@@ -42,3 +42,5 @@ Synchronize from Clang SVN to default branch under our local Clang
 
 2. Execute sync_clang.py
 # ../../../scripts/sync_clang.py
+
+You need to run 'hg push' to push the changes to https://bitbucket.org/multicoreware/cppamp
