@@ -1,4 +1,4 @@
-macro(ensure_clang_is_present dest_dir ${name})
+macro(ensure_clang_is_present dest_dir name)
 
 if(EXISTS "${dest_dir}/${name}/tools/clang")
   MESSAGE("clang is present.")
