@@ -20,3 +20,6 @@ os.system("hg pull " + synDir)
 
 print "Do: hg update"
 os.system("hg update")
+
+print "Do: hg update cppamp"
+os.system("hg update cppamp")

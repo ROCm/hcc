@@ -29,13 +29,16 @@ Before synchronize from Clang SVN to our local Clang:
 2. Execute init_clangsvn.py
 # ./src/scriptsinit_clangsvn.py
 
+Note, you need Python SVN bindings to make this work, such as
+'python-subversion' package in Ubuntu.
+
 
 
 ----------------
 Synchronize from Clang SVN to default branch under our local Clang
 ----------------
 1. Go to clang directory
-# cd cppamp/compilier/tools/clang
+# cd cppamp/src/compilier/tools/clang
 
 2. Execute sync_clang.py
 # ../../../scripts/sync_clang.py
