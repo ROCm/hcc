@@ -1,3 +1,4 @@
+// RUN: clang++ -c -emit-llvm -DCPPAMP -std=c++amp 01.cpp
 #include <iostream>
 
 int main() {
