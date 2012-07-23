@@ -1,3 +1,4 @@
+----------------
 Build Instruction
 -----------------
 
@@ -17,3 +18,24 @@ Build Instruction
 # make
 
 
+
+----------------
+Before synchronize from Clang SVN to our local Clang:
+   initialize a Clang SVN into a local mecurial repository
+-----------------
+1. Go to the cppamp directory
+# cd cppamp
+#
+2. Execute init_clangsvn.py
+# ./src/scriptsinit_clangsvn.py
+
+
+
+----------------
+Synchronize from Clang SVN to default branch under our local Clang
+----------------
+1. Go to clang directory
+# cd cppamp/compilier/tools/clang
+
+2. Execute sync_clang.py
+# ../../../scripts/sync_clang.py
