@@ -17,8 +17,6 @@ Build Instruction
 4. Build.
 # make
 
-
-
 ----------------
 Before synchronize from Clang SVN to our local Clang:
    initialize a Clang SVN into a local mecurial repository
@@ -29,10 +27,7 @@ Before synchronize from Clang SVN to our local Clang:
 2. Execute init_clangsvn.py
 # ./src/scriptsinit_clangsvn.py
 
-Note, you need Python SVN bindings to make this work, such as
-'python-subversion' package in Ubuntu.
-
-
+Note, you need Python SVN bindings to make this work, such as 'python-subversion' package in Ubuntu.
 
 ----------------
 Synchronize from Clang SVN to default branch under our local Clang
@@ -44,3 +39,14 @@ Synchronize from Clang SVN to default branch under our local Clang
 # ../../../scripts/sync_clang.py
 
 You need to run 'hg push' to push the changes to https://bitbucket.org/multicoreware/cppamp
+
+---------------
+Debugging Clang
+---------------
+Clang itself is not debuggable as it is actually 'driver' that calls actual compiler. Debugging becomes available once you give '-v' option to the Clang execution:
+
+# clang -v <other arguments>
+
+It will print out verbose message that actually it runs. Using this information will enable debugging.
+
+
