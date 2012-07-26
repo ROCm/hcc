@@ -9,29 +9,47 @@ able to generate codes for HSAIL.
 
 Build Instruction
 --------------------------------------------------------------------------------
-1. Prepare a directory
+Before building it, you should have access to two repositories:
+
+  https://bitbucket.org/multicoreware/cppamp-driver
+  https://bitbucket.org/multicoreware/cppamp
+
+You should fork from them and create your own repository for development. This
+build procedure assumes that you will work on your own repository. As such, the
+following repositories should be available:
+
+  https://${username}@bitbucket.org/${username}/cppamp-driver
+  https://${username}@bitbucket.org/${username}/cppamp
+
+, where ${username} is a placeholder for your ID for bitbucket.org.
+
+1. Prepare a directory.
   # mkdir cppamp
 
-2. Pull a repository from bitbucket:
-  https://bitbucket.org/multicoreware/cppamp-driver.
-
+2. Pull your cppamp-driver repository from bitbucket.
   # cd cppamp
-  # hg clone https://bitbucket.org/multicoreware/cppamp-driver src
+  # hg clone https://${username}@bitbucket.org/${username}/cppamp-driver src
 
-3. Build a build directory and configure using CMake
+3. Build a build directory and configure using CMake.
   # mkdir build
   # cd build
   # cmake ../src
+      -DCLANG_URL=https://${username}@bitbucket.org/${username}/cppamp
 
 4. Build.
-  # make
+  # make [-j #]
 
 5. Test. (optional, would be more useful in development cycle)
   # make test
 
-Note that you should also have an access to the repository for C++AMP frontend:
-https://bitbucket.org/multicoreware/cppamp. You will be asked id/password while
-it is configured.
+6. Rebuild builder system from CMake. When you bring changes to build system by
+   modifying CMakeFiles.txt for example, the build system could be messed up.
+   When such happens, you can remove cache of CMake and repopulate the build
+   system from scratch.
+  # cd build
+  # rm -f CMakeCache.txt
+  # cmake ../src
+      -DCLANG_URL=https://${username}@bitbucket.org/${username}/cppamp
 
 
 Repository Structure
@@ -44,7 +62,7 @@ The current repository is composed of as following:
   - Modified Clang. It will be downloaded from the build procedure as described
     above. This repository is basically a clone of Clang repository. The
     default branch will be a placeholder for the cloned Clang repository.
-    C++AMP specific changes will be made to dev branch, which is the main
+    C++AMP specific changes will be made to cppamp branch, which is the main
     branch for the C++AMP development. Developers can also create their own
     branches for their own development.
 
@@ -53,7 +71,7 @@ Synchronization with Clang repository
 -------------------------------------------------------------------------------
 C++AMP is an extension to C++11. Since support for C++11 is still very new and
 mostly in beta status from Clang, we will need to be periodically synchronized
-to the Clang development.
+to the Clang development. The rest of this section describes how to make 
 
 How to synchronize with Clang:
 1. Before synchronize from Clang SVN to our local Clang, you need to initialize

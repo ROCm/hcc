@@ -6,11 +6,11 @@ SET(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/scripts/cmake")
 MESSAGE("Module path: ${CMAKE_MODULE_PATH}")
 #include (MacroEnsureOutOfSourceBuild)
 #include (ExportFile)
+
 include (EnsureLLVMisPresent)
 include (EnsureCLANGisPresent)
-MESSAGE("${PROJECT_SOURCE_DIR}")
 ensure_llvm_is_present(${PROJECT_SOURCE_DIR} compiler)
-ensure_clang_is_present(${PROJECT_SOURCE_DIR} compiler)
+ensure_clang_is_present(${PROJECT_SOURCE_DIR} compiler ${CLANG_URL})
 
 #MACRO_ENSURE_OUT_OF_SOURCE_BUILD("Please build ${CMAKE_PROJECT_NAME} in a different directory than the source directory")
 
