@@ -26,7 +26,7 @@ Build Instruction
 4. Build.
   # make
 
-5. Test. (optional, more useful in development cycle)
+5. Test. (optional, would be more useful in development cycle)
   # make test
 
 Note that you should also have an access to the repository for C++AMP frontend:
