@@ -20,6 +20,10 @@ set(LLVM_INCLUDE_TOOLS off)
 set(LLVM_INCLUDE_EXAMPLES off)
 set(LLVM_INCLUDE_TESTS on)
 
+# Regression test
+set(LLVM_SRC "${PROJECT_SOURCE_DIR}/compiler")
+set(LLVM_ROOT "${PROJECT_BINARY_DIR}/compiler")
+
 # obtain specific information about llvm setup
 SET(LOCAL_LLVM_INCLUDE compiler/include)
 
@@ -62,6 +66,7 @@ LINK_DIRECTORIES( ${LLVM_LIB_DIR} )
 
 #add_subdirectory(include)
 add_subdirectory(compiler)
+add_subdirectory(tests)
 #add_subdirectory(lib)
 #add_subdirectory(tools)
 #add_subdirectory(test)
