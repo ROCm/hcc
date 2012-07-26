@@ -1,0 +1,5 @@
+config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
+
+# Let the main config do the real work.
+lit.load_config(config, "@CPPAMP_SOURCE_DIR@/lit.cfg")
+
