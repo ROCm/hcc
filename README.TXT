@@ -1,10 +1,27 @@
 
-                        C++AMP Implementation for HSAIL
+                    C++AMP Compiler Implementation for HSAIL
 
 Introduction
 --------------------------------------------------------------------------------
-This repository hosts C++AMP implementation on top of LLVM+CLANG. It aims to be
-able to generate codes for HSAIL.
+This repository hosts C++AMP compiler implementation project. The goal is to 
+implement a compiler that takes a program conforming C++AMP standard and
+transforms it into a binary for PC + HSAIL. It will be based on LLVM+CLANG.
+
+
+Repository Structure
+-------------------------------------------------------------------------------
+The current repository is composed of as following:
+1. cppamp-driver
+  - This repository. It contains all the C++AMP related implementations, tests,
+    scripts and build system.
+2. cppamp
+  - Modified Clang. It will be downloaded as part of the build procedure which
+    will be described later. This repository is basically a clone of Clang
+    repository. Default branch will be a placeholder for the cloned Clang
+    repository. C++AMP specific changes will be made to cppamp branch, which is
+    the main branch for the C++AMP development. Note that one should NOT commit
+    to the default trunk(admin should reject it even if such case happens).
+    Developers can also create their own branches for their own development.
 
 
 Build Instruction
@@ -23,14 +40,14 @@ following repositories should be available:
 
 , where ${username} is a placeholder for your ID for bitbucket.org.
 
-1. Prepare a directory.
+1. Prepare a directory for work space.
   # mkdir cppamp
 
 2. Pull your cppamp-driver repository from bitbucket.
   # cd cppamp
   # hg clone https://${username}@bitbucket.org/${username}/cppamp-driver src
 
-3. Build a build directory and configure using CMake.
+3. Create a build directory and configure using CMake.
   # mkdir build
   # cd build
   # cmake ../src
@@ -42,57 +59,101 @@ following repositories should be available:
 5. Test. (optional, would be more useful in development cycle)
   # make test
 
-6. Rebuild builder system from CMake. When you bring changes to build system by
+6. Rebuild build system from CMake. When you bring changes to build system by
    modifying CMakeFiles.txt for example, the build system could be messed up.
    When such happens, you can remove cache of CMake and repopulate the build
    system from scratch.
   # cd build
-  # rm -f CMakeCache.txt
+  # rm -f CMakeCache.txt         // or use rm -rf *
   # cmake ../src
       -DCLANG_URL=https://${username}@bitbucket.org/${username}/cppamp
 
 
-Repository Structure
+How to push your changes to the main repository
 -------------------------------------------------------------------------------
-The current repository is composed of as following:
-1. cppamp-driver
-  - This repository. It contains all the C++AMP related implementations, tests,
-    scripts and build system.
-2. cppamp
-  - Modified Clang. It will be downloaded from the build procedure as described
-    above. This repository is basically a clone of Clang repository. The
-    default branch will be a placeholder for the cloned Clang repository.
-    C++AMP specific changes will be made to cppamp branch, which is the main
-    branch for the C++AMP development. Developers can also create their own
-    branches for their own development.
+Create pull request from bitbucket.
+
+
+How to make your repository synchronized by pulling from main repository
+-------------------------------------------------------------------------------
+Synchronization can be done via scripts:
+
+  # cppamp/src/scripts/pull_from_trunk.py
+
+It will pull from both cppamp-driver and cppamp. Note that you still need to
+update repositories. Again, when build system does not seem to work, you will
+need to redo step No. 6 from the build instruction.
+
+
+Directory Structure
+-------------------------------------------------------------------------------
+$cppamp                // top-level directory
+  build/               // all outputs
+  src/                 // llvm
+    compiler/
+      tools/
+        clang/         // modified Clang frontend
+  libcxx/              // libc++ to help compile
+  tests/               // tests including unit tests, TDD issues
+  include/             // C++AMP related headers
+  lib/                 // C++AMP related implementions
 
 
 Synchronization with Clang repository
 -------------------------------------------------------------------------------
 C++AMP is an extension to C++11. Since support for C++11 is still very new and
 mostly in beta status from Clang, we will need to be periodically synchronized
-to the Clang development. The rest of this section describes how to make 
+to the Clang development. For this, we create a repository which is a mirror of
+Clang repository, but in Mercurial format. Then, by pulling changes from the
+repository into the localized development Clang repository, synchronization can
+be done.
 
-How to synchronize with Clang:
-1. Before synchronize from Clang SVN to our local Clang, you need to initialize
-   a Clang SVN into a local mecurial repository:
+We first need to be able to use hgsubversion, a tool converting a Subversion
+repository into Mercurial repository. Note that the selection of hgsubversion
+is not mendatory, but is one of such tools that we find useful so far. If you
+know better tool for this work, you may use that as well. Here goes procedure
+to make hgsubversion available:
 
-  A. Go to the cppamp directory
-    # cd cppamp
-  B. Execute init_clangsvn.py
-    # ./src/scriptsinit_clangsvn.py
+  1. Assuming Ubuntu Linux, we will need a package installed.
+    # apt-get install python-subversion
 
-Note that you will need Python SVN bindings to make this work, such as
-'python-subversion' package in Ubuntu.
+  2. Download hgsubversion package.
+    # hg clone http://bitbucket.org/durin42/hgsubversion hgsubversion
 
-2. Synchronize from Clang SVN to default branch in the local Clang repository.
+  3. Edit ~/.hgrc to use the package which is an extension to Mercurial:
 
-  A. Go to clang directory
-    # cd cppamp/src/compilier/tools/clang
-  B. Execute sync_clang.py
-    # ../../../scripts/sync_clang.py
+    [extensions]
+    hgsubversion = <the location where you downloaded hgsubversion>/hgsubversion
 
-3. You will need to run 'hg push' to make the change globally visible.
+    For instance, if you downloaded hgsubversion at /opt/hgsubversion, then 
+
+    [extensions]
+    hgsubversion = /opt/hgsubversion/hgsubversion
+
+  4. Make sure you correctly install everything by:
+    # hg help subversion
+.
+
+Then, we need to create a Clang repository in Mercurial format using the tool
+we just installed:
+
+  # cd cppamp     <- your top level development directory
+  # hg clone http://llvm.org/svn/llvm-project/cfe/trunk clangsvn
+
+. Note that this is required for the first time and later you can just reuse it
+with hg pull/update command:
+
+  # cd clangsvn
+  # hg pull
+  # hg update
+
+. Now, you can synchronize by pulling changes from the repository:
+
+  # cd cppamp/src/compiler/tools/clang
+  # hg pull ../../../../clangsvn
+  # hg merge -r <the most recent changeset number from clangsvn>
+
+. Note that you will need to push to make the change visible to other people.
 
 
 Test Driven Development
@@ -102,7 +163,7 @@ track of development status by working tests intact. Check out src/tests for
 actual implementation.
 
 
-Tips for developers
+Tips for Developers
 -------------------------------------------------------------------------------
 1. Debugging Clang
 
