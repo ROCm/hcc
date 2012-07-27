@@ -1,0 +1,74 @@
+# -*- Makefile -*-
+# Copyright (c) Microsoft
+#
+# All rights reserved
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not 
+# use this file except in compliance with the License. You may obtain a copy 
+# of the License at http://www.apache.org/licenses/LICENSE-2.0 
+#
+# THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY 
+# KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED 
+# WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, 
+# MERCHANTABLITY OR NON-INFRINGEMENT. 
+#
+# See the Apache Version 2.0 License for specific language governing permissions 
+# and limitations under the License.
+
+#
+# <summary>Builds the C++ AMP test library using the Microsoft (R) Visual C++ (R) compiler via nmake</summary>
+#
+
+# Tools called by nmake
+MV=move
+MKDIR=mkdir
+LNKEXE=lib
+RMDIR=rmdir /S/Q 
+
+LIBNAME=libamptest
+LIBEXT=lib
+
+!IFNDEF ARCH
+ARCH=amd64
+!ENDIF
+
+!IFNDEF LIBTYPE
+LIBTYPE=MTd
+!ENDIF
+
+!IFNDEF CXXFLAGS
+## Define options for compiling with VC++.
+CXX=cl
+CXXFLAGS=/W4 /WX /EHsc /GL- /MP /Zi /c /$(LIBTYPE) /DAMP_TEST_LIB_BUILD
+!ENDIF
+
+!IFNDEF LNKFLAGS
+LNKFLAGS=/nologo
+!ENDIF
+
+SRCPATH=src
+LIBPATH=lib\$(ARCH)
+OBJPATH=$(LIBPATH)\$(LIBTYPE)
+
+OBJS=$(OBJPATH)\context.obj $(OBJPATH)\device.obj $(OBJPATH)\logging.obj $(OBJPATH)\main.obj $(OBJPATH)\runall.obj $(OBJPATH)\string_utils.obj
+SRCS=$(SRCPATH)\context.cpp $(SRCPATH)\device.cpp $(SRCPATH)\logging.cpp $(SRCPATH)\main.cpp $(SRCPATH)\runall.cpp $(SRCPATH)\string_utils.cpp
+
+## Create the OBJPATH (and LIBPATH) if needed.
+## * note: if LIBPATH is not created by mkdir $(OBJPATH),
+##         a separate command will need to be added. 
+!if [if not exist $(OBJPATH) mkdir $(OBJPATH)]
+!endif
+
+all: $(LIBPATH)\$(LIBNAME)-$(LIBTYPE).$(LIBEXT)
+
+$(LIBPATH)/$(LIBNAME)-$(LIBTYPE).$(LIBEXT) : objects	
+	$(LNKEXE) $(LNKFLAGS) /OUT:$(LIBPATH)\$(LIBNAME)-$(LIBTYPE).$(LIBEXT) $(OBJS)
+
+objects : $(SRCS)
+	$(CXX) $(CXXFLAGS) $(SRCS)
+	$(MV) *.obj $(OBJPATH)
+
+clean : 
+	$(RMDIR) $(LIBPATH)
+
+
