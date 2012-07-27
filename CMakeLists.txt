@@ -9,8 +9,10 @@ MESSAGE("Module path: ${CMAKE_MODULE_PATH}")
 
 include (EnsureLLVMisPresent)
 include (EnsureCLANGisPresent)
+include (EnsureLibCXXisPresent)
 ensure_llvm_is_present(${PROJECT_SOURCE_DIR} compiler)
 ensure_clang_is_present(${PROJECT_SOURCE_DIR} compiler ${CLANG_URL})
+ensure_libcxx_is_present(${PROJECT_SOURCE_DIR} libcxx)
 
 #MACRO_ENSURE_OUT_OF_SOURCE_BUILD("Please build ${CMAKE_PROJECT_NAME} in a different directory than the source directory")
 
