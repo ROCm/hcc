@@ -1,0 +1,298 @@
+// iomanip standard header
+#pragma once
+#ifndef _IOMANIP_
+#define _IOMANIP_
+#ifndef RC_INVOKED
+#include <istream>
+
+#include <type_traits>
+
+#include <xlocmon>
+#include <xloctime>
+
+ #pragma pack(push,_CRT_PACKING)
+ #pragma warning(push,3)
+ #pragma push_macro("new")
+ #undef new
+
+_STD_BEGIN
+		// TEMPLATE STRUCT _Fillobj
+template<class _Elem>
+	struct _Fillobj
+	{	// store fill character
+	_Fillobj(_Elem _Ch)
+		: _Fill(_Ch)
+		{	// construct from fill character
+		}
+
+	_Elem _Fill;	// the fill character
+	};
+
+		// TEMPLATE FUNCTION setfill
+template<class _Elem> inline
+	_Fillobj<_Elem> setfill(_Elem _Ch)
+	{	// return a _Fillobj manipulator
+	return (_Fillobj<_Elem>(_Ch));
+	}
+
+template<class _Elem,
+	class _Traits,
+	class _Elem2> inline
+	basic_istream<_Elem, _Traits>&
+		operator>>(basic_istream<_Elem, _Traits>& _Istr,
+			const _Fillobj<_Elem2>& _Manip)
+	{	// set fill character in input stream
+	static_assert((is_same<_Elem, _Elem2>::value),
+		"wrong character type for setfill");
+
+	_Istr.fill(_Manip._Fill);
+	return (_Istr);
+	}
+
+template<class _Elem,
+	class _Traits,
+	class _Elem2> inline
+	basic_ostream<_Elem, _Traits>&
+		operator<<(basic_ostream<_Elem, _Traits>& _Ostr,
+			const _Fillobj<_Elem2>& _Manip)
+	{	// set fill character in output stream
+	static_assert((is_same<_Elem, _Elem2>::value),
+		"wrong character type for setfill");
+
+	_Ostr.fill(_Manip._Fill);
+	return (_Ostr);
+	}
+
+ #if _HAS_CPP0X
+		// TEMPLATE STRUCT _Monobj
+template<class _Money>
+	struct _Monobj
+	{	// store reference to monetary amount
+	_Monobj(_Money& _Val_arg, bool _Intl_arg)
+		: _Val(_Val_arg), _Intl(_Intl_arg)
+		{	// construct from monetary amount reference and int'l flag
+		}
+
+	_Money& _Val;	// the monetary amount reference
+	bool _Intl;		// international flag
+
+	private:
+		_Monobj& operator=(const _Monobj&);
+	};
+
+		// TEMPLATE FUNCTION get_money
+template<class _Money> inline
+	_Monobj<_Money> get_money(_Money& _Val_arg,
+		bool _Intl_arg = false)
+	{	// return a _Monobj manipulator
+	return (_Monobj<_Money>(_Val_arg, _Intl_arg));
+	}
+
+template<class _Elem,
+	class _Traits,
+	class _Money> inline
+	basic_istream<_Elem, _Traits>&
+		operator>>(basic_istream<_Elem, _Traits>& _Istr,
+			const _Monobj<_Money>& _Manip)
+	{	// get monetary amount from input stream
+	typedef basic_istream<_Elem, _Traits> _Myis;
+	typedef istreambuf_iterator<_Elem, _Traits> _Iter;
+	typedef money_get<_Elem, _Iter> _Mymget;
+
+	ios_base::iostate _State = ios_base::goodbit;
+	const typename _Myis::sentry _Ok(_Istr);
+
+	if (_Ok)
+		{	// state okay, extract monetary amount
+		const _Mymget& _Mget_fac = _USE(_Istr.getloc(), _Mymget);
+		_TRY_IO_BEGIN
+		_Mget_fac.get(_Iter(_Istr.rdbuf()), _Iter(0), _Manip._Intl,
+			_Istr, _State, _Manip._Val);
+		_CATCH_IO_(_Istr)
+		}
+
+	_Istr.setstate(_State);
+	return (_Istr);
+	}
+
+		// TEMPLATE FUNCTION put_money
+template<class _Money> inline
+	_Monobj<const _Money>
+		put_money(const _Money& _Val_arg,
+			bool _Intl_arg = false)
+	{	// return a _Monobj manipulator
+	return (_Monobj<const _Money>(_Val_arg, _Intl_arg));
+	}
+
+template<class _Elem,
+	class _Traits,
+	class _Money> inline
+	basic_ostream<_Elem, _Traits>&
+		operator<<(basic_ostream<_Elem, _Traits>& _Ostr,
+			const _Monobj<_Money>& _Manip)
+	{	// put monetary amount to output stream
+	typedef basic_ostream<_Elem, _Traits> _Myos;
+	typedef ostreambuf_iterator<_Elem, _Traits> _Iter;
+	typedef money_put<_Elem, _Iter> _Mymput;
+
+	ios_base::iostate _State = ios_base::goodbit;
+	const typename _Myos::sentry _Ok(_Ostr);
+
+	if (_Ok)
+		{	// state okay, insert monetary amount
+		const _Mymput& _Mput_fac = _USE(_Ostr.getloc(), _Mymput);
+		_TRY_IO_BEGIN
+		if (_Mput_fac.put(_Iter(_Ostr.rdbuf()), _Manip._Intl,
+			_Ostr, _Ostr.fill(), _Manip._Val).failed())
+				_State |= ios_base::badbit;
+		_CATCH_IO_(_Ostr)
+		}
+
+	_Ostr.setstate(_State);
+	return (_Ostr);
+	}
+
+		// TEMPLATE STRUCT _Timeobj
+template<class _Elem>
+	struct _Timeobj
+	{	// store reference to tm object and format
+	_Timeobj(struct tm *_Tptr_arg, const _Elem *_Fmt_arg)
+		: _Tptr(_Tptr_arg), _Fmtfirst(_Fmt_arg)
+		{	// construct from tm pointer and format pointer
+		for (_Fmtlast = _Fmtfirst; *_Fmtlast != 0; ++_Fmtlast)
+			;	// find end of format string
+		}
+
+	struct tm *_Tptr;	// the tm struct pointer
+	const _Elem *_Fmtfirst;	// format string start
+	const _Elem *_Fmtlast;	// format string end
+	};
+
+		// TEMPLATE FUNCTION get_time
+template<class _Elem> inline
+	_Timeobj<_Elem>
+		get_time(struct tm *_Tptr_arg, const _Elem *_Fmt_arg)
+	{	// return a _Timeobj manipulator
+	return (_Timeobj<_Elem>(_Tptr_arg, _Fmt_arg));
+	}
+
+template<class _Elem,
+	class _Traits,
+	class _Elem2> inline
+	basic_istream<_Elem, _Traits>&
+		operator>>(basic_istream<_Elem, _Traits>& _Istr,
+			const _Timeobj<_Elem2>& _Manip)
+	{	// get time information from input stream
+	typedef basic_istream<_Elem, _Traits> _Myis;
+	typedef istreambuf_iterator<_Elem, _Traits> _Iter;
+	typedef time_get<_Elem2, _Iter> _Mytget;
+
+	static_assert((is_same<_Elem, _Elem2>::value),
+		"wrong character type for get_time");
+
+	ios_base::iostate _State = ios_base::goodbit;
+	const typename _Myis::sentry _Ok(_Istr);
+
+	if (_Ok)
+		{	// state okay, extract time amounts
+		const _Mytget& _Tget_fac = _USE(_Istr.getloc(), _Mytget);
+		_TRY_IO_BEGIN
+		_Tget_fac.get(_Iter(_Istr.rdbuf()), _Iter(0), _Istr, _State,
+			_Manip._Tptr, _Manip._Fmtfirst, _Manip._Fmtlast);
+		_CATCH_IO_(_Istr)
+		}
+
+	_Istr.setstate(_State);
+	return (_Istr);
+	}
+
+		// TEMPLATE FUNCTION put_time
+template<class _Elem> inline
+	_Timeobj<_Elem>
+		put_time(struct tm *_Tptr_arg, const _Elem *_Fmt_arg)
+	{	// return a _Timeobj manipulator
+	return (_Timeobj<_Elem>(_Tptr_arg, _Fmt_arg));
+	}
+
+template<class _Elem,
+	class _Traits,
+	class _Elem2> inline
+	basic_ostream<_Elem, _Traits>&
+		operator<<(basic_ostream<_Elem, _Traits>& _Ostr,
+			const _Timeobj<_Elem2>& _Manip)
+	{	// put time information to output stream
+	typedef basic_ostream<_Elem, _Traits> _Myos;
+	typedef ostreambuf_iterator<_Elem, _Traits> _Iter;
+	typedef time_put<_Elem2, _Iter> _Mytput;
+
+	static_assert((is_same<_Elem, _Elem2>::value),
+		"wrong character type for put_time");
+
+	ios_base::iostate _State = ios_base::goodbit;
+	const typename _Myos::sentry _Ok(_Ostr);
+
+	if (_Ok)
+		{	// state okay, insert monetary amount
+		const _Mytput& _Tput_fac = _USE(_Ostr.getloc(), _Mytput);
+		_TRY_IO_BEGIN
+		if (_Tput_fac.put(_Iter(_Ostr.rdbuf()), _Ostr, _Ostr.fill(),
+			_Manip._Tptr, _Manip._Fmtfirst, _Manip._Fmtlast).failed())
+			_State |= ios_base::badbit;
+		_CATCH_IO_(_Ostr)
+		}
+
+	_Ostr.setstate(_State);
+	return (_Ostr);
+	}
+ #endif /* _HAS_CPP0X */
+
+		// TEMPLATE STRUCT _Smanip
+template<class _Arg>
+	struct _Smanip
+	{	// store function pointer and argument value
+	_Smanip(void (__cdecl *_Left)(ios_base&, _Arg), _Arg _Val)
+		: _Pfun(_Left), _Manarg(_Val)
+		{	// construct from function pointer and argument value
+		}
+
+	void (__cdecl *_Pfun)(ios_base&, _Arg);	// the function pointer
+	_Arg _Manarg;	// the argument value
+	};
+
+template<class _Elem,
+	class _Traits,
+	class _Arg> inline
+	basic_istream<_Elem, _Traits>& operator>>(
+		basic_istream<_Elem, _Traits>& _Istr, const _Smanip<_Arg>& _Manip)
+	{	// extract by calling function with input stream and argument
+	(*_Manip._Pfun)(_Istr, _Manip._Manarg);
+	return (_Istr);
+	}
+
+template<class _Elem,
+	class _Traits,
+	class _Arg> inline
+	basic_ostream<_Elem, _Traits>& operator<<(
+		basic_ostream<_Elem, _Traits>& _Ostr, const _Smanip<_Arg>& _Manip)
+	{	// insert by calling function with output stream and argument
+	(*_Manip._Pfun)(_Ostr, _Manip._Manarg);
+	return (_Ostr);
+	}
+
+		// INSTANTIATIONS
+_MRTIMP2 _Smanip<ios_base::fmtflags> __cdecl resetiosflags(ios_base::fmtflags);
+_MRTIMP2 _Smanip<ios_base::fmtflags> __cdecl setiosflags(ios_base::fmtflags);
+_MRTIMP2 _Smanip<int> __cdecl setbase(int);
+_MRTIMP2 _Smanip<streamsize> __cdecl setprecision(streamsize);
+_MRTIMP2 _Smanip<streamsize> __cdecl setw(streamsize);
+_STD_END
+ #pragma pop_macro("new")
+ #pragma warning(pop)
+ #pragma pack(pop)
+#endif /* RC_INVOKED */
+#endif /* _IOMANIP_ */
+
+/*
+ * Copyright (c) 1992-2012 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V6.00:0009 */

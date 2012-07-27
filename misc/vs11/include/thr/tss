@@ -1,0 +1,106 @@
+// tss header for threads library
+#pragma once
+#ifndef _THR_TSS
+#define _THR_TSS
+#ifndef RC_INVOKED
+#include <thr/threads.h>
+#include <thr/exceptions>
+
+ #pragma pack(push,_CRT_PACKING)
+ #pragma warning(push,3)
+ #pragma push_macro("new")
+ #undef new
+
+namespace stdext
+	{	// Dinkum Libraries
+	namespace threads
+		{	// Dinkum C++ Threads Library
+template<class _Val_type>
+	class thread_specific_ptr
+	{	// thread-specific pointer class
+public:
+	typedef thread_specific_ptr<_Val_type> _Myt;
+	typedef _Val_type _Myval;
+
+	thread_specific_ptr()
+		{	// construct
+		_Validate(_Tss_create(&_Key, _Dtor));
+		}
+
+	~thread_specific_ptr() _NOEXCEPT
+		{	// destroy
+		_Tss_delete(_Key);
+		}
+
+	_Myval *get() const
+		{	// return stored pointer
+		return ((_Myval *)_Tss_get(_Key));
+		}
+
+	_Myval& operator*() const
+		{	// return reference to pointed-to object
+		_THREAD_ASSERT(_Tss_get(_Key) != 0,
+			"threads::thread::operator* called with null object pointer");
+		return (*(_Myval *)_Tss_get(_Key));
+		}
+
+	_Myval *operator->() const
+		{	// return stored pointer
+		return (_STD addressof(**this));
+		}
+
+	_Myval *release()
+		{	// set stored pointer to null
+		_Myval *_Ptr = (_Myval *)_Tss_get(_Key);
+		_Validate(_Tss_set(_Key, 0));
+		return (_Ptr);
+		}
+
+	void reset(_Myval *_Arg = 0)
+		{	// delete pointed-to object
+		_Myval *_Ptr = (_Myval *)_Tss_get(_Key);
+		if (_Ptr != _Arg)
+			delete _Ptr;
+		_Validate(_Tss_set(_Key, _Arg));
+		}
+
+private:
+	_Tss_t _Key;
+
+	static void _Dtor(void *_Ptr)
+		{	// delete an object
+		delete (_Myval *)_Ptr;
+		}
+
+	thread_specific_ptr(const _Myt&);	// not defined
+	_Myt& operator=(const _Myt&);	// not defined
+	};
+		}	// namespace threads
+	}	// namespace stdext
+
+ #pragma pop_macro("new")
+ #pragma warning(pop)
+ #pragma pack(pop)
+#endif /* RC_INVOKED */
+#endif /* _THR_TSS */
+
+/*
+ * This file is derived from software bearing the following
+ * restrictions:
+ *
+ * (c) Copyright William E. Kempf 2001
+ *
+ * Permission to use, copy, modify, distribute and sell this
+ * software and its documentation for any purpose is hereby
+ * granted without fee, provided that the above copyright
+ * notice appear in all copies and that both that copyright
+ * notice and this permission notice appear in supporting
+ * documentation. William E. Kempf makes no representations
+ * about the suitability of this software for any purpose.
+ * It is provided "as is" without express or implied warranty.
+ */
+
+/*
+ * Copyright (c) 1992-2012 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V6.00:0009 */

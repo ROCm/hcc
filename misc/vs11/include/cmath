@@ -1,0 +1,65 @@
+// cmath standard header
+#pragma once
+#ifndef _CMATH_
+#define _CMATH_
+#include <yvals.h>
+
+#ifdef _STD_USING
+ #undef _STD_USING
+  #include <math.h>
+
+ #if _HAS_CPP0X
+  #include <xtgmath.h>
+ #endif /* _HAS_CPP0X */
+
+ #define _STD_USING
+
+#else /* _STD_USING */
+ #include <math.h>
+
+ #if _HAS_CPP0X
+ #include <xtgmath.h>
+ #endif /* _HAS_CPP0X */
+#endif /* _STD_USING */
+
+ #if _GLOBAL_USING && !defined(RC_INVOKED)
+
+_STD_BEGIN
+using _CSTD acosf; using _CSTD asinf;
+using _CSTD atanf; using _CSTD atan2f; using _CSTD ceilf;
+using _CSTD cosf; using _CSTD coshf; using _CSTD expf;
+using _CSTD fabsf; using _CSTD floorf; using _CSTD fmodf;
+using _CSTD frexpf; using _CSTD ldexpf; using _CSTD logf;
+using _CSTD log10f; using _CSTD modff; using _CSTD powf;
+using _CSTD sinf; using _CSTD sinhf; using _CSTD sqrtf;
+using _CSTD tanf; using _CSTD tanhf;
+
+using _CSTD acosl; using _CSTD asinl;
+using _CSTD atanl; using _CSTD atan2l; using _CSTD ceill;
+using _CSTD cosl; using _CSTD coshl; using _CSTD expl;
+using _CSTD fabsl; using _CSTD floorl; using _CSTD fmodl;
+using _CSTD frexpl; using _CSTD ldexpl; using _CSTD logl;
+using _CSTD log10l; using _CSTD modfl; using _CSTD powl;
+using _CSTD sinl; using _CSTD sinhl; using _CSTD sqrtl;
+using _CSTD tanl; using _CSTD tanhl;
+
+using _CSTD abs;
+
+using _CSTD acos; using _CSTD asin;
+using _CSTD atan; using _CSTD atan2; using _CSTD ceil;
+using _CSTD cos; using _CSTD cosh; using _CSTD exp;
+using _CSTD fabs; using _CSTD floor; using _CSTD fmod;
+using _CSTD frexp; using _CSTD ldexp; using _CSTD log;
+using _CSTD log10; using _CSTD modf; using _CSTD pow;
+using _CSTD sin; using _CSTD sinh; using _CSTD sqrt;
+using _CSTD tan; using _CSTD tanh;
+
+using _CSTD hypot; using _CSTD hypotf;
+_STD_END
+ #endif /* _GLOBAL_USING */
+#endif /* _CMATH_ */
+
+/*
+ * Copyright (c) 1992-2012 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V6.00:0009 */

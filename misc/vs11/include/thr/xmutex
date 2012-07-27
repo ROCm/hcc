@@ -1,0 +1,324 @@
+// xmutex -- implementation classes for mutex, recursive_mutex
+#pragma once
+#ifndef _THR_XMUTEX
+#define _THR_XMUTEX
+#ifndef RC_INVOKED
+#include <thr/xthrcommon.h>
+#include <thr/xtime>
+#include <thr/exceptions>
+
+ #pragma pack(push,_CRT_PACKING)
+ #pragma warning(push,3)
+ #pragma push_macro("new")
+ #undef new
+
+namespace stdext
+	{	// Dinkum Libraries
+	namespace threads
+		{	// Dinkum C++ Threads Library
+class condition;
+
+template<class _Mutex>
+	class _Lock_base
+	{	// base class for scoped locks
+public:
+	typedef _Lock_base<_Mutex> _Myt;
+	typedef _Mutex _My_mtx;
+
+	_Lock_base(_My_mtx& _Mx)
+		: _Is_locked(false), _Mtx(_Mx)
+		{	// construct
+		}
+
+	~_Lock_base() _NOEXCEPT
+		{	// destroy
+		if (locked())
+			unlock();
+		}
+
+	operator const void *() const
+		{	// test if locked
+		return (_Is_locked ? this : 0);
+		}
+
+	bool locked() const
+		{	// test if locked
+		return (_Is_locked);
+		}
+
+	void lock()
+		{	// lock the mutex
+		if (_Is_locked || _Mtx.lock() != _Thrd_success)
+			_Throw_lock_error();
+		_Is_locked = true;
+		}
+
+	void unlock()
+		{	// unlock the mutex
+		if (!_Is_locked || _Mtx.unlock() != _Thrd_success)
+			_Throw_lock_error();
+		_Is_locked = false;
+		}
+
+	bool try_lock()
+		{	// lock the mutex if not locked
+		int _Res;
+		if (_Is_locked)
+			_Res = _Thrd_busy;
+		else if ((_Res = _Mtx.try_lock()) != _Thrd_success
+			&& _Res != _Thrd_busy)
+			_Throw_lock_error();
+		else
+			_Is_locked = _Res == _Thrd_success;
+		return (_Is_locked);
+		}
+
+	bool timed_lock(const xtime& _Xt)
+		{	// lock the mutex with timeout
+		int _Res;
+		if (_Is_locked)
+			_Res = _Thrd_busy;
+		else if ((_Res = _Mtx.timed_lock(_Xt)) != _Thrd_success
+			&& _Res != _Thrd_timedout)
+			_Throw_lock_error();
+		else
+			_Is_locked = _Res == _Thrd_success;
+		return (_Is_locked);
+		}
+
+private:
+	friend class condition;
+	_My_mtx &_Mtx;
+	bool _Is_locked;
+
+	_Lock_base(const _Myt&);	// not defined
+	_Myt& operator=(const _Myt&);	// not defined
+	};
+
+template<class _Mutex>
+	class _Scoped_lock_imp
+	{	//class for simple scoped lock
+public:
+	typedef _Mutex _My_mtx;
+	typedef _Scoped_lock_imp<_My_mtx> _Myt;
+	typedef _Lock_base<_Mutex> _My_base;
+
+	_Scoped_lock_imp(_My_mtx &_Mx)
+		: _My_lock(_Mx)
+		{	// construct locked
+		lock();
+		}
+
+	_Scoped_lock_imp(_My_mtx &_Mx, bool _Lck)
+		: _My_lock(_Mx)
+		{	// construct locked conditionally
+		if (_Lck)
+			lock();
+		}
+
+	operator const void *() const
+		{	// test if locked
+		return (_My_lock);
+		}
+
+	bool locked() const
+		{	// test if locked
+		return (_My_lock.locked());
+		}
+
+	void lock()
+		{	// lock it
+		_My_lock.lock();
+		}
+
+	void unlock()
+		{	// unlock it
+		_My_lock.unlock();
+		}
+
+private:
+	friend class condition;
+	_Lock_base<_Mutex> _My_lock;
+
+	_Scoped_lock_imp(const _Myt&);	// not defined
+	_Myt& operator=(const _Myt&);	// not defined
+	};
+
+template<class _Mutex>
+	class _Scoped_try_lock_imp
+	{	// class for scoped try-lock
+public:
+	typedef _Mutex _My_mtx;
+	typedef _Scoped_try_lock_imp<_My_mtx> _Myt;
+	typedef _Lock_base<_Mutex> _My_base;
+
+	_Scoped_try_lock_imp(_My_mtx &_Mx)
+		:  _My_lock(_Mx)
+		{	// construct locked
+		try_lock();
+		}
+
+	_Scoped_try_lock_imp(_My_mtx &_Mx, bool _Lck)
+		: _My_lock(_Mx)
+		{	// construct locked conditionally
+		if (_Lck)
+			lock();
+		}
+
+	operator const void *() const
+		{	// test if locked
+		return (_My_lock);
+		}
+
+	bool locked() const
+		{	// test if locked
+		return (_My_lock.locked());
+		}
+
+	void lock()
+		{	// lock it
+		_My_lock.lock();
+		}
+
+	bool try_lock()
+		{	// try the lock
+		return (_My_lock.try_lock());
+		}
+
+	void unlock()
+		{	// unlock it
+		_My_lock.unlock();
+		}
+
+private:
+	friend class condition;
+	_Lock_base<_Mutex> _My_lock;
+
+	_Scoped_try_lock_imp(const _Myt&);	// not defined
+	_Myt& operator=(const _Myt&);	// not defined
+	};
+
+template<class _Mutex>
+	class _Scoped_timed_lock_imp
+	{	// class for scoped timed lock
+public:
+	typedef _Mutex _My_mtx;
+	typedef _Scoped_timed_lock_imp<_My_mtx> _Myt;
+	typedef _Lock_base<_Mutex> _My_base;
+
+	_Scoped_timed_lock_imp(_My_mtx &_Mx, const xtime& _Xt)
+		: _My_lock(_Mx)
+		{	// construct locked
+		timed_lock(_Xt);
+		}
+
+	_Scoped_timed_lock_imp(_My_mtx &_Mx, bool _Lck)
+		: _My_lock(_Mx)
+		{	//construct locked conditionally
+		if (_Lck)
+			lock();
+		}
+
+	operator const void *() const
+		{	// test if locked
+		return (_My_lock);
+		}
+
+	bool locked() const
+		{	// test if locked
+		return (_My_lock.locked());
+		}
+
+	void lock()
+		{	// lock it
+		_My_lock.lock();
+		}
+
+	bool timed_lock(const xtime& _Xt)
+		{	// lock it for a time
+		return (_My_lock.timed_lock(_Xt));
+		}
+
+	void unlock()
+		{	// unlock it
+		_My_lock.unlock();
+		}
+
+private:
+	friend class condition;
+	_Lock_base<_Mutex> _My_lock;
+
+	_Scoped_timed_lock_imp(const _Myt&);	// not defined
+	_Myt& operator=(const _Myt&);	// not defined
+	};
+
+class _Mutex_base
+	{	// base class for mutexes
+public:
+	friend class _Lock_base<_Mutex_base>;
+
+	_Mutex_base(int _Type)
+		{	// construct
+		if (mtx_init(&_Mtx, _Type) != _Thrd_success)
+			_Throw_lock_error();
+		}
+
+	~_Mutex_base() _NOEXCEPT
+		{	// destroy
+		mtx_destroy(&_Mtx);
+		}
+
+	int lock()
+		{	// lock it
+		return (mtx_lock(&_Mtx));
+		}
+
+	int try_lock()
+		{	// try the lock
+		return (mtx_trylock(&_Mtx));
+		}
+
+	int timed_lock(const xtime& _Xt)
+		{	// lock for a time
+		return (mtx_timedlock(&_Mtx, &_Xt));
+		}
+
+	int unlock()
+		{	// unlock it
+		return (mtx_unlock(&_Mtx));
+		}
+
+	mtx_t _Mtx;
+
+private:
+	_Mutex_base(const _Mutex_base&);	// not defined
+	_Mutex_base& operator=(const _Mutex_base&);	// not defined
+	};
+		}	// namespace threads
+	}	// namespace stdext
+ #pragma pop_macro("new")
+ #pragma warning(pop)
+ #pragma pack(pop)
+#endif /* RC_INVOKED */
+#endif /* _THR_XMUTEX */
+
+/*
+ * This file is derived from software bearing the following
+ * restrictions:
+ *
+ * (c) Copyright William E. Kempf 2001
+ *
+ * Permission to use, copy, modify, distribute and sell this
+ * software and its documentation for any purpose is hereby
+ * granted without fee, provided that the above copyright
+ * notice appear in all copies and that both that copyright
+ * notice and this permission notice appear in supporting
+ * documentation. William E. Kempf makes no representations
+ * about the suitability of this software for any purpose.
+ * It is provided "as is" without express or implied warranty.
+ */
+
+/*
+ * Copyright (c) 1992-2012 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V6.00:0009 */

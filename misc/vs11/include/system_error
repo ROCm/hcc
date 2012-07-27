@@ -1,0 +1,692 @@
+// system_error standard header
+#pragma once
+#ifndef _SYSTEM_ERROR_
+#define _SYSTEM_ERROR_
+#ifndef RC_INVOKED
+#include <cerrno>
+#include <cstdlib>		// for strerror
+#include <stdexcept>	// for runtime_error
+
+ #pragma pack(push,_CRT_PACKING)
+ #pragma warning(push,3)
+ #pragma push_macro("new")
+ #undef new
+
+ #if _HAS_CPP0X
+
+ #else /* _HAS_CPP0X */
+ #error C++0X not fully supported
+ #endif /* _HAS_CPP0X */
+
+_STD_BEGIN
+		// ENUM errc
+
+	namespace errc {
+enum errc {	// names for generic error codes
+	address_family_not_supported = EAFNOSUPPORT,
+	address_in_use = EADDRINUSE,
+	address_not_available = EADDRNOTAVAIL,
+	already_connected = EISCONN,
+	argument_list_too_long = E2BIG,
+	argument_out_of_domain = EDOM,
+	bad_address = EFAULT,
+	bad_file_descriptor = EBADF,
+	bad_message = EBADMSG,
+	broken_pipe = EPIPE,
+	connection_aborted = ECONNABORTED,
+	connection_already_in_progress = EALREADY,
+	connection_refused = ECONNREFUSED,
+	connection_reset = ECONNRESET,
+	cross_device_link = EXDEV,
+	destination_address_required = EDESTADDRREQ,
+	device_or_resource_busy = EBUSY,
+	directory_not_empty = ENOTEMPTY,
+	executable_format_error = ENOEXEC,
+	file_exists = EEXIST,
+	file_too_large = EFBIG,
+	filename_too_long = ENAMETOOLONG,
+	function_not_supported = ENOSYS,
+	host_unreachable = EHOSTUNREACH,
+	identifier_removed = EIDRM,
+	illegal_byte_sequence = EILSEQ,
+	inappropriate_io_control_operation = ENOTTY,
+	interrupted = EINTR,
+	invalid_argument = EINVAL,
+	invalid_seek = ESPIPE,
+	io_error = EIO,
+	is_a_directory = EISDIR,
+	message_size = EMSGSIZE,
+	network_down = ENETDOWN,
+	network_reset = ENETRESET,
+	network_unreachable = ENETUNREACH,
+	no_buffer_space = ENOBUFS,
+	no_child_process = ECHILD,
+	no_link = ENOLINK,
+	no_lock_available = ENOLCK,
+	no_message_available = ENODATA,
+	no_message = ENOMSG,
+	no_protocol_option = ENOPROTOOPT,
+	no_space_on_device = ENOSPC,
+	no_stream_resources = ENOSR,
+	no_such_device_or_address = ENXIO,
+	no_such_device = ENODEV,
+	no_such_file_or_directory = ENOENT,
+	no_such_process = ESRCH,
+	not_a_directory = ENOTDIR,
+	not_a_socket = ENOTSOCK,
+	not_a_stream = ENOSTR,
+	not_connected = ENOTCONN,
+	not_enough_memory = ENOMEM,
+	not_supported = ENOTSUP,
+	operation_canceled = ECANCELED,
+	operation_in_progress = EINPROGRESS,
+	operation_not_permitted = EPERM,
+	operation_not_supported = EOPNOTSUPP,
+	operation_would_block = EWOULDBLOCK,
+	owner_dead = EOWNERDEAD,
+	permission_denied = EACCES,
+	protocol_error = EPROTO,
+	protocol_not_supported = EPROTONOSUPPORT,
+	read_only_file_system = EROFS,
+	resource_deadlock_would_occur = EDEADLK,
+	resource_unavailable_try_again = EAGAIN,
+	result_out_of_range = ERANGE,
+	state_not_recoverable = ENOTRECOVERABLE,
+	stream_timeout = ETIME,
+	text_file_busy = ETXTBSY,
+	timed_out = ETIMEDOUT,
+	too_many_files_open_in_system = ENFILE,
+	too_many_files_open = EMFILE,
+	too_many_links = EMLINK,
+	too_many_symbolic_link_levels = ELOOP,
+	value_too_large = EOVERFLOW,
+	wrong_protocol_type = EPROTOTYPE
+	};
+	}	// namespace errc
+
+typedef errc::errc generic_errno;
+
+		// ENUM io_errc
+
+	namespace io_errc {
+enum io_errc {	// error codes for ios_base::failure
+	stream = 1
+	};
+	}	// namespace io_errc
+
+typedef io_errc::io_errc _Io_errc;
+
+		// TEMPLATE CLASS is_error_code_enum
+template<class _Enum>
+	struct is_error_code_enum
+		: public false_type
+	{	// tests for error_code enumeration
+	};
+
+template<>
+	struct is_error_code_enum<_Io_errc>
+		: public true_type
+	{	// tests for error_condition enumeration
+	};
+
+		// TEMPLATE CLASS is_error_condition_enum
+template<class _Enum>
+	struct is_error_condition_enum
+		: public false_type
+	{	// tests for error_condition enumeration
+	};
+
+template<>
+	struct is_error_condition_enum<generic_errno>
+		: public true_type
+	{	// tests for error_condition enumeration
+	};
+
+class error_code;
+class error_condition;
+error_code make_error_code(generic_errno) _NOEXCEPT;
+error_code make_error_code(_Io_errc) _NOEXCEPT;
+error_condition make_error_condition(generic_errno) _NOEXCEPT;
+error_condition make_error_condition(_Io_errc) _NOEXCEPT;
+
+		// CLASS error_category
+class error_category;
+
+const error_category& generic_category();
+const error_category& iostream_category();
+const error_category& system_category();
+
+class error_category
+	{	// categorize an error
+public:
+	error_category()
+		{	// default constructor
+		}
+
+	virtual ~error_category() _NOEXCEPT
+		{	// destroy the object
+		}
+
+	virtual const char *name() const _NOEXCEPT = 0;
+
+	virtual string message(int _Errval) const = 0;
+
+	virtual error_condition
+		default_error_condition(int _Errval) const _NOEXCEPT;
+
+	virtual bool equivalent(int _Errval,
+		const error_condition& _Cond) const _NOEXCEPT;
+
+	virtual bool equivalent(const error_code& _Code,
+		int _Errval) const _NOEXCEPT;
+
+	bool operator==(const error_category& _Right) const _NOEXCEPT
+		{	// compare categories for equality
+		return (this == &_Right);
+		}
+
+	bool operator!=(const error_category& _Right) const _NOEXCEPT
+		{	// compare categories for inequality
+		return (!(*this == _Right));
+		}
+
+	bool operator<(const error_category& _Right) const _NOEXCEPT
+		{	// compare categories for order
+		return (this < &_Right);
+		}
+
+private:
+	error_category(const error_category&);	// not defined
+
+	error_category& operator=(const error_category&);	// not defined
+	};
+
+		// CLASS error_code
+class error_code
+	{	// store an implementation-specific error code and category
+public:
+	typedef error_code _Myt;
+
+	error_code()
+		: _Myval(0),
+			_Mycat(&system_category())
+		{	// construct non-error
+		}
+
+	error_code(int _Val, const error_category& _Cat)
+		: _Myval(_Val), _Mycat(&_Cat)
+		{	// construct from error code and category
+		}
+
+	template<class _Enum>
+		error_code(_Enum _Errcode,
+			typename enable_if<is_error_code_enum<_Enum>::value,
+				void>::type ** = 0)
+		: _Myval(0), _Mycat(0)
+		{	// construct from enumerated error code
+		*this = make_error_code(_Errcode);	// using ADL
+		}
+
+	void assign(int _Val, const error_category& _Cat)
+		{	// assign error code and category
+		_Myval = _Val;
+		_Mycat = &_Cat;
+		}
+
+	template<class _Enum>
+		typename enable_if<is_error_code_enum<_Enum>::value,
+			error_code>::type& operator=(_Enum _Errcode)
+		{	// assign enumerated error code
+		*this = make_error_code(_Errcode);	// using ADL
+		return (*this);
+		}
+
+	void clear() _NOEXCEPT
+		{	// assign non-error
+		_Myval = 0;
+		_Mycat = &system_category();
+		}
+
+	int value() const
+		{	// get error code
+		return (_Myval);
+		}
+
+	const error_category& category() const
+		{	// get category
+		return (*_Mycat);
+		}
+
+	error_condition default_error_condition() const;
+
+	string message() const
+		{	// get name of error code
+		return (category().message(value()));
+		}
+
+	_TYPEDEF_BOOL_TYPE;
+
+	_OPERATOR_BOOL() const _NOEXCEPT
+		{	// test for actual error
+		return (value() != 0 ? _CONVERTIBLE_TO_TRUE : 0);
+		}
+
+	bool operator!() const _NOEXCEPT
+		{	// test for actual error
+		return (value() == 0);
+		}
+
+	bool operator==(const error_code& _Right) const _NOEXCEPT
+		{	// test if *this == _Right
+		return (category() == _Right.category()
+			&& value() == _Right.value());
+		}
+
+	bool operator!=(const error_code& _Right) const _NOEXCEPT
+		{	// test if *this != _Right
+		return (!(*this == _Right));
+		}
+
+	bool operator<(const error_code& _Right) const _NOEXCEPT
+		{	// test if *this == _Right
+		return (category() < _Right.category()
+			|| category() == _Right.category()
+				&& value() < _Right.value());
+		}
+
+private:
+	int _Myval;	// the stored error number
+	const error_category *_Mycat;	// pointer to error category
+	};
+
+		// CLASS error_condition
+class error_condition
+	{	// store an abstract error code and category
+public:
+	typedef error_condition _Myt;
+
+	error_condition() _NOEXCEPT
+		: _Myval(0),
+			_Mycat(&generic_category())
+		{	// construct non-error
+		}
+
+	error_condition(int _Val, const error_category& _Cat) _NOEXCEPT
+		: _Myval(_Val), _Mycat(&_Cat)
+		{	// construct from error code and category
+		}
+
+	template<class _Enum>
+		error_condition(_Enum _Errcode,
+			typename enable_if<is_error_condition_enum<_Enum>::value,
+				void>::type ** = 0) _NOEXCEPT
+		: _Myval(0), _Mycat(0)
+		{	// construct from enumerated error code
+		*this = make_error_condition(_Errcode);	// using ADL
+		}
+
+	void assign(int _Val, const error_category& _Cat) _NOEXCEPT
+		{	// assign error code and category
+		_Myval = _Val;
+		_Mycat = &_Cat;
+		}
+
+	template<class _Enum>
+		typename enable_if<is_error_condition_enum<_Enum>::value,
+			error_condition>::type& operator=(_Enum _Errcode) _NOEXCEPT
+		{	// assign enumerated error code
+		*this = make_error_condition(_Errcode);	// using ADL
+		return (*this);
+		}
+
+	void clear() _NOEXCEPT
+		{	// assign non-error
+		_Myval = 0;
+		_Mycat = &generic_category();
+		}
+
+	int value() const _NOEXCEPT
+		{	// get error code
+		return (_Myval);
+		}
+
+	const error_category& category() const _NOEXCEPT
+		{	// get category
+		return (*_Mycat);
+		}
+
+	string message() const
+		{	// get name of error code
+		return (category().message(value()));
+		}
+
+	_TYPEDEF_BOOL_TYPE;
+
+	_OPERATOR_BOOL() const _NOEXCEPT
+		{	// test for actual error
+		return (value() != 0 ? _CONVERTIBLE_TO_TRUE : 0);
+		}
+
+	bool operator!() const _NOEXCEPT
+		{	// test for actual error
+		return (value() == 0);
+		}
+
+	bool operator==(const error_condition& _Right) const _NOEXCEPT
+		{	// test if *this == _Right
+		return (category() == _Right.category()
+			&& value() == _Right.value());
+		}
+
+	bool operator!=(const error_condition& _Right) const _NOEXCEPT
+		{	// test if *this != _Right
+		return (!(*this == _Right));
+		}
+
+	bool operator<(const error_condition& _Right) const _NOEXCEPT
+		{	// test if *this == _Right
+		return (category() < _Right.category()
+			|| category() == _Right.category()
+				&& value() < _Right.value());
+		}
+
+private:
+	int _Myval;	// the stored error number
+	const error_category *_Mycat;	// pointer to error category
+	};
+
+		// VIRTUALS FOR error_category
+inline error_condition
+	error_category::default_error_condition(int _Errval) const _NOEXCEPT
+	{	// make error_condition for error code
+	return (error_condition(_Errval, *this));
+	}
+
+inline bool
+	error_category::equivalent(int _Errval,
+		const error_condition& _Cond) const _NOEXCEPT
+	{	// test if error code same condition
+	return (default_error_condition(_Errval) == _Cond);
+	}
+
+inline bool
+	error_category::equivalent(const error_code& _Code,
+		int _Errval) const _NOEXCEPT
+	{	// test if conditions same for this category
+	return (*this == _Code.category() && _Code.value() == _Errval);
+	}
+
+		// MEMBER FUNCTIONS for error_code
+inline error_condition error_code::default_error_condition() const
+	{	// make error_condition for error code
+	return (category().default_error_condition(value()));
+	}
+
+		// OPERATOR== FOR error_code/error_condition
+inline bool operator==(
+	const error_code& _Left,
+	const error_condition& _Right) _NOEXCEPT
+	{	// test errors for equality
+	return (_Left.category().equivalent(_Left.value(), _Right)
+		|| _Right.category().equivalent(_Left, _Right.value()));
+	}
+
+inline bool operator==(
+	const error_condition& _Left,
+	const error_code& _Right) _NOEXCEPT
+	{	// test errors for equality
+	return (_Right.category().equivalent(_Right.value(), _Left)
+		|| _Left.category().equivalent(_Right, _Left.value()));
+	}
+
+		// OPERATOR!= FOR error_code/error_condition
+inline bool operator!=(
+	const error_code& _Left,
+	const error_condition& _Right) _NOEXCEPT
+	{	// test errors for inequality
+	return (!(_Left == _Right));
+	}
+
+inline bool operator!=(
+	const error_condition& _Left,
+	const error_code& _Right) _NOEXCEPT
+	{	// test errors for inequality
+	return (!(_Left == _Right));
+	}
+
+		// FUNCTION make_error_code
+inline error_code make_error_code(generic_errno _Errno) _NOEXCEPT
+	{	// make an error_code
+	return (error_code((int)_Errno, generic_category()));
+	}
+
+inline error_code make_error_code(_Io_errc _Errno) _NOEXCEPT
+	{	// make an error_code
+	return (error_code((int)_Errno, iostream_category()));
+	}
+
+		// FUNCTION make_error_condition
+inline error_condition make_error_condition(generic_errno _Errno) _NOEXCEPT
+	{	// make an error_condition
+	return (error_condition((int)_Errno, generic_category()));
+	}
+
+inline error_condition make_error_condition(_Io_errc _Errno) _NOEXCEPT
+	{	// make an error_condition
+	return (error_condition((int)_Errno, iostream_category()));
+	}
+
+		// TEMPLATE STRUCT SPECIALIZATION hash
+template<>
+	struct hash<error_code>
+		: public unary_function<error_code, size_t>
+	{	// hash functor for error_code
+	typedef error_code _Kty;
+
+	size_t operator()(const _Kty& _Keyval) const
+		{	// hash _Keyval to size_t value by pseudorandomizing transform
+		return (hash<int>()(_Keyval.value()));
+		}
+	};
+
+		// CLASS system_error
+class system_error
+	: public runtime_error
+	{	// base of all system-error exceptions
+public:
+	explicit system_error(error_code _Errcode)
+		: runtime_error(_Errcode.message()),
+			_Mycode(_Errcode)
+		{	// construct from error code and message string
+		_Makestr();
+		}
+
+	system_error(error_code _Errcode,
+		const string& _Message)
+		: runtime_error(_Message), _Mycode(_Errcode)
+		{	// construct from error code and message string
+		_Makestr();
+		}
+
+	system_error(int _Errval,
+		const error_category& _Errcat)
+		: runtime_error(error_code(_Errval, _Errcat).message()),
+			_Mycode(_Errval, _Errcat)
+		{	// construct from error code components and message string
+		_Makestr();
+		}
+
+	system_error(int _Errval,
+		const error_category& _Errcat,
+		const string& _Message)
+		: runtime_error(_Message), _Mycode(_Errval, _Errcat)
+		{	// construct from error code components and message string
+		_Makestr();
+		}
+
+	system_error(int _Errval,
+		const error_category& _Errcat,
+		const char *_Message)
+		: runtime_error(_Message), _Mycode(_Errval, _Errcat)
+		{	// construct from error code components and message string
+		_Makestr();
+		}
+
+//	virtual ~system_error() _NOEXCEPT
+//		{	// destroy the object
+//		}
+
+//	virtual const char *what() const _THROW0()
+//		{	// return pointer to message string
+//		return (_Mymes.c_str());
+//		}
+
+	const error_code& code() const _THROW0()
+		{	// return stored error code
+		return (_Mycode);
+		}
+
+ #if _HAS_EXCEPTIONS
+
+ #else /* _HAS_EXCEPTIONS */
+protected:
+	virtual void _Doraise() const
+		{	// perform class-specific exception handling
+		_RAISE(*this);
+		}
+ #endif /* _HAS_EXCEPTIONS */
+
+private:
+	void _Makestr()
+		{	// compose error message
+//		_Mymes = this->runtime_error::what();
+//		if (!_Mymes.empty())
+//			_Mymes.append(": ");
+//		_Mymes.append(_Mycode.message());
+		}
+
+	error_code _Mycode;	// the stored error code
+//	string _Mymes;		// the stored error message
+	};
+
+_CRTIMP2_PURE const char *__CLRCALL_PURE_OR_CDECL _Syserror_map(int);
+_CRTIMP2_PURE const char *__CLRCALL_PURE_OR_CDECL _Winerror_map(int);
+
+		// CLASS _Generic_error_category
+class _Generic_error_category
+	: public error_category
+	{	// categorize a generic error
+public:
+	_Generic_error_category()
+		{	// default constructor
+		}
+
+	virtual const char *name() const _NOEXCEPT
+		{	// get name of category
+		return ("generic");
+		}
+
+	virtual string message(int _Errcode) const
+		{	// convert to name of error
+		const char *_Name = _Syserror_map(_Errcode);
+		return (string(_Name != 0 ? _Name : "unknown error"));
+		}
+	};
+
+		// CLASS _Iostream_error_category
+class _Iostream_error_category
+	: public _Generic_error_category
+	{	// categorize a Posix error
+public:
+	_Iostream_error_category()
+		{	// default constructor
+		}
+
+	virtual const char *name() const _NOEXCEPT
+		{	// get name of category
+		return ("iostream");
+		}
+
+	virtual string message(int _Errcode) const
+		{	// convert to name of error
+		if (_Errcode == (int)io_errc::stream)
+			return ("iostream stream error");
+		else
+			return (_Generic_error_category::message(_Errcode));
+		}
+	};
+
+		// CLASS _System_error_category
+class _System_error_category
+	: public _Generic_error_category
+	{	// categorize a generic error
+public:
+	_System_error_category()
+		{	// default constructor
+		}
+
+	virtual const char *name() const _NOEXCEPT
+		{	// get name of category
+		return ("system");
+		}
+
+	virtual string message(int _Errcode) const
+		{	// convert to name of error
+		const char *_Name = _Winerror_map(_Errcode);
+		return (string(_Name != 0 ? _Name : "unknown error"));
+		}
+
+	virtual error_condition
+		default_error_condition(int _Errval) const _NOEXCEPT
+		{	// make error_condition for error code (generic if possible)
+		if (_Syserror_map(_Errval))
+			return (error_condition(_Errval, generic_category()));
+		else
+			return (error_condition(_Errval, system_category()));
+		}
+	};
+
+template<class _Cat>
+	struct _Error_objects
+	{	// wraps category objects
+	_Error_objects()
+		{	// default constructor
+		}
+
+	static _Generic_error_category _Generic_object;
+	static _Iostream_error_category _Iostream_object;
+	static _System_error_category _System_object;
+	};
+
+template<class _Cat>
+	_Generic_error_category _Error_objects<_Cat>::_Generic_object;
+template<class _Cat>
+	_Iostream_error_category _Error_objects<_Cat>::_Iostream_object;
+template<class _Cat>
+	_System_error_category _Error_objects<_Cat>::_System_object;
+
+inline const error_category& generic_category() _NOEXCEPT
+	{	// get generic_category
+	return (_Error_objects<int>::_Generic_object);
+	}
+
+inline const error_category& iostream_category() _NOEXCEPT
+	{	// get iostream_category
+	return (_Error_objects<int>::_Iostream_object);
+	}
+
+inline const error_category& system_category() _NOEXCEPT
+	{	// get system_category
+	return (_Error_objects<int>::_System_object);
+	}
+_STD_END
+ #pragma pop_macro("new")
+ #pragma warning(pop)
+ #pragma pack(pop)
+#endif /* RC_INVOKED */
+#endif /* _SYSTEM_ERROR_ */
+
+/*
+ * Copyright (c) 1992-2012 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V6.00:0009 */

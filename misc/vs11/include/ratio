@@ -1,0 +1,323 @@
+// ratio standard header
+#pragma once
+#ifndef _RATIO_
+#define _RATIO_
+#ifndef RC_INVOKED
+#include <yvals.h>
+#include <stdint.h>
+#include <type_traits>
+
+ #pragma pack(push,_CRT_PACKING)
+ #pragma warning(push,3)
+ #pragma push_macro("new")
+ #undef new
+
+ #pragma warning(disable: 6285)
+
+_STD_BEGIN
+#define _ABS(a)	((a) < 0 ? -(a) : (a))
+#define _MULT_OK(a, b)	(_ABS(a) <= INTMAX_MAX / _ABS(b))
+#define _ADD_OK(a, b)	((a) <= 0 && 0 <= (b) || (b) < 0 && 0 < (a) \
+	|| _ABS(b) <= INTMAX_MAX - _ABS(a))
+
+	// CLASS TEMPLATE _Abs
+template<intmax_t _Val>
+	struct _Abs
+	{   // computes absolute value of _Val
+	static const intmax_t value = _Val < 0 ? -_Val : _Val;
+	};
+
+	// CLASS TEMPLATE _Gcd
+template<intmax_t _Ax,
+	intmax_t _Bx>
+	struct _GcdX
+	{   // computes greatest common denominator of _Ax and _Bx
+	static const intmax_t value = _GcdX<_Bx, _Ax % _Bx>::value;
+	};
+
+template<intmax_t _Ax>
+	struct _GcdX<_Ax, 0>
+	{   // compute greatest common denominator of _Ax and 0
+	static const intmax_t value = _Ax;
+	};
+
+template<intmax_t _Ax,
+	intmax_t _Bx>
+	struct _Gcd
+	{   // computes greatest common denominator of _Ax and _Bx
+	static const intmax_t value =
+		_GcdX<_Abs<_Ax>::value, _Abs<_Bx>::value>::value;
+	};
+
+	// CLASS TEMPLATE ratio
+template<intmax_t _Nx, intmax_t _Dx = 1>
+	struct ratio
+	{   // holds the ratio of _Nx to _Dx
+	ratio()
+		{	// test constraints
+		static_assert(_Dx != 0,
+			"zero denominator");
+		static_assert(-INTMAX_MAX <= _Nx && -INTMAX_MAX <= _Dx,
+			"value not representable");
+		}
+
+	static const intmax_t num =
+		_Nx < 0 && _Dx < 0 || 0 <= _Nx && 0 <= _Dx
+			? _Abs<_Nx>::value
+				/ _Gcd<_Abs<_Nx>::value, _Abs<_Dx>::value>::value
+			: -_Abs<_Nx>::value
+				/ _Gcd<_Abs<_Nx>::value, _Abs<_Dx>::value>::value;
+	static const intmax_t den =
+		_Abs<_Dx>::value
+			/ _Gcd<_Abs<_Nx>::value, _Abs<_Dx>::value>::value;
+
+	typedef ratio<num, den> type;
+	};
+
+	// CLASS TEMPLATE ratio_add
+template<intmax_t _N1,
+	intmax_t _D1,
+	intmax_t _N2,
+	intmax_t _D2,
+	intmax_t _Gx>
+	struct _Ratio_add
+	{	// scale large values by gcd(_D1, _D2) to help avoid overflow
+	_Ratio_add()
+		{	// test constraints
+		static_assert(_MULT_OK(_N1, _D2),
+			"integer arithmetic overflow");
+		static_assert(_MULT_OK(_N2, _D1),
+			"integer arithmetic overflow");
+		static_assert(_ADD_OK(_N1 * _D2, _N2 * _D1),
+			"integer arithmetic overflow");
+		static_assert(_MULT_OK(_D1, _D2),
+			"integer arithmetic overflow");
+		static_assert(_MULT_OK(_D1 * _D2, _Gx),
+			"integer arithmetic overflow");
+		}
+
+	typedef ratio<_N1 * _D2 + _N2 * _D1, _D1 * _D2 * _Gx> type;
+	};
+
+template<class _R1,
+	class _R2>
+	struct _Ratio_add2;
+
+template<intmax_t _N1,
+	intmax_t _D1,
+	intmax_t _N2,
+	intmax_t _D2>
+	struct _Ratio_add2<ratio<_N1, _D1>, ratio<_N2, _D2> >
+	{   // add two ratios
+	static const intmax_t _Gx = _Gcd<_D1, _D2>::value;
+
+	typedef typename _Ratio_add<_N1, _D1 / _Gx,
+		_N2, _D2 / _Gx, _Gx>::type type;
+	};
+
+template<class _R1,
+	class _R2>
+	struct ratio_add
+	{   // add two ratios
+	typedef typename _Ratio_add2<_R1, _R2>::type type;
+	};
+
+	// CLASS TEMPLATE ratio_subtract
+template<class _R1,
+	class _R2>
+	struct _Ratio_subtract2;
+
+template<intmax_t _N1,
+	intmax_t _D1,
+	intmax_t _N2,
+	intmax_t _D2>
+	struct _Ratio_subtract2<ratio<_N1, _D1>, ratio<_N2, _D2> >
+	{   // subtract two ratios
+	static const intmax_t _Gx = _Gcd<_D1, _D2>::value;
+
+	typedef typename _Ratio_add<_N1, _D1 / _Gx,
+		-_N2, _D2 / _Gx, _Gx>::type type;
+	};
+
+template<class _R1,
+	class _R2>
+	struct ratio_subtract
+	{   // subtract two ratios
+	typedef typename _Ratio_subtract2<_R1, _R2>::type type;
+	};
+
+	// CLASS TEMPLATE ratio_multiply
+template<intmax_t _N1,
+	intmax_t _D1,
+	intmax_t _N2,
+	intmax_t _D2>
+	struct _Ratio_multiply
+	{	// multiply two ratios
+	_Ratio_multiply()
+		{	// test constraints
+		static_assert(_MULT_OK(_N1, _N2),
+			"integer arithmetic overflow");
+		static_assert(_MULT_OK(_D1, _D2),
+			"integer arithmetic overflow");
+		}
+
+	typedef ratio<_N1 * _N2, _D1 * _D2> type;
+	};
+
+template<class _R1,
+	class _R2>
+	struct _Ratio_multiply2;
+
+template<intmax_t _N1,
+	intmax_t _D1,
+	intmax_t _N2,
+	intmax_t _D2>
+	struct _Ratio_multiply2<ratio<_N1, _D1>, ratio<_N2, _D2> >
+	{   // multiply two ratios
+	static const intmax_t _G1 = _Gcd<_N1, _D2>::value;
+	static const intmax_t _G2 = _Gcd<_N2, _D1>::value;
+
+	typedef typename _Ratio_multiply<_N1 / _G1, _D1 / _G2,
+		_N2 / _G2, _D2 / _G1>::type type;
+	};
+
+template<class _R1,
+	class _R2>
+	struct ratio_multiply
+	{   // multiply two ratios
+	typedef typename _Ratio_multiply2<_R1, _R2>::type type;
+	};
+
+	// CLASS TEMPLATE ratio_divide
+template<class _R1,
+	class _R2>
+	struct _Ratio_divide2;
+
+template<intmax_t _N1,
+	intmax_t _D1,
+	intmax_t _N2,
+	intmax_t _D2>
+	struct _Ratio_divide2<ratio<_N1, _D1>, ratio<_N2, _D2> >
+	{   // divide two ratios
+	_Ratio_divide2()
+		{	// test constraints
+		static_assert(_N2 != 0,
+			"division by zero");
+		}
+
+	typedef typename ratio_multiply<ratio<_N1, _D1>,
+		ratio<_D2, _N2> >::type type;
+	};
+
+template<class _R1,
+	class _R2>
+	struct ratio_divide
+	{   // divide two ratios
+	typedef typename _Ratio_divide2<_R1, _R2>::type type;
+	};
+
+	// CLASS TEMPLATE ratio_equal
+template<class _R1,
+	class _R2>
+	struct ratio_equal;
+
+template<intmax_t _N1,
+	intmax_t _D1,
+	intmax_t _N2,
+	intmax_t _D2>
+	struct ratio_equal<ratio<_N1, _D1>, ratio<_N2, _D2> >
+		: integral_constant<bool, _N1 == _N2 && _D1 == _D2>
+	{	// tests if ratio == ratio
+	};
+
+	// CLASS TEMPLATE ratio_not_equal
+template<class _R1,
+	class _R2>
+	struct ratio_not_equal
+		: integral_constant<bool, !ratio_equal<_R1, _R2>::value>
+	{	// tests if ratio != ratio
+	};
+
+	// CLASS TEMPLATE ratio_less
+template<class _R1,
+	class _R2>
+	struct ratio_less;
+
+template<intmax_t _N1,
+	intmax_t _D1,
+	intmax_t _N2,
+	intmax_t _D2>
+	struct ratio_less<ratio<_N1, _D1>, ratio<_N2, _D2> >
+		: integral_constant<bool, _N1 * _D2 < _D1 * _N2>
+	{	// tests if ratio < ratio
+	};
+
+	// CLASS TEMPLATE ratio_less_equal
+template<class _R1,
+	class _R2>
+	struct ratio_less_equal
+		: integral_constant<bool, !ratio_less<_R2, _R1>::value>
+	{	// tests if ratio <= ratio
+	};
+
+	// CLASS TEMPLATE ratio_greater
+template<class _R1,
+	class _R2>
+	struct ratio_greater
+		: integral_constant<bool, ratio_less<_R2, _R1>::value>
+	{	// tests if ratio > ratio
+	};
+
+	// CLASS TEMPLATE ratio_greater_equal
+template<class _R1,
+	class _R2>
+	struct ratio_greater_equal
+		: integral_constant<bool, !ratio_less<_R1, _R2>::value>
+	{	// tests if ratio >= ratio
+	};
+
+	// CONSTANTS
+
+ #if 1000000 <= INTMAX_MAX / 1000000000 / 1000000000
+typedef ratio<1, (_LONGLONG)1000000 * 1000000000 * 1000000000> yocto;
+ #endif /* 1000000 <= INTMAX_MAX / 1000000000 / 1000000000 */
+
+ #if 1000 <= INTMAX_MAX / 1000000000 / 1000000000
+typedef ratio<1, (_LONGLONG)1000 * 1000000000 * 1000000000> zepto;
+ #endif /* 1000 <= INTMAX_MAX / 1000000000 / 1000000000 */
+
+typedef ratio<1, (_LONGLONG)1000000000 * 1000000000> atto;
+typedef ratio<1, (_LONGLONG)1000000 * 1000000000> femto;
+typedef ratio<1, (_LONGLONG)1000 * 1000000000> pico;
+typedef ratio<1, 1000000000> nano;
+typedef ratio<1, 1000000> micro;
+typedef ratio<1, 1000> milli;
+typedef ratio<1, 100> centi;
+typedef ratio<1, 10> deci;
+typedef ratio<10, 1> deca;
+typedef ratio<100, 1> hecto;
+typedef ratio<1000, 1> kilo;
+typedef ratio<1000000, 1> mega;
+typedef ratio<1000000000, 1> giga;
+typedef ratio<(_LONGLONG)1000 * 1000000000, 1> tera;
+typedef ratio<(_LONGLONG)1000000 * 1000000000, 1> peta;
+typedef ratio<(_LONGLONG)1000000000 * 1000000000, 1> exa;
+
+ #if 1000 <= INTMAX_MAX / 1000000000 / 1000000000
+typedef ratio<(_LONGLONG)1000 * 1000000000 * 1000000000, 1> zetta;
+ #endif /* 1000 <= INTMAX_MAX / 1000000000 / 1000000000 */
+
+ #if 1000000 <= INTMAX_MAX / 1000000000 / 1000000000
+typedef ratio<(_LONGLONG)1000000 * 1000000000 * 1000000000, 1> yotta;
+ #endif /* 1000000 <= INTMAX_MAX / 1000000000 / 1000000000 */
+_STD_END
+ #pragma pop_macro("new")
+ #pragma warning(pop)
+ #pragma pack(pop)
+#endif /* RC_INVOKED */
+#endif /* _RATIO_ */
+
+/*
+ * Copyright (c) 1992-2012 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V6.00:0009 */

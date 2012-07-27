@@ -1,0 +1,960 @@
+// tuple TR1 header
+#pragma once
+#ifndef _TUPLE_
+#define _TUPLE_
+#ifndef RC_INVOKED
+#include <type_traits>
+#include <xutility>
+#include <new>
+
+ #pragma pack(push,_CRT_PACKING)
+ #pragma warning(push,3)
+ #pragma push_macro("new")
+ #undef new
+
+ #pragma warning(disable: 4100 4521 4522)
+
+_STD_BEGIN
+	// STRUCT _Is_nothrow_constructible
+template<class _Tuple1,
+	class _Tuple2>
+	struct _Is_nothrow_constructible
+	: true_type
+	{	// test if all tuple element pairs are nothrow constructible
+	};
+
+	// STRUCT _Is_nothrow_assignable
+template<class _Tuple1,
+	class _Tuple2>
+	struct _Is_nothrow_assignable
+	: true_type
+	{	// test if all tuple element pairs are nothrow assignable
+	};
+
+template<class _This,
+	class _This2>
+	struct _Is_nothrow_constructible<tuple<_This>, tuple<_This2> >
+	: integral_constant<bool,
+		is_nothrow_constructible<_This, _This2&&>::value>
+	{	// test if a single tuple element pair is nothrow constructible
+	};
+
+#define _CLASS_IS_NOTHROW_CONSTRUCTIBLE( \
+	TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, X1, X2, X3, X4) \
+template<class _This, \
+	class _Xarg, \
+	class _This2, \
+	class _Xarg2 COMMA LIST(_CLASS_TYPE) COMMA LIST(_CLASS_TYPEX)> \
+	struct _Is_nothrow_constructible<tuple<_This, _Xarg COMMA LIST(_TYPE)>, \
+		tuple<_This2, _Xarg2 COMMA LIST(_TYPEX)> > \
+	: integral_constant<bool, \
+		is_nothrow_constructible<_This, _This2&&>::value \
+			&& _Is_nothrow_constructible<tuple<_Xarg COMMA LIST(_TYPE)>, \
+				tuple<_Xarg2 COMMA LIST(_TYPEX)> >::value> \
+	{	/* test if all tuple element pairs are nothrow constructible */ \
+	};
+
+_VARIADIC_EXPAND_0X(_CLASS_IS_NOTHROW_CONSTRUCTIBLE, , , , )
+#undef _CLASS_IS_NOTHROW_CONSTRUCTIBLE
+
+template<class _This,
+	class _This2>
+	struct _Is_nothrow_assignable<tuple<_This>, tuple<_This2> >
+	: integral_constant<bool,
+		is_nothrow_assignable<_This, _This2&&>::value>
+	{	// test if a single tuple element pair is nothrow assignable
+	};
+
+#define _CLASS_IS_NOTHROW_ASSIGNABLE( \
+	TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, X1, X2, X3, X4) \
+template<class _This, \
+	class _Xarg, \
+	class _This2, \
+	class _Xarg2 COMMA LIST(_CLASS_TYPE) COMMA LIST(_CLASS_TYPEX)> \
+	struct _Is_nothrow_assignable<tuple<_This, _Xarg COMMA LIST(_TYPE)>, \
+		tuple<_This2, _Xarg2 COMMA LIST(_TYPEX)> > \
+	: integral_constant<bool, \
+		is_nothrow_assignable<_This, _This2&&>::value \
+			&& _Is_nothrow_assignable<tuple<_Xarg COMMA LIST(_TYPE)>, \
+				tuple<_Xarg2 COMMA LIST(_TYPEX)> >::value> \
+	{	/* test if all tuple element pairs are nothrow assignable */ \
+	};
+
+_VARIADIC_EXPAND_0X(_CLASS_IS_NOTHROW_ASSIGNABLE, , , , )
+#undef _CLASS_IS_NOTHROW_ASSIGNABLE
+
+	// STRUCT _Tuple_enable
+template<class _Src,
+	class _Dest>
+	struct _Tuple_enable
+	: public false_type
+	{
+	};
+
+template<>
+	struct _Tuple_enable<tuple<>, tuple<>>
+	: public true_type
+	{
+	};
+
+#define _TUPLE_ENABLE( \
+	TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, X1, X2, X3, X4) \
+template<class _Src0, \
+	class _Dest0 COMMA LIST(_CLASS_TYPE) COMMA LIST(_CLASS_TYPEX)> \
+	struct _Tuple_enable< \
+		tuple<_Src0 COMMA LIST(_TYPE)>, \
+		tuple<_Dest0 COMMA LIST(_TYPEX)> > \
+	: public integral_constant<bool, \
+		is_convertible<_Src0, _Dest0>::value && _Tuple_enable< \
+		tuple<LIST(_TYPE)>, tuple<LIST(_TYPEX)> >::value> \
+	{	/* test if all tuple element pairs are implicitly convertible */ \
+	};
+
+_VARIADIC_EXPAND_0X(_TUPLE_ENABLE, , , , )
+#undef _TUPLE_ENABLE
+
+	// CLASS _Ignore
+class _Ignore
+	{	// class that ignores assignments
+public:
+	_Ignore()
+		{	// construct
+		}
+
+	template<class _Ty>
+		void operator=(const _Ty&) const
+		{	// do nothing
+		}
+	};
+
+const _Ignore ignore;
+
+		// STRUCT _Tuple_alloc_t
+struct _Tuple_alloc_t
+	{	// tag type to disambiguate added allocator argument
+	};
+
+const _Tuple_alloc_t _Tuple_alloc = _Tuple_alloc_t();
+
+	// TEMPLATE CLASS _Tuple_val
+template<class _Ty>
+	struct _Tuple_val
+	{	// stores each value in a tuple
+	_Tuple_val()
+		: _Val()
+		{	// default construct
+		}
+
+	template<class _Other>
+		_Tuple_val(_Other&& _Arg)
+		: _Val(_STD forward<_Other>(_Arg))
+		{	// construct with argument
+		}
+
+#define _TUPLE_VAL_CONSTRUCTOR( \
+	TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, X1, X2, X3, X4) \
+	template<class _Alloc COMMA LIST(_CLASS_TYPE)> \
+		_Tuple_val(const _Alloc&, \
+			typename enable_if<!uses_allocator<_Ty, _Alloc>::value, \
+				_Tuple_alloc_t>::type COMMA LIST(_TYPE_REFREF_ARG)) \
+		: _Val(LIST(_FORWARD_ARG)) \
+		{	/* construct with optional arguments, no allocator */ \
+		} \
+	template<class _Alloc COMMA LIST(_CLASS_TYPE)> \
+		_Tuple_val(const _Alloc& _Al, \
+			typename enable_if<uses_allocator<_Ty, _Alloc>::value \
+				&& is_constructible<_Ty, \
+					allocator_arg_t, _Alloc>::value, \
+				_Tuple_alloc_t>::type  COMMA LIST(_TYPE_REFREF_ARG)) \
+		: _Val(allocator_arg, _Al COMMA LIST(_FORWARD_ARG)) \
+		{	/* construct with optional arguments, leading allocator */ \
+		} \
+	template<class _Alloc, \
+		class _Xarg0 COMMA LIST(_CLASS_TYPE)> \
+		_Tuple_val(const _Alloc& _Al, \
+			typename enable_if<uses_allocator<_Ty, _Alloc>::value \
+				&& !is_constructible<_Ty, \
+					allocator_arg_t, _Alloc>::value, \
+				_Tuple_alloc_t>::type, _Xarg0&& _X0 \
+					COMMA LIST(_TYPE_REFREF_ARG)) \
+		: _Val(_X0 COMMA LIST(_FORWARD_ARG), _Al) \
+		{	/* construct with arguments, trailing allocator */ \
+		}
+
+_VARIADIC_EXPAND_0X(_TUPLE_VAL_CONSTRUCTOR, , , , )
+#undef _TUPLE_VAL_CONSTRUCTOR
+
+	template<class _Alloc>
+		_Tuple_val(const _Alloc& _Al,
+			typename enable_if<uses_allocator<_Ty, _Alloc>::value
+				&& !is_constructible<_Ty,
+					allocator_arg_t, _Alloc>::value,
+				_Tuple_alloc_t>::type)
+		: _Val(_Al)
+		{	// construct with no arguments, trailing allocator
+		}
+
+	template<class _Other>
+		_Tuple_val& operator=(_Other&& _Right)
+		{	// assign
+		_Val = _STD forward<_Other>(_Right);
+		return (*this);
+		}
+
+	_Ty _Val;
+	};
+
+	// CLASS tuple
+//template<class = _Nil, _MAX_CLASS_LIST>
+//	class tuple;
+
+template<>
+	class tuple<_Nil, _MAX_NIL_LIST>
+	{	// empty tuple
+public:
+	typedef tuple<> _Myt;
+
+	tuple()
+		{	// default construct
+		}
+
+	template<class _Alloc>
+		tuple(allocator_arg_t, const _Alloc&) _NOEXCEPT
+		{	// default construct, allocator
+		}
+
+	tuple(const tuple&) _NOEXCEPT
+		{	// copy construct
+		}
+
+	template<class _Alloc>
+		tuple(allocator_arg_t, const _Alloc&, const tuple&) _NOEXCEPT
+		{	// copy construct, allocator
+		}
+
+	void swap(_Myt&) _NOEXCEPT
+		{	// swap elements
+		}
+
+	bool _Equals(const _Myt&) const _NOEXCEPT
+		{	// test if *this == _Right
+		return (true);
+		}
+
+	bool _Less(const _Myt&) const _NOEXCEPT
+		{	// test if *this < _Right
+		return (false);
+		}
+	};
+
+#define _CLASS_TUPLE( \
+	TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, X1, X2, X3, X4) \
+template<class _This COMMA LIST(_CLASS_TYPEX)> \
+	class tuple<_This, LIST(_TYPEX) COMMA PADDING_LIST(_NIL_PAD)> \
+	: private tuple<LIST(_TYPEX) COMMA PADDING_LIST(_NIL_PAD)> \
+	{	/* recursive tuple definition, one or more elements */ \
+public: \
+	typedef _This _This_type; \
+	typedef tuple<_This, LIST(_TYPEX) COMMA PADDING_LIST(_NIL_PAD)> _Myt; \
+	typedef tuple<LIST(_TYPEX) COMMA PADDING_LIST(_NIL_PAD)> _Mybase; \
+_TUPLE_NONVARIADICS \
+_TUPLE_VARIADICS( \
+	TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, X1, X2, X3, X4) \
+	_Tuple_val<_This> _Myfirst;	/* the stored element */ \
+	};
+
+#define _TUPLE_NONVARIADICS \
+	tuple() \
+		: _Mybase(), \
+			_Myfirst() \
+		{	/* construct default */ \
+		} \
+	template<class _Alloc> \
+		tuple(allocator_arg_t, const _Alloc& _Al) \
+		: _Mybase(allocator_arg, _Al), \
+			_Myfirst(_Al, _Tuple_alloc) \
+		{	/* construct default, allocator */ \
+		} \
+	tuple(const _Myt& _Right) \
+		: _Mybase(_Right._Get_rest()), \
+			_Myfirst(_Right._Myfirst._Val) \
+		{	/* construct by copying */ \
+		} \
+	template<class _Alloc> \
+		tuple(allocator_arg_t, const _Alloc& _Al, \
+			const _Myt& _Right) \
+		: _Mybase(allocator_arg, _Al, _Right._Get_rest()), \
+			_Myfirst(_Al, _Tuple_alloc, \
+				_Right._Myfirst._Val) \
+		{	/* construct by copying, allocator */ \
+		} \
+	template<class _First, \
+		class _Second> \
+		tuple(const pair<_First, _Second>& _Right, \
+			typename enable_if<_Tuple_enable< \
+				tuple<const _First&, const _Second&>, _Myt>::value, \
+				void>::type ** = 0) \
+		: _Mybase(tuple<_Second>(_Right.second)), \
+			_Myfirst(_Right.first) \
+		{	/* construct by copying pair */ \
+		/* no static_assert necessary */ \
+		} \
+	template<class _Alloc, \
+		class _First, \
+		class _Second> \
+		tuple(allocator_arg_t, const _Alloc& _Al, \
+			const pair<_First, _Second>& _Right, \
+			typename enable_if<_Tuple_enable< \
+				tuple<const _First&, const _Second&>, _Myt>::value, \
+				void>::type ** = 0) \
+		: _Mybase(allocator_arg, _Al, tuple<_Second>(_Right.second)), \
+			_Myfirst(_Al, _Tuple_alloc, \
+				_Right.first) \
+		{	/* construct by copying pair, allocator */ \
+		/* no static_assert necessary */ \
+		} \
+	_Myt& operator=(const _Myt& _Right) \
+		{	/* assign */ \
+		_Myfirst._Val = _Right._Myfirst._Val; \
+		(_Mybase&)*this = _Right._Get_rest(); \
+		return (*this); \
+		} \
+	template<class _First, \
+		class _Second> \
+		_Myt& operator=(const pair<_First, _Second>& _Right) \
+		{	/* assign by copying pair */ \
+		static_assert(tuple_size<_Myt>::value == 2, \
+			"assigning to tuple from object with different size"); \
+		_Myfirst._Val = _Right.first; \
+		(_Mybase&)*this = tuple<_Second>(_Right.second); \
+		return (*this); \
+		} \
+	tuple(_Myt&& _Right) \
+		: _Mybase(_STD forward<_Mybase>(_Right._Get_rest())), \
+			_Myfirst(_STD forward<_This>(_Right._Myfirst._Val)) \
+		{	/* construct by moving */ \
+		} \
+	template<class _Alloc> \
+		tuple(allocator_arg_t, const _Alloc& _Al, \
+			_Myt&& _Right) \
+		: _Mybase(allocator_arg, _Al, \
+				_STD forward<_Mybase>(_Right._Get_rest())), \
+			_Myfirst(_Al, _Tuple_alloc, \
+				_STD forward<_This>(_Right._Myfirst._Val)) \
+		{	/* construct by moving, allocator */ \
+		} \
+	template<class _First, \
+		class _Second> \
+		tuple(pair<_First, _Second>&& _Right, \
+			typename enable_if<_Tuple_enable< \
+				tuple<_First, _Second>, _Myt>::value, \
+				void>::type ** = 0) \
+		: _Mybase(tuple<_Second>(_STD forward<_Second>(_Right.second))), \
+			_Myfirst(_STD forward<_First>(_Right.first)) \
+		{	/* construct by moving pair */ \
+		/* no static_assert necessary */ \
+		} \
+	template<class _Alloc, \
+		class _First, \
+		class _Second> \
+		tuple(allocator_arg_t, const _Alloc& _Al, \
+			pair<_First, _Second>&& _Right, \
+			typename enable_if<_Tuple_enable< \
+				tuple<_First, _Second>, _Myt>::value, \
+				void>::type ** = 0) \
+		: _Mybase(allocator_arg, _Al, \
+				tuple<_Second>(_STD forward<_Second>(_Right.second))), \
+			_Myfirst(_Al, _Tuple_alloc, \
+				_STD forward<_First>(_Right.first)) \
+		{	/* construct by moving pair, allocator */ \
+		/* no static_assert necessary */ \
+		} \
+	_Myt& operator=(_Myt&& _Right) \
+		{	/* assign by moving */ \
+		_Myfirst = _STD forward<_This>(_Right._Myfirst._Val); \
+		(_Mybase&)*this = _STD forward<_Mybase>(_Right._Get_rest()); \
+		return (*this); \
+		} \
+	template<class _First, \
+		class _Second> \
+		_Myt& operator=(pair<_First, _Second>&& _Right) \
+		{	/* assign by moving pair */ \
+		static_assert(tuple_size<_Myt>::value == 2, \
+			"assigning to tuple from object with different size"); \
+		_Myfirst._Val = _STD forward<_First>(_Right.first); \
+		(_Mybase&)*this = \
+			tuple<_Second>(_STD forward<_Second>(_Right.second)); \
+		return (*this); \
+		} \
+	_Mybase& _Get_rest() \
+		{	/* get reference to rest of elements */ \
+		return (*this); \
+		} \
+	const _Mybase& _Get_rest() const \
+		{	/* get const reference to rest of elements */ \
+		return (*this); \
+		} \
+	void swap(tuple& _Right) \
+		{	/* swap *this and _Right */ \
+		_Swap_adl(_Myfirst._Val, _Right._Myfirst._Val); \
+		_Mybase::swap((_Mybase&)_Right); \
+		}
+
+#define _TUPLE_VARIADICS( \
+	TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, X1, X2, X3, X4) \
+	TEMPLATE_LIST(_CLASS_TYPE) \
+		explicit tuple(_Tuple_alloc_t COMMA LIST(_TYPE_REFREF_ARG)) \
+		: _Mybase(LIST(_FORWARD_ARG)), \
+			_Myfirst(allocator_arg) \
+		{	/* construct smuggled allocator_arg_t element */ \
+		} \
+	template<class _Xarg0 COMMA LIST(_CLASS_TYPE)> \
+		tuple(const tuple<_Xarg0 COMMA LIST(_TYPE)>& _Right, \
+			typename enable_if<_Tuple_enable< \
+				tuple<const _Xarg0& COMMA LIST(_CONST_TYPE_REF)>, _Myt>::value, \
+				void>::type ** = 0) \
+		: _Mybase(_Right._Get_rest()), _Myfirst(_Right._Myfirst._Val) \
+		{	/* construct by copying same size tuple */ \
+		} \
+	template<class _Alloc, \
+		class _Xarg0 COMMA LIST(_CLASS_TYPE)> \
+		tuple(allocator_arg_t, const _Alloc& _Al, \
+			const tuple<_Xarg0 COMMA LIST(_TYPE)>& _Right, \
+			typename enable_if<_Tuple_enable< \
+				tuple<const _Xarg0& COMMA LIST(_CONST_TYPE_REF)>, _Myt>::value, \
+				void>::type ** = 0) \
+		: _Mybase(allocator_arg, _Al, _Right._Get_rest()), \
+			_Myfirst(_Al, _Tuple_alloc, \
+				_Right._Myfirst._Val) \
+		{	/* construct by copying same size tuple, allocator */ \
+		} \
+	explicit tuple(const _This& _Arg0 COMMA LIST(_CONST_TYPEX_REF_ARG)) \
+		: _Mybase(LIST(_ARGX)), \
+			_Myfirst(_Arg0) \
+		{	/* construct from one or more copied elements */ \
+		} \
+	template<class _Alloc> \
+		tuple(allocator_arg_t, const _Alloc& _Al, \
+			const _This& _Arg0 COMMA LIST(_CONST_TYPEX_REF_ARG)) \
+		: _Mybase(allocator_arg, _Al COMMA LIST(_ARGX)), \
+			_Myfirst(_Al, _Tuple_alloc, _Arg0) \
+		{	/* construct from one or more copied elements, allocator */ \
+		} \
+	template<class _Xarg0 COMMA LIST(_CLASS_TYPE)> \
+		explicit tuple(_Xarg0&& _Arg0 COMMA LIST(_TYPE_REFREF_ARG), \
+			typename enable_if<_Tuple_enable< \
+				tuple<_Xarg0 COMMA LIST(_TYPE)>, _Myt>::value, \
+				void>::type ** = 0) \
+		: _Mybase(LIST(_FORWARD_ARG)), \
+			_Myfirst(_STD forward<_Xarg0>(_Arg0)) \
+		{	/* construct from one or more moved elements */ \
+		} \
+	template<class _Alloc, \
+		class _Xarg0 COMMA LIST(_CLASS_TYPE)> \
+		tuple(allocator_arg_t, const _Alloc& _Al, \
+			_Xarg0&& _Arg0 COMMA LIST(_TYPE_REFREF_ARG), \
+			typename enable_if<_Tuple_enable< \
+				tuple<_Xarg0 COMMA LIST(_TYPE)>, _Myt>::value, \
+				void>::type ** = 0) \
+		: _Mybase(allocator_arg, _Al COMMA LIST(_FORWARD_ARG)), \
+			_Myfirst(_Al, _Tuple_alloc, \
+				_STD forward<_Xarg0>(_Arg0)) \
+		{	/* construct from one or more moved elements, allocator */ \
+		} \
+	template<class _Xarg0 COMMA LIST(_CLASS_TYPE)> \
+		tuple(tuple<_Xarg0 COMMA LIST(_TYPE)>&& _Right, \
+			typename enable_if<_Tuple_enable< \
+				tuple<_Xarg0 COMMA LIST(_TYPE)>, _Myt>::value, \
+				void>::type ** = 0) \
+		: _Mybase(_STD forward<typename tuple<_Xarg0 \
+			COMMA LIST(_TYPE)>::_Mybase>( \
+				_Right._Get_rest())), \
+			_Myfirst(_STD forward<_Xarg0>(_Right._Myfirst._Val)) \
+		{	/* construct by moving same size tuple */ \
+		} \
+	template<class _Alloc, \
+		class _Xarg0 COMMA LIST(_CLASS_TYPE)> \
+		tuple(allocator_arg_t, const _Alloc& _Al, \
+			tuple<_Xarg0 COMMA LIST(_TYPE)>&& _Right, \
+			typename enable_if<_Tuple_enable< \
+				tuple<_Xarg0 COMMA LIST(_TYPE)>, _Myt>::value, \
+				void>::type ** = 0) \
+		: _Mybase(allocator_arg, _Al, \
+				_STD forward<typename tuple<_Xarg0 \
+					COMMA LIST(_TYPE)>::_Mybase>( \
+						_Right._Get_rest())), \
+			_Myfirst(_Al, _Tuple_alloc, \
+				_STD forward<_Xarg0>(_Right._Myfirst._Val)) \
+		{	/* construct by moving same size tuple, allocator */ \
+		} \
+	template<class _Xarg0 COMMA LIST(_CLASS_TYPE)> \
+		_Myt& operator=(const tuple<_Xarg0 COMMA LIST(_TYPE)>& _Right) \
+		{	/* assign by copying same size tuple */ \
+		_Myfirst._Val = _Right._Myfirst._Val; \
+		(_Mybase&)*this = _Right._Get_rest(); \
+		return (*this); \
+		} \
+	template<class _Xarg0 COMMA LIST(_CLASS_TYPE)> \
+		_Myt& operator=(tuple<_Xarg0 COMMA LIST(_TYPE)>&& _Right) \
+		{	/* assign by moving same size tuple */ \
+		_Myfirst._Val = _STD forward<_Xarg0>(_Right._Myfirst._Val); \
+		(_Mybase&)*this = \
+			_STD forward<typename tuple<_Xarg0 \
+				COMMA LIST(_TYPE)>::_Mybase>( \
+					_Right._Get_rest()); \
+		return (*this); \
+		} \
+	template<class _Xarg0 COMMA LIST(_CLASS_TYPE)> \
+		bool _Equals(const tuple<_Xarg0 COMMA LIST(_TYPE)>& _Right) const \
+		{	/* test if *this == _Right */ \
+		return (_Myfirst._Val == _Right._Myfirst._Val \
+			&& _Mybase::_Equals(_Right._Get_rest())); \
+		} \
+	template<class _Xarg0 COMMA LIST(_CLASS_TYPE)> \
+		bool _Less(const tuple<_Xarg0 COMMA LIST(_TYPE)>& _Right) const \
+		{	/* test if *this < _Right */ \
+		return (_Myfirst._Val < _Right._Myfirst._Val \
+			|| !(_Right._Myfirst._Val < _Myfirst._Val) \
+				&& _Mybase::_Less(_Right._Get_rest())); \
+		}
+
+_VARIADIC_EXPAND_0X(_CLASS_TUPLE, , , , )
+#undef _TUPLE_NONVARIADICS
+#undef _TUPLE_VARIADICS
+#undef _CLASS_TUPLE
+
+	// OPERATORS FOR tuple
+#define _TUPLE_COMPARE_SWAP( \
+	TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, X1, X2, X3, X4) \
+TEMPLATE_LIST(_CLASS_TYPE_TYPEX) inline \
+	bool operator==(const tuple<LIST(_TYPE)>& _Left, \
+		const tuple<LIST(_TYPEX)>& _Right) \
+	{	/* test if _Left == _Right */ \
+	return (_Left._Equals(_Right)); \
+	} \
+TEMPLATE_LIST(_CLASS_TYPE_TYPEX) inline \
+	bool operator!=(const tuple<LIST(_TYPE)>& _Left, \
+		const tuple<LIST(_TYPEX)>& _Right) \
+	{	/* test if _Left != _Right */ \
+	return (!(_Left == _Right)); \
+	} \
+TEMPLATE_LIST(_CLASS_TYPE_TYPEX) inline \
+	bool operator<(const tuple<LIST(_TYPE)>& _Left, \
+		const tuple<LIST(_TYPEX)>& _Right) \
+	{	/* test if _Left < _Right */ \
+	return (_Left._Less(_Right)); \
+	} \
+TEMPLATE_LIST(_CLASS_TYPE_TYPEX) inline \
+	bool operator>=(const tuple<LIST(_TYPE)>& _Left, \
+		const tuple<LIST(_TYPEX)>& _Right) \
+	{	/* test if _Left >= _Right */ \
+	return (!(_Left < _Right)); \
+	} \
+TEMPLATE_LIST(_CLASS_TYPE_TYPEX) inline \
+	bool operator>(const tuple<LIST(_TYPE)>& _Left, \
+		const tuple<LIST(_TYPEX)>& _Right) \
+	{	/* test if _Left > _Right */ \
+	return (_Right < _Left); \
+	} \
+TEMPLATE_LIST(_CLASS_TYPE_TYPEX) inline \
+	bool operator<=(const tuple<LIST(_TYPE)>& _Left, \
+		const tuple<LIST(_TYPEX)>& _Right) \
+	{	/* test if _Left <= _Right */ \
+	return (!(_Right < _Left)); \
+	} \
+TEMPLATE_LIST(_CLASS_TYPE) inline \
+	void swap(tuple<LIST(_TYPE)>& _Left, \
+		tuple<LIST(_TYPE)>& _Right) \
+	{	/* swap _Left and _Right */ \
+	return (_Left.swap(_Right)); \
+	}
+
+_VARIADIC_EXPAND_0X(_TUPLE_COMPARE_SWAP, , , , )
+#undef _TUPLE_COMPARE_SWAP
+
+	// CLASS tuple_element
+template<size_t _Index,
+	class _Tuple>
+	struct tuple_element;
+
+template<>
+	struct tuple_element<0, tuple<> >
+	{	// tuple_element backstop
+	typedef void type;
+	};
+
+#define _CLASS_TUPLE_ELEMENT( \
+	TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, X1, X2, X3, X4) \
+template<class _This COMMA LIST(_CLASS_TYPE)> \
+	struct tuple_element<0, tuple<_This COMMA LIST(_TYPE)> > \
+	{	/* select first element */ \
+	typedef _This type; \
+	typedef typename add_lvalue_reference<const _This>::type _Ctype; \
+	typedef typename add_lvalue_reference<_This>::type _Rtype; \
+	typedef typename add_rvalue_reference<_This>::type _RRtype; \
+	typedef tuple<_This COMMA LIST(_TYPE)> _Ttype; \
+	}; \
+template<size_t _Index, \
+	class _This COMMA LIST(_CLASS_TYPE)> \
+	struct tuple_element<_Index, tuple<_This COMMA LIST(_TYPE)> > \
+		: public tuple_element<_Index - 1, tuple<LIST(_TYPE)> > \
+	{	/* recursive tuple_element definition */ \
+	}; \
+template<size_t _Index \
+	COMMA LIST(_CLASS_TYPE)> \
+	struct tuple_element<_Index, tuple<_Nil COMMA LIST(_TYPE)> > \
+		: public tuple_element<0, tuple<_Nil COMMA LIST(_TYPE)> > \
+	{	/* tuple_element backstop */ \
+	typedef void type; \
+	};
+
+_VARIADIC_EXPAND_0X(_CLASS_TUPLE_ELEMENT, , , , )
+#undef _CLASS_TUPLE_ELEMENT
+
+template<size_t _Index,
+	class _Tuple>
+	struct tuple_element<_Index, const _Tuple>
+	: public tuple_element<_Index, _Tuple>
+	{	// tuple_element for const
+	typedef tuple_element<_Index, _Tuple> _Mybase;
+	typedef typename add_const<typename _Mybase::type>::type type;
+	};
+
+template<size_t _Index,
+	class _Tuple>
+	struct tuple_element<_Index, volatile _Tuple>
+	: public tuple_element<_Index, _Tuple>
+	{	// tuple element for volatile
+	typedef tuple_element<_Index, _Tuple> _Mybase;
+	typedef typename add_volatile<typename _Mybase::type>::type type;
+	};
+
+template<size_t _Index,
+	class _Tuple>
+	struct tuple_element<_Index, const volatile _Tuple>
+	: public tuple_element<_Index, _Tuple>
+	{	// tuple_element for const volatile
+public:
+	typedef tuple_element<_Index, _Tuple> _Mybase;
+	typedef typename add_cv<typename _Mybase::type>::type type;
+	};
+
+	// TEMPLATE STRUCT tuple_size
+template<class _Tuple>
+	struct _Tuple_size
+	{	// size of empty tuple
+	static const size_t value = 0;
+	};
+
+#define _CLASS_TUPLE_SIZE( \
+	TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, X1, X2, X3, X4) \
+template<class _Xarg0 COMMA LIST(_CLASS_TYPE)> \
+	struct _Tuple_size<tuple<_Xarg0 COMMA LIST(_TYPE)> > \
+	{	/* size of tuple */ \
+	static const size_t value = _Sizeof<_Xarg0 COMMA LIST(_TYPE)>::value; \
+	};
+
+_VARIADIC_EXPAND_0X(_CLASS_TUPLE_SIZE, , , , )
+#undef _CLASS_TUPLE_SIZE
+
+template<class _Tuple>
+	struct tuple_size
+	{	// size of tuple
+	static const size_t value =
+		_Tuple_size<typename remove_cv<_Tuple>::type>::value;
+	};
+
+	// FUNCTION get
+#define _TUPLE_GET( \
+	TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, X1, X2, X3, X4) \
+template<size_t _Index COMMA LIST(_CLASS_TYPE)> inline \
+	typename tuple_element<_Index, tuple<LIST(_TYPE)> >::_Rtype \
+		get(tuple<LIST(_TYPE)>& _Tuple) \
+	{	/* get reference to _Index element of tuple */ \
+	typedef typename tuple_element<_Index, tuple<LIST(_TYPE)> >::_Ttype \
+		_Ttype; \
+	return (((_Ttype&)_Tuple)._Myfirst._Val); \
+	} \
+template<size_t _Index COMMA LIST(_CLASS_TYPE)> inline \
+	typename tuple_element<_Index, tuple<LIST(_TYPE)> >::_Ctype \
+		get(const tuple<LIST(_TYPE)>& _Tuple) \
+	{	/* get const reference to _Index element of tuple */ \
+	typedef typename tuple_element<_Index, tuple<LIST(_TYPE)> >::_Ttype \
+		_Ttype; \
+	return (((_Ttype&)_Tuple)._Myfirst._Val); \
+	} \
+template<size_t _Index COMMA LIST(_CLASS_TYPE)> inline \
+	typename tuple_element<_Index, tuple<LIST(_TYPE)> >::_RRtype \
+		get(tuple<LIST(_TYPE)>&& _Tuple) \
+	{	/* get rvalue reference to _Index element of tuple */ \
+	typedef typename tuple_element<_Index, tuple<LIST(_TYPE)> >::_Ttype \
+		_Ttype; \
+	typedef typename tuple_element<_Index, tuple<LIST(_TYPE)> >::type \
+		type; \
+	return (_STD forward<type>(((_Ttype&)_Tuple)._Myfirst._Val)); \
+	}
+
+_VARIADIC_EXPAND_0X(_TUPLE_GET, _COMMA, , , )
+#undef _TUPLE_GET
+
+	// FUNCTION make_tuple
+#define _MAKE_TUPLE( \
+	TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, X1, X2, X3, X4) \
+TEMPLATE_LIST(_CLASS_TYPE) inline \
+	tuple<LIST(_UNREFWRAP_TYPE)> \
+		make_tuple(LIST(_TYPE_REFREF_ARG)) \
+	{	/* make tuple from elements */ \
+	typedef tuple<LIST(_UNREFWRAP_TYPE)> _Ttype; \
+	return (_Ttype(LIST(_FORWARD_ARG))); \
+	}
+
+_VARIADIC_EXPAND_0X(_MAKE_TUPLE, , , , )
+#undef _MAKE_TUPLE
+
+	// FUNCTION tie
+#define _TUPLE_TIE( \
+	TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, X1, X2, X3, X4) \
+TEMPLATE_LIST(_CLASS_TYPE) inline \
+	tuple<LIST(_TYPE_REF)> \
+		tie(LIST(_TYPE_REF_ARG)) _NOEXCEPT \
+	{	/* make tuple from elements */ \
+	typedef tuple<LIST(_TYPE_REF)> _Ttype; \
+	return (_Ttype(LIST(_ARG))); \
+	}
+
+_VARIADIC_EXPAND_0X(_TUPLE_TIE, , , , )
+#undef _TUPLE_TIE
+
+	// FUNCTION tuple_cat
+#define _TUPLE_CAT_X0( \
+	TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, X1, X2, X3, X4) \
+	TEMPLATE_LIST(_CLASS_TYPE) inline \
+		tuple<LIST(_TYPE)> tuple_cat( \
+			tuple<LIST(_TYPE)>&& _Tpl1, \
+			tuple<>) \
+	{	/* concatenate (possibly empty) tuple to empty tuple */ \
+	return (_STD forward<tuple<LIST(_TYPE)> >(_Tpl1)); \
+	} \
+	TEMPLATE_LIST(_CLASS_TYPE) inline \
+		tuple<LIST(_TYPE)> tuple_cat( \
+			const tuple<LIST(_TYPE)>& _Tpl1, \
+			tuple<>) \
+	{	/* concatenate (possibly empty) tuple to empty tuple */ \
+	return (_Tpl1); \
+	}
+
+_VARIADIC_EXPAND_0X(_TUPLE_CAT_X0, , , , )
+#undef _TUPLE_CAT_X0
+
+#define _TUPLE_CAT_0X( \
+	TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, X1, X2, X3, X4) \
+	TEMPLATE_LIST(_CLASS_TYPE) inline \
+		tuple<LIST(_TYPE)> tuple_cat( \
+			tuple<>, \
+			tuple<LIST(_TYPE)>&& _Tpl1) \
+	{	/* concatenate empty tuple to non-empty tuple */ \
+	return (_STD forward<tuple<LIST(_TYPE)> >(_Tpl1)); \
+	} \
+	TEMPLATE_LIST(_CLASS_TYPE) inline \
+		tuple<LIST(_TYPE)> tuple_cat( \
+			tuple<>, \
+			const tuple<LIST(_TYPE)>& _Tpl1) \
+	{	/* concatenate empty tuple to non-empty tuple */ \
+	return (_Tpl1); \
+	}
+
+_VARIADIC_EXPAND_1X(_TUPLE_CAT_0X, , , , )
+#undef _TUPLE_CAT_0X
+
+#define _TUPLE_CAT( \
+	TEMPLATE_LIST1, PADDING_LIST1, LIST1, COMMA1, \
+	TEMPLATE_LIST2, PADDING_LIST2, LIST2, COMMA2) \
+	template<LIST1(_CLASS_TYPE) COMMA2 LIST2(_CLASS_TYPEX)> inline \
+		tuple<LIST1(_TYPE) COMMA2 LIST2(_TYPEX)> \
+			tuple_cat(tuple<LIST1(_TYPE)>&& _Tpl1, \
+				tuple<LIST2(_TYPEX)>&& _Tpl2) \
+	{	/* concatenate nonempty tuple with tuple */ \
+	return (tuple<LIST1(_TYPE) COMMA2 LIST2(_TYPEX)>( \
+		LIST1(_FORWARD_ELEMENT_ARG) \
+		COMMA2 LIST2(_FORWARD_ELEMENT_ARGX))); \
+	} \
+	template<LIST1(_CLASS_TYPE) COMMA2 LIST2(_CLASS_TYPEX)> \
+		tuple<LIST1(_TYPE) COMMA2 LIST2(_TYPEX)> \
+			tuple_cat(const tuple<LIST1(_TYPE)>& _Tpl1, \
+				tuple<LIST2(_TYPEX)>&& _Tpl2) \
+	{	/* concatenate nonempty tuple with tuple */ \
+	return (tuple<LIST1(_TYPE) COMMA2 LIST2(_TYPEX)>( \
+		LIST1(_ELEMENT_ARG) \
+		COMMA2 LIST2(_FORWARD_ELEMENT_ARGX))); \
+	} \
+	template<LIST1(_CLASS_TYPE) COMMA2 LIST2(_CLASS_TYPEX)> \
+		tuple<LIST1(_TYPE) COMMA2 LIST2(_TYPEX)> \
+			tuple_cat(tuple<LIST1(_TYPE)>&& _Tpl1, \
+				const tuple<LIST2(_TYPEX)>& _Tpl2) \
+	{	/* concatenate nonempty tuple with tuple */ \
+	return (tuple<LIST1(_TYPE) COMMA2 LIST2(_TYPEX)>( \
+		LIST1(_FORWARD_ELEMENT_ARG) \
+		COMMA2 LIST2(_ELEMENT_ARGX))); \
+	} \
+	template<LIST1(_CLASS_TYPE) COMMA2 LIST2(_CLASS_TYPEX)> \
+		tuple<LIST1(_TYPE) COMMA2 LIST2(_TYPEX)> \
+			tuple_cat(const tuple<LIST1(_TYPE)>& _Tpl1, \
+				const tuple<LIST2(_TYPEX)>& _Tpl2) \
+	{	/* concatenate nonempty tuple with tuple */ \
+	return (tuple<LIST1(_TYPE) COMMA2 LIST2(_TYPEX)>( \
+		LIST1(_ELEMENT_ARG) \
+		COMMA2 LIST2(_ELEMENT_ARGX))); \
+	}
+
+_VARIADIC_EXPAND_1X_1D(_TUPLE_CAT)
+#undef _TUPLE_CAT
+
+#define _TUPLE_CAT_XXX( \
+	TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, X1, X2, X3, X4) \
+template<class _Tuple1, \
+	class _Tuple2, \
+	class _Tuple3 COMMA LIST(_CLASS_TYPE)> \
+	auto inline tuple_cat(_Tuple1&& _Tp1, _Tuple2&& _Tp2, _Tuple3&& _Tp3 \
+		COMMA LIST(_TYPE_REFREF_ARG)) \
+		-> decltype(tuple_cat( \
+		tuple_cat(_STD forward<_Tuple1>(_Tp1), \
+			_STD forward<_Tuple2>(_Tp2)), \
+		tuple_cat(_STD forward<_Tuple3>(_Tp3) \
+			COMMA LIST(_FORWARD_ARG)))) \
+	{	/* concatenate three or more tuples */ \
+	return (tuple_cat( \
+		tuple_cat(_STD forward<_Tuple1>(_Tp1), \
+			_STD forward<_Tuple2>(_Tp2)), \
+		tuple_cat(_STD forward<_Tuple3>(_Tp3) \
+			COMMA LIST(_FORWARD_ARG)))); \
+	} \
+TEMPLATE_LIST(_CLASS_TYPE) \
+inline tuple<LIST(_TYPE)> \
+	tuple_cat(tuple<LIST(_TYPE)>&& _Tpl1) \
+	{	/* concatenate single tuple */ \
+	return (_STD forward<tuple<LIST(_TYPE)> >(_Tpl1)); \
+	} \
+TEMPLATE_LIST(_CLASS_TYPE) \
+inline tuple<LIST(_TYPE)> \
+	tuple_cat(const tuple<LIST(_TYPE)>& _Tpl1) \
+	{	/* concatenate single tuple */ \
+	return (_Tpl1); \
+	}
+
+_VARIADIC_EXPAND_0X(_TUPLE_CAT_XXX, , , , )
+#undef _TUPLE_CAT_XXX
+
+inline tuple<> tuple_cat()
+	{	// concatenate no tuples
+	return (tuple<>());
+	}
+
+#define _PAIR_TUPLE_CONSTRUCTOR0( \
+	TEMPLATE_LIST1, PADDING_LIST1, LIST1, COMMA1, \
+	TEMPLATE_LIST2, PADDING_LIST2, LIST2, COMMA2) \
+template<class _Ty1, \
+	class _Ty2> \
+	TEMPLATE_LIST1(_CLASS_TYPE) \
+		pair<_Ty1, _Ty2>::pair(piecewise_construct_t, \
+			tuple<LIST1(_TYPE)> _Tpl1, \
+			tuple<>) \
+			: first(LIST1(_FORWARD_ELEMENT_ARG)), \
+				second() \
+		{	/* construct from (tuple<0-X>, tuple<>) pair */ \
+		}
+
+_VARIADIC_EXPAND_0X_0(_PAIR_TUPLE_CONSTRUCTOR0)
+#undef _PAIR_TUPLE_CONSTRUCTOR0
+
+#define _PAIR_TUPLE_CONSTRUCTOR1( \
+	TEMPLATE_LIST1, PADDING_LIST1, LIST1, COMMA1, \
+	TEMPLATE_LIST2, PADDING_LIST2, LIST2, COMMA2) \
+template<class _Ty1, \
+	class _Ty2> \
+	template<LIST2(_CLASS_TYPEX)> \
+		pair<_Ty1, _Ty2>::pair(piecewise_construct_t, \
+			tuple<>, \
+			tuple<LIST2(_TYPEX)> _Tpl2) \
+			: first(), \
+				second(LIST2(_FORWARD_ELEMENT_ARGX)) \
+		{	/* construct from (tuple<>, tuple<1-X>) pair */ \
+		}
+
+_VARIADIC_EXPAND_0_1X(_PAIR_TUPLE_CONSTRUCTOR1)
+#undef _PAIR_TUPLE_CONSTRUCTOR1
+
+#define _PAIR_TUPLE_CONSTRUCTOR2( \
+	TEMPLATE_LIST1, PADDING_LIST1, LIST1, COMMA1, \
+	TEMPLATE_LIST2, PADDING_LIST2, LIST2, COMMA2) \
+template<class _Ty1, \
+	class _Ty2> \
+	template<LIST1(_CLASS_TYPE), LIST2(_CLASS_TYPEX)> \
+		pair<_Ty1, _Ty2>::pair(piecewise_construct_t, \
+			tuple<LIST1(_TYPE)> _Tpl1, \
+			tuple<LIST2(_TYPEX)> _Tpl2) \
+			: first(LIST1(_FORWARD_ELEMENT_ARG)), \
+				second(LIST2(_FORWARD_ELEMENT_ARGX)) \
+		{	/* construct from pair of tuples */ \
+		}
+
+_VARIADIC_EXPAND_1X_1X(_PAIR_TUPLE_CONSTRUCTOR2)
+#undef _PAIR_TUPLE_CONSTRUCTOR2
+
+	// TEMPLATE FUNCTION forward_as_tuple
+#define _FORWARD_AS_TUPLE( \
+	TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, X1, X2, X3, X4) \
+	TEMPLATE_LIST(_CLASS_TYPE) inline \
+	tuple<LIST(_TYPE_REFREF)> \
+		forward_as_tuple(LIST(_TYPE_REFREF_ARG)) _NOEXCEPT\
+	{	/* forward arguments in a tuple */ \
+	return (tuple<LIST(_TYPE_REFREF)>(LIST(_FORWARD_ARG))); \
+	}
+
+_VARIADIC_EXPAND_0X(_FORWARD_AS_TUPLE, , , , )
+#undef _FORWARD_AS_TUPLE
+_STD_END
+
+namespace std {
+template<class _Alloc>
+	struct uses_allocator<tuple<>, _Alloc>
+		: true_type
+	{	// true_type if container allocator enabled
+	};
+
+#define _TUPLE_USES_ALLOCATOR( \
+	TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, X1, X2, X3, X4) \
+template<class _Xarg0 COMMA LIST(_CLASS_TYPE), \
+	class _Alloc> \
+	struct uses_allocator<tuple<_Xarg0 COMMA LIST(_TYPE)>, _Alloc> \
+		: true_type \
+	{	/* true_type if container allocator enabled */ \
+	};
+
+_VARIADIC_EXPAND_0X(_TUPLE_USES_ALLOCATOR, , , , )
+#undef _TUPLE_USES_ALLOCATOR
+}	// namespace std
+
+_STD_BEGIN
+namespace tr1 {	// TR1 ADDITIONS
+using _STD get;
+using _STD ignore;
+using _STD make_tuple;
+using _STD ref;
+using _STD tie;
+using _STD tuple;
+using _STD tuple_cat;
+using _STD tuple_element;
+using _STD tuple_size;
+}	// namespace tr1
+_STD_END
+
+ #pragma pop_macro("new")
+ #pragma warning(pop)
+ #pragma pack(pop)
+#endif /* RC_INVOKED */
+#endif /* _TUPLE_ */
+
+/*
+ * Copyright (c) 1992-2012 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V6.00:0009 */

@@ -1,0 +1,571 @@
+// exception standard header for Microsoft
+#pragma once
+#ifndef _EXCEPTION_
+#define _EXCEPTION_
+#ifndef RC_INVOKED
+
+#include <xstddef>
+
+ #pragma pack(push,_CRT_PACKING)
+ #pragma warning(push,3)
+ #pragma push_macro("new")
+ #undef new
+
+#ifdef _CRT_EXCEPTION_NO_MALLOC
+
+  #pragma push_macro("malloc")
+  #pragma push_macro("free")
+
+ #undef malloc
+ #undef free
+#endif /* _CRT_EXCEPTION_NO_MALLOC */
+
+_STD_BEGIN
+
+  #define _USE_EXCEPTION \
+	using _STDEXT exception;
+
+  #define _USE_BAD_EXCEPTION \
+	using _STDEXT bad_alloc; \
+	using _STDEXT bad_exception;
+
+  #define _USE_EX \
+	using ::set_terminate; using ::terminate_handler; using ::terminate; \
+	using ::set_unexpected; using ::unexpected_handler; using ::unexpected;
+
+_STD_END
+
+ #if _HAS_EXCEPTIONS
+
+ #include <eh.h>
+ #include <malloc.h>
+ #include <string.h>
+
+ #if !defined(_WIN32)
+  #error ERROR: Only Win32 targets supported!
+ #endif /* !defined(_WIN32) */
+
+ #ifndef _CRTIMP
+
+  #ifdef	_DLL
+   #define _CRTIMP __declspec(dllimport)
+
+  #else	/* ndef _DLL */
+   #define _CRTIMP
+  #endif	/* _DLL */
+
+ #endif	/* _CRTIMP */
+
+#ifndef _MCRTIMP
+#ifdef  _DLL
+#define _MCRTIMP __declspec(dllimport)
+#else   /* ndef _DLL */
+#define _MCRTIMP
+#endif  /* _DLL */
+#endif  /* _CRTIMP */
+
+#ifndef _CRTIMP_PURE
+ #if defined(_M_CEE_PURE) || defined(_STATIC_CPPLIB)
+  #define _CRTIMP_PURE
+ #else
+  #define _CRTIMP_PURE _CRTIMP
+ #endif
+#endif
+
+#ifndef _ERRNO_T_DEFINED
+#define _ERRNO_T_DEFINED
+typedef int errno_t;
+#endif
+
+#if __STDC_WANT_SECURE_LIB__
+#define _CRT_SECURE_STRCPY(dest, destsize, source) ::strcpy_s((dest), (destsize), (source))
+#else
+#define _CRT_SECURE_STRCPY(dest, destsize, source) ::strcpy((dest), (source))
+#endif
+
+ _STD_BEGIN
+
+#ifdef _M_CEE_PURE
+ #define _DEFINE_EXCEPTION_MEMBER_FUNCTIONS
+ #define _EXCEPTION_INLINE inline
+#else /* _M_CEE_PURE */
+ #define _EXCEPTION_INLINE
+#endif /* _M_CEE_PURE */
+
+class _CRTIMP_PURE exception
+	{   // base of all library exceptions
+public:
+	_EXCEPTION_INLINE __CLR_OR_THIS_CALL exception();
+	_EXCEPTION_INLINE explicit __CLR_OR_THIS_CALL exception(const char * const &);
+	_EXCEPTION_INLINE __CLR_OR_THIS_CALL exception(const char * const &, int);
+	_EXCEPTION_INLINE __CLR_OR_THIS_CALL exception(const exception&);
+	_EXCEPTION_INLINE exception& __CLR_OR_THIS_CALL operator=(const exception&);
+	_EXCEPTION_INLINE virtual __CLR_OR_THIS_CALL ~exception() _NOEXCEPT;
+	_EXCEPTION_INLINE virtual const char * __CLR_OR_THIS_CALL what() const;
+
+private:
+	_EXCEPTION_INLINE void __CLR_OR_THIS_CALL _Copy_str(const char *);
+	_EXCEPTION_INLINE void __CLR_OR_THIS_CALL _Tidy();
+
+	const char * _Mywhat;
+	bool _Mydofree;
+	};
+
+#ifdef _DEFINE_EXCEPTION_MEMBER_FUNCTIONS
+
+_EXCEPTION_INLINE __CLR_OR_THIS_CALL exception::exception()
+	: _Mywhat(NULL), _Mydofree(false) { }
+
+_EXCEPTION_INLINE __CLR_OR_THIS_CALL exception::exception(const char * const & _What)
+	: _Mywhat(NULL), _Mydofree(false)
+	{
+	_Copy_str(_What);
+	}
+
+_EXCEPTION_INLINE __CLR_OR_THIS_CALL exception::exception(const char * const & _What, int)
+	: _Mywhat(_What), _Mydofree(false) { }
+
+_EXCEPTION_INLINE __CLR_OR_THIS_CALL exception::exception(const exception& _That)
+	: _Mywhat(NULL), _Mydofree(false)
+	{
+	*this = _That;
+	}
+
+_EXCEPTION_INLINE exception& __CLR_OR_THIS_CALL exception::operator=(const exception& _That)
+	{
+	if (this != &_That)
+		{
+		_Tidy();
+
+		if (_That._Mydofree)
+			{
+			_Copy_str(_That._Mywhat);
+			}
+		else
+			{
+			_Mywhat = _That._Mywhat;
+			}
+		}
+
+	return *this;
+	}
+
+_EXCEPTION_INLINE __CLR_OR_THIS_CALL exception::~exception() _NOEXCEPT
+	{
+	_Tidy();
+	}
+
+_EXCEPTION_INLINE const char * __CLR_OR_THIS_CALL exception::what() const
+	{
+	return _Mywhat ? _Mywhat : "Unknown exception";
+	}
+
+// _Copy_str() assumes that *this is already tidy.
+_EXCEPTION_INLINE void __CLR_OR_THIS_CALL exception::_Copy_str(const char * _What)
+	{
+	if (_What != NULL)
+		{
+		const size_t _Buf_size = strlen(_What) + 1;
+
+		_Mywhat = static_cast<char *>(malloc(_Buf_size));
+
+		if (_Mywhat != NULL)
+			{
+			_CRT_SECURE_STRCPY(const_cast<char *>(_Mywhat), _Buf_size, _What);
+			_Mydofree = true;
+			}
+		}
+	}
+
+_EXCEPTION_INLINE void __CLR_OR_THIS_CALL exception::_Tidy()
+	{
+	if (_Mydofree)
+		{
+		free(const_cast<char *>(_Mywhat));
+		}
+
+	_Mywhat = NULL;
+	_Mydofree = false;
+	}
+
+#endif /* _DEFINE_EXCEPTION_MEMBER_FUNCTIONS */
+
+
+_USE_EX
+
+typedef void (__cdecl *_Prhand)(const exception&);
+
+_CRTIMP2_PURE bool __CLRCALL_PURE_OR_CDECL uncaught_exception();
+
+#ifndef _M_CEE_PURE
+inline terminate_handler __CRTDECL get_terminate()
+	{	// get current terminate handler
+	return (_get_terminate());
+	}
+
+inline unexpected_handler __CRTDECL get_unexpected()
+	{	// get current unexpected handler
+	return (_get_unexpected());
+	}
+#endif /* _M_CEE_PURE */
+
+_STD_END
+
+ #else /* _HAS_EXCEPTIONS */
+
+		// CLASS exception
+_STDEXT_BEGIN
+class exception;
+_STDEXT_END
+
+_STD_BEGIN
+
+_USE_EXCEPTION
+
+typedef void (__cdecl *_Prhand)(const exception&);
+extern _CRTIMP2_NCEEPURE _Prhand _Raise_handler;	// pointer to raise handler
+
+_STD_END
+
+_STDEXT_BEGIN
+class exception
+	{	// base of all library exceptions
+public:
+
+	static _STD _Prhand _Set_raise_handler(_STD _Prhand _Pnew)
+		{	// register a handler for _Raise calls
+		const _STD _Prhand _Pold = _STD _Raise_handler;
+		_STD _Raise_handler = _Pnew;
+		return (_Pold);
+		}
+
+	// this constructor is necessary to compile
+	// successfully header new for _HAS_EXCEPTIONS==0 scenario
+	explicit __CLR_OR_THIS_CALL exception(const char *_Message = "unknown", int x=1)
+		_THROW0()
+		: _Ptr(_Message)
+		{	// construct from message string
+				(void)x;
+		}
+
+	__CLR_OR_THIS_CALL exception(const exception& _Right) _THROW0()
+		: _Ptr(_Right._Ptr)
+		{	// construct by copying _Right
+		}
+
+	exception& __CLR_OR_THIS_CALL operator=(const exception& _Right) _THROW0()
+		{	// assign _Right
+		_Ptr = _Right._Ptr;
+		return (*this);
+		}
+
+	virtual __CLR_OR_THIS_CALL ~exception() _NOEXCEPT
+		{	// destroy the object
+		}
+
+	virtual const char * __CLR_OR_THIS_CALL what() const _THROW0()
+		{	// return pointer to message string
+		return (_Ptr != 0 ? _Ptr : "unknown exception");
+		}
+
+	void __CLR_OR_THIS_CALL _Raise() const
+		{	// raise the exception
+		if (_STD _Raise_handler != 0)
+			(*_STD _Raise_handler)(*this);	// call raise handler if present
+
+		_Doraise();	// call the protected virtual
+		_RAISE(*this);	// raise this exception
+		}
+
+protected:
+	virtual void __CLR_OR_THIS_CALL _Doraise() const
+		{	// perform class-specific exception handling
+		}
+
+protected:
+	const char *_Ptr;	// the message pointer
+	};
+_STDEXT_END
+
+_STD_BEGIN
+
+		// TYPES
+typedef void (__cdecl *terminate_handler)();
+typedef void (__cdecl *unexpected_handler)();
+
+		// DUMMY FUNCTION DECLARATIONS
+inline terminate_handler __CRTDECL set_terminate(terminate_handler)
+	_THROW0()
+	{	// register a terminate handler
+	return 0;
+	}
+
+inline unexpected_handler __CRTDECL set_unexpected(unexpected_handler)
+	_THROW0()
+	{	// register an unexpected handler
+	return 0;
+	}
+
+inline void __CRTDECL terminate()
+	{	// handle exception termination
+	}
+
+inline void __CRTDECL unexpected()
+	{	// handle unexpected exception
+	}
+
+_CRTIMP2_PURE bool __CLRCALL_PURE_OR_CDECL uncaught_exception();	// handle uncaught exception
+
+inline terminate_handler __CRTDECL get_terminate()
+	{	// get current terminate handler
+	return (0);
+	}
+
+inline unexpected_handler __CRTDECL get_unexpected()
+	{	// get current unexpected handler
+	return (0);
+	}
+
+_STD_END
+
+ #endif /* _HAS_EXCEPTIONS */
+
+#if _HAS_EXCEPTIONS
+_STD_BEGIN
+#else
+_STDEXT_BEGIN
+#endif
+
+		// CLASS bad_exception
+class bad_exception : public exception
+	{	// base of all bad exceptions
+public:
+	__CLR_OR_THIS_CALL bad_exception(const char *_Message = "bad exception")
+		_THROW0()
+		: exception(_Message)
+		{	// construct from message string
+		}
+
+	virtual __CLR_OR_THIS_CALL ~bad_exception() _NOEXCEPT
+		{	// destroy the object
+		}
+
+ #if !_HAS_EXCEPTIONS
+protected:
+	virtual void __CLR_OR_THIS_CALL _Doraise() const
+		{	// raise this exception
+		_RAISE(*this);
+		}
+ #endif /* _HAS_EXCEPTIONS */
+
+	};
+
+		// CLASS bad_alloc
+class bad_alloc : public exception
+	{	// base of all bad allocation exceptions
+public:
+	__CLR_OR_THIS_CALL bad_alloc() _THROW0()
+		: exception("bad allocation", 1)
+		{	// construct from message string with no memory allocation
+		}
+
+	virtual __CLR_OR_THIS_CALL ~bad_alloc() _NOEXCEPT
+		{	// destroy the object
+		}
+
+private:
+	friend class bad_array_new_length;
+
+	__CLR_OR_THIS_CALL bad_alloc(const char *_Message) _THROW0()
+		: exception(_Message, 1)
+		{	// construct from message string with no memory allocation
+		}
+
+ #if !_HAS_EXCEPTIONS
+protected:
+	virtual void __CLR_OR_THIS_CALL _Doraise() const
+		{	// perform class-specific exception handling
+		_RAISE(*this);
+		}
+#endif  /* _HAS_EXCEPTIONS */
+
+	};
+
+#if _HAS_CPP0X
+		// CLASS bad_array_new_length
+class bad_array_new_length
+	: public bad_alloc
+	{	// bad array new exception
+public:
+
+	bad_array_new_length() _THROW0()
+		: bad_alloc("bad array new length")
+		{	// default construct
+		}
+	};
+#endif /* _HAS_CPP0X */
+
+#if _HAS_EXCEPTIONS
+_STD_END
+#else
+_STDEXT_END
+
+_STD_BEGIN
+
+_USE_BAD_EXCEPTION
+
+_STD_END
+
+#endif
+
+_CRTIMP_PURE void __CLRCALL_PURE_OR_CDECL __ExceptionPtrCreate(_Out_ void* );
+_CRTIMP_PURE void __CLRCALL_PURE_OR_CDECL __ExceptionPtrDestroy(_Inout_ void* );
+_CRTIMP_PURE void __CLRCALL_PURE_OR_CDECL __ExceptionPtrCopy(_Out_ void*, _In_ const void* );
+_CRTIMP_PURE void __CLRCALL_PURE_OR_CDECL __ExceptionPtrAssign(_Inout_ void*, _In_ const void* );
+_CRTIMP_PURE bool __CLRCALL_PURE_OR_CDECL __ExceptionPtrCompare(_In_ const void*, _In_ const void*);
+_CRTIMP_PURE bool __CLRCALL_PURE_OR_CDECL __ExceptionPtrToBool(_In_ const void*);
+_CRTIMP_PURE void __CLRCALL_PURE_OR_CDECL __ExceptionPtrSwap(_Inout_ void*, _Inout_ void*);
+
+_CRTIMP_PURE void __CLRCALL_PURE_OR_CDECL __ExceptionPtrCurrentException(_Out_ void*);
+_CRTIMP_PURE void __CLRCALL_PURE_OR_CDECL __ExceptionPtrRethrow(_In_ const void*);
+_CRTIMP_PURE void __CLRCALL_PURE_OR_CDECL __ExceptionPtrCopyException(_Inout_ void*, _In_ const void*, _In_ const void*);
+
+_STD_BEGIN
+
+class exception_ptr
+	{
+public:
+	exception_ptr()
+		{
+		__ExceptionPtrCreate(this);
+		}
+	exception_ptr(nullptr_t)
+		{
+		__ExceptionPtrCreate(this);
+		}
+	~exception_ptr() _NOEXCEPT
+		{
+		__ExceptionPtrDestroy(this);
+		}
+	exception_ptr(const exception_ptr& _Rhs)
+		{
+		__ExceptionPtrCopy(this, &_Rhs);
+		}
+	exception_ptr& operator=(const exception_ptr& _Rhs)
+		{
+		__ExceptionPtrAssign(this, &_Rhs);
+		return *this;
+		}
+	exception_ptr& operator=(nullptr_t)
+		{
+		exception_ptr _Ptr;
+		__ExceptionPtrAssign(this, &_Ptr);
+		return *this;
+		}
+
+	typedef exception_ptr _Myt;
+
+	_TYPEDEF_BOOL_TYPE;
+
+	_OPERATOR_BOOL() const _NOEXCEPT
+		{
+		return __ExceptionPtrToBool(this) ? _CONVERTIBLE_TO_TRUE : 0;
+		}
+
+	void _RethrowException() const
+		{
+		__ExceptionPtrRethrow(this);
+		}
+
+	static exception_ptr _Current_exception()
+		{
+		exception_ptr _Retval;
+		__ExceptionPtrCurrentException(&_Retval);
+		return _Retval;
+		}
+	static exception_ptr _Copy_exception(_In_ void* _Except, _In_ const void* _Ptr)
+		{
+		exception_ptr _Retval = NULL;
+		if (!_Ptr)
+			{
+			// unsupported exceptions
+			return _Retval;
+			}
+		__ExceptionPtrCopyException(&_Retval, _Except, _Ptr);
+		return _Retval;
+		}
+private:
+	void* _Data1;
+	void* _Data2;
+	};
+
+inline void swap(exception_ptr& _Lhs, exception_ptr& _Rhs)
+	{
+	__ExceptionPtrSwap(&_Lhs, &_Rhs);
+	}
+
+inline bool operator==(const exception_ptr& _Lhs, const exception_ptr& _Rhs)
+	{
+	return __ExceptionPtrCompare(&_Lhs, &_Rhs);
+	}
+
+inline bool operator==(nullptr_t, const exception_ptr& _Rhs)
+	{
+	return !_Rhs;
+	}
+
+inline bool operator==(const exception_ptr& _Lhs, nullptr_t)
+	{
+	return !_Lhs;
+	}
+
+inline bool operator!=(const exception_ptr& _Lhs, const exception_ptr& _Rhs)
+	{
+	return !(_Lhs == _Rhs);
+	}
+
+inline bool operator!=(nullptr_t _Lhs, const exception_ptr& _Rhs)
+	{
+	return !(_Lhs == _Rhs);
+	}
+
+inline bool operator!=(const exception_ptr& _Lhs, nullptr_t _Rhs)
+	{
+	return !(_Lhs == _Rhs);
+	}
+
+inline exception_ptr current_exception()
+	{
+	return exception_ptr::_Current_exception();
+	}
+
+inline void rethrow_exception(_In_ exception_ptr _P)
+	{
+	_P._RethrowException();
+	}
+
+template <class _E> void *__GetExceptionInfo(_E);
+
+template<class _E> exception_ptr make_exception_ptr(_E _Except)
+	{
+	return exception_ptr::_Copy_exception(_STD addressof(_Except), __GetExceptionInfo(_Except));
+	}
+_STD_END
+
+
+#ifdef _CRT_EXCEPTION_NO_MALLOC
+  #pragma pop_macro("free")
+  #pragma pop_macro("malloc")
+#endif /* _CRT_EXCEPTION_NO_MALLOC */
+
+ #pragma pop_macro("new")
+ #pragma warning(pop)
+ #pragma pack(pop)
+
+#endif /* RC_INVOKED */
+#endif /* _EXCEPTION_ */
+
+/*
+ * Copyright (c) 1992-2012 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+ V6.00:0009 */

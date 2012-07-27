@@ -1,0 +1,930 @@
+// xrefwrap internal header
+#pragma once
+#ifndef _XREFWRAP_
+#define _XREFWRAP_
+#ifndef RC_INVOKED
+
+// NOTE: included only at the end of type_traits
+
+ #pragma pack(push,_CRT_PACKING)
+ #pragma warning(push,3)
+ #pragma push_macro("new")
+ #undef new
+
+ #pragma warning(disable: 4180)
+
+_STD_BEGIN
+template<class _Ty>
+	class reference_wrapper;
+
+template<class, class = _Nil, class = _Nil, class = _Nil, _MAX_CLASS_LIST>
+	struct _Fun_class_base;
+
+template<class _Ret,
+	class _Farg0>
+	struct _Fun_class_base<_Ret, _Farg0, _Nil, _Nil, _MAX_NIL_LIST>
+		: public unary_function<_Farg0, _Ret>
+	{	// base if one argument
+	typedef _Farg0 _Arg0;
+	};
+
+template<class _Ret,
+	class _Farg0,
+	class _Farg1>
+	struct _Fun_class_base<_Ret, _Farg0, _Farg1, _Nil, _MAX_NIL_LIST>
+		: public binary_function<_Farg0, _Farg1, _Ret>
+	{	// base if two arguments
+	typedef _Farg0 _Arg0;
+	};
+
+#define _CLASS_FUN_CLASS_BASE( \
+	TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, X1, X2, X3, X4) \
+template<class _Ret, \
+	class _Farg0, \
+	class _Farg1, \
+	class _Farg2 COMMA LIST(_CLASS_TYPE)> \
+	struct _Fun_class_base<_Ret, _Farg0, _Farg1, _Farg2 \
+		COMMA LIST(_TYPE), PADDING_LIST(_NIL_PAD)> \
+	{	/* base if more than two arguments */ \
+	typedef _Farg0 _Arg0; \
+	};
+
+_VARIADIC_EXPAND_0X(_CLASS_FUN_CLASS_BASE, , , , )
+#undef _CLASS_FUN_CLASS_BASE
+
+// IMPLEMENT result_of
+		// TEMPLATE STRUCT _Get_callable_type
+template<class _Fty>
+	struct _Get_callable_type
+	{	// get typeof _Fty() or _Fty
+	template<class _Uty>
+		static auto _Fn(int)
+			-> typename decltype(_STD declval<_Uty>()());
+
+	template<class _Uty>
+		static auto _Fn(_Wrap_int)
+			-> _Fty;
+
+	typedef decltype(_Fn<_Fty>(0)) type;
+	};
+
+template<bool,
+	class _Fty, class = _Nil, _MAX_CLASS_LIST>
+	struct _Result_type;
+
+template<class _Fty>
+	struct _Result_type<false, _Fty, _Nil, _MAX_NIL_LIST>
+	{	// handle zero argument case
+	typedef typename _Get_callable_type<_Fty>::type type;
+	};
+
+#define _CLASS_RESULT_TYPE( \
+	TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, X1, X2, X3, X4) \
+template<class _Fty COMMA LIST(_CLASS_TYPE)> \
+	struct _Result_type<true, _Fty \
+		COMMA LIST(_TYPE), PADDING_LIST(_NIL_PAD), _Nil> \
+	{	/* define return type for UDT with nested result_type */ \
+	typedef typename _Fty::result_type type; \
+	}; \
+template<class _Fty, \
+	class _Xarg0 COMMA LIST(_CLASS_TYPE)> \
+	struct _Result_type<false, _Fty, _Xarg0 \
+		COMMA LIST(_TYPE), PADDING_LIST(_NIL_PAD)> \
+	{	/* define return type for UDT with no nested result_type */ \
+	typedef decltype(_STD declval<_Fty>()( \
+		_STD declval<_Xarg0>() COMMA LIST(_DECLVAL))) type; \
+	};
+
+_VARIADIC_EXPAND_0X(_CLASS_RESULT_TYPE, , , , )
+#undef _CLASS_RESULT_TYPE
+
+template<class _Fty, _MAX_CLASS_LIST>
+	struct _Result_ofx;
+
+template<class _Fty, _MAX_CLASS_LIST,
+	class _Obj = _Nil,
+	class _Xarg0 = _Nil>
+	struct _Result_of
+	{	// finds result of calling _Fty with optional arguments
+	typedef typename _Result_ofx<_Fty, _MAX_ALIST>::type type;
+	};
+
+#define _CLASS_RESULT_OFX( \
+	TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, X1, X2, X3, X4) \
+template<class _Fty COMMA LIST(_CLASS_TYPE)> \
+	struct _Result_ofx<_Fty COMMA LIST(_TYPE), PADDING_LIST(_NIL_PAD)> \
+	{	/* UDT */ \
+	static const bool value = _Has_result_type<_Fty>::type::value; \
+	typedef typename _Result_type< \
+		_Result_ofx<_Fty COMMA LIST(_TYPE)>::value, \
+		_Fty COMMA LIST(_TYPE)>::type type; \
+	};
+
+_VARIADIC_EXPAND_0X(_CLASS_RESULT_OFX, , , , )
+#undef _CLASS_RESULT_OFX
+
+#define _CLASS_RESULT_OF_PF( \
+	TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, CALL_OPT, X2, X3, X4) \
+template<class _Ret COMMA LIST(_CLASS_TYPE) COMMA LIST(_CLASS_TYPEX)> \
+	struct _Result_of<_Ret (CALL_OPT &)(LIST(_TYPE)) \
+		COMMA LIST(_TYPEX), PADDING_LIST(_NIL_PAD), _Nil, _Nil> \
+	{	/* template to determine result of call operation */ \
+		/* on ptr to function */ \
+	typedef _Ret type; \
+	}; \
+template<class _Ret COMMA LIST(_CLASS_TYPE) COMMA LIST(_CLASS_TYPEX)> \
+	struct _Result_of<_Ret (CALL_OPT *)(LIST(_TYPE)) \
+		COMMA LIST(_TYPEX), PADDING_LIST(_NIL_PAD), _Nil, _Nil> \
+	{	/* template to determine result of call operation */ \
+		/* on ptr to function */ \
+	typedef _Ret type; \
+	}; \
+template<class _Ret COMMA LIST(_CLASS_TYPE) COMMA LIST(_CLASS_TYPEX)> \
+	struct _Result_of<_Ret (CALL_OPT * const)(LIST(_TYPE)) \
+		COMMA LIST(_TYPEX), PADDING_LIST(_NIL_PAD), _Nil, _Nil> \
+	{	/* template to determine result of call operation */ \
+		/* on ptr to function */ \
+	typedef _Ret type; \
+	};
+
+#define _CLASS_RESULT_OF_PF_OPT_0X( \
+		TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, X1, X2, X3, X4) \
+	_VARIADIC_CALL_OPT_X1(_CLASS_RESULT_OF_PF, \
+		TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, \
+			__cdecl, X2, X3, X4)
+
+_VARIADIC_EXPAND_0X(_CLASS_RESULT_OF_PF_OPT_0X, , , , )
+
+#undef _CLASS_RESULT_OF_PF_OPT_0X
+#undef _CLASS_RESULT_OF_PF
+
+template<class _Ret,
+	class _Ty,
+	class _Obj>
+	struct _Result_of<_Ret _Ty::*, _Obj, _Nil, _MAX_NIL_LIST>
+	{	// template to determine result of call operation
+		// on pointer to member data
+	typedef _Ret& type;
+	};
+
+template<class _Ret,
+	class _Ty,
+	class _Obj>
+	struct _Result_of<_Ret _Ty::* const, _Obj, _Nil, _MAX_NIL_LIST>
+	{	// template to determine result of call operation
+		// on pointer to member data
+	typedef _Ret& type;
+	};
+
+template<class _Ret,
+	class _Ty,
+	class _Obj>
+	struct _Result_of<_Ret _Ty::*, const _Obj, _Nil, _MAX_NIL_LIST>
+	{	// template to determine result of call operation
+		// on pointer to member data
+	typedef const _Ret& type;
+	};
+
+template<class _Ret,
+	class _Ty,
+	class _Obj>
+	struct _Result_of<_Ret _Ty::* const, const _Obj, _Nil, _MAX_NIL_LIST>
+	{	// template to determine result of call operation
+		// on pointer to member data
+	typedef const _Ret& type;
+	};
+
+#define _CLASS_RESULT_OF_PMF( \
+	TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, CALL_OPT, CV_OPT, X3, X4) \
+template<class _Ret, \
+	class _Ty, \
+	class _Tyx COMMA LIST(_CLASS_TYPE) COMMA LIST(_CLASS_TYPEX)> \
+	struct _Result_of<_Ret (CALL_OPT _Ty::*)(LIST(_TYPE)) CV_OPT, \
+		_Tyx& COMMA LIST(_TYPEX), PADDING_LIST(_NIL_PAD), _Nil> \
+	{	/* template to determine result of call operation */ \
+		/* on pointer to member function */ \
+	typedef _Ret type; \
+	}; \
+template<class _Ret, \
+	class _Ty, \
+	class _Tyx COMMA LIST(_CLASS_TYPE) COMMA LIST(_CLASS_TYPEX)> \
+	struct _Result_of<_Ret (CALL_OPT _Ty::* const)(LIST(_TYPE)) CV_OPT, \
+		_Tyx& COMMA LIST(_TYPEX), PADDING_LIST(_NIL_PAD), _Nil> \
+	{	/* template to determine result of call operation */ \
+		/* on const pointer to member function */ \
+	typedef _Ret type; \
+	};
+
+#define _CLASS_RESULT_OF_PMF_OPT_0X( \
+		TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, X1, X2, X3, X4) \
+	_VARIADIC_CALL_OPT_X2(_CLASS_RESULT_OF_PMF, \
+		TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, \
+			__thiscall, X2, X3, X4)
+
+_VARIADIC_EXPAND_0X(_CLASS_RESULT_OF_PMF_OPT_0X, , , , )
+_VARIADIC_EXPAND_0X(_CLASS_RESULT_OF_PMF_OPT_0X, , const, , )
+_VARIADIC_EXPAND_0X(_CLASS_RESULT_OF_PMF_OPT_0X, , volatile, , )
+_VARIADIC_EXPAND_0X(_CLASS_RESULT_OF_PMF_OPT_0X, , const volatile, , )
+
+#undef _CLASS_RESULT_OF_PMF_OPT_0X
+#undef _CLASS_RESULT_OF_PMF
+
+template<class _Fty>
+	struct _Result_of0;
+
+#define _CLASS_RESULT_OF_FUN( \
+	TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, CALL_OPT, X2, X3, X4) \
+template<class _Fty COMMA LIST(_CLASS_TYPE)> \
+	struct _Result_of0<_Fty CALL_OPT (LIST(_TYPE))> \
+	{	/* generic result_of */ \
+	typedef typename _Result_of<_Fty \
+		COMMA LIST(_REMOVE_REF), PADDING_LIST(_NIL_PAD), \
+		_Nil, _Nil>::type type; \
+	};
+
+_VARIADIC_EXPAND_0X(_CLASS_RESULT_OF_FUN, , , , )
+#undef _CLASS_RESULT_OF_FUN
+
+	// TEMPLATE STRUCT result_of
+template<class _Fty>
+	struct result_of
+	{	// template to determine result of call operation
+	typedef typename _Result_of0<_Fty>::type type;
+	};
+
+// SUPPORT CLASSES FOR CALL WRAPPERS
+
+	// TEMPLATE STRUCT _Pmd_caller
+template<class _Ret,
+	class _Arg0>
+	struct _Pmd_caller
+	{	// bind object and pointer to member data
+	template<class _Pmd,
+		class _Farg0>
+		static _Ret _Call_pmd(_Pmd _Pm, _Farg0&& _Fx0, true_type)
+		{	// apply to object
+		return ((_Ret)(_Fx0.*_Pm));
+		}
+
+	template<class _Pmd,
+		class _Farg0>
+		static _Ret _Call_pmd(_Pmd _Pm, _Farg0&& _Fx0, false_type)
+		{	// apply to (possibly smart) pointer
+		return ((*_Fx0).*_Pm);
+		}
+
+	template<class _Pmd,
+		class _Farg0>
+		static _Ret _Apply_pmd(_Pmd _Pm, _Farg0&& _Fx0)
+		{	// apply to object
+		typedef typename remove_reference<_Arg0>::type _Arg0_bare;
+		typedef typename remove_reference<_Farg0>::type _Farg0_bare;
+		typedef _Cat_base<is_same<_Arg0_bare, _Farg0_bare>::value
+			|| is_base_of<_Arg0_bare, _Farg0_bare>::value
+				&& is_same<typename add_reference<_Farg0_bare>::type,
+					_Farg0>::value> _Is_obj;
+
+		return (_Call_pmd<_Pmd, _Farg0&&>(_Pm,
+			_STD forward<_Farg0>(_Fx0), _Is_obj()));
+		}
+	};
+
+	// TEMPLATE STRUCT _Callable_base
+template<class _Ty,
+	bool _Indirect>
+	struct _Callable_base;
+
+template<class _Ty>
+	struct _Callable_base<_Ty, false>
+	{	// base types for callable object wrappers
+	enum {_EEN_INDIRECT = 0};	// helper for expression evaluator
+	typedef _Ty _MyTy;
+	typedef const _Ty& _MyCnstTy;
+
+	_Callable_base(const _Callable_base& _Right)
+		: _Object(_Right._Object)
+		{	// copy construct
+		}
+
+	_Callable_base(_Callable_base&& _Right)
+		: _Object(_STD forward<_Ty>(_Right._Object))
+		{	// move construct
+		}
+
+	template<class _Ty2>
+		_Callable_base(_Ty2&& _Val)
+		: _Object(_STD forward<_Ty2>(_Val))
+		{	// construct by forwarding
+		}
+
+	const _Ty& _Get() const
+		{	// return reference to stored object
+		return (_Object);
+		}
+
+	_Ty& _Get()
+		{	// return reference to stored object
+		return (_Object);
+		}
+
+private:
+	_Callable_base& operator=(const _Callable_base&);
+
+	_Ty _Object;
+};
+
+template<class _Ty>
+	struct _Callable_base<_Ty, true>
+	{	// base types for callable object wrappers holding references
+		// (used by reference_wrapper)
+	enum {_EEN_INDIRECT = 1};	// helper for expression evaluator
+	typedef _Ty _MyTy;
+	typedef _Ty& _MyCnstTy;
+
+	_Callable_base(_Ty& _Val)
+		: _Ptr(_STD addressof(_Val))
+		{	// construct
+		}
+
+	_MyCnstTy _Get() const
+		{	// return reference to stored object
+		return (*_Ptr);
+		}
+
+	_Ty& _Get()
+		{	// return reference to stored object
+		return (*_Ptr);
+		}
+
+	void _Reset(_Ty& _Val)
+		{	// reseat reference
+		_Ptr = _STD addressof(_Val);
+		}
+
+private:
+	_Ty *_Ptr;
+};
+
+	// TEMPLATE STRUCT _Callable_pmd
+template<class _Ty,
+	class _Memty,
+	bool _Indirect = false>
+	struct _Callable_pmd
+		: _Callable_base<_Ty, _Indirect>
+	{	// wrap pointer to member data
+	_Callable_pmd(const _Callable_pmd& _Right)
+		: _Callable_base<_Ty, _Indirect>(_Right._Get())
+		{	// construct
+		}
+
+	_Callable_pmd(_Ty& _Val)
+		: _Callable_base<_Ty, _Indirect>(_Val)
+		{	// construct
+		}
+
+	template<class _Ret,
+		class _Arg0>
+		_Ret _ApplyX(_Arg0&& _A0) const
+		{	// apply
+		return (_Pmd_caller<_Ret, _Memty>::
+			_Apply_pmd(this->_Get(), _STD forward<_Arg0>(_A0)));
+		}
+	};
+
+	// TEMPLATE STRUCT _Callable_obj
+template<class _Ty,
+	bool _Indirect = false>
+	struct _Callable_obj
+		: _Callable_base<_Ty, _Indirect>
+	{	// wrap function object
+	typedef _Callable_base<_Ty, _Indirect> _Mybase;
+
+	_Callable_obj(_Callable_obj& _Right)
+		: _Mybase(_Right._Get())
+		{	// copy construct
+		}
+
+	_Callable_obj(_Callable_obj&& _Right)
+		: _Mybase(_STD forward<_Ty>(_Right._Get()))
+		{	// move construct
+		}
+
+	template<class _Ty2>
+		_Callable_obj(_Ty2&& _Val)
+		: _Mybase(_STD forward<_Ty2>(_Val))
+		{	// construct
+		}
+
+#define _APPLYX_CALLOBJ( \
+		TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, X1, X2, X3, X4) \
+	template<class _Ret COMMA LIST(_CLASS_TYPE)> \
+		_Ret _ApplyX(LIST(_TYPE_REFREF_ARG)) \
+		{ /* apply to UDT object */ \
+		return (this->_Get()(LIST(_FORWARD_ARG))); \
+		} \
+	template<class _Ret COMMA LIST(_CLASS_TYPE)> \
+		_Ret _ApplyX(LIST(_TYPE_REFREF_ARG)) const \
+		{ /* apply to UDT object */ \
+		return (this->_Get()(LIST(_FORWARD_ARG))); \
+		}
+
+_VARIADIC_EXPAND_0X(_APPLYX_CALLOBJ, , , , )
+#undef _APPLYX_CALLOBJ
+	};
+
+	// TEMPLATE STRUCT _Pmf_caller
+template<class _Ret,
+	class _Arg0>
+	struct _Pmf_caller
+	{	// bind object and pointer to member function
+	typedef _Arg0 _Funobj;
+
+// apply to pointer to member function
+#define _PMF_CALLER_CALL_PMF( \
+	TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, CALL_OPT, CV_OPT, X3, X4) \
+	template<class _Pmf, \
+		class _Farg0 COMMA LIST(_CLASS_TYPE)> \
+		static _Ret _Call_pmf(_Pmf _Pm, _Farg0 _Fx0, true_type \
+			COMMA LIST(_TYPE_REFREF_ARG)) \
+		{	/* apply to object */ \
+		typedef typename _Copy_cv<_Arg0, _Farg0>::type \
+			_Funobj_cv; \
+		return (((_Funobj_cv)_Fx0.*_Pm)(LIST(_FORWARD_ARG))); \
+		} \
+	template<class _Pmf, \
+		class _Farg0 COMMA LIST(_CLASS_TYPE)> \
+		static _Ret _Call_pmf(_Pmf _Pm, _Farg0&& _Fx0, false_type \
+			COMMA LIST(_TYPE_REFREF_ARG)) \
+		{	/* apply to (possibly smart) pointer */ \
+		return (((*_Fx0).*_Pm)(LIST(_FORWARD_ARG))); \
+		}
+
+_VARIADIC_EXPAND_0X(_PMF_CALLER_CALL_PMF, , , , )
+#undef _PMF_CALLER_CALL_PMF
+
+#define _PMF_CALLER_APPLY_PMF( \
+	TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, CALL_OPT, CV_OPT, X3, X4) \
+	template<class _Pmf, \
+		class _Farg0 COMMA LIST(_CLASS_TYPE)>\
+		static _Ret _Apply_pmf(_Pmf _Pm, \
+			_Farg0&& _Fx0 COMMA LIST(_TYPE_REFREF_ARG)) \
+		{	/* apply to object */ \
+		typedef typename remove_reference<_Arg0>::type _Arg0_bare0; \
+		typedef typename remove_cv<_Arg0_bare0>::type _Arg0_bare; \
+		typedef typename remove_reference<_Farg0>::type _Farg0_bare; \
+		typedef _Cat_base<is_same<_Arg0_bare, _Farg0_bare>::value \
+			|| is_base_of<_Arg0_bare, _Farg0_bare>::value \
+				&& is_same<typename add_reference<_Farg0_bare>::type, \
+					_Farg0>::value> _Is_obj; \
+		return (_Call_pmf<_Pmf, _Farg0&& COMMA LIST(_TYPE_REFREF)>( \
+			_Pm, _STD forward<_Farg0>(_Fx0), _Is_obj() \
+				COMMA LIST(_FORWARD_ARG))); \
+		}
+
+_VARIADIC_EXPAND_0X(_PMF_CALLER_APPLY_PMF, , , , )
+#undef _PMF_CALLER_APPLY_PMF
+	};
+
+	// TEMPLATE STRUCT _Callable_pmf
+template<class _Ty,
+	class _Memty,
+	bool _Indirect = false>
+	struct _Callable_pmf
+		: _Callable_base<_Ty, _Indirect>
+	{	// wrap pointer to member function
+	_Callable_pmf(const _Callable_pmf& _Right)
+		: _Callable_base<_Ty, _Indirect>(_Right._Get())
+		{	// construct
+		}
+
+	_Callable_pmf(_Ty& _Val)
+		: _Callable_base<_Ty, _Indirect>(_Val)
+		{	// construct
+		}
+
+#define _CALLABLE_PMF_APPLYX( \
+	TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, CALL_OPT, CV_OPT, X3, X4) \
+	template<class _Ret, \
+		class _Xarg0 COMMA LIST(_CLASS_TYPE)> \
+		_Ret _ApplyX(_Xarg0&& _Arg0 COMMA LIST(_TYPE_REFREF_ARG)) const \
+		{ /* call pointer to member function */ \
+		return (_Pmf_caller<_Ret, _Memty>:: \
+			_Apply_pmf(this->_Get(), \
+				_STD forward<_Xarg0>(_Arg0) COMMA LIST(_FORWARD_ARG))); \
+		}
+
+_VARIADIC_EXPAND_0X(_CALLABLE_PMF_APPLYX, , , , )
+#undef _CALLABLE_PMF_APPLYX
+	};
+
+	// TEMPLATE STRUCT _Callable_fun
+template<class _Ty,
+	bool _Indirect = false>
+	struct _Callable_fun
+		: _Callable_base<_Ty, _Indirect>
+	{	// wrap pointer to function
+	_Callable_fun(const _Callable_fun& _Right)
+		: _Callable_base<_Ty, _Indirect>(_Right._Get())
+		{	// construct
+		}
+
+	_Callable_fun(_Ty& _Val)
+		: _Callable_base<_Ty, _Indirect>(_Val)
+		{	// construct
+		}
+
+#define _CALLABLE_FUN_APPLYX( \
+	TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, CALL_OPT, CV_OPT, X3, X4) \
+	template<class _Ret COMMA LIST(_CLASS_TYPE)> \
+		_Ret _ApplyX(LIST(_TYPE_REFREF_ARG)) const \
+		{ /* call pointer to function */ \
+		return (this->_Get()(LIST(_FORWARD_ARG))); \
+		}
+
+_VARIADIC_EXPAND_0X(_CALLABLE_FUN_APPLYX, , , , )
+#undef _CALLABLE_FUN_APPLYX
+	};
+
+	// TEMPLATE STRUCT _Call_wrapper_base
+template<class _Callable>
+	struct _Call_wrapper_base
+	{	// wrap callable object
+	typedef typename _Callable::_MyTy _MyTy;
+	typedef typename _Callable::_MyCnstTy _MyCnstTy;
+
+	_Call_wrapper_base(_MyTy& _Val)
+		: _Callee(_Val)
+		{	// construct
+		}
+
+	void _Reset(_MyTy& _Val)
+		{	// reset
+		_Callee._Reset(_Val);
+		}
+
+	_MyCnstTy _Get() const
+		{	// get
+		return (_Callee._Get());
+		}
+
+	_MyCnstTy _Get()
+		{	// get
+		return (_Callee._Get());
+		}
+
+	_Callable _Callee;
+	};
+
+	// TEMPLATE STRUCT _Call_wrapper
+template<class _Callable,
+	bool _Is_abstract = false>
+	struct _Call_wrapper
+	: _Call_wrapper_base<_Callable>
+	{	// wrap callable object
+	typedef _Call_wrapper_base<_Callable> _Mybase;
+
+	_Call_wrapper(typename _Call_wrapper_base<_Callable>::_MyTy& _Val)
+		: _Call_wrapper_base<_Callable>(_Val)
+		{	// construct
+		}
+
+#define _CALL_WRAPPER_OP( \
+	TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, X1, X2, X3, X4) \
+	TEMPLATE_LIST(_CLASS_TYPE) \
+		typename result_of< \
+			typename _Callable::_MyTy(LIST(_TYPE))>::type \
+			operator()(LIST(_TYPE_REFREF_ARG)) const \
+		{ /* call target object */ \
+		typedef typename result_of< \
+			typename _Callable::_MyTy(LIST(_TYPE))>::type _Ret; \
+		return (this->_Callee.template _ApplyX<_Ret>(LIST(_FORWARD_ARG))); \
+		}
+
+_VARIADIC_EXPAND_0X(_CALL_WRAPPER_OP, , , , )
+#undef _CALL_WRAPPER_OP
+	};
+
+template<class _Callable>
+	struct _Call_wrapper<_Callable, true>
+	: _Call_wrapper_base<_Callable>
+	{	// wrap abstract callable object
+	typedef _Call_wrapper_base<_Callable> _Mybase;
+
+	_Call_wrapper(typename _Call_wrapper_base<_Callable>::_MyTy& _Val)
+		: _Call_wrapper_base<_Callable>(_Val)
+		{	// construct
+		}
+	};
+
+		// TEMPLATE STRUCT _Has_result_and_arg_type
+template<class _Ty>
+	struct _Has_result_and_arg_type
+		_HAS_TYPES(argument_type, result_type, result_type);
+
+		// TEMPLATE STRUCT _Has_result_and_2arg_type
+template<class _Ty>
+	struct _Has_result_and_2arg_type
+		_HAS_TYPES(first_argument_type, second_argument_type, result_type);
+
+	// TEMPLATE CLASS _Refwrap_result0
+template<class _Ty,
+	bool>
+	struct _Refwrap_result0
+	{	// define result_type when target object defines it
+	typedef typename _Ty::result_type result_type;
+	};
+
+template<class _Ty>
+	struct _Refwrap_result0<_Ty, false>
+	{	// no result_type when not defined by target object
+	};
+
+// TEMPLATE CLASS _Refwrap_result1_helper
+template<class _Ty,
+	bool>
+	struct _Refwrap_result1_helper
+		: _Refwrap_result0<_Ty, _Has_result_type<_Ty>::type::value>
+	{	// select _Refwrap_result0 specialization
+	};
+
+template<class _Ty>
+	struct _Refwrap_result1_helper<_Ty, true>
+		: unary_function<typename _Ty::argument_type,
+			typename _Ty::result_type>
+	{	// derive from unary_function
+	};
+
+	// TEMPLATE CLASS _Refwrap_result1
+template<class _Ty,
+	bool>
+	struct _Refwrap_result1
+		: _Refwrap_result0<_Ty, _Has_result_type<_Ty>::type::value>
+	{	// select base for type without typedefs for result and one argument
+	};
+
+template<class _Ty>
+	struct _Refwrap_result1<_Ty, true>
+		: _Refwrap_result1_helper<_Ty,
+			is_base_of<unary_function<
+				typename _Ty::argument_type,
+				typename _Ty::result_type>, _Ty>::value>
+	{	// select base for type with typedefs for result and one argument
+	};
+
+	// TEMPLATE CLASS _Refwrap_result2_helper
+template<class _Ty,
+	bool>
+	struct _Refwrap_result2_helper
+		: _Refwrap_result1<_Ty, _Has_result_and_arg_type<_Ty>::type::value>
+	{	// select base
+	};
+
+template<class _Ty>
+	struct _Refwrap_result2_helper<_Ty, true>
+		: binary_function<typename _Ty::first_argument_type,
+			typename _Ty::second_argument_type,
+			typename _Ty::result_type>,
+		_Refwrap_result1<_Ty, _Has_result_and_arg_type<_Ty>::type::value>
+	{	// base for type derived from binary_function
+	};
+
+	// TEMPLATE CLASS _Refwrap_result2
+template<class _Ty,
+	bool>
+	struct _Refwrap_result2
+		: _Refwrap_result1<_Ty, _Has_result_and_arg_type<_Ty>::type::value>
+	{	// select base for type without typedefs for result and two arguments
+	};
+
+template<class _Ty>
+	struct _Refwrap_result2<_Ty, true>
+		: _Refwrap_result2_helper<_Ty,
+			is_base_of<binary_function<
+				typename _Ty::first_argument_type,
+				typename _Ty::second_argument_type,
+				typename _Ty::result_type>, _Ty>::value>
+	{	// select base for type with typedefs for result and two arguments
+	};
+
+	// TEMPLATE CLASS _Refwrap_impl
+template<class _Ty>
+	struct _Refwrap_impl
+		: _Call_wrapper<_Callable_obj<_Ty, true>,
+			is_abstract<_Ty>::value>,
+			_Refwrap_result2<_Ty, _Has_result_and_2arg_type<_Ty>::type::value>
+	{	// reference_wrapper implementation for UDT
+	_Refwrap_impl(_Ty& _Val)
+		: _Call_wrapper<_Callable_obj<_Ty, true>,
+			is_abstract<_Ty>::value>(_Val)
+		{	// construct
+		}
+	};
+
+template<class _Rx,
+	class _Arg0>
+	struct _Refwrap_impl<_Rx _Arg0::*>
+		: _Call_wrapper<_Callable_pmd<_Rx _Arg0::*const, _Arg0, false> >
+	{	// reference_wrapper implementation for pointer to member data
+	typedef _Rx _Arg0::*const _Fty;
+	typedef _Rx result_type;
+
+	_Refwrap_impl(_Fty _Val)
+		: _Call_wrapper<_Callable_pmd<_Fty, _Arg0, false> >(_Val)
+		{	// construct
+		}
+	};
+
+template<class _Rx,
+	class _Arg0>
+	struct _Refwrap_impl<_Rx _Arg0::*const>
+		: _Call_wrapper<_Callable_pmd<_Rx _Arg0::*, _Arg0, false> >
+	{	// reference_wrapper implementation for const pointer to member data
+	typedef _Rx _Arg0::*_Fty;
+	typedef _Rx result_type;
+	_Refwrap_impl(_Fty _Val)
+		: _Call_wrapper<_Callable_pmd<_Fty, _Arg0, false> >(_Val)
+		{	// construct
+		}
+	};
+
+	// TEMPLATE CLASS _Refwrap_impl
+	// TEMPLATE CLASS _Refwrap_impl FOR FUNCTIONS, POINTERS TO FUNCTIONS
+#define _CLASS_REFWRAP_IMPL0( \
+	TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, CALL_OPT, X2, X3, X4) \
+template<class _Rx COMMA LIST(_CLASS_TYPE)> \
+	struct _Refwrap_impl<_Rx CALL_OPT (LIST(_TYPE))> \
+		: _Call_wrapper<_Callable_fun< \
+				_Rx(CALL_OPT *)(LIST(_TYPE)), false> >, \
+			_Fun_class_base<_Rx COMMA LIST(_TYPE), \
+				PADDING_LIST(_NIL_PAD), _Nil, _Nil, _Nil> \
+	{	/* implement for pointer to function */ \
+	typedef _Rx(CALL_OPT *_Fty)(LIST(_TYPE)); \
+	typedef _Rx result_type; \
+	_Refwrap_impl(_Fty _Val) \
+		: _Call_wrapper<_Callable_fun<_Fty, false> >(_Val) \
+		{	/* construct */ \
+		} \
+	}; \
+template<class _Rx COMMA LIST(_CLASS_TYPE)> \
+	struct _Refwrap_impl<_Rx(CALL_OPT *)(LIST(_TYPE))> \
+		: _Call_wrapper<_Callable_fun< \
+				_Rx(CALL_OPT *)(LIST(_TYPE)), true> >, \
+			_Fun_class_base<_Rx COMMA LIST(_TYPE), \
+				PADDING_LIST(_NIL_PAD), _Nil, _Nil, _Nil> \
+	{	/* implement for pointer to function */ \
+	typedef _Rx(CALL_OPT *_Fty)(LIST(_TYPE)); \
+	typedef _Rx result_type; \
+	_Refwrap_impl(_Fty& _Val) \
+		: _Call_wrapper<_Callable_fun<_Fty, true> >(_Val) \
+		{	/* construct */ \
+		} \
+	}; \
+template<class _Rx COMMA LIST(_CLASS_TYPE)> \
+	struct _Refwrap_impl<_Rx(CALL_OPT * const)(LIST(_TYPE))> \
+		: _Call_wrapper<_Callable_fun< \
+				_Rx(CALL_OPT * const)(LIST(_TYPE)), true> >, \
+			_Fun_class_base<_Rx COMMA LIST(_TYPE), \
+				PADDING_LIST(_NIL_PAD), _Nil, _Nil, _Nil> \
+	{	/* implement for pointer to function */ \
+	typedef _Rx(CALL_OPT * const _Fty)(LIST(_TYPE)); \
+	typedef _Rx result_type; \
+	_Refwrap_impl(_Fty& _Val) \
+		: _Call_wrapper<_Callable_fun<_Fty, true> >(_Val) \
+		{	/* construct */ \
+		} \
+	};
+
+#define _CLASS_REFWRAP_IMPL0_OPT_0X( \
+		TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, X1, X2, X3, X4) \
+	_VARIADIC_CALL_OPT_X1(_CLASS_REFWRAP_IMPL0, \
+		TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, \
+			__cdecl, X2, X3, X4)
+
+_VARIADIC_EXPAND_0X(_CLASS_REFWRAP_IMPL0_OPT_0X, , , , )
+#undef _CLASS_REFWRAP_IMPL0_OPT_0X
+#undef _CLASS_REFWRAP_IMPL0
+
+	// TEMPLATE CLASS _Refwrap_impl FOR POINTERS TO MEMBER FUNCTIONS
+#define _CLASS_REFWRAP_IMPL1( \
+	TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, CALL_OPT, CV_OPT, X3, X4) \
+template<class _Rx, \
+	class _Arg0 COMMA LIST(_CLASS_TYPE)> \
+	struct _Refwrap_impl<_Rx(CALL_OPT _Arg0::*)(LIST(_TYPE)) CV_OPT> \
+		: _Call_wrapper<_Callable_pmf< \
+			_Rx(CALL_OPT _Arg0::*)(LIST(_TYPE)) CV_OPT, _Arg0, true> >, \
+				_Fun_class_base<_Rx, _Arg0 COMMA LIST(_TYPE)> \
+	{	/* implement for pointer to member function */ \
+	typedef _Rx(CALL_OPT _Arg0::* _Fty)(LIST(_TYPE)); \
+	typedef _Rx result_type; \
+	_Refwrap_impl(_Fty& _Val) \
+		: _Call_wrapper<_Callable_pmf<_Fty, _Arg0, true> >(_Val) \
+		{	/* construct */ \
+		} \
+	}; \
+template<class _Rx, \
+	class _Arg0 COMMA LIST(_CLASS_TYPE)> \
+	struct _Refwrap_impl<_Rx(CALL_OPT _Arg0::* const)(LIST(_TYPE)) CV_OPT> \
+		: _Call_wrapper<_Callable_pmf< \
+			_Rx(CALL_OPT _Arg0::* const)(LIST(_TYPE)) CV_OPT, _Arg0, true> >, \
+				_Fun_class_base<_Rx, _Arg0 COMMA LIST(_TYPE)> \
+	{	/* implement for pointer to member function */ \
+	typedef _Rx(CALL_OPT _Arg0::* const _Fty)(LIST(_TYPE)) CV_OPT; \
+	typedef _Rx result_type; \
+	_Refwrap_impl(_Fty& _Val) \
+		: _Call_wrapper<_Callable_pmf<_Fty, _Arg0, true> >(_Val) \
+		{	/* construct */ \
+		} \
+	};
+
+#define _CLASS_REFWRAP_IMPL1_OPT_0X( \
+		TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, X1, X2, X3, X4) \
+	_VARIADIC_CALL_OPT_X1(_CLASS_RESULT_OF_PMF, \
+		TEMPLATE_LIST, PADDING_LIST, LIST, COMMA, \
+			__cdecl, X2, X3, X4)
+
+_VARIADIC_EXPAND_0X(_CLASS_REFWRAP_IMPL1, , , , )
+_VARIADIC_EXPAND_0X(_CLASS_REFWRAP_IMPL1, , const, , )
+_VARIADIC_EXPAND_0X(_CLASS_REFWRAP_IMPL1, , volatile, , )
+_VARIADIC_EXPAND_0X(_CLASS_REFWRAP_IMPL1, , const volatile, , )
+
+#undef _CLASS_REFWRAP_IMPL1_OPT_0X
+#undef _CLASS_REFWRAP_IMPL1
+
+	// TEMPLATE CLASS reference_wrapper
+template<class _Ty>
+	class reference_wrapper
+	: public _Refwrap_impl<_Ty>
+	{	// stand-in for an assignable reference
+public:
+	typedef _Refwrap_impl<_Ty> _MyBase;
+	typedef _Ty type;
+
+	reference_wrapper(_Ty& _Val) _NOEXCEPT
+		: _MyBase(_Val)
+		{	// construct
+		}
+
+	operator _Ty&() const _NOEXCEPT
+		{	// return reference
+		return (this->_Get());
+		}
+
+	_Ty& get() const _NOEXCEPT
+		{	// return reference
+		return (this->_Get());
+		}
+	};
+
+	// TEMPLATE FUNCTIONS ref AND cref
+template<class _Ty>
+	reference_wrapper<_Ty>
+		ref(_Ty& _Val) _NOEXCEPT
+	{	// create reference_wrapper<_Ty> object
+	return (reference_wrapper<_Ty>(_Val));
+	}
+
+template<class _Ty>
+	void ref(const _Ty&& _Val);	// not defined
+
+template<class _Ty>
+	reference_wrapper<_Ty>
+		ref(reference_wrapper<_Ty> _Val) _NOEXCEPT
+	{	// create reference_wrapper<_Ty> object
+	return (_Val);
+	}
+
+template<class _Ty>
+	reference_wrapper<const _Ty>
+		cref(const _Ty& _Val) _NOEXCEPT
+	{	// create reference_wrapper<const _Ty> object
+	return (reference_wrapper<const _Ty>(_Val));
+	}
+
+//template<class _Ty>
+//	void cref(const _Ty&& _Val);	// not defined
+
+template<class _Ty>
+	reference_wrapper<const _Ty>
+		cref(reference_wrapper<const _Ty> _Val) _NOEXCEPT
+	{	// create reference_wrapper<const _Ty> object
+	return (_Val);
+	}
+
+namespace tr1 {	// TR1 additions
+using _STD cref;
+using _STD ref;
+using _STD reference_wrapper;
+using _STD result_of;
+	}	// namespace tr1
+_STD_END
+
+ #pragma pop_macro("new")
+ #pragma warning(pop)
+ #pragma pack(pop)
+#endif /* RC_INVOKED */
+#endif /* _XREFWRAP_ */
+
+/*
+ * Copyright (c) 1992-2012 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V6.00:0009 */

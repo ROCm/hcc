@@ -1,0 +1,314 @@
+// condition_variable C++0X header
+#pragma once
+#ifndef _CONDITION_VARIABLE_
+#define _CONDITION_VARIABLE_
+#ifndef RC_INVOKED
+#include <thr/xthread>
+#include <mutex>
+#include <chrono>
+
+ #pragma pack(push,_CRT_PACKING)
+ #pragma warning(push,3)
+ #pragma push_macro("new")
+ #undef new
+
+ #ifdef _M_CEE
+  #error <condition_variable> is not supported when compiling with /clr or /clr:pure.
+ #endif /* _M_CEE */
+
+_STD_BEGIN
+	namespace cv_status {	// names for wait returns
+enum cv_status {
+	timeout,
+	no_timeout
+	};
+	} // namespace cv_status
+
+typedef cv_status::cv_status _Cv_status;
+
+class condition_variable
+	{	// class for waiting for conditions
+public:
+	typedef _Cnd_t native_handle_type;
+
+	condition_variable()
+		{	// construct
+		_Cnd_initX(&_Cnd);
+		}
+
+	~condition_variable() _NOEXCEPT
+		{	// destroy
+		_Cnd_destroy(&_Cnd);
+		}
+
+private:
+	condition_variable(const condition_variable&);  // not defined
+	condition_variable& operator=(const condition_variable&);	// not defined
+public:
+	void notify_one() _NOEXCEPT
+		{	// wake up one waiter
+		_Cnd_signalX(&_Cnd);
+		}
+
+	void notify_all() _NOEXCEPT
+		{	// wake up all waiters
+		_Cnd_broadcastX(&_Cnd);
+		}
+
+	void wait(unique_lock<mutex>& _Lck)
+		{	// wait for signal
+		_Cnd_waitX(&_Cnd, &_Lck.mutex()->_Mtx);
+		}
+
+	template<class _Predicate>
+		void wait(unique_lock<mutex>& _Lck, _Predicate _Pred)
+		{	// wait for signal and test predicate
+		while (!_Pred())
+			wait(_Lck);
+		}
+
+	template<class _Rep,
+		class _Period>
+		_Cv_status wait_for(
+			unique_lock<mutex>& _Lck,
+			const chrono::duration<_Rep, _Period>& _Rel_time)
+		{	// wait for duration
+		stdext::threads::xtime _Tgt = _To_xtime(_Rel_time);
+		return (wait_until(_Lck, &_Tgt));
+		}
+
+	template<class _Rep,
+		class _Period,
+		class _Predicate>
+		bool wait_for(
+			unique_lock<mutex>& _Lck,
+			const chrono::duration<_Rep, _Period>& _Rel_time,
+			_Predicate _Pred)
+		{	// wait for signal with timeout and check predicate
+		stdext::threads::xtime _Tgt = _To_xtime(_Rel_time);
+		return (wait_until(_Lck, &_Tgt, _Pred));
+		}
+
+	template<class _Clock,
+		class _Duration>
+		_Cv_status wait_until(
+			unique_lock<mutex>& _Lck,
+			const chrono::time_point<_Clock, _Duration>& _Abs_time)
+		{	// wait until time point
+		typename chrono::time_point<_Clock, _Duration>::duration
+			_Rel_time = _Abs_time - _Clock::now();
+		return (wait_for(_Lck, _Rel_time));
+		}
+
+	template<class _Clock,
+		class _Duration,
+		class _Predicate>
+		bool wait_until(
+			unique_lock<mutex>& _Lck,
+			const chrono::time_point<_Clock, _Duration>& _Abs_time,
+			_Predicate _Pred)
+		{	// wait for signal with timeout and check predicate
+		typename chrono::time_point<_Clock, _Duration>::duration
+			_Rel_time = _Abs_time - _Clock::now();
+		return (wait_for(_Lck, _Rel_time, _Pred));
+		}
+
+	_Cv_status wait_until(
+		unique_lock<mutex>& _Lck,
+		const xtime *_Abs_time)
+		{	// wait for signal with timeout
+		if (!_Mtx_current_owns(&_Lck.mutex()->_Mtx))
+			_Throw_Cpp_error(_OPERATION_NOT_PERMITTED);
+		int _Res = _Cnd_timedwaitX(&_Cnd, &_Lck.mutex()->_Mtx, _Abs_time);
+		return (_Res == _Thrd_timedout
+			? cv_status::timeout : cv_status::no_timeout);
+		}
+
+	template<class _Predicate>
+		bool wait_until(
+			unique_lock<mutex>& _Lck,
+			const xtime *_Abs_time,
+			_Predicate _Pred)
+		{	// wait for signal with timeout and check predicate
+		bool _Res = true;
+		while (_Res && !_Pred())
+			_Res = (int)wait_until(_Lck, _Abs_time)
+				!= (int)cv_status::timeout;
+		return (_Pred());
+		}
+
+	native_handle_type native_handle()
+		{	// return condition variable handle
+		return (_Cnd);
+		}
+
+	void _Register(unique_lock<mutex>& _Lck, int *_Ready)
+		{	// register this object for release at thread exit
+		_Cnd_register_at_thread_exit(&_Cnd, &_Lck.mutex()->_Mtx, _Ready);
+		}
+
+	void _Unregister(mutex& _Mtx)
+		{	// unregister this object for release at thread exit
+		_Cnd_unregister_at_thread_exit(&_Mtx._Mtx);
+		}
+
+private:
+	_Cnd_t _Cnd;
+	};
+
+class condition_variable_any
+	{	// class for waiting for conditions with any kind of mutex
+public:
+	condition_variable_any()
+		{	// construct
+		_Cnd_initX(&_Cnd);
+		_Auto_cnd _Cnd_cleaner(&_Cnd);
+		_Mtx_initX(&_Mtx, _Mtx_plain);
+		_Cnd_cleaner._Release();
+		}
+
+	~condition_variable_any() _NOEXCEPT
+		{	// destroy
+		_Mtx_destroy(&_Mtx);
+		_Cnd_destroy(&_Cnd);
+		}
+
+private:
+	condition_variable_any(
+		const condition_variable_any&);  // not defined
+	condition_variable_any& operator=(
+		const condition_variable_any&);	// not defined
+
+public:
+	void notify_one() _NOEXCEPT
+		{	// wake up one waiter
+		_Mtx_lockX(&_Mtx);
+		_Cnd_signalX(&_Cnd);
+		_Mtx_unlockX(&_Mtx);
+		}
+
+	void notify_all() _NOEXCEPT
+		{	// wake up all waiters
+		_Mtx_lockX(&_Mtx);
+		_Cnd_broadcastX(&_Cnd);
+		_Mtx_unlockX(&_Mtx);
+		}
+
+	template<class _Mutex>
+		void wait(_Mutex& _Xtrnl)
+		{	// wait for signal
+		_Mtx_lockX(&_Mtx);
+		_Xtrnl.unlock();
+		_Cnd_waitX(&_Cnd, &_Mtx);
+		_Mtx_unlockX(&_Mtx);
+		_Xtrnl.lock();
+		}
+
+	template<class _Mutex,
+		class _Predicate>
+		void wait(_Mutex& _Xtrnl, _Predicate _Pred)
+		{	// wait for signal and check predicate
+		while (!_Pred())
+			wait(_Xtrnl);
+		}
+
+	template<class _Lock,
+		class _Rep,
+		class _Period>
+		bool wait_for(
+			_Lock& _Lck,
+			const chrono::duration<_Rep, _Period>& _Rel_time)
+		{	// wait for duration
+		stdext::threads::xtime _Tgt = _To_xtime(_Rel_time);
+		return (wait_until(_Lck, &_Tgt));
+		}
+
+	template<class _Lock,
+		class _Rep,
+		class _Period,
+		class _Predicate>
+		bool wait_for(
+			_Lock& _Lck,
+			const chrono::duration<_Rep, _Period>& _Rel_time,
+			_Predicate _Pred)
+		{	// wait for signal with timeout and check predicate
+		bool _Res = true;
+		while (_Res && !_Pred())
+			_Res = wait_for(_Lck, _Rel_time);
+		return (_Pred());
+		}
+
+	template<class _Lock,
+		class _Clock,
+		class _Duration>
+		bool wait_until(
+			_Lock& _Lck,
+			const chrono::time_point<_Clock, _Duration>& _Abs_time)
+		{	// wait until time point
+		typename chrono::time_point<_Clock, _Duration>::duration
+			_Rel_time = _Abs_time - _Clock::now();
+		return (wait_for(_Lck, _Rel_time));
+		}
+
+	template<class _Lock,
+		class _Clock,
+		class _Duration,
+		class _Predicate>
+		bool wait_until(
+			_Lock& _Lck,
+			const chrono::time_point<_Clock, _Duration>& _Abs_time,
+			_Predicate _Pred)
+		{	// wait for signal with timeout and check predicate
+		bool _Res = true;
+		while (_Res && !_Pred())
+			_Res = wait_until(_Lck, _Abs_time);
+		return (_Pred());
+		}
+
+	template<class _Mutex>
+		bool wait_until(
+			_Mutex& _Xtrnl,
+			const xtime *_Abs_time)
+		{	// wait for signal with timeout
+		bool _Res;
+		_Mtx_lock(&_Mtx);
+		_Xtrnl.unlock();
+		_Res = _Cnd_timedwaitX(&_Cnd, &_Mtx, _Abs_time) != _Thrd_timedout;
+		_Mtx_unlock(&_Mtx);
+		_Xtrnl.lock();
+		return (_Res);
+		}
+
+	template<class _Mutex,
+		class _Predicate>
+		bool wait_until(
+			_Mutex& _Xtrnl,
+			const xtime *_Abs_time,
+			_Predicate _Pred)
+		{	// wait for signal with timeout and check predicate
+		bool _Res = true;
+		while (_Res && !_Pred())
+			_Res = wait_until(_Xtrnl, _Abs_time);
+		return (_Pred());
+		}
+private:
+	_Cnd_t _Cnd;
+	_Mtx_t _Mtx;
+	};
+
+inline void notify_all_at_thread_exit(condition_variable& _Cnd,
+	unique_lock<mutex> _Lck)
+	{	// register _Cnd for release at thread exit
+	_Cnd._Register(_Lck, 0);
+	}
+_STD_END
+ #pragma pop_macro("new")
+ #pragma warning(pop)
+ #pragma pack(pop)
+#endif /* RC_INVOKED */
+#endif /* _CONDITION_VARIABLE_ */
+
+/*
+ * Copyright (c) 1992-2012 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V6.00:0009 */
