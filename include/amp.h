@@ -191,6 +191,7 @@ public:
   index operator--(int) restrict(amp,cpu);
 };
 
+template <int D0, int D1=0, int D2=0> class tiled_extent;
 
 class array_view;
 template <int N>
