@@ -136,6 +136,7 @@ public:
 
   int& operator[](unsigned int c) restrict(amp,cpu);
   
+#if 0
   template   <int N>
   friend     bool operator==(const index<N>& lhs, const index<N>& rhs) restrict(amp,cpu);
   template   <int N>
@@ -144,10 +145,12 @@ public:
   friend     index<N> operator+(const index<N>& lhs, const index<N>& rhs) restrict(amp,cpu);
   template <int N>
   friend     index<N> operator-(const index<N>& lhs, const index<N>& rhs) restrict(amp,cpu);
+#endif
 
   index& operator+=(const index& rhs) restrict(amp,cpu);
   index& operator-=(const index& rhs) restrict(amp,cpu);
 
+#if 0
   template <int N>
   friend   index<N>
   operator+(const index<N>& lhs, int rhs) restrict(amp,cpu);
@@ -178,6 +181,7 @@ public:
   template <int N>
   friend   index<N> 
   operator%(int lhs, const index<N>& rhs) restrict(amp,cpu);
+#endif
   
   index& operator+=(int rhs) restrict(amp,cpu);
   index& operator-=(int rhs) restrict(amp,cpu);
@@ -191,9 +195,11 @@ public:
   index operator--(int) restrict(amp,cpu);
 };
 
+// forward decls
 template <int D0, int D1=0, int D2=0> class tiled_extent;
 
-class array_view;
+template <typename T, int N> class array_view;
+
 template <int N>
 class extent {
 public:
@@ -230,6 +236,7 @@ public:
   extent operator+(const index<N>& idx) restrict(amp,cpu);
   extent operator-(const index<N>& idx) restrict(amp,cpu);
 
+#if 0
   template <int N>
   friend bool operator==(const extent<N>& lhs, const extent<N>& rhs) restrict(amp,cpu);
   template <int N>
@@ -245,6 +252,7 @@ public:
   template <int N> friend extent<N> operator/(int lhs, const extent<N>& rhs) restrict(amp,cpu);
   template <int N> friend extent<N> operator%(const extent<N>& lhs, int rhs) restrict(amp,cpu);
   template <int N> friend extent<N> operator%(int lhs, const extent<N>& rhs) restrict(amp,cpu);
+#endif
 
   extent& operator+=(int rhs) restrict(amp,cpu);
   extent& operator-=(int rhs) restrict(amp,cpu);
@@ -258,7 +266,7 @@ public:
   extent operator--(int) restrict(amp,cpu);
 };
 
-template <int D0, int D1=0, int D2=0>
+template <int D0, int D1/*=0*/, int D2/*=0*/>
 class tiled_extent : public extent<3>
 {
 public:
@@ -742,11 +750,11 @@ public:
   accelerator_view av, accelerator_view associated_av); // staging
 
   template <typename InputIterator>
-  array(int e0, int e2, int e2, InputIterator srcBegin,
+  array(int e0, int e1, int e2, InputIterator srcBegin,
   accelerator_view av, accelerator_view associated_av); // staging
 
   template <typename InputIterator>
-  array(int e0, int e2, int e2, InputIterator srcBegin, InputIterator srcEnd,
+  array(int e0, int e1, int e2, InputIterator srcBegin, InputIterator srcEnd,
   accelerator_view av, accelerator_view associated_av); // staging
 
   template <typename InputIterator>
@@ -841,7 +849,7 @@ public:
   const T* data() const restrict(amp,cpu);
 };
 
-template <typename T, int N = 1>
+template <typename T, int N/* = 1*/>
 class array_view
 {
 public:
@@ -1025,7 +1033,7 @@ public:
   void discard_data() const;
 };
 
-template <typename T, int N=1>
+template <typename T, int N/*=1*/>
 class array_view<const T,N>
 {
 public:
@@ -1095,7 +1103,7 @@ public:
   const T& operator()(const index<1>& idx) const restrict(amp,cpu);
   const T& operator()(int i) const restrict(amp,cpu);
   
-  array_view<const T,1> section(const index<N>& idx, const extent<N>& ext) const restrict(amp,cpu);
+  array_view<const T,1> section(const index<1>& idx, const extent<1>& ext) const restrict(amp,cpu);
   array_view<const T,1> section(const index<1>& idx) const restrict(amp,cpu);
   array_view<const T,1> section(const extent<1>& ext) const restrict(amp,cpu);
   array_view<const T,1> section(int i0, int e0) const restrict(amp,cpu);
