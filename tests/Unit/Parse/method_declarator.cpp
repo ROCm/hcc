@@ -18,3 +18,4 @@ int func() restrict(amp) {
   return 0;
 }
 
+

@@ -1134,6 +1134,64 @@ public:
   void refresh() const;
 };
 
+// class index operators
+template <int N>
+bool operator==(const index<N>& lhs, const index<N>& rhs) restrict(amp,cpu);
+template <int N>
+bool operator!=(const index<N>& lhs, const index<N>& rhs) restrict(amp,cpu);
+
+template <int N>
+index<N> operator+(const index<N>& lhs, const index<N>& rhs) restrict(amp,cpu);
+template <int N>
+index<N> operator+(const index<N>& lhs, int rhs) restrict(amp,cpu);
+template <int N>
+index<N> operator+(int lhs, const index<N>& rhs) restrict(amp,cpu);
+template <int N>
+index<N> operator-(const index<N>& lhs, const index<N>& rhs) restrict(amp,cpu);
+template <int N>
+index<N> operator-(const index<N>& lhs, int rhs) restrict(amp,cpu);
+template <int N>
+index<N> operator-(int lhs, const index<N>& rhs) restrict(amp,cpu);
+template <int N>
+index<N> operator*(const index<N>& lhs, int rhs) restrict(amp,cpu);
+template <int N>
+index<N> operator*(int lhs, const index<N>& rhs) restrict(amp,cpu);
+template <int N>
+index<N> operator/(const index<N>& lhs, int rhs) restrict(amp,cpu);
+template <int N>
+index<N> operator/(int lhs, const index<N>& rhs) restrict(amp,cpu);
+template <int N>
+index<N> operator%(const index<N>& lhs, int rhs) restrict(amp,cpu);
+template <int N>
+index<N> operator%(int lhs, const index<N>& rhs) restrict(amp,cpu);
+
+// class extent operators
+template <int N>
+bool operator==(const extent<N>& lhs, const extent<N>& rhs) restrict(amp,cpu);
+template <int N>
+bool operator!=(const extent<N>& lhs, const extent<N>& rhs) restrict(amp,cpu);
+
+template <int N>
+extent<N> operator+(const extent<N>& lhs, int rhs) restrict(amp,cpu);
+template <int N> 
+extent<N> operator+(int lhs, const extent<N>& rhs) restrict(amp,cpu);
+template <int N>
+extent<N> operator-(const extent<N>& lhs, int rhs) restrict(amp,cpu);
+template <int N>
+extent<N> operator-(int lhs, const extent<N>& rhs) restrict(amp,cpu);
+template <int N>
+extent<N> operator*(const extent<N>& lhs, int rhs) restrict(amp,cpu);
+template <int N>
+extent<N> operator*(int lhs, const extent<N>& rhs) restrict(amp,cpu);
+template <int N>
+extent<N> operator/(const extent<N>& lhs, int rhs) restrict(amp,cpu);
+template <int N>
+extent<N> operator/(int lhs, const extent<N>& rhs) restrict(amp,cpu);
+template <int N>
+extent<N> operator%(const extent<N>& lhs, int rhs) restrict(amp,cpu);
+template <int N>
+extent<N> operator%(int lhs, const extent<N>& rhs) restrict(amp,cpu);
+
 template <int N, typename Kernel>
 void parallel_for_each(extent<N> compute_domain, const Kernel& f);
 
