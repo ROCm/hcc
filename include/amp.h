@@ -136,53 +136,9 @@ public:
 
   int& operator[](unsigned int c) restrict(amp,cpu);
   
-#if 0
-  template   <int N>
-  friend     bool operator==(const index<N>& lhs, const index<N>& rhs) restrict(amp,cpu);
-  template   <int N>
-  friend     bool operator!=(const index<N>& lhs, const index<N>& rhs) restrict(amp,cpu);
-  template   <int N>
-  friend     index<N> operator+(const index<N>& lhs, const index<N>& rhs) restrict(amp,cpu);
-  template <int N>
-  friend     index<N> operator-(const index<N>& lhs, const index<N>& rhs) restrict(amp,cpu);
-#endif
-
   index& operator+=(const index& rhs) restrict(amp,cpu);
   index& operator-=(const index& rhs) restrict(amp,cpu);
 
-#if 0
-  template <int N>
-  friend   index<N>
-  operator+(const index<N>& lhs, int rhs) restrict(amp,cpu);
-  template <int N>
-  friend   index<N>
-  operator+(int lhs, const index<N>& rhs) restrict(amp,cpu);
-  template <int N>
-  friend   index<N>
-  operator-(const index<N>& lhs, int rhs) restrict(amp,cpu);
-  template <int N>
-  friend   index<N>
-  operator-(int lhs, const index<N>& rhs) restrict(amp,cpu);
-  template <int N>
-  friend   index<N>
-  operator*(const index<N>& lhs, int rhs) restrict(amp,cpu);
-  template <int N>
-  friend   index<N>
-  operator*(int lhs, const index<N>& rhs) restrict(amp,cpu);
-  template <int N>
-  friend   index<N>
-  operator/(const index<N>& lhs, int rhs) restrict(amp,cpu);
-  template <int N>
-  friend   index<N>
-  operator/(int lhs, const index<N>& rhs) restrict(amp,cpu);
-  template <int N>
-  friend   index<N>
-  operator%(const index<N>& lhs, int rhs) restrict(amp,cpu);
-  template <int N>
-  friend   index<N> 
-  operator%(int lhs, const index<N>& rhs) restrict(amp,cpu);
-#endif
-  
   index& operator+=(int rhs) restrict(amp,cpu);
   index& operator-=(int rhs) restrict(amp,cpu);
   index& operator*=(int rhs) restrict(amp,cpu);
@@ -235,24 +191,6 @@ public:
 
   extent operator+(const index<N>& idx) restrict(amp,cpu);
   extent operator-(const index<N>& idx) restrict(amp,cpu);
-
-#if 0
-  template <int N>
-  friend bool operator==(const extent<N>& lhs, const extent<N>& rhs) restrict(amp,cpu);
-  template <int N>
-  friend bool operator!=(const extent<N>& lhs, const extent<N>& rhs) restrict(amp,cpu);
-
-  template <int N> friend extent<N> operator+(const extent<N>& lhs, int rhs) restrict(amp,cpu);
-  template <int N> friend extent<N> operator+(int lhs, const extent<N>& rhs) restrict(amp,cpu);
-  template <int N> friend extent<N> operator-(const extent<N>& lhs, int rhs) restrict(amp,cpu);
-  template <int N> friend extent<N> operator-(int lhs, const extent<N>& rhs) restrict(amp,cpu);
-  template <int N> friend extent<N> operator*(const extent<N>& lhs, int rhs) restrict(amp,cpu);
-  template <int N> friend extent<N> operator*(int lhs, const extent<N>& rhs) restrict(amp,cpu);
-  template <int N> friend extent<N> operator/(const extent<N>& lhs, int rhs) restrict(amp,cpu);
-  template <int N> friend extent<N> operator/(int lhs, const extent<N>& rhs) restrict(amp,cpu);
-  template <int N> friend extent<N> operator%(const extent<N>& lhs, int rhs) restrict(amp,cpu);
-  template <int N> friend extent<N> operator%(int lhs, const extent<N>& rhs) restrict(amp,cpu);
-#endif
 
   extent& operator+=(int rhs) restrict(amp,cpu);
   extent& operator-=(int rhs) restrict(amp,cpu);
@@ -973,10 +911,6 @@ public:
   T& operator()(const index<2>& idx) const restrict(amp,cpu);
   T& operator()(int i0, int i1) const restrict(amp,cpu);
 
-  
-  
-  
-  
   array_view<T,2> section(const index<2>& idx, const extent<2>& ext) const restrict(amp,cpu);
   array_view<T,2> section(const index<2>& idx) const restrict(amp,cpu);
   array_view<T,2> section(const extent<2>& ext) const restrict(amp,cpu);
