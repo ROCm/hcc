@@ -138,7 +138,7 @@ public:
   
   index& operator+=(const index& rhs) restrict(amp,cpu);
   index& operator-=(const index& rhs) restrict(amp,cpu);
-
+  
   index& operator+=(int rhs) restrict(amp,cpu);
   index& operator-=(int rhs) restrict(amp,cpu);
   index& operator*=(int rhs) restrict(amp,cpu);
@@ -153,6 +153,8 @@ public:
 
 // forward decls
 template <int D0, int D1=0, int D2=0> class tiled_extent;
+
+template <typename T, int N> class array;
 
 template <typename T, int N> class array_view;
 
@@ -261,6 +263,26 @@ public:
   friend bool operator!=(const tiled_extent& lhs, const tiled_extent& rhs) restrict(amp,cpu);
 };
 
+// ------------------------------------------------------------------------
+// For array's operator[](int i). This is a temporally workaround.
+// N must be greater or equal to 2
+template <typename T, int N>
+class array_projection_helper
+{
+public:
+  static array_view<T, N-1> project(array<T, N>* Array, int i) restrict(amp,cpu);
+  static array_view<T, N-1> project(const array<T, N>* Array, int i) restrict(amp,cpu);
+};
+
+template <typename T>
+class array_projection_helper<T, 1>
+{
+public:
+  static T& project(array<T, 1>* Array, int i) restrict(amp,cpu);
+  static const T& project(const array<T,1>* Array, int i) restrict(amp,cpu);
+};
+// ------------------------------------------------------------------------
+
 template <typename T, int N=1>
 class array {
 public:
@@ -270,13 +292,49 @@ public:
 
   explicit array(const extent<N>& extent);
 
-  array(const extent<N>& extent, accelerator_view av, accelerator_view associated_av);
+  explicit array(int e0);
+
+  explicit array(int e0, int e1);
+
+  explicit array(int e0, int e1, int e2);
+
+  array(int e0, accelerator_view av);
+
+  array(int e0, int e1, accelerator_view av);
+
+  array(int e0, int e1, int e2, accelerator_view av);
+
+  array(const extent<N>& extent, accelerator_view av, accelerator_view associated_av); //staging
+
+  array(int e0, accelerator_view av, accelerator_view associated_av);
+
+  array(int e0, int e1, accelerator_view av, accelerator_view associated_av); //staging
+
+  array(int e0, int e1, int e2, accelerator_view av, accelerator_view associated_av); //staging
 
   template <typename InputIterator>
   array(const extent<N>& extent, InputIterator srcBegin);
 
   template <typename InputIterator>
   array(const extent<N>& extent, InputIterator srcBegin, InputIterator srcEnd);
+
+  template <typename InputIterator>
+  array(int e0, InputIterator srcBegin);
+
+  template <typename InputIterator>
+  array(int e0, InputIterator srcBegin, InputIterator srcEnd);
+
+  template <typename InputIterator>
+  array(int e0, int e1, InputIterator srcBegin);
+
+  template <typename InputIterator>
+  array(int e0, int e1, InputIterator srcBegin, InputIterator srcEnd);
+
+  template <typename InputIterator>
+  array(int e0, int e1, int e2, InputIterator srcBegin);
+
+  template <typename InputIterator>
+  array(int e0, int e1, int e2, InputIterator srcBegin, InputIterator srcEnd);
 
   template <typename InputIterator>
   array(const extent<N>& extent, InputIterator srcBegin,
@@ -287,11 +345,53 @@ public:
     accelerator_view av, accelerator_view associated_av); // staging
 
   template <typename InputIterator>
+  array(int e0, InputIterator srcBegin,
+  accelerator_view av, accelerator_view associated_av); // staging
+
+  template <typename InputIterator>
+  array(int e0, InputIterator srcBegin, InputIterator srcEnd,
+  accelerator_view av, accelerator_view associated_av); // staging
+
+  template <typename InputIterator>
+  array(int e0, int e1, InputIterator srcBegin,
+  accelerator_view av, accelerator_view associated_av); // staging
+
+  template <typename InputIterator>
+  array(int e0, int e1, InputIterator srcBegin, InputIterator srcEnd,
+  accelerator_view av, accelerator_view associated_av); // staging
+
+  template <typename InputIterator>
+  array(int e0, int e1, int e2, InputIterator srcBegin,
+  accelerator_view av, accelerator_view associated_av); // staging
+
+  template <typename InputIterator>
+  array(int e0, int e1, int e2, InputIterator srcBegin, InputIterator srcEnd,
+  accelerator_view av, accelerator_view associated_av); // staging
+
+  template <typename InputIterator>
   array(const extent<N>& extent, InputIterator srcBegin, accelerator_view av);
+
+  template <typename InputIterator>
+  array(int e0, InputIterator SrcBegin, accelerator_view av);
+
+  template <typename InputIterator>
+  array(int e0, int e1, InputIterator SrcBegin, accelerator_view av);
+
+  template <typename InputIterator>
+  array(int e0, int e1, int e2, InputIterator SrcBegin, accelerator_view av);
 
   template <typename InputIterator>
   array(const extent<N>& extent, InputIterator srcBegin, InputIterator srcEnd,
   accelerator_view av);
+
+  template <typename InputIterator>
+  array(int e0, InputIterator srcBegin, InputIterator srcEnd, accelerator_view av);
+
+  template <typename InputIterator>
+  array(int e0, int e1, InputIterator srcBegin, InputIterator srcEnd, accelerator_view av);
+
+  template <typename InputIterator>
+  array(int e0, int e1, int e2, InputIterator srcBegin, InputIterator srcEnd, accelerator_view av);
 
   explicit array(const array_view<const T,N>& src);
 
@@ -328,17 +428,25 @@ public:
 
   const T& operator[](const index<N>& idx) const restrict(amp,cpu);
 
-  array_view<T,N-1> operator[](int i) restrict(amp,cpu);
+  auto operator[](int i) restrict(amp,cpu) -> decltype(array_projection_helper<T, N>::project((array<T,N> *)NULL, i));
 
-  array_view<const T,N-1> operator[](int i) const restrict(amp,cpu);
+  auto operator[](int i) const restrict(amp,cpu) -> decltype(array_projection_helper<T, N>::project((const array<T, N>* )NULL, i));
 
   const T& operator()(const index<N>& idx) const restrict(amp,cpu);
 
   T& operator()(const index<N>& idx) restrict(amp,cpu);
 
-  array_view<T,N-1> operator()(int i) restrict(amp,cpu);
+  T& operator()(int i0, int i1) restrict(amp,cpu);
 
-  array_view<const T,N-1> operator()(int i) const restrict(amp,cpu);
+  const T& operator()(int i0, int i1) const restrict(amp,cpu);
+
+  T& operator()(int i0, int i1, int i2) restrict(amp,cpu);
+
+  const T& operator()(int i0, int i1, int i2) const restrict(amp,cpu);
+
+  auto operator()(int i) restrict(amp,cpu) -> decltype(array_projection_helper<T, N>::project((array<T,N> *)NULL, i));
+
+  auto operator()(int i) const restrict(amp,cpu) -> decltype(array_projection_helper<T, N>::project((const array<T, N>* )NULL, i));
 
   array_view<T,N> section(const index<N>& idx, const extent<N>& ext) restrict(amp,cpu);
 
@@ -348,419 +456,13 @@ public:
 
   array_view<const T,N> section(const index<N>& idx) const restrict(amp,cpu);
 
-  template <typename ElementType>
-  array_view<ElementType,1> reinterpret_as() restrict(amp,cpu);
-
-  template <typename ElementType>
-  array_view<const ElementType,1> reinterpret_as() const restrict(amp,cpu);
-
-  template <int K>
-  array_view<T,K> view_as(const extent<K>& viewExtent) restrict(amp,cpu);
-
-  template <int K>
-  array_view<const T,K> view_as(const extent<K>& viewExtent) const restrict(amp,cpu);
-
-  operator std::vector<T>() const;
-
-  T* data() restrict(amp,cpu);
-
-  const T* data() const restrict(amp,cpu);
-};
-
-template<typename T>
-class array<T,1>
-{
-public:
-  static const int rank = 1;
-
-  typedef T value_type;
-
-  array() = delete;
-
-  explicit array(const extent<1>& extent);
-
-  explicit array(int e0);
-
-  array(const extent<1>& extent,
-  accelerator_view av, accelerator_view associated_av); // staging
-
-  array(int e0, accelerator_view av, accelerator_view associated_av); // staging
-
-  array(const extent<1>& extent, accelerator_view av);
-
-  array(int e0, accelerator_view av);
-
-  template <typename InputIterator>
-  array(const extent<1>& extent, InputIterator srcBegin);
-
-  template <typename InputIterator>
-  array(const extent<1>& extent, InputIterator srcBegin, InputIterator srcEnd);
-
-  template <typename InputIterator>
-  array(int e0, InputIterator srcBegin);
-
-  template <typename InputIterator>
-  array(int e0, InputIterator srcBegin, InputIterator srcEnd);
-
-  template <typename InputIterator>
-  array(const extent<1>& extent, InputIterator srcBegin,
-  accelerator_view av, accelerator_view associated_av); // staging
-
-  template <typename InputIterator>
-  array(const extent<1>& extent, InputIterator srcBegin, InputIterator srcEnd,
-  accelerator_view av, accelerator_view associated_av); // staging
-
-  template <typename InputIterator>
-  array(int e0, InputIterator srcBegin,
-  accelerator_view av, accelerator_view associated_av); // staging
-
-  template <typename InputIterator>
-  array(int e0, InputIterator srcBegin, InputIterator srcEnd,
-  accelerator_view av, accelerator_view associated_av); // staging
-
-  template <typename InputIterator>
-  array(const extent<1>& extent, InputIterator srcBegin, accelerator_view av);
-
-  template <typename InputIterator>
-  array(const extent<1>& extent, InputIterator srcBegin, InputIterator srcEnd,
-  accelerator_view av);
-
-  template <typename InputIterator>
-  array(int e0, InputIterator srcBegin, InputIterator srcEnd, accelerator_view av);
-
-  array(const array_view<const T,1>& src);
-
-  array(const array_view<const T,1>& src,
-  accelerator_view av, accelerator_view associated_av); // staging
-
-  array(const array_view<const T,1>& src, accelerator_view av);
-
-  array(const array& other);
-
-  array(array&& other);
-
-  array& operator=(const array& other);
-
-  array& operator=(array&& other);
-
-  array& operator=(const array_view<const T,1>& src);
-
-  void copy_to(array& dest) const;
-
-  void copy_to(const array_view<T,1>& dest) const;
-
-  // __declspec(property(get)) extent<1> extent;
-  extent<1> get_extent() const;
-
-  // __declspec(property(get)) accelerator_view accelerator_view;
-  accelerator_view get_accelerator_view() const;
-
-  T& operator[](const index<1>& idx) restrict(amp,cpu);
-
-  const T& operator[](const index<1>& idx) const restrict(amp,cpu);
-
-  T& operator[](int i0) restrict(amp,cpu);
-
-  const T& operator[](int i0) const restrict(amp,cpu);
-
-  T& operator()(const index<1>& idx) restrict(amp,cpu);
-
-  const T& operator()(const index<1>& idx) const restrict(amp,cpu);
-
-  T& operator()(int i0) restrict(amp,cpu);
-
-  const T& operator()(int i0) const restrict(amp,cpu);
-
-  array_view<T,1> section(const index<1>& idx, const extent<1>& ext) restrict(amp,cpu);
-
-  array_view<const T,1> section(const index<1>& idx, const extent<1>& ext) const
-  restrict(amp,cpu);
-
-  array_view<T,1> section(const index<1>& idx) restrict(amp,cpu);
-
-  array_view<const T,1> section(const index<1>& idx) const restrict(amp,cpu);
-
   array_view<T,1> section(int i0, int e0) restrict(amp,cpu);
 
   array_view<const T,1> section(int i0, int e0) const restrict(amp,cpu);
 
-  template <typename ElementType>
-  array_view<ElementType,1> reinterpret_as() restrict(amp,cpu);
-
-  template <typename ElementType>
-  array_view<const ElementType,1> reinterpret_as() const restrict(amp,cpu);
-
-  template <int K>
-  array_view<T,K> view_as(const extent<K>& viewExtent) restrict(amp,cpu);
-
-  template <int K>
-  array_view<const T,K> view_as(const extent<K>& viewExtent) const restrict(amp,cpu);
-
-  operator std::vector<T>() const;
-
-  T* data() restrict(amp,cpu);
-
-  const T* data() const restrict(amp,cpu);
-};
-
-template<typename T>
-class array<T,2>
-{
-public:
-  static const int rank = 2;
-
-  typedef T value_type;
-
-  array() = delete;
-
-  explicit array(const extent<2>& extent);
-
-  array(int e0, int e1);
-
-  array(const extent<2>& extent,
-
-  accelerator_view av, accelerator_view associated_av); // staging
-
-  array(int e0, int e1, accelerator_view av, accelerator_view associated_av); // staging
-
-  array(const extent<2>& extent, accelerator_view av);
-
-  array(int e0, int e1, accelerator_view av);
-
-  template <typename InputIterator>
-  array(const extent<2>& extent, InputIterator srcBegin);
-
-  template <typename InputIterator>
-  array(const extent<2>& extent, InputIterator srcBegin, InputIterator srcEnd);
-
-  template <typename InputIterator>
-  array(int e0, int e1, InputIterator srcBegin);
-
-  template <typename InputIterator>
-  array(int e0, int e1, InputIterator srcBegin, InputIterator srcEnd);
-
-  template <typename InputIterator>
-  array(const extent<2>& extent, InputIterator srcBegin,
-  accelerator_view av, accelerator_view associated_av); // staging
-
-  template <typename InputIterator>
-  array(const extent<2>& extent, InputIterator srcBegin, InputIterator srcEnd,
-  accelerator_view av, accelerator_view associated_av); // staging
-
-  template <typename InputIterator>
-  array(int e0, int e2, InputIterator srcBegin,
-  accelerator_view av, accelerator_view associated_av); // staging
-
-  template <typename InputIterator>
-  array(int e0, int e2, InputIterator srcBegin, InputIterator srcEnd,
-  accelerator_view av, accelerator_view associated_av); // staging
-
-  template <typename InputIterator>
-  array(const extent<2>& extent, InputIterator srcBegin, accelerator_view av);
-
-  template <typename InputIterator>
-  array(const extent<2>& extent, InputIterator srcBegin, InputIterator srcEnd,
-  accelerator_view av);
-
-  template <typename InputIterator>
-  array(int e0, int e1, InputIterator srcBegin, accelerator_view av);
-
-  template <typename InputIterator>
-  array(int e0, int e1, InputIterator srcBegin, InputIterator srcEnd, accelerator_view av);
-
-  array(const array_view<const T,2>& src);
-
-  array(const array_view<const T,2>& src,
-  accelerator_view av, accelerator_view associated_av); // staging
-
-  array(const array_view<const T,2>& src, accelerator_view av);
-
-  array(const array& other);
-
-  array(array&& other);
-
-  array& operator=(const array& other);
-
-  array& operator=(array&& other);
-
-  array& operator=(const array_view<const T,2>& src);
-
-  void copy_to(array& dest) const;
-
-  void copy_to(const array_view<T,2>& dest) const;
-
-  // __declspec(property(get)) extent<2> extent;
-  extent<2> get_extent() const;
-
-  // __declspec(property(get)) accelerator_view accelerator_view;
-  accelerator_view get_accelerator_view() const;
-
-  T& operator[](const index<2>& idx) restrict(amp,cpu);
-
-  const T& operator[](const index<2>& idx) const restrict(amp,cpu);
-
-  array_view<T,1> operator[](int i0) restrict(amp,cpu);
-
-  array_view<const T,1> operator[](int i0) const restrict(amp,cpu);
-
-  T& operator()(const index<2>& idx) restrict(amp,cpu);
-
-  const T& operator()(const index<2>& idx) const restrict(amp,cpu);
-
-  T& operator()(int i0, int i1) restrict(amp,cpu);
-
-  const T& operator()(int i0, int i1) const restrict(amp,cpu);
-
-  array_view<T,2> section(const index<2>& idx, const extent<2>& ext) restrict(amp,cpu);
-
-  array_view<const T,2> section(const index<2>& idx, const extent<2>& ext) const
-  restrict(amp,cpu);
-
-  array_view<T,2> section(const index<2>& idx) restrict(amp,cpu);
-
-  array_view<const T,2> section(const index<2>& idx) const restrict(amp,cpu);
-
   array_view<T,2> section(int i0, int i1, int e0, int e1) restrict(amp,cpu);
 
   array_view<const T,2> section(int i0, int i1, int e0, int e1) const restrict(amp,cpu);
-
-  template <typename ElementType>
-  array_view<ElementType,1> reinterpret_as() restrict(amp,cpu);
-
-  template <typename ElementType>
-  array_view<const ElementType,1> reinterpret_as() const restrict(amp,cpu);
-
-  template <int K>
-  array_view<T,K> view_as(const extent<K>& viewExtent) restrict(amp,cpu);
-
-  template <int K>
-  array_view<const T,K> view_as(const extent<K>& viewExtent) const restrict(amp,cpu);
-
-  operator std::vector<T>() const;
-
-  T* data() restrict(amp,cpu);
-
-  const T* data() const restrict(amp,cpu);
-};
-
-template<typename T>
-class array<T,3>
-{
-public:
-  static const int rank = 3;
-
-  typedef T value_type;
-
-  array() = delete;
-
-  explicit array(const extent<3>& extent);
-
-  array(int e0, int e1, int e2);
-
-  array(const extent<3>& extent,
-
-  accelerator_view av, accelerator_view associated_av); // staging
-  array(int e0, int e1, int e2,
-  accelerator_view av, accelerator_view associated_av); // staging
-
-  array(const extent<3>& extent, accelerator_view av);
-
-  array(int e0, int e1, int e2, accelerator_view av);
-
-  template <typename InputIterator>
-  array(const extent<3>& extent, InputIterator srcBegin);
-
-  template <typename InputIterator>
-  array(const extent<3>& extent, InputIterator srcBegin, InputIterator srcEnd);
-
-  template <typename InputIterator>
-  array(int e0, int e1, int e2, InputIterator srcBegin);
-
-  template <typename InputIterator>
-  array(int e0, int e1, int e2, InputIterator srcBegin, InputIterator srcEnd);
-
-  template <typename InputIterator>
-  array(const extent<3>& extent, InputIterator srcBegin,
-  accelerator_view av, accelerator_view associated_av); // staging
-
-  template <typename InputIterator>
-  array(const extent<3>& extent, InputIterator srcBegin, InputIterator srcEnd,
-  accelerator_view av, accelerator_view associated_av); // staging
-
-  template <typename InputIterator>
-  array(int e0, int e1, int e2, InputIterator srcBegin,
-  accelerator_view av, accelerator_view associated_av); // staging
-
-  template <typename InputIterator>
-  array(int e0, int e1, int e2, InputIterator srcBegin, InputIterator srcEnd,
-  accelerator_view av, accelerator_view associated_av); // staging
-
-  template <typename InputIterator>
-  array(const extent<3>& extent, InputIterator srcBegin, accelerator_view av);
-
-  template <typename InputIterator>
-  array(const extent<3>& extent, InputIterator srcBegin, InputIterator srcEnd,
-  accelerator_view av);
-
-  template <typename InputIterator>
-  array(int e0, int e1, int e2, InputIterator srcBegin, accelerator_view av);
-
-  template <typename InputIterator>
-  array(int e0, int e1, int e2, InputIterator srcBegin, InputIterator srcEnd,
-
-  accelerator_view av);
-
-  array(const array_view<const T,3>& src);
-
-  array(const array_view<const T,3>& src,
-
-  accelerator_view av, accelerator_view associated_av); // staging
-
-  array(const array_view<const T,3>& src, accelerator_view av);
-
-  array(const array& other);
-
-  array(array&& other);
-
-  array& operator=(const array& other);
-
-  array& operator=(array&& other);
-
-  array& operator=(const array_view<const T,3>& src);
-
-  void copy_to(array& dest) const;
-
-  void copy_to(const array_view<T,3>& dest) const;
-
-  // __declspec(property(get)) extent<3> extent;
-  extent<3> get_extent() const;
-  // __declspec(property(get)) accelerator_view accelerator_view;
-  accelerator_view get_accelerator_view() const;
-
-  T& operator[](const index<3>& idx) restrict(amp,cpu);
-
-  const T& operator[](const index<3>& idx) const restrict(amp,cpu);
-
-  array_view<T,2> operator[](int i0) restrict(amp,cpu);
-
-  array_view<const T,2> operator[](int i0) const restrict(amp,cpu);
-
-  T& operator()(const index<3>& idx) restrict(amp,cpu);
-
-  const T& operator()(const index<3>& idx) const restrict(amp,cpu);
-
-  T& operator()(int i0, int i1, int i2) restrict(amp,cpu);
-
-  const T& operator()(int i0, int i1, int i2) const restrict(amp,cpu);
-
-  array_view<T,3> section(const index<3>& idx, const extent<3>& ext) restrict(amp,cpu);
-
-  array_view<const T,3> section(const index<3>& idx, const extent<3>& ext) const
-  restrict(amp,cpu);
-
-  array_view<T,3> section(const index<3>& idx) restrict(amp,cpu);
-
-  array_view<const T,3> section(const index<3>& idx) const restrict(amp,cpu);
 
   array_view<T,3> section(int i0, int i1, int i2,
   int e0, int e1, int e2) restrict(amp,cpu);
@@ -787,7 +489,7 @@ public:
   const T* data() const restrict(amp,cpu);
 };
 
-template <typename T, int N/* = 1*/>
+template <typename T, int N = 1>
 class array_view
 {
 public:
@@ -827,147 +529,7 @@ public:
   void discard_data() const;
 };
 
-template <typename T>
-class array_view<T,1>
-{
-public:
-  static const int rank = 1;
-  typedef T value_type;
-  
-  array_view() = delete;
-  array_view(array<T,1>& src) restrict(amp,cpu);
-  template <typename Container>
-    array_view(const extent<1>& extent, Container& src);
-  template <typename Container>
-    array_view(int e0, Container& src);
-  array_view(const extent<1>& extent, value_type* src) restrict(amp,cpu);
-  array_view(int e0, value_type* src) restrict(amp,cpu);
-  
-  array_view(const array_view& other) restrict(amp,cpu);
-  
-  array_view& operator=(const array_view& other) restrict(amp,cpu);
-
-  void copy_to(array<T,1>& dest) const;
-  void copy_to(const array_view& dest) const;
-
-  // __declspec(property(get)) extent<1> extent;
-  extent<1> get_extent() const;
-
-  T& operator[](const index<1>& idx) const restrict(amp,cpu);
-  T& operator[](int i) const restrict(amp,cpu);
-
-  T& operator()(const index<1>& idx) const restrict(amp,cpu);
-  T& operator()(int i) const restrict(amp,cpu);
-  
-  array_view<T,1> section(const index<1>& idx, const extent<1>& ext) const restrict(amp,cpu);
-  array_view<T,1> section(const index<1>& idx) const restrict(amp,cpu);
-  array_view<T,1> section(const extent<1>& ext) const restrict(amp,cpu);
-  array_view<T,1> section(int i0, int e0) restrict(amp,cpu);
-
-  template <typename ElementType>
-    array_view<ElementType,1> reinterpret_as() const restrict(amp,cpu);
-
-  template <int K>
-    array_view<T,K> view_as(extent<K> viewExtent) const restrict(amp,cpu);
-
-  T* data() const restrict(amp,cpu);
-
-  void synchronize() const;
-  completion_future synchronize_async() const;
-
-  void refresh() const;
-  void discard_data() const;
-};
-
-template <typename T>
-class array_view<T,2>
-{
-public:
-  static const int rank = 2;
-  typedef T value_type;
-
-  array_view() = delete;
-  array_view(array<T,2>& src) restrict(amp,cpu);
-  template <typename Container>
-    array_view(const extent<2>& extent, Container& src);
-  template <typename Container>
-    array_view(int e0, int e1, Container& src);
-  array_view(const extent<2>& extent, value_type* src) restrict(amp,cpu);
-  array_view(int e0, int e1, value_type* src) restrict(amp,cpu);
-
-  array_view(const array_view& other) restrict(amp,cpu);
-
-  array_view& operator=(const array_view& other) restrict(amp,cpu);
-
-  void copy_to(array<T,2>& dest) const;
-  void copy_to(const array_view& dest) const;
-
-  // __declspec(property(get)) extent<2> extent;
-  extent<2> get_extent() const;
-
-  T& operator[](const index<2>& idx) const restrict(amp,cpu);
-  array_view<T,1> operator[](int i) const restrict(amp,cpu);
-
-  T& operator()(const index<2>& idx) const restrict(amp,cpu);
-  T& operator()(int i0, int i1) const restrict(amp,cpu);
-
-  array_view<T,2> section(const index<2>& idx, const extent<2>& ext) const restrict(amp,cpu);
-  array_view<T,2> section(const index<2>& idx) const restrict(amp,cpu);
-  array_view<T,2> section(const extent<2>& ext) const restrict(amp,cpu);
-  array_view<T,2> section(int i0, int i1, int e0, int e1) const restrict(amp,cpu);
-
-  void synchronize() const;
-  completion_future synchronize_async() const;
-
-  void refresh() const;
-  void discard_data() const;
-};
-
-template <typename T>
-class array_view<T,3>
-{
-public:
-  static const int rank = 3;
-  typedef T value_type;
-
-  array_view() = delete;
-  array_view(array<T,3>& src) restrict(amp,cpu);
-  template <typename Container>
-    array_view(const extent<3>& extent, Container& src);
-  template <typename Container>
-    array_view(int e0, int e1, int e2, Container& src);
-  array_view(const extent<3>& extent, value_type* src) restrict(amp,cpu);
-  array_view(int e0, int e1, int e2, value_type* src) restrict(amp,cpu);
-
-  array_view(const array_view& other) restrict(amp,cpu);
-
-  array_view& operator=(const array_view& other) restrict(amp,cpu);
-
-  void copy_to(array<T,3>& dest) const;
-  void copy_to(const array_view& dest) const;
-
-  // __declspec(property(get)) extent<3> extent;
-  extent<3> get_extent() const;
-
-  T& operator[](const index<3>& idx) const restrict(amp,cpu);
-  array_view<T,2> operator[](int i) const restrict(amp,cpu);
-
-  T& operator()(const index<3>& idx) const restrict(amp,cpu);
-  T& operator()(int i0, int i1, int i2) const restrict(amp,cpu);
-
-  array_view<T,3> section(const index<3>& idx, const extent<3>& ext) const restrict(amp,cpu);
-  array_view<T,3> section(const index<3>& idx) const restrict(amp,cpu);
-  array_view<T,3> section(const extent<3>& ext) const restrict(amp,cpu);
-  array_view<T,3> section(int i0, int i1, int i2, int e0, int e1, int e2) const restrict(amp,cpu);
-
-  void synchronize() const;
-  completion_future synchronize_async() const;
-
-  void refresh() const;
-  void discard_data() const;
-};
-
-template <typename T, int N/*=1*/>
+template <typename T, int N>
 class array_view<const T,N>
 {
 public:
@@ -999,137 +561,6 @@ public:
 
   array_view<const T,N> section(const index<N>& idx, const extent<N>& ext) const restrict(amp,cpu);
   array_view<const T,N> section(const index<N>& idx) const restrict(amp,cpu);
-
-  void refresh() const;
-};
-
-template <typename T>
-class array_view<const T,1>
-{
-public:
-  static const int rank = 1;
-  typedef const T value_type;
-
-  array_view() = delete;
-  array_view(const array<T,1>& src) restrict(amp,cpu);
-  template <typename Container>
-    array_view(const extent<1>& extent, const Container& src);
-  template <typename Container>
-    array_view(int e0, const Container& src);
-  array_view(const extent<1>& extent, const value_type* src) restrict(amp,cpu);
-  array_view(int e0, const value_type* src) restrict(amp,cpu);
-
-  array_view(const array_view<T,1>& other) restrict(amp,cpu);
-  array_view(const array_view<const T,1>& other) restrict(amp,cpu);
-
-  array_view& operator=(const array_view& other) restrict(amp,cpu);
-
-  void copy_to(array<T,1>& dest) const;
-  void copy_to(const array_view<T,1>& dest) const;
-
-  // __declspec(property(get)) extent<1> extent;
-  extent<1> get_extent() const;
-
-  // These are restrict(amp,cpu)
-  const T& operator[](const index<1>& idx) const restrict(amp,cpu);
-  const T& operator[](int i) const restrict(amp,cpu);
-
-  const T& operator()(const index<1>& idx) const restrict(amp,cpu);
-  const T& operator()(int i) const restrict(amp,cpu);
-  
-  array_view<const T,1> section(const index<1>& idx, const extent<1>& ext) const restrict(amp,cpu);
-  array_view<const T,1> section(const index<1>& idx) const restrict(amp,cpu);
-  array_view<const T,1> section(const extent<1>& ext) const restrict(amp,cpu);
-  array_view<const T,1> section(int i0, int e0) const restrict(amp,cpu);
-
-  template <typename ElementType>
-    array_view<const ElementType,1> reinterpret_as() const restrict(amp,cpu);
-  template <int K>
-    array_view<const T,K> view_as(extent<K> viewExtent) const restrict(amp,cpu);
-
-  const T* data() const restrict(amp,cpu);
-  void refresh() const;
-};
-
-template <typename T>
-class array_view<const T,2>
-{
-public:
-  static const int rank = 2;
-  typedef const T value_type;
-
-  array_view() = delete;
-  array_view(const array<T,2>& src) restrict(amp,cpu);
-  template <typename Container>
-  array_view(const extent<2>& extent, const Container& src);
-  template <typename Container>
-  array_view(int e0, int e1, const Container& src);
-  array_view(const extent<2>& extent, const value_type* src) restrict(amp,cpu);
-  array_view(int e0, int e1, const value_type* src) restrict(amp,cpu);
-
-  array_view(const array_view<T,2>& other) restrict(amp,cpu);
-  array_view(const array_view<const T,2>& other) restrict(amp,cpu);
-
-  array_view& operator=(const array_view& other) restrict(amp,cpu);
-
-  void copy_to(array<T,2>& dest) const;
-  void copy_to(const array_view<T,2>& dest) const;
-
-  // __declspec(property(get)) extent<2> extent;
-  extent<2> get_extent() const;
-
-  const T& operator[](const index<2>& idx) const restrict(amp,cpu);
-  array_view<const T,1> operator[](int i) const restrict(amp,cpu);
-
-  const T& operator()(const index<2>& idx) const restrict(amp,cpu);
-  const T& operator()(int i0, int i1) const restrict(amp,cpu);
-
-  array_view<const T,2> section(const index<2>& idx, const extent<2>& ext) const restrict(amp,cpu);
-  array_view<const T,2> section(const index<2>& idx) const restrict(amp,cpu);
-  array_view<const T,2> section(const extent<2>& ext) const restrict(amp,cpu);
-  array_view<const T,2> section(int i0, int i1, int e0, int e1) const restrict(amp,cpu);
-
-  void refresh() const;
-};
-
-template <typename T>
-class array_view<const T,3>
-{
-public:
-  static const int rank = 3;
-  typedef const T value_type;
-
-  array_view() = delete;
-  array_view(const array<T,3>& src) restrict(amp,cpu);
-  template <typename Container>
-    array_view(const extent<3>& extent, const Container& src);
-  template <typename Container>
-    array_view(int e0, int e1, int e2, const Container& src);
-  array_view(const extent<3>& extent, const value_type* src) restrict(amp,cpu);
-  array_view(int e0, int e1, int e2, const value_type* src) restrict(amp,cpu);
-
-  array_view(const array_view<T,3>& other) restrict(amp,cpu);
-  array_view(const array_view<const T,3>& other) restrict(amp,cpu);
-
-  array_view& operator=(const array_view& other) restrict(amp,cpu);
-
-  void copy_to(array<T,3>& dest) const;
-  void copy_to(const array_view<T,3>& dest) const;
-
-  // __declspec(property(get)) extent<3> extent;
-  extent<3> get_extent() const;
-
-  // These are restrict(amp,cpu)
-  const T& operator[](const index<3>& idx) const restrict(amp,cpu);
-  array_view<const T,2> operator[](int i) const restrict(amp,cpu);
-
-  const T& operator()(const index<3>& idx) const restrict(amp,cpu);
-  const T& operator()(int i0, int i1, int i2) const restrict(amp,cpu);
-
-  array_view<const T,3> section(const index<3>& idx, const extent<3>& ext) const restrict(amp,cpu);
-  array_view<const T,3> section(const index<3>& idx) const restrict(amp,cpu);
-  array_view<const T,3> section(const extent<3>& ext) const restrict(amp,cpu);
-  array_view<const T,3> section(int i0, int i1, int i2, int e0, int e1, int e2) const restrict(amp,cpu);
 
   void refresh() const;
 };
@@ -1192,6 +623,7 @@ extent<N> operator%(const extent<N>& lhs, int rhs) restrict(amp,cpu);
 template <int N>
 extent<N> operator%(int lhs, const extent<N>& rhs) restrict(amp,cpu);
 
+
 template <int N, typename Kernel>
 void parallel_for_each(extent<N> compute_domain, const Kernel& f);
 
@@ -1218,5 +650,4 @@ void parallel_for_each(const accelerator_view& accl_view, tiled_extent<D0> compu
 
 
 } // namespace Concurrency
-
 
