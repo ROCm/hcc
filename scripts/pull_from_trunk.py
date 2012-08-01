@@ -14,6 +14,8 @@ yesno = raw_input("Do you want to pull and update cppamp-driver [y/n]? ")
 if yesno.lower() in [ 'y', 'yes' ]:
   os.chdir(top_dir)
   os.system("hg pull https://bitbucket.org/multicoreware/cppamp-driver")
+elif yesno in [ 'q', 'exit' ]:
+  sys.exit(0)
 else:
   print "skipped."
 
@@ -24,6 +26,9 @@ yesno = raw_input("Do you want to pull and update cppamp [y/n]? ")
 if yesno.lower() in [ 'y', 'yes' ]:
   os.chdir(clang_dir)
   os.system("hg pull https://bitbucket.org/multicoreware/cppamp")
+elif yesno in [ 'q', 'exit' ]:
+  sys.exit(0)
+else:
   print "skipped."
 
 print
