@@ -6,6 +6,10 @@ config.libcxx_src_dir = "@LIBCXX_SRC_DIR@"
 config.libcxx_lib_dir = "@LIBCXX_LIB_DIR@"
 config.libcxxrt_lib_dir = "@LIBCXXRT_LIB_DIR@"
 
+# gtest
+config.gtest_src_dir = "@GTEST_SRC_DIR@"
+config.gtest_lib_dir = "@GTEST_LIB_DIR@"
+
 # Let the main config do the real work.
 lit.load_config(config, "@CPPAMP_TEST_DIR@/lit.cfg")
 

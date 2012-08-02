@@ -83,10 +83,11 @@ add_custom_target(libc++
 )
 
 add_custom_target(world
-  DEPENDS clang libc++
+  DEPENDS clang libc++ gtest_amp
 )
 
 MESSAGE("")
-MESSAGE("** For the first time: 'make world' to build llvm, clang and libc++.")
+MESSAGE("** For the first time:")
+MESSAGE("   'make world' to build llvm, clang, libc++ and library for testing.")
 MESSAGE("")
 
