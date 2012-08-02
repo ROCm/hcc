@@ -9,10 +9,13 @@ MESSAGE("Module path: ${CMAKE_MODULE_PATH}")
 
 include (EnsureLLVMisPresent)
 include (EnsureCLANGisPresent)
-include (EnsureLibCXXisPresent)
+include (EnsureLIBCXXisPresent)
+include (EnsureLIBCXXRTisPresent)
+
 ensure_llvm_is_present(${PROJECT_SOURCE_DIR} compiler)
 ensure_clang_is_present(${PROJECT_SOURCE_DIR} compiler ${CLANG_URL})
-ensure_libcxx_is_present(${PROJECT_SOURCE_DIR} libcxx)
+ensure_libcxx_is_present("${PROJECT_SOURCE_DIR}/libc++" libcxx)
+ensure_libcxxrt_is_present("${PROJECT_SOURCE_DIR}/libc++" libcxxrt)
 
 #MACRO_ENSURE_OUT_OF_SOURCE_BUILD("Please build ${CMAKE_PROJECT_NAME} in a different directory than the source directory")
 
@@ -63,17 +66,27 @@ LINK_DIRECTORIES( ${LLVM_LIB_DIR} )
 #SET(LLVM_CPPFLAGS "-D_CRT_SECURE_NO_WARNINGS -D_MBCS")
 #SET(LLVM_CFLAGS "-Os -fomit-frame-pointer -fPIC")
 #SET(LLVM_CXXFLAGS "-Os -Gm -EHsc -errorReport:prompt")
-#
 #endif(UNIX)
 
-#add_subdirectory(include)
 add_subdirectory(compiler)
 add_subdirectory(tests)
-#add_subdirectory(lib)
-#add_subdirectory(tools)
-#add_subdirectory(test)
-#add_subdirectory(icd)
-#add_subdirectory(data)
 
-MESSAGE("INCLUDE SEARCH DIRECTORIES: ${PROJ_SEARCH_PATH}")
+set(CLANG_CC1 "${PROJECT_BINARY_DIR}/compiler/bin/clang++")
+set(LIBCXX_SRC_DIR "${PROJECT_SOURCE_DIR}/libc++")
+set(LIBCXX_BIN_DIR "${PROJECT_BINARY_DIR}/libc++")
+file(MAKE_DIRECTORY ${LIBCXX_BIN_DIR})
+add_custom_target(libc++
+  COMMAND ${CMAKE_COMMAND} ${LIBCXX_SRC_DIR} -DCMAKE_CXX_COMPILER=${CLANG_CC1}
+  COMMAND make  # not portable, but this is what it is.
+  WORKING_DIRECTORY ${LIBCXX_BIN_DIR}
+  DEPENDS clang
+)
+
+add_custom_target(world
+  DEPENDS clang libc++
+)
+
+MESSAGE("")
+MESSAGE("** For the first time: 'make world' to build llvm, clang and libc++.")
+MESSAGE("")
 
