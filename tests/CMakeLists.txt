@@ -5,6 +5,10 @@ set(LLVM_LIBS_DIR "${LLVM_BINARY_DIR}/lib/")
 set(CPPAMP_SOURCE_DIR "${PROJECT_SOURCE_DIR}")
 set(CPPAMP_TEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(CPPAMP_OBJ_DIR "${CMAKE_BINARY_DIR}")
+
+# libcxx
+set(LIBCXX_SRC_DIR "${PROJECT_SOURCE_DIR}/libc++/libcxx")
+
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg)
