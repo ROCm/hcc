@@ -1,4 +1,4 @@
-// RUN: %clang_cppamp -Werror -c %s
+// RUN: %cxxamp -Werror -c %s
 
 #include <stdlib.h>
 #include <iostream>

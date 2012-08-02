@@ -1,5 +1,4 @@
-// RUN: %clang_cppamp -c %s
-// #include <iostream>
+// RUN: %cxxamp -c %s
 
 class AClass {
 public:

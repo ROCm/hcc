@@ -1,4 +1,4 @@
-// RUN: %clang_cppamp %s
+// RUN: %cxxamp -c %s
 
 int main() {
   int a = 1;

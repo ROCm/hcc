@@ -1,4 +1,4 @@
-// RUN: %clang_cppamp -c %s
+// RUN: %cxxamp -c %s
 #include <amp.h>
 
 
