@@ -8,6 +8,8 @@ set(CPPAMP_OBJ_DIR "${CMAKE_BINARY_DIR}")
 
 # libcxx
 set(LIBCXX_SRC_DIR "${PROJECT_SOURCE_DIR}/libc++/libcxx")
+set(LIBCXX_LIB_DIR "${PROJECT_BINARY_DIR}/libc++/libcxx")
+set(LIBCXXRT_LIB_DIR "${PROJECT_BINARY_DIR}/libc++/libcxxrt")
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in

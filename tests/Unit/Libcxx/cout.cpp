@@ -1,4 +1,4 @@
-// RUN: %cxx11 %s -o %t1 && %t1
+// RUN: %cxx11 %link %s -o %t1 && %t1
 
 #include <iostream>
 
