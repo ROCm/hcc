@@ -52,9 +52,15 @@ following repositories should be available:
   # cd build
   # cmake ../src
       -DCLANG_URL=https://${username}@bitbucket.org/${username}/cppamp
+      -DOPENCL_HEADER_DIR=<directory that contains CL/>
+      -DOPENCL_LIBRARY_DIR=<directory that contains libOpenCL.so on Linux>
 
-4. Build.
-  # make [-j #]
+4. Build the whole system. This will build llvm, clang and other libraries
+   that require one time build.
+  # make [-j #] world           // # is the number of parallel builds
+
+   For recurring builds for llvm and clang:
+  # make
 
 5. Test. (optional, would be more useful in development cycle)
   # make test
@@ -65,8 +71,7 @@ following repositories should be available:
    system from scratch.
   # cd build
   # rm -f CMakeCache.txt         // or use rm -rf *
-  # cmake ../src
-      -DCLANG_URL=https://${username}@bitbucket.org/${username}/cppamp
+  # (repeat No. 3 in this section)
 
 
 How to push your changes to the main repository
