@@ -1,9 +1,26 @@
+// CAVEATS: There could be walkarounds for quick evaluation purposes. Here we
+// list such features that are used in the code with description.
+//
+// ACCELERATOR
+//  According to specification, each array should have its binding accelerator
+//  instance. For now, we haven't implemented such binding nor actual
+//  implementation of accelerator. For a quick and dirty walkaround for
+//  OpenCL based prototype, we allow key OpenCL objects visible globally so
+//  that we don't have to be bothered with such implementaion effort.
+
 #pragma once
 
 #include <string>
 #include <vector>
 #include <chrono>
 #include <future>
+
+#include <gmac/cl.h>
+
+// CAVEAT: ACCELERATOR
+extern cl_int error_code;
+extern cl_context context;
+extern cl_command_queue command_queue;
 
 /* COMPATIBILITY LAYER */
 #define STD__FUTURE_STATUS__FUTURE_STATUS std::future_status
@@ -167,7 +184,10 @@ public:
 
   extent() restrict(amp,cpu);
 
-  extent(const extent& other) restrict(amp,cpu);
+  extent(const extent& other) restrict(amp,cpu) {
+    for (int i = 0; i < N; ++i)
+      m_internal[i] = other[i];
+  }
 
   explicit extent(int e0) restrict(amp,cpu) { // N==1
     m_internal[0] = e0;
@@ -196,7 +216,13 @@ public:
     return m_internal[c];
   }
 
-  int size() const restrict(amp,cpu);
+  int size() const restrict(amp,cpu) {
+    int retSize = 0;
+    for (int i = 0; i < N; ++i){
+      retSize += m_internal[i];
+    }
+    return retSize;
+  }
 
   bool contains(const index<N>& idx) const restrict(amp,cpu);
 
@@ -308,7 +334,13 @@ public:
 
   explicit array(const extent<N>& extent);
 
-  explicit array(int e0);
+  // CAVEAT: ACCELERATOR
+  explicit array(int e0) : m_extent(e0) {
+    if (!e0)
+      m_internal = NULL;
+    else
+      error_code = clMalloc(command_queue, (void**)&m_internal, e0 * sizeof(T));
+  }
 
   explicit array(int e0, int e1);
 
@@ -334,8 +366,18 @@ public:
   template <typename InputIterator>
   array(const extent<N>& extent, InputIterator srcBegin, InputIterator srcEnd);
 
+  // CAVEAT: ACCELERATOR
   template <typename InputIterator>
-  array(int e0, InputIterator srcBegin);
+  array(int e0, InputIterator srcBegin) : m_extent(e0) {  
+    if (!e0)
+      m_internal = NULL;
+    else {
+      error_code = clMalloc(command_queue, (void**)&m_internal, e0 * sizeof(T));
+      InputIterator srcEnd = srcBegin;
+      std::advance(srcEnd, e0);
+      std::copy(srcBegin, srcEnd, m_internal);
+    }
+  }
 
   template <typename InputIterator>
   array(int e0, InputIterator srcBegin, InputIterator srcEnd);
@@ -431,8 +473,10 @@ public:
 
   void copy_to(const array_view<T,N>& dest) const;
 
-  // __declspec(property(get)) extent<N> extent;
-  extent<N> get_extent() const;
+  //__declspec(property(get)) Concurrency::extent<N> extent;
+  extent<N> get_extent() const {
+    return m_extent;
+  }
 
   // __declspec(property(get)) accelerator_view accelerator_view;
   accelerator_view get_accelerator_view() const;
@@ -500,9 +544,22 @@ public:
 
   operator std::vector<T>() const;
 
-  T* data() restrict(amp,cpu);
+  T* data() restrict(amp,cpu) {
+    return m_internal;
+  }
 
   const T* data() const restrict(amp,cpu);
+
+  ~array() { // For GMAC
+    if (m_internal)
+      clFree(command_queue, m_internal);
+  }
+
+private:
+  // Data members
+  Concurrency::extent<N> m_extent;
+  T* m_internal; // Store the data and allocated by GMAC
+
 };
 
 template <typename T, int N = 1>
