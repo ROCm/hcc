@@ -169,19 +169,32 @@ public:
 
   extent(const extent& other) restrict(amp,cpu);
 
-  explicit extent(int e0) restrict(amp,cpu); // N==1
+  explicit extent(int e0) restrict(amp,cpu) { // N==1
+    m_internal[0] = e0;
+  }
 
-  extent(int e0, int e1) restrict(amp,cpu); // N==2
+  extent(int e0, int e1) restrict(amp,cpu) { // N==2
+    m_internal[0] = e0;
+    m_internal[1] = e1;
+  }
 
-  extent(int e0, int e1, int e2) restrict(amp,cpu); // N==3
+  extent(int e0, int e1, int e2) restrict(amp,cpu) { // N==3
+    m_internal[0] = e0;
+    m_internal[1] = e1;
+    m_internal[2] = e2;
+  }
 
   explicit extent(const int components[]) restrict(amp,cpu);
 
   extent& operator=(const extent& other) restrict(amp,cpu);
 
-  int operator[](unsigned int c) const restrict(amp,cpu);
+  int operator[](unsigned int c) const restrict(amp,cpu) {
+    return m_internal[c];
+  }
 
-  int& operator[](unsigned int c) restrict(amp,cpu);
+  int& operator[](unsigned int c) restrict(amp,cpu) {
+    return m_internal[c];
+  }
 
   int size() const restrict(amp,cpu);
 
@@ -204,6 +217,9 @@ public:
   extent operator++(int) restrict(amp,cpu);
   extent& operator--() restrict(amp,cpu);
   extent operator--(int) restrict(amp,cpu);
+
+private:
+  int m_internal[N]; // Store the data
 };
 
 template <int D0, int D1/*=0*/, int D2/*=0*/>
