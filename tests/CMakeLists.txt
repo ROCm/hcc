@@ -17,6 +17,9 @@ set(GTEST_LIB_DIR "${PROJECT_BINARY_DIR}/utils/gtest")
 set(CPPAMP_GTEST_LIB "${GTEST_LIB_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}gtest_main_amp${CMAKE_STATIC_LIBRARY_SUFFIX}")
 file(MAKE_DIRECTORY ${GTEST_LIB_DIR})
 
+# gmac
+set(GMAC_DIR "${PROJECT_SOURCE_DIR}/gmac")
+
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg)
