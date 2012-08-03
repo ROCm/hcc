@@ -12,7 +12,7 @@ include (EnsureCLANGisPresent)
 include (EnsureLIBCXXisPresent)
 include (EnsureLIBCXXRTisPresent)
 
-set(CLANG_URL "." CACHE STRING "CLANG URL" FORCE)
+set(CLANG_URL "." CACHE STRING "CLANG URL")
 
 ensure_llvm_is_present(${PROJECT_SOURCE_DIR} compiler)
 ensure_clang_is_present(${PROJECT_SOURCE_DIR} compiler ${CLANG_URL})
