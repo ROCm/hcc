@@ -700,7 +700,12 @@ extent<N> operator%(int lhs, const extent<N>& rhs) restrict(amp,cpu);
 template <int N, typename Kernel>
 void parallel_for_each(extent<N> compute_domain, const Kernel& f)
 {
-  // fill here.
+  // OpenCL specific.
+  size_t global_size[3] = {1, 1, 1};
+  for (int i = 0; i < N; ++i)
+    global_size[i] = compute_domain[i];
+  f.setArgs();
+  f.launchOpenCL(global_size, N);
 }
 
 template <int D0, int D1, int D2, typename Kernel>

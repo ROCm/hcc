@@ -30,11 +30,55 @@ public:
           array<float>& c)
     : a(a)
     , b(b)
-    , c(c) { }
+    , c(c) {
+      CreateCLProgram();
+      CreateCLKernel();
+    }
 
+  // Compiler generates this function to create the cl program
+  void CreateCLProgram();
+  void CreateCLKernel();
+
+  // Compiler locates this function
   void operator()(index<1> idx) restrict(amp) {
     c[idx] = a[idx] + b[idx];
   }
+
+  // Compiler generates a function to setup the kernel arguments
+  void setArgs() const {
+    cl_mem a_device = clGetBuffer(context, a.data());
+    error_code = clSetKernelArg(kernel, 0, sizeof(cl_mem), &a_device);
+    assert(error_code == CL_SUCCESS);
+    cl_mem b_device = clGetBuffer(context, b.data());
+    error_code = clSetKernelArg(kernel, 1, sizeof(cl_mem), &b_device);
+    assert(error_code == CL_SUCCESS);
+    cl_mem c_device = clGetBuffer(context, c.data());
+    error_code = clSetKernelArg(kernel, 2, sizeof(cl_mem), &c_device);
+    assert(error_code == CL_SUCCESS);
+  }
+
+  void launchOpenCL(size_t* gws, int dim) const {
+    error_code = clEnqueueNDRangeKernel(command_queue, kernel, dim, NULL, gws, NULL, 0, NULL, NULL);
+    assert(error_code == CL_SUCCESS);
+
+    error_code = clFinish(command_queue);
+    assert(error_code == CL_SUCCESS);
+  }
+
+  // Compiler generates the OpenCL kernel function 
+  const char* kernel_source ="\
+                              __kernel void fn(__global float* a, __global float* b, __global float* c) {\
+                                int x = get_global_id(0);\
+                                \
+                                int idx = x;\
+                                \
+                                c[idx] = a[idx] + b[idx];\
+                              }\
+                             ";
+
+  // The following OpenCL objects belong to C++AMP class 'accelerator'
+  cl_program program;
+  cl_kernel kernel;
 
 private:
   array<float>& a;
@@ -42,10 +86,38 @@ private:
   array<float>& c;
 };
 
+// This function should be part of class 'accelerator'
+void clInit() {
+  error_code = clGetPlatformIDs(1, &platform, NULL);
+  assert(error_code == CL_SUCCESS);
+  error_code = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, NULL);
+  assert(error_code == CL_SUCCESS);
+  context = clCreateContext(0, 1, &device, NULL, NULL, &error_code);
+  assert(error_code == CL_SUCCESS);
+  command_queue = clCreateCommandQueue(context, device, 0, &error_code);
+  assert(error_code == CL_SUCCESS);
+}
+
+void functor::CreateCLProgram() {
+  program = clCreateProgramWithSource(context, 1, &kernel_source, NULL, &error_code);
+  assert(error_code == CL_SUCCESS);
+  error_code = clBuildProgram(program, 1, &device, NULL, NULL, NULL);
+  assert(error_code == CL_SUCCESS);
+}
+
+void functor::CreateCLKernel() {
+  kernel = clCreateKernel(program, "fn", &error_code);
+  assert(error_code == CL_SUCCESS);
+}
+
 void vector_add_amp(array<float>& amp_C,
                     const std::vector<float>& A,
                     const std::vector<float>& B,
                     int sz) {
+  array<float> amp_A(A.size(), A.begin());
+  array<float> amp_B(B.size(), B.begin());
+  extent<1> e(sz);
+  parallel_for_each(e, functor(amp_A, amp_B, amp_C));
 }
 
 void vector_add_cpu(//array<float>& cpu_C,
@@ -54,16 +126,23 @@ void vector_add_cpu(//array<float>& cpu_C,
                     const std::vector<float>& B,
                     int sz) {
   for (int i = 0; i < sz; i++) {
+    //cpu_C[i] = A[i] + B[i];
     cpu_C[i] = A[i] + B[i];
   }
 }
 
 bool compare(array<float>& _exp, std::vector<float>& _ctl, int sz) {
-  return false;
+  for (int i = 0; i < sz; i++) {
+    //if (_exp[i] != _ctl[i]) return false;
+    std::cout << "gpu: " << (_exp.data())[i] << ", cpu: " << _ctl[i] << "\n";
+    if ((_exp.data())[i] != _ctl[i]) return false;
+  }
+  return true;
 }
 
 TEST(ArchitectingTest, Final)
 {
+  clInit();
   std::vector<float> A(N);
   std::vector<float> B(N);
 
