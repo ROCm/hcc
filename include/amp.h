@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include <cassert>
 #include <string>
 #include <vector>
 #include <chrono>
@@ -19,7 +20,6 @@
 
 // CAVEAT: ACCELERATOR
 extern cl_int error_code;
-extern cl_context context;
 extern cl_command_queue command_queue;
 
 /* COMPATIBILITY LAYER */
@@ -698,7 +698,10 @@ extent<N> operator%(int lhs, const extent<N>& rhs) restrict(amp,cpu);
 
 
 template <int N, typename Kernel>
-void parallel_for_each(extent<N> compute_domain, const Kernel& f);
+void parallel_for_each(extent<N> compute_domain, const Kernel& f)
+{
+  // fill here.
+}
 
 template <int D0, int D1, int D2, typename Kernel>
 void parallel_for_each(tiled_extent<D0,D1,D2> compute_domain, const Kernel& f);

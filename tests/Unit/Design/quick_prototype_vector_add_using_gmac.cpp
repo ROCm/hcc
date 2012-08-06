@@ -1,15 +1,23 @@
-// RUN: %cxxamp -Werror -c %s
+// RUN: %gtest_amp %s -o %t1 && %t1
 
+#include <amp.h>
 #include <stdlib.h>
 #include <iostream>
 #include <functional>
 #include <vector>
-#include <amp.h>
+#include <gtest/gtest.h>
 using namespace Concurrency;
 
 #define N 10
 
-void randomInit(std::vector<float>& data, int n)
+// The following OpenCL objects belong to C++AMP class 'accelerator'
+cl_platform_id platform;
+cl_device_id device;
+cl_int error_code;
+cl_context context;
+cl_command_queue command_queue;
+
+void random_init(std::vector<float>& data, int n)
 {
     for (int i = 0; i < n; ++i)
 	data[i] = rand() / (float)RAND_MAX;
@@ -34,24 +42,40 @@ private:
   array<float>& c;
 };
 
-void vectorAdd_by_array(const std::vector<float>& vecA, const std::vector<float>& vecB){
-   array<float> A(N, vecA.begin());
-   array<float> B(N, vecB.begin());
-   array<float> C(N);
-   extent<1> e(N);
-
-   parallel_for_each(e, functor(A, B, C));
+void vector_add_amp(array<float>& amp_C,
+                    const std::vector<float>& A,
+                    const std::vector<float>& B,
+                    int sz) {
 }
 
-int main(void)
+void vector_add_cpu(//array<float>& cpu_C,
+                    std::vector<float>& cpu_C,
+                    const std::vector<float>& A,
+                    const std::vector<float>& B,
+                    int sz) {
+  for (int i = 0; i < sz; i++) {
+    cpu_C[i] = A[i] + B[i];
+  }
+}
+
+bool compare(array<float>& _exp, std::vector<float>& _ctl, int sz) {
+  return false;
+}
+
+TEST(ArchitectingTest, Final)
 {
-    std::vector<float> vecA(N);
-    std::vector<float> vecB(N);
-    randomInit(vecA, N);
-    randomInit(vecB, N);
+  std::vector<float> A(N);
+  std::vector<float> B(N);
 
-    vectorAdd_by_array(vecA, vecB);
+  array<float> C_amp(N);
+  std::vector<float> C_cpu(N);
 
-    return 0;
+  random_init(A, N);
+  random_init(B, N);
+  vector_add_amp(C_amp, A, B, N);
+  vector_add_cpu(C_cpu, A, B, N);
+
+  bool result = compare(C_amp, C_cpu, N);
+  EXPECT_EQ(result, true); 
 }
 
