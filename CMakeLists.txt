@@ -11,11 +11,10 @@ include (EnsureLLVMisPresent)
 include (EnsureCLANGisPresent)
 include (EnsureLIBCXXisPresent)
 include (EnsureLIBCXXRTisPresent)
-
-set(CLANG_URL "." CACHE STRING "CLANG URL")
+include (MCWAMP)
 
 ensure_llvm_is_present(${PROJECT_SOURCE_DIR} compiler)
-ensure_clang_is_present(${PROJECT_SOURCE_DIR} compiler ${CLANG_URL})
+ensure_clang_is_present(${PROJECT_SOURCE_DIR} compiler)
 ensure_libcxx_is_present("${PROJECT_SOURCE_DIR}/libc++" libcxx)
 ensure_libcxxrt_is_present("${PROJECT_SOURCE_DIR}/libc++" libcxxrt)
 
@@ -109,6 +108,7 @@ MESSAGE("OPENCL_LIBRARY_DIR = ${OPENCL_LIBRARY_DIR}, actually found at: ${OPENCL
 MESSAGE("")
 
 add_subdirectory(compiler)
+add_subdirectory(lib)
 add_subdirectory(tests)
 
 add_custom_target(gmac

@@ -26,6 +26,9 @@ The current repository is composed of as following:
 
 Build Instruction
 --------------------------------------------------------------------------------
+
+* Prerequisite
+
 Before building it, you should have access to two repositories:
 
   https://bitbucket.org/multicoreware/cppamp-driver
@@ -40,6 +43,17 @@ following repositories should be available:
 
 , where ${username} is a placeholder for your ID for bitbucket.org.
 
+Also developers need to register their public key to bitbucket. Instructions
+are:
+
+1. Create public-private key pair
+  # ssh-keygen
+
+2. Upload .ssh/id_rsa.pub to bitbucket, under Admin of your account.
+
+
+* Now, here goes actual build instructions.
+
 1. Prepare a directory for work space.
   # mkdir cppamp
 
@@ -51,7 +65,6 @@ following repositories should be available:
   # mkdir build
   # cd build
   # cmake ../src
-      -DCLANG_URL=https://${username}@bitbucket.org/${username}/cppamp
       -DOPENCL_HEADER_DIR=<directory that contains CL/>
       -DOPENCL_LIBRARY_DIR=<directory that contains libOpenCL.so on Linux>
 
