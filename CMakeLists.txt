@@ -109,6 +109,7 @@ MESSAGE("")
 
 add_subdirectory(compiler)
 add_subdirectory(lib)
+add_subdirectory(utils)
 add_subdirectory(tests)
 
 add_custom_target(gmac
@@ -119,7 +120,7 @@ add_custom_target(gmac
 MESSAGE("COMMAND python ${PROJECT_SOURCE_DIR}/scripts/build/gmac.py ${PROJECT_SOURCE_DIR}/gmac ${OPENCL_HEADER_DIR} ${OPENCL_LIBRARY_DIR} ${CXXAMP_ENABLE_GMAC}")
 
 add_custom_target(world
-  DEPENDS clang libc++ gtest_amp gmac
+  DEPENDS clang libc++ gmac
 )
 
 MESSAGE("")

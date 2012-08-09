@@ -20,22 +20,12 @@ file(MAKE_DIRECTORY ${GTEST_LIB_DIR})
 # gmac
 set(GMAC_DIR "${PROJECT_SOURCE_DIR}/gmac")
 
+# MCWAMP
+set(MCWAMP_LIB_DIR "${LIBRARY_OUTPUT_PATH}")
+
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg)
-
-add_custom_command(
-  OUTPUT ${CPPAMP_GTEST_LIB}
-  COMMAND ${LLVM_TOOLS_DIR}/clang++ -std=c++amp -stdlib=libc++ -DGTEST_HAS_TR1_TUPLE=0 -c -I${LIBCXX_SRC_DIR}/include -I${GTEST_SRC_DIR} ${GTEST_SRC_DIR}/gtest/gtest_main.cc -o ${GTEST_LIB_DIR}/gtest_main.o
-  COMMAND ${LLVM_TOOLS_DIR}/clang++ -std=c++amp -stdlib=libc++ -DGTEST_HAS_TR1_TUPLE=0 -c -I${LIBCXX_SRC_DIR}/include -I${GTEST_SRC_DIR} ${GTEST_SRC_DIR}/gtest/gtest-all.cc -o ${GTEST_LIB_DIR}/gtest-all.o
-  COMMAND ${CMAKE_AR} cr ${CPPAMP_GTEST_LIB} ${GTEST_LIB_DIR}/gtest_main.o ${GTEST_LIB_DIR}/gtest-all.o
-  DEPENDS clang ${GTEST_SRC_DIR}/gtest/gtest_main.cc ${GTEST_SRC_DIR}/gtest/gtest-all.cc ${CPPAMP_SOURCE_DIR}/include/amp.h
-)
-
-add_custom_target(gtest_amp
-  DEPENDS ${CPPAMP_GTEST_LIB} 
-)
-
 
 add_custom_target(test
   COMMAND python ${LLVM_ROOT}/bin/llvm-lit --path ${LLVM_TOOLS_DIR} ${LLVM_LIT_ARGS} ${CMAKE_CURRENT_BINARY_DIR}
