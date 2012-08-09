@@ -59,12 +59,13 @@ are:
 
 2. Pull your cppamp-driver repository from bitbucket.
   # cd cppamp
-  # hg clone https://${username}@bitbucket.org/${username}/cppamp-driver src
+  # hg clone ssh://hg@bitbucket.org/${username}/cppamp-driver src
 
 3. Create a build directory and configure using CMake.
   # mkdir build
   # cd build
   # cmake ../src
+      -DCLANG_URL=ssh://hg@bitbucket.org/${username}/cppamp
       -DOPENCL_HEADER_DIR=<directory that contains CL/>
       -DOPENCL_LIBRARY_DIR=<directory that contains libOpenCL.so on Linux>
 

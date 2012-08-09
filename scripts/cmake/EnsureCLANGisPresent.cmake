@@ -1,7 +1,4 @@
-macro(ensure_clang_is_present dest_dir name)
-
-set(url "ssh://hg@bitbucket.org/multicoreware/cppamp")
-
+macro(ensure_clang_is_present dest_dir name url)
 if(EXISTS "${dest_dir}/${name}/tools/clang")
   MESSAGE("clang is present.")
 else(EXISTS "${dest_dir}/${name}/tools/clang")

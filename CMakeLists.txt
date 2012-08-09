@@ -7,6 +7,8 @@ MESSAGE("Module path: ${CMAKE_MODULE_PATH}")
 #include (MacroEnsureOutOfSourceBuild)
 #include (ExportFile)
 
+set(CLANG_URL "." CACHE STRING "CLANG URL")
+
 include (EnsureLLVMisPresent)
 include (EnsureCLANGisPresent)
 include (EnsureLIBCXXisPresent)
@@ -14,7 +16,7 @@ include (EnsureLIBCXXRTisPresent)
 include (MCWAMP)
 
 ensure_llvm_is_present(${PROJECT_SOURCE_DIR} compiler)
-ensure_clang_is_present(${PROJECT_SOURCE_DIR} compiler)
+ensure_clang_is_present(${PROJECT_SOURCE_DIR} compiler ${CLANG_URL})
 ensure_libcxx_is_present("${PROJECT_SOURCE_DIR}/libc++" libcxx)
 ensure_libcxxrt_is_present("${PROJECT_SOURCE_DIR}/libc++" libcxxrt)
 
