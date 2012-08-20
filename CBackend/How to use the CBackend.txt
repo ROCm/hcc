@@ -1,0 +1,46 @@
+1.Get the required tools.
+    See Getting Started with the LLVM System - Requirements.
+    Note also that Python is needed for running the test suite. Get it at: http://www.python.org/download
+2.Checkout LLVM:
+    Change directory to where you want the llvm directory placed.
+    svn co http://llvm.org/svn/llvm-project/llvm/tags/RELEASE_31/final/ llvm
+3.Checkout Clang:
+    cd llvm/tools
+    svn co http://llvm.org/svn/llvm-project/cfe/tags/RELEASE_31/final/ clang
+4.Checkout Compiler-RT:
+    cd ../.. (back to where you started)
+    cd llvm/projects
+    svn co http://llvm.org/svn/llvm-project/compiler-rt/tags/RELEASE_31/final/ compiler-rt
+5.Copy the CBackend to the llvm/lib/Target/.
+6.Change llvm/CMakeList.txt.
+    @@ -72,6 +72,7 @@
+     set(LLVM_ALL_TARGETS
+       ARM
+    +  CBackend
+       CellSPU
+       CppBackend
+       Hexagon
+7.Change llvm/lib/Target/LLVMBuild.txt.
+    @@ -16,7 +16,7 @@
+     ;===------------------------------------------------------------------------===;
+     [common]
+    -subdirectories = ARM CellSPU CppBackend Hexagon MBlaze MSP430 Mips PTX PowerPC Sparc X86 XCore
+    +subdirectories = ARM CBackend CellSPU CppBackend Hexagon MBlaze MSP430 Mips PTX PowerPC Sparc X86 XCore
+8.Configure clang using CMake, outside the source
+    cd ../../ (back to where you started)
+    mkdir build-debug
+    cmake -DCMAKE_BUILD_TYPE=Debug ../llvm
+    make
+9.Then you can use the CBackend.
+    cd bin/
+    gedit hello.c
+
+      #include <stdio.h>
+      int main()
+      {
+        printf("helloworld\n");
+        return 0;
+      }
+
+    ./clang -S hello.c -o hello.ll -emit-llvm
+    ./llc -march=c hello.ll -o hellotrans.c 
