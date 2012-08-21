@@ -28,6 +28,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/ConstantsScanner.h"
 #include "llvm/Analysis/FindUsedTypes.h"
+#include "llvm/TypeFinder.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Passes.h"
@@ -2052,8 +2053,10 @@ void CWriter::printModuleTypes() {
   Out << "} llvmBitCastUnion;\n";
 
   // Get all of the struct types used in the module.
-  std::vector<StructType*> StructTypes;
-  TheModule->findUsedStructTypes(StructTypes);
+  TypeFinder StructTypesFinder;
+  StructTypesFinder.run(*TheModule, true);
+  std::vector<StructType*> StructTypes(StructTypesFinder.begin(),
+    StructTypesFinder.end());
 
   if (StructTypes.empty()) return;
 
@@ -3188,7 +3191,7 @@ std::string CWriter::InterpretASMConstraint(InlineAsm::ConstraintInfo& c) {
     TargetAsm = Match->createMCAsmInfo(Triple);
   else
     return c.Codes[0];
-
+#if 0
   const char *const *table = TargetAsm->getAsmCBE();
 
   // Search the translation table if it exists.
@@ -3197,7 +3200,7 @@ std::string CWriter::InterpretASMConstraint(InlineAsm::ConstraintInfo& c) {
       delete TargetAsm;
       return table[i+1];
     }
-
+#endif
   // Default is identity.
   delete TargetAsm;
   return c.Codes[0];
@@ -3618,7 +3621,9 @@ void CWriter::visitExtractValueInst(ExtractValueInst &EVI) {
 bool CTargetMachine::addPassesToEmitFile(PassManagerBase &PM,
                                          formatted_raw_ostream &o,
                                          CodeGenFileType FileType,
-                                         bool DisableVerify) {
+                                         bool DisableVerify,
+                                         AnalysisID StartAfter,
+                                         AnalysisID StopAfter) {
   if (FileType != TargetMachine::CGFT_AssemblyFile) return true;
 
   PM.add(createGCLoweringPass());
