@@ -1,3 +1,4 @@
+// XFAIL: *
 // RUN: %cxxamp -Werror -c %s
 
 #include <stdlib.h>
