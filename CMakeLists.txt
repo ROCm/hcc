@@ -6,7 +6,7 @@ MESSAGE("Module path: ${CMAKE_MODULE_PATH}")
 #include (ExportFile)
 
 set(CLANG_URL "." CACHE STRING "CLANG URL")
-
+set(LLVM_REVISION 162227)
 include (EnsureLLVMisPresent)
 include (EnsureCLANGisPresent)
 include (EnsureLIBCXXisPresent)
@@ -18,9 +18,7 @@ ensure_clang_is_present(${PROJECT_SOURCE_DIR} compiler ${CLANG_URL})
 ensure_libcxx_is_present("${PROJECT_SOURCE_DIR}/libc++" libcxx)
 ensure_libcxxrt_is_present("${PROJECT_SOURCE_DIR}/libc++" libcxxrt)
 
-#MACRO_ENSURE_OUT_OF_SOURCE_BUILD("Please build ${CMAKE_PROJECT_NAME} in a different directory than the source directory")
-
-set(LLVM_TARGETS_TO_BUILD "X86")
+set(LLVM_TARGETS_TO_BUILD X86)
 set(LLVM_INCLUDE_EXAMPLES off)
 
 # Regression test
@@ -55,16 +53,6 @@ include_directories( ${PROJ_SEARCH_PATH} )
 LINK_DIRECTORIES( ${LLVM_LIB_DIR} )
 
 
-set(CLANG_CC1 "${PROJECT_BINARY_DIR}/compiler/bin/clang++")
-set(LIBCXX_SRC_DIR "${PROJECT_SOURCE_DIR}/libc++")
-set(LIBCXX_BIN_DIR "${PROJECT_BINARY_DIR}/libc++")
-file(MAKE_DIRECTORY ${LIBCXX_BIN_DIR})
-add_custom_target(libc++
-  COMMAND ${CMAKE_COMMAND} ${LIBCXX_SRC_DIR} -DCMAKE_CXX_COMPILER=${CLANG_CC1}
-  COMMAND make  # not portable, but this is what it is.
-  WORKING_DIRECTORY ${LIBCXX_BIN_DIR}
-  DEPENDS clang
-)
 
 # Turn on by default for now.
 option(CXXAMP_ENABLE_GMAC "Build GMAC as backend" ON)
@@ -92,6 +80,18 @@ MESSAGE("OPENCL_LIBRARY_DIR = ${OPENCL_LIBRARY_DIR}, actually found at: ${OPENCL
 MESSAGE("")
 
 add_subdirectory(compiler)
+# libc++
+set(CLANG_CC1 "${PROJECT_BINARY_DIR}/compiler/bin/clang++")
+set(LIBCXX_SRC_DIR "${PROJECT_SOURCE_DIR}/libc++")
+set(LIBCXX_BIN_DIR "${PROJECT_BINARY_DIR}/libc++")
+file(MAKE_DIRECTORY ${LIBCXX_BIN_DIR})
+add_custom_target(libc++
+  COMMAND ${CMAKE_COMMAND} ${LIBCXX_SRC_DIR} -DCMAKE_CXX_COMPILER=${CLANG_CC1}
+  COMMAND make  # not portable, but this is what it is.
+  WORKING_DIRECTORY ${LIBCXX_BIN_DIR}
+  DEPENDS clang
+)
+
 add_subdirectory(lib)
 add_subdirectory(utils)
 add_subdirectory(tests)
@@ -109,6 +109,7 @@ add_custom_target(world
 
 MESSAGE("")
 MESSAGE("** For the first time:")
-MESSAGE("   'make world' to build llvm, clang, libc++ and library for testing.")
+MESSAGE("   'make world' to build clang, libc++ and library for testing.")
+MESSAGE("   'make' to build the rest of LLVM tools")
 MESSAGE("")
 

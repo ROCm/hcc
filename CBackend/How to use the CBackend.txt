@@ -13,27 +13,20 @@
     cd ../.. (back to where you started)
     cd llvm/projects
     svn co http://llvm.org/svn/llvm-project/compiler-rt/trunk compiler-rt
-1.5.Copy the CBackend to the llvm/lib/Target/.
-1.6.Change llvm/CMakeList.txt.
-    @@ -72,6 +72,7 @@
-     set(LLVM_ALL_TARGETS
-       ARM
-    +  CBackend
-       CellSPU
-       CppBackend
-       Hexagon
-1.7.Change llvm/lib/Target/LLVMBuild.txt.
+1.5.Symbolic link the CBackend to the llvm/lib/Target/.
+    ln -s $TOP/CBackend compiler/lib/Target/
+1.6.Change llvm/lib/Target/LLVMBuild.txt.
     @@ -16,7 +16,7 @@
      ;===------------------------------------------------------------------------===;
      [common]
     -subdirectories = ARM CellSPU CppBackend Hexagon MBlaze MSP430 Mips PTX PowerPC Sparc X86 XCore
     +subdirectories = ARM CBackend CellSPU CppBackend Hexagon MBlaze MSP430 Mips PTX PowerPC Sparc X86 XCore
-1.8.Configure clang using CMake, outside the source
+1.7.Configure clang using CMake, outside the source
     cd ../../ (back to where you started)
     mkdir build-debug
-    cmake -DCMAKE_BUILD_TYPE=Debug ../llvm
+    cmake -DCMAKE_BUILD_TYPE=Debug -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CBackend ../llvm
     make
-1.9.Then you can use the CBackend.
+1.8.Then you can use the CBackend.
     cd bin/
     gedit hello.c
 
@@ -49,9 +42,8 @@
 
 2. Use the C Backend in cppamp-driver project
 Assuming $TOP is the directory of cppamp-driver checkout
-2.1 Symbol link
-    ln -s $TOP/CBackend compiler/lib/Target/
-2.2 Add CBackend to LLVM build system
-    Repeat step 1.6-1.7 with the files being $TOP/CMakeLists.txt and $TOP/lib/Target/LLVMBuild.txt
-2.3 Build
-    Follow the build instruction in toplevel README.txt
+2.1 Add CBackend to LLVM build system
+    Repeat step 1.5-1.6 with the file being and $TOP/lib/Target/LLVMBuild.txt
+2.2 Build
+    Mostly follow the build instruction in toplevel README.txt
+      cmake -DCMAKE_BUILD_TYPE=Debug -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CBackend <other options...>
