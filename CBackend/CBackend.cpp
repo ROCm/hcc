@@ -28,7 +28,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/ConstantsScanner.h"
 #include "llvm/Analysis/FindUsedTypes.h"
-#include "llvm/TypeFinder.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Passes.h"
@@ -97,6 +96,11 @@ namespace {
     unsigned OpaqueCounter;
     DenseMap<const Value*, unsigned> AnonValueNumbers;
     unsigned NextAnonValueNumber;
+
+    bool OnlyNamed;
+    std::vector<StructType*> StructTypes;
+    DenseSet<const Value*> VisitedConstants;
+    DenseSet<Type*> VisitedTypes;
 
     /// UnnamedStructIDs - This contains a unique ID for each struct that is
     /// either anonymous or has no name.
@@ -221,6 +225,7 @@ namespace {
     void printConstantDataSequential(ConstantDataSequential *CDS, bool Static);
 
 
+
     /// isAddressExposed - Return true if the specified value's name needs to
     /// have its address taken in order to get a C value of the correct type.
     /// This happens for global variables, byval parameters, and direct allocas.
@@ -342,6 +347,11 @@ namespace {
                             gep_type_iterator E, bool Static);
 
     std::string GetValueName(const Value *Operand);
+
+    void run(const Module &M, bool onlyNamed);
+    void incorporateType(const Module &M,Type *Ty);
+    void incorporateValue(const Module &M, const Value *V);
+    void incorporateMDNode(const Module &M, const MDNode *V);
   };
 }
 
@@ -511,13 +521,16 @@ raw_ostream &CWriter::printType(raw_ostream &Out, Type *Ty,
     // Check to see if the type is named.
     if (!IgnoreName)
       return Out << getStructName(STy) << ' ' << NameSoFar;
-    
+    Out << "struct\n";
     Out << NameSoFar + " {\n";
     unsigned Idx = 0;
     for (StructType::element_iterator I = STy->element_begin(),
            E = STy->element_end(); I != E; ++I) {
       Out << "  ";
+#if 0
       printType(Out, *I, false, "field" + utostr(Idx++));
+#endif
+      printType(Out, *I, false, "field" + utostr(Idx++), (STy->getNumElements() == 1) ? IgnoreName : false);
       Out << ";\n";
     }
     Out << '}';
@@ -542,14 +555,30 @@ raw_ostream &CWriter::printType(raw_ostream &Out, Type *Ty,
 
   case Type::ArrayTyID: {
     ArrayType *ATy = cast<ArrayType>(Ty);
+
+    // Check to see if the type is named.
+    if (!IgnoreName)
+    {
+       std::vector<Type*> structMembers;
+       structMembers.push_back(ATy);
+       return Out << getStructName(StructType::get(
+       TheModule->getContext(), structMembers)) << ' ' << NameSoFar;
+    }
+
     unsigned NumElements = ATy->getNumElements();
     if (NumElements == 0) NumElements = 1;
     // Arrays are wrapped in structs to allow them to have normal
     // value semantics (avoiding the array "decay").
+#if 0
     Out << NameSoFar << " { ";
+#endif
+    Out<<" ";
     printType(Out, ATy->getElementType(), false,
               "array[" + utostr(NumElements) + "]");
+#if 0
     return Out << "; }";
+#endif
+    return Out<<" ";
   }
 
   default:
@@ -1761,7 +1790,7 @@ bool CWriter::doInitialization(Module &M) {
 
       if (I->hasExternalLinkage() || I->hasExternalWeakLinkage() ||
           I->hasCommonLinkage())
-        Out << "extern ";
+        Out << "extern struct";
       else if (I->hasDLLImportLinkage())
         Out << "__declspec(dllimport) ";
       else
@@ -1838,7 +1867,7 @@ bool CWriter::doInitialization(Module &M) {
           continue;
 
         if (I->hasLocalLinkage())
-          Out << "static ";
+          Out << "static struct ";
         else
           Out << "extern ";
 
@@ -1874,7 +1903,7 @@ bool CWriter::doInitialization(Module &M) {
           continue;
 
         if (I->hasLocalLinkage())
-          Out << "static ";
+          Out << "static struct ";
         else if (I->hasDLLImportLinkage())
           Out << "__declspec(dllimport) ";
         else if (I->hasDLLExportLinkage())
@@ -2053,10 +2082,7 @@ void CWriter::printModuleTypes() {
   Out << "} llvmBitCastUnion;\n";
 
   // Get all of the struct types used in the module.
-  TypeFinder StructTypesFinder;
-  StructTypesFinder.run(*TheModule, true);
-  std::vector<StructType*> StructTypes(StructTypesFinder.begin(),
-    StructTypesFinder.end());
+  run(*TheModule, false);
 
   if (StructTypes.empty()) return;
 
@@ -2073,8 +2099,18 @@ void CWriter::printModuleTypes() {
       UnnamedStructIDs[ST] = NextTypeID++;
 
     std::string Name = getStructName(ST);
+    Out << "struct " << Name << ";\n";
+  }
 
-    Out << "typedef struct " << Name << ' ' << Name << ";\n";
+   Out << '\n';
+
+   // Now we can print out typedefs.  Above, we guaranteed that this can only be
+   // for struct or opaque types.
+   Out << "/* Typedefs */\n";
+   for (unsigned i = 0, e = StructTypes.size(); i != e; ++i) {
+      StructType *ST = StructTypes[i];
+       std::string Name = getStructName(ST);
+      Out << "typedef struct " << Name << ' ' << Name << ";\n";
   }
 
   Out << '\n';
@@ -3450,8 +3486,11 @@ void CWriter::writeMemoryAccess(Value *Operand, Type *OperandType,
   bool IsUnaligned = Alignment &&
     Alignment < TD->getABITypeAlignment(OperandType);
 
+#if 0
   if (!IsUnaligned)
+#endif
     Out << '*';
+#if 0
   if (IsVolatile || IsUnaligned) {
     Out << "((";
     if (IsUnaligned)
@@ -3464,14 +3503,16 @@ void CWriter::writeMemoryAccess(Value *Operand, Type *OperandType,
     }
     Out << ")";
   }
+#endif
 
   writeOperand(Operand);
-
+#if 0
   if (IsVolatile || IsUnaligned) {
     Out << ')';
     if (IsUnaligned)
       Out << "->data";
   }
+#endif
 }
 
 void CWriter::visitLoadInst(LoadInst &I) {
@@ -3481,23 +3522,34 @@ void CWriter::visitLoadInst(LoadInst &I) {
 }
 
 void CWriter::visitStoreInst(StoreInst &I) {
-  writeMemoryAccess(I.getPointerOperand(), I.getOperand(0)->getType(),
+  ConstantArray *CA = dyn_cast<ConstantArray>(I.getOperand(0));
+  if (I.getOperand(0)->getType()->isArrayTy() && CA) {
+    Out << "memcpy(";
+    writeOperand(I.getPointerOperand());
+    Out << ", ";
+    printConstantArray(CA, true);
+    Out << ", sizeof(";
+    printType(Out, I.getOperand(0)->getType());
+    Out << "))";
+  } else {
+    writeMemoryAccess(I.getPointerOperand(), I.getOperand(0)->getType(),
                     I.isVolatile(), I.getAlignment());
-  Out << " = ";
-  Value *Operand = I.getOperand(0);
-  Constant *BitMask = 0;
-  if (IntegerType* ITy = dyn_cast<IntegerType>(Operand->getType()))
-    if (!ITy->isPowerOf2ByteWidth())
-      // We have a bit width that doesn't match an even power-of-2 byte
-      // size. Consequently we must & the value with the type's bit mask
-      BitMask = ConstantInt::get(ITy, ITy->getBitMask());
-  if (BitMask)
-    Out << "((";
-  writeOperand(Operand);
-  if (BitMask) {
-    Out << ") & ";
-    printConstant(BitMask, false);
-    Out << ")";
+    Out << " = ";
+    Value *Operand = I.getOperand(0);
+    Constant *BitMask = 0;
+    if (IntegerType* ITy = dyn_cast<IntegerType>(Operand->getType()))
+      if (!ITy->isPowerOf2ByteWidth())
+        // We have a bit width that doesn't match an even power-of-2 byte
+        // size. Consequently we must & the value with the type's bit mask
+        BitMask = ConstantInt::get(ITy, ITy->getBitMask());
+    if (BitMask)
+      Out << "((";
+    writeOperand(Operand);
+    if (BitMask) {
+      Out << ") & ";
+      printConstant(BitMask, false);
+      Out << ")";
+    }
   }
 }
 
@@ -3612,6 +3664,139 @@ void CWriter::visitExtractValueInst(ExtractValueInst &EVI) {
     }
   }
   Out << ")";
+}
+
+void CWriter::run(const Module &M, bool onlyNamed) {
+  OnlyNamed = onlyNamed;
+
+  // Get types from global variables.
+  for (Module::const_global_iterator I = M.global_begin(),
+         E = M.global_end(); I != E; ++I) {
+    incorporateType(M, I->getType());
+    if (I->hasInitializer())
+      incorporateValue(M, I->getInitializer());
+  }
+
+  // Get types from aliases.
+  for (Module::const_alias_iterator I = M.alias_begin(),
+         E = M.alias_end(); I != E; ++I) {
+    incorporateType(M, I->getType());
+    if (const Value *Aliasee = I->getAliasee())
+      incorporateValue(M, Aliasee);
+  }
+
+  // Get types from functions.
+  SmallVector<std::pair<unsigned, MDNode*>, 4> MDForInst;
+  for (Module::const_iterator FI = M.begin(), E = M.end(); FI != E; ++FI) {
+    incorporateType(M, FI->getType());
+
+    // First incorporate the arguments.
+    for (Function::const_arg_iterator AI = FI->arg_begin(),
+           AE = FI->arg_end(); AI != AE; ++AI)
+      incorporateValue(M, AI);
+
+    for (Function::const_iterator BB = FI->begin(), E = FI->end();
+         BB != E;++BB)
+      for (BasicBlock::const_iterator II = BB->begin(),
+             E = BB->end(); II != E; ++II) {
+        const Instruction &I = *II;
+
+        // Incorporate the type of the instruction.
+        incorporateType(M, I.getType());
+
+        // Incorporate non-instruction operand types. (We are incorporating all
+        // instructions with this loop.)
+        for (User::const_op_iterator OI = I.op_begin(), OE = I.op_end();
+             OI != OE; ++OI)
+          if (!isa<Instruction>(OI))
+            incorporateValue(M, *OI);
+
+        // Incorporate types hiding in metadata.
+        I.getAllMetadataOtherThanDebugLoc(MDForInst);
+        for (unsigned i = 0, e = MDForInst.size(); i != e; ++i)
+          incorporateMDNode(M, MDForInst[i].second);
+
+        MDForInst.clear();
+      }
+  }
+
+  for (Module::const_named_metadata_iterator I = M.named_metadata_begin(),
+         E = M.named_metadata_end(); I != E; ++I) {
+    const NamedMDNode *NMD = I;
+    for (unsigned i = 0, e = NMD->getNumOperands(); i != e; ++i)
+      incorporateMDNode(M, NMD->getOperand(i));
+  }
+}
+/*
+void TypeFinder::clear() {
+  VisitedConstants.clear();
+  VisitedTypes.clear();
+  StructTypes.clear();
+}
+*/
+/// incorporateType - This method adds the type to the list of used structures
+/// if it's not in there already.
+void CWriter::incorporateType(const Module &M,Type *Ty) {
+  // Check to see if we're already visited this type.
+  if (!VisitedTypes.insert(Ty).second)
+    return;
+
+  // If this is a structure or opaque type, add a name for the type.
+  if (StructType *STy = dyn_cast<StructType>(Ty))
+    if (!OnlyNamed || STy->hasName())
+      StructTypes.push_back(STy);
+
+  if (ArrayType *ATy = dyn_cast<ArrayType>(Ty)) {
+    std::vector<Type*> structMembers;
+    structMembers.push_back(ATy);
+    StructTypes.push_back(StructType::get(M.getContext(), structMembers));
+      }
+
+  // Recursively walk all contained types.
+  for (Type::subtype_iterator I = Ty->subtype_begin(),
+         E = Ty->subtype_end(); I != E; ++I)
+    incorporateType(M, *I);
+}
+
+/// incorporateValue - This method is used to walk operand lists finding types
+/// hiding in constant expressions and other operands that won't be walked in
+/// other ways.  GlobalValues, basic blocks, instructions, and inst operands are
+/// all explicitly enumerated.
+void CWriter::incorporateValue(const Module &M, const Value *V) {
+  if (const MDNode *MNe = dyn_cast<MDNode>(V))
+    return incorporateMDNode(M, MNe);
+
+  if (!isa<Constant>(V) || isa<GlobalValue>(V)) return;
+
+  // Already visited?
+  if (!VisitedConstants.insert(V).second)
+    return;
+
+  // Check this type.
+  incorporateType(M, V->getType());
+
+  // If this is an instruction, we incorporate it separately.
+  if (isa<Instruction>(V))
+    return;
+
+  // Look in operands for types.
+  const User *U = cast<User>(V);
+  for (Constant::const_op_iterator I = U->op_begin(),
+         E = U->op_end(); I != E;++I)
+    incorporateValue(M, *I);
+}
+
+/// incorporateMDNode - This method is used to walk the operands of an MDNode to
+/// find types hiding within.
+void CWriter::incorporateMDNode(const Module &M, const MDNode *V) {
+  // Already visited?
+  if (!VisitedConstants.insert(V).second)
+    return;
+
+  // Look in operands for types.
+  for (unsigned i = 0, e = V->getNumOperands(); i != e; ++i)
+    if (Value *Op = V->getOperand(i))
+      incorporateValue(M, Op);
 }
 
 //===----------------------------------------------------------------------===//

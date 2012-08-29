@@ -19,6 +19,8 @@
 
 namespace llvm {
 
+class StructType;
+
 struct CTargetMachine : public TargetMachine {
   CTargetMachine(const Target &T, StringRef TT,
                  StringRef CPU, StringRef FS, const TargetOptions &Options,
