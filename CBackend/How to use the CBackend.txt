@@ -43,7 +43,7 @@
 2. Use the C Backend in cppamp-driver project
 Assuming $TOP is the directory of cppamp-driver checkout
 2.1 Add CBackend to LLVM build system
-    Repeat step 1.5-1.6 with the file being and $TOP/lib/Target/LLVMBuild.txt
+    Repeat step 1.5-1.6 with the file being $TOP/compiler/lib/Target/LLVMBuild.txt
 2.2 Build
     Mostly follow the build instruction in toplevel README.txt
       cmake -DCMAKE_BUILD_TYPE=Debug -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CBackend <other options...>
