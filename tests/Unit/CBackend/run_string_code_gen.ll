@@ -1,7 +1,7 @@
-; RUN: llc -march=c %s -o run_string_code_gen_c.c
-; RUN: clang run_string_code_gen_c.c
-; RUN: ./a.out | FileCheck %s
-; RUN: rm run_string_code_gen_c.c
+; RUN: %llc -march=c %s -o %t.c
+; RUN: %clang %t.c -o %t
+; RUN: %t | %FileCheck %s
+
 
 ; ModuleID = 'hello.c'
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-
