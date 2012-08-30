@@ -1789,8 +1789,11 @@ bool CWriter::doInitialization(Module &M) {
          I != E; ++I) {
 
       if (I->hasExternalLinkage() || I->hasExternalWeakLinkage() ||
-          I->hasCommonLinkage())
-        Out << "extern struct";
+          I->hasCommonLinkage()){
+        Out << "extern ";
+        if(I->getInitializer()->getType()->isStructTy())
+                  Out << "struct ";
+       }
       else if (I->hasDLLImportLinkage())
         Out << "__declspec(dllimport) ";
       else
