@@ -26,8 +26,31 @@ The current repository is composed of as following:
 
 Build Instruction
 --------------------------------------------------------------------------------
+* Prerequisite/OpenCL
 
-* Prerequisite
+Make sure OpenCL SDK is installed in your system. You can test it with the clInfo
+utility at http://graphics.stanford.edu/~yoel/notes/clInfo.c
+
+Here is a snippet of the output message from clInfo, running on a Linux w/ ATI GPU
+-------------------------------------------------------------------------
+Found 1 platform(s).
+platform[0x7f7950040140]: profile: FULL_PROFILE
+platform[0x7f7950040140]: version: OpenCL 1.2 AMD-APP (923.1)
+platform[0x7f7950040140]: name: AMD Accelerated Parallel Processing
+platform[0x7f7950040140]: vendor: Advanced Micro Devices, Inc.
+platform[0x7f7950040140]: extensions: cl_khr_icd cl_amd_event_callback cl_amd_offline_devices
+platform[0x7f7950040140]: Found 2 device(s).
+        device[0x27adc90]: NAME: Capeverde
+        device[0x27adc90]: VENDOR: Advanced Micro Devices, Inc.
+        device[0x27adc90]: PROFILE: FULL_PROFILE
+        device[0x27adc90]: VERSION: OpenCL 1.2 AMD-APP (923.1)
+        device[0x27adc90]: EXTENSIONS: cl_khr_fp64 cl_amd_fp64 cl_khr_global_int32_base_atomics cl_khr_global_int32_extended_atomics cl_khr_local_int32_base_atomics cl_khr_local_int32_extended_atomics cl_khr_3d_image_writes cl_khr_byte_addressable_store cl_khr_gl_sharing cl_ext_atomic_counters_32 cl_amd_device_attribute_query cl_amd_vec3 cl_amd_printf cl_amd_media_ops cl_amd_popcnt 
+        device[0x27adc90]: DRIVER_VERSION: CAL 1.4.1720 (VM)
+
+        device[0x27adc90]: Type: GPU
+--------------------------------------------------------------------------
+
+* Prerequisite/Repository
 
 Before building it, you should have access to two repositories:
 
@@ -55,6 +78,7 @@ are:
 * Now, here goes actual build instructions.
 
 1. Prepare a directory for work space.
+   Please make sure there is no special characters like '+' or space in the full path.
   # mkdir cppamp
 
 2. Pull your cppamp-driver repository from bitbucket.
@@ -64,14 +88,25 @@ are:
 3. Create a build directory and configure using CMake.
   # mkdir build
   # cd build
-  # cmake ../src
-      -DCLANG_URL=ssh://hg@bitbucket.org/${username}/cppamp
-      -DOPENCL_HEADER_DIR=<directory that contains CL/>
-      -DOPENCL_LIBRARY_DIR=<directory that contains libOpenCL.so on Linux>
+  # cmake ../src \
+      -DCLANG_URL=ssh://hg@bitbucket.org/${username}/cppamp \
+      -DOPENCL_HEADER_DIR=<directory that contains CL/> \
+      -DOPENCL_LIBRARY_DIR=<directory that contains libOpenCL.so on Linux> \
+      -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CBackend \
+      -DCMAKE_BUILD_TYPE=Debug
+  For example, on x86-64 platforms with AMD GPU and AMD APP SDK installed at the
+  default path, this becomes
+  # cmake ../src \
+      -DCLANG_URL=ssh://hg@bitbucket.org/${username}/cppamp \
+      -DOPENCL_HEADER_DIR=/opt/AMDAPP/include \
+      -DOPENCL_LIBRARY_DIR=/opt/AMDAPP/lib/x86_64/lib \
+      -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CBackend \
+      -DCMAKE_BUILD_TYPE=Debug
 
-4. Build the whole system. This will build llvm, clang and other libraries
+4. Build the whole system. This will build clang and other libraries
    that require one time build.
   # make [-j #] world           // # is the number of parallel builds
+  # make                        // this builds llvm utilities
 
    For recurring builds for llvm and clang:
   # make
