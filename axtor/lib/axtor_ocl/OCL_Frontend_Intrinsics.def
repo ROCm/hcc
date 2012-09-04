@@ -1,0 +1,372 @@
+/*  Axtor - AST-Extractor for LLVM
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+ 
+#ifdef __AXTOR_INTERNAL
+#define INTERNAL(X) X
+#else
+#define INTERNAL(X)
+#endif
+
+/*
+
+This file is used for both, specifying intrinsics for the OpenCL backend and declaring intrinsic functions in the "Compute_Api.hpp" header
+
+21.04.2010 created
+
+#### REQUIRED MACROS #####
+
+FUNC(INTRINSIC,RETURN,ACTUAL,ARGS,ARGC)
+
+@INTRINSIC
+	intrinsic call name in the LLVM bitcode
+	
+@RETURN
+	return value
+	
+@ACTUAL
+	proper intrinsic call name in accordance to OpenCL specs
+	
+@ARGS
+	argument list
+	
+@ARGC
+	number of arguments in @ARGS
+	
+COMPLEX(INTRINSIC, RETURN, FORMAT, ARGS)
+
+@INTRINSIC
+	intrinsic function name in the LLVM bitcode
+	
+@RETURN
+	return value
+	
+@FORMAT
+	format string for building the actual textual OpenCL representation.
+	
+@ARGS
+	argument list
+	
+@ARGC
+	number of arguments in @ARGS
+
+	
+	
+NATIVE(NAME)
+
+@NAME
+	name of an opaque type that is natively supported on this platform
+	
+	
+
+REPLACE_FUNC(NAME,RETURN,REPLACEMENT)
+
+@NAME
+	name of the intrinsic function
+	
+@RETURN
+	return type of the function
+	
+@REPLACEMENT
+	replacement string for calls to this function
+	
+	
+MUTE(NAME) [only used for particular intrinsics]
+
+@NAME
+	name of the surpressed intrinsic
+	
+@NAME
+*/
+
+/*
+ * surpressed functions (OpenCL Front-end intrinsics)
+ */
+MUTE(mem_fence)
+MUTE(barrier)
+
+/*
+ * CONVERT_X
+ */
+
+	// static const char * __dummy = D #WIDTH E #WIDTH F
+	
+
+#define CONVERT_SIZED_2(A,B,C,DEST,D,E,SRC,WIDTH) \
+	COMPLEX(A##WIDTH##B##WIDTH##C,DEST##WIDTH,D #WIDTH E,(SRC##WIDTH))
+	
+#define CONVERT_SIZED_3(A,B,C,DEST,D,E,F,SRC,WIDTH) \
+	COMPLEX(A##WIDTH##B##WIDTH##C,DEST##WIDTH,D #WIDTH E #WIDTH F,(SRC##WIDTH))
+	
+#define CONVERT_SIZED_4(A,B,C,DEST,D,E,F,G,SRC,WIDTH) \
+	COMPLEX(A##WIDTH##B##WIDTH##C,DEST##WIDTH,D #WIDTH E #WIDTH F #WIDTH G,(SRC##WIDTH))
+
+
+#define CONVERT_ALL_SIZES_2(A,B,C,DEST,D,E,SRC) \
+	CONVERT_SIZED_2(A,B,C,DEST,D,E,SRC,16) \
+	CONVERT_SIZED_2(A,B,C,DEST,D,E,SRC,8) \
+	CONVERT_SIZED_2(A,B,C,DEST,D,E,SRC,4) \
+	CONVERT_SIZED_2(A,B,C,DEST,D,E,SRC,3) \
+	CONVERT_SIZED_2(A,B,C,DEST,D,E,SRC,2)
+	
+#define CONVERT_ALL_SIZES(A,B,C,DEST,D,E,F,SRC) \
+	CONVERT_SIZED_3(A,B,C,DEST,D,E,F,SRC,16) \
+	CONVERT_SIZED_3(A,B,C,DEST,D,E,F,SRC,8) \
+	CONVERT_SIZED_3(A,B,C,DEST,D,E,F,SRC,4) \
+	CONVERT_SIZED_3(A,B,C,DEST,D,E,F,SRC,3) \
+	CONVERT_SIZED_3(A,B,C,DEST,D,E,F,SRC,2)
+	
+#define CONVERT_ALL_SIZES_4(A,B,C,DEST,D,E,F,G,SRC) \
+	CONVERT_SIZED_4(A,B,C,DEST,D,E,F,G,SRC,16) \
+	CONVERT_SIZED_4(A,B,C,DEST,D,E,F,G,SRC,8) \
+	CONVERT_SIZED_4(A,B,C,DEST,D,E,F,G,SRC,4) \
+	CONVERT_SIZED_4(A,B,C,DEST,D,E,F,G,SRC,3) \
+	CONVERT_SIZED_4(A,B,C,DEST,D,E,F,G,SRC,2)
+	
+//convert_doubleX
+CONVERT_ALL_SIZES(_Z15convert_double,Dv,_j,double,"convert_double","(as_uint","(%))",uint)
+COMPLEX(_Z14convert_doublej,double,convert_double(as_uint(%)),(uint))
+
+CONVERT_ALL_SIZES_2(_Z15convert_double,Dv,_i,double,"convert_double","(%)",int)
+COMPLEX(_Z14convert_doublei,double,convert_double(%),(int))
+
+CONVERT_ALL_SIZES(_Z15convert_double,Dv,_h,double,"convert_double","(as_uchar","(%))",uchar)
+COMPLEX(_Z14convert_doubleh,double,convert_double(as_uchar(%)),(uchar))
+
+CONVERT_ALL_SIZES_2(_Z15convert_double,Dv,_c,double,"convert_double","(%)",char)
+COMPLEX(_Z14convert_doublec,double,convert_double(%),(char))
+
+
+
+// convert_floatX	
+CONVERT_ALL_SIZES(_Z14convert_float,Dv,_j,float,"convert_float","(as_uint","(%))",uint)
+COMPLEX(_Z13convert_floatj,int,convert_float(as_uint(%)),(uint))
+
+CONVERT_ALL_SIZES_2(_Z14convert_float,Dv,_i,float,"convert_float","(%)",int)
+COMPLEX(_Z13convert_floati,float,convert_float(%),(int))
+
+CONVERT_ALL_SIZES(_Z14convert_float,Dv,_h,float,"convert_float","(as_uchar","(%))",uchar)
+COMPLEX(_Z13convert_floath,float,convert_float(as_uchar(%)),(uchar))
+
+CONVERT_ALL_SIZES_2(_Z14convert_float,Dv,_c,float,"convert_float","(%))",char)
+COMPLEX(_Z13convert_floatc,float,convert_float(%),(char))
+
+
+
+// convert_intX
+CONVERT_ALL_SIZES_2(_Z12convert_int,Dv,_d,int,"convert_int","(%)",double)
+COMPLEX(_Z11convert_intd,int,convert_int(%),(double))
+
+CONVERT_ALL_SIZES_2(_Z12convert_int,Dv,_f,int,"convert_int","(%)",float)
+COMPLEX(_Z11convert_intf,int,convert_int(%),(float))
+
+CONVERT_ALL_SIZES(_Z12convert_int,Dv,_j,int,"convert_int","(as_uint","(%))",uint)
+COMPLEX(_Z12convert_uintf,uint,as_int(convert_uint(%)),(float))
+
+
+CONVERT_ALL_SIZES(_Z12convert_int,Dv,_h,int,"convert_int","(as_uchar","(%))",uchar)
+COMPLEX(_Z11convert_inth,int,convert_int(as_uchar(%)),(uchar))
+
+CONVERT_ALL_SIZES_2(_Z12convert_int,Dv,_c,int,"convert_int","(%)",char)
+COMPLEX(_Z11convert_intc,int,convert_int(%),(char))
+
+
+// convert_uintX
+
+CONVERT_ALL_SIZES_4(_Z13convert_uint,Dv,_h,uint,as_int,"(convert_uint","(as_uchar","(%)))",uchar)
+COMPLEX(_Z12convert_uinth,uint,as_int(convert_uint(as_uchar(%))),(uchar))
+
+
+// convert_ucharX
+
+CONVERT_ALL_SIZES(_Z14convert_uchar,Dv,_f,uchar,as_char,"(convert_uchar","(%))",float)
+COMPLEX(_Z13convert_ucharf,uint,as_char(convert_uchar(%)),(float))
+
+CONVERT_ALL_SIZES(_Z14convert_uchar,Dv,_i,uchar,as_char,"(convert_uchar","(%))",int)
+COMPLEX(_Z13convert_uchari,uchar,as_char(convert_uchar(%)),(int))
+
+CONVERT_ALL_SIZES(_Z14convert_uchar,Dv,_c,uchar,as_char,"(convert_uchar","(%))",char)
+COMPLEX(_Z13convert_ucharc,uchar,as_char(convert_uchar(%)),(char))
+
+
+// convert_charX
+
+CONVERT_ALL_SIZES(_Z13convert_char,Dv,_h,char,convert_char,"(as_uchar","(%))",uchar)
+COMPLEX(_Z12convert_charh,char,convert_char(as_uchar(%)),(uchar))
+
+
+/*
+ * SATURATED CONVERSIONS
+ */
+
+CONVERT_ALL_SIZES(_Z18convert_uchar,_satDv,_f,uchar,as_char,"(convert_uchar","_sat(%))",float)
+COMPLEX(_Z17convert_uchar_satf,uchar,as_char(convert_uchar_sat(%)),(float))
+
+
+/*
+ * MATHEMATICAL FUNCTIONS
+ */
+ 
+#define FOV_TEMPLATE_1(A,B,TYPE,NAME,S) \
+	FUNC (A##S##B, TYPE##S,NAME,(TYPE##S),1)
+	
+#define FOV_TEMPLATE_2(A,B,TYPE,NAME,S) \
+	FUNC (A##S##B, TYPE##S,NAME,(TYPE##S, TYPE##S),2)
+	
+#define FOV_TEMPLATE_3(A,B,TYPE,NAME,S) \
+	FUNC (A##S##B, TYPE##S,NAME,(TYPE##S, TYPE##S, TYPE##S),3)
+	
+	
+#define FUNC_ONE_VEC(A,B,SMALL,TYPE,NAME) \
+	FOV_TEMPLATE_1(A,B,TYPE,NAME,4) \
+	FOV_TEMPLATE_1(A,B,TYPE,NAME,3) \
+	FOV_TEMPLATE_1(A,B,TYPE,NAME,2) \
+	FUNC(SMALL,TYPE,NAME,(TYPE),1)
+	
+#define FUNC_TWO_VEC(A,B,SMALL,TYPE,NAME) \
+	FOV_TEMPLATE_2(A,B,TYPE,NAME,4) \
+	FOV_TEMPLATE_2(A,B,TYPE,NAME,3) \
+	FOV_TEMPLATE_2(A,B,TYPE,NAME,2) \
+	FUNC(SMALL,TYPE,NAME,(TYPE,TYPE),2)
+	
+#define FUNC_THREE_VEC(A,B,SMALL,TYPE,NAME) \
+	FOV_TEMPLATE_3(A,B,TYPE,NAME,4) \
+	FOV_TEMPLATE_3(A,B,TYPE,NAME,3) \
+	FOV_TEMPLATE_3(A,B,TYPE,NAME,2) \
+	FUNC(SMALL,TYPE,NAME,(TYPE,TYPE,TYPE),3)
+	
+	
+#define FUNC_ONE_VEC_DF(CORE,NAME) \
+	FUNC_ONE_VEC(CORE##Dv,_f,CORE##f,float,NAME) \
+	FUNC_ONE_VEC(CORE##Dv,_d,CORE##d,double,NAME)
+	
+#define FUNC_TWO_VEC_DF(CORE,NAME) \
+	FUNC_TWO_VEC(CORE##Dv,_fS_,CORE##ff,float,NAME) \
+	FUNC_TWO_VEC(CORE##Dv,_dS_,CORE##dd,double,NAME)
+	
+#define FUNC_THREE_VEC_DF(CORE,NAME) \
+	FUNC_THREE_VEC(CORE##Dv,_fS_S_,CORE##fff,float,NAME) \
+	FUNC_THREE_VEC(CORE##Dv,_dS_S_,CORE##ddd,double,NAME)
+	
+// (float) - functions
+FUNC_ONE_VEC_DF(_Z3log,log)
+FUNC_ONE_VEC_DF(_Z11native_log2,native_log2)
+FUNC_ONE_VEC_DF(_Z4fabs,fabs)
+FUNC_ONE_VEC_DF(_Z3exp,exp)
+FUNC_ONE_VEC_DF(_Z4sqrt,sqrt)
+FUNC_ONE_VEC_DF(_Z10native_cos,native_cos)
+FUNC_ONE_VEC_DF(_Z10native_sin,native_sin)
+FUNC_ONE_VEC_DF(_Z5rsqrt,rsqrt)
+FUNC_ONE_VEC_DF(_Z5floor,floor)
+FUNC_ONE_VEC_DF(_Z3sin,sin)
+FUNC_ONE_VEC_DF(_Z3cos,cos)
+FUNC_ONE_VEC_DF(_Z11native_sqrt,native_sqrt)
+FUNC_ONE_VEC_DF(_Z4rint,rint)
+FUNC_ONE_VEC_DF(_Z12native_recip,native_recip)
+FUNC_ONE_VEC_DF(_Z9normalize,normalize)
+
+// (float, float) - functions
+FUNC_TWO_VEC_DF(_Z13native_divide,native_divide)
+FUNC_TWO_VEC_DF(_Z3dot,dot)
+FUNC_TWO_VEC_DF(_Z5hypot,hypot)
+FUNC_TWO_VEC_DF(_Z3max,max)
+FUNC_TWO_VEC_DF(_Z3min,min)
+
+// (float, float, float) - functions
+FUNC_THREE_VEC_DF(_Z5clamp,clamp)
+FUNC_THREE_VEC_DF(_Z3fma,fma)
+FUNC_THREE_VEC_DF(_Z3mix,mix)
+// _Z10atomic_addPVU10AS16776961ji
+
+
+// TODO extend for integer operations
+FUNC(_Z3allDv4_i,int4,all,(int4),1)
+FUNC(_Z4log2i,int,log2,(int),1)
+
+FUNC(_Z5mul24jj,uint,mul24,(uint,uint),2)
+FUNC(_Z5mul24ii,int,mul24,(int,int),2)
+
+
+/*
+ * MT FUNCTIONS
+ */
+#define FUNC_ATOMIC_TWO_32(PREFIX,NAME) \
+	FUNC(PREFIX##PVU10AS16776961jjj,uint,NAME,(uint GLOBAL *, uint, uint),3) \
+	FUNC(PREFIX##PVU10AS16776960jjj,uint,NAME,(uint LOCAL *, uint, uint),3) \
+	FUNC(PREFIX##PVU10AS16776961iii,int,NAME,(int GLOBAL *, int, int),3) \
+	FUNC(PREFIX##PVU10AS16776960iii,int,NAME,(int LOCAL *, int, int),3)
+ 
+#define FUNC_ATOMIC_ONE_32(PREFIX,NAME) \
+	FUNC(PREFIX##PVU10AS16776961jj,uint,NAME,(uint GLOBAL *, uint),2) \
+	FUNC(PREFIX##PVU10AS16776960jj,uint,NAME,(uint LOCAL *, uint),2) \
+	FUNC(PREFIX##PVU10AS16776961ii,int,NAME,(int GLOBAL *, int),2) \
+	FUNC(PREFIX##PVU10AS16776960ii,int,NAME,(int LOCAL *, int),2)
+	
+#define FUNC_ATOMIC_ZERO_32(PREFIX,NAME) \
+	FUNC(PREFIX##PVU10AS16776961j,uint,NAME,(uint GLOBAL *),1) \
+	FUNC(PREFIX##PVU10AS16776960j,uint,NAME,(uint LOCAL *),1) \
+	FUNC(PREFIX##PVU10AS16776961i,int,NAME,(int GLOBAL *),1) \
+	FUNC(PREFIX##PVU10AS16776960i,int,NAME,(int LOCAL *),1)
+	
+#define FUNC_ATOMIC_TWO_32_ALIASES(ATOM_PREFIX,ATOMIC_PREFIX,NAME) \
+	FUNC_ATOMIC_TWO_32(ATOM_PREFIX,atom_##NAME) \
+	FUNC_ATOMIC_TWO_32(ATOMIC_PREFIX,atomic_##NAME)
+
+#define FUNC_ATOMIC_ONE_32_ALIASES(ATOM_PREFIX,ATOMIC_PREFIX,NAME) \
+	FUNC_ATOMIC_ONE_32(ATOM_PREFIX,atom_##NAME) \
+	FUNC_ATOMIC_ONE_32(ATOMIC_PREFIX,atomic_##NAME)
+	
+	
+#define FUNC_ATOMIC_ZERO_32_ALIASES(ATOM_PREFIX,ATOMIC_PREFIX,NAME) \
+	FUNC_ATOMIC_ZERO_32(ATOM_PREFIX,atom_##NAME) \
+	FUNC_ATOMIC_ZERO_32(ATOMIC_PREFIX,atomic_##NAME)	
+	
+	
+FUNC_ATOMIC_TWO_32_ALIASES(_Z12atom_cmpxchg,_Z14atomic_cmpxchg,cmpxchg)
+	
+FUNC_ATOMIC_ONE_32_ALIASES(_Z8atom_add,_Z10atomic_add,add)
+FUNC_ATOMIC_ONE_32_ALIASES(_Z8atom_sub,_Z10atomic_sub,sub)
+FUNC_ATOMIC_ONE_32_ALIASES(_Z9atom_xchg,_Z11atomic_xchg,xchg)
+FUNC_ATOMIC_ONE_32_ALIASES(_Z8atom_min,_Z10atomic_min,min)
+FUNC_ATOMIC_ONE_32_ALIASES(_Z8atom_max,_Z10atomic_max,max)
+
+FUNC_ATOMIC_ZERO_32_ALIASES(_Z8atom_inc,_Z10atomic_inc,inc)
+FUNC_ATOMIC_ZERO_32_ALIASES(_Z8atom_dec,_Z10atomic_dec,dec)
+
+FUNC(_Z11atomic_xchgPVU10AS16776961f,float,atomic_xchg,(float GLOBAL *),1)
+
+//TODO 64 bit MT-builtins	
+
+#undef FUNC_ATOMIC_TWO_32_ALISES
+#undef FUNC_ATOMIC_ONE_32_ALISES
+#undef FUNC_ATOMIC_ZERO_32_ALISES
+#undef FUNC_ATOMIC_TWO_32
+#undef FUNC_ATOMIC_ONE_32
+#undef FUNC_ATOMIC_ZERO_32
+#undef FUNC_ONE_VEC
+#undef FUNC_ONE_VEC_DF
+#undef FUNC_TWO_VEC_DF
+#undef FUNC_THREE_VEC_DF
+#undef FOV_TEMPLATE_1
+#undef FOV_TEMPLATE_2
+#undef FOV_TEMPLATE_3
+#undef CONVERT_ALL_SIZES
+#undef CONVERT_ALL_SIZES_2
+#undef CONVERT_ALL_SIZES_4
+#undef CONVERT_SIZED_2
+#undef CONVERT_SIZED_3
+#undef CONVERT_SIZED_4
+

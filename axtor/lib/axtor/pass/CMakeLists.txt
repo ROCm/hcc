@@ -1,0 +1,1 @@
+ADD_LIBRARY("${OBJ_PREFIX}pass" STATIC CGIPass.cpp CNSPass.cpp ExitUnificationPass.cpp LoopBranchSeparationPass.cpp Normalizer.cpp OpaqueTypeRenamer.cpp Preparator.cpp RestructuringPass.cpp Serializer.cpp SimpleUnswitchPass.cpp TargetProvider.cpp TrivialReturnSplitter.cpp)

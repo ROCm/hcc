@@ -97,6 +97,7 @@ add_custom_target(libc++
 add_subdirectory(lib)
 add_subdirectory(utils)
 add_subdirectory(tests)
+add_subdirectory(axtor)
 
 add_custom_target(gmac
   # Find python first.

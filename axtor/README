@@ -1,0 +1,14 @@
+############################ How to use #################################
+
+Use axtor to get the kernel.cl
+$axtor kernel.bc -o kernel.cl -m OCL
+
+Note: The input file must be represented as the first argument according to
+      the source code. The option "-m OCL" specifies the axtor to use the OpenCL
+      backend.
+      
+
+########################## About axtor ##################################
+
+The origin repo of axtor is at https://bitbucket.org/gnarf/axtor.git
+In this directory contains its original README, LICENSE, TODO files.

@@ -1,0 +1,2 @@
+ADD_SUBDIRECTORY(axtor)
+ADD_SUBDIRECTORY(axtor_ocl)
