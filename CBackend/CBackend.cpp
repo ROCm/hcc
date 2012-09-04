@@ -1789,8 +1789,11 @@ bool CWriter::doInitialization(Module &M) {
          I != E; ++I) {
 
       if (I->hasExternalLinkage() || I->hasExternalWeakLinkage() ||
-          I->hasCommonLinkage())
-        Out << "extern struct";
+          I->hasCommonLinkage()){
+        Out << "extern ";
+        if(I->getInitializer()->getType()->isStructTy())
+          Out << "struct ";
+      }
       else if (I->hasDLLImportLinkage())
         Out << "__declspec(dllimport) ";
       else
@@ -2139,6 +2142,25 @@ void CWriter::printContainedStructs(Type *Ty,
   if (Ty->isPointerTy() || Ty->isPrimitiveType() || Ty->isIntegerTy())
     return;
 
+  // Walk through arrays, declaring their container structs.
+  if (Ty->isArrayTy()) {
+    ArrayType *ATy = cast<ArrayType>(Ty);
+    std::vector<Type*> structMembers;
+    structMembers.push_back(ATy);
+    StructType* ST = StructType::get(TheModule->getContext(), structMembers);
+
+    // Check to see if we have already printed this struct.
+    if (!StructPrinted.insert(ST)) return;
+
+    // Print all contained types first.
+    for (Type::subtype_iterator I = Ty->subtype_begin(), 
+         E = Ty->subtype_end(); I != E; ++I)
+      printContainedStructs(*I, StructPrinted);
+    
+    // Print structure type out.
+    printType(Out, ST, false, getStructName(ST), true);
+    Out << ";\n\n";
+  }
   // Print all contained types first.
   for (Type::subtype_iterator I = Ty->subtype_begin(),
        E = Ty->subtype_end(); I != E; ++I)
