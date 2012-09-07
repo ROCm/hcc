@@ -7,7 +7,7 @@
 class Member {
  public:
   // Compiler-generated constructor
-  __attribute__((used)) Member(float*, int) restrict(amp);
+  __attribute__((annotate("deserialize"))) Member(float*, int) restrict(amp);
   float* bzzt;
   int zzz;
 };
@@ -16,7 +16,7 @@ class baz {
  public:
   baz(void): m(NULL, 3), foo(1234) {}
   // Compiler-generated constructor
-  __attribute__((used)) baz(float *m1, int m2,
+  __attribute__((annotate("deserialize"))) baz(float *m1, int m2,
     int foo_, float bar_) restrict(amp);
 
   Member m;

@@ -7,7 +7,7 @@
 class baz {
  public:
   baz(void): foo(1234) {}
-  __attribute__((used)) baz(int foo_, float bar_) restrict(amp);
+  __attribute__((annotate("deserialize"))) baz(int foo_, float bar_) restrict(amp);
   //:foo(foo_), bar(bar_) {}
   int foo;
   float bar;
