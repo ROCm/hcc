@@ -1,6 +1,4 @@
-; RUN: %llc -march=c %s -o %t.c
-; RUN: %clang %t.c -o %t
-; RUN: %t | %FileCheck %s
+; RUN: %llc -march=c < %s | %FileCheck %s
 
 
 ; ModuleID = 'hello.c'
@@ -23,6 +21,6 @@ entry:
 declare i32 @printf(i8*, ...)
 ;
 
-;CHECK: helloworld
+;CHECK: main
 
 
