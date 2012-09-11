@@ -188,6 +188,7 @@ namespace {
       }
     }
 
+    bool isKernelFunction(const Function *F);
     void writeOperand(Value *Operand, bool Static = false);
     void writeInstComputationInline(Instruction &I);
     void writeOperandInternal(Value *Operand, bool Static = false);
@@ -1493,6 +1494,7 @@ void CWriter::writeOperandWithCast(Value* Operand, const ICmpInst &Cmp) {
 static void generateCompilerSpecificCode(formatted_raw_ostream& Out,
                                          const TargetData *TD) {
   // Alloca is hard to get, and we don't want to include stdlib.h here.
+  #if 0
   Out << "/* get a declaration for alloca */\n"
       << "#if defined(__CYGWIN__) || defined(__MINGW32__)\n"
       << "#define  alloca(x) __builtin_alloca((x))\n"
@@ -1618,6 +1620,7 @@ static void generateCompilerSpecificCode(formatted_raw_ostream& Out,
 
   // Output target-specific code that should be inserted into main.
   Out << "#define CODE_FOR_MAIN() /* Any target-specific code for main()*/\n";
+#endif
 }
 
 /// FindStaticTors - Given a static ctor/dtor list, unpack its contents into
@@ -1732,13 +1735,16 @@ bool CWriter::doInitialization(Module &M) {
   }
 
   // get declaration for alloca
+#if 0
   Out << "/* Provide Declarations */\n";
   Out << "#include <stdarg.h>\n";      // Varargs support
   Out << "#include <setjmp.h>\n";      // Unwind support
   Out << "#include <limits.h>\n";      // With overflow intrinsics support.
+#endif
   generateCompilerSpecificCode(Out, TD);
 
   // Provide a definition for `bool' if not compiling with a C++ compiler.
+#if 0
   Out << "\n"
       << "#ifndef __cplusplus\ntypedef unsigned char bool;\n#endif\n"
 
@@ -1751,7 +1757,7 @@ bool CWriter::doInitialization(Module &M) {
       << "typedef struct { unsigned long long f1; unsigned long long f2; }"
          " ConstantFP128Ty;\n"
       << "\n\n/* Global Declarations */\n";
-
+#endif
   // First output all the declarations for the program, because C requires
   // Functions & globals to be declared before they are used.
   //
@@ -1789,7 +1795,7 @@ bool CWriter::doInitialization(Module &M) {
          I != E; ++I) {
 
       if (I->hasExternalLinkage() || I->hasExternalWeakLinkage() ||
-          I->hasCommonLinkage()){
+          I->hasCommonLinkage()) {
         Out << "extern ";
         if(I->getInitializer()->getType()->isStructTy())
           Out << "struct ";
@@ -1812,11 +1818,12 @@ bool CWriter::doInitialization(Module &M) {
   }
 
   // Function declarations
+#if 0
   Out << "\n/* Function Declarations */\n";
   Out << "double fmod(double, double);\n";   // Support for FP rem
   Out << "float fmodf(float, float);\n";
   Out << "long double fmodl(long double, long double);\n";
-
+#endif
   // Store the intrinsics which will be declared/defined below.
   SmallVector<const Function*, 8> intrinsicsToDefine;
 
@@ -1841,7 +1848,7 @@ bool CWriter::doInitialization(Module &M) {
 
     if (I->hasExternalWeakLinkage())
       Out << "extern ";
-    printFunctionSignature(I, true);
+    //printFunctionSignature(I, true);
     if (I->hasWeakLinkage() || I->hasLinkOnceLinkage())
       Out << " __ATTRIBUTE_WEAK__";
     if (I->hasExternalWeakLinkage())
@@ -1856,7 +1863,7 @@ bool CWriter::doInitialization(Module &M) {
     if (I->hasName() && I->getName()[0] == 1)
       Out << " LLVM_ASM(\"" << I->getName().substr(1) << "\")";
 
-    Out << ";\n";
+    //Out << ";\n";
   }
 
   // Output the global variable declarations
@@ -1958,6 +1965,7 @@ bool CWriter::doInitialization(Module &M) {
       }
   }
 
+#if 0
   if (!M.empty())
     Out << "\n\n/* Function Bodies */\n";
 
@@ -1991,6 +1999,7 @@ bool CWriter::doInitialization(Module &M) {
   Out << "return X <= Y ; }\n";
   Out << "static inline int llvm_fcmp_oge(double X, double Y) { ";
   Out << "return X >= Y ; }\n";
+#endif
 
   // Emit definitions of the intrinsics.
   for (SmallVector<const Function*, 8>::const_iterator
@@ -2014,7 +2023,7 @@ void CWriter::printFloatingPointConstants(Function &F) {
        I != E; ++I)
     printFloatingPointConstants(*I);
 
-  Out << '\n';
+  //Out << '\n';
 }
 
 void CWriter::printFloatingPointConstants(const Constant *C) {
@@ -2076,6 +2085,7 @@ void CWriter::printFloatingPointConstants(const Constant *C) {
 /// type name is found, emit its declaration...
 ///
 void CWriter::printModuleTypes() {
+#if 0
   Out << "/* Helper union for bitcasts */\n";
   Out << "typedef union {\n";
   Out << "  unsigned int Int32;\n";
@@ -2083,7 +2093,7 @@ void CWriter::printModuleTypes() {
   Out << "  float Float;\n";
   Out << "  double Double;\n";
   Out << "} llvmBitCastUnion;\n";
-
+#endif
   // Get all of the struct types used in the module.
   run(*TheModule, false);
 
@@ -2153,7 +2163,7 @@ void CWriter::printContainedStructs(Type *Ty,
     if (!StructPrinted.insert(ST)) return;
 
     // Print all contained types first.
-    for (Type::subtype_iterator I = Ty->subtype_begin(), 
+    for (Type::subtype_iterator I = Ty->subtype_begin(),
          E = Ty->subtype_end(); I != E; ++I)
       printContainedStructs(*I, StructPrinted);
     
@@ -2169,11 +2179,26 @@ void CWriter::printContainedStructs(Type *Ty,
   if (StructType *ST = dyn_cast<StructType>(Ty)) {
     // Check to see if we have already printed this struct.
     if (!StructPrinted.insert(Ty)) return;
-    
+   
     // Print structure type out.
     printType(Out, ST, false, getStructName(ST), true);
     Out << ";\n\n";
   }
+}
+bool CWriter::isKernelFunction(const Function *F)
+{
+  if(!F)
+    return false;
+  llvm::NamedMDNode *openCLMetadata = TheModule->getNamedMetadata("opencl.kernels");
+  if(!openCLMetadata)
+    return false;
+
+  for(unsigned K = 0, E = openCLMetadata->getNumOperands(); K != E; ++K) {
+    llvm::MDNode &kernelMD = *openCLMetadata->getOperand(K);
+    if(kernelMD.getOperand(0) == F)
+      return true;
+  }
+  return false;
 }
 
 void CWriter::printFunctionSignature(const Function *F, bool Prototype) {
@@ -2206,7 +2231,10 @@ void CWriter::printFunctionSignature(const Function *F, bool Prototype) {
 
   // Print out the name...
   FunctionInnards << GetValueName(F) << '(';
-
+  
+  // Print the keyword of kernel
+  if(isKernelFunction(F))
+    Out << "__kernel ";
   bool PrintedArg = false;
   if (!F->isDeclaration()) {
     if (!F->arg_empty()) {
@@ -2232,6 +2260,14 @@ void CWriter::printFunctionSignature(const Function *F, bool Prototype) {
         if (PAL.paramHasAttr(Idx, Attribute::ByVal)) {
           ArgTy = cast<PointerType>(ArgTy)->getElementType();
           ByValParams.insert(I);
+        }
+        if (ArgTy->getTypeID() == Type::PointerTyID) {
+          PointerType *PTy = cast<PointerType>(ArgTy);
+          uint space = PTy->getAddressSpace();
+
+          // Print the key word of global
+          if (space == 1 || space == 0)
+            FunctionInnards << "__global ";
         }
         printType(FunctionInnards, ArgTy,
             /*isSigned=*/PAL.paramHasAttr(Idx, Attribute::SExt),
@@ -2259,6 +2295,14 @@ void CWriter::printFunctionSignature(const Function *F, bool Prototype) {
       if (PAL.paramHasAttr(Idx, Attribute::ByVal)) {
         assert(ArgTy->isPointerTy());
         ArgTy = cast<PointerType>(ArgTy)->getElementType();
+      }
+      if (ArgTy->getTypeID() == Type::PointerTyID) {
+        PointerType *PTy = cast<PointerType>(ArgTy);
+        uint space = PTy->getAddressSpace();
+
+        // Print the key word of global
+        if (space == 1 || space == 0)
+          FunctionInnards << "__global ";
       }
       printType(FunctionInnards, ArgTy,
              /*isSigned=*/PAL.paramHasAttr(Idx, Attribute::SExt));
