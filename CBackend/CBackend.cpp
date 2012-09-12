@@ -2266,7 +2266,7 @@ void CWriter::printFunctionSignature(const Function *F, bool Prototype) {
           uint space = PTy->getAddressSpace();
 
           // Print the key word of global
-          if (space == 1 || space == 0)
+          if (space == 1)
             FunctionInnards << "__global ";
         }
         printType(FunctionInnards, ArgTy,
@@ -2301,7 +2301,7 @@ void CWriter::printFunctionSignature(const Function *F, bool Prototype) {
         uint space = PTy->getAddressSpace();
 
         // Print the key word of global
-        if (space == 1 || space == 0)
+        if (space == 1)
           FunctionInnards << "__global ";
       }
       printType(FunctionInnards, ArgTy,

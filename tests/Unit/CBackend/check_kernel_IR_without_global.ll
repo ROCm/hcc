@@ -20,5 +20,5 @@ declare i32 @get_global_id(i32)
   @_ZN9myFunctor9LaunchPadEPfjS0_jS0_j}
 
 ;CHECK: __kernel
-;CHECK: __global
+;CHECK-NOT: __global
 ;CHECK-NOT: long long
