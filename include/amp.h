@@ -729,6 +729,7 @@ void parallel_for_each(const accelerator_view& accl_view, tiled_extent<D0,D1> co
 template <int D0, typename Kernel>
 void parallel_for_each(const accelerator_view& accl_view, tiled_extent<D0> compute_domain, const Kernel& f);
 
-
 } // namespace Concurrency
+// Specialization and inlined implementation of C++AMP classes/templates
+#include "amp_impl.h"
 
