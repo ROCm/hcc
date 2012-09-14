@@ -4,7 +4,7 @@
 namespace Concurrency {
 class Serialize {
  public:
-  void Append(void *s, size_t x);
+  void Append(size_t x, void *s);
 };
 }
 
