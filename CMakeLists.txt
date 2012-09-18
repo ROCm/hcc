@@ -88,7 +88,7 @@ set(LIBCXX_SRC_DIR "${PROJECT_SOURCE_DIR}/libc++")
 set(LIBCXX_BIN_DIR "${PROJECT_BINARY_DIR}/libc++")
 file(MAKE_DIRECTORY ${LIBCXX_BIN_DIR})
 add_custom_target(libc++
-  COMMAND ${CMAKE_COMMAND} ${LIBCXX_SRC_DIR} -DCMAKE_CXX_COMPILER=${CLANG_CC1}
+  COMMAND ${CMAKE_COMMAND} ${LIBCXX_SRC_DIR} -DCMAKE_CXX_COMPILER=${CLANG_CC1} -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
   COMMAND make  # not portable, but this is what it is.
   WORKING_DIRECTORY ${LIBCXX_BIN_DIR}
   DEPENDS clang
@@ -98,10 +98,11 @@ add_subdirectory(lib)
 add_subdirectory(utils)
 add_subdirectory(tests)
 add_subdirectory(axtor)
+add_subdirectory(include)
 
 add_custom_target(gmac
   # Find python first.
-  COMMAND python ${PROJECT_SOURCE_DIR}/scripts/build/gmac.py ${PROJECT_SOURCE_DIR}/gmac ${OPENCL_HEADER_DIR} ${OPENCL_LIBRARY_DIR} ${CXXAMP_ENABLE_GMAC}
+  COMMAND python ${PROJECT_SOURCE_DIR}/scripts/build/gmac.py ${PROJECT_SOURCE_DIR}/gmac ${OPENCL_HEADER_DIR} ${OPENCL_LIBRARY_DIR} ${CMAKE_INSTALL_PREFIX} ${CXXAMP_ENABLE_GMAC}
 )
 
 MESSAGE("COMMAND python ${PROJECT_SOURCE_DIR}/scripts/build/gmac.py ${PROJECT_SOURCE_DIR}/gmac ${OPENCL_HEADER_DIR} ${OPENCL_LIBRARY_DIR} ${CXXAMP_ENABLE_GMAC}")
