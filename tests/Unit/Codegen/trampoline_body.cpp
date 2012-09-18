@@ -10,7 +10,7 @@
 // To record results used in executable tests
 class Counter {
  public:
-  static void CalledGetGlobalId(int i) restrict(amp) { 
+  static void CalledGetGlobalId(int i) restrict(amp) {
     global_id_val = i;
   }
   static void CalledOperator(int i) restrict(amp) {
@@ -49,8 +49,9 @@ extern "C" int get_global_id(int) restrict(amp) {
 }
 
 // to trigger generation of __cxxamp_trampoline in device compilation mode
-void unused(void) restrict(amp) {
-  int foo = reinterpret_cast<intptr_t>(&baz::__cxxamp_trampoline);
+__attribute__((noinline))
+void trigger(void) restrict(amp) {
+  baz::__cxxamp_trampoline(1234, 56.78f);
 }
 #ifndef __GPU__
 TEST(GPUCodeGen, Constructor) {
@@ -58,7 +59,7 @@ TEST(GPUCodeGen, Constructor) {
   // call the constructor of Concurrency::index<1> which
   // calls get_global_id. Our mock version of get_global_id
   // sets the Counter::global_id_val
-  baz::__cxxamp_trampoline(1234, 56.78f);
+  trigger();
   EXPECT_EQ(Counter::global_id_val, MAGIC1);
 }
 TEST(GPUCodeGen, FunctionBody) {
@@ -69,7 +70,7 @@ TEST(GPUCodeGen, FunctionBody) {
   // 1) trampoline calls operator() passing designated index object
   // 2) the functor is constructed correctly
   // 3) the operator() is called
-  baz::__cxxamp_trampoline(1234, 56.78f);
+  trigger();
   EXPECT_EQ(Counter::operator_call_val, MAGIC1+MAGIC1+1234);
 }
 #endif
