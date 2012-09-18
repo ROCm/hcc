@@ -15,6 +15,7 @@ class Serialize {
 template<typename T>
 class gmac_array {
  public:
+  __attribute__((annotate("serialize")))/* For compiler */
   void __cxxamp_serialize(Serialize& s) const {
     s.Append(0, NULL);
   }
@@ -23,6 +24,7 @@ class gmac_array {
 }
 class baz {
  public:
+  __attribute__((annotate("serialize")))/* For compiler */
   void __cxxamp_serialize(Concurrency::Serialize& s) const;
  private:
   Concurrency::gmac_array<float> foo;
