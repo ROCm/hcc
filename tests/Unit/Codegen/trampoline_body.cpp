@@ -33,8 +33,9 @@ class baz {
   static __attribute__((annotate("__cxxamp_trampoline")))
   void __cxxamp_trampoline(int foo, float bar) restrict(amp) {
     baz tmp(foo, bar);
-    // default constructor that calls get_global_id(0);
-    Concurrency::index<1> idx; 
+    Concurrency::index<1> idx;
+    // calls get_global_id(0);
+    idx.__cxxamp_opencl_index();
     tmp(idx);
   }
 #endif

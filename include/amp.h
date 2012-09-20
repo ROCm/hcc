@@ -115,7 +115,9 @@ public:
   cl_command_queue command_queue_;
   //End CLAMP-specific
 };
-
+//CLAMP
+extern "C" int get_global_id(int n) restrict(amp);
+//End CLAMP
 class completion_future {
 public:
   completion_future();
@@ -152,11 +154,16 @@ public:
 
   typedef int value_type;
 
-  index() restrict(amp,cpu);
+  index() restrict(amp,cpu) {
+    for (int i = 0; i < N; i++)
+      m_internal[i] = 0;
+  }
 
   index(const index& other) restrict(amp,cpu);
 
-  explicit index(int i0) restrict(amp,cpu); // N==1
+  explicit index(int i0) restrict(amp,cpu) { // N==1
+    m_internal[0] = i0;
+  }
 
   index(int i0, int i1) restrict(amp,cpu); // N==2
 
@@ -166,9 +173,13 @@ public:
 
   index& operator=(const index& other) restrict(amp,cpu);
 
-  int operator[](unsigned int c) const restrict(amp,cpu);
+  int operator[](unsigned int c) const restrict(amp,cpu) {
+    return m_internal[c];
+  }
 
-  int& operator[](unsigned int c) restrict(amp,cpu);
+  int& operator[](unsigned int c) restrict(amp,cpu) {
+    return m_internal[c];
+  }
   
   index& operator+=(const index& rhs) restrict(amp,cpu);
   index& operator-=(const index& rhs) restrict(amp,cpu);
@@ -183,8 +194,23 @@ public:
   index operator++(int) restrict(amp,cpu);
   index& operator--() restrict(amp,cpu);
   index operator--(int) restrict(amp,cpu);
+ private:
+  //CLAMP
+  __attribute__((annotate("__cxxamp_opencl_index")))
+  void __cxxamp_opencl_index() restrict(amp,cpu)
+#ifdef __GPU__
+  {
+    m_internal[0] = get_global_id(0);
+  }
+#else
+  ;
+#endif // __GPU__
+  //End CLAMP
+  int m_internal[N]; // Store the data 
 };
-
+//CLAMP
+template class index<1>;
+//End CLAMP
 // forward decls
 template <int D0, int D1=0, int D2=0> class tiled_extent;
 
