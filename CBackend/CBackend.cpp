@@ -3508,8 +3508,15 @@ void CWriter::printGEPExpression(Value *Ptr, gep_type_iterator I,
     } else if (I != E && (*I)->isStructTy()) {
       // If we didn't already emit the first operand, see if we can print it as
       // P->f instead of "P[0].f"
-      writeOperand(Ptr);
-      Out << "->field" << cast<ConstantInt>(I.getOperand())->getZExtValue();
+      StructType *STy = dyn_cast<StructType>(*I);
+      if (STy->getNumElements() == 1) {
+        Out << "(*";
+        writeOperand(Ptr);
+        Out << ")";
+      } else {
+        writeOperand(Ptr);
+        Out << "->field" << cast<ConstantInt>(I.getOperand())->getZExtValue();
+      }
       ++I;  // eat the struct index as well.
     } else {
       // Instead of emitting P[0][1], emit (*P)[1], which is more idiomatic.
