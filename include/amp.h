@@ -78,6 +78,9 @@ public:
   
   bool operator==(const accelerator& other) const;
   bool operator!=(const accelerator& other) const;
+ private:
+  cl_platform_id platform_;
+  cl_device_id device_;
 };
 
 class completion_future;
@@ -97,6 +100,20 @@ public:
   completion_future create_marker();
   bool operator==(const accelerator_view& other) const;
   bool operator!=(const accelerator_view& other) const;
+  //CLAMP-specific
+  ~accelerator_view();
+  const cl_device_id& clamp_get_device(void) const { return device_; }
+  cl_context clamp_get_context(void) const { return context_; }
+  cl_command_queue clamp_get_command_queue(void) const { return command_queue_; }
+  //End CLAMP-specific
+ private:
+  //CLAMP-specific
+  friend class accelerator;
+  accelerator_view(cl_device_id d);
+  cl_device_id device_;     
+  cl_context context_;
+  cl_command_queue command_queue_;
+  //End CLAMP-specific
 };
 
 class completion_future {
