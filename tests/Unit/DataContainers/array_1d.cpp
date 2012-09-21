@@ -7,24 +7,7 @@
 #include <amp.h>
 #include <gtest/gtest.h>
 
-#define N0 10
-#define N1 10
-#define N2 10
-
-// The following OpenCL objects belong to C++AMP class 'accelerator'
-cl_platform_id platform;
-cl_device_id device;
-cl_int error_code;
-cl_context context;
-cl_command_queue command_queue;
-
-// This function should be part of class 'accelerator'
-void clInit() {
-  error_code = clGetPlatformIDs(1, &platform, NULL);
-  error_code = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, NULL);
-  context = clCreateContext(0, 1, &device, NULL, NULL, &error_code);
-  command_queue = clCreateCommandQueue(context, device, 0, &error_code);
-}
+#define N0 5000
 
 int init1D(std::vector<float>& vec) {
   int n = N0;
@@ -33,16 +16,10 @@ int init1D(std::vector<float>& vec) {
   }
   return n;
 }
-
 TEST(ClassArray, ConstructorAndDestructor) {
-  clInit();
-  Concurrency::array<float> arr(N0);
-}
-
-TEST(ClassArray, Array1D) {
+  Concurrency::array<float> arr1(N0);
   std::vector<float> vec;
   int sizeVec = init1D(vec);
-  clInit();
   Concurrency::array<float> arr(vec.size(), vec.begin());
   Concurrency::array_view<float> av(arr);
   Concurrency::array_view<float> av2(av);
@@ -54,6 +31,8 @@ TEST(ClassArray, Array1D) {
     EXPECT_EQ(vec[i], av[i]);
     EXPECT_EQ(vec[i], av2[i]);
   }
+  Concurrency::extent<1> e(vec.size());
+  Concurrency::array<int> arr2(e);
   Concurrency::accelerator def;
-  Concurrency::array<int>(10, def.get_default_view());
+  Concurrency::array<int>(N0, def.get_default_view());
 }
