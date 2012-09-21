@@ -412,7 +412,11 @@ public:
 
   explicit array(int e0, int e1, int e2);
 
-  array(int e0, accelerator_view av);
+  // CLAMP
+  array(int e0, accelerator_view av): m_extent(e0), accelerator_view_(av) {
+    cl_int err = clMalloc(av.clamp_get_command_queue(), (void **)&m_internal, e0*sizeof(T));
+    assert(err == CL_SUCCESS);
+  }
 
   array(int e0, int e1, accelerator_view av);
 
@@ -552,9 +556,9 @@ public:
   // __declspec(property(get)) accelerator_view associated_accelerator_view;
   accelerator_view get_associated_accelerator_view() const;
 
-  T& operator[](const index<N>& idx) restrict(amp,cpu);
+  T& operator[](const index<N>& idx) restrict(amp,cpu) { return m_internal[idx[0]]; }
 
-  const T& operator[](const index<N>& idx) const restrict(amp,cpu);
+  const T& operator[](const index<N>& idx) const restrict(amp,cpu) { return m_internal[idx[0]]; }
 
   auto operator[](int i) restrict(amp,cpu) -> decltype(array_projection_helper<T, N>::project((array<T,N> *)NULL, i));
 
@@ -616,7 +620,7 @@ public:
     return m_internal;
   }
 
-  const T* data() const restrict(amp,cpu);
+  const T* data() const restrict(amp,cpu) { return m_internal; }
 
   ~array() { // For GMAC
     if (m_internal)
@@ -634,17 +638,19 @@ private:
 template <typename T, int N = 1>
 class array_view
 {
+#define __global __attribute__((address_space(1)))
 public:
   static const int rank = N;
   typedef T value_type;
 
   array_view() = delete;
-  array_view(array<T,N>& src) restrict(amp,cpu);
+  array_view(array<T,N>& src) restrict(amp,cpu):
+    p_(reinterpret_cast<__global T*>(src.data())) {}
   template <typename Container>
     array_view(const extent<N>& extent, Container& src);
   array_view(const extent<N>& extent, value_type* src) restrict(amp,cpu);
 
-  array_view(const array_view& other) restrict(amp,cpu);
+  array_view(const array_view& other) restrict(amp,cpu):p_(other.p_) {}
 
   array_view& operator=(const array_view& other) restrict(amp,cpu);
 
@@ -655,8 +661,8 @@ public:
   extent<N> get_extent() const;
 
   // These are restrict(amp,cpu)
-  T& operator[](const index<N>& idx) const restrict(amp,cpu);
-  array_view<T,N-1> operator[](int i) const restrict(amp,cpu);
+  __global T& operator[](const index<N>& idx) const restrict(amp,cpu) { return p_[idx[0]]; }
+  __global T& operator[](int i) const restrict(amp,cpu) { return p_[i]; }
 
   T& operator()(const index<N>& idx) const restrict(amp,cpu);
   array_view<T,N-1> operator()(int i) const restrict(amp,cpu);
@@ -669,6 +675,9 @@ public:
 
   void refresh() const;
   void discard_data() const;
+ private:
+  __global T *p_;
+#undef __global  
 };
 
 template <typename T, int N>
