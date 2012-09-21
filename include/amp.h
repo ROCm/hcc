@@ -399,16 +399,18 @@ public:
   typedef T value_type;
   array() = delete;
 
-  explicit array(const extent<N>& extent);
+  explicit array(const extent<N>& ext): array(ext[0]) {}
 
   // CAVEAT: ACCELERATOR
   explicit array(int e0) : m_extent(e0),
     accelerator_view_(accelerator().get_default_view()) {
     if (!e0)
       m_internal = NULL;
-    else
-      clMalloc(accelerator_view_.clamp_get_command_queue(),
+    else {
+      cl_int ret = clMalloc(accelerator_view_.clamp_get_command_queue(),
         (void**)&m_internal, e0 * sizeof(T));
+      assert(ret == CL_SUCCESS);
+    }
   }
 
   explicit array(int e0, int e1);
@@ -626,8 +628,10 @@ public:
   const T* data() const restrict(amp,cpu) { return m_internal; }
 
   ~array() { // For GMAC
-    if (m_internal)
+    if (m_internal) {
       clFree(accelerator_view_.clamp_get_command_queue(), m_internal);
+      m_internal = NULL;
+    }
   }
 
 private:
