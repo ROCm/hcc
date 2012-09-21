@@ -168,7 +168,10 @@ public:
       m_internal[i] = 0;
   }
 
-  index(const index& other) restrict(amp,cpu);
+  index(const index& other) restrict(amp,cpu) {
+    for (int i = 0; i < N; i++)
+      m_internal[i] = other.m_internal[i];
+  }
 
   explicit index(int i0) restrict(amp,cpu) { // N==1
     m_internal[0] = i0;
@@ -199,8 +202,17 @@ public:
   index& operator/=(int rhs) restrict(amp,cpu);
   index& operator%=(int rhs) restrict(amp,cpu);
   
-  index& operator++() restrict(amp,cpu);
-  index operator++(int) restrict(amp,cpu);
+  index& operator++() restrict(amp,cpu) {
+    //FIXME extent?
+    m_internal[0]++;
+    return *this;
+  }
+  index operator++(int) restrict(amp,cpu) {
+    //FIXME extent?
+    index ret = *this;
+    m_internal[0]++;
+    return ret;
+  }
   index& operator--() restrict(amp,cpu);
   index operator--(int) restrict(amp,cpu);
  private:
