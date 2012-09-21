@@ -18,10 +18,6 @@
 
 #include <gmac/cl.h>
 
-// CAVEAT: ACCELERATOR
-extern cl_int error_code;
-extern cl_command_queue command_queue;
-
 /* COMPATIBILITY LAYER */
 #define STD__FUTURE_STATUS__FUTURE_STATUS std::future_status
 
@@ -70,7 +66,7 @@ public:
   __declspec(property(get)) bool supports_double_precision;
   __declspec(property(get)) bool supports_limited_double_precision;
   __declspec(property(get)) size_t dedicated_memory;
-  accelerator_view get_default_view() const;
+  accelerator_view& get_default_view() const;
   // __declspec(property(get=get_default_view)) accelerator_view default_view;
 
   accelerator_view create_view();
@@ -78,9 +74,13 @@ public:
   
   bool operator==(const accelerator& other) const;
   bool operator!=(const accelerator& other) const;
+  //CLAMP
+  cl_device_id clamp_get_device_id() const { return device_; }
+  //End CLAMP
  private:
   cl_platform_id platform_;
   cl_device_id device_;
+  static accelerator_view *default_view_;
 };
 
 class completion_future;
@@ -88,7 +88,16 @@ class accelerator_view {
 public:
   accelerator_view() = delete;
   accelerator_view(const accelerator_view& other);
-  accelerator_view& operator=(const accelerator_view& other);
+  accelerator_view& operator=(const accelerator_view& other) {
+    clRetainCommandQueue(other.command_queue_);
+    clReleaseCommandQueue(command_queue_);
+    command_queue_ = other.command_queue_;
+    clRetainContext(other.context_);
+    clReleaseContext(context_);
+    context_ = other.context_;
+    return *this;
+  }
+
   accelerator get_accelerator() const;
   // __declspec(property(get=get_accelerator)) Concurrency::accelerator accelerator;
 
@@ -378,11 +387,13 @@ public:
   explicit array(const extent<N>& extent);
 
   // CAVEAT: ACCELERATOR
-  explicit array(int e0) : m_extent(e0) {
+  explicit array(int e0) : m_extent(e0),
+    accelerator_view_(accelerator().get_default_view()) {
     if (!e0)
       m_internal = NULL;
     else
-      error_code = clMalloc(command_queue, (void**)&m_internal, e0 * sizeof(T));
+      clMalloc(accelerator_view_.clamp_get_command_queue(),
+        (void**)&m_internal, e0 * sizeof(T));
   }
 
   explicit array(int e0, int e1);
@@ -411,11 +422,13 @@ public:
 
   // CAVEAT: ACCELERATOR
   template <typename InputIterator>
-  array(int e0, InputIterator srcBegin) : m_extent(e0) {  
+  array(int e0, InputIterator srcBegin) : m_extent(e0),
+    accelerator_view_(accelerator().get_default_view()) {
     if (!e0)
       m_internal = NULL;
     else {
-      error_code = clMalloc(command_queue, (void**)&m_internal, e0 * sizeof(T));
+      clMalloc(accelerator_view_.clamp_get_command_queue(),
+        (void**)&m_internal, e0 * sizeof(T));
       InputIterator srcEnd = srcBegin;
       std::advance(srcEnd, e0);
       std::copy(srcBegin, srcEnd, m_internal);
@@ -595,13 +608,14 @@ public:
 
   ~array() { // For GMAC
     if (m_internal)
-      clFree(command_queue, m_internal);
+      clFree(accelerator_view_.clamp_get_command_queue(), m_internal);
   }
 
 private:
   // Data members
   Concurrency::extent<N> m_extent;
   T* m_internal; // Store the data and allocated by GMAC
+  accelerator_view accelerator_view_;
 
 };
 

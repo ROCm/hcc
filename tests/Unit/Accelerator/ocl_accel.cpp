@@ -24,3 +24,38 @@ TEST(Accelerator, Creation) {
   // Expect res_ctx to be the same
   EXPECT_EQ(ret_ctx, c);
 }
+
+TEST(Accelerator, View) {
+  Concurrency::accelerator def;
+
+  Concurrency::accelerator_view av1 = def.get_default_view();
+
+  // to get the internal OpenCL context out of accelerator_view
+  cl_context c = av1.clamp_get_context();
+  cl_int res;
+  cl_uint ret;
+  res = clGetContextInfo(c, CL_CONTEXT_REFERENCE_COUNT,
+    sizeof(cl_uint), &ret, NULL);
+  // Expect a valid OpenCL context is constructed
+  EXPECT_EQ(CL_SUCCESS, res);
+  EXPECT_EQ(2, ret);
+
+  // Test copy constructor
+  Concurrency::accelerator_view av2(av1);
+  cl_uint old_ret = ret;
+  res = clGetContextInfo(c, CL_CONTEXT_REFERENCE_COUNT,
+    sizeof(cl_uint), &ret, NULL);
+  // Expect a valid OpenCL context is constructed
+  EXPECT_EQ(CL_SUCCESS, res);
+  EXPECT_EQ(old_ret+1, ret);
+
+  // Test view creation
+  av2 = def.create_view();
+  cl_uint assign_ret = ret;
+  res = clGetContextInfo(c, CL_CONTEXT_REFERENCE_COUNT,
+    sizeof(cl_uint), &ret, NULL);
+  // Expect a valid OpenCL context is constructed
+  EXPECT_EQ(CL_SUCCESS, res);
+  // Old view should be released
+  EXPECT_EQ(old_ret, ret);
+}

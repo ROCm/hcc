@@ -24,6 +24,8 @@ accelerator::accelerator(void) {
   error_code = clGetDeviceIDs(platform_,
     CL_DEVICE_TYPE_GPU, 1, &device_, NULL);
   CHECK_ERROR(error_code, "clGetDeviceIDs");
+  if (!default_view_)
+    default_view_ = new accelerator_view(device_);
 }
 accelerator_view accelerator::create_view(void) {
   accelerator_view sa(device_);
@@ -36,7 +38,9 @@ accelerator_view::accelerator_view(const accelerator_view &v):
   //std::cerr << "SAV: copy constructor calld. This = " << this;
   //std::cerr << " v = " << &v << std::endl;
   cl_int err = clRetainCommandQueue(command_queue_);
-  CHECK_ERROR(err, "clRetainCommandQueue"); 
+  CHECK_ERROR(err, "clRetainCommandQueue");
+  err = clRetainContext(context_);
+  CHECK_ERROR(err, "clRetainContext");
 }
 
 accelerator_view::~accelerator_view() {
@@ -52,5 +56,8 @@ accelerator_view::accelerator_view(cl_device_id d):
   command_queue_ = clCreateCommandQueue(context_, d, 0, &error_code);
   CHECK_ERROR(error_code, "clCreateCommandQueue");
 }
+
+accelerator_view& accelerator::get_default_view() const { return *default_view_; }
+accelerator_view *accelerator::default_view_ = NULL;
 } //namespace Concurrency
 #endif //INCLUDE_AMP_IMPL_H

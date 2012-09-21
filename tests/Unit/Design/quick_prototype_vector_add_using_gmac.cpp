@@ -88,13 +88,10 @@ private:
 
 // This function should be part of class 'accelerator'
 void clInit() {
-  error_code = clGetPlatformIDs(1, &platform, NULL);
+  device = Concurrency::accelerator().clamp_get_device_id();
+  context = Concurrency::accelerator().get_default_view().clamp_get_context(); 
   assert(error_code == CL_SUCCESS);
-  error_code = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, NULL);
-  assert(error_code == CL_SUCCESS);
-  context = clCreateContext(0, 1, &device, NULL, NULL, &error_code);
-  assert(error_code == CL_SUCCESS);
-  command_queue = clCreateCommandQueue(context, device, 0, &error_code);
+  command_queue = Concurrency::accelerator().get_default_view().clamp_get_command_queue();
   assert(error_code == CL_SUCCESS);
 }
 
