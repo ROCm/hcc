@@ -44,10 +44,16 @@ TEST(ClassArray, Array1D) {
   int sizeVec = init1D(vec);
   clInit();
   Concurrency::array<float> arr(vec.size(), vec.begin());
+  Concurrency::array_view<float> av(arr);
+  Concurrency::array_view<float> av2(av);
 
   EXPECT_EQ(sizeVec, arr.get_extent().size());
   for (int i = 0; i < vec.size(); ++i) {
     EXPECT_EQ(vec[i], (arr.data())[i]);
+    EXPECT_EQ(vec[i], arr[Concurrency::index<1>(i)]);
+    EXPECT_EQ(vec[i], av[i]);
+    EXPECT_EQ(vec[i], av2[i]);
   }
+  Concurrency::accelerator def;
+  Concurrency::array<int>(10, def.get_default_view());
 }
-
