@@ -17,6 +17,9 @@
 #include <future>
 
 #include <gmac/cl.h>
+// CLAMP
+#include <serialize.h>
+// End CLAMP
 
 /* COMPATIBILITY LAYER */
 #define STD__FUTURE_STATUS__FUTURE_STATUS std::future_status
@@ -675,6 +678,17 @@ public:
 
   void refresh() const;
   void discard_data() const;
+
+  // CLAMP: The serialization interface
+  __attribute__((annotate("serialize")))
+  void __cxxamp_serialize(Serialize& s) const {
+    cl_int err;
+    cl_context context = s.getContext();
+    cl_mem t = clGetBuffer(context, (const void *)p_);
+    s.Append(sizeof(cl_mem), &t);
+  }
+  // End CLAMP
+
  private:
   __global T *p_;
 #undef __global  
@@ -776,15 +790,7 @@ extent<N> operator%(int lhs, const extent<N>& rhs) restrict(amp,cpu);
 
 
 template <int N, typename Kernel>
-void parallel_for_each(extent<N> compute_domain, const Kernel& f)
-{
-  // OpenCL specific.
-  size_t global_size[3] = {1, 1, 1};
-  for (int i = 0; i < N; ++i)
-    global_size[i] = compute_domain[i];
-  f.setArgs();
-  f.launchOpenCL(global_size, N);
-}
+void parallel_for_each(extent<N> compute_domain, const Kernel& f);
 
 template <int D0, int D1, int D2, typename Kernel>
 void parallel_for_each(tiled_extent<D0,D1,D2> compute_domain, const Kernel& f);
@@ -810,4 +816,5 @@ void parallel_for_each(const accelerator_view& accl_view, tiled_extent<D0> compu
 } // namespace Concurrency
 // Specialization and inlined implementation of C++AMP classes/templates
 #include "amp_impl.h"
+#include "parallel_for_each.h"
 
