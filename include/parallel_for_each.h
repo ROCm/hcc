@@ -9,6 +9,18 @@
 #define SERIALIZE __cxxamp_serialize
 
 namespace Concurrency {
+static inline std::string mcw_cxxamp_fixnames(char *f) {
+  std::string s(f);
+  std::string out;
+  for(std::string::iterator it = s.begin(); it != s.end(); it++ ) {
+    if (isalnum(*it) || (*it == '_')) {
+      out.append(1, *it);
+    } else if (*it == '$') {
+      out.append("_EC_");
+    }
+  }
+  return out;
+}
 
 //1D sandbox_parallel_for_each
 extern "C" char * kernel_source_[] asm ("_binary_kernel_cl_start");
@@ -48,10 +60,12 @@ __attribute__((noinline,used)) void parallel_for_each(
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
   int foo = reinterpret_cast<intptr_t>(&Kernel::__cxxamp_trampoline);
-  // std::cerr << "Kernel name = "<< 
-  // std::string(f.__cxxamp_trampoline_name())<<"\n";
+  std::string transformed_kernel_name =
+      mcw_cxxamp_fixnames(f.__cxxamp_trampoline_name());
+
+  std::cerr << "Kernel name = "<< transformed_kernel_name <<"\n";
   cl_kernel kernel = clCreateKernel(program,
-      f.__cxxamp_trampoline_name(), &error_code);
+      transformed_kernel_name.c_str(), &error_code);
   CHECK_ERROR(error_code, "clCreateKernel");
   Concurrency::Serialize s(accel_view.clamp_get_context(), kernel);
   f.SERIALIZE(s);
