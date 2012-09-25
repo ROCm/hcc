@@ -645,19 +645,17 @@ private:
 template <typename T, int N = 1>
 class array_view
 {
-#define __global __attribute__((address_space(1)))
 public:
   static const int rank = N;
   typedef T value_type;
 
   array_view() = delete;
-  array_view(array<T,N>& src) restrict(amp,cpu):
-    p_(reinterpret_cast<__global T*>(src.data())) {}
+  array_view(array<T,N>& src) restrict(amp,cpu) {}
   template <typename Container>
     array_view(const extent<N>& extent, Container& src);
   array_view(const extent<N>& extent, value_type* src) restrict(amp,cpu);
 
-  array_view(const array_view& other) restrict(amp,cpu):p_(other.p_) {}
+  array_view(const array_view& other) restrict(amp,cpu);
 
   array_view& operator=(const array_view& other) restrict(amp,cpu);
 
@@ -668,14 +666,59 @@ public:
   extent<N> get_extent() const;
 
   // These are restrict(amp,cpu)
-  __global T& operator[](const index<N>& idx) const restrict(amp,cpu) { return p_[idx[0]]; }
-  __global T& operator[](int i) const restrict(amp,cpu) { return p_[i]; }
+  T& operator[](const index<N>& idx) const restrict(amp,cpu);
 
   T& operator()(const index<N>& idx) const restrict(amp,cpu);
   array_view<T,N-1> operator()(int i) const restrict(amp,cpu);
 
   array_view<T,N> section(const index<N>& idx, const extent<N>& ext) restrict(amp,cpu);
   array_view<T,N> section(const index<N>& idx) const restrict(amp,cpu);
+
+  void synchronize() const;
+  completion_future synchronize_async() const;
+
+  void refresh() const;
+  void discard_data() const;
+};
+
+template <typename T>
+class array_view<T, 1>
+{
+#define __global __attribute__((address_space(1)))
+public:
+  static const int rank = 1;
+  typedef T value_type;
+
+  array_view() = delete;
+  array_view(array<T,1>& src) restrict(amp,cpu):
+    p_(reinterpret_cast<__global T*>(src.data())) {}
+  template <typename Container>
+    array_view(const extent<1>& extent, Container& src);
+  template <typename Container>
+    array_view(int e0, Container& src);
+  array_view(const extent<1>& extent, value_type* src) restrict(amp,cpu);
+
+  array_view(const array_view& other) restrict(amp,cpu):p_(other.p_) {}
+
+  array_view& operator=(const array_view& other) restrict(amp,cpu);
+
+  void copy_to(array<T,1>& dest) const;
+  void copy_to(const array_view& dest) const;
+
+  // __declspec(property(get)) extent<N> extent;
+  extent<1> get_extent() const;
+
+  // These are restrict(amp,cpu)
+  __global T& operator[](const index<1>& idx) const restrict(amp,cpu) { return p_[idx[0]]; }
+  __global T& operator[](int i) const restrict(amp,cpu) { return p_[i]; }
+
+  __global T& operator()(const index<1>& idx) const restrict(amp,cpu);
+  __global T& operator()(int i) const restrict(amp,cpu);
+
+  array_view<T,1> section(const index<1>& idx, const extent<1>& ext) restrict(amp,cpu);
+  array_view<T,1> section(const index<1>& idx) const restrict(amp,cpu);
+  array_view<T,1> section(const extent<1>& ext) const restrict(amp,cpu);
+  array_view<T,1> section(int i0, int e0) const restrict(amp,cpu);
 
   void synchronize() const;
   completion_future synchronize_async() const;
@@ -698,6 +741,7 @@ public:
 #undef __global  
 };
 
+#if 0 // Cause ambiguity on clang 
 template <typename T, int N>
 class array_view<const T,N>
 {
@@ -733,7 +777,7 @@ public:
 
   void refresh() const;
 };
-
+#endif
 // class index operators
 template <int N>
 bool operator==(const index<N>& lhs, const index<N>& rhs) restrict(amp,cpu);
