@@ -62,8 +62,9 @@ __attribute__((noinline,used)) void parallel_for_each(
   int foo = reinterpret_cast<intptr_t>(&Kernel::__cxxamp_trampoline);
   std::string transformed_kernel_name =
       mcw_cxxamp_fixnames(f.__cxxamp_trampoline_name());
-
+#if 0
   std::cerr << "Kernel name = "<< transformed_kernel_name <<"\n";
+#endif
   cl_kernel kernel = clCreateKernel(program,
       transformed_kernel_name.c_str(), &error_code);
   CHECK_ERROR(error_code, "clCreateKernel");
