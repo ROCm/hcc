@@ -1,4 +1,3 @@
-// XFAIL: *
 // RUN: %cxxamp -Werror -c %s
 
 #include <stdlib.h>
@@ -20,10 +19,13 @@ void vectorAdd_by_array(const std::vector<float>& vecA, const std::vector<float>
    array<float> A(N, vecA.begin());
    array<float> B(N, vecB.begin());
    array<float> C(N);
+   array_view<float> av(A);
+   array_view<float> bv(B);
+   array_view<float> cv(C);
    extent<1> e(N);
 
    parallel_for_each(e,
-         [&](index<1> idx) restrict(amp) { C[idx] = A[idx] + B[idx]; }); 
+         [=](index<1> idx) restrict(amp) { cv[idx] = av[idx] + bv[idx]; }); 
 }
 
 int main(void)

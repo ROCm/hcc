@@ -2205,7 +2205,8 @@ void CWriter::printFunctionSignature(const Function *F, bool Prototype) {
   /// isStructReturn - Should this function actually return a struct by-value?
   bool isStructReturn = F->hasStructRetAttr();
 
-  if (F->hasLocalLinkage()) Out << "static ";
+  if (F->hasLocalLinkage() && !isKernelFunction(F))
+    Out << "static ";
   if (F->hasDLLImportLinkage()) Out << "__declspec(dllimport) ";
   if (F->hasDLLExportLinkage()) Out << "__declspec(dllexport) ";
   switch (F->getCallingConv()) {
