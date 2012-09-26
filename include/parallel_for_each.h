@@ -22,17 +22,12 @@ static inline std::string mcw_cxxamp_fixnames(char *f) {
   return out;
 }
 
-//1D sandbox_parallel_for_each
 extern "C" char * kernel_source_[] asm ("_binary_kernel_cl_start");
 extern "C" char * kernel_size_[] asm ("_binary_kernel_cl_size");
-
-template <typename Kernel>
-__attribute__((noinline,used)) void parallel_for_each(
-  extent<1> compute_domain,
-    const Kernel& f) restrict(cpu,amp) {
+template<typename Kernel>
+static inline void mcw_cxxamp_launch_kernel(size_t ext,
+  size_t *local_size, Kernel f) {
   cl_int error_code;
-  size_t ext = compute_domain[0];
-#ifndef __GPU__
   accelerator def;
   accelerator_view accel_view = def.get_default_view();
   size_t kernel_size = (size_t)((void *)kernel_size_);
@@ -70,14 +65,42 @@ __attribute__((noinline,used)) void parallel_for_each(
   CHECK_ERROR(error_code, "clCreateKernel");
   Concurrency::Serialize s(accel_view.clamp_get_context(), kernel);
   f.SERIALIZE(s);
-  error_code = clEnqueueNDRangeKernel(accel_view.clamp_get_command_queue(), kernel, 1, NULL,
-      &ext, NULL, 0, NULL, NULL);
+  error_code = clEnqueueNDRangeKernel(accel_view.clamp_get_command_queue(),
+      kernel, 1, NULL,
+      &ext, local_size, 0, NULL, NULL);
   CHECK_ERROR(error_code, "clEnqueueNDRangeKernel");
   error_code = clFinish(accel_view.clamp_get_command_queue());
   CHECK_ERROR(error_code, "clFinish");
   clReleaseKernel(kernel);
   clReleaseProgram(program);
+}
+template class index<1>;
+//1D parallel_for_each, nontiled
+template <typename Kernel>
+__attribute__((noinline,used)) void parallel_for_each(
+    extent<1> compute_domain,
+    const Kernel& f) restrict(cpu,amp) {
+  size_t ext = compute_domain[0];
+#ifndef __GPU__
+  mcw_cxxamp_launch_kernel(ext, NULL, f);
 #else //ifndef __GPU__
+  //to ensure functor has right operator() defined
+  //this triggers the trampoline code being emitted
+  int foo = reinterpret_cast<intptr_t>(&Kernel::__cxxamp_trampoline);
+#endif
+}
+
+//1D parallel_for_each, tiled
+template <int D0, typename Kernel>
+__attribute__((noinline,used)) void parallel_for_each(
+    tiled_extent<D0> compute_domain,
+    const Kernel& f) restrict(cpu,amp) {
+  size_t ext = compute_domain[0];
+  size_t tile = compute_domain.tile_dim0;
+#ifndef __GPU__
+  mcw_cxxamp_launch_kernel(ext, &tile, f);
+#else //ifndef __GPU__
+  tiled_index<D0> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
   int foo = reinterpret_cast<intptr_t>(&Kernel::__cxxamp_trampoline);

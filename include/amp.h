@@ -129,7 +129,8 @@ public:
   //End CLAMP-specific
 };
 //CLAMP
-extern "C" int get_global_id(int n) restrict(amp);
+extern "C" __attribute__((pure)) int get_global_id(int n) restrict(amp);
+extern "C" __attribute__((pure)) int get_local_id(int n) restrict(amp);
 //End CLAMP
 class completion_future {
 public:
@@ -160,6 +161,7 @@ public:
   concurrency::task<void> to_task() const;
 };
 
+template <int N> class extent;
 template <int N>
 class index {
 public:
@@ -221,6 +223,8 @@ public:
   index operator--(int) restrict(amp,cpu);
  private:
   //CLAMP
+  template<class Y>
+  friend void parallel_for_each(extent<1>, const Y&);
   __attribute__((annotate("__cxxamp_opencl_index")))
   void __cxxamp_opencl_index() restrict(amp,cpu)
 #ifdef __GPU__
@@ -233,11 +237,41 @@ public:
   //End CLAMP
   int m_internal[N]; // Store the data 
 };
-//CLAMP
-template class index<1>;
-//End CLAMP
+
+// C++AMP LPM 4.4.1
 // forward decls
 template <int D0, int D1=0, int D2=0> class tiled_extent;
+
+template <int D0, int D1=0, int D2=0>
+class tiled_index {
+ public:
+  static const int rank = 3;
+};
+template <int N> class extent;
+template <int D0>
+class tiled_index<D0, 0, 0> {
+ public:
+  const index<1> global;
+  const index<1> local;
+  tiled_index(const index<1>& g) restrict(amp, cpu):global(g){}
+  tiled_index(const tiled_index<D0>& o) restrict(amp, cpu):
+    global(o.global), local(o.local) {}
+  operator const index<1>() const restrict(amp,cpu) {
+    return global;
+  }
+ private:
+  //CLAMP
+  __attribute__((annotate("__cxxamp_opencl_index")))
+  tiled_index() restrict(amp)
+#ifdef __GPU__
+  : global(index<1>(get_global_id(0))),
+    local(index<1>(get_local_id(0)))
+#endif // __GPU__
+  {}
+  template<int D, typename K>
+  friend void parallel_for_each(tiled_extent<D>, const K&);
+};
+
 
 template <typename T, int N> class array;
 
@@ -343,7 +377,7 @@ public:
   static const int rank = 2;
   tiled_extent() restrict(amp,cpu);
   tiled_extent(const tiled_extent& other) restrict(amp,cpu);
-  tiled_extent(const extent<2>& extent) restrict(amp,cpu);
+  tiled_extent(const extent<2>& ext) restrict(amp,cpu):extent(ext) {}
   tiled_extent& operator=(const tiled_extent& other) restrict(amp,cpu);
   tiled_extent pad() const restrict(amp,cpu);
   tiled_extent truncate() const restrict(amp,cpu);
@@ -361,8 +395,9 @@ class tiled_extent<D0,0,0> : public extent<1>
 public:
   static const int rank = 1;
   tiled_extent() restrict(amp,cpu);
-  tiled_extent(const tiled_extent& other) restrict(amp,cpu);
-  tiled_extent(const extent<1>& extent) restrict(amp,cpu);
+  tiled_extent(const tiled_extent& other) restrict(amp,cpu):
+    extent(static_cast<extent>(other)) {}
+  tiled_extent(const extent<1>& ext) restrict(amp,cpu):extent(ext) {}
   tiled_extent& operator=(const tiled_extent& other) restrict(amp,cpu);
   tiled_extent pad() const restrict(amp,cpu);
   tiled_extent truncate() const restrict(amp,cpu);
@@ -373,6 +408,11 @@ public:
   friend bool operator!=(const tiled_extent& lhs, const tiled_extent& rhs) restrict(amp,cpu);
 };
 
+template <int N>
+template <int D0>
+tiled_extent<D0> extent<N>::tile() const {
+  return tiled_extent<D0>(*this);
+}
 // ------------------------------------------------------------------------
 // For array's operator[](int i). This is a temporally workaround.
 // N must be greater or equal to 2

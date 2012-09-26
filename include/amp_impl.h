@@ -15,7 +15,6 @@
 // Specialization of AMP classes/templates
 
 namespace Concurrency {
-extern "C" int get_global_id(int n) restrict(amp);
 //Accelerators
 accelerator::accelerator(void) {
   cl_int error_code;
