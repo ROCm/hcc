@@ -548,6 +548,10 @@ raw_ostream &CWriter::printType(raw_ostream &Out, Type *Ty,
         PTy->getElementType()->isVectorTy())
       ptrName = "(" + ptrName + ")";
 
+    uint space = PTy->getAddressSpace();
+    // Print the key word of global
+    if (space == 1)
+      ptrName = "__global "+ptrName;
     if (!PAL.isEmpty())
       // Must be a function ptr cast!
       return printType(Out, PTy->getElementType(), false, ptrName, true, PAL);
@@ -2262,14 +2266,6 @@ void CWriter::printFunctionSignature(const Function *F, bool Prototype) {
           ArgTy = cast<PointerType>(ArgTy)->getElementType();
           ByValParams.insert(I);
         }
-        if (ArgTy->getTypeID() == Type::PointerTyID) {
-          PointerType *PTy = cast<PointerType>(ArgTy);
-          uint space = PTy->getAddressSpace();
-
-          // Print the key word of global
-          if (space == 1)
-            FunctionInnards << "__global ";
-        }
         printType(FunctionInnards, ArgTy,
             /*isSigned=*/PAL.paramHasAttr(Idx, Attribute::SExt),
             ArgName);
@@ -2296,14 +2292,6 @@ void CWriter::printFunctionSignature(const Function *F, bool Prototype) {
       if (PAL.paramHasAttr(Idx, Attribute::ByVal)) {
         assert(ArgTy->isPointerTy());
         ArgTy = cast<PointerType>(ArgTy)->getElementType();
-      }
-      if (ArgTy->getTypeID() == Type::PointerTyID) {
-        PointerType *PTy = cast<PointerType>(ArgTy);
-        uint space = PTy->getAddressSpace();
-
-        // Print the key word of global
-        if (space == 1)
-          FunctionInnards << "__global ";
       }
       printType(FunctionInnards, ArgTy,
              /*isSigned=*/PAL.paramHasAttr(Idx, Attribute::SExt));
