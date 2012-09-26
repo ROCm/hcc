@@ -15,8 +15,9 @@
 #include <vector>
 #include <chrono>
 #include <future>
-
+#include <string.h> //memcpy
 #include <gmac/cl.h>
+#include <memory>
 // CLAMP
 #include <serialize.h>
 // End CLAMP
@@ -392,6 +393,7 @@ public:
 };
 // ------------------------------------------------------------------------
 
+#include "gmac_manage.h"
 template <typename T, int N=1>
 class array {
 public:
@@ -404,12 +406,9 @@ public:
   // CAVEAT: ACCELERATOR
   explicit array(int e0) : m_extent(e0),
     accelerator_view_(accelerator().get_default_view()) {
-    if (!e0)
-      m_internal = NULL;
-    else {
-      cl_int ret = clMalloc(accelerator_view_.clamp_get_command_queue(),
-        (void**)&m_internal, e0 * sizeof(T));
-      assert(ret == CL_SUCCESS);
+    if (e0) {
+      m_internal.reset(GMACAllocator<T>().allocate(e0),
+        GMACDeleter<T>());
     }
   }
 
@@ -419,8 +418,7 @@ public:
 
   // CLAMP
   array(int e0, accelerator_view av): m_extent(e0), accelerator_view_(av) {
-    cl_int err = clMalloc(av.clamp_get_command_queue(), (void **)&m_internal, e0*sizeof(T));
-    assert(err == CL_SUCCESS);
+    m_internal.reset(GMACAllocator<T>().allocate(e0), GMACDeleter<T>());
   }
 
   array(int e0, int e1, accelerator_view av);
@@ -445,14 +443,12 @@ public:
   template <typename InputIterator>
   array(int e0, InputIterator srcBegin) : m_extent(e0),
     accelerator_view_(accelerator().get_default_view()) {
-    if (!e0)
-      m_internal = NULL;
-    else {
-      clMalloc(accelerator_view_.clamp_get_command_queue(),
-        (void**)&m_internal, e0 * sizeof(T));
+    if (e0) {
+      m_internal.reset(GMACAllocator<T>().allocate(e0),
+        GMACDeleter<T>());
       InputIterator srcEnd = srcBegin;
       std::advance(srcEnd, e0);
-      std::copy(srcBegin, srcEnd, m_internal);
+      std::copy(srcBegin, srcEnd, m_internal.get());
     }
   }
 
@@ -561,9 +557,9 @@ public:
   // __declspec(property(get)) accelerator_view associated_accelerator_view;
   accelerator_view get_associated_accelerator_view() const;
 
-  T& operator[](const index<N>& idx) restrict(amp,cpu) { return m_internal[idx[0]]; }
+  T& operator[](const index<N>& idx) restrict(amp,cpu) { return m_internal.get()[idx[0]]; }
 
-  const T& operator[](const index<N>& idx) const restrict(amp,cpu) { return m_internal[idx[0]]; }
+  const T& operator[](const index<N>& idx) const restrict(amp,cpu) { return m_internal.get()[idx[0]]; }
 
   auto operator[](int i) restrict(amp,cpu) -> decltype(array_projection_helper<T, N>::project((array<T,N> *)NULL, i));
 
@@ -622,22 +618,21 @@ public:
   operator std::vector<T>() const;
 
   T* data() restrict(amp,cpu) {
-    return m_internal;
+    return m_internal.get();
   }
 
-  const T* data() const restrict(amp,cpu) { return m_internal; }
+  const T* data() const restrict(amp,cpu) { return m_internal.get(); }
+
 
   ~array() { // For GMAC
-    if (m_internal) {
-      clFree(accelerator_view_.clamp_get_command_queue(), m_internal);
-      m_internal = NULL;
-    }
+    m_internal.reset();
   }
 
+  const std::shared_ptr<T> &internal() const { return m_internal; }
 private:
   // Data members
   Concurrency::extent<N> m_extent;
-  T* m_internal; // Store the data and allocated by GMAC
+  std::shared_ptr<T> m_internal; // Store the data and allocated by GMAC
   accelerator_view accelerator_view_;
 
 };
@@ -690,15 +685,41 @@ public:
   typedef T value_type;
 
   array_view() = delete;
-  array_view(array<T,1>& src) restrict(amp,cpu):
-    p_(reinterpret_cast<__global T*>(src.data())) {}
+  array_view(array<T,1>& src) restrict(amp,cpu): p_(NULL)
+#ifndef __GPU__
+  , cache_(src.internal())
+#endif
+  {}
   template <typename Container>
-    array_view(const extent<1>& extent, Container& src);
+    array_view(const extent<1>& extent, Container& src): array_view(extent, src.data()) {}
   template <typename Container>
-    array_view(int e0, Container& src);
-  array_view(const extent<1>& extent, value_type* src) restrict(amp,cpu);
+    array_view(int e0, Container& src):array_view(extent<1>(e0), src) {}
+  ~array_view() restrict(amp, cpu) {
+#ifndef __GPU__
+    if (p_) {
+      synchronize();
+      cache_.reset();
+    }
+#endif
+  }
+  array_view(const extent<1>& extent, value_type* src) restrict(amp,cpu):
+    p_(reinterpret_cast<__global T*>(src)),
+    size_(extent[0]) {
+#ifndef __GPU__
+    cache_.reset(GMACAllocator<T>().allocate(size_),
+      GMACDeleter<T>());
+    refresh();
+#endif
+  }
+  array_view(int e0, value_type* src) restrict(amp,cpu):array_view(extent<1>(e0), src) {}
 
-  array_view(const array_view& other) restrict(amp,cpu):p_(other.p_) {}
+  array_view(const array_view& other) restrict(amp,cpu):
+    p_(other.p_),
+    size_(other.size_)
+#ifndef __GPU__
+    , cache_(other.cache_)
+#endif
+    {}
 
   array_view& operator=(const array_view& other) restrict(amp,cpu);
 
@@ -709,8 +730,20 @@ public:
   extent<1> get_extent() const;
 
   // These are restrict(amp,cpu)
-  __global T& operator[](const index<1>& idx) const restrict(amp,cpu) { return p_[idx[0]]; }
-  __global T& operator[](int i) const restrict(amp,cpu) { return p_[i]; }
+  __global T& operator[](const index<1>& idx) const restrict(amp,cpu) {
+#ifdef __GPU__
+    return p_[idx[0]];
+#else
+    return reinterpret_cast<__global T*>(cache_.get())[idx[0]];
+#endif
+  }
+  __global T& operator[](int i) const restrict(amp,cpu) {
+#ifdef __GPU__
+    return p_[i];
+#else
+    return reinterpret_cast<__global T*>(cache_.get())[i];
+#endif
+  }
 
   __global T& operator()(const index<1>& idx) const restrict(amp,cpu);
   __global T& operator()(int i) const restrict(amp,cpu);
@@ -720,24 +753,49 @@ public:
   array_view<T,1> section(const extent<1>& ext) const restrict(amp,cpu);
   array_view<T,1> section(int i0, int e0) const restrict(amp,cpu);
 
-  void synchronize() const;
+  void synchronize() const {
+#ifndef __GPU__
+    assert(cache_);
+    assert(p_);
+    memmove(reinterpret_cast<void*>(p_),
+            reinterpret_cast<void*>(cache_.get()), size_ * sizeof(T));
+#endif
+  }
   completion_future synchronize_async() const;
 
-  void refresh() const;
+  void refresh() const {
+#ifndef __GPU__
+    assert(cache_);
+    assert(p_);
+    memmove(reinterpret_cast<void*>(cache_.get()),
+            reinterpret_cast<void*>(p_), size_ * sizeof(T));
+#endif
+  }
   void discard_data() const;
 
   // CLAMP: The serialization interface
   __attribute__((annotate("serialize")))
   void __cxxamp_serialize(Serialize& s) const {
+#ifndef __GPU__
     cl_int err;
     cl_context context = s.getContext();
-    cl_mem t = clGetBuffer(context, (const void *)p_);
+    cl_mem t = clGetBuffer(context, (const void *)cache_.get());
     s.Append(sizeof(cl_mem), &t);
+    s.Append(sizeof(cl_uint), &size_);
+#endif
   }
   // End CLAMP
 
  private:
+  // Holding user pointer in CPU mode; holding device pointer in GPU mode
   __global T *p_;
+  cl_uint size_;
+#ifndef __GPU__
+  // Cached value if initialized with a user ptr;
+  // GMAC array pointer if initialized with a Concurrency::array
+  // Note: does not count for deserialization due to the attribute
+  __attribute__((cpu)) std::shared_ptr<T> cache_;
+#endif
 #undef __global  
 };
 
