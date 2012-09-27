@@ -131,6 +131,7 @@ public:
 //CLAMP
 extern "C" __attribute__((pure)) int get_global_id(int n) restrict(amp);
 extern "C" __attribute__((pure)) int get_local_id(int n) restrict(amp);
+#define tile_static static __attribute__((address_space(3)))
 //End CLAMP
 class completion_future {
 public:
