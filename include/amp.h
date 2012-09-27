@@ -132,6 +132,7 @@ public:
 extern "C" __attribute__((pure)) int get_global_id(int n) restrict(amp);
 extern "C" __attribute__((pure)) int get_local_id(int n) restrict(amp);
 #define tile_static static __attribute__((address_space(3)))
+extern "C" void barrier(int n) restrict(amp);
 //End CLAMP
 class completion_future {
 public:
@@ -239,6 +240,20 @@ public:
   int m_internal[N]; // Store the data 
 };
 
+// C++AMP LPM 4.5
+class tile_barrier {
+ public:
+  void wait() const restrict(amp) {
+#ifdef __GPU__
+    barrier(0);
+#endif
+  }
+ private:
+  tile_barrier() restrict(amp) {}
+  template<int D0, int D1, int D2>
+  friend class tiled_index;
+};
+
 // C++AMP LPM 4.4.1
 // forward decls
 template <int D0, int D1=0, int D2=0> class tiled_extent;
@@ -254,6 +269,7 @@ class tiled_index<D0, 0, 0> {
  public:
   const index<1> global;
   const index<1> local;
+  const tile_barrier barrier;
   tiled_index(const index<1>& g) restrict(amp, cpu):global(g){}
   tiled_index(const tiled_index<D0>& o) restrict(amp, cpu):
     global(o.global), local(o.local) {}
