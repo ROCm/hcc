@@ -551,7 +551,10 @@ raw_ostream &CWriter::printType(raw_ostream &Out, Type *Ty,
     uint space = PTy->getAddressSpace();
     // Print the key word of global
     if (space == 1)
-      ptrName = "__global "+ptrName;
+      Out << " __global ";
+    else if (space == 3)
+      Out << " __local  ";
+      
     if (!PAL.isEmpty())
       // Must be a function ptr cast!
       return printType(Out, PTy->getElementType(), false, ptrName, true, PAL);
@@ -1670,6 +1673,10 @@ static SpecialGlobalClass getGlobalVariableClass(const GlobalVariable *GV) {
   if (GV->getSection() == "llvm.metadata")
     return NotPrinted;
 
+  // __local variables are printed in the function that uses them
+  if (GV->getType()->getAddressSpace() == 3)
+    return NotPrinted;
+
   return NotSpecial;
 }
 
@@ -2363,6 +2370,7 @@ void CWriter::printFunction(Function &F) {
   bool PrintedVar = false;
 
   // print local variable information for the function
+  std::set<std::string> PrintedLocal;
   for (inst_iterator I = inst_begin(&F), E = inst_end(&F); I != E; ++I) {
     if (const AllocaInst *AI = isDirectAlloca(&*I)) {
       Out << "  ";
@@ -2382,6 +2390,20 @@ void CWriter::printFunction(Function &F) {
         Out << ";\n";
       }
       PrintedVar = true;
+    } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(&*I)) {
+      if(GEP->getPointerAddressSpace() == 3) { // OpenCL __local?
+        std::string localname = GetValueName(I->getOperand(0));
+        if (PrintedLocal.find(localname) != PrintedLocal.end())
+          continue;
+        else
+          PrintedLocal.insert(localname);
+        PointerType  *PTy = cast<PointerType>(GEP->getPointerOperandType());
+        Out << "  __local ";
+        printType(Out, PTy->getElementType(), false,
+          GetValueName(I->getOperand(0)));
+        Out << ";\n";
+        PrintedVar = true;
+      }
     }
     // We need a temporary for the BitCast to use so it can pluck a value out
     // of a union to do the BitCast. This is separate from the need for a
