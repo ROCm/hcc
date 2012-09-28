@@ -14,10 +14,9 @@ class Member {
 
 class baz {
  public:
-  baz(void): m(NULL, 3), foo(1234) {}
   // Compiler-generated constructor
   __attribute__((annotate("deserialize"))) baz(float *m1, int m2,
-    int foo_, float bar_) restrict(amp);
+    int foo_, float bar_) restrict(amp,cpu);
 
   Member m;
   int foo;
