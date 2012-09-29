@@ -29,16 +29,13 @@
 #define __declspec(ignored) /* */
 #endif
 
+namespace Concurrency {
 /*
   This is not part of C++AMP standard, but borrowed from Parallel Patterns
   Library. 
 */
-namespace concurrency {
   template <typename _Type> class task;
   template <> class task<void>;
-}
-
-namespace Concurrency {
 
 enum queuing_mode {
   queuing_mode_immediate,
@@ -160,7 +157,7 @@ public:
   template <typename _Functor>
   void then(const _Functor &_Func) const;
 
-  concurrency::task<void> to_task() const;
+  Concurrency::task<void> to_task() const;
 };
 
 template <int N> class extent;
@@ -977,6 +974,7 @@ template <int D0, typename Kernel>
 void parallel_for_each(const accelerator_view& accl_view, tiled_extent<D0> compute_domain, const Kernel& f);
 
 } // namespace Concurrency
+namespace concurrency = Concurrency;
 // Specialization and inlined implementation of C++AMP classes/templates
 #include "amp_impl.h"
 #include "parallel_for_each.h"

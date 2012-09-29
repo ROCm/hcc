@@ -9,7 +9,7 @@
 #define SERIALIZE __cxxamp_serialize
 
 namespace Concurrency {
-static inline std::string mcw_cxxamp_fixnames(char *f) {
+static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu,amp) {
   std::string s(f);
   std::string out;
   for(std::string::iterator it = s.begin(); it != s.end(); it++ ) {
@@ -26,7 +26,7 @@ extern "C" char * kernel_source_[] asm ("_binary_kernel_cl_start");
 extern "C" char * kernel_size_[] asm ("_binary_kernel_cl_size");
 template<typename Kernel>
 static inline void mcw_cxxamp_launch_kernel(size_t ext,
-  size_t *local_size, Kernel f) {
+  size_t *local_size, Kernel f) restrict(cpu,amp) {
   cl_int error_code;
   accelerator def;
   accelerator_view accel_view = def.get_default_view();
