@@ -457,6 +457,9 @@ public:
 
   explicit array(const extent<N>& ext): array(ext[0]) {}
 
+#ifdef __GPU__
+  explicit array(int e0) {}
+#else
   // CAVEAT: ACCELERATOR
   explicit array(int e0) : m_extent(e0),
     accelerator_view_(accelerator().get_default_view()) {
@@ -465,15 +468,18 @@ public:
         GMACDeleter<T>());
     }
   }
+#endif
 
   explicit array(int e0, int e1);
 
   explicit array(int e0, int e1, int e2);
 
   // CLAMP
+#ifndef __GPU__
   array(int e0, accelerator_view av): m_extent(e0), accelerator_view_(av) {
     m_internal.reset(GMACAllocator<T>().allocate(e0), GMACDeleter<T>());
   }
+#endif
 
   array(int e0, int e1, accelerator_view av);
 
@@ -492,7 +498,7 @@ public:
 
   template <typename InputIterator>
   array(const extent<N>& extent, InputIterator srcBegin, InputIterator srcEnd);
-
+#ifndef __GPU__
   // CAVEAT: ACCELERATOR
   template <typename InputIterator>
   array(int e0, InputIterator srcBegin) : m_extent(e0),
@@ -505,7 +511,7 @@ public:
       std::copy(srcBegin, srcEnd, m_internal.get());
     }
   }
-
+#endif
   template <typename InputIterator>
   array(int e0, InputIterator srcBegin, InputIterator srcEnd);
 
@@ -585,8 +591,12 @@ public:
   accelerator_view av, accelerator_view associated_av); // staging
 
   array(const array_view<const T,N>& src, accelerator_view av);
-
-  array(const array& other);
+  array(const array& other)
+#ifndef __GPU__
+    :m_extent(other.m_extent), m_internal(other.m_internal),
+    accelerator_view_(other.accelerator_view_)
+#endif
+  {}
 
   array(array&& other);
 
@@ -601,19 +611,33 @@ public:
   void copy_to(const array_view<T,N>& dest) const;
 
   //__declspec(property(get)) Concurrency::extent<N> extent;
+#ifndef __GPU__
   extent<N> get_extent() const {
     return m_extent;
   }
+#endif
 
   // __declspec(property(get)) accelerator_view accelerator_view;
   accelerator_view get_accelerator_view() const;
 
   // __declspec(property(get)) accelerator_view associated_accelerator_view;
   accelerator_view get_associated_accelerator_view() const;
-
-  T& operator[](const index<N>& idx) restrict(amp,cpu) { return m_internal.get()[idx[0]]; }
-
-  const T& operator[](const index<N>& idx) const restrict(amp,cpu) { return m_internal.get()[idx[0]]; }
+#define __global __attribute__((address_space(1)))
+#ifdef __GPU__
+  __global T& operator[](const index<N>& idx) restrict(amp,cpu) {
+    return m_device[idx[0]];
+  }
+  __global const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
+    return m_device[idx[0]];
+  }
+#else
+  T& operator[](const index<N>& idx) restrict(amp,cpu) {
+    return m_internal.get()[idx[0]];
+  }
+  const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
+    return m_internal.get()[idx[0]];
+  }
+#endif
 
   auto operator[](int i) restrict(amp,cpu) -> decltype(array_projection_helper<T, N>::project((array<T,N> *)NULL, i));
 
@@ -672,23 +696,50 @@ public:
   operator std::vector<T>() const;
 
   T* data() restrict(amp,cpu) {
+#ifdef __GPU__
+    return m_device;
+#else
     return m_internal.get();
+#endif
   }
 
-  const T* data() const restrict(amp,cpu) { return m_internal.get(); }
-
+  const T* data() const restrict(amp,cpu) {
+#ifdef __GPU__
+    return m_device;
+#else
+    return m_internal.get();
+#endif
+  }
 
   ~array() { // For GMAC
+#ifndef __GPU__
     m_internal.reset();
+#endif
   }
-
+#ifndef __GPU__
   const std::shared_ptr<T> &internal() const { return m_internal; }
-private:
-  // Data members
-  Concurrency::extent<N> m_extent;
-  std::shared_ptr<T> m_internal; // Store the data and allocated by GMAC
-  accelerator_view accelerator_view_;
+#endif
 
+  // CLAMP: The serialization interface
+  __attribute__((annotate("serialize")))
+  void __cxxamp_serialize(Serialize& s) const {
+#ifndef __GPU__
+    cl_int err;
+    cl_context context = s.getContext();
+    cl_mem t = clGetBuffer(context, (const void *)m_internal.get());
+    s.Append(sizeof(cl_mem), &t);
+#endif
+  }
+  // End CLAMP
+private:
+#ifndef __GPU__
+  // Data members
+  __attribute__((cpu)) Concurrency::extent<N> m_extent;
+  __attribute__((cpu)) std::shared_ptr<T> m_internal; // Store the data and allocated by GMAC
+  __attribute__((cpu)) accelerator_view accelerator_view_;
+#endif
+  __global T *m_device;
+#undef __global
 };
 
 template <typename T, int N = 1>
