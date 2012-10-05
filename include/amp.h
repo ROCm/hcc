@@ -182,7 +182,11 @@ public:
     m_internal[0] = i0;
   }
 
-  index(int i0, int i1) restrict(amp,cpu); // N==2
+  index(int i0, int i1) restrict(amp,cpu) { // N==2
+    m_internal[0] = i0;
+    if (N==2)
+      m_internal[1] = i1;
+  }
 
   index(int i0, int i1, int i2) restrict(amp,cpu); // N==3
 
@@ -228,7 +232,12 @@ public:
   void __cxxamp_opencl_index() restrict(amp,cpu)
 #ifdef __GPU__
   {
-    m_internal[0] = get_global_id(0);
+    if (rank == 1) {
+      m_internal[0] = get_global_id(0);
+    } else if (rank == 2) {
+      m_internal[0] = get_global_id(1);
+      m_internal[1] = get_global_id(0);
+    }
   }
 #else
   ;
@@ -285,6 +294,32 @@ class tiled_index<D0, 0, 0> {
   template<int D, typename K>
   friend void parallel_for_each(tiled_extent<D>, const K&);
 };
+
+template <int D0, int D1>
+class tiled_index<D0, D1, 0> {
+ public:
+  const index<2> global;
+  const index<2> local;
+  const tile_barrier barrier;
+  tiled_index(const index<2>& g) restrict(amp, cpu):global(g){}
+  tiled_index(const tiled_index<D0, D1>& o) restrict(amp, cpu):
+    global(o.global), local(o.local) {}
+  operator const index<2>() const restrict(amp,cpu) {
+    return global;
+  }
+ private:
+  //CLAMP
+  __attribute__((annotate("__cxxamp_opencl_index")))
+  tiled_index() restrict(amp)
+#ifdef __GPU__
+  : global(index<2>(get_global_id(1), get_global_id(0))),
+    local(index<2>(get_local_id(1), get_local_id(0)))
+#endif // __GPU__
+  {}
+  template<int D, typename K>
+  friend void parallel_for_each(tiled_extent<D>, const K&);
+};
+
 
 
 template <typename T, int N> class array;
@@ -403,6 +438,12 @@ public:
   friend bool operator!=(const tiled_extent& lhs, const tiled_extent& rhs) restrict(amp,cpu);
 };
 
+template<>
+template <int D0, int D1>
+tiled_extent<D0, D1> extent<2>::tile() const {
+  return tiled_extent<D0, D1>(*this);
+}
+
 template <int D0>
 class tiled_extent<D0,0,0> : public extent<1>
 {
@@ -422,9 +463,9 @@ public:
   friend bool operator!=(const tiled_extent& lhs, const tiled_extent& rhs) restrict(amp,cpu);
 };
 
-template <int N>
+template<>
 template <int D0>
-tiled_extent<D0> extent<N>::tile() const {
+tiled_extent<D0> extent<1>::tile() const {
   return tiled_extent<D0>(*this);
 }
 // ------------------------------------------------------------------------
@@ -450,25 +491,42 @@ public:
 #include "gmac_manage.h"
 template <typename T, int N=1>
 class array {
+private:
+#define __global __attribute__((address_space(1)))
+  // Dummy interface that looks like std::shared_ptr<T>
+  class _data {
+   public:
+    _data() = delete;
+    __attribute__((annotate("deserialize")))
+    explicit _data(__global T* t) restrict(cpu, amp) { p_ = t; }
+    __global T* get(void) const restrict(cpu, amp) { return p_; }
+    void reset(__global T* t) { p_ = t; }
+   private:
+    __global T* p_;
+  };
 public:
   static const int rank = N;
   typedef T value_type;
   array() = delete;
 
-  explicit array(const extent<N>& ext): array(ext[0]) {}
-
 #ifdef __GPU__
-  explicit array(int e0) {}
+  explicit array(const extent<N>& ext) : m_device(NULL) {}
 #else
-  // CAVEAT: ACCELERATOR
-  explicit array(int e0) : m_extent(e0),
-    accelerator_view_(accelerator().get_default_view()) {
-    if (e0) {
-      m_internal.reset(GMACAllocator<T>().allocate(e0),
+  explicit array(const extent<N>& ext) : m_extent(ext),
+    accelerator_view_(accelerator().get_default_view()), m_device(NULL) {
+    size_t sz = ext[0];
+    if (rank == 2) {
+      e1_ = ext[1];
+      sz *= e1_;
+    }
+    if (sz) {
+      m_internal.reset(GMACAllocator<T>().allocate(sz),
         GMACDeleter<T>());
     }
   }
 #endif
+
+  explicit array(int e0): array(extent<1>(e0)) {}
 
   explicit array(int e0, int e1);
 
@@ -476,7 +534,8 @@ public:
 
   // CLAMP
 #ifndef __GPU__
-  array(int e0, accelerator_view av): m_extent(e0), accelerator_view_(av) {
+  array(int e0, accelerator_view av): m_extent(e0), accelerator_view_(av),
+    m_device(NULL) {
     m_internal.reset(GMACAllocator<T>().allocate(e0), GMACDeleter<T>());
   }
 #endif
@@ -502,7 +561,7 @@ public:
   // CAVEAT: ACCELERATOR
   template <typename InputIterator>
   array(int e0, InputIterator srcBegin) : m_extent(e0),
-    accelerator_view_(accelerator().get_default_view()) {
+    accelerator_view_(accelerator().get_default_view()), m_device(NULL) {
     if (e0) {
       m_internal.reset(GMACAllocator<T>().allocate(e0),
         GMACDeleter<T>());
@@ -591,12 +650,12 @@ public:
   accelerator_view av, accelerator_view associated_av); // staging
 
   array(const array_view<const T,N>& src, accelerator_view av);
-  array(const array& other)
+  array(const array& other):
 #ifndef __GPU__
-    :m_extent(other.m_extent), m_internal(other.m_internal),
-    accelerator_view_(other.accelerator_view_)
+    m_extent(other.m_extent), m_internal(other.m_internal),
+    accelerator_view_(other.accelerator_view_), 
 #endif
-  {}
+    m_device(other.m_device.get()) {}
 
   array(array&& other);
 
@@ -622,20 +681,33 @@ public:
 
   // __declspec(property(get)) accelerator_view associated_accelerator_view;
   accelerator_view get_associated_accelerator_view() const;
-#define __global __attribute__((address_space(1)))
 #ifdef __GPU__
   __global T& operator[](const index<N>& idx) restrict(amp,cpu) {
-    return m_device[idx[0]];
+    if (rank == 1)
+      return m_device.get()[idx[0]];
+    else if (rank == 2)
+      return m_device.get()[idx[0] * e1_ + idx[1]];
   }
   __global const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
-    return m_device[idx[0]];
+    if (rank == 1)
+      return m_device.get()[idx[0]];
+    else if (rank == 2)
+      return m_device.get()[idx[0] * e1_ + idx[1]];
   }
 #else
-  T& operator[](const index<N>& idx) restrict(amp,cpu) {
-    return m_internal.get()[idx[0]];
+  __global T& operator[](const index<N>& idx) restrict(amp,cpu) {
+    if (rank == 1)
+      return reinterpret_cast<__global T*>(m_internal.get())[idx[0]];
+    else if (rank ==2)
+      return reinterpret_cast<__global T*>(m_internal.get())[
+	idx[0] * e1_ + idx[1]];
   }
-  const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
-    return m_internal.get()[idx[0]];
+  __global const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
+    if (rank == 1)
+      return reinterpret_cast<__global T*>(m_internal.get())[idx[0]];
+    else if (rank ==2)
+      return reinterpret_cast<__global T*>(
+	m_internal.get())[idx[0] * e1_ + idx[1]];
   }
 #endif
 
@@ -647,9 +719,12 @@ public:
 
   T& operator()(const index<N>& idx) restrict(amp,cpu);
 
-  T& operator()(int i0, int i1) restrict(amp,cpu);
-
-  const T& operator()(int i0, int i1) const restrict(amp,cpu);
+  __global T& operator()(int i0, int i1) restrict(amp,cpu) {
+    return (*this)[index<2>(i0, i1)];
+  }
+  __global const T& operator()(int i0, int i1) const restrict(amp,cpu) {
+    return (*this)[index<2>(i0, i1)];
+  }
 
   T& operator()(int i0, int i1, int i2) restrict(amp,cpu);
 
@@ -697,7 +772,7 @@ public:
 
   T* data() restrict(amp,cpu) {
 #ifdef __GPU__
-    return m_device;
+    return m_device.get();
 #else
     return m_internal.get();
 #endif
@@ -705,7 +780,7 @@ public:
 
   const T* data() const restrict(amp,cpu) {
 #ifdef __GPU__
-    return m_device;
+    return m_device.get();
 #else
     return m_internal.get();
 #endif
@@ -728,6 +803,7 @@ public:
     cl_context context = s.getContext();
     cl_mem t = clGetBuffer(context, (const void *)m_internal.get());
     s.Append(sizeof(cl_mem), &t);
+    s.Append(sizeof(cl_int), &e1_);
 #endif
   }
   // End CLAMP
@@ -738,7 +814,8 @@ private:
   __attribute__((cpu)) std::shared_ptr<T> m_internal; // Store the data and allocated by GMAC
   __attribute__((cpu)) accelerator_view accelerator_view_;
 #endif
-  __global T *m_device;
+  _data m_device;
+  cl_int e1_;
 #undef __global
 };
 

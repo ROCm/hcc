@@ -440,7 +440,7 @@ CWriter::printSimpleType(raw_ostream &Out, Type *Ty, bool isSigned,
     else if (NumBits <= 32)
       return Out << (isSigned?"signed":"unsigned") << " int " << NameSoFar;
     else if (NumBits <= 64)
-      return Out << (isSigned?"signed":"unsigned") << " long long "<< NameSoFar;
+      return Out << (isSigned?"signed":"unsigned") << " long "<< NameSoFar;
     else {
       assert(NumBits <= 128 && "Bit widths > 128 not implemented yet");
       return Out << (isSigned?"llvmInt128":"llvmUInt128") << " " << NameSoFar;
