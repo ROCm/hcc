@@ -971,7 +971,7 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
     else if (Ty == Type::getInt32Ty(CPV->getContext()))
       Out << CI->getZExtValue() << 'u';
     else if (Ty->getPrimitiveSizeInBits() > 32)
-      Out << CI->getZExtValue() << "ull";
+      Out << CI->getZExtValue() << "ul";
     else {
       Out << "((";
       printSimpleType(Out, Ty, false) << ')';
