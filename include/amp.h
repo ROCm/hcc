@@ -497,7 +497,7 @@ public:
 #ifdef __GPU__
   typedef _data<T> gmac_buffer_t;
 #else
-  typedef std::shared_ptr<T> gmac_buffer_t;
+  typedef _data_host<T> gmac_buffer_t;
 #endif
   static const int rank = N;
   typedef T value_type;

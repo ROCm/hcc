@@ -36,3 +36,18 @@ class _data {
  private:
   __global T* p_;
 };
+
+template <typename T>
+class _data_host: public std::shared_ptr<T> {
+ public:
+  _data_host(const _data_host &other):std::shared_ptr<T>(other) {}
+
+  _data_host(std::nullptr_t x = nullptr):std::shared_ptr<T>(nullptr) {}
+
+  __attribute__((annotate("serialize")))
+  void __cxxamp_serialize(Serialize& s) const {
+    cl_context context = s.getContext();
+    cl_mem t = clGetBuffer(context, (const void *)std::shared_ptr<T>::get());
+    s.Append(sizeof(cl_mem), &t);
+  }
+};

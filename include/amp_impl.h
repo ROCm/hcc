@@ -90,10 +90,7 @@ array<T,N>:: array(const array& other): m_extent(other.m_extent),
 template <typename T, int N>
 __attribute__((annotate("serialize")))
 void array<T, N>::__cxxamp_serialize(Serialize& s) const {
-  cl_int err;
-  cl_context context = s.getContext();
-  cl_mem t = clGetBuffer(context, (const void *)m_device.get());
-  s.Append(sizeof(cl_mem), &t);
+  m_device.__cxxamp_serialize(s);
   s.Append(sizeof(cl_int), &e1_);
 }
 
