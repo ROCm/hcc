@@ -27,7 +27,7 @@ class myVecAdd {
   }
  private:
   Concurrency::array_view<int> a_, b_;
-  Concurrency::array<int> c_;
+  Concurrency::array<int>& c_;
 };
 void bar(void) restrict(amp,cpu) {
   int foo = reinterpret_cast<intptr_t>(&myVecAdd::__cxxamp_trampoline);
