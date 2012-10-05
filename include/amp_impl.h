@@ -58,5 +58,53 @@ accelerator_view::accelerator_view(cl_device_id d):
 
 accelerator_view& accelerator::get_default_view() const { return *default_view_; }
 accelerator_view *accelerator::default_view_ = NULL;
+
+/// Concurrency:array
+#define __global __attribute__((address_space(1)))
+#ifndef __GPU__
+/// Concurrency::array constructors that are only defined for the host
+template <typename T, int N>
+array<T, N>::array(int e0, accelerator_view av):
+  m_extent(e0), accelerator_view_(av) {
+  m_device.reset(GMACAllocator<T>().allocate(e0), GMACDeleter<T>());
+}
+
+template <typename T, int N>
+array<T, N>::array(const extent<N>& ext): m_extent(ext),
+  m_device(nullptr), accelerator_view_(accelerator().get_default_view()) {
+  size_t sz = ext[0];
+  if (rank == 2) {
+    e1_ = ext[1];
+    sz *= e1_;
+  }
+  if (sz) {
+    m_device.reset(GMACAllocator<T>().allocate(sz),
+	GMACDeleter<T>());
+  }
+}
+
+template <typename T, int N>
+array<T,N>:: array(const array& other): m_extent(other.m_extent),
+    accelerator_view_(other.accelerator_view_), m_device(other.m_device) {}
+
+template <typename T, int N>
+__attribute__((annotate("serialize")))
+void array<T, N>::__cxxamp_serialize(Serialize& s) const {
+  cl_int err;
+  cl_context context = s.getContext();
+  cl_mem t = clGetBuffer(context, (const void *)m_device.get());
+  s.Append(sizeof(cl_mem), &t);
+  s.Append(sizeof(cl_int), &e1_);
+}
+
+#else
+/// Concurrency::array implementations that are only visible when compiling
+/// for the GPU
+template <typename T, int N>
+__attribute__((annotate("deserialize"))) 
+array<T, N>::array(__global T *p, cl_int e) restrict(amp): m_device(p), e1_(e) {}
+#endif
+#undef __global
+
 } //namespace Concurrency
 #endif //INCLUDE_AMP_IMPL_H

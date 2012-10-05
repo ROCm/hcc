@@ -488,43 +488,22 @@ public:
 };
 // ------------------------------------------------------------------------
 
+#define __global __attribute__((address_space(1)))
 #include "gmac_manage.h"
+
 template <typename T, int N=1>
 class array {
-private:
-#define __global __attribute__((address_space(1)))
-  // Dummy interface that looks like std::shared_ptr<T>
-  class _data {
-   public:
-    _data() = delete;
-    __attribute__((annotate("deserialize")))
-    explicit _data(__global T* t) restrict(cpu, amp) { p_ = t; }
-    __global T* get(void) const restrict(cpu, amp) { return p_; }
-    void reset(__global T* t) { p_ = t; }
-   private:
-    __global T* p_;
-  };
 public:
+#ifdef __GPU__
+  typedef _data<T> gmac_buffer_t;
+#else
+  typedef std::shared_ptr<T> gmac_buffer_t;
+#endif
   static const int rank = N;
   typedef T value_type;
   array() = delete;
 
-#ifdef __GPU__
-  explicit array(const extent<N>& ext) : m_device(NULL) {}
-#else
-  explicit array(const extent<N>& ext) : m_extent(ext),
-    accelerator_view_(accelerator().get_default_view()), m_device(NULL) {
-    size_t sz = ext[0];
-    if (rank == 2) {
-      e1_ = ext[1];
-      sz *= e1_;
-    }
-    if (sz) {
-      m_internal.reset(GMACAllocator<T>().allocate(sz),
-        GMACDeleter<T>());
-    }
-  }
-#endif
+  explicit array(const extent<N>& ext);
 
   explicit array(int e0): array(extent<1>(e0)) {}
 
@@ -532,13 +511,7 @@ public:
 
   explicit array(int e0, int e1, int e2);
 
-  // CLAMP
-#ifndef __GPU__
-  array(int e0, accelerator_view av): m_extent(e0), accelerator_view_(av),
-    m_device(NULL) {
-    m_internal.reset(GMACAllocator<T>().allocate(e0), GMACDeleter<T>());
-  }
-#endif
+  array(int e0, accelerator_view av);
 
   array(int e0, int e1, accelerator_view av);
 
@@ -561,13 +534,13 @@ public:
   // CAVEAT: ACCELERATOR
   template <typename InputIterator>
   array(int e0, InputIterator srcBegin) : m_extent(e0),
-    accelerator_view_(accelerator().get_default_view()), m_device(NULL) {
+    accelerator_view_(accelerator().get_default_view()) {
     if (e0) {
-      m_internal.reset(GMACAllocator<T>().allocate(e0),
+      m_device.reset(GMACAllocator<T>().allocate(e0),
         GMACDeleter<T>());
       InputIterator srcEnd = srcBegin;
       std::advance(srcEnd, e0);
-      std::copy(srcBegin, srcEnd, m_internal.get());
+      std::copy(srcBegin, srcEnd, m_device.get());
     }
   }
 #endif
@@ -650,12 +623,8 @@ public:
   accelerator_view av, accelerator_view associated_av); // staging
 
   array(const array_view<const T,N>& src, accelerator_view av);
-  array(const array& other):
-#ifndef __GPU__
-    m_extent(other.m_extent), m_internal(other.m_internal),
-    accelerator_view_(other.accelerator_view_), 
-#endif
-    m_device(other.m_device.get()) {}
+
+  array(const array& other);
 
   array(array&& other);
 
@@ -681,35 +650,21 @@ public:
 
   // __declspec(property(get)) accelerator_view associated_accelerator_view;
   accelerator_view get_associated_accelerator_view() const;
-#ifdef __GPU__
+
   __global T& operator[](const index<N>& idx) restrict(amp,cpu) {
     if (rank == 1)
-      return m_device.get()[idx[0]];
+      return reinterpret_cast<__global T*>(m_device.get())[idx[0]];
     else if (rank == 2)
-      return m_device.get()[idx[0] * e1_ + idx[1]];
+      return reinterpret_cast<__global T*>(m_device.get())
+	[idx[0] * e1_ + idx[1]];
   }
   __global const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
     if (rank == 1)
-      return m_device.get()[idx[0]];
+      return reinterpret_cast<__global T*>(m_device.get())[idx[0]];
     else if (rank == 2)
-      return m_device.get()[idx[0] * e1_ + idx[1]];
+      return reinterpret_cast<__global T*>(m_device.get())
+	[idx[0] * e1_ + idx[1]];
   }
-#else
-  __global T& operator[](const index<N>& idx) restrict(amp,cpu) {
-    if (rank == 1)
-      return reinterpret_cast<__global T*>(m_internal.get())[idx[0]];
-    else if (rank ==2)
-      return reinterpret_cast<__global T*>(m_internal.get())[
-	idx[0] * e1_ + idx[1]];
-  }
-  __global const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
-    if (rank == 1)
-      return reinterpret_cast<__global T*>(m_internal.get())[idx[0]];
-    else if (rank ==2)
-      return reinterpret_cast<__global T*>(
-	m_internal.get())[idx[0] * e1_ + idx[1]];
-  }
-#endif
 
   auto operator[](int i) restrict(amp,cpu) -> decltype(array_projection_helper<T, N>::project((array<T,N> *)NULL, i));
 
@@ -771,50 +726,34 @@ public:
   operator std::vector<T>() const;
 
   T* data() restrict(amp,cpu) {
-#ifdef __GPU__
     return m_device.get();
-#else
-    return m_internal.get();
-#endif
   }
 
   const T* data() const restrict(amp,cpu) {
-#ifdef __GPU__
     return m_device.get();
-#else
-    return m_internal.get();
-#endif
   }
 
   ~array() { // For GMAC
-#ifndef __GPU__
-    m_internal.reset();
-#endif
+    m_device.reset();
   }
-#ifndef __GPU__
-  const std::shared_ptr<T> &internal() const { return m_internal; }
-#endif
+
+  const gmac_buffer_t& internal() const { return m_device; }
 
   // CLAMP: The serialization interface
   __attribute__((annotate("serialize")))
-  void __cxxamp_serialize(Serialize& s) const {
-#ifndef __GPU__
-    cl_int err;
-    cl_context context = s.getContext();
-    cl_mem t = clGetBuffer(context, (const void *)m_internal.get());
-    s.Append(sizeof(cl_mem), &t);
-    s.Append(sizeof(cl_int), &e1_);
-#endif
-  }
+  void __cxxamp_serialize(Serialize& s) const;
+
+  __attribute__((annotate("deserialize"))) 
+  array(__global T *p, cl_int e) restrict(amp);
   // End CLAMP
 private:
 #ifndef __GPU__
-  // Data members
-  __attribute__((cpu)) Concurrency::extent<N> m_extent;
-  __attribute__((cpu)) std::shared_ptr<T> m_internal; // Store the data and allocated by GMAC
-  __attribute__((cpu)) accelerator_view accelerator_view_;
+  // Data members that do not show up at GPU side
+  __attribute__((cpu)) int dummy_; //Don't define deserialization for this class
+  Concurrency::extent<N> m_extent;
+  accelerator_view accelerator_view_;
 #endif
-  _data m_device;
+  gmac_buffer_t m_device;
   cl_int e1_;
 #undef __global
 };
