@@ -106,6 +106,31 @@ void array<T, N>::__cxxamp_serialize(Serialize& s) const {
   s.Append(sizeof(cl_int), &e1_);
 }
 
+// 1D array constructors
+
+template <typename T>
+array<T, 1>::array(int e0, accelerator_view av):
+  m_extent(e0), accelerator_view_(av) {
+  m_device.reset(GMACAllocator<T>().allocate(e0), GMACDeleter<T>());
+}
+
+template <typename T>
+array<T, 1>::array(const extent<1>& ext): m_extent(ext),
+  m_device(nullptr), accelerator_view_(accelerator().get_default_view()) {
+  size_t sz = ext[0];
+  if (sz) {
+    m_device.reset(GMACAllocator<T>().allocate(sz),
+	GMACDeleter<T>());
+  }
+}
+
+template <typename T>
+__attribute__((annotate("serialize")))
+void array<T, 1>::__cxxamp_serialize(Serialize& s) const {
+  m_device.__cxxamp_serialize(s);
+  s.Append(sizeof(cl_int), &e1_);
+}
+
 #else
 /// Concurrency::array implementations that are only visible when compiling
 /// for the GPU

@@ -757,6 +757,187 @@ private:
 #endif
   gmac_buffer_t m_device;
   cl_int e1_;
+};
+
+template <typename T>
+class array<T, 1> {
+public:
+#ifdef __GPU__
+  typedef _data<T> gmac_buffer_t;
+#else
+  typedef _data_host<T> gmac_buffer_t;
+#endif
+  static const int rank = 1;
+  typedef T value_type;
+
+  array() = delete;
+
+  explicit array(const Concurrency::extent<1>& ext);
+
+  explicit array(int e0): array(extent<1>(e0)) {}
+
+  array(const Concurrency::extent<1>& extent,
+    accelerator_view av, accelerator_view associated_av); //staging
+
+  array(int e0, accelerator_view av, accelerator_view associated_av); //staging
+
+  array(const Concurrency::extent<1>& extent, accelerator_view av);
+
+  array(int e0, accelerator_view av);
+
+  template <typename InputIterator>
+    array(const Concurrency::extent<1>& extent, InputIterator srcBegin);
+
+  template <typename InputIterator>
+    array(const extent<1>& extent, InputIterator srcBegin, InputIterator srcEnd);
+
+#ifndef __GPU__
+  template <typename InputIterator>
+  array(int e0, InputIterator srcBegin) : m_extent(e0),
+    accelerator_view_(accelerator().get_default_view()) {
+    if (e0) {
+      m_device.reset(GMACAllocator<T>().allocate(e0),
+        GMACDeleter<T>());
+      InputIterator srcEnd = srcBegin;
+      std::advance(srcEnd, e0);
+      std::copy(srcBegin, srcEnd, m_device.get());
+    }
+  }
+#endif
+
+  template <typename InputIterator>
+    array(int e0, InputIterator srcBegin, InputIterator srcEnd);
+
+  template <typename InputIterator>
+  array(const extent<1>& extent, InputIterator srcBegin,
+    accelerator_view av, accelerator_view associated_av); // staging
+
+  template <typename InputIterator>
+  array(const extent<1>& extent, InputIterator srcBegin, InputIterator srcEnd,
+    accelerator_view av, accelerator_view associated_av); // staging
+
+  template <typename InputIterator>
+  array(int e0, InputIterator srcBegin,
+  accelerator_view av, accelerator_view associated_av); // staging
+
+  template <typename InputIterator>
+  array(int e0, InputIterator srcBegin, InputIterator srcEnd,
+  accelerator_view av, accelerator_view associated_av); // staging
+
+  template <typename InputIterator>
+  array(const Concurrency::extent<1>& extent, InputIterator srcBegin, accelerator_view av);
+
+  template <typename InputIterator>
+  array(int e0, InputIterator SrcBegin, accelerator_view av);
+
+  template <typename InputIterator>
+  array(const extent<1>& extent, InputIterator srcBegin, InputIterator srcEnd,
+  accelerator_view av);
+
+  template <typename InputIterator>
+  array(int e0, InputIterator srcBegin, InputIterator srcEnd, accelerator_view av);
+
+  explicit array(const array_view<const T,1>& src);
+
+  array(const array_view<const T,1>& src,
+    accelerator_view av, accelerator_view associated_av); // staging
+
+  array(const array_view<const T,1>& src, accelerator_view av);
+
+  array(const array& other);
+
+  array(array&& other);
+
+  array& operator=(const array& other);
+
+  array& operator=(array&& other);
+
+  array& operator=(const array_view<const T,1>& src);
+
+  void copy_to(array& dest) const;
+
+  void copy_to(const array_view<T,1>& dest) const;
+
+  //__declspec(property(get)) Concurrency::extent<N> extent;
+#ifndef __GPU__
+  extent<1> get_extent() const {
+    return m_extent;
+  }
+#endif
+
+  // __declspec(property(get)) accelerator_view accelerator_view;
+  accelerator_view get_accelerator_view() const;
+
+  // __declspec(property(get)) accelerator_view associated_accelerator_view;
+  accelerator_view get_associated_accelerator_view() const;
+
+  __global T& operator[](const index<1>& idx) restrict(amp,cpu) {
+    return reinterpret_cast<__global T*>(m_device.get())[idx[0]];
+  }
+  __global const T& operator[](const index<1>& idx) const restrict(amp,cpu) {
+    return reinterpret_cast<__global T*>(m_device.get())[idx[0]];
+  }
+
+  __global T& operator[](int i0) restrict(amp,cpu) {
+    return reinterpret_cast<__global T*>(m_device.get())[i0];
+  }
+
+  T& operator()(const index<1>& idx) restrict(amp,cpu);
+
+  const T& operator()(const index<1>& idx) const restrict(amp,cpu);
+
+  array_view<T,1> section(const index<1>& idx, const extent<1>& ext) restrict(amp,cpu);
+
+  array_view<const T,1> section(const index<1>& idx, const extent<1>& ext) const restrict(amp,cpu);
+
+  array_view<T,1> section(const index<1>& idx) restrict(amp,cpu);
+
+  array_view<const T,1> section(const index<1>& idx) const restrict(amp,cpu);
+
+  template <typename ElementType>
+    array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu);
+
+  template <typename ElementType>
+    array_view<const ElementType, 1> reinterpret_as() const restrict(amp,cpu);
+
+  template <int K>
+    array_view<T,K> view_as(const extent<K>& viewExtent) restrict(amp,cpu);
+
+  template <int K>
+    array_view<const T,K> view_as(const extent<K>& viewExtent) const restrict(amp,cpu);
+
+  operator std::vector<T>() const;
+
+  T* data() restrict(amp,cpu) {
+    return m_device.get();
+  }
+
+  const T* data() const restrict(amp,cpu) {
+    return m_device.get();
+  }
+
+  ~array() { // For GMAC
+    m_device.reset();
+  }
+
+  const gmac_buffer_t& internal() const { return m_device; }
+
+  // CLAMP: The serialization interface
+  __attribute__((annotate("serialize")))
+  void __cxxamp_serialize(Serialize& s) const;
+
+  __attribute__((annotate("deserialize"))) 
+  array(__global T *p, cl_int e) restrict(amp);
+  // End CLAMP
+private:
+#ifndef __GPU__
+  // Data members that do not show up at GPU side
+  __attribute__((cpu)) int dummy_; //Don't define deserialization for this class
+  Concurrency::extent<1> m_extent;
+  accelerator_view accelerator_view_;
+#endif
+  gmac_buffer_t m_device;
+  cl_int e1_;
 #undef __global
 };
 
