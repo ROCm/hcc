@@ -133,11 +133,13 @@ public:
   {}
 #endif
   template <typename Container>
-    array_view(const extent<2>& ext, Container& src):
+    array_view(const Concurrency::extent<2>& ext, Container& src):
       array_view(ext, src.data()) {}
-#if 0 // disabled for now
+
   template <typename Container>
-    array_view(int e0, Container& src):array_view(extent<1>(e0), src) {}
+    array_view(int e0, int e1, Container& src):
+    array_view(Concurrency::extent<2>(e0, e1), src) {}
+
   ~array_view() restrict(amp, cpu) {
 #ifndef __GPU__
     if (p_) {
@@ -146,13 +148,13 @@ public:
     }
 #endif
   }
-#endif
 
   array_view(const extent<2>& ext, value_type* src) restrict(amp,cpu);
 
-#if 0 //disabled for now
-  array_view(int e0, value_type* src) restrict(amp,cpu):array_view(extent<1>(e0), src) {}
+  array_view(int e0, int e1, value_type* src) restrict(amp,cpu):
+    array_view(Concurrency::extent<2>(e0, e1), src) {}
 
+#if 0 //disabled for now
   array_view(const array_view& other) restrict(amp,cpu):
     p_(other.p_),
     size_(other.size_)
@@ -176,9 +178,11 @@ public:
   __global T& operator[](const index<2>& idx) const restrict(amp,cpu) {
     return reinterpret_cast<__global T*>(cache_.get())[idx[0]*e1_+idx[1]];
   }
-#if 0 //disabled for now
-  __global T& operator()(const index<1>& idx) const restrict(amp,cpu);
-#endif
+
+  __global T& operator()(const index<2>& idx) const restrict(amp,cpu) {
+    return operator[](idx);
+  }
+
   __global T& operator()(int i0, int i1) const restrict(amp,cpu) {
     index<2> idx(i0, i1);
     return (*this)[idx];
@@ -188,15 +192,16 @@ public:
   array_view<T,1> section(const index<1>& idx) const restrict(amp,cpu);
   array_view<T,1> section(const extent<1>& ext) const restrict(amp,cpu);
   array_view<T,1> section(int i0, int e0) const restrict(amp,cpu);
-
+#endif
   void synchronize() const {
 #ifndef __GPU__
     assert(cache_);
     assert(p_);
     memmove(reinterpret_cast<void*>(p_),
-            reinterpret_cast<void*>(cache_.get()), size_ * sizeof(T));
+            reinterpret_cast<void*>(cache_.get()), e0_*e1_ * sizeof(T));
 #endif
   }
+#if 0
   completion_future synchronize_async() const;
 #endif //disable
 
