@@ -316,8 +316,8 @@ class tiled_index<D0, D1, 0> {
     local(index<2>(get_local_id(1), get_local_id(0)))
 #endif // __GPU__
   {}
-  template<int D, typename K>
-  friend void parallel_for_each(tiled_extent<D>, const K&);
+  template<int D0_, int D1_, typename K>
+  friend void parallel_for_each(tiled_extent<D0_, D1_>, const K&);
 };
 
 
@@ -368,9 +368,9 @@ public:
   }
 
   int size() const restrict(amp,cpu) {
-    int retSize = 0;
-    for (int i = 0; i < N; ++i){
-      retSize += m_internal[i];
+    int retSize = m_internal[0];
+    for (int i = 1; i < N; ++i){
+      retSize *= m_internal[i];
     }
     return retSize;
   }
@@ -381,6 +381,8 @@ public:
   template <int D0, int D1> tiled_extent<D0,D1> tile() const;
   template <int D0, int D1, int D2> tiled_extent<D0,D1,D2> tile() const;
 
+  friend inline bool operator==(const extent<N>& lhs, const extent<N>& rhs)
+    restrict(amp,cpu);
   extent operator+(const index<N>& idx) restrict(amp,cpu);
   extent operator-(const index<N>& idx) restrict(amp,cpu);
 

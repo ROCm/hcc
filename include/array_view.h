@@ -1,5 +1,8 @@
 #pragma once
+#include "declspec_get.h"
 #define __global __attribute__((address_space(1)))
+template <int> class extent; 
+
 template <typename T>
 class array_view<T, 1>
 {
@@ -15,14 +18,15 @@ public:
   array_view() = delete;
 
   array_view(array<T,1>& src) restrict(amp,cpu):
-    p_(NULL), cache_(src.internal()) {}
+    extent(this), p_(NULL), cache_(src.internal()) {}
 
   template <typename Container>
     array_view(const extent<1>& extent, Container& src):
       array_view(extent, src.data()) {}
 
   template <typename Container>
-    array_view(int e0, Container& src):array_view(extent<1>(e0), src) {}
+    array_view(int e0, Container& src):array_view(Concurrency::extent<1>(e0),
+      src) {}
 
   ~array_view() restrict(amp, cpu) {
 #ifndef __GPU__
@@ -36,9 +40,9 @@ public:
   array_view(const extent<1>& extent, value_type* src) restrict(amp,cpu);
 
   array_view(int e0, value_type* src) restrict(amp,cpu):
-    array_view(extent<1>(e0), src) {}
+    array_view(Concurrency::extent<1>(e0), src) {}
 
-  array_view(const array_view& other) restrict(amp,cpu):
+  array_view(const array_view& other) restrict(amp,cpu): extent(this),
     p_(other.p_), size_(other.size_) , cache_(other.cache_) {}
 
   array_view& operator=(const array_view& other) restrict(amp,cpu);
@@ -47,23 +51,34 @@ public:
 
   void copy_to(const array_view& dest) const;
 
-  // __declspec(property(get)) extent<N> extent;
-  extent<1> get_extent() const;
+  // __declspec(property(get)) extent<1> extent;
+  DeclSpecGetExtent<array_view<T, 1>, Concurrency::extent<1>> extent;
+  Concurrency::extent<1> __get_extent(void) restrict(cpu, amp) {
+    return Concurrency::extent<1>(size_);
+  }
 
   // These are restrict(amp,cpu)
   __global T& operator[](const index<1>& idx) const restrict(amp,cpu) {
     return reinterpret_cast<__global T*>(cache_.get())[idx[0]];
   }
+
   __global T& operator[](int i) const restrict(amp,cpu) {
     return reinterpret_cast<__global T*>(cache_.get())[i];
   }
 
-  __global T& operator()(const index<1>& idx) const restrict(amp,cpu);
-  __global T& operator()(int i) const restrict(amp,cpu);
+  __global T& operator()(const index<1>& idx) const restrict(amp,cpu) {
+    return this->operator[](idx);
+  }
 
-  array_view<T,1> section(const index<1>& idx, const extent<1>& ext) restrict(amp,cpu);
+  __global T& operator()(int i) const restrict(amp,cpu) {
+    return this->operator[](i);
+  }
+
+  array_view<T,1> section(const index<1>& idx,
+    const Concurrency::extent<1>& ext) restrict(amp,cpu);
   array_view<T,1> section(const index<1>& idx) const restrict(amp,cpu);
-  array_view<T,1> section(const extent<1>& ext) const restrict(amp,cpu);
+  array_view<T,1> section(const Concurrency::extent<1>& ext)
+    const restrict(amp,cpu);
   array_view<T,1> section(int i0, int e0) const restrict(amp,cpu);
 
   void synchronize() const;
@@ -150,9 +165,13 @@ public:
 
   void copy_to(array<T,1>& dest) const;
   void copy_to(const array_view& dest) const;
-  // __declspec(property(get)) extent<N> extent;
-  const extent<2> extent;
 #endif
+  // __declspec(property(get)) extent<N> extent;
+  DeclSpecGetExtent<array_view<T, 2>, Concurrency::extent<2>> extent;
+  Concurrency::extent<2> __get_extent(void) restrict(cpu, amp) {
+    return Concurrency::extent<2>(e0_, e1_);
+  }
+
   // These are restrict(amp,cpu)
   __global T& operator[](const index<2>& idx) const restrict(amp,cpu) {
     return reinterpret_cast<__global T*>(cache_.get())[idx[0]*e1_+idx[1]];
@@ -220,8 +239,9 @@ void array_view<T, 1>::synchronize() const {
 }
 
 template <typename T>
-array_view<T, 1>::array_view(const extent<1>& extent, value_type* src) 
-  restrict(amp,cpu):
+array_view<T, 1>::array_view(const Concurrency::extent<1>& extent,
+  value_type* src) 
+  restrict(amp,cpu): extent(this),
     p_(reinterpret_cast<__global T*>(src)),
     size_(extent[0]), cache_(nullptr) {
     cache_.reset(GMACAllocator<T>().allocate(size_),
@@ -245,7 +265,8 @@ void array_view<T, 1>::__cxxamp_serialize(Serialize& s) const {
 }
 
 template <typename T>
-array_view<T, 2>::array_view(const extent<2>& ext, value_type* src) restrict(amp,cpu):
+array_view<T, 2>::array_view(const Concurrency::extent<2>& ext,
+  value_type* src) restrict(amp,cpu): extent(this),
     e0_(ext[0]), e1_(ext[1]),
     p_(reinterpret_cast<__global T*>(src)) {
     cache_.reset(GMACAllocator<T>().allocate(e0_*e1_),
@@ -272,23 +293,26 @@ void array_view<T, 2>::__cxxamp_serialize(Serialize& s) const {
 #else // GPU implementations
 
 template <typename T>
-array_view<T,1>::array_view(const extent<1>& extent, value_type* src) 
-  restrict(amp,cpu): p_(nullptr), size_(extent[0]), cache_(src) {}
+array_view<T,1>::array_view(const Concurrency::extent<1>& extent,
+  value_type* src) restrict(amp,cpu): extent(this),
+    p_(nullptr), size_(extent[0]),
+    cache_(reinterpret_cast<__global value_type *>(src)) {}
 
 template <typename T>
 __attribute__((annotate("deserialize")))
 array_view<T, 1>::array_view(__global T *p, cl_int size) restrict(amp):
-  p_(nullptr), size_(size), cache_(p) {}
+  extent(this), p_(nullptr), size_(size), cache_(p) {}
 
 
 template <typename T>
-array_view<T, 2>::array_view(const extent<2>& ext, value_type* src)
-  restrict(amp,cpu): p_(nullptr), e0_(ext[0]), e1_(ext[1]), cache_(src) {}
+array_view<T, 2>::array_view(const Concurrency::extent<2>& ext, value_type* src)
+  restrict(amp,cpu): extent(this), p_(nullptr), e0_(ext[0]), e1_(ext[1]),
+  cache_(reinterpret_cast<__global value_type *>(src)) {}
 
 template <typename T>
 __attribute__((annotate("deserialize")))
 array_view<T, 2>::array_view(cl_int e0, cl_int e1, __global T *p) restrict(amp):
-  p_(nullptr), e0_(e0), e1_(e1), cache_(p) {}
+  extent(this), p_(nullptr), e0_(e0), e1_(e1), cache_(p) {}
 #endif
 #undef __global  
 

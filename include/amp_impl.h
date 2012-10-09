@@ -59,7 +59,19 @@ accelerator_view::accelerator_view(cl_device_id d):
 accelerator_view& accelerator::get_default_view() const { return *default_view_; }
 accelerator_view *accelerator::default_view_ = NULL;
 
-/// Concurrency:array
+/// Concurrency::extent
+
+inline bool operator==(const extent<1>& lhs, const extent<1>& rhs) restrict(amp,cpu) {
+  return (lhs[0] == rhs[0]);
+}
+inline bool operator==(const extent<2>& lhs, const extent<2>& rhs) restrict(amp,cpu) {
+  return (lhs[0] == rhs[0]) && (lhs[1] == rhs[1]);
+}
+inline bool operator==(const extent<3>& lhs, const extent<3>& rhs) restrict(amp,cpu) {
+  return (lhs[0] == rhs[0]) && (lhs[1] == rhs[1]) && (lhs[2] == rhs[2]);
+}
+
+/// Concurrency::array
 #define __global __attribute__((address_space(1)))
 #ifndef __GPU__
 /// Concurrency::array constructors that are only defined for the host

@@ -526,12 +526,19 @@ raw_ostream &CWriter::printType(raw_ostream &Out, Type *Ty,
     Out << NameSoFar + " {\n";
     unsigned Idx = 0;
     for (StructType::element_iterator I = STy->element_begin(),
-           E = STy->element_end(); I != E; ++I) {
+           E = STy->element_end(); I != E; ++I, ++Idx) {
       Out << "  ";
 #if 0
       printType(Out, *I, false, "field" + utostr(Idx++));
 #endif
-      printType(Out, *I, false, "field" + utostr(Idx++), (STy->getNumElements() == 1) ? IgnoreName : false);
+      bool Field_IN = (STy->getNumElements() == 1) ? IgnoreName : false;
+      if ((*I)->isStructTy() && Field_IN) {
+        printType(Out, *I, false, "",
+          Field_IN);
+        Out << "field"+utostr(Idx);
+      } else {
+        printType(Out, *I, false, "field" + utostr(Idx), Field_IN);
+      }
       Out << ";\n";
     }
     Out << '}';
