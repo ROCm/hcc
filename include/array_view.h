@@ -61,7 +61,7 @@ public:
 
   // __declspec(property(get)) extent<1> extent;
   DeclSpecGetExtent<array_view<T, 1>, Concurrency::extent<1>> extent;
-  Concurrency::extent<1> __get_extent(void) restrict(cpu, amp) {
+  Concurrency::extent<1> get_extent(void) restrict(cpu, amp) {
     return Concurrency::extent<1>(size_);
   }
 
@@ -206,9 +206,10 @@ public:
   void copy_to(array<T,1>& dest) const { assert(0&&"Unimplemented"); }
   void copy_to(const array_view& dest) const { assert(0&&"Unimplemented"); }
 
+  
   // __declspec(property(get)) extent<N> extent;
-  DeclSpecGetExtent<array_view<T, 2>, Concurrency::extent<2>> extent;
-  Concurrency::extent<2> __get_extent(void) restrict(cpu, amp) {
+  DeclSpecGetExtent<array_view<T, 2>, Concurrency::extent<2> > extent;
+  Concurrency::extent<2> get_extent(void) restrict(cpu, amp) {
     return Concurrency::extent<2>(e0_, e1_);
   }
 

@@ -8,11 +8,11 @@ class DeclSpecGetExtent {
     t_(reinterpret_cast<intptr_t>(t)) {}
 
   operator E() const restrict(amp,cpu) { //cast to T
-    return reinterpret_cast<T*>(t_)->__get_extent();
+    return reinterpret_cast<T*>(t_)->get_extent();
   }
 
   bool operator==(const T &t) const restrict(amp,cpu){
-    return reinterpret_cast<T*>(t_)->__get_extent() == t;
+    return reinterpret_cast<T*>(t_)->get_extent() == t;
   }
 
   // Forwording member calls to Concurrency::extent
@@ -20,14 +20,21 @@ class DeclSpecGetExtent {
     return this->operator E().size();
   }
 
-  int& operator[](unsigned int c) const restrict(amp, cpu) {
+  int operator[](unsigned int c) const restrict(amp, cpu) {
     return this->operator E().operator[](c);
   }
   
-  //template <int D0> tiled_extent<D0> tile() const;
-  template <int D0, int D1> tiled_extent<D0, D1> tile() const {
+  template <int D0>
+  tiled_extent<D0> tile() const {
     T* t= reinterpret_cast<T*>(t_);
-    extent<2> e = t->__get_extent();
+    extent<1> e = t->get_extent();
+    return e.tile<D0>();
+  }
+
+  template <int D0, int D1>
+  tiled_extent<D0, D1> tile() const {
+    T* t= reinterpret_cast<T*>(t_);
+    extent<2> e = t->get_extent();
     return e.tile<D0, D1>();
   }
 
