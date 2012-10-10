@@ -28,11 +28,11 @@ template <typename T>
 class _data {
  public:
   _data() = delete;
-  _data(const _data& d):p_(d.p_){}
+  _data(const _data& d) restrict(cpu, amp):p_(d.p_) {}
   __attribute__((annotate("deserialize")))
   explicit _data(__global T* t) restrict(cpu, amp) { p_ = t; }
   __global T* get(void) const restrict(cpu, amp) { return p_; }
-  void reset(__global T *t = NULL) { p_ = t; }
+  void reset(__global T *t = NULL) restrict(cpu, amp) { p_ = t; }
  private:
   __global T* p_;
 };
