@@ -18,7 +18,8 @@ public:
   array_view() = delete;
 
   array_view(array<T,1>& src) restrict(amp,cpu):
-    extent(this), p_(NULL), cache_(src.internal()), offset_(0) {}
+    extent(this), p_(NULL), size_(src.get_extent()[0]),
+    cache_(src.internal()), offset_(0) {}
 
   template <typename Container>
     array_view(const extent<1>& extent, Container& src):
@@ -46,7 +47,11 @@ public:
     p_(other.p_), size_(other.size_) , cache_(other.cache_),
     offset_(other.offset_) {}
 
-  array_view& operator=(const array_view& other) restrict(amp,cpu);
+  array_view& operator=(const array_view& other) restrict(amp,cpu) {
+    p_ = other.p_; size_ = other.size_; cache_ = other.cache_;
+    offset_ = other.offset_;
+    return *this;
+  }
 
   void copy_to(array<T,1>& dest) const { assert(0 && "Unimplemented"); }
 
@@ -78,19 +83,42 @@ public:
   }
 
   array_view<T,1> section(const index<1>& idx,
-    const Concurrency::extent<1>& ext) restrict(amp,cpu);
-  array_view<T,1> section(const index<1>& idx) const restrict(amp,cpu);
+    const Concurrency::extent<1>& ext) restrict(amp,cpu) {
+    return section(idx[0], ext[0]);
+  }
+  array_view<T,1> section(const index<1>& idx) const restrict(amp,cpu) {
+    return section(idx[0], size_-idx[0]);
+  }
   array_view<T,1> section(const Concurrency::extent<1>& ext)
-    const restrict(amp,cpu);
-  array_view<T,1> section(int i0, int e0) const restrict(amp,cpu);
+    const restrict(amp,cpu) {
+    return section(0, ext[0]);
+  }
+
+  array_view<T,1> section(int i0, int e0) const restrict(amp,cpu) {
+    array_view<T, 1> av(p_, Concurrency::extent<1>(e0), cache_, i0);
+    return av;
+  }
+
+  template <int K>
+    array_view<T, K> view_as(Concurrency::extent<K> viewExtent) const
+    restrict(amp, cpu) {
+    array_view<T, K> av(p_, viewExtent, cache_, offset_);
+    return av;
+  }
+
+  T *data() const restrict(amp, cpu) {
+    return cache_.get()+offset_;
+  }
 
   void synchronize() const;
 
-  completion_future synchronize_async() const;
+  completion_future synchronize_async() const {
+    assert(0 && "Not implemented yet");
+  }
 
   void refresh() const;
 
-  void discard_data() const;
+  void discard_data() const {/*No operation */}
 
   // CLAMP: The serialization interface
   __attribute__((annotate("serialize")))
@@ -101,9 +129,9 @@ public:
   // End CLAMP
   
   //TODO: move to private; used only by projection
-  array_view(__global T *p, cl_int size, 
+  array_view(__global T *p, Concurrency::extent<1> ext, 
     const gmac_buffer_t &cache, cl_uint offset) restrict(amp,cpu):
-    extent(this), p_(p), size_(size), cache_(cache), offset_(offset) {}
+    extent(this), p_(p), size_(ext[0]), cache_(cache), offset_(offset) {}
 
  private:
 #ifndef __GPU__
@@ -191,7 +219,7 @@ public:
 
   // Projection to 1D
   array_view<T, 1> operator[](int i) const restrict(amp, cpu) {
-    array_view<T, 1> av(p_, e0_*e1_, cache_, e1_*i);
+    array_view<T, 1> av(p_, Concurrency::extent<1>(e1_), cache_, e1_*i);
     return av;
   }
 
@@ -232,9 +260,11 @@ public:
             reinterpret_cast<void*>(cache_.get()), e0_*e1_ * sizeof(T));
 #endif
   }
-#if 0
-  completion_future synchronize_async() const;
-#endif //disable
+
+  completion_future synchronize_async() const {
+    assert(0 && "Not implemented yet");
+  }
+
 
   void refresh() const;
 
@@ -247,6 +277,10 @@ public:
   __attribute__((annotate("deserialize")))
   array_view(cl_int e0, cl_int e1, cl_int s1_, cl_uint offset, __global T *p) restrict(amp);
   // End CLAMP
+  //Used only by view_as
+  array_view(__global T *p, Concurrency::extent<2> ext, 
+    const gmac_buffer_t &cache, cl_uint offset) restrict(amp,cpu):
+  array_view(ext[0], ext[1], ext[1], offset, p, cache) {}
  private:
   //Used only by projection and section
   array_view(cl_int e0, cl_int e1, cl_int s1, cl_uint offset, 
@@ -280,6 +314,7 @@ template <typename T>
 void array_view<T, 1>::synchronize() const {
   assert(cache_);
   assert(p_);
+  assert(offset_ == 0 && "Does not support views created with offsets");
   memmove(reinterpret_cast<void*>(p_),
       reinterpret_cast<void*>(cache_.get()), size_ * sizeof(T));
 }
@@ -299,6 +334,7 @@ template <typename T>
 void array_view<T, 1>::refresh() const {
   assert(cache_);
   assert(p_);
+  assert(offset_ == 0 && "Does not support views created with offsets");
   memmove(reinterpret_cast<void*>(cache_.get()),
       reinterpret_cast<void*>(p_), size_ * sizeof(T));
 }

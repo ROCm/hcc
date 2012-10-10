@@ -796,10 +796,12 @@ public:
   template <typename InputIterator>
     array(const extent<1>& extent, InputIterator srcBegin, InputIterator srcEnd);
 
-#ifndef __GPU__
   template <typename InputIterator>
-  array(int e0, InputIterator srcBegin) : m_extent(e0),
-    accelerator_view_(accelerator().get_default_view()) {
+  array(int e0, InputIterator srcBegin) : e0_(e0)
+#ifdef __GPU__
+  { assert(0 && "Unrechable"); }
+#else
+  , accelerator_view_(accelerator().get_default_view()) {
     if (e0) {
       m_device.reset(GMACAllocator<T>().allocate(e0),
         GMACDeleter<T>());
@@ -864,11 +866,10 @@ public:
   void copy_to(const array_view<T,1>& dest) const;
 
   //__declspec(property(get)) Concurrency::extent<N> extent;
-#ifndef __GPU__
   extent<1> get_extent() const {
-    return m_extent;
+    return Concurrency::extent<1>(e0_);
   }
-#endif
+
 
   // __declspec(property(get)) accelerator_view accelerator_view;
   accelerator_view get_accelerator_view() const;
@@ -938,11 +939,10 @@ private:
 #ifndef __GPU__
   // Data members that do not show up at GPU side
   __attribute__((cpu)) int dummy_; //Don't define deserialization for this class
-  Concurrency::extent<1> m_extent;
   accelerator_view accelerator_view_;
 #endif
   gmac_buffer_t m_device;
-  cl_int e1_;
+  cl_int e0_;
 #undef __global
 };
 
