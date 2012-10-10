@@ -71,6 +71,17 @@ inline bool operator==(const extent<3>& lhs, const extent<3>& rhs) restrict(amp,
   return (lhs[0] == rhs[0]) && (lhs[1] == rhs[1]) && (lhs[2] == rhs[2]);
 }
 
+inline bool operator!=(const extent<1>& lhs, const extent<1>& rhs) restrict(amp,cpu) {
+  return !(lhs == rhs);
+}
+
+inline bool operator!=(const extent<2>& lhs, const extent<2>& rhs) restrict(amp,cpu) {
+  return !(lhs == rhs);
+}
+
+inline bool operator!=(const extent<3>& lhs, const extent<3>& rhs) restrict(amp,cpu) {
+  return !(lhs == rhs);
+}
 /// Concurrency::array
 #define __global __attribute__((address_space(1)))
 #ifndef __GPU__

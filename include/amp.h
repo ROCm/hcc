@@ -383,7 +383,12 @@ public:
 
   friend inline bool operator==(const extent<N>& lhs, const extent<N>& rhs)
     restrict(amp,cpu);
+
+  friend inline bool operator!=(const extent<N>& lhs, const extent<N>& rhs)
+    restrict(amp,cpu);
+
   extent operator+(const index<N>& idx) restrict(amp,cpu);
+
   extent operator-(const index<N>& idx) restrict(amp,cpu);
 
   extent& operator+=(int rhs) restrict(amp,cpu);
