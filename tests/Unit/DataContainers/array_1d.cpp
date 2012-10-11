@@ -35,4 +35,30 @@ TEST(ClassArray, ConstructorAndDestructor) {
   Concurrency::array<int> arr2(e);
   Concurrency::accelerator def;
   Concurrency::array<int>(N0, def.get_default_view());
+
+  {
+    Concurrency::extent<1> ext1d(vec.size());
+    Concurrency::array<float> arr_ext(ext1d, vec.begin());
+  }
+
+  {
+    Concurrency::extent<1> ext1d(vec.size());
+    Concurrency::array<float> arr_ext(ext1d, vec.begin(),
+      vec.end());
+    for (int i = 0; i < vec.size(); ++i) {
+      EXPECT_EQ(vec[i], arr_ext[i]);
+    }
+  }
+  {
+    Concurrency::array<float> arr_ext(vec.size(),
+      vec.begin(), vec.end());
+    for (int i = 0; i < vec.size(); ++i) {
+      EXPECT_EQ(vec[i],
+        arr_ext(Concurrency::index<1>(i)));
+    }
+    Concurrency::extent<2> ext(4, N0/4);
+    Concurrency::array_view<float, 2> av =
+      arr_ext.view_as<2>(ext);
+    EXPECT_EQ(vec[N0/4], av(1, 0));
+  }
 }
