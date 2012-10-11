@@ -50,3 +50,11 @@ TEST(Accelerator, Creation) {
   EXPECT_EQ(CL_SUCCESS, res);
   EXPECT_EQ(ret2+1, ret3);
 }
+
+TEST(Accelerator, Information) {
+  Concurrency::accelerator def;
+  EXPECT_NE(L"", def.get_description());
+  std::wcout << L"Description: " << def.get_description() << std::endl;
+  EXPECT_EQ(L"default", def.get_device_path()) << std::endl;
+  std::wcout << L"Device Path: " << def.get_device_path() << std::endl;
+}
