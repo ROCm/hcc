@@ -18,6 +18,7 @@
 #include <string.h> //memcpy
 #include <gmac/cl.h>
 #include <memory>
+#include <algorithm>
 // CLAMP
 #include <serialize.h>
 // End CLAMP
@@ -782,72 +783,122 @@ public:
   explicit array(int e0): array(extent<1>(e0)) {}
 
   array(const Concurrency::extent<1>& extent,
-    accelerator_view av, accelerator_view associated_av); //staging
+    accelerator_view av, accelerator_view associated_av) {
+    //staging
+    assert(0 && "Staging array is not supported");
+  }
 
-  array(int e0, accelerator_view av, accelerator_view associated_av); //staging
+  array(int e0, accelerator_view av, accelerator_view associated_av) {
+    //staging
+    assert(0 && "Staging array is not supported");
+  }
 
   array(const Concurrency::extent<1>& extent, accelerator_view av);
 
   array(int e0, accelerator_view av);
 
   template <typename InputIterator>
-    array(const Concurrency::extent<1>& extent, InputIterator srcBegin);
+    array(const Concurrency::extent<1>& extent, InputIterator srcBegin):
+      array(extent[0], srcBegin) {}
 
   template <typename InputIterator>
-    array(const extent<1>& extent, InputIterator srcBegin, InputIterator srcEnd);
-
-  template <typename InputIterator>
-  array(int e0, InputIterator srcBegin) : e0_(e0)
+    array(const extent<1>& extent, InputIterator srcBegin,
+      InputIterator srcEnd)
 #ifdef __GPU__
-  { assert(0 && "Unrechable"); }
+      { assert(0 && "Unrechable"); }
 #else
-  , accelerator_view_(accelerator().get_default_view()) {
-    if (e0) {
-      m_device.reset(GMACAllocator<T>().allocate(e0),
+    : array(extent, srcBegin, srcEnd, accelerator().get_default_view()) {}
+#endif
+
+  template <typename InputIterator>
+    array(int e0, InputIterator srcBegin)
+#ifdef __GPU__
+      { assert(0 && "Unrechable"); }
+#else
+    : array(Concurrency::extent<1>(e0), srcBegin,
+        accelerator().get_default_view()) {}
+#endif
+
+  template <typename InputIterator>
+    array(int e0, InputIterator srcBegin, InputIterator srcEnd):
+      array(Concurrency::extent<1>(e0), srcBegin, srcEnd) {}
+
+  template <typename InputIterator>
+    array(const extent<1>& extent, InputIterator srcBegin,
+        accelerator_view av, accelerator_view associated_av) { // staging
+      assert(0 && "Staging array is not supported");
+    }
+
+  template <typename InputIterator>
+    array(const extent<1>& extent, InputIterator srcBegin,
+        InputIterator srcEnd,
+        accelerator_view av, accelerator_view associated_av) { // staging
+      assert(0 && "Staging array is not supported");
+    }
+
+  template <typename InputIterator>
+    array(int e0, InputIterator srcBegin,
+        accelerator_view av, accelerator_view associated_av) { // staging
+      assert(0 && "Staging array is not supported");
+    }
+
+  template <typename InputIterator>
+    array(int e0, InputIterator srcBegin, InputIterator srcEnd,
+        accelerator_view av, accelerator_view associated_av) { // staging
+      assert(0 && "Staging array is not supported");
+    }
+
+  template <typename InputIterator>
+  array(const Concurrency::extent<1>& extent, InputIterator srcBegin,
+    accelerator_view av): e0_(extent[0])
+#ifdef __GPU__
+      { assert(0 && "Unrechable"); }
+#else
+    , accelerator_view_(av) {
+    if (e0_) {
+      m_device.reset(GMACAllocator<T>().allocate(e0_),
         GMACDeleter<T>());
       InputIterator srcEnd = srcBegin;
-      std::advance(srcEnd, e0);
+      std::advance(srcEnd, extent[0]);
       std::copy(srcBegin, srcEnd, m_device.get());
     }
   }
 #endif
 
   template <typename InputIterator>
-    array(int e0, InputIterator srcBegin, InputIterator srcEnd);
+    array(int e0, InputIterator SrcBegin, accelerator_view av):
+      array(Concurrency::extent<1>(e0), SrcBegin, av) {}
 
   template <typename InputIterator>
-  array(const extent<1>& extent, InputIterator srcBegin,
-    accelerator_view av, accelerator_view associated_av); // staging
+    array(const extent<1>& extent, InputIterator srcBegin,
+        InputIterator srcEnd, accelerator_view av): e0_(extent[0])
+#ifdef __GPU__
+      { assert(0 && "Unrechable"); }
+#else
+    , accelerator_view_(av) {
+    if (e0_) {
+      m_device.reset(GMACAllocator<T>().allocate(e0_),
+        GMACDeleter<T>());
+      InputIterator srcCopyEnd = srcBegin;
+      std::advance(srcCopyEnd,
+        std::min(std::distance(srcBegin, srcEnd),
+          decltype(std::distance(srcBegin, srcEnd))(e0_)));
+      std::copy(srcBegin, srcCopyEnd, m_device.get());
+    }
+  }
+#endif
 
   template <typename InputIterator>
-  array(const extent<1>& extent, InputIterator srcBegin, InputIterator srcEnd,
-    accelerator_view av, accelerator_view associated_av); // staging
-
-  template <typename InputIterator>
-  array(int e0, InputIterator srcBegin,
-  accelerator_view av, accelerator_view associated_av); // staging
-
-  template <typename InputIterator>
-  array(int e0, InputIterator srcBegin, InputIterator srcEnd,
-  accelerator_view av, accelerator_view associated_av); // staging
-
-  template <typename InputIterator>
-  array(const Concurrency::extent<1>& extent, InputIterator srcBegin, accelerator_view av);
-
-  template <typename InputIterator>
-  array(int e0, InputIterator SrcBegin, accelerator_view av);
-
-  template <typename InputIterator>
-  array(const extent<1>& extent, InputIterator srcBegin, InputIterator srcEnd,
-  accelerator_view av);
-
-  template <typename InputIterator>
-  array(int e0, InputIterator srcBegin, InputIterator srcEnd, accelerator_view av);
+    array(int e0, InputIterator srcBegin, InputIterator srcEnd,
+        accelerator_view av): array(Concurrency::extent<1>(e0), srcBegin,
+          srcEnd, av) {}
 
   explicit array(const array_view<const T,1>& src);
 
   array(const array_view<const T,1>& src,
-    accelerator_view av, accelerator_view associated_av); // staging
+    accelerator_view av, accelerator_view associated_av) { // staging
+      assert(0 && "Staging array is not supported");
+    }
 
   array(const array_view<const T,1>& src, accelerator_view av);
 
@@ -888,9 +939,13 @@ public:
     return reinterpret_cast<__global T*>(m_device.get())[i0];
   }
 
-  T& operator()(const index<1>& idx) restrict(amp,cpu);
+  __global T& operator()(const index<1>& idx) restrict(amp,cpu) {
+    return this->operator[](idx);
+  }
 
-  const T& operator()(const index<1>& idx) const restrict(amp,cpu);
+  const __global T& operator()(const index<1>& idx) const restrict(amp,cpu) {
+    return this->operator[](idx);
+  }
 
   array_view<T,1> section(const index<1>& idx, const extent<1>& ext) restrict(amp,cpu);
 
@@ -907,7 +962,10 @@ public:
     array_view<const ElementType, 1> reinterpret_as() const restrict(amp,cpu);
 
   template <int K>
-    array_view<T,K> view_as(const extent<K>& viewExtent) restrict(amp,cpu);
+    array_view<T,K> view_as(const extent<K>& viewExtent) restrict(amp,cpu) {
+      array_view<T, 1> av(*this);
+      return av.view_as(viewExtent);
+    }
 
   template <int K>
     array_view<const T,K> view_as(const extent<K>& viewExtent) const restrict(amp,cpu);
