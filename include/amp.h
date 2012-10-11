@@ -944,12 +944,24 @@ class array<T, 1> {
     return reinterpret_cast<__global T*>(m_device.get())[i0];
   }
 
+  const __global T& operator[](int i0) const restrict(amp,cpu) {
+    return reinterpret_cast<__global T*>(m_device.get())[i0];
+  }
+
   __global T& operator()(const index<1>& idx) restrict(amp,cpu) {
     return this->operator[](idx);
   }
 
   const __global T& operator()(const index<1>& idx) const restrict(amp,cpu) {
     return this->operator[](idx);
+  }
+
+  __global T& operator()(int i0) restrict(amp,cpu) {
+    return this->operator[](i0);
+  }
+
+  const __global T& operator()(int i0) const restrict(amp,cpu) {
+    return this->operator[](i0);
   }
 
   array_view<T,1> section(const index<1>& idx,
