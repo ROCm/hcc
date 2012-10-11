@@ -129,6 +129,7 @@ public:
 //CLAMP
 extern "C" __attribute__((pure)) int get_global_id(int n) restrict(amp);
 extern "C" __attribute__((pure)) int get_local_id(int n) restrict(amp);
+extern "C" __attribute__((pure)) int get_group_id(int n) restrict(amp);
 #define tile_static static __attribute__((address_space(3)))
 extern "C" void barrier(int n) restrict(amp);
 //End CLAMP
@@ -261,71 +262,12 @@ class tile_barrier {
   friend class tiled_index;
 };
 
-// C++AMP LPM 4.4.1
-// forward decls
-template <int D0, int D1=0, int D2=0> class tiled_extent;
-
-template <int D0, int D1=0, int D2=0>
-class tiled_index {
- public:
-  static const int rank = 3;
-};
-template <int N> class extent;
-template <int D0>
-class tiled_index<D0, 0, 0> {
- public:
-  const index<1> global;
-  const index<1> local;
-  const tile_barrier barrier;
-  tiled_index(const index<1>& g) restrict(amp, cpu):global(g){}
-  tiled_index(const tiled_index<D0>& o) restrict(amp, cpu):
-    global(o.global), local(o.local) {}
-  operator const index<1>() const restrict(amp,cpu) {
-    return global;
-  }
- private:
-  //CLAMP
-  __attribute__((annotate("__cxxamp_opencl_index")))
-  tiled_index() restrict(amp)
-#ifdef __GPU__
-  : global(index<1>(get_global_id(0))),
-    local(index<1>(get_local_id(0)))
-#endif // __GPU__
-  {}
-  template<int D, typename K>
-  friend void parallel_for_each(tiled_extent<D>, const K&);
-};
-
-template <int D0, int D1>
-class tiled_index<D0, D1, 0> {
- public:
-  const index<2> global;
-  const index<2> local;
-  const tile_barrier barrier;
-  tiled_index(const index<2>& g) restrict(amp, cpu):global(g){}
-  tiled_index(const tiled_index<D0, D1>& o) restrict(amp, cpu):
-    global(o.global), local(o.local) {}
-  operator const index<2>() const restrict(amp,cpu) {
-    return global;
-  }
- private:
-  //CLAMP
-  __attribute__((annotate("__cxxamp_opencl_index")))
-  tiled_index() restrict(amp)
-#ifdef __GPU__
-  : global(index<2>(get_global_id(1), get_global_id(0))),
-    local(index<2>(get_local_id(1), get_local_id(0)))
-#endif // __GPU__
-  {}
-  template<int D0_, int D1_, typename K>
-  friend void parallel_for_each(tiled_extent<D0_, D1_>, const K&);
-};
-
-
-
 template <typename T, int N> class array;
 
 template <typename T, int N> class array_view;
+
+// forward decls
+template <int D0, int D1=0, int D2=0> class tiled_extent;
 
 template <int N>
 class extent {
@@ -410,17 +352,103 @@ private:
   int e0_,e1_,e2_, dummy; // Store the data
 };
 
+// C++AMP LPM 4.4.1
+
+template <int D0, int D1=0, int D2=0>
+class tiled_index {
+ public:
+  static const int rank = 3;
+};
+template <int N> class extent;
+template <int D0>
+class tiled_index<D0, 0, 0> {
+ public:
+  const index<1> global;
+  const index<1> local;
+  const index<1> tile;
+  const index<1> tile_origin;
+  const tile_barrier barrier;
+  tiled_index(const index<1>& g) restrict(amp, cpu):global(g){}
+  tiled_index(const tiled_index<D0>& o) restrict(amp, cpu):
+    global(o.global), local(o.local) {}
+  operator const index<1>() const restrict(amp,cpu) {
+    return global;
+  }
+  const Concurrency::extent<1> tile_extent;
+ private:
+  //CLAMP
+  __attribute__((annotate("__cxxamp_opencl_index")))
+  tiled_index() restrict(amp)
+#ifdef __GPU__
+  : global(index<1>(get_global_id(0))),
+    local(index<1>(get_local_id(0))),
+    tile(index<1>(get_group_id(0))),
+    tile_origin(index<1>(get_global_id(0)-get_local_id(0))),
+    tile_extent(D0)
+#endif // __GPU__
+  {}
+  template<int D, typename K>
+  friend void parallel_for_each(tiled_extent<D>, const K&);
+};
+
+template <int D0, int D1>
+class tiled_index<D0, D1, 0> {
+ public:
+  const index<2> global;
+  const index<2> local;
+  const index<2> tile;
+  const index<2> tile_origin;
+  const tile_barrier barrier;
+  tiled_index(const index<2>& g) restrict(amp, cpu):global(g){}
+  tiled_index(const tiled_index<D0, D1>& o) restrict(amp, cpu):
+    global(o.global), local(o.local) {}
+  operator const index<2>() const restrict(amp,cpu) {
+    return global;
+  }
+  const Concurrency::extent<2> tile_extent;
+ private:
+  //CLAMP
+  __attribute__((annotate("__cxxamp_opencl_index")))
+  tiled_index() restrict(amp)
+#ifdef __GPU__
+  : global(index<2>(get_global_id(1), get_global_id(0))),
+    local(index<2>(get_local_id(1), get_local_id(0))),
+    tile(index<2>(get_group_id(1), get_group_id(0))),
+    tile_origin(index<2>(get_global_id(1)-get_local_id(1),
+                         get_global_id(0)-get_local_id(0))),
+    tile_extent(D0, D1)
+#endif // __GPU__
+  {}
+  template<int D0_, int D1_, typename K>
+  friend void parallel_for_each(tiled_extent<D0_, D1_>, const K&);
+};
+
+
+
 template <int D0, int D1/*=0*/, int D2/*=0*/>
 class tiled_extent : public extent<3>
 {
 public:
   static const int rank = 3;
   tiled_extent() restrict(amp,cpu);
-  tiled_extent(const tiled_extent& other) restrict(amp,cpu);
-  tiled_extent(const extent<3>& extent) restrict(amp,cpu);
+  tiled_extent(const tiled_extent& other) restrict(amp,cpu): extent(other){}
+  tiled_extent(const extent<3>& ext) restrict(amp,cpu): extent(ext) {}
   tiled_extent& operator=(const tiled_extent& other) restrict(amp,cpu);
-  tiled_extent pad() const restrict(amp,cpu);
-  tiled_extent truncate() const restrict(amp,cpu);
+  tiled_extent pad() const restrict(amp,cpu) {
+    tiled_extent padded(*this);
+    padded[0] = ((padded[0] + D0 - 1)/D0) * D0;
+    padded[1] = ((padded[1] + D1 - 1)/D1) * D1;
+    padded[2] = ((padded[2] + D2 - 1)/D2) * D2;
+    return padded;
+  }
+  tiled_extent truncate() const restrict(amp,cpu) {
+    tiled_extent trunc(*this);
+    trunc[0] = (trunc[0]/D0) * D0;
+    trunc[1] = (trunc[1]/D1) * D1;
+    trunc[2] = (trunc[2]/D2) * D2;
+    return trunc;
+  }
+
   // __declspec(property(get)) extent<3> tile_extent;
   extent<3> get_tile_extent() const;
   static const int tile_dim0 = D0;
@@ -436,11 +464,21 @@ class tiled_extent<D0,D1,0> : public extent<2>
 public:
   static const int rank = 2;
   tiled_extent() restrict(amp,cpu);
-  tiled_extent(const tiled_extent& other) restrict(amp,cpu);
+  tiled_extent(const tiled_extent& other) restrict(amp,cpu):extent(other) {}
   tiled_extent(const extent<2>& ext) restrict(amp,cpu):extent(ext) {}
   tiled_extent& operator=(const tiled_extent& other) restrict(amp,cpu);
-  tiled_extent pad() const restrict(amp,cpu);
-  tiled_extent truncate() const restrict(amp,cpu);
+  tiled_extent pad() const restrict(amp,cpu) {
+    tiled_extent padded(*this);
+    padded[0] = ((padded[0] + D0 - 1)/D0) * D0;
+    padded[1] = ((padded[1] + D1 - 1)/D1) * D1;
+    return padded;
+  }
+  tiled_extent truncate() const restrict(amp,cpu) {
+    tiled_extent trunc(*this);
+    trunc[0] = (trunc[0]/D0) * D0;
+    trunc[1] = (trunc[1]/D1) * D1;
+    return trunc;
+  }
   // __declspec(property(get)) extent<2> tile_extent;
   extent<2> get_tile_extent() const;
   static const int tile_dim0 = D0;
@@ -465,8 +503,16 @@ public:
     extent(static_cast<extent>(other)) {}
   tiled_extent(const extent<1>& ext) restrict(amp,cpu):extent(ext) {}
   tiled_extent& operator=(const tiled_extent& other) restrict(amp,cpu);
-  tiled_extent pad() const restrict(amp,cpu);
-  tiled_extent truncate() const restrict(amp,cpu);
+  tiled_extent pad() const restrict(amp,cpu) {
+    tiled_extent padded(*this);
+    padded[0] = ((padded[0] + D0 - 1)/D0) * D0;
+    return padded;
+  }
+  tiled_extent truncate() const restrict(amp,cpu) {
+    tiled_extent trunc(*this);
+    trunc[0] = (trunc[0]/D0) * D0;
+    return trunc;
+  }
   // __declspec(property(get)) extent<1> tile_extent;
   extent<1> get_tile_extent() const;
   static const int tile_dim0 = D0;
