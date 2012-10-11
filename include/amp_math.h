@@ -89,9 +89,4 @@ namespace fast_math {
     using std::min;
     return min(x, y);
   }
-
-  float ceil(float x) {
-    using std::ceil;
-    return ceil(x);
-  }
 } // namespace Concurrency
