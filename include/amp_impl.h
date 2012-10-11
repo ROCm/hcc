@@ -16,15 +16,22 @@
 
 namespace Concurrency {
 //Accelerators
-accelerator::accelerator(void) {
+accelerator::accelerator(void): device_path(L"default") {
   cl_int error_code;
   error_code = clGetPlatformIDs(1, &platform_, NULL);
   CHECK_ERROR(error_code, "clGetPlatformIDs");
   error_code = clGetDeviceIDs(platform_,
     CL_DEVICE_TYPE_GPU, 1, &device_, NULL);
   CHECK_ERROR(error_code, "clGetDeviceIDs");
+  char buffer[10240];
+  error_code = clGetDeviceInfo(
+    device_, CL_DEVICE_NAME, sizeof(buffer), buffer, NULL);
+  CHECK_ERROR(error_code, "clGetDeviceInfo");
+  std::string s_desc(buffer);
+  std::copy(s_desc.begin(), s_desc.end(), std::back_inserter(description));
   if (!default_view_)
     default_view_ = new accelerator_view(device_);
+
 }
 accelerator_view accelerator::create_view(void) {
   accelerator_view sa(device_);
