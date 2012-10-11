@@ -334,49 +334,52 @@ public:
 
   typedef int value_type;
 
-  extent() restrict(amp,cpu);
+  extent() restrict(amp,cpu):
+    extent(0, 0, 0) {}
 
-  extent(const extent& other) restrict(amp,cpu) {
-    for (int i = 0; i < N; ++i)
-      m_internal[i] = other[i];
+  extent(const extent& other) restrict(amp,cpu):
+    extent(other.e0_, other.e1_, other.e2_) {
+    static_assert(N<=3, "Does not support N>3");
   }
 
-  explicit extent(int e0) restrict(amp,cpu) { // N==1
-    m_internal[0] = e0;
-  }
+  explicit extent(int e0) restrict(amp,cpu):
+    extent(e0, 0, 0) {} // N==1
 
-  extent(int e0, int e1) restrict(amp,cpu) { // N==2
-    m_internal[0] = e0;
-    m_internal[1] = e1;
-  }
+  extent(int e0, int e1) restrict(amp,cpu):
+    extent(e0, e1, 0) {} // N==2
 
-  extent(int e0, int e1, int e2) restrict(amp,cpu) { // N==3
-    m_internal[0] = e0;
-    m_internal[1] = e1;
-    m_internal[2] = e2;
-  }
+  extent(int e0, int e1, int e2) restrict(amp,cpu):
+    e0_(e0), e1_(e1), e2_(e2) {} // N==3
 
-  explicit extent(const int components[]) restrict(amp,cpu);
+  explicit extent(const int components[]) restrict(amp,cpu){
+    assert(0 && "Not supported yet");
+  }
 
   extent& operator=(const extent& other) restrict(amp,cpu);
 
   int operator[](unsigned int c) const restrict(amp,cpu) {
-    return m_internal[c];
+    static_assert(N<=3, "Does not support N>3");
+    int r[3]={e0_, e1_, e2_};
+    return r[c];
   }
 
-  int& operator[](unsigned int c) restrict(amp,cpu) {
-    return m_internal[c];
+  int &operator[](unsigned int c) restrict(amp,cpu) {
+    static_assert(N<=3, "Does not support N>3");
+    if (c==0) return e0_;
+    if (c==1) return e1_;
+    return e2_;
   }
 
   int size() const restrict(amp,cpu) {
-    int retSize = m_internal[0];
-    for (int i = 1; i < N; ++i){
-      retSize *= m_internal[i];
-    }
+    int retSize = e0_;
+    if (rank > 1) retSize *= e1_;
+    if (rank > 2) retSize *= e2_;
     return retSize;
   }
 
-  bool contains(const index<N>& idx) const restrict(amp,cpu);
+  bool contains(const index<N>& idx) const restrict(amp,cpu) {
+    assert(0 && "Not supported yet");
+  }
 
   template <int D0> tiled_extent<D0> tile() const;
   template <int D0, int D1> tiled_extent<D0,D1> tile() const;
@@ -404,7 +407,7 @@ public:
   extent operator--(int) restrict(amp,cpu);
 
 private:
-  int m_internal[N]; // Store the data
+  int e0_,e1_,e2_, dummy; // Store the data
 };
 
 template <int D0, int D1/*=0*/, int D2/*=0*/>
@@ -501,6 +504,9 @@ public:
 
 template <typename T, int N=1>
 class array {
+private:
+  // Data members that do not show up at GPU side
+  __attribute__((cpu)) int dummy_; //Don't define deserialization for this class
 public:
 #ifdef __GPU__
   typedef _data<T> gmac_buffer_t;
@@ -541,7 +547,7 @@ public:
 #ifndef __GPU__
   // CAVEAT: ACCELERATOR
   template <typename InputIterator>
-  array(int e0, InputIterator srcBegin) : m_extent(e0),
+  array(int e0, InputIterator srcBegin) : extent(e0),
     accelerator_view_(accelerator().get_default_view()) {
     if (e0) {
       m_device.reset(GMACAllocator<T>().allocate(e0),
@@ -647,11 +653,12 @@ public:
   void copy_to(const array_view<T,N>& dest) const;
 
   //__declspec(property(get)) Concurrency::extent<N> extent;
-#ifndef __GPU__
-  extent<N> get_extent() const {
-    return m_extent;
+
+  const Concurrency::extent<N> extent;
+  Concurrency::extent<N> get_extent() const {
+    return extent;
   }
-#endif
+
 
   // __declspec(property(get)) accelerator_view accelerator_view;
   accelerator_view get_accelerator_view() const;
@@ -697,9 +704,11 @@ public:
 
   auto operator()(int i) const restrict(amp,cpu) -> decltype(array_projection_helper<T, N>::project((const array<T, N>* )NULL, i));
 
-  array_view<T,N> section(const index<N>& idx, const extent<N>& ext) restrict(amp,cpu);
+  array_view<T,N> section(const index<N>& idx,
+      const Concurrency::extent<N>& ext) restrict(amp,cpu);
 
-  array_view<const T,N> section(const index<N>& idx, const extent<N>& ext) const restrict(amp,cpu);
+  array_view<const T,N> section(const index<N>& idx,
+      const Concurrency::extent<N>& ext) const restrict(amp,cpu);
 
   array_view<T,N> section(const index<N>& idx) restrict(amp,cpu);
 
@@ -726,10 +735,12 @@ public:
   array_view<const ElementType,1> reinterpret_as() const restrict(amp,cpu);
 
   template <int K>
-  array_view<T,K> view_as(const extent<K>& viewExtent) restrict(amp,cpu);
+    array_view<T,K> view_as(const Concurrency::extent<K>& viewExtent)
+    restrict(amp,cpu);
 
   template <int K>
-  array_view<const T,K> view_as(const extent<K>& viewExtent) const restrict(amp,cpu);
+    array_view<const T,K> view_as(const Concurrency::extent<K>& viewExtent)
+    const restrict(amp,cpu);
 
   operator std::vector<T>() const;
 
@@ -756,9 +767,6 @@ public:
   // End CLAMP
 private:
 #ifndef __GPU__
-  // Data members that do not show up at GPU side
-  __attribute__((cpu)) int dummy_; //Don't define deserialization for this class
-  Concurrency::extent<N> m_extent;
   accelerator_view accelerator_view_;
 #endif
   gmac_buffer_t m_device;

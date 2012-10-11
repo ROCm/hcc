@@ -88,12 +88,12 @@ inline bool operator!=(const extent<3>& lhs, const extent<3>& rhs) restrict(amp,
 /// Concurrency::array constructors that are only defined for the host
 template <typename T, int N>
 array<T, N>::array(int e0, accelerator_view av):
-  m_extent(e0), accelerator_view_(av) {
+  extent(e0), accelerator_view_(av) {
   m_device.reset(GMACAllocator<T>().allocate(e0), GMACDeleter<T>());
 }
 
 template <typename T, int N>
-array<T, N>::array(const extent<N>& ext): m_extent(ext),
+array<T, N>::array(const Concurrency::extent<N>& ext): extent(ext),
   m_device(nullptr), accelerator_view_(accelerator().get_default_view()) {
   size_t sz = ext[0];
   if (rank == 2) {
@@ -107,7 +107,7 @@ array<T, N>::array(const extent<N>& ext): m_extent(ext),
 }
 
 template <typename T, int N>
-array<T,N>:: array(const array& other): m_extent(other.m_extent),
+array<T,N>:: array(const array& other): extent(other.m_extent),
     accelerator_view_(other.accelerator_view_), m_device(other.m_device) {}
 
 template <typename T, int N>
