@@ -121,22 +121,23 @@ void array<T, N>::__cxxamp_serialize(Serialize& s) const {
 
 template <typename T>
 array<T, 1>::array(int e0, accelerator_view av):
-  e0_(e0), accelerator_view_(av) {
+  extent(e0), accelerator_view_(av) {
   m_device.reset(GMACAllocator<T>().allocate(e0), GMACDeleter<T>());
 }
 
 template <typename T>
-array<T, 1>::array(const extent<1>& ext): e0_(ext[0]),
+array<T, 1>::array(const Concurrency::extent<1>& ext): extent(ext),
   m_device(nullptr), accelerator_view_(accelerator().get_default_view()) {
-  if (ext[0])
-    m_device.reset(GMACAllocator<T>().allocate(e0_), GMACDeleter<T>());
+  if (extent[0])
+    m_device.reset(GMACAllocator<T>().allocate(ext.size()), GMACDeleter<T>());
 }
 
 template <typename T>
 __attribute__((annotate("serialize")))
 void array<T, 1>::__cxxamp_serialize(Serialize& s) const {
   m_device.__cxxamp_serialize(s);
-  s.Append(sizeof(cl_int), &e0_);
+  cl_int e0 = extent[0];
+  s.Append(sizeof(cl_int), &e0);
 }
 
 #else
@@ -148,8 +149,8 @@ array<T, N>::array(__global T *p, cl_int e) restrict(amp): m_device(p), e1_(e) {
 
 template <typename T>
 __attribute__((annotate("deserialize"))) 
-array<T, 1>::array(__global T *p, cl_int e) restrict(amp): m_device(p),
-  e0_(e) {}
+array<T, 1>::array(__global T *p, cl_int e) restrict(amp):
+  extent(e), m_device(p) {}
 #endif
 #undef __global
 
