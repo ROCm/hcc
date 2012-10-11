@@ -1,21 +1,20 @@
 #pragma once
-
-#ifdef __GPU__
-  extern "C" float cos(float x);
-  extern "C" float exp(float x);
-  extern "C" float fabs(float x);
-  extern "C" float log(float x);
-  extern "C" float sin(float x);
-  extern "C" float sqrt(float x);
-#else
   #include <cmath>
+#ifdef __GPU__
+  extern "C" float opencl_fastmath_cos(float x);
+  extern "C" float opencl_fastmath_exp(float x);
+  extern "C" float opencl_fastmath_fabs(float x);
+  extern "C" float opencl_fastmath_log(float x);
+  extern "C" float opencl_fastmath_sin(float x);
+  extern "C" float opencl_fastmath_sqrt(float x);
+//#else
 #endif
 
 namespace Concurrency {
 namespace fast_math {
   float cos(float x) restrict(amp, cpu) {
     #ifdef __GPU__
-      return ::cos(x);
+      return opencl_fastmath_cos(x);
     #else
       return ::cosf(x);
     #endif
@@ -23,7 +22,7 @@ namespace fast_math {
 
   float exp(float x) restrict(amp, cpu) {
     #ifdef __GPU__
-      return ::exp(x);
+      return opencl_fastmath_exp(x);
     #else
       return ::expf(x);
     #endif
@@ -31,7 +30,7 @@ namespace fast_math {
 
   float expf(float x) restrict(amp, cpu) {
     #ifdef __GPU__
-      return ::exp(x);
+      return opencl_fastmath_exp(x);
     #else
       return ::expf(x);
     #endif
@@ -39,7 +38,7 @@ namespace fast_math {
 
   float fabs(float x) restrict(amp, cpu) {
     #ifdef __GPU__
-      return ::fabs(x);
+      return opencl_fastmath_fabs(x);
     #else
       return ::fabsf(x);
     #endif
@@ -47,7 +46,7 @@ namespace fast_math {
 
   float fabsf(float x) restrict(amp, cpu) {
     #ifdef __GPU__
-      return ::fabs(x);
+      return opencl_fastmath_fabs(x);
     #else
       return ::fabsf(x);
     #endif
@@ -55,7 +54,7 @@ namespace fast_math {
 
   float logf(float x) restrict(amp, cpu) {
     #ifdef __GPU__
-      return ::log(x);
+      return opencl_fastmath_log(x);
     #else
       return ::logf(x);
     #endif
@@ -63,7 +62,7 @@ namespace fast_math {
 
   float sin(float x) restrict(amp, cpu) {
     #ifdef __GPU__
-      return ::sin(x);
+      return opencl_fastmath_sin(x);
     #else
       return ::sinf(x);
     #endif
@@ -71,7 +70,7 @@ namespace fast_math {
 
   float sqrt(float x) restrict(amp, cpu) {
     #ifdef __GPU__
-      return ::sqrt(x);
+      return opencl_fastmath_sqrt(x);
     #else
       return ::sqrtf(x);
     #endif
@@ -79,11 +78,20 @@ namespace fast_math {
 
   float sqrtf(float x) restrict(amp, cpu) {
     #ifdef __GPU__
-      return ::sqrt(x);
+      return opencl_fastmath_sqrt(x);
     #else
       return ::sqrtf(x);
     #endif
   };
 } // namesapce fast_math
-  using std::min;
+
+  int min(int x, int y) {
+    using std::min;
+    return min(x, y);
+  }
+
+  float ceil(float x) {
+    using std::ceil;
+    return ceil(x);
+  }
 } // namespace Concurrency
