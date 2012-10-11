@@ -804,20 +804,12 @@ public:
   template <typename InputIterator>
     array(const extent<1>& extent, InputIterator srcBegin,
       InputIterator srcEnd)
-#ifdef __GPU__
-      { assert(0 && "Unrechable"); }
-#else
     : array(extent, srcBegin, srcEnd, accelerator().get_default_view()) {}
-#endif
 
   template <typename InputIterator>
     array(int e0, InputIterator srcBegin)
-#ifdef __GPU__
-      { assert(0 && "Unrechable"); }
-#else
     : array(Concurrency::extent<1>(e0), srcBegin,
         accelerator().get_default_view()) {}
-#endif
 
   template <typename InputIterator>
     array(int e0, InputIterator srcBegin, InputIterator srcEnd):
@@ -850,9 +842,9 @@ public:
 
   template <typename InputIterator>
   array(const Concurrency::extent<1>& extent, InputIterator srcBegin,
-    accelerator_view av): e0_(extent[0])
+    accelerator_view av): e0_(extent[0]), m_device(nullptr)
 #ifdef __GPU__
-      { assert(0 && "Unrechable"); }
+    { assert(0 && "Unrechable"); }
 #else
     , accelerator_view_(av) {
     if (e0_) {
@@ -871,11 +863,11 @@ public:
 
   template <typename InputIterator>
     array(const extent<1>& extent, InputIterator srcBegin,
-        InputIterator srcEnd, accelerator_view av): e0_(extent[0])
+        InputIterator srcEnd, accelerator_view av): e0_(extent[0]),
 #ifdef __GPU__
-      { assert(0 && "Unrechable"); }
+    m_device(nullptr)  { assert(0 && "Unrechable"); }
 #else
-    , accelerator_view_(av) {
+    accelerator_view_(av) {
     if (e0_) {
       m_device.reset(GMACAllocator<T>().allocate(e0_),
         GMACDeleter<T>());
