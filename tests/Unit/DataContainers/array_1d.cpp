@@ -61,4 +61,10 @@ TEST(ClassArray, ConstructorAndDestructor) {
       arr_ext.view_as<2>(ext);
     EXPECT_EQ(vec[N0/4], av(1, 0));
   }
+
+  {
+    const Concurrency::array<float> arr_c(vec.size(),
+      vec.begin());
+    EXPECT_EQ(vec[10], arr_c(10));
+  }
 }
