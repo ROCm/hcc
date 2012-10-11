@@ -20,6 +20,9 @@ file(MAKE_DIRECTORY ${GTEST_LIB_DIR})
 # gmac
 set(GMAC_DIR "${PROJECT_SOURCE_DIR}/gmac")
 
+# opencl_math
+set(OPENCL_MATH_DIR "${PROJECT_SOURCE_DIR}/include")
+
 # MCWAMP
 set(MCWAMP_LIB_DIR "${LIBRARY_OUTPUT_PATH}")
 
