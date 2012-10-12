@@ -7,7 +7,7 @@
   extern "C" float opencl_fastmath_log(float x);
   extern "C" float opencl_fastmath_sin(float x);
   extern "C" float opencl_fastmath_sqrt(float x);
-//#else
+  extern "C" int opencl_min(int x, int y);
 #endif
 
 namespace Concurrency {
@@ -85,8 +85,12 @@ namespace fast_math {
   };
 } // namesapce fast_math
 
-  int min(int x, int y) {
-    using std::min;
-    return min(x, y);
+  int min(int x, int y) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_min(x, y);
+    #else
+      using std::min;
+      return min(x, y);
+    #endif
   }
 } // namespace Concurrency

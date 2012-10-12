@@ -21,3 +21,7 @@ float opencl_fastmath_sin(float x) {
 float opencl_fastmath_sqrt(float x) {
   return sqrt(x);
 }
+
+int opencl_min(int x, int y) {
+  return min(x, y);
+}
