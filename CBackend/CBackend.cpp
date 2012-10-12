@@ -584,16 +584,10 @@ raw_ostream &CWriter::printType(raw_ostream &Out, Type *Ty,
     if (NumElements == 0) NumElements = 1;
     // Arrays are wrapped in structs to allow them to have normal
     // value semantics (avoiding the array "decay").
-#if 0
-    Out << NameSoFar << " { ";
-#endif
-    Out<<" ";
+    Out << " struct { ";
     printType(Out, ATy->getElementType(), false,
               "array[" + utostr(NumElements) + "]");
-#if 0
-    return Out << "; }";
-#endif
-    return Out<<" ";
+    return Out << "; }" << NameSoFar << " ";
   }
 
   default:
@@ -3523,18 +3517,17 @@ void CWriter::printGEPExpression(Value *Ptr, gep_type_iterator I,
     // exposed, like a global, avoid emitting (&foo)[0], just emit foo instead.
     if (isAddressExposed(Ptr)) {
       writeOperandInternal(Ptr, Static);
+      // We've wrapped each array with a struct. For globals, we need to
+      // peel it out when addressing the array inside.
+      if ((*I)->isArrayTy()) {
+       Out << ".field0";  // Probably ok
+      }
     } else if (I != E && (*I)->isStructTy()) {
       // If we didn't already emit the first operand, see if we can print it as
       // P->f instead of "P[0].f"
       StructType *STy = dyn_cast<StructType>(*I);
-      if (STy->getNumElements() == 1) {
-        Out << "(*";
-        writeOperand(Ptr);
-        Out << ")";
-      } else {
-        writeOperand(Ptr);
-        Out << "->field" << cast<ConstantInt>(I.getOperand())->getZExtValue();
-      }
+      writeOperand(Ptr);
+      Out << "->field" << cast<ConstantInt>(I.getOperand())->getZExtValue();
       ++I;  // eat the struct index as well.
     } else {
       // Instead of emitting P[0][1], emit (*P)[1], which is more idiomatic.

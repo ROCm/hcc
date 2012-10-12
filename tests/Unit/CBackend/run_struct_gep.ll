@@ -9,5 +9,5 @@ entry:
   %arrayidx.i = getelementptr inbounds %"class.Concurrency::index"* %this, i32 0, i32 0, i32 0
   ret void
 }
-; CHECK-NOT: {{.*}}->field0.array
+; CHECK: {{.*}}->field0.array
 
