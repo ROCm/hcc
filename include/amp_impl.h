@@ -127,6 +127,10 @@ void array<T, N>::__cxxamp_serialize(Serialize& s) const {
 // 1D array constructors
 
 template <typename T>
+array<T,1>:: array(const array& other): extent(other.extent),
+    accelerator_view_(other.accelerator_view_), m_device(other.m_device) {}
+
+template <typename T>
 array<T, 1>::array(int e0, accelerator_view av):
   extent(e0), accelerator_view_(av) {
   m_device.reset(GMACAllocator<T>().allocate(e0), GMACDeleter<T>());
