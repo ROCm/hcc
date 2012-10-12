@@ -114,7 +114,7 @@ array<T, N>::array(const Concurrency::extent<N>& ext): extent(ext),
 }
 
 template <typename T, int N>
-array<T,N>:: array(const array& other): extent(other.m_extent),
+array<T,N>:: array(const array& other): extent(other.extent),
     accelerator_view_(other.accelerator_view_), m_device(other.m_device) {}
 
 template <typename T, int N>
