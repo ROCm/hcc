@@ -1238,3 +1238,41 @@ namespace concurrency = Concurrency;
 #include "amp_impl.h"
 #include "parallel_for_each.h"
 
+
+namespace Concurrency {
+//container====array_view
+template <typename InputIterator, typename _Value_type>
+void copy(InputIterator _SrcFirst, const array_view<_Value_type, 1> &_Dest) {
+  for(int i = 0; i < _Dest.extent[0]; ++i) {
+    _Dest(i) = *_SrcFirst;
+    _SrcFirst++;
+  }
+}
+
+template <typename OutputIterator, typename _Value_type>
+void copy(const array_view<_Value_type, 1> &_Src, OutputIterator _DestIter) {
+  for(int i = 0; i < _Src.extent[0]; ++i) {
+    *_DestIter = _Src(i);
+    _DestIter++;
+  }
+}
+
+//array=====container
+template <typename OutputIterator, typename _Value_type>
+void copy(const array<_Value_type, 1> &_Src, OutputIterator _DestIter) {
+  for(int i = 0; i < _Src.extent[0]; ++i) {
+    *_DestIter = _Src(i);
+    _DestIter++;
+  }
+}
+
+template <typename InputIterator, typename _Value_type>
+void copy(InputIterator _SrcFirst, array<_Value_type, 1> &_Dest) {
+  for(int i = 0; i < _Dest.extent[0]; ++i) {
+    _Dest(i) = *_SrcFirst;
+    _SrcFirst++;
+  }
+}
+
+}//namespace Concurrency
+
