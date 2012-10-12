@@ -17,7 +17,7 @@ class baz {
     return 45;
   }
 };
-int kerker(void) restrict(amp) {
+int kerker(void) restrict(amp,cpu) {
   baz b1;
   return b1.cho()+b1.bzzt();
 }
