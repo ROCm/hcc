@@ -52,6 +52,14 @@ namespace fast_math {
     #endif
   };
 
+  float log(float x) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_fastmath_log(x);
+    #else
+      return ::logf(x);
+    #endif
+  };
+
   float logf(float x) restrict(amp, cpu) {
     #ifdef __GPU__
       return opencl_fastmath_log(x);
