@@ -1240,38 +1240,157 @@ namespace concurrency = Concurrency;
 
 
 namespace Concurrency {
-//container====array_view
-template <typename InputIterator, typename _Value_type>
-void copy(InputIterator _SrcFirst, const array_view<_Value_type, 1> &_Dest) {
+//std::vector====array_view
+//1D
+template <typename _Value_type>
+void copy(typename std::vector<_Value_type>::iterator _SrcFirst,
+          const array_view<_Value_type, 1> &_Dest) {
   for(int i = 0; i < _Dest.extent[0]; ++i) {
     _Dest(i) = *_SrcFirst;
     _SrcFirst++;
   }
 }
 
-template <typename OutputIterator, typename _Value_type>
-void copy(const array_view<_Value_type, 1> &_Src, OutputIterator _DestIter) {
+template <typename _Value_type>
+void copy(const array_view<_Value_type, 1> &_Src,
+          typename std::vector<_Value_type>::iterator _DestIter) {
   for(int i = 0; i < _Src.extent[0]; ++i) {
     *_DestIter = _Src(i);
     _DestIter++;
   }
 }
 
-//array=====container
-template <typename OutputIterator, typename _Value_type>
-void copy(const array<_Value_type, 1> &_Src, OutputIterator _DestIter) {
+//2D
+template <typename _Value_type>
+void copy(typename std::vector<_Value_type>::iterator _SrcFirst,
+          const array_view<_Value_type, 2> &_Dest) {
+  for(int i = 0; i < _Dest.extent[0]; ++i) {
+    for(int j = 0; j < _Dest.extent[1]; ++j) {
+      _Dest(i, j) = *_SrcFirst;
+      _SrcFirst++;
+    }
+  }
+}
+
+template <typename _Value_type>
+void copy(const array_view<_Value_type, 2> &_Src,
+          typename std::vector<_Value_type>::iterator _DestIter) {
+  for(int i = 0; i < _Src.extent[0]; ++i) {
+    for(int j = 0; j < _Src.extent[1]; ++j) {
+      *_DestIter = _Src(i, j);
+     _DestIter++;
+    }
+  }
+}
+
+//array=====std::vector
+//1D
+template <typename _Value_type>
+void copy(const array<_Value_type, 1> &_Src,
+          typename std::vector<_Value_type>::iterator _DestIter) {
   for(int i = 0; i < _Src.extent[0]; ++i) {
     *_DestIter = _Src(i);
     _DestIter++;
   }
 }
 
-template <typename InputIterator, typename _Value_type>
-void copy(InputIterator _SrcFirst, array<_Value_type, 1> &_Dest) {
+template <typename _Value_type>
+void copy(typename std::vector<_Value_type>::iterator _SrcFirst,
+          array<_Value_type, 1> &_Dest) {
   for(int i = 0; i < _Dest.extent[0]; ++i) {
     _Dest(i) = *_SrcFirst;
     _SrcFirst++;
   }
+}
+//2D
+template <typename _Value_type>
+void copy(const array<_Value_type, 2> &_Src,
+          typename std::vector<_Value_type>::iterator _DestIter) {
+  for(int i = 0; i < _Src.extent[0]; ++i) {
+    for(int j = 0; j < _Src.extent[1]; ++j) {
+      *_DestIter = _Src(i, j);
+      _DestIter++;
+    }
+  } 
+}
+
+template <typename _Value_type>
+void copy(typename std::vector<_Value_type>::iterator _SrcFirst,
+          array<_Value_type, 2> &_Dest) {   
+  for(int i = 0; i < _Dest.extent[0]; ++i) {
+    for(int j = 0; j < _Dest.extent[1]; ++j) {
+      _Dest(i, j) = *_SrcFirst;
+      _SrcFirst++;
+    }
+  }
+}
+//array====array_view
+//1D
+template <typename _Value_type>
+void copy(const array<_Value_type, 1> &_Src,
+          array_view<_Value_type, 1> &_Dest) {
+  for(int i = 0; i < _Dest.extent[0]; ++i)
+    _Dest(i) = _Src(i);
+}
+
+template <typename _Value_type>
+void copy(const array_view<_Value_type, 1> &_Src,
+          array<_Value_type, 1> &_Dest) {
+  for(int i = 0; i < _Src.extent[0]; ++i)
+    _Dest(i) = _Src(i);
+}
+
+//2D
+template <typename _Value_type>
+void copy(const array<_Value_type, 2> &_Src,
+          array_view<_Value_type, 2> &_Dest) {
+  for(int i = 0; i < _Dest.extent[0]; ++i) {
+    for(int j = 0; j < _Dest.extent[1]; ++j) {
+      _Dest(i, j) = _Src(i, j);
+    }
+  }
+}
+
+template <typename _Value_type>
+void copy(const array_view<_Value_type, 2> &_Src,
+          array<_Value_type, 2> &_Dest) {
+  for(int i = 0; i < _Src.extent[0]; ++i)
+    for(int j = 0; j < _Src.extent[1]; ++j)
+      _Dest(i, j) = _Src(i, j);
+}
+
+//array====array
+//1D
+template <typename _Value_type>
+void copy(const array<_Value_type, 1> &_Src, array<_Value_type, 1> &_Dest) {
+  for(int i = 0; i < _Dest.extent[0]; ++i)
+    _Dest(i) = _Src(i);
+}
+
+//2D
+template <typename _Value_type>
+void copy(const array<_Value_type, 2> &_Src, array<_Value_type, 2> &_Dest) {
+  for(int i = 0; i < _Dest.extent[0]; ++i)
+    for(int j = 0; j < _Dest.extent[1]; ++j)
+      _Dest(i, j) = _Src(i, j);  
+}
+
+//array_view====array_view
+//1D
+template <typename _Value_type>
+void copy(const array_view<_Value_type, 1> &_Src,
+          array_view<_Value_type, 1> &_Dest) {
+  for(int i = 0; i < _Dest.extent[0]; ++i)
+    _Dest(i) = _Src(i);
+}
+
+//2D
+template <typename _Value_type>
+void copy(const array_view<_Value_type, 2> &_Src,
+          array_view<_Value_type, 2> &_Dest) {
+  for(int i = 0; i < _Dest.extent[0]; ++i)
+    for(int j = 0; j < _Dest.extent[1]; ++j)
+      _Dest(i, j) = _Src(i, j);
 }
 
 }//namespace Concurrency
