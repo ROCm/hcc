@@ -2375,6 +2375,8 @@ static void FindLocalName(Instruction *I, Value *&LocalValue, Type *&LocalTy) {
         };
       } else if (isa<GetElementPtrInst>(PO)) {
         FindLocalName(dyn_cast<Instruction>(PO), LocalValue, LocalTy);
+      } else if (isa<PHINode>(PO)) {
+	// The sources must have been processed. Do nothing.
       } else {
         assert(0 && "Unhandled type of reference to a local array");
       }
@@ -3541,6 +3543,7 @@ void CWriter::printGEPExpression(Value *Ptr, gep_type_iterator I,
 
   Out << '&';
 
+  bool IsUserDefinedStructOfArray = false;
   // If the first index is 0 (very typical) we can do a number of
   // simplifications to clean up the code.
   Value *FirstOp = I.getOperand();
@@ -3554,17 +3557,15 @@ void CWriter::printGEPExpression(Value *Ptr, gep_type_iterator I,
     // exposed, like a global, avoid emitting (&foo)[0], just emit foo instead.
     if (isAddressExposed(Ptr)) {
       writeOperandInternal(Ptr, Static);
-      // We've wrapped each array with a struct. For globals, we need to
-      // peel it out when addressing the array inside.
-      if ((*I)->isArrayTy()) {
-       Out << ".field0";  // Probably ok
-      }
     } else if (I != E && (*I)->isStructTy()) {
       // If we didn't already emit the first operand, see if we can print it as
       // P->f instead of "P[0].f"
       writeOperand(Ptr);
       Out << "->field" << cast<ConstantInt>(I.getOperand())->getZExtValue();
       ++I;  // eat the struct index as well.
+      if ((*I)->isArrayTy())
+	IsUserDefinedStructOfArray = true;
+
     } else {
       // Instead of emitting P[0][1], emit (*P)[1], which is more idiomatic.
       Out << "(*";
@@ -3575,11 +3576,21 @@ void CWriter::printGEPExpression(Value *Ptr, gep_type_iterator I,
 
   for (; I != E; ++I) {
     if ((*I)->isStructTy()) {
+      // For unnamed arrays that are declared during code gen,
+      // there won't be a GEP that has struct.array access
+      // but for arrays that are enclosed in a user-defined structure,
+      // we will see struct.array in GEP
+      gep_type_iterator J = I;
+      if (++J != E && ((*J)->isArrayTy()))
+	IsUserDefinedStructOfArray = true;
       Out << ".field" << cast<ConstantInt>(I.getOperand())->getZExtValue();
     } else if ((*I)->isArrayTy()) {
+      if (!IsUserDefinedStructOfArray)
+	Out << ".field0";
       Out << ".array[";
       writeOperandWithCast(I.getOperand(), Instruction::GetElementPtr);
       Out << ']';
+      IsUserDefinedStructOfArray = false;
     } else if (!(*I)->isVectorTy()) {
       Out << '[';
       writeOperandWithCast(I.getOperand(), Instruction::GetElementPtr);
