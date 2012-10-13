@@ -2347,6 +2347,40 @@ static inline bool isFPIntBitCast(const Instruction &I) {
          (DstTy->isFloatingPointTy() && SrcTy->isIntegerTy());
 }
 
+static void FindLocalName(Instruction *I, Value *&LocalValue, Type *&LocalTy) {
+  if (!I)
+    return;
+  if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(I)) {
+    if (GEP->getPointerAddressSpace() == 3) { // OpenCL __local?
+      PointerType  *PTy = cast<PointerType>(GEP->getPointerOperandType());
+      LocalTy = PTy->getElementType();
+      LocalValue = I->getOperand(0);
+    }
+  } else if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
+    if (LI->getPointerAddressSpace() == 3) {
+      Value * PO = LI->getPointerOperand();
+      if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(PO)) {
+        switch (CE->getOpcode()) {
+          case Instruction::GetElementPtr:
+            {
+              PointerType  *PTy = cast<PointerType>(
+                  CE->getOperand(0)->getType());
+              LocalTy = PTy->getElementType();
+              LocalValue = CE->getOperand(0);
+            }
+            break;
+          default:
+            assert(0 && "Unhandled type of ConstantExpr in a load");
+        };
+      } else if (isa<GetElementPtrInst>(PO)) {
+        FindLocalName(dyn_cast<Instruction>(PO), LocalValue, LocalTy);
+      } else {
+        assert(0 && "Unhandled type of reference to a local array");
+      }
+    }
+  }
+}
+
 void CWriter::printFunction(Function &F) {
   /// isStructReturn - Should this function actually return a struct by-value?
   bool isStructReturn = F.hasStructRetAttr();
@@ -2391,17 +2425,19 @@ void CWriter::printFunction(Function &F) {
         Out << ";\n";
       }
       PrintedVar = true;
-    } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(&*I)) {
-      if(GEP->getPointerAddressSpace() == 3) { // OpenCL __local?
-        std::string localname = GetValueName(I->getOperand(0));
-        if (PrintedLocal.find(localname) != PrintedLocal.end())
+    }
+    {
+      Type *LocalTy = NULL;
+      Value *LocalValue = NULL;
+      FindLocalName(&*I, LocalValue, LocalTy);
+      if (LocalTy) {
+        std::string LocalName = GetValueName(LocalValue);
+        if (PrintedLocal.find(LocalName) != PrintedLocal.end())
           continue;
         else
-          PrintedLocal.insert(localname);
-        PointerType  *PTy = cast<PointerType>(GEP->getPointerOperandType());
+          PrintedLocal.insert(LocalName);
         Out << "  __local ";
-        printType(Out, PTy->getElementType(), false,
-          GetValueName(I->getOperand(0)));
+        printType(Out, LocalTy, false, LocalName);
         Out << ";\n";
         PrintedVar = true;
       }
