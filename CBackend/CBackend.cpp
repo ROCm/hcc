@@ -1977,12 +1977,12 @@ bool CWriter::doInitialization(Module &M) {
       }
   }
 
-#if 0
   if (!M.empty())
     Out << "\n\n/* Function Bodies */\n";
 
   // Emit some helper functions for dealing with FCMP instruction's
   // predicates
+  Out << "#pragma OPENCL EXTENSION cl_khr_fp64: enable\n";
   Out << "static inline int llvm_fcmp_ord(double X, double Y) { ";
   Out << "return X == X && Y == Y; }\n";
   Out << "static inline int llvm_fcmp_uno(double X, double Y) { ";
@@ -2011,7 +2011,6 @@ bool CWriter::doInitialization(Module &M) {
   Out << "return X <= Y ; }\n";
   Out << "static inline int llvm_fcmp_oge(double X, double Y) { ";
   Out << "return X >= Y ; }\n";
-#endif
 
   // Emit definitions of the intrinsics.
   for (SmallVector<const Function*, 8>::const_iterator
@@ -3561,7 +3560,6 @@ void CWriter::printGEPExpression(Value *Ptr, gep_type_iterator I,
     } else if (I != E && (*I)->isStructTy()) {
       // If we didn't already emit the first operand, see if we can print it as
       // P->f instead of "P[0].f"
-      StructType *STy = dyn_cast<StructType>(*I);
       writeOperand(Ptr);
       Out << "->field" << cast<ConstantInt>(I.getOperand())->getZExtValue();
       ++I;  // eat the struct index as well.
@@ -3602,11 +3600,10 @@ void CWriter::printGEPExpression(Value *Ptr, gep_type_iterator I,
 
 void CWriter::writeMemoryAccess(Value *Operand, Type *OperandType,
                                 bool IsVolatile, unsigned Alignment) {
-
+#if 0
   bool IsUnaligned = Alignment &&
     Alignment < TD->getABITypeAlignment(OperandType);
 
-#if 0
   if (!IsUnaligned)
 #endif
     Out << '*';
