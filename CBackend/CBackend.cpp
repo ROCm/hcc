@@ -584,16 +584,10 @@ raw_ostream &CWriter::printType(raw_ostream &Out, Type *Ty,
     if (NumElements == 0) NumElements = 1;
     // Arrays are wrapped in structs to allow them to have normal
     // value semantics (avoiding the array "decay").
-#if 0
-    Out << NameSoFar << " { ";
-#endif
-    Out<<" ";
+    Out << " struct { ";
     printType(Out, ATy->getElementType(), false,
               "array[" + utostr(NumElements) + "]");
-#if 0
-    return Out << "; }";
-#endif
-    return Out<<" ";
+    return Out << "; }" << NameSoFar << " ";
   }
 
   default:
@@ -1983,12 +1977,12 @@ bool CWriter::doInitialization(Module &M) {
       }
   }
 
-#if 0
   if (!M.empty())
     Out << "\n\n/* Function Bodies */\n";
 
   // Emit some helper functions for dealing with FCMP instruction's
   // predicates
+  Out << "#pragma OPENCL EXTENSION cl_khr_fp64: enable\n";
   Out << "static inline int llvm_fcmp_ord(double X, double Y) { ";
   Out << "return X == X && Y == Y; }\n";
   Out << "static inline int llvm_fcmp_uno(double X, double Y) { ";
@@ -2017,7 +2011,6 @@ bool CWriter::doInitialization(Module &M) {
   Out << "return X <= Y ; }\n";
   Out << "static inline int llvm_fcmp_oge(double X, double Y) { ";
   Out << "return X >= Y ; }\n";
-#endif
 
   // Emit definitions of the intrinsics.
   for (SmallVector<const Function*, 8>::const_iterator
@@ -2353,6 +2346,40 @@ static inline bool isFPIntBitCast(const Instruction &I) {
          (DstTy->isFloatingPointTy() && SrcTy->isIntegerTy());
 }
 
+static void FindLocalName(Instruction *I, Value *&LocalValue, Type *&LocalTy) {
+  if (!I)
+    return;
+  if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(I)) {
+    if (GEP->getPointerAddressSpace() == 3) { // OpenCL __local?
+      PointerType  *PTy = cast<PointerType>(GEP->getPointerOperandType());
+      LocalTy = PTy->getElementType();
+      LocalValue = I->getOperand(0);
+    }
+  } else if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
+    if (LI->getPointerAddressSpace() == 3) {
+      Value * PO = LI->getPointerOperand();
+      if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(PO)) {
+        switch (CE->getOpcode()) {
+          case Instruction::GetElementPtr:
+            {
+              PointerType  *PTy = cast<PointerType>(
+                  CE->getOperand(0)->getType());
+              LocalTy = PTy->getElementType();
+              LocalValue = CE->getOperand(0);
+            }
+            break;
+          default:
+            assert(0 && "Unhandled type of ConstantExpr in a load");
+        };
+      } else if (isa<GetElementPtrInst>(PO)) {
+        FindLocalName(dyn_cast<Instruction>(PO), LocalValue, LocalTy);
+      } else {
+        assert(0 && "Unhandled type of reference to a local array");
+      }
+    }
+  }
+}
+
 void CWriter::printFunction(Function &F) {
   /// isStructReturn - Should this function actually return a struct by-value?
   bool isStructReturn = F.hasStructRetAttr();
@@ -2397,17 +2424,19 @@ void CWriter::printFunction(Function &F) {
         Out << ";\n";
       }
       PrintedVar = true;
-    } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(&*I)) {
-      if(GEP->getPointerAddressSpace() == 3) { // OpenCL __local?
-        std::string localname = GetValueName(I->getOperand(0));
-        if (PrintedLocal.find(localname) != PrintedLocal.end())
+    }
+    {
+      Type *LocalTy = NULL;
+      Value *LocalValue = NULL;
+      FindLocalName(&*I, LocalValue, LocalTy);
+      if (LocalTy) {
+        std::string LocalName = GetValueName(LocalValue);
+        if (PrintedLocal.find(LocalName) != PrintedLocal.end())
           continue;
         else
-          PrintedLocal.insert(localname);
-        PointerType  *PTy = cast<PointerType>(GEP->getPointerOperandType());
+          PrintedLocal.insert(LocalName);
         Out << "  __local ";
-        printType(Out, PTy->getElementType(), false,
-          GetValueName(I->getOperand(0)));
+        printType(Out, LocalTy, false, LocalName);
         Out << ";\n";
         PrintedVar = true;
       }
@@ -3523,18 +3552,16 @@ void CWriter::printGEPExpression(Value *Ptr, gep_type_iterator I,
     // exposed, like a global, avoid emitting (&foo)[0], just emit foo instead.
     if (isAddressExposed(Ptr)) {
       writeOperandInternal(Ptr, Static);
+      // We've wrapped each array with a struct. For globals, we need to
+      // peel it out when addressing the array inside.
+      if ((*I)->isArrayTy()) {
+       Out << ".field0";  // Probably ok
+      }
     } else if (I != E && (*I)->isStructTy()) {
       // If we didn't already emit the first operand, see if we can print it as
       // P->f instead of "P[0].f"
-      StructType *STy = dyn_cast<StructType>(*I);
-      if (STy->getNumElements() == 1) {
-        Out << "(*";
-        writeOperand(Ptr);
-        Out << ")";
-      } else {
-        writeOperand(Ptr);
-        Out << "->field" << cast<ConstantInt>(I.getOperand())->getZExtValue();
-      }
+      writeOperand(Ptr);
+      Out << "->field" << cast<ConstantInt>(I.getOperand())->getZExtValue();
       ++I;  // eat the struct index as well.
     } else {
       // Instead of emitting P[0][1], emit (*P)[1], which is more idiomatic.
@@ -3573,11 +3600,10 @@ void CWriter::printGEPExpression(Value *Ptr, gep_type_iterator I,
 
 void CWriter::writeMemoryAccess(Value *Operand, Type *OperandType,
                                 bool IsVolatile, unsigned Alignment) {
-
+#if 0
   bool IsUnaligned = Alignment &&
     Alignment < TD->getABITypeAlignment(OperandType);
 
-#if 0
   if (!IsUnaligned)
 #endif
     Out << '*';
