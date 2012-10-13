@@ -1982,34 +1982,36 @@ bool CWriter::doInitialization(Module &M) {
 
   // Emit some helper functions for dealing with FCMP instruction's
   // predicates
+#if 0
   Out << "#pragma OPENCL EXTENSION cl_khr_fp64: enable\n";
-  Out << "static inline int llvm_fcmp_ord(double X, double Y) { ";
+#endif
+  Out << "static inline int llvm_fcmp_ord(float X, float Y) { ";
   Out << "return X == X && Y == Y; }\n";
-  Out << "static inline int llvm_fcmp_uno(double X, double Y) { ";
+  Out << "static inline int llvm_fcmp_uno(float X, float Y) { ";
   Out << "return X != X || Y != Y; }\n";
-  Out << "static inline int llvm_fcmp_ueq(double X, double Y) { ";
+  Out << "static inline int llvm_fcmp_ueq(float X, float Y) { ";
   Out << "return X == Y || llvm_fcmp_uno(X, Y); }\n";
-  Out << "static inline int llvm_fcmp_une(double X, double Y) { ";
+  Out << "static inline int llvm_fcmp_une(float X, float Y) { ";
   Out << "return X != Y; }\n";
-  Out << "static inline int llvm_fcmp_ult(double X, double Y) { ";
+  Out << "static inline int llvm_fcmp_ult(float X, float Y) { ";
   Out << "return X <  Y || llvm_fcmp_uno(X, Y); }\n";
-  Out << "static inline int llvm_fcmp_ugt(double X, double Y) { ";
+  Out << "static inline int llvm_fcmp_ugt(float X, float Y) { ";
   Out << "return X >  Y || llvm_fcmp_uno(X, Y); }\n";
-  Out << "static inline int llvm_fcmp_ule(double X, double Y) { ";
+  Out << "static inline int llvm_fcmp_ule(float X, float Y) { ";
   Out << "return X <= Y || llvm_fcmp_uno(X, Y); }\n";
-  Out << "static inline int llvm_fcmp_uge(double X, double Y) { ";
+  Out << "static inline int llvm_fcmp_uge(float X, float Y) { ";
   Out << "return X >= Y || llvm_fcmp_uno(X, Y); }\n";
-  Out << "static inline int llvm_fcmp_oeq(double X, double Y) { ";
+  Out << "static inline int llvm_fcmp_oeq(float X, float Y) { ";
   Out << "return X == Y ; }\n";
-  Out << "static inline int llvm_fcmp_one(double X, double Y) { ";
+  Out << "static inline int llvm_fcmp_one(float X, float Y) { ";
   Out << "return X != Y && llvm_fcmp_ord(X, Y); }\n";
-  Out << "static inline int llvm_fcmp_olt(double X, double Y) { ";
+  Out << "static inline int llvm_fcmp_olt(float X, float Y) { ";
   Out << "return X <  Y ; }\n";
-  Out << "static inline int llvm_fcmp_ogt(double X, double Y) { ";
+  Out << "static inline int llvm_fcmp_ogt(float X, float Y) { ";
   Out << "return X >  Y ; }\n";
-  Out << "static inline int llvm_fcmp_ole(double X, double Y) { ";
+  Out << "static inline int llvm_fcmp_ole(float X, float Y) { ";
   Out << "return X <= Y ; }\n";
-  Out << "static inline int llvm_fcmp_oge(double X, double Y) { ";
+  Out << "static inline int llvm_fcmp_oge(float X, float Y) { ";
   Out << "return X >= Y ; }\n";
 
   // Emit definitions of the intrinsics.
