@@ -15,8 +15,15 @@
 // Specialization of AMP classes/templates
 
 namespace Concurrency {
-//Accelerators
-accelerator::accelerator(void): device_path(L"default") {
+// Accelerators
+accelerator::accelerator(): accelerator(default_accelerator) {}
+
+accelerator::accelerator(const std::wstring& path): device_path(path) {
+  if (path != std::wstring(default_accelerator)) {
+    std::wcerr << L"CLAMP: Warning: the given accelerator is not supported: ";
+    std::wcerr << path << std::endl;
+    return;
+  }
   cl_int error_code;
   error_code = clGetPlatformIDs(1, &platform_, NULL);
   CHECK_ERROR(error_code, "clGetPlatformIDs");
@@ -31,8 +38,24 @@ accelerator::accelerator(void): device_path(L"default") {
   std::copy(s_desc.begin(), s_desc.end(), std::back_inserter(description));
   if (!default_view_)
     default_view_ = new accelerator_view(device_);
-
 }
+
+bool accelerator::operator==(const accelerator& other) const {
+  return device_path == other.device_path;
+}
+bool accelerator::operator!=(const accelerator& other) const {
+  return device_path != other.device_path;
+}
+
+accelerator_view& accelerator::get_default_view() const {
+  return *default_view_;
+}
+
+accelerator_view *accelerator::default_view_ = NULL;
+const wchar_t accelerator::direct3d_ref[] = L"direct3d\\ref";
+const wchar_t accelerator::default_accelerator[] = L"default";
+
+// Accelerator view
 accelerator_view accelerator::create_view(void) {
   accelerator_view sa(device_);
   return sa;
@@ -63,8 +86,6 @@ accelerator_view::accelerator_view(cl_device_id d):
   CHECK_ERROR(error_code, "clCreateCommandQueue");
 }
 
-accelerator_view& accelerator::get_default_view() const { return *default_view_; }
-accelerator_view *accelerator::default_view_ = NULL;
 
 /// Concurrency::extent
 template<int N>
