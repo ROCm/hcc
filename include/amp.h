@@ -174,38 +174,39 @@ public:
 
   typedef int value_type;
 
-  index() restrict(amp,cpu) {
-    for (int i = 0; i < N; i++)
-      m_internal[i] = 0;
-  }
+  index() restrict(amp,cpu):index(0, 0, 0) {}
 
-  index(const index& other) restrict(amp,cpu) {
-    for (int i = 0; i < N; i++)
-      m_internal[i] = other.m_internal[i];
-  }
+  index(const index& other) restrict(amp,cpu):
+    i0_(other.i0_), i1_(other.i1_), i2_(other.i2_) {}
 
-  explicit index(int i0) restrict(amp,cpu) { // N==1
-    m_internal[0] = i0;
-  }
+  explicit index(int i0) restrict(amp,cpu):index(i0, 0, 0) {} // N==1
 
-  index(int i0, int i1) restrict(amp,cpu) { // N==2
-    m_internal[0] = i0;
-    if (N==2)
-      m_internal[1] = i1;
-  }
+  index(int i0, int i1) restrict(amp,cpu):index(i0, i1, 0) {} // N==2
 
-  index(int i0, int i1, int i2) restrict(amp,cpu); // N==3
+  __attribute__((annotate("deserialize")))
+  index(int i0, int i1, int i2) restrict(amp,cpu):
+    i0_(i0), i1_(i1), i2_(i2) {}
 
   explicit index(const int components[]) restrict(amp,cpu);
 
   index& operator=(const index& other) restrict(amp,cpu);
 
   int operator[](unsigned int c) const restrict(amp,cpu) {
-    return m_internal[c];
+    if (c==0)
+      return i0_;
+    else if (c==1)
+      return i1_;
+    else
+      return i2_;
   }
 
   int& operator[](unsigned int c) restrict(amp,cpu) {
-    return m_internal[c];
+    if (c==0)
+      return i0_;
+    else if (c==1)
+      return i1_;
+    else
+      return i2_;
   }
   
   index& operator+=(const index& rhs) restrict(amp,cpu);
@@ -219,13 +220,13 @@ public:
   
   index& operator++() restrict(amp,cpu) {
     //FIXME extent?
-    m_internal[0]++;
+    i0_++;
     return *this;
   }
   index operator++(int) restrict(amp,cpu) {
     //FIXME extent?
     index ret = *this;
-    m_internal[0]++;
+    i0_++;
     return ret;
   }
   index& operator--() restrict(amp,cpu);
@@ -239,17 +240,21 @@ public:
 #ifdef __GPU__
   {
     if (rank == 1) {
-      m_internal[0] = get_global_id(0);
+      i0_ = get_global_id(0);
     } else if (rank == 2) {
-      m_internal[0] = get_global_id(1);
-      m_internal[1] = get_global_id(0);
+      i0_ = get_global_id(1);
+      i1_ = get_global_id(0);
+    } else {
+      i0_ = get_global_id(2);
+      i1_ = get_global_id(1);
+      i2_ = get_global_id(0);
     }
   }
 #else
   ;
 #endif // __GPU__
   //End CLAMP
-  int m_internal[N]; // Store the data 
+  int i0_, i1_, i2_;
 };
 
 // C++AMP LPM 4.5
@@ -387,7 +392,7 @@ class tiled_index<D0, 0, 0> {
  private:
   //CLAMP
   __attribute__((annotate("__cxxamp_opencl_index")))
-  tiled_index() restrict(amp)
+  __attribute__((always_inline)) tiled_index() restrict(amp)
 #ifdef __GPU__
   : global(index<1>(get_global_id(0))),
     local(index<1>(get_local_id(0))),
@@ -418,7 +423,7 @@ class tiled_index<D0, D1, 0> {
  private:
   //CLAMP
   __attribute__((annotate("__cxxamp_opencl_index")))
-  tiled_index() restrict(amp)
+  __attribute__((always_inline)) tiled_index() restrict(amp)
 #ifdef __GPU__
   : global(index<2>(get_global_id(1), get_global_id(0))),
     local(index<2>(get_local_id(1), get_local_id(0))),
