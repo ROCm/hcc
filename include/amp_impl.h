@@ -106,21 +106,16 @@ inline bool operator!=(const extent<3>& lhs, const extent<3>& rhs) restrict(amp,
 #ifndef __GPU__
 /// Concurrency::array constructors that are only defined for the host
 template <typename T, int N>
-array<T, N>::array(int e0, accelerator_view av):
-  extent(e0), accelerator_view_(av) {
+array<T, N>::array(int e0, int e1, accelerator_view av):
+  extent(Concurrency::extent<N>(e0, e1)), accelerator_view_(av) {
   m_device.reset(GMACAllocator<T>().allocate(e0), GMACDeleter<T>());
 }
 
 template <typename T, int N>
 array<T, N>::array(const Concurrency::extent<N>& ext): extent(ext),
   m_device(nullptr), accelerator_view_(accelerator().get_default_view()) {
-  size_t sz = ext[0];
-  if (rank == 2) {
-    e1_ = ext[1];
-    sz *= e1_;
-  }
-  if (sz) {
-    m_device.reset(GMACAllocator<T>().allocate(sz),
+  if (ext.size()) {
+    m_device.reset(GMACAllocator<T>().allocate(ext.size()),
 	GMACDeleter<T>());
   }
 }
@@ -133,7 +128,10 @@ template <typename T, int N>
 __attribute__((annotate("serialize")))
 void array<T, N>::__cxxamp_serialize(Serialize& s) const {
   m_device.__cxxamp_serialize(s);
-  s.Append(sizeof(cl_int), &e1_);
+  Concurrency::extent<N> ex(extent);
+  s.Append(sizeof(cl_int), &ex[0]);
+  s.Append(sizeof(cl_int), &ex[1]);
+  s.Append(sizeof(cl_int), &ex[2]);
 }
 
 // 1D array constructors
@@ -168,7 +166,8 @@ void array<T, 1>::__cxxamp_serialize(Serialize& s) const {
 /// for the GPU
 template <typename T, int N>
 __attribute__((annotate("deserialize"))) 
-array<T, N>::array(__global T *p, cl_int e) restrict(amp): m_device(p), e1_(e) {}
+array<T, N>::array(__global T *p, cl_int e0, cl_int e1, cl_int e2)
+  restrict(amp): extent(e0, e1, e2), m_device(p) {}
 
 template <typename T>
 __attribute__((annotate("deserialize"))) 

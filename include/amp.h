@@ -357,7 +357,8 @@ public:
   extent operator--(int) restrict(amp,cpu);
 
 private:
-  int e0_,e1_,e2_, dummy; // Store the data
+  int e0_,e1_,e2_; // Store the data
+  char dummy_;
 };
 
 // C++AMP LPM 4.4.1
@@ -575,15 +576,24 @@ public:
 
   explicit array(int e0): array(extent<1>(e0)) {}
 
-  explicit array(int e0, int e1);
+  explicit array(int e0, int e1): 
+    array(Concurrency::extent<N>(e0, e1)) {
+      assert(N == 2 && "For constructing array<T, 2> only");
+    }
 
-  explicit array(int e0, int e1, int e2);
+  explicit array(int e0, int e1, int e2) {
+    assert(0 && "Not Implemented Yet.");
+  }
 
-  array(int e0, accelerator_view av);
+  array(int e0, accelerator_view av) {
+    assert(0 && "Only applicable to array<T, 1>");
+  }
 
   array(int e0, int e1, accelerator_view av);
 
-  array(int e0, int e1, int e2, accelerator_view av);
+  array(int e0, int e1, int e2, accelerator_view av) {
+    assert(0 && "Not Implemented Yet.");
+  }
 
   array(const extent<N>& extent, accelerator_view av, accelerator_view associated_av); //staging
 
@@ -594,7 +604,8 @@ public:
   array(int e0, int e1, int e2, accelerator_view av, accelerator_view associated_av); //staging
 
   template <typename InputIterator>
-  array(const extent<N>& extent, InputIterator srcBegin);
+    array(const extent<N>& ext, InputIterator srcBegin):
+	array(ext, srcBegin, accelerator().get_default_view()) {}
 
   template <typename InputIterator>
   array(const extent<N>& extent, InputIterator srcBegin, InputIterator srcEnd);
@@ -616,7 +627,10 @@ public:
   array(int e0, InputIterator srcBegin, InputIterator srcEnd);
 
   template <typename InputIterator>
-  array(int e0, int e1, InputIterator srcBegin);
+  array(int e0, int e1, InputIterator srcBegin):
+    array(Concurrency::extent<N>(e0, e1), srcBegin) {
+      assert(N == 2 && "For constructing array<T, 2> only");
+    }
 
   template <typename InputIterator>
   array(int e0, int e1, InputIterator srcBegin, InputIterator srcEnd);
@@ -660,7 +674,21 @@ public:
   accelerator_view av, accelerator_view associated_av); // staging
 
   template <typename InputIterator>
-  array(const extent<N>& extent, InputIterator srcBegin, accelerator_view av);
+  array(const extent<N>& ext, InputIterator srcBegin, accelerator_view av)
+    : extent(ext), m_device(nullptr)
+#ifdef __GPU__
+    { assert(0 && "Unrechable"); }
+#else
+    , accelerator_view_(av) {
+    if (ext.size()) {
+      m_device.reset(GMACAllocator<T>().allocate(ext.size()),
+        GMACDeleter<T>());
+      InputIterator srcEnd = srcBegin;
+      std::advance(srcEnd, extent.size());
+      std::copy(srcBegin, srcEnd, m_device.get());
+    }
+  }
+#endif
 
   template <typename InputIterator>
   array(int e0, InputIterator SrcBegin, accelerator_view av);
@@ -682,9 +710,26 @@ public:
   array(int e0, int e1, InputIterator srcBegin, InputIterator srcEnd, accelerator_view av);
 
   template <typename InputIterator>
-  array(int e0, int e1, int e2, InputIterator srcBegin, InputIterator srcEnd, accelerator_view av);
+  array(int e0, int e1, int e2, InputIterator srcBegin, InputIterator srcEnd, accelerator_view av) {
+    assert(0 && "Not Implemented Yet.");
+  }
 
-  explicit array(const array_view<const T,N>& src);
+
+  explicit array(const array_view<const T,N>& src):
+    array(src.extent) {
+      memmove(const_cast<void*>(reinterpret_cast<const void*>(m_device.get())),
+	  reinterpret_cast<const void*>(src.cache_.get()),
+	  extent.size() * sizeof(T));
+    }
+
+  // Not really in C++AMP spec 1.0, but required by samples
+  explicit array(const array_view<T,N>& src):
+    array(src.extent) {
+      memmove(const_cast<void*>(reinterpret_cast<const void*>(m_device.get())),
+	  reinterpret_cast<const void*>(src.cache_.get()),
+	  extent.size() * sizeof(T));
+    }
+
 
   array(const array_view<const T,N>& src,
 
@@ -725,14 +770,14 @@ public:
       return reinterpret_cast<__global T*>(m_device.get())[idx[0]];
     else if (rank == 2)
       return reinterpret_cast<__global T*>(m_device.get())
-	[idx[0] * e1_ + idx[1]];
+	[idx[0] * extent[1] + idx[1]];
   }
   __global const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
     if (rank == 1)
       return reinterpret_cast<__global T*>(m_device.get())[idx[0]];
     else if (rank == 2)
       return reinterpret_cast<__global T*>(m_device.get())
-	[idx[0] * e1_ + idx[1]];
+	[idx[0] * extent[1] + idx[1]];
   }
 
   auto operator[](int i) restrict(amp,cpu) -> decltype(array_projection_helper<T, N>::project((array<T,N> *)NULL, i));
@@ -796,7 +841,11 @@ public:
     array_view<const T,K> view_as(const Concurrency::extent<K>& viewExtent)
     const restrict(amp,cpu);
 
-  operator std::vector<T>() const;
+  operator std::vector<T>() const {
+    T *begin = reinterpret_cast<T*>(m_device.get()),
+      *end = reinterpret_cast<T*>(m_device.get()+extent.size());
+    return std::vector<T>(begin, end);
+  }
 
   T* data() restrict(amp,cpu) {
     return m_device.get();
@@ -817,14 +866,13 @@ public:
   void __cxxamp_serialize(Serialize& s) const;
 
   __attribute__((annotate("deserialize"))) 
-  array(__global T *p, cl_int e) restrict(amp);
+  array(__global T *p, cl_int e0, cl_int e1, cl_int e2) restrict(amp);
   // End CLAMP
 private:
 #ifndef __GPU__
   accelerator_view accelerator_view_;
 #endif
   gmac_buffer_t m_device;
-  cl_int e1_;
 };
 
 template <typename T>
@@ -1059,7 +1107,7 @@ class array<T, 1> {
     m_device.reset();
   }
 
-  const gmac_buffer_t& internal() const { return m_device; }
+  const gmac_buffer_t& internal() const restrict(amp, cpu) { return m_device; }
 
   // CLAMP: The serialization interface
   __attribute__((annotate("serialize")))

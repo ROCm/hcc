@@ -259,8 +259,9 @@ class array_view<T, 2>
     assert(p_);
     assert(extent[1] == s1_ && "Only support non-sectioned view");
     assert(offset_ == 0 && "Only support non-sectioned view");
-    memmove(reinterpret_cast<void*>(p_),
-            reinterpret_cast<void*>(cache_.get()), extent.size() * sizeof(T));
+    memmove(const_cast<void*>(reinterpret_cast<const void*>(p_)),
+            reinterpret_cast<const void*>(cache_.get()),
+	      extent.size() * sizeof(T));
 #endif
   }
 
@@ -285,6 +286,7 @@ class array_view<T, 2>
     const gmac_buffer_t &cache, cl_uint offset) restrict(amp,cpu):
   array_view(ext[0], ext[1], ext[1], offset, p, cache) {}
  private:
+  template<typename, int> friend class array;
   //Used only by projection and section
   array_view(cl_int e0, cl_int e1, cl_int s1, cl_uint offset, 
     __global T*p, const gmac_buffer_t &cache) restrict(amp,cpu):
@@ -360,8 +362,8 @@ void array_view<T, 2>::refresh() const {
   assert(p_);
   assert(extent[1] == s1_ && "Only support non-sectioned view");
   assert(offset_ == 0 && "Only support non-sectioned view");
-  memmove(reinterpret_cast<void*>(cache_.get()),
-      reinterpret_cast<void*>(p_), extent.size() * sizeof(T));
+  memmove(const_cast<void*>(reinterpret_cast<const void*>(cache_.get())),
+      reinterpret_cast<const void*>(p_), extent.size() * sizeof(T));
 }
 
 template <typename T>
