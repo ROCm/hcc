@@ -337,6 +337,10 @@ public:
   friend inline bool operator!=(const extent<N>& lhs, const extent<N>& rhs)
     restrict(amp,cpu);
 
+  template <int M>
+    friend extent<M> operator-(const extent<M> &lhs, const extent<M> &rhs)
+    restrict(amp, cpu);
+
   extent operator+(const index<N>& idx) restrict(amp,cpu);
 
   extent operator-(const index<N>& idx) restrict(amp,cpu);

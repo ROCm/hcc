@@ -67,6 +67,18 @@ accelerator_view& accelerator::get_default_view() const { return *default_view_;
 accelerator_view *accelerator::default_view_ = NULL;
 
 /// Concurrency::extent
+template<int N>
+extent<N> operator-(const extent<N> &lhs, const extent<N> &rhs)
+  restrict(amp, cpu) {
+    extent<N> i;
+    i[0] = lhs[0] - rhs[0];
+    if (N>1)
+      i[1] = lhs[1] - rhs[1];
+    if (N>2)
+      i[2] = lhs[2] - rhs[2];
+    return i;
+  }
+
 
 inline bool operator==(const extent<1>& lhs, const extent<1>& rhs) restrict(amp,cpu) {
   return (lhs[0] == rhs[0]);
