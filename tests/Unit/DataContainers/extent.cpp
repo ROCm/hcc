@@ -26,6 +26,17 @@ TEST(ClassExtent, Extent2D) {
   EXPECT_EQ(n1, ext[1]);
 }
 
+TEST(ClassExtent, Extent2DSub) {
+  int n0 = N0;
+  int n1 = N1;
+  Concurrency::extent<2> ext(n0, n1);
+  Concurrency::extent<2> sub(1, 1);
+  Concurrency::extent<2> ext2 = ext - sub;
+
+  EXPECT_EQ(n0-1, ext2[0]);
+  EXPECT_EQ(n1-1, ext2[1]);
+}
+
 TEST(ClassExtent, Extent3D) {
   int n0 = N0;
   int n1 = N1;
