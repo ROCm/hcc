@@ -314,8 +314,8 @@ void array_view<T, 1>::synchronize() const {
   assert(cache_);
   assert(p_);
   assert(offset_ == 0 && "Does not support views created with offsets");
-  memmove(reinterpret_cast<void*>(p_),
-      reinterpret_cast<void*>(cache_.get()), extent.size() * sizeof(T));
+  memmove(const_cast<void*>(reinterpret_cast<const void*>(p_)),
+      reinterpret_cast<const void*>(cache_.get()), extent.size() * sizeof(T));
 }
 
 template <typename T>
@@ -333,8 +333,8 @@ void array_view<T, 1>::refresh() const {
   assert(cache_);
   assert(p_);
   assert(offset_ == 0 && "Does not support views created with offsets");
-  memmove(reinterpret_cast<void*>(cache_.get()),
-      reinterpret_cast<void*>(p_), extent.size() * sizeof(T));
+  memmove(const_cast<void*>(reinterpret_cast<const void*>(cache_.get())),
+      reinterpret_cast<const void*>(p_), extent.size() * sizeof(T));
 }
 
 template <typename T>
