@@ -302,6 +302,7 @@ public:
   extent(int e0, int e1) restrict(amp,cpu):
     extent(e0, e1, 0) {} // N==2
 
+  __attribute__((annotate("deserialize"))) 
   extent(int e0, int e1, int e2) restrict(amp,cpu):
     e0_(e0), e1_(e1), e2_(e2) {} // N==3
 
@@ -367,9 +368,15 @@ public:
   extent& operator--() restrict(amp,cpu);
   extent operator--(int) restrict(amp,cpu);
 
+  __attribute__((annotate("serialize")))
+  void __cxxamp_serialize(Serialize& s) const {
+    s.Append(sizeof(cl_int), &e0_);
+    s.Append(sizeof(cl_int), &e1_);
+    s.Append(sizeof(cl_int), &e2_);
+  }
+
 private:
-  int e0_,e1_,e2_; // Store the data
-  char dummy_;
+  cl_int e0_, e1_, e2_; // Store the data
 };
 
 // C++AMP LPM 4.4.1

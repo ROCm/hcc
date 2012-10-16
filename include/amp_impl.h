@@ -159,10 +159,7 @@ template <typename T, int N>
 __attribute__((annotate("serialize")))
 void array<T, N>::__cxxamp_serialize(Serialize& s) const {
   m_device.__cxxamp_serialize(s);
-  Concurrency::extent<N> ex(extent);
-  s.Append(sizeof(cl_int), &ex[0]);
-  s.Append(sizeof(cl_int), &ex[1]);
-  s.Append(sizeof(cl_int), &ex[2]);
+  extent.__cxxamp_serialize(s);
 }
 
 // 1D array constructors
