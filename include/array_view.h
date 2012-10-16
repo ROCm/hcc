@@ -131,13 +131,13 @@ public:
   // End CLAMP
   
   //TODO: move to private; used only by projection
-  array_view(__global T *p, Concurrency::extent<1> ext, 
+  array_view(T *p, Concurrency::extent<1> ext, 
     const gmac_buffer_t &cache, cl_uint offset) restrict(amp,cpu):
     extent(ext), p_(p), cache_(cache), offset_(offset) {}
 
  private:
-  // Holding user pointer in CPU mode; null if in device mode
-  __global T *p_;
+  // Holding user pointer in host address space
+  T *p_;
   // Cached value if initialized with a user ptr;
   // GMAC array pointer if initialized with a Concurrency::array
   gmac_buffer_t cache_;
@@ -235,7 +235,7 @@ class array_view<T, 2>
   }
 
   array_view<T, 2> section(const index<2>& idx, const Concurrency::extent<2>& ext)
-    restrict(amp,cpu) {
+    const restrict(amp,cpu) {
     return section(idx[0], idx[1], ext[0], ext[1]);
   }
 
@@ -272,33 +272,32 @@ class array_view<T, 2>
 
   void refresh() const;
 
-  void discard_data() const;
+  void discard_data() const {}
 
   // CLAMP: The serialization interface
   __attribute__((annotate("serialize")))
   void __cxxamp_serialize(Serialize& s) const;
 
   __attribute__((annotate("deserialize")))
-  array_view(cl_int e0, cl_int e1, cl_int s1_, cl_uint offset, __global T *p) restrict(amp);
+  array_view(cl_int e0, cl_int e1, cl_int s1_, cl_uint offset, __global T *p)
+    restrict(amp);
   // End CLAMP
   //Used only by view_as
-  array_view(__global T *p, Concurrency::extent<2> ext, 
+  array_view(T *p, Concurrency::extent<2> ext, 
     const gmac_buffer_t &cache, cl_uint offset) restrict(amp,cpu):
   array_view(ext[0], ext[1], ext[1], offset, p, cache) {}
  private:
   template<typename, int> friend class array;
   //Used only by projection and section
   array_view(cl_int e0, cl_int e1, cl_int s1, cl_uint offset, 
-    __global T*p, const gmac_buffer_t &cache) restrict(amp,cpu):
-    extent(e0, e1), s1_(s1), offset_(offset),
-    p_(p), cache_(cache) {}
+    T*p, const gmac_buffer_t &cache) restrict(amp,cpu):
+    extent(e0, e1), s1_(s1), offset_(offset), p_(p), cache_(cache) {}
   // Strides for flattening. == e1_ if not constructed by sectioning another view
   cl_int s1_;
   // Offset of this view regarding to the base of cache.
   cl_uint offset_;
-  // Holding user pointer in CPU mode; holding device pointer in GPU mode
-  __global T *p_;
-
+  // Holding user pointer in host addressing space
+  T* p_;
   // Cached value if initialized with a user ptr;
   // GMAC array pointer if initialized with a Concurrency::array
   // Note: does not count for deserialization due to the attribute
@@ -322,7 +321,7 @@ template <typename T>
 array_view<T, 1>::array_view(const Concurrency::extent<1>& ext,
   value_type* src) 
   restrict(amp,cpu): extent(ext),
-    p_(reinterpret_cast<__global T*>(src)), cache_(nullptr), offset_(0) {
+    p_(src), cache_(nullptr), offset_(0) {
     cache_.reset(GMACAllocator<T>().allocate(ext.size()),
       GMACDeleter<T>());
     refresh();
@@ -349,8 +348,7 @@ void array_view<T, 1>::__cxxamp_serialize(Serialize& s) const {
 template <typename T>
 array_view<T, 2>::array_view(const Concurrency::extent<2>& ext,
   value_type* src) restrict(amp,cpu): extent(ext),
-    s1_(ext[1]), offset_(0),
-    p_(reinterpret_cast<__global T*>(src)) {
+    s1_(ext[1]), offset_(0), p_(src) {
     cache_.reset(GMACAllocator<T>().allocate(ext.size()),
       GMACDeleter<T>());
     refresh();
