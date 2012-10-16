@@ -47,3 +47,13 @@ TEST(ClassExtent, Extent3D) {
   EXPECT_EQ(n1, ext[1]);
   EXPECT_EQ(n2, ext[2]);
 }
+
+TEST(ClassExtent, ExtentContains) {
+  Concurrency::index<2> i(1234, 5678);
+  Concurrency::index<2> j(5000, 1234);
+  Concurrency::index<2> k(4999, 6001);
+  Concurrency::extent<2> foo(5000, 6000);
+  EXPECT_EQ(true, foo.contains(i));
+  EXPECT_EQ(false, foo.contains(j));
+  EXPECT_EQ(false, foo.contains(k));
+}
