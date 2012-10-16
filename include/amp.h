@@ -209,6 +209,9 @@ public:
       return i2_;
   }
   
+  template <int M>
+    friend index<M> operator+(const index<N> &lhs,
+      const index<N> &rhs) restrict(amp, cpu);
   index& operator+=(const index& rhs) restrict(amp,cpu);
   index& operator-=(const index& rhs) restrict(amp,cpu);
   
@@ -329,7 +332,10 @@ public:
   }
 
   bool contains(const index<N>& idx) const restrict(amp,cpu) {
-    assert(0 && "Not supported yet");
+    bool c = idx[0] < e0_;
+    if (rank > 1) c = ( c && (idx[1] < e1_ ));
+    if (rank > 2) c = ( c && (idx[2] < e2_ ));
+    return c;
   }
 
   template <int D0> tiled_extent<D0> tile() const;

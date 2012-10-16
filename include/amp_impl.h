@@ -60,6 +60,16 @@ accelerator_view accelerator::create_view(void) {
   accelerator_view sa(device_);
   return sa;
 }
+// Concurrency::index
+template <int N>
+index<N> operator+(const index<N> &lhs, const index<N> &rhs)
+  restrict(amp, cpu) {
+  index<N> x(lhs);
+  x[0] += rhs[0];
+  if (N > 1) x[1] += rhs[1];
+  if (N > 2) x[2] += rhs[2];
+  return  x;
+}
 
 accelerator_view::accelerator_view(const accelerator_view &v):
   device_(v.device_), context_(v.context_),
