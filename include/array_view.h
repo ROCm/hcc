@@ -249,19 +249,26 @@ class array_view<T, 2>
   }
 
   array_view<T, 2> section(int i0, int i1, int e0, int e1) const restrict(amp,cpu) {
-    array_view<T, 2> av(e0, e1, /*stride*/ extent[1],
-      /*offset*/i0*extent[1]+i1, p_, cache_);
+    array_view<T, 2> av(e0, e1, /*stride*/ s1_,
+      /*offset*/offset_+i0*s1_+i1, p_, cache_);
     return av;
   }
   void synchronize() const {
 #ifndef __GPU__
     assert(cache_);
     assert(p_);
-    assert(extent[1] == s1_ && "Only support non-sectioned view");
-    assert(offset_ == 0 && "Only support non-sectioned view");
-    memmove(const_cast<void*>(reinterpret_cast<const void*>(p_)),
-            reinterpret_cast<const void*>(cache_.get()),
-	      extent.size() * sizeof(T));
+    if (extent[1] == s1_ && offset_ == 0) {
+      memmove(const_cast<void*>(reinterpret_cast<const void*>(p_)),
+          reinterpret_cast<const void*>(cache_.get()),
+          extent.size() * sizeof(T));
+    } else {
+      for (int i = 0; i < extent[0]; i++) {
+        memmove(
+          const_cast<void*>(reinterpret_cast<const void*>(&p_[offset_+i*s1_])),
+          reinterpret_cast<const void*>(&(cache_.get()[offset_+i*s1_])),
+          extent[1] * sizeof(T));
+      }
+    }
 #endif
   }
 
