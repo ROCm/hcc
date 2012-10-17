@@ -12,7 +12,7 @@
 
 void init2D(std::vector<int>& vec) {
   for (int i = 0; i < N0; ++i) {
-    for (int j = 0; i < N1; ++j) {
+    for (int j = 0; j < N1; ++j) {
       vec.push_back(100.0f* rand() / (float)RAND_MAX);
     }
   }
@@ -80,4 +80,16 @@ TEST(ClassArray2D, Section) {
     av1.section(Concurrency::index<2>(3,4),
                 section_ext);
   EXPECT_EQ(6, av4(2, 6));
+}
+TEST(ClassArray2D, Sync) {
+  Concurrency::extent<2> ext(N0, N1);
+  std::vector<int> vec(N0*N1);
+  init2D(vec);
+  Concurrency::array_view<int, 2> av1(ext, vec);
+  Concurrency::array_view<int, 2> av2 =
+    av1.section(Concurrency::index<2>(3,4));
+  EXPECT_EQ(av1(5, 10), av2(2, 6));
+  av2(3, 7) = 1234; // = vec(6, 11)
+  av2.synchronize();
+  EXPECT_EQ(vec[6*N1+11], 1234);
 }
