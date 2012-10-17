@@ -17,7 +17,6 @@ int main() {
     av[idx] +=1 ;
   });
 
-  av.refresh();
   parallel_for_each(av.extent, [=](index<1> idx) restrict(amp) {
     av[idx] += 10;
   });
