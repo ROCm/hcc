@@ -1877,7 +1877,7 @@ bool CWriter::doInitialization(Module &M) {
 
     //Out << ";\n";
   }
-
+#if 0
   // Output the global variable declarations
   if (!M.global_empty()) {
     Out << "\n\n/* Global Variable Declarations */\n";
@@ -1913,7 +1913,7 @@ bool CWriter::doInitialization(Module &M) {
         Out << ";\n";
       }
   }
-
+#endif
   // Output the global variable definitions and contents...
   if (!M.global_empty()) {
     Out << "\n\n/* Global Variable Definitions and Initialization */\n";
@@ -1924,9 +1924,12 @@ bool CWriter::doInitialization(Module &M) {
         if (getGlobalVariableClass(I))
           continue;
 
-        if (I->hasLocalLinkage())
-          Out << "static struct ";
-        else if (I->hasDLLImportLinkage())
+        if (I->hasLocalLinkage()) { 
+          if (!I->isConstant())
+            Out << "static struct ";
+          else
+            Out << "__constant struct ";
+        } else if (I->hasDLLImportLinkage())
           Out << "__declspec(dllimport) ";
         else if (I->hasDLLExportLinkage())
           Out << "__declspec(dllexport) ";

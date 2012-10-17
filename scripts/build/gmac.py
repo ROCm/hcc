@@ -15,12 +15,17 @@ def build(target, inc_dir, lib_dir, prefix):
   # ./configure
   if sys.platform.find('linux') != -1: # linux
     os.chdir(target)
-    os.system("./configure --enable-installer --enable-opencl --with-opencl-include=%s --with-opencl-library=%s --enable-tests --prefix=%s" % (inc_dir, lib_dir, prefix)) 
+    os.system("./configure --enable-installer --enable-opencl --with-opencl-include=%s --with-opencl-library=%s --enable-tests --enable-debug --prefix=%s" % (inc_dir, lib_dir, prefix)) 
     os.system("make")
   else:
     print "Error: not supported platform."
     sys.exit(1)
   pass
+
+def patch(target):
+  os.chdir(target)
+  print "Patching GMAC"
+  os.system("patch -Np1 < %s/../scripts/build/gmac.patch" % target)
 
 def test():
   result = os.system("./oclVecAdd")
@@ -30,6 +35,7 @@ def test():
 
 def run(url, target, inc_dir, lib_dir, prefix):
   download(url, target)
+  patch(target)
   build(target, inc_dir, lib_dir, prefix)
   test()
 

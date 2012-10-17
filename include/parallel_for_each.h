@@ -6,7 +6,6 @@
 #include <cassert>
 #include <amp.h>
 #define __global __attribute__((address_space(1)))
-#define SERIALIZE __cxxamp_serialize
 
 namespace Concurrency {
 static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu,amp) {
@@ -38,35 +37,27 @@ static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu,amp) {
     }
     return out;
 }
+static bool __mcw_cxxamp_compiled = false;
 
 extern "C" char * kernel_source_[] asm ("_binary_kernel_cl_start");
 extern "C" char * kernel_size_[] asm ("_binary_kernel_cl_size");
 template<typename Kernel, int dim_ext>
 static inline void mcw_cxxamp_launch_kernel(size_t *ext,
   size_t *local_size, const Kernel& f) restrict(cpu,amp) {
-  cl_int error_code;
+  ecl_error error_code;
   accelerator def;
   accelerator_view accel_view = def.get_default_view();
-  size_t kernel_size = (size_t)((void *)kernel_size_);
-  char *kernel_source = (char*)malloc(kernel_size+1);
-  memcpy(kernel_source, kernel_source_, kernel_size);
-  kernel_source[kernel_size] = '\0';
-  const char *ks = kernel_source;
-  cl_program program =
-    clCreateProgramWithSource(
-      accel_view.clamp_get_context(), 1, &ks,
-	NULL, &error_code);
-  CHECK_ERROR(error_code, "clCreateProgramWithSource");
-  error_code = clBuildProgram(program, 1, &accel_view.clamp_get_device(),
-      "-D__ATTRIBUTE_WEAK__=", NULL, NULL);
-  // CHECK_ERROR(error_code, "clBuildProgram");
-  if (error_code != CL_SUCCESS) {
-    char buf[65536] = { '\0', };
-    clGetProgramBuildInfo(program,
-      accel_view.clamp_get_device(), CL_PROGRAM_BUILD_LOG, 65536,
-        buf, NULL);
-    printf ("%s\n", buf);
-    return;
+
+  if ( !__mcw_cxxamp_compiled ) {
+    size_t kernel_size = (size_t)((void *)kernel_size_);
+    char *kernel_source = (char*)malloc(kernel_size+1);
+    memcpy(kernel_source, kernel_source_, kernel_size);
+    kernel_source[kernel_size] = '\0';
+    const char *ks = kernel_source;
+    error_code = eclCompileSource(ks, "-D__ATTRIBUTE_WEAK__=");
+    CHECK_ERROR_GMAC(error_code, "eclCompileSource");
+    __mcw_cxxamp_compiled = true;
+    free(kernel_source);
   }
   //Invoke Kernel::__cxxamp_trampoline as an OpenCL kernel
   //to ensure functor has right operator() defined
@@ -77,19 +68,15 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
 #if 0
   std::cerr << "Kernel name = "<< transformed_kernel_name <<"\n";
 #endif
-  cl_kernel kernel = clCreateKernel(program,
-      transformed_kernel_name.c_str(), &error_code);
-  CHECK_ERROR(error_code, "clCreateKernel");
-  Concurrency::Serialize s(accel_view.clamp_get_context(), kernel);
-  f.SERIALIZE(s);
-  error_code = clEnqueueNDRangeKernel(accel_view.clamp_get_command_queue(),
-      kernel, dim_ext, NULL,
-      ext, local_size, 0, NULL, NULL);
-  CHECK_ERROR(error_code, "clEnqueueNDRangeKernel");
-  error_code = clFinish(accel_view.clamp_get_command_queue());
-  CHECK_ERROR(error_code, "clFinish");
-  clReleaseKernel(kernel);
-  clReleaseProgram(program);
+  ecl_kernel kernel;
+  error_code = eclGetKernel(transformed_kernel_name.c_str(), &kernel);
+  CHECK_ERROR_GMAC(error_code, "eclGetKernel");
+  Concurrency::Serialize s(kernel);
+  f.__cxxamp_serialize(s);
+  error_code = eclCallNDRange(kernel, dim_ext, NULL,
+      ext, local_size);
+  CHECK_ERROR_GMAC(error_code, "eclCallNDRange");
+  eclReleaseKernel(kernel);
 }
 template class index<1>;
 //1D parallel_for_each, nontiled

@@ -1,3 +1,4 @@
+// XFAIL: *
 // RUN: %gtest_amp %s -o %t && %t
 // Test if there is an accelerator() defined
 #include <amp.h>

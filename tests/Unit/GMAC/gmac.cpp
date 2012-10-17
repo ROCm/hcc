@@ -1,7 +1,7 @@
 // RUN: %gtest_amp %s -o %t1 && %t1
 
 #include <gtest/gtest.h>
-#include <gmac/cl.h>
+#include <gmac/opencl.h>
 
 const char *kernel_source = "\
 __kernel void vecAdd(__global float *c, __global const float *a, __global const float *b, unsigned size)\
@@ -15,38 +15,23 @@ __kernel void vecAdd(__global float *c, __global const float *a, __global const 
 
 TEST(GMAC, vecAdd) {
   const int vecSize = 16;
-  cl_platform_id platform;
-  cl_device_id device;
-  cl_int error_code;
-  cl_context context;
-  cl_command_queue command_queue;
-  cl_program program;
-  cl_kernel kernel;
+  ecl_error error_code;
+  ecl_kernel kernel;
   float *a, *b, *c;
-
-  error_code = clGetPlatformIDs(1, &platform, NULL);
-  assert(error_code == CL_SUCCESS);
-  error_code = clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, NULL);
-  assert(error_code == CL_SUCCESS);
-  context = clCreateContext(0, 1, &device, NULL, NULL, &error_code);
-  assert(error_code == CL_SUCCESS);
-  command_queue = clCreateCommandQueue(context, device, 0, &error_code);
-  assert(error_code == CL_SUCCESS);
-  program = clCreateProgramWithSource(context, 1, &kernel_source, NULL, &error_code);
-  assert(error_code == CL_SUCCESS);
-  error_code = clBuildProgram(program, 1, &device, NULL, NULL, NULL);
-  assert(error_code == CL_SUCCESS);
-  kernel = clCreateKernel(program, "vecAdd", &error_code);
-  assert(error_code == CL_SUCCESS);
+  
+  error_code = eclCompileSource(kernel_source);
+  ASSERT_EQ(eclSuccess, error_code);
+  error_code = eclGetKernel("vecAdd", &kernel);
+  ASSERT_EQ(eclSuccess, error_code);
 
   // Alloc & init input data
-  error_code = clMalloc(command_queue, (void **)&a, vecSize * sizeof(float));
-  assert(error_code == CL_SUCCESS);
-  error_code = clMalloc(command_queue, (void **)&b, vecSize * sizeof(float));
-  assert(error_code == CL_SUCCESS);
+  error_code = eclMalloc((void **)&a, vecSize * sizeof(float));
+  ASSERT_EQ(eclSuccess, error_code);
+  error_code = eclMalloc((void **)&b, vecSize * sizeof(float));
+  ASSERT_EQ(eclSuccess, error_code);
   // Alloc output data
-  error_code = clMalloc(command_queue, (void **)&c, vecSize * sizeof(float));
-  assert(error_code == CL_SUCCESS);
+  error_code = eclMalloc((void **)&c, vecSize * sizeof(float));
+  ASSERT_EQ(eclSuccess, error_code);
 
   float sum = 0.f;
 
@@ -58,22 +43,17 @@ TEST(GMAC, vecAdd) {
   // Call the kernel    
   size_t global_size = vecSize;
 
-  cl_mem c_device = clGetBuffer(context, c);
-  error_code = clSetKernelArg(kernel, 0, sizeof(cl_mem), &c_device);
-  assert(error_code == CL_SUCCESS);
-  cl_mem a_device = clGetBuffer(context, a);
-  error_code = clSetKernelArg(kernel, 1, sizeof(cl_mem), &a_device);
-  assert(error_code == CL_SUCCESS);
-  cl_mem b_device = clGetBuffer(context, b);
-  error_code = clSetKernelArg(kernel, 2, sizeof(cl_mem), &b_device);
-  assert(error_code == CL_SUCCESS);
-  error_code = clSetKernelArg(kernel, 3, sizeof(vecSize), &vecSize);
-  assert(error_code == CL_SUCCESS);
+  error_code = eclSetKernelArgPtr(kernel, 0, c);
+  ASSERT_EQ(eclSuccess, error_code);
+  error_code = eclSetKernelArgPtr(kernel, 1, a);
+  ASSERT_EQ(eclSuccess, error_code);
+  error_code = eclSetKernelArgPtr(kernel, 2, b);
+  ASSERT_EQ(eclSuccess, error_code);
+  error_code = eclSetKernelArg(kernel, 3, sizeof(vecSize), &vecSize);
+  ASSERT_EQ(eclSuccess, error_code);
 
-  error_code = clEnqueueNDRangeKernel(command_queue, kernel, 1, NULL, &global_size, NULL, 0, NULL, NULL);
-  assert(error_code == CL_SUCCESS);
-  error_code = clFinish(command_queue);
-  assert(error_code == CL_SUCCESS);
+  error_code = eclCallNDRange(kernel, 1, NULL, &global_size, NULL);
+  ASSERT_EQ(eclSuccess, error_code);
 
   float error = 0.f;
   float check = 0.f;
@@ -85,13 +65,8 @@ TEST(GMAC, vecAdd) {
   EXPECT_EQ(sum, check);
 
   /* Clean up resources */
-  clFree(command_queue, a);
-  clFree(command_queue, b);
-  clFree(command_queue, c);
-
-  clReleaseKernel(kernel);
-  clReleaseProgram(program);
-  clReleaseCommandQueue(command_queue);
-  clReleaseContext(context);
+  eclFree(a);
+  eclFree(b);
+  eclFree(c);
 }
 

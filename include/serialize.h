@@ -2,16 +2,19 @@
 namespace Concurrency {
 class Serialize {
  public:
-  Serialize(cl_context c, cl_kernel k): c_(c), k_(k), current_idx_(0) {}
+  Serialize(ecl_kernel k): k_(k), current_idx_(0) {}
   void Append(size_t sz, const void *s) {
-    cl_int err;
-    err = clSetKernelArg(k_, current_idx_++, sz, s);
-    assert(err == CL_SUCCESS);
+    ecl_error err;
+    err = eclSetKernelArg(k_, current_idx_++, sz, s);
+    assert(err == eclSuccess);
   }
-  cl_context getContext(void) const {return c_;}
+  void AppendPtr(const void *ptr) {
+    ecl_error err;
+    err = eclSetKernelArgPtr(k_, current_idx_++, ptr);
+    assert(err == eclSuccess);
+  }
  private:
-  cl_kernel k_;
-  cl_context c_;
+  ecl_kernel k_;
   int current_idx_;
 };
 }
