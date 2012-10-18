@@ -1445,5 +1445,13 @@ void copy(const array_view<_Value_type, 2> &_Src,
       _Dest(i, j) = _Src(i, j);
 }
 
+#ifdef __GPU__
+extern "C" unsigned atomic_add(volatile __attribute__((address_space(3))) unsigned *p, unsigned val) restrict(amp);
+static inline unsigned atomic_fetch_add(__attribute__((address_space(3)))unsigned *x, unsigned y) restrict(amp) { 
+  return atomic_add(reinterpret_cast<volatile __attribute__((address_space(3))) unsigned *>(x), y);
+}
+#else
+extern "C" unsigned atomic_fetch_add(__attribute__((address_space(3)))unsigned *x, unsigned y) restrict(amp);
+#endif
 }//namespace Concurrency
 
