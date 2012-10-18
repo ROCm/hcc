@@ -38,7 +38,7 @@ static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu,amp) {
     return out;
 }
 static bool __mcw_cxxamp_compiled = false;
-
+static std::set<std::string> __mcw_cxxamp_kernels;
 extern "C" char * kernel_source_[] asm ("_binary_kernel_cl_start");
 extern "C" char * kernel_size_[] asm ("_binary_kernel_cl_size");
 template<typename Kernel, int dim_ext>
@@ -69,14 +69,14 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
   std::cerr << "Kernel name = "<< transformed_kernel_name <<"\n";
 #endif
   ecl_kernel kernel;
-  error_code = eclGetKernel(transformed_kernel_name.c_str(), &kernel);
+  auto it = __mcw_cxxamp_kernels.insert(transformed_kernel_name);
+  error_code = eclGetKernel(it.first->c_str(), &kernel);
   CHECK_ERROR_GMAC(error_code, "eclGetKernel");
   Concurrency::Serialize s(kernel);
   f.__cxxamp_serialize(s);
   error_code = eclCallNDRange(kernel, dim_ext, NULL,
       ext, local_size);
   CHECK_ERROR_GMAC(error_code, "eclCallNDRange");
-  eclReleaseKernel(kernel);
 }
 template class index<1>;
 //1D parallel_for_each, nontiled

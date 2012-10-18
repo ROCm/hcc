@@ -19,6 +19,7 @@
 #include <gmac/opencl.h>
 #include <memory>
 #include <algorithm>
+#include <set>
 // CLAMP
 #include <serialize.h>
 // End CLAMP
