@@ -36,8 +36,10 @@ int main(void) {
   }
 
   float sum = 0;
+  float a1 = 0, b1 = -1.0f;
+  float c1 = max(a1, b1);
   for(unsigned i = 0; i < vecSize; i++) {
     sum += fast_math::fabs(fast_math::fabs(gc[i]) - fast_math::fabs(gb[i]));
   }
-  return (sum > 0.1f);
+  return ((sum + c1) > 0.1f);
 }

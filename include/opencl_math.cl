@@ -25,3 +25,7 @@ float opencl_fastmath_sqrt(float x) {
 int opencl_min(int x, int y) {
   return min(x, y);
 }
+
+float opencl_max(float x, float y) {
+  return max(x, y);
+}

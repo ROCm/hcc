@@ -8,6 +8,7 @@
   extern "C" float opencl_fastmath_sin(float x);
   extern "C" float opencl_fastmath_sqrt(float x);
   extern "C" int opencl_min(int x, int y);
+  extern "C" float opencl_max(float x, float y);
 #endif
 
 namespace Concurrency {
@@ -18,7 +19,7 @@ namespace fast_math {
     #else
       return ::cosf(x);
     #endif
-  };
+  }
 
   float exp(float x) restrict(amp, cpu) {
     #ifdef __GPU__
@@ -26,7 +27,7 @@ namespace fast_math {
     #else
       return ::expf(x);
     #endif
-  };
+  }
 
   float expf(float x) restrict(amp, cpu) {
     #ifdef __GPU__
@@ -34,7 +35,7 @@ namespace fast_math {
     #else
       return ::expf(x);
     #endif
-  };
+  }
 
   float fabs(float x) restrict(amp, cpu) {
     #ifdef __GPU__
@@ -42,7 +43,7 @@ namespace fast_math {
     #else
       return ::fabsf(x);
     #endif
-  };
+  }
 
   float fabsf(float x) restrict(amp, cpu) {
     #ifdef __GPU__
@@ -50,7 +51,7 @@ namespace fast_math {
     #else
       return ::fabsf(x);
     #endif
-  };
+  }
 
   float log(float x) restrict(amp, cpu) {
     #ifdef __GPU__
@@ -58,7 +59,7 @@ namespace fast_math {
     #else
       return ::logf(x);
     #endif
-  };
+  }
 
   float logf(float x) restrict(amp, cpu) {
     #ifdef __GPU__
@@ -66,7 +67,7 @@ namespace fast_math {
     #else
       return ::logf(x);
     #endif
-  };
+  }
 
   float sin(float x) restrict(amp, cpu) {
     #ifdef __GPU__
@@ -74,7 +75,7 @@ namespace fast_math {
     #else
       return ::sinf(x);
     #endif
-  };
+  }
 
   float sqrt(float x) restrict(amp, cpu) {
     #ifdef __GPU__
@@ -82,7 +83,7 @@ namespace fast_math {
     #else
       return ::sqrtf(x);
     #endif
-  };
+  }
 
   float sqrtf(float x) restrict(amp, cpu) {
     #ifdef __GPU__
@@ -99,6 +100,15 @@ namespace fast_math {
     #else
       using std::min;
       return min(x, y);
+    #endif
+  }
+
+  float max(float x, float y) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_max(x, y);
+    #else
+      using std::max;
+      return max(x, y);
     #endif
   }
 } // namespace Concurrency
