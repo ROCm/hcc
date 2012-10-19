@@ -13,6 +13,7 @@ class baz {
   int bzzt(void) {
     return 44;
   }
+  __attribute__((noinline))
   int cho(void) restrict(amp) {
     return 45;
   }

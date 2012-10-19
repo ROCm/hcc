@@ -7,6 +7,7 @@
 class Member {
  public:
   // Compiler-generated constructor
+  __attribute__((noinline))
   __attribute__((annotate("deserialize"))) Member(float*, int) restrict(amp);
   float* bzzt;
   int zzz;
