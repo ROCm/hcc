@@ -194,9 +194,19 @@ public:
   template <int M>
     friend index<M> operator+(const index<N> &lhs,
       const index<N> &rhs) restrict(amp, cpu);
-  index& operator+=(const index& rhs) restrict(amp,cpu);
-  index& operator-=(const index& rhs) restrict(amp,cpu);
-  
+  index& operator+=(const index& rhs) restrict(amp,cpu) {
+    i0_ += rhs[0];
+    if (N > 1) i1_ += rhs[1];
+    if (N > 2) i2_ += rhs[2];
+    return *this;
+  }
+  index& operator-=(const index& rhs) restrict(amp,cpu) {
+    i0_ -= rhs[0];
+    if (N > 1) i1_ -= rhs[1];
+    if (N > 2) i2_ -= rhs[2];
+    return *this;
+  }
+
   index& operator+=(int rhs) restrict(amp,cpu);
   index& operator-=(int rhs) restrict(amp,cpu);
   index& operator*=(int rhs) restrict(amp,cpu);
