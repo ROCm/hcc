@@ -47,4 +47,20 @@ TEST(ClassIndex, Add) {
   EXPECT_EQ(1234+4321, k[0]);
   EXPECT_EQ(5678+8765, k[1]);
 }
+
+TEST(ClassIndex, AddEqual) {
+  Concurrency::index<2> i(1234, 5678);
+  Concurrency::index<2> j(4321, 8765);
+  i += j;
+  EXPECT_EQ(1234+4321, i[0]);
+  EXPECT_EQ(5678+8765, i[1]);
+}
+
+TEST(ClassIndex, SubEqual) {
+  Concurrency::index<2> i(5555, 9999);
+  Concurrency::index<2> j(4321, 8765);
+  i -= j;
+  EXPECT_EQ(1234, i[0]);
+  EXPECT_EQ(1234, i[1]);
+}
 #endif
