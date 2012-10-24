@@ -194,9 +194,19 @@ public:
   template <int M>
     friend index<M> operator+(const index<N> &lhs,
       const index<N> &rhs) restrict(amp, cpu);
-  index& operator+=(const index& rhs) restrict(amp,cpu);
-  index& operator-=(const index& rhs) restrict(amp,cpu);
-  
+  index& operator+=(const index& rhs) restrict(amp,cpu) {
+    i0_ += rhs[0];
+    if (N > 1) i1_ += rhs[1];
+    if (N > 2) i2_ += rhs[2];
+    return *this;
+  }
+  index& operator-=(const index& rhs) restrict(amp,cpu) {
+    i0_ -= rhs[0];
+    if (N > 1) i1_ -= rhs[1];
+    if (N > 2) i2_ -= rhs[2];
+    return *this;
+  }
+
   index& operator+=(int rhs) restrict(amp,cpu);
   index& operator-=(int rhs) restrict(amp,cpu);
   index& operator*=(int rhs) restrict(amp,cpu);
@@ -1446,12 +1456,22 @@ void copy(const array_view<_Value_type, 2> &_Src,
 }
 
 #ifdef __GPU__
-extern "C" unsigned atomic_add(volatile __attribute__((address_space(3))) unsigned *p, unsigned val) restrict(amp);
+extern "C" unsigned atomic_add_local(volatile __attribute__((address_space(3))) unsigned *p, unsigned val) restrict(amp);
 static inline unsigned atomic_fetch_add(__attribute__((address_space(3)))unsigned *x, unsigned y) restrict(amp) { 
-  return atomic_add(reinterpret_cast<volatile __attribute__((address_space(3))) unsigned *>(x), y);
+  return atomic_add_local(reinterpret_cast<volatile __attribute__((address_space(3))) unsigned *>(x), y);
 }
 #else
-extern "C" unsigned atomic_fetch_add(__attribute__((address_space(3)))unsigned *x, unsigned y) restrict(amp);
+extern unsigned atomic_fetch_add(__attribute__((address_space(3)))unsigned *x, unsigned y) restrict(amp);
 #endif
+
+#ifdef __GPU__
+extern "C" int atomic_add_global(volatile __attribute__((address_space(1))) int *p, int val) restrict(amp, cpu);
+static inline int atomic_fetch_add(__attribute__((address_space(1))) int *x, int y) restrict(amp) { 
+  return atomic_add_global(reinterpret_cast<volatile __attribute__((address_space(1))) int *>(x), y);
+}
+#else
+extern int atomic_fetch_add(__attribute__((address_space(1)))int *x, int y) restrict(amp, cpu);
+#endif
+
 }//namespace Concurrency
 

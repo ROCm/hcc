@@ -29,3 +29,10 @@ int opencl_min(int x, int y) {
 float opencl_max(float x, float y) {
   return max(x, y);
 }
+
+unsigned atomic_add_global(volatile __global unsigned *x, unsigned y) {
+  return atomic_add(x, y);
+}
+unsigned atomic_add_local(volatile __local unsigned *x, unsigned y) {
+  return atomic_add(x, y);
+}
