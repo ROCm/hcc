@@ -591,9 +591,10 @@ public:
       assert(N == 2 && "For constructing array<T, 2> only");
     }
 
-  explicit array(int e0, int e1, int e2) {
-    assert(0 && "Not Implemented Yet.");
-  }
+  explicit array(int e0, int e1, int e2):
+    array(Concurrency::extent<N>(e0, e1, e2)) {
+      assert(N == 3 && "For constructing array<T, 3> only");
+    }
 
   array(int e0, accelerator_view av) {
     assert(0 && "Only applicable to array<T, 1>");
@@ -646,7 +647,12 @@ public:
   array(int e0, int e1, InputIterator srcBegin, InputIterator srcEnd);
 
   template <typename InputIterator>
-  array(int e0, int e1, int e2, InputIterator srcBegin);
+  array(int e0, int e1, int e2, InputIterator srcBegin):
+    array(Concurrency::extent<N>(e0, e1, e2), srcBegin) {
+      assert(N == 3 && "For constructing array<T, 3> only");
+    }
+
+
 
   template <typename InputIterator>
   array(int e0, int e1, int e2, InputIterator srcBegin, InputIterator srcEnd);
@@ -781,6 +787,9 @@ public:
     else if (rank == 2)
       return reinterpret_cast<__global T*>(m_device.get())
 	[idx[0] * extent[1] + idx[1]];
+    else if (rank == 3)
+      return reinterpret_cast<__global T*>(m_device.get())
+	[idx[0] * extent[1] * extent[2] + idx[1]*extent[2] + idx[2]];
   }
   __global const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
     if (rank == 1)
@@ -788,6 +797,9 @@ public:
     else if (rank == 2)
       return reinterpret_cast<__global T*>(m_device.get())
 	[idx[0] * extent[1] + idx[1]];
+    else if (rank == 3)
+      return reinterpret_cast<__global T*>(m_device.get())
+	[idx[0] * extent[1] * extent[2] + idx[1]*extent[2] + idx[2]];
   }
 
   auto operator[](int i) restrict(amp,cpu) -> decltype(array_projection_helper<T, N>::project((array<T,N> *)NULL, i));
@@ -796,7 +808,9 @@ public:
 
   const T& operator()(const index<N>& idx) const restrict(amp,cpu);
 
-  T& operator()(const index<N>& idx) restrict(amp,cpu);
+  __global T& operator()(const index<N>& idx) restrict(amp,cpu) {
+    return (*this)[idx];
+  }
 
   __global T& operator()(int i0, int i1) restrict(amp,cpu) {
     return (*this)[index<2>(i0, i1)];
@@ -805,9 +819,15 @@ public:
     return (*this)[index<2>(i0, i1)];
   }
 
-  T& operator()(int i0, int i1, int i2) restrict(amp,cpu);
+  __global T& operator()(int i0, int i1, int i2) restrict(amp,cpu) {
+    return (*this)[index<3>(i0, i1, i2)];
+  }
 
-  const T& operator()(int i0, int i1, int i2) const restrict(amp,cpu);
+  __global const T& operator()(int i0, int i1, int i2) 
+    const restrict(amp,cpu) {
+    return (*this)[index<3>(i0, i1, i2)];
+  }
+
 
   auto operator()(int i) restrict(amp,cpu) -> decltype(array_projection_helper<T, N>::project((array<T,N> *)NULL, i));
 

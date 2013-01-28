@@ -111,6 +111,24 @@ __attribute__((noinline,used)) void parallel_for_each(
 #endif
 }
 
+template class index<3>;
+//3D parallel_for_each, nontiled
+template <typename Kernel>
+__attribute__((noinline,used)) void parallel_for_each(
+    extent<3> compute_domain,
+    const Kernel& f) restrict(cpu,amp) {
+  size_t ext[3] = {static_cast<size_t>(compute_domain[2]),
+                   static_cast<size_t>(compute_domain[1]),
+                   static_cast<size_t>(compute_domain[0])};
+#ifndef __GPU__
+  mcw_cxxamp_launch_kernel<Kernel, 3>(ext, NULL, f);
+#else //ifndef __GPU__
+  //to ensure functor has right operator() defined
+  //this triggers the trampoline code being emitted
+  int foo = reinterpret_cast<intptr_t>(&Kernel::__cxxamp_trampoline);
+#endif
+}
+
 //1D parallel_for_each, tiled
 template <int D0, typename Kernel>
 __attribute__((noinline,used)) void parallel_for_each(
