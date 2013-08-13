@@ -5,8 +5,11 @@ MESSAGE("Module path: ${CMAKE_MODULE_PATH}")
 #include (MacroEnsureOutOfSourceBuild)
 #include (ExportFile)
 
+set(GMAC_URL "." CACHE STRING "GMAC URL")
 set(CLANG_URL "." CACHE STRING "CLANG URL")
 set(LLVM_REVISION 162227)
+include (EnsureGMACisPresent)
+
 include (EnsureLLVMisPresent)
 include (EnsureCLANGisPresent)
 include (EnsureLIBCXXisPresent)
@@ -60,8 +63,17 @@ LINK_DIRECTORIES( ${LLVM_LIB_DIR} )
 option(CXXAMP_ENABLE_GMAC "Build GMAC as backend" ON)
 
 if(CXXAMP_ENABLE_GMAC)
+
+ensure_gmac_is_present(${PROJECT_SOURCE_DIR} gmac ${GMAC_URL})
+
+set(DEPS "gmac")
+
 set(OPENCL_HEADER_DIR "/usr/local/cuda/include" CACHE PATH "OpenCL Header Directory")
 set(OPENCL_LIBRARY_DIR "/usr/local/cuda/lib64" CACHE PATH "OpenCL Library Directory")
+
+set(USE_OPENCL ON)
+set(USE_LITE OFF)
+set(USE_CUDA OFF)
 
 find_path(OPENCL_HEADER cl.h ${OPENCL_HEADER_DIR}/CL)
 if (NOT OPENCL_HEADER)
@@ -73,6 +85,8 @@ if (NOT OPENCL_LIBRARY)
   MESSAGE(FATAL_ERROR "OpenCL library not found. Use -DOPENCL_LIBRARY_DIR=<path_to_libOpenCL.so>.")
 endif(NOT OPENCL_LIBRARY)
 
+add_subdirectory(gmac)
+
 endif(CXXAMP_ENABLE_GMAC)
 
 MESSAGE("")
@@ -80,6 +94,7 @@ MESSAGE("OPENCL INFORMATION:")
 MESSAGE("OPENCL_HEADER_DIR = ${OPENCL_HEADER_DIR}, actually found at: ${OPENCL_HEADER}")
 MESSAGE("OPENCL_LIBRARY_DIR = ${OPENCL_LIBRARY_DIR}, actually found at: ${OPENCL_LIBRARY}")
 MESSAGE("")
+
 
 add_subdirectory(compiler)
 # libc++
@@ -100,15 +115,8 @@ add_subdirectory(tests)
 add_subdirectory(axtor)
 add_subdirectory(include)
 
-add_custom_target(gmac
-  # Find python first.
-  COMMAND python ${PROJECT_SOURCE_DIR}/scripts/build/gmac.py ${PROJECT_SOURCE_DIR}/gmac ${OPENCL_HEADER_DIR} ${OPENCL_LIBRARY_DIR} ${CMAKE_INSTALL_PREFIX} ${CXXAMP_ENABLE_GMAC}
-)
-
-MESSAGE("COMMAND python ${PROJECT_SOURCE_DIR}/scripts/build/gmac.py ${PROJECT_SOURCE_DIR}/gmac ${OPENCL_HEADER_DIR} ${OPENCL_LIBRARY_DIR} ${CXXAMP_ENABLE_GMAC}")
-
 add_custom_target(world
-  DEPENDS clang libc++ gmac
+    DEPENDS clang libc++ ${DEPS}
 )
 
 MESSAGE("")
