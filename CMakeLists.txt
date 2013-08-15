@@ -71,9 +71,10 @@ set(DEPS "gmac")
 set(OPENCL_HEADER_DIR "/usr/local/cuda/include" CACHE PATH "OpenCL Header Directory")
 set(OPENCL_LIBRARY_DIR "/usr/local/cuda/lib64" CACHE PATH "OpenCL Library Directory")
 
-set(USE_OPENCL ON)
-set(USE_LITE OFF)
-set(USE_CUDA OFF)
+SET(FOO_BUILD_SHARED OFF CACHE BOOL "Build libfoo shared library")
+set(USE_OPENCL ON CACHE BOOL "GMAC: Enable OpenCL")
+set(USE_LITE OFF CACHE BOOL "GMAC: Disable Lite")
+set(USE_CUDA OFF CACHE BOOL "GMAC: Disable CUDA")
 
 find_path(OPENCL_HEADER cl.h ${OPENCL_HEADER_DIR}/CL)
 if (NOT OPENCL_HEADER)
