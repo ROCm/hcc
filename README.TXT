@@ -93,6 +93,7 @@ are:
       -DOPENCL_HEADER_DIR=<directory that contains CL/> \
       -DOPENCL_LIBRARY_DIR=<directory that contains libOpenCL.so on Linux> \
       -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CBackend \
+      -DGMAC_URL=ssh://hg@bitbucket.org/multicoreware/gmac \
       -DCMAKE_BUILD_TYPE=Debug
   For example, on x86-64 platforms with AMD GPU and AMD APP SDK installed at the
   default path, this becomes
@@ -101,6 +102,7 @@ are:
       -DOPENCL_HEADER_DIR=/opt/AMDAPP/include \
       -DOPENCL_LIBRARY_DIR=/opt/AMDAPP/lib/x86_64/lib \
       -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CBackend \
+      -DGMAC_URL=ssh://hg@bitbucket.org/multicoreware/gmac \
       -DCMAKE_BUILD_TYPE=Debug
 
 4. Build the whole system. This will build clang and other libraries
