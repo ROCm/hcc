@@ -171,7 +171,15 @@ public:
 
   explicit index(const int components[]) restrict(amp,cpu);
 
-  index& operator=(const index& other) restrict(amp,cpu);
+  index& operator=(const index& other) restrict(amp,cpu) {
+    if (rank > 0)
+      i0_ = other.i0_;
+    if (rank > 1)
+      i1_ = other.i1_;
+    if (rank > 2)
+      i2_ = other.i2_;
+    return *this;
+  }
 
   int operator[](unsigned int c) const restrict(amp,cpu) {
     if (c==0)
@@ -1238,9 +1246,23 @@ template <int N>
 bool operator!=(const index<N>& lhs, const index<N>& rhs) restrict(amp,cpu);
 
 template <int N>
+index<N>& index<N>::operator+=(int rhs) restrict(amp,cpu) {
+  if (rank > 0)
+      i0_ += rhs;
+  if (rank > 1)
+      i1_ += rhs;
+  if (rank > 2)
+      i2_ += rhs;
+  return *this;
+}
+template <int N>
 index<N> operator+(const index<N>& lhs, const index<N>& rhs) restrict(amp,cpu);
 template <int N>
-index<N> operator+(const index<N>& lhs, int rhs) restrict(amp,cpu);
+index<N> operator+(const index<N>& lhs, int rhs) restrict(amp,cpu) {
+  index<N> __r = lhs;
+  __r += rhs;
+  return __r;
+}
 template <int N>
 index<N> operator+(int lhs, const index<N>& rhs) restrict(amp,cpu);
 template <int N>
