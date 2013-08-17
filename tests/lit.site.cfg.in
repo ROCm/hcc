@@ -17,7 +17,9 @@ config.opencl_lib_dir = "@OPENCL_LIBRARY_DIR@"
 config.opencl_math_dir = "@OPENCL_MATH_DIR@"
 
 # GMAC
-config.gmac_dir = "@GMAC_DIR@"
+config.gmac_src_dir = "@GMAC_SRC_DIR@"
+config.gmac_inc_dir = "@GMAC_INC_DIR@"
+config.gmac_lib_dir = "@GMAC_LIB_DIR@"
 
 # MCWAMP
 config.mcwamp_lib_dir = "@MCWAMP_LIB_DIR@"
