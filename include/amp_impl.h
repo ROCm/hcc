@@ -25,7 +25,8 @@ namespace Concurrency {
 // Accelerators
 inline accelerator::accelerator(): accelerator(default_accelerator) {}
 
-inline accelerator::accelerator(const std::wstring& path): device_path(path) {
+inline accelerator::accelerator(const std::wstring& path): device_path(path), version(0), dedicated_memory(1<<20),
+is_emulated(0), has_display(0), supports_double_precision(1), supports_limited_double_precision(0) {
   if (path != std::wstring(default_accelerator)) {
     std::wcerr << L"CLAMP: Warning: the given accelerator is not supported: ";
     std::wcerr << path << std::endl;

@@ -62,11 +62,11 @@ public:
   accelerator& operator=(const accelerator& other);
   //__declspec(property(get)) std::wstring device_path;
   const std::wstring device_path;
-  const std::wstring &get_device_path() { return device_path; }
+  const std::wstring &get_device_path() const { return device_path; }
   __declspec(property(get)) unsigned int version; // hiword=major, loword=minor
   //__declspec(property(get)) std::wstring description;
   std::wstring description;
-  const std::wstring &get_description() { return description; }
+  const std::wstring &get_description() const { return description; }
   __declspec(property(get)) bool is_debug;
   __declspec(property(get)) bool is_emulated;
   __declspec(property(get)) bool has_display;
