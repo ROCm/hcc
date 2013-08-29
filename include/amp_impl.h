@@ -23,9 +23,9 @@
 
 namespace Concurrency {
 // Accelerators
-accelerator::accelerator(): accelerator(default_accelerator) {}
+inline accelerator::accelerator(): accelerator(default_accelerator) {}
 
-accelerator::accelerator(const std::wstring& path): device_path(path) {
+inline accelerator::accelerator(const std::wstring& path): device_path(path) {
   if (path != std::wstring(default_accelerator)) {
     std::wcerr << L"CLAMP: Warning: the given accelerator is not supported: ";
     std::wcerr << path << std::endl;
@@ -37,23 +37,19 @@ accelerator::accelerator(const std::wstring& path): device_path(path) {
     default_view_ = new accelerator_view(0);
 }
 
-bool accelerator::operator==(const accelerator& other) const {
+inline bool accelerator::operator==(const accelerator& other) const {
   return device_path == other.device_path;
 }
-bool accelerator::operator!=(const accelerator& other) const {
+inline bool accelerator::operator!=(const accelerator& other) const {
   return device_path != other.device_path;
 }
 
-accelerator_view& accelerator::get_default_view() const {
+inline accelerator_view& accelerator::get_default_view() const {
   return *default_view_;
 }
 
-accelerator_view *accelerator::default_view_ = NULL;
-const wchar_t accelerator::direct3d_ref[] = L"direct3d\\ref";
-const wchar_t accelerator::default_accelerator[] = L"default";
-
 // Accelerator view
-accelerator_view accelerator::create_view(void) {
+inline accelerator_view accelerator::create_view(void) {
   accelerator_view sa(0);
   return sa;
 }
