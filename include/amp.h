@@ -206,10 +206,12 @@ template <int ...N>
     {
         index_impl() restrict(amp,cpu) {}
         
-        template<int ..._Uf, class ..._Up>
+        template<class ..._Up>
         __attribute__((annotate("deserialize")))
-            explicit index_impl(__indices<_Uf...>, _Up... __u) restrict(amp,cpu) :
-                __index_leaf<_Uf>(__u)... {}
+            explicit index_impl(_Up... __u) restrict(amp,cpu) :
+                __index_leaf<N>(__u)... {}
+        index_impl(const index_impl& other) restrict(amp,cpu) :
+            __index_leaf<N>(static_cast<const __index_leaf<N>&>(other).get())... {}
         
         template<class ..._Tp>
             inline void __swallow(_Tp...) restrict(amp,cpu) {}
@@ -281,8 +283,9 @@ public:
     index() restrict(amp,cpu) {};
     template <typename ..._Tp>
         explicit index(_Tp ... __t) restrict(amp,cpu)
-        : base_(typename __make_indices<N>::type(),
-                __t...) {}
+        : base_(__t...) {}
+    index(const index& other) restrict(amp,cpu)
+        : base_(other.base_) {}
 
     int operator[] (unsigned int c) const restrict(amp,cpu) {
         return index_helper<N, index<N> >::get(c, *this);
@@ -291,8 +294,7 @@ public:
         return index_helper<N, index<N> >::get(c, *this);
     }
 
-    template <class _index>
-    index& operator=(const _index __t) restrict(amp,cpu) {
+    index& operator=(const index& __t) restrict(amp,cpu) {
         base_.operator=(__t.base_);
         return *this;
     }
