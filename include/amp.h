@@ -149,116 +149,202 @@ public:
 };
 
 template <int N> class extent;
+
+template <int...> struct __indices {};
+
+template <int _Sp, class _IntTuple, int _Ep>
+    struct __make_indices_imp;
+
+template <int _Sp, int ..._Indices, int _Ep>
+    struct __make_indices_imp<_Sp, __indices<_Indices...>, _Ep>
+    {
+        typedef typename __make_indices_imp<_Sp+1, __indices<_Indices..., _Sp>, _Ep>::type type;
+    };
+
+template <int _Ep, int ..._Indices>
+    struct __make_indices_imp<_Ep, __indices<_Indices...>, _Ep>
+    {
+        typedef __indices<_Indices...> type;
+    };
+
+template <int _Ep, int _Sp = 0>
+    struct __make_indices
+    {
+        static_assert(_Sp <= _Ep, "__make_indices input error");
+        typedef typename __make_indices_imp<_Sp, __indices<>, _Ep>::type type;
+    };
+
+template <int _Ip>
+    class __index_leaf {
+        int __idx;
+        int dummy;
+    public:
+        __index_leaf() restrict(amp,cpu) : __idx() {};
+        explicit __index_leaf(int __t) restrict(amp,cpu) : __idx(__t) {}
+
+        __index_leaf& operator=(const int __t) restrict(amp,cpu) {
+            __idx = __t;
+            return *this;
+        }
+        __index_leaf& operator+=(const int __t) restrict(amp,cpu) {
+            __idx += __t;
+            return *this;
+        }
+        __index_leaf& operator-=(const int __t) restrict(amp,cpu) {
+            __idx -= __t;
+            return *this;
+        }
+              int& get()       restrict(amp,cpu) { return __idx; }
+        const int& get() const restrict(amp,cpu) { return __idx; }
+    };
+
+
+template <class _Indx> struct index_impl;
+template <int ...N>
+    struct index_impl<__indices<N...> >
+    : public __index_leaf<N>... 
+    {
+        index_impl() restrict(amp,cpu) {}
+        
+        template<int ..._Uf, class ..._Up>
+        __attribute__((annotate("deserialize")))
+            explicit index_impl(__indices<_Uf...>, _Up... __u) restrict(amp,cpu) :
+                __index_leaf<_Uf>(__u)... {}
+        
+        template<class ..._Tp>
+            inline void __swallow(_Tp...) restrict(amp,cpu) {}
+
+        index_impl& operator=(const index_impl& __t) restrict(amp,cpu) {
+            __swallow(__index_leaf<N>::operator=(static_cast<const __index_leaf<N>&>(__t).get())...);
+            return *this;
+        }
+        index_impl& operator+=(const index_impl& __t) restrict(amp,cpu) {
+            __swallow(__index_leaf<N>::operator+=(static_cast<const __index_leaf<N>&>(__t).get())...);
+            return *this;
+        }
+        index_impl& operator-=(const index_impl& __t) restrict(amp,cpu) {
+            __swallow(__index_leaf<N>::operator-=(static_cast<const __index_leaf<N>&>(__t).get())...);
+            return *this;
+        }
+        index_impl& operator+=(const int __t) restrict(amp,cpu) {
+            __swallow(__index_leaf<N>::operator+=(__t)...);
+            return *this;
+        }
+        index_impl& operator-=(const int __t) restrict(amp,cpu) {
+            __swallow(__index_leaf<N>::operator+=(__t)...);
+            return *this;
+        }
+    };
+
+template<int N> class index;
+
+template <int N, typename _Tp>
+struct index_helper
+{
+    static inline int& get(unsigned int c, _Tp& now) restrict(amp,cpu) {
+        if (c == 0)
+            return static_cast<__index_leaf<_Tp::rank - N>&>(now.base_).get();
+        else
+            return index_helper<N - 1, _Tp>::get(c - 1, now);
+    }
+    static inline int get(unsigned int c, const _Tp& now) restrict(amp,cpu) {
+        if (c == 0)
+            return static_cast<const __index_leaf<_Tp::rank - N>&>(now.base_).get();
+        else
+            return index_helper<N - 1, _Tp>::get(c - 1, now);
+    }
+    static inline void set(_Tp& now) restrict(amp,cpu) {
+        static_cast<__index_leaf<N - 1>&>(now.base_).get() = get_global_id(_Tp::rank - N);
+        index_helper<N - 1, _Tp>::set(now);
+    }
+};
+template<typename _Tp>
+struct index_helper<1, _Tp>
+{
+    static inline int& get(unsigned int c, _Tp& now) restrict(amp,cpu) {
+        return static_cast<__index_leaf<_Tp::rank - 1>&>(now.base_).get();
+    }
+    static inline int get(unsigned int c, const _Tp& now) restrict(amp,cpu) {
+        return static_cast<const __index_leaf<_Tp::rank - 1>&>(now.base_).get();
+    }
+    static inline void set(_Tp& now) restrict(amp,cpu) {
+        static_cast<__index_leaf<0>&>(now.base_).get() = get_global_id(_Tp::rank - 1);
+    }
+};
+
 template <int N>
 class index {
 public:
-  static const int rank = N;
+    static const int rank = N;
+    typedef int value_type;
 
-  typedef int value_type;
+    index() restrict(amp,cpu) {};
+    template <typename ..._Tp>
+        explicit index(_Tp ... __t) restrict(amp,cpu)
+        : base_(typename __make_indices<N>::type(),
+                __t...) {}
 
-  index() restrict(amp,cpu):index(0, 0, 0) {}
-
-  index(const index& other) restrict(amp,cpu):
-    i0_(other.i0_), i1_(other.i1_), i2_(other.i2_) {}
-
-  explicit index(int i0) restrict(amp,cpu):index(i0, 0, 0) {} // N==1
-
-  index(int i0, int i1) restrict(amp,cpu):index(i0, i1, 0) {} // N==2
-
-  __attribute__((annotate("deserialize")))
-  index(int i0, int i1, int i2) restrict(amp,cpu):
-    i0_(i0), i1_(i1), i2_(i2) {}
-
-  explicit index(const int components[]) restrict(amp,cpu);
-
-  index& operator=(const index& other) restrict(amp,cpu) {
-    if (rank > 0)
-      i0_ = other.i0_;
-    if (rank > 1)
-      i1_ = other.i1_;
-    if (rank > 2)
-      i2_ = other.i2_;
-    return *this;
-  }
-
-  int operator[](unsigned int c) const restrict(amp,cpu) {
-    if (c==0)
-      return i0_;
-    else if (c==1)
-      return i1_;
-    else
-      return i2_;
-  }
-
-  int& operator[](unsigned int c) restrict(amp,cpu) {
-    if (c==0)
-      return i0_;
-    else if (c==1)
-      return i1_;
-    else
-      return i2_;
-  }
-  
-  template <int M>
-    friend index<M> operator+(const index<N> &lhs,
-      const index<N> &rhs) restrict(amp, cpu);
-  index& operator+=(const index& rhs) restrict(amp,cpu) {
-    i0_ += rhs[0];
-    if (N > 1) i1_ += rhs[1];
-    if (N > 2) i2_ += rhs[2];
-    return *this;
-  }
-  index& operator-=(const index& rhs) restrict(amp,cpu) {
-    i0_ -= rhs[0];
-    if (N > 1) i1_ -= rhs[1];
-    if (N > 2) i2_ -= rhs[2];
-    return *this;
-  }
-
-  index& operator+=(int rhs) restrict(amp,cpu);
-  index& operator-=(int rhs) restrict(amp,cpu);
-  index& operator*=(int rhs) restrict(amp,cpu);
-  index& operator/=(int rhs) restrict(amp,cpu);
-  index& operator%=(int rhs) restrict(amp,cpu);
-  
-  index& operator++() restrict(amp,cpu) {
-    //FIXME extent?
-    i0_++;
-    return *this;
-  }
-  index operator++(int) restrict(amp,cpu) {
-    //FIXME extent?
-    index ret = *this;
-    i0_++;
-    return ret;
-  }
-  index& operator--() restrict(amp,cpu);
-  index operator--(int) restrict(amp,cpu);
- private:
-  //CLAMP
-  template<class Y>
-  friend void parallel_for_each(extent<1>, const Y&);
-  __attribute__((annotate("__cxxamp_opencl_index")))
-  void __cxxamp_opencl_index() restrict(amp,cpu)
-#ifdef __GPU__
-  {
-    if (rank == 1) {
-      i0_ = get_global_id(0);
-    } else if (rank == 2) {
-      i0_ = get_global_id(1);
-      i1_ = get_global_id(0);
-    } else {
-      i0_ = get_global_id(2);
-      i1_ = get_global_id(1);
-      i2_ = get_global_id(0);
+    int operator[] (unsigned int c) const restrict(amp,cpu) {
+        return index_helper<N, index<N> >::get(c, *this);
     }
-  }
+    int& operator[] (unsigned int c) restrict(amp,cpu) {
+        return index_helper<N, index<N> >::get(c, *this);
+    }
+
+    template <class _index>
+    index& operator=(const _index __t) restrict(amp,cpu) {
+        base_.operator=(__t.base_);
+        return *this;
+    }
+    /* Add each element 1 for now */
+    index& operator++() restrict(amp,cpu) {
+        base_.operator+=(1);
+        return *this;
+    }
+    index operator++(int) restrict(amp,cpu) {
+        index ret = *this;
+        base_.operator+=(1);
+        return ret;
+    }
+    index& operator+=(const index& __r) restrict(amp,cpu) {
+        base_.operator+=(__r.base_);
+        return *this;
+    }
+    index& operator-=(const index& __r) restrict(amp,cpu) {
+        base_.operator-=(__r.base_);
+        return *this;
+    }
+    index& operator+=(int __r) restrict(amp,cpu) {
+        base_.operator+=(__r);
+        return *this;
+    }
+    index& operator-=(int __r) restrict(amp,cpu) {
+        base_.operator-=(__r);
+        return *this;
+    }
+
+private:
+    typedef index_impl<typename __make_indices<N>::type> base;
+    base base_;
+    template <int K, typename Q> friend struct index_helper;
+    template <int _Ip>
+        int& subscript_impl() restrict(amp,cpu) {
+            return static_cast<__index_leaf<_Ip>&>(base_).get();
+        }
+
+    template<class Y>
+        friend void parallel_for_each(extent<1>, const Y&);
+    __attribute__((annotate("__cxxamp_opencl_index")))
+        void __cxxamp_opencl_index() restrict(amp,cpu)
+#ifdef __GPU__
+        {
+            index_helper<N, index<N> >::set(*this);
+        }
 #else
-  ;
-#endif // __GPU__
-  //End CLAMP
-  int i0_, i1_, i2_;
+    ;
+#endif
 };
+
 
 // C++AMP LPM 4.5
 class tile_barrier {
@@ -1246,22 +1332,12 @@ template <int N>
 bool operator!=(const index<N>& lhs, const index<N>& rhs) restrict(amp,cpu);
 
 template <int N>
-index<N>& index<N>::operator+=(int rhs) restrict(amp,cpu) {
-  if (rank > 0)
-      i0_ += rhs;
-  if (rank > 1)
-      i1_ += rhs;
-  if (rank > 2)
-      i2_ += rhs;
-  return *this;
-}
-template <int N>
 index<N> operator+(const index<N>& lhs, const index<N>& rhs) restrict(amp,cpu);
 template <int N>
 index<N> operator+(const index<N>& lhs, int rhs) restrict(amp,cpu) {
-  index<N> __r = lhs;
-  __r += rhs;
-  return __r;
+    index<N> __r = lhs;
+    __r += rhs;
+    return __r;
 }
 template <int N>
 index<N> operator+(int lhs, const index<N>& rhs) restrict(amp,cpu);
