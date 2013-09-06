@@ -179,7 +179,6 @@ template <int _Ip>
         int __idx;
         int dummy;
     public:
-        __index_leaf() restrict(amp,cpu) : __idx() {};
         explicit __index_leaf(int __t) restrict(amp,cpu) : __idx(__t) {}
 
         __index_leaf& operator=(const int __t) restrict(amp,cpu) {
@@ -194,6 +193,18 @@ template <int _Ip>
             __idx -= __t;
             return *this;
         }
+        __index_leaf& operator*=(const int __t) restrict(amp,cpu) {
+            __idx *= __t;
+            return *this;
+        }
+        __index_leaf& operator/=(const int __t) restrict(amp,cpu) {
+            __idx /= __t;
+            return *this;
+        }
+        __index_leaf& operator%=(const int __t) restrict(amp,cpu) {
+            __idx %= __t;
+            return *this;
+        }
               int& get()       restrict(amp,cpu) { return __idx; }
         const int& get() const restrict(amp,cpu) { return __idx; }
     };
@@ -204,14 +215,19 @@ template <int ...N>
     struct index_impl<__indices<N...> >
     : public __index_leaf<N>... 
     {
-        index_impl() restrict(amp,cpu) {}
+        index_impl() restrict(amp,cpu) : __index_leaf<N>(0)... {}
         
         template<class ..._Up>
-        __attribute__((annotate("deserialize")))
-            explicit index_impl(_Up... __u) restrict(amp,cpu) :
-                __index_leaf<N>(__u)... {}
-        index_impl(const index_impl& other) restrict(amp,cpu) :
-            __index_leaf<N>(static_cast<const __index_leaf<N>&>(other).get())... {}
+            explicit index_impl(_Up... __u) restrict(amp,cpu)
+            : __index_leaf<N>(__u)... {}
+
+        index_impl(const index_impl& other) restrict(amp,cpu)
+            : index_impl(static_cast<const __index_leaf<N>&>(other).get()...) {}
+
+        index_impl(int components[]) restrict(amp,cpu)
+            : __index_leaf<N>(components[N])... {}
+        index_impl(const int components[]) restrict(amp,cpu)
+            : __index_leaf<N>(components[N])... {}
         
         template<class ..._Tp>
             inline void __swallow(_Tp...) restrict(amp,cpu) {}
@@ -228,12 +244,36 @@ template <int ...N>
             __swallow(__index_leaf<N>::operator-=(static_cast<const __index_leaf<N>&>(__t).get())...);
             return *this;
         }
+        index_impl& operator*=(const index_impl& __t) restrict(amp,cpu) {
+            __swallow(__index_leaf<N>::operator*=(static_cast<const __index_leaf<N>&>(__t).get())...);
+            return *this;
+        }
+        index_impl& operator/=(const index_impl& __t) restrict(amp,cpu) {
+            __swallow(__index_leaf<N>::operator/=(static_cast<const __index_leaf<N>&>(__t).get())...);
+            return *this;
+        }
+        index_impl& operator%=(const index_impl& __t) restrict(amp,cpu) {
+            __swallow(__index_leaf<N>::operator%=(static_cast<const __index_leaf<N>&>(__t).get())...);
+            return *this;
+        }
         index_impl& operator+=(const int __t) restrict(amp,cpu) {
             __swallow(__index_leaf<N>::operator+=(__t)...);
             return *this;
         }
         index_impl& operator-=(const int __t) restrict(amp,cpu) {
-            __swallow(__index_leaf<N>::operator+=(__t)...);
+            __swallow(__index_leaf<N>::operator-=(__t)...);
+            return *this;
+        }
+        index_impl& operator*=(const int __t) restrict(amp,cpu) {
+            __swallow(__index_leaf<N>::operator*=(__t)...);
+            return *this;
+        }
+        index_impl& operator/=(const int __t) restrict(amp,cpu) {
+            __swallow(__index_leaf<N>::operator/=(__t)...);
+            return *this;
+        }
+        index_impl& operator%=(const int __t) restrict(amp,cpu) {
+            __swallow(__index_leaf<N>::operator%=(__t)...);
             return *this;
         }
     };
@@ -259,6 +299,24 @@ struct index_helper
         static_cast<__index_leaf<N - 1>&>(now.base_).get() = get_global_id(_Tp::rank - N);
         index_helper<N - 1, _Tp>::set(now);
     }
+    static inline bool equal(const _Tp& _lhs, const _Tp& _rhs) restrict(amp,cpu) {
+        return (static_cast<const __index_leaf<N - 1>&>(_lhs.base_).get() == 
+                static_cast<const __index_leaf<N - 1>&>(_rhs.base_).get()) &&
+            (index_helper<N - 1, _Tp>::equal(_lhs, _rhs));
+    }
+    static inline int count_size(const _Tp& now) restrict(amp,cpu) {
+        return now[N - 1] * index_helper<N - 1, _Tp>::count_size(now);
+    }
+    static inline bool contains(const _Tp& now, const index<N>& idx, int c) restrict(amp,cpu) {
+        if (c == -1)
+            return 1;
+        return now[c] > idx[c] && idx[c] >= 0 && index_helper<N, _Tp>::contains(now, idx, c - 1);
+    }
+    static inline void seria_help(const _Tp& now, Serialize& s) restrict(amp,cpu) {
+        index_helper<N - 1, _Tp>::seria_help(now, s);
+        int a = now[N - 1];
+        s.Append(sizeof(int), &a);
+    }
 };
 template<typename _Tp>
 struct index_helper<1, _Tp>
@@ -272,6 +330,17 @@ struct index_helper<1, _Tp>
     static inline void set(_Tp& now) restrict(amp,cpu) {
         static_cast<__index_leaf<0>&>(now.base_).get() = get_global_id(_Tp::rank - 1);
     }
+    static inline bool equal(const _Tp& _lhs, const _Tp& _rhs) restrict(amp,cpu) {
+        return (static_cast<const __index_leaf<0>&>(_lhs.base_).get() == 
+                static_cast<const __index_leaf<0>&>(_rhs.base_).get());
+    }
+    static inline int count_size(const _Tp& now) restrict(amp,cpu) {
+        return now[0];
+    }
+    static inline void seria_help(const _Tp& now, Serialize& s) restrict(amp,cpu) {
+        int a = now[0];
+        s.Append(sizeof(int), &a);
+    }
 };
 
 template <int N>
@@ -280,12 +349,23 @@ public:
     static const int rank = N;
     typedef int value_type;
 
-    index() restrict(amp,cpu) {};
-    template <typename ..._Tp>
-        explicit index(_Tp ... __t) restrict(amp,cpu)
-        : base_(__t...) {}
+    index() restrict(amp,cpu) : base_() {};
     index(const index& other) restrict(amp,cpu)
         : base_(other.base_) {}
+    template <typename ..._Tp>
+        explicit index(_Tp ... __t) restrict(amp,cpu)
+        : base_(__t...) {
+            static_assert(sizeof...(_Tp) <= 3, "Explicit constructor with rank greater than 3 is not allowed");
+        }
+    explicit index(int components[]) restrict(amp,cpu)
+        : base_(components) {}
+    explicit index(const int components[]) restrict(amp,cpu)
+        : base_(components) {}
+
+    index& operator=(const index& __t) restrict(amp,cpu) {
+        base_.operator=(__t.base_);
+        return *this;
+    }
 
     int operator[] (unsigned int c) const restrict(amp,cpu) {
         return index_helper<N, index<N> >::get(c, *this);
@@ -293,27 +373,32 @@ public:
     int& operator[] (unsigned int c) restrict(amp,cpu) {
         return index_helper<N, index<N> >::get(c, *this);
     }
-
-    index& operator=(const index& __t) restrict(amp,cpu) {
-        base_.operator=(__t.base_);
-        return *this;
+    
+    bool operator== (const index& other) const restrict(amp,cpu) {
+        return index_helper<N, index<N> >::equal(*this, other);
     }
-    /* Add each element 1 for now */
-    index& operator++() restrict(amp,cpu) {
-        base_.operator+=(1);
-        return *this;
+    bool operator!= (const index& other) const restrict(amp,cpu) {
+        return !(*this == other);
     }
-    index operator++(int) restrict(amp,cpu) {
-        index ret = *this;
-        base_.operator+=(1);
-        return ret;
-    }
+   
     index& operator+=(const index& __r) restrict(amp,cpu) {
         base_.operator+=(__r.base_);
         return *this;
     }
     index& operator-=(const index& __r) restrict(amp,cpu) {
         base_.operator-=(__r.base_);
+        return *this;
+    }
+    index& operator*=(const index& __r) restrict(amp,cpu) {
+        base_.operator*=(__r.base_);
+        return *this;
+    }
+    index& operator/=(const index& __r) restrict(amp,cpu) {
+        base_.operator/=(__r.base_);
+        return *this;
+    }
+    index& operator%=(const index& __r) restrict(amp,cpu) {
+        base_.operator%=(__r.base_);
         return *this;
     }
     index& operator+=(int __r) restrict(amp,cpu) {
@@ -323,6 +408,37 @@ public:
     index& operator-=(int __r) restrict(amp,cpu) {
         base_.operator-=(__r);
         return *this;
+    }
+    index& operator*=(int __r) restrict(amp,cpu) {
+        base_.operator*=(__r);
+        return *this;
+    }
+    index& operator/=(int __r) restrict(amp,cpu) {
+        base_.operator/=(__r);
+        return *this;
+    }
+    index& operator%=(int __r) restrict(amp,cpu) {
+        base_.operator%=(__r);
+        return *this;
+    }
+ 
+    index& operator++() restrict(amp,cpu) {
+        base_.operator+=(1);
+        return *this;
+    }
+    index operator++(int) restrict(amp,cpu) {
+        index ret = *this;
+        base_.operator+=(1);
+        return ret;
+    }
+    index& operator--() restrict(amp,cpu) {
+        base_.operator-=(1);
+        return *this;
+    }
+    index operator--(int) restrict(amp,cpu) {
+        index ret = *this;
+        base_.operator-=(1);
+        return ret;
     }
 
 private:
@@ -372,100 +488,130 @@ template <int D0, int D1=0, int D2=0> class tiled_extent;
 template <int N>
 class extent {
 public:
-  static const int rank = N;
+    static const int rank = N;
+    typedef int value_type;
 
-  typedef int value_type;
+    extent() restrict(amp,cpu) : base_() {};
+    extent(const extent& other) restrict(amp,cpu)
+        : base_(other.base_) {}
+    template <typename ..._Tp>
+        __attribute__((annotate("deserialize"))) 
+        explicit extent(_Tp ... __t) restrict(amp,cpu)
+        : base_(__t...) {}
+    explicit extent(int components[]) restrict(amp,cpu)
+        : base_(components) {}
+    explicit extent(const int components[]) restrict(amp,cpu)
+        : base_(components) {}
 
-  extent() restrict(amp,cpu):
-    extent(0, 0, 0) {}
+    extent& operator=(const extent& other) restrict(amp,cpu) {
+        base_.operator=(other.base_);
+        return *this;
+    }
 
-  extent(const extent& other) restrict(amp,cpu):
-    extent(other.e0_, other.e1_, other.e2_) {
-    static_assert(N<=3, "Does not support N>3");
-  }
+    int operator[] (unsigned int c) const restrict(amp,cpu) {
+        return index_helper<N, extent<N> >::get(c, *this);
+    }
+    int& operator[] (unsigned int c) restrict(amp,cpu) {
+        return index_helper<N, extent<N> >::get(c, *this);
+    }
 
-  explicit extent(int e0) restrict(amp,cpu):
-    extent(e0, 0, 0) {} // N==1
+    bool operator==(const extent& other) const restrict(amp,cpu) {
+        return index_helper<N, extent<N> >::equal(*this, other);
+    }
+    bool operator!=(const extent& other) const restrict(amp,cpu) {
+        return !(*this == other);
+    }
 
-  extent(int e0, int e1) restrict(amp,cpu):
-    extent(e0, e1, 0) {} // N==2
+    unsigned int size() const restrict(amp,cpu) {
+        return index_helper<N, extent<N> >::count_size(*this);
+    }
+    bool contains(const index<N>& idx) const restrict(amp,cpu) {
+        return index_helper<N, extent<N> >::contains(*this, idx, N - 1);
+    }
+    template <int D0> 
+        typename std::enable_if<N == 1, tiled_extent<D0> >::type tile() const {
+            return tiled_extent<D0>(*this);
+        }
+    template <int D0, int D1>
+        typename std::enable_if<N == 2, tiled_extent<D0, D1> >::type tile() const {
+            return tiled_extent<D0, D1>(*this);
+        }
+    template <int D0, int D1, int D2>
+        typename std::enable_if<N == 3, tiled_extent<D0, D1, D2> >::type tile() const {
+            return tiled_extent<D0, D1, D2>(*this);
+        }
 
-  __attribute__((annotate("deserialize"))) 
-  extent(int e0, int e1, int e2) restrict(amp,cpu):
-    e0_(e0), e1_(e1), e2_(e2) {} // N==3
-
-  explicit extent(const int components[]) restrict(amp,cpu){
-    assert(0 && "Not supported yet");
-  }
-
-  extent& operator=(const extent& other) restrict(amp,cpu);
-
-  int operator[](unsigned int c) const restrict(amp,cpu) {
-    static_assert(N<=3, "Does not support N>3");
-    int r[3]={e0_, e1_, e2_};
-    return r[c];
-  }
-
-  int &operator[](unsigned int c) restrict(amp,cpu) {
-    static_assert(N<=3, "Does not support N>3");
-    if (c==0) return e0_;
-    if (c==1) return e1_;
-    return e2_;
-  }
-
-  int size() const restrict(amp,cpu) {
-    int retSize = e0_;
-    if (rank > 1) retSize *= e1_;
-    if (rank > 2) retSize *= e2_;
-    return retSize;
-  }
-
-  bool contains(const index<N>& idx) const restrict(amp,cpu) {
-    bool c = idx[0] < e0_;
-    if (rank > 1) c = ( c && (idx[1] < e1_ ));
-    if (rank > 2) c = ( c && (idx[2] < e2_ ));
-    return c;
-  }
-
-  template <int D0> tiled_extent<D0> tile() const;
-  template <int D0, int D1> tiled_extent<D0,D1> tile() const;
-  template <int D0, int D1, int D2> tiled_extent<D0,D1,D2> tile() const;
-
-  friend inline bool operator==(const extent<N>& lhs, const extent<N>& rhs)
-    restrict(amp,cpu);
-
-  friend inline bool operator!=(const extent<N>& lhs, const extent<N>& rhs)
-    restrict(amp,cpu);
-
-  template <int M>
-    friend extent<M> operator-(const extent<M> &lhs, const extent<M> &rhs)
-    restrict(amp, cpu);
-
-  extent operator+(const index<N>& idx) restrict(amp,cpu);
-
-  extent operator-(const index<N>& idx) restrict(amp,cpu);
-
-  extent& operator+=(int rhs) restrict(amp,cpu);
-  extent& operator-=(int rhs) restrict(amp,cpu);
-  extent& operator*=(int rhs) restrict(amp,cpu);
-  extent& operator/=(int rhs) restrict(amp,cpu);
-  extent& operator%=(int rhs) restrict(amp,cpu);
-
-  extent& operator++() restrict(amp,cpu);
-  extent operator++(int) restrict(amp,cpu);
-  extent& operator--() restrict(amp,cpu);
-  extent operator--(int) restrict(amp,cpu);
-
-  __attribute__((annotate("serialize")))
-  void __cxxamp_serialize(Serialize& s) const {
-    s.Append(sizeof(cl_int), &e0_);
-    s.Append(sizeof(cl_int), &e1_);
-    s.Append(sizeof(cl_int), &e2_);
-  }
+    extent& operator+=(const extent& __r) restrict(amp,cpu) {
+        base_.operator+=(__r.base_);
+        return *this;
+    }
+    extent& operator-=(const extent& __r) restrict(amp,cpu) {
+        base_.operator-=(__r.base_);
+        return *this;
+    }
+    extent& operator*=(const extent& __r) restrict(amp,cpu) {
+        base_.operator*=(__r.base_);
+        return *this;
+    }
+    extent& operator/=(const extent& __r) restrict(amp,cpu) {
+        base_.operator/=(__r.base_);
+        return *this;
+    }
+    extent& operator%=(const extent& __r) restrict(amp,cpu) {
+        base_.operator%=(__r.base_);
+        return *this;
+    }
+    extent& operator+=(int __r) restrict(amp,cpu) {
+        base_.operator+=(__r);
+        return *this;
+    }
+    extent& operator-=(int __r) restrict(amp,cpu) {
+        base_.operator-=(__r);
+        return *this;
+    }
+    extent& operator*=(int __r) restrict(amp,cpu) {
+        base_.operator*=(__r);
+        return *this;
+    }
+    extent& operator/=(int __r) restrict(amp,cpu) {
+        base_.operator/=(__r);
+        return *this;
+    }
+    extent& operator%=(int __r) restrict(amp,cpu) {
+        base_.operator%=(__r);
+        return *this;
+    }
+ 
+    extent& operator++() restrict(amp,cpu) {
+        base_.operator+=(1);
+        return *this;
+    }
+    extent operator++(int) restrict(amp,cpu) {
+        extent ret = *this;
+        base_.operator+=(1);
+        return ret;
+    }
+    extent& operator--() restrict(amp,cpu) {
+        base_.operator-=(1);
+        return *this;
+    }
+    extent operator--(int) restrict(amp,cpu) {
+        extent ret = *this;
+        base_.operator-=(1);
+        return ret;
+    }
+    __attribute__((annotate("serialize")))
+        void __cxxamp_serialize(Serialize& s) const {
+            /* This is hard-coded because array has a hard-coded serializer */
+            index_helper<3, extent<N> >::seria_help(*this, s);
+        }
 
 private:
-  cl_int e0_, e1_, e2_; // Store the data
+    typedef index_impl<typename __make_indices<N>::type> base;
+    base base_;
+    template <int K, typename Q> friend struct index_helper;
 };
+
 
 // C++AMP LPM 4.4.1
 
@@ -546,7 +692,7 @@ class tiled_extent : public extent<3>
 public:
   static const int rank = 3;
   tiled_extent() restrict(amp,cpu);
-  tiled_extent(const tiled_extent& other) restrict(amp,cpu): extent(other){}
+  tiled_extent(const tiled_extent& other) restrict(amp,cpu): extent(other[0], other[1], other[2]) {}
   tiled_extent(const extent<3>& ext) restrict(amp,cpu): extent(ext) {}
   tiled_extent& operator=(const tiled_extent& other) restrict(amp,cpu);
   tiled_extent pad() const restrict(amp,cpu) {
@@ -579,7 +725,7 @@ class tiled_extent<D0,D1,0> : public extent<2>
 public:
   static const int rank = 2;
   tiled_extent() restrict(amp,cpu);
-  tiled_extent(const tiled_extent& other) restrict(amp,cpu):extent(other) {}
+  tiled_extent(const tiled_extent& other) restrict(amp,cpu):extent(other[0], other[1]) {}
   tiled_extent(const extent<2>& ext) restrict(amp,cpu):extent(ext) {}
   tiled_extent& operator=(const tiled_extent& other) restrict(amp,cpu);
   tiled_extent pad() const restrict(amp,cpu) {
@@ -602,11 +748,6 @@ public:
   friend bool operator!=(const tiled_extent& lhs, const tiled_extent& rhs) restrict(amp,cpu);
 };
 
-template<>
-template <int D0, int D1>
-tiled_extent<D0, D1> extent<2>::tile() const {
-  return tiled_extent<D0, D1>(*this);
-}
 
 template <int D0>
 class tiled_extent<D0,0,0> : public extent<1>
@@ -615,7 +756,7 @@ public:
   static const int rank = 1;
   tiled_extent() restrict(amp,cpu);
   tiled_extent(const tiled_extent& other) restrict(amp,cpu):
-    extent(static_cast<extent>(other)) {}
+    extent(other[0]) {}
   tiled_extent(const extent<1>& ext) restrict(amp,cpu):extent(ext) {}
   tiled_extent& operator=(const tiled_extent& other) restrict(amp,cpu);
   tiled_extent pad() const restrict(amp,cpu) {
@@ -635,11 +776,7 @@ public:
   friend bool operator!=(const tiled_extent& lhs, const tiled_extent& rhs) restrict(amp,cpu);
 };
 
-template<>
-template <int D0>
-tiled_extent<D0> extent<1>::tile() const {
-  return tiled_extent<D0>(*this);
-}
+
 // ------------------------------------------------------------------------
 // For array's operator[](int i). This is a temporally workaround.
 // N must be greater or equal to 2
@@ -972,6 +1109,7 @@ public:
       *end = reinterpret_cast<T*>(m_device.get()+extent.size());
     return std::vector<T>(begin, end);
   }
+
 
   T* data() restrict(amp,cpu) {
     return m_device.get();
@@ -1328,66 +1466,6 @@ public:
 };
 #endif
 // class index operators
-template <int N>
-bool operator==(const index<N>& lhs, const index<N>& rhs) restrict(amp,cpu);
-template <int N>
-bool operator!=(const index<N>& lhs, const index<N>& rhs) restrict(amp,cpu);
-
-template <int N>
-index<N> operator+(const index<N>& lhs, const index<N>& rhs) restrict(amp,cpu);
-template <int N>
-index<N> operator+(const index<N>& lhs, int rhs) restrict(amp,cpu) {
-    index<N> __r = lhs;
-    __r += rhs;
-    return __r;
-}
-template <int N>
-index<N> operator+(int lhs, const index<N>& rhs) restrict(amp,cpu);
-template <int N>
-index<N> operator-(const index<N>& lhs, const index<N>& rhs) restrict(amp,cpu);
-template <int N>
-index<N> operator-(const index<N>& lhs, int rhs) restrict(amp,cpu);
-template <int N>
-index<N> operator-(int lhs, const index<N>& rhs) restrict(amp,cpu);
-template <int N>
-index<N> operator*(const index<N>& lhs, int rhs) restrict(amp,cpu);
-template <int N>
-index<N> operator*(int lhs, const index<N>& rhs) restrict(amp,cpu);
-template <int N>
-index<N> operator/(const index<N>& lhs, int rhs) restrict(amp,cpu);
-template <int N>
-index<N> operator/(int lhs, const index<N>& rhs) restrict(amp,cpu);
-template <int N>
-index<N> operator%(const index<N>& lhs, int rhs) restrict(amp,cpu);
-template <int N>
-index<N> operator%(int lhs, const index<N>& rhs) restrict(amp,cpu);
-
-// class extent operators
-template <int N>
-bool operator==(const extent<N>& lhs, const extent<N>& rhs) restrict(amp,cpu);
-template <int N>
-bool operator!=(const extent<N>& lhs, const extent<N>& rhs) restrict(amp,cpu);
-
-template <int N>
-extent<N> operator+(const extent<N>& lhs, int rhs) restrict(amp,cpu);
-template <int N> 
-extent<N> operator+(int lhs, const extent<N>& rhs) restrict(amp,cpu);
-template <int N>
-extent<N> operator-(const extent<N>& lhs, int rhs) restrict(amp,cpu);
-template <int N>
-extent<N> operator-(int lhs, const extent<N>& rhs) restrict(amp,cpu);
-template <int N>
-extent<N> operator*(const extent<N>& lhs, int rhs) restrict(amp,cpu);
-template <int N>
-extent<N> operator*(int lhs, const extent<N>& rhs) restrict(amp,cpu);
-template <int N>
-extent<N> operator/(const extent<N>& lhs, int rhs) restrict(amp,cpu);
-template <int N>
-extent<N> operator/(int lhs, const extent<N>& rhs) restrict(amp,cpu);
-template <int N>
-extent<N> operator%(const extent<N>& lhs, int rhs) restrict(amp,cpu);
-template <int N>
-extent<N> operator%(int lhs, const extent<N>& rhs) restrict(amp,cpu);
 
 
 template <int N, typename Kernel>

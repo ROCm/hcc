@@ -54,52 +54,153 @@ inline accelerator_view accelerator::create_view(void) {
   accelerator_view sa(0);
   return sa;
 }
-// Concurrency::index
+
 template <int N>
-index<N> operator+(const index<N> &lhs, const index<N> &rhs)
-  restrict(amp, cpu) {
-  index<N> x(lhs);
-  x[0] += rhs[0];
-  if (N > 1) x[1] += rhs[1];
-  if (N > 2) x[2] += rhs[2];
-  return  x;
+index<N> operator+(const index<N>& lhs, const index<N>& rhs) restrict(amp,cpu) {
+    index<N> __r = lhs;
+    __r += rhs;
+    return __r;
+}
+template <int N>
+index<N> operator+(const index<N>& lhs, int rhs) restrict(amp,cpu) {
+    index<N> __r = lhs;
+    __r += rhs;
+    return __r;
+}
+template <int N>
+index<N> operator+(int lhs, const index<N>& rhs) restrict(amp,cpu) {
+    index<N> __r = rhs;
+    __r += lhs;
+    return __r;
+}
+template <int N>
+index<N> operator-(const index<N>& lhs, const index<N>& rhs) restrict(amp,cpu) {
+    index<N> __r = lhs;
+    __r -= rhs;
+    return __r;
+}
+template <int N>
+index<N> operator-(const index<N>& lhs, int rhs) restrict(amp,cpu) {
+    index<N> __r = lhs;
+    __r -= rhs;
+    return __r;
+}
+template <int N>
+index<N> operator-(int lhs, const index<N>& rhs) restrict(amp,cpu) {
+    index<N> __r = rhs;
+    __r -= lhs;
+    return __r;
+}
+template <int N>
+index<N> operator*(const index<N>& lhs, int rhs) restrict(amp,cpu) {
+    index<N> __r = lhs;
+    __r *= rhs;
+    return __r;
+}
+template <int N>
+index<N> operator*(int lhs, const index<N>& rhs) restrict(amp,cpu) {
+    index<N> __r = rhs;
+    __r *= lhs;
+    return __r;
+}
+template <int N>
+index<N> operator/(const index<N>& lhs, int rhs) restrict(amp,cpu) {
+    index<N> __r = lhs;
+    __r /= rhs;
+    return __r;
+}
+template <int N>
+index<N> operator/(int lhs, const index<N>& rhs) restrict(amp,cpu) {
+    index<N> __r = rhs;
+    __r /= lhs;
+    return __r;
+}
+template <int N>
+index<N> operator%(const index<N>& lhs, int rhs) restrict(amp,cpu) {
+    index<N> __r = lhs;
+    __r %= rhs;
+    return __r;
+}
+template <int N>
+index<N> operator%(int lhs, const index<N>& rhs) restrict(amp,cpu) {
+    index<N> __r = rhs;
+    __r %= lhs;
+    return __r;
 }
 
-/// Concurrency::extent
-template<int N>
-extent<N> operator-(const extent<N> &lhs, const extent<N> &rhs)
-  restrict(amp, cpu) {
-    extent<N> i;
-    i[0] = lhs[0] - rhs[0];
-    if (N>1)
-      i[1] = lhs[1] - rhs[1];
-    if (N>2)
-      i[2] = lhs[2] - rhs[2];
-    return i;
-  }
+template <int N>
+extent<N> operator+(const extent<N>& lhs, const extent<N>& rhs) restrict(amp,cpu) {
+    extent<N> __r = lhs;
+    __r += rhs;
+    return __r;
+}
+template <int N>
+extent<N> operator+(const extent<N>& lhs, int rhs) restrict(amp,cpu) {
+    extent<N> __r = lhs;
+    __r += rhs;
+    return __r;
+}
+template <int N>
+extent<N> operator+(int lhs, const extent<N>& rhs) restrict(amp,cpu) {
+    extent<N> __r = rhs;
+    __r += lhs;
+    return __r;
+}
+template <int N>
+extent<N> operator-(const extent<N>& lhs, const extent<N>& rhs) restrict(amp,cpu) {
+    extent<N> __r = lhs;
+    __r -= rhs;
+    return __r;
+}
+template <int N>
+extent<N> operator-(const extent<N>& lhs, int rhs) restrict(amp,cpu) {
+    extent<N> __r = lhs;
+    __r -= rhs;
+    return __r;
+}
+template <int N>
+extent<N> operator-(int lhs, const extent<N>& rhs) restrict(amp,cpu) {
+    extent<N> __r = rhs;
+    __r -= lhs;
+    return __r;
+}
+template <int N>
+extent<N> operator*(const extent<N>& lhs, int rhs) restrict(amp,cpu) {
+    extent<N> __r = lhs;
+    __r *= rhs;
+    return __r;
+}
+template <int N>
+extent<N> operator*(int lhs, const extent<N>& rhs) restrict(amp,cpu) {
+    extent<N> __r = rhs;
+    __r *= lhs;
+    return __r;
+}
+template <int N>
+extent<N> operator/(const extent<N>& lhs, int rhs) restrict(amp,cpu) {
+    extent<N> __r = lhs;
+    __r /= rhs;
+    return __r;
+}
+template <int N>
+extent<N> operator/(int lhs, const extent<N>& rhs) restrict(amp,cpu) {
+    extent<N> __r = rhs;
+    __r /= lhs;
+    return __r;
+}
+template <int N>
+extent<N> operator%(const extent<N>& lhs, int rhs) restrict(amp,cpu) {
+    extent<N> __r = lhs;
+    __r %= rhs;
+    return __r;
+}
+template <int N>
+extent<N> operator%(int lhs, const extent<N>& rhs) restrict(amp,cpu) {
+    extent<N> __r = rhs;
+    __r %= lhs;
+    return __r;
+}
 
-
-inline bool operator==(const extent<1>& lhs, const extent<1>& rhs) restrict(amp,cpu) {
-  return (lhs[0] == rhs[0]);
-}
-inline bool operator==(const extent<2>& lhs, const extent<2>& rhs) restrict(amp,cpu) {
-  return (lhs[0] == rhs[0]) && (lhs[1] == rhs[1]);
-}
-inline bool operator==(const extent<3>& lhs, const extent<3>& rhs) restrict(amp,cpu) {
-  return (lhs[0] == rhs[0]) && (lhs[1] == rhs[1]) && (lhs[2] == rhs[2]);
-}
-
-inline bool operator!=(const extent<1>& lhs, const extent<1>& rhs) restrict(amp,cpu) {
-  return !(lhs == rhs);
-}
-
-inline bool operator!=(const extent<2>& lhs, const extent<2>& rhs) restrict(amp,cpu) {
-  return !(lhs == rhs);
-}
-
-inline bool operator!=(const extent<3>& lhs, const extent<3>& rhs) restrict(amp,cpu) {
-  return !(lhs == rhs);
-}
 /// Concurrency::array
 #define __global __attribute__((address_space(1)))
 #ifndef __GPU__
