@@ -1219,7 +1219,12 @@ class array<T, 1> {
     array_view<const T,K> view_as(const Concurrency::extent<K>& viewExtent)
     const restrict(amp,cpu);
 
-  operator std::vector<T>() const;
+  operator std::vector<T>() const {
+    T *begin = reinterpret_cast<T*>(m_device.get()),
+      *end = reinterpret_cast<T*>(m_device.get()+extent.size());
+    return std::vector<T>(begin, end);
+
+  }
 
   T* data() restrict(amp,cpu) {
     return m_device.get();
