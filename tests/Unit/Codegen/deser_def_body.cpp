@@ -7,12 +7,15 @@
 class baz {
  public:
   baz(void): foo(1234) {}
-  __attribute__((annotate("deserialize"))) baz(int foo_, float bar_) restrict(amp,cpu);
+  __attribute__((annotate("auto_deserialize"))) baz(int foo_, float bar_) restrict(amp,cpu);
   //:foo(foo_), bar(bar_) {}
   int foo;
   float bar;
 };
-int fake_use(void) restrict(amp) {
+
+ __attribute__((annotate("user_deserialize")))
+int fake_use(void)
+  restrict(amp) {
   baz bll(1, 2.0);
   return bll.foo;
 }

@@ -224,13 +224,6 @@ template <typename T, int N>
 array<T,N>:: array(const array& other): extent(other.extent),
     accelerator_view_(other.accelerator_view_), m_device(other.m_device) {}
 
-template <typename T, int N>
-__attribute__((annotate("serialize")))
-void array<T, N>::__cxxamp_serialize(Serialize& s) const {
-  m_device.__cxxamp_serialize(s);
-  extent.__cxxamp_serialize(s);
-}
-
 // 1D array constructors
 
 template <typename T>
@@ -249,27 +242,6 @@ array<T, 1>::array(const Concurrency::extent<1>& ext): extent(ext),
   if (extent[0])
     m_device.reset(GMACAllocator<T>().allocate(ext.size()), GMACDeleter<T>());
 }
-
-template <typename T>
-__attribute__((annotate("serialize")))
-void array<T, 1>::__cxxamp_serialize(Serialize& s) const {
-  m_device.__cxxamp_serialize(s);
-  cl_int e0 = extent[0];
-  s.Append(sizeof(cl_int), &e0);
-}
-
-#else
-/// Concurrency::array implementations that are only visible when compiling
-/// for the GPU
-template <typename T, int N>
-__attribute__((annotate("deserialize"))) 
-array<T, N>::array(__global T *p, cl_int e0, cl_int e1, cl_int e2)
-  restrict(amp): extent(e0, e1, e2), m_device(p) {}
-
-template <typename T>
-__attribute__((annotate("deserialize"))) 
-array<T, 1>::array(__global T *p, cl_int e) restrict(amp):
-  extent(e), m_device(p) {}
 #endif
 #undef __global
 

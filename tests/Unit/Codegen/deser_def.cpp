@@ -6,7 +6,7 @@ class baz {
   }
   baz(void): foo(1234) {}
   __attribute__((used)) /* Forcing this function to be present in the output */
-  __attribute__((annotate("deserialize"))) /* For compiler */
+  __attribute__((annotate("auto_deserialize"))) /* For compiler */
   baz(int foo_, float bar_) restrict(amp);
   // :foo(foo_), bar(bar_) {}
  private:

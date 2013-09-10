@@ -30,6 +30,7 @@ class baz: public base {
   member m;
 };
 #ifdef __GPU__
+__attribute__((annotate("user_deserialize")))
 float fake_use(void) restrict(amp) {
   baz bll(1.1, 2, 1); // calls the deserializer
   return bll._f;

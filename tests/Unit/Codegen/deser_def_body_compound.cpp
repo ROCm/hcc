@@ -8,7 +8,7 @@ class Member {
  public:
   // Compiler-generated constructor
   __attribute__((noinline))
-  __attribute__((annotate("deserialize"))) Member(float*, int) restrict(amp);
+  __attribute__((annotate("auto_deserialize"))) Member(float*, int) restrict(amp);
   float* bzzt;
   int zzz;
 };
@@ -16,13 +16,15 @@ class Member {
 class baz {
  public:
   // Compiler-generated constructor
-  __attribute__((annotate("deserialize"))) baz(float *m1, int m2,
+  __attribute__((annotate("auto_deserialize"))) baz(float *m1, int m2,
     int foo_, float bar_) restrict(amp,cpu);
 
   Member m;
   int foo;
   float bar;
 };
+
+__attribute__((annotate("user_deserialize")))
 int fake_use(void) restrict(amp) {
   baz bll(NULL, 0,  1, 2.0);
   return bll.foo;

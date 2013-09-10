@@ -11,7 +11,7 @@ class Serialize {
 
 class base{
  public:
-  __attribute__((annotate("deserialize"))) /* For compiler */
+  __attribute__((annotate("user_deserialize"))) /* For compiler */
   base(int a_,float b_) restrict(amp) :a(a_), b(b_) {}
   int cho(void) restrict(amp);
   int a;

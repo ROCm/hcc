@@ -29,7 +29,7 @@ class _data {
  public:
   _data() = delete;
   _data(const _data& d) restrict(cpu, amp):p_(d.p_) {}
-  __attribute__((annotate("deserialize")))
+  __attribute__((annotate("user_deserialize")))
   explicit _data(__global T* t) restrict(cpu, amp) { p_ = t; }
   __global T* get(void) const restrict(cpu, amp) { return p_; }
   void reset(__global T *t = NULL) restrict(cpu, amp) { p_ = t; }
@@ -48,4 +48,6 @@ class _data_host: public std::shared_ptr<T> {
   void __cxxamp_serialize(Serialize& s) const {
     s.AppendPtr((const void *)std::shared_ptr<T>::get());
   }
+  __attribute__((annotate("user_deserialize")))
+  explicit _data_host(__global T* t) restrict(amp);
 };

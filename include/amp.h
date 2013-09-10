@@ -96,10 +96,12 @@ public:
 
   accelerator get_accelerator() const;
   // __declspec(property(get=get_accelerator)) Concurrency::accelerator accelerator;
-
-  __declspec(property(get)) bool is_debug;
-  __declspec(property(get)) unsigned int version;
-  __declspec(property(get)) queuing_mode queuing_mode;
+  //__declspec(property(get))
+  __attribute__((cpu)) bool is_debug;
+  //__declspec(property(get))
+  unsigned int version;
+  //__declspec(property(get))
+  __attribute__((cpu)) queuing_mode queuing_mode;
   void flush();
   void wait();
   completion_future create_marker();
@@ -177,7 +179,7 @@ template <int _Ep, int _Sp = 0>
 template <int _Ip>
     class __index_leaf {
         int __idx;
-        int dummy;
+        float dummy;
     public:
         explicit __index_leaf(int __t) restrict(amp,cpu) : __idx(__t) {}
 
@@ -495,7 +497,6 @@ public:
     extent(const extent& other) restrict(amp,cpu)
         : base_(other.base_) {}
     template <typename ..._Tp>
-        __attribute__((annotate("deserialize"))) 
         explicit extent(_Tp ... __t) restrict(amp,cpu)
         : base_(__t...) {}
     explicit extent(int components[]) restrict(amp,cpu)
@@ -600,12 +601,6 @@ public:
         base_.operator-=(1);
         return ret;
     }
-    __attribute__((annotate("serialize")))
-        void __cxxamp_serialize(Serialize& s) const {
-            /* This is hard-coded because array has a hard-coded serializer */
-            index_helper<3, extent<N> >::seria_help(*this, s);
-        }
-
 private:
     typedef index_impl<typename __make_indices<N>::type> base;
     base base_;
@@ -802,9 +797,6 @@ public:
 
 template <typename T, int N=1>
 class array {
-private:
-  // Data members that do not show up at GPU side
-  __attribute__((cpu)) int dummy_; //Don't define deserialization for this class
 public:
 #ifdef __GPU__
   typedef _data<T> gmac_buffer_t;
@@ -1124,28 +1116,13 @@ public:
   }
 
   const gmac_buffer_t& internal() const { return m_device; }
-
-  // CLAMP: The serialization interface
-  __attribute__((annotate("serialize")))
-  void __cxxamp_serialize(Serialize& s) const;
-
-  __attribute__((annotate("deserialize"))) 
-  array(__global T *p, cl_int e0, cl_int e1, cl_int e2) restrict(amp);
-  // End CLAMP
 private:
-#ifndef __GPU__
   accelerator_view accelerator_view_;
-#endif
   gmac_buffer_t m_device;
 };
 
 template <typename T>
 class array<T, 1> {
- private:
-#ifndef __GPU__
-  //Don't define deserialization for this class
-  __attribute__((cpu)) int dummy_;
-#endif
  public:
 #ifdef __GPU__
   typedef _data<T> gmac_buffer_t;
@@ -1377,18 +1354,9 @@ class array<T, 1> {
   }
 
   const gmac_buffer_t& internal() const restrict(amp, cpu) { return m_device; }
-
-  // CLAMP: The serialization interface
-  __attribute__((annotate("serialize")))
-  void __cxxamp_serialize(Serialize& s) const;
-
-  __attribute__((annotate("deserialize"))) 
-  array(__global T *p, cl_int e) restrict(amp);
   // End CLAMP
 private:
-#ifndef __GPU__
   accelerator_view accelerator_view_;
-#endif
   gmac_buffer_t m_device;
 #undef __global
 };

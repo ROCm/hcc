@@ -5,11 +5,6 @@ template <int> class extent;
 template <typename T>
 class array_view<T, 1>
 {
-private:
-#ifndef __GPU__
-  // Stop defining implicit deserialization for this class
-  __attribute__((cpu)) int dummy_;
-#endif
 public:
 #ifdef __GPU__
   typedef _data<T> gmac_buffer_t;
@@ -126,7 +121,7 @@ public:
   __attribute__((annotate("serialize")))
   void __cxxamp_serialize(Serialize& s) const;
 
-  __attribute__((annotate("deserialize")))
+  __attribute__((annotate("user_deserialize")))
   array_view(__global T *p, cl_int size, cl_int offset) restrict(amp);
   // End CLAMP
   
@@ -149,11 +144,6 @@ public:
 template <typename T>
 class array_view<T, 2>
 {
- private:
-#ifndef __GPU__
-  // Stop defining implicit deserialization for this class
-  __attribute__((cpu)) int dummy_;
-#endif
  public:
 #ifdef __GPU__
   typedef _data<T> gmac_buffer_t;
@@ -285,7 +275,7 @@ class array_view<T, 2>
   __attribute__((annotate("serialize")))
   void __cxxamp_serialize(Serialize& s) const;
 
-  __attribute__((annotate("deserialize")))
+  __attribute__((annotate("user_deserialize")))
   array_view(cl_int e0, cl_int e1, cl_int s1_, cl_uint offset, __global T *p)
     restrict(amp);
   // End CLAMP
@@ -390,7 +380,7 @@ template <typename T>
   cache_(reinterpret_cast<__global value_type *>(src)), offset_(0) {}
 
 template <typename T>
-__attribute__((annotate("deserialize")))
+__attribute__((annotate("user_deserialize")))
   array_view<T, 1>::array_view(__global T *p, cl_int size, cl_int off)
     restrict(amp): extent(size), p_(nullptr), cache_(p), offset_(off) {}
 
@@ -403,7 +393,7 @@ array_view<T, 2>::array_view(const Concurrency::extent<2>& ext,
   cache_(reinterpret_cast<__global value_type *>(src)) {}
 
 template <typename T>
-__attribute__((annotate("deserialize")))
+__attribute__((annotate("user_deserialize")))
 array_view<T, 2>::array_view(cl_int e0, cl_int e1, cl_int s1, cl_uint offset,
   __global T *p) restrict(amp):
   extent(e0, e1), p_(nullptr), s1_(s1), offset_(offset), cache_(p) {}
