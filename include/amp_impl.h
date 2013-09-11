@@ -201,49 +201,150 @@ extent<N> operator%(int lhs, const extent<N>& rhs) restrict(amp,cpu) {
     return __r;
 }
 
-/// Concurrency::array
-#define __global __attribute__((address_space(1)))
+
+template<int N> class extent;
+template<typename T, int N> array<T, N>::array(const Concurrency::extent<N>& ext)
+    : extent(ext), m_device(nullptr) {
 #ifndef __GPU__
-/// Concurrency::array constructors that are only defined for the host
-template <typename T, int N>
-array<T, N>::array(int e0, int e1, accelerator_view av):
-  extent(Concurrency::extent<N>(e0, e1)), accelerator_view_(av) {
-  m_device.reset(GMACAllocator<T>().allocate(e0), GMACDeleter<T>());
-}
-
-template <typename T, int N>
-array<T, N>::array(const Concurrency::extent<N>& ext): extent(ext),
-  m_device(nullptr), accelerator_view_(accelerator().get_default_view()) {
-  if (ext.size()) {
-    m_device.reset(GMACAllocator<T>().allocate(ext.size()),
-	GMACDeleter<T>());
-  }
-}
-
-template <typename T, int N>
-array<T,N>:: array(const array& other): extent(other.extent),
-    accelerator_view_(other.accelerator_view_), m_device(other.m_device) {}
-
-// 1D array constructors
-
-template <typename T>
-array<T,1>:: array(const array& other): extent(other.extent),
-    accelerator_view_(other.accelerator_view_), m_device(other.m_device) {}
-
-template <typename T>
-array<T, 1>::array(int e0, accelerator_view av):
-  extent(e0), accelerator_view_(av) {
-  m_device.reset(GMACAllocator<T>().allocate(e0), GMACDeleter<T>());
-}
-
-template <typename T>
-array<T, 1>::array(const Concurrency::extent<1>& ext): extent(ext),
-  m_device(nullptr), accelerator_view_(accelerator().get_default_view()) {
-  if (extent[0])
-    m_device.reset(GMACAllocator<T>().allocate(ext.size()), GMACDeleter<T>());
-}
+        initialize();
 #endif
-#undef __global
+    }
+template<typename T, int N> array<T, N>::array(int e0)
+    : array(Concurrency::extent<1>(e0)) {}
+template<typename T, int N> array<T, N>::array(int e0, int e1)
+    : array(Concurrency::extent<2>(e0, e1)) {}
+template<typename T, int N> array<T, N>::array(int e0, int e1, int e2)
+    : array(Concurrency::extent<3>(e0, e1, e2)) {}
+
+
+template<typename T, int N> 
+array<T, N>::array(const Concurrency::extent<N>& ext, accelerator_view av) : array(ext) {}
+template<typename T, int N> 
+array<T, N>::array(int e0, accelerator_view av) : array(e0) {}
+template<typename T, int N> 
+array<T, N>::array(int e0, int e1, accelerator_view av) : array(e0, e1) {}
+template<typename T, int N> 
+array<T, N>::array(int e0, int e1, int e2, accelerator_view av) : array(e0, e1, e2) {}
+
+
+template<typename T, int N> template <typename InputIterator>
+array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin)
+    : extent(ext), m_device(nullptr) {
+#ifndef __GPU__
+        InputIterator srcEnd = srcBegin;
+        std::advance(srcEnd, extent.size());
+        initialize(srcBegin, srcEnd);
+#endif
+    }
+
+template<typename T, int N> template <typename InputIterator>
+array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, InputIterator srcEnd)
+    : extent(ext), m_device(nullptr) { initialize(srcBegin, srcEnd); }
+
+template<typename T, int N> template <typename InputIterator> 
+array<T, N>::array(int e0, InputIterator srcBegin)
+    : array(Concurrency::extent<1>(e0), srcBegin) {}
+
+template<typename T, int N> template <typename InputIterator>
+array<T, N>::array(int e0, InputIterator srcBegin, InputIterator srcEnd)
+    : array(Concurrency::extent<1>(e0), srcBegin, srcEnd) {}
+
+template<typename T, int N> template <typename InputIterator>
+array<T, N>::array(int e0, int e1, InputIterator srcBegin)
+    : array(Concurrency::extent<2>(e0, e1), srcBegin) {}
+
+template<typename T, int N> template <typename InputIterator>
+array<T, N>::array(int e0, int e1, InputIterator srcBegin, InputIterator srcEnd)
+    : array(Concurrency::extent<2>(e0, e1), srcBegin, srcEnd) {}
+
+template<typename T, int N> template <typename InputIterator>
+array<T, N>::array(int e0, int e1, int e2, InputIterator srcBegin)
+    : array(Concurrency::extent<3>(e0, e1, e2), srcBegin) {}
+
+template<typename T, int N> template <typename InputIterator>
+array<T, N>::array(int e0, int e1, int e2, InputIterator srcBegin, InputIterator srcEnd)
+    : array(Concurrency::extent<3>(e0, e1, e2), srcBegin, srcEnd) {}
+
+
+
+template<typename T, int N> template <typename InputIterator>
+array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, accelerator_view av)
+    : array(ext, srcBegin) {}
+
+template<typename T, int N> template <typename InputIterator>
+array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, InputIterator srcEnd,
+                   accelerator_view av) : array(ext, srcBegin, srcEnd) {}
+
+template<typename T, int N> template <typename InputIterator>
+array<T, N>::array(int e0, InputIterator srcBegin, accelerator_view av)
+    : array(e0, srcBegin) {}
+
+template<typename T, int N> template <typename InputIterator> 
+array<T, N>::array(int e0, InputIterator srcBegin, InputIterator srcEnd, accelerator_view av)
+    : array(e0, srcBegin) {}
+
+template<typename T, int N> template <typename InputIterator>
+array<T, N>::array(int e0, int e1, InputIterator srcBegin, accelerator_view av)
+    : array(e0, e1, srcBegin) {}
+
+template<typename T, int N> template <typename InputIterator> 
+array<T, N>::array(int e0, int e1, InputIterator srcBegin, InputIterator srcEnd,
+                   accelerator_view av) : array(e0, e1, srcBegin, srcEnd) {}
+
+template<typename T, int N> template <typename InputIterator>
+array<T, N>::array(int e0, int e1, int e2, InputIterator srcBegin, accelerator_view av)
+    : array(e0, e1, e2, srcBegin) {}
+
+template<typename T, int N> template <typename InputIterator>
+array<T, N>::array(int e0, int e1, int e2, InputIterator srcBegin, InputIterator srcEnd,
+                   accelerator_view av) : array(e0, e1, e2, srcBegin, srcEnd) {}
+
+
+
+
+
+template<typename T, int N> template <typename InputIterator>
+array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, accelerator_view av,
+                   accelerator_view associated_av) : array(ext, srcBegin) {}
+template<typename T, int N> template <typename InputIterator>
+array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, InputIterator srcEnd,
+                   accelerator_view av, accelerator_view associated_av)
+    : array(ext, srcBegin, srcEnd) {}
+
+template<typename T, int N> template <typename InputIterator>
+array<T, N>::array(int e0, InputIterator srcBegin, accelerator_view av,
+                   accelerator_view associated_av)
+    : array(e0, srcBegin) {}
+
+template<typename T, int N> template <typename InputIterator>
+array<T, N>::array(int e0, InputIterator srcBegin, InputIterator srcEnd,
+                   accelerator_view av, accelerator_view associated_av)
+    : array(e0, srcBegin, srcEnd) {}
+
+template<typename T, int N> template <typename InputIterator>
+array<T, N>::array(int e0, int e1, InputIterator srcBegin, accelerator_view av,
+                   accelerator_view associated_av)
+    : array(e0, e1, srcBegin) {}
+
+template<typename T, int N> template <typename InputIterator>
+array<T, N>::array(int e0, int e1, InputIterator srcBegin, InputIterator srcEnd,
+                   accelerator_view av, accelerator_view associated_av)
+    : array(e0, e1, srcBegin, srcEnd) {}
+
+template<typename T, int N> template <typename InputIterator>
+array<T, N>::array(int e0, int e1, int e2, InputIterator srcBegin, accelerator_view av,
+                   accelerator_view associated_av)
+    : array(e0, e1, e2, srcBegin) {}
+
+template<typename T, int N> template <typename InputIterator>
+array<T, N>::array(int e0, int e1, int e2, InputIterator srcBegin, InputIterator srcEnd,
+                   accelerator_view av, accelerator_view associated_av)
+    : array(e0, e1, e2, srcBegin, srcEnd) {}
+
+
+template<typename T, int N> array<T, N>::array(const array& other)
+    : extent(other.extent), m_device(other.m_device) {}
+
 
 } //namespace Concurrency
 #endif //INCLUDE_AMP_IMPL_H
