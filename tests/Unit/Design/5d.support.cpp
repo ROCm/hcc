@@ -41,7 +41,7 @@ int main()
 {
 	int result = 1;
 
-	// result &= ((test_array_rank<int, 1>()));
+	result &= ((test_array_rank<int, 1>()));
 	result &= ((test_array_rank<int, 5>()));
     
     return !result;

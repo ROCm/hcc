@@ -455,8 +455,8 @@ private:
     base base_;
     template <int K, typename Q> friend struct index_helper;
 
-    template<class Y>
-        friend void parallel_for_each(extent<1>, const Y&);
+    template<int K, class Y>
+        friend void parallel_for_each(extent<K>, const Y&);
     __attribute__((annotate("__cxxamp_opencl_index")))
         void __cxxamp_opencl_index() restrict(amp,cpu)
 #ifdef __GPU__
