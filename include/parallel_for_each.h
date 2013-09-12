@@ -78,14 +78,66 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
       ext, local_size);
   CHECK_ERROR_GMAC(error_code, "eclCallNDRange");
 }
+
+template <int N, typename Kernel, typename _Tp>
+struct pfe_helper
+{
+    static inline void call(Kernel& k, _Tp& idx) restrict(amp,cpu) {
+        int i;
+        for (i = 0; i < k.ext[N - 1]; ++i) {
+            idx[N - 1] = i;
+            pfe_helper<N - 1, Kernel, _Tp>::call(k, idx);
+        }
+    }
+};
+template <typename Kernel, typename _Tp>
+struct pfe_helper<0, Kernel, _Tp>
+{
+    static inline void call(Kernel& k, _Tp& idx) restrict(amp,cpu) {
+        k.k(idx);
+    }
+};
+
+template <int N, typename Kernel>
+class pfe_wrapper
+{
+public:
+    explicit pfe_wrapper(extent<N>& other, const Kernel& f) restrict(amp,cpu)
+        : ext(other), k(f) {}
+    void operator() (index<N> idx) restrict(amp,cpu) {
+        pfe_helper<N - 3, pfe_wrapper<N, Kernel>, index<N>>::call(*this, idx);
+    }
+private:
+    const extent<N> ext;
+    const Kernel k;
+    template <int K, typename Ker, typename _Tp>
+        friend struct pfe_helper;
+};
+
+template <int N, typename Kernel>
+__attribute__((noinline,used)) void parallel_for_each(
+    extent<N> compute_domain, const Kernel& f) restrict(cpu, amp) {
+#ifndef __GPU__
+    size_t ext[3] = {static_cast<size_t>(compute_domain[N - 1]),
+        static_cast<size_t>(compute_domain[N - 2]),
+        static_cast<size_t>(compute_domain[N - 3])};
+    const pfe_wrapper<N, Kernel> _pf(compute_domain, f);
+    mcw_cxxamp_launch_kernel<pfe_wrapper<N, Kernel>, 3>(ext, NULL, _pf);
+#else
+    auto bar = &pfe_wrapper<N, Kernel>::operator();
+    auto qq = &index<N>::__cxxamp_opencl_index;
+    int foo = reinterpret_cast<intptr_t>(&pfe_wrapper<N, Kernel>::__cxxamp_trampoline);
+#endif
+}
+
 template class index<1>;
 //1D parallel_for_each, nontiled
 template <typename Kernel>
 __attribute__((noinline,used)) void parallel_for_each(
     extent<1> compute_domain,
     const Kernel& f) restrict(cpu,amp) {
-  size_t ext = compute_domain[0];
 #ifndef __GPU__
+  size_t ext = compute_domain[0];
   mcw_cxxamp_launch_kernel<Kernel, 1>(&ext, NULL, f);
 #else //ifndef __GPU__
   //to ensure functor has right operator() defined
@@ -100,9 +152,9 @@ template <typename Kernel>
 __attribute__((noinline,used)) void parallel_for_each(
     extent<2> compute_domain,
     const Kernel& f) restrict(cpu,amp) {
+#ifndef __GPU__
   size_t ext[2] = {static_cast<size_t>(compute_domain[1]),
                    static_cast<size_t>(compute_domain[0])};
-#ifndef __GPU__
   mcw_cxxamp_launch_kernel<Kernel, 2>(ext, NULL, f);
 #else //ifndef __GPU__
   //to ensure functor has right operator() defined
@@ -117,10 +169,10 @@ template <typename Kernel>
 __attribute__((noinline,used)) void parallel_for_each(
     extent<3> compute_domain,
     const Kernel& f) restrict(cpu,amp) {
+#ifndef __GPU__
   size_t ext[3] = {static_cast<size_t>(compute_domain[2]),
                    static_cast<size_t>(compute_domain[1]),
                    static_cast<size_t>(compute_domain[0])};
-#ifndef __GPU__
   mcw_cxxamp_launch_kernel<Kernel, 3>(ext, NULL, f);
 #else //ifndef __GPU__
   //to ensure functor has right operator() defined
