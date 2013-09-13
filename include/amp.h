@@ -340,6 +340,9 @@ struct amp_helper
     static int inline flatten(const _Tp1& idx, const _Tp2& ext) restrict(amp,cpu) {
         return idx[N - 1] + ext[N - 1] * amp_helper<N - 1, _Tp1, _Tp2>::flatten(idx, ext);
     }
+    static void inline minus(const _Tp1& idx, _Tp2& ext) restrict(amp,cpu) {
+        ext.base_ -= idx.base_;
+    }
 };
 template <typename _Tp1, typename _Tp2>
 struct amp_helper<1, _Tp1, _Tp2>
@@ -349,6 +352,9 @@ struct amp_helper<1, _Tp1, _Tp2>
     }
     static int inline flatten(const _Tp1& idx, const _Tp2& ext) restrict(amp,cpu) {
         return idx[0];
+    }
+    static void inline minus(const _Tp1& idx, _Tp2& ext) restrict(amp,cpu) {
+        ext.base_ -= idx.base_;
     }
 };
 
@@ -454,6 +460,7 @@ private:
     typedef index_impl<typename __make_indices<N>::type> base;
     base base_;
     template <int K, typename Q> friend struct index_helper;
+    template <int K, typename Q1, typename Q2> friend struct amp_helper;
 
     template<int K, class Y>
         friend void parallel_for_each(extent<K>, const Y&);
@@ -775,30 +782,54 @@ public:
 };
 
 
-// ------------------------------------------------------------------------
-// For array's operator[](int i). This is a temporally workaround.
-// N must be greater or equal to 2
 #define __global __attribute__((address_space(1)))
-
 template <typename T, int N>
-struct array_projection_helper
+struct projection_helper
 {
     typedef array_view<T, N - 1> result_type;
     typedef array_view<const T, N - 1> const_result_type;
+    static result_type project(array<T, N>& now, int stride) restrict(amp,cpu) {
+        int comp[N - 1], i;
+        for (i = N - 1; i > 0; --i)
+            comp[i - 1] = now.extent[i];
+        Concurrency::extent<N - 1> ext(comp);
+        array_view<T, N - 1> av(ext, now.m_device, now.p_, ext.size() * stride);
+        return av;
+    }
+    static const_result_type project(const array<T, N>& now, int stride) restrict(amp,cpu) {
+        int comp[N - 1], i;
+        for (i = N - 1; i > 0; --i)
+            comp[i - 1] = now.extent[i];
+        Concurrency::extent<N - 1> ext(comp);
+        array_view<T, N - 1> av(ext, now.m_device, now.p_, ext.size() * stride);
+        return av;
+    }
+    static result_type project(const array_view<T, N>& now, int stride) restrict(amp,cpu) {
+        int comp[N - 1], i;
+        for (i = N - 1; i > 0; --i)
+            comp[i - 1] = now.extent[i];
+        Concurrency::extent<N - 1> ext(comp);
+        array_view<T, N - 1> av(ext, now.cache, now.p_, ext.size() * stride);
+        return av;
+    }
 };
 
 template <typename T>
-struct array_projection_helper<T, 1>
+struct projection_helper<T, 1>
 {
-    typedef __global T result_type;
-    typedef __global const T const_result_type;
-    static result_type& project(array<T, 1>& now, int i) restrict(amp,cpu) {
-        result_type *ptr = reinterpret_cast<result_type *>(now.m_device.get());
-        return ptr[i];
+    typedef __global T& result_type;
+    typedef __global const T& const_result_type;
+    static result_type project(array<T, 1>& now, int i) restrict(amp,cpu) {
+        __global T *ptr = reinterpret_cast<__global T *>(now.m_device.get() + i);
+        return *ptr;
     }
     static const_result_type& project(const array<T, 1>& now, int i) restrict(amp,cpu) {
-        result_type *ptr = reinterpret_cast<result_type *>(now.m_device.get());
-        return ptr[i];
+        __global T *ptr = reinterpret_cast<__global T *>(now.m_device.get() + i);
+        return *ptr;
+    }
+    static result_type& project(const array_view<T, 1>& now, int i) restrict(amp,cpu) {
+        __global T *ptr = reinterpret_cast<__global T *>(now.cache.get() + i + now.offset);
+        return *ptr;
     }
 };
 // ------------------------------------------------------------------------
@@ -808,6 +839,12 @@ struct array_projection_helper<T, 1>
 template <typename T, int N = 1>
 class array {
 public:
+#ifdef __GPU__
+  typedef _data<T> gmac_buffer_t;
+#else
+  typedef _data_host<T> gmac_buffer_t;
+#endif
+
   static const int rank = N;
   typedef T value_type;
   array() = delete;
@@ -899,11 +936,11 @@ public:
 
   explicit array(const array_view<const T, N>& src) : array(src.extent) {
       memmove(const_cast<void*>(reinterpret_cast<const void*>(m_device.get())), 
-      reinterpret_cast<const void*>(src.cache_.get()), extent.size() * sizeof(T));                                               
+      reinterpret_cast<const void*>(src.cache.get()), extent.size() * sizeof(T));                                               
   }  
   explicit array(const array_view<T, N>& src) : array(src.extent) {
       memmove(const_cast<void*>(reinterpret_cast<const void*>(m_device.get())), 
-      reinterpret_cast<const void*>(src.cache_.get()), extent.size() * sizeof(T));                                               
+      reinterpret_cast<const void*>(src.cache.get()), extent.size() * sizeof(T));                                               
   }
 
 
@@ -940,13 +977,13 @@ public:
       return ptr[amp_helper<N, index<N>, Concurrency::extent<N> >::flatten(idx, extent)];
   }
 
-  typename array_projection_helper<T, N>::result_type& 
+  typename projection_helper<T, N>::result_type& 
       operator[] (int i) restrict(amp,cpu) {
-          return array_projection_helper<T, N>::project(*this, i);
+          return projection_helper<T, N>::project(*this, i);
       }
-  typename array_projection_helper<T, N>::const_result_type&
+  typename projection_helper<T, N>::const_result_type&
       operator[] (int i) const restrict(amp,cpu) {
-          return array_projection_helper<T, N>::project(*this, i);
+          return projection_helper<T, N>::project(*this, i);
       }
 
   __global T& operator()(const index<N>& idx) restrict(amp,cpu) {
@@ -994,13 +1031,17 @@ public:
   array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu);
   template <typename ElementType>
   array_view<const ElementType, 1> reinterpret_as() const restrict(amp,cpu);
-  template <int K> array_view<T,K>
+  template <int K> array_view<T, K>
       view_as(const Concurrency::extent<K>& viewExtent) restrict(amp,cpu) {
+          static_assert(N == 1, "view_as is only permissible on array views of rank 1");
           array_view<T, 1> av(*this);
           return av.view_as(viewExtent);
       }
-  template <int K> array_view<const T,K>
+  template <int K> array_view<const T, K>
       view_as(const Concurrency::extent<K>& viewExtent) const restrict(amp,cpu) {
+          static_assert(N == 1, "view_as is only permissible on array views of rank 1");
+          const array_view<T, 1> av(*this);
+          return av.view_as(viewExtent);
       }
 
   operator std::vector<T>() const {
@@ -1020,17 +1061,12 @@ public:
   }
 
 
-#ifdef __GPU__
-  typedef _data<T> gmac_buffer_t;
-#else
-  typedef _data_host<T> gmac_buffer_t;
-#endif
   const gmac_buffer_t& internal() const { return m_device; }
   const Concurrency::extent<N> extent;
 private:
   template <int K, typename Q> friend struct index_helper;
   template <int K, typename Q1, typename Q2> friend struct amp_helper;
-  template <typename K, int Q> friend struct array_projection_helper;
+  template <typename K, int Q> friend struct projection_helper;
   gmac_buffer_t m_device;
 
 #ifndef __GPU__
@@ -1049,81 +1085,165 @@ template <typename T, int N = 1>
 class array_view
 {
 public:
+#ifdef __GPU__
+  typedef _data<T> gmac_buffer_t;
+#else
+  typedef _data_host<T> gmac_buffer_t;
+#endif
+
   static const int rank = N;
   typedef T value_type;
-
   array_view() = delete;
-  array_view(array<T,N>& src) restrict(amp,cpu) {}
+
+  ~array_view() restrict(amp,cpu) {
+#ifndef __GPU__
+      if (p_) {
+           synchronize();
+          cache.reset();
+      }
+#endif
+  }
+
+  array_view(array<T, N>& src) restrict(amp,cpu) : extent(src.extent),
+    p_(NULL), cache(src.internal()), offset(0), sec_offset(src.extent) {}
+
   template <typename Container>
-    array_view(const extent<N>& extent, Container& src);
-  array_view(const extent<N>& extent, value_type* src) restrict(amp,cpu);
+      array_view(const Concurrency::extent<N>& extent, Container& src)
+      : array_view(extent, src.data()) {}
+  template <typename Container>
+      array_view(int e0, Container& src)
+      : array_view(Concurrency::extent<1>(e0), src)
+  { static_assert(N == 1, "Rank must be 1"); }
+  template <typename Container>
+      array_view(int e0, int e1, Container& src)
+      : array_view(Concurrency::extent<2>(e0, e1), src) 
+  { static_assert(N == 2, "Rank must be 2"); }
+  template <typename Container>
+      array_view(int e0, int e1, int e2, Container& src)
+      : array_view(Concurrency::extent<3>(e0, e1, e2), src) 
+  { static_assert(N == 3, "Rank must be 3"); }
 
-  array_view(const array_view& other) restrict(amp,cpu);
 
-  array_view& operator=(const array_view& other) restrict(amp,cpu);
+  array_view(const Concurrency::extent<N>& extent, value_type* src) restrict(amp,cpu);
+  array_view(int e0, value_type *src) restrict(amp,cpu)
+      : array_view(Concurrency::extent<1>(e0), src)
+  { static_assert(N == 1, "Rank must be 1"); }
+  array_view(int e0, int e1, value_type *src) restrict(amp,cpu)
+      : array_view(Concurrency::extent<2>(e0, e1), src)
+  { static_assert(N == 2, "Rank must be 2"); }
+  array_view(int e0, int e1, int e2, value_type *src) restrict(amp,cpu)
+      : array_view(Concurrency::extent<3>(e0, e1, e2), src)
+  { static_assert(N == 3, "Rank must be 3"); }
+
+
+  array_view(const array_view& other) restrict(amp,cpu) : extent(other.extent),
+    p_(other.p_), cache(other.cache), offset(other.offset), sec_offset(other.sec_offset) {}
+  array_view& operator=(const array_view& other) restrict(amp,cpu) {
+      cache.reset();
+      new (this) array_view(other);
+      return *this;
+  }
+
 
   void copy_to(array<T,N>& dest) const;
   void copy_to(const array_view& dest) const;
 
-  // __declspec(property(get)) extent<N> extent;
-  extent<N> get_extent() const;
 
-  // These are restrict(amp,cpu)
-  T& operator[](const index<N>& idx) const restrict(amp,cpu);
+  __global T& operator[](const index<N>& idx) const restrict(amp,cpu) {
+      __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
+      return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx, sec_offset)];
+  }
 
-  T& operator()(const index<N>& idx) const restrict(amp,cpu);
-  array_view<T,N-1> operator()(int i) const restrict(amp,cpu);
 
-  array_view<T,N> section(const index<N>& idx, const extent<N>& ext) restrict(amp,cpu);
-  array_view<T,N> section(const index<N>& idx) const restrict(amp,cpu);
+  typename projection_helper<T, N>::result_type 
+      operator[] (int i) const restrict(amp,cpu) {
+          return projection_helper<T, N>::project(*this, i);
+      }
+  __global T& operator()(const index<N>& idx) const restrict(amp,cpu) {
+    return (*this)[idx];
+  }
+  __global T& operator()(int i0) const restrict(amp,cpu) {
+      static_assert(N == 1, "Rank must be 1");
+      return (*this)[index<1>(i0)];
+  }
+  __global T& operator()(int i0, int i1) const restrict(amp,cpu) {
+      static_assert(N == 2, "Rank must be 2");
+      return (*this)[index<2>(i0, i1)];
+  }
+  __global T& operator()(int i0, int i1, int i2) const restrict(amp,cpu) {
+      static_assert(N == 3, "Rank must be 3");
+      return (*this)[index<3>(i0, i1, i2)];
+  }
+
+
+  array_view<T, N> section(const Concurrency::index<N>& idx, const Concurrency::extent<N>& ext) const restrict(amp,cpu) {
+      array_view<T, N> av(ext, sec_offset, cache, p_,
+                          amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx, sec_offset));
+      return av;
+  }
+  array_view<T, N> section(const Concurrency::index<N>& idx) const restrict(amp,cpu) {
+      Concurrency::extent<N> ext(extent);
+      amp_helper<N, Concurrency::index<N>, Concurrency::extent<N>>::minus(idx, ext);
+      return section(idx, ext);
+  }
+  array_view<T, N> section(const Concurrency::extent<N>& ext) const restrict(amp,cpu) {
+      Concurrency::index<N> idx;
+      return section(idx, ext);
+  }
+  array_view<T, 1> section(int i0, int e0) const restrict(amp,cpu) {
+      static_assert(N == 1, "Rank must be 1");
+      return section(Concurrency::index<1>(i0), Concurrency::extent<1>(e0));
+  }
+  array_view<T, 2> section(int i0, int i1, int e0, int e1) const restrict(amp,cpu) {
+      static_assert(N == 2, "Rank must be 2");
+      return section(Concurrency::index<2>(i0, i1), Concurrency::extent<2>(e0, e1));
+  }
+  array_view<T, 3> section(int i0, int i1, int i2, int e0, int e1, int e2) const restrict(amp,cpu) {
+      static_assert(N == 3, "Rank must be 3");
+      return section(Concurrency::index<3>(i0, i1, i2), Concurrency::extent<3>(e0, e1, e2));
+  }
+
+  template <int K>
+      array_view<T, K> view_as(Concurrency::extent<K> viewExtent) const restrict(amp,cpu) {
+          static_assert(N == 1, "view_as is only permissible on array views of rank 1");
+          array_view<T, K> av(viewExtent, cache, p_, offset);
+          return av;
+      }
 
   void synchronize() const;
   completion_future synchronize_async() const;
-
   void refresh() const;
   void discard_data() const;
-};
-#include <array_view.h>
 
-#if 0 // Cause ambiguity on clang 
-template <typename T, int N>
-class array_view<const T,N>
-{
+  T* data() restrict(amp,cpu) {
+    return cache.get() + offset;
+  }
+  const T* data() const restrict(amp,cpu) {
+    return cache.get() + offset;
+  }
+
+  const Concurrency::extent<N> extent;
 public:
-  static const int rank = N;
-  typedef const T value_type;
+  template <int K, typename Q> friend struct index_helper;
+  template <int K, typename Q1, typename Q2> friend struct amp_helper;
+  template <typename K, int Q> friend struct projection_helper;
+  template <typename Q, int K> friend class array_view;
+ 
+  // used by view_as
+  array_view(const Concurrency::extent<N>& ext, const gmac_buffer_t& cache,
+             T *p, int offset) restrict(amp,cpu) 
+      : extent(ext), sec_offset(ext), cache(cache), offset(offset), p_(p) {}
+  // used by section and projection
+  array_view(const Concurrency::extent<N>& ext, const Concurrency::extent<N>& sec_off, 
+             const gmac_buffer_t& cache, T *p, int offset) restrict(amp,cpu)
+      : extent(ext), p_(p), cache(cache), offset(offset), sec_offset(sec_off) {}
 
-  array_view() = delete;
-  array_view(const array<T,N>& src) restrict(amp,cpu);
-  template <typename Container>
-    array_view(const extent<N>& extent, const Container& src);
-  array_view(const extent<N>& extent, const value_type* src) restrict(amp,cpu);
-  array_view(const array_view<T,N>& other) restrict(amp,cpu);
-
-  array_view(const array_view<const T,N>& other) restrict(amp,cpu);
-
-  array_view& operator=(const array_view& other) restrict(amp,cpu);
-
-  void copy_to(array<T,N>& dest) const;
-  void copy_to(const array_view<T,N>& dest) const;
-
-  // __declspec(property(get)) extent<N> extent;
-  extent<N> get_extent() const;
-
-  const T& operator[](const index<N>& idx) const restrict(amp,cpu);
-  array_view<const T,N-1> operator[](int i) const restrict(amp,cpu);
-
-  const T& operator()(const index<N>& idx) const restrict(amp,cpu);
-  array_view<const T,N-1> operator()(int i) const restrict(amp,cpu);
-
-  array_view<const T,N> section(const index<N>& idx, const extent<N>& ext) const restrict(amp,cpu);
-  array_view<const T,N> section(const index<N>& idx) const restrict(amp,cpu);
-
-  void refresh() const;
+  __attribute__((cpu)) T *p_;
+  gmac_buffer_t cache;
+  int offset;
+  Concurrency::extent<N> sec_offset;
 };
-#endif
-// class index operators
-
+#undef __global
 
 template <int N, typename Kernel>
 void parallel_for_each(extent<N> compute_domain, const Kernel& f);
