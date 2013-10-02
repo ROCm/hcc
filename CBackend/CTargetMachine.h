@@ -15,7 +15,7 @@
 #define CTARGETMACHINE_H
 
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetData.h"
+#include "llvm/IR/DataLayout.h"
 
 namespace llvm {
 
@@ -35,7 +35,7 @@ struct CTargetMachine : public TargetMachine {
                                    AnalysisID StartAfter,
                                    AnalysisID StopAfter);
   
-  virtual const TargetData *getTargetData() const { return 0; }
+  virtual const DataLayout *getDataLayout() const { return 0; }
 };
 
 extern Target TheCBackendTarget;

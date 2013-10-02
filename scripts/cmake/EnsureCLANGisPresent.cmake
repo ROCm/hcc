@@ -5,7 +5,7 @@ else(EXISTS "${dest_dir}/${name}/tools/clang")
   MESSAGE("Cloning clang from ${url}...")
   Find_Package(Mercurial)
   Find_Program(MERCIRUAL_EXECUTABLE hg)
-  execute_process( COMMAND ${MERCURIAL_EXECUTABLE} clone ${url} -u cppamp ${dest_dir}/${name}/tools/clang )
+  execute_process( COMMAND ${MERCURIAL_EXECUTABLE} clone ${url} ${dest_dir}/${name}/tools/clang )
 endif(EXISTS "${dest_dir}/${name}/tools/clang")
 
 endmacro()

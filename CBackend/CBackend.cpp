@@ -13,47 +13,42 @@
 //===----------------------------------------------------------------------===//
 
 #include "CTargetMachine.h"
-#include "llvm/CallingConv.h"
-#include "llvm/Constants.h"
-#include "llvm/DerivedTypes.h"
-#include "llvm/Module.h"
-#include "llvm/Instructions.h"
-#include "llvm/Pass.h"
-#include "llvm/PassManager.h"
-#include "llvm/Intrinsics.h"
-#include "llvm/IntrinsicInst.h"
-#include "llvm/InlineAsm.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Analysis/ConstantsScanner.h"
-#include "llvm/Analysis/FindUsedTypes.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/ValueTracking.h"
-#include "llvm/CodeGen/Passes.h"
+#include "llvm/Analysis/ConstantsScanner.h"
+#include "llvm/Config/config.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
-#include "llvm/Target/Mangler.h"
-#include "llvm/Transforms/Scalar.h"
+#include "llvm/CodeGen/Passes.h"
+#include "llvm/InstVisitor.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/CallingConv.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCObjectFileInfo.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/MCSymbol.h"
-#include "llvm/Target/TargetData.h"
+#include "llvm/MC/MCObjectFileInfo.h"
+#include "llvm/Pass.h"
+#include "llvm/PassManager.h"
 #include "llvm/Support/CallSite.h"
-#include "llvm/Support/CFG.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/GetElementPtrTypeIterator.h"
-#include "llvm/Support/InstVisitor.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/Host.h"
-#include "llvm/Config/config.h"
+#include "llvm/Target/Mangler.h"
+#include "llvm/Transforms/Scalar.h"
 #include <algorithm>
 #include <cstdio>
+#include <set>
 
 // Some ms header decided to define setjmp as _setjmp, undo this for this file.
 #ifdef _MSC_VER
@@ -87,7 +82,7 @@ namespace {
     const MCRegisterInfo *MRI;
     const MCObjectFileInfo *MOFI;
     MCContext *TCtx;
-    const TargetData* TD;
+    const DataLayout* TD;
     
     std::map<const ConstantFP *, unsigned> FPConstantMap;
     std::set<Function*> intrinsicPrototypesAlreadyGenerated;
@@ -163,13 +158,13 @@ namespace {
                            bool isSigned = false,
                            const std::string &VariableName = "",
                            bool IgnoreName = false,
-                           const AttrListPtr &PAL = AttrListPtr());
+                           const AttributeSet &PAL = AttributeSet());
     raw_ostream &printSimpleType(raw_ostream &Out, Type *Ty,
                                  bool isSigned,
                                  const std::string &NameSoFar = "");
 
     void printStructReturnPointerFunctionType(raw_ostream &Out,
-                                              const AttrListPtr &PAL,
+                                              const AttributeSet &PAL,
                                               PointerType *Ty);
 
     std::string getStructName(StructType *ST);
@@ -387,7 +382,7 @@ std::string CWriter::getStructName(StructType *ST) {
 /// return type, except, instead of printing the type as void (*)(Struct*, ...)
 /// print it as "Struct (*)(...)", for struct return functions.
 void CWriter::printStructReturnPointerFunctionType(raw_ostream &Out,
-                                                   const AttrListPtr &PAL,
+                                                   const AttributeSet &PAL,
                                                    PointerType *TheTy) {
   FunctionType *FTy = cast<FunctionType>(TheTy->getElementType());
   std::string tstr;
@@ -402,12 +397,12 @@ void CWriter::printStructReturnPointerFunctionType(raw_ostream &Out,
     if (PrintedType)
       FunctionInnards << ", ";
     Type *ArgTy = *I;
-    if (PAL.paramHasAttr(Idx, Attribute::ByVal)) {
+    if (PAL.hasAttribute(Idx, Attribute::ByVal)) {
       assert(ArgTy->isPointerTy());
       ArgTy = cast<PointerType>(ArgTy)->getElementType();
     }
     printType(FunctionInnards, ArgTy,
-        /*isSigned=*/PAL.paramHasAttr(Idx, Attribute::SExt), "");
+        /*isSigned=*/PAL.hasAttribute(Idx, Attribute::SExt), "");
     PrintedType = true;
   }
   if (FTy->isVarArg()) {
@@ -419,7 +414,7 @@ void CWriter::printStructReturnPointerFunctionType(raw_ostream &Out,
   }
   FunctionInnards << ')';
   printType(Out, RetTy,
-      /*isSigned=*/PAL.paramHasAttr(0, Attribute::SExt), FunctionInnards.str());
+      /*isSigned=*/PAL.hasAttribute(0, Attribute::SExt), FunctionInnards.str());
 }
 
 raw_ostream &
@@ -478,7 +473,7 @@ CWriter::printSimpleType(raw_ostream &Out, Type *Ty, bool isSigned,
 //
 raw_ostream &CWriter::printType(raw_ostream &Out, Type *Ty,
                                 bool isSigned, const std::string &NameSoFar,
-                                bool IgnoreName, const AttrListPtr &PAL) {
+                                bool IgnoreName, const AttributeSet &PAL) {
   if (Ty->isPrimitiveType() || Ty->isIntegerTy() || Ty->isVectorTy()) {
     printSimpleType(Out, Ty, isSigned, NameSoFar);
     return Out;
@@ -494,14 +489,14 @@ raw_ostream &CWriter::printType(raw_ostream &Out, Type *Ty,
     for (FunctionType::param_iterator I = FTy->param_begin(),
            E = FTy->param_end(); I != E; ++I) {
       Type *ArgTy = *I;
-      if (PAL.paramHasAttr(Idx, Attribute::ByVal)) {
+      if (PAL.hasAttribute(Idx, Attribute::ByVal)) {
         assert(ArgTy->isPointerTy());
         ArgTy = cast<PointerType>(ArgTy)->getElementType();
       }
       if (I != FTy->param_begin())
         FunctionInnards << ", ";
       printType(FunctionInnards, ArgTy,
-        /*isSigned=*/PAL.paramHasAttr(Idx, Attribute::SExt), "");
+        /*isSigned=*/PAL.hasAttribute(Idx, Attribute::SExt), "");
       ++Idx;
     }
     if (FTy->isVarArg()) {
@@ -513,7 +508,7 @@ raw_ostream &CWriter::printType(raw_ostream &Out, Type *Ty,
     }
     FunctionInnards << ')';
     printType(Out, FTy->getReturnType(),
-      /*isSigned=*/PAL.paramHasAttr(0, Attribute::SExt), FunctionInnards.str());
+      /*isSigned=*/PAL.hasAttribute(0, Attribute::SExt), FunctionInnards.str());
     return Out;
   }
   case Type::StructTyID: {
@@ -1500,7 +1495,7 @@ void CWriter::writeOperandWithCast(Value* Operand, const ICmpInst &Cmp) {
 // directives to cater to specific compilers as need be.
 //
 static void generateCompilerSpecificCode(formatted_raw_ostream& Out,
-                                         const TargetData *TD) {
+                                         const DataLayout *TD) {
   // Alloca is hard to get, and we don't want to include stdlib.h here.
   #if 0
   Out << "/* get a declaration for alloca */\n"
@@ -1712,7 +1707,7 @@ bool CWriter::doInitialization(Module &M) {
   // Initialize
   TheModule = &M;
 
-  TD = new TargetData(&M);
+  TD = new DataLayout(&M);
   IL = new IntrinsicLowering(*TD);
   IL->AddPrototypes(M);
 
@@ -1861,8 +1856,8 @@ bool CWriter::doInitialization(Module &M) {
     if (I->hasExternalWeakLinkage())
       Out << "extern ";
     //printFunctionSignature(I, true);
-    if (I->hasWeakLinkage() || I->hasLinkOnceLinkage())
-      Out << " __ATTRIBUTE_WEAK__";
+    //if (I->hasWeakLinkage() || I->hasLinkOnceLinkage())
+    //  Out << " __ATTRIBUTE_WEAK__";
     if (I->hasExternalWeakLinkage())
       Out << " __EXTERNAL_WEAK__";
     if (StaticCtors.count(I))
@@ -1942,10 +1937,10 @@ bool CWriter::doInitialization(Module &M) {
                   GetValueName(I));
         if (I->hasLinkOnceLinkage())
           Out << " __attribute__((common))";
-        else if (I->hasWeakLinkage())
-          Out << " __ATTRIBUTE_WEAK__";
-        else if (I->hasCommonLinkage())
-          Out << " __ATTRIBUTE_WEAK__";
+        //else if (I->hasWeakLinkage())
+        //  Out << " __ATTRIBUTE_WEAK__";
+        //else if (I->hasCommonLinkage())
+        //  Out << " __ATTRIBUTE_WEAK__";
 
         if (I->hasHiddenVisibility())
           Out << " __HIDDEN__";
@@ -2241,7 +2236,7 @@ void CWriter::printFunctionSignature(const Function *F, bool Prototype) {
 
   // Loop over the arguments, printing them...
   FunctionType *FT = cast<FunctionType>(F->getFunctionType());
-  const AttrListPtr &PAL = F->getAttributes();
+  const AttributeSet &PAL = F->getAttributes();
 
   std::string tstr;
   raw_string_ostream FunctionInnards(tstr);
@@ -2274,12 +2269,12 @@ void CWriter::printFunctionSignature(const Function *F, bool Prototype) {
         else
           ArgName = "";
         Type *ArgTy = I->getType();
-        if (PAL.paramHasAttr(Idx, Attribute::ByVal)) {
+        if (PAL.hasAttribute(Idx, Attribute::ByVal)) {
           ArgTy = cast<PointerType>(ArgTy)->getElementType();
           ByValParams.insert(I);
         }
         printType(FunctionInnards, ArgTy,
-            /*isSigned=*/PAL.paramHasAttr(Idx, Attribute::SExt),
+            /*isSigned=*/PAL.hasAttribute(Idx, Attribute::SExt),
             ArgName);
         PrintedArg = true;
         ++Idx;
@@ -2301,12 +2296,12 @@ void CWriter::printFunctionSignature(const Function *F, bool Prototype) {
     for (; I != E; ++I) {
       if (PrintedArg) FunctionInnards << ", ";
       Type *ArgTy = *I;
-      if (PAL.paramHasAttr(Idx, Attribute::ByVal)) {
+      if (PAL.hasAttribute(Idx, Attribute::ByVal)) {
         assert(ArgTy->isPointerTy());
         ArgTy = cast<PointerType>(ArgTy)->getElementType();
       }
       printType(FunctionInnards, ArgTy,
-             /*isSigned=*/PAL.paramHasAttr(Idx, Attribute::SExt));
+             /*isSigned=*/PAL.hasAttribute(Idx, Attribute::SExt));
       PrintedArg = true;
       ++Idx;
     }
@@ -2338,7 +2333,7 @@ void CWriter::printFunctionSignature(const Function *F, bool Prototype) {
 
   // Print out the return type and the signature built above.
   printType(Out, RetTy,
-            /*isSigned=*/PAL.paramHasAttr(0, Attribute::SExt),
+            /*isSigned=*/PAL.hasAttribute(0, Attribute::SExt),
             FunctionInnards.str());
 }
 
@@ -3034,9 +3029,6 @@ void CWriter::lowerIntrinsics(Function &F) {
             // If this is an intrinsic that directly corresponds to a GCC
             // builtin, we handle it.
             const char *BuiltinName = "";
-#define GET_GCC_BUILTIN_NAME
-#include "llvm/Intrinsics.gen"
-#undef GET_GCC_BUILTIN_NAME
             // If we handle it, don't lower it.
             if (BuiltinName[0]) break;
 
@@ -3095,7 +3087,7 @@ void CWriter::visitCallInst(CallInst &I) {
 
   // If this is a call to a struct-return function, assign to the first
   // parameter instead of passing it to the call.
-  const AttrListPtr &PAL = I.getAttributes();
+  const AttributeSet &PAL = I.getAttributes();
   bool hasByVal = I.hasByValArgument();
   bool isStructRet = I.hasStructRetAttr();
   if (isStructRet) {
@@ -3169,7 +3161,7 @@ void CWriter::visitCallInst(CallInst &I) {
         (*AI)->getType() != FTy->getParamType(ArgNo)) {
       Out << '(';
       printType(Out, FTy->getParamType(ArgNo),
-            /*isSigned=*/PAL.paramHasAttr(ArgNo+1, Attribute::SExt));
+            /*isSigned=*/PAL.hasAttribute(ArgNo+1, Attribute::SExt));
       Out << ')';
     }
     // Check if the argument is expected to be passed by value.
@@ -3192,10 +3184,6 @@ bool CWriter::visitBuiltinCall(CallInst &I, Intrinsic::ID ID,
     // If this is an intrinsic that directly corresponds to a GCC
     // builtin, we emit it here.
     const char *BuiltinName = "";
-    Function *F = I.getCalledFunction();
-#define GET_GCC_BUILTIN_NAME
-#include "llvm/Intrinsics.gen"
-#undef GET_GCC_BUILTIN_NAME
     assert(BuiltinName[0] && "Unknown LLVM intrinsic!");
 
     Out << BuiltinName;
@@ -3948,6 +3936,5 @@ bool CTargetMachine::addPassesToEmitFile(PassManagerBase &PM,
   PM.add(createLowerInvokePass());
   PM.add(createCFGSimplificationPass());   // clean up after lower invoke.
   PM.add(new CWriter(o));
-  PM.add(createGCInfoDeleter());
   return false;
 }

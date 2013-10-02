@@ -7,20 +7,19 @@ MESSAGE("Module path: ${CMAKE_MODULE_PATH}")
 
 set(GMAC_URL "." CACHE STRING "GMAC URL")
 set(CLANG_URL "." CACHE STRING "CLANG URL")
-set(LLVM_REVISION 162227)
 include (EnsureGMACisPresent)
 
-include (EnsureLLVMisPresent)
+#include (EnsureLLVMisPresent)
 include (EnsureCLANGisPresent)
-include (EnsureLIBCXXisPresent)
-include (EnsureLIBCXXRTisPresent)
+#include (EnsureLIBCXXisPresent)
+#include (EnsureLIBCXXRTisPresent)
 include (SetupCBE)
 include (MCWAMP)
 
-ensure_llvm_is_present(${PROJECT_SOURCE_DIR} compiler)
+#ensure_llvm_is_present(${PROJECT_SOURCE_DIR} compiler)
 ensure_clang_is_present(${PROJECT_SOURCE_DIR} compiler ${CLANG_URL})
-ensure_libcxx_is_present("${PROJECT_SOURCE_DIR}/libc++" libcxx)
-ensure_libcxxrt_is_present("${PROJECT_SOURCE_DIR}/libc++" libcxxrt)
+#ensure_libcxx_is_present("${PROJECT_SOURCE_DIR}/libc++" libcxx)
+#ensure_libcxxrt_is_present("${PROJECT_SOURCE_DIR}/libc++" libcxxrt)
 setup_CBackend(${PROJECT_SOURCE_DIR}/compiler/lib/Target CBackend)
 
 set(LLVM_TARGETS_TO_BUILD X86)
@@ -113,7 +112,6 @@ add_custom_target(libc++
 add_subdirectory(lib)
 add_subdirectory(utils)
 add_subdirectory(tests)
-add_subdirectory(axtor)
 add_subdirectory(include)
 
 add_custom_target(world
