@@ -9,8 +9,8 @@ Index: compiler/lib/Target/LLVMBuild.txt
  ;===------------------------------------------------------------------------===;
  
  [common]
--subdirectories = ARM CellSPU CppBackend Hexagon MBlaze MSP430 NVPTX Mips PowerPC Sparc X86 XCore
-+subdirectories = ARM CBackend CellSPU CppBackend Hexagon MBlaze MSP430 NVPTX Mips PowerPC Sparc X86 XCore
+-subdirectories = AArch64 ARM CppBackend Hexagon MBlaze MSP430 NVPTX Mips PowerPC R600 Sparc SystemZ X86 XCore
++subdirectories = AArch64 ARM CBackend CppBackend Hexagon MBlaze MSP430 NVPTX Mips PowerPC R600 Sparc SystemZ X86 XCore
  
  ; This is a special group whose required libraries are extended (by llvm-build)
  ; with the best execution engine (the native JIT, if available, or the
