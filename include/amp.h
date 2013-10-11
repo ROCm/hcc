@@ -179,7 +179,7 @@ template <int _Ep, int _Sp = 0>
 template <int _Ip>
     class __index_leaf {
         int __idx;
-        float dummy;
+        int dummy;
     public:
         explicit __index_leaf(int __t) restrict(amp,cpu) : __idx(__t) {}
 

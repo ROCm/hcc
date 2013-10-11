@@ -1,5 +1,3 @@
-extern void *memcpy(void *dest, const void *src, size_t n);
-
 float opencl_fastmath_cos(float x) {
   return cos(x);
 }
