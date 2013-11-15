@@ -234,6 +234,12 @@ template <int ...N>
         template<class ..._Tp>
             inline void __swallow(_Tp...) restrict(amp,cpu) {}
 
+        int operator[] (unsigned int c) const restrict(amp,cpu) {
+            return static_cast<const __index_leaf<0>&>(*((__index_leaf<0> *)this + c)).get();
+        }
+        int& operator[] (unsigned int c) restrict(amp,cpu) {
+            return static_cast<__index_leaf<0>&>(*((__index_leaf<0> *)this + c)).get();
+        }
         index_impl& operator=(const index_impl& __t) restrict(amp,cpu) {
             __swallow(__index_leaf<N>::operator=(static_cast<const __index_leaf<N>&>(__t).get())...);
             return *this;
@@ -286,18 +292,6 @@ template<int N> class extent;
 template <int N, typename _Tp>
 struct index_helper
 {
-    static inline int& get(unsigned int c, _Tp& now) restrict(amp,cpu) {
-        if (c == N - 1)
-            return static_cast<__index_leaf<N - 1>&>(now.base_).get();
-        else
-            return index_helper<N - 1, _Tp>::get(c, now);
-    }
-    static inline int get(unsigned int c, const _Tp& now) restrict(amp,cpu) {
-        if (c == N - 1)
-            return static_cast<const __index_leaf<N - 1>&>(now.base_).get();
-        else
-            return index_helper<N - 1, _Tp>::get(c, now);
-    }
     static inline void set(_Tp& now) restrict(amp,cpu) {
         now[N - 1] = get_global_id(_Tp::rank - N);
         index_helper<N - 1, _Tp>::set(now);
@@ -313,12 +307,6 @@ struct index_helper
 template<typename _Tp>
 struct index_helper<1, _Tp>
 {
-    static inline int& get(unsigned int c, _Tp& now) restrict(amp,cpu) {
-        return static_cast<__index_leaf<0>&>(now.base_).get();
-    }
-    static inline int get(unsigned int c, const _Tp& now) restrict(amp,cpu) {
-        return static_cast<const __index_leaf<0>&>(now.base_).get();
-    }
     static inline void set(_Tp& now) restrict(amp,cpu) {
         now[0] = get_global_id(_Tp::rank - 1);
     }
@@ -383,10 +371,10 @@ public:
     }
 
     int operator[] (unsigned int c) const restrict(amp,cpu) {
-        return index_helper<N, index<N> >::get(c, *this);
+        return base_[c];
     }
     int& operator[] (unsigned int c) restrict(amp,cpu) {
-        return index_helper<N, index<N> >::get(c, *this);
+        return base_[c];
     }
     
     bool operator== (const index& other) const restrict(amp,cpu) {
@@ -519,10 +507,10 @@ public:
     }
 
     int operator[] (unsigned int c) const restrict(amp,cpu) {
-        return index_helper<N, extent<N>>::get(c, *this);
+        return base_[c];
     }
     int& operator[] (unsigned int c) restrict(amp,cpu) {
-        return index_helper<N, extent<N>>::get(c, *this);
+        return base_[c];
     }
 
     bool operator==(const extent& other) const restrict(amp,cpu) {
@@ -1223,11 +1211,11 @@ public:
   }
 
   const Concurrency::extent<N> extent;
-public:
+private:
   template <int K, typename Q> friend struct index_helper;
   template <int K, typename Q1, typename Q2> friend struct amp_helper;
   template <typename K, int Q> friend struct projection_helper;
-  template <typename Q, int K> friend class array_view;
+  template <typename Q, int K> friend class array;
  
   // used by view_as
   array_view(const Concurrency::extent<N>& ext, const gmac_buffer_t& cache,
