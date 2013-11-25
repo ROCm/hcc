@@ -52,17 +52,13 @@ platform[0x7f7950040140]: Found 2 device(s).
 
 * Prerequisite/Repository
 
-Before building it, you should have access to two repositories:
+For any development work, you should fork from them and create your own
+repository for development. This build procedure assumes that you will
+work on your own repository. As such, the following repositories should
+be available:
 
-  https://bitbucket.org/multicoreware/cppamp-driver
-  https://bitbucket.org/multicoreware/cppamp
-
-You should fork from them and create your own repository for development. This
-build procedure assumes that you will work on your own repository. As such, the
-following repositories should be available:
-
-  https://${username}@bitbucket.org/${username}/cppamp-driver
-  https://${username}@bitbucket.org/${username}/cppamp
+  https://${username}@bitbucket.org/${username}/cppamp-driver-ng
+  https://${username}@bitbucket.org/${username}/cppamp-ng
 
 , where ${username} is a placeholder for your ID for bitbucket.org.
 
@@ -81,24 +77,24 @@ are:
    Please make sure there is no special characters like '+' or space in the full path.
   # mkdir cppamp
 
-2. Pull your cppamp-driver repository from bitbucket.
+2. Pull your cppamp-driver-ng repository from bitbucket.
   # cd cppamp
-  # hg clone ssh://hg@bitbucket.org/${username}/cppamp-driver src
+  # git clone git@bitbucket.org:${username}/cppamp-driver-ng.git src
 
 3. Create a build directory and configure using CMake.
   # mkdir build
   # cd build
   # cmake ../src \
-      -DCLANG_URL=git@bitbucket.org:multicoreware/cppamp-ng.git \
+      -DCLANG_URL=git@bitbucket.org:${username}/cppamp-ng.git \
       -DOPENCL_HEADER_DIR=<directory that contains CL/> \
       -DOPENCL_LIBRARY_DIR=<directory that contains libOpenCL.so on Linux> \
       -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CBackend \
-      -DGMAC_URL=ssh://hg@bitbucket.org/multicoreware/gmac \
+      -DGMAC_URL=https://bitbucket.org/multicoreware/gmac \
       -DCMAKE_BUILD_TYPE=Debug
   For example, on x86-64 platforms with AMD GPU and AMD APP SDK installed at the
   default path, this becomes
   # cmake ../src \
-      -DCLANG_URL=git@bitbucket.org:multicoreware/cppamp-ng.git \
+      -DCLANG_URL=git@bitbucket.org:${username}/cppamp-ng.git \
       -DOPENCL_HEADER_DIR=/opt/AMDAPP/include \
       -DOPENCL_LIBRARY_DIR=/opt/AMDAPP/lib/x86_64/lib \
       -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CBackend \
