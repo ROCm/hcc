@@ -1216,6 +1216,7 @@ private:
   template <int K, typename Q1, typename Q2> friend struct amp_helper;
   template <typename K, int Q> friend struct projection_helper;
   template <typename Q, int K> friend class array;
+  template <typename Q, int K> friend class array_view;
  
   // used by view_as
   array_view(const Concurrency::extent<N>& ext, const gmac_buffer_t& cache,
