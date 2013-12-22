@@ -123,6 +123,7 @@ extern "C" void barrier(int n) restrict(amp);
 //End CLAMP
 class completion_future {
 public:
+
   completion_future();
   completion_future(const completion_future& _Other);
   completion_future(completion_future&& _Other);
@@ -135,19 +136,19 @@ public:
   void wait() const;
 
   template <class _Rep, class _Period>
-  STD__FUTURE_STATUS__FUTURE_STATUS wait_for(
-    const std::chrono::duration<_Rep, _Period>& _Rel_time) const;
-
+  std::future_status wait_for(const std::chrono::duration<_Rep, _Period>& _Rel_time) const;
   template <class _Clock, class _Duration>
-  STD__FUTURE_STATUS__FUTURE_STATUS wait_until(
-    const std::chrono::time_point<_Clock, _Duration>& _Abs_time) const;
+  std::future_status wait_until(const std::chrono::time_point<_Clock, _Duration>& _Abs_time) const;
 
-  operator std::shared_future<void>() const;
+  operator std::shared_future<void>() const {
+      return __amp_future;
+  }
 
   template <typename _Functor>
   void then(const _Functor &_Func) const;
 
-  Concurrency::task<void> to_task() const;
+private:
+  std::shared_future<void> __amp_future;
 };
 
 template <int N> class extent;
@@ -1086,7 +1087,7 @@ public:
   ~array_view() restrict(amp,cpu) {
 #ifndef __GPU__
       if (p_) {
-           synchronize();
+          synchronize();
           cache.reset();
       }
 #endif
@@ -1136,6 +1137,9 @@ public:
   void copy_to(array<T,N>& dest) const;
   void copy_to(const array_view& dest) const;
 
+  extent<N> get_extent() const restrict(amp,cpu) {
+      return extent;
+  }
 
   __global T& operator[](const index<N>& idx) const restrict(amp,cpu) {
       __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
@@ -1210,8 +1214,8 @@ public:
     return cache.get() + offset;
   }
 
-  const Concurrency::extent<N> extent;
 private:
+  const Concurrency::extent<N> extent;
   template <int K, typename Q> friend struct index_helper;
   template <int K, typename Q1, typename Q2> friend struct amp_helper;
   template <typename K, int Q> friend struct projection_helper;
@@ -1266,157 +1270,64 @@ namespace concurrency = Concurrency;
 
 
 namespace Concurrency {
+
+template <typename _Dest_iter, typename _Src_iter>
+    void __amp_copy_impl(_Dest_iter dest, _Src_iter src, int count) {
+        int i;
+        for (i = 0; i < count; i++)
+            dest[i] = src[i];
+    }
+
 //std::vector====array_view
-//1D
-template <typename _Value_type>
+template <typename _Value_type, int N>
 void copy(typename std::vector<_Value_type>::iterator _SrcFirst,
-          const array_view<_Value_type, 1> &_Dest) {
-  for(int i = 0; i < _Dest.extent[0]; ++i) {
-    _Dest(i) = *_SrcFirst;
-    _SrcFirst++;
-  }
+          array_view<_Value_type, N> &_Dest) {
+    __amp_copy_impl(_Dest.data(), _SrcFirst, _Dest.get_extent().size());
 }
 
-template <typename _Value_type>
-void copy(const array_view<_Value_type, 1> &_Src,
+template <typename _Value_type, int N>
+void copy(const array_view<_Value_type, N> &_Src,
           typename std::vector<_Value_type>::iterator _DestIter) {
-  for(int i = 0; i < _Src.extent[0]; ++i) {
-    *_DestIter = _Src(i);
-    _DestIter++;
-  }
-}
-
-//2D
-template <typename _Value_type>
-void copy(typename std::vector<_Value_type>::iterator _SrcFirst,
-          const array_view<_Value_type, 2> &_Dest) {
-  for(int i = 0; i < _Dest.extent[0]; ++i) {
-    for(int j = 0; j < _Dest.extent[1]; ++j) {
-      _Dest(i, j) = *_SrcFirst;
-      _SrcFirst++;
-    }
-  }
-}
-
-template <typename _Value_type>
-void copy(const array_view<_Value_type, 2> &_Src,
-          typename std::vector<_Value_type>::iterator _DestIter) {
-  for(int i = 0; i < _Src.extent[0]; ++i) {
-    for(int j = 0; j < _Src.extent[1]; ++j) {
-      *_DestIter = _Src(i, j);
-     _DestIter++;
-    }
-  }
+    __amp_copy_impl(_DestIter, _Src.data(), _Src.get_extent().size());
 }
 
 //array=====std::vector
-//1D
-template <typename _Value_type>
-void copy(const array<_Value_type, 1> &_Src,
+template <typename _Value_type, int N>
+void copy(const array<_Value_type, N> &_Src,
           typename std::vector<_Value_type>::iterator _DestIter) {
-  for(int i = 0; i < _Src.extent[0]; ++i) {
-    *_DestIter = _Src(i);
-    _DestIter++;
-  }
+    __amp_copy_impl(_DestIter, _Src.data(), _Src.get_extent().size());
 }
 
-template <typename _Value_type>
+template <typename _Value_type, int N>
 void copy(typename std::vector<_Value_type>::iterator _SrcFirst,
-          array<_Value_type, 1> &_Dest) {
-  for(int i = 0; i < _Dest.extent[0]; ++i) {
-    _Dest(i) = *_SrcFirst;
-    _SrcFirst++;
-  }
-}
-//2D
-template <typename _Value_type>
-void copy(const array<_Value_type, 2> &_Src,
-          typename std::vector<_Value_type>::iterator _DestIter) {
-  for(int i = 0; i < _Src.extent[0]; ++i) {
-    for(int j = 0; j < _Src.extent[1]; ++j) {
-      *_DestIter = _Src(i, j);
-      _DestIter++;
-    }
-  } 
+          array<_Value_type, N> &_Dest) {
+    __amp_copy_impl(_Dest.data(), _SrcFirst, _Dest.get_extent().size());
 }
 
-template <typename _Value_type>
-void copy(typename std::vector<_Value_type>::iterator _SrcFirst,
-          array<_Value_type, 2> &_Dest) {   
-  for(int i = 0; i < _Dest.extent[0]; ++i) {
-    for(int j = 0; j < _Dest.extent[1]; ++j) {
-      _Dest(i, j) = *_SrcFirst;
-      _SrcFirst++;
-    }
-  }
-}
 //array====array_view
-//1D
-template <typename _Value_type>
-void copy(const array<_Value_type, 1> &_Src,
-          array_view<_Value_type, 1> &_Dest) {
-  for(int i = 0; i < _Dest.extent[0]; ++i)
-    _Dest(i) = _Src(i);
+template <typename _Value_type, int N>
+void copy(const array<_Value_type, N> &_Src,
+          array_view<_Value_type, N> &_Dest) {
+    __amp_copy_impl(_Dest.data(), _Src.data(), _Src.get_extent().size());
 }
 
-template <typename _Value_type>
-void copy(const array_view<_Value_type, 1> &_Src,
-          array<_Value_type, 1> &_Dest) {
-  for(int i = 0; i < _Src.extent[0]; ++i)
-    _Dest(i) = _Src(i);
-}
-
-//2D
-template <typename _Value_type>
-void copy(const array<_Value_type, 2> &_Src,
-          array_view<_Value_type, 2> &_Dest) {
-  for(int i = 0; i < _Dest.extent[0]; ++i) {
-    for(int j = 0; j < _Dest.extent[1]; ++j) {
-      _Dest(i, j) = _Src(i, j);
-    }
-  }
-}
-
-template <typename _Value_type>
-void copy(const array_view<_Value_type, 2> &_Src,
-          array<_Value_type, 2> &_Dest) {
-  for(int i = 0; i < _Src.extent[0]; ++i)
-    for(int j = 0; j < _Src.extent[1]; ++j)
-      _Dest(i, j) = _Src(i, j);
+template <typename _Value_type, int N>
+void copy(const array_view<_Value_type, N> &_Src,
+          array<_Value_type, N> &_Dest) {
+    __amp_copy_impl(_Dest.data(), _Src.data(), _Src.get_extent().size());
 }
 
 //array====array
-//1D
-template <typename _Value_type>
-void copy(const array<_Value_type, 1> &_Src, array<_Value_type, 1> &_Dest) {
-  for(int i = 0; i < _Dest.extent[0]; ++i)
-    _Dest(i) = _Src(i);
-}
-
-//2D
-template <typename _Value_type>
-void copy(const array<_Value_type, 2> &_Src, array<_Value_type, 2> &_Dest) {
-  for(int i = 0; i < _Dest.extent[0]; ++i)
-    for(int j = 0; j < _Dest.extent[1]; ++j)
-      _Dest(i, j) = _Src(i, j);  
+template <typename _Value_type, int N>
+void copy(const array<_Value_type, N> &_Src, array<_Value_type, N> &_Dest) {
+    __amp_copy_impl(_Dest.data(), _Src.data(), _Src.get_extent().size());
 }
 
 //array_view====array_view
-//1D
-template <typename _Value_type>
-void copy(const array_view<_Value_type, 1> &_Src,
-          array_view<_Value_type, 1> &_Dest) {
-  for(int i = 0; i < _Dest.extent[0]; ++i)
-    _Dest(i) = _Src(i);
-}
-
-//2D
-template <typename _Value_type>
-void copy(const array_view<_Value_type, 2> &_Src,
-          array_view<_Value_type, 2> &_Dest) {
-  for(int i = 0; i < _Dest.extent[0]; ++i)
-    for(int j = 0; j < _Dest.extent[1]; ++j)
-      _Dest(i, j) = _Src(i, j);
+template <typename _Value_type, int N>
+void copy(const array_view<_Value_type, N> &_Src,
+          array_view<_Value_type, N> &_Dest) {
+    __amp_copy_impl(_Dest.data(), _Src.data(), _Src.get_extent().size());
 }
 
 #ifdef __GPU__

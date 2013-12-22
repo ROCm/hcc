@@ -71,7 +71,7 @@ namespace
 		std::mt19937 rng;
 		std::generate(input.begin(), input.end(), rng);
 
-		concurrency::parallel_for_each(av, input_view.extent,
+		concurrency::parallel_for_each(av, input_view.get_extent(),
 			[=](concurrency::index<1> idx) restrict(amp)
 			{
 				output_view[idx] = input_view[idx] / 2;

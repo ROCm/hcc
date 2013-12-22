@@ -22,7 +22,7 @@ TEST(ClassArray2D, ConstructorFromArrayRef) {
   Concurrency::extent<2> ext(N0, N1);
   Concurrency::array<int, 2> arr1(ext);
   Concurrency::array_view<int, 2> av1(arr1);
-  EXPECT_EQ(ext, av1.extent);
+  EXPECT_EQ(ext, av1.get_extent());
 }
 
 TEST(ClassArray2D, CopyConstructor) {
@@ -30,7 +30,7 @@ TEST(ClassArray2D, CopyConstructor) {
   Concurrency::array<int, 2> arr1(ext);
   Concurrency::array_view<int, 2> av1(arr1);
   Concurrency::array_view<int, 2> av2(av1);
-  EXPECT_EQ(ext, av2.extent);
+  EXPECT_EQ(ext, av2.get_extent());
 }
 
 TEST(ClassArray2D, Assign) {
@@ -43,9 +43,9 @@ TEST(ClassArray2D, Assign) {
 
   Concurrency::array_view<int, 2> av1(arr1);
   Concurrency::array_view<int, 2> av2(arr2);
-  EXPECT_NE(ext, av2.extent);
+  EXPECT_NE(ext, av2.get_extent());
   av2 = av1;
-  EXPECT_EQ(ext, av2.extent);
+  EXPECT_EQ(ext, av2.get_extent());
   EXPECT_EQ(5, av2(1, 2));
 }
 
