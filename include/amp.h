@@ -1009,21 +1009,51 @@ public:
       return (*this)[index<3>(i0, i1, i2)];
   }
 
-  
-  array_view<T, N> section(const index<N>& idx, Concurrency::extent<N>& ext) restrict(amp,cpu);
-  array_view<const T, N> section(const index<N>& idx, Concurrency::extent<N>& ext) const restrict(amp,cpu);
-  array_view<T, N> section(const index<N>& idx) restrict(amp,cpu);
-  array_view<const T, N> section(const index<N>& idx) const restrict(amp,cpu);
+  array_view<T, N> section(const Concurrency::index<N>& idx, const Concurrency::extent<N>& ext) restrict(amp,cpu) {
+      array_view<T, N> av(*this);
+      return av.section(idx, ext);
+  }
+  array_view<const T, N> section(const Concurrency::index<N>& idx, const Concurrency::extent<N>& ext) const restrict(amp,cpu) {
+      array_view<const T, N> av(*this);
+      return av.section(idx, ext);
+  }
+  array_view<T, N> section(const index<N>& idx) restrict(amp,cpu) {
+      array_view<T, N> av(*this);
+      return av.section(idx);
+  }
+  array_view<const T, N> section(const index<N>& idx) const restrict(amp,cpu) {
+      array_view<const T, N> av(*this);
+      return av.section(idx);
+  }
+  array_view<T,N> section(const extent<N>& ext) restrict(amp,cpu) {
+      array_view<T, N> av(*this);
+      return av.section(ext);
+  }
+  array_view<const T,N> section(const extent<N>& ext) const restrict(amp,cpu) {
+      array_view<const T, N> av(*this);
+      return av.section(ext);
+  }
 
-  array_view<T, 1> section(int i0, int e0) restrict(amp,cpu);
-  array_view<const T, 1> section(int i0, int e0) const restrict(amp,cpu);
-  array_view<T, 2> section(int i0, int i1, int e0, int e1) restrict(amp,cpu);
-  array_view<const T, 2>
-      section(int i0, int i1, int e0, int e1) const restrict(amp,cpu);
-  array_view<T, 3>
-      section(int i0, int i1, int i2, int e0, int e1, int e2) restrict(amp,cpu);
-  array_view<const T, 3>
-      section(int i0, int i1, int i2, int e0, int e1, int e2) const restrict(amp,cpu);
+  array_view<T, 1> section(int i0, int e0) restrict(amp,cpu) {
+      static_assert(N == 1, "Rank must be 1");
+      return section(Concurrency::index<1>(i0), Concurrency::extent<1>(e0));
+  }
+  array_view<const T, 1> section(int i0, int e0) const restrict(amp,cpu) {
+      static_assert(N == 1, "Rank must be 1");
+      return section(Concurrency::index<1>(i0), Concurrency::extent<1>(e0));
+  }
+  array_view<T, 2> section(int i0, int i1, int e0, int e1) const restrict(amp,cpu) {
+      static_assert(N == 2, "Rank must be 2");
+      return section(Concurrency::index<2>(i0, i1), Concurrency::extent<2>(e0, e1));
+  }
+  array_view<T, 2> section(int i0, int i1, int e0, int e1) restrict(amp,cpu) {
+      static_assert(N == 2, "Rank must be 2");
+      return section(Concurrency::index<2>(i0, i1), Concurrency::extent<2>(e0, e1));
+  }
+  array_view<const T, 3> section(int i0, int i1, int i2, int e0, int e1, int e2) const restrict(amp,cpu) {
+      static_assert(N == 3, "Rank must be 3");
+      return section(Concurrency::index<3>(i0, i1, i2), Concurrency::extent<3>(e0, e1, e2));
+  }
 
   template <typename ElementType>
   array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu);
