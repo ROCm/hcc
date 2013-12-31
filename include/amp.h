@@ -1031,14 +1031,12 @@ public:
   array_view<const ElementType, 1> reinterpret_as() const restrict(amp,cpu);
   template <int K> array_view<T, K>
       view_as(const Concurrency::extent<K>& viewExtent) restrict(amp,cpu) {
-          static_assert(N == 1, "view_as is only permissible on array views of rank 1");
-          array_view<T, 1> av(*this);
+          array_view<T, 1> av(Concurrency::extent<1>(viewExtent.size()), data());
           return av.view_as(viewExtent);
       }
   template <int K> array_view<const T, K>
       view_as(const Concurrency::extent<K>& viewExtent) const restrict(amp,cpu) {
-          static_assert(N == 1, "view_as is only permissible on array views of rank 1");
-          const array_view<T, 1> av(*this);
+          const array_view<T, 1> av(Concurrency::extent<1>(viewExtent.size()), data());
           return av.view_as(viewExtent);
       }
 
@@ -1049,10 +1047,10 @@ public:
   }
 
   T* data() restrict(amp,cpu) {
-    return m_device.get();
+    return reinterpret_cast<T*>(m_device.get());
   }
   const T* data() const restrict(amp,cpu) {
-    return m_device.get();
+    return reinterpret_cast<const T*>(m_device.get());
   }
   ~array() { // For GMAC
     m_device.reset();
