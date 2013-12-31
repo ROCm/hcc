@@ -44,6 +44,15 @@ enum queuing_mode {
   queuing_mode_automatic
 };
 
+enum access_type
+{
+  access_type_none,
+  access_type_read,
+  access_type_write,
+  access_type_read_write = access_type_read | access_type_write,
+  access_type_auto
+};
+
 class accelerator_view;
 class accelerator;
 
