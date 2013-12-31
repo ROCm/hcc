@@ -958,7 +958,7 @@ public:
   void copy_to(const array_view<T,N>& dest) const;
 
 
-  Concurrency::extent<N> get_extent() const {
+  Concurrency::extent<N> get_extent() const restrict(amp,cpu) {
       return extent;
   }
 
