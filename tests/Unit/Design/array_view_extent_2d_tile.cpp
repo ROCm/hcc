@@ -15,15 +15,15 @@ int main()
   extent<2> e(5, 2);
 
   array_view<int, 2> av(e, v); 
-  assert(av.extent == e);
+  assert(av.get_extent() == e);
   // Testing tiled_index
-  parallel_for_each(av.extent.tile<1,2>(),
+  parallel_for_each(av.get_extent().tile<1,2>(),
     [=](tiled_index<1,2> idx) restrict(amp) { 
     av[idx] -= 1; 
   });
-  assert(av.extent == e);
-  for(unsigned int i = 0; i < av.extent[0]; i++)
-    for(unsigned int j = 0; j < av.extent[1]; j++)
+  assert(av.get_extent() == e);
+  for(unsigned int i = 0; i < av.get_extent()[0]; i++)
+    for(unsigned int j = 0; j < av.get_extent()[1]; j++)
       assert(i*2+j == static_cast<char>(av(i, j)));
   return 0;
 }

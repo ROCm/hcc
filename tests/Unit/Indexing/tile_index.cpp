@@ -18,14 +18,14 @@ int test_1d() {
   extent<1> e(100);
   {
     array_view<int, 1> av(e, vv.data()); 
-    parallel_for_each(av.extent.tile<5>(),
+    parallel_for_each(av.get_extent().tile<5>(),
       [=](tiled_index<5> idx) restrict(amp) { 
 	av(idx) = 
           idx.tile[0] +
           idx.tile_origin[0] * 100;
       });
-    assert(av.extent == e);
-    for(unsigned int i = 0; i < av.extent[0]; i++)
+    assert(av.get_extent() == e);
+    for(unsigned int i = 0; i < av.get_extent()[0]; i++)
       assert(i/5 + 100*(i-i%5) == av[i]);
   }
   return 0;
@@ -39,7 +39,7 @@ int test_2d()
   extent<2> e(10, 20);
   {
     array_view<int, 2> av(e, vv.data()); 
-    parallel_for_each(av.extent.tile<5,5>(),
+    parallel_for_each(av.get_extent().tile<5,5>(),
       [=](tiled_index<5,5> idx) restrict(amp) { 
 	av(idx) = 
           idx.tile[0] +
@@ -49,9 +49,9 @@ int test_2d()
           idx.tile_extent[0] * 10000 +
           idx.tile_extent[1] * 100000;
       });
-    assert(av.extent == e);
-    for(unsigned int i = 0; i < av.extent[0]; i++)
-      for(unsigned int j = 0; j < av.extent[1]; j++)
+    assert(av.get_extent() == e);
+    for(unsigned int i = 0; i < av.get_extent()[0]; i++)
+      for(unsigned int j = 0; j < av.get_extent()[1]; j++)
 	assert(    i/5 +
                10*(j/5)+
                100*(i-i%5)+

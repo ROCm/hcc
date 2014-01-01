@@ -27,9 +27,9 @@ TEST(ClassArrayView1D, Assign) {
 
   Concurrency::array_view<int, 1> av1(arr1);
   Concurrency::array_view<int, 1> av2(arr2);
-  EXPECT_NE(ext, av2.extent);
+  EXPECT_NE(ext, av2.get_extent());
   av2 = av1;
-  EXPECT_EQ(ext, av2.extent);
+  EXPECT_EQ(ext, av2.get_extent());
   EXPECT_EQ(5, av2[12]);
 }
 
@@ -46,13 +46,13 @@ TEST(ClassArrayView1D, Section) {
     av1.section(section_ext);
   EXPECT_EQ(5, av3[12]);
 
-  Concurrency::extent<1> ext3 = av3.extent;
+  Concurrency::extent<1> ext3 = av3.get_extent();
   EXPECT_EQ(11, ext3[0]);
 
 
   Concurrency::array_view<int, 1> av4 =
     av1.section(Concurrency::index<1>(10));
-  Concurrency::extent<1> ext4 = av4.extent;
+  Concurrency::extent<1> ext4 = av4.get_extent();
   EXPECT_EQ(N0-10, ext4[0]);
 
   Concurrency::array_view<int, 1> av5 =
