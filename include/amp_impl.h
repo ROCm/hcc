@@ -239,7 +239,11 @@ array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin)
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, InputIterator srcEnd)
-    : extent(ext), m_device(nullptr) { initialize(srcBegin, srcEnd); }
+    : extent(ext), m_device(nullptr) {
+#ifndef __GPU__
+        initialize(srcBegin, srcEnd);
+#endif
+ }
 
 template<typename T, int N> template <typename InputIterator> 
 array<T, N>::array(int e0, InputIterator srcBegin)

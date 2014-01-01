@@ -958,7 +958,7 @@ public:
   void copy_to(const array_view<T,N>& dest) const;
 
 
-  Concurrency::extent<N> get_extent() const {
+  Concurrency::extent<N> get_extent() const restrict(amp,cpu) {
       return extent;
   }
 
@@ -1009,21 +1009,51 @@ public:
       return (*this)[index<3>(i0, i1, i2)];
   }
 
-  
-  array_view<T, N> section(const index<N>& idx, Concurrency::extent<N>& ext) restrict(amp,cpu);
-  array_view<const T, N> section(const index<N>& idx, Concurrency::extent<N>& ext) const restrict(amp,cpu);
-  array_view<T, N> section(const index<N>& idx) restrict(amp,cpu);
-  array_view<const T, N> section(const index<N>& idx) const restrict(amp,cpu);
+  array_view<T, N> section(const Concurrency::index<N>& idx, const Concurrency::extent<N>& ext) restrict(amp,cpu) {
+      array_view<T, N> av(*this);
+      return av.section(idx, ext);
+  }
+  array_view<const T, N> section(const Concurrency::index<N>& idx, const Concurrency::extent<N>& ext) const restrict(amp,cpu) {
+      array_view<const T, N> av(*this);
+      return av.section(idx, ext);
+  }
+  array_view<T, N> section(const index<N>& idx) restrict(amp,cpu) {
+      array_view<T, N> av(*this);
+      return av.section(idx);
+  }
+  array_view<const T, N> section(const index<N>& idx) const restrict(amp,cpu) {
+      array_view<const T, N> av(*this);
+      return av.section(idx);
+  }
+  array_view<T,N> section(const extent<N>& ext) restrict(amp,cpu) {
+      array_view<T, N> av(*this);
+      return av.section(ext);
+  }
+  array_view<const T,N> section(const extent<N>& ext) const restrict(amp,cpu) {
+      array_view<const T, N> av(*this);
+      return av.section(ext);
+  }
 
-  array_view<T, 1> section(int i0, int e0) restrict(amp,cpu);
-  array_view<const T, 1> section(int i0, int e0) const restrict(amp,cpu);
-  array_view<T, 2> section(int i0, int i1, int e0, int e1) restrict(amp,cpu);
-  array_view<const T, 2>
-      section(int i0, int i1, int e0, int e1) const restrict(amp,cpu);
-  array_view<T, 3>
-      section(int i0, int i1, int i2, int e0, int e1, int e2) restrict(amp,cpu);
-  array_view<const T, 3>
-      section(int i0, int i1, int i2, int e0, int e1, int e2) const restrict(amp,cpu);
+  array_view<T, 1> section(int i0, int e0) restrict(amp,cpu) {
+      static_assert(N == 1, "Rank must be 1");
+      return section(Concurrency::index<1>(i0), Concurrency::extent<1>(e0));
+  }
+  array_view<const T, 1> section(int i0, int e0) const restrict(amp,cpu) {
+      static_assert(N == 1, "Rank must be 1");
+      return section(Concurrency::index<1>(i0), Concurrency::extent<1>(e0));
+  }
+  array_view<T, 2> section(int i0, int i1, int e0, int e1) const restrict(amp,cpu) {
+      static_assert(N == 2, "Rank must be 2");
+      return section(Concurrency::index<2>(i0, i1), Concurrency::extent<2>(e0, e1));
+  }
+  array_view<T, 2> section(int i0, int i1, int e0, int e1) restrict(amp,cpu) {
+      static_assert(N == 2, "Rank must be 2");
+      return section(Concurrency::index<2>(i0, i1), Concurrency::extent<2>(e0, e1));
+  }
+  array_view<const T, 3> section(int i0, int i1, int i2, int e0, int e1, int e2) const restrict(amp,cpu) {
+      static_assert(N == 3, "Rank must be 3");
+      return section(Concurrency::index<3>(i0, i1, i2), Concurrency::extent<3>(e0, e1, e2));
+  }
 
   template <typename ElementType>
   array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu);
@@ -1031,14 +1061,12 @@ public:
   array_view<const ElementType, 1> reinterpret_as() const restrict(amp,cpu);
   template <int K> array_view<T, K>
       view_as(const Concurrency::extent<K>& viewExtent) restrict(amp,cpu) {
-          static_assert(N == 1, "view_as is only permissible on array views of rank 1");
-          array_view<T, 1> av(*this);
+          array_view<T, 1> av(Concurrency::extent<1>(viewExtent.size()), data());
           return av.view_as(viewExtent);
       }
   template <int K> array_view<const T, K>
       view_as(const Concurrency::extent<K>& viewExtent) const restrict(amp,cpu) {
-          static_assert(N == 1, "view_as is only permissible on array views of rank 1");
-          const array_view<T, 1> av(*this);
+          const array_view<T, 1> av(Concurrency::extent<1>(viewExtent.size()), data());
           return av.view_as(viewExtent);
       }
 
@@ -1049,10 +1077,10 @@ public:
   }
 
   T* data() restrict(amp,cpu) {
-    return m_device.get();
+    return reinterpret_cast<T*>(m_device.get());
   }
   const T* data() const restrict(amp,cpu) {
-    return m_device.get();
+    return reinterpret_cast<const T*>(m_device.get());
   }
   ~array() { // For GMAC
     m_device.reset();
