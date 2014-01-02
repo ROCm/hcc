@@ -454,6 +454,8 @@ public:
         return ret;
     }
 
+    template<int T>
+    friend class extent;
 private:
     typedef index_impl<typename __make_indices<N>::type> base;
     base base_;
@@ -549,6 +551,24 @@ public:
             return tiled_extent<D0, D1, D2>(*this);
         }
 
+    extent operator+(const index<N>& idx) restrict(amp,cpu) {
+        extent __r = *this;
+        __r += idx;
+        return __r;
+    }
+    extent operator-(const index<N>& idx) restrict(amp,cpu) {
+        extent __r = *this;
+        __r -= idx;
+        return __r;
+    }
+    extent& operator+=(const index<N>& idx) restrict(amp,cpu) {
+        base_.operator+=(idx.base_);
+        return *this;
+    }
+    extent& operator-=(const index<N>& idx) restrict(amp,cpu) {
+        base_.operator-=(idx.base_);
+        return *this;
+    }
     extent& operator+=(const extent& __r) restrict(amp,cpu) {
         base_.operator+=(__r.base_);
         return *this;
