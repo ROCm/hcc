@@ -25,7 +25,7 @@ bool TestCopy1(accelerator_view av, int numElems, bool async)
     const int HEIGHT = (numElems + WIDTH - 1)/ WIDTH;
     const int BORDER = 3;
     array<T, 2> srcArray(HEIGHT, WIDTH, av);
-    parallel_for_each(srcArray.get_extent(), [&, WIDTH](const index<2> &idx) restrict(amp) {
+    parallel_for_each(srcArray.get_extent(), [&, WIDTH](const index<2> idx) restrict(amp) {
         srcArray[idx] = (T)(idx[0] * WIDTH + idx[1]);
     });
 
@@ -49,7 +49,7 @@ bool TestCopy1(accelerator_view av, int numElems, bool async)
     bool passed = false;
     if (async) 
     {
-        auto fut = copy_async(srcArray, destArrayView);
+        completion_future fut = copy_async(srcArray, destArrayView);
         fut.get();
         passed = verificationFunc();
     }
@@ -156,7 +156,7 @@ bool TestCopy3(int numElems, bool async)
     const int HEIGHT = (numElems + WIDTH - 1)/ WIDTH;
     const int BORDER = 3;
     array_view<T, 2> srcArrayView(HEIGHT, WIDTH);
-    parallel_for_each(srcArrayView.get_extent(), [=](const index<2> &idx) restrict(amp) {
+    parallel_for_each(srcArrayView.get_extent(), [=](const index<2> idx) restrict(amp) {
         srcArrayView[idx] = (T)(idx[0] * WIDTH + idx[1]);
     });
 
@@ -202,7 +202,7 @@ bool TestCopy4(const accelerator_view &av, int numElems, bool async)
     const int BORDER = 3;
     array_view<T, 2> tempSrcArrayView(HEIGHT + (2 * BORDER), WIDTH + (2 * BORDER));
     array_view<T, 2> srcArrayView = tempSrcArrayView.section(BORDER, BORDER, HEIGHT, WIDTH);
-    parallel_for_each(srcArrayView.get_extent(), [=](const index<2> &idx) restrict(amp) {
+    parallel_for_each(srcArrayView.get_extent(), [=](const index<2> idx) restrict(amp) {
         srcArrayView[idx] = (T)(idx[0] * WIDTH + idx[1]);
     });
 
@@ -212,7 +212,7 @@ bool TestCopy4(const accelerator_view &av, int numElems, bool async)
     auto verificationFunc = [&destArray, WIDTH, HEIGHT]() -> bool {
         int passed = 1;
         array_view<int> passedView(1, &passed);
-        parallel_for_each(destArray.get_extent(), [=, &destArray](const index<2> &idx) restrict(amp) {
+        parallel_for_each(destArray.get_extent(), [=, &destArray](const index<2> idx) restrict(amp) {
             if (destArray[idx] != (T)(idx[0] * WIDTH + idx[1])) {
                 passedView(0) = 0;
             }
@@ -247,7 +247,7 @@ bool TestCopy4_1(const accelerator_view &av, int numElems, bool async)
     const int BORDER = 3;
     array_view<T, 2> tempSrcArrayView(HEIGHT + (2 * BORDER), WIDTH + (2 * BORDER));
     array_view<T, 2> srcArrayView = tempSrcArrayView.section(BORDER, BORDER, HEIGHT, WIDTH);
-    parallel_for_each(srcArrayView.get_extent(), [=](const index<2> &idx) restrict(amp) {
+    parallel_for_each(srcArrayView.get_extent(), [=](const index<2> idx) restrict(amp) {
         srcArrayView[idx] = (T)(idx[0] * WIDTH + idx[1]);
     });
 
@@ -257,7 +257,7 @@ bool TestCopy4_1(const accelerator_view &av, int numElems, bool async)
     auto verificationFunc = [destArrayView, WIDTH, HEIGHT]() -> bool {
         int passed = 1;
         array_view<int> passedView(1, &passed);
-        parallel_for_each(destArrayView.get_extent(), [=](const index<2> &idx) restrict(amp) {
+        parallel_for_each(destArrayView.get_extent(), [=](const index<2> idx) restrict(amp) {
             if (destArrayView[idx] != (T)(idx[0] * WIDTH + idx[1])) {
                 passedView(0) = 0;
             }
@@ -292,7 +292,7 @@ bool TestCopy5(int numElems, bool async)
     const int BORDER = 3;
     array_view<T, 2> tempSrcArrayView(HEIGHT + (2 * BORDER), WIDTH + (2 * BORDER));
     array_view<T, 2> srcArrayView = tempSrcArrayView.section(BORDER, BORDER, HEIGHT, WIDTH);
-    parallel_for_each(srcArrayView.get_extent(), [=](const index<2> &idx) restrict(amp) {
+    parallel_for_each(srcArrayView.get_extent(), [=](const index<2> idx) restrict(amp) {
         srcArrayView[idx] = (T)(idx[0] * WIDTH + idx[1]);
     });
 
@@ -313,7 +313,7 @@ bool TestCopy5(int numElems, bool async)
     bool passed = false;
     if (async) 
     {
-        auto fut = copy_async(srcArrayView, (destIter));
+        auto fut = copy_async(srcArrayView, destIter);
         fut.get();
         passed = verificationFunc();
     }
@@ -346,7 +346,7 @@ bool TestCopy6(bool async)
     bool passed = false;
     if (async) 
     {
-        auto fut = copy_async(srcArrayView, (destIter));
+        auto fut = copy_async(srcArrayView, destIter);
         fut.get();
         passed = verificationFunc();
     }
@@ -360,7 +360,7 @@ bool TestCopy6(bool async)
     return passed;
 }   
 
-int test_main()
+int main()
 {
     accelerator def;
     accelerator_view av = def.get_default_view();
