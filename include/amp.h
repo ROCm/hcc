@@ -1125,9 +1125,17 @@ public:
   }
 
   template <typename ElementType>
-  array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu);
+    array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu) {
+        int size = extent.size() * sizeof(T) / sizeof(ElementType);
+        array_view<ElementType, 1> av(Concurrency::extent<1>(size), reinterpret_cast<ElementType*>(m_device.get()));
+        return av;
+    }
   template <typename ElementType>
-  array_view<const ElementType, 1> reinterpret_as() const restrict(amp,cpu);
+    array_view<const ElementType, 1> reinterpret_as() const restrict(amp,cpu) {
+        int size = extent.size() * sizeof(T) / sizeof(ElementType);
+        array_view<const ElementType, 1> av(Concurrency::extent<1>(size), reinterpret_cast<const ElementType*>(m_device.get()));
+        return av;
+    }
   template <int K> array_view<T, K>
       view_as(const Concurrency::extent<K>& viewExtent) restrict(amp,cpu) {
           array_view<T, 1> av(Concurrency::extent<1>(viewExtent.size()), data());
