@@ -1,3 +1,4 @@
+#include<type_traits>
 #pragma once
 template<class T>
 class GMACAllocator

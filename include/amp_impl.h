@@ -358,12 +358,12 @@ template <typename T, int N>
 void array_view<T, N>::synchronize() const {
   assert(cache);
   assert(p_);
-  if (sec_offset == extent && offset == 0) {
+  if (extent_base == extent && offset == 0) {
       memmove(const_cast<void*>(reinterpret_cast<const void*>(p_)),
               reinterpret_cast<const void*>(cache.get()), extent.size() * sizeof(T));
   } else {
-      for (int i = 0; i < extent[0]; ++i){
-          int off = sec_offset.size() / sec_offset[0];
+      for (int i = 0; i < extent_base[0]; ++i){
+          int off = extent_base.size() / extent_base[0];
           memmove(const_cast<void*>(reinterpret_cast<const void*>(&p_[offset + i * off])),
                   reinterpret_cast<const void*>(&(cache.get()[offset + i * off])),
                   extent.size() / extent[0] * sizeof(T));
@@ -374,19 +374,25 @@ void array_view<T, N>::synchronize() const {
 template <typename T, int N>
 array_view<T, N>::array_view(const Concurrency::extent<N>& ext,
                              value_type* src) restrict(amp,cpu)
-    : extent(ext), p_(src), cache(nullptr), offset(0), sec_offset(ext) {
-        cache.reset(GMACAllocator<T>().allocate(ext.size()), GMACDeleter<T>());
+    : extent(ext), p_(src), cache(nullptr), offset(0), extent_base(ext) {
+        cache.reset(GMACAllocator<nc_T>().allocate(ext.size()), GMACDeleter<nc_T>());
         refresh();
+    }
+
+template <typename T, int N>
+array_view<T, N>::array_view(const Concurrency::extent<N>& ext) restrict(amp,cpu)
+    : extent(ext), p_(nullptr), cache(nullptr), offset(0), extent_base(ext) {
+        cache.reset(GMACAllocator<nc_T>().allocate(ext.size()), GMACDeleter<nc_T>());
     }
 
 template <typename T, int N>
 void array_view<T, N>::refresh() const {
     assert(cache);
-    assert(p_);
-    assert(extent == sec_offset && "Only support non-sectioned view");
+    assert(extent == extent_base && "Only support non-sectioned view");
     assert(offset == 0 && "Only support non-sectioned view");
-    memmove(const_cast<void*>(reinterpret_cast<const void*>(cache.get())),
-            reinterpret_cast<const void*>(p_), extent.size() * sizeof(T));
+    if (p_)
+        memmove(const_cast<void*>(reinterpret_cast<const void*>(cache.get())),
+                reinterpret_cast<const void*>(p_), extent.size() * sizeof(T));
 }
 
 #else // GPU implementations
@@ -395,7 +401,7 @@ template <typename T, int N>
 array_view<T,N>::array_view(const Concurrency::extent<N>& ext,
                             value_type* src) restrict(amp,cpu)
     : extent(ext), p_(nullptr), cache(reinterpret_cast<__global value_type *>(src)),
-    offset(0), sec_offset(ext) {}
+    offset(0), extent_base(ext) {}
 
 #endif
 #undef __global  
