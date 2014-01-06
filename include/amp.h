@@ -1299,7 +1299,18 @@ public:
       return (*this)[index<3>(i0, i1, i2)];
   }
 
-
+  template <typename ElementType>
+      array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu) {
+          int size = extent.size() * sizeof(T) / sizeof(ElementType);
+          array_view<ElementType, 1> av(Concurrency::extent<1>(size), reinterpret_cast<ElementType*>(cache.get() + offset + index_base[0]));
+          return av;
+      }
+  template <typename ElementType>
+      array_view<const ElementType, 1> reinterpret_as() const restrict(amp,cpu) {
+          int size = extent.size() * sizeof(T) / sizeof(ElementType);
+          array_view<const ElementType, 1> av(Concurrency::extent<1>(size), reinterpret_cast<const ElementType*>(cache.get() + offset + index_base[0]));
+          return av;
+      }
   array_view<T, N> section(const Concurrency::index<N>& idx,
                            const Concurrency::extent<N>& ext) const restrict(amp,cpu) {
       array_view<T, N> av(ext, extent_base, idx + index_base, cache, p_, offset);
