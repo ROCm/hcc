@@ -61,7 +61,7 @@ template <typename T, int N> class array;
 
 class accelerator {
 public:
-  static const wchar_t default_accelerator[];   // = L"default"
+  static wchar_t default_accelerator[];   // = L"default"
   static const wchar_t direct3d_warp[];         // = L"direct3d\\warp"
   static const wchar_t direct3d_ref[];          // = L"direct3d\\ref"
   static const wchar_t cpu_accelerator[];       // = L"cpu"
@@ -70,7 +70,16 @@ public:
   explicit accelerator(const std::wstring& path);
   accelerator(const accelerator& other);
   static std::vector<accelerator> get_all();
-  static bool set_default(const std::wstring& path);
+  static bool set_default(const std::wstring& path) {
+    std::wstring cpu(cpu_accelerator);
+    std::wstring warp(direct3d_warp);
+    std::wstring ref(direct3d_ref);
+    if (path == cpu || path == warp || path == ref)
+      wcscpy(default_accelerator, path.c_str());
+    else
+      return false;
+    return true;
+  }
   accelerator& operator=(const accelerator& other);
   //__declspec(property(get)) std::wstring device_path;
   const std::wstring device_path;
