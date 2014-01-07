@@ -1023,9 +1023,13 @@ public:
   array& operator=(array&& other);
   array& operator=(const array_view<const T,N>& src);
 
-  void copy_to(array& dest) const;
-  void copy_to(const array_view<T,N>& dest) const;
+  void copy_to(array& dest) const {
+      copy(*this, dest);
+  }
 
+  void copy_to(const array_view<T,N>& dest) const {
+      copy(*this, dest);
+  }
 
   Concurrency::extent<N> get_extent() const restrict(amp,cpu) {
       return extent;
@@ -1266,8 +1270,12 @@ public:
   }
 
 
-  void copy_to(array<T,N>& dest) const;
-  void copy_to(const array_view& dest) const;
+  void copy_to(array<T,N>& dest) const {
+      copy(*this, dest);
+  }
+  void copy_to(const array_view& dest) const {
+      copy(*this, dest);
+  }
 
   extent<N> get_extent() const restrict(amp,cpu) {
       return extent;
