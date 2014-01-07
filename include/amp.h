@@ -1176,7 +1176,7 @@ public:
 
 
   const gmac_buffer_t& internal() const { return m_device; }
-  const Concurrency::extent<N> extent;
+  Concurrency::extent<N> extent;
 private:
   template <int K, typename Q> friend struct index_helper;
   template <int K, typename Q1, typename Q2> friend struct amp_helper;
