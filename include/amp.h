@@ -1249,9 +1249,11 @@ public:
       : array_view(Concurrency::extent<3>(e0, e1, e2))
   { static_assert(N == 3, "Rank must be 3"); }
 
-  template <typename T2> array_view(const array_view<T2, N>& other) restrict(amp,cpu) : extent(other.extent),
-    p_(other.p_), cache(other.cache), offset(other.offset), index_base(other.index_base),
-    extent_base(other.extent_base) {}
+  template <class = typename std::enable_if<std::is_const<T>::value, nc_T>::type>
+    array_view(const array_view<nc_T, N>& other) restrict(amp,cpu) : extent(other.extent),
+      p_(other.p_), cache(other.cache), offset(other.offset), index_base(other.index_base),
+      extent_base(other.extent_base) {}
+
   array_view(const array_view& other) restrict(amp,cpu) : extent(other.extent),
     p_(other.p_), cache(other.cache), offset(other.offset), index_base(other.index_base),
     extent_base(other.extent_base) {}
