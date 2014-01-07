@@ -1019,7 +1019,17 @@ public:
   array(const array& other);
   array(array&& other);
 
-  array& operator=(const array& other);
+  array& operator=(const array& other) {
+    if(this != &other) {
+        extent = other.extent;
+#ifndef __GPU__
+        this->initialize();
+#endif
+        m_device = other.m_device;
+        copy(other, *this);
+    }
+    return *this;
+  }
   array& operator=(array&& other);
   array& operator=(const array_view<const T,N>& src);
 
