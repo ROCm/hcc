@@ -24,7 +24,19 @@
 namespace Concurrency {
 // Accelerators
 inline accelerator::accelerator(): accelerator(default_accelerator) {}
-
+inline accelerator::accelerator(const accelerator& other): device_path(other.device_path), version(other.version),
+dedicated_memory(other.dedicated_memory),is_emulated(other.is_emulated), has_display(other.has_display),
+supports_double_precision(other.supports_double_precision), supports_limited_double_precision(other.supports_limited_double_precision) {
+  if (device_path != std::wstring(default_accelerator)) {
+    std::wcerr << L"CLAMP: Warning: the given accelerator is not supported: ";
+    std::wcerr << device_path << std::endl;
+    return;
+  }
+  std::string s_desc("Default GMAC+OpenCL");
+  std::copy(s_desc.begin(), s_desc.end(), std::back_inserter(description));
+  if (!default_view_)
+    default_view_ = new accelerator_view(0);
+}
 inline accelerator::accelerator(const std::wstring& path): device_path(path), version(0), dedicated_memory(1<<20),
 is_emulated(0), has_display(0), supports_double_precision(1), supports_limited_double_precision(0) {
   if (path != std::wstring(default_accelerator)) {
@@ -37,7 +49,16 @@ is_emulated(0), has_display(0), supports_double_precision(1), supports_limited_d
   if (!default_view_)
     default_view_ = new accelerator_view(0);
 }
-
+inline accelerator& accelerator::operator=(const accelerator& other) {
+  device_path = other.device_path;
+  version = other.version;
+  dedicated_memory = other.dedicated_memory;
+  is_emulated = other.is_emulated;
+  has_display = other.has_display;
+  supports_double_precision = other.supports_double_precision;
+  supports_limited_double_precision = other.supports_limited_double_precision;
+  return *this;
+}
 inline bool accelerator::operator==(const accelerator& other) const {
   return device_path == other.device_path;
 }

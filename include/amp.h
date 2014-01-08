@@ -82,7 +82,7 @@ public:
   }
   accelerator& operator=(const accelerator& other);
   //__declspec(property(get)) std::wstring device_path;
-  const std::wstring device_path;
+  std::wstring device_path;
   const std::wstring &get_device_path() const { return device_path; }
   __declspec(property(get)) unsigned int version; // hiword=major, loword=minor
   //__declspec(property(get)) std::wstring description;
