@@ -1028,13 +1028,27 @@ public:
   array(const array& other);
   array(array&& other);
 
-  array& operator=(const array& other);
+  array& operator=(const array& other) {
+    if(this != &other) {
+        extent = other.extent;
+#ifndef __GPU__
+        this->initialize();
+#endif
+        m_device = other.m_device;
+        copy(other, *this);
+    }
+    return *this;
+  }
   array& operator=(array&& other);
   array& operator=(const array_view<const T,N>& src);
 
-  void copy_to(array& dest) const;
-  void copy_to(const array_view<T,N>& dest) const;
+  void copy_to(array& dest) const {
+      copy(*this, dest);
+  }
 
+  void copy_to(const array_view<T,N>& dest) const {
+      copy(*this, dest);
+  }
 
   Concurrency::extent<N> get_extent() const restrict(amp,cpu) {
       return extent;
@@ -1171,7 +1185,7 @@ public:
 
 
   const gmac_buffer_t& internal() const { return m_device; }
-  const Concurrency::extent<N> extent;
+  Concurrency::extent<N> extent;
 private:
   template <int K, typename Q> friend struct index_helper;
   template <int K, typename Q1, typename Q2> friend struct amp_helper;
@@ -1279,8 +1293,12 @@ public:
   }
 
 
-  void copy_to(array<T,N>& dest) const;
-  void copy_to(const array_view& dest) const;
+  void copy_to(array<T,N>& dest) const {
+      copy(*this, dest);
+  }
+  void copy_to(const array_view& dest) const {
+      copy(*this, dest);
+  }
 
   extent<N> get_extent() const restrict(amp,cpu) {
       return extent;
