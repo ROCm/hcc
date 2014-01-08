@@ -60,10 +60,20 @@ inline accelerator& accelerator::operator=(const accelerator& other) {
   return *this;
 }
 inline bool accelerator::operator==(const accelerator& other) const {
-  return device_path == other.device_path;
+  return device_path == other.device_path &&
+         version == other.version &&
+         dedicated_memory == other.dedicated_memory &&
+         is_emulated == other.is_emulated &&
+         has_display == other.has_display &&
+         supports_double_precision == other.supports_double_precision;
 }
 inline bool accelerator::operator!=(const accelerator& other) const {
-  return device_path != other.device_path;
+  return device_path != other.device_path ||
+         version != other.version ||
+         dedicated_memory != other.dedicated_memory ||
+         is_emulated != other.is_emulated ||
+         has_display != other.has_display ||
+         supports_double_precision != other.supports_double_precision;
 }
 
 inline accelerator_view& accelerator::get_default_view() const {
@@ -73,9 +83,14 @@ inline accelerator_view& accelerator::get_default_view() const {
 // Accelerator view
 inline accelerator_view accelerator::create_view(void) {
   accelerator_view sa(0);
+  sa.queuing_mode = queuing_mode_automatic;
   return sa;
 }
-
+inline accelerator_view accelerator::create_view(queuing_mode qmode) {
+  accelerator_view sa(0);
+  sa.queuing_mode = qmode;
+  return sa;
+}
 template <int N>
 index<N> operator+(const index<N>& lhs, const index<N>& rhs) restrict(amp,cpu) {
     index<N> __r = lhs;

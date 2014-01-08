@@ -81,21 +81,18 @@ public:
     return true;
   }
   accelerator& operator=(const accelerator& other);
-  //__declspec(property(get)) std::wstring device_path;
   std::wstring device_path;
   const std::wstring &get_device_path() const { return device_path; }
-  __declspec(property(get)) unsigned int version; // hiword=major, loword=minor
-  //__declspec(property(get)) std::wstring description;
+  unsigned int version; // hiword=major, loword=minor
   std::wstring description;
   const std::wstring &get_description() const { return description; }
-  __declspec(property(get)) bool is_debug;
-  __declspec(property(get)) bool is_emulated;
-  __declspec(property(get)) bool has_display;
-  __declspec(property(get)) bool supports_double_precision;
-  __declspec(property(get)) bool supports_limited_double_precision;
-  __declspec(property(get)) size_t dedicated_memory;
+  bool is_debug;
+  bool is_emulated;
+  bool has_display;
+  bool supports_double_precision;
+  bool supports_limited_double_precision;
+  size_t dedicated_memory;
   accelerator_view& get_default_view() const;
-  // __declspec(property(get=get_default_view)) accelerator_view default_view;
 
   accelerator_view create_view();
   accelerator_view create_view(queuing_mode qmode);
@@ -112,27 +109,33 @@ public:
   accelerator_view() = delete;
   accelerator_view(const accelerator_view& other) {}
   accelerator_view& operator=(const accelerator_view& other) {
+    queuing_mode = other.queuing_mode;
+    is_debug = other.is_debug;
+    version = other.version;
+    
     return *this;
   }
 
   accelerator get_accelerator() const;
-  // __declspec(property(get=get_accelerator)) Concurrency::accelerator accelerator;
-  //__declspec(property(get))
-  __attribute__((cpu)) bool is_debug;
-  //__declspec(property(get))
+  bool is_debug;
   unsigned int version;
-  //__declspec(property(get))
-  __attribute__((cpu)) queuing_mode queuing_mode;
+  enum queuing_mode queuing_mode;
+  enum queuing_mode get_queuing_mode() const {return queuing_mode;}
+
   void flush();
   void wait();
   completion_future create_marker();
-  bool operator==(const accelerator_view& other) const;
-  bool operator!=(const accelerator_view& other) const;
+  bool operator==(const accelerator_view& other) const {
+    return is_debug == other.is_debug &&
+           version == other.version &&
+           queuing_mode == other.queuing_mode;
+  }
+  bool operator!=(const accelerator_view& other) const {return !(*this == other);}
   ~accelerator_view() {}
  private:
   //CLAMP-specific
   friend class accelerator;
-  explicit accelerator_view(int) {}
+  explicit accelerator_view(int) {queuing_mode = queuing_mode_automatic;}
   //End CLAMP-specific
 };
 //CLAMP
@@ -1427,7 +1430,7 @@ template <int D0, typename Kernel>
 void parallel_for_each(tiled_extent<D0> compute_domain, const Kernel& f);
 
 template <int N, typename Kernel>
-void parallel_for_each(const accelerator_view& accl_view, extent<N> compute_domain, const Kernel& f);
+void parallel_for_each(const accelerator_view& accl_view, extent<N> compute_domain, const Kernel& f){}
 
 template <int D0, int D1, int D2, typename Kernel>
 void parallel_for_each(const accelerator_view& accl_view, tiled_extent<D0,D1,D2> compute_domain, const Kernel& f);
