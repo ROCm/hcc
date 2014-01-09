@@ -91,6 +91,9 @@ inline accelerator_view accelerator::create_view(queuing_mode qmode) {
   sa.queuing_mode = qmode;
   return sa;
 }
+
+inline completion_future accelerator_view::create_marker(){return completion_future();}
+
 template <int N>
 index<N> operator+(const index<N>& lhs, const index<N>& rhs) restrict(amp,cpu) {
     index<N> __r = lhs;

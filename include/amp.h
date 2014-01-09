@@ -62,8 +62,7 @@ template <typename T, int N> class array;
 class accelerator {
 public:
   static wchar_t default_accelerator[];   // = L"default"
-  static const wchar_t direct3d_warp[];         // = L"direct3d\\warp"
-  static const wchar_t direct3d_ref[];          // = L"direct3d\\ref"
+  static const wchar_t gpu_accelerator[];         // = L"gpu"
   static const wchar_t cpu_accelerator[];       // = L"cpu"
   
   accelerator();
@@ -72,9 +71,8 @@ public:
   static std::vector<accelerator> get_all();
   static bool set_default(const std::wstring& path) {
     std::wstring cpu(cpu_accelerator);
-    std::wstring warp(direct3d_warp);
-    std::wstring ref(direct3d_ref);
-    if (path == cpu || path == warp || path == ref)
+    std::wstring gpu(gpu_accelerator);
+    if (path == cpu || path == gpu)
       wcscpy(default_accelerator, path.c_str());
     else
       return false;
@@ -92,6 +90,8 @@ public:
   bool supports_double_precision;
   bool supports_limited_double_precision;
   size_t dedicated_memory;
+  bool get_is_debug() const {return is_debug;}
+  bool get_version() const {return version;}
   accelerator_view& get_default_view() const;
 
   accelerator_view create_view();
@@ -121,9 +121,11 @@ public:
   unsigned int version;
   enum queuing_mode queuing_mode;
   enum queuing_mode get_queuing_mode() const {return queuing_mode;}
+  bool get_is_debug() const {return is_debug;}
+  bool get_version() const {return version;}
 
-  void flush();
-  void wait();
+  void flush(){}
+  void wait(){}
   completion_future create_marker();
   bool operator==(const accelerator_view& other) const {
     return is_debug == other.is_debug &&
@@ -178,7 +180,7 @@ public:
         return __amp_future.valid();
     }
     void wait() const {
-        __amp_future.wait();
+        //__amp_future.wait();
     }
 
     template <class _Rep, class _Period>
