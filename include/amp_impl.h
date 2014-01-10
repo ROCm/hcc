@@ -308,8 +308,10 @@ array<T, N>::array(int e0, int e1, int e2, InputIterator srcBegin, InputIterator
 
 
 template<typename T, int N> template <typename InputIterator>
-array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, accelerator_view av)
-    : array(ext, srcBegin) {}
+array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, accelerator_view av,
+                   access_type cpu_access_type) : array(ext, srcBegin) {
+  this->cpu_access_type = cpu_access_type;
+}
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, InputIterator srcEnd,

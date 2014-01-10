@@ -981,7 +981,8 @@ public:
 
 
   template <typename InputIter>
-      array(const Concurrency::extent<N>& ext, InputIter srcBegin, accelerator_view av);
+      array(const Concurrency::extent<N>& ext, InputIter srcBegin, accelerator_view av,
+            access_type cpu_access_type = access_type_auto);
   template <typename InputIter>
       array(const Concurrency::extent<N>& ext, InputIter srcBegin, InputIter srcEnd,
             accelerator_view av, access_type cpu_access_type = access_type_auto);
@@ -1396,7 +1397,7 @@ public:
   void synchronize() const;
   completion_future synchronize_async() const;
   void refresh() const;
-  void discard_data() const;
+  void discard_data() const {}
 
   T* data() const restrict(amp,cpu) {
     return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
