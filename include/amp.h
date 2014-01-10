@@ -94,7 +94,7 @@ public:
   bool get_supports_double_precision() const {return supports_double_precision;}
   bool get_supports_limited_double_precision() const { return supports_limited_double_precision;}
   size_t get_dedicated_memory() const {return dedicated_memory;}
-
+  void set_default_cpu_access_type(access_type type) {default_access_type = type;}
   bool operator==(const accelerator& other) const;
   bool operator!=(const accelerator& other) const;
  private:
@@ -109,6 +109,7 @@ public:
   bool supports_cpu_shared_memory;
   size_t dedicated_memory;
   static accelerator_view *default_view_;
+  access_type default_access_type;
 };
 
 class completion_future;
