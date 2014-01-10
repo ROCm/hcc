@@ -5,3 +5,7 @@ include_directories(${GMAC_INC_DIR} ${OPENCL_HEADER_DIR})
 add_mcwamp_library(mcwamp mcwamp.cpp)
 
 add_mcwamp_executable(mcwexe mcwamp_main.cpp)
+install(TARGETS mcwamp
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    )
