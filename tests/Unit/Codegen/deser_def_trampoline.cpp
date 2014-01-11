@@ -1,5 +1,4 @@
-// RUN: %amp_device -c -D__GPU__=1 -S -emit-llvm %s -o -|c++filt|%FileCheck %s
-// RUN: %amp_device -c -D__GPU__=1 %s -o %t.device.o
+// RUN: %amp_device -c -D__GPU__=1 %s
 // RUN: %gtest_amp %s %t.device.o -o %t && %t
 #include "amp.h"
 #ifndef __GPU__
@@ -11,7 +10,7 @@ extern "C" int get_global_id(int) {return 0;}
 class base{
  public:
   __attribute__((annotate("deserialize"))) /* For compiler */
-  base(int a_,float b_) restrict(amp) :a(a_), b(b_) { aa = a_; bb = b_; }
+  base(int a_,float b_) restrict(amp,cpu) :a(a_), b(b_) { aa = a_; bb = b_; }
   int a;
   float b;
 };
@@ -21,13 +20,13 @@ class baz {
   __attribute__((annotate("deserialize"))) /* For compiler */
   baz(base&, int foo) restrict(amp);
 #endif
-  void operator()(Concurrency::index<1> idx) restrict(amp) {};
+  void operator()(Concurrency::index<1> idx) restrict(amp,cpu) {};
 
   base &B;
   int bar;
 };
 __attribute__((noinline))
-void trampoline(void) restrict(amp) {
+void trampoline(void) restrict(amp,cpu) {
   baz::__cxxamp_trampoline(1, 2.0f, 3);
 }
 #ifndef __GPU__
