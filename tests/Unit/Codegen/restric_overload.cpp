@@ -10,7 +10,7 @@ class baz {
   int bar;
 };
 
-int fake_use(void) restrict(cpu) {
+int fake_use(void) restrict(cpu,amp) {
   baz baz_cpu;
   baz_cpu.foo(); //call the one with restrict(cpu)
   return baz_cpu.bar;
