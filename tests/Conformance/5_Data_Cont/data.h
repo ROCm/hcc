@@ -224,33 +224,6 @@ namespace Concurrency
         }
 
         #pragma endregion
-
-        // Creates an extent object with range of each dimension between 1 and maxRange.
-        template<int _rank>
-        extent<_rank> CreateRandomExtent(int max_range)
-        {
-            int extent_data[_rank];
-    
-            for (int i = 0; i < _rank; i++) 
-            { 
-				   extent_data[i] = 1 + (int)rand() % max_range; 
-			  }
-			
-            return extent<_rank>(extent_data);
-        }
-
-        template<typename _type, int _rank>
-        array<_type, _rank> CreateArrayAndFillData(const accelerator_view& src_av, int extent_range, access_type cpu_access_type = access_type_auto)
-        {
-            extent<_rank> arr_extent = CreateRandomExtent<_rank>(extent_range);
-            
-            std::vector<_type> cont(arr_extent.size());
-            Fill<_type>(cont);
-
-            array<_type, _rank> src_arr(arr_extent, cont.begin(), src_av, cpu_access_type);
-            
-            return src_arr;
-        }
 	}
 }
 
