@@ -128,16 +128,17 @@ class completion_future;
 class accelerator_view {
 public:
   accelerator_view() = delete;
-  accelerator_view(const accelerator_view& other) {}
+  accelerator_view(const accelerator_view& other) { *this = other; }
   accelerator_view& operator=(const accelerator_view& other) {
     queuing_mode = other.queuing_mode;
+    accelerator_ = other.accelerator_;
     is_debug = other.is_debug;
     version = other.version;
     
     return *this;
   }
 
-  accelerator get_accelerator() const;
+  accelerator& get_accelerator() const { return *accelerator_; }
   enum queuing_mode get_queuing_mode() const {return queuing_mode;}
   bool get_is_debug() const {return is_debug;}
   bool get_version() const {return version;}
@@ -160,6 +161,7 @@ public:
   friend class accelerator;
   explicit accelerator_view(int) {queuing_mode = queuing_mode_automatic;}
   //End CLAMP-specific
+  accelerator *accelerator_;
 };
 //CLAMP
 extern "C" __attribute__((pure)) int get_global_id(int n) restrict(amp);
