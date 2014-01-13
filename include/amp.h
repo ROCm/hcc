@@ -68,7 +68,19 @@ public:
   accelerator();
   explicit accelerator(const std::wstring& path);
   accelerator(const accelerator& other);
-  static std::vector<accelerator> get_all();
+  static std::vector<accelerator> get_all() {
+    std::wstring default_acc(default_accelerator);
+    ecl_accelerator_info info;
+    std::vector<accelerator> acc;
+    for (unsigned i = 0; i < eclGetNumberOfAccelerators(); i++) {
+      assert(eclGetAcceleratorInfo(i, &info) == eclSuccess);
+      if (info.acceleratorType == GMAC_ACCELERATOR_TYPE_ACCELERATOR) {
+        accelerator acc_default(default_acc);
+        acc.push_back(acc_default);
+      }
+    }
+    return acc;
+  }
   static bool set_default(const std::wstring& path) {
     std::wstring cpu(cpu_accelerator);
     std::wstring gpu(gpu_accelerator);
