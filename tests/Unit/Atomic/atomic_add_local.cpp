@@ -22,7 +22,7 @@ int main(void) {
   array_view<int, 2> av_a(e_a, va); 
 
   extent<2> compute_domain(e_a);
-  parallel_for_each(compute_domain.tile<tile_size, tile_size>(), [=] (tiled_index<tile_size, tile_size> tidx) restrict(amp) {
+  parallel_for_each(compute_domain.tile<tile_size, tile_size>(), [=] (tiled_index<tile_size, tile_size> tidx) restrict(amp,cpu) {
     index<2> localIdx = tidx.local;
     index<2> globalIdx = tidx.global;
 

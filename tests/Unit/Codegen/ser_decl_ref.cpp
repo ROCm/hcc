@@ -1,5 +1,4 @@
 // RUN: %cxxamp -emit-llvm -S -c %s -o -|c++filt|%FileCheck %s
-// UN: %amp_device -c -D__GPU__=1 -S -emit-llvm %s -o -|c++filt|%FileCheck %s
 //Serialization object decl
 #include <cstdlib>
 namespace Concurrency {
@@ -12,7 +11,7 @@ class Serialize {
 class base{
  public:
   __attribute__((annotate("user_deserialize"))) /* For compiler */
-  base(int a_,float b_) restrict(amp) :a(a_), b(b_) {}
+  base(int a_,float b_) restrict(amp,cpu) :a(a_), b(b_) {}
   int cho(void) restrict(amp);
   int a;
   float b;
