@@ -34,8 +34,10 @@ supports_double_precision(other.supports_double_precision), supports_limited_dou
   }
   std::string s_desc("Default GMAC+OpenCL");
   std::copy(s_desc.begin(), s_desc.end(), std::back_inserter(description));
-  if (!default_view_)
+  if (!default_view_) {
     default_view_ = new accelerator_view(0);
+    default_view_->accelerator_ = this;
+  }
 }
 inline accelerator::accelerator(const std::wstring& path): device_path(path), version(0), dedicated_memory(1<<20),
 is_emulated(0), has_display(0), supports_double_precision(1), supports_limited_double_precision(0) {
@@ -46,8 +48,10 @@ is_emulated(0), has_display(0), supports_double_precision(1), supports_limited_d
   }
   std::string s_desc("Default GMAC+OpenCL");
   std::copy(s_desc.begin(), s_desc.end(), std::back_inserter(description));
-  if (!default_view_)
+  if (!default_view_) {
     default_view_ = new accelerator_view(0);
+    default_view_->accelerator_ = this;
+  }
 }
 inline accelerator& accelerator::operator=(const accelerator& other) {
   device_path = other.device_path;
@@ -79,11 +83,13 @@ inline accelerator_view& accelerator::get_default_view() const {
 inline accelerator_view accelerator::create_view(void) {
   accelerator_view sa(0);
   sa.queuing_mode = queuing_mode_automatic;
+  sa.accelerator_ = this;
   return sa;
 }
 inline accelerator_view accelerator::create_view(queuing_mode qmode) {
   accelerator_view sa(0);
   sa.queuing_mode = qmode;
+  sa.accelerator_ = this;
   return sa;
 }
 
