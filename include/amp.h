@@ -1418,6 +1418,7 @@ public:
     return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
   }
 
+  Concurrency::extent<N> extent;
 private:
   template <int K, typename Q> friend struct index_helper;
   template <int K, typename Q1, typename Q2> friend struct amp_helper;
@@ -1439,7 +1440,6 @@ private:
 
   __attribute__((cpu)) T *p_;
   gmac_buffer_t cache;
-  Concurrency::extent<N> extent;
   Concurrency::extent<N> extent_base;
   Concurrency::index<N> index_base;
   int offset;
