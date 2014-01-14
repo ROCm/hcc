@@ -68,7 +68,19 @@ public:
   accelerator();
   explicit accelerator(const std::wstring& path);
   accelerator(const accelerator& other);
-  static std::vector<accelerator> get_all();
+  static std::vector<accelerator> get_all() {
+    std::wstring default_acc(default_accelerator);
+    ecl_accelerator_info info;
+    std::vector<accelerator> acc;
+    for (unsigned i = 0; i < eclGetNumberOfAccelerators(); i++) {
+      assert(eclGetAcceleratorInfo(i, &info) == eclSuccess);
+      if (info.acceleratorType == GMAC_ACCELERATOR_TYPE_ACCELERATOR) {
+        accelerator acc_default(default_acc);
+        acc.push_back(acc_default);
+      }
+    }
+    return acc;
+  }
   static bool set_default(const std::wstring& path) {
     std::wstring cpu(cpu_accelerator);
     std::wstring gpu(gpu_accelerator);
@@ -79,47 +91,54 @@ public:
     return true;
   }
   accelerator& operator=(const accelerator& other);
-  std::wstring device_path;
+
   const std::wstring &get_device_path() const { return device_path; }
+
+  const std::wstring &get_description() const { return description; }
+  bool get_supports_cpu_shared_memory() const {return true;}
+  bool get_is_debug() const {return is_debug;}
+  bool get_version() const {return version;}
+  accelerator_view& get_default_view() const;
+  bool get_has_display() const {return has_display;}
+  accelerator_view create_view();
+  accelerator_view create_view(queuing_mode qmode);
+  bool get_is_emulated() const {return is_emulated;}
+  bool get_supports_double_precision() const {return supports_double_precision;}
+  bool get_supports_limited_double_precision() const { return supports_limited_double_precision;}
+  size_t get_dedicated_memory() const {return dedicated_memory;}
+  void set_default_cpu_access_type(access_type type) {default_access_type = type;}
+  bool operator==(const accelerator& other) const;
+  bool operator!=(const accelerator& other) const;
+ private:
+  std::wstring device_path;
   unsigned int version; // hiword=major, loword=minor
   std::wstring description;
-  const std::wstring &get_description() const { return description; }
   bool is_debug;
   bool is_emulated;
   bool has_display;
   bool supports_double_precision;
   bool supports_limited_double_precision;
+  bool supports_cpu_shared_memory;
   size_t dedicated_memory;
-  bool get_is_debug() const {return is_debug;}
-  bool get_version() const {return version;}
-  accelerator_view& get_default_view() const;
-
-  accelerator_view create_view();
-  accelerator_view create_view(queuing_mode qmode);
-  
-  bool operator==(const accelerator& other) const;
-  bool operator!=(const accelerator& other) const;
- private:
   static accelerator_view *default_view_;
+  access_type default_access_type;
 };
 
 class completion_future;
 class accelerator_view {
 public:
   accelerator_view() = delete;
-  accelerator_view(const accelerator_view& other) {}
+  accelerator_view(const accelerator_view& other) { *this = other; }
   accelerator_view& operator=(const accelerator_view& other) {
     queuing_mode = other.queuing_mode;
+    accelerator_ = other.accelerator_;
     is_debug = other.is_debug;
     version = other.version;
     
     return *this;
   }
 
-  accelerator get_accelerator() const;
-  bool is_debug;
-  unsigned int version;
-  enum queuing_mode queuing_mode;
+  accelerator& get_accelerator() const { return *accelerator_; }
   enum queuing_mode get_queuing_mode() const {return queuing_mode;}
   bool get_is_debug() const {return is_debug;}
   bool get_version() const {return version;}
@@ -135,10 +154,14 @@ public:
   bool operator!=(const accelerator_view& other) const {return !(*this == other);}
   ~accelerator_view() {}
  private:
+  bool is_debug;
+  unsigned int version;
+  enum queuing_mode queuing_mode;
   //CLAMP-specific
   friend class accelerator;
   explicit accelerator_view(int) {queuing_mode = queuing_mode_automatic;}
   //End CLAMP-specific
+  accelerator *accelerator_;
 };
 //CLAMP
 extern "C" __attribute__((pure)) int get_global_id(int n) restrict(amp);
@@ -941,7 +964,8 @@ public:
   explicit array(int e0, int e1, int e2);
 
 
-  array(const Concurrency::extent<N>& ext, accelerator_view av);
+  array(const Concurrency::extent<N>& ext, accelerator_view av,
+        access_type cpu_access_type = access_type_auto);
   array(int e0, accelerator_view av);
   array(int e0, int e1, accelerator_view av);
   array(int e0, int e1, int e2, accelerator_view av);
@@ -972,10 +996,11 @@ public:
 
 
   template <typename InputIter>
-      array(const Concurrency::extent<N>& ext, InputIter srcBegin, accelerator_view av);
+      array(const Concurrency::extent<N>& ext, InputIter srcBegin, accelerator_view av,
+            access_type cpu_access_type = access_type_auto);
   template <typename InputIter>
       array(const Concurrency::extent<N>& ext, InputIter srcBegin, InputIter srcEnd,
-            accelerator_view av);
+            accelerator_view av, access_type cpu_access_type = access_type_auto);
   template <typename InputIter> 
       array(int e0, InputIter srcBegin, accelerator_view av);
   template <typename InputIter>
@@ -1025,7 +1050,8 @@ public:
   }
 
 
-  array(const array_view<const T, N>& src, accelerator_view av);
+  array(const array_view<const T, N>& src, accelerator_view av,
+        access_type cpu_access_type = access_type_auto);
   array(const array_view<const T, N>& src, accelerator_view av,
         accelerator_view associated_av);
 
@@ -1062,6 +1088,7 @@ public:
 
   accelerator_view get_accelerator_view() const;
   accelerator_view get_associated_accelerator_view() const;
+  access_type get_cpu_access_type() const {return cpu_access_type;}
 
   __global T& operator[](const index<N>& idx) restrict(amp,cpu) {
       __global T *ptr = reinterpret_cast<__global T*>(m_device.get());
@@ -1196,6 +1223,7 @@ private:
   template <int K, typename Q1, typename Q2> friend struct amp_helper;
   template <typename K, int Q> friend struct projection_helper;
   gmac_buffer_t m_device;
+  access_type cpu_access_type;
 
 #ifndef __GPU__
   void initialize() {
@@ -1384,7 +1412,7 @@ public:
   void synchronize() const;
   completion_future synchronize_async() const;
   void refresh() const;
-  void discard_data() const;
+  void discard_data() const {}
 
   T* data() const restrict(amp,cpu) {
     return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);

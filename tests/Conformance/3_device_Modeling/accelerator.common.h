@@ -21,14 +21,14 @@ namespace
         // Not using operator== on purpose.
 		// Assuming that equality of all properties implies the same underlying device.
 		return acc1.get_device_path() == acc2.get_device_path()
-			&& acc1.version == acc2.version
+			&& acc1.get_version() == acc2.get_version()
 			&& acc1.get_description() == acc2.get_description()
-			&& acc1.is_debug == acc2.is_debug
-			&& acc1.is_emulated == acc2.is_emulated
-			&& acc1.has_display == acc2.has_display
-			&& acc1.supports_double_precision == acc2.supports_double_precision
-			&& acc1.supports_limited_double_precision == acc2.supports_limited_double_precision
-			&& acc1.dedicated_memory == acc2.dedicated_memory;
+			&& acc1.get_is_debug() == acc2.get_is_debug()
+			&& acc1.get_is_emulated() == acc2.get_is_emulated()
+			&& acc1.get_has_display() == acc2.get_has_display()
+			&& acc1.get_supports_double_precision() == acc2.get_supports_double_precision()
+			&& acc1.get_supports_limited_double_precision() == acc2.get_supports_limited_double_precision()
+			&& acc1.get_dedicated_memory() == acc2.get_dedicated_memory();
 	}
 
 	// Compares properties of two accelerator views.
@@ -38,9 +38,9 @@ namespace
         // Not using operator== on purpose.
 		// Assuming that equality of all properties implies the same underlying device.
 		return av1.get_accelerator() == av2.get_accelerator()
-			&& av1.is_debug == av2.is_debug
-			&& av1.version == av2.version
-			&& av1.queuing_mode == av2.queuing_mode;
+			&& av1.get_is_debug() == av2.get_is_debug()
+			&& av1.get_version() == av2.get_version()
+			&& av1.get_queuing_mode() == av2.get_queuing_mode();
 	}
 
 	// Runs a copy algorithm on a given accelerator_view.

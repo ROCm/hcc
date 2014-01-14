@@ -55,7 +55,7 @@ namespace Concurrency
         template<typename _type, int _rank>
         array<_type, _rank> CreateStagingArrayAndFillData(const accelerator_view& cpu_av, const accelerator_view& gpu_av, int extent_range)
         {            
-            if(cpu_av.get_accelerator().device_path != concurrency::accelerator::cpu_accelerator)
+            if(cpu_av.get_accelerator().get_device_path() != concurrency::accelerator::cpu_accelerator)
 			{
                 //throw amptest_failure("cpu_av is not an accelerator_view on the CPU accelerator.");
 			}
