@@ -55,7 +55,7 @@ bool test_feature()
 	return true;
 }
 
-int main() 
+int main()
 { 
     int passed = test_feature<float, 5>() ? 0 : 1;
 

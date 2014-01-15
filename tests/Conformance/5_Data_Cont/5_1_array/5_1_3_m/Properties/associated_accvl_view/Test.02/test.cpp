@@ -14,7 +14,7 @@
 // RUN: %cxxamp %link %t/kernel.o %s -o %t.out && %t.out
 #include "./../../../member.h"
 
-int main() 
+int main()
 {
 	if (!is_gpu_hardware_available())
 		return 2;

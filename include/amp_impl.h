@@ -262,11 +262,27 @@ array<T, N>::array(const Concurrency::extent<N>& ext, accelerator_view av, acces
   this->cpu_access_type = cpu_access_type;
 }
 template<typename T, int N> 
-array<T, N>::array(int e0, accelerator_view av) : array(e0) {}
+array<T, N>::array(int e0, accelerator_view av, access_type cpu_access_type) : array(e0) {
+  this->cpu_access_type = cpu_access_type;
+}
 template<typename T, int N> 
-array<T, N>::array(int e0, int e1, accelerator_view av) : array(e0, e1) {}
+array<T, N>::array(int e0, int e1, accelerator_view av, access_type cpu_access_type) : array(e0, e1) {
+  this->cpu_access_type = cpu_access_type;
+}
 template<typename T, int N> 
-array<T, N>::array(int e0, int e1, int e2, accelerator_view av) : array(e0, e1, e2) {}
+array<T, N>::array(int e0, int e1, int e2, accelerator_view av, access_type cpu_access_type) : array(e0, e1, e2) {
+  this->cpu_access_type = cpu_access_type;
+}
+
+
+template<typename T, int N> 
+array<T, N>::array(const Concurrency::extent<N>& extent, accelerator_view av, accelerator_view associated_av) : array(extent) {}
+template<typename T, int N> 
+array<T, N>::array(int e0, accelerator_view av, accelerator_view associated_av) : array(e0) {}
+template<typename T, int N> 
+array<T, N>::array(int e0, int e1, accelerator_view av, accelerator_view associated_av) : array(e0, e1) {}
+template<typename T, int N> 
+array<T, N>::array(int e0, int e1, int e2, accelerator_view av, accelerator_view associated_av) : array(e0, e1, e2) {}
 
 
 template<typename T, int N> template <typename InputIterator>
@@ -326,28 +342,40 @@ array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, In
 }
 
 template<typename T, int N> template <typename InputIterator>
-array<T, N>::array(int e0, InputIterator srcBegin, accelerator_view av)
-    : array(e0, srcBegin) {}
+array<T, N>::array(int e0, InputIterator srcBegin, accelerator_view av, access_type cpu_access_type)
+    : array(e0, srcBegin) {
+  this->cpu_access_type = cpu_access_type;
+}
 
 template<typename T, int N> template <typename InputIterator> 
-array<T, N>::array(int e0, InputIterator srcBegin, InputIterator srcEnd, accelerator_view av)
-    : array(e0, srcBegin) {}
+array<T, N>::array(int e0, InputIterator srcBegin, InputIterator srcEnd, accelerator_view av, access_type cpu_access_type)
+    : array(e0, srcBegin) {
+  this->cpu_access_type = cpu_access_type;
+}
 
 template<typename T, int N> template <typename InputIterator>
-array<T, N>::array(int e0, int e1, InputIterator srcBegin, accelerator_view av)
-    : array(e0, e1, srcBegin) {}
+array<T, N>::array(int e0, int e1, InputIterator srcBegin, accelerator_view av, access_type cpu_access_type)
+    : array(e0, e1, srcBegin) {
+  this->cpu_access_type = cpu_access_type;
+}
 
 template<typename T, int N> template <typename InputIterator> 
 array<T, N>::array(int e0, int e1, InputIterator srcBegin, InputIterator srcEnd,
-                   accelerator_view av) : array(e0, e1, srcBegin, srcEnd) {}
+                   accelerator_view av, access_type cpu_access_type) : array(e0, e1, srcBegin, srcEnd) {
+  this->cpu_access_type = cpu_access_type;
+}
 
 template<typename T, int N> template <typename InputIterator>
-array<T, N>::array(int e0, int e1, int e2, InputIterator srcBegin, accelerator_view av)
-    : array(e0, e1, e2, srcBegin) {}
+array<T, N>::array(int e0, int e1, int e2, InputIterator srcBegin, accelerator_view av, access_type cpu_access_type)
+    : array(e0, e1, e2, srcBegin) {
+  this->cpu_access_type = cpu_access_type;
+}
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(int e0, int e1, int e2, InputIterator srcBegin, InputIterator srcEnd,
-                   accelerator_view av) : array(e0, e1, e2, srcBegin, srcEnd) {}
+                   accelerator_view av, access_type cpu_access_type) : array(e0, e1, e2, srcBegin, srcEnd) {
+  this->cpu_access_type = cpu_access_type;
+}
 
 
 

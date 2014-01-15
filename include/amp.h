@@ -159,6 +159,8 @@ public:
   enum queuing_mode queuing_mode;
   //CLAMP-specific
   friend class accelerator;
+  template <typename T, int>
+  friend class array;
   explicit accelerator_view(int) {queuing_mode = queuing_mode_automatic;}
   //End CLAMP-specific
   accelerator *accelerator_;
@@ -966,9 +968,12 @@ public:
 
   array(const Concurrency::extent<N>& ext, accelerator_view av,
         access_type cpu_access_type = access_type_auto);
-  array(int e0, accelerator_view av);
-  array(int e0, int e1, accelerator_view av);
-  array(int e0, int e1, int e2, accelerator_view av);
+  array(int e0, accelerator_view av,
+        access_type cpu_access_type = access_type_auto);
+  array(int e0, int e1, accelerator_view av,
+        access_type cpu_access_type = access_type_auto);
+  array(int e0, int e1, int e2, accelerator_view av,
+        access_type cpu_access_type = access_type_auto);
 
 
   array(const Concurrency::extent<N>& extent, accelerator_view av, accelerator_view associated_av);
@@ -1002,20 +1007,23 @@ public:
       array(const Concurrency::extent<N>& ext, InputIter srcBegin, InputIter srcEnd,
             accelerator_view av, access_type cpu_access_type = access_type_auto);
   template <typename InputIter> 
-      array(int e0, InputIter srcBegin, accelerator_view av);
+      array(int e0, InputIter srcBegin, accelerator_view av,
+            access_type cpu_access_type = access_type_auto);
   template <typename InputIter>
       array(int e0, InputIter srcBegin, InputIter srcEnd,
-            accelerator_view av);
+            accelerator_view av, access_type cpu_access_type = access_type_auto);
   template <typename InputIter>
-      array(int e0, int e1, InputIter srcBegin, accelerator_view av);
+      array(int e0, int e1, InputIter srcBegin, accelerator_view av,
+            access_type cpu_access_type = access_type_auto);
   template <typename InputIter>
       array(int e0, int e1, InputIter srcBegin, InputIter srcEnd,
-            accelerator_view av);
+            accelerator_view av, access_type cpu_access_type = access_type_auto);
   template <typename InputIter>
-      array(int e0, int e1, int e2, InputIter srcBegin, accelerator_view av);
+      array(int e0, int e1, int e2, InputIter srcBegin, accelerator_view av,
+            access_type cpu_access_type = access_type_auto);
   template <typename InputIter>
       array(int e0, int e1, int e2, InputIter srcBegin, InputIter srcEnd,
-            accelerator_view av);
+            accelerator_view av, access_type cpu_access_type = access_type_auto);
 
 
   template <typename InputIter>
@@ -1086,8 +1094,8 @@ public:
   }
 
 
-  accelerator_view get_accelerator_view() const;
-  accelerator_view get_associated_accelerator_view() const;
+  accelerator_view get_accelerator_view() const {return accelerator_view(0);}
+  accelerator_view get_associated_accelerator_view() const {return accelerator_view(0);}
   access_type get_cpu_access_type() const {return cpu_access_type;}
 
   __global T& operator[](const index<N>& idx) restrict(amp,cpu) {
@@ -1418,7 +1426,6 @@ public:
     return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
   }
 
-  Concurrency::extent<N> extent;
 private:
   template <int K, typename Q> friend struct index_helper;
   template <int K, typename Q1, typename Q2> friend struct amp_helper;
@@ -1440,6 +1447,7 @@ private:
 
   __attribute__((cpu)) T *p_;
   gmac_buffer_t cache;
+  Concurrency::extent<N> extent;
   Concurrency::extent<N> extent_base;
   Concurrency::index<N> index_base;
   int offset;
