@@ -30,6 +30,19 @@ void cxxflags(void) {
     std::cout << std::endl;
 }
 
+void ldflags(void) {
+    if (build_mode) {
+        std::cout << " -L" CMAKE_LIBCXX_LIB_DIR;
+        std::cout << " -L" CMAKE_LIBCXXRT_LIB_DIR;
+        std::cout << " -L" CMAKE_GMAC_LIB_DIR;
+        std::cout << " -Wl,--rpath="
+            CMAKE_GMAC_LIB_DIR ":"
+            CMAKE_LIBCXX_LIB_DIR ":"
+            CMAKE_LIBCXXRT_LIB_DIR ;
+    }
+    std::cout << " -lgmac-hpe -lc++ -lcxxrt -ldl -lmcwamp ";
+}
+
 int main (int argc, char **argv) {
     int c;
     while (1)
@@ -44,6 +57,7 @@ int main (int argc, char **argv) {
             {"cxxflags", no_argument,       0, 'a'},
             {"build",    no_argument,       0, 'b'},
             {"install",  no_argument,       0, 'i'},
+            {"ldflags",  no_argument,       0, 'l'},
             {"delete",  required_argument, 0, 'd'},
             {"create",  required_argument, 0, 'c'},
             {"file",    required_argument, 0, 'f'},
@@ -74,7 +88,9 @@ int main (int argc, char **argv) {
             case 'a':   // --cxxflags
                 cxxflags();
                 break;
-
+            case 'l':   // --ldflags
+                ldflags();
+                break;
             case 'b':
                 build_mode = true;
                 break;
