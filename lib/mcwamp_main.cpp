@@ -23,7 +23,8 @@ void cxxflags(void) {
         std::cout << " -I" CMAKE_GMAC_INC_BIN_DIR;
         std::cout << " -I" CMAKE_GMAC_INC_DIR;
     } else if (install_mode) {
-        std::cerr << "Not supported yet\n";
+        std::cout << " -I" CMAKE_INSTALL_INC;
+        std::cout << " -I" CMAKE_INSTALL_LIBCXX_INC;
     } else {
         assert(0 && "Unreacheable!");
     }
@@ -39,8 +40,15 @@ void ldflags(void) {
             CMAKE_GMAC_LIB_DIR ":"
             CMAKE_LIBCXX_LIB_DIR ":"
             CMAKE_LIBCXXRT_LIB_DIR ;
+    } else if (install_mode) {
+        std::cout << " -L" CMAKE_INSTALL_LIB;
+        std::cout << " -Wl,--rpath=" CMAKE_INSTALL_LIB;
     }
     std::cout << " -lgmac-hpe -lc++ -lcxxrt -ldl -lmcwamp ";
+}
+
+void prefix(void) {
+    std::cout << CMAKE_INSTALL_PREFIX;
 }
 
 int main (int argc, char **argv) {
@@ -58,6 +66,7 @@ int main (int argc, char **argv) {
             {"build",    no_argument,       0, 'b'},
             {"install",  no_argument,       0, 'i'},
             {"ldflags",  no_argument,       0, 'l'},
+            {"prefix",  no_argument,       0, 'p'},
             {"delete",  required_argument, 0, 'd'},
             {"create",  required_argument, 0, 'c'},
             {"file",    required_argument, 0, 'f'},
@@ -90,6 +99,9 @@ int main (int argc, char **argv) {
                 break;
             case 'l':   // --ldflags
                 ldflags();
+                break;
+            case 'p':   // --prefix
+                prefix();
                 break;
             case 'b':
                 build_mode = true;
