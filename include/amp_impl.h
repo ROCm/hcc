@@ -34,8 +34,10 @@ supports_double_precision(other.supports_double_precision), supports_limited_dou
   }
   std::string s_desc("Default GMAC+OpenCL");
   std::copy(s_desc.begin(), s_desc.end(), std::back_inserter(description));
-  if (!default_view_)
+  if (!default_view_) {
     default_view_ = new accelerator_view(0);
+    default_view_->accelerator_ = this;
+  }
 }
 inline accelerator::accelerator(const std::wstring& path): device_path(path), version(0), dedicated_memory(1<<20),
 is_emulated(0), has_display(0), supports_double_precision(1), supports_limited_double_precision(0) {
@@ -46,8 +48,10 @@ is_emulated(0), has_display(0), supports_double_precision(1), supports_limited_d
   }
   std::string s_desc("Default GMAC+OpenCL");
   std::copy(s_desc.begin(), s_desc.end(), std::back_inserter(description));
-  if (!default_view_)
+  if (!default_view_) {
     default_view_ = new accelerator_view(0);
+    default_view_->accelerator_ = this;
+  }
 }
 inline accelerator& accelerator::operator=(const accelerator& other) {
   device_path = other.device_path;
@@ -68,12 +72,7 @@ inline bool accelerator::operator==(const accelerator& other) const {
          supports_double_precision == other.supports_double_precision;
 }
 inline bool accelerator::operator!=(const accelerator& other) const {
-  return device_path != other.device_path ||
-         version != other.version ||
-         dedicated_memory != other.dedicated_memory ||
-         is_emulated != other.is_emulated ||
-         has_display != other.has_display ||
-         supports_double_precision != other.supports_double_precision;
+  return !(*this == other);
 }
 
 inline accelerator_view& accelerator::get_default_view() const {
@@ -84,11 +83,13 @@ inline accelerator_view& accelerator::get_default_view() const {
 inline accelerator_view accelerator::create_view(void) {
   accelerator_view sa(0);
   sa.queuing_mode = queuing_mode_automatic;
+  sa.accelerator_ = this;
   return sa;
 }
 inline accelerator_view accelerator::create_view(queuing_mode qmode) {
   accelerator_view sa(0);
   sa.queuing_mode = qmode;
+  sa.accelerator_ = this;
   return sa;
 }
 
@@ -257,7 +258,9 @@ template<typename T, int N> array<T, N>::array(int e0, int e1, int e2)
 
 
 template<typename T, int N> 
-array<T, N>::array(const Concurrency::extent<N>& ext, accelerator_view av) : array(ext) {}
+array<T, N>::array(const Concurrency::extent<N>& ext, accelerator_view av, access_type cpu_access_type) : array(ext) {
+  this->cpu_access_type = cpu_access_type;
+}
 template<typename T, int N> 
 array<T, N>::array(int e0, accelerator_view av) : array(e0) {}
 template<typename T, int N> 
@@ -311,12 +314,16 @@ array<T, N>::array(int e0, int e1, int e2, InputIterator srcBegin, InputIterator
 
 
 template<typename T, int N> template <typename InputIterator>
-array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, accelerator_view av)
-    : array(ext, srcBegin) {}
+array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, accelerator_view av,
+                   access_type cpu_access_type) : array(ext, srcBegin) {
+  this->cpu_access_type = cpu_access_type;
+}
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, InputIterator srcEnd,
-                   accelerator_view av) : array(ext, srcBegin, srcEnd) {}
+                   accelerator_view av, access_type cpu_access_type) : array(ext, srcBegin, srcEnd) {
+  this->cpu_access_type = cpu_access_type;
+}
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(int e0, InputIterator srcBegin, accelerator_view av)
@@ -388,7 +395,10 @@ array<T, N>::array(int e0, int e1, int e2, InputIterator srcBegin, InputIterator
 template<typename T, int N> array<T, N>::array(const array& other)
     : extent(other.extent), m_device(other.m_device) {}
 
-
+template<typename T, int N>
+array<T, N>::array(const array_view<const T, N>& src, accelerator_view av,
+                   access_type cpu_access_type)
+    : array(src.get_extent(), av, cpu_access_type) {}
 
 #define __global __attribute__((address_space(1))) 
 #ifndef __GPU__
