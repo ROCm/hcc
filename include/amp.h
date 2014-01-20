@@ -1069,17 +1069,38 @@ public:
 
   array& operator=(const array& other) {
     if(this != &other) {
-        extent = other.extent;
+      extent = other.extent;
+      this->cpu_access_type = other.cpu_access_type;
 #ifndef __GPU__
-        this->initialize();
+      this->initialize();
 #endif
-        m_device = other.m_device;
-        copy(other, *this);
+      m_device = other.m_device;
+      copy(other, *this);
     }
     return *this;
   }
-  array& operator=(array&& other);
-  array& operator=(const array_view<const T,N>& src);
+  array& operator=(array&& other) {
+    if(this != &other) {
+      extent = other.extent;
+      this->cpu_access_type = other.cpu_access_type;
+#ifndef __GPU__
+      this->initialize();
+#endif
+      m_device = other.m_device;
+      copy(other, *this);
+    }
+    return *this;
+  }
+  array& operator=(const array_view<T,N>& src) {
+    extent = src.get_extent();
+#ifndef __GPU__
+    this->initialize();
+#endif
+    m_device = src.cache;
+    src.copy_to(*this);
+
+    return *this;
+  }
 
   void copy_to(array& dest) const {
       copy(*this, dest);
