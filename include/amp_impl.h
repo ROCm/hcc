@@ -422,7 +422,8 @@ array<T, N>::array(int e0, int e1, int e2, InputIterator srcBegin, InputIterator
 
 template<typename T, int N> array<T, N>::array(const array& other)
     : extent(other.extent), m_device(other.m_device) {}
-
+template<typename T, int N> array<T, N>::array(array&& other)
+    : extent(other.extent), m_device(other.m_device) {}
 template<typename T, int N>
 array<T, N>::array(const array_view<const T, N>& src, accelerator_view av,
                    access_type cpu_access_type)
