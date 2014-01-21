@@ -484,7 +484,7 @@ void array_view<T, N>::refresh() const {
 template <typename T, int N>
 array_view<T,N>::array_view(const Concurrency::extent<N>& ext,
                             value_type* src) restrict(amp,cpu)
-    : extent(ext), p_(nullptr), cache(reinterpret_cast<__global value_type *>(src)),
+    : extent(ext), p_(nullptr), cache((__global nc_T *)(src)),
     offset(0), extent_base(ext) {}
 
 #endif
