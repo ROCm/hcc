@@ -86,17 +86,16 @@ are:
   # cd build
   # cmake ../src \
       -DCLANG_URL=git@bitbucket.org:${username}/cppamp-ng.git \
-      -DOPENCL_HEADER_DIR=<directory that contains CL/> \
+      -DOPENCL_HEADER_DIR=<directory that contains cl.h/> \
       -DOPENCL_LIBRARY_DIR=<directory that contains libOpenCL.so on Linux> \
       -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CBackend \
       -DGMAC_URL=https://bitbucket.org/multicoreware/gmac \
       -DCMAKE_BUILD_TYPE=Debug
-  For example, on x86-64 platforms with AMD GPU and AMD APP SDK installed at the
+  The default paths for major OpenCL stacks are searched. For example,
+  on x86-64 platforms with AMD GPU and AMD APP SDK installed at the
   default path, this becomes
   # cmake ../src \
       -DCLANG_URL=git@bitbucket.org:${username}/cppamp-ng.git \
-      -DOPENCL_HEADER_DIR=/opt/AMDAPP/include \
-      -DOPENCL_LIBRARY_DIR=/opt/AMDAPP/lib/x86_64/lib \
       -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CBackend \
       -DGMAC_URL=https://bitbucket.org/multicoreware/gmac \
       -DCMAKE_BUILD_TYPE=Debug
