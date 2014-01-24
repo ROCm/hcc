@@ -777,6 +777,51 @@ void updateInstructionWithNewOperand(Instruction * I,
              I->print(llvm::errs()); llvm::errs() << "\n";);
 }  
 
+// tile_static are declared as static variables in section("clamp_opencl_local")
+// for each tile_static, make a modified clone with address space 3 and update users
+void promoteTileStatic(Function *Func, InstUpdateWorkList * updateNeeded)
+{
+    Module *M = Func->getParent();
+    Module::GlobalListType &globals = M->getGlobalList();
+    for (Module::global_iterator I = globals.begin(), E = globals.end();
+        I != E; I++) {
+        if (!I->hasInternalLinkage() || !I->hasSection() || 
+            I->getSection() != std::string("clamp_opencl_local") ||
+            I->getType()->getPointerAddressSpace() != 0) {
+            continue;
+        }
+        DEBUG(I->dump());
+        GlobalVariable *new_GV = new GlobalVariable(*M,
+                I->getType()->getElementType(),
+                I->isConstant(), I->getLinkage(), I->getInitializer(), "",
+                (GlobalVariable *)0, I->getThreadLocalMode(), LocalAddressSpace);
+        new_GV->copyAttributesFrom(I);
+        new_GV->takeName(I);
+        updateListWithUsers (I->use_begin(), I->use_end(),
+                I, new_GV, updateNeeded); 
+    }
+}
+
+void eraseOldTileStaticDefs(Module *M)
+{
+    std::vector<GlobalValue*> todo;
+    Module::GlobalListType &globals = M->getGlobalList();
+    for (Module::global_iterator I = globals.begin(), E = globals.end();
+        I != E; I++) {
+        if (!I->hasInternalLinkage() || !I->hasSection() || 
+            I->getSection() != std::string("clamp_opencl_local") ||
+            I->getType()->getPointerAddressSpace() != 0) {
+            continue;
+        }
+        assert(I->getNumUses() == 0);
+        todo.push_back(I);
+    }
+    for (std::vector<GlobalValue*>::iterator I = todo.begin(),
+            E = todo.end(); I!=E; I++) {
+        (*I)->eraseFromParent();
+    }
+}
+
 void promoteAllocas (Function * Func,  
                      InstUpdateWorkList * updatesNeeded)
 {
@@ -892,6 +937,7 @@ Function * createPromotedFunctionToType ( Function * F, FunctionType * promoteTy
         InstUpdateWorkList workList;
 //        promoteAllocas(newFunction, workList);
 //        promoteBitcasts(newFunction, workList);
+        promoteTileStatic(newFunction, &workList);
         updateArgUsers (newFunction, &workList);
 
         do {
@@ -908,6 +954,7 @@ Function * createPromotedFunctionToType ( Function * F, FunctionType * promoteTy
                 CollectChangedCalledFunctions ( newFunction, &workList );
         } while ( !workList.empty() );
         
+        eraseOldTileStaticDefs(F->getParent());
         if (verifyFunction (*newFunction, PrintMessageAction)) {
                 llvm::errs() << "When checking the updated function of: ";
                 F->dump();
