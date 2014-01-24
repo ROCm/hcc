@@ -27,7 +27,7 @@ set(OPENCL_MATH_DIR "${PROJECT_SOURCE_DIR}/include")
 
 # MCWAMP
 set(MCWAMP_LIB_DIR "${LIBRARY_OUTPUT_PATH}")
-
+set(MCWAMP_TOOL_DIR "${PROJECT_BINARY_DIR}/lib")
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg)
@@ -35,6 +35,10 @@ configure_file(
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-config.hxx.in
   ${CMAKE_CURRENT_BINARY_DIR}/../lib/clamp-config.hxx ESCAPE_QUOTES)
+
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-spirify.in
+  ${CMAKE_CURRENT_BINARY_DIR}/../lib/clamp-spirify @ONLY)
 
 add_custom_target(test
   COMMAND python ${LLVM_ROOT}/bin/llvm-lit --path ${LLVM_TOOLS_DIR} ${LLVM_LIT_ARGS} ${CMAKE_CURRENT_BINARY_DIR}

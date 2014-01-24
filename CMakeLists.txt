@@ -17,6 +17,7 @@ include (EnsureCLANGisPresent)
 include (EnsureLIBCXXisPresent)
 include (EnsureLIBCXXRTisPresent)
 include (SetupCBE)
+include (SetupSPIRify)
 include (MCWAMP)
 
 ensure_llvm_is_present(${PROJECT_SOURCE_DIR} compiler)
@@ -24,7 +25,7 @@ ensure_clang_is_present(${PROJECT_SOURCE_DIR} compiler ${CLANG_URL})
 ensure_libcxx_is_present("${PROJECT_SOURCE_DIR}/libc++" libcxx)
 ensure_libcxxrt_is_present("${PROJECT_SOURCE_DIR}/libc++" libcxxrt)
 setup_CBackend(${PROJECT_SOURCE_DIR}/compiler/lib/Target CBackend)
-
+setup_SPIRify(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms SPIRify)
 set(LLVM_TARGETS_TO_BUILD X86)
 set(LLVM_INCLUDE_EXAMPLES off)
 
