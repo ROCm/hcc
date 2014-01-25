@@ -1,0 +1,9 @@
+#!/bin/sh
+# wraps around commands to produce the OpenCL kernel
+# $1 = input ll name
+# $2 = opencl kernel file name
+
+LLC=@LLVM_TOOLS_DIR@/llc
+$LLC -march=c -o $2.tmp < $1
+cat @OPENCL_MATH_DIR@/opencl_math.cl $2.tmp > $2
+

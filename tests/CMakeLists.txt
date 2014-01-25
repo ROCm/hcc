@@ -40,6 +40,10 @@ configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-spirify.in
   ${CMAKE_CURRENT_BINARY_DIR}/../lib/clamp-spirify @ONLY)
 
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-device.in
+  ${CMAKE_CURRENT_BINARY_DIR}/../lib/clamp-device @ONLY)
+
 add_custom_target(test
   COMMAND python ${LLVM_ROOT}/bin/llvm-lit --path ${LLVM_TOOLS_DIR} ${LLVM_LIT_ARGS} ${CMAKE_CURRENT_BINARY_DIR}
   # DEPENDS ${CPPAMP_GTEST_LIB} 
