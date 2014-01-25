@@ -1,6 +1,6 @@
 // RUN: %amp_device -D__GPU__ %s -m32 -emit-llvm -c -S -O3 -o %t.ll 
 // RUN: mkdir -p %t
-// RUN: %llc -march=c -o %t/kernel.cl < %t.ll
+// RUN: %clamp-device %t.ll %t/kernel.cl 
 // RUN: pushd %t 
 // RUN: objcopy -B i386:x86-64 -I binary -O elf64-x86-64 kernel.cl kernel.o
 // RUN: popd

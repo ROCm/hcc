@@ -9,8 +9,7 @@
 /// <summary>Test a corner section (at (0, 4, 4) sized (5, 5, 5)) of a 3D array(10, 10, 10) </summary>
 
 // RUN: %amp_device -D__GPU__ %s -m32 -emit-llvm -c -S -O3 -o %t.ll && mkdir -p %t
-// RUN: %llc -march=c -o %t/kernel_.cl < %t.ll
-// RUN: cat %opencl_math_dir/opencl_math.cl %t/kernel_.cl > %t/kernel.cl
+// RUN: %clamp-device %t.ll %t/kernel.cl
 // RUN: pushd %t && objcopy -B i386:x86-64 -I binary -O elf64-x86-64 kernel.cl %t/kernel.o && popd
 // RUN: %cxxamp %link %t/kernel.o %s -o %t.out && %t.out
 #include <amp.h>
