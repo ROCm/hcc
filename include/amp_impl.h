@@ -23,17 +23,27 @@
 
 namespace Concurrency {
 // Accelerators
-inline accelerator::accelerator(): accelerator(default_accelerator) {}
+inline accelerator::accelerator(): accelerator(default_accelerator) {
+  if (device_path != std::wstring(default_accelerator)) {
+    std::wcerr << L"CLAMP: Warning: the given accelerator is not supported: ";
+    std::wcerr << device_path << std::endl;
+  }
+
+  description = L"Default GMAC+OpenCL";
+  if (!default_view_) {
+    default_view_ = new accelerator_view(0);
+    default_view_->accelerator_ = this;
+  }
+}
 inline accelerator::accelerator(const accelerator& other): device_path(other.device_path), version(other.version),
 dedicated_memory(other.dedicated_memory),is_emulated(other.is_emulated), has_display(other.has_display),
 supports_double_precision(other.supports_double_precision), supports_limited_double_precision(other.supports_limited_double_precision) {
   if (device_path != std::wstring(default_accelerator)) {
     std::wcerr << L"CLAMP: Warning: the given accelerator is not supported: ";
     std::wcerr << device_path << std::endl;
-    return;
   }
-  std::string s_desc("Default GMAC+OpenCL");
-  std::copy(s_desc.begin(), s_desc.end(), std::back_inserter(description));
+
+  description = L"Default GMAC+OpenCL";
   if (!default_view_) {
     default_view_ = new accelerator_view(0);
     default_view_->accelerator_ = this;
@@ -44,10 +54,9 @@ is_emulated(0), has_display(0), supports_double_precision(1), supports_limited_d
   if (path != std::wstring(default_accelerator)) {
     std::wcerr << L"CLAMP: Warning: the given accelerator is not supported: ";
     std::wcerr << path << std::endl;
-    return;
   }
-  std::string s_desc("Default GMAC+OpenCL");
-  std::copy(s_desc.begin(), s_desc.end(), std::back_inserter(description));
+
+  description = L"Default GMAC+OpenCL";
   if (!default_view_) {
     default_view_ = new accelerator_view(0);
     default_view_->accelerator_ = this;
@@ -262,11 +271,27 @@ array<T, N>::array(const Concurrency::extent<N>& ext, accelerator_view av, acces
   this->cpu_access_type = cpu_access_type;
 }
 template<typename T, int N> 
-array<T, N>::array(int e0, accelerator_view av) : array(e0) {}
+array<T, N>::array(int e0, accelerator_view av, access_type cpu_access_type) : array(e0) {
+  this->cpu_access_type = cpu_access_type;
+}
 template<typename T, int N> 
-array<T, N>::array(int e0, int e1, accelerator_view av) : array(e0, e1) {}
+array<T, N>::array(int e0, int e1, accelerator_view av, access_type cpu_access_type) : array(e0, e1) {
+  this->cpu_access_type = cpu_access_type;
+}
 template<typename T, int N> 
-array<T, N>::array(int e0, int e1, int e2, accelerator_view av) : array(e0, e1, e2) {}
+array<T, N>::array(int e0, int e1, int e2, accelerator_view av, access_type cpu_access_type) : array(e0, e1, e2) {
+  this->cpu_access_type = cpu_access_type;
+}
+
+
+template<typename T, int N> 
+array<T, N>::array(const Concurrency::extent<N>& extent, accelerator_view av, accelerator_view associated_av) : array(extent) {}
+template<typename T, int N> 
+array<T, N>::array(int e0, accelerator_view av, accelerator_view associated_av) : array(e0) {}
+template<typename T, int N> 
+array<T, N>::array(int e0, int e1, accelerator_view av, accelerator_view associated_av) : array(e0, e1) {}
+template<typename T, int N> 
+array<T, N>::array(int e0, int e1, int e2, accelerator_view av, accelerator_view associated_av) : array(e0, e1, e2) {}
 
 
 template<typename T, int N> template <typename InputIterator>
@@ -326,28 +351,40 @@ array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, In
 }
 
 template<typename T, int N> template <typename InputIterator>
-array<T, N>::array(int e0, InputIterator srcBegin, accelerator_view av)
-    : array(e0, srcBegin) {}
+array<T, N>::array(int e0, InputIterator srcBegin, accelerator_view av, access_type cpu_access_type)
+    : array(e0, srcBegin) {
+  this->cpu_access_type = cpu_access_type;
+}
 
 template<typename T, int N> template <typename InputIterator> 
-array<T, N>::array(int e0, InputIterator srcBegin, InputIterator srcEnd, accelerator_view av)
-    : array(e0, srcBegin) {}
+array<T, N>::array(int e0, InputIterator srcBegin, InputIterator srcEnd, accelerator_view av, access_type cpu_access_type)
+    : array(e0, srcBegin) {
+  this->cpu_access_type = cpu_access_type;
+}
 
 template<typename T, int N> template <typename InputIterator>
-array<T, N>::array(int e0, int e1, InputIterator srcBegin, accelerator_view av)
-    : array(e0, e1, srcBegin) {}
+array<T, N>::array(int e0, int e1, InputIterator srcBegin, accelerator_view av, access_type cpu_access_type)
+    : array(e0, e1, srcBegin) {
+  this->cpu_access_type = cpu_access_type;
+}
 
 template<typename T, int N> template <typename InputIterator> 
 array<T, N>::array(int e0, int e1, InputIterator srcBegin, InputIterator srcEnd,
-                   accelerator_view av) : array(e0, e1, srcBegin, srcEnd) {}
+                   accelerator_view av, access_type cpu_access_type) : array(e0, e1, srcBegin, srcEnd) {
+  this->cpu_access_type = cpu_access_type;
+}
 
 template<typename T, int N> template <typename InputIterator>
-array<T, N>::array(int e0, int e1, int e2, InputIterator srcBegin, accelerator_view av)
-    : array(e0, e1, e2, srcBegin) {}
+array<T, N>::array(int e0, int e1, int e2, InputIterator srcBegin, accelerator_view av, access_type cpu_access_type)
+    : array(e0, e1, e2, srcBegin) {
+  this->cpu_access_type = cpu_access_type;
+}
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(int e0, int e1, int e2, InputIterator srcBegin, InputIterator srcEnd,
-                   accelerator_view av) : array(e0, e1, e2, srcBegin, srcEnd) {}
+                   accelerator_view av, access_type cpu_access_type) : array(e0, e1, e2, srcBegin, srcEnd) {
+  this->cpu_access_type = cpu_access_type;
+}
 
 
 
@@ -394,11 +431,18 @@ array<T, N>::array(int e0, int e1, int e2, InputIterator srcBegin, InputIterator
 
 template<typename T, int N> array<T, N>::array(const array& other)
     : extent(other.extent), m_device(other.m_device) {}
-
+template<typename T, int N> array<T, N>::array(array&& other)
+    : extent(other.extent), m_device(other.m_device) {}
 template<typename T, int N>
 array<T, N>::array(const array_view<const T, N>& src, accelerator_view av,
                    access_type cpu_access_type)
-    : array(src.get_extent(), av, cpu_access_type) {}
+    : array(src) {
+  this->cpu_access_type = cpu_access_type;
+}
+template<typename T, int N>
+array<T, N>::array(const array_view<const T, N>& src, accelerator_view av,
+                   accelerator_view associated_av)
+    : array(src) {}
 
 #define __global __attribute__((address_space(1))) 
 #ifndef __GPU__
@@ -449,7 +493,7 @@ void array_view<T, N>::refresh() const {
 template <typename T, int N>
 array_view<T,N>::array_view(const Concurrency::extent<N>& ext,
                             value_type* src) restrict(amp,cpu)
-    : extent(ext), p_(nullptr), cache(reinterpret_cast<__global value_type *>(src)),
+    : extent(ext), p_(nullptr), cache((__global nc_T *)(src)),
     offset(0), extent_base(ext) {}
 
 #endif
