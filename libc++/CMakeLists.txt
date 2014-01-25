@@ -1,5 +1,8 @@
 project(libc++)
 cmake_minimum_required(VERSION 2.8)
+execute_process(COMMAND git describe --abbrev=4 --dirty --always --tags
+                OUTPUT_VARIABLE GIT_VERSION
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 include_directories(${PROJECT_SOURCE_DIR}/libcxxrt/src)
 
@@ -15,6 +18,11 @@ set(CPACK_SET_DESTDIR TRUE)
 set(CPACK_INSTALL_PREFIX "/opt/mcw")
 set(CPACK_PACKAGE_NAME "libcxxamp")
 set(CPACK_PACKAGE_VENDOR "MulticoreWare, Inc")
+set(CPACK_PACKAGE_VERSION "0.1.1-${GIT_VERSION}")
+set(CPACK_PACKAGE_VERSION_MAJOR "0")
+set(CPACK_PACKAGE_VERSION_MINOR "1")
+set(CPACK_PACKAGE_VERSION_PATCH "1")
+set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_SYSTEM_NAME})
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "libcxxamp: libc++ for C++AMP to OpenCL compiler")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Ray I-Jui Sung <ray@multicorewareinc.com>")
 set(CPACK_GENERATOR "DEB;TGZ")
