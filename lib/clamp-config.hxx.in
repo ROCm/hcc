@@ -1,0 +1,13 @@
+#pragma once
+#define CMAKE_CLAMP_INC_DIR     "@CPPAMP_SOURCE_DIR@/include"
+#define CMAKE_GMAC_INC_DIR      "@GMAC_SRC_DIR@/src/include"
+#define CMAKE_GMAC_INC_BIN_DIR  "@GMAC_INC_DIR@/src/include"
+#define CMAKE_GMAC_LIB_DIR      "@GMAC_LIB_DIR@"
+#define CMAKE_LIBCXX_INC        "@LIBCXX_SRC_DIR@/include"
+#define CMAKE_LIBCXX_LIB_DIR    "@LIBCXX_LIB_DIR@"
+#define CMAKE_LIBCXXRT_LIB_DIR  "@LIBCXXRT_LIB_DIR@"
+
+#define CMAKE_INSTALL_PREFIX    "@CMAKE_INSTALL_PREFIX@"  
+#define CMAKE_INSTALL_INC           CMAKE_INSTALL_PREFIX"/include"
+#define CMAKE_INSTALL_LIBCXX_INC    CMAKE_INSTALL_INC"/c++/v1"
+#define CMAKE_INSTALL_LIB           CMAKE_INSTALL_PREFIX"/lib"

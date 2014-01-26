@@ -12,8 +12,8 @@ config.gtest_src_dir = "@GTEST_SRC_DIR@"
 config.gtest_lib_dir = "@GTEST_LIB_DIR@"
 
 # OpenCL
-config.opencl_inc_dir = "@OPENCL_HEADER_DIR@"
-config.opencl_lib_dir = "@OPENCL_LIBRARY_DIR@"
+config.opencl_inc_dir = "@OPENCL_HEADER@/../"
+config.opencl_lib_dir = "@OPENCL_LIBRARY@"
 config.opencl_math_dir = "@OPENCL_MATH_DIR@"
 
 # GMAC
