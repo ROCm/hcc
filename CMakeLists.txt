@@ -5,6 +5,7 @@ MESSAGE("Module path: ${CMAKE_MODULE_PATH}")
 #include (MacroEnsureOutOfSourceBuild)
 #include (ExportFile)
 execute_process(COMMAND git describe --abbrev=4 --dirty --always --tags
+                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
                 OUTPUT_VARIABLE GIT_VERSION
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 
