@@ -1,5 +1,5 @@
 // RUN: %amp_device -D__GPU__ %s -m32 -emit-llvm -c -S -O3 -o %t.ll && mkdir -p %t
-// RUN: %clamp-device %t.ll %t/kernel.cl
+// RUN: %clamp-device %t.ll %t/kernel.cl 
 // RUN: pushd %t && objcopy -B i386:x86-64 -I binary -O elf64-x86-64 kernel.cl %t/kernel.o && popd
 // RUN: %cxxamp %link %t/kernel.o %s -o %t.out && %t.out
 #include <amp.h>
@@ -8,6 +8,10 @@
 #include <amp_math.h>
 
 using namespace concurrency;
+
+float x(float *p) restrict(amp) {
+    return fast_math::sin(*p);
+}
 
 int main(void) {
   const int vecSize = 1000;
@@ -27,19 +31,16 @@ int main(void) {
   parallel_for_each(
     e,
     [=](index<1> idx) restrict(amp) {
-    gc[idx] = fast_math::sqrtf(ga[idx]);
+    gc[idx] = x(&ga[idx]);
   });
 
   for(unsigned i = 0; i < vecSize; i++) {
-    gb[i] = fast_math::sqrtf(ga[i]);
+    gb[i] = fast_math::sin(ga[i]);
   }
-
-  int a1 = 0, b1 = 3;
-  int c1 = min(a1, b1);
 
   float sum = 0;
   for(unsigned i = 0; i < vecSize; i++) {
     sum += fast_math::fabs(fast_math::fabs(gc[i]) - fast_math::fabs(gb[i]));
   }
-  return ((sum + (float)c1) > 0.1f);
+  return (sum > 0.1f);
 }

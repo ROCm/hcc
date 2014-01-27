@@ -169,7 +169,7 @@ public:
 extern "C" __attribute__((pure)) int get_global_id(int n) restrict(amp);
 extern "C" __attribute__((pure)) int get_local_id(int n) restrict(amp);
 extern "C" __attribute__((pure)) int get_group_id(int n) restrict(amp);
-#define tile_static static __attribute__((address_space(3)))
+#define tile_static static __attribute__((section("clamp_opencl_local")))
 extern "C" void barrier(int n) restrict(amp);
 //End CLAMP
 class completion_future {
@@ -884,7 +884,7 @@ public:
 };
 
 
-#define __global __attribute__((address_space(1)))
+#define __global
 #include "gmac_manage.h"
 template <typename T, int N>
 struct projection_helper
@@ -1727,20 +1727,20 @@ completion_future copy_async(const array_view<T, N>& src, OutputIter destBegin) 
 
 #ifdef __GPU__
 extern "C" unsigned atomic_add_local(volatile __attribute__((address_space(3))) unsigned *p, unsigned val) restrict(amp,cpu);
-static inline unsigned atomic_fetch_add(__attribute__((address_space(3)))unsigned *x, unsigned y) restrict(amp,cpu) { 
+static inline unsigned atomic_fetch_add(unsigned *x, unsigned y) restrict(amp,cpu) { 
   return atomic_add_local(reinterpret_cast<volatile __attribute__((address_space(3))) unsigned *>(x), y);
 }
 #else
-extern unsigned atomic_fetch_add(__attribute__((address_space(3)))unsigned *x, unsigned y) restrict(amp,cpu);
+extern unsigned atomic_fetch_add(unsigned *x, unsigned y) restrict(amp,cpu);
 #endif
 
 #ifdef __GPU__
 extern "C" int atomic_add_global(volatile __attribute__((address_space(1))) int *p, int val) restrict(amp, cpu);
-static inline int atomic_fetch_add(__attribute__((address_space(1))) int *x, int y) restrict(amp,cpu) { 
+static inline int atomic_fetch_add(int *x, int y) restrict(amp,cpu) { 
   return atomic_add_global(reinterpret_cast<volatile __attribute__((address_space(1))) int *>(x), y);
 }
 #else
-extern int atomic_fetch_add(__attribute__((address_space(1)))int *x, int y) restrict(amp, cpu);
+extern int atomic_fetch_add(int *x, int y) restrict(amp, cpu);
 #endif
 
 }//namespace Concurrency
