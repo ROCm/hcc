@@ -4,6 +4,6 @@
 # $2 = opencl kernel file name
 OPT=@LLVM_TOOLS_DIR@/opt
 LLC=@LLVM_TOOLS_DIR@/llc
-$OPT -load @LLVM_LIBS_DIR@/LLVMPromote.so -promote-globals < $1 | \
+$OPT -load @LLVM_LIBS_DIR@/LLVMPromote.so -promote-globals -O3 < $1 | \
         $LLC -march=c -o $2.tmp
 cat @OPENCL_MATH_DIR@/opencl_math.cl $2.tmp > $2
