@@ -444,7 +444,7 @@ array<T, N>::array(const array_view<const T, N>& src, accelerator_view av,
                    accelerator_view associated_av)
     : array(src) {}
 
-#define __global __attribute__((address_space(1))) 
+#define __global
 #ifndef __GPU__
 
 template <typename T, int N>

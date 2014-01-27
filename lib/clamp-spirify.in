@@ -1,0 +1,6 @@
+#!/bin/sh
+# wraps around commands to produce the OpenCL kernel
+# $1 = input ll name
+OPT=@LLVM_TOOLS_DIR@/opt
+DIS=@LLVM_TOOLS_DIR@/llvm-dis
+$OPT -load @LLVM_LIBS_DIR@/LLVMPromote.so -promote-globals < $1 | $DIS -o -

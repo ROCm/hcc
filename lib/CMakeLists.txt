@@ -10,3 +10,6 @@ install(TARGETS mcwamp clamp-config
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
     )
+install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-device
+    ${CMAKE_CURRENT_BINARY_DIR}/clamp-spirify
+    DESTINATION bin)
