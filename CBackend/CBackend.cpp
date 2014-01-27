@@ -1751,20 +1751,11 @@ bool CWriter::doInitialization(Module &M) {
   generateCompilerSpecificCode(Out, TD);
 
   // Provide a definition for `bool' if not compiling with a C++ compiler.
-#if 0
   Out << "\n"
-      << "#ifndef __cplusplus\ntypedef unsigned char bool;\n#endif\n"
-
       << "\n\n/* Support for floating point constants */\n"
-      << "typedef unsigned long long ConstantDoubleTy;\n"
-      << "typedef unsigned int        ConstantFloatTy;\n"
-      << "typedef struct { unsigned long long f1; unsigned short f2; "
-         "unsigned short pad[3]; } ConstantFP80Ty;\n"
-      // This is used for both kinds of 128-bit long double; meaning differs.
-      << "typedef struct { unsigned long long f1; unsigned long long f2; }"
-         " ConstantFP128Ty;\n"
+      << "typedef ulong ConstantDoubleTy;\n"
+      << "typedef uint ConstantFloatTy;\n"
       << "\n\n/* Global Declarations */\n";
-#endif
   // First output all the declarations for the program, because C requires
   // Functions & globals to be declared before they are used.
   //
