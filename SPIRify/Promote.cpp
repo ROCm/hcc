@@ -1057,6 +1057,8 @@ void updateKernels(Module& M, const FunctionPairVect& new_kernels)
                 MDNode * node = MDNode::get(kernel->getContext(),
                                             kernel);
                 root->addOperand(node);
+                // Remove the original function
+                kern->first->deleteBody();
         }
 }
 

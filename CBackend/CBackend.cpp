@@ -1908,6 +1908,7 @@ bool CWriter::doInitialization(Module &M) {
         Out << ";\n";
       }
   }
+#endif
   // Output the global variable definitions and contents...
   if (!M.global_empty()) {
     Out << "\n\n/* Global Variable Definitions and Initialization */\n";
@@ -1917,32 +1918,13 @@ bool CWriter::doInitialization(Module &M) {
         // Ignore special globals, such as debug info.
         if (getGlobalVariableClass(I))
           continue;
+        // OpenCL allows only __constants in global scope
+        if (!I->isConstant())
+            continue;
 
-        if (I->hasLocalLinkage()) { 
-          if (!I->isConstant())
-            Out << "static struct ";
-          else
-            Out << "__constant struct ";
-        } else if (I->hasDLLImportLinkage())
-          Out << "__declspec(dllimport) ";
-        else if (I->hasDLLExportLinkage())
-          Out << "__declspec(dllexport) ";
-
-        // Thread Local Storage
-        if (I->isThreadLocal())
-          Out << "__thread ";
-
+        Out << "__constant struct ";
         printType(Out, I->getType()->getElementType(), false,
                   GetValueName(I));
-        if (I->hasLinkOnceLinkage())
-          Out << " __attribute__((common))";
-        //else if (I->hasWeakLinkage())
-        //  Out << " __ATTRIBUTE_WEAK__";
-        //else if (I->hasCommonLinkage())
-        //  Out << " __ATTRIBUTE_WEAK__";
-
-        if (I->hasHiddenVisibility())
-          Out << " __HIDDEN__";
 
         // If the initializer is not null, emit the initializer.  If it is null,
         // we try to avoid emitting large amounts of zeros.  The problem with
@@ -1950,7 +1932,7 @@ bool CWriter::doInitialization(Module &M) {
         // case, the assembler will complain about the variable being both weak
         // and common, so we disable this optimization.
         // FIXME common linkage should avoid this problem.
-        if (!I->getInitializer()->isNullValue()) {
+        if (I->hasInitializer() && !I->getInitializer()->isNullValue()) {
           Out << " = " ;
           writeOperand(I->getInitializer(), true);
         } else if (I->hasWeakLinkage()) {
@@ -1973,7 +1955,6 @@ bool CWriter::doInitialization(Module &M) {
         Out << ";\n";
       }
   }
-#endif
   if (!M.empty())
     Out << "\n\n/* Function Bodies */\n";
 
