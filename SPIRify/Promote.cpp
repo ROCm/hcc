@@ -537,9 +537,29 @@ void updateListWithUsers ( Value::use_iterator U, const Value::use_iterator& Ue,
 {
         for ( ; U != Ue; ++U ) {
                 Instruction * Insn = dyn_cast<Instruction>(*U);
-                if ( !Insn ) continue;
-
-                updates->addUpdate ( new ForwardUpdate(Insn, oldOperand, newOperand ) );
+                if ( Insn ) {
+                    updates->addUpdate (
+                            new ForwardUpdate(Insn,
+                                oldOperand, newOperand ) );
+                } else if (ConstantExpr * GEPCE =
+                    dyn_cast<ConstantExpr>(*U)) {
+                    DEBUG(llvm::errs()<<"GEPCE:";
+                            GEPCE->dump(););
+                    // patch all the users of the constexpr by
+                    // first producing an equivalent instruction that
+                    // computes the constantexpr
+                    for(Value::use_iterator CU = GEPCE->use_begin(),
+                        CE = GEPCE->use_end(); CU!=CE; CU++) {
+                        if (Instruction *I2 = dyn_cast<Instruction>(*CU)) {
+                            Insn = GEPCE->getAsInstruction();
+                            Insn->insertBefore(I2);
+                            updateInstructionWithNewOperand(Insn,
+                                oldOperand, newOperand, updates);
+                            updateInstructionWithNewOperand(I2,
+                                GEPCE, Insn, updates);
+                        }
+                    }
+                }
         } 
 }
 
@@ -785,12 +805,19 @@ void promoteTileStatic(Function *Func, InstUpdateWorkList * updateNeeded)
     Module::GlobalListType &globals = M->getGlobalList();
     for (Module::global_iterator I = globals.begin(), E = globals.end();
         I != E; I++) {
-        if (!I->hasInternalLinkage() || !I->hasSection() || 
+        if (!I->hasSection() || 
             I->getSection() != std::string("clamp_opencl_local") ||
-            I->getType()->getPointerAddressSpace() != 0) {
+            I->getType()->getPointerAddressSpace() != 0 ||
+            !I->hasName()) {
             continue;
         }
-        DEBUG(I->dump());
+        DEBUG(llvm::errs() << "Promoting variable\n";
+                I->dump(););
+        for (Value::use_iterator U = I->use_begin(), Ue = I->use_end();
+            U!=Ue; U++) {
+            DEBUG(llvm::errs() << "U: \n";
+                U->dump(););
+        }
         GlobalVariable *new_GV = new GlobalVariable(*M,
                 I->getType()->getElementType(),
                 I->isConstant(), I->getLinkage(), I->getInitializer(), "",
@@ -808,13 +835,14 @@ void eraseOldTileStaticDefs(Module *M)
     Module::GlobalListType &globals = M->getGlobalList();
     for (Module::global_iterator I = globals.begin(), E = globals.end();
         I != E; I++) {
-        if (!I->hasInternalLinkage() || !I->hasSection() || 
+        if (!I->hasSection() || 
             I->getSection() != std::string("clamp_opencl_local") ||
             I->getType()->getPointerAddressSpace() != 0) {
             continue;
         }
-        assert(I->getNumUses() == 0);
-        todo.push_back(I);
+        I->removeDeadConstantUsers();
+        if (I->getNumUses() == 0)
+            todo.push_back(I);
     }
     for (std::vector<GlobalValue*>::iterator I = todo.begin(),
             E = todo.end(); I!=E; I++) {
@@ -1193,13 +1221,15 @@ bool PromoteGlobals::runOnModule(Module& M)
                 FunctionType * translatedType = 
                         createNewFunctionTypeWithPtrToGlobals(*F);
                 Function * promoted = createPromotedFunction (*F);
-                Function * wrapped = createWrappedFunction (promoted);
-                if (wrapped != promoted) {
-                        promoted->setLinkage(GlobalValue::InternalLinkage);
-                 //       promoted->eraseFromParent();
+                promoted->takeName (*F);
+                // lambdas can be set as internal. This causes problem
+                // in optimizer and we shall mark it as non-internal
+                if (promoted->getLinkage() ==
+                        GlobalValue::InternalLinkage) {
+                    promoted->setLinkage(GlobalValue::ExternalLinkage);
                 }
-                wrapped->takeName (*F); 
-                promotedKernels.push_back(std::make_pair(*F,wrapped));
+                (*F)->setLinkage(GlobalValue::InternalLinkage);
+                promotedKernels.push_back(std::make_pair(*F, promoted));
         }
         updateKernels (M, promotedKernels);
 

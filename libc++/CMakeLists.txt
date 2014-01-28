@@ -1,6 +1,7 @@
 project(libc++)
 cmake_minimum_required(VERSION 2.8)
 execute_process(COMMAND git describe --abbrev=4 --dirty --always --tags
+                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
                 OUTPUT_VARIABLE GIT_VERSION
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 

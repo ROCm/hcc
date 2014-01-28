@@ -1751,20 +1751,11 @@ bool CWriter::doInitialization(Module &M) {
   generateCompilerSpecificCode(Out, TD);
 
   // Provide a definition for `bool' if not compiling with a C++ compiler.
-#if 0
   Out << "\n"
-      << "#ifndef __cplusplus\ntypedef unsigned char bool;\n#endif\n"
-
       << "\n\n/* Support for floating point constants */\n"
-      << "typedef unsigned long long ConstantDoubleTy;\n"
-      << "typedef unsigned int        ConstantFloatTy;\n"
-      << "typedef struct { unsigned long long f1; unsigned short f2; "
-         "unsigned short pad[3]; } ConstantFP80Ty;\n"
-      // This is used for both kinds of 128-bit long double; meaning differs.
-      << "typedef struct { unsigned long long f1; unsigned long long f2; }"
-         " ConstantFP128Ty;\n"
+      << "typedef unsigned long ConstantDoubleTy;\n"
+      << "typedef unsigned int ConstantFloatTy;\n"
       << "\n\n/* Global Declarations */\n";
-#endif
   // First output all the declarations for the program, because C requires
   // Functions & globals to be declared before they are used.
   //
@@ -1795,6 +1786,7 @@ bool CWriter::doInitialization(Module &M) {
   // Loop over the symbol table, emitting all named constants.
   printModuleTypes();
 
+#if 0 //there shouldn't be globals in OpenCL
   // Global variable declarations...
   if (!M.global_empty()) {
     Out << "\n/* External Global Variable Declarations */\n";
@@ -1823,6 +1815,7 @@ bool CWriter::doInitialization(Module &M) {
       Out << ";\n";
     }
   }
+#endif
 
   // Function declarations
 #if 0
@@ -1908,7 +1901,6 @@ bool CWriter::doInitialization(Module &M) {
         Out << ";\n";
       }
   }
-#endif
   // Output the global variable definitions and contents...
   if (!M.global_empty()) {
     Out << "\n\n/* Global Variable Definitions and Initialization */\n";
@@ -1974,7 +1966,7 @@ bool CWriter::doInitialization(Module &M) {
         Out << ";\n";
       }
   }
-
+#endif
   if (!M.empty())
     Out << "\n\n/* Function Bodies */\n";
 
