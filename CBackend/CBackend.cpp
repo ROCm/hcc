@@ -1753,8 +1753,8 @@ bool CWriter::doInitialization(Module &M) {
   // Provide a definition for `bool' if not compiling with a C++ compiler.
   Out << "\n"
       << "\n\n/* Support for floating point constants */\n"
-      << "typedef ulong ConstantDoubleTy;\n"
-      << "typedef uint ConstantFloatTy;\n"
+      << "typedef unsigned long ConstantDoubleTy;\n"
+      << "typedef unsigned int ConstantFloatTy;\n"
       << "\n\n/* Global Declarations */\n";
   // First output all the declarations for the program, because C requires
   // Functions & globals to be declared before they are used.
