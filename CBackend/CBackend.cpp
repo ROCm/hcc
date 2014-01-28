@@ -991,12 +991,19 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
     if (I != FPConstantMap.end()) {
       // Because of FP precision problems we must load from a stack allocated
       // value that holds the value in hex.
+      Out << "\n#ifdef __OPENCL_VERSION__\n";
+      Out << "(*(" << (FPC->getType() == Type::getFloatTy(CPV->getContext()) ?
+                       "__constant float" :
+                       "__constant double" )
+          << "*)&FPConstant" << I->second << ')';
+      Out << "\n#else\n";
       Out << "(*(" << (FPC->getType() == Type::getFloatTy(CPV->getContext()) ?
                        "float" :
                        FPC->getType() == Type::getDoubleTy(CPV->getContext()) ?
                        "double" :
                        "long double")
           << "*)&FPConstant" << I->second << ')';
+      Out << "\n#endif\n";
     } else {
       double V;
       if (FPC->getType() == Type::getFloatTy(CPV->getContext()))
@@ -2051,33 +2058,30 @@ void CWriter::printFloatingPointConstants(const Constant *C) {
   if (FPC->getType() == Type::getDoubleTy(FPC->getContext())) {
     double Val = FPC->getValueAPF().convertToDouble();
     uint64_t i = FPC->getValueAPF().bitcastToAPInt().getZExtValue();
-    Out << "static const ConstantDoubleTy FPConstant" << FPCounter++
+    Out << "#ifdef __OPENCL_VERSION__\n"
+    << "static __constant ConstantDoubleTy FPConstant" << FPCounter
     << " = 0x" << utohexstr(i)
-    << "ULL;    /* " << Val << " */\n";
+    << "ULL;    /* " << Val << " */\n"
+    << "#else\n"
+    << "static const ConstantDoubleTy FPConstant" << FPCounter
+    << " = 0x" << utohexstr(i)
+    << "ULL;    /* " << Val << " */\n"
+    << "#endif";
+    FPCounter += 1;
   } else if (FPC->getType() == Type::getFloatTy(FPC->getContext())) {
     float Val = FPC->getValueAPF().convertToFloat();
     uint32_t i = (uint32_t)FPC->getValueAPF().bitcastToAPInt().
     getZExtValue();
-    Out << "static const ConstantFloatTy FPConstant" << FPCounter++
+    Out << "#ifdef __OPENCL_VERSION__\n"
+    << "static __constant ConstantFloatTy FPConstant" << FPCounter
     << " = 0x" << utohexstr(i)
-    << "U;    /* " << Val << " */\n";
-  } else if (FPC->getType() == Type::getX86_FP80Ty(FPC->getContext())) {
-    // api needed to prevent premature destruction
-    APInt api = FPC->getValueAPF().bitcastToAPInt();
-    const uint64_t *p = api.getRawData();
-    Out << "static const ConstantFP80Ty FPConstant" << FPCounter++
-    << " = { 0x" << utohexstr(p[0])
-    << "ULL, 0x" << utohexstr((uint16_t)p[1]) << ",{0,0,0}"
-    << "}; /* Long double constant */\n";
-  } else if (FPC->getType() == Type::getPPC_FP128Ty(FPC->getContext()) ||
-             FPC->getType() == Type::getFP128Ty(FPC->getContext())) {
-    APInt api = FPC->getValueAPF().bitcastToAPInt();
-    const uint64_t *p = api.getRawData();
-    Out << "static const ConstantFP128Ty FPConstant" << FPCounter++
-    << " = { 0x"
-    << utohexstr(p[0]) << ", 0x" << utohexstr(p[1])
-    << "}; /* Long double constant */\n";
-
+    << "U;    /* " << Val << " */\n"
+    << "#else\n"
+    << "static const ConstantFloatTy FPConstant" << FPCounter
+    << " = 0x" << utohexstr(i)
+    << "U;    /* " << Val << " */\n"
+    << "#endif\n";
+    FPCounter += 1;
   } else {
     llvm_unreachable("Unknown float type!");
   }
