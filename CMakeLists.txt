@@ -89,7 +89,8 @@ find_library(OPENCL_LIBRARY OpenCL ${OPENCL_LIBRARY_DIR}/ PATHS /usr/lib)
 if (NOT OPENCL_LIBRARY)
   MESSAGE(FATAL_ERROR "OpenCL library not found. Use -DOPENCL_LIBRARY_DIR=<path_to_libOpenCL.so>.")
 endif(NOT OPENCL_LIBRARY)
-
+# Pass OpenCL header dir to GMAC..
+set(OPENCL_INCLUDE ${OPENCL_HEADER}/.. CACHE PATH "OpenCL header for GMAC")
 add_subdirectory(gmac)
 
 endif(CXXAMP_ENABLE_GMAC)
