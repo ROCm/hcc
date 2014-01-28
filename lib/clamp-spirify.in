@@ -3,4 +3,6 @@
 # $1 = input ll name
 OPT=@LLVM_TOOLS_DIR@/opt
 DIS=@LLVM_TOOLS_DIR@/llvm-dis
-$OPT -load @LLVM_LIBS_DIR@/LLVMPromote.so -promote-globals -O3 < $1 | $DIS -o -
+EXTRACT=@LLVM_TOOLS_DIR@/llvm-extract
+$OPT -load @LLVM_LIBS_DIR@/LLVMPromote.so -promote-globals -O3 < $1 | \
+$EXTRACT -rfunc ".*__cxxamp_trampoline.*" | $DIS -o -

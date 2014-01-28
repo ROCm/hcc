@@ -1795,6 +1795,7 @@ bool CWriter::doInitialization(Module &M) {
   // Loop over the symbol table, emitting all named constants.
   printModuleTypes();
 
+#if 0 //there shouldn't be globals in OpenCL
   // Global variable declarations...
   if (!M.global_empty()) {
     Out << "\n/* External Global Variable Declarations */\n";
@@ -1823,6 +1824,7 @@ bool CWriter::doInitialization(Module &M) {
       Out << ";\n";
     }
   }
+#endif
 
   // Function declarations
 #if 0
@@ -1908,7 +1910,6 @@ bool CWriter::doInitialization(Module &M) {
         Out << ";\n";
       }
   }
-#endif
   // Output the global variable definitions and contents...
   if (!M.global_empty()) {
     Out << "\n\n/* Global Variable Definitions and Initialization */\n";
@@ -1974,7 +1975,7 @@ bool CWriter::doInitialization(Module &M) {
         Out << ";\n";
       }
   }
-
+#endif
   if (!M.empty())
     Out << "\n\n/* Function Bodies */\n";
 
