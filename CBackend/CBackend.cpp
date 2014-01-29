@@ -1073,7 +1073,7 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
       printType(Out, CPV->getType());
       Out << ")";
     }
-    Out << "{ "; // Arrays are wrapped in struct types.
+    Out << " { { "; // Arrays are wrapped in struct types.
     if (ConstantArray *CA = dyn_cast<ConstantArray>(CPV)) {
       printConstantArray(CA, Static);
     } else if (ConstantDataSequential *CDS = 
@@ -1094,7 +1094,7 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
       }
       Out << " }";
     }
-    Out << " }"; // Arrays are wrapped in struct types.
+    Out << " } }"; // Arrays are wrapped in struct types.
     break;
 
   case Type::VectorTyID:
