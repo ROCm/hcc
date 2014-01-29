@@ -549,7 +549,7 @@ void updateListWithUsers ( Value::use_iterator U, const Value::use_iterator& Ue,
                     // first producing an equivalent instruction that
                     // computes the constantexpr
                     for(Value::use_iterator CU = GEPCE->use_begin(),
-                        CE = GEPCE->use_end(); CU!=CE; CU++) {
+                        CE = GEPCE->use_end(); CU!=CE;) {
                         if (Instruction *I2 = dyn_cast<Instruction>(*CU)) {
                             Insn = GEPCE->getAsInstruction();
                             Insn->insertBefore(I2);
@@ -557,7 +557,11 @@ void updateListWithUsers ( Value::use_iterator U, const Value::use_iterator& Ue,
                                 oldOperand, newOperand, updates);
                             updateInstructionWithNewOperand(I2,
                                 GEPCE, Insn, updates);
+                            // CU is invalidated
+                            CU = GEPCE->use_begin();
+                            continue;
                         }
+                        CU++;
                     }
                 }
         } 
