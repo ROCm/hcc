@@ -1,4 +1,4 @@
-// RUN: %amp_device -D__GPU__ %s -m32 -emit-llvm -c -S -O3 -o %t.ll && mkdir -p %t
+// RUN: %amp_device -D__GPU__ %s -m32 -emit-llvm -c -S -O2 -o %t.ll && mkdir -p %t
 // RUN: %clamp-device %t.ll %t/kernel.cl
 // RUN: pushd %t && objcopy -B i386:x86-64 -I binary -O elf64-x86-64 kernel.cl kernel.o && popd
 // RUN: %gtest_amp %t/kernel.o %s -o %t.out && %t.out
