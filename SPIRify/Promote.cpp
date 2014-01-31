@@ -578,6 +578,34 @@ void updateLoadInstWithNewOperand(LoadInst * I, Value * newOperand, InstUpdateWo
         }
 }
 
+void updatePHINodeWithNewOperand(PHINode * I, Value * oldOperand,
+        Value * newOperand, InstUpdateWorkList * updatesNeeded)
+{
+    // Update the PHI node itself as well its users
+    Type * originalType = I->getType();
+    PointerType * PT = cast<PointerType>(newOperand->getType());
+    if ( PT != originalType ) {
+        I->mutateType(PT);
+        updateListWithUsers(I->use_begin(), I->use_end(), I, I, updatesNeeded);
+    } else {
+        return;
+    }
+    // Update the sources of the PHI node
+    for (unsigned i = 0; i < I->getNumIncomingValues(); i++) {
+        Value *V = I->getIncomingValue(i);
+        if (V == oldOperand) {
+            I->setOperand(i, newOperand);
+        } else if (V == newOperand) {
+            continue;
+        } else if (!isa<Instruction>(V)) {
+            // It is temping to do backward updating on other incoming
+            // operands here, // but we don't have to. Eventually fwd
+            // updates will cover them, except Undefs
+            V->mutateType(PT);
+        }
+    }
+}
+
 void updateStoreInstWithNewOperand(StoreInst * I, Value * oldOperand, Value * newOperand, InstUpdateWorkList * updatesNeeded)
 {
         unsigned index = I->getOperand(1) == oldOperand?1:0;
@@ -797,6 +825,11 @@ void updateInstructionWithNewOperand(Instruction * I,
                return;
        }
 
+       if (PHINode * PHI = dyn_cast<PHINode>(I)) {
+           updatePHINodeWithNewOperand(PHI, oldOperand, newOperand, updatesNeeded);
+           return;
+       }
+
        DEBUG(llvm::errs() << "DO NOT KNOW HOW TO UPDATE INSTRUCTION: "; 
              I->print(llvm::errs()); llvm::errs() << "\n";);
 }  
@@ -902,13 +935,13 @@ void promoteBitcasts (Function * F, InstUpdateWorkList * updates)
                 PointerType * srcPtrType =
                         dyn_cast<PointerType>(srcType);
                 if ( ! srcPtrType ) continue;
-
+#if 0
                 unsigned srcAddressSpace = 
                         srcPtrType->getAddressSpace();
 
                 unsigned destAddressSpace = 
                         destPtrType->getAddressSpace();
-
+#endif
                 Type * elementType = destPtrType->getElementType();
                 Type * mappedType = mapTypeToGlobal(elementType);
                 unsigned addrSpace = srcPtrType->getAddressSpace();
@@ -1224,8 +1257,8 @@ bool PromoteGlobals::runOnModule(Module& M)
         typedef FunctionVect::const_iterator kernel_iterator;
         for (kernel_iterator F = foundKernels.begin(), Fe = foundKernels.end();
              F != Fe; ++F) {
-                FunctionType * translatedType = 
-                        createNewFunctionTypeWithPtrToGlobals(*F);
+                if ((*F)->empty())
+                    continue;
                 Function * promoted = createPromotedFunction (*F);
                 promoted->takeName (*F);
                 // lambdas can be set as internal. This causes problem
