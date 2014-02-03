@@ -13,7 +13,6 @@ else
     MATH=@CMAKE_INSTALL_PREFIX@/include
     LIB=@CMAKE_INSTALL_PREFIX@/lib
 fi
-$OPT -load $LIB/LLVMPromote.so -promote-globals < $1 | \
+$OPT -load $LIB/LLVMPromote.so -load $LIB/LLVMEraseNonkernel.so -promote-globals -erase-nonkernels < $1 | \
 tee $2.promote.bc |$LLC -march=c -o $2.tmp
 cat $MATH/opencl_math.cl $2.tmp > $2
-
