@@ -27,6 +27,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include <map>
 using namespace llvm;
 
 
@@ -36,6 +37,7 @@ namespace {
    that are OpenCL kernels will be stored */
 typedef SmallVector<Function *, 3> FunctionVect;
 typedef SmallVector<std::pair<Function *, Function *>, 3> FunctionPairVect;
+typedef std::map <Function *, Function *> FunctionMap;
 
 /* The name of the MDNode into which the list of
    MD nodes referencing each OpenCL kernel is stored. */
@@ -1084,18 +1086,25 @@ bool findKernels(Module& M, FunctionVect& found_kernels)
         return found_kernels.size() != 0;
 }
 
-void updateKernels(Module& M, const FunctionPairVect& new_kernels)
+void updateKernels(Module& M, const FunctionMap& new_kernels)
 {
-        NamedMDNode * root = getNewKernelListMDNode(M);
-        typedef FunctionPairVect::const_iterator iterator;
+        NamedMDNode * root = getKernelListMDNode(M);
+        typedef FunctionMap::const_iterator iterator;
+        // for each kernel..
+        for (unsigned i = 0; i < root->getNumOperands(); i++) {
+            // for each metadata of the kernel..
+            MDNode * kernel = root->getOperand(i);
+            Function * f = dyn_cast<Function>(kernel->getOperand(0));
+            assert(f != NULL);
+            iterator I = new_kernels.find(f);
+            if (I != new_kernels.end())
+                kernel->replaceOperandWith(0, I->second);
+        }
         for (iterator kern = new_kernels.begin(), end = new_kernels.end();
              kern != end; ++kern) {
-                Function * kernel = kern->second;
-                MDNode * node = MDNode::get(kernel->getContext(),
-                                            kernel);
-                root->addOperand(node);
                 // Remove the original function
                 kern->first->deleteBody();
+                kern->first->setCallingConv(llvm::CallingConv::C);
         }
 }
 
@@ -1251,7 +1260,7 @@ void PromoteGlobals::getAnalysisUsage(AnalysisUsage& AU) const
 bool PromoteGlobals::runOnModule(Module& M) 
 {
         FunctionVect foundKernels;
-        FunctionPairVect promotedKernels;
+        FunctionMap promotedKernels;
         if (!findKernels(M, foundKernels)) return false;
 
         typedef FunctionVect::const_iterator kernel_iterator;
@@ -1261,6 +1270,7 @@ bool PromoteGlobals::runOnModule(Module& M)
                     continue;
                 Function * promoted = createPromotedFunction (*F);
                 promoted->takeName (*F);
+                promoted->setCallingConv(llvm::CallingConv::SPIR_KERNEL);
                 // lambdas can be set as internal. This causes problem
                 // in optimizer and we shall mark it as non-internal
                 if (promoted->getLinkage() ==
@@ -1268,7 +1278,7 @@ bool PromoteGlobals::runOnModule(Module& M)
                     promoted->setLinkage(GlobalValue::ExternalLinkage);
                 }
                 (*F)->setLinkage(GlobalValue::InternalLinkage);
-                promotedKernels.push_back(std::make_pair(*F, promoted));
+                promotedKernels[*F] = promoted;
         }
         updateKernels (M, promotedKernels);
 
