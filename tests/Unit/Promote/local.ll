@@ -7,7 +7,7 @@ target triple = "i386-unknown-linux-gnu"
 ;CHECK: @_ZZ4mainEN6localAE = {{.+}} addrspace(3) global [10 x [10 x i32]]
 
 define internal void @"_ZZ4mainEN3$_019__cxxamp_trampolineEiiiiPiiiiiiiiii"(i32, i32, i32, i32, i32*, i32, i32, i32, i32, i32, i32, i32, i32, i32) #4 align 2 {
-;CHECK: define void @"_ZZ4mainEN3$_019__cxxamp_trampolineEiiiiPiiiiiiiiii"(i32, i32, i32, i32, i32 addrspace(1)*
+;CHECK: void @"_ZZ4mainEN3$_019__cxxamp_trampolineEiiiiPiiiiiiiiii"(i32, i32, i32, i32, i32 addrspace(1)*
 entry:
   %call.i.i15 = tail call i32 @get_global_id(i32 1) #6
   %call2.i.i = tail call i32 @get_global_id(i32 0) #6

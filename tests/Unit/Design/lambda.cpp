@@ -2,6 +2,7 @@
 // RUN: %clamp-device %t.ll %t/kernel.cl
 // RUN: pushd %t && objcopy -B i386:x86-64 -I binary -O elf64-x86-64 kernel.cl %t/kernel.o && popd
 // RUN: %cxxamp %link %t/kernel.o %s -o %t.out && %t.out
+// RUN: %llvm-dis %t/kernel.cl.promote.bc -o - | %FileCheck %s
 #include <amp.h>
 #include <stdlib.h>
 #include <iostream>
@@ -35,3 +36,5 @@ int main(void){
   }
   return error != 0;
 }
+// SPIR code generation test
+// CHECK: metadata !{metadata !"kernel_arg_addr_space", i32 0, 
