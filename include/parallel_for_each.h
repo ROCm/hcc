@@ -29,7 +29,9 @@ static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu,amp) {
     s = str;
 
     for(std::string::iterator it = s.begin(); it != s.end(); it++ ) {
-      if (isalnum(*it) || (*it == '_')) {
+      if (*it == '_' && it == s.begin()) {
+        continue;
+      } else if (isalnum(*it) || (*it == '_')) {
         out.append(1, *it);
       } else if (*it == '$') {
         out.append("_EC_");

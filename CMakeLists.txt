@@ -19,6 +19,7 @@ include (EnsureLIBCXXisPresent)
 include (EnsureLIBCXXRTisPresent)
 include (SetupCBE)
 include (SetupSPIRify)
+include (SetupEraseNonkernel)
 include (MCWAMP)
 
 ensure_llvm_is_present(${PROJECT_SOURCE_DIR} compiler)
@@ -27,6 +28,7 @@ ensure_libcxx_is_present("${PROJECT_SOURCE_DIR}/libc++" libcxx)
 ensure_libcxxrt_is_present("${PROJECT_SOURCE_DIR}/libc++" libcxxrt)
 setup_CBackend(${PROJECT_SOURCE_DIR}/compiler/lib/Target CBackend)
 setup_SPIRify(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms SPIRify)
+setup_EraseNonkernel(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms EraseNonkernel)
 set(LLVM_TARGETS_TO_BUILD X86)
 set(LLVM_INCLUDE_EXAMPLES off)
 
@@ -89,7 +91,8 @@ find_library(OPENCL_LIBRARY OpenCL ${OPENCL_LIBRARY_DIR}/ PATHS /usr/lib)
 if (NOT OPENCL_LIBRARY)
   MESSAGE(FATAL_ERROR "OpenCL library not found. Use -DOPENCL_LIBRARY_DIR=<path_to_libOpenCL.so>.")
 endif(NOT OPENCL_LIBRARY)
-
+# Pass OpenCL header dir to GMAC..
+set(OPENCL_INCLUDE ${OPENCL_HEADER}/.. CACHE PATH "OpenCL header for GMAC")
 add_subdirectory(gmac)
 
 endif(CXXAMP_ENABLE_GMAC)

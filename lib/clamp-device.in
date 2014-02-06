@@ -2,9 +2,17 @@
 # wraps around commands to produce the OpenCL kernel
 # $1 = input ll name
 # $2 = opencl kernel file name
-OPT=@LLVM_TOOLS_DIR@/opt
-LLC=@LLVM_TOOLS_DIR@/llc
-EXTRACT=@LLVM_TOOLS_DIR@/llvm-extract
-$OPT -load @LLVM_LIBS_DIR@/LLVMPromote.so -promote-globals < $1 | \
-$EXTRACT -rfunc ".*__cxxamp_trampoline.*" | tee $2.ext.bc |$LLC -march=c -o $2.tmp
-cat @OPENCL_MATH_DIR@/opencl_math.cl $2.tmp > $2
+if [ -d @LLVM_TOOLS_DIR@ ]; then
+    OPT=@LLVM_TOOLS_DIR@/opt
+    LLC=@LLVM_TOOLS_DIR@/llc
+    MATH=@OPENCL_MATH_DIR@
+    LIB=@LLVM_LIBS_DIR@
+else
+    OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
+    LLC=@CMAKE_INSTALL_PREFIX@/bin/llc
+    MATH=@CMAKE_INSTALL_PREFIX@/include
+    LIB=@CMAKE_INSTALL_PREFIX@/lib
+fi
+$OPT -load $LIB/LLVMPromote.so -load $LIB/LLVMEraseNonkernel.so -promote-globals -erase-nonkernels < $1 | \
+tee $2.promote.bc |$LLC -march=c -o $2.tmp
+cat $MATH/opencl_math.cl $2.tmp > $2

@@ -1,4 +1,4 @@
-// RUN: %gtest_amp %s -O3 -o %t && %t
+// RUN: %gtest_amp %s -O2 -o %t && %t
 #include <stdlib.h>
 #ifndef __GPU__ //gtest requires rtti, but amp_device forbids rtti
 #include <gtest/gtest.h>

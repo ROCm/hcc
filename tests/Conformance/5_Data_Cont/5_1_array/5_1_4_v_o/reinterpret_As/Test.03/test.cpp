@@ -7,7 +7,7 @@
 // See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
 /// <tags>P1</tags>
 /// <summary>Reinterpret an Array of float as double</summary>
-// RUN: %amp_device -D__GPU__ %s -m32 -emit-llvm -c -S -O3 -o %t.ll && mkdir -p %t
+// RUN: %amp_device -D__GPU__ %s -m32 -emit-llvm -c -S -O2 -o %t.ll && mkdir -p %t
 // RUN: %llc -march=c -o %t/kernel_.cl < %t.ll
 // RUN: cat %opencl_math_dir/opencl_math.cl %t/kernel_.cl > %t/kernel.cl
 // RUN: pushd %t && objcopy -B i386:x86-64 -I binary -O elf64-x86-64 kernel.cl %t/kernel.o && popd

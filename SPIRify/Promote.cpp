@@ -27,6 +27,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include <map>
 using namespace llvm;
 
 
@@ -36,6 +37,7 @@ namespace {
    that are OpenCL kernels will be stored */
 typedef SmallVector<Function *, 3> FunctionVect;
 typedef SmallVector<std::pair<Function *, Function *>, 3> FunctionPairVect;
+typedef std::map <Function *, Function *> FunctionMap;
 
 /* The name of the MDNode into which the list of
    MD nodes referencing each OpenCL kernel is stored. */
@@ -549,7 +551,7 @@ void updateListWithUsers ( Value::use_iterator U, const Value::use_iterator& Ue,
                     // first producing an equivalent instruction that
                     // computes the constantexpr
                     for(Value::use_iterator CU = GEPCE->use_begin(),
-                        CE = GEPCE->use_end(); CU!=CE; CU++) {
+                        CE = GEPCE->use_end(); CU!=CE;) {
                         if (Instruction *I2 = dyn_cast<Instruction>(*CU)) {
                             Insn = GEPCE->getAsInstruction();
                             Insn->insertBefore(I2);
@@ -557,7 +559,11 @@ void updateListWithUsers ( Value::use_iterator U, const Value::use_iterator& Ue,
                                 oldOperand, newOperand, updates);
                             updateInstructionWithNewOperand(I2,
                                 GEPCE, Insn, updates);
+                            // CU is invalidated
+                            CU = GEPCE->use_begin();
+                            continue;
                         }
+                        CU++;
                     }
                 }
         } 
@@ -572,6 +578,34 @@ void updateLoadInstWithNewOperand(LoadInst * I, Value * newOperand, InstUpdateWo
                 I->mutateType(PT->getElementType());
                 updateListWithUsers(I->use_begin(), I->use_end(), I, I, updatesNeeded);
         }
+}
+
+void updatePHINodeWithNewOperand(PHINode * I, Value * oldOperand,
+        Value * newOperand, InstUpdateWorkList * updatesNeeded)
+{
+    // Update the PHI node itself as well its users
+    Type * originalType = I->getType();
+    PointerType * PT = cast<PointerType>(newOperand->getType());
+    if ( PT != originalType ) {
+        I->mutateType(PT);
+        updateListWithUsers(I->use_begin(), I->use_end(), I, I, updatesNeeded);
+    } else {
+        return;
+    }
+    // Update the sources of the PHI node
+    for (unsigned i = 0; i < I->getNumIncomingValues(); i++) {
+        Value *V = I->getIncomingValue(i);
+        if (V == oldOperand) {
+            I->setOperand(i, newOperand);
+        } else if (V == newOperand) {
+            continue;
+        } else if (!isa<Instruction>(V)) {
+            // It is temping to do backward updating on other incoming
+            // operands here, // but we don't have to. Eventually fwd
+            // updates will cover them, except Undefs
+            V->mutateType(PT);
+        }
+    }
 }
 
 void updateStoreInstWithNewOperand(StoreInst * I, Value * oldOperand, Value * newOperand, InstUpdateWorkList * updatesNeeded)
@@ -793,6 +827,11 @@ void updateInstructionWithNewOperand(Instruction * I,
                return;
        }
 
+       if (PHINode * PHI = dyn_cast<PHINode>(I)) {
+           updatePHINodeWithNewOperand(PHI, oldOperand, newOperand, updatesNeeded);
+           return;
+       }
+
        DEBUG(llvm::errs() << "DO NOT KNOW HOW TO UPDATE INSTRUCTION: "; 
              I->print(llvm::errs()); llvm::errs() << "\n";);
 }  
@@ -898,13 +937,13 @@ void promoteBitcasts (Function * F, InstUpdateWorkList * updates)
                 PointerType * srcPtrType =
                         dyn_cast<PointerType>(srcType);
                 if ( ! srcPtrType ) continue;
-
+#if 0
                 unsigned srcAddressSpace = 
                         srcPtrType->getAddressSpace();
 
                 unsigned destAddressSpace = 
                         destPtrType->getAddressSpace();
-
+#endif
                 Type * elementType = destPtrType->getElementType();
                 Type * mappedType = mapTypeToGlobal(elementType);
                 unsigned addrSpace = srcPtrType->getAddressSpace();
@@ -1047,16 +1086,25 @@ bool findKernels(Module& M, FunctionVect& found_kernels)
         return found_kernels.size() != 0;
 }
 
-void updateKernels(Module& M, const FunctionPairVect& new_kernels)
+void updateKernels(Module& M, const FunctionMap& new_kernels)
 {
-        NamedMDNode * root = getNewKernelListMDNode(M);
-        typedef FunctionPairVect::const_iterator iterator;
+        NamedMDNode * root = getKernelListMDNode(M);
+        typedef FunctionMap::const_iterator iterator;
+        // for each kernel..
+        for (unsigned i = 0; i < root->getNumOperands(); i++) {
+            // for each metadata of the kernel..
+            MDNode * kernel = root->getOperand(i);
+            Function * f = dyn_cast<Function>(kernel->getOperand(0));
+            assert(f != NULL);
+            iterator I = new_kernels.find(f);
+            if (I != new_kernels.end())
+                kernel->replaceOperandWith(0, I->second);
+        }
         for (iterator kern = new_kernels.begin(), end = new_kernels.end();
              kern != end; ++kern) {
-                Function * kernel = kern->second;
-                MDNode * node = MDNode::get(kernel->getContext(),
-                                            kernel);
-                root->addOperand(node);
+                // Remove the original function
+                kern->first->deleteBody();
+                kern->first->setCallingConv(llvm::CallingConv::C);
         }
 }
 
@@ -1138,7 +1186,6 @@ Function * createWrappedFunction (Function * F)
         std::vector<Value *> callArgs;
         for (arg_iterator sA = F->arg_begin(), dA = wrapped->arg_begin(),
                           Ae = F->arg_end(); sA != Ae; ++sA, ++dA) {
-            unsigned argNum = sA->getArgNo();
             dA->setName (sA->getName());
             callArgs.push_back(dA);
         }
@@ -1208,20 +1255,36 @@ void PromoteGlobals::getAnalysisUsage(AnalysisUsage& AU) const
 {
         AU.addRequired<CallGraph>();
 }
+static std::string escapeName(const std::string &orig_name)
+{
+    std::string oldName(orig_name);
+    // AMD OpenCL doesn't like kernel names starting with _
+    if (oldName[0] == '_')
+        oldName = oldName.substr(1);
+    size_t loc;
+    // escape name: $ -> _EC_
+    while ((loc = oldName.find('$')) != std::string::npos) {
+        oldName.replace(loc, 1, "_EC_");
+    }
+    return oldName;
+}
 
 bool PromoteGlobals::runOnModule(Module& M) 
 {
         FunctionVect foundKernels;
-        FunctionPairVect promotedKernels;
+        FunctionMap promotedKernels;
         if (!findKernels(M, foundKernels)) return false;
 
         typedef FunctionVect::const_iterator kernel_iterator;
         for (kernel_iterator F = foundKernels.begin(), Fe = foundKernels.end();
              F != Fe; ++F) {
-                FunctionType * translatedType = 
-                        createNewFunctionTypeWithPtrToGlobals(*F);
+                if ((*F)->empty())
+                    continue;
                 Function * promoted = createPromotedFunction (*F);
                 promoted->takeName (*F);
+                promoted->setName(escapeName(promoted->getName().str()));
+
+                promoted->setCallingConv(llvm::CallingConv::SPIR_KERNEL);
                 // lambdas can be set as internal. This causes problem
                 // in optimizer and we shall mark it as non-internal
                 if (promoted->getLinkage() ==
@@ -1229,7 +1292,7 @@ bool PromoteGlobals::runOnModule(Module& M)
                     promoted->setLinkage(GlobalValue::ExternalLinkage);
                 }
                 (*F)->setLinkage(GlobalValue::InternalLinkage);
-                promotedKernels.push_back(std::make_pair(*F, promoted));
+                promotedKernels[*F] = promoted;
         }
         updateKernels (M, promotedKernels);
 
@@ -1241,6 +1304,29 @@ bool PromoteGlobals::runOnModule(Module& M)
                 }
         }
 
+        // Rename local variables per SPIR naming rule
+        Module::GlobalListType &globals = M.getGlobalList();
+        for (Module::global_iterator I = globals.begin(), E = globals.end();
+                I != E; I++) {
+            if (I->hasSection() && 
+                    I->getSection() == std::string("clamp_opencl_local") && 
+                    I->getType()->getPointerAddressSpace() != 0) {
+                std::string oldName = escapeName(I->getName().str());
+                // Prepend the name of the function which contains the user
+                for (Value::use_iterator U = I->use_begin(), Ue = I->use_end();
+                    U != Ue; U ++) {
+                    Instruction *Ins = dyn_cast<Instruction>(*U);
+                    if (!Ins)
+                        continue;
+                    oldName = Ins->getParent()->getParent()->getName().str() +
+                        "."+oldName;
+                    I->setName(oldName);
+                    break;
+                }
+                // AMD SPIR stack takes only internal linkage
+                I->setLinkage(GlobalValue::InternalLinkage);
+            }
+        }
         return false;
 }
 

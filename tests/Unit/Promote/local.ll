@@ -4,17 +4,17 @@ target triple = "i386-unknown-linux-gnu"
 
 @_ZZ4mainEN6localAE = internal global [10 x [10 x i32]] zeroinitializer, section "clamp_opencl_local", align 4
 ;CHECK-NOT:@0 = internal global [10 x [10 x i32]] zeroinitializer, section "clamp_opencl_local", align 4
-;CHECK: @_ZZ4mainEN6localAE = {{.+}} addrspace(3) global [10 x [10 x i32]]
+;CHECK: ZZ4mainEN3_EC__019__cxxamp_trampolineEiiiiPiiiiiiiiii.ZZ4mainEN6localAE = {{.+}} addrspace(3) global [10 x [10 x i32]]
 
 define internal void @"_ZZ4mainEN3$_019__cxxamp_trampolineEiiiiPiiiiiiiiii"(i32, i32, i32, i32, i32*, i32, i32, i32, i32, i32, i32, i32, i32, i32) #4 align 2 {
-;CHECK: define void @"_ZZ4mainEN3$_019__cxxamp_trampolineEiiiiPiiiiiiiiii"(i32, i32, i32, i32, i32 addrspace(1)*
+;CHECK: void @ZZ4mainEN3_EC__019__cxxamp_trampolineEiiiiPiiiiiiiiii(i32, i32, i32, i32, i32 addrspace(1)*
 entry:
   %call.i.i15 = tail call i32 @get_global_id(i32 1) #6
   %call2.i.i = tail call i32 @get_global_id(i32 0) #6
   %call3.i.i = tail call i32 @get_local_id(i32 1) #6
   %call4.i.i = tail call i32 @get_local_id(i32 0) #6
   %arrayidx3.i = getelementptr inbounds [10 x [10 x i32]]* @_ZZ4mainEN6localAE, i32 0, i32 %call3.i.i, i32 %call4.i.i
-;CHECK:   %arrayidx3.i = getelementptr inbounds [10 x [10 x i32]] addrspace(3)* @_ZZ4mainEN6localAE, i32 0, 
+;CHECK:   %arrayidx3.i = getelementptr inbounds [10 x [10 x i32]] addrspace(3)* @ZZ4mainEN3_EC__019__cxxamp_trampolineEiiiiPiiiiiiiiii.ZZ4mainEN6localAE, i32 0,
   store i32 0, i32* %arrayidx3.i, align 4, !tbaa !1
   tail call void @barrier(i32 0)
   br label %for.cond4.preheader.i

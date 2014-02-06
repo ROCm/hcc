@@ -991,12 +991,19 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
     if (I != FPConstantMap.end()) {
       // Because of FP precision problems we must load from a stack allocated
       // value that holds the value in hex.
+      Out << "\n#ifdef __OPENCL_VERSION__\n";
+      Out << "(*(" << (FPC->getType() == Type::getFloatTy(CPV->getContext()) ?
+                       "__constant float" :
+                       "__constant double" )
+          << "*)&FPConstant" << I->second << ')';
+      Out << "\n#else\n";
       Out << "(*(" << (FPC->getType() == Type::getFloatTy(CPV->getContext()) ?
                        "float" :
                        FPC->getType() == Type::getDoubleTy(CPV->getContext()) ?
                        "double" :
                        "long double")
           << "*)&FPConstant" << I->second << ')';
+      Out << "\n#endif\n";
     } else {
       double V;
       if (FPC->getType() == Type::getFloatTy(CPV->getContext()))
@@ -1066,7 +1073,7 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
       printType(Out, CPV->getType());
       Out << ")";
     }
-    Out << "{ "; // Arrays are wrapped in struct types.
+    Out << " { { "; // Arrays are wrapped in struct types.
     if (ConstantArray *CA = dyn_cast<ConstantArray>(CPV)) {
       printConstantArray(CA, Static);
     } else if (ConstantDataSequential *CDS = 
@@ -1087,7 +1094,7 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
       }
       Out << " }";
     }
-    Out << " }"; // Arrays are wrapped in struct types.
+    Out << " } }"; // Arrays are wrapped in struct types.
     break;
 
   case Type::VectorTyID:
@@ -1901,6 +1908,7 @@ bool CWriter::doInitialization(Module &M) {
         Out << ";\n";
       }
   }
+#endif
   // Output the global variable definitions and contents...
   if (!M.global_empty()) {
     Out << "\n\n/* Global Variable Definitions and Initialization */\n";
@@ -1910,32 +1918,13 @@ bool CWriter::doInitialization(Module &M) {
         // Ignore special globals, such as debug info.
         if (getGlobalVariableClass(I))
           continue;
+        // OpenCL allows only __constants in global scope
+        if (!I->isConstant())
+            continue;
 
-        if (I->hasLocalLinkage()) { 
-          if (!I->isConstant())
-            Out << "static struct ";
-          else
-            Out << "__constant struct ";
-        } else if (I->hasDLLImportLinkage())
-          Out << "__declspec(dllimport) ";
-        else if (I->hasDLLExportLinkage())
-          Out << "__declspec(dllexport) ";
-
-        // Thread Local Storage
-        if (I->isThreadLocal())
-          Out << "__thread ";
-
+        Out << "__constant struct ";
         printType(Out, I->getType()->getElementType(), false,
                   GetValueName(I));
-        if (I->hasLinkOnceLinkage())
-          Out << " __attribute__((common))";
-        //else if (I->hasWeakLinkage())
-        //  Out << " __ATTRIBUTE_WEAK__";
-        //else if (I->hasCommonLinkage())
-        //  Out << " __ATTRIBUTE_WEAK__";
-
-        if (I->hasHiddenVisibility())
-          Out << " __HIDDEN__";
 
         // If the initializer is not null, emit the initializer.  If it is null,
         // we try to avoid emitting large amounts of zeros.  The problem with
@@ -1943,7 +1932,7 @@ bool CWriter::doInitialization(Module &M) {
         // case, the assembler will complain about the variable being both weak
         // and common, so we disable this optimization.
         // FIXME common linkage should avoid this problem.
-        if (!I->getInitializer()->isNullValue()) {
+        if (I->hasInitializer() && !I->getInitializer()->isNullValue()) {
           Out << " = " ;
           writeOperand(I->getInitializer(), true);
         } else if (I->hasWeakLinkage()) {
@@ -1966,7 +1955,6 @@ bool CWriter::doInitialization(Module &M) {
         Out << ";\n";
       }
   }
-#endif
   if (!M.empty())
     Out << "\n\n/* Function Bodies */\n";
 
@@ -2051,33 +2039,30 @@ void CWriter::printFloatingPointConstants(const Constant *C) {
   if (FPC->getType() == Type::getDoubleTy(FPC->getContext())) {
     double Val = FPC->getValueAPF().convertToDouble();
     uint64_t i = FPC->getValueAPF().bitcastToAPInt().getZExtValue();
-    Out << "static const ConstantDoubleTy FPConstant" << FPCounter++
+    Out << "#ifdef __OPENCL_VERSION__\n"
+    << "static __constant ConstantDoubleTy FPConstant" << FPCounter
     << " = 0x" << utohexstr(i)
-    << "ULL;    /* " << Val << " */\n";
+    << "ULL;    /* " << Val << " */\n"
+    << "#else\n"
+    << "static const ConstantDoubleTy FPConstant" << FPCounter
+    << " = 0x" << utohexstr(i)
+    << "ULL;    /* " << Val << " */\n"
+    << "#endif";
+    FPCounter += 1;
   } else if (FPC->getType() == Type::getFloatTy(FPC->getContext())) {
     float Val = FPC->getValueAPF().convertToFloat();
     uint32_t i = (uint32_t)FPC->getValueAPF().bitcastToAPInt().
     getZExtValue();
-    Out << "static const ConstantFloatTy FPConstant" << FPCounter++
+    Out << "#ifdef __OPENCL_VERSION__\n"
+    << "static __constant ConstantFloatTy FPConstant" << FPCounter
     << " = 0x" << utohexstr(i)
-    << "U;    /* " << Val << " */\n";
-  } else if (FPC->getType() == Type::getX86_FP80Ty(FPC->getContext())) {
-    // api needed to prevent premature destruction
-    APInt api = FPC->getValueAPF().bitcastToAPInt();
-    const uint64_t *p = api.getRawData();
-    Out << "static const ConstantFP80Ty FPConstant" << FPCounter++
-    << " = { 0x" << utohexstr(p[0])
-    << "ULL, 0x" << utohexstr((uint16_t)p[1]) << ",{0,0,0}"
-    << "}; /* Long double constant */\n";
-  } else if (FPC->getType() == Type::getPPC_FP128Ty(FPC->getContext()) ||
-             FPC->getType() == Type::getFP128Ty(FPC->getContext())) {
-    APInt api = FPC->getValueAPF().bitcastToAPInt();
-    const uint64_t *p = api.getRawData();
-    Out << "static const ConstantFP128Ty FPConstant" << FPCounter++
-    << " = { 0x"
-    << utohexstr(p[0]) << ", 0x" << utohexstr(p[1])
-    << "}; /* Long double constant */\n";
-
+    << "U;    /* " << Val << " */\n"
+    << "#else\n"
+    << "static const ConstantFloatTy FPConstant" << FPCounter
+    << " = 0x" << utohexstr(i)
+    << "U;    /* " << Val << " */\n"
+    << "#endif\n";
+    FPCounter += 1;
   } else {
     llvm_unreachable("Unknown float type!");
   }
