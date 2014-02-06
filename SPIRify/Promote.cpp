@@ -28,6 +28,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <map>
+#include <set>
 using namespace llvm;
 
 
@@ -859,8 +860,8 @@ void promoteTileStatic(Function *Func, InstUpdateWorkList * updateNeeded)
         }
         GlobalVariable *new_GV = new GlobalVariable(*M,
                 I->getType()->getElementType(),
-                I->isConstant(), I->getLinkage(), I->getInitializer(), "",
-                (GlobalVariable *)0, I->getThreadLocalMode(), LocalAddressSpace);
+                I->isConstant(), I->getLinkage(), I->hasInitializer()?I->getInitializer():0,
+                "", (GlobalVariable *)0, I->getThreadLocalMode(), LocalAddressSpace);
         new_GV->copyAttributesFrom(I);
         new_GV->takeName(I);
         updateListWithUsers (I->use_begin(), I->use_end(),
@@ -1058,6 +1059,8 @@ void KernelNodeVisitor::operator()(MDNode *N)
 {
         if ( N->getNumOperands() < 1) return;
         Value * Op = N->getOperand(0);
+        if (!Op)
+            return;
         if ( Function * F = dyn_cast<Function>(Op)) {
                 found_kernels.push_back(F); 
         }
@@ -1313,18 +1316,24 @@ bool PromoteGlobals::runOnModule(Module& M)
                     I->getType()->getPointerAddressSpace() != 0) {
                 std::string oldName = escapeName(I->getName().str());
                 // Prepend the name of the function which contains the user
+                std::set<std::string> userNames;
                 for (Value::use_iterator U = I->use_begin(), Ue = I->use_end();
                     U != Ue; U ++) {
                     Instruction *Ins = dyn_cast<Instruction>(*U);
                     if (!Ins)
                         continue;
-                    oldName = Ins->getParent()->getParent()->getName().str() +
-                        "."+oldName;
-                    I->setName(oldName);
-                    break;
+                    userNames.insert(Ins->getParent()->getParent()->getName().str());
                 }
+                // A local memory variable belongs to only one kernel, per SPIR spec
+                assert(userNames.size() < 2 &&
+                        "__local variable belongs to more than one kernel");
+                if (userNames.empty())
+                    continue;
+                oldName = *(userNames.begin()) + "."+oldName;
+                I->setName(oldName);
                 // AMD SPIR stack takes only internal linkage
-                I->setLinkage(GlobalValue::InternalLinkage);
+                if (I->hasInitializer())
+                    I->setLinkage(GlobalValue::InternalLinkage);
             }
         }
         return false;
