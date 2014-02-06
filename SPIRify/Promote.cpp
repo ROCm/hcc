@@ -1186,7 +1186,6 @@ Function * createWrappedFunction (Function * F)
         std::vector<Value *> callArgs;
         for (arg_iterator sA = F->arg_begin(), dA = wrapped->arg_begin(),
                           Ae = F->arg_end(); sA != Ae; ++sA, ++dA) {
-            unsigned argNum = sA->getArgNo();
             dA->setName (sA->getName());
             callArgs.push_back(dA);
         }
@@ -1256,6 +1255,19 @@ void PromoteGlobals::getAnalysisUsage(AnalysisUsage& AU) const
 {
         AU.addRequired<CallGraph>();
 }
+static std::string escapeName(const std::string &orig_name)
+{
+    std::string oldName(orig_name);
+    // AMD OpenCL doesn't like kernel names starting with _
+    if (oldName[0] == '_')
+        oldName = oldName.substr(1);
+    size_t loc;
+    // escape name: $ -> _EC_
+    while ((loc = oldName.find('$')) != std::string::npos) {
+        oldName.replace(loc, 1, "_EC_");
+    }
+    return oldName;
+}
 
 bool PromoteGlobals::runOnModule(Module& M) 
 {
@@ -1270,6 +1282,8 @@ bool PromoteGlobals::runOnModule(Module& M)
                     continue;
                 Function * promoted = createPromotedFunction (*F);
                 promoted->takeName (*F);
+                promoted->setName(escapeName(promoted->getName().str()));
+
                 promoted->setCallingConv(llvm::CallingConv::SPIR_KERNEL);
                 // lambdas can be set as internal. This causes problem
                 // in optimizer and we shall mark it as non-internal
@@ -1290,6 +1304,29 @@ bool PromoteGlobals::runOnModule(Module& M)
                 }
         }
 
+        // Rename local variables per SPIR naming rule
+        Module::GlobalListType &globals = M.getGlobalList();
+        for (Module::global_iterator I = globals.begin(), E = globals.end();
+                I != E; I++) {
+            if (I->hasSection() && 
+                    I->getSection() == std::string("clamp_opencl_local") && 
+                    I->getType()->getPointerAddressSpace() != 0) {
+                std::string oldName = escapeName(I->getName().str());
+                // Prepend the name of the function which contains the user
+                for (Value::use_iterator U = I->use_begin(), Ue = I->use_end();
+                    U != Ue; U ++) {
+                    Instruction *Ins = dyn_cast<Instruction>(*U);
+                    if (!Ins)
+                        continue;
+                    oldName = Ins->getParent()->getParent()->getName().str() +
+                        "."+oldName;
+                    I->setName(oldName);
+                    break;
+                }
+                // AMD SPIR stack takes only internal linkage
+                I->setLinkage(GlobalValue::InternalLinkage);
+            }
+        }
         return false;
 }
 
