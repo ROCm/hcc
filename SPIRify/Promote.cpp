@@ -28,6 +28,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <map>
+#include <set>
 using namespace llvm;
 
 
@@ -533,40 +534,45 @@ AllocaInst * createNewAlloca(Type * elementType,
 
 }
 
+void updateListWithUsers ( User *U, Value * oldOperand, Value * newOperand,
+                           InstUpdateWorkList * updates )
+{
+    Instruction * Insn = dyn_cast<Instruction>(U);
+    if ( Insn ) {
+        updates->addUpdate (
+                new ForwardUpdate(Insn,
+                    oldOperand, newOperand ) );
+    } else if (ConstantExpr * GEPCE =
+            dyn_cast<ConstantExpr>(U)) {
+        DEBUG(llvm::errs()<<"GEPCE:";
+                GEPCE->dump(););
+        // patch all the users of the constexpr by
+        // first producing an equivalent instruction that
+        // computes the constantexpr
+        for(Value::use_iterator CU = GEPCE->use_begin(),
+                CE = GEPCE->use_end(); CU!=CE;) {
+            if (Instruction *I2 = dyn_cast<Instruction>(*CU)) {
+                Insn = GEPCE->getAsInstruction();
+                Insn->insertBefore(I2);
+                updateInstructionWithNewOperand(Insn,
+                        oldOperand, newOperand, updates);
+                updateInstructionWithNewOperand(I2,
+                        GEPCE, Insn, updates);
+                // CU is invalidated
+                CU = GEPCE->use_begin();
+                continue;
+            }
+            CU++;
+        }
+    }
+}
 void updateListWithUsers ( Value::use_iterator U, const Value::use_iterator& Ue, 
                            Value * oldOperand, Value * newOperand,
                            InstUpdateWorkList * updates ) 
 {
-        for ( ; U != Ue; ++U ) {
-                Instruction * Insn = dyn_cast<Instruction>(*U);
-                if ( Insn ) {
-                    updates->addUpdate (
-                            new ForwardUpdate(Insn,
-                                oldOperand, newOperand ) );
-                } else if (ConstantExpr * GEPCE =
-                    dyn_cast<ConstantExpr>(*U)) {
-                    DEBUG(llvm::errs()<<"GEPCE:";
-                            GEPCE->dump(););
-                    // patch all the users of the constexpr by
-                    // first producing an equivalent instruction that
-                    // computes the constantexpr
-                    for(Value::use_iterator CU = GEPCE->use_begin(),
-                        CE = GEPCE->use_end(); CU!=CE;) {
-                        if (Instruction *I2 = dyn_cast<Instruction>(*CU)) {
-                            Insn = GEPCE->getAsInstruction();
-                            Insn->insertBefore(I2);
-                            updateInstructionWithNewOperand(Insn,
-                                oldOperand, newOperand, updates);
-                            updateInstructionWithNewOperand(I2,
-                                GEPCE, Insn, updates);
-                            // CU is invalidated
-                            CU = GEPCE->use_begin();
-                            continue;
-                        }
-                        CU++;
-                    }
-                }
-        } 
+    for ( ; U != Ue; ++U ) {
+        updateListWithUsers(*U, oldOperand, newOperand, updates);
+    } 
 }
 
 void updateLoadInstWithNewOperand(LoadInst * I, Value * newOperand, InstUpdateWorkList * updatesNeeded)
@@ -852,19 +858,49 @@ void promoteTileStatic(Function *Func, InstUpdateWorkList * updateNeeded)
         }
         DEBUG(llvm::errs() << "Promoting variable\n";
                 I->dump(););
+        std::set<Function *> users;
+        typedef std::multimap<Function *, llvm::User *> Uses;
+        Uses uses;
         for (Value::use_iterator U = I->use_begin(), Ue = I->use_end();
-            U!=Ue; U++) {
+            U!=Ue;) {
+            if (Instruction *Ins = dyn_cast<Instruction>(*U)) {
+                users.insert(Ins->getParent()->getParent());
+                uses.insert(std::make_pair(Ins->getParent()->getParent(), *U));
+            } else if (ConstantExpr *C = dyn_cast<ConstantExpr>(*U)) {
+                // Replace GEPCE uses so that we have an instruction to track
+                updateListWithUsers (*U, I, I, updateNeeded);
+                assert(U->getNumUses() == 0);
+                C->destroyConstant();
+                U = I->use_begin();
+                continue;
+            }
             DEBUG(llvm::errs() << "U: \n";
                 U->dump(););
+            U++;
         }
-        GlobalVariable *new_GV = new GlobalVariable(*M,
-                I->getType()->getElementType(),
-                I->isConstant(), I->getLinkage(), I->getInitializer(), "",
-                (GlobalVariable *)0, I->getThreadLocalMode(), LocalAddressSpace);
-        new_GV->copyAttributesFrom(I);
-        new_GV->takeName(I);
-        updateListWithUsers (I->use_begin(), I->use_end(),
-                I, new_GV, updateNeeded); 
+        int i = users.size()-1;
+        // Create a clone of the tile static variable for each unique
+        // function that uses it
+        for (std::set<Function*>::reverse_iterator
+                F = users.rbegin(), Fe = users.rend();
+                F != Fe; F++, i--) {
+            GlobalVariable *new_GV = new GlobalVariable(*M,
+                    I->getType()->getElementType(),
+                    I->isConstant(), I->getLinkage(),
+                    I->hasInitializer()?I->getInitializer():0,
+                    "", (GlobalVariable *)0, I->getThreadLocalMode(), LocalAddressSpace);
+            new_GV->copyAttributesFrom(I);
+            if (i == 0) {
+                new_GV->takeName(I);
+            } else {
+                new_GV->setName(I->getName());
+            }
+            std::pair<Uses::iterator, Uses::iterator> usesOfSameFunction;
+            usesOfSameFunction = uses.equal_range(*F);
+            for ( Uses::iterator U = usesOfSameFunction.first, Ue =
+                usesOfSameFunction.second; U != Ue; U++) 
+                updateListWithUsers (U->second, I, new_GV, updateNeeded);
+        }
     }
 }
 
@@ -1058,6 +1094,8 @@ void KernelNodeVisitor::operator()(MDNode *N)
 {
         if ( N->getNumOperands() < 1) return;
         Value * Op = N->getOperand(0);
+        if (!Op)
+            return;
         if ( Function * F = dyn_cast<Function>(Op)) {
                 found_kernels.push_back(F); 
         }
@@ -1313,18 +1351,24 @@ bool PromoteGlobals::runOnModule(Module& M)
                     I->getType()->getPointerAddressSpace() != 0) {
                 std::string oldName = escapeName(I->getName().str());
                 // Prepend the name of the function which contains the user
+                std::set<std::string> userNames;
                 for (Value::use_iterator U = I->use_begin(), Ue = I->use_end();
                     U != Ue; U ++) {
                     Instruction *Ins = dyn_cast<Instruction>(*U);
                     if (!Ins)
                         continue;
-                    oldName = Ins->getParent()->getParent()->getName().str() +
-                        "."+oldName;
-                    I->setName(oldName);
-                    break;
+                    userNames.insert(Ins->getParent()->getParent()->getName().str());
                 }
+                // A local memory variable belongs to only one kernel, per SPIR spec
+                assert(userNames.size() < 2 &&
+                        "__local variable belongs to more than one kernel");
+                if (userNames.empty())
+                    continue;
+                oldName = *(userNames.begin()) + "."+oldName;
+                I->setName(oldName);
                 // AMD SPIR stack takes only internal linkage
-                I->setLinkage(GlobalValue::InternalLinkage);
+                if (I->hasInitializer())
+                    I->setLinkage(GlobalValue::InternalLinkage);
             }
         }
         return false;

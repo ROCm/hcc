@@ -1,11 +1,11 @@
 
-                    C++AMP Compiler Implementation for HSAIL
+                    C++AMP Compiler Implementation for OpenCL/SPIR
 
 Introduction
 --------------------------------------------------------------------------------
 This repository hosts C++AMP compiler implementation project. The goal is to 
 implement a compiler that takes a program conforming C++AMP standard and
-transforms it into a binary for PC + HSAIL. It will be based on LLVM+CLANG.
+transforms it into a SPIR binary for OpenCL. It will be based on LLVM+CLANG.
 
 
 Repository Structure

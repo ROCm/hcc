@@ -115,29 +115,41 @@ void EraseNonkernels::getAnalysisUsage(AnalysisUsage& AU) const
 
 bool EraseNonkernels::runOnModule(Module &M)
 {
-        findKernels(M, foundKernels);
+    findKernels(M, foundKernels);
 
-        typedef Module::iterator func_iterator;
-        for (func_iterator F = M.begin(), Fend = M.end();
-             F != Fend; ++F) {
-                typedef FunctionVect::const_iterator kernel_iterator;
-                bool isKernel = false;
-                if (!foundKernels.empty()) {
-                        for (kernel_iterator KernFunc = foundKernels.begin(), KernFuncEnd = foundKernels.end();
-                             KernFunc != KernFuncEnd; ++KernFunc) {
-                                if (*KernFunc == &*F) {
-                                        isKernel = true;
-                                }
-                        }
+    typedef Module::iterator func_iterator;
+    for (func_iterator F = M.begin(), Fend = M.end();
+            F != Fend; ++F) {
+        typedef FunctionVect::const_iterator kernel_iterator;
+        bool isKernel = false;
+        if (!foundKernels.empty()) {
+            for (kernel_iterator KernFunc = foundKernels.begin(), KernFuncEnd = foundKernels.end();
+                    KernFunc != KernFuncEnd; ++KernFunc) {
+                if (*KernFunc == &*F) {
+                    isKernel = true;
                 }
-                        
-                if (isKernel) continue;
-
-                F->deleteBody();
+            }
         }
 
-        foundKernels.clear();
-        return true;
+        if (isKernel) continue;
+
+        F->deleteBody();
+    }
+
+    foundKernels.clear();
+    // Some global variables may be dead after removing dead kernels
+    Module::GlobalListType &globals = M.getGlobalList();
+    for (Module::global_iterator I = globals.begin(), E = globals.end();
+            I != E; ) {
+        I->removeDeadConstantUsers();
+        if (I->getNumUses() == 0) {
+            I->eraseFromParent();
+            I = globals.begin();
+        } else {
+            I++;
+        }
+    }
+    return true;
 }
 
 char EraseNonkernels::ID = 0;
