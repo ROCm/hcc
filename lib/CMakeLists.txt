@@ -1,6 +1,6 @@
 # OpenCL/GMAC
 set(GMAC_INC_DIR "${PROJECT_SOURCE_DIR}/gmac/src/include" "${PROJECT_BINARY_DIR}/gmac/src/include")
-include_directories(${GMAC_INC_DIR} ${OPENCL_HEADER_DIR})
+include_directories(${GMAC_INC_DIR} ${OPENCL_HEADER}/../)
 
 add_mcwamp_library(mcwamp mcwamp.cpp)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
@@ -13,3 +13,4 @@ install(TARGETS mcwamp clamp-config
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-device
     ${CMAKE_CURRENT_BINARY_DIR}/clamp-spirify
     DESTINATION bin)
+install(FILES opencl_math.bc DESTINATION lib)

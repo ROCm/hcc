@@ -1,9 +1,34 @@
 #!/bin/sh
-# wraps around commands to produce the OpenCL kernel
+# wraps around commands to produce the OpenCL kernel or SPIR (when applicable)
 # $1 = input ll name
-# $2 = opencl kernel file name
-OPT=@LLVM_TOOLS_DIR@/opt
-LLC=@LLVM_TOOLS_DIR@/llc
-$OPT -load @LLVM_LIBS_DIR@/LLVMPromote.so -promote-globals < $1 | \
-        $LLC -march=c -o $2.tmp
-cat @OPENCL_MATH_DIR@/opencl_math.cl $2.tmp > $2
+# $2 = opencl kernel file name or SPIR bitcode file name
+hasSPIR() {
+    [ -z "$CLAMP_NOSPIR" -a -x /usr/bin/clinfo ] && ( /usr/bin/clinfo|grep cl_khr_spir > /dev/null )
+    return $?
+}
+if [ -d @LLVM_TOOLS_DIR@ ]; then
+    OPT=@LLVM_TOOLS_DIR@/opt
+    LLC=@LLVM_TOOLS_DIR@/llc
+    LINK=@LLVM_TOOLS_DIR@/llvm-link
+    MATH=@OPENCL_MATH_DIR@
+    MATHLIB=@CPPAMP_SOURCE_DIR@/lib
+    LIB=@LLVM_LIBS_DIR@
+else
+    OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
+    LLC=@CMAKE_INSTALL_PREFIX@/bin/llc
+    LINK=@CMAKE_INSTALL_PREFIX@/bin/llvm-link
+    MATH=@CMAKE_INSTALL_PREFIX@/include
+    MATHLIB=@CMAKE_INSTALL_PREFIX@/lib
+    LIB=@CMAKE_INSTALL_PREFIX@/lib
+fi
+$OPT -load $LIB/LLVMPromote.so -load $LIB/LLVMEraseNonkernel.so \
+        -promote-globals -erase-nonkernels < $1 -o $2.promote.bc
+if hasSPIR; then
+    echo "Generating SPIR file"
+    $LINK $MATHLIB/opencl_math.bc $2.promote.bc -o $2 2>/dev/null
+    exit $?
+else
+    echo "Warning: not a SPIR-enabled OpenCL stack; generating OpenCL-C instead."
+    $LLC $2.promote.bc -march=c -o - |cat $MATH/opencl_math.cl - > $2
+fi
+

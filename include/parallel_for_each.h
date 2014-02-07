@@ -5,7 +5,6 @@
 // object
 #include <cassert>
 #include <amp.h>
-#define __global __attribute__((address_space(1)))
 
 namespace Concurrency {
 static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu,amp) {
@@ -29,7 +28,9 @@ static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu,amp) {
     s = str;
 
     for(std::string::iterator it = s.begin(); it != s.end(); it++ ) {
-      if (isalnum(*it) || (*it == '_')) {
+      if (*it == '_' && it == s.begin()) {
+        continue;
+      } else if (isalnum(*it) || (*it == '_')) {
         out.append(1, *it);
       } else if (*it == '$') {
         out.append("_EC_");
@@ -37,10 +38,10 @@ static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu,amp) {
     }
     return out;
 }
-static bool __mcw_cxxamp_compiled = false;
+namespace CLAMP {
+extern void CompileKernels(void);
+}
 static std::set<std::string> __mcw_cxxamp_kernels;
-extern "C" char * kernel_source_[] asm ("_binary_kernel_cl_start");
-extern "C" char * kernel_size_[] asm ("_binary_kernel_cl_size");
 template<typename Kernel, int dim_ext>
 static inline void mcw_cxxamp_launch_kernel(size_t *ext,
   size_t *local_size, const Kernel& f) restrict(cpu,amp) {
@@ -48,17 +49,7 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
   accelerator def;
   accelerator_view accel_view = def.get_default_view();
 
-  if ( !__mcw_cxxamp_compiled ) {
-    size_t kernel_size = (size_t)((void *)kernel_size_);
-    char *kernel_source = (char*)malloc(kernel_size+1);
-    memcpy(kernel_source, kernel_source_, kernel_size);
-    kernel_source[kernel_size] = '\0';
-    const char *ks = kernel_source;
-    error_code = eclCompileSource(ks, "-D__ATTRIBUTE_WEAK__=");
-    CHECK_ERROR_GMAC(error_code, "eclCompileSource");
-    __mcw_cxxamp_compiled = true;
-    free(kernel_source);
-  }
+  CLAMP::CompileKernels();
   //Invoke Kernel::__cxxamp_trampoline as an OpenCL kernel
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
