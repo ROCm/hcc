@@ -3,7 +3,7 @@
 # $1 = input ll name
 # $2 = opencl kernel file name or SPIR bitcode file name
 hasSPIR() {
-    [ -x /usr/bin/clinfo ] && ( /usr/bin/clinfo|grep cl_khr_spir > /dev/null )
+    [ -z "$CLAMP_NOSPIR" -a -x /usr/bin/clinfo ] && ( /usr/bin/clinfo|grep cl_khr_spir > /dev/null )
     return $?
 }
 if [ -d @LLVM_TOOLS_DIR@ ]; then
