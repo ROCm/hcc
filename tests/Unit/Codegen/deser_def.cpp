@@ -1,4 +1,4 @@
-// RUN: %amp_device -c -S -emit-llvm %s -o -|c++filt|%FileCheck %s
+// RUN: %amp_device -c -S -emit-llvm %s -o -|%cppfilt|%FileCheck %s
 class baz {
  public:
   int cho(void) restrict(amp) {

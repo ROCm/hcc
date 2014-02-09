@@ -1,4 +1,4 @@
-// RUN: %amp_device -c -S -D__GPU__ -emit-llvm %s -O -o -|c++filt|%FileCheck %s
+// RUN: %amp_device -c -S -D__GPU__ -emit-llvm %s -O -o -|%cppfilt|%FileCheck %s
 // RUN: %gtest_amp %s -o %t && %t
 // Testing if an efficient (i.e. fully inlined version) of Concurrency::index
 #include <amp.h>

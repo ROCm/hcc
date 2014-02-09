@@ -1,4 +1,4 @@
-// RUN: %cxxamp -emit-llvm -S -c %s -o -|c++filt|%FileCheck %s
+// RUN: %cxxamp -emit-llvm -S -c %s -o -|%cppfilt|%FileCheck %s
 //Serialization object decl
 #include <cstdlib>
 namespace Concurrency {
