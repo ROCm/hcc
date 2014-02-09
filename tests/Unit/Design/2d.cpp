@@ -2,7 +2,7 @@
 // RUN: mkdir -p %t
 // RUN: %clamp-device %t.ll %t/kernel.cl 
 // RUN: pushd %t 
-// RUN: objcopy -B i386:x86-64 -I binary -O elf64-x86-64 kernel.cl kernel.o
+// RUN: %embed_kernel kernel.cl kernel.o
 // RUN: popd
 // RUN: %gtest_amp %t/kernel.o %s -o %t.out 
 // RUN: %t.out

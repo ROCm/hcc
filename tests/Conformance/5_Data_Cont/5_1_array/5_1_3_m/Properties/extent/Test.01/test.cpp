@@ -9,7 +9,7 @@
 /// <summary>Using extent function, verify if array's extent matches with another extent using the same extents. Check if it is accessible on GPU</summary>
 // RUN: %amp_device -D__GPU__ %s -m32 -emit-llvm -c -S -O2 -o %t.ll && mkdir -p %t
 // RUN: %clamp-device %t.ll %t/kernel.cl
-// RUN: pushd %t && objcopy -B i386:x86-64 -I binary -O elf64-x86-64 kernel.cl %t/kernel.o && popd
+// RUN: pushd %t && %embed_kernel kernel.cl %t/kernel.o && popd
 // RUN: %cxxamp %link %t/kernel.o %s -o %t.out && %t.out
 #include "./../../../member.h"
 #include "../../../../../amp.compare.h"
