@@ -1,4 +1,4 @@
-﻿// RUN: %cxxamp %s %link
+// RUN: %cxxamp %s %link
 // RUN: ./a.out
 #include <amp.h>
 #include "../../../accelerator.common.h"
