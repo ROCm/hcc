@@ -11,6 +11,7 @@ execute_process(COMMAND git describe --abbrev=4 --dirty --always --tags
 
 set(GMAC_URL "." CACHE STRING "GMAC URL")
 set(CLANG_URL "." CACHE STRING "CLANG URL")
+set(CMAKE_MACOSX_RPATH 1)
 include (EnsureGMACisPresent)
 
 include (EnsureLLVMisPresent)
@@ -25,7 +26,9 @@ include (MCWAMP)
 ensure_llvm_is_present(${PROJECT_SOURCE_DIR} compiler)
 ensure_clang_is_present(${PROJECT_SOURCE_DIR} compiler ${CLANG_URL})
 ensure_libcxx_is_present("${PROJECT_SOURCE_DIR}/libc++" libcxx)
+if (NOT APPLE)
 ensure_libcxxrt_is_present("${PROJECT_SOURCE_DIR}/libc++" libcxxrt)
+endif (NOT APPLE)
 setup_CBackend(${PROJECT_SOURCE_DIR}/compiler/lib/Target CBackend)
 setup_SPIRify(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms SPIRify)
 setup_EraseNonkernel(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms EraseNonkernel)
@@ -54,7 +57,7 @@ SET( CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${EXECUTABLE_OUTPUT_PATH})
 
 SET( CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${LIBRARY_OUTPUT_PATH})
 SET( CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${LIBRARY_OUTPUT_PATH})
-MESSAGE("(DEBUG|RELEASE) output changed to path:", "${EXECUTABLE_OUTPUT_PATH}")
+MESSAGE("(DEBUG|RELEASE) output changed to path:" "${EXECUTABLE_OUTPUT_PATH}")
 
 endif (UNIX)
 
@@ -83,14 +86,14 @@ set(USE_LITE OFF CACHE BOOL "GMAC: Disable Lite")
 set(USE_CUDA OFF CACHE BOOL "GMAC: Disable CUDA")
 
 find_path(OPENCL_HEADER cl.h ${OPENCL_HEADER_DIR} PATHS /usr/include/CL /opt/AMDAPP/include/CL )
-if (NOT OPENCL_HEADER)
+if (NOT APPLE AND NOT OPENCL_HEADER)
   MESSAGE(FATAL_ERROR "OpenCL header not found. Use -DOPENCL_HEADER_DIR=<path_to_cl.h>.")
-endif(NOT OPENCL_HEADER)
+endif(NOT APPLE AND NOT OPENCL_HEADER)
 
 find_library(OPENCL_LIBRARY OpenCL ${OPENCL_LIBRARY_DIR}/ PATHS /usr/lib)
-if (NOT OPENCL_LIBRARY)
+if (NOT APPLE AND NOT OPENCL_LIBRARY)
   MESSAGE(FATAL_ERROR "OpenCL library not found. Use -DOPENCL_LIBRARY_DIR=<path_to_libOpenCL.so>.")
-endif(NOT OPENCL_LIBRARY)
+endif(NOT APPLE AND NOT OPENCL_LIBRARY)
 # Pass OpenCL header dir to GMAC..
 set(OPENCL_INCLUDE ${OPENCL_HEADER}/.. CACHE PATH "OpenCL header for GMAC")
 add_subdirectory(gmac)
@@ -110,12 +113,25 @@ set(CLANG_CC1 "${PROJECT_BINARY_DIR}/compiler/bin/clang++")
 set(LIBCXX_SRC_DIR "${PROJECT_SOURCE_DIR}/libc++")
 set(LIBCXX_BIN_DIR "${PROJECT_BINARY_DIR}/libc++")
 file(MAKE_DIRECTORY ${LIBCXX_BIN_DIR})
+if (APPLE)
+add_custom_target(libc++
+  COMMAND ${CMAKE_COMMAND} ${LIBCXX_SRC_DIR}
+      -DLIBCXX_CXX_ABI="libcxxabi" -DLIBCXX_LIBCXXABI_INCLUDE_PATHS="/usr/include/"
+      -DCMAKE_CXX_COMPILER=${CLANG_CC1}
+      -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
+  COMMAND make  # not portable, but this is what it is.
+  WORKING_DIRECTORY ${LIBCXX_BIN_DIR}
+  DEPENDS clang
+)
+else (APPLE)
+# use libcxxrt as ABI instead
 add_custom_target(libc++
   COMMAND ${CMAKE_COMMAND} ${LIBCXX_SRC_DIR} -DCMAKE_CXX_COMPILER=${CLANG_CC1} -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
   COMMAND make  # not portable, but this is what it is.
   WORKING_DIRECTORY ${LIBCXX_BIN_DIR}
   DEPENDS clang
 )
+endif (APPLE)
 
 add_subdirectory(lib)
 add_subdirectory(utils)

@@ -1,15 +1,15 @@
-project(libc++)
+project(libcxx)
 cmake_minimum_required(VERSION 2.8)
 execute_process(COMMAND git describe --abbrev=4 --dirty --always --tags
                 WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
                 OUTPUT_VARIABLE GIT_VERSION
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 
+if(NOT APPLE)
 include_directories(${PROJECT_SOURCE_DIR}/libcxxrt/src)
-
 set(CMAKE_CXX_FLAGS "-DLIBCXXRT")
-
 add_subdirectory(libcxxrt)
+endif(NOT APPLE)
 add_subdirectory(libcxx)
 FILE(GLOB libcxxrt_files "${PROJECT_BINARY_DIR}/libcxxrt/lib/lib*")
 INSTALL(FILES ${libcxxrt_files}

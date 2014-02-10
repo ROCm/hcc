@@ -1,0 +1,5 @@
+#!/bin/sh
+touch $2.stub.c
+gcc -o $2.stub.o -c $2.stub.c
+ld -r -o $2 -sectcreate binary kernel_cl $1 $2.stub.o
+rm -f $2.stub.c $2.stub.o

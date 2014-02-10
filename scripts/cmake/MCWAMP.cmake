@@ -5,9 +5,10 @@ set(LIBCXX_SRC_DIR "${PROJECT_SOURCE_DIR}/libc++/libcxx")
 set(LIBCXX_INC_DIR "${LIBCXX_SRC_DIR}/include")
 set(LIBCXX_LIB_DIR "${PROJECT_BINARY_DIR}/libc++/libcxx/lib")
 
+if (NOT APPLE)
 # libcxxrt
 set(LIBCXXRT_LIB_DIR "${PROJECT_BINARY_DIR}/libc++/libcxxrt/lib")
-
+endif (NOT APPLE)
 # gtest
 set(GTEST_SRC_DIR "${PROJECT_SOURCE_DIR}/utils")
 set(GTEST_INC_DIR "${PROJECT_SOURCE_DIR}/utils")
@@ -33,6 +34,10 @@ macro(add_mcwamp_executable name )
   set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I${GTEST_INC_DIR} -I${LIBCXX_INC_DIR} -I${MCWAMP_INC_DIR} -stdlib=libc++ -std=c++amp" )
   add_executable( ${name} ${ARGN} )
-  target_link_libraries( ${name} mcwamp cxxrt dl pthread)
+  if (APPLE)
+    target_link_libraries( ${name} mcwamp c++abi)
+  else (APPLE)
+    target_link_libraries( ${name} mcwamp cxxrt dl pthread)
+  endif (APPLE)
 endmacro(add_mcwamp_executable name )
 

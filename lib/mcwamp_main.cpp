@@ -33,18 +33,30 @@ void cxxflags(void) {
 
 void ldflags(void) {
     if (build_mode) {
+        std::cout << " -L" CMAKE_GMAC_LIB_DIR;
+#ifdef __APPLE__
+        std::cout << " -Wl,-rpath," CMAKE_GMAC_LIB_DIR;
+#else
         std::cout << " -L" CMAKE_LIBCXX_LIB_DIR;
         std::cout << " -L" CMAKE_LIBCXXRT_LIB_DIR;
-        std::cout << " -L" CMAKE_GMAC_LIB_DIR;
         std::cout << " -Wl,--rpath="
             CMAKE_GMAC_LIB_DIR ":"
             CMAKE_LIBCXX_LIB_DIR ":"
             CMAKE_LIBCXXRT_LIB_DIR ;
+#endif
     } else if (install_mode) {
         std::cout << " -L" CMAKE_INSTALL_LIB;
+#ifdef __APPLE__
+        std::cout << " -Wl,-rpath," CMAKE_INSTALL_LIB;
+#else
         std::cout << " -Wl,--rpath=" CMAKE_INSTALL_LIB;
+#endif
     }
+#ifndef __APPLE__
     std::cout << " -lgmac-hpe -lc++ -lcxxrt -ldl -lmcwamp ";
+#else
+    std::cout << " -lgmac-hpe -lc++ -lmcwamp ";
+#endif
 }
 
 void prefix(void) {

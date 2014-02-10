@@ -169,7 +169,11 @@ public:
 extern "C" __attribute__((pure)) int get_global_id(int n) restrict(amp);
 extern "C" __attribute__((pure)) int get_local_id(int n) restrict(amp);
 extern "C" __attribute__((pure)) int get_group_id(int n) restrict(amp);
+#ifdef __APPLE__
+#define tile_static static __attribute__((section("clamp,opencl_local")))
+#else
 #define tile_static static __attribute__((section("clamp_opencl_local")))
+#endif
 extern "C" void barrier(int n) restrict(amp);
 //End CLAMP
 class completion_future {

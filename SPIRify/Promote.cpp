@@ -30,7 +30,11 @@
 #include <map>
 #include <set>
 using namespace llvm;
-
+#ifdef __APPLE__
+#define TILE_STATIC_NAME "clamp,opencl_local"
+#else
+#define TILE_STATIC_NAME "clamp_opencl_local"
+#endif
 
 namespace {
 
@@ -851,7 +855,7 @@ void promoteTileStatic(Function *Func, InstUpdateWorkList * updateNeeded)
     for (Module::global_iterator I = globals.begin(), E = globals.end();
         I != E; I++) {
         if (!I->hasSection() || 
-            I->getSection() != std::string("clamp_opencl_local") ||
+            I->getSection() != std::string(TILE_STATIC_NAME) ||
             I->getType()->getPointerAddressSpace() != 0 ||
             !I->hasName()) {
             continue;
@@ -911,7 +915,7 @@ void eraseOldTileStaticDefs(Module *M)
     for (Module::global_iterator I = globals.begin(), E = globals.end();
         I != E; I++) {
         if (!I->hasSection() || 
-            I->getSection() != std::string("clamp_opencl_local") ||
+            I->getSection() != std::string(TILE_STATIC_NAME) ||
             I->getType()->getPointerAddressSpace() != 0) {
             continue;
         }
@@ -1347,7 +1351,7 @@ bool PromoteGlobals::runOnModule(Module& M)
         for (Module::global_iterator I = globals.begin(), E = globals.end();
                 I != E; I++) {
             if (I->hasSection() && 
-                    I->getSection() == std::string("clamp_opencl_local") && 
+                    I->getSection() == std::string(TILE_STATIC_NAME) &&
                     I->getType()->getPointerAddressSpace() != 0) {
                 std::string oldName = escapeName(I->getName().str());
                 // Prepend the name of the function which contains the user

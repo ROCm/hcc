@@ -12,5 +12,6 @@ install(TARGETS mcwamp clamp-config
     )
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-device
     ${CMAKE_CURRENT_BINARY_DIR}/clamp-spirify
+    ${CMAKE_CURRENT_BINARY_DIR}/clamp-embed
     DESTINATION bin)
 install(FILES opencl_math.bc DESTINATION lib)

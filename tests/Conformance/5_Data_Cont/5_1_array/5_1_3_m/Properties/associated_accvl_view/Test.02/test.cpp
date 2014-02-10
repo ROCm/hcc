@@ -1,3 +1,4 @@
+// XFAIL: Darwin
 // Copyright (c) Microsoft
 // All rights reserved
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.
@@ -8,8 +9,7 @@
 /// <tags>P1</tags>
 /// <summary>Verify array associate_accelerator_view property - is valid (same as acclv2) when acclv1 and accl2 are compatible for staging</summary>
 // RUN: %amp_device -D__GPU__ %s -m32 -emit-llvm -c -S -O2 -o %t.ll && mkdir -p %t
-// RUN: %llc -march=c -o %t/kernel_.cl < %t.ll
-// RUN: cat %opencl_math_dir/opencl_math.cl %t/kernel_.cl > %t/kernel.cl
+// RUN: %clamp-device %t.ll %t/kernel.cl
 // RUN: pushd %t && %embed_kernel kernel.cl %t/kernel.o && popd
 // RUN: %cxxamp %link %t/kernel.o %s -o %t.out && %t.out
 #include "./../../../member.h"

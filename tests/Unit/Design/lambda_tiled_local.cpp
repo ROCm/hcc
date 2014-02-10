@@ -1,3 +1,4 @@
+// XFAIL: Darwin
 // RUN: %amp_device -D__GPU__ %s -m32 -emit-llvm -c -S -O2 -o %t.ll 
 // RUN: mkdir -p %t
 // RUN: %clamp-device %t.ll %t/kernel.cl
