@@ -21,7 +21,8 @@ else
     MATHLIB=@CMAKE_INSTALL_PREFIX@/lib
     LIB=@CMAKE_INSTALL_PREFIX@/lib
 fi
-$OPT -load $LIB/LLVMPromote.so -load $LIB/LLVMEraseNonkernel.so \
+$OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+    -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
         -promote-globals -erase-nonkernels < $1 -o $2.promote.bc
 if hasSPIR; then
     echo "Generating SPIR file"

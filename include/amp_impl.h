@@ -2,8 +2,11 @@
 #define INCLUDE_AMP_IMPL_H
 
 #include <iostream>
+#if __APPLE__
+#include <OpenCL/cl.h>
+#else
 #include <CL/cl.h>
-
+#endif
 #define CHECK_ERROR(error_code, message) \
   if (error_code != CL_SUCCESS) { \
     std::cout << "Error: " << message << "\n"; \

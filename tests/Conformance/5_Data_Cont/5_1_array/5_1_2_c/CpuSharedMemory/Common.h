@@ -12,19 +12,24 @@ using namespace Concurrency;
 template<typename _type, int _rank, template<typename, int> class _amp_container_type> 
 bool ReadAndVerify(_amp_container_type<_type, _rank>& amp_container, _type value)
 {
-	index_iterator<_rank> idx_iter(amp_container.get_extent());
+    index_iterator<_rank> idx_iter(amp_container.get_extent());
 
     for(Concurrency::index_iterator<_rank> iter = idx_iter.begin(); iter != idx_iter.end(); iter++)
-	{
-		if(amp_container[*iter] != value)
-		{
-			//Log(LogType::Error) << "Value mismatch at " << *iter << std::endl;
-			//Log(LogType::Error) << "Excpected: " << value << " Actual: " << amp_container[*iter] << std::endl;
-			return false;
-		}
-	}
-	
-	return true;
+    {
+        if(amp_container[*iter] != value)
+        {
+            std::cerr << "Value mismatch at ("; 
+            for (int i = 0; i < _rank; i++) {
+                if (i) std::cerr << ", ";
+                std::cerr << (*iter)[i];
+            }
+            std::cerr << ")\n";
+            std::cerr << "Excpected: " << value << " Actual: " << amp_container[*iter] << std::endl;
+            return false;
+        }
+    }
+
+    return true;
 }
 
 template<typename _type, int _rank, template<typename, int> class _amp_container_type> 

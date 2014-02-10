@@ -1,4 +1,4 @@
-// RUN: %amp_device -c -D__GPU__=1 -S -emit-llvm %s -o -|c++filt|%FileCheck %s
+// RUN: %amp_device -c -D__GPU__=1 -S -emit-llvm %s -o -|%cppfilt|%FileCheck %s
 // RUN: %amp_device -c -D__GPU__=1 %s -o %t.device.o
 // RUN: %gtest_amp %s %t.device.o -o %t && %t
 #ifndef __GPU__
