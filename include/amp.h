@@ -1253,7 +1253,7 @@ public:
   }
 
 
-  const gmac_buffer_t& internal() const { return m_device; }
+  const gmac_buffer_t& internal() const restrict(amp,cpu) { return m_device; }
   Concurrency::extent<N> extent;
 private:
   template <int K, typename Q> friend struct index_helper;
