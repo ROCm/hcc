@@ -67,12 +67,13 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
   f.__cxxamp_serialize(s);
   error_code = eclCallNDRange(kernel, dim_ext, NULL,
       ext, local_size);
-  if (error_code != eclSuccess)
-  for (int i = 0; i<dim_ext;i++) {
+  if (error_code != eclSuccess) {
     std::cerr << "clamp: error invoking GPU kernel;";
     std::cerr << " GMAC error code="<< error_code <<"\n";
-    std::cerr << "global["<<i<<"] = "<<ext[i]<<"; local[";
-    std::cerr << i << "] = "<<local_size[i]<<"\n";
+    for (int i = 0; i<dim_ext;i++) {
+      std::cerr << "global["<<i<<"] = "<<ext[i]<<"; local[";
+      std::cerr << i << "] = "<<local_size[i]<<"\n";
+    }
   }
 }
 
