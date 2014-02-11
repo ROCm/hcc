@@ -52,8 +52,12 @@ supports_double_precision(other.supports_double_precision), supports_limited_dou
     default_view_->accelerator_ = this;
   }
 }
-inline accelerator::accelerator(const std::wstring& path): device_path(path), version(0), dedicated_memory(1<<20),
-is_emulated(0), has_display(0), supports_double_precision(1), supports_limited_double_precision(0) {
+
+// TODO(I-Jui Sung): perform real OpenCL queries here..
+inline accelerator::accelerator(const std::wstring& path): device_path(path),
+  version(0), dedicated_memory(1<<20), is_debug(false), is_emulated(false),
+  has_display(false), supports_double_precision(true),
+  supports_limited_double_precision(false), supports_cpu_shared_memory(false) {
   if (path != std::wstring(default_accelerator)) {
     std::wcerr << L"CLAMP: Warning: the given accelerator is not supported: ";
     std::wcerr << path << std::endl;
