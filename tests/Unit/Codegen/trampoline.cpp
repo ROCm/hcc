@@ -1,4 +1,4 @@
-// RUN: %amp_device  -c -S -emit-llvm %s -o -|c++filt|%FileCheck %s
+// RUN: %amp_device  -c -S -emit-llvm %s -o -|%cppfilt|%FileCheck %s
 #include "amp.h"
 class baz {
  public:

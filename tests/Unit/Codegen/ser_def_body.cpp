@@ -1,4 +1,4 @@
-// RUN: %cxxamp -emit-llvm -S -c %s -o -|c++filt|%FileCheck %s
+// RUN: %cxxamp -emit-llvm -S -c %s -o -|%cppfilt|%FileCheck %s
 // RUN: %gtest_amp %s -DUSING_GTEST=1 -o %t && %t
 #include <cstdlib> //for size_t
 //Serialization object decl
