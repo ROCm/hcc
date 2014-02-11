@@ -1207,6 +1207,10 @@ public:
       static_assert(N == 2, "Rank must be 2");
       return section(Concurrency::index<2>(i0, i1), Concurrency::extent<2>(e0, e1));
   }
+  array_view<T, 3> section(int i0, int i1, int i2, int e0, int e1, int e2) restrict(amp,cpu) {
+      static_assert(N == 3, "Rank must be 3");
+      return section(Concurrency::index<3>(i0, i1, i2), Concurrency::extent<3>(e0, e1, e2));
+  }
   array_view<const T, 3> section(int i0, int i1, int i2, int e0, int e1, int e2) const restrict(amp,cpu) {
       static_assert(N == 3, "Rank must be 3");
       return section(Concurrency::index<3>(i0, i1, i2), Concurrency::extent<3>(e0, e1, e2));
