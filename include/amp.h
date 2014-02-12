@@ -161,7 +161,8 @@ public:
   friend class accelerator;
   template <typename T, int>
   friend class array;
-  explicit accelerator_view(int) {queuing_mode = queuing_mode_automatic;}
+  explicit accelerator_view(int):is_debug(false), version(0),
+    queuing_mode(queuing_mode_automatic) {}
   //End CLAMP-specific
   accelerator *accelerator_;
 };
