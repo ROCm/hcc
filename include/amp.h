@@ -1292,7 +1292,7 @@ public:
 
   ~array_view() restrict(amp,cpu) {
 #ifndef __GPU__
-      if (p_) {
+      if (p_ && cache.use_count() == 1) {
           synchronize();
           cache.reset();
       }
