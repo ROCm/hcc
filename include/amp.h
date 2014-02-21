@@ -1101,7 +1101,6 @@ public:
 #ifndef __GPU__
     this->initialize();
 #endif
-    m_device = src.cache;
     src.copy_to(*this);
 
     return *this;
@@ -1283,7 +1282,7 @@ public:
 #ifdef __GPU__
   typedef _data<nc_T> gmac_buffer_t;
 #else
-  typedef _data_host<nc_T> gmac_buffer_t;
+  typedef _data_host_view<nc_T> gmac_buffer_t;
 #endif
 
   static const int rank = N;
