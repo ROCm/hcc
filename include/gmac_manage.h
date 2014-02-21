@@ -57,7 +57,7 @@ class _data_host {
     GMAC_OWNED,
     SHARED
   } cache_state;
-  std::shared_ptr<T> gmac_buffer;
+  __attribute__((cpu)) std::shared_ptr<T> gmac_buffer;
   __attribute__((cpu)) std::shared_ptr<cache_state> state_ptr;
   __attribute__((cpu)) T* home_ptr;
   __attribute__((cpu)) size_t buffer_size;
@@ -75,9 +75,9 @@ class _data_host {
     *state_ptr = HOST_OWNED;
   }
   
+  __attribute__((annotate("user_deserialize")))
   _data_host(T* cache) :
-   gmac_buffer(cache), home_ptr(nullptr), buffer_size(0) {
-    state_ptr = new cache_state;
+   gmac_buffer(cache), home_ptr(nullptr), state_ptr(new cache_state), buffer_size(0) {
     *state_ptr = GMAC_OWNED;
   }
   
@@ -160,4 +160,5 @@ class _data_host {
     *state_ptr = GMAC_OWNED;
     s.AppendPtr((const void *)gmac_buffer.get());
   }
+
 };
