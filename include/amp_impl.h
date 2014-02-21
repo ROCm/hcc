@@ -465,7 +465,7 @@ template <typename T, int N>
 array_view<T, N>::array_view(const Concurrency::extent<N>& ext,
                              value_type* src) restrict(amp,cpu)
     : extent(ext), p_(src),
-      cache(GMACAllocator<nc_T>().allocate(ext.size()), GMACDeleter<nc_T>(), src, extent.size() / extent[0] * sizeof(T)),
+      cache(GMACAllocator<nc_T>().allocate(ext.size()), GMACDeleter<nc_T>(), src, ext.size() * sizeof(T)),
       offset(0), extent_base(ext) {}
 
 template <typename T, int N>
