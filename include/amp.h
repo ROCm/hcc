@@ -1291,7 +1291,7 @@ public:
 
   ~array_view() restrict(amp,cpu) {
 #ifndef __GPU__
-      if (p_ && cache.is_last() == 1) {
+      if (p_ && cache.is_last()) {
           synchronize();
           cache.reset();
       }
