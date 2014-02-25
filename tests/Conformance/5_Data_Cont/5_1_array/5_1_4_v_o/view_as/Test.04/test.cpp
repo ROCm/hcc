@@ -35,6 +35,6 @@ int main()
     gpu_write(arr,set_original,0);
     r[set_view] = 0;
 
-	  return ( (gpu_read(arr,read_original) == 0)  && (r[read_view] == 0));
+	  return !( (gpu_read(arr,read_original) == 0)  && (r[read_view] == 0));
 }
 
