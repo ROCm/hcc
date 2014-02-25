@@ -476,7 +476,7 @@ array_view<T, N>::array_view(const Concurrency::extent<N>& ext) restrict(amp,cpu
 
 template <typename T, int N>
 void array_view<T, N>::refresh() const {
-    assert(cache);
+    assert(cache.get());
     assert(extent == extent_base && "Only support non-sectioned view");
     assert(offset == 0 && "Only support non-sectioned view");
     cache.refresh();

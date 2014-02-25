@@ -1277,12 +1277,12 @@ private:
 template <typename T, int N = 1>
 class array_view
 {
-    typedef typename std::remove_const<T>::type nc_T;
+  typedef typename std::remove_const<T>::type nc_T;
 public:
 #ifdef __GPU__
-  typedef _data<nc_T> gmac_buffer_t;
+  typedef _data<T> gmac_buffer_t;
 #else
-  typedef _data_host_view<nc_T> gmac_buffer_t;
+  typedef _data_host_view<T> gmac_buffer_t;
 #endif
 
   static const int rank = N;
@@ -1342,7 +1342,7 @@ public:
       : array_view(Concurrency::extent<3>(e0, e1, e2))
   { static_assert(N == 3, "Rank must be 3"); }
 
-  template <class = typename std::enable_if<std::is_const<T>::value, nc_T>::type>
+  template <class = typename std::enable_if<std::is_const<T>::value>::type>
     array_view(const array_view<nc_T, N>& other) restrict(amp,cpu) : extent(other.extent),
       p_(other.p_), cache(other.cache), offset(other.offset), index_base(other.index_base),
       extent_base(other.extent_base) {}
@@ -1403,7 +1403,7 @@ public:
   template <typename ElementType>
       array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu) {
           int size = extent.size() * sizeof(T) / sizeof(ElementType);
-          array_view<ElementType, 1> av(Concurrency::extent<1>(size), reinterpret_cast<ElementType*>(cache.get() + offset + index_base[0]));
+          array_view<ElementType, 1> av(Concurrency::extent<1>(size), reinterpret_cast<ElementType*>(cache.get_mutable() + offset + index_base[0]));
           return av;
       }
   template <typename ElementType>
