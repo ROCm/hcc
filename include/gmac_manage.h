@@ -99,8 +99,8 @@ class _data_host_view {
   }
   
   __attribute__((annotate("user_deserialize")))
-  _data_host_view(nc_T* cache) :
-   gmac_buffer(cache), home_ptr(nullptr), state_ptr(new cache_state), buffer_size(0) {
+  _data_host_view(T* cache) :
+   gmac_buffer((nc_T*)(cache)), home_ptr(nullptr), state_ptr(new cache_state), buffer_size(0) {
     *state_ptr = GMAC_OWNED;
   }
   
