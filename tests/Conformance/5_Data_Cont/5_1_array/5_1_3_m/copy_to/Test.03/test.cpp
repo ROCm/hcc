@@ -29,7 +29,7 @@ int test(extent<rank> e, accelerator_view acc_view)
     const array_view<int, rank> dst_av(e, dst_v);
 
     src.copy_to(dst_av);
-    //dst_av.synchronize();
+    dst_av.synchronize();
     return Verify(dst_v, src_v);
 }
 
@@ -45,9 +45,9 @@ int main()
     extent<2> e2(1, 20);
     extent<3> e3(10, 2, 3);
     
-    result &= ((test<1>(e1, acc_view) == 0));
-    //result &= ((test<2>(e2, acc_view) == 0));
-    //result &= ((test<3>(e3, acc_view) == 0));
+    result &= test<1>(e1, acc_view);
+    result &= test<2>(e2, acc_view);
+    result &= test<3>(e3, acc_view);
     
     return !result;
 }

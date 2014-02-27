@@ -23,8 +23,6 @@
 // RUN: %clamp-device %t.ll %t/kernel.cl
 // RUN: pushd %t && %embed_kernel kernel.cl %t/kernel.o && popd
 // RUN: %cxxamp %link %t/kernel.o %s -o %t.out && %t.out
-// This test is in violation of the C++amp v1.2 spec. Mark as xfail
-// XFAIL: *
 #include <amp.h>
 #include <vector>
 #include <algorithm>
