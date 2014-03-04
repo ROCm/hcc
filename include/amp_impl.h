@@ -39,8 +39,9 @@ inline accelerator::accelerator(): accelerator(default_accelerator) {
   }
 }
 inline accelerator::accelerator(const accelerator& other): device_path(other.device_path), version(other.version),
-dedicated_memory(other.dedicated_memory),is_emulated(other.is_emulated), has_display(other.has_display),
-supports_double_precision(other.supports_double_precision), supports_limited_double_precision(other.supports_limited_double_precision) {
+dedicated_memory(other.dedicated_memory), is_debug(other.is_debug), is_emulated(other.is_emulated), has_display(other.has_display),
+supports_double_precision(other.supports_double_precision), supports_limited_double_precision(other.supports_limited_double_precision),
+supports_cpu_shared_memory(other.supports_cpu_shared_memory) {
   if (device_path != std::wstring(default_accelerator)) {
     std::wcerr << L"CLAMP: Warning: the given accelerator is not supported: ";
     std::wcerr << device_path << std::endl;
@@ -74,18 +75,22 @@ inline accelerator& accelerator::operator=(const accelerator& other) {
   version = other.version;
   dedicated_memory = other.dedicated_memory;
   is_emulated = other.is_emulated;
+  is_debug = other.is_debug;
   has_display = other.has_display;
   supports_double_precision = other.supports_double_precision;
   supports_limited_double_precision = other.supports_limited_double_precision;
+  supports_cpu_shared_memory = other.supports_cpu_shared_memory;
   return *this;
 }
 inline bool accelerator::operator==(const accelerator& other) const {
   return device_path == other.device_path &&
          version == other.version &&
          dedicated_memory == other.dedicated_memory &&
+         is_debug == other.is_debug &&
          is_emulated == other.is_emulated &&
          has_display == other.has_display &&
-         supports_double_precision == other.supports_double_precision;
+         supports_double_precision == other.supports_double_precision &&
+         supports_cpu_shared_memory == other.supports_cpu_shared_memory;
 }
 inline bool accelerator::operator!=(const accelerator& other) const {
   return !(*this == other);
