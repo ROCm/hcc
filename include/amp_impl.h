@@ -40,7 +40,8 @@ inline accelerator::accelerator(): accelerator(default_accelerator) {
 }
 inline accelerator::accelerator(const accelerator& other): device_path(other.device_path), version(other.version),
 dedicated_memory(other.dedicated_memory),is_emulated(other.is_emulated), has_display(other.has_display),
-supports_double_precision(other.supports_double_precision), supports_limited_double_precision(other.supports_limited_double_precision) {
+supports_double_precision(other.supports_double_precision), supports_limited_double_precision(other.supports_limited_double_precision),
+accInfo(other.accInfo) {
   if (device_path != std::wstring(default_accelerator)) {
     std::wcerr << L"CLAMP: Warning: the given accelerator is not supported: ";
     std::wcerr << device_path << std::endl;
@@ -55,13 +56,33 @@ supports_double_precision(other.supports_double_precision), supports_limited_dou
 
 // TODO(I-Jui Sung): perform real OpenCL queries here..
 inline accelerator::accelerator(const std::wstring& path): device_path(path),
-  version(0), dedicated_memory(1<<20), is_debug(false), is_emulated(false),
+  version(0), is_debug(false), is_emulated(false),
   has_display(false), supports_double_precision(true),
   supports_limited_double_precision(false), supports_cpu_shared_memory(false) {
   if (path != std::wstring(default_accelerator)) {
     std::wcerr << L"CLAMP: Warning: the given accelerator is not supported: ";
     std::wcerr << path << std::endl;
   }
+
+  AcceleratorInfo accInfo;
+  for (unsigned i = 0; i < eclGetNumberOfAccelerators(); i++) {
+    assert(eclGetAcceleratorInfo(i, &accInfo) == eclSuccess);
+    if ( (accInfo.acceleratorType == GMAC_ACCELERATOR_TYPE_GPU)
+      && (path ==std::wstring(gpu_accelerator)))
+      this->accInfo = accInfo;
+
+    if ( (accInfo.acceleratorType == GMAC_ACCELERATOR_TYPE_CPU)
+      && (path ==std::wstring(cpu_accelerator)))
+      this->accInfo = accInfo;
+  }
+  dedicated_memory=accInfo.memAllocSize/(size_t)1024;
+
+  if(accInfo.singleFPConfig & GMAC_ACCELERATOR_FP_FMA
+     & GMAC_ACCELERATOR_FP_ROUND_TO_NEAREST
+     & GMAC_ACCELERATOR_FP_ROUND_TO_ZERO
+     & GMAC_ACCELERATOR_FP_INF_NAN
+     & GMAC_ACCELERATOR_FP_DENORM)
+    supports_limited_double_precision = true;
 
   description = L"Default GMAC+OpenCL";
   if (!default_view_) {
@@ -77,6 +98,7 @@ inline accelerator& accelerator::operator=(const accelerator& other) {
   has_display = other.has_display;
   supports_double_precision = other.supports_double_precision;
   supports_limited_double_precision = other.supports_limited_double_precision;
+  accInfo = other.accInfo;
   return *this;
 }
 inline bool accelerator::operator==(const accelerator& other) const {
