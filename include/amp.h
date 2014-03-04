@@ -247,6 +247,7 @@ private:
         friend completion_future copy_async(const array<T, N>& src, OutputIter destBegin);
     template <typename OutputIter, typename T, int N>
         friend completion_future copy_async(const array_view<T, N>& src, OutputIter destBegin);
+    template <typename T, int N> friend class array_view;
 };
 
 template <int N> class extent;
