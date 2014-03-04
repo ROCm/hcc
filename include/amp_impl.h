@@ -143,8 +143,27 @@ index<N> operator-(const index<N>& lhs, int rhs) restrict(amp,cpu) {
 }
 template <int N>
 index<N> operator-(int lhs, const index<N>& rhs) restrict(amp,cpu) {
-    index<N> __r = rhs;
-    __r -= lhs;
+    index<N> __r;
+    for (int i = 0; i < N; ++i) __r[i] = lhs;
+    __r -= rhs;
+    return __r;
+}
+template<>
+inline index<1> operator-(int lhs, const index<1>& rhs) restrict(amp,cpu) {
+    index<1> __r(lhs);
+    __r -= rhs;
+    return __r;
+}
+template<>
+inline index<2> operator-(int lhs, const index<2>& rhs) restrict(amp,cpu) {
+    index<2> __r(lhs,lhs);
+    __r -= rhs;
+    return __r;
+}
+template<>
+inline index<3> operator-(int lhs, const index<3>& rhs) restrict(amp,cpu) {
+    index<3> __r(lhs,lhs,lhs);
+    __r -= rhs;
     return __r;
 }
 template <int N>
@@ -167,8 +186,27 @@ index<N> operator/(const index<N>& lhs, int rhs) restrict(amp,cpu) {
 }
 template <int N>
 index<N> operator/(int lhs, const index<N>& rhs) restrict(amp,cpu) {
-    index<N> __r = rhs;
-    __r /= lhs;
+    index<N> __r;
+    for (int i = 0; i < N; ++i) __r[i] = lhs;
+    __r /= rhs;
+    return __r;
+}
+template <>
+inline index<1> operator/(int lhs, const index<1>& rhs) restrict(amp,cpu) {
+    index<1> __r(lhs);
+    __r /= rhs;
+    return __r;
+}
+template <>
+inline index<2> operator/(int lhs, const index<2>& rhs) restrict(amp,cpu) {
+    index<2> __r(lhs,lhs);
+    __r /= rhs;
+    return __r;
+}
+template <>
+inline index<3> operator/(int lhs, const index<3>& rhs) restrict(amp,cpu) {
+    index<3> __r(lhs,lhs,lhs);
+    __r /= rhs;
     return __r;
 }
 template <int N>
@@ -179,8 +217,27 @@ index<N> operator%(const index<N>& lhs, int rhs) restrict(amp,cpu) {
 }
 template <int N>
 index<N> operator%(int lhs, const index<N>& rhs) restrict(amp,cpu) {
-    index<N> __r = rhs;
-    __r %= lhs;
+    index<N> __r;
+    for (int i = 0; i < N; ++i) __r[i] = lhs;
+    __r %= rhs;
+    return __r;
+}
+template <>
+inline index<1> operator%(int lhs, const index<1>& rhs) restrict(amp,cpu) {
+    index<1> __r(lhs);
+    __r %= rhs;
+    return __r;
+}
+template <>
+inline index<2> operator%(int lhs, const index<2>& rhs) restrict(amp,cpu) {
+    index<2> __r(lhs,lhs);
+    __r %= rhs;
+    return __r;
+}
+template <>
+inline index<3> operator%(int lhs, const index<3>& rhs) restrict(amp,cpu) {
+    index<3> __r(lhs,lhs,lhs);
+    __r %= rhs;
     return __r;
 }
 
