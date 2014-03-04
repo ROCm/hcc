@@ -72,14 +72,14 @@ namespace Concurrency
         }
         
         template<typename _type, int _rank>
-        array<_type, _rank> CreateArrayAndFillData(const accelerator_view& src_av, int extent_range)
+        array<_type, _rank> CreateArrayAndFillData(const accelerator_view& src_av, int extent_range, access_type cpu_access_type = access_type_auto)
         {
             extent<_rank> arr_extent = CreateRandomExtent<_rank>(extent_range);
             
             std::vector<_type> cont(arr_extent.size());
             Fill<_type>(cont);
 
-            array<_type, _rank> src_arr(arr_extent, cont.begin(), src_av);
+            array<_type, _rank> src_arr(arr_extent, cont.begin(), src_av, cpu_access_type);
             //Log() << "Created array of " << src_arr.get_extent() << std::endl;
             
             return src_arr;

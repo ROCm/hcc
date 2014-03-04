@@ -731,6 +731,34 @@ template <int D0, int D1=0, int D2=0>
 class tiled_index {
  public:
   static const int rank = 3;
+  const index<3> global;
+  const index<3> local;
+  const index<3> tile;
+  const index<3> tile_origin;
+  const tile_barrier barrier;
+  tiled_index(const index<3>& g) restrict(amp, cpu):global(g){}
+  tiled_index(const tiled_index<D0, D1, D2>& o) restrict(amp, cpu):
+    global(o.global), local(o.local) {}
+  operator const index<3>() const restrict(amp,cpu) {
+    return global;
+  }
+  const Concurrency::extent<3> tile_extent;
+ private:
+  //CLAMP
+  __attribute__((annotate("__cxxamp_opencl_index")))
+  __attribute__((always_inline)) tiled_index() restrict(amp)
+#ifdef __GPU__
+  : global(index<3>(get_global_id(2), get_global_id(1), get_global_id(0))),
+    local(index<3>(get_local_id(2), get_local_id(1), get_local_id(0))),
+    tile(index<3>(get_group_id(2), get_group_id(1), get_group_id(0))),
+    tile_origin(index<3>(get_global_id(2)-get_local_id(2),
+                         get_global_id(1)-get_local_id(1),
+                         get_global_id(0)-get_local_id(0))),
+    tile_extent(D0, D1, D2)
+#endif // __GPU__
+  {}
+  template<int D0_, int D1_, int D2_, typename K>
+  friend void parallel_for_each(tiled_extent<D0_, D1_, D2_>, const K&);
 };
 template <int N> class extent;
 template <int D0>
@@ -1378,7 +1406,11 @@ public:
       __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
       return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
   }
-
+  template <int D0, int D1=0, int D2=0>
+  __global T& operator[](const tiled_index<D0, D1, D2>& idx) const restrict(amp,cpu) {
+      __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
+      return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx.global + index_base, extent_base)];
+  }
 
   typename projection_helper<T, N>::result_type 
       operator[] (int i) const restrict(amp,cpu) {
