@@ -149,7 +149,8 @@ public:
   bool operator==(const accelerator_view& other) const {
     return is_debug == other.is_debug &&
            version == other.version &&
-           queuing_mode == other.queuing_mode;
+           queuing_mode == other.queuing_mode &&
+           accelerator_ == other.accelerator_;
   }
   bool operator!=(const accelerator_view& other) const {return !(*this == other);}
   ~accelerator_view() {}
@@ -1119,8 +1120,8 @@ public:
   }
 
 
-  accelerator_view get_accelerator_view() const {return accelerator_view(0);}
-  accelerator_view get_associated_accelerator_view() const {return accelerator_view(0);}
+  accelerator_view get_accelerator_view() const {return *pav;}
+  accelerator_view get_associated_accelerator_view() const {return *paav;}
   access_type get_cpu_access_type() const {return cpu_access_type;}
 
   __global T& operator[](const index<N>& idx) restrict(amp,cpu) {
@@ -1250,6 +1251,8 @@ public:
   }
   ~array() { // For GMAC
     m_device.reset();
+    if(pav) delete pav;
+    if(paav) delete paav;
   }
 
 
@@ -1261,6 +1264,7 @@ private:
   template <typename K, int Q> friend struct projection_helper;
   gmac_buffer_t m_device;
   access_type cpu_access_type;
+  __attribute__((cpu)) accelerator_view *pav, *paav;
 
 #ifndef __GPU__
   void initialize() {
