@@ -23,11 +23,16 @@ set(CXXAMP_FLAGS "-I${GTEST_INC_DIR} -I${LIBCXX_INC_DIR} -I${MCWAMP_INC_DIR} -st
 macro(add_mcwamp_library name )
   CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXXAMP_FLAGS}")
-
+  if (CXXAMP_ENABLE_HSA_OKRA)
+    add_definitions("-DCXXAMP_ENABLE_HSA_OKRA=1")
+  endif (CXXAMP_ENABLE_HSA_OKRA)
   add_library( ${name} ${ARGN} )
 endmacro(add_mcwamp_library name )
 
 macro(add_mcwamp_executable name )
+  if (CXXAMP_ENABLE_HSA_OKRA)
+    add_definitions("-DCXXAMP_ENABLE_HSA_OKRA=1")
+  endif (CXXAMP_ENABLE_HSA_OKRA)
   link_directories(${LIBCXX_LIB_DIR} ${LIBCXXRT_LIB_DIR})
   CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
   set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
