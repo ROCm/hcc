@@ -16,7 +16,9 @@
 #include <chrono>
 #include <future>
 #include <string.h> //memcpy
+#ifndef CXXAMP_ENABLE_HSA_OKRA
 #include <gmac/opencl.h>
+#endif
 #include <memory>
 #include <algorithm>
 #include <set>
@@ -70,8 +72,9 @@ public:
   accelerator(const accelerator& other);
   static std::vector<accelerator> get_all() {
     std::wstring default_acc(default_accelerator);
-    ecl_accelerator_info info;
     std::vector<accelerator> acc;
+#ifndef CXXAMP_ENABLE_HSA_OKRA
+    ecl_accelerator_info info;
     for (unsigned i = 0; i < eclGetNumberOfAccelerators(); i++) {
       assert(eclGetAcceleratorInfo(i, &info) == eclSuccess);
       if (info.acceleratorType == GMAC_ACCELERATOR_TYPE_ACCELERATOR) {
@@ -79,6 +82,7 @@ public:
         acc.push_back(acc_default);
       }
     }
+#endif
     return acc;
   }
   static bool set_default(const std::wstring& path) {
@@ -890,7 +894,12 @@ public:
 
 
 #define __global
+#ifdef CXXAMP_ENABLE_HSA_OKRA
+//include okra-specific files here
+#include "okra_manage.h"
+#else
 #include "gmac_manage.h"
+#endif
 template <typename T, int N>
 struct projection_helper
 {

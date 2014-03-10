@@ -22,6 +22,9 @@ namespace Concurrency {
 namespace CLAMP {
 void CompileKernels(void)
 {
+#ifdef CXXAMP_ENABLE_HSA_OKRA
+  assert(0 && "Unsupported function");
+#else
   ecl_error error_code;
   if ( !__mcw_cxxamp_compiled ) {
 #ifdef __APPLE__
@@ -49,6 +52,7 @@ void CompileKernels(void)
     __mcw_cxxamp_compiled = true;
     free(kernel_source);
   }
+#endif
 }
 
 } // namespace CLAMP
