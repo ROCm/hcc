@@ -70,6 +70,7 @@ LINK_DIRECTORIES( ${LLVM_LIB_DIR} )
 
 # Turn on by default for now.
 option(CXXAMP_ENABLE_GMAC "Build GMAC as backend" ON)
+option(CXXAMP_ENABLE_HSA_OKRA "Use HSA Okra runtime as backend" OFF)
 
 if(CXXAMP_ENABLE_GMAC)
 

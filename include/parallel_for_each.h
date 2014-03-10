@@ -45,10 +45,12 @@ static std::set<std::string> __mcw_cxxamp_kernels;
 template<typename Kernel, int dim_ext>
 static inline void mcw_cxxamp_launch_kernel(size_t *ext,
   size_t *local_size, const Kernel& f) restrict(cpu,amp) {
+#ifdef CXXAMP_ENABLE_HSA_OKRA
+  assert(0 && "Unsupported function");
+#else
   ecl_error error_code;
   accelerator def;
   accelerator_view accel_view = def.get_default_view();
-
   CLAMP::CompileKernels();
   //Invoke Kernel::__cxxamp_trampoline as an OpenCL kernel
   //to ensure functor has right operator() defined
@@ -75,6 +77,7 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
       std::cerr << i << "] = "<<local_size[i]<<"\n";
     }
   }
+#endif //CXXAMP_ENABLE_HSA_OKRA
 }
 
 template <int N, typename Kernel, typename _Tp>
