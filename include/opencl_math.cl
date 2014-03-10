@@ -30,7 +30,7 @@ float opencl_max(float x, float y) {
   return max(x, y);
 }
 
-float opencl_isnan(float x) {
+int opencl_isnan(float x) {
   return isnan(x);
 }
 
