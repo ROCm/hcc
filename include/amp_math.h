@@ -9,6 +9,7 @@
   extern "C" float opencl_fastmath_sqrt(float x);
   extern "C" int opencl_min(int x, int y);
   extern "C" float opencl_max(float x, float y);
+  extern "C" int opencl_isnan(float x);
 #endif
 
 namespace Concurrency {
@@ -90,6 +91,14 @@ namespace fast_math {
       return opencl_fastmath_sqrt(x);
     #else
       return ::sqrtf(x);
+    #endif
+  };
+
+  int isnan(float x) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_isnan(x);
+    #else
+      return ::isnan(x);
     #endif
   };
 } // namesapce fast_math
