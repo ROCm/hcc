@@ -4,7 +4,7 @@
 #include <iostream>
 #if __APPLE__
 #include <OpenCL/cl.h>
-#else
+#elseif !defined(CXXAMP_ENABLE_HSA_OKRA)
 #include <CL/cl.h>
 #endif
 #define CHECK_ERROR(error_code, message) \
@@ -143,8 +143,27 @@ index<N> operator-(const index<N>& lhs, int rhs) restrict(amp,cpu) {
 }
 template <int N>
 index<N> operator-(int lhs, const index<N>& rhs) restrict(amp,cpu) {
-    index<N> __r = rhs;
-    __r -= lhs;
+    index<N> __r;
+    for (int i = 0; i < N; ++i) __r[i] = lhs;
+    __r -= rhs;
+    return __r;
+}
+template<>
+inline index<1> operator-(int lhs, const index<1>& rhs) restrict(amp,cpu) {
+    index<1> __r(lhs);
+    __r -= rhs;
+    return __r;
+}
+template<>
+inline index<2> operator-(int lhs, const index<2>& rhs) restrict(amp,cpu) {
+    index<2> __r(lhs,lhs);
+    __r -= rhs;
+    return __r;
+}
+template<>
+inline index<3> operator-(int lhs, const index<3>& rhs) restrict(amp,cpu) {
+    index<3> __r(lhs,lhs,lhs);
+    __r -= rhs;
     return __r;
 }
 template <int N>
@@ -167,8 +186,27 @@ index<N> operator/(const index<N>& lhs, int rhs) restrict(amp,cpu) {
 }
 template <int N>
 index<N> operator/(int lhs, const index<N>& rhs) restrict(amp,cpu) {
-    index<N> __r = rhs;
-    __r /= lhs;
+    index<N> __r;
+    for (int i = 0; i < N; ++i) __r[i] = lhs;
+    __r /= rhs;
+    return __r;
+}
+template <>
+inline index<1> operator/(int lhs, const index<1>& rhs) restrict(amp,cpu) {
+    index<1> __r(lhs);
+    __r /= rhs;
+    return __r;
+}
+template <>
+inline index<2> operator/(int lhs, const index<2>& rhs) restrict(amp,cpu) {
+    index<2> __r(lhs,lhs);
+    __r /= rhs;
+    return __r;
+}
+template <>
+inline index<3> operator/(int lhs, const index<3>& rhs) restrict(amp,cpu) {
+    index<3> __r(lhs,lhs,lhs);
+    __r /= rhs;
     return __r;
 }
 template <int N>
@@ -179,8 +217,27 @@ index<N> operator%(const index<N>& lhs, int rhs) restrict(amp,cpu) {
 }
 template <int N>
 index<N> operator%(int lhs, const index<N>& rhs) restrict(amp,cpu) {
-    index<N> __r = rhs;
-    __r %= lhs;
+    index<N> __r;
+    for (int i = 0; i < N; ++i) __r[i] = lhs;
+    __r %= rhs;
+    return __r;
+}
+template <>
+inline index<1> operator%(int lhs, const index<1>& rhs) restrict(amp,cpu) {
+    index<1> __r(lhs);
+    __r %= rhs;
+    return __r;
+}
+template <>
+inline index<2> operator%(int lhs, const index<2>& rhs) restrict(amp,cpu) {
+    index<2> __r(lhs,lhs);
+    __r %= rhs;
+    return __r;
+}
+template <>
+inline index<3> operator%(int lhs, const index<3>& rhs) restrict(amp,cpu) {
+    index<3> __r(lhs,lhs,lhs);
+    __r %= rhs;
     return __r;
 }
 
@@ -216,8 +273,27 @@ extent<N> operator-(const extent<N>& lhs, int rhs) restrict(amp,cpu) {
 }
 template <int N>
 extent<N> operator-(int lhs, const extent<N>& rhs) restrict(amp,cpu) {
-    extent<N> __r = rhs;
-    __r -= lhs;
+    extent<N> __r;
+    for (int i = 0; i < N; ++i) __r[i] = lhs;
+    __r -= rhs;
+    return __r;
+}
+template<>
+inline extent<1> operator-(int lhs, const extent<1>& rhs) restrict(amp,cpu) {
+    extent<1> __r(lhs);
+    __r -= rhs;
+    return __r;
+}
+template<>
+inline extent<2> operator-(int lhs, const extent<2>& rhs) restrict(amp,cpu) {
+    extent<2> __r(lhs,lhs);
+    __r -= rhs;
+    return __r;
+}
+template<>
+inline extent<3> operator-(int lhs, const extent<3>& rhs) restrict(amp,cpu) {
+    extent<3> __r(lhs,lhs,lhs);
+    __r -= rhs;
     return __r;
 }
 template <int N>
@@ -240,8 +316,27 @@ extent<N> operator/(const extent<N>& lhs, int rhs) restrict(amp,cpu) {
 }
 template <int N>
 extent<N> operator/(int lhs, const extent<N>& rhs) restrict(amp,cpu) {
-    extent<N> __r = rhs;
-    __r /= lhs;
+    extent<N> __r;
+    for (int i = 0; i < N; ++i) __r[i] = lhs;
+    __r /= rhs;
+    return __r;
+}
+template <>
+inline extent<1> operator/(int lhs, const extent<1>& rhs) restrict(amp,cpu) {
+    extent<1> __r(lhs);
+    __r /= rhs;
+    return __r;
+}
+template <int N>
+inline extent<2> operator/(int lhs, const extent<2>& rhs) restrict(amp,cpu) {
+    extent<2> __r(lhs,lhs);
+    __r /= rhs;
+    return __r;
+}
+template <>
+inline extent<3> operator/(int lhs, const extent<3>& rhs) restrict(amp,cpu) {
+    extent<3> __r(lhs,lhs,lhs);
+    __r /= rhs;
     return __r;
 }
 template <int N>
@@ -252,8 +347,27 @@ extent<N> operator%(const extent<N>& lhs, int rhs) restrict(amp,cpu) {
 }
 template <int N>
 extent<N> operator%(int lhs, const extent<N>& rhs) restrict(amp,cpu) {
-    extent<N> __r = rhs;
-    __r %= lhs;
+    extent<N> __r;
+    for (int i = 0; i < N; ++i) __r[i] = lhs;
+    __r %= rhs;
+    return __r;
+}
+template <>
+inline extent<1> operator%(int lhs, const extent<1>& rhs) restrict(amp,cpu) {
+    extent<1> __r(lhs);
+    __r %= rhs;
+    return __r;
+}
+template <>
+inline extent<2> operator%(int lhs, const extent<2>& rhs) restrict(amp,cpu) {
+    extent<2> __r(lhs,lhs);
+    __r %= rhs;
+    return __r;
+}
+template <>
+inline extent<3> operator%(int lhs, const extent<3>& rhs) restrict(amp,cpu) {
+    extent<3> __r(lhs,lhs,lhs);
+    __r %= rhs;
     return __r;
 }
 
