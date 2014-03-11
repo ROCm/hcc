@@ -1121,7 +1121,6 @@ public:
 #ifndef __GPU__
       this->initialize();
 #endif
-      m_device = other.m_device;
       copy(other, *this);
     }
     return *this;
@@ -1130,10 +1129,7 @@ public:
     if(this != &other) {
       extent = other.extent;
       this->cpu_access_type = other.cpu_access_type;
-#ifndef __GPU__
-      this->initialize();
-#endif
-      m_device = other.m_device;
+      other.m_device = nullptr;
       copy(other, *this);
     }
     return *this;
