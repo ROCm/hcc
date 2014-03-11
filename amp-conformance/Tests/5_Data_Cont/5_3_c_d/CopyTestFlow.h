@@ -7,13 +7,16 @@
 #pragma once
 
 #include <amptest.h>
-#include <amptest\coordinates.h>
+#include <amptest/coordinates.h>
 #include <map>
 
 #define MODIFY_VALUE 5.5f
 #define INIT_VALUE 0xDEAD
 
 #pragma region utility methods
+
+namespace Concurrency {
+namespace Test {
 
 int get_max_dim(int rank)
 {
@@ -792,5 +795,8 @@ bool CopyAndVerifyFromStagingArrayToNonContigArrayView(
 
 	return VerifyDataOnCpu(src_stg_arr, dest_stg_arr, static_cast<_type>(MODIFY_VALUE));
 }
+
+} //namespace Test
+} //namespace Concurrency
 
 #pragma endregion
