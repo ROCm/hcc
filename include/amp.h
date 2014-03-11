@@ -88,9 +88,10 @@ public:
   static bool set_default(const std::wstring& path) {
     std::wstring cpu(cpu_accelerator);
     std::wstring gpu(gpu_accelerator);
-    if (path == cpu || path == gpu)
+    if (path == cpu || path == gpu) {
       wcscpy(default_accelerator, path.c_str());
-    else
+      accelerator(path);
+    } else
       return false;
     return true;
   }
@@ -126,6 +127,8 @@ public:
   size_t dedicated_memory;
   static accelerator_view *default_view_;
   access_type default_access_type;
+  typedef GmacAcceleratorInfo AcceleratorInfo;
+  AcceleratorInfo accInfo;
 };
 
 class completion_future;
