@@ -77,7 +77,8 @@ public:
     ecl_accelerator_info info;
     for (unsigned i = 0; i < eclGetNumberOfAccelerators(); i++) {
       assert(eclGetAcceleratorInfo(i, &info) == eclSuccess);
-      if (info.acceleratorType == GMAC_ACCELERATOR_TYPE_ACCELERATOR) {
+      if (info.acceleratorType &
+          (GMAC_ACCELERATOR_TYPE_ACCELERATOR|GMAC_ACCELERATOR_TYPE_GPU)) {
         accelerator acc_default(default_acc);
         acc.push_back(acc_default);
       }
