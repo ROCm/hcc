@@ -76,8 +76,7 @@ log_message("Test: $test");
 # Read test configuration
 undef %Test::config;
 
-my $test_dir = dirname($test);
-my $conf_file = try_find_file_by_extension(abs_path(dirname(($test_dir))), $tests_root, "conf");
+my $conf_file = try_find_file_by_extension(abs_path(dirname(($test))), $tests_root, "conf");
 
 if(-e $conf_file)
 {
@@ -121,7 +120,7 @@ foreach my $def_set (@{$Test::config{'definitions'}})
             $CLANG_AMP -cc1 -fsyntax-only $SHARED_CXXFLAGS $include_main $test $cflags_defs -D__CPU__=1";
     } else {
         $command = "\\
-            $CLANG_AMP $SHARED_CXXFLAGS $include_main $test -fno-common -m32 $cflags_defs -D__GPU__=1 -Xclang -fcuda-is-device -emit-llvm -c -S -O2 -o $tmpdir/test.ll && \\
+            $CLANG_AMP $SHARED_CXXFLAGS $include_main $test -fno-common -m32 $cflags_defs -D__GPU__=1 -Xclang -fcuda-is-device -fno-builtin -emit-llvm -c -S -O2 -o $tmpdir/test.ll && \\
             $CLAMP_DEVICE test.ll kernel.cl && \\
             $CLAMP_EMBED kernel.cl kernel.o && \\
             $CLANG_AMP $SHARED_CXXFLAGS $include_main $test $AMPTESTLIB $cflags_defs -D__CPU__=1 $CLAMP_LDFLAGS $tmpdir/kernel.o -o $tmpdir/test.out -g";
