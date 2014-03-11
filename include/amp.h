@@ -849,9 +849,9 @@ public:
   tiled_extent& operator=(const tiled_extent& other) restrict(amp,cpu);
   tiled_extent pad() const restrict(amp,cpu) {
     tiled_extent padded(*this);
-    padded[0] = ((padded[0] + D0 - 1)/D0) * D0;
-    padded[1] = ((padded[1] + D1 - 1)/D1) * D1;
-    padded[2] = ((padded[2] + D2 - 1)/D2) * D2;
+    padded[0] = (padded[0] <= D0) ? D0 : (((padded[0] + D0 - 1) / D0) * D0);
+    padded[1] = (padded[1] <= D1) ? D1 : (((padded[1] + D1 - 1) / D1) * D1);
+    padded[2] = (padded[2] <= D2) ? D2 : (((padded[2] + D2 - 1) / D2) * D2);
     return padded;
   }
   tiled_extent truncate() const restrict(amp,cpu) {
@@ -882,8 +882,8 @@ public:
   tiled_extent& operator=(const tiled_extent& other) restrict(amp,cpu);
   tiled_extent pad() const restrict(amp,cpu) {
     tiled_extent padded(*this);
-    padded[0] = ((padded[0] + D0 - 1)/D0) * D0;
-    padded[1] = ((padded[1] + D1 - 1)/D1) * D1;
+    padded[0] = (padded[0] <= D0) ? D0 : (((padded[0] + D0 - 1) / D0) * D0);
+    padded[1] = (padded[1] <= D1) ? D1 : (((padded[1] + D1 - 1) / D1) * D1);
     return padded;
   }
   tiled_extent truncate() const restrict(amp,cpu) {
@@ -913,7 +913,7 @@ public:
   tiled_extent& operator=(const tiled_extent& other) restrict(amp,cpu);
   tiled_extent pad() const restrict(amp,cpu) {
     tiled_extent padded(*this);
-    padded[0] = ((padded[0] + D0 - 1)/D0) * D0;
+    padded[0] = (padded[0] <= D0) ? D0 : (((padded[0] + D0 - 1) / D0) * D0);
     return padded;
   }
   tiled_extent truncate() const restrict(amp,cpu) {
