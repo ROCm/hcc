@@ -189,13 +189,33 @@ __attribute__((noinline,used)) void parallel_for_each(
     tiled_extent<D0, D1> compute_domain,
     const Kernel& f) restrict(cpu,amp) {
   size_t ext[2] = { static_cast<size_t>(compute_domain[1]),
-		    static_cast<size_t>(compute_domain[0])};
+                    static_cast<size_t>(compute_domain[0])};
   size_t tile[2] = { compute_domain.tile_dim1,
                      compute_domain.tile_dim0};
 #ifndef __GPU__
   mcw_cxxamp_launch_kernel<Kernel, 2>(ext, tile, f);
 #else //ifndef __GPU__
   tiled_index<D0, D1> this_is_used_to_instantiate_the_right_index;
+  //to ensure functor has right operator() defined
+  //this triggers the trampoline code being emitted
+  int foo = reinterpret_cast<intptr_t>(&Kernel::__cxxamp_trampoline);
+#endif
+}
+ //3D parallel_for_each, tiled
+template <int D0, int D1, int D2, typename Kernel>
+__attribute__((noinline,used)) void parallel_for_each(
+    tiled_extent<D0, D1, D2> compute_domain,
+    const Kernel& f) restrict(cpu,amp) {
+  size_t ext[3] = { static_cast<size_t>(compute_domain[2]),
+                    static_cast<size_t>(compute_domain[1]),
+            		    static_cast<size_t>(compute_domain[0])};
+  size_t tile[3] = { compute_domain.tile_dim2,
+                     compute_domain.tile_dim1,
+                     compute_domain.tile_dim0};
+#ifndef __GPU__
+  mcw_cxxamp_launch_kernel<Kernel, 3>(ext, tile, f);
+#else //ifndef __GPU__
+  tiled_index<D0, D1, D2> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
   int foo = reinterpret_cast<intptr_t>(&Kernel::__cxxamp_trampoline);
