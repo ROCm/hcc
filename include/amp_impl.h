@@ -97,10 +97,7 @@ inline accelerator_view& accelerator::get_default_view() const {
 
 // Accelerator view
 inline accelerator_view accelerator::create_view(void) {
-  accelerator_view sa(0);
-  sa.queuing_mode = queuing_mode_automatic;
-  sa.accelerator_ = this;
-  return sa;
+  return create_view(queuing_mode_immediate);
 }
 inline accelerator_view accelerator::create_view(queuing_mode qmode) {
   accelerator_view sa(0);
