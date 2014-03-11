@@ -467,6 +467,9 @@ public:
         : base_(components) {}
     explicit index(const int components[]) restrict(amp,cpu)
         : base_(components) {}
+    template <int D0, int D1, int D2>
+        explicit extent(const tiled_extent<D0, D1, D2>& other) restrict(amp,cpu)
+            : base_(other.base_) {}
 
     index& operator=(const index& __t) restrict(amp,cpu) {
         base_.operator=(__t.base_);
