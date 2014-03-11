@@ -40,50 +40,6 @@ bool test() restrict(amp,cpu)
     return test_feature<T>();
 }
 
-/*
-int blah()
-{
-	int result = 1;
-	result &= INVOKE_TEST_FUNC_ON_CPU_AND_GPU([]() restrict(amp,cpu){
-		return test<extent<1>>();
-	});																
-	result &= INVOKE_TEST_FUNC_ON_CPU_AND_GPU([]() restrict(amp,cpu){
-		return test<extent<4>>();
-	});																
-	result &= INVOKE_TEST_FUNC_ON_CPU_AND_GPU([]() restrict(amp,cpu){
-		return test<extent<10>>();
-	});																
-
-	{
-		result &= INVOKE_TEST_FUNC_ON_CPU_AND_GPU([]() restrict(amp,cpu){
-			return test<extent<1>>();
-		});																
-		result &= INVOKE_TEST_FUNC_ON_CPU_AND_GPU([]() restrict(amp,cpu){
-			return test<extent<4>>();
-		});																
-		result &= INVOKE_TEST_FUNC_ON_CPU_AND_GPU([]() restrict(amp,cpu){
-			return test<extent<10>>();
-		});																
-
-		{
-			result &= INVOKE_TEST_FUNC_ON_CPU_AND_GPU([]() restrict(amp,cpu){
-				return test<extent<1>>();
-			});																
-			result &= INVOKE_TEST_FUNC_ON_CPU_AND_GPU([]() restrict(amp,cpu){
-				return test<extent<4>>();
-			});																
-			result &= INVOKE_TEST_FUNC_ON_CPU_AND_GPU([]() restrict(amp,cpu){
-				return test<extent<10>>();
-			});																
-
-		}
-
-	}
-
-	return result;
-}
-*/
-
 int main() 
 {
 	//accelerator_view av = require_device().get_default_view();
@@ -99,8 +55,6 @@ int main()
 	result &= INVOKE_TEST_FUNC_ON_CPU_AND_GPU([]() restrict(amp,cpu){
 		return test<extent<10>>();
 	});																
-
-	//result &= blah();
 
 	return !result;
 }

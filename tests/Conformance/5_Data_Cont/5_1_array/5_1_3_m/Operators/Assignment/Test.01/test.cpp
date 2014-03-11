@@ -8,8 +8,7 @@
 /// <tags>P1</tags>
 /// <summary>Create an array using copy assignment</summary>
 // RUN: %amp_device -D__GPU__ %s -m32 -emit-llvm -c -S -O2 -o %t.ll && mkdir -p %t
-// RUN: %llc -march=c -o %t/kernel_.cl < %t.ll
-// RUN: cat %opencl_math_dir/opencl_math.cl %t/kernel_.cl > %t/kernel.cl
+// RUN: %clamp-device %t.ll %t/kernel.cl
 // RUN: pushd %t && %embed_kernel kernel.cl %t/kernel.o && popd
 // RUN: %cxxamp %link %t/kernel.o %s -o %t.out && %t.out
 #include "./../../../member.h"
