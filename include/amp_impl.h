@@ -595,6 +595,30 @@ void array_view<T, N>::synchronize() const {
 }
 
 template <typename T, int N>
+completion_future array_view<T, N>::synchronize_async() const {
+  assert(cache.get());
+  assert(p_);
+  if (extent_base == extent && offset == 0) {
+      std::future<void> fut = std::async([&]() mutable {
+          memmove(const_cast<void*>(reinterpret_cast<const void*>(p_)),
+              reinterpret_cast<const void*>(cache.get()), extent.size() * sizeof(T));
+          });
+    return completion_future(fut.share());
+
+  } else {
+    std::future<void> fut = std::async([&]() mutable {
+      for (int i = 0; i < extent_base[0]; ++i){
+          int off = extent_base.size() / extent_base[0];
+          memmove(const_cast<void*>(reinterpret_cast<const void*>(&p_[offset + i * off])),
+                  reinterpret_cast<const void*>(&(cache.get()[offset + i * off])),
+                  extent.size() / extent[0] * sizeof(T));
+          }
+      });
+    return completion_future(fut.share());
+  }
+}
+
+template <typename T, int N>
 array_view<T, N>::array_view(const Concurrency::extent<N>& ext,
                              value_type* src) restrict(amp,cpu)
     : extent(ext), p_(src),
