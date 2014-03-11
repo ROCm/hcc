@@ -30,6 +30,10 @@ float opencl_max(float x, float y) {
   return max(x, y);
 }
 
+int opencl_isnan(float x) {
+  return isnan(x);
+}
+
 unsigned atomic_add_global(volatile __global unsigned *x, unsigned y) {
   return atomic_add(x, y);
 }

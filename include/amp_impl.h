@@ -4,7 +4,7 @@
 #include <iostream>
 #if __APPLE__
 #include <OpenCL/cl.h>
-#elseif !defined(CXXAMP_ENABLE_HSA_OKRA)
+#elif !defined(CXXAMP_ENABLE_HSA_OKRA)
 #include <CL/cl.h>
 #endif
 #define CHECK_ERROR(error_code, message) \
