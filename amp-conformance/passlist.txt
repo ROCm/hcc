@@ -1,8 +1,10 @@
+5_Data_Cont/5_3_c_d/SynchronousCopy/ArrayViewConstToIterator/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/Reinterpret_As/Test.03/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/Reinterpret_As/Test.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/Reinterpret_As/Test.04/test.cpp
 5_Data_Cont/5_2_a_v/5_2_2_c/Test.16/test.cpp
 5_Data_Cont/5_2_a_v/5_2_2_c/Test.02/test.cpp
+5_Data_Cont/5_2_a_v/5_2_3_m/ImplicitSynchronize/Synchronize/Test.04/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/Copy_To/Test.03/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/Copy_To/Test.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/WithoutDataSource/Test.03/test.cpp
