@@ -8,24 +8,8 @@
 
 namespace Concurrency {
 static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu,amp) {
-    std::string str(f);
-    std::string s;
+    std::string s(f);
     std::string out;
-
-    std::string sE_("trampolineE_");
-    std::string sE__("trampolineE__");
-    size_t found_;
-    size_t foundstr;
-    found_ = str.find(sE_);
-    foundstr = str.find(sE__);
-
-    if(found_ != std::string::npos) {
-      str.replace(int(found_)+11, 2,"");
-    }
-    if(foundstr != std::string::npos) {
-        str.replace(int(foundstr)+11, 3,"");
-    }
-    s = str;
 
     for(std::string::iterator it = s.begin(); it != s.end(); it++ ) {
       if (*it == '_' && it == s.begin()) {

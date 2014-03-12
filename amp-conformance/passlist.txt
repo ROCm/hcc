@@ -72,6 +72,9 @@
 5_Data_Cont/5_1_array/5_1_4_v_o/reinterpret_As/Test.04/test.cpp
 4_Basic_Data_Elmnts/4_2_extent/4_2_4_ops/Arithmetic/Test.05/test.cpp
 4_Basic_Data_Elmnts/4_2_extent/4_2_4_ops/Arithmetic/Test.01/test.cpp
+4_Basic_Data_Elmnts/4_2_extent/4_2_3_m/size/Test.01/test.cpp
+4_Basic_Data_Elmnts/4_2_extent/4_2_3_m/size/Test.02/test.cpp
+4_Basic_Data_Elmnts/4_2_extent/4_2_3_m/tile/pad.02/test.cpp
 4_Basic_Data_Elmnts/4_1_index/4_1_4_ops/Logical/Test.02/test.cpp
 4_Basic_Data_Elmnts/4_1_index/4_1_4_ops/Logical/Test.01/test.cpp
 4_Basic_Data_Elmnts/4_1_index/4_1_4_ops/Arithmetic/Test.02/test.cpp
