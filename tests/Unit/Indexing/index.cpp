@@ -1,4 +1,3 @@
-// XFAIL: *
 // RUN: %amp_device -c -S -D__GPU__ -emit-llvm %s -O -o -|%cppfilt|%FileCheck %s
 // RUN: %gtest_amp %s -o %t && %t
 // Testing if an efficient (i.e. fully inlined version) of Concurrency::index
@@ -17,7 +16,7 @@ int foo(int k) restrict(amp){
 //CHECK: define {{.*}} @foo(int)
 //CHECK-NOT: call {{.*}}Concurrency::index<1>::operator[]
 //CHECK-NOT: load
-//CHECKL }
+//CHECK: }
 
 #ifndef __GPU__ //Device mode compilation cannot have RTTI
 // Test correctness
