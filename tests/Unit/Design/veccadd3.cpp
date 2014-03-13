@@ -47,6 +47,22 @@ bool verify(float *A, float *B, float *C, int n) {
 int main(int argc, char**argv) {
 
     // Initialize host variables ----------------------------------------------
+    std::vector<accelerator> accs = accelerator::get_all();
+    std::wcout << "Size: " << accs.size() << std::endl;                       
+    assert(accs.size() && "Number of Accelerators == 0!");
+    std::for_each(accs.begin(), accs.end(), [&] (accelerator acc) 
+            {  
+            std::wcout << "New accelerator: " << acc.get_description() << std::endl;
+            std::wcout << "device_path = " << acc.get_device_path() << std::endl;
+            std::wcout << "version = " << (acc.get_version() >> 16) << '.' << (acc.get_version() & 0xFFFF) << std::endl;
+            std::wcout << "dedicated_memory = " << acc.get_dedicated_memory() << " KB" << std::endl;
+            std::wcout << "doubles = " << ((acc.get_supports_double_precision()) ? "true" : "false") << std::endl;
+            std::wcout << "limited_doubles = " << ((acc.get_supports_limited_double_precision()) ? "true" : "false") << std::endl;
+            std::wcout << "has_display = " << ((acc.get_has_display()) ? "true" : "false") << std::endl;
+            std::wcout << "is_emulated = " << ((acc.get_is_emulated()) ? "true" : "false") << std::endl;
+            std::wcout << "is_debug = " << ((acc.get_is_debug()) ? "true" : "false") << std::endl;
+            std::cout << std::endl;
+            });
 
     std::cout << "\nSetting up the problem..." << std::endl;
 

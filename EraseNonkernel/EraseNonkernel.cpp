@@ -23,6 +23,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/IR/CallingConv.h"
 using namespace llvm;
 
 
@@ -149,6 +150,54 @@ bool EraseNonkernels::runOnModule(Module &M)
             I++;
         }
     }
+
+	// codes below will remove CPU codes emitted in GPU path
+	// only functions in the following 3 categories would be preserved:
+	// 1) kernels : functions with SPIR_KERNEL linkage
+	// 2) OpenCL intrinsics
+	// 3) LLVM intrinsics
+
+	// remove unwanted functions
+	Module::FunctionListType &global_funcs = M.getFunctionList();
+	for (Module::iterator I = global_funcs.begin(), E = global_funcs.end(); I != E; ) {
+		// keep functions with SPIR_KERNEL linkage
+		if (I->getCallingConv() == CallingConv::SPIR_KERNEL) {
+			I++;
+			continue;
+		}
+
+		// keep certain intrinsics
+		// FIXME: switch to attribute-based check
+		if (I->getName().find("get_global_id") != StringRef::npos ||
+			I->getName().find("get_local_id") != StringRef::npos ||
+			I->getName().find("get_group_id") != StringRef::npos ||
+			I->getName().find("barrier") != StringRef::npos ||
+			I->getName().find("opencl_") != StringRef::npos ||
+			I->getName().find("atomic_") != StringRef::npos ||
+			I->getName().find("llvm.") != StringRef::npos ) {
+			I++;
+			continue;
+		}
+
+		// remove all other functions
+		//llvm::errs() << "[REMOVE FUNC]: " << I->getName() << "\n";
+		I->removeFromParent();
+		I = global_funcs.begin();
+	}
+
+	// remove unwanted aliases
+	Module::AliasListType &global_aliases = M.getAliasList();
+	for (Module::alias_iterator I = global_aliases.begin(), E = global_aliases.end(); I != E; ) {
+		I->removeDeadConstantUsers();
+		if (I->getNumUses() == 0) {
+			//llvm::errs() << "[REMOVE ALIAS]: " << I->getName() << "\n";
+			I->eraseFromParent();
+			I = global_aliases.begin();
+		} else {
+			I++;
+		}
+	}
+
     return true;
 }
 
