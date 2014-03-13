@@ -223,9 +223,9 @@ bool test_arithmetic_conversion()
 
     Concurrency::extent<1> e(size);
 
-    array<srcType1, 1> aA(e, A.begin(), A.end(), rv);
-    array<srcType2, 1> aB(e, B.begin(), B.end(), rv);
-    array<dstType, 1> aC(e, rv);
+    Concurrency::array<srcType1, 1> aA(e, A.begin(), A.end(), rv);
+    Concurrency::array<srcType2, 1> aB(e, B.begin(), B.end(), rv);
+    Concurrency::array<dstType, 1> aC(e, rv);
 
     parallel_for_each(aA.get_extent(), [&](index<1> idx) __GPU {
         arithmetic_conversion<dstType, srcType1, srcType2>(aC[idx], aA[idx], aB[idx]);

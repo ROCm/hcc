@@ -59,7 +59,7 @@ void CalculateGroupSum(int* A, int* B)
 }
 
 //Calculate sum of all elements in a group - GPU version
-void CalculateGroupSum(tiled_index<YGroupSize, XGroupSize> ti, int flatLocalIndex, array<int, 2>& fA, array<int, 2>& fB) __GPU_ONLY
+void CalculateGroupSum(tiled_index<YGroupSize, XGroupSize> ti, int flatLocalIndex, Concurrency::array<int, 2>& fA, Concurrency::array<int, 2>& fB) __GPU_ONLY
 {
     // use shared memory
     tile_static int shared[XGroupSize * YGroupSize];         
@@ -78,7 +78,7 @@ void CalculateGroupSum(tiled_index<YGroupSize, XGroupSize> ti, int flatLocalInde
     }
 }
 
-void kernel(tiled_index<YGroupSize, XGroupSize> ti, array<int, 2>& fA, array<int, 2>& fB, int x) __GPU_ONLY
+void kernel(tiled_index<YGroupSize, XGroupSize> ti, Concurrency::array<int, 2>& fA, Concurrency::array<int, 2>& fB, int x) __GPU_ONLY
 {
     int flatLocalIndex = ti.local[0] * XGroupSize + ti.local[1];
     int groupIndex = ti.tile[0] * XGroupSize + ti.tile[1];
@@ -113,7 +113,7 @@ runall_result test_main()
     accelerator_view av =  require_device(Device::ALL_DEVICES).get_default_view();
 
     Concurrency::extent<2> extentA(XSize, YSize), extentB(NumYGroups, NumXGroups);
-    array<int, 2> fA(extentA, A.begin(), A.end(), av), fB(extentB, av);
+    Concurrency::array<int, 2> fA(extentA, A.begin(), A.end(), av), fB(extentB, av);
 
     //parallel_for_each where conditions are met
     parallel_for_each(fA.get_extent().tile<YGroupSize, XGroupSize>(), [&](tiled_index<YGroupSize, XGroupSize> ti) __GPU_ONLY{
