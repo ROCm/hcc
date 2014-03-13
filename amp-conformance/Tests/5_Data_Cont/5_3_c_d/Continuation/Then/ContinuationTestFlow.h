@@ -11,6 +11,8 @@
 #define RANGE 40
 #define VALUE 10
 
+using namespace Concurrency::Test;
+
 template<typename _type, int _rank>
 bool AsyncCopyAndVerifyArrayToArray(Concurrency::accelerator& srcDevice, Concurrency::accelerator& destDevice)
 {

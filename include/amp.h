@@ -34,6 +34,10 @@
 #define __declspec(ignored) /* */
 #endif
 
+typedef int32_t __int32;
+typedef long LONG;
+typedef std::exception runtime_exception;
+
 namespace Concurrency {
 /*
   This is not part of C++AMP standard, but borrowed from Parallel Patterns
