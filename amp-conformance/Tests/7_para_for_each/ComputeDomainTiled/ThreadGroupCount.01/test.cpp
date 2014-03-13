@@ -1,0 +1,66 @@
+//--------------------------------------------------------------------------------------
+// File: test.cpp
+//
+// Copyright (c) Microsoft Corporation. All rights reserved.
+//--------------------------------------------------------------------------------------
+//
+// Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
+// file except in compliance with the License.  You may obtain a copy of the License at
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+// EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR
+// CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
+//
+// See the Apache Version 2.0 License for specific language governing permissions
+// and limitations under the License.
+//
+//--------------------------------------------------------------------------------------
+//
+/// <tags>P1</tags>
+/// <summary>Test that invoking tiled parallel_for_each with maximum number of tiles per dimension (65535) succeeds. Test for 1D.</summary>
+#include <amptest.h>
+#include <amptest_main.h>
+using namespace concurrency;
+using namespace concurrency::Test;
+
+template <int D0>
+bool test(const accelerator_view& av, const tiled_extent<D0>& ext)
+{
+	// Note: This test is only verifying that for each tile the correct number
+	// of parallel activities were created. It is not covered whether they
+	// indicies were unique.
+
+	std::vector<int> vec(65535);
+	array_view<int, 1> vec_view(static_cast<int>(vec.size()), vec);
+
+	parallel_for_each(av, ext, [=](tiled_index<D0> tidx) restrict(amp)
+	{
+		atomic_fetch_inc(&vec_view[tidx.tile]);
+	});
+
+	vec_view.synchronize();
+	return VerifyAllSameValue(vec, D0) == -1;
+}
+
+runall_result test_main()
+{
+        // test doesn't require double support but require high end cards with high performance
+        // to finish compute in less than windows timeout.
+	accelerator_view av = require_device(device_flags::D3D11_GPU|device_flags::DOUBLE).get_default_view();
+	
+	runall_result result;
+
+	result &= REPORT_RESULT(test(av,
+		extent<1>(65535).tile<1>()
+		));
+	result &= REPORT_RESULT(test(av,
+		extent<1>(2*65535).tile<2>()
+		));
+	result &= REPORT_RESULT(test(av,
+		extent<1>(1024*65535).tile<1024>()
+		));
+
+	return result;
+}
+

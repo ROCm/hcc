@@ -77,7 +77,8 @@ public:
     ecl_accelerator_info info;
     for (unsigned i = 0; i < eclGetNumberOfAccelerators(); i++) {
       assert(eclGetAcceleratorInfo(i, &info) == eclSuccess);
-      if (info.acceleratorType == GMAC_ACCELERATOR_TYPE_ACCELERATOR) {
+      if (info.acceleratorType &
+          (GMAC_ACCELERATOR_TYPE_ACCELERATOR|GMAC_ACCELERATOR_TYPE_GPU)) {
         accelerator acc_default(default_acc);
         acc.push_back(acc_default);
       }
@@ -88,9 +89,10 @@ public:
   static bool set_default(const std::wstring& path) {
     std::wstring cpu(cpu_accelerator);
     std::wstring gpu(gpu_accelerator);
-    if (path == cpu || path == gpu)
+    if (path == cpu || path == gpu) {
       wcscpy(default_accelerator, path.c_str());
-    else
+      accelerator(path);
+    } else
       return false;
     return true;
   }
@@ -126,6 +128,8 @@ public:
   size_t dedicated_memory;
   static accelerator_view *default_view_;
   access_type default_access_type;
+  typedef GmacAcceleratorInfo AcceleratorInfo;
+  AcceleratorInfo accInfo;
 };
 
 class completion_future;
@@ -153,7 +157,8 @@ public:
   bool operator==(const accelerator_view& other) const {
     return is_debug == other.is_debug &&
            version == other.version &&
-           queuing_mode == other.queuing_mode;
+           queuing_mode == other.queuing_mode &&
+           accelerator_ == other.accelerator_;
   }
   bool operator!=(const accelerator_view& other) const {return !(*this == other);}
   ~accelerator_view() {}
@@ -251,6 +256,7 @@ private:
         friend completion_future copy_async(const array<T, N>& src, OutputIter destBegin);
     template <typename OutputIter, typename T, int N>
         friend completion_future copy_async(const array_view<T, N>& src, OutputIter destBegin);
+    template <typename T, int N> friend class array_view;
 };
 
 template <int N> class extent;
@@ -738,6 +744,34 @@ template <int D0, int D1=0, int D2=0>
 class tiled_index {
  public:
   static const int rank = 3;
+  const index<3> global;
+  const index<3> local;
+  const index<3> tile;
+  const index<3> tile_origin;
+  const tile_barrier barrier;
+  tiled_index(const index<3>& g) restrict(amp, cpu):global(g){}
+  tiled_index(const tiled_index<D0, D1, D2>& o) restrict(amp, cpu):
+    global(o.global), local(o.local) {}
+  operator const index<3>() const restrict(amp,cpu) {
+    return global;
+  }
+  const Concurrency::extent<3> tile_extent;
+ private:
+  //CLAMP
+  __attribute__((annotate("__cxxamp_opencl_index")))
+  __attribute__((always_inline)) tiled_index() restrict(amp)
+#ifdef __GPU__
+  : global(index<3>(get_global_id(2), get_global_id(1), get_global_id(0))),
+    local(index<3>(get_local_id(2), get_local_id(1), get_local_id(0))),
+    tile(index<3>(get_group_id(2), get_group_id(1), get_group_id(0))),
+    tile_origin(index<3>(get_global_id(2)-get_local_id(2),
+                         get_global_id(1)-get_local_id(1),
+                         get_global_id(0)-get_local_id(0))),
+    tile_extent(D0, D1, D2)
+#endif // __GPU__
+  {}
+  template<int D0_, int D1_, int D2_, typename K>
+  friend void parallel_for_each(tiled_extent<D0_, D1_, D2_>, const K&);
 };
 template <int N> class extent;
 template <int D0>
@@ -816,9 +850,9 @@ public:
   tiled_extent& operator=(const tiled_extent& other) restrict(amp,cpu);
   tiled_extent pad() const restrict(amp,cpu) {
     tiled_extent padded(*this);
-    padded[0] = ((padded[0] + D0 - 1)/D0) * D0;
-    padded[1] = ((padded[1] + D1 - 1)/D1) * D1;
-    padded[2] = ((padded[2] + D2 - 1)/D2) * D2;
+    padded[0] = (padded[0] <= D0) ? D0 : (((padded[0] + D0 - 1) / D0) * D0);
+    padded[1] = (padded[1] <= D1) ? D1 : (((padded[1] + D1 - 1) / D1) * D1);
+    padded[2] = (padded[2] <= D2) ? D2 : (((padded[2] + D2 - 1) / D2) * D2);
     return padded;
   }
   tiled_extent truncate() const restrict(amp,cpu) {
@@ -849,8 +883,8 @@ public:
   tiled_extent& operator=(const tiled_extent& other) restrict(amp,cpu);
   tiled_extent pad() const restrict(amp,cpu) {
     tiled_extent padded(*this);
-    padded[0] = ((padded[0] + D0 - 1)/D0) * D0;
-    padded[1] = ((padded[1] + D1 - 1)/D1) * D1;
+    padded[0] = (padded[0] <= D0) ? D0 : (((padded[0] + D0 - 1) / D0) * D0);
+    padded[1] = (padded[1] <= D1) ? D1 : (((padded[1] + D1 - 1) / D1) * D1);
     return padded;
   }
   tiled_extent truncate() const restrict(amp,cpu) {
@@ -880,7 +914,7 @@ public:
   tiled_extent& operator=(const tiled_extent& other) restrict(amp,cpu);
   tiled_extent pad() const restrict(amp,cpu) {
     tiled_extent padded(*this);
-    padded[0] = ((padded[0] + D0 - 1)/D0) * D0;
+    padded[0] = (padded[0] <= D0) ? D0 : (((padded[0] + D0 - 1) / D0) * D0);
     return padded;
   }
   tiled_extent truncate() const restrict(amp,cpu) {
@@ -1091,7 +1125,6 @@ public:
 #ifndef __GPU__
       this->initialize();
 #endif
-      m_device = other.m_device;
       copy(other, *this);
     }
     return *this;
@@ -1100,10 +1133,7 @@ public:
     if(this != &other) {
       extent = other.extent;
       this->cpu_access_type = other.cpu_access_type;
-#ifndef __GPU__
-      this->initialize();
-#endif
-      m_device = other.m_device;
+      other.m_device = nullptr;
       copy(other, *this);
     }
     return *this;
@@ -1131,8 +1161,8 @@ public:
   }
 
 
-  accelerator_view get_accelerator_view() const {return accelerator_view(0);}
-  accelerator_view get_associated_accelerator_view() const {return accelerator_view(0);}
+  accelerator_view get_accelerator_view() const {return *pav;}
+  accelerator_view get_associated_accelerator_view() const {return *paav;}
   access_type get_cpu_access_type() const {return cpu_access_type;}
 
   __global T& operator[](const index<N>& idx) restrict(amp,cpu) {
@@ -1262,6 +1292,8 @@ public:
   }
   ~array() { // For GMAC
     m_device.reset();
+    if(pav) delete pav;
+    if(paav) delete paav;
   }
 
 
@@ -1273,6 +1305,7 @@ private:
   template <typename K, int Q> friend struct projection_helper;
   gmac_buffer_t m_device;
   access_type cpu_access_type;
+  __attribute__((cpu)) accelerator_view *pav, *paav;
 
 #ifndef __GPU__
   void initialize() {
@@ -1390,7 +1423,11 @@ public:
       __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
       return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
   }
-
+  template <int D0, int D1=0, int D2=0>
+  __global T& operator[](const tiled_index<D0, D1, D2>& idx) const restrict(amp,cpu) {
+      __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
+      return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx.global + index_base, extent_base)];
+  }
 
   typename projection_helper<T, N>::result_type 
       operator[] (int i) const restrict(amp,cpu) {
