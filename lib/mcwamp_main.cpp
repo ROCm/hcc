@@ -53,7 +53,7 @@ void ldflags(void) {
 #endif
     }
 #ifndef __APPLE__
-    std::cout << " -lgmac-hpe -lc++ -lcxxrt -ldl ";
+    std::cout << " -lgmac-hpe -lc++ -lcxxrt -ldl -lpthread ";
     std::cout << "-Wl,--whole-archive -lmcwamp -Wl,--no-whole-archive ";
 #else
     std::cout << " -lgmac-hpe -lc++ -lmcwamp ";
