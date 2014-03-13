@@ -98,3 +98,4 @@
 3_device_Modeling/3_3_Accelerator_view/3_3_4_memb/method/wait/test.cpp
 3_device_Modeling/3_3_Accelerator_view/3_3_2_Queue_mode/test.cpp
 3_device_Modeling/3_3_Accelerator_view/3_3_3_constr/copy_ctor/test.cpp
+2_Cxx_Lang_Exte/2_1_Synt/2_1_1_Func_Decl_Synt/TemplateClass/Test.01/test.cpp
