@@ -756,6 +756,12 @@ class tiled_index {
     return global;
   }
   const Concurrency::extent<3> tile_extent;
+  Concurrency::extent<3> get_tile_extent() const restrict(amp, cpu) {
+    return tile_extent;
+  }
+  static const int tile_dim0 = D0;
+  static const int tile_dim1 = D1;
+  static const int tile_dim2 = D2;
  private:
   //CLAMP
   __attribute__((annotate("__cxxamp_opencl_index")))
@@ -789,6 +795,10 @@ class tiled_index<D0, 0, 0> {
     return global;
   }
   const Concurrency::extent<1> tile_extent;
+  Concurrency::extent<1> get_tile_extent() const restrict(amp, cpu) {
+    return tile_extent;
+  }
+  static const int tile_dim0 = D0;
  private:
   //CLAMP
   __attribute__((annotate("__cxxamp_opencl_index")))
@@ -820,6 +830,11 @@ class tiled_index<D0, D1, 0> {
     return global;
   }
   const Concurrency::extent<2> tile_extent;
+  Concurrency::extent<2> get_tile_extent() const restrict(amp, cpu) {
+    return tile_extent;
+  }
+  static const int tile_dim0 = D0;
+  static const int tile_dim1 = D1;
  private:
   //CLAMP
   __attribute__((annotate("__cxxamp_opencl_index")))
