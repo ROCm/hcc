@@ -566,9 +566,15 @@ array<T, N>::array(int e0, int e1, int e2, InputIterator srcBegin, InputIterator
 
 
 template<typename T, int N> array<T, N>::array(const array& other)
-    : extent(other.extent), m_device(other.m_device), pav(other.pav), paav(other.paav) {}
+    : extent(other.extent), m_device(other.m_device), pav(other.pav), paav(other.paav) {
+  if(pav) pav = new accelerator_view(*(other.pav));
+  if(paav) paav = new accelerator_view(*(other.paav));
+}
 template<typename T, int N> array<T, N>::array(array&& other)
-    : extent(other.extent), m_device(other.m_device),pav(other.pav), paav(other.paav) {}
+    : extent(other.extent), m_device(other.m_device),pav(other.pav), paav(other.paav) {
+  if(pav) pav = new accelerator_view(*(other.pav));
+  if(paav) paav = new accelerator_view(*(other.paav));
+}
 template<typename T, int N>
 array<T, N>::array(const array_view<const T, N>& src, accelerator_view av,
                    access_type cpu_access_type)
