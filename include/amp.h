@@ -1583,33 +1583,6 @@ namespace concurrency = Concurrency;
 
 namespace Concurrency {
 
-template <typename T, int N>
-void copy(const array<T, N>& src, array<T, N>& dest) {
-    for (int i = 0; i < dest.get_extent()[0]; ++i)
-        copy(src[i], dest[i]);
-}
-template <typename T>
-void copy(const array<T, 1>& src, array<T, 1>& dest) {
-    for (int i = 0; i < dest.get_extent()[0]; ++i)
-        dest[i] = src[i];
-}
-template <typename T, int N>
-void copy(const array<T, N>& src, const array_view<T, N>& dest) {
-    for (int i = 0; i < dest.get_extent()[0]; ++i)
-        copy(src[i], dest[i]);
-}
-template <typename T>
-void copy(const array<T, 1>& src, const array_view<T, 1>& dest) {
-    for (int i = 0; i < dest.get_extent()[0]; ++i)
-        dest[i] = src[i];
-}
-
-
-template <typename T, int N>
-void copy(const array_view<const T, N>& src, array<T, N>& dest) {
-    for (int i = 0; i < dest.get_extent()[0]; ++i)
-        copy(src[i], dest[i]);
-}
 template <typename T>
 void copy(const array_view<const T, 1>& src, const array_view<T, 1>& dest) {
     for (int i = 0; i < dest.get_extent()[0]; ++i)
@@ -1618,20 +1591,9 @@ void copy(const array_view<const T, 1>& src, const array_view<T, 1>& dest) {
 template <typename T, int N>
 void copy(const array_view<const T, N>& src, const array_view<T, N>& dest) {
     for (int i = 0; i < dest.get_extent()[0]; ++i)
-        copy(src[i], dest[i]);
+        Concurrency::copy(src[i], dest[i]);
 }
 
-
-template <typename T, int N>
-void copy(const array_view<T, N>& src, array<T, N>& dest) {
-    for (int i = 0; i < dest.get_extent()[0]; ++i)
-        copy(src[i], dest[i]);
-}
-template <typename T>
-void copy(const array_view<T, 1>& src, array<T, 1>& dest) {
-    for (int i = 0; i < dest.get_extent()[0]; ++i)
-        dest[i] = src[i];
-}
 template <typename T>
 void copy(const array_view<T, 1>& src, const array_view<T, 1>& dest) {
     for (int i = 0; i < dest.get_extent()[0]; ++i)
@@ -1640,26 +1602,53 @@ void copy(const array_view<T, 1>& src, const array_view<T, 1>& dest) {
 template <typename T, int N>
 void copy(const array_view<T, N>& src, const array_view<T, N>& dest) {
     for (int i = 0; i < dest.get_extent()[0]; ++i)
-        copy(src[i], dest[i]);
+        Concurrency::copy(src[i], dest[i]);
 }
 
-// TODO: Boundary Check
-template <typename InputIter, typename T>
-void copy(InputIter srcBegin, InputIter srcEnd, array<T, 1>& dest) {
-    for (int i = 0; i < dest.get_extent()[0]; ++i) {
-        dest[i] = *srcBegin;
-        ++srcBegin;
-    }
+template <typename T>
+void copy(const array<T, 1>& src, const array_view<T, 1>& dest) {
+    for (int i = 0; i < dest.get_extent()[0]; ++i)
+        dest[i] = src[i];
+}
+template <typename T, int N>
+void copy(const array<T, N>& src, const array_view<T, N>& dest) {
+    for (int i = 0; i < dest.get_extent()[0]; ++i)
+        Concurrency::copy(src[i], dest[i]);
 }
 
-template <typename InputIter, typename T, int N>
-void copy(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest) {
-    int adv = dest.get_extent().size() / dest.get_extent()[0];
-    for (int i = 0; i < dest.get_extent()[0]; ++i) {
-        copy(srcBegin, srcEnd, dest[i]);
-        std::advance(srcBegin, adv);
-    }
+template <typename T>
+void copy(const array<T, 1>& src, array<T, 1>& dest) {
+    for (int i = 0; i < dest.get_extent()[0]; ++i)
+        dest[i] = src[i];
 }
+template <typename T, int N>
+void copy(const array<T, N>& src, array<T, N>& dest) {
+    for (int i = 0; i < dest.get_extent()[0]; ++i)
+        Concurrency::copy(src[i], dest[i]);
+}
+
+template <typename T>
+void copy(const array_view<const T, 1>& src, array<T, 1>& dest) {
+    for (int i = 0; i < dest.get_extent()[0]; ++i)
+        dest[i] = src[i];
+}
+template <typename T, int N>
+void copy(const array_view<const T, N>& src, array<T, N>& dest) {
+    for (int i = 0; i < dest.get_extent()[0]; ++i)
+        Concurrency::copy(src[i], dest[i]);
+}
+
+template <typename T>
+void copy(const array_view<T, 1>& src, array<T, 1>& dest) {
+    for (int i = 0; i < dest.get_extent()[0]; ++i)
+        dest[i] = src[i];
+}
+template <typename T, int N>
+void copy(const array_view<T, N>& src, array<T, N>& dest) {
+    for (int i = 0; i < dest.get_extent()[0]; ++i)
+        Concurrency::copy(src[i], dest[i]);
+}
+
 // TODO: __global should not be allowed in CPU Path
 template <typename InputIter, typename T>
 void copy(InputIter srcBegin, InputIter srcEnd, const array_view<T, 1>& dest) {
@@ -1672,27 +1661,75 @@ template <typename InputIter, typename T, int N>
 void copy(InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest) {
     int adv = dest.get_extent().size() / dest.get_extent()[0];
     for (int i = 0; i < dest.get_extent()[0]; ++i) {
-        copy(srcBegin, srcEnd, dest[i]);
+        Concurrency::copy(srcBegin, srcEnd, dest[i]);
         std::advance(srcBegin, adv);
     }
 }
 
-
+// TODO: Boundary Check
+template <typename InputIter, typename T>
+void copy(InputIter srcBegin, InputIter srcEnd, array<T, 1>& dest) {
+    for (int i = 0; i < dest.get_extent()[0]; ++i) {
+        dest[i] = *srcBegin;
+        ++srcBegin;
+    }
+}
 template <typename InputIter, typename T, int N>
-void copy(InputIter srcBegin, array<T, N>& dest) {
-    int size = dest.get_extent().size();;
-    InputIter srcEnd = srcBegin;
-    std::advance(srcEnd, size);
-    copy(srcBegin, srcEnd, dest);
+void copy(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest) {
+    int adv = dest.get_extent().size() / dest.get_extent()[0];
+    for (int i = 0; i < dest.get_extent()[0]; ++i) {
+        Concurrency::copy(srcBegin, srcEnd, dest[i]);
+        std::advance(srcBegin, adv);
+    }
+}
+
+template <typename InputIter, typename T>
+void copy(InputIter srcBegin, const array_view<T, 1>& dest) {
+    for (int i = 0; i < dest.get_extent()[0]; ++i) {
+        reinterpret_cast<T&>(dest[i]) = *srcBegin;
+        ++srcBegin;
+    }
 }
 template <typename InputIter, typename T, int N>
 void copy(InputIter srcBegin, const array_view<T, N>& dest) {
-    int size = dest.get_extent().size();;
-    InputIter srcEnd = srcBegin;
-    std::advance(srcEnd, size);
-    copy(srcBegin, srcEnd, dest);
+    int adv = dest.get_extent().size() / dest.get_extent()[0];
+    for (int i = 0; i < dest.get_extent()[0]; ++i) {
+        Concurrency::copy(srcBegin, dest[i]);
+        std::advance(srcBegin, adv);
+    }
 }
 
+template <typename InputIter, typename T>
+void copy(InputIter srcBegin, array<T, 1>& dest) {
+    for (int i = 0; i < dest.get_extent()[0]; ++i) {
+        dest[i] = *srcBegin;
+        ++srcBegin;
+    }
+}
+template <typename InputIter, typename T, int N>
+void copy(InputIter srcBegin, array<T, N>& dest) {
+    int adv = dest.get_extent().size() / dest.get_extent()[0];
+    for (int i = 0; i < dest.get_extent()[0]; ++i) {
+        Concurrency::copy(srcBegin, dest[i]);
+        std::advance(srcBegin, adv);
+    }
+}
+
+template <typename OutputIter, typename T>
+void copy(const array_view<T, 1> &src, OutputIter destBegin) {
+    for (int i = 0; i < src.get_extent()[0]; ++i) {
+        *destBegin = (src[i]);
+        destBegin++;
+    }
+}
+template <typename OutputIter, typename T, int N>
+void copy(const array_view<T, N> &src, OutputIter destBegin) {
+    int adv = src.get_extent().size() / src.get_extent()[0];
+    for (int i = 0; i < src.get_extent()[0]; ++i) {
+        copy(src[i], destBegin);
+        std::advance(destBegin, adv);
+    }
+}
 
 template <typename OutputIter, typename T>
 void copy(const array<T, 1> &src, OutputIter destBegin) {
@@ -1703,21 +1740,6 @@ void copy(const array<T, 1> &src, OutputIter destBegin) {
 }
 template <typename OutputIter, typename T, int N>
 void copy(const array<T, N> &src, OutputIter destBegin) {
-    int adv = src.get_extent().size() / src.get_extent()[0];
-    for (int i = 0; i < src.get_extent()[0]; ++i) {
-        copy(src[i], destBegin);
-        std::advance(destBegin, adv);
-    }
-}
-template <typename OutputIter, typename T>
-void copy(const array_view<T, 1> &src, OutputIter destBegin) {
-    for (int i = 0; i < src.get_extent()[0]; ++i) {
-        *destBegin = (src[i]);
-        destBegin++;
-    }
-}
-template <typename OutputIter, typename T, int N>
-void copy(const array_view<T, N> &src, OutputIter destBegin) {
     int adv = src.get_extent().size() / src.get_extent()[0];
     for (int i = 0; i < src.get_extent()[0]; ++i) {
         copy(src[i], destBegin);
