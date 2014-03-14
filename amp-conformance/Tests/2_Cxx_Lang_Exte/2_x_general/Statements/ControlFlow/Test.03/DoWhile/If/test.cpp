@@ -40,7 +40,7 @@ void CalculateGroupSum(ElementType* A, ElementType* B)
 
 //Calculate sum of all elements in a group - GPU version
 template<typename ElementType>
-void CalculateGroupSum(tiled_index<GroupSize> idx, int flatLocalIndex, const array<ElementType, 1> & fA, array<ElementType, 1> & fB) __GPU_ONLY
+void CalculateGroupSum(tiled_index<GroupSize> idx, int flatLocalIndex, const Concurrency::array<ElementType, 1> & fA, Concurrency::array<ElementType, 1> & fB) __GPU_ONLY
 {
     // use shared memory
     tile_static ElementType shared[GroupSize];
@@ -62,7 +62,7 @@ void CalculateGroupSum(tiled_index<GroupSize> idx, int flatLocalIndex, const arr
 
 //Kernel
 template <typename ElementType>
-void kernel(tiled_index<GroupSize> idx, const array<ElementType, 1> & fA, array<ElementType, 1> & fB, int x) __GPU_ONLY
+void kernel(tiled_index<GroupSize> idx, const Concurrency::array<ElementType, 1> & fA, Concurrency::array<ElementType, 1> & fB, int x) __GPU_ONLY
 {
     int flatLocalIndex = idx.local[0];
 
@@ -109,7 +109,7 @@ runall_result test()
     accelerator_view rv = device.get_default_view();
 
     Concurrency::extent<1> extentA(Size), extentB(NumGroups);
-    array<ElementType, 1> fA(extentA, rv), fB(extentB, rv);
+    Concurrency::array<ElementType, 1> fA(extentA, rv), fB(extentB, rv);
 
     //forall where conditions are met
     copy(A, fA);
