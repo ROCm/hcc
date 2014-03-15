@@ -180,7 +180,7 @@ foreach my $test (@tests)
                 .'<<<');
             eval {
                 local $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
-                alarm 30;
+                alarm 60;
                 $exec_exit_code = system("$test_exec 2>>$run_log 1>>$run_log") >> 8;
                 alarm 0;
             };

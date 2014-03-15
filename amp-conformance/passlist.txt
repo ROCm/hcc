@@ -1,5 +1,6 @@
-5_Data_Cont/5_1_array/5_1_2_c/CopyConstruct/Test.04/test.cpp
+7_para_for_each/ComputeDomainTiled/ThreadGroupCount.02/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/ArrayViewConstToIterator/test.cpp
+5_Data_Cont/5_3_c_d/Misc/HigherRank/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/Reinterpret_As/Test.03/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/Reinterpret_As/Test.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/Reinterpret_As/Test.04/test.cpp
@@ -17,6 +18,7 @@
 5_Data_Cont/5_1_array/5_1_3_m/Properties/extent/Test.01/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/copy_to/Test.03/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/copy_to/Test.01/test.cpp
+5_Data_Cont/5_1_array/5_1_2_c/CopyConstruct/Test.04/test.cpp
 5_Data_Cont/5_1_array/5_1_2_c/CopyConstruct/Test.03/test.cpp
 5_Data_Cont/5_1_array/5_1_2_c/CopyConstruct/Test.01/test.cpp
 5_Data_Cont/5_1_array/5_1_2_c/MoveConstruct/Test.01/test.cpp
@@ -98,3 +100,4 @@
 3_device_Modeling/3_3_Accelerator_view/3_3_4_memb/method/wait/test.cpp
 3_device_Modeling/3_3_Accelerator_view/3_3_2_Queue_mode/test.cpp
 3_device_Modeling/3_3_Accelerator_view/3_3_3_constr/copy_ctor/test.cpp
+2_Cxx_Lang_Exte/2_1_Synt/2_1_1_Func_Decl_Synt/TemplateClass/Test.01/test.cpp
