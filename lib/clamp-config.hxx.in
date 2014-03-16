@@ -11,3 +11,7 @@
 #define CMAKE_INSTALL_INC           CMAKE_INSTALL_PREFIX"/include"
 #define CMAKE_INSTALL_LIBCXX_INC    CMAKE_INSTALL_INC"/c++/v1"
 #define CMAKE_INSTALL_LIB           CMAKE_INSTALL_PREFIX"/lib"
+
+#define CMAKE_OKRA_ROOT         "@OKRA_ROOT@/okra/dist/include"
+#define CMAKE_OKRA_LIB          "@OKRA_ROOT@/okra/dist/bin"
+#define CMAKE_JNI_INCLUDE       "@JNI_INCLUDE_DIRS@"
