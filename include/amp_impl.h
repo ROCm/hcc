@@ -63,7 +63,7 @@ inline accelerator::accelerator(const std::wstring& path): device_path(path),
     std::wcerr << L"CLAMP: Warning: the given accelerator is not supported: ";
     std::wcerr << path << std::endl;
   }
-
+#ifndef CXXAMP_ENABLE_HSA_OKRA
   AcceleratorInfo accInfo;
   for (unsigned i = 0; i < eclGetNumberOfAccelerators(); i++) {
     assert(eclGetAcceleratorInfo(i, &accInfo) == eclSuccess);
@@ -83,7 +83,7 @@ inline accelerator::accelerator(const std::wstring& path): device_path(path),
      & GMAC_ACCELERATOR_FP_INF_NAN
      & GMAC_ACCELERATOR_FP_DENORM)
     supports_limited_double_precision = true;
-
+#endif
   description = L"Default GMAC+OpenCL";
   if (!default_view_) {
     default_view_ = new accelerator_view(0);

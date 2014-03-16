@@ -128,8 +128,10 @@ public:
   size_t dedicated_memory;
   static accelerator_view *default_view_;
   access_type default_access_type;
+#ifndef CXXAMP_ENABLE_HSA_OKRA
   typedef GmacAcceleratorInfo AcceleratorInfo;
   AcceleratorInfo accInfo;
+#endif
 };
 
 class completion_future;
@@ -948,7 +950,9 @@ public:
 #define __global
 #ifdef CXXAMP_ENABLE_HSA_OKRA
 //include okra-specific files here
+} //namespace Concurrency
 #include "okra_manage.h"
+namespace Concurrency {
 #else
 #include "gmac_manage.h"
 #endif

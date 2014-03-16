@@ -71,6 +71,24 @@ LINK_DIRECTORIES( ${LLVM_LIB_DIR} )
 # Turn on by default for now.
 option(CXXAMP_ENABLE_GMAC "Build GMAC as backend" ON)
 option(CXXAMP_ENABLE_HSA_OKRA "Use HSA Okra runtime as backend" OFF)
+if (CXXAMP_ENABLE_HSA_OKRA)
+# A bunch of external dependencies
+set (OKRA_ROOT "/home/ijsung/Development/Okra-Interface-to-HSA-Device"
+        CACHE PATH "Okra bin release path")
+set (HSAIL_BACKEND_ROOT "/home/ijsung/Development/hsail-backend/build/"
+        CACHE PATH "HSAIL LLVM Backend build directory")
+set (HSAIL_TOOLS "/home/ijsung/Development/HSAIL-Tools/"
+        CACHE PATH "LibHSAIL Path")
+find_program (HSAILASM NAME hsailasm PATHS
+        ${HSAIL_TOOLS}/libHSAIL/build_linux/
+        NO_DEFAULT_PATH
+        )
+# clc.exe and AMD OpenCL library builtins
+set (AMD_TOOL_ROOT "/home/ijsung/Development/LLVM_HSAIL_Cmake/"
+        CACHE PATH "AMD OpenCL tool root")
+# Okra headers needs JNI
+find_package(JNI)
+endif (CXXAMP_ENABLE_HSA_OKRA)
 
 if(CXXAMP_ENABLE_GMAC)
 
