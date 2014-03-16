@@ -595,9 +595,8 @@ array<T, N>::array(const array_view<const T, N>& src, accelerator_view av,
 
 template <typename T, int N>
 void array_view<T, N>::synchronize() const {
-  assert(cache.get());
-  assert(p_);
-  cache.synchronize();
+  if(p_ && cache.get())
+    cache.synchronize();
 }
 
 template <typename T, int N>
