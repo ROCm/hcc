@@ -18,6 +18,7 @@
 5_Data_Cont/5_1_array/5_1_3_m/Properties/extent/Test.01/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/copy_to/Test.03/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/copy_to/Test.01/test.cpp
+5_Data_Cont/5_1_array/5_1_2_c/CopyConstruct/Test.04/test.cpp
 5_Data_Cont/5_1_array/5_1_2_c/CopyConstruct/Test.03/test.cpp
 5_Data_Cont/5_1_array/5_1_2_c/CopyConstruct/Test.01/test.cpp
 5_Data_Cont/5_1_array/5_1_2_c/MoveConstruct/Test.01/test.cpp
