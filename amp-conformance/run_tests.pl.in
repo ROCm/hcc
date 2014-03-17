@@ -66,7 +66,10 @@ $CLAMP_LDFLAGS =~ s/^\s+//;
 $CLAMP_LDFLAGS =~ s/\s+$//;
 my $CLAMP_DEVICE="$CLANG_AMP_BUILD_DIR/lib/clamp-device";
 my $CLAMP_EMBED="$CLANG_AMP_BUILD_DIR/lib/clamp-embed";
-my $SHARED_CXXFLAGS="$CLAMP_CXXFLAGS -I$AMPTESTINC -I$OPENCL_INC";
+my $SHARED_CXXFLAGS="$CLAMP_CXXFLAGS -I$AMPTESTINC ";
+if ($OPENCL_INC ne "") {
+    $SHARED_CXXFLAGS="$SHARED_CXXFLAGS -I$OPENCL_INC";
+}
 
 ### Prepare environment
 if(-e $run_log)
