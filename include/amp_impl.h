@@ -63,7 +63,7 @@ inline accelerator::accelerator(const std::wstring& path): device_path(path),
     std::wcerr << L"CLAMP: Warning: the given accelerator is not supported: ";
     std::wcerr << path << std::endl;
   }
-
+#ifndef CXXAMP_ENABLE_HSA_OKRA
   AcceleratorInfo accInfo;
   for (unsigned i = 0; i < eclGetNumberOfAccelerators(); i++) {
     assert(eclGetAcceleratorInfo(i, &accInfo) == eclSuccess);
@@ -83,7 +83,7 @@ inline accelerator::accelerator(const std::wstring& path): device_path(path),
      & GMAC_ACCELERATOR_FP_INF_NAN
      & GMAC_ACCELERATOR_FP_DENORM)
     supports_limited_double_precision = true;
-
+#endif
   description = L"Default GMAC+OpenCL";
   if (!default_view_) {
     default_view_ = new accelerator_view(0);
@@ -566,9 +566,15 @@ array<T, N>::array(int e0, int e1, int e2, InputIterator srcBegin, InputIterator
 
 
 template<typename T, int N> array<T, N>::array(const array& other)
-    : extent(other.extent), m_device(other.m_device), pav(other.pav), paav(other.paav) {}
+    : extent(other.extent), m_device(other.m_device), pav(other.pav), paav(other.paav) {
+  if(pav) pav = new accelerator_view(*(other.pav));
+  if(paav) paav = new accelerator_view(*(other.paav));
+}
 template<typename T, int N> array<T, N>::array(array&& other)
-    : extent(other.extent), m_device(other.m_device),pav(other.pav), paav(other.paav) {}
+    : extent(other.extent), m_device(other.m_device),pav(other.pav), paav(other.paav) {
+  if(pav) pav = new accelerator_view(*(other.pav));
+  if(paav) paav = new accelerator_view(*(other.paav));
+}
 template<typename T, int N>
 array<T, N>::array(const array_view<const T, N>& src, accelerator_view av,
                    access_type cpu_access_type)
@@ -589,9 +595,8 @@ array<T, N>::array(const array_view<const T, N>& src, accelerator_view av,
 
 template <typename T, int N>
 void array_view<T, N>::synchronize() const {
-  assert(cache.get());
-  assert(p_);
-  cache.synchronize();
+  if(p_ && cache.get())
+    cache.synchronize();
 }
 
 template <typename T, int N>

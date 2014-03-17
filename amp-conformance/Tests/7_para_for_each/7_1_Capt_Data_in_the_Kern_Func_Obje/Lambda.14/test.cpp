@@ -23,7 +23,7 @@ void kernel(T _Pred, int &c, int a) __GPU
 
 // One level of indirection in order to get the type of lambda
 template<typename T>
-void start(T lambda, array<int, 1> &ac, array<int, 1> &aa)
+void start(T lambda, Concurrency::array<int, 1> &ac, Concurrency::array<int, 1> &aa)
 {
     parallel_for_each(aa.get_extent(), [&, lambda](index<1> idx) __GPU {
         kernel<T>(lambda, ac[idx], aa[idx]);
@@ -50,8 +50,8 @@ int main()
     }
 
     Concurrency::extent<1> e(size);
-    array<int, 1> aa(e, a.begin(), rv);
-    array<int, 1> ac(e, rv);
+    Concurrency::array<int, 1> aa(e, a.begin(), rv);
+    Concurrency::array<int, 1> ac(e, rv);
 
     auto lambda = [](int x) __GPU -> int { return x % 2; };
 

@@ -31,5 +31,10 @@ if hasSPIR; then
 else
     echo "Warning: not a SPIR-enabled OpenCL stack; generating OpenCL-C instead."
     $LLC $2.promote.bc -march=c -o - |cat $MATH/opencl_math.cl - > $2
+    if [ "@CXXAMP_ENABLE_HSA_OKRA@" = "ON" ]; then
+        @PROJECT_BINARY_DIR@/lib/clamp-hsatools $2
+        mv -f $2 $2.orig
+        mv $2.hsail $2
+    fi
 fi
 
