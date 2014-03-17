@@ -487,7 +487,7 @@ namespace Test
             
             // now try to read locally (implicit synchronize)
             Log() << "Performing implicit synchronize on the local section" << std::endl;
-            local.view()[local_view_type::index_type()];
+            local.view()[typename local_view_type::index_type()];
             
             // for the positive case, the local section should be updated with some of the known
             // values
@@ -546,7 +546,7 @@ namespace Test
             
             // now refresh the remote view
             Log() << "Performing implicit synchronize on the remote section" << std::endl;
-            remote.view()[remote_view_type::index_type()];
+            remote.view()[typename remote_view_type::index_type()];
             
             return unexpected_changes == 0 && known_values_checked > 0;
         };
@@ -571,7 +571,7 @@ namespace Test
             
             // now try to read locally (implicit synchronize)
             Log() << "Performing implicit synchronize on the local section" << std::endl;
-            local.view()[local_view_type::index_type()];
+            local.view()[typename local_view_type::index_type()];
             
             // for the negative case, no change should occur -- this will count the changes
             Log() << "Looking for changes in local_view" << std::endl;

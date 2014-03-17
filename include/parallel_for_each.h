@@ -24,13 +24,30 @@ static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu,amp) {
 }
 namespace CLAMP {
 extern void CompileKernels(void);
+extern void *CreateOkraKernel(std::string);
+extern void OkraLaunchKernel(void *ker, size_t, size_t *global, size_t *local);
 }
 static std::set<std::string> __mcw_cxxamp_kernels;
 template<typename Kernel, int dim_ext>
 static inline void mcw_cxxamp_launch_kernel(size_t *ext,
   size_t *local_size, const Kernel& f) restrict(cpu,amp) {
 #ifdef CXXAMP_ENABLE_HSA_OKRA
-  assert(0 && "Unsupported function");
+  //Invoke Kernel::__cxxamp_trampoline as an HSAkernel
+  //to ensure functor has right operator() defined
+  //this triggers the trampoline code being emitted
+  int foo = reinterpret_cast<intptr_t>(&Kernel::__cxxamp_trampoline);
+  void *kernel = NULL;
+  {
+      std::string transformed_kernel_name =
+          mcw_cxxamp_fixnames(f.__cxxamp_trampoline_name());
+#if 0
+      std::cerr << "Kernel name = "<< transformed_kernel_name <<"\n";
+#endif
+      kernel = CLAMP::CreateOkraKernel(transformed_kernel_name);
+  }
+  Concurrency::Serialize s(kernel);
+  f.__cxxamp_serialize(s);
+  CLAMP::OkraLaunchKernel(kernel, dim_ext, ext, local_size);
 #else
   ecl_error error_code;
   accelerator def;
