@@ -12,7 +12,7 @@
 using namespace Concurrency;
 using namespace std;
 
-void restrict(index<1>& idx, array<int, 1>& a) restrict(amp)
+void restrict(index<1>& idx, Concurrency::array<int, 1>& a) restrict(amp)
 {
    a(0) = 1;
 }
@@ -42,7 +42,7 @@ int main(int argc, char **argv)
 
     cout << "Test: Use restrict as a restricted amp function name" << endl;
     Concurrency::extent<1> ex(1);
-    array<int, 1> arr(ex);
+    Concurrency::array<int, 1> arr(ex);
 
     parallel_for_each(arr.get_extent(), [&](index<1> idx) restrict(amp) { restrict(idx, arr);});
 

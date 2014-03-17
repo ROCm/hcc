@@ -45,7 +45,7 @@ int main()
     }
 
     // verify data
-    if(!equal(vec.begin(), vec.end(), stdext::make_unchecked_array_iterator(av1.data())))
+    if(!equal(vec.begin(), vec.end(), av1.data()))
     {
         printf("array_view data does not match original data. FAIL!\n");
         return runall_fail;
