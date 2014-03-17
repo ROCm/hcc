@@ -73,7 +73,7 @@ option(CXXAMP_ENABLE_GMAC "Build GMAC as backend" ON)
 option(CXXAMP_ENABLE_HSA_OKRA "Use HSA Okra runtime as backend" OFF)
 if (CXXAMP_ENABLE_HSA_OKRA)
 # A bunch of external dependencies
-set (OKRA_ROOT "/home/ijsung/Development/Okra-Interface-to-HSA-Device"
+set (OKRA_ROOT "/opt/hsa/"
         CACHE PATH "Okra bin release path")
 set (HSAIL_BACKEND_ROOT "/home/ijsung/Development/hsail-backend/build/"
         CACHE PATH "HSAIL LLVM Backend build directory")
@@ -87,7 +87,7 @@ find_program (HSAILASM NAME hsailasm PATHS
 set (AMD_TOOL_ROOT "/home/ijsung/Development/LLVM_HSAIL_Cmake/"
         CACHE PATH "AMD OpenCL tool root")
 # Okra headers needs JNI
-find_package(JNI)
+find_package(JNI REQUIRED)
 endif (CXXAMP_ENABLE_HSA_OKRA)
 
 if(CXXAMP_ENABLE_GMAC)
@@ -174,6 +174,10 @@ set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMA
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "clamp: a C++AMP to OpenCL compiler")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Ray I-Jui Sung <ray@multicorewareinc.com>")
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "libcxxamp (>= 0.1.1)")
+if (CXXAMP_ENABLE_HSA_OKRA)
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS 
+            "${CPACK_DEBIAN_PACKAGE_DEPENDS} okra-dev (>= 0.1.1)")
+endif (CXXAMP_ENABLE_HSA_OKRA)
 set(CPACK_GENERATOR "DEB;TGZ")
 set(CPACK_SOURCE_GENERATOR "TGZ")
 set(CPACK_BINARY_DEB "ON")
