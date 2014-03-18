@@ -130,3 +130,4 @@
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToGlobal/Test02/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToGlobal/Test01/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/Misc/Test04/test.cpp
+2_Cxx_Lang_Exte/2_1_Synt/Contextual_restrict/test.02/test.cpp
