@@ -129,10 +129,10 @@
 2_Cxx_Lang_Exte/2_1_Synt/2_1_3_Type_Spec/Typedef/Test.01/test.cpp
 2_Cxx_Lang_Exte/2_1_Synt/2_1_1_Func_Decl_Synt/TemplateClass/Test.01/test.cpp
 2_Cxx_Lang_Exte/2_1_Synt/2_1_1_Func_Decl_Synt/Negative/Test.04/test.cpp
+2_Cxx_Lang_Exte/2_1_Synt/Contextual_restrict/test.02/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Statements/ControlFlow/Test.07/While/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToGlobal/Test02/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToGlobal/Test01/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/Misc/Test04/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/RefToPointer/Normal/Test10/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/RefToPointer/Normal/Test05/test.cpp
-
