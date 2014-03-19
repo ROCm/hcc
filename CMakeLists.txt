@@ -174,9 +174,9 @@ set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Ray I-Jui Sung <ray@multicorewareinc.com>")
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "libcxxamp (>= 0.1.1)")
 if (CXXAMP_ENABLE_HSA_OKRA)
     set(CPACK_DEBIAN_PACKAGE_DEPENDS 
-            "${CPACK_DEBIAN_PACKAGE_DEPENDS} okra-dev (>= 0.1.1)")
+            "${CPACK_DEBIAN_PACKAGE_DEPENDS}, okra-dev (>= 0.1.1)")
     set(CPACK_DEBIAN_PACKAGE_DEPENDS 
-            "${CPACK_DEBIAN_PACKAGE_DEPENDS} amd-ocl-tools-dev (>= 0.1.1)")
+            "${CPACK_DEBIAN_PACKAGE_DEPENDS}, amd-ocl-tools-dev (>= 0.1.1)")
 endif (CXXAMP_ENABLE_HSA_OKRA)
 set(CPACK_GENERATOR "DEB;TGZ")
 set(CPACK_SOURCE_GENERATOR "TGZ")
