@@ -1508,11 +1508,12 @@ public:
   }
 
   template <int K>
-      array_view<T, K> view_as(Concurrency::extent<K> viewExtent) const restrict(amp,cpu) {
-          static_assert(N == 1, "view_as is only permissible on array views of rank 1");
-          array_view<T, K> av(viewExtent, cache, p_, offset);
-          return av;
-      }
+  array_view<T, K> view_as(Concurrency::extent<K> viewExtent) const restrict(amp,cpu) {
+    static_assert(N == 1, "view_as is only permissible on array views of rank 1");
+    offset = index_base[0];
+    array_view<T, K> av(viewExtent, cache, p_, offset);
+    return av;
+  }
 
   void synchronize() const;
   completion_future synchronize_async() const;
@@ -1547,8 +1548,9 @@ private:
   Concurrency::extent<N> extent;
   Concurrency::extent<N> extent_base;
   Concurrency::index<N> index_base;
-  int offset;
+  int mutable offset;
 };
+
 
 #undef __global
 
