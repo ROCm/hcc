@@ -16,7 +16,7 @@ int foo(int k) restrict(amp){
 //CHECK: define {{.*}} @foo(int)
 //CHECK-NOT: call {{.*}}Concurrency::index<1>::operator[]
 //CHECK-NOT: load
-//CHECKL }
+//CHECK: }
 
 #ifndef __GPU__ //Device mode compilation cannot have RTTI
 // Test correctness

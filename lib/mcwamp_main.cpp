@@ -7,6 +7,14 @@
 /* Flag set by ‘--verbose’. */
 static int verbose_flag;
 static bool build_mode = false, install_mode = false;
+void replace(std::string& str,
+        const std::string& from, const std::string& to) {
+    size_t start_pos = str.find(from);
+    while(start_pos != std::string::npos) {
+        str.replace(start_pos, from.length(), to);
+        start_pos = str.find(from);
+    }
+}
 void cxxflags(void) {
     if (!build_mode && !install_mode) {
         std::cerr << "Please specify --install or --build mode before flags\n";
@@ -14,14 +22,23 @@ void cxxflags(void) {
     }
     // Common options
     std::cout << "--std=c++amp";
+#if CXXAMP_ENABLE_HSA_OKRA
+    std::cout << " -DCXXAMP_ENABLE_HSA_OKRA=1";
+    std::cout << " -I" CMAKE_OKRA_ROOT;
+    std::string jni_dirs(CMAKE_JNI_INCLUDE);
+    replace(jni_dirs, ";", " -I");
+    std::cout << " -I" << jni_dirs;
+#endif
     // clamp
     if (build_mode) {
         std::cout << " -I" CMAKE_CLAMP_INC_DIR;
         // libcxx
         std::cout << " -I" CMAKE_LIBCXX_INC;
+#ifndef CXXAMP_ENABLE_HSA_OKRA
         // GMAC options, build tree
         std::cout << " -I" CMAKE_GMAC_INC_BIN_DIR;
         std::cout << " -I" CMAKE_GMAC_INC_DIR;
+#endif
     } else if (install_mode) {
         std::cout << " -I" CMAKE_INSTALL_INC;
         std::cout << " -I" CMAKE_INSTALL_LIBCXX_INC;
@@ -53,7 +70,15 @@ void ldflags(void) {
 #endif
     }
 #ifndef __APPLE__
-    std::cout << " -lgmac-hpe -lc++ -lcxxrt -ldl -lmcwamp ";
+#ifdef CXXAMP_ENABLE_HSA_OKRA
+    std::cout << " -Wl,--rpath=" CMAKE_OKRA_LIB;
+    std::cout << " -L" CMAKE_OKRA_LIB;
+    std::cout << " -lokra_x86_64 -lnewhsacore64 -lamdhsacl64";
+#else
+    std::cout << " -lgmac-hpe";
+#endif
+    std::cout << " -lc++ -lcxxrt -ldl -lpthread ";
+    std::cout << "-Wl,--whole-archive -lmcwamp -Wl,--no-whole-archive ";
 #else
     std::cout << " -lgmac-hpe -lc++ -lmcwamp ";
 #endif
