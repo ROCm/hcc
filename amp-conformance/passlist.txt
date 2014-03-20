@@ -6,6 +6,7 @@
 5_Data_Cont/5_2_a_v/5_2_3_m/WithoutDataSource/copy_to/Test.01/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/ArrayViewConstToIterator/test.cpp
 5_Data_Cont/5_3_c_d/Misc/HigherRank/test.cpp
+5_Data_Cont/5_3_c_d/Misc/CustomIterator/IterToArrayView.02/CpuToCpu/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/IteratorToArrayView/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/IteratorToNonContigArrayView/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/StagingArrayAndIterator/test.cpp
