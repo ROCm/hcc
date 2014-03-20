@@ -753,7 +753,7 @@ class tiled_index {
   const tile_barrier barrier;
   tiled_index(const index<3>& g) restrict(amp, cpu):global(g){}
   tiled_index(const tiled_index<D0, D1, D2>& o) restrict(amp, cpu):
-    global(o.global), local(o.local) {}
+    global(o.global), local(o.local), tile(o.tile), tile_origin(o.tile_origin), barrier(o.barrier) {}
   operator const index<3>() const restrict(amp,cpu) {
     return global;
   }
@@ -792,7 +792,7 @@ class tiled_index<D0, 0, 0> {
   const tile_barrier barrier;
   tiled_index(const index<1>& g) restrict(amp, cpu):global(g){}
   tiled_index(const tiled_index<D0>& o) restrict(amp, cpu):
-    global(o.global), local(o.local) {}
+    global(o.global), local(o.local), tile(o.tile), tile_origin(o.tile_origin), barrier(o.barrier) {}
   operator const index<1>() const restrict(amp,cpu) {
     return global;
   }
@@ -827,7 +827,7 @@ class tiled_index<D0, D1, 0> {
   const tile_barrier barrier;
   tiled_index(const index<2>& g) restrict(amp, cpu):global(g){}
   tiled_index(const tiled_index<D0, D1>& o) restrict(amp, cpu):
-    global(o.global), local(o.local) {}
+    global(o.global), local(o.local), tile(o.tile), tile_origin(o.tile_origin), barrier(o.barrier) {}
   operator const index<2>() const restrict(amp,cpu) {
     return global;
   }
