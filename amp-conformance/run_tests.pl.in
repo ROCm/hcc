@@ -66,7 +66,7 @@ $CLAMP_LDFLAGS =~ s/^\s+//;
 $CLAMP_LDFLAGS =~ s/\s+$//;
 my $CLAMP_DEVICE="$CLANG_AMP_BUILD_DIR/lib/clamp-device";
 my $CLAMP_EMBED="$CLANG_AMP_BUILD_DIR/lib/clamp-embed";
-my $SHARED_CXXFLAGS="$CLAMP_CXXFLAGS -I$AMPTESTINC ";
+my $SHARED_CXXFLAGS="$CLAMP_CXXFLAGS -I$AMPTESTINC -I/usr/include -I$CLANG_AMP_BUILD_DIR/compiler/lib/clang/3.3/include/";
 if ($OPENCL_INC ne "") {
     $SHARED_CXXFLAGS="$SHARED_CXXFLAGS -I$OPENCL_INC";
 }
