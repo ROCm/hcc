@@ -14,4 +14,10 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-device
     ${CMAKE_CURRENT_BINARY_DIR}/clamp-spirify
     ${CMAKE_CURRENT_BINARY_DIR}/clamp-embed
     DESTINATION bin)
+
+if (CXXAMP_ENABLE_HSA_OKRA)
+install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-hsatools
+    DESTINATION bin)
+endif (CXXAMP_ENABLE_HSA_OKRA)
+
 install(FILES opencl_math.bc DESTINATION lib)
