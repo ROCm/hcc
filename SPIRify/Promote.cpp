@@ -1022,7 +1022,43 @@ void updateArgUsers (Function * F, InstUpdateWorkList * updateNeeded)
 }
 
 
-
+// updateOperandType - Replace types of operand and return values with the promoted types if necessary
+// This function goes through the function's body and handles GEPs and select instruction specially.
+// After a function is cloned by calling CloneFunctionInto, some of the operands types 
+// might not be updated correctly. Neither are some of  the instructions' return types.
+// For example, 
+// (1) getelementptr instruction will leave type of its pointer operand un-promoted 
+// (2) select instructiono will not update its return type as what has been changed to its #1 or #2 operand
+// Note that It is always safe to call this function right after CloneFunctionInto
+//
+void updateOperandType(Function * oldF, Function * newF, FunctionType* ty, InstUpdateWorkList* workList)
+{
+  // Walk all the BBs
+  for (Function::iterator B = newF->begin(), Be = newF->end();B != Be; ++B) {
+    // Walk all instructions	
+    for (BasicBlock::iterator I = B->begin(), Ie = B->end(); I != Ie; ++I) {
+      if (SelectInst *Sel = dyn_cast<SelectInst>(I)) {
+        assert(Sel->getOperand(1) && "#1  operand  of Select Instruction is invalid!");
+        Sel->mutateType(I->getOperand(1)->getType());
+        updateListWithUsers(I->use_begin(), I->use_end(), I, I, workList);
+      } else if( GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(I)) {
+        // Handle GEPs
+        Type*T = GEP->getPointerOperandType();
+        // Traverse the old args to find source type
+        unsigned argIdx = 0;
+        for (Function::arg_iterator A = oldF->arg_begin(), Ae = oldF->arg_end();
+                    A != Ae; ++A, ++argIdx) {
+          // Since Type* is immutable, pointer comparison to see if they are the same
+          if(T == oldF->getFunctionType()->getParamType(argIdx)) {
+            Argument* V = new Argument(ty->getParamType(argIdx), GEP->getPointerOperand()->getName());
+          // Note that only forward udpate is allowed. A backward update
+          updateGEPWithNewOperand(GEP, GEP->getPointerOperand(), V, workList);
+          }
+        }
+      }
+    }
+  }
+}
 
 Function * createPromotedFunctionToType ( Function * F, FunctionType * promoteType)
 {
@@ -1046,7 +1082,8 @@ Function * createPromotedFunctionToType ( Function * F, FunctionType * promoteTy
 //        promoteBitcasts(newFunction, workList);
         promoteTileStatic(newFunction, &workList);
         updateArgUsers (newFunction, &workList);
-
+        updateOperandType(F, newFunction, promoteType, &workList);
+       
         do {
                 /*while( !workList.empty() ) {
                         update_token update = workList.back();
