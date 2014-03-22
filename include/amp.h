@@ -1510,8 +1510,7 @@ public:
   template <int K>
   array_view<T, K> view_as(Concurrency::extent<K> viewExtent) const restrict(amp,cpu) {
     static_assert(N == 1, "view_as is only permissible on array views of rank 1");
-    offset = index_base[0];
-    array_view<T, K> av(viewExtent, cache, p_, offset);
+    array_view<T, K> av(viewExtent, cache, p_, index_base[0]);
     return av;
   }
 
@@ -1548,7 +1547,7 @@ private:
   Concurrency::extent<N> extent;
   Concurrency::extent<N> extent_base;
   Concurrency::index<N> index_base;
-  int mutable offset;
+  int offset;
 };
 
 
