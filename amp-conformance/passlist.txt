@@ -15,6 +15,10 @@
 5_Data_Cont/5_3_c_d/SynchronousCopy/ArrayToArray/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/ArrayAndIterator/test.cpp
 5_Data_Cont/5_3_c_d/Misc/HigherRank/test.cpp
+5_Data_Cont/5_3_c_d/Misc/CustomIterator/IterToArrayView.02/CpuToCpu/test.cpp
+5_Data_Cont/5_3_c_d/SynchronousCopy/IteratorToArrayView/test.cpp
+5_Data_Cont/5_3_c_d/SynchronousCopy/IteratorToNonContigArrayView/test.cpp
+5_Data_Cont/5_3_c_d/SynchronousCopy/StagingArrayAndIterator/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/1d/Nested.03/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/1d/Nested.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/1d/Nested.01/test.cpp
@@ -122,6 +126,7 @@
 3_device_Modeling/3_3_Accelerator_view/3_3_3_constr/copy_ctor/test.cpp
 2_Cxx_Lang_Exte/2_1_Synt/2_1_1_Func_Decl_Synt/TemplateClass/Test.01/test.cpp
 2_Cxx_Lang_Exte/2_1_Synt/2_1_1_Func_Decl_Synt/Negative/Test.04/test.cpp
+2_Cxx_Lang_Exte/2_x_general/Statements/ControlFlow/Test.07/While/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToGlobal/Test02/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToGlobal/Test01/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/Misc/Test04/test.cpp
