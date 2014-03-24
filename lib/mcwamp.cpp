@@ -1,4 +1,5 @@
 #include <amp.h>
+#include <map>
 namespace Concurrency {
 accelerator_view *accelerator::default_view_ = NULL;
 const wchar_t accelerator::gpu_accelerator[] = L"gpu";
@@ -66,7 +67,7 @@ OkraContext *GetOrInitOkraContext(void)
 {
   static OkraContext *context = NULL;
   if (!context) {
-    std::cerr << "Okra: create context\n";
+    //std::cerr << "Okra: create context\n";
     context = OkraContext::Create();
   }
   if (!context) {
@@ -76,21 +77,26 @@ OkraContext *GetOrInitOkraContext(void)
   return context;
 }
 
+static std::map<std::string, OkraContext::Kernel *> __mcw_okra_kernels;
 void *CreateOkraKernel(std::string s)
 {
-  size_t kernel_size = (size_t)((void *)kernel_size_);
-  char *kernel_source = (char*)malloc(kernel_size+1);
-  memcpy(kernel_source, kernel_source_, kernel_size);
-  kernel_source[kernel_size] = '\0';
-  std::string kname = std::string("&__OpenCL_")+s+std::string("_kernel");
-  OkraContext::Kernel *kernel = GetOrInitOkraContext()->
-      createKernel(kernel_source, kname.c_str());
-  std::cerr << "CLAMP::Okra::Creating kernel: "<< kname<<"\n";
-  std::cerr << "CLAMP::Okra::Creating kernel: "<< kernel <<"\n";
-
+  OkraContext::Kernel *kernel = __mcw_okra_kernels[s];
   if (!kernel) {
-    std::cerr << "Okra: Unable to create kernel\n";
-    abort();
+      size_t kernel_size = (size_t)((void *)kernel_size_);
+      char *kernel_source = (char*)malloc(kernel_size+1);
+      memcpy(kernel_source, kernel_source_, kernel_size);
+      kernel_source[kernel_size] = '\0';
+      std::string kname = std::string("&__OpenCL_")+s+
+          std::string("_kernel");
+      kernel = GetOrInitOkraContext()->
+          createKernel(kernel_source, kname.c_str());
+      //std::cerr << "CLAMP::Okra::Creating kernel: "<< kname<<"\n";
+      //std::cerr << "CLAMP::Okra::Creating kernel: "<< kernel <<"\n";
+      if (!kernel) {
+          std::cerr << "Okra: Unable to create kernel\n";
+          abort();
+      }
+      __mcw_okra_kernels[s] = kernel;
   }
   kernel->clearArgs();
   // HSA kernels generated from OpenCL takes 3 additional arguments at the beginning
@@ -102,7 +108,7 @@ void *CreateOkraKernel(std::string s)
 namespace Okra {
 void RegisterMemory(void *p, size_t sz)
 {
-    std::cerr << "registering: ptr " << p << " of size " << sz << "\n";
+    //std::cerr << "registering: ptr " << p << " of size " << sz << "\n";
     GetOrInitOkraContext()->registerArrayMemory(p, sz);
 }
 }
@@ -114,7 +120,7 @@ void OkraLaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local)
   size_t tmp_local[] = {0, 0, 0};
   if (!local)
       local = tmp_local;
-  std::cerr<<"Launching: nr dim = " << nr_dim << "\n";
+  //std::cerr<<"Launching: nr dim = " << nr_dim << "\n";
 
   kernel->setLaunchAttributes(nr_dim, global, local);
   //std::cerr << "No real launch\n";
@@ -123,14 +129,14 @@ void OkraLaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local)
 
 void OkraPushArg(void *ker, size_t sz, const void *v)
 {
-  std::cerr << "pushing:" << ker << " of size " << sz << "\n";
+  //std::cerr << "pushing:" << ker << " of size " << sz << "\n";
   OkraContext::Kernel *kernel =
       reinterpret_cast<OkraContext::Kernel*>(ker);
   void *val = const_cast<void*>(v);
   switch (sz) {
     case sizeof(int):
       kernel->pushIntArg(*reinterpret_cast<int*>(val));
-      std::cerr << "(int) value = " << *reinterpret_cast<int*>(val) <<"\n";
+      //std::cerr << "(int) value = " << *reinterpret_cast<int*>(val) <<"\n";
       break;
     default:
       assert(0 && "Unsupported kernel argument size");
@@ -138,7 +144,7 @@ void OkraPushArg(void *ker, size_t sz, const void *v)
 }
 void OkraPushPointer(void *ker, void *val)
 {
-    std::cerr << "pushing:" << ker << " of ptr " << val << "\n";
+    //std::cerr << "pushing:" << ker << " of ptr " << val << "\n";
     OkraContext::Kernel *kernel =
         reinterpret_cast<OkraContext::Kernel*>(ker);
     kernel->pushPointerArg(val);

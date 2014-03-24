@@ -753,7 +753,7 @@ class tiled_index {
   const tile_barrier barrier;
   tiled_index(const index<3>& g) restrict(amp, cpu):global(g){}
   tiled_index(const tiled_index<D0, D1, D2>& o) restrict(amp, cpu):
-    global(o.global), local(o.local) {}
+    global(o.global), local(o.local), tile(o.tile), tile_origin(o.tile_origin), barrier(o.barrier) {}
   operator const index<3>() const restrict(amp,cpu) {
     return global;
   }
@@ -792,7 +792,7 @@ class tiled_index<D0, 0, 0> {
   const tile_barrier barrier;
   tiled_index(const index<1>& g) restrict(amp, cpu):global(g){}
   tiled_index(const tiled_index<D0>& o) restrict(amp, cpu):
-    global(o.global), local(o.local) {}
+    global(o.global), local(o.local), tile(o.tile), tile_origin(o.tile_origin), barrier(o.barrier) {}
   operator const index<1>() const restrict(amp,cpu) {
     return global;
   }
@@ -827,7 +827,7 @@ class tiled_index<D0, D1, 0> {
   const tile_barrier barrier;
   tiled_index(const index<2>& g) restrict(amp, cpu):global(g){}
   tiled_index(const tiled_index<D0, D1>& o) restrict(amp, cpu):
-    global(o.global), local(o.local) {}
+    global(o.global), local(o.local), tile(o.tile), tile_origin(o.tile_origin), barrier(o.barrier) {}
   operator const index<2>() const restrict(amp,cpu) {
     return global;
   }
@@ -1508,11 +1508,11 @@ public:
   }
 
   template <int K>
-      array_view<T, K> view_as(Concurrency::extent<K> viewExtent) const restrict(amp,cpu) {
-          static_assert(N == 1, "view_as is only permissible on array views of rank 1");
-          array_view<T, K> av(viewExtent, cache, p_, offset);
-          return av;
-      }
+  array_view<T, K> view_as(Concurrency::extent<K> viewExtent) const restrict(amp,cpu) {
+    static_assert(N == 1, "view_as is only permissible on array views of rank 1");
+    array_view<T, K> av(viewExtent, cache, p_, index_base[0]);
+    return av;
+  }
 
   void synchronize() const;
   completion_future synchronize_async() const;
@@ -1550,6 +1550,7 @@ private:
   int offset;
 };
 
+
 #undef __global
 
 template <int N, typename Kernel>
@@ -1570,13 +1571,19 @@ void parallel_for_each(const accelerator_view& accl_view, extent<N> compute_doma
 }
 
 template <int D0, int D1, int D2, typename Kernel>
-void parallel_for_each(const accelerator_view& accl_view, tiled_extent<D0,D1,D2> compute_domain, const Kernel& f);
+void parallel_for_each(const accelerator_view& accl_view, tiled_extent<D0,D1,D2> compute_domain, const Kernel& f) {
+    parallel_for_each(compute_domain, f);
+}
 
 template <int D0, int D1, typename Kernel>
-void parallel_for_each(const accelerator_view& accl_view, tiled_extent<D0,D1> compute_domain, const Kernel& f);
+void parallel_for_each(const accelerator_view& accl_view, tiled_extent<D0,D1> compute_domain, const Kernel& f) {
+    parallel_for_each(compute_domain, f);
+}
 
 template <int D0, typename Kernel>
-void parallel_for_each(const accelerator_view& accl_view, tiled_extent<D0> compute_domain, const Kernel& f);
+void parallel_for_each(const accelerator_view& accl_view, tiled_extent<D0> compute_domain, const Kernel& f) {
+    parallel_for_each(compute_domain, f);
+}
 
 } // namespace Concurrency
 namespace concurrency = Concurrency;
