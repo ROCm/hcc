@@ -1359,7 +1359,7 @@ private:
 template <typename T, int N = 1>
 class array_view
 {
-  typedef typename std::remove_const<T>::type nc_T;
+//  typedef typename std::remove_const<T>::type nc_T;
 public:
 #ifdef __GPU__
   typedef _data<T> gmac_buffer_t;
