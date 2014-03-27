@@ -13,6 +13,7 @@ if [ -d @LLVM_TOOLS_DIR@ ]; then
     MATH=@OPENCL_MATH_DIR@
     MATHLIB=@CPPAMP_SOURCE_DIR@/lib
     LIB=@LLVM_LIBS_DIR@
+    HSATOOLS=@PROJECT_BINARY_DIR@/lib/clamp-hsatools
 else
     OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
     LLC=@CMAKE_INSTALL_PREFIX@/bin/llc
@@ -20,10 +21,11 @@ else
     MATH=@CMAKE_INSTALL_PREFIX@/include
     MATHLIB=@CMAKE_INSTALL_PREFIX@/lib
     LIB=@CMAKE_INSTALL_PREFIX@/lib
+    HSATOOLS=@CMAKE_INSTALL_PREFIX@/bin/clamp-hsatools
 fi
 $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
     -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-        -promote-globals -erase-nonkernels < $1 -o $2.promote.bc
+        -promote-globals -erase-nonkernels -dce < $1 -o $2.promote.bc
 if hasSPIR; then
     echo "Generating SPIR file"
     $LINK $MATHLIB/opencl_math.bc $2.promote.bc -o $2 2>/dev/null
@@ -31,5 +33,13 @@ if hasSPIR; then
 else
     echo "Warning: not a SPIR-enabled OpenCL stack; generating OpenCL-C instead."
     $LLC $2.promote.bc -march=c -o - |cat $MATH/opencl_math.cl - > $2
+    if [ "@CXXAMP_ENABLE_HSA_OKRA@" = "ON" ]; then
+        $HSATOOLS $2
+        mv -f $2 $2.orig
+        mv $2.hsail $2
+    elif grep -q " double " $2; then
+        echo "#pragma OPENCL EXTENSION cl_khr_fp64: enable"|cat - $2 > $2.t
+        mv -f $2.t $2
+    fi
 fi
 

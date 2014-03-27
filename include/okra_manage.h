@@ -1,18 +1,22 @@
 #include<type_traits>
 #pragma once
-
+#include <malloc.h>
 #include <string.h>
+namespace Concurrency {
+namespace CLAMP {
+namespace Okra {
+extern void RegisterMemory(void *p, size_t sz);
+}
+}
+
 template<class T>
 class GMACAllocator
 {
  public:
   typedef T value_type;
   T* allocate(unsigned n) {
-    T *p = NULL;
-//    ecl_error ret = eclMalloc(
-//	(void**)(const_cast<T**>(&p)), n * sizeof(T));
-    assert(0 && "Not supported yet");
-//    assert(ret == eclSuccess);
+    T *p = (T*)memalign(128, n*sizeof(T));
+    CLAMP::Okra::RegisterMemory(p, sizeof(value_type) * n);
     return p;
   }
 };
@@ -21,10 +25,7 @@ template<class T>
 class GMACDeleter {
  public:
   void operator()(T* ptr) {
-//    ecl_error ret = eclFree(
-//        const_cast<void*>(reinterpret_cast<const void*>(ptr)));
-    assert(0 && "Not supported yet");
-//    assert(ret == eclSuccess);
+    free(ptr);
   }
 };
 
@@ -99,12 +100,8 @@ class _data_host_view {
    gmac_buffer(cache, d), home_ptr(home), state_ptr(new cache_state), buffer_size(size) {
     *state_ptr = HOST_OWNED;
   }
-  
-  __attribute__((annotate("user_deserialize")))
-  _data_host_view(T* cache) :
-   gmac_buffer((nc_T*)(cache)), home_ptr(nullptr), state_ptr(new cache_state), buffer_size(0) {
-    *state_ptr = GMAC_OWNED;
-  }
+
+  __attribute__((annotate("user_deserialize"))) _data_host_view(T* cache);
   
   template <class Deleter>
   _data_host_view(nc_T* cache, Deleter d) :
@@ -201,3 +198,4 @@ class _data_host_view {
   }
 
 };
+} // namespace Concurrency
