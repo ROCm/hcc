@@ -648,14 +648,20 @@ public:
     }
     template <int D0> 
         typename std::enable_if<N == 1, tiled_extent<D0> >::type tile() const {
+            static_assert(D0 > 0, "Tile size must be positive");
             return tiled_extent<D0>(*this);
         }
     template <int D0, int D1>
         typename std::enable_if<N == 2, tiled_extent<D0, D1> >::type tile() const {
+            static_assert(D0 > 0, "Tile size must be positive");
+            static_assert(D1 > 0, "Tile size must be positive");
             return tiled_extent<D0, D1>(*this);
         }
     template <int D0, int D1, int D2>
         typename std::enable_if<N == 3, tiled_extent<D0, D1, D2> >::type tile() const {
+            static_assert(D0 > 0, "Tile size must be positive");
+            static_assert(D1 > 0, "Tile size must be positive");
+            static_assert(D2 > 0, "Tile size must be positive");
             return tiled_extent<D0, D1, D2>(*this);
         }
 
@@ -865,7 +871,11 @@ class tiled_extent : public extent<3>
 {
 public:
   static const int rank = 3;
-  tiled_extent() restrict(amp,cpu);
+  tiled_extent() restrict(amp,cpu) {
+    static_assert(D0 > 0, "Tile size must be positive");
+    static_assert(D1 > 0, "Tile size must be positive");
+    static_assert(D2 > 0, "Tile size must be positive");
+  }
   tiled_extent(const tiled_extent& other) restrict(amp,cpu): extent(other[0], other[1], other[2]) {}
   tiled_extent(const extent<3>& ext) restrict(amp,cpu): extent(ext) {}
   tiled_extent& operator=(const tiled_extent& other) restrict(amp,cpu);
@@ -898,7 +908,10 @@ class tiled_extent<D0,D1,0> : public extent<2>
 {
 public:
   static const int rank = 2;
-  tiled_extent() restrict(amp,cpu);
+  tiled_extent() restrict(amp,cpu) {
+    static_assert(D0 > 0, "Tile size must be positive");
+    static_assert(D1 > 0, "Tile size must be positive");
+  }
   tiled_extent(const tiled_extent& other) restrict(amp,cpu):extent(other[0], other[1]) {}
   tiled_extent(const extent<2>& ext) restrict(amp,cpu):extent(ext) {}
   tiled_extent& operator=(const tiled_extent& other) restrict(amp,cpu);
@@ -928,7 +941,9 @@ class tiled_extent<D0,0,0> : public extent<1>
 {
 public:
   static const int rank = 1;
-  tiled_extent() restrict(amp,cpu);
+  tiled_extent() restrict(amp,cpu) {
+    static_assert(D0 > 0, "Tile size must be positive");
+  }
   tiled_extent(const tiled_extent& other) restrict(amp,cpu):
     extent(other[0]) {}
   tiled_extent(const extent<1>& ext) restrict(amp,cpu):extent(ext) {}
