@@ -610,7 +610,9 @@ public:
         : base_(other.base_) {}
     template <typename ..._Tp>
         explicit extent(_Tp ... __t) restrict(amp,cpu)
-        : base_(__t...) {}
+        : base_(__t...) {
+      static_assert(sizeof...(__t) <= 3, "Can only supply at most 3 individual coordinates in the constructor");
+    }
     explicit extent(int components[]) restrict(amp,cpu)
         : base_(components) {}
     explicit extent(const int components[]) restrict(amp,cpu)
