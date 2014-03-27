@@ -8,7 +8,7 @@
 /// <tags>P1</tags>
 /// <summary>Create array using 2-D accelerator_view and staging specialized constructors - uses hash_multiset - GPU Host CPU target</summary>
 
-#include <hash_set>
+#include <unordered_set>
 #include "./../../../../constructor.h"
 #include <amptest_main.h>
 
@@ -17,15 +17,13 @@ bool test_feature()
 {
     const int _rank = 2;
 
-    std::hash_multiset<_type> data;
+    std::unordered_multiset<_type> data;
     for (int i = 0; i < _D0*_D1; i++)
         data.insert((_type)rand());
 
     {
         bool pass = test_feature_staging_itr<_type, _rank, _D0, _D1, accelerator_view>(data.begin(), data.end(), (_gpu_device).get_default_view(), _cpu_device.get_default_view()) &&
-            test_feature_staging_itr<_type, _rank, _D0, _D1, accelerator_view>(data.rbegin(), data.rend(), (_gpu_device).create_view(queuing_mode_immediate), _cpu_device.create_view(queuing_mode_immediate)) &&
-            test_feature_staging_itr<_type, _rank, _D0, _D1, accelerator_view>(data.cbegin(), data.cend(), (_gpu_device).create_view(queuing_mode_automatic), _cpu_device.create_view(queuing_mode_automatic)) &&
-            test_feature_staging_itr<_type, _rank, _D0, _D1, accelerator_view>(data.crbegin(), data.crend(), (_gpu_device).create_view(queuing_mode_automatic), _cpu_device.create_view(queuing_mode_immediate));
+            test_feature_staging_itr<_type, _rank, _D0, _D1, accelerator_view>(data.cbegin(), data.cend(), (_gpu_device).create_view(queuing_mode_automatic), _cpu_device.create_view(queuing_mode_automatic));
 
         if (!pass)
             return false;
@@ -33,9 +31,7 @@ bool test_feature()
 
     {
         bool pass = test_feature_staging_itr<_type, _rank, _D0, _D1, accelerator_view>(data.begin(), (_gpu_device).get_default_view(), _cpu_device.get_default_view()) &&
-            test_feature_staging_itr<_type, _rank, _D0, _D1, accelerator_view>(data.rbegin(), (_gpu_device).create_view(queuing_mode_immediate), _cpu_device.create_view(queuing_mode_immediate)) &&
-            test_feature_staging_itr<_type, _rank, _D0, _D1, accelerator_view>(data.cbegin(), (_gpu_device).create_view(queuing_mode_automatic), _cpu_device.create_view(queuing_mode_automatic)) &&
-            test_feature_staging_itr<_type, _rank, _D0, _D1, accelerator_view>(data.crbegin(), (_gpu_device).create_view(queuing_mode_immediate), _cpu_device.create_view(queuing_mode_automatic));
+            test_feature_staging_itr<_type, _rank, _D0, _D1, accelerator_view>(data.cbegin(), (_gpu_device).create_view(queuing_mode_automatic), _cpu_device.create_view(queuing_mode_automatic));
 
         if (!pass)
             return false;
@@ -58,7 +54,7 @@ runall_result test_main()
 	result &= REPORT_RESULT((test_feature<float, 31, 19>()));
     result &= REPORT_RESULT((test_feature<float, 5, 1>()));
 	result &= REPORT_RESULT((test_feature<double, 13, 7>()));
-	
+
     return result;
 }
 
