@@ -47,6 +47,11 @@
 5_Data_Cont/5_1_array/5_1_2_c/CopyConstruct/Test.01/test.cpp
 5_Data_Cont/5_1_array/5_1_2_c/MoveConstruct/Test.01/test.cpp
 5_Data_Cont/5_1_array/5_1_2_c/Copy_ArrayView/Test.01/test.cpp
+5_Data_Cont/5_1_array/5_1_2_c/Extent_Acclvw/With_Begin_End_Itrs/Test.02/test.cpp
+5_Data_Cont/5_1_array/5_1_2_c/Extent_Acclvw/With_Begin_Itr/Test.03/test.cpp
+5_Data_Cont/5_1_array/5_1_3_i/data/Test.03/test.cpp
+5_Data_Cont/5_1_array/5_1_3_i/data/Test.04/test.cpp
+5_Data_Cont/5_1_array/5_1_3_i/data/Test.02/test.cpp
 5_Data_Cont/5_1_array/5_1_4_v_o/section/Convenience.02/test.cpp
 5_Data_Cont/5_1_array/5_1_4_v_o/section/3d/General.01.02/test.cpp
 5_Data_Cont/5_1_array/5_1_4_v_o/section/3d/Face.02/test.cpp
