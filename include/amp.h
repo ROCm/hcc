@@ -1850,5 +1850,58 @@ static inline int atomic_fetch_add(int *x, int y) restrict(amp,cpu) {
 extern int atomic_fetch_add(int *x, int y) restrict(amp, cpu);
 #endif
 
+#ifdef __GPU__
+extern "C" unsigned atomic_max_local(volatile __attribute__((address_space(3))) unsigned *p, unsigned val) restrict(amp,cpu);
+extern "C" int atomic_max_global(volatile __attribute__((address_space(1))) int *p, int val) restrict(amp, cpu);
+static inline unsigned atomic_fetch_max(unsigned *x, unsigned y) restrict(amp,cpu) {
+  return atomic_max_local(reinterpret_cast<volatile __attribute__((address_space(3))) unsigned *>(x), y);
+}
+static inline int atomic_fetch_max(int *x, int y) restrict(amp,cpu) {
+  return atomic_max_global(reinterpret_cast<volatile __attribute__((address_space(1))) int *>(x), y);
+}
+
+extern "C" unsigned atomic_inc_local(volatile __attribute__((address_space(3))) unsigned *p) restrict(amp,cpu);
+extern "C" int atomic_inc_global(volatile __attribute__((address_space(1))) int *p) restrict(amp, cpu);
+static inline unsigned atomic_fetch_inc(unsigned *x) restrict(amp,cpu) {
+  return atomic_inc_local(reinterpret_cast<volatile __attribute__((address_space(3))) unsigned *>(x));
+}
+static inline int atomic_fetch_inc(int *x) restrict(amp,cpu) {
+  return atomic_inc_global(reinterpret_cast<volatile __attribute__((address_space(1))) int *>(x));
+}
+#else
+extern unsigned atomic_exchange(unsigned *dest, unsigned val);
+extern int atomic_exchange(int *dest, int val);
+extern float atomic_exchange(float *dest, int val);
+
+extern unsigned atomic_compare_exchange(unsigned * dest, int * expected_value, int val);
+extern int atomic_compare_exchange(int * dest, int * expected_value, int val);
+
+extern unsigned atomic_fetch_add(unsigned *dest, unsigned val);
+extern int atomic_fetch_add(int *dest, int val);
+
+extern unsigned atomic_fetch_sub(unsigned *dest, unsigned val);
+extern int atomic_fetch_sub(int *dest, int val);
+
+extern unsigned atomic_fetch_and(unsigned *dest, unsigned val);
+extern int atomic_fetch_and(int *dest, int val);
+
+extern unsigned atomic_fetch_or(unsigned *dest, unsigned val);
+extern int atomic_fetch_or(int *dest, int val);
+
+extern unsigned atomic_fetch_xor(unsigned *dest, unsigned val);
+extern int atomic_fetch_xor(int *dest, int val);
+
+extern int atomic_fetch_inc(int * _Dest);
+extern unsigned atomic_fetch_inc(unsigned * _Dest);
+
+extern int atomic_fetch_dec(int * _Dest);
+extern unsigned atomic_fetch_dec(unsigned * _Dest);
+
+int atomic_fetch_max(int * dest, int val);// todo
+unsigned int atomic_fetch_max(unsigned int * dest, unsigned int val);// todo
+int atomic_fetch_min(int * dest, int val);// todo
+unsigned int atomic_fetch_min(unsigned int * dest, unsigned int val);// todo
+#endif
+
 }//namespace Concurrency
 
