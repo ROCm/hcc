@@ -8,7 +8,7 @@
 /// <tags>P1</tags>
 /// <summary>Create array using 1-D accelerator_view staging specialized constructors - uses hash_set - CPU host GPU target</summary>
 
-#include <hash_set>
+#include <unordered_set>
 #include "./../../../../constructor.h"
 #include <amptest_main.h>
 
@@ -17,7 +17,7 @@ bool test_feature()
 {
     const int _rank = 1;
 
-    std::hash_set<_type> data;
+    std::unordered_set<_type> data;
     for (int i = 0; i < _D0; i++)
     {
         _type var = (_type)rand();
@@ -26,9 +26,7 @@ bool test_feature()
 
     {
         bool pass = test_feature_staging_itr<_type, _rank, _D0, accelerator_view>(data.begin(), data.end(), (_gpu_device).get_default_view(), _cpu_device.get_default_view()) &&
-            test_feature_staging_itr<_type, _rank, _D0, accelerator_view>(data.rbegin(), data.rend(), (_gpu_device).create_view(queuing_mode_immediate), _cpu_device.create_view(queuing_mode_immediate)) &&
-            test_feature_staging_itr<_type, _rank, _D0, accelerator_view>(data.cbegin(), data.cend(), (_gpu_device).create_view(queuing_mode_automatic), _cpu_device.create_view(queuing_mode_immediate)) &&
-            test_feature_staging_itr<_type, _rank, _D0, accelerator_view>(data.crbegin(), data.crend(), (_gpu_device).create_view(queuing_mode_automatic), _cpu_device.create_view(queuing_mode_automatic));
+            test_feature_staging_itr<_type, _rank, _D0, accelerator_view>(data.cbegin(), data.cend(), (_gpu_device).create_view(queuing_mode_automatic), _cpu_device.create_view(queuing_mode_immediate));
 
         if (!pass)
             return false;
@@ -37,9 +35,7 @@ bool test_feature()
 
     {
         bool pass = test_feature_staging_itr<_type, _rank, _D0, accelerator_view>(data.begin(), (_gpu_device).get_default_view(), _cpu_device.get_default_view()) &&
-            test_feature_staging_itr<_type, _rank, _D0, accelerator_view>(data.rbegin(), (_gpu_device).create_view(queuing_mode_immediate), _cpu_device.create_view(queuing_mode_immediate)) &&
-            test_feature_staging_itr<_type, _rank, _D0, accelerator_view>(data.cbegin(), (_gpu_device).create_view(queuing_mode_immediate), _cpu_device.create_view(queuing_mode_automatic)) &&
-            test_feature_staging_itr<_type, _rank, _D0, accelerator_view>(data.crbegin(), (_gpu_device).create_view(queuing_mode_automatic), _cpu_device.create_view(queuing_mode_automatic));
+            test_feature_staging_itr<_type, _rank, _D0, accelerator_view>(data.cbegin(), (_gpu_device).create_view(queuing_mode_immediate), _cpu_device.create_view(queuing_mode_automatic));
 
         if (!pass)
             return false;
