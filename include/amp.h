@@ -603,7 +603,9 @@ public:
     static const int rank = N;
     typedef int value_type;
 
-    extent() restrict(amp,cpu) : base_() {};
+    extent() restrict(amp,cpu) : base_() {
+      static_assert(N > 0, "Dimensionality must be positive");
+    };
     extent(const extent& other) restrict(amp,cpu)
         : base_(other.base_) {}
     template <typename ..._Tp>
