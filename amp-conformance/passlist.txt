@@ -1,4 +1,13 @@
+7_para_for_each/ComputeDomainTiled/ThreadGroupCount.01/test.cpp
 7_para_for_each/ComputeDomainTiled/ThreadGroupCount.02/test.cpp
+7_para_for_each/ComputeDomainTiled/ThreadGroupCount.04/test.cpp
+7_para_for_each/ComputeDomain/extent_max/test.cpp
+5_Data_Cont/5_2_a_v/5_2_3_m/WithoutDataSource/AssgnOps/Test.01/test.cpp
+5_Data_Cont/5_2_a_v/5_2_3_m/WithoutDataSource/discard_data/Test.01/test.cpp
+5_Data_Cont/5_2_a_v/5_2_3_m/WithoutDataSource/refresh/Test.01/test.cpp
+5_Data_Cont/5_2_a_v/5_2_3_m/ImplicitSynchronize/OverlappingSynchronize/Test.02/test.cpp
+5_Data_Cont/5_2_a_v/5_2_3_m/ImplicitSynchronize/OverlappingSynchronize/Test.03/test.cpp
+5_Data_Cont/5_2_a_v/5_2_3_m/ImplicitSynchronize/OverlappingSynchronize/Test.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/Destructor/Test.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/Destructor/Test.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/ImplicitSynchronize/OverlappingSynchronize/Test.03/test.cpp
