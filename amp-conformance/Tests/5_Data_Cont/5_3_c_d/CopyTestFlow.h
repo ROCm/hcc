@@ -639,7 +639,7 @@ bool CopyAndVerifyFromIteratorToArrayView(const concurrency::accelerator_view& t
 	// Copy: STL container -> target array_view (target_av)
 	array<_type, _rank> target_data_arr(arr_v_extent, target_av, target_access_type);
 	array_view<_type, _rank> target_arr_v(target_data_arr);
-	copy(src_stl_cont.begin(),src_stl_cont.end(), target_arr_v);
+	concurrency::copy(src_stl_cont.begin(),src_stl_cont.end(), target_arr_v);
 
 	// Modify target array_view on target_av
 	ModifyOnAcceleratorView(target_av, target_arr_v, static_cast<_type>(MODIFY_VALUE));
@@ -661,7 +661,7 @@ bool CopyAndVerifyFromIteratorToNonContigArrayView(const concurrency::accelerato
 	_stl_cont<_type> src_stl_cont(target_non_contig_arr_v.get_extent().size(), static_cast<_type>(_rank));
 
 	// Copy: STL container -> target non-contiguous array_view (target_av)
-	copy(src_stl_cont.begin(),src_stl_cont.end(), target_non_contig_arr_v);
+	concurrency::copy(src_stl_cont.begin(),src_stl_cont.end(), target_non_contig_arr_v);
 
 	// Modify target non-contiguous array_view on target_av
 	ModifyOnAcceleratorView(target_av, target_non_contig_arr_v, static_cast<_type>(MODIFY_VALUE));
@@ -684,7 +684,7 @@ bool CopyAndVerifyBetweenStagingArrayAndIterator(const concurrency::accelerator_
 
 	// Copy: STL container -> target staging array (stg_arr_av)
 	array<_type, _rank> target_stg_arr(arr_extent, cpu_av, stg_arr_av);
-	copy(src_stl_cont.begin(), src_stl_cont.end(), target_stg_arr);
+	concurrency::copy(src_stl_cont.begin(), src_stl_cont.end(), target_stg_arr);
 
 	// Modify target staging array on cpu accelerator_view
 	ModifyOnAcceleratorView(cpu_av, target_stg_arr, static_cast<_type>(MODIFY_VALUE));

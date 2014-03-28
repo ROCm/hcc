@@ -54,7 +54,7 @@ int main()
     }
 
     // verify data
-    if(!equal(vec.begin(), vec.end(), stdext::make_unchecked_array_iterator(av.data())))
+    if(!equal(vec.begin(), vec.end(), av.data()))
     {
         printf("array_view data does not match original data. FAIL!\n");
         return runall_fail;
@@ -70,7 +70,7 @@ int main()
     vec = arr;
 
     // verify data
-    if(!equal(vec.begin(), vec.end(), stdext::make_unchecked_array_iterator(av.data())))
+    if(!equal(vec.begin(), vec.end(), av.data()))
     {
         printf("data copied to vector doesnt contained updated data. FAIL!\n");
         return runall_fail;

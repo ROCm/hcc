@@ -58,8 +58,8 @@ namespace CustomIterator
 		friend class CustomContainer<T>;
 
 	private:
-		typename std::vector<T>::const_iterator actual_iterator;	
-		InputIterator(typename std::vector<T>::const_iterator& actual_iterator) { this->actual_iterator = actual_iterator; }
+		typename std::vector<T>::iterator actual_iterator;	
+		InputIterator(typename std::vector<T>::iterator& actual_iterator) { this->actual_iterator = actual_iterator; }
 
 	public:
 		const T& operator*() { return *actual_iterator; }
