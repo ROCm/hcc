@@ -20,6 +20,12 @@
 5_Data_Cont/5_3_c_d/SynchronousCopy/IteratorToArrayView/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/IteratorToNonContigArrayView/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/StagingArrayAndIterator/test.cpp
+5_Data_Cont/5_3_c_d/AsynCopy/ArrayToIter/test.cpp
+5_Data_Cont/5_3_c_d/AsynCopy/IterToArray/test.cpp
+5_Data_Cont/5_3_c_d/AsynCopy/IterToArrayView/test.cpp
+5_Data_Cont/5_3_c_d/AsynCopy/Iter2ToArrayView/test.cpp
+5_Data_Cont/5_3_c_d/AsynCopy/ArrayViewToIter/test.cpp
+5_Data_Cont/5_3_c_d/AsynCopy/Iter2ToArray/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/1d/Nested.03/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/1d/Nested.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/1d/Nested.01/test.cpp
@@ -125,6 +131,7 @@
 3_device_Modeling/3_2_Accelerator/3_2_3_Stat_memb/set_default/test.cpp
 3_device_Modeling/3_2_Accelerator/3_2_5_members/logic_op/test.cpp
 3_device_Modeling/3_2_Accelerator/3_2_1_Defa_Acce/Test.02/test.cpp
+3_device_Modeling/3_3_Accelerator_view/3_3_4_memb/prop/test.cpp
 3_device_Modeling/3_3_Accelerator_view/3_3_4_memb/method/crt_mark/test.cpp
 3_device_Modeling/3_3_Accelerator_view/3_3_4_memb/method/wait/test.cpp
 3_device_Modeling/3_3_Accelerator_view/3_3_2_Queue_mode/test.cpp
