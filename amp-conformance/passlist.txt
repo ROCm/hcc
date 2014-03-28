@@ -4,6 +4,7 @@
 5_Data_Cont/5_2_a_v/5_2_3_m/ImplicitSynchronize/OverlappingSynchronize/Test.03/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/ImplicitSynchronize/OverlappingSynchronize/Test.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/WithoutDataSource/copy_to/Test.01/test.cpp
+5_Data_Cont/5_2_a_v/5_2_2_c/WithoutDataSource/Test.01/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/StagingArrayToNonContiguousArrayView/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/StagingArrayToArrayView/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/StagingArrayToArray/test.cpp
@@ -32,6 +33,8 @@
 5_Data_Cont/5_2_a_v/5_2_3_m/Data/Test.04/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/Copy_To/Test.03/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/Copy_To/Test.01/test.cpp
+5_Data_Cont/5_1_array/5_1_2_c/5_1_2_1/Extent_Accl_Staging/With_Itrs/Test.02/test.cpp
+5_Data_Cont/5_1_array/5_1_2_c/ExtentOnly/With_Begin_Itr/Test.01/test.cpp
 5_Data_Cont/5_1_array/5_1_3_i/data/Test.05/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/Operators/Assignment/Test.03/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/Operators/Assignment/Test.01/test.cpp
@@ -129,6 +132,8 @@
 2_Cxx_Lang_Exte/2_1_Synt/2_1_3_Type_Spec/Typedef/Test.01/test.cpp
 2_Cxx_Lang_Exte/2_1_Synt/2_1_1_Func_Decl_Synt/TemplateClass/Test.01/test.cpp
 2_Cxx_Lang_Exte/2_1_Synt/2_1_1_Func_Decl_Synt/Negative/Test.04/test.cpp
+2_Cxx_Lang_Exte/2_1_Synt/2_1_1_Func_Decl_Synt/Member/Test.01/test.cpp
+2_Cxx_Lang_Exte/2_1_Synt/Contextual_restrict/test.01/test.cpp
 2_Cxx_Lang_Exte/2_1_Synt/Contextual_restrict/test.02/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Statements/ControlFlow/Test.07/While/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToGlobal/Test02/test.cpp
