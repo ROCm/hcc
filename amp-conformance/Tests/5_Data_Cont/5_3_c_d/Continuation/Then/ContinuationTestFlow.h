@@ -12,6 +12,7 @@
 #define VALUE 10
 
 using namespace Concurrency::Test;
+typedef long LONG;
 
 template<typename _type, int _rank>
 bool AsyncCopyAndVerifyArrayToArray(Concurrency::accelerator& srcDevice, Concurrency::accelerator& destDevice)

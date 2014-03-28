@@ -11,6 +11,7 @@
 #pragma once
 
 #include <cassert>
+#include <exception>
 #include <string>
 #include <vector>
 #include <chrono>
@@ -33,10 +34,6 @@
 #ifndef WIN32
 #define __declspec(ignored) /* */
 #endif
-
-typedef int32_t __int32;
-typedef long LONG;
-typedef std::exception runtime_exception;
 
 namespace Concurrency {
 /*
@@ -1594,6 +1591,27 @@ namespace concurrency = Concurrency;
 // Specialization and inlined implementation of C++AMP classes/templates
 #include "amp_impl.h"
 #include "parallel_for_each.h"
+
+typedef int HRESULT;
+class runtime_exception : public std::exception
+{
+public:
+  runtime_exception(const char * message, HRESULT hresult) throw() : _M_msg(message), err_code(hresult) {}
+  explicit runtime_exception(HRESULT hresult) throw() : err_code(hresult) {}
+  runtime_exception(const runtime_exception& other) throw() : _M_msg(other.what()), err_code(other.err_code) {}
+  runtime_exception& operator=(const runtime_exception& other) throw() {
+    _M_msg = *(other.what());
+    err_code = other.err_code;
+    return *this;
+  }
+  virtual ~runtime_exception() throw() {}
+  virtual const char* what() const throw() {return _M_msg.c_str();}
+  HRESULT get_error_code() const {return err_code;}
+
+private:
+  std::string _M_msg;
+  HRESULT err_code;
+};
 
 
 namespace Concurrency {
