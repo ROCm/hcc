@@ -48,10 +48,9 @@ supports_cpu_shared_memory(other.supports_cpu_shared_memory) {
   }
 
   description = L"Default GMAC+OpenCL";
-  if (!default_view_) {
-    default_view_ = new accelerator_view(0);
-    default_view_->accelerator_ = this;
-  }
+
+  default_view_ = new accelerator_view(0);
+  default_view_->accelerator_ = this;
 }
 
 // TODO(I-Jui Sung): perform real OpenCL queries here..
