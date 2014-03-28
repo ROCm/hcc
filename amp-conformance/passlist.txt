@@ -5,6 +5,7 @@
 5_Data_Cont/5_2_a_v/5_2_3_m/ImplicitSynchronize/OverlappingSynchronize/Test.03/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/ImplicitSynchronize/OverlappingSynchronize/Test.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/WithoutDataSource/copy_to/Test.01/test.cpp
+5_Data_Cont/5_2_a_v/5_2_2_c/WithoutDataSource/Test.01/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/StagingArrayToNonContiguousArrayView/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/StagingArrayToArrayView/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/StagingArrayToArray/test.cpp
@@ -20,6 +21,12 @@
 5_Data_Cont/5_3_c_d/SynchronousCopy/IteratorToArrayView/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/IteratorToNonContigArrayView/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/StagingArrayAndIterator/test.cpp
+5_Data_Cont/5_3_c_d/AsynCopy/ArrayToIter/test.cpp
+5_Data_Cont/5_3_c_d/AsynCopy/IterToArray/test.cpp
+5_Data_Cont/5_3_c_d/AsynCopy/IterToArrayView/test.cpp
+5_Data_Cont/5_3_c_d/AsynCopy/Iter2ToArrayView/test.cpp
+5_Data_Cont/5_3_c_d/AsynCopy/ArrayViewToIter/test.cpp
+5_Data_Cont/5_3_c_d/AsynCopy/Iter2ToArray/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/1d/Nested.03/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/1d/Nested.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/1d/Nested.01/test.cpp
@@ -33,6 +40,8 @@
 5_Data_Cont/5_2_a_v/5_2_3_m/Data/Test.04/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/Copy_To/Test.03/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/Copy_To/Test.01/test.cpp
+5_Data_Cont/5_1_array/5_1_2_c/5_1_2_1/Extent_Accl_Staging/With_Itrs/Test.02/test.cpp
+5_Data_Cont/5_1_array/5_1_2_c/ExtentOnly/With_Begin_Itr/Test.01/test.cpp
 5_Data_Cont/5_1_array/5_1_3_i/data/Test.05/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/Operators/Assignment/Test.03/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/Operators/Assignment/Test.01/test.cpp
@@ -123,6 +132,7 @@
 3_device_Modeling/3_2_Accelerator/3_2_3_Stat_memb/set_default/test.cpp
 3_device_Modeling/3_2_Accelerator/3_2_5_members/logic_op/test.cpp
 3_device_Modeling/3_2_Accelerator/3_2_1_Defa_Acce/Test.02/test.cpp
+3_device_Modeling/3_3_Accelerator_view/3_3_4_memb/prop/test.cpp
 3_device_Modeling/3_3_Accelerator_view/3_3_4_memb/method/crt_mark/test.cpp
 3_device_Modeling/3_3_Accelerator_view/3_3_4_memb/method/wait/test.cpp
 3_device_Modeling/3_3_Accelerator_view/3_3_2_Queue_mode/test.cpp
@@ -130,6 +140,8 @@
 2_Cxx_Lang_Exte/2_1_Synt/2_1_3_Type_Spec/Typedef/Test.01/test.cpp
 2_Cxx_Lang_Exte/2_1_Synt/2_1_1_Func_Decl_Synt/TemplateClass/Test.01/test.cpp
 2_Cxx_Lang_Exte/2_1_Synt/2_1_1_Func_Decl_Synt/Negative/Test.04/test.cpp
+2_Cxx_Lang_Exte/2_1_Synt/2_1_1_Func_Decl_Synt/Member/Test.01/test.cpp
+2_Cxx_Lang_Exte/2_1_Synt/Contextual_restrict/test.01/test.cpp
 2_Cxx_Lang_Exte/2_1_Synt/Contextual_restrict/test.02/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Statements/ControlFlow/Test.07/While/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToGlobal/Test02/test.cpp

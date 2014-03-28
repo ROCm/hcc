@@ -27,4 +27,4 @@
 #include <amptest/amp.data.h>
 #include <amptest/data.h>
 #include <amptest/gpuinvoke.h>
-
+#include <amptest/logging.h>
