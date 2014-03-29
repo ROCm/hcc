@@ -1,9 +1,11 @@
+5_Data_Cont/5_3_c_d/AsynCopy/ArrayViewToArrayView/test.cpp
 7_para_for_each/ComputeDomainTiled/ThreadGroupCount.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/Destructor/Test.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/Destructor/Test.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/ImplicitSynchronize/OverlappingSynchronize/Test.03/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/ImplicitSynchronize/OverlappingSynchronize/Test.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/WithoutDataSource/copy_to/Test.01/test.cpp
+5_Data_Cont/5_2_a_v/5_2_2_c/WithoutDataSource/Test.01/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/StagingArrayToNonContiguousArrayView/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/StagingArrayToArrayView/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/StagingArrayToArray/test.cpp
@@ -127,6 +129,7 @@
 3_device_Modeling/3_2_Accelerator/3_2_3_Stat_memb/set_default/test.cpp
 3_device_Modeling/3_2_Accelerator/3_2_5_members/logic_op/test.cpp
 3_device_Modeling/3_2_Accelerator/3_2_1_Defa_Acce/Test.02/test.cpp
+3_device_Modeling/3_3_Accelerator_view/3_3_4_memb/prop/test.cpp
 3_device_Modeling/3_3_Accelerator_view/3_3_4_memb/method/crt_mark/test.cpp
 3_device_Modeling/3_3_Accelerator_view/3_3_4_memb/method/wait/test.cpp
 3_device_Modeling/3_3_Accelerator_view/3_3_2_Queue_mode/test.cpp
