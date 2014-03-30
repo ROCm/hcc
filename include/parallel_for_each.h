@@ -225,7 +225,7 @@ __attribute__((noinline,used)) void parallel_for_each(
     const Kernel& f) restrict(cpu,amp) {
   size_t ext[3] = { static_cast<size_t>(compute_domain[2]),
                     static_cast<size_t>(compute_domain[1]),
-            		    static_cast<size_t>(compute_domain[0])};
+                    static_cast<size_t>(compute_domain[0])};
   size_t tile[3] = { compute_domain.tile_dim2,
                      compute_domain.tile_dim1,
                      compute_domain.tile_dim0};

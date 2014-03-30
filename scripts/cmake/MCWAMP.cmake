@@ -46,4 +46,3 @@ macro(add_mcwamp_executable name )
     target_link_libraries( ${name} mcwamp cxxrt dl pthread)
   endif (APPLE)
 endmacro(add_mcwamp_executable name )
-
