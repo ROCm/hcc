@@ -8,6 +8,8 @@
 
 #include "../../inc/common.h"
 
+typedef int32_t __int32;
+
 class c1
 {
 public:

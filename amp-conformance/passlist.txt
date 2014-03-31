@@ -1,4 +1,5 @@
 5_Data_Cont/5_3_c_d/AsynCopy/ArrayViewToArrayView/test.cpp
+5_Data_Cont/5_1_array/5_1_3_m/data/Test.02/test.cpp
 7_para_for_each/ComputeDomainTiled/ThreadGroupCount.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/Reinterpret_As/Test.01.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/Destructor/Test.02/test.cpp
@@ -22,6 +23,12 @@
 5_Data_Cont/5_3_c_d/SynchronousCopy/IteratorToArrayView/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/IteratorToNonContigArrayView/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/StagingArrayAndIterator/test.cpp
+5_Data_Cont/5_3_c_d/AsynCopy/ArrayToIter/test.cpp
+5_Data_Cont/5_3_c_d/AsynCopy/IterToArray/test.cpp
+5_Data_Cont/5_3_c_d/AsynCopy/IterToArrayView/test.cpp
+5_Data_Cont/5_3_c_d/AsynCopy/Iter2ToArrayView/test.cpp
+5_Data_Cont/5_3_c_d/AsynCopy/ArrayViewToIter/test.cpp
+5_Data_Cont/5_3_c_d/AsynCopy/Iter2ToArray/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/1d/Nested.03/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/1d/Nested.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/1d/Nested.01/test.cpp

@@ -11,6 +11,7 @@
 #pragma once
 
 #include <cassert>
+#include <exception>
 #include <string>
 #include <vector>
 #include <chrono>
@@ -1615,6 +1616,27 @@ namespace concurrency = Concurrency;
 #include "amp_impl.h"
 #include "parallel_for_each.h"
 
+typedef int HRESULT;
+class runtime_exception : public std::exception
+{
+public:
+  runtime_exception(const char * message, HRESULT hresult) throw() : _M_msg(message), err_code(hresult) {}
+  explicit runtime_exception(HRESULT hresult) throw() : err_code(hresult) {}
+  runtime_exception(const runtime_exception& other) throw() : _M_msg(other.what()), err_code(other.err_code) {}
+  runtime_exception& operator=(const runtime_exception& other) throw() {
+    _M_msg = *(other.what());
+    err_code = other.err_code;
+    return *this;
+  }
+  virtual ~runtime_exception() throw() {}
+  virtual const char* what() const throw() {return _M_msg.c_str();}
+  HRESULT get_error_code() const {return err_code;}
+
+private:
+  std::string _M_msg;
+  HRESULT err_code;
+};
+
 
 namespace Concurrency {
 
@@ -1786,6 +1808,7 @@ void copy(const array<T, N> &src, OutputIter destBegin) {
 template <typename InputType, typename OutputType>
 completion_future __amp_copy_async_impl(InputType& src, OutputType& dst) {
     std::future<void> fut = std::async([&]() mutable { copy(src, dst); });
+    fut.wait();
     return completion_future(fut.share());
 }
 
@@ -1823,12 +1846,14 @@ completion_future copy_async(const array_view<T, N>& src, const array_view<T, N>
 template <typename InputIter, typename T, int N>
 completion_future copy_async(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest) {
     std::future<void> fut = std::async([&]() mutable { copy(srcBegin, srcEnd, dest); });
+    fut.wait();
     return completion_future(fut.share());
 }
 
 template <typename InputIter, typename T, int N>
 completion_future copy_async(InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest) {
     std::future<void> fut = std::async([&]() mutable { copy(srcBegin, srcEnd, dest); });
+    fut.wait();
     return completion_future(fut.share());
 }
 
@@ -1836,11 +1861,13 @@ completion_future copy_async(InputIter srcBegin, InputIter srcEnd, const array_v
 template <typename InputIter, typename T, int N>
 completion_future copy_async(InputIter srcBegin, array<T, N>& dest) {
     std::future<void> fut = std::async([&]() mutable { copy(srcBegin, dest); });
+    fut.wait();
     return completion_future(fut.share());
 }
 template <typename InputIter, typename T, int N>
 completion_future copy_async(InputIter srcBegin, const array_view<T, N>& dest) {
     std::future<void> fut = std::async([&]() mutable { copy(srcBegin, dest); });
+    fut.wait();
     return completion_future(fut.share());
 }
 
@@ -1848,11 +1875,13 @@ completion_future copy_async(InputIter srcBegin, const array_view<T, N>& dest) {
 template <typename OutputIter, typename T, int N>
 completion_future copy_async(const array<T, N>& src, OutputIter destBegin) {
     std::future<void> fut = std::async([&]() mutable { copy(src, destBegin); });
+    fut.wait();
     return completion_future(fut.share());
 }
 template <typename OutputIter, typename T, int N>
 completion_future copy_async(const array_view<T, N>& src, OutputIter destBegin) {
     std::future<void> fut = std::async([&]() mutable { copy(src, destBegin); });
+    fut.wait();
     return completion_future(fut.share());
 }
 
