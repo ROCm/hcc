@@ -1,3 +1,4 @@
+5_Data_Cont/5_3_c_d/AsynCopy/ArrayViewToArrayView/test.cpp
 7_para_for_each/ComputeDomainTiled/ThreadGroupCount.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/Destructor/Test.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/Destructor/Test.01/test.cpp
@@ -20,6 +21,12 @@
 5_Data_Cont/5_3_c_d/SynchronousCopy/IteratorToArrayView/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/IteratorToNonContigArrayView/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/StagingArrayAndIterator/test.cpp
+5_Data_Cont/5_3_c_d/AsynCopy/ArrayToIter/test.cpp
+5_Data_Cont/5_3_c_d/AsynCopy/IterToArray/test.cpp
+5_Data_Cont/5_3_c_d/AsynCopy/IterToArrayView/test.cpp
+5_Data_Cont/5_3_c_d/AsynCopy/Iter2ToArrayView/test.cpp
+5_Data_Cont/5_3_c_d/AsynCopy/ArrayViewToIter/test.cpp
+5_Data_Cont/5_3_c_d/AsynCopy/Iter2ToArray/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/1d/Nested.03/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/1d/Nested.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/1d/Nested.01/test.cpp
@@ -107,6 +114,9 @@
 4_Basic_Data_Elmnts/4_2_extent/4_2_3_m/size/Test.01/test.cpp
 4_Basic_Data_Elmnts/4_2_extent/4_2_3_m/size/Test.02/test.cpp
 4_Basic_Data_Elmnts/4_2_extent/4_2_3_m/tile/pad.02/test.cpp
+4_Basic_Data_Elmnts/4_2_extent/4_2_3_m/tile/Negative/tile.02/test.cpp
+4_Basic_Data_Elmnts/4_2_extent/4_2_2_c/Negative/Test.01/test.cpp
+4_Basic_Data_Elmnts/4_2_extent/4_2_2_c/Negative/Test.04/test.cpp
 4_Basic_Data_Elmnts/4_1_index/4_1_4_ops/Logical/Test.02/test.cpp
 4_Basic_Data_Elmnts/4_1_index/4_1_4_ops/Logical/Test.01/test.cpp
 4_Basic_Data_Elmnts/4_1_index/4_1_4_ops/Arithmetic/Test.02/test.cpp
