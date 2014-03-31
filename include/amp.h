@@ -6,7 +6,7 @@
 //  instance. For now, we haven't implemented such binding nor actual
 //  implementation of accelerator. For a quick and dirty walkaround for
 //  OpenCL based prototype, we allow key OpenCL objects visible globally so
-//  that we don't have to be bothered with such implementaion effort.
+//  that we don't have to be bothered with such implementation effort.
 
 #pragma once
 
@@ -38,7 +38,7 @@
 namespace Concurrency {
 /*
   This is not part of C++AMP standard, but borrowed from Parallel Patterns
-  Library. 
+  Library.
 */
   template <typename _Type> class task;
   template <> class task<void>;
@@ -67,7 +67,7 @@ public:
   static wchar_t default_accelerator[];   // = L"default"
   static const wchar_t gpu_accelerator[];         // = L"gpu"
   static const wchar_t cpu_accelerator[];       // = L"cpu"
-  
+
   accelerator();
   explicit accelerator(const std::wstring& path);
   accelerator(const accelerator& other);
@@ -145,7 +145,7 @@ public:
     accelerator_ = other.accelerator_;
     is_debug = other.is_debug;
     version = other.version;
-    
+
     return *this;
   }
 
@@ -241,7 +241,7 @@ public:
 
 private:
     std::shared_future<void> __amp_future;
-    
+
     completion_future(const std::shared_future<void> &__future)
         : __amp_future(__future) {}
 
@@ -327,10 +327,10 @@ template <int _Ip>
 template <class _Indx> struct index_impl;
 template <int ...N>
     struct index_impl<__indices<N...> >
-    : public __index_leaf<N>... 
+    : public __index_leaf<N>...
     {
         index_impl() restrict(amp,cpu) : __index_leaf<N>(0)... {}
-        
+
         template<class ..._Up>
             explicit index_impl(_Up... __u) restrict(amp,cpu)
             : __index_leaf<N>(__u)... {}
@@ -342,7 +342,7 @@ template <int ...N>
             : __index_leaf<N>(components[N])... {}
         index_impl(const int components[]) restrict(amp,cpu)
             : __index_leaf<N>(components[N])... {}
-        
+
         template<class ..._Tp>
             inline void __swallow(_Tp...) restrict(amp,cpu) {}
 
@@ -488,14 +488,14 @@ public:
     int& operator[] (unsigned int c) restrict(amp,cpu) {
         return base_[c];
     }
-    
+
     bool operator== (const index& other) const restrict(amp,cpu) {
         return index_helper<N, index<N> >::equal(*this, other);
     }
     bool operator!= (const index& other) const restrict(amp,cpu) {
         return !(*this == other);
     }
-   
+
     index& operator+=(const index& __r) restrict(amp,cpu) {
         base_.operator+=(__r.base_);
         return *this;
@@ -536,7 +536,7 @@ public:
         base_.operator%=(__r);
         return *this;
     }
- 
+
     index& operator++() restrict(amp,cpu) {
         base_.operator+=(1);
         return *this;
@@ -647,7 +647,7 @@ public:
     bool contains(const index<N>& idx) const restrict(amp,cpu) {
         return amp_helper<N, index<N>, extent<N>>::contains(idx, *this);
     }
-    template <int D0> 
+    template <int D0>
         typename std::enable_if<N == 1, tiled_extent<D0> >::type tile() const {
             static_assert(D0 > 0, "Tile size must be positive");
             return tiled_extent<D0>(*this);
@@ -724,7 +724,6 @@ public:
         base_.operator%=(__r);
         return *this;
     }
- 
     extent& operator++() restrict(amp,cpu) {
         base_.operator+=(1);
         return *this;
@@ -1049,7 +1048,6 @@ public:
   typedef T value_type;
   array() = delete;
 
-  
   explicit array(const Concurrency::extent<N>& ext);
   explicit array(int e0);
   explicit array(int e0, int e1);
@@ -1096,7 +1094,7 @@ public:
   template <typename InputIter>
       array(const Concurrency::extent<N>& ext, InputIter srcBegin, InputIter srcEnd,
             accelerator_view av, access_type cpu_access_type = access_type_auto);
-  template <typename InputIter> 
+  template <typename InputIter>
       array(int e0, InputIter srcBegin, accelerator_view av,
             access_type cpu_access_type = access_type_auto);
   template <typename InputIter>
@@ -1122,7 +1120,7 @@ public:
   template <typename InputIter>
       array(const Concurrency::extent<N>& ext, InputIter srcBegin, InputIter srcEnd,
             accelerator_view av, accelerator_view associated_av);
-  template <typename InputIter> 
+  template <typename InputIter>
       array(int e0, InputIter srcBegin,
             accelerator_view av, accelerator_view associated_av);
   template <typename InputIter>
@@ -1143,7 +1141,7 @@ public:
 
 
   explicit array(const array_view<const T, N>& src) : array(src.extent) {
-      memmove(const_cast<void*>(reinterpret_cast<const void*>(m_device.get())), 
+      memmove(const_cast<void*>(reinterpret_cast<const void*>(m_device.get())),
       reinterpret_cast<const void*>(src.cache.get()), extent.size() * sizeof(T));
   }
 
@@ -1395,11 +1393,11 @@ public:
   { static_assert(N == 1, "Rank must be 1"); }
   template <typename Container>
       array_view(int e0, int e1, Container& src)
-      : array_view(Concurrency::extent<2>(e0, e1), src) 
+      : array_view(Concurrency::extent<2>(e0, e1), src)
   { static_assert(N == 2, "Rank must be 2"); }
   template <typename Container>
       array_view(int e0, int e1, int e2, Container& src)
-      : array_view(Concurrency::extent<3>(e0, e1, e2), src) 
+      : array_view(Concurrency::extent<3>(e0, e1, e2), src)
   { static_assert(N == 3, "Rank must be 3"); }
 
 
@@ -1473,7 +1471,7 @@ public:
       return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx.global + index_base, extent_base)];
   }
 
-  typename projection_helper<T, N>::result_type 
+  typename projection_helper<T, N>::result_type
       operator[] (int i) const restrict(amp,cpu) {
           return projection_helper<T, N>::project(*this, i);
       }
@@ -1554,15 +1552,15 @@ private:
   template <typename K, int Q> friend struct projection_helper;
   template <typename Q, int K> friend class array;
   template <typename Q, int K> friend class array_view;
- 
+
   // used by view_as
   array_view(const Concurrency::extent<N>& ext, const gmac_buffer_t& cache,
-             T *p, int offset) restrict(amp,cpu) 
+             T *p, int offset) restrict(amp,cpu)
       : extent(ext), cache(cache), offset(offset), p_(p), extent_base(ext) {}
   // used by section and projection
   array_view(const Concurrency::extent<N>& ext_now,
-             const Concurrency::extent<N>& ext_b, 
-             const Concurrency::index<N>& idx_b, 
+             const Concurrency::extent<N>& ext_b,
+             const Concurrency::index<N>& idx_b,
              const gmac_buffer_t& cache, T *p, int off) restrict(amp,cpu)
       : extent(ext_now), index_base(idx_b), extent_base(ext_b),
       p_(p), cache(cache), offset(off) {}
@@ -1896,7 +1894,7 @@ extern unsigned atomic_fetch_add(unsigned *x, unsigned y) restrict(amp,cpu);
 
 #ifdef __GPU__
 extern "C" int atomic_add_global(volatile __attribute__((address_space(1))) int *p, int val) restrict(amp, cpu);
-static inline int atomic_fetch_add(int *x, int y) restrict(amp,cpu) { 
+static inline int atomic_fetch_add(int *x, int y) restrict(amp,cpu) {
   return atomic_add_global(reinterpret_cast<volatile __attribute__((address_space(1))) int *>(x), y);
 }
 #else
@@ -1904,4 +1902,3 @@ extern int atomic_fetch_add(int *x, int y) restrict(amp, cpu);
 #endif
 
 }//namespace Concurrency
-
