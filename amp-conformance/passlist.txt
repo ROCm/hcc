@@ -35,6 +35,7 @@
 5_Data_Cont/5_2_a_v/5_2_3_m/Data/Test.04/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/Copy_To/Test.03/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/Copy_To/Test.01/test.cpp
+5_Data_Cont/5_2_a_v/5_2_4_i/RW_Const.01/test.cpp
 5_Data_Cont/5_1_array/5_1_2_c/5_1_2_1/Extent_Accl_Staging/With_Itrs/Test.02/test.cpp
 5_Data_Cont/5_1_array/5_1_2_c/ExtentOnly/With_Begin_Itr/Test.01/test.cpp
 5_Data_Cont/5_1_array/5_1_3_i/data/Test.05/test.cpp
