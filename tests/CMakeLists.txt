@@ -54,7 +54,5 @@ configure_file(
 
 add_custom_target(test
   COMMAND python ${LLVM_ROOT}/bin/llvm-lit --path ${LLVM_TOOLS_DIR} ${LLVM_LIT_ARGS} ${CMAKE_CURRENT_BINARY_DIR}
-  # DEPENDS ${CPPAMP_GTEST_LIB} 
+  # DEPENDS ${CPPAMP_GTEST_LIB}
   COMMENT "Running C++AMP regression tests")
-
-

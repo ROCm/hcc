@@ -61,8 +61,8 @@ class InstUpdate {
         virtual void operator()(InstUpdateWorkList*) =0;
 };
 
-void updateInstructionWithNewOperand(Instruction * I, 
-                                     Value * oldOperand, 
+void updateInstructionWithNewOperand(Instruction * I,
+                                     Value * oldOperand,
                                      Value * newOperand,
                                      InstUpdateWorkList * updatesNeeded);
 
@@ -92,7 +92,7 @@ class ForwardUpdate : public InstUpdate {
         Value * newOperand;
 };
 
-ForwardUpdate::ForwardUpdate(Instruction *s, 
+ForwardUpdate::ForwardUpdate(Instruction *s,
                              Value *oldOp, Value *newOp)
                              : subject(s), oldOperand(oldOp), newOperand(newOp)
 {}
@@ -103,14 +103,14 @@ void ForwardUpdate::operator()(InstUpdateWorkList * workList)
         updateInstructionWithNewOperand (subject,
                                          oldOperand,
                                          newOperand,
-                                         workList); 
+                                         workList);
        // Instruction *oldInst = dyn_cast<Instruction>(oldOperand);
        // if ( oldInst->use_empty () ) {
                 //oldInst->eraseFromParent ();
        // }
 }
 
-void ForwardUpdate::UpdateUsersWithNewOperand (Instruction * Insn, 
+void ForwardUpdate::UpdateUsersWithNewOperand (Instruction * Insn,
                                                Value * oldOperand,
                                                Value * newOperand,
                                                InstUpdateWorkList * workList)
@@ -118,13 +118,13 @@ void ForwardUpdate::UpdateUsersWithNewOperand (Instruction * Insn,
         updateListWithUsers ( Insn->use_begin (), Insn->use_end(),
                               oldOperand, newOperand,
                               workList );
-} 
+}
 
 class BackwardUpdate : public InstUpdate {
         public:
         BackwardUpdate(Instruction * upstream, Type* expected);
         void operator()(InstUpdateWorkList *updater);
-        static void setExpectedType(Instruction * Insn, Type * expected, 
+        static void setExpectedType(Instruction * Insn, Type * expected,
                                     InstUpdateWorkList * updater);
         private:
         Instruction * upstream;
@@ -146,21 +146,21 @@ BackwardUpdate::BackwardUpdate (Instruction * insn, Type *type)
                                 : upstream (insn), expected (type)
 {}
 
-void updateBackAllocaInst(AllocaInst * AI, Type * expected, 
+void updateBackAllocaInst(AllocaInst * AI, Type * expected,
                           InstUpdateWorkList * updater)
 {
         PointerType * ptrType = dyn_cast<PointerType> (expected);
         if ( !ptrType ) {
                 DEBUG(llvm::errs() << "Was expecting a pointer type. Got ";
                       expected->dump(););
-        }        
+        }
 
         AllocaInst * newInst = new AllocaInst (ptrType->getElementType(),
                                                AI->getArraySize (), "",
                                                AI);
 
         ForwardUpdate::UpdateUsersWithNewOperand (AI, AI, newInst,
-                                                  updater); 
+                                                  updater);
 }
 
 Type * patchType ( Type * baseType, Type* patch, User::op_iterator idx, User::op_iterator idx_end);
@@ -205,14 +205,14 @@ Type * patchType ( Type * baseType, Type* patch, User::op_iterator idx, User::op
 }
 
 void updateBackGEP (GetElementPtrInst * GEP, Type* expected,
-                    InstUpdateWorkList * updater) 
+                    InstUpdateWorkList * updater)
 {
         PointerType * ptrExpected = dyn_cast<PointerType> (expected);
         if ( !ptrExpected ) {
                 llvm::errs() << "Expected type for GEP is not a pointer!\n";
                 return;
         }
-        PointerType * ptrSource = 
+        PointerType * ptrSource =
                 dyn_cast<PointerType> (GEP->getPointerOperand()->getType());
         if ( !ptrSource ) {
                 llvm::errs() << "Source operand type is not a pointer!\n";
@@ -221,21 +221,21 @@ void updateBackGEP (GetElementPtrInst * GEP, Type* expected,
         User::op_iterator first_idx = GEP->idx_begin();
         ++first_idx;
         Type * newElementType = patchType (ptrSource->getElementType(),
-                                           ptrExpected->getElementType(), 
+                                           ptrExpected->getElementType(),
                                            first_idx, GEP->idx_end());
 
-        PointerType  * newUpstreamType = 
+        PointerType  * newUpstreamType =
                 PointerType::get(newElementType,
                                  ptrExpected->getAddressSpace());
-        Instruction * ptrProducer = 
+        Instruction * ptrProducer =
                 dyn_cast<Instruction>(GEP->getPointerOperand());
-        assert(ptrProducer 
+        assert(ptrProducer
                && "Was expecting an instruction as source operand for GEP");
         BackwardUpdate::setExpectedType (ptrProducer,
                                          newUpstreamType, updater);
 }
 
-void updateBackLoad (LoadInst * L, Type * expected, 
+void updateBackLoad (LoadInst * L, Type * expected,
                      InstUpdateWorkList * updater)
 {
         Value * ptrOperand = L->getPointerOperand();
@@ -244,25 +244,25 @@ void updateBackLoad (LoadInst * L, Type * expected,
         assert(ptrSource
                && "Was expecting an instruction for the source operand");
 
-        PointerType * sourceType = 
+        PointerType * sourceType =
                 dyn_cast<PointerType> (ptrOperand->getType());
         assert(sourceType
                && "Load ptr operand's type is not a pointer type");
 
-        PointerType * newPtrType = 
-                PointerType::get(expected, 
+        PointerType * newPtrType =
+                PointerType::get(expected,
                                  sourceType->getAddressSpace());
 
         BackwardUpdate::setExpectedType(ptrSource, newPtrType, updater);
 }
 
-void updateBackBitCast (BitCastInst * BCI, Type * expected, 
+void updateBackBitCast (BitCastInst * BCI, Type * expected,
                         InstUpdateWorkList * updater)
 {
         DEBUG(BCI->dump(););
         Type * srcType = BCI->getSrcTy();
         PointerType * ptrSrcType = dyn_cast<PointerType> (srcType);
-        assert (ptrSrcType 
+        assert (ptrSrcType
                 && "Unexpected non-pointer type as source operand of bitcast");
 
         Type * destType = BCI->getDestTy();
@@ -284,7 +284,7 @@ void updateBackBitCast (BitCastInst * BCI, Type * expected,
                  return;
         }
 
-        bool sameLayout = 
+        bool sameLayout =
                 srcElementStructType->isLayoutIdentical(dstElementStructType);
         if ( !sameLayout ) {
                 DEBUG(llvm::errs() << "Different layout in bitcast!\n";);
@@ -296,12 +296,12 @@ void updateBackBitCast (BitCastInst * BCI, Type * expected,
                 DEBUG(llvm::errs() << "Do not know how to handle"
                                       " non-instruction source operand\n";);
         }
-        BitCastInst * newBitCast = 
+        BitCastInst * newBitCast =
                 new BitCastInst(sourceOperand,
                                 expected, "", BCI);
 
         ForwardUpdate::UpdateUsersWithNewOperand (BCI, BCI, newBitCast,
-                                                  updater); 
+                                                  updater);
         BackwardUpdate::setExpectedType(sourceOperand, expected, updater);
         return;
 
@@ -322,7 +322,7 @@ void BackwardUpdate::operator ()(InstUpdateWorkList *updater)
         if ( LoadInst * LI = dyn_cast<LoadInst>(upstream) ) {
                 updateBackLoad (LI, expected, updater);
                 return;
-        } 
+        }
         if ( BitCastInst * BCI = dyn_cast<BitCastInst>(upstream) ) {
                 updateBackBitCast (BCI, expected, updater);
                 return;
@@ -404,7 +404,7 @@ StructType * mapTypeToGlobal ( StructType * T) {
         }
 
         return StructType::get (T->getContext(),
-                                ArrayRef<Type *>(translatedTypes), 
+                                ArrayRef<Type *>(translatedTypes),
                                 T->isPacked() );
 }
 
@@ -425,7 +425,7 @@ SequentialType * mapTypeToGlobal ( SequentialType * T ) {
 
         PointerType * PT = dyn_cast<PointerType> (T);
         if ( PT ) return mapTypeToGlobal (PT);
- 
+
         return T;
 }
 
@@ -433,7 +433,7 @@ CompositeType * mapTypeToGlobal (CompositeType * T)
 {
         StructType * ST = dyn_cast<StructType> (T);
         if ( ST ) return mapTypeToGlobal ( ST );
-       
+
         SequentialType * SQ = dyn_cast<SequentialType> (T);
         if ( SQ ) return mapTypeToGlobal ( SQ );
 
@@ -443,7 +443,7 @@ CompositeType * mapTypeToGlobal (CompositeType * T)
 
 Type * mapTypeToGlobal (Type * T)
 {
-        CompositeType * C = dyn_cast<CompositeType>(T); 
+        CompositeType * C = dyn_cast<CompositeType>(T);
         if ( !C ) return T;
         return mapTypeToGlobal (C);
 }
@@ -467,7 +467,7 @@ FunctionType * createNewFunctionTypeWithPtrToGlobals (Function * F)
         unsigned argIdx = 0;
         for (Function::arg_iterator A = F->arg_begin(), Ae = F->arg_end();
              A != Ae; ++A, ++argIdx) {
-                Type * argType = baseType->getParamType(argIdx); 
+                Type * argType = baseType->getParamType(argIdx);
                 Type * translatedType;
 
                 StringRef argName = A->getName();
@@ -477,7 +477,7 @@ FunctionType * createNewFunctionTypeWithPtrToGlobals (Function * F)
                         PointerType * Ptr = dyn_cast<PointerType>(argType);
                         assert(Ptr && "Pointer type expected");
                         translatedType = PointerType::get(Ptr->getElementType(),
-                                                          LocalAddressSpace); 
+                                                          LocalAddressSpace);
                 } else {
                         if (A->hasByValAttr()) {
                                 PointerType * ptrType =
@@ -486,7 +486,7 @@ FunctionType * createNewFunctionTypeWithPtrToGlobals (Function * F)
                                         ptrType->getElementType();
                                 Type * translatedElement =
                                         mapTypeToGlobal(elementType);
-                                translatedType = 
+                                translatedType =
                                         PointerType::get(translatedElement,
                                                          0);
                         } else translatedType = mapTypeToGlobal (argType);
@@ -494,8 +494,8 @@ FunctionType * createNewFunctionTypeWithPtrToGlobals (Function * F)
                 translatedArgTypes.push_back ( translatedType );
         }
 
-        FunctionType * newType 
-                = FunctionType::get(mapTypeToGlobal(baseType->getReturnType()), 
+        FunctionType * newType
+                = FunctionType::get(mapTypeToGlobal(baseType->getReturnType()),
                                     ArrayRef<Type *>(translatedArgTypes),
                                     baseType->isVarArg());
         return newType;
@@ -531,7 +531,7 @@ AllocaInst * createNewAlloca(Type * elementType,
                                       oldAlloca->getName(),
                                       terminator);
         }
-        return new AllocaInst(elementType, 
+        return new AllocaInst(elementType,
                               oldAlloca->getArraySize(),
                               oldAlloca->getName(),
                               dest);
@@ -572,11 +572,11 @@ void updateListWithUsers ( User *U, Value * oldOperand, Value * newOperand,
 }
 void updateListWithUsers ( Value::use_iterator U, const Value::use_iterator& Ue, 
                            Value * oldOperand, Value * newOperand,
-                           InstUpdateWorkList * updates ) 
+                           InstUpdateWorkList * updates )
 {
     for ( ; U != Ue; ++U ) {
         updateListWithUsers(*U, oldOperand, newOperand, updates);
-    } 
+    }
 }
 
 void updateLoadInstWithNewOperand(LoadInst * I, Value * newOperand, InstUpdateWorkList * updatesNeeded)
@@ -636,16 +636,14 @@ void updateStoreInstWithNewOperand(StoreInst * I, Value * oldOperand, Value * ne
                 DEBUG(llvm::errs() << " as "; I->getValueOperand()->dump();
                       llvm::errs() << " is stored in "; I->getPointerOperand()->dump(););
         } else {
-                PointerType * newType = 
+                PointerType * newType =
                         PointerType::get(I->getValueOperand()->getType(),
                                          destType->getAddressSpace());
-                Instruction * ptrProducer = 
+                Instruction * ptrProducer =
                         dyn_cast<Instruction> ( I->getPointerOperand () );
 
                 BackwardUpdate::setExpectedType (ptrProducer,
                                                  newType, updatesNeeded);
-                    
-                                                 
         }
 }
 
@@ -670,9 +668,9 @@ void updateBitCastInstWithNewOperand(BitCastInst * BI, Value *oldOperand, Value 
         if (!sourcePtrType) return;
 
         if ( sourcePtrType->getAddressSpace()
-             == currentPtrType->getAddressSpace() ) return; 
+             == currentPtrType->getAddressSpace() ) return;
 
-        PointerType * newDestType = 
+        PointerType * newDestType =
                 PointerType::get(currentPtrType->getElementType(),
                                  sourcePtrType->getAddressSpace());
 
@@ -688,9 +686,9 @@ void updateGEPWithNewOperand(GetElementPtrInst * GEP, Value * oldOperand, Value 
         if ( GEP->getPointerOperand() != oldOperand ) return;
 
         std::vector<Value *> Indices(GEP->idx_begin(), GEP->idx_end());
-       
-        Type * futureType = 
-                GEP->getGEPReturnType(newOperand, ArrayRef<Value *>(Indices)); 
+
+        Type * futureType =
+                GEP->getGEPReturnType(newOperand, ArrayRef<Value *>(Indices));
 
         PointerType * futurePtrType = dyn_cast<PointerType>(futureType);
         if ( !futurePtrType ) return;
@@ -701,7 +699,6 @@ void updateGEPWithNewOperand(GetElementPtrInst * GEP, Value * oldOperand, Value 
 
         GEP->mutateType ( futurePtrType );
         updateListWithUsers(GEP->use_begin(), GEP->use_end(), GEP, GEP, updatesNeeded);
-        
 }
 
 bool CheckCalledFunction ( CallInst * CI, InstUpdateWorkList * updates,
@@ -730,7 +727,7 @@ bool CheckCalledFunction ( CallInst * CI, InstUpdateWorkList * updates,
 
         Type * returnType = mapTypeToGlobal (CalledType->getReturnType());
 
-        newFunctionType = 
+        newFunctionType =
                 FunctionType::get(returnType,
                                   ArrayRef<Type *>(newArgTypes),
                                   CalledType->isVarArg());
@@ -741,7 +738,7 @@ void promoteCallToNewFunction (CallInst * CI, FunctionType * newFunctionType,
                                InstUpdateWorkList * updates)
 {
         Function * CalledFunction = CI->getCalledFunction ();
-        Function * promoted = 
+        Function * promoted =
                 createPromotedFunctionToType ( CalledFunction, newFunctionType);
         CI->setCalledFunction (promoted);
 
@@ -782,7 +779,7 @@ void CollectChangedCalledFunctions (Function * F, InstUpdateWorkList * updatesNe
              Ce = changedFunctions.end();
              C != Ce; ++C) {
                 CallInst * CI = C->first;
-                FunctionType *newType = C->second; 
+                FunctionType *newType = C->second;
                 IntrinsicInst * Intrinsic = dyn_cast<IntrinsicInst>(CI);
                 if (!Intrinsic) {
                         promoteCallToNewFunction(CI, newType, updatesNeeded);
@@ -791,13 +788,13 @@ void CollectChangedCalledFunctions (Function * F, InstUpdateWorkList * updatesNe
                 Intrinsic::ID IntrinsicId = Intrinsic->getIntrinsicID ();
                 ArrayRef<Type *> Args(newType->param_begin(),
                                       newType->param_begin()+3);
-                Function * newIntrinsicDecl = 
+                Function * newIntrinsicDecl =
                         Intrinsic::getDeclaration (F->getParent(),
                                                    IntrinsicId,
                                                    Args);
                 DEBUG(llvm::errs() << "When updating intrinsic "; CI->dump(););
                 CI->setCalledFunction (newIntrinsicDecl);
-                DEBUG(llvm::errs() << " expecting: " 
+                DEBUG(llvm::errs() << " expecting: "
                                    << Intrinsic::getName(IntrinsicId, Args);
                 CI->dump();
                 llvm::errs() << CI->getCalledFunction()->getName() << "\n";);
@@ -805,9 +802,9 @@ void CollectChangedCalledFunctions (Function * F, InstUpdateWorkList * updatesNe
 }
 
 
-                           
-void updateInstructionWithNewOperand(Instruction * I, 
-                                     Value * oldOperand, 
+
+void updateInstructionWithNewOperand(Instruction * I,
+                                     Value * oldOperand,
                                      Value * newOperand,
                                      InstUpdateWorkList * updatesNeeded)
 {
@@ -815,7 +812,7 @@ void updateInstructionWithNewOperand(Instruction * I,
                updateLoadInstWithNewOperand(LI, newOperand, updatesNeeded);
                return;
        }
-    
+
        if (StoreInst * SI = dyn_cast<StoreInst>(I)) {
                updateStoreInstWithNewOperand(SI, oldOperand, newOperand, updatesNeeded);
                return;
@@ -832,7 +829,7 @@ void updateInstructionWithNewOperand(Instruction * I,
        }
 
        if (GetElementPtrInst * GEP = dyn_cast<GetElementPtrInst>(I)) {
-               updateGEPWithNewOperand(GEP, oldOperand, newOperand, 
+               updateGEPWithNewOperand(GEP, oldOperand, newOperand,
                                        updatesNeeded);
                return;
        }
@@ -842,9 +839,9 @@ void updateInstructionWithNewOperand(Instruction * I,
            return;
        }
 
-       DEBUG(llvm::errs() << "DO NOT KNOW HOW TO UPDATE INSTRUCTION: "; 
+       DEBUG(llvm::errs() << "DO NOT KNOW HOW TO UPDATE INSTRUCTION: ";
              I->print(llvm::errs()); llvm::errs() << "\n";);
-}  
+}
 
 // tile_static are declared as static variables in section("clamp_opencl_local")
 // for each tile_static, make a modified clone with address space 3 and update users
@@ -854,7 +851,7 @@ void promoteTileStatic(Function *Func, InstUpdateWorkList * updateNeeded)
     Module::GlobalListType &globals = M->getGlobalList();
     for (Module::global_iterator I = globals.begin(), E = globals.end();
         I != E; I++) {
-        if (!I->hasSection() || 
+        if (!I->hasSection() ||
             I->getSection() != std::string(TILE_STATIC_NAME) ||
             I->getType()->getPointerAddressSpace() != 0 ||
             !I->hasName()) {
@@ -902,7 +899,7 @@ void promoteTileStatic(Function *Func, InstUpdateWorkList * updateNeeded)
             std::pair<Uses::iterator, Uses::iterator> usesOfSameFunction;
             usesOfSameFunction = uses.equal_range(*F);
             for ( Uses::iterator U = usesOfSameFunction.first, Ue =
-                usesOfSameFunction.second; U != Ue; U++) 
+                usesOfSameFunction.second; U != Ue; U++)
                 updateListWithUsers (U->second, I, new_GV, updateNeeded);
         }
     }
@@ -914,7 +911,7 @@ void eraseOldTileStaticDefs(Module *M)
     Module::GlobalListType &globals = M->getGlobalList();
     for (Module::global_iterator I = globals.begin(), E = globals.end();
         I != E; I++) {
-        if (!I->hasSection() || 
+        if (!I->hasSection() ||
             I->getSection() != std::string(TILE_STATIC_NAME) ||
             I->getType()->getPointerAddressSpace() != 0) {
             continue;
@@ -929,7 +926,7 @@ void eraseOldTileStaticDefs(Module *M)
     }
 }
 
-void promoteAllocas (Function * Func,  
+void promoteAllocas (Function * Func,
                      InstUpdateWorkList * updatesNeeded)
 {
         typedef BasicBlock::iterator iterator;
@@ -938,16 +935,16 @@ void promoteAllocas (Function * Func,
                 AllocaInst * AI = cast<AllocaInst>(I);
                 Type * allocatedType = AI->getType()->getElementType();
                 Type * promotedType = mapTypeToGlobal(allocatedType);
-                
+
                 if ( allocatedType == promotedType ) continue;
 
                 AllocaInst * clonedAlloca = new AllocaInst(promotedType,
                                                            AI->getArraySize(),
                                                            "", AI);
 
-                updateListWithUsers ( AI->use_begin(), AI->use_end(), 
+                updateListWithUsers ( AI->use_begin(), AI->use_end(),
                                       AI, clonedAlloca, updatesNeeded );
-        } 
+        }
 }
 
 void promoteBitcasts (Function * F, InstUpdateWorkList * updates)
@@ -966,10 +963,10 @@ void promoteBitcasts (Function * F, InstUpdateWorkList * updates)
 
         for (BitCastList::const_iterator I = foundBitCasts.begin(),
              Ie = foundBitCasts.end(); I != Ie; ++I) {
-                BitCastInst * BI = *I;  
+                BitCastInst * BI = *I;
 
                 Type *destType = BI->getType();
-                PointerType * destPtrType = 
+                PointerType * destPtrType =
                         dyn_cast<PointerType>(destType);
                 if ( ! destPtrType ) continue;
 
@@ -978,10 +975,10 @@ void promoteBitcasts (Function * F, InstUpdateWorkList * updates)
                         dyn_cast<PointerType>(srcType);
                 if ( ! srcPtrType ) continue;
 #if 0
-                unsigned srcAddressSpace = 
+                unsigned srcAddressSpace =
                         srcPtrType->getAddressSpace();
 
-                unsigned destAddressSpace = 
+                unsigned destAddressSpace =
                         destPtrType->getAddressSpace();
 #endif
                 Type * elementType = destPtrType->getElementType();
@@ -990,7 +987,6 @@ void promoteBitcasts (Function * F, InstUpdateWorkList * updates)
                 Type * newDestType = PointerType::get(mappedType, addrSpace);
                 if (elementType == mappedType) continue;
 
-                        
                 BitCastInst * newBI = new BitCastInst(BI->getOperand(0),
                                                       newDestType, BI->getName(),
                                                          BI);
@@ -1017,7 +1013,7 @@ void updateArgUsers (Function * F, InstUpdateWorkList * updateNeeded)
              A != Ae; ++A) {
                 if ( !hasPtrToNonZeroAddrSpace (A) ) continue;
                 updateListWithUsers (A->use_begin(), A->use_end(),
-                                     A, A, updateNeeded); 
+                                     A, A, updateNeeded);
         }
 }
 
@@ -1026,33 +1022,35 @@ void updateArgUsers (Function * F, InstUpdateWorkList * updateNeeded)
 // This function goes through the function's body and handles GEPs and select instruction specially.
 // After a function is cloned by calling CloneFunctionInto, some of the operands types 
 // might not be updated correctly. Neither are some of  the instructions' return types.
-// For example, 
+// For example,
 // (1) getelementptr instruction will leave type of its pointer operand un-promoted 
-// (2) select instructiono will not update its return type as what has been changed to its #1 or #2 operand
+// (2) select instruction will not update its return type as what has been changed to its #1 or #2 operand
 // Note that It is always safe to call this function right after CloneFunctionInto
 //
 void updateOperandType(Function * oldF, Function * newF, FunctionType* ty, InstUpdateWorkList* workList)
 {
   // Walk all the BBs
   for (Function::iterator B = newF->begin(), Be = newF->end();B != Be; ++B) {
-    // Walk all instructions	
+    // Walk all instructions
     for (BasicBlock::iterator I = B->begin(), Ie = B->end(); I != Ie; ++I) {
       if (SelectInst *Sel = dyn_cast<SelectInst>(I)) {
         assert(Sel->getOperand(1) && "#1  operand  of Select Instruction is invalid!");
         Sel->mutateType(I->getOperand(1)->getType());
         updateListWithUsers(I->use_begin(), I->use_end(), I, I, workList);
       } else if( GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(I)) {
-        // Handle GEPs
-        Type*T = GEP->getPointerOperandType();
-        // Traverse the old args to find source type
-        unsigned argIdx = 0;
-        for (Function::arg_iterator A = oldF->arg_begin(), Ae = oldF->arg_end();
-                    A != Ae; ++A, ++argIdx) {
-          // Since Type* is immutable, pointer comparison to see if they are the same
-          if(T == oldF->getFunctionType()->getParamType(argIdx)) {
-            Argument* V = new Argument(ty->getParamType(argIdx), GEP->getPointerOperand()->getName());
-          // Note that only forward udpate is allowed. A backward update
-          updateGEPWithNewOperand(GEP, GEP->getPointerOperand(), V, workList);
+        // Only handle GEPs with parameters promoted (ex: after a select instruction)
+        if (GEP->getPointerAddressSpace() != 0) {
+          Type*T = GEP->getPointerOperandType();
+          // Traverse the old args to find source type
+          unsigned argIdx = 0;
+          for (Function::arg_iterator A = oldF->arg_begin(), Ae = oldF->arg_end();
+                      A != Ae; ++A, ++argIdx) {
+            // Since Type* is immutable, pointer comparison to see if they are the same
+            if(T == oldF->getFunctionType()->getParamType(argIdx)) {
+              Argument* V = new Argument(ty->getParamType(argIdx), GEP->getPointerOperand()->getName());
+            // Note that only forward udpate is allowed.
+            updateGEPWithNewOperand(GEP, GEP->getPointerOperand(), V, workList);
+            }
           }
         }
       }
@@ -1070,7 +1068,7 @@ Function * createPromotedFunctionToType ( Function * F, FunctionType * promoteTy
         DEBUG(llvm::errs() << "New function name: " << newFunction->getName() << "\n" << "\n";);
 
         ValueToValueMapTy CloneMapping;
-        nameAndMapArgs(newFunction, F, CloneMapping);    
+        nameAndMapArgs(newFunction, F, CloneMapping);
 
 
         SmallVector<ReturnInst *, 1> Returns;
@@ -1083,7 +1081,7 @@ Function * createPromotedFunctionToType ( Function * F, FunctionType * promoteTy
         promoteTileStatic(newFunction, &workList);
         updateArgUsers (newFunction, &workList);
         updateOperandType(F, newFunction, promoteType, &workList);
-       
+
         do {
                 /*while( !workList.empty() ) {
                         update_token update = workList.back();
@@ -1091,19 +1089,19 @@ Function * createPromotedFunctionToType ( Function * F, FunctionType * promoteTy
                         updateInstructionWithNewOperand (update.subject,
                                                          update.oldOperand,
                                                          update.newOperand,
-                                                         workList); 
+                                                         workList);
 
                 }*/
                 workList.run();
                 CollectChangedCalledFunctions ( newFunction, &workList );
         } while ( !workList.empty() );
-        
+
         eraseOldTileStaticDefs(F->getParent());
         if (verifyFunction (*newFunction, PrintMessageAction)) {
                 llvm::errs() << "When checking the updated function of: ";
                 F->dump();
                 llvm::errs() << " into: ";
-                newFunction->dump(); 
+                newFunction->dump();
         }
         DEBUG(llvm::errs() << "-------------------------------------------";);
         return newFunction;
@@ -1111,7 +1109,7 @@ Function * createPromotedFunctionToType ( Function * F, FunctionType * promoteTy
 
 Function * createPromotedFunction ( Function * F )
 {
-        FunctionType * promotedType = 
+        FunctionType * promotedType =
                 createNewFunctionTypeWithPtrToGlobals (F);
         return createPromotedFunctionToType (F, promotedType);
 }
@@ -1138,7 +1136,7 @@ void KernelNodeVisitor::operator()(MDNode *N)
         if (!Op)
             return;
         if ( Function * F = dyn_cast<Function>(Op)) {
-                found_kernels.push_back(F); 
+                found_kernels.push_back(F);
         }
 }
 
@@ -1233,19 +1231,19 @@ Function * createWrappedFunction (Function * F)
                 }
                 // ByVal args are pointers
                 PointerType * ptrArgType = cast<PointerType>(argType);
-                StructType * argStructType = 
+                StructType * argStructType =
                         dyn_cast<StructType>(ptrArgType->getElementType());
                 if (!argStructType) {
                         wrappedTypes.push_back (argType);
                         continue;
                 }
-                StructType * wrapped = 
+                StructType * wrapped =
                         wrapStructType (argStructType, PtrDiff);
                 if (wrapped == argStructType) {
                         wrappedTypes.push_back (argType);
                         continue;
                 }
-                PointerType * final = 
+                PointerType * final =
                         PointerType::get(wrapped,
                                          ptrArgType->getAddressSpace());
                 wrappedTypes.push_back(final);
@@ -1253,7 +1251,7 @@ Function * createWrappedFunction (Function * F)
                 changed = true;
         }
         if ( !changed ) return F;
-        
+
         FunctionType * newFuncType =
                 FunctionType::get(F->getReturnType(),
                                   ArrayRef<Type*>(wrappedTypes),
@@ -1348,7 +1346,7 @@ static std::string escapeName(const std::string &orig_name)
     return oldName;
 }
 
-bool PromoteGlobals::runOnModule(Module& M) 
+bool PromoteGlobals::runOnModule(Module& M)
 {
         FunctionVect foundKernels;
         FunctionMap promotedKernels;
@@ -1387,7 +1385,7 @@ bool PromoteGlobals::runOnModule(Module& M)
         Module::GlobalListType &globals = M.getGlobalList();
         for (Module::global_iterator I = globals.begin(), E = globals.end();
                 I != E; I++) {
-            if (I->hasSection() && 
+            if (I->hasSection() &&
                     I->getSection() == std::string(TILE_STATIC_NAME) &&
                     I->getType()->getPointerAddressSpace() != 0) {
                 std::string oldName = escapeName(I->getName().str());

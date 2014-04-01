@@ -63,7 +63,7 @@ class _data_host: public std::shared_ptr<T> {
   __attribute__((annotate("user_deserialize")))
   explicit _data_host(__global T* t);
 };
-//emum used to track the cache state.
+//enum used to track the cache state.
 //HOST_OWNED: Most up to date version in the home location and will need to
 //be copied back to the gmac buffer before calling a kernel.
 //GMAC_OWNED: data was used in a kernel invocation and is presumed to have
@@ -94,7 +94,7 @@ class _data_host_view {
    gmac_buffer(cache), home_ptr(home), state_ptr(new cache_state), buffer_size(size) {
     *state_ptr = HOST_OWNED;
   }
-  
+
   template <class Deleter>
   _data_host_view(nc_T* cache, Deleter d, T* home, size_t size) :
    gmac_buffer(cache, d), home_ptr(home), state_ptr(new cache_state), buffer_size(size) {
@@ -102,7 +102,7 @@ class _data_host_view {
   }
 
   __attribute__((annotate("user_deserialize"))) _data_host_view(T* cache);
-  
+
   template <class Deleter>
   _data_host_view(nc_T* cache, Deleter d) :
    gmac_buffer(cache, d), home_ptr(nullptr), state_ptr(new cache_state), buffer_size(0) {
@@ -151,7 +151,7 @@ class _data_host_view {
 //is used to check if we are the last copy of an array_view and need to
 //implicitly synchronize.
   bool is_last() const { return gmac_buffer.unique(); }
-  
+
 //Return the home location ptr, synchronizing first if necessary. The pointer
 //returned is mutable, so we set it as host owned. If this is an array or array_view
 //without a host buffer just return a pointer to the gmac buffer.
@@ -181,7 +181,7 @@ class _data_host_view {
   }
 
 //This is the serialization done by the runtime when an object is used in as a
-//kernel argument. By overloading it we can do special work here instead of 
+//kernel argument. By overloading it we can do special work here instead of
 //just using the compiler provided version. First, we copy the data back to
 //the gmac buffer if the cache is currently owned by the host. Instead of
 //appending in the normal way we append the gmac buffer pointer. This removes

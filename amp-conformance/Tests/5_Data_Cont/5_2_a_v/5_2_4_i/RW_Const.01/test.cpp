@@ -30,7 +30,7 @@ class data_const
 {
 public:
 	data_const(array_view<int, 1> output_1, array_view<int, 2> output_2, array_view<int, 3> output_3) : output_1(output_1), output_2(output_2), output_3(output_3) {};
-	data_const(const data_const& rhs) : output_1(rhs.output_1), output_2(rhs.output_2), output_3(rhs.output_3) {};
+	data_const(const data_const& rhs) restrict(cpu, amp) : output_1(rhs.output_1), output_2(rhs.output_2), output_3(rhs.output_3) {};
 
 	void sync() const
 	{
