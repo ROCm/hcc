@@ -16,6 +16,8 @@ private:
     int var;
 
 public:
+    NonPodClass() __GPU_ONLY {}
+
     NonPodClass(int i)
     {
         var = i;
