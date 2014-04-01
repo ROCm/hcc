@@ -13,6 +13,8 @@
 #include <amptest.h>
 #include <amptest_main.h>
 
+typedef int32_t __int32;
+
 template<typename _type, int _rank>
 bool test_feature(accelerator_view device_view)
 {	

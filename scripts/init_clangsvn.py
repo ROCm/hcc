@@ -12,4 +12,3 @@ hgrc.write("hgsubversion=\"hgsubversion\"\n")
 
 # Clone clang trunk
 os.system("hg clone http://llvm.org/svn/llvm-project/cfe/trunk clangsvn")
-
