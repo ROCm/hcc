@@ -15,7 +15,7 @@ def build(target, inc_dir, lib_dir, prefix):
   # ./configure
   if sys.platform.find('linux') != -1: # linux
     os.chdir(target)
-    os.system("./configure --enable-installer --enable-opencl --with-opencl-include=%s --with-opencl-library=%s --enable-tests --enable-debug --prefix=%s" % (inc_dir, lib_dir, prefix)) 
+    os.system("./configure --enable-installer --enable-opencl --with-opencl-include=%s --with-opencl-library=%s --enable-tests --enable-debug --prefix=%s" % (inc_dir, lib_dir, prefix))
     os.system("make")
   else:
     print "Error: not supported platform."
@@ -46,5 +46,3 @@ prefix = sys.argv[4]
 onoff = sys.argv[5]
 if onoff == 'ON':
   run(url, target, inc_dir, lib_dir, prefix)
-
-
