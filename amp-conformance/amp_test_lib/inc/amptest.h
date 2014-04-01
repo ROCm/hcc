@@ -28,4 +28,3 @@
 #include <amptest/data.h>
 #include <amptest/gpuinvoke.h>
 #include <amptest/logging.h>
-
