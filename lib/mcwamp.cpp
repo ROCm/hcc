@@ -24,7 +24,7 @@ namespace Concurrency {
 namespace CLAMP {
 // Levenshtein Distance to measure the difference of two sequences
 // The shortest distance it returns the more likely the two sequences are equal
-static inline int ldistance(const std::string source, const std::string target) restrict(cpu, amp)
+static inline int ldistance(const std::string source, const std::string target)
 {
   int n = source.length();
   int m = target.length();
@@ -142,7 +142,6 @@ void CompileKernels(void)
          std::sort(std::begin(__mcw_kernel_names), std::end(__mcw_kernel_names));
          __mcw_kernel_names.erase (std::unique (__mcw_kernel_names.begin (),
                                                        __mcw_kernel_names.end ()), __mcw_kernel_names.end ());
-         //std::for_each(__mcw_kernel_names.begin(), __mcw_kernel_names.end(), [](std::string& it) {std::cout<<"Kernel Names = "<< it<<std::endl;});
        }
     }
   }
