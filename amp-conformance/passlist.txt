@@ -34,6 +34,8 @@
 5_Data_Cont/5_2_a_v/5_2_5_v_o/Reinterpret_As/Test.03/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/Reinterpret_As/Test.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/Reinterpret_As/Test.04/test.cpp
+5_Data_Cont/5_2_a_v/5_2_2_c/Test.01.01/test.cpp
+5_Data_Cont/5_2_a_v/5_2_2_c/Test.01.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_2_c/Test.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_2_c/Test.03/test.cpp
 5_Data_Cont/5_2_a_v/5_2_2_c/Test.10/test.cpp
@@ -47,6 +49,7 @@
 5_Data_Cont/5_1_array/5_1_2_c/5_1_2_1/Extent_Accl_Staging/With_Itrs/Test.02/test.cpp
 5_Data_Cont/5_1_array/5_1_2_c/ExtentOnly/With_Begin_Itr/Test.01/test.cpp
 5_Data_Cont/5_1_array/5_1_3_i/data/Test.05/test.cpp
+5_Data_Cont/5_1_array/5_1_3_i/Projection/Test.01/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/Operators/Assignment/Test.03/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/Operators/Assignment/Test.01/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/Properties/associated_accvl_view/Test.02/test.cpp
