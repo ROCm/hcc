@@ -1226,8 +1226,9 @@ public:
   __global const T& operator()(const index<N>& idx) const restrict(amp,cpu) {
     return (*this)[idx];
   }
-  __global T& operator()(int i0) restrict(amp,cpu) {
-      return (*this)[i0];
+  typename projection_helper<T, N>::result_type
+      operator()(int i0) restrict(amp,cpu) {
+          return (*this)[i0];
   }
   __global const T& operator()(int i0) const restrict(amp,cpu) {
       return (*this)[i0];
@@ -1478,9 +1479,9 @@ public:
   __global T& operator()(const index<N>& idx) const restrict(amp,cpu) {
     return (*this)[idx];
   }
-  __global T& operator()(int i0) const restrict(amp,cpu) {
-      static_assert(N == 1, "Rank must be 1");
-      return (*this)[index<1>(i0)];
+  typename projection_helper<T, N>::result_type
+      operator()(int i0) const restrict(amp,cpu) {
+          return (*this)[index<1>(i0)];
   }
   __global T& operator()(int i0, int i1) const restrict(amp,cpu) {
       static_assert(N == 2, "Rank must be 2");
