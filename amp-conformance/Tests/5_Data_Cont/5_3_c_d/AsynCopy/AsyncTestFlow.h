@@ -8,6 +8,7 @@
 #include "amptest_main.h"
 #include <typeinfo>
 
+using namespace Concurrency::Test;
 //
 //**************************************** BEGIN: Copy between data containers *************************************
 //

@@ -459,7 +459,7 @@ array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, In
 #endif
  }
 
-template<typename T, int N> template <typename InputIterator> 
+template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(int e0, InputIterator srcBegin)
     : array(Concurrency::extent<1>(e0), srcBegin) {}
 
@@ -503,7 +503,7 @@ template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(int e0, InputIterator srcBegin, accelerator_view av, access_type cpu_access_type)
     : array(Concurrency::extent<1>(e0), srcBegin, av, cpu_access_type) {}
 
-template<typename T, int N> template <typename InputIterator> 
+template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(int e0, InputIterator srcBegin, InputIterator srcEnd, accelerator_view av, access_type cpu_access_type)
     : array(Concurrency::extent<1>(e0), srcBegin, srcEnd, av, cpu_access_type) {}
 
@@ -511,7 +511,7 @@ template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(int e0, int e1, InputIterator srcBegin, accelerator_view av, access_type cpu_access_type)
     : array(Concurrency::extent<2>(e0, e1), srcBegin, av, cpu_access_type) {}
 
-template<typename T, int N> template <typename InputIterator> 
+template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(int e0, int e1, InputIterator srcBegin, InputIterator srcEnd,
                    accelerator_view av, access_type cpu_access_type) : array(Concurrency::extent<2>(e0, e1), srcBegin, srcEnd, av, cpu_access_type) {}
 
@@ -659,7 +659,7 @@ array_view<T,N>::array_view(const Concurrency::extent<N>& ext,
     offset(0), extent_base(ext) {}
 
 #endif
-#undef __global  
+#undef __global
 
 } //namespace Concurrency
 #endif //INCLUDE_AMP_IMPL_H
