@@ -1413,14 +1413,14 @@ public:
   { static_assert(N == 3, "Rank must be 3"); }
 
 
-  array_view(const Concurrency::extent<N>& extent) restrict(amp,cpu);
-  array_view(int e0) restrict(amp,cpu)
+  explicit array_view(const Concurrency::extent<N>& extent);
+  explicit array_view(int e0)
       : array_view(Concurrency::extent<1>(e0))
   { static_assert(N == 1, "Rank must be 1"); }
-  array_view(int e0, int e1) restrict(amp,cpu)
+  explicit array_view(int e0, int e1)
       : array_view(Concurrency::extent<2>(e0, e1))
   { static_assert(N == 2, "Rank must be 2"); }
-  array_view(int e0, int e1, int e2) restrict(amp,cpu)
+  explicit array_view(int e0, int e1, int e2)
       : array_view(Concurrency::extent<3>(e0, e1, e2))
   { static_assert(N == 3, "Rank must be 3"); }
 
