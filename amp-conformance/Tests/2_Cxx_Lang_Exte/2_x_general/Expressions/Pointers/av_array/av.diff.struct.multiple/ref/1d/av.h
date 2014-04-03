@@ -20,6 +20,9 @@ const static int DOMAIN_SIZE = 64 * 64;
 const static int BLOCK_SIZE = 16;
 const int LOCAL_SIZE = 0xF;
 
+template<typename type>
+void init(vector<type> &a, vector<type> &b, vector<type> &c, vector<type> &fa, vector<type> &fb, vector<type> &fc, vector<type> &ref_c, vector<int> &flag);
+
 template<typename type, int rank>
 struct sa
 {
