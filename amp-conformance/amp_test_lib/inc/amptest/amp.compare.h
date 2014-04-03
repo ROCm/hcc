@@ -149,7 +149,9 @@ namespace Concurrency
         // End of Verify functions for c-style arrays
 
 		#pragma region VerifyDataOnCpu()
-        
+		template<typename _type, int _rank,	template<typename, int> class _amp_container_type, template<typename T, typename=std::allocator<T>> class _stl_cont>
+		bool VerifyDataOnCpu(const _stl_cont<_type>& actual, const _amp_container_type<_type, _rank>& expected, _type diff = 0);
+
 		// Verifies that data contained in the two C++ AMP containers differs by value 'diff'. The computation
 		// happens on CPU. If any of supplied array is on GPU, it will get copied to CPU.
 		template<typename _type, int _rank, template<typename, int> class _amp_container_type_1, template<typename, int> class _amp_container_type_2>
@@ -223,7 +225,7 @@ namespace Concurrency
 		// Verifies that data containes in the supplied C++ AMP container and standard container differs by value 'diff'. 
 		// The computation happens on CPU. If the supplied array have data on GPU, it will get copied on CPU.
 		template<typename _type, int _rank,	template<typename, int> class _amp_container_type, template<typename T, typename=std::allocator<T>> class _stl_cont>
-		bool VerifyDataOnCpu(const _stl_cont<_type>& actual, const _amp_container_type<_type, _rank>& expected, _type diff = 0)
+		bool VerifyDataOnCpu(const _stl_cont<_type>& actual, const _amp_container_type<_type, _rank>& expected, _type diff)
 		{
 			if(expected.get_extent().size() != actual.size())
 			{
