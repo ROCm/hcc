@@ -1424,12 +1424,6 @@ public:
       : array_view(Concurrency::extent<3>(e0, e1, e2))
   { static_assert(N == 3, "Rank must be 3"); }
 
-<<<<<<< HEAD
-  array_view(const array_view<const T, N>& other) restrict(amp,cpu) : extent(other.extent),
-    p_(const_cast<T*>(other.p_)), cache(other.cache), offset(other.offset), index_base(other.index_base),
-    extent_base(other.extent_base) {
-    }
-=======
   template <class = typename std::enable_if<std::is_const<T>::value>::type>
     array_view(const array_view<nc_T, N>& other) restrict(amp,cpu) : extent(other.extent),
       p_(other.p_), cache(other.cache), offset(other.offset), index_base(other.index_base),
@@ -1439,9 +1433,12 @@ public:
       p_(const_cast<T*>(other.p_)), cache(other.cache), offset(other.offset), index_base(other.index_base),
       extent_base(other.extent_base) {
       }
->>>>>>> master
 
-  array_view(const array_view& other) restrict(amp,cpu) : extent(other.extent),
+  array_view(const array_view<const T, N>& other) restrict(amp,cpu) : extent(other.extent),
+    p_(const_cast<T*>(other.p_)), cache(other.cache), offset(other.offset), index_base(other.index_base),
+    extent_base(other.extent_base) {
+    }
+   array_view(const array_view& other) restrict(amp,cpu) : extent(other.extent),
     p_(other.p_), cache(other.cache), offset(other.offset), index_base(other.index_base),
     extent_base(other.extent_base) {}
   array_view& operator=(const array_view& other) restrict(amp,cpu) {
