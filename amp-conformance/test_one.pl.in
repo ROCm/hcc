@@ -123,10 +123,10 @@ foreach my $def_set (@{$Test::config{'definitions'}})
             $CLANG_AMP -cc1 -fsyntax-only $SHARED_CXXFLAGS $include_main $test $cflags_defs -D__CPU__=1";
     } else {
         $command = "\\
-            $CLANG_AMP $SHARED_CXXFLAGS $include_main $test -fno-common -m32 $cflags_defs -D__GPU__=1 -Xclang -fcuda-is-device -fno-builtin -emit-llvm -c -S -O2 -o $tmpdir/test.ll && \\
+            $CLANG_AMP $SHARED_CXXFLAGS $include_main $test -fno-common -m32 $cflags_defs -Wno-non-pod-varargs -D__GPU__=1 -Xclang -fcuda-is-device -fno-builtin -emit-llvm -c -S -O2 -o $tmpdir/test.ll && \\
             $CLAMP_DEVICE test.ll kernel.cl && \\
             $CLAMP_EMBED kernel.cl kernel.o && \\
-            $CLANG_AMP $SHARED_CXXFLAGS $include_main $test $AMPTESTLIB $cflags_defs -D__CPU__=1 $CLAMP_LDFLAGS $tmpdir/kernel.o -o $tmpdir/test.out -g";
+            $CLANG_AMP $SHARED_CXXFLAGS $include_main $test $AMPTESTLIB $cflags_defs -Wno-non-pod-varargs -D__CPU__=1 $CLAMP_LDFLAGS $tmpdir/kernel.o -o $tmpdir/test.out -g";
     }
     
     log_message("Command: $command\n"

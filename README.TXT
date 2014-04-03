@@ -3,7 +3,7 @@
 
 Introduction
 --------------------------------------------------------------------------------
-This repository hosts C++AMP compiler implementation project. The goal is to 
+This repository hosts C++AMP compiler implementation project. The goal is to
 implement a compiler that takes a program conforming C++AMP standard and
 transforms it into a SPIR binary for OpenCL. It will be based on LLVM+CLANG.
 
