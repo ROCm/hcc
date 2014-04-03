@@ -13,6 +13,10 @@
 #include <time.h>
 #include <amptest.h>
 
+#define BOOL int
+#define TRUE 1
+#define FALSE 0
+
 using std::vector;
 using namespace Concurrency;
 using namespace Concurrency::Test;
