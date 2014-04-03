@@ -2353,7 +2353,6 @@ static void FindLocalName(Instruction *I, Value *&LocalValue, Type *&LocalTy) {
       } else if (isa<PHINode>(PO)) {
          // The sources must have been processed. Do nothing.
       } else {
-      llvm::errs()<<"Unhandled type of reference to a local array";
         assert(0 && "Unhandled type of reference to a local array");
       }
     }
@@ -2384,7 +2383,6 @@ static void FindLocalName(Instruction *I, Value *&LocalValue, Type *&LocalTy) {
           LocalTy = PTy->getElementType();
           LocalValue = PO;
         } else {
-          llvm::errs()<<"Unhandled type of reference to a local array\n";
           assert(0 && "Unhandled type of reference to a local array");
         }
       }
