@@ -1035,8 +1035,11 @@ void updateOperandType(Function * oldF, Function * newF, FunctionType* ty, InstU
     for (BasicBlock::iterator I = B->begin(), Ie = B->end(); I != Ie; ++I) {
       if (SelectInst *Sel = dyn_cast<SelectInst>(I)) {
         assert(Sel->getOperand(1) && "#1  operand  of Select Instruction is invalid!");
-        Sel->mutateType(I->getOperand(1)->getType());
-        updateListWithUsers(I->use_begin(), I->use_end(), I, I, workList);
+        if (Sel->getType() != I->getOperand(1)->getType()) {
+          // mutate type only when absolutely necessary
+          Sel->mutateType(I->getOperand(1)->getType());
+          updateListWithUsers(I->use_begin(), I->use_end(), I, I, workList);
+        }
       } else if( GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(I)) {
         // Only handle GEPs with parameters promoted (ex: after a select instruction)
         if (GEP->getPointerAddressSpace() != 0) {
