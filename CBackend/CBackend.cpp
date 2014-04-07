@@ -2372,7 +2372,7 @@ static void FindLocalName(Instruction *I, Value *&LocalValue, Type *&LocalTy) {
             break;
           default:
             assert(0 && "Unhandled type of ConstantExpr in a load");
-        }
+        };
       } else if (isa<GetElementPtrInst>(PO)) {
         FindLocalName(dyn_cast<Instruction>(PO), LocalValue, LocalTy);
       } else if (isa<PHINode>(PO)) {
