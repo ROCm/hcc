@@ -9,6 +9,7 @@
 5_Data_Cont/5_2_a_v/5_2_3_m/WithoutDataSource/copy_to/Test.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_2_c/WithoutDataSource/Test.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_2_c/WithoutDataSource/Negative/Test.01/test.cpp
+5_Data_Cont/5_2_a_v/5_2_2_c/Test.20/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/StagingArrayToNonContiguousArrayView/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/StagingArrayToArrayView/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/StagingArrayToArray/test.cpp
@@ -21,6 +22,7 @@
 5_Data_Cont/5_3_c_d/SynchronousCopy/ArrayAndIterator/test.cpp
 5_Data_Cont/5_3_c_d/Misc/HigherRank/test.cpp
 5_Data_Cont/5_3_c_d/Misc/CustomIterator/IterToArrayView.02/CpuToCpu/test.cpp
+5_Data_Cont/5_3_c_d/Misc/CopyWithConstObject/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/IteratorToArrayView/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/IteratorToNonContigArrayView/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/StagingArrayAndIterator/test.cpp
@@ -117,6 +119,7 @@
 5_Data_Cont/5_1_array/5_1_4_v_o/reinterpret_As/Test.01.01/test.cpp
 5_Data_Cont/5_1_array/5_1_4_v_o/reinterpret_As/Test.01/test.cpp
 5_Data_Cont/5_1_array/5_1_4_v_o/reinterpret_As/Test.04/test.cpp
+5_Data_Cont/5_0_general/amp_compatible/non.pod.inheritance/test.cpp
 4_Basic_Data_Elmnts/4_2_extent/4_2_4_ops/Arithmetic/Test.05/test.cpp
 4_Basic_Data_Elmnts/4_2_extent/4_2_4_ops/Arithmetic/Test.01/test.cpp
 4_Basic_Data_Elmnts/4_2_extent/4_2_3_m/size/Test.01/test.cpp
