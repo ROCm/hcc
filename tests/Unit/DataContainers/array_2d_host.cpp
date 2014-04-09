@@ -59,7 +59,7 @@ TEST(ClassArray2D, ConstructorFromConstantView) {
   init2D(v);
   Concurrency::extent<2> ext(N0, N1);
   Concurrency::array<int, 2> arr1(ext, v.begin());
-  Concurrency::array_view<const int, 2>av(ext, &v[0]);
+  Concurrency::array_view<const int, 2>av(ext, v);
   Concurrency::array<int, 2> arr2(av);
 
   EXPECT_EQ(ext, arr1.extent);
@@ -80,7 +80,7 @@ TEST(ClassArray2D, ConstructorFromView) {
   init2D(v);
   Concurrency::extent<2> ext(N0, N1);
   Concurrency::array<int, 2> arr1(ext, v.begin());
-  Concurrency::array_view<const int, 2>av(ext, &v[0]);
+  Concurrency::array_view<const int, 2>av(ext, v);
   Concurrency::array<int, 2> arr2(av);
 
   EXPECT_EQ(ext, arr1.extent);
