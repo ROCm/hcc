@@ -151,6 +151,7 @@
 3_device_Modeling/3_3_Accelerator_view/3_3_4_memb/method/wait/test.cpp
 3_device_Modeling/3_3_Accelerator_view/3_3_2_Queue_mode/test.cpp
 3_device_Modeling/3_3_Accelerator_view/3_3_3_constr/copy_ctor/test.cpp
+2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_3_Rest_on_Func_Scop/2_4_3_5_Loca_Decl/2_4_3_5_1_tile_stat_Vari/local_class.01/test.cpp
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/2_3_2_1_Over_Reso/Overloading/conversion_operator/multiple_restrictions_class.01/test.cpp
 2_Cxx_Lang_Exte/2_1_Synt/2_1_3_Type_Spec/Typedef/Test.01/test.cpp
 2_Cxx_Lang_Exte/2_1_Synt/2_1_1_Func_Decl_Synt/TemplateClass/Test.01/test.cpp
