@@ -425,6 +425,14 @@ template<typename T, int N>
 array<T, N>::array(const Concurrency::extent<N>& extent, accelerator_view av, accelerator_view associated_av) : array(extent) {
   pav = new accelerator_view(av);
   paav = new accelerator_view(associated_av);
+
+  if(pav->get_accelerator()!=paav->get_accelerator()) {
+    if(pav->get_accelerator().get_device_path().compare(L"default")==0) {
+      pav->accelerator_ = new accelerator(L"cpu");
+      pav->queuing_mode = queuing_mode_immediate;
+    }
+  }
+
 }
 template<typename T, int N>
 array<T, N>::array(int e0, accelerator_view av, accelerator_view associated_av) : array(Concurrency::extent<1>(e0), av, associated_av) {}
