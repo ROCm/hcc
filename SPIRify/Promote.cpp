@@ -50,6 +50,7 @@ static Twine KernelListMDNodeName = "opencl.kernels";
 
 enum {
         GlobalAddressSpace = 1,
+        ConstantAddressSpace = 2,
         LocalAddressSpace = 3
 };
 
@@ -851,7 +852,13 @@ void promoteTileStatic(Function *Func, InstUpdateWorkList * updateNeeded)
     Module::GlobalListType &globals = M->getGlobalList();
     for (Module::global_iterator I = globals.begin(), E = globals.end();
         I != E; I++) {
-        if (!I->hasSection() ||
+        unsigned the_space = LocalAddressSpace;
+        if (!I->hasSection() && I->isConstant() && 
+            I->getType()->getPointerAddressSpace() == 0 &&
+            I->hasName() && I->getLinkage() == GlobalVariable::InternalLinkage) {
+            // Though I'm global, I'm constant indeed.
+            the_space = ConstantAddressSpace;
+        } else if (!I->hasSection() ||
             I->getSection() != std::string(TILE_STATIC_NAME) ||
             I->getType()->getPointerAddressSpace() != 0 ||
             !I->hasName()) {
@@ -889,7 +896,7 @@ void promoteTileStatic(Function *Func, InstUpdateWorkList * updateNeeded)
                     I->getType()->getElementType(),
                     I->isConstant(), I->getLinkage(),
                     I->hasInitializer()?I->getInitializer():0,
-                    "", (GlobalVariable *)0, I->getThreadLocalMode(), LocalAddressSpace);
+                    "", (GlobalVariable *)0, I->getThreadLocalMode(), the_space);
             new_GV->copyAttributesFrom(I);
             if (i == 0) {
                 new_GV->takeName(I);
