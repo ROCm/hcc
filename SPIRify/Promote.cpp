@@ -50,6 +50,7 @@ static Twine KernelListMDNodeName = "opencl.kernels";
 
 enum {
         GlobalAddressSpace = 1,
+        ConstantAddressSpace = 2,
         LocalAddressSpace = 3
 };
 
@@ -851,7 +852,13 @@ void promoteTileStatic(Function *Func, InstUpdateWorkList * updateNeeded)
     Module::GlobalListType &globals = M->getGlobalList();
     for (Module::global_iterator I = globals.begin(), E = globals.end();
         I != E; I++) {
-        if (!I->hasSection() ||
+        unsigned the_space = LocalAddressSpace;
+        if (!I->hasSection() && I->isConstant() && 
+            I->getType()->getPointerAddressSpace() == 0 &&
+            I->hasName() && I->getLinkage() == GlobalVariable::InternalLinkage) {
+            // Though I'm global, I'm constant indeed.
+            the_space = ConstantAddressSpace;
+        } else if (!I->hasSection() ||
             I->getSection() != std::string(TILE_STATIC_NAME) ||
             I->getType()->getPointerAddressSpace() != 0 ||
             !I->hasName()) {
@@ -889,7 +896,7 @@ void promoteTileStatic(Function *Func, InstUpdateWorkList * updateNeeded)
                     I->getType()->getElementType(),
                     I->isConstant(), I->getLinkage(),
                     I->hasInitializer()?I->getInitializer():0,
-                    "", (GlobalVariable *)0, I->getThreadLocalMode(), LocalAddressSpace);
+                    "", (GlobalVariable *)0, I->getThreadLocalMode(), the_space);
             new_GV->copyAttributesFrom(I);
             if (i == 0) {
                 new_GV->takeName(I);
@@ -1035,8 +1042,11 @@ void updateOperandType(Function * oldF, Function * newF, FunctionType* ty, InstU
     for (BasicBlock::iterator I = B->begin(), Ie = B->end(); I != Ie; ++I) {
       if (SelectInst *Sel = dyn_cast<SelectInst>(I)) {
         assert(Sel->getOperand(1) && "#1  operand  of Select Instruction is invalid!");
-        Sel->mutateType(I->getOperand(1)->getType());
-        updateListWithUsers(I->use_begin(), I->use_end(), I, I, workList);
+        if (Sel->getType() != I->getOperand(1)->getType()) {
+          // mutate type only when absolutely necessary
+          Sel->mutateType(I->getOperand(1)->getType());
+          updateListWithUsers(I->use_begin(), I->use_end(), I, I, workList);
+        }
       } else if( GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(I)) {
         // Only handle GEPs with parameters promoted (ex: after a select instruction)
         if (GEP->getPointerAddressSpace() != 0) {
