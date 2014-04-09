@@ -7,7 +7,6 @@
 5_Data_Cont/5_2_a_v/5_2_3_m/ImplicitSynchronize/OverlappingSynchronize/Test.03/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/ImplicitSynchronize/OverlappingSynchronize/Test.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/WithoutDataSource/copy_to/Test.01/test.cpp
-5_Data_Cont/5_2_a_v/5_2_2_c/WithoutDataSource/Test.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_2_c/WithoutDataSource/Negative/Test.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_2_c/Test.20/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/StagingArrayToNonContiguousArrayView/test.cpp
@@ -39,7 +38,6 @@
 5_Data_Cont/5_2_a_v/5_2_5_v_o/Reinterpret_As/Test.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/Reinterpret_As/Test.04/test.cpp
 5_Data_Cont/5_2_a_v/5_2_2_c/Test.16/test.cpp
-5_Data_Cont/5_2_a_v/5_2_2_c/Test.07/test.cpp
 5_Data_Cont/5_2_a_v/5_2_2_c/Test.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_2_c/Test.03/test.cpp
 5_Data_Cont/5_2_a_v/5_2_2_c/Test.10/test.cpp
@@ -159,7 +157,6 @@
 2_Cxx_Lang_Exte/2_1_Synt/2_1_1_Func_Decl_Synt/Member/Test.01/test.cpp
 2_Cxx_Lang_Exte/2_1_Synt/Contextual_restrict/test.01/test.cpp
 2_Cxx_Lang_Exte/2_1_Synt/Contextual_restrict/test.02/test.cpp
-2_Cxx_Lang_Exte/2_x_general/Statements/ControlFlow/Test.07/While/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToGlobal/Test05.02/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToGlobal/Test02.03/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToGlobal/Test02/test.cpp
@@ -167,3 +164,4 @@
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/Misc/Test04/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/RefToPointer/Normal/Test10/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/RefToPointer/Normal/Test05/test.cpp
+2_Cxx_Lang_Exte/2_x_general/Statements/ControlFlow/Test.07/While/test.cpp
