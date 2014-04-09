@@ -1863,6 +1863,18 @@ private:
   HRESULT err_code;
 };
 
+#ifndef E_FAIL
+#define E_FAIL 0x80004005
+#endif
+
+class invalid_compute_domain : public runtime_exception
+{
+public:
+  explicit invalid_compute_domain (const char * message) throw()
+  : runtime_exception(message, E_FAIL) {}
+  invalid_compute_domain() throw()
+  : runtime_exception(E_FAIL) {}
+};
 
 namespace Concurrency {
 
