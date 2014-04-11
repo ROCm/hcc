@@ -128,11 +128,12 @@ void CompileKernels(void)
     free(kernel_source);
     // Extract kernel names
     char** kernel_names = NULL;
+    unsigned kernel_num = 0;
     ecl_error error_code;
-    error_code =  eclExtractKernelNames(&kernel_names);
+    error_code =  eclGetKernelNames(&kernel_names, &kernel_num);
     if(error_code == eclSuccess && kernel_names) {
        int i = 0;
-       while(kernel_names && kernel_names[i]) {
+       while(kernel_names && i<kernel_num) {
           __mcw_kernel_names.push_back(std::string(kernel_names[i]));
           delete [] kernel_names[i];
           ++i;
