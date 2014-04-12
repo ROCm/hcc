@@ -19,6 +19,80 @@ extern "C" char * kernel_source_[] asm ("_binary_kernel_cl_start") __attribute__
 extern "C" char * kernel_size_[] asm ("_binary_kernel_cl_size") __attribute__((weak));
 #endif
 
+std::vector<std::string> __mcw_kernel_names;
+namespace Concurrency {
+namespace CLAMP {
+// Levenshtein Distance to measure the difference of two sequences
+// The shortest distance it returns the more likely the two sequences are equal
+static inline int ldistance(const std::string source, const std::string target)
+{
+  int n = source.length();
+  int m = target.length();
+  if (m == 0)
+    return n;
+  if (n == 0)
+    return m;
+  
+  //Construct a matrix
+  typedef std::vector < std::vector < int >>Tmatrix;
+  Tmatrix matrix(n + 1);
+  
+  for (int i = 0; i <= n; i++)
+    matrix[i].resize(m + 1);
+  for (int i = 1; i <= n; i++)
+    matrix[i][0] = i;
+  for (int i = 1; i <= m; i++)
+    matrix[0][i] = i;
+
+  for (int i = 1; i <= n; i++) {
+    const char si = source[i - 1];
+    for (int j = 1; j <= m; j++) {
+      const char dj = target[j - 1];
+      int cost;
+      if (si == dj)
+        cost = 0;
+      else
+        cost = 1;
+      const int above = matrix[i - 1][j] + 1;
+      const int left = matrix[i][j - 1] + 1;
+      const int diag = matrix[i - 1][j - 1] + cost;
+      matrix[i][j] = std::min(above, std::min(left, diag));
+    }
+  }
+  return matrix[n][m];
+}
+// transformed_kernel_name (mangled) might differ if usages of 'm32' flag in CPU/GPU
+// paths are mutually exclusive. We can scan all kernel names and replace
+// transformed_kernel_name with the one that has the shortest distance from it by using 
+// Levenshtein Distance measurement
+void MatchKernelNames(std::string& fixed_name) {
+  if (__mcw_kernel_names.size()) {
+    // Must start from a big value > 10
+    int distance = 1024;
+    int hit = -1;
+    std::string shortest;
+    for (std::vector < std::string >::iterator it = __mcw_kernel_names.begin();
+         it != __mcw_kernel_names.end(); ++it) {
+      if ((*it) == fixed_name) {
+        // Perfect match. Mark no need to replace and skip the loop
+        hit = -1;
+        break;
+      }
+      int n = ldistance(fixed_name, (*it));
+      if (n <= distance) {
+        distance = n;
+        hit = 1;
+        shortest = (*it);
+      }
+    }
+    /* Replacement. Skip if not hit or the distance is too far (>5)*/
+    if (hit >= 0 && distance < 5)
+      fixed_name = shortest;
+  }
+  return;
+}
+}
+}
 namespace Concurrency {
 namespace CLAMP {
 void CompileKernels(void)
@@ -52,6 +126,25 @@ void CompileKernels(void)
     }
     __mcw_cxxamp_compiled = true;
     free(kernel_source);
+    // Extract kernel names
+    char** kernel_names = NULL;
+    unsigned kernel_num = 0;
+    ecl_error error_code;
+    error_code =  eclGetKernelNames(&kernel_names, &kernel_num);
+    if(error_code == eclSuccess && kernel_names) {
+       int i = 0;
+       while(kernel_names && i<kernel_num) {
+          __mcw_kernel_names.push_back(std::string(kernel_names[i]));
+          delete [] kernel_names[i];
+          ++i;
+        }
+       delete [] kernel_names;
+       if(__mcw_kernel_names.size()) {
+         std::sort(std::begin(__mcw_kernel_names), std::end(__mcw_kernel_names));
+         __mcw_kernel_names.erase (std::unique (__mcw_kernel_names.begin (),
+                                                       __mcw_kernel_names.end ()), __mcw_kernel_names.end ());
+       }
+    }
   }
 #endif
 }
