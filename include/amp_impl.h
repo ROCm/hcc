@@ -396,6 +396,11 @@ inline extent<3> operator%(int lhs, const extent<3>& rhs) restrict(amp,cpu) {
 template<int N> class extent;
 template<typename T, int N> array<T, N>::array(const Concurrency::extent<N>& ext)
     : extent(ext), m_device(nullptr), pav(nullptr), paav(nullptr) {
+    for (int i = 0; i < rank; i++)
+    {
+      if(ext[i] <=0)
+        throw runtime_exception("errorMsg_throw", 0);
+    }
 #ifndef __GPU__
         initialize();
 #endif

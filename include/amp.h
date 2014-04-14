@@ -36,6 +36,40 @@
 #endif
 
 namespace Concurrency {
+typedef int HRESULT;
+class runtime_exception : public std::exception
+{
+public:
+  runtime_exception(const char * message, HRESULT hresult) throw() : _M_msg(message), err_code(hresult) {}
+  explicit runtime_exception(HRESULT hresult) throw() : err_code(hresult) {}
+  runtime_exception(const runtime_exception& other) throw() : _M_msg(other.what()), err_code(other.err_code) {}
+  runtime_exception& operator=(const runtime_exception& other) throw() {
+    _M_msg = *(other.what());
+    err_code = other.err_code;
+    return *this;
+  }
+  virtual ~runtime_exception() throw() {}
+  virtual const char* what() const throw() {return _M_msg.c_str();}
+  HRESULT get_error_code() const {return err_code;}
+
+private:
+  std::string _M_msg;
+  HRESULT err_code;
+};
+
+#ifndef E_FAIL
+#define E_FAIL 0x80004005
+#endif
+
+class invalid_compute_domain : public runtime_exception
+{
+public:
+  explicit invalid_compute_domain (const char * message) throw()
+  : runtime_exception(message, E_FAIL) {}
+  invalid_compute_domain() throw()
+  : runtime_exception(E_FAIL) {}
+};
+
 /*
   This is not part of C++AMP standard, but borrowed from Parallel Patterns
   Library.
@@ -437,6 +471,12 @@ struct amp_helper
         return idx[N - 1] >= 0 && idx[N - 1] < ext[N - 1] &&
             amp_helper<N - 1, _Tp1, _Tp2>::contains(idx, ext);
     }
+
+    static bool inline contains(const _Tp1& idx, const _Tp2& ext,const _Tp2& ext2) restrict(amp,cpu) {
+        return idx[N - 1] >= 0 && ext[N - 1] > 0 && (idx[N - 1] + ext[N - 1]) <= ext2[N - 1] &&
+            amp_helper<N - 1, _Tp1, _Tp2>::contains(idx, ext,ext2);
+    }
+
     static int inline flatten(const _Tp1& idx, const _Tp2& ext) restrict(amp,cpu) {
         return idx[N - 1] + ext[N - 1] * amp_helper<N - 1, _Tp1, _Tp2>::flatten(idx, ext);
     }
@@ -450,6 +490,11 @@ struct amp_helper<1, _Tp1, _Tp2>
     static bool inline contains(const _Tp1& idx, const _Tp2& ext) restrict(amp,cpu) {
         return idx[0] >= 0 && idx[0] < ext[0];
     }
+
+    static bool inline contains(const _Tp1& idx, const _Tp2& ext,const _Tp2& ext2) restrict(amp,cpu) {
+        return idx[0] >= 0 && ext[0] > 0 && (idx[0] + ext[0]) <= ext2[0] ;
+    }
+
     static int inline flatten(const _Tp1& idx, const _Tp2& ext) restrict(amp,cpu) {
         return idx[0];
     }
@@ -1186,6 +1231,11 @@ public:
   }
 
   void copy_to(array& dest) const {
+      for(int i = 0 ; i < N ; i++)
+      {
+        if(dest.extent[i] < this->extent[i] )
+          throw runtime_exception("errorMsg_throw", 0);
+      }
       copy(*this, dest);
   }
 
@@ -1246,6 +1296,8 @@ public:
   }
 
   array_view<T, N> section(const Concurrency::index<N>& idx, const Concurrency::extent<N>& ext) restrict(amp,cpu) {
+      if(  !amp_helper<N, index<N>, Concurrency::extent<N>>::contains(idx,  ext ,this->extent) )
+        throw runtime_exception("errorMsg_throw", 0);
       array_view<T, N> av(*this);
       return av.section(idx, ext);
   }
@@ -1254,6 +1306,8 @@ public:
       return av.section(idx, ext);
   }
   array_view<T, N> section(const index<N>& idx) restrict(amp,cpu) {
+      if(  !amp_helper<N, index<N>, Concurrency::extent<N>>::contains(idx, this->extent ) )
+        throw runtime_exception("errorMsg_throw", 0);
       array_view<T, N> av(*this);
       return av.section(idx);
   }
@@ -1298,6 +1352,8 @@ public:
   template <typename ElementType>
     array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu) {
         int size = extent.size() * sizeof(T) / sizeof(ElementType);
+        if( (extent.size() * sizeof(T)) % sizeof(ElementType))
+          throw runtime_exception("errorMsg_throw", 0);
         array_view<ElementType, 1> av(Concurrency::extent<1>(size), reinterpret_cast<ElementType*>(m_device.get()));
         return av;
     }
@@ -1463,6 +1519,11 @@ public:
   }
 
   void copy_to(array<T,N>& dest) const {
+      for(int i= 0 ;i< N;i++)
+      {
+        if(dest.extent[i] < this->extent[i])
+          throw runtime_exception("errorMsg_throw", 0);
+      }
       copy(*this, dest);
   }
   void copy_to(const array_view& dest) const {
@@ -1506,6 +1567,8 @@ public:
   template <typename ElementType>
       array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu) {
           int size = extent.size() * sizeof(T) / sizeof(ElementType);
+          if( (extent.size() * sizeof(T)) % sizeof(ElementType))
+            throw runtime_exception("errorMsg_throw", 0);
           array_view<ElementType, 1> av(Concurrency::extent<1>(size), reinterpret_cast<ElementType*>(cache.get_mutable() + offset + index_base[0]));
           return av;
       }
@@ -1517,6 +1580,8 @@ public:
       }
   array_view<T, N> section(const Concurrency::index<N>& idx,
                            const Concurrency::extent<N>& ext) const restrict(amp,cpu) {
+      if(  !amp_helper<N, index<N>, Concurrency::extent<N>>::contains(idx, ext,this->extent ) )
+        throw runtime_exception("errorMsg_throw", 0);
       array_view<T, N> av(ext, extent_base, idx + index_base, cache, p_, offset);
       return av;
   }
@@ -1545,6 +1610,8 @@ public:
   template <int K>
   array_view<T, K> view_as(Concurrency::extent<K> viewExtent) const restrict(amp,cpu) {
     static_assert(N == 1, "view_as is only permissible on array views of rank 1");
+    if( viewExtent.size() > extent.size())
+      throw runtime_exception("errorMsg_throw", 0);
     array_view<T, K> av(viewExtent, cache, p_, index_base[0]);
     return av;
   }
@@ -1841,40 +1908,6 @@ namespace concurrency = Concurrency;
 // Specialization and inlined implementation of C++AMP classes/templates
 #include "amp_impl.h"
 #include "parallel_for_each.h"
-
-typedef int HRESULT;
-class runtime_exception : public std::exception
-{
-public:
-  runtime_exception(const char * message, HRESULT hresult) throw() : _M_msg(message), err_code(hresult) {}
-  explicit runtime_exception(HRESULT hresult) throw() : err_code(hresult) {}
-  runtime_exception(const runtime_exception& other) throw() : _M_msg(other.what()), err_code(other.err_code) {}
-  runtime_exception& operator=(const runtime_exception& other) throw() {
-    _M_msg = *(other.what());
-    err_code = other.err_code;
-    return *this;
-  }
-  virtual ~runtime_exception() throw() {}
-  virtual const char* what() const throw() {return _M_msg.c_str();}
-  HRESULT get_error_code() const {return err_code;}
-
-private:
-  std::string _M_msg;
-  HRESULT err_code;
-};
-
-#ifndef E_FAIL
-#define E_FAIL 0x80004005
-#endif
-
-class invalid_compute_domain : public runtime_exception
-{
-public:
-  explicit invalid_compute_domain (const char * message) throw()
-  : runtime_exception(message, E_FAIL) {}
-  invalid_compute_domain() throw()
-  : runtime_exception(E_FAIL) {}
-};
 
 namespace Concurrency {
 
