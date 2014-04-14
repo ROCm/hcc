@@ -4,6 +4,7 @@
 5_Data_Cont/5_2_a_v/5_2_5_v_o/Reinterpret_As/Test.01.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/Destructor/Test.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/Destructor/Test.01/test.cpp
+5_Data_Cont/5_2_a_v/5_2_3_m/ImplicitSynchronize/Discard/Test.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/ImplicitSynchronize/OverlappingSynchronize/Test.03/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/ImplicitSynchronize/OverlappingSynchronize/Test.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/WithoutDataSource/copy_to/Test.01/test.cpp
