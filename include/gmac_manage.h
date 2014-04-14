@@ -146,7 +146,13 @@ class _data_host_view {
 //The host buffer was modified without going through the array_view interface.
 //Set it host owned so we know it is dirty and will copy it back to the gmac
 //buffer when we serialize.
-  void refresh() const { *state_ptr = HOST_OWNED; }
+  void refresh() const {
+    *state_ptr = HOST_OWNED;
+    if (home_ptr) {
+      memcpy(reinterpret_cast<void*>(gmac_buffer.get()),
+             reinterpret_cast<const void*>(home_ptr), buffer_size);
+    }
+  }
 
 //If the cache is currently owned by the gmac buffer, copy it back to the host
 //buffer and change the state to shared.

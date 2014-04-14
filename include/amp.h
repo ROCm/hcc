@@ -1552,8 +1552,11 @@ public:
   void synchronize() const;
   completion_future synchronize_async() const;
   void refresh() const;
-  void discard_data() const {}
-
+  void discard_data() const {
+#ifndef __GPU__
+    cache.refresh();
+#endif
+  }
   T* data() const restrict(amp,cpu) {
     return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
   }
