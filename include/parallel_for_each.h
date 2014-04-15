@@ -7,6 +7,12 @@
 #include <amp.h>
 
 namespace Concurrency {
+namespace CLAMP {
+extern void MatchKernelNames( std::string & );
+extern void CompileKernels(void);
+extern void *CreateOkraKernel(std::string);
+extern void OkraLaunchKernel(void *ker, size_t, size_t *global, size_t *local);
+}
 static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu,amp) {
     std::string s(f);
     std::string out;
@@ -20,13 +26,10 @@ static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu,amp) {
         out.append("_EC_");
       }
     }
+    CLAMP::MatchKernelNames(out);
     return out;
 }
-namespace CLAMP {
-extern void CompileKernels(void);
-extern void *CreateOkraKernel(std::string);
-extern void OkraLaunchKernel(void *ker, size_t, size_t *global, size_t *local);
-}
+
 static std::set<std::string> __mcw_cxxamp_kernels;
 template<typename Kernel, int dim_ext>
 static inline void mcw_cxxamp_launch_kernel(size_t *ext,
