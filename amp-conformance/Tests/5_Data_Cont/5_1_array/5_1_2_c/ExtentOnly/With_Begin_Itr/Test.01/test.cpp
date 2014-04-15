@@ -8,7 +8,7 @@
 /// <tags>P1</tags>
 /// <summary>Array(extent based) constructed with only begin iterator - use hash_multiset</summary>
 
-#include <hash_set>
+#include <unordered_set>
 #include "./../../../constructor.h"
 #include <amptest_main.h>
 
@@ -20,13 +20,12 @@ bool test_feature()
         edata[i] = i+1;
     extent<_rank> e1(edata);
 
-    std::hash_multiset<_type> data;
+    std::unordered_multiset<_type> data;
     for (unsigned int i = 0; i < e1.size(); i++)
         data.insert((_type)rand());
 
     {
-        bool pass = test_feature_itr<_type, _rank>(e1, data.begin()) &&
-            test_feature_itr<_type, _rank>(e1, data.rbegin());
+        bool pass = test_feature_itr<_type, _rank>(e1, data.begin());
 
         if (!pass)
             return false;

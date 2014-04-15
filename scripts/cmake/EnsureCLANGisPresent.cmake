@@ -9,4 +9,3 @@ else(EXISTS "${dest_dir}/${name}/tools/clang")
 endif(EXISTS "${dest_dir}/${name}/tools/clang")
 
 endmacro()
-

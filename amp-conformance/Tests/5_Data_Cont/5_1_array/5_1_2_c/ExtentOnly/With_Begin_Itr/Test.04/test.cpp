@@ -8,7 +8,7 @@
 /// <tags>P1</tags>
 /// <summary>Array(3D) constructed with only begin iterator - use hash_set</summary>
 
-#include <hash_set>
+#include <unordered_set>
 #include "./../../../constructor.h"
 #include <amptest_main.h>
 
@@ -18,14 +18,12 @@ bool test_feature()
     const int _rank = 3;
 
     {
-        std::hash_set<_type> data;
+        std::unordered_set<_type> data;
         for (int i = 0; i < _D0*_D1*_D2; i++)
             data.insert((_type)rand());
 
         bool pass = test_feature_itr<_type, _rank, _D0, _D1, _D2>(data.begin()) &&
-            test_feature_itr<_type, _rank, _D0, _D1, _D2>(data.rbegin()) && 
-            test_feature_itr<_type, _rank, _D0, _D1, _D2>(data.cbegin()) && 
-            test_feature_itr<_type, _rank, _D0, _D1, _D2>(data.crbegin());
+            test_feature_itr<_type, _rank, _D0, _D1, _D2>(data.cbegin());
 
         if (!pass)
             return false;

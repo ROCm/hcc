@@ -2351,9 +2351,40 @@ static void FindLocalName(Instruction *I, Value *&LocalValue, Type *&LocalTy) {
       } else if (isa<GetElementPtrInst>(PO)) {
         FindLocalName(dyn_cast<Instruction>(PO), LocalValue, LocalTy);
       } else if (isa<PHINode>(PO)) {
-	// The sources must have been processed. Do nothing.
+         // The sources must have been processed. Do nothing.
       } else {
         assert(0 && "Unhandled type of reference to a local array");
+      }
+    }
+  }
+  else if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
+    if (SI->getPointerAddressSpace() == 3) { 
+      Value * PO = SI->getPointerOperand();
+      if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(PO)) {
+        switch (CE->getOpcode()) {
+          case Instruction::GetElementPtr:
+            {
+              PointerType  *PTy = cast<PointerType>(
+                  CE->getOperand(0)->getType());
+              LocalTy = PTy->getElementType();
+              LocalValue = CE->getOperand(0);
+            }
+            break;
+          default:
+            assert(0 && "Unhandled type of ConstantExpr in a load");
+        };
+      } else if (isa<GetElementPtrInst>(PO)) {
+        FindLocalName(dyn_cast<Instruction>(PO), LocalValue, LocalTy);
+      } else if (isa<PHINode>(PO)) {
+        // The sources must have been processed. Do nothing.
+      } else {
+        PointerType  *PTy = cast<PointerType>(PO->getType());
+        if(PTy) {
+          LocalTy = PTy->getElementType();
+          LocalValue = PO;
+        } else {
+          assert(0 && "Unhandled type of reference to a local array");
+        }
       }
     }
   }
