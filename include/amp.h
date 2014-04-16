@@ -145,7 +145,7 @@ public:
     accelerator_ = other.accelerator_;
     is_debug = other.is_debug;
     version = other.version;
-
+    is_auto_selection = other.is_auto_selection;
     return *this;
   }
 
@@ -153,12 +153,13 @@ public:
   enum queuing_mode get_queuing_mode() const {return queuing_mode;}
   bool get_is_debug() const {return is_debug;}
   bool get_version() const {return version;}
-
+  bool get_is_auto_selection() const {return is_auto_selection;}
   void flush(){}
   void wait(){}
   completion_future create_marker();
   bool operator==(const accelerator_view& other) const {
     return is_debug == other.is_debug &&
+           is_auto_selection == other.is_auto_selection &&
            version == other.version &&
            queuing_mode == other.queuing_mode &&
            accelerator_ == other.accelerator_;
@@ -167,6 +168,7 @@ public:
   ~accelerator_view() {}
  private:
   bool is_debug;
+  bool is_auto_selection;
   unsigned int version;
   enum queuing_mode queuing_mode;
   //CLAMP-specific
