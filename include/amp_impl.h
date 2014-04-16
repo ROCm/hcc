@@ -7,13 +7,6 @@
 #elif !defined(CXXAMP_ENABLE_HSA_OKRA)
 #include <CL/cl.h>
 #endif
-#define CHECK_ERROR(error_code, message) \
-  if (error_code != CL_SUCCESS) { \
-    std::cout << "Error: " << message << "\n"; \
-    std::cout << "Code: " << error_code << "\n"; \
-    std::cout << "Line: " << __LINE__ << "\n"; \
-    exit(1); \
-  }
 
 #define CHECK_ERROR_GMAC(error_code, message) \
   if (error_code != eclSuccess) { \
