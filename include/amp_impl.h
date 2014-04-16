@@ -7,13 +7,6 @@
 #elif !defined(CXXAMP_ENABLE_HSA_OKRA)
 #include <CL/cl.h>
 #endif
-#define CHECK_ERROR(error_code, message) \
-  if (error_code != CL_SUCCESS) { \
-    std::cout << "Error: " << message << "\n"; \
-    std::cout << "Code: " << error_code << "\n"; \
-    std::cout << "Line: " << __LINE__ << "\n"; \
-    exit(1); \
-  }
 
 #define CHECK_ERROR_GMAC(error_code, message) \
   if (error_code != eclSuccess) { \
@@ -145,6 +138,20 @@ inline accelerator_view accelerator::create_view(queuing_mode qmode) {
 }
 
 inline completion_future accelerator_view::create_marker(){return completion_future();}
+
+// Default access type
+inline bool accelerator::set_default_cpu_access_type(access_type type) {
+  if(get_supports_cpu_shared_memory() == false &&
+        ((type&access_type_read) || (type&access_type_write))) {
+    // TODO: Throw runtime exception here 
+  }
+  if(type == access_type_auto)
+    default_access_type = access_type_none;
+  else
+    default_access_type = type;
+  return true;
+}
+inline access_type accelerator::get_default_cpu_access_type() const {return default_access_type;}
 
 template <int N>
 index<N> operator+(const index<N>& lhs, const index<N>& rhs) restrict(amp,cpu) {
@@ -410,6 +417,7 @@ inline extent<3> operator%(int lhs, const extent<3>& rhs) restrict(amp,cpu) {
 template<int N> class extent;
 template<typename T, int N> array<T, N>::array(const Concurrency::extent<N>& ext)
     : extent(ext), m_device(nullptr), pav(nullptr), paav(nullptr) {
+  this->cpu_access_type = Concurrency::accelerator(accelerator::default_accelerator).get_default_view().get_accelerator().get_default_cpu_access_type();
 #ifndef __GPU__
         initialize();
 #endif
@@ -424,7 +432,12 @@ template<typename T, int N> array<T, N>::array(int e0, int e1, int e2)
 
 template<typename T, int N>
 array<T, N>::array(const Concurrency::extent<N>& ext, accelerator_view av, access_type cpu_access_type) : array(ext) {
-  this->cpu_access_type = cpu_access_type;
+  if(cpu_access_type == access_type_auto)
+    this->cpu_access_type = av.get_accelerator().get_default_cpu_access_type();
+  else {
+    this->cpu_access_type = cpu_access_type;
+    av.get_accelerator().set_default_cpu_access_type(cpu_access_type);
+  }
   pav = new accelerator_view(av);
 }
 template<typename T, int N>
@@ -451,6 +464,7 @@ array<T, N>::array(int e0, int e1, int e2, accelerator_view av, accelerator_view
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin)
     : extent(ext), m_device(nullptr), pav(nullptr), paav(nullptr) {
+  this->cpu_access_type = Concurrency::accelerator(accelerator::default_accelerator).get_default_view().get_accelerator().get_default_cpu_access_type();
 #ifndef __GPU__
         InputIterator srcEnd = srcBegin;
         std::advance(srcEnd, extent.size());
@@ -461,6 +475,7 @@ array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin)
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, InputIterator srcEnd)
     : extent(ext), m_device(nullptr), pav(nullptr), paav(nullptr) {
+  this->cpu_access_type = Concurrency::accelerator(accelerator::default_accelerator).get_default_view().get_accelerator().get_default_cpu_access_type();
 #ifndef __GPU__
         initialize(srcBegin, srcEnd);
 #endif
@@ -494,16 +509,20 @@ array<T, N>::array(int e0, int e1, int e2, InputIterator srcBegin, InputIterator
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, accelerator_view av,
-                   access_type cpu_access_type) : array(ext, srcBegin) {
-  this->cpu_access_type = cpu_access_type;
-  pav = new accelerator_view(av);
+                   access_type cpu_access_type) : array(ext, av, cpu_access_type) {
+#ifndef __GPU__
+  InputIterator srcEnd = srcBegin;
+  std::advance(srcEnd, extent.size());
+  initialize(srcBegin, srcEnd);
+#endif
 }
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, InputIterator srcEnd,
-                   accelerator_view av, access_type cpu_access_type) : array(ext, srcBegin, srcEnd) {
-  this->cpu_access_type = cpu_access_type;
-  pav = new accelerator_view(av);
+                   accelerator_view av, access_type cpu_access_type) : array(ext, srcBegin, av, cpu_access_type) {
+#ifndef __GPU__
+  initialize(srcBegin, srcEnd);
+#endif
 }
 
 template<typename T, int N> template <typename InputIterator>
@@ -536,8 +555,12 @@ array<T, N>::array(int e0, int e1, int e2, InputIterator srcBegin, InputIterator
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, accelerator_view av,
-                   accelerator_view associated_av) : array(ext, srcBegin, av, access_type_none) {
-  paav = new accelerator_view(associated_av);
+                   accelerator_view associated_av) : array(ext, av, associated_av) {
+#ifndef __GPU__
+  InputIterator srcEnd = srcBegin;
+  std::advance(srcEnd, extent.size());
+  initialize(srcBegin, srcEnd);
+#endif
 }
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, InputIterator srcEnd,
@@ -587,12 +610,16 @@ template<typename T, int N> array<T, N>::array(array&& other)
     : extent(other.extent), m_device(other.m_device),pav(other.pav), paav(other.paav) {
   if(pav) pav = new accelerator_view(*(other.pav));
   if(paav) paav = new accelerator_view(*(other.paav));
+  this->cpu_access_type = other.cpu_access_type;
 }
 template<typename T, int N>
 array<T, N>::array(const array_view<const T, N>& src, accelerator_view av,
                    access_type cpu_access_type)
     : array(src) {
-  this->cpu_access_type = cpu_access_type;
+  if(cpu_access_type == access_type_auto)
+    this->cpu_access_type = av.get_accelerator().get_default_cpu_access_type();
+  else
+    this->cpu_access_type = cpu_access_type;
   pav = new accelerator_view(av);
 }
 template<typename T, int N>
