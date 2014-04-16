@@ -3162,22 +3162,43 @@ void CWriter::visitCallInst(CallInst &I) {
     ++ArgNo;
   }
 
-
-  for (; AI != AE; ++AI, ++ArgNo) {
-    if (PrintedArg) Out << ", ";
-    if (ArgNo < NumDeclaredParams &&
-        (*AI)->getType() != FTy->getParamType(ArgNo)) {
-      Out << '(';
-      printType(Out, FTy->getParamType(ArgNo),
-            /*isSigned=*/PAL.hasAttribute(ArgNo+1, Attribute::SExt));
-      Out << ')';
+  Function *F = I.getCalledFunction();
+  if (F && F->getName() == "barrier") {
+    // Special processing for OpenCL barrier() function:
+    // Numerical values of CLK_LOCAL_MEM_FENCE and CLK_GLOBAL_MEM_FENCE can't be
+    // determined before clBuildProgram() so we have to convert from integers
+    // back to strings at this point.
+    assert(CS.arg_size() == 1 && "Incorrect number of arguments to barrier()!"); 
+    assert((*AI)->getType()->isIntegerTy() && "Illegal argument passed to barrier()!");
+    ConstantInt *arg_value = dyn_cast_or_null<ConstantInt>(AI->get());
+    assert(arg_value && "Can't extract integer value!");
+    APInt v = arg_value->getValue();
+    if (v == 1) {
+      Out << "CLK_LOCAL_MEM_FENCE";
+    } else if (v == 2) {
+      Out << "CLK_GLOBAL_MEM_FENCE";
+    } else if (v == 3) {
+      Out << "CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE";
+    } else {
+      assert(0 && "Illegal argument passed to barrier()!");
     }
-    // Check if the argument is expected to be passed by value.
-    if (I.paramHasAttr(ArgNo+1, Attribute::ByVal))
-      writeOperandDeref(*AI);
-    else
-      writeOperand(*AI);
-    PrintedArg = true;
+  } else {
+    for (; AI != AE; ++AI, ++ArgNo) {
+      if (PrintedArg) Out << ", ";
+      if (ArgNo < NumDeclaredParams &&
+          (*AI)->getType() != FTy->getParamType(ArgNo)) {
+        Out << '(';
+        printType(Out, FTy->getParamType(ArgNo),
+              /*isSigned=*/PAL.hasAttribute(ArgNo+1, Attribute::SExt));
+        Out << ')';
+      }
+      // Check if the argument is expected to be passed by value.
+      if (I.paramHasAttr(ArgNo+1, Attribute::ByVal))
+        writeOperandDeref(*AI);
+      else
+        writeOperand(*AI);
+      PrintedArg = true;
+    }
   }
   Out << ')';
 }
