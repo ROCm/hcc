@@ -150,6 +150,7 @@
 4_Basic_Data_Elmnts/4_2_extent/4_2_3_m/tile/Negative/pad.01/test.cpp
 4_Basic_Data_Elmnts/4_2_extent/4_2_3_m/tile/Negative/tile.02/test.cpp
 4_Basic_Data_Elmnts/4_2_extent/4_2_2_c/Negative/Test.01/test.cpp
+4_Basic_Data_Elmnts/4_2_extent/4_2_2_c/Negative/Test.03/test.cpp
 4_Basic_Data_Elmnts/4_2_extent/4_2_2_c/Negative/Test.04/test.cpp
 4_Basic_Data_Elmnts/4_1_index/4_1_4_ops/Logical/Test.02/test.cpp
 4_Basic_Data_Elmnts/4_1_index/4_1_4_ops/Logical/Test.01/test.cpp
@@ -166,6 +167,10 @@
 4_Basic_Data_Elmnts/4_1_index/4_1_2_c/WithArray/Test.01/test.cpp
 4_Basic_Data_Elmnts/4_1_index/4_1_2_c/Default/Test.01/test.cpp
 4_Basic_Data_Elmnts/4_1_index/4_1_2_c/WithCoordindates/Test.01/test.cpp
+4_Basic_Data_Elmnts/4_1_index/4_1_2_c/Negative/UnmatchedCoordinates.1/test.cpp
+4_Basic_Data_Elmnts/4_1_index/4_1_2_c/Negative/UnmatchedCoordinates.2/test.cpp
+4_Basic_Data_Elmnts/4_1_index/4_1_2_c/Negative/UnmatchedIndexRank/test.cpp
+4_Basic_Data_Elmnts/4_1_index/4_1_2_c/Negative/ZeroRank/test.cpp
 3_device_Modeling/3_2_Accelerator/3_2_3_Stat_memb/set_default/test.cpp
 3_device_Modeling/3_2_Accelerator/3_2_5_members/logic_op/test.cpp
 3_device_Modeling/3_2_Accelerator/3_2_1_Defa_Acce/Test.02/test.cpp
