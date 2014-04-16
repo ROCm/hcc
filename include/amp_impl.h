@@ -36,6 +36,7 @@ inline accelerator::accelerator(): accelerator(default_accelerator) {
   if (!default_view_) {
     default_view_ = new accelerator_view(0);
     default_view_->accelerator_ = this;
+    default_view_->is_auto_selection = true;
   }
 }
 inline accelerator::accelerator(const accelerator& other): device_path(other.device_path), version(other.version),
@@ -51,6 +52,7 @@ supports_cpu_shared_memory(other.supports_cpu_shared_memory) {
 
   default_view_ = new accelerator_view(0);
   default_view_->accelerator_ = this;
+  default_view_->is_auto_selection = false;
 }
 
 // TODO(I-Jui Sung): perform real OpenCL queries here..
@@ -62,17 +64,28 @@ inline accelerator::accelerator(const std::wstring& path): device_path(path),
     std::wcerr << L"CLAMP: Warning: the given accelerator is not supported: ";
     std::wcerr << path << std::endl;
   }
+
+  if (!default_view_) {
+    default_view_ = new accelerator_view(0);
+    default_view_->accelerator_ = this;
+    default_view_->is_auto_selection = true;
+  }
 #ifndef CXXAMP_ENABLE_HSA_OKRA
   AcceleratorInfo accInfo;
   for (unsigned i = 0; i < eclGetNumberOfAccelerators(); i++) {
     assert(eclGetAcceleratorInfo(i, &accInfo) == eclSuccess);
     if ( (accInfo.acceleratorType == GMAC_ACCELERATOR_TYPE_GPU)
-      && (path ==std::wstring(gpu_accelerator)))
+      && (path ==std::wstring(gpu_accelerator))) {
       this->accInfo = accInfo;
-
+      default_view_->queuing_mode = queuing_mode_automatic;
+      default_view_->is_auto_selection = false;
+    }
     if ( (accInfo.acceleratorType == GMAC_ACCELERATOR_TYPE_CPU)
-      && (path ==std::wstring(cpu_accelerator)))
+      && (path ==std::wstring(cpu_accelerator))) {
       this->accInfo = accInfo;
+      default_view_->queuing_mode = queuing_mode_immediate;
+      default_view_->is_auto_selection = false;
+    }
   }
   dedicated_memory=accInfo.memAllocSize/(size_t)1024;
 
@@ -84,10 +97,6 @@ inline accelerator::accelerator(const std::wstring& path): device_path(path),
     supports_limited_double_precision = true;
 #endif
   description = L"Default GMAC+OpenCL";
-  if (!default_view_) {
-    default_view_ = new accelerator_view(0);
-    default_view_->accelerator_ = this;
-  }
 }
 inline accelerator& accelerator::operator=(const accelerator& other) {
   device_path = other.device_path;
@@ -121,12 +130,13 @@ inline accelerator_view& accelerator::get_default_view() const {
 
 // Accelerator view
 inline accelerator_view accelerator::create_view(void) {
-  return create_view(queuing_mode_immediate);
+  return create_view(queuing_mode_automatic);
 }
 inline accelerator_view accelerator::create_view(queuing_mode qmode) {
   accelerator_view sa(0);
   sa.queuing_mode = qmode;
   sa.accelerator_ = this;
+  sa.is_auto_selection = false;
   return sa;
 }
 
