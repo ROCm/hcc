@@ -511,13 +511,16 @@ public:
     static const int rank = N;
     typedef int value_type;
 
-    index() restrict(amp,cpu) : base_() {};
+    index() restrict(amp,cpu) : base_() {
+        static_assert( N>0, "rank should bigger than 0 ");
+    };
     index(const index& other) restrict(amp,cpu)
         : base_(other.base_) {}
     template <typename ..._Tp>
         explicit index(_Tp ... __t) restrict(amp,cpu)
         : base_(__t...) {
             static_assert(sizeof...(_Tp) <= 3, "Explicit constructor with rank greater than 3 is not allowed");
+            static_assert(sizeof...(_Tp) == N, "rank should be consistency");
         }
     explicit index(int components[]) restrict(amp,cpu)
         : base_(components) {}
@@ -684,6 +687,7 @@ public:
         explicit extent(_Tp ... __t) restrict(amp,cpu)
         : base_(__t...) {
       static_assert(sizeof...(__t) <= 3, "Can only supply at most 3 individual coordinates in the constructor");
+      static_assert(sizeof...(__t) == N, "rank should be consistency");
     }
     explicit extent(int components[]) restrict(amp,cpu)
         : base_(components) {}
