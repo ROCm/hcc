@@ -578,12 +578,36 @@ private:
 };
 
 
+#ifndef CLK_LOCAL_MEM_FENCE
+#define CLK_LOCAL_MEM_FENCE (1)
+#endif
+
+#ifndef CLK_GLOBAL_MEM_FENCE
+#define CLK_GLOBAL_MEM_FENCE (2)
+#endif
+
 // C++AMP LPM 4.5
 class tile_barrier {
  public:
+  tile_barrier(const tile_barrier& other) restrict(amp,cpu) {}
   void wait() const restrict(amp) {
 #ifdef __GPU__
-    barrier(0);
+    wait_with_all_memory_fence();
+#endif
+  }
+  void wait_with_all_memory_fence() const restrict(amp) {
+#ifdef __GPU__
+    barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
+#endif
+  }
+  void wait_with_global_memory_fence() const restrict(amp) {
+#ifdef __GPU__
+    barrier(CLK_GLOBAL_MEM_FENCE);
+#endif
+  }
+  void wait_with_tile_static_memory_fence() const restrict(amp) {
+#ifdef __GPU__
+    barrier(CLK_LOCAL_MEM_FENCE);
 #endif
   }
  private:
