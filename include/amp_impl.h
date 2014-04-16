@@ -97,10 +97,6 @@ inline accelerator::accelerator(const std::wstring& path): device_path(path),
     supports_limited_double_precision = true;
 #endif
   description = L"Default GMAC+OpenCL";
-<<<<<<< HEAD
-
-=======
->>>>>>> master
 }
 inline accelerator& accelerator::operator=(const accelerator& other) {
   device_path = other.device_path;
