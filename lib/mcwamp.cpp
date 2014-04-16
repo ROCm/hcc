@@ -2,6 +2,7 @@
 #include <map>
 namespace Concurrency {
 accelerator_view *accelerator::default_view_ = NULL;
+access_type accelerator::default_access_type = access_type_none;
 const wchar_t accelerator::gpu_accelerator[] = L"gpu";
 wchar_t accelerator::default_accelerator[] = L"default";
 const wchar_t accelerator::cpu_accelerator[] = L"cpu";
