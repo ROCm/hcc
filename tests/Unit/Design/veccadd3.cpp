@@ -49,6 +49,11 @@ int main(int argc, char**argv) {
     // Initialize host variables ----------------------------------------------
     std::vector<accelerator> accs = accelerator::get_all();
     std::wcout << "Size: " << accs.size() << std::endl;                       
+    if(accs.size() == 0) {
+      std::wcout << "There is no acclerator!\n";
+      // Since this case is to test on GPU device, skip if there is CPU only
+      return 0;
+    }
     assert(accs.size() && "Number of Accelerators == 0!");
     std::for_each(accs.begin(), accs.end(), [&] (accelerator acc) 
             {  
