@@ -197,7 +197,7 @@ public:
            is_auto_selection == other.is_auto_selection &&
            version == other.version &&
            queuing_mode == other.queuing_mode &&
-           accelerator_ == other.accelerator_;
+           *accelerator_ == *(other.accelerator_);
   }
   bool operator!=(const accelerator_view& other) const {return !(*this == other);}
   ~accelerator_view() {}
