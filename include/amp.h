@@ -147,7 +147,8 @@ public:
   bool get_supports_double_precision() const {return supports_double_precision;}
   bool get_supports_limited_double_precision() const { return supports_limited_double_precision;}
   size_t get_dedicated_memory() const {return dedicated_memory;}
-  void set_default_cpu_access_type(access_type type) {default_access_type = type;}
+  bool set_default_cpu_access_type(access_type type);
+  access_type get_default_cpu_access_type() const;
   bool operator==(const accelerator& other) const;
   bool operator!=(const accelerator& other) const;
  private:
@@ -162,7 +163,7 @@ public:
   bool supports_cpu_shared_memory;
   size_t dedicated_memory;
   static accelerator_view *default_view_;
-  access_type default_access_type;
+  static access_type default_access_type;
 #ifndef CXXAMP_ENABLE_HSA_OKRA
   typedef GmacAcceleratorInfo AcceleratorInfo;
   AcceleratorInfo accInfo;
@@ -1411,6 +1412,12 @@ public:
   }
 
   T* data() const restrict(amp,cpu) {
+#ifndef __GPU__
+    // TODO: If array's buffer is inaccessible on CPU, host pointer to that buffer must be NULL
+    if(cpu_access_type == access_type_none) {
+      //return reinterpret_cast<T*>(NULL);
+    }      
+#endif
     return reinterpret_cast<T*>(m_device.get());
   }
   ~array() { // For GMAC
