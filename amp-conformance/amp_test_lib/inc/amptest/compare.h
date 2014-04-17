@@ -6,6 +6,7 @@
 #pragma once
 #include <amptest/math.h>
 #include <amptest/logging.h>
+#include <amptest/operators.h>
 
 namespace Concurrency
 {

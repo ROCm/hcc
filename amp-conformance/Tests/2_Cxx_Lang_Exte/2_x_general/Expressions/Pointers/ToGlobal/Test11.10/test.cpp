@@ -8,6 +8,8 @@
 
 #include "../../inc/common.h"
 
+#define __int32 int
+
 class c
 {
 public:
