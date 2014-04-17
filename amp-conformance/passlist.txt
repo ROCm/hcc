@@ -56,6 +56,7 @@
 5_Data_Cont/5_1_array/5_1_3_i/data/Test.05/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/Operators/Assignment/Test.03/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/Operators/Assignment/Test.01/test.cpp
+5_Data_Cont/5_1_array/5_1_3_m/Properties/associated_accvl_view/Test.03/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/Properties/associated_accvl_view/Test.02/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/Properties/associated_accvl_view/Test.01/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/Properties/accl_view/Test.01/test.cpp
