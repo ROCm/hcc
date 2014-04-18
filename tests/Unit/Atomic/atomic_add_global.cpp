@@ -5,7 +5,7 @@
 #include <amp.h>
 #include <stdlib.h>
 #include <iostream>
-
+#include <vector>
 using namespace concurrency;
 
 int main(void) {
@@ -23,7 +23,8 @@ int main(void) {
     }
   });
 
-  for(unsigned i = 0; i < vecSize; i++) {
+  std::vector<accelerator> accs = accelerator::get_all();
+  for(unsigned i = 0; i < vecSize && accs.size(); i++) {
       if(count[i] != vecSize) {
         return 1;
       }
