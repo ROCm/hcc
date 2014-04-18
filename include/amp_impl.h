@@ -414,6 +414,11 @@ template<int N> class extent;
 template<typename T, int N> array<T, N>::array(const Concurrency::extent<N>& ext)
     : extent(ext), m_device(nullptr), pav(nullptr), paav(nullptr) {
   this->cpu_access_type = Concurrency::accelerator(accelerator::default_accelerator).get_default_view().get_accelerator().get_default_cpu_access_type();
+    for (int i = 0; i < rank; i++)
+    {
+      if(ext[i] <=0)
+        throw runtime_exception("errorMsg_throw", 0);
+    }
 #ifndef __GPU__
         initialize();
 #endif
@@ -448,6 +453,14 @@ template<typename T, int N>
 array<T, N>::array(const Concurrency::extent<N>& extent, accelerator_view av, accelerator_view associated_av) : array(extent) {
   pav = new accelerator_view(av);
   paav = new accelerator_view(associated_av);
+
+  if(pav->get_accelerator()!=paav->get_accelerator()) {
+    if(pav->get_accelerator().get_device_path().compare(L"default")==0) {
+      pav->accelerator_ = new accelerator(L"cpu");
+      pav->queuing_mode = queuing_mode_immediate;
+    }
+  }
+
 }
 template<typename T, int N>
 array<T, N>::array(int e0, accelerator_view av, accelerator_view associated_av) : array(Concurrency::extent<1>(e0), av, associated_av) {}
@@ -471,6 +484,8 @@ array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin)
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, InputIterator srcEnd)
     : extent(ext), m_device(nullptr), pav(nullptr), paav(nullptr) {
+    if(ext.size() != std::distance(srcBegin,srcEnd) )
+      throw runtime_exception("errorMsg_throw", 0);
   this->cpu_access_type = Concurrency::accelerator(accelerator::default_accelerator).get_default_view().get_accelerator().get_default_cpu_access_type();
 #ifndef __GPU__
         initialize(srcBegin, srcEnd);

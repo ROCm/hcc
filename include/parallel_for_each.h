@@ -193,6 +193,7 @@ __attribute__((noinline,used)) void parallel_for_each(
     const Kernel& f) restrict(cpu,amp) {
   size_t ext = compute_domain[0];
   size_t tile = compute_domain.tile_dim0;
+  static_assert( compute_domain.tile_dim0 <= 1024, "The maximum nuimber of threads in a tile is 1024");
 #ifndef __GPU__
   mcw_cxxamp_launch_kernel<Kernel, 1>(&ext, &tile, f);
 #else //ifndef __GPU__
@@ -212,6 +213,7 @@ __attribute__((noinline,used)) void parallel_for_each(
                     static_cast<size_t>(compute_domain[0])};
   size_t tile[2] = { compute_domain.tile_dim1,
                      compute_domain.tile_dim0};
+  static_assert( (compute_domain.tile_dim1 * compute_domain.tile_dim0)<= 1024, "The maximum nuimber of threads in a tile is 1024");
 #ifndef __GPU__
   mcw_cxxamp_launch_kernel<Kernel, 2>(ext, tile, f);
 #else //ifndef __GPU__
@@ -232,6 +234,7 @@ __attribute__((noinline,used)) void parallel_for_each(
   size_t tile[3] = { compute_domain.tile_dim2,
                      compute_domain.tile_dim1,
                      compute_domain.tile_dim0};
+  static_assert(( compute_domain.tile_dim2 * compute_domain.tile_dim1* compute_domain.tile_dim0)<= 1024, "The maximum nuimber of threads in a tile is 1024");
 #ifndef __GPU__
   mcw_cxxamp_launch_kernel<Kernel, 3>(ext, tile, f);
 #else //ifndef __GPU__
