@@ -2234,11 +2234,11 @@ static inline int atomic_fetch_inc(int *x) restrict(amp,cpu) {
 }
 #else
 
-extern int atomic_fetch_inc(int * _Dest);
-extern unsigned atomic_fetch_inc(unsigned * _Dest);
+extern int atomic_fetch_inc(int * _Dest) restrict(amp, cpu);
+extern unsigned atomic_fetch_inc(unsigned * _Dest) restrict(amp, cpu);
 
-int atomic_fetch_max(int * dest, int val);// todo
-unsigned int atomic_fetch_max(unsigned int * dest, unsigned int val);// todo
+extern int atomic_fetch_max(int * dest, int val) restrict(amp, cpu);
+extern unsigned int atomic_fetch_max(unsigned int * dest, unsigned int val) restrict(amp, cpu);
 
 #endif
 
