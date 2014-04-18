@@ -185,6 +185,7 @@
 3_device_Modeling/3_2_Accelerator/3_2_3_Stat_memb/set_default/test.cpp
 3_device_Modeling/3_2_Accelerator/3_2_5_members/logic_op/test.cpp
 3_device_Modeling/3_2_Accelerator/3_2_1_Defa_Acce/Test.02/test.cpp
+3_device_Modeling/3_3_Accelerator_view/3_3_4_memb/oper/test.cpp
 3_device_Modeling/3_3_Accelerator_view/3_3_4_memb/prop/test.cpp
 3_device_Modeling/3_3_Accelerator_view/3_3_4_memb/method/crt_mark/test.cpp
 3_device_Modeling/3_3_Accelerator_view/3_3_4_memb/method/wait/test.cpp
