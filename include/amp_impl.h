@@ -7,13 +7,6 @@
 #elif !defined(CXXAMP_ENABLE_HSA_OKRA)
 #include <CL/cl.h>
 #endif
-#define CHECK_ERROR(error_code, message) \
-  if (error_code != CL_SUCCESS) { \
-    std::cout << "Error: " << message << "\n"; \
-    std::cout << "Code: " << error_code << "\n"; \
-    std::cout << "Line: " << __LINE__ << "\n"; \
-    exit(1); \
-  }
 
 #define CHECK_ERROR_GMAC(error_code, message) \
   if (error_code != eclSuccess) { \
@@ -36,6 +29,7 @@ inline accelerator::accelerator(): accelerator(default_accelerator) {
   if (!default_view_) {
     default_view_ = new accelerator_view(0);
     default_view_->accelerator_ = this;
+    default_view_->is_auto_selection = true;
   }
 }
 inline accelerator::accelerator(const accelerator& other): device_path(other.device_path), version(other.version),
@@ -51,6 +45,7 @@ supports_cpu_shared_memory(other.supports_cpu_shared_memory) {
 
   default_view_ = new accelerator_view(0);
   default_view_->accelerator_ = this;
+  default_view_->is_auto_selection = false;
 }
 
 // TODO(I-Jui Sung): perform real OpenCL queries here..
@@ -62,17 +57,28 @@ inline accelerator::accelerator(const std::wstring& path): device_path(path),
     std::wcerr << L"CLAMP: Warning: the given accelerator is not supported: ";
     std::wcerr << path << std::endl;
   }
+
+  if (!default_view_) {
+    default_view_ = new accelerator_view(0);
+    default_view_->accelerator_ = this;
+    default_view_->is_auto_selection = true;
+  }
 #ifndef CXXAMP_ENABLE_HSA_OKRA
   AcceleratorInfo accInfo;
   for (unsigned i = 0; i < eclGetNumberOfAccelerators(); i++) {
     assert(eclGetAcceleratorInfo(i, &accInfo) == eclSuccess);
     if ( (accInfo.acceleratorType == GMAC_ACCELERATOR_TYPE_GPU)
-      && (path ==std::wstring(gpu_accelerator)))
+      && (path ==std::wstring(gpu_accelerator))) {
       this->accInfo = accInfo;
-
+      default_view_->queuing_mode = queuing_mode_automatic;
+      default_view_->is_auto_selection = false;
+    }
     if ( (accInfo.acceleratorType == GMAC_ACCELERATOR_TYPE_CPU)
-      && (path ==std::wstring(cpu_accelerator)))
+      && (path ==std::wstring(cpu_accelerator))) {
       this->accInfo = accInfo;
+      default_view_->queuing_mode = queuing_mode_immediate;
+      default_view_->is_auto_selection = false;
+    }
   }
   dedicated_memory=accInfo.memAllocSize/(size_t)1024;
 
@@ -84,10 +90,6 @@ inline accelerator::accelerator(const std::wstring& path): device_path(path),
     supports_limited_double_precision = true;
 #endif
   description = L"Default GMAC+OpenCL";
-  if (!default_view_) {
-    default_view_ = new accelerator_view(0);
-    default_view_->accelerator_ = this;
-  }
 }
 inline accelerator& accelerator::operator=(const accelerator& other) {
   device_path = other.device_path;
@@ -121,16 +123,31 @@ inline accelerator_view& accelerator::get_default_view() const {
 
 // Accelerator view
 inline accelerator_view accelerator::create_view(void) {
-  return create_view(queuing_mode_immediate);
+  return create_view(queuing_mode_automatic);
 }
 inline accelerator_view accelerator::create_view(queuing_mode qmode) {
   accelerator_view sa(0);
   sa.queuing_mode = qmode;
   sa.accelerator_ = this;
+  sa.is_auto_selection = false;
   return sa;
 }
 
 inline completion_future accelerator_view::create_marker(){return completion_future();}
+
+// Default access type
+inline bool accelerator::set_default_cpu_access_type(access_type type) {
+  if(get_supports_cpu_shared_memory() == false &&
+        ((type&access_type_read) || (type&access_type_write))) {
+    // TODO: Throw runtime exception here 
+  }
+  if(type == access_type_auto)
+    default_access_type = access_type_none;
+  else
+    default_access_type = type;
+  return true;
+}
+inline access_type accelerator::get_default_cpu_access_type() const {return default_access_type;}
 
 template <int N>
 index<N> operator+(const index<N>& lhs, const index<N>& rhs) restrict(amp,cpu) {
@@ -396,6 +413,12 @@ inline extent<3> operator%(int lhs, const extent<3>& rhs) restrict(amp,cpu) {
 template<int N> class extent;
 template<typename T, int N> array<T, N>::array(const Concurrency::extent<N>& ext)
     : extent(ext), m_device(nullptr), pav(nullptr), paav(nullptr) {
+  this->cpu_access_type = Concurrency::accelerator(accelerator::default_accelerator).get_default_view().get_accelerator().get_default_cpu_access_type();
+    for (int i = 0; i < rank; i++)
+    {
+      if(ext[i] <=0)
+        throw runtime_exception("errorMsg_throw", 0);
+    }
 #ifndef __GPU__
         initialize();
 #endif
@@ -410,7 +433,12 @@ template<typename T, int N> array<T, N>::array(int e0, int e1, int e2)
 
 template<typename T, int N>
 array<T, N>::array(const Concurrency::extent<N>& ext, accelerator_view av, access_type cpu_access_type) : array(ext) {
-  this->cpu_access_type = cpu_access_type;
+  if(cpu_access_type == access_type_auto)
+    this->cpu_access_type = av.get_accelerator().get_default_cpu_access_type();
+  else {
+    this->cpu_access_type = cpu_access_type;
+    av.get_accelerator().set_default_cpu_access_type(cpu_access_type);
+  }
   pav = new accelerator_view(av);
 }
 template<typename T, int N>
@@ -425,6 +453,14 @@ template<typename T, int N>
 array<T, N>::array(const Concurrency::extent<N>& extent, accelerator_view av, accelerator_view associated_av) : array(extent) {
   pav = new accelerator_view(av);
   paav = new accelerator_view(associated_av);
+
+  if(pav->get_accelerator()!=paav->get_accelerator()) {
+    if(pav->get_accelerator().get_device_path().compare(L"default")==0) {
+      pav->accelerator_ = new accelerator(L"cpu");
+      pav->queuing_mode = queuing_mode_immediate;
+    }
+  }
+
 }
 template<typename T, int N>
 array<T, N>::array(int e0, accelerator_view av, accelerator_view associated_av) : array(Concurrency::extent<1>(e0), av, associated_av) {}
@@ -437,6 +473,7 @@ array<T, N>::array(int e0, int e1, int e2, accelerator_view av, accelerator_view
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin)
     : extent(ext), m_device(nullptr), pav(nullptr), paav(nullptr) {
+  this->cpu_access_type = Concurrency::accelerator(accelerator::default_accelerator).get_default_view().get_accelerator().get_default_cpu_access_type();
 #ifndef __GPU__
         InputIterator srcEnd = srcBegin;
         std::advance(srcEnd, extent.size());
@@ -447,6 +484,9 @@ array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin)
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, InputIterator srcEnd)
     : extent(ext), m_device(nullptr), pav(nullptr), paav(nullptr) {
+    if(ext.size() != std::distance(srcBegin,srcEnd) )
+      throw runtime_exception("errorMsg_throw", 0);
+  this->cpu_access_type = Concurrency::accelerator(accelerator::default_accelerator).get_default_view().get_accelerator().get_default_cpu_access_type();
 #ifndef __GPU__
         initialize(srcBegin, srcEnd);
 #endif
@@ -480,16 +520,20 @@ array<T, N>::array(int e0, int e1, int e2, InputIterator srcBegin, InputIterator
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, accelerator_view av,
-                   access_type cpu_access_type) : array(ext, srcBegin) {
-  this->cpu_access_type = cpu_access_type;
-  pav = new accelerator_view(av);
+                   access_type cpu_access_type) : array(ext, av, cpu_access_type) {
+#ifndef __GPU__
+  InputIterator srcEnd = srcBegin;
+  std::advance(srcEnd, extent.size());
+  initialize(srcBegin, srcEnd);
+#endif
 }
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, InputIterator srcEnd,
-                   accelerator_view av, access_type cpu_access_type) : array(ext, srcBegin, srcEnd) {
-  this->cpu_access_type = cpu_access_type;
-  pav = new accelerator_view(av);
+                   accelerator_view av, access_type cpu_access_type) : array(ext, srcBegin, av, cpu_access_type) {
+#ifndef __GPU__
+  initialize(srcBegin, srcEnd);
+#endif
 }
 
 template<typename T, int N> template <typename InputIterator>
@@ -522,8 +566,12 @@ array<T, N>::array(int e0, int e1, int e2, InputIterator srcBegin, InputIterator
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, accelerator_view av,
-                   accelerator_view associated_av) : array(ext, srcBegin, av, access_type_none) {
-  paav = new accelerator_view(associated_av);
+                   accelerator_view associated_av) : array(ext, av, associated_av) {
+#ifndef __GPU__
+  InputIterator srcEnd = srcBegin;
+  std::advance(srcEnd, extent.size());
+  initialize(srcBegin, srcEnd);
+#endif
 }
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, InputIterator srcEnd,
@@ -573,12 +621,16 @@ template<typename T, int N> array<T, N>::array(array&& other)
     : extent(other.extent), m_device(other.m_device),pav(other.pav), paav(other.paav) {
   if(pav) pav = new accelerator_view(*(other.pav));
   if(paav) paav = new accelerator_view(*(other.paav));
+  this->cpu_access_type = other.cpu_access_type;
 }
 template<typename T, int N>
 array<T, N>::array(const array_view<const T, N>& src, accelerator_view av,
                    access_type cpu_access_type)
     : array(src) {
-  this->cpu_access_type = cpu_access_type;
+  if(cpu_access_type == access_type_auto)
+    this->cpu_access_type = av.get_accelerator().get_default_cpu_access_type();
+  else
+    this->cpu_access_type = cpu_access_type;
   pav = new accelerator_view(av);
 }
 template<typename T, int N>
