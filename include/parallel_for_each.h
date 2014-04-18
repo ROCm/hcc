@@ -7,6 +7,12 @@
 #include <amp.h>
 
 namespace Concurrency {
+namespace CLAMP {
+extern void MatchKernelNames( std::string & );
+extern void CompileKernels(void);
+extern void *CreateOkraKernel(std::string);
+extern void OkraLaunchKernel(void *ker, size_t, size_t *global, size_t *local);
+}
 static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu,amp) {
     std::string s(f);
     std::string out;
@@ -20,13 +26,10 @@ static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu,amp) {
         out.append("_EC_");
       }
     }
+    CLAMP::MatchKernelNames(out);
     return out;
 }
-namespace CLAMP {
-extern void CompileKernels(void);
-extern void *CreateOkraKernel(std::string);
-extern void OkraLaunchKernel(void *ker, size_t, size_t *global, size_t *local);
-}
+
 static std::set<std::string> __mcw_cxxamp_kernels;
 template<typename Kernel, int dim_ext>
 static inline void mcw_cxxamp_launch_kernel(size_t *ext,
@@ -190,6 +193,7 @@ __attribute__((noinline,used)) void parallel_for_each(
     const Kernel& f) restrict(cpu,amp) {
   size_t ext = compute_domain[0];
   size_t tile = compute_domain.tile_dim0;
+  static_assert( compute_domain.tile_dim0 <= 1024, "The maximum nuimber of threads in a tile is 1024");
 #ifndef __GPU__
   mcw_cxxamp_launch_kernel<Kernel, 1>(&ext, &tile, f);
 #else //ifndef __GPU__
@@ -209,6 +213,7 @@ __attribute__((noinline,used)) void parallel_for_each(
                     static_cast<size_t>(compute_domain[0])};
   size_t tile[2] = { compute_domain.tile_dim1,
                      compute_domain.tile_dim0};
+  static_assert( (compute_domain.tile_dim1 * compute_domain.tile_dim0)<= 1024, "The maximum nuimber of threads in a tile is 1024");
 #ifndef __GPU__
   mcw_cxxamp_launch_kernel<Kernel, 2>(ext, tile, f);
 #else //ifndef __GPU__
@@ -229,6 +234,7 @@ __attribute__((noinline,used)) void parallel_for_each(
   size_t tile[3] = { compute_domain.tile_dim2,
                      compute_domain.tile_dim1,
                      compute_domain.tile_dim0};
+  static_assert(( compute_domain.tile_dim2 * compute_domain.tile_dim1* compute_domain.tile_dim0)<= 1024, "The maximum nuimber of threads in a tile is 1024");
 #ifndef __GPU__
   mcw_cxxamp_launch_kernel<Kernel, 3>(ext, tile, f);
 #else //ifndef __GPU__

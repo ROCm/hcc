@@ -22,7 +22,7 @@ bool test(accelerator_view &rv)
     const int size = 100;
 
     vector<int> A(size);
-    vector<const s> G1(size);
+    vector<s> G1(size);
     vector<const int> G2(size);
     vector<const double> G3(size);
 

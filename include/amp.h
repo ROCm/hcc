@@ -36,6 +36,40 @@
 #endif
 
 namespace Concurrency {
+typedef int HRESULT;
+class runtime_exception : public std::exception
+{
+public:
+  runtime_exception(const char * message, HRESULT hresult) throw() : _M_msg(message), err_code(hresult) {}
+  explicit runtime_exception(HRESULT hresult) throw() : err_code(hresult) {}
+  runtime_exception(const runtime_exception& other) throw() : _M_msg(other.what()), err_code(other.err_code) {}
+  runtime_exception& operator=(const runtime_exception& other) throw() {
+    _M_msg = *(other.what());
+    err_code = other.err_code;
+    return *this;
+  }
+  virtual ~runtime_exception() throw() {}
+  virtual const char* what() const throw() {return _M_msg.c_str();}
+  HRESULT get_error_code() const {return err_code;}
+
+private:
+  std::string _M_msg;
+  HRESULT err_code;
+};
+
+#ifndef E_FAIL
+#define E_FAIL 0x80004005
+#endif
+
+class invalid_compute_domain : public runtime_exception
+{
+public:
+  explicit invalid_compute_domain (const char * message) throw()
+  : runtime_exception(message, E_FAIL) {}
+  invalid_compute_domain() throw()
+  : runtime_exception(E_FAIL) {}
+};
+
 /*
   This is not part of C++AMP standard, but borrowed from Parallel Patterns
   Library.
@@ -113,7 +147,8 @@ public:
   bool get_supports_double_precision() const {return supports_double_precision;}
   bool get_supports_limited_double_precision() const { return supports_limited_double_precision;}
   size_t get_dedicated_memory() const {return dedicated_memory;}
-  void set_default_cpu_access_type(access_type type) {default_access_type = type;}
+  bool set_default_cpu_access_type(access_type type);
+  access_type get_default_cpu_access_type() const;
   bool operator==(const accelerator& other) const;
   bool operator!=(const accelerator& other) const;
  private:
@@ -128,7 +163,7 @@ public:
   bool supports_cpu_shared_memory;
   size_t dedicated_memory;
   static accelerator_view *default_view_;
-  access_type default_access_type;
+  static access_type default_access_type;
 #ifndef CXXAMP_ENABLE_HSA_OKRA
   typedef GmacAcceleratorInfo AcceleratorInfo;
   AcceleratorInfo accInfo;
@@ -145,7 +180,7 @@ public:
     accelerator_ = other.accelerator_;
     is_debug = other.is_debug;
     version = other.version;
-
+    is_auto_selection = other.is_auto_selection;
     return *this;
   }
 
@@ -153,20 +188,22 @@ public:
   enum queuing_mode get_queuing_mode() const {return queuing_mode;}
   bool get_is_debug() const {return is_debug;}
   bool get_version() const {return version;}
-
+  bool get_is_auto_selection() const {return is_auto_selection;}
   void flush(){}
   void wait(){}
   completion_future create_marker();
   bool operator==(const accelerator_view& other) const {
     return is_debug == other.is_debug &&
+           is_auto_selection == other.is_auto_selection &&
            version == other.version &&
            queuing_mode == other.queuing_mode &&
-           accelerator_ == other.accelerator_;
+           *accelerator_ == *(other.accelerator_);
   }
   bool operator!=(const accelerator_view& other) const {return !(*this == other);}
   ~accelerator_view() {}
  private:
   bool is_debug;
+  bool is_auto_selection;
   unsigned int version;
   enum queuing_mode queuing_mode;
   //CLAMP-specific
@@ -437,6 +474,12 @@ struct amp_helper
         return idx[N - 1] >= 0 && idx[N - 1] < ext[N - 1] &&
             amp_helper<N - 1, _Tp1, _Tp2>::contains(idx, ext);
     }
+
+    static bool inline contains(const _Tp1& idx, const _Tp2& ext,const _Tp2& ext2) restrict(amp,cpu) {
+        return idx[N - 1] >= 0 && ext[N - 1] > 0 && (idx[N - 1] + ext[N - 1]) <= ext2[N - 1] &&
+            amp_helper<N - 1, _Tp1, _Tp2>::contains(idx, ext,ext2);
+    }
+
     static int inline flatten(const _Tp1& idx, const _Tp2& ext) restrict(amp,cpu) {
         return idx[N - 1] + ext[N - 1] * amp_helper<N - 1, _Tp1, _Tp2>::flatten(idx, ext);
     }
@@ -450,6 +493,11 @@ struct amp_helper<1, _Tp1, _Tp2>
     static bool inline contains(const _Tp1& idx, const _Tp2& ext) restrict(amp,cpu) {
         return idx[0] >= 0 && idx[0] < ext[0];
     }
+
+    static bool inline contains(const _Tp1& idx, const _Tp2& ext,const _Tp2& ext2) restrict(amp,cpu) {
+        return idx[0] >= 0 && ext[0] > 0 && (idx[0] + ext[0]) <= ext2[0] ;
+    }
+
     static int inline flatten(const _Tp1& idx, const _Tp2& ext) restrict(amp,cpu) {
         return idx[0];
     }
@@ -464,13 +512,16 @@ public:
     static const int rank = N;
     typedef int value_type;
 
-    index() restrict(amp,cpu) : base_() {};
+    index() restrict(amp,cpu) : base_() {
+        static_assert( N>0, "rank should bigger than 0 ");
+    };
     index(const index& other) restrict(amp,cpu)
         : base_(other.base_) {}
     template <typename ..._Tp>
         explicit index(_Tp ... __t) restrict(amp,cpu)
         : base_(__t...) {
             static_assert(sizeof...(_Tp) <= 3, "Explicit constructor with rank greater than 3 is not allowed");
+            static_assert(sizeof...(_Tp) == N, "rank should be consistency");
         }
     explicit index(int components[]) restrict(amp,cpu)
         : base_(components) {}
@@ -578,12 +629,36 @@ private:
 };
 
 
+#ifndef CLK_LOCAL_MEM_FENCE
+#define CLK_LOCAL_MEM_FENCE (1)
+#endif
+
+#ifndef CLK_GLOBAL_MEM_FENCE
+#define CLK_GLOBAL_MEM_FENCE (2)
+#endif
+
 // C++AMP LPM 4.5
 class tile_barrier {
  public:
+  tile_barrier(const tile_barrier& other) restrict(amp,cpu) {}
   void wait() const restrict(amp) {
 #ifdef __GPU__
-    barrier(0);
+    wait_with_all_memory_fence();
+#endif
+  }
+  void wait_with_all_memory_fence() const restrict(amp) {
+#ifdef __GPU__
+    barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
+#endif
+  }
+  void wait_with_global_memory_fence() const restrict(amp) {
+#ifdef __GPU__
+    barrier(CLK_GLOBAL_MEM_FENCE);
+#endif
+  }
+  void wait_with_tile_static_memory_fence() const restrict(amp) {
+#ifdef __GPU__
+    barrier(CLK_LOCAL_MEM_FENCE);
 #endif
   }
  private:
@@ -613,6 +688,7 @@ public:
         explicit extent(_Tp ... __t) restrict(amp,cpu)
         : base_(__t...) {
       static_assert(sizeof...(__t) <= 3, "Can only supply at most 3 individual coordinates in the constructor");
+      static_assert(sizeof...(__t) == N, "rank should be consistency");
     }
     explicit extent(int components[]) restrict(amp,cpu)
         : base_(components) {}
@@ -1186,6 +1262,11 @@ public:
   }
 
   void copy_to(array& dest) const {
+      for(int i = 0 ; i < N ; i++)
+      {
+        if(dest.extent[i] < this->extent[i] )
+          throw runtime_exception("errorMsg_throw", 0);
+      }
       copy(*this, dest);
   }
 
@@ -1226,8 +1307,9 @@ public:
   __global const T& operator()(const index<N>& idx) const restrict(amp,cpu) {
     return (*this)[idx];
   }
-  __global T& operator()(int i0) restrict(amp,cpu) {
-      return (*this)[i0];
+  typename projection_helper<T, N>::result_type
+      operator()(int i0) restrict(amp,cpu) {
+          return (*this)[i0];
   }
   __global const T& operator()(int i0) const restrict(amp,cpu) {
       return (*this)[i0];
@@ -1246,6 +1328,8 @@ public:
   }
 
   array_view<T, N> section(const Concurrency::index<N>& idx, const Concurrency::extent<N>& ext) restrict(amp,cpu) {
+      if(  !amp_helper<N, index<N>, Concurrency::extent<N>>::contains(idx,  ext ,this->extent) )
+        throw runtime_exception("errorMsg_throw", 0);
       array_view<T, N> av(*this);
       return av.section(idx, ext);
   }
@@ -1254,6 +1338,8 @@ public:
       return av.section(idx, ext);
   }
   array_view<T, N> section(const index<N>& idx) restrict(amp,cpu) {
+      if(  !amp_helper<N, index<N>, Concurrency::extent<N>>::contains(idx, this->extent ) )
+        throw runtime_exception("errorMsg_throw", 0);
       array_view<T, N> av(*this);
       return av.section(idx);
   }
@@ -1298,6 +1384,8 @@ public:
   template <typename ElementType>
     array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu) {
         int size = extent.size() * sizeof(T) / sizeof(ElementType);
+        if( (extent.size() * sizeof(T)) % sizeof(ElementType))
+          throw runtime_exception("errorMsg_throw", 0);
         array_view<ElementType, 1> av(Concurrency::extent<1>(size), reinterpret_cast<ElementType*>(m_device.get()));
         return av;
     }
@@ -1325,6 +1413,12 @@ public:
   }
 
   T* data() const restrict(amp,cpu) {
+#ifndef __GPU__
+    // TODO: If array's buffer is inaccessible on CPU, host pointer to that buffer must be NULL
+    if(cpu_access_type == access_type_none) {
+      //return reinterpret_cast<T*>(NULL);
+    }      
+#endif
     return reinterpret_cast<T*>(m_device.get());
   }
   ~array() { // For GMAC
@@ -1463,6 +1557,11 @@ public:
   }
 
   void copy_to(array<T,N>& dest) const {
+      for(int i= 0 ;i< N;i++)
+      {
+        if(dest.extent[i] < this->extent[i])
+          throw runtime_exception("errorMsg_throw", 0);
+      }
       copy(*this, dest);
   }
   void copy_to(const array_view& dest) const {
@@ -1490,9 +1589,9 @@ public:
   __global T& operator()(const index<N>& idx) const restrict(amp,cpu) {
     return (*this)[idx];
   }
-  __global T& operator()(int i0) const restrict(amp,cpu) {
-      static_assert(N == 1, "Rank must be 1");
-      return (*this)[index<1>(i0)];
+  typename projection_helper<T, N>::result_type
+      operator()(int i0) const restrict(amp,cpu) {
+          return (*this)[index<1>(i0)];
   }
   __global T& operator()(int i0, int i1) const restrict(amp,cpu) {
       static_assert(N == 2, "Rank must be 2");
@@ -1506,6 +1605,8 @@ public:
   template <typename ElementType>
       array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu) {
           int size = extent.size() * sizeof(T) / sizeof(ElementType);
+          if( (extent.size() * sizeof(T)) % sizeof(ElementType))
+            throw runtime_exception("errorMsg_throw", 0);
           array_view<ElementType, 1> av(Concurrency::extent<1>(size), reinterpret_cast<ElementType*>(cache.get_mutable() + offset + index_base[0]));
           return av;
       }
@@ -1517,6 +1618,8 @@ public:
       }
   array_view<T, N> section(const Concurrency::index<N>& idx,
                            const Concurrency::extent<N>& ext) const restrict(amp,cpu) {
+      if(  !amp_helper<N, index<N>, Concurrency::extent<N>>::contains(idx, ext,this->extent ) )
+        throw runtime_exception("errorMsg_throw", 0);
       array_view<T, N> av(ext, extent_base, idx + index_base, cache, p_, offset);
       return av;
   }
@@ -1545,6 +1648,8 @@ public:
   template <int K>
   array_view<T, K> view_as(Concurrency::extent<K> viewExtent) const restrict(amp,cpu) {
     static_assert(N == 1, "view_as is only permissible on array views of rank 1");
+    if( viewExtent.size() > extent.size())
+      throw runtime_exception("errorMsg_throw", 0);
     array_view<T, K> av(viewExtent, cache, p_, index_base[0]);
     return av;
   }
@@ -1552,8 +1657,11 @@ public:
   void synchronize() const;
   completion_future synchronize_async() const;
   void refresh() const;
-  void discard_data() const {}
-
+  void discard_data() const {
+#ifndef __GPU__
+    cache.refresh();
+#endif
+  }
   T* data() const restrict(amp,cpu) {
     return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
   }
@@ -1841,40 +1949,6 @@ namespace concurrency = Concurrency;
 // Specialization and inlined implementation of C++AMP classes/templates
 #include "amp_impl.h"
 #include "parallel_for_each.h"
-
-typedef int HRESULT;
-class runtime_exception : public std::exception
-{
-public:
-  runtime_exception(const char * message, HRESULT hresult) throw() : _M_msg(message), err_code(hresult) {}
-  explicit runtime_exception(HRESULT hresult) throw() : err_code(hresult) {}
-  runtime_exception(const runtime_exception& other) throw() : _M_msg(other.what()), err_code(other.err_code) {}
-  runtime_exception& operator=(const runtime_exception& other) throw() {
-    _M_msg = *(other.what());
-    err_code = other.err_code;
-    return *this;
-  }
-  virtual ~runtime_exception() throw() {}
-  virtual const char* what() const throw() {return _M_msg.c_str();}
-  HRESULT get_error_code() const {return err_code;}
-
-private:
-  std::string _M_msg;
-  HRESULT err_code;
-};
-
-#ifndef E_FAIL
-#define E_FAIL 0x80004005
-#endif
-
-class invalid_compute_domain : public runtime_exception
-{
-public:
-  explicit invalid_compute_domain (const char * message) throw()
-  : runtime_exception(message, E_FAIL) {}
-  invalid_compute_domain() throw()
-  : runtime_exception(E_FAIL) {}
-};
 
 namespace Concurrency {
 
