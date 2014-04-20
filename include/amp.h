@@ -259,7 +259,8 @@ public:
         return __amp_future.valid();
     }
     void wait() const {
-        //__amp_future.wait();
+        if(this->valid())
+          __amp_future.wait();
     }
 
     template <class _Rep, class _Period>
@@ -274,6 +275,13 @@ public:
 
     operator std::shared_future<void>() const {
         return __amp_future;
+    }
+
+    template<typename functor>
+    void then(const functor & func) const {
+      this->wait();
+      if(this->valid())
+        func();
     }
 
 private:
