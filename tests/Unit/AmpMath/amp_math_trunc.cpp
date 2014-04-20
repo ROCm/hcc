@@ -27,11 +27,11 @@ int main(void) {
   parallel_for_each(
     e,
     [=](index<1> idx) restrict(amp) {
-    gc[idx] = fast_math::expf(ga[idx]);
+    gc[idx] = fast_math::trunc(ga[idx]);
   });
 
   for(unsigned i = 0; i < vecSize; i++) {
-    gb[i] = fast_math::expf(ga[i]);
+    gb[i] = fast_math::trunc(ga[i]);
   }
 
   float sum = 0;
