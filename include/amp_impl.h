@@ -416,8 +416,10 @@ template<typename T, int N> array<T, N>::array(const Concurrency::extent<N>& ext
   this->cpu_access_type = Concurrency::accelerator(accelerator::default_accelerator).get_default_view().get_accelerator().get_default_cpu_access_type();
     for (int i = 0; i < rank; i++)
     {
+#ifndef __GPU__
       if(ext[i] <=0)
         throw runtime_exception("errorMsg_throw", 0);
+#endif
     }
 #ifndef __GPU__
         initialize();
@@ -484,8 +486,10 @@ array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin)
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, InputIterator srcEnd)
     : extent(ext), m_device(nullptr), pav(nullptr), paav(nullptr) {
+#ifndef __GPU__
     if(ext.size() != std::distance(srcBegin,srcEnd) )
       throw runtime_exception("errorMsg_throw", 0);
+#endif
   this->cpu_access_type = Concurrency::accelerator(accelerator::default_accelerator).get_default_view().get_accelerator().get_default_cpu_access_type();
 #ifndef __GPU__
         initialize(srcBegin, srcEnd);
