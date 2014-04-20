@@ -147,6 +147,9 @@
 5_Data_Cont/5_1_array/5_1_4_v_o/reinterpret_As/Test.01/test.cpp
 5_Data_Cont/5_1_array/5_1_4_v_o/reinterpret_As/Test.04/test.cpp
 5_Data_Cont/5_1_array/5_1_4_v_o/reinterpret_As/Negative/Test.01/test.cpp
+5_Data_Cont/5_1_array/5_1_4_v_o/reinterpret_As/Negative/ElementType.01/test.cpp
+5_Data_Cont/5_1_array/5_1_4_v_o/reinterpret_As/Negative/ElementType.02/test.cpp
+5_Data_Cont/5_2_a_v/5_2_5_v_o/Reinterpret_As/Negative/ElementType.01/test.cpp
 5_Data_Cont/5_1_array/5_1_2_c/CpuSharedMemory/PropertyOnly/test.cpp
 5_Data_Cont/5_1_array/5_1_2_c/CpuSharedMemory/Auto/test.cpp
 5_Data_Cont/5_1_array/5_1_2_c/CpuSharedMemory/None/test.cpp
