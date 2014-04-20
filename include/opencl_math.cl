@@ -40,3 +40,16 @@ unsigned atomic_add_global(volatile __global unsigned *x, unsigned y) {
 unsigned atomic_add_local(volatile __local unsigned *x, unsigned y) {
   return atomic_add(x, y);
 }
+unsigned atomic_max_global(volatile __global unsigned *x, unsigned y) {
+  return atomic_max(x, y);
+}
+unsigned atomic_max_local(volatile __local unsigned *x, unsigned y) {
+  return atomic_max(x, y);
+}
+unsigned atomic_inc_global(volatile __global unsigned *x) {
+  return atomic_inc(x);
+}
+unsigned atomic_inc_local(volatile __local unsigned *x) {
+  return atomic_inc(x);
+}
+
