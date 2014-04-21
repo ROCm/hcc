@@ -226,6 +226,7 @@
 2_Cxx_Lang_Exte/2_1_Synt/Contextual_restrict/test.01/test.cpp
 2_Cxx_Lang_Exte/2_1_Synt/Contextual_restrict/test.02/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/BuiltInOperators/RelationalEquality/RelationalEquality.01/test.cpp
+2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToLocal/Test11.02.02/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToGlobal/Test01/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToGlobal/Test02/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToGlobal/Test02.03/test.cpp
@@ -234,6 +235,7 @@
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToGlobal/Test12.02/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToGlobal/Test13/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToGlobal/Test14/test.cpp
+2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToShared/Test04.02/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToShared/Test10/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToShared/Test11.10/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToShared/Test14/test.cpp
