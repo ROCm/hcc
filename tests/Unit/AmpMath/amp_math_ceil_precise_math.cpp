@@ -27,19 +27,16 @@ int main(void) {
   parallel_for_each(
     e,
     [=](index<1> idx) restrict(amp) {
-    gc[idx] = fast_math::sqrtf(ga[idx]);
+    gc[idx] = precise_math::ceil(ga[idx]);
   });
 
   for(unsigned i = 0; i < vecSize; i++) {
-    gb[i] = fast_math::sqrtf(ga[i]);
+    gb[i] = precise_math::ceil(ga[i]);
   }
-
-  int a1 = 0, b1 = 3;
-  int c1 = min(a1, b1);
 
   float sum = 0;
   for(unsigned i = 0; i < vecSize; i++) {
     sum += fast_math::fabs(fast_math::fabs(gc[i]) - fast_math::fabs(gb[i]));
   }
-  return ((sum + (float)c1) > 0.1f);
+  return (sum > 0.1f);
 }
