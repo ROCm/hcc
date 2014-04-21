@@ -41,6 +41,19 @@
 5_Data_Cont/5_3_c_d/SynchronousCopy/IteratorToArrayView/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/IteratorToNonContigArrayView/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/StagingArrayAndIterator/test.cpp
+5_Data_Cont/5_3_c_d/Continuation/Then/Iter2ToArray/test.cpp
+5_Data_Cont/5_3_c_d/Continuation/Then/Iter2ToArrayView/test.cpp
+5_Data_Cont/5_3_c_d/Continuation/Then/IterToArray/test.cpp
+5_Data_Cont/5_3_c_d/Continuation/Then/IterToArrayView/test.cpp
+5_Data_Cont/5_3_c_d/Continuation/Then/ArrayViewToArrayView/test.cpp
+5_Data_Cont/5_3_c_d/Continuation/Then/IterToArrayView/test.cpp
+5_Data_Cont/5_3_c_d/Continuation/Then/ArrayToArray/test.cpp
+5_Data_Cont/5_3_c_d/Continuation/Then/ArrayToArrayView/test.cpp
+5_Data_Cont/5_3_c_d/Continuation/Then/ArrayToIter/test.cpp
+5_Data_Cont/5_3_c_d/Continuation/Then/ArrayViewConstToArray/test.cpp
+5_Data_Cont/5_3_c_d/Continuation/Then/ArrayViewConstToArrayView/test.cpp
+5_Data_Cont/5_3_c_d/Continuation/Then/ArrayViewToArray/test.cpp
+5_Data_Cont/5_3_c_d/Continuation/Then/ArrayViewToArrayView/test.cpp
 5_Data_Cont/5_3_c_d/AsynCopy/ArrayToIter/test.cpp
 5_Data_Cont/5_3_c_d/AsynCopy/IterToArray/test.cpp
 5_Data_Cont/5_3_c_d/AsynCopy/IterToArrayView/test.cpp
@@ -213,6 +226,7 @@
 2_Cxx_Lang_Exte/2_1_Synt/Contextual_restrict/test.01/test.cpp
 2_Cxx_Lang_Exte/2_1_Synt/Contextual_restrict/test.02/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/BuiltInOperators/RelationalEquality/RelationalEquality.01/test.cpp
+2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToLocal/Test11.02.02/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToGlobal/Test01/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToGlobal/Test02/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToGlobal/Test02.03/test.cpp
@@ -221,6 +235,7 @@
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToGlobal/Test12.02/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToGlobal/Test13/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToGlobal/Test14/test.cpp
+2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToShared/Test04.02/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToShared/Test10/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToShared/Test11.10/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToShared/Test14/test.cpp

@@ -17,26 +17,31 @@ int main(void) {
   array<float, 1> a(vecSize);
   array<float, 1> b(vecSize);
   array<float, 1> c(vecSize);
+  array<float, 1> d(vecSize);
+
   for (index<1> i(0); i[0] < vecSize; i++) {
-    a[i] = rand() / 1000.0f - 10000.f;
+    a[i] = rand() / 1000.0f;
+    b[i] = rand() / 1000.0f;
   }
 
   array_view<float> ga(a);
   array_view<float> gb(b);
   array_view<float> gc(c);
+  array_view<float> gd(d);
+
   parallel_for_each(
     e,
     [=](index<1> idx) restrict(amp) {
-    gc[idx] = fast_math::fabsf(ga[idx]);
+    gc[idx] = precise_math::fmin(ga[idx], gb[idx]);
   });
 
   for(unsigned i = 0; i < vecSize; i++) {
-    gb[i] = fast_math::fabsf(ga[i]);
+    gd[i] = precise_math::fmin(ga[i], gb[i]);
   }
 
   float sum = 0;
   for(unsigned i = 0; i < vecSize; i++) {
-    sum += fast_math::fabsf(gc[i] - gb[i]);
+    sum += fast_math::fabs(fast_math::fabs(gc[i]) - fast_math::fabs(gd[i]));
   }
   return (sum > 0.1f);
 }
