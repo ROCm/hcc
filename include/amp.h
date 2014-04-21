@@ -1262,11 +1262,13 @@ public:
   }
 
   void copy_to(array& dest) const {
+#ifndef __GPU__
       for(int i = 0 ; i < N ; i++)
       {
         if(dest.extent[i] < this->extent[i] )
           throw runtime_exception("errorMsg_throw", 0);
       }
+#endif
       copy(*this, dest);
   }
 
@@ -1307,8 +1309,9 @@ public:
   __global const T& operator()(const index<N>& idx) const restrict(amp,cpu) {
     return (*this)[idx];
   }
-  __global T& operator()(int i0) restrict(amp,cpu) {
-      return (*this)[i0];
+  typename projection_helper<T, N>::result_type
+      operator()(int i0) restrict(amp,cpu) {
+          return (*this)[i0];
   }
   __global const T& operator()(int i0) const restrict(amp,cpu) {
       return (*this)[i0];
@@ -1327,8 +1330,10 @@ public:
   }
 
   array_view<T, N> section(const Concurrency::index<N>& idx, const Concurrency::extent<N>& ext) restrict(amp,cpu) {
+#ifndef __GPU__
       if(  !amp_helper<N, index<N>, Concurrency::extent<N>>::contains(idx,  ext ,this->extent) )
         throw runtime_exception("errorMsg_throw", 0);
+#endif
       array_view<T, N> av(*this);
       return av.section(idx, ext);
   }
@@ -1337,8 +1342,10 @@ public:
       return av.section(idx, ext);
   }
   array_view<T, N> section(const index<N>& idx) restrict(amp,cpu) {
+#ifndef __GPU__
       if(  !amp_helper<N, index<N>, Concurrency::extent<N>>::contains(idx, this->extent ) )
         throw runtime_exception("errorMsg_throw", 0);
+#endif
       array_view<T, N> av(*this);
       return av.section(idx);
   }
@@ -1387,8 +1394,10 @@ public:
           static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
 #endif
         int size = extent.size() * sizeof(T) / sizeof(ElementType);
+#ifndef __GPU__
         if( (extent.size() * sizeof(T)) % sizeof(ElementType))
           throw runtime_exception("errorMsg_throw", 0);
+#endif
         array_view<ElementType, 1> av(Concurrency::extent<1>(size), reinterpret_cast<ElementType*>(m_device.get()));
         return av;
     }
@@ -1560,11 +1569,13 @@ public:
   }
 
   void copy_to(array<T,N>& dest) const {
+#ifndef __GPU__
       for(int i= 0 ;i< N;i++)
       {
         if(dest.extent[i] < this->extent[i])
           throw runtime_exception("errorMsg_throw", 0);
       }
+#endif
       copy(*this, dest);
   }
   void copy_to(const array_view& dest) const {
@@ -1592,9 +1603,9 @@ public:
   __global T& operator()(const index<N>& idx) const restrict(amp,cpu) {
     return (*this)[idx];
   }
-  __global T& operator()(int i0) const restrict(amp,cpu) {
-      static_assert(N == 1, "Rank must be 1");
-      return (*this)[index<1>(i0)];
+  typename projection_helper<T, N>::result_type
+      operator()(int i0) const restrict(amp,cpu) {
+          return (*this)[index<1>(i0)];
   }
   __global T& operator()(int i0, int i1) const restrict(amp,cpu) {
       static_assert(N == 2, "Rank must be 2");
@@ -1612,8 +1623,10 @@ public:
           static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
 #endif
           int size = extent.size() * sizeof(T) / sizeof(ElementType);
+#ifndef __GPU__
           if( (extent.size() * sizeof(T)) % sizeof(ElementType))
             throw runtime_exception("errorMsg_throw", 0);
+#endif
           array_view<ElementType, 1> av(Concurrency::extent<1>(size), reinterpret_cast<ElementType*>(cache.get_mutable() + offset + index_base[0]));
           return av;
       }
@@ -1625,8 +1638,10 @@ public:
       }
   array_view<T, N> section(const Concurrency::index<N>& idx,
                            const Concurrency::extent<N>& ext) const restrict(amp,cpu) {
+#ifndef __GPU__
       if(  !amp_helper<N, index<N>, Concurrency::extent<N>>::contains(idx, ext,this->extent ) )
         throw runtime_exception("errorMsg_throw", 0);
+#endif
       array_view<T, N> av(ext, extent_base, idx + index_base, cache, p_, offset);
       return av;
   }
@@ -1655,8 +1670,10 @@ public:
   template <int K>
   array_view<T, K> view_as(Concurrency::extent<K> viewExtent) const restrict(amp,cpu) {
     static_assert(N == 1, "view_as is only permissible on array views of rank 1");
+#ifndef __GPU__
     if( viewExtent.size() > extent.size())
       throw runtime_exception("errorMsg_throw", 0);
+#endif
     array_view<T, K> av(viewExtent, cache, p_, index_base[0]);
     return av;
   }
