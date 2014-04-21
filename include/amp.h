@@ -259,7 +259,8 @@ public:
         return __amp_future.valid();
     }
     void wait() const {
-        //__amp_future.wait();
+        if(this->valid())
+          __amp_future.wait();
     }
 
     template <class _Rep, class _Period>
@@ -274,6 +275,13 @@ public:
 
     operator std::shared_future<void>() const {
         return __amp_future;
+    }
+
+    template<typename functor>
+    void then(const functor & func) const {
+      this->wait();
+      if(this->valid())
+        func();
     }
 
 private:
@@ -1262,11 +1270,13 @@ public:
   }
 
   void copy_to(array& dest) const {
+#ifndef __GPU__
       for(int i = 0 ; i < N ; i++)
       {
         if(dest.extent[i] < this->extent[i] )
           throw runtime_exception("errorMsg_throw", 0);
       }
+#endif
       copy(*this, dest);
   }
 
@@ -1307,8 +1317,9 @@ public:
   __global const T& operator()(const index<N>& idx) const restrict(amp,cpu) {
     return (*this)[idx];
   }
-  __global T& operator()(int i0) restrict(amp,cpu) {
-      return (*this)[i0];
+  typename projection_helper<T, N>::result_type
+      operator()(int i0) restrict(amp,cpu) {
+          return (*this)[i0];
   }
   __global const T& operator()(int i0) const restrict(amp,cpu) {
       return (*this)[i0];
@@ -1327,8 +1338,10 @@ public:
   }
 
   array_view<T, N> section(const Concurrency::index<N>& idx, const Concurrency::extent<N>& ext) restrict(amp,cpu) {
+#ifndef __GPU__
       if(  !amp_helper<N, index<N>, Concurrency::extent<N>>::contains(idx,  ext ,this->extent) )
         throw runtime_exception("errorMsg_throw", 0);
+#endif
       array_view<T, N> av(*this);
       return av.section(idx, ext);
   }
@@ -1337,8 +1350,10 @@ public:
       return av.section(idx, ext);
   }
   array_view<T, N> section(const index<N>& idx) restrict(amp,cpu) {
+#ifndef __GPU__
       if(  !amp_helper<N, index<N>, Concurrency::extent<N>>::contains(idx, this->extent ) )
         throw runtime_exception("errorMsg_throw", 0);
+#endif
       array_view<T, N> av(*this);
       return av.section(idx);
   }
@@ -1382,9 +1397,15 @@ public:
 
   template <typename ElementType>
     array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu) {
+#ifdef __GPU__
+          static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
+          static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
+#endif
         int size = extent.size() * sizeof(T) / sizeof(ElementType);
+#ifndef __GPU__
         if( (extent.size() * sizeof(T)) % sizeof(ElementType))
           throw runtime_exception("errorMsg_throw", 0);
+#endif
         array_view<ElementType, 1> av(Concurrency::extent<1>(size), reinterpret_cast<ElementType*>(m_device.get()));
         return av;
     }
@@ -1556,11 +1577,13 @@ public:
   }
 
   void copy_to(array<T,N>& dest) const {
+#ifndef __GPU__
       for(int i= 0 ;i< N;i++)
       {
         if(dest.extent[i] < this->extent[i])
           throw runtime_exception("errorMsg_throw", 0);
       }
+#endif
       copy(*this, dest);
   }
   void copy_to(const array_view& dest) const {
@@ -1588,9 +1611,9 @@ public:
   __global T& operator()(const index<N>& idx) const restrict(amp,cpu) {
     return (*this)[idx];
   }
-  __global T& operator()(int i0) const restrict(amp,cpu) {
-      static_assert(N == 1, "Rank must be 1");
-      return (*this)[index<1>(i0)];
+  typename projection_helper<T, N>::result_type
+      operator()(int i0) const restrict(amp,cpu) {
+          return (*this)[index<1>(i0)];
   }
   __global T& operator()(int i0, int i1) const restrict(amp,cpu) {
       static_assert(N == 2, "Rank must be 2");
@@ -1603,9 +1626,15 @@ public:
 
   template <typename ElementType>
       array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu) {
+#ifdef __GPU__
+          static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
+          static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
+#endif
           int size = extent.size() * sizeof(T) / sizeof(ElementType);
+#ifndef __GPU__
           if( (extent.size() * sizeof(T)) % sizeof(ElementType))
             throw runtime_exception("errorMsg_throw", 0);
+#endif
           array_view<ElementType, 1> av(Concurrency::extent<1>(size), reinterpret_cast<ElementType*>(cache.get_mutable() + offset + index_base[0]));
           return av;
       }
@@ -1617,8 +1646,10 @@ public:
       }
   array_view<T, N> section(const Concurrency::index<N>& idx,
                            const Concurrency::extent<N>& ext) const restrict(amp,cpu) {
+#ifndef __GPU__
       if(  !amp_helper<N, index<N>, Concurrency::extent<N>>::contains(idx, ext,this->extent ) )
         throw runtime_exception("errorMsg_throw", 0);
+#endif
       array_view<T, N> av(ext, extent_base, idx + index_base, cache, p_, offset);
       return av;
   }
@@ -1647,8 +1678,10 @@ public:
   template <int K>
   array_view<T, K> view_as(Concurrency::extent<K> viewExtent) const restrict(amp,cpu) {
     static_assert(N == 1, "view_as is only permissible on array views of rank 1");
+#ifndef __GPU__
     if( viewExtent.size() > extent.size())
       throw runtime_exception("errorMsg_throw", 0);
+#endif
     array_view<T, K> av(viewExtent, cache, p_, index_base[0]);
     return av;
   }
@@ -1825,6 +1858,10 @@ public:
 */
   template <typename ElementType>
     array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu) {
+#ifdef __GPU__
+          static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
+          static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
+#endif
       int size = extent.size() * sizeof(T) / sizeof(ElementType);
       array_view<ElementType, 1> av(Concurrency::extent<1>(size), reinterpret_cast<ElementType*>(cache.get_mutable() + offset + index_base[0]));
       return av;
@@ -2212,6 +2249,34 @@ static inline int atomic_fetch_add(int *x, int y) restrict(amp,cpu) {
 }
 #else
 extern int atomic_fetch_add(int *x, int y) restrict(amp, cpu);
+#endif
+
+#ifdef __GPU__
+extern "C" unsigned atomic_max_local(volatile __attribute__((address_space(3))) unsigned *p, unsigned val) restrict(amp,cpu);
+extern "C" int atomic_max_global(volatile __attribute__((address_space(1))) int *p, int val) restrict(amp, cpu);
+static inline unsigned atomic_fetch_max(unsigned *x, unsigned y) restrict(amp,cpu) {
+  return atomic_max_local(reinterpret_cast<volatile __attribute__((address_space(3))) unsigned *>(x), y);
+}
+static inline int atomic_fetch_max(int *x, int y) restrict(amp,cpu) {
+  return atomic_max_global(reinterpret_cast<volatile __attribute__((address_space(1))) int *>(x), y);
+}
+
+extern "C" unsigned atomic_inc_local(volatile __attribute__((address_space(3))) unsigned *p) restrict(amp,cpu);
+extern "C" int atomic_inc_global(volatile __attribute__((address_space(1))) int *p) restrict(amp, cpu);
+static inline unsigned atomic_fetch_inc(unsigned *x) restrict(amp,cpu) {
+  return atomic_inc_local(reinterpret_cast<volatile __attribute__((address_space(3))) unsigned *>(x));
+}
+static inline int atomic_fetch_inc(int *x) restrict(amp,cpu) {
+  return atomic_inc_global(reinterpret_cast<volatile __attribute__((address_space(1))) int *>(x));
+}
+#else
+
+extern int atomic_fetch_inc(int * _Dest) restrict(amp, cpu);
+extern unsigned atomic_fetch_inc(unsigned * _Dest) restrict(amp, cpu);
+
+extern int atomic_fetch_max(int * dest, int val) restrict(amp, cpu);
+extern unsigned int atomic_fetch_max(unsigned int * dest, unsigned int val) restrict(amp, cpu);
+
 #endif
 
 }//namespace Concurrency
