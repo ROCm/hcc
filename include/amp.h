@@ -1065,11 +1065,19 @@ struct projection_helper
     typedef array_view<T, N - 1> result_type;
     typedef array_view<const T, N - 1> const_result_type;
     static result_type project(array<T, N>& now, int stride) restrict(amp,cpu) {
+#ifndef __GPU__
+        if( stride < 0)
+          throw runtime_exception("errorMsg_throw", 0);
+#endif
         int comp[N - 1], i;
         for (i = N - 1; i > 0; --i)
             comp[i - 1] = now.extent[i];
         Concurrency::extent<N - 1> ext(comp);
         int offset = ext.size() * stride;
+#ifndef __GPU__
+        if( offset >= now.extent.size())
+          throw runtime_exception("errorMsg_throw", 0);
+#endif
         array_view<T, N - 1> av(ext, ext, index<N - 1>(), now.m_device, now.data(), offset);
         return av;
     }
