@@ -1397,6 +1397,10 @@ public:
 
   template <typename ElementType>
     array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu) {
+#ifdef __GPU__
+          static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
+          static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
+#endif
         int size = extent.size() * sizeof(T) / sizeof(ElementType);
 #ifndef __GPU__
         if( (extent.size() * sizeof(T)) % sizeof(ElementType))
@@ -1622,6 +1626,10 @@ public:
 
   template <typename ElementType>
       array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu) {
+#ifdef __GPU__
+          static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
+          static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
+#endif
           int size = extent.size() * sizeof(T) / sizeof(ElementType);
 #ifndef __GPU__
           if( (extent.size() * sizeof(T)) % sizeof(ElementType))
@@ -1850,6 +1858,10 @@ public:
 */
   template <typename ElementType>
     array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu) {
+#ifdef __GPU__
+          static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
+          static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
+#endif
       int size = extent.size() * sizeof(T) / sizeof(ElementType);
       array_view<ElementType, 1> av(Concurrency::extent<1>(size), reinterpret_cast<ElementType*>(cache.get_mutable() + offset + index_base[0]));
       return av;
