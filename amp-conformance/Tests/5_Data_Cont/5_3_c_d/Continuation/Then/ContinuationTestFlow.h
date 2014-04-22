@@ -8,6 +8,10 @@
 #include "amptest_main.h"
 #include <typeinfo>
 
+#ifndef _MSC_VER
+#include "concrt.h"
+#endif
+
 #define RANGE 40
 #define VALUE 10
 
@@ -33,7 +37,11 @@ bool AsyncCopyAndVerifyArrayToArray(Concurrency::accelerator& srcDevice, Concurr
 		Log() << "Verifying destArray" << std::endl;
 		if(VerifyAllSameValue(destArray, expected_value) == -1) 
 		{ 
+#ifdef _MSC_VER
 			InterlockedExchange (&flag, 1);
+#else
+			__sync_fetch_and_add (&flag, 1);
+#endif
 		}
 		
 		waitEvent.set();
@@ -64,7 +72,11 @@ bool AsyncCopyAndVerifyArrayToArrayView(Concurrency::accelerator& srcDevice, Con
 		Log() << "Verifying destArrayView" << std::endl;
 		if(VerifyAllSameValue(destArrayView, expected_value) == -1) 
 		{ 
+#ifdef _MSC_VER
 			InterlockedExchange (&flag, 1);
+#else
+			__sync_fetch_and_add (&flag, 1);
+#endif
 		}
 
 		waitEvent.set();
@@ -94,7 +106,11 @@ bool AsyncCopyAndVerifyArrayViewToArray(Concurrency::accelerator& srcDevice, Con
 		Log() << "Verifying destArray" << std::endl;
 		if(VerifyAllSameValue(destArray, expected_value) == -1) 
 		{ 
+#ifdef _MSC_VER
 			InterlockedExchange (&flag, 1);
+#else
+			__sync_fetch_and_add (&flag, 1);
+#endif
 		}
 		
 		waitEvent.set();
@@ -125,7 +141,11 @@ bool AsyncCopyAndVerifyArrayViewConstToArray(Concurrency::accelerator& srcDevice
 		Log() << "Verifying destArray" << std::endl;
 		if(VerifyAllSameValue(destArray, expected_value) == -1) 
 		{ 
+#ifdef _MSC_VER
 			InterlockedExchange (&flag, 1);
+#else
+			__sync_fetch_and_add (&flag, 1);
+#endif
 		}
 
 		waitEvent.set();
@@ -157,7 +177,11 @@ bool AsyncCopyAndVerifyArrayViewToArrayView(Concurrency::accelerator& srcDevice,
 		Log() << "Verifying destArrayView" << std::endl;
 		if(VerifyAllSameValue(destArrayView, expected_value) == -1) 
 		{ 
+#ifdef _MSC_VER
 			InterlockedExchange (&flag, 1);
+#else
+			__sync_fetch_and_add (&flag, 1);
+#endif
 		}
 		
 		waitEvent.set();
@@ -187,7 +211,11 @@ bool AsyncCopyAndVerifyArrayToIter(Concurrency::accelerator& srcDevice)
 		Log() << "Verifying destCont" << std::endl;
 		if(VerifyAllSameValue(destCont, expected_value) == -1) 
 		{ 
+#ifdef _MSC_VER
 			InterlockedExchange (&flag, 1);
+#else
+			__sync_fetch_and_add (&flag, 1);
+#endif
 		}
 
 		waitEvent.set();
@@ -219,7 +247,11 @@ bool AsyncCopyAndVerifyArrayViewConstToArrayView(Concurrency::accelerator& srcDe
 		Log() << "Verifying destArrayView" << std::endl;
 		if(VerifyAllSameValue(destArrayView, expected_value) == -1) 
 		{ 
+#ifdef _MSC_VER
 			InterlockedExchange (&flag, 1);
+#else
+			__sync_fetch_and_add (&flag, 1);
+#endif
 		}
 		
 		waitEvent.set();
@@ -247,7 +279,11 @@ bool AsyncCopyAndVerifyIterToArray(Concurrency::accelerator& destDevice)
 		Log() << "Verifying destArray" << std::endl;
 		if(VerifyAllSameValue(destArray, expected_value) == -1) 
 		{ 
+#ifdef _MSC_VER
 			InterlockedExchange (&flag, 1);
+#else
+			__sync_fetch_and_add (&flag, 1);
+#endif
 		}
 
 		waitEvent.set();
@@ -275,7 +311,11 @@ bool AsyncCopyAndVerifyIter2ToArray(Concurrency::accelerator& destDevice)
 		Log() << "Verifying destArray" << std::endl;
 		if(VerifyAllSameValue(destArray, expected_value) == -1) 
 		{ 
+#ifdef _MSC_VER
 			InterlockedExchange (&flag, 1);
+#else
+			__sync_fetch_and_add (&flag, 1);
+#endif
 		}
 		
 		waitEvent.set();
@@ -306,7 +346,11 @@ bool AsyncCopyAndVerifyArrayViewToIter(Concurrency::accelerator& srcDevice)
 		Log() << "Verifying destConst" << std::endl;
 		if(VerifyAllSameValue(destCont, expected_value) == -1) 
 		{ 
+#ifdef _MSC_VER
 			InterlockedExchange (&flag, 1);
+#else
+			__sync_fetch_and_add (&flag, 1);
+#endif
 		}
 
 		waitEvent.set();
@@ -335,7 +379,11 @@ bool AsyncCopyAndVerifyIterToArrayView(Concurrency::accelerator& destDevice)
 		Log() << "Verifying destArrayView" << std::endl;
 		if(VerifyAllSameValue(destArrayView, expected_value) == -1) 
 		{ 
+#ifdef _MSC_VER
 			InterlockedExchange (&flag, 1);
+#else
+			__sync_fetch_and_add (&flag, 1);
+#endif
 		}
 		
 		waitEvent.set();
@@ -364,7 +412,11 @@ bool AsyncCopyAndVerifyIter2ToArrayView(Concurrency::accelerator& destDevice)
 		Log() << "Verifying destArrayView" << std::endl;
 		if(VerifyAllSameValue(destArrayView, expected_value) == -1) 
 		{ 
+#ifdef _MSC_VER
 			InterlockedExchange (&flag, 1);
+#else
+			__sync_fetch_and_add (&flag, 1);
+#endif
 		}
 
 		waitEvent.set();
