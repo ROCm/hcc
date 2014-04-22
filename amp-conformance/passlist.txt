@@ -1,3 +1,4 @@
+7_para_for_each/7_1_Capt_Data_in_the_Kern_Func_Obje/Bool.01/test.cpp
 7_para_for_each/ComputeDomainTiled/ThreadGroupCount.01/test.cpp
 7_para_for_each/ComputeDomainTiled/ThreadGroupCount.02/test.cpp
 7_para_for_each/ComputeDomainTiled/ThreadGroupCount.04/test.cpp
