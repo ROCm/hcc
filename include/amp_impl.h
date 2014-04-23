@@ -19,65 +19,77 @@
 
 namespace Concurrency {
 // Accelerators
-inline accelerator::accelerator(): accelerator(default_accelerator) {
-  if (device_path != std::wstring(default_accelerator)) {
-    std::wcerr << L"CLAMP: Warning: the given accelerator is not supported: ";
-    std::wcerr << device_path << std::endl;
-  }
+inline accelerator::accelerator() : 
+  accelerator(default_accelerator) {}
 
-  description = L"Default GMAC+OpenCL";
-  if (!default_view_) {
-    default_view_ = new accelerator_view(0);
-    default_view_->accelerator_ = this;
-    default_view_->is_auto_selection = true;
-  }
-}
-inline accelerator::accelerator(const accelerator& other): device_path(other.device_path), version(other.version),
-dedicated_memory(other.dedicated_memory), is_debug(other.is_debug), is_emulated(other.is_emulated), has_display(other.has_display),
-supports_double_precision(other.supports_double_precision), supports_limited_double_precision(other.supports_limited_double_precision),
-supports_cpu_shared_memory(other.supports_cpu_shared_memory) {
-  if (device_path != std::wstring(default_accelerator)) {
-    std::wcerr << L"CLAMP: Warning: the given accelerator is not supported: ";
-    std::wcerr << device_path << std::endl;
-  }
-
-  description = L"Default GMAC+OpenCL";
-
-  default_view_ = new accelerator_view(0);
-  default_view_->accelerator_ = this;
-  default_view_->is_auto_selection = false;
-}
+inline accelerator::accelerator(const accelerator& other) : 
+  device_path(other.device_path), 
+  version(other.version), 
+  description(other.description),
+  is_debug(other.is_debug),
+  is_emulated(other.is_emulated),
+  has_display(other.has_display),
+  supports_double_precision(other.supports_double_precision),
+  supports_limited_double_precision(other.supports_limited_double_precision),
+  supports_cpu_shared_memory(other.supports_cpu_shared_memory),
+  dedicated_memory(other.dedicated_memory),
+  default_access_type(other.default_access_type),
+  default_view(other.default_view),
+#ifndef CXXAMP_ENABLE_HSA_OKRA
+  accInfo(other.accInfo)
+#endif
+  {}
 
 // TODO(I-Jui Sung): perform real OpenCL queries here..
-inline accelerator::accelerator(const std::wstring& path): device_path(path),
-  version(0), is_debug(false), is_emulated(false),
-  has_display(false), supports_double_precision(true),
-  supports_limited_double_precision(false), supports_cpu_shared_memory(false) {
-  if (path != std::wstring(default_accelerator)) {
-    std::wcerr << L"CLAMP: Warning: the given accelerator is not supported: ";
-    std::wcerr << path << std::endl;
-  }
+inline accelerator::accelerator(const std::wstring& path) :
+  device_path( (path != std::wstring(default_accelerator)) ? 
+					path : 
+					(_default_accelerator != nullptr) ?
+						accelerator::_default_accelerator->get_device_path() :
+						std::wstring(gpu_accelerator) ),
+  version(0), 
+  description(L"Default GMAC+OpenCL"),
+  is_debug(false),
+  is_emulated(false),
+  has_display(false),
+  supports_double_precision(true),
+  supports_limited_double_precision(false), // constructor will set it
+  supports_cpu_shared_memory(false), // constructor will set it
+  dedicated_memory(0), // constructor will set it
+  default_access_type(access_type_none),
+#ifndef CXXAMP_ENABLE_HSA_OKRA
+  default_view( (device_path == std::wstring(gpu_accelerator)) ?
+					( (_gpu_accelerator != nullptr) ?
+						new accelerator_view(_gpu_accelerator.get()) : new accelerator_view(this)) :
+					( (_cpu_accelerator != nullptr) ?
+						new accelerator_view(_cpu_accelerator.get()) : new accelerator_view(this)) ) ,
+  accInfo()
+#else
+  default_view( (device_path == std::wstring(gpu_accelerator)) ?
+					( (_gpu_accelerator != nullptr) ?
+						new accelerator_view(_gpu_accelerator.get()) : new accelerator_view(this)) :
+					( (_cpu_accelerator != nullptr) ?
+						new accelerator_view(_cpu_accelerator.get()) : new accelerator_view(this)) )
+#endif
+    {
 
-  if (!default_view_) {
-    default_view_ = new accelerator_view(0);
-    default_view_->accelerator_ = this;
-    default_view_->is_auto_selection = true;
-  }
 #ifndef CXXAMP_ENABLE_HSA_OKRA
   AcceleratorInfo accInfo;
   for (unsigned i = 0; i < eclGetNumberOfAccelerators(); i++) {
     assert(eclGetAcceleratorInfo(i, &accInfo) == eclSuccess);
     if ( (accInfo.acceleratorType == GMAC_ACCELERATOR_TYPE_GPU)
-      && (path ==std::wstring(gpu_accelerator))) {
+      && (device_path == std::wstring(gpu_accelerator))) {
+      supports_cpu_shared_memory = false;
       this->accInfo = accInfo;
-      default_view_->queuing_mode = queuing_mode_automatic;
-      default_view_->is_auto_selection = false;
+      default_view->queuing_mode = queuing_mode_immediate;
+      default_view->is_auto_selection = true;
     }
     if ( (accInfo.acceleratorType == GMAC_ACCELERATOR_TYPE_CPU)
-      && (path ==std::wstring(cpu_accelerator))) {
+      && (device_path == std::wstring(cpu_accelerator))) {
+      supports_cpu_shared_memory = true;
       this->accInfo = accInfo;
-      default_view_->queuing_mode = queuing_mode_immediate;
-      default_view_->is_auto_selection = false;
+      default_view->queuing_mode = queuing_mode_immediate;
+      default_view->is_auto_selection = false;
     }
   }
   dedicated_memory=accInfo.memAllocSize/(size_t)1024;
@@ -89,36 +101,54 @@ inline accelerator::accelerator(const std::wstring& path): device_path(path),
      & GMAC_ACCELERATOR_FP_DENORM)
     supports_limited_double_precision = true;
 #endif
-  description = L"Default GMAC+OpenCL";
 }
+
 inline accelerator& accelerator::operator=(const accelerator& other) {
   device_path = other.device_path;
   version = other.version;
-  dedicated_memory = other.dedicated_memory;
-  is_emulated = other.is_emulated;
+  description = other.description;
   is_debug = other.is_debug;
+  is_emulated = other.is_emulated;
   has_display = other.has_display;
   supports_double_precision = other.supports_double_precision;
   supports_limited_double_precision = other.supports_limited_double_precision;
   supports_cpu_shared_memory = other.supports_cpu_shared_memory;
+  dedicated_memory = other.dedicated_memory;
+  default_access_type = other.default_access_type;
+  default_view = other.default_view;
+#ifndef CXXAMP_ENABLE_HSA_OKRA
+  accInfo = other.accInfo;
+#endif 
   return *this;
 }
 inline bool accelerator::operator==(const accelerator& other) const {
   return device_path == other.device_path &&
          version == other.version &&
-         dedicated_memory == other.dedicated_memory &&
+         description == other.description &&
          is_debug == other.is_debug &&
          is_emulated == other.is_emulated &&
          has_display == other.has_display &&
          supports_double_precision == other.supports_double_precision &&
-         supports_cpu_shared_memory == other.supports_cpu_shared_memory;
+         supports_limited_double_precision == other.supports_limited_double_precision &&
+         supports_cpu_shared_memory == other.supports_cpu_shared_memory &&
+         dedicated_memory == other.dedicated_memory &&
+         default_access_type == other.default_access_type;
+         // do not check default_view
 }
 inline bool accelerator::operator!=(const accelerator& other) const {
   return !(*this == other);
 }
 
+inline bool accelerator_view::operator==(const accelerator_view& other) const {
+  return is_debug == other.is_debug &&
+         is_auto_selection == other.is_auto_selection &&
+         version == other.version &&
+         queuing_mode == other.queuing_mode &&
+         *_accelerator == *other._accelerator;
+}
+
 inline accelerator_view& accelerator::get_default_view() const {
-  return *default_view_;
+  return *default_view;
 }
 
 // Accelerator view
@@ -126,10 +156,10 @@ inline accelerator_view accelerator::create_view(void) {
   return create_view(queuing_mode_automatic);
 }
 inline accelerator_view accelerator::create_view(queuing_mode qmode) {
-  accelerator_view sa(0);
+  // make accelarator_view's accelerator pointer always points to static class members
+  accelerator_view sa( (device_path == std::wstring(gpu_accelerator)) ?
+						_gpu_accelerator.get() : _cpu_accelerator.get() );
   sa.queuing_mode = qmode;
-  sa.accelerator_ = this;
-  sa.is_auto_selection = false;
   return sa;
 }
 
@@ -454,15 +484,12 @@ array<T, N>::array(int e0, int e1, int e2, accelerator_view av, access_type cpu_
 template<typename T, int N>
 array<T, N>::array(const Concurrency::extent<N>& extent, accelerator_view av, accelerator_view associated_av) : array(extent) {
   pav = new accelerator_view(av);
-  paav = new accelerator_view(associated_av);
-
-  if(pav->get_accelerator()!=paav->get_accelerator()) {
-    if(pav->get_accelerator().get_device_path().compare(L"default")==0) {
-      pav->accelerator_ = new accelerator(L"cpu");
-      pav->queuing_mode = queuing_mode_immediate;
-    }
+  if (av.get_accelerator() == accelerator(accelerator::gpu_accelerator) &&
+      associated_av.get_accelerator() == accelerator(accelerator::cpu_accelerator)) {
+    paav = new accelerator_view(av);
+  } else {
+    paav = new accelerator_view(associated_av);
   }
-
 }
 template<typename T, int N>
 array<T, N>::array(int e0, accelerator_view av, accelerator_view associated_av) : array(Concurrency::extent<1>(e0), av, associated_av) {}

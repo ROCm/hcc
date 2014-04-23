@@ -61,6 +61,8 @@ private:
 #define E_FAIL 0x80004005
 #endif
 
+static const char *__errorMsg_UnsupportedAccelerator = "concurrency::parallel_for_each is not supported on the selected accelerator \"CPU accelerator\".";
+
 class invalid_compute_domain : public runtime_exception
 {
 public:
@@ -91,62 +93,106 @@ enum access_type
   access_type_auto
 };
 
-class accelerator_view;
+class completion_future;
 class accelerator;
 template <typename T, int N> class array_view;
 template <typename T, int N> class array;
 
+class accelerator_view {
+public:
+  accelerator_view() = delete;
+  accelerator_view(const accelerator_view& other) { *this = other; }
+  accelerator_view& operator=(const accelerator_view& other) {
+    is_debug = other.is_debug;
+    is_auto_selection = other.is_auto_selection;
+    version = other.version;
+    queuing_mode = other.queuing_mode;
+    _accelerator = other._accelerator;
+    return *this;
+  }
+
+  accelerator& get_accelerator() const { return *_accelerator; }
+  enum queuing_mode get_queuing_mode() const { return queuing_mode; }
+  bool get_is_debug() const { return is_debug; }
+  bool get_version() const { return version; }
+  bool get_is_auto_selection() const { return is_auto_selection; }
+  void flush() {}
+  void wait() {}
+  completion_future create_marker();
+  bool operator==(const accelerator_view& other) const;
+  bool operator!=(const accelerator_view& other) const { return !(*this == other); }
+  ~accelerator_view() {}
+ private:
+  bool is_debug;
+  bool is_auto_selection;
+  unsigned int version;
+  enum queuing_mode queuing_mode;
+  //CLAMP-specific
+  friend class accelerator;
+  template <typename T, int>
+  friend class array;
+  explicit accelerator_view(accelerator* accel) :
+    is_debug(false), is_auto_selection(false), version(0), queuing_mode(queuing_mode_automatic), _accelerator(accel) {}
+  //End CLAMP-specific
+  accelerator* _accelerator;
+};
+
 class accelerator {
 public:
-  static wchar_t default_accelerator[];   // = L"default"
-  static const wchar_t gpu_accelerator[];         // = L"gpu"
+  static const wchar_t default_accelerator[];   // = L"default"
+  static const wchar_t gpu_accelerator[];       // = L"gpu"
   static const wchar_t cpu_accelerator[];       // = L"cpu"
 
   accelerator();
   explicit accelerator(const std::wstring& path);
   accelerator(const accelerator& other);
   static std::vector<accelerator> get_all() {
-    std::wstring default_acc(default_accelerator);
     std::vector<accelerator> acc;
 #ifndef CXXAMP_ENABLE_HSA_OKRA
-    ecl_accelerator_info info;
+    AcceleratorInfo accInfo;
     for (unsigned i = 0; i < eclGetNumberOfAccelerators(); i++) {
-      assert(eclGetAcceleratorInfo(i, &info) == eclSuccess);
-      if (info.acceleratorType &
-          (GMAC_ACCELERATOR_TYPE_ACCELERATOR|GMAC_ACCELERATOR_TYPE_GPU)) {
-        accelerator acc_default(default_acc);
-        acc.push_back(acc_default);
-      }
+      assert(eclGetAcceleratorInfo(i, &accInfo) == eclSuccess);
+      if (accInfo.acceleratorType == GMAC_ACCELERATOR_TYPE_GPU)
+        acc.push_back(*_gpu_accelerator);
+
+      if (accInfo.acceleratorType == GMAC_ACCELERATOR_TYPE_CPU)
+        acc.push_back(*_cpu_accelerator);
     }
+#else
+    acc.push_back(*_cpu_accelerator);  // in HSA path, always add CPU accelerator
+    acc.push_back(*_gpu_accelerator);  // in HSA path, always add GPU accelerator
 #endif
     return acc;
   }
   static bool set_default(const std::wstring& path) {
-    std::wstring cpu(cpu_accelerator);
-    std::wstring gpu(gpu_accelerator);
-    if (path == cpu || path == gpu) {
-      wcscpy(default_accelerator, path.c_str());
-      accelerator(path);
-    } else
+    if (_default_accelerator != nullptr) {
       return false;
-    return true;
+    }
+    if (path == std::wstring(cpu_accelerator)) {
+      _default_accelerator = _cpu_accelerator;
+      return true;
+    } else if (path == std::wstring(gpu_accelerator)) {
+      _default_accelerator = _gpu_accelerator;
+      return true;
+    }
+    return false;
   }
   accelerator& operator=(const accelerator& other);
 
   const std::wstring &get_device_path() const { return device_path; }
 
   const std::wstring &get_description() const { return description; }
-  bool get_supports_cpu_shared_memory() const {return true;}
-  bool get_is_debug() const {return is_debug;}
-  bool get_version() const {return version;}
+  bool get_supports_cpu_shared_memory() const {return supports_cpu_shared_memory; }
+  bool get_is_debug() const { return is_debug; }
+  bool get_version() const { return version; }
   accelerator_view& get_default_view() const;
-  bool get_has_display() const {return has_display;}
+  bool get_has_display() const { return has_display; }
   accelerator_view create_view();
   accelerator_view create_view(queuing_mode qmode);
-  bool get_is_emulated() const {return is_emulated;}
-  bool get_supports_double_precision() const {return supports_double_precision;}
-  bool get_supports_limited_double_precision() const { return supports_limited_double_precision;}
-  size_t get_dedicated_memory() const {return dedicated_memory;}
+  bool get_is_emulated() const { return is_emulated; }
+  bool get_supports_double_precision() const { return supports_double_precision; }
+  bool get_supports_limited_double_precision() const { return supports_limited_double_precision; }
+  size_t get_dedicated_memory() const { return dedicated_memory; }
   bool set_default_cpu_access_type(access_type type);
   access_type get_default_cpu_access_type() const;
   bool operator==(const accelerator& other) const;
@@ -162,59 +208,19 @@ public:
   bool supports_limited_double_precision;
   bool supports_cpu_shared_memory;
   size_t dedicated_memory;
-  static accelerator_view *default_view_;
-  static access_type default_access_type;
+  access_type default_access_type;
+  std::shared_ptr<accelerator_view> default_view;
 #ifndef CXXAMP_ENABLE_HSA_OKRA
   typedef GmacAcceleratorInfo AcceleratorInfo;
   AcceleratorInfo accInfo;
 #endif
+
+  // static class members
+  static std::shared_ptr<accelerator> _default_accelerator; // initialized as nullptr
+  static std::shared_ptr<accelerator> _gpu_accelerator;
+  static std::shared_ptr<accelerator> _cpu_accelerator;
 };
 
-class completion_future;
-class accelerator_view {
-public:
-  accelerator_view() = delete;
-  accelerator_view(const accelerator_view& other) { *this = other; }
-  accelerator_view& operator=(const accelerator_view& other) {
-    queuing_mode = other.queuing_mode;
-    accelerator_ = other.accelerator_;
-    is_debug = other.is_debug;
-    version = other.version;
-    is_auto_selection = other.is_auto_selection;
-    return *this;
-  }
-
-  accelerator& get_accelerator() const { return *accelerator_; }
-  enum queuing_mode get_queuing_mode() const {return queuing_mode;}
-  bool get_is_debug() const {return is_debug;}
-  bool get_version() const {return version;}
-  bool get_is_auto_selection() const {return is_auto_selection;}
-  void flush(){}
-  void wait(){}
-  completion_future create_marker();
-  bool operator==(const accelerator_view& other) const {
-    return is_debug == other.is_debug &&
-           is_auto_selection == other.is_auto_selection &&
-           version == other.version &&
-           queuing_mode == other.queuing_mode &&
-           *accelerator_ == *(other.accelerator_);
-  }
-  bool operator!=(const accelerator_view& other) const {return !(*this == other);}
-  ~accelerator_view() {}
- private:
-  bool is_debug;
-  bool is_auto_selection;
-  unsigned int version;
-  enum queuing_mode queuing_mode;
-  //CLAMP-specific
-  friend class accelerator;
-  template <typename T, int>
-  friend class array;
-  explicit accelerator_view(int):is_debug(false), version(0),
-    queuing_mode(queuing_mode_automatic) {}
-  //End CLAMP-specific
-  accelerator *accelerator_;
-};
 //CLAMP
 extern "C" __attribute__((pure)) int get_global_id(int n) restrict(amp);
 extern "C" __attribute__((pure)) int get_local_id(int n) restrict(amp);
@@ -1962,21 +1968,33 @@ void parallel_for_each(tiled_extent<D0> compute_domain, const Kernel& f);
 
 template <int N, typename Kernel>
 void parallel_for_each(const accelerator_view& accl_view, extent<N> compute_domain, const Kernel& f){
+    if (accl_view.get_accelerator() == accelerator(accelerator::cpu_accelerator)) {
+      throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
+    }
     parallel_for_each(compute_domain, f);
 }
 
 template <int D0, int D1, int D2, typename Kernel>
 void parallel_for_each(const accelerator_view& accl_view, tiled_extent<D0,D1,D2> compute_domain, const Kernel& f) {
+    if (accl_view.get_accelerator() == accelerator(accelerator::cpu_accelerator)) {
+      throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
+    }
     parallel_for_each(compute_domain, f);
 }
 
 template <int D0, int D1, typename Kernel>
 void parallel_for_each(const accelerator_view& accl_view, tiled_extent<D0,D1> compute_domain, const Kernel& f) {
+    if (accl_view.get_accelerator() == accelerator(accelerator::cpu_accelerator)) {
+      throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
+    }
     parallel_for_each(compute_domain, f);
 }
 
 template <int D0, typename Kernel>
 void parallel_for_each(const accelerator_view& accl_view, tiled_extent<D0> compute_domain, const Kernel& f) {
+    if (accl_view.get_accelerator() == accelerator(accelerator::cpu_accelerator)) {
+      throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
+    }
     parallel_for_each(compute_domain, f);
 }
 
