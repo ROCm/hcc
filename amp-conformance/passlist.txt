@@ -1,3 +1,4 @@
+7_para_for_each/AcceleratorViewSelection/Negative/UnsupportedAccelerator/test.cpp
 7_para_for_each/7_1_Capt_Data_in_the_Kern_Func_Obje/Bool.01/test.cpp
 7_para_for_each/ComputeDomainTiled/ThreadGroupCount.01/test.cpp
 7_para_for_each/ComputeDomainTiled/ThreadGroupCount.02/test.cpp
@@ -241,6 +242,7 @@
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToGlobal/Test12.02/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToGlobal/Test13/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToGlobal/Test14/test.cpp
+2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToShared/Test12.04/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToShared/Test04.02/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToShared/Test10/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToShared/Test11.10/test.cpp

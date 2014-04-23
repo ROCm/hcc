@@ -111,6 +111,14 @@ namespace fast_math {
     #endif
   }
 
+  float expf(float x) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_exp(x);
+    #else
+      return ::expf(x);
+    #endif
+  }
+
   float exp2(float x) restrict(amp, cpu) {
     #ifdef __GPU__
       return opencl_exp2(x);
@@ -124,6 +132,14 @@ namespace fast_math {
       return opencl_fabs(x);
     #else
       return ::fabs(x);
+    #endif
+  }
+
+  float fabsf(float x) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_fabs(x);
+    #else
+      return ::fabsf(x);
     #endif
   }
 
@@ -183,6 +199,14 @@ namespace fast_math {
     #endif
   }
 
+  float logf(float x) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_log(x);
+    #else
+      return ::logf(x);
+    #endif
+  }
+
   float log2(float x) restrict(amp, cpu) {
     #ifdef __GPU__
       return opencl_log2(x);
@@ -232,6 +256,14 @@ namespace fast_math {
   }
 
   float sqrt(float x) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_sqrt(x);
+    #else
+      return ::sqrt(x);
+    #endif
+  }
+
+  float sqrtf(float x) restrict(amp, cpu) {
     #ifdef __GPU__
       return opencl_sqrt(x);
     #else

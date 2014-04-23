@@ -702,6 +702,28 @@ void updateGEPWithNewOperand(GetElementPtrInst * GEP, Value * oldOperand, Value 
         updateListWithUsers(GEP->use_begin(), GEP->use_end(), GEP, GEP, updatesNeeded);
 }
 
+void updateSELWithNewOperand(SelectInst * SEL, Value * oldOperand, Value * newOperand, InstUpdateWorkList * updatesNeeded)
+{
+    Type* InstructionType =  SEL->getType();
+    bool update = false;
+    if(SEL->getOperand(1) == oldOperand) {
+      SEL->setOperand (1, newOperand);
+      if(InstructionType != newOperand->getType()) {
+        SEL->mutateType(newOperand->getType());
+        update = true;
+      }
+    }    
+    if(SEL->getOperand(2) == oldOperand) {
+      SEL->setOperand (2, newOperand);
+      if(InstructionType != newOperand->getType()) {
+        SEL->mutateType(newOperand->getType());
+        update = true;
+      }
+    }
+    if(update) 
+      updateListWithUsers(SEL->use_begin(), SEL->use_end(), SEL, SEL, updatesNeeded);
+}
+
 bool CheckCalledFunction ( CallInst * CI, InstUpdateWorkList * updates,
                            FunctionType *& newFunctionType )
 {
@@ -839,6 +861,11 @@ void updateInstructionWithNewOperand(Instruction * I,
            updatePHINodeWithNewOperand(PHI, oldOperand, newOperand, updatesNeeded);
            return;
        }
+       
+       if (SelectInst * SEL = dyn_cast<SelectInst>(I)) {
+           updateSELWithNewOperand(SEL, oldOperand, newOperand,updatesNeeded);
+           return;
+       }
 
        DEBUG(llvm::errs() << "DO NOT KNOW HOW TO UPDATE INSTRUCTION: ";
              I->print(llvm::errs()); llvm::errs() << "\n";);
@@ -877,7 +904,7 @@ void promoteTileStatic(Function *Func, InstUpdateWorkList * updateNeeded)
             } else if (ConstantExpr *C = dyn_cast<ConstantExpr>(*U)) {
                 // Replace GEPCE uses so that we have an instruction to track
                 updateListWithUsers (*U, I, I, updateNeeded);
-                assert(U->getNumUses() == 0);
+                assert(C->getNumUses() == 0);
                 C->destroyConstant();
                 U = I->use_begin();
                 continue;
