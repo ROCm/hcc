@@ -1122,8 +1122,27 @@ struct projection_helper<T, 1>
         return *ptr;
     }
 };
-// ------------------------------------------------------------------------
 
+template <typename T, int N = 1>
+class array_helper {
+public:
+  __attribute__((annotate("user_deserialize")))
+  array_helper() restrict(cpu, amp) {}
+
+  void setArray(array<T, N>* arr) restrict(cpu) { m_arr = arr; }
+
+  __attribute__((annotate("serialize")))
+  void __cxxamp_serialize(Serialize& s) const {
+    array<T, N>* p_arr = (array<T, N>*)m_arr;
+    if (p_arr && p_arr->pav && p_arr->pav->get_accelerator() == accelerator(accelerator::cpu_accelerator)) {
+      throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
+    }    
+  }
+private:
+  void* m_arr;
+};
+
+// ------------------------------------------------------------------------
 
 template <typename T, int N = 1>
 class array {
@@ -1133,6 +1152,7 @@ public:
 #else
   typedef _data_host<T> gmac_buffer_t;
 #endif
+  typedef array_helper<T, N> array_helper_t;
 
   static const int rank = N;
   typedef T value_type;
@@ -1460,13 +1480,16 @@ private:
   template <int K, typename Q> friend struct index_helper;
   template <int K, typename Q1, typename Q2> friend struct amp_helper;
   template <typename K, int Q> friend struct projection_helper;
+  template <typename K, int Q> friend class array_helper;
   gmac_buffer_t m_device;
   access_type cpu_access_type;
+  array_helper_t m_array_helper;
   __attribute__((cpu)) accelerator_view *pav, *paav;
 
 #ifndef __GPU__
   void initialize() {
       m_device.reset(GMACAllocator<T>().allocate(extent.size()), GMACDeleter<T>());
+      m_array_helper.setArray(this);
   }
   template <typename InputIter>
       void initialize(InputIter srcBegin, InputIter srcEnd) {
