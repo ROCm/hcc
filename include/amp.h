@@ -1431,7 +1431,7 @@ public:
 
   template <typename ElementType>
     array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu) {
-#ifdef __GPU__
+#ifndef __GPU__
           static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
           static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
 #endif
@@ -1445,6 +1445,10 @@ public:
     }
   template <typename ElementType>
     array_view<const ElementType, 1> reinterpret_as() const restrict(amp,cpu) {
+#ifndef __GPU__
+          static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
+          static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
+#endif
         int size = extent.size() * sizeof(T) / sizeof(ElementType);
         array_view<const ElementType, 1> av(Concurrency::extent<1>(size), reinterpret_cast<const ElementType*>(m_device.get()));
         return av;
@@ -1663,7 +1667,7 @@ public:
 
   template <typename ElementType>
       array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu) {
-#ifdef __GPU__
+#ifndef __GPU__
           static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
           static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
 #endif
@@ -1677,6 +1681,10 @@ public:
       }
   template <typename ElementType>
       array_view<const ElementType, 1> reinterpret_as() const restrict(amp,cpu) {
+#ifndef __GPU__
+          static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
+          static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
+#endif
           int size = extent.size() * sizeof(T) / sizeof(ElementType);
           array_view<const ElementType, 1> av(Concurrency::extent<1>(size), reinterpret_cast<const ElementType*>(cache.get() + offset + index_base[0]));
           return av;
@@ -1732,6 +1740,7 @@ public:
 #endif
   }
   T* data() const restrict(amp,cpu) {
+    static_assert(N == 1, "data() is only permissible on array views of rank 1");
     return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
   }
 
@@ -1895,7 +1904,7 @@ public:
 */
   template <typename ElementType>
     array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu) {
-#ifdef __GPU__
+#ifndef __GPU__
           static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
           static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
 #endif
@@ -1905,6 +1914,10 @@ public:
     }
   template <typename ElementType>
     array_view<const ElementType, 1> reinterpret_as() const restrict(amp,cpu) {
+#ifndef __GPU__
+          static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
+          static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
+#endif
       int size = extent.size() * sizeof(T) / sizeof(ElementType);
       array_view<const ElementType, 1> av(Concurrency::extent<1>(size), reinterpret_cast<const ElementType*>(cache.get() + offset + index_base[0]));
       return av;
@@ -1953,6 +1966,7 @@ public:
   void refresh() const;
 
   const T* data() const restrict(amp,cpu) {
+    static_assert(N == 1, "data() is only permissible on array views of rank 1");
     return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
   }
 private:
@@ -2123,6 +2137,10 @@ void copy(InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest) {
 // TODO: Boundary Check
 template <typename InputIter, typename T>
 void copy(InputIter srcBegin, InputIter srcEnd, array<T, 1>& dest) {
+#ifndef __GPU__
+    if( ( ( srcEnd - srcBegin ) <=0 )||( ( srcEnd - srcBegin ) < dest.get_extent()[0] ))
+      throw runtime_exception("errorMsg_throw ,copy between different types", 0);
+#endif
     for (int i = 0; i < dest.get_extent()[0]; ++i) {
         dest[i] = *srcBegin;
         ++srcBegin;
