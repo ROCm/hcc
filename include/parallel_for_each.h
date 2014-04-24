@@ -123,6 +123,12 @@ template <int N, typename Kernel>
 __attribute__((noinline,used)) void parallel_for_each(
     extent<N> compute_domain, const Kernel& f) restrict(cpu, amp) {
 #ifndef __GPU__
+    for(int i = 0 ; i < N ; i++)
+    {
+      if(compute_domain[i]<=0)
+        throw runtime_exception("errorMsg_throw", 0);
+    }
+
     size_t ext[3] = {static_cast<size_t>(compute_domain[N - 1]),
         static_cast<size_t>(compute_domain[N - 2]),
         static_cast<size_t>(compute_domain[N - 3])};
