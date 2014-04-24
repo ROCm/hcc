@@ -71,6 +71,7 @@
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/Negative/Bounds.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/Negative/Bounds.03/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/Negative/Convenience.02/test.cpp
+5_Data_Cont/5_2_a_v/5_2_5_v_o/section/Reinterpret_As/Negative/ElementType.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/Reinterpret_As/Test.03/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/Reinterpret_As/Test.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/Reinterpret_As/Test.04/test.cpp
