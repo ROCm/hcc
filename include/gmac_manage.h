@@ -147,7 +147,7 @@ class _data_host_view {
 //Set it host owned so we know it is dirty and will copy it back to the gmac
 //buffer when we serialize.
   void refresh() const {
-    *state_ptr = HOST_OWNED;
+//    *state_ptr = HOST_OWNED;
     if (home_ptr) {
       memcpy(reinterpret_cast<void*>(gmac_buffer.get()),
              reinterpret_cast<const void*>(home_ptr), buffer_size);
