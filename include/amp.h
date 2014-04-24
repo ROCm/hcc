@@ -1724,6 +1724,7 @@ public:
 #endif
   }
   T* data() const restrict(amp,cpu) {
+    static_assert(N == 1, "data() is only permissible on array views of rank 1");
     return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
   }
 
@@ -1945,6 +1946,7 @@ public:
   void refresh() const;
 
   const T* data() const restrict(amp,cpu) {
+    static_assert(N == 1, "data() is only permissible on array views of rank 1");
     return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
   }
 private:
