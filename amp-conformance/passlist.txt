@@ -43,6 +43,8 @@
 5_Data_Cont/5_3_c_d/SynchronousCopy/ArrayAndIterator/test.cpp
 5_Data_Cont/5_3_c_d/Misc/HigherRank/test.cpp
 5_Data_Cont/5_3_c_d/Misc/CustomIterator/IterToArrayView.02/CpuToCpu/test.cpp
+5_Data_Cont/5_3_c_d/Misc/CustomIterator/IterToArray.01/CpuToCpu/test.cpp
+5_Data_Cont/5_3_c_d/Misc/CustomIterator/IterToArray.01/CpuToGpu/test.cpp
 5_Data_Cont/5_3_c_d/Misc/CopyWithConstObject/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/IteratorToArrayView/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/IteratorToNonContigArrayView/test.cpp
