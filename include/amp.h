@@ -2232,6 +2232,12 @@ template <typename T, int N>
 completion_future copy_async(const array<T, N>& src, array<T, N>& dest) {
     return __amp_copy_async_impl(src, dest);
 }
+
+template <typename T, int N>
+completion_future copy_async(const array<T, N>& src, const array<T, N>& dest) {
+    return __amp_copy_async_impl(src, dest);
+}
+
 template <typename T, int N>
 completion_future copy_async(const array<T, N>& src, const array_view<T, N>& dest) {
     return __amp_copy_async_impl(src, dest);
@@ -2242,6 +2248,12 @@ template <typename T, int N>
 completion_future copy_async(const array_view<const T, N>& src, array<T, N>& dest) {
     return __amp_copy_async_impl(src, dest);
 }
+
+template <typename T, int N>
+completion_future copy_async(const array_view<const T, N>& src, const array<T, N>& dest) {
+    return __amp_copy_async_impl(src, dest);
+}
+
 template <typename T, int N>
 completion_future copy_async(const array_view<const T, N>& src, const array_view<T, N>& dest) {
     return __amp_copy_async_impl(src, dest);
@@ -2252,6 +2264,12 @@ template <typename T, int N>
 completion_future copy_async(const array_view<T, N>& src, array<T, N>& dest) {
     return __amp_copy_async_impl(src, dest);
 }
+
+template <typename T, int N>
+completion_future copy_async(const array_view<T, N>& src, const array<T, N>& dest) {
+    return __amp_copy_async_impl(src, dest);
+}
+
 template <typename T, int N>
 completion_future copy_async(const array_view<T, N>& src, const array_view<T, N>& dest) {
     return __amp_copy_async_impl(src, dest);
