@@ -219,8 +219,8 @@ namespace {
     void printConstantArray(ConstantArray *CPA, bool Static);
     void printConstantVector(ConstantVector *CV, bool Static);
     void printConstantDataSequential(ConstantDataSequential *CDS, bool Static);
-
-
+    void printFunctionPrivateVaraibles(Function&F);
+    void printInitializer(GlobalVariable *I);
 
     /// isAddressExposed - Return true if the specified value's name needs to
     /// have its address taken in order to get a C value of the correct type.
@@ -1708,6 +1708,39 @@ static void PrintEscapedString(const std::string &Str, raw_ostream &Out) {
   PrintEscapedString(Str.c_str(), Str.size(), Out);
 }
 
+void CWriter::printInitializer(GlobalVariable * I)
+{
+    if(!I) 
+      return;
+    
+    // If the initializer is not null, emit the initializer.  If it is null,
+    // we try to avoid emitting large amounts of zeros.  The problem with
+    // this, however, occurs when the variable has weak linkage.  In this
+    // case, the assembler will complain about the variable being both weak
+    // and common, so we disable this optimization.
+    // FIXME common linkage should avoid this problem.
+    if (I->hasInitializer() && !I->getInitializer()->isNullValue()) {
+      Out << " = " ;
+      writeOperand(I->getInitializer(), true);
+    } else if (I->hasWeakLinkage()) {
+      // We have to specify an initializer, but it doesn't have to be
+      // complete.  If the value is an aggregate, print out { 0 }, and let
+      // the compiler figure out the rest of the zeros.
+      Out << " = " ;
+      if (I->getInitializer()->getType()->isStructTy() ||
+          I->getInitializer()->getType()->isVectorTy()) {
+        Out << "{ 0 }";
+      } else if (I->getInitializer()->getType()->isArrayTy()) {
+        // As with structs and vectors, but with an extra set of braces
+        // because arrays are wrapped in structs.
+        Out << "{ { 0 } }";
+      } else {
+        // Just print it out normally.
+        writeOperand(I->getInitializer(), true);
+      }
+    }
+}
+
 bool CWriter::doInitialization(Module &M) {
   FunctionPass::doInitialization(M);
 
@@ -1925,33 +1958,7 @@ bool CWriter::doInitialization(Module &M) {
         Out << "__constant struct ";
         printType(Out, I->getType()->getElementType(), false,
                   GetValueName(I));
-
-        // If the initializer is not null, emit the initializer.  If it is null,
-        // we try to avoid emitting large amounts of zeros.  The problem with
-        // this, however, occurs when the variable has weak linkage.  In this
-        // case, the assembler will complain about the variable being both weak
-        // and common, so we disable this optimization.
-        // FIXME common linkage should avoid this problem.
-        if (I->hasInitializer() && !I->getInitializer()->isNullValue()) {
-          Out << " = " ;
-          writeOperand(I->getInitializer(), true);
-        } else if (I->hasWeakLinkage()) {
-          // We have to specify an initializer, but it doesn't have to be
-          // complete.  If the value is an aggregate, print out { 0 }, and let
-          // the compiler figure out the rest of the zeros.
-          Out << " = " ;
-          if (I->getInitializer()->getType()->isStructTy() ||
-              I->getInitializer()->getType()->isVectorTy()) {
-            Out << "{ 0 }";
-          } else if (I->getInitializer()->getType()->isArrayTy()) {
-            // As with structs and vectors, but with an extra set of braces
-            // because arrays are wrapped in structs.
-            Out << "{ { 0 } }";
-          } else {
-            // Just print it out normally.
-            writeOperand(I->getInitializer(), true);
-          }
-        }
+        printInitializer(I);
         Out << ";\n";
       }
   }
@@ -2390,6 +2397,86 @@ static void FindLocalName(Instruction *I, Value *&LocalValue, Type *&LocalTy) {
   }
 }
 
+static bool usedInOneFunc(const User *U, Function const *&oneFunc) {
+  if (const GlobalVariable *othergv = dyn_cast<GlobalVariable>(U)) {
+    if (othergv->getName().str() == "llvm.used")
+      return true;
+  }
+
+  if (const Instruction *instr = dyn_cast<Instruction>(U)) {
+    if (instr->getParent() && instr->getParent()->getParent()) {
+      const Function *curFunc = instr->getParent()->getParent();
+      if (oneFunc && (curFunc != oneFunc))
+        return false;
+      oneFunc = curFunc;
+      return true;
+    } else
+      return false;
+  }
+
+  if (const MDNode *md = dyn_cast<MDNode>(U))
+    if (md->hasName() && ((md->getName().str() == "llvm.dbg.gv") ||
+                          (md->getName().str() == "llvm.dbg.sp")))
+      return true;
+
+  for (User::const_use_iterator ui = U->use_begin(), ue = U->use_end();
+       ui != ue; ++ui) {
+    if (usedInOneFunc(*ui, oneFunc) == false)
+      return false;
+  }
+  return true;
+}
+
+// Variables inside a __kernel function not declared with an address space qualifier, 
+// all variables inside non-kernel functions, and all function arguments are in 
+// the __private or private address space
+ void  CWriter::printFunctionPrivateVaraibles(Function& F)
+{
+  // We only care Kernel Function
+  if(!isKernelFunction(&F))
+    return;
+
+  Module* M = F.getParent();
+  if (M && !M->global_empty()) {
+    // Find out if a static global variable can be demoted to Function's scope.
+    // The conditions to check are,
+    // 1. Is the global variable in private address space?
+    // 2. Does it have internal linkage?
+    // 3. Is the global variable referenced only in one function?
+    // FIXME: private linkage should be handled as well
+    for (Module::global_iterator I = M->global_begin(), E = M->global_end();
+         I != E; ++I) {
+      if (I->hasInternalLinkage() &&  I->getType()->getPointerAddressSpace() == 0 &&
+          I->hasName()) {
+        const Function *oneFunc = 0;
+        bool flag = usedInOneFunc(I, oneFunc);
+        if (flag == false || (flag&&!oneFunc))
+            continue;
+        // Not in this Funciton's scope
+        if (F.getName().str()!= oneFunc->getName().str())
+            continue;
+        // Theoretically, an eligible parallel body, e.g OpenCL Kernel, does not have static global
+        // non-constant variables inside. Even it has, we won't update them for the reason
+        // that the occurrence of race condition can cause undefined behavior.
+        // However for emitted OpenCL C Kernel, this happens. For example, Kernel body initiates
+        // an instance of class A, and there is a static variable used to initialize A's members in A's ctors.
+        // Note that it is not the same as tile_static variables which we have implemented correctly.
+        // Take the following two steps to work around,
+        // (1) Declare those variables in private or local address space inside its containing Kernel.
+        //      This is to make Kernel compilation successful. Note that for performance-sensitive
+        //      cases, local space is suggested.
+          // (2) Keep in mind that Kerne's behavior is still undefined if we try to utilize any 
+        //      values from those variables outside Kernel.
+        Out << " /* FIXME: Static global variables inside. Make private instead */\n";
+        Out << " __private ";
+        printType(Out, I->getType()->getElementType(), false, GetValueName(I));
+        printInitializer(I);
+        Out << ";\n";
+      }
+    }
+  }
+}
+
 void CWriter::printFunction(Function &F) {
   /// isStructReturn - Should this function actually return a struct by-value?
   bool isStructReturn = F.hasStructRetAttr();
@@ -2410,7 +2497,9 @@ void CWriter::printFunction(Function &F) {
               GetValueName(F.arg_begin()));
     Out << " = &StructReturn;\n";
   }
-
+  
+  printFunctionPrivateVaraibles(F);
+  
   bool PrintedVar = false;
 
   // print local variable information for the function
