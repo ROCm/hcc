@@ -12,6 +12,7 @@
 5_Data_Cont/5_2_a_v/5_2_3_m/ImplicitSynchronize/OverlappingSynchronize/Test.01/test.cpp
 5_Data_Cont/5_3_c_d/Misc/CopyWithConstObject/test.cpp
 5_Data_Cont/5_3_c_d/AsynCopy/ArrayViewToArrayView/test.cpp
+5_Data_Cont/5_3_c_d/Negative/WrongIteratorPointer/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/data/Test.02/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/value_type/Test.01/test.cpp
 7_para_for_each/ComputeDomainTiled/ThreadGroupCount.02/test.cpp
@@ -27,6 +28,7 @@
 5_Data_Cont/5_2_a_v/5_2_3_m/ImplicitSynchronize/OverlappingSynchronize/Test.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/WithoutDataSource/copy_to/Test.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/value_type/test.cpp
+5_Data_Cont/5_2_a_v/5_2_3_m/Data/Negative/Test.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_2_c/WithoutDataSource/Negative/Test.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_2_c/Test.20/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/StagingArrayToNonContiguousArrayView/test.cpp
@@ -71,6 +73,7 @@
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/Negative/Bounds.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/Negative/Bounds.03/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/Negative/Convenience.02/test.cpp
+5_Data_Cont/5_2_a_v/5_2_5_v_o/section/Reinterpret_As/Negative/ElementType.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/Reinterpret_As/Test.03/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/Reinterpret_As/Test.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/Reinterpret_As/Test.04/test.cpp
@@ -106,8 +109,10 @@
 5_Data_Cont/5_1_array/5_1_3_m/Properties/accl_view/Test.01/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/Properties/extent/Test.01/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/copy_to/Test.03/test.cpp
+5_Data_Cont/5_1_array/5_1_3_m/copy_to/Test.02/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/copy_to/Test.01/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/copy_to/Negative/Test.01/test.cpp
+5_Data_Cont/5_1_array/5_1_3_m/copy_to/Negative/Test.02/test.cpp
 5_Data_Cont/5_1_array/5_1_2_c/CopyConstruct/Test.04/test.cpp
 5_Data_Cont/5_1_array/5_1_2_c/CopyConstruct/Test.03/test.cpp
 5_Data_Cont/5_1_array/5_1_2_c/CopyConstruct/Test.01/test.cpp
