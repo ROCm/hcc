@@ -2138,7 +2138,7 @@ void copy(InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest) {
 template <typename InputIter, typename T>
 void copy(InputIter srcBegin, InputIter srcEnd, array<T, 1>& dest) {
 #ifndef __GPU__
-    if( ( ( srcEnd - srcBegin ) <=0 )||( ( srcEnd - srcBegin ) < dest.get_extent()[0] ))
+    if( ( std::distance(srcBegin,srcEnd) <=0 )||( std::distance(srcBegin,srcEnd) < dest.get_extent()[0] ))
       throw runtime_exception("errorMsg_throw ,copy between different types", 0);
 #endif
     for (int i = 0; i < dest.get_extent()[0]; ++i) {
