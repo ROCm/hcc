@@ -54,15 +54,30 @@ float opencl_fma(float x, float y, float z) {
   return fma(x, y, z);
 }
 
+float opencl_erf(float x) {
+  return erf(x);
+}
+
+
+float opencl_erfc(float x) {
+  return erfc(x);
+}
 
 float opencl_exp(float x) {
   return exp(x);
+}
+
+float opencl_exp10(float x) {
+  return exp10(x);
 }
 
 float opencl_exp2(float x) {
   return exp2(x);
 }
 
+float opencl_expm1(float x) {
+  return expm1(x);
+}
 float opencl_fabs(float x) {
   return fabs(x);
 }
@@ -81,6 +96,10 @@ float opencl_fmin(float x, float y) {
 
 float opencl_fmod(float x, float y) {
   return fmod(x, y);
+}
+
+float opencl_hypot(float x, float y) {
+  return hypot(x, y);
 }
 
 float opencl_ldexp(float x, int exp) {
@@ -107,7 +126,12 @@ float opencl_logb(float x) {
   return logb(x);
 }
 
-float opencl_ilogb(float x) {
+
+float opencl_nextafter(float x, float y) {
+  return nextafter(x, y);
+}
+
+int opencl_ilogb(float x) {
   return ilogb(x);
 }
 
@@ -129,6 +153,10 @@ float opencl_sin(float x) {
 
 float opencl_sinh(float x) {
   return sinh(x);
+}
+
+float opencl_sinpi(float x) {
+  return sinpi(x);
 }
 
 float opencl_sqrt(float x) {
