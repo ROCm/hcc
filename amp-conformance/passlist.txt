@@ -13,6 +13,8 @@
 5_Data_Cont/5_3_c_d/Misc/CopyWithConstObject/test.cpp
 5_Data_Cont/5_3_c_d/AsynCopy/ArrayViewToArrayView/test.cpp
 5_Data_Cont/5_3_c_d/Negative/WrongIteratorPointer/test.cpp
+5_Data_Cont/5_3_c_d/Negative/ConstArray/Test.02/test.cpp
+5_Data_Cont/5_3_c_d/Negative/ConstArray/Test.04/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/data/Test.02/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/value_type/Test.01/test.cpp
 7_para_for_each/ComputeDomainTiled/ThreadGroupCount.02/test.cpp
@@ -43,6 +45,8 @@
 5_Data_Cont/5_3_c_d/SynchronousCopy/ArrayAndIterator/test.cpp
 5_Data_Cont/5_3_c_d/Misc/HigherRank/test.cpp
 5_Data_Cont/5_3_c_d/Misc/CustomIterator/IterToArrayView.02/CpuToCpu/test.cpp
+5_Data_Cont/5_3_c_d/Misc/CustomIterator/IterToArray.01/CpuToCpu/test.cpp
+5_Data_Cont/5_3_c_d/Misc/CustomIterator/IterToArray.01/CpuToGpu/test.cpp
 5_Data_Cont/5_3_c_d/Misc/CopyWithConstObject/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/IteratorToArrayView/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/IteratorToNonContigArrayView/test.cpp
@@ -98,6 +102,7 @@
 5_Data_Cont/5_1_array/5_1_2_c/ExtentOnly/With_Begin_Itr/Test.01/test.cpp
 5_Data_Cont/5_1_array/5_1_2_c/ExtentOnly/With_Begin_End_Itrs/Negative/Test.01/test.cpp
 5_Data_Cont/5_1_array/5_1_3_i/data/Test.05/test.cpp
+5_Data_Cont/5_1_array/5_1_3_i/data/Test.06/test.cpp
 5_Data_Cont/5_1_array/5_1_3_i/Projection/Test.01/test.cpp
 5_Data_Cont/5_1_array/5_1_3_i/Projection/Negative/Test.01/test.cpp
 5_Data_Cont/5_1_array/5_1_3_i/Projection/Negative/Test.02/test.cpp
