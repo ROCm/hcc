@@ -63,7 +63,6 @@ private:
 
 private:
 	int _exit_code;
-    int hack;
 
 	void verify_exit_code() restrict(cpu);
 
