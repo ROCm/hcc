@@ -71,6 +71,36 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
   CHECK_ERROR_GMAC(error_code, "eclGetKernel");
   Concurrency::Serialize s(kernel);
   f.__cxxamp_serialize(s);
+
+  {
+    // C++ AMP specifications
+    // The maximum number of tiles per dimension will be no less than 65535.
+    // The maximum number of threads in a tile will be no less than 1024.
+    // In 3D tiling, the maximal value of D0 will be no less than 64.
+    ecl_accelerator_info accInfo;
+    unsigned number = eclGetAcceleratorInfo(eclGetCurrentAcceleratorId(), &accInfo);
+    #ifdef __GPU__
+    assert(accInfo.maxDimensions >= dim_ext);
+    assert(accInfo.maxSizes);
+    #endif
+    bool is = true;
+    int threads_per_tile = 1;
+    for(int i=0; local_size && i<dim_ext; i++) {
+      threads_per_tile *= local_size[i];
+      // For the following cases, set local_size=NULL and let OpenCL driver arranges it instead
+      //(1) tils number exceeds CL_DEVICE_MAX_WORK_ITEM_SIZES per dimension
+      //(2) threads in a tile exceeds CL_DEVICE_MAX_WORK_ITEM_SIZES
+      //Note that the driver can still handle unregular tile_dim, e.g. tile_dim is undivisble by 2
+      //So skip this condition ((local_size[i]!=1) && (local_size[i] & 1))
+      if(local_size[i] > accInfo.maxSizes[i] ||threads_per_tile >= accInfo.maxSizes[i]) {
+        is=false;
+        break;
+       }
+    }
+    if(!is)
+      local_size = NULL;
+  }
+
   error_code = eclCallNDRange(kernel, dim_ext, NULL,
       ext, local_size);
   if (error_code != eclSuccess) {
