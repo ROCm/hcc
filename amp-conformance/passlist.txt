@@ -82,12 +82,15 @@
 5_Data_Cont/5_2_a_v/5_2_5_v_o/Reinterpret_As/Test.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/Reinterpret_As/Test.04/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/Reinterpret_As/Negative/Test.02/test.cpp
+5_Data_Cont/5_2_a_v/5_2_5_v_o/View_As/Test.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/View_As/Negative/Test.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_2_c/Test.01.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_2_c/Test.01.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_2_c/Test.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_2_c/Test.03/test.cpp
+5_Data_Cont/5_2_a_v/5_2_2_c/Test.05.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_2_c/Test.10/test.cpp
+5_Data_Cont/5_2_a_v/5_2_2_c/Test.11/test.cpp
 5_Data_Cont/5_2_a_v/5_2_2_c/Test.16/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/ImplicitSynchronize/Synchronize/Test.04/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/ImplicitSynchronize/Local/Test.06/test.cpp
