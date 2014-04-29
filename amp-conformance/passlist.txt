@@ -66,6 +66,8 @@
 5_Data_Cont/5_3_c_d/AsynCopy/Iter2ToArrayView/test.cpp
 5_Data_Cont/5_3_c_d/AsynCopy/ArrayViewToIter/test.cpp
 5_Data_Cont/5_3_c_d/AsynCopy/Iter2ToArray/test.cpp
+5_Data_Cont/5_2_a_v/5_2_5_v_o/OverlappingViews/ElementType/Test.02/test.cpp
+5_Data_Cont/5_2_a_v/5_2_5_v_o/OverlappingViews/ElementType/Test.03/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/1d/Nested.03/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/1d/Nested.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/1d/Nested.01/test.cpp
