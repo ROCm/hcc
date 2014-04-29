@@ -39,10 +39,13 @@ class _data {
     _data(const _data<nc_T>& d) restrict(cpu, amp):p_(d.p_) {}
   template <class = typename std::enable_if<!std::is_const<T>::value>::type>
     _data(const _data<const T>& d) restrict(cpu, amp):p_(const_cast<T*>(d.p_)) {}
+  template <typename T2>
+    _data(const _data<T2>& d) restrict(cpu, amp):p_(reinterpret_cast<T *>(d.get())) {}
   __attribute__((annotate("user_deserialize")))
   explicit _data(__global T* t) restrict(cpu, amp) { p_ = t; }
   __global T* get(void) const restrict(cpu, amp) { return p_; }
   __global T* get_mutable(void) const restrict(cpu, amp) { return p_; }
+  __global T* get_data() const { return get(); }
   void reset(__global T *t = NULL) restrict(cpu, amp) { p_ = t; }
  private:
   __global T* p_;
@@ -85,6 +88,7 @@ class _data_host_view {
   typedef typename std::remove_const<T>::type nc_T;
   friend _data_host_view<const T>;
   friend _data_host_view<nc_T>;
+  template <typename T2> friend class _data_host_view;
 
   __attribute__((cpu)) std::shared_ptr<nc_T> gmac_buffer;
   __attribute__((cpu)) std::shared_ptr<cache_state> state_ptr;
@@ -123,6 +127,16 @@ class _data_host_view {
   _data_host_view(const _data_host_view<const T> &other) :
     gmac_buffer(other.gmac_buffer), state_ptr(other.state_ptr),
     home_ptr(const_cast<T*>(other.home_ptr)), buffer_size(other.buffer_size) {}
+
+  template <typename ElementType>
+  _data_host_view(const _data_host_view<ElementType> &other) :
+    gmac_buffer(std::static_pointer_cast<T>(std::static_pointer_cast<void>(other.gmac_buffer))), state_ptr(other.state_ptr),
+    home_ptr(reinterpret_cast<T *>(other.home_ptr)), buffer_size(other.buffer_size) {}
+
+  template <typename ElementType>
+  _data_host_view(const _data_host_view<const ElementType> &other) :
+    gmac_buffer(std::static_pointer_cast<T>(std::static_pointer_cast<void>(other.gmac_buffer))), state_ptr(other.state_ptr),
+    home_ptr(reinterpret_cast<T *>(const_cast<T*>(other.home_ptr))), buffer_size(other.buffer_size) {}
 
   _data_host_view(const _data_host<T> &other) :
     gmac_buffer(other), home_ptr(nullptr), buffer_size(0) {}
@@ -172,6 +186,14 @@ class _data_host_view {
 //Return the home location ptr, synchronizing first if necessary. The pointer
 //returned is mutable, so we set it as host owned. If this is an array or array_view
 //without a host buffer just return a pointer to the gmac buffer.
+  T* get_data() const {
+    if (home_ptr && *state_ptr != GMAC_OWNED) {
+      return home_ptr;
+    } else {
+      return gmac_buffer.get();
+    }
+  }
+
   T* get_mutable() const {
     if (home_ptr) {
       synchronize();

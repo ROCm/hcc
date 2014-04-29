@@ -1676,8 +1676,16 @@ public:
           if( (extent.size() * sizeof(T)) % sizeof(ElementType))
             throw runtime_exception("errorMsg_throw", 0);
 #endif
-          array_view<ElementType, 1> av(Concurrency::extent<1>(size), reinterpret_cast<ElementType*>(cache.get_mutable() + offset + index_base[0]));
-          return av;
+#ifndef __GPU__
+          array_view<ElementType, 1> av(Concurrency::extent<1>(size),
+                                        _data_host_view<ElementType>(cache),
+                                        reinterpret_cast<ElementType*>(p_), (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
+#else
+          array_view<ElementType, 1> av(Concurrency::extent<1>(size),
+                                        _data<ElementType>(cache),
+                                        reinterpret_cast<ElementType*>(p_), (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
+#endif
+         return av;
       }
   template <typename ElementType>
       array_view<const ElementType, 1> reinterpret_as() const restrict(amp,cpu) {
@@ -1686,7 +1694,16 @@ public:
           static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
 #endif
           int size = extent.size() * sizeof(T) / sizeof(ElementType);
-          array_view<const ElementType, 1> av(Concurrency::extent<1>(size), reinterpret_cast<const ElementType*>(cache.get() + offset + index_base[0]));
+
+#ifndef __GPU__
+          array_view<const ElementType, 1> av(Concurrency::extent<1>(size),
+                                              _data_host_view<ElementType>(cache),
+                                              reinterpret_cast<ElementType*>(p_), (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
+#else
+          array_view<const ElementType, 1> av(Concurrency::extent<1>(size),
+                                              _data<ElementType>(cache),
+                                              reinterpret_cast<ElementType*>(p_), (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
+#endif
           return av;
       }
   array_view<T, N> section(const Concurrency::index<N>& idx,
@@ -1727,7 +1744,7 @@ public:
     if( viewExtent.size() > extent.size())
       throw runtime_exception("errorMsg_throw", 0);
 #endif
-    array_view<T, K> av(viewExtent, cache, p_, index_base[0]);
+    array_view<T, K> av(viewExtent, cache, p_, offset + index_base[0]);
     return av;
   }
 
@@ -1738,6 +1755,13 @@ public:
 #ifndef __GPU__
     cache.refresh();
 #endif
+  }
+  // only get data do not synchronize
+  __global const T& get_data(int i0) const restrict(amp,cpu) {
+    static_assert(N == 1, "Rank must be 1");
+    index<1> idx(i0);
+    __global T *ptr = reinterpret_cast<__global T*>(cache.get_data() + offset);
+    return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
   }
   T* data() const restrict(amp,cpu) {
     static_assert(N == 1, "data() is only permissible on array views of rank 1");
@@ -1751,7 +1775,7 @@ private:
   template <typename Q, int K> friend class array;
   template <typename Q, int K> friend class array_view;
 
-  // used by view_as
+  // used by view_as and reinterpret_as
   array_view(const Concurrency::extent<N>& ext, const gmac_buffer_t& cache,
              T *p, int offset) restrict(amp,cpu)
       : extent(ext), cache(cache), offset(offset), p_(p), extent_base(ext) {}
@@ -1905,21 +1929,37 @@ public:
   template <typename ElementType>
     array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu) {
 #ifndef __GPU__
-          static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
-          static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
+      static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
+      static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
 #endif
       int size = extent.size() * sizeof(T) / sizeof(ElementType);
-      array_view<ElementType, 1> av(Concurrency::extent<1>(size), reinterpret_cast<ElementType*>(cache.get_mutable() + offset + index_base[0]));
+#ifndef __GPU__
+      array_view<ElementType, 1> av(Concurrency::extent<1>(size),
+                                    _data_host_view<ElementType>(cache),
+                                    reinterpret_cast<ElementType*>(p_), (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
+#else
+      array_view<ElementType, 1> av(Concurrency::extent<1>(size),
+                                    _data<ElementType>(cache),
+                                    reinterpret_cast<ElementType*>(p_), (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
+#endif
       return av;
     }
   template <typename ElementType>
     array_view<const ElementType, 1> reinterpret_as() const restrict(amp,cpu) {
 #ifndef __GPU__
-          static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
-          static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
+      static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
+      static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
 #endif
       int size = extent.size() * sizeof(T) / sizeof(ElementType);
-      array_view<const ElementType, 1> av(Concurrency::extent<1>(size), reinterpret_cast<const ElementType*>(cache.get() + offset + index_base[0]));
+#ifndef __GPU__
+      array_view<const ElementType, 1> av(Concurrency::extent<1>(size),
+                                          _data_host_view<ElementType>(cache),
+                                          reinterpret_cast<ElementType*>(p_), (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
+#else
+      array_view<const ElementType, 1> av(Concurrency::extent<1>(size),
+                                          _data<ElementType>(cache),
+                                          reinterpret_cast<ElementType*>(p_), (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
+#endif
       return av;
     }
   array_view<const T, N> section(const Concurrency::index<N>& idx,
@@ -1953,7 +1993,7 @@ public:
   template <int K>
     array_view<const T, K> view_as(Concurrency::extent<K> viewExtent) const restrict(amp,cpu) {
       static_assert(N == 1, "view_as is only permissible on array views of rank 1");
-      array_view<const T, K> av(viewExtent, cache, p_, offset);
+      array_view<const T, K> av(viewExtent, cache, p_, offset + index_base[0]);
       return av;
     }
 
@@ -1964,7 +2004,13 @@ public:
   completion_future synchronize_to_async(const accelerator_view& av) const;
 
   void refresh() const;
-
+  // only get data do not synchronize
+  __global const T& get_data(int i0) const restrict(amp,cpu) {
+    static_assert(N == 1, "Rank must be 1");
+    index<1> idx(i0);
+    __global T *ptr = reinterpret_cast<__global T*>(cache.get_data() + offset);
+    return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
+  }
   const T* data() const restrict(amp,cpu) {
     static_assert(N == 1, "data() is only permissible on array views of rank 1");
     return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
@@ -1975,12 +2021,12 @@ private:
   template <typename K, int Q> friend struct projection_helper;
   template <typename Q, int K> friend class array;
   template <typename Q, int K> friend class array_view;
-/*
-  // used by view_as
+
+  // used by view_as and reinterpret_as
   array_view(const Concurrency::extent<N>& ext, const gmac_buffer_t& cache,
              T *p, int offset) restrict(amp,cpu)
       : extent(ext), cache(cache), offset(offset), p_(p), extent_base(ext) {}
-*/
+
   // used by section and projection
   array_view(const Concurrency::extent<N>& ext_now,
              const Concurrency::extent<N>& ext_b,
@@ -2190,10 +2236,11 @@ void copy(InputIter srcBegin, array<T, N>& dest) {
 template <typename OutputIter, typename T>
 void copy(const array_view<T, 1> &src, OutputIter destBegin) {
     for (int i = 0; i < src.get_extent()[0]; ++i) {
-        *destBegin = (src[i]);
+        *destBegin = (src.get_data(i));
         destBegin++;
     }
 }
+
 template <typename OutputIter, typename T, int N>
 void copy(const array_view<T, N> &src, OutputIter destBegin) {
     int adv = src.get_extent().size() / src.get_extent()[0];
