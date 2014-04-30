@@ -34,11 +34,11 @@ runall_result test_main()
     const int m = 100, n = 80, o = 10;
     const int size = m * n * o;
 
-    vector<const int> vec1(size);
+    vector<int> vec1(size);
     Fill<int>(vec1.data(), size);
-    vector<const int> vec2(vec1);
+    vector<int> vec2(vec1);
 
-    array_view<const int, 3> av1(m, n, o, vec1);
+    array_view<int, 3> av1(m, n, o, vec1);
     array_view<int, 3> av2(m, n, o, vec2);
 
     if(m != av1.get_extent()[0]) // Verify extent

@@ -1328,10 +1328,20 @@ public:
   access_type get_cpu_access_type() const {return cpu_access_type;}
 
   __global T& operator[](const index<N>& idx) restrict(amp,cpu) {
+#ifndef __GPU__
+      if(pav && (pav->get_accelerator() == accelerator(accelerator::gpu_accelerator))) {
+          throw runtime_exception("The array is not accessible on CPU.", 0);
+      }
+#endif
       __global T *ptr = reinterpret_cast<__global T*>(m_device.get());
       return ptr[amp_helper<N, index<N>, Concurrency::extent<N> >::flatten(idx, extent)];
   }
   __global const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
+#ifndef __GPU__
+      if(pav && (pav->get_accelerator() == accelerator(accelerator::gpu_accelerator))) {
+          throw runtime_exception("The array is not accessible on CPU.", 0);
+      }
+#endif
       __global T *ptr = reinterpret_cast<__global T*>(m_device.get());
       return ptr[amp_helper<N, index<N>, Concurrency::extent<N> >::flatten(idx, extent)];
   }
@@ -1823,7 +1833,7 @@ public:
   array_view(const array<T,N>& src) restrict(amp,cpu)
       : extent(src.extent), p_(NULL), cache(src.internal()), offset(0),
         index_base(), extent_base(src.extent) {}
-  template <typename Container, class = typename std::enable_if<!std::is_array<Container>::value>::type>
+  template <typename Container, class = typename std::enable_if<!std::is_array<Container>::value && !std::is_pointer<Container>::value>::type>
     array_view(const extent<N>& extent, const Container& src)
         : array_view(extent, src.data()) {}
     template <typename Container, class = typename std::enable_if<!std::is_array<Container>::value>::type>
@@ -2024,7 +2034,7 @@ private:
 
   // used by view_as and reinterpret_as
   array_view(const Concurrency::extent<N>& ext, const gmac_buffer_t& cache,
-             T *p, int offset) restrict(amp,cpu)
+             value_type *p, int offset) restrict(amp,cpu)
       : extent(ext), cache(cache), offset(offset), p_(p), extent_base(ext) {}
 
   // used by section and projection
@@ -2184,7 +2194,7 @@ void copy(InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest) {
 template <typename InputIter, typename T>
 void copy(InputIter srcBegin, InputIter srcEnd, array<T, 1>& dest) {
 #ifndef __GPU__
-    if( ( ( srcEnd - srcBegin ) <=0 )||( ( srcEnd - srcBegin ) < dest.get_extent()[0] ))
+    if( ( std::distance(srcBegin,srcEnd) <=0 )||( std::distance(srcBegin,srcEnd) < dest.get_extent()[0] ))
       throw runtime_exception("errorMsg_throw ,copy between different types", 0);
 #endif
     for (int i = 0; i < dest.get_extent()[0]; ++i) {
@@ -2279,6 +2289,12 @@ template <typename T, int N>
 completion_future copy_async(const array<T, N>& src, array<T, N>& dest) {
     return __amp_copy_async_impl(src, dest);
 }
+
+template <typename T, int N>
+completion_future copy_async(const array<T, N>& src, const array<T, N>& dest) {
+    return __amp_copy_async_impl(src, dest);
+}
+
 template <typename T, int N>
 completion_future copy_async(const array<T, N>& src, const array_view<T, N>& dest) {
     return __amp_copy_async_impl(src, dest);
@@ -2289,6 +2305,12 @@ template <typename T, int N>
 completion_future copy_async(const array_view<const T, N>& src, array<T, N>& dest) {
     return __amp_copy_async_impl(src, dest);
 }
+
+template <typename T, int N>
+completion_future copy_async(const array_view<const T, N>& src, const array<T, N>& dest) {
+    return __amp_copy_async_impl(src, dest);
+}
+
 template <typename T, int N>
 completion_future copy_async(const array_view<const T, N>& src, const array_view<T, N>& dest) {
     return __amp_copy_async_impl(src, dest);
@@ -2299,6 +2321,12 @@ template <typename T, int N>
 completion_future copy_async(const array_view<T, N>& src, array<T, N>& dest) {
     return __amp_copy_async_impl(src, dest);
 }
+
+template <typename T, int N>
+completion_future copy_async(const array_view<T, N>& src, const array<T, N>& dest) {
+    return __amp_copy_async_impl(src, dest);
+}
+
 template <typename T, int N>
 completion_future copy_async(const array_view<T, N>& src, const array_view<T, N>& dest) {
     return __amp_copy_async_impl(src, dest);
