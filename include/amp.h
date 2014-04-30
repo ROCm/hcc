@@ -1826,7 +1826,7 @@ public:
   array_view(const array<T,N>& src) restrict(amp,cpu)
       : extent(src.extent), p_(NULL), cache(src.internal()), offset(0),
         index_base(), extent_base(src.extent) {}
-  template <typename Container, class = typename std::enable_if<!std::is_array<Container>::value>::type>
+  template <typename Container, class = typename std::enable_if<!std::is_array<Container>::value && !std::is_pointer<Container>::value>::type>
     array_view(const extent<N>& extent, const Container& src)
         : array_view(extent, src.data()) {}
     template <typename Container, class = typename std::enable_if<!std::is_array<Container>::value>::type>
@@ -2021,7 +2021,7 @@ private:
 
   // used by view_as and reinterpret_as
   array_view(const Concurrency::extent<N>& ext, const gmac_buffer_t& cache,
-             T *p, int offset) restrict(amp,cpu)
+             value_type *p, int offset) restrict(amp,cpu)
       : extent(ext), cache(cache), offset(offset), p_(p), extent_base(ext) {}
 
   // used by section and projection
