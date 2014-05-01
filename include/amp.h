@@ -1453,11 +1453,19 @@ public:
     }
   template <int K> array_view<T, K>
       view_as(const Concurrency::extent<K>& viewExtent) restrict(amp,cpu) {
+#ifndef __GPU__
+    if( viewExtent.size() > extent.size())
+      throw runtime_exception("errorMsg_throw", 0);
+#endif
           array_view<T, 1> av(Concurrency::extent<1>(viewExtent.size()), data());
           return av.view_as(viewExtent);
       }
   template <int K> array_view<const T, K>
       view_as(const Concurrency::extent<K>& viewExtent) const restrict(amp,cpu) {
+#ifndef __GPU__
+    if( viewExtent.size() > extent.size())
+      throw runtime_exception("errorMsg_throw", 0);
+#endif
           const array_view<T, 1> av(Concurrency::extent<1>(viewExtent.size()), data());
           return av.view_as(viewExtent);
       }
@@ -1942,6 +1950,10 @@ public:
   template <int K>
     array_view<const T, K> view_as(Concurrency::extent<K> viewExtent) const restrict(amp,cpu) {
       static_assert(N == 1, "view_as is only permissible on array views of rank 1");
+#ifndef __GPU__
+    if( viewExtent.size() > extent.size())
+      throw runtime_exception("errorMsg_throw", 0);
+#endif
       array_view<const T, K> av(viewExtent, cache, p_, offset);
       return av;
     }
