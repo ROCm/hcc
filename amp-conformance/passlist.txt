@@ -1,3 +1,7 @@
+7_para_for_each/ComputeDomainTiled/Grouped.02/test.cpp
+7_para_for_each/ComputeDomainTiled/Grouped.01/test.cpp
+7_para_for_each/AcceleratorViewSelection/ExplicitAcceleratorArg/test.cpp
+5_Data_Cont/5_2_a_v/5_2_2_c/WithoutDataSource/Test.01/test.cpp
 7_para_for_each/AcceleratorViewSelection/Negative/UnsupportedAccelerator/test.cpp
 7_para_for_each/7_1_Capt_Data_in_the_Kern_Func_Obje/Bool.01/test.cpp
 7_para_for_each/ComputeDomainTiled/ThreadGroupCount.01/test.cpp
@@ -12,6 +16,9 @@
 5_Data_Cont/5_2_a_v/5_2_3_m/ImplicitSynchronize/OverlappingSynchronize/Test.01/test.cpp
 5_Data_Cont/5_3_c_d/Misc/CopyWithConstObject/test.cpp
 5_Data_Cont/5_3_c_d/AsynCopy/ArrayViewToArrayView/test.cpp
+5_Data_Cont/5_3_c_d/Negative/WrongIteratorPointer/test.cpp
+5_Data_Cont/5_3_c_d/Negative/ConstArray/Test.02/test.cpp
+5_Data_Cont/5_3_c_d/Negative/ConstArray/Test.04/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/data/Test.02/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/value_type/Test.01/test.cpp
 7_para_for_each/ComputeDomainTiled/ThreadGroupCount.02/test.cpp
@@ -27,6 +34,7 @@
 5_Data_Cont/5_2_a_v/5_2_3_m/ImplicitSynchronize/OverlappingSynchronize/Test.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/WithoutDataSource/copy_to/Test.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/value_type/test.cpp
+5_Data_Cont/5_2_a_v/5_2_3_m/Data/Negative/Test.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_2_c/WithoutDataSource/Negative/Test.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_2_c/Test.20/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/StagingArrayToNonContiguousArrayView/test.cpp
@@ -41,6 +49,8 @@
 5_Data_Cont/5_3_c_d/SynchronousCopy/ArrayAndIterator/test.cpp
 5_Data_Cont/5_3_c_d/Misc/HigherRank/test.cpp
 5_Data_Cont/5_3_c_d/Misc/CustomIterator/IterToArrayView.02/CpuToCpu/test.cpp
+5_Data_Cont/5_3_c_d/Misc/CustomIterator/IterToArray.01/CpuToCpu/test.cpp
+5_Data_Cont/5_3_c_d/Misc/CustomIterator/IterToArray.01/CpuToGpu/test.cpp
 5_Data_Cont/5_3_c_d/Misc/CopyWithConstObject/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/IteratorToArrayView/test.cpp
 5_Data_Cont/5_3_c_d/SynchronousCopy/IteratorToNonContigArrayView/test.cpp
@@ -64,6 +74,8 @@
 5_Data_Cont/5_3_c_d/AsynCopy/Iter2ToArrayView/test.cpp
 5_Data_Cont/5_3_c_d/AsynCopy/ArrayViewToIter/test.cpp
 5_Data_Cont/5_3_c_d/AsynCopy/Iter2ToArray/test.cpp
+5_Data_Cont/5_2_a_v/5_2_5_v_o/OverlappingViews/ElementType/Test.02/test.cpp
+5_Data_Cont/5_2_a_v/5_2_5_v_o/OverlappingViews/ElementType/Test.03/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/1d/Nested.03/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/1d/Nested.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/1d/Nested.01/test.cpp
@@ -71,16 +83,20 @@
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/Negative/Bounds.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/Negative/Bounds.03/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/Negative/Convenience.02/test.cpp
+5_Data_Cont/5_2_a_v/5_2_5_v_o/section/Reinterpret_As/Negative/ElementType.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/Reinterpret_As/Test.03/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/Reinterpret_As/Test.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/Reinterpret_As/Test.04/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/Reinterpret_As/Negative/Test.02/test.cpp
+5_Data_Cont/5_2_a_v/5_2_5_v_o/View_As/Test.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/View_As/Negative/Test.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_2_c/Test.01.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_2_c/Test.01.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_2_c/Test.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_2_c/Test.03/test.cpp
+5_Data_Cont/5_2_a_v/5_2_2_c/Test.05.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_2_c/Test.10/test.cpp
+5_Data_Cont/5_2_a_v/5_2_2_c/Test.11/test.cpp
 5_Data_Cont/5_2_a_v/5_2_2_c/Test.16/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/ImplicitSynchronize/Synchronize/Test.04/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/ImplicitSynchronize/Local/Test.06/test.cpp
@@ -97,6 +113,8 @@
 5_Data_Cont/5_1_array/5_1_3_i/data/Test.05/test.cpp
 5_Data_Cont/5_1_array/5_1_3_i/data/Test.06/test.cpp
 5_Data_Cont/5_1_array/5_1_3_i/Projection/Test.01/test.cpp
+5_Data_Cont/5_1_array/5_1_3_i/Projection/Negative/Test.01/test.cpp
+5_Data_Cont/5_1_array/5_1_3_i/Projection/Negative/Test.02/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/Operators/Assignment/Test.03/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/Operators/Assignment/Test.01/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/Properties/associated_accvl_view/Test.03/test.cpp
@@ -105,8 +123,10 @@
 5_Data_Cont/5_1_array/5_1_3_m/Properties/accl_view/Test.01/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/Properties/extent/Test.01/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/copy_to/Test.03/test.cpp
+5_Data_Cont/5_1_array/5_1_3_m/copy_to/Test.02/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/copy_to/Test.01/test.cpp
 5_Data_Cont/5_1_array/5_1_3_m/copy_to/Negative/Test.01/test.cpp
+5_Data_Cont/5_1_array/5_1_3_m/copy_to/Negative/Test.02/test.cpp
 5_Data_Cont/5_1_array/5_1_2_c/CopyConstruct/Test.04/test.cpp
 5_Data_Cont/5_1_array/5_1_2_c/CopyConstruct/Test.03/test.cpp
 5_Data_Cont/5_1_array/5_1_2_c/CopyConstruct/Test.01/test.cpp
@@ -189,6 +209,8 @@
 4_Basic_Data_Elmnts/4_2_extent/4_2_4_ops/Arithmetic/Test.01/test.cpp
 4_Basic_Data_Elmnts/4_2_extent/4_2_3_m/size/Test.01/test.cpp
 4_Basic_Data_Elmnts/4_2_extent/4_2_3_m/size/Test.02/test.cpp
+4_Basic_Data_Elmnts/4_2_extent/4_2_3_m/size/Negative/Test.02/test.cpp
+4_Basic_Data_Elmnts/4_2_extent/4_2_3_m/size/Negative/Test.04/test.cpp
 4_Basic_Data_Elmnts/4_2_extent/4_2_3_m/tile/pad.02/test.cpp
 4_Basic_Data_Elmnts/4_2_extent/4_2_3_m/tile/Negative/pad.01/test.cpp
 4_Basic_Data_Elmnts/4_2_extent/4_2_3_m/tile/Negative/tile.02/test.cpp
