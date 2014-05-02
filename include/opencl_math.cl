@@ -30,6 +30,10 @@ float opencl_cos(float x) {
   return cos(x);
 }
 
+float opencl_cospi(float x) {
+  return cospi(x);
+}
+
 float opencl_cosh(float x) {
   return cosh(x);
 }
@@ -126,13 +130,24 @@ float opencl_logb(float x) {
   return logb(x);
 }
 
-
 float opencl_nextafter(float x, float y) {
   return nextafter(x, y);
 }
 
 int opencl_ilogb(float x) {
   return ilogb(x);
+}
+
+int opencl_isfinite(float x) {
+  return isfinite(x);
+}
+
+int opencl_isinf(float x) {
+  return isinf(x);
+}
+
+int opencl_isnormal(float x) {
+  return isnormal(x);
 }
 
 float opencl_pow(float x, float y) {
@@ -145,6 +160,14 @@ float opencl_remainder(float x, float y) {
 
 float opencl_round(float x) {
   return round(x);
+}
+
+float opencl_rsqrt(float x) {
+  return rsqrt(x);
+}
+
+int opencl_signbit(float x) {
+  return signbit(x);
 }
 
 float opencl_sin(float x) {

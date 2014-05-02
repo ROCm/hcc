@@ -92,7 +92,7 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
       //(2) threads in a tile exceeds CL_DEVICE_MAX_WORK_ITEM_SIZES
       //Note that the driver can still handle unregular tile_dim, e.g. tile_dim is undivisble by 2
       //So skip this condition ((local_size[i]!=1) && (local_size[i] & 1))
-      if(local_size[i] > accInfo.maxSizes[i] ||threads_per_tile >= accInfo.maxSizes[i]) {
+      if(local_size[i] > accInfo.maxSizes[i] ||threads_per_tile > accInfo.maxSizes[i]) {
         is=false;
         break;
        }
