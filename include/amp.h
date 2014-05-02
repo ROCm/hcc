@@ -1774,6 +1774,13 @@ public:
     cache.refresh();
 #endif
   }
+  // only get data do not synchronize
+  __global const T& get_data(int i0) const restrict(amp,cpu) {
+    static_assert(N == 1, "Rank must be 1");
+    index<1> idx(i0);
+    __global T *ptr = reinterpret_cast<__global T*>(cache.get_data() + offset);
+    return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
+  }
   T* data() const restrict(amp,cpu) {
     static_assert(N == 1, "data() is only permissible on array views of rank 1");
     return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
@@ -2019,7 +2026,13 @@ public:
   completion_future synchronize_to_async(const accelerator_view& av) const;
 
   void refresh() const;
-
+  // only get data do not synchronize
+  __global const T& get_data(int i0) const restrict(amp,cpu) {
+    static_assert(N == 1, "Rank must be 1");
+    index<1> idx(i0);
+    __global T *ptr = reinterpret_cast<__global T*>(cache.get_data() + offset);
+    return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
+  }
   const T* data() const restrict(amp,cpu) {
     static_assert(N == 1, "data() is only permissible on array views of rank 1");
     return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
@@ -2245,10 +2258,11 @@ void copy(InputIter srcBegin, array<T, N>& dest) {
 template <typename OutputIter, typename T>
 void copy(const array_view<T, 1> &src, OutputIter destBegin) {
     for (int i = 0; i < src.get_extent()[0]; ++i) {
-        *destBegin = (src[i]);
+        *destBegin = (src.get_data(i));
         destBegin++;
     }
 }
+
 template <typename OutputIter, typename T, int N>
 void copy(const array_view<T, N> &src, OutputIter destBegin) {
     int adv = src.get_extent().size() / src.get_extent()[0];

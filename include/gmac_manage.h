@@ -45,6 +45,7 @@ class _data {
   explicit _data(__global T* t) restrict(cpu, amp) { p_ = t; }
   __global T* get(void) const restrict(cpu, amp) { return p_; }
   __global T* get_mutable(void) const restrict(cpu, amp) { return p_; }
+  __global T* get_data() const { return get(); }
   void reset(__global T *t = NULL) restrict(cpu, amp) { p_ = t; }
  private:
   __global T* p_;
@@ -87,6 +88,7 @@ class _data_host_view {
   typedef typename std::remove_const<T>::type nc_T;
   friend _data_host_view<const T>;
   friend _data_host_view<nc_T>;
+  template <typename T2> friend class _data_host_view;
 
   __attribute__((cpu)) std::shared_ptr<nc_T> gmac_buffer;
   __attribute__((cpu)) std::shared_ptr<cache_state> state_ptr;
@@ -196,6 +198,14 @@ class _data_host_view {
 //Return the home location ptr, synchronizing first if necessary. The pointer
 //returned is mutable, so we set it as host owned. If this is an array or array_view
 //without a host buffer just return a pointer to the gmac buffer.
+  T* get_data() const {
+    if (home_ptr && *state_ptr != GMAC_OWNED) {
+      return home_ptr;
+    } else {
+      return gmac_buffer.get();
+    }
+  }
+
   T* get_mutable() const {
     if (home_ptr) {
       synchronize();
