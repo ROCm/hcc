@@ -96,6 +96,18 @@ class _data_host_view {
   __attribute__((cpu)) size_t buffer_size;
 
  public:
+  std::shared_ptr<nc_T> get_gmac_buffer() const { return gmac_buffer; }
+  T *get_home_ptr() const {
+    if (home_ptr) {
+      synchronize();
+      *state_ptr = HOST_OWNED;
+      return home_ptr;
+    }
+    return nullptr;
+  }
+  std::shared_ptr<cache_state> get_state_ptr() const { return state_ptr; }
+  size_t get_buffer_size() const { return buffer_size; }
+
   _data_host_view(nc_T* cache, T* home, size_t size) :
    gmac_buffer(cache), home_ptr(home), state_ptr(new cache_state), buffer_size(size) {
     *state_ptr = HOST_OWNED;
@@ -130,13 +142,13 @@ class _data_host_view {
 
   template <typename ElementType>
   _data_host_view(const _data_host_view<ElementType> &other) :
-    gmac_buffer(std::static_pointer_cast<T>(std::static_pointer_cast<void>(other.gmac_buffer))), state_ptr(other.state_ptr),
-    home_ptr(reinterpret_cast<T *>(other.home_ptr)), buffer_size(other.buffer_size) {}
+    gmac_buffer(std::static_pointer_cast<T>(std::static_pointer_cast<void>(other.get_gmac_buffer()))), state_ptr(other.get_state_ptr()),
+    home_ptr(reinterpret_cast<T *>(other.get_home_ptr())), buffer_size(other.get_buffer_size()) {}
 
   template <typename ElementType>
   _data_host_view(const _data_host_view<const ElementType> &other) :
-    gmac_buffer(std::static_pointer_cast<T>(std::static_pointer_cast<void>(other.gmac_buffer))), state_ptr(other.state_ptr),
-    home_ptr(reinterpret_cast<T *>(const_cast<T*>(other.home_ptr))), buffer_size(other.buffer_size) {}
+    gmac_buffer(std::static_pointer_cast<T>(std::static_pointer_cast<void>(other.get_gmac_buffer()))), state_ptr(other.get_state_ptr()),
+    home_ptr(reinterpret_cast<T *>(const_cast<T*>(other.get_home_ptr()))), buffer_size(other.get_buffer_size()) {}
 
   _data_host_view(const _data_host<T> &other) :
     gmac_buffer(other), home_ptr(nullptr), buffer_size(0) {}

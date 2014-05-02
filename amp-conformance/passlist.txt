@@ -75,6 +75,8 @@
 5_Data_Cont/5_3_c_d/AsynCopy/Iter2ToArrayView/test.cpp
 5_Data_Cont/5_3_c_d/AsynCopy/ArrayViewToIter/test.cpp
 5_Data_Cont/5_3_c_d/AsynCopy/Iter2ToArray/test.cpp
+5_Data_Cont/5_2_a_v/5_2_5_v_o/OverlappingViews/ElementType/Test.02/test.cpp
+5_Data_Cont/5_2_a_v/5_2_5_v_o/OverlappingViews/ElementType/Test.03/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/1d/Nested.03/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/1d/Nested.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/section/1d/Nested.01/test.cpp
@@ -190,6 +192,7 @@
 5_Data_Cont/5_1_array/5_1_4_v_o/section/Negative/Convenience.02/test.cpp
 5_Data_Cont/5_1_array/5_1_4_v_o/section/Negative/Test.01/test.cpp
 5_Data_Cont/5_1_array/5_1_4_v_o/view_as/Test.04/test.cpp
+5_Data_Cont/5_1_array/5_1_4_v_o/view_as/Negative/Test.01/test.cpp
 5_Data_Cont/5_1_array/5_1_4_v_o/reinterpret_As/Test.03/test.cpp
 5_Data_Cont/5_1_array/5_1_4_v_o/reinterpret_As/Test.02/test.cpp
 5_Data_Cont/5_1_array/5_1_4_v_o/reinterpret_As/Test.01.01/test.cpp

@@ -13,6 +13,7 @@
   extern "C" float opencl_cbrt(float x);
   extern "C" float opencl_ceil(float x);
   extern "C" float opencl_copysign(float x, float y);
+  extern "C" float opencl_cospi(float x);
   extern "C" float opencl_erf(float x);
   extern "C" float opencl_erfc(float x);
   extern "C" float opencl_exp(float x);
@@ -26,8 +27,11 @@
   extern "C" float opencl_fmax(float x, float y);
   extern "C" float opencl_fmin(float x, float y);
   extern "C" float opencl_fmod(float x, float y);
+  extern "C" int opencl_isinf(float x);
+  extern "C" int opencl_isfinite(float x);
   extern "C" int opencl_ilogb(float x);
   extern "C" int opencl_isnan(float x);
+  extern "C" int opencl_isnormal(float x);
   extern "C" float opencl_ldexp(float x, int exp);
   extern "C" float opencl_log(float x);
   extern "C" float opencl_log2(float x);
@@ -41,14 +45,17 @@
   extern "C" float opencl_pow(float x, float y);
   extern "C" float opencl_round(float x);
   extern "C" float opencl_remainder(float x, float y);
+  extern "C" float opencl_rsqrt(float x);
   extern "C" float opencl_sin(float x);
   extern "C" float opencl_sinh(float x);
+  extern "C" int   opencl_signbit(float x);
   extern "C" float opencl_sinpi(float x);
   extern "C" float opencl_sqrt(float x);
   extern "C" float opencl_tan(float x);
   extern "C" float opencl_tanh(float x);
   extern "C" float opencl_tgamma(float x);
   extern "C" float opencl_trunc(float x);
+
 #endif
 
 namespace Concurrency {
@@ -277,6 +284,22 @@ namespace fast_math {
     #endif
   }
 
+  int isfinite(float x) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_isfinite(x);
+    #else
+      return ::isfinite(x);
+    #endif
+  }
+
+  int isinf(float x) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_isinf(x);
+    #else
+      return ::isinf(x);
+    #endif
+  }
+
   int isnan(float x) restrict(amp, cpu) {
     #ifdef __GPU__
       return opencl_isnan(x);
@@ -381,6 +404,22 @@ namespace fast_math {
     #endif
   }
 
+  float  rsqrt(float x) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_rsqrt(x);
+    #else
+      return 1 / (::sqrt(x));
+    #endif
+  }
+
+  float  rsqrtf(float x) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_rsqrt(x);
+    #else
+      return 1 / (::sqrt(x));
+    #endif
+  }
+
   float sin(float x) restrict(amp, cpu) {
     #ifdef __GPU__
       return opencl_sin(x);
@@ -394,6 +433,22 @@ namespace fast_math {
       return opencl_sin(x);
     #else
       return ::sinf(x);
+    #endif
+  }
+
+  int signbit(float x) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_signbit(x);
+    #else
+      return ::signbit(x);
+    #endif
+  }
+
+  int signbitf(float x) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_signbit(x);
+    #else
+      return ::signbit(x);
     #endif
   }
 
@@ -594,6 +649,22 @@ namespace fast_math {
     #endif
   }
 
+  float cospi(float x) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_cospi(x);
+    #else
+      return ::cos(M_PI * x);
+    #endif
+  }
+
+  float cospif(float x) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_cospi(x);
+    #else
+      return ::cos(M_PI * x);
+    #endif
+  }
+
   float erf(float x) restrict(amp, cpu) {
     #ifdef __GPU__
       return opencl_erf(x);
@@ -722,6 +793,14 @@ namespace fast_math {
     #endif
   }
 
+  int isnormal(float x) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_isnormal(x);
+    #else
+      return ::isnormal(x);
+    #endif
+  }
+
   float log1p(float x) restrict(amp, cpu) {
     #ifdef __GPU__
       return opencl_log1p(x);
@@ -761,11 +840,28 @@ namespace fast_math {
       return ::nextafter(x, y);
     #endif
   }
+
   float hypotf(float x, float y) restrict(amp, cpu) {
     #ifdef __GPU__
       return opencl_hypot(x, y);
     #else
       return ::hypotf(x, y);
+    #endif
+  }
+
+  float rcbrt(float x) restrict(amp,cpu) {
+    #ifdef __GPU__
+      return 1 / opencl_cbrt(x);
+    #else
+      return 1 / (::cbrt(x));
+    #endif
+  }
+
+  float rcbrtf(float x) restrict(amp,cpu) {
+    #ifdef __GPU__
+      return 1 / opencl_cbrt(x);
+    #else
+      return 1 / (::cbrt(x));
     #endif
   }
 
@@ -801,7 +897,31 @@ namespace fast_math {
     #endif
   }
 
+  float scalbn(float x, int exp) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_ldexp(x, exp);
+    #else
+      return ::scalbn(x, exp);
+    #endif
+  }
+
+  float scalbnf(float x, int exp) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_ldexp(x, exp);
+    #else
+      return ::scalbn(x, exp);
+    #endif
+  }
+
   float sinpi(float x) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_sinpi(x);
+    #else
+      return ::sin(M_PI * x);
+    #endif
+  }
+
+  float sinpif(float x) restrict(amp, cpu) {
     #ifdef __GPU__
       return opencl_sinpi(x);
     #else
@@ -857,11 +977,18 @@ namespace fast_math {
   using fast_math::log2;
   using fast_math::log2f;
 
+  using fast_math::isinf;
+
+  using fast_math::isfinite;
+
   using fast_math::pow;
   using fast_math::powf;
 
   using fast_math::round;
   using fast_math::roundf;
+
+  using fast_math::signbit;
+  using fast_math::signbitf;
 
   using fast_math::sin;
   using fast_math::sinf;
@@ -871,6 +998,9 @@ namespace fast_math {
 
   using fast_math::sqrt;
   using fast_math::sqrtf;
+
+  using fast_math::rsqrt;
+  using fast_math::rsqrtf;
 
   using fast_math::tan;
   using fast_math::tanf;
