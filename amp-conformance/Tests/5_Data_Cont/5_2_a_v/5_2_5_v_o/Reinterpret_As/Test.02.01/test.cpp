@@ -38,7 +38,7 @@ int main()
     std::vector<int> results_v(v.size());
     array_view<int, 1> results(static_cast<int>(results_v.size()), results_v);
     parallel_for_each(av_float.get_extent(), [=](index<1> i) __GPU {
-        array_view<const int, 1> av_int = av_float.reinterpret_as<int>();
+        array_view<const int, 1> av_int = av_float.reinterpret_as<const int>();
         results[i] = av_int[i];
     });
     

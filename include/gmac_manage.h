@@ -142,7 +142,7 @@ class _data_host_view {
 
   template <typename ElementType>
   _data_host_view(const _data_host_view<ElementType> &other) :
-    gmac_buffer(std::static_pointer_cast<T>(std::static_pointer_cast<void>(other.get_gmac_buffer()))), state_ptr(other.get_state_ptr()),
+    gmac_buffer(std::static_pointer_cast<nc_T>(std::static_pointer_cast<void>(other.get_gmac_buffer()))), state_ptr(other.get_state_ptr()),
     home_ptr(reinterpret_cast<T *>(other.get_home_ptr())), buffer_size(other.get_buffer_size()) {}
 
   template <typename ElementType>

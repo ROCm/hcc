@@ -27,6 +27,8 @@
 7_para_for_each/ComputeDomainTiled/Negative/NegGrouped.06/test.cpp
 7_para_for_each/ComputeDomainTiled/Negative/NegGrouped.07/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/Reinterpret_As/Test.01.01/test.cpp
+5_Data_Cont/5_2_a_v/5_2_5_v_o/Reinterpret_As/Test.02/test.cpp
+5_Data_Cont/5_2_a_v/5_2_5_v_o/Reinterpret_As/Test.02.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_2_c/Test.20/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/Destructor/Test.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/Destructor/Test.01/test.cpp
