@@ -30,7 +30,7 @@ class myVecAdd {
   Concurrency::array<int>& c_;
 };
 void bar(void) restrict(amp,cpu) {
-  int foo = reinterpret_cast<intptr_t>(&myVecAdd::__cxxamp_trampoline);
+  int* foo = reinterpret_cast<int*>(&myVecAdd::__cxxamp_trampoline);
 }
 #ifndef __GPU__
 TEST(Design, Final) {

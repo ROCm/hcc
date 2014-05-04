@@ -1596,7 +1596,8 @@ public:
   explicit array_view(int e0, int e1, int e2)
       : array_view(Concurrency::extent<3>(e0, e1, e2))
   { static_assert(N == 3, "Rank must be 3"); }
-
+  // A read-write array_view cannot be copy constructed from a const array_view
+#if 0
   template <class = typename std::enable_if<std::is_const<T>::value>::type>
     array_view(const array_view<nc_T, N>& other) restrict(amp,cpu) : extent(other.extent),
       p_(other.p_), cache(other.cache), offset(other.offset), index_base(other.index_base),
@@ -1611,6 +1612,7 @@ public:
     p_(const_cast<T*>(other.p_)), cache(other.cache), offset(other.offset), index_base(other.index_base),
     extent_base(other.extent_base) {
     }
+#endif
    array_view(const array_view& other) restrict(amp,cpu) : extent(other.extent),
     p_(other.p_), cache(other.cache), offset(other.offset), index_base(other.index_base),
     extent_base(other.extent_base) {}
@@ -1625,6 +1627,8 @@ public:
       }
       return *this;
   }
+  // These codes are not C++AMP Spec
+ #if 0
   array_view& operator=(const array_view<const T,N>& other) restrict(amp,cpu) {
     extent = other.extent;
     p_ = const_cast<T*>(other.p_);
@@ -1634,7 +1638,7 @@ public:
     offset = other.offset;
     return *this;
   }
-
+#endif
   void copy_to(array<T,N>& dest) const {
 #ifndef __GPU__
       for(int i= 0 ;i< N;i++)
@@ -1684,7 +1688,7 @@ public:
   }
 
   template <typename ElementType>
-      array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu) {
+      array_view<ElementType, 1> reinterpret_as() const restrict(amp,cpu) {
 #ifndef __GPU__
           static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
           static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
@@ -1705,25 +1709,7 @@ public:
 #endif
          return av;
       }
-  template <typename ElementType>
-      array_view<const ElementType, 1> reinterpret_as() const restrict(amp,cpu) {
-#ifndef __GPU__
-          static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
-          static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
-#endif
-          int size = extent.size() * sizeof(T) / sizeof(ElementType);
 
-#ifndef __GPU__
-          array_view<const ElementType, 1> av(Concurrency::extent<1>(size),
-                                              _data_host_view<ElementType>(cache),
-                                              reinterpret_cast<ElementType*>(p_), (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
-#else
-          array_view<const ElementType, 1> av(Concurrency::extent<1>(size),
-                                              _data<ElementType>(cache),
-                                              reinterpret_cast<ElementType*>(p_), (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
-#endif
-          return av;
-      }
   array_view<T, N> section(const Concurrency::index<N>& idx,
                            const Concurrency::extent<N>& ext) const restrict(amp,cpu) {
 #ifndef __GPU__
@@ -1773,6 +1759,13 @@ public:
 #ifndef __GPU__
     cache.refresh();
 #endif
+  }
+  // only get data do not synchronize
+  __global const T& get_data(int i0) const restrict(amp,cpu) {
+    static_assert(N == 1, "Rank must be 1");
+    index<1> idx(i0);
+    __global T *ptr = reinterpret_cast<__global T*>(cache.get_data() + offset);
+    return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
   }
   T* data() const restrict(amp,cpu) {
     static_assert(N == 1, "data() is only permissible on array views of rank 1");
@@ -1938,24 +1931,6 @@ public:
   }
 */
   template <typename ElementType>
-    array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu) {
-#ifndef __GPU__
-      static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
-      static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
-#endif
-      int size = extent.size() * sizeof(T) / sizeof(ElementType);
-#ifndef __GPU__
-      array_view<ElementType, 1> av(Concurrency::extent<1>(size),
-                                    _data_host_view<ElementType>(cache),
-                                    reinterpret_cast<ElementType*>(p_), (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
-#else
-      array_view<ElementType, 1> av(Concurrency::extent<1>(size),
-                                    _data<ElementType>(cache),
-                                    reinterpret_cast<ElementType*>(p_), (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
-#endif
-      return av;
-    }
-  template <typename ElementType>
     array_view<const ElementType, 1> reinterpret_as() const restrict(amp,cpu) {
 #ifndef __GPU__
       static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
@@ -2019,7 +1994,13 @@ public:
   completion_future synchronize_to_async(const accelerator_view& av) const;
 
   void refresh() const;
-
+  // only get data do not synchronize
+  __global const T& get_data(int i0) const restrict(amp,cpu) {
+    static_assert(N == 1, "Rank must be 1");
+    index<1> idx(i0);
+    __global T *ptr = reinterpret_cast<__global T*>(cache.get_data() + offset);
+    return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
+  }
   const T* data() const restrict(amp,cpu) {
     static_assert(N == 1, "data() is only permissible on array views of rank 1");
     return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
@@ -2245,10 +2226,11 @@ void copy(InputIter srcBegin, array<T, N>& dest) {
 template <typename OutputIter, typename T>
 void copy(const array_view<T, 1> &src, OutputIter destBegin) {
     for (int i = 0; i < src.get_extent()[0]; ++i) {
-        *destBegin = (src[i]);
+        *destBegin = (src.get_data(i));
         destBegin++;
     }
 }
+
 template <typename OutputIter, typename T, int N>
 void copy(const array_view<T, N> &src, OutputIter destBegin) {
     int adv = src.get_extent().size() / src.get_extent()[0];
