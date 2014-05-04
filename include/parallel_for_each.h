@@ -38,7 +38,8 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
   //Invoke Kernel::__cxxamp_trampoline as an HSAkernel
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
-  int foo = reinterpret_cast<intptr_t>(&Kernel::__cxxamp_trampoline);
+  // FIXME: implicitly casting to avoid pointer to int error
+  int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
   void *kernel = NULL;
   {
       std::string transformed_kernel_name =
@@ -59,7 +60,8 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
   //Invoke Kernel::__cxxamp_trampoline as an OpenCL kernel
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
-  int foo = reinterpret_cast<intptr_t>(&Kernel::__cxxamp_trampoline);
+  // FIXME: implicitly casting to avoid pointer to int error
+  int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
   std::string transformed_kernel_name =
       mcw_cxxamp_fixnames(f.__cxxamp_trampoline_name());
 #if 0
@@ -183,7 +185,7 @@ __attribute__((noinline,used)) void parallel_for_each(
 #else //ifndef __GPU__
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
-  int foo = reinterpret_cast<intptr_t>(&Kernel::__cxxamp_trampoline);
+  int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
 #endif
 }
 
@@ -200,7 +202,7 @@ __attribute__((noinline,used)) void parallel_for_each(
 #else //ifndef __GPU__
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
-  int foo = reinterpret_cast<intptr_t>(&Kernel::__cxxamp_trampoline);
+  int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
 #endif
 }
 
@@ -218,7 +220,7 @@ __attribute__((noinline,used)) void parallel_for_each(
 #else //ifndef __GPU__
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
-  int foo = reinterpret_cast<intptr_t>(&Kernel::__cxxamp_trampoline);
+  int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
 #endif
 }
 
@@ -236,7 +238,7 @@ __attribute__((noinline,used)) void parallel_for_each(
   tiled_index<D0> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
-  int foo = reinterpret_cast<intptr_t>(&Kernel::__cxxamp_trampoline);
+  int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
 #endif
 }
 
@@ -256,7 +258,7 @@ __attribute__((noinline,used)) void parallel_for_each(
   tiled_index<D0, D1> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
-  int foo = reinterpret_cast<intptr_t>(&Kernel::__cxxamp_trampoline);
+  int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
 #endif
 }
  //3D parallel_for_each, tiled
@@ -277,7 +279,7 @@ __attribute__((noinline,used)) void parallel_for_each(
   tiled_index<D0, D1, D2> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
-  int foo = reinterpret_cast<intptr_t>(&Kernel::__cxxamp_trampoline);
+  int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
 #endif
 }
 } // namespace Concurrency
