@@ -1,3 +1,4 @@
+7_para_for_each/ComputeDomainTiled/Negative/NegGrouped.01/test.cpp
 7_para_for_each/ComputeDomainTiled/Grouped.02/test.cpp
 7_para_for_each/ComputeDomainTiled/Grouped.01/test.cpp
 7_para_for_each/AcceleratorViewSelection/ExplicitAcceleratorArg/test.cpp
