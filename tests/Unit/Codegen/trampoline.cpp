@@ -16,7 +16,7 @@ class baz {
 template<typename Foo>
 void kerker(void) restrict(amp) {
   // This reference triggers declaration&definition of __cxxamp_trampoline
-  int b = reinterpret_cast<long>(&Foo::__cxxamp_trampoline);
+  int* b = reinterpret_cast<int*>(&Foo::__cxxamp_trampoline);
 }
 void kk(void) restrict(amp) {
   kerker<baz>();

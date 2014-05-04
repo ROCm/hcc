@@ -169,7 +169,7 @@ __attribute__((noinline,used)) void parallel_for_each(
 #else
     auto bar = &pfe_wrapper<N, Kernel>::operator();
     auto qq = &index<N>::__cxxamp_opencl_index;
-    int foo = reinterpret_cast<intptr_t>(&pfe_wrapper<N, Kernel>::__cxxamp_trampoline);
+    int* foo = reinterpret_cast<int*>(&pfe_wrapper<N, Kernel>::__cxxamp_trampoline);
 #endif
 }
 
