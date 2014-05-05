@@ -5,6 +5,8 @@
 5_Data_Cont/5_2_a_v/5_2_2_c/WithoutDataSource/Test.01/test.cpp
 7_para_for_each/AcceleratorViewSelection/Negative/UnsupportedAccelerator/test.cpp
 7_para_for_each/7_1_Capt_Data_in_the_Kern_Func_Obje/Bool.01/test.cpp
+7_para_for_each/7_1_Capt_Data_in_the_Kern_Func_Obje/Lambda.14/test.cpp
+7_para_for_each/7_1_Capt_Data_in_the_Kern_Func_Obje/Lambda.15/test.cpp
 7_para_for_each/ComputeDomainTiled/ThreadGroupCount.01/test.cpp
 7_para_for_each/ComputeDomainTiled/ThreadGroupCount.02/test.cpp
 7_para_for_each/ComputeDomainTiled/ThreadGroupCount.04/test.cpp
