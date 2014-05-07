@@ -1,4 +1,4 @@
-// RUN: %amp_device -c -S -emit-llvm %s
+// RUN: %amp_device -D__GPU__ -c -S -emit-llvm %s
 #include <amp.h>
 
 using namespace concurrency;
