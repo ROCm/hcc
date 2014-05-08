@@ -308,3 +308,4 @@
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/RefToPointer/Normal/Test05/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/PseudoDtor.01/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Statements/ControlFlow/Test.07/While/test.cpp
+2_Cxx_Lang_Exte/2_x_general/Arrays/Test.02/test.cpp
