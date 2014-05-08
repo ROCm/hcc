@@ -280,6 +280,7 @@
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/Special_member_functions/defaulted_copy_assign_op.01/test.cpp
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/Special_member_functions/defaulted_copy_ctor.01/test.cpp
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/Negative/Test.05/test.cpp
+2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_1_Func_poin_conv/Negative/290118/test.cpp
 2_Cxx_Lang_Exte/2_1_Synt/2_1_3_Type_Spec/Typedef/Test.01/test.cpp
 2_Cxx_Lang_Exte/2_1_Synt/2_1_1_Func_Decl_Synt/TemplateClass/Test.01/test.cpp
 2_Cxx_Lang_Exte/2_1_Synt/2_1_1_Func_Decl_Synt/Negative/Test.04/test.cpp
