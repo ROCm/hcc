@@ -265,15 +265,18 @@
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_3_Rest_on_Func_Scop/2_4_3_5_Loca_Decl/amp_compatible_local/negative/local.amp.incompatible/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_3_Rest_on_Func_Scop/2_4_3_5_Loca_Decl/2_4_3_5_1_tile_stat_Vari/Tile_staticVar/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_3_Rest_on_Func_Scop/2_4_3_6_Type_Cast_Rest/IntToPointer.02/test.cpp
+2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_2_Rest_on_Func_Decl/Exception_specification/Negative/Lambda.01/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_2_Rest_on_Func_Decl/Function_parameters/Negative/Char/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_2_Rest_on_Func_Decl/Return_type/Negative/Test.01/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_2_Rest_on_Func_Decl/Virtual/Negative/Function.03/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_2_Rest_on_Func_Decl/Virtual/Negative/Test.01/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_1_Rest_on_Type/2_4_1_3_Comp_Type/VirtualBaseClass/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_1_Rest_on_Type/2_4_1_2_Fund_Type/Negative/Char.01/test.cpp
+2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_1_Rest_on_Type/2_4_1_1_Type_Qual/Local_variable/Negative/Test07/test.cpp
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/Test07/test.cpp
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/Test06/test.cpp
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/2_3_2_1_Over_Reso/Overloading/conversion_operator/multiple_restrictions_class.01/test.cpp
+2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/Special_member_functions/defaulted_smf_local_class.01/test.cpp
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/Special_member_functions/defaulted_copy_assign_op.01/test.cpp
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/Special_member_functions/defaulted_copy_ctor.01/test.cpp
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/Negative/Test.05/test.cpp
@@ -303,4 +306,5 @@
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/Misc/Test04/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/RefToPointer/Normal/Test10/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/RefToPointer/Normal/Test05/test.cpp
+2_Cxx_Lang_Exte/2_x_general/Expressions/PseudoDtor.01/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Statements/ControlFlow/Test.07/While/test.cpp
