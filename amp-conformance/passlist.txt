@@ -271,6 +271,7 @@
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_2_Rest_on_Func_Decl/Virtual/Negative/Test.01/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_1_Rest_on_Type/2_4_1_3_Comp_Type/VirtualBaseClass/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_1_Rest_on_Type/2_4_1_2_Fund_Type/Negative/Char.01/test.cpp
+2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_1_Rest_on_Type/2_4_1_1_Type_Qual/Local_variable/Negative/Test07/test.cpp
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/Test07/test.cpp
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/Test06/test.cpp
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/2_3_2_1_Over_Reso/Overloading/conversion_operator/multiple_restrictions_class.01/test.cpp
