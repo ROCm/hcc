@@ -1,3 +1,4 @@
+// XFAIL: *
 // RUN: %amp_device -c -D__GPU__=1 -S -emit-llvm %s -o -|%cppfilt|%FileCheck %s
 // RUN: %amp_device -c -D__GPU__=1 %s -o %t.device.o
 // RUN: %gtest_amp %s %t.device.o -o %t && %t
@@ -19,7 +20,7 @@ class baz {
 #endif
   void cho(void) restrict(amp) {};
 
-  base &B;
+  base &B; // No reference type is considered amp-compatible
   int bar;
 };
 

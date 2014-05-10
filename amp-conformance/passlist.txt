@@ -274,6 +274,9 @@
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_2_Rest_on_Func_Decl/Virtual/Negative/Function.03/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_2_Rest_on_Func_Decl/Virtual/Negative/Test.01/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_1_Rest_on_Type/2_4_1_3_Comp_Type/VirtualBaseClass/test.cpp
+2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_1_Rest_on_Type/2_4_1_3_Comp_Type/Negative/BitField/test.cpp
+2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_1_Rest_on_Type/2_4_1_3_Comp_Type/Negative/Class.02/test.cpp
+2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_1_Rest_on_Type/2_4_1_3_Comp_Type/Negative/Enums.01/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_1_Rest_on_Type/2_4_1_2_Fund_Type/Negative/Char.01/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_1_Rest_on_Type/2_4_1_1_Type_Qual/Local_variable/Negative/Test07/test.cpp
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_3_Cast/Casting.06/test.cpp

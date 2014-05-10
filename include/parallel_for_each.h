@@ -13,7 +13,7 @@ extern void CompileKernels(void);
 extern void *CreateOkraKernel(std::string);
 extern void OkraLaunchKernel(void *ker, size_t, size_t *global, size_t *local);
 }
-static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu,amp) {
+static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu) {
     std::string s(f);
     std::string out;
 
@@ -34,6 +34,7 @@ static std::set<std::string> __mcw_cxxamp_kernels;
 template<typename Kernel, int dim_ext>
 static inline void mcw_cxxamp_launch_kernel(size_t *ext,
   size_t *local_size, const Kernel& f) restrict(cpu,amp) {
+#ifndef __GPU__
 #ifdef CXXAMP_ENABLE_HSA_OKRA
   //Invoke Kernel::__cxxamp_trampoline as an HSAkernel
   //to ensure functor has right operator() defined
@@ -114,6 +115,7 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
     }
   }
 #endif //CXXAMP_ENABLE_HSA_OKRA
+#endif // __GPU__
 }
 
 template <int N, typename Kernel, typename _Tp>
