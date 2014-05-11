@@ -866,9 +866,32 @@ void updateInstructionWithNewOperand(Instruction * I,
            updateSELWithNewOperand(SEL, oldOperand, newOperand,updatesNeeded);
            return;
        }
+       llvm::errs() << "DO NOT KNOW HOW TO UPDATE INSTRUCTION: ";
+             I->print(llvm::errs()); llvm::errs() << "\n";
+       // Must trap it
+       exit(1);
+}
 
-       DEBUG(llvm::errs() << "DO NOT KNOW HOW TO UPDATE INSTRUCTION: ";
-             I->print(llvm::errs()); llvm::errs() << "\n";);
+static bool usedInTheFunc(const User *U, const Function* F)
+{
+  if (!U)
+    return false;
+
+  if (const Instruction *instr = dyn_cast<Instruction>(U)) {
+      if (instr->getParent() && instr->getParent()->getParent()) {
+        const Function *curFunc = instr->getParent()->getParent();
+        if(curFunc->getName().str() == F->getName().str()) 
+            return true;
+        else
+            return false;
+        }
+    }
+  for (User::const_use_iterator ui = U->use_begin(), ue = U->use_end();
+       ui != ue; ++ui) {
+    if (usedInTheFunc(*ui, F) == true)
+      return true;
+  }
+  return false;
 }
 
 // tile_static are declared as static variables in section("clamp_opencl_local")
@@ -884,7 +907,21 @@ void promoteTileStatic(Function *Func, InstUpdateWorkList * updateNeeded)
             I->getType()->getPointerAddressSpace() == 0 &&
             I->hasName() && I->getLinkage() == GlobalVariable::InternalLinkage) {
             // Though I'm global, I'm constant indeed.
+          if(usedInTheFunc(I, Func))
             the_space = ConstantAddressSpace;
+          else
+            continue;
+        } else if (!I->hasSection() && I->isConstant() && 
+            I->getType()->getPointerAddressSpace() == 0 &&
+            I->hasName() && I->getLinkage() == GlobalVariable::PrivateLinkage) {
+            // Though I'm private, I'm constant indeed.
+            // FIXME: We should determine constant with address space (2) for OpenCL SPIR
+            //              during clang front-end. It is not reliable to determine that in Promte stage
+            if(usedInTheFunc(I, Func))
+              the_space = ConstantAddressSpace;
+            else
+              continue;
+               
         } else if (!I->hasSection() ||
             I->getSection() != std::string(TILE_STATIC_NAME) ||
             I->getType()->getPointerAddressSpace() != 0 ||
