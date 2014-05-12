@@ -34,9 +34,11 @@ inline accelerator::accelerator(const accelerator& other) :
   supports_cpu_shared_memory(other.supports_cpu_shared_memory),
   dedicated_memory(other.dedicated_memory),
   default_access_type(other.default_access_type),
-  default_view(other.default_view),
 #ifndef CXXAMP_ENABLE_HSA_OKRA
+  default_view(other.default_view),
   accInfo(other.accInfo)
+#else
+  default_view(other.default_view)
 #endif
   {}
 
