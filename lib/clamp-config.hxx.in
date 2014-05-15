@@ -18,5 +18,4 @@
 
 #define CMAKE_HSA_ROOT         "@HSA_ROOT@/include"
 #define CMAKE_HSA_LIB          "@HSA_ROOT@/lib"
-
 #define CMAKE_OPENCL_INC       "@OPENCL_INCLUDE@"

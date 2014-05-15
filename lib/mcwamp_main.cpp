@@ -54,7 +54,6 @@ void cxxflags(void) {
         std::cout << " -I" CMAKE_CLAMP_INC_DIR;
         // libcxx
         std::cout << " -I" CMAKE_LIBCXX_INC;
-
 #if !defined(CXXAMP_ENABLE_HSA_OKRA) && !defined(CXXAMP_ENABLE_HSA)
         // GMAC options, build tree
         std::cout << " -I" CMAKE_GMAC_INC_BIN_DIR;
