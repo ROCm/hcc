@@ -600,6 +600,32 @@ private:
                         return new std::string("fixHsail FAILED");
                      }
                      regfree(&exp);
+                } else if ((startPtr = strstr(line, "barrier_sys")) != NULL) { //touch up barrier_sys to barrier
+                     long unmatchedLength = (long) startPtr - (long) line;
+                     strncat(fixedFenceOpsString, line, unmatchedLength);
+  
+                     regex_t exp;
+                     rv = regcomp(&exp, "barrier_sys;(.*)", REG_EXTENDED);
+                     if(rv != 0) {
+                        printf("regcomp failed while fixing barrier_sys with %d\n", rv);
+                        return new std::string("fixHsail FAILED");
+                     }
+                     regmatch_t matches[MAX_MATCHES];
+                     if (regexec(&exp, startPtr, MAX_MATCHES, matches, 0) == 0) {
+                        char* comment = getMatch(startPtr, matches, 1);
+                        char* newInstruction = new char[strlen(line) + 32];
+  
+                        sprintf(newInstruction, "barrier;%s", comment);
+                        strcat(fixedFenceOpsString, newInstruction);
+                        //printf("### Replaced %s[WITH]%s[END]\n", startPtr, newInstruction);
+                        delete newInstruction;
+                     }
+                     else {
+                        printf("regexec failed while fixing barrier_fgroup\n");
+                        regfree(&exp);
+                        return new std::string("fixHsail FAILED");
+                     }
+                     regfree(&exp);
                } else {
                     //printf("##### No regex match in length=%ld: [[%s]]\n", strlen(line), line);
                     strcat(fixedFenceOpsString, line);
