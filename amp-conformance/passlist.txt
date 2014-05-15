@@ -4,6 +4,11 @@
 7_para_for_each/AcceleratorViewSelection/ExplicitAcceleratorArg/test.cpp
 5_Data_Cont/5_2_a_v/5_2_2_c/WithoutDataSource/Test.01/test.cpp
 7_para_for_each/AcceleratorViewSelection/Negative/UnsupportedAccelerator/test.cpp
+7_para_for_each/7_1_Capt_Data_in_the_Kern_Func_Obje/Negative/CaptureByReference.01/test.cpp
+7_para_for_each/7_1_Capt_Data_in_the_Kern_Func_Obje/Negative/CaptureByReference.03/test.cpp
+7_para_for_each/7_1_Capt_Data_in_the_Kern_Func_Obje/Negative/Test09/test.cpp
+7_para_for_each/7_1_Capt_Data_in_the_Kern_Func_Obje/Negative/Test11/test.cpp
+7_para_for_each/7_1_Capt_Data_in_the_Kern_Func_Obje/Negative/Test13/test.cpp
 7_para_for_each/7_1_Capt_Data_in_the_Kern_Func_Obje/Negative/Test10/test.cpp
 7_para_for_each/7_1_Capt_Data_in_the_Kern_Func_Obje/Negative/Test12/test.cpp
 7_para_for_each/7_1_Capt_Data_in_the_Kern_Func_Obje/Negative/Test24/test.cpp
