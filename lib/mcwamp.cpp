@@ -110,7 +110,7 @@ namespace Concurrency {
 namespace CLAMP {
 void CompileKernels(void)
 {
-#ifdef CXXAMP_ENABLE_HSA_OKRA
+#if defined(CXXAMP_ENABLE_HSA_OKRA) || defined(CXXAMP_ENABLE_HSA)
   assert(0 && "Unsupported function");
 #else
   ecl_error error_code;
@@ -162,7 +162,7 @@ void CompileKernels(void)
 #endif
 }
 
-#ifdef CXXAMP_ENABLE_HSA_OKRA
+#if defined(CXXAMP_ENABLE_HSA_OKRA)
 } // namespce CLAMP
 } // namespace Concurrency
 #include <okraContext.h>
@@ -255,6 +255,108 @@ void OkraPushPointer(void *ker, void *val)
         reinterpret_cast<OkraContext::Kernel*>(ker);
     kernel->pushPointerArg(val);
 }
+#elif defined(CXXAMP_ENABLE_HSA)
+} // namespce CLAMP
+} // namespace Concurrency
+#include "HSAContext.h"
+namespace Concurrency {
+namespace CLAMP {
+
+/* Used only in HSA runtime */
+HSAContext *GetOrInitHSAContext(void)
+{
+  static HSAContext *context = NULL;
+  if (!context) {
+    //std::cerr << "HSA: create context\n";
+    context = HSAContext::Create();
+  }
+  if (!context) {
+    std::cerr << "HSA: Unable to create context\n";
+    abort();
+  }
+  return context;
+}
+
+static std::map<std::string, HSAContext::Kernel *> __mcw_okra_kernels;
+void *CreateHSAKernel(std::string s)
+{
+  HSAContext::Kernel *kernel = __mcw_okra_kernels[s];
+  if (!kernel) {
+      size_t kernel_size = (size_t)((void *)kernel_size_);
+      char *kernel_source = (char*)malloc(kernel_size+1);
+      memcpy(kernel_source, kernel_source_, kernel_size);
+      kernel_source[kernel_size] = '\0';
+      std::string kname = std::string("&__OpenCL_")+s+
+          std::string("_kernel");
+      //std::cerr << "CLAMP::HSA::Creating kernel: " << kname << "\n";
+      kernel = GetOrInitHSAContext()->
+          createKernel(kernel_source, kname.c_str());
+      if (!kernel) {
+          std::cerr << "CLAMP::HSA: Unable to create kernel\n";
+          abort();
+      } else {
+          //std::cerr << "CLAMP::HSA::Created kernel\n";
+      }
+      __mcw_okra_kernels[s] = kernel;
+  }
+  kernel->clearArgs();
+  // HSA kernels generated from OpenCL takes 3 additional arguments at the beginning
+  kernel->pushLongArg(0);
+  kernel->pushLongArg(0);
+  kernel->pushLongArg(0);
+  return kernel;
+}
+
+namespace HSA {
+void RegisterMemory(void *p, size_t sz)
+{
+    //std::cerr << "registering: ptr " << p << " of size " << sz << "\n";
+    GetOrInitHSAContext()->registerArrayMemory(p, sz);
+}
+}
+
+void HSALaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local)
+{
+  HSAContext::Kernel *kernel =
+      reinterpret_cast<HSAContext::Kernel*>(ker);
+  size_t tmp_local[] = {0, 0, 0};
+  if (!local)
+      local = tmp_local;
+  //std::cerr<<"Launching: nr dim = " << nr_dim << "\n";
+  //for (size_t i = 0; i < nr_dim; ++i) {
+  //  std::cerr << "g: " << global[i] << " l: " << local[i] << "\n";
+  //}
+  kernel->setLaunchAttributes(nr_dim, global, local);
+  //std::cerr << "Now real launch\n";
+  kernel->dispatchKernelWaitComplete();
+}
+
+void HSAPushArg(void *ker, size_t sz, const void *v)
+{
+  //std::cerr << "pushing:" << ker << " of size " << sz << "\n";
+  HSAContext::Kernel *kernel =
+      reinterpret_cast<HSAContext::Kernel*>(ker);
+  void *val = const_cast<void*>(v);
+  switch (sz) {
+    case sizeof(int):
+      kernel->pushIntArg(*reinterpret_cast<int*>(val));
+      //std::cerr << "(int) value = " << *reinterpret_cast<int*>(val) <<"\n";
+      break;
+    default:
+      assert(0 && "Unsupported kernel argument size");
+  }
+}
+void HSAPushPointer(void *ker, void *val)
+{
+    //std::cerr << "pushing:" << ker << " of ptr " << val << "\n";
+    HSAContext::Kernel *kernel =
+        reinterpret_cast<HSAContext::Kernel*>(ker);
+    kernel->pushPointerArg(val);
+}
+#elif defined(CXXAMP_ENABLE_HSA)
+} // namespce CLAMP
+} // namespace Concurrency
+
 #endif
 } // namespace CLAMP
 } // namespace Concurrency
