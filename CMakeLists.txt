@@ -71,6 +71,23 @@ LINK_DIRECTORIES( ${LLVM_LIB_DIR} )
 # Turn on by default for now.
 option(CXXAMP_ENABLE_GMAC "Build GMAC as backend" ON)
 option(CXXAMP_ENABLE_HSA_OKRA "Use HSA Okra runtime as backend" OFF)
+option(CXXAMP_ENABLE_HSA "Use HSA Runtime as backend" OFF)
+
+if (CXXAMP_ENABLE_HSA)
+# A bunch of external dependencies
+set (AMDOCLTOOLS_ROOT "/opt/amd/"
+        CACHE PATH "AMD OpenCL bin release path")
+set (HSA_ROOT "/opt/hsa/"
+        CACHE PATH "HSA runtime release path")
+find_program (HSAILASM NAME hsailasm PATHS
+        ${AMDOCLTOOLS_ROOT}/bin
+        NO_DEFAULT_PATH)
+# clc.exe and AMD OpenCL library builtins
+find_program (AMD_CLC NAME clc PATHS
+        "${AMDOCLTOOLS_ROOT}/bin"
+        NO_DEFAULT_PATH)
+endif (CXXAMP_ENABLE_HSA)
+
 if (CXXAMP_ENABLE_HSA_OKRA)
 # A bunch of external dependencies
 set (AMDOCLTOOLS_ROOT "/opt/amd/"

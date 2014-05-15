@@ -28,13 +28,16 @@ void cxxflags(void) {
     std::string jni_dirs(CMAKE_JNI_INCLUDE);
     replace(jni_dirs, ";", " -I");
     std::cout << " -I" << jni_dirs;
+#elif CXXAMP_ENABLE_HSA
+    std::cout << " -DCXXAMP_ENABLE_HSA=1";
+    std::cout << " -I" CMAKE_HSA_ROOT;
 #endif
     // clamp
     if (build_mode) {
         std::cout << " -I" CMAKE_CLAMP_INC_DIR;
         // libcxx
         std::cout << " -I" CMAKE_LIBCXX_INC;
-#ifndef CXXAMP_ENABLE_HSA_OKRA
+#if !defined(CXXAMP_ENABLE_HSA_OKRA) && !defined(CXXAMP_ENABLE_HSA)
         // GMAC options, build tree
         std::cout << " -I" CMAKE_GMAC_INC_BIN_DIR;
         std::cout << " -I" CMAKE_GMAC_INC_DIR;
@@ -70,16 +73,24 @@ void ldflags(void) {
 #endif
     }
 #ifndef __APPLE__
-#ifdef CXXAMP_ENABLE_HSA_OKRA
+#if defined(CXXAMP_ENABLE_HSA_OKRA)
     std::cout << " -Wl,--rpath=" CMAKE_OKRA_LIB;
     std::cout << " -L" CMAKE_OKRA_LIB;
     std::cout << " -lokra_x86_64 -lnewhsacore64 -lamdhsacl64";
+#elif defined(CXXAMP_ENABLE_HSA)
+    // XXX TBD
+    std::cout << " -Wl,--rpath=" CMAKE_HSA_LIB;
+    std::cout << " -L" CMAKE_HSA_LIB;
+    std::cout << " " CMAKE_HSA_LIB "/hsa_runtime_core64.so";
+    std::cout << " -lamdocl64";
+    std::cout << " -Wl,--whole-archive -lhsacontext -Wl,--no-whole-archive ";
 #else
     std::cout << " -lgmac-hpe";
 #endif
     std::cout << " -lc++ -lcxxrt -ldl -lpthread ";
     std::cout << "-Wl,--whole-archive -lmcwamp -Wl,--no-whole-archive ";
-#else
+
+#else // __APPLE__
     std::cout << " -lgmac-hpe -lc++ -lmcwamp ";
 #endif
 }

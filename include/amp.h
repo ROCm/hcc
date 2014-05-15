@@ -17,7 +17,7 @@
 #include <chrono>
 #include <future>
 #include <string.h> //memcpy
-#ifndef CXXAMP_ENABLE_HSA_OKRA
+#if !defined(CXXAMP_ENABLE_HSA_OKRA) && !defined(CXXAMP_ENABLE_HSA)
 #include <gmac/opencl.h>
 #endif
 #include <memory>
@@ -148,7 +148,7 @@ public:
   accelerator(const accelerator& other);
   static std::vector<accelerator> get_all() {
     std::vector<accelerator> acc;
-#ifndef CXXAMP_ENABLE_HSA_OKRA
+#if !defined(CXXAMP_ENABLE_HSA_OKRA) && !defined(CXXAMP_ENABLE_HSA)
     AcceleratorInfo accInfo;
     for (unsigned i = 0; i < eclGetNumberOfAccelerators(); i++) {
       assert(eclGetAcceleratorInfo(i, &accInfo) == eclSuccess);
@@ -210,7 +210,7 @@ public:
   size_t dedicated_memory;
   access_type default_access_type;
   std::shared_ptr<accelerator_view> default_view;
-#ifndef CXXAMP_ENABLE_HSA_OKRA
+#if !defined(CXXAMP_ENABLE_HSA_OKRA) && !defined(CXXAMP_ENABLE_HSA)
   typedef GmacAcceleratorInfo AcceleratorInfo;
   AcceleratorInfo accInfo;
 #endif
@@ -1057,10 +1057,14 @@ public:
 
 
 #define __global
-#ifdef CXXAMP_ENABLE_HSA_OKRA
+#if defined(CXXAMP_ENABLE_HSA_OKRA)
 //include okra-specific files here
 } //namespace Concurrency
 #include "okra_manage.h"
+namespace Concurrency {
+#elif defined(CXXAMP_ENABLE_HSA)
+}
+#include "hsa_manage.h"
 namespace Concurrency {
 #else
 #include "gmac_manage.h"
