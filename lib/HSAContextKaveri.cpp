@@ -13,6 +13,14 @@
 
 #define STATUS_CHECK(s,line) if (status != HSA_STATUS_SUCCESS) {\
 		printf("### Error: %d at line:%d\n", status, line);\
+                assert(HSA_STATUS_SUCCESS == hsa_close());\
+		exit(-1);\
+	}
+
+#define STATUS_CHECK_Q(s,line) if (status != HSA_STATUS_SUCCESS) {\
+		printf("### Error: %d at line:%d\n", status, line);\
+                assert(HSA_STATUS_SUCCESS == hsa_queue_destroy(commandQueue));\
+                assert(HSA_STATUS_SUCCESS == hsa_close());\
 		exit(-1);\
 	}
 
@@ -513,14 +521,11 @@ private:
       hsa_status_t setArgPrivate(int idx, T val) {
         // XXX disable this member function for now
 /*
-=======
->>>>>>> [HSA] port C++ AMP to support HSA Runtime from AMD
          // each arg takes up a 64-bit slot, no matter what its size
          uint64_t  argAsU64 = 0;
          T* pt = (T *) &argAsU64;
          *pt = val;
          arg_vec.at(idx) = argAsU64;    
-<<<<<<< HEAD
 */
          return HSA_STATUS_SUCCESS;
       }
