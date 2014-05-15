@@ -262,16 +262,25 @@ void OkraPushPointer(void *ker, void *val)
 namespace Concurrency {
 namespace CLAMP {
 
+static HSAContext *context = NULL;
+
+void FinalizeHSAContext() {
+  if (context != NULL) {
+    context->dispose();
+    context = NULL;
+  }
+}
+
 /* Used only in HSA runtime */
 HSAContext *GetOrInitHSAContext(void)
 {
-  static HSAContext *context = NULL;
   if (!context) {
-    //std::cerr << "HSA: create context\n";
+    //std::cerr << "CLAMP::HSA: create context\n";
     context = HSAContext::Create();
+    atexit(FinalizeHSAContext); // register finalizer
   }
   if (!context) {
-    std::cerr << "HSA: Unable to create context\n";
+    std::cerr << "CLAMP::HSA: Unable to create context\n";
     abort();
   }
   return context;
@@ -295,7 +304,7 @@ void *CreateHSAKernel(std::string s)
           std::cerr << "CLAMP::HSA: Unable to create kernel\n";
           abort();
       } else {
-          //std::cerr << "CLAMP::HSA::Created kernel\n";
+          //std::cerr << "CLAMP::HSA: Created kernel\n";
       }
       __mcw_okra_kernels[s] = kernel;
   }
