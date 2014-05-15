@@ -290,6 +290,7 @@
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_2_Rest_on_Func_Decl/Virtual/Negative/Test.01/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_2_Rest_on_Func_Decl/Function_parameters/Negative/Function.02/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_2_Rest_on_Func_Decl/Function_parameters/Negative/Test.02/test.cpp
+2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_1_Rest_on_Type/2_4_1_3_Comp_Type/Negative/EmptyClass/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_1_Rest_on_Type/2_4_1_3_Comp_Type/VirtualBaseClass/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_1_Rest_on_Type/2_4_1_3_Comp_Type/Negative/BitField/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_1_Rest_on_Type/2_4_1_3_Comp_Type/Negative/Class.02/test.cpp
