@@ -414,11 +414,14 @@ private:
       hsa_status_t setArgPrivate(int idx, T val) {
         // XXX disable this member function for now
 /*
+=======
+>>>>>>> [HSA] port C++ AMP to support HSA Runtime from AMD
          // each arg takes up a 64-bit slot, no matter what its size
          uint64_t  argAsU64 = 0;
          T* pt = (T *) &argAsU64;
          *pt = val;
          arg_vec.at(idx) = argAsU64;    
+<<<<<<< HEAD
 */
          return HSA_STATUS_SUCCESS;
       }
@@ -570,7 +573,6 @@ public:
       STATUS_CHECK(status, __LINE__);
 
       status = hsa_shut_down();
-
 
       return HSA_STATUS_SUCCESS;
    }
