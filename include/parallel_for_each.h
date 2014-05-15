@@ -11,10 +11,12 @@
 
 namespace Concurrency {
 namespace CLAMP {
-extern void MatchKernelNames( std::string & );
-extern void CompileKernels(void);
 extern void *CreateOkraKernel(std::string);
 extern void OkraLaunchKernel(void *ker, size_t, size_t *global, size_t *local);
+extern void *CreateHSAKernel(std::string);
+extern void HSALaunchKernel(void *ker, size_t, size_t *global, size_t *local);
+extern void MatchKernelNames( std::string & );
+extern void CompileKernels(void);
 }
 static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu) {
     std::string s(f);
@@ -38,7 +40,7 @@ template<typename Kernel, int dim_ext>
 static inline void mcw_cxxamp_launch_kernel(size_t *ext,
   size_t *local_size, const Kernel& f) restrict(cpu,amp) {
 #ifndef __GPU__
-#ifdef CXXAMP_ENABLE_HSA_OKRA
+#if defined(CXXAMP_ENABLE_HSA_OKRA)
   //Invoke Kernel::__cxxamp_trampoline as an HSAkernel
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -56,6 +58,21 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
   Concurrency::Serialize s(kernel);
   f.__cxxamp_serialize(s);
   CLAMP::OkraLaunchKernel(kernel, dim_ext, ext, local_size);
+#elif defined(CXXAMP_ENABLE_HSA)
+  //Invoke Kernel::__cxxamp_trampoline as an HSAkernel
+  //to ensure functor has right operator() defined
+  //this triggers the trampoline code being emitted
+  // FIXME: implicitly casting to avoid pointer to int error
+  int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
+  void *kernel = NULL;
+  {
+      std::string transformed_kernel_name =
+          mcw_cxxamp_fixnames(f.__cxxamp_trampoline_name());
+      kernel = CLAMP::CreateHSAKernel(transformed_kernel_name);
+  }
+  Concurrency::Serialize s(kernel);
+  f.__cxxamp_serialize(s);
+  CLAMP::HSALaunchKernel(kernel, dim_ext, ext, local_size);
 #else
   ecl_error error_code;
   accelerator def;
@@ -117,7 +134,7 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
       std::cerr << i << "] = "<<local_size[i]<<"\n";
     }
   }
-#endif //CXXAMP_ENABLE_HSA_OKRA
+#endif // CXXAMP_ENABLE_HSA_OKRA, CXXAMP_ENABLE_HSA
 #endif // __GPU__
 }
 
