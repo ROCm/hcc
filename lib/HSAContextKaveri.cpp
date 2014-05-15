@@ -12,6 +12,14 @@
 
 #define STATUS_CHECK(s,line) if (status != HSA_STATUS_SUCCESS) {\
 		printf("### Error: %d at line:%d\n", status, line);\
+                assert(HSA_STATUS_SUCCESS == hsa_close());\
+		exit(-1);\
+	}
+
+#define STATUS_CHECK_Q(s,line) if (status != HSA_STATUS_SUCCESS) {\
+		printf("### Error: %d at line:%d\n", status, line);\
+                assert(HSA_STATUS_SUCCESS == hsa_queue_destroy(commandQueue));\
+                assert(HSA_STATUS_SUCCESS == hsa_close());\
 		exit(-1);\
 	}
 
