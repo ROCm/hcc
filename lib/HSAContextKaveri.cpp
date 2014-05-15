@@ -17,6 +17,14 @@
     
 #define STATUS_CHECK(s,line) if (status != HSA_STATUS_SUCCESS) {\
 		printf("### Error: %d at line:%d\n", status, line);\
+                assert(HSA_STATUS_SUCCESS == hsa_close());\
+		exit(-1);\
+	}
+
+#define STATUS_CHECK_Q(s,line) if (status != HSA_STATUS_SUCCESS) {\
+		printf("### Error: %d at line:%d\n", status, line);\
+                assert(HSA_STATUS_SUCCESS == hsa_queue_destroy(commandQueue));\
+                assert(HSA_STATUS_SUCCESS == hsa_close());\
 		exit(-1);\
 	}
 
@@ -113,12 +121,15 @@ private:
             registerArgVecMemory();
          }
 
+         // get command queue from context
+         hsa_queue_t* commandQueue = context->getQueue();
+
          // create a signal
          hsa_signal_handle_t signal;
          hsa_signal_value_t value;
          value.value64 = 1;
          status = hsa_signal_create(value, &signal, context->getContext());
-         STATUS_CHECK(status, __LINE__);
+         STATUS_CHECK_Q(status, __LINE__);
 
          // create a dispatch packet
          hsa_aql_dispatch_packet_t aql;
@@ -150,9 +161,6 @@ private:
          aql.group_segment_size_bytes = kernel->workgroup_group_segment_byte_size;
          aql.private_segment_size_bytes = kernel->workitem_private_segment_byte_size;
 
-         // get command queue from context
-         hsa_queue_t* commandQueue = context->getQueue();
-
          // write packet
          uint32_t queueMask = commandQueue->size_packets - 1;
          uint64_t index = hsa_queue_get_write_index(commandQueue);
@@ -162,12 +170,12 @@ private:
          // Ring door bell
          value.value64 = index + 1;
          status = hsa_signal_send_relaxed(commandQueue->doorbell_signal, value);
-         STATUS_CHECK(status, __LINE__);
+         STATUS_CHECK_Q(status, __LINE__);
 
          // wait for completion
          value.value64 = 1;
          status = hsa_signal_wait_acquire(signal, -1, HSA_LT, value, NULL);
-         STATUS_CHECK(status, __LINE__);
+         STATUS_CHECK_Q(status, __LINE__);
 
          value.value64 = 1;
          hsa_signal_send_relaxed(signal, value);
@@ -316,7 +324,7 @@ public:
 
       status = hsa_close(context);
       STATUS_CHECK(status, __LINE__);
-      
+
       return HSA_STATUS_SUCCESS;
    }
 
