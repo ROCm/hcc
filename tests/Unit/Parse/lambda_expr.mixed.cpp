@@ -4,8 +4,9 @@ int main() {
   int a = 1;
   int b = 2;
   int c;
+  // capture-by-reference is not allowed in amp-restricted codes
   [=, &c] ()
-    restrict(cpu, amp)
+    restrict(cpu)
     { c = a + b; } ();
   return c;
 }
