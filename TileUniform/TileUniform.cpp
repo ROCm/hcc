@@ -194,6 +194,8 @@ void ThreadDependencyAnalyzer::visitInstruction(Instruction &I) {
 bool TileUniform::runOnModule(Module &M) {
 
 #if 0
+  /// The following code is used to test ControlDependences class
+  ///
   Module::FunctionListType &funcs = M.getFunctionList();
   ControlDependences *CDs = new ControlDependences();
   
@@ -211,30 +213,15 @@ bool TileUniform::runOnModule(Module &M) {
 
   barrier = M.getFunction("barrier");
 
-  for (Value::use_iterator UI = barrier->use_begin(), UE = barrier->use_end(); 
+  for (Value::use_iterator UI = barrier->use_begin(), UE = barrier->use_end();
         UI != UE; ++UI) {
     if (Instruction *I = dyn_cast<Instruction>(*UI)) {
-#if 0
-      errs() << "F is used in instruction:\n";
-      errs() << *I << "\n";
-#endif
-
-/*
-      BasicBlock *BB = I->getParent();
-      if (BasicBlock *predBB = BB->getSinglePredecessor()) {
-        Instruction *Br = predBB->getTerminator();
-        ThreadDependencyAnalyzer TDA(M);
-        TDA.analyze(*Br);
-      }
-*/
       BasicBlock *BB = I->getParent();
       Function *F = BB->getParent();
       ControlDependences *CtrlDeps = new ControlDependences();
       ThreadDependencyAnalyzer *TDA = new ThreadDependencyAnalyzer(M);
 
       CtrlDeps->runOnFunction(*F);
-
-      CtrlDeps->print(errs());
 
       typedef ControlDependences::CtrlDepSetType CDST;
 
