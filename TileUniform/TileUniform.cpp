@@ -63,7 +63,7 @@ public:
 
   virtual void getAnalysisUsage(AnalysisUsage &AU) const {
     AU.setPreservesAll();
-    AU.addRequired<PostDominatorTree>();
+//    AU.addRequired<PostDominatorTree>();
   }
 };
 
@@ -96,7 +96,7 @@ public:
 
   virtual void getAnalysisUsage(AnalysisUsage& AU) const {
     AU.setPreservesAll();
-    AU.addRequired<ControlDependences>();
+//    AU.addRequired<ControlDependences>();
   }
 
   virtual bool runOnModule(Module& M);
@@ -211,7 +211,8 @@ bool TileUniform::runOnModule(Module &M) {
   return false;
 #endif
 
-  barrier = M.getFunction("barrier");
+  if(!(barrier = M.getFunction("barrier")))
+    return false;
 
   for (Value::use_iterator UI = barrier->use_begin(), UE = barrier->use_end();
         UI != UE; ++UI) {
