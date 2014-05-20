@@ -334,6 +334,7 @@
 2_Cxx_Lang_Exte/2_1_Synt/2_1_1_Func_Decl_Synt/Restriction_specifier/Negative/Test.02/test.cpp
 2_Cxx_Lang_Exte/2_1_Synt/Contextual_restrict/test.01/test.cpp
 2_Cxx_Lang_Exte/2_1_Synt/Contextual_restrict/test.02/test.cpp
+2_Cxx_Lang_Exte/2_x_general/decltype_specifier/Negative/evaluation_context.01/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Functions/CV_qualifiers/Test.01/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/destructor.03/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/BuiltInOperators/RelationalEquality/RelationalEquality.01/test.cpp
