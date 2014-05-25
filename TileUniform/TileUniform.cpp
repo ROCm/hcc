@@ -25,6 +25,9 @@ using namespace llvm;
 
 namespace {
 
+#define HANDLE_LOAD_PRIVATE 0
+#define TILE_UNIFORM_DEBUG  0
+
 /// ControlDependences Class - Used to compute the control dependences.
 ///
 class ControlDependences : public FunctionPass {
@@ -78,7 +81,9 @@ public:
   ThreadDependencyAnalyzer(Module &M);
   void analyze(Instruction &I) { visit(I); }
   // Opcode Implementations
+#if HANDLE_LOAD_PRIVATE
   void visitLoadInst(LoadInst &I);
+#endif
   void visitCallInst(CallInst &I);
   void visitInstruction(Instruction &I);
 };
@@ -172,17 +177,28 @@ ThreadDependencyAnalyzer::ThreadDependencyAnalyzer(Module &M) {
   get_local_id = M.getFunction("get_local_id");
 }
 
-void ThreadDependencyAnalyzer::visitLoadInst(LoadInst &I) { 
+#if HANDLE_LOAD_PRIVATE
+void ThreadDependencyAnalyzer::visitLoadInst(LoadInst &I) {
+#if TILE_UNIFORM_DEBUG
+  errs() << I << "\n";
+#endif
   report_fatal_error("violated tile uniform\n");
 }
+#endif
 
-void ThreadDependencyAnalyzer::visitCallInst(CallInst &I) { 
+void ThreadDependencyAnalyzer::visitCallInst(CallInst &I) {
+#if TILE_UNIFORM_DEBUG
+  errs() << I << "\n";
+#endif
   Function *callee = I.getCalledFunction();
   if (callee == get_local_id || callee == get_global_id)
     report_fatal_error("violated tile uniform\n");
 }
 
 void ThreadDependencyAnalyzer::visitInstruction(Instruction &I) {
+#if TILE_UNIFORM_DEBUG
+  errs() << I << "\n";
+#endif
   for (User::op_iterator oi = I.op_begin(), e = I.op_end(); oi != e; ++oi) {
     if (Instruction *Inst = dyn_cast<Instruction>(*oi))
       visit(*Inst);
@@ -211,6 +227,10 @@ bool TileUniform::runOnModule(Module &M) {
   return false;
 #endif
 
+#if TILE_UNIFORM_DEBUG
+  errs() << "TileUniform::runOnModule\n";
+#endif
+
   if(!(barrier = M.getFunction("barrier")))
     return false;
 
@@ -224,9 +244,15 @@ bool TileUniform::runOnModule(Module &M) {
 
       CtrlDeps->runOnFunction(*F);
 
-      typedef ControlDependences::CtrlDepSetType CDST;
+#if TILE_UNIFORM_DEBUG
+      CtrlDeps->print(errs());
+#endif
 
-      CDST *CtrlDep = &CtrlDeps->find(BB)->second;
+      if (CtrlDeps->find(BB) == CtrlDeps->end())
+        continue;
+
+      typedef ControlDependences::CtrlDepSetType CDST;
+      CDST *CtrlDep = &CtrlDeps->find(BB)->second;      
 
       for (CDST::iterator i = CtrlDep->begin(), e = CtrlDep->end(); i != e;
             ++i) {
