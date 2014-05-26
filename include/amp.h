@@ -738,23 +738,23 @@ public:
         return amp_helper<N, index<N>, extent<N>>::contains(idx, *this);
     }
     template <int D0>
-        typename std::enable_if<N == 1, tiled_extent<D0> >::type tile() const {
-            static_assert(D0 > 0, "Tile size must be positive");
-            return tiled_extent<D0>(*this);
-        }
+      tiled_extent<D0> tile() const restrict(amp,cpu) {
+        static_assert(N == 1, "One-dimensional tile() method only available on extent<1>");
+        static_assert(D0 >0, "All tile dimensions must be positive");
+        return tiled_extent<D0>(*this);
+      }
     template <int D0, int D1>
-        typename std::enable_if<N == 2, tiled_extent<D0, D1> >::type tile() const {
-            static_assert(D0 > 0, "Tile size must be positive");
-            static_assert(D1 > 0, "Tile size must be positive");
-            return tiled_extent<D0, D1>(*this);
-        }
+      tiled_extent<D0, D1> tile() const restrict(amp,cpu) {
+        static_assert(N == 2, "Two-dimensional tile() method only available on extent<2>");
+        static_assert(D0 >0 && D1 > 0, "All tile dimensions must be positive");
+        return tiled_extent<D0, D1>(*this);
+      }
     template <int D0, int D1, int D2>
-        typename std::enable_if<N == 3, tiled_extent<D0, D1, D2> >::type tile() const {
-            static_assert(D0 > 0, "Tile size must be positive");
-            static_assert(D1 > 0, "Tile size must be positive");
-            static_assert(D2 > 0, "Tile size must be positive");
-            return tiled_extent<D0, D1, D2>(*this);
-        }
+      tiled_extent<D0, D1, D2> tile() const restrict(amp,cpu) {
+        static_assert(N == 3, "Three-dimensional tile() method only available on extent<3>");
+        static_assert(D0 >0 && D1 > 0 && D2 > 0, "All tile dimensions must be positive");
+        return tiled_extent<D0, D1, D2>(*this);
+      }
 
     extent operator+(const index<N>& idx) restrict(amp,cpu) {
         extent __r = *this;
@@ -960,12 +960,11 @@ template <int D0, int D1/*=0*/, int D2/*=0*/>
 class tiled_extent : public extent<3>
 {
 public:
+  static_assert(D0 > 0, "Tile size must be positive");
+  static_assert(D1 > 0, "Tile size must be positive");
+  static_assert(D2 > 0, "Tile size must be positive");
   static const int rank = 3;
-  tiled_extent() restrict(amp,cpu) {
-    static_assert(D0 > 0, "Tile size must be positive");
-    static_assert(D1 > 0, "Tile size must be positive");
-    static_assert(D2 > 0, "Tile size must be positive");
-  }
+  tiled_extent() restrict(amp,cpu) { }
   tiled_extent(const tiled_extent& other) restrict(amp,cpu): extent(other[0], other[1], other[2]) {}
   tiled_extent(const extent<3>& ext) restrict(amp,cpu): extent(ext) {}
   tiled_extent& operator=(const tiled_extent& other) restrict(amp,cpu);
@@ -997,11 +996,10 @@ template <int D0, int D1>
 class tiled_extent<D0,D1,0> : public extent<2>
 {
 public:
+  static_assert(D0 > 0, "Tile size must be positive");
+  static_assert(D1 > 0, "Tile size must be positive");
   static const int rank = 2;
-  tiled_extent() restrict(amp,cpu) {
-    static_assert(D0 > 0, "Tile size must be positive");
-    static_assert(D1 > 0, "Tile size must be positive");
-  }
+  tiled_extent() restrict(amp,cpu) { }
   tiled_extent(const tiled_extent& other) restrict(amp,cpu):extent(other[0], other[1]) {}
   tiled_extent(const extent<2>& ext) restrict(amp,cpu):extent(ext) {}
   tiled_extent& operator=(const tiled_extent& other) restrict(amp,cpu);
@@ -1030,10 +1028,9 @@ template <int D0>
 class tiled_extent<D0,0,0> : public extent<1>
 {
 public:
+  static_assert(D0 > 0, "Tile size must be positive");
   static const int rank = 1;
-  tiled_extent() restrict(amp,cpu) {
-    static_assert(D0 > 0, "Tile size must be positive");
-  }
+  tiled_extent() restrict(amp,cpu) { }
   tiled_extent(const tiled_extent& other) restrict(amp,cpu):
     extent(other[0]) {}
   tiled_extent(const extent<1>& ext) restrict(amp,cpu):extent(ext) {}
@@ -1679,16 +1676,17 @@ public:
           return (*this)[index<1>(i0)];
   }
   __global T& operator()(int i0, int i1) const restrict(amp,cpu) {
-      static_assert(N == 2, "Rank must be 2");
+      static_assert(N == 2, "T& array_view::operator()(int,int) is only permissible on array_view<T, 2>");
       return (*this)[index<2>(i0, i1)];
   }
   __global T& operator()(int i0, int i1, int i2) const restrict(amp,cpu) {
-      static_assert(N == 3, "Rank must be 3");
+      static_assert(N == 3, "T& array_view::operator()(int,int, int) is only permissible on array_view<T, 3>");
       return (*this)[index<3>(i0, i1, i2)];
   }
 
   template <typename ElementType>
-      array_view<ElementType, 1> reinterpret_as() const restrict(amp,cpu) {
+      array_view<ElementType, N> reinterpret_as() const restrict(amp,cpu) {
+      static_assert(N == 1, "reinterpret_as is only permissible on array views of rank 1");
 #ifndef __GPU__
           static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
           static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
@@ -1913,15 +1911,16 @@ public:
     return (*this)[idx];
   }
   __global const T& operator()(int i0) const restrict(amp,cpu) {
-    static_assert(N == 1, "Rank must be 1");
+    static_assert(N == 1, "const T& array_view::operator()(int) is only permissible on array_view<T, 1>");
     return (*this)[index<1>(i0)];
   }
+
   __global const T& operator()(int i0, int i1) const restrict(amp,cpu) {
-    static_assert(N == 2, "Rank must be 2");
+    static_assert(N == 2, "const T& array_view::operator()(int,int) is only permissible on array_view<T, 2>");
     return (*this)[index<2>(i0, i1)];
   }
   __global const T& operator()(int i0, int i1, int i2) const restrict(amp,cpu) {
-    static_assert(N == 3, "Rank must be 3");
+    static_assert(N == 3, "const T& array_view::operator()(int,int, int) is only permissible on array_view<T, 3>");
     return (*this)[index<3>(i0, i1, i2)];
   }
 /*
@@ -1931,7 +1930,8 @@ public:
   }
 */
   template <typename ElementType>
-    array_view<const ElementType, 1> reinterpret_as() const restrict(amp,cpu) {
+    array_view<const ElementType, N> reinterpret_as() const restrict(amp,cpu) {
+    static_assert(N == 1, "reinterpret_as is only permissible on array views of rank 1");
 #ifndef __GPU__
       static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
       static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
