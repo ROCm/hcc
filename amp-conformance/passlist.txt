@@ -223,6 +223,7 @@
 5_Data_Cont/5_1_array/5_1_1_gen/Pointer/Negative/Test.02/test.cpp
 5_Data_Cont/5_1_array/5_1_1_gen/Pointer/Negative/Test.03/test.cpp
 5_Data_Cont/5_1_array/5_1_1_gen/Pointer/Negative/Test.04/test.cpp
+5_Data_Cont/5_0_general/amp_compatible/negative/empty.class/test.cpp
 5_Data_Cont/5_0_general/amp_compatible/non.pod.inheritance/test.cpp
 5_Data_Cont/5_0_general/amp_compatible/negative/local.amp.incompatible/test.cpp
 4_Basic_Data_Elmnts/4_2_extent/4_2_4_ops/Arithmetic/Test.05/test.cpp
