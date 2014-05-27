@@ -1130,6 +1130,57 @@ struct projection_helper<T, 1>
         return *ptr;
     }
 };
+template <typename T, int N>
+struct array_projection_helper
+{
+    // array<T,N>, where N>1
+    //     array_view<T,N-1> operator[](int i0) restrict(amp,cpu);
+    //     array_view<const T,N-1> operator[](int i0) const restrict(amp,cpu);
+    static_assert(N > 1, "projection_helper is only supported on array with a rank of 2 or higher");
+    typedef array_view<T, N - 1> result_type;
+    typedef array_view<const T, N - 1> const_result_type;
+    static result_type project(array<T, N>& now, int stride) restrict(amp,cpu) {
+#ifndef __GPU__
+        if( stride < 0)
+          throw runtime_exception("errorMsg_throw", 0);
+#endif
+        int comp[N - 1], i;
+        for (i = N - 1; i > 0; --i)
+            comp[i - 1] = now.extent[i];
+        Concurrency::extent<N - 1> ext(comp);
+        int offset = ext.size() * stride;
+#ifndef __GPU__
+        if( offset >= now.extent.size())
+          throw runtime_exception("errorMsg_throw", 0);
+#endif
+        return result_type(ext, ext, index<N - 1>(), now.m_device, now.data(), offset);
+    }
+    static const_result_type project(const array<T, N>& now, int stride) restrict(amp,cpu) {
+        int comp[N - 1], i;
+        for (i = N - 1; i > 0; --i)
+            comp[i - 1] = now.extent[i];
+        Concurrency::extent<N - 1> ext(comp);
+        int offset = ext.size() * stride;
+        return const_result_type(ext, ext, index<N - 1>(), now.m_device, now.data(), offset);
+    }
+};
+template <typename T>
+struct array_projection_helper<T, 1>
+{
+    // array<T,1>
+    //    T& operator[](int i0) restrict(amp,cpu);
+    //    const T& operator[](int i0) const restrict(amp,cpu);
+    typedef __global T& result_type;
+    typedef __global const T& const_result_type;
+    static result_type project(array<T, 1>& now, int i) restrict(amp,cpu) {
+        __global T *ptr = reinterpret_cast<__global T *>(now.m_device.get() + i);
+        return *ptr;
+    }
+    static const_result_type project(const array<T, 1>& now, int i) restrict(amp,cpu) {
+        __global const T *ptr = reinterpret_cast<__global const T *>(now.m_device.get() + i);
+        return *ptr;
+    }
+};
 
 template <typename T, int N = 1>
 class array_helper {
@@ -1347,13 +1398,13 @@ public:
       return ptr[amp_helper<N, index<N>, Concurrency::extent<N> >::flatten(idx, extent)];
   }
 
-  typename projection_helper<T, N>::result_type
+  typename array_projection_helper<T, N>::result_type
       operator[] (int i) restrict(amp,cpu) {
-          return projection_helper<T, N>::project(*this, i);
+          return array_projection_helper<T, N>::project(*this, i);
       }
-  typename projection_helper<T, N>::const_result_type
+  typename array_projection_helper<T, N>::const_result_type
       operator[] (int i) const restrict(amp,cpu) {
-          return projection_helper<T, N>::project(*this, i);
+          return array_projection_helper<T, N>::project(*this, i);
       }
 
   __global T& operator()(const index<N>& idx) restrict(amp,cpu) {
@@ -1362,8 +1413,12 @@ public:
   __global const T& operator()(const index<N>& idx) const restrict(amp,cpu) {
     return (*this)[idx];
   }
-  typename projection_helper<T, N>::result_type
+  typename array_projection_helper<T, N>::result_type
       operator()(int i0) restrict(amp,cpu) {
+          return (*this)[i0];
+  }
+  typename array_projection_helper<T, N>::const_result_type
+      operator()(int i0) const restrict(amp,cpu) {
           return (*this)[i0];
   }
   // Duplicated codes
@@ -1514,6 +1569,7 @@ private:
   template <int K, typename Q> friend struct index_helper;
   template <int K, typename Q1, typename Q2> friend struct amp_helper;
   template <typename K, int Q> friend struct projection_helper;
+  template <typename K, int Q> friend struct array_projection_helper;
   template <typename K, int Q> friend class array_helper;
   gmac_buffer_t m_device;
   access_type cpu_access_type;
@@ -1780,6 +1836,7 @@ private:
   template <int K, typename Q> friend struct index_helper;
   template <int K, typename Q1, typename Q2> friend struct amp_helper;
   template <typename K, int Q> friend struct projection_helper;
+  template <typename K, int Q> friend struct array_projection_helper;
   template <typename Q, int K> friend class array;
   template <typename Q, int K> friend class array_view;
 
@@ -2013,6 +2070,7 @@ private:
   template <int K, typename Q> friend struct index_helper;
   template <int K, typename Q1, typename Q2> friend struct amp_helper;
   template <typename K, int Q> friend struct projection_helper;
+  template <typename K, int Q> friend struct array_projection_helper;
   template <typename Q, int K> friend class array;
   template <typename Q, int K> friend class array_view;
 
