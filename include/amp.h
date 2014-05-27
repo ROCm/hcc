@@ -1154,6 +1154,7 @@ private:
 
 template <typename T, int N = 1>
 class array {
+  static_assert(!std::is_const<T>::value, "array<const T> is not supported");
 public:
 #ifdef __GPU__
   typedef _data<T> gmac_buffer_t;
