@@ -1121,11 +1121,11 @@ struct projection_helper<T, 1>
         __global T *ptr = reinterpret_cast<__global T *>(now.m_device.get() + i);
         return *ptr;
     }
-    static const_result_type& project(const array<T, 1>& now, int i) restrict(amp,cpu) {
+    static const_result_type project(const array<T, 1>& now, int i) restrict(amp,cpu) {
         __global const T *ptr = reinterpret_cast<__global const T *>(now.m_device.get() + i);
         return *ptr;
     }
-    static result_type& project(const array_view<T, 1>& now, int i) restrict(amp,cpu) {
+    static result_type project(const array_view<T, 1>& now, int i) restrict(amp,cpu) {
         __global T *ptr = reinterpret_cast<__global T *>(now.cache.get() + i + now.offset + now.index_base[0]);
         return *ptr;
     }
@@ -1353,7 +1353,7 @@ public:
       }
   typename projection_helper<T, N>::const_result_type
       operator[] (int i) const restrict(amp,cpu) {
-          return projection_helper<const T, N>::project(*this, i);
+          return projection_helper<T, N>::project(*this, i);
       }
 
   __global T& operator()(const index<N>& idx) restrict(amp,cpu) {
@@ -1366,9 +1366,12 @@ public:
       operator()(int i0) restrict(amp,cpu) {
           return (*this)[i0];
   }
+  // Duplicated codes
+  #if 0
   __global const T& operator()(int i0) const restrict(amp,cpu) {
       return (*this)[i0];
   }
+  #endif
   __global T& operator()(int i0, int i1) restrict(amp,cpu) {
       return (*this)[index<2>(i0, i1)];
   }
@@ -1677,7 +1680,7 @@ public:
   }
   typename projection_helper<T, N>::result_type
       operator()(int i0) const restrict(amp,cpu) {
-          return (*this)[index<1>(i0)];
+          return (*this)[i0];
   }
   __global T& operator()(int i0, int i1) const restrict(amp,cpu) {
       static_assert(N == 2, "Rank must be 2");
@@ -1903,7 +1906,7 @@ public:
     return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
   }
 
-  typename projection_helper<const T, N>::result_type
+  typename projection_helper<const T, N>::const_result_type
       operator[] (int i) const restrict(amp,cpu) {
     return projection_helper<const T, N>::project(*this, i);
   }
