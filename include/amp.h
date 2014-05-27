@@ -1068,32 +1068,23 @@ namespace Concurrency {
 template <typename T, int N>
 struct projection_helper
 {
+    // array_view<T,N>, where N>1
+    //    array_view<T,N-1> operator[](int i) const restrict(amp,cpu)
+    static_assert(N > 1, "projection_helper is only supported on array_view with a rank of 2 or higher");
     typedef array_view<T, N - 1> result_type;
-    typedef array_view<const T, N - 1> const_result_type;
-    static result_type project(array<T, N>& now, int stride) restrict(amp,cpu) {
-#ifndef __GPU__
-        if( stride < 0)
-          throw runtime_exception("errorMsg_throw", 0);
-#endif
-        int comp[N - 1], i;
-        for (i = N - 1; i > 0; --i)
-            comp[i - 1] = now.extent[i];
-        Concurrency::extent<N - 1> ext(comp);
-        int offset = ext.size() * stride;
-#ifndef __GPU__
-        if( offset >= now.extent.size())
-          throw runtime_exception("errorMsg_throw", 0);
-#endif
-        array_view<T, N - 1> av(ext, ext, index<N - 1>(), now.m_device, now.data(), offset);
-        return av;
+    static result_type project(array_view<T, N>& now, int stride) restrict(amp,cpu) {
+        int ext[N - 1], i, idx[N - 1], ext_o[N - 1];
+        for (i = N - 1; i > 0; --i) {
+            ext_o[i - 1] = now.extent[i];
+            ext[i - 1] = now.extent_base[i];
+            idx[i - 1] = now.index_base[i];
     }
-    static const_result_type project(const array<const T, N>& now, int stride) restrict(amp,cpu) {
-        int comp[N - 1], i;
-        for (i = N - 1; i > 0; --i)
-            comp[i - 1] = now.extent[i];
-        Concurrency::extent<N - 1> ext(comp);
-        int offset = ext.size() * stride;
-        return const_result_type(ext, ext, index<N - 1>(), now.m_device, now.data(), offset);
+        stride += now.index_base[0];
+        Concurrency::extent<N - 1> ext_now(ext_o);
+        Concurrency::extent<N - 1> ext_base(ext);
+        Concurrency::index<N - 1> idx_base(idx);
+        return result_type (ext_now, ext_base, idx_base, now.cache,
+                                now.p_, now.offset + ext_base.size() * stride);
     }
     static result_type project(const array_view<T, N>& now, int stride) restrict(amp,cpu) {
         int ext[N - 1], i, idx[N - 1], ext_o[N - 1];
@@ -1106,27 +1097,73 @@ struct projection_helper
         Concurrency::extent<N - 1> ext_now(ext_o);
         Concurrency::extent<N - 1> ext_base(ext);
         Concurrency::index<N - 1> idx_base(idx);
-        array_view<T, N - 1> av(ext_now, ext_base, idx_base, now.cache,
+        return result_type (ext_now, ext_base, idx_base, now.cache,
                                 now.p_, now.offset + ext_base.size() * stride);
-        return av;
     }
 };
-
 template <typename T>
 struct projection_helper<T, 1>
 {
+    // array_view<T,1>
+    //      T& operator[](int i) const restrict(amp,cpu);
     typedef __global T& result_type;
-    typedef __global const T& const_result_type;
-    static result_type project(array<T, 1>& now, int i) restrict(amp,cpu) {
-        __global T *ptr = reinterpret_cast<__global T *>(now.m_device.get() + i);
-        return *ptr;
-    }
-    static const_result_type project(const array<T, 1>& now, int i) restrict(amp,cpu) {
-        __global const T *ptr = reinterpret_cast<__global const T *>(now.m_device.get() + i);
+    static result_type project(array_view<T, 1>& now, int i) restrict(amp,cpu) {
+        __global T *ptr = reinterpret_cast<__global T *>(now.cache.get() + i + now.offset + now.index_base[0]);
         return *ptr;
     }
     static result_type project(const array_view<T, 1>& now, int i) restrict(amp,cpu) {
         __global T *ptr = reinterpret_cast<__global T *>(now.cache.get() + i + now.offset + now.index_base[0]);
+        return *ptr;
+    }
+};
+template <typename T, int N>
+struct projection_helper<const T, N>
+{
+    // array_view<T,N>, where N>1
+    //    array_view<const T,N-1> operator[](int i) const restrict(amp,cpu);
+    static_assert(N > 1, "projection_helper is only supported on array_view with a rank of 2 or higher");
+    typedef array_view<const T, N - 1> const_result_type;
+    static const_result_type project(array_view<const T, N>& now, int stride) restrict(amp,cpu) {
+        int ext[N - 1], i, idx[N - 1], ext_o[N - 1];
+        for (i = N - 1; i > 0; --i) {
+            ext_o[i - 1] = now.extent[i];
+            ext[i - 1] = now.extent_base[i];
+            idx[i - 1] = now.index_base[i];
+        }
+        stride += now.index_base[0];
+        Concurrency::extent<N - 1> ext_now(ext_o);
+        Concurrency::extent<N - 1> ext_base(ext);
+        Concurrency::index<N - 1> idx_base(idx);
+        return const_result_type (ext_now, ext_base, idx_base, now.cache,
+                                now.p_, now.offset + ext_base.size() * stride);
+    }
+    static const_result_type project(const array_view<const T, N>& now, int stride) restrict(amp,cpu) {
+        int ext[N - 1], i, idx[N - 1], ext_o[N - 1];
+        for (i = N - 1; i > 0; --i) {
+            ext_o[i - 1] = now.extent[i];
+            ext[i - 1] = now.extent_base[i];
+            idx[i - 1] = now.index_base[i];
+        }
+        stride += now.index_base[0];
+        Concurrency::extent<N - 1> ext_now(ext_o);
+        Concurrency::extent<N - 1> ext_base(ext);
+        Concurrency::index<N - 1> idx_base(idx);
+        return const_result_type (ext_now, ext_base, idx_base, now.cache,
+                                now.p_, now.offset + ext_base.size() * stride);
+    }
+};
+template <typename T>
+struct projection_helper<const T, 1>
+{
+    // array_view<const T,1>
+    //      const T& operator[](int i) const restrict(amp,cpu);
+    typedef __global const T& const_result_type;
+    static const_result_type project(array_view<const T, 1>& now, int i) restrict(amp,cpu) {
+        __global const T *ptr = reinterpret_cast<__global const T *>(now.cache.get() + i + now.offset + now.index_base[0]);
+        return *ptr;
+    }
+    static const_result_type project(const array_view<const T, 1>& now, int i) restrict(amp,cpu) {
+        __global const T *ptr = reinterpret_cast<__global const T *>(now.cache.get() + i + now.offset + now.index_base[0]);
         return *ptr;
     }
 };
