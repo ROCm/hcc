@@ -2356,7 +2356,7 @@ completion_future copy_async(const array_view<T, N>& src, OutputIter destBegin) 
 }
 
 #ifdef __GPU__
-extern "C" unsigned atomic_add_local(volatile __attribute__((address_space(3))) unsigned *p, unsigned val) restrict(amp,cpu);
+extern "C" unsigned atomic_add_local(volatile __attribute__((address_space(3))) unsigned *p, unsigned val) restrict(amp);
 static inline unsigned atomic_fetch_add(unsigned *x, unsigned y) restrict(amp,cpu) { 
   return atomic_add_local(reinterpret_cast<volatile __attribute__((address_space(3))) unsigned *>(x), y);
 }
@@ -2365,7 +2365,7 @@ extern unsigned atomic_fetch_add(unsigned *x, unsigned y) restrict(amp,cpu);
 #endif
 
 #ifdef __GPU__
-extern "C" int atomic_add_global(volatile __attribute__((address_space(1))) int *p, int val) restrict(amp, cpu);
+extern "C" int atomic_add_global(volatile __attribute__((address_space(1))) int *p, int val) restrict(amp);
 static inline int atomic_fetch_add(int *x, int y) restrict(amp,cpu) {
   return atomic_add_global(reinterpret_cast<volatile __attribute__((address_space(1))) int *>(x), y);
 }
@@ -2374,8 +2374,8 @@ extern int atomic_fetch_add(int *x, int y) restrict(amp, cpu);
 #endif
 
 #ifdef __GPU__
-extern "C" unsigned atomic_max_local(volatile __attribute__((address_space(3))) unsigned *p, unsigned val) restrict(amp,cpu);
-extern "C" int atomic_max_global(volatile __attribute__((address_space(1))) int *p, int val) restrict(amp, cpu);
+extern "C" unsigned atomic_max_local(volatile __attribute__((address_space(3))) unsigned *p, unsigned val) restrict(amp);
+extern "C" int atomic_max_global(volatile __attribute__((address_space(1))) int *p, int val) restrict(amp);
 static inline unsigned atomic_fetch_max(unsigned *x, unsigned y) restrict(amp,cpu) {
   return atomic_max_local(reinterpret_cast<volatile __attribute__((address_space(3))) unsigned *>(x), y);
 }
@@ -2383,8 +2383,8 @@ static inline int atomic_fetch_max(int *x, int y) restrict(amp,cpu) {
   return atomic_max_global(reinterpret_cast<volatile __attribute__((address_space(1))) int *>(x), y);
 }
 
-extern "C" unsigned atomic_inc_local(volatile __attribute__((address_space(3))) unsigned *p) restrict(amp,cpu);
-extern "C" int atomic_inc_global(volatile __attribute__((address_space(1))) int *p) restrict(amp, cpu);
+extern "C" unsigned atomic_inc_local(volatile __attribute__((address_space(3))) unsigned *p) restrict(amp);
+extern "C" int atomic_inc_global(volatile __attribute__((address_space(1))) int *p) restrict(amp);
 static inline unsigned atomic_fetch_inc(unsigned *x) restrict(amp,cpu) {
   return atomic_inc_local(reinterpret_cast<volatile __attribute__((address_space(3))) unsigned *>(x));
 }
