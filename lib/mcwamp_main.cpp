@@ -60,7 +60,7 @@ void cxxflags(void) {
     }
 
     if (gpu_path) {
-        std::cout << " -D__GPU__=1 -Xclang -fcuda-is-device -fno-builtin -fno-common -m32 -O2";
+        std::cout << " -D__GPU__=1 -Xclang -famp-is-device -fno-builtin -fno-common -m32 -O2";
     } else if (cpu_path) {
         std::cout << " -D__CPU__=1";
     }
