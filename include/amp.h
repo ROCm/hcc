@@ -389,6 +389,8 @@ template <int ...N>
         index_impl(const index_impl& other) restrict(amp,cpu)
             : index_impl(static_cast<const __index_leaf<N>&>(other).get()...) {}
 
+        index_impl(int component) restrict(amp,cpu)
+            : __index_leaf<N>(component)... {}
         index_impl(int components[]) restrict(amp,cpu)
             : __index_leaf<N>(components[N])... {}
         index_impl(const int components[]) restrict(amp,cpu)
@@ -537,6 +539,8 @@ public:
             static_assert(sizeof...(_Tp) <= 3, "Explicit constructor with rank greater than 3 is not allowed");
             static_assert(sizeof...(_Tp) == N, "rank should be consistency");
         }
+    explicit index(int component) restrict(amp,cpu)
+        : base_(component) {}
     explicit index(int components[]) restrict(amp,cpu)
         : base_(components) {}
     explicit index(const int components[]) restrict(amp,cpu)
@@ -704,6 +708,8 @@ public:
       static_assert(sizeof...(__t) <= 3, "Can only supply at most 3 individual coordinates in the constructor");
       static_assert(sizeof...(__t) == N, "rank should be consistency");
     }
+    explicit extent(int component) restrict(amp,cpu)
+        : base_(component) {}
     explicit extent(int components[]) restrict(amp,cpu)
         : base_(components) {}
     explicit extent(const int components[]) restrict(amp,cpu)
