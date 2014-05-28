@@ -308,7 +308,7 @@ namespace fast_math {
     #endif
   }
 
-  float ldexp(float x, int exp) {
+  float ldexp(float x, int exp) restrict(amp, cpu) {
     #ifdef __GPU__
       return opencl_ldexp(x,exp);
     #else
@@ -316,7 +316,7 @@ namespace fast_math {
     #endif
   }
 
-  float ldexpf(float x, int exp) {
+  float ldexpf(float x, int exp) restrict(amp, cpu) {
     #ifdef __GPU__
       return opencl_ldexp(x,exp);
     #else
@@ -372,7 +372,7 @@ namespace fast_math {
     #endif
   }
 
-  float pow(float x, float y) {
+  float pow(float x, float y) restrict(amp, cpu) {
     #ifdef __GPU__
       return opencl_pow(x, y);
     #else
@@ -380,7 +380,7 @@ namespace fast_math {
     #endif
   }
 
-  float powf(float x, float y) {
+  float powf(float x, float y) restrict(amp, cpu) {
     #ifdef __GPU__
       return opencl_pow(x, y);
     #else
@@ -865,7 +865,7 @@ namespace fast_math {
     #endif
   }
 
-  float remainder(double x, double y) {
+  float remainder (double x, double y) restrict(amp, cpu) {
     #ifdef __GPU__
       return opencl_remainder(x, y);
     #else
@@ -873,7 +873,7 @@ namespace fast_math {
     #endif
   }
 
-  float remainderf(double x, double y) {
+  float remainderf (double x, double y) restrict(amp, cpu) {
     #ifdef __GPU__
       return opencl_remainder(x, y);
     #else
