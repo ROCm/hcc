@@ -76,6 +76,7 @@ class ThreadDependencyAnalyzer : public InstVisitor<ThreadDependencyAnalyzer> {
 protected:
   Function *get_global_id;
   Function *get_local_id;
+  SmallPtrSet<Instruction *, 8> Visited;
 
 public:
   ThreadDependencyAnalyzer(Module &M);
@@ -179,6 +180,7 @@ ThreadDependencyAnalyzer::ThreadDependencyAnalyzer(Module &M) {
 
 #if HANDLE_LOAD_PRIVATE
 void ThreadDependencyAnalyzer::visitLoadInst(LoadInst &I) {
+  if (!Visited.insert(&I)) return;
 #if TILE_UNIFORM_DEBUG
   errs() << I << "\n";
 #endif
@@ -187,6 +189,7 @@ void ThreadDependencyAnalyzer::visitLoadInst(LoadInst &I) {
 #endif
 
 void ThreadDependencyAnalyzer::visitCallInst(CallInst &I) {
+  if (!Visited.insert(&I)) return;
 #if TILE_UNIFORM_DEBUG
   errs() << I << "\n";
 #endif
@@ -196,6 +199,7 @@ void ThreadDependencyAnalyzer::visitCallInst(CallInst &I) {
 }
 
 void ThreadDependencyAnalyzer::visitInstruction(Instruction &I) {
+  if (!Visited.insert(&I)) return;
 #if TILE_UNIFORM_DEBUG
   errs() << I << "\n";
 #endif
@@ -227,10 +231,6 @@ bool TileUniform::runOnModule(Module &M) {
   return false;
 #endif
 
-#if TILE_UNIFORM_DEBUG
-  errs() << "TileUniform::runOnModule\n";
-#endif
-
   if(!(barrier = M.getFunction("barrier")))
     return false;
 
@@ -239,8 +239,15 @@ bool TileUniform::runOnModule(Module &M) {
     if (Instruction *I = dyn_cast<Instruction>(*UI)) {
       BasicBlock *BB = I->getParent();
       Function *F = BB->getParent();
+
+#if TILE_UNIFORM_DEBUG
+      errs() << "Decide whether Instruction " << *I << "\n"
+               << " of Basic Block " << BB->getName() << "\n"
+               << " of Function " << F->getName() << "\n"
+               << " is tile uniform or not\n";
+#endif
+
       ControlDependences *CtrlDeps = new ControlDependences();
-      ThreadDependencyAnalyzer *TDA = new ThreadDependencyAnalyzer(M);
 
       CtrlDeps->runOnFunction(*F);
 
@@ -257,13 +264,18 @@ bool TileUniform::runOnModule(Module &M) {
       for (CDST::iterator i = CtrlDep->begin(), e = CtrlDep->end(); i != e;
             ++i) {
         BasicBlock *CtrlDepBB = *i;
+#if TILE_UNIFORM_DEBUG
+        errs() << "Analyze the Thread Dependency of Terminator Instruction of "
+                 << CtrlDepBB->getName() << " which is " << BB->getName()
+                 << " control dependent on \n";
+#endif
         TerminatorInst *TI = CtrlDepBB->getTerminator();
-        TDA->analyze(*TI);
+        ThreadDependencyAnalyzer TDA(M);
+        TDA.analyze(*TI);
       }
 
       CtrlDeps->releaseMemory();
       delete CtrlDeps;
-      delete TDA;
     }
   }
   return false;
