@@ -37,9 +37,10 @@ void cxxflags(void) {
     std::cout << " -I" CMAKE_HSA_ROOT;
 #endif
 
+#if !defined(CXXAMP_ENABLE_HSA_OKRA) && !defined(CXXAMP_ENABLE_HSA)
     // OpenCL headers
-    // FIXME: remove from OKRA and HSA path
     std::cout << " -I" CMAKE_OPENCL_INC;
+#endif
 
     // clamp
     if (build_mode) {
