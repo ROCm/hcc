@@ -1,4 +1,4 @@
-//===- Hello.cpp - Example code from "Writing an LLVM Pass" ---------------===//
+//===- TileUniform.cpp - Tile Uniform analysis ----------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,17 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements two versions of the LLVM "Hello World" pass described
-// in docs/WritingAnLLVMPass.html
+// Detects whether all active control flow expressions leading to a tile barrier 
+// to be tile-uniform.
 //
 //===----------------------------------------------------------------------===//
-
-//#define DEBUG_TYPE "PromoteGlobals"
 
 #include "llvm/InstVisitor.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Assembly/Writer.h"
 #include "llvm/Support/Debug.h"
+
 #include <map>
 #include <set>
 
@@ -35,17 +34,16 @@ public:
   typedef std::set<BasicBlock*>                 CtrlDepSetType;
   typedef std::map<BasicBlock*, CtrlDepSetType> CtrlDepSetMapType;
   static char ID; // Pass ID, replacement for typeid
+
 protected:
   CtrlDepSetMapType CtrlDeps;
 
 public:
-  ControlDependences() : FunctionPass(ID) {
-    //initializeControlDependencesPass(*PassRegistry::getPassRegistry());
-  }
+  ControlDependences() : FunctionPass(ID) {}
 
   virtual void releaseMemory() { CtrlDeps.clear(); }
 
-  // Accessor interface: 
+  /// Accessor interface: 
   typedef CtrlDepSetMapType::iterator iterator; 
   typedef CtrlDepSetMapType::const_iterator const_iterator; 
   iterator       begin()       { return CtrlDeps.begin(); } 
@@ -56,7 +54,6 @@ public:
   const_iterator find(BasicBlock *B) const { return CtrlDeps.find(B); }
 
   /// print - Convert to human readable form
-  ///
   virtual void print(raw_ostream &OS, const Module* = 0) const;
 
   /// dump - Dump the control dependences to dbgs().
@@ -66,7 +63,6 @@ public:
 
   virtual void getAnalysisUsage(AnalysisUsage &AU) const {
     AU.setPreservesAll();
-//    AU.addRequired<PostDominatorTree>();
   }
 };
 
@@ -80,8 +76,11 @@ protected:
 
 public:
   ThreadDependencyAnalyzer(Module &M);
+
+  /// Entry point of analysis
   void analyze(Instruction &I) { visit(I); }
-  // Opcode Implementations
+
+  /// Opcode Implementations
 #if HANDLE_LOAD_PRIVATE
   void visitLoadInst(LoadInst &I);
 #endif
@@ -94,6 +93,7 @@ public:
 class TileUniform : public ModulePass {
 public:
   static char ID;
+
 protected:
   Function *barrier;
 
@@ -102,7 +102,7 @@ public:
 
   virtual void getAnalysisUsage(AnalysisUsage& AU) const {
     AU.setPreservesAll();
-//    AU.addRequired<ControlDependences>();
+    // FIXME: use AnalysisUsage class 
   }
 
   virtual bool runOnModule(Module& M);
@@ -184,7 +184,7 @@ void ThreadDependencyAnalyzer::visitLoadInst(LoadInst &I) {
 #if TILE_UNIFORM_DEBUG
   errs() << I << "\n";
 #endif
-  report_fatal_error("violated tile uniform\n");
+  // FIXME: load from private memory is still thread dependent
 }
 #endif
 
@@ -212,25 +212,7 @@ void ThreadDependencyAnalyzer::visitInstruction(Instruction &I) {
 /// TileUniform Implementation - Used to ensure tile uniform.
 ///
 bool TileUniform::runOnModule(Module &M) {
-
-#if 0
-  /// The following code is used to test ControlDependences class
-  ///
-  Module::FunctionListType &funcs = M.getFunctionList();
-  ControlDependences *CDs = new ControlDependences();
-  
-  for (Module::iterator I = funcs.begin(), E = funcs.end(); I != E; ++I) {
-    Function &func = *I;
-    if (!func.isDeclaration()) {
-      CDs->runOnFunction(func);
-      CDs->print(errs());
-      CDs->releaseMemory();      
-    }
-  }
-  
-  return false;
-#endif
-
+  // FIXME: TileUniform should be implement as a FunctionPass
   if(!(barrier = M.getFunction("barrier")))
     return false;
 
@@ -248,7 +230,6 @@ bool TileUniform::runOnModule(Module &M) {
 #endif
 
       ControlDependences *CtrlDeps = new ControlDependences();
-
       CtrlDeps->runOnFunction(*F);
 
 #if TILE_UNIFORM_DEBUG
@@ -264,11 +245,13 @@ bool TileUniform::runOnModule(Module &M) {
       for (CDST::iterator i = CtrlDep->begin(), e = CtrlDep->end(); i != e;
             ++i) {
         BasicBlock *CtrlDepBB = *i;
+
 #if TILE_UNIFORM_DEBUG
         errs() << "Analyze the Thread Dependency of Terminator Instruction of "
                  << CtrlDepBB->getName() << " which is " << BB->getName()
                  << " control dependent on \n";
 #endif
+
         TerminatorInst *TI = CtrlDepBB->getTerminator();
         ThreadDependencyAnalyzer TDA(M);
         TDA.analyze(*TI);
