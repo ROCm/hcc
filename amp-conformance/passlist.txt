@@ -327,6 +327,7 @@
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_1_Func_poin_conv/Conversion.03/test.cpp
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_1_Func_poin_conv/Negative/290118/test.cpp
 2_Cxx_Lang_Exte/2_2_Mean_of_Rest_Spec/2_2_1_Func_Defi/Auto_inference/Negative/AutoInference.02/test.cpp
+2_Cxx_Lang_Exte/2_2_Mean_of_Rest_Spec/2_2_2_Cons_and_Dest/Negative/Destructor/test.cpp
 2_Cxx_Lang_Exte/2_1_Synt/2_1_3_Type_Spec/Typedef/Test.01/test.cpp
 2_Cxx_Lang_Exte/2_1_Synt/2_1_1_Func_Decl_Synt/TemplateClass/Test.01/test.cpp
 2_Cxx_Lang_Exte/2_1_Synt/2_1_1_Func_Decl_Synt/Negative/Test.04/test.cpp
