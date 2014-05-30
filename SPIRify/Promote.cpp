@@ -1,4 +1,4 @@
-//===- Hello.cpp - Example code from "Writing an LLVM Pass" ---------------===//
+//===- Promote.cpp - Lift LLVM IR to SPIR-compatible ----- ----------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements two versions of the LLVM "Hello World" pass described
-// in docs/WritingAnLLVMPass.html
+// This file implements a pass to promote variables to correct addrspace to
+// adhere SPIR specification.
 //
 //===----------------------------------------------------------------------===//
 
