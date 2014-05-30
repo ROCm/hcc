@@ -1,4 +1,4 @@
-//===- Hello.cpp - Example code from "Writing an LLVM Pass" ---------------===//
+//===- EraseNonkernel.cpp - Remove non-GPU codes from LLVM IR -------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,8 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements two versions of the LLVM "Hello World" pass described
-// in docs/WritingAnLLVMPass.html
+// This file implements a pass which removes non-GPU codes from LLVM IR.
 //
 //===----------------------------------------------------------------------===//
 
