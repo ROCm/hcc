@@ -1,3 +1,10 @@
+//===----------------------------------------------------------------------===//
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef INCLUDE_AMP_IMPL_H
 #define INCLUDE_AMP_IMPL_H
 
@@ -42,7 +49,7 @@ inline accelerator::accelerator(const accelerator& other) :
 #endif
   {}
 
-// TODO(I-Jui Sung): perform real OpenCL queries here..
+// TODO: perform real OpenCL queries here..
 inline accelerator::accelerator(const std::wstring& path) :
   device_path( (path != std::wstring(default_accelerator)) ? 
 					path : 

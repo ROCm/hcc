@@ -1,3 +1,10 @@
+//===----------------------------------------------------------------------===//
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
 // CAVEATS: There could be walkarounds for quick evaluation purposes. Here we
 // list such features that are used in the code with description.
 //
