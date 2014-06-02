@@ -1164,6 +1164,7 @@ private:
 
 template <typename T, int N = 1>
 class array {
+  static_assert(0 == (sizeof(T) % sizeof(int)), "only value types whose size is a multiple of the size of an integer are allowed in array");
 public:
 #ifdef __GPU__
   typedef _data<T> gmac_buffer_t;
@@ -1542,6 +1543,7 @@ private:
 template <typename T, int N = 1>
 class array_view
 {
+  static_assert(0 == (sizeof(T) % sizeof(int)), "only value types whose size is a multiple of the size of an integer are allowed in array views");
   typedef typename std::remove_const<T>::type nc_T;
 public:
 #ifdef __GPU__
