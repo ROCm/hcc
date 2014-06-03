@@ -105,7 +105,7 @@ void ldflags(void) {
     std::cout << " -Wl,--rpath=" CMAKE_HSA_LIB;
     std::cout << " -L" CMAKE_HSA_LIB;
     std::cout << " " CMAKE_HSA_LIB "/hsa_runtime_core64.so";
-    std::cout << " -lamdocl64";
+    std::cout << " -lamdhsacl64";
     std::cout << " -Wl,--whole-archive -lhsacontext -Wl,--no-whole-archive ";
 #else
     std::cout << " -lgmac-hpe";

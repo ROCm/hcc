@@ -298,12 +298,13 @@ public:
 
         // "Fix" HSAIL
         //printf("Kernel entry is %s\n", entryName);
-        const char* fixedHsail = (fixHsail(hsailBuffer))->c_str();
+        //const char* fixedHsail = (fixHsail(hsailBuffer))->c_str();
         //printf("fixedHsail:\n");
         //printf("%s\n", fixedHsail);
 
         // Get program by hsail compile path.
-        status = hsa_finalize_hsail(device, fixedHsail, entryName, &kernel);
+        //status = hsa_finalize_hsail(device, fixedHsail, entryName, &kernel);
+        status = hsa_finalize_hsail(device, hsailBuffer, entryName, &kernel);
         STATUS_CHECK(status, __LINE__);
 
         return new KernelImpl(kernel, this);
