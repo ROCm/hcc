@@ -324,6 +324,7 @@
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_3_Rest_on_Func_Scop/2_4_3_1_Lite/Negative/Strings.02/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_2_Rest_on_Func_Decl/Exception_specification/Negative/Lambda.01/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_2_Rest_on_Func_Decl/Function_parameters/Negative/Char/test.cpp
+2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_2_Rest_on_Func_Decl/Function_parameters/Negative/Test.04/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_2_Rest_on_Func_Decl/Return_type/Negative/Test.01/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_2_Rest_on_Func_Decl/Virtual/Negative/Function.03/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_2_Rest_on_Func_Decl/Virtual/Negative/Test.01/test.cpp
