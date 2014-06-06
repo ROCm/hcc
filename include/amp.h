@@ -1,3 +1,10 @@
+//===----------------------------------------------------------------------===//
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
 // CAVEATS: There could be walkarounds for quick evaluation purposes. Here we
 // list such features that are used in the code with description.
 //
@@ -389,6 +396,8 @@ template <int ...N>
         index_impl(const index_impl& other) restrict(amp,cpu)
             : index_impl(static_cast<const __index_leaf<N>&>(other).get()...) {}
 
+        index_impl(int component) restrict(amp,cpu)
+            : __index_leaf<N>(component)... {}
         index_impl(int components[]) restrict(amp,cpu)
             : __index_leaf<N>(components[N])... {}
         index_impl(const int components[]) restrict(amp,cpu)
@@ -537,6 +546,8 @@ public:
             static_assert(sizeof...(_Tp) <= 3, "Explicit constructor with rank greater than 3 is not allowed");
             static_assert(sizeof...(_Tp) == N, "rank should be consistency");
         }
+    explicit index(int component) restrict(amp,cpu)
+        : base_(component) {}
     explicit index(int components[]) restrict(amp,cpu)
         : base_(components) {}
     explicit index(const int components[]) restrict(amp,cpu)
@@ -704,6 +715,8 @@ public:
       static_assert(sizeof...(__t) <= 3, "Can only supply at most 3 individual coordinates in the constructor");
       static_assert(sizeof...(__t) == N, "rank should be consistency");
     }
+    explicit extent(int component) restrict(amp,cpu)
+        : base_(component) {}
     explicit extent(int components[]) restrict(amp,cpu)
         : base_(components) {}
     explicit extent(const int components[]) restrict(amp,cpu)
@@ -738,23 +751,23 @@ public:
         return amp_helper<N, index<N>, extent<N>>::contains(idx, *this);
     }
     template <int D0>
-        typename std::enable_if<N == 1, tiled_extent<D0> >::type tile() const {
-            static_assert(D0 > 0, "Tile size must be positive");
-            return tiled_extent<D0>(*this);
-        }
+      tiled_extent<D0> tile() const restrict(amp,cpu) {
+        static_assert(N == 1, "One-dimensional tile() method only available on extent<1>");
+        static_assert(D0 >0, "All tile dimensions must be positive");
+        return tiled_extent<D0>(*this);
+      }
     template <int D0, int D1>
-        typename std::enable_if<N == 2, tiled_extent<D0, D1> >::type tile() const {
-            static_assert(D0 > 0, "Tile size must be positive");
-            static_assert(D1 > 0, "Tile size must be positive");
-            return tiled_extent<D0, D1>(*this);
-        }
+      tiled_extent<D0, D1> tile() const restrict(amp,cpu) {
+        static_assert(N == 2, "Two-dimensional tile() method only available on extent<2>");
+        static_assert(D0 >0 && D1 > 0, "All tile dimensions must be positive");
+        return tiled_extent<D0, D1>(*this);
+      }
     template <int D0, int D1, int D2>
-        typename std::enable_if<N == 3, tiled_extent<D0, D1, D2> >::type tile() const {
-            static_assert(D0 > 0, "Tile size must be positive");
-            static_assert(D1 > 0, "Tile size must be positive");
-            static_assert(D2 > 0, "Tile size must be positive");
-            return tiled_extent<D0, D1, D2>(*this);
-        }
+      tiled_extent<D0, D1, D2> tile() const restrict(amp,cpu) {
+        static_assert(N == 3, "Three-dimensional tile() method only available on extent<3>");
+        static_assert(D0 >0 && D1 > 0 && D2 > 0, "All tile dimensions must be positive");
+        return tiled_extent<D0, D1, D2>(*this);
+      }
 
     extent operator+(const index<N>& idx) restrict(amp,cpu) {
         extent __r = *this;
@@ -960,12 +973,11 @@ template <int D0, int D1/*=0*/, int D2/*=0*/>
 class tiled_extent : public extent<3>
 {
 public:
+  static_assert(D0 > 0, "Tile size must be positive");
+  static_assert(D1 > 0, "Tile size must be positive");
+  static_assert(D2 > 0, "Tile size must be positive");
   static const int rank = 3;
-  tiled_extent() restrict(amp,cpu) {
-    static_assert(D0 > 0, "Tile size must be positive");
-    static_assert(D1 > 0, "Tile size must be positive");
-    static_assert(D2 > 0, "Tile size must be positive");
-  }
+  tiled_extent() restrict(amp,cpu) { }
   tiled_extent(const tiled_extent& other) restrict(amp,cpu): extent(other[0], other[1], other[2]) {}
   tiled_extent(const extent<3>& ext) restrict(amp,cpu): extent(ext) {}
   tiled_extent& operator=(const tiled_extent& other) restrict(amp,cpu);
@@ -997,11 +1009,10 @@ template <int D0, int D1>
 class tiled_extent<D0,D1,0> : public extent<2>
 {
 public:
+  static_assert(D0 > 0, "Tile size must be positive");
+  static_assert(D1 > 0, "Tile size must be positive");
   static const int rank = 2;
-  tiled_extent() restrict(amp,cpu) {
-    static_assert(D0 > 0, "Tile size must be positive");
-    static_assert(D1 > 0, "Tile size must be positive");
-  }
+  tiled_extent() restrict(amp,cpu) { }
   tiled_extent(const tiled_extent& other) restrict(amp,cpu):extent(other[0], other[1]) {}
   tiled_extent(const extent<2>& ext) restrict(amp,cpu):extent(ext) {}
   tiled_extent& operator=(const tiled_extent& other) restrict(amp,cpu);
@@ -1030,10 +1041,9 @@ template <int D0>
 class tiled_extent<D0,0,0> : public extent<1>
 {
 public:
+  static_assert(D0 > 0, "Tile size must be positive");
   static const int rank = 1;
-  tiled_extent() restrict(amp,cpu) {
-    static_assert(D0 > 0, "Tile size must be positive");
-  }
+  tiled_extent() restrict(amp,cpu) { }
   tiled_extent(const tiled_extent& other) restrict(amp,cpu):
     extent(other[0]) {}
   tiled_extent(const extent<1>& ext) restrict(amp,cpu):extent(ext) {}
@@ -1154,6 +1164,7 @@ private:
 
 template <typename T, int N = 1>
 class array {
+  static_assert(0 == (sizeof(T) % sizeof(int)), "only value types whose size is a multiple of the size of an integer are allowed in array");
 public:
 #ifdef __GPU__
   typedef _data<T> gmac_buffer_t;
@@ -1532,6 +1543,7 @@ private:
 template <typename T, int N = 1>
 class array_view
 {
+  static_assert(0 == (sizeof(T) % sizeof(int)), "only value types whose size is a multiple of the size of an integer are allowed in array views");
   typedef typename std::remove_const<T>::type nc_T;
 public:
 #ifdef __GPU__
@@ -1679,16 +1691,17 @@ public:
           return (*this)[index<1>(i0)];
   }
   __global T& operator()(int i0, int i1) const restrict(amp,cpu) {
-      static_assert(N == 2, "Rank must be 2");
+      static_assert(N == 2, "T& array_view::operator()(int,int) is only permissible on array_view<T, 2>");
       return (*this)[index<2>(i0, i1)];
   }
   __global T& operator()(int i0, int i1, int i2) const restrict(amp,cpu) {
-      static_assert(N == 3, "Rank must be 3");
+      static_assert(N == 3, "T& array_view::operator()(int,int, int) is only permissible on array_view<T, 3>");
       return (*this)[index<3>(i0, i1, i2)];
   }
 
   template <typename ElementType>
-      array_view<ElementType, 1> reinterpret_as() const restrict(amp,cpu) {
+      array_view<ElementType, N> reinterpret_as() const restrict(amp,cpu) {
+      static_assert(N == 1, "reinterpret_as is only permissible on array views of rank 1");
 #ifndef __GPU__
           static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
           static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
@@ -1913,15 +1926,16 @@ public:
     return (*this)[idx];
   }
   __global const T& operator()(int i0) const restrict(amp,cpu) {
-    static_assert(N == 1, "Rank must be 1");
+    static_assert(N == 1, "const T& array_view::operator()(int) is only permissible on array_view<T, 1>");
     return (*this)[index<1>(i0)];
   }
+
   __global const T& operator()(int i0, int i1) const restrict(amp,cpu) {
-    static_assert(N == 2, "Rank must be 2");
+    static_assert(N == 2, "const T& array_view::operator()(int,int) is only permissible on array_view<T, 2>");
     return (*this)[index<2>(i0, i1)];
   }
   __global const T& operator()(int i0, int i1, int i2) const restrict(amp,cpu) {
-    static_assert(N == 3, "Rank must be 3");
+    static_assert(N == 3, "const T& array_view::operator()(int,int, int) is only permissible on array_view<T, 3>");
     return (*this)[index<3>(i0, i1, i2)];
   }
 /*
@@ -1931,7 +1945,8 @@ public:
   }
 */
   template <typename ElementType>
-    array_view<const ElementType, 1> reinterpret_as() const restrict(amp,cpu) {
+    array_view<const ElementType, N> reinterpret_as() const restrict(amp,cpu) {
+    static_assert(N == 1, "reinterpret_as is only permissible on array views of rank 1");
 #ifndef __GPU__
       static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
       static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
@@ -2356,7 +2371,7 @@ completion_future copy_async(const array_view<T, N>& src, OutputIter destBegin) 
 }
 
 #ifdef __GPU__
-extern "C" unsigned atomic_add_local(volatile __attribute__((address_space(3))) unsigned *p, unsigned val) restrict(amp,cpu);
+extern "C" unsigned atomic_add_local(volatile __attribute__((address_space(3))) unsigned *p, unsigned val) restrict(amp);
 static inline unsigned atomic_fetch_add(unsigned *x, unsigned y) restrict(amp,cpu) { 
   return atomic_add_local(reinterpret_cast<volatile __attribute__((address_space(3))) unsigned *>(x), y);
 }
@@ -2365,7 +2380,7 @@ extern unsigned atomic_fetch_add(unsigned *x, unsigned y) restrict(amp,cpu);
 #endif
 
 #ifdef __GPU__
-extern "C" int atomic_add_global(volatile __attribute__((address_space(1))) int *p, int val) restrict(amp, cpu);
+extern "C" int atomic_add_global(volatile __attribute__((address_space(1))) int *p, int val) restrict(amp);
 static inline int atomic_fetch_add(int *x, int y) restrict(amp,cpu) {
   return atomic_add_global(reinterpret_cast<volatile __attribute__((address_space(1))) int *>(x), y);
 }
@@ -2374,8 +2389,8 @@ extern int atomic_fetch_add(int *x, int y) restrict(amp, cpu);
 #endif
 
 #ifdef __GPU__
-extern "C" unsigned atomic_max_local(volatile __attribute__((address_space(3))) unsigned *p, unsigned val) restrict(amp,cpu);
-extern "C" int atomic_max_global(volatile __attribute__((address_space(1))) int *p, int val) restrict(amp, cpu);
+extern "C" unsigned atomic_max_local(volatile __attribute__((address_space(3))) unsigned *p, unsigned val) restrict(amp);
+extern "C" int atomic_max_global(volatile __attribute__((address_space(1))) int *p, int val) restrict(amp);
 static inline unsigned atomic_fetch_max(unsigned *x, unsigned y) restrict(amp,cpu) {
   return atomic_max_local(reinterpret_cast<volatile __attribute__((address_space(3))) unsigned *>(x), y);
 }
@@ -2383,8 +2398,8 @@ static inline int atomic_fetch_max(int *x, int y) restrict(amp,cpu) {
   return atomic_max_global(reinterpret_cast<volatile __attribute__((address_space(1))) int *>(x), y);
 }
 
-extern "C" unsigned atomic_inc_local(volatile __attribute__((address_space(3))) unsigned *p) restrict(amp,cpu);
-extern "C" int atomic_inc_global(volatile __attribute__((address_space(1))) int *p) restrict(amp, cpu);
+extern "C" unsigned atomic_inc_local(volatile __attribute__((address_space(3))) unsigned *p) restrict(amp);
+extern "C" int atomic_inc_global(volatile __attribute__((address_space(1))) int *p) restrict(amp);
 static inline unsigned atomic_fetch_inc(unsigned *x) restrict(amp,cpu) {
   return atomic_inc_local(reinterpret_cast<volatile __attribute__((address_space(3))) unsigned *>(x));
 }
