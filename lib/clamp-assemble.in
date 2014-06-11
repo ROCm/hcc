@@ -1,0 +1,21 @@
+#!/bin/sh
+if [ "$#" -ne 2 ]; then
+  echo "Usage: $0 input ouput" >&2
+  exit 1
+fi
+ORIGINAL_FILENAME=$2
+FILENAME=${ORIGINAL_FILENAME%.*}
+
+if [ -d @LLVM_TOOLS_DIR@ ]; then
+    CLAMP_DEVICE=@PROJECT_BINARY_DIR@/lib/clamp-device
+    CLAMP_EMBED=@PROJECT_BINARY_DIR@/lib/clamp-embed
+else
+    CLAMP_DEVICE=@CMAKE_INSTALL_PREFIX@/bin/clamp-device
+    CLAMP_EMBED=@CMAKE_INSTALL_PREFIX@/bin/clamp-embed
+fi
+$CLAMP_DEVICE $1 $FILENAME.cl
+$CLAMP_EMBED $FILENAME.cl $FILENAME.o
+
+# remove temp files
+rm $FILENAME.cl
+rm $FILENAME.cl.promote.bc
