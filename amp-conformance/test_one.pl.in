@@ -121,7 +121,7 @@ foreach my $def_set (@{$Test::config{'definitions'}})
             $CLANG_AMP -cc1 -fsyntax-only -D__CPU__=1 $SHARED_CXXFLAGS $include_main $test $cflags_defs";
     } else {
         $command = "\\
-            $CLANG_AMP $SHARED_CXXFLAGS $include_main $test $AMPTESTLIB $cflags_defs -Wno-non-pod-varargs $CLAMP_LDFLAGS -o $tmpdir/test.out -g";
+            $CLANG_AMP $SHARED_CXXFLAGS $include_main $test $AMPTESTLIB $cflags_defs $CLAMP_LDFLAGS -o $tmpdir/test.out -g";
     }
 
     log_message("Command: $command\n"
