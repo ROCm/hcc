@@ -13,7 +13,7 @@
 #include "clamp-config.hxx"
 /* Flag set by ‘--verbose’. */
 static int verbose_flag;
-static bool build_mode = false, install_mode = false;
+static bool build_mode = false, install_mode = true; // use install mode by default
 static bool gpu_path = false, cpu_path = false;
 
 void replace(std::string& str,
@@ -175,8 +175,10 @@ int main (int argc, char **argv) {
                 break;
             case 'b':   // --build
                 build_mode = true;
+                install_mode = false;
                 break;
             case 'i':   // --install
+                build_mode = false;
                 install_mode = true;
                 break;
             case 'g':   // --gpu
