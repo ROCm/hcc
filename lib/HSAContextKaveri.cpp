@@ -9,21 +9,15 @@
 #include "HSAContext.h"
 #include "fileUtils.h"
 
-#define HSAIL_STATUS_CHECK(s,line) if (status != HSA_STATUS_SUCCESS) {\
-          printf("### Error: %d at line:%d\n", status, line);\
-          printf("### HSAIL =\n%s\n", fixedHsail);\
-          exit(-1);\
-        }
-    
 #define STATUS_CHECK(s,line) if (status != HSA_STATUS_SUCCESS) {\
 		printf("### Error: %d at line:%d\n", status, line);\
-                assert(HSA_STATUS_SUCCESS == hsa_close());\
 		exit(-1);\
 	}
 
 #define STATUS_CHECK_Q(s,line) if (status != HSA_STATUS_SUCCESS) {\
 		printf("### Error: %d at line:%d\n", status, line);\
                 assert(HSA_STATUS_SUCCESS == hsa_queue_destroy(commandQueue));\
+		assert(HSA_STATUS_SUCCESS == hsa_topology_table_destroy(table));\
                 assert(HSA_STATUS_SUCCESS == hsa_close());\
 		exit(-1);\
 	}
@@ -278,7 +272,7 @@ private:
 
      // create command queue
      status = hsa_queue_create(device, device->queue_size, HSA_QUEUE_TYPE_IN_ORDER, context, &commandQueue);
-     STATUS_CHECK(status, __LINE__);
+     STATUS_CHECK_Q(status, __LINE__);
 
      kernelImpl = NULL;
    }
@@ -296,14 +290,7 @@ public:
         hsa_status_t status;
         hsa_kernel_code_t* kernel;
 
-        // "Fix" HSAIL
-        //printf("Kernel entry is %s\n", entryName);
-        //const char* fixedHsail = (fixHsail(hsailBuffer))->c_str();
-        //printf("fixedHsail:\n");
-        //printf("%s\n", fixedHsail);
-
         // Get program by hsail compile path.
-        //status = hsa_finalize_hsail(device, fixedHsail, entryName, &kernel);
         status = hsa_finalize_hsail(device, hsailBuffer, entryName, &kernel);
         STATUS_CHECK(status, __LINE__);
 
@@ -339,333 +326,6 @@ public:
      dispose();
    }
 
-private:
-#define MAX_MATCHES 5 //The maximum number of matches allowed in a single string
-#define LINE 1024
-
-    static char *getMatch(char *line, regmatch_t *matches, int i) {
-        char value[256];
-        int len = matches[i].rm_eo - matches[i].rm_so;
-        strncpy(value, line + matches[i].rm_so, len);
-        value[len] = '\0';
-        return (strdup(value));
-    }
-
-   char *get_regerror (int errcode, regex_t *compiled) {
-      size_t length = regerror (errcode, compiled, NULL, 0);
-      char *buffer = (char*) malloc (length);
-      (void) regerror (errcode, compiled, buffer, length);
-      return buffer;
-   }
-
-    std::string* fixHsail(const char *hsailStr) {
-        int rv;
-        int origLength = strlen(hsailStr);
-        int extraSize = 256;
-        char* fixedFenceOpsString = new char[origLength + extraSize];
-        memset(fixedFenceOpsString, 0, origLength + extraSize);
-
-        // This part is to fix 1.0 spec fenced load/store until the 
-        // public version simulator supports v1.0 instructions.
-        // st_global_rel_u32 into atomicnoret_st_rel_sys_b32
-        // ld_global_acq_u32 into atomic_ld_acq_sys_b32
-        if (true) {
-            char line[origLength];
-            char* startPtr = (char*) hsailStr;
-            int i = 0;
-            int oldi = 0;
-            while ((i < origLength) && (strlen(&(hsailStr[i])) != 0)) {
-                // collect the instruction line including ';'
-                //i = strcspn(&(hsailStr[i]), ";");
-                i = strcspn(&(hsailStr[i]), "\n");
-                memcpy(line, &(hsailStr[oldi]), ++i);
-                line[i] = 0;
-                oldi += i;
-                i = oldi;
-
-                // There might be trailing newlines etc after the 
-                // final ';' so don't process them here and add one later
-                char* semicolonPtr = strchr(line, ';');
-                if (semicolonPtr == 0) {
-                    //printf("##### No ; match in length=%ld: [[%s]]\n", strlen(line), line);
-                    // Add whatever this is to the output, probably comments
-                    strcat(fixedFenceOpsString, line);
-                    continue;
-                }
-
-                //printf("### Next line:: %s[END]\n", line);
-
-                // Find ptr to instruction
-                if ((startPtr = strstr(line, "ld_global_acq_u")) != NULL) {
-                    //printf("found: %s\n", line);
-
-                    // print the first part before the match
-                    long unmatchedLength = (long) startPtr - (long) line;
-                    strncat(fixedFenceOpsString, line, unmatchedLength);
-
-                    regex_t exp2;
-                    //rv = regcomp(&exp2, "ld_global_acq_u([0-9]+) (.*), (.*);", REG_EXTENDED);
-                    rv = regcomp(&exp2, "ld_global_acq_u([0-9]+) (.*), (.*);(.*)", REG_EXTENDED);
-                    if (rv != 0) {
-                        printf("regcomp 2 failed with %d\n", rv);
-                        return new std::string("fixHsail FAILED");
-                    }
-                    regmatch_t matches[MAX_MATCHES]; //A list of the matches in the string (a list of 1)
-                    if (regexec(&exp2, startPtr, MAX_MATCHES, matches, 0) == 0) {
-                        char* size = getMatch(startPtr, matches, 1);
-                        char* reg = getMatch(startPtr, matches, 2);
-                        char* addr = getMatch(startPtr, matches, 3);
-                        char* after = getMatch(startPtr, matches, 4);
-                        char* newInstruction = new char[strlen(line) + 32];
-
-                        sprintf(newInstruction, "atomic_ld_acq_sys_b%s %s, %s;%s", size, reg, addr, after);
-                        strcat(fixedFenceOpsString, newInstruction);
-                        //printf("### Replaced %s[WITH]%s[END]\n", startPtr, newInstruction);
-                        delete newInstruction;
-                    }
-                    regfree(&exp2);
-                } else if ((startPtr = strstr(line, "st_global_rel_u")) != NULL) {
-                    //printf("found: [[%s]]\n", line);
-
-                    // print the first part before the match
-                    long unmatchedLength = (long) startPtr - (long) line;
-                    strncat(fixedFenceOpsString, line, unmatchedLength);
-
-                    regex_t exp2;
-                    rv = regcomp(&exp2, "st_global_rel_u([0-9]+) (\\$[sd]+[0-9]*), (\\[\\$[A-Za-z0-9]* \\+ [A-Za-z0-9]*\\]);(.*)", REG_EXTENDED);
-                    if (rv != 0) {
-                        printf("regcomp 2 failed with %d\n", rv);
-                        return new std::string("fixHsail FAILED");
-                    }
-                    regmatch_t matches[MAX_MATCHES]; //A list of the matches in the string (a list of 1)
-                    if (regexec(&exp2, startPtr, MAX_MATCHES, matches, 0) == 0) {
-                        char* size = getMatch(startPtr, matches, 1);
-                        char* reg = getMatch(startPtr, matches, 2);
-                        char* addr = getMatch(startPtr, matches, 3);
-                        char* after = getMatch(startPtr, matches, 4);
-                        char* newInstruction = new char[strlen(line) + 32];
-
-                        sprintf(newInstruction, "atomicnoret_st_rel_sys_b%s %s, %s;%s", size, addr, reg, after);
-                        strcat(fixedFenceOpsString, newInstruction);
-                        //printf("### Replaced %s[WITH]%s[END]\n", startPtr, newInstruction);
-                        delete newInstruction;
-                    }
-                    regfree(&exp2);
-                } else if ((startPtr = strstr(line, "sync")) != NULL) { //touch up sync to memfence
-                     long unmatchedLength = (long) startPtr - (long) line;
-                     strncat(fixedFenceOpsString, line, unmatchedLength);
-               
-                     regex_t exp;
-                     rv = regcomp(&exp, "sync;(.*)", REG_EXTENDED);
-                     if(rv != 0) {
-                        printf("regcomp failed while fixing sync with %d\n", rv);
-                        return new std::string("fixHsail FAILED");
-                     }
-                     regmatch_t matches[MAX_MATCHES];
-                     if (regexec(&exp, startPtr, MAX_MATCHES, matches, 0) == 0) {
-                         char* comment = getMatch(startPtr, matches, 1);
-                         char* newInstruction = new char[strlen(line) + 32];
-
-                         sprintf(newInstruction, "memfence_ar_sys;%s", comment);
-                         strcat(fixedFenceOpsString, newInstruction);
-                         //printf("### Replaced %s[WITH]%s[END]\n", startPtr, newInstruction);
-                         delete newInstruction;
-                     }
-                     else {
-                         printf("regexec failed while fixing sync\n");
-                         regfree(&exp);
-                         return new std::string("fixHsail FAILED");
-                     }
-                     regfree(&exp);
-                } else if ((startPtr = strstr(line, "atomic")) != NULL) { //touch up for atomic_*
-                     //do necessary for each type of op
-                     if((startPtr = strstr(line, "atomic_cas")) != NULL) {
-                         //printf("found atomic_cas: [[%s]]\n", startPtr);
-                         long unmatchedLength = (long) startPtr - (long) line;
-                         strncat(fixedFenceOpsString, line, unmatchedLength);
-
-                         regex_t exp;
-                         rv = regcomp(&exp, "atomic_cas_global_b([0-9]+)(.*)", REG_EXTENDED);
-                         if (rv != 0) {
-                             printf("regcomp failed while fixing atomic_cas with %d\n", rv);
-                             return new std::string("fixHsail FAILED");
-                         }
-                         regmatch_t matches[MAX_MATCHES]; //A list of the matches in the string (a list of 1)
-                         if ((rv = regexec(&exp, startPtr, MAX_MATCHES, matches, 0)) == 0) {
-                             char* size = getMatch(startPtr, matches, 1);
-                             char* rest = getMatch(startPtr, matches, 2);
-                             char* newInstruction = new char[strlen(line) + 32];
-
-                             sprintf(newInstruction, "atomic_cas_global_ar_sys_b%s%s", size, rest);
-                             strcat(fixedFenceOpsString, newInstruction);
-                             //printf("### Replaced %s[WITH]%s[END]\n", startPtr, newInstruction);
-                             delete newInstruction;
-                         } 
-						 else {
-                             printf("regexec failed while fixing atomic_cas with %d\n", rv);
-                             char *err = get_regerror (rv, &exp);
-                             printf("error msg:%s\n", err);
-                             regfree(&exp);
-                             return new std::string("fixHsail FAILED");
-                         } 
-                         regfree(&exp);
-                     }
-                     else if((startPtr = strstr(line, "atomic_add")) != NULL) { //fix atomic_add
-                         //printf("found atomic_add: [[%s]]\n", startPtr);
-                         long unmatchedLength = (long) startPtr - (long) line;
-                         strncat(fixedFenceOpsString, line, unmatchedLength);
-
-                         regex_t exp;
-                         rv = regcomp(&exp, "atomic_add_global_([bus][0-9]+)(.*)", REG_EXTENDED);
-                         if (rv != 0) {
-                             printf("regcomp failed while fixing atomic_add with %d\n", rv);
-                             return new std::string("fixHsail FAILED");
-                         }
-                          regmatch_t matches[MAX_MATCHES]; //A list of the matches in the string (a list of 1)
-                          if ((rv = regexec(&exp, startPtr, MAX_MATCHES, matches, 0)) == 0) {
-                              char* size = getMatch(startPtr, matches, 1);
-                              char* rest = getMatch(startPtr, matches, 2);
-                              char* newInstruction = new char[strlen(line) + 32];
- 
-                              sprintf(newInstruction, "atomic_add_global_ar_sys_%s%s", size, rest);
-                              strcat(fixedFenceOpsString, newInstruction);
-                              //printf("### Replaced %s[WITH]%s[END]\n", startPtr, newInstruction);
-                              delete newInstruction;
-                          }
-                          else {
-                              printf("regexec failed while fixing atomic_add with %d\n", rv);
-                              char *err = get_regerror (rv, &exp);
-                              printf("error msg:%s\n", err);
-                              regfree(&exp);
-                              return new std::string("fixHsail FAILED");
-                          }
-                          regfree(&exp); 
-                     }
-                     else if((startPtr = strstr(line, "atomic_exch")) != NULL) { //fix atomic_exch
-                         //printf("found atomic_exch: [[%s]]\n", startPtr);
-                         long unmatchedLength = (long) startPtr - (long) line;
-                         strncat(fixedFenceOpsString, line, unmatchedLength);
-
-                         regex_t exp;
-                         rv = regcomp(&exp, "atomic_exch_global_([bus][0-9]+)(.*)", REG_EXTENDED);
-                         if (rv != 0) {
-                             printf("regcomp failed while fixing atomic_exch with %d\n", rv);
-                             return new std::string("fixHsail FAILED");
-                         }
-                          regmatch_t matches[MAX_MATCHES]; //A list of the matches in the string (a list of 1)
-                          if ((rv = regexec(&exp, startPtr, MAX_MATCHES, matches, 0)) == 0) {
-                              char* size = getMatch(startPtr, matches, 1);
-                              char* rest = getMatch(startPtr, matches, 2);
-                              char* newInstruction = new char[strlen(line) + 32];
- 
-                              sprintf(newInstruction, "atomic_exch_global_ar_sys_%s%s", size, rest);
-                              strcat(fixedFenceOpsString, newInstruction);
-                              //printf("### Replaced %s[WITH]%s[END]\n", startPtr, newInstruction);
-                              delete newInstruction;
-                          }
-                          else {
-                              printf("regexec failed while fixing atomic_exch with %d\n", rv);
-                              char *err = get_regerror (rv, &exp);
-                              printf("error msg:%s\n", err);
-                              regfree(&exp);
-                              return new std::string("fixHsail FAILED");
-                          }
-                          regfree(&exp); 
-                     }
-                     else {
-                         strcat(fixedFenceOpsString, line);
-					 }
-                } else if ((startPtr = strstr(line, "barrier_fgroup")) != NULL) { //touch up barrier_fgroup to barrier
-                     long unmatchedLength = (long) startPtr - (long) line;
-                     strncat(fixedFenceOpsString, line, unmatchedLength);
-  
-                     regex_t exp;
-                     rv = regcomp(&exp, "barrier_fgroup;(.*)", REG_EXTENDED);
-                     if(rv != 0) {
-                        printf("regcomp failed while fixing barrier_fgroup with %d\n", rv);
-                        return new std::string("fixHsail FAILED");
-                     }
-                     regmatch_t matches[MAX_MATCHES];
-                     if (regexec(&exp, startPtr, MAX_MATCHES, matches, 0) == 0) {
-                        char* comment = getMatch(startPtr, matches, 1);
-                        char* newInstruction = new char[strlen(line) + 32];
-  
-                        sprintf(newInstruction, "barrier;%s", comment);
-                        strcat(fixedFenceOpsString, newInstruction);
-                        //printf("### Replaced %s[WITH]%s[END]\n", startPtr, newInstruction);
-                        delete newInstruction;
-                     }
-                     else {
-                        printf("regexec failed while fixing barrier_fgroup\n");
-                        regfree(&exp);
-                        return new std::string("fixHsail FAILED");
-                     }
-                     regfree(&exp);
-                } else if ((startPtr = strstr(line, "barrier_sys")) != NULL) { //touch up barrier_sys to barrier
-                     long unmatchedLength = (long) startPtr - (long) line;
-                     strncat(fixedFenceOpsString, line, unmatchedLength);
-  
-                     regex_t exp;
-                     rv = regcomp(&exp, "barrier_sys;(.*)", REG_EXTENDED);
-                     if(rv != 0) {
-                        printf("regcomp failed while fixing barrier_sys with %d\n", rv);
-                        return new std::string("fixHsail FAILED");
-                     }
-                     regmatch_t matches[MAX_MATCHES];
-                     if (regexec(&exp, startPtr, MAX_MATCHES, matches, 0) == 0) {
-                        char* comment = getMatch(startPtr, matches, 1);
-                        char* newInstruction = new char[strlen(line) + 32];
-  
-                        sprintf(newInstruction, "barrier;%s", comment);
-                        strcat(fixedFenceOpsString, newInstruction);
-                        //printf("### Replaced %s[WITH]%s[END]\n", startPtr, newInstruction);
-                        delete newInstruction;
-                     }
-                     else {
-                        printf("regexec failed while fixing barrier_fgroup\n");
-                        regfree(&exp);
-                        return new std::string("fixHsail FAILED");
-                     }
-                     regfree(&exp);
-               } else {
-                    //printf("##### No regex match in length=%ld: [[%s]]\n", strlen(line), line);
-                    strcat(fixedFenceOpsString, line);
-                }
-            }
-        }
-
-        // Add a trailing newline
-        strcat(fixedFenceOpsString, "\n");
-        //printf("original hsail string length = %ld\n", strlen(hsailStr));
-        //printf("fixedFenceOpsString length = %ld\n", strlen(fixedFenceOpsString));
-        //printf("fixed hsail = \n%s\n", fixedFenceOpsString);
-
-        std::string *s = new std::string(fixedFenceOpsString);
-
-        // the following conversions should no longer be needed because newer hsailasm is being used
-        if (false) {
-            // conversions are from 0.95 Spec format to MCW assembler format
-            // version string, we don't really handle the non-$full models here 
-            // also this should be made more regex based so we don't depend on whitespace
-            replaceAll(*s, "0:95: $full : $large", "1:0");
-            replaceAll(*s, "0:95: $full : $small", "1:0:$small");
-            // workitemabsid mnemonic
-            replaceAll(*s, "workitemabsid_u32", "workitemabsid");
-            // mul_hi mnemonic
-            replaceAll(*s, "mulhi", "mul_hi");
-
-            // MCW assembler is pick about DOS line endings
-            replaceAll(*s, "\r", "");
-        }
-        if (false) {
-            // the following were the conversions from June 2012 format into MCW assembler format
-            replaceAll(*s, "1:0:large", "1:0");
-            replaceAll(*s, "1:0:small", "1:0:$small");
-            replaceAll(*s, "workitemaid", "workitemabsid");
-            replaceAll(*s, "cvt_near_f64_f32", "cvt_f64_f32");
-        }
-        return s;
-    }
 }; // end of HSAContextKaveriImpl
 
 // Create an instance thru the HSAContext interface
