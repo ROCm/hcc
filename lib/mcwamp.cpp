@@ -295,8 +295,9 @@ void *CreateHSAKernel(std::string s)
       char *kernel_source = (char*)malloc(kernel_size+1);
       memcpy(kernel_source, kernel_source_, kernel_size);
       kernel_source[kernel_size] = '\0';
-      std::string kname = std::string("&__OpenCL_")+s+
-          std::string("_kernel");
+      //std::string kname = std::string("&__OpenCL_")+s+
+      //    std::string("_kernel");
+      std::string kname = std::string("&")+s;
       //std::cerr << "CLAMP::HSA::Creating kernel: " << kname << "\n";
       kernel = GetOrInitHSAContext()->
           createKernel(kernel_source, kname.c_str());
