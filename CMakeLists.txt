@@ -94,8 +94,8 @@ ensure_gmac_is_present(${PROJECT_SOURCE_DIR} gmac ${GMAC_URL})
 
 set(DEPS "gmac")
 
-set(OPENCL_HEADER_DIR "/usr/local/cuda/include" CACHE PATH "OpenCL Header Directory")
-set(OPENCL_LIBRARY_DIR "/usr/local/cuda/lib64" CACHE PATH "OpenCL Library Directory")
+set(OPENCL_HEADER_DIR "/usr/include/CL" CACHE PATH "OpenCL Header Directory")
+set(OPENCL_LIBRARY_DIR "/usr/lib64/" CACHE PATH "OpenCL Library Directory")
 
 SET(FOO_BUILD_SHARED OFF CACHE BOOL "Build libfoo shared library")
 set(USE_OPENCL ON CACHE BOOL "GMAC: Enable OpenCL")
