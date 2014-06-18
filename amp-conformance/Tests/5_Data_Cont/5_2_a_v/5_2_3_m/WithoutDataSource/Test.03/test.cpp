@@ -317,12 +317,12 @@ bool TestCopy5(int numElems, bool async)
     bool passed = false;
     if (async) 
     {
-        auto fut = copy_async(srcArrayView, stdext::make_unchecked_array_iterator(destIter));
+        auto fut = copy_async(srcArrayView, destIter);
         passed = fut.to_task().then([&]() -> bool { return verificationFunc(); }).get();
     }
     else 
     {
-        copy(srcArrayView, stdext::make_unchecked_array_iterator(destIter));
+        copy(srcArrayView, destIter);
         passed = verificationFunc();
     }
 
@@ -349,12 +349,12 @@ bool TestCopy6(bool async)
     bool passed = false;
     if (async) 
     {
-        auto fut = copy_async(srcArrayView, stdext::make_unchecked_array_iterator(destIter));
+        auto fut = copy_async(srcArrayView, destIter);
         passed = fut.to_task().then([&]() -> bool { return verificationFunc(); }).get();
     }
     else 
     {
-        copy(srcArrayView, stdext::make_unchecked_array_iterator(destIter));
+        copy(srcArrayView, destIter);
         passed = verificationFunc();
     }
 
