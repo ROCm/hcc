@@ -1,8 +1,11 @@
+//===----------------------------------------------------------------------===//
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
 #pragma once
-// My quick and dirty implementation of amp.h
-// To use: put a gmac_array object (not pointer or reference!)
-// in your functor and use it in your kernel as if it is an array_view
-// object
 #include <cassert>
 #include <amp.h>
 
