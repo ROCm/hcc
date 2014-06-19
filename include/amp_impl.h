@@ -1,3 +1,10 @@
+//===----------------------------------------------------------------------===//
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef INCLUDE_AMP_IMPL_H
 #define INCLUDE_AMP_IMPL_H
 
@@ -42,7 +49,7 @@ inline accelerator::accelerator(const accelerator& other) :
 #endif
   {}
 
-// TODO(I-Jui Sung): perform real OpenCL queries here..
+// TODO: perform real OpenCL queries here..
 inline accelerator::accelerator(const std::wstring& path) :
   device_path( (path != std::wstring(default_accelerator)) ? 
 					path : 
@@ -213,26 +220,7 @@ index<N> operator-(const index<N>& lhs, int rhs) restrict(amp,cpu) {
 }
 template <int N>
 index<N> operator-(int lhs, const index<N>& rhs) restrict(amp,cpu) {
-    index<N> __r;
-    for (int i = 0; i < N; ++i) __r[i] = lhs;
-    __r -= rhs;
-    return __r;
-}
-template<>
-inline index<1> operator-(int lhs, const index<1>& rhs) restrict(amp,cpu) {
-    index<1> __r(lhs);
-    __r -= rhs;
-    return __r;
-}
-template<>
-inline index<2> operator-(int lhs, const index<2>& rhs) restrict(amp,cpu) {
-    index<2> __r(lhs,lhs);
-    __r -= rhs;
-    return __r;
-}
-template<>
-inline index<3> operator-(int lhs, const index<3>& rhs) restrict(amp,cpu) {
-    index<3> __r(lhs,lhs,lhs);
+    index<N> __r(lhs);
     __r -= rhs;
     return __r;
 }
@@ -256,26 +244,7 @@ index<N> operator/(const index<N>& lhs, int rhs) restrict(amp,cpu) {
 }
 template <int N>
 index<N> operator/(int lhs, const index<N>& rhs) restrict(amp,cpu) {
-    index<N> __r;
-    for (int i = 0; i < N; ++i) __r[i] = lhs;
-    __r /= rhs;
-    return __r;
-}
-template <>
-inline index<1> operator/(int lhs, const index<1>& rhs) restrict(amp,cpu) {
-    index<1> __r(lhs);
-    __r /= rhs;
-    return __r;
-}
-template <>
-inline index<2> operator/(int lhs, const index<2>& rhs) restrict(amp,cpu) {
-    index<2> __r(lhs,lhs);
-    __r /= rhs;
-    return __r;
-}
-template <>
-inline index<3> operator/(int lhs, const index<3>& rhs) restrict(amp,cpu) {
-    index<3> __r(lhs,lhs,lhs);
+    index<N> __r(lhs);
     __r /= rhs;
     return __r;
 }
@@ -287,26 +256,7 @@ index<N> operator%(const index<N>& lhs, int rhs) restrict(amp,cpu) {
 }
 template <int N>
 index<N> operator%(int lhs, const index<N>& rhs) restrict(amp,cpu) {
-    index<N> __r;
-    for (int i = 0; i < N; ++i) __r[i] = lhs;
-    __r %= rhs;
-    return __r;
-}
-template <>
-inline index<1> operator%(int lhs, const index<1>& rhs) restrict(amp,cpu) {
-    index<1> __r(lhs);
-    __r %= rhs;
-    return __r;
-}
-template <>
-inline index<2> operator%(int lhs, const index<2>& rhs) restrict(amp,cpu) {
-    index<2> __r(lhs,lhs);
-    __r %= rhs;
-    return __r;
-}
-template <>
-inline index<3> operator%(int lhs, const index<3>& rhs) restrict(amp,cpu) {
-    index<3> __r(lhs,lhs,lhs);
+    index<N> __r(lhs);
     __r %= rhs;
     return __r;
 }
@@ -343,26 +293,7 @@ extent<N> operator-(const extent<N>& lhs, int rhs) restrict(amp,cpu) {
 }
 template <int N>
 extent<N> operator-(int lhs, const extent<N>& rhs) restrict(amp,cpu) {
-    extent<N> __r;
-    for (int i = 0; i < N; ++i) __r[i] = lhs;
-    __r -= rhs;
-    return __r;
-}
-template<>
-inline extent<1> operator-(int lhs, const extent<1>& rhs) restrict(amp,cpu) {
-    extent<1> __r(lhs);
-    __r -= rhs;
-    return __r;
-}
-template<>
-inline extent<2> operator-(int lhs, const extent<2>& rhs) restrict(amp,cpu) {
-    extent<2> __r(lhs,lhs);
-    __r -= rhs;
-    return __r;
-}
-template<>
-inline extent<3> operator-(int lhs, const extent<3>& rhs) restrict(amp,cpu) {
-    extent<3> __r(lhs,lhs,lhs);
+    extent<N> __r(lhs);
     __r -= rhs;
     return __r;
 }
@@ -386,26 +317,7 @@ extent<N> operator/(const extent<N>& lhs, int rhs) restrict(amp,cpu) {
 }
 template <int N>
 extent<N> operator/(int lhs, const extent<N>& rhs) restrict(amp,cpu) {
-    extent<N> __r;
-    for (int i = 0; i < N; ++i) __r[i] = lhs;
-    __r /= rhs;
-    return __r;
-}
-template <>
-inline extent<1> operator/(int lhs, const extent<1>& rhs) restrict(amp,cpu) {
-    extent<1> __r(lhs);
-    __r /= rhs;
-    return __r;
-}
-template <int N>
-inline extent<2> operator/(int lhs, const extent<2>& rhs) restrict(amp,cpu) {
-    extent<2> __r(lhs,lhs);
-    __r /= rhs;
-    return __r;
-}
-template <>
-inline extent<3> operator/(int lhs, const extent<3>& rhs) restrict(amp,cpu) {
-    extent<3> __r(lhs,lhs,lhs);
+    extent<N> __r(lhs);
     __r /= rhs;
     return __r;
 }
@@ -417,26 +329,7 @@ extent<N> operator%(const extent<N>& lhs, int rhs) restrict(amp,cpu) {
 }
 template <int N>
 extent<N> operator%(int lhs, const extent<N>& rhs) restrict(amp,cpu) {
-    extent<N> __r;
-    for (int i = 0; i < N; ++i) __r[i] = lhs;
-    __r %= rhs;
-    return __r;
-}
-template <>
-inline extent<1> operator%(int lhs, const extent<1>& rhs) restrict(amp,cpu) {
-    extent<1> __r(lhs);
-    __r %= rhs;
-    return __r;
-}
-template <>
-inline extent<2> operator%(int lhs, const extent<2>& rhs) restrict(amp,cpu) {
-    extent<2> __r(lhs,lhs);
-    __r %= rhs;
-    return __r;
-}
-template <>
-inline extent<3> operator%(int lhs, const extent<3>& rhs) restrict(amp,cpu) {
-    extent<3> __r(lhs,lhs,lhs);
+    extent<N> __r(lhs);
     __r %= rhs;
     return __r;
 }
@@ -458,11 +351,14 @@ template<typename T, int N> array<T, N>::array(const Concurrency::extent<N>& ext
 #endif
     }
 template<typename T, int N> array<T, N>::array(int e0)
-    : array(Concurrency::extent<1>(e0)) {}
+    : array(Concurrency::extent<1>(e0))
+    { static_assert(N == 1, "array(int) is only permissible on array<T, 1>"); }
 template<typename T, int N> array<T, N>::array(int e0, int e1)
-    : array(Concurrency::extent<2>(e0, e1)) {}
+    : array(Concurrency::extent<2>(e0, e1))
+    { static_assert(N == 2, "array(int, int) is only permissible on array<T, 2>"); }
 template<typename T, int N> array<T, N>::array(int e0, int e1, int e2)
-    : array(Concurrency::extent<3>(e0, e1, e2)) {}
+    : array(Concurrency::extent<3>(e0, e1, e2))
+    {  static_assert(N == 3, "array(int, int, int) is only permissible on array<T, 3>"); }
 
 
 template<typename T, int N>
@@ -476,12 +372,14 @@ array<T, N>::array(const Concurrency::extent<N>& ext, accelerator_view av, acces
   pav = new accelerator_view(av);
 }
 template<typename T, int N>
-array<T, N>::array(int e0, accelerator_view av, access_type cpu_access_type) : array(Concurrency::extent<1>(e0), av, cpu_access_type) {}
+array<T, N>::array(int e0, accelerator_view av, access_type cpu_access_type) : array(Concurrency::extent<1>(e0), av, cpu_access_type)
+  { static_assert(N == 1, "array(int, accelerator_view) is only permissible on array<T, 1>"); }
 template<typename T, int N>
-array<T, N>::array(int e0, int e1, accelerator_view av, access_type cpu_access_type) : array(Concurrency::extent<2>(e0, e1), av, cpu_access_type) {}
+array<T, N>::array(int e0, int e1, accelerator_view av, access_type cpu_access_type) : array(Concurrency::extent<2>(e0, e1), av, cpu_access_type)
+  { static_assert(N == 2, "array(int, int, accelerator_view) is only permissible on array<T, 2>"); }
 template<typename T, int N>
-array<T, N>::array(int e0, int e1, int e2, accelerator_view av, access_type cpu_access_type) : array(Concurrency::extent<3>(e0, e1, e2), av, cpu_access_type) {}
-
+array<T, N>::array(int e0, int e1, int e2, accelerator_view av, access_type cpu_access_type) : array(Concurrency::extent<3>(e0, e1, e2), av, cpu_access_type)
+{ static_assert(N == 3, "array(int, int, int, accelerator_view) is only permissible on array<T, 3>"); }
 
 template<typename T, int N>
 array<T, N>::array(const Concurrency::extent<N>& extent, accelerator_view av, accelerator_view associated_av) : array(extent) {
@@ -494,11 +392,15 @@ array<T, N>::array(const Concurrency::extent<N>& extent, accelerator_view av, ac
   }
 }
 template<typename T, int N>
-array<T, N>::array(int e0, accelerator_view av, accelerator_view associated_av) : array(Concurrency::extent<1>(e0), av, associated_av) {}
+array<T, N>::array(int e0, accelerator_view av, accelerator_view associated_av) : array(Concurrency::extent<1>(e0), av, associated_av)
+  { static_assert(N == 1, "array(int, accelerator_view, accelerator_view) is only permissible on array<T, 1>"); }
 template<typename T, int N>
-array<T, N>::array(int e0, int e1, accelerator_view av, accelerator_view associated_av) : array(Concurrency::extent<2>(e0, e1), av, associated_av) {}
+array<T, N>::array(int e0, int e1, accelerator_view av, accelerator_view associated_av) : array(Concurrency::extent<2>(e0, e1), av, associated_av)
+  { static_assert(N == 2, "array(int, int, accelerator_view, accelerator_view) is only permissible on array<T, 2>"); }
 template<typename T, int N>
-array<T, N>::array(int e0, int e1, int e2, accelerator_view av, accelerator_view associated_av) : array(Concurrency::extent<3>(e0, e1, e2), av, associated_av) {}
+array<T, N>::array(int e0, int e1, int e2, accelerator_view av, accelerator_view associated_av) : array(Concurrency::extent<3>(e0, e1, e2), av, associated_av)
+  { static_assert(N == 3, "array(int, int, int, accelerator_view, accelerator_view) is only permissible on array<T, 3>"); }
+
 
 
 template<typename T, int N> template <typename InputIterator>
@@ -527,27 +429,33 @@ array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, In
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(int e0, InputIterator srcBegin)
-    : array(Concurrency::extent<1>(e0), srcBegin) {}
+    : array(Concurrency::extent<1>(e0), srcBegin)
+      { static_assert(N == 1, "array(int, iterator) is only permissible on array<T, 1>"); }
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(int e0, InputIterator srcBegin, InputIterator srcEnd)
-    : array(Concurrency::extent<1>(e0), srcBegin, srcEnd) {}
+    : array(Concurrency::extent<1>(e0), srcBegin, srcEnd)
+    { static_assert(N == 1, "array(int, iterator, iterator) is only permissible on array<T, 1>"); }
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(int e0, int e1, InputIterator srcBegin)
-    : array(Concurrency::extent<2>(e0, e1), srcBegin) {}
+    : array(Concurrency::extent<2>(e0, e1), srcBegin)
+    { static_assert(N == 2, "array(int, int, iterator) is only permissible on array<T, 2>"); }
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(int e0, int e1, InputIterator srcBegin, InputIterator srcEnd)
-    : array(Concurrency::extent<2>(e0, e1), srcBegin, srcEnd) {}
+    : array(Concurrency::extent<2>(e0, e1), srcBegin, srcEnd)
+    { static_assert(N == 2, "array(int, int, iterator, iterator) is only permissible on array<T, 2>"); }
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(int e0, int e1, int e2, InputIterator srcBegin)
-    : array(Concurrency::extent<3>(e0, e1, e2), srcBegin) {}
+    : array(Concurrency::extent<3>(e0, e1, e2), srcBegin)
+    { static_assert(N == 3, "array(int, int, int, iterator) is only permissible on array<T, 3>"); }
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(int e0, int e1, int e2, InputIterator srcBegin, InputIterator srcEnd)
-    : array(Concurrency::extent<3>(e0, e1, e2), srcBegin, srcEnd) {}
+    : array(Concurrency::extent<3>(e0, e1, e2), srcBegin, srcEnd)
+    { static_assert(N == 3, "array(int, int, int, iterator, iterator) is only permissible on array<T, 3>"); }
 
 
 
@@ -571,27 +479,33 @@ array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, In
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(int e0, InputIterator srcBegin, accelerator_view av, access_type cpu_access_type)
-    : array(Concurrency::extent<1>(e0), srcBegin, av, cpu_access_type) {}
+    : array(Concurrency::extent<1>(e0), srcBegin, av, cpu_access_type)
+    { static_assert(N == 1, "array(int, iterator, accelerator_view) is only permissible on array<T, 1>"); }
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(int e0, InputIterator srcBegin, InputIterator srcEnd, accelerator_view av, access_type cpu_access_type)
-    : array(Concurrency::extent<1>(e0), srcBegin, srcEnd, av, cpu_access_type) {}
+    : array(Concurrency::extent<1>(e0), srcBegin, srcEnd, av, cpu_access_type)
+    { static_assert(N == 1, "array(int, iterator, iterator, accelerator_view) is only permissible on array<T, 1>"); }
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(int e0, int e1, InputIterator srcBegin, accelerator_view av, access_type cpu_access_type)
-    : array(Concurrency::extent<2>(e0, e1), srcBegin, av, cpu_access_type) {}
+    : array(Concurrency::extent<2>(e0, e1), srcBegin, av, cpu_access_type)
+    { static_assert(N == 2, "array(int, int, iterator, accelerator_view) is only permissible on array<T, 2>"); }
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(int e0, int e1, InputIterator srcBegin, InputIterator srcEnd,
-                   accelerator_view av, access_type cpu_access_type) : array(Concurrency::extent<2>(e0, e1), srcBegin, srcEnd, av, cpu_access_type) {}
+                   accelerator_view av, access_type cpu_access_type) : array(Concurrency::extent<2>(e0, e1), srcBegin, srcEnd, av, cpu_access_type)
+                   { static_assert(N == 2, "array(int, int, iterator, iterator, accelerator_view) is only permissible on array<T, 2>"); }
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(int e0, int e1, int e2, InputIterator srcBegin, accelerator_view av, access_type cpu_access_type)
-    : array(Concurrency::extent<3>(e0, e1, e2), srcBegin, av, cpu_access_type) {}
+    : array(Concurrency::extent<3>(e0, e1, e2), srcBegin, av, cpu_access_type)
+    { static_assert(N == 3, "array(int, int, int, iterator, accelerator_view) is only permissible on array<T, 3>"); }
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(int e0, int e1, int e2, InputIterator srcBegin, InputIterator srcEnd,
-                   accelerator_view av, access_type cpu_access_type) : array(Concurrency::extent<3>(e0, e1, e2), srcBegin, srcEnd, av, cpu_access_type) {}
+                   accelerator_view av, access_type cpu_access_type) : array(Concurrency::extent<3>(e0, e1, e2), srcBegin, srcEnd, av, cpu_access_type)
+    { static_assert(N == 3, "array(int, int, int, iterator, iterator, accelerator_view) is only permissible on array<T, 3>"); }
 
 
 
@@ -617,32 +531,38 @@ array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, In
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(int e0, InputIterator srcBegin, accelerator_view av,
                    accelerator_view associated_av)
-    : array(Concurrency::extent<1>(e0), srcBegin, av, associated_av) {}
+    : array(Concurrency::extent<1>(e0), srcBegin, av, associated_av)
+    { static_assert(N == 1, "array(int, iterator, iterator, accelerator_view, acclerator_view) is only permissible on array<T, 1>"); }
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(int e0, InputIterator srcBegin, InputIterator srcEnd,
                    accelerator_view av, accelerator_view associated_av)
-    : array(Concurrency::extent<1>(e0), srcBegin, srcEnd, av, associated_av) {}
+    : array(Concurrency::extent<1>(e0), srcBegin, srcEnd, av, associated_av)
+    { static_assert(N == 1, "array(int, iterator, iterator, accelerator_view, accelerator_view) is only permissible on array<T, 1>"); }
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(int e0, int e1, InputIterator srcBegin, accelerator_view av,
                    accelerator_view associated_av)
-    : array(Concurrency::extent<2>(e0, e1), srcBegin, av, associated_av) {}
+    : array(Concurrency::extent<2>(e0, e1), srcBegin, av, associated_av)
+    { static_assert(N == 2, "array(int, int, iterator, accelerator_view, acclerator_view) is only permissible on array<T, 2>"); }
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(int e0, int e1, InputIterator srcBegin, InputIterator srcEnd,
                    accelerator_view av, accelerator_view associated_av)
-    : array(Concurrency::extent<2>(e0, e1), srcBegin, srcEnd, av, associated_av) {}
+    : array(Concurrency::extent<2>(e0, e1), srcBegin, srcEnd, av, associated_av)
+    { static_assert(N == 2, "array(int, int, iterator, iterator, accelerator_view, acclerator_view) is only permissible on array<T, 2>"); }
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(int e0, int e1, int e2, InputIterator srcBegin, accelerator_view av,
                    accelerator_view associated_av)
-    : array(Concurrency::extent<3>(e0, e1, e2), srcBegin, av, associated_av) {}
+    : array(Concurrency::extent<3>(e0, e1, e2), srcBegin, av, associated_av)
+    { static_assert(N == 3, "array(int, int, int, iterator, accelerator_view, acclerator_view) is only permissible on array<T, 3>"); }
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(int e0, int e1, int e2, InputIterator srcBegin, InputIterator srcEnd,
                    accelerator_view av, accelerator_view associated_av)
-    : array(Concurrency::extent<3>(e0, e1, e2), srcBegin, srcEnd, av, associated_av) {}
+    : array(Concurrency::extent<3>(e0, e1, e2), srcBegin, srcEnd, av, associated_av)
+    { static_assert(N == 3, "array(int, int, int, iterator, iterator, accelerator_view, acclerator_view) is only permissible on array<T, 3>"); }
 
 
 template<typename T, int N> array<T, N>::array(const array& other)
