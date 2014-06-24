@@ -84,6 +84,9 @@ are:
 3. Create a build directory and configure using CMake.
   # mkdir build
   # cd build
+  # cmake ../src
+
+  The default options can be overridden on the command line:
   # cmake ../src \
       -DCLANG_URL=git@bitbucket.org:${username}/cppamp-ng.git \
       -DOPENCL_HEADER_DIR=<directory that contains cl.h/> \

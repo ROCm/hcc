@@ -19,6 +19,8 @@
 7_para_for_each/ComputeDomainTiled/ThreadGroupCount.02/test.cpp
 7_para_for_each/ComputeDomainTiled/ThreadGroupCount.04/test.cpp
 7_para_for_each/ComputeDomain/extent_max/test.cpp
+5_Data_Cont/5_0_general/amp_compatible/negative/virtual.base/test.cpp
+5_Data_Cont/5_0_general/amp_compatible/negative/virtual.memberfn/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/WithoutDataSource/AssgnOps/Test.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/WithoutDataSource/discard_data/Test.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/WithoutDataSource/refresh/Test.01/test.cpp
@@ -324,6 +326,7 @@
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_3_Rest_on_Func_Scop/2_4_3_1_Lite/Negative/Strings.02/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_2_Rest_on_Func_Decl/Exception_specification/Negative/Lambda.01/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_2_Rest_on_Func_Decl/Function_parameters/Negative/Char/test.cpp
+2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_2_Rest_on_Func_Decl/Function_parameters/Negative/Test.04/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_2_Rest_on_Func_Decl/Return_type/Negative/Test.01/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_2_Rest_on_Func_Decl/Virtual/Negative/Function.03/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_2_Rest_on_Func_Decl/Virtual/Negative/Test.01/test.cpp
@@ -333,7 +336,9 @@
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_2_Rest_on_Func_Decl/Function_parameters/Negative/Test.02/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_1_Rest_on_Type/2_4_1_3_Comp_Type/Negative/EmptyClass/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_1_Rest_on_Type/2_4_1_3_Comp_Type/VirtualBaseClass/test.cpp
+2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_1_Rest_on_Type/2_4_1_3_Comp_Type/Negative/Reference/Test.08/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_1_Rest_on_Type/2_4_1_3_Comp_Type/Negative/BitField/test.cpp
+2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_1_Rest_on_Type/2_4_1_3_Comp_Type/Unions/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_1_Rest_on_Type/2_4_1_3_Comp_Type/Negative/Class.02/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_1_Rest_on_Type/2_4_1_3_Comp_Type/Negative/Enums.01/test.cpp
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_1_Rest_on_Type/2_4_1_2_Fund_Type/Negative/Char.01/test.cpp
@@ -344,11 +349,19 @@
 2_Cxx_Lang_Exte/2_4_amp_Rest_Modi/2_4_1_Rest_on_Type/2_4_1_3_Comp_Type/Negative/1d/Test04/test.cpp
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/Calling_context/Negative/CallingContext.21/test.cpp
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_3_Cast/Casting.06/test.cpp
+2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/Calling_context/Negative/CallingContext.01/test.cpp
+2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/Calling_context/Negative/CallingContext.02/test.cpp
+2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/Calling_context/Negative/CallingContext.17/test.cpp
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/Test07/test.cpp
+2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/Calling_context/Negative/CallingContext.04/test.cpp
+2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/Calling_context/Negative/CallingContext.11/test.cpp
+2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/Calling_context/Negative/CallingContext.13/test.cpp
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/Test06/test.cpp
+2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/2_3_2_1_Over_Reso/Overloading/Negative/Overloading.80/test.cpp
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/2_3_2_1_Over_Reso/Overloading_2/Test.38/test.cpp
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/2_3_2_1_Over_Reso/Overloading_2/Test.36/test.cpp
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/2_3_2_1_Over_Reso/Overloading/conversion_operator/multiple_restrictions_class.01/test.cpp
+2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/2_3_2_1_Over_Reso/Overloading/conversion_operator/multiple_restrictions_non_class.01/test.cpp
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/Special_member_functions/defaulted_smf_local_class.01/test.cpp
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/Special_member_functions/defaulted_copy_assign_op.01/test.cpp
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/Special_member_functions/defaulted_copy_ctor.01/test.cpp
@@ -370,6 +383,8 @@
 2_Cxx_Lang_Exte/2_1_Synt/Contextual_restrict/test.01/test.cpp
 2_Cxx_Lang_Exte/2_1_Synt/Contextual_restrict/test.02/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Functions/CV_qualifiers/Test.01/test.cpp
+2_Cxx_Lang_Exte/2_x_general/Literals/double.01/test.cpp
+2_Cxx_Lang_Exte/2_x_general/Literals/float.01/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/destructor.03/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/BuiltInOperators/RelationalEquality/RelationalEquality.01/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToLocal/Test11.02.02/test.cpp

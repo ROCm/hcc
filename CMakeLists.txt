@@ -32,7 +32,8 @@ endif (NOT APPLE)
 setup_CBackend(${PROJECT_SOURCE_DIR}/compiler/lib/Target CBackend)
 setup_SPIRify(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms SPIRify)
 setup_EraseNonkernel(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms EraseNonkernel)
-set(LLVM_TARGETS_TO_BUILD X86)
+set(LLVM_TARGETS_TO_BUILD X86 CACHE STRING "LLVM host target")
+set(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD CBackend CACHE STRING "set this to 'CBackend' to enable generating OpenCL-C")
 set(LLVM_INCLUDE_EXAMPLES off)
 
 # Regression test
@@ -94,8 +95,8 @@ ensure_gmac_is_present(${PROJECT_SOURCE_DIR} gmac ${GMAC_URL})
 
 set(DEPS "gmac")
 
-set(OPENCL_HEADER_DIR "/usr/local/cuda/include" CACHE PATH "OpenCL Header Directory")
-set(OPENCL_LIBRARY_DIR "/usr/local/cuda/lib64" CACHE PATH "OpenCL Library Directory")
+set(OPENCL_HEADER_DIR "/usr/include/CL" CACHE PATH "OpenCL Header Directory")
+set(OPENCL_LIBRARY_DIR "/usr/lib64/" CACHE PATH "OpenCL Library Directory")
 
 SET(FOO_BUILD_SHARED OFF CACHE BOOL "Build libfoo shared library")
 set(USE_OPENCL ON CACHE BOOL "GMAC: Enable OpenCL")
