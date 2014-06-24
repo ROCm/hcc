@@ -3218,7 +3218,9 @@ void CWriter::visitCallInst(CallInst &I) {
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Callee))
       if (CE->isCast())
         if (Function *RF = dyn_cast<Function>(CE->getOperand(0))) {
-          NeedsCast = true;
+          if (RF->getName() != "memcpy") { // skip casting for memcpy function
+            NeedsCast = true;
+          }
           Callee = RF;
         }
 
