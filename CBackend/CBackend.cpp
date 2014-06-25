@@ -2965,8 +2965,17 @@ void CWriter::visitCastInst(CastInst &I) {
     return;
   }
 
-  Out << '(';
-  printCast(I.getOpcode(), SrcTy, DstTy);
+  bool ShouldCast = true;
+  if (isa<PointerType>(DstTy)) {
+    PointerType* PTy = dyn_cast<PointerType>(DstTy);
+    if (PTy && (PTy->getAddressSpace() != 0)) {
+      ShouldCast = false;
+    }
+  }
+  if (ShouldCast) {
+    Out << '(';
+    printCast(I.getOpcode(), SrcTy, DstTy);
+  }
 
   // Make a sext from i1 work by subtracting the i1 from 0 (an int).
   if (SrcTy == Type::getInt1Ty(I.getContext()) &&
@@ -2983,7 +2992,9 @@ void CWriter::visitCastInst(CastInst &I) {
     // Make sure we really get a trunc to bool by anding the operand with 1
     Out << "&1u";
   }
-  Out << ')';
+  if (ShouldCast) {
+    Out << ')';
+  }
 }
 
 void CWriter::visitSelectInst(SelectInst &I) {
