@@ -1668,7 +1668,8 @@ public:
 
   template <typename Container, class = typename std::enable_if<!std::is_array<Container>::value>::type>
       array_view(const Concurrency::extent<N>& extent, Container& src)
-      : array_view(extent, src.data()) {}
+      : array_view(extent, src.data())
+  { static_assert( std::is_same<decltype(src.data()), T*>::value, "container element type and array view element type must match"); }
   template <typename Container, class = typename std::enable_if<!std::is_array<Container>::value>::type>
       array_view(int e0, Container& src)
       : array_view(Concurrency::extent<1>(e0), src)
@@ -1940,7 +1941,8 @@ public:
         index_base(), extent_base(src.extent) {}
   template <typename Container, class = typename std::enable_if<!std::is_array<Container>::value && !std::is_pointer<Container>::value>::type>
     array_view(const extent<N>& extent, const Container& src)
-        : array_view(extent, src.data()) {}
+        : array_view(extent, src.data())
+  { static_assert( std::is_same<typename std::remove_const<typename std::remove_reference<decltype(*src.data())>::type>::type, T>::value, "container element type and array view element type must match"); }
     template <typename Container, class = typename std::enable_if<!std::is_array<Container>::value>::type>
       array_view(int e0, Container& src)
       : array_view(Concurrency::extent<1>(e0), src)

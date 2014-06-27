@@ -108,6 +108,7 @@
 5_Data_Cont/5_2_a_v/5_2_5_v_o/Reinterpret_As/Negative/Test.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/View_As/Test.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_5_v_o/View_As/Negative/Test.02/test.cpp
+5_Data_Cont/5_2_a_v/5_2_2_c/Negative/Test.06/test.cpp
 5_Data_Cont/5_2_a_v/5_2_4_i/Negative/Convenience.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_4_i/Negative/Convenience.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_2_c/Test.01.01/test.cpp
