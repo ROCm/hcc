@@ -8,15 +8,15 @@
 class Member {
  public:
   // Compiler-generated constructor
-  __attribute__((annotate("auto_deserialize"))) Member(float*, int) restrict(amp, cpu);
-  float* bzzt;
+  __attribute__((annotate("auto_deserialize"))) Member(float, int) restrict(amp, cpu);
+  float bzzt;
   int zzz;
 };
 
 class base {
  public:
   // Compiler-generated constructor
-  __attribute__((annotate("auto_deserialize"))) base(float *m1, int m2,
+  __attribute__((annotate("auto_deserialize"))) base(float m1, int m2,
     int foo_, float bar_) restrict(amp, cpu);
 
   Member m;
@@ -27,22 +27,22 @@ class base {
 class baz :public base {
  public:
   // Compiler-generated constructor
-  __attribute__((annotate("auto_deserialize"))) baz(float *m1, int m2,
+  __attribute__((annotate("auto_deserialize"))) baz(float m1, int m2,
     int foo_, float bar_, int bar_foo_) restrict(amp, cpu);
   int baz_foo;
 };
 
 __attribute__((annotate("user_deserialize")))
 int fake_use(void) restrict(amp) {
-  baz bll(NULL, 0,  1, 2.0, 1);
+  baz bll(0, 0,  1, 2.0, 1);
   return bll.foo;
 }
 #ifndef __GPU__
 TEST(GPUCodeGen, ConstructorCompound) {
   float local_float = 2.78f;
-  baz bll(&local_float, 2, 1, 2.0,1);
+  baz bll(local_float, 2, 1, 2.0,1);
   EXPECT_EQ(bll.foo, 1);
-  EXPECT_EQ(bll.m.bzzt, &local_float);
+  EXPECT_EQ(bll.m.bzzt, local_float);
   EXPECT_EQ(bll.m.zzz, 2);
   EXPECT_EQ(bll.baz_foo, 1);
 }
