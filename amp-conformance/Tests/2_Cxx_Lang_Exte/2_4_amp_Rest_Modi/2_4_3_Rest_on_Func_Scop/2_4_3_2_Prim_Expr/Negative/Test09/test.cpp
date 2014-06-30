@@ -9,7 +9,7 @@
 
 #include "common.h"
 
-typedef int32_t __int32;
+#define __int32 int
 
 bool test(accelerator_view &rv)
 {

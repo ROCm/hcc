@@ -1,8 +1,11 @@
+//===----------------------------------------------------------------------===//
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
 #pragma once
-// My quick and dirty implementation of amp.h
-// To use: put a gmac_array object (not pointer or reference!)
-// in your functor and use it in your kernel as if it is an array_view
-// object
 #include <cassert>
 #include <amp.h>
 
@@ -157,10 +160,16 @@ template <int N, typename Kernel>
 __attribute__((noinline,used)) void parallel_for_each(
     extent<N> compute_domain, const Kernel& f) restrict(cpu, amp) {
 #ifndef __GPU__
+    size_t compute_domain_size = 1;
     for(int i = 0 ; i < N ; i++)
     {
       if(compute_domain[i]<=0)
         throw invalid_compute_domain("Extent is less or equal than 0.");
+      if (static_cast<size_t>(compute_domain[i]) > 4294967295L)
+        throw invalid_compute_domain("Extent size too large.");
+      compute_domain_size *= static_cast<size_t>(compute_domain[i]);
+      if (compute_domain_size > 4294967295L)
+        throw invalid_compute_domain("Extent size too large.");
     }
 
     size_t ext[3] = {static_cast<size_t>(compute_domain[N - 1]),
@@ -185,6 +194,8 @@ __attribute__((noinline,used)) void parallel_for_each(
   if(compute_domain[0]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
   }
+  if (static_cast<size_t>(compute_domain[0]) > 4294967295L) 
+    throw invalid_compute_domain("Extent size too large.");
   size_t ext = compute_domain[0];
   mcw_cxxamp_launch_kernel<Kernel, 1>(&ext, NULL, f);
 #else //ifndef __GPU__
@@ -204,6 +215,8 @@ __attribute__((noinline,used)) void parallel_for_each(
   if(compute_domain[0]<=0 || compute_domain[1]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
   }
+  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
+    throw invalid_compute_domain("Extent size too large.");
   size_t ext[2] = {static_cast<size_t>(compute_domain[1]),
                    static_cast<size_t>(compute_domain[0])};
   mcw_cxxamp_launch_kernel<Kernel, 2>(ext, NULL, f);
@@ -224,6 +237,14 @@ __attribute__((noinline,used)) void parallel_for_each(
   if(compute_domain[0]<=0 || compute_domain[1]<=0 || compute_domain[2]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
   }
+  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
+    throw invalid_compute_domain("Extent size too large.");
+  if (static_cast<size_t>(compute_domain[1]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
+    throw invalid_compute_domain("Extent size too large.");
+  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
+    throw invalid_compute_domain("Extent size too large.");
+  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
+    throw invalid_compute_domain("Extent size too large.");
   size_t ext[3] = {static_cast<size_t>(compute_domain[2]),
                    static_cast<size_t>(compute_domain[1]),
                    static_cast<size_t>(compute_domain[0])};
@@ -244,6 +265,8 @@ __attribute__((noinline,used)) void parallel_for_each(
   if(compute_domain[0]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
   }
+  if (static_cast<size_t>(compute_domain[0]) > 4294967295L) 
+    throw invalid_compute_domain("Extent size too large.");
   size_t ext = compute_domain[0];
   size_t tile = compute_domain.tile_dim0;
   static_assert( compute_domain.tile_dim0 <= 1024, "The maximum nuimber of threads in a tile is 1024");
@@ -268,6 +291,8 @@ __attribute__((noinline,used)) void parallel_for_each(
   if(compute_domain[0]<=0 || compute_domain[1]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
   }
+  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
+    throw invalid_compute_domain("Extent size too large.");
   size_t ext[2] = { static_cast<size_t>(compute_domain[1]),
                     static_cast<size_t>(compute_domain[0])};
   size_t tile[2] = { compute_domain.tile_dim1,
@@ -293,6 +318,14 @@ __attribute__((noinline,used)) void parallel_for_each(
   if(compute_domain[0]<=0 || compute_domain[1]<=0 || compute_domain[2]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
   }
+  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
+    throw invalid_compute_domain("Extent size too large.");
+  if (static_cast<size_t>(compute_domain[1]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
+    throw invalid_compute_domain("Extent size too large.");
+  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
+    throw invalid_compute_domain("Extent size too large.");
+  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
+    throw invalid_compute_domain("Extent size too large.");
   size_t ext[3] = { static_cast<size_t>(compute_domain[2]),
                     static_cast<size_t>(compute_domain[1]),
                     static_cast<size_t>(compute_domain[0])};

@@ -4,7 +4,7 @@ if(EXISTS "${dest_dir}/${name}")
 MESSAGE("libcxxrt is present.")
 else(EXISTS "${dest_dir}/${name}")
 
-set(GIT_REPOSITORY git://github.com/pathscale/libcxxrt.git)
+set(GIT_REPOSITORY http://github.com/pathscale/libcxxrt.git)
 
 find_package(Git)
 if(NOT GIT_EXECUTABLE)

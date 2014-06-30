@@ -97,8 +97,8 @@ ensure_gmac_is_present(${PROJECT_SOURCE_DIR} gmac ${GMAC_URL})
 
 set(DEPS "gmac")
 
-set(OPENCL_HEADER_DIR "/usr/local/cuda/include" CACHE PATH "OpenCL Header Directory")
-set(OPENCL_LIBRARY_DIR "/usr/local/cuda/lib64" CACHE PATH "OpenCL Library Directory")
+set(OPENCL_HEADER_DIR "/usr/include/CL" CACHE PATH "OpenCL Header Directory")
+set(OPENCL_LIBRARY_DIR "/usr/lib64/" CACHE PATH "OpenCL Library Directory")
 
 SET(FOO_BUILD_SHARED OFF CACHE BOOL "Build libfoo shared library")
 set(USE_OPENCL ON CACHE BOOL "GMAC: Enable OpenCL")
@@ -164,17 +164,17 @@ add_custom_target(world
 )
 
 set(CPACK_SET_DESTDIR TRUE)
-set(CPACK_INSTALL_PREFIX "/opt/mcw")
+set(CPACK_INSTALL_PREFIX "/opt/clamp")
 set(CPACK_PACKAGE_NAME "clamp")
 set(CPACK_PACKAGE_VENDOR "MulticoreWare, Inc")
-set(CPACK_PACKAGE_VERSION "0.1.1-${GIT_VERSION}")
+set(CPACK_PACKAGE_VERSION "0.2.0-${GIT_VERSION}")
 set(CPACK_PACKAGE_VERSION_MAJOR "0")
-set(CPACK_PACKAGE_VERSION_MINOR "1")
-set(CPACK_PACKAGE_VERSION_PATCH "1")
+set(CPACK_PACKAGE_VERSION_MINOR "2")
+set(CPACK_PACKAGE_VERSION_PATCH "0")
 set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_SYSTEM_NAME})
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "clamp: a C++AMP to OpenCL compiler")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Ray I-Jui Sung <ray@multicorewareinc.com>")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "libcxxamp (>= 0.1.1)")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libcxxamp (>= 0.2.0)")
 if (CXXAMP_ENABLE_HSA_OKRA)
     set(CPACK_DEBIAN_PACKAGE_DEPENDS 
             "${CPACK_DEBIAN_PACKAGE_DEPENDS}, okra-dev (>= 0.1.1)")

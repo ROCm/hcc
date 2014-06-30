@@ -201,6 +201,46 @@ float opencl_trunc(float x) {
   return trunc(x);
 }
 
+float opencl_modff_global(float x, __global float *iptr) {
+  return modf(x, iptr);
+}
+float opencl_modff_local(float x, __local float *iptr) {
+  return modf(x, iptr);
+}
+float opencl_modff(float x, float *iptr) {
+  return modf(x, iptr);
+}
+
+double opencl_modf_global(double x, __global double *iptr) {
+  return modf(x, iptr);
+}
+double opencl_modf_local(double x, __local double *iptr) {
+  return modf(x, iptr);
+}
+double opencl_modf(double x, double *iptr) {
+  return modf(x, iptr);
+}
+ 
+float opencl_frexpf_global(float x, __global int *exp) {
+  return frexp(x, exp);
+}
+float opencl_frexpf_local(float x, __local int *exp) {
+  return frexp(x, exp);
+}
+float opencl_frexpf(float x, int *exp) {
+  return frexp(x, exp);
+}
+
+double opencl_frexp_global(double x, __global int *exp) {
+  return frexp(x, exp);
+}
+double opencl_frexp_local(double x, __local int *exp) {
+  return frexp(x, exp);
+}
+double opencl_frexp(double x, int *exp) {
+  return frexp(x, exp);
+}
+
 int opencl_min(int x, int y) {
   return min(x, y);
 }
@@ -213,22 +253,79 @@ int opencl_isnan(float x) {
   return isnan(x);
 }
 
-unsigned atomic_add_global(volatile __global unsigned *x, unsigned y) {
+unsigned atomic_add_unsigned_global(volatile __global unsigned *x, unsigned y) {
   return atomic_add(x, y);
 }
-unsigned atomic_add_local(volatile __local unsigned *x, unsigned y) {
+unsigned atomic_add_unsigned_local(volatile __local unsigned *x, unsigned y) {
   return atomic_add(x, y);
 }
-unsigned atomic_max_global(volatile __global unsigned *x, unsigned y) {
-  return atomic_max(x, y);
-}
-unsigned atomic_max_local(volatile __local unsigned *x, unsigned y) {
-  return atomic_max(x, y);
-}
-unsigned atomic_inc_global(volatile __global unsigned *x) {
-  return atomic_inc(x);
-}
-unsigned atomic_inc_local(volatile __local unsigned *x) {
-  return atomic_inc(x);
+unsigned atomic_add_unsigned(volatile unsigned *x, unsigned y) {
+  unsigned old = *x;
+  *x = old + y;
+  return old;
 }
 
+int atomic_add_int_global(volatile __global int *x, int y) {
+  return atomic_add(x, y);
+}
+int atomic_add_int_local(volatile __local int *x, int y) {
+  return atomic_add(x, y);
+}
+int atomic_add_int(volatile int *x, int y) {
+  int old = *x;
+  *x = old + y;
+  return old;
+}
+
+unsigned atomic_max_unsigned_global(volatile __global unsigned *x, unsigned y) {
+  return atomic_max(x, y);
+}
+unsigned atomic_max_unsigned_local(volatile __local unsigned *x, unsigned y) {
+  return atomic_max(x, y);
+}
+unsigned atomic_max_unsigned(volatile unsigned *x, unsigned y) {
+  *x = max(*x, y);
+  return *x;
+}
+
+int atomic_max_int_global(volatile __global int *x, int y) {
+  return atomic_max(x, y);
+}
+int atomic_max_int_local(volatile __local int *x, int y) {
+  return atomic_max(x, y);
+}
+int atomic_max_int(volatile int *x, int y) {
+  *x = max(*x, y);
+  return *x;
+}
+
+unsigned atomic_inc_unsigned_global(volatile __global unsigned *x) {
+  return atomic_inc(x);
+}
+unsigned atomic_inc_unsigned_local(volatile __local unsigned *x) {
+  return atomic_inc(x);
+}
+unsigned atomic_inc_unsigned(volatile unsigned *x) {
+  unsigned old = *x;
+  *x = old + 1;
+  return old;
+}
+
+int atomic_inc_int_global(volatile __global int *x) {
+  return atomic_inc(x);
+}
+int atomic_inc_int_local(volatile __local int *x) {
+  return atomic_inc(x);
+}
+int atomic_inc_int(volatile int *x) {
+  int old = *x;
+  *x = old + 1;
+  return old;
+}
+
+static unsigned char * memcpy(unsigned char *dst,  __global unsigned char *src, unsigned int len) {
+  for (int i = 0; i < len; ++i) {
+    dst[i] = src[i];
+  }    
+  return dst; 
+}
