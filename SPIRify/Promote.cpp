@@ -1322,15 +1322,31 @@ Function * createPromotedFunctionToType ( Function * F, FunctionType * promoteTy
             }
           }
 
+          StringRef newFuncName;
+          Function *promotedFunction;
           switch (Addrspace) {
             case PrivateAddressSpace:
             case ConstantAddressSpace:
               break;
             case LocalAddressSpace:
-              newFunction->setName(F->getName() + "_local");
+              newFuncName = (F->getName() + "_local").str();
+              DEBUG(llvm::errs() << newFuncName << "\n";);
+              promotedFunction = F->getParent()->getFunction(newFuncName);
+              if (!promotedFunction) { 
+                newFunction->setName(F->getName() + "_local");
+              } else {
+                newFunction = promotedFunction;
+              }
               break;
             case GlobalAddressSpace:
-              newFunction->setName(F->getName() + "_global");
+              newFuncName = (F->getName() + "_global").str();
+              DEBUG(llvm::errs() << newFuncName << "\n";);
+              promotedFunction = F->getParent()->getFunction(newFuncName);
+              if (!promotedFunction) { 
+                newFunction->setName(F->getName() + "_global");
+              } else {
+                newFunction = promotedFunction;
+              }
               break;
             default:
               break;
