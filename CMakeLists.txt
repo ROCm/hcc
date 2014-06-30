@@ -36,7 +36,7 @@ setup_SPIRify(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms SPIRify)
 setup_EraseNonkernel(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms EraseNonkernel)
 setup_TileUniform(${PROJECT_SOURCE_DIR}/compiler/lib/Analysis TileUniform)
 patch_SimplifyCFG(PatchSimplifyCFG)
-set(LLVM_TARGETS_TO_BUILD X86)
+set(LLVM_TARGETS_TO_BUILD X86 CACHE STRING "LLVM host target")
 set(LLVM_INCLUDE_EXAMPLES off)
 
 # Regression test
