@@ -37,6 +37,7 @@ setup_EraseNonkernel(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms EraseNonkerne
 setup_TileUniform(${PROJECT_SOURCE_DIR}/compiler/lib/Analysis TileUniform)
 patch_SimplifyCFG(PatchSimplifyCFG)
 set(LLVM_TARGETS_TO_BUILD X86 CACHE STRING "LLVM host target")
+set(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD CBackend CACHE STRING "set this to 'CBackend' to enable generating OpenCL-C")
 set(LLVM_INCLUDE_EXAMPLES off)
 
 # Regression test
