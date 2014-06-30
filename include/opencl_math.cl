@@ -259,12 +259,29 @@ unsigned atomic_add_global(volatile __global unsigned *x, unsigned y) {
 unsigned atomic_add_local(volatile __local unsigned *x, unsigned y) {
   return atomic_add(x, y);
 }
-unsigned atomic_max_global(volatile __global unsigned *x, unsigned y) {
+
+unsigned atomic_max_unsigned_global(volatile __global unsigned *x, unsigned y) {
   return atomic_max(x, y);
 }
-unsigned atomic_max_local(volatile __local unsigned *x, unsigned y) {
+unsigned atomic_max_unsigned_local(volatile __local unsigned *x, unsigned y) {
   return atomic_max(x, y);
 }
+unsigned atomic_max_unsigned(volatile unsigned *x, unsigned y) {
+  *x = max(*x, y);
+  return *x;
+}
+
+int atomic_max_int_global(volatile __global int *x, int y) {
+  return atomic_max(x, y);
+}
+int atomic_max_int_local(volatile __local int *x, int y) {
+  return atomic_max(x, y);
+}
+int atomic_max_int(volatile int *x, int y) {
+  *x = max(*x, y);
+  return *x;
+}
+
 unsigned atomic_inc_global(volatile __global unsigned *x) {
   return atomic_inc(x);
 }
