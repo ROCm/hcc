@@ -402,6 +402,10 @@
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToShared/Test11.10/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToShared/Test14/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/Misc/Test04/test.cpp
+2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/av_array/av.struct.multiple/struct_ptr/1d/Test01/test.cpp
+2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/av_array/array.struct/2d/Test01/test.cpp
+2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/av_array/av.c_array/3d.02/Test01/test.cpp
+2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/av_array/av.diff.struct.multiple/ref/1d/Test01/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/RefToPointer/BE/Test.01.02/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/RefToPointer/BE/Test.02.02/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/RefToPointer/BE/Test.03.01/test.cpp
