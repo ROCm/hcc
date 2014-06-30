@@ -1302,12 +1302,53 @@ Function * createPromotedFunctionToType ( Function * F, FunctionType * promoteTy
                                                    F->getParent());
         DEBUG(llvm::errs() << "New function name: " << newFunction->getName() << "\n" << "\n";);
 
+
+        // rewrite function with pointer type parameters
+        if (F->getName().find("opencl_") != StringRef::npos ||
+            F->getName().find("atomic_") != StringRef::npos) {
+
+          DEBUG(llvm::errs() << "Old function name: " << F->getName() << "\n";
+          llvm::errs() << "Old function type: "; F->getFunctionType()->dump(); llvm::errs() << "\n";
+          llvm::errs() << "Old function has definition: " << !F->isDeclaration() << "\n";
+          llvm::errs() << "New function type: "; newFunction->getFunctionType()->dump(); llvm::errs() << "\n";);
+
+          unsigned Addrspace = PrivateAddressSpace;
+          for (Function::const_arg_iterator it = newFunction->arg_begin(), ie = newFunction->arg_end(); it != ie; ++it) {
+            Type *Ty = (*it).getType();
+            if (isa<PointerType>(Ty)) {
+              Addrspace = Ty->getPointerAddressSpace();
+              DEBUG(llvm::errs() << "Pointer address space: " << Addrspace << "\n";);
+              break;
+            }
+          }
+
+          switch (Addrspace) {
+            case PrivateAddressSpace:
+            case ConstantAddressSpace:
+              break;
+            case LocalAddressSpace:
+              newFunction->setName(F->getName() + "_local");
+              break;
+            case GlobalAddressSpace:
+              newFunction->setName(F->getName() + "_global");
+              break;
+            default:
+              break;
+          }
+
+          DEBUG(llvm::errs() << "New function name: " << newFunction->getName() << "\n";);
+        }
+
+
         ValueToValueMapTy CloneMapping;
         nameAndMapArgs(newFunction, F, CloneMapping);
 
 
         SmallVector<ReturnInst *, 1> Returns;
-        CloneFunctionInto(newFunction, F, CloneMapping, false, Returns);
+        if (!F->isDeclaration()) {
+          // only clone the function if it's defined
+          CloneFunctionInto(newFunction, F, CloneMapping, false, Returns);
+        }
 
         ValueToValueMapTy CorrectedMapping;
         InstUpdateWorkList workList;
