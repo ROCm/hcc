@@ -1,3 +1,4 @@
+XFAIL: *
 // RUN: %cxxamp -emit-llvm -S -c %s -o -|%cppfilt|%FileCheck %s
 //Serialization object decl
 #include <cstdlib>
@@ -24,7 +25,7 @@ class baz {
 #endif
   int cho(void) restrict(amp) { return 0; };
 
-  base &B;
+  base &B; //  reference object is not allowed in amp codes
   int bar;
 };
 
