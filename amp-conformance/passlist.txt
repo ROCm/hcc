@@ -440,6 +440,8 @@
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToShared/Test14/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/Misc/Test04/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/RefToPointer/BE/Test.01.02/test.cpp
+2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/RefToPointer/BE/Test.02.02/test.cpp
+2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/RefToPointer/BE/Test.03.01/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/RefToPointer/Normal/Test10/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/RefToPointer/Normal/Test05/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/PseudoDtor.01/test.cpp
