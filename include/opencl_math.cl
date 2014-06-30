@@ -201,6 +201,46 @@ float opencl_trunc(float x) {
   return trunc(x);
 }
 
+float opencl_modff_global(float x, __global float *iptr) {
+  return modf(x, iptr);
+}
+float opencl_modff_local(float x, __local float *iptr) {
+  return modf(x, iptr);
+}
+float opencl_modff(float x, float *iptr) {
+  return modf(x, iptr);
+}
+
+double opencl_modf_global(double x, __global double *iptr) {
+  return modf(x, iptr);
+}
+double opencl_modf_local(double x, __local double *iptr) {
+  return modf(x, iptr);
+}
+double opencl_modf(double x, double *iptr) {
+  return modf(x, iptr);
+}
+ 
+float opencl_frexpf_global(float x, __global int *exp) {
+  return frexp(x, exp);
+}
+float opencl_frexpf_local(float x, __local int *exp) {
+  return frexp(x, exp);
+}
+float opencl_frexpf(float x, int *exp) {
+  return frexp(x, exp);
+}
+
+double opencl_frexp_global(double x, __global int *exp) {
+  return frexp(x, exp);
+}
+double opencl_frexp_local(double x, __local int *exp) {
+  return frexp(x, exp);
+}
+double opencl_frexp(double x, int *exp) {
+  return frexp(x, exp);
+}
+
 int opencl_min(int x, int y) {
   return min(x, y);
 }
