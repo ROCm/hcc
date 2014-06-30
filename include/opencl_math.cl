@@ -290,10 +290,8 @@ unsigned atomic_inc_local(volatile __local unsigned *x) {
 }
 
 static unsigned char * memcpy(unsigned char *dst,  __global unsigned char *src, unsigned int len) {
-  if (len >= 0) { 
-    for (int i = 0; i < len; ++i) {
-      dst[i] = src[i];
-    }    
-  }
+  for (int i = 0; i < len; ++i) {
+    dst[i] = src[i];
+  }    
   return dst; 
 }
