@@ -2335,9 +2335,11 @@ static void FindLocalName(Instruction *I, Value *&LocalValue, Type *&LocalTy) {
     return;
   if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(I)) {
     if (GEP->getPointerAddressSpace() == 3) { // OpenCL __local?
-      PointerType  *PTy = cast<PointerType>(GEP->getPointerOperandType());
-      LocalTy = PTy->getElementType();
-      LocalValue = I->getOperand(0);
+      if (isa<GlobalValue>(GEP->getPointerOperand())) {
+        PointerType  *PTy = cast<PointerType>(GEP->getPointerOperandType());
+        LocalTy = PTy->getElementType();
+        LocalValue = I->getOperand(0);
+      }
     }
   } else if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
     if (LI->getPointerAddressSpace() == 3) {
@@ -2366,31 +2368,33 @@ static void FindLocalName(Instruction *I, Value *&LocalValue, Type *&LocalTy) {
   }
   else if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
     if (SI->getPointerAddressSpace() == 3) { 
-      Value * PO = SI->getPointerOperand();
-      if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(PO)) {
-        switch (CE->getOpcode()) {
-          case Instruction::GetElementPtr:
-            {
-              PointerType  *PTy = cast<PointerType>(
-                  CE->getOperand(0)->getType());
-              LocalTy = PTy->getElementType();
-              LocalValue = CE->getOperand(0);
-            }
-            break;
-          default:
-            assert(0 && "Unhandled type of ConstantExpr in a load");
-        };
-      } else if (isa<GetElementPtrInst>(PO)) {
-        FindLocalName(dyn_cast<Instruction>(PO), LocalValue, LocalTy);
-      } else if (isa<PHINode>(PO)) {
-        // The sources must have been processed. Do nothing.
-      } else {
-        PointerType  *PTy = cast<PointerType>(PO->getType());
-        if(PTy) {
-          LocalTy = PTy->getElementType();
-          LocalValue = PO;
+      if (isa<GlobalValue>(SI->getPointerOperand())) {
+        Value * PO = SI->getPointerOperand();
+        if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(PO)) {
+          switch (CE->getOpcode()) {
+            case Instruction::GetElementPtr:
+              {
+                PointerType  *PTy = cast<PointerType>(
+                    CE->getOperand(0)->getType());
+                LocalTy = PTy->getElementType();
+                LocalValue = CE->getOperand(0);
+              }
+              break;
+            default:
+              assert(0 && "Unhandled type of ConstantExpr in a load");
+          };
+        } else if (isa<GetElementPtrInst>(PO)) {
+          FindLocalName(dyn_cast<Instruction>(PO), LocalValue, LocalTy);
+        } else if (isa<PHINode>(PO)) {
+          // The sources must have been processed. Do nothing.
         } else {
-          assert(0 && "Unhandled type of reference to a local array");
+          PointerType  *PTy = cast<PointerType>(PO->getType());
+          if(PTy) {
+            LocalTy = PTy->getElementType();
+            LocalValue = PO;
+          } else {
+            assert(0 && "Unhandled type of reference to a local array");
+          }
         }
       }
     }
@@ -2961,8 +2965,17 @@ void CWriter::visitCastInst(CastInst &I) {
     return;
   }
 
-  Out << '(';
-  printCast(I.getOpcode(), SrcTy, DstTy);
+  bool ShouldCast = true;
+  if (isa<PointerType>(DstTy)) {
+    PointerType* PTy = dyn_cast<PointerType>(DstTy);
+    if (PTy && (PTy->getAddressSpace() != 0)) {
+      ShouldCast = false;
+    }
+  }
+  if (ShouldCast) {
+    Out << '(';
+    printCast(I.getOpcode(), SrcTy, DstTy);
+  }
 
   // Make a sext from i1 work by subtracting the i1 from 0 (an int).
   if (SrcTy == Type::getInt1Ty(I.getContext()) &&
@@ -2979,7 +2992,9 @@ void CWriter::visitCastInst(CastInst &I) {
     // Make sure we really get a trunc to bool by anding the operand with 1
     Out << "&1u";
   }
-  Out << ')';
+  if (ShouldCast) {
+    Out << ')';
+  }
 }
 
 void CWriter::visitSelectInst(SelectInst &I) {
@@ -3214,7 +3229,9 @@ void CWriter::visitCallInst(CallInst &I) {
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Callee))
       if (CE->isCast())
         if (Function *RF = dyn_cast<Function>(CE->getOperand(0))) {
-          NeedsCast = true;
+          if (RF->getName() != "memcpy") { // skip casting for memcpy function
+            NeedsCast = true;
+          }
           Callee = RF;
         }
 

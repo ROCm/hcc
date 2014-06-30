@@ -21,8 +21,8 @@ const static int LOCAL_SIZE = 9;
 
 struct s1
 {
-    float x;
     double y;
+    float x;
 	int z;
 	float w;
 
@@ -433,7 +433,8 @@ bool test(accelerator_view av)
 runall_result test_main()
 {
     srand(2010);
-    accelerator_view av = require_device_with_double().get_default_view();;
+    //accelerator_view av = require_device_with_double().get_default_view();;
+    accelerator_view av = require_device().get_default_view();;
 
     runall_result ret;
 
