@@ -63,10 +63,18 @@
   extern "C" float opencl_tgamma(float x) restrict(amp);
   extern "C" float opencl_trunc(float x) restrict(amp);
 
+  /* SPIR pass will deduce the address space of the pointer and emit correct
+     call instruction */
+  extern "C" float opencl_modff(float x, float *iptr) restrict(amp);
+  extern "C" double opencl_modf(double x, double *iptr) restrict(amp);
+  extern "C" float opencl_frexpf(float x, int *exp) restrict(amp);
+  extern "C" double opencl_frexp(double x, int *exp) restrict(amp);
+
 #endif
 
 namespace Concurrency {
 namespace fast_math {
+
   float host_asin(float x) restrict(cpu) { return ::asin(x); }
   float asin(float x) restrict(amp,cpu) {
     #ifdef __GPU__
@@ -540,6 +548,42 @@ namespace fast_math {
       return host_truncf(x);
     #endif
   }
+
+  float host_modff(float x, float *iptr) restrict(cpu) { return ::modff(x, iptr); }
+  float modff(float x, float *iptr) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_modff(x, iptr);
+    #else
+      return host_modff(x, iptr);
+    #endif
+  }
+
+  float host_modf(float x, float *iptr) restrict(cpu) { return ::modff(x, iptr); }
+  float modf(float x, float *iptr) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_modff(x, iptr);
+    #else
+      return host_modf(x, iptr);
+    #endif
+  }
+
+  float host_frexpf(float x, int *exp) restrict(cpu) { return ::frexpf(x, exp); }
+  float frexpf(float x, int *exp) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_frexpf(x, exp);
+    #else
+      return host_frexpf(x, exp);
+    #endif
+  }
+
+  float host_frexp(float x, int *exp) restrict(cpu) { return ::frexpf(x, exp); }
+  float frexp(float x, int *exp) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_frexpf(x, exp);
+    #else
+      return host_frexp(x, exp);
+    #endif
+  }
 } // namesapce fast_math
   int host_min(int x, int y) restrict(cpu) {
     using std::min;
@@ -879,7 +923,7 @@ namespace fast_math {
     #endif
   }
   float host_remainder(double x, double y) restrict(cpu) { return ::remainder(x, y);}
-  float remainder(double x, double y) {
+  float remainder(double x, double y) restrict(amp,cpu) {
     #ifdef __GPU__
       return opencl_remainder(x, y);
     #else
@@ -887,7 +931,7 @@ namespace fast_math {
     #endif
   }
   float host_remainderf(double x, double y) restrict(cpu) { return ::remainder(x, y); }
-  float remainderf(double x, double y) {
+  float remainderf(double x, double y) restrict(amp,cpu) {
     #ifdef __GPU__
       return opencl_remainder(x, y);
     #else
@@ -940,6 +984,60 @@ namespace fast_math {
       return opencl_sinpi(x);
     #else
       return host_sinpif(x);
+    #endif
+  }
+
+  float host_modff(float x, float *iptr) restrict(cpu) { return ::modff(x, iptr); }
+  float modff(float x, float *iptr) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_modff(x, iptr);
+    #else
+      return host_modff(x, iptr);
+    #endif
+  }
+
+  float host_modf(float x, float *iptr) restrict(cpu) { return ::modff(x, iptr); }
+  float modf(float x, float *iptr) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_modff(x, iptr);
+    #else
+      return host_modf(x, iptr);
+    #endif
+  }
+
+  double host_modf(double x, double *iptr) restrict(cpu) { return ::modf(x, iptr); }
+  double modf(double x, double *iptr) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_modf(x, iptr);
+    #else
+      return host_modf(x, iptr);
+    #endif
+  }
+
+  float host_frexpf(float x, int *exp) restrict(cpu) { return ::frexpf(x, exp); }
+  float frexpf(float x, int *exp) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_frexpf(x, exp);
+    #else
+      return host_frexpf(x, exp);
+    #endif
+  }
+
+  float host_frexp(float x, int *exp) restrict(cpu) { return ::frexp(x, exp); }
+  float frexp(float x, int *exp) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_frexp(x, exp);
+    #else
+      return host_frexp(x, exp);
+    #endif
+  }
+
+  double host_frexp(double x, int *exp) restrict(cpu) { return ::frexp(x, exp); }
+  double frexp(double x, int *exp) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_frexp(x, exp);
+    #else
+      return host_frexp(x, exp);
     #endif
   }
 

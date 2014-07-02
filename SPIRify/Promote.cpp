@@ -49,6 +49,7 @@ typedef std::map <Function *, Function *> FunctionMap;
 static Twine KernelListMDNodeName = "opencl.kernels";
 
 enum {
+        PrivateAddressSpace = 0,
         GlobalAddressSpace = 1,
         ConstantAddressSpace = 2,
         LocalAddressSpace = 3
@@ -199,7 +200,14 @@ Type * patchType ( Type * baseType, Type* patch, User::op_iterator idx, User::op
                 return StructType::get (ST->getContext(),
                                         ArrayRef<Type *>(newElements),
                                         ST->isPacked());
-       }
+        } else if ( ArrayType *AT = dyn_cast<ArrayType>(baseType) ) {
+          if (!isIndexLiteral) {
+            llvm::errs() << "Expecting literal index for array type\n";
+            return NULL;
+          }
+          Type *transformed = patchType(AT->getElementType(), patch, ++idx, idx_end);
+          return ArrayType::get(transformed, AT->getNumElements());
+        }
        DEBUG(llvm::errs() << "Patch type not handling ";
              baseType->dump(););
        return NULL;
@@ -208,6 +216,10 @@ Type * patchType ( Type * baseType, Type* patch, User::op_iterator idx, User::op
 void updateBackGEP (GetElementPtrInst * GEP, Type* expected,
                     InstUpdateWorkList * updater)
 {
+        DEBUG(llvm::errs() << "=== BEFORE UPDATE BACK GEP ===\n";
+        llvm::errs() << "EXPECTED TYPE: "; expected->dump(); llvm::errs() << "\n";
+        llvm::errs() << "Source operand type: "; GEP->getPointerOperandType()->dump(); llvm::errs() << "\n";);
+
         PointerType * ptrExpected = dyn_cast<PointerType> (expected);
         if ( !ptrExpected ) {
                 llvm::errs() << "Expected type for GEP is not a pointer!\n";
@@ -219,21 +231,38 @@ void updateBackGEP (GetElementPtrInst * GEP, Type* expected,
                 llvm::errs() << "Source operand type is not a pointer!\n";
                 return;
         }
+
+        DEBUG(llvm::errs() << "Element type: "; ptrSource->getElementType()->dump(); llvm::errs() << "\n";
+        llvm::errs() << "Expected element type: "; ptrExpected->getElementType()->dump(); llvm::errs() << "\n";
+        for (User::op_iterator it = GEP->idx_begin(), ie = GEP->idx_end(); it != ie; ++it) {
+          if ( ConstantInt * CI = dyn_cast<ConstantInt>(*it) ) {
+            llvm::errs() << " idx " << CI->getZExtValue();
+          }
+        }
+        llvm::errs() << "\n";);
+
         User::op_iterator first_idx = GEP->idx_begin();
         ++first_idx;
         Type * newElementType = patchType (ptrSource->getElementType(),
                                            ptrExpected->getElementType(),
                                            first_idx, GEP->idx_end());
 
-        PointerType  * newUpstreamType =
+
+        // be aware that newElementType might be null
+        if (newElementType) {
+          DEBUG(llvm::errs() << "NEW ELEMENT TYPE: "; newElementType->dump(); llvm::errs() << "\n";);
+          PointerType  * newUpstreamType =
                 PointerType::get(newElementType,
                                  ptrExpected->getAddressSpace());
-        Instruction * ptrProducer =
+          Instruction * ptrProducer =
                 dyn_cast<Instruction>(GEP->getPointerOperand());
-        assert(ptrProducer
+          assert(ptrProducer
                && "Was expecting an instruction as source operand for GEP");
-        BackwardUpdate::setExpectedType (ptrProducer,
+          BackwardUpdate::setExpectedType (ptrProducer,
                                          newUpstreamType, updater);
+        } else {
+          DEBUG(llvm::errs() << "newElementType is null\n";);
+        }
 }
 
 void updateBackLoad (LoadInst * L, Type * expected,
@@ -312,6 +341,8 @@ void updateBackBitCast (BitCastInst * BCI, Type * expected,
 void BackwardUpdate::operator ()(InstUpdateWorkList *updater)
 {
         DEBUG(llvm::errs() << "B: "; upstream->dump(););
+        if (!upstream) return;
+
         if ( AllocaInst * AI = dyn_cast<AllocaInst> (upstream) ) {
                 updateBackAllocaInst (AI, expected, updater);
                 return;
@@ -328,11 +359,15 @@ void BackwardUpdate::operator ()(InstUpdateWorkList *updater)
                 updateBackBitCast (BCI, expected, updater);
                 return;
         }
+        if ( isa<PHINode>(upstream)) {
+          DEBUG(llvm::errs() << "[BackwardUpdate::operator()] TBD PHINode\n";);
+          return;
+        }
+
         DEBUG(llvm::errs() << "Do not know how to update ";
               upstream->dump(); llvm::errs() << " with "; expected->dump();
               llvm::errs() << "\n";);
         return;
-
 }
 
 void BackwardUpdate::setExpectedType (Instruction * Insn, Type * expected,
@@ -594,36 +629,75 @@ void updateLoadInstWithNewOperand(LoadInst * I, Value * newOperand, InstUpdateWo
 void updatePHINodeWithNewOperand(PHINode * I, Value * oldOperand,
         Value * newOperand, InstUpdateWorkList * updatesNeeded)
 {
-    // Update the PHI node itself as well its users
-    Type * originalType = I->getType();
-    PointerType * PT = cast<PointerType>(newOperand->getType());
-    if ( PT != originalType ) {
-        I->mutateType(PT);
-        updateListWithUsers(I->use_begin(), I->use_end(), I, I, updatesNeeded);
+  DEBUG(llvm::errs() << "=== BEFORE UPDATE PHI ===\n";
+  I->dump();
+  llvm::errs() << "original type: "; I->getType()->dump(); llvm::errs() << "\n";
+  for (unsigned i = 0; i < I->getNumIncomingValues(); ++i) {
+    llvm::errs() << "src#" << i << ": "; I->getIncomingValue(i)->getType()->dump(); llvm::errs() << "\n";
+  }
+  llvm::errs() << "=========================\nnew type: "; newOperand->getType()->dump(); llvm::errs() << "\n";);
+
+  // Update the PHI node itself as well its users
+  Type * originalType = I->getType();
+  PointerType * PT = cast<PointerType>(newOperand->getType());
+  if ( PT != originalType ) {
+    I->mutateType(PT);
+    updateListWithUsers(I->use_begin(), I->use_end(), I, I, updatesNeeded);
+  }
+
+  /* update other incoming nodes as well */
+  for (unsigned i = 0; i < I->getNumIncomingValues(); ++i) {
+    Value *V = I->getIncomingValue(i);
+
+    if (V == oldOperand) {
+      I->setOperand(i, newOperand);
+    } else if (V == newOperand) {
+      continue;
     } else {
-        return;
-    }
-    // Update the sources of the PHI node
-    for (unsigned i = 0; i < I->getNumIncomingValues(); i++) {
-        Value *V = I->getIncomingValue(i);
-        if (V == oldOperand) {
-            I->setOperand(i, newOperand);
-        } else if (V == newOperand) {
-            continue;
-        } else if (!isa<Instruction>(V)) {
-            // It is temping to do backward updating on other incoming
-            // operands here, // but we don't have to. Eventually fwd
-            // updates will cover them, except Undefs
+      Type *Ty = V->getType();
+      if (isa<PointerType>(Ty)) {
+        PointerType *PTy = dyn_cast<PointerType>(Ty);
+        if (PT != PTy) {
+          if (isa<Instruction>(V)) {
+            Instruction *II = dyn_cast<Instruction>(V);
+
+            DEBUG(llvm::errs() << "value#" << i << " update type from: ";  PTy->dump();
+            llvm::errs() << " to: "; PT->dump();
+            llvm::errs() << " for instruction: "; II->dump(); llvm::errs() << "\n";);
+
             V->mutateType(PT);
+            updateListWithUsers(II->use_begin(), II->use_end(), II, II, updatesNeeded);
+          } else if (isa<Constant>(V)) {
+            Constant *CC = dyn_cast<Constant>(V);
+
+            DEBUG(llvm::errs() << "value#" << i << " update type from: ";  PTy->dump(); 
+            llvm::errs() << " to: "; PT->dump();
+            llvm::errs() << " for constant: "; CC->dump(); llvm::errs() << "\n";);
+
+            if (CC->isNullValue()) {
+              I->setOperand(i, Constant::getNullValue(PT));
+            } else {
+              DEBUG(llvm::errs() << "unhandled constant\n";);
+            }
+          }
         }
+      }
     }
+  }
+
+  DEBUG(llvm::errs() << "=== AFTER UPDATE PHI ====\n";
+  I->dump();
+  llvm::errs() << "type: "; I->getType()->dump(); llvm::errs() << "\n";
+  for (unsigned i = 0; i < I->getNumIncomingValues(); ++i) {
+    llvm::errs() << "src#" << i << ": "; I->getIncomingValue(i)->getType()->dump(); llvm::errs() << "\n";
+  }
+  llvm::errs() << "\n\n";);
 }
 
 void updateStoreInstWithNewOperand(StoreInst * I, Value * oldOperand, Value * newOperand, InstUpdateWorkList * updatesNeeded)
 {
         unsigned index = I->getOperand(1) == oldOperand?1:0;
         I->setOperand(index, newOperand);
-
         Value * storeOperand = I->getPointerOperand();
         PointerType * destType =
                 dyn_cast<PointerType>(storeOperand->getType());
@@ -640,11 +714,20 @@ void updateStoreInstWithNewOperand(StoreInst * I, Value * oldOperand, Value * ne
                 PointerType * newType =
                         PointerType::get(I->getValueOperand()->getType(),
                                          destType->getAddressSpace());
-                Instruction * ptrProducer =
+
+                DEBUG(llvm::errs() << "newtype: "; newType->dump(); llvm::errs() << "\n";
+                llvm::errs() << "pointer operand type: "; I->getPointerOperand()->getType()->dump(); llvm::errs() << "\n";);
+
+                if (isa<Instruction>(I->getPointerOperand())) {
+                  Instruction * ptrProducer =
                         dyn_cast<Instruction> ( I->getPointerOperand () );
 
-                BackwardUpdate::setExpectedType (ptrProducer,
+                  BackwardUpdate::setExpectedType (ptrProducer,
                                                  newType, updatesNeeded);
+
+                } else {
+                  DEBUG(llvm::errs() << "ptrProducer is null\n";);
+                } 
         }
 }
 
@@ -684,12 +767,20 @@ void updateBitCastInstWithNewOperand(BitCastInst * BI, Value *oldOperand, Value 
 
 void updateGEPWithNewOperand(GetElementPtrInst * GEP, Value * oldOperand, Value * newOperand, InstUpdateWorkList * updatesNeeded)
 {
+        DEBUG(llvm::errs() << "=== BEFORE UPDATE GEP ===\n";
+        llvm::errs() << "new operand: "; newOperand->getType()->dump(); llvm::errs() << "\n";);
+
         if ( GEP->getPointerOperand() != oldOperand ) return;
 
         std::vector<Value *> Indices(GEP->idx_begin(), GEP->idx_end());
 
+
         Type * futureType =
                 GEP->getGEPReturnType(newOperand, ArrayRef<Value *>(Indices));
+
+        DEBUG(llvm::errs() << "future type: "; futureType->dump(); llvm::errs() << "\n";
+        llvm::errs() << "address space: " << GEP->getAddressSpace() << "\n";
+        llvm::errs() << "indexed type: "; GEP->getIndexedType(oldOperand->getType(), Indices)->dump(); llvm::errs() << "\n";);
 
         PointerType * futurePtrType = dyn_cast<PointerType>(futureType);
         if ( !futurePtrType ) return;
@@ -702,12 +793,47 @@ void updateGEPWithNewOperand(GetElementPtrInst * GEP, Value * oldOperand, Value 
         updateListWithUsers(GEP->use_begin(), GEP->use_end(), GEP, GEP, updatesNeeded);
 }
 
+void updateCMPWithNewOperand(CmpInst *CMP, Value *oldOperand, Value *newOperand, InstUpdateWorkList *updatesNeeded)
+{
+    DEBUG(llvm::errs() << "=== BEFORE UPDATE CMP ===\n";
+    llvm::errs() << " new type: "; newOperand->getType()->dump(); llvm::errs() << "\n";
+    for (unsigned i = 0; i < CMP->getNumOperands(); ++i) {
+      llvm::errs() << " op#" << i << ": "; CMP->getOperand(i)->getType()->dump(); llvm::errs() << "\n";
+    });
+
+    bool update = false;
+    for (unsigned i = 0; i < CMP->getNumOperands(); ++i) {
+      Value *V = CMP->getOperand(i);
+      Type *T = V->getType();
+      if (T != newOperand->getType()) {
+        V->mutateType(newOperand->getType());
+        updateListWithUsers(V->use_begin(), V->use_end(), V, V, updatesNeeded);
+        update = true;
+      }
+    }
+    if (update)
+      updateListWithUsers(CMP->use_begin(), CMP->use_end(), CMP, CMP, updatesNeeded);
+}
+
 void updateSELWithNewOperand(SelectInst * SEL, Value * oldOperand, Value * newOperand, InstUpdateWorkList * updatesNeeded)
 {
+    DEBUG(llvm::errs() << "=== BEFORE UPDATE SEL ===\n";
+    llvm::errs() << " new type: "; newOperand->getType()->dump(); llvm::errs() << "\n";
+    llvm::errs() << " op1 type: "; SEL->getOperand(1)->getType()->dump(); llvm::errs() << "\n";
+    llvm::errs() << " op2 type: "; SEL->getOperand(2)->getType()->dump(); llvm::errs() << "\n";);
+
     Type* InstructionType =  SEL->getType();
     bool update = false;
     if(SEL->getOperand(1) == oldOperand) {
       SEL->setOperand (1, newOperand);
+
+      Value *V2 = SEL->getOperand(2);
+      Type *T2 = V2->getType();
+      if (T2 != newOperand->getType()) {
+        V2->mutateType(newOperand->getType());
+        updateListWithUsers(V2->use_begin(), V2->use_end(), V2, V2, updatesNeeded);
+        update = true;
+      }
       if(InstructionType != newOperand->getType()) {
         SEL->mutateType(newOperand->getType());
         update = true;
@@ -715,11 +841,24 @@ void updateSELWithNewOperand(SelectInst * SEL, Value * oldOperand, Value * newOp
     }    
     if(SEL->getOperand(2) == oldOperand) {
       SEL->setOperand (2, newOperand);
+
+      Value *V1 = SEL->getOperand(1);
+      Type *T1 = V1->getType();
+      if (T1 != newOperand->getType()) {
+        V1->mutateType(newOperand->getType());
+        updateListWithUsers(V1->use_begin(), V1->use_end(), V1, V1, updatesNeeded);
+        update = true;
+      }
       if(InstructionType != newOperand->getType()) {
         SEL->mutateType(newOperand->getType());
         update = true;
       }
     }
+
+    DEBUG(llvm::errs() << "=== AFTER UPDATE SEL ===\n";
+    llvm::errs() << " op1 type: "; SEL->getOperand(1)->getType()->dump(); llvm::errs() << "\n";
+    llvm::errs() << " op2 type: "; SEL->getOperand(2)->getType()->dump(); llvm::errs() << "\n";);
+
     if(update) 
       updateListWithUsers(SEL->use_begin(), SEL->use_end(), SEL, SEL, updatesNeeded);
 }
@@ -866,10 +1005,32 @@ void updateInstructionWithNewOperand(Instruction * I,
            updateSELWithNewOperand(SEL, oldOperand, newOperand,updatesNeeded);
            return;
        }
+
+       if (CmpInst *CMP = dyn_cast<CmpInst>(I)) {
+           updateCMPWithNewOperand(CMP, oldOperand, newOperand, updatesNeeded);
+           return;
+       }
+
+       if (isa<PtrToIntInst>(I)) {
+           DEBUG(llvm::errs() << "No need to update ptrtoint\n";);
+           return;
+       }
+
+       if (isa<InvokeInst>(I)) {
+           DEBUG(llvm::errs() << "No need to update invoke\n";);
+           return;
+       }
+
+       if (isa<BranchInst>(I)) {
+           DEBUG(llvm::errs() << "No need to update branch\n";);
+           return;
+       }
+
        llvm::errs() << "DO NOT KNOW HOW TO UPDATE INSTRUCTION: ";
              I->print(llvm::errs()); llvm::errs() << "\n";
-       // Must trap it
-       exit(1);
+
+       // Don't crash the program
+       return;
 }
 
 static bool usedInTheFunc(const User *U, const Function* F)
@@ -1141,12 +1302,69 @@ Function * createPromotedFunctionToType ( Function * F, FunctionType * promoteTy
                                                    F->getParent());
         DEBUG(llvm::errs() << "New function name: " << newFunction->getName() << "\n" << "\n";);
 
+
+        // rewrite function with pointer type parameters
+        if (F->getName().find("opencl_") != StringRef::npos ||
+            F->getName().find("atomic_") != StringRef::npos) {
+
+          DEBUG(llvm::errs() << "Old function name: " << F->getName() << "\n";
+          llvm::errs() << "Old function type: "; F->getFunctionType()->dump(); llvm::errs() << "\n";
+          llvm::errs() << "Old function has definition: " << !F->isDeclaration() << "\n";
+          llvm::errs() << "New function type: "; newFunction->getFunctionType()->dump(); llvm::errs() << "\n";);
+
+          unsigned Addrspace = PrivateAddressSpace;
+          for (Function::const_arg_iterator it = newFunction->arg_begin(), ie = newFunction->arg_end(); it != ie; ++it) {
+            Type *Ty = (*it).getType();
+            if (isa<PointerType>(Ty)) {
+              Addrspace = Ty->getPointerAddressSpace();
+              DEBUG(llvm::errs() << "Pointer address space: " << Addrspace << "\n";);
+              break;
+            }
+          }
+
+          StringRef newFuncName;
+          Function *promotedFunction;
+          switch (Addrspace) {
+            case PrivateAddressSpace:
+            case ConstantAddressSpace:
+              break;
+            case LocalAddressSpace:
+              newFuncName = (F->getName() + "_local").str();
+              DEBUG(llvm::errs() << newFuncName << "\n";);
+              promotedFunction = F->getParent()->getFunction(newFuncName);
+              if (!promotedFunction) { 
+                newFunction->setName(F->getName() + "_local");
+              } else {
+                newFunction = promotedFunction;
+              }
+              break;
+            case GlobalAddressSpace:
+              newFuncName = (F->getName() + "_global").str();
+              DEBUG(llvm::errs() << newFuncName << "\n";);
+              promotedFunction = F->getParent()->getFunction(newFuncName);
+              if (!promotedFunction) { 
+                newFunction->setName(F->getName() + "_global");
+              } else {
+                newFunction = promotedFunction;
+              }
+              break;
+            default:
+              break;
+          }
+
+          DEBUG(llvm::errs() << "New function name: " << newFunction->getName() << "\n";);
+        }
+
+
         ValueToValueMapTy CloneMapping;
         nameAndMapArgs(newFunction, F, CloneMapping);
 
 
         SmallVector<ReturnInst *, 1> Returns;
-        CloneFunctionInto(newFunction, F, CloneMapping, false, Returns);
+        if (!F->isDeclaration()) {
+          // only clone the function if it's defined
+          CloneFunctionInto(newFunction, F, CloneMapping, false, Returns);
+        }
 
         ValueToValueMapTy CorrectedMapping;
         InstUpdateWorkList workList;

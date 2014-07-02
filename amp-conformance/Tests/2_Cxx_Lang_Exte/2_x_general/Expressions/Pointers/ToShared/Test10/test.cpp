@@ -13,8 +13,8 @@
 class c
 {
 public:
-    __int32 i;
     double d;
+    __int32 i;
     unsigned __int32 ui;
     float f;
 };
@@ -80,7 +80,7 @@ bool test(accelerator_view &rv)
         p1->ui = 2;
         p1->f = 2;
 
-        if (!Equal(p2->i, (int)2) || !Equal(p2->ui, (unsigned __int32)2) || !Equal(p2->f, (float)2) || !Equal(p2->d, 2.0))
+        if (!Equal(p2->i, (int)2) || !Equal(p2->ui, (unsigned __int32)2) || !Equal(p2->f, (float)2) || !Equal(p2->d, (double)2.0))
             aA[idx] = 1;
 
         tile_static u o3;
@@ -146,7 +146,8 @@ runall_result test_main()
 {
     bool passed = true;
 
-    accelerator device = require_device_with_double(Device::ALL_DEVICES);
+    //accelerator device = require_device_with_double(Device::ALL_DEVICES);
+    accelerator device = require_device();
 
     accelerator_view rv = device.get_default_view();
 

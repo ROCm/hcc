@@ -1,0 +1,64 @@
+#!/bin/sh
+patch -p0 < $0
+exit 0
+Index: compiler/lib/Transforms/IPO/GlobalOpt.cpp
+===================================================================
+--- compiler/lib/Transforms/IPO/GlobalOpt.cpp	2013-05-15 13:16:42.000000000 -0500
++++ compiler/lib/Transforms/IPO/GlobalOpt.cpp	2014-06-24 18:03:05.587075047 -0500
+>>>>>>> remotes/origin/AMP-272
+@@ -688,6 +688,7 @@
+                                                In, GV->getName()+"."+Twine(i),
+                                                GV->getThreadLocalMode(),
+                                               GV->getType()->getAddressSpace());
++      NGV->copyAttributesFrom(GV);
+       Globals.insert(GV, NGV);
+       NewGlobals.push_back(NGV);
+ 
+@@ -721,6 +722,7 @@
+                                                In, GV->getName()+"."+Twine(i),
+                                                GV->getThreadLocalMode(),
+                                               GV->getType()->getAddressSpace());
++      NGV->copyAttributesFrom(GV);
+       Globals.insert(GV, NGV);
+       NewGlobals.push_back(NGV);
+ 
+@@ -1043,6 +1045,7 @@
+                                              GV->getName()+".body",
+                                              GV,
+                                              GV->getThreadLocalMode());
++  NewGV->copyAttributesFrom(GV);
+ 
+   // If there are bitcast users of the malloc (which is typical, usually we have
+   // a malloc + bitcast) then replace them with uses of the new global.  Update
+@@ -1076,6 +1079,7 @@
+                        GlobalValue::InternalLinkage,
+                        ConstantInt::getFalse(GV->getContext()),
+                        GV->getName()+".init", GV->getThreadLocalMode());
++  InitBool->copyAttributesFrom(GV);
+   bool InitBoolUsed = false;
+ 
+   // Loop over all uses of GV, processing them in turn.
+@@ -1499,6 +1503,7 @@
+                          Constant::getNullValue(PFieldTy),
+                          GV->getName() + ".f" + Twine(FieldNo), GV,
+                          GV->getThreadLocalMode());
++    NGV->copyAttributesFrom(GV);
+     FieldGlobals.push_back(NGV);
+ 
+     unsigned TypeSize = TD->getTypeAllocSize(FieldTy);
+@@ -1827,6 +1832,7 @@
+                                              GV->getName()+".b",
+                                              GV->getThreadLocalMode(),
+                                              GV->getType()->getAddressSpace());
++  NewGV->copyAttributesFrom(GV);
+   GV->getParent()->getGlobalList().insert(GV, NewGV);
+ 
+   Constant *InitVal = GV->getInitializer();
+@@ -2243,6 +2249,7 @@
+   GlobalVariable *NGV = new GlobalVariable(CA->getType(), GCL->isConstant(),
+                                            GCL->getLinkage(), CA, "",
+                                            GCL->getThreadLocalMode());
++  NGV->copyAttributesFrom(GCL);
+   GCL->getParent()->getGlobalList().insert(GCL, NGV);
+   NGV->takeName(GCL);
+ 
