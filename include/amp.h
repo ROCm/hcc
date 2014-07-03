@@ -237,7 +237,7 @@ extern "C" __attribute__((pure)) int get_group_id(int n) restrict(amp);
 #else
 #define tile_static static __attribute__((section("clamp_opencl_local")))
 #endif
-extern "C" void barrier(int n) restrict(amp);
+extern "C" __attribute__((noduplicate)) void barrier(int n) restrict(amp);
 //End CLAMP
 class completion_future {
 public:

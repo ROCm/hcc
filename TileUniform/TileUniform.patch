@@ -1,0 +1,2 @@
+#/bin/bash
+echo "add_subdirectory(TileUniform)" >> compiler/lib/Analysis/CMakeLists.txt
