@@ -1,7 +1,7 @@
 #!/bin/sh
 # wraps around commands to produce GPU kernel
 # $1 = input ll name
-# $2 = opencl kernel file name or SPIR bitcode file name
+# $2 = OpenCL/SPIR/HSAIL kernel file name
 hasSPIR() {
     [ -z "$CLAMP_NOSPIR" -a -x /usr/bin/clinfo ] && ( /usr/bin/clinfo|grep cl_khr_spir > /dev/null )
     return $?
