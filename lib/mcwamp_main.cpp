@@ -31,7 +31,7 @@ void cxxflags(void) {
         abort();
     }
     // Common options
-    std::cout << "--std=c++amp";
+    std::cout << "-std=c++amp";
 
 #if defined(CXXAMP_ENABLE_HSA_OKRA)
     std::cout << " -DCXXAMP_ENABLE_HSA_OKRA=1";
