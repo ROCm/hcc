@@ -9,6 +9,10 @@
 #include "HSAContext.h"
 #include "fileUtils.h"
 
+#include "hsa_ext_finalize.h"
+#include "hsa_ext_private_amd.h"
+#include "assemble.h"
+
 #define STATUS_CHECK(s,line) if (status != HSA_STATUS_SUCCESS) {\
 		printf("### Error: %d at line:%d\n", status, line);\
 		exit(-1);\
@@ -25,10 +29,53 @@
 #define STATUS_CHECK_Q(s,line) if (status != HSA_STATUS_SUCCESS) {\
 		printf("### Error: %d at line:%d\n", status, line);\
                 assert(HSA_STATUS_SUCCESS == hsa_queue_destroy(commandQueue));\
-		assert(HSA_STATUS_SUCCESS == hsa_topology_table_destroy(table));\
-                assert(HSA_STATUS_SUCCESS == hsa_close());\
 		exit(-1);\
 	}
+
+/************************ From HSA example *********************************/ 
+
+	static hsa_status_t IterateAgent(hsa_agent_t agent, void *data) {
+		// Find GPU device and use it.
+		if (data == NULL) {
+			return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+		}
+
+		hsa_device_type_t device_type;
+		hsa_status_t stat =
+			hsa_agent_get_info(agent, HSA_AGENT_INFO_DEVICE, &device_type);
+		if (stat != HSA_STATUS_SUCCESS) {
+			return stat;
+		}
+
+		if (device_type == HSA_DEVICE_TYPE_GPU) {
+			*((hsa_agent_t *)data) = agent;
+		}
+
+		return HSA_STATUS_SUCCESS;
+	}
+
+	static hsa_status_t IterateRegion(hsa_region_t region, void *data) {
+		// Find system memory region.
+		if (data == NULL) {
+			return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+		}
+
+		bool is_host = false;
+		hsa_status_t stat =
+			hsa_region_get_info(
+			region, (hsa_region_info_t)HSA_EXT_REGION_INFO_HOST_ACCESS, &is_host);
+		if (stat != HSA_STATUS_SUCCESS) {
+			return stat;
+		}
+
+		if (is_host) {
+			*((hsa_region_t *)data) = region;
+		}
+		return HSA_STATUS_SUCCESS;
+	}
+
+/**************************************************************************/
+
 
 HSAContext* HSAContext::m_pContext = 0;
 
@@ -39,7 +86,7 @@ private:
    class KernelImpl : public HSAContext::Kernel {
    private:
       HSAContextKaveriImpl* context;
-      hsa_kernel_code_t* kernel;
+      hsa_ext_code_descriptor_t *hsaCodeDescriptor;
 
       std::vector<uint64_t> arg_vec;
       uint32_t arg_count;
@@ -50,9 +97,9 @@ private:
       static const int ARGS_VEC_INITIAL_CAPACITY = 256;   
 
    public:
-      KernelImpl(hsa_kernel_code_t* _kernel, HSAContextKaveriImpl* _context) {
+      KernelImpl(hsa_ext_code_descriptor_t* _hsaCodeDescriptor, HSAContextKaveriImpl* _context) {
          context = _context;
-         kernel = _kernel;
+         hsaCodeDescriptor =  _hsaCodeDescriptor;
          
          // allocate the initial argument vector capacity
          arg_vec.reserve(ARGS_VEC_INITIAL_CAPACITY);
@@ -127,14 +174,12 @@ private:
          hsa_queue_t* commandQueue = context->getQueue();
 
          // create a signal
-         hsa_signal_handle_t signal;
-         hsa_signal_value_t value;
-         value.value64 = 1;
-         status = hsa_signal_create(value, &signal, context->getContext());
+         hsa_signal_t signal;
+         status = hsa_signal_create(1, &signal);
          STATUS_CHECK_Q(status, __LINE__);
 
          // create a dispatch packet
-         hsa_aql_dispatch_packet_t aql;
+         hsa_dispatch_packet_t aql;
          memset(&aql, 0, sizeof(aql));
 
          // setup dispatch sizes
@@ -148,39 +193,35 @@ private:
          aql.grid_size_z = global_size[2];
 
          // set dispatch fences
-         aql.header.format = HSA_AQL_FORMAT_DISPATCH;
+         aql.header.type = HSA_PACKET_TYPE_DISPATCH;
          aql.header.acquire_fence_scope = 2;
          aql.header.release_fence_scope = 2;
          aql.header.barrier = 1;
 
          // bind kernel code
-         aql.kernel_object_address = (uint64_t)kernel; 
+         aql.kernel_object_address = hsaCodeDescriptor->code.handle; 
 
          // bind kernel arguments
          aql.kernarg_address = (uint64_t)arg_vec.data();
 
          // Initialize memory resources needed to execute
-         aql.group_segment_size_bytes = kernel->workgroup_group_segment_byte_size;
-         aql.private_segment_size_bytes = kernel->workitem_private_segment_byte_size;
+         aql.group_segment_size = hsaCodeDescriptor->workgroup_group_segment_byte_size;
+         aql.private_segment_size = hsaCodeDescriptor->workitem_private_segment_byte_size;
 
          // write packet
-         uint32_t queueMask = commandQueue->size_packets - 1;
+         uint32_t queueMask = commandQueue->size - 1;
          uint64_t index = hsa_queue_get_write_index(commandQueue);
-         ((hsa_aql_dispatch_packet_t*)(commandQueue->base_address))[index & queueMask] = aql;
+         ((hsa_dispatch_packet_t*)(commandQueue->base_address))[index & queueMask] = aql;
          hsa_queue_set_write_index(commandQueue, index + 1);
 
          // Ring door bell
-         value.value64 = index + 1;
-         status = hsa_signal_send_relaxed(commandQueue->doorbell_signal, value);
-         STATUS_CHECK_Q(status, __LINE__);
+         hsa_signal_store_relaxed(commandQueue->doorbell_signal, index+1);
 
          // wait for completion
-         value.value64 = 1;
-         status = hsa_signal_wait_acquire(signal, -1, HSA_LT, value, NULL);
+         signal = hsa_signal_wait_acquire(signal, HSA_LT, 1, -1, HSA_WAIT_EXPECTANCY_UNKNOWN);
          STATUS_CHECK_Q(status, __LINE__);
 
-         value.value64 = 1;
-         hsa_signal_send_relaxed(signal, value);
+         hsa_signal_store_relaxed(signal, 1);
 
          return status; 
       }
@@ -254,11 +295,9 @@ private:
    }; // end of KernelImpl
 
    private:
-     hsa_runtime_context_t* context;
-     hsa_topology_table_t* table;
-     hsa_agent_t* device;
+     hsa_agent_t device;
      hsa_queue_t* commandQueue;
-
+     hsa_ext_program_handle_t hsaProgram;
      KernelImpl *kernelImpl;
 
    // constructor
@@ -266,20 +305,18 @@ private:
      hsa_status_t status;
 
      // initialize HSA runtime
-     status = hsa_open(&context);
-     STATUS_CHECK(status, __LINE__);
-
      // device discovery
-     status = hsa_topology_table_create(&table);
+     device = 0;
+	   status = hsa_iterate_agents(IterateAgent, &device);
      STATUS_CHECK(status, __LINE__);
 
-     assert(table->number_agents && "No HSA devices found!\n");
-
-     // use the first HSA device
-     device = ((hsa_agent_t*)((size_t)table->topology_table_base+table->agent_offset_list_bytes[0]));
 
      // create command queue
-     status = hsa_queue_create(device, device->queue_size, HSA_QUEUE_TYPE_IN_ORDER, context, &commandQueue);
+     size_t queue_size = 0;
+     status = hsa_agent_get_info(device, HSA_AGENT_INFO_QUEUE_MAX_SIZE, &queue_size);
+     STATUS_CHECK(status, __LINE__);
+
+     status = hsa_queue_create(device, queue_size, HSA_QUEUE_TYPE_MULTI, NULL, NULL, &commandQueue);
      STATUS_CHECK_Q(status, __LINE__);
 
      kernelImpl = NULL;
@@ -290,21 +327,50 @@ public:
         return commandQueue;
     }
 
-    hsa_runtime_context_t* getContext() {
-        return context;
-    }
-
     Kernel * createKernel(const char *hsailBuffer, const char *entryName) {
-        hsa_status_t status;
-        hsa_kernel_code_t* kernel;
 
-        // Get program by hsail compile path.
-        status = hsa_finalize_hsail(device, hsailBuffer, entryName, &kernel);
+      hsa_status_t status;
+
+	    //Convert hsail kernel text to BRIG.
+	    hsa_ext_brig_module_t* brigModule;
+	    if (!CreateBrigModule(hsailBuffer, &brigModule)){
         STATUS_CHECK(status, __LINE__);
+	    }
 
-        return new KernelImpl(kernel, this);
+	    //Create hsa program.
+	    status = hsa_ext_program_create(&device, 1, HSA_EXT_BRIG_MACHINE_LARGE, HSA_EXT_BRIG_PROFILE_FULL, &hsaProgram);
+      STATUS_CHECK(status, __LINE__);
+
+	    //Add BRIG module to hsa program.
+	    hsa_ext_brig_module_handle_t module;
+	    status = hsa_ext_add_module(hsaProgram, brigModule, &module);
+      STATUS_CHECK(status, __LINE__);
+
+	    // Construct finalization request list.
+	    // @todo kzhuravl 6/16/2014 remove bare numbers, we actually need to find
+	    // entry offset into the code section.
+	    hsa_ext_finalization_request_t finalization_request_list;
+	    finalization_request_list.module = module;              // module handle.
+	    finalization_request_list.symbol = 192;                 // entry offset into the code section.
+	    finalization_request_list.program_call_convention = 0;  // program call convention. not supported.
+
+	    if (!FindSymbolOffset(brigModule, entryName, KERNEL_SYMBOLS, finalization_request_list.symbol)){
+        STATUS_CHECK(GENERIC_ERROR, __LINE__);
+	    }
+
+	    //Finalize hsa program.
+	    status = hsa_ext_finalize_program(hsaProgram, &device, 1, &finalization_request_list, NULL, NULL, 0, NULL, 0);
+      STATUS_CHECK(status, __LINE__);
+
+	    //Get hsa code descriptor address.
+	    hsa_ext_code_descriptor_t *hsaCodeDescriptor;
+	    status = hsa_ext_query_kernel_descriptor_address(hsaProgram, module, finalization_request_list.symbol, &hsaCodeDescriptor);
+      STATUS_CHECK(status, __LINE__);
+
+
+      return new KernelImpl(hsaCodeDescriptor, this);
     }
-   
+
    hsa_status_t dispose() {
       hsa_status_t status;
 
@@ -312,13 +378,10 @@ public:
          kernelImpl->dispose();
       }
 
+	    status = hsa_ext_program_destroy(hsaProgram);
+      STATUS_CHECK(status, __LINE__);
+
       status = hsa_queue_destroy(commandQueue);
-      STATUS_CHECK(status, __LINE__);
-
-      status = hsa_topology_table_destroy(table);
-      STATUS_CHECK(status, __LINE__);
-
-      status = hsa_close(context);
       STATUS_CHECK(status, __LINE__);
 
       return HSA_STATUS_SUCCESS;
@@ -343,4 +406,158 @@ HSAContext* HSAContext::Create() {
   
    return m_pContext;
 }
+
+
+// from assemble.cpp
+
+#include <iostream>
+//#include "assemble.h"
+#include "HSAILItems.h"
+#include <assert.h>
+using namespace Brig;
+using namespace HSAIL_ASM;
+
+const uint32_t string_section_id = 0;
+const uint32_t directive_section_id = 1;
+const uint32_t instruction_section_id = 2;
+const uint32_t operand_section_id = 3;
+const uint32_t debug_section_id = 4;
+
+int alignUp (int x, int number) {
+    return x + (number - x%number);
+}
+
+void print_brig(hsa_ext_brig_module_t* brig_module){
+    std::cout<<"Number of sections:"<<brig_module->section_count<<std::endl;
+    for (int i=0; i<brig_module->section_count;i++) {
+        hsa_ext_brig_section_header_t* section_header = brig_module->section[i];
+        std::cout<<"Name:"<<(char*)section_header->name<<std::endl;
+        std::cout<<"Header size:"<<section_header->header_byte_count<<std::endl;
+        std::cout<<"Total size:"<<section_header->byte_count<<std::endl;
+    }
+}
+bool CreateBrigModule(const char* kernel_source, hsa_ext_brig_module_t** brig_module_t){
+    hsa_ext_brig_module_t* brig_module;
+    uint32_t number_of_sections = 5;
+    brig_module = (hsa_ext_brig_module_t*)
+                (malloc (sizeof(hsa_ext_brig_module_t) + sizeof(void*)*number_of_sections));
+    brig_module->section_count = number_of_sections;
+    brig_container_t c = brig_container_create_empty();
+    if (brig_container_assemble_from_memory(c, kernel_source, strlen(kernel_source))) { // or use brig_container_assemble_from_file
+        printf("error assembling:%s\n", brig_container_get_error_text(c)); 
+        brig_container_destroy(c);
+        return false;
+    }
+    char* section_name[5] = {"strn","drct","inst","oprd","debg"};
+    for(int i=0; i<5; ++i) {
+      //  printf("section %d: %p %u\n", i, brig_container_get_section_data(c, i), 
+       //     (unsigned)brig_container_get_section_size(c, i));
+        //create new section header
+        uint64_t size_section_name = 5;
+        uint64_t size_section_header = sizeof(hsa_ext_brig_section_header_t) + size_section_name -1;
+        size_section_header = alignUp(size_section_header,4);
+        uint64_t size_section_data = (unsigned)brig_container_get_section_size(c, i);
+        //Commenting this for now because brig container fails with this
+        //size_section_data = alignUp(size_section_data, 4);
+        uint64_t size_total = size_section_header + size_section_data;
+        //std::cout<<"Header size :"<< size_section_header<<std::endl;
+        //std::cout<<"Total size :"<<size_total<<std::endl;
+        hsa_ext_brig_section_header_t* section_header = 
+                                    (hsa_ext_brig_section_header_t*)(
+                                        malloc(size_total));
+        memset(section_header,0,size_total);
+        //Must be a multiple of 4 ? - Why ?
+        section_header->byte_count = size_total;
+        //assert(section_header->byte_count%4==0);
+        section_header->header_byte_count = size_section_header;
+        assert(section_header->header_byte_count%4 == 0);
+        //copy the name
+        memcpy (section_header->name, section_name[i], size_section_name);
+        //copy the section data
+        memcpy ((char*)section_header + section_header->header_byte_count,
+            brig_container_get_section_data(c, i),
+            size_section_data);
+        brig_module->section[i] = section_header;
+    }
+    //print_brig(brig_module);
+    *brig_module_t = brig_module;
+    brig_container_destroy(c);
+    return true;
+}
+
+bool DestroyBrigModule(hsa_ext_brig_module_t* brig_module) {
+     for (int i=0; i<brig_module->section_count;i++) {
+        hsa_ext_brig_section_header_t* section_header = brig_module->section[i];
+        free(section_header);
+     }
+     free (brig_module);
+     return true;
+}
+
+char* GetSectionAndSize(hsa_ext_brig_module_t* brig_module, 
+    int section_id, int* size) {
+    hsa_ext_brig_section_header_t* section_header =
+        brig_module->section[section_id];
+    char* section_data = (char*)section_header + section_header->header_byte_count;
+    int section_data_size = section_header->byte_count - 
+        section_header->header_byte_count;
+    *size = section_data_size;
+    return section_data;
+}
+
+bool FindSymbolOffset(hsa_ext_brig_module_t* brig_module, 
+    std::string symbol_name,SymbolType symbol_type, hsa_ext_brig_code_section_offset32_t& offset) {
+        //Create BRIG Container
+        int string_data_size, directive_data_size, instruction_data_size, 
+            operand_data_size, debug_data_size;
+        char* string_section_data = GetSectionAndSize(brig_module, 
+            string_section_id, &string_data_size);
+        char* directive_section_data = GetSectionAndSize(brig_module, 
+            directive_section_id, &directive_data_size);
+        char* instruction_section_data = GetSectionAndSize(brig_module, 
+            instruction_section_id, &instruction_data_size);
+        char* operand_section_data = GetSectionAndSize(brig_module, 
+            operand_section_id, &operand_data_size);
+        char* debug_section_data = GetSectionAndSize(brig_module, 
+            debug_section_id, &debug_data_size);
+
+        //Create a BRIG container
+        BrigContainer c(string_section_data, string_data_size,
+            directive_section_data,directive_data_size,
+            instruction_section_data, instruction_data_size,
+            operand_section_data, operand_data_size,
+            debug_section_data, debug_data_size);
+        Directive first_d = c.directives().begin();
+        Directive last_d = c.directives().end();
+
+        for (;first_d != last_d;first_d = first_d.next()) {
+            switch (symbol_type) {
+            case GLOBAL_READ_SYMBOLS :
+
+                if (DirectiveVariable sym = first_d) {
+                    if ((sym.segment() == BRIG_SEGMENT_GLOBAL) ||
+                        (sym.segment() == BRIG_SEGMENT_READONLY)) {
+                            std::string variable_name = (SRef)sym.name();
+                            if (variable_name == symbol_name) {
+                                offset = sym.brigOffset();
+                                return true;
+                            }
+                    }
+                }
+                break;
+            case KERNEL_SYMBOLS :
+                if (DirectiveExecutable de = first_d) {
+                    if (symbol_name == de.name()) {
+                        offset = de.brigOffset();
+                        return true;
+                    }
+                }
+                break;
+            default:
+                return false;
+            }
+        }
+        return false;
+}
+
 
