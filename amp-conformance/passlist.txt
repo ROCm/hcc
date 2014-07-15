@@ -1,3 +1,5 @@
+5_Data_Cont/5_2_a_v/5_2_2_c/Test.07/test.cpp
+5_Data_Cont/5_2_a_v/5_2_2_c/Test.08/test.cpp
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/Special_member_functions/defaulted_dtor.01/test.cpp
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/Special_member_functions/defaulted_dtor_amp.01/test.cpp
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/Special_member_functions/defaulted_dtor_cpu.01/test.cpp
