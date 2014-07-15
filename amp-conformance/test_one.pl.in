@@ -131,10 +131,10 @@ foreach my $def_set (@{$Test::config{'definitions'}})
             $CLANG_AMP -cc1 -fsyntax-only $SHARED_CPU_CXXFLAGS $include_main $test $cflags_defs";
     } else {
         $command = "\\
-            $CLANG_AMP $SHARED_GPU_CXXFLAGS $include_main $test $cflags_defs -Wno-non-pod-varargs -emit-llvm -c -S -o $tmpdir/test.ll && \\
+            $CLANG_AMP $SHARED_GPU_CXXFLAGS $include_main $test $cflags_defs -emit-llvm -c -S -o $tmpdir/test.ll && \\
             $CLAMP_DEVICE test.ll kernel.cl && \\
             $CLAMP_EMBED kernel.cl kernel.o && \\
-            $CLANG_AMP $SHARED_CPU_CXXFLAGS $include_main $test $AMPTESTLIB $cflags_defs -Wno-non-pod-varargs $CLAMP_LDFLAGS $tmpdir/kernel.o -o $tmpdir/test.out -g";
+            $CLANG_AMP $SHARED_CPU_CXXFLAGS $include_main $test $AMPTESTLIB $cflags_defs $CLAMP_LDFLAGS $tmpdir/kernel.o -o $tmpdir/test.out -g";
     }
     
     log_message("Command: $command\n"
