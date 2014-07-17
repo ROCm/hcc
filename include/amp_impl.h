@@ -41,12 +41,7 @@ inline accelerator::accelerator(const accelerator& other) :
   supports_cpu_shared_memory(other.supports_cpu_shared_memory),
   dedicated_memory(other.dedicated_memory),
   default_access_type(other.default_access_type),
-#ifndef CXXAMP_ENABLE_HSA_OKRA
-  default_view(other.default_view),
-  accInfo(other.accInfo)
-#else
   default_view(other.default_view)
-#endif
   {}
 
 // TODO: perform real OpenCL queries here..
@@ -57,7 +52,7 @@ inline accelerator::accelerator(const std::wstring& path) :
 						accelerator::_default_accelerator->get_device_path() :
 						std::wstring(gpu_accelerator) ),
   version(0), 
-  description(L"Default GMAC+OpenCL"),
+  description(L"OpenCL"),
   is_debug(false),
   is_emulated(false),
   has_display(false),
@@ -66,49 +61,46 @@ inline accelerator::accelerator(const std::wstring& path) :
   supports_cpu_shared_memory(false), // constructor will set it
   dedicated_memory(0), // constructor will set it
   default_access_type(access_type_none),
-#ifndef CXXAMP_ENABLE_HSA_OKRA
-  default_view( (device_path == std::wstring(gpu_accelerator)) ?
-					( (_gpu_accelerator != nullptr) ?
-						new accelerator_view(_gpu_accelerator.get()) : new accelerator_view(this)) :
-					( (_cpu_accelerator != nullptr) ?
-						new accelerator_view(_cpu_accelerator.get()) : new accelerator_view(this)) ) ,
-  accInfo()
-#else
   default_view( (device_path == std::wstring(gpu_accelerator)) ?
 					( (_gpu_accelerator != nullptr) ?
 						new accelerator_view(_gpu_accelerator.get()) : new accelerator_view(this)) :
 					( (_cpu_accelerator != nullptr) ?
 						new accelerator_view(_cpu_accelerator.get()) : new accelerator_view(this)) )
-#endif
     {
 
 #ifndef CXXAMP_ENABLE_HSA_OKRA
-  AcceleratorInfo accInfo;
-  for (unsigned i = 0; i < eclGetNumberOfAccelerators(); i++) {
-    assert(eclGetAcceleratorInfo(i, &accInfo) == eclSuccess);
-    if ( (accInfo.acceleratorType == GMAC_ACCELERATOR_TYPE_GPU)
-      && (device_path == std::wstring(gpu_accelerator))) {
-      supports_cpu_shared_memory = false;
-      this->accInfo = accInfo;
-      default_view->queuing_mode = queuing_mode_immediate;
-      default_view->is_auto_selection = true;
-    }
-    if ( (accInfo.acceleratorType == GMAC_ACCELERATOR_TYPE_CPU)
-      && (device_path == std::wstring(cpu_accelerator))) {
-      supports_cpu_shared_memory = true;
-      this->accInfo = accInfo;
-      default_view->queuing_mode = queuing_mode_immediate;
-      default_view->is_auto_selection = false;
-    }
-  }
-  dedicated_memory=accInfo.memAllocSize/(size_t)1024;
+    cl_int err;
+    cl_uint platformCount;
+    cl_device_id device;
+    cl_ulong memAllocSize;
+    cl_device_fp_config singleFPConfig;
+    std::unique_ptr<cl_platform_id[]> platforms;
 
-  if(accInfo.singleFPConfig & GMAC_ACCELERATOR_FP_FMA
-     & GMAC_ACCELERATOR_FP_ROUND_TO_NEAREST
-     & GMAC_ACCELERATOR_FP_ROUND_TO_ZERO
-     & GMAC_ACCELERATOR_FP_INF_NAN
-     & GMAC_ACCELERATOR_FP_DENORM)
-    supports_limited_double_precision = true;
+    err = clGetPlatformIDs(0, NULL, &platformCount);
+    platforms.reset(new cl_platform_id[platformCount]);
+    clGetPlatformIDs(platformCount, platforms.get(), NULL);
+    for (int i = 0; i < platformCount; i++) {
+        if (device_path == std::wstring(gpu_accelerator)) {
+            clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_GPU, 1, &device, NULL);
+            assert(err == CL_SUCCESS);
+            supports_cpu_shared_memory = false;
+            default_view->queuing_mode = queuing_mode_immediate;
+            default_view->is_auto_selection = true;
+        } else if (device_path == std::wstring(cpu_accelerator)) {
+            clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_CPU, 1, &device, NULL);
+            assert(err == CL_SUCCESS);
+            supports_cpu_shared_memory = true;
+            default_view->queuing_mode = queuing_mode_immediate;
+            default_view->is_auto_selection = false;
+        }
+    }
+
+    err = clGetDeviceInfo(device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_ulong), &memAllocSize, NULL);
+    dedicated_memory = memAllocSize / (size_t)1024;
+    err = clGetDeviceInfo(device, CL_DEVICE_SINGLE_FP_CONFIG, sizeof(cl_device_fp_config), &singleFPConfig, NULL);
+    if (singleFPConfig & CL_FP_FMA & CL_FP_DENORM & CL_FP_INF_NAN &
+        CL_FP_ROUND_TO_NEAREST &CL_FP_ROUND_TO_ZERO)
+        supports_limited_double_precision = true;
 #endif
 }
 
@@ -125,9 +117,6 @@ inline accelerator& accelerator::operator=(const accelerator& other) {
   dedicated_memory = other.dedicated_memory;
   default_access_type = other.default_access_type;
   default_view = other.default_view;
-#ifndef CXXAMP_ENABLE_HSA_OKRA
-  accInfo = other.accInfo;
-#endif 
   return *this;
 }
 inline bool accelerator::operator==(const accelerator& other) const {

@@ -156,14 +156,21 @@ public:
   static std::vector<accelerator> get_all() {
     std::vector<accelerator> acc;
 #ifndef CXXAMP_ENABLE_HSA_OKRA
-    AcceleratorInfo accInfo;
-    for (unsigned i = 0; i < eclGetNumberOfAccelerators(); i++) {
-      assert(eclGetAcceleratorInfo(i, &accInfo) == eclSuccess);
-      if (accInfo.acceleratorType == GMAC_ACCELERATOR_TYPE_GPU)
-        acc.push_back(*_gpu_accelerator);
+    cl_int err;
+    cl_uint platformCount;
+    cl_uint deviceCount;
+    std::unique_ptr<cl_platform_id[]> platforms;
 
-      if (accInfo.acceleratorType == GMAC_ACCELERATOR_TYPE_CPU)
-        acc.push_back(*_cpu_accelerator);
+    err = clGetPlatformIDs(0, NULL, &platformCount);
+    platforms.reset(new cl_platform_id[platformCount]);
+    clGetPlatformIDs(platformCount, platforms.get(), NULL);
+    for (int i = 0; i < platformCount; i++) {
+        clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_CPU, 0, NULL, &deviceCount);
+        for (int j = 0; j < deviceCount; j++)
+            acc.push_back(*_cpu_accelerator);
+        clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_GPU, 0, NULL, &deviceCount);
+        for (int j = 0; j < deviceCount; j++)
+            acc.push_back(*_gpu_accelerator);
     }
 #else
     acc.push_back(*_cpu_accelerator);  // in HSA path, always add CPU accelerator
@@ -217,10 +224,6 @@ public:
   size_t dedicated_memory;
   access_type default_access_type;
   std::shared_ptr<accelerator_view> default_view;
-#ifndef CXXAMP_ENABLE_HSA_OKRA
-  typedef GmacAcceleratorInfo AcceleratorInfo;
-  AcceleratorInfo accInfo;
-#endif
 
   // static class members
   static std::shared_ptr<accelerator> _default_accelerator; // initialized as nullptr
