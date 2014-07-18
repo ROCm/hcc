@@ -182,10 +182,10 @@ void CompileKernels(cl_program& program, cl_context& context, cl_device_id& devi
     // Extract kernel names
     char** kernel_names = NULL;
     unsigned kernel_num = 0;
-    eclGetKernelNames(&kernel_names, &kernel_num);
+    eclGetKernelNames(&kernel_names, &kernel_num, program);
     if(kernel_names) {
        int i = 0;
-       while(kernel_names && i<kernel_num) {
+       while(kernel_names && i < kernel_num) {
           __mcw_kernel_names.push_back(std::string(kernel_names[i]));
           delete [] kernel_names[i];
           ++i;
@@ -194,7 +194,8 @@ void CompileKernels(cl_program& program, cl_context& context, cl_device_id& devi
        if(__mcw_kernel_names.size()) {
          std::sort(std::begin(__mcw_kernel_names), std::end(__mcw_kernel_names));
          __mcw_kernel_names.erase (std::unique (__mcw_kernel_names.begin (),
-                                                       __mcw_kernel_names.end ()), __mcw_kernel_names.end ());
+                                                __mcw_kernel_names.end ()),
+                                   __mcw_kernel_names.end ());
        }
     }
   }

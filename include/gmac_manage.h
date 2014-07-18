@@ -16,7 +16,7 @@ struct mm_info
 {
     cl_mem dm;
     size_t count;
-    bool original;
+    bool del;
 };
 
 struct AMPAllocator
@@ -88,7 +88,7 @@ struct AMPAllocator
     void AMPFree() {
         for (auto& iter : al_info) {
             mm_info mm = al_info[cpu_ptr];
-            if (mm.original)
+            if (mm.del)
                 free(*cpu_ptr);
             clReleaseMemObject(mm.dm);
         }
@@ -96,10 +96,18 @@ struct AMPAllocator
     }
     void AMPFree(void **cpu_ptr) {
         mm_info mm = al_info[cpu_ptr];
-        if (mm.original)
+        if (mm.del)
             free(*cpu_ptr);
         clReleaseMemObject(mm.dm);
         al_info.clear(cpu_ptr);
+    }
+    ~AMPAllocator() {
+        read();
+        AMPFree();
+        clReleaseContext(context);
+        clReleaseKernel(kernel);
+        clReleaseProgram(program);
+        clReleaseCommandQueue(queue);
     }
     map<void **, mm_info>  al_info;
     cl_context       context;

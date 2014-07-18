@@ -1097,7 +1097,7 @@ struct projection_helper
         Concurrency::extent<N - 1> ext_base(ext);
         Concurrency::index<N - 1> idx_base(idx);
         return result_type (ext_now, ext_base, idx_base, now.cache,
-                                now.p_, now.offset + ext_base.size() * stride);
+                                now.offset + ext_base.size() * stride);
     }
     static result_type project(const array_view<T, N>& now, int stride) restrict(amp,cpu) {
         int ext[N - 1], i, idx[N - 1], ext_o[N - 1];
@@ -1111,7 +1111,7 @@ struct projection_helper
         Concurrency::extent<N - 1> ext_base(ext);
         Concurrency::index<N - 1> idx_base(idx);
         return result_type (ext_now, ext_base, idx_base, now.cache,
-                                now.p_, now.offset + ext_base.size() * stride);
+                                now.offset + ext_base.size() * stride);
     }
 };
 template <typename T>
@@ -1148,7 +1148,7 @@ struct projection_helper<const T, N>
         Concurrency::extent<N - 1> ext_base(ext);
         Concurrency::index<N - 1> idx_base(idx);
         return const_result_type (ext_now, ext_base, idx_base, now.cache,
-                                now.p_, now.offset + ext_base.size() * stride);
+                                  now.offset + ext_base.size() * stride);
     }
     static const_result_type project(const array_view<const T, N>& now, int stride) restrict(amp,cpu) {
         int ext[N - 1], i, idx[N - 1], ext_o[N - 1];
@@ -1162,7 +1162,7 @@ struct projection_helper<const T, N>
         Concurrency::extent<N - 1> ext_base(ext);
         Concurrency::index<N - 1> idx_base(idx);
         return const_result_type (ext_now, ext_base, idx_base, now.cache,
-                                now.p_, now.offset + ext_base.size() * stride);
+                                  now.offset + ext_base.size() * stride);
     }
 };
 template <typename T>
@@ -1658,7 +1658,7 @@ public:
 
   ~array_view() restrict(amp,cpu) {
 #ifndef __GPU__
-      if (p_ && cache.is_last()) {
+      if (cache.is_last()) {
           synchronize();
           cache.reset();
       }
@@ -1666,7 +1666,7 @@ public:
   }
 
   array_view(array<T, N>& src) restrict(amp,cpu)
-      : extent(src.extent), p_(NULL), cache(src.internal()), offset(0),
+      : extent(src.extent), cache(src.internal()), offset(0),
         index_base(), extent_base(src.extent) {}
 
   template <typename Container, class = typename std::enable_if<!std::is_array<Container>::value>::type>
@@ -1813,11 +1813,11 @@ public:
 #ifndef __GPU__
           array_view<ElementType, 1> av(Concurrency::extent<1>(size),
                                         _data_host_view<ElementType>(cache),
-                                        reinterpret_cast<ElementType*>(cache.get()), (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
+                                        (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
 #else
           array_view<ElementType, 1> av(Concurrency::extent<1>(size),
                                         _data<ElementType>(cache),
-                                        reinterpret_cast<ElementType*>(cache.get()), (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
+                                        (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
 #endif
          return av;
       }
@@ -1929,7 +1929,7 @@ public:
 
   ~array_view() restrict(amp,cpu) {
 #ifndef __GPU__
-  if (p_ && cache.is_last()) {
+  if (cache.is_last()) {
     synchronize();
     cache.reset();
   }
@@ -1937,7 +1937,7 @@ public:
   }
 
   array_view(const array<T,N>& src) restrict(amp,cpu)
-      : extent(src.extent), p_(NULL), cache(src.internal()), offset(0),
+      : extent(src.extent), cache(src.internal()), offset(0),
         index_base(), extent_base(src.extent) {}
   template <typename Container, class = typename std::enable_if<!std::is_array<Container>::value && !std::is_pointer<Container>::value>::type>
     array_view(const extent<N>& extent, const Container& src)
@@ -1968,16 +1968,15 @@ public:
   { static_assert(N == 3, "Rank must be 3"); }
 
   array_view(const array_view<T, N>& other) restrict(amp,cpu) : extent(other.extent),
-      p_(other.p_), cache(other.cache), offset(other.offset), index_base(other.index_base),
+      cache(other.cache), offset(other.offset), index_base(other.index_base),
       extent_base(other.extent_base) {}
 
   array_view(const array_view& other) restrict(amp,cpu) : extent(other.extent),
-    p_(other.p_), cache(other.cache), offset(other.offset), index_base(other.index_base),
+    cache(other.cache), offset(other.offset), index_base(other.index_base),
     extent_base(other.extent_base) {}
 
   array_view& operator=(const array_view<T,N>& other) restrict(amp,cpu) {
     extent = other.extent;
-    p_ = other.p_;
     cache = other.cache;
     index_base = other.index_base;
     extent_base = other.extent_base;
@@ -1988,7 +1987,6 @@ public:
   array_view& operator=(const array_view& other) restrict(amp,cpu) {
     if (this != &other) {
       extent = other.extent;
-      p_ = other.p_;
       cache = other.cache;
       index_base = other.index_base;
       extent_base = other.extent_base;
@@ -2055,17 +2053,17 @@ public:
 #ifndef __GPU__
       array_view<const ElementType, 1> av(Concurrency::extent<1>(size),
                                           _data_host_view<ElementType>(cache),
-                                          reinterpret_cast<ElementType*>(p_), (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
+                                          (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
 #else
       array_view<const ElementType, 1> av(Concurrency::extent<1>(size),
                                           _data<ElementType>(cache),
-                                          reinterpret_cast<ElementType*>(p_), (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
+                                          (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
 #endif
       return av;
     }
   array_view<const T, N> section(const Concurrency::index<N>& idx,
                      const Concurrency::extent<N>& ext) const restrict(amp,cpu) {
-    array_view<const T, N> av(ext, extent_base, idx + index_base, cache, p_, offset);
+    array_view<const T, N> av(ext, extent_base, idx + index_base, cache, offset);
     return av;
   }
   array_view<const T, N> section(const Concurrency::index<N>& idx) const restrict(amp,cpu) {
@@ -2098,7 +2096,7 @@ public:
     if( viewExtent.size() > extent.size())
       throw runtime_exception("errorMsg_throw", 0);
 #endif
-      array_view<const T, K> av(viewExtent, cache, p_, offset + index_base[0]);
+      array_view<const T, K> av(viewExtent, cache, offset + index_base[0]);
       return av;
     }
 
@@ -2130,18 +2128,17 @@ private:
 
   // used by view_as and reinterpret_as
   array_view(const Concurrency::extent<N>& ext, const gmac_buffer_t& cache,
-             value_type *p, int offset) restrict(amp,cpu)
-      : extent(ext), cache(cache), offset(offset), p_(p), extent_base(ext) {}
+             int offset) restrict(amp,cpu)
+      : extent(ext), cache(cache), offset(offset), extent_base(ext) {}
 
   // used by section and projection
   array_view(const Concurrency::extent<N>& ext_now,
              const Concurrency::extent<N>& ext_b,
              const Concurrency::index<N>& idx_b,
-             const gmac_buffer_t& cache, value_type *p, int off) restrict(amp,cpu)
+             const gmac_buffer_t& cache, int off) restrict(amp,cpu)
       : extent(ext_now), index_base(idx_b), extent_base(ext_b),
-      p_(p), cache(cache), offset(off) {}
+      cache(cache), offset(off) {}
 
-  __attribute__((cpu)) value_type *p_;
   gmac_buffer_t cache;
   Concurrency::extent<N> extent;
   Concurrency::extent<N> extent_base;
