@@ -299,7 +299,7 @@ private:
 
          // create a signal
          hsa_signal_t signal;
-         status = hsa_signal_create(1, 1, context->getDevice(), &signal);
+         status = hsa_signal_create(1, 0, NULL, &signal);
          STATUS_CHECK_Q(status, __LINE__);
 
          // create a dispatch packet
@@ -430,6 +430,9 @@ private:
      hsa_status_t status;
 
      // initialize HSA runtime
+     status = hsa_init();
+     STATUS_CHECK(status, __LINE__);
+
      // device discovery
      device = 0;
 	   status = hsa_iterate_agents(IterateAgent, &device);
@@ -489,7 +492,7 @@ public:
 	    }
 
 	    //Finalize hsa program.
-	    status = hsa_ext_finalize_program(hsaProgram, &device, 1, &finalization_request_list, NULL, NULL, 0, NULL, 0);
+	    status = hsa_ext_finalize_program(hsaProgram, device, 1, &finalization_request_list, NULL, NULL, 0, NULL, 0);
       STATUS_CHECK(status, __LINE__);
 
 	    //Get hsa code descriptor address.
