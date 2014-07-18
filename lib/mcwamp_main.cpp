@@ -104,9 +104,9 @@ void ldflags(void) {
 #elif defined(CXXAMP_ENABLE_HSA)
     std::cout << " -Wl,--rpath=" CMAKE_HSA_LIB;
     std::cout << " -L" CMAKE_HSA_LIB;
-    std::cout << " " CMAKE_HSA_LIB "/hsa_runtime_core64.so";
+    std::cout << " -lhsa-runtime64";
     std::cout << " -Wl,--whole-archive -lhsacontext -Wl,--no-whole-archive ";
-    std::cout << " " CMAKE_HSA_LIB "/LIBHSAIL.a";
+    std::cout << " " CMAKE_HSA_LIB "/LIBHSAIL.a ";
 #else
     std::cout << " -lgmac-hpe";
 #endif
