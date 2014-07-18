@@ -299,7 +299,7 @@ private:
 
          // create a signal
          hsa_signal_t signal;
-         status = hsa_signal_create(1, &signal);
+         status = hsa_signal_create(1, 1, context->getDevice(), &signal);
          STATUS_CHECK_Q(status, __LINE__);
 
          // create a dispatch packet
@@ -352,7 +352,8 @@ private:
 
       void dispose() {
          hsa_status_t status;
-         status = hsa_memory_deregister(arg_vec.data());
+         status = hsa_memory_deregister(arg_vec.data(), arg_vec.capacity() * sizeof(uint64_t));
+         assert(status == HSA_STATUS_SUCCESS);
       }
 
    private:
@@ -447,8 +448,13 @@ private:
    }
 
 public:
+
+    hsa_agent_t* getDevice() {
+      return &device;
+    }
+
     hsa_queue_t* getQueue() {
-        return commandQueue;
+      return commandQueue;
     }
 
     Kernel * createKernel(const char *hsailBuffer, const char *entryName) {
