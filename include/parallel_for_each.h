@@ -8,6 +8,7 @@
 #pragma once
 #include <cassert>
 #include <amp.h>
+#include <gmac_manage.h>
 
 namespace Concurrency {
 namespace CLAMP {
@@ -57,10 +58,8 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
   f.__cxxamp_serialize(s);
   CLAMP::OkraLaunchKernel(kernel, dim_ext, ext, local_size);
 #else
-  ecl_error error_code;
-  accelerator def;
-  accelerator_view accel_view = def.get_default_view();
-  CLAMP::CompileKernels();
+  AMPAllocator& aloc = getAllocator();
+  CLAMP::CompileKernels(aloc.program, aloc.context, aloc.device);
   //Invoke Kernel::__cxxamp_trampoline as an OpenCL kernel
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -71,7 +70,7 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
 #if 0
   std::cerr << "Kernel name = "<< transformed_kernel_name <<"\n";
 #endif
-  ecl_kernel kernel;
+  cl_kernel kernel;
   auto it = __mcw_cxxamp_kernels.insert(transformed_kernel_name);
   error_code = eclGetKernel(it.first->c_str(), &kernel);
   CHECK_ERROR_GMAC(error_code, "eclGetKernel");

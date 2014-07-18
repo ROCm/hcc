@@ -108,12 +108,51 @@ void MatchKernelNames(std::string& fixed_name) {
 }
 namespace Concurrency {
 namespace CLAMP {
-void CompileKernels(void)
+void GetKernelNames(char **names[], unsigned *count, cl_program& program)
+{
+    std::vector<std::string> n;
+    cl_uint kernel_num = 0;
+    cl_int ret;
+    ret = clCreateKernelsInProgram(prog, 1024, NULL, &kernel_num);
+    if (ret == CL_SUCCESS && kernel_num > 0) {
+        cl_kernel *kl = new cl_kernel[kernel_num];
+        ret = clCreateKernelsInProgram(*prog, kernel_num + 1, kl, &kernel_num);
+        if (ret == CL_SUCCESS) {
+            std::map<std::string, std::string> aMap;
+            for (unsigned i = 0; i < unsigned(kernel_num); ++i) {
+                char s[1024] = { 0x0 };
+                size_t size;
+                ret = clGetKernelInfo(kl[i], CL_KERNEL_FUNCTION_NAME, 1024, s, &size);
+                n.push_back(std::string (s));
+                clReleaseKernel(kl[i]);
+            }
+        }
+        delete [] kl;
+    }
+    if (n.size()) {
+        std::sort(n.begin(), n.end());
+        n.erase(std::unique(n.begin(), n.end()), n.end());
+    }
+    if (names && n.size()) {
+        *names = new char *[n.size()];
+        int i = 0;
+        std::vector<std::string>::iterator it;
+        for (it = n.begin(); it != n.end(); ++it, ++i) {
+            size_t len = (*it).length();
+            char *name = new char[len + 1];
+            memcpy(name, (*it).c_str(), len);
+            name[len] = '\0';
+            (*names)[i] = name;
+        }
+        *count = unsigned(n.size());
+    }
+}
+void CompileKernels(cl_program& program, cl_context& context, cl_device_id& device)
 {
 #ifdef CXXAMP_ENABLE_HSA_OKRA
   assert(0 && "Unsupported function");
 #else
-  ecl_error error_code;
+  cl_int err;
   if ( !__mcw_cxxamp_compiled ) {
 #ifdef __APPLE__
     const struct section_64 *sect = getsectbyname("binary", "kernel_cl");
@@ -123,28 +162,28 @@ void CompileKernels(void)
     memcpy(kernel_source, (void*)(sect->addr + _dyld_get_image_vmaddr_slide(0)), kernel_size); // whatever
 #else
     size_t kernel_size = (size_t)((void *)kernel_size_);
-    unsigned char *kernel_source = (unsigned char*)malloc(kernel_size+1);
+    unsigned char *kernel_source = (unsigned char *)malloc(kernel_size + 1);
     memcpy(kernel_source, kernel_source_, kernel_size);
 #endif
     kernel_source[kernel_size] = '\0';
     if (kernel_source[0] == 'B' && kernel_source[1] == 'C') {
       // Bitcode magic number. Assuming it's in SPIR
-      error_code = eclCompileBinary(kernel_source, kernel_size);
-      CHECK_ERROR_GMAC(error_code, "Compiling kernel in SPIR binary");
+      program = clCreateProgramWithBinary(context, 1, device, &kernel_size, &kernel_source, NULL, &err);
+      CHECK_ERROR_GMAC(err, "Compiling kernel in SPIR binary");
     } else {
       // in OpenCL-C
       const char *ks = (const char *)kernel_source;
-      error_code = eclCompileSource(ks, "-D__ATTRIBUTE_WEAK__=");
-      CHECK_ERROR_GMAC(error_code, "Compiling kernel in OpenCL-C");
+      program = clCreateProgramWithSource(context, 1, ks, NULL, &err);
+      err = clBuildProgram(program, 1, device, "-D__ATTRIBUTE_WEAK__=", NULL, NULL);
+      CHECK_ERROR_GMAC(err, "Compiling kernel in OpenCL-C");
     }
     __mcw_cxxamp_compiled = true;
     free(kernel_source);
     // Extract kernel names
     char** kernel_names = NULL;
     unsigned kernel_num = 0;
-    ecl_error error_code;
-    error_code =  eclGetKernelNames(&kernel_names, &kernel_num);
-    if(error_code == eclSuccess && kernel_names) {
+    eclGetKernelNames(&kernel_names, &kernel_num);
+    if(kernel_names) {
        int i = 0;
        while(kernel_names && i<kernel_num) {
           __mcw_kernel_names.push_back(std::string(kernel_names[i]));

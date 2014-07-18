@@ -25,7 +25,7 @@
 #include <future>
 #include <string.h> //memcpy
 #ifndef CXXAMP_ENABLE_HSA_OKRA
-#include <gmac/opencl.h>
+#include <CL/opencl.h>
 #endif
 #include <memory>
 #include <algorithm>
@@ -1649,7 +1649,7 @@ public:
 #ifdef __GPU__
   typedef _data<T> gmac_buffer_t;
 #else
-  typedef _data_host_view<T> gmac_buffer_t;
+  typedef _data_host<T> gmac_buffer_t;
 #endif
 
   static const int rank = N;
@@ -1727,12 +1727,11 @@ public:
     }
 #endif
    array_view(const array_view& other) restrict(amp,cpu) : extent(other.extent),
-    p_(other.p_), cache(other.cache), offset(other.offset), index_base(other.index_base),
+    cache(other.cache), offset(other.offset), index_base(other.index_base),
     extent_base(other.extent_base) {}
   array_view& operator=(const array_view& other) restrict(amp,cpu) {
       if (this != &other) {
           extent = other.extent;
-          p_ = other.p_;
           cache = other.cache;
           index_base = other.index_base;
           extent_base = other.extent_base;
@@ -1744,7 +1743,6 @@ public:
  #if 0
   array_view& operator=(const array_view<const T,N>& other) restrict(amp,cpu) {
     extent = other.extent;
-    p_ = const_cast<T*>(other.p_);
     cache = other.cache;
     index_base = other.index_base;
     extent_base = other.extent_base;
@@ -1815,11 +1813,11 @@ public:
 #ifndef __GPU__
           array_view<ElementType, 1> av(Concurrency::extent<1>(size),
                                         _data_host_view<ElementType>(cache),
-                                        reinterpret_cast<ElementType*>(p_), (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
+                                        reinterpret_cast<ElementType*>(cache.get()), (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
 #else
           array_view<ElementType, 1> av(Concurrency::extent<1>(size),
                                         _data<ElementType>(cache),
-                                        reinterpret_cast<ElementType*>(p_), (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
+                                        reinterpret_cast<ElementType*>(cache.get()), (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
 #endif
          return av;
       }
@@ -1830,7 +1828,7 @@ public:
       if(  !amp_helper<N, index<N>, Concurrency::extent<N>>::contains(idx, ext,this->extent ) )
         throw runtime_exception("errorMsg_throw", 0);
 #endif
-      array_view<T, N> av(ext, extent_base, idx + index_base, cache, p_, offset);
+      array_view<T, N> av(ext, extent_base, idx + index_base, cache, offset);
       return av;
   }
   array_view<T, N> section(const Concurrency::index<N>& idx) const restrict(amp,cpu) {
@@ -1862,7 +1860,7 @@ public:
     if( viewExtent.size() > extent.size())
       throw runtime_exception("errorMsg_throw", 0);
 #endif
-    array_view<T, K> av(viewExtent, cache, p_, offset + index_base[0]);
+    array_view<T, K> av(viewExtent, cache, offset + index_base[0]);
     return av;
   }
 
@@ -1896,17 +1894,16 @@ private:
 
   // used by view_as and reinterpret_as
   array_view(const Concurrency::extent<N>& ext, const gmac_buffer_t& cache,
-             T *p, int offset) restrict(amp,cpu)
-      : extent(ext), cache(cache), offset(offset), p_(p), extent_base(ext) {}
+             int offset) restrict(amp,cpu)
+      : extent(ext), cache(cache), offset(offset), extent_base(ext) {}
   // used by section and projection
   array_view(const Concurrency::extent<N>& ext_now,
              const Concurrency::extent<N>& ext_b,
              const Concurrency::index<N>& idx_b,
-             const gmac_buffer_t& cache, T *p, int off) restrict(amp,cpu)
+             const gmac_buffer_t& cache, int off) restrict(amp,cpu)
       : extent(ext_now), index_base(idx_b), extent_base(ext_b),
-      p_(p), cache(cache), offset(off) {}
+      cache(cache), offset(off) {}
 
-  __attribute__((cpu)) T *p_;
   gmac_buffer_t cache;
   Concurrency::extent<N> extent;
   Concurrency::extent<N> extent_base;
