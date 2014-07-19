@@ -7,16 +7,16 @@
 
 #ifndef __CL_MANAGE__
 #define __CL_MANAGE__
-#include<type_traits>
-#pragma once
 
+#include <map>
 #include <string.h>
+#include <CL/opencl.h>
 
 struct mm_info
 {
     cl_mem dm;
     size_t count;
-    bool del;
+    bool toDel;
 };
 
 struct AMPAllocator
@@ -85,10 +85,15 @@ struct AMPAllocator
         mm_info mm = al_info[ptr];
         clEnqueueReadBuffer(queue, mm.dm, CL_TRUE, 0, mm.count, *ptr, 0, NULL, NULL);
     }
+    template <typename T>
+    cl_mem getmem(T *ptr) {
+        void **ptr = (void**)(const_cast<T**>(&p));
+        return al_info[ptr].dm;
+    }
     void AMPFree() {
         for (auto& iter : al_info) {
             mm_info mm = al_info[cpu_ptr];
-            if (mm.del)
+            if (mm.toDel)
                 free(*cpu_ptr);
             clReleaseMemObject(mm.dm);
         }
@@ -96,7 +101,7 @@ struct AMPAllocator
     }
     void AMPFree(void **cpu_ptr) {
         mm_info mm = al_info[cpu_ptr];
-        if (mm.del)
+        if (mm.toDel)
             free(*cpu_ptr);
         clReleaseMemObject(mm.dm);
         al_info.clear(cpu_ptr);
@@ -109,7 +114,7 @@ struct AMPAllocator
         clReleaseProgram(program);
         clReleaseCommandQueue(queue);
     }
-    map<void **, mm_info>  al_info;
+    std::map<void **, mm_info>  al_info;
     cl_context       context;
     cl_device_id     device_id;
     cl_kernel        kernel;
@@ -181,7 +186,8 @@ class _data_host: public std::shared_ptr<T> {
 
   __attribute__((annotate("serialize")))
   void __cxxamp_serialize(Serialize& s) const {
-    s.AppendPtr((const void *)std::shared_ptr<T>::get());
+      cl_mem mm = getAllocator().getmem(std::shared_ptr<T>::get());
+      s.Append(sizeof(cl_mem), &mm);
   }
   __attribute__((annotate("user_deserialize")))
   explicit _data_host(__global T* t);

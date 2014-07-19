@@ -588,8 +588,8 @@ array<T, N>::array(const array_view<const T, N>& src, accelerator_view av,
 
 template <typename T, int N>
 void array_view<T, N>::synchronize() const {
-  if(cache.get())
-    cache.synchronize();
+    if(cache.get())
+        getAllocator().read(cache.get());
 }
 
 template <typename T, int N>

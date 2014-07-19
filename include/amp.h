@@ -1812,7 +1812,7 @@ public:
 #endif
 #ifndef __GPU__
           array_view<ElementType, 1> av(Concurrency::extent<1>(size),
-                                        _data_host_view<ElementType>(cache),
+                                        _data_host<ElementType>(cache),
                                         (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
 #else
           array_view<ElementType, 1> av(Concurrency::extent<1>(size),
@@ -1922,7 +1922,7 @@ public:
 #ifdef __GPU__
   typedef _data<T> cl_buffer_t;
 #else
-  typedef _data_host_view<T> cl_buffer_t;
+  typedef _data_host<T> cl_buffer_t;
 #endif
 
   array_view() = delete;
@@ -2052,7 +2052,7 @@ public:
       int size = extent.size() * sizeof(T) / sizeof(ElementType);
 #ifndef __GPU__
       array_view<const ElementType, 1> av(Concurrency::extent<1>(size),
-                                          _data_host_view<ElementType>(cache),
+                                          _data_host<ElementType>(cache),
                                           (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
 #else
       array_view<const ElementType, 1> av(Concurrency::extent<1>(size),
