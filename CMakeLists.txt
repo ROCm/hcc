@@ -9,10 +9,8 @@ execute_process(COMMAND git describe --abbrev=4 --dirty --always --tags
                 OUTPUT_VARIABLE GIT_VERSION
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-set(GMAC_URL "." CACHE STRING "GMAC URL")
 set(CLANG_URL "." CACHE STRING "CLANG URL")
 set(CMAKE_MACOSX_RPATH 1)
-include (EnsureGMACisPresent)
 
 include (EnsureLLVMisPresent)
 include (EnsureCLANGisPresent)
@@ -74,7 +72,6 @@ LINK_DIRECTORIES( ${LLVM_LIB_DIR} )
 
 
 # Turn on by default for now.
-option(CXXAMP_ENABLE_GMAC "Build GMAC as backend" ON)
 option(CXXAMP_ENABLE_HSA_OKRA "Use HSA Okra runtime as backend" OFF)
 if (CXXAMP_ENABLE_HSA_OKRA)
 # A bunch of external dependencies
@@ -92,35 +89,6 @@ find_program (AMD_CLC NAME clc PATHS
 # Okra headers needs JNI
 find_package(JNI REQUIRED)
 endif (CXXAMP_ENABLE_HSA_OKRA)
-
-if(CXXAMP_ENABLE_GMAC)
-
-ensure_gmac_is_present(${PROJECT_SOURCE_DIR} gmac ${GMAC_URL})
-
-set(DEPS "gmac")
-
-set(OPENCL_HEADER_DIR "/usr/include/CL" CACHE PATH "OpenCL Header Directory")
-set(OPENCL_LIBRARY_DIR "/usr/lib64/" CACHE PATH "OpenCL Library Directory")
-
-SET(FOO_BUILD_SHARED OFF CACHE BOOL "Build libfoo shared library")
-set(USE_OPENCL ON CACHE BOOL "GMAC: Enable OpenCL")
-set(USE_LITE OFF CACHE BOOL "GMAC: Disable Lite")
-set(USE_CUDA OFF CACHE BOOL "GMAC: Disable CUDA")
-
-find_path(OPENCL_HEADER cl.h ${OPENCL_HEADER_DIR} PATHS /usr/include/CL /opt/AMDAPP/include/CL )
-if (NOT APPLE AND NOT OPENCL_HEADER)
-  MESSAGE(FATAL_ERROR "OpenCL header not found. Use -DOPENCL_HEADER_DIR=<path_to_cl.h>.")
-endif(NOT APPLE AND NOT OPENCL_HEADER)
-
-find_library(OPENCL_LIBRARY OpenCL ${OPENCL_LIBRARY_DIR}/ PATHS /usr/lib)
-if (NOT APPLE AND NOT OPENCL_LIBRARY)
-  MESSAGE(FATAL_ERROR "OpenCL library not found. Use -DOPENCL_LIBRARY_DIR=<path_to_libOpenCL.so>.")
-endif(NOT APPLE AND NOT OPENCL_LIBRARY)
-# Pass OpenCL header dir to GMAC..
-set(OPENCL_INCLUDE ${OPENCL_HEADER}/.. CACHE PATH "OpenCL header for GMAC")
-add_subdirectory(gmac)
-
-endif(CXXAMP_ENABLE_GMAC)
 
 MESSAGE("")
 MESSAGE("OPENCL INFORMATION:")
