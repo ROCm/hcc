@@ -55,11 +55,6 @@ void cxxflags(void) {
         // libcxx
         std::cout << " -I" CMAKE_LIBCXX_INC;
 
-#if !defined(CXXAMP_ENABLE_HSA_OKRA) && !defined(CXXAMP_ENABLE_HSA)
-        // GMAC options, build tree
-        std::cout << " -I" CMAKE_GMAC_INC_BIN_DIR;
-        std::cout << " -I" CMAKE_GMAC_INC_DIR;
-#endif
     } else if (install_mode) {
         std::cout << " -I" CMAKE_INSTALL_INC;
         std::cout << " -I" CMAKE_INSTALL_LIBCXX_INC;
@@ -78,14 +73,9 @@ void cxxflags(void) {
 
 void ldflags(void) {
     if (build_mode) {
-        std::cout << " -L" CMAKE_GMAC_LIB_DIR;
-#ifdef __APPLE__
-        std::cout << " -Wl,-rpath," CMAKE_GMAC_LIB_DIR;
-#else
         std::cout << " -L" CMAKE_LIBCXX_LIB_DIR;
         std::cout << " -L" CMAKE_LIBCXXRT_LIB_DIR;
         std::cout << " -Wl,--rpath="
-            CMAKE_GMAC_LIB_DIR ":"
             CMAKE_LIBCXX_LIB_DIR ":"
             CMAKE_LIBCXXRT_LIB_DIR ;
 #endif
@@ -109,12 +99,9 @@ void ldflags(void) {
     std::cout << " -lamdocl64";
     std::cout << " -Wl,--whole-archive -lhsacontext -Wl,--no-whole-archive ";
 #else
-    std::cout << " -lgmac-hpe";
 #endif
     std::cout << " -lc++ -lcxxrt -ldl -lpthread ";
     std::cout << "-Wl,--whole-archive -lmcwamp -Wl,--no-whole-archive ";
-#else // __APPLE__
-    std::cout << " -lgmac-hpe -lc++ -lmcwamp ";
 #endif
 }
 

@@ -27,7 +27,7 @@ class Serialize {
     CLAMP::OkraPushArg(k_, sz, s);
 #else
     ecl_error err;
-    err = eclSetKernelArg(k_, current_idx_++, sz, s);
+    err = clSetKernelArg(k_, current_idx_++, sz, s);
     assert(err == eclSuccess);
 #endif
   }
