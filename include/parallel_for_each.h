@@ -13,7 +13,7 @@
 namespace Concurrency {
 namespace CLAMP {
 extern void MatchKernelNames( std::string & );
-extern void CompileKernels(void);
+extern void CompileKernels(cl_program& program, cl_context& context, cl_device_id& device);
 extern void *CreateOkraKernel(std::string);
 extern void OkraLaunchKernel(void *ker, size_t, size_t *global, size_t *local);
 }
@@ -70,7 +70,7 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
       mcw_cxxamp_fixnames(f.__cxxamp_trampoline_name());
   cl_kernel kernel;
   auto it = __mcw_cxxamp_kernels.insert(transformed_kernel_name);
-  error_code = eclGetKernel(it.first->c_str(), &kernel);
+  // err = eclGetKernel(it.first->c_str(), &kernel);
   CHECK_ERROR_CL(err, "eclGetKernel");
   Concurrency::Serialize s(kernel);
   f.__cxxamp_serialize(s);
@@ -103,10 +103,10 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
   }
 
   aloc.write();
-  err = clEnqueueNDRangeKernel(aloc.queue, aloc.kernel, dim_ext, NULL, global, ext, local_size, 0, NULL, NULL);
+  err = clEnqueueNDRangeKernel(aloc.queue, aloc.kernel, dim_ext, NULL, ext, local_size, 0, NULL, NULL);
   if (err != CL_SUCCESS) {
       std::cerr << "clamp: error invoking GPU kernel;";
-      std::cerr << " OpenCL error code="<< error_code <<"\n";
+      std::cerr << " OpenCL error code="<< err <<"\n";
       for (int i = 0; i<dim_ext;i++) {
           std::cerr << "global["<<i<<"] = "<<ext[i]<<"; local[";
           std::cerr << i << "] = "<<local_size[i]<<"\n";

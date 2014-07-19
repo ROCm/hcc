@@ -8,7 +8,7 @@
 #ifndef __CL_MANAGE__
 #define __CL_MANAGE__
 
-#include <map>
+#pragma once
 #include <string.h>
 #include <CL/opencl.h>
 
@@ -28,21 +28,21 @@ struct AMPAllocator
         int i;
         err = clGetPlatformIDs(10, platform_id, &num_platforms);
         for (i = 0; i < num_platforms; i++) {
-            err = clGetDeviceIDs(platform_id[i], CL_DEVICE_TYPE_GPU, 1, &device_id, NULL);
+            err = clGetDeviceIDs(platform_id[i], CL_DEVICE_TYPE_GPU, 1, &device, NULL);
             if (err == CL_SUCCESS)
                 break;
         }
         if (err != CL_SUCCESS) {
             for (i = 0; i < num_platforms; i++) {
-                err = clGetDeviceIDs(platform_id[i], CL_DEVICE_TYPE_CPU, 1, &device_id, NULL);
+                err = clGetDeviceIDs(platform_id[i], CL_DEVICE_TYPE_CPU, 1, &device, NULL);
                 if (err != CL_SUCCESS)
                     break;
             }
         }
         assert(err == CL_SUCCESS);
-        context = clCreateContext(0, 1, &device_id, NULL, NULL, &err);
+        context = clCreateContext(0, 1, &device, NULL, NULL, &err);
         assert(err == CL_SUCCESS);
-        queue = clCreateCommandQueue(context, device_id, 0, &err);
+        queue = clCreateCommandQueue(context, device, 0, &err);
         assert(err == CL_SUCCESS);
     }
     void AMPMalloc(void **cpu_ptr, size_t count) {
@@ -63,38 +63,38 @@ struct AMPAllocator
     void write() {
         cl_int err;
         for (auto& iter : al_info) {
-            err = clEnqueueWriteBuffer(queue, iter->second.dm, CL_TRUE, 0, iter->second.count, *(iter->first), 0, NULL, NULL);
+            err = clEnqueueWriteBuffer(queue, iter.second.dm, CL_TRUE, 0, iter.second.count, *(iter.first), 0, NULL, NULL);
             assert(err == CL_SUCCESS);
         }
     }
     template <typename T>
-    void write(T *cpu_ptr) {
+    void write(T *p) {
         cl_int err;
         void **ptr = (void**)(const_cast<T**>(&p));
         mm_info mm = al_info[ptr];
-        err = readclEnqueueWriteBuffer(queue, mm.dm, CL_TRUE, 0, mm.count, *ptr, 0, NULL, NULL);
+        err = clEnqueueWriteBuffer(queue, mm.dm, CL_TRUE, 0, mm.count, *ptr, 0, NULL, NULL);
         assert(err == CL_SUCCESS);
     }
     void read() {
         for (auto& iter : al_info)
-            clEnqueueReadBuffer(queue, iter->second.dm, CL_TRUE, 0, iter->second.count, *(iter->first), 0, NULL, NULL);
+            clEnqueueReadBuffer(queue, iter.second.dm, CL_TRUE, 0, iter.second.count, *(iter.first), 0, NULL, NULL);
     }
     template <typename T>
-    void read(T *cpu_ptr) {
+    void read(T *p) {
         void **ptr = (void**)(const_cast<T**>(&p));
         mm_info mm = al_info[ptr];
         clEnqueueReadBuffer(queue, mm.dm, CL_TRUE, 0, mm.count, *ptr, 0, NULL, NULL);
     }
     template <typename T>
-    cl_mem getmem(T *ptr) {
+    cl_mem getmem(T *p) {
         void **ptr = (void**)(const_cast<T**>(&p));
         return al_info[ptr].dm;
     }
     void AMPFree() {
         for (auto& iter : al_info) {
-            mm_info mm = al_info[cpu_ptr];
+            mm_info mm = iter.second;
             if (mm.toDel)
-                free(*cpu_ptr);
+                free(*(iter.first));
             clReleaseMemObject(mm.dm);
         }
         al_info.clear();
@@ -104,7 +104,7 @@ struct AMPAllocator
         if (mm.toDel)
             free(*cpu_ptr);
         clReleaseMemObject(mm.dm);
-        al_info.clear(cpu_ptr);
+        al_info.erase(cpu_ptr);
     }
     ~AMPAllocator() {
         read();
@@ -116,7 +116,7 @@ struct AMPAllocator
     }
     std::map<void **, mm_info>  al_info;
     cl_context       context;
-    cl_device_id     device_id;
+    cl_device_id     device;
     cl_kernel        kernel;
     cl_command_queue queue;
     cl_program       program;

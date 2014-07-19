@@ -78,7 +78,6 @@ void ldflags(void) {
         std::cout << " -Wl,--rpath="
             CMAKE_LIBCXX_LIB_DIR ":"
             CMAKE_LIBCXXRT_LIB_DIR ;
-#endif
     } else if (install_mode) {
         std::cout << " -L" CMAKE_INSTALL_LIB;
 #ifdef __APPLE__

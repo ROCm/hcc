@@ -23,6 +23,7 @@
 #include <vector>
 #include <chrono>
 #include <future>
+#include <map>
 #include <string.h> //memcpy
 #ifndef CXXAMP_ENABLE_HSA_OKRA
 #include <CL/opencl.h>

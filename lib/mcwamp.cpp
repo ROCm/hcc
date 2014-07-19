@@ -7,6 +7,7 @@
 
 #include <amp.h>
 #include <map>
+#include <CL/opencl.h>
 namespace Concurrency {
 
 // initialize static class members
@@ -108,7 +109,7 @@ void MatchKernelNames(std::string& fixed_name) {
 }
 namespace Concurrency {
 namespace CLAMP {
-void GetKernelNames(char **names[], unsigned *count, cl_program& program)
+void GetKernelNames(char **names[], unsigned *count, cl_program& prog)
 {
     std::vector<std::string> n;
     cl_uint kernel_num = 0;
@@ -116,7 +117,7 @@ void GetKernelNames(char **names[], unsigned *count, cl_program& program)
     ret = clCreateKernelsInProgram(prog, 1024, NULL, &kernel_num);
     if (ret == CL_SUCCESS && kernel_num > 0) {
         cl_kernel *kl = new cl_kernel[kernel_num];
-        ret = clCreateKernelsInProgram(*prog, kernel_num + 1, kl, &kernel_num);
+        ret = clCreateKernelsInProgram(prog, kernel_num + 1, kl, &kernel_num);
         if (ret == CL_SUCCESS) {
             std::map<std::string, std::string> aMap;
             for (unsigned i = 0; i < unsigned(kernel_num); ++i) {
@@ -168,13 +169,14 @@ void CompileKernels(cl_program& program, cl_context& context, cl_device_id& devi
     kernel_source[kernel_size] = '\0';
     if (kernel_source[0] == 'B' && kernel_source[1] == 'C') {
       // Bitcode magic number. Assuming it's in SPIR
-      program = clCreateProgramWithBinary(context, 1, device, &kernel_size, &kernel_source, NULL, &err);
+      const unsigned char *ks = (const unsigned char *)kernel_source;
+      program = clCreateProgramWithBinary(context, 1, &device, &kernel_size, &ks, NULL, &err);
       CHECK_ERROR_CL(err, "Compiling kernel in SPIR binary");
     } else {
       // in OpenCL-C
       const char *ks = (const char *)kernel_source;
-      program = clCreateProgramWithSource(context, 1, ks, NULL, &err);
-      err = clBuildProgram(program, 1, device, "-D__ATTRIBUTE_WEAK__=", NULL, NULL);
+      program = clCreateProgramWithSource(context, 1, &ks, NULL, &err);
+      err = clBuildProgram(program, 1, &device, "-D__ATTRIBUTE_WEAK__=", NULL, NULL);
       CHECK_ERROR_CL(err, "Compiling kernel in OpenCL-C");
     }
     __mcw_cxxamp_compiled = true;
@@ -182,7 +184,7 @@ void CompileKernels(cl_program& program, cl_context& context, cl_device_id& devi
     // Extract kernel names
     char** kernel_names = NULL;
     unsigned kernel_num = 0;
-    eclGetKernelNames(&kernel_names, &kernel_num, program);
+    GetKernelNames(&kernel_names, &kernel_num, program);
     if(kernel_names) {
        int i = 0;
        while(kernel_names && i < kernel_num) {
