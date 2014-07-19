@@ -15,7 +15,7 @@
 #include <CL/cl.h>
 #endif
 
-#define CHECK_ERROR_GMAC(error_code, message) \
+#define CHECK_ERROR_CL(error_code, message) \
   if (error_code != CL_SUCCESS) { \
     std::cout << "Error: " << message << "\n"; \
     std::cout << "Code: " << error_code << "\n"; \
@@ -603,13 +603,13 @@ template <typename T, int N>
 array_view<T, N>::array_view(const Concurrency::extent<N>& ext,
                              value_type* src) restrict(amp,cpu)
     : extent(ext),
-      cache(GMACAllocator<T>().allocate(ext.size(), src)),
+      cache(CLAllocator<T>().allocate(ext.size(), src)),
       offset(0), extent_base(ext) {}
 
 template <typename T, int N>
 array_view<T, N>::array_view(const Concurrency::extent<N>& ext) restrict(amp,cpu)
     : extent(ext),
-    cache(GMACAllocator<T>().allocate(ext.size()), GMACDeleter<T>()),
+    cache(CLAllocator<T>().allocate(ext.size()), CLDeleter<T>()),
     offset(0), extent_base(ext) {}
 
 template <typename T, int N>
@@ -650,7 +650,7 @@ template <typename T, int N>
 array_view<const T, N>::array_view(const Concurrency::extent<N>& ext,
                              value_type* src) restrict(amp,cpu)
     : extent(ext),
-      cache(GMACAllocator<nc_T>().allocate(ext.size(), src)),
+      cache(CLAllocator<nc_T>().allocate(ext.size(), src)),
       offset(0), extent_base(ext) {}
 
 template <typename T, int N>

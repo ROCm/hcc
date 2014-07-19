@@ -5,8 +5,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __GMAC_MANAGE__
-#define __GMAC_MANAGE__
+#ifndef __CL_MANAGE__
+#define __CL_MANAGE__
 #include<type_traits>
 #pragma once
 
@@ -124,7 +124,7 @@ AMPAllocator& getAllocator()
 }
 
 template <class T>
-struct GMACAllocator
+struct CLAllocator
 {
     T* allocate(unsigned n) {
         T *p = nullptr;
@@ -139,7 +139,7 @@ struct GMACAllocator
 };
 
 template <class T>
-struct GMACDeleter {
+struct CLDeleter {
     void operator()(T* ptr) {
         getAllocator().AMPFree((void**)(const_cast<T**>(&ptr)));
     }
@@ -186,4 +186,4 @@ class _data_host: public std::shared_ptr<T> {
   __attribute__((annotate("user_deserialize")))
   explicit _data_host(__global T* t);
 };
-#endif // __GMAC_MANAGE__
+#endif // __CL_MANAGE__

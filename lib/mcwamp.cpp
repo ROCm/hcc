@@ -169,13 +169,13 @@ void CompileKernels(cl_program& program, cl_context& context, cl_device_id& devi
     if (kernel_source[0] == 'B' && kernel_source[1] == 'C') {
       // Bitcode magic number. Assuming it's in SPIR
       program = clCreateProgramWithBinary(context, 1, device, &kernel_size, &kernel_source, NULL, &err);
-      CHECK_ERROR_GMAC(err, "Compiling kernel in SPIR binary");
+      CHECK_ERROR_CL(err, "Compiling kernel in SPIR binary");
     } else {
       // in OpenCL-C
       const char *ks = (const char *)kernel_source;
       program = clCreateProgramWithSource(context, 1, ks, NULL, &err);
       err = clBuildProgram(program, 1, device, "-D__ATTRIBUTE_WEAK__=", NULL, NULL);
-      CHECK_ERROR_GMAC(err, "Compiling kernel in OpenCL-C");
+      CHECK_ERROR_CL(err, "Compiling kernel in OpenCL-C");
     }
     __mcw_cxxamp_compiled = true;
     free(kernel_source);

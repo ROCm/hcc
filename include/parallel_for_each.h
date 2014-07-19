@@ -8,7 +8,7 @@
 #pragma once
 #include <cassert>
 #include <amp.h>
-#include <gmac_manage.h>
+#include <cl_manage.h>
 
 namespace Concurrency {
 namespace CLAMP {
@@ -71,7 +71,7 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
   cl_kernel kernel;
   auto it = __mcw_cxxamp_kernels.insert(transformed_kernel_name);
   error_code = eclGetKernel(it.first->c_str(), &kernel);
-  CHECK_ERROR_GMAC(err, "eclGetKernel");
+  CHECK_ERROR_CL(err, "eclGetKernel");
   Concurrency::Serialize s(kernel);
   f.__cxxamp_serialize(s);
 
@@ -106,7 +106,7 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
   err = clEnqueueNDRangeKernel(aloc.queue, aloc.kernel, dim_ext, NULL, global, ext, local_size, 0, NULL, NULL);
   if (err != CL_SUCCESS) {
       std::cerr << "clamp: error invoking GPU kernel;";
-      std::cerr << " GMAC error code="<< error_code <<"\n";
+      std::cerr << " OpenCL error code="<< error_code <<"\n";
       for (int i = 0; i<dim_ext;i++) {
           std::cerr << "global["<<i<<"] = "<<ext[i]<<"; local[";
           std::cerr << i << "] = "<<local_size[i]<<"\n";

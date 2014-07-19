@@ -1076,7 +1076,7 @@ public:
 #include "okra_manage.h"
 namespace Concurrency {
 #else
-#include "gmac_manage.h"
+#include "cl_manage.h"
 #endif
 template <typename T, int N>
 struct projection_helper
@@ -1259,9 +1259,9 @@ class array {
   static_assert(0 == (sizeof(T) % sizeof(int)), "only value types whose size is a multiple of the size of an integer are allowed in array");
 public:
 #ifdef __GPU__
-  typedef _data<T> gmac_buffer_t;
+  typedef _data<T> cl_buffer_t;
 #else
-  typedef _data_host<T> gmac_buffer_t;
+  typedef _data_host<T> cl_buffer_t;
 #endif
   typedef array_helper<T, N> array_helper_t;
 
@@ -1607,14 +1607,14 @@ public:
 #endif
     return reinterpret_cast<T*>(m_device.get());
   }
-  ~array() { // For GMAC
+  ~array() {
     m_device.reset();
     if(pav) delete pav;
     if(paav) delete paav;
   }
 
 
-  const gmac_buffer_t& internal() const restrict(amp,cpu) { return m_device; }
+  const cl_buffer_t& internal() const restrict(amp,cpu) { return m_device; }
   Concurrency::extent<N> extent;
 private:
   template <int K, typename Q> friend struct index_helper;
@@ -1622,14 +1622,14 @@ private:
   template <typename K, int Q> friend struct projection_helper;
   template <typename K, int Q> friend struct array_projection_helper;
   template <typename K, int Q> friend class array_helper;
-  gmac_buffer_t m_device;
+  cl_buffer_t m_device;
   access_type cpu_access_type;
   array_helper_t m_array_helper;
   __attribute__((cpu)) accelerator_view *pav, *paav;
 
 #ifndef __GPU__
   void initialize() {
-      m_device.reset(GMACAllocator<T>().allocate(extent.size()), GMACDeleter<T>());
+      m_device.reset(CLAllocator<T>().allocate(extent.size()), CLDeleter<T>());
       m_array_helper.setArray(this);
   }
   template <typename InputIter>
@@ -1647,9 +1647,9 @@ class array_view
   typedef typename std::remove_const<T>::type nc_T;
 public:
 #ifdef __GPU__
-  typedef _data<T> gmac_buffer_t;
+  typedef _data<T> cl_buffer_t;
 #else
-  typedef _data_host<T> gmac_buffer_t;
+  typedef _data_host<T> cl_buffer_t;
 #endif
 
   static const int rank = N;
@@ -1893,18 +1893,18 @@ private:
   template <typename Q, int K> friend class array_view;
 
   // used by view_as and reinterpret_as
-  array_view(const Concurrency::extent<N>& ext, const gmac_buffer_t& cache,
+  array_view(const Concurrency::extent<N>& ext, const cl_buffer_t& cache,
              int offset) restrict(amp,cpu)
       : extent(ext), cache(cache), offset(offset), extent_base(ext) {}
   // used by section and projection
   array_view(const Concurrency::extent<N>& ext_now,
              const Concurrency::extent<N>& ext_b,
              const Concurrency::index<N>& idx_b,
-             const gmac_buffer_t& cache, int off) restrict(amp,cpu)
+             const cl_buffer_t& cache, int off) restrict(amp,cpu)
       : extent(ext_now), index_base(idx_b), extent_base(ext_b),
       cache(cache), offset(off) {}
 
-  gmac_buffer_t cache;
+  cl_buffer_t cache;
   Concurrency::extent<N> extent;
   Concurrency::extent<N> extent_base;
   Concurrency::index<N> index_base;
@@ -1920,9 +1920,9 @@ public:
   typedef const T value_type;
 
 #ifdef __GPU__
-  typedef _data<T> gmac_buffer_t;
+  typedef _data<T> cl_buffer_t;
 #else
-  typedef _data_host_view<T> gmac_buffer_t;
+  typedef _data_host_view<T> cl_buffer_t;
 #endif
 
   array_view() = delete;
@@ -2127,7 +2127,7 @@ private:
   template <typename Q, int K> friend class array_view;
 
   // used by view_as and reinterpret_as
-  array_view(const Concurrency::extent<N>& ext, const gmac_buffer_t& cache,
+  array_view(const Concurrency::extent<N>& ext, const cl_buffer_t& cache,
              int offset) restrict(amp,cpu)
       : extent(ext), cache(cache), offset(offset), extent_base(ext) {}
 
@@ -2135,11 +2135,11 @@ private:
   array_view(const Concurrency::extent<N>& ext_now,
              const Concurrency::extent<N>& ext_b,
              const Concurrency::index<N>& idx_b,
-             const gmac_buffer_t& cache, int off) restrict(amp,cpu)
+             const cl_buffer_t& cache, int off) restrict(amp,cpu)
       : extent(ext_now), index_base(idx_b), extent_base(ext_b),
       cache(cache), offset(off) {}
 
-  gmac_buffer_t cache;
+  cl_buffer_t cache;
   Concurrency::extent<N> extent;
   Concurrency::extent<N> extent_base;
   Concurrency::index<N> index_base;
