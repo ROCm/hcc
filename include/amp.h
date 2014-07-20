@@ -1392,8 +1392,8 @@ public:
     if(this != &other) {
       extent = other.extent;
       this->cpu_access_type = other.cpu_access_type;
+      m_device = other.m_device;
       other.m_device = nullptr;
-      copy(other, *this);
     }
     return *this;
   }
@@ -1438,7 +1438,7 @@ public:
       }
 #endif
       __global T *ptr = reinterpret_cast<__global T*>(m_device.get());
-      return ptr[amp_helper<N, index<N>, Concurrency::extent<N> >::flatten(idx, extent)];
+      return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx, extent)];
   }
   __global const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
 #ifndef __GPU__
@@ -1447,7 +1447,7 @@ public:
       }
 #endif
       __global T *ptr = reinterpret_cast<__global T*>(m_device.get());
-      return ptr[amp_helper<N, index<N>, Concurrency::extent<N> >::flatten(idx, extent)];
+      return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx, extent)];
   }
 
   typename array_projection_helper<T, N>::result_type
@@ -1473,12 +1473,6 @@ public:
       operator()(int i0) const restrict(amp,cpu) {
           return (*this)[i0];
   }
-  // Duplicated codes
-  #if 0
-  __global const T& operator()(int i0) const restrict(amp,cpu) {
-      return (*this)[i0];
-  }
-  #endif
   __global T& operator()(int i0, int i1) restrict(amp,cpu) {
       return (*this)[index<2>(i0, i1)];
   }
@@ -1659,10 +1653,8 @@ public:
 
   ~array_view() restrict(amp,cpu) {
 #ifndef __GPU__
-      if (cache.is_last()) {
-          synchronize();
-          cache.reset();
-      }
+      synchronize();
+      cache.reset();
 #endif
   }
 

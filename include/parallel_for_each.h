@@ -61,25 +61,19 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
   cl_int err;
   AMPAllocator& aloc = getAllocator();
   CLAMP::CompileKernels(aloc.program, aloc.context, aloc.device);
-  //Invoke Kernel::__cxxamp_trampoline as an OpenCL kernel
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  // FIXME: implicitly casting to avoid pointer to int error
   int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
   std::string transformed_kernel_name =
       mcw_cxxamp_fixnames(f.__cxxamp_trampoline_name());
-  cl_kernel kernel;
-  auto it = __mcw_cxxamp_kernels.insert(transformed_kernel_name);
-  // err = eclGetKernel(it.first->c_str(), &kernel);
-  CHECK_ERROR_CL(err, "eclGetKernel");
-  Concurrency::Serialize s(kernel);
+  aloc.kernel = clCreateKernel(aloc.program, transformed_kernel_name.c_str(), &err);
+  assert(err == CL_SUCCESS);
+  Concurrency::Serialize s(aloc.kernel);
   f.__cxxamp_serialize(s);
 
   {
-    // C++ AMP specifications
-    // The maximum number of tiles per dimension will be no less than 65535.
-    // The maximum number of threads in a tile will be no less than 1024.
-    // In 3D tiling, the maximal value of D0 will be no less than 64.
+      // C++ AMP specifications
+      // The maximum number of tiles per dimension will be no less than 65535.
+      // The maximum number of threads in a tile will be no less than 1024.
+      // In 3D tiling, the maximal value of D0 will be no less than 64.
       cl_uint dimensions;
       err = clGetDeviceInfo(aloc.device, CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, sizeof(cl_uint), &dimensions, NULL);
       size_t *maxSizes = new size_t[dimensions];
@@ -104,14 +98,7 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
 
   aloc.write();
   err = clEnqueueNDRangeKernel(aloc.queue, aloc.kernel, dim_ext, NULL, ext, local_size, 0, NULL, NULL);
-  if (err != CL_SUCCESS) {
-      std::cerr << "clamp: error invoking GPU kernel;";
-      std::cerr << " OpenCL error code="<< err <<"\n";
-      for (int i = 0; i<dim_ext;i++) {
-          std::cerr << "global["<<i<<"] = "<<ext[i]<<"; local[";
-          std::cerr << i << "] = "<<local_size[i]<<"\n";
-      }
-  }
+  assert(err == CL_SUCCESS);
   clFinish(aloc.queue);
   aloc.read();
 #endif //CXXAMP_ENABLE_HSA_OKRA

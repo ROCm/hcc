@@ -35,7 +35,7 @@ struct AMPAllocator
         if (err != CL_SUCCESS) {
             for (i = 0; i < num_platforms; i++) {
                 err = clGetDeviceIDs(platform_id[i], CL_DEVICE_TYPE_CPU, 1, &device, NULL);
-                if (err != CL_SUCCESS)
+                if (err == CL_SUCCESS)
                     break;
             }
         }
@@ -47,7 +47,7 @@ struct AMPAllocator
     }
     void AMPMalloc(void **cpu_ptr, size_t count) {
         cl_int err;
-        *cpu_ptr = (void *) malloc(count);
+        *cpu_ptr = ::operator new(count);
         cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, NULL, &err);
         assert(err == CL_SUCCESS);
         al_info[cpu_ptr] = {dm, count, true};
@@ -94,7 +94,7 @@ struct AMPAllocator
         for (auto& iter : al_info) {
             mm_info mm = iter.second;
             if (mm.toDel)
-                free(*(iter.first));
+                ::operator delete(*(iter.first));
             clReleaseMemObject(mm.dm);
         }
         al_info.clear();
@@ -102,7 +102,7 @@ struct AMPAllocator
     void AMPFree(void **cpu_ptr) {
         mm_info mm = al_info[cpu_ptr];
         if (mm.toDel)
-            free(*cpu_ptr);
+            ::operator delete(*cpu_ptr);
         clReleaseMemObject(mm.dm);
         al_info.erase(cpu_ptr);
     }
@@ -138,7 +138,7 @@ struct CLAllocator
     }
     T* allocate(unsigned n, T *ptr) {
         T *p = nullptr;
-        getAllocator().AMPMalloc((void**)(const_cast<T**>(&p)), n * sizeof(T), &ptr);
+        getAllocator().AMPMalloc((void**)(const_cast<T**>(&p)), n * sizeof(T), (void**)(const_cast<T**>(&ptr)));
         return p;
     }
 };
