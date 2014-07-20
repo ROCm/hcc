@@ -99,6 +99,7 @@ void ldflags(void) {
     std::cout << " -Wl,--whole-archive -lhsacontext -Wl,--no-whole-archive ";
 #else
 #endif
+    std::cout << "lOpenCL";
     std::cout << " -lc++ -lcxxrt -ldl -lpthread ";
     std::cout << "-Wl,--whole-archive -lmcwamp -Wl,--no-whole-archive ";
 #endif
