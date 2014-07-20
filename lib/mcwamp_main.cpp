@@ -73,11 +73,17 @@ void cxxflags(void) {
 
 void ldflags(void) {
     if (build_mode) {
+        std::cout << " -L" CMAKE_AMPCL_LIB_DIR;
+#ifdef __APPLE__
+        std::cout << " -Wl,-rpath," CMAKE_AMPCL_LIB_DIR;
+#else
         std::cout << " -L" CMAKE_LIBCXX_LIB_DIR;
         std::cout << " -L" CMAKE_LIBCXXRT_LIB_DIR;
         std::cout << " -Wl,--rpath="
+            CMAKE_AMPCL_LIB_DIR ":"
             CMAKE_LIBCXX_LIB_DIR ":"
             CMAKE_LIBCXXRT_LIB_DIR ;
+#endif
     } else if (install_mode) {
         std::cout << " -L" CMAKE_INSTALL_LIB;
 #ifdef __APPLE__

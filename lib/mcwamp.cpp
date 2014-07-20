@@ -10,6 +10,12 @@
 #include <CL/opencl.h>
 namespace Concurrency {
 
+AMPAllocator& getAllocator()
+{
+    static AMPAllocator amp;
+    return amp;
+}
+
 // initialize static class members
 const wchar_t accelerator::gpu_accelerator[] = L"gpu";
 const wchar_t accelerator::cpu_accelerator[] = L"cpu";

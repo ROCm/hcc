@@ -122,11 +122,7 @@ struct AMPAllocator
     cl_program       program;
 };
 
-AMPAllocator& getAllocator()
-{
-    static AMPAllocator amp;
-    return amp;
-}
+AMPAllocator& getAllocator();
 
 template <class T>
 struct CLAllocator
