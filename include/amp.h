@@ -1204,7 +1204,7 @@ struct array_projection_helper
         if( offset >= now.extent.size())
           throw runtime_exception("errorMsg_throw", 0);
 #endif
-        return result_type(ext, ext, index<N - 1>(), now.m_device, now.data(), offset);
+        return result_type(ext, ext, index<N - 1>(), now.m_device, offset);
     }
     static const_result_type project(const array<T, N>& now, int stride) restrict(amp,cpu) {
         int comp[N - 1], i;
@@ -1212,7 +1212,7 @@ struct array_projection_helper
             comp[i - 1] = now.extent[i];
         Concurrency::extent<N - 1> ext(comp);
         int offset = ext.size() * stride;
-        return const_result_type(ext, ext, index<N - 1>(), now.m_device, now.data(), offset);
+        return const_result_type(ext, ext, index<N - 1>(), now.m_device, offset);
     }
 };
 template <typename T>
@@ -1654,7 +1654,6 @@ public:
   ~array_view() restrict(amp,cpu) {
 #ifndef __GPU__
       synchronize();
-      cache.reset();
 #endif
   }
 
@@ -1862,14 +1861,14 @@ public:
   void refresh() const;
   void discard_data() const {
 #ifndef __GPU__
-    cache.refresh();
+    cache.reset();
 #endif
   }
   // only get data do not synchronize
   __global const T& get_data(int i0) const restrict(amp,cpu) {
     static_assert(N == 1, "Rank must be 1");
     index<1> idx(i0);
-    __global T *ptr = reinterpret_cast<__global T*>(cache.get_data() + offset);
+    __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
     return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
   }
   T* data() const restrict(amp,cpu) {
@@ -1922,10 +1921,8 @@ public:
 
   ~array_view() restrict(amp,cpu) {
 #ifndef __GPU__
-  if (cache.is_last()) {
     synchronize();
     cache.reset();
-  }
 #endif
   }
 
@@ -2104,7 +2101,7 @@ public:
   __global const T& get_data(int i0) const restrict(amp,cpu) {
     static_assert(N == 1, "Rank must be 1");
     index<1> idx(i0);
-    __global T *ptr = reinterpret_cast<__global T*>(cache.get_data() + offset);
+    __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
     return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
   }
   const T* data() const restrict(amp,cpu) {
