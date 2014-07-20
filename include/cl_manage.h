@@ -54,7 +54,7 @@ struct AMPAllocator
     }
     void AMPMalloc(void **cpu_ptr, size_t count, void **data_ptr) {
         cl_int err;
-        cpu_ptr = data_ptr;
+        *cpu_ptr = *data_ptr;
         cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
                                    count, *cpu_ptr, &err);
         assert(err == CL_SUCCESS);
@@ -179,17 +179,14 @@ class _data_host: public std::shared_ptr<T> {
   template <class = typename std::enable_if<!std::is_const<T>::value>::type>
   _data_host(const _data_host<const T> &other):std::shared_ptr<T>(other) {}
   _data_host(std::nullptr_t x = nullptr):std::shared_ptr<T>(nullptr) {}
+  template<class Deleter> _data_host(T* ptr, Deleter d) : std::shared_ptr<T>(ptr, d) {}
 
   __attribute__((annotate("serialize")))
   void __cxxamp_serialize(Serialize& s) const {
       cl_mem mm = getAllocator().getmem(std::shared_ptr<T>::get());
       s.Append(sizeof(cl_mem), &mm);
   }
-#ifdef __GPU__
   __attribute__((annotate("user_deserialize")))
   explicit _data_host(__global T* t);
-#else
-  explicit _data_host(T *ptr) : std::shared_ptr<T>(ptr) {}
-#endif
 };
 #endif // __CL_MANAGE__

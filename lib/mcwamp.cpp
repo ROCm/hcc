@@ -129,7 +129,7 @@ namespace Concurrency { namespace CLAMP {
             memcpy(kernel_source, (void*)(sect->addr + _dyld_get_image_vmaddr_slide(0)), kernel_size); // whatever
 #else
             size_t kernel_size = (size_t)((void *)kernel_size_);
-            unsigned char *kernel_source = new unsigned char[kernel_size + 1];
+            unsigned char *kernel_source = (unsigned char*)malloc(kernel_size+1);
             memcpy(kernel_source, kernel_source_, kernel_size);
 #endif
             kernel_source[kernel_size] = '\0';
@@ -147,7 +147,7 @@ namespace Concurrency { namespace CLAMP {
                 assert(err == CL_SUCCESS);
             }
             __mcw_cxxamp_compiled = true;
-            delete [] kernel_source;
+            free(kernel_source);
 #endif
         }
 

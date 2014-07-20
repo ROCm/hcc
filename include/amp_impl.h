@@ -89,14 +89,14 @@ inline accelerator::accelerator(const std::wstring& path) :
         }
     }
 
-    err = clGetDeviceInfo(device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_ulong), &memAllocSize, NULL);
-    assert(err == CL_SUCCESS);
-    dedicated_memory = memAllocSize / (size_t) 1024;
-    err = clGetDeviceInfo(device, CL_DEVICE_SINGLE_FP_CONFIG, sizeof(cl_device_fp_config), &singleFPConfig, NULL);
-    assert(err == CL_SUCCESS);
-    if (singleFPConfig & CL_FP_FMA & CL_FP_DENORM & CL_FP_INF_NAN &
-        CL_FP_ROUND_TO_NEAREST & CL_FP_ROUND_TO_ZERO)
-        supports_limited_double_precision = true;
+    // err = clGetDeviceInfo(device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_ulong), &memAllocSize, NULL);
+    // assert(err == CL_SUCCESS);
+    // dedicated_memory = memAllocSize / (size_t) 1024;
+    // err = clGetDeviceInfo(device, CL_DEVICE_SINGLE_FP_CONFIG, sizeof(cl_device_fp_config), &singleFPConfig, NULL);
+    // assert(err == CL_SUCCESS);
+    // if (singleFPConfig & CL_FP_FMA & CL_FP_DENORM & CL_FP_INF_NAN &
+    //     CL_FP_ROUND_TO_NEAREST & CL_FP_ROUND_TO_ZERO)
+    //     supports_limited_double_precision = true;
 #endif
 }
 
@@ -599,7 +599,7 @@ template <typename T, int N>
 array_view<T, N>::array_view(const Concurrency::extent<N>& ext,
                              value_type* src) restrict(amp,cpu)
     : extent(ext),
-      cache(CLAllocator<T>().allocate(ext.size(), src)),
+      cache(CLAllocator<T>().allocate(ext.size(), src), CLDeleter<T>()),
       offset(0), extent_base(ext) {}
 
 template <typename T, int N>
@@ -646,7 +646,7 @@ template <typename T, int N>
 array_view<const T, N>::array_view(const Concurrency::extent<N>& ext,
                              value_type* src) restrict(amp,cpu)
     : extent(ext),
-      cache(CLAllocator<nc_T>().allocate(ext.size(), src)),
+      cache(CLAllocator<nc_T>().allocate(ext.size(), src), CLDeleter<T>()),
       offset(0), extent_base(ext) {}
 
 template <typename T, int N>
