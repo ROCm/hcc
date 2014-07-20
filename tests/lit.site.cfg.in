@@ -16,6 +16,8 @@ config.opencl_inc_dir = "@OPENCL_HEADER@/../"
 config.opencl_lib_dir = "@OPENCL_LIBRARY@"
 config.opencl_math_dir = "@OPENCL_MATH_DIR@"
 
+config.ampcl_lib_dir = "@AMPCL_LIB_DIR@"
+
 # MCWAMP
 config.mcwamp_lib_dir = "@MCWAMP_LIB_DIR@"
 config.mcwamp_tool_dir = "@MCWAMP_TOOL_DIR@"
