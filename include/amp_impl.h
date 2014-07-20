@@ -15,13 +15,6 @@
 #include <CL/cl.h>
 #endif
 
-#define CHECK_ERROR_CL(error_code, message) \
-  if (error_code != CL_SUCCESS) { \
-    std::cout << "Error: " << message << "\n"; \
-    std::cout << "Code: " << error_code << "\n"; \
-    std::cout << "Line: " << __LINE__ << "\n"; \
-    exit(1); \
-  }
 // Specialization of AMP classes/templates
 
 namespace Concurrency {
@@ -44,7 +37,6 @@ inline accelerator::accelerator(const accelerator& other) :
   default_view(other.default_view)
   {}
 
-// TODO: perform real OpenCL queries here..
 inline accelerator::accelerator(const std::wstring& path) :
   device_path( (path != std::wstring(default_accelerator)) ? 
 					path : 
@@ -77,8 +69,10 @@ inline accelerator::accelerator(const std::wstring& path) :
     std::unique_ptr<cl_platform_id[]> platforms;
 
     err = clGetPlatformIDs(0, NULL, &platformCount);
+    assert(err == CL_SUCCESS);
     platforms.reset(new cl_platform_id[platformCount]);
     clGetPlatformIDs(platformCount, platforms.get(), NULL);
+    assert(err == CL_SUCCESS);
     for (int i = 0; i < platformCount; i++) {
         if (device_path == std::wstring(gpu_accelerator)) {
             clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_GPU, 1, &device, NULL);
@@ -96,8 +90,10 @@ inline accelerator::accelerator(const std::wstring& path) :
     }
 
     err = clGetDeviceInfo(device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_ulong), &memAllocSize, NULL);
-    dedicated_memory = memAllocSize / (size_t)1024;
+    assert(err == CL_SUCCESS);
+    dedicated_memory = memAllocSize / (size_t) 1024;
     err = clGetDeviceInfo(device, CL_DEVICE_SINGLE_FP_CONFIG, sizeof(cl_device_fp_config), &singleFPConfig, NULL);
+    assert(err == CL_SUCCESS);
     if (singleFPConfig & CL_FP_FMA & CL_FP_DENORM & CL_FP_INF_NAN &
         CL_FP_ROUND_TO_NEAREST & CL_FP_ROUND_TO_ZERO)
         supports_limited_double_precision = true;

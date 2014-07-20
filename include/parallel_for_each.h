@@ -68,7 +68,6 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
   assert(err == CL_SUCCESS);
   Concurrency::Serialize s(aloc.kernel);
   f.__cxxamp_serialize(s);
-
   {
       // C++ AMP specifications
       // The maximum number of tiles per dimension will be no less than 65535.

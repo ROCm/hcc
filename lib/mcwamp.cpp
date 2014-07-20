@@ -10,12 +10,6 @@
 #include <CL/opencl.h>
 namespace Concurrency {
 
-AMPAllocator& getAllocator()
-{
-    static AMPAllocator amp;
-    return amp;
-}
-
 // initialize static class members
 const wchar_t accelerator::gpu_accelerator[] = L"gpu";
 const wchar_t accelerator::cpu_accelerator[] = L"cpu";
@@ -24,6 +18,12 @@ const wchar_t accelerator::default_accelerator[] = L"default";
 std::shared_ptr<accelerator> accelerator::_gpu_accelerator = std::make_shared<accelerator>(accelerator::gpu_accelerator);
 std::shared_ptr<accelerator> accelerator::_cpu_accelerator = std::make_shared<accelerator>(accelerator::cpu_accelerator);
 std::shared_ptr<accelerator> accelerator::_default_accelerator = nullptr;
+
+AMPAllocator& getAllocator()
+{
+    static AMPAllocator amp;
+    return amp;
+}
 
 }
 
@@ -142,8 +142,8 @@ namespace Concurrency { namespace CLAMP {
                 // in OpenCL-C
                 const char *ks = (const char *)kernel_source;
                 program = clCreateProgramWithSource(context, 1, &ks, &kernel_size, &err);
+                assert(err == CL_SUCCESS);
                 err = clBuildProgram(program, 1, &device, "-D__ATTRIBUTE_WEAK__=", NULL, NULL);
-                CHECK_ERROR_CL(err, "Compiling kernel in OpenCL-C");
                 assert(err == CL_SUCCESS);
             }
             __mcw_cxxamp_compiled = true;

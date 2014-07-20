@@ -50,7 +50,7 @@ struct AMPAllocator
         *cpu_ptr = ::operator new(count);
         cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, NULL, &err);
         assert(err == CL_SUCCESS);
-        al_info[cpu_ptr] = {dm, count, true};
+        al_info[*cpu_ptr] = {dm, count, true};
     }
     void AMPMalloc(void **cpu_ptr, size_t count, void **data_ptr) {
         cl_int err;
@@ -58,12 +58,12 @@ struct AMPAllocator
         cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
                                    count, *cpu_ptr, &err);
         assert(err == CL_SUCCESS);
-        al_info[cpu_ptr] = {dm, count, false};
+        al_info[*cpu_ptr] = {dm, count, false};
     }
     void write() {
         cl_int err;
         for (auto& iter : al_info) {
-            err = clEnqueueWriteBuffer(queue, iter.second.dm, CL_TRUE, 0, iter.second.count, *(iter.first), 0, NULL, NULL);
+            err = clEnqueueWriteBuffer(queue, iter.second.dm, CL_TRUE, 0, iter.second.count, iter.first, 0, NULL, NULL);
             assert(err == CL_SUCCESS);
         }
     }
@@ -71,40 +71,40 @@ struct AMPAllocator
     void write(T *p) {
         cl_int err;
         void **ptr = (void**)(const_cast<T**>(&p));
-        mm_info mm = al_info[ptr];
+        mm_info mm = al_info[*ptr];
         err = clEnqueueWriteBuffer(queue, mm.dm, CL_TRUE, 0, mm.count, *ptr, 0, NULL, NULL);
         assert(err == CL_SUCCESS);
     }
     void read() {
         for (auto& iter : al_info)
-            clEnqueueReadBuffer(queue, iter.second.dm, CL_TRUE, 0, iter.second.count, *(iter.first), 0, NULL, NULL);
+            clEnqueueReadBuffer(queue, iter.second.dm, CL_TRUE, 0, iter.second.count, iter.first, 0, NULL, NULL);
     }
     template <typename T>
     void read(T *p) {
         void **ptr = (void**)(const_cast<T**>(&p));
-        mm_info mm = al_info[ptr];
+        mm_info mm = al_info[*ptr];
         clEnqueueReadBuffer(queue, mm.dm, CL_TRUE, 0, mm.count, *ptr, 0, NULL, NULL);
     }
     template <typename T>
     cl_mem getmem(T *p) {
         void **ptr = (void**)(const_cast<T**>(&p));
-        return al_info[ptr].dm;
+        return al_info[*ptr].dm;
     }
     void AMPFree() {
         for (auto& iter : al_info) {
             mm_info mm = iter.second;
             if (mm.toDel)
-                ::operator delete(*(iter.first));
+                ::operator delete(iter.first);
             clReleaseMemObject(mm.dm);
         }
         al_info.clear();
     }
     void AMPFree(void **cpu_ptr) {
-        mm_info mm = al_info[cpu_ptr];
+        mm_info mm = al_info[*cpu_ptr];
         if (mm.toDel)
             ::operator delete(*cpu_ptr);
         clReleaseMemObject(mm.dm);
-        al_info.erase(cpu_ptr);
+        al_info.erase(*cpu_ptr);
     }
     ~AMPAllocator() {
         read();
@@ -114,7 +114,7 @@ struct AMPAllocator
         clReleaseProgram(program);
         clReleaseCommandQueue(queue);
     }
-    std::map<void **, mm_info>  al_info;
+    std::map<void *, mm_info>  al_info;
     cl_context       context;
     cl_device_id     device;
     cl_kernel        kernel;
@@ -185,7 +185,11 @@ class _data_host: public std::shared_ptr<T> {
       cl_mem mm = getAllocator().getmem(std::shared_ptr<T>::get());
       s.Append(sizeof(cl_mem), &mm);
   }
+#ifdef __GPU__
   __attribute__((annotate("user_deserialize")))
   explicit _data_host(__global T* t);
+#else
+  explicit _data_host(T *ptr) : std::shared_ptr<T>(ptr) {}
+#endif
 };
 #endif // __CL_MANAGE__
