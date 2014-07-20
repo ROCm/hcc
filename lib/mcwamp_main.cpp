@@ -46,7 +46,7 @@ void cxxflags(void) {
 
 #if !defined(CXXAMP_ENABLE_HSA_OKRA) && !defined(CXXAMP_ENABLE_HSA)
     // OpenCL headers
-    std::cout << " -I" CMAKE_OPENCL_INC;
+    // std::cout << " -I" CMAKE_OPENCL_INC;
 #endif
 
     // clamp
@@ -98,10 +98,12 @@ void ldflags(void) {
     std::cout << " -lamdocl64";
     std::cout << " -Wl,--whole-archive -lhsacontext -Wl,--no-whole-archive ";
 #else
+    std::cout << " -lOpenCL";
 #endif
-    std::cout << "lOpenCL";
     std::cout << " -lc++ -lcxxrt -ldl -lpthread ";
     std::cout << "-Wl,--whole-archive -lmcwamp -Wl,--no-whole-archive ";
+#else // __APPLE__
+    std::cout << " -lOpenCL -lc++ -lmcwamp ";
 #endif
 }
 
