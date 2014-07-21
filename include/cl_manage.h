@@ -16,8 +16,7 @@ struct mm_info
 {
     cl_mem dm;
     size_t count;
-    bool toDel;
-    bool dirty;
+    void *host;
 };
 
 struct AMPAllocator
@@ -51,73 +50,59 @@ struct AMPAllocator
         *cpu_ptr = ::operator new(count);
         cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, NULL, &err);
         assert(err == CL_SUCCESS);
-        al_info[*cpu_ptr] = {dm, count, true, false};
+        al_info[*cpu_ptr] = {dm, count, nullptr};
     }
     void AMPMalloc(void **cpu_ptr, size_t count, void **data_ptr) {
         cl_int err;
-        *cpu_ptr = *data_ptr;
+        *cpu_ptr = ::operator new(count);
+        memcpy(*cpu_ptr, *data_ptr, count);
         cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
                                    count, *cpu_ptr, &err);
         assert(err == CL_SUCCESS);
-        al_info[*cpu_ptr] = {dm, count, false, false};
+        al_info[*cpu_ptr] = {dm, count, *data_ptr};
+    }
+    void refresh(void *p) {
+        mm_info mm = al_info[p];
+        if (mm.host == nullptr)
+            return;
+        memcpy(p, mm.host, mm.count);
+    }
+    void synchronize(void *p) {
+        mm_info mm = al_info[p];
+        if (mm.host == nullptr)
+            return;
+        memcpy(mm.host, p, mm.count);
     }
     void write() {
         cl_int err;
         for (auto& iter : al_info) {
             err = clEnqueueWriteBuffer(queue, iter.second.dm, CL_TRUE, 0, iter.second.count, iter.first, 0, NULL, NULL);
-            iter.second.dirty = true;
             assert(err == CL_SUCCESS);
         }
-    }
-    template <typename T>
-    void write(T *p) {
-        cl_int err;
-        void **ptr = (void**)(const_cast<T**>(&p));
-        mm_info mm = al_info[*ptr];
-        err = clEnqueueWriteBuffer(queue, mm.dm, CL_TRUE, 0, mm.count, *ptr, 0, NULL, NULL);
-        assert(err == CL_SUCCESS);
-        mm.dirty = true;
     }
     void read() {
         cl_int err;
         for (auto& iter : al_info) {
-            if (iter.second.dirty) {
-                err = clEnqueueReadBuffer(queue, iter.second.dm, CL_TRUE, 0, iter.second.count, iter.first, 0, NULL, NULL);
-                assert(err == CL_SUCCESS);
-                iter.second.dirty = false;
-            }
-        }
-    }
-    template <typename T>
-    void read(T *p) {
-        void **ptr = (void**)(const_cast<T**>(&p));
-        mm_info mm = al_info[*ptr];
-        if (mm.dirty) {
-            cl_int err= clEnqueueReadBuffer(queue, mm.dm, CL_TRUE, 0, mm.count, *ptr, 0, NULL, NULL);
+            err = clEnqueueReadBuffer(queue, iter.second.dm, CL_TRUE, 0, iter.second.count, iter.first, 0, NULL, NULL);
             assert(err == CL_SUCCESS);
-            mm.dirty = false;
         }
     }
-    template <typename T>
-    cl_mem getmem(T *p) {
-        void **ptr = (void**)(const_cast<T**>(&p));
-        return al_info[*ptr].dm;
+    cl_mem getmem(void *p) {
+        return al_info[p].dm;
     }
     void AMPFree() {
         for (auto& iter : al_info) {
             mm_info mm = iter.second;
-            if (mm.toDel)
-                ::operator delete(iter.first);
+            ::operator delete(iter.first);
             clReleaseMemObject(mm.dm);
         }
         al_info.clear();
     }
-    void AMPFree(void **cpu_ptr) {
-        mm_info mm = al_info[*cpu_ptr];
-        if (mm.toDel)
-            ::operator delete(*cpu_ptr);
+    void AMPFree(void *cpu_ptr) {
+        mm_info mm = al_info[cpu_ptr];
+        ::operator delete(cpu_ptr);
         clReleaseMemObject(mm.dm);
-        al_info.erase(*cpu_ptr);
+        al_info.erase(cpu_ptr);
     }
     ~AMPAllocator() {
         read();
@@ -155,7 +140,7 @@ struct CLAllocator
 template <class T>
 struct CLDeleter {
     void operator()(T* ptr) {
-        getAllocator().AMPFree((void**)(const_cast<T**>(&ptr)));
+        getAllocator().AMPFree(ptr);
     }
 };
 

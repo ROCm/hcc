@@ -1657,7 +1657,9 @@ public:
   typedef T value_type;
   array_view() = delete;
 
-  ~array_view() restrict(amp,cpu) {}
+  ~array_view() restrict(amp,cpu) {
+      synchronize();
+  }
 
   array_view(array<T, N>& src) restrict(amp,cpu)
       : extent(src.extent), cache(src.internal()), offset(0),
@@ -1861,7 +1863,7 @@ public:
   void synchronize() const;
   completion_future synchronize_async() const;
   void refresh() const;
-  void discard_data() const {}
+  void discard_data() const { getAllocator().refresh(cache.get()); }
   // only get data do not synchronize
   __global const T& get_data(int i0) const restrict(amp,cpu) {
     static_assert(N == 1, "Rank must be 1");
@@ -1917,7 +1919,9 @@ public:
 
   array_view() = delete;
 
-  ~array_view() restrict(amp,cpu) {}
+  ~array_view() restrict(amp,cpu) {
+      synchronize();
+  }
 
   array_view(const array<T,N>& src) restrict(amp,cpu)
       : extent(src.extent), cache(src.internal()), offset(0),
