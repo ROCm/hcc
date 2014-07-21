@@ -63,15 +63,13 @@ struct AMPAllocator
     }
     void refresh(void *p) {
         mm_info mm = al_info[p];
-        if (mm.host == nullptr)
-            return;
-        memcpy(p, mm.host, mm.count);
+        if (mm.host != nullptr)
+            memcpy(p, mm.host, mm.count);
     }
     void synchronize(void *p) {
         mm_info mm = al_info[p];
-        if (mm.host == nullptr)
-            return;
-        memcpy(mm.host, p, mm.count);
+        if (mm.host != nullptr)
+            memcpy(mm.host, p, mm.count);
     }
     void write() {
         cl_int err;
@@ -99,6 +97,7 @@ struct AMPAllocator
         al_info.clear();
     }
     void AMPFree(void *cpu_ptr) {
+        synchronize(cpu_ptr);
         mm_info mm = al_info[cpu_ptr];
         ::operator delete(cpu_ptr);
         clReleaseMemObject(mm.dm);

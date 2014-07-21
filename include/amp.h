@@ -1657,9 +1657,7 @@ public:
   typedef T value_type;
   array_view() = delete;
 
-  ~array_view() restrict(amp,cpu) {
-      synchronize();
-  }
+  ~array_view() restrict(amp,cpu) {}
 
   array_view(array<T, N>& src) restrict(amp,cpu)
       : extent(src.extent), cache(src.internal()), offset(0),
@@ -1919,9 +1917,7 @@ public:
 
   array_view() = delete;
 
-  ~array_view() restrict(amp,cpu) {
-      synchronize();
-  }
+  ~array_view() restrict(amp,cpu) {}
 
   array_view(const array<T,N>& src) restrict(amp,cpu)
       : extent(src.extent), cache(src.internal()), offset(0),
