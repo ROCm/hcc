@@ -1555,7 +1555,9 @@ public:
         if( (extent.size() * sizeof(T)) % sizeof(ElementType))
           throw runtime_exception("errorMsg_throw", 0);
 #endif
-        array_view<ElementType, 1> av(Concurrency::extent<1>(size), reinterpret_cast<ElementType*>(m_device.get()));
+        array_view<ElementType, 1> av(Concurrency::extent<1>(size),
+                                        _data_host<ElementType>(reinterpret_cast<ElementType*>(m_device.get()), ReinDeleter<ElementType>()),
+                                      0);
         return av;
     }
   template <typename ElementType>
@@ -1565,7 +1567,9 @@ public:
           static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
 #endif
         int size = extent.size() * sizeof(T) / sizeof(ElementType);
-        array_view<const ElementType, 1> av(Concurrency::extent<1>(size), reinterpret_cast<const ElementType*>(m_device.get()));
+        array_view<const ElementType, 1> av(Concurrency::extent<1>(size),
+                                            _data_host<const ElementType>(reinterpret_cast<const ElementType*>(m_device.get()), ReinDeleter<const ElementType>()),
+                                            0);
         return av;
     }
   template <int K> array_view<T, K>
@@ -1804,7 +1808,7 @@ public:
 #endif
 #ifndef __GPU__
           array_view<ElementType, 1> av(Concurrency::extent<1>(size),
-                                        _data_host<ElementType>(cache),
+                                        _data_host<ElementType>(reinterpret_cast<ElementType*>(cache.get()), ReinDeleter<ElementType>()),
                                         (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
 #else
           array_view<ElementType, 1> av(Concurrency::extent<1>(size),
@@ -1859,11 +1863,7 @@ public:
   void synchronize() const;
   completion_future synchronize_async() const;
   void refresh() const;
-  void discard_data() const {
-#ifndef __GPU__
-    cache.reset();
-#endif
-  }
+  void discard_data() const {}
   // only get data do not synchronize
   __global const T& get_data(int i0) const restrict(amp,cpu) {
     static_assert(N == 1, "Rank must be 1");
@@ -2042,7 +2042,7 @@ public:
       int size = extent.size() * sizeof(T) / sizeof(ElementType);
 #ifndef __GPU__
       array_view<const ElementType, 1> av(Concurrency::extent<1>(size),
-                                          _data_host<ElementType>(cache),
+                                          _data_host<ElementType>(reinterpret_cast<ElementType*>(cache.get()), ReinDeleter<ElementType>()),
                                           (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
 #else
       array_view<const ElementType, 1> av(Concurrency::extent<1>(size),

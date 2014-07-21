@@ -159,6 +159,11 @@ struct CLDeleter {
     }
 };
 
+template <class T>
+struct ReinDeleter {
+    void operator()(T* ptr) {}
+};
+
 // Dummy interface that looks somewhat like std::shared_ptr<T>
 template <typename T>
 class _data {
