@@ -195,7 +195,7 @@ class _data_host: public std::shared_ptr<T> {
  public:
   _data_host(const _data_host &other):std::shared_ptr<T>(other) {}
   template <class = typename std::enable_if<!std::is_const<T>::value>::type>
-  _data_host(const _data_host<const T> &other):std::shared_ptr<T>(other) {}
+  _data_host(const _data_host<const T> &other):std::shared_ptr<T>(const_cast<T *>(other.get()), ReinDeleter<T>()) {}
   _data_host(std::nullptr_t x = nullptr):std::shared_ptr<T>(nullptr) {}
   template<class Deleter> _data_host(T* ptr, Deleter d) : std::shared_ptr<T>(ptr, d) {}
 

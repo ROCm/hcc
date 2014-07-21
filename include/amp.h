@@ -1545,21 +1545,23 @@ public:
   }
 
   template <typename ElementType>
-    array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu) {
+      array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu) {
+          int size = extent.size() * sizeof(T) / sizeof(ElementType);
 #ifndef __GPU__
           static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
           static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
-#endif
-        int size = extent.size() * sizeof(T) / sizeof(ElementType);
-#ifndef __GPU__
-        if( (extent.size() * sizeof(T)) % sizeof(ElementType))
-          throw runtime_exception("errorMsg_throw", 0);
-#endif
-        array_view<ElementType, 1> av(Concurrency::extent<1>(size),
+          if( (extent.size() * sizeof(T)) % sizeof(ElementType))
+              throw runtime_exception("errorMsg_throw", 0);
+          array_view<ElementType, 1> av(Concurrency::extent<1>(size),
                                         _data_host<ElementType>(reinterpret_cast<ElementType*>(m_device.get()), ReinDeleter<ElementType>()),
-                                      0);
-        return av;
-    }
+                                        0);
+#else
+          array_view<ElementType, 1> av(Concurrency::extent<1>(size),
+                                        _data<ElementType>(m_device),
+                                        0);
+#endif
+          return av;
+      }
   template <typename ElementType>
     array_view<const ElementType, 1> reinterpret_as() const restrict(amp,cpu) {
 #ifndef __GPU__
@@ -1655,11 +1657,7 @@ public:
   typedef T value_type;
   array_view() = delete;
 
-  ~array_view() restrict(amp,cpu) {
-#ifndef __GPU__
-      synchronize();
-#endif
-  }
+  ~array_view() restrict(amp,cpu) {}
 
   array_view(array<T, N>& src) restrict(amp,cpu)
       : extent(src.extent), cache(src.internal()), offset(0),
@@ -1914,17 +1912,12 @@ public:
 #ifdef __GPU__
   typedef _data<T> cl_buffer_t;
 #else
-  typedef _data_host<T> cl_buffer_t;
+  typedef _data_host<nc_T> cl_buffer_t;
 #endif
 
   array_view() = delete;
 
-  ~array_view() restrict(amp,cpu) {
-#ifndef __GPU__
-    synchronize();
-    cache.reset();
-#endif
-  }
+  ~array_view() restrict(amp,cpu) {}
 
   array_view(const array<T,N>& src) restrict(amp,cpu)
       : extent(src.extent), cache(src.internal()), offset(0),
