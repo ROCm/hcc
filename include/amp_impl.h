@@ -96,7 +96,7 @@ inline accelerator::accelerator(const std::wstring& path) :
     // assert(err == CL_SUCCESS);
     // if (singleFPConfig & CL_FP_FMA & CL_FP_DENORM & CL_FP_INF_NAN &
     //     CL_FP_ROUND_TO_NEAREST & CL_FP_ROUND_TO_ZERO)
-         supports_limited_double_precision = true;
+    //      supports_limited_double_precision = true;
 #endif
 }
 
