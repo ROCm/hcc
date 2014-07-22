@@ -76,6 +76,7 @@ struct AMPAllocator
         }
     }
     void discard(void *p) {
+        al_info[p].dirty = false;
         al_info[p].discard = true;
     }
     void *getData(void *p) {
