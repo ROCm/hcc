@@ -429,6 +429,7 @@ private:
    HSAContextKaveriImpl() {
      hsa_status_t status;
 
+
      // initialize HSA runtime
      status = hsa_init();
      STATUS_CHECK(status, __LINE__);
@@ -444,9 +445,11 @@ private:
      status = hsa_agent_get_info(device, HSA_AGENT_INFO_QUEUE_MAX_SIZE, &queue_size);
      STATUS_CHECK(status, __LINE__);
 
+     commandQueue = NULL;
      status = hsa_queue_create(device, queue_size, HSA_QUEUE_TYPE_MULTI, NULL, NULL, &commandQueue);
      STATUS_CHECK_Q(status, __LINE__);
 
+     hsaProgram.handle = 0;
      kernelImpl = NULL;
    }
 
@@ -511,11 +514,16 @@ public:
          kernelImpl->dispose();
       }
 
-	    status = hsa_ext_program_destroy(hsaProgram);
-      STATUS_CHECK(status, __LINE__);
+      if (hsaProgram.handle != 0) {
+	      status = hsa_ext_program_destroy(hsaProgram);
+        STATUS_CHECK(status, __LINE__);
+      }
 
       status = hsa_queue_destroy(commandQueue);
       STATUS_CHECK(status, __LINE__);
+
+      status = hsa_shut_down();
+
 
       return HSA_STATUS_SUCCESS;
    }
