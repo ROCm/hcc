@@ -89,6 +89,7 @@ inline accelerator::accelerator(const std::wstring& path) :
         }
     }
 
+    // Will get segmentation fault on my laptop
     // err = clGetDeviceInfo(device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_ulong), &memAllocSize, NULL);
     // assert(err == CL_SUCCESS);
     // dedicated_memory = memAllocSize / (size_t) 1024;
