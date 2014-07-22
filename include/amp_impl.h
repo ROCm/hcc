@@ -585,7 +585,7 @@ array<T, N>::array(const array_view<const T, N>& src, accelerator_view av,
 template <typename T, int N>
 void array_view<T, N>::synchronize() const {
     if(cache.get())
-        getAllocator().synchronize(cache.get());
+        getAllocator().synchronize(cache.get_device());
 }
 
 template <typename T, int N>
@@ -613,7 +613,7 @@ void array_view<T, N>::refresh() const {
     assert(cache.get());
     assert(extent == extent_base && "Only support non-sectioned view");
     assert(offset == 0 && "Only support non-sectioned view");
-    getAllocator().refresh(cache.get());
+    getAllocator().refresh(cache.get_device());
 }
 
 #else // GPU implementations
@@ -632,7 +632,7 @@ array_view<T,N>::array_view(const Concurrency::extent<N>& ext,
 template <typename T, int N>
 void array_view<const T, N>::synchronize() const {
   if(cache.get())
-      getAllocator().synchronize(cache.get());
+      getAllocator().synchronize(cache.get_device());
 }
 
 template <typename T, int N>
@@ -654,7 +654,7 @@ void array_view<const T, N>::refresh() const {
     assert(cache.get());
     assert(extent == extent_base && "Only support non-sectioned view");
     assert(offset == 0 && "Only support non-sectioned view");
-    getAllocator().refresh(cache.get());
+    getAllocator().refresh(cache.get_device());
 }
 
 #else // GPU implementations

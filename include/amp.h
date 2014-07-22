@@ -1815,7 +1815,7 @@ public:
 #endif
 #ifndef __GPU__
           array_view<ElementType, 1> av(Concurrency::extent<1>(size),
-                                        _data_host<ElementType>(reinterpret_cast<ElementType*>(cache.get()), ReinDeleter<ElementType>()),
+                                        _data_host<ElementType>(reinterpret_cast<ElementType*>(cache.get_device()), ReinDeleter<ElementType>()),
                                         (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
 #else
           array_view<ElementType, 1> av(Concurrency::extent<1>(size),
@@ -1870,15 +1870,26 @@ public:
   void synchronize() const;
   completion_future synchronize_async() const;
   void refresh() const;
-  void discard_data() const { getAllocator().refresh(cache.get()); }
+  void discard_data() const {
+#ifndef __GPU__
+      getAllocator().discard(cache.get_device());
+#endif
+  }
   // only get data do not synchronize
   __global const T& get_data(int i0) const restrict(amp,cpu) {
     static_assert(N == 1, "Rank must be 1");
     index<1> idx(i0);
+#ifdef __GPU__
     __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
+#else
+    __global T *ptr = reinterpret_cast<__global T*>(cache.get_device() + offset);
+#endif
     return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
   }
   T* data() const restrict(amp,cpu) {
+#ifndef __GPU__
+      synchronize();
+#endif
     static_assert(N == 1, "data() is only permissible on array views of rank 1");
     return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
   }
@@ -2050,7 +2061,7 @@ public:
       int size = extent.size() * sizeof(T) / sizeof(ElementType);
 #ifndef __GPU__
       array_view<const ElementType, 1> av(Concurrency::extent<1>(size),
-                                          _data_host<ElementType>(reinterpret_cast<ElementType*>(cache.get()), ReinDeleter<ElementType>()),
+                                          _data_host<ElementType>(reinterpret_cast<ElementType*>(cache.get_device()), ReinDeleter<ElementType>()),
                                           (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
 #else
       array_view<const ElementType, 1> av(Concurrency::extent<1>(size),
@@ -2109,7 +2120,11 @@ public:
   __global const T& get_data(int i0) const restrict(amp,cpu) {
     static_assert(N == 1, "Rank must be 1");
     index<1> idx(i0);
+#ifdef __GPU__
     __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
+#else
+    __global T *ptr = reinterpret_cast<__global T*>(cache.get_device() + offset);
+#endif
     return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
   }
   const T* data() const restrict(amp,cpu) {
