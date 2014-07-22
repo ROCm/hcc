@@ -78,13 +78,6 @@ struct AMPAllocator
     void discard(void *p) {
         al_info[p].discard = true;
     }
-    void *getDirty(void *p) {
-        mm_info mm = al_info[p];
-        if (!mm.dirty)
-            al_info[p].host;
-        else
-            return p;
-    }
     void *getHost(void *p) {
         return al_info[p].host;
     }
@@ -212,9 +205,6 @@ class _data_host: public std::shared_ptr<T> {
   _data_host(const _data_host<const T> &other):std::shared_ptr<T>(const_cast<T *>(other.get_device()), ReinDeleter<T>()) {}
   _data_host(std::nullptr_t x = nullptr):std::shared_ptr<T>(nullptr) {}
   template<class Deleter> _data_host(T* ptr, Deleter d) : std::shared_ptr<T>(ptr, d) {}
-  T *get_dirty() const {
-      return (T *)getAllocator().getDirty(std::shared_ptr<T>::get());
-  }
   T *get_device() const {
       return std::shared_ptr<T>::get();
   }
