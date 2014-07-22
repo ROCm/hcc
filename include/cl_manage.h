@@ -75,10 +75,14 @@ struct AMPAllocator
             mm.dirty = false;
         }
     }
+    // discard means
+    // 1. discard current host data -> undirty
+    // 2. don't write to OpenCL
     void discard(void *p) {
         al_info[p].dirty = false;
         al_info[p].discard = true;
     }
+    // can be optimizated in future
     void *getData(void *p) {
         if (al_info[p].dirty)
             return p;
@@ -215,15 +219,9 @@ class _data_host: public std::shared_ptr<T> {
   _data_host(const _data_host<const T> &other):std::shared_ptr<T>(const_cast<T *>(other.get_device()), ReinDeleter<T>()) {}
   _data_host(std::nullptr_t x = nullptr):std::shared_ptr<T>(nullptr) {}
   template<class Deleter> _data_host(T* ptr, Deleter d) : std::shared_ptr<T>(ptr, d) {}
-  T *get_data() const {
-      return (T *)getAllocator().getData(std::shared_ptr<T>::get());
-  }
-  T *get_device() const {
-      return std::shared_ptr<T>::get();
-  }
-  T *get() const {
-      return (T *)getAllocator().getHost(std::shared_ptr<T>::get());
-  }
+  T *get_data() const { return (T *)getAllocator().getData(std::shared_ptr<T>::get()); }
+  T *get_device() const { return std::shared_ptr<T>::get(); }
+  T *get() const { return (T *)getAllocator().getHost(std::shared_ptr<T>::get()); }
 
   __attribute__((annotate("serialize")))
   void __cxxamp_serialize(Serialize& s) const {
