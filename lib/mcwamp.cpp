@@ -42,6 +42,61 @@ extern "C" char * kernel_size_[] asm ("_binary_kernel_cl_size") __attribute__((w
 std::vector<std::string> __mcw_kernel_names;
 namespace Concurrency {
 namespace CLAMP {
+    static inline void getKernelNames(cl_program& prog) {
+        std::vector<std::string> n;
+        cl_uint kernel_num = 0;
+        cl_uint ret = CL_SUCCESS;
+        char **names;
+        int count;
+        ret = clCreateKernelsInProgram(prog, 1024, NULL, &kernel_num);
+        if (ret == CL_SUCCESS && kernel_num > 0) {
+            cl_kernel *kl = new cl_kernel[kernel_num];
+            ret = clCreateKernelsInProgram(prog, kernel_num + 1, kl, &kernel_num);
+            if (ret == CL_SUCCESS) {
+                std::map<std::string, std::string> aMap;
+                for (unsigned i = 0; i < unsigned(kernel_num); ++i) {
+                    char s[1024] = { 0x0 };
+                    size_t size;
+                    ret = clGetKernelInfo(kl[i], CL_KERNEL_FUNCTION_NAME, 1024, s, &size);
+                    n.push_back(std::string (s));
+                    clReleaseKernel(kl[i]);
+                }
+            }
+            delete [] kl;
+        }
+        if (n.size()) {
+            std::sort(n.begin(), n.end());
+            n.erase(std::unique(n.begin(), n.end()), n.end());
+        }
+        if (n.size()) {
+            names = new char *[n.size()];
+            int i = 0;
+            std::vector<std::string>::iterator it;
+            for (it = n.begin(); it != n.end(); ++it, ++i) {
+                size_t len = (*it).length();
+                char *name = new char[len + 1];
+                memcpy(name, (*it).c_str(), len);
+                name[len] = '\0';
+                names[i] = name;
+            }
+            count = unsigned(n.size());
+        }
+        if (count) {
+            int i = 0;
+            while (names && i < count) {
+                __mcw_kernel_names.push_back(std::string(names[i]));
+                delete [] names[i];
+                ++i;
+            }
+            delete [] names;
+            if (__mcw_kernel_names.size()) {
+                std::sort(std::begin(__mcw_kernel_names), std::end(__mcw_kernel_names));
+                __mcw_kernel_names.erase (std::unique (__mcw_kernel_names.begin (),
+                                                       __mcw_kernel_names.end ()),
+                                          __mcw_kernel_names.end ());
+            }
+        }
+    }
 // Levenshtein Distance to measure the difference of two sequences
 // The shortest distance it returns the more likely the two sequences are equal
 static inline int ldistance(const std::string source, const std::string target)
@@ -148,6 +203,7 @@ namespace Concurrency { namespace CLAMP {
             }
             __mcw_cxxamp_compiled = true;
             free(kernel_source);
+            getKernelNames(program);
 #endif
         }
 
