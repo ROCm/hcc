@@ -16,9 +16,8 @@ struct mm_info
 {
     cl_mem dm;
     size_t count;
-    void *device;
+    void *host;
     bool dirty;
-    bool discard;
 };
 
 struct AMPAllocator
@@ -56,44 +55,41 @@ struct AMPAllocator
     }
     void AMPMalloc(void **cpu_ptr, size_t count, void **data_ptr) {
         cl_int err;
-        void *device = ::operator new(count);
-        memcpy(device, *data_ptr, count);
-        *cpu_ptr = *data_ptr;
-        cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, NULL, &err);
+        *cpu_ptr = ::operator new(count);
+        memcpy(*cpu_ptr, *data_ptr, count);
+        cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
+                                   count, *cpu_ptr, &err);
         assert(err == CL_SUCCESS);
-        al_info[*cpu_ptr] = {dm, count, device};
+        al_info[*cpu_ptr] = {dm, count, *data_ptr};
     }
     void refresh(void *p) {
         mm_info mm = al_info[p];
-        if (mm.device != nullptr)
-            memcpy(mm.device, p, mm.count);
+        if (mm.host != nullptr)
+            memcpy(p, mm.host, mm.count);
     }
     void synchronize(void *p) {
-        mm_info& mm = al_info[p];
-        if (mm.device != nullptr && mm.dirty) {
-            mm.dirty = false;
-            memcpy(p, mm.device, mm.count);
-        }
+        mm_info mm = al_info[p];
+        if (mm.host != nullptr)
+            memcpy(mm.host, p, mm.count);
     }
-    void discard(void *p) {
-        al_info[p].dirty = false;
+    void *getHost(void *p) {
+        void *host = al_info[p].host;
+        if (host != nullptr)
+            return host;
+        else
+            return p;
     }
     void write() {
         cl_int err;
         for (auto& iter : al_info) {
-            mm_info& mm = iter.second;
-            void *dst = mm.device != nullptr ? mm.device : iter.first;
-            err = clEnqueueWriteBuffer(queue, mm.dm, CL_TRUE, 0, mm.count, dst, 0, NULL, NULL);
+            err = clEnqueueWriteBuffer(queue, iter.second.dm, CL_TRUE, 0, iter.second.count, iter.first, 0, NULL, NULL);
             assert(err == CL_SUCCESS);
         }
     }
     void read() {
         cl_int err;
         for (auto& iter : al_info) {
-            mm_info& mm = iter.second;
-            void *dst = mm.device != nullptr ? mm.device : iter.first;
-            err = clEnqueueReadBuffer(queue, mm.dm, CL_TRUE, 0, mm.count, dst, 0, NULL, NULL);
-            mm.dirty = true;
+            err = clEnqueueReadBuffer(queue, iter.second.dm, CL_TRUE, 0, iter.second.count, iter.first, 0, NULL, NULL);
             assert(err == CL_SUCCESS);
         }
     }
@@ -102,12 +98,8 @@ struct AMPAllocator
     }
     void AMPFree() {
         for (auto& iter : al_info) {
-            synchronize(iter.first);
             mm_info mm = iter.second;
-            if (mm.device != nullptr)
-                ::operator delete(mm.device);
-            else
-                ::operator delete(iter.first);
+            ::operator delete(iter.first);
             clReleaseMemObject(mm.dm);
         }
         al_info.clear();
@@ -115,10 +107,7 @@ struct AMPAllocator
     void AMPFree(void *cpu_ptr) {
         synchronize(cpu_ptr);
         mm_info mm = al_info[cpu_ptr];
-        if (mm.device)
-            ::operator delete(mm.device);
-        else
-            ::operator delete(cpu_ptr);
+        ::operator delete(cpu_ptr);
         clReleaseMemObject(mm.dm);
         al_info.erase(cpu_ptr);
     }
@@ -201,11 +190,6 @@ class _data_host: public std::shared_ptr<T> {
   _data_host(const _data_host<const T> &other):std::shared_ptr<T>(const_cast<T *>(other.get()), ReinDeleter<T>()) {}
   _data_host(std::nullptr_t x = nullptr):std::shared_ptr<T>(nullptr) {}
   template<class Deleter> _data_host(T* ptr, Deleter d) : std::shared_ptr<T>(ptr, d) {}
-  T *get() const {
-      T *ptr = this->std::shared_ptr<T>::get();
-      getAllocator().synchronize(ptr);
-      return ptr;
-  }
 
   __attribute__((annotate("serialize")))
   void __cxxamp_serialize(Serialize& s) const {
