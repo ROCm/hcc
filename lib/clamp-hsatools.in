@@ -10,4 +10,4 @@ $LLVM_BIN/opt -O3 -gpu -whole -verify $1.linked.bc -o $1.opt.bc
 $LLVM_BIN/llc -O2 -march=hsail-64 -o $1.brig $1.opt.bc
 $HSAIL_ASM -disassemble -o $1.hsail.orig $1.brig
 # A hack to workaround HSA runtime kernel argument layout mismatch
-sed s/"^\tkernarg_u32"/"align 8 kernarg_u32"/g $1.hsail.orig > $1.hsail
+sed s/"^\tkernarg_u32"/"align (8) kernarg_u32"/g $1.hsail.orig > $1.hsail
