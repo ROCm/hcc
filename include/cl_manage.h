@@ -78,6 +78,11 @@ struct AMPAllocator
     void discard(void *p) {
         al_info[p].discard = true;
     }
+    void *getData(void *p) {
+        if (al_info[p].dirty)
+            return p;
+        return al_info[p].host;
+    }
     void *getHost(void *p) {
         return al_info[p].host;
     }
@@ -85,11 +90,14 @@ struct AMPAllocator
         cl_int err;
         for (auto& iter : al_info) {
             mm_info& mm = iter.second;
-            if (mm.write && !mm.discard) {
-                void *dst = mm.dirty ? iter.first : mm.host;
-                err = clEnqueueWriteBuffer(queue, mm.dm, CL_TRUE, 0,
-                                           mm.count, dst, 0, NULL, NULL);
-                assert(err == CL_SUCCESS);
+            if (mm.write) {
+                if (!mm.discard) {
+                    void *dst = mm.dirty ? iter.first : mm.host;
+                    err = clEnqueueWriteBuffer(queue, mm.dm, CL_TRUE, 0,
+                                               mm.count, dst, 0, NULL, NULL);
+                    assert(err == CL_SUCCESS);
+                    mm.discard = false;
+                }
                 mm.dirty = true;
             }
         }
@@ -97,11 +105,11 @@ struct AMPAllocator
     void read() {
         cl_int err;
         for (auto& iter : al_info) {
-            if (iter.second.write) {
-                mm_info mm = iter.second;
+            mm_info& mm = iter.second;
+            if (mm.write) {
                 err = clEnqueueReadBuffer(queue, mm.dm, CL_TRUE, 0,
                                           mm.count, iter.first, 0, NULL, NULL);
-                iter.second.write = false;
+                mm.write = false;
                 assert(err == CL_SUCCESS);
             }
         }
@@ -120,8 +128,9 @@ struct AMPAllocator
         al_info.clear();
     }
     void AMPFree(void *cpu_ptr) {
-        synchronize(cpu_ptr);
         mm_info mm = al_info[cpu_ptr];
+        if (!mm.discard)
+            synchronize(cpu_ptr);
         if (cpu_ptr != mm.host)
             ::operator delete(cpu_ptr);
         clReleaseMemObject(mm.dm);
@@ -205,6 +214,9 @@ class _data_host: public std::shared_ptr<T> {
   _data_host(const _data_host<const T> &other):std::shared_ptr<T>(const_cast<T *>(other.get_device()), ReinDeleter<T>()) {}
   _data_host(std::nullptr_t x = nullptr):std::shared_ptr<T>(nullptr) {}
   template<class Deleter> _data_host(T* ptr, Deleter d) : std::shared_ptr<T>(ptr, d) {}
+  T *get_data() const {
+      return (T *)getAllocator().getData(std::shared_ptr<T>::get());
+  }
   T *get_device() const {
       return std::shared_ptr<T>::get();
   }
