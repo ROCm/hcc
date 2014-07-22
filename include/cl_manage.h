@@ -51,16 +51,15 @@ struct AMPAllocator
         *cpu_ptr = ::operator new(count);
         cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, NULL, &err);
         assert(err == CL_SUCCESS);
-        al_info[*cpu_ptr] = {dm, count, nullptr};
+        al_info[*cpu_ptr] = {dm, count, nullptr, false};
     }
     void AMPMalloc(void **cpu_ptr, size_t count, void **data_ptr) {
         cl_int err;
         *cpu_ptr = ::operator new(count);
         memcpy(*cpu_ptr, *data_ptr, count);
-        cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
-                                   count, *cpu_ptr, &err);
+        cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, NULL, &err);
         assert(err == CL_SUCCESS);
-        al_info[*cpu_ptr] = {dm, count, *data_ptr};
+        al_info[*cpu_ptr] = {dm, count, *data_ptr, false};
     }
     void refresh(void *p) {
         mm_info mm = al_info[p];
@@ -68,9 +67,14 @@ struct AMPAllocator
             memcpy(p, mm.host, mm.count);
     }
     void synchronize(void *p) {
-        mm_info mm = al_info[p];
-        if (mm.host != nullptr)
+        mm_info& mm = al_info[p];
+        if (mm.host != nullptr && mm.dirty) {
             memcpy(mm.host, p, mm.count);
+            for (auto iter : al_info)
+                if (iter.second.host == mm.host)
+                    memcpy(iter.first, mm.host, mm.count);
+            mm.dirty = false;
+        }
     }
     void *getHost(void *p) {
         void *host = al_info[p].host;
@@ -82,18 +86,25 @@ struct AMPAllocator
     void write() {
         cl_int err;
         for (auto& iter : al_info) {
-            err = clEnqueueWriteBuffer(queue, iter.second.dm, CL_TRUE, 0, iter.second.count, iter.first, 0, NULL, NULL);
-            assert(err == CL_SUCCESS);
+            if (iter.second.dirty) {
+                err = clEnqueueWriteBuffer(queue, iter.second.dm, CL_TRUE, 0,
+                                           iter.second.count, iter.first, 0, NULL, NULL);
+                assert(err == CL_SUCCESS);
+            }
         }
     }
     void read() {
         cl_int err;
         for (auto& iter : al_info) {
-            err = clEnqueueReadBuffer(queue, iter.second.dm, CL_TRUE, 0, iter.second.count, iter.first, 0, NULL, NULL);
-            assert(err == CL_SUCCESS);
+            if (iter.second.dirty) {
+                err = clEnqueueReadBuffer(queue, iter.second.dm, CL_TRUE, 0,
+                                          iter.second.count, iter.first, 0, NULL, NULL);
+                assert(err == CL_SUCCESS);
+            }
         }
     }
     cl_mem getmem(void *p) {
+        al_info[p].dirty = true;
         return al_info[p].dm;
     }
     void AMPFree() {
