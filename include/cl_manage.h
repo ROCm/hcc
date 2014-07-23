@@ -62,7 +62,7 @@ struct AMPAllocator
         cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, NULL, &err);
         assert(err == CL_SUCCESS);
         if (isConst) {
-            *cpu_ptr = ::operator new(1);
+            *cpu_ptr = ::operator new(sizeof(int));
         } else {
             *cpu_ptr = ::operator new(count);
             memcpy(*cpu_ptr, *data_ptr, count);
