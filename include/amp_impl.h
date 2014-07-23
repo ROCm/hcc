@@ -79,7 +79,6 @@ inline accelerator::accelerator(const std::wstring& path) :
             if (err != CL_SUCCESS)
                 continue;
             supports_cpu_shared_memory = false;
-            default_view->queuing_mode = queuing_mode_immediate;
             default_view->is_auto_selection = true;
             break;
         } else if (device_path == std::wstring(cpu_accelerator)) {
@@ -87,7 +86,6 @@ inline accelerator::accelerator(const std::wstring& path) :
             if (err != CL_SUCCESS)
                 continue;
             supports_cpu_shared_memory = true;
-            default_view->queuing_mode = queuing_mode_immediate;
             default_view->is_auto_selection = false;
             break;
         }
