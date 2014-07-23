@@ -59,7 +59,6 @@ inline accelerator::accelerator(const std::wstring& path) :
 					( (_cpu_accelerator != nullptr) ?
 						new accelerator_view(_cpu_accelerator.get()) : new accelerator_view(this)) )
     {
-
 #ifndef CXXAMP_ENABLE_HSA_OKRA
     cl_int err;
     cl_uint platformCount;
@@ -73,31 +72,37 @@ inline accelerator::accelerator(const std::wstring& path) :
     platforms.reset(new cl_platform_id[platformCount]);
     clGetPlatformIDs(platformCount, platforms.get(), NULL);
     assert(err == CL_SUCCESS);
-    for (int i = 0; i < platformCount; i++) {
+    int i;
+    for (i = 0; i < platformCount; i++) {
         if (device_path == std::wstring(gpu_accelerator)) {
-            clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_GPU, 1, &device, NULL);
-            assert(err == CL_SUCCESS);
+            err = clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_GPU, 1, &device, NULL);
+            if (err != CL_SUCCESS)
+                continue;
             supports_cpu_shared_memory = false;
             default_view->queuing_mode = queuing_mode_immediate;
             default_view->is_auto_selection = true;
+            break;
         } else if (device_path == std::wstring(cpu_accelerator)) {
-            clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_CPU, 1, &device, NULL);
-            assert(err == CL_SUCCESS);
+            err = clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_CPU, 1, &device, NULL);
+            if (err != CL_SUCCESS)
+                continue;
             supports_cpu_shared_memory = true;
             default_view->queuing_mode = queuing_mode_immediate;
             default_view->is_auto_selection = false;
+            break;
         }
     }
+    if (i == platformCount)
+        return;
 
-    // Will get segmentation fault on my laptop
-    // err = clGetDeviceInfo(device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_ulong), &memAllocSize, NULL);
-    // assert(err == CL_SUCCESS);
-    // dedicated_memory = memAllocSize / (size_t) 1024;
-    // err = clGetDeviceInfo(device, CL_DEVICE_SINGLE_FP_CONFIG, sizeof(cl_device_fp_config), &singleFPConfig, NULL);
-    // assert(err == CL_SUCCESS);
-    // if (singleFPConfig & CL_FP_FMA & CL_FP_DENORM & CL_FP_INF_NAN &
-    //     CL_FP_ROUND_TO_NEAREST & CL_FP_ROUND_TO_ZERO)
-    //      supports_limited_double_precision = true;
+    err = clGetDeviceInfo(device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_ulong), &memAllocSize, NULL);
+    assert(err == CL_SUCCESS);
+    dedicated_memory = memAllocSize / (size_t) 1024;
+    err = clGetDeviceInfo(device, CL_DEVICE_SINGLE_FP_CONFIG, sizeof(cl_device_fp_config), &singleFPConfig, NULL);
+    assert(err == CL_SUCCESS);
+    if (singleFPConfig & CL_FP_FMA & CL_FP_DENORM & CL_FP_INF_NAN &
+        CL_FP_ROUND_TO_NEAREST & CL_FP_ROUND_TO_ZERO)
+         supports_limited_double_precision = true;
 #endif
 }
 
