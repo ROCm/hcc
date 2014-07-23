@@ -314,6 +314,9 @@ void *CreateHSAKernel(std::string s)
   kernel->pushLongArg(0);
   kernel->pushLongArg(0);
   kernel->pushLongArg(0);
+  //kernel->pushLongArg(0);
+  //kernel->pushLongArg(0);
+  //kernel->pushLongArg(0);
   return kernel;
 }
 

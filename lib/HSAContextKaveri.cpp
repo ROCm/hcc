@@ -334,8 +334,10 @@ private:
          hsa_signal_store_relaxed(commandQueue->doorbell_signal, index+1);
 
          // wait for completion
-         signal = hsa_signal_wait_acquire(signal, HSA_LT, 1, -1, HSA_WAIT_EXPECTANCY_UNKNOWN);
-         STATUS_CHECK_Q(status, __LINE__);
+         if (hsa_signal_wait_acquire(signal, HSA_LT, 1, uint64_t(-1), HSA_WAIT_EXPECTANCY_UNKNOWN)!=0) {
+           printf("Signal wait returned unexpected value\n");
+           exit(0);
+         }
 
          hsa_signal_store_relaxed(signal, 1);
 
