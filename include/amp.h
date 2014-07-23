@@ -1631,6 +1631,7 @@ private:
 #ifndef __GPU__
   void initialize() {
       m_device.reset(CLAllocator<T>().allocate(extent.size()), CLDeleter<T>());
+      getAllocator().setarr(m_device.get_device());
       m_array_helper.setArray(this);
   }
   template <typename InputIter>

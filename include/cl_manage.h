@@ -20,6 +20,7 @@ struct mm_info
     bool dirty;
     bool discard;
     bool write;
+    bool isArr;
 };
 
 struct AMPAllocator
@@ -53,7 +54,7 @@ struct AMPAllocator
         *cpu_ptr = ::operator new(count);
         cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, NULL, &err);
         assert(err == CL_SUCCESS);
-        al_info[*cpu_ptr] = {dm, count, *cpu_ptr, false, false, false};
+        al_info[*cpu_ptr] = {dm, count, *cpu_ptr, false, false, false, false};
     }
     void AMPMalloc(void **cpu_ptr, size_t count, void **data_ptr) {
         cl_int err;
@@ -61,7 +62,10 @@ struct AMPAllocator
         memcpy(*cpu_ptr, *data_ptr, count);
         cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, NULL, &err);
         assert(err == CL_SUCCESS);
-        al_info[*cpu_ptr] = {dm, count, *data_ptr, false, false, false};
+        al_info[*cpu_ptr] = {dm, count, *data_ptr, false, false, false, false};
+    }
+    void setarr(void *p) {
+        al_info[p].isArr = true;
     }
     void refresh(void *p) {
         mm_info mm = al_info[p];
@@ -80,7 +84,8 @@ struct AMPAllocator
     // 2. don't write to OpenCL
     void discard(void *p) {
         al_info[p].dirty = false;
-        al_info[p].discard = true;
+        // We cannot discard it if the underlying data comes from array
+        al_info[p].discard = !al_info[p].isArr;
     }
     // can be optimizated in future
     void *getData(void *p) {
