@@ -1631,7 +1631,7 @@ private:
 #ifndef __GPU__
   void initialize() {
       m_device.reset(CLAllocator<T>().allocate(extent.size()), CLDeleter<T>());
-      getAllocator().setarr(m_device.get_device());
+      getAllocator().setArray(m_device.get_device());
       m_array_helper.setArray(this);
   }
   template <typename InputIter>
@@ -2013,18 +2013,12 @@ public:
   accelerator_view get_source_accelerator_view() const;
 
   __global const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
-#ifndef __GPU__
-      synchronize();
-#endif
     __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
     return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
   }
 
   typename projection_helper<const T, N>::const_result_type
       operator[] (int i) const restrict(amp,cpu) {
-#ifndef __GPU__
-      synchronize();
-#endif
     return projection_helper<const T, N>::project(*this, i);
   }
 
@@ -2121,11 +2115,7 @@ public:
   __global const T& get_data(int i0) const restrict(amp,cpu) {
     static_assert(N == 1, "Rank must be 1");
     index<1> idx(i0);
-#ifdef __GPU__
     __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
-#else
-    __global T *ptr = reinterpret_cast<__global T*>(cache.get_data() + offset);
-#endif
     return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
   }
   const T* data() const restrict(amp,cpu) {

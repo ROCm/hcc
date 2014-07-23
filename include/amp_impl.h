@@ -650,7 +650,7 @@ template <typename T, int N>
 array_view<const T, N>::array_view(const Concurrency::extent<N>& ext,
                              value_type* src) restrict(amp,cpu)
     : extent(ext),
-      cache(CLAllocator<nc_T>().allocate(ext.size(), const_cast<nc_T*>(src)), CLDeleter<T>()),
+      cache(CLAllocator<nc_T>().allocate(ext.size(), const_cast<nc_T*>(src), true), CLDeleter<T>()),
       offset(0), extent_base(ext) {}
 
 template <typename T, int N>

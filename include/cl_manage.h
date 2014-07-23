@@ -20,7 +20,8 @@ struct mm_info
     bool dirty;
     bool discard;
     bool write;
-    bool isArr;
+    bool isArray;
+    bool isConst;
 };
 
 struct AMPAllocator
@@ -54,18 +55,22 @@ struct AMPAllocator
         *cpu_ptr = ::operator new(count);
         cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, NULL, &err);
         assert(err == CL_SUCCESS);
-        al_info[*cpu_ptr] = {dm, count, *cpu_ptr, false, false, false, false};
+        al_info[*cpu_ptr] = {dm, count, *cpu_ptr, false, false, false, false, false};
     }
-    void AMPMalloc(void **cpu_ptr, size_t count, void **data_ptr) {
+    void AMPMalloc(void **cpu_ptr, size_t count, void **data_ptr, bool isConst) {
         cl_int err;
-        *cpu_ptr = ::operator new(count);
-        memcpy(*cpu_ptr, *data_ptr, count);
         cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, NULL, &err);
         assert(err == CL_SUCCESS);
-        al_info[*cpu_ptr] = {dm, count, *data_ptr, false, false, false, false};
+        if (isConst) {
+            *cpu_ptr = ::operator new(1);
+        } else {
+            *cpu_ptr = ::operator new(count);
+            memcpy(*cpu_ptr, *data_ptr, count);
+        }
+        al_info[*cpu_ptr] = {dm, count, *data_ptr, false, false, false, false, isConst};
     }
-    void setarr(void *p) {
-        al_info[p].isArr = true;
+    void setArray(void *p) {
+        al_info[p].isArray = true;
     }
     void refresh(void *p) {
         mm_info mm = al_info[p];
@@ -85,7 +90,7 @@ struct AMPAllocator
     void discard(void *p) {
         al_info[p].dirty = false;
         // We cannot discard it if the underlying data comes from array
-        al_info[p].discard = !al_info[p].isArr;
+        al_info[p].discard = !al_info[p].isArray;
     }
     // can be optimizated in future
     void *getData(void *p) {
@@ -108,7 +113,9 @@ struct AMPAllocator
                     assert(err == CL_SUCCESS);
                     mm.discard = false;
                 }
-                mm.dirty = true;
+                // don't need to copy Const data back;
+                mm.dirty = !mm.isConst;
+                mm.write = !mm.isConst;
             }
         }
     }
@@ -171,9 +178,9 @@ struct CLAllocator
         getAllocator().AMPMalloc((void**)(const_cast<T**>(&p)), n * sizeof(T));
         return p;
     }
-    T* allocate(unsigned n, T *ptr) {
+    T* allocate(unsigned n, T *ptr, bool isConst = false) {
         T *p = nullptr;
-        getAllocator().AMPMalloc((void**)(const_cast<T**>(&p)), n * sizeof(T), (void**)(const_cast<T**>(&ptr)));
+        getAllocator().AMPMalloc((void**)(const_cast<T**>(&p)), n * sizeof(T), (void**)(const_cast<T**>(&ptr)), isConst);
         return p;
     }
 };
