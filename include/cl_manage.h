@@ -84,12 +84,16 @@ struct AMPAllocator
             mm.dirty = false;
         }
     }
-    // discard means
-    // 1. discard current host data -> undirty
-    // 2. don't write to OpenCL
+    // discard is an optimization hint to runtime not
+    // to copy data to device
+    // 1. don't synchronize at destruction time
+    // 2. the data is write only, don't need to
+    //    feed into device. However, there is a
+    //    tricy case, if the array_view is projected
+    //    from array but is discard, we still need to
+    //    copy the data to device.
     void discard(void *p) {
         al_info[p].dirty = false;
-        // We cannot discard it if the underlying data comes from array
         al_info[p].discard = !al_info[p].isArray;
     }
     // can be optimizated in future
@@ -113,7 +117,7 @@ struct AMPAllocator
                     assert(err == CL_SUCCESS);
                     mm.discard = false;
                 }
-                // don't need to copy Const data back;
+                // don't need to read const data back;
                 mm.dirty = !mm.isConst;
                 mm.write = !mm.isConst;
             }
