@@ -166,7 +166,6 @@ public:
         acc.push_back(*_cpu_accelerator);
     }
 #else
-    acc.push_back(*_cpu_accelerator);  // in HSA path, always add CPU accelerator
     acc.push_back(*_gpu_accelerator);  // in HSA path, always add GPU accelerator
 #endif
     return acc;
