@@ -21,18 +21,20 @@ class Serialize {
 #ifdef CXXAMP_ENABLE_HSA_OKRA
   typedef void *okra_kernel;
   Serialize(okra_kernel k): k_(k) {}
+  void AppendPtr(const void *ptr) {
+    CLAMP::OkraPushPointer(k_, const_cast<void*>(ptr));
+  }
+  void Append(size_t sz, const void *s) {
+    CLAMP::OkraPushArg(k_, sz, s);
+  }
 #else
   Serialize(cl_kernel k): k_(k), current_idx_(0) {}
-#endif
   void Append(size_t sz, const void *s) {
-#ifdef CXXAMP_ENABLE_HSA_OKRA
-    CLAMP::OkraPushArg(k_, sz, s);
-#else
     cl_int err;
     err = clSetKernelArg(k_, current_idx_++, sz, s);
     assert(err == CL_SUCCESS);
-#endif
   }
+#endif
  private:
 #ifdef CXXAMP_ENABLE_HSA_OKRA
   okra_kernel k_;
