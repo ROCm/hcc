@@ -107,6 +107,7 @@ void ldflags(void) {
     std::cout << " -lhsa-runtime64";
     std::cout << " -Wl,--whole-archive -lhsacontext -Wl,--no-whole-archive ";
     std::cout << " " CMAKE_HSA_LIB "/LIBHSAIL.a ";
+    std::cout << " /usr/lib/gcc/x86_64-linux-gnu/4.8/libstdc++.a ";
 #else
     std::cout << " -lgmac-hpe";
 #endif
