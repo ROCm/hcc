@@ -42,6 +42,18 @@
 #define __declspec(ignored) /* */
 #endif
 
+//CLAMP
+extern int64_t get_global_id(unsigned int n) restrict(amp);
+extern int64_t get_local_id(unsigned int n) restrict(amp);
+extern int64_t get_group_id(unsigned int n) restrict(amp);
+#ifdef __APPLE__
+#define tile_static static __attribute__((section("clamp,opencl_local")))
+#else
+#define tile_static static __attribute__((section("clamp_opencl_local")))
+#endif
+extern void barrier(unsigned int n) restrict(amp);
+//End CLAMP
+
 namespace Concurrency {
 typedef int HRESULT;
 class runtime_exception : public std::exception
@@ -227,17 +239,6 @@ public:
   static std::shared_ptr<accelerator> _cpu_accelerator;
 };
 
-//CLAMP
-extern "C" __attribute__((pure)) int get_global_id(int n) restrict(amp);
-extern "C" __attribute__((pure)) int get_local_id(int n) restrict(amp);
-extern "C" __attribute__((pure)) int get_group_id(int n) restrict(amp);
-#ifdef __APPLE__
-#define tile_static static __attribute__((section("clamp,opencl_local")))
-#else
-#define tile_static static __attribute__((section("clamp_opencl_local")))
-#endif
-extern "C" void barrier(int n) restrict(amp);
-//End CLAMP
 class completion_future {
 public:
 
