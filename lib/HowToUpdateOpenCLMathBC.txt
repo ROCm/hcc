@@ -1,5 +1,5 @@
-opencl_math.bc is compiled from include/opencl_math.cl, using
-the SPIR-enabled clang from https://github.com/KhronosGroup/SPIR. Building
-instructions are also available from the same site. No need to pass any extra
-OpenCL compiler options.
+opencl_math.bc is compiled from include/opencl_math.cl, using clc2 from
+https://github.com/HSAFoundation/HSAIL_LLVM_Backend/
 
+Build instruction:
+clc2 -cl-std=CL2.0 opencl_math.cl
