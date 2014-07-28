@@ -1,0 +1,59 @@
+global_b32 &memory_pool [1024] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+
+global_u64 &offset = 0;
+
+function &_Znwj(arg_u64 %ret_r0)(arg_u32 %arg_p0)
+{
+        ld_arg_u32  $s0, [%arg_p0];
+        cvt_u64_u32 $d0, $s0;
+        lda_global_u64 $d1, [&memory_pool];
+        stof_global_u64_u64 $d2, $d1;
+        workitemabsid_u32 $s1, 0;
+        cvt_u64_u32 $d3, $s1;
+        mul_u64 $d4, $d3, $d0;
+        add_u64 $d5, $d4, $d2;
+
+        ld_global_u64 $d6, [&offset];
+        add_u64 $d7, $d6, $d5;
+
+        st_arg_u64  $d7, [%ret_r0]; // d5
+
+        gridsize_u32 $s2, 0;
+        add_u32 $s1, $s1, 0x1;
+        cmp_ne_b1_u32 $c0, $s1, $s2;
+        cbr $c0, @BB_1;
+
+@BB_0:
+        add_u64 $d4, $d4, $d0;
+        st_global_u64  $d4, [&offset];
+@BB_1:
+        ret;
+};
+
+function &_Znaj(arg_u64 %ret_r0)(arg_u32 %arg_p0)
+{
+        ld_arg_u32  $s0, [%arg_p0];
+        cvt_u64_u32 $d0, $s0;
+        lda_global_u64 $d1, [&memory_pool];
+        stof_global_u64_u64 $d2, $d1;
+        workitemabsid_u32 $s1, 0;
+        cvt_u64_u32 $d3, $s1;
+        mul_u64 $d4, $d3, $d0;
+        add_u64 $d5, $d4, $d2;
+
+        ld_global_u64 $d6, [&offset];
+        add_u64 $d7, $d6, $d5;
+
+        st_arg_u64  $d7, [%ret_r0]; // d5
+
+        gridsize_u32 $s2, 0;
+        add_u32 $s1, $s1, 0x1;
+        cmp_ne_b1_u32 $c0, $s1, $s2;
+        cbr $c0, @BB_1;
+
+@BB_0:
+        add_u64 $d4, $d4, $d0;
+        st_global_u64  $d4, [&offset];
+@BB_1:
+        ret;
+};
