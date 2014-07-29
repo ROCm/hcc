@@ -355,6 +355,9 @@ void HSAPushArg(void *ker, size_t sz, const void *v)
       kernel->pushIntArg(*reinterpret_cast<int*>(val));
       //std::cerr << "(int) value = " << *reinterpret_cast<int*>(val) <<"\n";
       break;
+    case sizeof(unsigned char):
+      kernel->pushBooleanArg(*reinterpret_cast<unsigned char*>(val));
+      break;
     default:
       assert(0 && "Unsupported kernel argument size");
   }
