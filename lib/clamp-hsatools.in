@@ -8,6 +8,4 @@ HSAIL_ASM=/opt/amd/bin/hsailasm
 $LLVM_BIN/llvm-link -o $1.linked.bc $AMD_BUILTINS/builtins-hsail.bc $AMD_BUILTINS/builtins-hsail-amd-ci.bc $AMD_BUILTINS/builtins-gcn.bc $1
 $LLVM_BIN/opt -O3 -gpu -whole -verify $1.linked.bc -o $1.opt.bc
 $LLVM_BIN/llc -O2 -march=hsail-64 -o $1.brig $1.opt.bc
-$HSAIL_ASM -disassemble -o $1.hsail.orig $1.brig
-# A hack to workaround HSA runtime kernel argument layout mismatch
-sed s/"^\tkernarg_"/"align (8) kernarg_"/g $1.hsail.orig > $1.hsail
+$HSAIL_ASM -disassemble -o $1.hsail $1.brig
