@@ -351,6 +351,9 @@ void HSAPushArg(void *ker, size_t sz, const void *v)
       reinterpret_cast<HSAContext::Kernel*>(ker);
   void *val = const_cast<void*>(v);
   switch (sz) {
+    case sizeof(double):
+      kernel->pushDoubleArg(*reinterpret_cast<double*>(val));
+      break;
     case sizeof(int):
       kernel->pushIntArg(*reinterpret_cast<int*>(val));
       //std::cerr << "(int) value = " << *reinterpret_cast<int*>(val) <<"\n";
