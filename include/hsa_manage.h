@@ -15,7 +15,7 @@ class GMACAllocator
  public:
   typedef T value_type;
   T* allocate(unsigned n) {
-    T *p = (T*)memalign(128, n*sizeof(T));
+    T *p = (T*)memalign(0x1000, n*sizeof(T));
     CLAMP::HSA::RegisterMemory(p, sizeof(value_type) * n);
     return p;
   }
