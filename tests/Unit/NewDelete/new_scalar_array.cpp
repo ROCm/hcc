@@ -8,17 +8,6 @@ using namespace concurrency;
 
 const int size = 5;
 
-class Point
-{
-  int _x;
-  int _y;
-public:
-  Point(int x, int y) restrict(amp/*, cpu*/) : _x(x), _y(y) {}
-  int get_x() { return _x; }
-  int get_y() { return _y; }
-  //Point() restrict(amp) {}
-};
-
 int main()
 {
     unsigned long int sumCPP[size];
@@ -26,25 +15,20 @@ int main()
     // Create C++ AMP objects.
     array_view<unsigned long int, 1> sum(size, sumCPP);
 
-    //Point p(3, 4);
-
-#if 1
     parallel_for_each(
         // Define the compute domain, which is the set of threads that are created.
         sum.get_extent(),
         // Define the code to run on each thread on the accelerator.
         [=](index<1> idx) restrict(amp)
     {
-       sum[idx] = (unsigned long int)new Point(3, 4);
-       //Point p(3, 4);
+       sum[idx] = (unsigned long int)new unsigned int[2];
     }
     );
-#endif
 
    for (int i = 0; i < size; i++)
    {
-     Point *p = (Point *)sum[i];
-     printf("Value of addr %p is %d & %d\n", (void*)p, p->get_x(), p->get_y());
+     unsigned int *p = (unsigned int*)sum[i];
+     printf("Value of addr %p is %u\n", (void*)p, *p);
    }
 
   return 0;
