@@ -61,12 +61,8 @@ struct AMPAllocator
         cl_int err;
         cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, NULL, &err);
         assert(err == CL_SUCCESS);
-        if (isConst) {
-            *cpu_ptr = ::operator new(sizeof(int));
-        } else {
-            *cpu_ptr = ::operator new(count);
-            memcpy(*cpu_ptr, *data_ptr, count);
-        }
+        *cpu_ptr = ::operator new(count);
+        memcpy(*cpu_ptr, *data_ptr, count);
         al_info[*cpu_ptr] = {dm, count, *data_ptr, false, false, false, false, isConst};
     }
     void setArray(void *p) {
@@ -88,9 +84,9 @@ struct AMPAllocator
     // to copy data to device
     // 1. don't synchronize at destruction time
     // 2. the data is write only, don't need to
-    //    feed into device. However, there is a
-    //    tricy case, if the array_view is projected
-    //    from array but is discard, we still need to
+    //    copy to device. There is a trick case,
+    //    however, if the array_view is projected
+    //    from array and discarded, we still need to
     //    copy the data to device.
     void discard(void *p) {
         al_info[p].dirty = false;
