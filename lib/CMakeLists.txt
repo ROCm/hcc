@@ -18,6 +18,7 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-device
 if (CXXAMP_ENABLE_HSA)
 add_mcwamp_library(hsacontext HSAContextKaveri.cpp)
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-hsatools
+    ${CMAKE_CURRENT_BINARY_DIR}/clamp-hsail
     DESTINATION bin)
 endif (CXXAMP_ENABLE_HSA)
 

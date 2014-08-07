@@ -508,8 +508,13 @@ private:
       void computeLaunchAttr(int level, int globalSize, int localSize) {
          // localSize of 0 means pick best
          // according to the hsa folks, this is 256 for all current targets
-         if (localSize == 0) localSize = 256;   // (globalSize > 16 ? 1 : globalSize);   
-         localSize = std::min(localSize, 256);
+         if (level < 2) {
+           if (localSize == 0) localSize = 32;   // (globalSize > 16 ? 1 : globalSize);   
+           localSize = std::min(localSize, 32);
+         } else {
+           if (localSize == 0) localSize = 2;   // (globalSize > 16 ? 1 : globalSize);   
+           localSize = std::min(localSize, 2);
+         }
 
          // Check if globalSize is a multiple of localSize
          // (this might be temporary until the runtime really does handle non-full last groups)

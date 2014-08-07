@@ -1,11 +1,11 @@
 # Compiles an OpenCL file to HSAIL
 # Path to AMD OpenCL library builtins
-AMD_BUILTINS=/opt/amd/bin
+AMD_BUILTINS=@AMDOCLTOOLS_ROOT@/bin
 # Path to HSAIL backend (LLVM-3.2-based)
-LLVM_BIN=/opt/amd/bin
+LLVM_BIN=@AMDOCLTOOLS_ROOT@/bin
 # Path to HSAILASM
-HSAIL_ASM=/opt/amd/bin/hsailasm
-$LLVM_BIN/llvm-link -o $1.linked.bc $AMD_BUILTINS/builtins-hsail.bc $AMD_BUILTINS/builtins-hsail-amd-ci.bc $AMD_BUILTINS/builtins-gcn.bc $1
+HSAIL_ASM=@AMDOCLTOOLS_ROOT@/bin/hsailasm
+$LLVM_BIN/llvm-link -prelink-opt -o $1.linked.bc $1 -l $AMD_BUILTINS/builtins-hsail.bc
 $LLVM_BIN/opt -O3 -gpu -whole -verify $1.linked.bc -o $1.opt.bc
 $LLVM_BIN/llc -O2 -march=hsail-64 -o $1.brig $1.opt.bc
 $HSAIL_ASM -disassemble -o $1.hsail $1.brig
