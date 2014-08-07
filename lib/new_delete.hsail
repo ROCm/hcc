@@ -1,8 +1,8 @@
-global_b32 &memory_pool [1024] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+prog global_b32 &memory_pool [1024] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
 
-global_u64 &offset = 0;
+prog global_u64 &offset = 0;
 
-function &_Znwj(arg_u64 %ret_r0)(arg_u32 %arg_p0)
+prog function &_Znwj(arg_u64 %ret_r0)(arg_u32 %arg_p0)
 {
         ld_arg_u32  $s0, [%arg_p0];
         cvt_u64_u32 $d0, $s0;
@@ -21,7 +21,7 @@ function &_Znwj(arg_u64 %ret_r0)(arg_u32 %arg_p0)
         gridsize_u32 $s2, 0;
         add_u32 $s1, $s1, 0x1;
         cmp_ne_b1_u32 $c0, $s1, $s2;
-        cbr $c0, @BB_1;
+        cbr_b1 $c0, @BB_1;
 
 @BB_0:
         add_u64 $d4, $d4, $d0;
@@ -49,7 +49,7 @@ function &_Znaj(arg_u64 %ret_r0)(arg_u32 %arg_p0)
         gridsize_u32 $s2, 0;
         add_u32 $s1, $s1, 0x1;
         cmp_ne_b1_u32 $c0, $s1, $s2;
-        cbr $c0, @BB_1;
+        cbr_b1 $c0, @BB_1;
 
 @BB_0:
         add_u64 $d4, $d4, $d0;
