@@ -7,6 +7,7 @@ hasSPIR() {
     return $?
 }
 if [ -d @LLVM_TOOLS_DIR@ ]; then
+    AS=@LLVM_TOOLS_DIR@/llvm-as
     OPT=@LLVM_TOOLS_DIR@/opt
     LLC=@LLVM_TOOLS_DIR@/llc
     LINK=@LLVM_TOOLS_DIR@/llvm-link
@@ -15,6 +16,7 @@ if [ -d @LLVM_TOOLS_DIR@ ]; then
     LIB=@LLVM_LIBS_DIR@
     HSATOOLS=@PROJECT_BINARY_DIR@/lib/clamp-hsatools
 else
+    AS=@CMAKE_INSTALL_PREFIX@/bin/llvm-as
     OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
     LLC=@CMAKE_INSTALL_PREFIX@/bin/llc
     LINK=@CMAKE_INSTALL_PREFIX@/bin/llvm-link
@@ -25,7 +27,9 @@ else
 fi
 $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
     -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-        -promote-globals -erase-nonkernels -dce < $1 -o $2.promote.bc
+        -promote-globals -erase-nonkernels -dce -S < $1 -o $2.promote.ll.orig
+sed "s/call /call spir_func /g" < $2.promote.ll.orig > $2.promote.ll
+$AS -o $2.promote.bc $2.promote.ll
 echo "Generating HSAIL file"
 $LINK $MATHLIB/opencl_math.bc $2.promote.bc -o $2 2>/dev/null
 $HSATOOLS $2

@@ -1,0 +1,26 @@
+#!/bin/bash
+if [ -d @LLVM_TOOLS_DIR@ ]; then
+    AS=@LLVM_TOOLS_DIR@/llvm-as
+    OPT=@LLVM_TOOLS_DIR@/opt
+    SPIRIFY=@PROJECT_BINARY_DIR@/lib/clamp-spirify
+else
+    AS=@CMAKE_INSTALL_PREFIX@/bin/llvm-as
+    OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
+    SPIRIFY=@CMAKE_INSTALL_PREFIX@/bin/clamp-spirify
+fi
+HSAIL_LLC=@AMDOCLTOOLS_ROOT@/bin/llc
+HSAIL_ASM=@AMDOCLTOOLS_ROOT@/bin/hsailasm
+
+INPUT=$1
+SUFFIX=ll
+FILENAME=${INPUT%.$SUFFIX}
+
+$SPIRIFY $INPUT > $FILENAME.spir.ll
+$OPT -O3 -dce -S -o $FILENAME.opt.ll < $FILENAME.spir.ll
+$AS -o $FILENAME.bc $FILENAME.opt.ll
+
+$HSAIL_LLC -O2 -march=hsail-64 -o $FILENAME.brig $FILENAME.bc
+$HSAIL_ASM -disassemble -o - $FILENAME.brig
+
+# remove artifacts
+rm $FILENAME.spir.ll $FILENAME.opt.ll $FILENAME.bc $FILENAME.brig

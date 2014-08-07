@@ -150,12 +150,12 @@ namespace Concurrency
 
 		#pragma region VerifyDataOnCpu()
 		template<typename _type, int _rank,	template<typename, int> class _amp_container_type, template<typename T, typename=std::allocator<T>> class _stl_cont>
-		bool VerifyDataOnCpu(const _stl_cont<_type>& actual, const _amp_container_type<_type, _rank>& expected, _type diff = 0);
+		bool VerifyDataOnCpu(const _stl_cont<_type>& actual, const _amp_container_type<_type, _rank>& expected, _type diff = 0.0001);
 
 		// Verifies that data contained in the two C++ AMP containers differs by value 'diff'. The computation
 		// happens on CPU. If any of supplied array is on GPU, it will get copied to CPU.
 		template<typename _type, int _rank, template<typename, int> class _amp_container_type_1, template<typename, int> class _amp_container_type_2>
-		bool VerifyDataOnCpu(const _amp_container_type_1<_type, _rank>& actual, const _amp_container_type_2<_type, _rank>& expected, _type diff = 0)
+		bool VerifyDataOnCpu(const _amp_container_type_1<_type, _rank>& actual, const _amp_container_type_2<_type, _rank>& expected, _type diff = 0.0001)
 		{
 			if(actual.get_extent() != expected.get_extent())
 			{
@@ -176,7 +176,7 @@ namespace Concurrency
 		// Verifies that data contained in the two array_view<const T, N> and C++ AMP container differs by 
 		// value 'diff'. The computation happens on CPU. If any of supplied array is on GPU, it will get copied to CPU.
 		template<typename _type, int _rank, template<typename, int> class _amp_container_type>
-		bool VerifyDataOnCpu(const array_view<const _type, _rank>& actual, const _amp_container_type<_type, _rank>& expected, _type diff = 0)
+		bool VerifyDataOnCpu(const array_view<const _type, _rank>& actual, const _amp_container_type<_type, _rank>& expected, _type diff = 0.0001)
 		{
 			std::vector<_type> vect_actual(actual.get_extent().size());
 			copy(actual, vect_actual.begin());
@@ -187,7 +187,7 @@ namespace Concurrency
 		// Verifies that data contained in the supplied C++ AMP container and standard container differs by value 'diff'. 
 		// The computation happens on CPU. If the supplied array have data on GPU, it will get copied on CPU.
 		template<typename _type, int _rank, template<typename, int> class _amp_container_type, template<typename T, typename=std::allocator<T>> class _stl_cont>
-		bool VerifyDataOnCpu(const _amp_container_type<_type, _rank>& actual, const _stl_cont<_type>& expected, _type diff = 0)
+		bool VerifyDataOnCpu(const _amp_container_type<_type, _rank>& actual, const _stl_cont<_type>& expected, _type diff = 0.0001)
 		{
 			if(actual.get_extent().size() != expected.size())
 			{
@@ -206,7 +206,7 @@ namespace Concurrency
 		// Verifies that data contained in the supplied array_view<const T, N> and standard container differs by value 'diff'. 
 		// The computation happens on CPU. If the supplied array have data on GPU, it will get copied on CPU.
 		template<typename _type, int _rank,	template<typename T, typename=std::allocator<T>> class _stl_cont>
-		bool VerifyDataOnCpu(const array_view<const _type, _rank>& actual, const _stl_cont<_type>& expected, _type diff = 0)
+		bool VerifyDataOnCpu(const array_view<const _type, _rank>& actual, const _stl_cont<_type>& expected, _type diff = 0.0001)
 		{
 			if(actual.get_extent().size() != expected.size())
 			{
@@ -459,7 +459,7 @@ namespace Concurrency
 	
 			bool operator()(_type actualValue, _type expectedValue) const
 			{
-				return (expectedValue - actualValue == diff);
+				return std::fabs(expectedValue - actualValue) <= diff;
 			}
 		};
 

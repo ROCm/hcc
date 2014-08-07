@@ -923,7 +923,7 @@ namespace fast_math {
     #endif
   }
   float host_remainder(double x, double y) restrict(cpu) { return ::remainder(x, y);}
-  float remainder(double x, double y) {
+  float remainder(double x, double y) restrict(amp,cpu) {
     #ifdef __GPU__
       return opencl_remainder(x, y);
     #else
@@ -931,7 +931,7 @@ namespace fast_math {
     #endif
   }
   float host_remainderf(double x, double y) restrict(cpu) { return ::remainder(x, y); }
-  float remainderf(double x, double y) {
+  float remainderf(double x, double y) restrict(amp,cpu) {
     #ifdef __GPU__
       return opencl_remainder(x, y);
     #else
