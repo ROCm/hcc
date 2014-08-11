@@ -70,13 +70,13 @@ void cxxflags(void) {
 #if !defined(CXXAMP_ENABLE_HSA_OKRA) && !defined(CXXAMP_ENABLE_HSA)
         std::cout << " -D__GPU__=1 -Xclang -famp-is-device -fno-builtin -fno-common -m32 -O2";
 #else
-        std::cout << " -D__GPU__=1 -Xclang -famp-is-device -Xclang -fhsa-ext -fno-builtin -fno-common -m32 -O2";
+        std::cout << " -D__GPU__=1 -Xclang -famp-is-device -fno-builtin -fno-common -m32 -O2";
 #endif
     } else if (cpu_path) {
 #if !defined(CXXAMP_ENABLE_HSA_OKRA) && !defined(CXXAMP_ENABLE_HSA)
         std::cout << " -D__CPU__=1";
 #else
-        std::cout << " -D__CPU__=1 -Xclang -fhsa-ext";
+        std::cout << " -D__CPU__=1";
 #endif
     }
 
