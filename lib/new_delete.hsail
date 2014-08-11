@@ -2,6 +2,14 @@ prog global_b32 &memory_pool [1024] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13
 
 prog global_u64 &offset = 0;
 
+prog function &_ZdlPv()(arg_u64 %arg_p0)
+{
+};
+
+prog function &_ZdaPv()(arg_u64 %arg_p0)
+{
+};
+
 prog function &_Znwj(arg_u64 %ret_r0)(arg_u32 %arg_p0)
 {
         ld_arg_u32  $s0, [%arg_p0];
@@ -30,7 +38,7 @@ prog function &_Znwj(arg_u64 %ret_r0)(arg_u32 %arg_p0)
         ret;
 };
 
-function &_Znaj(arg_u64 %ret_r0)(arg_u32 %arg_p0)
+prog function &_Znaj(arg_u64 %ret_r0)(arg_u32 %arg_p0)
 {
         ld_arg_u32  $s0, [%arg_p0];
         cvt_u64_u32 $d0, $s0;
