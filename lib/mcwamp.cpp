@@ -310,13 +310,6 @@ void *CreateHSAKernel(std::string s)
       __mcw_okra_kernels[s] = kernel;
   }
   kernel->clearArgs();
-  // HSA kernels generated from OpenCL takes 3 additional arguments at the beginning
-  kernel->pushLongArg(0);
-  kernel->pushLongArg(0);
-  kernel->pushLongArg(0);
-  kernel->pushLongArg(0);
-  kernel->pushLongArg(0);
-  kernel->pushLongArg(0);
   return kernel;
 }
 
