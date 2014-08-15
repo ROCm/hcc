@@ -3,8 +3,9 @@
 // RUN: pushd %t && %embed_kernel kernel.cl %t/kernel.o && popd
 // RUN: %cxxamp %link %t/kernel.o %s -o %t.out && %t.out
 #include <amp.h>
+#include "point.h"
 
-#define TEST_DEBUG 0
+#define TEST_DEBUG 1
 
 using namespace concurrency;
 
@@ -23,22 +24,25 @@ int main()
     // Define the code to run on each thread on the accelerator.
     [=](index<1> idx) restrict(amp)
   {
-    unsigned int *p = new unsigned int(idx[0]);
-    sum[idx] = (unsigned long int)p;
-    delete p;
+    sum[idx] = (unsigned long int)new Point(idx[0], idx[0] * 2);
   }
   );
 
 #if TEST_DEBUG
   for (int i = 0; i < size; i++)
   {
-    unsigned int *p = (unsigned int*)sum[i];
-    printf("Value of addr %p is %u\n", (void*)p, *p);
+    Point *p = (Point *)sum[i];
+    printf("Value of addr %p is %d & %d\n", (void*)p, p->get_x(), p->get_y());
   }
 #endif
 
   // Verify
   int error = 0;
+  for(int i = 0; i < size; i++) {
+    Point *p = (Point*)sum[i];
+    Point pt(i, i * 2);
+    error += (abs(p->get_x() - pt.get_x()) + abs(p->get_y() - pt.get_y()));
+  }
   if (error == 0) {
     std::cout << "Verify success!\n";
   } else {

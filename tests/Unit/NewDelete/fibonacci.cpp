@@ -4,64 +4,69 @@
 // RUN: %cxxamp %link %t/kernel.o %s -o %t.out && %t.out
 #include <amp.h>
 
+#define TEST_DEBUG 0
+
 using namespace concurrency;
 
 const int size = 1024;
 
 int main()
 {
-    int sumCPP[size];
+  int sumCPP[size];
 
-    // Create C++ AMP objects.
-    array_view<int, 1> sum(size, sumCPP);
-    int n = 10;
+  // Create C++ AMP objects.
+  array_view<int, 1> sum(size, sumCPP);
+  int n = 10;
 
-    parallel_for_each(
-        // Define the compute domain, which is the set of threads that are created.
-        sum.get_extent(),
-        // Define the code to run on each thread on the accelerator.
-        [=](index<1> idx) restrict(amp)
+  parallel_for_each(
+    // Define the compute domain, which is the set of threads that are created.
+    sum.get_extent(),
+    // Define the code to run on each thread on the accelerator.
+    [=](index<1> idx) restrict(amp)
+  {
+    int *fib = new int[n + 1];
+
+    fib[0] = 0;
+    fib[1] = 1;
+
+    for (int i = 2; i <= n; i++)
     {
-       //sum[idx] = (unsigned long int)new Point();
-      int *fib = new int[n + 1];
-
-      fib[0] = 0;
-      fib[1] = 1;
-
-      for (int i = 2; i <= n; i++)
-      {
-        fib[i] = fib[i-1] + fib[i-2];
-      }
- 
-      sum[idx] = fib[n];
-      delete[] fib;
+      fib[i] = fib[i-1] + fib[i-2];
     }
-    );
+ 
+    sum[idx] = fib[n];
+    delete[] fib;
+  }
+  );
 
-#if 0
-   for (int i = 0; i < size; i++)
-   {
-     printf("Fib[n] is %d\n", sum[i]);
-   }
+#if TEST_DEBUG
+  for (int i = 0; i < size; i++)
+  {
+    printf("Fib[n] is %d\n", sum[i]);
+  }
 #endif
 
-      int *fibh = new int[n + 1];
+  int *fibh = new int[n + 1];
 
-      fibh[0] = 0;
-      fibh[1] = 1;
+  fibh[0] = 0;
+  fibh[1] = 1;
 
-      for (int i = 2; i <= n; i++)
-      {
-        fibh[i] = fibh[i-1] + fibh[i-2];
-      }
+  for (int i = 2; i <= n; i++)
+  {
+    fibh[i] = fibh[i-1] + fibh[i-2];
+  }
 
-      int ans = fibh[n];
-      delete[] fibh;
+  int ans = fibh[n];
+  delete[] fibh;
 
   for (int i = 0; i < size; i++)
   {
-    if (ans != sum[i]) return 1;
+    if (ans != sum[i]) {
+      std::cout << "Verify failed!\n";
+      return 1;
+    }
   }
 
+  std::cout << "Verify success!\n";
   return 0;
 }

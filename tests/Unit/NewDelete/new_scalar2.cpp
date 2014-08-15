@@ -4,7 +4,7 @@
 // RUN: %cxxamp %link %t/kernel.o %s -o %t.out && %t.out
 #include <amp.h>
 
-#define TEST_DEBUG 0
+#define TEST_DEBUG 1
 
 using namespace concurrency;
 
@@ -23,9 +23,7 @@ int main()
     // Define the code to run on each thread on the accelerator.
     [=](index<1> idx) restrict(amp)
   {
-    unsigned int *p = new unsigned int(idx[0]);
-    sum[idx] = (unsigned long int)p;
-    delete p;
+    sum[idx] = (unsigned long int)new unsigned int(idx[0]);
   }
   );
 
@@ -39,6 +37,10 @@ int main()
 
   // Verify
   int error = 0;
+  for(int i = 0; i < size; i++) {
+    unsigned int *p = (unsigned int*)sum[i];
+    error += abs(*p - i);
+  }
   if (error == 0) {
     std::cout << "Verify success!\n";
   } else {
