@@ -817,9 +817,9 @@ namespace Concurrency {
 
                 //TODO: take this out once accelerator is working fully.
                 //Assume default accelerator is a real gpu without double, and there are no other accelerators
-                if (!(required_flags & ~(NOT_EMULATED | D3D11_GPU | NO_DOUBLE))) {
+                //if (!(required_flags & ~(NOT_EMULATED | D3D11_GPU | NO_DOUBLE))) {
                     return accelerator(accelerator::default_accelerator);
-                }
+                //}
 
 				vector<device_info> avail_infos = get_available_device_infos(required_flags);
 

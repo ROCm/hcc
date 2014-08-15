@@ -42,6 +42,23 @@
 			*((hsa_agent_t *)data) = agent;
 		}
 
+#if 0
+                uint32_t d;
+                hsa_dim3_t dim;
+                uint32_t c;
+                uint16_t a[3];
+                uint32_t b;
+                stat = hsa_agent_get_info(agent, HSA_AGENT_INFO_WAVEFRONT_SIZE, &d);
+                stat = hsa_agent_get_info(agent, HSA_AGENT_INFO_GRID_MAX_DIM, &dim);
+                stat = hsa_agent_get_info(agent, HSA_AGENT_INFO_GRID_MAX_SIZE, &c);
+                stat = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_DIM, &a);
+                stat = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_SIZE, &b);
+
+                printf("HSA_AGENT_INFO_WORKGROUP_MAX_DIM: (%u,%u,%u), HSA_AGENT_INFO_WORKGROUP_MAX_SIZE: %u\n", a[0], a[1], a[2], b);
+                printf("HSA_AGENT_INFO_GRID_MAX_DIM: (%u,%u,%u), HSA_AGENT_INFO_GRID_MAX_SIZE: %u\n", dim.x, dim.y, dim.z, c);
+                printf("HSA_AGENT_INFO_WAVEFRONT_SIZE: %u\n", d);
+#endif
+
 		return HSA_STATUS_SUCCESS;
 	}
 
@@ -308,9 +325,24 @@ private:
          workgroup_size[1] = workgroup_size[2] = global_size[1] = global_size[2] = 1;
          launchDimensions = dims;
 
-         for (int k = 0; k < dims; ++k) {
-            computeLaunchAttr(k, globalDims[k], localDims[k]);
+         switch (dims) {
+           case 1:
+             // according to the hsa folks, this is 256 for all current targets
+             computeLaunchAttr(0, globalDims[0], localDims[0], 256);
+             break;
+           case 2:
+             // according to some experiments, 64 * 32 (2048 workitems) is the best configuration
+             computeLaunchAttr(0, globalDims[0], localDims[0], 64);
+             computeLaunchAttr(1, globalDims[1], localDims[1], 32);
+             break;
+           case 3:
+             // according to some experiments, 32 * 32 * 2 (2048 workitems) is the best configuration
+             computeLaunchAttr(0, globalDims[0], localDims[0], 32);
+             computeLaunchAttr(1, globalDims[1], localDims[1], 32);
+             computeLaunchAttr(2, globalDims[2], localDims[2], 2);
+             break;
          }
+
          return HSA_STATUS_SUCCESS;
       }
 
@@ -505,16 +537,10 @@ private:
          assert(status == HSA_STATUS_SUCCESS);
       }
 
-      void computeLaunchAttr(int level, int globalSize, int localSize) {
+      void computeLaunchAttr(int level, int globalSize, int localSize, int recommendedSize) {
          // localSize of 0 means pick best
-         // according to the hsa folks, this is 256 for all current targets
-         if (level < 2) {
-           if (localSize == 0) localSize = 32;   // (globalSize > 16 ? 1 : globalSize);   
-           localSize = std::min(localSize, 32);
-         } else {
-           if (localSize == 0) localSize = 2;   // (globalSize > 16 ? 1 : globalSize);   
-           localSize = std::min(localSize, 2);
-         }
+         if (localSize == 0) localSize = recommendedSize;   // (globalSize > 16 ? 1 : globalSize);   
+         localSize = std::min(localSize, recommendedSize);
 
          // Check if globalSize is a multiple of localSize
          // (this might be temporary until the runtime really does handle non-full last groups)
