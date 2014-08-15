@@ -1,21 +1,17 @@
-#!/bin/sh
+#!/bin/bash
+# clamp-assemble kernel-bitcode kernel-object
+
 if [ "$#" -ne 2 ]; then
-  echo "Usage: $0 input ouput" >&2
+  echo "Usage: $0 kernel-bitcode object" >&2
   exit 1
 fi
-ORIGINAL_FILENAME=$2
-FILENAME=${ORIGINAL_FILENAME%.*}
 
-if [ -d @LLVM_TOOLS_DIR@ ]; then
-    CLAMP_DEVICE=@PROJECT_BINARY_DIR@/lib/clamp-device
-    CLAMP_EMBED=@PROJECT_BINARY_DIR@/lib/clamp-embed
+if [ -f $2 ]; then
+  mv $2 $2.host.o
+  /home/whchung/cppamp/build_release/lib/clamp-embed $1 $2.kernel.o
+  ld -r $2.kernel.o $2.host.o -o $2
+  rm $2.kernel.o $2.host.o
 else
-    CLAMP_DEVICE=@CMAKE_INSTALL_PREFIX@/bin/clamp-device
-    CLAMP_EMBED=@CMAKE_INSTALL_PREFIX@/bin/clamp-embed
+  /home/whchung/cppamp/build_release/lib/clamp-embed $1 $2
 fi
-$CLAMP_DEVICE $1 $FILENAME.cl
-$CLAMP_EMBED $FILENAME.cl $FILENAME.o
 
-# remove temp files
-rm $FILENAME.cl
-rm $FILENAME.cl.promote.bc
