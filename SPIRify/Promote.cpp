@@ -963,7 +963,18 @@ void CollectChangedCalledFunctions (Function * F, InstUpdateWorkList * updatesNe
         }
 }
 
-
+// HSA-specific : memory scope for atomic operations
+//
+// For atomic instructions (load atomic, store atomic, atomicrmw, cmpxchg, fence),
+// add !mem.scope metadata to specify its memory scope, which is required in HSAIL.
+// Since there is no way to specify memory scope in C++ atomic operations <atomic>
+// yet, we set default memory scope as: _sys_ (5)
+void appendMemoryScopeMetadata(Instruction *I) {
+  // set default memory scope as: _sys_ (5)
+  ConstantInt *C = ConstantInt::get(Type::getInt32Ty(I->getContext()), 5); 
+  MDNode *MD = MDNode::get(I->getContext(), C); 
+  I->setMetadata("mem.scope", MD);
+}
 
 void updateInstructionWithNewOperand(Instruction * I,
                                      Value * oldOperand,
@@ -971,11 +982,19 @@ void updateInstructionWithNewOperand(Instruction * I,
                                      InstUpdateWorkList * updatesNeeded)
 {
        if (LoadInst * LI = dyn_cast<LoadInst>(I)) {
+               if (LI->isAtomic()) {
+                 appendMemoryScopeMetadata(I);
+               }
+
                updateLoadInstWithNewOperand(LI, newOperand, updatesNeeded);
                return;
        }
 
        if (StoreInst * SI = dyn_cast<StoreInst>(I)) {
+               if (SI->isAtomic()) {
+                 appendMemoryScopeMetadata(I);
+               }
+
                updateStoreInstWithNewOperand(SI, oldOperand, newOperand, updatesNeeded);
                return;
        }
@@ -1025,6 +1044,12 @@ void updateInstructionWithNewOperand(Instruction * I,
            DEBUG(llvm::errs() << "No need to update branch\n";);
            return;
        }
+
+       if (isa<AtomicRMWInst>(I) || isa<AtomicCmpXchgInst>(I) || isa<FenceInst>(I)) {
+           appendMemoryScopeMetadata(I);
+           return; 
+       }
+
 
        llvm::errs() << "DO NOT KNOW HOW TO UPDATE INSTRUCTION: ";
              I->print(llvm::errs()); llvm::errs() << "\n";
