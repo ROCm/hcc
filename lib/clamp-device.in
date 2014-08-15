@@ -25,7 +25,8 @@ else
 fi
 $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
     -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-        -promote-globals -erase-nonkernels -dce < $1 -o $2.promote.bc
+    -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+        -promote-globals -erase-nonkernels -tile-uniform -dce < $1 -o $2.promote.bc || exit $?
 if hasSPIR; then
     echo "Generating SPIR file"
     $LINK $MATHLIB/opencl_math.bc $2.promote.bc -o $2 2>/dev/null
