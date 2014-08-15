@@ -84,6 +84,8 @@ void cxxflags(void) {
 }
 
 void ldflags(void) {
+    // Common options
+    std::cout << "-std=c++amp";
     if (build_mode) {
         std::cout << " -L" CMAKE_GMAC_LIB_DIR;
 #ifdef __APPLE__
