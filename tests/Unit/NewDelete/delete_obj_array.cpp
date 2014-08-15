@@ -3,49 +3,50 @@
 // RUN: pushd %t && %embed_kernel kernel.cl %t/kernel.o && popd
 // RUN: %cxxamp %link %t/kernel.o %s -o %t.out && %t.out
 #include <amp.h>
+#include "point.h"
+
+#define TEST_DEBUG 0
 
 using namespace concurrency;
 
 const int size = 5;
 
-class Point
-{
-  int _x;
-  int _y;
-public:
-  Point(int x, int y) restrict(amp/*, cpu*/) : _x(x), _y(y) {}
-  int get_x() { return _x; }
-  int get_y() { return _y; }
-  //Point() restrict(amp) {}
-};
-
 int main()
 {
-    unsigned long int sumCPP[size];
+  unsigned long int sumCPP[size];
 
-    // Create C++ AMP objects.
-    array_view<unsigned long int, 1> sum(size, sumCPP);
+  // Create C++ AMP objects.
+  array_view<unsigned long int, 1> sum(size, sumCPP);
 
-    //Point p(3, 4);
+  parallel_for_each(
+    // Define the compute domain, which is the set of threads that are created.
+    sum.get_extent(),
+    // Define the code to run on each thread on the accelerator.
+    [=](index<1> idx) restrict(amp)
+  {
+    Point *p = new Point[2]();
+    sum[idx] = (unsigned long int)p;
+    delete[] p;
+  }
+  );
 
-#if 1
-    parallel_for_each(
-        // Define the compute domain, which is the set of threads that are created.
-        sum.get_extent(),
-        // Define the code to run on each thread on the accelerator.
-        [=](index<1> idx) restrict(amp)
-    {
-       sum[idx] = (unsigned long int)new Point(3, 4);
-       //Point p(3, 4);
-    }
-    );
+#if TEST_DEBUG
+  for (int i = 0; i < size; i++)
+  {
+    Point *p = (Point *)sum[i];
+    printf("Value of addr %p is %d & %d, addr %p is %d & %d\n", 
+      (void*)p, p->get_x(), p->get_y(), 
+      (void*)(p + 1), (p + 1)->get_x(), (p + 1)->get_y());
+  }
 #endif
 
-   for (int i = 0; i < size; i++)
-   {
-     Point *p = (Point *)sum[i];
-     printf("Value of addr %p is %d & %d\n", (void*)p, p->get_x(), p->get_y());
-   }
+  // Verify
+  int error = 0;
+  if (error == 0) {
+    std::cout << "Verify success!\n";
+  } else {
+    std::cout << "Verify failed!\n";
+  }
 
-  return 0;
+  return (error != 0);
 }

@@ -27,8 +27,7 @@ else
 fi
 $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
     -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-        -promote-globals -erase-nonkernels -dce -S < $1 -o $2.promote.ll.orig
-
+        -promote-globals -promote-privates -erase-nonkernels -dce -S < $1 -o $2.promote.ll.orig
 sed "s/call /call spir_func /g" < $2.promote.ll.orig > $2.promote.ll
 $AS -o $2.promote.bc $2.promote.ll
 if [ "@CXXAMP_ENABLE_HSA_OKRA@" = "ON" ]; then
