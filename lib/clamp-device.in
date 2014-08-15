@@ -38,6 +38,8 @@ if [ "@CXXAMP_ENABLE_HSA_OKRA@" = "ON" ]; then
     $HSATOOLS $2
     mv -f $2 $2.orig
     mv $2.hsail $2
+    # remove temp file
+    rm $2.promote.ll.orig $2.promote.ll $2.promote.bc
     exit $?
 elif [ "@CXXAMP_ENABLE_HSA@" = "ON" ]; then
     $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
@@ -51,6 +53,8 @@ elif [ "@CXXAMP_ENABLE_HSA@" = "ON" ]; then
     $HSATOOLS $2
     mv -f $2 $2.orig
     mv $2.hsail $2
+    # remove temp file
+    rm $2.promote.ll.orig $2.promote.ll $2.promote.bc
     exit $?
 else
     $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
@@ -60,6 +64,8 @@ else
     if hasSPIR; then
         echo "Generating SPIR file"
         $LINK $MATHLIB/opencl_math.bc $2.promote.bc -o $2 2>/dev/null
+        # remove temp file
+        rm $2.promote.bc
         exit $?
     else
         echo "Warning: not a SPIR-enabled OpenCL stack; generating OpenCL-C instead."
@@ -69,6 +75,8 @@ else
             echo "#pragma OPENCL EXTENSION cl_khr_fp64: enable"|cat - $2 > $2.t
             mv -f $2.t $2
         fi
+        # remove temp file
+        rm $2.promote.bc
+        exit $?
     fi
 fi
-
