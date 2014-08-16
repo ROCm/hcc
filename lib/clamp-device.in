@@ -25,13 +25,13 @@ else
     LIB=@CMAKE_INSTALL_PREFIX@/lib
     HSATOOLS=@CMAKE_INSTALL_PREFIX@/bin/clamp-hsatools
 fi
-$OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-    -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-    -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-        -promote-globals -promote-privates -erase-nonkernels -tile-uniform -dce -S < $1 -o $2.promote.ll.orig
-sed "s/call /call spir_func /g" < $2.promote.ll.orig > $2.promote.ll
-$AS -o $2.promote.bc $2.promote.ll
 if [ "@CXXAMP_ENABLE_HSA_OKRA@" = "ON" ]; then
+    $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+         -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+         -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+         -promote-globals -promote-privates -erase-nonkernels -tile-uniform -dce -S < $1 -o $2.promote.ll.orig
+    sed "s/call /call spir_func /g" < $2.promote.ll.orig > $2.promote.ll
+    $AS -o $2.promote.bc $2.promote.ll
     echo "Generating HSAIL file"
     $LINK $MATHLIB/opencl_math.bc $2.promote.bc -o $2 2>/dev/null
     $HSATOOLS $2
@@ -39,6 +39,12 @@ if [ "@CXXAMP_ENABLE_HSA_OKRA@" = "ON" ]; then
     mv $2.hsail $2
     exit $?
 elif [ "@CXXAMP_ENABLE_HSA@" = "ON" ]; then
+    $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+         -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+         -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+         -promote-globals -promote-privates -erase-nonkernels -tile-uniform -dce -S < $1 -o $2.promote.ll.orig
+    sed "s/call /call spir_func /g" < $2.promote.ll.orig > $2.promote.ll
+    $AS -o $2.promote.bc $2.promote.ll
     echo "Generating HSAIL file"
     $LINK $MATHLIB/opencl_math.bc $2.promote.bc -o $2 2>/dev/null
     $HSATOOLS $2
@@ -46,6 +52,10 @@ elif [ "@CXXAMP_ENABLE_HSA@" = "ON" ]; then
     mv $2.hsail $2
     exit $?
 else
+    $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+         -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+         -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+         -promote-globals -erase-nonkernels -tile-uniform -dce < $1 -o $2.promote.bc
     if hasSPIR; then
         echo "Generating SPIR file"
         $LINK $MATHLIB/opencl_math.bc $2.promote.bc -o $2 2>/dev/null
