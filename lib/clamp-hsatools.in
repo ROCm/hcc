@@ -8,4 +8,3 @@ HSAIL_ASM=@AMDOCLTOOLS_ROOT@/bin/hsailasm
 $LLVM_BIN/llvm-link -prelink-opt -o $1.linked.bc $1 -l $AMD_BUILTINS/builtins-hsail.bc
 $LLVM_BIN/opt -O3 -gpu -whole -verify $1.linked.bc -o $1.opt.bc
 $LLVM_BIN/llc -O2 -march=hsail-64 -o $1.brig $1.opt.bc
-$HSAIL_ASM -disassemble -o $1.hsail $1.brig

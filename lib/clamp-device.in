@@ -34,6 +34,6 @@ echo "Generating HSAIL file"
 $LINK $MATHLIB/opencl_math.bc $2.promote.bc -o $2 2>/dev/null
 $HSATOOLS $2
 mv -f $2 $2.orig
-mv $2.hsail $2
+mv $2.brig $2
 exit $?
 

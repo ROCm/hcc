@@ -30,18 +30,15 @@
 		if (data == NULL) {
 			return HSA_STATUS_ERROR_INVALID_ARGUMENT;
 		}
-
 		hsa_device_type_t device_type;
 		hsa_status_t stat =
 			hsa_agent_get_info(agent, HSA_AGENT_INFO_DEVICE, &device_type);
 		if (stat != HSA_STATUS_SUCCESS) {
 			return stat;
 		}
-
 		if (device_type == HSA_DEVICE_TYPE_GPU) {
 			*((hsa_agent_t *)data) = agent;
 		}
-
 		return HSA_STATUS_SUCCESS;
 	}
 
@@ -67,6 +64,49 @@
 
 /**************************************************************************/
 
+#define ENABLE_HSAIL_BRIG 1
+#ifdef ENABLE_HSAIL_BRIG
+
+#include "hsa.h"
+#include "hsa_ext_finalize.h"
+#include "Brig_new.hpp"
+#include "elf_utils.hpp"
+
+
+bool FindSymbolOffset(hsa_ext_brig_module_t* brig_module, 
+    const char* symbol_name,
+    hsa_ext_brig_code_section_offset32_t& offset) {
+    
+    //Get the data section
+     hsa_ext_brig_section_header_t* data_section_header = 
+                brig_module->section[HSA_EXT_BRIG_SECTION_DATA];
+    //Get the code section
+     hsa_ext_brig_section_header_t* code_section_header =
+             brig_module->section[HSA_EXT_BRIG_SECTION_CODE];
+
+    //First entry into the BRIG code section
+    BrigCodeOffset32_t code_offset = code_section_header->header_byte_count;
+    BrigBase* code_entry = (BrigBase*) ((char*)code_section_header + code_offset);
+    while (code_offset != code_section_header->byte_count) {
+        if (code_entry->kind == BRIG_KIND_DIRECTIVE_KERNEL) {
+            //Now find the data in the data section
+            BrigDirectiveKernel* directive_kernel = (BrigDirectiveKernel*) (code_entry);
+            BrigDataOffsetString32_t data_name_offset = directive_kernel->name;
+            BrigData* data_entry = (BrigData*)((char*) data_section_header + data_name_offset);
+            if (!strcmp(symbol_name, (char*)data_entry->bytes)){
+                offset = code_offset;
+                return true;
+            }
+
+        }
+        code_offset += code_entry->byteCount;
+        code_entry = (BrigBase*) ((char*)code_section_header + code_offset);
+    }
+    return false;
+}
+
+
+#else
 
 /*************************  From assemble.cpp *****************************/
 
@@ -191,6 +231,9 @@ bool FindSymbolOffset(hsa_ext_brig_module_t* brig_module,
 
 
 /**************************************************************************/
+#endif
+
+
 hsa_status_t get_kernarg(hsa_region_t region, void* data) {
   hsa_region_flag_t flags;
   hsa_region_get_info(region, HSA_REGION_INFO_FLAGS, &flags);
@@ -585,7 +628,54 @@ public:
       return commandQueue;
     }
 
-    Kernel * createKernel(const char *hsailBuffer, const char *entryName) {
+
+
+
+#ifdef ENABLE_HSAIL_BRIG
+    Kernel * createKernel(const char *hsailBuffer, const size_t hsailSize, const char *entryName) {
+
+      hsa_status_t status;
+
+	    //Convert hsail kernel text to BRIG.
+	    hsa_ext_brig_module_t* brigModule;
+	    if (!CreateBrigModuleFromBrigMemory(hsailBuffer, hsailSize, &brigModule)){
+        STATUS_CHECK(status, __LINE__);
+	    }
+
+	    //Create hsa program.
+	    status = hsa_ext_program_create(&device, 1, HSA_EXT_BRIG_MACHINE_LARGE, HSA_EXT_BRIG_PROFILE_FULL, &hsaProgram);
+      STATUS_CHECK(status, __LINE__);
+
+	    //Add BRIG module to hsa program.
+	    hsa_ext_brig_module_handle_t module;
+	    status = hsa_ext_add_module(hsaProgram, brigModule, &module);
+      STATUS_CHECK(status, __LINE__);
+
+	    // Construct finalization request list.
+	    // @todo kzhuravl 6/16/2014 remove bare numbers, we actually need to find
+	    // entry offset into the code section.
+	    hsa_ext_finalization_request_t finalization_request_list;
+	    finalization_request_list.module = module;              // module handle.
+	    finalization_request_list.program_call_convention = 0;  // program call convention. not supported.
+
+	    if (!FindSymbolOffset(brigModule, entryName, finalization_request_list.symbol)){
+        STATUS_CHECK(GENERIC_ERROR, __LINE__);
+	    }
+
+	    //Finalize hsa program.
+	    status = hsa_ext_finalize_program(hsaProgram, device, 1, &finalization_request_list, NULL, NULL, 0, NULL, 0);
+      STATUS_CHECK(status, __LINE__);
+
+	    //Get hsa code descriptor address.
+	    hsa_ext_code_descriptor_t *hsaCodeDescriptor;
+	    status = hsa_ext_query_kernel_descriptor_address(hsaProgram, module, finalization_request_list.symbol, &hsaCodeDescriptor);
+      STATUS_CHECK(status, __LINE__);
+
+      return new KernelImpl(hsaCodeDescriptor, this);
+    }
+
+#else
+    Kernel * createKernel(const char *hsailText, const size_t hsailSize, const char *entryName) {
 
       hsa_status_t status;
 
@@ -628,6 +718,8 @@ public:
 
       return new KernelImpl(hsaCodeDescriptor, this);
     }
+#endif
+
 
    hsa_status_t dispose() {
       hsa_status_t status;
