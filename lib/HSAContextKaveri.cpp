@@ -10,7 +10,6 @@
 #include "fileUtils.h"
 
 #include "hsa_ext_finalize.h"
-#include "hsa_ext_private_amd.h"
 
 #define STATUS_CHECK(s,line) if (status != HSA_STATUS_SUCCESS) {\
 		printf("### Error: %d at line:%d\n", status, line);\
@@ -71,7 +70,7 @@
 		bool is_host = false;
 		hsa_status_t stat =
 			hsa_region_get_info(
-			region, (hsa_region_info_t)HSA_EXT_REGION_INFO_HOST_ACCESS, &is_host);
+			region, (hsa_region_info_t)HSA_REGION_INFO_COUNT, &is_host);
 		if (stat != HSA_STATUS_SUCCESS) {
 			return stat;
 		}

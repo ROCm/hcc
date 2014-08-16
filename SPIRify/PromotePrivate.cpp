@@ -55,10 +55,10 @@ protected:
   Function *NewScalar;
   Function *NewArray;
   //SmallPtrSet<Instruction *, 8> Visited;
-  bool IsNewed = false;
+  bool IsNewed;
 
 public:
-  NewedMemoryAnalyzer(Function &F) {
+  NewedMemoryAnalyzer(Function &F) : IsNewed(false) {
     Module *M = F.getParent();
     NewScalar = M->getFunction("_Znwj");
     NewArray = M->getFunction("_Znaj"); 
