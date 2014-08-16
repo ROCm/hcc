@@ -4,6 +4,7 @@ execute_process(COMMAND git describe --abbrev=4 --dirty --always --tags
                 WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
                 OUTPUT_VARIABLE GIT_VERSION
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
+set(CMAKE_INSTALL_PREFIX "/opt/clamp")
 
 if(NOT APPLE)
 include_directories(${PROJECT_SOURCE_DIR}/libcxxrt/src)
