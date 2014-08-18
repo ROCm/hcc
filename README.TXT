@@ -11,7 +11,7 @@ transforms it into the following targets:
 
 The project is based on LLVM+CLANG.
 
-HSA-specific features are also gradually being added to the project.
+HSA-specific features are also gradually being added to the project.  For more HSA-related information please visit: https://bitbucket.org/multicoreware/cppamp-driver-ng/wiki/HSA%20Support%20Status
 
 
 Repository Structure
