@@ -26,7 +26,7 @@ int main()
   {
     unsigned int *p = new unsigned int[2];
     sum[idx] = (unsigned long int)p;
-    delete p;
+    delete[] p;
   }
   );
 
