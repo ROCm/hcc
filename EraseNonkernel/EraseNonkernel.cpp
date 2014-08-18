@@ -177,7 +177,11 @@ bool EraseNonkernels::runOnModule(Module &M)
                         I->getName().find("_Znwj") != StringRef::npos || 
                         I->getName().find("_Znaj") != StringRef::npos ||
                         I->getName().find("_ZdlPv") != StringRef::npos ||
-                        I->getName().find("_ZdaPv") != StringRef::npos ) {
+                        I->getName().find("_ZdaPv") != StringRef::npos || 
+                        I->getName().find("_Z9put_ptr_bPv3") != StringRef::npos ||
+                        I->getName().find("_Z9put_ptr_cPv4") != StringRef::npos ||
+                        I->getName().find("_Z9get_ptr_av") != StringRef::npos ||
+                        I->getName().find("_Z9put_ptr_aPv2") != StringRef::npos ) {
 			I++;
 			continue;
 		}
