@@ -1,3 +1,4 @@
+// XFAIL: Linux
 // RUN: %amp_device -D__GPU__ -Xclang -fhsa-ext %s -m32 -emit-llvm -c -S -O2 -o %t.ll && mkdir -p %t
 // RUN: %clamp-device %t.ll %t/kernel.cl
 // RUN: pushd %t && %embed_kernel kernel.cl %t/kernel.o && popd
@@ -128,7 +129,7 @@ int main ()
 #if TEST_DEBUG
   for (int i = 0; i < vecSize; i++)
   {
-    printf("Fib[n] is %d\n", sum[i]);
+    printf("Fib[n] is %lu\n", sum[i]);
   }
 #endif
 
