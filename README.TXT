@@ -1,5 +1,4 @@
-
-                    C++AMP Compiler Implementation for OpenCL/SPIR
+C++AMP Compiler Implementation for HSA/OpenCL/SPIR
 
 Introduction
 --------------------------------------------------------------------------------
@@ -229,5 +228,3 @@ Tips for Developers
 
   It will print out verbose messages that actually it runs. Using this
   information will enable debugging.
-
-
