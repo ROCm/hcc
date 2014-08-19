@@ -10,7 +10,7 @@
 #include "fileUtils.h"
 
 #include "hsa_ext_finalize.h"
-#include "hsa_ext_private_amd.h"
+//#include "hsa_ext_private_amd.h"
 
 #define STATUS_CHECK(s,line) if (status != HSA_STATUS_SUCCESS) {\
 		printf("### Error: %d at line:%d\n", status, line);\
@@ -42,6 +42,7 @@
 		return HSA_STATUS_SUCCESS;
 	}
 
+/*
 	static hsa_status_t IterateRegion(hsa_region_t region, void *data) {
 		// Find system memory region.
 		if (data == NULL) {
@@ -61,7 +62,7 @@
 		}
 		return HSA_STATUS_SUCCESS;
 	}
-
+*/
 /**************************************************************************/
 
 #define ENABLE_HSAIL_BRIG 1
@@ -87,13 +88,19 @@ bool FindSymbolOffset(hsa_ext_brig_module_t* brig_module,
     //First entry into the BRIG code section
     BrigCodeOffset32_t code_offset = code_section_header->header_byte_count;
     BrigBase* code_entry = (BrigBase*) ((char*)code_section_header + code_offset);
+
+    size_t symbol_size = strlen(symbol_name);
     while (code_offset != code_section_header->byte_count) {
         if (code_entry->kind == BRIG_KIND_DIRECTIVE_KERNEL) {
             //Now find the data in the data section
             BrigDirectiveKernel* directive_kernel = (BrigDirectiveKernel*) (code_entry);
             BrigDataOffsetString32_t data_name_offset = directive_kernel->name;
             BrigData* data_entry = (BrigData*)((char*) data_section_header + data_name_offset);
-            if (!strcmp(symbol_name, (char*)data_entry->bytes)){
+
+            // A HSAIL assembler has a bug that may generate symbol names 
+            // with extra empty characters appended at the end, that's why we use >= here...
+            if (strlen((char*)data_entry->bytes) >= symbol_size
+                && strncmp(symbol_name, (char*)data_entry->bytes, symbol_size)==0){
                 offset = code_offset;
                 return true;
             }
@@ -415,7 +422,7 @@ private:
          //for (size_t i = 0; i < arg_vec.size(); ++i) {
          //  printf("%02X ", *(((uint8_t*)aql.kernarg_address)+i));
          //}
-         //printf("\n");
+         //printf("\n");hsa_ext_brig_module_t
 #else
          //printf("arg_vec size: %d in bytes: %d\n", arg_vec.size(), arg_vec.size() * sizeof(uint64_t));
          hsa_region_t region;
@@ -638,7 +645,7 @@ public:
 
 	    //Convert hsail kernel text to BRIG.
 	    hsa_ext_brig_module_t* brigModule;
-	    if (!CreateBrigModuleFromBrigMemory(hsailBuffer, hsailSize, &brigModule)){
+	    if (!CreateBrigModuleFromBrigMemory((char*)hsailBuffer, hsailSize, &brigModule)){
         STATUS_CHECK(status, __LINE__);
 	    }
 
@@ -655,6 +662,7 @@ public:
 	    // @todo kzhuravl 6/16/2014 remove bare numbers, we actually need to find
 	    // entry offset into the code section.
 	    hsa_ext_finalization_request_t finalization_request_list;
+      memset(&finalization_request_list, 0, sizeof(hsa_ext_finalization_request_t));
 	    finalization_request_list.module = module;              // module handle.
 	    finalization_request_list.program_call_convention = 0;  // program call convention. not supported.
 
@@ -671,7 +679,7 @@ public:
 	    status = hsa_ext_query_kernel_descriptor_address(hsaProgram, module, finalization_request_list.symbol, &hsaCodeDescriptor);
       STATUS_CHECK(status, __LINE__);
 
-      return new KernelImpl(hsaCodeDescriptor, this);
+      return new KernelImpl(hsaCodeDescriptor, this); 
     }
 
 #else

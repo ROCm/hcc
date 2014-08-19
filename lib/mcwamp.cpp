@@ -317,6 +317,17 @@ void *CreateHSAKernel(std::string s)
       __mcw_okra_kernels[s] = kernel;
   }
   kernel->clearArgs();
+
+#define USE_HSAIL_D2
+#ifndef USE_HSAIL_D2
+  kernel->pushLongArg(0);
+  kernel->pushLongArg(0);
+  kernel->pushLongArg(0);
+  kernel->pushLongArg(0);
+  kernel->pushLongArg(0);
+  kernel->pushLongArg(0);
+#endif
+
   return kernel;
 }
 

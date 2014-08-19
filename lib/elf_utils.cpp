@@ -1,10 +1,15 @@
+
+
+
 #include <stdlib.h>
 #include <libelf.h>
 #include <iostream>
 #include <string.h>
 #include <fstream>
-#include "hsa.h"
-#include "hsa_ext_finalize.h"
+
+#include "elf_utils.hpp"
+
+
 enum {
   SECTION_HSA_DATA = 0,
   SECTION_HSA_CODE,
@@ -204,7 +209,7 @@ static status_t readBinary(hsa_ext_brig_module_t **brig_module_t, Elf* elfP) {
 }
 
 
-extern "C" bool CreateBrigModuleFromBrigFile(const char* file_name, hsa_ext_brig_module_t** brig_module) {
+bool CreateBrigModuleFromBrigFile(const char* file_name, hsa_ext_brig_module_t** brig_module) {
 
  FILE *fp = ::fopen(file_name, "rb");
  int fd = fileno(fp);
@@ -230,7 +235,7 @@ extern "C" bool CreateBrigModuleFromBrigFile(const char* file_name, hsa_ext_brig
 }
 
 
-extern "C" bool CreateBrigModuleFromBrigMemory(char* buffer, const size_t buffer_size, hsa_ext_brig_module_t** brig_module) {
+bool CreateBrigModuleFromBrigMemory(char* buffer, const size_t buffer_size, hsa_ext_brig_module_t** brig_module) {
 
  Elf* elfP = NULL;
 
@@ -255,7 +260,7 @@ extern "C" bool CreateBrigModuleFromBrigMemory(char* buffer, const size_t buffer
 }
 
 
-extern "C" bool DestroyBrigModule(hsa_ext_brig_module_t* brig_module) {
+bool DestroyBrigModule(hsa_ext_brig_module_t* brig_module) {
     for (int i=0; i<brig_module->section_count; i++) {
         free (brig_module->section[i]);
     }
