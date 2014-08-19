@@ -7,7 +7,6 @@
 #include <fstream>
 
 #include "HSAContext.h"
-#include "fileUtils.h"
 
 #include "hsa_ext_finalize.h"
 
