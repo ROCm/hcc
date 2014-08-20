@@ -97,10 +97,18 @@ bool FindSymbolOffset(hsa_ext_brig_module_t* brig_module,
             BrigDataOffsetString32_t data_name_offset = directive_kernel->name;
             BrigData* data_entry = (BrigData*)((char*) data_section_header + data_name_offset);
 
+            size_t data_entry_size = strlen((char*)data_entry->bytes);
+            if (data_entry_size == symbol_size
+                && strncmp(symbol_name, (char*)data_entry->bytes, symbol_size)==0){
+                offset = code_offset;
+                return true;
+            }
+
             // A HSAIL assembler has a bug that may generate symbol names 
             // with extra empty characters appended at the end, that's why we use >= here...
-            if (strlen((char*)data_entry->bytes) >= symbol_size
-                && strncmp(symbol_name, (char*)data_entry->bytes, symbol_size)==0){
+            if (data_entry_size > symbol_size
+                && strncmp(symbol_name, (char*)data_entry->bytes, symbol_size)==0
+                && isspace(data_entry->bytes[symbol_size])) {
                 offset = code_offset;
                 return true;
             }
