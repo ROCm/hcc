@@ -1,11 +1,17 @@
-
-                    C++AMP Compiler Implementation for OpenCL/SPIR
+C++AMP Compiler Implementation for HSA
 
 Introduction
 --------------------------------------------------------------------------------
 This repository hosts C++AMP compiler implementation project. The goal is to
 implement a compiler that takes a program conforming C++AMP standard and
-transforms it into a SPIR binary for OpenCL. It will be based on LLVM+CLANG.
+transforms it into the following targets:
+
+1. HSAIL for HSA
+2. (work-in-progress) BRIG for HSA
+
+The project is based on LLVM+CLANG.
+
+HSA-specific features are also gradually being added to the project.  For more HSA-related information please visit: https://bitbucket.org/multicoreware/cppamp-driver-ng/wiki/HSA%20Support%20Status
 
 
 Repository Structure
@@ -24,31 +30,19 @@ The current repository is composed of as following:
     Developers can also create their own branches for their own development.
 
 
-Build Instruction
+Build Instruction for HSA
 --------------------------------------------------------------------------------
-* Prerequisite/OpenCL
+* Prerequisite/HSA
 
-Make sure OpenCL SDK is installed in your system. You can test it with the clInfo
-utility at http://graphics.stanford.edu/~yoel/notes/clInfo.c
+FIXME: this section needs to be polished
 
-Here is a snippet of the output message from clInfo, running on a Linux w/ ATI GPU
--------------------------------------------------------------------------
-Found 1 platform(s).
-platform[0x7f7950040140]: profile: FULL_PROFILE
-platform[0x7f7950040140]: version: OpenCL 1.2 AMD-APP (923.1)
-platform[0x7f7950040140]: name: AMD Accelerated Parallel Processing
-platform[0x7f7950040140]: vendor: Advanced Micro Devices, Inc.
-platform[0x7f7950040140]: extensions: cl_khr_icd cl_amd_event_callback cl_amd_offline_devices
-platform[0x7f7950040140]: Found 2 device(s).
-        device[0x27adc90]: NAME: Capeverde
-        device[0x27adc90]: VENDOR: Advanced Micro Devices, Inc.
-        device[0x27adc90]: PROFILE: FULL_PROFILE
-        device[0x27adc90]: VERSION: OpenCL 1.2 AMD-APP (923.1)
-        device[0x27adc90]: EXTENSIONS: cl_khr_fp64 cl_amd_fp64 cl_khr_global_int32_base_atomics cl_khr_global_int32_extended_atomics cl_khr_local_int32_base_atomics cl_khr_local_int32_extended_atomics cl_khr_3d_image_writes cl_khr_byte_addressable_store cl_khr_gl_sharing cl_ext_atomic_counters_32 cl_amd_device_attribute_query cl_amd_vec3 cl_amd_printf cl_amd_media_ops cl_amd_popcnt 
-        device[0x27adc90]: DRIVER_VERSION: CAL 1.4.1720 (VM)
-
-        device[0x27adc90]: Type: GPU
---------------------------------------------------------------------------
+1. Linux distribution: Ubuntu 14.04 or higher
+2. HSA Linux Driver: TBD
+3. HSA Runtime: TBD
+4. HSAIL Compiler: TBD
+   (There are 2 versions available: Stable and Development.  It is suggested to use Stable version)
+5. libHSAIL: TBD
+   (libHSAIL has to be manually built per instructions below TBD)
 
 * Prerequisite/Repository
 
@@ -89,19 +83,10 @@ are:
   The default options can be overridden on the command line:
   # cmake ../src \
       -DCLANG_URL=git@bitbucket.org:${username}/cppamp-ng.git \
-      -DOPENCL_HEADER_DIR=<directory that contains cl.h/> \
-      -DOPENCL_LIBRARY_DIR=<directory that contains libOpenCL.so on Linux> \
-      -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CBackend \
-      -DGMAC_URL=https://bitbucket.org/multicoreware/gmac \
-      -DCMAKE_BUILD_TYPE=Debug
-  The default paths for major OpenCL stacks are searched. For example,
-  on x86-64 platforms with AMD GPU and AMD APP SDK installed at the
-  default path, this becomes
-  # cmake ../src \
-      -DCLANG_URL=git@bitbucket.org:${username}/cppamp-ng.git \
-      -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CBackend \
-      -DGMAC_URL=https://bitbucket.org/multicoreware/gmac \
-      -DCMAKE_BUILD_TYPE=Debug
+      -DCXXAMP_ENABLE_GMAC=OFF \
+      -DCXXAMP_ENABLE_HSA_OKRA=OFF \
+      -DCXXAMP_ENABLE_HSA=ON \
+      -DCMAKE_BUILD_TYPE=Release
 
 4. Build the whole system. This will build clang and other libraries
    that require one time build.
@@ -229,5 +214,3 @@ Tips for Developers
 
   It will print out verbose messages that actually it runs. Using this
   information will enable debugging.
-
-
