@@ -287,21 +287,13 @@ HSAContext *GetOrInitHSAContext(void)
 }
 
 
-#define ENABLE_HSAIL_BRIG 1
-
 static std::map<std::string, HSAContext::Kernel *> __mcw_okra_kernels;
 void *CreateHSAKernel(std::string s)
 {
   HSAContext::Kernel *kernel = __mcw_okra_kernels[s];
   if (!kernel) {
       size_t kernel_size = (size_t)((void *)kernel_size_);
-#ifdef ENABLE_HSAIL_BRIG
       char *kernel_source = (char*)kernel_source_;
-#else
-      char *kernel_source = (char*)malloc(kernel_size+1);
-      memcpy(kernel_source, kernel_source_, kernel_size);
-      kernel_source[kernel_size] = '\0';
-#endif
       //std::string kname = std::string("&__OpenCL_")+s+
       //    std::string("_kernel");
       std::string kname = std::string("&")+s;

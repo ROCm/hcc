@@ -113,7 +113,7 @@ void ldflags(void) {
     std::cout << " -Wl,--rpath=" CMAKE_HSA_LIB;
     std::cout << " -L" CMAKE_HSA_LIB;
     std::cout << " -Wl,--whole-archive -lhsacontext -Wl,--no-whole-archive ";
-    std::cout << "-lelf -lhsa-runtime64";
+    std::cout << " -lelf -lhsa-runtime64 ";
     std::cout << " " CMAKE_HSA_LIB "/LIBHSAIL.a ";
     std::cout << " -Wl,--unresolved-symbols=ignore-in-shared-libs ";
 #else
