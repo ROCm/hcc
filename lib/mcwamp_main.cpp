@@ -13,8 +13,8 @@
 #include "clamp-config.hxx"
 /* Flag set by ‘--verbose’. */
 static int verbose_flag;
-static bool build_mode = false, install_mode = false;
-static bool gpu_path = false, cpu_path = false;
+static bool build_mode = false, install_mode = true;
+static bool gpu_path = false, cpu_path = true;
 
 void replace(std::string& str,
         const std::string& from, const std::string& to) {
@@ -114,7 +114,7 @@ void ldflags(void) {
     std::cout << " -L" CMAKE_HSA_LIB;
     std::cout << " -Wl,--whole-archive -lhsacontext -Wl,--no-whole-archive ";
     std::cout << " -lelf -lhsa-runtime64 ";
-    std::cout << " " CMAKE_HSA_LIB "/LIBHSAIL.a ";
+    std::cout << " " CMAKE_HSA_LIB "/libhsail.a ";
     std::cout << " -Wl,--unresolved-symbols=ignore-in-shared-libs ";
 #else
     std::cout << " -lgmac-hpe ";
@@ -185,14 +185,18 @@ int main (int argc, char **argv) {
                 break;
             case 'b':   // --build
                 build_mode = true;
+                install_mode = false;
                 break;
             case 'i':   // --install
+                build_mode = false;
                 install_mode = true;
                 break;
             case 'g':   // --gpu
                 gpu_path = true;
+                cpu_path = false;
                 break;
             case 'c':   // --cpu
+                gpu_path = false;
                 cpu_path = true;
                 break;
             case '?':

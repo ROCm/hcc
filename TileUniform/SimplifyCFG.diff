@@ -1,0 +1,36 @@
+#!/bin/sh
+patch -p0 < $0
+exit 0
+Index: compiler/lib/Transforms/Utils/SimplifyCFG.cpp
+===================================================================
+--- compiler/lib/Transforms/Utils/SimplifyCFG.cpp	(original one)
++++ compiler/lib/Transforms/Utils/SimplifyCFG.cpp	(working copy)
+@@ -1598,6 +1598,19 @@
+   return true;
+ }
+ 
++/// \returns True if this block contains a CallInst with the NoDuplicate
++/// attribute.
++static bool HasNoDuplicateCall(const BasicBlock *BB) {
++  for (BasicBlock::const_iterator I = BB->begin(), E = BB->end(); I != E; ++I) {
++    const CallInst *CI = dyn_cast<CallInst>(I);
++    if (!CI)
++      continue;
++    if (CI->cannotDuplicate())
++      return true;
++  }
++  return false;
++}
++
+ /// BlockIsSimpleEnoughToThreadThrough - Return true if we can thread a branch
+ /// across this block.
+ static bool BlockIsSimpleEnoughToThreadThrough(BasicBlock *BB) {
+@@ -1645,6 +1658,8 @@
+   // Now we know that this block has multiple preds and two succs.
+   if (!BlockIsSimpleEnoughToThreadThrough(BB)) return false;
+ 
++  if (HasNoDuplicateCall(BB)) return false;
++
+   // Okay, this is a simple enough basic block.  See if any phi values are
+   // constants.
+   for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
