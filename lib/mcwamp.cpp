@@ -310,8 +310,7 @@ void *CreateHSAKernel(std::string s)
   }
   kernel->clearArgs();
 
-#define USE_HSAIL_D2
-#ifndef USE_HSAIL_D2
+#ifndef CXXAMP_ENABLE_HSAIL_HLC_DEVELOPMENT_COMPILER
   kernel->pushLongArg(0);
   kernel->pushLongArg(0);
   kernel->pushLongArg(0);
