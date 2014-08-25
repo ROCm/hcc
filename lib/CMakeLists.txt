@@ -27,9 +27,4 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-hsatools
     DESTINATION bin)
 endif (CXXAMP_ENABLE_HSA)
 
-if (CXXAMP_ENABLE_HSA_OKRA)
-install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-hsatools
-    DESTINATION bin)
-endif (CXXAMP_ENABLE_HSA_OKRA)
-
 install(FILES opencl_math.bc DESTINATION lib)
