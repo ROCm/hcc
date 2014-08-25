@@ -76,7 +76,6 @@ LINK_DIRECTORIES( ${LLVM_LIB_DIR} )
 
 # Turn on by default for now.
 option(CXXAMP_ENABLE_GMAC "Build GMAC as backend" ON)
-option(CXXAMP_ENABLE_HSA_OKRA "Use HSA Okra runtime as backend" OFF)
 option(CXXAMP_ENABLE_HSA "Use HSA Runtime as backend" OFF)
 
 if (CXXAMP_ENABLE_HSA)
@@ -93,23 +92,6 @@ find_program (AMD_CLC NAME clc PATHS
         "${AMDOCLTOOLS_ROOT}/bin"
         NO_DEFAULT_PATH)
 endif (CXXAMP_ENABLE_HSA)
-
-if (CXXAMP_ENABLE_HSA_OKRA)
-# A bunch of external dependencies
-set (AMDOCLTOOLS_ROOT "/opt/amd/"
-        CACHE PATH "AMD OpenCL bin release path")
-set (OKRA_ROOT "/opt/hsa/"
-        CACHE PATH "Okra bin release path")
-find_program (HSAILASM NAME hsailasm PATHS
-        ${AMDOCLTOOLS_ROOT}/bin
-        NO_DEFAULT_PATH)
-# clc.exe and AMD OpenCL library builtins
-find_program (AMD_CLC NAME clc PATHS
-        "${AMDOCLTOOLS_ROOT}/bin"
-        NO_DEFAULT_PATH)
-# Okra headers needs JNI
-find_package(JNI REQUIRED)
-endif (CXXAMP_ENABLE_HSA_OKRA)
 
 if(CXXAMP_ENABLE_GMAC)
 
@@ -195,12 +177,6 @@ set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMA
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "clamp: a C++AMP to OpenCL/HSA compiler")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Jack Chung <jack@multicorewareinc.com>")
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "libcxxamp (>= 0.3.0)")
-if (CXXAMP_ENABLE_HSA_OKRA)
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS 
-            "${CPACK_DEBIAN_PACKAGE_DEPENDS}, okra-dev (>= 0.1.1)")
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS 
-            "${CPACK_DEBIAN_PACKAGE_DEPENDS}, amd-ocl-tools-dev (>= 0.1.1)")
-endif (CXXAMP_ENABLE_HSA_OKRA)
 set(CPACK_GENERATOR "DEB;TGZ")
 set(CPACK_SOURCE_GENERATOR "TGZ")
 set(CPACK_BINARY_DEB "ON")
