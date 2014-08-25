@@ -112,7 +112,7 @@ void ldflags(void) {
     std::cout << " -lgmac-hpe";
 #endif
     std::cout << " -lc++ -lcxxrt -ldl -lpthread ";
-    std::cout << "-Wl,--whole-archive -lmcwamp -Wl,--no-whole-archive ";
+    std::cout << " -lmcwamp ";
 #else // __APPLE__
     std::cout << " -lgmac-hpe -lc++ -lmcwamp ";
 #endif
