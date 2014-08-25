@@ -5,10 +5,7 @@
 // See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
 
 /// <summary>Test the correctness of C++ AMP copy APIs involving array_views without a data source</summary>
-// RUN: %amp_device -D__GPU__ %s -m32 -emit-llvm -c -S -O2 -o %t.ll && mkdir -p %t
-// RUN: %clamp-device %t.ll %t/kernel.cl 
-// RUN: pushd %t && %embed_kernel kernel.cl %t/kernel.o && popd
-// RUN: %cxxamp %link %t/kernel.o %s -o %t.out && %t.out
+// RUN: %cxxamp %s -o %t.out && %t.out
 #include <vector>
 #include <algorithm>
 #include <amp.h>
