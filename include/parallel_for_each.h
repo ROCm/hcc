@@ -65,9 +65,6 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
   int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
   std::string transformed_kernel_name =
       mcw_cxxamp_fixnames(f.__cxxamp_trampoline_name());
-#if 0
-  std::cerr << "Kernel name = "<< transformed_kernel_name <<"\n";
-#endif
   ecl_kernel kernel;
   auto it = __mcw_cxxamp_kernels.insert(transformed_kernel_name);
   error_code = eclGetKernel(it.first->c_str(), &kernel);
