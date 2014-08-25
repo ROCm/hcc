@@ -1,8 +1,5 @@
 // XFAIL: Linux
-// RUN: %amp_device -D__GPU__ -Xclang -fhsa-ext %s -m32 -emit-llvm -c -S -O2 -o %t.ll && mkdir -p %t
-// RUN: %clamp-device %t.ll %t/kernel.cl
-// RUN: pushd %t && %embed_kernel kernel.cl %t/kernel.o && popd
-// RUN: %cxxamp -Xclang -fhsa-ext %link %t/kernel.o %s -o %t.out && %t.out
+// RUN: %cxxamp %s -o %t.out && %t.out
 #include <amp.h>
 
 #define TEST_DEBUG 1
