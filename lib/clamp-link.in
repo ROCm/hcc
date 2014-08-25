@@ -1,8 +1,16 @@
 #!/bin/bash
 
-CPPAMP_BUILD_DIR=/home/whchung/cppamp/build_release
-COMPILER_BIN_DIR=$CPPAMP_BUILD_DIR/compiler/bin
-COMPILER_LIB_DIR=$CPPAMP_BUILD_DIR/lib
+if [ -d @LLVM_TOOLS_DIR@ ]; then
+    LINK=@LLVM_TOOLS_DIR@/llvm-link
+    OPT=@LLVM_TOOLS_DIR@/opt
+    CLAMP_DEVICE=@PROJECT_BINARY_DIR@/lib/clamp-device
+    CLAMP_EMBED=@PROJECT_BINARY_DIR@/lib/clamp-embed
+else
+    LINK=@CMAKE_INSTALL_PREFIX@/bin/llvm-link
+    OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
+    CLAMP_DEVICE=@CMAKE_INSTALL_PREFIX@/bin/clamp-clamp-device
+    CLAMP_EMBED=@CMAKE_INSTALL_PREFIX@/bin/clamp-clamp-embed
+fi
 
 ################
 # link
