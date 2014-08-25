@@ -65,5 +65,3 @@ else
         exit $?
     fi
 fi
-# remove temp file
-rm $2.promote.bc
