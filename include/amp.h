@@ -1483,12 +1483,6 @@ public:
       operator()(int i0) const restrict(amp,cpu) {
           return (*this)[i0];
   }
-  // Duplicated codes
-  #if 0
-  __global const T& operator()(int i0) const restrict(amp,cpu) {
-      return (*this)[i0];
-  }
-  #endif
   __global T& operator()(int i0, int i1) restrict(amp,cpu) {
       return (*this)[index<2>(i0, i1)];
   }
@@ -1720,23 +1714,7 @@ public:
   explicit array_view(int e0, int e1, int e2)
       : array_view(Concurrency::extent<3>(e0, e1, e2))
   { static_assert(N == 3, "Rank must be 3"); }
-  // A read-write array_view cannot be copy constructed from a const array_view
-#if 0
-  template <class = typename std::enable_if<std::is_const<T>::value>::type>
-    array_view(const array_view<nc_T, N>& other) restrict(amp,cpu) : extent(other.extent),
-      p_(other.p_), cache(other.cache), offset(other.offset), index_base(other.index_base),
-      extent_base(other.extent_base) {}
-  template <class = typename std::enable_if<!std::is_const<T>::value>::type>
-    array_view(const array_view<const T, N>& other) restrict(amp,cpu) : extent(other.extent),
-      p_(const_cast<T*>(other.p_)), cache(other.cache), offset(other.offset), index_base(other.index_base),
-      extent_base(other.extent_base) {
-      }
 
-  array_view(const array_view<const T, N>& other) restrict(amp,cpu) : extent(other.extent),
-    p_(const_cast<T*>(other.p_)), cache(other.cache), offset(other.offset), index_base(other.index_base),
-    extent_base(other.extent_base) {
-    }
-#endif
    array_view(const array_view& other) restrict(amp,cpu) : extent(other.extent),
     p_(other.p_), cache(other.cache), offset(other.offset), index_base(other.index_base),
     extent_base(other.extent_base) {}
@@ -1751,18 +1729,7 @@ public:
       }
       return *this;
   }
-  // These codes are not C++AMP Spec
- #if 0
-  array_view& operator=(const array_view<const T,N>& other) restrict(amp,cpu) {
-    extent = other.extent;
-    p_ = const_cast<T*>(other.p_);
-    cache = other.cache;
-    index_base = other.index_base;
-    extent_base = other.extent_base;
-    offset = other.offset;
-    return *this;
-  }
-#endif
+
   void copy_to(array<T,N>& dest) const {
 #ifndef __GPU__
       for(int i= 0 ;i< N;i++)
