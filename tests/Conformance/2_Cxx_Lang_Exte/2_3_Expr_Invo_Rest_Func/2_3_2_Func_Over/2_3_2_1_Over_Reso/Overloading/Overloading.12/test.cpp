@@ -6,8 +6,7 @@
 /// <tags>P0</tags>
 /// <summary>pointer -> const pointer</summary>
 
-// RUN: %cxxamp %s %link
-// RUN: ./a.out
+// RUN: %cxxamp %s -o %t.out && %t.out
 
 class c
 {

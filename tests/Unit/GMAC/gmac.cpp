@@ -1,4 +1,4 @@
-// XFAIL: hsa-okra, hsa
+// XFAIL: hsa
 // RUN: %gtest_amp %s -o %t1 && %t1
 
 #include <gtest/gtest.h>

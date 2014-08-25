@@ -6,8 +6,7 @@
 /// <tags>P2</tags>
 /// <summary>Use typeid to compare two equal function pointers, one with restrict(cpu)</summary>
 
-// RUN: %cxxamp %s %link
-// RUN: ./a.out
+// RUN: %cxxamp %s -o %t.out && %t.out
 
 #include <typeinfo>
 

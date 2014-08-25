@@ -1,10 +1,4 @@
-// RUN: %amp_device -D__GPU__=1 %s -m32 -emit-llvm -c -S -O2 -o %t.ll 
-// RUN: mkdir -p %t
-// RUN: %clamp-device %t.ll %t/kernel.cl
-// RUN: pushd %t 
-// RUN: %embed_kernel kernel.cl %t/kernel.o
-// RUN: popd
-// RUN: %cxxamp %link %t/kernel.o %s -o %t.out && %t.out
+// RUN: %cxxamp %s -o %t.out && %t.out
 
 #include <iostream> 
 #include <amp.h> 
