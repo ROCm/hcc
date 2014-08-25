@@ -1,0 +1,55 @@
+#!/bin/bash
+
+CPPAMP_BUILD_DIR=/home/whchung/cppamp/build_release
+COMPILER_BIN_DIR=$CPPAMP_BUILD_DIR/compiler/bin
+COMPILER_LIB_DIR=$CPPAMP_BUILD_DIR/lib
+
+################
+# link
+################
+
+LINK_KERNEL_ARGS=""
+LINK_HOST_ARGS=""
+LINK_OTHER_ARGS=""
+
+ARGS="$@"
+for ARG in $ARGS
+do
+  FILENAME=${ARG%.o}
+  ISCRT=${ARG#/usr}
+  if [ $FILENAME != $ARG ] && [ $ISCRT == $ARG ]; then
+    KERNEL_FILE=$FILENAME.kernel.bc
+    HOST_FILE=$FILENAME.host.o
+
+    # extract kernel section
+    objcopy -O binary -j .kernel $ARG $KERNEL_FILE 
+
+    # extract host section
+    objcopy -R .kernel $ARG $HOST_FILE
+
+    LINK_KERNEL_ARGS=$LINK_KERNEL_ARGS" "$KERNEL_FILE
+    LINK_HOST_ARGS=$LINK_HOST_ARGS" "$HOST_FILE
+  else
+    LINK_OTHER_ARGS=$LINK_OTHER_ARGS" "$ARG
+  fi
+done
+#echo $LINK_KERNEL_ARGS
+#echo $LINK_HOST_ARGS
+#echo $LINK_OTHER_ARGS
+
+# combine kernel sections together
+$COMPILER_BIN_DIR/llvm-link $LINK_KERNEL_ARGS | $COMPILER_BIN_DIR/opt -always-inline - -o kernel.bc
+
+# lower to SPIR or OCL
+$COMPILER_LIB_DIR/clamp-device kernel.bc kernel.cl
+
+# build a new kernel object
+$COMPILER_LIB_DIR/clamp-embed kernel.cl kernel.o
+
+# link
+ld kernel.o $LINK_HOST_ARGS $LINK_OTHER_ARGS
+
+# remove temp files
+rm kernel.o kernel.bc kernel.cl # combine kernel
+rm $LINK_KERNEL_ARGS # individual kernels
+rm $LINK_HOST_ARGS # individual host codes
