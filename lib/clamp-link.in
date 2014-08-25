@@ -20,23 +20,31 @@ LINK_KERNEL_ARGS=""
 LINK_HOST_ARGS=""
 LINK_OTHER_ARGS=""
 
+TEMP_DIR=`mktemp -d`
+
 ARGS="$@"
 for ARG in $ARGS
 do
-  FILENAME=${ARG%.o}
-  ISCRT=${ARG#/usr}
-  if [ $FILENAME != $ARG ] && [ $ISCRT == $ARG ]; then
-    KERNEL_FILE=$FILENAME.kernel.bc
-    HOST_FILE=$FILENAME.host.o
+  if [ -f $ARG ]; then
+    FILE=`basename $ARG` # remove path
+    FILENAME=${FILE%.o}  # check if it's an object file
+    ISCRT=${ARG#/usr}    # exception for objects under /usr
+    ISLIB=${ARG#/lib}    # exception for objects under /lib
+    if [ $FILENAME != $FILE ] && [ $ISCRT == $ARG ] && [ $ISLIB == $ARG ]; then
+      KERNEL_FILE=$TEMP_DIR/$FILENAME.kernel.bc
+      HOST_FILE=$TEMP_DIR/$FILENAME.host.o
 
-    # extract kernel section
-    objcopy -O binary -j .kernel $ARG $KERNEL_FILE 
+      # extract kernel section
+      objcopy -O binary -j .kernel $ARG $KERNEL_FILE 
 
-    # extract host section
-    objcopy -R .kernel $ARG $HOST_FILE
+      # extract host section
+      objcopy -R .kernel $ARG $HOST_FILE
 
-    LINK_KERNEL_ARGS=$LINK_KERNEL_ARGS" "$KERNEL_FILE
-    LINK_HOST_ARGS=$LINK_HOST_ARGS" "$HOST_FILE
+      LINK_KERNEL_ARGS=$LINK_KERNEL_ARGS" "$KERNEL_FILE
+      LINK_HOST_ARGS=$LINK_HOST_ARGS" "$HOST_FILE
+    else
+      LINK_OTHER_ARGS=$LINK_OTHER_ARGS" "$ARG
+    fi
   else
     LINK_OTHER_ARGS=$LINK_OTHER_ARGS" "$ARG
   fi
@@ -46,18 +54,25 @@ done
 #echo $LINK_OTHER_ARGS
 
 # combine kernel sections together
-$COMPILER_BIN_DIR/llvm-link $LINK_KERNEL_ARGS | $COMPILER_BIN_DIR/opt -always-inline - -o kernel.bc
+$LINK $LINK_KERNEL_ARGS | $OPT -always-inline - -o $TEMP_DIR/kernel.bc
 
 # lower to SPIR or OCL
-$COMPILER_LIB_DIR/clamp-device kernel.bc kernel.cl
+$CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.cl
 
 # build a new kernel object
-$COMPILER_LIB_DIR/clamp-embed kernel.cl kernel.o
+pushd . > /dev/null
+cd $TEMP_DIR
+$CLAMP_EMBED kernel.cl kernel.o
+popd > /dev/null
 
 # link
-ld kernel.o $LINK_HOST_ARGS $LINK_OTHER_ARGS
+ld $TEMP_DIR/kernel.o $LINK_HOST_ARGS $LINK_OTHER_ARGS
 
 # remove temp files
-rm kernel.o kernel.bc kernel.cl # combine kernel
+rm $TEMP_DIR/kernel.o $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.cl # combine kernel
 rm $LINK_KERNEL_ARGS # individual kernels
 rm $LINK_HOST_ARGS # individual host codes
+if [ -d $TEMP_DIR ]; then
+  rm -f $TEMP_DIR/*
+  rmdir $TEMP_DIR
+fi
