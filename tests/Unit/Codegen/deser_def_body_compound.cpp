@@ -1,5 +1,5 @@
-// RUN: %amp_device -D__GPU__=1 %s -c -o %t.device.o
-// RUN: %gtest_amp %s %t.device.o -o %t && %t
+// XFAIL: *
+// RUN: %gtest_amp %s -o %t && %t
 #include <stdlib.h>
 #ifndef __GPU__ //gtest requires rtti, but amp_device forbids rtti
 #include <gtest/gtest.h>

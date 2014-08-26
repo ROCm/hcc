@@ -49,8 +49,20 @@ configure_file(
   ${CMAKE_CURRENT_BINARY_DIR}/../lib/clamp-embed @ONLY)
 
 configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-assemble.in
+  ${CMAKE_CURRENT_BINARY_DIR}/../lib/clamp-assemble @ONLY)
+
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-link.in
+  ${CMAKE_CURRENT_BINARY_DIR}/../lib/clamp-link @ONLY)
+
+configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-hsatools.in
   ${CMAKE_CURRENT_BINARY_DIR}/../lib/clamp-hsatools @ONLY)
+
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-hsail.in
+  ${CMAKE_CURRENT_BINARY_DIR}/../lib/clamp-hsail @ONLY)
 
 add_custom_target(test
   COMMAND python ${LLVM_ROOT}/bin/llvm-lit --path ${LLVM_TOOLS_DIR} ${LLVM_LIT_ARGS} ${CMAKE_CURRENT_BINARY_DIR}

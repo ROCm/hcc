@@ -33,18 +33,12 @@ void cxxflags(void) {
     // Common options
     std::cout << "-std=c++amp";
 
-#if defined(CXXAMP_ENABLE_HSA_OKRA)
-    std::cout << " -DCXXAMP_ENABLE_HSA_OKRA=1";
-    std::cout << " -I" CMAKE_OKRA_ROOT;
-    std::string jni_dirs(CMAKE_JNI_INCLUDE);
-    replace(jni_dirs, ";", " -I");
-    std::cout << " -I" << jni_dirs;
-#elif defined(CXXAMP_ENABLE_HSA)
+#if defined(CXXAMP_ENABLE_HSA)
     std::cout << " -DCXXAMP_ENABLE_HSA=1";
     std::cout << " -I" CMAKE_HSA_ROOT;
 #endif
 
-#if !defined(CXXAMP_ENABLE_HSA_OKRA) && !defined(CXXAMP_ENABLE_HSA)
+#if !defined(CXXAMP_ENABLE_HSA)
     // OpenCL headers
     std::cout << " -I" CMAKE_OPENCL_INC;
 #endif
@@ -54,8 +48,7 @@ void cxxflags(void) {
         std::cout << " -I" CMAKE_CLAMP_INC_DIR;
         // libcxx
         std::cout << " -I" CMAKE_LIBCXX_INC;
-
-#if !defined(CXXAMP_ENABLE_HSA_OKRA) && !defined(CXXAMP_ENABLE_HSA)
+#if !defined(CXXAMP_ENABLE_HSA)
         // GMAC options, build tree
         std::cout << " -I" CMAKE_GMAC_INC_BIN_DIR;
         std::cout << " -I" CMAKE_GMAC_INC_DIR;
@@ -68,15 +61,25 @@ void cxxflags(void) {
     }
 
     if (gpu_path) {
+#if !defined(CXXAMP_ENABLE_HSA)
         std::cout << " -D__GPU__=1 -Xclang -famp-is-device -fno-builtin -fno-common -m32 -O2";
+#else
+        std::cout << " -D__GPU__=1 -Xclang -famp-is-device -fno-builtin -fno-common -m32 -O2";
+#endif
     } else if (cpu_path) {
+#if !defined(CXXAMP_ENABLE_HSA)
         std::cout << " -D__CPU__=1";
+#else
+        std::cout << " -D__CPU__=1";
+#endif
     }
 
     std::cout << std::endl;
 }
 
 void ldflags(void) {
+    // Common options
+    std::cout << "-std=c++amp";
     if (build_mode) {
         std::cout << " -L" CMAKE_GMAC_LIB_DIR;
 #ifdef __APPLE__
@@ -98,21 +101,18 @@ void ldflags(void) {
 #endif
     }
 #ifndef __APPLE__
-#if defined(CXXAMP_ENABLE_HSA_OKRA)
-    std::cout << " -Wl,--rpath=" CMAKE_OKRA_LIB;
-    std::cout << " -L" CMAKE_OKRA_LIB;
-    std::cout << " -lokra_x86_64 -lnewhsacore64 -lamdhsacl64";
-#elif defined(CXXAMP_ENABLE_HSA)
+#if defined(CXXAMP_ENABLE_HSA)
     std::cout << " -Wl,--rpath=" CMAKE_HSA_LIB;
     std::cout << " -L" CMAKE_HSA_LIB;
-    std::cout << " " CMAKE_HSA_LIB "/hsa_runtime_core64.so";
-    std::cout << " -lamdocl64";
+    std::cout << " -lhsa-runtime64";
     std::cout << " -Wl,--whole-archive -lhsacontext -Wl,--no-whole-archive ";
+    std::cout << " " CMAKE_HSA_LIB "/libhsail.a ";
+    std::cout << " /usr/lib/gcc/x86_64-linux-gnu/4.8/libstdc++.a ";
 #else
     std::cout << " -lgmac-hpe";
 #endif
     std::cout << " -lc++ -lcxxrt -ldl -lpthread ";
-    std::cout << "-Wl,--whole-archive -lmcwamp -Wl,--no-whole-archive ";
+    std::cout << " -lmcwamp ";
 #else // __APPLE__
     std::cout << " -lgmac-hpe -lc++ -lmcwamp ";
 #endif
@@ -183,8 +183,10 @@ int main (int argc, char **argv) {
                 break;
             case 'g':   // --gpu
                 gpu_path = true;
+                cpu_path = false;
                 break;
             case 'c':   // --cpu
+                gpu_path = false;
                 cpu_path = true;
                 break;
             case '?':

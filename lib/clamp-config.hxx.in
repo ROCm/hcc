@@ -12,11 +12,6 @@
 #define CMAKE_INSTALL_LIBCXX_INC    CMAKE_INSTALL_INC"/c++/v1"
 #define CMAKE_INSTALL_LIB           CMAKE_INSTALL_PREFIX"/lib"
 
-#define CMAKE_OKRA_ROOT         "@OKRA_ROOT@/include"
-#define CMAKE_OKRA_LIB          "@OKRA_ROOT@/lib"
-#define CMAKE_JNI_INCLUDE       "@JNI_INCLUDE_DIRS@"
-
 #define CMAKE_HSA_ROOT         "@HSA_ROOT@/include"
 #define CMAKE_HSA_LIB          "@HSA_ROOT@/lib"
-
 #define CMAKE_OPENCL_INC       "@OPENCL_INCLUDE@"
