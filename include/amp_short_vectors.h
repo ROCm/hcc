@@ -117,6 +117,7 @@ private:
     Value = v;
   }
 
+public:
   NORM_COMMON_PRIVATE_MEMBER(unorm)
 
 public:
@@ -142,7 +143,7 @@ private:
     v = v > 1.0f ? 1.0f : v;
     Value = v;
   }
-
+public:
   NORM_COMMON_PRIVATE_MEMBER(norm)
 
 public:
@@ -268,6 +269,27 @@ class norm_4;
 class unorm_2;
 class unorm_3;
 class unorm_4;
+
+
+typedef int_2 int2;
+typedef int_3 int3;
+typedef int_4 int4;
+typedef uint_2 uint2;
+typedef uint_3 uint3;
+typedef uint_4 uint4;
+typedef float_2 float2;
+typedef float_3 float3;
+typedef float_4 float4;
+typedef double_2 double2;
+typedef double_3 double3;
+typedef double_4 double4;
+typedef norm_2 norm2;
+typedef norm_3 norm3;
+typedef norm_4 norm4;
+typedef unorm_2 unorm2;
+typedef unorm_3 unorm3;
+typedef unorm_4 unorm4;
+
 
 //   Class Declaration (10.8.1 Synopsis)
 
@@ -797,7 +819,7 @@ ST_2& operator/=(const ST_2& rhs) restrict(cpu, amp) \
 
 class int_2
 {
-private:
+public:
   SCALARTYPE_2_COMMON_PRIVATE_MEMBER(int)
 
 public:
@@ -860,7 +882,7 @@ public:
 
 class uint_2
 {
-private:
+public:
   SCALARTYPE_2_COMMON_PRIVATE_MEMBER(unsigned int)
 
 public:
@@ -921,7 +943,7 @@ public:
 
 class float_2
 {
-private:
+public:
   SCALARTYPE_2_COMMON_PRIVATE_MEMBER(float)
 
 public:
@@ -940,7 +962,7 @@ public:
 
 class double_2
 {
-private:
+public:
   SCALARTYPE_2_COMMON_PRIVATE_MEMBER(double)
 
 public:
@@ -959,7 +981,7 @@ public:
 
 class norm_2
 {
-private:
+public:
   SCALARTYPE_2_COMMON_PRIVATE_MEMBER(norm)
 
 public:
@@ -1125,7 +1147,7 @@ ST_3& operator/=(const ST_3& rhs) restrict(cpu, amp) \
 
 class int_3
 {
-private:
+public:
   SCALARTYPE_3_COMMON_PRIVATE_MEMBER(int)
 
 public:
@@ -1199,7 +1221,7 @@ public:
 
 class uint_3
 {
-private:
+public:
   SCALARTYPE_3_COMMON_PRIVATE_MEMBER(unsigned int)
 
 public:
@@ -1271,7 +1293,7 @@ public:
 
 class float_3
 {
-private:
+public:
   SCALARTYPE_3_COMMON_PRIVATE_MEMBER(float)
 
 public:
@@ -1295,7 +1317,7 @@ public:
 
 class double_3
 {
-private:
+public:
   SCALARTYPE_3_COMMON_PRIVATE_MEMBER(double)
 
 public:
@@ -1319,7 +1341,7 @@ public:
 
 class norm_3
 {
-private:
+public:
   SCALARTYPE_3_COMMON_PRIVATE_MEMBER(norm)
 
 public:
@@ -1343,7 +1365,7 @@ public:
 
 class unorm_3
 {
-private:
+public:
   SCALARTYPE_3_COMMON_PRIVATE_MEMBER(unorm)
 
 public:
@@ -1510,7 +1532,7 @@ ST_4& operator/=(const ST_4& rhs) restrict(cpu, amp) \
 
 class int_4
 {
-private:
+public:
   SCALARTYPE_4_COMMON_PRIVATE_MEMBER(int)
 
 public:
@@ -1599,7 +1621,7 @@ public:
 
 class uint_4
 {
-private:
+public:
   SCALARTYPE_4_COMMON_PRIVATE_MEMBER(unsigned int)
 
 public:
@@ -1686,7 +1708,7 @@ public:
 
 class float_4
 {
-private:
+public:
   SCALARTYPE_4_COMMON_PRIVATE_MEMBER(float)
 
 public:
@@ -1719,7 +1741,7 @@ public:
 
 class double_4
 {
-private:
+public:
   SCALARTYPE_4_COMMON_PRIVATE_MEMBER(double)
 
 public:
@@ -1752,7 +1774,7 @@ public:
 
 class norm_4
 {
-private:
+public:
   SCALARTYPE_4_COMMON_PRIVATE_MEMBER(norm)
 
 public:
@@ -1785,7 +1807,7 @@ public:
 
 class unorm_4
 {
-private:
+public:
   SCALARTYPE_4_COMMON_PRIVATE_MEMBER(unorm)
 
 public:
