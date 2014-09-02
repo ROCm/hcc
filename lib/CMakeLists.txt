@@ -16,7 +16,7 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-device
     DESTINATION bin)
 
 if (CXXAMP_ENABLE_HSA)
-add_mcwamp_library(hsacontext HSAContextKaveri.cpp)
+add_mcwamp_library(hsacontext HSAContextKaveri.cpp elf_utils.cpp)
 install(TARGETS hsacontext
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib)

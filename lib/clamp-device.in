@@ -25,6 +25,7 @@ else
     LIB=@CMAKE_INSTALL_PREFIX@/lib
     HSATOOLS=@CMAKE_INSTALL_PREFIX@/bin/clamp-hsatools
 fi
+
 if [ "@CXXAMP_ENABLE_HSA_OKRA@" = "ON" ]; then
     $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
          -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
@@ -49,7 +50,7 @@ elif [ "@CXXAMP_ENABLE_HSA@" = "ON" ]; then
     $LINK $MATHLIB/opencl_math.bc $2.promote.bc -o $2 2>/dev/null
     $HSATOOLS $2
     mv -f $2 $2.orig
-    mv $2.hsail $2
+    mv $2.brig $2
     exit $?
 else
     $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \

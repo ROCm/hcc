@@ -68,8 +68,8 @@ public:
 		virtual hsa_status_t dispatchKernelWaitComplete() = 0;
 	};
 
-	// create a kernel object from the specified HSAIL text source and entrypoint
-	virtual Kernel * createKernel(const char *source, const char *entryName) = 0;
+	// create a kernel object from the specified HSAIL entrypoint
+	virtual Kernel * createKernel(const char *hsail, const size_t hsailSize, const char *entryName) = 0;
 
 	// dispose of an environment including all programs
 	virtual hsa_status_t dispose() = 0;

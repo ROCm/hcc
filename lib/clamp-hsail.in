@@ -23,4 +23,4 @@ $HSAIL_LLC -O2 -march=hsail-64 -o $FILENAME.brig $FILENAME.bc
 $HSAIL_ASM -disassemble -o - $FILENAME.brig
 
 # remove artifacts
-rm $FILENAME.spir.ll $FILENAME.opt.ll $FILENAME.bc $FILENAME.brig
+rm $FILENAME.spir.ll $FILENAME.opt.ll $FILENAME.bc

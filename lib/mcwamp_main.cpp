@@ -112,15 +112,17 @@ void ldflags(void) {
 #elif defined(CXXAMP_ENABLE_HSA)
     std::cout << " -Wl,--rpath=" CMAKE_HSA_LIB;
     std::cout << " -L" CMAKE_HSA_LIB;
-    std::cout << " -lhsa-runtime64";
     std::cout << " -Wl,--whole-archive -lhsacontext -Wl,--no-whole-archive ";
+    std::cout << " -lelf -lhsa-runtime64 ";
     std::cout << " " CMAKE_HSA_LIB "/libhsail.a ";
-    std::cout << " /usr/lib/gcc/x86_64-linux-gnu/4.8/libstdc++.a ";
+    std::cout << " -Wl,--unresolved-symbols=ignore-in-shared-libs ";
 #else
-    std::cout << " -lgmac-hpe";
+    std::cout << " -lgmac-hpe ";
 #endif
+
     std::cout << " -lc++ -lcxxrt -ldl -lpthread ";
     std::cout << "-Wl,--whole-archive -lmcwamp -Wl,--no-whole-archive ";
+
 #else // __APPLE__
     std::cout << " -lgmac-hpe -lc++ -lmcwamp ";
 #endif
