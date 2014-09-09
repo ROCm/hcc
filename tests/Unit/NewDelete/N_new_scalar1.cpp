@@ -1,5 +1,5 @@
 // XFAIL: Linux
-// RUN: %amp_device -D__GPU__ -Xclang -fhsa-ext %s -m32 -emit-llvm -c -S -O2 -o %t.ll && mkdir -p %t
+// RUN: %amp_device -D__GPU__ -Xclang -fhsa-ext %s -m64 -emit-llvm -c -S -O2 -o %t.ll && mkdir -p %t
 // RUN: %clamp-device %t.ll %t/kernel.cl
 // RUN: pushd %t && %embed_kernel kernel.cl %t/kernel.o && popd
 // RUN: %cxxamp -Xclang -fhsa-ext %link %t/kernel.o %s -o %t.out && %t.out
@@ -34,9 +34,6 @@ int main ()
   std::atomic_long table_c[vecSize];
   auto ptr_c = &table_c[0];
 
-  // returned address
-  void* table_d[vecSize] = {0};
-
   // CPU syscall service thread control
   std::atomic_bool done(false);
   auto ptr_done = &done;
@@ -49,7 +46,7 @@ int main ()
   }
 
   // fire CPU thread
-  std::thread cpu_thread([=, &table_d]() {
+  std::thread cpu_thread([=]() {
     std::cout << "Enter CPU syscall service thread..." << std::endl;
     std::chrono::milliseconds dura( cpuSleepMsec );
     int syscall;
@@ -68,7 +65,6 @@ int main ()
               result = (long)memalign(0x1000, param);
               std::cout << std::dec << "tid: " << i << ", malloc(" << param << "), " 
                 << "ret: " << "0x" << std::setfill('0') << std::setw(2) << std::hex << result << "\n";
-              table_d[i] = (void*)result;
             break;
             case 2: // free
               std::cout << std::dec << "tid: " << i << ", free(" << std::hex << param << ")\n";
@@ -111,7 +107,7 @@ int main ()
 #if TEST_DEBUG
   for (int i = 0; i < vecSize; i++)
   {
-    unsigned int *p = (unsigned int*)table_d[i];
+    unsigned int *p = (unsigned int*)sum[i];
     printf("Value of addr %p is %u\n", (void*)p, *p);
   }
 #endif
@@ -119,7 +115,7 @@ int main ()
   // Verify
   int error = 0;
   for(int i = 0; i < vecSize; i++) {
-    unsigned int *p = (unsigned int*)table_d[i];
+    unsigned int *p = (unsigned int*)sum[i];
     error += abs(*p);
   }
   if (error == 0) {

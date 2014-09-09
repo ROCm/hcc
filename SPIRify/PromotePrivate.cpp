@@ -60,8 +60,8 @@ protected:
 public:
   NewedMemoryAnalyzer(Function &F) : IsNewed(false) {
     Module *M = F.getParent();
-    NewScalar = M->getFunction("_Znwj");
-    NewArray = M->getFunction("_Znaj"); 
+    NewScalar = M->getFunction(/*"_Znwj"*/ "_Znwm");
+    NewArray = M->getFunction(/*"_Znaj"*/ "_Znam");
   }
 
   bool isNewed() { return IsNewed; }
