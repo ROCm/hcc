@@ -53,7 +53,7 @@ extern int64_t get_group_id(unsigned int n) restrict(amp);
 #else
 #define tile_static static __attribute__((section("clamp_opencl_local")))
 #endif
-extern void barrier(unsigned int n) restrict(amp);
+extern __attribute__((noduplicate)) void barrier(unsigned int n) restrict(amp);
 //End CLAMP
 #endif
 
