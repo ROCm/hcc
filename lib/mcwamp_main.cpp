@@ -13,8 +13,8 @@
 #include "clamp-config.hxx"
 /* Flag set by ‘--verbose’. */
 static int verbose_flag;
-static bool build_mode = false, install_mode = false;
-static bool gpu_path = false, cpu_path = false;
+static bool build_mode = false, install_mode = true;
+static bool gpu_path = false, cpu_path = true;
 
 void replace(std::string& str,
         const std::string& from, const std::string& to) {
@@ -31,7 +31,7 @@ void cxxflags(void) {
         abort();
     }
     // Common options
-    std::cout << "--std=c++amp";
+    std::cout << "-std=c++amp";
 
 #if defined(CXXAMP_ENABLE_HSA_OKRA)
     std::cout << " -DCXXAMP_ENABLE_HSA_OKRA=1";
@@ -54,7 +54,6 @@ void cxxflags(void) {
         std::cout << " -I" CMAKE_CLAMP_INC_DIR;
         // libcxx
         std::cout << " -I" CMAKE_LIBCXX_INC;
-
 #if !defined(CXXAMP_ENABLE_HSA_OKRA) && !defined(CXXAMP_ENABLE_HSA)
         // GMAC options, build tree
         std::cout << " -I" CMAKE_GMAC_INC_BIN_DIR;
@@ -68,9 +67,17 @@ void cxxflags(void) {
     }
 
     if (gpu_path) {
+#if !defined(CXXAMP_ENABLE_HSA_OKRA) && !defined(CXXAMP_ENABLE_HSA)
         std::cout << " -D__GPU__=1 -Xclang -famp-is-device -fno-builtin -fno-common -m32 -O2";
+#else
+        std::cout << " -D__GPU__=1 -Xclang -famp-is-device -fno-builtin -fno-common -m32 -O2";
+#endif
     } else if (cpu_path) {
+#if !defined(CXXAMP_ENABLE_HSA_OKRA) && !defined(CXXAMP_ENABLE_HSA)
         std::cout << " -D__CPU__=1";
+#else
+        std::cout << " -D__CPU__=1";
+#endif
     }
 
     std::cout << std::endl;
@@ -105,9 +112,10 @@ void ldflags(void) {
 #elif defined(CXXAMP_ENABLE_HSA)
     std::cout << " -Wl,--rpath=" CMAKE_HSA_LIB;
     std::cout << " -L" CMAKE_HSA_LIB;
-    std::cout << " " CMAKE_HSA_LIB "/hsa_runtime_core64.so";
-    std::cout << " -lamdocl64";
+    std::cout << " -lhsa-runtime64";
     std::cout << " -Wl,--whole-archive -lhsacontext -Wl,--no-whole-archive ";
+    std::cout << " " CMAKE_HSA_LIB "/libhsail.a ";
+    std::cout << " /usr/lib/gcc/x86_64-linux-gnu/4.8/libstdc++.a ";
 #else
     std::cout << " -lgmac-hpe";
 #endif
@@ -175,14 +183,18 @@ int main (int argc, char **argv) {
                 break;
             case 'b':   // --build
                 build_mode = true;
+                install_mode = false;
                 break;
             case 'i':   // --install
+                build_mode = false;
                 install_mode = true;
                 break;
             case 'g':   // --gpu
                 gpu_path = true;
+                cpu_path = false;
                 break;
             case 'c':   // --cpu
+                gpu_path = false;
                 cpu_path = true;
                 break;
             case '?':

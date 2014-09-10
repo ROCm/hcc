@@ -24,7 +24,7 @@
 #include <chrono>
 #include <future>
 #include <string.h> //memcpy
-#ifndef CXXAMP_ENABLE_HSA_OKRA
+#if !defined(CXXAMP_ENABLE_HSA_OKRA) && !defined(CXXAMP_ENABLE_HSA)
 #include <gmac/opencl.h>
 #endif
 #include <memory>
@@ -40,6 +40,20 @@
 
 #ifndef WIN32
 #define __declspec(ignored) /* */
+#endif
+
+#if defined(CXXAMP_ENABLE_HSA_OKRA) || defined(CXXAMP_ENABLE_HSA)
+//CLAMP
+extern int64_t get_global_id(unsigned int n) restrict(amp);
+extern int64_t get_local_id(unsigned int n) restrict(amp);
+extern int64_t get_group_id(unsigned int n) restrict(amp);
+#ifdef __APPLE__
+#define tile_static static __attribute__((section("clamp,opencl_local")))
+#else
+#define tile_static static __attribute__((section("clamp_opencl_local")))
+#endif
+extern void barrier(unsigned int n) restrict(amp);
+//End CLAMP
 #endif
 
 namespace Concurrency {
@@ -155,7 +169,7 @@ public:
   accelerator(const accelerator& other);
   static std::vector<accelerator> get_all() {
     std::vector<accelerator> acc;
-#ifndef CXXAMP_ENABLE_HSA_OKRA
+#if !defined(CXXAMP_ENABLE_HSA_OKRA) && !defined(CXXAMP_ENABLE_HSA)
     AcceleratorInfo accInfo;
     for (unsigned i = 0; i < eclGetNumberOfAccelerators(); i++) {
       assert(eclGetAcceleratorInfo(i, &accInfo) == eclSuccess);
@@ -166,7 +180,6 @@ public:
         acc.push_back(*_cpu_accelerator);
     }
 #else
-    acc.push_back(*_cpu_accelerator);  // in HSA path, always add CPU accelerator
     acc.push_back(*_gpu_accelerator);  // in HSA path, always add GPU accelerator
 #endif
     return acc;
@@ -217,7 +230,7 @@ public:
   size_t dedicated_memory;
   access_type default_access_type;
   std::shared_ptr<accelerator_view> default_view;
-#ifndef CXXAMP_ENABLE_HSA_OKRA
+#if !defined(CXXAMP_ENABLE_HSA_OKRA) && !defined(CXXAMP_ENABLE_HSA)
   typedef GmacAcceleratorInfo AcceleratorInfo;
   AcceleratorInfo accInfo;
 #endif
@@ -228,6 +241,7 @@ public:
   static std::shared_ptr<accelerator> _cpu_accelerator;
 };
 
+#if !defined(CXXAMP_ENABLE_HSA_OKRA) && !defined(CXXAMP_ENABLE_HSA)
 //CLAMP
 extern "C" __attribute__((pure)) int get_global_id(int n) restrict(amp);
 extern "C" __attribute__((pure)) int get_local_id(int n) restrict(amp);
@@ -239,6 +253,7 @@ extern "C" __attribute__((pure)) int get_group_id(int n) restrict(amp);
 #endif
 extern "C" __attribute__((noduplicate)) void barrier(int n) restrict(amp);
 //End CLAMP
+#endif
 class completion_future {
 public:
 
@@ -1067,10 +1082,14 @@ public:
 
 
 #define __global
-#ifdef CXXAMP_ENABLE_HSA_OKRA
+#if defined(CXXAMP_ENABLE_HSA_OKRA)
 //include okra-specific files here
 } //namespace Concurrency
 #include "okra_manage.h"
+namespace Concurrency {
+#elif defined(CXXAMP_ENABLE_HSA)
+}
+#include "hsa_manage.h"
 namespace Concurrency {
 #else
 #include "gmac_manage.h"
