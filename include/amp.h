@@ -42,6 +42,7 @@
 #define __declspec(ignored) /* */
 #endif
 
+#if defined(CXXAMP_ENABLE_HSA_OKRA) || defined(CXXAMP_ENABLE_HSA)
 //CLAMP
 extern int64_t get_global_id(unsigned int n) restrict(amp);
 extern int64_t get_local_id(unsigned int n) restrict(amp);
@@ -53,6 +54,7 @@ extern int64_t get_group_id(unsigned int n) restrict(amp);
 #endif
 extern void barrier(unsigned int n) restrict(amp);
 //End CLAMP
+#endif
 
 namespace Concurrency {
 typedef int HRESULT;
@@ -239,6 +241,19 @@ public:
   static std::shared_ptr<accelerator> _cpu_accelerator;
 };
 
+#if !defined(CXXAMP_ENABLE_HSA_OKRA) && !defined(CXXAMP_ENABLE_HSA)
+//CLAMP
+extern "C" __attribute__((pure)) int get_global_id(int n) restrict(amp);
+extern "C" __attribute__((pure)) int get_local_id(int n) restrict(amp);
+extern "C" __attribute__((pure)) int get_group_id(int n) restrict(amp);
+#ifdef __APPLE__
+#define tile_static static __attribute__((section("clamp,opencl_local")))
+#else
+#define tile_static static __attribute__((section("clamp_opencl_local")))
+#endif
+extern "C" __attribute__((noduplicate)) void barrier(int n) restrict(amp);
+//End CLAMP
+#endif
 class completion_future {
 public:
 

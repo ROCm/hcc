@@ -286,21 +286,20 @@ HSAContext *GetOrInitHSAContext(void)
   return context;
 }
 
+
 static std::map<std::string, HSAContext::Kernel *> __mcw_okra_kernels;
 void *CreateHSAKernel(std::string s)
 {
   HSAContext::Kernel *kernel = __mcw_okra_kernels[s];
   if (!kernel) {
       size_t kernel_size = (size_t)((void *)kernel_size_);
-      char *kernel_source = (char*)malloc(kernel_size+1);
-      memcpy(kernel_source, kernel_source_, kernel_size);
-      kernel_source[kernel_size] = '\0';
+      char *kernel_source = (char*)kernel_source_;
       //std::string kname = std::string("&__OpenCL_")+s+
       //    std::string("_kernel");
       std::string kname = std::string("&")+s;
       //std::cerr << "CLAMP::HSA::Creating kernel: " << kname << "\n";
       kernel = GetOrInitHSAContext()->
-          createKernel(kernel_source, kname.c_str());
+          createKernel(kernel_source, kernel_size, kname.c_str());
       if (!kernel) {
           std::cerr << "CLAMP::HSA: Unable to create kernel\n";
           abort();
@@ -310,13 +309,17 @@ void *CreateHSAKernel(std::string s)
       __mcw_okra_kernels[s] = kernel;
   }
   kernel->clearArgs();
-  // HSA kernels generated from OpenCL takes 3 additional arguments at the beginning
+
+//#define CXXAMP_ENABLE_HSAIL_HLC_DEVELOPMENT_COMPILER 1
+#ifndef CXXAMP_ENABLE_HSAIL_HLC_DEVELOPMENT_COMPILER
   kernel->pushLongArg(0);
   kernel->pushLongArg(0);
   kernel->pushLongArg(0);
   kernel->pushLongArg(0);
   kernel->pushLongArg(0);
   kernel->pushLongArg(0);
+#endif
+
   return kernel;
 }
 

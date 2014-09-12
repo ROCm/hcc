@@ -13,8 +13,8 @@
 #include "clamp-config.hxx"
 /* Flag set by ‘--verbose’. */
 static int verbose_flag;
-static bool build_mode = false, install_mode = false;
-static bool gpu_path = false, cpu_path = false;
+static bool build_mode = false, install_mode = true;
+static bool gpu_path = false, cpu_path = true;
 
 void replace(std::string& str,
         const std::string& from, const std::string& to) {
@@ -112,15 +112,17 @@ void ldflags(void) {
 #elif defined(CXXAMP_ENABLE_HSA)
     std::cout << " -Wl,--rpath=" CMAKE_HSA_LIB;
     std::cout << " -L" CMAKE_HSA_LIB;
-    std::cout << " -lhsa-runtime64";
     std::cout << " -Wl,--whole-archive -lhsacontext -Wl,--no-whole-archive ";
-    std::cout << " " CMAKE_HSA_LIB "/LIBHSAIL.a ";
-    std::cout << " /usr/lib/gcc/x86_64-linux-gnu/4.8/libstdc++.a ";
+    std::cout << " -lelf -lhsa-runtime64 ";
+    std::cout << " " CMAKE_HSA_LIB "/libhsail.a ";
+    std::cout << " -Wl,--unresolved-symbols=ignore-in-shared-libs ";
 #else
-    std::cout << " -lgmac-hpe";
+    std::cout << " -lgmac-hpe ";
 #endif
+
     std::cout << " -lc++ -lcxxrt -ldl -lpthread ";
     std::cout << "-Wl,--whole-archive -lmcwamp -Wl,--no-whole-archive ";
+
 #else // __APPLE__
     std::cout << " -lgmac-hpe -lc++ -lmcwamp ";
 #endif
@@ -183,14 +185,18 @@ int main (int argc, char **argv) {
                 break;
             case 'b':   // --build
                 build_mode = true;
+                install_mode = false;
                 break;
             case 'i':   // --install
+                build_mode = false;
                 install_mode = true;
                 break;
             case 'g':   // --gpu
                 gpu_path = true;
+                cpu_path = false;
                 break;
             case 'c':   // --cpu
+                gpu_path = false;
                 cpu_path = true;
                 break;
             case '?':
