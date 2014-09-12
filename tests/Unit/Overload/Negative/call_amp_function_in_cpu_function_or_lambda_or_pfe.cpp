@@ -21,14 +21,14 @@ int main()
   auto a_lambda_func = []() restrict(cpu) { 
     foo();
   };
-// CHECK: call_amp_function_in_cpu_function_or_lambda_or_pfe.cpp:[[@LINE-2]]:8: error:  'main()::<anonymous class>::operator()':  no overloaded function has restriction specifiers that are compatible with the ambient context ''std::__1::__tree_node<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >, void *>''
+// CHECK: call_amp_function_in_cpu_function_or_lambda_or_pfe.cpp:[[@LINE-2]]:8: error:  'foo':  no overloaded function has restriction specifiers that are compatible with the ambient context 'main()::<anonymous class>::operator()'
 // CHECK-NEXT:    foo();
 // CHECK-NEXT:       ^
 
   parallel_for_each(extent<1>(1), [](index<1>) restrict(cpu) {
     foo();
   });
-// CHECK: call_amp_function_in_cpu_function_or_lambda_or_pfe.cpp:[[@LINE-2]]:8: error:  'main()::<anonymous class>::operator()':  no overloaded function has restriction specifiers that are compatible with the ambient context ''std::__1::__tree_node<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> >, void *>''
+// CHECK: call_amp_function_in_cpu_function_or_lambda_or_pfe.cpp:[[@LINE-2]]:8: error:  'foo':  no overloaded function has restriction specifiers that are compatible with the ambient context 'main()::<anonymous class>::operator()'
 // CHECK-NEXT:        foo();
 // CHECK-NEXT:           ^
 
