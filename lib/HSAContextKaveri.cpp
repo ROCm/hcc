@@ -375,7 +375,7 @@ private:
          ((hsa_dispatch_packet_t*)(commandQueue->base_address))[index & queueMask] = aql;
          hsa_queue_store_write_index_relaxed(commandQueue, index + 1);
 
-         //printf("ring door bell\n");
+         printf("ring door bell\n");
 
          // Ring door bell
          hsa_signal_store_relaxed(commandQueue->doorbell_signal, index+1);
@@ -400,7 +400,7 @@ private:
            exit(0);
          }
 
-         //printf("complete!\n");
+         printf("complete!\n");
 
          hsa_memory_deregister((void*)aql.kernarg_address, roundUp(arg_vec.size()));
          free((void*)aql.kernarg_address);
