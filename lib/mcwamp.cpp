@@ -256,7 +256,7 @@ std::future<void> HSALaunchKernelAsync(void *ker, size_t nr_dim, size_t *global,
   //std::cerr << "Now real launch\n";
   //kernel->dispatchKernelWaitComplete();
 
-  return std::move(dispatch->dispatchKernelAndGetFuture());
+  return dispatch->dispatchKernelAndGetFuture();
 }
 
 void HSALaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local)
