@@ -66,6 +66,12 @@ public:
 
 		// run a kernel and wait until complete
 		virtual hsa_status_t dispatchKernelWaitComplete() = 0;
+
+                // dispatch a kernel asynchronously
+                virtual hsa_status_t dispatchKernel() = 0;
+
+                // wait for the kernel to finish execution
+                virtual hsa_status_t waitComplete() = 0;
         };
 
 	class Kernel {
