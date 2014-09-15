@@ -23,12 +23,6 @@
 		exit(-1);\
 	}
 
-#define STATUS_CHECK_Q(s,line) if (status != HSA_STATUS_SUCCESS) {\
-		printf("### Error: %d at line:%d\n", status, line);\
-                assert(HSA_STATUS_SUCCESS == hsa_queue_destroy(commandQueue));\
-		exit(-1);\
-	}
-
 /************************ From HSA example *********************************/ 
 
 	static hsa_status_t IterateAgent(hsa_agent_t agent, void *data) {
@@ -253,23 +247,14 @@ private:
       HSAContextKaveriImpl* context;
       hsa_ext_code_descriptor_t *hsaCodeDescriptor;
 
-#define NA_ALIGN (1)
-#if NA_ALIGN
-      std::vector<uint8_t> arg_vec;
-#else
-      std::vector<uint64_t> arg_vec;
-#endif
 
+      std::vector<uint8_t> arg_vec;
       uint32_t arg_count;
       size_t prevArgVecCapacity;
       int launchDimensions;
       uint32_t workgroup_size[3];
       uint32_t global_size[3];
-#if NA_ALIGN
       static const int ARGS_VEC_INITIAL_CAPACITY = 256 * 8;   
-#else
-      static const int ARGS_VEC_INITIAL_CAPACITY = 256;   
-#endif
 
    public:
       KernelImpl(hsa_ext_code_descriptor_t* _hsaCodeDescriptor, HSAContextKaveriImpl* _context) {
@@ -392,7 +377,6 @@ private:
          aql.kernel_object_address = hsaCodeDescriptor->code.handle; 
 
          // bind kernel arguments
-#if NA_ALIGN
          //printf("arg_vec size: %d in bytes: %d\n", arg_vec.size(), arg_vec.size());
          hsa_region_t region;
          //printf("hsa_agent_iterate_regions\n");
@@ -411,26 +395,6 @@ private:
          //  printf("%02X ", *(((uint8_t*)aql.kernarg_address)+i));
          //}
          //printf("\n");
-#else
-         //printf("arg_vec size: %d in bytes: %d\n", arg_vec.size(), arg_vec.size() * sizeof(uint64_t));
-         hsa_region_t region;
-         //printf("hsa_agent_iterate_regions\n");
-         hsa_agent_iterate_regions(context->device, get_kernarg, &region);
-         //printf("kernarg region: %08X\n", region);
-
-         //printf("hsa_memory_allocate in region: %08X size: %d bytes\n", region, roundUp(arg_vec.size() * sizeof(uint64_t)));
-         if ((status = hsa_memory_allocate(region, roundUp(arg_vec.size() * sizeof(uint64_t)), (void**) &aql.kernarg_address)) != HSA_STATUS_SUCCESS) {
-           printf("hsa_memory_allocate error: %d\n", status);
-           exit(1);
-         }
-
-         //printf("memcpy dst: %08X, src: %08X, %d kernargs, %d bytes\n", aql.kernarg_address, arg_vec.data(), arg_count, arg_vec.size() * sizeof(uint64_t));
-         memcpy((void*)aql.kernarg_address, arg_vec.data(), arg_vec.size() * sizeof(uint64_t));
-         //for (size_t i = 0; i < arg_vec.size() * sizeof(uint64_t); ++i) {
-         //  printf("%02X ", *(((uint8_t*)aql.kernarg_address)+i));
-         //}
-         //printf("\n");
-#endif
 
          // Initialize memory resources needed to execute
          aql.group_segment_size = hsaCodeDescriptor->workgroup_group_segment_byte_size;
@@ -458,13 +422,8 @@ private:
 
          //printf("complete!\n");
 
-#if NA_ALIGN
          hsa_memory_deregister((void*)aql.kernarg_address, roundUp(arg_vec.size()));
          free((void*)aql.kernarg_address);
-#else
-         hsa_memory_deregister((void*)aql.kernarg_address, roundUp(arg_vec.size() * sizeof(uint64_t)));
-         free((void*)aql.kernarg_address);
-#endif
 
          hsa_signal_store_relaxed(signal, 1);
 
@@ -473,18 +432,13 @@ private:
 
       void dispose() {
          hsa_status_t status;
-#if NA_ALIGN
          status = hsa_memory_deregister(arg_vec.data(), arg_vec.capacity() * sizeof(uint8_t));
-#else
-         status = hsa_memory_deregister(arg_vec.data(), arg_vec.capacity() * sizeof(uint64_t));
-#endif
          assert(status == HSA_STATUS_SUCCESS);
       }
 
    private:
       template <typename T>
       hsa_status_t pushArgPrivate(T val) {
-#if NA_ALIGN
          /* add padding if necessary */
          int padding_size = arg_vec.size() % sizeof(T);
          //printf("push %lu bytes into kernarg: ", sizeof(T) + padding_size);
@@ -498,20 +452,6 @@ private:
            //printf("%02X ", ptr[i]);
          }
          //printf("\n");
-#else
-         // each arg takes up a 64-bit slot, no matter what its size
-         const uint64_t  argAsU64 = 0;
-         T* pt = (T *) &argAsU64;
-         *pt = val;
-         arg_vec.push_back(argAsU64);
-
-         //printf("push %lu bytes into kernarg: ", sizeof(const uint64_t));
-         //uint8_t *ptr = static_cast<uint8_t*>(static_cast<void*>(pt));
-         //for (size_t i = 0; i < sizeof(const uint64_t); ++i) {
-         //  printf("%02X ", ptr[i]);
-         //}
-         //printf("\n");
-#endif
          arg_count++;
          return HSA_STATUS_SUCCESS;
       }
@@ -535,11 +475,7 @@ private:
          prevArgVecCapacity = arg_vec.capacity();
 
          // register the memory behind the arg_vec
-#if NA_ALIGN
          hsa_status_t status = hsa_memory_register(arg_vec.data(), arg_vec.capacity() * sizeof(uint8_t));
-#else
-         hsa_status_t status = hsa_memory_register(arg_vec.data(), arg_vec.capacity() * sizeof(uint64_t));
-#endif
          assert(status == HSA_STATUS_SUCCESS);
       }
 
