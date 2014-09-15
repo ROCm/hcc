@@ -2132,6 +2132,13 @@ private:
 
 #undef __global
 
+// async pfe
+template <typename Kernel>
+void* async_parallel_for_each(extent<1> compute_domain, const Kernel& f);
+
+void async_wait_kernel_complete(void *);
+
+// sync pfe
 template <int N, typename Kernel>
 void parallel_for_each(extent<N> compute_domain, const Kernel& f);
 
