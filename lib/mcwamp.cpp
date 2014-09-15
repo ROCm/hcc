@@ -18,7 +18,13 @@ std::shared_ptr<accelerator> accelerator::_gpu_accelerator = std::make_shared<ac
 std::shared_ptr<accelerator> accelerator::_cpu_accelerator = std::make_shared<accelerator>(accelerator::cpu_accelerator);
 std::shared_ptr<accelerator> accelerator::_default_accelerator = nullptr;
 
+namespace CLAMP {
+extern void HSAWaitKernel(void*);
 }
+void async_wait_kernel_complete(void* handle) {
+  CLAMP::HSAWaitKernel(handle);
+}
+} // namespace Concurrency
 
 namespace {
 bool __mcw_cxxamp_compiled = false;
@@ -176,6 +182,10 @@ void FinalizeHSAContext() {
     context->dispose();
     context = NULL;
   }
+
+  // TBD dispose all Kernel objects
+
+  // TBD dispose all Dispatch objects
 }
 
 /* Used only in HSA runtime */
@@ -233,6 +243,32 @@ void RegisterMemory(void *p, size_t sz)
     //std::cerr << "registering: ptr " << p << " of size " << sz << "\n";
     GetOrInitHSAContext()->registerArrayMemory(p, sz);
 }
+}
+
+void* HSALaunchKernelAsync(void *ker, size_t nr_dim, size_t *global, size_t *local)
+{
+  HSAContext::Dispatch *dispatch =
+      reinterpret_cast<HSAContext::Dispatch*>(ker);
+  size_t tmp_local[] = {0, 0, 0};
+  if (!local)
+      local = tmp_local;
+  //std::cerr<<"Launching: nr dim = " << nr_dim << "\n";
+  //for (size_t i = 0; i < nr_dim; ++i) {
+  //  std::cerr << "g: " << global[i] << " l: " << local[i] << "\n";
+  //}
+  dispatch->setLaunchAttributes(nr_dim, global, local);
+  //std::cerr << "Now real launch\n";
+  //kernel->dispatchKernelWaitComplete();
+
+  dispatch->dispatchKernel();
+  return dispatch;
+}
+
+void HSAWaitKernel(void *ker)
+{
+  HSAContext::Dispatch *dispatch =
+      reinterpret_cast<HSAContext::Dispatch*>(ker);
+  dispatch->waitComplete();
 }
 
 void HSALaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local)

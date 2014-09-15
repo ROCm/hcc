@@ -13,6 +13,7 @@ namespace Concurrency {
 namespace CLAMP {
 extern void *CreateHSAKernel(std::string);
 extern void HSALaunchKernel(void *ker, size_t, size_t *global, size_t *local);
+extern void* HSALaunchKernelAsync(void *ker, size_t, size_t *global, size_t *local);
 extern void MatchKernelNames( std::string & );
 extern void CompileKernels(void);
 }
@@ -34,6 +35,32 @@ static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu) {
 }
 
 static std::set<std::string> __mcw_cxxamp_kernels;
+template<typename Kernel, int dim_ext>
+static inline void* mcw_cxxamp_launch_kernel_async(size_t *ext,
+  size_t *local_size, const Kernel& f) restrict(cpu,amp) {
+#ifndef __GPU__
+#if defined(CXXAMP_ENABLE_HSA)
+  //Invoke Kernel::__cxxamp_trampoline as an HSAkernel
+  //to ensure functor has right operator() defined
+  //this triggers the trampoline code being emitted
+  // FIXME: implicitly casting to avoid pointer to int error
+  int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
+  void *kernel = NULL;
+  {
+      std::string transformed_kernel_name =
+          mcw_cxxamp_fixnames(f.__cxxamp_trampoline_name());
+      kernel = CLAMP::CreateHSAKernel(transformed_kernel_name);
+  }
+  Concurrency::Serialize s(kernel);
+  f.__cxxamp_serialize(s);
+  return CLAMP::HSALaunchKernelAsync(kernel, dim_ext, ext, local_size);
+#else
+  // async kernel launch is unsupported in non-HSA path
+  throw runtime_exception("async_parallel_for_each is unsupported on this platform", 0);
+#endif
+#endif
+}
+
 template<typename Kernel, int dim_ext>
 static inline void mcw_cxxamp_launch_kernel(size_t *ext,
   size_t *local_size, const Kernel& f) restrict(cpu,amp) {
@@ -196,6 +223,27 @@ __attribute__((noinline,used)) void parallel_for_each(
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
   int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
+#endif
+}
+
+//1D async_parallel_for_each, nontiled
+template <typename Kernel>
+__attribute__((noinline,used)) void* async_parallel_for_each(
+    extent<1> compute_domain,
+    const Kernel& f) restrict(cpu,amp) {
+#ifndef __GPU__
+  if(compute_domain[0]<=0) {
+    throw invalid_compute_domain("Extent is less or equal than 0.");
+  }
+  if (static_cast<size_t>(compute_domain[0]) > 4294967295L) 
+    throw invalid_compute_domain("Extent size too large.");
+  size_t ext = compute_domain[0];
+  return mcw_cxxamp_launch_kernel_async<Kernel, 1>(&ext, NULL, f);
+#else //ifndef __GPU__
+  //to ensure functor has right operator() defined
+  //this triggers the trampoline code being emitted
+  int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
+  return 0;
 #endif
 }
 
