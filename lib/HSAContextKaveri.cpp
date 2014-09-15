@@ -275,10 +275,10 @@ private:
 
       hsa_signal_t signal;
       hsa_dispatch_packet_t aql;
+      bool isDispatched;
 
    public:
-      DispatchImpl(const KernelImpl* _kernel) {
-         kernel = _kernel;
+      DispatchImpl(const KernelImpl* _kernel) : kernel(_kernel), isDispatched(false) {
          context = _kernel->context;
          
          // allocate the initial argument vector capacity
@@ -359,6 +359,22 @@ private:
 
       hsa_status_t dispatchKernelWaitComplete() {
          hsa_status_t status = HSA_STATUS_SUCCESS;
+         if (isDispatched) {
+           return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+         }
+         status = dispatchKernel();
+         STATUS_CHECK_Q(status, __LINE__);
+         status = waitComplete();
+         STATUS_CHECK_Q(status, __LINE__);
+         return status;
+      } 
+
+      // dispatch a kernel asynchronously
+      hsa_status_t dispatchKernel() {
+         hsa_status_t status = HSA_STATUS_SUCCESS;
+         if (isDispatched) {
+           return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+         }
 
          // check if underlying arg_vec data might have changed, if so re-register
          if (arg_vec.capacity() > prevArgVecCapacity) {
@@ -425,12 +441,23 @@ private:
          ((hsa_dispatch_packet_t*)(commandQueue->base_address))[index & queueMask] = aql;
          hsa_queue_store_write_index_relaxed(commandQueue, index + 1);
 
-         //printf("ring door bell\n");
+         printf("ring door bell\n");
 
          // Ring door bell
          hsa_signal_store_relaxed(commandQueue->doorbell_signal, index+1);
 
-         //printf("wait for completion...");
+         isDispatched = true;
+         return status;
+      }
+
+      // wait for the kernel to finish execution
+      hsa_status_t waitComplete() {
+         hsa_status_t status = HSA_STATUS_SUCCESS;
+         if (!isDispatched)  {
+           return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+         }
+
+         printf("wait for completion...");
 
          // wait for completion
          if (hsa_signal_wait_acquire(signal, HSA_LT, 1, uint64_t(-1), HSA_WAIT_EXPECTANCY_UNKNOWN)!=0) {
@@ -438,13 +465,13 @@ private:
            exit(0);
          }
 
-         //printf("complete!\n");
+         printf("complete!\n");
 
          hsa_memory_deregister((void*)aql.kernarg_address, roundUp(arg_vec.size()));
          free((void*)aql.kernarg_address);
 
          hsa_signal_store_relaxed(signal, 1);
-
+         isDispatched = false;
          return status; 
       }
 
