@@ -2,6 +2,10 @@
 // RUN: %cxxamp -Xclang -fhsa-ext %s -o %t.out && %t.out
 #include <iostream>
 #include <random>
+#include <future>
+#include <vector>
+#include <algorithm>
+#include <utility>
 #include <amp.h>
 
 // An HSA version of C++AMP program
@@ -25,42 +29,28 @@ int main ()
     table_b[i] = int_dist(rd);
   }
 
+  // the vector to store handles to each async pfe 
+  std::vector<std::future<void>> futures;
+
   // divide the array into 4 quarters
   Concurrency::extent<1> e(vecSize / 4);
 
-  // the first quarter of the array
-  void *handle1 = Concurrency::async_parallel_for_each(
-    e,
-    [=](Concurrency::index<1> idx) restrict(amp) {
-      p_c[idx[0]] = p_a[idx[0]] + p_b[idx[0]];
-  });
+#define ASYNC_KERNEL_DISPATCH(x, y) \
+  Concurrency::async_parallel_for_each( \
+    e, \
+    [=](Concurrency::index<1> idx) restrict(amp) { \
+      for (int i = 0; i < 1024 * 1024; ++i) \
+        p_c[idx[0] + vecSize/(x)*(y)] = p_a[idx[0] + vecSize/(x)*(y)] + p_b[idx[0] + vecSize/(x)*(y)]; \
+  })
 
-  // the second quarter of the array
-  void *handle2 = Concurrency::async_parallel_for_each(
-    e,
-    [=](Concurrency::index<1> idx) restrict(amp) {
-      p_c[idx[0] + vecSize/4] = p_a[idx[0] + vecSize/4] + p_b[idx[0] + vecSize/4];
-  });
+  // asynchronously launch each quarter
+  futures.push_back(std::move(ASYNC_KERNEL_DISPATCH(4, 0)));
+  futures.push_back(std::move(ASYNC_KERNEL_DISPATCH(4, 1)));
+  futures.push_back(std::move(ASYNC_KERNEL_DISPATCH(4, 2)));
+  futures.push_back(std::move(ASYNC_KERNEL_DISPATCH(4, 3)));
 
-  // the third quarter of the array
-  void *handle3 = Concurrency::async_parallel_for_each(
-    e,
-    [=](Concurrency::index<1> idx) restrict(amp) {
-      p_c[idx[0] + (vecSize/4) * 2] = p_a[idx[0] + (vecSize/4) * 2] + p_b[idx[0] + (vecSize/4) * 2];
-  });
-
-  // the foruth quarter of the array
-  void *handle4 = Concurrency::async_parallel_for_each(
-    e,
-    [=](Concurrency::index<1> idx) restrict(amp) {
-      p_c[idx[0] + (vecSize/4) * 3] = p_a[idx[0] + (vecSize/4) * 3] + p_b[idx[0] + (vecSize/4) * 3];
-  });
-
-
-  Concurrency::async_wait_kernel_complete(handle1);
-  Concurrency::async_wait_kernel_complete(handle2);
-  Concurrency::async_wait_kernel_complete(handle3);
-  Concurrency::async_wait_kernel_complete(handle4);
+  // wait for all kernels to finish execution
+  std::for_each(futures.cbegin(), futures.cend(), [](const std::future<void>& fut) { fut.wait(); });
 
   // verify
   int error = 0;
