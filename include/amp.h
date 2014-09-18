@@ -690,6 +690,10 @@ private:
 
     template<int K, class Y>
         friend void parallel_for_each(extent<K>, const Y&);
+
+    template<int K, class Y>
+        friend completion_future async_parallel_for_each(extent<K>, const Y&);
+
     __attribute__((annotate("__cxxamp_opencl_index")))
         void __cxxamp_opencl_index() restrict(amp,cpu)
 #ifdef __GPU__
@@ -938,6 +942,9 @@ class tiled_index {
   {}
   template<int D0_, int D1_, int D2_, typename K>
   friend void parallel_for_each(tiled_extent<D0_, D1_, D2_>, const K&);
+
+  template<int D0_, int D1_, int D2_, typename K>
+  friend completion_future async_parallel_for_each(tiled_extent<D0_, D1_, D2_>, const K&);
 };
 template <int N> class extent;
 template <int D0>
@@ -973,6 +980,9 @@ class tiled_index<D0, 0, 0> {
   {}
   template<int D, typename K>
   friend void parallel_for_each(tiled_extent<D>, const K&);
+
+  template<int D, typename K>
+  friend completion_future async_parallel_for_each(tiled_extent<D>, const K&);
 };
 
 template <int D0, int D1>
@@ -1010,6 +1020,9 @@ class tiled_index<D0, D1, 0> {
   {}
   template<int D0_, int D1_, typename K>
   friend void parallel_for_each(tiled_extent<D0_, D1_>, const K&);
+
+  template<int D0_, int D1_, typename K>
+  friend completion_future async_parallel_for_each(tiled_extent<D0_, D1_>, const K&);
 };
 
 
