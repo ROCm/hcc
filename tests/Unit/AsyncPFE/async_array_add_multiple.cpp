@@ -30,7 +30,7 @@ int main ()
   }
 
   // the vector to store handles to each async pfe 
-  std::vector<Concurrency::completion_future> futures;
+  std::vector<std::future<void>> futures;
 
   // divide the array into 4 quarters
   Concurrency::extent<1> e(vecSize / 4);
@@ -50,7 +50,7 @@ int main ()
   futures.push_back(std::move(ASYNC_KERNEL_DISPATCH(4, 3)));
 
   // wait for all kernels to finish execution
-  std::for_each(futures.cbegin(), futures.cend(), [](const Concurrency::completion_future& fut) { fut.wait(); });
+  std::for_each(futures.cbegin(), futures.cend(), [](const std::future<void>& fut) { fut.wait(); });
 
   // verify
   int error = 0;

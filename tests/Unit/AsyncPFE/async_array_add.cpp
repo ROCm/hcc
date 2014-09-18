@@ -28,7 +28,7 @@ int main ()
 
   // launch kernel
   Concurrency::extent<1> e(vecSize);
-  Concurrency::completion_future fut = Concurrency::async_parallel_for_each(
+  std::future<void> fut = Concurrency::async_parallel_for_each(
     e,
     [=](Concurrency::index<1> idx) restrict(amp) {
       for (int i = 0; i < 1024 * 1024; ++i) 
