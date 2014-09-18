@@ -256,7 +256,7 @@ extern "C" __attribute__((noduplicate)) void barrier(int n) restrict(amp);
 #endif
 
 template <int N> class extent;
-
+template <int D0, int D1=0, int D2=0> class tiled_extent;
 class completion_future {
 public:
 
@@ -337,8 +337,35 @@ private:
         friend completion_future copy_async(const array_view<T, N>& src, OutputIter destBegin);
     template <typename T, int N> friend class array_view;
 
+
+    // non-tiled async_parallel_for_each
+    // generic version
+    template <int N, typename Kernel>
+        friend completion_future async_parallel_for_each(Concurrency::extent<N> compute_domain, const Kernel& f);
+
+    // 1D specialization
     template <typename Kernel>
         friend completion_future async_parallel_for_each(Concurrency::extent<1> compute_domain, const Kernel& f);
+
+    // 2D specialization
+    template <typename Kernel>
+        friend completion_future async_parallel_for_each(Concurrency::extent<2> compute_domain, const Kernel& f);
+
+    // 3D specialization
+    template <typename Kernel>
+        friend completion_future async_parallel_for_each(Concurrency::extent<3> compute_domain, const Kernel& f);
+
+    // tiled async_parallel_for_each, 3D version
+    template <int D0, int D1, int D2, typename Kernel>
+        friend completion_future async_parallel_for_each(Concurrency::tiled_extent<D0,D1,D2> compute_domain, const Kernel& f);
+
+    // tiled async_parallel_for_each, 2D version
+    template <int D0, int D1, typename Kernel>
+        friend completion_future async_parallel_for_each(Concurrency::tiled_extent<D0,D1> compute_domain, const Kernel& f);
+
+    // tiled async_parallel_for_each, 1D version
+     template <int D0, typename Kernel>
+        friend completion_future async_parallel_for_each(Concurrency::tiled_extent<D0> compute_domain, const Kernel& f);
 };
 
 template <int N> class extent;
@@ -715,9 +742,6 @@ class tile_barrier {
 
 template <typename T, int N> class array;
 template <typename T, int N> class array_view;
-
-// forward decls
-template <int D0, int D1=0, int D2=0> class tiled_extent;
 
 template <int N>
 class extent {
@@ -2139,8 +2163,18 @@ private:
 #undef __global
 
 // async pfe
-template <typename Kernel>
-completion_future async_parallel_for_each(extent<1> compute_domain, const Kernel& f);
+template <int N, typename Kernel>
+completion_future async_parallel_for_each(extent<N> compute_domain, const Kernel& f);
+
+template <int D0, int D1, int D2, typename Kernel>
+completion_future async_parallel_for_each(tiled_extent<D0,D1,D2> compute_domain, const Kernel& f);
+
+template <int D0, int D1, typename Kernel>
+completion_future async_parallel_for_each(tiled_extent<D0,D1> compute_domain, const Kernel& f);
+
+template <int D0, typename Kernel>
+completion_future async_parallel_for_each(tiled_extent<D0> compute_domain, const Kernel& f);
+
 
 // sync pfe
 template <int N, typename Kernel>
