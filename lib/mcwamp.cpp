@@ -18,12 +18,6 @@ std::shared_ptr<accelerator> accelerator::_gpu_accelerator = std::make_shared<ac
 std::shared_ptr<accelerator> accelerator::_cpu_accelerator = std::make_shared<accelerator>(accelerator::cpu_accelerator);
 std::shared_ptr<accelerator> accelerator::_default_accelerator = nullptr;
 
-namespace CLAMP {
-extern void HSAWaitKernel(void*);
-}
-void async_wait_kernel_complete(void* handle) {
-  CLAMP::HSAWaitKernel(handle);
-}
 } // namespace Concurrency
 
 namespace {
@@ -262,14 +256,7 @@ std::future<void> HSALaunchKernelAsync(void *ker, size_t nr_dim, size_t *global,
   //std::cerr << "Now real launch\n";
   //kernel->dispatchKernelWaitComplete();
 
-  return dispatch->dispatchKernelAndGetFuture();
-}
-
-void HSAWaitKernel(void *ker)
-{
-  HSAContext::Dispatch *dispatch =
-      reinterpret_cast<HSAContext::Dispatch*>(ker);
-  dispatch->waitComplete();
+  return std::move(dispatch->dispatchKernelAndGetFuture());
 }
 
 void HSALaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local)

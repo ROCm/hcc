@@ -254,6 +254,9 @@ extern "C" __attribute__((pure)) int get_group_id(int n) restrict(amp);
 extern "C" __attribute__((noduplicate)) void barrier(int n) restrict(amp);
 //End CLAMP
 #endif
+
+template <int N> class extent;
+
 class completion_future {
 public:
 
@@ -333,6 +336,9 @@ private:
     template <typename OutputIter, typename T, int N>
         friend completion_future copy_async(const array_view<T, N>& src, OutputIter destBegin);
     template <typename T, int N> friend class array_view;
+
+    template <typename Kernel>
+        friend completion_future async_parallel_for_each(Concurrency::extent<1> compute_domain, const Kernel& f);
 };
 
 template <int N> class extent;
@@ -2134,7 +2140,7 @@ private:
 
 // async pfe
 template <typename Kernel>
-std::future<void> async_parallel_for_each(extent<1> compute_domain, const Kernel& f);
+completion_future async_parallel_for_each(extent<1> compute_domain, const Kernel& f);
 
 // sync pfe
 template <int N, typename Kernel>
