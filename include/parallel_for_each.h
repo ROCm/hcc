@@ -7,13 +7,14 @@
 
 #pragma once
 #include <cassert>
+#include <future>
 #include <amp.h>
 
 namespace Concurrency {
 namespace CLAMP {
 extern void *CreateHSAKernel(std::string);
 extern void HSALaunchKernel(void *ker, size_t, size_t *global, size_t *local);
-extern void* HSALaunchKernelAsync(void *ker, size_t, size_t *global, size_t *local);
+extern std::future<void> HSALaunchKernelAsync(void *ker, size_t, size_t *global, size_t *local);
 extern void MatchKernelNames( std::string & );
 extern void CompileKernels(void);
 }
@@ -36,7 +37,7 @@ static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu) {
 
 static std::set<std::string> __mcw_cxxamp_kernels;
 template<typename Kernel, int dim_ext>
-static inline void* mcw_cxxamp_launch_kernel_async(size_t *ext,
+static inline std::future<void> mcw_cxxamp_launch_kernel_async(size_t *ext,
   size_t *local_size, const Kernel& f) restrict(cpu,amp) {
 #ifndef __GPU__
 #if defined(CXXAMP_ENABLE_HSA)
@@ -226,9 +227,11 @@ __attribute__((noinline,used)) void parallel_for_each(
 #endif
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreturn-type"
 //1D async_parallel_for_each, nontiled
 template <typename Kernel>
-__attribute__((noinline,used)) void* async_parallel_for_each(
+__attribute__((noinline,used)) std::future<void> async_parallel_for_each(
     extent<1> compute_domain,
     const Kernel& f) restrict(cpu,amp) {
 #ifndef __GPU__
@@ -243,9 +246,9 @@ __attribute__((noinline,used)) void* async_parallel_for_each(
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
   int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
-  return 0;
 #endif
 }
+#pragma clang diagnostic pop
 
 template class index<2>;
 //2D parallel_for_each, nontiled

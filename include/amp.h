@@ -2134,9 +2134,7 @@ private:
 
 // async pfe
 template <typename Kernel>
-void* async_parallel_for_each(extent<1> compute_domain, const Kernel& f);
-
-void async_wait_kernel_complete(void *);
+std::future<void> async_parallel_for_each(extent<1> compute_domain, const Kernel& f);
 
 // sync pfe
 template <int N, typename Kernel>
