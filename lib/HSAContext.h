@@ -42,6 +42,7 @@
 
 #ifndef HSACONTEXT_H
 #define HSACONTEXT_H
+#include <future>
 #include <hsa.h>
 
 // Abstract interface to an HSA Implementation
@@ -72,6 +73,9 @@ public:
 
                 // wait for the kernel to finish execution
                 virtual hsa_status_t waitComplete() = 0;
+
+                // dispatch a kernel asynchronously and get a future object
+                virtual std::future<void> dispatchKernelAndGetFuture() = 0;
         };
 
 	class Kernel {

@@ -247,7 +247,7 @@ void RegisterMemory(void *p, size_t sz)
 }
 }
 
-void* HSALaunchKernelAsync(void *ker, size_t nr_dim, size_t *global, size_t *local)
+std::future<void> HSALaunchKernelAsync(void *ker, size_t nr_dim, size_t *global, size_t *local)
 {
   HSAContext::Dispatch *dispatch =
       reinterpret_cast<HSAContext::Dispatch*>(ker);
@@ -262,8 +262,7 @@ void* HSALaunchKernelAsync(void *ker, size_t nr_dim, size_t *global, size_t *loc
   //std::cerr << "Now real launch\n";
   //kernel->dispatchKernelWaitComplete();
 
-  dispatch->dispatchKernel();
-  return dispatch;
+  return dispatch->dispatchKernelAndGetFuture();
 }
 
 void HSAWaitKernel(void *ker)

@@ -5,6 +5,9 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <future>
+#include <thread>
+#include <chrono>
 
 
 #include "HSAContext.h"
@@ -263,12 +266,22 @@ private:
          if (isDispatched) {
            return HSA_STATUS_ERROR_INVALID_ARGUMENT;
          }
-         status = dispatchKernel();
-         STATUS_CHECK_Q(status, __LINE__);
-         status = waitComplete();
-         STATUS_CHECK_Q(status, __LINE__);
+         dispatchKernelAndGetFuture().wait();
          return status;
       } 
+
+
+      std::future<void> dispatchKernelAndGetFuture() {
+         dispatchKernel();
+         auto waitFunc = [&]() {
+           this->waitComplete();
+         };
+         std::packaged_task<void()> waitTask(waitFunc);
+         auto fut = waitTask.get_future();
+         std::thread waitThread(std::move(waitTask));
+         waitThread.detach();         
+         return fut;
+      }
 
       // dispatch a kernel asynchronously
       hsa_status_t dispatchKernel() {
@@ -362,12 +375,13 @@ private:
          ((hsa_dispatch_packet_t*)(commandQueue->base_address))[index & queueMask] = aql;
          hsa_queue_store_write_index_relaxed(commandQueue, index + 1);
 
-         printf("ring door bell\n");
+         //printf("ring door bell\n");
 
          // Ring door bell
          hsa_signal_store_relaxed(commandQueue->doorbell_signal, index+1);
 
          isDispatched = true;
+
          return status;
       }
 
@@ -378,7 +392,7 @@ private:
            return HSA_STATUS_ERROR_INVALID_ARGUMENT;
          }
 
-         printf("wait for completion...");
+         //printf("wait for completion...");
 
          // wait for completion
          if (hsa_signal_wait_acquire(signal, HSA_LT, 1, uint64_t(-1), HSA_WAIT_EXPECTANCY_UNKNOWN)!=0) {
@@ -386,7 +400,7 @@ private:
            exit(0);
          }
 
-         printf("complete!\n");
+         //printf("complete!\n");
 
          hsa_memory_deregister((void*)aql.kernarg_address, roundUp(arg_vec.size()));
          free((void*)aql.kernarg_address);
