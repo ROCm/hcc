@@ -8,6 +8,7 @@
 #pragma once
 #include <cassert>
 #include <future>
+#include <utility>
 #include <amp.h>
 
 namespace Concurrency {
@@ -54,7 +55,7 @@ static inline std::future<void> mcw_cxxamp_launch_kernel_async(size_t *ext,
   }
   Concurrency::Serialize s(kernel);
   f.__cxxamp_serialize(s);
-  return CLAMP::HSALaunchKernelAsync(kernel, dim_ext, ext, local_size);
+  return std::move(CLAMP::HSALaunchKernelAsync(kernel, dim_ext, ext, local_size));
 #else
   // async kernel launch is unsupported in non-HSA path
   throw runtime_exception("async_parallel_for_each is unsupported on this platform", 0);
@@ -231,7 +232,7 @@ __attribute__((noinline,used)) void parallel_for_each(
 #pragma clang diagnostic ignored "-Wreturn-type"
 //1D async_parallel_for_each, nontiled
 template <typename Kernel>
-__attribute__((noinline,used)) std::future<void> async_parallel_for_each(
+__attribute__((noinline,used)) completion_future async_parallel_for_each(
     extent<1> compute_domain,
     const Kernel& f) restrict(cpu,amp) {
 #ifndef __GPU__
@@ -241,7 +242,7 @@ __attribute__((noinline,used)) std::future<void> async_parallel_for_each(
   if (static_cast<size_t>(compute_domain[0]) > 4294967295L) 
     throw invalid_compute_domain("Extent size too large.");
   size_t ext = compute_domain[0];
-  return mcw_cxxamp_launch_kernel_async<Kernel, 1>(&ext, NULL, f);
+  return completion_future(std::move(std::shared_future<void>(std::move(mcw_cxxamp_launch_kernel_async<Kernel, 1>(&ext, NULL, f)))));
 #else //ifndef __GPU__
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
