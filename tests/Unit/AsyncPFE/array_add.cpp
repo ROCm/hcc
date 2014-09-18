@@ -2,6 +2,7 @@
 // RUN: %cxxamp -Xclang -fhsa-ext %s -o %t.out && %t.out
 #include <iostream>
 #include <random>
+#include <future>
 #include <amp.h>
 
 // An HSA version of C++AMP program
@@ -27,15 +28,15 @@ int main ()
 
   // launch kernel
   Concurrency::extent<1> e(vecSize);
-  void *handle = Concurrency::async_parallel_for_each(
+  std::future<void> fut = Concurrency::async_parallel_for_each(
     e,
     [=](Concurrency::index<1> idx) restrict(amp) {
-
-      p_c[idx[0]] = p_a[idx[0]] + p_b[idx[0]];
+      for (int i = 0; i < 1024 * 1024; ++i) 
+        p_c[idx[0]] = p_a[idx[0]] + p_b[idx[0]];
 
   });
 
-  Concurrency::async_wait_kernel_complete(handle);
+  fut.wait();
 
   // verify
   int error = 0;
