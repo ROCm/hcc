@@ -23,6 +23,7 @@
 #include <vector>
 #include <chrono>
 #include <future>
+#include <thread>
 #include <string.h> //memcpy
 #if !defined(CXXAMP_ENABLE_HSA)
 #include <gmac/opencl.h>
@@ -263,22 +264,32 @@ public:
     completion_future() {};
 
     completion_future(const completion_future& _Other)
-        : __amp_future(_Other.__amp_future) {}
+        : __amp_future(_Other.__amp_future), __thread_then(_Other.__thread_then) {}
 
     completion_future(completion_future&& _Other)
-        : __amp_future(std::move(_Other.__amp_future)) {}
+        : __amp_future(std::move(_Other.__amp_future)), __thread_then(_Other.__thread_then) {}
 
-    ~completion_future() {}
+    ~completion_future() {
+      if (__thread_then != nullptr) {
+        __thread_then->join();
+      }
+      delete __thread_then;
+      __thread_then = nullptr;
+    }
 
     completion_future& operator=(const completion_future& _Other) {
-        if (this != &_Other)
+        if (this != &_Other) {
            __amp_future = _Other.__amp_future;
+           __thread_then = _Other.__thread_then;
+        }
         return (*this);
     }
 
     completion_future& operator=(completion_future&& _Other) {
-        if (this != &_Other)
+        if (this != &_Other) {
             __amp_future = std::move(_Other.__amp_future);
+            __thread_then = _Other.__thread_then;
+        }
         return (*this);
     }
 
@@ -308,15 +319,23 @@ public:
         return __amp_future;
     }
 
+    // notice we removed const from the signature here
     template<typename functor>
-    void then(const functor & func) const {
-      this->wait();
-      if(this->valid())
-        func();
+    void then(const functor & func) {
+      // could only assign once
+      if (__thread_then == nullptr) {
+        // spawn a new thread to wait on the future and then execute the callback functor
+        __thread_then = new std::thread([&] {
+          this->wait();
+          if(this->valid())
+            func();
+        });
+      }
     }
 
 private:
     std::shared_future<void> __amp_future;
+    std::thread* __thread_then = nullptr;
 
     completion_future(const std::shared_future<void> &__future)
         : __amp_future(__future) {}
