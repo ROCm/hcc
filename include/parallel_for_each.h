@@ -230,7 +230,7 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
         static_cast<size_t>(compute_domain[N - 2]),
         static_cast<size_t>(compute_domain[N - 3])};
     const pfe_wrapper<N, Kernel> _pf(compute_domain, f);
-    return completion_future(std::shared_future<void>(mcw_cxxamp_launch_kernel_async<pfe_wrapper<N, Kernel>, 3>(&ext, NULL, _pf)));
+    return completion_future(std::shared_future<void>(mcw_cxxamp_launch_kernel_async<pfe_wrapper<N, Kernel>, 3>(ext, NULL, _pf)));
 #else
     auto bar = &pfe_wrapper<N, Kernel>::operator();
     auto qq = &index<N>::__cxxamp_opencl_index;
