@@ -55,7 +55,7 @@ static inline std::future<void> mcw_cxxamp_launch_kernel_async(size_t *ext,
   }
   Concurrency::Serialize s(kernel);
   f.__cxxamp_serialize(s);
-  return std::move(CLAMP::HSALaunchKernelAsync(kernel, dim_ext, ext, local_size));
+  return CLAMP::HSALaunchKernelAsync(kernel, dim_ext, ext, local_size);
 #else
   // async kernel launch is unsupported in non-HSA path
   throw runtime_exception("async_parallel_for_each is unsupported on this platform", 0);
