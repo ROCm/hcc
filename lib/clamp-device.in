@@ -40,10 +40,17 @@ if [ "@CXXAMP_ENABLE_HSA_OKRA@" = "ON" ]; then
     mv $2.hsail $2
     exit $?
 elif [ "@CXXAMP_ENABLE_HSA@" = "ON" ]; then
-    $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-         -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-         -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-         -promote-globals -promote-privates -erase-nonkernels -tile-uniform -dce -S < $1 -o $2.promote.ll.orig
+    if [ "$ALWAYS_MALLOC" = "ON" ]; then
+      $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+           -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+           -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+           -promote-globals -promote-privates -erase-nonkernels -tile-uniform -malloc-select -alwasy-malloc -dce -S < $1 -o $2.promote.ll.orig
+    else
+      $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+           -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+           -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+           -promote-globals -promote-privates -erase-nonkernels -tile-uniform -malloc-select -dce -S < $1 -o $2.promote.ll.orig
+    fi
     sed "s/call /call spir_func /g" < $2.promote.ll.orig > $2.promote.ll
     $AS -o $2.promote.bc $2.promote.ll
     echo "Generating HSAIL file"
