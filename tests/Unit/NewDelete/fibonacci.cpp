@@ -3,7 +3,6 @@
 #include <iostream>
 #include <iomanip>
 #include <amp.h>
-#include <ctime>
 #include "hsa_new.h"
 
 #define DEBUG 1
@@ -15,6 +14,9 @@ int main ()
   auto ptr_a = newInit.ptr_a;
   auto ptr_b = newInit.ptr_b;
   auto ptr_c = newInit.ptr_c;
+  auto ptr_x = newInit.ptr_x;
+  auto ptr_y = newInit.ptr_y;
+  auto ptr_z = newInit.ptr_z;
 
   // define inputs and output
   const int vecSize = 16;
@@ -25,7 +27,6 @@ int main ()
   unsigned long int sumCPP[vecSize];
   Concurrency::array_view<unsigned long int, 1> sum(vecSize, sumCPP);
 
-  clock_t m_start = clock();
   parallel_for_each(
     Concurrency::extent<1>(vecSize),
     [=](Concurrency::index<1> idx) restrict(amp) {
@@ -34,6 +35,9 @@ int main ()
     put_ptr_a(ptr_a);
     put_ptr_b(ptr_b);
     put_ptr_c(ptr_c);
+    put_ptr_x(ptr_x);
+    put_ptr_y(ptr_y);
+    put_ptr_z(ptr_z);
 
     int tid = idx[0];
     int *fib = new int[(tid < 2) ? 2 : tid + 1];
@@ -49,7 +53,6 @@ int main ()
     sum[idx[0]] = fib[tid];
     delete[] fib;
   });
-  clock_t m_stop = clock();
 
 #if DEBUG
   for (int i = 0; i < vecSize; i++)
