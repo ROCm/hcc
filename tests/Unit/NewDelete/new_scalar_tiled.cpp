@@ -6,7 +6,6 @@
 #include <iostream>
 #include <iomanip>
 #include <amp.h>
-#include <ctime>
 #include "hsa_new.h"
 
 #define DEBUG 1
@@ -18,6 +17,9 @@ int main ()
   auto ptr_a = newInit.ptr_a;
   auto ptr_b = newInit.ptr_b;
   auto ptr_c = newInit.ptr_c;
+  auto ptr_x = newInit.ptr_x;
+  auto ptr_y = newInit.ptr_y;
+  auto ptr_z = newInit.ptr_z;
 
   // define inputs and output
   const int vecSize = 16;
@@ -28,18 +30,20 @@ int main ()
   unsigned long int sumCPP[vecSize];
   Concurrency::array_view<unsigned long int, 1> sum(vecSize, sumCPP);
 
-  clock_t m_start = clock();
   parallel_for_each(
     Concurrency::extent<1>(vecSize).tile<tileSize>(),
     [=](Concurrency::tiled_index<tileSize> tidx) restrict(amp) {
 
+    // Removed until linking/alloc qualifier issue is solved
     put_ptr_a(ptr_a);
     put_ptr_b(ptr_b);
     put_ptr_c(ptr_c);
+    put_ptr_x(ptr_x);
+    put_ptr_y(ptr_y);
+    put_ptr_z(ptr_z);
 
     sum[tidx.global[0]] = (unsigned long int)new unsigned int(tidx.local[0]);
   });
-  clock_t m_stop = clock();
 
 #if DEBUG
   for (int i = 0; i < vecSize; i++)
@@ -60,12 +64,6 @@ int main ()
   } else {
     std::cout << "Verify failed!\n";
   }
-  clock_t t1 = clock();
-  clock_t t2 = clock();
-  clock_t m_overhead = t2 - t1;
-  double elapsed = ((double)(m_stop - m_start - m_overhead)) / CLOCKS_PER_SEC;
-  std::cout << "Execution time of amp restrict lambda is " << std::dec << elapsed << " s.\n";
-  std::cout << "System call is executed " << std::dec << newInit.get_syscall_count() << " times\n";
   return (error != 0);
 }
 

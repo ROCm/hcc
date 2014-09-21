@@ -1,15 +1,15 @@
 // XFAIL: Linux
 // RUN: %amp_device -D__GPU__ -Xclang -fhsa-ext %s -m64 -emit-llvm -c -S -O2 -o %t.ll && mkdir -p %t
-// RUN: %clamp-device %t.ll %t/kernel.cl
+// RUN: %clamp-device %t.ll %t/kernel.cl MALLOC
 // RUN: pushd %t && %embed_kernel kernel.cl %t/kernel.o && popd
 // RUN: %cxxamp -Xclang -fhsa-ext %link %t/kernel.o %s -o %t.out && %t.out
 #include <iostream>
 #include <iomanip>
 #include <amp.h>
-#include "point.h"
+#include <ctime>
 #include "hsa_new.h"
 
-#define DEBUG 1
+#define DEBUG 0
 
 // An HSA version of C++AMP program
 int main ()
@@ -31,9 +31,10 @@ int main ()
   unsigned long int sumCPP[vecSize];
   Concurrency::array_view<unsigned long int, 1> sum(vecSize, sumCPP);
 
+  clock_t m_start = clock();
   parallel_for_each(
-    Concurrency::extent<1>(vecSize),
-    [=](Concurrency::index<1> idx) restrict(amp) {
+    Concurrency::extent<1>(vecSize).tile<tileSize>(),
+    [=](Concurrency::tiled_index<tileSize> tidx) restrict(amp) {
 
     // Removed until linking/alloc qualifier issue is solved
     put_ptr_a(ptr_a);
@@ -43,32 +44,41 @@ int main ()
     put_ptr_y(ptr_y);
     put_ptr_z(ptr_z);
 
-    sum[idx[0]] = (unsigned long int)new Point[2]();
+    /*sum[tidx.global[0]] = (unsigned long int)*/ 
+    unsigned int *p = new unsigned int[tidx.local[0] + 1]; //(tidx.local[0]);
+    *p = 5566;
+    sum[tidx.global[0]] = (unsigned long int)p;
+    delete p;
   });
+  clock_t m_stop = clock();
 
 #if DEBUG
   for (int i = 0; i < vecSize; i++)
   {
-    Point *p = (Point *)sum[i];
-    printf("Value of addr %p is %d & %d, addr %p is %d & %d\n",
-      (void*)p, p->get_x(), p->get_y(),
-      (void*)(p + 1), (p + 1)->get_x(), (p + 1)->get_y());
+    unsigned int *p = (unsigned int*)sum[i];
+    //printf("Value of addr %p is %u\n", (void*)p, *p);
+    printf("Value of addr %p\n", (void*)p);
   }
 #endif
 
   // Verify
   int error = 0;
-  for(int i = 0; i < vecSize; i++) {
-    Point *p = (Point*)sum[i];
-    Point pt;
-    error += (abs(p->get_x() - pt.get_x()) + abs(p->get_y() - pt.get_y())
-               + abs((p + 1)->get_x() - pt.get_x()) + abs((p + 1)->get_y() - pt.get_y()));
-  }
   if (error == 0) {
     std::cout << "Verify success!\n";
   } else {
     std::cout << "Verify failed!\n";
   }
+  clock_t t1 = clock();
+  clock_t t2 = clock();
+  clock_t m_overhead = t2 - t1;
+  double elapsed = ((double)(m_stop - m_start - m_overhead)) / CLOCKS_PER_SEC;
+  std::cout << "Execution time of amp restrict lambda is " << std::dec << elapsed << " s.\n";
+  int Xmalloc_count = newInit.get_Xmalloc_count();
+  int malloc_count = newInit.get_malloc_count();
+  int Xfree_count = newInit.get_Xfree_count();
+  if (Xfree_count != Xmalloc_count + malloc_count) std::cout << "Verify error!\n";
+  std::cout << "Xfree_count: " << Xfree_count << "\n";
+  std::cout << "malloc_count: " << malloc_count << "\n";
+  std::cout << "Xmalloc_count: " << Xmalloc_count << "\n";
   return (error != 0);
 }
-
