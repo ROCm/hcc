@@ -3,7 +3,7 @@
 #include <iostream>
 #include <iomanip>
 #include <amp.h>
-#include "hsa_new.h"
+#include <hsa_new.h>
 
 #define DEBUG 1
 

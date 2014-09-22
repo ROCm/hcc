@@ -4,7 +4,7 @@
 #include <iomanip>
 #include <amp.h>
 #include "point.h"
-#include "hsa_new.h"
+#include <hsa_new.h>
 
 #define DEBUG 1
 
