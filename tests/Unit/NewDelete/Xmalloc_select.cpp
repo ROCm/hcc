@@ -1,9 +1,11 @@
 // XFAIL: Linux
-// RUN: %cxxamp -Xclang -fhsa-ext %s -o %t.out && %t.out
+// RUN: %amp_device -D__GPU__ -Xclang -fhsa-ext %s -m64 -emit-llvm -c -S -O2 -o %t.ll && mkdir -p %t
+// RUN: %clamp-device %t.ll %t/kernel.cl
+// RUN: pushd %t && %embed_kernel kernel.cl %t/kernel.o && popd
+// RUN: %cxxamp -Xclang -fhsa-ext %link %t/kernel.o %s -o %t.out && %t.out
 #include <iostream>
 #include <iomanip>
 #include <amp.h>
-#include "point.h"
 #include <hsa_new.h>
 
 #define DEBUG 1
@@ -29,8 +31,8 @@ int main ()
   Concurrency::array_view<unsigned long int, 1> sum(vecSize, sumCPP);
 
   parallel_for_each(
-    Concurrency::extent<1>(vecSize),
-    [=](Concurrency::index<1> idx) restrict(amp) {
+    Concurrency::extent<1>(vecSize).tile<tileSize>(),
+    [=](Concurrency::tiled_index<tileSize> tidx) restrict(amp) {
 
     // Removed until linking/alloc qualifier issue is solved
     put_ptr_a(ptr_a);
@@ -40,23 +42,26 @@ int main ()
     put_ptr_y(ptr_y);
     put_ptr_z(ptr_z);
 
-    sum[idx[0]] = (unsigned long int)new Point(idx[0], idx[0] * 2);
+    int local = tidx.local[0];
+
+    unsigned int *p = NULL; 
+    p = new unsigned int(local * 2);
+    sum[tidx.global[0]] = (unsigned long int)p;
+    delete p;
   });
 
 #if DEBUG
   for (int i = 0; i < vecSize; i++)
   {
-    Point *p = (Point *)sum[i];
-    printf("Value of addr %p is %d & %d\n", (void*)p, p->get_x(), p->get_y());
+    unsigned int *p = (unsigned int*)sum[i];
+    printf("Value of addr %p\n", (void*)p);
   }
 #endif
 
   // Verify
   int error = 0;
-  for(int i = 0; i < vecSize; i++) {
-    Point *p = (Point*)sum[i];
-    Point pt(i, i * 2);
-    error += (abs(p->get_x() - pt.get_x()) + abs(p->get_y() - pt.get_y()));
+  if ((newInit.get_Xmalloc_count() == 0) || (newInit.get_malloc_count() != 0)) {
+    error = 1;
   }
   if (error == 0) {
     std::cout << "Verify success!\n";
@@ -65,4 +70,3 @@ int main ()
   }
   return (error != 0);
 }
-
