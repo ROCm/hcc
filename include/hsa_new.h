@@ -168,7 +168,6 @@ void NewInit::mallocThread() {
         // do actual stuff
         long result;
         switch (syscall) {
-#if 1
           case 1: { // malloc
             malloc_count++;
             result = (long)malloc(param);
@@ -178,9 +177,9 @@ void NewInit::mallocThread() {
 #endif
             break;
           }
-#endif
-          case 2: { // Xfree
+          case 2: { // Xfree/free
             char *alloc = (char *)param;
+            if (alloc == NULL) break;
             int *p_header = (int *)alloc - 1;
             int header_offset = *p_header;
             int *p_counter = (int *)((char *)p_header - header_offset);
@@ -200,6 +199,7 @@ void NewInit::mallocThread() {
 #if DEBUG
               std::cout << "free: " << std::hex << (void *)p_counter << "\n";
 #endif
+              break;
             }
             result = 0;
           }
