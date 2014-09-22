@@ -15,12 +15,12 @@
 int main ()
 {
   // Removed until linking/alloc qualifier issue is solved
-  auto ptr_a = newInit.ptr_a;
-  auto ptr_b = newInit.ptr_b;
-  auto ptr_c = newInit.ptr_c;
-  auto ptr_x = newInit.ptr_x;
-  auto ptr_y = newInit.ptr_y;
-  auto ptr_z = newInit.ptr_z;
+  auto ptr_a = newInit.ptr_a; // pointer to Xmalloc syscall numbers
+  auto ptr_b = newInit.ptr_b; // pointer to Xmalloc syscall parameters
+  auto ptr_c = newInit.ptr_c; // pointer to Xmalloc test results
+  auto ptr_x = newInit.ptr_x; // pointer to Xfree/free/malloc syscall numbers
+  auto ptr_y = newInit.ptr_y; // pointer to Xfree/free/malloc syscall parameters
+  auto ptr_z = newInit.ptr_z; // pointer to Xfree/free/malloc test results
 
   // define inputs and output
   const int vecSize = 16;
