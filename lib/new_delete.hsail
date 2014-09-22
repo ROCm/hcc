@@ -47,6 +47,30 @@ prog function &_Z9put_ptr_zPv7()(arg_u64 %arg_p0)
         ret;
 };
 
+/*
+  Implementation of Xfree/free, observe the hsail and extract it.  
+
+  parallel_for_each(
+    Concurrency::extent<1>(vecSize).tile<tileSize>(),
+    [=](Concurrency::tiled_index<tileSize> tidx) restrict(amp) {
+
+    int global = tidx.global[0];
+    int local = tidx.local[0];
+    int tile = tidx.tile[0];
+
+    // store the parameter
+    (ptr_y + global)->store(address, std::memory_order_release);
+
+    // store the signal value
+    (ptr_x + global)->store(2, std::memory_order_release);
+
+    // wait until syscall returns
+    while ((ptr_x + global)->load(std::memory_order_acquire));
+  });
+
+*/
+
+// Xfree/free
 prog function &_ZdlPv()(arg_u64 %arg_p0)
 {
 
@@ -109,6 +133,43 @@ ret;
 
 };
 
+/*
+  Implementation of malloc, observe the hsail and extract it.
+
+  parallel_for_each(
+    Concurrency::extent<1>(vecSize).tile<tileSize>(),
+    [=](Concurrency::tiled_index<tileSize> tidx) restrict(amp) {
+
+    int global = tidx.global[0];
+    int local = tidx.local[0];
+    int tile = tidx.tile[0];
+
+    (ptr_y + global)->store(n, std::memory_order_release);
+
+    (ptr_x + global)->store(1, std::memory_order_release);
+
+    while ((ptr_x + global)->load(std::memory_order_acquire));
+
+    // load result from CPU
+    long result = (ptr_y + global)->load(std::memory_order_acquire);
+
+    // test access the memory allocated
+    int *p_counter = (int *)result;
+    *p_counter = 1;
+    int header_offset = sizeof(int);
+    int *p_header = (int *)((char *)p_counter + header_offset);
+    *p_header = header_offset;
+    char *alloc = (char *)(p_header + 1);
+
+    long address = (long)alloc;
+ 
+    // store result
+    (ptr_z + global)->store(address, std::memory_order_release);
+  });
+
+*/
+
+// malloc version
 prog function &_Znwm_malloc(arg_u64 %ret_r0)(arg_u64 %arg_p0)
 {
 
@@ -194,6 +255,98 @@ st_arg_u64  $d1, [%ret_r0];
 ret;
 
 };
+
+/*
+  Implementation of Xmalloc, observe the hsail and extract it.
+
+  parallel_for_each(
+    Concurrency::extent<1>(vecSize).tile<tileSize>(),
+    [=](Concurrency::tiled_index<tileSize> tidx) restrict(amp) {
+
+    #define MAX_TILE_SIZE 256
+
+    int global = tidx.global[0];
+    int local = tidx.local[0];
+    int tile = tidx.tile[0];
+
+    tile_static long g_idata[MAX_TILE_SIZE * 2]; // g_idata only
+    g_idata[local] = n; // g_idata only
+
+    tile_static long temp[MAX_TILE_SIZE * 2];
+    int offset = 1;
+
+    tidx.barrier.wait();
+
+    temp[2 * local] = g_idata[2 * local];
+    temp[2 * local + 1] = g_idata[2 * local + 1];
+
+    for (int d = currentworkgroupsize >> 1; d > 0; d >>= 1) // build
+    {
+      tidx.barrier.wait();
+
+      if (local < d)
+      {
+        int ai = offset * (2 * local + 1) - 1;
+        int bi = offset * (2 * local + 2) - 1;
+
+        temp[bi] += temp[ai];
+      }
+      offset *= 2;
+    }
+
+    if (local == 0) { temp[currentworkgroupsize - 1] = 0; }
+
+    for (int d = 1; d < currentworkgroupsize; d *= 2)
+    {
+      offset >>= 1;
+      tidx.barrier.wait();
+
+      if (local < d)
+      {
+        int ai = offset * (2 * local + 1) - 1;
+        int bi = offset * (2 * local + 2) - 1;
+
+        long t = temp[ai];
+        temp[ai] = temp[bi];
+        temp[bi] += t;
+      }
+    }
+
+    tidx.barrier.wait();
+
+    if (local == 0) {
+      long amount = temp[currentworkgroupsize - 1] + g_idata[currentworkgroupsize - 1] + sizeof(int) * currentworkgroupsize + sizeof(int);
+
+      (ptr_b + tile)->store(amount, std::memory_order_release);
+
+      (ptr_a + tile)->store(1, std::memory_order_release);
+
+      while ((ptr_a + tile)->load(std::memory_order_acquire));
+    }
+
+    tidx.barrier.wait();
+
+    // load result from CPU
+    long result = (ptr_b + tile)->load(std::memory_order_acquire);
+
+    // test access the memory allocated
+    int *p_counter = (int *) result;
+
+    if (local == 0) {
+      *p_counter = currentworkgroupsize;
+    }
+
+    int header_offset = (int)temp[local] + sizeof(int) * local + sizeof(int);
+    int *p_header = (int *)((char *)p_counter + header_offset);
+    *p_header = header_offset;
+    char *alloc = (char *)(p_header + 1);
+    long address = (long)alloc;
+
+    // store result
+    (ptr_c + global)->store(address, std::memory_order_release);
+  });
+
+*/
 
 // Xmalloc version
 prog function &_Znwm(arg_u64 %ret_r0)(arg_u64 %arg_p0)
