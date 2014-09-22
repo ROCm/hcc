@@ -60,6 +60,9 @@ int main ()
 
   // Verify
   int error = 0;
+  if ((newInit.get_Xmalloc_count() != 0) || (newInit.get_malloc_count() == 0)) {
+    error = 1;
+  }
   if (error == 0) {
     std::cout << "Verify success!\n";
   } else {
