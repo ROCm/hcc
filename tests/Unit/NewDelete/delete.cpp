@@ -7,7 +7,7 @@
 #include <iomanip>
 #include <amp.h>
 #include <ctime>
-#include "hsa_new.h"
+#include <hsa_new.h>
 
 #define DEBUG 0
 
