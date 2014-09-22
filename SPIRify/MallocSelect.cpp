@@ -1,4 +1,4 @@
-//===- TileUniform.cpp - Tile Uniform analysis ----------------------------===//
+//===- MallocSelect.cpp - Malloc Selection Transformation ------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,10 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Detects whether all active control flow expressions leading to a tile barrier 
-// to be tile-uniform.
+// Transform control divergent Xmalloc to malloc
 //
 //===----------------------------------------------------------------------===//
+
+// TODO: Refactor Tile Uniform/Malloc Selection/Promote Privates
 
 #include "llvm/InstVisitor.h"
 #include "llvm/Analysis/PostDominators.h"
@@ -29,9 +30,6 @@ AlwaysMalloc("alwasy-malloc", cl::init(false), cl::Hidden,
   cl::desc("Alwasy transform Xmalloc to malloc"));
 
 namespace {
-
-#define HANDLE_LOAD_PRIVATE 0
-#define TILE_UNIFORM_DEBUG  0
 
 /// ControlDependences Class - Used to compute the control dependences.
 ///
@@ -95,9 +93,9 @@ public:
   void visitInstruction(Instruction &I);
 };
 
-/// TileUniform Class - Used to ensure tile uniform.
+/// MallocSelect Class - Used to transform control divergent Xmalloc to malloc
 ///
-class TileUniform : public ModulePass {
+class MallocSelect : public ModulePass {
 public:
   static char ID;
 
@@ -106,7 +104,7 @@ protected:
   Function *NewArray;
 
 public:        
-  TileUniform() : ModulePass(ID) {}
+  MallocSelect() : ModulePass(ID) {}
 
   virtual void getAnalysisUsage(AnalysisUsage& AU) const {
     AU.setPreservesAll();
@@ -123,7 +121,7 @@ public:
 ///
 char ControlDependences::ID = 0;
 static RegisterPass<ControlDependences>
-X("ctrl-deps1", "Control Dependences Construction.");
+X("ctrl-deps-redun", "Control Dependences Construction.");
 
 bool ControlDependences::runOnFunction(Function &F) {
   PostDominatorTree *PDT = new PostDominatorTree();
@@ -182,25 +180,24 @@ void ControlDependences::dump() const {
 /// dependency.
 ///
 ThreadDependencyAnalyzer::ThreadDependencyAnalyzer(Module &M) {
-  get_global_id = M.getFunction(/*"get_global_id"*/"_Z13get_global_idj");
-  get_local_id = M.getFunction(/*"get_local_id"*/"_Z12get_local_idj");
+  get_global_id = M.getFunction("_Z13get_global_idj");
+  get_local_id = M.getFunction("_Z12get_local_idj");
   indep = true;
 }
 
 void ThreadDependencyAnalyzer::visitCallInst(CallInst &I) {
   if (!Visited.insert(&I)) return;
-#if TILE_UNIFORM_DEBUG
+#if DEBUG
   errs() << I << "\n";
 #endif
   Function *callee = I.getCalledFunction();
   if (callee == get_local_id || callee == get_global_id)
     indep = false;
-    //report_fatal_error("violated tile uniform\n");
 }
 
 void ThreadDependencyAnalyzer::visitInstruction(Instruction &I) {
   if (!Visited.insert(&I)) return;
-#if TILE_UNIFORM_DEBUG
+#if DEBUG
   errs() << I << "\n";
 #endif
   for (User::op_iterator oi = I.op_begin(), e = I.op_end(); oi != e; ++oi) {
@@ -209,106 +206,102 @@ void ThreadDependencyAnalyzer::visitInstruction(Instruction &I) {
   }
 } 
 
-/// TileUniform Implementation - Used to ensure tile uniform.
+/// MallocSelect Implementation
 ///
-bool TileUniform::runOnModule(Module &M) {
+bool MallocSelect::runOnModule(Module &M) {
 
   std::vector<Instruction*> Needmalloc;
 
-  // FIXME: TileUniform should be implement as a FunctionPass
-#if 0
-  if(!(NewScalar = M.getFunction("_Znwm")) && !(NewArray = M.getFunction("_Znam")))
-    return false;
-#endif
-
   if ((NewScalar = M.getFunction("_Znwm"))) { // new
 
-  for (Value::use_iterator UI = NewScalar->use_begin(), UE = NewScalar->use_end();
-        UI != UE; ++UI) {
+    for (Value::use_iterator UI = NewScalar->use_begin(), UE = NewScalar->use_end();
+          UI != UE; ++UI) {
 
-    if (Instruction *I = dyn_cast<Instruction>(*UI)) {
+      if (Instruction *I = dyn_cast<Instruction>(*UI)) {
 
-      if (AlwaysMalloc) {
-        Needmalloc.push_back(I);
-        continue;
+        if (AlwaysMalloc) {
+          Needmalloc.push_back(I);
+          continue;
+        }
+
+        BasicBlock *BB = I->getParent();
+        Function *F = BB->getParent();
+
+        ControlDependences *CtrlDeps = new ControlDependences();
+        CtrlDeps->runOnFunction(*F);
+
+        if (CtrlDeps->find(BB) == CtrlDeps->end())
+          continue;
+
+        typedef ControlDependences::CtrlDepSetType CDST;
+        CDST *CtrlDep = &CtrlDeps->find(BB)->second;      
+
+        for (CDST::iterator i = CtrlDep->begin(), e = CtrlDep->end(); i != e;
+              ++i) {
+          BasicBlock *CtrlDepBB = *i;
+
+          TerminatorInst *TI = CtrlDepBB->getTerminator();
+          ThreadDependencyAnalyzer TDA(M);
+          TDA.analyze(*TI);
+
+          if (!TDA.isIndep())
+            Needmalloc.push_back(I); 
+        }
+
+        CtrlDeps->releaseMemory();
+        delete CtrlDeps;
       }
-
-      BasicBlock *BB = I->getParent();
-      Function *F = BB->getParent();
-
-      ControlDependences *CtrlDeps = new ControlDependences();
-      CtrlDeps->runOnFunction(*F);
-
-      if (CtrlDeps->find(BB) == CtrlDeps->end())
-        continue;
-
-      typedef ControlDependences::CtrlDepSetType CDST;
-      CDST *CtrlDep = &CtrlDeps->find(BB)->second;      
-
-      for (CDST::iterator i = CtrlDep->begin(), e = CtrlDep->end(); i != e;
-            ++i) {
-        BasicBlock *CtrlDepBB = *i;
-
-        TerminatorInst *TI = CtrlDepBB->getTerminator();
-        ThreadDependencyAnalyzer TDA(M);
-        TDA.analyze(*TI);
-
-        if (!TDA.isIndep())
-          Needmalloc.push_back(I); 
-      }
-
-      CtrlDeps->releaseMemory();
-      delete CtrlDeps;
     }
-  }
   } // end of new
 
   if ((NewArray = M.getFunction("_Znam"))) { // new[]
 
-  for (Value::use_iterator UI = NewArray->use_begin(), UE = NewArray->use_end();
-        UI != UE; ++UI) {
+    for (Value::use_iterator UI = NewArray->use_begin(), UE = NewArray->use_end();
+          UI != UE; ++UI) {
 
-    if (Instruction *I = dyn_cast<Instruction>(*UI)) {
+      if (Instruction *I = dyn_cast<Instruction>(*UI)) {
 
-      if (AlwaysMalloc) {
-        Needmalloc.push_back(I);
-        continue;
-      }
-
-      BasicBlock *BB = I->getParent();
-      Function *F = BB->getParent();
-
-      ControlDependences *CtrlDeps = new ControlDependences();
-      CtrlDeps->runOnFunction(*F);
-
-      if (CtrlDeps->find(BB) == CtrlDeps->end())
-        continue;
-
-      typedef ControlDependences::CtrlDepSetType CDST;
-      CDST *CtrlDep = &CtrlDeps->find(BB)->second;
-
-      for (CDST::iterator i = CtrlDep->begin(), e = CtrlDep->end(); i != e;
-            ++i) {
-        BasicBlock *CtrlDepBB = *i;
-
-        TerminatorInst *TI = CtrlDepBB->getTerminator();
-        ThreadDependencyAnalyzer TDA(M);
-        TDA.analyze(*TI);
-
-        if (!TDA.isIndep())
+        if (AlwaysMalloc) {
           Needmalloc.push_back(I);
-      }
+          continue;
+        }
 
-      CtrlDeps->releaseMemory();
-      delete CtrlDeps;
+        BasicBlock *BB = I->getParent();
+        Function *F = BB->getParent();
+
+        ControlDependences *CtrlDeps = new ControlDependences();
+        CtrlDeps->runOnFunction(*F);
+
+        if (CtrlDeps->find(BB) == CtrlDeps->end())
+          continue;
+
+        typedef ControlDependences::CtrlDepSetType CDST;
+        CDST *CtrlDep = &CtrlDeps->find(BB)->second;
+
+        for (CDST::iterator i = CtrlDep->begin(), e = CtrlDep->end(); i != e;
+              ++i) {
+          BasicBlock *CtrlDepBB = *i;
+
+          TerminatorInst *TI = CtrlDepBB->getTerminator();
+          ThreadDependencyAnalyzer TDA(M);
+          TDA.analyze(*TI);
+
+          if (!TDA.isIndep())
+            Needmalloc.push_back(I);
+        }
+
+        CtrlDeps->releaseMemory();
+        delete CtrlDeps;
+      }
     }
-  }
   } // end of new[]
 
   while (!Needmalloc.empty()) {
     Instruction *I = Needmalloc.back();
 
+#if DEBUG
     llvm::errs() << "Needmalloc:" << *I << "\n";
+#endif
     if (CallInst *CI = dyn_cast<CallInst>(I)) {
       std::vector<Value*> ArgsVec;
       for (int i = 0, e = CI->getNumArgOperands(); i < e; i++) {
@@ -345,6 +338,6 @@ bool TileUniform::runOnModule(Module &M) {
   return true;
 }
 
-char TileUniform::ID = 0;
-static RegisterPass<TileUniform>
-Y("malloc-select", "Ensure tile uniform.");
+char MallocSelect::ID = 0;
+static RegisterPass<MallocSelect>
+Y("malloc-select", "Transform control divergent Xmalloc to malloc.");
