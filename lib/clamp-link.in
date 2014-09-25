@@ -8,8 +8,8 @@ if [ -d @LLVM_TOOLS_DIR@ ]; then
 else
     LINK=@CMAKE_INSTALL_PREFIX@/bin/llvm-link
     OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
-    CLAMP_DEVICE=@CMAKE_INSTALL_PREFIX@/bin/clamp-clamp-device
-    CLAMP_EMBED=@CMAKE_INSTALL_PREFIX@/bin/clamp-clamp-embed
+    CLAMP_DEVICE=@CMAKE_INSTALL_PREFIX@/bin/clamp-device
+    CLAMP_EMBED=@CMAKE_INSTALL_PREFIX@/bin/clamp-embed
 fi
 
 ################

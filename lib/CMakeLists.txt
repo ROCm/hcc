@@ -13,8 +13,8 @@ install(TARGETS mcwamp clamp-config
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-device
     ${CMAKE_CURRENT_BINARY_DIR}/clamp-spirify
     ${CMAKE_CURRENT_BINARY_DIR}/clamp-embed
-    ${CMAKE_CURRENT_BINARY_DIR}/clamp-assemble
-    ${CMAKE_CURRENT_BINARY_DIR}/clamp-link
+    ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-assemble
+    ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-link
     DESTINATION bin)
 
 if (CXXAMP_ENABLE_HSA)
