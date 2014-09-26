@@ -322,6 +322,7 @@ public:
     // notice we removed const from the signature here
     template<typename functor>
     void then(const functor & func) {
+#ifndef __GPU__
       // could only assign once
       if (__thread_then == nullptr) {
         // spawn a new thread to wait on the future and then execute the callback functor
@@ -331,6 +332,7 @@ public:
             func();
         });
       }
+#endif
     }
 
 private:
