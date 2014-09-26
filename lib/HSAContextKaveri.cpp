@@ -9,7 +9,6 @@
 #include <thread>
 #include <chrono>
 
-
 #include "HSAContext.h"
 
 #include "hsa.h"
