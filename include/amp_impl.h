@@ -11,7 +11,7 @@
 #include <iostream>
 #if __APPLE__
 #include <OpenCL/cl.h>
-#elif !defined(CXXAMP_ENABLE_HSA_OKRA) && !defined(CXXAMP_ENABLE_HSA)
+#elif !defined(CXXAMP_ENABLE_HSA)
 #include <CL/cl.h>
 #endif
 
@@ -41,7 +41,7 @@ inline accelerator::accelerator(const accelerator& other) :
   supports_cpu_shared_memory(other.supports_cpu_shared_memory),
   dedicated_memory(other.dedicated_memory),
   default_access_type(other.default_access_type),
-#if !defined(CXXAMP_ENABLE_HSA_OKRA) && !defined(CXXAMP_ENABLE_HSA)
+#if !defined(CXXAMP_ENABLE_HSA)
   default_view(other.default_view),
   accInfo(other.accInfo)
 #else
@@ -66,7 +66,7 @@ inline accelerator::accelerator(const std::wstring& path) :
   supports_cpu_shared_memory(false), // constructor will set it
   dedicated_memory(0), // constructor will set it
   default_access_type(access_type_none),
-#if !defined(CXXAMP_ENABLE_HSA_OKRA) && !defined(CXXAMP_ENABLE_HSA)
+#if !defined(CXXAMP_ENABLE_HSA)
   default_view( (device_path == std::wstring(gpu_accelerator)) ?
 					( (_gpu_accelerator != nullptr) ?
 						new accelerator_view(_gpu_accelerator.get()) : new accelerator_view(this)) :
@@ -82,7 +82,7 @@ inline accelerator::accelerator(const std::wstring& path) :
 #endif
     {
 
-#if !defined(CXXAMP_ENABLE_HSA_OKRA) && !defined(CXXAMP_ENABLE_HSA)
+#if !defined(CXXAMP_ENABLE_HSA)
   AcceleratorInfo accInfo;
   for (unsigned i = 0; i < eclGetNumberOfAccelerators(); i++) {
     assert(eclGetAcceleratorInfo(i, &accInfo) == eclSuccess);
@@ -125,7 +125,7 @@ inline accelerator& accelerator::operator=(const accelerator& other) {
   dedicated_memory = other.dedicated_memory;
   default_access_type = other.default_access_type;
   default_view = other.default_view;
-#if !defined(CXXAMP_ENABLE_HSA_OKRA) && !defined(CXXAMP_ENABLE_HSA)
+#if !defined(CXXAMP_ENABLE_HSA)
   accInfo = other.accInfo;
 #endif 
   return *this;

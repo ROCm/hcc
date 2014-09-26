@@ -24,7 +24,7 @@
 #include <chrono>
 #include <future>
 #include <string.h> //memcpy
-#if !defined(CXXAMP_ENABLE_HSA_OKRA) && !defined(CXXAMP_ENABLE_HSA)
+#if !defined(CXXAMP_ENABLE_HSA)
 #include <gmac/opencl.h>
 #endif
 #include <memory>
@@ -42,7 +42,7 @@
 #define __declspec(ignored) /* */
 #endif
 
-#if defined(CXXAMP_ENABLE_HSA_OKRA) || defined(CXXAMP_ENABLE_HSA)
+#if defined(CXXAMP_ENABLE_HSA)
 //CLAMP
 extern int64_t get_global_id(unsigned int n) restrict(amp);
 extern int64_t get_local_id(unsigned int n) restrict(amp);
@@ -169,7 +169,7 @@ public:
   accelerator(const accelerator& other);
   static std::vector<accelerator> get_all() {
     std::vector<accelerator> acc;
-#if !defined(CXXAMP_ENABLE_HSA_OKRA) && !defined(CXXAMP_ENABLE_HSA)
+#if !defined(CXXAMP_ENABLE_HSA)
     AcceleratorInfo accInfo;
     for (unsigned i = 0; i < eclGetNumberOfAccelerators(); i++) {
       assert(eclGetAcceleratorInfo(i, &accInfo) == eclSuccess);
@@ -230,7 +230,7 @@ public:
   size_t dedicated_memory;
   access_type default_access_type;
   std::shared_ptr<accelerator_view> default_view;
-#if !defined(CXXAMP_ENABLE_HSA_OKRA) && !defined(CXXAMP_ENABLE_HSA)
+#if !defined(CXXAMP_ENABLE_HSA)
   typedef GmacAcceleratorInfo AcceleratorInfo;
   AcceleratorInfo accInfo;
 #endif
@@ -241,7 +241,7 @@ public:
   static std::shared_ptr<accelerator> _cpu_accelerator;
 };
 
-#if !defined(CXXAMP_ENABLE_HSA_OKRA) && !defined(CXXAMP_ENABLE_HSA)
+#if !defined(CXXAMP_ENABLE_HSA)
 //CLAMP
 extern "C" __attribute__((pure)) int get_global_id(int n) restrict(amp);
 extern "C" __attribute__((pure)) int get_local_id(int n) restrict(amp);
@@ -1082,12 +1082,7 @@ public:
 
 
 #define __global
-#if defined(CXXAMP_ENABLE_HSA_OKRA)
-//include okra-specific files here
-} //namespace Concurrency
-#include "okra_manage.h"
-namespace Concurrency {
-#elif defined(CXXAMP_ENABLE_HSA)
+#if defined(CXXAMP_ENABLE_HSA)
 }
 #include "hsa_manage.h"
 namespace Concurrency {
@@ -1488,12 +1483,6 @@ public:
       operator()(int i0) const restrict(amp,cpu) {
           return (*this)[i0];
   }
-  // Duplicated codes
-  #if 0
-  __global const T& operator()(int i0) const restrict(amp,cpu) {
-      return (*this)[i0];
-  }
-  #endif
   __global T& operator()(int i0, int i1) restrict(amp,cpu) {
       return (*this)[index<2>(i0, i1)];
   }
@@ -1725,23 +1714,7 @@ public:
   explicit array_view(int e0, int e1, int e2)
       : array_view(Concurrency::extent<3>(e0, e1, e2))
   { static_assert(N == 3, "Rank must be 3"); }
-  // A read-write array_view cannot be copy constructed from a const array_view
-#if 0
-  template <class = typename std::enable_if<std::is_const<T>::value>::type>
-    array_view(const array_view<nc_T, N>& other) restrict(amp,cpu) : extent(other.extent),
-      p_(other.p_), cache(other.cache), offset(other.offset), index_base(other.index_base),
-      extent_base(other.extent_base) {}
-  template <class = typename std::enable_if<!std::is_const<T>::value>::type>
-    array_view(const array_view<const T, N>& other) restrict(amp,cpu) : extent(other.extent),
-      p_(const_cast<T*>(other.p_)), cache(other.cache), offset(other.offset), index_base(other.index_base),
-      extent_base(other.extent_base) {
-      }
 
-  array_view(const array_view<const T, N>& other) restrict(amp,cpu) : extent(other.extent),
-    p_(const_cast<T*>(other.p_)), cache(other.cache), offset(other.offset), index_base(other.index_base),
-    extent_base(other.extent_base) {
-    }
-#endif
    array_view(const array_view& other) restrict(amp,cpu) : extent(other.extent),
     p_(other.p_), cache(other.cache), offset(other.offset), index_base(other.index_base),
     extent_base(other.extent_base) {}
@@ -1756,18 +1729,7 @@ public:
       }
       return *this;
   }
-  // These codes are not C++AMP Spec
- #if 0
-  array_view& operator=(const array_view<const T,N>& other) restrict(amp,cpu) {
-    extent = other.extent;
-    p_ = const_cast<T*>(other.p_);
-    cache = other.cache;
-    index_base = other.index_base;
-    extent_base = other.extent_base;
-    offset = other.offset;
-    return *this;
-  }
-#endif
+
   void copy_to(array<T,N>& dest) const {
 #ifndef __GPU__
       for(int i= 0 ;i< N;i++)

@@ -11,8 +11,6 @@
 
 namespace Concurrency {
 namespace CLAMP {
-extern void *CreateOkraKernel(std::string);
-extern void OkraLaunchKernel(void *ker, size_t, size_t *global, size_t *local);
 extern void *CreateHSAKernel(std::string);
 extern void HSALaunchKernel(void *ker, size_t, size_t *global, size_t *local);
 extern void MatchKernelNames( std::string & );
@@ -40,25 +38,7 @@ template<typename Kernel, int dim_ext>
 static inline void mcw_cxxamp_launch_kernel(size_t *ext,
   size_t *local_size, const Kernel& f) restrict(cpu,amp) {
 #ifndef __GPU__
-#if defined(CXXAMP_ENABLE_HSA_OKRA)
-  //Invoke Kernel::__cxxamp_trampoline as an HSAkernel
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  // FIXME: implicitly casting to avoid pointer to int error
-  int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
-  void *kernel = NULL;
-  {
-      std::string transformed_kernel_name =
-          mcw_cxxamp_fixnames(f.__cxxamp_trampoline_name());
-#if 0
-      std::cerr << "Kernel name = "<< transformed_kernel_name <<"\n";
-#endif
-      kernel = CLAMP::CreateOkraKernel(transformed_kernel_name);
-  }
-  Concurrency::Serialize s(kernel);
-  f.__cxxamp_serialize(s);
-  CLAMP::OkraLaunchKernel(kernel, dim_ext, ext, local_size);
-#elif defined(CXXAMP_ENABLE_HSA)
+#if defined(CXXAMP_ENABLE_HSA)
   //Invoke Kernel::__cxxamp_trampoline as an HSAkernel
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -85,9 +65,6 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
   int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
   std::string transformed_kernel_name =
       mcw_cxxamp_fixnames(f.__cxxamp_trampoline_name());
-#if 0
-  std::cerr << "Kernel name = "<< transformed_kernel_name <<"\n";
-#endif
   ecl_kernel kernel;
   auto it = __mcw_cxxamp_kernels.insert(transformed_kernel_name);
   error_code = eclGetKernel(it.first->c_str(), &kernel);
@@ -134,7 +111,7 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
       std::cerr << i << "] = "<<local_size[i]<<"\n";
     }
   }
-#endif // CXXAMP_ENABLE_HSA_OKRA, CXXAMP_ENABLE_HSA
+#endif // CXXAMP_ENABLE_HSA
 #endif // __GPU__
 }
 

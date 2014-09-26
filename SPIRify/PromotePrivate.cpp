@@ -1,4 +1,4 @@
-//===- TileUniform.cpp - Tile Uniform analysis ----------------------------===//
+//===- PromotePrivate.cpp - Private pointer promotion analysis -----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Detects whether all active control flow expressions leading to a tile barrier 
-// to be tile-uniform.
+// Promote pointers obtained from new/delete operations from private address space
+// to global segment (addrspace(1)).  This pass is only applied on HSA build path.
 //
 //===----------------------------------------------------------------------===//
 
@@ -31,7 +31,7 @@ namespace {
 //#define HANDLE_LOAD_PRIVATE 0
 //#define TILE_UNIFORM_DEBUG  0
 
-/// TileUniform Class - Used to ensure tile uniform.
+/// PromotePrivates Class - Used to promote pointers from new/delete operations to global segment in HSA
 ///
 class PromotePrivates : public FunctionPass {
 public:
@@ -48,7 +48,7 @@ public:
   virtual bool runOnFunction(Function &F);
 };
 
-/// NewedMemoryAnalyzer Class - Used to compute the thread dependency.
+/// NewedMemoryAnalyzer Class - Used to compute if an instruction will use operand from new/delete
 ///
 class NewedMemoryAnalyzer : public InstVisitor<NewedMemoryAnalyzer> {
 protected:
@@ -120,7 +120,7 @@ public:
 
 } // ::<unnamed> namespace
 
-/// PromotePrivates Implementation - Used to ensure tile uniform.
+/// PromotePrivates Implementation - Used to promote pointers from new/delete operations to global segment in HSA
 ///
 bool PromotePrivates::runOnFunction(Function &F) {
   if (F.getName().find("cxxamp_trampoline") == StringRef::npos)

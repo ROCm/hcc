@@ -6,8 +6,7 @@
 /// <tags>P0</tags>
 /// <summary>pointer to member -> const pointer to member or add __GPU</summary>
 
-// RUN: %cxxamp %s %link
-// RUN: ./a.out
+// RUN: %cxxamp %s -o %t.out && %t.out
 
 #include <stdio.h>
 
