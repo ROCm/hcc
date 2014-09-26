@@ -1,14 +1,18 @@
-//XFAIL:*
-// RUN: %amp_device -D__GPU__ %s -m32 -emit-llvm -c -S -O2 -o %t.ll && mkdir -p %t
-// RUN: %clamp-device %t.ll %t/kernel.cl
-// RUN: pushd %t && %embed_kernel kernel.cl %t/kernel.o && popd
-// RUN: %cxxamp %link %t/kernel.o %s -o %t.out && %t.out
+// RUN: %amp_device -D__GPU__ %s -m32 -emit-llvm -c -S -O2 -o %t.ll 2>&1 | FileCheck --strict-whitespace %s
+
+//////////////////////////////////////////////////////////////////////////////////
+// Do not delete or add any line; it is referred to by absolute line number in the
+// FileCheck lines below
+//////////////////////////////////////////////////////////////////////////////////
 #include <amp.h>
 
-int f1() restrict(amp:,)  // expected-error{{':': unrecognized restriction sepcifier}}
+int f1() restrict(amp:,)
 {
   return 1;
 }
+// CHECK: should_not_parse.cpp:[[@LINE-4]]:22: error: ':' : unrecognized restriction specifier
+// CHECK-NEXT:int f1() restrict(amp:,)
+// CHECK-NEXT:                     ^
 
 // 'amp' should not be attached to f1()
 int f2() restrict(amp)
