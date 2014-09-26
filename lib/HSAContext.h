@@ -82,7 +82,7 @@ public:
 	};
 
 	// create a kernel object from the specified HSAIL text source and entrypoint
-	virtual Kernel* createKernel(const char *source, const char *entryName) = 0;
+	virtual Kernel* createKernel(const char *source, int size, const char *entryName) = 0;
 
         // create a kernel dispatch object from the specified kernel
         virtual Dispatch* createDispatch(const Kernel *kernel) = 0;
