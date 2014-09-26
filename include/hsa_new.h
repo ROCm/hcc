@@ -1,6 +1,8 @@
 #ifndef _HSA_NEW_H
 #define _HSA_NEW_H
 
+#include <iostream>
+#include <iomanip>
 #include <atomic>
 #include <thread>
 
