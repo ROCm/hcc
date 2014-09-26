@@ -5,6 +5,7 @@
 // See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
 /// <tags>P1</tags>
 /// <summary>Verify decltype expression evaluation.</summary>
+#include <amp.h>
 #include <type_traits>
 #define TEST(a,b) static_assert(std::is_same<a,b>::value, "Test failed, type of \"" #a "\" != type of \"" #b "\".")
 #pragma warning(disable: 4101 4189) // unreferenced local variable; unreferenced initialized local variable
