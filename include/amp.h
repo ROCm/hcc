@@ -53,7 +53,7 @@ extern int64_t get_group_id(unsigned int n) restrict(amp);
 #else
 #define tile_static static __attribute__((section("clamp_opencl_local")))
 #endif
-extern void barrier(unsigned int n) restrict(amp);
+extern __attribute__((noduplicate)) void barrier(unsigned int n) restrict(amp);
 //End CLAMP
 #endif
 
@@ -322,15 +322,17 @@ public:
     // notice we removed const from the signature here
     template<typename functor>
     void then(const functor & func) {
+#ifndef __GPU__
       // could only assign once
       if (__thread_then == nullptr) {
         // spawn a new thread to wait on the future and then execute the callback functor
-        __thread_then = new std::thread([&] {
+        __thread_then = new std::thread([&]() restrict(cpu) {
           this->wait();
           if(this->valid())
             func();
         });
       }
+#endif
     }
 
 private:
