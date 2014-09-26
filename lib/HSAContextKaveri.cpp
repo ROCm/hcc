@@ -342,26 +342,6 @@ private:
          //  printf("%02X ", *(((uint8_t*)aql.kernarg_address)+i));
          //}
          //printf("\n");hsa_ext_brig_module_t
-#else
-         //printf("arg_vec size: %d in bytes: %d\n", arg_vec.size(), arg_vec.size() * sizeof(uint64_t));
-         hsa_region_t region;
-         //printf("hsa_agent_iterate_regions\n");
-         hsa_agent_iterate_regions(context->device, get_kernarg, &region);
-         //printf("kernarg region: %08X\n", region);
-
-         //printf("hsa_memory_allocate in region: %08X size: %d bytes\n", region, roundUp(arg_vec.size() * sizeof(uint64_t)));
-         if ((status = hsa_memory_allocate(region, roundUp(arg_vec.size() * sizeof(uint64_t)), (void**) &aql.kernarg_address)) != HSA_STATUS_SUCCESS) {
-           printf("hsa_memory_allocate error: %d\n", status);
-           exit(1);
-         }
-
-         //printf("memcpy dst: %08X, src: %08X, %d kernargs, %d bytes\n", aql.kernarg_address, arg_vec.data(), arg_count, arg_vec.size() * sizeof(uint64_t));
-         memcpy((void*)aql.kernarg_address, arg_vec.data(), arg_vec.size() * sizeof(uint64_t));
-         //for (size_t i = 0; i < arg_vec.size() * sizeof(uint64_t); ++i) {
-         //  printf("%02X ", *(((uint8_t*)aql.kernarg_address)+i));
-         //}
-         //printf("\n");
-#endif
 
          // Initialize memory resources needed to execute
          aql.group_segment_size = kernel->hsaCodeDescriptor->workgroup_group_segment_byte_size;
@@ -534,7 +514,7 @@ public:
       return new DispatchImpl((const KernelImpl*)kernel);
     }
 
-    Kernel* createKernel(const char *hsailBuffer, const char *entryName) {
+    Kernel* createKernel(const char *hsailBuffer, int hsailSize, const char *entryName) {
 
       hsa_status_t status;
 
