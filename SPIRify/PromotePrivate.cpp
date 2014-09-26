@@ -178,7 +178,9 @@ bool PromotePrivates::runOnFunction(Function &F) {
   while (!NeedPromoted.empty()) {
     Instruction *I = NeedPromoted.back();
 
+#if 0
     llvm::errs() << "NeedPromoted:" << *I << "\n";
+#endif
 
     if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
       IRBuilder<> Builder(SI);
