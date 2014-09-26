@@ -326,7 +326,7 @@ public:
       // could only assign once
       if (__thread_then == nullptr) {
         // spawn a new thread to wait on the future and then execute the callback functor
-        __thread_then = new std::thread([&] {
+        __thread_then = new std::thread([&]() restrict(cpu) {
           this->wait();
           if(this->valid())
             func();
