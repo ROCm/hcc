@@ -50,11 +50,11 @@ configure_file(
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-assemble.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../lib/clamp-assemble @ONLY)
+  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-assemble @ONLY)
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-link.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../lib/clamp-link @ONLY)
+  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-link @ONLY)
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-hsatools.in

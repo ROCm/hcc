@@ -18,7 +18,7 @@ std::shared_ptr<accelerator> accelerator::_gpu_accelerator = std::make_shared<ac
 std::shared_ptr<accelerator> accelerator::_cpu_accelerator = std::make_shared<accelerator>(accelerator::cpu_accelerator);
 std::shared_ptr<accelerator> accelerator::_default_accelerator = nullptr;
 
-}
+} // namespace Concurrency
 
 namespace {
 bool __mcw_cxxamp_compiled = false;
@@ -176,6 +176,10 @@ void FinalizeHSAContext() {
     context->dispose();
     context = NULL;
   }
+
+  // TBD dispose all Kernel objects
+
+  // TBD dispose all Dispatch objects
 }
 
 /* Used only in HSA runtime */
@@ -214,19 +218,19 @@ void *CreateHSAKernel(std::string s)
       }
       __mcw_hsa_kernels[s] = kernel;
   }
-  kernel->clearArgs();
 
+  HSAContext::Dispatch *dispatch = GetOrInitHSAContext()->createDispatch(kernel);
+  dispatch->clearArgs();
 //#define CXXAMP_ENABLE_HSAIL_HLC_DEVELOPMENT_COMPILER 1
 #ifndef CXXAMP_ENABLE_HSAIL_HLC_DEVELOPMENT_COMPILER
-  kernel->pushLongArg(0);
-  kernel->pushLongArg(0);
-  kernel->pushLongArg(0);
-  kernel->pushLongArg(0);
-  kernel->pushLongArg(0);
-  kernel->pushLongArg(0);
+  dispatch->pushLongArg(0);
+  dispatch->pushLongArg(0);
+  dispatch->pushLongArg(0);
+  dispatch->pushLongArg(0);
+  dispatch->pushLongArg(0);
+  dispatch->pushLongArg(0);
 #endif
-
-  return kernel;
+  return dispatch;
 }
 
 namespace HSA {
@@ -237,10 +241,10 @@ void RegisterMemory(void *p, size_t sz)
 }
 }
 
-void HSALaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local)
+std::future<void> HSALaunchKernelAsync(void *ker, size_t nr_dim, size_t *global, size_t *local)
 {
-  HSAContext::Kernel *kernel =
-      reinterpret_cast<HSAContext::Kernel*>(ker);
+  HSAContext::Dispatch *dispatch =
+      reinterpret_cast<HSAContext::Dispatch*>(ker);
   size_t tmp_local[] = {0, 0, 0};
   if (!local)
       local = tmp_local;
@@ -248,27 +252,45 @@ void HSALaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local)
   //for (size_t i = 0; i < nr_dim; ++i) {
   //  std::cerr << "g: " << global[i] << " l: " << local[i] << "\n";
   //}
-  kernel->setLaunchAttributes(nr_dim, global, local);
+  dispatch->setLaunchAttributes(nr_dim, global, local);
   //std::cerr << "Now real launch\n";
-  kernel->dispatchKernelWaitComplete();
+  //kernel->dispatchKernelWaitComplete();
+
+  return dispatch->dispatchKernelAndGetFuture();
+}
+
+void HSALaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local)
+{
+  HSAContext::Dispatch *dispatch =
+      reinterpret_cast<HSAContext::Dispatch*>(ker);
+  size_t tmp_local[] = {0, 0, 0};
+  if (!local)
+      local = tmp_local;
+  //std::cerr<<"Launching: nr dim = " << nr_dim << "\n";
+  //for (size_t i = 0; i < nr_dim; ++i) {
+  //  std::cerr << "g: " << global[i] << " l: " << local[i] << "\n";
+  //}
+  dispatch->setLaunchAttributes(nr_dim, global, local);
+  //std::cerr << "Now real launch\n";
+  dispatch->dispatchKernelWaitComplete();
 }
 
 void HSAPushArg(void *ker, size_t sz, const void *v)
 {
   //std::cerr << "pushing:" << ker << " of size " << sz << "\n";
-  HSAContext::Kernel *kernel =
-      reinterpret_cast<HSAContext::Kernel*>(ker);
+  HSAContext::Dispatch *dispatch =
+      reinterpret_cast<HSAContext::Dispatch*>(ker);
   void *val = const_cast<void*>(v);
   switch (sz) {
     case sizeof(double):
-      kernel->pushDoubleArg(*reinterpret_cast<double*>(val));
+      dispatch->pushDoubleArg(*reinterpret_cast<double*>(val));
       break;
     case sizeof(int):
-      kernel->pushIntArg(*reinterpret_cast<int*>(val));
+      dispatch->pushIntArg(*reinterpret_cast<int*>(val));
       //std::cerr << "(int) value = " << *reinterpret_cast<int*>(val) <<"\n";
       break;
     case sizeof(unsigned char):
-      kernel->pushBooleanArg(*reinterpret_cast<unsigned char*>(val));
+      dispatch->pushBooleanArg(*reinterpret_cast<unsigned char*>(val));
       break;
     default:
       assert(0 && "Unsupported kernel argument size");
@@ -277,9 +299,9 @@ void HSAPushArg(void *ker, size_t sz, const void *v)
 void HSAPushPointer(void *ker, void *val)
 {
     //std::cerr << "pushing:" << ker << " of ptr " << val << "\n";
-    HSAContext::Kernel *kernel =
-        reinterpret_cast<HSAContext::Kernel*>(ker);
-    kernel->pushPointerArg(val);
+    HSAContext::Dispatch *dispatch =
+        reinterpret_cast<HSAContext::Dispatch*>(ker);
+    dispatch->pushPointerArg(val);
 }
 #elif defined(CXXAMP_ENABLE_HSA)
 } // namespce CLAMP

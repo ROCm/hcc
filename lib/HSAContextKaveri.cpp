@@ -5,7 +5,9 @@
 #include <string>
 #include <vector>
 #include <fstream>
-
+#include <future>
+#include <thread>
+#include <chrono>
 
 #include "HSAContext.h"
 
@@ -26,13 +28,6 @@
                 assert(HSA_STATUS_SUCCESS == hsa_close());\
 		exit(-1);\
 	}
-
-#define STATUS_CHECK_Q(s,line) if (status != HSA_STATUS_SUCCESS) {\
-		printf("### Error: %d at line:%d\n", status, line);\
-                assert(HSA_STATUS_SUCCESS == hsa_queue_destroy(commandQueue));\
-		exit(-1);\
-	}
-
 
 static hsa_status_t IterateAgent(hsa_agent_t agent, void *data) {
   // Find GPU device and use it.
@@ -150,33 +145,44 @@ class HSAContextKaveriImpl : public HSAContext {
    friend HSAContext * HSAContext::Create(); 
 
 private:
+
+   class DispatchImpl;
+
    class KernelImpl : public HSAContext::Kernel {
    private:
       HSAContextKaveriImpl* context;
       hsa_ext_code_descriptor_t *hsaCodeDescriptor;
-
-#define NA_ALIGN (1)
-#if NA_ALIGN
-      std::vector<uint8_t> arg_vec;
-#else
-      std::vector<uint64_t> arg_vec;
-#endif
-
-      uint32_t arg_count;
-      size_t prevArgVecCapacity;
-      int launchDimensions;
-      uint32_t workgroup_size[3];
-      uint32_t global_size[3];
-#if NA_ALIGN
-      static const int ARGS_VEC_INITIAL_CAPACITY = 256 * 8;   
-#else
-      static const int ARGS_VEC_INITIAL_CAPACITY = 256;   
-#endif
+      friend class DispatchImpl;
 
    public:
       KernelImpl(hsa_ext_code_descriptor_t* _hsaCodeDescriptor, HSAContextKaveriImpl* _context) {
          context = _context;
          hsaCodeDescriptor =  _hsaCodeDescriptor;
+      }
+
+   }; // end of KernelImpl
+
+
+   class DispatchImpl : public HSAContext::Dispatch {
+   private:
+      HSAContextKaveriImpl* context;
+      const KernelImpl* kernel;
+
+      std::vector<uint8_t> arg_vec;
+      uint32_t arg_count;
+      size_t prevArgVecCapacity;
+      int launchDimensions;
+      uint32_t workgroup_size[3];
+      uint32_t global_size[3];
+      static const int ARGS_VEC_INITIAL_CAPACITY = 256 * 8;   
+
+      hsa_signal_t signal;
+      hsa_dispatch_packet_t aql;
+      bool isDispatched;
+
+   public:
+      DispatchImpl(const KernelImpl* _kernel) : kernel(_kernel), isDispatched(false) {
+         context = _kernel->context;
          
          // allocate the initial argument vector capacity
          arg_vec.reserve(ARGS_VEC_INITIAL_CAPACITY);
@@ -256,6 +262,32 @@ private:
 
       hsa_status_t dispatchKernelWaitComplete() {
          hsa_status_t status = HSA_STATUS_SUCCESS;
+         if (isDispatched) {
+           return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+         }
+         dispatchKernelAndGetFuture().wait();
+         return status;
+      } 
+
+
+      std::future<void> dispatchKernelAndGetFuture() {
+         dispatchKernel();
+         auto waitFunc = [&]() {
+           this->waitComplete();
+         };
+         std::packaged_task<void()> waitTask(waitFunc);
+         auto fut = waitTask.get_future();
+         std::thread waitThread(std::move(waitTask));
+         waitThread.detach();         
+         return fut;
+      }
+
+      // dispatch a kernel asynchronously
+      hsa_status_t dispatchKernel() {
+         hsa_status_t status = HSA_STATUS_SUCCESS;
+         if (isDispatched) {
+           return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+         }
 
          // check if underlying arg_vec data might have changed, if so re-register
          if (arg_vec.capacity() > prevArgVecCapacity) {
@@ -266,12 +298,10 @@ private:
          hsa_queue_t* commandQueue = context->getQueue();
 
          // create a signal
-         hsa_signal_t signal;
          status = hsa_signal_create(1, 0, NULL, &signal);
          STATUS_CHECK_Q(status, __LINE__);
 
          // create a dispatch packet
-         hsa_dispatch_packet_t aql;
          memset(&aql, 0, sizeof(aql));
 
          // setup dispatch sizes
@@ -291,10 +321,9 @@ private:
          aql.header.barrier = 1;
 
          // bind kernel code
-         aql.kernel_object_address = hsaCodeDescriptor->code.handle; 
+         aql.kernel_object_address = kernel->hsaCodeDescriptor->code.handle; 
 
          // bind kernel arguments
-#if NA_ALIGN
          //printf("arg_vec size: %d in bytes: %d\n", arg_vec.size(), arg_vec.size());
          hsa_region_t region;
          //printf("hsa_agent_iterate_regions\n");
@@ -335,9 +364,9 @@ private:
 #endif
 
          // Initialize memory resources needed to execute
-         aql.group_segment_size = hsaCodeDescriptor->workgroup_group_segment_byte_size;
+         aql.group_segment_size = kernel->hsaCodeDescriptor->workgroup_group_segment_byte_size;
 
-         aql.private_segment_size = hsaCodeDescriptor->workitem_private_segment_byte_size;
+         aql.private_segment_size = kernel->hsaCodeDescriptor->workitem_private_segment_byte_size;
 
          // write packet
          uint32_t queueMask = commandQueue->size - 1;
@@ -350,6 +379,18 @@ private:
          // Ring door bell
          hsa_signal_store_relaxed(commandQueue->doorbell_signal, index+1);
 
+         isDispatched = true;
+
+         return status;
+      }
+
+      // wait for the kernel to finish execution
+      hsa_status_t waitComplete() {
+         hsa_status_t status = HSA_STATUS_SUCCESS;
+         if (!isDispatched)  {
+           return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+         }
+
          //printf("wait for completion...");
 
          // wait for completion
@@ -360,33 +401,23 @@ private:
 
          //printf("complete!\n");
 
-#if NA_ALIGN
          hsa_memory_deregister((void*)aql.kernarg_address, roundUp(arg_vec.size()));
          free((void*)aql.kernarg_address);
-#else
-         hsa_memory_deregister((void*)aql.kernarg_address, roundUp(arg_vec.size() * sizeof(uint64_t)));
-         free((void*)aql.kernarg_address);
-#endif
 
          hsa_signal_store_relaxed(signal, 1);
-
+         isDispatched = false;
          return status; 
       }
 
       void dispose() {
          hsa_status_t status;
-#if NA_ALIGN
          status = hsa_memory_deregister(arg_vec.data(), arg_vec.capacity() * sizeof(uint8_t));
-#else
-         status = hsa_memory_deregister(arg_vec.data(), arg_vec.capacity() * sizeof(uint64_t));
-#endif
          assert(status == HSA_STATUS_SUCCESS);
       }
 
    private:
       template <typename T>
       hsa_status_t pushArgPrivate(T val) {
-#if NA_ALIGN
          /* add padding if necessary */
          int padding_size = arg_vec.size() % sizeof(T);
          //printf("push %lu bytes into kernarg: ", sizeof(T) + padding_size);
@@ -400,20 +431,6 @@ private:
            //printf("%02X ", ptr[i]);
          }
          //printf("\n");
-#else
-         // each arg takes up a 64-bit slot, no matter what its size
-         const uint64_t  argAsU64 = 0;
-         T* pt = (T *) &argAsU64;
-         *pt = val;
-         arg_vec.push_back(argAsU64);
-
-         //printf("push %lu bytes into kernarg: ", sizeof(const uint64_t));
-         //uint8_t *ptr = static_cast<uint8_t*>(static_cast<void*>(pt));
-         //for (size_t i = 0; i < sizeof(const uint64_t); ++i) {
-         //  printf("%02X ", ptr[i]);
-         //}
-         //printf("\n");
-#endif
          arg_count++;
          return HSA_STATUS_SUCCESS;
       }
@@ -437,11 +454,7 @@ private:
          prevArgVecCapacity = arg_vec.capacity();
 
          // register the memory behind the arg_vec
-#if NA_ALIGN
          hsa_status_t status = hsa_memory_register(arg_vec.data(), arg_vec.capacity() * sizeof(uint8_t));
-#else
-         hsa_status_t status = hsa_memory_register(arg_vec.data(), arg_vec.capacity() * sizeof(uint64_t));
-#endif
          assert(status == HSA_STATUS_SUCCESS);
       }
 
@@ -473,13 +486,12 @@ private:
       }
 
 
-   }; // end of KernelImpl
+   }; // end of DispatchImpl
 
    private:
      hsa_agent_t device;
      hsa_queue_t* commandQueue;
      hsa_ext_program_handle_t hsaProgram;
-     KernelImpl *kernelImpl;
 
    // constructor
    HSAContextKaveriImpl() {
@@ -506,7 +518,6 @@ private:
      STATUS_CHECK_Q(status, __LINE__);
 
      hsaProgram.handle = 0;
-     kernelImpl = NULL;
    }
 
 public:
@@ -519,7 +530,11 @@ public:
       return commandQueue;
     }
 
-    Kernel * createKernel(const char *hsailBuffer, const size_t hsailSize, const char *entryName) {
+    Dispatch* createDispatch(const Kernel* kernel) {
+      return new DispatchImpl((const KernelImpl*)kernel);
+    }
+
+    Kernel* createKernel(const char *hsailBuffer, const char *entryName) {
 
       hsa_status_t status;
 
@@ -564,10 +579,6 @@ public:
 
    hsa_status_t dispose() {
       hsa_status_t status;
-
-      if (kernelImpl) {
-         kernelImpl->dispose();
-      }
 
       if (hsaProgram.handle != 0) {
 	      status = hsa_ext_program_destroy(hsaProgram);
