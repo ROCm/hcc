@@ -1,8 +1,4 @@
-// RUN: %amp_device -D__GPU__ %s -m32 -emit-llvm -c -S -O2 -o %t.ll
-// RUN: mkdir -p %t
-// RUN: %clamp-device %t.ll %t/kernel.cl
-// RUN: pushd %t && %embed_kernel kernel.cl %t/kernel.o && popd
-// RUN: %cxxamp %link %t/kernel.o %s -o %t.out 2>&1 | FileCheck --strict-whitespace %s
+// RUN: %cxxamp %s -o %t.out 2>&1 | %FileCheck --strict-whitespace %s
 
 //////////////////////////////////////////////////////////////////////////////////
 // Do not delete or add any line; it is referred to by absolute line number in the
