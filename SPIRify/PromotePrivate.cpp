@@ -54,21 +54,35 @@ class NewedMemoryAnalyzer : public InstVisitor<NewedMemoryAnalyzer> {
 protected:
   Function *NewScalar;
   Function *NewArray;
+
+  Function *Memset;
   //SmallPtrSet<Instruction *, 8> Visited;
   bool IsNewed;
 
 public:
   NewedMemoryAnalyzer(Function &F) : IsNewed(false) {
     Module *M = F.getParent();
-    NewScalar = M->getFunction("_Znwj");
-    NewArray = M->getFunction("_Znaj"); 
+    NewScalar = M->getFunction(/*"_Znwj"*/ "_Znwm");
+    NewArray = M->getFunction(/*"_Znaj"*/ "_Znam");
+
+    Memset = M->getFunction("llvm.memset.p0i8.i64");
   }
 
   bool isNewed() { return IsNewed; }
 
+  bool NotMemIntrinsic(Instruction &I) {
+    if (CallInst *CI = dyn_cast<CallInst>(&I)) {
+      Function *Callee = CI->getCalledFunction();
+      if (Memset && Callee == Memset) 
+        return false;
+    }
+    return true;
+  }
+
   /// Entry point of analysis
   void analyze(Instruction &I) { 
-    if (!isa<StoreInst>(&I) && !isa<LoadInst>(&I)) {
+    if (!isa<StoreInst>(&I) && !isa<LoadInst>(&I) && NotMemIntrinsic(I)) {
+    //if (!I.mayReadOrWriteMemory()) {
       IsNewed = false;
       return;
     }
@@ -108,8 +122,20 @@ public:
 
   void visitCallInst(CallInst &I) {
     Function *Callee = I.getCalledFunction();
-    if ((NewScalar && Callee == NewScalar) || (NewArray && Callee == NewArray))
+
+    if ((NewScalar && Callee == NewScalar) || (NewArray && Callee == NewArray)) {
       IsNewed =true;
+      return;
+    }
+
+    if (Memset && Callee == Memset) {
+      if (Instruction *Operand = dyn_cast<Instruction>(I.getArgOperand(0)))
+      {
+        //llvm::errs() << "I: " << I << "\n";
+        //llvm::errs() << "Operand" << *Operand << "\n";
+        visit(*Operand);
+      }
+    }
   }
 
 #if 0
@@ -124,6 +150,11 @@ public:
 ///
 bool PromotePrivates::runOnFunction(Function &F) {
   if (F.getName().find("cxxamp_trampoline") == StringRef::npos)
+    return false;
+
+  // Need refactor!
+  Module *M = F.getParent();
+  if ((M->getFunction(/*"_Znwj"*/ "_Znwm") == NULL) && (M->getFunction(/*"_Znaj"*/ "_Znam") == NULL))
     return false;
 
   //errs() << "Execute PromotePrivates::runOnFunction: " << F.getName() << "\n";
@@ -147,9 +178,15 @@ bool PromotePrivates::runOnFunction(Function &F) {
   while (!NeedPromoted.empty()) {
     Instruction *I = NeedPromoted.back();
 
+#if 0
+    llvm::errs() << "NeedPromoted:" << *I << "\n";
+#endif
+
     if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
       IRBuilder<> Builder(SI);
-      Value *StoreAddr = Builder.CreatePointerCast(SI->getPointerOperand(), Type::getInt32PtrTy(C, 1));
+      //Value *StoreAddr = Builder.CreatePointerCast(SI->getPointerOperand(), Type::getInt64PtrTy(C, 1));
+      PointerType *DestTy = SI->getPointerOperand()->getType()->getPointerElementType()->getPointerTo(1);
+      Value *StoreAddr = Builder.CreatePointerCast(SI->getPointerOperand(), DestTy);
       StoreInst* nSI = new StoreInst(SI->getValueOperand(), StoreAddr);
 
       ReplaceInstWithInst(SI, nSI);
@@ -161,6 +198,35 @@ bool PromotePrivates::runOnFunction(Function &F) {
       LoadInst* nLI = new LoadInst(LoadAddr);
 
       ReplaceInstWithInst(LI, nLI);
+    }
+
+    if (CallInst *CI = dyn_cast<CallInst>(I)) {
+      IRBuilder<> Builder(CI);
+
+      PointerType *DestTy = CI->getArgOperand(0)->getType()->getPointerElementType()->getPointerTo(1);
+      Value *MemsetAddr = Builder.CreatePointerCast(CI->getArgOperand(0), DestTy);
+      std::vector<Value*> ArgsVec;
+      ArgsVec.push_back(MemsetAddr);
+      for (int i = 1, e = CI->getNumArgOperands(); i < e; i++) {
+        ArgsVec.push_back(CI->getArgOperand(i));
+      }
+      ArrayRef<Value*> Args(ArgsVec);
+
+      FunctionType *MemsetFuncType = CI->getCalledFunction()->getFunctionType();
+      Type *MemsetRetType = MemsetFuncType->getReturnType();
+      std::vector<Type*> ArgsTypeVec;
+      ArgsTypeVec.push_back(DestTy);
+      for (int i = 1, e = MemsetFuncType->getNumParams(); i < e; i++) {
+        ArgsTypeVec.push_back(MemsetFuncType->getParamType(i));
+      }
+      ArrayRef<Type*> ArgsType(ArgsTypeVec);  
+      FunctionType *nMemsetFuncType = FunctionType::get(MemsetRetType, ArgsType, false);
+      M->getOrInsertFunction("llvm.memset.p1i8.i64", nMemsetFuncType);
+      Function *MemsetFunc = M->getFunction("llvm.memset.p1i8.i64");
+
+      CallInst* nCI = CallInst::Create(MemsetFunc, Args);
+
+      ReplaceInstWithInst(CI, nCI);
     }
 
 #if 0

@@ -174,14 +174,16 @@ bool EraseNonkernels::runOnModule(Module &M)
 			I->getName().find("opencl_") != StringRef::npos ||
 			I->getName().find("atomic_") != StringRef::npos ||
 			I->getName().find("llvm.") != StringRef::npos || 
-                        I->getName().find("_Znwj") != StringRef::npos || 
-                        I->getName().find("_Znaj") != StringRef::npos ||
+                        I->getName().find("_Znwm") != StringRef::npos ||
+                        I->getName().find("_Znam") != StringRef::npos ||
                         I->getName().find("_ZdlPv") != StringRef::npos ||
-                        I->getName().find("_ZdaPv") != StringRef::npos || 
-                        I->getName().find("_Z9put_ptr_bPv3") != StringRef::npos ||
-                        I->getName().find("_Z9put_ptr_cPv4") != StringRef::npos ||
-                        I->getName().find("_Z9get_ptr_av") != StringRef::npos ||
-                        I->getName().find("_Z9put_ptr_aPv2") != StringRef::npos ) {
+                        I->getName().find("_ZdaPv") != StringRef::npos ||
+                        I->getName().find("_Z9put_ptr_xPv") != StringRef::npos ||
+                        I->getName().find("_Z9put_ptr_yPv") != StringRef::npos ||
+                        I->getName().find("_Z9put_ptr_zPv") != StringRef::npos ||
+                        I->getName().find("_Z9put_ptr_aPv") != StringRef::npos ||
+                        I->getName().find("_Z9put_ptr_bPv") != StringRef::npos ||
+                        I->getName().find("_Z9put_ptr_cPv") != StringRef::npos ) {
 			I++;
 			continue;
 		}
