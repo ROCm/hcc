@@ -1,36 +1,42 @@
-//XFAIL:*
-// RUN: %amp_device -D__GPU__ %s -m32 -emit-llvm -c -S -O2 -o %t.ll && mkdir -p %t
-// RUN: %clamp-device %t.ll %t/kernel.cl
-// RUN: pushd %t && %embed_kernel kernel.cl %t/kernel.o && popd
-// RUN: %cxxamp %link %t/kernel.o %s -o %t.out && %t.out
+// RUN: %amp_device -D__GPU__ %s -m32 -emit-llvm -c -S -O2 -o %t.ll 2>&1 | FileCheck --strict-whitespace %s
+
+//////////////////////////////////////////////////////////////////////////////////
+// Do not delete or add any line; it is referred to by absolute line number in the
+// FileCheck lines below
+//////////////////////////////////////////////////////////////////////////////////
 #include <amp.h>
 using namespace concurrency;
 
 int f1() restrict(cpu) {return 1;} 
-int f2() restrict(amp) {return 2;}
-
-int AMP_AND_CPU_Func() restrict(cpu,amp)
-{
-  return f2(); // expected-error{{undefined reference to `f2()'}}  // Since in CPU path, there is no any cpu restricted 'f2'
-}
 
 int AMP_AND_CPU_Func_1() restrict(cpu,amp)
 {
-  return f1(); // expected-error{{call from AMP-restricted function to CPU-restricted function}}
+  return f1();
 }
+// CHECK: call_distinct_from_dual_context.cpp:[[@LINE-2]]:10: error: call from AMP-restricted function to CPU-restricted function
+// CHECK-NEXT:  return f1();
+// CHECK-NEXT:         ^
+
 
 int foo() {}
 
 int main()
 {
-    auto a_lambda_func = []() restrict(cpu,amp) { 
-       foo(); // lambda:expected_error{{'foo':  no overloaded function has restriction specifiers that are compatible with the ambient context 'main()::<anonymous class>::operator()'}}
-    };
+  auto a_lambda_func = []() restrict(cpu,amp) { 
+    foo();
+  };
+// CHECK: call_distinct_from_dual_context.cpp:[[@LINE-2]]:8: error:  'foo':  no overloaded function has restriction specifiers that are compatible with the ambient context 'main()::<anonymous class>::operator()'
+// CHECK-NEXT:    foo();
+// CHECK-NEXT:       ^
 
-    parallel_for_each(extent<1>(1), [](index<1>) restrict(cpu,amp)
-    {
-        foo();  // pfe:expected_error{{'foo':  no overloaded function has restriction specifiers that are compatible with the ambient context 'main()::<anonymous class>::operator()'}}
-    });
-   
-    return 1; // Should not compile
+
+  parallel_for_each(extent<1>(1), [](index<1>) restrict(cpu,amp) {
+    foo();
+  });
+// CHECK: call_distinct_from_dual_context.cpp:[[@LINE-2]]:8: error:  'foo':  no overloaded function has restriction specifiers that are compatible with the ambient context 'main()::<anonymous class>::operator()'
+// CHECK-NEXT:    foo();
+// CHECK-NEXT:       ^
+
+
+  return 1; // Should not compile
 }

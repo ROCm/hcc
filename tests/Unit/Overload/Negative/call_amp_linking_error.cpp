@@ -7,23 +7,25 @@
 //////////////////////////////////////////////////////////////////////////////////
 // Do not delete or add any line; it is referred to by absolute line number in the
 // FileCheck lines below
-//////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////
 #include <amp.h>
 using namespace concurrency;
 
-int foo() restrict(amp)
-{
-  return 1;
+int f1() restrict(amp) {return 1;} 
+int f2() restrict(amp) {
+  return f1();
 }
+
+int CPU_Func() restrict(cpu)
+{
+  return f2();
+}
+// CHECK:call_amp_linking_error.cpp:[[@LINE-2]]:12: error:  'f2':  no overloaded function has restriction specifiers that are compatible with the ambient context 'CPU_Func'
+// CHECK-NEXT:  return f2();
+// CHECK-NEXT:           ^
+
 
 int main()
 {
-  foo();
   return 1; // Should not compile
 }
-// CHECK: call_amp_function_in_main.cpp:[[@LINE-3]]:6: error:  'foo':  no overloaded function has restriction specifiers that are compatible with the ambient context 'main'
-// CHECK-NEXT:  foo();
-// CHECK-NEXT:     ^
-
-
-
