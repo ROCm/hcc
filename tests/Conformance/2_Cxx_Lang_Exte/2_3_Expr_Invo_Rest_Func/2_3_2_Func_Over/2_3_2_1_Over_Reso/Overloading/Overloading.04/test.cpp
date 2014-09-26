@@ -6,9 +6,7 @@
 /// <tags>P0</tags>
 /// <summary>Select __GPU function over non __GPU</summary>
 
-// RUN: %cxxamp %s %link
-// RUN: ./a.out
-
+// RUN: %cxxamp %s -o %t.out && %t.out
 
 class c
 {

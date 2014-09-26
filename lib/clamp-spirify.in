@@ -1,8 +1,15 @@
 #!/bin/sh
 # wraps around commands to produce the OpenCL kernel
 # $1 = input ll name
-OPT=@LLVM_TOOLS_DIR@/opt
-DIS=@LLVM_TOOLS_DIR@/llvm-dis
+
+if [ -d @LLVM_TOOLS_DIR@ ]; then
+    OPT=@LLVM_TOOLS_DIR@/opt
+    DIS=@LLVM_TOOLS_DIR@/llvm-dis
+else
+    OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
+    DIS=@CMAKE_INSTALL_PREFIX@/bin/dis
+fi
+
 $OPT -load @LLVM_LIBS_DIR@/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ -promote-globals -verify < $1 | \
 $DIS -o -
 exit $?
