@@ -24,7 +24,6 @@ config.gmac_lib_dir = "@GMAC_LIB_DIR@"
 # MCWAMP
 config.mcwamp_lib_dir = "@MCWAMP_LIB_DIR@"
 config.mcwamp_tool_dir = "@MCWAMP_TOOL_DIR@"
-config.enable_okra = "@CXXAMP_ENABLE_HSA_OKRA@"
 config.enable_hsa = "@CXXAMP_ENABLE_HSA@"
 # Let the main config do the real work.
 lit.load_config(config, "@CPPAMP_TEST_DIR@/lit.cfg")

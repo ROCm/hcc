@@ -1,4 +1,4 @@
-// RUN: %cxxamp %s %link
+// RUN: %cxxamp %s -o %t.out && %t.out
 
 #include <amp.h>
 int main(void)
