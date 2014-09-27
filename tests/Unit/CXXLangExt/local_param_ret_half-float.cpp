@@ -1,9 +1,5 @@
-// XFAIL: *
-
-// RUN: %amp_device -DTYPE="half float" -D__GPU__ -Xclang -fhsa-ext %s -m64 -emit-llvm -c -S -O2 -o %t.ll && mkdir -p %t
-// RUN: %clamp-device %t.ll %t/kernel.cl
-// RUN: pushd %t && %embed_kernel kernel.cl %t/kernel.o && popd
-// RUN: %cxxamp -DTYPE="half float" -Xclang -fhsa-ext %link %t/kernel.o %s -o %t.out && %t.out
+// XFAIL: Linux, hsa
+// RUN: %cxxamp -DTYPE="half float" -Xclang -fhsa-ext %s -o %t.out && %t.out
 
 #include <amp.h>
 
