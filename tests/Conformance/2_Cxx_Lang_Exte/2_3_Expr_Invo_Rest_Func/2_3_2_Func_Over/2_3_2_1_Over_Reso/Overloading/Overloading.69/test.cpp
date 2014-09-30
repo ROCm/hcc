@@ -6,8 +6,7 @@
 /// <tags>P0</tags>
 /// <summary>Test conversion when matching</summary>
 
-// RUN: %cxxamp %s %link
-// RUN: ./a.out
+// RUN: %cxxamp %s -o %t.out && %t.out
 
 #include <stdio.h>
 

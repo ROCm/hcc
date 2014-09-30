@@ -1,38 +1,64 @@
-//XFAIL:*
-// RUN: %amp_device -D__GPU__ %s -m32 -emit-llvm -c -S -O2 -o %t.ll && mkdir -p %t
-// RUN: %clamp-device %t.ll %t/kernel.cl
-// RUN: pushd %t && %embed_kernel kernel.cl %t/kernel.o && popd
-// RUN: %cxxamp %link %t/kernel.o %s -o %t.out && %t.out
+// RUN: %amp_device -D__GPU__ %s -m32 -emit-llvm -c -S -O2 -o %t.ll 2>&1 | %FileCheck --strict-whitespace %s
+
+//////////////////////////////////////////////////////////////////////////////////
+// Do not delete or add any line; it is referred to by absolute line number in the
+// FileCheck lines below
+//////////////////////////////////////////////////////////////////////////////////
+
 #include <amp.h>
 
-int foo() restrict(!,,,,)  // expected-error{{'!': unrecognized restriction sepcifier}}
+int foo() restrict(!,,,,)
 {
   return 1;
 }
+// CHECK: non-id_at_two_ends.cpp:[[@LINE-4]]:20: error: '!' : unrecognized restriction specifier
+// CHECK-NEXT:int foo() restrict(!,,,,)
+// CHECK-NEXT:                   ^
 
 // consecutive
-int foo1() restrict(!!,,,,)  // expected-error{{'!': unrecognized restriction sepcifier}} // expected-error{{'!': unrecognized restriction sepcifier}}
+int foo1() restrict(!!,,,,)
 {
   return 1;
 }
+// CHECK: non-id_at_two_ends.cpp:[[@LINE-4]]:21: error: '!' : unrecognized restriction specifier
+// CHECK-NEXT:int foo1() restrict(!!,,,,)
+// CHECK-NEXT:                    ^
+// CHECK: non-id_at_two_ends.cpp:[[@LINE-7]]:22: error: '!' : unrecognized restriction specifier
+// CHECK-NEXT:int foo1() restrict(!!,,,,)
+// CHECK-NEXT:                     ^
 
 
-int foo2() restrict(,,,,*)  // expected-error{{'*': unrecognized restriction sepcifier}} // expected-error{{'*': unrecognized restriction sepcifier}}
+int foo2() restrict(,,,,*)
 {
   return 1;
 }
+// CHECK: non-id_at_two_ends.cpp:[[@LINE-4]]:25: error: '*' : unrecognized restriction specifier
+// CHECK-NEXT:int foo2() restrict(,,,,*)
+// CHECK-NEXT:                        ^
 
 
-int foo3() restrict(,,,,**)  // expected-error{{'*': unrecognized restriction sepcifier}} // expected-error{{'*': unrecognized restriction sepcifier}}
+int foo3() restrict(,,,,**)
 {
   return 1;
 }
+// CHECK: non-id_at_two_ends.cpp:[[@LINE-4]]:25: error: '*' : unrecognized restriction specifier
+// CHECK-NEXT:int foo3() restrict(,,,,**)
+// CHECK-NEXT:                        ^
+// CHECK: non-id_at_two_ends.cpp:[[@LINE-7]]:26: error: '*' : unrecognized restriction specifier
+// CHECK-NEXT:int foo3() restrict(,,,,**)
+// CHECK-NEXT:                         ^
 
 // both
-int foo4() restrict(!,,,,*)  // expected-error{{'!': unrecognized restriction sepcifier}} // expected-error{{'*': unrecognized restriction sepcifier}}
+int foo4() restrict(!,,,,*)
 {
   return 1;
 }
+// CHECK: non-id_at_two_ends.cpp:[[@LINE-4]]:21: error: '!' : unrecognized restriction specifier
+// CHECK-NEXT:int foo4() restrict(!,,,,*)
+// CHECK-NEXT:                    ^
+// CHECK: non-id_at_two_ends.cpp:[[@LINE-7]]:26: error: '*' : unrecognized restriction specifier
+// CHECK-NEXT:int foo4() restrict(!,,,,*)
+// CHECK-NEXT:                         ^
 
 
 int main(void)

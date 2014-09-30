@@ -6,8 +6,7 @@
 /// <tags>P0</tags>
 /// <summary>Reference -> const reference</summary>
 
-// RUN: %cxxamp %s %link
-// RUN: ./a.out
+// RUN: %cxxamp %s -o %t.out && %t.out
 
 int f(int &) restrict(amp) 
 {

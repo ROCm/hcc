@@ -42,13 +42,14 @@
 
 #ifndef HSACONTEXT_H
 #define HSACONTEXT_H
+#include <future>
 #include <hsa.h>
 
 // Abstract interface to an HSA Implementation
 class HSAContext{
 public:
-	class Kernel {
-	public:
+        class Dispatch {
+        public:
 		// various methods for setting different types of args into the arg stack
 		virtual hsa_status_t pushFloatArg(float) = 0;
 		virtual hsa_status_t pushIntArg(int) = 0;
@@ -66,10 +67,25 @@ public:
 
 		// run a kernel and wait until complete
 		virtual hsa_status_t dispatchKernelWaitComplete() = 0;
+
+                // dispatch a kernel asynchronously
+                virtual hsa_status_t dispatchKernel() = 0;
+
+                // wait for the kernel to finish execution
+                virtual hsa_status_t waitComplete() = 0;
+
+                // dispatch a kernel asynchronously and get a future object
+                virtual std::future<void> dispatchKernelAndGetFuture() = 0;
+        };
+
+	class Kernel {
 	};
 
 	// create a kernel object from the specified HSAIL text source and entrypoint
-	virtual Kernel * createKernel(const char *source, const char *entryName) = 0;
+	virtual Kernel* createKernel(const char *source, int size, const char *entryName) = 0;
+
+        // create a kernel dispatch object from the specified kernel
+        virtual Dispatch* createDispatch(const Kernel *kernel) = 0;
 
 	// dispose of an environment including all programs
 	virtual hsa_status_t dispose() = 0;
