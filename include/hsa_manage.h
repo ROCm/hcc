@@ -1,17 +1,10 @@
-//===----------------------------------------------------------------------===//
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
-//
-//===----------------------------------------------------------------------===//
-
 #include<type_traits>
 #pragma once
 #include <malloc.h>
 #include <string.h>
 namespace Concurrency {
 namespace CLAMP {
-namespace Okra {
+namespace HSA {
 extern void RegisterMemory(void *p, size_t sz);
 }
 }
@@ -22,8 +15,8 @@ class CLAllocator
  public:
   typedef T value_type;
   T* allocate(unsigned n) {
-    T *p = (T*)memalign(128, n*sizeof(T));
-    CLAMP::Okra::RegisterMemory(p, sizeof(value_type) * n);
+    T *p = (T*)memalign(0x1000, n*sizeof(T));
+    CLAMP::HSA::RegisterMemory(p, sizeof(value_type) * n);
     return p;
   }
 };
@@ -41,15 +34,21 @@ template <typename T>
 class _data {
   typedef typename std::remove_const<T>::type nc_T;
   friend _data<const T>;
+  friend _data<nc_T>;
  public:
   _data() = delete;
   _data(const _data& d) restrict(cpu, amp):p_(d.p_) {}
   template <class = typename std::enable_if<std::is_const<T>::value>::type>
     _data(const _data<nc_T>& d) restrict(cpu, amp):p_(d.p_) {}
+  template <class = typename std::enable_if<!std::is_const<T>::value>::type>
+    _data(const _data<const T>& d) restrict(cpu, amp):p_(const_cast<T*>(d.p_)) {}
+  template <typename T2>
+    _data(const _data<T2>& d) restrict(cpu, amp):p_(reinterpret_cast<T *>(d.get())) {}
   __attribute__((annotate("user_deserialize")))
   explicit _data(__global T* t) restrict(cpu, amp) { p_ = t; }
   __global T* get(void) const restrict(cpu, amp) { return p_; }
   __global T* get_mutable(void) const restrict(cpu, amp) { return p_; }
+  __global T* get_data() const { return get(); }
   void reset(__global T *t = NULL) restrict(cpu, amp) { p_ = t; }
  private:
   __global T* p_;
@@ -60,7 +59,8 @@ template <typename T>
 class _data_host: public std::shared_ptr<T> {
  public:
   _data_host(const _data_host &other):std::shared_ptr<T>(other) {}
-
+  template <class = typename std::enable_if<!std::is_const<T>::value>::type>
+  _data_host(const _data_host<const T> &other):std::shared_ptr<T>(other) {}
   _data_host(std::nullptr_t x = nullptr):std::shared_ptr<T>(nullptr) {}
 
   __attribute__((annotate("serialize")))
@@ -90,6 +90,8 @@ class _data_host_view {
  private:
   typedef typename std::remove_const<T>::type nc_T;
   friend _data_host_view<const T>;
+  friend _data_host_view<nc_T>;
+  template <typename T2> friend class _data_host_view;
 
   __attribute__((cpu)) std::shared_ptr<nc_T> cl_buffer;
   __attribute__((cpu)) std::shared_ptr<cache_state> state_ptr;
@@ -97,6 +99,18 @@ class _data_host_view {
   __attribute__((cpu)) size_t buffer_size;
 
  public:
+  std::shared_ptr<nc_T> get_gmac_buffer() const { return gmac_buffer; }
+  T *get_home_ptr() const {
+    if (home_ptr) {
+      synchronize();
+      *state_ptr = HOST_OWNED;
+      return home_ptr;
+    }
+    return nullptr;
+  }
+  std::shared_ptr<cache_state> get_state_ptr() const { return state_ptr; }
+  size_t get_buffer_size() const { return buffer_size; }
+
   _data_host_view(nc_T* cache, T* home, size_t size) :
    cl_buffer(cache), home_ptr(home), state_ptr(new cache_state), buffer_size(size) {
     *state_ptr = HOST_OWNED;
@@ -108,7 +122,11 @@ class _data_host_view {
     *state_ptr = HOST_OWNED;
   }
 
-  __attribute__((annotate("user_deserialize"))) _data_host_view(T* cache);
+  __attribute__((annotate("user_deserialize")))
+  _data_host_view(T* cache) :
+   gmac_buffer((nc_T*)(cache)), home_ptr(nullptr), state_ptr(new cache_state), buffer_size(0) {
+    *state_ptr = GMAC_OWNED;
+  };
 
   template <class Deleter>
   _data_host_view(nc_T* cache, Deleter d) :
@@ -119,6 +137,21 @@ class _data_host_view {
   _data_host_view(const _data_host_view<T> &other) :
     cl_buffer(other.cl_buffer), state_ptr(other.state_ptr),
     home_ptr(other.home_ptr), buffer_size(other.buffer_size) {}
+
+  template <class = typename std::enable_if<!std::is_const<T>::value>::type>
+  _data_host_view(const _data_host_view<const T> &other) :
+    gmac_buffer(other.gmac_buffer), state_ptr(other.state_ptr),
+    home_ptr(const_cast<T*>(other.home_ptr)), buffer_size(other.buffer_size) {}
+
+  template <typename ElementType>
+  _data_host_view(const _data_host_view<ElementType> &other) :
+    gmac_buffer(std::static_pointer_cast<nc_T>(std::static_pointer_cast<void>(other.get_gmac_buffer()))), state_ptr(other.get_state_ptr()),
+    home_ptr(reinterpret_cast<T *>(other.get_home_ptr())), buffer_size(other.get_buffer_size()) {}
+
+  template <typename ElementType>
+  _data_host_view(const _data_host_view<const ElementType> &other) :
+    gmac_buffer(std::static_pointer_cast<T>(std::static_pointer_cast<void>(other.get_gmac_buffer()))), state_ptr(other.get_state_ptr()),
+    home_ptr(reinterpret_cast<T *>(const_cast<T*>(other.get_home_ptr()))), buffer_size(other.get_buffer_size()) {}
 
   _data_host_view(const _data_host<T> &other) :
     cl_buffer(other), home_ptr(nullptr), buffer_size(0) {}
@@ -142,7 +175,13 @@ class _data_host_view {
 //The host buffer was modified without going through the array_view interface.
 //Set it host owned so we know it is dirty and will copy it back to the OpenCL
 //buffer when we serialize.
-  void refresh() const { *state_ptr = HOST_OWNED; }
+  void refresh() const { 
+//    *state_ptr = HOST_OWNED; 
+    if (home_ptr) {
+      memcpy(reinterpret_cast<void*>(gmac_buffer.get()),
+             reinterpret_cast<const void*>(home_ptr), buffer_size);
+    }
+  }
 
 //If the cache is currently owned by the cl buffer, copy it back to the host
 //buffer and change the state to shared.
@@ -161,7 +200,22 @@ class _data_host_view {
 
 //Return the home location ptr, synchronizing first if necessary. The pointer
 //returned is mutable, so we set it as host owned. If this is an array or array_view
+<<<<<<< HEAD:include/okra_manage.h
 //without a host buffer just return a pointer to the cl buffer.
+=======
+//without a host buffer just return a pointer to the gmac buffer.
+  T* get_data() const {
+    if (home_ptr && *state_ptr != GMAC_OWNED) {
+      return home_ptr;
+    } else {
+      return gmac_buffer.get();
+    }
+  }
+
+//Return the home location ptr, synchronizing first if necessary. The pointer
+//returned is mutable, so we set it as host owned. If this is an array or array_view
+//without a host buffer just return a pointer to the gmac buffer.
+>>>>>>> master:include/hsa_manage.h
   T* get_mutable() const {
     if (home_ptr) {
       synchronize();

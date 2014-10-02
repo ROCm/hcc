@@ -83,8 +83,12 @@ int main()
     });
 
     // vec should be updated after this
+    // array_view is non-POD and is not allowed as variadic argument at least in Clang
+    // however Microsoft VC++ compiler allows it. 
+    // Comment out it as it is Compiler specific
+    #if 0
     printf("Accessing first element of array_view [%d] to force synchronize.\n", av[0]);
-    
+    #endif
     // verify data
     for(int i = 0; i < av.get_extent()[0]; i++)
     {

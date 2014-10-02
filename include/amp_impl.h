@@ -11,7 +11,7 @@
 #include <iostream>
 #if __APPLE__
 #include <OpenCL/cl.h>
-#elif !defined(CXXAMP_ENABLE_HSA_OKRA)
+#elif !defined(CXXAMP_ENABLE_HSA)
 #include <CL/cl.h>
 #endif
 
@@ -34,6 +34,13 @@ inline accelerator::accelerator(const accelerator& other) :
   supports_cpu_shared_memory(other.supports_cpu_shared_memory),
   dedicated_memory(other.dedicated_memory),
   default_access_type(other.default_access_type),
+<<<<<<< HEAD
+=======
+#if !defined(CXXAMP_ENABLE_HSA)
+  default_view(other.default_view),
+  accInfo(other.accInfo)
+#else
+>>>>>>> master
   default_view(other.default_view)
   {}
 
@@ -53,12 +60,24 @@ inline accelerator::accelerator(const std::wstring& path) :
   supports_cpu_shared_memory(false), // constructor will set it
   dedicated_memory(0), // constructor will set it
   default_access_type(access_type_none),
+<<<<<<< HEAD
+=======
+#if !defined(CXXAMP_ENABLE_HSA)
+  default_view( (device_path == std::wstring(gpu_accelerator)) ?
+					( (_gpu_accelerator != nullptr) ?
+						new accelerator_view(_gpu_accelerator.get()) : new accelerator_view(this)) :
+					( (_cpu_accelerator != nullptr) ?
+						new accelerator_view(_cpu_accelerator.get()) : new accelerator_view(this)) ) ,
+  accInfo()
+#else
+>>>>>>> master
   default_view( (device_path == std::wstring(gpu_accelerator)) ?
 					( (_gpu_accelerator != nullptr) ?
 						new accelerator_view(_gpu_accelerator.get()) : new accelerator_view(this)) :
 					( (_cpu_accelerator != nullptr) ?
 						new accelerator_view(_cpu_accelerator.get()) : new accelerator_view(this)) )
     {
+<<<<<<< HEAD
 #ifndef CXXAMP_ENABLE_HSA_OKRA
     cl_int err;
     cl_uint platformCount;
@@ -89,6 +108,19 @@ inline accelerator::accelerator(const std::wstring& path) :
             default_view->is_auto_selection = false;
             break;
         }
+=======
+
+#if !defined(CXXAMP_ENABLE_HSA)
+  AcceleratorInfo accInfo;
+  for (unsigned i = 0; i < eclGetNumberOfAccelerators(); i++) {
+    assert(eclGetAcceleratorInfo(i, &accInfo) == eclSuccess);
+    if ( (accInfo.acceleratorType == GMAC_ACCELERATOR_TYPE_GPU)
+      && (device_path == std::wstring(gpu_accelerator))) {
+      supports_cpu_shared_memory = false;
+      this->accInfo = accInfo;
+      default_view->queuing_mode = queuing_mode_immediate;
+      default_view->is_auto_selection = true;
+>>>>>>> master
     }
     if (i == platformCount)
         return;
@@ -117,6 +149,12 @@ inline accelerator& accelerator::operator=(const accelerator& other) {
   dedicated_memory = other.dedicated_memory;
   default_access_type = other.default_access_type;
   default_view = other.default_view;
+<<<<<<< HEAD
+=======
+#if !defined(CXXAMP_ENABLE_HSA)
+  accInfo = other.accInfo;
+#endif 
+>>>>>>> master
   return *this;
 }
 inline bool accelerator::operator==(const accelerator& other) const {

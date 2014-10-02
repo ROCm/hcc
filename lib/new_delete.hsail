@@ -1,0 +1,684 @@
+prog global_u64 &ptr_a_address = 0;
+prog global_u64 &ptr_b_address = 0;
+prog global_u64 &ptr_c_address = 0;
+prog global_u64 &ptr_x_address = 0;
+prog global_u64 &ptr_y_address = 0;
+prog global_u64 &ptr_z_address = 0;
+
+prog function &_Z9put_ptr_aPv2()(arg_u64 %arg_p0)
+{
+        ld_arg_u64  $d0, [%arg_p0];
+        st_global_u64 $d0, [&ptr_a_address];
+        ret;
+};
+
+prog function &_Z9put_ptr_bPv3()(arg_u64 %arg_p0)
+{
+        ld_arg_u64  $d0, [%arg_p0];
+        st_global_u64 $d0, [&ptr_b_address];
+        ret;
+};
+
+prog function &_Z9put_ptr_cPv4()(arg_u64 %arg_p0)
+{
+        ld_arg_u64  $d0, [%arg_p0];
+        st_global_u64 $d0, [&ptr_c_address];
+        ret;
+};
+
+prog function &_Z9put_ptr_xPv5()(arg_u64 %arg_p0)
+{
+        ld_arg_u64  $d0, [%arg_p0];
+        st_global_u64 $d0, [&ptr_x_address];
+        ret;
+};
+
+prog function &_Z9put_ptr_yPv6()(arg_u64 %arg_p0)
+{
+        ld_arg_u64  $d0, [%arg_p0];
+        st_global_u64 $d0, [&ptr_y_address];
+        ret;
+};
+
+prog function &_Z9put_ptr_zPv7()(arg_u64 %arg_p0)
+{
+        ld_arg_u64  $d0, [%arg_p0];
+        st_global_u64 $d0, [&ptr_z_address];
+        ret;
+};
+
+/*
+  Implementation of Xfree/free, observe the hsail and extract it.  
+
+  parallel_for_each(
+    Concurrency::extent<1>(vecSize).tile<tileSize>(),
+    [=](Concurrency::tiled_index<tileSize> tidx) restrict(amp) {
+
+    int global = tidx.global[0];
+    int local = tidx.local[0];
+    int tile = tidx.tile[0];
+
+    // store the parameter
+    (ptr_y + global)->store(address, std::memory_order_release);
+
+    // store the signal value
+    (ptr_x + global)->store(2, std::memory_order_release);
+
+    // wait until syscall returns
+    while ((ptr_x + global)->load(std::memory_order_acquire));
+  });
+
+*/
+
+// Xfree/free
+prog function &_ZdlPv()(arg_u64 %arg_p0)
+{
+
+@ZZ4mainEN3_EC__219__cxxamp_trampolineE_1PNSt3__16atomicIlEElPNS1_IiEE_entry:
+// BB#0:
+workitemabsid_u32       $s0, 0;
+cvt_u64_u32     $d0, $s0;
+ld_kernarg_align(8)_width(all)_u64      $d1, [0];
+add_u64 $d0, $d0, $d1;
+shl_u64 $d0, $d0, 32;
+shr_s64 $d1, $d0, 32;
+shl_u64 $d0, $d1, 2;
+ld_global_u64 $d2, [&ptr_x_address];
+add_u64 $d0, $d2, $d0;
+shl_u64 $d1, $d1, 3;
+ld_global_u64 $d2, [&ptr_y_address];
+add_u64 $d1, $d2, $d1;
+mov_b32 $s0, 2;
+ld_arg_u64 $d2, [%arg_p0];
+atomicnoret_st_global_screl_sys_equiv(255)_b64  [$d1], $d2;
+atomicnoret_st_global_screl_sys_equiv(255)_b32  [$d0], $s0;
+
+@BB0_1:
+atomic_ld_global_scacq_sys_equiv(255)_b32       $s0, [$d0];
+cmp_ne_b1_s32   $c0, $s0, 0;
+cbr_b1  $c0, @BB0_1;
+// BB#2:                                // %_ZZ4mainENK3$_2clE_1N11Concurrency11tiled_indexILi4ELi0ELi0EEE.exit
+ret;
+
+};
+
+prog function &_ZdaPv()(arg_u64 %arg_p0)
+{
+
+@ZZ4mainEN3_EC__219__cxxamp_trampolineE_1PNSt3__16atomicIlEElPNS1_IiEE_entry:
+// BB#0:
+workitemabsid_u32       $s0, 0;
+cvt_u64_u32     $d0, $s0;
+ld_kernarg_align(8)_width(all)_u64      $d1, [0];
+add_u64 $d0, $d0, $d1;
+shl_u64 $d0, $d0, 32;
+shr_s64 $d1, $d0, 32;
+shl_u64 $d0, $d1, 2;
+ld_global_u64 $d2, [&ptr_x_address];
+add_u64 $d0, $d2, $d0;
+shl_u64 $d1, $d1, 3;
+ld_global_u64 $d2, [&ptr_y_address];
+add_u64 $d1, $d2, $d1;
+mov_b32 $s0, 2;
+ld_arg_u64 $d2, [%arg_p0];
+atomicnoret_st_global_screl_sys_equiv(255)_b64  [$d1], $d2;
+atomicnoret_st_global_screl_sys_equiv(255)_b32  [$d0], $s0;
+
+@BB0_1:
+atomic_ld_global_scacq_sys_equiv(255)_b32       $s0, [$d0];
+cmp_ne_b1_s32   $c0, $s0, 0;
+cbr_b1  $c0, @BB0_1;
+// BB#2:                                // %_ZZ4mainENK3$_2clE_1N11Concurrency11tiled_indexILi4ELi0ELi0EEE.exit
+ret;
+
+};
+
+/*
+  Implementation of malloc, observe the hsail and extract it.
+
+  parallel_for_each(
+    Concurrency::extent<1>(vecSize).tile<tileSize>(),
+    [=](Concurrency::tiled_index<tileSize> tidx) restrict(amp) {
+
+    int global = tidx.global[0];
+    int local = tidx.local[0];
+    int tile = tidx.tile[0];
+
+    (ptr_y + global)->store(n, std::memory_order_release);
+
+    (ptr_x + global)->store(1, std::memory_order_release);
+
+    while ((ptr_x + global)->load(std::memory_order_acquire));
+
+    // load result from CPU
+    long result = (ptr_y + global)->load(std::memory_order_acquire);
+
+    // test access the memory allocated
+    int *p_counter = (int *)result;
+    *p_counter = 1;
+    int header_offset = sizeof(int);
+    int *p_header = (int *)((char *)p_counter + header_offset);
+    *p_header = header_offset;
+    char *alloc = (char *)(p_header + 1);
+
+    long address = (long)alloc;
+ 
+    // store result
+    (ptr_z + global)->store(address, std::memory_order_release);
+  });
+
+*/
+
+// malloc version
+prog function &_Znwm_malloc(arg_u64 %ret_r0)(arg_u64 %arg_p0)
+{
+
+@ZZ4mainEN3_EC__119__cxxamp_trampolineE_0lPNSt3__16atomicIlEEPNS1_IiEES3__entry:
+// BB#0:
+workitemabsid_u32       $s0, 0;
+cvt_u64_u32     $d0, $s0;
+ld_kernarg_align(8)_width(all)_u64      $d1, [0];
+add_u64 $d0, $d0, $d1;
+shl_u64 $d0, $d0, 32;
+shr_s64 $d1, $d0, 32;
+shl_u64 $d0, $d1, 3;
+shl_u64 $d1, $d1, 2;
+ld_arg_u64 $d2, [%arg_p0];
+shl_u64 $d4, $d2, 32;
+ld_global_u64 $d2, [&ptr_y_address];
+ld_global_u64 $d3, [&ptr_x_address];
+add_u64 $d3, $d3, $d1;
+add_u64 $d2, $d2, $d0;
+add_u64 $d1, $d4, 34359738368;
+shr_s64 $d4, $d1, 32;
+ld_global_u64 $d1, [&ptr_z_address];
+mov_b32 $s0, 1;
+atomicnoret_st_global_screl_sys_equiv(255)_b64  [$d2], $d4;
+atomicnoret_st_global_screl_sys_equiv(255)_b32  [$d3], $s0;
+
+@BB0_1:
+atomic_ld_global_scacq_sys_equiv(255)_b32       $s1, [$d3];
+cmp_ne_b1_s32   $c0, $s1, 0;
+cbr_b1  $c0, @BB0_1;
+// BB#2:                                // %_ZZ4mainENK3$_1clE_0N11Concurrency11tiled_indexILi1ELi0ELi0EEE.exit
+atomic_ld_global_scacq_sys_equiv(255)_b64       $d2, [$d2];
+st_global_align(4)_u32  $s0, [$d2];
+mov_b32 $s0, 4;
+st_global_align(4)_u32  $s0, [$d2+4];
+add_u64 $d0, $d1, $d0;
+add_u64 $d1, $d2, 8;
+// atomicnoret_st_global_screl_sys_equiv(255)_b64       [$d0], $d1;
+st_arg_u64  $d1, [%ret_r0];
+ret;
+
+};
+
+prog function &_Znam_malloc(arg_u64 %ret_r0)(arg_u64 %arg_p0)
+{
+
+@ZZ4mainEN3_EC__119__cxxamp_trampolineE_0lPNSt3__16atomicIlEEPNS1_IiEES3__entry:
+// BB#0:
+workitemabsid_u32       $s0, 0;
+cvt_u64_u32     $d0, $s0;
+ld_kernarg_align(8)_width(all)_u64      $d1, [0];
+add_u64 $d0, $d0, $d1;
+shl_u64 $d0, $d0, 32;
+shr_s64 $d1, $d0, 32;
+shl_u64 $d0, $d1, 3;
+shl_u64 $d1, $d1, 2;
+ld_arg_u64 $d2, [%arg_p0];
+shl_u64 $d4, $d2, 32;
+ld_global_u64 $d2, [&ptr_y_address];
+ld_global_u64 $d3, [&ptr_x_address];
+add_u64 $d3, $d3, $d1;
+add_u64 $d2, $d2, $d0;
+add_u64 $d1, $d4, 34359738368;
+shr_s64 $d4, $d1, 32;
+ld_global_u64 $d1, [&ptr_z_address];
+mov_b32 $s0, 1;
+atomicnoret_st_global_screl_sys_equiv(255)_b64  [$d2], $d4;
+atomicnoret_st_global_screl_sys_equiv(255)_b32  [$d3], $s0;
+
+@BB0_1:
+atomic_ld_global_scacq_sys_equiv(255)_b32       $s1, [$d3];
+cmp_ne_b1_s32   $c0, $s1, 0;
+cbr_b1  $c0, @BB0_1;
+// BB#2:                                // %_ZZ4mainENK3$_1clE_0N11Concurrency11tiled_indexILi1ELi0ELi0EEE.exit
+atomic_ld_global_scacq_sys_equiv(255)_b64       $d2, [$d2];
+st_global_align(4)_u32  $s0, [$d2];
+mov_b32 $s0, 4;
+st_global_align(4)_u32  $s0, [$d2+4];
+add_u64 $d0, $d1, $d0;
+add_u64 $d1, $d2, 8;
+// atomicnoret_st_global_screl_sys_equiv(255)_b64       [$d0], $d1;
+st_arg_u64  $d1, [%ret_r0];
+ret;
+
+};
+
+/*
+  Implementation of Xmalloc, observe the hsail and extract it.
+
+  parallel_for_each(
+    Concurrency::extent<1>(vecSize).tile<tileSize>(),
+    [=](Concurrency::tiled_index<tileSize> tidx) restrict(amp) {
+
+    #define MAX_TILE_SIZE 256
+
+    int global = tidx.global[0];
+    int local = tidx.local[0];
+    int tile = tidx.tile[0];
+
+    tile_static long g_idata[MAX_TILE_SIZE * 2]; // g_idata only
+    g_idata[local] = n; // g_idata only
+
+    tile_static long temp[MAX_TILE_SIZE * 2];
+    int offset = 1;
+
+    tidx.barrier.wait();
+
+    temp[2 * local] = g_idata[2 * local];
+    temp[2 * local + 1] = g_idata[2 * local + 1];
+
+    for (int d = currentworkgroupsize >> 1; d > 0; d >>= 1) // build
+    {
+      tidx.barrier.wait();
+
+      if (local < d)
+      {
+        int ai = offset * (2 * local + 1) - 1;
+        int bi = offset * (2 * local + 2) - 1;
+
+        temp[bi] += temp[ai];
+      }
+      offset *= 2;
+    }
+
+    if (local == 0) { temp[currentworkgroupsize - 1] = 0; }
+
+    for (int d = 1; d < currentworkgroupsize; d *= 2)
+    {
+      offset >>= 1;
+      tidx.barrier.wait();
+
+      if (local < d)
+      {
+        int ai = offset * (2 * local + 1) - 1;
+        int bi = offset * (2 * local + 2) - 1;
+
+        long t = temp[ai];
+        temp[ai] = temp[bi];
+        temp[bi] += t;
+      }
+    }
+
+    tidx.barrier.wait();
+
+    if (local == 0) {
+      long amount = temp[currentworkgroupsize - 1] + g_idata[currentworkgroupsize - 1] + sizeof(int) * currentworkgroupsize + sizeof(int);
+
+      (ptr_b + tile)->store(amount, std::memory_order_release);
+
+      (ptr_a + tile)->store(1, std::memory_order_release);
+
+      while ((ptr_a + tile)->load(std::memory_order_acquire));
+    }
+
+    tidx.barrier.wait();
+
+    // load result from CPU
+    long result = (ptr_b + tile)->load(std::memory_order_acquire);
+
+    // test access the memory allocated
+    int *p_counter = (int *) result;
+
+    if (local == 0) {
+      *p_counter = currentworkgroupsize;
+    }
+
+    int header_offset = (int)temp[local] + sizeof(int) * local + sizeof(int);
+    int *p_header = (int *)((char *)p_counter + header_offset);
+    *p_header = header_offset;
+    char *alloc = (char *)(p_header + 1);
+    long address = (long)alloc;
+
+    // store result
+    (ptr_c + global)->store(address, std::memory_order_release);
+  });
+
+*/
+
+// Xmalloc version
+prog function &_Znwm(arg_u64 %ret_r0)(arg_u64 %arg_p0)
+{
+
+align(16) group_u64 %__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN7g_idataE_12[512];
+align(16) group_u64 %__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN4tempE_13[512];
+
+@ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__entry:
+// BB#0:
+workitemid_u32	$s2, 0;
+shl_u32	$s0, $s2, 3;
+ld_arg_u64 $d0, [%arg_p0];
+st_group_align(8)_u64	$d0, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN7g_idataE_12][$s0];
+barrier;
+shl_u32	$s6, $s2, 1;
+or_b32	$s3, $s6, 1;
+shl_u32	$s1, $s6, 3;
+ld_group_align(16)_u64	$d0, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN7g_idataE_12][$s1];
+st_group_align(16)_u64	$d0, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN4tempE_13][$s1];
+shl_u32	$s5, $s3, 3;
+workitemabsid_u32	$s4, 0;
+ld_global_u64 $d0, [&ptr_c_address];
+ld_global_u64 $d2, [&ptr_a_address];
+ld_global_u64 $d1, [&ptr_b_address];
+currentworkgroupsize_u32 $s1, 0;
+ld_kernarg_align(8)_width(all)_u64	$d3, [0];
+ld_group_align(8)_u64	$d4, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN7g_idataE_12][$s5];
+st_group_align(8)_u64	$d4, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN4tempE_13][$s5];
+shr_s32	$s7, $s1, 1;
+cmp_lt_b1_s32	$c0, $s7, 1;
+cbr_b1	$c0, @BB0_1;
+// BB#2:                                // %.lr.ph11.i
+add_u32	$s8, $s6, 2;
+mov_b32	$s5, 1;
+
+@BB0_3:
+barrier;
+cmp_ge_b1_s32	$c0, $s2, $s7;
+cbr_b1	$c0, @BB0_5;
+// BB#4:
+mul_u32	$s9, $s5, $s3;
+shl_u32	$s9, $s9, 3;
+ld_group_align(8)_u64	$d4, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN4tempE_13][$s9-8];
+mul_u32	$s9, $s5, $s8;
+shl_u32	$s9, $s9, 3;
+ld_group_align(8)_u64	$d5, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN4tempE_13][$s9-8];
+add_u64	$d4, $d5, $d4;
+st_group_align(8)_u64	$d4, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN4tempE_13][$s9-8];
+
+@BB0_5:
+shl_u32	$s5, $s5, 1;
+shr_s32	$s7, $s7, 1;
+cmp_gt_b1_s32	$c0, $s7, 0;
+cbr_b1	$c0, @BB0_3;
+br	@BB0_6;
+
+@BB0_1:
+mov_b32	$s5, 1;
+
+@BB0_6:
+// %._crit_edge12.i
+cmp_ne_b1_s32	$c0, $s2, 0;
+cbr_b1	$c0, @BB0_8;
+// BB#7:
+shl_u32	$s7, $s1, 3;
+mov_b64	$d4, 0;
+st_group_align(8)_u64	$d4, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN4tempE_13][$s7-8];
+
+@BB0_8:
+// %.preheader.i
+cmp_lt_b1_s32	$c1, $s1, 2;
+cbr_b1	$c1, @BB0_13;
+// BB#9:                                // %.lr.ph.i
+add_u32	$s6, $s6, 2;
+mov_b32	$s7, 1;
+
+@BB0_10:
+barrier;
+shr_s32	$s5, $s5, 1;
+cmp_ge_b1_s32	$c1, $s2, $s7;
+cbr_b1	$c1, @BB0_12;
+// BB#11:
+mul_u32	$s8, $s5, $s3;
+shl_u32	$s8, $s8, 3;
+ld_group_align(8)_u64	$d4, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN4tempE_13][$s8-8];
+mul_u32	$s9, $s5, $s6;
+shl_u32	$s9, $s9, 3;
+ld_group_align(8)_u64	$d5, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN4tempE_13][$s9-8];
+st_group_align(8)_u64	$d5, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN4tempE_13][$s8-8];
+ld_group_align(8)_u64	$d5, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN4tempE_13][$s9-8];
+add_u64	$d4, $d5, $d4;
+st_group_align(8)_u64	$d4, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN4tempE_13][$s9-8];
+
+@BB0_12:
+shl_u32	$s7, $s7, 1;
+cmp_lt_b1_s32	$c1, $s7, $s1;
+cbr_b1	$c1, @BB0_10;
+
+@BB0_13:
+// %._crit_edge.i
+cvt_u64_u32	$d4, $s4;
+workgroupid_u32	$s3, 0;
+add_u64	$d3, $d4, $d3;
+pack_u32x2_u32	$d4, _u32x2(0,0), $s2, 1;
+barrier;
+cmp_eq_b1_s32	$c1, $s2, 0;
+cbr_b1	$c1, @BB0_15;
+// BB#14:                                // %._crit_edge13.i
+cvt_s64_s32	$d5, $s3;
+br	@BB0_17;
+
+@BB0_15:
+add_u32	$s2, $s1, 4294967295;
+shl_u32	$s2, $s2, 3;
+cvt_s64_s32	$d5, $s1;
+shl_u64	$d6, $d5, 2;
+ld_group_align(8)_width(WAVESIZE)_u64	$d7, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN4tempE_13][$s2];
+cvt_s64_s32	$d5, $s3;
+shl_u64	$d8, $d5, 3;
+shl_u64	$d9, $d5, 2;
+add_u64	$d2, $d2, $d9;
+add_u64	$d8, $d1, $d8;
+add_u64	$d6, $d6, $d7;
+ld_group_align(8)_width(WAVESIZE)_u64	$d7, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN7g_idataE_12][$s2];
+add_u64	$d6, $d6, $d7;
+mov_b32	$s2, 1;
+add_u64	$d6, $d6, 4;
+atomicnoret_st_global_screl_sys_equiv(255)_b64	[$d8], $d6;
+atomicnoret_st_global_screl_sys_equiv(255)_b32	[$d2], $s2;
+
+@BB0_16:
+atomic_ld_global_scacq_sys_equiv(255)_b32	$s2, [$d2];
+cmp_ne_b1_s32	$c1, $s2, 0;
+cbr_b1	$c1, @BB0_16;
+
+@BB0_17:
+// %.loopexit.i
+shl_u64	$d2, $d5, 3;
+add_u64	$d1, $d1, $d2;
+barrier;
+atomic_ld_global_scacq_sys_equiv(255)_b64	$d1, [$d1];
+cbr_b1	$c0, @BB0_19;
+// BB#18:
+st_global_align(4)_u32	$s1, [$d1];
+
+@BB0_19:
+// %_ZZ4mainENK3$_2clE_1N11Concurrency11tiled_indexILi4ELi0ELi0EEE.exit
+shr_s64	$d2, $d4, 30;
+ld_group_align(8)_u64	$d4, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN4tempE_13][$s0];
+and_b64	$d4, $d4, 4294967295;
+add_u64	$d2, $d2, $d4;
+add_u64	$d2, $d2, 4;
+cvt_u32_u64	$s0, $d2;
+shl_u64	$d4, $d2, 32;
+shl_u64	$d2, $d3, 32;
+shr_s64	$d2, $d2, 32;
+shr_s64	$d3, $d4, 32;
+add_u64	$d1, $d1, $d3;
+st_global_align(4)_u32	$s0, [$d1];
+shl_u64	$d2, $d2, 3;
+add_u64	$d0, $d0, $d2;
+add_u64	$d1, $d1, 4;
+// atomicnoret_st_global_screl_sys_equiv(255)_b64   [$d0], $d1;
+st_arg_u64  $d1, [%ret_r0];
+ret;
+
+};
+
+prog function &_Znam(arg_u64 %ret_r0)(arg_u64 %arg_p0)
+{
+
+align(16) group_u64 %__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN7g_idataE_12[512];
+align(16) group_u64 %__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN4tempE_13[512];
+
+@ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__entry:
+// BB#0:
+workitemid_u32	$s2, 0;
+shl_u32	$s0, $s2, 3;
+ld_arg_u64 $d0, [%arg_p0];
+st_group_align(8)_u64	$d0, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN7g_idataE_12][$s0];
+barrier;
+shl_u32	$s6, $s2, 1;
+or_b32	$s3, $s6, 1;
+shl_u32	$s1, $s6, 3;
+ld_group_align(16)_u64	$d0, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN7g_idataE_12][$s1];
+st_group_align(16)_u64	$d0, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN4tempE_13][$s1];
+shl_u32	$s5, $s3, 3;
+workitemabsid_u32	$s4, 0;
+ld_global_u64 $d0, [&ptr_c_address];
+ld_global_u64 $d2, [&ptr_a_address];
+ld_global_u64 $d1, [&ptr_b_address];
+currentworkgroupsize_u32 $s1, 0;
+ld_kernarg_align(8)_width(all)_u64	$d3, [0];
+ld_group_align(8)_u64	$d4, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN7g_idataE_12][$s5];
+st_group_align(8)_u64	$d4, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN4tempE_13][$s5];
+shr_s32	$s7, $s1, 1;
+cmp_lt_b1_s32	$c0, $s7, 1;
+cbr_b1	$c0, @BB0_1;
+// BB#2:                                // %.lr.ph11.i
+add_u32	$s8, $s6, 2;
+mov_b32	$s5, 1;
+
+@BB0_3:
+barrier;
+cmp_ge_b1_s32	$c0, $s2, $s7;
+cbr_b1	$c0, @BB0_5;
+// BB#4:
+mul_u32	$s9, $s5, $s3;
+shl_u32	$s9, $s9, 3;
+ld_group_align(8)_u64	$d4, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN4tempE_13][$s9-8];
+mul_u32	$s9, $s5, $s8;
+shl_u32	$s9, $s9, 3;
+ld_group_align(8)_u64	$d5, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN4tempE_13][$s9-8];
+add_u64	$d4, $d5, $d4;
+st_group_align(8)_u64	$d4, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN4tempE_13][$s9-8];
+
+@BB0_5:
+shl_u32	$s5, $s5, 1;
+shr_s32	$s7, $s7, 1;
+cmp_gt_b1_s32	$c0, $s7, 0;
+cbr_b1	$c0, @BB0_3;
+br	@BB0_6;
+
+@BB0_1:
+mov_b32	$s5, 1;
+
+@BB0_6:
+// %._crit_edge12.i
+cmp_ne_b1_s32	$c0, $s2, 0;
+cbr_b1	$c0, @BB0_8;
+// BB#7:
+shl_u32	$s7, $s1, 3;
+mov_b64	$d4, 0;
+st_group_align(8)_u64	$d4, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN4tempE_13][$s7-8];
+
+@BB0_8:
+// %.preheader.i
+cmp_lt_b1_s32	$c1, $s1, 2;
+cbr_b1	$c1, @BB0_13;
+// BB#9:                                // %.lr.ph.i
+add_u32	$s6, $s6, 2;
+mov_b32	$s7, 1;
+
+@BB0_10:
+barrier;
+shr_s32	$s5, $s5, 1;
+cmp_ge_b1_s32	$c1, $s2, $s7;
+cbr_b1	$c1, @BB0_12;
+// BB#11:
+mul_u32	$s8, $s5, $s3;
+shl_u32	$s8, $s8, 3;
+ld_group_align(8)_u64	$d4, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN4tempE_13][$s8-8];
+mul_u32	$s9, $s5, $s6;
+shl_u32	$s9, $s9, 3;
+ld_group_align(8)_u64	$d5, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN4tempE_13][$s9-8];
+st_group_align(8)_u64	$d5, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN4tempE_13][$s8-8];
+ld_group_align(8)_u64	$d5, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN4tempE_13][$s9-8];
+add_u64	$d4, $d5, $d4;
+st_group_align(8)_u64	$d4, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN4tempE_13][$s9-8];
+
+@BB0_12:
+shl_u32	$s7, $s7, 1;
+cmp_lt_b1_s32	$c1, $s7, $s1;
+cbr_b1	$c1, @BB0_10;
+
+@BB0_13:
+// %._crit_edge.i
+cvt_u64_u32	$d4, $s4;
+workgroupid_u32	$s3, 0;
+add_u64	$d3, $d4, $d3;
+pack_u32x2_u32	$d4, _u32x2(0,0), $s2, 1;
+barrier;
+cmp_eq_b1_s32	$c1, $s2, 0;
+cbr_b1	$c1, @BB0_15;
+// BB#14:                                // %._crit_edge13.i
+cvt_s64_s32	$d5, $s3;
+br	@BB0_17;
+
+@BB0_15:
+add_u32	$s2, $s1, 4294967295;
+shl_u32	$s2, $s2, 3;
+cvt_s64_s32	$d5, $s1;
+shl_u64	$d6, $d5, 2;
+ld_group_align(8)_width(WAVESIZE)_u64	$d7, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN4tempE_13][$s2];
+cvt_s64_s32	$d5, $s3;
+shl_u64	$d8, $d5, 3;
+shl_u64	$d9, $d5, 2;
+add_u64	$d2, $d2, $d9;
+add_u64	$d8, $d1, $d8;
+add_u64	$d6, $d6, $d7;
+ld_group_align(8)_width(WAVESIZE)_u64	$d7, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN7g_idataE_12][$s2];
+add_u64	$d6, $d6, $d7;
+mov_b32	$s2, 1;
+add_u64	$d6, $d6, 4;
+atomicnoret_st_global_screl_sys_equiv(255)_b64	[$d8], $d6;
+atomicnoret_st_global_screl_sys_equiv(255)_b32	[$d2], $s2;
+
+@BB0_16:
+atomic_ld_global_scacq_sys_equiv(255)_b32	$s2, [$d2];
+cmp_ne_b1_s32	$c1, $s2, 0;
+cbr_b1	$c1, @BB0_16;
+
+@BB0_17:
+// %.loopexit.i
+shl_u64	$d2, $d5, 3;
+add_u64	$d1, $d1, $d2;
+barrier;
+atomic_ld_global_scacq_sys_equiv(255)_b64	$d1, [$d1];
+cbr_b1	$c0, @BB0_19;
+// BB#18:
+st_global_align(4)_u32	$s1, [$d1];
+
+@BB0_19:
+// %_ZZ4mainENK3$_2clE_1N11Concurrency11tiled_indexILi4ELi0ELi0EEE.exit
+shr_s64	$d2, $d4, 30;
+ld_group_align(8)_u64	$d4, [%__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN4tempE_13][$s0];
+and_b64	$d4, $d4, 4294967295;
+add_u64	$d2, $d2, $d4;
+add_u64	$d2, $d2, 4;
+cvt_u32_u64	$s0, $d2;
+shl_u64	$d4, $d2, 32;
+shl_u64	$d2, $d3, 32;
+shr_s64	$d2, $d2, 32;
+shr_s64	$d3, $d4, 32;
+add_u64	$d1, $d1, $d3;
+st_global_align(4)_u32	$s0, [$d1];
+shl_u64	$d2, $d2, 3;
+add_u64	$d0, $d0, $d2;
+add_u64	$d1, $d1, 4;
+// atomicnoret_st_global_screl_sys_equiv(255)_b64	[$d0], $d1;
+st_arg_u64  $d1, [%ret_r0];
+ret;
+
+};

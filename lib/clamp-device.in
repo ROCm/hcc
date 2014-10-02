@@ -1,12 +1,13 @@
 #!/bin/sh
-# wraps around commands to produce the OpenCL kernel or SPIR (when applicable)
+# wraps around commands to produce GPU kernel
 # $1 = input ll name
-# $2 = opencl kernel file name or SPIR bitcode file name
+# $2 = OpenCL/SPIR/HSAIL kernel file name
 hasSPIR() {
     [ -z "$CLAMP_NOSPIR" -a -x /usr/bin/clinfo ] && ( /usr/bin/clinfo|grep cl_khr_spir > /dev/null )
     return $?
 }
 if [ -d @LLVM_TOOLS_DIR@ ]; then
+    AS=@LLVM_TOOLS_DIR@/llvm-as
     OPT=@LLVM_TOOLS_DIR@/opt
     LLC=@LLVM_TOOLS_DIR@/llc
     LINK=@LLVM_TOOLS_DIR@/llvm-link
@@ -15,6 +16,7 @@ if [ -d @LLVM_TOOLS_DIR@ ]; then
     LIB=@LLVM_LIBS_DIR@
     HSATOOLS=@PROJECT_BINARY_DIR@/lib/clamp-hsatools
 else
+    AS=@CMAKE_INSTALL_PREFIX@/bin/llvm-as
     OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
     LLC=@CMAKE_INSTALL_PREFIX@/bin/llc
     LINK=@CMAKE_INSTALL_PREFIX@/bin/llvm-link
@@ -23,24 +25,50 @@ else
     LIB=@CMAKE_INSTALL_PREFIX@/lib
     HSATOOLS=@CMAKE_INSTALL_PREFIX@/bin/clamp-hsatools
 fi
-$OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-    -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-    -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-        -promote-globals -erase-nonkernels -tile-uniform -dce < $1 -o $2.promote.bc || exit $?
-if hasSPIR; then
-    echo "Generating SPIR file"
+
+if [ "@CXXAMP_ENABLE_HSA@" = "ON" ]; then
+    if [ "$ALWAYS_MALLOC" = "ON" ]; then
+      $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+           -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+           -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+           -promote-globals -promote-privates -erase-nonkernels -tile-uniform -malloc-select -alwasy-malloc -dce -S < $1 -o $2.promote.ll.orig
+    else
+      $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+           -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+           -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+           -promote-globals -promote-privates -erase-nonkernels -tile-uniform -malloc-select -dce -S < $1 -o $2.promote.ll.orig
+    fi
+    sed "s/call /call spir_func /g" < $2.promote.ll.orig > $2.promote.ll
+    $AS -o $2.promote.bc $2.promote.ll
+    echo "Generating HSAIL file"
     $LINK $MATHLIB/opencl_math.bc $2.promote.bc -o $2 2>/dev/null
+    $HSATOOLS $2
+    mv -f $2 $2.orig
+    mv $2.brig $2
+    # remove temp file
+    rm $2.promote.ll.orig $2.promote.ll $2.promote.bc
     exit $?
 else
-    echo "Warning: not a SPIR-enabled OpenCL stack; generating OpenCL-C instead."
-    $LLC $2.promote.bc -march=c -o - |cat $MATH/opencl_math.cl - > $2
-    if [ "@CXXAMP_ENABLE_HSA_OKRA@" = "ON" ]; then
-        $HSATOOLS $2
-        mv -f $2 $2.orig
-        mv $2.hsail $2
-    elif grep -q " double " $2; then
-        echo "#pragma OPENCL EXTENSION cl_khr_fp64: enable"|cat - $2 > $2.t
-        mv -f $2.t $2
+    $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+         -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+         -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+         -promote-globals -erase-nonkernels -tile-uniform -dce < $1 -o $2.promote.bc
+    if hasSPIR; then
+        echo "Generating SPIR file"
+        $LINK $MATHLIB/opencl_math.bc $2.promote.bc -o $2 2>/dev/null
+        # remove temp file
+        rm $2.promote.bc
+        exit $?
+    else
+        echo "Warning: not a SPIR-enabled OpenCL stack; generating OpenCL-C instead."
+        $LLC $2.promote.bc -march=c -o - |cat $MATH/opencl_math.cl - > $2
+    
+        if grep -q " double " $2; then
+            echo "#pragma OPENCL EXTENSION cl_khr_fp64: enable"|cat - $2 > $2.t
+            mv -f $2.t $2
+        fi
+        # remove temp file
+        rm $2.promote.bc
+        exit $?
     fi
 fi
-
