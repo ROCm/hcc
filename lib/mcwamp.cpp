@@ -171,7 +171,7 @@ void MatchKernelNames(std::string& fixed_name) {
 namespace Concurrency { namespace CLAMP {
     void CompileKernels(cl_program& program, cl_context& context, cl_device_id& device)
     {
-#ifdef CXXAMP_ENABLE_HSA_OKRA
+#ifdef CXXAMP_ENABLE_HSA
         assert(0 && "Unsupported function");
 #else
         cl_int err;

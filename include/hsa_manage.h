@@ -200,22 +200,7 @@ class _data_host_view {
 
 //Return the home location ptr, synchronizing first if necessary. The pointer
 //returned is mutable, so we set it as host owned. If this is an array or array_view
-<<<<<<< HEAD:include/okra_manage.h
 //without a host buffer just return a pointer to the cl buffer.
-=======
-//without a host buffer just return a pointer to the gmac buffer.
-  T* get_data() const {
-    if (home_ptr && *state_ptr != GMAC_OWNED) {
-      return home_ptr;
-    } else {
-      return gmac_buffer.get();
-    }
-  }
-
-//Return the home location ptr, synchronizing first if necessary. The pointer
-//returned is mutable, so we set it as host owned. If this is an array or array_view
-//without a host buffer just return a pointer to the gmac buffer.
->>>>>>> master:include/hsa_manage.h
   T* get_mutable() const {
     if (home_ptr) {
       synchronize();

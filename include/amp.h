@@ -23,17 +23,10 @@
 #include <vector>
 #include <chrono>
 #include <future>
-<<<<<<< HEAD
 #include <map>
 #include <string.h> //memcpy
-#ifndef CXXAMP_ENABLE_HSA_OKRA
-#include <CL/opencl.h>
-=======
-#include <thread>
-#include <string.h> //memcpy
 #if !defined(CXXAMP_ENABLE_HSA)
-#include <gmac/opencl.h>
->>>>>>> master
+#include <CL/opencl.h>
 #endif
 #include <memory>
 #include <algorithm>
@@ -177,8 +170,7 @@ public:
   accelerator(const accelerator& other);
   static std::vector<accelerator> get_all() {
     std::vector<accelerator> acc;
-<<<<<<< HEAD
-#ifndef CXXAMP_ENABLE_HSA_OKRA
+#if !defined(CXXAMP_ENABLE_HSA)
     cl_int err;
     cl_uint platformCount;
     cl_uint deviceCount;
@@ -194,17 +186,6 @@ public:
         clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_GPU, 0, NULL, &deviceCount);
         for (int j = 0; j < deviceCount; j++)
             acc.push_back(*_gpu_accelerator);
-=======
-#if !defined(CXXAMP_ENABLE_HSA)
-    AcceleratorInfo accInfo;
-    for (unsigned i = 0; i < eclGetNumberOfAccelerators(); i++) {
-      assert(eclGetAcceleratorInfo(i, &accInfo) == eclSuccess);
-      if (accInfo.acceleratorType == GMAC_ACCELERATOR_TYPE_GPU)
-        acc.push_back(*_gpu_accelerator);
-
-      if (accInfo.acceleratorType == GMAC_ACCELERATOR_TYPE_CPU)
-        acc.push_back(*_cpu_accelerator);
->>>>>>> master
     }
 #else
     acc.push_back(*_gpu_accelerator);  // in HSA path, always add GPU accelerator
@@ -257,13 +238,6 @@ public:
   size_t dedicated_memory;
   access_type default_access_type;
   std::shared_ptr<accelerator_view> default_view;
-<<<<<<< HEAD
-=======
-#if !defined(CXXAMP_ENABLE_HSA)
-  typedef GmacAcceleratorInfo AcceleratorInfo;
-  AcceleratorInfo accInfo;
-#endif
->>>>>>> master
 
   // static class members
   static std::shared_ptr<accelerator> _default_accelerator; // initialized as nullptr
@@ -1821,21 +1795,6 @@ public:
       }
       return *this;
   }
-<<<<<<< HEAD
-  // These codes are not C++AMP Spec
- #if 0
-  array_view& operator=(const array_view<const T,N>& other) restrict(amp,cpu) {
-    extent = other.extent;
-    cache = other.cache;
-    index_base = other.index_base;
-    extent_base = other.extent_base;
-    offset = other.offset;
-    return *this;
-  }
-#endif
-=======
-
->>>>>>> master
   void copy_to(array<T,N>& dest) const {
 #ifndef __GPU__
       for(int i= 0 ;i< N;i++)

@@ -18,13 +18,9 @@ extern void *CreateHSAKernel(std::string);
 extern void HSALaunchKernel(void *ker, size_t, size_t *global, size_t *local);
 extern std::future<void> HSALaunchKernelAsync(void *ker, size_t, size_t *global, size_t *local);
 extern void MatchKernelNames( std::string & );
-<<<<<<< HEAD
 extern void CompileKernels(cl_program& program, cl_context& context, cl_device_id& device);
 extern void *CreateOkraKernel(std::string);
 extern void OkraLaunchKernel(void *ker, size_t, size_t *global, size_t *local);
-=======
-extern void CompileKernels(void);
->>>>>>> master
 }
 static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu) {
     std::string s(f);
@@ -96,17 +92,9 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
   int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
   std::string transformed_kernel_name =
       mcw_cxxamp_fixnames(f.__cxxamp_trampoline_name());
-<<<<<<< HEAD
   aloc.kernel = clCreateKernel(aloc.program, transformed_kernel_name.c_str(), &err);
   assert(err == CL_SUCCESS);
   Concurrency::Serialize s(aloc.kernel);
-=======
-  ecl_kernel kernel;
-  auto it = __mcw_cxxamp_kernels.insert(transformed_kernel_name);
-  error_code = eclGetKernel(it.first->c_str(), &kernel);
-  CHECK_ERROR_GMAC(error_code, "eclGetKernel");
-  Concurrency::Serialize s(kernel);
->>>>>>> master
   f.__cxxamp_serialize(s);
   {
       // C++ AMP specifications
@@ -135,26 +123,12 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
           local_size = NULL;
   }
 
-<<<<<<< HEAD
   aloc.write();
   err = clEnqueueNDRangeKernel(aloc.queue, aloc.kernel, dim_ext, NULL, ext, local_size, 0, NULL, NULL);
   assert(err == CL_SUCCESS);
   clFinish(aloc.queue);
   aloc.read();
-#endif //CXXAMP_ENABLE_HSA_OKRA
-=======
-  error_code = eclCallNDRange(kernel, dim_ext, NULL,
-      ext, local_size);
-  if (error_code != eclSuccess) {
-    std::cerr << "clamp: error invoking GPU kernel;";
-    std::cerr << " GMAC error code="<< error_code <<"\n";
-    for (int i = 0; i<dim_ext;i++) {
-      std::cerr << "global["<<i<<"] = "<<ext[i]<<"; local[";
-      std::cerr << i << "] = "<<local_size[i]<<"\n";
-    }
-  }
-#endif // CXXAMP_ENABLE_HSA
->>>>>>> master
+#endif //CXXAMP_ENABLE_HSA
 #endif // __GPU__
 }
 

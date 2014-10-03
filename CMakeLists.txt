@@ -73,14 +73,9 @@ LINK_DIRECTORIES( ${LLVM_LIB_DIR} )
 
 
 # Turn on by default for now.
-<<<<<<< HEAD
-option(CXXAMP_ENABLE_HSA_OKRA "Use HSA Okra runtime as backend" OFF)
-if (CXXAMP_ENABLE_HSA_OKRA)
-=======
 option(CXXAMP_ENABLE_HSA "Use HSA Runtime as backend" OFF)
 
 if (CXXAMP_ENABLE_HSA)
->>>>>>> master
 # A bunch of external dependencies
 set (AMDOCLTOOLS_ROOT "/opt/amd/"
         CACHE PATH "AMD OpenCL bin release path")
