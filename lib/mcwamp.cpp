@@ -206,10 +206,11 @@ namespace Concurrency { namespace CLAMP {
             getKernelNames(program);
 #endif
         }
+    }
 
-#if defined(CXXAMP_ENABLE_HSA)
 } // namespce CLAMP
 } // namespace Concurrency
+#if defined(CXXAMP_ENABLE_HSA)
 #include "HSAContext.h"
 namespace Concurrency {
 namespace CLAMP {
