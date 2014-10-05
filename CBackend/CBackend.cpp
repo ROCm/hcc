@@ -22,7 +22,7 @@
 #include "llvm/Config/config.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/InstVisitor.h"
+#include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
@@ -37,14 +37,14 @@
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/PassManager.h"
-#include "llvm/Support/CallSite.h"
+#include "llvm/IR/CallSite.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/GetElementPtrTypeIterator.h"
+#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/Host.h"
-#include "llvm/Target/Mangler.h"
+#include "llvm/IR/Mangler.h"
 #include "llvm/Transforms/Scalar.h"
 #include <algorithm>
 #include <cstdio>
@@ -65,7 +65,7 @@ namespace {
   class CBEMCAsmInfo : public MCAsmInfo {
   public:
     CBEMCAsmInfo() {
-      GlobalPrefix = "";
+      //GlobalPrefix = "";
       PrivateGlobalPrefix = "";
     }
   };
@@ -253,14 +253,14 @@ namespace {
 
       // Must not be used in inline asm, extractelement, or shufflevector.
       if (I.hasOneUse()) {
-        const Instruction &User = cast<Instruction>(*I.use_back());
+        const Instruction &User = cast<Instruction>(*I.user_back());
         if (isInlineAsm(User) || isa<ExtractElementInst>(User) ||
             isa<ShuffleVectorInst>(User))
           return false;
       }
 
       // Only inline instruction it if it's use is in the same BB as the inst.
-      return I.getParent() == cast<Instruction>(I.use_back())->getParent();
+      return I.getParent() == cast<Instruction>(I.user_back())->getParent();
     }
 
     // isDirectAlloca - Define fixed sized allocas in the entry block as direct
@@ -474,7 +474,7 @@ CWriter::printSimpleType(raw_ostream &Out, Type *Ty, bool isSigned,
 raw_ostream &CWriter::printType(raw_ostream &Out, Type *Ty,
                                 bool isSigned, const std::string &NameSoFar,
                                 bool IgnoreName, const AttributeSet &PAL) {
-  if (Ty->isPrimitiveType() || Ty->isIntegerTy() || Ty->isVectorTy()) {
+  if ((Ty->getTypeID() >= 0 && Ty->getTypeID() <= 9) || Ty->isIntegerTy() || Ty->isVectorTy()) {
     printSimpleType(Out, Ty, isSigned, NameSoFar);
     return Out;
   }
@@ -1278,11 +1278,14 @@ void CWriter::printConstantWithCast(Constant* CPV, unsigned Opcode) {
 
 std::string CWriter::GetValueName(const Value *Operand) {
 
+#if 0
+  // To Ensure
   // Resolve potential alias.
   if (const GlobalAlias *GA = dyn_cast<GlobalAlias>(Operand)) {
     if (const Value *V = GA->resolveAliasedGlobal(false))
       Operand = V;
   }
+#endif
 
   // Mangle globals with the standard mangler interface for LLC compatibility.
   if (const GlobalValue *GV = dyn_cast<GlobalValue>(Operand)) {
@@ -1673,7 +1676,7 @@ static SpecialGlobalClass getGlobalVariableClass(const GlobalVariable *GV) {
 
   // Otherwise, if it is other metadata, don't print it.  This catches things
   // like debug information.
-  if (GV->getSection() == "llvm.metadata")
+  if (strcmp(GV->getSection(), "llvm.metadata") == 0)
     return NotPrinted;
 
   // __local variables are printed in the function that uses them
@@ -1762,8 +1765,8 @@ bool CWriter::doInitialization(Module &M) {
 #endif
   TAsm = new CBEMCAsmInfo();
   MRI  = new MCRegisterInfo();
-  TCtx = new MCContext(*TAsm, *MRI, NULL);
-  Mang = new Mangler(*TCtx, *TD);
+  TCtx = new MCContext(TAsm, MRI, NULL);
+  Mang = new Mangler(TD);
 
   // Keep track of which functions are static ctors/dtors so they can have
   // an attribute added to their prototypes.
@@ -2144,7 +2147,7 @@ void CWriter::printModuleTypes() {
 void CWriter::printContainedStructs(Type *Ty,
                                 SmallPtrSet<Type *, 16> &StructPrinted) {
   // Don't walk through pointers.
-  if (Ty->isPointerTy() || Ty->isPrimitiveType() || Ty->isIntegerTy())
+  if (Ty->isPointerTy() || (Ty->getTypeID() >= 0 && Ty->getTypeID() <= 9) || Ty->isIntegerTy())
     return;
 
   // Walk through arrays, declaring their container structs.
@@ -2202,8 +2205,9 @@ void CWriter::printFunctionSignature(const Function *F, bool Prototype) {
 
   if (F->hasLocalLinkage() && !isKernelFunction(F))
     Out << "static ";
-  if (F->hasDLLImportLinkage()) Out << "__declspec(dllimport) ";
-  if (F->hasDLLExportLinkage()) Out << "__declspec(dllexport) ";
+  // No dllimport and dllexport linkage in SPIR 1.2
+  //if (F->hasDLLImportLinkage()) Out << "__declspec(dllimport) ";
+  //if (F->hasDLLExportLinkage()) Out << "__declspec(dllexport) ";
   switch (F->getCallingConv()) {
    case CallingConv::X86_StdCall:
     Out << "__attribute__((stdcall)) ";
@@ -2421,6 +2425,7 @@ static void FindLocalName(Instruction *I, Value *&LocalValue, Type *&LocalTy) {
   }
 }
 
+#if 0
 static bool usedInOneFunc(const User *U, Function const *&oneFunc) {
   if (const GlobalVariable *othergv = dyn_cast<GlobalVariable>(U)) {
     if (othergv->getName().str() == "llvm.used")
@@ -2450,6 +2455,7 @@ static bool usedInOneFunc(const User *U, Function const *&oneFunc) {
   }
   return true;
 }
+#endif
 
 // Variables inside a __kernel function not declared with an address space qualifier, 
 // all variables inside non-kernel functions, and all function arguments are in 
@@ -2473,7 +2479,7 @@ static bool usedInOneFunc(const User *U, Function const *&oneFunc) {
       if (I->hasInternalLinkage() &&  I->getType()->getPointerAddressSpace() == 0 &&
           I->hasName()) {
         const Function *oneFunc = 0;
-        bool flag = usedInOneFunc(I, oneFunc);
+        bool flag = false; //usedInOneFunc(I, oneFunc);
         if (flag == false || (flag&&!oneFunc))
             continue;
         // Not in this Funciton's scope
@@ -2691,7 +2697,7 @@ void CWriter::visitSwitchInst(SwitchInst &SI) {
     printPHICopiesForSuccessor (SI.getParent(), Succ, 2);
     printBranchToBlock(SI.getParent(), Succ, 2);
     if (Function::iterator(Succ) ==
-        llvm::next(Function::iterator(SI.getParent())))
+        std::next(Function::iterator(SI.getParent())))
       Out << "    break;\n";
   }
 
@@ -2712,7 +2718,7 @@ bool CWriter::isGotoCodeNecessary(BasicBlock *From, BasicBlock *To) {
   /// FIXME: This should be reenabled, but loop reordering safe!!
   return true;
 
-  if (llvm::next(Function::iterator(From)) != Function::iterator(To))
+  if (std::next(Function::iterator(From)) != Function::iterator(To))
     return true;  // Not the direct successor, we need a goto.
 
   //isa<SwitchInst>(From->getTerminator())
@@ -3167,7 +3173,7 @@ void CWriter::lowerIntrinsics(Function &F) {
             // All other intrinsic calls we must lower.
             Instruction *Before = 0;
             if (CI != &BB->front())
-              Before = prior(BasicBlock::iterator(CI));
+              Before = std::prev(BasicBlock::iterator(CI));
 
             IL->LowerIntrinsicCall(CI);
             if (Before) {        // Move iterator to instruction after call
@@ -3477,8 +3483,10 @@ bool CWriter::visitBuiltinCall(CallInst &I, Intrinsic::ID ID,
 //      of the per target tables
 //      handle multiple constraint codes
 std::string CWriter::InterpretASMConstraint(InlineAsm::ConstraintInfo& c) {
+  assert(0 && "FIXME: Execute CWriter::InterpretASMConstraint\n");
   assert(c.Codes.size() == 1 && "Too many asm constraint codes to handle");
 
+#if 0
   // Grab the translation table from MCAsmInfo if it exists.
   const MCAsmInfo *TargetAsm;
   std::string Triple = TheModule->getTargetTriple();
@@ -3502,6 +3510,7 @@ std::string CWriter::InterpretASMConstraint(InlineAsm::ConstraintInfo& c) {
 #endif
   // Default is identity.
   delete TargetAsm;
+#endif
   return c.Codes[0];
 }
 
