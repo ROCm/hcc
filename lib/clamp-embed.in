@@ -1,6 +1,6 @@
 #!/bin/bash
 if [[ $OSTYPE == linux-gnu ]]; then
-  objcopy -B i386:x86-64 -I binary -O elf64-x86-64 $1 $2
+  objcopy -B i386:x86-64 -I binary -O elf64-x86-64 --rename-section .data=.kernel $1 $2
 elif [[ $OSTYPE == darwin* ]]; then
 # OS X
   touch $2.stub.c

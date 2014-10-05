@@ -1,20 +1,19 @@
 # Compiles an OpenCL file to HSAIL
 # Path to AMD OpenCL library builtins
-AMD_BUILTINS=@AMDOCLTOOLS_ROOT@/lib/x86_64/
-# Path to CLC (windows version)
-CLC=@AMD_CLC@
-# Path to HSAIL backend (LLVM-3.1-based)
-#LLVM_BIN=@HSAIL_BACKEND_BIN@
+AMD_BUILTINS=@AMDOCLTOOLS_ROOT@/bin
+if [ -d @LLVM_TOOLS_DIR@ ]; then
+    NEWLIB=@CPPAMP_SOURCE_DIR@/lib
+else
+    NEWLIB=@CMAKE_INSTALL_PREFIX@/lib
+fi
+AMD_BUILTINS=/opt/amd/bin
+# Path to HSAIL backend (LLVM-3.2-based)
 LLVM_BIN=@AMDOCLTOOLS_ROOT@/bin
 # Path to HSAILASM
-HSAIL_ASM=@HSAILASM@
-CLCFLAGS=
-$CLC --support_all_extension --opencl=1.2 --march=gpu-64 "--c++" $CLCFLAGS -o $1.fe.ll $1
-$LLVM_BIN/llvm-as -o $1.fe.bc $1.fe.ll
-$LLVM_BIN/llvm-link -o $1.linked.bc $AMD_BUILTINS/builtins-hsail.bc $AMD_BUILTINS/builtins-gcn.bc $1.fe.bc
+HSAIL_ASM=@AMDOCLTOOLS_ROOT@/bin/hsailasm
+$LLVM_BIN/llvm-link -prelink-opt -o $1.linked.bc $1 -l $AMD_BUILTINS/builtins-hsail.bc
 $LLVM_BIN/opt -O3 -gpu -whole -verify $1.linked.bc -o $1.opt.bc
 $LLVM_BIN/llc -O2 -march=hsail-64 -o $1.brig $1.opt.bc
-$HSAIL_ASM -disassemble -o $1.hsail.orig $1.brig
-# A hack to workaround Okra runtime kernel argument layout mismatch
-sed s/"align 4 kern"/"align 8 kern"/g $1.hsail.orig > $1.hsail
-
+$HSAIL_ASM -disassemble -o $1.hsail $1.brig
+cat $NEWLIB/new_delete.hsail >> $1.hsail
+$HSAIL_ASM -assemble -o $1.brig $1.hsail

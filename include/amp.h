@@ -25,7 +25,7 @@
 #include <future>
 #include <map>
 #include <string.h> //memcpy
-#ifndef CXXAMP_ENABLE_HSA_OKRA
+#if !defined(CXXAMP_ENABLE_HSA)
 #include <CL/opencl.h>
 #endif
 #include <memory>
@@ -41,6 +41,20 @@
 
 #ifndef WIN32
 #define __declspec(ignored) /* */
+#endif
+
+#if defined(CXXAMP_ENABLE_HSA)
+//CLAMP
+extern int64_t get_global_id(unsigned int n) restrict(amp);
+extern int64_t get_local_id(unsigned int n) restrict(amp);
+extern int64_t get_group_id(unsigned int n) restrict(amp);
+#ifdef __APPLE__
+#define tile_static static __attribute__((section("clamp,opencl_local")))
+#else
+#define tile_static static __attribute__((section("clamp_opencl_local")))
+#endif
+extern __attribute__((noduplicate)) void barrier(unsigned int n) restrict(amp);
+//End CLAMP
 #endif
 
 namespace Concurrency {
@@ -156,7 +170,7 @@ public:
   accelerator(const accelerator& other);
   static std::vector<accelerator> get_all() {
     std::vector<accelerator> acc;
-#ifndef CXXAMP_ENABLE_HSA_OKRA
+#if !defined(CXXAMP_ENABLE_HSA)
     cl_int err;
     cl_uint platformCount;
     cl_uint deviceCount;
@@ -174,7 +188,6 @@ public:
             acc.push_back(*_gpu_accelerator);
     }
 #else
-    acc.push_back(*_cpu_accelerator);  // in HSA path, always add CPU accelerator
     acc.push_back(*_gpu_accelerator);  // in HSA path, always add GPU accelerator
 #endif
     return acc;
@@ -232,6 +245,7 @@ public:
   static std::shared_ptr<accelerator> _cpu_accelerator;
 };
 
+#if !defined(CXXAMP_ENABLE_HSA)
 //CLAMP
 extern "C" __attribute__((pure)) int get_global_id(int n) restrict(amp);
 extern "C" __attribute__((pure)) int get_local_id(int n) restrict(amp);
@@ -243,28 +257,42 @@ extern "C" __attribute__((pure)) int get_group_id(int n) restrict(amp);
 #endif
 extern "C" __attribute__((noduplicate)) void barrier(int n) restrict(amp);
 //End CLAMP
+#endif
+
+template <int N> class extent;
+template <int D0, int D1=0, int D2=0> class tiled_extent;
 class completion_future {
 public:
 
     completion_future() {};
 
     completion_future(const completion_future& _Other)
-        : __amp_future(_Other.__amp_future) {}
+        : __amp_future(_Other.__amp_future), __thread_then(_Other.__thread_then) {}
 
     completion_future(completion_future&& _Other)
-        : __amp_future(std::move(_Other.__amp_future)) {}
+        : __amp_future(std::move(_Other.__amp_future)), __thread_then(_Other.__thread_then) {}
 
-    ~completion_future() {}
+    ~completion_future() {
+      if (__thread_then != nullptr) {
+        __thread_then->join();
+      }
+      delete __thread_then;
+      __thread_then = nullptr;
+    }
 
     completion_future& operator=(const completion_future& _Other) {
-        if (this != &_Other)
+        if (this != &_Other) {
            __amp_future = _Other.__amp_future;
+           __thread_then = _Other.__thread_then;
+        }
         return (*this);
     }
 
     completion_future& operator=(completion_future&& _Other) {
-        if (this != &_Other)
+        if (this != &_Other) {
             __amp_future = std::move(_Other.__amp_future);
+            __thread_then = _Other.__thread_then;
+        }
         return (*this);
     }
 
@@ -294,15 +322,25 @@ public:
         return __amp_future;
     }
 
+    // notice we removed const from the signature here
     template<typename functor>
-    void then(const functor & func) const {
-      this->wait();
-      if(this->valid())
-        func();
+    void then(const functor & func) {
+#ifndef __GPU__
+      // could only assign once
+      if (__thread_then == nullptr) {
+        // spawn a new thread to wait on the future and then execute the callback functor
+        __thread_then = new std::thread([&]() restrict(cpu) {
+          this->wait();
+          if(this->valid())
+            func();
+        });
+      }
+#endif
     }
 
 private:
     std::shared_future<void> __amp_future;
+    std::thread* __thread_then = nullptr;
 
     completion_future(const std::shared_future<void> &__future)
         : __amp_future(__future) {}
@@ -322,6 +360,36 @@ private:
     template <typename OutputIter, typename T, int N>
         friend completion_future copy_async(const array_view<T, N>& src, OutputIter destBegin);
     template <typename T, int N> friend class array_view;
+
+
+    // non-tiled async_parallel_for_each
+    // generic version
+    template <int N, typename Kernel>
+        friend completion_future async_parallel_for_each(Concurrency::extent<N> compute_domain, const Kernel& f);
+
+    // 1D specialization
+    template <typename Kernel>
+        friend completion_future async_parallel_for_each(Concurrency::extent<1> compute_domain, const Kernel& f);
+
+    // 2D specialization
+    template <typename Kernel>
+        friend completion_future async_parallel_for_each(Concurrency::extent<2> compute_domain, const Kernel& f);
+
+    // 3D specialization
+    template <typename Kernel>
+        friend completion_future async_parallel_for_each(Concurrency::extent<3> compute_domain, const Kernel& f);
+
+    // tiled async_parallel_for_each, 3D version
+    template <int D0, int D1, int D2, typename Kernel>
+        friend completion_future async_parallel_for_each(Concurrency::tiled_extent<D0,D1,D2> compute_domain, const Kernel& f);
+
+    // tiled async_parallel_for_each, 2D version
+    template <int D0, int D1, typename Kernel>
+        friend completion_future async_parallel_for_each(Concurrency::tiled_extent<D0,D1> compute_domain, const Kernel& f);
+
+    // tiled async_parallel_for_each, 1D version
+     template <int D0, typename Kernel>
+        friend completion_future async_parallel_for_each(Concurrency::tiled_extent<D0> compute_domain, const Kernel& f);
 };
 
 template <int N> class extent;
@@ -646,6 +714,10 @@ private:
 
     template<int K, class Y>
         friend void parallel_for_each(extent<K>, const Y&);
+
+    template<int K, class Y>
+        friend completion_future async_parallel_for_each(extent<K>, const Y&);
+
     __attribute__((annotate("__cxxamp_opencl_index")))
         void __cxxamp_opencl_index() restrict(amp,cpu)
 #ifdef __GPU__
@@ -698,9 +770,6 @@ class tile_barrier {
 
 template <typename T, int N> class array;
 template <typename T, int N> class array_view;
-
-// forward decls
-template <int D0, int D1=0, int D2=0> class tiled_extent;
 
 template <int N>
 class extent {
@@ -897,6 +966,9 @@ class tiled_index {
   {}
   template<int D0_, int D1_, int D2_, typename K>
   friend void parallel_for_each(tiled_extent<D0_, D1_, D2_>, const K&);
+
+  template<int D0_, int D1_, int D2_, typename K>
+  friend completion_future async_parallel_for_each(tiled_extent<D0_, D1_, D2_>, const K&);
 };
 template <int N> class extent;
 template <int D0>
@@ -932,6 +1004,9 @@ class tiled_index<D0, 0, 0> {
   {}
   template<int D, typename K>
   friend void parallel_for_each(tiled_extent<D>, const K&);
+
+  template<int D, typename K>
+  friend completion_future async_parallel_for_each(tiled_extent<D>, const K&);
 };
 
 template <int D0, int D1>
@@ -969,6 +1044,9 @@ class tiled_index<D0, D1, 0> {
   {}
   template<int D0_, int D1_, typename K>
   friend void parallel_for_each(tiled_extent<D0_, D1_>, const K&);
+
+  template<int D0_, int D1_, typename K>
+  friend completion_future async_parallel_for_each(tiled_extent<D0_, D1_>, const K&);
 };
 
 
@@ -1071,10 +1149,9 @@ public:
 
 
 #define __global
-#ifdef CXXAMP_ENABLE_HSA_OKRA
-//include okra-specific files here
-} //namespace Concurrency
-#include "okra_manage.h"
+#if defined(CXXAMP_ENABLE_HSA)
+}
+#include "hsa_manage.h"
 namespace Concurrency {
 #else
 #include "cl_manage.h"
@@ -1704,23 +1781,7 @@ public:
   explicit array_view(int e0, int e1, int e2)
       : array_view(Concurrency::extent<3>(e0, e1, e2))
   { static_assert(N == 3, "Rank must be 3"); }
-  // A read-write array_view cannot be copy constructed from a const array_view
-#if 0
-  template <class = typename std::enable_if<std::is_const<T>::value>::type>
-    array_view(const array_view<nc_T, N>& other) restrict(amp,cpu) : extent(other.extent),
-      p_(other.p_), cache(other.cache), offset(other.offset), index_base(other.index_base),
-      extent_base(other.extent_base) {}
-  template <class = typename std::enable_if<!std::is_const<T>::value>::type>
-    array_view(const array_view<const T, N>& other) restrict(amp,cpu) : extent(other.extent),
-      p_(const_cast<T*>(other.p_)), cache(other.cache), offset(other.offset), index_base(other.index_base),
-      extent_base(other.extent_base) {
-      }
 
-  array_view(const array_view<const T, N>& other) restrict(amp,cpu) : extent(other.extent),
-    p_(const_cast<T*>(other.p_)), cache(other.cache), offset(other.offset), index_base(other.index_base),
-    extent_base(other.extent_base) {
-    }
-#endif
    array_view(const array_view& other) restrict(amp,cpu) : extent(other.extent),
     cache(other.cache), offset(other.offset), index_base(other.index_base),
     extent_base(other.extent_base) {}
@@ -1734,17 +1795,6 @@ public:
       }
       return *this;
   }
-  // These codes are not C++AMP Spec
- #if 0
-  array_view& operator=(const array_view<const T,N>& other) restrict(amp,cpu) {
-    extent = other.extent;
-    cache = other.cache;
-    index_base = other.index_base;
-    extent_base = other.extent_base;
-    offset = other.offset;
-    return *this;
-  }
-#endif
   void copy_to(array<T,N>& dest) const {
 #ifndef __GPU__
       for(int i= 0 ;i< N;i++)
@@ -2158,6 +2208,21 @@ private:
 
 #undef __global
 
+// async pfe
+template <int N, typename Kernel>
+completion_future async_parallel_for_each(extent<N> compute_domain, const Kernel& f);
+
+template <int D0, int D1, int D2, typename Kernel>
+completion_future async_parallel_for_each(tiled_extent<D0,D1,D2> compute_domain, const Kernel& f);
+
+template <int D0, int D1, typename Kernel>
+completion_future async_parallel_for_each(tiled_extent<D0,D1> compute_domain, const Kernel& f);
+
+template <int D0, typename Kernel>
+completion_future async_parallel_for_each(tiled_extent<D0> compute_domain, const Kernel& f);
+
+
+// sync pfe
 template <int N, typename Kernel>
 void parallel_for_each(extent<N> compute_domain, const Kernel& f);
 

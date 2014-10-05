@@ -6,8 +6,7 @@
 /// <tags>P0</tags>
 /// <summary>reference -> const reference or add __GPU</summary>
 
-// RUN: %cxxamp %s %link
-// RUN: ./a.out
+// RUN: %cxxamp %s -o %t.out && %t.out
 
 void f(const int & i) 
 {

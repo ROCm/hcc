@@ -46,6 +46,7 @@ set(LLVM_ROOT "${PROJECT_BINARY_DIR}/compiler")
 SET(LOCAL_LLVM_INCLUDE compiler/include)
 
 # setup compilation environment
+set(CMAKE_INSTALL_PREFIX "/opt/clamp")
 if (UNIX)
 SET(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/build/${CMAKE_CFG_INTDIR}/${CMAKE_BUILD_TYPE}/bin" )
 SET(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/build/${CMAKE_CFG_INTDIR}/${CMAKE_BUILD_TYPE}/lib" )
@@ -72,13 +73,14 @@ LINK_DIRECTORIES( ${LLVM_LIB_DIR} )
 
 
 # Turn on by default for now.
-option(CXXAMP_ENABLE_HSA_OKRA "Use HSA Okra runtime as backend" OFF)
-if (CXXAMP_ENABLE_HSA_OKRA)
+option(CXXAMP_ENABLE_HSA "Use HSA Runtime as backend" OFF)
+
+if (CXXAMP_ENABLE_HSA)
 # A bunch of external dependencies
 set (AMDOCLTOOLS_ROOT "/opt/amd/"
         CACHE PATH "AMD OpenCL bin release path")
-set (OKRA_ROOT "/opt/hsa/"
-        CACHE PATH "Okra bin release path")
+set (HSA_ROOT "/opt/hsa/"
+        CACHE PATH "HSA runtime release path")
 find_program (HSAILASM NAME hsailasm PATHS
         ${AMDOCLTOOLS_ROOT}/bin
         NO_DEFAULT_PATH)
@@ -86,9 +88,7 @@ find_program (HSAILASM NAME hsailasm PATHS
 find_program (AMD_CLC NAME clc PATHS
         "${AMDOCLTOOLS_ROOT}/bin"
         NO_DEFAULT_PATH)
-# Okra headers needs JNI
-find_package(JNI REQUIRED)
-endif (CXXAMP_ENABLE_HSA_OKRA)
+endif (CXXAMP_ENABLE_HSA)
 
 MESSAGE("")
 MESSAGE("OPENCL INFORMATION:")
@@ -137,20 +137,14 @@ set(CPACK_SET_DESTDIR TRUE)
 set(CPACK_INSTALL_PREFIX "/opt/clamp")
 set(CPACK_PACKAGE_NAME "clamp")
 set(CPACK_PACKAGE_VENDOR "MulticoreWare, Inc")
-set(CPACK_PACKAGE_VERSION "0.2.0-${GIT_VERSION}")
+set(CPACK_PACKAGE_VERSION "0.3.0-${GIT_VERSION}")
 set(CPACK_PACKAGE_VERSION_MAJOR "0")
-set(CPACK_PACKAGE_VERSION_MINOR "2")
+set(CPACK_PACKAGE_VERSION_MINOR "3")
 set(CPACK_PACKAGE_VERSION_PATCH "0")
 set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_SYSTEM_NAME})
-set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "clamp: a C++AMP to OpenCL compiler")
-set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Ray I-Jui Sung <ray@multicorewareinc.com>")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "libcxxamp (>= 0.2.0)")
-if (CXXAMP_ENABLE_HSA_OKRA)
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS 
-            "${CPACK_DEBIAN_PACKAGE_DEPENDS}, okra-dev (>= 0.1.1)")
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS 
-            "${CPACK_DEBIAN_PACKAGE_DEPENDS}, amd-ocl-tools-dev (>= 0.1.1)")
-endif (CXXAMP_ENABLE_HSA_OKRA)
+set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "clamp: a C++AMP to OpenCL/HSA compiler")
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Jack Chung <jack@multicorewareinc.com>")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libcxxamp (>= 0.3.0)")
 set(CPACK_GENERATOR "DEB;TGZ")
 set(CPACK_SOURCE_GENERATOR "TGZ")
 set(CPACK_BINARY_DEB "ON")

@@ -10,22 +10,22 @@
 #include <CL/opencl.h>
 
 namespace Concurrency {
-#ifdef CXXAMP_ENABLE_HSA_OKRA
+#if defined(CXXAMP_ENABLE_HSA)
 namespace CLAMP {
-extern void OkraPushArg(void *, size_t, const void *);
-extern void OkraPushPointer(void *, void *);
+extern void HSAPushArg(void *, size_t, const void *);
+extern void HSAPushPointer(void *, void *);
 }
 #endif
 class Serialize {
  public:
-#ifdef CXXAMP_ENABLE_HSA_OKRA
-  typedef void *okra_kernel;
-  Serialize(okra_kernel k): k_(k) {}
+#if defined(CXXAMP_ENABLE_HSA)
+  typedef void *hsa_kernel;
+  Serialize(hsa_kernel k): k_(k) {}
   void AppendPtr(const void *ptr) {
-    CLAMP::OkraPushPointer(k_, const_cast<void*>(ptr));
+    CLAMP::HSAPushArg(k_, sz, s);
   }
   void Append(size_t sz, const void *s) {
-    CLAMP::OkraPushArg(k_, sz, s);
+    CLAMP::HSAPushPointer(k_, const_cast<void*>(ptr));
   }
 #else
   Serialize(cl_kernel k): k_(k), current_idx_(0) {}
@@ -36,8 +36,8 @@ class Serialize {
   }
 #endif
  private:
-#ifdef CXXAMP_ENABLE_HSA_OKRA
-  okra_kernel k_;
+#if defined(CXXAMP_ENABLE_HSA)
+  hsa_kernel k_;
 #else
   cl_kernel k_;
 #endif

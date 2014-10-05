@@ -659,6 +659,8 @@ namespace Concurrency {
 
 			inline bool is_device_known_IHV_failure(device_bit_flags device_bits) {
 				return std::any_of(dmf_known_IHV_failures.begin(), dmf_known_IHV_failures.end(), [device_bits](known_IHV_failure failure) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wlogical-op-parentheses"
 					// Check the IHV first
 					if(!(  has_bits_set(failure, known_IHV_failure::IHV_ATI)    && has_bits_set(device_bits, device_bit_flags::IHV_ATI)
 						|| has_bits_set(failure, known_IHV_failure::IHV_NVIDIA) && has_bits_set(device_bits, device_bit_flags::IHV_NVIDIA)
@@ -667,6 +669,7 @@ namespace Concurrency {
 						// then the device isn't the same IHV as this failure
 						return false;
 					}
+#pragma clang diagnostic pop
 
 					// Check against the test context
 					bool matches_context = true;
@@ -817,9 +820,9 @@ namespace Concurrency {
 
                 //TODO: take this out once accelerator is working fully.
                 //Assume default accelerator is a real gpu without double, and there are no other accelerators
-                if (!(required_flags & ~(NOT_EMULATED | D3D11_GPU | NO_DOUBLE))) {
+                //if (!(required_flags & ~(NOT_EMULATED | D3D11_GPU | NO_DOUBLE))) {
                     return accelerator(accelerator::default_accelerator);
-                }
+                //}
 
 				vector<device_info> avail_infos = get_available_device_infos(required_flags);
 

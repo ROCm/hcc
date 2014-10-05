@@ -25,7 +25,7 @@ AMPAllocator& getAllocator()
     return amp;
 }
 
-}
+} // namespace Concurrency
 
 namespace {
 bool __mcw_cxxamp_compiled = false;
@@ -171,7 +171,7 @@ void MatchKernelNames(std::string& fixed_name) {
 namespace Concurrency { namespace CLAMP {
     void CompileKernels(cl_program& program, cl_context& context, cl_device_id& device)
     {
-#ifdef CXXAMP_ENABLE_HSA_OKRA
+#ifdef CXXAMP_ENABLE_HSA
         assert(0 && "Unsupported function");
 #else
         cl_int err;
@@ -206,98 +206,148 @@ namespace Concurrency { namespace CLAMP {
             getKernelNames(program);
 #endif
         }
+    }
 
-    } } }
-#ifdef CXXAMP_ENABLE_HSA_OKRA
-#include <okraContext.h>
+} // namespce CLAMP
+} // namespace Concurrency
+#if defined(CXXAMP_ENABLE_HSA)
+#include "HSAContext.h"
 namespace Concurrency {
 namespace CLAMP {
-/* Used only in HSA Okra runtime */
-OkraContext *GetOrInitOkraContext(void)
+
+static HSAContext *context = NULL;
+
+void FinalizeHSAContext() {
+  if (context != NULL) {
+    context->dispose();
+    context = NULL;
+  }
+
+  // TBD dispose all Kernel objects
+
+  // TBD dispose all Dispatch objects
+}
+
+/* Used only in HSA runtime */
+HSAContext *GetOrInitHSAContext(void)
 {
-  static OkraContext *context = NULL;
   if (!context) {
-    //std::cerr << "Okra: create context\n";
-    context = OkraContext::Create();
+    //std::cerr << "CLAMP::HSA: create context\n";
+    context = HSAContext::Create();
+    atexit(FinalizeHSAContext); // register finalizer
   }
   if (!context) {
-    std::cerr << "Okra: Unable to create context\n";
+    std::cerr << "CLAMP::HSA: Unable to create context\n";
     abort();
   }
   return context;
 }
 
-static std::map<std::string, OkraContext::Kernel *> __mcw_okra_kernels;
-void *CreateOkraKernel(std::string s)
+static std::map<std::string, HSAContext::Kernel *> __mcw_hsa_kernels;
+void *CreateHSAKernel(std::string s)
 {
-  OkraContext::Kernel *kernel = __mcw_okra_kernels[s];
+  HSAContext::Kernel *kernel = __mcw_hsa_kernels[s];
   if (!kernel) {
       size_t kernel_size = (size_t)((void *)kernel_size_);
       char *kernel_source = (char*)malloc(kernel_size+1);
       memcpy(kernel_source, kernel_source_, kernel_size);
       kernel_source[kernel_size] = '\0';
-      std::string kname = std::string("&__OpenCL_")+s+
-          std::string("_kernel");
-      kernel = GetOrInitOkraContext()->
-          createKernel(kernel_source, kname.c_str());
-      //std::cerr << "CLAMP::Okra::Creating kernel: "<< kname<<"\n";
-      //std::cerr << "CLAMP::Okra::Creating kernel: "<< kernel <<"\n";
+      std::string kname = std::string("&")+s;
+      //std::cerr << "CLAMP::HSA::Creating kernel: " << kname << "\n";
+      kernel = GetOrInitHSAContext()->
+          createKernel(kernel_source, kernel_size, kname.c_str());
       if (!kernel) {
-          std::cerr << "Okra: Unable to create kernel\n";
+          std::cerr << "CLAMP::HSA: Unable to create kernel\n";
           abort();
+      } else {
+          //std::cerr << "CLAMP::HSA: Created kernel\n";
       }
-      __mcw_okra_kernels[s] = kernel;
+      __mcw_hsa_kernels[s] = kernel;
   }
-  kernel->clearArgs();
-  // HSA kernels generated from OpenCL takes 3 additional arguments at the beginning
-  kernel->pushLongArg(0);
-  kernel->pushLongArg(0);
-  kernel->pushLongArg(0);
-  return kernel;
+
+  HSAContext::Dispatch *dispatch = GetOrInitHSAContext()->createDispatch(kernel);
+  dispatch->clearArgs();
+//#define CXXAMP_ENABLE_HSAIL_HLC_DEVELOPMENT_COMPILER 1
+#ifndef CXXAMP_ENABLE_HSAIL_HLC_DEVELOPMENT_COMPILER
+  dispatch->pushLongArg(0);
+  dispatch->pushLongArg(0);
+  dispatch->pushLongArg(0);
+  dispatch->pushLongArg(0);
+  dispatch->pushLongArg(0);
+  dispatch->pushLongArg(0);
+#endif
+  return dispatch;
 }
-namespace Okra {
+
+namespace HSA {
 void RegisterMemory(void *p, size_t sz)
 {
     //std::cerr << "registering: ptr " << p << " of size " << sz << "\n";
-    GetOrInitOkraContext()->registerArrayMemory(p, sz);
+    GetOrInitHSAContext()->registerArrayMemory(p, sz);
 }
 }
 
-void OkraLaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local)
+std::future<void> HSALaunchKernelAsync(void *ker, size_t nr_dim, size_t *global, size_t *local)
 {
-  OkraContext::Kernel *kernel =
-      reinterpret_cast<OkraContext::Kernel*>(ker);
+  HSAContext::Dispatch *dispatch =
+      reinterpret_cast<HSAContext::Dispatch*>(ker);
   size_t tmp_local[] = {0, 0, 0};
   if (!local)
       local = tmp_local;
   //std::cerr<<"Launching: nr dim = " << nr_dim << "\n";
+  //for (size_t i = 0; i < nr_dim; ++i) {
+  //  std::cerr << "g: " << global[i] << " l: " << local[i] << "\n";
+  //}
+  dispatch->setLaunchAttributes(nr_dim, global, local);
+  //std::cerr << "Now real launch\n";
+  //kernel->dispatchKernelWaitComplete();
 
-  kernel->setLaunchAttributes(nr_dim, global, local);
-  //std::cerr << "No real launch\n";
-  kernel->dispatchKernelWaitComplete();
+  return dispatch->dispatchKernelAndGetFuture();
 }
 
-void OkraPushArg(void *ker, size_t sz, const void *v)
+void HSALaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local)
+{
+  HSAContext::Dispatch *dispatch =
+      reinterpret_cast<HSAContext::Dispatch*>(ker);
+  size_t tmp_local[] = {0, 0, 0};
+  if (!local)
+      local = tmp_local;
+  //std::cerr<<"Launching: nr dim = " << nr_dim << "\n";
+  //for (size_t i = 0; i < nr_dim; ++i) {
+  //  std::cerr << "g: " << global[i] << " l: " << local[i] << "\n";
+  //}
+  dispatch->setLaunchAttributes(nr_dim, global, local);
+  //std::cerr << "Now real launch\n";
+  dispatch->dispatchKernelWaitComplete();
+}
+
+void HSAPushArg(void *ker, size_t sz, const void *v)
 {
   //std::cerr << "pushing:" << ker << " of size " << sz << "\n";
-  OkraContext::Kernel *kernel =
-      reinterpret_cast<OkraContext::Kernel*>(ker);
+  HSAContext::Dispatch *dispatch =
+      reinterpret_cast<HSAContext::Dispatch*>(ker);
   void *val = const_cast<void*>(v);
   switch (sz) {
+    case sizeof(double):
+      dispatch->pushDoubleArg(*reinterpret_cast<double*>(val));
+      break;
     case sizeof(int):
-      kernel->pushIntArg(*reinterpret_cast<int*>(val));
+      dispatch->pushIntArg(*reinterpret_cast<int*>(val));
       //std::cerr << "(int) value = " << *reinterpret_cast<int*>(val) <<"\n";
+      break;
+    case sizeof(unsigned char):
+      dispatch->pushBooleanArg(*reinterpret_cast<unsigned char*>(val));
       break;
     default:
       assert(0 && "Unsupported kernel argument size");
   }
 }
-void OkraPushPointer(void *ker, void *val)
+void HSAPushPointer(void *ker, void *val)
 {
     //std::cerr << "pushing:" << ker << " of ptr " << val << "\n";
-    OkraContext::Kernel *kernel =
-        reinterpret_cast<OkraContext::Kernel*>(ker);
-    kernel->pushPointerArg(val);
+    HSAContext::Dispatch *dispatch =
+        reinterpret_cast<HSAContext::Dispatch*>(ker);
+    dispatch->pushPointerArg(val);
 }
 } // namespace CLAMP
 } // namespace Concurrency

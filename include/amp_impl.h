@@ -11,7 +11,7 @@
 #include <iostream>
 #if __APPLE__
 #include <OpenCL/cl.h>
-#elif !defined(CXXAMP_ENABLE_HSA_OKRA)
+#elif !defined(CXXAMP_ENABLE_HSA)
 #include <CL/cl.h>
 #endif
 
@@ -59,7 +59,7 @@ inline accelerator::accelerator(const std::wstring& path) :
 					( (_cpu_accelerator != nullptr) ?
 						new accelerator_view(_cpu_accelerator.get()) : new accelerator_view(this)) )
     {
-#ifndef CXXAMP_ENABLE_HSA_OKRA
+#if !defined(CXXAMP_ENABLE_HSA)
     cl_int err;
     cl_uint platformCount;
     cl_device_id device;

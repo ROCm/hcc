@@ -56,23 +56,13 @@ my $CLANG_AMP="$CLANG_AMP_BUILD_DIR/compiler/bin/clang++";
 my $CLAMP_CONFIG=`find $CLANG_AMP_BUILD_DIR/build -name clamp-config -print`;
 $CLAMP_CONFIG =~ s/^\s+//;
 $CLAMP_CONFIG =~ s/\s+$//;
-#my $CLAMP_CXXFLAGS=`$CLAMP_CONFIG --build --cxxflags`;
-#$CLAMP_CXXFLAGS =~ s/^\s+//;
-#$CLAMP_CXXFLAGS =~ s/\s+$//;
-my $CLAMP_GPU_CXXFLAGS=`$CLAMP_CONFIG --build --gpu --cxxflags`;
-$CLAMP_GPU_CXXFLAGS =~ s/^\s+//;
-$CLAMP_GPU_CXXFLAGS =~ s/\s+$//;
-my $CLAMP_CPU_CXXFLAGS=`$CLAMP_CONFIG --build --cpu --cxxflags`;
-$CLAMP_CPU_CXXFLAGS =~ s/^\s+//;
-$CLAMP_CPU_CXXFLAGS =~ s/\s+$//;
+my $CLAMP_CXXFLAGS=`$CLAMP_CONFIG --build --cxxflags`;
+$CLAMP_CXXFLAGS =~ s/^\s+//;
+$CLAMP_CXXFLAGS =~ s/\s+$//;
 my $CLAMP_LDFLAGS=`$CLAMP_CONFIG --build --ldflags`;
 $CLAMP_LDFLAGS =~ s/^\s+//;
 $CLAMP_LDFLAGS =~ s/\s+$//;
-my $CLAMP_DEVICE="$CLANG_AMP_BUILD_DIR/lib/clamp-device";
-my $CLAMP_EMBED="$CLANG_AMP_BUILD_DIR/lib/clamp-embed";
-#my $SHARED_CXXFLAGS="$CLAMP_CXXFLAGS -I$AMPTESTINC ";
-my $SHARED_GPU_CXXFLAGS="$CLAMP_GPU_CXXFLAGS -I$AMPTESTINC ";
-my $SHARED_CPU_CXXFLAGS="$CLAMP_CPU_CXXFLAGS -I$AMPTESTINC ";
+my $SHARED_CXXFLAGS="$CLAMP_CXXFLAGS -I$AMPTESTINC ";
 #if ($OPENCL_INC ne "") {
 #    $SHARED_CXXFLAGS="$SHARED_CXXFLAGS -I$OPENCL_INC";
 #}
@@ -128,15 +118,12 @@ foreach my $def_set (@{$Test::config{'definitions'}})
     my $command;
     if ($Test::config{'compile_only'}) {
         $command = "\\
-            $CLANG_AMP -cc1 -fsyntax-only $SHARED_CPU_CXXFLAGS $include_main $test $cflags_defs";
+            $CLANG_AMP -cc1 -fsyntax-only -D__CPU__=1 $SHARED_CXXFLAGS $include_main $test $cflags_defs";
     } else {
         $command = "\\
-            $CLANG_AMP $SHARED_GPU_CXXFLAGS $include_main $test $cflags_defs -Wno-non-pod-varargs -emit-llvm -c -S -o $tmpdir/test.ll && \\
-            $CLAMP_DEVICE test.ll kernel.cl && \\
-            $CLAMP_EMBED kernel.cl kernel.o && \\
-            $CLANG_AMP $SHARED_CPU_CXXFLAGS $include_main $test $AMPTESTLIB $cflags_defs -Wno-non-pod-varargs $CLAMP_LDFLAGS $tmpdir/kernel.o -o $tmpdir/test.out -g";
+            $CLANG_AMP $SHARED_CXXFLAGS $include_main $test $AMPTESTLIB $cflags_defs $CLAMP_LDFLAGS -o $tmpdir/test.out -g";
     }
-    
+
     log_message("Command: $command\n"
         ."Build output:\n"
         ."<<<");

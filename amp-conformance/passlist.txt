@@ -1,3 +1,5 @@
+5_Data_Cont/5_2_a_v/5_2_2_c/Test.07/test.cpp
+5_Data_Cont/5_2_a_v/5_2_2_c/Test.08/test.cpp
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/Special_member_functions/defaulted_dtor.01/test.cpp
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/Special_member_functions/defaulted_dtor_amp.01/test.cpp
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/Special_member_functions/defaulted_dtor_cpu.01/test.cpp
@@ -265,6 +267,7 @@
 5_Data_Cont/5_0_general/amp_compatible/non.pod.inheritance/test.cpp
 5_Data_Cont/5_0_general/amp_compatible/negative/nested.containers.03/test.cpp
 5_Data_Cont/5_0_general/amp_compatible/negative/local.amp.incompatible/test.cpp
+5_Data_Cont/5_0_general/amp_compatible/negative/not.aligned/test.cpp
 4_Basic_Data_Elmnts/4_2_extent/4_2_4_ops/Arithmetic/Test.05/test.cpp
 4_Basic_Data_Elmnts/4_2_extent/4_2_4_ops/Arithmetic/Test.01/test.cpp
 4_Basic_Data_Elmnts/4_2_extent/4_2_3_m/tile/Negative/tile.01/test.cpp
@@ -416,9 +419,12 @@
 2_Cxx_Lang_Exte/2_1_Synt/2_1_1_Func_Decl_Synt/Negative/Test.04/test.cpp
 2_Cxx_Lang_Exte/2_1_Synt/2_1_1_Func_Decl_Synt/Member/Test.01/test.cpp
 2_Cxx_Lang_Exte/2_1_Synt/2_1_1_Func_Decl_Synt/Restriction_specifier/Negative/Test.02/test.cpp
+2_Cxx_Lang_Exte/2_x_general/decltype_specifier/location.01/test.cpp
 2_Cxx_Lang_Exte/2_1_Synt/Contextual_restrict/test.01/test.cpp
 2_Cxx_Lang_Exte/2_1_Synt/Contextual_restrict/test.02/test.cpp
+2_Cxx_Lang_Exte/2_x_general/decltype_specifier/evaluation_context.01/test.cpp
 2_Cxx_Lang_Exte/2_x_general/decltype_specifier/Negative/evaluation_context.01/test.cpp
+2_Cxx_Lang_Exte/2_x_general/decltype_specifier/expression.01/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Functions/CV_qualifiers/Test.01/test.cpp
 2_Cxx_Lang_Exte/2_x_general/decltype_specifier/Negative/decltype.01/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Literals/double.01/test.cpp
