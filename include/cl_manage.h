@@ -74,12 +74,13 @@ struct mm_info
     void *data_ptr;
     bool isArray;
     bool discard;
+    bool dirty;
     mm_info(int count)
         : count(count), src_ptr(nullptr), data_ptr(::operator new(count)),
-        isArray(false), discard(false) {}
+        isArray(false), discard(false), dirty(false) {}
     mm_info(int count, void *src)
         : count(count), src_ptr(src), data_ptr(::operator new(count)),
-        isArray(false), discard(false) {
+        isArray(false), discard(false), dirty(false) {
             memmove(data_ptr, src_ptr, count);
         }
     void synchronize() {
@@ -89,9 +90,20 @@ struct mm_info
         if (src_ptr != nullptr)
             memmove(data_ptr, src_ptr, count);
     }
-    void disc() { discard = !isArray; }
+    void* get() {
+        if (dirty) {
+            dirty = false;
+            synchronize();
+        }
+        return data_ptr;
+    }
+    void disc() {
+        dirty = false;
+        discard = !isArray;
+    }
     void isArr() { isArray = true;}
     void serialize(Serialize& s) {
+        dirty = true;
         cl_mem dm = getAllocator().setup(data_ptr, count);
         s.Append(sizeof(cl_mem), &dm);
     }
@@ -145,7 +157,7 @@ public:
     _data_host(const _data_host& other) : mm(other.mm) {}
     template <typename U>
         _data_host(const _data_host<U>& other) : mm(other.mm) {}
-    T *get() const { return (T *)mm->data_ptr; }
+    T *get() const { return (T *)mm->get(); }
 
     void synchronize() const {
         mm->synchronize();
