@@ -42,7 +42,7 @@ struct AMPAllocator
     }
     cl_mem setup(void *data, int count) {
         cl_int err;
-        cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, count, data, &err);
+        cl_mem dm = clCreateBuffer(context, CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, count, data, &err);
         assert(err == CL_SUCCESS);
         mem_info[data] = dm;
         return dm;
@@ -103,7 +103,7 @@ struct mm_info
     }
     void isArr() { isArray = true;}
     void serialize(Serialize& s) {
-        dirty = true;
+        dirty = src_ptr != nullptr;
         cl_mem dm = getAllocator().setup(data_ptr, count);
         s.Append(sizeof(cl_mem), &dm);
     }
@@ -157,18 +157,13 @@ public:
     _data_host(const _data_host& other) : mm(other.mm) {}
     template <typename U>
         _data_host(const _data_host<U>& other) : mm(other.mm) {}
-    T *get() const { return (T *)mm->get(); }
 
-    void synchronize() const {
-        mm->synchronize();
-    }
-    void discard() const {
-        mm->disc();
-    }
-    void isArray() {
-        mm->isArr();
-    }
+    T *get() const { return (T *)mm->get(); }
+    void synchronize() const { mm->synchronize(); }
+    void discard() const { mm->disc(); }
+    void isArray() { mm->isArr(); }
     void refresh() const { mm->refresh(); }
+
     __attribute__((annotate("serialize")))
         void __cxxamp_serialize(Serialize& s) const {
             mm->serialize(s);
