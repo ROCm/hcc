@@ -1441,7 +1441,7 @@ public:
 
   explicit array(const array_view<const T, N>& src) : array(src.extent) {
       memmove(const_cast<void*>(reinterpret_cast<const void*>(m_device.get())),
-      reinterpret_cast<const void*>(src.cache.get_data()), extent.size() * sizeof(T));
+      reinterpret_cast<const void*>(src.cache.get()), extent.size() * sizeof(T));
   }
 
 
@@ -1707,8 +1707,7 @@ private:
 
 #ifndef __GPU__
   void initialize() {
-      m_device.reset(CLAllocator<T>().allocate(extent.size()), CLDeleter<T>());
-      getAllocator().setArray(m_device.get_device());
+      m_device.isArray();
       m_array_helper.setArray(this);
   }
   template <typename InputIter>
@@ -1866,7 +1865,7 @@ public:
 #endif
 #ifndef __GPU__
           array_view<ElementType, 1> av(Concurrency::extent<1>(size),
-                                        _data_host<ElementType>(reinterpret_cast<ElementType*>(cache.get_device()), ReinDeleter<ElementType>()),
+                                        _data_host<ElementType>(reinterpret_cast<ElementType*>(cache.get()), ReinDeleter<ElementType>()),
                                         (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
 #else
           array_view<ElementType, 1> av(Concurrency::extent<1>(size),
@@ -1923,7 +1922,7 @@ public:
   void refresh() const;
   void discard_data() const {
 #ifndef __GPU__
-      getAllocator().discard(cache.get_device());
+      cache.discard();
 #endif
   }
   // only get data do not synchronize
@@ -1933,7 +1932,7 @@ public:
 #ifdef __GPU__
     __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
 #else
-    __global T *ptr = reinterpret_cast<__global T*>(cache.get_data() + offset);
+    __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
 #endif
     return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
   }
