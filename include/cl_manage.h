@@ -71,16 +71,25 @@ struct mm_info
     size_t count;
     void *src_ptr;
     void *data_ptr;
+    bool isArray;
+    bool discard;
     mm_info(int count)
-        : count(count), src_ptr(nullptr), data_ptr(::operator new(count)) {}
+        : count(count), src_ptr(nullptr), data_ptr(::operator new(count)),
+        isArray(false), discard(false) {}
     mm_info(int count, void *src)
-        : count(count), src_ptr(src), data_ptr(::operator new(count)) {
+        : count(count), src_ptr(src), data_ptr(::operator new(count)),
+        isArray(false), discard(false) {
             memmove(data_ptr, src_ptr, count);
         }
-    void synchronize() { memmove(src_ptr, data_ptr, count); }
-    void refresh() { memmove(data_ptr, src_ptr, count); }
-    void discard() {}
-    void isArray() {}
+    void synchronize() {
+        memmove(src_ptr, data_ptr, count);
+    }
+    void refresh() {
+        if (src_ptr != nullptr)
+            memmove(data_ptr, src_ptr, count);
+    }
+    void disc() { discard = !isArray; }
+    void isArr() { isArray = true;}
     void serialize(Serialize& s) {
         cl_mem dm = getAllocator().setup(data_ptr, count);
         s.Append(sizeof(cl_mem), &dm);
@@ -88,7 +97,8 @@ struct mm_info
     ~mm_info() {
         getAllocator().unregister(data_ptr);
         if (src_ptr != nullptr) {
-            synchronize();
+            if (!discard)
+                synchronize();
             ::operator delete(data_ptr);
         }
     }
@@ -137,10 +147,10 @@ public:
         mm->synchronize();
     }
     void discard() const {
-        mm->discard();
+        mm->disc();
     }
     void isArray() {
-        mm->isArray();
+        mm->isArr();
     }
     void refresh() const { mm->refresh(); }
     __attribute__((annotate("serialize")))
