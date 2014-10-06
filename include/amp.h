@@ -1630,7 +1630,7 @@ public:
           if( (extent.size() * sizeof(T)) % sizeof(ElementType))
               throw runtime_exception("errorMsg_throw", 0);
           array_view<ElementType, 1> av(Concurrency::extent<1>(size),
-                                        _data_host<ElementType>(reinterpret_cast<ElementType*>(m_device.get()), ReinDeleter<ElementType>()),
+                                        _data_host<ElementType>(m_device),
                                         0);
 #else
           array_view<ElementType, 1> av(Concurrency::extent<1>(size),
@@ -1647,7 +1647,7 @@ public:
 #endif
         int size = extent.size() * sizeof(T) / sizeof(ElementType);
         array_view<const ElementType, 1> av(Concurrency::extent<1>(size),
-                                            _data_host<const ElementType>(reinterpret_cast<const ElementType*>(m_device.get()), ReinDeleter<const ElementType>()),
+                                        _data_host<ElementType>(m_device),
                                             0);
         return av;
     }
@@ -1657,8 +1657,8 @@ public:
     if( viewExtent.size() > extent.size())
       throw runtime_exception("errorMsg_throw", 0);
 #endif
-          array_view<T, 1> av(Concurrency::extent<1>(viewExtent.size()), data());
-          return av.view_as(viewExtent);
+          array_view<T, K> av(viewExtent, m_device, 0);
+          return av;
       }
   template <int K> array_view<const T, K>
       view_as(const Concurrency::extent<K>& viewExtent) const restrict(amp,cpu) {
@@ -1666,8 +1666,8 @@ public:
     if( viewExtent.size() > extent.size())
       throw runtime_exception("errorMsg_throw", 0);
 #endif
-          const array_view<T, 1> av(Concurrency::extent<1>(viewExtent.size()), data());
-          return av.view_as(viewExtent);
+          const array_view<T, K> av(viewExtent, m_device, 0);
+          return av;
       }
 
   operator std::vector<T>() const {
@@ -1686,7 +1686,6 @@ public:
     return reinterpret_cast<T*>(m_device.get());
   }
   ~array() {
-    m_device.reset();
     if(pav) delete pav;
     if(paav) delete paav;
   }
@@ -1813,26 +1812,17 @@ public:
   }
 
   __global T& operator[](const index<N>& idx) const restrict(amp,cpu) {
-#ifndef __GPU__
-      synchronize();
-#endif
       __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
       return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
   }
   template <int D0, int D1=0, int D2=0>
   __global T& operator[](const tiled_index<D0, D1, D2>& idx) const restrict(amp,cpu) {
-#ifndef __GPU__
-      synchronize();
-#endif
       __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
       return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx.global + index_base, extent_base)];
   }
 
   typename projection_helper<T, N>::result_type
       operator[] (int i) const restrict(amp,cpu) {
-#ifndef __GPU__
-          synchronize();
-#endif
           return projection_helper<T, N>::project(*this, i);
       }
   __global T& operator()(const index<N>& idx) const restrict(amp,cpu) {
@@ -1865,7 +1855,7 @@ public:
 #endif
 #ifndef __GPU__
           array_view<ElementType, 1> av(Concurrency::extent<1>(size),
-                                        _data_host<ElementType>(reinterpret_cast<ElementType*>(cache.get()), ReinDeleter<ElementType>()),
+                                        _data_host<ElementType>(cache),
                                         (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
 #else
           array_view<ElementType, 1> av(Concurrency::extent<1>(size),
@@ -1937,9 +1927,6 @@ public:
     return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
   }
   T* data() const restrict(amp,cpu) {
-#ifndef __GPU__
-      synchronize();
-#endif
     static_assert(N == 1, "data() is only permissible on array views of rank 1");
     return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
   }
@@ -2062,18 +2049,12 @@ public:
   accelerator_view get_source_accelerator_view() const;
 
   __global const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
-#ifndef __GPU__
-      synchronize();
-#endif
     __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
     return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
   }
 
   typename projection_helper<const T, N>::const_result_type
       operator[] (int i) const restrict(amp,cpu) {
-#ifndef __GPU__
-      synchronize();
-#endif
     return projection_helper<const T, N>::project(*this, i);
   }
 
@@ -2111,7 +2092,7 @@ public:
       int size = extent.size() * sizeof(T) / sizeof(ElementType);
 #ifndef __GPU__
       array_view<const ElementType, 1> av(Concurrency::extent<1>(size),
-                                          _data_host<ElementType>(reinterpret_cast<ElementType*>(cache.get_device()), ReinDeleter<ElementType>()),
+                                        _data_host<ElementType>(cache),
                                           (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
 #else
       array_view<const ElementType, 1> av(Concurrency::extent<1>(size),

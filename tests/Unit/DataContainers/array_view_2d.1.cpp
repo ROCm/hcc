@@ -13,6 +13,7 @@ int main()
 	av[idx] -= 1; 
 	});
     assert(av.get_extent() == e);
+    std::cout << "QQ1" << std::endl;
     for(unsigned int i = 0; i < av.get_extent()[0]; i++)
       for(unsigned int j = 0; j < av.get_extent()[1]; j++)
 	assert(i*2+j == static_cast<char>(av(i, j)));
