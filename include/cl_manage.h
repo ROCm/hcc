@@ -74,9 +74,14 @@ struct mm_info
     mm_info(int count)
         : count(count), src_ptr(nullptr), data_ptr(::operator new(count)) {}
     mm_info(int count, void *src)
-        : count(count), src_ptr(src), data_ptr(::operator new(count)) {}
+        : count(count), src_ptr(src), data_ptr(::operator new(count)) {
+            memmove(data_ptr, src_ptr, count);
+        }
     void synchronize() {
         memcpy(src_ptr, data_ptr, count);
+    }
+    void refresh() {
+        memcpy(data_ptr, src_ptr, count);
     }
     void discard() {}
     void isArray() {}
@@ -135,15 +140,14 @@ public:
     void synchronize() const {
         mm->synchronize();
     }
-    void discard() {
+    void discard() const {
         mm->discard();
     }
     void isArray() {
         mm->isArray();
     }
-    void reset() {
-
-    }
+    void reset() {}
+    void refresh() const { mm->refresh(); }
     __attribute__((annotate("serialize")))
         void __cxxamp_serialize(Serialize& s) const {
             mm->serialize(s);
