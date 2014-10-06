@@ -77,12 +77,8 @@ struct mm_info
         : count(count), src_ptr(src), data_ptr(::operator new(count)) {
             memmove(data_ptr, src_ptr, count);
         }
-    void synchronize() {
-        memcpy(src_ptr, data_ptr, count);
-    }
-    void refresh() {
-        memcpy(data_ptr, src_ptr, count);
-    }
+    void synchronize() { memmove(src_ptr, data_ptr, count); }
+    void refresh() { memmove(data_ptr, src_ptr, count); }
     void discard() {}
     void isArray() {}
     void serialize(Serialize& s) {
@@ -90,11 +86,11 @@ struct mm_info
         s.Append(sizeof(cl_mem), &dm);
     }
     ~mm_info() {
+        getAllocator().unregister(data_ptr);
         if (src_ptr != nullptr) {
-            memcpy(src_ptr, data_ptr, count);
+            synchronize();
             ::operator delete(data_ptr);
         }
-        getAllocator().unregister(data_ptr);
     }
 };
 
@@ -146,7 +142,6 @@ public:
     void isArray() {
         mm->isArray();
     }
-    void reset() {}
     void refresh() const { mm->refresh(); }
     __attribute__((annotate("serialize")))
         void __cxxamp_serialize(Serialize& s) const {
