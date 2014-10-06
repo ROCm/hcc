@@ -52,6 +52,7 @@ struct AMPAllocator
         mem_info.erase(data);
     }
     ~AMPAllocator() {
+        clReleaseCommandQueue(queue);
         clReleaseContext(context);
         clReleaseKernel(kernel);
         clReleaseProgram(program);
@@ -135,12 +136,15 @@ private:
 template <typename T>
 class _data_host {
     std::shared_ptr<mm_info> mm;
+    template <typename U> friend struct _data_host;
 public:
     _data_host(int count)
         : mm(std::make_shared<mm_info>(count * sizeof(T))) {}
     _data_host(int count, T* src)
         : mm(std::make_shared<mm_info>(count * sizeof(T), src)) {}
     _data_host(const _data_host& other) : mm(other.mm) {}
+    template <typename U>
+        _data_host(const _data_host<U>& other) : mm(other.mm) {}
     T *get() const { return (T *)mm->data_ptr; }
 
     void synchronize() const {

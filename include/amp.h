@@ -1647,7 +1647,7 @@ public:
 #endif
         int size = extent.size() * sizeof(T) / sizeof(ElementType);
         array_view<const ElementType, 1> av(Concurrency::extent<1>(size),
-                                        _data_host<ElementType>(m_device),
+                                            _data_host<ElementType>(m_device),
                                             0);
         return av;
     }
