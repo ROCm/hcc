@@ -90,6 +90,21 @@ find_program (AMD_CLC NAME clc PATHS
         NO_DEFAULT_PATH)
 endif (CXXAMP_ENABLE_HSA)
 
+set(OPENCL_HEADER_DIR "/usr/include/CL" CACHE PATH "OpenCL Header Directory")
+set(OPENCL_LIBRARY_DIR "/usr/lib64/" CACHE PATH "OpenCL Library Directory")
+
+SET(FOO_BUILD_SHARED OFF CACHE BOOL "Build libfoo shared library")
+set(USE_OPENCL ON CACHE BOOL "Enable OpenCL")
+
+find_path(OPENCL_HEADER cl.h ${OPENCL_HEADER_DIR} PATHS /usr/include/CL /opt/AMDAPP/include/CL /usr/local/cuda/include/CL )
+if (NOT APPLE AND NOT OPENCL_HEADER)
+  MESSAGE(FATAL_ERROR "OpenCL header not found. Use -DOPENCL_HEADER_DIR=<path_to_cl.h>.")
+endif(NOT APPLE AND NOT OPENCL_HEADER)
+
+find_library(OPENCL_LIBRARY OpenCL ${OPENCL_LIBRARY_DIR}/ PATHS /usr/lib)
+if (NOT APPLE AND NOT OPENCL_LIBRARY)
+  MESSAGE(FATAL_ERROR "OpenCL library not found. Use -DOPENCL_LIBRARY_DIR=<path_to_libOpenCL.so>.")
+endif(NOT APPLE AND NOT OPENCL_LIBRARY)
 MESSAGE("")
 MESSAGE("OPENCL INFORMATION:")
 MESSAGE("OPENCL_HEADER_DIR = ${OPENCL_HEADER_DIR}, actually found at: ${OPENCL_HEADER}")
