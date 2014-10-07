@@ -52,6 +52,8 @@ struct AMPAllocator
         mem_info.erase(data);
     }
     ~AMPAllocator() {
+        for (auto& iter : mem_info)
+            clReleaseMemObject(iter.second);
         clReleaseCommandQueue(queue);
         clReleaseContext(context);
         clReleaseKernel(kernel);
