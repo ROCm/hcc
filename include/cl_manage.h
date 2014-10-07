@@ -84,7 +84,8 @@ struct mm_info
             memmove(data_ptr, src_ptr, count);
         }
     void synchronize() {
-        memmove(src_ptr, data_ptr, count);
+        if (src_ptr != nullptr && !discard)
+            memmove(src_ptr, data_ptr, count);
     }
     void refresh() {
         if (src_ptr != nullptr)
@@ -99,11 +100,12 @@ struct mm_info
     }
     void disc() {
         dirty = false;
-        discard = !isArray;
+        discard = true;
     }
     void isArr() { isArray = true;}
     void serialize(Serialize& s) {
         dirty = src_ptr != nullptr;
+        discard = false;
         cl_mem dm = getAllocator().setup(data_ptr, count);
         s.Append(sizeof(cl_mem), &dm);
     }

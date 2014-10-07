@@ -1736,7 +1736,8 @@ public:
   ~array_view() restrict(amp,cpu) {}
 
   array_view(array<T, N>& src) restrict(amp,cpu)
-      : array_view(src.extent, src.data()) {}
+      : extent(src.extent), cache(src.internal()), offset(0),
+      index_base(), extent_base(src.extent) {}
 
   template <typename Container, class = typename std::enable_if<!std::is_array<Container>::value>::type>
       array_view(const Concurrency::extent<N>& extent, Container& src)
