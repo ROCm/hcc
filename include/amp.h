@@ -1496,7 +1496,10 @@ public:
   }
 
   void copy_to(const array_view<T,N>& dest) const {
-      copy(*this, dest);
+      void *src = dest.cache.get();
+      void *data = dest.cache.get_data();
+      void *dst = data != nullptr ? data : src;
+      memmove(dst, m_device.get(), extent.size() * sizeof(T));
   }
 
   Concurrency::extent<N> get_extent() const restrict(amp,cpu) {
@@ -1804,7 +1807,10 @@ public:
       copy(*this, dest);
   }
   void copy_to(const array_view& dest) const {
-      copy(*this, dest);
+      void *src = dest.cache.get();
+      void *data = dest.cache.get_data();
+      void *dst = data != nullptr ? data : src;
+      memmove(dst, cache.get(), extent.size() * sizeof(T));
   }
 
   extent<N> get_extent() const restrict(amp,cpu) {
@@ -1922,7 +1928,7 @@ public:
 #ifdef __GPU__
     __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
 #else
-    __global T *ptr = reinterpret_cast<__global T*>(cache.get_data() + offset);
+    __global T *ptr = reinterpret_cast<__global T*>(cache.get_new() + offset);
 #endif
     return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
   }

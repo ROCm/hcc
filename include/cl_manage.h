@@ -98,7 +98,7 @@ struct mm_info
         }
         return src_ptr;
     }
-    void* get_data() {
+    void* get_new() {
         if (dirty)
             return data_ptr;
         else
@@ -110,12 +110,12 @@ struct mm_info
     }
     void isArr() { isArray = true;}
     void serialize(Serialize& s) {
-        dirty = data_ptr != nullptr;
         refresh();
         discard = false;
-        void *src = dirty ? data_ptr : src_ptr;
+        void *src = data_ptr != nullptr ? data_ptr : src_ptr;
         cl_mem dm = getAllocator().setup(src, count);
         s.Append(sizeof(cl_mem), &dm);
+        dirty = data_ptr != nullptr;
     }
     ~mm_info() {
         void *src = data_ptr != nullptr ? data_ptr : src_ptr;
@@ -170,7 +170,8 @@ public:
         _data_host(const _data_host<U>& other) : mm(other.mm) {}
 
     T *get() const { return (T *)mm->get(); }
-    T *get_data() const { return (T *)mm->get_data(); }
+    T *get_new() const { return (T *)mm->get_new(); }
+    T *get_data() const { return (T *)mm->data_ptr; }
     void synchronize() const { mm->synchronize(); }
     void discard() const { mm->disc(); }
     void isArray() { mm->isArr(); }
