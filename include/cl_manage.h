@@ -107,6 +107,8 @@ struct mm_info
     void isArr() { isArray = true;}
     void serialize(Serialize& s) {
         discard = false;
+        if (!dirty)
+            refresh();
         cl_mem dm = getAllocator().setup(data_ptr, count);
         s.Append(sizeof(cl_mem), &dm);
         dirty = data_ptr != nullptr;
