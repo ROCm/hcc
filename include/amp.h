@@ -1922,7 +1922,7 @@ public:
 #ifdef __GPU__
     __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
 #else
-    __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
+    __global T *ptr = reinterpret_cast<__global T*>(cache.get_data() + offset);
 #endif
     return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
   }

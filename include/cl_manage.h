@@ -78,19 +78,17 @@ struct mm_info
     bool discard;
     bool dirty;
     mm_info(int count)
-        : count(count), src_ptr(nullptr), data_ptr(::operator new(count)),
+        : count(count), src_ptr(::operator new(count)), data_ptr(nullptr),
         isArray(false), discard(false), dirty(false) {}
     mm_info(int count, void *src)
         : count(count), src_ptr(src), data_ptr(::operator new(count)),
-        isArray(false), discard(false), dirty(false) {
-            memmove(data_ptr, src_ptr, count);
-        }
+        isArray(false), discard(false), dirty(false) {}
     void synchronize() {
-        if (src_ptr != nullptr && !discard)
+        if (data_ptr != nullptr && !discard)
             memmove(src_ptr, data_ptr, count);
     }
     void refresh() {
-        if (src_ptr != nullptr)
+        if (data_ptr != nullptr)
             memmove(data_ptr, src_ptr, count);
     }
     void* get() {
@@ -98,7 +96,13 @@ struct mm_info
             dirty = false;
             synchronize();
         }
-        return data_ptr;
+        return src_ptr;
+    }
+    void* get_data() {
+        if (dirty)
+            return data_ptr;
+        else
+            return src_ptr;
     }
     void disc() {
         dirty = false;
@@ -106,13 +110,16 @@ struct mm_info
     }
     void isArr() { isArray = true;}
     void serialize(Serialize& s) {
-        dirty = src_ptr != nullptr;
+        dirty = data_ptr != nullptr;
+        refresh();
         discard = false;
-        cl_mem dm = getAllocator().setup(data_ptr, count);
+        void *src = dirty ? data_ptr : src_ptr;
+        cl_mem dm = getAllocator().setup(src, count);
         s.Append(sizeof(cl_mem), &dm);
     }
     ~mm_info() {
-        getAllocator().unregister(data_ptr);
+        void *src = data_ptr != nullptr ? data_ptr : src_ptr;
+        getAllocator().unregister(src);
         if (src_ptr != nullptr) {
             if (!discard)
                 synchronize();
@@ -163,6 +170,7 @@ public:
         _data_host(const _data_host<U>& other) : mm(other.mm) {}
 
     T *get() const { return (T *)mm->get(); }
+    T *get_data() const { return (T *)mm->get_data(); }
     void synchronize() const { mm->synchronize(); }
     void discard() const { mm->disc(); }
     void isArray() { mm->isArr(); }
