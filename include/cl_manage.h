@@ -78,26 +78,22 @@ struct mm_info
     bool discard;
     bool dirty;
     mm_info(int count)
-        : count(count), src_ptr(::operator new(count)), data_ptr(nullptr),
+        : count(count), src_ptr(::operator new(count)), data_ptr(src_ptr),
         isArray(false), discard(false), dirty(false) {}
     mm_info(int count, void *src)
         : count(count), src_ptr(src), data_ptr(::operator new(count)),
-        isArray(false), discard(false), dirty(false) {}
+        isArray(false), discard(false), dirty(false) { refresh(); }
     void synchronize() {
-        if (data_ptr != nullptr && !discard)
+        if (data_ptr != src_ptr && dirty) {
             memmove(src_ptr, data_ptr, count);
+            dirty = false;
+        }
     }
     void refresh() {
-        if (data_ptr != nullptr)
+        if (data_ptr != src_ptr)
             memmove(data_ptr, src_ptr, count);
     }
-    void* get() {
-        if (dirty) {
-            dirty = false;
-            synchronize();
-        }
-        return src_ptr;
-    }
+    void* get() { return src_ptr; }
     void* get_new() {
         if (dirty)
             return data_ptr;
@@ -110,16 +106,13 @@ struct mm_info
     }
     void isArr() { isArray = true;}
     void serialize(Serialize& s) {
-        refresh();
         discard = false;
-        void *src = data_ptr != nullptr ? data_ptr : src_ptr;
-        cl_mem dm = getAllocator().setup(src, count);
+        cl_mem dm = getAllocator().setup(data_ptr, count);
         s.Append(sizeof(cl_mem), &dm);
         dirty = data_ptr != nullptr;
     }
     ~mm_info() {
-        void *src = data_ptr != nullptr ? data_ptr : src_ptr;
-        getAllocator().unregister(src);
+        getAllocator().unregister(data_ptr);
         if (src_ptr != nullptr) {
             if (!discard)
                 synchronize();

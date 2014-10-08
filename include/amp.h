@@ -1496,10 +1496,7 @@ public:
   }
 
   void copy_to(const array_view<T,N>& dest) const {
-      void *src = dest.cache.get();
-      void *data = dest.cache.get_data();
-      void *dst = data != nullptr ? data : src;
-      memmove(dst, m_device.get(), extent.size() * sizeof(T));
+      copy(*this, dest);
   }
 
   Concurrency::extent<N> get_extent() const restrict(amp,cpu) {
@@ -1807,10 +1804,7 @@ public:
       copy(*this, dest);
   }
   void copy_to(const array_view& dest) const {
-      void *src = dest.cache.get();
-      void *data = dest.cache.get_data();
-      void *dst = data != nullptr ? data : src;
-      memmove(dst, cache.get(), extent.size() * sizeof(T));
+      copy(*this, dest);
   }
 
   extent<N> get_extent() const restrict(amp,cpu) {
@@ -1818,17 +1812,26 @@ public:
   }
 
   __global T& operator[](const index<N>& idx) const restrict(amp,cpu) {
+#ifndef __GPU__
+      synchronize();
+#endif
       __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
       return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
   }
   template <int D0, int D1=0, int D2=0>
   __global T& operator[](const tiled_index<D0, D1, D2>& idx) const restrict(amp,cpu) {
+#ifndef __GPU__
+      synchronize();
+#endif
       __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
       return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx.global + index_base, extent_base)];
   }
 
   typename projection_helper<T, N>::result_type
       operator[] (int i) const restrict(amp,cpu) {
+#ifndef __GPU__
+      synchronize();
+#endif
           return projection_helper<T, N>::project(*this, i);
       }
   __global T& operator()(const index<N>& idx) const restrict(amp,cpu) {
@@ -1933,6 +1936,9 @@ public:
     return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
   }
   T* data() const restrict(amp,cpu) {
+#ifndef __GPU__
+      synchronize();
+#endif
     static_assert(N == 1, "data() is only permissible on array views of rank 1");
     return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
   }
@@ -2055,12 +2061,18 @@ public:
   accelerator_view get_source_accelerator_view() const;
 
   __global const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
+#ifndef __GPU__
+      synchronize();
+#endif
     __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
     return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
   }
 
   typename projection_helper<const T, N>::const_result_type
       operator[] (int i) const restrict(amp,cpu) {
+#ifndef __GPU__
+      synchronize();
+#endif
     return projection_helper<const T, N>::project(*this, i);
   }
 
