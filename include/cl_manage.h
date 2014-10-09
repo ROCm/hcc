@@ -48,8 +48,11 @@ struct AMPAllocator
         return dm;
     }
     void unregister(void *data) {
-        clReleaseMemObject(mem_info[data]);
-        mem_info.erase(data);
+        auto iter = mem_info.find(data);
+        if (iter != std::end(mem_info)) {
+            clReleaseMemObject(iter->second);
+            mem_info.erase(iter);
+        }
     }
     ~AMPAllocator() {
         for (auto& iter : mem_info)
@@ -86,6 +89,7 @@ struct mm_info
     void synchronize() {
         if (data_ptr != src_ptr && dirty) {
             memmove(src_ptr, data_ptr, count);
+            getAllocator().unregister(data_ptr);
             dirty = false;
         }
     }
@@ -101,7 +105,10 @@ struct mm_info
             return src_ptr;
     }
     void disc() {
-        dirty = false;
+        if (dirty) {
+            getAllocator().unregister(data_ptr);
+            dirty = false;
+        }
         discard = true;
     }
     void isArr() { isArray = true;}
