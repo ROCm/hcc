@@ -77,19 +77,21 @@ struct mm_info
     size_t count;
     void *src_ptr;
     void *data_ptr;
+    void *newest;
     bool isArray;
     bool discard;
     bool dirty;
     mm_info(int count)
         : count(count), src_ptr(::operator new(count)), data_ptr(src_ptr),
-        isArray(false), discard(false), dirty(false) {}
+        newest(src_ptr), isArray(false), discard(false), dirty(false) {}
     mm_info(int count, void *src)
         : count(count), src_ptr(src), data_ptr(::operator new(count)),
-        isArray(false), discard(false), dirty(false) { refresh(); }
+        newest(src_ptr), isArray(false), discard(false), dirty(false) { refresh(); }
     void synchronize() {
         if (data_ptr != src_ptr && dirty) {
             memmove(src_ptr, data_ptr, count);
             getAllocator().unregister(data_ptr);
+            newest = src_ptr;
             dirty = false;
         }
     }
@@ -97,15 +99,10 @@ struct mm_info
         if (data_ptr != src_ptr)
             memmove(data_ptr, src_ptr, count);
     }
-    void* get() { return src_ptr; }
-    void* get_new() {
-        if (dirty)
-            return data_ptr;
-        else
-            return src_ptr;
-    }
+    void* get() { return newest; }
     void disc() {
         if (dirty) {
+            newest = src_ptr;
             getAllocator().unregister(data_ptr);
             dirty = false;
         }
@@ -118,11 +115,14 @@ struct mm_info
             refresh();
         cl_mem dm = getAllocator().setup(data_ptr, count);
         s.Append(sizeof(cl_mem), &dm);
-        dirty = data_ptr != nullptr;
+        if (data_ptr != src_ptr) {
+            dirty = true;
+            newest = data_ptr;
+        }
     }
     ~mm_info() {
         getAllocator().unregister(data_ptr);
-        if (src_ptr != nullptr) {
+        if (src_ptr != data_ptr) {
             if (!discard)
                 synchronize();
             ::operator delete(data_ptr);
@@ -150,9 +150,6 @@ public:
     __attribute__((annotate("user_deserialize")))
         explicit _data(__global T* t) restrict(cpu, amp) { p_ = t; }
     __global T* get(void) const restrict(cpu, amp) { return p_; }
-    __global T* get_mutable(void) const restrict(cpu, amp) { return p_; }
-    __global T* get_data() const { return get(); }
-    void reset(__global T *t = NULL) restrict(cpu, amp) { p_ = t; }
 private:
     __global T* p_;
 };
@@ -172,8 +169,6 @@ public:
         _data_host(const _data_host<U>& other) : mm(other.mm) {}
 
     T *get() const { return (T *)mm->get(); }
-    T *get_new() const { return (T *)mm->get_new(); }
-    T *get_data() const { return (T *)mm->data_ptr; }
     void synchronize() const { mm->synchronize(); }
     void discard() const { mm->disc(); }
     void isArray() { mm->isArr(); }

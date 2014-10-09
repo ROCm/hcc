@@ -1928,11 +1928,7 @@ public:
   __global const T& get_data(int i0) const restrict(amp,cpu) {
     static_assert(N == 1, "Rank must be 1");
     index<1> idx(i0);
-#ifdef __GPU__
     __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
-#else
-    __global T *ptr = reinterpret_cast<__global T*>(cache.get_new() + offset);
-#endif
     return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
   }
   T* data() const restrict(amp,cpu) {
