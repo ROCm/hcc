@@ -78,21 +78,23 @@ struct mm_info
     void *src_ptr;
     void *data_ptr;
     void *newest;
-    bool isArray;
     bool discard;
     bool dirty;
     mm_info(int count)
         : count(count), src_ptr(::operator new(count)), data_ptr(src_ptr),
-        newest(src_ptr), isArray(false), discard(false), dirty(false) {}
+        newest(src_ptr), discard(false), dirty(false) {}
     mm_info(int count, void *src)
         : count(count), src_ptr(src), data_ptr(::operator new(count)),
-        newest(src_ptr), isArray(false), discard(false), dirty(false) { refresh(); }
+        newest(src_ptr), discard(false), dirty(false) { refresh(); }
+    void update() {
+        getAllocator().unregister(data_ptr);
+        newest = src_ptr;
+        dirty = false;
+    }
     void synchronize() {
-        if (data_ptr != src_ptr && dirty) {
+        if (dirty) {
             memmove(src_ptr, data_ptr, count);
-            getAllocator().unregister(data_ptr);
-            newest = src_ptr;
-            dirty = false;
+            update();
         }
     }
     void refresh() {
@@ -101,14 +103,10 @@ struct mm_info
     }
     void* get() { return newest; }
     void disc() {
-        if (dirty) {
-            newest = src_ptr;
-            getAllocator().unregister(data_ptr);
-            dirty = false;
-        }
+        if (dirty)
+            update();
         discard = true;
     }
-    void isArr() { isArray = true;}
     void serialize(Serialize& s) {
         discard = false;
         if (!dirty)
@@ -130,30 +128,23 @@ struct mm_info
     }
 };
 
-
 // Dummy interface that looks somewhat like std::shared_ptr<T>
 template <typename T>
 class _data {
-    typedef typename std::remove_const<T>::type nc_T;
-    friend _data<const T>;
-    friend _data<nc_T>;
 public:
     _data() = delete;
     _data(int count) {}
-    _data(const _data& d) restrict(cpu, amp):p_(d.p_) {}
-    template <class = typename std::enable_if<std::is_const<T>::value>::type>
-        _data(const _data<nc_T>& d) restrict(cpu, amp):p_(d.p_) {}
-    template <class = typename std::enable_if<!std::is_const<T>::value>::type>
-        _data(const _data<const T>& d) restrict(cpu, amp):p_(const_cast<T*>(d.p_)) {}
-    template <typename T2>
-        _data(const _data<T2>& d) restrict(cpu, amp):p_(reinterpret_cast<T *>(d.get())) {}
+    _data(const _data& d) restrict(cpu, amp)
+        : p_(d.p_) {}
+    template <typename U>
+        _data(const _data<U>& d) restrict(cpu, amp)
+        : p_(reinterpret_cast<T *>(d.get())) {}
     __attribute__((annotate("user_deserialize")))
         explicit _data(__global T* t) restrict(cpu, amp) { p_ = t; }
     __global T* get(void) const restrict(cpu, amp) { return p_; }
 private:
     __global T* p_;
 };
-
 
 template <typename T>
 class _data_host {
@@ -164,14 +155,14 @@ public:
         : mm(std::make_shared<mm_info>(count * sizeof(T))) {}
     _data_host(int count, T* src)
         : mm(std::make_shared<mm_info>(count * sizeof(T), src)) {}
-    _data_host(const _data_host& other) : mm(other.mm) {}
+    _data_host(const _data_host& other)
+        : mm(other.mm) {}
     template <typename U>
         _data_host(const _data_host<U>& other) : mm(other.mm) {}
 
     T *get() const { return (T *)mm->get(); }
     void synchronize() const { mm->synchronize(); }
     void discard() const { mm->disc(); }
-    void isArray() { mm->isArr(); }
     void refresh() const { mm->refresh(); }
 
     __attribute__((annotate("serialize")))
