@@ -83,20 +83,18 @@ struct mm_info
     void *data_ptr;
     void *newest;
     bool discard;
-    bool dirty;
     mm_info(int count)
         : count(count), src_ptr(::operator new(count)), data_ptr(src_ptr),
-        newest(src_ptr), discard(false), dirty(false) {}
+        newest(src_ptr), discard(false) {}
     mm_info(int count, void *src)
         : count(count), src_ptr(src), data_ptr(::operator new(count)),
-        newest(src_ptr), discard(false), dirty(false) { refresh(); }
+        newest(src_ptr), discard(false) { refresh(); }
     void update() {
         getAllocator().unregister(data_ptr);
         newest = src_ptr;
-        dirty = false;
     }
     void synchronize() {
-        if (data_ptr != src_ptr && dirty) {
+        if (newest != src_ptr) {
             memmove(src_ptr, data_ptr, count);
             update();
         }
@@ -107,20 +105,18 @@ struct mm_info
     }
     void* get() { return newest; }
     void disc() {
-        if (dirty)
+        if (newest != src_ptr)
             update();
         discard = true;
     }
     void serialize(Serialize& s) {
         discard = false;
-        if (!dirty)
+        if (newest == src_ptr)
             refresh();
         cl_mem dm = getAllocator().setup(data_ptr, count);
         s.Append(sizeof(cl_mem), &dm);
-        if (data_ptr != src_ptr) {
-            dirty = true;
+        if (data_ptr != src_ptr)
             newest = data_ptr;
-        }
     }
     ~mm_info() {
         getAllocator().unregister(data_ptr);
