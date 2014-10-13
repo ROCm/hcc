@@ -1441,7 +1441,7 @@ public:
 
   explicit array(const array_view<const T, N>& src) : array(src.extent) {
       memmove(const_cast<void*>(reinterpret_cast<const void*>(m_device.get())),
-      reinterpret_cast<const void*>(src.cache.get_data()), extent.size() * sizeof(T));
+      reinterpret_cast<const void*>(src.cache.get()), extent.size() * sizeof(T));
   }
 
 
@@ -1623,42 +1623,36 @@ public:
 
   template <typename ElementType>
       array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu) {
-          int size = extent.size() * sizeof(T) / sizeof(ElementType);
 #ifndef __GPU__
           static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
           static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
           if( (extent.size() * sizeof(T)) % sizeof(ElementType))
               throw runtime_exception("errorMsg_throw", 0);
-          array_view<ElementType, 1> av(Concurrency::extent<1>(size),
-                                        _data_host<ElementType>(reinterpret_cast<ElementType*>(m_device.get()), ReinDeleter<ElementType>()),
-                                        0);
-#else
-          array_view<ElementType, 1> av(Concurrency::extent<1>(size),
-                                        _data<ElementType>(m_device),
-                                        0);
 #endif
+          int size = extent.size() * sizeof(T) / sizeof(ElementType);
+          using buffer_type = typename array_view<ElementType, 1>::cl_buffer_t;
+          array_view<ElementType, 1> av(Concurrency::extent<1>(size), buffer_type(m_device), 0);
           return av;
       }
   template <typename ElementType>
-    array_view<const ElementType, 1> reinterpret_as() const restrict(amp,cpu) {
+      array_view<const ElementType, 1> reinterpret_as() const restrict(amp,cpu) {
 #ifndef __GPU__
           static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
           static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
 #endif
-        int size = extent.size() * sizeof(T) / sizeof(ElementType);
-        array_view<const ElementType, 1> av(Concurrency::extent<1>(size),
-                                            _data_host<const ElementType>(reinterpret_cast<const ElementType*>(m_device.get()), ReinDeleter<const ElementType>()),
-                                            0);
-        return av;
-    }
+          int size = extent.size() * sizeof(T) / sizeof(ElementType);
+          using buffer_type = typename array_view<ElementType, 1>::cl_buffer_t;
+          array_view<const ElementType, 1> av(Concurrency::extent<1>(size), buffer_type(m_device), 0);
+          return av;
+      }
   template <int K> array_view<T, K>
       view_as(const Concurrency::extent<K>& viewExtent) restrict(amp,cpu) {
 #ifndef __GPU__
     if( viewExtent.size() > extent.size())
       throw runtime_exception("errorMsg_throw", 0);
 #endif
-          array_view<T, 1> av(Concurrency::extent<1>(viewExtent.size()), data());
-          return av.view_as(viewExtent);
+          array_view<T, K> av(viewExtent, m_device, 0);
+          return av;
       }
   template <int K> array_view<const T, K>
       view_as(const Concurrency::extent<K>& viewExtent) const restrict(amp,cpu) {
@@ -1666,8 +1660,8 @@ public:
     if( viewExtent.size() > extent.size())
       throw runtime_exception("errorMsg_throw", 0);
 #endif
-          const array_view<T, 1> av(Concurrency::extent<1>(viewExtent.size()), data());
-          return av.view_as(viewExtent);
+          const array_view<T, K> av(viewExtent, m_device, 0);
+          return av;
       }
 
   operator std::vector<T>() const {
@@ -1686,7 +1680,6 @@ public:
     return reinterpret_cast<T*>(m_device.get());
   }
   ~array() {
-    m_device.reset();
     if(pav) delete pav;
     if(paav) delete paav;
   }
@@ -1706,11 +1699,7 @@ private:
   __attribute__((cpu)) accelerator_view *pav, *paav;
 
 #ifndef __GPU__
-  void initialize() {
-      m_device.reset(CLAllocator<T>().allocate(extent.size()), CLDeleter<T>());
-      getAllocator().setArray(m_device.get_device());
-      m_array_helper.setArray(this);
-  }
+  void initialize() { m_array_helper.setArray(this); }
   template <typename InputIter>
       void initialize(InputIter srcBegin, InputIter srcEnd) {
           initialize();
@@ -1739,7 +1728,7 @@ public:
 
   array_view(array<T, N>& src) restrict(amp,cpu)
       : extent(src.extent), cache(src.internal()), offset(0),
-        index_base(), extent_base(src.extent) {}
+      index_base(), extent_base(src.extent) {}
 
   template <typename Container, class = typename std::enable_if<!std::is_array<Container>::value>::type>
       array_view(const Concurrency::extent<N>& extent, Container& src)
@@ -1832,7 +1821,7 @@ public:
   typename projection_helper<T, N>::result_type
       operator[] (int i) const restrict(amp,cpu) {
 #ifndef __GPU__
-          synchronize();
+      synchronize();
 #endif
           return projection_helper<T, N>::project(*this, i);
       }
@@ -1854,26 +1843,19 @@ public:
 
   template <typename ElementType>
       array_view<ElementType, N> reinterpret_as() const restrict(amp,cpu) {
-      static_assert(N == 1, "reinterpret_as is only permissible on array views of rank 1");
+          static_assert(N == 1, "reinterpret_as is only permissible on array views of rank 1");
 #ifndef __GPU__
           static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
           static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
+          if( (extent.size() * sizeof(T)) % sizeof(ElementType))
+              throw runtime_exception("errorMsg_throw", 0);
 #endif
           int size = extent.size() * sizeof(T) / sizeof(ElementType);
-#ifndef __GPU__
-          if( (extent.size() * sizeof(T)) % sizeof(ElementType))
-            throw runtime_exception("errorMsg_throw", 0);
-#endif
-#ifndef __GPU__
+          using buffer_type = typename array_view<ElementType, 1>::cl_buffer_t;
           array_view<ElementType, 1> av(Concurrency::extent<1>(size),
-                                        _data_host<ElementType>(reinterpret_cast<ElementType*>(cache.get_device()), ReinDeleter<ElementType>()),
+                                        buffer_type(cache),
                                         (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
-#else
-          array_view<ElementType, 1> av(Concurrency::extent<1>(size),
-                                        _data<ElementType>(cache),
-                                        (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
-#endif
-         return av;
+          return av;
       }
 
   array_view<T, N> section(const Concurrency::index<N>& idx,
@@ -1923,18 +1905,14 @@ public:
   void refresh() const;
   void discard_data() const {
 #ifndef __GPU__
-      getAllocator().discard(cache.get_device());
+      cache.discard();
 #endif
   }
   // only get data do not synchronize
   __global const T& get_data(int i0) const restrict(amp,cpu) {
     static_assert(N == 1, "Rank must be 1");
     index<1> idx(i0);
-#ifdef __GPU__
     __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
-#else
-    __global T *ptr = reinterpret_cast<__global T*>(cache.get_data() + offset);
-#endif
     return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
   }
   T* data() const restrict(amp,cpu) {
@@ -1981,7 +1959,7 @@ public:
   typedef const T value_type;
 
 #ifdef __GPU__
-  typedef _data<T> cl_buffer_t;
+  typedef _data<nc_T> cl_buffer_t;
 #else
   typedef _data_host<nc_T> cl_buffer_t;
 #endif
@@ -2103,24 +2081,19 @@ public:
   }
 */
   template <typename ElementType>
-    array_view<const ElementType, N> reinterpret_as() const restrict(amp,cpu) {
-    static_assert(N == 1, "reinterpret_as is only permissible on array views of rank 1");
+      array_view<const ElementType, N> reinterpret_as() const restrict(amp,cpu) {
+          static_assert(N == 1, "reinterpret_as is only permissible on array views of rank 1");
 #ifndef __GPU__
-      static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
-      static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
+          static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
+          static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
 #endif
-      int size = extent.size() * sizeof(T) / sizeof(ElementType);
-#ifndef __GPU__
-      array_view<const ElementType, 1> av(Concurrency::extent<1>(size),
-                                          _data_host<ElementType>(reinterpret_cast<ElementType*>(cache.get_device()), ReinDeleter<ElementType>()),
-                                          (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
-#else
-      array_view<const ElementType, 1> av(Concurrency::extent<1>(size),
-                                          _data<ElementType>(cache),
-                                          (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
-#endif
-      return av;
-    }
+          int size = extent.size() * sizeof(T) / sizeof(ElementType);
+          using buffer_type = typename array_view<ElementType, 1>::cl_buffer_t;
+          array_view<const ElementType, 1> av(Concurrency::extent<1>(size),
+                                              buffer_type(cache),
+                                              (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
+          return av;
+      }
   array_view<const T, N> section(const Concurrency::index<N>& idx,
                      const Concurrency::extent<N>& ext) const restrict(amp,cpu) {
     array_view<const T, N> av(ext, extent_base, idx + index_base, cache, offset);

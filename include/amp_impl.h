@@ -326,7 +326,7 @@ extent<N> operator%(int lhs, const extent<N>& rhs) restrict(amp,cpu) {
 
 template<int N> class extent;
     template<typename T, int N> array<T, N>::array(const Concurrency::extent<N>& ext)
-: extent(ext), m_device(nullptr), pav(nullptr), paav(nullptr)
+: extent(ext), m_device(ext.size()), pav(nullptr), paav(nullptr)
 {
     this->cpu_access_type = Concurrency::accelerator(accelerator::default_accelerator).get_default_view().get_accelerator().get_default_cpu_access_type();
 #ifndef __GPU__
@@ -393,7 +393,7 @@ array<T, N>::array(int e0, int e1, int e2, accelerator_view av, accelerator_view
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin)
-    : extent(ext), m_device(nullptr), pav(nullptr), paav(nullptr) {
+    : extent(ext), m_device(ext.size()), pav(nullptr), paav(nullptr) {
   this->cpu_access_type = Concurrency::accelerator(accelerator::default_accelerator).get_default_view().get_accelerator().get_default_cpu_access_type();
 #ifndef __GPU__
         InputIterator srcEnd = srcBegin;
@@ -404,7 +404,7 @@ array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin)
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, InputIterator srcEnd)
-    : extent(ext), m_device(nullptr), pav(nullptr), paav(nullptr) {
+    : extent(ext), m_device(ext.size()), pav(nullptr), paav(nullptr) {
 #ifndef __GPU__
     if(ext.size() < std::distance(srcBegin,srcEnd) )
       throw runtime_exception("errorMsg_throw", 0);
@@ -589,7 +589,7 @@ array<T, N>::array(const array_view<const T, N>& src, accelerator_view av,
 template <typename T, int N>
 void array_view<T, N>::synchronize() const {
     if(cache.get())
-        getAllocator().synchronize(cache.get_device());
+        cache.synchronize();
 }
 
 template <typename T, int N>
@@ -602,22 +602,18 @@ completion_future array_view<T, N>::synchronize_async() const {
 template <typename T, int N>
 array_view<T, N>::array_view(const Concurrency::extent<N>& ext,
                              value_type* src) restrict(amp,cpu)
-    : extent(ext),
-      cache(CLAllocator<T>().allocate(ext.size(), src), CLDeleter<T>()),
-      offset(0), extent_base(ext) {}
+    : extent(ext), cache(ext.size(), src), offset(0), extent_base(ext) {}
 
 template <typename T, int N>
 array_view<T, N>::array_view(const Concurrency::extent<N>& ext) restrict(amp,cpu)
-    : extent(ext),
-    cache(CLAllocator<T>().allocate(ext.size()), CLDeleter<T>()),
-    offset(0), extent_base(ext) {}
+    : extent(ext), cache(ext.size()), offset(0), extent_base(ext) {}
 
 template <typename T, int N>
 void array_view<T, N>::refresh() const {
     assert(cache.get());
     assert(extent == extent_base && "Only support non-sectioned view");
     assert(offset == 0 && "Only support non-sectioned view");
-    getAllocator().refresh(cache.get_device());
+    cache.refresh();
 }
 
 #else // GPU implementations
@@ -636,7 +632,7 @@ array_view<T,N>::array_view(const Concurrency::extent<N>& ext,
 template <typename T, int N>
 void array_view<const T, N>::synchronize() const {
   if(cache.get())
-      getAllocator().synchronize(cache.get_device());
+      cache.synchronize();
 }
 
 template <typename T, int N>
@@ -649,16 +645,15 @@ completion_future array_view<const T, N>::synchronize_async() const {
 template <typename T, int N>
 array_view<const T, N>::array_view(const Concurrency::extent<N>& ext,
                              value_type* src) restrict(amp,cpu)
-    : extent(ext),
-      cache(CLAllocator<nc_T>().allocate(ext.size(), const_cast<nc_T*>(src), true), CLDeleter<T>()),
-      offset(0), extent_base(ext) {}
+    : extent(ext), cache(ext.size(), const_cast<nc_T*>(src)),
+    offset(0), extent_base(ext) {}
 
 template <typename T, int N>
 void array_view<const T, N>::refresh() const {
     assert(cache.get());
     assert(extent == extent_base && "Only support non-sectioned view");
     assert(offset == 0 && "Only support non-sectioned view");
-    getAllocator().refresh(cache.get_device());
+    cache.refresh();
 }
 
 #else // GPU implementations
