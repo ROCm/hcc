@@ -41,11 +41,15 @@ struct AMPAllocator
         assert(err == CL_SUCCESS);
     }
     cl_mem setup(void *data, int count) {
-        cl_int err;
-        cl_mem dm = clCreateBuffer(context, CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, count, data, &err);
-        assert(err == CL_SUCCESS);
-        mem_info[data] = dm;
-        return dm;
+        auto iter = mem_info.find(data);
+        if (iter == std::end(mem_info)) {
+            cl_int err;
+            cl_mem dm = clCreateBuffer(context, CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, count, data, &err);
+            assert(err == CL_SUCCESS);
+            mem_info[data] = dm;
+            return dm;
+        } else
+            return iter->second;
     }
     void unregister(void *data) {
         auto iter = mem_info.find(data);
@@ -92,7 +96,7 @@ struct mm_info
         dirty = false;
     }
     void synchronize() {
-        if (dirty) {
+        if (data_ptr != src_ptr && dirty) {
             memmove(src_ptr, data_ptr, count);
             update();
         }
