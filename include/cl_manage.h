@@ -79,51 +79,54 @@ AMPAllocator& getAllocator();
 struct mm_info
 {
     size_t count;
-    void *src_ptr;
-    void *data_ptr;
-    void *newest;
+    void *host;
+    void *device;
+    void *dirty;
+    cl_mem dm;
     bool discard;
     mm_info(int count)
-        : count(count), src_ptr(::operator new(count)), data_ptr(src_ptr),
-        newest(src_ptr), discard(false) {}
+        : count(count), host(::operator new(count)), device(host),
+        dirty(host), discard(false) {
+            if (count > 0)
+                dm = getAllocator().setup(device, count);
+        }
     mm_info(int count, void *src)
-        : count(count), src_ptr(src), data_ptr(::operator new(count)),
-        newest(src_ptr), discard(false) { refresh(); }
-    void update() {
-        getAllocator().unregister(data_ptr);
-        newest = src_ptr;
-    }
+        : count(count), host(src), device(::operator new(count)),
+        dirty(host), discard(false) {
+            refresh();
+            if (count > 0)
+                dm = getAllocator().setup(device, count);
+        }
     void synchronize() {
-        if (newest != src_ptr) {
-            memmove(src_ptr, data_ptr, count);
-            update();
+        if (dirty != host) {
+            memmove(host, device, count);
+            dirty = host;
         }
     }
     void refresh() {
-        if (data_ptr != src_ptr)
-            memmove(data_ptr, src_ptr, count);
+        if (device != host)
+            memmove(device, host, count);
     }
-    void* get() { return newest; }
+    void* get() { return dirty; }
     void disc() {
-        if (newest != src_ptr)
-            update();
+        if (dirty != host)
+            dirty = host;
         discard = true;
     }
     void serialize(Serialize& s) {
         discard = false;
-        if (newest == src_ptr)
+        if (dirty == host)
             refresh();
-        cl_mem dm = getAllocator().setup(data_ptr, count);
         s.Append(sizeof(cl_mem), &dm);
-        if (data_ptr != src_ptr)
-            newest = data_ptr;
+        if (device != host)
+            dirty = device;
     }
     ~mm_info() {
-        getAllocator().unregister(data_ptr);
-        if (src_ptr != data_ptr) {
+        getAllocator().unregister(device);
+        if (host != device) {
             if (!discard)
                 synchronize();
-            ::operator delete(data_ptr);
+            ::operator delete(device);
         }
     }
 };
