@@ -77,7 +77,7 @@ struct AMPAllocator
     void read() {
         cl_int err;
         for (auto& it : rw_que) {
-            err = clEnqueueWriteBuffer(queue, it.dm, CL_TRUE, 0,
+            err = clEnqueueReadBuffer(queue, it.dm, CL_TRUE, 0,
                                        it.count, it.data, 0, NULL, NULL);
             assert(err == CL_SUCCESS);
         }
