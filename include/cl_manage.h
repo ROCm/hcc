@@ -82,21 +82,13 @@ struct mm_info
     void *host;
     void *device;
     void *dirty;
-    cl_mem dm;
     bool discard;
     mm_info(int count)
         : count(count), host(::operator new(count)), device(host),
-        dirty(host), discard(false) {
-            if (count > 0)
-                dm = getAllocator().setup(device, count);
-        }
+        dirty(host), discard(false) {}
     mm_info(int count, void *src)
         : count(count), host(src), device(::operator new(count)),
-        dirty(host), discard(false) {
-            refresh();
-            if (count > 0)
-                dm = getAllocator().setup(device, count);
-        }
+        dirty(host), discard(false) { refresh(); }
     void synchronize() {
         if (dirty != host) {
             memmove(host, device, count);
@@ -117,6 +109,7 @@ struct mm_info
         discard = false;
         if (dirty == host)
             refresh();
+        cl_mem dm = getAllocator().setup(device, count);
         s.Append(sizeof(cl_mem), &dm);
         if (device != host)
             dirty = device;
