@@ -49,7 +49,7 @@ do
       mv $HOST_FILE.new $HOST_FILE
 
       # find cxxamp_serialize symbols and save them into symbol.txt
-      objdump -t $HOST_FILE -j .text 2> /dev/null | grep "g.*__cxxamp_serialize" | awk '{print "-N"$6}' >> $CXXAMP_SERIALIZE_SYMBOL_FILE
+      objdump -t $HOST_FILE -j .text 2> /dev/null | grep "g.*__cxxamp_serialize" | awk '{print "-L"$6}' >> $CXXAMP_SERIALIZE_SYMBOL_FILE
 
       LINK_KERNEL_ARGS=$LINK_KERNEL_ARGS" "$KERNEL_FILE
       LINK_HOST_ARGS=$LINK_HOST_ARGS" "$HOST_FILE
