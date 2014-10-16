@@ -56,8 +56,6 @@ struct AMPAllocator
         mem_info.erase(iter);
     }
     ~AMPAllocator() {
-        for (auto& iter : mem_info)
-            clReleaseMemObject(iter.second);
         clReleaseCommandQueue(queue);
         clReleaseContext(context);
         clReleaseKernel(kernel);
@@ -103,11 +101,12 @@ struct mm_info
         discard = true;
     }
     void serialize(Serialize& s) {
-        discard = false;
         if (dirty == host && device != host) {
-            refresh();
+            if (!discard)
+                refresh();
             dirty = device;
         }
+        discard = false;
         getAllocator().append(s, device);
     }
     ~mm_info() {
