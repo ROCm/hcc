@@ -193,6 +193,8 @@ namespace Concurrency { namespace CLAMP {
                 const unsigned char *ks = (const unsigned char *)kernel_source;
                 program = clCreateProgramWithBinary(context, 1, &device, &kernel_size, &ks, NULL, &err);
                 assert(err == CL_SUCCESS);
+                err = clBuildProgram(program, 1, &device, NULL, NULL, NULL);
+                assert(err == CL_SUCCESS);
             } else {
                 // in OpenCL-C
                 const char *ks = (const char *)kernel_source;
