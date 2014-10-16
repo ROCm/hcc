@@ -325,16 +325,23 @@ extent<N> operator%(int lhs, const extent<N>& rhs) restrict(amp,cpu) {
 
 
 template<int N> class extent;
-    template<typename T, int N> array<T, N>::array(const Concurrency::extent<N>& ext)
-: extent(ext), m_device(ext.size()), pav(nullptr), paav(nullptr)
+template <int N>
+const Concurrency::extent<N>& check(const Concurrency::extent<N>& ext)
 {
-    this->cpu_access_type = Concurrency::accelerator(accelerator::default_accelerator).get_default_view().get_accelerator().get_default_cpu_access_type();
 #ifndef __GPU__
-    for (int i = 0; i < rank; i++)
+    for (int i = 0; i < N; i++)
     {
         if(ext[i] <=0)
             throw runtime_exception("errorMsg_throw", 0);
     }
+#endif
+    return ext;
+}
+    template<typename T, int N> array<T, N>::array(const Concurrency::extent<N>& ext)
+: extent(check(ext)), m_device(ext.size()), pav(nullptr), paav(nullptr)
+{
+    this->cpu_access_type = Concurrency::accelerator(accelerator::default_accelerator).get_default_view().get_accelerator().get_default_cpu_access_type();
+#ifndef __GPU__
     initialize();
 #endif
 }
