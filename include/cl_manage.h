@@ -59,13 +59,6 @@ struct AMPAllocator
             dm = iter->second;
         s.Append(sizeof(cl_mem), &dm);
     }
-    void unregister(void *data) {
-        auto iter = mem_info.find(data);
-        if (iter != std::end(mem_info)) {
-            clReleaseMemObject(iter->second);
-            mem_info.erase(iter);
-        }
-    }
     void write() {
         cl_int err;
         for (auto& it : rw_que) {
@@ -79,8 +72,10 @@ struct AMPAllocator
         for (auto& it : rw_que) {
             err = clEnqueueReadBuffer(queue, it.dm, CL_TRUE, 0,
                                        it.count, it.data, 0, NULL, NULL);
+            clReleaseMemObject(it.dm);
             assert(err == CL_SUCCESS);
         }
+        mem_info.clear();
         rw_que.clear();
     }
     ~AMPAllocator() {
@@ -140,7 +135,6 @@ struct mm_info
         getAllocator().setup(s, device, count);
     }
     ~mm_info() {
-        getAllocator().unregister(device);
         if (host != device) {
             if (!discard)
                 synchronize();
