@@ -13,6 +13,13 @@
 #include <CL/opencl.h>
 
 
+#if defined(CXXAMP_NV)
+struct rw_info
+{
+    int count;
+    bool used;
+};
+#endif
 struct AMPAllocator
 {
     AMPAllocator() {
@@ -42,14 +49,47 @@ struct AMPAllocator
     void init(void *data, int count) {
         if (count > 0) {
             cl_int err;
+#if defined(CXXAMP_NV)
+            cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, NULL, &err);
+            rwq[data] = {count, false};
+#else
             cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, count, data, &err);
+#endif
             assert(err == CL_SUCCESS);
             mem_info[data] = dm;
         }
     }
     void append(Serialize& s, void *data) {
         s.Append(sizeof(cl_mem), &mem_info[data]);
+#if defined(CXXAMP_NV)
+        rwq[data].used = true;
+#endif
     }
+#if defined(CXXAMP_NV)
+    void write() {
+        cl_int err;
+        for (auto& it : rwq) {
+            rw_info& rw = it.second;
+            if (rw.used) {
+                err = clEnqueueWriteBuffer(queue, mem_info[it.first], CL_TRUE, 0,
+                                           rw.count, it.first, 0, NULL, NULL);
+                assert(err == CL_SUCCESS);
+            }
+        }
+    }
+    void read() {
+        cl_int err;
+        for (auto& it : rwq) {
+            rw_info& rw = it.second;
+            if (rw.used) {
+                err = clEnqueueReadBuffer(queue, mem_info[it.first], CL_TRUE, 0,
+                                          rw.count, it.first, 0, NULL, NULL);
+                assert(err == CL_SUCCESS);
+                rw.used = false;
+            }
+        }
+    }
+#endif
     void free(void *data) {
         auto iter = mem_info.find(data);
         clReleaseMemObject(iter->second);
@@ -62,6 +102,9 @@ struct AMPAllocator
         clReleaseProgram(program);
     }
     std::map<void *, cl_mem> mem_info;
+#if defined(CXXAMP_NV)
+    std::map<void *, rw_info> rwq;
+#endif
     cl_context       context;
     cl_device_id     device;
     cl_kernel        kernel;
