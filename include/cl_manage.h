@@ -13,13 +13,6 @@
 #include <CL/opencl.h>
 
 
-struct mm_info;
-struct rw_info
-{
-    void *data;
-    int count;
-    cl_mem dm;
-};
 struct AMPAllocator
 {
     AMPAllocator() {
@@ -46,37 +39,21 @@ struct AMPAllocator
         queue = clCreateCommandQueue(context, device, 0, &err);
         assert(err == CL_SUCCESS);
     }
-    void setup(Serialize& s, void *data, int count) {
-        auto iter = mem_info.find(data);
-        cl_mem dm = nullptr;
-        if (iter == std::end(mem_info)) {
+    void init(void *data, int count) {
+        if (count > 0) {
             cl_int err;
-            dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, NULL, &err);
+            cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, count, data, &err);
             assert(err == CL_SUCCESS);
             mem_info[data] = dm;
-            rw_que.push_back({data, count, dm});
-        } else
-            dm = iter->second;
-        s.Append(sizeof(cl_mem), &dm);
-    }
-    void write() {
-        cl_int err;
-        for (auto& it : rw_que) {
-            err = clEnqueueWriteBuffer(queue, it.dm, CL_TRUE, 0,
-                                       it.count, it.data, 0, NULL, NULL);
-            assert(err == CL_SUCCESS);
         }
     }
-    void read() {
-        cl_int err;
-        for (auto& it : rw_que) {
-            err = clEnqueueReadBuffer(queue, it.dm, CL_TRUE, 0,
-                                       it.count, it.data, 0, NULL, NULL);
-            clReleaseMemObject(it.dm);
-            assert(err == CL_SUCCESS);
-        }
-        mem_info.clear();
-        rw_que.clear();
+    void append(Serialize& s, void *data) {
+        s.Append(sizeof(cl_mem), &mem_info[data]);
+    }
+    void free(void *data) {
+        auto iter = mem_info.find(data);
+        clReleaseMemObject(iter->second);
+        mem_info.erase(iter);
     }
     ~AMPAllocator() {
         for (auto& iter : mem_info)
@@ -87,7 +64,6 @@ struct AMPAllocator
         clReleaseProgram(program);
     }
     std::map<void *, cl_mem> mem_info;
-    std::vector<rw_info> rw_que;
     cl_context       context;
     cl_device_id     device;
     cl_kernel        kernel;
@@ -106,10 +82,10 @@ struct mm_info
     bool discard;
     mm_info(int count)
         : count(count), host(::operator new(count)), device(host),
-        dirty(host), discard(false) {}
+        dirty(host), discard(false) { getAllocator().init(device, count); }
     mm_info(int count, void *src)
         : count(count), host(src), device(::operator new(count)),
-        dirty(host), discard(false) { refresh(); }
+        dirty(host), discard(false) { getAllocator().init(device, count); }
     void synchronize() {
         if (dirty != host) {
             memmove(host, device, count);
@@ -132,9 +108,10 @@ struct mm_info
             refresh();
             dirty = device;
         }
-        getAllocator().setup(s, device, count);
+        getAllocator().append(s, device);
     }
     ~mm_info() {
+        getAllocator().free(device);
         if (host != device) {
             if (!discard)
                 synchronize();
