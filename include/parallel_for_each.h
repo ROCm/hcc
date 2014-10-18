@@ -123,8 +123,14 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
           local_size = NULL;
   }
 
+#if defined(CXXAMP_NV)
+  aloc.write();
+#endif
   err = clEnqueueNDRangeKernel(aloc.queue, aloc.kernel, dim_ext, NULL, ext, local_size, 0, NULL, NULL);
   assert(err == CL_SUCCESS);
+#if defined(CXXAMP_NV)
+  aloc.read();
+#endif
   clFinish(aloc.queue);
 #endif //CXXAMP_ENABLE_HSA
 #endif // __GPU__

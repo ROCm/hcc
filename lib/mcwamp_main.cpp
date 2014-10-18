@@ -37,6 +37,9 @@ void cxxflags(void) {
     std::cout << " -DCXXAMP_ENABLE_HSA=1";
     std::cout << " -I" CMAKE_HSA_ROOT;
 #endif
+    char *NV = getenv("CXXAMP_NV");
+    if (NV != nullptr)
+        std::cout << " -DCXXAMP_NV=1 ";
 
     // clamp
     if (build_mode) {
