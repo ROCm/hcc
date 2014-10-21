@@ -24,8 +24,12 @@ macro(add_mcwamp_library name )
   CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXXAMP_FLAGS} -fPIC -DCXXAMP_NV=1")
   if (CXXAMP_ENABLE_HSA)
+    # add HSA headers
     include_directories(${HSA_ROOT}/include)
     add_definitions("-DCXXAMP_ENABLE_HSA=1")
+  else (CXXAMP_ENABLE_HSA)
+    # add OpenCL headers
+    include_directories("${OPENCL_HEADER}/..")
   endif (CXXAMP_ENABLE_HSA)
   add_library( ${name} ${ARGN} )
 endmacro(add_mcwamp_library name )
