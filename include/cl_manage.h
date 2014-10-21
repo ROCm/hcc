@@ -102,14 +102,14 @@ struct AMPAllocator
         clReleaseProgram(program);
     }
     std::map<void *, cl_mem> mem_info;
-#if defined(CXXAMP_NV)
-    std::map<void *, rw_info> rwq;
-#endif
     cl_context       context;
     cl_device_id     device;
     cl_kernel        kernel;
     cl_command_queue queue;
     cl_program       program;
+#if defined(CXXAMP_NV)
+    std::map<void *, rw_info> rwq;
+#endif
 };
 
 AMPAllocator& getAllocator();
