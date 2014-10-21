@@ -71,6 +71,10 @@ include_directories( ${PROJ_SEARCH_PATH} )
 LINK_DIRECTORIES( ${LLVM_LIB_DIR} )
 
 
+# set as release build by default
+IF (NOT CMAKE_BUILD_TYPE)
+  SET(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build, options are: Release Debug" FORCE)
+ENDIF(NOT CMAKE_BUILD_TYPE)
 
 # Turn on by default for now.
 option(CXXAMP_ENABLE_HSA "Use HSA Runtime as backend" OFF)
