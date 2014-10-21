@@ -9,7 +9,10 @@ execute_process(COMMAND git describe --abbrev=4 --dirty --always --tags
                 OUTPUT_VARIABLE GIT_VERSION
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-set(CLANG_URL "." CACHE STRING "CLANG URL")
+# set default cppamp-ng URL
+IF (NOT CLANG_URL)
+  SET(CLANG_URL "https://bitbucket.org/multicoreware/cppamp-ng.git" CACHE STRING "CLANG URL" FORCE)
+ENDIF (NOT CLANG_URL)
 set(CMAKE_MACOSX_RPATH 1)
 
 include (EnsureLLVMisPresent)
