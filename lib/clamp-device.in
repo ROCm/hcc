@@ -1,7 +1,8 @@
-#!/bin/sh
+#!/bin/bash
 # wraps around commands to produce GPU kernel
 # $1 = input ll name
 # $2 = OpenCL/SPIR/HSAIL kernel file name
+# $3 = (optional) --hsa will trigger HSAIL lowering
 hasSPIR() {
     [ -z "$CLAMP_NOSPIR" -a -x /usr/bin/clinfo ] && ( /usr/bin/clinfo|grep cl_khr_spir > /dev/null )
     return $?
@@ -26,8 +27,8 @@ else
     HSATOOLS=@CMAKE_INSTALL_PREFIX@/bin/clamp-hsatools
 fi
 
-if [ "@CXXAMP_ENABLE_HSA@" = "ON" ]; then
-    if [ "$ALWAYS_MALLOC" = "ON" ]; then
+if [ "$3" == "--hsa" ]; then
+    if [ "$ALWAYS_MALLOC" == "ON" ]; then
       $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
            -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
            -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \

@@ -67,8 +67,15 @@ done
 # combine kernel sections together
 $LINK $LINK_KERNEL_ARGS | $OPT -always-inline - -o $TEMP_DIR/kernel.bc
 
-# lower to SPIR or OCL
-$CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.cl
+# FIXME
+# need to be able to lower kernels to OCL/SPIR/HSAIL, instead of only pick 1 path
+if [ "@HAS_OPENCL@" == "1" ]; then
+  # lower to SPIR or OCL
+  $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.cl
+else
+  # lower to HSAIL
+  $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.cl --hsa
+fi
 
 # build a new kernel object
 pushd . > /dev/null
