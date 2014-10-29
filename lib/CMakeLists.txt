@@ -17,6 +17,13 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-hsatools
     ${CMAKE_CURRENT_BINARY_DIR}/clamp-hsail
     DESTINATION bin)
 
+if (HAS_OPENCL EQUAL 1)
+# TBD add install commands for OpenCL-specific files here
+MESSAGE(STATUS "OpenCL available, going to build OpenCL C++AMP Runtime")
+else (HAS_OPENCL EQUAL 1)
+MESSAGE(STATUS "OpenCL NOT available, NOT going to build OpenCL C++AMP Runtime")
+endif (HAS_OPENCL EQUAL 1)
+
 if (HAS_HSA EQUAL 1)
 add_mcwamp_library(hsacontext HSAContextKaveri.cpp elf_utils.cpp)
 install(TARGETS hsacontext
