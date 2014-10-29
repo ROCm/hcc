@@ -73,13 +73,13 @@ class _data_host: public std::shared_ptr<T> {
 //enum used to track the cache state.
 //HOST_OWNED: Most up to date version in the home location and will need to
 //be copied back to the CL buffer before calling a kernel.
-//CL_OWNED: data was used in a kernel invocation and is presumed to have
+//HSA_OWNED: data was used in a kernel invocation and is presumed to have
 //been dirtied by it. Most up to date version will be in the CL buffer.
 //SHARED: Data has been copied from the CL buffer back to the home location
 //but has not been modified yet. Both buffers have the most up to date version.
 namespace { typedef enum {
 HOST_OWNED,
-CL_OWNED,
+HSA_OWNED,
 SHARED
 } cache_state; }
 
@@ -99,7 +99,7 @@ class _data_host_view {
   __attribute__((cpu)) size_t buffer_size;
 
  public:
-  std::shared_ptr<nc_T> get_gmac_buffer() const { return gmac_buffer; }
+  std::shared_ptr<nc_T> get_cl_buffer() const { return cl_buffer; }
   T *get_home_ptr() const {
     if (home_ptr) {
       synchronize();
@@ -124,14 +124,14 @@ class _data_host_view {
 
   __attribute__((annotate("user_deserialize")))
   _data_host_view(T* cache) :
-   gmac_buffer((nc_T*)(cache)), home_ptr(nullptr), state_ptr(new cache_state), buffer_size(0) {
-    *state_ptr = GMAC_OWNED;
+   cl_buffer((nc_T*)(cache)), home_ptr(nullptr), state_ptr(new cache_state), buffer_size(0) {
+    *state_ptr = HSA_OWNED;
   };
 
   template <class Deleter>
   _data_host_view(nc_T* cache, Deleter d) :
    cl_buffer(cache, d), home_ptr(nullptr), state_ptr(new cache_state), buffer_size(0) {
-    *state_ptr = CL_OWNED;
+    *state_ptr = HSA_OWNED;
   }
 
   _data_host_view(const _data_host_view<T> &other) :
@@ -140,17 +140,17 @@ class _data_host_view {
 
   template <class = typename std::enable_if<!std::is_const<T>::value>::type>
   _data_host_view(const _data_host_view<const T> &other) :
-    gmac_buffer(other.gmac_buffer), state_ptr(other.state_ptr),
+    cl_buffer(other.cl_buffer), state_ptr(other.state_ptr),
     home_ptr(const_cast<T*>(other.home_ptr)), buffer_size(other.buffer_size) {}
 
   template <typename ElementType>
   _data_host_view(const _data_host_view<ElementType> &other) :
-    gmac_buffer(std::static_pointer_cast<nc_T>(std::static_pointer_cast<void>(other.get_gmac_buffer()))), state_ptr(other.get_state_ptr()),
+    cl_buffer(std::static_pointer_cast<nc_T>(std::static_pointer_cast<void>(other.get_cl_buffer()))), state_ptr(other.get_state_ptr()),
     home_ptr(reinterpret_cast<T *>(other.get_home_ptr())), buffer_size(other.get_buffer_size()) {}
 
   template <typename ElementType>
   _data_host_view(const _data_host_view<const ElementType> &other) :
-    gmac_buffer(std::static_pointer_cast<T>(std::static_pointer_cast<void>(other.get_gmac_buffer()))), state_ptr(other.get_state_ptr()),
+    cl_buffer(std::static_pointer_cast<T>(std::static_pointer_cast<void>(other.get_cl_buffer()))), state_ptr(other.get_state_ptr()),
     home_ptr(reinterpret_cast<T *>(const_cast<T*>(other.get_home_ptr()))), buffer_size(other.get_buffer_size()) {}
 
   _data_host_view(const _data_host<T> &other) :
@@ -178,7 +178,7 @@ class _data_host_view {
   void refresh() const { 
 //    *state_ptr = HOST_OWNED; 
     if (home_ptr) {
-      memcpy(reinterpret_cast<void*>(gmac_buffer.get()),
+      memcpy(reinterpret_cast<void*>(cl_buffer.get()),
              reinterpret_cast<const void*>(home_ptr), buffer_size);
     }
   }
@@ -186,7 +186,7 @@ class _data_host_view {
 //If the cache is currently owned by the cl buffer, copy it back to the host
 //buffer and change the state to shared.
   void synchronize() const {
-    if (*state_ptr == CL_OWNED) {
+    if (*state_ptr == HSA_OWNED) {
       memcpy(const_cast<void*>(reinterpret_cast<const void*>(home_ptr)),
               reinterpret_cast<const void*>(cl_buffer.get()), buffer_size);
       *state_ptr = SHARED;
@@ -238,7 +238,7 @@ class _data_host_view {
     if (home_ptr && *state_ptr == HOST_OWNED) {
       memcpy(reinterpret_cast<void*>(cl_buffer.get()),
               reinterpret_cast<const void*>(home_ptr), buffer_size);
-      *state_ptr = CL_OWNED;
+      *state_ptr = HSA_OWNED;
     }
     s.AppendPtr((const void *)cl_buffer.get());
   }

@@ -7,7 +7,9 @@
 
 #pragma once
 
+#if !defined(CXXAMP_ENABLE_HSA)
 #include <CL/opencl.h>
+#endif
 
 namespace Concurrency {
 #if defined(CXXAMP_ENABLE_HSA)
@@ -22,10 +24,10 @@ class Serialize {
   typedef void *hsa_kernel;
   Serialize(hsa_kernel k): k_(k) {}
   void AppendPtr(const void *ptr) {
-    CLAMP::HSAPushArg(k_, sz, s);
+    CLAMP::HSAPushPointer(k_, const_cast<void*>(ptr));
   }
   void Append(size_t sz, const void *s) {
-    CLAMP::HSAPushPointer(k_, const_cast<void*>(ptr));
+    CLAMP::HSAPushArg(k_, sz, s);
   }
 #else
   Serialize(cl_kernel k): k_(k), current_idx_(0) {}

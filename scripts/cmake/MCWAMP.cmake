@@ -26,7 +26,7 @@ macro(add_mcwamp_library name )
   if (HAS_HSA EQUAL 1)
     # add HSA headers
     include_directories(${HSA_HEADER})
-    add_definitions("-DCXXAMP_ENABLE_HSA=1")
+    #add_definitions("-DCXXAMP_ENABLE_HSA=1")
   else (HAS_HSA EQUAL 1)
     # add OpenCL headers
     include_directories("${OPENCL_HEADER}/..")
@@ -36,7 +36,7 @@ endmacro(add_mcwamp_library name )
 
 macro(add_mcwamp_executable name )
   if (HAS_HSA EQUAL 1)
-    add_definitions("-DCXXAMP_ENABLE_HSA=1")
+    #add_definitions("-DCXXAMP_ENABLE_HSA=1")
   endif (HAS_HSA EQUAL 1)
   link_directories(${LIBCXX_LIB_DIR} ${LIBCXXRT_LIB_DIR})
   CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)

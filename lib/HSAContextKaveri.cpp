@@ -83,7 +83,7 @@ bool FindSymbolOffset(hsa_ext_brig_module_t* brig_module,
     while (code_offset != code_section_header->byte_count) {
         if (code_entry->kind == BRIG_KIND_DIRECTIVE_KERNEL) {
             //Now find the data in the data section
-            BrigDirectiveKernel* directive_kernel = (BrigDirectiveKernel*) (code_entry);
+            BrigDirectiveExecutable* directive_kernel = (BrigDirectiveExecutable*) (code_entry);
             BrigDataOffsetString32_t data_name_offset = directive_kernel->name;
             BrigData* data_entry = (BrigData*)((char*) data_section_header + data_name_offset);
             size_t data_entry_size = strlen((char*)data_entry->bytes);
@@ -357,7 +357,7 @@ private:
          //printf("ring door bell\n");
 
          // Ring door bell
-         hsa_signal_store_relaxed(commandQueue->doorbell_signal, index+1);
+         hsa_signal_store_relaxed(commandQueue->doorbell_signal, index);
 
          isDispatched = true;
 

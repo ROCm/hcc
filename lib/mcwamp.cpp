@@ -7,7 +7,9 @@
 
 #include <amp.h>
 #include <map>
+#if !defined(CXXAMP_ENABLE_HSA)
 #include <CL/opencl.h>
+#endif
 namespace Concurrency {
 
 // initialize static class members
@@ -19,11 +21,13 @@ std::shared_ptr<accelerator> accelerator::_gpu_accelerator = std::make_shared<ac
 std::shared_ptr<accelerator> accelerator::_cpu_accelerator = std::make_shared<accelerator>(accelerator::cpu_accelerator);
 std::shared_ptr<accelerator> accelerator::_default_accelerator = nullptr;
 
+#if !defined(CXXAMP_ENABLE_HSA)
 AMPAllocator& getAllocator()
 {
     static AMPAllocator amp;
     return amp;
 }
+#endif
 
 } // namespace Concurrency
 
@@ -42,6 +46,7 @@ extern "C" char * kernel_size_[] asm ("_binary_kernel_cl_size") __attribute__((w
 std::vector<std::string> __mcw_kernel_names;
 namespace Concurrency {
 namespace CLAMP {
+#if !defined(CXXAMP_ENABLE_HSA)
     static inline void getKernelNames(cl_program& prog) {
         std::vector<std::string> n;
         cl_uint kernel_num = 0;
@@ -97,6 +102,7 @@ namespace CLAMP {
             }
         }
     }
+#endif
 // Levenshtein Distance to measure the difference of two sequences
 // The shortest distance it returns the more likely the two sequences are equal
 static inline int ldistance(const std::string source, const std::string target)
@@ -169,11 +175,9 @@ void MatchKernelNames(std::string& fixed_name) {
 }
 }
 namespace Concurrency { namespace CLAMP {
+#if !defined(CXXAMP_ENABLE_HSA)
     void CompileKernels(cl_program& program, cl_context& context, cl_device_id& device)
     {
-#ifdef CXXAMP_ENABLE_HSA
-        assert(0 && "Unsupported function");
-#else
         cl_int err;
         if (!__mcw_cxxamp_compiled) {
 #ifdef __APPLE__
@@ -216,9 +220,9 @@ namespace Concurrency { namespace CLAMP {
             __mcw_cxxamp_compiled = true;
             free(kernel_source);
             getKernelNames(program);
-#endif
         }
     }
+#endif
 
 } // namespce CLAMP
 } // namespace Concurrency

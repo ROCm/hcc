@@ -1,3 +1,11 @@
+if (HAS_OPENCL EQUAL 1)
+  include_directories(${OPENCL_HEADER}/../)
+endif (HAS_OPENCL EQUAL 1)
+
+if (HAS_HSA EQUAL 1)
+  include_directories(${HSA_HEADER} ${LIBHSAIL_HEADER} ${LIBHSAIL_HEADER}/generated)
+endif (HAS_HSA EQUAL 1)
+
 add_mcwamp_library(mcwamp mcwamp.cpp)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 add_mcwamp_executable(clamp-config mcwamp_main.cpp)
