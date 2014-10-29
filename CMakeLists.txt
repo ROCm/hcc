@@ -107,7 +107,7 @@ set(USE_OPENCL ON CACHE BOOL "GMAC: Enable OpenCL")
 set(USE_LITE OFF CACHE BOOL "GMAC: Disable Lite")
 set(USE_CUDA OFF CACHE BOOL "GMAC: Disable CUDA")
 
-find_path(OPENCL_HEADER cl.h ${OPENCL_HEADER_DIR} PATHS /usr/include/CL /opt/AMDAPP/include/CL )
+find_path(OPENCL_HEADER cl.h ${OPENCL_HEADER_DIR} PATHS /usr/include/CL /opt/AMDAPP/include/CL /usr/local/cuda/include/CL )
 if (NOT APPLE AND NOT OPENCL_HEADER)
   MESSAGE(FATAL_ERROR "OpenCL header not found. Use -DOPENCL_HEADER_DIR=<path_to_cl.h>.")
 endif(NOT APPLE AND NOT OPENCL_HEADER)
