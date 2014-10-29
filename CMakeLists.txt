@@ -79,45 +79,81 @@ IF (NOT CMAKE_BUILD_TYPE)
   SET(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build, options are: Release Debug" FORCE)
 ENDIF(NOT CMAKE_BUILD_TYPE)
 
-# Turn on by default for now.
-option(CXXAMP_ENABLE_HSA "Use HSA Runtime as backend" OFF)
-
-if (CXXAMP_ENABLE_HSA)
-# A bunch of external dependencies
-set (AMDOCLTOOLS_ROOT "/opt/amd/"
-        CACHE PATH "AMD OpenCL bin release path")
-set (HSA_ROOT "/opt/hsa/"
-        CACHE PATH "HSA runtime release path")
-find_program (HSAILASM NAME hsailasm PATHS
-        ${AMDOCLTOOLS_ROOT}/bin
-        NO_DEFAULT_PATH)
-# clc.exe and AMD OpenCL library builtins
-find_program (AMD_CLC NAME clc PATHS
-        "${AMDOCLTOOLS_ROOT}/bin"
-        NO_DEFAULT_PATH)
-endif (CXXAMP_ENABLE_HSA)
-
-#set(OPENCL_HEADER_DIR "/usr/include/CL" CACHE PATH "OpenCL Header Directory")
-#set(OPENCL_LIBRARY_DIR "/usr/lib64/" CACHE PATH "OpenCL Library Directory")
-
 SET(FOO_BUILD_SHARED OFF CACHE BOOL "Build libfoo shared library")
-set(USE_OPENCL ON CACHE BOOL "Enable OpenCL")
 
-find_path(OPENCL_HEADER cl.h ${OPENCL_HEADER_DIR} PATHS /usr/include/CL /opt/AMDAPP/include/CL /usr/local/cuda/include/CL )
+#################
+# Detect OpenCL
+#################
+
+find_path(OPENCL_HEADER cl.h PATHS ${OPENCL_HEADER_DIR} /usr/include/CL /opt/AMDAPP/include/CL /usr/local/cuda/include/CL )
 if (NOT APPLE AND NOT OPENCL_HEADER)
-  MESSAGE(FATAL_ERROR "OpenCL header not found. Use -DOPENCL_HEADER_DIR=<path_to_cl.h>.")
+  MESSAGE("OpenCL header not found. Use -DOPENCL_HEADER_DIR=<path_to_cl.h>.")
 endif(NOT APPLE AND NOT OPENCL_HEADER)
 
-find_library(OPENCL_LIBRARY OpenCL ${OPENCL_LIBRARY_DIR}/ PATHS /usr/lib /opt/AMDAPP/lib/x86_64 /usr/local/cuda/lib64 )
+find_library(OPENCL_LIBRARY OpenCL PATHS ${OPENCL_LIBRARY_DIR} /usr/lib /opt/AMDAPP/lib/x86_64 /usr/local/cuda/lib64 )
 if (NOT APPLE AND NOT OPENCL_LIBRARY)
-  MESSAGE(FATAL_ERROR "OpenCL library not found. Use -DOPENCL_LIBRARY_DIR=<path_to_libOpenCL.so>.")
+  MESSAGE("OpenCL library not found. Use -DOPENCL_LIBRARY_DIR=<path_to_libOpenCL.so>.")
 endif(NOT APPLE AND NOT OPENCL_LIBRARY)
 
+# display OpenCL information
 MESSAGE("")
 MESSAGE("OPENCL INFORMATION:")
 MESSAGE("OPENCL_HEADER_DIR = ${OPENCL_HEADER_DIR}, actually found at: ${OPENCL_HEADER}")
 MESSAGE("OPENCL_LIBRARY_DIR = ${OPENCL_LIBRARY_DIR}, actually found at: ${OPENCL_LIBRARY}")
 MESSAGE("")
+
+if ((NOT OPENCL_HEADER) OR (NOT OPENCL_LIBRARY))
+  set(HAS_OPENCL 0)
+else ((NOT OPENCL_HEADER) OR (NOT OPENCL_LIBRARY))
+  set(HAS_OPENCL 1)
+endif ((NOT OPENCL_HEADER) OR (NOT OPENCL_LIBRARY))
+
+#################
+# Detect HSA
+#################
+
+# HSA external dependencies
+set (HSAIL_ROOT "/opt/amd"
+        CACHE PATH "AMD HSAIL compiler path")
+set (HSA_ROOT "/opt/hsa"
+        CACHE PATH "HSA runtime path")
+
+find_path(HSA_HEADER hsa.h PATHS ${HSA_HEADER_DIR} ${HSA_ROOT}/include)
+if (NOT HSA_HEADER)
+  MESSAGE("HSA header not found. Use -DHSA_HEADER_DIR=<path_to_hsa.h>.")
+endif (NOT HSA_HEADER)
+
+find_library(HSA_LIBRARY hsa-runtime64 PATHS ${HSA_LIBRARY_DIR} ${HSA_ROOT}/lib)
+if (NOT HSA_LIBRARY)
+  MESSAGE("HSA library not found. Use -DHSA_LIBRARY_DIR=<path_to_libhsaruntime64.so>.")
+endif (NOT HSA_LIBRARY)
+
+find_program(HSAIL_COMPILER hsailasm PATHS ${HSAIL_COMPILER_DIR} ${HSAIL_ROOT}/bin)
+if (NOT HSAIL_COMPILER)
+  MESSAGE("HSAIL compiler not found. Use -DHSAIL_COMPILER_DIR=<path_to_hsailasm>.")
+endif (NOT HSAIL_COMPILER)
+
+
+# display HSA information
+MESSAGE("")
+MESSAGE("HSA INFORMATION:")
+MESSAGE("HSA_HEADER_DIR = ${HSA_HEADER_DIR}, actually found at: ${HSA_HEADER}")
+MESSAGE("HSA_LIBRARY_DIR = ${HSA_LIBRARY_DIR}, actually found at: ${HSA_LIBRARY}")
+MESSAGE("HSAIL_COMPILER_DIR = ${HSAIL_COMPILER_DIR}, actually found at: ${HSAIL_COMPILER}")
+MESSAGE("")
+
+if ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT HSAIL_COMPILER))
+  set(HSA_HSA 0)
+else ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT HSAIL_COMPILER))
+  set(HAS_HSA 1)
+endif ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT HSAIL_COMPILER))
+
+#################
+# Detect if we have at least one of OpenCL or HSA available
+#################
+if ((HAS_OPENCL EQUAL 0) AND (HAS_HSA EQUAL 0))
+  MESSAGE(FATAL_ERROR "Neither OpenCL nor HSA is available on the system!")
+endif ((HAS_OPENCL EQUAL 0) AND (HAS_HSA EQUAL 0))
 
 
 add_subdirectory(compiler)

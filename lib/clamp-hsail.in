@@ -8,8 +8,8 @@ else
     OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
     SPIRIFY=@CMAKE_INSTALL_PREFIX@/bin/clamp-spirify
 fi
-HSAIL_LLC=@AMDOCLTOOLS_ROOT@/bin/llc
-HSAIL_ASM=@AMDOCLTOOLS_ROOT@/bin/hsailasm
+HSAIL_LLC=@HSAIL_ROOT@/bin/llc
+HSAIL_ASM=@HSAIL_ROOT@/bin/hsailasm
 
 INPUT=$1
 SUFFIX=ll
