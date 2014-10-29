@@ -19,8 +19,6 @@ extern void HSALaunchKernel(void *ker, size_t, size_t *global, size_t *local);
 extern std::future<void> HSALaunchKernelAsync(void *ker, size_t, size_t *global, size_t *local);
 extern void MatchKernelNames( std::string & );
 extern void CompileKernels(cl_program& program, cl_context& context, cl_device_id& device);
-extern void *CreateOkraKernel(std::string);
-extern void OkraLaunchKernel(void *ker, size_t, size_t *global, size_t *local);
 }
 static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu) {
     std::string s(f);
