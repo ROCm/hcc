@@ -14,6 +14,7 @@
 /* Flag set by ‘--verbose’. */
 static int verbose_flag;
 static bool build_mode = false, install_mode = true; // use install mode by default
+static bool opencl_mode = true, hsa_mode = false; // use opencl mode by default
 
 void replace(std::string& str,
         const std::string& from, const std::string& to) {
@@ -29,16 +30,23 @@ void cxxflags(void) {
         std::cerr << "Please specify --install or --build mode before flags\n";
         abort();
     }
+
     // Common options
     std::cout << "-std=c++amp";
 
-#if defined(CXXAMP_ENABLE_HSA)
-    std::cout << " -DCXXAMP_ENABLE_HSA=1";
-    std::cout << " -I" CMAKE_HSA_ROOT;
-#endif
-    char *NV = getenv("CXXAMP_NV");
-    if (NV != nullptr)
+    if (hsa_mode) {
+      // HSA header
+      std::cout << " -DCXXAMP_ENABLE_HSA=1";
+      std::cout << " -I" CMAKE_HSA_ROOT;
+    }
+
+    if (opencl_mode) {
+      // OpenCL header
+      std::cout << " -I" CMAKE_OPENCL_INC;
+      char *NV = getenv("CXXAMP_NV");
+      if (NV != nullptr)
         std::cout << " -DCXXAMP_NV=1 ";
+    }
 
     // clamp
     if (build_mode) {
@@ -79,18 +87,23 @@ void ldflags(void) {
 #endif
     }
 #ifndef __APPLE__
-#if defined(CXXAMP_ENABLE_HSA)
-    std::cout << " -Wl,--rpath=" CMAKE_HSA_LIB;
-    std::cout << " -L" CMAKE_HSA_LIB;
-    std::cout << " -Wl,--whole-archive -lhsacontext -Wl,--no-whole-archive ";
-    std::cout << " -lelf -lhsa-runtime64 ";
-    std::cout << " " CMAKE_HSA_LIB "/libhsail.a ";
-    std::cout << " -Wl,--unresolved-symbols=ignore-in-shared-libs ";
-#else
-    std::cout << " -lOpenCL";
-#endif
+    if (hsa_mode) {
+      // HSA libraries
+      std::cout << " -Wl,--rpath=" CMAKE_HSA_LIB;
+      std::cout << " -L" CMAKE_HSA_LIB;
+      std::cout << " -Wl,--whole-archive -lhsacontext -Wl,--no-whole-archive ";
+      std::cout << " -lelf -lhsa-runtime64 ";
+      std::cout << " " CMAKE_HSA_LIB "/libhsail.a ";
+      std::cout << " -Wl,--unresolved-symbols=ignore-in-shared-libs ";
+    }
 
-    std::cout << " -lc++ -lcxxrt -ldl -lpthread ";
+    if (opencl_mode) {
+      // OpenCL library
+      std::cout << " -L" CMAKE_OPENCL_LIB;
+      std::cout << " -lOpenCL";
+    }
+
+    std::cout << " -lc++ -lcxxrt -ldl ";
     std::cout << "-Wl,--whole-archive -lmcwamp -Wl,--no-whole-archive ";
 
 #else // __APPLE__
@@ -118,6 +131,8 @@ int main (int argc, char **argv) {
             {"install",  no_argument,       0, 'i'},
             {"ldflags",  no_argument,       0, 'l'},
             {"prefix",  no_argument,       0, 'p'},
+            {"opencl",  no_argument,       0, 'o'},
+            {"hsa",     no_argument,       0, 'h'},
             {0, 0, 0, 0}
         };
         /* getopt_long stores the option index here. */
@@ -159,6 +174,16 @@ int main (int argc, char **argv) {
                 build_mode = false;
                 install_mode = true;
                 break;
+
+            case 'o':   // --opencl
+                opencl_mode = true;
+                hsa_mode = false;
+                break;
+            case 'h':   // --hsa
+                opencl_mode = false;
+                hsa_mode = true;
+                break;
+
             case '?':
                 /* getopt_long already printed an error message. */
                 break;
