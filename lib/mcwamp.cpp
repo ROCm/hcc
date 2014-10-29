@@ -192,16 +192,26 @@ namespace Concurrency { namespace CLAMP {
                 // Bitcode magic number. Assuming it's in SPIR
                 const unsigned char *ks = (const unsigned char *)kernel_source;
                 program = clCreateProgramWithBinary(context, 1, &device, &kernel_size, &ks, NULL, &err);
-                assert(err == CL_SUCCESS);
-                err = clBuildProgram(program, 1, &device, NULL, NULL, NULL);
-                assert(err == CL_SUCCESS);
+                if (err == CL_SUCCESS)
+                    err = clBuildProgram(program, 1, &device, NULL, NULL, NULL);
             } else {
                 // in OpenCL-C
                 const char *ks = (const char *)kernel_source;
                 program = clCreateProgramWithSource(context, 1, &ks, &kernel_size, &err);
+                if (err == CL_SUCCESS)
+                    err = clBuildProgram(program, 1, &device, "-D__ATTRIBUTE_WEAK__=", NULL, NULL);
+            }
+            if (err != CL_SUCCESS) {
+                size_t len;
+                err = clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &len);
                 assert(err == CL_SUCCESS);
-                err = clBuildProgram(program, 1, &device, "-D__ATTRIBUTE_WEAK__=", NULL, NULL);
+                char *msg = new char[len + 1];
+                err = clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, len, msg, NULL);
                 assert(err == CL_SUCCESS);
+                msg[len] = '\0';
+                std::cerr << msg;
+                delete [] msg;
+                exit(1);
             }
             __mcw_cxxamp_compiled = true;
             free(kernel_source);
