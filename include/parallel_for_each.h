@@ -10,13 +10,18 @@
 #include <future>
 #include <utility>
 #include <amp.h>
+
+#if !defined(CXXAMP_ENABLE_HSA)
 #include <cl_manage.h>
+#endif
 
 namespace Concurrency {
 namespace CLAMP {
+#if defined(CXXAMP_ENABLE_HSA)
 extern void *CreateHSAKernel(std::string);
 extern void HSALaunchKernel(void *ker, size_t, size_t *global, size_t *local);
 extern std::future<void> HSALaunchKernelAsync(void *ker, size_t, size_t *global, size_t *local);
+#endif
 extern void MatchKernelNames( std::string & );
 extern void CompileKernels(cl_program& program, cl_context& context, cl_device_id& device);
 }
