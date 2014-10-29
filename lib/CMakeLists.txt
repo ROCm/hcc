@@ -13,14 +13,18 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-device
     ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-link
     DESTINATION bin)
 
-if (CXXAMP_ENABLE_HSA)
+install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-hsatools
+    ${CMAKE_CURRENT_BINARY_DIR}/clamp-hsail
+    DESTINATION bin)
+
+if (HAS_HSA EQUAL 1)
 add_mcwamp_library(hsacontext HSAContextKaveri.cpp elf_utils.cpp)
 install(TARGETS hsacontext
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib)
-install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-hsatools
-    ${CMAKE_CURRENT_BINARY_DIR}/clamp-hsail
-    DESTINATION bin)
-endif (CXXAMP_ENABLE_HSA)
+MESSAGE(STATUS "HSA available, going to build HSA C++AMP Runtime")
+else (HAS_HSA EQUAL 1)
+MESSAGE(STATUS "HSA NOT available, NOT going to build HSA C++AMP Runtime")
+endif (HAS_HSA EQUAL 1)
 
 install(FILES opencl_math.bc DESTINATION lib)
