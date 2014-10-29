@@ -14,7 +14,6 @@
 /* Flag set by ‘--verbose’. */
 static int verbose_flag;
 static bool build_mode = false, install_mode = true; // use install mode by default
-static bool gpu_path = false, cpu_path = false;
 
 void replace(std::string& str,
         const std::string& from, const std::string& to) {
@@ -51,20 +50,6 @@ void cxxflags(void) {
         std::cout << " -I" CMAKE_INSTALL_LIBCXX_INC;
     } else {
         assert(0 && "Unreacheable!");
-    }
-
-    if (gpu_path) {
-#if !defined(CXXAMP_ENABLE_HSA)
-        std::cout << " -D__GPU__=1 -Xclang -famp-is-device -fno-builtin -fno-common -m32 -O2";
-#else
-        std::cout << " -D__GPU__=1 -Xclang -famp-is-device -fno-builtin -fno-common -m64 -O2";
-#endif
-    } else if (cpu_path) {
-#if !defined(CXXAMP_ENABLE_HSA)
-        std::cout << " -D__CPU__=1";
-#else
-        std::cout << " -D__CPU__=1";
-#endif
     }
 
     std::cout << std::endl;
@@ -128,8 +113,6 @@ int main (int argc, char **argv) {
             {"brief",   no_argument,       &verbose_flag, 0},
             /* These options don't set a flag.
                We distinguish them by their indices. */
-            {"gpu",      no_argument,       0, 'g'},
-            {"cpu",      no_argument,       0, 'c'},
             {"cxxflags", no_argument,       0, 'a'},
             {"build",    no_argument,       0, 'b'},
             {"install",  no_argument,       0, 'i'},
@@ -175,14 +158,6 @@ int main (int argc, char **argv) {
             case 'i':   // --install
                 build_mode = false;
                 install_mode = true;
-                break;
-            case 'g':   // --gpu
-                gpu_path = true;
-                cpu_path = false;
-                break;
-            case 'c':   // --cpu
-                gpu_path = false;
-                cpu_path = true;
                 break;
             case '?':
                 /* getopt_long already printed an error message. */
