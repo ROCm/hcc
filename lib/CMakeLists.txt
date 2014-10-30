@@ -1,11 +1,20 @@
+####################
+# OpenCL headers
+####################
 if (HAS_OPENCL EQUAL 1)
   include_directories(${OPENCL_HEADER}/../)
 endif (HAS_OPENCL EQUAL 1)
 
+####################
+# HSA headers
+####################
 if (HAS_HSA EQUAL 1)
   include_directories(${HSA_HEADER} ${LIBHSAIL_HEADER} ${LIBHSAIL_HEADER}/generated)
 endif (HAS_HSA EQUAL 1)
 
+####################
+# C++AMP runtime (mcwamp) and C++AMP config (clamp-config)
+####################
 add_mcwamp_library(mcwamp mcwamp.cpp)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 add_mcwamp_executable(clamp-config mcwamp_main.cpp)
@@ -14,6 +23,10 @@ install(TARGETS mcwamp clamp-config
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
     )
+
+####################
+# C++AMP tools
+####################
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-device
     ${CMAKE_CURRENT_BINARY_DIR}/clamp-spirify
     ${CMAKE_CURRENT_BINARY_DIR}/clamp-embed
@@ -21,20 +34,34 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-device
     ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-link
     DESTINATION bin)
 
+####################
+# C++AMP tools (HSA-specific)
+####################
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-hsatools
     ${CMAKE_CURRENT_BINARY_DIR}/clamp-hsail
     DESTINATION bin)
 
+####################
+# C++AMP runtime (OpenCL implementation)
+####################
 if (HAS_OPENCL EQUAL 1)
-# TBD add install commands for OpenCL-specific files here
+# TBD install commands for OpenCL-specific files here
+add_mcwamp_library_opencl(mcwamp_opencl mcwamp_opencl.cpp)
+install(TARGETS mcwamp_opencl
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib)
 MESSAGE(STATUS "OpenCL available, going to build OpenCL C++AMP Runtime")
 else (HAS_OPENCL EQUAL 1)
 MESSAGE(STATUS "OpenCL NOT available, NOT going to build OpenCL C++AMP Runtime")
 endif (HAS_OPENCL EQUAL 1)
 
+####################
+# C++AMP runtime (HSA implementation)
+####################
 if (HAS_HSA EQUAL 1)
-add_mcwamp_library(hsacontext HSAContextKaveri.cpp elf_utils.cpp)
-install(TARGETS hsacontext
+# TBD install commands for HSA-specific files here
+add_mcwamp_library_hsa(mcwamp_hsa mcwamp_hsa.cpp HSAContextKaveri.cpp elf_utils.cpp)
+install(TARGETS mcwamp_hsa
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib)
 MESSAGE(STATUS "HSA available, going to build HSA C++AMP Runtime")
@@ -42,4 +69,7 @@ else (HAS_HSA EQUAL 1)
 MESSAGE(STATUS "HSA NOT available, NOT going to build HSA C++AMP Runtime")
 endif (HAS_HSA EQUAL 1)
 
+####################
+# Math builtin bitcode (SPIR)
+####################
 install(FILES opencl_math.bc DESTINATION lib)

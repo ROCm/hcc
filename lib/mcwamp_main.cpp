@@ -91,7 +91,7 @@ void ldflags(void) {
       // HSA libraries
       std::cout << " -Wl,--rpath=" CMAKE_HSA_LIB;
       std::cout << " -L" CMAKE_HSA_LIB;
-      std::cout << " -Wl,--whole-archive -lhsacontext -Wl,--no-whole-archive ";
+      std::cout << " -Wl,--whole-archive -lmcwamp_hsa -Wl,--no-whole-archive ";
       std::cout << " -lelf -lhsa-runtime64 ";
       std::cout << " " CMAKE_HSA_LIB "/libhsail.a ";
       std::cout << " -Wl,--unresolved-symbols=ignore-in-shared-libs ";
@@ -100,6 +100,7 @@ void ldflags(void) {
     if (opencl_mode) {
       // OpenCL library
       std::cout << " -L" CMAKE_OPENCL_LIB;
+      std::cout << " -Wl,--whole-archive -lmcwamp_opencl -Wl,--no-whole-archive ";
       std::cout << " -lOpenCL";
     }
 

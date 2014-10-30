@@ -20,6 +20,10 @@ seT(MCWAMP_INC_DIR "${PROJECT_SOURCE_DIR}/include")
 set(CXXAMP_FLAGS "-I${GTEST_INC_DIR} -I${LIBCXX_INC_DIR} -I${MCWAMP_INC_DIR} -stdlib=libc++ -std=c++amp -DGTEST_HAS_TR1_TUPLE=0")
 
 # STATIC ONLY FOR NOW.
+
+####################
+# C++AMP runtime interface (mcwamp) 
+####################
 macro(add_mcwamp_library name )
   CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXXAMP_FLAGS} -fPIC -DCXXAMP_NV=1")
@@ -34,10 +38,32 @@ macro(add_mcwamp_library name )
   add_library( ${name} ${ARGN} )
 endmacro(add_mcwamp_library name )
 
+####################
+# C++AMP runtime (OpenCL implementation) 
+####################
+macro(add_mcwamp_library_opencl name )
+  CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXXAMP_FLAGS} -fPIC -DCXXAMP_NV=1")
+  # add OpenCL headers
+  include_directories("${OPENCL_HEADER}/..")
+  add_library( ${name} ${ARGN} )
+endmacro(add_mcwamp_library_opencl name )
+
+####################
+# C++AMP runtime (HSA implementation) 
+####################
+macro(add_mcwamp_library_hsa name )
+  CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXXAMP_FLAGS} -fPIC")
+  # add HSA headers
+  include_directories(${HSA_HEADER} ${LIBHSAIL_HEADER} ${LIBHSAIL_HEADER}/generated)
+  add_library( ${name} ${ARGN} )
+endmacro(add_mcwamp_library_hsa name )
+
+####################
+# C++AMP config (clamp-config)
+####################
 macro(add_mcwamp_executable name )
-  if (HAS_HSA EQUAL 1)
-    #add_definitions("-DCXXAMP_ENABLE_HSA=1")
-  endif (HAS_HSA EQUAL 1)
   link_directories(${LIBCXX_LIB_DIR} ${LIBCXXRT_LIB_DIR})
   CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
   set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")

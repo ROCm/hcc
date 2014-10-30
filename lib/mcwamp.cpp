@@ -21,14 +21,6 @@ std::shared_ptr<accelerator> accelerator::_gpu_accelerator = std::make_shared<ac
 std::shared_ptr<accelerator> accelerator::_cpu_accelerator = std::make_shared<accelerator>(accelerator::cpu_accelerator);
 std::shared_ptr<accelerator> accelerator::_default_accelerator = nullptr;
 
-#if !defined(CXXAMP_ENABLE_HSA)
-AMPAllocator& getAllocator()
-{
-    static AMPAllocator amp;
-    return amp;
-}
-#endif
-
 } // namespace Concurrency
 
 namespace {
