@@ -17,7 +17,7 @@ set(GTEST_INC_DIR "${PROJECT_SOURCE_DIR}/utils")
 seT(MCWAMP_INC_DIR "${PROJECT_SOURCE_DIR}/include")
 
 # CXXAMPFLAGS
-set(CXXAMP_FLAGS "-I${GTEST_INC_DIR} -I${LIBCXX_INC_DIR} -I${MCWAMP_INC_DIR} -stdlib=libc++ -std=c++amp -DGTEST_HAS_TR1_TUPLE=0")
+set(CXXAMP_FLAGS "-I${GTEST_INC_DIR} -I${LIBCXX_INC_DIR} -I${MCWAMP_INC_DIR} -stdlib=libc++ -std=c++amp -DGTEST_HAS_TR1_TUPLE=0 -fPIC -DCXXAMP_NV=1")
 
 # STATIC ONLY FOR NOW.
 
@@ -26,15 +26,7 @@ set(CXXAMP_FLAGS "-I${GTEST_INC_DIR} -I${LIBCXX_INC_DIR} -I${MCWAMP_INC_DIR} -st
 ####################
 macro(add_mcwamp_library name )
   CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXXAMP_FLAGS} -fPIC -DCXXAMP_NV=1")
-  if (HAS_HSA EQUAL 1)
-    # add HSA headers
-    include_directories(${HSA_HEADER})
-    #add_definitions("-DCXXAMP_ENABLE_HSA=1")
-  else (HAS_HSA EQUAL 1)
-    # add OpenCL headers
-    include_directories("${OPENCL_HEADER}/..")
-  endif (HAS_HSA EQUAL 1)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXXAMP_FLAGS}")
   add_library( ${name} ${ARGN} )
 endmacro(add_mcwamp_library name )
 
@@ -43,7 +35,7 @@ endmacro(add_mcwamp_library name )
 ####################
 macro(add_mcwamp_library_opencl name )
   CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXXAMP_FLAGS} -fPIC -DCXXAMP_NV=1")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXXAMP_FLAGS}")
   # add OpenCL headers
   include_directories("${OPENCL_HEADER}/..")
   add_library( ${name} ${ARGN} )
@@ -54,7 +46,9 @@ endmacro(add_mcwamp_library_opencl name )
 ####################
 macro(add_mcwamp_library_hsa name )
   CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXXAMP_FLAGS} -fPIC")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXXAMP_FLAGS}")
+  # FIXME remove this in the future
+  add_definitions("-DCXXAMP_ENABLE_HSA=1")
   # add HSA headers
   include_directories(${HSA_HEADER} ${LIBHSAIL_HEADER} ${LIBHSAIL_HEADER}/generated)
   add_library( ${name} ${ARGN} )
