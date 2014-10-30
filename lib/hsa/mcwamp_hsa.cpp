@@ -18,6 +18,18 @@ extern "C" char * kernel_size_[] asm ("_binary_kernel_cl_size") __attribute__((w
 namespace Concurrency {
 namespace CLAMP {
 
+void QueryDeviceInfo(const std::wstring& device_path,
+    bool& supports_cpu_shared_memory,
+    size_t& dedicated_memory,
+    bool& supports_limited_double_precision,
+    std::wstring& description) {
+
+    description = L"HSA";
+    supports_cpu_shared_memory = true;
+    supports_limited_double_precision = true;
+    dedicated_memory = 0;
+}
+
 static HSAContext *context = NULL;
 
 void FinalizeHSAContext() {

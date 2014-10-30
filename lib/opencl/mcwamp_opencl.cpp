@@ -9,6 +9,8 @@
 
 #include <amp.h>
 #include <CL/opencl.h>
+#include <iostream>
+
 namespace Concurrency {
 
 AMPAllocator& getAllocator()
@@ -33,8 +35,62 @@ extern "C" char * kernel_size_[] asm ("_binary_kernel_cl_size") __attribute__((w
 
 extern std::vector<std::string> __mcw_kernel_names;
 
+const wchar_t gpu_accelerator[] = L"gpu";
+const wchar_t cpu_accelerator[] = L"cpu";
+const wchar_t default_accelerator[] = L"default";
+
 namespace Concurrency {
 namespace CLAMP {
+
+void QueryDeviceInfo(const std::wstring& device_path,
+    bool& supports_cpu_shared_memory,
+    size_t& dedicated_memory,
+    bool& supports_limited_double_precision,
+    std::wstring& description) {
+
+    description = L"OpenCL";
+
+    cl_int err;
+    cl_uint platformCount;
+    cl_device_id device;
+    cl_ulong memAllocSize;
+    cl_device_fp_config singleFPConfig;
+    std::unique_ptr<cl_platform_id[]> platforms;
+
+    err = clGetPlatformIDs(0, NULL, &platformCount);
+    assert(err == CL_SUCCESS);
+    platforms.reset(new cl_platform_id[platformCount]);
+    clGetPlatformIDs(platformCount, platforms.get(), NULL);
+    assert(err == CL_SUCCESS);
+    int i;
+    for (i = 0; i < platformCount; i++) {
+        if (device_path == std::wstring(gpu_accelerator)) {
+            err = clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_GPU, 1, &device, NULL);
+            if (err != CL_SUCCESS)
+                continue;
+            supports_cpu_shared_memory = false;
+            break;
+        } else if (device_path == std::wstring(cpu_accelerator)) {
+            err = clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_CPU, 1, &device, NULL);
+            if (err != CL_SUCCESS)
+                continue;
+            supports_cpu_shared_memory = true;
+            break;
+        }
+    }
+    if (i == platformCount)
+        return;
+
+    err = clGetDeviceInfo(device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_ulong), &memAllocSize, NULL);
+    assert(err == CL_SUCCESS);
+    dedicated_memory = memAllocSize / (size_t) 1024;
+
+    err = clGetDeviceInfo(device, CL_DEVICE_SINGLE_FP_CONFIG, sizeof(cl_device_fp_config), &singleFPConfig, NULL);
+    assert(err == CL_SUCCESS);
+    if (singleFPConfig & CL_FP_FMA & CL_FP_DENORM & CL_FP_INF_NAN &
+        CL_FP_ROUND_TO_NEAREST & CL_FP_ROUND_TO_ZERO)
+         supports_limited_double_precision = true;
+}
 
 void PushArg(void *k_, int idx, size_t sz, const void *s) {
   cl_int err;

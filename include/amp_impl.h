@@ -8,14 +8,13 @@
 #ifndef INCLUDE_AMP_IMPL_H
 #define INCLUDE_AMP_IMPL_H
 
-#include <iostream>
-#if __APPLE__
-#include <OpenCL/cl.h>
-#elif !defined(CXXAMP_ENABLE_HSA)
-#include <CL/cl.h>
-#endif
-
 // Specialization of AMP classes/templates
+
+namespace Concurrency {
+namespace CLAMP {
+extern void QueryDeviceInfo(const std::wstring&, bool&, size_t&, bool&, std::wstring&);
+}
+}
 
 namespace Concurrency {
 // Accelerators
@@ -44,7 +43,7 @@ inline accelerator::accelerator(const std::wstring& path) :
 						accelerator::_default_accelerator->get_device_path() :
 						std::wstring(gpu_accelerator) ),
   version(0), 
-  description(L"OpenCL"),
+  description(L""),
   is_debug(false),
   is_emulated(false),
   has_display(false),
@@ -58,50 +57,9 @@ inline accelerator::accelerator(const std::wstring& path) :
 						new accelerator_view(_gpu_accelerator.get()) : new accelerator_view(this)) :
 					( (_cpu_accelerator != nullptr) ?
 						new accelerator_view(_cpu_accelerator.get()) : new accelerator_view(this)) )
-    {
-#if !defined(CXXAMP_ENABLE_HSA)
-    cl_int err;
-    cl_uint platformCount;
-    cl_device_id device;
-    cl_ulong memAllocSize;
-    cl_device_fp_config singleFPConfig;
-    std::unique_ptr<cl_platform_id[]> platforms;
-
-    err = clGetPlatformIDs(0, NULL, &platformCount);
-    assert(err == CL_SUCCESS);
-    platforms.reset(new cl_platform_id[platformCount]);
-    clGetPlatformIDs(platformCount, platforms.get(), NULL);
-    assert(err == CL_SUCCESS);
-    int i;
-    for (i = 0; i < platformCount; i++) {
-        if (device_path == std::wstring(gpu_accelerator)) {
-            err = clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_GPU, 1, &device, NULL);
-            if (err != CL_SUCCESS)
-                continue;
-            supports_cpu_shared_memory = false;
-            default_view->is_auto_selection = true;
-            break;
-        } else if (device_path == std::wstring(cpu_accelerator)) {
-            err = clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_CPU, 1, &device, NULL);
-            if (err != CL_SUCCESS)
-                continue;
-            supports_cpu_shared_memory = true;
-            default_view->is_auto_selection = false;
-            break;
-        }
-    }
-    if (i == platformCount)
-        return;
-
-    err = clGetDeviceInfo(device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_ulong), &memAllocSize, NULL);
-    assert(err == CL_SUCCESS);
-    dedicated_memory = memAllocSize / (size_t) 1024;
-    err = clGetDeviceInfo(device, CL_DEVICE_SINGLE_FP_CONFIG, sizeof(cl_device_fp_config), &singleFPConfig, NULL);
-    assert(err == CL_SUCCESS);
-    if (singleFPConfig & CL_FP_FMA & CL_FP_DENORM & CL_FP_INF_NAN &
-        CL_FP_ROUND_TO_NEAREST & CL_FP_ROUND_TO_ZERO)
-         supports_limited_double_precision = true;
-#endif
+{
+    CLAMP::QueryDeviceInfo(device_path, supports_cpu_shared_memory, dedicated_memory, supports_limited_double_precision, description);
+    default_view->is_auto_selection = !supports_cpu_shared_memory;
 }
 
 inline accelerator& accelerator::operator=(const accelerator& other) {
