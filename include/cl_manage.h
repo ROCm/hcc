@@ -5,13 +5,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CL_MANAGE__
-#define __CL_MANAGE__
-
 #pragma once
 #include <string.h>
 #include <CL/opencl.h>
 
+
+namespace CLAMP {
+extern void CompileKernels(cl_program& program, cl_context& context, cl_device_id& device);
+}
 
 #if defined(CXXAMP_NV)
 struct rw_info
@@ -45,6 +46,9 @@ struct AMPAllocator
         assert(err == CL_SUCCESS);
         queue = clCreateCommandQueue(context, device, 0, &err);
         assert(err == CL_SUCCESS);
+    }
+    void compile() {
+        CLAMP::CompileKernels(program, context, device);
     }
     void init(void *data, int count) {
         if (count > 0) {
@@ -206,4 +210,3 @@ public:
     __attribute__((annotate("user_deserialize")))
         explicit _data_host(__global T* t);
 };
-#endif // __CL_MANAGE__
