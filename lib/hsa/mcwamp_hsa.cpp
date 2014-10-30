@@ -47,7 +47,7 @@ HSAContext *GetOrInitHSAContext(void)
 }
 
 static std::map<std::string, HSAContext::Kernel *> __mcw_hsa_kernels;
-void *CreateHSAKernel(std::string s)
+void *CreateKernel(std::string s)
 {
   HSAContext::Kernel *kernel = __mcw_hsa_kernels[s];
   if (!kernel) {
@@ -90,7 +90,7 @@ void RegisterMemory(void *p, size_t sz)
 }
 }
 
-std::future<void> HSALaunchKernelAsync(void *ker, size_t nr_dim, size_t *global, size_t *local)
+std::future<void> LaunchKernelAsync(void *ker, size_t nr_dim, size_t *global, size_t *local)
 {
   HSAContext::Dispatch *dispatch =
       reinterpret_cast<HSAContext::Dispatch*>(ker);
@@ -108,7 +108,7 @@ std::future<void> HSALaunchKernelAsync(void *ker, size_t nr_dim, size_t *global,
   return dispatch->dispatchKernelAndGetFuture();
 }
 
-void HSALaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local)
+void LaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local)
 {
   HSAContext::Dispatch *dispatch =
       reinterpret_cast<HSAContext::Dispatch*>(ker);

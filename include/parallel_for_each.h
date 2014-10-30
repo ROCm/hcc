@@ -13,11 +13,9 @@
 
 namespace Concurrency {
 namespace CLAMP {
-#if defined(CXXAMP_ENABLE_HSA)
-extern void *CreateHSAKernel(std::string);
-extern void HSALaunchKernel(void *ker, size_t, size_t *global, size_t *local);
-extern std::future<void> HSALaunchKernelAsync(void *ker, size_t, size_t *global, size_t *local);
-#endif
+extern void *CreateKernel(std::string);
+extern void LaunchKernel(void *, size_t, size_t *, size_t *);
+extern std::future<void> LaunchKernelAsync(void *, size_t, size_t *, size_t *);
 extern void MatchKernelNames( std::string & );
 }
 static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu) {
@@ -42,8 +40,7 @@ template<typename Kernel, int dim_ext>
 static inline std::future<void> mcw_cxxamp_launch_kernel_async(size_t *ext,
   size_t *local_size, const Kernel& f) restrict(cpu,amp) {
 #ifndef __GPU__
-#if defined(CXXAMP_ENABLE_HSA)
-  //Invoke Kernel::__cxxamp_trampoline as an HSAkernel
+  //Invoke Kernel::__cxxamp_trampoline as an kernel
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
   // FIXME: implicitly casting to avoid pointer to int error
@@ -52,15 +49,15 @@ static inline std::future<void> mcw_cxxamp_launch_kernel_async(size_t *ext,
   {
       std::string transformed_kernel_name =
           mcw_cxxamp_fixnames(f.__cxxamp_trampoline_name());
-      kernel = CLAMP::CreateHSAKernel(transformed_kernel_name);
+      kernel = CLAMP::CreateKernel(transformed_kernel_name);
   }
+#ifdef CXXAMP_ENABLE_HSA
   Concurrency::Serialize s(kernel);
-  f.__cxxamp_serialize(s);
-  return CLAMP::HSALaunchKernelAsync(kernel, dim_ext, ext, local_size);
 #else
-  // async kernel launch is unsupported in non-HSA path
-  throw runtime_exception("async_parallel_for_each is unsupported on this platform", 0);
+  Concurrency::Serialize s(static_cast<cl_kernel>(kernel));
 #endif
+  f.__cxxamp_serialize(s);
+  return CLAMP::LaunchKernelAsync(kernel, dim_ext, ext, local_size);
 #endif
 }
 
@@ -68,8 +65,7 @@ template<typename Kernel, int dim_ext>
 static inline void mcw_cxxamp_launch_kernel(size_t *ext,
   size_t *local_size, const Kernel& f) restrict(cpu,amp) {
 #ifndef __GPU__
-#if defined(CXXAMP_ENABLE_HSA)
-  //Invoke Kernel::__cxxamp_trampoline as an HSAkernel
+  //Invoke Kernel::__cxxamp_trampoline as an kernel
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
   // FIXME: implicitly casting to avoid pointer to int error
@@ -78,59 +74,15 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
   {
       std::string transformed_kernel_name =
           mcw_cxxamp_fixnames(f.__cxxamp_trampoline_name());
-      kernel = CLAMP::CreateHSAKernel(transformed_kernel_name);
+      kernel = CLAMP::CreateKernel(transformed_kernel_name);
   }
+#ifdef CXXAMP_ENABLE_HSA
   Concurrency::Serialize s(kernel);
-  f.__cxxamp_serialize(s);
-  CLAMP::HSALaunchKernel(kernel, dim_ext, ext, local_size);
 #else
-  cl_int err;
-  AMPAllocator& aloc = getAllocator();
-  aloc.compile();
-  int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
-  std::string transformed_kernel_name =
-      mcw_cxxamp_fixnames(f.__cxxamp_trampoline_name());
-  aloc.kernel = clCreateKernel(aloc.program, transformed_kernel_name.c_str(), &err);
-  assert(err == CL_SUCCESS);
-  Concurrency::Serialize s(aloc.kernel);
+  Concurrency::Serialize s(static_cast<cl_kernel>(kernel));
+#endif
   f.__cxxamp_serialize(s);
-  {
-      // C++ AMP specifications
-      // The maximum number of tiles per dimension will be no less than 65535.
-      // The maximum number of threads in a tile will be no less than 1024.
-      // In 3D tiling, the maximal value of D0 will be no less than 64.
-      cl_uint dimensions;
-      err = clGetDeviceInfo(aloc.device, CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, sizeof(cl_uint), &dimensions, NULL);
-      size_t *maxSizes = new size_t[dimensions];
-      err = clGetDeviceInfo(aloc.device, CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(size_t) * dimensions, maxSizes, NULL);
-      bool is = true;
-      int threads_per_tile = 1;
-      for(int i = 0; local_size && i < dim_ext; i++) {
-          threads_per_tile *= local_size[i];
-          // For the following cases, set local_size=NULL and let OpenCL driver arranges it instead
-          //(1) tils number exceeds CL_DEVICE_MAX_WORK_ITEM_SIZES per dimension
-          //(2) threads in a tile exceeds CL_DEVICE_MAX_WORK_ITEM_SIZES
-          //Note that the driver can still handle unregular tile_dim, e.g. tile_dim is undivisble by 2
-          //So skip this condition ((local_size[i]!=1) && (local_size[i] & 1))
-          if(local_size[i] > maxSizes[i] || threads_per_tile > maxSizes[i]) {
-              is = false;
-              break;
-          }
-      }
-      if(!is)
-          local_size = NULL;
-  }
-
-#if defined(CXXAMP_NV)
-  aloc.write();
-#endif
-  err = clEnqueueNDRangeKernel(aloc.queue, aloc.kernel, dim_ext, NULL, ext, local_size, 0, NULL, NULL);
-  assert(err == CL_SUCCESS);
-#if defined(CXXAMP_NV)
-  aloc.read();
-#endif
-  clFinish(aloc.queue);
-#endif //CXXAMP_ENABLE_HSA
+  CLAMP::LaunchKernel(kernel, dim_ext, ext, local_size);
 #endif // __GPU__
 }
 
