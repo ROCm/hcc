@@ -51,6 +51,11 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-hsatools
 install(FILES opencl_math.bc DESTINATION lib)
 
 ####################
+# Dynamic memory allocation HSAIL logic (HSA)
+####################
+install(FILES new_delete.hsail DESTINATION lib)
+
+####################
 # add subdirectories
 ####################
 add_subdirectory(opencl)
