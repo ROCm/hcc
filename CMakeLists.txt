@@ -2,12 +2,15 @@ cmake_minimum_required( VERSION 2.8 )
 project (CLAMP)
 SET(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/scripts/cmake")
 MESSAGE("Module path: ${CMAKE_MODULE_PATH}")
-#include (MacroEnsureOutOfSourceBuild)
-#include (ExportFile)
 execute_process(COMMAND git describe --abbrev=4 --dirty --always --tags
                 WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
                 OUTPUT_VARIABLE GIT_VERSION
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+# set as release build by default
+IF (NOT CMAKE_BUILD_TYPE)
+  SET(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build, options are: Release Debug" FORCE)
+ENDIF(NOT CMAKE_BUILD_TYPE)
 
 # set default cppamp-ng URL
 IF (NOT CLANG_URL)
@@ -73,11 +76,6 @@ include_directories( ${PROJ_SEARCH_PATH} )
 
 LINK_DIRECTORIES( ${LLVM_LIB_DIR} )
 
-
-# set as release build by default
-IF (NOT CMAKE_BUILD_TYPE)
-  SET(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build, options are: Release Debug" FORCE)
-ENDIF(NOT CMAKE_BUILD_TYPE)
 
 SET(FOO_BUILD_SHARED OFF CACHE BOOL "Build libfoo shared library")
 
