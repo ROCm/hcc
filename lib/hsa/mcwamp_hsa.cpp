@@ -10,13 +10,24 @@
 #include <cassert>
 #include <iostream>
 #include <map>
+#include <vector>
+
 #include "HSAContext.h"
 
 extern "C" char * kernel_source_[] asm ("_binary_kernel_cl_start") __attribute__((weak));
 extern "C" char * kernel_size_[] asm ("_binary_kernel_cl_size") __attribute__((weak));
 
+#define AMP_DEVICE_TYPE_CPU (1)
+#define AMP_DEVICE_TYPE_GPU (2)
+
 namespace Concurrency {
 namespace CLAMP {
+
+std::vector<int> EnumerateDevices() {
+    std::vector<int> devices;
+    devices.push_back(AMP_DEVICE_TYPE_GPU);
+    return devices;
+}
 
 void QueryDeviceInfo(const std::wstring& device_path,
     bool& supports_cpu_shared_memory,

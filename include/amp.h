@@ -44,18 +44,35 @@
 #endif
 
 #if defined(CXXAMP_ENABLE_HSA)
-//CLAMP
+///
+/// HSA builtin functions are 64-bit, and have Itanium C++ mangling scheme
+///
 extern int64_t get_global_id(unsigned int n) restrict(amp);
 extern int64_t get_local_id(unsigned int n) restrict(amp);
 extern int64_t get_group_id(unsigned int n) restrict(amp);
+#define tile_static static __attribute__((section("clamp_opencl_local")))
+extern __attribute__((noduplicate)) void barrier(unsigned int n) restrict(amp);
+
+#else
+///
+/// OpenCL builtin functions are 32-bit, and are not mangled
+///
+extern "C" __attribute__((pure)) int get_global_id(int n) restrict(amp);
+extern "C" __attribute__((pure)) int get_local_id(int n) restrict(amp);
+extern "C" __attribute__((pure)) int get_group_id(int n) restrict(amp);
 #ifdef __APPLE__
 #define tile_static static __attribute__((section("clamp,opencl_local")))
 #else
 #define tile_static static __attribute__((section("clamp_opencl_local")))
 #endif
-extern __attribute__((noduplicate)) void barrier(unsigned int n) restrict(amp);
-//End CLAMP
+extern "C" __attribute__((noduplicate)) void barrier(int n) restrict(amp);
 #endif
+
+namespace Concurrency {
+namespace CLAMP {
+extern std::vector<int> EnumerateDevices();
+}
+}
 
 namespace Concurrency {
 typedef int HRESULT;
@@ -159,6 +176,9 @@ public:
   accelerator* _accelerator;
 };
 
+#define AMP_DEVICE_TYPE_CPU (1)
+#define AMP_DEVICE_TYPE_GPU (2)
+
 class accelerator {
 public:
   static const wchar_t default_accelerator[];   // = L"default"
@@ -170,26 +190,19 @@ public:
   accelerator(const accelerator& other);
   static std::vector<accelerator> get_all() {
     std::vector<accelerator> acc;
-#if !defined(CXXAMP_ENABLE_HSA)
-    cl_int err;
-    cl_uint platformCount;
-    cl_uint deviceCount;
-    std::unique_ptr<cl_platform_id[]> platforms;
-
-    err = clGetPlatformIDs(0, NULL, &platformCount);
-    platforms.reset(new cl_platform_id[platformCount]);
-    clGetPlatformIDs(platformCount, platforms.get(), NULL);
-    for (int i = 0; i < platformCount; i++) {
-        clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_CPU, 0, NULL, &deviceCount);
-        for (int j = 0; j < deviceCount; j++)
-            acc.push_back(*_cpu_accelerator);
-        clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_GPU, 0, NULL, &deviceCount);
-        for (int j = 0; j < deviceCount; j++)
-            acc.push_back(*_gpu_accelerator);
+    std::vector<int> devices = CLAMP::EnumerateDevices();
+    for (std::vector<int>::iterator it = devices.begin(); it != devices.end(); ++it) {
+      switch (*it) {
+        case AMP_DEVICE_TYPE_CPU:
+          acc.push_back(*_cpu_accelerator);
+          break;
+        case AMP_DEVICE_TYPE_GPU:
+          acc.push_back(*_gpu_accelerator);
+          break;
+        default:
+          break;
+      }
     }
-#else
-    acc.push_back(*_gpu_accelerator);  // in HSA path, always add GPU accelerator
-#endif
     return acc;
   }
   static bool set_default(const std::wstring& path) {
@@ -244,20 +257,6 @@ public:
   static std::shared_ptr<accelerator> _gpu_accelerator;
   static std::shared_ptr<accelerator> _cpu_accelerator;
 };
-
-#if !defined(CXXAMP_ENABLE_HSA)
-//CLAMP
-extern "C" __attribute__((pure)) int get_global_id(int n) restrict(amp);
-extern "C" __attribute__((pure)) int get_local_id(int n) restrict(amp);
-extern "C" __attribute__((pure)) int get_group_id(int n) restrict(amp);
-#ifdef __APPLE__
-#define tile_static static __attribute__((section("clamp,opencl_local")))
-#else
-#define tile_static static __attribute__((section("clamp_opencl_local")))
-#endif
-extern "C" __attribute__((noduplicate)) void barrier(int n) restrict(amp);
-//End CLAMP
-#endif
 
 template <int N> class extent;
 template <int D0, int D1=0, int D2=0> class tiled_extent;

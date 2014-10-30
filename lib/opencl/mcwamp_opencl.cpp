@@ -10,6 +10,7 @@
 #include <amp.h>
 #include <CL/opencl.h>
 #include <iostream>
+#include <vector>
 
 namespace Concurrency {
 
@@ -39,8 +40,33 @@ const wchar_t gpu_accelerator[] = L"gpu";
 const wchar_t cpu_accelerator[] = L"cpu";
 const wchar_t default_accelerator[] = L"default";
 
+#define AMP_DEVICE_TYPE_CPU (1)
+#define AMP_DEVICE_TYPE_GPU (2)
+
 namespace Concurrency {
 namespace CLAMP {
+
+std::vector<int> EnumerateDevices() {
+    std::vector<int> devices;
+    cl_int err;
+    cl_uint platformCount;
+    cl_uint deviceCount;
+    std::unique_ptr<cl_platform_id[]> platforms;
+
+    err = clGetPlatformIDs(0, NULL, &platformCount);
+    platforms.reset(new cl_platform_id[platformCount]);
+    clGetPlatformIDs(platformCount, platforms.get(), NULL);
+    for (int i = 0; i < platformCount; i++) {
+        clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_CPU, 0, NULL, &deviceCount);
+        for (int j = 0; j < deviceCount; j++)
+            devices.push_back(AMP_DEVICE_TYPE_CPU);
+        clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_GPU, 0, NULL, &deviceCount);
+        for (int j = 0; j < deviceCount; j++)
+            devices.push_back(AMP_DEVICE_TYPE_GPU);
+    }
+
+    return devices;
+}
 
 void QueryDeviceInfo(const std::wstring& device_path,
     bool& supports_cpu_shared_memory,
