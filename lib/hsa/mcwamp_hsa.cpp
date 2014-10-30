@@ -124,7 +124,7 @@ void LaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local)
   dispatch->dispatchKernelWaitComplete();
 }
 
-void HSAPushArg(void *ker, size_t sz, const void *v)
+void PushArg(void *ker, int idx, size_t sz, const void *v)
 {
   //std::cerr << "pushing:" << ker << " of size " << sz << "\n";
   HSAContext::Dispatch *dispatch =
@@ -145,7 +145,7 @@ void HSAPushArg(void *ker, size_t sz, const void *v)
       assert(0 && "Unsupported kernel argument size");
   }
 }
-void HSAPushPointer(void *ker, void *val)
+void PushPointer(void *ker, void *val)
 {
     //std::cerr << "pushing:" << ker << " of ptr " << val << "\n";
     HSAContext::Dispatch *dispatch =

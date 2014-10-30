@@ -51,11 +51,7 @@ static inline std::future<void> mcw_cxxamp_launch_kernel_async(size_t *ext,
           mcw_cxxamp_fixnames(f.__cxxamp_trampoline_name());
       kernel = CLAMP::CreateKernel(transformed_kernel_name);
   }
-#ifdef CXXAMP_ENABLE_HSA
   Concurrency::Serialize s(kernel);
-#else
-  Concurrency::Serialize s(static_cast<cl_kernel>(kernel));
-#endif
   f.__cxxamp_serialize(s);
   return CLAMP::LaunchKernelAsync(kernel, dim_ext, ext, local_size);
 #endif
@@ -76,11 +72,7 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
           mcw_cxxamp_fixnames(f.__cxxamp_trampoline_name());
       kernel = CLAMP::CreateKernel(transformed_kernel_name);
   }
-#ifdef CXXAMP_ENABLE_HSA
   Concurrency::Serialize s(kernel);
-#else
-  Concurrency::Serialize s(static_cast<cl_kernel>(kernel));
-#endif
   f.__cxxamp_serialize(s);
   CLAMP::LaunchKernel(kernel, dim_ext, ext, local_size);
 #endif // __GPU__

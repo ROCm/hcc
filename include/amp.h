@@ -17,6 +17,9 @@
 
 #pragma once
 
+#if !defined(CXXAMP_ENABLE_HSA)
+#include <CL/opencl.h>
+#endif
 #include <cassert>
 #include <exception>
 #include <string>
