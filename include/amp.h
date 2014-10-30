@@ -25,9 +25,6 @@
 #include <future>
 #include <map>
 #include <string.h> //memcpy
-#if !defined(CXXAMP_ENABLE_HSA)
-#include <CL/opencl.h>
-#endif
 #include <memory>
 #include <algorithm>
 #include <set>
