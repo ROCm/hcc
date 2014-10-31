@@ -6,117 +6,10 @@
 //===----------------------------------------------------------------------===//
 
 #pragma once
-#include <string.h>
-#include <CL/opencl.h>
 
+#include <amp_allocator.h>
 
-namespace CLAMP {
-extern void CompileKernels(cl_program& program, cl_context& context, cl_device_id& device);
-}
-
-#if defined(CXXAMP_NV)
-struct rw_info
-{
-    int count;
-    bool used;
-};
-#endif
-struct AMPAllocator
-{
-    AMPAllocator() {
-        cl_uint          num_platforms;
-        cl_int           err;
-        cl_platform_id   platform_id[10];
-        int i;
-        err = clGetPlatformIDs(10, platform_id, &num_platforms);
-        for (i = 0; i < num_platforms; i++) {
-            err = clGetDeviceIDs(platform_id[i], CL_DEVICE_TYPE_GPU, 1, &device, NULL);
-            if (err == CL_SUCCESS)
-                break;
-        }
-        if (err != CL_SUCCESS) {
-            for (i = 0; i < num_platforms; i++) {
-                err = clGetDeviceIDs(platform_id[i], CL_DEVICE_TYPE_CPU, 1, &device, NULL);
-                if (err == CL_SUCCESS)
-                    break;
-            }
-        }
-        assert(err == CL_SUCCESS);
-        context = clCreateContext(0, 1, &device, NULL, NULL, &err);
-        assert(err == CL_SUCCESS);
-        queue = clCreateCommandQueue(context, device, 0, &err);
-        assert(err == CL_SUCCESS);
-    }
-    void compile() {
-        CLAMP::CompileKernels(program, context, device);
-    }
-    void init(void *data, int count) {
-        if (count > 0) {
-            cl_int err;
-#if defined(CXXAMP_NV)
-            cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, NULL, &err);
-            rwq[data] = {count, false};
-#else
-            cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, count, data, &err);
-#endif
-            assert(err == CL_SUCCESS);
-            mem_info[data] = dm;
-        }
-    }
-    void append(Serialize& s, void *data) {
-        s.Append(sizeof(cl_mem), &mem_info[data]);
-#if defined(CXXAMP_NV)
-        rwq[data].used = true;
-#endif
-    }
-#if defined(CXXAMP_NV)
-    void write() {
-        cl_int err;
-        for (auto& it : rwq) {
-            rw_info& rw = it.second;
-            if (rw.used) {
-                err = clEnqueueWriteBuffer(queue, mem_info[it.first], CL_TRUE, 0,
-                                           rw.count, it.first, 0, NULL, NULL);
-                assert(err == CL_SUCCESS);
-            }
-        }
-    }
-    void read() {
-        cl_int err;
-        for (auto& it : rwq) {
-            rw_info& rw = it.second;
-            if (rw.used) {
-                err = clEnqueueReadBuffer(queue, mem_info[it.first], CL_TRUE, 0,
-                                          rw.count, it.first, 0, NULL, NULL);
-                assert(err == CL_SUCCESS);
-                rw.used = false;
-            }
-        }
-    }
-#endif
-    void free(void *data) {
-        auto iter = mem_info.find(data);
-        clReleaseMemObject(iter->second);
-        mem_info.erase(iter);
-    }
-    ~AMPAllocator() {
-        clReleaseCommandQueue(queue);
-        clReleaseContext(context);
-        clReleaseKernel(kernel);
-        clReleaseProgram(program);
-    }
-    std::map<void *, cl_mem> mem_info;
-    cl_context       context;
-    cl_device_id     device;
-    cl_kernel        kernel;
-    cl_command_queue queue;
-    cl_program       program;
-#if defined(CXXAMP_NV)
-    std::map<void *, rw_info> rwq;
-#endif
-};
-
-AMPAllocator& getAllocator();
+namespace Concurrency {
 
 struct mm_info
 {
@@ -210,3 +103,5 @@ public:
     __attribute__((annotate("user_deserialize")))
         explicit _data_host(__global T* t);
 };
+
+} // namespace Concurrency

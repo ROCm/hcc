@@ -7,20 +7,146 @@
 
 // FIXME this file will place C++AMP Runtime implementation (OpenCL version)
 
-#include <amp.h>
-#include <CL/opencl.h>
 #include <iostream>
 #include <vector>
+#include <map>
+#include <future>
+#include <cassert>
+#include <stdexcept>
 
+#include <CL/opencl.h>
+
+#include <amp_allocator.h>
+
+///
+/// memory allocator
+///
 namespace Concurrency {
 
-AMPAllocator& getAllocator()
+// forward declaration
+namespace CLAMP {
+    void CompileKernels(cl_program&, cl_context&, cl_device_id&);
+}
+
+#if defined(CXXAMP_NV)
+struct rw_info
 {
-    static AMPAllocator amp;
+    int count;
+    bool used;
+};
+#endif
+class OpenCLAMPAllocator : public AMPAllocator
+{
+public:
+    OpenCLAMPAllocator() {
+        cl_uint          num_platforms;
+        cl_int           err;
+        cl_platform_id   platform_id[10];
+        int i;
+        err = clGetPlatformIDs(10, platform_id, &num_platforms);
+        for (i = 0; i < num_platforms; i++) {
+            err = clGetDeviceIDs(platform_id[i], CL_DEVICE_TYPE_GPU, 1, &device, NULL);
+            if (err == CL_SUCCESS)
+                break;
+        }
+        if (err != CL_SUCCESS) {
+            for (i = 0; i < num_platforms; i++) {
+                err = clGetDeviceIDs(platform_id[i], CL_DEVICE_TYPE_CPU, 1, &device, NULL);
+                if (err == CL_SUCCESS)
+                    break;
+            }
+        }
+        assert(err == CL_SUCCESS);
+        context = clCreateContext(0, 1, &device, NULL, NULL, &err);
+        assert(err == CL_SUCCESS);
+        queue = clCreateCommandQueue(context, device, 0, &err);
+        assert(err == CL_SUCCESS);
+    }
+    void compile() {
+        CLAMP::CompileKernels(program, context, device);
+    }
+    void init(void *data, int count) {
+        if (count > 0) {
+            cl_int err;
+#if defined(CXXAMP_NV)
+            cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, NULL, &err);
+            rwq[data] = {count, false};
+#else
+            cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, count, data, &err);
+#endif
+            assert(err == CL_SUCCESS);
+            mem_info[data] = dm;
+        }
+    }
+    void append(Serialize& s, void *data) {
+        s.Append(sizeof(cl_mem), &mem_info[data]);
+#if defined(CXXAMP_NV)
+        rwq[data].used = true;
+#endif
+    }
+#if defined(CXXAMP_NV)
+    void write() {
+        cl_int err;
+        for (auto& it : rwq) {
+            rw_info& rw = it.second;
+            if (rw.used) {
+                err = clEnqueueWriteBuffer(queue, mem_info[it.first], CL_TRUE, 0,
+                                           rw.count, it.first, 0, NULL, NULL);
+                assert(err == CL_SUCCESS);
+            }
+        }
+    }
+    void read() {
+        cl_int err;
+        for (auto& it : rwq) {
+            rw_info& rw = it.second;
+            if (rw.used) {
+                err = clEnqueueReadBuffer(queue, mem_info[it.first], CL_TRUE, 0,
+                                          rw.count, it.first, 0, NULL, NULL);
+                assert(err == CL_SUCCESS);
+                rw.used = false;
+            }
+        }
+    }
+#endif
+    void free(void *data) {
+        auto iter = mem_info.find(data);
+        clReleaseMemObject(iter->second);
+        mem_info.erase(iter);
+    }
+    ~OpenCLAMPAllocator() {
+        clReleaseCommandQueue(queue);
+        clReleaseContext(context);
+        clReleaseKernel(kernel);
+        clReleaseProgram(program);
+    }
+
+    std::map<void *, cl_mem> mem_info;
+    cl_context       context;
+    cl_device_id     device;
+    cl_kernel        kernel;
+    cl_command_queue queue;
+    cl_program       program;
+#if defined(CXXAMP_NV)
+    std::map<void *, rw_info> rwq;
+#endif
+};
+
+static OpenCLAMPAllocator amp;
+
+OpenCLAMPAllocator& getOpenCLAMPAllocator() {
+    return amp;
+}
+
+AMPAllocator& getAllocator() {
     return amp;
 }
 
 } // namespace Concurrency
+
+///
+/// kernel compilation / kernel launching
+///
 
 namespace {
 bool __mcw_cxxamp_compiled = false;
@@ -129,7 +255,7 @@ void PushPointer(void *, void *) {
 
 void *CreateKernel(std::string s) {
   cl_int err;
-  AMPAllocator& aloc = getAllocator();
+  OpenCLAMPAllocator& aloc = getOpenCLAMPAllocator();
   aloc.compile();
   aloc.kernel = clCreateKernel(aloc.program, s.c_str(), &err);
   assert(err == CL_SUCCESS);
@@ -137,12 +263,12 @@ void *CreateKernel(std::string s) {
 }
 
 std::future<void> LaunchKernelAsync(void *ker, size_t nr_dim, size_t *global, size_t *local) {
-  throw runtime_exception("async_parallel_for_each is unsupported on this platform", 0);
+  throw std::runtime_error("async_parallel_for_each is unsupported on this platform");
 }
 
 void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {
   cl_int err;
-  AMPAllocator& aloc = getAllocator();
+  OpenCLAMPAllocator& aloc = getOpenCLAMPAllocator();
   {
       // C++ AMP specifications
       // The maximum number of tiles per dimension will be no less than 65535.
@@ -287,3 +413,5 @@ void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size)
 
 } // namespce CLAMP
 } // namespace Concurrency
+
+

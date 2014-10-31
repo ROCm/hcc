@@ -17,9 +17,6 @@
 
 #pragma once
 
-#if !defined(CXXAMP_ENABLE_HSA)
-#include <CL/opencl.h>
-#endif
 #include <cassert>
 #include <exception>
 #include <string>
@@ -1148,13 +1145,16 @@ public:
 
 
 #define __global
-#if defined(CXXAMP_ENABLE_HSA)
 }
+
+#if defined(CXXAMP_ENABLE_HSA)
 #include "hsa_manage.h"
-namespace Concurrency {
 #else
 #include "cl_manage.h"
 #endif
+
+namespace Concurrency {
+
 template <typename T, int N>
 struct projection_helper
 {
