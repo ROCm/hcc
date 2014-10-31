@@ -18,13 +18,13 @@
 #pragma once
 
 #include <cassert>
+#include <cstdlib>
 #include <exception>
 #include <string>
 #include <vector>
 #include <chrono>
 #include <future>
 #include <map>
-#include <string.h> //memcpy
 #include <memory>
 #include <algorithm>
 #include <set>
@@ -40,30 +40,18 @@
 #define __declspec(ignored) /* */
 #endif
 
-#if defined(CXXAMP_ENABLE_HSA)
-///
-/// HSA builtin functions are 64-bit, and have Itanium C++ mangling scheme
-///
-extern int64_t get_global_id(unsigned int n) restrict(amp);
-extern int64_t get_local_id(unsigned int n) restrict(amp);
-extern int64_t get_group_id(unsigned int n) restrict(amp);
-#define tile_static static __attribute__((section("clamp_opencl_local")))
-extern __attribute__((noduplicate)) void barrier(unsigned int n) restrict(amp);
-
-#else
-///
-/// OpenCL builtin functions are 32-bit, and are not mangled
-///
-extern "C" __attribute__((pure)) int get_global_id(int n) restrict(amp);
-extern "C" __attribute__((pure)) int get_local_id(int n) restrict(amp);
-extern "C" __attribute__((pure)) int get_group_id(int n) restrict(amp);
+//
+// work-item related builtin functions
+//
+extern "C" __attribute__((pure)) int64_t amp_get_global_id(unsigned int n) restrict(amp);
+extern "C" __attribute__((pure)) int64_t amp_get_local_id(unsigned int n) restrict(amp);
+extern "C" __attribute__((pure)) int64_t amp_get_group_id(unsigned int n) restrict(amp);
 #ifdef __APPLE__
 #define tile_static static __attribute__((section("clamp,opencl_local")))
 #else
 #define tile_static static __attribute__((section("clamp_opencl_local")))
 #endif
-extern "C" __attribute__((noduplicate)) void barrier(int n) restrict(amp);
-#endif
+extern "C" __attribute__((noduplicate)) void amp_barrier(unsigned int n) restrict(amp);
 
 namespace Concurrency {
 namespace CLAMP {
@@ -533,7 +521,7 @@ template <int N, typename _Tp>
 struct index_helper
 {
     static inline void set(_Tp& now) restrict(amp,cpu) {
-        now[N - 1] = get_global_id(_Tp::rank - N);
+        now[N - 1] = amp_get_global_id(_Tp::rank - N);
         index_helper<N - 1, _Tp>::set(now);
     }
     static inline bool equal(const _Tp& _lhs, const _Tp& _rhs) restrict(amp,cpu) {
@@ -548,7 +536,7 @@ template<typename _Tp>
 struct index_helper<1, _Tp>
 {
     static inline void set(_Tp& now) restrict(amp,cpu) {
-        now[0] = get_global_id(_Tp::rank - 1);
+        now[0] = amp_get_global_id(_Tp::rank - 1);
     }
     static inline bool equal(const _Tp& _lhs, const _Tp& _rhs) restrict(amp,cpu) {
         return (_lhs[0] == _rhs[0]);
@@ -745,17 +733,17 @@ class tile_barrier {
   }
   void wait_with_all_memory_fence() const restrict(amp) {
 #ifdef __GPU__
-    barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
+    amp_barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
 #endif
   }
   void wait_with_global_memory_fence() const restrict(amp) {
 #ifdef __GPU__
-    barrier(CLK_GLOBAL_MEM_FENCE);
+    amp_barrier(CLK_GLOBAL_MEM_FENCE);
 #endif
   }
   void wait_with_tile_static_memory_fence() const restrict(amp) {
 #ifdef __GPU__
-    barrier(CLK_LOCAL_MEM_FENCE);
+    amp_barrier(CLK_LOCAL_MEM_FENCE);
 #endif
   }
  private:
@@ -951,12 +939,12 @@ class tiled_index {
   __attribute__((annotate("__cxxamp_opencl_index")))
   __attribute__((always_inline)) tiled_index() restrict(amp)
 #ifdef __GPU__
-  : global(index<3>(get_global_id(2), get_global_id(1), get_global_id(0))),
-    local(index<3>(get_local_id(2), get_local_id(1), get_local_id(0))),
-    tile(index<3>(get_group_id(2), get_group_id(1), get_group_id(0))),
-    tile_origin(index<3>(get_global_id(2)-get_local_id(2),
-                         get_global_id(1)-get_local_id(1),
-                         get_global_id(0)-get_local_id(0))),
+  : global(index<3>(amp_get_global_id(2), amp_get_global_id(1), amp_get_global_id(0))),
+    local(index<3>(amp_get_local_id(2), amp_get_local_id(1), amp_get_local_id(0))),
+    tile(index<3>(amp_get_group_id(2), amp_get_group_id(1), amp_get_group_id(0))),
+    tile_origin(index<3>(amp_get_global_id(2)-amp_get_local_id(2),
+                         amp_get_global_id(1)-amp_get_local_id(1),
+                         amp_get_global_id(0)-amp_get_local_id(0))),
     tile_extent(D0, D1, D2)
 #endif // __GPU__
   {}
@@ -991,10 +979,10 @@ class tiled_index<D0, 0, 0> {
   __attribute__((annotate("__cxxamp_opencl_index")))
   __attribute__((always_inline)) tiled_index() restrict(amp)
 #ifdef __GPU__
-  : global(index<1>(get_global_id(0))),
-    local(index<1>(get_local_id(0))),
-    tile(index<1>(get_group_id(0))),
-    tile_origin(index<1>(get_global_id(0)-get_local_id(0))),
+  : global(index<1>(amp_get_global_id(0))),
+    local(index<1>(amp_get_local_id(0))),
+    tile(index<1>(amp_get_group_id(0))),
+    tile_origin(index<1>(amp_get_global_id(0)-amp_get_local_id(0))),
     tile_extent(D0)
 #endif // __GPU__
   {}
@@ -1030,11 +1018,11 @@ class tiled_index<D0, D1, 0> {
   __attribute__((annotate("__cxxamp_opencl_index")))
   __attribute__((always_inline)) tiled_index() restrict(amp)
 #ifdef __GPU__
-  : global(index<2>(get_global_id(1), get_global_id(0))),
-    local(index<2>(get_local_id(1), get_local_id(0))),
-    tile(index<2>(get_group_id(1), get_group_id(0))),
-    tile_origin(index<2>(get_global_id(1)-get_local_id(1),
-                         get_global_id(0)-get_local_id(0))),
+  : global(index<2>(amp_get_global_id(1), amp_get_global_id(0))),
+    local(index<2>(amp_get_local_id(1), amp_get_local_id(0))),
+    tile(index<2>(amp_get_group_id(1), amp_get_group_id(0))),
+    tile_origin(index<2>(amp_get_global_id(1)-amp_get_local_id(1),
+                         amp_get_global_id(0)-amp_get_local_id(0))),
     tile_extent(D0, D1)
 #endif // __GPU__
   {}
