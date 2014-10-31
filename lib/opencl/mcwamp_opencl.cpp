@@ -28,13 +28,11 @@ namespace CLAMP {
     void CompileKernels(cl_program&, cl_context&, cl_device_id&);
 }
 
-#if defined(CXXAMP_NV)
 struct rw_info
 {
     int count;
     bool used;
 };
-#endif
 class OpenCLAMPAllocator : public AMPAllocator
 {
 public:
@@ -84,8 +82,8 @@ public:
         rwq[data].used = true;
 #endif
     }
-#if defined(CXXAMP_NV)
     void write() {
+#if defined(CXXAMP_NV)
         cl_int err;
         for (auto& it : rwq) {
             rw_info& rw = it.second;
@@ -95,8 +93,10 @@ public:
                 assert(err == CL_SUCCESS);
             }
         }
+#endif
     }
     void read() {
+#if defined(CXXAMP_NV)
         cl_int err;
         for (auto& it : rwq) {
             rw_info& rw = it.second;
@@ -107,8 +107,8 @@ public:
                 rw.used = false;
             }
         }
-    }
 #endif
+    }
     void free(void *data) {
         auto iter = mem_info.find(data);
         clReleaseMemObject(iter->second);
@@ -127,9 +127,7 @@ public:
     cl_kernel        kernel;
     cl_command_queue queue;
     cl_program       program;
-#if defined(CXXAMP_NV)
     std::map<void *, rw_info> rwq;
-#endif
 };
 
 static OpenCLAMPAllocator amp;
@@ -296,14 +294,10 @@ void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size)
           local_size = NULL;
   }
 
-#if defined(CXXAMP_NV)
   aloc.write();
-#endif
   err = clEnqueueNDRangeKernel(aloc.queue, aloc.kernel, dim_ext, NULL, ext, local_size, 0, NULL, NULL);
   assert(err == CL_SUCCESS);
-#if defined(CXXAMP_NV)
   aloc.read();
-#endif
   clFinish(aloc.queue);
 }
 
