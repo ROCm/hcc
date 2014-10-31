@@ -152,8 +152,8 @@ void *CreateKernel(std::string s)
 
   HSAContext::Dispatch *dispatch = GetOrInitHSAContext()->createDispatch(kernel);
   dispatch->clearArgs();
-//#define CXXAMP_ENABLE_HSAIL_HLC_DEVELOPMENT_COMPILER 1
-#ifndef CXXAMP_ENABLE_HSAIL_HLC_DEVELOPMENT_COMPILER
+//#define HSAIL_HLC_DEVELOPMENT_COMPILER 1
+#ifndef HSAIL_HLC_DEVELOPMENT_COMPILER
   dispatch->pushLongArg(0);
   dispatch->pushLongArg(0);
   dispatch->pushLongArg(0);
