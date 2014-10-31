@@ -11,9 +11,7 @@
 // ACCELERATOR
 //  According to specification, each array should have its binding accelerator
 //  instance. For now, we haven't implemented such binding nor actual
-//  implementation of accelerator. For a quick and dirty walkaround for
-//  OpenCL based prototype, we allow key OpenCL objects visible globally so
-//  that we don't have to be bothered with such implementation effort.
+//  implementation of accelerator.
 
 #pragma once
 
@@ -31,6 +29,8 @@
 #include <type_traits>
 // CLAMP
 #include <serialize.h>
+#define __global
+#include <amp_manage.h>
 // End CLAMP
 
 /* COMPATIBILITY LAYER */
@@ -1131,15 +1131,7 @@ public:
   friend bool operator!=(const tiled_extent& lhs, const tiled_extent& rhs) restrict(amp,cpu);
 };
 
-
-#define __global
 }
-
-#if defined(CXXAMP_ENABLE_HSA)
-#include "hsa_manage.h"
-#else
-#include "cl_manage.h"
-#endif
 
 namespace Concurrency {
 
@@ -1324,9 +1316,9 @@ class array {
   static_assert(0 == (sizeof(T) % sizeof(int)), "only value types whose size is a multiple of the size of an integer are allowed in array");
 public:
 #ifdef __GPU__
-  typedef _data<T> cl_buffer_t;
+  typedef _data<T> acc_buffer_t;
 #else
-  typedef _data_host<T> cl_buffer_t;
+  typedef _data_host<T> acc_buffer_t;
 #endif
   typedef array_helper<T, N> array_helper_t;
 
@@ -1617,7 +1609,7 @@ public:
               throw runtime_exception("errorMsg_throw", 0);
 #endif
           int size = extent.size() * sizeof(T) / sizeof(ElementType);
-          using buffer_type = typename array_view<ElementType, 1>::cl_buffer_t;
+          using buffer_type = typename array_view<ElementType, 1>::acc_buffer_t;
           array_view<ElementType, 1> av(Concurrency::extent<1>(size), buffer_type(m_device), 0);
           return av;
       }
@@ -1628,7 +1620,7 @@ public:
           static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
 #endif
           int size = extent.size() * sizeof(T) / sizeof(ElementType);
-          using buffer_type = typename array_view<ElementType, 1>::cl_buffer_t;
+          using buffer_type = typename array_view<ElementType, 1>::acc_buffer_t;
           array_view<const ElementType, 1> av(Concurrency::extent<1>(size), buffer_type(m_device), 0);
           return av;
       }
@@ -1672,7 +1664,7 @@ public:
   }
 
 
-  const cl_buffer_t& internal() const restrict(amp,cpu) { return m_device; }
+  const acc_buffer_t& internal() const restrict(amp,cpu) { return m_device; }
   Concurrency::extent<N> extent;
 private:
   template <int K, typename Q> friend struct index_helper;
@@ -1680,7 +1672,7 @@ private:
   template <typename K, int Q> friend struct projection_helper;
   template <typename K, int Q> friend struct array_projection_helper;
   template <typename K, int Q> friend class array_helper;
-  cl_buffer_t m_device;
+  acc_buffer_t m_device;
   access_type cpu_access_type;
   array_helper_t m_array_helper;
   __attribute__((cpu)) accelerator_view *pav, *paav;
@@ -1702,9 +1694,9 @@ class array_view
   typedef typename std::remove_const<T>::type nc_T;
 public:
 #ifdef __GPU__
-  typedef _data<T> cl_buffer_t;
+  typedef _data<T> acc_buffer_t;
 #else
-  typedef _data_host<T> cl_buffer_t;
+  typedef _data_host<T> acc_buffer_t;
 #endif
 
   static const int rank = N;
@@ -1838,7 +1830,7 @@ public:
               throw runtime_exception("errorMsg_throw", 0);
 #endif
           int size = extent.size() * sizeof(T) / sizeof(ElementType);
-          using buffer_type = typename array_view<ElementType, 1>::cl_buffer_t;
+          using buffer_type = typename array_view<ElementType, 1>::acc_buffer_t;
           array_view<ElementType, 1> av(Concurrency::extent<1>(size),
                                         buffer_type(cache),
                                         (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
@@ -1919,18 +1911,18 @@ private:
   template <typename Q, int K> friend class array_view;
 
   // used by view_as and reinterpret_as
-  array_view(const Concurrency::extent<N>& ext, const cl_buffer_t& cache,
+  array_view(const Concurrency::extent<N>& ext, const acc_buffer_t& cache,
              int offset) restrict(amp,cpu)
       : extent(ext), cache(cache), offset(offset), extent_base(ext) {}
   // used by section and projection
   array_view(const Concurrency::extent<N>& ext_now,
              const Concurrency::extent<N>& ext_b,
              const Concurrency::index<N>& idx_b,
-             const cl_buffer_t& cache, int off) restrict(amp,cpu)
+             const acc_buffer_t& cache, int off) restrict(amp,cpu)
       : extent(ext_now), index_base(idx_b), extent_base(ext_b),
       cache(cache), offset(off) {}
 
-  cl_buffer_t cache;
+  acc_buffer_t cache;
   Concurrency::extent<N> extent;
   Concurrency::extent<N> extent_base;
   Concurrency::index<N> index_base;
@@ -1946,9 +1938,9 @@ public:
   typedef const T value_type;
 
 #ifdef __GPU__
-  typedef _data<nc_T> cl_buffer_t;
+  typedef _data<nc_T> acc_buffer_t;
 #else
-  typedef _data_host<nc_T> cl_buffer_t;
+  typedef _data_host<nc_T> acc_buffer_t;
 #endif
 
   array_view() = delete;
@@ -2075,7 +2067,7 @@ public:
           static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
 #endif
           int size = extent.size() * sizeof(T) / sizeof(ElementType);
-          using buffer_type = typename array_view<ElementType, 1>::cl_buffer_t;
+          using buffer_type = typename array_view<ElementType, 1>::acc_buffer_t;
           array_view<const ElementType, 1> av(Concurrency::extent<1>(size),
                                               buffer_type(cache),
                                               (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
@@ -2147,7 +2139,7 @@ private:
   template <typename Q, int K> friend class array_view;
 
   // used by view_as and reinterpret_as
-  array_view(const Concurrency::extent<N>& ext, const cl_buffer_t& cache,
+  array_view(const Concurrency::extent<N>& ext, const acc_buffer_t& cache,
              int offset) restrict(amp,cpu)
       : extent(ext), cache(cache), offset(offset), extent_base(ext) {}
 
@@ -2155,11 +2147,11 @@ private:
   array_view(const Concurrency::extent<N>& ext_now,
              const Concurrency::extent<N>& ext_b,
              const Concurrency::index<N>& idx_b,
-             const cl_buffer_t& cache, int off) restrict(amp,cpu)
+             const acc_buffer_t& cache, int off) restrict(amp,cpu)
       : extent(ext_now), index_base(idx_b), extent_base(ext_b),
       cache(cache), offset(off) {}
 
-  cl_buffer_t cache;
+  acc_buffer_t cache;
   Concurrency::extent<N> extent;
   Concurrency::extent<N> extent_base;
   Concurrency::index<N> index_base;

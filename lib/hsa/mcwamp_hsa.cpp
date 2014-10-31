@@ -12,7 +12,66 @@
 #include <map>
 #include <vector>
 
+#include <malloc.h> // memalign
+
+#include <amp_allocator.h>
+
 #include "HSAContext.h"
+
+///
+/// memory allocator
+///
+namespace Concurrency {
+
+// forward declaration
+namespace CLAMP {
+namespace HSA {
+extern void RegisterMemory(void*, size_t);
+}
+}
+
+class HSAAMPAllocator : public AMPAllocator
+{ 
+public:
+  HSAAMPAllocator() {}
+  void compile() {}
+  void init(void *data, int count) {
+    void *p = memalign(0x1000, count);
+    assert(p);
+    CLAMP::HSA::RegisterMemory(p, count);
+    mem_info[data] = p;
+  }
+  void append(Serialize&s, void *data) {
+    s.Append(sizeof(void*), &mem_info[data]);
+  }
+  void write() {}
+  void read() {}
+  void free(void *data) {
+    auto iter = mem_info.find(data);
+    free(iter->second);
+    mem_info.erase(iter);
+  }
+  ~HSAAMPAllocator() {}
+
+  std::map<void *, void*> mem_info;
+};
+
+static HSAAMPAllocator amp;
+
+HSAAMPAllocator& getHSAAMPAllocator() {
+  return amp;
+}
+
+AMPAllocator& getAllocator() {
+  return amp;
+}
+
+} // namespace Concurrency
+
+
+///
+/// kernel compilation / kernel launching
+///
 
 extern "C" char * kernel_source_[] asm ("_binary_kernel_cl_start") __attribute__((weak));
 extern "C" char * kernel_size_[] asm ("_binary_kernel_cl_size") __attribute__((weak));
