@@ -36,7 +36,6 @@ void cxxflags(void) {
 
     if (hsa_mode) {
       // HSA header
-      std::cout << " -DCXXAMP_ENABLE_HSA=1";
       std::cout << " -I" CMAKE_HSA_ROOT;
     }
 

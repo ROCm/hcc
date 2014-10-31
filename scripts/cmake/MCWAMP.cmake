@@ -47,8 +47,6 @@ endmacro(add_mcwamp_library_opencl name )
 macro(add_mcwamp_library_hsa name )
   CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXXAMP_FLAGS}")
-  # FIXME remove this in the future
-  add_definitions("-DCXXAMP_ENABLE_HSA=1")
   # add HSA headers
   include_directories(${HSA_HEADER} ${LIBHSAIL_HEADER} ${LIBHSAIL_HEADER}/generated)
   add_library( ${name} ${ARGN} )
