@@ -1,4 +1,4 @@
-C++AMP Compiler Implementation for HSA
+C++AMP Compiler Implementation for OpenCL/HSA
 
 Introduction
 --------------------------------------------------------------------------------
@@ -6,8 +6,9 @@ This repository hosts C++AMP compiler implementation project. The goal is to
 implement a compiler that takes a program conforming C++AMP standard and
 transforms it into the following targets:
 
-1. HSAIL for HSA
-2. (work-in-progress) BRIG for HSA
+1. OpenCL SPIR
+2. OpenCL C
+3. HSA BRIG 
 
 The project is based on LLVM+CLANG.
 
@@ -32,6 +33,10 @@ The current repository is composed of as following:
 
 Build Instruction for HSA
 --------------------------------------------------------------------------------
+* Prerequisite/OpenCL
+
+FIXME: this section needs to be polished
+
 * Prerequisite/HSA
 
 FIXME: this section needs to be polished
@@ -82,10 +87,30 @@ are:
 
   The default options can be overridden on the command line:
   # cmake ../src \
-      -DCLANG_URL=git@bitbucket.org:${username}/cppamp-ng.git \
-      -DCXXAMP_ENABLE_GMAC=OFF \
-      -DCXXAMP_ENABLE_HSA=ON \
+      -DCLANG_URL=https://bitbucket.org/multicoreware/cppamp-ng.git \
+      -DOPENCL_HEADER_DIR=/opt/AMDAPP/include \
+      -DOPENCL_LIBRARY_DIR=/opt/AMDAPP/lib/x86_64 \
+      -DHSA_HEADER_DIR=/opt/hsa/include \
+      -DHSA_LIBRARY_DIR=/opt/hsa/lib \
+      -DHSA_LIBHSAIL_HEADER_DIR=/opt/hsa/include \
+      -DHSA_LIBHSAIL_LIBRARY_DIR=/opt/hsa/lib \
+      -DHSAIL_COMPILER_DIR=/opt/amd/bin \
       -DCMAKE_BUILD_TYPE=Release
+
+   - CLANG_URL : URL of C++AMP clang implementation
+
+   - OPENCL_HEADER_DIR : OpenCL header include path
+   - OPENCL_LIBRARY_DIR : OpenCL runtime library path
+
+   - HSA_HEADER_DIR : HSA runtime header include path
+   - HSA_LIBRARY_DIR : HSA runtime library path
+
+   - HSA_LIBHSAIL_HEADER_DIR : libHSAIL header include path
+   - HSA_LIBHSAIL_LIBRARY_DIR : libHSAIL library path
+
+   - HSAIL_COMPILER_DIR : HSAIL compiler binary path
+
+   - CMAKE_BUILD_TYPE : Release or Debug  
 
 4. Build the whole system. This will build clang and other libraries
    that require one time build.
