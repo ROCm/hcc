@@ -1,0 +1,41 @@
+/// ELIGIBLE_STL_CALL is used to enumerate STL call names that are
+/// eligible by replacing with AMD Bolt counterpart.
+
+#ifndef ELIGIBLE_STL_CALL
+#  define ELIGIBLE_STL_CALL(Name)
+#endif
+
+ELIGIBLE_STL_CALL( binary_search )
+ELIGIBLE_STL_CALL( copy )
+ELIGIBLE_STL_CALL( copy_n )
+ELIGIBLE_STL_CALL( count )
+ELIGIBLE_STL_CALL( count_if )
+ELIGIBLE_STL_CALL( device_vector )
+ELIGIBLE_STL_CALL( exclusive_scan )
+ELIGIBLE_STL_CALL( exclusive_scan_by_key )
+ELIGIBLE_STL_CALL( fill )
+ELIGIBLE_STL_CALL( fill_n )
+ELIGIBLE_STL_CALL( gather )
+ELIGIBLE_STL_CALL( gather_if )
+ELIGIBLE_STL_CALL( generate )
+ELIGIBLE_STL_CALL( inclusive_scan )
+ELIGIBLE_STL_CALL( inclusive_scan_by_key )
+ELIGIBLE_STL_CALL( inner_product )
+ELIGIBLE_STL_CALL( max_element )
+ELIGIBLE_STL_CALL( merge )
+ELIGIBLE_STL_CALL( min_element )
+ELIGIBLE_STL_CALL( pair )
+ELIGIBLE_STL_CALL( reduce )
+ELIGIBLE_STL_CALL( reduce_by_key )
+ELIGIBLE_STL_CALL( scatter )
+ELIGIBLE_STL_CALL( scatter_if )
+ELIGIBLE_STL_CALL( sort )
+ELIGIBLE_STL_CALL( sort_by_key )
+ELIGIBLE_STL_CALL( stablesort )
+ELIGIBLE_STL_CALL( stable_sort_by_key )
+ELIGIBLE_STL_CALL( transform )
+ELIGIBLE_STL_CALL( transform_exclusive_scan )
+ELIGIBLE_STL_CALL( transform_inclusive_scan )
+ELIGIBLE_STL_CALL( transform_reduce )
+
+#undef ELIGIBLE_STL_CALL
