@@ -92,8 +92,9 @@ void ldflags(void) {
       std::cout << " -L" CMAKE_HSA_LIB;
       std::cout << " -Wl,--whole-archive -lmcwamp_hsa -Wl,--no-whole-archive ";
       std::cout << " -lelf -lhsa-runtime64 ";
-      std::cout << " " CMAKE_HSA_LIB "/libhsail.a ";
+      std::cout << " " CMAKE_LIBHSAIL_LIB;
       std::cout << " -Wl,--unresolved-symbols=ignore-in-shared-libs ";
+      std::cout << " -lpthread ";
     }
 
     if (opencl_mode) {

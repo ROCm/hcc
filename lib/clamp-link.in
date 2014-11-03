@@ -72,7 +72,9 @@ $LINK $LINK_KERNEL_ARGS | $OPT -always-inline - -o $TEMP_DIR/kernel.bc
 if [ "@HAS_OPENCL@" == "1" ]; then
   # lower to SPIR or OCL
   $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.cl
-else
+fi
+
+if [ "@HAS_HSA@" == "1" ]; then
   # lower to HSAIL
   $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.cl --hsa
 fi

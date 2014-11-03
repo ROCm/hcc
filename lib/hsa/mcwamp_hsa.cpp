@@ -30,30 +30,67 @@ extern void RegisterMemory(void*, size_t);
 }
 }
 
+struct rw_info
+{
+  int count;
+  bool used;
+};
 class HSAAMPAllocator : public AMPAllocator
 { 
 public:
   HSAAMPAllocator() {}
   void compile() {}
   void init(void *data, int count) {
+    //std::cerr << "HSAAMPAllocator::init()" << std::endl;
     void *p = memalign(0x1000, count);
     assert(p);
     CLAMP::HSA::RegisterMemory(p, count);
+    rwq[data] = {count, false};
     mem_info[data] = p;
+    //std::cerr << "add to rwq: " << data << " - " << p << std::endl;
   }
   void append(Serialize&s, void *data) {
     s.Append(sizeof(void*), &mem_info[data]);
+    rwq[data].used = true;
   }
-  void write() {}
-  void read() {}
+  void write() {
+    //std::cerr << "HSAAMPAllocator::write()" << std::endl;
+    for (auto& it : rwq) {
+      rw_info& rw = it.second;
+      if (rw.used) {
+        //std::cerr << "copy from: " << mem_info[it.first] << " to: " << it.first << " size: " << rw.count << std::endl;
+        memcpy(mem_info[it.first], it.first, rw.count);
+      }
+    }
+  }
+  void read() {
+    //std::cerr << "HSAAMPAllocator::read()" << std::endl;
+    for (auto& it : rwq) {
+      rw_info& rw = it.second;
+      if (rw.used) {
+        //std::cerr << "copy from: " << mem_info[it.first] << " to: " << it.first << " size: " << rw.count << std::endl;
+        memcpy(it.first, mem_info[it.first], rw.count);
+        rw.used = false;
+      }
+    }
+  }
   void free(void *data) {
+    //std::cerr << "HSAAMPAllocator::free()" << std::endl;
+    //std::cerr << "data: " << data << std::endl;
     auto iter = mem_info.find(data);
-    free(iter->second);
-    mem_info.erase(iter);
+    if (iter != mem_info.end()) {
+      free(iter->second);
+      mem_info.erase(iter);
+    }
   }
-  ~HSAAMPAllocator() {}
+  ~HSAAMPAllocator() {
+    // FIXME add more proper cleanup
+    mem_info.clear();
+    rwq.clear();
+  }
 
   std::map<void *, void*> mem_info;
+  std::map<void *, rw_info> rwq;
 };
 
 static HSAAMPAllocator amp;
@@ -179,6 +216,9 @@ std::future<void> LaunchKernelAsync(void *ker, size_t nr_dim, size_t *global, si
   size_t tmp_local[] = {0, 0, 0};
   if (!local)
       local = tmp_local;
+
+  // FIXME: TBD need to consider allocator with async kernel dispatch
+
   //std::cerr<<"Launching: nr dim = " << nr_dim << "\n";
   //for (size_t i = 0; i < nr_dim; ++i) {
   //  std::cerr << "g: " << global[i] << " l: " << local[i] << "\n";
@@ -201,9 +241,12 @@ void LaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local)
   //for (size_t i = 0; i < nr_dim; ++i) {
   //  std::cerr << "g: " << global[i] << " l: " << local[i] << "\n";
   //}
+  HSAAMPAllocator& aloc = getHSAAMPAllocator();
+  aloc.write();
   dispatch->setLaunchAttributes(nr_dim, global, local);
   //std::cerr << "Now real launch\n";
   dispatch->dispatchKernelWaitComplete();
+  aloc.read();
 }
 
 void PushArg(void *ker, int idx, size_t sz, const void *v)
