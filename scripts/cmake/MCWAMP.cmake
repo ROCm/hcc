@@ -38,7 +38,7 @@ macro(add_mcwamp_library_opencl name )
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXXAMP_FLAGS}")
   # add OpenCL headers
   include_directories("${OPENCL_HEADER}/..")
-  add_library( ${name} ${ARGN} )
+  add_library( ${name} SHARED ${ARGN} )
 endmacro(add_mcwamp_library_opencl name )
 
 ####################
@@ -49,7 +49,7 @@ macro(add_mcwamp_library_hsa name )
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXXAMP_FLAGS}")
   # add HSA headers
   include_directories(${HSA_HEADER} ${LIBHSAIL_HEADER} ${LIBHSAIL_HEADER}/generated)
-  add_library( ${name} ${ARGN} )
+  add_library( ${name} SHARED ${ARGN} )
 endmacro(add_mcwamp_library_hsa name )
 
 ####################
