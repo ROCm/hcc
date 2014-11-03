@@ -83,7 +83,6 @@ are:
   The default options can be overridden on the command line:
   # cmake ../src \
       -DCLANG_URL=git@bitbucket.org:${username}/cppamp-ng.git \
-      -DCXXAMP_ENABLE_GMAC=OFF \
       -DCXXAMP_ENABLE_HSA=ON \
       -DCMAKE_BUILD_TYPE=Release
 

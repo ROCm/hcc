@@ -12,9 +12,6 @@ set (INC_DIRS ${CLAMP_INC_DIR}
     "${LLVM_INC_DIR}"
     "${CLANG_BUILD_DIR}/include"
     ${BOLT_INC_DIRS} )
-if (CXXAMP_ENABLE_GMAC)
-  list(APPEND INC_DIRS ${GMAC_INC_DIR})
-endif()
 
 set (LIB_DIRS ${LIBCXX_LIB_DIR} 
     ${LIBCXXRT_LIB_DIR}
@@ -123,10 +120,6 @@ set ( USER_LIBS
   cxxrt
   c++ 
 )
-
-if (CXXAMP_ENABLE_GMAC)
-  list(APPEND USER_LIBS gmac-hpe)
-endif()
 
 list(APPEND USER_LIBS ampBolt.runtime.clang ${Boost_LIBRARIES})
 

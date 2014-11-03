@@ -9,9 +9,6 @@ set (CLAMP_INC_DIR ${PROJECT_SOURCE_DIR}/include)
 set (INC_DIRS ${CLAMP_INC_DIR}
     ${LIBCXX_INC_DIR}
     ${BOLT_INC_DIRS} )
-if (CXXAMP_ENABLE_GMAC)
-  list(APPEND INC_DIRS ${GMAC_INC_DIR})
-endif()
 
 set (LIB_DIRS ${LIBCXX_LIB_DIR} 
     ${LIBCXXRT_LIB_DIR}
@@ -43,14 +40,6 @@ macro(test_clang_plugin name)
   endif()
 
 endmacro(test_clang_plugin)
- 
-set ( Boost_LIBRARIES 
-  boost_chrono
-  boost_date_time
-  boost_program_options
-  boost_system
-  boost_thread
-)
 
 set ( USER_LIBS
   mcwamp
@@ -60,11 +49,7 @@ set ( USER_LIBS
   OpenCL
 )
 
-if (CXXAMP_ENABLE_GMAC)
-  list(APPEND USER_LIBS gmac-hpe pthread)
-endif()
-
-list(APPEND USER_LIBS ampBolt.runtime.clang)# ${Boost_LIBRARIES})
+list(APPEND USER_LIBS ampBolt.runtime.clang)
 
 # For verification purpose, not for delivery
 test_clang_plugin(TestBolt TestBolt.cpp)
