@@ -50,6 +50,12 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-hsatools
 ####################
 install(FILES opencl_math.bc DESTINATION lib)
 
+
+####################
+# OpenCL C double type detection
+####################
+install(FILES opencl_prefix.cl DESTINATION lib)
+
 ####################
 # Dynamic memory allocation HSAIL logic (HSA)
 ####################

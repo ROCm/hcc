@@ -65,7 +65,7 @@ else
         $LLC $2.promote.bc -march=c -o - |cat $MATH/opencl_math.cl - > $2
     
         if grep -q " double " $2; then
-            echo "#pragma OPENCL EXTENSION cl_khr_fp64: enable"|cat - $2 > $2.t
+            cat $MATHLIB/opencl_prefix.cl $2 > $2.t
             mv -f $2.t $2
         fi
         # remove temp file
