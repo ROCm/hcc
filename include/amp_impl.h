@@ -5,17 +5,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef INCLUDE_AMP_IMPL_H
-#define INCLUDE_AMP_IMPL_H
+#pragma once
+
+#include <amp_runtime.h>
 
 // Specialization of AMP classes/templates
-
-namespace Concurrency {
-namespace CLAMP {
-extern void QueryDeviceInfo(const std::wstring&, bool&, size_t&, bool&, std::wstring&);
-}
-}
-
 namespace Concurrency {
 // Accelerators
 inline accelerator::accelerator() : 
@@ -633,4 +627,3 @@ array_view<const T,N>::array_view(const Concurrency::extent<N>& ext,
 #undef __global
 
 } //namespace Concurrency
-#endif //INCLUDE_AMP_IMPL_H

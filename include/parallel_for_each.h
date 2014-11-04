@@ -9,16 +9,12 @@
 #include <cassert>
 #include <future>
 #include <utility>
+
 #include <amp.h>
+#include <amp_runtime.h>
 
 namespace Concurrency {
-namespace CLAMP {
-extern void *CreateKernel(std::string);
-extern void LaunchKernel(void *, size_t, size_t *, size_t *);
-extern std::future<void> LaunchKernelAsync(void *, size_t, size_t *, size_t *);
-extern void MatchKernelNames( std::string & );
-extern void DetectRuntime();
-}
+
 static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu) {
     std::string s(f);
     std::string out;

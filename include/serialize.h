@@ -7,11 +7,9 @@
 
 #pragma once
 
+#include <amp_runtime.h>
+
 namespace Concurrency {
-namespace CLAMP {
-extern void PushArg(void *, int, size_t, const void *);
-extern void PushPointer(void *, void *);
-}
 class Serialize {
  public:
   typedef void *kernel;
