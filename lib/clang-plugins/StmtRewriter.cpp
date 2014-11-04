@@ -8,9 +8,10 @@
 //===----------------------------------------------------------------------===//
 //
 // This file searchs STL calls in input files and replaces them with AMD Bolt calls by using
-// utilites from RewriteHelper. The implementation will remove 'std::' text if any right before 
-// call's name and add nested namespace"bolt::amp::" instead. All needed bolt headers are also
-// rewritten in the begining place of the source files. Other statments, like arguments in
+// routines from ParallelRewriter. The implementation will remove 'std::' text if any preceding
+// call's name and add nested namespace"bolt::BKN::" instead. The BKN reprensets 
+// Bolt's amp or cl code path. The amp code path is by default. All needed bolt headers 
+// are also rewritten in the begining place of the source files. Other statments, like arguments in
 // CallExpr or their delcarations also will be rewritten if any changes to them need to happen
 // by using Bolt and its data structures.
 //
@@ -53,24 +54,32 @@
 
 using namespace clang;
 
-#define RW_STL_2_BOLT_CALL           (1<<20)
+// Default: using bolt's amp backend
+#define RW_STL_2_BOLT_CALL           (1<<10)
+#define RW_EXPAND_ARG_MACROS (1<<11)
+// For extensions
+#define RW_BOLT_CL_BACKEND        (1<<12) // N.A. for now
 // For debug purpose
-#define RW_BOLT_2_STL_CALL           (1<<21)
-#define RW_EXPAND_ARG_MACROS (1<<21)
+#define RW_BOLT_2_STL_CALL           (1<<20)
 
 class CallsVisitor: public RecursiveASTVisitor<CallsVisitor> {
   // This maps an original source AST to it's rewritten form. This allows
   // us to avoid rewriting the same node twice (which is very uncommon).
   // This is needed to support some of the exotic property rewriting.
   llvm::DenseMap<Stmt *, Stmt *> ReplacedNodes;
+  std::map<StringRef, bool> HeadersToAdd;
 
 public:
   ASTContext* Context;
 
 private:
     std::vector<StringRef> CallVec;
+    std::map<StringRef, StringRef>Name2HeaderMap;
     StringRef SourceFile;
     unsigned RWOpts;
+    std::string BoltBKN;            // backend name as: "amp"
+    std::string BoltNS;               // namespace as: "bolt::amp::"
+    std::string BoltDirname;  // dirname with trailing '/' as: "bolt/amp/"
 
     // FIXME: when using clang::Rewriter in PluginASTAction, there might be potential 
     // multi-threading issues. The root cause is that std::map inside RewiterBuffers fails
@@ -80,12 +89,21 @@ private:
 
 public:
   CallsVisitor(ASTContext* Ctx, StringRef InFile, unsigned Options) 
-    : Context(Ctx), SourceFile(InFile), RWOpts(Options) {
+    : Context(Ctx), SourceFile(InFile), RWOpts(Options), BoltBKN("amp") {
     Rw.setSourceMgr(Ctx->getSourceManager(),Ctx->getLangOpts());
+    if (RWOpts & RW_BOLT_CL_BACKEND)
+      BoltBKN = "cl";
+    BoltNS = "bolt::" + BoltBKN + "::";
+    BoltDirname = "bolt/"+BoltBKN+ "/";
     if (CallVec.size() == 0) {
-      #define ELIGIBLE_STL_CALL(Name) CallVec.push_back(#Name);
+      #define ELIGIBLE_STL_CALL(Name, Header) CallVec.push_back(#Name); \
+        Name2HeaderMap[#Name] = #Header;
       #include "EligibleSTLCallName.def"
     }
+  }
+
+  inline std::string FormBoltHeader( std::string HeaderName) {
+    return "#include <" + BoltDirname + HeaderName + ">\n";
   }
 
   void AddBoltInclude(FileID FID) {
@@ -93,34 +111,20 @@ public:
 
     // FIXME: not sure why LocFileStart can't be replaced or be inserted.
     // Use LocOffset temporarily. This needs user codes has a blank "first line".
-    SourceLocation LocOffset = LocFileStart.getLocWithOffset(1);
-    
-    std::string SearchPaths = StringRef("//#include <bolt/amp/binary_search.h>\n"
-    "#include <bolt/amp/transform.h>\n"
-    "#include <bolt/amp/device_vector.h>\n"
-    "#include <bolt/amp/copy.h>\n"
-    "#include <bolt/amp/fill.h>\n"
-    "#include <bolt/amp/functional.h>\n"
-    "#include <bolt/amp/gather.h>\n"
-    "#include <bolt/amp/generate.h>\n"
-    "//#include <bolt/amp/inner_product.h>\n"
-    "#include <bolt/amp/max_element.h>\n"
-    "#include <bolt/amp/merge.h>\n"
-    "#include <bolt/amp/min_element.h>\n"
-    "#include <bolt/amp/pair.h>\n"
-    "//#include <bolt/amp/reduce.h>\n"
-    "#include <bolt/amp/scatter.h>\n"
-    "//#include <bolt/amp/sorts.h>\n"
-    "//#include <bolt/amp/sort_by_key.h>\n"
-    "#include <bolt/amp/transform_reduce.h>\n"
-    "#include <bolt/amp/transform_scan.h>\n\n");
-    
-    // TODO: avoid duplicated
-    bool OkWrite = !Rw.InsertText(LocOffset, StringRef(SearchPaths));
-    if (!OkWrite) {
-      llvm::errs() << "Adding headers fails at: \n";
-      LocFileStart.dump(Context->getSourceManager());
-      llvm::errs()<<"\n";
+    SourceLocation LocOffset = LocFileStart.getLocWithOffset(1);    
+
+    // TODO: avoid duplicated headers
+    for (std::map<StringRef, bool>::iterator It = HeadersToAdd.begin(), 
+      E = HeadersToAdd.end(); It!=E; It++) {
+      if (It->second) {
+        std::string Header = FormBoltHeader(It->first);
+        bool OkWrite = !Rw.InsertText(LocOffset, Header);
+        if (!OkWrite) {
+          llvm::errs() << "Adding headers fails at: \n";
+          LocOffset.dump(Context->getSourceManager());
+          llvm::errs()<<"\n";
+        }
+      }
     }
 
   }
@@ -296,6 +300,10 @@ public:
         StringRef FuncName = FD->getName();
         if ((RWOpts & RW_STL_2_BOLT_CALL) && IsEligibleSTLCall(FuncName) &&
           getFirstNamespace(FD) == StringRef("std")) {
+         
+          // Indicate that we need to include this function's header
+          HeadersToAdd[Name2HeaderMap[FuncName]] = true;
+
           FunctionDecl* BoltFunc = SynthesizeFunctionDecl(FD);
           CallExpr* NewExpr = SynthesizeCallToFunctionDecl(
              BoltFunc, E->getArgs(),E->getNumArgs(),SourceLocation(), SourceLocation());
@@ -313,11 +321,11 @@ public:
               ArgBodyWithRParen.setBegin(E->getRParenLoc());
             }
             std::string NewCall;
-            NewCall += StringRef("bolt::amp::");
+            NewCall += BoltNS;
             NewCall += FuncName;
             NewCall += StringRef("(");
             NewCall += Rw.getRewrittenText(ArgBodyWithRParen);
-            bool OkWrite = !Rw.ReplaceText( E->getSourceRange(), StringRef(NewCall));
+            bool OkWrite = !Rw.ReplaceText(E->getSourceRange(), StringRef(NewCall));
             if (!OkWrite) {
               llvm::errs() << "Replacement fails at: \n";
               E->getLocStart().dump(Context->getSourceManager());
@@ -393,19 +401,30 @@ public:
     assert(CI.hasFileManager() && "File Manager is invalid!");
     assert(CI.hasASTContext() && "Context is invalid!");
 
-    // Enable to rewrite STL calls with Bolt calls by default
-    RWOpts |= RW_STL_2_BOLT_CALL;
-
     // Once the consumer is returned, our own implementation will be executed automatically
     // Also the consumer will be deleted automatically in the end by framework
     return new FindConsumer(CI, InFile, RWOpts);
   }
 
-  // Parse plugin's arguments if any
+  // Load in plugin's arguments by specifying the following in Clang's cc1
+  // for example,
+  //   -Xclang -plugin-arg-StmtRewriter -Xclang -expandarg
   bool ParseArgs(const CompilerInstance &CI, const std::vector<std::string>& args) {
+    // Enable to rewrite STL calls with Bolt amp calls by default
+    RWOpts |= RW_STL_2_BOLT_CALL;
+    
+    // TODO: Due to poisonous libstdc++ from cfe, args are not meaningful for now
+    #if 0
     for (unsigned i = 0, e = args.size(); i != e; ++i) {
       // TODO: Add specific arguments here to control plugin behavior
+      if (args[i] == "-expandarg")
+        RWOpts |= RW_EXPAND_ARG_MACROS;
+      if (args[i] == "-clbkn")
+        RWOpts |= RW_BOLT_CL_BACKEND;
+       if (args[i] == "-bolt2stl")
+        RWOpts |= RW_BOLT_2_STL_CALL;
     }
+    #endif
     
     return true;
   }
