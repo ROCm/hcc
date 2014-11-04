@@ -110,8 +110,8 @@ AMPAllocator& getAllocator() {
 /// kernel compilation / kernel launching
 ///
 
-extern "C" char * kernel_source_[] asm ("_binary_kernel_cl_start") __attribute__((weak));
-extern "C" char * kernel_size_[] asm ("_binary_kernel_cl_size") __attribute__((weak));
+extern "C" char * kernel_source_[] asm ("_binary_kernel_brig_start") __attribute__((weak));
+extern "C" char * kernel_size_[] asm ("_binary_kernel_brig_size") __attribute__((weak));
 
 #define AMP_DEVICE_TYPE_CPU (1)
 #define AMP_DEVICE_TYPE_GPU (2)
