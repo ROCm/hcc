@@ -17,6 +17,7 @@ extern void *CreateKernel(std::string);
 extern void LaunchKernel(void *, size_t, size_t *, size_t *);
 extern std::future<void> LaunchKernelAsync(void *, size_t, size_t *, size_t *);
 extern void MatchKernelNames( std::string & );
+extern void DetectRuntime();
 }
 static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu) {
     std::string s(f);
@@ -66,6 +67,10 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
   //this triggers the trampoline code being emitted
   // FIXME: implicitly casting to avoid pointer to int error
   int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
+
+  // FIXME detect and load C++AMP runtime
+  CLAMP::DetectRuntime();
+
   void *kernel = NULL;
   {
       std::string transformed_kernel_name =

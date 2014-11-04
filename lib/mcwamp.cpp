@@ -5,7 +5,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <iostream>
+
 #include <amp.h>
+
+#include <dlfcn.h>
 
 namespace Concurrency {
 
@@ -22,8 +26,65 @@ std::shared_ptr<accelerator> accelerator::_default_accelerator = nullptr;
 
 std::vector<std::string> __mcw_kernel_names;
 
+extern "C" char * cl_kernel_source[] asm ("_binary_kernel_cl_start") __attribute__((weak));
+extern "C" char * hsa_kernel_source[] asm ("_binary_kernel_brig_start") __attribute__((weak));
+
 namespace Concurrency {
 namespace CLAMP {
+
+////////////////////////////////////////////////////////////
+// Class declaration
+////////////////////////////////////////////////////////////
+/**
+ * \brief Base class of platform detection
+ */
+class PlatformDetect {
+public:
+  PlatformDetect(const std::string& name, const std::string& runtimeLibrary, void* const kernel_source) : m_name(name), m_runtimeLibrary(runtimeLibrary), m_kernel_source(kernel_source) {}
+
+  bool detect() {
+    std::cout << "Detecting " << m_name << "...";
+    // detect if kernel is available
+    if (!m_kernel_source) {
+      std::cout << " kernel not found" << std::endl;
+      return false;
+    }
+    std::cout << " kernel found...";
+
+    // detect if runtime is available
+    void* handle = dlopen(m_runtimeLibrary.c_str(), RTLD_LAZY);
+    if (!handle) {
+      std::cout << " runtime not found" << std::endl;
+      return false;
+    }
+    dlerror();  // clear any existing error
+    std::cout << " runtime found" << std::endl;
+    dlclose(handle);
+
+    return true;
+  }
+
+private:
+  std::string m_runtimeLibrary;
+  std::string m_name;
+  void* m_kernel_source;
+};
+
+/**
+ * \brief OpenCL runtime detection
+ */
+class OpenCLPlatformDetect : public PlatformDetect {
+public:
+  OpenCLPlatformDetect() : PlatformDetect("OpenCL", "libmcwamp_opencl.so", cl_kernel_source) {}
+};
+
+/**
+ * \brief HSA runtime detection
+ */
+class HSAPlatformDetect : public PlatformDetect {
+public:
+  HSAPlatformDetect() : PlatformDetect("HSA", "libmcwamp_hsa.so", hsa_kernel_source) {}
+};
 
 // Levenshtein Distance to measure the difference of two sequences
 // The shortest distance it returns the more likely the two sequences are equal
@@ -94,6 +155,21 @@ void MatchKernelNames(std::string& fixed_name) {
       fixed_name = shortest;
   }
   return;
+}
+
+void DetectRuntime() {
+  HSAPlatformDetect hsa_rt;
+  OpenCLPlatformDetect opencl_rt;
+  if (!hsa_rt.detect()) {
+    if (!opencl_rt.detect()) {
+      std::cerr << "Can't load any C++AMP platform!" << std::endl;
+      exit(-1);
+    } else {
+      // load OpenCL C++AMP runtime
+    }
+  } else {
+    // load HSA C++AMP runtime
+  }
 }
 
 } // namespace CLAMP
