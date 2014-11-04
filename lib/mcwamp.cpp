@@ -5,7 +5,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <iostream>
+
 #include <amp.h>
+
+#include <dlfcn.h>
 
 namespace Concurrency {
 
@@ -24,6 +28,50 @@ std::vector<std::string> __mcw_kernel_names;
 
 namespace Concurrency {
 namespace CLAMP {
+
+////////////////////////////////////////////////////////////
+// Class declaration
+////////////////////////////////////////////////////////////
+/**
+ * \brief Base class of runtime detection
+ */
+class RuntimeDetect {
+public:
+  RuntimeDetect(const std::string& name, const std::string& runtimeLibrary) : m_name(name), m_runtimeLibrary(runtimeLibrary) {}
+
+  bool detect() {
+    std::cout << "Detecting " << m_name << "...";
+    void* handle = dlopen(m_runtimeLibrary.c_str(), RTLD_LAZY);
+    if (!handle) {
+      std::cout << " not found" << std::endl;
+      return false;
+    }
+    dlerror();  // clear any existing error
+    std::cout << " found" << std::endl;
+    dlclose(handle);
+    return true;
+  }
+
+private:
+  std::string m_runtimeLibrary;
+  std::string m_name;
+};
+
+/**
+ * \brief OpenCL runtime detection
+ */
+class OpenCLRuntimeDetect : public RuntimeDetect {
+public:
+  OpenCLRuntimeDetect() : RuntimeDetect("OpenCL", "libOpenCL.so") {}
+};
+
+/**
+ * \brief HSA runtime detection
+ */
+class HSARuntimeDetect : public RuntimeDetect {
+public:
+  HSARuntimeDetect() : RuntimeDetect("HSA", "libhsa-runtime64.so") {}
+};
 
 // Levenshtein Distance to measure the difference of two sequences
 // The shortest distance it returns the more likely the two sequences are equal
@@ -94,6 +142,21 @@ void MatchKernelNames(std::string& fixed_name) {
       fixed_name = shortest;
   }
   return;
+}
+
+void DetectRuntime() {
+  HSARuntimeDetect hsa_rt;
+  OpenCLRuntimeDetect opencl_rt;
+  if (!hsa_rt.detect()) {
+    if (!opencl_rt.detect()) {
+      std::cerr << "Can't load any C++AMP runtime!" << std::endl;
+      exit(-1);
+    } else {
+      // load OpenCL C++AMP runtime
+    }
+  } else {
+    // load HSA C++AMP runtime
+  }
 }
 
 } // namespace CLAMP
