@@ -40,32 +40,52 @@ namespace CLAMP {
  */
 class PlatformDetect {
 public:
-  PlatformDetect(const std::string& name, const std::string& runtimeLibrary, void* const kernel_source) : m_name(name), m_runtimeLibrary(runtimeLibrary), m_kernel_source(kernel_source) {}
+  PlatformDetect(const std::string& name, 
+                 const std::string& ampRuntimeLibrary, 
+                 const std::string& systemRuntimeLibrary,
+                 void* const kernel_source)
+    : m_name(name), 
+      m_ampRuntimeLibrary(ampRuntimeLibrary), 
+      m_systemRuntimeLibrary(systemRuntimeLibrary), 
+      m_kernel_source(kernel_source) {}
 
   bool detect() {
-    std::cout << "Detecting " << m_name << "...";
+    //std::cout << "Detecting " << m_name << "...";
     // detect if kernel is available
     if (!m_kernel_source) {
-      std::cout << " kernel not found" << std::endl;
+      //std::cout << " kernel not found" << std::endl;
       return false;
     }
-    std::cout << " kernel found...";
+    //std::cout << " kernel found...";
 
-    // detect if runtime is available
-    void* handle = dlopen(m_runtimeLibrary.c_str(), RTLD_LAZY);
+    void* handle = nullptr;
+
+    // detect if system runtime is available
+    handle = dlopen(m_systemRuntimeLibrary.c_str(), RTLD_LAZY);
     if (!handle) {
-      std::cout << " runtime not found" << std::endl;
+      //std::cout << " system runtime not found" << std::endl;
       return false;
     }
     dlerror();  // clear any existing error
-    std::cout << " runtime found" << std::endl;
+    //std::cout << " system runtime found...";
+    dlclose(handle);
+
+    // detect if C++AMP runtime is available
+    handle = dlopen(m_ampRuntimeLibrary.c_str(), RTLD_LAZY);
+    if (!handle) {
+      //std::cout << " C++AMP runtime not found" << std::endl;
+      return false;
+    }
+    dlerror();  // clear any existing error
+    //std::cout << " C++AMP runtime found" << std::endl;
     dlclose(handle);
 
     return true;
   }
 
 private:
-  std::string m_runtimeLibrary;
+  std::string m_systemRuntimeLibrary;
+  std::string m_ampRuntimeLibrary;
   std::string m_name;
   void* m_kernel_source;
 };
@@ -75,7 +95,7 @@ private:
  */
 class OpenCLPlatformDetect : public PlatformDetect {
 public:
-  OpenCLPlatformDetect() : PlatformDetect("OpenCL", "libmcwamp_opencl.so", cl_kernel_source) {}
+  OpenCLPlatformDetect() : PlatformDetect("OpenCL", "libmcwamp_opencl.so", "libOpenCL.so", cl_kernel_source) {}
 };
 
 /**
@@ -83,7 +103,7 @@ public:
  */
 class HSAPlatformDetect : public PlatformDetect {
 public:
-  HSAPlatformDetect() : PlatformDetect("HSA", "libmcwamp_hsa.so", hsa_kernel_source) {}
+  HSAPlatformDetect() : PlatformDetect("HSA", "libmcwamp_hsa.so", "libhsa-runtime64.so", hsa_kernel_source) {}
 };
 
 // Levenshtein Distance to measure the difference of two sequences
@@ -166,9 +186,11 @@ void DetectRuntime() {
       exit(-1);
     } else {
       // load OpenCL C++AMP runtime
+      std::cout << "Use OpenCL runtime" << std::endl;
     }
   } else {
     // load HSA C++AMP runtime
+    std::cout << "Use HSA runtime" << std::endl;
   }
 }
 

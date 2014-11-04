@@ -94,9 +94,9 @@ fi
 # link everything together
 if [ "@HAS_OPENCL@" == "1" ] && [ "@HAS_HSA@" == "1" ]; then
   ld $TEMP_DIR/kernel.o $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS $LINK_OTHER_ARGS
-elif [ "@HAS_OPENCL@" == "1" ]; then
+elif [ "@HAS_OPENCL@" == "1" ] && [ "@HAS_HSA@" == "0" ]; then
   ld $TEMP_DIR/kernel.o $LINK_HOST_ARGS $LINK_OTHER_ARGS
-elif [ "@HAS_HSA@" == "1" ]; then
+elif [ "@HAS_OPENCL@" == "0" ] && [ "@HAS_HSA@" == "1" ]; then
   ld $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS $LINK_OTHER_ARGS
 else
   echo "Error in C++AMP link!"
