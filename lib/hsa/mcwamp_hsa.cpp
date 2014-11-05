@@ -38,7 +38,6 @@ class HSAAMPAllocator : public AMPAllocator
   static inline bool is_aligned(const void *pointer, size_t byte_count) { return (uintptr_t)pointer % byte_count == 0; }
 public:
   HSAAMPAllocator() {}
-  void compile() {}
   void init(void *data, int count) {
     //std::cerr << "HSAAMPAllocator::init()" << std::endl;
     void *p = nullptr;

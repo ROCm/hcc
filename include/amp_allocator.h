@@ -7,7 +7,6 @@ class AMPAllocator {
 public:
   AMPAllocator() {}
   virtual ~AMPAllocator() {}
-  virtual void compile() = 0;
   virtual void init(void*, int) = 0;
   virtual void append(void*, int, void*) = 0;
   virtual void write() = 0;

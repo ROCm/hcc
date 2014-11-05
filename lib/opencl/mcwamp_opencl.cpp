@@ -60,9 +60,6 @@ public:
         queue = clCreateCommandQueue(context, device, 0, &err);
         assert(err == CL_SUCCESS);
     }
-    void compile() {
-        CLAMP::CompileKernels(program, context, device);
-    }
     void init(void *data, int count) {
         if (count > 0) {
             cl_int err;
@@ -246,7 +243,7 @@ void PushArg(void *k_, int idx, size_t sz, const void *s) {
 void *CreateKernel(std::string s) {
   cl_int err;
   OpenCLAMPAllocator& aloc = getOpenCLAMPAllocator();
-  aloc.compile();
+  CLAMP::CompileKernels(aloc.program, aloc.context, aloc.device);
   aloc.kernel = clCreateKernel(aloc.program, s.c_str(), &err);
   assert(err == CL_SUCCESS);
   return aloc.kernel;
