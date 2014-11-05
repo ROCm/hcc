@@ -109,19 +109,15 @@ public:
   void AddBoltInclude(FileID FID) {
     SourceLocation LocFileStart = Rw.getSourceMgr().getLocForStartOfFile(FID);
 
-    // FIXME: not sure why LocFileStart can't be replaced or be inserted.
-    // Use LocOffset temporarily. This needs user codes has a blank "first line".
-    SourceLocation LocOffset = LocFileStart.getLocWithOffset(1);    
-
     // TODO: avoid duplicated headers
     for (std::map<StringRef, bool>::iterator It = HeadersToAdd.begin(), 
       E = HeadersToAdd.end(); It!=E; It++) {
       if (It->second) {
         std::string Header = FormBoltHeader(It->first);
-        bool OkWrite = !Rw.InsertText(LocOffset, Header);
+        bool OkWrite = !Rw.InsertText(LocFileStart, Header);
         if (!OkWrite) {
           llvm::errs() << "Adding headers fails at: \n";
-          LocOffset.dump(Context->getSourceManager());
+          LocFileStart.dump(Context->getSourceManager());
           llvm::errs()<<"\n";
         }
       }
