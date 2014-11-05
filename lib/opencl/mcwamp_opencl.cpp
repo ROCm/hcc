@@ -17,6 +17,7 @@
 #include <CL/opencl.h>
 
 #include <amp_allocator.h>
+#include <amp_runtime.h>
 
 ///
 /// memory allocator
@@ -152,9 +153,6 @@ extern std::vector<std::string> __mcw_kernel_names;
 const wchar_t gpu_accelerator[] = L"gpu";
 const wchar_t cpu_accelerator[] = L"cpu";
 const wchar_t default_accelerator[] = L"default";
-
-#define AMP_DEVICE_TYPE_CPU (1)
-#define AMP_DEVICE_TYPE_GPU (2)
 
 namespace Concurrency {
 namespace CLAMP {

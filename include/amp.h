@@ -152,9 +152,6 @@ public:
   accelerator* _accelerator;
 };
 
-#define AMP_DEVICE_TYPE_CPU (1)
-#define AMP_DEVICE_TYPE_GPU (2)
-
 class accelerator {
 public:
   static const wchar_t default_accelerator[];   // = L"default"

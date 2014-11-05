@@ -13,6 +13,7 @@
 #include <vector>
 
 #include <amp_allocator.h>
+#include <amp_runtime.h>
 
 #include "HSAContext.h"
 
@@ -116,9 +117,6 @@ AMPAllocator *getAllocator() {
 ///
 /// kernel compilation / kernel launching
 ///
-
-#define AMP_DEVICE_TYPE_CPU (1)
-#define AMP_DEVICE_TYPE_GPU (2)
 
 namespace Concurrency {
 namespace CLAMP {

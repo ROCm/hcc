@@ -2,6 +2,9 @@
 
 #include <future>
 
+#define AMP_DEVICE_TYPE_CPU (1)
+#define AMP_DEVICE_TYPE_GPU (2)
+
 namespace Concurrency {
 namespace CLAMP {
 // used in amp.h
