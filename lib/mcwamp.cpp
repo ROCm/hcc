@@ -39,6 +39,10 @@ namespace CLAMP {
 // FIXME remove in the near future
 void* CLCreateKernel(const char*, void*, void*) __attribute__((weak));
 void* HSACreateKernel(const char*, void*, void*) __attribute__((weak));
+extern "C" void CLEnumerateDevicesImpl(int*, int*) __attribute__((weak));
+extern "C" void HSAEnumerateDevicesImpl(int*, int*) __attribute__((weak));
+extern "C" void CLQueryDeviceInfoImpl(const wchar_t*, bool*, size_t*, bool*, wchar_t*) __attribute__((weak));
+extern "C" void HSAQueryDeviceInfoImpl(const wchar_t*, bool*, size_t*, bool*, wchar_t*) __attribute__((weak));
 
 ////////////////////////////////////////////////////////////
 // Class declaration
@@ -153,6 +157,54 @@ static inline int ldistance(const std::string source, const std::string target)
   }
   return matrix[n][m];
 }
+
+// used in amp.h
+std::vector<int> EnumerateDevices() {
+  // FIXME use runtime detection in the future
+  OpenCLPlatformDetect opencl_rt;
+  int num = 0;
+  std::vector<int> ret;
+  int* devices = nullptr;
+  if (opencl_rt.detect()) {
+    // OpenCL path
+    CLEnumerateDevicesImpl(NULL, &num);
+    assert(num > 0);
+    devices = new int[num];
+    CLEnumerateDevicesImpl(devices, NULL);
+  } else {
+    // HSA path
+    HSAEnumerateDevicesImpl(NULL, &num);
+    assert(num > 0);
+    devices = new int[num];
+    HSAEnumerateDevicesImpl(devices, NULL);
+  }
+  
+  for (int i = 0; i < num; ++i) {
+    ret.push_back(devices[i]);
+  }
+  delete[] devices;
+  return ret;
+}
+
+// used in amp_impl.h
+void QueryDeviceInfo(const std::wstring& device_path, 
+  bool& supports_cpu_shared_memory,
+  size_t& dedicated_memory, 
+  bool& supports_limited_double_precision, 
+  std::wstring& description) {
+  wchar_t des[128];
+  // FIXME use runtime detection in the future
+  OpenCLPlatformDetect opencl_rt;
+  if (opencl_rt.detect()) {
+    // OpenCL path
+    CLQueryDeviceInfoImpl(device_path.c_str(), &supports_cpu_shared_memory, &dedicated_memory, &supports_limited_double_precision, des);
+  } else {
+    // HSA path
+    HSAQueryDeviceInfoImpl(device_path.c_str(), &supports_cpu_shared_memory, &dedicated_memory, &supports_limited_double_precision, des);
+  }
+  description = std::wstring(des);
+}
+
 
 // transformed_kernel_name (mangled) might differ if usages of 'm32' flag in CPU/GPU
 // paths are mutually exclusive. We can scan all kernel names and replace

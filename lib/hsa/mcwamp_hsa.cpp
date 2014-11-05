@@ -118,26 +118,34 @@ AMPAllocator *getAllocator() {
 /// kernel compilation / kernel launching
 ///
 
+
+extern "C" void HSAEnumerateDevicesImpl(int* devices, int* device_number) {
+  // FIXME this is a dummy implementation where we always add one GPU device
+  // in the future it shall be changed to use hsa_iterate_agents
+  if (device_number != nullptr) {
+    *device_number = 1;
+  }
+  if (devices != nullptr) {
+    devices[0] = AMP_DEVICE_TYPE_GPU;
+  }
+}
+
+extern "C" void HSAQueryDeviceInfoImpl(const wchar_t* device_path,
+  bool* supports_cpu_shared_memory,
+  size_t* dedicated_memory,
+  bool* supports_limited_double_precision,
+  wchar_t* description) {
+
+  // FIXME this is a somewhat dummy implementation
+  const wchar_t des[] = L"HSA";
+  wmemcpy(description, des, sizeof(des));
+  *supports_cpu_shared_memory = true;
+  *supports_limited_double_precision = true;
+  *dedicated_memory = 0;
+}
+
 namespace Concurrency {
 namespace CLAMP {
-
-std::vector<int> EnumerateDevices() {
-    std::vector<int> devices;
-    devices.push_back(AMP_DEVICE_TYPE_GPU);
-    return devices;
-}
-
-void QueryDeviceInfo(const std::wstring& device_path,
-    bool& supports_cpu_shared_memory,
-    size_t& dedicated_memory,
-    bool& supports_limited_double_precision,
-    std::wstring& description) {
-
-    description = L"HSA";
-    supports_cpu_shared_memory = true;
-    supports_limited_double_precision = true;
-    dedicated_memory = 0;
-}
 
 static HSAContext *context = NULL;
 

@@ -63,10 +63,6 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
   //this triggers the trampoline code being emitted
   // FIXME: implicitly casting to avoid pointer to int error
   int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
-
-  // FIXME detect and load C++AMP runtime
-  CLAMP::DetectRuntime();
-
   void *kernel = NULL;
   {
       std::string transformed_kernel_name =

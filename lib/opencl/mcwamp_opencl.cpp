@@ -154,38 +154,50 @@ const wchar_t gpu_accelerator[] = L"gpu";
 const wchar_t cpu_accelerator[] = L"cpu";
 const wchar_t default_accelerator[] = L"default";
 
-namespace Concurrency {
-namespace CLAMP {
 
-std::vector<int> EnumerateDevices() {
-    std::vector<int> devices;
+extern "C" void CLEnumerateDevicesImpl(int* devices, int* device_number) {
+    int deviceTotalCount = 0;
+    int idx = 0;
     cl_int err;
     cl_uint platformCount;
     cl_uint deviceCount;
     std::unique_ptr<cl_platform_id[]> platforms;
 
-    err = clGetPlatformIDs(0, NULL, &platformCount);
+    err = clGetPlatformIDs(0, nullptr, &platformCount);
     platforms.reset(new cl_platform_id[platformCount]);
-    clGetPlatformIDs(platformCount, platforms.get(), NULL);
+    clGetPlatformIDs(platformCount, platforms.get(), nullptr);
     for (int i = 0; i < platformCount; i++) {
-        clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_CPU, 0, NULL, &deviceCount);
-        for (int j = 0; j < deviceCount; j++)
-            devices.push_back(AMP_DEVICE_TYPE_CPU);
-        clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_GPU, 0, NULL, &deviceCount);
-        for (int j = 0; j < deviceCount; j++)
-            devices.push_back(AMP_DEVICE_TYPE_GPU);
-    }
+        clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_CPU, 0, nullptr, &deviceCount);
+        for (int j = 0; j < deviceCount; j++) {
+            if (devices != nullptr) {
+              devices[idx++] = AMP_DEVICE_TYPE_CPU;
+            }
+        }
+        deviceTotalCount += deviceCount;
 
-    return devices;
+        clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_GPU, 0, nullptr, &deviceCount);
+        for (int j = 0; j < deviceCount; j++) {
+            if (devices != nullptr) {
+              devices[idx++] = AMP_DEVICE_TYPE_GPU;
+            }
+        }
+        deviceTotalCount += deviceCount;
+    }
+    assert(idx == deviceTotalCount);
+
+    if (device_number != nullptr) {
+      *device_number = deviceTotalCount;
+    }
 }
 
-void QueryDeviceInfo(const std::wstring& device_path,
-    bool& supports_cpu_shared_memory,
-    size_t& dedicated_memory,
-    bool& supports_limited_double_precision,
-    std::wstring& description) {
+extern "C" void CLQueryDeviceInfoImpl(const wchar_t* device_path,
+    bool* supports_cpu_shared_memory,
+    size_t* dedicated_memory,
+    bool* supports_limited_double_precision,
+    wchar_t* description) {
 
-    description = L"OpenCL";
+    const wchar_t des[] = L"OpenCL";
+    wmemcpy(description, des, sizeof(des));
 
     cl_int err;
     cl_uint platformCount;
@@ -201,17 +213,18 @@ void QueryDeviceInfo(const std::wstring& device_path,
     assert(err == CL_SUCCESS);
     int i;
     for (i = 0; i < platformCount; i++) {
-        if (device_path == std::wstring(gpu_accelerator)) {
+        if (std::wstring(gpu_accelerator) == device_path) {
+            
             err = clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_GPU, 1, &device, NULL);
             if (err != CL_SUCCESS)
                 continue;
-            supports_cpu_shared_memory = false;
+            *supports_cpu_shared_memory = false;
             break;
-        } else if (device_path == std::wstring(cpu_accelerator)) {
+        } else if (std::wstring(cpu_accelerator) == device_path) {
             err = clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_CPU, 1, &device, NULL);
             if (err != CL_SUCCESS)
                 continue;
-            supports_cpu_shared_memory = true;
+            *supports_cpu_shared_memory = true;
             break;
         }
     }
@@ -220,15 +233,17 @@ void QueryDeviceInfo(const std::wstring& device_path,
 
     err = clGetDeviceInfo(device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_ulong), &memAllocSize, NULL);
     assert(err == CL_SUCCESS);
-    dedicated_memory = memAllocSize / (size_t) 1024;
+    *dedicated_memory = memAllocSize / (size_t) 1024;
 
     err = clGetDeviceInfo(device, CL_DEVICE_SINGLE_FP_CONFIG, sizeof(cl_device_fp_config), &singleFPConfig, NULL);
     assert(err == CL_SUCCESS);
     if (singleFPConfig & CL_FP_FMA & CL_FP_DENORM & CL_FP_INF_NAN &
         CL_FP_ROUND_TO_NEAREST & CL_FP_ROUND_TO_ZERO)
-         supports_limited_double_precision = true;
+         *supports_limited_double_precision = true;
 }
 
+namespace Concurrency {
+namespace CLAMP {
 void PushArg(void *k_, int idx, size_t sz, const void *s) {
   cl_int err;
   err = clSetKernelArg(static_cast<cl_kernel>(k_), idx, sz, s);
