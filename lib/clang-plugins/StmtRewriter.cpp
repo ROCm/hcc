@@ -303,10 +303,17 @@ public:
           FunctionDecl* BoltFunc = SynthesizeFunctionDecl(FD);
           CallExpr* NewExpr = SynthesizeCallToFunctionDecl(
              BoltFunc, E->getArgs(),E->getNumArgs(),SourceLocation(), SourceLocation());
+          assert (NewExpr && "Null created CallExpr!");
           if (RWOpts & RW_EXPAND_ARG_MACROS ) {
             // Syntheize Bolt call by creating new FunctionDecl and rewrite CallExpr
             ReplaceStatement(E, NewExpr);
+            return true;
           } else {
+            // Ensure we only replace once
+            if ( ReplacedNodes[E] )
+              return true;
+            ReplacedNodes[E] = NewExpr;
+
             // Syntheize Bolt call straightforward
             SourceRange ArgBodyWithRParen(E->getLocStart(), E->getRParenLoc());
             if(E->getNumArgs()) {
