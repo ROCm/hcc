@@ -27,10 +27,18 @@ std::shared_ptr<accelerator> accelerator::_default_accelerator = nullptr;
 std::vector<std::string> __mcw_kernel_names;
 
 extern "C" char * cl_kernel_source[] asm ("_binary_kernel_cl_start") __attribute__((weak));
+extern "C" char * cl_kernel_size[] asm ("_binary_kernel_cl_size") __attribute__((weak));
 extern "C" char * hsa_kernel_source[] asm ("_binary_kernel_brig_start") __attribute__((weak));
+extern "C" char * hsa_kernel_size[] asm ("_binary_kernel_brig_size") __attribute__((weak));
+
 
 namespace Concurrency {
 namespace CLAMP {
+
+// forward declaration
+// FIXME remove in the near future
+void* CLCreateKernel(const char*, void*, void*) __attribute__((weak));
+void* HSACreateKernel(const char*, void*, void*) __attribute__((weak));
 
 ////////////////////////////////////////////////////////////
 // Class declaration
@@ -191,6 +199,18 @@ void DetectRuntime() {
   } else {
     // load HSA C++AMP runtime
     std::cout << "Use HSA runtime" << std::endl;
+  }
+}
+
+void *CreateKernel(std::string s) {
+  // FIXME use runtime detection in the future
+  OpenCLPlatformDetect opencl_rt;
+  if (opencl_rt.detect()) {
+    // OpenCL path
+    return CLAMP::CLCreateKernel(s.c_str(), cl_kernel_size, cl_kernel_source);
+  } else {
+    // HSA path
+    return CLAMP::HSACreateKernel(s.c_str(), hsa_kernel_size, hsa_kernel_source);
   }
 }
 

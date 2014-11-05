@@ -25,7 +25,7 @@ namespace Concurrency {
 
 // forward declaration
 namespace CLAMP {
-    void CompileKernels(cl_program&, cl_context&, cl_device_id&);
+    void CLCompileKernels(cl_program&, cl_context&, cl_device_id&, void*, void*);
 }
 
 struct rw_info
@@ -147,9 +147,6 @@ namespace {
 bool __mcw_cxxamp_compiled = false;
 }
 
-extern "C" char * kernel_source_[] asm ("_binary_kernel_cl_start") __attribute__((weak));
-extern "C" char * kernel_size_[] asm ("_binary_kernel_cl_size") __attribute__((weak));
-
 extern std::vector<std::string> __mcw_kernel_names;
 
 const wchar_t gpu_accelerator[] = L"gpu";
@@ -240,11 +237,11 @@ void PushArg(void *k_, int idx, size_t sz, const void *s) {
   assert(err == CL_SUCCESS);
 }
 
-void *CreateKernel(std::string s) {
+void *CLCreateKernel(const char* s, void* kernel_size, void* kernel_source) {
   cl_int err;
   OpenCLAMPAllocator& aloc = getOpenCLAMPAllocator();
-  CLAMP::CompileKernels(aloc.program, aloc.context, aloc.device);
-  aloc.kernel = clCreateKernel(aloc.program, s.c_str(), &err);
+  CLAMP::CLCompileKernels(aloc.program, aloc.context, aloc.device, kernel_size, kernel_source);
+  aloc.kernel = clCreateKernel(aloc.program, s, &err);
   assert(err == CL_SUCCESS);
   return aloc.kernel;
 }
@@ -347,7 +344,7 @@ void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size)
         }
     }
 
-    void CompileKernels(cl_program& program, cl_context& context, cl_device_id& device)
+    void CLCompileKernels(cl_program& program, cl_context& context, cl_device_id& device, void* kernel_size_, void* kernel_source_)
     {
         cl_int err;
         if (!__mcw_cxxamp_compiled) {

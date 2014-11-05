@@ -117,9 +117,6 @@ AMPAllocator *getAllocator() {
 /// kernel compilation / kernel launching
 ///
 
-extern "C" char * kernel_source_[] asm ("_binary_kernel_brig_start") __attribute__((weak));
-extern "C" char * kernel_size_[] asm ("_binary_kernel_brig_size") __attribute__((weak));
-
 #define AMP_DEVICE_TYPE_CPU (1)
 #define AMP_DEVICE_TYPE_GPU (2)
 
@@ -173,9 +170,10 @@ HSAContext *GetOrInitHSAContext(void)
 }
 
 static std::map<std::string, HSAContext::Kernel *> __mcw_hsa_kernels;
-void *CreateKernel(std::string s)
+void *HSACreateKernel(const char* s, void* kernel_size_, void* kernel_source_)
 {
-  HSAContext::Kernel *kernel = __mcw_hsa_kernels[s];
+  std::string str(s);
+  HSAContext::Kernel *kernel = __mcw_hsa_kernels[str];
   if (!kernel) {
       size_t kernel_size = (size_t)((void *)kernel_size_);
       char *kernel_source = (char*)malloc(kernel_size+1);
@@ -191,7 +189,7 @@ void *CreateKernel(std::string s)
       } else {
           //std::cerr << "CLAMP::HSA: Created kernel\n";
       }
-      __mcw_hsa_kernels[s] = kernel;
+      __mcw_hsa_kernels[str] = kernel;
   }
 
   HSAContext::Dispatch *dispatch = GetOrInitHSAContext()->createDispatch(kernel);
