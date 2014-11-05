@@ -17,6 +17,8 @@
 
 #include "HSAContext.h"
 
+extern "C" void HSAPushArgImpl(void *ker, int idx, size_t sz, const void *v);
+
 namespace Concurrency {
 namespace CLAMP {
 
@@ -88,7 +90,7 @@ public:
     //std::cerr << "add to rwq: " << data << " - " << p << std::endl;
   }
   void append(void *kernel, int idx, void *data) {
-    CLAMP::PushArg(kernel, idx, sizeof(void*), &mem_info[data]);
+    HSAPushArgImpl(kernel, idx, sizeof(void*), &mem_info[data]);
     rwq[data].used = true;
   }
   void write() {

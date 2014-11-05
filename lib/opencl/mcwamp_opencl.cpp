@@ -30,6 +30,8 @@ const wchar_t cpu_accelerator[] = L"cpu";
 const wchar_t default_accelerator[] = L"default";
 }
 
+extern "C" void CLPushArgImpl(void *k_, int idx, size_t sz, const void *s);
+
 ///
 /// memory allocator
 ///
@@ -86,7 +88,7 @@ public:
         }
     }
     void append(void *kernel, int idx, void *data) {
-        CLAMP::PushArg(kernel, idx, sizeof(cl_mem), &mem_info[data]);
+        CLPushArgImpl(kernel, idx, sizeof(cl_mem), &mem_info[data]);
 #if defined(CXXAMP_NV)
         rwq[data].used = true;
 #endif
