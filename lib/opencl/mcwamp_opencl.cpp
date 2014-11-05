@@ -147,9 +147,6 @@ OpenCLAMPAllocator& getOpenCLAMPAllocator() {
     return amp;
 }
 
-AMPAllocator *getAllocator() {
-    return &amp;
-}
 
 } // namespace Concurrency
 
@@ -258,6 +255,10 @@ void CLCompileKernels(cl_program& program, cl_context& context, cl_device_id& de
 } // namespce CLAMP
 } // namespace Concurrency
 
+
+extern "C" void *CLGetAllocatorImpl() {
+    return &Concurrency::amp;
+}
 
 extern "C" void CLEnumerateDevicesImpl(int* devices, int* device_number) {
     int deviceTotalCount = 0;

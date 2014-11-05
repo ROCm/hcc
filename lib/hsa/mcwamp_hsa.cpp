@@ -143,10 +143,6 @@ HSAAMPAllocator& getHSAAMPAllocator() {
   return amp;
 }
 
-AMPAllocator *getAllocator() {
-  return &amp;
-}
-
 } // namespace Concurrency
 
 
@@ -154,6 +150,9 @@ AMPAllocator *getAllocator() {
 /// kernel compilation / kernel launching
 ///
 
+extern "C" void *HSAGetAllocatorImpl() {
+  return &Concurrency::amp;
+}
 
 extern "C" void HSAEnumerateDevicesImpl(int* devices, int* device_number) {
   // FIXME this is a dummy implementation where we always add one GPU device
