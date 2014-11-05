@@ -54,6 +54,7 @@ macro(add_mcwamp_library_hsa name )
   add_library( ${name} SHARED ${ARGN} )
   # add HSA libraries
   target_link_libraries(${name} ${HSA_LIBRARY})
+  target_link_libraries(${name} ${HSA_KMT_LIBRARY})
   target_link_libraries(${name} ${LIBHSAIL_LIBRARY})
   target_link_libraries(${name} pthread)
   target_link_libraries(${name} elf)

@@ -92,6 +92,7 @@ are:
       -DOPENCL_LIBRARY_DIR=/opt/AMDAPP/lib/x86_64 \
       -DHSA_HEADER_DIR=/opt/hsa/include \
       -DHSA_LIBRARY_DIR=/opt/hsa/lib \
+      -DHSA_KMT_LIBRARY_DIR=/opt/hsa/lib \
       -DHSA_LIBHSAIL_HEADER_DIR=/opt/hsa/include \
       -DHSA_LIBHSAIL_LIBRARY_DIR=/opt/hsa/lib \
       -DHSAIL_COMPILER_DIR=/opt/amd/bin \
@@ -104,6 +105,8 @@ are:
 
    - HSA_HEADER_DIR : HSA runtime header include path
    - HSA_LIBRARY_DIR : HSA runtime library path
+
+   - HSA_KMT_LIBRARY_DIR : HSA kernel library path
 
    - HSA_LIBHSAIL_HEADER_DIR : libHSAIL header include path
    - HSA_LIBHSAIL_LIBRARY_DIR : libHSAIL library path
