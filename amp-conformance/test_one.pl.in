@@ -50,8 +50,6 @@ my $AMPTESTLIB="@AMPTESTLIB@";
 my $AMPTESTINC="@AMPTESTINC@";
 my $RUNTESTSDIR="@RUNTESTSDIR@";
 
-my $OPENCL_INC="@OPENCL_HEADER@/..";
-
 my $CLANG_AMP="$CLANG_AMP_BUILD_DIR/compiler/bin/clang++";
 my $CLAMP_CONFIG=`find $CLANG_AMP_BUILD_DIR/build -name clamp-config -print`;
 $CLAMP_CONFIG =~ s/^\s+//;
@@ -63,9 +61,6 @@ my $CLAMP_LDFLAGS=`$CLAMP_CONFIG --build --ldflags`;
 $CLAMP_LDFLAGS =~ s/^\s+//;
 $CLAMP_LDFLAGS =~ s/\s+$//;
 my $SHARED_CXXFLAGS="$CLAMP_CXXFLAGS -I$AMPTESTINC ";
-if ($OPENCL_INC ne "/..") {
-    $SHARED_CXXFLAGS="$SHARED_CXXFLAGS -I$OPENCL_INC";
-}
 
 ### Execute tests
 use constant PASS => 0;
