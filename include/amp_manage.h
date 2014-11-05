@@ -47,7 +47,7 @@ struct mm_info
             dirty = device;
         }
         discard = false;
-        getAllocator().append(s, device);
+        getAllocator().append(s.getKernel(), s.getAndIncCurrentIndex(), device);
     }
     ~mm_info() {
         getAllocator().free(device);

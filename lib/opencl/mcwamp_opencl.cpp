@@ -76,8 +76,8 @@ public:
             mem_info[data] = dm;
         }
     }
-    void append(Serialize& s, void *data) {
-        s.Append(sizeof(cl_mem), &mem_info[data]);
+    void append(void *kernel, int idx, void *data) {
+        CLAMP::PushArg(kernel, idx, sizeof(cl_mem), &mem_info[data]);
 #if defined(CXXAMP_NV)
         rwq[data].used = true;
 #endif

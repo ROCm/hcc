@@ -49,8 +49,8 @@ public:
     mem_info[data] = p;
     //std::cerr << "add to rwq: " << data << " - " << p << std::endl;
   }
-  void append(Serialize&s, void *data) {
-    s.Append(sizeof(void*), &mem_info[data]);
+  void append(void *kernel, int idx, void *data) {
+    CLAMP::PushArg(kernel, idx, sizeof(void*), &mem_info[data]);
     rwq[data].used = true;
   }
   void write() {
