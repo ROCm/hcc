@@ -37,12 +37,20 @@ namespace CLAMP {
 
 // forward declaration
 // FIXME remove in the near future
-void* CLCreateKernel(const char*, void*, void*) __attribute__((weak));
-void* HSACreateKernel(const char*, void*, void*) __attribute__((weak));
 extern "C" void CLEnumerateDevicesImpl(int*, int*) __attribute__((weak));
 extern "C" void HSAEnumerateDevicesImpl(int*, int*) __attribute__((weak));
 extern "C" void CLQueryDeviceInfoImpl(const wchar_t*, bool*, size_t*, bool*, wchar_t*) __attribute__((weak));
 extern "C" void HSAQueryDeviceInfoImpl(const wchar_t*, bool*, size_t*, bool*, wchar_t*) __attribute__((weak));
+extern "C" void* CLCreateKernelImpl(const char*, void*, void*) __attribute__((weak));
+extern "C" void* HSACreateKernelImpl(const char*, void*, void*) __attribute__((weak));
+extern "C" void CLLaunchKernelImpl(void *, size_t, size_t*, size_t*) __attribute__((weak));
+extern "C" void HSALaunchKernelImpl(void *, size_t, size_t*, size_t*) __attribute__((weak));
+extern "C" void* CLLaunchKernelAsyncImpl(void *, size_t, size_t*, size_t*) __attribute__((weak));
+extern "C" void* HSALaunchKernelAsyncImpl(void *, size_t, size_t*, size_t*) __attribute__((weak));
+extern "C" void* CLMatchKernelNamesImpl(char *) __attribute__((weak));
+extern "C" void* HSAMatchKernelNamesImpl(char *) __attribute__((weak));
+extern "C" void* CLPushArgImpl(void *, int, size_t, const void *) __attribute__((weak));
+extern "C" void* HSAPushArgImpl(void *, int, size_t, const void *) __attribute__((weak));
 
 ////////////////////////////////////////////////////////////
 // Class declaration
@@ -118,46 +126,6 @@ public:
   HSAPlatformDetect() : PlatformDetect("HSA", "libmcwamp_hsa.so", "libhsa-runtime64.so", hsa_kernel_source) {}
 };
 
-// Levenshtein Distance to measure the difference of two sequences
-// The shortest distance it returns the more likely the two sequences are equal
-static inline int ldistance(const std::string source, const std::string target)
-{
-  int n = source.length();
-  int m = target.length();
-  if (m == 0)
-    return n;
-  if (n == 0)
-    return m;
-
-  //Construct a matrix
-  typedef std::vector < std::vector < int >>Tmatrix;
-  Tmatrix matrix(n + 1);
-
-  for (int i = 0; i <= n; i++)
-    matrix[i].resize(m + 1);
-  for (int i = 1; i <= n; i++)
-    matrix[i][0] = i;
-  for (int i = 1; i <= m; i++)
-    matrix[0][i] = i;
-
-  for (int i = 1; i <= n; i++) {
-    const char si = source[i - 1];
-    for (int j = 1; j <= m; j++) {
-      const char dj = target[j - 1];
-      int cost;
-      if (si == dj)
-        cost = 0;
-      else
-        cost = 1;
-      const int above = matrix[i - 1][j] + 1;
-      const int left = matrix[i][j - 1] + 1;
-      const int diag = matrix[i - 1][j - 1] + cost;
-      matrix[i][j] = std::min(above, std::min(left, diag));
-    }
-  }
-  return matrix[n][m];
-}
-
 // used in amp.h
 std::vector<int> EnumerateDevices() {
   // FIXME use runtime detection in the future
@@ -205,36 +173,62 @@ void QueryDeviceInfo(const std::wstring& device_path,
   description = std::wstring(des);
 }
 
-
-// transformed_kernel_name (mangled) might differ if usages of 'm32' flag in CPU/GPU
-// paths are mutually exclusive. We can scan all kernel names and replace
-// transformed_kernel_name with the one that has the shortest distance from it by using 
-// Levenshtein Distance measurement
-void MatchKernelNames(std::string& fixed_name) {
-  if (__mcw_kernel_names.size()) {
-    // Must start from a big value > 10
-    int distance = 1024;
-    int hit = -1;
-    std::string shortest;
-    for (std::vector < std::string >::iterator it = __mcw_kernel_names.begin();
-         it != __mcw_kernel_names.end(); ++it) {
-      if ((*it) == fixed_name) {
-        // Perfect match. Mark no need to replace and skip the loop
-        hit = -1;
-        break;
-      }
-      int n = ldistance(fixed_name, (*it));
-      if (n <= distance) {
-        distance = n;
-        hit = 1;
-        shortest = (*it);
-      }
-    }
-    /* Replacement. Skip if not hit or the distance is too far (>5)*/
-    if (hit >= 0 && distance < 5)
-      fixed_name = shortest;
+// used in parallel_for_each.h
+void *CreateKernel(std::string s) {
+  // FIXME use runtime detection in the future
+  OpenCLPlatformDetect opencl_rt;
+  if (opencl_rt.detect()) {
+    // OpenCL path
+    return CLAMP::CLCreateKernelImpl(s.c_str(), cl_kernel_size, cl_kernel_source);
+  } else {
+    // HSA path
+    return CLAMP::HSACreateKernelImpl(s.c_str(), hsa_kernel_size, hsa_kernel_source);
   }
-  return;
+}
+
+void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {
+  // FIXME use runtime detection in the future
+  OpenCLPlatformDetect opencl_rt;
+  if (opencl_rt.detect()) {
+    // OpenCL path
+    CLAMP::CLLaunchKernelImpl(kernel, dim_ext, ext, local_size);
+  } else {
+    // HSA path
+    CLAMP::HSALaunchKernelImpl(kernel, dim_ext, ext, local_size);
+  }
+}
+
+std::future<void>* LaunchKernelAsync(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {
+  // FIXME use runtime detection in the future
+  OpenCLPlatformDetect opencl_rt;
+  void *ret = nullptr;
+  if (opencl_rt.detect()) {
+    // OpenCL path
+    ret = CLAMP::CLLaunchKernelAsyncImpl(kernel, dim_ext, ext, local_size);
+  } else {
+    // HSA path
+    ret = CLAMP::HSALaunchKernelAsyncImpl(kernel, dim_ext, ext, local_size);
+  }
+  return static_cast<std::future<void>*>(ret);
+}
+
+
+void MatchKernelNames(std::string& fixed_name) {
+  // FIXME use runtime detection in the future
+  OpenCLPlatformDetect opencl_rt;
+  char* ret = new char[fixed_name.length() * 2];
+  assert(ret);
+  memset(ret, 0, fixed_name.length() * 2);
+  memcpy(ret, fixed_name.c_str(), fixed_name.length());
+  if (opencl_rt.detect()) {
+    // OpenCL path
+    CLMatchKernelNamesImpl(ret);
+  } else {
+    // HSA path
+    HSAMatchKernelNamesImpl(ret);
+  }
+  fixed_name = ret;
+  delete[] ret;
 }
 
 void DetectRuntime() {
@@ -254,15 +248,15 @@ void DetectRuntime() {
   }
 }
 
-void *CreateKernel(std::string s) {
+void PushArg(void *k_, int idx, size_t sz, const void *s) {
   // FIXME use runtime detection in the future
   OpenCLPlatformDetect opencl_rt;
   if (opencl_rt.detect()) {
     // OpenCL path
-    return CLAMP::CLCreateKernel(s.c_str(), cl_kernel_size, cl_kernel_source);
+    CLPushArgImpl(k_, idx, sz, s);
   } else {
     // HSA path
-    return CLAMP::HSACreateKernel(s.c_str(), hsa_kernel_size, hsa_kernel_source);
+    HSAPushArgImpl(k_, idx, sz, s);
   }
 }
 
