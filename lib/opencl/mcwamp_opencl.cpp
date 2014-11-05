@@ -136,8 +136,8 @@ OpenCLAMPAllocator& getOpenCLAMPAllocator() {
     return amp;
 }
 
-AMPAllocator& getAllocator() {
-    return amp;
+AMPAllocator *getAllocator() {
+    return &amp;
 }
 
 } // namespace Concurrency

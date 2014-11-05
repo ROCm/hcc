@@ -15,7 +15,7 @@ public:
   virtual void free(void*) = 0;
 };
 
-AMPAllocator& getAllocator();
+AMPAllocator *getAllocator();
 
 } // namespace Concurrency
 
