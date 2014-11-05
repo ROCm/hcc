@@ -84,6 +84,7 @@ public:
     handle = dlopen(m_systemRuntimeLibrary.c_str(), RTLD_LAZY);
     if (!handle) {
       //std::cout << " system runtime not found" << std::endl;
+      //std::cout << dlerror() << std::endl;
       return false;
     }
     dlerror();  // clear any existing error
@@ -94,6 +95,7 @@ public:
     handle = dlopen(m_ampRuntimeLibrary.c_str(), RTLD_LAZY);
     if (!handle) {
       //std::cout << " C++AMP runtime not found" << std::endl;
+      //std::cout << dlerror() << std::endl;
       return false;
     }
     dlerror();  // clear any existing error
@@ -133,7 +135,7 @@ std::vector<int> EnumerateDevices() {
   int num = 0;
   std::vector<int> ret;
   int* devices = nullptr;
-  if (opencl_rt.detect()) {
+  if (opencl_rt.detect() && CLEnumerateDevicesImpl) {
     // OpenCL path
     CLEnumerateDevicesImpl(NULL, &num);
     assert(num > 0);
@@ -163,7 +165,7 @@ void QueryDeviceInfo(const std::wstring& device_path,
   wchar_t des[128];
   // FIXME use runtime detection in the future
   OpenCLPlatformDetect opencl_rt;
-  if (opencl_rt.detect()) {
+  if (opencl_rt.detect() && CLQueryDeviceInfoImpl) {
     // OpenCL path
     CLQueryDeviceInfoImpl(device_path.c_str(), &supports_cpu_shared_memory, &dedicated_memory, &supports_limited_double_precision, des);
   } else {
@@ -177,24 +179,24 @@ void QueryDeviceInfo(const std::wstring& device_path,
 void *CreateKernel(std::string s) {
   // FIXME use runtime detection in the future
   OpenCLPlatformDetect opencl_rt;
-  if (opencl_rt.detect()) {
+  if (opencl_rt.detect() && CLCreateKernelImpl) {
     // OpenCL path
-    return CLAMP::CLCreateKernelImpl(s.c_str(), cl_kernel_size, cl_kernel_source);
+    return CLCreateKernelImpl(s.c_str(), cl_kernel_size, cl_kernel_source);
   } else {
     // HSA path
-    return CLAMP::HSACreateKernelImpl(s.c_str(), hsa_kernel_size, hsa_kernel_source);
+    return HSACreateKernelImpl(s.c_str(), hsa_kernel_size, hsa_kernel_source);
   }
 }
 
 void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {
   // FIXME use runtime detection in the future
   OpenCLPlatformDetect opencl_rt;
-  if (opencl_rt.detect()) {
+  if (opencl_rt.detect() && CLLaunchKernelImpl) {
     // OpenCL path
-    CLAMP::CLLaunchKernelImpl(kernel, dim_ext, ext, local_size);
+    CLLaunchKernelImpl(kernel, dim_ext, ext, local_size);
   } else {
     // HSA path
-    CLAMP::HSALaunchKernelImpl(kernel, dim_ext, ext, local_size);
+    HSALaunchKernelImpl(kernel, dim_ext, ext, local_size);
   }
 }
 
@@ -202,12 +204,12 @@ std::future<void>* LaunchKernelAsync(void *kernel, size_t dim_ext, size_t *ext, 
   // FIXME use runtime detection in the future
   OpenCLPlatformDetect opencl_rt;
   void *ret = nullptr;
-  if (opencl_rt.detect()) {
+  if (opencl_rt.detect() && CLLaunchKernelAsyncImpl) {
     // OpenCL path
-    ret = CLAMP::CLLaunchKernelAsyncImpl(kernel, dim_ext, ext, local_size);
+    ret = CLLaunchKernelAsyncImpl(kernel, dim_ext, ext, local_size);
   } else {
     // HSA path
-    ret = CLAMP::HSALaunchKernelAsyncImpl(kernel, dim_ext, ext, local_size);
+    ret = HSALaunchKernelAsyncImpl(kernel, dim_ext, ext, local_size);
   }
   return static_cast<std::future<void>*>(ret);
 }
@@ -220,7 +222,7 @@ void MatchKernelNames(std::string& fixed_name) {
   assert(ret);
   memset(ret, 0, fixed_name.length() * 2);
   memcpy(ret, fixed_name.c_str(), fixed_name.length());
-  if (opencl_rt.detect()) {
+  if (opencl_rt.detect() && CLMatchKernelNamesImpl) {
     // OpenCL path
     CLMatchKernelNamesImpl(ret);
   } else {
@@ -251,7 +253,7 @@ void DetectRuntime() {
 void PushArg(void *k_, int idx, size_t sz, const void *s) {
   // FIXME use runtime detection in the future
   OpenCLPlatformDetect opencl_rt;
-  if (opencl_rt.detect()) {
+  if (opencl_rt.detect() && CLPushArgImpl) {
     // OpenCL path
     CLPushArgImpl(k_, idx, sz, s);
   } else {
