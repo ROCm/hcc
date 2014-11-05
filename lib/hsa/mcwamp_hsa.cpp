@@ -12,8 +12,6 @@
 #include <map>
 #include <vector>
 
-#include <malloc.h> // memalign
-
 #include <amp_allocator.h>
 
 #include "HSAContext.h"
@@ -37,12 +35,18 @@ struct rw_info
 };
 class HSAAMPAllocator : public AMPAllocator
 { 
+  static inline bool is_aligned(const void *pointer, size_t byte_count) { return (uintptr_t)pointer % byte_count == 0; }
 public:
   HSAAMPAllocator() {}
   void compile() {}
   void init(void *data, int count) {
     //std::cerr << "HSAAMPAllocator::init()" << std::endl;
-    void *p = memalign(0x1000, count);
+    void *p = nullptr;
+    if (is_aligned(data, 0x1000))  {
+      p = data;
+    } else {
+      p = aligned_alloc(0x1000, count);
+    }
     assert(p);
     CLAMP::HSA::RegisterMemory(p, count);
     rwq[data] = {count, false};
@@ -59,7 +63,9 @@ public:
       rw_info& rw = it.second;
       if (rw.used) {
         //std::cerr << "copy from: " << mem_info[it.first] << " to: " << it.first << " size: " << rw.count << std::endl;
-        memcpy(mem_info[it.first], it.first, rw.count);
+        if (it.first != mem_info[it.first]) {
+          memcpy(mem_info[it.first], it.first, rw.count);
+        }
       }
     }
   }
@@ -69,7 +75,9 @@ public:
       rw_info& rw = it.second;
       if (rw.used) {
         //std::cerr << "copy from: " << mem_info[it.first] << " to: " << it.first << " size: " << rw.count << std::endl;
-        memcpy(it.first, mem_info[it.first], rw.count);
+        if (it.first != mem_info[it.first]) {
+          memcpy(it.first, mem_info[it.first], rw.count);
+        }
         rw.used = false;
       }
     }
