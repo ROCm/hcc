@@ -34,18 +34,18 @@ void cxxflags(void) {
     // Common options
     std::cout << "-std=c++amp";
 
-    if (hsa_mode) {
+    //if (hsa_mode) {
       // HSA header
-      std::cout << " -I" CMAKE_HSA_ROOT;
-    }
+      //std::cout << " -I" CMAKE_HSA_ROOT;
+    //}
 
-    if (opencl_mode) {
+    //if (opencl_mode) {
       // OpenCL header
-      std::cout << " -I" CMAKE_OPENCL_INC;
-      char *NV = getenv("CXXAMP_NV");
-      if (NV != nullptr)
-        std::cout << " -DCXXAMP_NV=1 ";
-    }
+      //std::cout << " -I" CMAKE_OPENCL_INC;
+      //char *NV = getenv("CXXAMP_NV");
+      //if (NV != nullptr)
+      //  std::cout << " -DCXXAMP_NV=1 ";
+    //}
 
     // clamp
     if (build_mode) {
@@ -79,20 +79,20 @@ void ldflags(void) {
     }
     if (hsa_mode) {
       // HSA libraries
-      std::cout << " -Wl,--rpath=" CMAKE_HSA_LIB;
-      std::cout << " -L" CMAKE_HSA_LIB;
+      //std::cout << " -Wl,--rpath=" CMAKE_HSA_LIB;
+      //std::cout << " -L" CMAKE_HSA_LIB;
       std::cout << " -Wl,--whole-archive -lmcwamp_hsa -Wl,--no-whole-archive ";
-      std::cout << " -lelf -lhsa-runtime64 ";
-      std::cout << " " CMAKE_LIBHSAIL_LIB;
-      std::cout << " -Wl,--unresolved-symbols=ignore-in-shared-libs ";
-      std::cout << " -lpthread ";
+      //std::cout << " -lelf -lhsa-runtime64 ";
+      //std::cout << " " CMAKE_LIBHSAIL_LIB;
+      //std::cout << " -Wl,--unresolved-symbols=ignore-in-shared-libs ";
+      //std::cout << " -lpthread ";
     }
 
     if (opencl_mode) {
       // OpenCL library
-      std::cout << " -L" CMAKE_OPENCL_LIB;
+      //std::cout << " -L" CMAKE_OPENCL_LIB;
       std::cout << " -Wl,--whole-archive -lmcwamp_opencl -Wl,--no-whole-archive ";
-      std::cout << " -lOpenCL";
+      //std::cout << " -lOpenCL";
     }
 
     std::cout << " -lc++ -lcxxrt -ldl ";

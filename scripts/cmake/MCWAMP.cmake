@@ -39,6 +39,8 @@ macro(add_mcwamp_library_opencl name )
   # add OpenCL headers
   include_directories("${OPENCL_HEADER}/..")
   add_library( ${name} SHARED ${ARGN} )
+  # add OpenCL libraries
+  target_link_libraries(${name} ${OPENCL_LIBRARY})
 endmacro(add_mcwamp_library_opencl name )
 
 ####################
@@ -50,6 +52,11 @@ macro(add_mcwamp_library_hsa name )
   # add HSA headers
   include_directories(${HSA_HEADER} ${LIBHSAIL_HEADER} ${LIBHSAIL_HEADER}/generated)
   add_library( ${name} SHARED ${ARGN} )
+  # add HSA libraries
+  target_link_libraries(${name} ${HSA_LIBRARY})
+  target_link_libraries(${name} ${LIBHSAIL_LIBRARY})
+  target_link_libraries(${name} pthread)
+  target_link_libraries(${name} elf)
 endmacro(add_mcwamp_library_hsa name )
 
 ####################
