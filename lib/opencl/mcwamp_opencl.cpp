@@ -247,9 +247,6 @@ void PushArg(void *k_, int idx, size_t sz, const void *s) {
   err = clSetKernelArg(static_cast<cl_kernel>(k_), idx, sz, s);
   assert(err == CL_SUCCESS);
 }
-void PushPointer(void *, void *) {
-  // FIXME do we need this in OpenCL?
-}
 
 void *CreateKernel(std::string s) {
   cl_int err;

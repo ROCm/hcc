@@ -14,9 +14,6 @@ class Serialize {
  public:
   typedef void *kernel;
   Serialize(kernel k): k_(k), current_idx_(0) {}
-  void AppendPtr(const void *ptr) {
-    CLAMP::PushPointer(k_, const_cast<void*>(ptr));
-  }
   void Append(size_t sz, const void *s) {
     CLAMP::PushArg(k_, current_idx_++, sz, s);
   }

@@ -59,8 +59,6 @@ public:
 		virtual hsa_status_t pushDoubleArg(double) = 0;
 		virtual hsa_status_t pushPointerArg(void *addr) = 0;
 		virtual hsa_status_t clearArgs() = 0;
-		// allow a previously pushed arg to be changed
-		virtual hsa_status_t setPointerArg(int idx, void *addr) = 0;
 
 		// setting number of dimensions and sizes of each
 		virtual hsa_status_t setLaunchAttributes(int dims, size_t *globalDims, size_t *localDims) = 0;

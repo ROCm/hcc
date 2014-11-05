@@ -220,12 +220,6 @@ private:
          return pushArgPrivate(addr);
       }
 
-      // allow a previously pushed arg to be changed
-      hsa_status_t setPointerArg(int idx, void *addr) {
-         assert (idx < arg_count);
-         return setArgPrivate(idx, addr);
-      }
-
       hsa_status_t clearArgs() {
          arg_count = 0;
          arg_vec.clear();
@@ -414,20 +408,6 @@ private:
          arg_count++;
          return HSA_STATUS_SUCCESS;
       }
-
-      template <typename T>
-      hsa_status_t setArgPrivate(int idx, T val) {
-        // XXX disable this member function for now
-/*
-         // each arg takes up a 64-bit slot, no matter what its size
-         uint64_t  argAsU64 = 0;
-         T* pt = (T *) &argAsU64;
-         *pt = val;
-         arg_vec.at(idx) = argAsU64;    
-*/
-         return HSA_STATUS_SUCCESS;
-      }
-
 
       void registerArgVecMemory() {
          // record current capacity to compare for changes

@@ -19,7 +19,6 @@ extern void DetectRuntime();
 
 // used in serialize.h
 extern void PushArg(void *, int, size_t, const void *);
-extern void PushPointer(void *, void *);
 
 } // namespace CLAMP
 } // namespace Concurrency

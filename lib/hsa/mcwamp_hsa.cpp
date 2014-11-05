@@ -270,12 +270,5 @@ void PushArg(void *ker, int idx, size_t sz, const void *v)
       assert(0 && "Unsupported kernel argument size");
   }
 }
-void PushPointer(void *ker, void *val)
-{
-    //std::cerr << "pushing:" << ker << " of ptr " << val << "\n";
-    HSAContext::Dispatch *dispatch =
-        reinterpret_cast<HSAContext::Dispatch*>(ker);
-    dispatch->pushPointerArg(val);
-}
 } // namespace CLAMP
 } // namespace Concurrency
