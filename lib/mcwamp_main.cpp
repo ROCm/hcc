@@ -67,25 +67,16 @@ void ldflags(void) {
     std::cout << "-std=c++amp";
     if (build_mode) {
         std::cout << " -L" CMAKE_AMPCL_LIB_DIR;
-#ifdef __APPLE__
-        std::cout << " -Wl,-rpath," CMAKE_AMPCL_LIB_DIR;
-#else
         std::cout << " -L" CMAKE_LIBCXX_LIB_DIR;
         std::cout << " -L" CMAKE_LIBCXXRT_LIB_DIR;
         std::cout << " -Wl,--rpath="
             CMAKE_AMPCL_LIB_DIR ":"
             CMAKE_LIBCXX_LIB_DIR ":"
             CMAKE_LIBCXXRT_LIB_DIR ;
-#endif
     } else if (install_mode) {
         std::cout << " -L" CMAKE_INSTALL_LIB;
-#ifdef __APPLE__
-        std::cout << " -Wl,-rpath," CMAKE_INSTALL_LIB;
-#else
         std::cout << " -Wl,--rpath=" CMAKE_INSTALL_LIB;
-#endif
     }
-#ifndef __APPLE__
     if (hsa_mode) {
       // HSA libraries
       std::cout << " -Wl,--rpath=" CMAKE_HSA_LIB;
@@ -106,10 +97,6 @@ void ldflags(void) {
 
     std::cout << " -lc++ -lcxxrt -ldl ";
     std::cout << "-Wl,--whole-archive -lmcwamp -Wl,--no-whole-archive ";
-
-#else // __APPLE__
-    std::cout << " -lOpenCL -lc++ -lmcwamp ";
-#endif
 }
 
 void prefix(void) {

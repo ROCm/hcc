@@ -47,11 +47,7 @@
 extern "C" __attribute__((pure)) int64_t amp_get_global_id(unsigned int n) restrict(amp);
 extern "C" __attribute__((pure)) int64_t amp_get_local_id(unsigned int n) restrict(amp);
 extern "C" __attribute__((pure)) int64_t amp_get_group_id(unsigned int n) restrict(amp);
-#ifdef __APPLE__
-#define tile_static static __attribute__((section("clamp,opencl_local")))
-#else
 #define tile_static static __attribute__((section("clamp_opencl_local")))
-#endif
 extern "C" __attribute__((noduplicate)) void amp_barrier(unsigned int n) restrict(amp);
 
 namespace Concurrency {
