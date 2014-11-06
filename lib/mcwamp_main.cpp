@@ -14,7 +14,6 @@
 /* Flag set by ‘--verbose’. */
 static int verbose_flag;
 static bool build_mode = false, install_mode = true; // use install mode by default
-static bool opencl_mode = true, hsa_mode = false; // use opencl mode by default
 
 void replace(std::string& str,
         const std::string& from, const std::string& to) {
@@ -33,19 +32,6 @@ void cxxflags(void) {
 
     // Common options
     std::cout << "-std=c++amp";
-
-    //if (hsa_mode) {
-      // HSA header
-      //std::cout << " -I" CMAKE_HSA_ROOT;
-    //}
-
-    //if (opencl_mode) {
-      // OpenCL header
-      //std::cout << " -I" CMAKE_OPENCL_INC;
-      //char *NV = getenv("CXXAMP_NV");
-      //if (NV != nullptr)
-      //  std::cout << " -DCXXAMP_NV=1 ";
-    //}
 
     // clamp
     if (build_mode) {
@@ -77,23 +63,6 @@ void ldflags(void) {
         std::cout << " -L" CMAKE_INSTALL_LIB;
         std::cout << " -Wl,--rpath=" CMAKE_INSTALL_LIB;
     }
-    if (hsa_mode) {
-      // HSA libraries
-      //std::cout << " -Wl,--rpath=" CMAKE_HSA_LIB;
-      //std::cout << " -L" CMAKE_HSA_LIB;
-      std::cout << " -Wl,--whole-archive -lmcwamp_hsa -Wl,--no-whole-archive ";
-      //std::cout << " -lelf -lhsa-runtime64 ";
-      //std::cout << " " CMAKE_LIBHSAIL_LIB;
-      //std::cout << " -Wl,--unresolved-symbols=ignore-in-shared-libs ";
-      //std::cout << " -lpthread ";
-    }
-
-    if (opencl_mode) {
-      // OpenCL library
-      //std::cout << " -L" CMAKE_OPENCL_LIB;
-      std::cout << " -Wl,--whole-archive -lmcwamp_opencl -Wl,--no-whole-archive ";
-      //std::cout << " -lOpenCL";
-    }
 
     std::cout << " -lc++ -lcxxrt -ldl ";
     std::cout << "-Wl,--whole-archive -lmcwamp -Wl,--no-whole-archive ";
@@ -119,8 +88,6 @@ int main (int argc, char **argv) {
             {"install",  no_argument,       0, 'i'},
             {"ldflags",  no_argument,       0, 'l'},
             {"prefix",  no_argument,       0, 'p'},
-            {"opencl",  no_argument,       0, 'o'},
-            {"hsa",     no_argument,       0, 'h'},
             {0, 0, 0, 0}
         };
         /* getopt_long stores the option index here. */
@@ -161,15 +128,6 @@ int main (int argc, char **argv) {
             case 'i':   // --install
                 build_mode = false;
                 install_mode = true;
-                break;
-
-            case 'o':   // --opencl
-                opencl_mode = true;
-                hsa_mode = false;
-                break;
-            case 'h':   // --hsa
-                opencl_mode = false;
-                hsa_mode = true;
                 break;
 
             case '?':

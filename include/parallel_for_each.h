@@ -62,9 +62,6 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
   // FIXME: implicitly casting to avoid pointer to int error
-
-  CLAMP::DetectRuntime();
-
   int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
   void *kernel = NULL;
   {

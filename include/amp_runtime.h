@@ -18,7 +18,6 @@ extern void *CreateKernel(std::string);
 extern void LaunchKernel(void *, size_t, size_t *, size_t *);
 extern std::future<void>* LaunchKernelAsync(void *, size_t, size_t *, size_t *);
 extern void MatchKernelNames(std::string &);
-extern void DetectRuntime();
 
 // used in serialize.h
 extern void PushArg(void *, int, size_t, const void *);

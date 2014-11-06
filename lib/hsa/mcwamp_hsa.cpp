@@ -17,7 +17,7 @@
 
 #include "HSAContext.h"
 
-extern "C" void HSAPushArgImpl(void *ker, int idx, size_t sz, const void *v);
+extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v);
 
 namespace Concurrency {
 namespace CLAMP {
@@ -90,7 +90,7 @@ public:
     //std::cerr << "add to rwq: " << data << " - " << p << std::endl;
   }
   void append(void *kernel, int idx, void *data) {
-    HSAPushArgImpl(kernel, idx, sizeof(void*), &mem_info[data]);
+    PushArgImpl(kernel, idx, sizeof(void*), &mem_info[data]);
     rwq[data].used = true;
   }
   void write() {
@@ -150,11 +150,11 @@ HSAAMPAllocator& getHSAAMPAllocator() {
 /// kernel compilation / kernel launching
 ///
 
-extern "C" void *HSAGetAllocatorImpl() {
+extern "C" void *GetAllocatorImpl() {
   return &Concurrency::amp;
 }
 
-extern "C" void HSAEnumerateDevicesImpl(int* devices, int* device_number) {
+extern "C" void EnumerateDevicesImpl(int* devices, int* device_number) {
   // FIXME this is a dummy implementation where we always add one GPU device
   // in the future it shall be changed to use hsa_iterate_agents
   if (device_number != nullptr) {
@@ -165,7 +165,7 @@ extern "C" void HSAEnumerateDevicesImpl(int* devices, int* device_number) {
   }
 }
 
-extern "C" void HSAQueryDeviceInfoImpl(const wchar_t* device_path,
+extern "C" void QueryDeviceInfoImpl(const wchar_t* device_path,
   bool* supports_cpu_shared_memory,
   size_t* dedicated_memory,
   bool* supports_limited_double_precision,
@@ -180,7 +180,7 @@ extern "C" void HSAQueryDeviceInfoImpl(const wchar_t* device_path,
 }
 
 static std::map<std::string, HSAContext::Kernel *> __mcw_hsa_kernels;
-extern "C" void *HSACreateKernelImpl(const char* s, void* kernel_size_, void* kernel_source_) {
+extern "C" void *CreateKernelImpl(const char* s, void* kernel_size_, void* kernel_source_) {
   std::string str(s);
   HSAContext::Kernel *kernel = __mcw_hsa_kernels[str];
   if (!kernel) {
@@ -215,7 +215,7 @@ extern "C" void *HSACreateKernelImpl(const char* s, void* kernel_size_, void* ke
   return dispatch;
 }
 
-extern "C" void HSALaunchKernelImpl(void *ker, size_t nr_dim, size_t *global, size_t *local)
+extern "C" void LaunchKernelImpl(void *ker, size_t nr_dim, size_t *global, size_t *local)
 {
   HSAContext::Dispatch *dispatch =
       reinterpret_cast<HSAContext::Dispatch*>(ker);
@@ -234,7 +234,7 @@ extern "C" void HSALaunchKernelImpl(void *ker, size_t nr_dim, size_t *global, si
   aloc.read();
 }
 
-extern "C" void *HSALaunchKernelAsyncImpl(void *ker, size_t nr_dim, size_t *global, size_t *local)
+extern "C" void *LaunchKernelAsyncImpl(void *ker, size_t nr_dim, size_t *global, size_t *local)
 {
   HSAContext::Dispatch *dispatch =
       reinterpret_cast<HSAContext::Dispatch*>(ker);
@@ -259,11 +259,11 @@ extern "C" void *HSALaunchKernelAsyncImpl(void *ker, size_t nr_dim, size_t *glob
   return static_cast<void*>(&fut);
 }
 
-extern "C" void HSAMatchKernelNamesImpl(char *fixed_name) {
+extern "C" void MatchKernelNamesImpl(char *fixed_name) {
   // In HSA kernel names don't need to be fixed
 }
 
-extern "C" void HSAPushArgImpl(void *ker, int idx, size_t sz, const void *v) {
+extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v) {
   //std::cerr << "pushing:" << ker << " of size " << sz << "\n";
   HSAContext::Dispatch *dispatch =
       reinterpret_cast<HSAContext::Dispatch*>(ker);

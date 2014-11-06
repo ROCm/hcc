@@ -6,8 +6,12 @@
 //===----------------------------------------------------------------------===//
 
 #include <iostream>
+#include <string>
+#include <cassert>
 
 #include <amp.h>
+
+#include "mcwamp_impl.hpp"
 
 #include <dlfcn.h>
 
@@ -26,30 +30,69 @@ std::shared_ptr<accelerator> accelerator::_default_accelerator = nullptr;
 
 std::vector<std::string> __mcw_kernel_names;
 
+// weak symbols of kernel codes
+
+// OpenCL kernel codes
 extern "C" char * cl_kernel_source[] asm ("_binary_kernel_cl_start") __attribute__((weak));
 extern "C" char * cl_kernel_size[] asm ("_binary_kernel_cl_size") __attribute__((weak));
+
+// HSA kernel codes
 extern "C" char * hsa_kernel_source[] asm ("_binary_kernel_brig_start") __attribute__((weak));
 extern "C" char * hsa_kernel_size[] asm ("_binary_kernel_brig_size") __attribute__((weak));
 
-// forward declaration
-// FIXME remove in the near future
-extern "C" void CLEnumerateDevicesImpl(int*, int*) __attribute__((weak));
-extern "C" void HSAEnumerateDevicesImpl(int*, int*) __attribute__((weak));
-extern "C" void CLQueryDeviceInfoImpl(const wchar_t*, bool*, size_t*, bool*, wchar_t*) __attribute__((weak));
-extern "C" void HSAQueryDeviceInfoImpl(const wchar_t*, bool*, size_t*, bool*, wchar_t*) __attribute__((weak));
-extern "C" void* CLCreateKernelImpl(const char*, void*, void*) __attribute__((weak));
-extern "C" void* HSACreateKernelImpl(const char*, void*, void*) __attribute__((weak));
-extern "C" void CLLaunchKernelImpl(void *, size_t, size_t*, size_t*) __attribute__((weak));
-extern "C" void HSALaunchKernelImpl(void *, size_t, size_t*, size_t*) __attribute__((weak));
-extern "C" void* CLLaunchKernelAsyncImpl(void *, size_t, size_t*, size_t*) __attribute__((weak));
-extern "C" void* HSALaunchKernelAsyncImpl(void *, size_t, size_t*, size_t*) __attribute__((weak));
-extern "C" void* CLMatchKernelNamesImpl(char *) __attribute__((weak));
-extern "C" void* HSAMatchKernelNamesImpl(char *) __attribute__((weak));
-extern "C" void* CLPushArgImpl(void *, int, size_t, const void *) __attribute__((weak));
-extern "C" void* HSAPushArgImpl(void *, int, size_t, const void *) __attribute__((weak));
-extern "C" void *CLGetAllocatorImpl() __attribute__((weak));
-extern "C" void *HSAGetAllocatorImpl() __attribute__((weak));
 
+// interface of C++AMP runtime implementation
+struct RuntimeImpl {
+  RuntimeImpl(const char* libraryName) : 
+    m_ImplName(libraryName),
+    m_RuntimeHandle(nullptr),
+    m_EnumerateDevicesImpl(nullptr),
+    m_QueryDeviceInfoImpl(nullptr),
+    m_CreateKernelImpl(nullptr),
+    m_LaunchKernelImpl(nullptr),
+    m_LaunchKernelAsyncImpl(nullptr),
+    m_MatchKernelNamesImpl(nullptr),
+    m_PushArgImpl(nullptr),
+    m_GetAllocatorImpl(nullptr) {
+    m_RuntimeHandle = dlopen(libraryName, RTLD_LAZY);
+    if (!m_RuntimeHandle) {
+      std::cerr << "C++AMP runtime load error: " << dlerror() << std::endl;
+      return;
+    }
+
+    LoadSymbols();
+  }
+
+  ~RuntimeImpl() {
+    if (m_RuntimeHandle) {
+      dlclose(m_RuntimeHandle);
+    }
+  }
+
+  // load symbols from C++AMP runtime implementation
+  void LoadSymbols() {
+
+    m_EnumerateDevicesImpl = (EnumerateDevicesImpl_t) dlsym(m_RuntimeHandle, "EnumerateDevicesImpl");
+    m_QueryDeviceInfoImpl = (QueryDeviceInfoImpl_t) dlsym(m_RuntimeHandle, "QueryDeviceInfoImpl");
+    m_CreateKernelImpl = (CreateKernelImpl_t) dlsym(m_RuntimeHandle, "CreateKernelImpl");
+    m_LaunchKernelImpl = (LaunchKernelImpl_t) dlsym(m_RuntimeHandle, "LaunchKernelImpl");
+    m_LaunchKernelAsyncImpl = (LaunchKernelAsyncImpl_t) dlsym(m_RuntimeHandle, "LaunchKernelAsyncImpl");
+    m_MatchKernelNamesImpl = (MatchKernelNamesImpl_t) dlsym(m_RuntimeHandle, "MatchKernelNamesImpl");
+    m_PushArgImpl = (PushArgImpl_t) dlsym(m_RuntimeHandle, "PushArgImpl");
+    m_GetAllocatorImpl = (GetAllocatorImpl_t) dlsym(m_RuntimeHandle, "GetAllocatorImpl");
+  }
+
+  std::string m_ImplName;
+  void* m_RuntimeHandle;
+  EnumerateDevicesImpl_t m_EnumerateDevicesImpl;
+  QueryDeviceInfoImpl_t m_QueryDeviceInfoImpl;
+  CreateKernelImpl_t m_CreateKernelImpl;
+  LaunchKernelImpl_t m_LaunchKernelImpl;
+  LaunchKernelAsyncImpl_t m_LaunchKernelAsyncImpl;
+  MatchKernelNamesImpl_t m_MatchKernelNamesImpl;
+  PushArgImpl_t m_PushArgImpl;
+  GetAllocatorImpl_t m_GetAllocatorImpl;
+};
 
 namespace Concurrency {
 namespace CLAMP {
@@ -130,6 +173,43 @@ public:
   HSAPlatformDetect() : PlatformDetect("HSA", "libmcwamp_hsa.so", "libhsa-runtime64.so", hsa_kernel_source) {}
 };
 
+RuntimeImpl* GetOrInitRuntime() {
+  static RuntimeImpl* runtimeImpl = nullptr;
+  if (runtimeImpl == nullptr) {
+    HSAPlatformDetect hsa_rt;
+    OpenCLPlatformDetect opencl_rt;
+    if (!hsa_rt.detect()) {
+      if (!opencl_rt.detect()) {
+        std::cerr << "Can't load any C++AMP runtime!" << std::endl;
+        exit(-1);
+      } else {
+        // load OpenCL C++AMP runtime
+        //std::cout << "Use OpenCL runtime" << std::endl;
+        runtimeImpl = new RuntimeImpl("libmcwamp_opencl.so");
+        if (!runtimeImpl->m_RuntimeHandle) {
+          std::cerr << "Can't load OpenCL C++AMP runtime!" << std::endl;
+          delete runtimeImpl;
+          exit(-1);
+        } else {
+          //std::cout << "OpenCL C++AMP runtime loaded" << std::endl;
+        }
+      }
+    } else {
+      // load HSA C++AMP runtime
+      //std::cout << "Use HSA runtime" << std::endl;
+      runtimeImpl = new RuntimeImpl("libmcwamp_hsa.so");
+      if (!runtimeImpl->m_RuntimeHandle) {
+        std::cerr << "Can't load HSA C++AMP runtime!" << std::endl;
+        delete runtimeImpl;
+        exit(-1);
+      } else {
+        //std::cout << "HSA C++AMP runtime loaded" << std::endl;
+      }
+    }
+  } 
+  return runtimeImpl;
+}
+
 //
 // implementation of C++AMP runtime interfaces 
 // declared in amp_runtime.h and amp_allocator.h
@@ -137,28 +217,13 @@ public:
 
 // used in amp.h
 std::vector<int> EnumerateDevices() {
-  // FIXME use runtime detection in the future
-  OpenCLPlatformDetect opencl_rt;
   int num = 0;
   std::vector<int> ret;
   int* devices = nullptr;
-  if (opencl_rt.detect() && CLEnumerateDevicesImpl) {
-    // OpenCL path
-    CLEnumerateDevicesImpl(NULL, &num);
-    assert(num > 0);
-    devices = new int[num];
-    CLEnumerateDevicesImpl(devices, NULL);
-  } else if (HSAEnumerateDevicesImpl) {
-    // HSA path
-    HSAEnumerateDevicesImpl(NULL, &num);
-    assert(num > 0);
-    devices = new int[num];
-    HSAEnumerateDevicesImpl(devices, NULL);
-  } else {
-      std::cerr << "Can't load any C++AMP platform!" << std::endl;
-      exit(-1);
-  }
-  
+  GetOrInitRuntime()->m_EnumerateDevicesImpl(NULL, &num);
+  assert(num > 0);
+  devices = new int[num];
+  GetOrInitRuntime()->m_EnumerateDevicesImpl(devices, NULL);
   for (int i = 0; i < num; ++i) {
     ret.push_back(devices[i]);
   }
@@ -173,138 +238,51 @@ void QueryDeviceInfo(const std::wstring& device_path,
   bool& supports_limited_double_precision, 
   std::wstring& description) {
   wchar_t des[128];
-  // FIXME use runtime detection in the future
-  OpenCLPlatformDetect opencl_rt;
-  if (opencl_rt.detect() && CLQueryDeviceInfoImpl) {
-    // OpenCL path
-    CLQueryDeviceInfoImpl(device_path.c_str(), &supports_cpu_shared_memory, &dedicated_memory, &supports_limited_double_precision, des);
-  } else if (HSAQueryDeviceInfoImpl) {
-    // HSA path
-    HSAQueryDeviceInfoImpl(device_path.c_str(), &supports_cpu_shared_memory, &dedicated_memory, &supports_limited_double_precision, des);
-  } else {
-      std::cerr << "Can't load any C++AMP platform!" << std::endl;
-      exit(-1);
-  }
+  GetOrInitRuntime()->m_QueryDeviceInfoImpl(device_path.c_str(), &supports_cpu_shared_memory, &dedicated_memory, &supports_limited_double_precision, des);
   description = std::wstring(des);
 }
 
 // used in parallel_for_each.h
 void *CreateKernel(std::string s) {
-  // FIXME use runtime detection in the future
-  OpenCLPlatformDetect opencl_rt;
-  if (opencl_rt.detect() && CLCreateKernelImpl) {
+  // FIXME need a more elegant way
+  if (GetOrInitRuntime()->m_ImplName == "libmcwamp_opencl.so") {
     // OpenCL path
-    return CLCreateKernelImpl(s.c_str(), cl_kernel_size, cl_kernel_source);
-  } else if (HSACreateKernelImpl) {
-    // HSA path
-    return HSACreateKernelImpl(s.c_str(), hsa_kernel_size, hsa_kernel_source);
+    return GetOrInitRuntime()->m_CreateKernelImpl(s.c_str(), cl_kernel_size, cl_kernel_source);
   } else {
-      std::cerr << "Can't load any C++AMP platform!" << std::endl;
-      exit(-1);
+    // HSA path
+    return GetOrInitRuntime()->m_CreateKernelImpl(s.c_str(), hsa_kernel_size, hsa_kernel_source);
   }
 }
 
 void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {
-  // FIXME use runtime detection in the future
-  OpenCLPlatformDetect opencl_rt;
-  if (opencl_rt.detect() && CLLaunchKernelImpl) {
-    // OpenCL path
-    CLLaunchKernelImpl(kernel, dim_ext, ext, local_size);
-  } else if (HSALaunchKernelImpl) {
-    // HSA path
-    HSALaunchKernelImpl(kernel, dim_ext, ext, local_size);
-  } else {
-      std::cerr << "Can't load any C++AMP platform!" << std::endl;
-      exit(-1);
-  }
+  GetOrInitRuntime()->m_LaunchKernelImpl(kernel, dim_ext, ext, local_size);
 }
 
 std::future<void>* LaunchKernelAsync(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {
-  // FIXME use runtime detection in the future
-  OpenCLPlatformDetect opencl_rt;
   void *ret = nullptr;
-  if (opencl_rt.detect() && CLLaunchKernelAsyncImpl) {
-    // OpenCL path
-    ret = CLLaunchKernelAsyncImpl(kernel, dim_ext, ext, local_size);
-  } else if (HSALaunchKernelAsyncImpl) {
-    // HSA path
-    ret = HSALaunchKernelAsyncImpl(kernel, dim_ext, ext, local_size);
-  } else {
-      std::cerr << "Can't load any C++AMP platform!" << std::endl;
-      exit(-1);
-  }
+  ret = GetOrInitRuntime()->m_LaunchKernelAsyncImpl(kernel, dim_ext, ext, local_size);
   return static_cast<std::future<void>*>(ret);
 }
 
 
 void MatchKernelNames(std::string& fixed_name) {
-  // FIXME use runtime detection in the future
-  OpenCLPlatformDetect opencl_rt;
   char* ret = new char[fixed_name.length() * 2];
   assert(ret);
   memset(ret, 0, fixed_name.length() * 2);
   memcpy(ret, fixed_name.c_str(), fixed_name.length());
-  if (opencl_rt.detect() && CLMatchKernelNamesImpl) {
-    // OpenCL path
-    CLMatchKernelNamesImpl(ret);
-  } else if (HSAMatchKernelNamesImpl) {
-    // HSA path
-    HSAMatchKernelNamesImpl(ret);
-  } else {
-      std::cerr << "Can't load any C++AMP platform!" << std::endl;
-      exit(-1);
-  }
+  GetOrInitRuntime()->m_MatchKernelNamesImpl(ret);
   fixed_name = ret;
   delete[] ret;
 }
 
-void DetectRuntime() {
-  HSAPlatformDetect hsa_rt;
-  OpenCLPlatformDetect opencl_rt;
-  if (!hsa_rt.detect()) {
-    if (!opencl_rt.detect()) {
-      std::cerr << "Can't load any C++AMP platform!" << std::endl;
-      exit(-1);
-    } else {
-      // load OpenCL C++AMP runtime
-      std::cout << "Use OpenCL runtime" << std::endl;
-    }
-  } else {
-    // load HSA C++AMP runtime
-    std::cout << "Use HSA runtime" << std::endl;
-  }
-}
-
 void PushArg(void *k_, int idx, size_t sz, const void *s) {
-  // FIXME use runtime detection in the future
-  OpenCLPlatformDetect opencl_rt;
-  if (opencl_rt.detect() && CLPushArgImpl) {
-    // OpenCL path
-    CLPushArgImpl(k_, idx, sz, s);
-  } else if (HSAPushArgImpl) {
-    // HSA path
-    HSAPushArgImpl(k_, idx, sz, s);
-  } else {
-      std::cerr << "Can't load any C++AMP platform!" << std::endl;
-      exit(-1);
-  }
+  GetOrInitRuntime()->m_PushArgImpl(k_, idx, sz, s);
 }
 
 } // namespace CLAMP
 
 AMPAllocator *getAllocator() {
-  // FIXME use runtime detection in the future
-  CLAMP::OpenCLPlatformDetect opencl_rt;
-  if (opencl_rt.detect() && CLGetAllocatorImpl) {
-    // OpenCL path
-    return static_cast<AMPAllocator*>(CLGetAllocatorImpl());
-  } else if (HSAGetAllocatorImpl) {
-    // HSA path
-    return static_cast<AMPAllocator*>(HSAGetAllocatorImpl());
-  } else {
-      std::cerr << "Can't load any C++AMP platform!" << std::endl;
-      exit(-1);
-  }
+  return static_cast<AMPAllocator*>(CLAMP::GetOrInitRuntime()->m_GetAllocatorImpl());
 }
 } // namespace Concurrency
 

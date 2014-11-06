@@ -30,7 +30,7 @@ const wchar_t cpu_accelerator[] = L"cpu";
 const wchar_t default_accelerator[] = L"default";
 }
 
-extern "C" void CLPushArgImpl(void *k_, int idx, size_t sz, const void *s);
+extern "C" void PushArgImpl(void *k_, int idx, size_t sz, const void *s);
 
 ///
 /// memory allocator
@@ -88,7 +88,7 @@ public:
         }
     }
     void append(void *kernel, int idx, void *data) {
-        CLPushArgImpl(kernel, idx, sizeof(cl_mem), &mem_info[data]);
+        PushArgImpl(kernel, idx, sizeof(cl_mem), &mem_info[data]);
 #if defined(CXXAMP_NV)
         rwq[data].used = true;
 #endif
@@ -256,11 +256,11 @@ void CLCompileKernels(cl_program& program, cl_context& context, cl_device_id& de
 } // namespace Concurrency
 
 
-extern "C" void *CLGetAllocatorImpl() {
+extern "C" void *GetAllocatorImpl() {
     return &Concurrency::amp;
 }
 
-extern "C" void CLEnumerateDevicesImpl(int* devices, int* device_number) {
+extern "C" void EnumerateDevicesImpl(int* devices, int* device_number) {
     int deviceTotalCount = 0;
     int idx = 0;
     cl_int err;
@@ -295,7 +295,7 @@ extern "C" void CLEnumerateDevicesImpl(int* devices, int* device_number) {
     }
 }
 
-extern "C" void CLQueryDeviceInfoImpl(const wchar_t* device_path,
+extern "C" void QueryDeviceInfoImpl(const wchar_t* device_path,
     bool* supports_cpu_shared_memory,
     size_t* dedicated_memory,
     bool* supports_limited_double_precision,
@@ -347,7 +347,7 @@ extern "C" void CLQueryDeviceInfoImpl(const wchar_t* device_path,
          *supports_limited_double_precision = true;
 }
 
-extern "C" void *CLCreateKernelImpl(const char* s, void* kernel_size, void* kernel_source) {
+extern "C" void *CreateKernelImpl(const char* s, void* kernel_size, void* kernel_source) {
   cl_int err;
   Concurrency::OpenCLAMPAllocator& aloc = Concurrency::getOpenCLAMPAllocator();
   Concurrency::CLAMP::CLCompileKernels(aloc.program, aloc.context, aloc.device, kernel_size, kernel_source);
@@ -356,7 +356,7 @@ extern "C" void *CLCreateKernelImpl(const char* s, void* kernel_size, void* kern
   return aloc.kernel;
 }
 
-extern "C" void CLLaunchKernelImpl(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {
+extern "C" void LaunchKernelImpl(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {
   cl_int err;
   Concurrency::OpenCLAMPAllocator& aloc = Concurrency::getOpenCLAMPAllocator();
   {
@@ -393,7 +393,7 @@ extern "C" void CLLaunchKernelImpl(void *kernel, size_t dim_ext, size_t *ext, si
   clFinish(aloc.queue);
 }
 
-extern "C" void *CLLaunchKernelAsyncImpl(void *ker, size_t nr_dim, size_t *global, size_t *local) {
+extern "C" void *LaunchKernelAsyncImpl(void *ker, size_t nr_dim, size_t *global, size_t *local) {
   throw std::runtime_error("async_parallel_for_each is unsupported on this platform");
 }
 
@@ -441,7 +441,7 @@ static inline int ldistance(const std::string source, const std::string target)
 // paths are mutually exclusive. We can scan all kernel names and replace
 // transformed_kernel_name with the one that has the shortest distance from it by using 
 // Levenshtein Distance measurement
-extern "C" void CLMatchKernelNamesImpl(char *fixed_name) {
+extern "C" void MatchKernelNamesImpl(char *fixed_name) {
     if (__mcw_kernel_names.size()) {
     // Must start from a big value > 10
     int distance = 1024;
@@ -467,7 +467,7 @@ extern "C" void CLMatchKernelNamesImpl(char *fixed_name) {
   }
 }
 
-extern "C" void CLPushArgImpl(void *k_, int idx, size_t sz, const void *s) {
+extern "C" void PushArgImpl(void *k_, int idx, size_t sz, const void *s) {
   cl_int err;
   err = clSetKernelArg(static_cast<cl_kernel>(k_), idx, sz, s);
   assert(err == CL_SUCCESS);
