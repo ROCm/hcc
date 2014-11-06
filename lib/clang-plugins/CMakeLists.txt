@@ -106,30 +106,16 @@ set ( CLANG_LIBS
   clangStaticAnalyzerCore
   clangStaticAnalyzerFrontend
 )
- 
-set ( Boost_LIBRARIES 
-  boost_chrono
-  boost_date_time
-  boost_program_options
-  boost_system
-  boost_thread
-)
-
 set ( USER_LIBS
   mcwamp
   cxxrt
   c++ 
 )
 
-list(APPEND USER_LIBS ampBolt.runtime.clang ${Boost_LIBRARIES})
-
 add_clang_plugin(StmtRewriter StmtRewriter.cpp ParallelRewriter.cpp)
-add_dependencies(StmtRewriter Bolt)
   
 install(TARGETS StmtRewriter
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
 )
-
-add_subdirectory(TestBolt)

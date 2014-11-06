@@ -27,8 +27,5 @@ install(FILES opencl_math.bc DESTINATION lib)
 
 # Build plugins for clang
 if (CXXAMP_ENABLE_BOLT)
-  # Bolt header path
-  set(BOLT_INC_DIR "${PROJECT_SOURCE_DIR}/Bolt/include")
-  include_directories(${BOLT_INC_DIR})
   add_subdirectory(clang-plugins)
 endif (CXXAMP_ENABLE_BOLT)
