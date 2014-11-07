@@ -54,6 +54,7 @@ struct RuntimeImpl {
     m_MatchKernelNamesImpl(nullptr),
     m_PushArgImpl(nullptr),
     m_GetAllocatorImpl(nullptr) {
+    //std::cout << "dlopen(" << libraryName << ")\n";
     m_RuntimeHandle = dlopen(libraryName, RTLD_LAZY);
     if (!m_RuntimeHandle) {
       std::cerr << "C++AMP runtime load error: " << dlerror() << std::endl;
@@ -126,6 +127,7 @@ public:
     void* handle = nullptr;
 
     // detect if system runtime is available
+    //std::cout << "dlopen(" << m_systemRuntimeLibrary << ")\n";
     handle = dlopen(m_systemRuntimeLibrary.c_str(), RTLD_LAZY);
     if (!handle) {
       //std::cout << " system runtime not found" << std::endl;
@@ -137,6 +139,7 @@ public:
     dlclose(handle);
 
     // detect if C++AMP runtime is available
+    //std::cout << "dlopen(" << m_ampRuntimeLibrary << ")\n";
     handle = dlopen(m_ampRuntimeLibrary.c_str(), RTLD_LAZY);
     if (!handle) {
       //std::cout << " C++AMP runtime not found" << std::endl;
@@ -173,6 +176,7 @@ public:
 
     result = PlatformDetect::detect();
     if (result) {
+      //std::cout << "dlopen(libmcwamp_opencl_version.so)\n";
       ocl_version_test_handle = dlopen("libmcwamp_opencl_version.so", RTLD_LAZY);
       if (!ocl_version_test_handle) {
         //std::cout << " OpenCL version test not found" << std::endl;
@@ -193,7 +197,8 @@ public:
         }
       }
     }
-    dlclose(ocl_version_test_handle);
+    if (ocl_version_test_handle)
+      dlclose(ocl_version_test_handle);
     return result;
   }
 
