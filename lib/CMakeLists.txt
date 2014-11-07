@@ -11,6 +11,7 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-device
     ${CMAKE_CURRENT_BINARY_DIR}/clamp-embed
     ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-assemble
     ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-link
+    ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-preprocess
     DESTINATION bin)
 
 if (CXXAMP_ENABLE_HSA)
