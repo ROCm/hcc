@@ -51,5 +51,6 @@ install(FILES new_delete.hsail DESTINATION lib)
 # add subdirectories
 ####################
 add_subdirectory(opencl)
+add_subdirectory(opencl_11)
 add_subdirectory(hsa)
 

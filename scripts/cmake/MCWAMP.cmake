@@ -17,7 +17,7 @@ set(GTEST_INC_DIR "${PROJECT_SOURCE_DIR}/utils")
 seT(MCWAMP_INC_DIR "${PROJECT_SOURCE_DIR}/include")
 
 # CXXAMPFLAGS
-set(CXXAMP_FLAGS "-I${GTEST_INC_DIR} -I${LIBCXX_INC_DIR} -I${MCWAMP_INC_DIR} -stdlib=libc++ -std=c++amp -DGTEST_HAS_TR1_TUPLE=0 -fPIC -DCXXAMP_NV=1")
+set(CXXAMP_FLAGS "-I${GTEST_INC_DIR} -I${LIBCXX_INC_DIR} -I${MCWAMP_INC_DIR} -stdlib=libc++ -std=c++amp -DGTEST_HAS_TR1_TUPLE=0 -fPIC")
 
 # STATIC ONLY FOR NOW.
 
@@ -31,7 +31,7 @@ macro(add_mcwamp_library name )
 endmacro(add_mcwamp_library name )
 
 ####################
-# C++AMP runtime (OpenCL implementation) 
+# C++AMP runtime (OpenCL 1.2 implementation) 
 ####################
 macro(add_mcwamp_library_opencl name )
   CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
@@ -42,6 +42,19 @@ macro(add_mcwamp_library_opencl name )
   # add OpenCL libraries
   target_link_libraries(${name} ${OPENCL_LIBRARY})
 endmacro(add_mcwamp_library_opencl name )
+
+####################
+# C++AMP runtime (OpenCL 1.1 implementation) 
+####################
+macro(add_mcwamp_library_opencl_11 name )
+  CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXXAMP_FLAGS}")
+  # add OpenCL headers
+  include_directories("${OPENCL_HEADER}/..")
+  add_library( ${name} SHARED ${ARGN} )
+  # add OpenCL libraries
+  target_link_libraries(${name} ${OPENCL_LIBRARY})
+endmacro(add_mcwamp_library_opencl_11 name )
 
 ####################
 # C++AMP runtime (HSA implementation) 

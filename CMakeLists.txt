@@ -104,6 +104,22 @@ if ((NOT OPENCL_HEADER) OR (NOT OPENCL_LIBRARY))
   set(HAS_OPENCL 0)
 else ((NOT OPENCL_HEADER) OR (NOT OPENCL_LIBRARY))
   set(HAS_OPENCL 1)
+
+  # find detailed OpenCL version information
+  file(STRINGS "${OPENCL_HEADER}/cl.h" lines11 REGEX "CL_VERSION_1_1[ \t]*1")
+  if (lines11)
+    set (HAS_OPENCL11 1)
+  else (lines11)
+    set (HAS_OPENCL11 0)
+  endif (lines11)
+
+  file(STRINGS "${OPENCL_HEADER}/cl.h" lines12 REGEX "CL_VERSION_1_2[ \t]*1")
+  if (lines12)
+    set (HAS_OPENCL12 1)
+  else (lines12)
+    set (HAS_OPENCL12 0)
+  endif (lines12)
+
 endif ((NOT OPENCL_HEADER) OR (NOT OPENCL_LIBRARY))
 
 #################

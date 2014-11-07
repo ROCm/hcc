@@ -6,16 +6,15 @@ if (HAS_OPENCL EQUAL 1)
 endif (HAS_OPENCL EQUAL 1)
 
 ####################
-# C++AMP runtime (OpenCL implementation)
+# C++AMP runtime (OpenCL zero-copy implementation)
 ####################
-if (HAS_OPENCL EQUAL 1)
-# TBD install commands for OpenCL-specific files here
+if ((HAS_OPENCL EQUAL 1) AND (HAS_OPENCL12 EQUAL 1))
 add_mcwamp_library_opencl(mcwamp_opencl mcwamp_opencl.cpp)
 install(TARGETS mcwamp_opencl
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib)
-MESSAGE(STATUS "OpenCL available, going to build OpenCL C++AMP Runtime")
-else (HAS_OPENCL EQUAL 1)
-MESSAGE(STATUS "OpenCL NOT available, NOT going to build OpenCL C++AMP Runtime")
-endif (HAS_OPENCL EQUAL 1)
+MESSAGE(STATUS "OpenCL 1.2 available, going to build OpenCL (zero-copy) C++AMP Runtime")
+else ((HAS_OPENCL EQUAL 1) AND (HAS_OPENCL12 EQUAL 1))
+MESSAGE(STATUS "OpenCL 1.2 NOT available, NOT going to build OpenCL (zero-copy)  C++AMP Runtime")
+endif ((HAS_OPENCL EQUAL 1) AND (HAS_OPENCL12 EQUAL 1))
 
