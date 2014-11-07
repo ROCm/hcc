@@ -10,7 +10,7 @@ extern "C" int GetOpenCLVersion() {
   char platform_version[256];
   size_t platform_version_length;
   int i;
-  err - clGetPlatformIDs(1, platform_id, &num_platforms);
+  err = clGetPlatformIDs(1, platform_id, &num_platforms);
   assert(num_platforms > 0);
   err = clGetPlatformInfo(platform_id[0], CL_PLATFORM_VERSION, sizeof(platform_version), platform_version, &platform_version_length);
   assert(platform_version_length > 0);
