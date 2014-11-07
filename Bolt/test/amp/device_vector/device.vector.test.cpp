@@ -18,6 +18,7 @@
 #include "stdafx.h"
 #include <vector>
 #include <array>
+#include <cfloat>
 #include <bolt/unicode.h>
 #include <bolt/miniDump.h>
 #include <gtest/gtest.h>

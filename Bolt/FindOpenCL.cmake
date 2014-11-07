@@ -60,6 +60,8 @@ find_path( OPENCL_INCLUDE_DIRS
 	PATHS
 		/usr/include 
 		/usr/local/include
+                /usr/local/cuda/include
+                /opt/AMDAPP/include
 	DOC "OpenCL header file path"
 )
 mark_as_advanced( OPENCL_INCLUDE_DIRS )
