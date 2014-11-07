@@ -162,7 +162,7 @@ private:
  */
 class OpenCLPlatformDetect : public PlatformDetect {
 public:
-  OpenCLPlatformDetect() : PlatformDetect("OpenCL", "libmcwamp_opencl.so", "libOpenCL.so", cl_kernel_source) {}
+  OpenCLPlatformDetect() : PlatformDetect("OpenCL", "libmcwamp_opencl_12.so", "libOpenCL.so", cl_kernel_source) {}
 };
 
 /**
@@ -185,7 +185,7 @@ RuntimeImpl* GetOrInitRuntime() {
       } else {
         // load OpenCL C++AMP runtime
         //std::cout << "Use OpenCL runtime" << std::endl;
-        runtimeImpl = new RuntimeImpl("libmcwamp_opencl.so");
+        runtimeImpl = new RuntimeImpl("libmcwamp_opencl_12.so");
         if (!runtimeImpl->m_RuntimeHandle) {
           std::cerr << "Can't load OpenCL C++AMP runtime!" << std::endl;
           delete runtimeImpl;
@@ -245,7 +245,7 @@ void QueryDeviceInfo(const std::wstring& device_path,
 // used in parallel_for_each.h
 void *CreateKernel(std::string s) {
   // FIXME need a more elegant way
-  if (GetOrInitRuntime()->m_ImplName == "libmcwamp_opencl.so") {
+  if (GetOrInitRuntime()->m_ImplName.find("libmcwamp_opencl") != std::string::npos) {
     // OpenCL path
     return GetOrInitRuntime()->m_CreateKernelImpl(s.c_str(), cl_kernel_size, cl_kernel_source);
   } else {
