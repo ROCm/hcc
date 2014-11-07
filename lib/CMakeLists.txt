@@ -36,6 +36,15 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-hsatools
 ####################
 install(FILES opencl_math.bc DESTINATION lib)
 
+####################
+# OpenCL runtime version detection
+####################
+if (HAS_OPENCL EQUAL 1)
+add_mcwamp_library_opencl(mcwamp_opencl_version opencl_version.cpp)
+install(TARGETS mcwamp_opencl_version
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib)
+endif (HAS_OPENCL EQUAL 1)
 
 ####################
 # OpenCL C double type detection

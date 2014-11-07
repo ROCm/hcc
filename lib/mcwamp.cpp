@@ -114,7 +114,7 @@ public:
       m_systemRuntimeLibrary(systemRuntimeLibrary), 
       m_kernel_source(kernel_source) {}
 
-  bool detect() {
+  virtual bool detect() {
     //std::cout << "Detecting " << m_name << "...";
     // detect if kernel is available
     if (!m_kernel_source) {
@@ -157,12 +157,64 @@ private:
   void* m_kernel_source;
 };
 
-/**
- * \brief OpenCL runtime detection
- */
 class OpenCLPlatformDetect : public PlatformDetect {
 public:
-  OpenCLPlatformDetect() : PlatformDetect("OpenCL", "libmcwamp_opencl_12.so", "libOpenCL.so", cl_kernel_source) {}
+  OpenCLPlatformDetect(const std::string& name, 
+                       const std::string& ampRuntimeName,
+                       const std::string& systemRuntimeName, 
+                       void* const kernel_source,
+                       int version) : PlatformDetect(name, ampRuntimeName, systemRuntimeName, kernel_source), m_clVersion(version) {}
+
+  bool detect() override {
+    void* ocl_version_test_handle = nullptr;
+    typedef int (*version_test_t) ();
+    version_test_t test_func = nullptr;
+    bool result = false;
+
+    result = PlatformDetect::detect();
+    if (result) {
+      ocl_version_test_handle = dlopen("libmcwamp_opencl_version.so", RTLD_LAZY);
+      if (!ocl_version_test_handle) {
+        //std::cout << " OpenCL version test not found" << std::endl;
+        //std::cout << dlerror() << std::endl;
+        result = false;
+      } else {
+        test_func = (version_test_t) dlsym(ocl_version_test_handle, "GetOpenCLVersion");
+        if (!test_func) {
+          //std::cout << " OpenCL version test function not found" << std::endl
+          //std::cout << dlerror() << std::endl;
+          result = false;
+        } else {
+          if (test_func() >= m_clVersion) {
+            result = true;
+          } else {
+            result = false;
+          }
+        }
+      }
+    }
+    dlclose(ocl_version_test_handle);
+    return result;
+  }
+
+private:
+  int m_clVersion;
+};
+
+/**
+ * \brief OpenCL 1.2 runtime detection
+ */
+class OpenCL12PlatformDetect : public OpenCLPlatformDetect {
+public:
+  OpenCL12PlatformDetect() : OpenCLPlatformDetect("OpenCL", "libmcwamp_opencl_12.so", "libOpenCL.so", cl_kernel_source, 12) {}
+};
+
+/**
+ * \brief OpenCL 1.1 runtime detection
+ */
+class OpenCL11PlatformDetect : public OpenCLPlatformDetect {
+public:
+  OpenCL11PlatformDetect() : OpenCLPlatformDetect("OpenCL", "libmcwamp_opencl_11.so", "libOpenCL.so", cl_kernel_source, 11) {}
 };
 
 /**
@@ -177,26 +229,40 @@ RuntimeImpl* GetOrInitRuntime() {
   static RuntimeImpl* runtimeImpl = nullptr;
   if (runtimeImpl == nullptr) {
     HSAPlatformDetect hsa_rt;
-    OpenCLPlatformDetect opencl_rt;
+    OpenCL12PlatformDetect opencl12_rt;
+    OpenCL11PlatformDetect opencl11_rt;
     if (!hsa_rt.detect()) {
-      if (!opencl_rt.detect()) {
-        std::cerr << "Can't load any C++AMP runtime!" << std::endl;
-        exit(-1);
+      if (!opencl12_rt.detect()) {
+        if (!opencl11_rt.detect()) {
+          std::cerr << "Can't load any C++AMP runtime!" << std::endl;
+          exit(-1);
+        } else {
+          // load OpenCL 1.1 C++AMP runtime
+          std::cout << "Use OpenCL 1.1 C++AMP runtime" << std::endl;
+          runtimeImpl = new RuntimeImpl("libmcwamp_opencl_11.so");
+          if (!runtimeImpl->m_RuntimeHandle) {
+            std::cerr << "Can't load OpenCL 1.1 C++AMP runtime!" << std::endl;
+            delete runtimeImpl;
+            exit(-1);
+          } else {
+            //std::cout << "OpenCL 1.1 C++AMP runtime loaded" << std::endl;
+          }
+        }
       } else {
-        // load OpenCL C++AMP runtime
-        //std::cout << "Use OpenCL runtime" << std::endl;
+        // load OpenCL 1.2 C++AMP runtime
+        std::cout << "Use OpenCL 1.2 C++AMP runtime" << std::endl;
         runtimeImpl = new RuntimeImpl("libmcwamp_opencl_12.so");
         if (!runtimeImpl->m_RuntimeHandle) {
-          std::cerr << "Can't load OpenCL C++AMP runtime!" << std::endl;
+          std::cerr << "Can't load OpenCL 1.2 C++AMP runtime!" << std::endl;
           delete runtimeImpl;
           exit(-1);
         } else {
-          //std::cout << "OpenCL C++AMP runtime loaded" << std::endl;
+          //std::cout << "OpenCL 1.2 C++AMP runtime loaded" << std::endl;
         }
       }
     } else {
       // load HSA C++AMP runtime
-      //std::cout << "Use HSA runtime" << std::endl;
+      std::cout << "Use HSA C++AMP runtime" << std::endl;
       runtimeImpl = new RuntimeImpl("libmcwamp_hsa.so");
       if (!runtimeImpl->m_RuntimeHandle) {
         std::cerr << "Can't load HSA C++AMP runtime!" << std::endl;
