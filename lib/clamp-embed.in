@@ -1,4 +1,16 @@
 #!/bin/bash
+
+# check command line arguments
+if [ "$#" -ne 2 ]; then
+  echo "Usage: $0 input_object output_kernel" >&2
+  exit 1
+fi
+
+if [ ! -f $1 ]; then
+  echo "input object $1 is not valid" >&2
+  exit 1
+fi
+
 if [[ $OSTYPE == linux-gnu ]]; then
   objcopy -B i386:x86-64 -I binary -O elf64-x86-64 --rename-section .data=.kernel $1 $2
 elif [[ $OSTYPE == darwin* ]]; then
