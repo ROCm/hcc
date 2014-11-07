@@ -193,9 +193,6 @@ if(CXXAMP_ENABLE_BOLT)
   
   ADD_DEPENDENCIES( Bolt world )
   
-  # Must build after 'Bolt' target
-  add_subdirectory(lib/clang-plugins/TestBolt)
-
 endif(CXXAMP_ENABLE_BOLT)
 
 set(CPACK_SET_DESTDIR TRUE)
