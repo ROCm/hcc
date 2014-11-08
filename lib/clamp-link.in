@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# check number of arguments
+if [ "$#" -eq 0 ]; then
+  echo "$0 is NOT recommended to be directly used" >&2
+  exit 1
+fi
+
 if [ -d @LLVM_TOOLS_DIR@ ]; then
     LINK=@LLVM_TOOLS_DIR@/llvm-link
     OPT=@LLVM_TOOLS_DIR@/opt

@@ -3,6 +3,18 @@
 # $1 = input ll name
 # $2 = OpenCL/SPIR/HSAIL kernel file name
 # $3 = (optional) --hsa will trigger HSAIL lowering
+
+# check command line arguments
+if [ "$#" -le 2 ]; then
+  echo "Usage: $0 input_LLVM output_kernel" >&2
+  exit 1
+fi
+
+if [ ! -f $1 ]; then
+  echo "input LLVM IR $1 is not valid" >&2
+  exit 1
+fi
+
 hasSPIR() {
     [ -z "$CLAMP_NOSPIR" -a -x /usr/bin/clinfo ] && ( /usr/bin/clinfo|grep cl_khr_spir > /dev/null )
     return $?

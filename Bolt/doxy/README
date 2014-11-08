@@ -1,0 +1,9 @@
+This directory contains miscellaneous files related to Bolt documentation.
+
+To build the documentation:
+    * Install the "doxygen" toolset.  
+    * > doxygen.exe bolt.doxy.cfg
+
+
+This will generate an HTML file in: <HSA_PERFORCE_ROOT>/boltProject/doxy/doxy.out/html/index.html 
+

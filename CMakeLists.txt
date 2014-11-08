@@ -77,6 +77,9 @@ include_directories( ${PROJ_SEARCH_PATH} )
 LINK_DIRECTORIES( ${LLVM_LIB_DIR} )
 
 
+# Turn on by default for now.
+option(CXXAMP_ENABLE_BOLT "Enable Bolt as external dependency" ON)
+
 SET(FOO_BUILD_SHARED OFF CACHE BOOL "Build libfoo shared library")
 
 #################
@@ -224,6 +227,44 @@ add_subdirectory(amp-conformance)
 add_custom_target(world
     DEPENDS clang libc++ ${DEPS}
 )
+
+# Must build after 'world' target
+if(CXXAMP_ENABLE_BOLT)
+  # TODO: add an independent repo. for Bolt ported on clamp
+
+  ##### Pass clamp paths to Bolt project #####
+  # Note that with 'DIRS' suffix is for include/link directory and 'DIR' is for cxxflags/linkflags
+  SET( CLAMP_C_COMPILER "${PROJECT_BINARY_DIR}/compiler/bin/clang"  )
+  SET( CLAMP_CXX_COMPILER "${PROJECT_BINARY_DIR}/compiler/bin/clang++"  )
+  SET( CLAMP_LIBCXX_INC_DIR "${PROJECT_SOURCE_DIR}/libc++/libcxx/include" )
+  SET( CLAMP_LIBCXX_LIB_DIR "${PROJECT_BINARY_DIR}/libc++/libcxx/lib" )
+  SET( CLAMP_LIBCXXRT_LIB_DIR "${PROJECT_BINARY_DIR}/libc++/libcxxrt/lib" )
+
+  SET( CLAMP_LIBRARIES mcwamp c++ cxxrt dl OpenCL )
+  SET( CLAMP_INC_DIRS ${PROJECT_SOURCE_DIR}/include 
+     ${CLAMP_LIBCXX_INC_DIR} )
+
+  SET( CLAMP_LIB_DIRS ${PROJECT_BINARY_DIR}/build/${CMAKE_BUILD_TYPE}/lib
+     ${CLAMP_LIBCXX_LIB_DIR} 
+     ${CLAMP_LIBCXXRT_LIB_DIR} )
+
+  # This is the only source code folder we can build as a generator
+  add_subdirectory( Bolt/superbuild )
+
+  # Searched paths for BoltVersion.h and Boost headers
+  # These are used in building clang-plugin and demo sample in lib/clang-plugin folder
+  # Generally they shall be ouput from Bolt project. However we manually specify them in here
+  
+  SET( BOLT_INC_DIRS ${PROJECT_BINARY_DIR}/Bolt/superbuild/Bolt-build/include
+    ${PROJECT_BINARY_DIR}/Bolt/superbuild/external/boost/src/Boost 
+    ${PROJECT_SOURCE_DIR}/Bolt/include )
+  
+  SET( BOLT_LIB_DIRS ${PROJECT_BINARY_DIR}/Bolt/superbuild/Bolt-build/bolt/amp
+    ${PROJECT_BINARY_DIR}/Bolt/superbuild/external/boost/src/Boost/stage/lib )
+  
+  ADD_DEPENDENCIES( Bolt world )
+  
+endif(CXXAMP_ENABLE_BOLT)
 
 set(CPACK_SET_DESTDIR TRUE)
 set(CPACK_INSTALL_PREFIX "/opt/clamp")

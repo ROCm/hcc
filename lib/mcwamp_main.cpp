@@ -15,6 +15,8 @@
 static int verbose_flag;
 static bool build_mode = false, install_mode = true; // use install mode by default
 
+static bool bolt_rewrite_mode = false;
+
 void replace(std::string& str,
         const std::string& from, const std::string& to) {
     size_t start_pos = str.find(from);
@@ -38,9 +40,26 @@ void cxxflags(void) {
         std::cout << " -I" CMAKE_CLAMP_INC_DIR;
         // libcxx
         std::cout << " -I" CMAKE_LIBCXX_INC;
+
+        // bolt and boost
+        if (bolt_rewrite_mode) {
+            std::cout << " -I" CMAKE_BOLT_SRC_INC_DIR;
+            std::cout << " -I" CMAKE_BOLT_BIN_INC_DIR;
+            std::cout << " -I" CMAKE_BOOST_INC_DIR;
+            // opencl
+            std::cout << " -I" CMAKE_OPENCL_INC;
+        }
     } else if (install_mode) {
         std::cout << " -I" CMAKE_INSTALL_INC;
         std::cout << " -I" CMAKE_INSTALL_LIBCXX_INC;
+
+        // bolt and boost
+        if (bolt_rewrite_mode) {
+            std::cout << " -I" CMAKE_INSTALL_BOLT_INC;
+            std::cout << " -I" CMAKE_INSTALL_BOOST_INC;
+            // opencl
+            std::cout << " -I" CMAKE_OPENCL_INC;
+        }
     } else {
         assert(0 && "Unreacheable!");
     }
@@ -55,16 +74,30 @@ void ldflags(void) {
         std::cout << " -L" CMAKE_AMPCL_LIB_DIR;
         std::cout << " -L" CMAKE_LIBCXX_LIB_DIR;
         std::cout << " -L" CMAKE_LIBCXXRT_LIB_DIR;
+
+        if (bolt_rewrite_mode) {
+            std::cout << " -L" CMAKE_BOLT_LIB_DIR;
+            std::cout << " -L" CMAKE_BOOST_LIB_DIR;
+        }
+
         std::cout << " -Wl,--rpath="
             CMAKE_AMPCL_LIB_DIR ":"
             CMAKE_LIBCXX_LIB_DIR ":"
             CMAKE_LIBCXXRT_LIB_DIR ;
+
+        if (bolt_rewrite_mode) {
+            std::cout << CMAKE_BOLT_LIB_DIR ":"
+                         CMAKE_BOOST_LIB_DIR ;
+        }
     } else if (install_mode) {
         std::cout << " -L" CMAKE_INSTALL_LIB;
         std::cout << " -Wl,--rpath=" CMAKE_INSTALL_LIB;
     }
 
     std::cout << " -lc++ -lcxxrt -ldl ";
+    if (bolt_rewrite_mode) {
+        std::cout << "-lampBolt.runtime.clang ";
+    }
     std::cout << "-Wl,--whole-archive -lmcwamp -Wl,--no-whole-archive ";
 }
 
@@ -88,6 +121,7 @@ int main (int argc, char **argv) {
             {"install",  no_argument,       0, 'i'},
             {"ldflags",  no_argument,       0, 'l'},
             {"prefix",  no_argument,       0, 'p'},
+            {"bolt",  no_argument,       0, 'o'},
             {0, 0, 0, 0}
         };
         /* getopt_long stores the option index here. */
@@ -129,7 +163,9 @@ int main (int argc, char **argv) {
                 build_mode = false;
                 install_mode = true;
                 break;
-
+            case 'o':   // --bolt
+                bolt_rewrite_mode = true;
+                break;
             case '?':
                 /* getopt_long already printed an error message. */
                 break;

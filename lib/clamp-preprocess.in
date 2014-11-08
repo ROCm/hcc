@@ -1,0 +1,54 @@
+#!/bin/bash
+
+# check if we have 2 arguments
+if [ "$#" -ne 2 ]; then
+  echo "Usage: $0 input_source output_source" >&2
+  exit 1
+fi
+
+if [ ! -f $1 ]; then
+  echo "Input source $1 is not valid!" >&2
+  exit 1
+fi
+
+if [ -d @LLVM_TOOLS_DIR@ ]; then
+  CLANG=@PROJECT_BINARY_DIR@/compiler/bin/clang++
+else
+  CLANG=@CMAKE_INSTALL_PREFIX@/bin/clang++
+fi
+
+# copy input file to a temp directory
+TEMP_DIR=`mktemp -d`
+cp $1 $TEMP_DIR/input.cpp
+
+# do preprocess
+# include paths:
+# - OpenCL header
+# - C++AMP header
+# - libc++ header
+# - Bolt source header
+# - Bolt header generated
+# - Boost header
+
+# FIXME : add macros for headers in installed verion
+$CLANG \
+  -I@OPENCL_HEADER@/.. \
+  -I@PROJECT_SOURCE_DIR@/include \
+  -I@PROJECT_SOURCE_DIR@/libc++/libcxx/include \
+  -I@PROJECT_SOURCE_DIR@/Bolt/include \
+  -I@PROJECT_BINARY_DIR@/Bolt/superbuild/Bolt-build/include \
+  -I@PROJECT_BINARY_DIR@/Bolt/superbuild/external/boost/src/Boost \
+  -stdlib=libc++ -std=c++amp \
+  -Xclang -load -Xclang /home/whchung/cppamp/build/build/Release/lib/libStmtRewriter.so \
+  -Xclang -plugin -Xclang StmtRewriter \
+  -E $1
+
+# save the output
+cp $1 $2
+
+# restore input back
+cp $TEMP_DIR/input.cpp $1
+
+# remove temp files
+rm $TEMP_DIR/input.cpp
+rmdir $TEMP_DIR

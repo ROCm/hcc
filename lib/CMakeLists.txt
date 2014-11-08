@@ -22,6 +22,7 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-device
     ${CMAKE_CURRENT_BINARY_DIR}/clamp-embed
     ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-assemble
     ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-link
+    ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-preprocess
     DESTINATION bin)
 
 ####################
@@ -63,3 +64,7 @@ add_subdirectory(opencl_12)
 add_subdirectory(opencl_11)
 add_subdirectory(hsa)
 
+# Build plugins for clang
+if (CXXAMP_ENABLE_BOLT)
+  add_subdirectory(clang-plugins)
+endif (CXXAMP_ENABLE_BOLT)
