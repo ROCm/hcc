@@ -240,7 +240,7 @@ if(CXXAMP_ENABLE_BOLT)
   SET( CLAMP_LIBCXX_LIB_DIR "${PROJECT_BINARY_DIR}/libc++/libcxx/lib" )
   SET( CLAMP_LIBCXXRT_LIB_DIR "${PROJECT_BINARY_DIR}/libc++/libcxxrt/lib" )
 
-  SET( CLAMP_LIBRARIES mcwamp c++ cxxrt dl OpenCL )
+  SET( CLAMP_LIBRARIES mcwamp c++ cxxrt dl )
   SET( CLAMP_INC_DIRS ${PROJECT_SOURCE_DIR}/include 
      ${CLAMP_LIBCXX_INC_DIR} )
 

@@ -23,7 +23,6 @@ cp $1 $TEMP_DIR/input.cpp
 
 # do preprocess
 # include paths:
-# - OpenCL header
 # - C++AMP header
 # - libc++ header
 # - Bolt source header
@@ -32,14 +31,13 @@ cp $1 $TEMP_DIR/input.cpp
 
 # FIXME : add macros for headers in installed verion
 $CLANG \
-  -I@OPENCL_HEADER@/.. \
   -I@PROJECT_SOURCE_DIR@/include \
   -I@PROJECT_SOURCE_DIR@/libc++/libcxx/include \
   -I@PROJECT_SOURCE_DIR@/Bolt/include \
   -I@PROJECT_BINARY_DIR@/Bolt/superbuild/Bolt-build/include \
   -I@PROJECT_BINARY_DIR@/Bolt/superbuild/external/boost/src/Boost \
   -stdlib=libc++ -std=c++amp \
-  -Xclang -load -Xclang /home/whchung/cppamp/build/build/Release/lib/libStmtRewriter.so \
+  -Xclang -load -Xclang @PROJECT_BINARY_DIR@/build/@CMAKE_BUILD_TYPE@/lib/libStmtRewriter.so \
   -Xclang -plugin -Xclang StmtRewriter \
   -E $1
 

@@ -238,7 +238,7 @@ if( BUILD_ampBolt )
     # CLAMP needs OpenCL
     if ( UNIX )
         # This will define OPENCL_FOUND
-        find_package( OpenCL REQUIRED )
+        #find_package( OpenCL REQUIRED )
     endif( )
  
     if( WIN32 AND MSVC_VERSION VERSION_LESS 1700 )
