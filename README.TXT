@@ -35,19 +35,44 @@ Build Instruction for HSA
 --------------------------------------------------------------------------------
 * Prerequisite/OpenCL
 
-FIXME: this section needs to be polished
+1. Linux distribution: Ubuntu 14.04 or higher
+
+2. OpenCL Driver: OpenCL 1.1 or above
+  - AMD:
+    - OpenCL 1.2 : http://support.amd.com/en-us/download
+    - (NOT thoroughly tested yet) OpenCL 2.0 : http://support.amd.com/en-us/kb-articles/Pages/OpenCL2-Driver.aspx
+  - Intel:
+    - https://software.intel.com/en-us/articles/opencl-drivers
+  - NVidia:
+    - http://www.nvidia.com/Download/index.aspx?lang=en-us
+
+3. OpencL SDK: OpenCL 1.1 or above
+  - AMD:
+    - http://developer.amd.com/tools-and-sdks/opencl-zone/amd-accelerated-parallel-processing-app-sdk/
+  - Intel:
+    - https://software.intel.com/en-us/intel-opencl
+  - NVidia:
+    - https://developer.nvidia.com/cuda-downloads
 
 * Prerequisite/HSA
 
-FIXME: this section needs to be polished
-
 1. Linux distribution: Ubuntu 14.04 or higher
-2. HSA Linux Driver: TBD
-3. HSA Runtime: TBD
-4. HSAIL Compiler: TBD
-   (There are 2 versions available: Stable and Development.  It is suggested to use Stable version)
-5. libHSAIL: TBD
-   (libHSAIL has to be manually built per instructions below TBD)
+
+2. HSA Linux Driver:
+  - https://github.com/HSAFoundation/HSA-Drivers-Linux-AMD
+  - make sure kfd_check_installation.sh shows "Can run HSA YES"
+
+3. HSA Runtime:
+  - https://github.com/HSAFoundation/HSA-Runtime-AMD
+
+4. HSAIL Compiler:
+   There are 2 versions available: HSAIL-HLC-Stable and HSAIL-HLC-Development.  It is suggested to use Stable version at this moment.  Debian packages are built to only support HSAIL-HLC-Stable.
+  - Stable: https://github.com/HSAFoundation/HSAIL-HLC-Stable
+  - Development: https://github.com/HSAFoundation/HSAIL-HLC-Development
+
+5. libHSAIL: 
+   libHSAIL has to be manually built per instructions on GitHub.
+  - https://github.com/HSAFoundation/HSAIL-Tools
 
 * Prerequisite/Repository
 
