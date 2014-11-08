@@ -160,6 +160,53 @@ are:
   # (repeat No. 3 in this section)
 
 
+Dynamic Libaries
+-------------------------------------------------------------------------------
+After building, please change /etc/ld.so.conf to let dynamic libraries be
+locatable at runtime:
+
+# If you install deb files:
+# C++AMP runtime libraries
+# libc++ & C++AMP runtime implementations
+/opt/clamp/lib
+
+# If you build from source:
+# C++AMP runtime libraries
+# libc++
+(path_of_your_build_directory)/libc++/libcxx/lib
+(path_of_your_build_directory)/libc++/libcxxrt/lib
+# C++AMP runtime implementations
+(path_of_your_build_directory)/build/Release/lib
+
+Remember to use: sudo ldconfig -v to reload ld.so cache.
+
+
+Environment varialbes
+-------------------------------------------------------------------------------
+The following environment variables can change the behavior of Clamp.
+
+1. CLAMP_NOSPIR
+
+export CLAMP_NOSPIR=1 could force Clamp emit OpenCL C instead of SPIR at
+compile time.
+
+2. CLAMP_RUNTIME
+
+C++AMP programs will automatically pick C++AMP runtime to use in the following
+precedence:
+
+- HSA
+- OpenCL 1.2
+- OpenCL 1.1
+
+Set CLAMP_RUNTIME to different values to force pick different C++AMP runtime.
+Available options are:
+
+- HSA : HSA
+- CL12 : OpenCL 1.2 (with zero-copy performance optimizations)
+- CL11 : OpenCL 1.1
+
+
 How to push your changes to the main repository
 -------------------------------------------------------------------------------
 Create pull request from bitbucket.
