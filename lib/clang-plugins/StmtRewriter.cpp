@@ -19,16 +19,10 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/AST.h"
-#include "clang/AST/Attr.h"
-#include "clang/AST/CharUnits.h"
-#include "clang/AST/CommentDiagnostic.h"
-#include "clang/AST/CommentVisitor.h"
-#include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
-#include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtCXX.h"
@@ -37,16 +31,13 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Basic/TargetInfo.h"
-#include "clang/Basic/TargetOptions.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
+#include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
-#include "clang/Parse/ParseAST.h"
-#include "clang/Sema/Scope.h"
-#include "clang/Sema/SemaInternal.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Path.h"
 
 #include <fcntl.h>
 #include <errno.h>
@@ -68,29 +59,27 @@ class CallsVisitor: public RecursiveASTVisitor<CallsVisitor> {
   // This is needed to support some of the exotic property rewriting.
   llvm::DenseMap<Stmt *, Stmt *> ReplacedNodes;
   std::map<StringRef, bool> HeadersToAdd;
-
-public:
   ASTContext* Context;
+  std::vector<StringRef> CallVec;
+  std::map<StringRef, StringRef>Name2HeaderMap;
+  CompilerInstance& Compiler;
+  StringRef SourceFile;
+  unsigned RWOpts;
+  std::string BoltBKN;            // backend name as: "amp"
+  std::string BoltNS;               // namespace as: "bolt::amp::"
+  std::string BoltDirname;  // dirname with trailing '/' as: "bolt/amp/"
 
-private:
-    std::vector<StringRef> CallVec;
-    std::map<StringRef, StringRef>Name2HeaderMap;
-    StringRef SourceFile;
-    unsigned RWOpts;
-    std::string BoltBKN;            // backend name as: "amp"
-    std::string BoltNS;               // namespace as: "bolt::amp::"
-    std::string BoltDirname;  // dirname with trailing '/' as: "bolt/amp/"
-
-    // FIXME: when using clang::Rewriter in PluginASTAction, there might be potential 
-    // multi-threading issues. The root cause is that std::map inside RewiterBuffers fails
-    // in such occasions. We just copy codes from clang/lib/Rewrite/Core/Rewriter.cpp
-    // and compile with clang isolately here
-    parallel::Rewriter Rw;
+  // FIXME: when using clang::Rewriter in PluginASTAction, there might be potential 
+  // multi-threading issues. The root cause is that std::map inside RewiterBuffers fails
+  // in such occasions. We just copy codes from clang/lib/Rewrite/Core/Rewriter.cpp
+  // and compile with clang isolately here
+  parallel::Rewriter Rw;
 
 public:
-  CallsVisitor(ASTContext* Ctx, StringRef InFile, unsigned Options) 
-    : Context(Ctx), SourceFile(InFile), RWOpts(Options), BoltBKN("amp") {
-    Rw.setSourceMgr(Ctx->getSourceManager(),Ctx->getLangOpts());
+  CallsVisitor(CompilerInstance& CI, StringRef InFile, unsigned Options) 
+    : Compiler(CI), SourceFile(InFile), RWOpts(Options), BoltBKN("amp") {
+    Context = &CI.getASTContext();
+    Rw.setSourceMgr(Context->getSourceManager(),Context->getLangOpts());
     if (RWOpts & RW_BOLT_CL_BACKEND)
       BoltBKN = "cl";
     BoltNS = "bolt::" + BoltBKN + "::";
@@ -109,7 +98,29 @@ public:
   void AddBoltInclude(FileID FID) {
     SourceLocation LocFileStart = Rw.getSourceMgr().getLocForStartOfFile(FID);
 
-    // TODO: avoid duplicated headers
+    // Retrieve headers of this file based on AST and check if there is any "expected"
+    // Bolt header is already included. This is to avoid adding duplicated Bolt headers
+    Preprocessor& PP = Compiler.getPreprocessor();
+    HeaderSearch& HS = PP.getHeaderSearchInfo();
+    SmallVector<const FileEntry *, 16> Headers;
+    // We shall cache Headers for better performance
+    HS.getFileMgr().GetUniqueIDMapping(Headers);
+    if (Headers.size() > HS.header_file_size())
+      Headers.resize(HS.header_file_size());
+    for (unsigned UID = 0, E = Headers.size(); UID != E; ++UID) {
+      const FileEntry *File = Headers[UID];
+      if (!File)
+        continue;
+      StringRef FullName = File->getName();
+      StringRef FileName = llvm::sys::path::filename(FullName);
+      std::map<StringRef, bool>::iterator It = HeadersToAdd.find(FileName);
+      if ( It != HeadersToAdd.end() && It->second) {
+        // FIMXE: check if contain BoltDirname+FileName
+        if ( FullName.find(BoltDirname) != StringRef::npos)
+          It->second = false;
+        }
+    }
+
     for (std::map<StringRef, bool>::iterator It = HeadersToAdd.begin(), 
       E = HeadersToAdd.end(); It!=E; It++) {
       if (It->second) {
@@ -345,14 +356,13 @@ public:
 };
 
 class FindStmt : public RecursiveASTVisitor<FindStmt> {
-private:
     CompilerInstance& Compiler;
     StringRef SourceFile;
     CallsVisitor Visitor;
 
 public:
   FindStmt(CompilerInstance& CI, StringRef InFile, unsigned Options)
-    : Compiler(CI), SourceFile(InFile), Visitor(&CI.getASTContext(), InFile, Options) { }
+    : Compiler(CI), SourceFile(InFile), Visitor(CI, InFile, Options) { }
 
    void Terminate() { Visitor.SaveRewrittenFiles(); }
 
@@ -376,7 +386,6 @@ public:
 // Implementation of the ASTConsumer interface for reading an AST produced
 // by the Clang parser.
 class FindConsumer : public ASTConsumer {
-private:
   FindStmt FindMe;
 
 public:
@@ -393,7 +402,6 @@ public:
 
 // Implement action that can be invoked by the framework
 class StmtRewriterAction : public PluginASTAction {
-private:
   unsigned RWOpts;
 
 public:
