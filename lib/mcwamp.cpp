@@ -230,52 +230,98 @@ public:
   HSAPlatformDetect() : PlatformDetect("HSA", "libmcwamp_hsa.so", "libhsa-runtime64.so", hsa_kernel_source) {}
 };
 
+static RuntimeImpl* LoadOpenCL11Runtime() {
+  RuntimeImpl* runtimeImpl = nullptr;
+  // load OpenCL 1.1 C++AMP runtime
+  std::cout << "Use OpenCL 1.1 C++AMP runtime" << std::endl;
+  runtimeImpl = new RuntimeImpl("libmcwamp_opencl_11.so");
+  if (!runtimeImpl->m_RuntimeHandle) {
+    std::cerr << "Can't load OpenCL 1.1 C++AMP runtime!" << std::endl;
+    delete runtimeImpl;
+    exit(-1);
+  } else {
+    //std::cout << "OpenCL 1.1 C++AMP runtime loaded" << std::endl;
+  }
+  return runtimeImpl;
+}
+
+static RuntimeImpl* LoadOpenCL12Runtime() {
+  RuntimeImpl* runtimeImpl = nullptr;
+  // load OpenCL 1.2 C++AMP runtime
+  std::cout << "Use OpenCL 1.2 C++AMP runtime" << std::endl;
+  runtimeImpl = new RuntimeImpl("libmcwamp_opencl_12.so");
+  if (!runtimeImpl->m_RuntimeHandle) {
+    std::cerr << "Can't load OpenCL 1.2 C++AMP runtime!" << std::endl;
+    delete runtimeImpl;
+    exit(-1);
+  } else {
+    //std::cout << "OpenCL 1.2 C++AMP runtime loaded" << std::endl;
+  }
+  return runtimeImpl;
+}
+
+static RuntimeImpl* LoadHSARuntime() {
+  RuntimeImpl* runtimeImpl = nullptr;
+  // load HSA C++AMP runtime
+  std::cout << "Use HSA C++AMP runtime" << std::endl;
+  runtimeImpl = new RuntimeImpl("libmcwamp_hsa.so");
+  if (!runtimeImpl->m_RuntimeHandle) {
+    std::cerr << "Can't load HSA C++AMP runtime!" << std::endl;
+    delete runtimeImpl;
+    exit(-1);
+  } else {
+    //std::cout << "HSA C++AMP runtime loaded" << std::endl;
+  }
+  return runtimeImpl;
+}
+
 RuntimeImpl* GetOrInitRuntime() {
   static RuntimeImpl* runtimeImpl = nullptr;
   if (runtimeImpl == nullptr) {
     HSAPlatformDetect hsa_rt;
     OpenCL12PlatformDetect opencl12_rt;
     OpenCL11PlatformDetect opencl11_rt;
-    if (!hsa_rt.detect()) {
-      if (!opencl12_rt.detect()) {
-        if (!opencl11_rt.detect()) {
-          std::cerr << "Can't load any C++AMP runtime!" << std::endl;
-          exit(-1);
+
+    // force use certain C++AMP runtime from CLAMP_RUNTIME environment variable
+    char* runtime_env = getenv("CLAMP_RUNTIME");
+    if (runtime_env != nullptr) {
+      if (std::string("HSA") == runtime_env) {
+        if (hsa_rt.detect()) {
+          runtimeImpl = LoadHSARuntime();
         } else {
-          // load OpenCL 1.1 C++AMP runtime
-          std::cout << "Use OpenCL 1.1 C++AMP runtime" << std::endl;
-          runtimeImpl = new RuntimeImpl("libmcwamp_opencl_11.so");
-          if (!runtimeImpl->m_RuntimeHandle) {
-            std::cerr << "Can't load OpenCL 1.1 C++AMP runtime!" << std::endl;
-            delete runtimeImpl;
-            exit(-1);
-          } else {
-            //std::cout << "OpenCL 1.1 C++AMP runtime loaded" << std::endl;
-          }
+          std::cerr << "Ignore unsupported CLAMP_RUNTIME environment variable: " << runtime_env << std::endl;
+        }
+      } else if (std::string("CL12") == runtime_env) {
+        if (opencl12_rt.detect()) {
+          runtimeImpl = LoadOpenCL12Runtime();
+        } else {
+          std::cerr << "Ignore unsupported CLAMP_RUNTIME environment variable: " << runtime_env << std::endl;
+        }
+      } else if (std::string("CL11") == runtime_env) {
+        if (opencl11_rt.detect()) {
+          runtimeImpl = LoadOpenCL11Runtime();
+        } else {
+          std::cerr << "Ignore unsupported CLAMP_RUNTIME environment variable: " << runtime_env << std::endl;
         }
       } else {
-        // load OpenCL 1.2 C++AMP runtime
-        std::cout << "Use OpenCL 1.2 C++AMP runtime" << std::endl;
-        runtimeImpl = new RuntimeImpl("libmcwamp_opencl_12.so");
-        if (!runtimeImpl->m_RuntimeHandle) {
-          std::cerr << "Can't load OpenCL 1.2 C++AMP runtime!" << std::endl;
-          delete runtimeImpl;
-          exit(-1);
-        } else {
-          //std::cout << "OpenCL 1.2 C++AMP runtime loaded" << std::endl;
-        }
+        std::cerr << "Ignore unknown CLAMP_RUNTIME environment variable:" << runtime_env << std::endl;
       }
-    } else {
-      // load HSA C++AMP runtime
-      std::cout << "Use HSA C++AMP runtime" << std::endl;
-      runtimeImpl = new RuntimeImpl("libmcwamp_hsa.so");
-      if (!runtimeImpl->m_RuntimeHandle) {
-        std::cerr << "Can't load HSA C++AMP runtime!" << std::endl;
-        delete runtimeImpl;
-        exit(-1);
-      } else {
-        //std::cout << "HSA C++AMP runtime loaded" << std::endl;
+    }
+
+    // If can't determined by environment variable, try detect what can be used
+    if (runtimeImpl == nullptr) {
+      if (hsa_rt.detect()) {
+        runtimeImpl = LoadHSARuntime();
+      } else if (opencl12_rt.detect()) {
+        runtimeImpl = LoadOpenCL12Runtime();
+      } else if (opencl11_rt.detect()) {
+        runtimeImpl = LoadOpenCL11Runtime();
       }
+    }
+
+    if (runtimeImpl == nullptr) {
+      std::cerr << "Can't load any C++AMP runtime!" << std::endl;
+      exit(-1);
     }
   } 
   return runtimeImpl;
