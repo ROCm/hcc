@@ -1,16 +1,28 @@
+#!/bin/bash
 # Compiles an OpenCL file to HSAIL
+
+# check command line argument
+if [ "$#" -ne 1 ]; then
+  echo "Usage: $0 input_LLVM_IR" >&2
+  exit 1
+fi
+
+if [ ! -f $1 ]; then
+  echo "input LLVM IR $1 is not valid" >&2
+  exit 1
+fi
+
 # Path to AMD OpenCL library builtins
-AMD_BUILTINS=@AMDOCLTOOLS_ROOT@/bin
+AMD_BUILTINS=@HSAIL_BIN@
 if [ -d @LLVM_TOOLS_DIR@ ]; then
     NEWLIB=@CPPAMP_SOURCE_DIR@/lib
 else
     NEWLIB=@CMAKE_INSTALL_PREFIX@/lib
 fi
-AMD_BUILTINS=/opt/amd/bin
 # Path to HSAIL backend (LLVM-3.2-based)
-LLVM_BIN=@AMDOCLTOOLS_ROOT@/bin
+LLVM_BIN=@HSAIL_BIN@
 # Path to HSAILASM
-HSAIL_ASM=@AMDOCLTOOLS_ROOT@/bin/hsailasm
+HSAIL_ASM=@HSAIL_COMPILER@
 $LLVM_BIN/llvm-link -prelink-opt -o $1.linked.bc $1 -l $AMD_BUILTINS/builtins-hsail.bc
 $LLVM_BIN/opt -O3 -gpu -whole -verify $1.linked.bc -o $1.opt.bc
 $LLVM_BIN/llc -O2 -march=hsail-64 -o $1.brig $1.opt.bc

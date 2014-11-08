@@ -1,4 +1,4 @@
-C++AMP Compiler Implementation for HSA
+C++AMP Compiler Implementation for OpenCL/HSA
 
 Introduction
 --------------------------------------------------------------------------------
@@ -6,8 +6,9 @@ This repository hosts C++AMP compiler implementation project. The goal is to
 implement a compiler that takes a program conforming C++AMP standard and
 transforms it into the following targets:
 
-1. HSAIL for HSA
-2. (work-in-progress) BRIG for HSA
+1. OpenCL SPIR
+2. OpenCL C
+3. HSA BRIG 
 
 The project is based on LLVM+CLANG.
 
@@ -32,17 +33,46 @@ The current repository is composed of as following:
 
 Build Instruction for HSA
 --------------------------------------------------------------------------------
-* Prerequisite/HSA
-
-FIXME: this section needs to be polished
+* Prerequisite/OpenCL
 
 1. Linux distribution: Ubuntu 14.04 or higher
-2. HSA Linux Driver: TBD
-3. HSA Runtime: TBD
-4. HSAIL Compiler: TBD
-   (There are 2 versions available: Stable and Development.  It is suggested to use Stable version)
-5. libHSAIL: TBD
-   (libHSAIL has to be manually built per instructions below TBD)
+
+2. OpenCL Driver: OpenCL 1.1 or above
+  - AMD:
+    - OpenCL 1.2 : http://support.amd.com/en-us/download
+    - (NOT thoroughly tested yet) OpenCL 2.0 : http://support.amd.com/en-us/kb-articles/Pages/OpenCL2-Driver.aspx
+  - Intel:
+    - https://software.intel.com/en-us/articles/opencl-drivers
+  - NVidia:
+    - http://www.nvidia.com/Download/index.aspx?lang=en-us
+
+3. OpencL SDK: OpenCL 1.1 or above
+  - AMD:
+    - http://developer.amd.com/tools-and-sdks/opencl-zone/amd-accelerated-parallel-processing-app-sdk/
+  - Intel:
+    - https://software.intel.com/en-us/intel-opencl
+  - NVidia:
+    - https://developer.nvidia.com/cuda-downloads
+
+* Prerequisite/HSA
+
+1. Linux distribution: Ubuntu 14.04 or higher
+
+2. HSA Linux Driver:
+  - https://github.com/HSAFoundation/HSA-Drivers-Linux-AMD
+  - make sure kfd_check_installation.sh shows "Can run HSA YES"
+
+3. HSA Runtime:
+  - https://github.com/HSAFoundation/HSA-Runtime-AMD
+
+4. HSAIL Compiler:
+   There are 2 versions available: HSAIL-HLC-Stable and HSAIL-HLC-Development.  It is suggested to use Stable version at this moment.  Debian packages are built to only support HSAIL-HLC-Stable.
+  - Stable: https://github.com/HSAFoundation/HSAIL-HLC-Stable
+  - Development: https://github.com/HSAFoundation/HSAIL-HLC-Development
+
+5. libHSAIL: 
+   libHSAIL has to be manually built per instructions on GitHub.
+  - https://github.com/HSAFoundation/HSAIL-Tools
 
 * Prerequisite/Repository
 
@@ -82,11 +112,33 @@ are:
 
   The default options can be overridden on the command line:
   # cmake ../src \
-      -DCLANG_URL=git@bitbucket.org:${username}/cppamp-ng.git \
-      -DCXXAMP_ENABLE_GMAC=OFF \
-      -DCXXAMP_ENABLE_HSA_OKRA=OFF \
-      -DCXXAMP_ENABLE_HSA=ON \
+      -DCLANG_URL=https://bitbucket.org/multicoreware/cppamp-ng.git \
+      -DOPENCL_HEADER_DIR=/opt/AMDAPP/include \
+      -DOPENCL_LIBRARY_DIR=/opt/AMDAPP/lib/x86_64 \
+      -DHSA_HEADER_DIR=/opt/hsa/include \
+      -DHSA_LIBRARY_DIR=/opt/hsa/lib \
+      -DHSA_KMT_LIBRARY_DIR=/opt/hsa/lib \
+      -DHSA_LIBHSAIL_HEADER_DIR=/opt/hsa/include \
+      -DHSA_LIBHSAIL_LIBRARY_DIR=/opt/hsa/lib \
+      -DHSAIL_COMPILER_DIR=/opt/amd/bin \
       -DCMAKE_BUILD_TYPE=Release
+
+   - CLANG_URL : URL of C++AMP clang implementation
+
+   - OPENCL_HEADER_DIR : OpenCL header include path
+   - OPENCL_LIBRARY_DIR : OpenCL runtime library path
+
+   - HSA_HEADER_DIR : HSA runtime header include path
+   - HSA_LIBRARY_DIR : HSA runtime library path
+
+   - HSA_KMT_LIBRARY_DIR : HSA kernel library path
+
+   - HSA_LIBHSAIL_HEADER_DIR : libHSAIL header include path
+   - HSA_LIBHSAIL_LIBRARY_DIR : libHSAIL library path
+
+   - HSAIL_COMPILER_DIR : HSAIL compiler binary path
+
+   - CMAKE_BUILD_TYPE : Release or Debug  
 
 4. Build the whole system. This will build clang and other libraries
    that require one time build.
@@ -106,6 +158,53 @@ are:
   # cd build
   # rm -f CMakeCache.txt         // or use rm -rf *
   # (repeat No. 3 in this section)
+
+
+Dynamic Libaries
+-------------------------------------------------------------------------------
+After building, please change /etc/ld.so.conf to let dynamic libraries be
+locatable at runtime:
+
+# If you install deb files:
+# C++AMP runtime libraries
+# libc++ & C++AMP runtime implementations
+/opt/clamp/lib
+
+# If you build from source:
+# C++AMP runtime libraries
+# libc++
+(path_of_your_build_directory)/libc++/libcxx/lib
+(path_of_your_build_directory)/libc++/libcxxrt/lib
+# C++AMP runtime implementations
+(path_of_your_build_directory)/build/Release/lib
+
+Remember to use: sudo ldconfig -v to reload ld.so cache.
+
+
+Environment varialbes
+-------------------------------------------------------------------------------
+The following environment variables can change the behavior of Clamp.
+
+1. CLAMP_NOSPIR
+
+export CLAMP_NOSPIR=1 could force Clamp emit OpenCL C instead of SPIR at
+compile time.
+
+2. CLAMP_RUNTIME
+
+C++AMP programs will automatically pick C++AMP runtime to use in the following
+precedence:
+
+- HSA
+- OpenCL 1.2
+- OpenCL 1.1
+
+Set CLAMP_RUNTIME to different values to force pick different C++AMP runtime.
+Available options are:
+
+- HSA : HSA
+- CL12 : OpenCL 1.2 (with zero-copy performance optimizations)
+- CL11 : OpenCL 1.1
 
 
 How to push your changes to the main repository

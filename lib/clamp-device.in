@@ -1,7 +1,20 @@
-#!/bin/sh
+#!/bin/bash
 # wraps around commands to produce GPU kernel
 # $1 = input ll name
 # $2 = OpenCL/SPIR/HSAIL kernel file name
+# $3 = (optional) --hsa will trigger HSAIL lowering
+
+# check command line arguments
+if [ "$#" -lt 2 ]; then
+  echo "Usage: $0 input_LLVM output_kernel (--hsa)" >&2
+  exit 1
+fi
+
+if [ ! -f $1 ]; then
+  echo "input LLVM IR $1 is not valid" >&2
+  exit 1
+fi
+
 hasSPIR() {
     [ -z "$CLAMP_NOSPIR" -a -x /usr/bin/clinfo ] && ( /usr/bin/clinfo|grep cl_khr_spir > /dev/null )
     return $?
@@ -26,8 +39,8 @@ else
     HSATOOLS=@CMAKE_INSTALL_PREFIX@/bin/clamp-hsatools
 fi
 
-if [ "@CXXAMP_ENABLE_HSA@" = "ON" ]; then
-    if [ "$ALWAYS_MALLOC" = "ON" ]; then
+if [ "$3" == "--hsa" ]; then
+    if [ "$ALWAYS_MALLOC" == "ON" ]; then
       $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
            -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
            -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
@@ -40,7 +53,7 @@ if [ "@CXXAMP_ENABLE_HSA@" = "ON" ]; then
     fi
     sed "s/call /call spir_func /g" < $2.promote.ll.orig > $2.promote.ll
     $AS -o $2.promote.bc $2.promote.ll
-    echo "Generating HSAIL file"
+    echo "Generating HSA Brig kernel"
     $LINK $MATHLIB/opencl_math.bc $2.promote.bc -o $2 2>/dev/null
     $HSATOOLS $2
     mv -f $2 $2.orig
@@ -54,17 +67,17 @@ else
          -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
          -promote-globals -erase-nonkernels -tile-uniform -dce < $1 -o $2.promote.bc
     if hasSPIR; then
-        echo "Generating SPIR file"
+        echo "Generating OpenCL SPIR kernel"
         $LINK $MATHLIB/opencl_math.bc $2.promote.bc -o $2 2>/dev/null
         # remove temp file
         rm $2.promote.bc
         exit $?
     else
-        echo "Warning: not a SPIR-enabled OpenCL stack; generating OpenCL-C instead."
+        echo "Generating OpenCL C kernel"
         $LLC $2.promote.bc -march=c -o - |cat $MATH/opencl_math.cl - > $2
     
         if grep -q " double " $2; then
-            echo "#pragma OPENCL EXTENSION cl_khr_fp64: enable"|cat - $2 > $2.t
+            cat $MATHLIB/opencl_prefix.cl $2 > $2.t
             mv -f $2.t $2
         fi
         # remove temp file

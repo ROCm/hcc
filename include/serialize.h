@@ -7,45 +7,26 @@
 
 #pragma once
 
+#include <amp_runtime.h>
+
 namespace Concurrency {
-#if defined(CXXAMP_ENABLE_HSA)
-namespace CLAMP {
-extern void HSAPushArg(void *, size_t, const void *);
-extern void HSAPushPointer(void *, void *);
-}
-#endif
 class Serialize {
- public:
-#if defined(CXXAMP_ENABLE_HSA)
-  typedef void *hsa_kernel;
-  Serialize(hsa_kernel k): k_(k) {}
-#else
-  Serialize(ecl_kernel k): k_(k), current_idx_(0) {}
-#endif
+public:
+  typedef void *kernel;
+  Serialize(kernel k): k_(k), current_idx_(0) {}
   void Append(size_t sz, const void *s) {
-#if defined(CXXAMP_ENABLE_HSA)
-    CLAMP::HSAPushArg(k_, sz, s);
-#else
-    ecl_error err;
-    err = eclSetKernelArg(k_, current_idx_++, sz, s);
-    assert(err == eclSuccess);
-#endif
+    CLAMP::PushArg(k_, current_idx_++, sz, s);
   }
-  void AppendPtr(const void *ptr) {
-#if defined(CXXAMP_ENABLE_HSA)
-    CLAMP::HSAPushPointer(k_, const_cast<void*>(ptr));
-#else
-    ecl_error err;
-    err = eclSetKernelArgPtr(k_, current_idx_++, ptr);
-    assert(err == eclSuccess);
-#endif
+  void* getKernel() { 
+    return k_; 
   }
- private:
-#if defined(CXXAMP_ENABLE_HSA)
-  hsa_kernel k_;
-#else
-  ecl_kernel k_;
-#endif
+  int getAndIncCurrentIndex() { 
+    int ret = current_idx_; 
+    current_idx_++; 
+    return ret; 
+  }
+private:
+  kernel k_;
   int current_idx_;
 };
 }
