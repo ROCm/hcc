@@ -45,6 +45,15 @@ message( STATUS "Bolt_VERSION_MAJOR=${Bolt_VERSION_MAJOR}" )
 message( STATUS "Bolt_VERSION_MINOR=${Bolt_VERSION_MINOR}" )
 message( STATUS "Bolt_VERSION_PATCH=${Bolt_VERSION_PATCH}" )
 
+# set git version
+execute_process(COMMAND git describe --abbrev=4 --dirty --always --tags
+                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+                OUTPUT_VARIABLE GIT_VERSION
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+# set installation directory
+set(CMAKE_INSTALL_PREFIX "/opt/clamp")
+
 list( APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR} )
 set( BOLT_LIBRARY_DIR ${PROJECT_SOURCE_DIR}/bolt )
 
@@ -216,8 +225,8 @@ message( STATUS "CMAKE_EXE_LINKER link flags: " ${CMAKE_EXE_LINKER_FLAGS} )
 if( Bolt_BUILD64 )
     set( CPACK_PACKAGE_FILE_NAME "${CMAKE_PROJECT_NAME}-${Bolt_VERSION}-${CMAKE_HOST_SYSTEM_NAME}-x64" )
     set( INCLUDE_DIR include )
-    set( BIN_DIR bin64 )
-    set( LIB_DIR lib64 )
+    set( BIN_DIR bin )
+    set( LIB_DIR lib )
 else( )
     set( CPACK_PACKAGE_FILE_NAME "${CMAKE_PROJECT_NAME}-${Bolt_VERSION}-${CMAKE_HOST_SYSTEM_NAME}-x32" )
     set( INCLUDE_DIR include )
@@ -338,7 +347,7 @@ else( )
     set( CPACK_GENERATOR "TGZ" )
 endif( )
 
-set( CPACK_SOURCE_PACKAGE_FILE_NAME "${CMAKE_PROJECT_NAME}-${Bolt_VERSION}-${CMAKE_HOST_SYSTEM_NAME}-Source")
+#set( CPACK_SOURCE_PACKAGE_FILE_NAME "${CMAKE_PROJECT_NAME}-${Bolt_VERSION}-${CMAKE_HOST_SYSTEM_NAME}-Source")
 #set( CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/ReadMeBuild.html")
 set( CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
 set( CPACK_PACKAGE_VERSION_MAJOR ${Bolt_VERSION_MAJOR} )
@@ -348,5 +357,21 @@ set( CPACK_PACKAGE_DESCRIPTION_SUMMARY "Bolt library SDK package")
 set( CPACK_PACKAGE_VENDOR "AMD")
 set( CPACK_SOURCE_IGNORE_FILES "/\\\\.hg/;/\\\\.svn/;" )
 
+set(CPACK_SET_DESTDIR TRUE)
+set(CPACK_INSTALL_PREFIX "/opt/clamp")
+set(CPACK_PACKAGE_NAME "clamp-bolt")
+set(CPACK_PACKAGE_VERSION "${Bolt_VERSION_MAJOR}.${Bolt_VERSION_MINOR}.${Bolt_VERSION_PATCH}-${GIT_VERSION}")
+set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_SYSTEM_NAME})
+set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "Bolt for Clamp")
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Jack Chung <jack@multicorewareinc.com>")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libcxxamp (>= 0.3.0)")
+set(CPACK_GENERATOR "DEB;TGZ")
+set(CPACK_SOURCE_GENERATOR "TGZ")
+set(CPACK_BINARY_DEB "ON")
+set(CPACK_BINARY_STGZ "OFF")
+set(CPACK_SOURCE_TGZ "OFF")
+set(CPACK_SOURCE_TZ "OFF")
+set(CPACK_SOURCE_TBZ2 "OFF")
+set(CPACK_BINARY_TZ "OFF")
 # Define all variables that influence CPack before including CPack, such as install targets
 include( CPack )
