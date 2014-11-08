@@ -46,8 +46,6 @@ void cxxflags(void) {
             std::cout << " -I" CMAKE_BOLT_SRC_INC_DIR;
             std::cout << " -I" CMAKE_BOLT_BIN_INC_DIR;
             std::cout << " -I" CMAKE_BOOST_INC_DIR;
-            // opencl
-            std::cout << " -I" CMAKE_OPENCL_INC;
         }
     } else if (install_mode) {
         std::cout << " -I" CMAKE_INSTALL_INC;
@@ -57,8 +55,6 @@ void cxxflags(void) {
         if (bolt_rewrite_mode) {
             std::cout << " -I" CMAKE_INSTALL_BOLT_INC;
             std::cout << " -I" CMAKE_INSTALL_BOOST_INC;
-            // opencl
-            std::cout << " -I" CMAKE_OPENCL_INC;
         }
     } else {
         assert(0 && "Unreacheable!");
