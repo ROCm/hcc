@@ -1,6 +1,5 @@
-#OpenCL/GMAC
-set(GMAC_INC_DIR "${PROJECT_SOURCE_DIR}/gmac/src/include" "${PROJECT_BINARY_DIR}/gmac/src/include")
-include_directories(${GMAC_INC_DIR} ${OPENCL_HEADER}/../ ${CMAKE_CURRENT_SOURCE_DIR}/amp_test_lib/inc)
+#OpenCL
+include_directories(${OPENCL_HEADER}/../ ${CMAKE_CURRENT_SOURCE_DIR}/amp_test_lib/inc)
 
 add_mcwamp_library(amptest
 amp_test_lib/src/context.cpp amp_test_lib/src/device.cpp amp_test_lib/src/logging.cpp

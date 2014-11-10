@@ -11,29 +11,27 @@
 // ACCELERATOR
 //  According to specification, each array should have its binding accelerator
 //  instance. For now, we haven't implemented such binding nor actual
-//  implementation of accelerator. For a quick and dirty walkaround for
-//  OpenCL based prototype, we allow key OpenCL objects visible globally so
-//  that we don't have to be bothered with such implementation effort.
+//  implementation of accelerator.
 
 #pragma once
 
 #include <cassert>
+#include <cstdlib>
 #include <exception>
 #include <string>
 #include <vector>
 #include <chrono>
 #include <future>
-#include <thread>
-#include <string.h> //memcpy
-#if !defined(CXXAMP_ENABLE_HSA)
-#include <gmac/opencl.h>
-#endif
+#include <map>
 #include <memory>
 #include <algorithm>
 #include <set>
 #include <type_traits>
 // CLAMP
 #include <serialize.h>
+#define __global
+#include <amp_manage.h>
+#include <amp_runtime.h>
 // End CLAMP
 
 /* COMPATIBILITY LAYER */
@@ -43,19 +41,14 @@
 #define __declspec(ignored) /* */
 #endif
 
-#if defined(CXXAMP_ENABLE_HSA)
-//CLAMP
-extern int64_t get_global_id(unsigned int n) restrict(amp);
-extern int64_t get_local_id(unsigned int n) restrict(amp);
-extern int64_t get_group_id(unsigned int n) restrict(amp);
-#ifdef __APPLE__
-#define tile_static static __attribute__((section("clamp,opencl_local")))
-#else
+//
+// work-item related builtin functions
+//
+extern "C" __attribute__((pure)) int64_t amp_get_global_id(unsigned int n) restrict(amp);
+extern "C" __attribute__((pure)) int64_t amp_get_local_id(unsigned int n) restrict(amp);
+extern "C" __attribute__((pure)) int64_t amp_get_group_id(unsigned int n) restrict(amp);
 #define tile_static static __attribute__((section("clamp_opencl_local")))
-#endif
-extern __attribute__((noduplicate)) void barrier(unsigned int n) restrict(amp);
-//End CLAMP
-#endif
+extern "C" __attribute__((noduplicate)) void amp_barrier(unsigned int n) restrict(amp);
 
 namespace Concurrency {
 typedef int HRESULT;
@@ -170,19 +163,19 @@ public:
   accelerator(const accelerator& other);
   static std::vector<accelerator> get_all() {
     std::vector<accelerator> acc;
-#if !defined(CXXAMP_ENABLE_HSA)
-    AcceleratorInfo accInfo;
-    for (unsigned i = 0; i < eclGetNumberOfAccelerators(); i++) {
-      assert(eclGetAcceleratorInfo(i, &accInfo) == eclSuccess);
-      if (accInfo.acceleratorType == GMAC_ACCELERATOR_TYPE_GPU)
-        acc.push_back(*_gpu_accelerator);
-
-      if (accInfo.acceleratorType == GMAC_ACCELERATOR_TYPE_CPU)
-        acc.push_back(*_cpu_accelerator);
+    std::vector<int> devices = CLAMP::EnumerateDevices();
+    for (std::vector<int>::iterator it = devices.begin(); it != devices.end(); ++it) {
+      switch (*it) {
+        case AMP_DEVICE_TYPE_CPU:
+          acc.push_back(*_cpu_accelerator);
+          break;
+        case AMP_DEVICE_TYPE_GPU:
+          acc.push_back(*_gpu_accelerator);
+          break;
+        default:
+          break;
+      }
     }
-#else
-    acc.push_back(*_gpu_accelerator);  // in HSA path, always add GPU accelerator
-#endif
     return acc;
   }
   static bool set_default(const std::wstring& path) {
@@ -231,30 +224,12 @@ public:
   size_t dedicated_memory;
   access_type default_access_type;
   std::shared_ptr<accelerator_view> default_view;
-#if !defined(CXXAMP_ENABLE_HSA)
-  typedef GmacAcceleratorInfo AcceleratorInfo;
-  AcceleratorInfo accInfo;
-#endif
 
   // static class members
   static std::shared_ptr<accelerator> _default_accelerator; // initialized as nullptr
   static std::shared_ptr<accelerator> _gpu_accelerator;
   static std::shared_ptr<accelerator> _cpu_accelerator;
 };
-
-#if !defined(CXXAMP_ENABLE_HSA)
-//CLAMP
-extern "C" __attribute__((pure)) int get_global_id(int n) restrict(amp);
-extern "C" __attribute__((pure)) int get_local_id(int n) restrict(amp);
-extern "C" __attribute__((pure)) int get_group_id(int n) restrict(amp);
-#ifdef __APPLE__
-#define tile_static static __attribute__((section("clamp,opencl_local")))
-#else
-#define tile_static static __attribute__((section("clamp_opencl_local")))
-#endif
-extern "C" __attribute__((noduplicate)) void barrier(int n) restrict(amp);
-//End CLAMP
-#endif
 
 template <int N> class extent;
 template <int D0, int D1=0, int D2=0> class tiled_extent;
@@ -534,7 +509,7 @@ template <int N, typename _Tp>
 struct index_helper
 {
     static inline void set(_Tp& now) restrict(amp,cpu) {
-        now[N - 1] = get_global_id(_Tp::rank - N);
+        now[N - 1] = amp_get_global_id(_Tp::rank - N);
         index_helper<N - 1, _Tp>::set(now);
     }
     static inline bool equal(const _Tp& _lhs, const _Tp& _rhs) restrict(amp,cpu) {
@@ -549,7 +524,7 @@ template<typename _Tp>
 struct index_helper<1, _Tp>
 {
     static inline void set(_Tp& now) restrict(amp,cpu) {
-        now[0] = get_global_id(_Tp::rank - 1);
+        now[0] = amp_get_global_id(_Tp::rank - 1);
     }
     static inline bool equal(const _Tp& _lhs, const _Tp& _rhs) restrict(amp,cpu) {
         return (_lhs[0] == _rhs[0]);
@@ -746,17 +721,17 @@ class tile_barrier {
   }
   void wait_with_all_memory_fence() const restrict(amp) {
 #ifdef __GPU__
-    barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
+    amp_barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
 #endif
   }
   void wait_with_global_memory_fence() const restrict(amp) {
 #ifdef __GPU__
-    barrier(CLK_GLOBAL_MEM_FENCE);
+    amp_barrier(CLK_GLOBAL_MEM_FENCE);
 #endif
   }
   void wait_with_tile_static_memory_fence() const restrict(amp) {
 #ifdef __GPU__
-    barrier(CLK_LOCAL_MEM_FENCE);
+    amp_barrier(CLK_LOCAL_MEM_FENCE);
 #endif
   }
  private:
@@ -952,12 +927,12 @@ class tiled_index {
   __attribute__((annotate("__cxxamp_opencl_index")))
   __attribute__((always_inline)) tiled_index() restrict(amp)
 #ifdef __GPU__
-  : global(index<3>(get_global_id(2), get_global_id(1), get_global_id(0))),
-    local(index<3>(get_local_id(2), get_local_id(1), get_local_id(0))),
-    tile(index<3>(get_group_id(2), get_group_id(1), get_group_id(0))),
-    tile_origin(index<3>(get_global_id(2)-get_local_id(2),
-                         get_global_id(1)-get_local_id(1),
-                         get_global_id(0)-get_local_id(0))),
+  : global(index<3>(amp_get_global_id(2), amp_get_global_id(1), amp_get_global_id(0))),
+    local(index<3>(amp_get_local_id(2), amp_get_local_id(1), amp_get_local_id(0))),
+    tile(index<3>(amp_get_group_id(2), amp_get_group_id(1), amp_get_group_id(0))),
+    tile_origin(index<3>(amp_get_global_id(2)-amp_get_local_id(2),
+                         amp_get_global_id(1)-amp_get_local_id(1),
+                         amp_get_global_id(0)-amp_get_local_id(0))),
     tile_extent(D0, D1, D2)
 #endif // __GPU__
   {}
@@ -992,10 +967,10 @@ class tiled_index<D0, 0, 0> {
   __attribute__((annotate("__cxxamp_opencl_index")))
   __attribute__((always_inline)) tiled_index() restrict(amp)
 #ifdef __GPU__
-  : global(index<1>(get_global_id(0))),
-    local(index<1>(get_local_id(0))),
-    tile(index<1>(get_group_id(0))),
-    tile_origin(index<1>(get_global_id(0)-get_local_id(0))),
+  : global(index<1>(amp_get_global_id(0))),
+    local(index<1>(amp_get_local_id(0))),
+    tile(index<1>(amp_get_group_id(0))),
+    tile_origin(index<1>(amp_get_global_id(0)-amp_get_local_id(0))),
     tile_extent(D0)
 #endif // __GPU__
   {}
@@ -1031,11 +1006,11 @@ class tiled_index<D0, D1, 0> {
   __attribute__((annotate("__cxxamp_opencl_index")))
   __attribute__((always_inline)) tiled_index() restrict(amp)
 #ifdef __GPU__
-  : global(index<2>(get_global_id(1), get_global_id(0))),
-    local(index<2>(get_local_id(1), get_local_id(0))),
-    tile(index<2>(get_group_id(1), get_group_id(0))),
-    tile_origin(index<2>(get_global_id(1)-get_local_id(1),
-                         get_global_id(0)-get_local_id(0))),
+  : global(index<2>(amp_get_global_id(1), amp_get_global_id(0))),
+    local(index<2>(amp_get_local_id(1), amp_get_local_id(0))),
+    tile(index<2>(amp_get_group_id(1), amp_get_group_id(0))),
+    tile_origin(index<2>(amp_get_global_id(1)-amp_get_local_id(1),
+                         amp_get_global_id(0)-amp_get_local_id(0))),
     tile_extent(D0, D1)
 #endif // __GPU__
   {}
@@ -1144,15 +1119,10 @@ public:
   friend bool operator!=(const tiled_extent& lhs, const tiled_extent& rhs) restrict(amp,cpu);
 };
 
-
-#define __global
-#if defined(CXXAMP_ENABLE_HSA)
 }
-#include "hsa_manage.h"
+
 namespace Concurrency {
-#else
-#include "gmac_manage.h"
-#endif
+
 template <typename T, int N>
 struct projection_helper
 {
@@ -1172,7 +1142,7 @@ struct projection_helper
         Concurrency::extent<N - 1> ext_base(ext);
         Concurrency::index<N - 1> idx_base(idx);
         return result_type (ext_now, ext_base, idx_base, now.cache,
-                                now.p_, now.offset + ext_base.size() * stride);
+                                now.offset + ext_base.size() * stride);
     }
     static result_type project(const array_view<T, N>& now, int stride) restrict(amp,cpu) {
         int ext[N - 1], i, idx[N - 1], ext_o[N - 1];
@@ -1186,7 +1156,7 @@ struct projection_helper
         Concurrency::extent<N - 1> ext_base(ext);
         Concurrency::index<N - 1> idx_base(idx);
         return result_type (ext_now, ext_base, idx_base, now.cache,
-                                now.p_, now.offset + ext_base.size() * stride);
+                                now.offset + ext_base.size() * stride);
     }
 };
 template <typename T>
@@ -1223,7 +1193,7 @@ struct projection_helper<const T, N>
         Concurrency::extent<N - 1> ext_base(ext);
         Concurrency::index<N - 1> idx_base(idx);
         return const_result_type (ext_now, ext_base, idx_base, now.cache,
-                                now.p_, now.offset + ext_base.size() * stride);
+                                  now.offset + ext_base.size() * stride);
     }
     static const_result_type project(const array_view<const T, N>& now, int stride) restrict(amp,cpu) {
         int ext[N - 1], i, idx[N - 1], ext_o[N - 1];
@@ -1237,7 +1207,7 @@ struct projection_helper<const T, N>
         Concurrency::extent<N - 1> ext_base(ext);
         Concurrency::index<N - 1> idx_base(idx);
         return const_result_type (ext_now, ext_base, idx_base, now.cache,
-                                now.p_, now.offset + ext_base.size() * stride);
+                                  now.offset + ext_base.size() * stride);
     }
 };
 template <typename T>
@@ -1278,7 +1248,7 @@ struct array_projection_helper
         if( offset >= now.extent.size())
           throw runtime_exception("errorMsg_throw", 0);
 #endif
-        return result_type(ext, ext, index<N - 1>(), now.m_device, now.data(), offset);
+        return result_type(ext, ext, index<N - 1>(), now.m_device, offset);
     }
     static const_result_type project(const array<T, N>& now, int stride) restrict(amp,cpu) {
         int comp[N - 1], i;
@@ -1286,7 +1256,7 @@ struct array_projection_helper
             comp[i - 1] = now.extent[i];
         Concurrency::extent<N - 1> ext(comp);
         int offset = ext.size() * stride;
-        return const_result_type(ext, ext, index<N - 1>(), now.m_device, now.data(), offset);
+        return const_result_type(ext, ext, index<N - 1>(), now.m_device, offset);
     }
 };
 template <typename T>
@@ -1334,9 +1304,9 @@ class array {
   static_assert(0 == (sizeof(T) % sizeof(int)), "only value types whose size is a multiple of the size of an integer are allowed in array");
 public:
 #ifdef __GPU__
-  typedef _data<T> gmac_buffer_t;
+  typedef _data<T> acc_buffer_t;
 #else
-  typedef _data_host<T> gmac_buffer_t;
+  typedef _data_host<T> acc_buffer_t;
 #endif
   typedef array_helper<T, N> array_helper_t;
 
@@ -1466,8 +1436,8 @@ public:
     if(this != &other) {
       extent = other.extent;
       this->cpu_access_type = other.cpu_access_type;
+      m_device = other.m_device;
       other.m_device = nullptr;
-      copy(other, *this);
     }
     return *this;
   }
@@ -1512,7 +1482,7 @@ public:
       }
 #endif
       __global T *ptr = reinterpret_cast<__global T*>(m_device.get());
-      return ptr[amp_helper<N, index<N>, Concurrency::extent<N> >::flatten(idx, extent)];
+      return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx, extent)];
   }
   __global const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
 #ifndef __GPU__
@@ -1521,7 +1491,7 @@ public:
       }
 #endif
       __global T *ptr = reinterpret_cast<__global T*>(m_device.get());
-      return ptr[amp_helper<N, index<N>, Concurrency::extent<N> >::flatten(idx, extent)];
+      return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx, extent)];
   }
 
   typename array_projection_helper<T, N>::result_type
@@ -1619,37 +1589,37 @@ public:
   }
 
   template <typename ElementType>
-    array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu) {
+      array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu) {
 #ifndef __GPU__
           static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
           static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
+          if( (extent.size() * sizeof(T)) % sizeof(ElementType))
+              throw runtime_exception("errorMsg_throw", 0);
 #endif
-        int size = extent.size() * sizeof(T) / sizeof(ElementType);
-#ifndef __GPU__
-        if( (extent.size() * sizeof(T)) % sizeof(ElementType))
-          throw runtime_exception("errorMsg_throw", 0);
-#endif
-        array_view<ElementType, 1> av(Concurrency::extent<1>(size), reinterpret_cast<ElementType*>(m_device.get()));
-        return av;
-    }
+          int size = extent.size() * sizeof(T) / sizeof(ElementType);
+          using buffer_type = typename array_view<ElementType, 1>::acc_buffer_t;
+          array_view<ElementType, 1> av(Concurrency::extent<1>(size), buffer_type(m_device), 0);
+          return av;
+      }
   template <typename ElementType>
-    array_view<const ElementType, 1> reinterpret_as() const restrict(amp,cpu) {
+      array_view<const ElementType, 1> reinterpret_as() const restrict(amp,cpu) {
 #ifndef __GPU__
           static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
           static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
 #endif
-        int size = extent.size() * sizeof(T) / sizeof(ElementType);
-        array_view<const ElementType, 1> av(Concurrency::extent<1>(size), reinterpret_cast<const ElementType*>(m_device.get()));
-        return av;
-    }
+          int size = extent.size() * sizeof(T) / sizeof(ElementType);
+          using buffer_type = typename array_view<ElementType, 1>::acc_buffer_t;
+          array_view<const ElementType, 1> av(Concurrency::extent<1>(size), buffer_type(m_device), 0);
+          return av;
+      }
   template <int K> array_view<T, K>
       view_as(const Concurrency::extent<K>& viewExtent) restrict(amp,cpu) {
 #ifndef __GPU__
     if( viewExtent.size() > extent.size())
       throw runtime_exception("errorMsg_throw", 0);
 #endif
-          array_view<T, 1> av(Concurrency::extent<1>(viewExtent.size()), data());
-          return av.view_as(viewExtent);
+          array_view<T, K> av(viewExtent, m_device, 0);
+          return av;
       }
   template <int K> array_view<const T, K>
       view_as(const Concurrency::extent<K>& viewExtent) const restrict(amp,cpu) {
@@ -1657,8 +1627,8 @@ public:
     if( viewExtent.size() > extent.size())
       throw runtime_exception("errorMsg_throw", 0);
 #endif
-          const array_view<T, 1> av(Concurrency::extent<1>(viewExtent.size()), data());
-          return av.view_as(viewExtent);
+          const array_view<T, K> av(viewExtent, m_device, 0);
+          return av;
       }
 
   operator std::vector<T>() const {
@@ -1676,14 +1646,13 @@ public:
 #endif
     return reinterpret_cast<T*>(m_device.get());
   }
-  ~array() { // For GMAC
-    m_device.reset();
+  ~array() {
     if(pav) delete pav;
     if(paav) delete paav;
   }
 
 
-  const gmac_buffer_t& internal() const restrict(amp,cpu) { return m_device; }
+  const acc_buffer_t& internal() const restrict(amp,cpu) { return m_device; }
   Concurrency::extent<N> extent;
 private:
   template <int K, typename Q> friend struct index_helper;
@@ -1691,16 +1660,13 @@ private:
   template <typename K, int Q> friend struct projection_helper;
   template <typename K, int Q> friend struct array_projection_helper;
   template <typename K, int Q> friend class array_helper;
-  gmac_buffer_t m_device;
+  acc_buffer_t m_device;
   access_type cpu_access_type;
   array_helper_t m_array_helper;
   __attribute__((cpu)) accelerator_view *pav, *paav;
 
 #ifndef __GPU__
-  void initialize() {
-      m_device.reset(GMACAllocator<T>().allocate(extent.size()), GMACDeleter<T>());
-      m_array_helper.setArray(this);
-  }
+  void initialize() { m_array_helper.setArray(this); }
   template <typename InputIter>
       void initialize(InputIter srcBegin, InputIter srcEnd) {
           initialize();
@@ -1716,27 +1682,20 @@ class array_view
   typedef typename std::remove_const<T>::type nc_T;
 public:
 #ifdef __GPU__
-  typedef _data<T> gmac_buffer_t;
+  typedef _data<T> acc_buffer_t;
 #else
-  typedef _data_host_view<T> gmac_buffer_t;
+  typedef _data_host<T> acc_buffer_t;
 #endif
 
   static const int rank = N;
   typedef T value_type;
   array_view() = delete;
 
-  ~array_view() restrict(amp,cpu) {
-#ifndef __GPU__
-      if (p_ && cache.is_last()) {
-          synchronize();
-          cache.reset();
-      }
-#endif
-  }
+  ~array_view() restrict(amp,cpu) {}
 
   array_view(array<T, N>& src) restrict(amp,cpu)
-      : extent(src.extent), p_(NULL), cache(src.internal()), offset(0),
-        index_base(), extent_base(src.extent) {}
+      : extent(src.extent), cache(src.internal()), offset(0),
+      index_base(), extent_base(src.extent) {}
 
   template <typename Container, class = typename std::enable_if<!std::is_array<Container>::value>::type>
       array_view(const Concurrency::extent<N>& extent, Container& src)
@@ -1780,12 +1739,11 @@ public:
   { static_assert(N == 3, "Rank must be 3"); }
 
    array_view(const array_view& other) restrict(amp,cpu) : extent(other.extent),
-    p_(other.p_), cache(other.cache), offset(other.offset), index_base(other.index_base),
+    cache(other.cache), offset(other.offset), index_base(other.index_base),
     extent_base(other.extent_base) {}
   array_view& operator=(const array_view& other) restrict(amp,cpu) {
       if (this != &other) {
           extent = other.extent;
-          p_ = other.p_;
           cache = other.cache;
           index_base = other.index_base;
           extent_base = other.extent_base;
@@ -1793,7 +1751,6 @@ public:
       }
       return *this;
   }
-
   void copy_to(array<T,N>& dest) const {
 #ifndef __GPU__
       for(int i= 0 ;i< N;i++)
@@ -1813,17 +1770,26 @@ public:
   }
 
   __global T& operator[](const index<N>& idx) const restrict(amp,cpu) {
+#ifndef __GPU__
+      synchronize();
+#endif
       __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
       return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
   }
   template <int D0, int D1=0, int D2=0>
   __global T& operator[](const tiled_index<D0, D1, D2>& idx) const restrict(amp,cpu) {
+#ifndef __GPU__
+      synchronize();
+#endif
       __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
       return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx.global + index_base, extent_base)];
   }
 
   typename projection_helper<T, N>::result_type
       operator[] (int i) const restrict(amp,cpu) {
+#ifndef __GPU__
+      synchronize();
+#endif
           return projection_helper<T, N>::project(*this, i);
       }
   __global T& operator()(const index<N>& idx) const restrict(amp,cpu) {
@@ -1844,26 +1810,19 @@ public:
 
   template <typename ElementType>
       array_view<ElementType, N> reinterpret_as() const restrict(amp,cpu) {
-      static_assert(N == 1, "reinterpret_as is only permissible on array views of rank 1");
+          static_assert(N == 1, "reinterpret_as is only permissible on array views of rank 1");
 #ifndef __GPU__
           static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
           static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
+          if( (extent.size() * sizeof(T)) % sizeof(ElementType))
+              throw runtime_exception("errorMsg_throw", 0);
 #endif
           int size = extent.size() * sizeof(T) / sizeof(ElementType);
-#ifndef __GPU__
-          if( (extent.size() * sizeof(T)) % sizeof(ElementType))
-            throw runtime_exception("errorMsg_throw", 0);
-#endif
-#ifndef __GPU__
+          using buffer_type = typename array_view<ElementType, 1>::acc_buffer_t;
           array_view<ElementType, 1> av(Concurrency::extent<1>(size),
-                                        _data_host_view<ElementType>(cache),
-                                        reinterpret_cast<ElementType*>(p_), (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
-#else
-          array_view<ElementType, 1> av(Concurrency::extent<1>(size),
-                                        _data<ElementType>(cache),
-                                        reinterpret_cast<ElementType*>(p_), (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
-#endif
-         return av;
+                                        buffer_type(cache),
+                                        (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
+          return av;
       }
 
   array_view<T, N> section(const Concurrency::index<N>& idx,
@@ -1872,7 +1831,7 @@ public:
       if(  !amp_helper<N, index<N>, Concurrency::extent<N>>::contains(idx, ext,this->extent ) )
         throw runtime_exception("errorMsg_throw", 0);
 #endif
-      array_view<T, N> av(ext, extent_base, idx + index_base, cache, p_, offset);
+      array_view<T, N> av(ext, extent_base, idx + index_base, cache, offset);
       return av;
   }
   array_view<T, N> section(const Concurrency::index<N>& idx) const restrict(amp,cpu) {
@@ -1904,7 +1863,7 @@ public:
     if( viewExtent.size() > extent.size())
       throw runtime_exception("errorMsg_throw", 0);
 #endif
-    array_view<T, K> av(viewExtent, cache, p_, offset + index_base[0]);
+    array_view<T, K> av(viewExtent, cache, offset + index_base[0]);
     return av;
   }
 
@@ -1913,17 +1872,20 @@ public:
   void refresh() const;
   void discard_data() const {
 #ifndef __GPU__
-    cache.refresh();
+      cache.discard();
 #endif
   }
   // only get data do not synchronize
   __global const T& get_data(int i0) const restrict(amp,cpu) {
     static_assert(N == 1, "Rank must be 1");
     index<1> idx(i0);
-    __global T *ptr = reinterpret_cast<__global T*>(cache.get_data() + offset);
+    __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
     return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
   }
   T* data() const restrict(amp,cpu) {
+#ifndef __GPU__
+      synchronize();
+#endif
     static_assert(N == 1, "data() is only permissible on array views of rank 1");
     return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
   }
@@ -1937,19 +1899,18 @@ private:
   template <typename Q, int K> friend class array_view;
 
   // used by view_as and reinterpret_as
-  array_view(const Concurrency::extent<N>& ext, const gmac_buffer_t& cache,
-             T *p, int offset) restrict(amp,cpu)
-      : extent(ext), cache(cache), offset(offset), p_(p), extent_base(ext) {}
+  array_view(const Concurrency::extent<N>& ext, const acc_buffer_t& cache,
+             int offset) restrict(amp,cpu)
+      : extent(ext), cache(cache), offset(offset), extent_base(ext) {}
   // used by section and projection
   array_view(const Concurrency::extent<N>& ext_now,
              const Concurrency::extent<N>& ext_b,
              const Concurrency::index<N>& idx_b,
-             const gmac_buffer_t& cache, T *p, int off) restrict(amp,cpu)
+             const acc_buffer_t& cache, int off) restrict(amp,cpu)
       : extent(ext_now), index_base(idx_b), extent_base(ext_b),
-      p_(p), cache(cache), offset(off) {}
+      cache(cache), offset(off) {}
 
-  __attribute__((cpu)) T *p_;
-  gmac_buffer_t cache;
+  acc_buffer_t cache;
   Concurrency::extent<N> extent;
   Concurrency::extent<N> extent_base;
   Concurrency::index<N> index_base;
@@ -1965,24 +1926,17 @@ public:
   typedef const T value_type;
 
 #ifdef __GPU__
-  typedef _data<T> gmac_buffer_t;
+  typedef _data<nc_T> acc_buffer_t;
 #else
-  typedef _data_host_view<T> gmac_buffer_t;
+  typedef _data_host<nc_T> acc_buffer_t;
 #endif
 
   array_view() = delete;
 
-  ~array_view() restrict(amp,cpu) {
-#ifndef __GPU__
-  if (p_ && cache.is_last()) {
-    synchronize();
-    cache.reset();
-  }
-#endif
-  }
+  ~array_view() restrict(amp,cpu) {}
 
   array_view(const array<T,N>& src) restrict(amp,cpu)
-      : extent(src.extent), p_(NULL), cache(src.internal()), offset(0),
+      : extent(src.extent), cache(src.internal()), offset(0),
         index_base(), extent_base(src.extent) {}
   template <typename Container, class = typename std::enable_if<!std::is_array<Container>::value && !std::is_pointer<Container>::value>::type>
     array_view(const extent<N>& extent, const Container& src)
@@ -2013,16 +1967,15 @@ public:
   { static_assert(N == 3, "Rank must be 3"); }
 
   array_view(const array_view<T, N>& other) restrict(amp,cpu) : extent(other.extent),
-      p_(other.p_), cache(other.cache), offset(other.offset), index_base(other.index_base),
+      cache(other.cache), offset(other.offset), index_base(other.index_base),
       extent_base(other.extent_base) {}
 
   array_view(const array_view& other) restrict(amp,cpu) : extent(other.extent),
-    p_(other.p_), cache(other.cache), offset(other.offset), index_base(other.index_base),
+    cache(other.cache), offset(other.offset), index_base(other.index_base),
     extent_base(other.extent_base) {}
 
   array_view& operator=(const array_view<T,N>& other) restrict(amp,cpu) {
     extent = other.extent;
-    p_ = other.p_;
     cache = other.cache;
     index_base = other.index_base;
     extent_base = other.extent_base;
@@ -2033,7 +1986,6 @@ public:
   array_view& operator=(const array_view& other) restrict(amp,cpu) {
     if (this != &other) {
       extent = other.extent;
-      p_ = other.p_;
       cache = other.cache;
       index_base = other.index_base;
       extent_base = other.extent_base;
@@ -2056,12 +2008,18 @@ public:
   accelerator_view get_source_accelerator_view() const;
 
   __global const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
+#ifndef __GPU__
+      synchronize();
+#endif
     __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
     return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
   }
 
   typename projection_helper<const T, N>::const_result_type
       operator[] (int i) const restrict(amp,cpu) {
+#ifndef __GPU__
+      synchronize();
+#endif
     return projection_helper<const T, N>::project(*this, i);
   }
 
@@ -2090,27 +2048,22 @@ public:
   }
 */
   template <typename ElementType>
-    array_view<const ElementType, N> reinterpret_as() const restrict(amp,cpu) {
-    static_assert(N == 1, "reinterpret_as is only permissible on array views of rank 1");
+      array_view<const ElementType, N> reinterpret_as() const restrict(amp,cpu) {
+          static_assert(N == 1, "reinterpret_as is only permissible on array views of rank 1");
 #ifndef __GPU__
-      static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
-      static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
+          static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
+          static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
 #endif
-      int size = extent.size() * sizeof(T) / sizeof(ElementType);
-#ifndef __GPU__
-      array_view<const ElementType, 1> av(Concurrency::extent<1>(size),
-                                          _data_host_view<ElementType>(cache),
-                                          reinterpret_cast<ElementType*>(p_), (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
-#else
-      array_view<const ElementType, 1> av(Concurrency::extent<1>(size),
-                                          _data<ElementType>(cache),
-                                          reinterpret_cast<ElementType*>(p_), (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
-#endif
-      return av;
-    }
+          int size = extent.size() * sizeof(T) / sizeof(ElementType);
+          using buffer_type = typename array_view<ElementType, 1>::acc_buffer_t;
+          array_view<const ElementType, 1> av(Concurrency::extent<1>(size),
+                                              buffer_type(cache),
+                                              (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
+          return av;
+      }
   array_view<const T, N> section(const Concurrency::index<N>& idx,
                      const Concurrency::extent<N>& ext) const restrict(amp,cpu) {
-    array_view<const T, N> av(ext, extent_base, idx + index_base, cache, p_, offset);
+    array_view<const T, N> av(ext, extent_base, idx + index_base, cache, offset);
     return av;
   }
   array_view<const T, N> section(const Concurrency::index<N>& idx) const restrict(amp,cpu) {
@@ -2143,7 +2096,7 @@ public:
     if( viewExtent.size() > extent.size())
       throw runtime_exception("errorMsg_throw", 0);
 #endif
-      array_view<const T, K> av(viewExtent, cache, p_, offset + index_base[0]);
+      array_view<const T, K> av(viewExtent, cache, offset + index_base[0]);
       return av;
     }
 
@@ -2158,7 +2111,7 @@ public:
   __global const T& get_data(int i0) const restrict(amp,cpu) {
     static_assert(N == 1, "Rank must be 1");
     index<1> idx(i0);
-    __global T *ptr = reinterpret_cast<__global T*>(cache.get_data() + offset);
+    __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
     return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
   }
   const T* data() const restrict(amp,cpu) {
@@ -2174,20 +2127,19 @@ private:
   template <typename Q, int K> friend class array_view;
 
   // used by view_as and reinterpret_as
-  array_view(const Concurrency::extent<N>& ext, const gmac_buffer_t& cache,
-             value_type *p, int offset) restrict(amp,cpu)
-      : extent(ext), cache(cache), offset(offset), p_(p), extent_base(ext) {}
+  array_view(const Concurrency::extent<N>& ext, const acc_buffer_t& cache,
+             int offset) restrict(amp,cpu)
+      : extent(ext), cache(cache), offset(offset), extent_base(ext) {}
 
   // used by section and projection
   array_view(const Concurrency::extent<N>& ext_now,
              const Concurrency::extent<N>& ext_b,
              const Concurrency::index<N>& idx_b,
-             const gmac_buffer_t& cache, value_type *p, int off) restrict(amp,cpu)
+             const acc_buffer_t& cache, int off) restrict(amp,cpu)
       : extent(ext_now), index_base(idx_b), extent_base(ext_b),
-      p_(p), cache(cache), offset(off) {}
+      cache(cache), offset(off) {}
 
-  __attribute__((cpu)) value_type *p_;
-  gmac_buffer_t cache;
+  acc_buffer_t cache;
   Concurrency::extent<N> extent;
   Concurrency::extent<N> extent_base;
   Concurrency::index<N> index_base;

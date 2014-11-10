@@ -16,15 +16,12 @@ config.opencl_inc_dir = "@OPENCL_HEADER@/../"
 config.opencl_lib_dir = "@OPENCL_LIBRARY@"
 config.opencl_math_dir = "@OPENCL_MATH_DIR@"
 
-# GMAC
-config.gmac_src_dir = "@GMAC_SRC_DIR@"
-config.gmac_inc_dir = "@GMAC_INC_DIR@"
-config.gmac_lib_dir = "@GMAC_LIB_DIR@"
+config.ampcl_lib_dir = "@AMPCL_LIB_DIR@"
 
 # MCWAMP
 config.mcwamp_lib_dir = "@MCWAMP_LIB_DIR@"
 config.mcwamp_tool_dir = "@MCWAMP_TOOL_DIR@"
-config.enable_hsa = "@CXXAMP_ENABLE_HSA@"
+config.enable_hsa = "@HAS_HSA@"
 # Let the main config do the real work.
 lit.load_config(config, "@CPPAMP_TEST_DIR@/lit.cfg")
 
