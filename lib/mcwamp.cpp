@@ -36,6 +36,10 @@ std::vector<std::string> __mcw_kernel_names;
 extern "C" char * cl_kernel_source[] asm ("_binary_kernel_cl_start") __attribute__((weak));
 extern "C" char * cl_kernel_size[] asm ("_binary_kernel_cl_size") __attribute__((weak));
 
+// SPIR kernel codes
+extern "C" char * spir_kernel_source[] asm ("_binary_kernel_spir_start") __attribute__((weak));
+extern "C" char * spir_kernel_size[] asm ("_binary_kernel_spir_size") __attribute__((weak));
+
 // HSA kernel codes
 extern "C" char * hsa_kernel_source[] asm ("_binary_kernel_brig_start") __attribute__((weak));
 extern "C" char * hsa_kernel_size[] asm ("_binary_kernel_brig_size") __attribute__((weak));
@@ -81,6 +85,7 @@ struct RuntimeImpl {
     m_MatchKernelNamesImpl = (MatchKernelNamesImpl_t) dlsym(m_RuntimeHandle, "MatchKernelNamesImpl");
     m_PushArgImpl = (PushArgImpl_t) dlsym(m_RuntimeHandle, "PushArgImpl");
     m_GetAllocatorImpl = (GetAllocatorImpl_t) dlsym(m_RuntimeHandle, "GetAllocatorImpl");
+
   }
 
   std::string m_ImplName;
@@ -189,12 +194,30 @@ public:
           //std::cout << dlerror() << std::endl;
           result = false;
         } else {
-          if (test_func() >= m_clVersion) {
-            result = true;
-          } else {
-            result = false;
-          }
+          result = (test_func() >= m_clVersion);
         }
+      }
+    }
+    if (ocl_version_test_handle)
+      dlclose(ocl_version_test_handle);
+    return result;
+  }
+
+  bool hasSPIR() {
+    void* ocl_version_test_handle = nullptr;
+    typedef int (*spir_test_t) ();
+    spir_test_t test_func = nullptr;
+    bool result = false;
+
+    ocl_version_test_handle = dlopen("libmcwamp_opencl_version.so", RTLD_LAZY);
+    if (!ocl_version_test_handle) {
+      result = false;
+    } else {
+      test_func = (spir_test_t) dlsym(ocl_version_test_handle, "IsSPIRAvailable");
+      if (!test_func) {
+        result = false;
+      } else {
+        result = (test_func() > 0);
       }
     }
     if (ocl_version_test_handle)
@@ -204,6 +227,15 @@ public:
 
 private:
   int m_clVersion;
+};
+
+
+/**
+ * \brief OpenCL SPIR 1.2 runtime detection
+ */
+class SPIR12PlatformDetect : public OpenCLPlatformDetect {
+public:
+  SPIR12PlatformDetect() : OpenCLPlatformDetect("OpenCL", "libmcwamp_opencl_12.so", "libOpenCL.so", spir_kernel_source, 12) {}
 };
 
 /**
@@ -363,8 +395,31 @@ void QueryDeviceInfo(const std::wstring& device_path,
 void *CreateKernel(std::string s) {
   // FIXME need a more elegant way
   if (GetOrInitRuntime()->m_ImplName.find("libmcwamp_opencl") != std::string::npos) {
-    // OpenCL path
-    return GetOrInitRuntime()->m_CreateKernelImpl(s.c_str(), cl_kernel_size, cl_kernel_source);
+    static bool firstTime = true;
+    static bool hasSPIR = false;
+    if (firstTime) {
+      // force use OpenCL C kernel from CLAMP_NOSPIR environment variable
+      char* kernel_env = getenv("CLAMP_NOSPIR");
+      if (kernel_env == nullptr) {
+        SPIR12PlatformDetect spir_rt;
+        if (spir_rt.hasSPIR()) {
+          std::cout << "Use OpenCL SPIR kernel\n";
+          hasSPIR = true;
+        } else {
+          std::cout << "Use OpenCL C kernel\n";
+        }
+      } else {
+        std::cout << "Use OpenCL C kernel\n";
+      }
+      firstTime = false;
+    }
+    if (hasSPIR) {
+      // SPIR path
+      return GetOrInitRuntime()->m_CreateKernelImpl(s.c_str(), spir_kernel_size, spir_kernel_source);
+    } else {
+      // OpenCL path
+      return GetOrInitRuntime()->m_CreateKernelImpl(s.c_str(), cl_kernel_size, cl_kernel_source);
+    }
   } else {
     // HSA path
     return GetOrInitRuntime()->m_CreateKernelImpl(s.c_str(), hsa_kernel_size, hsa_kernel_source);
