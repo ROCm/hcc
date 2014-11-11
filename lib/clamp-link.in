@@ -67,10 +67,22 @@ done
 # combine kernel sections together
 $LINK $LINK_KERNEL_ARGS | $OPT -always-inline - -o $TEMP_DIR/kernel.bc
 
-# lower to OpenCL
+# lower to SPIR
 if [ "@HAS_OPENCL@" == "1" ]; then
-  # lower to SPIR or OCL
-  $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.cl
+  # lower to SPIR
+  $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.spir --spir
+
+  # build a new kernel object
+  pushd . > /dev/null
+  cd $TEMP_DIR
+  $CLAMP_EMBED kernel.spir kernel_spir.o
+  popd > /dev/null
+fi
+
+# lower to OpenCL C
+if [ "@HAS_OPENCL@" == "1" ]; then
+  # lower to SPIR
+  $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.cl --opencl
 
   # build a new kernel object
   pushd . > /dev/null
@@ -93,9 +105,9 @@ fi
 
 # link everything together
 if [ "@HAS_OPENCL@" == "1" ] && [ "@HAS_HSA@" == "1" ]; then
-  ld $TEMP_DIR/kernel.o $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS $LINK_OTHER_ARGS
+  ld $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS $LINK_OTHER_ARGS
 elif [ "@HAS_OPENCL@" == "1" ] && [ "@HAS_HSA@" == "0" ]; then
-  ld $TEMP_DIR/kernel.o $LINK_HOST_ARGS $LINK_OTHER_ARGS
+  ld $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $LINK_HOST_ARGS $LINK_OTHER_ARGS
 elif [ "@HAS_OPENCL@" == "0" ] && [ "@HAS_HSA@" == "1" ]; then
   ld $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS $LINK_OTHER_ARGS
 else
@@ -107,12 +119,20 @@ if [ -e $TEMP_DIR/kernel.o ]; then
   rm $TEMP_DIR/kernel.o
 fi
 
+if [ -e $TEMP_DIR/kernel_spir.o ]; then
+  rm $TEMP_DIR/kernel_spir.o
+fi
+
 if [ -e $TEMP_DIR/kernel_hsa.o ]; then
   rm $TEMP_DIR/kernel_hsa.o
 fi
 
 if [ -e $TEMP_DIR/kernel.cl ]; then
   rm $TEMP_DIR/kernel.bc
+fi
+
+if [ -e $TEMP_DIR/kernel.spir ]; then
+  rm $TEMP_DIR/kernel.spir
 fi
 
 if [ -e $TEMP_DIR/kernel.brig ]; then
