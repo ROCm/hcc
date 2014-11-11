@@ -1,0 +1,27 @@
+#!/bin/bash
+# clamp-assemble kernel-bitcode kernel-object
+if [ -d @LLVM_TOOLS_DIR@ ]; then
+    EMBED=@PROJECT_BINARY_DIR@/lib/clamp-embed
+else
+    EMBED=@CMAKE_INSTALL_PREFIX@/bin/clamp-embed
+fi
+
+if [ "$#" -ne 2 ]; then
+  echo "Usage: $0 kernel-bitcode object" >&2
+  exit 1
+fi
+
+if [ ! -f $1 ]; then
+  echo "kernel-bitcode $1 is not valid" >&2
+  exit 1
+fi
+
+if [ -f $2 ]; then
+  mv $2 $2.host.o
+  $EMBED $1 $2.kernel.o
+  ld -r $2.kernel.o $2.host.o -o $2
+  rm $2.kernel.o $2.host.o
+else
+  $EMBED $1 $2
+fi
+

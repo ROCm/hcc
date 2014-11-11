@@ -1,0 +1,138 @@
+#!/bin/bash
+
+# check number of arguments
+if [ "$#" -eq 0 ]; then
+  echo "$0 is NOT recommended to be directly used" >&2
+  exit 1
+fi
+
+if [ -d @LLVM_TOOLS_DIR@ ]; then
+    LINK=@LLVM_TOOLS_DIR@/llvm-link
+    OPT=@LLVM_TOOLS_DIR@/opt
+    CLAMP_DEVICE=@PROJECT_BINARY_DIR@/lib/clamp-device
+    CLAMP_EMBED=@PROJECT_BINARY_DIR@/lib/clamp-embed
+else
+    LINK=@CMAKE_INSTALL_PREFIX@/bin/llvm-link
+    OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
+    CLAMP_DEVICE=@CMAKE_INSTALL_PREFIX@/bin/clamp-device
+    CLAMP_EMBED=@CMAKE_INSTALL_PREFIX@/bin/clamp-embed
+fi
+
+################
+# link
+################
+
+LINK_KERNEL_ARGS=""
+LINK_HOST_ARGS=""
+LINK_OTHER_ARGS=""
+
+TEMP_DIR=`mktemp -d`
+
+# a file which contains the list of __cxxamp_serialize symbols in each CPU object file
+CXXAMP_SERIALIZE_SYMBOL_FILE=$TEMP_DIR/symbol.txt
+touch $CXXAMP_SERIALIZE_SYMBOL_FILE
+
+ARGS="$@"
+for ARG in $ARGS
+do
+  if [ -f $ARG ]; then
+    FILE=`basename $ARG` # remove path
+    FILENAME=${FILE%.o}  # check if it's an object file
+    ISCRT=${ARG#/usr}    # exception for objects under /usr
+    ISLIB=${ARG#/lib}    # exception for objects under /lib
+    if [ $FILENAME != $FILE ] && [ $ISCRT == $ARG ] && [ $ISLIB == $ARG ]; then
+      KERNEL_FILE=$TEMP_DIR/$FILENAME.kernel.bc
+      HOST_FILE=$TEMP_DIR/$FILENAME.host.o
+
+      # extract kernel section
+      objcopy -O binary -j .kernel $ARG $KERNEL_FILE 
+
+      # extract host section
+      objcopy -R .kernel $ARG $HOST_FILE
+
+      # strip all symbols specified in symbol.txt from $HOST_FILE
+      objcopy @$CXXAMP_SERIALIZE_SYMBOL_FILE $HOST_FILE $HOST_FILE.new
+      mv $HOST_FILE.new $HOST_FILE
+
+      # find cxxamp_serialize symbols and save them into symbol.txt
+      objdump -t $HOST_FILE -j .text 2> /dev/null | grep "g.*__cxxamp_serialize" | awk '{print "-L"$6}' >> $CXXAMP_SERIALIZE_SYMBOL_FILE
+
+      LINK_KERNEL_ARGS=$LINK_KERNEL_ARGS" "$KERNEL_FILE
+      LINK_HOST_ARGS=$LINK_HOST_ARGS" "$HOST_FILE
+    else
+      LINK_OTHER_ARGS=$LINK_OTHER_ARGS" "$ARG
+    fi
+  else
+    LINK_OTHER_ARGS=$LINK_OTHER_ARGS" "$ARG
+  fi
+done
+#echo $LINK_KERNEL_ARGS
+#echo $LINK_HOST_ARGS
+#echo $LINK_OTHER_ARGS
+
+# combine kernel sections together
+$LINK $LINK_KERNEL_ARGS | $OPT -always-inline - -o $TEMP_DIR/kernel.bc
+
+# lower to OpenCL
+if [ "@HAS_OPENCL@" == "1" ]; then
+  # lower to SPIR or OCL
+  $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.cl
+
+  # build a new kernel object
+  pushd . > /dev/null
+  cd $TEMP_DIR
+  $CLAMP_EMBED kernel.cl kernel.o
+  popd > /dev/null
+fi
+
+# lower to HSA
+if [ "@HAS_HSA@" == "1" ]; then
+  # lower to HSAIL
+  $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.brig --hsa
+
+  # build a new kernel object
+  pushd . > /dev/null
+  cd $TEMP_DIR
+  $CLAMP_EMBED kernel.brig kernel_hsa.o
+  popd > /dev/null
+fi
+
+# link everything together
+if [ "@HAS_OPENCL@" == "1" ] && [ "@HAS_HSA@" == "1" ]; then
+  ld $TEMP_DIR/kernel.o $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS $LINK_OTHER_ARGS
+elif [ "@HAS_OPENCL@" == "1" ] && [ "@HAS_HSA@" == "0" ]; then
+  ld $TEMP_DIR/kernel.o $LINK_HOST_ARGS $LINK_OTHER_ARGS
+elif [ "@HAS_OPENCL@" == "0" ] && [ "@HAS_HSA@" == "1" ]; then
+  ld $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS $LINK_OTHER_ARGS
+else
+  echo "Error in C++AMP link!"
+fi
+
+# remove temp files
+if [ -e $TEMP_DIR/kernel.o ]; then
+  rm $TEMP_DIR/kernel.o
+fi
+
+if [ -e $TEMP_DIR/kernel_hsa.o ]; then
+  rm $TEMP_DIR/kernel_hsa.o
+fi
+
+if [ -e $TEMP_DIR/kernel.cl ]; then
+  rm $TEMP_DIR/kernel.bc
+fi
+
+if [ -e $TEMP_DIR/kernel.brig ]; then
+  rm $TEMP_DIR/kernel.brig
+fi
+
+if [ -e $TEMP_DIR/kernel.bc ]; then
+  rm $TEMP_DIR/kernel.bc
+fi
+
+rm $LINK_KERNEL_ARGS # individual kernels
+rm $LINK_HOST_ARGS # individual host codes
+rm $CXXAMP_SERIALIZE_SYMBOL_FILE # __cxxamp_serialize symbols
+if [ -d $TEMP_DIR ]; then
+  rm -f $TEMP_DIR/*
+  rmdir $TEMP_DIR
+fi

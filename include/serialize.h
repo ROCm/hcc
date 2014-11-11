@@ -7,45 +7,26 @@
 
 #pragma once
 
+#include <amp_runtime.h>
+
 namespace Concurrency {
-#ifdef CXXAMP_ENABLE_HSA_OKRA
-namespace CLAMP {
-extern void OkraPushArg(void *, size_t, const void *);
-extern void OkraPushPointer(void *, void *);
-}
-#endif
 class Serialize {
- public:
-#ifdef CXXAMP_ENABLE_HSA_OKRA
-  typedef void *okra_kernel;
-  Serialize(okra_kernel k): k_(k) {}
-#else
-  Serialize(ecl_kernel k): k_(k), current_idx_(0) {}
-#endif
+public:
+  typedef void *kernel;
+  Serialize(kernel k): k_(k), current_idx_(0) {}
   void Append(size_t sz, const void *s) {
-#ifdef CXXAMP_ENABLE_HSA_OKRA
-    CLAMP::OkraPushArg(k_, sz, s);
-#else
-    ecl_error err;
-    err = eclSetKernelArg(k_, current_idx_++, sz, s);
-    assert(err == eclSuccess);
-#endif
+    CLAMP::PushArg(k_, current_idx_++, sz, s);
   }
-  void AppendPtr(const void *ptr) {
-#ifdef CXXAMP_ENABLE_HSA_OKRA
-    CLAMP::OkraPushPointer(k_, const_cast<void*>(ptr));
-#else
-    ecl_error err;
-    err = eclSetKernelArgPtr(k_, current_idx_++, ptr);
-    assert(err == eclSuccess);
-#endif
+  void* getKernel() { 
+    return k_; 
   }
- private:
-#ifdef CXXAMP_ENABLE_HSA_OKRA
-  okra_kernel k_;
-#else
-  ecl_kernel k_;
-#endif
+  int getAndIncCurrentIndex() { 
+    int ret = current_idx_; 
+    current_idx_++; 
+    return ret; 
+  }
+private:
+  kernel k_;
   int current_idx_;
 };
 }

@@ -1,3 +1,27 @@
+
+/**
+ * work-item related functions
+ */
+ulong amp_get_global_id(uint n) {
+  return (long)get_global_id(n);
+}
+
+ulong amp_get_local_id(uint n) {
+  return (long)get_local_id(n);
+}
+
+ulong amp_get_group_id(uint n) {
+  return (long)get_group_id(n);
+}
+
+void amp_barrier(uint n) {
+  return barrier((int)n);
+}
+
+
+/**
+ * math functions
+ */
 float opencl_asin(float x) {
   return asin(x);
 }
@@ -253,6 +277,10 @@ int opencl_isnan(float x) {
   return isnan(x);
 }
 
+
+/**
+ * atomic functions
+ */
 unsigned atomic_add_unsigned_global(volatile __global unsigned *x, unsigned y) {
   return atomic_add(x, y);
 }
@@ -323,6 +351,10 @@ int atomic_inc_int(volatile int *x) {
   return old;
 }
 
+
+/**
+ * memory functions
+ */
 static unsigned char * memcpy(unsigned char *dst,  __global unsigned char *src, unsigned int len) {
   for (int i = 0; i < len; ++i) {
     dst[i] = src[i];

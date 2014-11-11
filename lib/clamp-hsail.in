@@ -1,0 +1,38 @@
+#!/bin/bash
+
+# check command line argument
+if [ "$#" -ne 1 ]; then
+  echo "Usage: $0 input_LLVM_IR" >&2
+  exit 1
+fi
+
+if [ ! -f $1 ]; then
+  echo "input LLVM IR $1 is not valid" >&2
+  exit 1
+fi
+
+if [ -d @LLVM_TOOLS_DIR@ ]; then
+    AS=@LLVM_TOOLS_DIR@/llvm-as
+    OPT=@LLVM_TOOLS_DIR@/opt
+    SPIRIFY=@PROJECT_BINARY_DIR@/lib/clamp-spirify
+else
+    AS=@CMAKE_INSTALL_PREFIX@/bin/llvm-as
+    OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
+    SPIRIFY=@CMAKE_INSTALL_PREFIX@/bin/clamp-spirify
+fi
+HSAIL_LLC=@HSAIL_BIN@/llc
+HSAIL_ASM=@HSAIL_COMPILER@
+
+INPUT=$1
+SUFFIX=ll
+FILENAME=${INPUT%.$SUFFIX}
+
+$SPIRIFY $INPUT > $FILENAME.spir.ll
+$OPT -O3 -dce -S -o $FILENAME.opt.ll < $FILENAME.spir.ll
+$AS -o $FILENAME.bc $FILENAME.opt.ll
+
+$HSAIL_LLC -O2 -march=hsail-64 -o $FILENAME.brig $FILENAME.bc
+$HSAIL_ASM -disassemble -o - $FILENAME.brig
+
+# remove artifacts
+rm $FILENAME.spir.ll $FILENAME.opt.ll $FILENAME.bc $FILENAME.brig

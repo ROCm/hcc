@@ -5,8 +5,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <iostream>
+#include <string>
+#include <cassert>
+
 #include <amp.h>
-#include <map>
+
+#include "mcwamp_impl.hpp"
+
+#include <dlfcn.h>
+
 namespace Concurrency {
 
 // initialize static class members
@@ -18,243 +26,380 @@ std::shared_ptr<accelerator> accelerator::_gpu_accelerator = std::make_shared<ac
 std::shared_ptr<accelerator> accelerator::_cpu_accelerator = std::make_shared<accelerator>(accelerator::cpu_accelerator);
 std::shared_ptr<accelerator> accelerator::_default_accelerator = nullptr;
 
-}
-
-namespace {
-bool __mcw_cxxamp_compiled = false;
-}
-
-#ifdef __APPLE__
-#include <mach-o/getsect.h>
-extern "C" intptr_t _dyld_get_image_vmaddr_slide(uint32_t image_index);
-#else
-extern "C" char * kernel_source_[] asm ("_binary_kernel_cl_start") __attribute__((weak));
-extern "C" char * kernel_size_[] asm ("_binary_kernel_cl_size") __attribute__((weak));
-#endif
+} // namespace Concurrency
 
 std::vector<std::string> __mcw_kernel_names;
-namespace Concurrency {
-namespace CLAMP {
-// Levenshtein Distance to measure the difference of two sequences
-// The shortest distance it returns the more likely the two sequences are equal
-static inline int ldistance(const std::string source, const std::string target)
-{
-  int n = source.length();
-  int m = target.length();
-  if (m == 0)
-    return n;
-  if (n == 0)
-    return m;
-  
-  //Construct a matrix
-  typedef std::vector < std::vector < int >>Tmatrix;
-  Tmatrix matrix(n + 1);
-  
-  for (int i = 0; i <= n; i++)
-    matrix[i].resize(m + 1);
-  for (int i = 1; i <= n; i++)
-    matrix[i][0] = i;
-  for (int i = 1; i <= m; i++)
-    matrix[0][i] = i;
 
-  for (int i = 1; i <= n; i++) {
-    const char si = source[i - 1];
-    for (int j = 1; j <= m; j++) {
-      const char dj = target[j - 1];
-      int cost;
-      if (si == dj)
-        cost = 0;
-      else
-        cost = 1;
-      const int above = matrix[i - 1][j] + 1;
-      const int left = matrix[i][j - 1] + 1;
-      const int diag = matrix[i - 1][j - 1] + cost;
-      matrix[i][j] = std::min(above, std::min(left, diag));
+// weak symbols of kernel codes
+
+// OpenCL kernel codes
+extern "C" char * cl_kernel_source[] asm ("_binary_kernel_cl_start") __attribute__((weak));
+extern "C" char * cl_kernel_size[] asm ("_binary_kernel_cl_size") __attribute__((weak));
+
+// HSA kernel codes
+extern "C" char * hsa_kernel_source[] asm ("_binary_kernel_brig_start") __attribute__((weak));
+extern "C" char * hsa_kernel_size[] asm ("_binary_kernel_brig_size") __attribute__((weak));
+
+
+// interface of C++AMP runtime implementation
+struct RuntimeImpl {
+  RuntimeImpl(const char* libraryName) : 
+    m_ImplName(libraryName),
+    m_RuntimeHandle(nullptr),
+    m_EnumerateDevicesImpl(nullptr),
+    m_QueryDeviceInfoImpl(nullptr),
+    m_CreateKernelImpl(nullptr),
+    m_LaunchKernelImpl(nullptr),
+    m_LaunchKernelAsyncImpl(nullptr),
+    m_MatchKernelNamesImpl(nullptr),
+    m_PushArgImpl(nullptr),
+    m_GetAllocatorImpl(nullptr) {
+    //std::cout << "dlopen(" << libraryName << ")\n";
+    m_RuntimeHandle = dlopen(libraryName, RTLD_LAZY);
+    if (!m_RuntimeHandle) {
+      std::cerr << "C++AMP runtime load error: " << dlerror() << std::endl;
+      return;
+    }
+
+    LoadSymbols();
+  }
+
+  ~RuntimeImpl() {
+    if (m_RuntimeHandle) {
+      dlclose(m_RuntimeHandle);
     }
   }
-  return matrix[n][m];
-}
-// transformed_kernel_name (mangled) might differ if usages of 'm32' flag in CPU/GPU
-// paths are mutually exclusive. We can scan all kernel names and replace
-// transformed_kernel_name with the one that has the shortest distance from it by using 
-// Levenshtein Distance measurement
-void MatchKernelNames(std::string& fixed_name) {
-  if (__mcw_kernel_names.size()) {
-    // Must start from a big value > 10
-    int distance = 1024;
-    int hit = -1;
-    std::string shortest;
-    for (std::vector < std::string >::iterator it = __mcw_kernel_names.begin();
-         it != __mcw_kernel_names.end(); ++it) {
-      if ((*it) == fixed_name) {
-        // Perfect match. Mark no need to replace and skip the loop
-        hit = -1;
-        break;
-      }
-      int n = ldistance(fixed_name, (*it));
-      if (n <= distance) {
-        distance = n;
-        hit = 1;
-        shortest = (*it);
-      }
-    }
-    /* Replacement. Skip if not hit or the distance is too far (>5)*/
-    if (hit >= 0 && distance < 5)
-      fixed_name = shortest;
+
+  // load symbols from C++AMP runtime implementation
+  void LoadSymbols() {
+
+    m_EnumerateDevicesImpl = (EnumerateDevicesImpl_t) dlsym(m_RuntimeHandle, "EnumerateDevicesImpl");
+    m_QueryDeviceInfoImpl = (QueryDeviceInfoImpl_t) dlsym(m_RuntimeHandle, "QueryDeviceInfoImpl");
+    m_CreateKernelImpl = (CreateKernelImpl_t) dlsym(m_RuntimeHandle, "CreateKernelImpl");
+    m_LaunchKernelImpl = (LaunchKernelImpl_t) dlsym(m_RuntimeHandle, "LaunchKernelImpl");
+    m_LaunchKernelAsyncImpl = (LaunchKernelAsyncImpl_t) dlsym(m_RuntimeHandle, "LaunchKernelAsyncImpl");
+    m_MatchKernelNamesImpl = (MatchKernelNamesImpl_t) dlsym(m_RuntimeHandle, "MatchKernelNamesImpl");
+    m_PushArgImpl = (PushArgImpl_t) dlsym(m_RuntimeHandle, "PushArgImpl");
+    m_GetAllocatorImpl = (GetAllocatorImpl_t) dlsym(m_RuntimeHandle, "GetAllocatorImpl");
   }
-  return;
-}
-}
-}
+
+  std::string m_ImplName;
+  void* m_RuntimeHandle;
+  EnumerateDevicesImpl_t m_EnumerateDevicesImpl;
+  QueryDeviceInfoImpl_t m_QueryDeviceInfoImpl;
+  CreateKernelImpl_t m_CreateKernelImpl;
+  LaunchKernelImpl_t m_LaunchKernelImpl;
+  LaunchKernelAsyncImpl_t m_LaunchKernelAsyncImpl;
+  MatchKernelNamesImpl_t m_MatchKernelNamesImpl;
+  PushArgImpl_t m_PushArgImpl;
+  GetAllocatorImpl_t m_GetAllocatorImpl;
+};
+
 namespace Concurrency {
 namespace CLAMP {
-void CompileKernels(void)
-{
-#ifdef CXXAMP_ENABLE_HSA_OKRA
-  assert(0 && "Unsupported function");
-#else
-  ecl_error error_code;
-  if ( !__mcw_cxxamp_compiled ) {
-#ifdef __APPLE__
-    const struct section_64 *sect = getsectbyname("binary", "kernel_cl");
-    unsigned char *kernel_source = (unsigned char*)calloc(1, sect->size+1);
-    size_t kernel_size = sect->size;
-    assert(sect->addr != 0);
-    memcpy(kernel_source, (void*)(sect->addr + _dyld_get_image_vmaddr_slide(0)), kernel_size); // whatever
-#else
-    size_t kernel_size = (size_t)((void *)kernel_size_);
-    unsigned char *kernel_source = (unsigned char*)malloc(kernel_size+1);
-    memcpy(kernel_source, kernel_source_, kernel_size);
-#endif
-    kernel_source[kernel_size] = '\0';
-    if (kernel_source[0] == 'B' && kernel_source[1] == 'C') {
-      // Bitcode magic number. Assuming it's in SPIR
-      error_code = eclCompileBinary(kernel_source, kernel_size);
-      CHECK_ERROR_GMAC(error_code, "Compiling kernel in SPIR binary");
-    } else {
-      // in OpenCL-C
-      const char *ks = (const char *)kernel_source;
-      error_code = eclCompileSource(ks, "-D__ATTRIBUTE_WEAK__=");
-      CHECK_ERROR_GMAC(error_code, "Compiling kernel in OpenCL-C");
+
+////////////////////////////////////////////////////////////
+// Class declaration
+////////////////////////////////////////////////////////////
+/**
+ * \brief Base class of platform detection
+ */
+class PlatformDetect {
+public:
+  PlatformDetect(const std::string& name, 
+                 const std::string& ampRuntimeLibrary, 
+                 const std::string& systemRuntimeLibrary,
+                 void* const kernel_source)
+    : m_name(name), 
+      m_ampRuntimeLibrary(ampRuntimeLibrary), 
+      m_systemRuntimeLibrary(systemRuntimeLibrary), 
+      m_kernel_source(kernel_source) {}
+
+  virtual bool detect() {
+    //std::cout << "Detecting " << m_name << "...";
+    // detect if kernel is available
+    if (!m_kernel_source) {
+      //std::cout << " kernel not found" << std::endl;
+      return false;
     }
-    __mcw_cxxamp_compiled = true;
-    free(kernel_source);
-    // Extract kernel names
-    char** kernel_names = NULL;
-    unsigned kernel_num = 0;
-    ecl_error error_code;
-    error_code =  eclGetKernelNames(&kernel_names, &kernel_num);
-    if(error_code == eclSuccess && kernel_names) {
-       int i = 0;
-       while(kernel_names && i<kernel_num) {
-          __mcw_kernel_names.push_back(std::string(kernel_names[i]));
-          delete [] kernel_names[i];
-          ++i;
+    //std::cout << " kernel found...";
+
+    void* handle = nullptr;
+
+    // detect if system runtime is available
+    //std::cout << "dlopen(" << m_systemRuntimeLibrary << ")\n";
+    handle = dlopen(m_systemRuntimeLibrary.c_str(), RTLD_LAZY);
+    if (!handle) {
+      //std::cout << " system runtime not found" << std::endl;
+      //std::cout << dlerror() << std::endl;
+      return false;
+    }
+    dlerror();  // clear any existing error
+    //std::cout << " system runtime found...";
+    dlclose(handle);
+
+    // detect if C++AMP runtime is available
+    //std::cout << "dlopen(" << m_ampRuntimeLibrary << ")\n";
+    handle = dlopen(m_ampRuntimeLibrary.c_str(), RTLD_LAZY);
+    if (!handle) {
+      //std::cout << " C++AMP runtime not found" << std::endl;
+      //std::cout << dlerror() << std::endl;
+      return false;
+    }
+    dlerror();  // clear any existing error
+    //std::cout << " C++AMP runtime found" << std::endl;
+    dlclose(handle);
+
+    return true;
+  }
+
+private:
+  std::string m_systemRuntimeLibrary;
+  std::string m_ampRuntimeLibrary;
+  std::string m_name;
+  void* m_kernel_source;
+};
+
+class OpenCLPlatformDetect : public PlatformDetect {
+public:
+  OpenCLPlatformDetect(const std::string& name, 
+                       const std::string& ampRuntimeName,
+                       const std::string& systemRuntimeName, 
+                       void* const kernel_source,
+                       int version) : PlatformDetect(name, ampRuntimeName, systemRuntimeName, kernel_source), m_clVersion(version) {}
+
+  bool detect() override {
+    void* ocl_version_test_handle = nullptr;
+    typedef int (*version_test_t) ();
+    version_test_t test_func = nullptr;
+    bool result = false;
+
+    result = PlatformDetect::detect();
+    if (result) {
+      //std::cout << "dlopen(libmcwamp_opencl_version.so)\n";
+      ocl_version_test_handle = dlopen("libmcwamp_opencl_version.so", RTLD_LAZY);
+      if (!ocl_version_test_handle) {
+        //std::cout << " OpenCL version test not found" << std::endl;
+        //std::cout << dlerror() << std::endl;
+        result = false;
+      } else {
+        test_func = (version_test_t) dlsym(ocl_version_test_handle, "GetOpenCLVersion");
+        if (!test_func) {
+          //std::cout << " OpenCL version test function not found" << std::endl
+          //std::cout << dlerror() << std::endl;
+          result = false;
+        } else {
+          if (test_func() >= m_clVersion) {
+            result = true;
+          } else {
+            result = false;
+          }
         }
-       delete [] kernel_names;
-       if(__mcw_kernel_names.size()) {
-         std::sort(std::begin(__mcw_kernel_names), std::end(__mcw_kernel_names));
-         __mcw_kernel_names.erase (std::unique (__mcw_kernel_names.begin (),
-                                                       __mcw_kernel_names.end ()), __mcw_kernel_names.end ());
-       }
-    }
-  }
-#endif
-}
-
-#ifdef CXXAMP_ENABLE_HSA_OKRA
-} // namespce CLAMP
-} // namespace Concurrency
-#include <okraContext.h>
-namespace Concurrency {
-namespace CLAMP {
-/* Used only in HSA Okra runtime */
-OkraContext *GetOrInitOkraContext(void)
-{
-  static OkraContext *context = NULL;
-  if (!context) {
-    //std::cerr << "Okra: create context\n";
-    context = OkraContext::Create();
-  }
-  if (!context) {
-    std::cerr << "Okra: Unable to create context\n";
-    abort();
-  }
-  return context;
-}
-
-static std::map<std::string, OkraContext::Kernel *> __mcw_okra_kernels;
-void *CreateOkraKernel(std::string s)
-{
-  OkraContext::Kernel *kernel = __mcw_okra_kernels[s];
-  if (!kernel) {
-      size_t kernel_size = (size_t)((void *)kernel_size_);
-      char *kernel_source = (char*)malloc(kernel_size+1);
-      memcpy(kernel_source, kernel_source_, kernel_size);
-      kernel_source[kernel_size] = '\0';
-      std::string kname = std::string("&__OpenCL_")+s+
-          std::string("_kernel");
-      kernel = GetOrInitOkraContext()->
-          createKernel(kernel_source, kname.c_str());
-      //std::cerr << "CLAMP::Okra::Creating kernel: "<< kname<<"\n";
-      //std::cerr << "CLAMP::Okra::Creating kernel: "<< kernel <<"\n";
-      if (!kernel) {
-          std::cerr << "Okra: Unable to create kernel\n";
-          abort();
       }
-      __mcw_okra_kernels[s] = kernel;
+    }
+    if (ocl_version_test_handle)
+      dlclose(ocl_version_test_handle);
+    return result;
   }
-  kernel->clearArgs();
-  // HSA kernels generated from OpenCL takes 3 additional arguments at the beginning
-  kernel->pushLongArg(0);
-  kernel->pushLongArg(0);
-  kernel->pushLongArg(0);
-  return kernel;
-}
-namespace Okra {
-void RegisterMemory(void *p, size_t sz)
-{
-    //std::cerr << "registering: ptr " << p << " of size " << sz << "\n";
-    GetOrInitOkraContext()->registerArrayMemory(p, sz);
-}
+
+private:
+  int m_clVersion;
+};
+
+/**
+ * \brief OpenCL 1.2 runtime detection
+ */
+class OpenCL12PlatformDetect : public OpenCLPlatformDetect {
+public:
+  OpenCL12PlatformDetect() : OpenCLPlatformDetect("OpenCL", "libmcwamp_opencl_12.so", "libOpenCL.so", cl_kernel_source, 12) {}
+};
+
+/**
+ * \brief OpenCL 1.1 runtime detection
+ */
+class OpenCL11PlatformDetect : public OpenCLPlatformDetect {
+public:
+  OpenCL11PlatformDetect() : OpenCLPlatformDetect("OpenCL", "libmcwamp_opencl_11.so", "libOpenCL.so", cl_kernel_source, 11) {}
+};
+
+/**
+ * \brief HSA runtime detection
+ */
+class HSAPlatformDetect : public PlatformDetect {
+public:
+  HSAPlatformDetect() : PlatformDetect("HSA", "libmcwamp_hsa.so", "libhsa-runtime64.so", hsa_kernel_source) {}
+};
+
+static RuntimeImpl* LoadOpenCL11Runtime() {
+  RuntimeImpl* runtimeImpl = nullptr;
+  // load OpenCL 1.1 C++AMP runtime
+  std::cout << "Use OpenCL 1.1 C++AMP runtime" << std::endl;
+  runtimeImpl = new RuntimeImpl("libmcwamp_opencl_11.so");
+  if (!runtimeImpl->m_RuntimeHandle) {
+    std::cerr << "Can't load OpenCL 1.1 C++AMP runtime!" << std::endl;
+    delete runtimeImpl;
+    exit(-1);
+  } else {
+    //std::cout << "OpenCL 1.1 C++AMP runtime loaded" << std::endl;
+  }
+  return runtimeImpl;
 }
 
-void OkraLaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local)
-{
-  OkraContext::Kernel *kernel =
-      reinterpret_cast<OkraContext::Kernel*>(ker);
-  size_t tmp_local[] = {0, 0, 0};
-  if (!local)
-      local = tmp_local;
-  //std::cerr<<"Launching: nr dim = " << nr_dim << "\n";
-
-  kernel->setLaunchAttributes(nr_dim, global, local);
-  //std::cerr << "No real launch\n";
-  kernel->dispatchKernelWaitComplete();
+static RuntimeImpl* LoadOpenCL12Runtime() {
+  RuntimeImpl* runtimeImpl = nullptr;
+  // load OpenCL 1.2 C++AMP runtime
+  std::cout << "Use OpenCL 1.2 C++AMP runtime" << std::endl;
+  runtimeImpl = new RuntimeImpl("libmcwamp_opencl_12.so");
+  if (!runtimeImpl->m_RuntimeHandle) {
+    std::cerr << "Can't load OpenCL 1.2 C++AMP runtime!" << std::endl;
+    delete runtimeImpl;
+    exit(-1);
+  } else {
+    //std::cout << "OpenCL 1.2 C++AMP runtime loaded" << std::endl;
+  }
+  return runtimeImpl;
 }
 
-void OkraPushArg(void *ker, size_t sz, const void *v)
-{
-  //std::cerr << "pushing:" << ker << " of size " << sz << "\n";
-  OkraContext::Kernel *kernel =
-      reinterpret_cast<OkraContext::Kernel*>(ker);
-  void *val = const_cast<void*>(v);
-  switch (sz) {
-    case sizeof(int):
-      kernel->pushIntArg(*reinterpret_cast<int*>(val));
-      //std::cerr << "(int) value = " << *reinterpret_cast<int*>(val) <<"\n";
-      break;
-    default:
-      assert(0 && "Unsupported kernel argument size");
+static RuntimeImpl* LoadHSARuntime() {
+  RuntimeImpl* runtimeImpl = nullptr;
+  // load HSA C++AMP runtime
+  std::cout << "Use HSA C++AMP runtime" << std::endl;
+  runtimeImpl = new RuntimeImpl("libmcwamp_hsa.so");
+  if (!runtimeImpl->m_RuntimeHandle) {
+    std::cerr << "Can't load HSA C++AMP runtime!" << std::endl;
+    delete runtimeImpl;
+    exit(-1);
+  } else {
+    //std::cout << "HSA C++AMP runtime loaded" << std::endl;
+  }
+  return runtimeImpl;
+}
+
+RuntimeImpl* GetOrInitRuntime() {
+  static RuntimeImpl* runtimeImpl = nullptr;
+  if (runtimeImpl == nullptr) {
+    HSAPlatformDetect hsa_rt;
+    OpenCL12PlatformDetect opencl12_rt;
+    OpenCL11PlatformDetect opencl11_rt;
+
+    // force use certain C++AMP runtime from CLAMP_RUNTIME environment variable
+    char* runtime_env = getenv("CLAMP_RUNTIME");
+    if (runtime_env != nullptr) {
+      if (std::string("HSA") == runtime_env) {
+        if (hsa_rt.detect()) {
+          runtimeImpl = LoadHSARuntime();
+        } else {
+          std::cerr << "Ignore unsupported CLAMP_RUNTIME environment variable: " << runtime_env << std::endl;
+        }
+      } else if (std::string("CL12") == runtime_env) {
+        if (opencl12_rt.detect()) {
+          runtimeImpl = LoadOpenCL12Runtime();
+        } else {
+          std::cerr << "Ignore unsupported CLAMP_RUNTIME environment variable: " << runtime_env << std::endl;
+        }
+      } else if (std::string("CL11") == runtime_env) {
+        if (opencl11_rt.detect()) {
+          runtimeImpl = LoadOpenCL11Runtime();
+        } else {
+          std::cerr << "Ignore unsupported CLAMP_RUNTIME environment variable: " << runtime_env << std::endl;
+        }
+      } else {
+        std::cerr << "Ignore unknown CLAMP_RUNTIME environment variable:" << runtime_env << std::endl;
+      }
+    }
+
+    // If can't determined by environment variable, try detect what can be used
+    if (runtimeImpl == nullptr) {
+      if (hsa_rt.detect()) {
+        runtimeImpl = LoadHSARuntime();
+      } else if (opencl12_rt.detect()) {
+        runtimeImpl = LoadOpenCL12Runtime();
+      } else if (opencl11_rt.detect()) {
+        runtimeImpl = LoadOpenCL11Runtime();
+      }
+    }
+
+    if (runtimeImpl == nullptr) {
+      std::cerr << "Can't load any C++AMP runtime!" << std::endl;
+      exit(-1);
+    }
+  } 
+  return runtimeImpl;
+}
+
+//
+// implementation of C++AMP runtime interfaces 
+// declared in amp_runtime.h and amp_allocator.h
+//
+
+// used in amp.h
+std::vector<int> EnumerateDevices() {
+  int num = 0;
+  std::vector<int> ret;
+  int* devices = nullptr;
+  GetOrInitRuntime()->m_EnumerateDevicesImpl(NULL, &num);
+  assert(num > 0);
+  devices = new int[num];
+  GetOrInitRuntime()->m_EnumerateDevicesImpl(devices, NULL);
+  for (int i = 0; i < num; ++i) {
+    ret.push_back(devices[i]);
+  }
+  delete[] devices;
+  return ret;
+}
+
+// used in amp_impl.h
+void QueryDeviceInfo(const std::wstring& device_path, 
+  bool& supports_cpu_shared_memory,
+  size_t& dedicated_memory, 
+  bool& supports_limited_double_precision, 
+  std::wstring& description) {
+  wchar_t des[128];
+  GetOrInitRuntime()->m_QueryDeviceInfoImpl(device_path.c_str(), &supports_cpu_shared_memory, &dedicated_memory, &supports_limited_double_precision, des);
+  description = std::wstring(des);
+}
+
+// used in parallel_for_each.h
+void *CreateKernel(std::string s) {
+  // FIXME need a more elegant way
+  if (GetOrInitRuntime()->m_ImplName.find("libmcwamp_opencl") != std::string::npos) {
+    // OpenCL path
+    return GetOrInitRuntime()->m_CreateKernelImpl(s.c_str(), cl_kernel_size, cl_kernel_source);
+  } else {
+    // HSA path
+    return GetOrInitRuntime()->m_CreateKernelImpl(s.c_str(), hsa_kernel_size, hsa_kernel_source);
   }
 }
-void OkraPushPointer(void *ker, void *val)
-{
-    //std::cerr << "pushing:" << ker << " of ptr " << val << "\n";
-    OkraContext::Kernel *kernel =
-        reinterpret_cast<OkraContext::Kernel*>(ker);
-    kernel->pushPointerArg(val);
+
+void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {
+  GetOrInitRuntime()->m_LaunchKernelImpl(kernel, dim_ext, ext, local_size);
 }
-#endif
+
+std::future<void>* LaunchKernelAsync(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {
+  void *ret = nullptr;
+  ret = GetOrInitRuntime()->m_LaunchKernelAsyncImpl(kernel, dim_ext, ext, local_size);
+  return static_cast<std::future<void>*>(ret);
+}
+
+
+void MatchKernelNames(std::string& fixed_name) {
+  char* ret = new char[fixed_name.length() * 2];
+  assert(ret);
+  memset(ret, 0, fixed_name.length() * 2);
+  memcpy(ret, fixed_name.c_str(), fixed_name.length());
+  GetOrInitRuntime()->m_MatchKernelNamesImpl(ret);
+  fixed_name = ret;
+  delete[] ret;
+}
+
+void PushArg(void *k_, int idx, size_t sz, const void *s) {
+  GetOrInitRuntime()->m_PushArgImpl(k_, idx, sz, s);
+}
+
 } // namespace CLAMP
+
+AMPAllocator *getAllocator() {
+  return static_cast<AMPAllocator*>(CLAMP::GetOrInitRuntime()->m_GetAllocatorImpl());
+}
 } // namespace Concurrency
+

@@ -52,32 +52,18 @@ my $AMPTESTLIB="@AMPTESTLIB@";
 my $AMPTESTINC="@AMPTESTINC@";
 my $RUNTESTSDIR="@RUNTESTSDIR@";
 
-#my $OPENCL_INC="@OPENCL_INCLUDE@";
 
 my $CLANG_AMP="$CLANG_AMP_BUILD_DIR/compiler/bin/clang++";
 my $CLAMP_CONFIG=`find $CLANG_AMP_BUILD_DIR/build -name clamp-config -print`;
 $CLAMP_CONFIG =~ s/^\s+//;
 $CLAMP_CONFIG =~ s/\s+$//;
-#my $CLAMP_CXXFLAGS=`$CLAMP_CONFIG --build --cxxflags`;
-#$CLAMP_CXXFLAGS =~ s/^\s+//;
-#$CLAMP_CXXFLAGS =~ s/\s+$//;
-my $CLAMP_GPU_CXXFLAGS=`$CLAMP_CONFIG --build --gpu --cxxflags`;
-$CLAMP_GPU_CXXFLAGS =~ s/^\s+//;
-$CLAMP_GPU_CXXFLAGS =~ s/\s+$//;
-my $CLAMP_CPU_CXXFLAGS=`$CLAMP_CONFIG --build --cpu --cxxflags`;
-$CLAMP_CPU_CXXFLAGS =~ s/^\s+//;
-$CLAMP_CPU_CXXFLAGS =~ s/\s+$//;
+my $CLAMP_CXXFLAGS=`$CLAMP_CONFIG --build --cxxflags`;
+$CLAMP_CXXFLAGS =~ s/^\s+//;
+$CLAMP_CXXFLAGS =~ s/\s+$//;
 my $CLAMP_LDFLAGS=`$CLAMP_CONFIG --build --ldflags`;
 $CLAMP_LDFLAGS =~ s/^\s+//;
 $CLAMP_LDFLAGS =~ s/\s+$//;
-my $CLAMP_DEVICE="$CLANG_AMP_BUILD_DIR/lib/clamp-device";
-my $CLAMP_EMBED="$CLANG_AMP_BUILD_DIR/lib/clamp-embed";
-#my $SHARED_CXXFLAGS="$CLAMP_CXXFLAGS -I$AMPTESTINC -I/usr/include -I$CLANG_AMP_BUILD_DIR/compiler/lib/clang/3.3/include/";
-my $SHARED_GPU_CXXFLAGS="$CLAMP_GPU_CXXFLAGS -I$AMPTESTINC -I/usr/include -I$CLANG_AMP_BUILD_DIR/compiler/lib/clang/3.3/include/";
-my $SHARED_CPU_CXXFLAGS="$CLAMP_CPU_CXXFLAGS -I$AMPTESTINC -I/usr/include -I$CLANG_AMP_BUILD_DIR/compiler/lib/clang/3.3/include/";
-#if ($OPENCL_INC ne "") {
-#    $SHARED_CXXFLAGS="$SHARED_CXXFLAGS -I$OPENCL_INC";
-#}
+my $SHARED_CXXFLAGS="$CLAMP_CXXFLAGS -I$AMPTESTINC -I/usr/include -I$CLANG_AMP_BUILD_DIR/compiler/lib/clang/3.3/include/";
 
 ### Prepare environment
 if(-e $run_log)
@@ -167,13 +153,10 @@ foreach my $test (@tests)
         my $command;
         if ($Test::config{'compile_only'}) {
             $command = "\\
-                $CLANG_AMP -cc1 -fcxx-exceptions -fsyntax-only $SHARED_CPU_CXXFLAGS $include_main $test $cflags_defs 2>>$run_log 1>>$run_log";
+                $CLANG_AMP -cc1 -fcxx-exceptions -fsyntax-only -D__CPU__=1 $SHARED_CXXFLAGS $include_main $test $cflags_defs 2>>$run_log 1>>$run_log";
         } else {
             $command = "\\
-                $CLANG_AMP $SHARED_GPU_CXXFLAGS $include_main $test $cflags_defs -Wno-non-pod-varargs -emit-llvm -c -S -o $tmpdir/test.ll 2>>$run_log 1>>$run_log && \\
-                $CLAMP_DEVICE test.ll kernel.cl 2>>$run_log 1>>$run_log && \\
-                $CLAMP_EMBED kernel.cl kernel.o 2>>$run_log 1>>$run_log && \\
-                $CLANG_AMP $SHARED_CPU_CXXFLAGS $include_main $test $AMPTESTLIB $cflags_defs -Wno-non-pod-varargs $CLAMP_LDFLAGS $tmpdir/kernel.o -o $tmpdir/test.out -g 2>>$run_log 1>>$run_log";
+                $CLANG_AMP $SHARED_CXXFLAGS $include_main $test $AMPTESTLIB $cflags_defs $CLAMP_LDFLAGS -o $tmpdir/test.out -g 2>>$run_log 1>>$run_log";
         }
         
         log_message("Command: $command\n"
