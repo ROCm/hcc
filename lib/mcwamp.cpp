@@ -398,9 +398,18 @@ void *CreateKernel(std::string s) {
     static bool firstTime = true;
     static bool hasSPIR = false;
     if (firstTime) {
-      SPIR12PlatformDetect spir_rt;
-      if (spir_rt.hasSPIR()) {
-        hasSPIR = true;
+      // force use OpenCL C kernel from CLAMP_NOSPIR environment variable
+      char* kernel_env = getenv("CLAMP_NOSPIR");
+      if (kernel_env == nullptr) {
+        SPIR12PlatformDetect spir_rt;
+        if (spir_rt.hasSPIR()) {
+          std::cout << "Use OpenCL SPIR kernel\n";
+          hasSPIR = true;
+        } else {
+          std::cout << "Use OpenCL C kernel\n";
+        }
+      } else {
+        std::cout << "Use OpenCL C kernel\n";
       }
       firstTime = false;
     }
