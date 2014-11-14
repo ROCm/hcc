@@ -1,4 +1,4 @@
-// XFAIL: *
+// XFAIL: Linux
 // RUN: %cxxamp -c %s
 
 class AClass {
