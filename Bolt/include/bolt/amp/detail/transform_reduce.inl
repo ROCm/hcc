@@ -243,7 +243,7 @@ namespace bolt {
             if (runMode == bolt::amp::control::SerialCpu)
             {
 
-			   typename bolt::amp::device_vector< iType >::pointer firstPtr = first.getContainer( ).data( );
+			   typename bolt::amp::device_vector< iType >::pointer firstPtr = const_cast<typename bolt::amp::device_vector< iType >::pointer>(first.getContainer( ).data( ));
                std::vector< oType > result ( last.m_Index - first.m_Index );
 
                std::transform( &firstPtr[ first.m_Index ], &firstPtr[ last.m_Index ], result.begin(), transform_op );
@@ -256,7 +256,7 @@ namespace bolt {
 
 #ifdef ENABLE_TBB
            
-			    typename  bolt::amp::device_vector< iType >::pointer firstPtr = first.getContainer( ).data( );
+			    typename  bolt::amp::device_vector< iType >::pointer firstPtr = const_cast<typename bolt::amp::device_vector< iType >::pointer>(first.getContainer( ).data( ));
 
 				return  bolt::btbb::transform_reduce(  &firstPtr[ first.m_Index ], &firstPtr[ last.m_Index ],
 				                                       transform_op,init,reduce_op);

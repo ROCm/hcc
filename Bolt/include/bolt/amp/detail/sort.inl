@@ -881,12 +881,12 @@ void sort_pick_iterator( bolt::amp::control &ctl,
 
     if ((runMode == bolt::amp::control::SerialCpu)) {
         // Hui
-        typename bolt::amp::device_vector< T >::pointer firstPtr =  first.getContainer( ).data( );
+        typename bolt::amp::device_vector< T >::pointer firstPtr =  const_cast<typename bolt::amp::device_vector< T >::pointer>(first.getContainer( ).data( ));
         std::sort(&firstPtr[ first.m_Index ], &firstPtr[ last.m_Index ], comp);
     } else if (runMode == bolt::amp::control::MultiCoreCpu) {
 #ifdef ENABLE_TBB
         // Hui
-        typename bolt::amp::device_vector< T >::pointer firstPtr =  first.getContainer( ).data( );
+        typename bolt::amp::device_vector< T >::pointer firstPtr =  const_cast<typename bolt::amp::device_vector< T >::pointer>(first.getContainer( ).data( ));
         bolt::btbb::sort(&firstPtr[ first.m_Index ], &firstPtr[ last.m_Index ], comp);
 #else
         throw Concurrency::runtime_exception( "The MultiCoreCpu version of sort is not enabled to be built.", 0);

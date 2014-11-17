@@ -609,8 +609,8 @@ transform_scan_pick_iterator(
     if( runMode == bolt::amp::control::SerialCpu )
     {
 	  
-        typename bolt::amp::device_vector< iType >::pointer InputBuffer =  first.getContainer( ).data( );
-        typename bolt::amp::device_vector< oType >::pointer ResultBuffer =  result.getContainer( ).data( );
+        typename bolt::amp::device_vector< iType >::pointer InputBuffer =  const_cast<typename bolt::amp::device_vector< iType >::pointer>(first.getContainer( ).data( ));
+        typename bolt::amp::device_vector< oType >::pointer ResultBuffer =  const_cast<typename bolt::amp::device_vector< oType >::pointer>(result.getContainer( ).data( ));
 
 #if defined(_WIN32)
         std::transform(&InputBuffer[ first.m_Index ], &InputBuffer[first.m_Index + numElements], stdext::make_checked_array_iterator(&ResultBuffer[ result.m_Index], numElements), unary_op);
@@ -625,8 +625,8 @@ transform_scan_pick_iterator(
     {
         #ifdef ENABLE_TBB
 			 
-            typename bolt::amp::device_vector< iType >::pointer InputBuffer =  first.getContainer( ).data( );
-            typename bolt::amp::device_vector< oType >::pointer ResultBuffer =  result.getContainer( ).data( );
+            typename bolt::amp::device_vector< iType >::pointer InputBuffer =  const_cast<typename bolt::amp::device_vector< iType >::pointer>(first.getContainer( ).data( ));
+            typename bolt::amp::device_vector< oType >::pointer ResultBuffer =  const_cast<typename bolt::amp::device_vector< oType >::pointer>(result.getContainer( ).data( ));
 
             if(inclusive)
                {
