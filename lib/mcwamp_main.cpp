@@ -101,6 +101,15 @@ void prefix(void) {
     std::cout << CMAKE_INSTALL_PREFIX;
 }
 
+// Compiling as a shared library
+void shared(void) {
+#ifndef __APPLE__
+    std::cout << " -shared -fPIC -Wl,-Bsymbolic ";
+#else
+#error Does not support Mac OS X
+#endif
+}
+
 int main (int argc, char **argv) {
     int c;
     while (1)
@@ -118,6 +127,7 @@ int main (int argc, char **argv) {
             {"ldflags",  no_argument,       0, 'l'},
             {"prefix",  no_argument,       0, 'p'},
             {"bolt",  no_argument,       0, 'o'},
+            {"shared",  no_argument,       0, 's'},
             {0, 0, 0, 0}
         };
         /* getopt_long stores the option index here. */
@@ -150,6 +160,9 @@ int main (int argc, char **argv) {
                 break;
             case 'p':   // --prefix
                 prefix();
+                break;
+            case 's':   // --shared
+                shared();
                 break;
             case 'b':   // --build
                 build_mode = true;
