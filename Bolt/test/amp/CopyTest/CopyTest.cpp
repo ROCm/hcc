@@ -76,15 +76,14 @@ struct UserStruct
 // primitive vs struct
 // mult64 vs not mult
 // zero vs positive
-#if 0
+
 static const int numLengths = 23;
 static const int lengths[23] = {
     1, 2, 3, 4, 5, 6, 7, 8, 9,
     10, 11, 12, 13, 14, 15, 16, 17, 63, 64,
     65, 1023, 1024, 1025};
-    #endif
-static const int numLengths = 1;
-static const int lengths[1] = {13};
+//static const int numLengths = 1;
+//static const int lengths[1] = {13};
 
 
 
