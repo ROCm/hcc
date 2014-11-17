@@ -151,6 +151,9 @@ are:
 5. Test. (optional, would be more useful in development cycle)
   # make test
 
+   Please notice HSA-specific tests shall be executed in the following way:
+  # CLAMP_RUNTIME=HSA make test
+
 6. Rebuild build system from CMake. When you bring changes to build system by
    modifying CMakeFiles.txt for example, the build system could be messed up.
    When such happens, you can remove cache of CMake and repopulate the build
