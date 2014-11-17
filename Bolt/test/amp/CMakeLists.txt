@@ -70,7 +70,7 @@ add_subdirectory( CopyTest )
 add_subdirectory( MergeTest )
 # Deadlock
 #add_subdirectory( MaxElementTest )
-#add_subdirectory( CountTest )
+add_subdirectory( CountTest )
 #add_subdirectory( PermutationIteratorTest )
 #add_subdirectory( ReduceTest )
 #add_subdirectory( ReduceByKeyTest )
