@@ -499,14 +499,14 @@ void stablesort_pick_iterator( control &ctl,
    
     if( runMode == bolt::amp::control::SerialCpu || (vecSize < STABLESORT_BUFFER_SIZE) )
     {
-        typename bolt::amp::device_vector< Type >::pointer firstPtr =  first.getContainer( ).data( );
+        typename bolt::amp::device_vector< Type >::pointer firstPtr =  const_cast<typename bolt::amp::device_vector< Type >::pointer>(first.getContainer( ).data( ));
         std::stable_sort( &firstPtr[ first.m_Index ], &firstPtr[ last.m_Index ], comp );
         return;
     }
     else if( runMode == bolt::amp::control::MultiCoreCpu )
     {
         #ifdef ENABLE_TBB
-            typename bolt::amp::device_vector< Type >::pointer firstPtr =  first.getContainer( ).data( );
+            typename bolt::amp::device_vector< Type >::pointer firstPtr =  const_cast<typename bolt::amp::device_vector< Type >::pointer>(first.getContainer( ).data( ));
             bolt::btbb::stable_sort( &firstPtr[ first.m_Index ], &firstPtr[ last.m_Index ], comp );
         #else
             throw std::runtime_error("MultiCoreCPU Version of stable_sort not Enabled! \n");

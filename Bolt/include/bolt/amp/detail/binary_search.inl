@@ -263,13 +263,13 @@ namespace bolt {
 				
                 if( runMode == bolt::amp::control::SerialCpu )
                 {
-                     typename bolt::amp::device_vector< iType >::pointer bsInputBuffer = first.getContainer( ).data( );
+                     typename bolt::amp::device_vector< iType >::pointer bsInputBuffer = const_cast<typename bolt::amp::device_vector< iType >::pointer>(first.getContainer( ).data( ));
                      return std::binary_search(&bsInputBuffer[first.m_Index], &bsInputBuffer[last.m_Index], value, comp );
                 }
                 else if(runMode == bolt::amp::control::MultiCoreCpu)
                 {
                     #ifdef ENABLE_TBB
-                        typename bolt::amp::device_vector< iType >::pointer bsInputBuffer = first.getContainer( ).data( );
+                        typename bolt::amp::device_vector< iType >::pointer bsInputBuffer = const_cast<typename bolt::amp::device_vector< iType >::pointer>(first.getContainer( ).data( ));
                         return bolt::btbb::binary_search(&bsInputBuffer[first.m_Index], &bsInputBuffer[last.m_Index], value, comp );
                     #else
                         throw std::runtime_error("MultiCoreCPU Version of Binary Search not Enabled! \n");

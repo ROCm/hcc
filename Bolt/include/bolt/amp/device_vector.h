@@ -307,7 +307,12 @@ public:
             return result;
         }
 
-        Container getContainer( ) const
+        Container& getContainer( )
+        {
+          return m_Container;
+        }
+
+        const Container& getContainer( ) const
         {
           return m_Container;
         }
@@ -1335,10 +1340,17 @@ private:
     //  reflected back in the host memory.  However, the complication is that the concurrency::array object
     //  does not expose a synchronize method, whereas the concurrency::array_view does.  These routines
     //  differentiate between the two different containers
-    void synchronize( device_vector< T, concurrency::array >& rhs )
+    void synchronize( device_vector< T, concurrency::array >& rhs ) const
     {
     };
-    void synchronize( device_vector< T, concurrency::array_view >& rhs )
+    void synchronize( const device_vector< T, concurrency::array >& rhs ) const
+    {
+    };
+    void synchronize( device_vector< T, concurrency::array_view >& rhs ) const
+    {
+        rhs.m_devMemory.synchronize( );
+    };
+    void synchronize( const device_vector< T, concurrency::array_view >& rhs ) const
     {
         rhs.m_devMemory.synchronize( );
     };

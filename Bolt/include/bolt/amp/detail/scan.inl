@@ -642,8 +642,8 @@ scan_pick_iterator(
 	}
     if( runMode == bolt::amp::control::SerialCpu )
     {
-        typename bolt::amp::device_vector< iType >::pointer scanInputBuffer =  first.getContainer( ).data( );
-        typename bolt::amp::device_vector< oType >::pointer scanResultBuffer =  result.getContainer( ).data( );
+        typename bolt::amp::device_vector< iType >::pointer scanInputBuffer =  const_cast<typename bolt::amp::device_vector< iType >::pointer>(first.getContainer( ).data( ));
+        typename bolt::amp::device_vector< oType >::pointer scanResultBuffer =  const_cast<typename bolt::amp::device_vector< oType >::pointer>(result.getContainer( ).data( ));
 
         Serial_scan( &scanInputBuffer[ first.m_Index ],
                      &scanInputBuffer [ last.m_Index ],
@@ -658,8 +658,8 @@ scan_pick_iterator(
     {
 
 #ifdef ENABLE_TBB
-        typename bolt::amp::device_vector< iType >::pointer scanInputBuffer =  first.getContainer( ).data( );
-        typename bolt::amp::device_vector< oType >::pointer scanResultBuffer =  result.getContainer( ).data( );
+        typename bolt::amp::device_vector< iType >::pointer scanInputBuffer =  const_cast<typename bolt::amp::device_vector< iType >::pointer>(first.getContainer( ).data( ));
+        typename bolt::amp::device_vector< oType >::pointer scanResultBuffer =  const_cast<typename bolt::amp::device_vector< oType >::pointer>(result.getContainer( ).data( ));
         if(inclusive)
             bolt::btbb::inclusive_scan(&scanInputBuffer[first.m_Index], &scanInputBuffer[first.m_Index + numElements], &scanResultBuffer[result.m_Index], binary_op);
         else
