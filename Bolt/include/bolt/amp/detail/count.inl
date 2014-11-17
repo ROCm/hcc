@@ -19,6 +19,7 @@
 #define BOLT_AMP_COUNT_INL
 #pragma once
 
+#include <cmath>
 #include <algorithm>
 #include <amp.h>
 #include "bolt/amp/bolt.h"
