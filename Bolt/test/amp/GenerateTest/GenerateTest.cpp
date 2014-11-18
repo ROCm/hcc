@@ -92,7 +92,7 @@ struct GenConst
     T _a;
 
     // constructor
-    GenConst( T a ) : _a(a) {};
+    GenConst( T a ) restrict(amp,cpu) : _a(a) {};
 
     // functor
     T operator() () const restrict (cpu,amp) { return _a; };
@@ -1010,7 +1010,7 @@ TEST_P( HostIntVector, MultiCoreGenerate )
 struct ConstFunctor25 
 {     
 	int val;     
-	ConstFunctor25(int a) : val(a) {};     
+	ConstFunctor25(int a) restrict(amp, cpu) : val(a) {};     
 	int operator() () const restrict(amp, cpu)    
 	{         return val;     
 	}
@@ -1104,7 +1104,7 @@ TEST(stress_generate_n_amp_withdev_ctl, stressLimit5){
 
 struct ConstFunctor26 {     
 	float val;     
-	ConstFunctor26(float a) : val(++a) {};     
+	ConstFunctor26(float a) restrict(amp, cpu) : val(++a) {};     
 	float operator() ()  const restrict(cpu, amp)    
 	{         return val;     
 	}
@@ -1148,7 +1148,12 @@ TEST(sanity_generate_n_amp_withdev_ctl, mallocfloat)
 
     //TAKE_AMP_CONTROL_PATH
 	bolt::amp::generate_n( ptr1, size, floatcf);
+#if defined (_WIN32 )
 	std::generate_n(stdext::make_checked_array_iterator(ptr2,size), size, floatcf);
+#else
+	std::generate_n(ptr2, size, floatcf);
+#endif
+
 
 	std::cout <<" val = " << ptr1[1] << std::endl;
 
@@ -1160,7 +1165,7 @@ TEST(sanity_generate_n_amp_withdev_ctl, mallocfloat)
 
 struct ConstFunctor27 {     
 	int val;     
-	ConstFunctor27(int a) : val(a/10) {};     
+	ConstFunctor27(int a) restrict(amp, cpu) : val(a/10) {};     
 	int operator() ()  const restrict(cpu, amp)    
 	{         return val;     
 	}
@@ -1197,7 +1202,11 @@ TEST (sanity_generate_n_amp_mallocRand_ctl, intValues)
 	srand(111);
     //TAKE_AMP_CONTROL_PATH
 	bolt::amp::generate_n(ptr1, size, icf);
+#if defined (_WIN32 )
 	std::generate_n(stdext::make_checked_array_iterator(ptr2,size), size, icf);
+#else
+	std::generate_n(ptr2, size, icf);
+#endif
 
 	for (int i = 1 ; i < 10; ++i){
 		std::cout<<ptr1[i]<<" " << ptr2[i] << std::endl;
@@ -1211,7 +1220,7 @@ TEST (sanity_generate_n_amp_mallocRand_ctl, intValues)
 
 struct ConstFunctor31 {     
 	long val;     
-	ConstFunctor31(long a) : val(a) {};     
+	ConstFunctor31(long a) restrict(amp, cpu) : val(a) {};     
 	long operator() () const restrict(cpu, amp)     
 	{         return val;     
 	}
@@ -1231,7 +1240,11 @@ TEST (sanity_generate_n_amp_mallocRand_64ctl, int64Values)
 	//srand(111);
     //TAKE_AMP_CONTROL_PATH
 	bolt::amp::generate_n(ptr1, size, cf31);
+#if defined (_WIN32 )
 	std::generate_n(stdext::make_checked_array_iterator(ptr2,size), size, cf31);
+#else
+	std::generate_n(ptr2, size, cf31);
+#endif
 
 	for (int i = 1 ; i < 10; ++i){
 		std::cout<<ptr1[i]<<" " << ptr2[i] << std::endl;
@@ -1270,7 +1283,7 @@ TEST (sanity_generate_n_amp_malloc_64ctl, int64Values)
 struct ConstFunctor {
 int val;
 
-ConstFunctor(int a) : val(a) {
+ConstFunctor(int a) restrict(amp, cpu) : val(a) {
 }
 
 int operator() () const restrict (cpu,amp){
