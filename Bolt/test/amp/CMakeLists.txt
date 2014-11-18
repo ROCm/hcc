@@ -59,8 +59,8 @@ if ( UNIX )
 endif()
 add_definitions( -DAMP_TESTS )
 
-# compile error related with device_vector
-#add_subdirectory( BinarySearchTest )
+# compile OK, failed some tests on HSA
+add_subdirectory( BinarySearchTest )
 
 # passed
 add_subdirectory( PairTest )

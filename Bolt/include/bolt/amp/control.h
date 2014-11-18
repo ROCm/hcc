@@ -207,7 +207,7 @@ public:
      * bolt::amp::control::getDefault().compileOptions("-g");
      * \endcode
      */
-    static control &getDefault()
+    static control &getDefault() restrict(amp, cpu)
     {
         // Default control structure; this can be accessed by the bolt::cl::control::getDefault()
         static control _defaultControl( true );
