@@ -375,8 +375,8 @@ TYPED_TEST_P( SortArrayTest, Normal )
     cmpStdArray< ArrayType, SortArrayTest< gtest_TypeParam_ >::ArraySize >::cmpArrays( SortArrayTest< gtest_TypeParam_ >::stdInput, SortArrayTest< gtest_TypeParam_ >::boltInput );
 
     //  OFFSET Calling the actual functions under test
-    size_t startIndex = 17; //Some aribitrary offset position
-    size_t endIndex   = SortArrayTest< gtest_TypeParam_ >::ArraySize -17; //Some aribitrary offset position
+    int startIndex = 17; //Some aribitrary offset position
+    int endIndex   = SortArrayTest< gtest_TypeParam_ >::ArraySize -17; //Some aribitrary offset position
     if( (( startIndex > SortArrayTest< gtest_TypeParam_ >::ArraySize ) || ( endIndex < 0 ) )  || (startIndex > endIndex) )
     {
         std::cout <<"\nSkipping NormalOffset Test for size "<< SortArrayTest< gtest_TypeParam_ >::ArraySize << "\n";
@@ -421,8 +421,8 @@ TYPED_TEST_P( SortArrayTest, CPU_DeviceNormal )
     
     //OFFSET Test cases
     //  Calling the actual functions under test
-    size_t startIndex = 17; //Some aribitrary offset position
-    size_t endIndex   = SortArrayTest< gtest_TypeParam_ >::ArraySize -17; //Some aribitrary offset position
+    int startIndex = 17; //Some aribitrary offset position
+    int endIndex   = SortArrayTest< gtest_TypeParam_ >::ArraySize -17; //Some aribitrary offset position
     if( (( startIndex > SortArrayTest< gtest_TypeParam_ >::ArraySize ) || ( endIndex < 0 ) )  || (startIndex > endIndex) )
     {
         std::cout <<"\nSkipping NormalOffset Test for size "<< SortArrayTest< gtest_TypeParam_ >::ArraySize << "\n";
@@ -465,8 +465,8 @@ TYPED_TEST_P( SortArrayTest, GreaterFunction )
 #if (TEST_OFFSET_BUFFERS == 1)    
     //OFFSET Test cases
     //  Calling the actual functions under test
-    size_t startIndex = 17; //Some aribitrary offset position
-    size_t endIndex   = SortArrayTest< gtest_TypeParam_ >::ArraySize -17; //Some aribitrary offset position
+    int startIndex = 17; //Some aribitrary offset position
+    int endIndex   = SortArrayTest< gtest_TypeParam_ >::ArraySize -17; //Some aribitrary offset position
     if( (( startIndex > SortArrayTest< gtest_TypeParam_ >::ArraySize ) || ( endIndex < 0 ) )  || (startIndex > endIndex) )
     {
         std::cout <<"\nSkipping NormalOffset Test for size "<< SortArrayTest< gtest_TypeParam_ >::ArraySize << "\n";
@@ -508,8 +508,8 @@ TYPED_TEST_P( SortArrayTest, LessFunction )
 #if (TEST_OFFSET_BUFFERS == 1)
     //OFFSET Test cases
     //  Calling the actual functions under test
-    size_t startIndex = 17; //Some aribitrary offset position
-    size_t endIndex   = SortArrayTest< gtest_TypeParam_ >::ArraySize -17; //Some aribitrary offset position
+    int startIndex = 17; //Some aribitrary offset position
+    int endIndex   = SortArrayTest< gtest_TypeParam_ >::ArraySize -17; //Some aribitrary offset position
     if( (( startIndex > SortArrayTest< gtest_TypeParam_ >::ArraySize ) || ( endIndex < 0 ) )  || (startIndex > endIndex) )
     {
         std::cout <<"\nSkipping NormalOffset Test for size "<< SortArrayTest< gtest_TypeParam_ >::ArraySize << "\n";
@@ -2434,8 +2434,8 @@ int main ()
             std::cout << "Failed at i " << i << " -- stdInput[i] " << stdInput[i] << " boltInput[i] = " << boltInput[i] << "\n";
     }
     //  OFFSET Calling the actual functions under test
-    size_t startIndex = 17; //Some aribitrary offset position
-    size_t endIndex   = ArraySize -17; //Some aribitrary offset position
+    int startIndex = 17; //Some aribitrary offset position
+    int endIndex   = ArraySize -17; //Some aribitrary offset position
     if( (( startIndex > ArraySize ) || ( endIndex < 0 ) )  || (startIndex > endIndex) )
     {
         std::cout <<"\nSkipping NormalOffset Test for size "<< ArraySize << "\n";

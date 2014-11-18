@@ -879,7 +879,7 @@ void sort_pick_iterator( bolt::amp::control &ctl,
 		runMode = ctl.getDefaultPathToRun();
 	}
 
-    if ((runMode == bolt::amp::control::SerialCpu)) {
+    if (runMode == bolt::amp::control::SerialCpu) {
         // Hui
         typename bolt::amp::device_vector< T >::pointer firstPtr =  const_cast<typename bolt::amp::device_vector< T >::pointer>(first.getContainer( ).data( ));
         std::sort(&firstPtr[ first.m_Index ], &firstPtr[ last.m_Index ], comp);
@@ -929,7 +929,7 @@ void sort_pick_iterator( bolt::amp::control &ctl,
 		runMode = ctl.getDefaultPathToRun();
 	}
 
-    if ((runMode == bolt::amp::control::SerialCpu)) {
+    if (runMode == bolt::amp::control::SerialCpu) {
         std::sort(first, last, comp);
         return;
     } else if (runMode == bolt::amp::control::MultiCoreCpu) {
