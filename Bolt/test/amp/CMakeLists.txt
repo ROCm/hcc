@@ -104,8 +104,8 @@ add_subdirectory( ReduceByKeyTest )
 # killed at opt within clamp-device
 #add_subdirectory( ScanByKeyTest )
 
-# compile error
-#add_subdirectory( SortTest )
+# compile OK, crashed on HSA after passing some tests
+add_subdirectory( SortTest )
 
 # compile error related with device_vector
 #add_subdirectory( SortByKeyTest )

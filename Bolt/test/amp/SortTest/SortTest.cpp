@@ -1720,11 +1720,19 @@ TEST_P( SortIntegerNakedPointer, Inplace )
     unsigned int endIndex = GetParam( );
 
     //  Calling the actual functions under test
+#if defined (_WIN32 )
     stdext::checked_array_iterator< int* > wrapStdInput( stdInput, endIndex );
+#else
+    int* wrapStdInput = stdInput;
+#endif
     std::SORT_FUNC( wrapStdInput, wrapStdInput + endIndex );
     //std::SORT_FUNC( stdInput, stdInput + endIndex );
 
+#if defined (_WIN32 )
     stdext::checked_array_iterator< int* > wrapBoltInput( boltInput, endIndex );
+#else
+    int* wrapBoltInput = boltInput;
+#endif
     bolt::BKND::SORT_FUNC( wrapBoltInput, wrapBoltInput + endIndex );
     //bolt::BKND::SORT_FUNC( boltInput, boltInput + endIndex );
 
@@ -1740,11 +1748,19 @@ TEST_P( SortIntegerNakedPointer, SerialInplace )
     unsigned int endIndex = GetParam( );
 
     //  Calling the actual functions under test
+#if defined (_WIN32 )
     stdext::checked_array_iterator< int* > wrapStdInput( stdInput, endIndex );
+#else
+    int* wrapStdInput = stdInput;
+#endif
     std::SORT_FUNC( wrapStdInput, wrapStdInput + endIndex );
     //std::SORT_FUNC( stdInput, stdInput + endIndex );
 
+#if defined (_WIN32 )
     stdext::checked_array_iterator< int* > wrapBoltInput( boltInput, endIndex );
+#else
+    int* wrapBoltInput = boltInput;
+#endif
     bolt::BKND::SORT_FUNC( ctl, wrapBoltInput, wrapBoltInput + endIndex );
     //bolt::BKND::SORT_FUNC( boltInput, boltInput + endIndex );
 
@@ -1760,11 +1776,19 @@ TEST_P( SortIntegerNakedPointer, MultiCoreInplace )
     unsigned int endIndex = GetParam( );
 
     //  Calling the actual functions under test
+#if defined (_WIN32 )
     stdext::checked_array_iterator< int* > wrapStdInput( stdInput, endIndex );
+#else
+    int* wrapStdInput = stdInput;
+#endif
     std::SORT_FUNC( wrapStdInput, wrapStdInput + endIndex );
     //std::SORT_FUNC( stdInput, stdInput + endIndex );
 
+#if defined (_WIN32 )
     stdext::checked_array_iterator< int* > wrapBoltInput( boltInput, endIndex );
+#else
+    int* wrapBoltInput = boltInput;
+#endif
     bolt::BKND::SORT_FUNC( ctl, wrapBoltInput, wrapBoltInput + endIndex );
     //bolt::BKND::SORT_FUNC( boltInput, boltInput + endIndex );
 
@@ -1778,11 +1802,19 @@ TEST_P( SortFloatNakedPointer, Inplace )
     unsigned int endIndex = GetParam( );
 
     //  Calling the actual functions under test
+#if defined (_WIN32 )
     stdext::checked_array_iterator< float* > wrapStdInput( stdInput, endIndex );
+#else
+    float* wrapStdInput = stdInput;
+#endif
     std::SORT_FUNC( wrapStdInput, wrapStdInput + endIndex );
     //std::SORT_FUNC( stdInput, stdInput + endIndex );
 
+#if defined (_WIN32 )
     stdext::checked_array_iterator< float* > wrapBoltInput( boltInput, endIndex );
+#else
+    float* wrapBoltInput = boltInput;
+#endif
     bolt::BKND::SORT_FUNC( wrapBoltInput, wrapBoltInput + endIndex );
     //bolt::BKND::SORT_FUNC( boltInput, boltInput + endIndex );
 
@@ -1798,11 +1830,19 @@ TEST_P( SortFloatNakedPointer, SerialInplace )
     unsigned int endIndex = GetParam( );
 
     //  Calling the actual functions under test
+#if defined (_WIN32 )
     stdext::checked_array_iterator< float* > wrapStdInput( stdInput, endIndex );
+#else
+    float* wrapStdInput = stdInput;
+#endif
     std::SORT_FUNC( wrapStdInput, wrapStdInput + endIndex );
     //std::SORT_FUNC( stdInput, stdInput + endIndex );
 
+#if defined (_WIN32 )
     stdext::checked_array_iterator< float* > wrapBoltInput( boltInput, endIndex );
+#else
+    float* wrapBoltInput = boltInput;
+#endif
     bolt::BKND::SORT_FUNC( ctl, wrapBoltInput, wrapBoltInput + endIndex );
     //bolt::BKND::SORT_FUNC( boltInput, boltInput + endIndex );
 
@@ -1818,11 +1858,19 @@ TEST_P( SortFloatNakedPointer, MultiCoreInplace )
     unsigned int endIndex = GetParam( );
 
     //  Calling the actual functions under test
+#if defined (_WIN32 )
     stdext::checked_array_iterator< float* > wrapStdInput( stdInput, endIndex );
+#else
+    float* wrapStdInput = stdInput;
+#endif
     std::SORT_FUNC( wrapStdInput, wrapStdInput + endIndex );
     //std::SORT_FUNC( stdInput, stdInput + endIndex );
 
+#if defined (_WIN32 )
     stdext::checked_array_iterator< float* > wrapBoltInput( boltInput, endIndex );
+#else
+    float* wrapBoltInput = boltInput;
+#endif
     bolt::BKND::SORT_FUNC( ctl, wrapBoltInput, wrapBoltInput + endIndex );
     //bolt::BKND::SORT_FUNC( boltInput, boltInput + endIndex );
 
@@ -1837,11 +1885,19 @@ TEST_P( SortDoubleNakedPointer, Inplace )
     unsigned int endIndex = GetParam( );
 
     //  Calling the actual functions under test
+#if defined (_WIN32 )
     stdext::checked_array_iterator< double* > wrapStdInput( stdInput, endIndex );
+#else
+    double* wrapStdInput = stdInput;
+#endif
     std::SORT_FUNC( wrapStdInput, wrapStdInput + endIndex );
     //std::SORT_FUNC( stdInput, stdInput + endIndex );
 
+#if defined (_WIN32 )
     stdext::checked_array_iterator< double* > wrapBoltInput( boltInput, endIndex );
+#else
+    double* wrapBoltInput = boltInput;
+#endif
     bolt::BKND::SORT_FUNC( wrapBoltInput, wrapBoltInput + endIndex );
     //bolt::BKND::SORT_FUNC( boltInput, boltInput + endIndex );
 
@@ -1854,14 +1910,22 @@ TEST_P( SortDoubleNakedPointer, SerialInplace )
     unsigned int endIndex = GetParam( );
 
     //  Calling the actual functions under test
+#if defined (_WIN32 )
     stdext::checked_array_iterator< double* > wrapStdInput( stdInput, endIndex );
+#else
+    double* wrapStdInput = stdInput;
+#endif
     std::SORT_FUNC( wrapStdInput, wrapStdInput + endIndex );
     //std::SORT_FUNC( stdInput, stdInput + endIndex );
     
     bolt::BKND::control ctl = bolt::BKND::control::getDefault( );
     ctl.setForceRunMode(bolt::BKND::control::SerialCpu);
 
+#if defined (_WIN32 )
     stdext::checked_array_iterator< double* > wrapBoltInput( boltInput, endIndex );
+#else
+    double* wrapBoltInput = boltInput;
+#endif
     bolt::BKND::SORT_FUNC( wrapBoltInput, wrapBoltInput + endIndex );
     //bolt::BKND::SORT_FUNC( boltInput, boltInput + endIndex );
 
@@ -1874,14 +1938,22 @@ TEST_P( SortDoubleNakedPointer, MulticoreInplace )
     unsigned int endIndex = GetParam( );
 
     //  Calling the actual functions under test
+#if defined (_WIN32 )
     stdext::checked_array_iterator< double* > wrapStdInput( stdInput, endIndex );
+#else
+    double* wrapStdInput = stdInput;
+#endif
     std::SORT_FUNC( wrapStdInput, wrapStdInput + endIndex );
     //std::SORT_FUNC( stdInput, stdInput + endIndex );
     
     bolt::BKND::control ctl = bolt::BKND::control::getDefault( );
     ctl.setForceRunMode(bolt::BKND::control::MultiCoreCpu);
 
+#if defined (_WIN32 )
     stdext::checked_array_iterator< double* > wrapBoltInput( boltInput, endIndex );
+#else
+    double* wrapBoltInput = boltInput;
+#endif
     bolt::BKND::SORT_FUNC( wrapBoltInput, wrapBoltInput + endIndex );
     //bolt::BKND::SORT_FUNC( boltInput, boltInput + endIndex );
 
@@ -2089,7 +2161,7 @@ public:
 
 protected:
     typedef typename std::tuple_element< 0, ArrayTuple >::type ArrayType;
-    static const size_t ArraySize = typename std::tuple_element< 1, ArrayTuple >::type::value;
+    static const size_t ArraySize = std::tuple_element< 1, ArrayTuple >::type::value;
     typename std::array< ArrayType, ArraySize > stdInput, boltInput;
     int m_Errors;
 };
@@ -2098,28 +2170,30 @@ TYPED_TEST_CASE_P( SortUDDArrayTest );
 
 TYPED_TEST_P( SortUDDArrayTest, Normal )
 {
+    typedef typename SortUDDArrayTest< gtest_TypeParam_ >::ArrayType ArrayType;
+    const size_t ArraySize = SortUDDArrayTest< gtest_TypeParam_ >::ArraySize;
     typedef std::array< ArrayType, ArraySize > ArrayCont;
     //  Calling the actual functions under test
 
-    std::SORT_FUNC( stdInput.begin( ), stdInput.end( ), UDD() );
-    bolt::BKND::SORT_FUNC( boltInput.begin( ), boltInput.end( ), UDD() );
+    std::SORT_FUNC( SortUDDArrayTest< gtest_TypeParam_ >::stdInput.begin( ), SortUDDArrayTest< gtest_TypeParam_ >::stdInput.end( ), UDD() );
+    bolt::BKND::SORT_FUNC( SortUDDArrayTest< gtest_TypeParam_ >::boltInput.begin( ), SortUDDArrayTest< gtest_TypeParam_ >::boltInput.end( ), UDD() );
 
-    ArrayCont::difference_type stdNumElements = std::distance( stdInput.begin( ), stdInput.end() );
-    ArrayCont::difference_type boltNumElements = std::distance( boltInput.begin( ), boltInput.end() );
+    typename ArrayCont::difference_type stdNumElements = std::distance( SortUDDArrayTest< gtest_TypeParam_ >::stdInput.begin( ), SortUDDArrayTest< gtest_TypeParam_ >::stdInput.end() );
+    typename ArrayCont::difference_type boltNumElements = std::distance( SortUDDArrayTest< gtest_TypeParam_ >::boltInput.begin( ), SortUDDArrayTest< gtest_TypeParam_ >::boltInput.end() );
     //  Both collections should have the same number of elements
     EXPECT_EQ( stdNumElements, boltNumElements );
     //  Loop through the array and compare all the values with each other
-    cmpStdArray< ArrayType, ArraySize >::cmpArrays( stdInput, boltInput );
+    cmpStdArray< ArrayType, ArraySize >::cmpArrays( SortUDDArrayTest< gtest_TypeParam_ >::stdInput, SortUDDArrayTest< gtest_TypeParam_ >::boltInput );
 
-    std::SORT_FUNC( stdInput.begin( ), stdInput.end( ), sortBy_UDD_a() );
-    bolt::BKND::SORT_FUNC( boltInput.begin( ), boltInput.end( ), sortBy_UDD_a() );
+    std::SORT_FUNC( SortUDDArrayTest< gtest_TypeParam_ >::stdInput.begin( ), SortUDDArrayTest< gtest_TypeParam_ >::stdInput.end( ), sortBy_UDD_a() );
+    bolt::BKND::SORT_FUNC( SortUDDArrayTest< gtest_TypeParam_ >::boltInput.begin( ), SortUDDArrayTest< gtest_TypeParam_ >::boltInput.end( ), sortBy_UDD_a() );
 
-    stdNumElements = std::distance( stdInput.begin( ), stdInput.end() );
-    boltNumElements = std::distance( boltInput.begin( ), boltInput.end() );
+    stdNumElements = std::distance( SortUDDArrayTest< gtest_TypeParam_ >::stdInput.begin( ), SortUDDArrayTest< gtest_TypeParam_ >::stdInput.end() );
+    boltNumElements = std::distance( SortUDDArrayTest< gtest_TypeParam_ >::boltInput.begin( ), SortUDDArrayTest< gtest_TypeParam_ >::boltInput.end() );
     //  Both collections should have the same number of elements
     EXPECT_EQ( stdNumElements, boltNumElements );
     //  Loop through the array and compare all the values with each other
-    cmpStdArray< ArrayType, ArraySize >::cmpArrays( stdInput, boltInput );
+    cmpStdArray< ArrayType, ArraySize >::cmpArrays( SortUDDArrayTest< gtest_TypeParam_ >::stdInput, SortUDDArrayTest< gtest_TypeParam_ >::boltInput );
 
 }
 
@@ -2184,6 +2258,7 @@ INSTANTIATE_TYPED_TEST_CASE_P( clLong, SortArrayTest, clLongTests );
 #if (TEST_DOUBLE == 1)
 INSTANTIATE_TYPED_TEST_CASE_P( Double, SortArrayTest, DoubleTests );
 #endif 
+
 REGISTER_TYPED_TEST_CASE_P( SortUDDArrayTest,  Normal);
 INSTANTIATE_TYPED_TEST_CASE_P( UDDTest, SortUDDArrayTest, UDDTests );
 
