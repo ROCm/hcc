@@ -311,8 +311,8 @@ TYPED_TEST_P( StableSortArrayTest, Normal )
     cmpStdArray< ArrayType, StableSortArrayTest< gtest_TypeParam_ >::ArraySize >::cmpArrays( StableSortArrayTest< gtest_TypeParam_ >::stdInput, StableSortArrayTest< gtest_TypeParam_ >::boltInput );
 
     //  OFFSET Calling the actual functions under test
-    size_t startIndex = 17; //Some aribitrary offset position
-    size_t endIndex   = StableSortArrayTest< gtest_TypeParam_ >::ArraySize -17; //Some aribitrary offset position
+    int startIndex = 17; //Some aribitrary offset position
+    int endIndex   = StableSortArrayTest< gtest_TypeParam_ >::ArraySize -17; //Some aribitrary offset position
     if( (( startIndex > StableSortArrayTest< gtest_TypeParam_ >::ArraySize ) || ( endIndex < 0 ) )  || (startIndex > endIndex) )
     {
         std::cout <<"\nSkipping NormalOffset Test for size "<< StableSortArrayTest< gtest_TypeParam_ >::ArraySize << "\n";
@@ -354,8 +354,8 @@ TYPED_TEST_P( StableSortArrayTest, GreaterFunction )
     
     //OFFSET Test cases
     //  Calling the actual functions under test
-    size_t startIndex = 17; //Some aribitrary offset position
-    size_t endIndex   = StableSortArrayTest< gtest_TypeParam_ >::ArraySize -17; //Some aribitrary offset position
+    int startIndex = 17; //Some aribitrary offset position
+    int endIndex   = StableSortArrayTest< gtest_TypeParam_ >::ArraySize -17; //Some aribitrary offset position
     if( (( startIndex > StableSortArrayTest< gtest_TypeParam_ >::ArraySize ) || ( endIndex < 0 ) )  || (startIndex > endIndex) )
     {
         std::cout <<"\nSkipping NormalOffset Test for size "<< StableSortArrayTest< gtest_TypeParam_ >::ArraySize << "\n";
@@ -397,8 +397,8 @@ TYPED_TEST_P( StableSortArrayTest, LessFunction )
 
     //OFFSET Test cases
     //  Calling the actual functions under test
-    size_t startIndex = 17; //Some aribitrary offset position
-    size_t endIndex   = StableSortArrayTest< gtest_TypeParam_ >::ArraySize -17; //Some aribitrary offset position
+    int startIndex = 17; //Some aribitrary offset position
+    int endIndex   = StableSortArrayTest< gtest_TypeParam_ >::ArraySize -17; //Some aribitrary offset position
     if( (( startIndex > StableSortArrayTest< gtest_TypeParam_ >::ArraySize ) || ( endIndex < 0 ) )  || (startIndex > endIndex) )
     {
         std::cout <<"\nSkipping NormalOffset Test for size "<< StableSortArrayTest< gtest_TypeParam_ >::ArraySize << "\n";

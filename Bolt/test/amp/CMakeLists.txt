@@ -110,8 +110,8 @@ add_subdirectory( SortTest )
 # compile OK, failed some tests on HSA
 add_subdirectory( SortByKeyTest )
 
-# compile error
-#add_subdirectory( StableSortTest )
+# compile OK, crashed on HSA after passing some tests
+add_subdirectory( StableSortTest )
 
 # compile error related with device_vector
 #add_subdirectory( StableSortByKeyTest )

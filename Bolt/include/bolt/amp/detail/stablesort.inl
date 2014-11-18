@@ -40,8 +40,15 @@ namespace amp {
 
 namespace detail
 {
-// FIXME: it can't compile on Linux
-#ifdef _WIN32
+
+template<typename DVRandomAccessIterator, typename StrictWeakOrdering>
+void sort_enqueue_int_uint(bolt::amp::control &ctl,
+             DVRandomAccessIterator &first, DVRandomAccessIterator &last,
+             StrictWeakOrdering comp,
+                         bool int_flag
+                         );
+
+
 template< typename DVRandomAccessIterator, typename StrictWeakOrdering >
 typename std::enable_if< std::is_same< typename std::iterator_traits<DVRandomAccessIterator >::value_type,
                                        unsigned int
@@ -51,7 +58,7 @@ stablesort_enqueue(control &ctl,
              DVRandomAccessIterator first, DVRandomAccessIterator last,
              StrictWeakOrdering comp)
 {
-    bolt::amp::detail::sort_enqueue(ctl, first, last, comp);
+    bolt::amp::detail::sort_enqueue_int_uint(ctl, first, last, comp, true);
     return;
 }
 
@@ -64,10 +71,10 @@ stablesort_enqueue(control &ctl,
              DVRandomAccessIterator first, DVRandomAccessIterator last,
              StrictWeakOrdering comp)
 {
-    bolt::amp::detail::sort_enqueue(ctl, first, last, comp);
+    bolt::amp::detail::sort_enqueue_int_uint(ctl, first, last, comp, true);
     return;
 }
-#endif
+
 // On Linux. 'max' macro is expanded in std::max. Just rename it
 #define _max(a,b)    (((a) > (b)) ? (a) : (b))
 #define _min(a,b)    (((a) < (b)) ? (a) : (b))
