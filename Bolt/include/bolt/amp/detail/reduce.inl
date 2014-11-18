@@ -42,6 +42,7 @@ if ((_IDX < _W) && ((_IDX + _W) < _LENGTH)) {\
 
 #endif
 
+#include <cmath>
 #include <algorithm>
 #include <type_traits>
 #include "bolt/amp/bolt.h"

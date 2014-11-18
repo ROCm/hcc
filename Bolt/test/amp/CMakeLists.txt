@@ -92,7 +92,7 @@ add_subdirectory( CountTest )
 # compile error
 #add_subdirectory( PermutationIteratorTest )
 
-# compile error
+# killed at opt within clamp-device
 #add_subdirectory( ReduceTest )
 
 # compile OK, crashed on HSA after passing some tests

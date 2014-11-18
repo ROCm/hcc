@@ -1391,9 +1391,15 @@ TEST_P( ReduceIntegerNakedPointer, Inplace )
     unsigned int endIndex = GetParam( );
 
     //  Calling the actual functions under test
+#if defined (_WIN32 )
     stdext::checked_array_iterator< int* > wrapStdInput( stdInput, endIndex );
     stdext::checked_array_iterator< int* > wrapStdOutput( stdOutput, endIndex );
     stdext::checked_array_iterator< int* > wrapBoltInput( boltInput, endIndex );
+#else
+    int* wrapStdInput = stdInput;
+    int* wrapStdOutput = stdOutput;
+    int* wrapBoltInput = boltInput;
+#endif
 
     int init(0);
     //  Calling the actual functions under test
@@ -1413,9 +1419,15 @@ TEST_P( ReduceIntegerNakedPointer, SerialInplace )
     unsigned int endIndex = GetParam( );
 
     //  Calling the actual functions under test
+#if defined (_WIN32 )
     stdext::checked_array_iterator< int* > wrapStdInput( stdInput, endIndex );
     stdext::checked_array_iterator< int* > wrapStdOutput( stdOutput, endIndex );
     stdext::checked_array_iterator< int* > wrapBoltInput( boltInput, endIndex );
+#else
+    int* wrapStdInput = stdInput;
+    int* wrapStdOutput = stdOutput;
+    int* wrapBoltInput = boltInput;
+#endif
 
     int init(0);
 
@@ -1439,9 +1451,15 @@ TEST_P( ReduceIntegerNakedPointer, MultiCoreInplace )
     unsigned int endIndex = GetParam( );
 
     //  Calling the actual functions under test
+#if defined (_WIN32 )
     stdext::checked_array_iterator< int* > wrapStdInput( stdInput, endIndex );
     stdext::checked_array_iterator< int* > wrapStdOutput( stdOutput, endIndex );
     stdext::checked_array_iterator< int* > wrapBoltInput( boltInput, endIndex );
+#else
+    int* wrapStdInput = stdInput;
+    int* wrapStdOutput = stdOutput;
+    int* wrapBoltInput = boltInput;
+#endif
 
     int init(0);
 
@@ -1466,9 +1484,15 @@ TEST_P( ReduceFloatNakedPointer, Inplace )
     unsigned int endIndex = GetParam( );
 
     //  Calling the actual functions under test
+#if defined (_WIN32 )
     stdext::checked_array_iterator< float* > wrapStdInput( stdInput, endIndex );
     stdext::checked_array_iterator< float* > wrapStdOutput( stdOutput, endIndex );
     stdext::checked_array_iterator< float* > wrapBoltInput( boltInput, endIndex );
+#else
+    float* wrapStdInput = stdInput;
+    float* wrapStdOutput = stdOutput;
+    float* wrapBoltInput = boltInput;
+#endif
 
     float init(0);
     //  Calling the actual functions under test
@@ -1491,9 +1515,15 @@ TEST_P( ReduceFloatNakedPointer, SerialInplace )
     ctl.setForceRunMode(bolt::amp::control::SerialCpu);
 
     //  Calling the actual functions under test
+#if defined (_WIN32 )
     stdext::checked_array_iterator< float* > wrapStdInput( stdInput, endIndex );
     stdext::checked_array_iterator< float* > wrapStdOutput( stdOutput, endIndex );
     stdext::checked_array_iterator< float* > wrapBoltInput( boltInput, endIndex );
+#else
+    float* wrapStdInput = stdInput;
+    float* wrapStdOutput = stdOutput;
+    float* wrapBoltInput = boltInput;
+#endif
 
     float init(0);
     //  Calling the actual functions under test
@@ -1516,9 +1546,15 @@ TEST_P( ReduceFloatNakedPointer, MultiCoreInplace )
     ctl.setForceRunMode(bolt::amp::control::MultiCoreCpu);
 
     //  Calling the actual functions under test
+#if defined (_WIN32 )
     stdext::checked_array_iterator< float* > wrapStdInput( stdInput, endIndex );
     stdext::checked_array_iterator< float* > wrapStdOutput( stdOutput, endIndex );
     stdext::checked_array_iterator< float* > wrapBoltInput( boltInput, endIndex );
+#else
+    float* wrapStdInput = stdInput;
+    float* wrapStdOutput = stdOutput;
+    float* wrapBoltInput = boltInput;
+#endif
 
     float init(0);
     //  Calling the actual functions under test
