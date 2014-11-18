@@ -89,8 +89,8 @@ add_subdirectory( MergeTest )
 # passed
 add_subdirectory( CountTest )
 
-# compile error
-#add_subdirectory( PermutationIteratorTest )
+# compile OK, crashed on HSA after passing some tests
+add_subdirectory( PermutationIteratorTest )
 
 # killed at opt within clamp-device
 #add_subdirectory( ReduceTest )
