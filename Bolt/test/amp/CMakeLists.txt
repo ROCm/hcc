@@ -119,7 +119,7 @@ add_subdirectory( ReduceByKeyTest )
 # compile OK, crashed on HSA after passing some tests
 add_subdirectory( TransformTest )   
 
-# compile error
+# killed at opt within clamp-device
 #add_subdirectory( TransformReduceTest )
 
 # killed at opt within clamp-device

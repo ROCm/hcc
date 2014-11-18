@@ -19,6 +19,7 @@
 #if !defined( BOLT_AMP_TRANSFORM_REDUCE_INL )
 #define BOLT_AMP_TRANSFORM_REDUCE_INL
 
+#include <cmath>
 #include <string>
 #include <iostream>
 #include <numeric>
