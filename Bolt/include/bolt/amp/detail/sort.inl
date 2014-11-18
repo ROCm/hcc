@@ -1022,6 +1022,15 @@ void sort_detect_random_access( bolt::amp::control &ctl,
 template<typename DVRandomAccessIterator, typename StrictWeakOrdering>
 typename std::enable_if<
     !(std::is_same< typename std::iterator_traits<DVRandomAccessIterator >::value_type, unsigned int >::value ||
+      std::is_same< typename std::iterator_traits<DVRandomAccessIterator >::value_type, int >::value  )
+                       >::type
+stablesort_enqueue(control& ctrl, const DVRandomAccessIterator& first, const DVRandomAccessIterator& last,
+             const StrictWeakOrdering& comp);
+
+
+template<typename DVRandomAccessIterator, typename StrictWeakOrdering>
+typename std::enable_if<
+    !(std::is_same< typename std::iterator_traits<DVRandomAccessIterator >::value_type, unsigned int >::value ||
       std::is_same< typename std::iterator_traits<DVRandomAccessIterator >::value_type,          int >::value)
                        >::type
 sort_enqueue(bolt::amp::control &ctl, const DVRandomAccessIterator& first, const DVRandomAccessIterator& last,
