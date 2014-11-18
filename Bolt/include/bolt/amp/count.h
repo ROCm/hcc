@@ -39,6 +39,7 @@ namespace bolt {
 
         /*! \addtogroup reductions
         *   \ingroup algorithms
+        */
 
         /*! \addtogroup AMP-counting
         *  \ingroup reductions
