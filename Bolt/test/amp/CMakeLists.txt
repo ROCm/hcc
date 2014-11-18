@@ -65,8 +65,8 @@ add_definitions( -DAMP_TESTS )
 # passed
 add_subdirectory( PairTest )
 
-# compile error related with device_vector
-#add_subdirectory( GenerateTest )
+# compile OK, failed some tests on HSA
+add_subdirectory( GenerateTest )
 
 # passed
 add_subdirectory( FillTest )

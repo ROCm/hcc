@@ -220,7 +220,7 @@ class DevUDDVector: public ::testing::TestWithParam< int >
 {
 public:
     //  Create an std and a bolt vector of requested size, and initialize all the elements to -1
-    DevUDDVector( ): stdInput( GetParam( ), -1 ), boltInput( static_cast<size_t>(GetParam( )), -1 )
+    DevUDDVector( ): stdInput( GetParam( ), -1 ), boltInput( static_cast<size_t>(GetParam( )), static_cast< bolt::amp::device_vector< UDD >::value_type >(-1) )
     {}
 
 protected:
