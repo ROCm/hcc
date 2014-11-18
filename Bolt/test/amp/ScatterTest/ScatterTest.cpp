@@ -2757,7 +2757,7 @@ TEST( DeviceMemory_Double, SerialScatter_If)
         exp_result.push_back(3.5);exp_result.push_back(0.5);
         exp_result.push_back(1.5);exp_result.push_back(0.5);
     }
-    bolt::amp::device_vector<float> result ( 10, static_cast< bolt::amp::device_vector<float>::value_type >(0.5f) );
+    bolt::amp::device_vector<double> result ( 10, static_cast< bolt::amp::device_vector<float>::value_type >(0.5f) );
     bolt::amp::device_vector<double> input ( n_input, n_input + 10 );
     bolt::amp::device_vector<int> map ( n_map, n_map + 10 );
     bolt::amp::device_vector<int> stencil ( n_stencil, n_stencil + 10 );
