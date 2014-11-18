@@ -59,34 +59,78 @@ if ( UNIX )
 endif()
 add_definitions( -DAMP_TESTS )
 
+# compile error
 #add_subdirectory( BinarySearchTest )
-add_subdirectory( PairTest )
-#add_subdirectory( GenerateTest )
-add_subdirectory( FillTest )
-#add_subdirectory( InnerProductTest )
-add_subdirectory( CopyTest )
-# Deadlock
-#add_subdirectory( MinElementTest )
-add_subdirectory( MergeTest )
-# Deadlock
-#add_subdirectory( MaxElementTest )
-add_subdirectory( CountTest )
-#add_subdirectory( PermutationIteratorTest )
-#add_subdirectory( ReduceTest )
-#add_subdirectory( ReduceByKeyTest )
-#add_subdirectory( ScanTest )
-# Deadlock
-#add_subdirectory( ScanByKeyTest )
-#add_subdirectory( SortTest )
-#add_subdirectory( SortByKeyTest )
-#add_subdirectory( StableSortTest )
-#add_subdirectory( StableSortByKeyTest )
-add_subdirectory( TransformTest )   
-#add_subdirectory( TransformReduceTest )
-# Deadlock
-#add_subdirectory( TransformScanTest )
-add_subdirectory( ScatterTest )
-add_subdirectory( GatherTest )
-add_subdirectory( device_vector )
 
+# passed
+add_subdirectory( PairTest )
+
+# compile error
+#add_subdirectory( GenerateTest )
+
+# passed
+add_subdirectory( FillTest )
+
+# killed at opt within clamp-device
+#add_subdirectory( InnerProductTest )
+
+# passed
+add_subdirectory( CopyTest )
+
+# killed at opt within clamp-device
+#add_subdirectory( MinElementTest )
+
+# passed
+add_subdirectory( MergeTest )
+
+# killed at opt within clamp-device
+#add_subdirectory( MaxElementTest )
+
+# passed
+add_subdirectory( CountTest )
+
+# compile error
+#add_subdirectory( PermutationIteratorTest )
+
+# compile error
+#add_subdirectory( ReduceTest )
+
+# compile OK, crashed on HSA after passing some tests
+add_subdirectory( ReduceByKeyTest )
+
+# killed at opt within clamp-device
+#add_subdirectory( ScanTest )
+
+# killed at opt within clamp-device
+#add_subdirectory( ScanByKeyTest )
+
+# compile error
+#add_subdirectory( SortTest )
+
+# compile error
+#add_subdirectory( SortByKeyTest )
+
+# compile error
+#add_subdirectory( StableSortTest )
+
+# compile error
+#add_subdirectory( StableSortByKeyTest )
+
+# compile OK, crashed on HSA after passing some tests
+add_subdirectory( TransformTest )   
+
+# compile error
+#add_subdirectory( TransformReduceTest )
+
+# killed at opt within clamp-device
+#add_subdirectory( TransformScanTest )
+
+# compile OK, crashed on HSA after passing some tests
+add_subdirectory( ScatterTest )
+
+# passed
+add_subdirectory( GatherTest )
+
+# compile OK, crashed on HSA after passing some tests
+add_subdirectory( device_vector )
 
