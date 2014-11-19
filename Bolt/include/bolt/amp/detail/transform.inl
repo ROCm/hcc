@@ -310,6 +310,10 @@ namespace bolt
                     //device_vector< oType > dvOutput( result, sz, false, ctl );
                     device_vector< oType, concurrency::array_view > dvOutput( result, sz, true, ctl );
                     transform_enqueue( ctl, dvInput.begin( ), dvInput.end( ), dvInput2.begin( ), dvOutput.begin( ), f  );
+
+                    // TODO: Need to synchorize dvInput as well? in case there is inplace operation in this binary funciton.
+                    // The related cases run successfully without such synchronization on CLAMP so far
+
                     // This should immediately map/unmap the buffer
                     dvOutput.data( );
                }
@@ -356,6 +360,10 @@ namespace bolt
                     // Map the output iterator to a device_vector
                     device_vector< oType, concurrency::array_view > dvOutput( result, sz, true, ctl );
                     transform_enqueue( ctl, first1, last1, dvInput2.begin( ), dvOutput.begin( ), f  );
+
+                    // TODO: Need to synchorize dvInput as well? in case there is inplace operation in this binary funciton?
+                    // The related cases run successfully without such synchronization on CLAMP so far
+
                     // This should immediately map/unmap the buffer
                     dvOutput.data( );
                }
@@ -403,6 +411,10 @@ namespace bolt
                     // Map the output iterator to a device_vector
                     device_vector< oType, concurrency::array_view > dvOutput( result, sz, true, ctl );
                     transform_enqueue( ctl, dvInput.begin( ), dvInput.end( ), first2, dvOutput.begin( ), f  );
+
+                    // TODO: Need to synchorize dvInput as well? in case there is inplace operation in this binary funciton?
+                    // The related cases run successfully without such synchronization on CLAMP so far
+
                     // This should immediately map/unmap the buffer
                     dvOutput.data( );
                }
@@ -514,6 +526,15 @@ namespace bolt
                    device_vector< oType, concurrency::array_view > dvOutput( result, sz, true, ctl );
 
                    transform_unary_enqueue( ctl, dvInput.begin( ), dvInput.end( ), dvOutput.begin( ), f );
+
+                   // Always synchorize dvInput in case there is inplace operation. For example, 
+                   // dvOuput has the same container as dvInput which is the operand of unary funciton 'f'
+                   // FIXME: this will introduce extra time, however it is what the logic is.
+                   //
+                   #ifndef _WIN32
+                   // At least do it on CLAMP
+                   dvInput.data();
+                   #endif
 
                    // This should immediately map/unmap the buffer
                    dvOutput.data( );
