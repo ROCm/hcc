@@ -116,7 +116,7 @@ add_subdirectory( StableSortTest )
 # compile OK, failed some tests on HSA
 add_subdirectory( StableSortByKeyTest )
 
-# compile OK, crashed on HSA after passing some tests
+# passed on SPIR path. crashed on HSA after passing some tests
 add_subdirectory( TransformTest )   
 
 # killed at opt within clamp-device
