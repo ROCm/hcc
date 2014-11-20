@@ -71,8 +71,8 @@ add_subdirectory( GenerateTest )
 # passed
 add_subdirectory( FillTest )
 
-# killed at opt within clamp-device
-#add_subdirectory( InnerProductTest )
+# passed on SPIR path. 'double type' related cases fail if no support in GPU
+add_subdirectory( InnerProductTest )
 
 # passed
 add_subdirectory( CopyTest )

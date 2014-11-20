@@ -1128,9 +1128,14 @@ void promoteTileStatic(Function *Func, InstUpdateWorkList * updateNeeded)
                 // Replace GEPCE uses so that we have an instruction to track
                 updateListWithUsers (*U, I, I, updateNeeded);
                 assert(C->getNumUses() == 0);
-                C->destroyConstant();
-                U = I->use_begin();
-                continue;
+                // FIXME: updateListWithUsers takes no effect if use of (*U) does not represent
+                // an instruction and can't be replaceable
+                if (C->getNumUses() == 0) {
+                  // Only non-zero ref can be destroyed, otherwise deadlock occurs
+                  C->destroyConstant();
+                  U = I->use_begin();
+                  continue;
+                }
             }
             DEBUG(llvm::errs() << "U: \n";
                 U->dump(););
