@@ -77,14 +77,14 @@ add_subdirectory( InnerProductTest )
 # passed
 add_subdirectory( CopyTest )
 
-# killed at opt within clamp-device
-#add_subdirectory( MinElementTest )
+# compile OK, failed some tests on SPIR and HSA
+add_subdirectory( MinElementTest )
 
 # passed
 add_subdirectory( MergeTest )
 
-# killed at opt within clamp-device
-#add_subdirectory( MaxElementTest )
+# compile OK, failed some tests on SPIR and HSA
+add_subdirectory( MaxElementTest )
 
 # passed
 add_subdirectory( CountTest )
@@ -92,17 +92,17 @@ add_subdirectory( CountTest )
 # compile OK, crashed on HSA after passing some tests
 add_subdirectory( PermutationIteratorTest )
 
-# killed at opt within clamp-device
-#add_subdirectory( ReduceTest )
+# compile OK, failed some tests on SPIR and HSA
+add_subdirectory( ReduceTest )
 
 # compile OK, crashed on HSA after passing some tests
 add_subdirectory( ReduceByKeyTest )
 
-# killed at opt within clamp-device
-#add_subdirectory( ScanTest )
+# compile OK, failed some tests on SPIR and HSA
+add_subdirectory( ScanTest )
 
-# killed at opt within clamp-device
-#add_subdirectory( ScanByKeyTest )
+# compile OK, failed some tests on SPIR and HSA
+add_subdirectory( ScanByKeyTest )
 
 # compile OK, crashed on HSA after passing some tests
 add_subdirectory( SortTest )
@@ -119,11 +119,11 @@ add_subdirectory( StableSortByKeyTest )
 # passed on SPIR path. crashed on HSA after passing some tests
 add_subdirectory( TransformTest )   
 
-# killed at opt within clamp-device
-#add_subdirectory( TransformReduceTest )
+# compile OK, failed some tests on SPIR and HSA
+add_subdirectory( TransformReduceTest )
 
-# killed at opt within clamp-device
-#add_subdirectory( TransformScanTest )
+# compile OK, failed some tests on SPIR and HSA
+add_subdirectory( TransformScanTest )
 
 # compile OK, crashed on HSA after passing some tests
 add_subdirectory( ScatterTest )
