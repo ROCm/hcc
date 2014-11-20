@@ -72,7 +72,7 @@ add_subdirectory( GenerateTest )
 add_subdirectory( FillTest )
 
 # killed at opt within clamp-device
-#add_subdirectory( InnerProductTest )
+add_subdirectory( InnerProductTest )
 
 # passed
 add_subdirectory( CopyTest )
