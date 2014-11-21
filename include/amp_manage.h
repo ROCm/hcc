@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <stdlib.h>
 #include <amp_allocator.h>
 
 namespace Concurrency {
@@ -19,10 +20,10 @@ struct mm_info
     void *dirty;
     bool discard;
     mm_info(int count)
-        : count(count), host(::operator new(count)), device(host),
+        : count(count), host(aligned_alloc(0x1000, count)), device(host),
         dirty(host), discard(false) { getAllocator()->init(device, count); }
     mm_info(int count, void *src)
-        : count(count), host(src), device(::operator new(count)),
+        : count(count), host(src), device(aligned_alloc(0x1000, count)),
         dirty(host), discard(false) { getAllocator()->init(device, count); }
     void synchronize() {
         if (dirty != host) {
@@ -54,7 +55,7 @@ struct mm_info
         if (host != device) {
             if (!discard)
                 synchronize();
-            ::operator delete(device);
+            free(device);
         }
     }
 };
