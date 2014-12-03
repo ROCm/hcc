@@ -1717,6 +1717,15 @@ struct UDD {
         : a(0),b(0) { }
     UDD(int _in)   restrict (cpu,amp)
         : a(_in), b(_in +1)  { }
+    // User should provide copy ctor
+    UDD(const UDD&other)   restrict (cpu,amp)
+        : a(other.a), b(other.b)  { }
+    // User should provide copy assign ctor
+    UDD& operator = (const UDD&other)   restrict (cpu,amp) {
+      a = other.a;
+      b = other.b;
+      return *this;
+    }
 }; 
 
 struct UDDplus
