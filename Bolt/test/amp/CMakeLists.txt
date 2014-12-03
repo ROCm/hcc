@@ -119,7 +119,7 @@ add_subdirectory( StableSortByKeyTest )
 # passed on SPIR path. crashed on HSA after passing some tests
 add_subdirectory( TransformTest )   
 
-# compile OK, failed some tests on SPIR and HSA
+# passed on SPIR path. failed some tests on HSA
 add_subdirectory( TransformReduceTest )
 
 # compile OK, failed some tests on SPIR and HSA
