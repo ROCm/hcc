@@ -59,7 +59,7 @@ if ( UNIX )
 endif()
 add_definitions( -DAMP_TESTS )
 
-# compile OK, failed some tests on HSA
+# failed some tests on SPIR(has dependency on bolt::amp::sort availability), failed some tests on HSA
 add_subdirectory( BinarySearchTest )
 
 # passed
