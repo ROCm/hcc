@@ -1932,7 +1932,6 @@ int main(int argc, char* argv[])
     std::vector<int> lengths;
     lengths.push_back(0);
     lengths.push_back(1);
-      #if 0
     lengths.push_back(63);
     lengths.push_back(64);
     lengths.push_back(65);
@@ -1940,7 +1939,7 @@ int main(int argc, char* argv[])
     lengths.push_back(1024);
     lengths.push_back(1025);
     lengths.push_back(16384+1);
-    #endif
+
     int testsPassed = 0;
     int testsFailed = 0;
 
