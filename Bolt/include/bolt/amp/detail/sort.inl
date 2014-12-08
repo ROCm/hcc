@@ -52,7 +52,7 @@
 // On Linux. Macro is expanded in std::max
 #define _max(a,b)    (((a) > (b)) ? (a) : (b))
 #define _min(a,b)    (((a) < (b)) ? (a) : (b))
-#define make_uint4 (uint_4)
+#define make_uint4 uint_4
 #define SET_HISTOGRAM(setIdx, key) ldsSortData[(setIdx)*NUM_BUCKET+key]
 
 namespace bolt {

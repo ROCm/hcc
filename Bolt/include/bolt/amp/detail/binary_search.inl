@@ -70,9 +70,11 @@ namespace bolt {
                  *********************************************************************************/
                 typedef typename std::iterator_traits<DVForwardIterator>::value_type iType;
 
-				//concurrency::array< int > result( szElements, av );
-				std::vector<int> stdResBuffer(totalThreads);
-                device_vector<int, concurrency::array_view > stdResVec(stdResBuffer.begin(), stdResBuffer.size(), false, ctl );
+
+                std::vector<int> stdResBuffer(totalThreads);
+		// Use array since it is one of the containers that are allowed to be captured by reference
+		// in parallel_for_each lambda in AMP
+		concurrency::array< int> stdResVec(totalThreads, stdResBuffer.begin());
 
                 if(nmofthreads != 0 )
                 {
@@ -86,7 +88,7 @@ namespace bolt {
                                  val,
                                  numElementsProcessedperWI,
                                  comp,	
-                                 stdResVec
+                                 &stdResVec
 	                          ] ( concurrency::index<1> idx ) restrict(amp)
                            {
 
@@ -135,7 +137,7 @@ namespace bolt {
                                  val,
                                  numElementsProcessedperWI,
                                  comp,	
-                                 stdResVec,
+                                 &stdResVec,
 								 startIndex,
 								 szElements_b,
                                  nmofthreads

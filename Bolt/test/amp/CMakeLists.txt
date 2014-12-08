@@ -59,7 +59,7 @@ if ( UNIX )
 endif()
 add_definitions( -DAMP_TESTS )
 
-# compile OK, failed some tests on HSA
+# failed some tests on SPIR(has dependency on bolt::amp::sort availability), failed some tests on HSA
 add_subdirectory( BinarySearchTest )
 
 # passed
@@ -92,7 +92,7 @@ add_subdirectory( CountTest )
 # compile OK, crashed on HSA after passing some tests
 add_subdirectory( PermutationIteratorTest )
 
-# compile OK, failed some tests on SPIR and HSA
+# passed on SPIR path. failed some tests on SPIR and HSA
 add_subdirectory( ReduceTest )
 
 # compile OK, crashed on HSA after passing some tests
@@ -119,7 +119,7 @@ add_subdirectory( StableSortByKeyTest )
 # passed on SPIR path. crashed on HSA after passing some tests
 add_subdirectory( TransformTest )   
 
-# compile OK, failed some tests on SPIR and HSA
+# passed on SPIR path. failed some tests on HSA
 add_subdirectory( TransformReduceTest )
 
 # compile OK, failed some tests on SPIR and HSA
