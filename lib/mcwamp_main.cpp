@@ -90,7 +90,7 @@ void ldflags(void) {
         std::cout << " -Wl,--rpath=" CMAKE_INSTALL_LIB;
     }
 
-    std::cout << " -lc++ -lcxxrt -ldl ";
+    std::cout << " -lc++ -lcxxrt -ldl -lpthread ";
     if (bolt_rewrite_mode) {
         std::cout << "-lampBolt.runtime.clang ";
     }
