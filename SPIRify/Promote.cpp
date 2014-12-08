@@ -1127,7 +1127,6 @@ void promoteTileStatic(Function *Func, InstUpdateWorkList * updateNeeded)
             } else if (ConstantExpr *C = dyn_cast<ConstantExpr>(*U)) {
                 // Replace GEPCE uses so that we have an instruction to track
                 updateListWithUsers (*U, I, I, updateNeeded);
-                assert(C->getNumUses() == 0);
                 // FIXME: updateListWithUsers takes no effect if use of (*U) does not represent
                 // an instruction and can't be replaceable
                 if (C->getNumUses() == 0) {
