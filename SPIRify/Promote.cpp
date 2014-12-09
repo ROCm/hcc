@@ -18,7 +18,7 @@
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/CallGraph.h"
-#include "llvm/Analysis/Verifier.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Metadata.h"
@@ -68,7 +68,7 @@ void updateInstructionWithNewOperand(Instruction * I,
                                      Value * newOperand,
                                      InstUpdateWorkList * updatesNeeded);
 
-void updateListWithUsers ( Value::use_iterator U, const Value::use_iterator& Ue, 
+void updateListWithUsers ( Value::user_iterator U, const Value::user_iterator& Ue, 
                            Value * oldOperand, Value * newOperand,
                            InstUpdateWorkList * updates );
 /* This structure hold information on which instruction
@@ -117,7 +117,7 @@ void ForwardUpdate::UpdateUsersWithNewOperand (Instruction * Insn,
                                                Value * newOperand,
                                                InstUpdateWorkList * workList)
 {
-        updateListWithUsers ( Insn->use_begin (), Insn->use_end(),
+        updateListWithUsers ( Insn->user_begin (), Insn->user_end(),
                               oldOperand, newOperand,
                               workList );
 }
@@ -589,8 +589,8 @@ void updateListWithUsers ( User *U, Value * oldOperand, Value * newOperand,
         // patch all the users of the constexpr by
         // first producing an equivalent instruction that
         // computes the constantexpr
-        for(Value::use_iterator CU = GEPCE->use_begin(),
-                CE = GEPCE->use_end(); CU!=CE;) {
+        for(Value::user_iterator CU = GEPCE->user_begin(),
+                CE = GEPCE->user_end(); CU!=CE;) {
             if (Instruction *I2 = dyn_cast<Instruction>(*CU)) {
                 Insn = GEPCE->getAsInstruction();
                 Insn->insertBefore(I2);
@@ -599,14 +599,14 @@ void updateListWithUsers ( User *U, Value * oldOperand, Value * newOperand,
                 updateInstructionWithNewOperand(I2,
                         GEPCE, Insn, updates);
                 // CU is invalidated
-                CU = GEPCE->use_begin();
+                CU = GEPCE->user_begin();
                 continue;
             }
             CU++;
         }
     }
 }
-void updateListWithUsers ( Value::use_iterator U, const Value::use_iterator& Ue, 
+void updateListWithUsers ( Value::user_iterator U, const Value::user_iterator& Ue, 
                            Value * oldOperand, Value * newOperand,
                            InstUpdateWorkList * updates )
 {
@@ -622,7 +622,7 @@ void updateLoadInstWithNewOperand(LoadInst * I, Value * newOperand, InstUpdateWo
         PointerType * PT = cast<PointerType>(newOperand->getType());
         if ( PT->getElementType() != originalLoadedType ) {
                 I->mutateType(PT->getElementType());
-                updateListWithUsers(I->use_begin(), I->use_end(), I, I, updatesNeeded);
+                updateListWithUsers(I->user_begin(), I->user_end(), I, I, updatesNeeded);
         }
 }
 
@@ -642,7 +642,7 @@ void updatePHINodeWithNewOperand(PHINode * I, Value * oldOperand,
   PointerType * PT = cast<PointerType>(newOperand->getType());
   if ( PT != originalType ) {
     I->mutateType(PT);
-    updateListWithUsers(I->use_begin(), I->use_end(), I, I, updatesNeeded);
+    updateListWithUsers(I->user_begin(), I->user_end(), I, I, updatesNeeded);
   }
 
   /* update other incoming nodes as well */
@@ -666,7 +666,7 @@ void updatePHINodeWithNewOperand(PHINode * I, Value * oldOperand,
             llvm::errs() << " for instruction: "; II->dump(); llvm::errs() << "\n";);
 
             V->mutateType(PT);
-            updateListWithUsers(II->use_begin(), II->use_end(), II, II, updatesNeeded);
+            updateListWithUsers(II->user_begin(), II->user_end(), II, II, updatesNeeded);
           } else if (isa<Constant>(V)) {
             Constant *CC = dyn_cast<Constant>(V);
 
@@ -761,7 +761,7 @@ void updateBitCastInstWithNewOperand(BitCastInst * BI, Value *oldOperand, Value 
         BitCastInst * newBCI = new BitCastInst (newOperand, newDestType,
                                                 "", BI);
 
-        updateListWithUsers (BI->use_begin(), BI->use_end(),
+        updateListWithUsers (BI->user_begin(), BI->user_end(),
                              BI, newBCI, updatesNeeded);
 }
 
@@ -790,7 +790,7 @@ void updateGEPWithNewOperand(GetElementPtrInst * GEP, Value * oldOperand, Value 
         if ( futurePtrType == GEP->getType()) return;
 
         GEP->mutateType ( futurePtrType );
-        updateListWithUsers(GEP->use_begin(), GEP->use_end(), GEP, GEP, updatesNeeded);
+        updateListWithUsers(GEP->user_begin(), GEP->user_end(), GEP, GEP, updatesNeeded);
 }
 
 void updateCMPWithNewOperand(CmpInst *CMP, Value *oldOperand, Value *newOperand, InstUpdateWorkList *updatesNeeded)
@@ -807,12 +807,12 @@ void updateCMPWithNewOperand(CmpInst *CMP, Value *oldOperand, Value *newOperand,
       Type *T = V->getType();
       if (T != newOperand->getType()) {
         V->mutateType(newOperand->getType());
-        updateListWithUsers(V->use_begin(), V->use_end(), V, V, updatesNeeded);
+        updateListWithUsers(V->user_begin(), V->user_end(), V, V, updatesNeeded);
         update = true;
       }
     }
     if (update)
-      updateListWithUsers(CMP->use_begin(), CMP->use_end(), CMP, CMP, updatesNeeded);
+      updateListWithUsers(CMP->user_begin(), CMP->user_end(), CMP, CMP, updatesNeeded);
 }
 
 void updateSELWithNewOperand(SelectInst * SEL, Value * oldOperand, Value * newOperand, InstUpdateWorkList * updatesNeeded)
@@ -831,7 +831,7 @@ void updateSELWithNewOperand(SelectInst * SEL, Value * oldOperand, Value * newOp
       Type *T2 = V2->getType();
       if (T2 != newOperand->getType()) {
         V2->mutateType(newOperand->getType());
-        updateListWithUsers(V2->use_begin(), V2->use_end(), V2, V2, updatesNeeded);
+        updateListWithUsers(V2->user_begin(), V2->user_end(), V2, V2, updatesNeeded);
         update = true;
       }
       if(InstructionType != newOperand->getType()) {
@@ -846,7 +846,7 @@ void updateSELWithNewOperand(SelectInst * SEL, Value * oldOperand, Value * newOp
       Type *T1 = V1->getType();
       if (T1 != newOperand->getType()) {
         V1->mutateType(newOperand->getType());
-        updateListWithUsers(V1->use_begin(), V1->use_end(), V1, V1, updatesNeeded);
+        updateListWithUsers(V1->user_begin(), V1->user_end(), V1, V1, updatesNeeded);
         update = true;
       }
       if(InstructionType != newOperand->getType()) {
@@ -860,7 +860,7 @@ void updateSELWithNewOperand(SelectInst * SEL, Value * oldOperand, Value * newOp
     llvm::errs() << " op2 type: "; SEL->getOperand(2)->getType()->dump(); llvm::errs() << "\n";);
 
     if(update) 
-      updateListWithUsers(SEL->use_begin(), SEL->use_end(), SEL, SEL, updatesNeeded);
+      updateListWithUsers(SEL->user_begin(), SEL->user_end(), SEL, SEL, updatesNeeded);
 }
 
 bool CheckCalledFunction ( CallInst * CI, InstUpdateWorkList * updates,
@@ -908,7 +908,7 @@ void promoteCallToNewFunction (CallInst * CI, FunctionType * newFunctionType,
         if ( returnType == CI->getType () ) return;
 
         CI->mutateType (returnType);
-        updateListWithUsers (CI->use_begin(), CI->use_end(),
+        updateListWithUsers (CI->user_begin(), CI->user_end(),
                              CI, CI, updates);
 }
 
@@ -1072,11 +1072,26 @@ static bool usedInTheFunc(const User *U, const Function* F)
             return false;
         }
     }
+
+#if LLVM_VERSION_MAJOR == 3
+  #if LLVM_VERSION_MINOR == 3
   for (User::const_use_iterator ui = U->use_begin(), ue = U->use_end();
        ui != ue; ++ui) {
     if (usedInTheFunc(*ui, F) == true)
       return true;
   }
+  #elif LLVM_VERSION_MINOR == 5
+  for (const User *u : U->users()) {
+    if (usedInTheFunc(u, F) == true)
+      return true;
+  }
+  #else
+    #error Unsupported LLVM MINOR VERSION
+  #endif
+#else
+  #error Unsupported LLVM MAJOR VERSION
+#endif
+
   return false;
 }
 
@@ -1119,7 +1134,7 @@ void promoteTileStatic(Function *Func, InstUpdateWorkList * updateNeeded)
         std::set<Function *> users;
         typedef std::multimap<Function *, llvm::User *> Uses;
         Uses uses;
-        for (Value::use_iterator U = I->use_begin(), Ue = I->use_end();
+        for (Value::user_iterator U = I->user_begin(), Ue = I->user_end();
             U!=Ue;) {
             if (Instruction *Ins = dyn_cast<Instruction>(*U)) {
                 users.insert(Ins->getParent()->getParent());
@@ -1132,7 +1147,7 @@ void promoteTileStatic(Function *Func, InstUpdateWorkList * updateNeeded)
                 if (C->getNumUses() == 0) {
                   // Only non-zero ref can be destroyed, otherwise deadlock occurs
                   C->destroyConstant();
-                  U = I->use_begin();
+                  U = I->user_begin();
                   continue;
                 }
             }
@@ -1203,7 +1218,7 @@ void promoteAllocas (Function * Func,
                                                            AI->getArraySize(),
                                                            "", AI);
 
-                updateListWithUsers ( AI->use_begin(), AI->use_end(),
+                updateListWithUsers ( AI->user_begin(), AI->user_end(),
                                       AI, clonedAlloca, updatesNeeded );
         }
 }
@@ -1251,7 +1266,7 @@ void promoteBitcasts (Function * F, InstUpdateWorkList * updates)
                 BitCastInst * newBI = new BitCastInst(BI->getOperand(0),
                                                       newDestType, BI->getName(),
                                                          BI);
-                updateListWithUsers (BI->use_begin(), BI->use_end(),
+                updateListWithUsers (BI->user_begin(), BI->user_end(),
                                      BI, newBI, updates);
         }
 
@@ -1273,7 +1288,7 @@ void updateArgUsers (Function * F, InstUpdateWorkList * updateNeeded)
         for (arg_iterator A = F->arg_begin(), Ae = F->arg_end();
              A != Ae; ++A) {
                 if ( !hasPtrToNonZeroAddrSpace (A) ) continue;
-                updateListWithUsers (A->use_begin(), A->use_end(),
+                updateListWithUsers (A->user_begin(), A->user_end(),
                                      A, A, updateNeeded);
         }
 }
@@ -1299,7 +1314,7 @@ void updateOperandType(Function * oldF, Function * newF, FunctionType* ty, InstU
         if (Sel->getType() != I->getOperand(1)->getType()) {
           // mutate type only when absolutely necessary
           Sel->mutateType(I->getOperand(1)->getType());
-          updateListWithUsers(I->use_begin(), I->use_end(), I, I, workList);
+          updateListWithUsers(I->user_begin(), I->user_end(), I, I, workList);
         }
       } else if( GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(I)) {
         // Only handle GEPs with parameters promoted (ex: after a select instruction)
@@ -1418,7 +1433,7 @@ Function * createPromotedFunctionToType ( Function * F, FunctionType * promoteTy
         } while ( !workList.empty() );
 
         eraseOldTileStaticDefs(F->getParent());
-        if (verifyFunction (*newFunction, PrintMessageAction)) {
+        if (verifyFunction (*newFunction/*, PrintMessageAction*/)) {
                 llvm::errs() << "When checking the updated function of: ";
                 F->dump();
                 llvm::errs() << " into: ";
@@ -1651,7 +1666,7 @@ PromoteGlobals::~PromoteGlobals()
 
 void PromoteGlobals::getAnalysisUsage(AnalysisUsage& AU) const
 {
-        AU.addRequired<CallGraph>();
+        AU.addRequired<CallGraphWrapperPass>();
 }
 static std::string escapeName(const std::string &orig_name)
 {
@@ -1712,7 +1727,7 @@ bool PromoteGlobals::runOnModule(Module& M)
                 std::string oldName = escapeName(I->getName().str());
                 // Prepend the name of the function which contains the user
                 std::set<std::string> userNames;
-                for (Value::use_iterator U = I->use_begin(), Ue = I->use_end();
+                for (Value::user_iterator U = I->user_begin(), Ue = I->user_end();
                     U != Ue; U ++) {
                     Instruction *Ins = dyn_cast<Instruction>(*U);
                     if (!Ins)
