@@ -420,7 +420,7 @@ void CWriter::printStructReturnPointerFunctionType(raw_ostream &Out,
 raw_ostream &
 CWriter::printSimpleType(raw_ostream &Out, Type *Ty, bool isSigned,
                          const std::string &NameSoFar) {
-  assert((Ty->isPrimitiveType() || Ty->isIntegerTy() || Ty->isVectorTy()) &&
+  assert(((Ty->getTypeID() >= 0 && Ty->getTypeID() <= 9) || Ty->isIntegerTy() || Ty->isVectorTy()) &&
          "Invalid type for printSimpleType");
   switch (Ty->getTypeID()) {
   case Type::VoidTyID:   return Out << "void " << NameSoFar;
@@ -2425,7 +2425,6 @@ static void FindLocalName(Instruction *I, Value *&LocalValue, Type *&LocalTy) {
   }
 }
 
-#if 0
 static bool usedInOneFunc(const User *U, Function const *&oneFunc) {
   if (const GlobalVariable *othergv = dyn_cast<GlobalVariable>(U)) {
     if (othergv->getName().str() == "llvm.used")
@@ -2448,14 +2447,27 @@ static bool usedInOneFunc(const User *U, Function const *&oneFunc) {
                           (md->getName().str() == "llvm.dbg.sp")))
       return true;
 
+#if LLVM_VERSION_MAJOR == 3
+  #if LLVM_VERSION_MINOR == 3
   for (User::const_use_iterator ui = U->use_begin(), ue = U->use_end();
        ui != ue; ++ui) {
     if (usedInOneFunc(*ui, oneFunc) == false)
       return false;
   }
+  #elif LLVM_VERSION_MINOR == 5
+  for (const User *u : U->users()) {
+    if (usedInOneFunc(u, oneFunc) == false)
+      return false;
+  }
+  #else
+    #error Unsupported LLVM MINOR VERSION
+  #endif
+#else
+  #error Unsupported LLVM MAJOR VERSION
+#endif
+
   return true;
 }
-#endif
 
 // Variables inside a __kernel function not declared with an address space qualifier, 
 // all variables inside non-kernel functions, and all function arguments are in 
@@ -2479,7 +2491,7 @@ static bool usedInOneFunc(const User *U, Function const *&oneFunc) {
       if (I->hasInternalLinkage() &&  I->getType()->getPointerAddressSpace() == 0 &&
           I->hasName()) {
         const Function *oneFunc = 0;
-        bool flag = false; //usedInOneFunc(I, oneFunc);
+        bool flag = usedInOneFunc(I, oneFunc);
         if (flag == false || (flag&&!oneFunc))
             continue;
         // Not in this Funciton's scope

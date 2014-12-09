@@ -13,9 +13,9 @@
 
 // TODO: Refactor Tile Uniform/Malloc Selection/Promote Privates
 
-#include "llvm/InstVisitor.h"
+#include "llvm/IR/InstVisitor.h"
 #include "llvm/Analysis/PostDominators.h"
-#include "llvm/Assembly/Writer.h"
+//#include "llvm/Assembly/Writer.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/CommandLine.h"
@@ -151,7 +151,7 @@ void ControlDependences::print(raw_ostream &OS, const Module*) const {
   for (const_iterator I = begin(), E = end(); I != E; ++I) {
     OS << "  BB ";
     if (I->first)
-      WriteAsOperand(OS, I->first, false);
+      ; //WriteAsOperand(OS, I->first, false);
     else
       OS << " <<exit node>>";
     OS << " is Control Dependent on:\t";
@@ -162,7 +162,7 @@ void ControlDependences::print(raw_ostream &OS, const Module*) const {
          I != E; ++I) {
       OS << ' ';
       if (*I)
-        WriteAsOperand(OS, *I, false);
+        ; //WriteAsOperand(OS, *I, false);
       else
         OS << "<<exit node>>";
     }
