@@ -648,7 +648,12 @@ aProfiler.stopTrial();
         scan_enqueue( ctl, dvInput.begin( ), dvInput.end( ), dvOutput.begin( ), init, binary_op, inclusive );
        
         PEEK_AT( dvOutput.begin().getContainer().getBuffer())
-
+	
+	// In case there is inplace operation
+	#ifndef _WIN32
+        dvInput.data();
+	#endif
+	
         // This should immediately map/unmap the buffer
         dvOutput.data( );
     }
