@@ -23,8 +23,18 @@
 #define BOLT_AMP_SCAN_INL
 #pragma once
 
+// FIXME: Maybe 1 KBytes workgroup size is Ok on Windows. However on Linux, 
+// it needs to be 256 Bytes especially for AMD platform. And then preSumArray1 is not necessary.
+// Moreover, logic of Kernel #2 is problematic for incorrectly handle prescan results of different tiles.
+// I just rewrite the impl. of scan kernel on Linux and use this macro to keep its windows impl. unchanged.
+// Hui 2014/12/09
 
+// TODO: If windows impl. is not correct, need clean up its codes
+#ifdef _WIN32
 #define SCAN_KERNELWAVES 4
+#else
+#define SCAN_KERNELWAVES 2
+#endif
 #define SCAN_WAVESIZE 128
 #define SCAN_TILE_MAX 65535
 
@@ -110,24 +120,47 @@ unsigned int k0_stepNum, k1_stepNum, k2_stepNum;
 
     //  Ceiling function to bump the size of input to the next whole wavefront size
     unsigned int sizeInputBuff = numElements;
+    #ifdef _WIN32
     unsigned int modWgSize = (sizeInputBuff & ((kernel0_WgSize*2)-1));
+    #else
+    unsigned int modWgSize = (sizeInputBuff & ((kernel0_WgSize)-1));
+    #endif
     if( modWgSize )
     {
         sizeInputBuff &= ~modWgSize;
+	#ifdef _WIN32
         sizeInputBuff += (kernel0_WgSize*2);
+	#else
+	sizeInputBuff += (kernel0_WgSize);
+	#endif
     }
+    #ifdef _WIN32
     int numWorkGroupsK0 = static_cast< int >( sizeInputBuff / (kernel0_WgSize*2) );
+    #else
+    // tiles number
+    int numWorkGroupsK0 = static_cast< int >( sizeInputBuff / (kernel0_WgSize) );
+    #endif
     //  Ceiling function to bump the size of the sum array to the next whole wavefront size
     unsigned int sizeScanBuff = numWorkGroupsK0;
+    #ifdef _WIN32
     modWgSize = (sizeScanBuff & ((kernel0_WgSize*2)-1));
+    #else
+    modWgSize = (sizeScanBuff & ((kernel0_WgSize)-1));
+    #endif
     if( modWgSize )
     {
         sizeScanBuff &= ~modWgSize;
+	#ifdef _WIN32
         sizeScanBuff += (kernel0_WgSize*2);
+	#else
+	sizeScanBuff += (kernel0_WgSize);
+	#endif
     }
 
     concurrency::array< iType >  preSumArray( sizeScanBuff, av );
+    #ifdef _WIN32
     concurrency::array< iType >  preSumArray1( sizeScanBuff, av );
+    #endif
 
     /**********************************************************************************
      *  Kernel 0
@@ -145,7 +178,11 @@ aProfiler.set(AsyncProfiler::memory, 2*numElements*sizeof(iType) + 1*sizeScanBuf
 
 	const unsigned int tile_limit = SCAN_TILE_MAX;
 	const unsigned int max_ext = (tile_limit*kernel0_WgSize);
+	#ifdef _WIN32
 	unsigned int	   tempBuffsize = (sizeInputBuff/2); 
+	#else
+	unsigned int	   tempBuffsize = (sizeInputBuff); 
+	#endif
 	unsigned int	   iteration = (tempBuffsize-1)/max_ext; 
 
     for(unsigned int i=0; i<=iteration; i++)
@@ -163,7 +200,9 @@ aProfiler.set(AsyncProfiler::memory, 2*numElements*sizeof(iType) + 1*sizeScanBuf
 					init,
 					numElements,
 					&preSumArray,
+					#ifdef _WIN32
 					&preSumArray1,
+					#endif
 					binary_op,
 					exclusive,
 					index,
@@ -175,10 +214,12 @@ aProfiler.set(AsyncProfiler::memory, 2*numElements*sizeof(iType) + 1*sizeScanBuf
 				unsigned int groId = t_idx.tile[ 0 ] + tile_index;
 				unsigned int locId = t_idx.local[ 0 ];
 				int wgSize = kernel0_WgSize;
-
+				#ifdef _WIN32
 				tile_static iType lds[ SCAN_WAVESIZE*SCAN_KERNELWAVES*2 ];
-
 				wgSize *=2;
+				#else
+				tile_static iType lds[ SCAN_WAVESIZE*SCAN_KERNELWAVES ];
+				#endif
 
 				int input_offset = (groId*wgSize)+locId;
 				// if exclusive, load gloId=0 w/ identity, and all others shifted-1
@@ -214,7 +255,9 @@ aProfiler.set(AsyncProfiler::memory, 2*numElements*sizeof(iType) + 1*sizeScanBuf
 				 if (locId == 0)
 				 {
 					preSumArray[ groId  ] = lds[wgSize -1];
+					#ifdef _WIN32
 					preSumArray1[ groId  ] = lds[wgSize/2 -1];
+					#endif
 				 }
 		  } );
 
@@ -365,7 +408,9 @@ aProfiler.set(AsyncProfiler::memory, 2*numElements*sizeof(oType) + 1*sizeScanBuf
 					first,
 					result,
 					&preSumArray,
+					#ifdef _WIN32
 					&preSumArray1,
+					#endif
 					numElements,
 					binary_op,
 					init,
@@ -412,6 +457,8 @@ aProfiler.set(AsyncProfiler::memory, 2*numElements*sizeof(oType) + 1*sizeScanBuf
 				if(locId == 0 && gloId < numElements)
 				{
 					if(groId > 0) {
+					#ifdef _WIN32
+					// Problematic codes to handle prescan results of different tiles
 						if(groId % 2 == 0)
 						   postBlockSum = preSumArray[ groId/2 -1 ];
 						else if(groId == 1)
@@ -421,6 +468,9 @@ aProfiler.set(AsyncProfiler::memory, 2*numElements*sizeof(oType) + 1*sizeScanBuf
 						   y1 = preSumArray1[groId/2];
 						   postBlockSum = binary_op(y, y1);
 						}
+					#else
+					postBlockSum = preSumArray[ groId-1 ];
+					#endif	
 						if (!exclusive)
 						   newResult = binary_op( scanResult, postBlockSum );
 						else 
@@ -598,7 +648,12 @@ aProfiler.stopTrial();
         scan_enqueue( ctl, dvInput.begin( ), dvInput.end( ), dvOutput.begin( ), init, binary_op, inclusive );
        
         PEEK_AT( dvOutput.begin().getContainer().getBuffer())
-
+	
+	// In case there is inplace operation
+	#ifndef _WIN32
+        dvInput.data();
+	#endif
+	
         // This should immediately map/unmap the buffer
         dvOutput.data( );
     }
