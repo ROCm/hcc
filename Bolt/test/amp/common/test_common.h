@@ -217,7 +217,11 @@ typename std::enable_if< !(std::is_same< typename std::iterator_traits<typename 
 }
 
 template< typename T1,typename T2>
-::testing::AssertionResult 
+typename std::enable_if< 
+  !(std::is_same< typename std::iterator_traits<typename T1::iterator >::value_type, float >::value ||
+  std::is_same< typename std::iterator_traits<typename T1::iterator >::value_type, double >::value) , 
+  ::testing::AssertionResult
+>::type
 cmpArrays( const T1& ref, typename bolt::amp::device_vector<T2> &calc )
 {
 		typename bolt::amp::device_vector<T2>::pointer calcptr =  calc.data( );
