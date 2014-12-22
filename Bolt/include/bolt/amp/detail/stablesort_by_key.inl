@@ -592,8 +592,8 @@ namespace detail
 		
         if( runMode == bolt::amp::control::SerialCpu )
         {
-                typename bolt::amp::device_vector< keyType >::pointer   keysPtr   =  keys_first.getContainer( ).data( );
-                typename bolt::amp::device_vector< valueType >::pointer valuesPtr =  values_first.getContainer( ).data( );
+                typename bolt::amp::device_vector< keyType >::pointer   keysPtr   =  const_cast<typename bolt::amp::device_vector< keyType >::pointer>(keys_first.getContainer( ).data( ));
+                typename bolt::amp::device_vector< valueType >::pointer valuesPtr =  const_cast<typename bolt::amp::device_vector< valueType >::pointer>(values_first.getContainer( ).data( ));
                 serialCPU_stable_sort_by_key(&keysPtr[keys_first.m_Index], &keysPtr[keys_last.m_Index],
                                              &valuesPtr[values_first.m_Index], comp);
                 return;
@@ -601,8 +601,8 @@ namespace detail
         else if( runMode == bolt::amp::control::MultiCoreCpu )
         {
             #ifdef ENABLE_TBB	   
-                typename bolt::amp::device_vector< keyType >::pointer   keysPtr   =  keys_first.getContainer( ).data( );
-                typename bolt::amp::device_vector< valueType >::pointer valuesPtr =  values_first.getContainer( ).data( );
+                typename bolt::amp::device_vector< keyType >::pointer   keysPtr   =  const_cast<typename bolt::amp::device_vector< keyType >::pointer>(keys_first.getContainer( ).data( ));
+                typename bolt::amp::device_vector< valueType >::pointer valuesPtr =  const_cast<typename bolt::amp::device_vector< valueType >::pointer>(values_first.getContainer( ).data( ));
                 bolt::btbb::stable_sort_by_key(&keysPtr[keys_first.m_Index], &keysPtr[keys_last.m_Index],
                                              &valuesPtr[values_first.m_Index], comp);
                 return;

@@ -1063,7 +1063,7 @@ TEST( DeviceMemory_Float, Scatter_IfPredicate )
         exp_result.push_back(-1.5f);exp_result.push_back(2.5f);
         exp_result.push_back(-1.5f);exp_result.push_back(0.5f);
     }
-    bolt::amp::device_vector<float> result ( 10, -1.5f );
+    bolt::amp::device_vector<float> result ( 10, static_cast< bolt::amp::device_vector<float>::value_type >(-1.5f) );
     bolt::amp::device_vector<float> input ( n_input, n_input + 10 );
     bolt::amp::device_vector<int> map ( n_map, n_map + 10 );
     bolt::amp::device_vector<int> stencil ( n_stencil, n_stencil + 10 );
@@ -1097,7 +1097,7 @@ TEST( DeviceMemory_Float, SerialScatter_IfPredicate )
         exp_result.push_back(-1.5f);exp_result.push_back(2.5f);
         exp_result.push_back(-1.5f);exp_result.push_back(0.5f);
     }
-    bolt::amp::device_vector<float> result ( 10, -1.5f );
+    bolt::amp::device_vector<float> result ( 10, static_cast< bolt::amp::device_vector<float>::value_type >(-1.5f) );
     bolt::amp::device_vector<float> input ( n_input, n_input + 10 );
     bolt::amp::device_vector<int> map ( n_map, n_map + 10 );
     bolt::amp::device_vector<int> stencil ( n_stencil, n_stencil + 10 );
@@ -1479,7 +1479,7 @@ TEST( DeviceMemory_Double, Scatter_IfPredicate )
         exp_result.push_back(-1.5);exp_result.push_back(2.5);
         exp_result.push_back(-1.5);exp_result.push_back(0.5);
     }
-    bolt::amp::device_vector<double> result ( 10, -1.5 );
+    bolt::amp::device_vector<double> result ( 10, static_cast< bolt::amp::device_vector<double>::value_type >(-1.5) );
     bolt::amp::device_vector<double> input ( n_input, n_input + 10 );
     bolt::amp::device_vector<int> map ( n_map, n_map + 10 );
     bolt::amp::device_vector<int> stencil ( n_stencil, n_stencil + 10 );
@@ -1513,7 +1513,7 @@ TEST( DeviceMemory_Double, SerialScatter_IfPredicate )
         exp_result.push_back(-1.5);exp_result.push_back(2.5);
         exp_result.push_back(-1.5);exp_result.push_back(0.5);
     }
-    bolt::amp::device_vector<double> result ( 10, -1.5 );
+    bolt::amp::device_vector<double> result ( 10, static_cast< bolt::amp::device_vector<double>::value_type >(-1.5) );
     bolt::amp::device_vector<double> input ( n_input, n_input + 10 );
     bolt::amp::device_vector<int> map ( n_map, n_map + 10 );
     bolt::amp::device_vector<int> stencil ( n_stencil, n_stencil + 10 );
@@ -2264,7 +2264,7 @@ TEST( DeviceMemory_Float, Scatter_If)
         exp_result.push_back(3.5f);exp_result.push_back(0.5f);
         exp_result.push_back(1.5f);exp_result.push_back(0.5f);
     }
-    bolt::amp::device_vector<float> result ( 10, 0.5f );
+    bolt::amp::device_vector<float> result ( 10, static_cast< bolt::amp::device_vector<float>::value_type >(0.5f) );
     bolt::amp::device_vector<float> input ( n_input, n_input + 10 );
     bolt::amp::device_vector<int> map ( n_map, n_map + 10 );
     bolt::amp::device_vector<int> stencil ( n_stencil, n_stencil + 10 );
@@ -2289,7 +2289,7 @@ TEST( DeviceMemory_Float, SerialScatter_If)
         exp_result.push_back(3.5f);exp_result.push_back(0.5f);
         exp_result.push_back(1.5f);exp_result.push_back(0.5f);
     }
-    bolt::amp::device_vector<float> result ( 10, 0.5f );
+    bolt::amp::device_vector<float> result ( 10, static_cast< bolt::amp::device_vector<float>::value_type >(0.5f) );
     bolt::amp::device_vector<float> input ( n_input, n_input + 10 );
     bolt::amp::device_vector<int> map ( n_map, n_map + 10 );
     bolt::amp::device_vector<int> stencil ( n_stencil, n_stencil + 10 );
@@ -2317,7 +2317,7 @@ TEST( DeviceMemory_Float, MulticoreScatter_If)
         exp_result.push_back(3.5f);exp_result.push_back(0.5f);
         exp_result.push_back(1.5f);exp_result.push_back(0.5f);
     }
-    bolt::amp::device_vector<float> result ( 10, 0.5f );
+    bolt::amp::device_vector<float> result ( 10, static_cast< bolt::amp::device_vector<float>::value_type >(0.5f) );
     bolt::amp::device_vector<float> input ( n_input, n_input + 10 );
     bolt::amp::device_vector<int> map ( n_map, n_map + 10 );
     bolt::amp::device_vector<int> stencil ( n_stencil, n_stencil + 10 );
@@ -2732,7 +2732,7 @@ TEST( DeviceMemory_Double, Scatter_If)
         exp_result.push_back(3.5);exp_result.push_back(0.5);
         exp_result.push_back(1.5);exp_result.push_back(0.5);
     }
-    bolt::amp::device_vector<double> result ( 10, 0.5 );
+    bolt::amp::device_vector<double> result ( 10, static_cast< bolt::amp::device_vector<double>::value_type > (0.5) );
     bolt::amp::device_vector<double> input ( n_input, n_input + 10 );
     bolt::amp::device_vector<int> map ( n_map, n_map + 10 );
     bolt::amp::device_vector<int> stencil ( n_stencil, n_stencil + 10 );
@@ -2757,7 +2757,7 @@ TEST( DeviceMemory_Double, SerialScatter_If)
         exp_result.push_back(3.5);exp_result.push_back(0.5);
         exp_result.push_back(1.5);exp_result.push_back(0.5);
     }
-    bolt::amp::device_vector<double> result ( 10, 0.5 );
+    bolt::amp::device_vector<double> result ( 10, static_cast< bolt::amp::device_vector<float>::value_type >(0.5f) );
     bolt::amp::device_vector<double> input ( n_input, n_input + 10 );
     bolt::amp::device_vector<int> map ( n_map, n_map + 10 );
     bolt::amp::device_vector<int> stencil ( n_stencil, n_stencil + 10 );
@@ -3864,7 +3864,7 @@ TEST( DeviceMemory_Float, Scatter )
         exp_result.push_back(3.5f);exp_result.push_back(2.5f);
         exp_result.push_back(1.5f);exp_result.push_back(0.5f);
     }
-    bolt::amp::device_vector<float> result ( 10, 0.5f );
+    bolt::amp::device_vector<float> result ( 10, static_cast< bolt::amp::device_vector<float>::value_type >(0.5f) );
     bolt::amp::device_vector<float> input ( n_input, n_input + 10 );
     bolt::amp::device_vector<int> map ( n_map, n_map + 10 );
 
@@ -3886,7 +3886,7 @@ TEST( DeviceMemory_Float, SerialScatter )
         exp_result.push_back(3.5f);exp_result.push_back(2.5f);
         exp_result.push_back(1.5f);exp_result.push_back(0.5f);
     }
-    bolt::amp::device_vector<float> result ( 10, 0.5f );
+    bolt::amp::device_vector<float> result ( 10, static_cast< bolt::amp::device_vector<float>::value_type >(0.5f) );
     bolt::amp::device_vector<float> input ( n_input, n_input + 10 );
     bolt::amp::device_vector<int> map ( n_map, n_map + 10 );
 
@@ -3912,7 +3912,7 @@ TEST( DeviceMemory_Float, MulticoreScatter )
         exp_result.push_back(3.5f);exp_result.push_back(2.5f);
         exp_result.push_back(1.5f);exp_result.push_back(0.5f);
     }
-    bolt::amp::device_vector<float> result ( 10, 0.5f );
+    bolt::amp::device_vector<float> result ( 10, static_cast< bolt::amp::device_vector<float>::value_type >(0.5f) );
     bolt::amp::device_vector<float> input ( n_input, n_input + 10 );
     bolt::amp::device_vector<int> map ( n_map, n_map + 10 );
 
@@ -3938,7 +3938,7 @@ TEST( DeviceMemory_Float, Scatter_fancyInput )
         exp_result.push_back(3.5f);exp_result.push_back(2.5f);
         exp_result.push_back(1.5f);exp_result.push_back(0.5f);
     }
-    bolt::amp::device_vector<float> result ( 10, 0.5f );
+    bolt::amp::device_vector<float> result ( 10, static_cast< bolt::amp::device_vector<float>::value_type >(0.5f) );
     bolt::amp::device_vector<int> map ( n_map, n_map + 10 );
 
     bolt::amp::scatter( input, input+10, map.begin(), result.begin() );
@@ -3959,7 +3959,7 @@ TEST( DeviceMemory_Float, SerialScatter_fancyInput )
         exp_result.push_back(3.5f);exp_result.push_back(2.5f);
         exp_result.push_back(1.5f);exp_result.push_back(0.5f);
     }
-    bolt::amp::device_vector<float> result ( 10, 0.5f );
+    bolt::amp::device_vector<float> result ( 10, static_cast< bolt::amp::device_vector<float>::value_type >(0.5f) );
     bolt::amp::device_vector<int> map ( n_map, n_map + 10 );
 
     bolt::amp::control ctl = bolt::amp::control::getDefault( );
@@ -3984,7 +3984,7 @@ TEST( DeviceMemory_Float, MulticoreScatter_fancyInput )
         exp_result.push_back(3.5f);exp_result.push_back(2.5f);
         exp_result.push_back(1.5f);exp_result.push_back(0.5f);
     }
-    bolt::amp::device_vector<float> result ( 10, 0.5f );
+    bolt::amp::device_vector<float> result ( 10, static_cast< bolt::amp::device_vector<float>::value_type >(0.5f) );
     bolt::amp::device_vector<int> map ( n_map, n_map + 10 );
 
     bolt::amp::control ctl = bolt::amp::control::getDefault( );
@@ -4009,7 +4009,7 @@ TEST( DeviceMemory_Float, Scatter_Fancy_map )
         exp_result.push_back(6.5f);exp_result.push_back(7.5f);
         exp_result.push_back(8.5f);exp_result.push_back(9.5f);
     }
-    bolt::amp::device_vector<float> result ( 10, 0.5f );
+    bolt::amp::device_vector<float> result ( 10, static_cast< bolt::amp::device_vector<float>::value_type >(0.5f) );
     bolt::amp::device_vector<float> input ( n_input, n_input + 10 );
 
     bolt::amp::scatter( input.begin(), input.end(), map, result.begin() );
@@ -4030,7 +4030,7 @@ TEST( DeviceMemory_Float, SerialScatter_Fancy_map )
         exp_result.push_back(6.5f);exp_result.push_back(7.5f);
         exp_result.push_back(8.5f);exp_result.push_back(9.5f);
     }
-    bolt::amp::device_vector<float> result ( 10, 0.5f );
+    bolt::amp::device_vector<float> result ( 10, static_cast< bolt::amp::device_vector<float>::value_type >(0.5f) );
     bolt::amp::device_vector<float> input ( n_input, n_input + 10 );
 
     bolt::amp::control ctl = bolt::amp::control::getDefault( );
@@ -4055,7 +4055,7 @@ TEST( DeviceMemory_Float, MulticoreScatter_Fancy_map )
         exp_result.push_back(6.5f);exp_result.push_back(7.5f);
         exp_result.push_back(8.5f);exp_result.push_back(9.5f);
     }
-    bolt::amp::device_vector<float> result ( 10, 0.5f );
+    bolt::amp::device_vector<float> result ( 10, static_cast< bolt::amp::device_vector<float>::value_type >(0.5f) );
     bolt::amp::device_vector<float> input ( n_input, n_input + 10 );
         
     bolt::amp::control ctl = bolt::amp::control::getDefault( );

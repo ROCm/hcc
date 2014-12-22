@@ -1,5 +1,6 @@
 // XFAIL: Linux
 // RUN: %cxxamp -Xclang -fhsa-ext %s -o %t.out && %t.out
+#include <cstdlib>
 #include <iostream>
 #include <iomanip>
 #include <atomic>
@@ -54,7 +55,7 @@ int main ()
           switch (syscall) {
             case 1: // malloc
               std::cout << "tid: " << i << ", malloc(" << param << ")\n";
-              result = (long)memalign(0x1000, param);
+              result = (long)aligned_alloc(0x1000, param);
             break;
             case 2: // free
               std::cout << "tid: " << i << ", free(" << param << ")\n";

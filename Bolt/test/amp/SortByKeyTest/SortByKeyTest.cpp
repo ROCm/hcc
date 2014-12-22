@@ -2018,7 +2018,7 @@ TEST_P( SortbyKeyIntegerDeviceVector, SerialInplace )
     //  Loop through the array and compare all the values with each other
     cmpArraysSortByKey( stdValues, boltKeys, boltValues, VectorSize );
 }
-#if defined( ENABLE_TBB )s
+#if defined( ENABLE_TBB )
 TEST_P( SortbyKeyIntegerDeviceVector, MultiCoreInplace )
 {
 

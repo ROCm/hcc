@@ -260,9 +260,9 @@ namespace bolt {
 					  #if defined(BOLT_DEBUG_LOG)
                       dblog->CodePathTaken(BOLTLOG::BOLT_MERGE,BOLTLOG::BOLT_MULTICORE_CPU,"::Merge::MULTICORE_CPU");
                       #endif
-                      typename bolt::amp::device_vector< iType1 >::pointer mergeInputBuffer1 =  first1.getContainer( ).data( );
-                      typename bolt::amp::device_vector< iType2 >::pointer mergeInputBuffer2 =  first2.getContainer( ).data( );
-                      typename bolt::amp::device_vector< oType >::pointer mergeResBuffer =  result.getContainer( ).data( );
+                      typename bolt::amp::device_vector< iType1 >::pointer mergeInputBuffer1 =  const_cast<typename bolt::amp::device_vector< iType1 >::pointer>(first1.getContainer( ).data( ));
+                      typename bolt::amp::device_vector< iType2 >::pointer mergeInputBuffer2 =  const_cast<typename bolt::amp::device_vector< iType2 >::pointer>(first2.getContainer( ).data( ));
+                      typename bolt::amp::device_vector< oType >::pointer mergeResBuffer =  const_cast<typename bolt::amp::device_vector< oType >::pointer>(result.getContainer( ).data( ));
 
 #if defined ( _WIN32 )
                        bolt::btbb::merge(&mergeInputBuffer1[first1.m_Index],&mergeInputBuffer1[ last1.m_Index ],
@@ -290,9 +290,9 @@ namespace bolt {
 					  #if defined(BOLT_DEBUG_LOG)
                       dblog->CodePathTaken(BOLTLOG::BOLT_REDUCE,BOLTLOG::BOLT_SERIAL_CPU,"::Merge::SERIAL_CPU");
                       #endif
-                      typename bolt::amp::device_vector< iType1 >::pointer mergeInputBuffer1 =  first1.getContainer( ).data( );
-                      typename bolt::amp::device_vector< iType2 >::pointer mergeInputBuffer2 =  first2.getContainer( ).data( );
-                      typename  bolt::amp::device_vector< oType >::pointer mergeResBuffer =  result.getContainer( ).data( );
+                      typename bolt::amp::device_vector< iType1 >::pointer mergeInputBuffer1 =  const_cast<typename bolt::amp::device_vector< iType1 >::pointer>(first1.getContainer( ).data( ));
+                      typename bolt::amp::device_vector< iType2 >::pointer mergeInputBuffer2 =  const_cast<typename bolt::amp::device_vector< iType2 >::pointer>(first2.getContainer( ).data( ));
+                      typename  bolt::amp::device_vector< oType >::pointer mergeResBuffer =  const_cast<typename bolt::amp::device_vector< oType >::pointer>(result.getContainer( ).data( ));
 
 #if defined ( _WIN32 )
                       std::merge(&mergeInputBuffer1[first1.m_Index],&mergeInputBuffer1[ last1.m_Index ],
@@ -314,9 +314,9 @@ namespace bolt {
                       dblog->CodePathTaken(BOLTLOG::BOLT_REDUCE,BOLTLOG::BOLT_SERIAL_CPU,"::Merge::SERIAL_CPU");
                       #endif
 					  
-                      typename  bolt::amp::device_vector< iType1 >::pointer mergeInputBuffer1 =  first1.getContainer( ).data( );
-                      typename  bolt::amp::device_vector< iType2 >::pointer mergeInputBuffer2 =  first2.getContainer( ).data( );
-                      typename  bolt::amp::device_vector< oType >::pointer mergeResBuffer =  result.getContainer( ).data( );
+                      typename  bolt::amp::device_vector< iType1 >::pointer mergeInputBuffer1 =  const_cast<typename bolt::amp::device_vector< iType1 >::pointer>(first1.getContainer( ).data( ));
+                      typename  bolt::amp::device_vector< iType2 >::pointer mergeInputBuffer2 =  const_cast<typename bolt::amp::device_vector< iType2 >::pointer>(first2.getContainer( ).data( ));
+                      typename  bolt::amp::device_vector< oType >::pointer mergeResBuffer =  const_cast<typename bolt::amp::device_vector< oType >::pointer>(result.getContainer( ).data( ));
 
 #if defined ( _WIN32 )
                       std::merge(&mergeInputBuffer1[first1.m_Index],&mergeInputBuffer1[ last1.m_Index ],

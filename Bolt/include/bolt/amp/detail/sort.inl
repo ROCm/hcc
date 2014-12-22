@@ -52,7 +52,7 @@
 // On Linux. Macro is expanded in std::max
 #define _max(a,b)    (((a) > (b)) ? (a) : (b))
 #define _min(a,b)    (((a) < (b)) ? (a) : (b))
-#define make_uint4 (uint_4)
+#define make_uint4 uint_4
 #define SET_HISTOGRAM(setIdx, key) ldsSortData[(setIdx)*NUM_BUCKET+key]
 
 namespace bolt {
@@ -879,14 +879,14 @@ void sort_pick_iterator( bolt::amp::control &ctl,
 		runMode = ctl.getDefaultPathToRun();
 	}
 
-    if ((runMode == bolt::amp::control::SerialCpu)) {
+    if (runMode == bolt::amp::control::SerialCpu) {
         // Hui
-        typename bolt::amp::device_vector< T >::pointer firstPtr =  first.getContainer( ).data( );
+        typename bolt::amp::device_vector< T >::pointer firstPtr =  const_cast<typename bolt::amp::device_vector< T >::pointer>(first.getContainer( ).data( ));
         std::sort(&firstPtr[ first.m_Index ], &firstPtr[ last.m_Index ], comp);
     } else if (runMode == bolt::amp::control::MultiCoreCpu) {
 #ifdef ENABLE_TBB
         // Hui
-        typename bolt::amp::device_vector< T >::pointer firstPtr =  first.getContainer( ).data( );
+        typename bolt::amp::device_vector< T >::pointer firstPtr =  const_cast<typename bolt::amp::device_vector< T >::pointer>(first.getContainer( ).data( ));
         bolt::btbb::sort(&firstPtr[ first.m_Index ], &firstPtr[ last.m_Index ], comp);
 #else
         throw Concurrency::runtime_exception( "The MultiCoreCpu version of sort is not enabled to be built.", 0);
@@ -929,7 +929,7 @@ void sort_pick_iterator( bolt::amp::control &ctl,
 		runMode = ctl.getDefaultPathToRun();
 	}
 
-    if ((runMode == bolt::amp::control::SerialCpu)) {
+    if (runMode == bolt::amp::control::SerialCpu) {
         std::sort(first, last, comp);
         return;
     } else if (runMode == bolt::amp::control::MultiCoreCpu) {
@@ -1018,6 +1018,15 @@ void sort_detect_random_access( bolt::amp::control &ctl,
 *       0110     0001     0000      0111
 *
 */
+
+template<typename DVRandomAccessIterator, typename StrictWeakOrdering>
+typename std::enable_if<
+    !(std::is_same< typename std::iterator_traits<DVRandomAccessIterator >::value_type, unsigned int >::value ||
+      std::is_same< typename std::iterator_traits<DVRandomAccessIterator >::value_type, int >::value  )
+                       >::type
+stablesort_enqueue(control& ctrl, const DVRandomAccessIterator& first, const DVRandomAccessIterator& last,
+             const StrictWeakOrdering& comp);
+
 
 template<typename DVRandomAccessIterator, typename StrictWeakOrdering>
 typename std::enable_if<

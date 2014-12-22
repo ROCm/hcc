@@ -70,7 +70,7 @@
 #define uint_4 Concurrency::graphics::uint_4
 #define max(a,b)    (((a) > (b)) ? (a) : (b))
 #define min(a,b)    (((a) < (b)) ? (a) : (b))
-#define make_uint4 (uint_4)
+#define make_uint4 uint_4
 #define SET_HISTOGRAM(setIdx, key) ldsSortData[(setIdx)*NUM_BUCKET+key]
 
 namespace bolt {
@@ -417,6 +417,14 @@ namespace detail {
 		return lmem[lIdx-exclusive];
 	}
 
+struct b3ConstData
+{
+   int m_n;
+   int m_nWGs;
+   int m_startBit;
+   int m_nBlocksPerWG;
+};
+
 template<typename DVKeys, typename DVValues, typename StrictWeakOrdering>
 void sort_by_key_enqueue_int_uint( control &ctl,
                          DVKeys keys_first, DVKeys keys_last,
@@ -451,13 +459,6 @@ void sort_by_key_enqueue_int_uint( control &ctl,
 	int swap = 0;
     unsigned int blockSize = (int)(ELEMENTS_PER_WORK_ITEM*localSize);//set at 1024
     unsigned int nBlocks = (int)(orig_szElements + blockSize-1)/(blockSize);
-    struct b3ConstData
-    {
-       int m_n;
-       int m_nWGs;
-       int m_startBit;
-       int m_nBlocksPerWG;
-    };
     b3ConstData cdata;
 	cdata.m_n = (int)orig_szElements;
 	cdata.m_nWGs = (int)numGroups;
@@ -975,7 +976,7 @@ void sort_by_key_enqueue_int_uint( control &ctl,
                          DVValues values_first,
 							 StrictWeakOrdering comp)
 	{
-		bool int_flag = 1;
+		bool int_flag = true;
 		sort_by_key_enqueue_int_uint(ctl, keys_first, keys_last, values_first, comp, int_flag);
 		return;
 	}
@@ -989,7 +990,7 @@ void sort_by_key_enqueue_int_uint( control &ctl,
                          DVValues values_first,
                          StrictWeakOrdering comp)
 	{
-		bool int_flag = 0;
+		bool int_flag = false;
 		sort_by_key_enqueue_int_uint(ctl, keys_first, keys_last, values_first, comp, int_flag);
 		return;
 	}
@@ -1004,7 +1005,8 @@ void sort_by_key_enqueue_int_uint( control &ctl,
                         const DVKeys& keys_last, const DVValues& values_first,
                         const StrictWeakOrdering& comp)
     {
-        stablesort_by_key_enqueue(ctl, keys_first, keys_last, values_first, comp);
+        // FIXME : actualy use stablesort_by_key_enqueue
+        //stablesort_by_key_enqueue(ctl, keys_first, keys_last, values_first, comp);
         return;
     }// END of sort_by_key_enqueue
 
@@ -1042,8 +1044,8 @@ void sort_by_key_enqueue_int_uint( control &ctl,
         if (runMode == bolt::amp::control::SerialCpu) 
 		{
 		   			
-            typename bolt::amp::device_vector< keyType >::pointer   keysPtr   =  keys_first.getContainer( ).data( );
-            typename bolt::amp::device_vector< valueType >::pointer valuesPtr =  values_first.getContainer( ).data( );
+            typename bolt::amp::device_vector< keyType >::pointer   keysPtr   =  const_cast<typename bolt::amp::device_vector< keyType >::pointer>(keys_first.getContainer( ).data( ));
+            typename bolt::amp::device_vector< valueType >::pointer valuesPtr =  const_cast<typename bolt::amp::device_vector< valueType >::pointer>(values_first.getContainer( ).data( ));
             serialCPU_sort_by_key(&keysPtr[keys_first.m_Index], &keysPtr[keys_last.m_Index],
                                             &valuesPtr[values_first.m_Index], comp);
             return;
@@ -1052,8 +1054,8 @@ void sort_by_key_enqueue_int_uint( control &ctl,
 		{
 
             #ifdef ENABLE_TBB
-                typename bolt::amp::device_vector< keyType >::pointer   keysPtr   =  keys_first.getContainer( ).data( );
-                typename bolt::amp::device_vector< valueType >::pointer valuesPtr =  values_first.getContainer( ).data( );
+                typename bolt::amp::device_vector< keyType >::pointer   keysPtr   =  const_cast<typename bolt::amp::device_vector< keyType >::pointer>(keys_first.getContainer( ).data( ));
+                typename bolt::amp::device_vector< valueType >::pointer valuesPtr =  const_cast<typename bolt::amp::device_vector< valueType >::pointer>(values_first.getContainer( ).data( ));
                 bolt::btbb::sort_by_key(&keysPtr[keys_first.m_Index], &keysPtr[keys_last.m_Index],
                                                 &valuesPtr[values_first.m_Index], comp);
                 return;
@@ -1093,7 +1095,7 @@ void sort_by_key_enqueue_int_uint( control &ctl,
             runMode = ctl.getDefaultPathToRun( );
         }
 	    
-        if ((runMode == bolt::amp::control::SerialCpu) /*|| (szElements < WGSIZE) */)
+        if (runMode == bolt::amp::control::SerialCpu /*|| (szElements < WGSIZE) */)
 		{   
             serialCPU_sort_by_key(keys_first, keys_last, values_first, comp);
             return;

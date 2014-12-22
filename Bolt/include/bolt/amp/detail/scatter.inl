@@ -443,10 +443,10 @@ void gold_scatter_if_enqueue (InputIterator1 first1,
         if( runMode == bolt::amp::control::SerialCpu )
         {
 			
-            typename bolt::amp::device_vector< iType1 >::pointer firstPtr =  first1.getContainer( ).data( );
-            typename bolt::amp::device_vector< iType2 >::pointer mapPtr =  map.getContainer( ).data( );
-            typename bolt::amp::device_vector< iType3 >::pointer stenPtr =  stencil.getContainer( ).data( );
-            typename bolt::amp::device_vector< oType >::pointer resPtr =  result.getContainer( ).data( );
+            typename bolt::amp::device_vector< iType1 >::pointer firstPtr =  const_cast<typename bolt::amp::device_vector< iType1 >::pointer>(first1.getContainer( ).data( ));
+            typename bolt::amp::device_vector< iType2 >::pointer mapPtr =  const_cast<typename bolt::amp::device_vector< iType2 >::pointer>(map.getContainer( ).data( ));
+            typename bolt::amp::device_vector< iType3 >::pointer stenPtr =  const_cast<typename bolt::amp::device_vector< iType3 >::pointer>(stencil.getContainer( ).data( ));
+            typename bolt::amp::device_vector< oType >::pointer resPtr =  const_cast<typename bolt::amp::device_vector< oType >::pointer>(result.getContainer( ).data( ));
 
 #if defined( _WIN32 )
             gold_scatter_if_enqueue(&firstPtr[ first1.m_Index ], &firstPtr[ last1.m_Index ], &mapPtr[ map.m_Index ],
@@ -464,10 +464,10 @@ void gold_scatter_if_enqueue (InputIterator1 first1,
 #if defined( ENABLE_TBB )
             {
 			
-                typename bolt::amp::device_vector< iType1 >::pointer firstPtr =  first1.getContainer( ).data( );
-                typename bolt::amp::device_vector< iType2 >::pointer mapPtr =  map.getContainer( ).data( );
-                typename bolt::amp::device_vector< iType3 >::pointer stenPtr =  stencil.getContainer( ).data( );
-                typename bolt::amp::device_vector< oType >::pointer resPtr =  result.getContainer( ).data( );
+                typename bolt::amp::device_vector< iType1 >::pointer firstPtr =  const_cast<typename bolt::amp::device_vector< iType1 >::pointer>(first1.getContainer( ).data( ));
+                typename bolt::amp::device_vector< iType2 >::pointer mapPtr =  const_cast<typename bolt::amp::device_vector< iType2 >::pointer>(map.getContainer( ).data( ));
+                typename bolt::amp::device_vector< iType3 >::pointer stenPtr =  const_cast<typename bolt::amp::device_vector< iType3 >::pointer>(stencil.getContainer( ).data( ));
+                typename bolt::amp::device_vector< oType >::pointer resPtr =  const_cast<typename bolt::amp::device_vector< oType >::pointer>(result.getContainer( ).data( ));
 
                 bolt::btbb::scatter_if( &firstPtr[ first1.m_Index ], &firstPtr[ last1.m_Index ],
                 &mapPtr[ map.m_Index ], &stenPtr[ stencil.m_Index ], &resPtr[ result.m_Index ], pred );
@@ -699,9 +699,9 @@ void gold_scatter_if_enqueue (InputIterator1 first1,
         }		
         if( runMode == bolt::amp::control::SerialCpu )
         {		    		
-            typename bolt::amp::device_vector< iType1 >::pointer InputBuffer  =  first1.getContainer( ).data( );
-            typename bolt::amp::device_vector< iType2 >::pointer MapBuffer    =  map.getContainer( ).data( );
-            typename bolt::amp::device_vector< oType >::pointer  ResultBuffer =  result.getContainer( ).data( );
+            typename bolt::amp::device_vector< iType1 >::pointer InputBuffer  =  const_cast<typename bolt::amp::device_vector< iType1 >::pointer>(first1.getContainer( ).data( ));
+            typename bolt::amp::device_vector< iType2 >::pointer MapBuffer    =  const_cast<typename bolt::amp::device_vector< iType2>::pointer>(map.getContainer( ).data( ));
+            typename bolt::amp::device_vector< oType >::pointer  ResultBuffer =  const_cast<typename bolt::amp::device_vector< oType >::pointer>(result.getContainer( ).data( ));
             gold_scatter_enqueue(&InputBuffer[ first1.m_Index ], &InputBuffer[ last1.m_Index ], &MapBuffer[ map.m_Index ],
             &ResultBuffer[ result.m_Index ]);
         }
@@ -710,9 +710,9 @@ void gold_scatter_if_enqueue (InputIterator1 first1,
 
 #if defined( ENABLE_TBB )
             {
-              typename bolt::amp::device_vector< iType1 >::pointer InputBuffer   =  first1.getContainer( ).data( );
-              typename bolt::amp::device_vector< iType2 >::pointer MapBuffer     =  map.getContainer( ).data( );
-              typename bolt::amp::device_vector< oType >::pointer ResultBuffer   =  result.getContainer( ).data( );
+              typename bolt::amp::device_vector< iType1 >::pointer InputBuffer   =  const_cast<typename bolt::amp::device_vector< iType1 >::pointer>(first1.getContainer( ).data( ));
+              typename bolt::amp::device_vector< iType2 >::pointer MapBuffer     =  const_cast<typename bolt::amp::device_vector< iType2 >::pointer>(map.getContainer( ).data( ));
+              typename bolt::amp::device_vector< oType >::pointer ResultBuffer   =  const_cast<typename bolt::amp::device_vector< oType >::pointer>(result.getContainer( ).data( ));
                 bolt::btbb::scatter(&InputBuffer[ first1.m_Index ], &InputBuffer[ last1.m_Index ], &MapBuffer[ map.m_Index ],
                 &ResultBuffer[ result.m_Index ]);
             }
@@ -758,16 +758,16 @@ void gold_scatter_if_enqueue (InputIterator1 first1,
         }
         if( runMode == bolt::amp::control::SerialCpu )
         {			
-            typename bolt::amp::device_vector< iType2 >::pointer MapBuffer    =  map.getContainer( ).data( );
-            typename bolt::amp::device_vector< oType >::pointer  ResultBuffer =  result.getContainer( ).data( );
+            typename bolt::amp::device_vector< iType2 >::pointer MapBuffer    =  const_cast<typename bolt::amp::device_vector< iType2 >::pointer>(map.getContainer( ).data( ));
+            typename bolt::amp::device_vector< oType >::pointer  ResultBuffer =  const_cast<typename bolt::amp::device_vector< oType >::pointer>(result.getContainer( ).data( ));
             gold_scatter_enqueue(firstFancy, lastFancy, &MapBuffer[ map.m_Index ], &ResultBuffer[ result.m_Index ]);
         }
         else if( runMode == bolt::amp::control::MultiCoreCpu )
         {
 #if defined( ENABLE_TBB )
             {
-                typename bolt::amp::device_vector< iType2 >::pointer MapBuffer =  map.getContainer( ).data( );
-                typename bolt::amp::device_vector< oType >::pointer ResultBuffer =  result.getContainer( ).data( );
+                typename bolt::amp::device_vector< iType2 >::pointer MapBuffer =  const_cast<typename bolt::amp::device_vector< iType2 >::pointer>(map.getContainer( ).data( ));
+                typename bolt::amp::device_vector< oType >::pointer ResultBuffer =  const_cast<typename bolt::amp::device_vector< oType >::pointer>(result.getContainer( ).data( ));
 
                 bolt::btbb::scatter(firstFancy, lastFancy, &MapBuffer[ map.m_Index ],&ResultBuffer[ result.m_Index ]);
             }
@@ -812,8 +812,8 @@ void gold_scatter_if_enqueue (InputIterator1 first1,
         }
         if( runMode == bolt::amp::control::SerialCpu )
         {
-            typename bolt::amp::device_vector< iType1 >::pointer InputBuffer    =  first1.getContainer( ).data( );
-            typename bolt::amp::device_vector< oType >::pointer  ResultBuffer =  result.getContainer( ).data( );
+            typename bolt::amp::device_vector< iType1 >::pointer InputBuffer    =  const_cast<typename bolt::amp::device_vector< iType1 >::pointer>(first1.getContainer( ).data( ));
+            typename bolt::amp::device_vector< oType >::pointer  ResultBuffer =  const_cast<typename bolt::amp::device_vector< oType >::pointer>(result.getContainer( ).data( ));
             gold_scatter_enqueue( &InputBuffer[ first1.m_Index ], &InputBuffer[ last1.m_Index ], mapFancy,
                                                                          &ResultBuffer[ result.m_Index ]);
 
@@ -822,8 +822,8 @@ void gold_scatter_if_enqueue (InputIterator1 first1,
         {
 #if defined( ENABLE_TBB )
             {
-                typename bolt::amp::device_vector< iType1 >::pointer InputBuffer    =  first1.getContainer( ).data( );
-                typename bolt::amp::device_vector< oType >::pointer  ResultBuffer =  result.getContainer( ).data( );
+                typename bolt::amp::device_vector< iType1 >::pointer InputBuffer    =  const_cast<typename bolt::amp::device_vector< iType1 >::pointer>(first1.getContainer( ).data( ));
+                typename bolt::amp::device_vector< oType >::pointer  ResultBuffer =  const_cast<typename bolt::amp::device_vector< oType >::pointer>(result.getContainer( ).data( ));
                 bolt::btbb::scatter( &InputBuffer[ first1.m_Index ], &InputBuffer[ last1.m_Index ], mapFancy,
                                                                             &ResultBuffer[ result.m_Index ]);
             }
@@ -868,14 +868,14 @@ void gold_scatter_if_enqueue (InputIterator1 first1,
         }
         if( runMode == bolt::amp::control::SerialCpu )
         {
-            typename bolt::amp::device_vector< iType1 >::pointer InputBuffer    =  first.getContainer( ).data( );
+            typename bolt::amp::device_vector< iType1 >::pointer InputBuffer    =  const_cast<typename bolt::amp::device_vector< iType1 >::pointer>(first.getContainer( ).data( ));
             gold_scatter_enqueue( &InputBuffer[ first.m_Index ], &InputBuffer[ last.m_Index ], map,result);
         }
         else if( runMode == bolt::amp::control::MultiCoreCpu )
         {
 #if defined( ENABLE_TBB )
             {
-                typename bolt::amp::device_vector< iType1 >::pointer InputBuffer    =  first.getContainer( ).data( );
+                typename bolt::amp::device_vector< iType1 >::pointer InputBuffer    =  const_cast<typename bolt::amp::device_vector< iType1 >::pointer>(first.getContainer( ).data( ));
                 bolt::btbb::scatter( &InputBuffer[ first.m_Index ], &InputBuffer[ last.m_Index ],map, result);
             }
 #else
@@ -929,14 +929,14 @@ void gold_scatter_if_enqueue (InputIterator1 first1,
         }
         if( runMode == bolt::amp::control::SerialCpu )
         {
-           typename bolt::amp::device_vector< iType2 >::pointer mapBuffer    =  map.getContainer( ).data( );
+           typename bolt::amp::device_vector< iType2 >::pointer mapBuffer    =  const_cast<typename bolt::amp::device_vector< iType2 >::pointer>(map.getContainer( ).data( ));
            gold_scatter_enqueue(first1, last1, &mapBuffer[ map.m_Index ], result);
         }
         else if( runMode == bolt::amp::control::MultiCoreCpu )
         {
 #if defined( ENABLE_TBB )
             {
-                typename bolt::amp::device_vector< iType2 >::pointer mapBuffer    =  map.getContainer( ).data( );
+                typename bolt::amp::device_vector< iType2 >::pointer mapBuffer    =  const_cast<typename bolt::amp::device_vector< iType2 >::pointer>(map.getContainer( ).data( ));
                 bolt::btbb::scatter(first1, last1, &mapBuffer[ map.m_Index ], result);
             }
 #else

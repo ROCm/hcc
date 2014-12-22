@@ -152,13 +152,13 @@ void generate_enqueue(
               
                 if( runMode == bolt::amp::control::SerialCpu)
                 {
-                    typename bolt::amp::device_vector< iType >::pointer generateInputBuffer =  first.getContainer( ).data( );
+                    typename bolt::amp::device_vector< iType >::pointer generateInputBuffer =  const_cast<typename bolt::amp::device_vector< iType >::pointer>(first.getContainer( ).data( ));
                     std::generate(&generateInputBuffer[first.m_Index], &generateInputBuffer[last.m_Index], gen );
                 }
                 else if(runMode == bolt::amp::control::MultiCoreCpu)
                 {
                     #ifdef ENABLE_TBB	
-                      typename bolt::amp::device_vector< iType >::pointer generateInputBuffer =  first.getContainer( ).data( );
+                      typename bolt::amp::device_vector< iType >::pointer generateInputBuffer =  const_cast<typename bolt::amp::device_vector< iType >::pointer>(first.getContainer( ).data( ));
                       bolt::btbb::generate(&generateInputBuffer[first.m_Index], &generateInputBuffer[last.m_Index], gen );
                     #else
                         throw std::runtime_error("MultiCoreCPU Version of generate not Enabled! \n");

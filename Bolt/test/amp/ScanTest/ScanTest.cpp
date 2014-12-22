@@ -955,6 +955,14 @@ struct uddtI2
     // Hui
     uddtI2() restrict(cpu, amp) {}
     uddtI2(int x, int y) restrict(cpu, amp) : a(x), b(y) {}
+    // User should provide explicit copy ctor
+    uddtI2(const uddtI2& other) restrict(cpu, amp) : a(other.a), b(other.b) {}
+    // User should provide explicit copy assign ctor
+    uddtI2& operator = (const uddtI2& other) restrict(cpu, amp) {
+      a = other.a;
+      b = other.b;
+      return *this;
+    }
     bool operator==(const uddtI2& rhs) const restrict (amp,cpu)
     {
         bool equal = true;
@@ -996,6 +1004,15 @@ struct uddtM3
 
     uddtM3() restrict(cpu, amp) {}
     uddtM3(unsigned int x, float y, double w) restrict(cpu, amp) : a(x), b(y), c(w) {}
+    // User should provide explicit copy ctor
+    uddtM3(const uddtM3& other) restrict(cpu, amp) : a(other.a), b(other.b), c(other.c) {}
+    // User should provide explicit copy assign ctor
+    uddtM3& operator = (const uddtM3& other) restrict(cpu, amp) {
+      a = other.a;
+      b = other.b;
+      c = other.c;
+      return *this;
+    }
     bool operator==(const uddtM3& rhs) const restrict (amp,cpu)
     {
         bool equal = true;

@@ -39,6 +39,7 @@ namespace bolt {
 
         /*! \addtogroup reductions
         *   \ingroup algorithms
+        */
 
         /*! \addtogroup AMP-counting
         *  \ingroup reductions
@@ -50,9 +51,9 @@ namespace bolt {
         {
         template <typename T> 
         struct CountIfEqual {
-            CountIfEqual(const T &targetValue)  : _targetValue(targetValue)
+            CountIfEqual(const T &targetValue) restrict(amp,cpu)  : _targetValue(targetValue)
             { };
-            CountIfEqual(){}
+            CountIfEqual() restrict(amp,cpu) {}
             bool operator()  (const T &x) const restrict(amp,cpu)
             {
                    T temp= _targetValue;

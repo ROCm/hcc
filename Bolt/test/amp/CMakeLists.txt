@@ -59,34 +59,78 @@ if ( UNIX )
 endif()
 add_definitions( -DAMP_TESTS )
 
-#add_subdirectory( BinarySearchTest )
-add_subdirectory( PairTest )
-#add_subdirectory( GenerateTest )
-add_subdirectory( FillTest )
-#add_subdirectory( InnerProductTest )
-add_subdirectory( CopyTest )
-# Deadlock
-#add_subdirectory( MinElementTest )
-add_subdirectory( MergeTest )
-# Deadlock
-#add_subdirectory( MaxElementTest )
-#add_subdirectory( CountTest )
-#add_subdirectory( PermutationIteratorTest )
-#add_subdirectory( ReduceTest )
-#add_subdirectory( ReduceByKeyTest )
-#add_subdirectory( ScanTest )
-# Deadlock
-#add_subdirectory( ScanByKeyTest )
-#add_subdirectory( SortTest )
-#add_subdirectory( SortByKeyTest )
-#add_subdirectory( StableSortTest )
-#add_subdirectory( StableSortByKeyTest )
-add_subdirectory( TransformTest )   
-#add_subdirectory( TransformReduceTest )
-# Deadlock
-#add_subdirectory( TransformScanTest )
-add_subdirectory( ScatterTest )
-add_subdirectory( GatherTest )
-add_subdirectory( device_vector )
+# failed some tests on SPIR(has dependency on bolt::amp::sort availability), failed some tests on HSA
+add_subdirectory( BinarySearchTest )
 
+# passed
+add_subdirectory( PairTest )
+
+# compile OK, failed some tests on HSA
+add_subdirectory( GenerateTest )
+
+# passed
+add_subdirectory( FillTest )
+
+# passed on SPIR path. 'double type' related cases fail if no support in GPU
+add_subdirectory( InnerProductTest )
+
+# passed
+add_subdirectory( CopyTest )
+
+# compile OK, failed some tests on SPIR and HSA
+add_subdirectory( MinElementTest )
+
+# passed
+add_subdirectory( MergeTest )
+
+# compile OK, failed some tests on SPIR and HSA
+add_subdirectory( MaxElementTest )
+
+# passed
+add_subdirectory( CountTest )
+
+# compile OK, crashed on HSA after passing some tests
+add_subdirectory( PermutationIteratorTest )
+
+# passed on SPIR path. failed some tests on SPIR and HSA
+add_subdirectory( ReduceTest )
+
+# compile OK, crashed on HSA after passing some tests
+add_subdirectory( ReduceByKeyTest )
+
+# passed on SPIR path. failed some tests on SPIR and HSA
+add_subdirectory( ScanTest )
+
+# compile OK, failed some tests on SPIR and HSA
+add_subdirectory( ScanByKeyTest )
+
+# compile OK, crashed on HSA after passing some tests
+add_subdirectory( SortTest )
+
+# compile OK, failed some tests on HSA
+add_subdirectory( SortByKeyTest )
+
+# compile OK, crashed on HSA after passing some tests
+add_subdirectory( StableSortTest )
+
+# compile OK, failed some tests on HSA
+add_subdirectory( StableSortByKeyTest )
+
+# passed on SPIR path. crashed on HSA after passing some tests
+add_subdirectory( TransformTest )   
+
+# passed on SPIR path. failed some tests on HSA
+add_subdirectory( TransformReduceTest )
+
+# compile OK, failed some tests on SPIR and HSA
+add_subdirectory( TransformScanTest )
+
+# compile OK, crashed on HSA after passing some tests
+add_subdirectory( ScatterTest )
+
+# passed
+add_subdirectory( GatherTest )
+
+# compile OK, crashed on HSA after passing some tests
+add_subdirectory( device_vector )
 

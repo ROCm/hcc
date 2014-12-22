@@ -1,6 +1,7 @@
 // XFAIL: Linux, hsa
 // RUN: %cxxamp -DTYPE="half float" -Xclang -fhsa-ext %s -o %t.out && %t.out
 
+#include <iostream>
 #include <amp.h>
 
 TYPE func(TYPE arg) restrict(amp)

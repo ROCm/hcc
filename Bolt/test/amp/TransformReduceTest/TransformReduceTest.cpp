@@ -1579,9 +1579,15 @@ TEST_P( TransformIntegerNakedPointer, Inplace )
     int endIndex = GetParam( );
 
     //  Calling the actual functions under test
+#if defined (_WIN32 )
     stdext::checked_array_iterator< int* > wrapStdInput( stdInput, endIndex );
     stdext::checked_array_iterator< int* > wrapStdOutput( stdOutput, endIndex );
     stdext::checked_array_iterator< int* > wrapBoltInput( boltInput, endIndex );
+#else
+    int* wrapStdInput = stdInput;
+    int* wrapStdOutput = stdOutput;
+    int* wrapBoltInput = boltInput;
+#endif
 
     int init(0);
     //  Calling the actual functions under test
@@ -1602,9 +1608,15 @@ TEST_P( TransformIntegerNakedPointer, SerialInplace )
     int endIndex = GetParam( );
 
     //  Calling the actual functions under test
+#if defined (_WIN32 )
     stdext::checked_array_iterator< int* > wrapStdInput( stdInput, endIndex );
     stdext::checked_array_iterator< int* > wrapStdOutput( stdOutput, endIndex );
     stdext::checked_array_iterator< int* > wrapBoltInput( boltInput, endIndex );
+#else
+    int* wrapStdInput = stdInput;
+    int* wrapStdOutput = stdOutput;
+    int* wrapBoltInput = boltInput;
+#endif
 
     int init(0);
      
@@ -1630,9 +1642,15 @@ TEST_P( TransformIntegerNakedPointer, MulticoreInplace )
     int endIndex = GetParam( );
 
     //  Calling the actual functions under test
+#if defined (_WIN32 )
     stdext::checked_array_iterator< int* > wrapStdInput( stdInput, endIndex );
     stdext::checked_array_iterator< int* > wrapStdOutput( stdOutput, endIndex );
     stdext::checked_array_iterator< int* > wrapBoltInput( boltInput, endIndex );
+#else
+    int* wrapStdInput = stdInput;
+    int* wrapStdOutput = stdOutput;
+    int* wrapBoltInput = boltInput;
+#endif
 
     int init(0);
      
@@ -1658,9 +1676,15 @@ TEST_P( TransformFloatNakedPointer, Inplace )
     int endIndex = GetParam( );
 
     //  Calling the actual functions under test
+#if defined (_WIN32 )
     stdext::checked_array_iterator< float* > wrapStdInput( stdInput, endIndex );
     stdext::checked_array_iterator< float* > wrapStdOutput( stdOutput, endIndex );
     stdext::checked_array_iterator< float* > wrapBoltInput( boltInput, endIndex );
+#else
+    float* wrapStdInput = stdInput;
+    float* wrapStdOutput = stdOutput;
+    float* wrapBoltInput = boltInput;
+#endif
 
     float init(0);
       
@@ -1685,9 +1709,15 @@ TEST_P( TransformFloatNakedPointer, SerialInplace )
     ctl.setForceRunMode(bolt::amp::control::SerialCpu); 
 
     //  Calling the actual functions under test
+#if defined (_WIN32 )
     stdext::checked_array_iterator< float* > wrapStdInput( stdInput, endIndex );
     stdext::checked_array_iterator< float* > wrapStdOutput( stdOutput, endIndex );
     stdext::checked_array_iterator< float* > wrapBoltInput( boltInput, endIndex );
+#else
+    float* wrapStdInput = stdInput;
+    float* wrapStdOutput = stdOutput;
+    float* wrapBoltInput = boltInput;
+#endif
 
     float init(0);
       
@@ -1710,9 +1740,15 @@ TEST_P( TransformFloatNakedPointer, MulticoreInplace )
     int endIndex = GetParam( );
 
     //  Calling the actual functions under test
+#if defined (_WIN32 )
     stdext::checked_array_iterator< float* > wrapStdInput( stdInput, endIndex );
     stdext::checked_array_iterator< float* > wrapStdOutput( stdOutput, endIndex );
     stdext::checked_array_iterator< float* > wrapBoltInput( boltInput, endIndex );
+#else
+    float* wrapStdInput = stdInput;
+    float* wrapStdOutput = stdOutput;
+    float* wrapBoltInput = boltInput;
+#endif
      
     bolt::amp::control ctl = bolt::amp::control::getDefault( );
     ctl.setForceRunMode(bolt::amp::control::MultiCoreCpu); 
@@ -1741,9 +1777,15 @@ TEST_P( TransformDoubleNakedPointer, Inplace )
     int endIndex = GetParam( );
 
     //  Calling the actual functions under test
+#if defined (_WIN32 )
     stdext::checked_array_iterator< double* > wrapStdInput( stdInput, endIndex );
     stdext::checked_array_iterator< double* > wrapStdOutput( stdOutput, endIndex );
     stdext::checked_array_iterator< double* > wrapBoltInput( boltInput, endIndex );
+#else
+    double* wrapStdInput = stdInput;
+    double* wrapStdOutput = stdOutput;
+    double* wrapBoltInput = boltInput;
+#endif
 
     double init(0);
     //  Calling the actual functions under test
@@ -1764,9 +1806,15 @@ TEST_P( TransformDoubleNakedPointer, SerialInplace )
     int endIndex = GetParam( );
 
     //  Calling the actual functions under test
+#if defined (_WIN32 )
     stdext::checked_array_iterator< double* > wrapStdInput( stdInput, endIndex );
     stdext::checked_array_iterator< double* > wrapStdOutput( stdOutput, endIndex );
     stdext::checked_array_iterator< double* > wrapBoltInput( boltInput, endIndex );
+#else
+    double* wrapStdInput = stdInput;
+    double* wrapStdOutput = stdOutput;
+    double* wrapBoltInput = boltInput;
+#endif
      
     bolt::amp::control ctl = bolt::amp::control::getDefault( );
     ctl.setForceRunMode(bolt::amp::control::SerialCpu); 
@@ -1791,9 +1839,15 @@ TEST_P( TransformDoubleNakedPointer, MulticoreInplace )
     int endIndex = GetParam( );
 
     //  Calling the actual functions under test
+#if defined (_WIN32 )
     stdext::checked_array_iterator< double* > wrapStdInput( stdInput, endIndex );
     stdext::checked_array_iterator< double* > wrapStdOutput( stdOutput, endIndex );
     stdext::checked_array_iterator< double* > wrapBoltInput( boltInput, endIndex );
+#else
+    double* wrapStdInput = stdInput;
+    double* wrapStdOutput = stdOutput;
+    double* wrapBoltInput = boltInput;
+#endif
      
     bolt::amp::control ctl = bolt::amp::control::getDefault( );
     ctl.setForceRunMode(bolt::amp::control::MultiCoreCpu); 
@@ -1931,7 +1985,15 @@ struct UDD {
         : a(0),b(0) { } 
     UDD(int _in) restrict (amp,cpu)
         : a(_in), b(_in +1)  { } 
-        
+    // User should provide explicit copy ctor
+    UDD(const UDD& other) restrict (amp,cpu)
+      : a(other.a), b(other.b) { }
+    // User should provide explicit copy assgin ctor
+    UDD& operator = (const UDD& other) restrict (amp,cpu) {
+      a = other.a;
+      b =other.b;
+      return *this;
+    }
 }; 
 
 
@@ -1953,6 +2015,17 @@ struct tbbUDD {
         : a(0.f),b(0.0) { } 
     tbbUDD(int _in) restrict (amp,cpu)
         : a((float)_in), b(_in +1.0)  { } 
+    // User should provide explicit copy ctor
+    tbbUDD(const tbbUDD& other) restrict (amp,cpu) {
+      a = other.a;
+      b = other.b;
+    }
+    // User should provide explicit copy assign ctor
+    tbbUDD& operator = (const tbbUDD& other) restrict (amp,cpu) {
+      a = other.a;
+      b = other.b;
+      return *this;
+    }
     bool operator == (const tbbUDD& other) const restrict (amp,cpu) { 
         return ((double)(a+b) == (double)(other.a+other.b));
     }
@@ -2807,6 +2880,19 @@ class point{
   {
     xPoint =0;
     yPoint =0;
+  }
+  // User should provide explicit copy ctor
+  point(const point& other)  restrict(cpu,amp)
+  {
+    xPoint = other.xPoint;
+    yPoint = other.yPoint;
+  }
+  // User should provide explicit copy assign ctor
+  point& operator = (const point& other)  restrict(cpu,amp)
+  {
+    xPoint = other.xPoint;
+    yPoint = other.yPoint;
+    return *this;
   }
 
   point(int x, int y)  restrict(cpu,amp)
