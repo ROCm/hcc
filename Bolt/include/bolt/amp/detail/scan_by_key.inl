@@ -793,9 +793,9 @@ scan_by_key_pick_iterator(
         dblog->CodePathTaken(BOLTLOG::BOLT_SCANBYKEY,BOLTLOG::BOLT_SERIAL_CPU,"::Scan_By_Key::SERIAL_CPU");
         #endif
           
-	  	typename bolt::amp::device_vector< kType >::pointer scanInputkey =  firstKey.getContainer( ).data( );
-		typename bolt::amp::device_vector< vType >::pointer scanInputBuffer =  firstValue.getContainer( ).data( );
-        typename bolt::amp::device_vector< oType >::pointer scanResultBuffer =  result.getContainer( ).data( );
+	  	typename bolt::amp::device_vector< kType >::pointer scanInputkey =  const_cast<typename bolt::amp::device_vector< kType >::pointer>(firstKey.getContainer( ).data( ));
+		typename bolt::amp::device_vector< vType >::pointer scanInputBuffer =  const_cast<typename bolt::amp::device_vector< vType >::pointer>(firstValue.getContainer( ).data( ));
+        typename bolt::amp::device_vector< oType >::pointer scanResultBuffer =  const_cast<typename bolt::amp::device_vector< oType >::pointer>(result.getContainer( ).data( ));
 
         if(inclusive)
             Serial_inclusive_scan_by_key(&scanInputkey[ firstKey.m_Index ],
@@ -815,9 +815,9 @@ scan_by_key_pick_iterator(
             dblog->CodePathTaken(BOLTLOG::BOLT_SCANBYKEY,BOLTLOG::BOLT_MULTICORE_CPU,"::Scan_By_Key::MULTICORE_CPU");
             #endif
       
-           typename  bolt::amp::device_vector< kType >::pointer scanInputkey =  firstKey.getContainer( ).data( );
-		    typename bolt::amp::device_vector< vType >::pointer scanInputBuffer =  firstValue.getContainer( ).data( );
-            typename bolt::amp::device_vector< oType >::pointer scanResultBuffer =  result.getContainer( ).data( );
+           typename  bolt::amp::device_vector< kType >::pointer scanInputkey =  const_cast<typename bolt::amp::device_vector< kType >::pointer>(firstKey.getContainer( ).data( ));
+		    typename bolt::amp::device_vector< vType >::pointer scanInputBuffer =  const_cast<typename bolt::amp::device_vector< vType >::pointer>(firstValue.getContainer( ).data( ));
+            typename bolt::amp::device_vector< oType >::pointer scanResultBuffer =  const_cast<typename bolt::amp::device_vector< oType >::pointer>(result.getContainer( ).data( ));
 
             if (inclusive)
                bolt::btbb::inclusive_scan_by_key(&scanInputkey[ firstKey.m_Index ],&scanInputkey[ firstKey.m_Index + numElements],  &scanInputBuffer[ firstValue.m_Index ],

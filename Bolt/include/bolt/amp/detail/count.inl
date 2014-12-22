@@ -19,6 +19,7 @@
 #define BOLT_AMP_COUNT_INL
 #pragma once
 
+#include <cmath>
 #include <algorithm>
 #include <amp.h>
 #include "bolt/amp/bolt.h"
@@ -282,7 +283,7 @@ namespace bolt {
                 }
                 if (runMode == bolt::amp::control::SerialCpu)
                 {
-                  typename bolt::amp::device_vector< iType >::pointer countInputBuffer = first.getContainer( ).data( );
+                  typename bolt::amp::device_vector< iType >::pointer countInputBuffer = const_cast<typename bolt::amp::device_vector< iType >::pointer>(first.getContainer( ).data( ));
                    return  (int) std::count_if(&countInputBuffer[first.m_Index],
                        &countInputBuffer[first.m_Index + szElements], predicate) ;
 
@@ -292,7 +293,7 @@ namespace bolt {
                 {
 #ifdef ENABLE_TBB
                    
-                   typename bolt::amp::device_vector< iType >::pointer countInputBuffer =  first.getContainer( ).data( );
+                   typename bolt::amp::device_vector< iType >::pointer countInputBuffer =  const_cast<typename bolt::amp::device_vector< iType >::pointer>(first.getContainer( ).data( ));
                      return  bolt::btbb::count_if(&countInputBuffer[first.m_Index],
                          &countInputBuffer[first.m_Index + szElements] ,predicate);
 #else              

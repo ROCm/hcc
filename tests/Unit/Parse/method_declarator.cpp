@@ -1,4 +1,3 @@
-// XFAIL: *
 // RUN: %cxxamp -c %s
 
 class AClass {

@@ -32,6 +32,7 @@
 
 #include "stdafx.h"
 #include <cmath>
+#include <cfloat>
 #include "bolt/amp/inner_product.h"
 #include "bolt/amp/functional.h"
 #include "bolt/amp/device_vector.h"

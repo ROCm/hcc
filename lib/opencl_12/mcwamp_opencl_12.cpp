@@ -131,7 +131,7 @@ static inline void getKernelNames(cl_program& prog) {
     cl_uint kernel_num = 0;
     cl_uint ret = CL_SUCCESS;
     char **names;
-    int count;
+    int count = 0;
     ret = clCreateKernelsInProgram(prog, 1024, NULL, &kernel_num);
     if (ret == CL_SUCCESS && kernel_num > 0) {
         cl_kernel *kl = new cl_kernel[kernel_num];

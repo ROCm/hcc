@@ -20,6 +20,7 @@
 // RUN: %cxxamp -DTYPE="signed long long" -Xclang -fhsa-ext %s -o %t.out && %t.out
 // RUN: %cxxamp -DTYPE="unsigned long long" -Xclang -fhsa-ext %s -o %t.out && %t.out
 
+#include <iostream>
 #include <amp.h>
 
 enum E : TYPE {

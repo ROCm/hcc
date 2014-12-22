@@ -3,10 +3,18 @@
 # $1 = input ll name
 # $2 = OpenCL/SPIR/HSAIL kernel file name
 # $3 = (optional) --hsa will trigger HSAIL lowering
+#      (optional) --spir will trigger SPIR lowering
+#      (optional) --opencl will trigger OpenCL C lowering
+#
+# in case $3 is not set, then either SPIR or OpenCL C kernel
+# will be emitted according to the capability of GPU
 
 # check command line arguments
 if [ "$#" -lt 2 ]; then
-  echo "Usage: $0 input_LLVM output_kernel (--hsa)" >&2
+  echo "Usage: $0 input_LLVM output_kernel (--hsa | --spir | --opencl)" >&2
+  echo "  --hsa    will trigger HSAIL/BRIG kernel output" >&2
+  echo "  --spir   will trigger SPIR       kernel output" >&2
+  echo "  --opencl will trigger OpenCL C   kernel output" >&2
   exit 1
 fi
 
@@ -15,10 +23,6 @@ if [ ! -f $1 ]; then
   exit 1
 fi
 
-hasSPIR() {
-    [ -z "$CLAMP_NOSPIR" -a -x /usr/bin/clinfo ] && ( /usr/bin/clinfo|grep cl_khr_spir > /dev/null )
-    return $?
-}
 if [ -d @LLVM_TOOLS_DIR@ ]; then
     AS=@LLVM_TOOLS_DIR@/llvm-as
     OPT=@LLVM_TOOLS_DIR@/opt
@@ -39,6 +43,7 @@ else
     HSATOOLS=@CMAKE_INSTALL_PREFIX@/bin/clamp-hsatools
 fi
 
+# emit HSAIL/BRIG kernel
 if [ "$3" == "--hsa" ]; then
     if [ "$ALWAYS_MALLOC" == "ON" ]; then
       $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
@@ -61,27 +66,64 @@ if [ "$3" == "--hsa" ]; then
     # remove temp file
     rm $2.promote.ll.orig $2.promote.ll $2.promote.bc
     exit $?
-else
+fi
+
+# emit SPIR kernel
+if [ "$3" == "--spir" ]; then
     $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
          -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
          -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
          -promote-globals -erase-nonkernels -tile-uniform -dce < $1 -o $2.promote.bc
-    if hasSPIR; then
-        echo "Generating OpenCL SPIR kernel"
-        $LINK $MATHLIB/opencl_math.bc $2.promote.bc -o $2 2>/dev/null
-        # remove temp file
-        rm $2.promote.bc
-        exit $?
-    else
-        echo "Generating OpenCL C kernel"
-        $LLC $2.promote.bc -march=c -o - |cat $MATH/opencl_math.cl - > $2
-    
-        if grep -q " double " $2; then
-            cat $MATHLIB/opencl_prefix.cl $2 > $2.t
-            mv -f $2.t $2
-        fi
-        # remove temp file
-        rm $2.promote.bc
-        exit $?
+    echo "Generating OpenCL SPIR kernel"
+    $LINK $MATHLIB/opencl_math.bc $2.promote.bc -o $2 2>/dev/null
+    # remove temp file
+    rm $2.promote.bc
+    exit $?
+fi
+
+# emit OpenCL C kernel
+if [ "$3" == "--opencl" ]; then
+    $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+         -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+         -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+         -promote-globals -erase-nonkernels -tile-uniform -dce < $1 -o $2.promote.bc
+    echo "Generating OpenCL C kernel"
+    $LLC $2.promote.bc -march=c -o - |cat $MATH/opencl_math.cl - > $2
+
+    if grep -q " double " $2; then
+        cat $MATHLIB/opencl_prefix.cl $2 > $2.t
+        mv -f $2.t $2
     fi
+    # remove temp file
+    rm $2.promote.bc
+    exit $?
+fi
+
+
+hasSPIR() {
+    [ -z "$CLAMP_NOSPIR" -a -x /usr/bin/clinfo ] && ( /usr/bin/clinfo|grep cl_khr_spir > /dev/null )
+    return $?
+}
+# if there is no mode specified, fallback to default behavior
+$OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+     -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+     -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+     -promote-globals -erase-nonkernels -tile-uniform -dce < $1 -o $2.promote.bc
+if hasSPIR; then
+    echo "Generating OpenCL SPIR kernel"
+    $LINK $MATHLIB/opencl_math.bc $2.promote.bc -o $2 2>/dev/null
+    # remove temp file
+    rm $2.promote.bc
+    exit $?
+else
+    echo "Generating OpenCL C kernel"
+    $LLC $2.promote.bc -march=c -o - |cat $MATH/opencl_math.cl - > $2
+
+    if grep -q " double " $2; then
+        cat $MATHLIB/opencl_prefix.cl $2 > $2.t
+        mv -f $2.t $2
+    fi
+    # remove temp file
+    rm $2.promote.bc
+    exit $?
 fi

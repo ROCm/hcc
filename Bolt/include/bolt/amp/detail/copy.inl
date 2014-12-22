@@ -147,8 +147,8 @@ void copy_pick_iterator( bolt::amp::control &ctrl,  const DVInputIterator& first
      if( runMode == bolt::amp::control::SerialCpu )
      {
           
-            typename bolt::amp::device_vector< iType >::pointer copySrc =  first.getContainer( ).data( );
-            typename bolt::amp::device_vector< oType >::pointer copyDest =  result.getContainer( ).data( );
+            typename bolt::amp::device_vector< iType >::pointer copySrc =  const_cast<typename bolt::amp::device_vector< iType >::pointer>(first.getContainer( ).data( ));
+            typename bolt::amp::device_vector< oType >::pointer copyDest =  const_cast<typename bolt::amp::device_vector< oType >::pointer>(result.getContainer( ).data( ));
 #if defined( _WIN32 )
             std::copy_n( &copySrc[first.m_Index], n, stdext::make_checked_array_iterator( &copyDest[result.m_Index], n) );
 #else
@@ -162,8 +162,8 @@ void copy_pick_iterator( bolt::amp::control &ctrl,  const DVInputIterator& first
      {
 
          #ifdef ENABLE_TBB
-             typename bolt::amp::device_vector< iType >::pointer copySrc =  first.getContainer( ).data( );
-             typename bolt::amp::device_vector< oType >::pointer copyDest =  result.getContainer( ).data( );
+             typename bolt::amp::device_vector< iType >::pointer copySrc =  const_cast<typename bolt::amp::device_vector< iType >::pointer>(first.getContainer( ).data( ));
+             typename bolt::amp::device_vector< oType >::pointer copyDest =  const_cast<typename bolt::amp::device_vector< oType >::pointer>(result.getContainer( ).data( ));
              bolt::btbb::copy_n( &copySrc[first.m_Index], n, &copyDest[result.m_Index] );    
             return;
          #else
@@ -191,7 +191,7 @@ void copy_pick_iterator( bolt::amp::control &ctrl,  const DVInputIterator& first
      if( runMode == bolt::amp::control::SerialCpu )
      {
           
-            typename bolt::amp::device_vector< oType >::pointer copyDest =  result.getContainer( ).data( );
+            typename bolt::amp::device_vector< oType >::pointer copyDest =  const_cast<typename bolt::amp::device_vector< oType >::pointer>(result.getContainer( ).data( ));
 #if defined( _WIN32 )
             std::copy_n( first, n, stdext::make_checked_array_iterator( &copyDest[result.m_Index], n) );
 #else
@@ -205,7 +205,7 @@ void copy_pick_iterator( bolt::amp::control &ctrl,  const DVInputIterator& first
      {
 
          #ifdef ENABLE_TBB
-             typename bolt::amp::device_vector< oType >::pointer copyDest =  result.getContainer( ).data( );
+             typename bolt::amp::device_vector< oType >::pointer copyDest =  const_cast<typename bolt::amp::device_vector< oType >::pointer>(result.getContainer( ).data( ));
              bolt::btbb::copy_n( first, n, &copyDest[result.m_Index] );    
             return;
          #else
@@ -237,7 +237,7 @@ void copy_pick_iterator( bolt::amp::control &ctrl,  const DVInputIterator& first
      if( runMode == bolt::amp::control::SerialCpu )
      {
            
-            typename bolt::amp::device_vector< oType >::pointer copyDest =  result.getContainer( ).data( );
+            typename bolt::amp::device_vector< oType >::pointer copyDest =  const_cast<typename bolt::amp::device_vector< oType >::pointer>(result.getContainer( ).data( ));
 #if defined( _WIN32 )
             std::copy_n( first, n, stdext::make_checked_array_iterator( &copyDest[result.m_Index], n) );
 #else
@@ -250,7 +250,7 @@ void copy_pick_iterator( bolt::amp::control &ctrl,  const DVInputIterator& first
      {
 
          #ifdef ENABLE_TBB
-              typename bolt::amp::device_vector< oType >::pointer copyDest =  result.getContainer( ).data( );
+              typename bolt::amp::device_vector< oType >::pointer copyDest =  const_cast<typename bolt::amp::device_vector< oType >::pointer>(result.getContainer( ).data( ));
               bolt::btbb::copy_n( first, n, &copyDest[result.m_Index] );
 
             return;
@@ -298,7 +298,7 @@ void copy_pick_iterator(bolt::amp::control &ctrl,  const DVInputIterator& first,
      {
 
            #ifdef ENABLE_TBB
-               typename bolt::amp::device_vector< iType >::pointer copySrc =  first.getContainer( ).data( );
+               typename bolt::amp::device_vector< iType >::pointer copySrc =  const_cast<typename bolt::amp::device_vector< iType >::pointer>(first.getContainer( ).data( ));
                bolt::btbb::copy_n( &copySrc[first.m_Index], n, result );
            #else
                 throw std::runtime_error( "The MultiCoreCpu version of Copy is not enabled to be built." );

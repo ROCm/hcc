@@ -154,13 +154,13 @@ namespace detail {
 				
                 if( runMode == bolt::amp::control::SerialCpu)
                 {				
-					typename bolt::amp::device_vector< iType >::pointer fillInputBuffer =  first.getContainer( ).data( );
+					typename bolt::amp::device_vector< iType >::pointer fillInputBuffer =  const_cast<typename bolt::amp::device_vector< iType >::pointer>(first.getContainer( ).data( ));
                     std::fill(&fillInputBuffer[first.m_Index], &fillInputBuffer[last.m_Index], (iType) value );
                 }
                 else if(runMode == bolt::amp::control::MultiCoreCpu)
                 {
                     #ifdef ENABLE_TBB
-                        typename bolt::amp::device_vector< iType >::pointer fillInputBuffer =  first.getContainer( ).data( );
+                        typename bolt::amp::device_vector< iType >::pointer fillInputBuffer =  const_cast<typename bolt::amp::device_vector< iType >::pointer>(first.getContainer( ).data( ));
                         bolt::btbb::fill(&fillInputBuffer[first.m_Index], &fillInputBuffer[last.m_Index], (iType) value );
                     #else
                         throw std::runtime_error("MultiCoreCPU Version of fill not Enabled! \n");

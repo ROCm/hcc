@@ -389,7 +389,7 @@ namespace bolt {
                 case bolt::amp::control::MultiCoreCpu:
 					{
                     #ifdef ENABLE_TBB   
-						typename bolt::amp::device_vector< iType >::pointer InputBuffer =  first.getContainer( ).data( );
+						typename bolt::amp::device_vector< iType >::pointer InputBuffer =  const_cast<typename bolt::amp::device_vector< iType >::pointer>(first.getContainer( ).data( ));
 						iType* stlPtr;
                         if(std::strcmp(min_max,str) == 0)
                               stlPtr = bolt::btbb::max_element(&InputBuffer[first.m_Index], &InputBuffer[last.m_Index], binary_op);
@@ -402,7 +402,7 @@ namespace bolt {
 					}
                 case bolt::amp::control::SerialCpu:
 					{
-						typename bolt::amp::device_vector< iType >::pointer InputBuffer =  first.getContainer( ).data( );
+						typename bolt::amp::device_vector< iType >::pointer InputBuffer =  const_cast<typename bolt::amp::device_vector< iType >::pointer>(first.getContainer( ).data( ));
 						iType* stlPtr;
 						if(std::strcmp(min_max,str) == 0)
 						   stlPtr = std::max_element(&InputBuffer[first.m_Index], &InputBuffer[last.m_Index], binary_op);

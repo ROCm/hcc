@@ -42,6 +42,7 @@ if ((_IDX < _W) && ((_IDX + _W) < _LENGTH)) {\
 
 #endif
 
+#include <cmath>
 #include <algorithm>
 #include <type_traits>
 #include "bolt/amp/bolt.h"
@@ -242,7 +243,7 @@ namespace bolt
                 }
                 if (runMode == bolt::amp::control::SerialCpu)
                 {
-                     typename bolt::amp::device_vector< iType >::pointer reduceInputBuffer =  first.getContainer( ).data( );
+                     typename bolt::amp::device_vector< iType >::pointer reduceInputBuffer =  const_cast<typename bolt::amp::device_vector< iType >::pointer>(first.getContainer( ).data( ));
                      return std::accumulate(  &reduceInputBuffer[first.m_Index], &reduceInputBuffer[ last.m_Index ],
                                                init, binary_op);
                 }
@@ -250,7 +251,7 @@ namespace bolt
                 {
 #ifdef ENABLE_TBB
 
-                    typename bolt::amp::device_vector< iType >::pointer reduceInputBuffer =  first.getContainer( ).data( );
+                    typename bolt::amp::device_vector< iType >::pointer reduceInputBuffer =  const_cast<typename bolt::amp::device_vector< iType >::pointer>(first.getContainer( ).data( ));
                     return bolt::btbb::reduce(  &reduceInputBuffer[first.m_Index],&reduceInputBuffer[ last.m_Index ],
                                                   init, binary_op);
 

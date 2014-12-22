@@ -189,13 +189,6 @@ namespace bolt {
         * \sa http://www.sgi.com/tech/stl/accumulate.html
         */
         template<typename InputIterator, typename T, typename BinaryFunction>
-        T reduce(bolt::amp::control &ctl,
-            InputIterator first,
-            InputIterator last,
-            T init,
-            BinaryFunction binary_op=bolt::amp::plus<T>());
-
-        template<typename InputIterator, typename T, typename BinaryFunction>
         T reduce(InputIterator first,
             InputIterator last,
             T init,

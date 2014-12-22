@@ -61,9 +61,19 @@ struct uddtD4
     double c;
     double d;
 
-    uddtD4() restrict(cpu, amp) {}
+    uddtD4() restrict(cpu, amp)
+     :a(0.0), b(0.0), c(0.0), d(0.0) {}
     uddtD4(double x, double y, double z, double w) restrict(cpu, amp)
      : a(x), b(y), c(z), d(w) {}
+    uddtD4(const uddtD4& other) restrict(cpu, amp)
+     : a(other.a), b(other.b), c(other.c), d(other.d) {}
+    uddtD4& operator = (const uddtD4& other) restrict(cpu, amp) {
+      a = other.a;
+      b = other.b;
+      c = other.c;
+      d = other.d;
+      return *this;
+    }
     bool operator==(const uddtD4& rhs) const restrict(cpu, amp)
     {
         bool equal = true;
@@ -959,7 +969,7 @@ TEST_P( BSearchIntegerVector, SerialGreater )
 
     EXPECT_EQ(stdresult, boltresult);
 }
-
+#if (TEST_MULTICORE_TBB_SEARCH == 1)
 TEST_P( BSearchIntegerVector, MultiCoreGreater )
 {
     bool stdresult, boltresult;
@@ -978,7 +988,7 @@ TEST_P( BSearchIntegerVector, MultiCoreGreater )
 
     EXPECT_EQ(stdresult, boltresult);
 }
-
+#endif
 
 TEST_P( BSearchIntegerVector, Normal )
 {
@@ -1007,7 +1017,7 @@ TEST_P( BSearchIntegerVector, SerialCPU )
 
     EXPECT_EQ(stdresult, boltresult);
 }
-
+#if (TEST_MULTICORE_TBB_SEARCH == 1)
 TEST_P( BSearchIntegerVector, MultiCoreCPU )
 {
     bolt::amp::control ctl = bolt::amp::control::getDefault( );
@@ -1023,7 +1033,7 @@ TEST_P( BSearchIntegerVector, MultiCoreCPU )
 
     EXPECT_EQ(stdresult, boltresult);
 }
-
+#endif
 
 TEST_P( BSearchFloatVector, Normal )
 {
@@ -1053,7 +1063,7 @@ TEST_P( BSearchFloatVector, SerialCPU)
 
     EXPECT_EQ(stdresult, boltresult);
 }
-
+#if (TEST_MULTICORE_TBB_SEARCH == 1)
 TEST_P( BSearchFloatVector, MultiCoreCPU)
 {
     bolt::amp::control ctl = bolt::amp::control::getDefault( );
@@ -1068,7 +1078,7 @@ TEST_P( BSearchFloatVector, MultiCoreCPU)
 
     EXPECT_EQ(stdresult, boltresult);
 }
-
+#endif
 #if (TEST_DOUBLE == 1)
 TEST_P( BSearchDoubleVector, Normal )
 {
@@ -1097,7 +1107,7 @@ TEST_P( BSearchDoubleVector, SerialNormal)
 
     EXPECT_EQ(stdresult, boltresult);
 }
-#if defined( ENABLE_TBB )
+#if (TEST_MULTICORE_TBB_SEARCH == 1)
 TEST_P( BSearchDoubleVector, MulticoreNormal )
 {   
     bolt::amp::control ctl = bolt::amp::control::getDefault( );
@@ -1179,7 +1189,7 @@ TEST_P( BSearchIntegerDeviceVector, SerialNormal )
         EXPECT_EQ( stdresult, boltresult );
     }
 }
-
+#if (TEST_MULTICORE_TBB_SEARCH == 1)
 TEST_P( BSearchIntegerDeviceVector, MultiCoreNormal )
 {
     bolt::amp::control ctl = bolt::amp::control::getDefault( );
@@ -1214,7 +1224,7 @@ TEST_P( BSearchIntegerDeviceVector, MultiCoreNormal )
         EXPECT_EQ( stdresult, boltresult );
     }
 }
-
+#endif
 TEST_P( BSearchUDDDeviceVector, Normal )
 {
     typedef std::vector< UDD >::value_type valtype;
@@ -1284,7 +1294,7 @@ TEST_P( BSearchUDDDeviceVector, SerialNormal)
         EXPECT_EQ( stdresult, boltresult );
     }
 }
-
+#if (TEST_MULTICORE_TBB_SEARCH == 1)
 TEST_P( BSearchUDDDeviceVector, MultiCoreNormal )
 {
     typedef std::vector< UDD >::value_type valtype;
@@ -1317,7 +1327,7 @@ TEST_P( BSearchUDDDeviceVector, MultiCoreNormal )
         EXPECT_EQ( stdresult, boltresult );
     }
 }
-
+#endif
 TEST_P( BSearchFloatDeviceVector, Normal )
 {
     typedef std::vector< float >::value_type valtype;
@@ -1386,7 +1396,7 @@ TEST_P( BSearchFloatDeviceVector, SerialNormal )
         EXPECT_EQ( stdresult, boltresult );
     }
 }
-
+#if (TEST_MULTICORE_TBB_SEARCH == 1)
 TEST_P( BSearchFloatDeviceVector, MultiCoreNormal )
 {
     typedef std::vector< float >::value_type valtype;
@@ -1420,8 +1430,9 @@ TEST_P( BSearchFloatDeviceVector, MultiCoreNormal )
         EXPECT_EQ( stdresult, boltresult );
     }
 }
-
+#endif
 #if (TEST_DOUBLE == 1)
+#if (TEST_MULTICORE_TBB_SEARCH == 1)
 TEST_P(BSearchDoubleDeviceVector, Normal )
 {
     typedef std::vector< double >::value_type valtype;
@@ -1454,7 +1465,7 @@ TEST_P(BSearchDoubleDeviceVector, Normal )
         EXPECT_EQ( stdresult, boltresult );
     }
 }
-
+#endif
 TEST_P( BSearchDoubleDeviceVector, SerialNormal )
 {
     typedef std::vector< double >::value_type valtype;
@@ -1488,7 +1499,7 @@ TEST_P( BSearchDoubleDeviceVector, SerialNormal )
         EXPECT_EQ( stdresult, boltresult );
     }
 }
-#if defined( ENABLE_TBB )
+#if (TEST_MULTICORE_TBB_SEARCH == 1)
 TEST_P( BSearchDoubleDeviceVector, MulticoreNormal )
 {
     typedef std::vector< double >::value_type valtype;

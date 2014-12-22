@@ -901,7 +901,7 @@ TEST(sanity_permutation_gather, Permutation_GatherTest)
   #ifdef _WIN32
   std::transform(result.begin(), result.end(), exp_result.begin(), std::identity<int>());
   #else
-  std::transform(result.begin(), result.end(), exp_result.begin(), std::_Identity<int>());
+  std::transform(result.begin(), result.end(), exp_result.begin(), bolt::amp::identity<int>());
   #endif
 
   for (int i=0; i<size;i++)

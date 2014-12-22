@@ -174,8 +174,8 @@ namespace detail {
                 if( runMode == bolt::amp::control::SerialCpu)
                 {
                     
-                    typename bolt::amp::device_vector< iType1 >::pointer firstPtr =  first1.getContainer( ).data( );
-                    typename bolt::amp::device_vector< iType1 >::pointer first2Ptr =  first2.getContainer( ).data( );
+                    typename bolt::amp::device_vector< iType1 >::pointer firstPtr =  const_cast<typename bolt::amp::device_vector< iType1 >::pointer>(first1.getContainer( ).data( ));
+                    typename bolt::amp::device_vector< iType1 >::pointer first2Ptr =  const_cast<typename bolt::amp::device_vector< iType1 >::pointer>(first2.getContainer( ).data( ));
 
                     #if defined( _WIN32 )
                        return std::inner_product(  &firstPtr[ first1.m_Index ],
@@ -191,8 +191,8 @@ namespace detail {
                 else if(runMode == bolt::amp::control::MultiCoreCpu)
                 {
                 #ifdef ENABLE_TBB
-                    typename bolt::amp::device_vector< iType1 >::pointer firstPtr =  first1.getContainer( ).data( );
-                    typename bolt::amp::device_vector< iType1 >::pointer first2Ptr =  first2.getContainer( ).data( );
+                    typename bolt::amp::device_vector< iType1 >::pointer firstPtr =  const_cast<typename bolt::amp::device_vector< iType1 >::pointer>(first1.getContainer( ).data( ));
+                    typename bolt::amp::device_vector< iType1 >::pointer first2Ptr =  const_cast<typename bolt::amp::device_vector< iType1 >::pointer>(first2.getContainer( ).data( ));
                     return bolt::btbb::inner_product(  &firstPtr[ first1.m_Index ],  &firstPtr[ last1.m_Index ],
                                                 &first2Ptr[ first2.m_Index ], init, f1, f2);
                 #else

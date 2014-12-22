@@ -30,6 +30,7 @@
 
 // RUN: %cxxamp -DTYPE="wchar_t" -Xclang -fhsa-ext %s -o %t.out && %t.out
 
+#include <iostream>
 #include <amp.h>
 
 struct S {

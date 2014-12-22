@@ -2361,8 +2361,22 @@ static void FindLocalName(Instruction *I, Value *&LocalValue, Type *&LocalTy) {
         FindLocalName(dyn_cast<Instruction>(PO), LocalValue, LocalTy);
       } else if (isa<PHINode>(PO)) {
          // The sources must have been processed. Do nothing.
+      } else if (dyn_cast<LoadInst>(PO)) {
+        // Sample:
+        //  %21 = load i64 addrspace(3)* %20, align 4
+        //  %20 = bitcast %struct.UDD addrspace(3)* %arrayidx.i to i64 addrspace(3)*
+        FindLocalName(dyn_cast<Instruction>(PO), LocalValue, LocalTy);
+      } else if (dyn_cast<StoreInst>(PO)) {
+        FindLocalName(dyn_cast<Instruction>(PO), LocalValue, LocalTy);
       } else {
-        assert(0 && "Unhandled type of reference to a local array");
+        if (PointerType* PTy = cast<PointerType>(PO->getType())) {
+          LocalTy = PTy->getElementType();
+          LocalValue = PO;
+        } else {
+          LI->dump();
+          PO->dump();
+          assert(0 && "LI: Unhandled type of reference to a local array");
+        }
       }
     }
   }
@@ -2381,19 +2395,25 @@ static void FindLocalName(Instruction *I, Value *&LocalValue, Type *&LocalTy) {
               }
               break;
             default:
-              assert(0 && "Unhandled type of ConstantExpr in a load");
+              assert(0 && "Unhandled type of ConstantExpr in a store");
           };
         } else if (isa<GetElementPtrInst>(PO)) {
           FindLocalName(dyn_cast<Instruction>(PO), LocalValue, LocalTy);
         } else if (isa<PHINode>(PO)) {
           // The sources must have been processed. Do nothing.
+        } else if (dyn_cast<LoadInst>(PO)) {
+          FindLocalName(dyn_cast<Instruction>(PO), LocalValue, LocalTy);
+        } else if (dyn_cast<StoreInst>(PO)) {
+          FindLocalName(dyn_cast<Instruction>(PO), LocalValue, LocalTy);
         } else {
           PointerType  *PTy = cast<PointerType>(PO->getType());
           if(PTy) {
             LocalTy = PTy->getElementType();
             LocalValue = PO;
           } else {
-            assert(0 && "Unhandled type of reference to a local array");
+            SI->dump();
+            PO->dump();
+            assert(0 && "SI: Unhandled type of reference to a local array");
           }
         }
       }

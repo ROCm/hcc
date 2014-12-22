@@ -10,6 +10,7 @@
 // XFAIL: Linux, hsa
 // RUN: %cxxamp -Xclang -fhsa-ext %s -o %t.out && %t.out
 
+#include <iostream>
 #include <amp.h>
 
 int func(float arg1, char arg2, char arg3) restrict(amp, cpu) 

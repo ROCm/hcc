@@ -12,6 +12,7 @@
 // XFAIL: Linux
 // RUN: %cxxamp -Xclang -fhsa-ext %s -o %t.out && %t.out
 
+#include <iostream>
 #include <amp.h>
 
 // An HSA version of C++AMP program

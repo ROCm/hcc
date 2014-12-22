@@ -307,7 +307,12 @@ public:
             return result;
         }
 
-        Container getContainer( ) const
+        Container& getContainer( )
+        {
+          return m_Container;
+        }
+
+        const Container& getContainer( ) const
         {
           return m_Container;
         }
@@ -595,7 +600,7 @@ private:
 	*   \param copy Boolean value to decide whether new device_vector will be shallow copy or deep copy
 	*   \param ctl A Bolt control class used to perform copy operations; a default is used if not supplied by the user.
     */
-	device_vector( const device_vector<T, CONT> &cont, bool copy = true,control& ctl = control::getDefault( ) ): m_Size( cont.size( ) ),
+	device_vector( const device_vector<T, CONT> &cont, bool copy = true,control& ctl = control::getDefault( ) ) restrict(amp, cpu) : m_Size( cont.size( ) ),
 														m_devMemory( cont.m_devMemory.view_as(cont.m_devMemory.get_extent()))
     {
 		if(!copy)
@@ -674,7 +679,7 @@ private:
 
 
 	    //destructor for device_vector
-    ~device_vector()
+    ~device_vector() restrict(amp, cpu)
     {
     }
 
@@ -794,7 +799,7 @@ private:
     *   \note size( ) differs from capacity( ), in that size( ) returns the number of elements between begin() & end()
     *   \return Number of valid elements
     */
-    size_type size( void ) const
+    size_type size( void ) const restrict(amp, cpu)
     {
         return m_Size;
     }
@@ -1335,10 +1340,17 @@ private:
     //  reflected back in the host memory.  However, the complication is that the concurrency::array object
     //  does not expose a synchronize method, whereas the concurrency::array_view does.  These routines
     //  differentiate between the two different containers
-    void synchronize( device_vector< T, concurrency::array >& rhs )
+    void synchronize( device_vector< T, concurrency::array >& rhs ) const
     {
     };
-    void synchronize( device_vector< T, concurrency::array_view >& rhs )
+    void synchronize( const device_vector< T, concurrency::array >& rhs ) const
+    {
+    };
+    void synchronize( device_vector< T, concurrency::array_view >& rhs ) const
+    {
+        rhs.m_devMemory.synchronize( );
+    };
+    void synchronize( const device_vector< T, concurrency::array_view >& rhs ) const
     {
         rhs.m_devMemory.synchronize( );
     };

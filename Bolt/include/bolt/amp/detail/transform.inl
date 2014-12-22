@@ -227,8 +227,8 @@ namespace bolt
                 const bolt::amp::control::e_RunMode runMode = ctl.getForceRunMode();  // could be dynamic choice some day.
                 if (runMode == bolt::amp::control::SerialCpu)
                 {
-                   typename bolt::amp::device_vector< iType1 >::pointer firstPtr =  first1.getContainer( ).data( );
-                   typename bolt::amp::device_vector< oType >::pointer resPtr =  result.getContainer( ).data( );
+                   typename bolt::amp::device_vector< iType1 >::pointer firstPtr =  const_cast<typename bolt::amp::device_vector< iType1 >::pointer>(first1.getContainer( ).data( ));
+                   typename bolt::amp::device_vector< oType >::pointer resPtr =  const_cast<typename bolt::amp::device_vector< oType >::pointer>(result.getContainer( ).data( ));
 
 #if defined( _WIN32 )
 
@@ -243,8 +243,8 @@ namespace bolt
                 else if (runMode == bolt::amp::control::MultiCoreCpu)
                 {
 #if defined( ENABLE_TBB )
-                  typename bolt::amp::device_vector< iType1 >::pointer firstPtr =  first1.getContainer( ).data( );
-                  typename bolt::amp::device_vector< oType >::pointer resPtr =  result.getContainer( ).data( );
+                  typename bolt::amp::device_vector< iType1 >::pointer firstPtr =  const_cast<typename bolt::amp::device_vector< iType1 >::pointer>(first1.getContainer( ).data( ));
+                  typename bolt::amp::device_vector< oType >::pointer resPtr =  const_cast<typename bolt::amp::device_vector< oType >::pointer>(result.getContainer( ).data( ));
                   bolt::btbb::transform(&firstPtr[ first1.m_Index ],&firstPtr[ first1.m_Index + sz ],
                                         first2, &resPtr[ result.m_Index ],f);
 
@@ -310,6 +310,10 @@ namespace bolt
                     //device_vector< oType > dvOutput( result, sz, false, ctl );
                     device_vector< oType, concurrency::array_view > dvOutput( result, sz, true, ctl );
                     transform_enqueue( ctl, dvInput.begin( ), dvInput.end( ), dvInput2.begin( ), dvOutput.begin( ), f  );
+
+                    // TODO: Need to synchorize dvInput as well? in case there is inplace operation in this binary funciton.
+                    // The related cases run successfully without such synchronization on CLAMP so far
+
                     // This should immediately map/unmap the buffer
                     dvOutput.data( );
                }
@@ -356,6 +360,10 @@ namespace bolt
                     // Map the output iterator to a device_vector
                     device_vector< oType, concurrency::array_view > dvOutput( result, sz, true, ctl );
                     transform_enqueue( ctl, first1, last1, dvInput2.begin( ), dvOutput.begin( ), f  );
+
+                    // TODO: Need to synchorize dvInput as well? in case there is inplace operation in this binary funciton?
+                    // The related cases run successfully without such synchronization on CLAMP so far
+
                     // This should immediately map/unmap the buffer
                     dvOutput.data( );
                }
@@ -403,6 +411,10 @@ namespace bolt
                     // Map the output iterator to a device_vector
                     device_vector< oType, concurrency::array_view > dvOutput( result, sz, true, ctl );
                     transform_enqueue( ctl, dvInput.begin( ), dvInput.end( ), first2, dvOutput.begin( ), f  );
+
+                    // TODO: Need to synchorize dvInput as well? in case there is inplace operation in this binary funciton?
+                    // The related cases run successfully without such synchronization on CLAMP so far
+
                     // This should immediately map/unmap the buffer
                     dvOutput.data( );
                }
@@ -433,9 +445,9 @@ namespace bolt
 
                if( runMode == bolt::amp::control::SerialCpu )
                {
-                   typename bolt::amp::device_vector< iType1 >::pointer firstPtr =  first1.getContainer( ).data( );
-                   typename bolt::amp::device_vector< iType2 >::pointer secPtr =  first2.getContainer( ).data( );
-                   typename bolt::amp::device_vector< oType >::pointer resPtr =  result.getContainer( ).data( );
+                   typename bolt::amp::device_vector< iType1 >::pointer firstPtr =  const_cast<typename bolt::amp::device_vector< iType1 >::pointer>(first1.getContainer( ).data( ));
+                   typename bolt::amp::device_vector< iType2 >::pointer secPtr =  const_cast<typename bolt::amp::device_vector< iType2 >::pointer>(first2.getContainer( ).data( ));
+                   typename bolt::amp::device_vector< oType >::pointer resPtr =  const_cast<typename bolt::amp::device_vector< oType >::pointer>(result.getContainer( ).data( ));
 
 #if defined( _WIN32 )
                   std::transform( &firstPtr[ first1.m_Index ], &firstPtr[first1.m_Index +  sz ], &secPtr[ first2.m_Index ],
@@ -449,9 +461,9 @@ namespace bolt
               {
 
 #if defined( ENABLE_TBB )
-                  typename bolt::amp::device_vector< iType1 >::pointer firstPtr =  first1.getContainer( ).data( );
-                  typename bolt::amp::device_vector< iType2 >::pointer secPtr =  first2.getContainer( ).data( );
-                  typename bolt::amp::device_vector< oType >::pointer resPtr =  result.getContainer( ).data( );
+                  typename bolt::amp::device_vector< iType1 >::pointer firstPtr =  const_cast<typename bolt::amp::device_vector< iType1 >::pointer>(first1.getContainer( ).data( ));
+                  typename bolt::amp::device_vector< iType2 >::pointer secPtr =  const_cast<typename bolt::amp::device_vector< iType2 >::pointer>(first2.getContainer( ).data( ));
+                  typename bolt::amp::device_vector< oType >::pointer resPtr =  const_cast<typename bolt::amp::device_vector< iType3 >::pointer>(result.getContainer( ).data( ));
                   bolt::btbb::transform(&firstPtr[ first1.m_Index ],&firstPtr[ first1.m_Index + sz ],&secPtr[ first2.m_Index ],&resPtr[ result.m_Index ],f);
 
 #else
@@ -515,6 +527,15 @@ namespace bolt
 
                    transform_unary_enqueue( ctl, dvInput.begin( ), dvInput.end( ), dvOutput.begin( ), f );
 
+                   // Always synchorize dvInput in case there is inplace operation. For example, 
+                   // dvOuput has the same container as dvInput which is the operand of unary funciton 'f'
+                   // FIXME: this will introduce extra time, however it is what the logic is.
+                   //
+                   #ifndef _WIN32
+                   // At least do it on CLAMP
+                   dvInput.data();
+                   #endif
+
                    // This should immediately map/unmap the buffer
                    dvOutput.data( );
                 }
@@ -543,8 +564,8 @@ namespace bolt
               //  TBB does not have an equivalent for two input iterator std::transform
              if( (runMode == bolt::amp::control::SerialCpu) )
              {
-                 typename bolt::amp::device_vector< iType >::pointer firstPtr = first.getContainer( ).data( );
-                 typename bolt::amp::device_vector< oType >::pointer resPtr = result.getContainer( ).data( );
+                 typename bolt::amp::device_vector< iType >::pointer firstPtr = const_cast<typename bolt::amp::device_vector< iType >::pointer>(first.getContainer( ).data( ));
+                 typename bolt::amp::device_vector< oType >::pointer resPtr = const_cast<typename bolt::amp::device_vector< oType >::pointer>(result.getContainer( ).data( ));
 
 #if defined( _WIN32 )
 
@@ -559,8 +580,8 @@ namespace bolt
              {
 
 #if defined( ENABLE_TBB )
-                typename bolt::amp::device_vector< iType >::pointer firstPtr = first.getContainer( ).data( );
-                typename bolt::amp::device_vector< oType >::pointer resPtr = result.getContainer( ).data( );
+                typename bolt::amp::device_vector< iType >::pointer firstPtr = const_cast<typename bolt::amp::device_vector< iType >::pointer>(first.getContainer( ).data( ));
+                typename bolt::amp::device_vector< oType >::pointer resPtr = const_cast<typename bolt::amp::device_vector< oType >::pointer>(result.getContainer( ).data( ));
 
                 bolt::btbb::transform( &firstPtr[ first.m_Index ],  &firstPtr[ first.m_Index  + sz ], &resPtr[ result.m_Index], f);
 #else

@@ -10,6 +10,7 @@
 // XFAIL: Linux
 // RUN: %cxxamp -Xclang -fhsa-ext %s -o %t.out && %t.out
 
+#include <iostream>
 #include <amp.h>
 
 void foo() restrict(amp)

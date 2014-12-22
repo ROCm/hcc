@@ -12,6 +12,7 @@
 // XFAIL: Linux, hsa
 // RUN: %cxxamp -Xclang -fhsa-ext %s -o %t.out && %t.out
 
+#include <iostream>
 #include <amp.h>
 
 //struct of size 12
