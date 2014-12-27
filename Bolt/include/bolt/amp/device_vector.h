@@ -572,7 +572,13 @@ private:
 			m_devMemory.discard_data();
     };
 
-
+    // Reuse av
+    device_vector( const arrayview_type& av, size_type newSize, bool discard = false, control& ctl = control::getDefault( ))
+                                    : m_Size( static_cast<int>(newSize) ), m_devMemory( av )
+    {
+		if(discard)
+			m_devMemory.discard_data();
+    };
 	/*! \brief A constructor that creates a new device_vector using a range specified by the user.
     *   \param begin An iterator pointing at the beginning of the range.
 	*   \param newSize The number of elements of the new device_vector
