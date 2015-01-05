@@ -252,7 +252,7 @@ extern "C" void *LaunchKernelAsyncImpl(void *ker, size_t nr_dim, size_t *global,
   //std::cerr << "Now real launch\n";
   //kernel->dispatchKernelWaitComplete();
 
-  static std::future<void> fut = dispatch->dispatchKernelAndGetFuture();
+  static std::shared_future<void> fut = dispatch->dispatchKernelAndGetFuture();
 
   // FIXME what about aloc.read() ??
 

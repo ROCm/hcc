@@ -264,13 +264,13 @@ private:
       } 
 
 
-      std::future<void> dispatchKernelAndGetFuture() {
+      std::shared_future<void> dispatchKernelAndGetFuture() {
          dispatchKernel();
          auto waitFunc = [&]() {
            this->waitComplete();
          };
          std::packaged_task<void()> waitTask(waitFunc);
-         auto fut = waitTask.get_future();
+         std::shared_future<void> fut = waitTask.get_future();
          std::thread waitThread(std::move(waitTask));
          waitThread.detach();         
          return fut;
