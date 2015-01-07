@@ -13,29 +13,94 @@
 
 #include "hsa.h"
 #include "hsa_ext_finalize.h"
-#include "Brig_new.hpp"
 #include "elf_utils.hpp"
 
-#define STATUS_CHECK(s,line) if (status != HSA_STATUS_SUCCESS) {\
-		printf("### Error: %d at line:%d\n", status, line);\
+#define STATUS_CHECK(s,line) if (s != HSA_STATUS_SUCCESS) {\
+		printf("### Error: %d at line:%d\n", s, line);\
                 assert(HSA_STATUS_SUCCESS == hsa_close());\
 		exit(-1);\
 	}
 
-#define STATUS_CHECK_Q(s,line) if (status != HSA_STATUS_SUCCESS) {\
-		printf("### Error: %d at line:%d\n", status, line);\
+#define STATUS_CHECK_Q(s,line) if (s != HSA_STATUS_SUCCESS) {\
+		printf("### Error: %d at line:%d\n", s, line);\
                 assert(HSA_STATUS_SUCCESS == hsa_queue_destroy(commandQueue));\
                 assert(HSA_STATUS_SUCCESS == hsa_close());\
 		exit(-1);\
 	}
 
-static hsa_status_t IterateAgent(hsa_agent_t agent, void *data) {
+#define BRIG_STATUS_CHECK(s,line) if (s != STATUS_SUCCESS) {\
+		printf("### Error: %d at line:%d\n", s, line);\
+                assert(HSA_STATUS_SUCCESS == hsa_queue_destroy(commandQueue));\
+                assert(HSA_STATUS_SUCCESS == hsa_close());\
+		exit(-1);\
+	}
+
+/*
+ * Define required BRIG data structures.
+ */
+
+typedef uint32_t BrigCodeOffset32_t;
+
+typedef uint32_t BrigDataOffset32_t;
+
+typedef uint16_t BrigKinds16_t;
+
+typedef uint8_t BrigLinkage8_t;
+
+typedef uint8_t BrigExecutableModifier8_t;
+
+typedef BrigDataOffset32_t BrigDataOffsetString32_t;
+
+enum BrigKinds {
+    BRIG_KIND_NONE = 0x0000,
+    BRIG_KIND_DIRECTIVE_BEGIN = 0x1000,
+    BRIG_KIND_DIRECTIVE_KERNEL = 0x1008,
+};
+
+typedef struct BrigBase BrigBase;
+struct BrigBase {
+    uint16_t byteCount;
+    BrigKinds16_t kind;
+};
+
+typedef struct BrigExecutableModifier BrigExecutableModifier;
+struct BrigExecutableModifier {
+    BrigExecutableModifier8_t allBits;
+};
+
+typedef struct BrigDirectiveExecutable BrigDirectiveExecutable;
+struct BrigDirectiveExecutable {
+    uint16_t byteCount;
+    BrigKinds16_t kind;
+    BrigDataOffsetString32_t name;
+    uint16_t outArgCount;
+    uint16_t inArgCount;
+    BrigCodeOffset32_t firstInArg;
+    BrigCodeOffset32_t firstCodeBlockEntry;
+    BrigCodeOffset32_t nextModuleEntry;
+    uint32_t codeBlockEntryCount;
+    BrigExecutableModifier modifier;
+    BrigLinkage8_t linkage;
+    uint16_t reserved;
+};
+
+typedef struct BrigData BrigData;
+struct BrigData {
+    uint32_t byteCount;
+    uint8_t bytes[1];
+};
+
+/*
+ * Determines if the given agent is of type HSA_DEVICE_TYPE_GPU
+ * and sets the value of data to the agent handle if it is.
+ */
+static hsa_status_t find_gpu(hsa_agent_t agent, void *data) {
   // Find GPU device and use it.
   if (data == NULL) {
     return HSA_STATUS_ERROR_INVALID_ARGUMENT;
-	}
-	hsa_device_type_t device_type;
-	hsa_status_t stat =
+  }
+  hsa_device_type_t device_type;
+  hsa_status_t stat =
   hsa_agent_get_info(agent, HSA_AGENT_INFO_DEVICE, &device_type);
   if (stat != HSA_STATUS_SUCCESS) {
     return stat;
@@ -43,94 +108,67 @@ static hsa_status_t IterateAgent(hsa_agent_t agent, void *data) {
   if (device_type == HSA_DEVICE_TYPE_GPU) {
     *((hsa_agent_t *)data) = agent;
   }
-#if 0
-                uint32_t d;
-                hsa_dim3_t dim;
-                uint32_t c;
-                uint16_t a[3];
-                uint32_t b;
-                stat = hsa_agent_get_info(agent, HSA_AGENT_INFO_WAVEFRONT_SIZE, &d);
-                stat = hsa_agent_get_info(agent, HSA_AGENT_INFO_GRID_MAX_DIM, &dim);
-                stat = hsa_agent_get_info(agent, HSA_AGENT_INFO_GRID_MAX_SIZE, &c);
-                stat = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_DIM, &a);
-                stat = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_SIZE, &b);
-
-                printf("HSA_AGENT_INFO_WORKGROUP_MAX_DIM: (%u,%u,%u), HSA_AGENT_INFO_WORKGROUP_MAX_SIZE: %u\n", a[0], a[1], a[2], b);
-                printf("HSA_AGENT_INFO_GRID_MAX_DIM: (%u,%u,%u), HSA_AGENT_INFO_GRID_MAX_SIZE: %u\n", dim.x, dim.y, dim.z, c);
-                printf("HSA_AGENT_INFO_WAVEFRONT_SIZE: %u\n", d);
-#endif
-
-		return HSA_STATUS_SUCCESS;
+  return HSA_STATUS_SUCCESS;
 }
 
-
-bool FindSymbolOffset(hsa_ext_brig_module_t* brig_module, 
-    const char* symbol_name,
-    hsa_ext_brig_code_section_offset32_t& offset) {
-    
-    //Get the data section
-     hsa_ext_brig_section_header_t* data_section_header = 
-                brig_module->section[HSA_EXT_BRIG_SECTION_DATA];
-    //Get the code section
-     hsa_ext_brig_section_header_t* code_section_header =
-             brig_module->section[HSA_EXT_BRIG_SECTION_CODE];
-
-    //First entry into the BRIG code section
-    BrigCodeOffset32_t code_offset = code_section_header->header_byte_count;
-    BrigBase* code_entry = (BrigBase*) ((char*)code_section_header + code_offset);
-    size_t symbol_size = strlen(symbol_name);
-
-    while (code_offset != code_section_header->byte_count) {
-        if (code_entry->kind == BRIG_KIND_DIRECTIVE_KERNEL) {
-            //Now find the data in the data section
-            BrigDirectiveExecutable* directive_kernel = (BrigDirectiveExecutable*) (code_entry);
-            BrigDataOffsetString32_t data_name_offset = directive_kernel->name;
-            BrigData* data_entry = (BrigData*)((char*) data_section_header + data_name_offset);
-            size_t data_entry_size = strlen((char*)data_entry->bytes);
-
-            if (data_entry_size == symbol_size
-                && strncmp(symbol_name, (char*)data_entry->bytes, symbol_size)==0) {
-                offset = code_offset;
-                return true;
-            }
-
-            // A HSAIL assembler has a bug that may generate symbol names 
-            // with extra characters appended to the end, this is a workaround to that bug
-            if (data_entry_size > symbol_size
-                && strncmp(symbol_name, (char*)data_entry->bytes, symbol_size)==0) {
-                offset = code_offset;
-                return true;
-            }
-
-        }
-        code_offset += code_entry->byteCount;
-        code_entry = (BrigBase*) ((char*)code_section_header + code_offset);
-    }
-    return false;
-}
-
-
-
-hsa_status_t get_kernarg(hsa_region_t region, void* data) {
+/*
+ * Determines if a memory region can be used for kernarg
+ * allocations.
+ */
+static hsa_status_t get_kernarg(hsa_region_t region, void* data) {
   hsa_region_flag_t flags;
   hsa_region_get_info(region, HSA_REGION_INFO_FLAGS, &flags);
   if (flags & HSA_REGION_FLAG_KERNARG) {
     hsa_region_t * ret = (hsa_region_t *) data;
     *ret = region;
-    //printf("found kernarg region: %08X\n", region);
-
-    //size_t alloc_max_size;
-    //hsa_region_get_info(region, HSA_REGION_INFO_ALLOC_MAX_SIZE, &alloc_max_size);
-    //printf("maximum allocate size: %lX\n", alloc_max_size);
-
-    //size_t granule;
-    //hsa_region_get_info(region, HSA_REGION_INFO_ALLOC_GRANULE,  &granule);
-    //printf("minimum allocate size: %lX\n", granule);
-
-    return HSA_STATUS_INFO_BREAK;
   }
   return HSA_STATUS_SUCCESS;
 }
+
+/*
+ * Finds the specified symbols offset in the specified brig_module.
+ * If the symbol is found the function returns HSA_STATUS_SUCCESS, 
+ * otherwise it returns HSA_STATUS_ERROR.
+ */
+hsa_status_t find_symbol_offset(hsa_ext_brig_module_t* brig_module, 
+    const char* symbol_name,
+    hsa_ext_brig_code_section_offset32_t* offset) {
+    
+    /* 
+     * Get the data section 
+     */
+    hsa_ext_brig_section_header_t* data_section_header =
+                brig_module->section[HSA_EXT_BRIG_SECTION_DATA];
+    /* 
+     * Get the code section
+     */
+    hsa_ext_brig_section_header_t* code_section_header =
+             brig_module->section[HSA_EXT_BRIG_SECTION_CODE];
+
+    /* 
+     * First entry into the BRIG code section
+     */
+    BrigCodeOffset32_t code_offset = code_section_header->header_byte_count;
+    BrigBase* code_entry = (BrigBase*) ((char*)code_section_header + code_offset);
+    while (code_offset != code_section_header->byte_count) {
+        if (code_entry->kind == BRIG_KIND_DIRECTIVE_KERNEL) {
+            /* 
+             * Now find the data in the data section
+             */
+            BrigDirectiveExecutable* directive_kernel = (BrigDirectiveExecutable*) (code_entry);
+            BrigDataOffsetString32_t data_name_offset = directive_kernel->name;
+            BrigData* data_entry = (BrigData*)((char*) data_section_header + data_name_offset);
+            if (!strncmp(symbol_name, (char*) data_entry->bytes, strlen(symbol_name))) {
+                *offset = code_offset;
+                return HSA_STATUS_SUCCESS;
+            }
+        }
+        code_offset += code_entry->byteCount;
+        code_entry = (BrigBase*) ((char*)code_section_header + code_offset);
+    }
+    return HSA_STATUS_ERROR;
+}
+
 
 size_t roundUp(size_t size) {
   size_t times = size / 0x1000;
@@ -291,14 +329,20 @@ private:
          // get command queue from context
          hsa_queue_t* commandQueue = context->getQueue();
 
-         // create a signal
+         /*
+          * Create a signal to wait for the dispatch to finish.
+          */
          status = hsa_signal_create(1, 0, NULL, &signal);
          STATUS_CHECK_Q(status, __LINE__);
 
-         // create a dispatch packet
+         /*
+          * Initialize the dispatch packet.
+          */
          memset(&aql, 0, sizeof(aql));
 
-         // setup dispatch sizes
+         /*
+          * Setup the dispatch information.
+          */
          aql.completion_signal = signal;
          aql.dimensions = launchDimensions;
          aql.workgroup_size_x = workgroup_size[0];
@@ -307,8 +351,6 @@ private:
          aql.grid_size_x = global_size[0];
          aql.grid_size_y = global_size[1];
          aql.grid_size_z = global_size[2];
-
-         // set dispatch fences
          aql.header.type = HSA_PACKET_TYPE_DISPATCH;
          aql.header.acquire_fence_scope = 2;
          aql.header.release_fence_scope = 2;
@@ -317,15 +359,22 @@ private:
          // bind kernel code
          aql.kernel_object_address = kernel->hsaCodeDescriptor->code.handle; 
 
+
+         /*
+          * Find a memory region that supports kernel arguments.
+          */
          // bind kernel arguments
          //printf("arg_vec size: %d in bytes: %d\n", arg_vec.size(), arg_vec.size());
-         hsa_region_t region;
+         hsa_region_t kernarg_region = 0;
          //printf("hsa_agent_iterate_regions\n");
-         hsa_agent_iterate_regions(context->device, get_kernarg, &region);
-         //printf("kernarg region: %08X\n", region);
+         hsa_agent_iterate_regions(context->device, get_kernarg, &kernarg_region);
+         //printf("kernarg region: %08X\n", kernarg_region);
 
-         //printf("hsa_memory_allocate in region: %08X size: %d bytes\n", region, roundUp(arg_vec.size()));
-         if ((status = hsa_memory_allocate(region, roundUp(arg_vec.size()), (void**) &aql.kernarg_address)) != HSA_STATUS_SUCCESS) {
+         void* kernel_arg_buffer = NULL;
+         size_t kernel_arg_buffer_size = kernel->hsaCodeDescriptor->kernarg_segment_byte_size;
+         //printf("kernarg_segment_byte_size: %lu\n", kernel_arg_buffer_size);
+         //printf("hsa_memory_allocate in region: %08X size: %d bytes\n", kernarg_region, roundUp(arg_vec.size()));
+         if ((status = hsa_memory_allocate(kernarg_region, roundUp(arg_vec.size()), (void**) &aql.kernarg_address)) != HSA_STATUS_SUCCESS) {
            printf("hsa_memory_allocate error: %d\n", status);
            exit(1);
          }
@@ -335,7 +384,7 @@ private:
          //for (size_t i = 0; i < arg_vec.size(); ++i) {
          //  printf("%02X ", *(((uint8_t*)aql.kernarg_address)+i));
          //}
-         //printf("\n");hsa_ext_brig_module_t
+         //printf("\n");
 
          // Initialize memory resources needed to execute
          aql.group_segment_size = kernel->hsaCodeDescriptor->workgroup_group_segment_byte_size;
@@ -462,17 +511,25 @@ private:
      status = hsa_init();
      STATUS_CHECK(status, __LINE__);
 
-     // device discovery
+     /* 
+      * Iterate over the agents and pick the gpu agent using 
+      * the find_gpu callback.
+      */
      device = 0;
-	   status = hsa_iterate_agents(IterateAgent, &device);
+     status = hsa_iterate_agents(find_gpu, &device);
      STATUS_CHECK(status, __LINE__);
 
 
-     // create command queue
+     /*
+      * Query the maximum size of the queue.
+      */
      size_t queue_size = 0;
      status = hsa_agent_get_info(device, HSA_AGENT_INFO_QUEUE_MAX_SIZE, &queue_size);
      STATUS_CHECK(status, __LINE__);
 
+     /*
+      * Create a queue using the maximum size.
+      */
      commandQueue = NULL;
      status = hsa_queue_create(device, queue_size, HSA_QUEUE_TYPE_MULTI, NULL, NULL, &commandQueue);
      STATUS_CHECK_Q(status, __LINE__);
@@ -497,41 +554,55 @@ public:
     Kernel* createKernel(const char *hsailBuffer, int hsailSize, const char *entryName) {
 
       hsa_status_t status;
+      status_t brig_status;
 
-	    //Convert hsail kernel text to BRIG.
-	    hsa_ext_brig_module_t* brigModule;
-	    if (!CreateBrigModuleFromBrigMemory((char*)hsailBuffer, hsailSize, &brigModule)){
-        STATUS_CHECK(status, __LINE__);
-	    }
+      /*
+       * Load BRIG, encapsulated in an ELF container, into a BRIG module.
+       */
+      hsa_ext_brig_module_t* brigModule;
+      brig_status = create_brig_module_from_brig_memory((char*)hsailBuffer, hsailSize, &brigModule);
+      BRIG_STATUS_CHECK(brig_status, __LINE__);
 
-	    //Create hsa program.
-	    status = hsa_ext_program_create(&device, 1, HSA_EXT_BRIG_MACHINE_LARGE, HSA_EXT_BRIG_PROFILE_FULL, &hsaProgram);
+      /*
+       * Create hsa program.
+       */
+      status = hsa_ext_program_create(&device, 1, HSA_EXT_BRIG_MACHINE_LARGE, HSA_EXT_BRIG_PROFILE_FULL, &hsaProgram);
       STATUS_CHECK(status, __LINE__);
 
-	    //Add BRIG module to hsa program.
-	    hsa_ext_brig_module_handle_t module;
-	    status = hsa_ext_add_module(hsaProgram, brigModule, &module);
+      /*
+       * Add the BRIG module to hsa program.
+       */
+      hsa_ext_brig_module_handle_t module;
+      status = hsa_ext_add_module(hsaProgram, brigModule, &module);
       STATUS_CHECK(status, __LINE__);
 
-	    // Construct finalization request list.
-	    // @todo kzhuravl 6/16/2014 remove bare numbers, we actually need to find
-	    // entry offset into the code section.
-	    hsa_ext_finalization_request_t finalization_request_list;
-      memset(&finalization_request_list, 0, sizeof(hsa_ext_finalization_request_t));
-	    finalization_request_list.module = module;              // module handle.
-	    finalization_request_list.program_call_convention = 0;  // program call convention. not supported.
-
-	    if (!FindSymbolOffset(brigModule, entryName, finalization_request_list.symbol)){
-        STATUS_CHECK(GENERIC_ERROR, __LINE__);
-	    }
-
-	    //Finalize hsa program.
-	    status = hsa_ext_finalize_program(hsaProgram, device, 1, &finalization_request_list, NULL, NULL, 0, NULL, 0);
+      /* 
+       * Construct finalization request list.
+       */
+      hsa_ext_finalization_request_t finalization_request_list;
+      finalization_request_list.module = module;
+      finalization_request_list.program_call_convention = 0;
+      status = find_symbol_offset(brigModule, entryName, &finalization_request_list.symbol);
       STATUS_CHECK(status, __LINE__);
 
-	    //Get hsa code descriptor address.
-	    hsa_ext_code_descriptor_t *hsaCodeDescriptor;
-	    status = hsa_ext_query_kernel_descriptor_address(hsaProgram, module, finalization_request_list.symbol, &hsaCodeDescriptor);
+      /*
+       * Finalize the hsa program.
+       */
+      status = hsa_ext_finalize_program(hsaProgram, device, 1, &finalization_request_list, NULL, NULL, 0, NULL, 0);
+      STATUS_CHECK(status, __LINE__);
+
+      /*
+       * Destroy the brig module. The program was successfully created the 
+       * kernel symbol was found and the program was finalized, so it is no 
+       * longer needed.
+       */
+      destroy_brig_module(brigModule);
+
+      /*
+       * Get the hsa code descriptor address.
+       */
+      hsa_ext_code_descriptor_t *hsaCodeDescriptor;
+      status = hsa_ext_query_kernel_descriptor_address(hsaProgram, module, finalization_request_list.symbol, &hsaCodeDescriptor);
       STATUS_CHECK(status, __LINE__);
 
       return new KernelImpl(hsaCodeDescriptor, this); 
