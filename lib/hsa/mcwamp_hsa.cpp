@@ -205,9 +205,9 @@ extern "C" void *CreateKernelImpl(const char* s, void* kernel_size_, void* kerne
   dispatch->clearArgs();
 //#define HSAIL_HLC_DEVELOPMENT_COMPILER 1
 #ifndef HSAIL_HLC_DEVELOPMENT_COMPILER
-  dispatch->pushLongArg(0);
-  dispatch->pushLongArg(0);
-  dispatch->pushLongArg(0);
+  //dispatch->pushLongArg(0);
+  //dispatch->pushLongArg(0);
+  //dispatch->pushLongArg(0);
   dispatch->pushLongArg(0);
   dispatch->pushLongArg(0);
   dispatch->pushLongArg(0);
@@ -252,7 +252,7 @@ extern "C" void *LaunchKernelAsyncImpl(void *ker, size_t nr_dim, size_t *global,
   //std::cerr << "Now real launch\n";
   //kernel->dispatchKernelWaitComplete();
 
-  static std::future<void> fut = dispatch->dispatchKernelAndGetFuture();
+  static std::shared_future<void> fut = dispatch->dispatchKernelAndGetFuture();
 
   // FIXME what about aloc.read() ??
 

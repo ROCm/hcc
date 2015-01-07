@@ -16,7 +16,7 @@ extern void QueryDeviceInfo(const std::wstring&, bool&, size_t&, bool&, std::wst
 // used in parallel_for_each.h
 extern void *CreateKernel(std::string);
 extern void LaunchKernel(void *, size_t, size_t *, size_t *);
-extern std::future<void>* LaunchKernelAsync(void *, size_t, size_t *, size_t *);
+extern std::shared_future<void>* LaunchKernelAsync(void *, size_t, size_t *, size_t *);
 extern void MatchKernelNames(std::string &);
 
 // used in serialize.h

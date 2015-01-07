@@ -34,7 +34,7 @@ static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu) {
 
 static std::set<std::string> __mcw_cxxamp_kernels;
 template<typename Kernel, int dim_ext>
-static inline std::future<void>* mcw_cxxamp_launch_kernel_async(size_t *ext,
+static inline std::shared_future<void>* mcw_cxxamp_launch_kernel_async(size_t *ext,
   size_t *local_size, const Kernel& f) restrict(cpu,amp) {
 #ifndef __GPU__
   //Invoke Kernel::__cxxamp_trampoline as an kernel

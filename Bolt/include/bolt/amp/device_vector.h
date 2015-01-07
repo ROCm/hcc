@@ -107,7 +107,7 @@ class device_vector;
     public:
         static concurrency::array_view<T, 1> getav() restrict(cpu)
         {
-            static T type_default;
+            //static T type_default;
             concurrency::array<T, 1> A = concurrency::array<T>(1);
             return concurrency::array_view<T,1>(A);
         }
@@ -275,16 +275,16 @@ public:
         {}
 
         //  Basic constructor requires a reference to the container and a positional element
-        iterator_base( Container& rhs, size_type index ): m_Container( rhs, false ), m_Index( static_cast<int>(index) )
+        iterator_base( Container& rhs, size_type index ): m_Index( static_cast<int>(index) ), m_Container( rhs, false )
         {}
 
         //  This copy constructor allows an iterator to convert into a const_iterator, but not vica versa
         template< typename OtherContainer >
         iterator_base( const iterator_base< OtherContainer >& rhs ):
-            m_Container( rhs.m_Container, false ), m_Index( rhs.m_Index )
+            m_Index( rhs.m_Index ), m_Container( rhs.m_Container, false )
         {}
         iterator_base( const iterator_base& rhs ):
-            m_Container( rhs.m_Container, false ), m_Index( rhs.m_Index )
+            m_Index( rhs.m_Index ), m_Container( rhs.m_Container, false )
         {}
         //  This copy constructor allows an iterator to convert into a const_iterator, but not vica versa
         iterator_base< Container >& operator= ( const iterator_base< Container >& rhs )
@@ -572,7 +572,13 @@ private:
 			m_devMemory.discard_data();
     };
 
-
+    // Reuse av
+    device_vector( const arrayview_type& av, size_type newSize, bool discard = false, control& ctl = control::getDefault( ))
+                                    : m_Size( static_cast<int>(newSize) ), m_devMemory( av )
+    {
+		if(discard)
+			m_devMemory.discard_data();
+    };
 	/*! \brief A constructor that creates a new device_vector using a range specified by the user.
     *   \param begin An iterator pointing at the beginning of the range.
 	*   \param newSize The number of elements of the new device_vector

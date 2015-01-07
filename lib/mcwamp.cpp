@@ -430,10 +430,10 @@ void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size)
   GetOrInitRuntime()->m_LaunchKernelImpl(kernel, dim_ext, ext, local_size);
 }
 
-std::future<void>* LaunchKernelAsync(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {
+std::shared_future<void>* LaunchKernelAsync(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {
   void *ret = nullptr;
   ret = GetOrInitRuntime()->m_LaunchKernelAsyncImpl(kernel, dim_ext, ext, local_size);
-  return static_cast<std::future<void>*>(ret);
+  return static_cast<std::shared_future<void>*>(ret);
 }
 
 

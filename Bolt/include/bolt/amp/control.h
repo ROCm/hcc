@@ -120,8 +120,8 @@ public:
         m_useHost(useHost),
         m_forceRunMode(getDefault().m_forceRunMode),
 		m_defaultRunMode(getDefault().m_defaultRunMode),
-        m_debug(debug),
         m_autoTune(getDefault().m_autoTune),
+        m_debug(debug),
         m_wgPerComputeUnit(getDefault().m_wgPerComputeUnit),
         m_waitMode(getDefault().m_waitMode),
         m_unroll(getDefault().m_unroll)
@@ -132,8 +132,8 @@ public:
         m_useHost(ref.m_useHost),
         m_forceRunMode(ref.m_forceRunMode),
 		m_defaultRunMode(ref.m_defaultRunMode),
-        m_debug(ref.m_debug),
         m_autoTune(ref.m_autoTune),
+        m_debug(ref.m_debug),
         m_wgPerComputeUnit(ref.m_wgPerComputeUnit),
         m_waitMode(ref.m_waitMode),
         m_unroll(ref.m_unroll)
@@ -226,8 +226,8 @@ private:
         m_accelerator( Concurrency::accelerator::default_accelerator ),
         m_useHost(UseHost),
         m_forceRunMode(Automatic),
-        m_debug(debug::None),
         m_autoTune(AutoTuneAll),
+        m_debug(debug::None),
         m_wgPerComputeUnit(8),
         m_waitMode(BusyWait),
         m_unroll(1)
