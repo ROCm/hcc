@@ -5,7 +5,7 @@ target triple = "i386-unknown-linux-gnu"
 
 %"class.Concurrency::array_view" = type { float addrspace(1)*, i32 }
 
-@_ZZ4mainEN1aE = internal addrspace(3) unnamed_addr global [16 x float] zeroinitializer, align 4
+@_ZZ4mainEN1aE = internal unnamed_addr addrspace(3) global [16 x float] zeroinitializer, align 4
 
 declare i32 @get_global_id(i32) nounwind readonly
 

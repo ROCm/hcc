@@ -2,7 +2,7 @@
 ; RUN: gcc -D__local= -c %t.c
 ; ModuleID = 'binomialoptions.cpp'
 
-@call_a = internal addrspace(3) unnamed_addr global [17 x float] zeroinitializer, align 4
+@call_a = internal unnamed_addr addrspace(3) global [17 x float] zeroinitializer, align 4
 
 define internal void @bar() align 2 {
 entry:
