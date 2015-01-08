@@ -77,12 +77,7 @@ public:
   HSAAMPAllocator() {}
   void init(void *data, int count) {
     //std::cerr << "HSAAMPAllocator::init()" << std::endl;
-    void *p = nullptr;
-    if (is_aligned(data, 0x1000))  {
-      p = data;
-    } else {
-      p = aligned_alloc(0x1000, count);
-    }
+    void *p = aligned_alloc(0x1000, count);
     assert(p);
     CLAMP::RegisterMemory(p, count);
     rwq[data] = {count, false};
