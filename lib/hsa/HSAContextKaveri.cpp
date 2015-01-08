@@ -592,18 +592,18 @@ public:
       STATUS_CHECK(status, __LINE__);
 
       /*
-       * Destroy the brig module. The program was successfully created the 
-       * kernel symbol was found and the program was finalized, so it is no 
-       * longer needed.
-       */
-      destroy_brig_module(brigModule);
-
-      /*
        * Get the hsa code descriptor address.
        */
       hsa_ext_code_descriptor_t *hsaCodeDescriptor;
       status = hsa_ext_query_kernel_descriptor_address(hsaProgram, module, finalization_request_list.symbol, &hsaCodeDescriptor);
       STATUS_CHECK(status, __LINE__);
+
+      /*
+       * Destroy the brig module. The program was successfully created the 
+       * kernel symbol was found and the program was finalized, so it is no 
+       * longer needed.
+       */
+      destroy_brig_module(brigModule);
 
       return new KernelImpl(hsaCodeDescriptor, this); 
     }
