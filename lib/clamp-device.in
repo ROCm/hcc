@@ -56,6 +56,10 @@ if [ "$3" == "--hsa" ]; then
            -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
            -promote-globals -promote-privates -erase-nonkernels -tile-uniform -malloc-select -dce -S < $1 -o $2.promote.ll.orig
     fi
+    if [ $? == 1 ]; then
+      echo "Generating HSAIL BRIG kernel failed"
+      exit 1
+    fi
     sed "s/call /call spir_func /g" < $2.promote.ll.orig > $2.promote.ll
     $AS -o $2.promote.bc $2.promote.ll
     echo "Generating HSA Brig kernel"
@@ -74,6 +78,10 @@ if [ "$3" == "--spir" ]; then
          -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
          -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
          -promote-globals -erase-nonkernels -tile-uniform -dce < $1 -o $2.promote.bc
+    if [ $? == 1 ]; then
+      echo "Generating OpenCL SPIR kernel failed"
+      exit 1
+    fi
     echo "Generating OpenCL SPIR kernel"
     $LINK $MATHLIB/opencl_math.bc $2.promote.bc -o $2 2>/dev/null
     # remove temp file
@@ -87,6 +95,10 @@ if [ "$3" == "--opencl" ]; then
          -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
          -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
          -promote-globals -erase-nonkernels -tile-uniform -dce < $1 -o $2.promote.bc
+    if [ $? == 1 ]; then
+      echo "Generating OpenCL C kernel failed"
+      exit 1
+    fi
     echo "Generating OpenCL C kernel"
     $LLC $2.promote.bc -march=c -o - |cat $MATH/opencl_math.cl - > $2
 
@@ -109,6 +121,10 @@ $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
      -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
      -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
      -promote-globals -erase-nonkernels -tile-uniform -dce < $1 -o $2.promote.bc
+    if [ $? == 1 ]; then
+      echo "Generating OpenCL kernel failed"
+      exit 1
+    fi
 if hasSPIR; then
     echo "Generating OpenCL SPIR kernel"
     $LINK $MATHLIB/opencl_math.bc $2.promote.bc -o $2 2>/dev/null

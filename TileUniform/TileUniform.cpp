@@ -174,8 +174,8 @@ void ControlDependences::dump() const {
 /// dependency.
 ///
 ThreadDependencyAnalyzer::ThreadDependencyAnalyzer(Module &M) {
-  get_global_id = M.getFunction("get_global_id");
-  get_local_id = M.getFunction("get_local_id");
+  get_global_id = M.getFunction("amp_get_global_id");
+  get_local_id = M.getFunction("amp_get_local_id");
 }
 
 #if HANDLE_LOAD_PRIVATE
@@ -213,7 +213,7 @@ void ThreadDependencyAnalyzer::visitInstruction(Instruction &I) {
 ///
 bool TileUniform::runOnModule(Module &M) {
   // FIXME: TileUniform should be implement as a FunctionPass
-  if(!(barrier = M.getFunction("barrier")))
+  if(!(barrier = M.getFunction("amp_barrier")))
     return false;
 
   for (Value::use_iterator UI = barrier->use_begin(), UE = barrier->use_end();
