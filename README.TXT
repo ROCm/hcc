@@ -8,7 +8,7 @@ transforms it into the following targets:
 
 1. OpenCL SPIR
 2. OpenCL C
-3. HSA BRIG 
+3. HSA BRIG
 
 The project is based on LLVM+CLANG.
 
@@ -77,8 +77,8 @@ repository for development. This build procedure assumes that you will
 work on your own repository. As such, the following repositories should
 be available:
 
-  https://${username}@bitbucket.org/${username}/cppamp-driver-ng
-  https://${username}@bitbucket.org/${username}/cppamp-ng
+  https://${username}@bitbucket.org/${username}/cppamp-driver-ng-35
+  https://${username}@bitbucket.org/${username}/cppamp-ng-35
 
 , where ${username} is a placeholder for your ID for bitbucket.org.
 
@@ -99,7 +99,11 @@ are:
 
 2. Pull your cppamp-driver-ng repository from bitbucket.
   # cd cppamp
-  # git clone git@bitbucket.org:${username}/cppamp-driver-ng.git src
+  # git clone git@bitbucket.org:${username}/cppamp-driver-ng-35.git src
+  # cd src/
+  # git fetch origin
+  # git checkout -b AMP-439_on_master origin/AMP-439_on_master
+  # cd ..
 
 3. Create a build directory and configure using CMake.
   # mkdir build
@@ -108,7 +112,7 @@ are:
 
   The default options can be overridden on the command line:
   # cmake ../src \
-      -DCLANG_URL=https://bitbucket.org/multicoreware/cppamp-ng.git \
+      -DCLANG_URL=https://bitbucket.org/multicoreware/cppamp-ng-35.git \
       -DOPENCL_HEADER_DIR=/opt/AMDAPP/include \
       -DOPENCL_LIBRARY_DIR=/opt/AMDAPP/lib/x86_64 \
       -DHSA_HEADER_DIR=/opt/hsa/include \
@@ -132,9 +136,14 @@ are:
 
    - HSAIL_COMPILER_DIR : HSAIL compiler binary path
 
-   - CMAKE_BUILD_TYPE : Release or Debug  
+   - CMAKE_BUILD_TYPE : Release or Debug
 
    - CXXAMP_ENABLE_BOLT : ON / OFF AMD Bolt API (default is ON)
+
+  # cd ../src/compiler/tools/clang/
+  # git fetch origin
+  # git checkout -b AMP-439 origin/AMP-439
+  # cd -
 
 4. Build the whole system. This will build clang and other libraries
    that require one time build.
@@ -210,7 +219,7 @@ Available options are:
 export CLAMP_NOTILECHECK=1 could suppress tile uniformity check in C++AMP at
 compile time.
 
-If you compile AMD Bolt API along with C++AMP, this environment variable must 
+If you compile AMD Bolt API along with C++AMP, this environment variable must
 be set due to internal issues inside Bolt.
 
 
@@ -270,7 +279,7 @@ to make hgsubversion available:
     [extensions]
     hgsubversion = <the location where you downloaded hgsubversion>/hgsubversion
 
-    For instance, if you downloaded hgsubversion at /opt/hgsubversion, then 
+    For instance, if you downloaded hgsubversion at /opt/hgsubversion, then
 
     [extensions]
     hgsubversion = /opt/hgsubversion/hgsubversion
