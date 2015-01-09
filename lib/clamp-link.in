@@ -70,6 +70,8 @@ done
 #echo "host args:"$LINK_HOST_ARGS
 #echo "other args:"$LINK_OTHER_ARGS
 
+# linker return value
+ret=0
 
 # only do kernel lowering if there are objects given
 if [ -n "$LINK_KERNEL_ARGS" ]; then
@@ -116,12 +118,16 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
   # link everything together
   if [ "@HAS_OPENCL@" == "1" ] && [ "@HAS_HSA@" == "1" ]; then
     ld $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS $LINK_OTHER_ARGS
+    ret=$?
   elif [ "@HAS_OPENCL@" == "1" ] && [ "@HAS_HSA@" == "0" ]; then
     ld $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $LINK_HOST_ARGS $LINK_OTHER_ARGS
+    ret=$?
   elif [ "@HAS_OPENCL@" == "0" ] && [ "@HAS_HSA@" == "1" ]; then
     ld $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS $LINK_OTHER_ARGS
+    ret=$?
   else
     echo "Error in C++AMP link!"
+    ret=1
   fi
 
 fi # if [ -n $LINK_KERNEL_ARGS ];
@@ -171,3 +177,6 @@ if [ -d $TEMP_DIR ]; then
   rm -f $TEMP_DIR/*
   rmdir $TEMP_DIR
 fi
+
+# return value
+exit $ret
