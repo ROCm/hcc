@@ -70,10 +70,6 @@ Build Instruction for HSA
   - Stable: https://github.com/HSAFoundation/HSAIL-HLC-Stable
   - Development: https://github.com/HSAFoundation/HSAIL-HLC-Development
 
-5. libHSAIL: 
-   libHSAIL has to be manually built per instructions on GitHub.
-  - https://github.com/HSAFoundation/HSAIL-Tools
-
 * Prerequisite/Repository
 
 For any development work, you should fork from them and create your own
@@ -117,9 +113,8 @@ are:
       -DOPENCL_LIBRARY_DIR=/opt/AMDAPP/lib/x86_64 \
       -DHSA_HEADER_DIR=/opt/hsa/include \
       -DHSA_LIBRARY_DIR=/opt/hsa/lib \
+      -DHSA_EXT_LIBRARY_DIR=/opt/hsa/lib \
       -DHSA_KMT_LIBRARY_DIR=/opt/hsa/lib \
-      -DHSA_LIBHSAIL_HEADER_DIR=/opt/hsa/include \
-      -DHSA_LIBHSAIL_LIBRARY_DIR=/opt/hsa/lib \
       -DHSAIL_COMPILER_DIR=/opt/amd/bin \
       -DCMAKE_BUILD_TYPE=Release
 
@@ -130,11 +125,9 @@ are:
 
    - HSA_HEADER_DIR : HSA runtime header include path
    - HSA_LIBRARY_DIR : HSA runtime library path
+   - HSA_EXT_LIBRARY_DIR : HSA runtime extension library path
 
    - HSA_KMT_LIBRARY_DIR : HSA kernel library path
-
-   - HSA_LIBHSAIL_HEADER_DIR : libHSAIL header include path
-   - HSA_LIBHSAIL_LIBRARY_DIR : libHSAIL library path
 
    - HSAIL_COMPILER_DIR : HSAIL compiler binary path
 
