@@ -216,7 +216,7 @@ bool TileUniform::runOnModule(Module &M) {
   if(!(barrier = M.getFunction("amp_barrier")))
     return false;
 
-  for (Value::use_iterator UI = barrier->use_begin(), UE = barrier->use_end();
+  for (Value::user_iterator UI = barrier->user_begin(), UE = barrier->user_end();
         UI != UE; ++UI) {
     if (Instruction *I = dyn_cast<Instruction>(*UI)) {
       BasicBlock *BB = I->getParent();
