@@ -1,4 +1,4 @@
-// XFAIL: Linux, hsa
+// XFAIL: Linux
 // RUN: %cxxamp -Xclang -fhsa-ext %s -o %t.out && %t.out
 #include <iostream>
 #include <iomanip>
@@ -92,6 +92,6 @@ int main ()
   std::cout << "Xfree count: " << newInit.get_Xfree_count() 
               << ", Xmalloc count: " << newInit.get_Xmalloc_count()
               << ", malloc count: " << newInit.get_malloc_count() << "\n";
-  //return (error != 0);
-  return 1; // FIXME tempoary make this test case fail no matter what
+  return (error != 0);
+  //return 1; // FIXME tempoary make this test case fail no matter what
 }
