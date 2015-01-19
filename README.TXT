@@ -116,7 +116,8 @@ are:
       -DHSA_EXT_LIBRARY_DIR=/opt/hsa/lib \
       -DHSA_KMT_LIBRARY_DIR=/opt/hsa/lib \
       -DHSAIL_COMPILER_DIR=/opt/amd/bin \
-      -DCMAKE_BUILD_TYPE=Release
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCXXAMP_ENABLE_BOLT=ON
 
    - CLANG_URL : URL of C++AMP clang implementation
 
@@ -133,13 +134,15 @@ are:
 
    - CMAKE_BUILD_TYPE : Release or Debug  
 
+   - CXXAMP_ENABLE_BOLT : ON / OFF AMD Bolt API (default is ON)
+
 4. Build the whole system. This will build clang and other libraries
    that require one time build.
   # make [-j #] world           // # is the number of parallel builds
-  # make                        // this builds llvm utilities
+  # CLAMP_NOTILECHECK=ON make   // this builds llvm utilities
 
    For recurring builds for llvm and clang:
-  # make
+  # CLAMP_NOTILECHECK=ON make
 
 5. Test. (optional, would be more useful in development cycle)
   # make test
@@ -201,6 +204,14 @@ Available options are:
 - HSA : HSA
 - CL12 : OpenCL 1.2 (with zero-copy performance optimizations)
 - CL11 : OpenCL 1.1
+
+3. CLAMP_NOTILECHECK
+
+export CLAMP_NOTILECHECK=1 could suppress tile uniformity check in C++AMP at
+compile time.
+
+If you compile AMD Bolt API along with C++AMP, this environment variable must 
+be set due to internal issues inside Bolt.
 
 
 How to push your changes to the main repository
