@@ -45,16 +45,28 @@ fi
 
 # emit HSAIL/BRIG kernel
 if [ "$3" == "--hsa" ]; then
-    if [ "$ALWAYS_MALLOC" == "ON" ]; then
-      $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-           -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-           -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-           -promote-globals -promote-privates -erase-nonkernels -tile-uniform -malloc-select -alwasy-malloc -dce -S < $1 -o $2.promote.ll.orig
+    if [ "$CLAMP_NOTILECHECK" == "ON" ]; then
+      if [ "$ALWAYS_MALLOC" == "ON" ]; then
+        $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+             -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+           -  promote-globals -promote-privates -erase-nonkernels -malloc-select -alwasy-malloc -dce -S < $1 -o $2.promote.ll.orig
+      else
+        $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+             -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+             -promote-globals -promote-privates -erase-nonkernels -malloc-select -dce -S < $1 -o $2.promote.ll.orig
+      fi
     else
-      $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-           -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-           -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-           -promote-globals -promote-privates -erase-nonkernels -tile-uniform -malloc-select -dce -S < $1 -o $2.promote.ll.orig
+      if [ "$ALWAYS_MALLOC" == "ON" ]; then
+        $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+             -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+             -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+           -  promote-globals -promote-privates -erase-nonkernels -tile-uniform -malloc-select -alwasy-malloc -dce -S < $1 -o $2.promote.ll.orig
+      else
+        $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+             -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+             -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+             -promote-globals -promote-privates -erase-nonkernels -tile-uniform -malloc-select -dce -S < $1 -o $2.promote.ll.orig
+      fi
     fi
     if [ $? == 1 ]; then
       echo "Generating HSAIL BRIG kernel failed"
@@ -74,10 +86,16 @@ fi
 
 # emit SPIR kernel
 if [ "$3" == "--spir" ]; then
-    $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-         -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-         -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-         -promote-globals -erase-nonkernels -tile-uniform -dce < $1 -o $2.promote.bc
+    if [ "$CLAMP_NOTILECHECK" == "ON" ]; then
+      $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+           -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+           -promote-globals -erase-nonkernels -dce < $1 -o $2.promote.bc
+    else
+      $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+           -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+           -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+           -promote-globals -erase-nonkernels -tile-uniform -dce < $1 -o $2.promote.bc
+    fi
     if [ $? == 1 ]; then
       echo "Generating OpenCL SPIR kernel failed"
       exit 1
@@ -91,10 +109,16 @@ fi
 
 # emit OpenCL C kernel
 if [ "$3" == "--opencl" ]; then
-    $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-         -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-         -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-         -promote-globals -erase-nonkernels -tile-uniform -dce < $1 -o $2.promote.bc
+    if [ "$CLAMP_NOTILECHECK" == "ON" ]; then
+      $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+           -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+           -promote-globals -erase-nonkernels -dce < $1 -o $2.promote.bc
+    else
+      $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+           -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+           -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+           -promote-globals -erase-nonkernels -tile-uniform -dce < $1 -o $2.promote.bc
+    fi
     if [ $? == 1 ]; then
       echo "Generating OpenCL C kernel failed"
       exit 1
@@ -117,14 +141,20 @@ hasSPIR() {
     return $?
 }
 # if there is no mode specified, fallback to default behavior
-$OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-     -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-     -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-     -promote-globals -erase-nonkernels -tile-uniform -dce < $1 -o $2.promote.bc
-    if [ $? == 1 ]; then
-      echo "Generating OpenCL kernel failed"
-      exit 1
-    fi
+if [ "$CLAMP_NOTILECHECK" == "ON" ]; then
+  $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+       -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+       -promote-globals -erase-nonkernels -dce < $1 -o $2.promote.bc
+else
+  $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+       -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+       -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+       -promote-globals -erase-nonkernels -tile-uniform -dce < $1 -o $2.promote.bc
+fi
+if [ $? == 1 ]; then
+  echo "Generating OpenCL kernel failed"
+  exit 1
+fi
 if hasSPIR; then
     echo "Generating OpenCL SPIR kernel"
     $LINK $MATHLIB/opencl_math.bc $2.promote.bc -o $2 2>/dev/null
