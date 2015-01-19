@@ -19,10 +19,10 @@ test_load_store_atomic:
   %ld3 = load atomic i32* %0 seq_cst, align 4
 ;CHECK: memfence_screl_global(sys);
 ;CHECK: ld_kernarg_{{.*}}
-;CHECK: atomic_ld_global_scacq_sys_equiv({{.*}})_b32 {{.*}}
+;CHECK: atomic_ld_global_scacq_sys_b32 {{.*}}
 
   store atomic i32 %ld3, i32* %0 seq_cst, align 4, !tbaa !15
-;CHECK: atomicnoret_st_global_screl_sys_equiv({{.*}})_b32 {{.*}}
+;CHECK: atomicnoret_st_global_screl_sys_b32 {{.*}}
 ;CHECK: memfence_scacq_global(sys);
 
   ret void
