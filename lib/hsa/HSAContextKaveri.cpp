@@ -125,6 +125,46 @@ static hsa_status_t get_kernarg(hsa_region_t region, void* data) {
   return HSA_STATUS_SUCCESS;
 }
 
+// Levenshtein Distance to measure the difference of two sequences
+// The shortest distance it returns the more likely the two sequences are equal
+static inline int ldistance(const std::string source, const std::string target)
+{
+  int n = source.length();
+  int m = target.length();
+  if (m == 0)
+    return n;
+  if (n == 0)
+    return m;
+
+  //Construct a matrix
+  typedef std::vector < std::vector < int >>Tmatrix;
+  Tmatrix matrix(n + 1);
+
+  for (int i = 0; i <= n; i++)
+    matrix[i].resize(m + 1);
+  for (int i = 1; i <= n; i++)
+    matrix[i][0] = i;
+  for (int i = 1; i <= m; i++)
+    matrix[0][i] = i;
+
+  for (int i = 1; i <= n; i++) {
+    const char si = source[i - 1];
+    for (int j = 1; j <= m; j++) {
+      const char dj = target[j - 1];
+      int cost;
+      if (si == dj)
+        cost = 0;
+      else
+        cost = 1;
+      const int above = matrix[i - 1][j] + 1;
+      const int left = matrix[i][j - 1] + 1;
+      const int diag = matrix[i - 1][j - 1] + cost;
+      matrix[i][j] = std::min(above, std::min(left, diag));
+    }
+  }
+  return matrix[n][m];
+}
+
 /*
  * Finds the specified symbols offset in the specified brig_module.
  * If the symbol is found the function returns HSA_STATUS_SUCCESS, 
@@ -145,6 +185,8 @@ hsa_status_t find_symbol_offset(hsa_ext_brig_module_t* brig_module,
     hsa_ext_brig_section_header_t* code_section_header =
              brig_module->section[HSA_EXT_BRIG_SECTION_CODE];
 
+    int distance = 1024;
+    bool hit = false;
     /* 
      * First entry into the BRIG code section
      */
@@ -160,11 +202,24 @@ hsa_status_t find_symbol_offset(hsa_ext_brig_module_t* brig_module,
             BrigData* data_entry = (BrigData*)((char*) data_section_header + data_name_offset);
             if (!strncmp(symbol_name, (char*) data_entry->bytes, strlen(symbol_name))) {
                 *offset = code_offset;
-                return HSA_STATUS_SUCCESS;
+                // perfect match. mark no need to replace and skip the loop
+                hit = true;
+                distance = 0;
+                break;
+            }
+            int n = ldistance((char*) data_entry->bytes, symbol_name);
+            if (n <= distance) {
+                distance = n;
+                hit = true;
+                *offset = code_offset;
             }
         }
         code_offset += code_entry->byteCount;
         code_entry = (BrigBase*) ((char*)code_section_header + code_offset);
+    }
+
+    if (hit && distance < 5) {
+        return HSA_STATUS_SUCCESS;
     }
     return HSA_STATUS_ERROR;
 }
