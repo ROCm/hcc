@@ -1,9 +1,25 @@
+prog global_u64 &signal_Xmalloc = 0;
+prog global_u64 &signal_malloc = 0;
 prog global_u64 &ptr_a_address = 0;
 prog global_u64 &ptr_b_address = 0;
 prog global_u64 &ptr_c_address = 0;
 prog global_u64 &ptr_x_address = 0;
 prog global_u64 &ptr_y_address = 0;
 prog global_u64 &ptr_z_address = 0;
+
+prog function &_Z14putXmallocFlagm()(arg_u64 %arg_p0)
+{
+        ld_arg_u64  $d0, [%arg_p0];
+        st_global_u64 $d0, [&signal_Xmalloc];
+        ret;
+};
+
+prog function &_Z13putMallocFlagm()(arg_u64 %arg_p0)
+{
+        ld_arg_u64  $d0, [%arg_p0];
+        st_global_u64 $d0, [&signal_malloc];
+        ret;
+};
 
 prog function &_Z9put_ptr_aPv2()(arg_u64 %arg_p0)
 {
@@ -75,6 +91,10 @@ prog function &_ZdlPv()(arg_u64 %arg_p0)
 {
 
 @ZZ4mainEN3_EC__219__cxxamp_trampolineE_1PNSt3__16atomicIlEElPNS1_IiEE_entry:
+
+ld_global_u64 $d10, [&signal_malloc];
+signalnoret_add_screl_s64_sig64 $d10, 1;
+
 // BB#0:
 workitemabsid_u32       $s0, 0;
 cvt_u64_u32     $d0, $s0;
@@ -98,6 +118,10 @@ atomic_ld_global_scacq_sys_equiv(255)_b32       $s0, [$d0];
 cmp_ne_b1_s32   $c0, $s0, 0;
 cbr_b1  $c0, @BB0_1;
 // BB#2:                                // %_ZZ4mainENK3$_2clE_1N11Concurrency11tiled_indexILi4ELi0ELi0EEE.exit
+
+ld_global_u64 $d10, [&signal_malloc];
+signalnoret_sub_screl_s64_sig64 $d10, 1;
+
 ret;
 
 };
@@ -106,6 +130,10 @@ prog function &_ZdaPv()(arg_u64 %arg_p0)
 {
 
 @ZZ4mainEN3_EC__219__cxxamp_trampolineE_1PNSt3__16atomicIlEElPNS1_IiEE_entry:
+
+ld_global_u64 $d10, [&signal_malloc];
+signalnoret_add_screl_s64_sig64 $d10, 1;
+
 // BB#0:
 workitemabsid_u32       $s0, 0;
 cvt_u64_u32     $d0, $s0;
@@ -129,6 +157,10 @@ atomic_ld_global_scacq_sys_equiv(255)_b32       $s0, [$d0];
 cmp_ne_b1_s32   $c0, $s0, 0;
 cbr_b1  $c0, @BB0_1;
 // BB#2:                                // %_ZZ4mainENK3$_2clE_1N11Concurrency11tiled_indexILi4ELi0ELi0EEE.exit
+
+ld_global_u64 $d10, [&signal_malloc];
+signalnoret_sub_screl_s64_sig64 $d10, 1;
+
 ret;
 
 };
@@ -174,6 +206,10 @@ prog function &_Znwm_malloc(arg_u64 %ret_r0)(arg_u64 %arg_p0)
 {
 
 @ZZ4mainEN3_EC__119__cxxamp_trampolineE_0lPNSt3__16atomicIlEEPNS1_IiEES3__entry:
+
+ld_global_u64 $d10, [&signal_malloc];
+signalnoret_add_screl_s64_sig64 $d10, 1;
+
 // BB#0:
 workitemabsid_u32       $s0, 0;
 cvt_u64_u32     $d0, $s0;
@@ -209,6 +245,10 @@ add_u64 $d0, $d1, $d0;
 add_u64 $d1, $d2, 8;
 // atomicnoret_st_global_screl_sys_equiv(255)_b64       [$d0], $d1;
 st_arg_u64  $d1, [%ret_r0];
+
+ld_global_u64 $d10, [&signal_malloc];
+signalnoret_sub_screl_s64_sig64 $d10, 1;
+
 ret;
 
 };
@@ -217,6 +257,10 @@ prog function &_Znam_malloc(arg_u64 %ret_r0)(arg_u64 %arg_p0)
 {
 
 @ZZ4mainEN3_EC__119__cxxamp_trampolineE_0lPNSt3__16atomicIlEEPNS1_IiEES3__entry:
+
+ld_global_u64 $d10, [&signal_malloc];
+signalnoret_add_screl_s64_sig64 $d10, 1;
+
 // BB#0:
 workitemabsid_u32       $s0, 0;
 cvt_u64_u32     $d0, $s0;
@@ -252,6 +296,10 @@ add_u64 $d0, $d1, $d0;
 add_u64 $d1, $d2, 8;
 // atomicnoret_st_global_screl_sys_equiv(255)_b64       [$d0], $d1;
 st_arg_u64  $d1, [%ret_r0];
+
+ld_global_u64 $d10, [&signal_malloc];
+signalnoret_sub_screl_s64_sig64 $d10, 1;
+
 ret;
 
 };
@@ -356,6 +404,10 @@ align(16) group_u64 %__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPN
 align(16) group_u64 %__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN4tempE_13[512];
 
 @ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__entry:
+
+ld_global_u64 $d10, [&signal_Xmalloc];
+signalnoret_add_screl_s64_sig64 $d10, 1;
+
 // BB#0:
 workitemid_u32	$s2, 0;
 shl_u32	$s0, $s2, 3;
@@ -512,6 +564,10 @@ add_u64	$d0, $d0, $d2;
 add_u64	$d1, $d1, 4;
 // atomicnoret_st_global_screl_sys_equiv(255)_b64   [$d0], $d1;
 st_arg_u64  $d1, [%ret_r0];
+
+ld_global_u64 $d10, [&signal_Xmalloc];
+signalnoret_sub_screl_s64_sig64 $d10, 1;
+
 ret;
 
 };
@@ -523,6 +579,10 @@ align(16) group_u64 %__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPN
 align(16) group_u64 %__hsa_replaced_ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__ZZ4mainEN4tempE_13[512];
 
 @ZZ4mainEN3_EC__219__cxxamp_trampolineE_1liPNSt3__16atomicIlEEPNS1_IiEES3__entry:
+
+ld_global_u64 $d10, [&signal_Xmalloc];
+signalnoret_add_screl_s64_sig64 $d10, 1;
+
 // BB#0:
 workitemid_u32	$s2, 0;
 shl_u32	$s0, $s2, 3;
@@ -679,6 +739,10 @@ add_u64	$d0, $d0, $d2;
 add_u64	$d1, $d1, 4;
 // atomicnoret_st_global_screl_sys_equiv(255)_b64	[$d0], $d1;
 st_arg_u64  $d1, [%ret_r0];
+
+ld_global_u64 $d10, [&signal_Xmalloc];
+signalnoret_sub_screl_s64_sig64 $d10, 1;
+
 ret;
 
 };

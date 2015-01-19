@@ -1,9 +1,9 @@
 // XFAIL: Linux
-// RUN: %cxxamp -Xclang -fhsa-ext %s -o %t.out && %t.out
+// RUN: %cxxamp -I/opt/hsa/include/ -Wl,--rpath=/opt/hsa/lib -lhsa-runtime64 -L/opt/hsa/lib -Xclang -fhsa-ext %s -o %t.out && %t.out
 #include <iostream>
 #include <iomanip>
 #include <amp.h>
-#include <hsa_new.h>
+#include "hsa_new.h"
 
 #define DEBUG 1
 
@@ -11,6 +11,8 @@
 int main ()
 {
   // Removed until linking/alloc qualifier issue is solved
+  auto XmallocFlag = newInit.XmallocFlag;
+  auto mallocFlag = newInit.mallocFlag;
   auto ptr_a = newInit.ptr_a; // pointer to Xmalloc syscall numbers
   auto ptr_b = newInit.ptr_b; // pointer to Xmalloc syscall parameters
   auto ptr_c = newInit.ptr_c; // pointer to Xmalloc test results
@@ -32,6 +34,8 @@ int main ()
     [=](Concurrency::tiled_index<tileSize> tidx) restrict(amp) {
 
     // Removed until linking/alloc qualifier issue is solved
+    putXmallocFlag(XmallocFlag);
+    putMallocFlag(mallocFlag);
     put_ptr_a(ptr_a);
     put_ptr_b(ptr_b);
     put_ptr_c(ptr_c);
