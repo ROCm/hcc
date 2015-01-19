@@ -16,19 +16,19 @@ test_atomicrmw_umin:
   ;
 
   %umin1 = atomicrmw umin i32* %0, i32 %1 monotonic
-;CHECK: atomicnoret_min_global_rlx_sys_equiv({{.*}})_u32 {{.*}}
+;CHECK: atomicnoret_min_global_rlx_sys_u32 {{.*}}
 
   %umin2 = atomicrmw umin i32* %0, i32 %1 acquire
-;CHECK: atomicnoret_min_global_scacq_sys_equiv({{.*}})_u32 {{.*}}
+;CHECK: atomicnoret_min_global_scacq_sys_u32 {{.*}}
 
   %umin3 = atomicrmw umin i32* %0, i32 %1 release
-;CHECK: atomicnoret_min_global_screl_sys_equiv({{.*}})_u32 {{.*}}
+;CHECK: atomicnoret_min_global_screl_sys_u32 {{.*}}
 
   %umin4 = atomicrmw umin i32* %0, i32 %1 acq_rel
-;CHECK: atomicnoret_min_global_scar_sys_equiv({{.*}})_u32 {{.*}}
+;CHECK: atomicnoret_min_global_scar_sys_u32 {{.*}}
 
   %umin5 = atomicrmw umin i32* %0, i32 %1 seq_cst
-;CHECK: atomicnoret_min_global_scar_sys_equiv({{.*}})_u32 {{.*}}
+;CHECK: atomicnoret_min_global_scar_sys_u32 {{.*}}
 
   ret void
 }

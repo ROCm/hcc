@@ -16,19 +16,19 @@ test_atomicrmw_xor:
   ;
 
   %xor1 = atomicrmw xor i32* %0, i32 %1 monotonic
-;CHECK: atomicnoret_xor_global_rlx_sys_equiv({{.*}})_b32 {{.*}}
+;CHECK: atomicnoret_xor_global_rlx_sys_b32 {{.*}}
 
   %xor2 = atomicrmw xor i32* %0, i32 %1 acquire
-;CHECK: atomicnoret_xor_global_scacq_sys_equiv({{.*}})_b32 {{.*}}
+;CHECK: atomicnoret_xor_global_scacq_sys_b32 {{.*}}
 
   %xor3 = atomicrmw xor i32* %0, i32 %1 release
-;CHECK: atomicnoret_xor_global_screl_sys_equiv({{.*}})_b32 {{.*}}
+;CHECK: atomicnoret_xor_global_screl_sys_b32 {{.*}}
 
   %xor4 = atomicrmw xor i32* %0, i32 %1 acq_rel
-;CHECK: atomicnoret_xor_global_scar_sys_equiv({{.*}})_b32 {{.*}}
+;CHECK: atomicnoret_xor_global_scar_sys_b32 {{.*}}
 
   %xor5 = atomicrmw xor i32* %0, i32 %1 seq_cst
-;CHECK: atomicnoret_xor_global_scar_sys_equiv({{.*}})_b32 {{.*}}
+;CHECK: atomicnoret_xor_global_scar_sys_b32 {{.*}}
 
   ret void
 }

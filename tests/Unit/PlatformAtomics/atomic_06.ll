@@ -16,19 +16,19 @@ test_atomicrmw_sub:
   ;
 
   %sub1 = atomicrmw sub i32* %0, i32 %1 monotonic
-;CHECK: atomicnoret_sub_global_rlx_sys_equiv({{.*}})_s32 {{.*}}
+;CHECK: atomicnoret_sub_global_rlx_sys_s32 {{.*}}
 
   %sub2 = atomicrmw sub i32* %0, i32 %1 acquire
-;CHECK: atomicnoret_sub_global_scacq_sys_equiv({{.*}})_s32 {{.*}}
+;CHECK: atomicnoret_sub_global_scacq_sys_s32 {{.*}}
 
   %sub3 = atomicrmw sub i32* %0, i32 %1 release
-;CHECK: atomicnoret_sub_global_screl_sys_equiv({{.*}})_s32 {{.*}}
+;CHECK: atomicnoret_sub_global_screl_sys_s32 {{.*}}
 
   %sub4 = atomicrmw sub i32* %0, i32 %1 acq_rel
-;CHECK: atomicnoret_sub_global_scar_sys_equiv({{.*}})_s32 {{.*}}
+;CHECK: atomicnoret_sub_global_scar_sys_s32 {{.*}}
 
   %sub5 = atomicrmw sub i32* %0, i32 %1 seq_cst
-;CHECK: atomicnoret_sub_global_scar_sys_equiv({{.*}})_s32 {{.*}}
+;CHECK: atomicnoret_sub_global_scar_sys_s32 {{.*}}
 
   ret void
 }

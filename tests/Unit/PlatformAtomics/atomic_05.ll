@@ -16,19 +16,19 @@ test_atomicrmw_add:
   ;
 
   %add1 = atomicrmw add i32* %0, i32 %1 monotonic
-;CHECK: atomicnoret_add_global_rlx_sys_equiv({{.*}})_s32 {{.*}}
+;CHECK: atomicnoret_add_global_rlx_sys_s32 {{.*}}
 
   %add2 = atomicrmw add i32* %0, i32 %1 acquire
-;CHECK: atomicnoret_add_global_scacq_sys_equiv({{.*}})_s32 {{.*}}
+;CHECK: atomicnoret_add_global_scacq_sys_s32 {{.*}}
 
   %add3 = atomicrmw add i32* %0, i32 %1 release
-;CHECK: atomicnoret_add_global_screl_sys_equiv({{.*}})_s32 {{.*}}
+;CHECK: atomicnoret_add_global_screl_sys_s32 {{.*}}
 
   %add4 = atomicrmw add i32* %0, i32 %1 acq_rel
-;CHECK: atomicnoret_add_global_scar_sys_equiv({{.*}})_s32 {{.*}}
+;CHECK: atomicnoret_add_global_scar_sys_s32 {{.*}}
 
   %add5 = atomicrmw add i32* %0, i32 %1 seq_cst
-;CHECK: atomicnoret_add_global_scar_sys_equiv({{.*}})_s32 {{.*}}
+;CHECK: atomicnoret_add_global_scar_sys_s32 {{.*}}
 
 
   ret void
