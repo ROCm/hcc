@@ -17,10 +17,10 @@ test_load_store_atomic:
   ; store release
   ;
   %ld2 = load atomic i32* %0 acquire, align 4
-;CHECK: atomic_ld_global_scacq_sys_equiv({{.*}})_b32 {{.*}}
+;CHECK: atomic_ld_global_scacq_sys_b32 {{.*}}
 
   store atomic i32 %ld2, i32* %0 release, align 4, !tbaa !15
-;CHECK: atomicnoret_st_global_screl_sys_equiv({{.*}})_b32 {{.*}}
+;CHECK: atomicnoret_st_global_screl_sys_b32 {{.*}}
 
   ret void
 }
