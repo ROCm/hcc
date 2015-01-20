@@ -180,8 +180,8 @@ void ControlDependences::dump() const {
 /// dependency.
 ///
 ThreadDependencyAnalyzer::ThreadDependencyAnalyzer(Module &M) {
-  get_global_id = M.getFunction("_Z13get_global_idj");
-  get_local_id = M.getFunction("_Z12get_local_idj");
+  get_global_id = M.getFunction("amp_get_global_id");
+  get_local_id = M.getFunction("amp_get_local_id");
   indep = true;
 }
 

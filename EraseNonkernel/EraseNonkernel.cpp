@@ -178,6 +178,8 @@ bool EraseNonkernels::runOnModule(Module &M)
                         I->getName().find("_Znam") != StringRef::npos ||
                         I->getName().find("_ZdlPv") != StringRef::npos ||
                         I->getName().find("_ZdaPv") != StringRef::npos ||
+                        I->getName().find("_Z14putXmallocFlagm") != StringRef::npos ||
+                        I->getName().find("_Z13putMallocFlagm") != StringRef::npos ||
                         I->getName().find("_Z9put_ptr_xPv") != StringRef::npos ||
                         I->getName().find("_Z9put_ptr_yPv") != StringRef::npos ||
                         I->getName().find("_Z9put_ptr_zPv") != StringRef::npos ||

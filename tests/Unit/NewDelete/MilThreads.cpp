@@ -1,10 +1,10 @@
-// XFAIL: Linux, hsa
-// RUN: %cxxamp -Xclang -fhsa-ext %s -o %t.out && %t.out
+// XFAIL: Linux
+// RUN: %cxxamp -I/opt/hsa/include/ -Wl,--rpath=/opt/hsa/lib -lhsa-runtime64 -L/opt/hsa/lib -Xclang -fhsa-ext %s -o %t.out && %t.out
 #include <iostream>
 #include <iomanip>
 #include <amp.h>
 #include <ctime>
-#include <hsa_new.h>
+#include "hsa_new.h"
 
 #define DEBUG 0
 
@@ -19,6 +19,8 @@
 int main ()
 {
   // Removed until linking/alloc qualifier issue is solved
+  auto XmallocFlag = newInit.XmallocFlag;
+  auto mallocFlag = newInit.mallocFlag;
   auto ptr_a = newInit.ptr_a; // pointer to Xmalloc syscall numbers
   auto ptr_b = newInit.ptr_b; // pointer to Xmalloc syscall parameters
   auto ptr_c = newInit.ptr_c; // pointer to Xmalloc test results
@@ -44,6 +46,8 @@ int main ()
       [=](Concurrency::tiled_index<tileSize> tidx) restrict(amp) {
 
       // Removed until linking/alloc qualifier issue is solved
+      putXmallocFlag(XmallocFlag);
+      putMallocFlag(mallocFlag);
       put_ptr_a(ptr_a);
       put_ptr_b(ptr_b);
       put_ptr_c(ptr_c);
@@ -92,6 +96,6 @@ int main ()
   std::cout << "Xfree count: " << newInit.get_Xfree_count() 
               << ", Xmalloc count: " << newInit.get_Xmalloc_count()
               << ", malloc count: " << newInit.get_malloc_count() << "\n";
-  //return (error != 0);
-  return 1; // FIXME tempoary make this test case fail no matter what
+  return (error != 0);
+  //return 1; // FIXME tempoary make this test case fail no matter what
 }
