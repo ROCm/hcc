@@ -29,7 +29,7 @@ int main()
   auto a_lambda_func = []() restrict(amp) { 
     foo();
   };
-// CHECK: call_cpu_funtion_in_amp_function_or_lambda_or_pfe.cpp:[[@LINE-2]]:8: error:  'foo':  no overloaded function has restriction specifiers that are compatible with the ambient context 'main()::<anonymous class>::operator()'
+// CHECK: call_cpu_funtion_in_amp_function_or_lambda_or_pfe.cpp:[[@LINE-2]]:8: error:  'foo':  no overloaded function has restriction specifiers that are compatible with the ambient context 'main()::(anonymous class)::operator()'
 // CHECK-NEXT:    foo();
 // CHECK-NEXT:       ^
 
@@ -37,7 +37,7 @@ int main()
   {
     foo();
   });
-// CHECK: call_cpu_funtion_in_amp_function_or_lambda_or_pfe.cpp:[[@LINE-2]]:8: error:  'foo':  no overloaded function has restriction specifiers that are compatible with the ambient context 'main()::<anonymous class>::operator()'
+// CHECK: call_cpu_funtion_in_amp_function_or_lambda_or_pfe.cpp:[[@LINE-2]]:8: error:  'foo':  no overloaded function has restriction specifiers that are compatible with the ambient context 'main()::(anonymous class)::operator()'
 // CHECK-NEXT:    foo();
 // CHECK-NEXT:       ^
    
