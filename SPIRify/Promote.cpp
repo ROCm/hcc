@@ -765,6 +765,35 @@ void updateBitCastInstWithNewOperand(BitCastInst * BI, Value *oldOperand, Value 
                              BI, newBCI, updatesNeeded);
 }
 
+void updateAddrSpaceCastInstWithNewOperand(AddrSpaceCastInst * AI, Value *oldOperand, Value * newOperand, InstUpdateWorkList * updatesNeeded)
+{
+        Type * currentType = AI->getType();
+        PointerType * currentPtrType = dyn_cast<PointerType>(currentType);
+        if (!currentPtrType) return;
+
+        Type * sourceType = newOperand->getType();
+        PointerType * sourcePtrType = dyn_cast<PointerType>(sourceType);
+        if (!sourcePtrType) return;
+
+        if ( sourcePtrType->getAddressSpace()
+             == currentPtrType->getAddressSpace() ) {
+          Value *nV = AI->getOperand(0);
+          AI->replaceAllUsesWith(nV);
+          AI->eraseFromParent();
+          return;
+        }
+
+        PointerType * newDestType =
+                PointerType::get(currentPtrType->getElementType(),
+                                 sourcePtrType->getAddressSpace());
+
+        AddrSpaceCastInst * newACI = new AddrSpaceCastInst (newOperand, newDestType,
+                                                "", AI);
+
+        updateListWithUsers (AI->user_begin(), AI->user_end(),
+                             AI, newACI, updatesNeeded);
+}
+
 void updateGEPWithNewOperand(GetElementPtrInst * GEP, Value * oldOperand, Value * newOperand, InstUpdateWorkList * updatesNeeded)
 {
         DEBUG(llvm::errs() << "=== BEFORE UPDATE GEP ===\n";
@@ -1006,6 +1035,11 @@ void updateInstructionWithNewOperand(Instruction * I,
 
        if (BitCastInst * BI = dyn_cast<BitCastInst>(I)) {
                updateBitCastInstWithNewOperand(BI, oldOperand, newOperand, updatesNeeded);
+               return;
+       }
+
+       if (AddrSpaceCastInst * AI = dyn_cast<AddrSpaceCastInst>(I)) {
+               updateAddrSpaceCastInstWithNewOperand(AI, oldOperand, newOperand, updatesNeeded);
                return;
        }
 
