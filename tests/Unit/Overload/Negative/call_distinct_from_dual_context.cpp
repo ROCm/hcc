@@ -25,7 +25,7 @@ int main()
   auto a_lambda_func = []() restrict(cpu,amp) { 
     foo();
   };
-// CHECK: call_distinct_from_dual_context.cpp:[[@LINE-2]]:8: error:  'foo':  no overloaded function has restriction specifiers that are compatible with the ambient context 'main()::<anonymous class>::operator()'
+// CHECK: call_distinct_from_dual_context.cpp:[[@LINE-2]]:8: error:  'foo':  no overloaded function has restriction specifiers that are compatible with the ambient context 'main()::(anonymous class)::operator()'
 // CHECK-NEXT:    foo();
 // CHECK-NEXT:       ^
 
@@ -33,7 +33,7 @@ int main()
   parallel_for_each(extent<1>(1), [](index<1>) restrict(cpu,amp) {
     foo();
   });
-// CHECK: call_distinct_from_dual_context.cpp:[[@LINE-2]]:8: error:  'foo':  no overloaded function has restriction specifiers that are compatible with the ambient context 'main()::<anonymous class>::operator()'
+// CHECK: call_distinct_from_dual_context.cpp:[[@LINE-2]]:8: error:  'foo':  no overloaded function has restriction specifiers that are compatible with the ambient context 'main()::(anonymous class)::operator()'
 // CHECK-NEXT:    foo();
 // CHECK-NEXT:       ^
 
