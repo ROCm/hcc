@@ -63,6 +63,7 @@ install(FILES new_delete.hsail DESTINATION lib)
 add_subdirectory(opencl_12)
 add_subdirectory(opencl_11)
 add_subdirectory(hsa)
+add_subdirectory(cpu)
 
 # Build plugins for clang
 if (CXXAMP_ENABLE_BOLT)
