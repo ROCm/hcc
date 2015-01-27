@@ -96,6 +96,9 @@ public:
         mem_info.erase(iter);
     }
     ~OpenCLAMPAllocator() {
+        // There may be unreleased mem object if an exception is thrown
+        for (auto& it : mem_info)
+            clReleaseMemObject(it.second);
         clReleaseCommandQueue(queue);
         clReleaseContext(context);
         clReleaseKernel(kernel);
