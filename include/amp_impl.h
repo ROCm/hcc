@@ -54,6 +54,8 @@ inline accelerator::accelerator(const std::wstring& path) :
 {
     CLAMP::QueryDeviceInfo(device_path, supports_cpu_shared_memory, dedicated_memory, supports_limited_double_precision, description);
     default_view->is_auto_selection = !supports_cpu_shared_memory;
+    if (device_path == std::wstring(cpu_accelerator))
+      is_emulated = true;
 }
 
 inline accelerator& accelerator::operator=(const accelerator& other) {
