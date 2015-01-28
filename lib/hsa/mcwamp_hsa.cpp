@@ -72,7 +72,6 @@ struct rw_info
 };
 class HSAAMPAllocator : public AMPAllocator
 { 
-  static inline bool is_aligned(const void *pointer, size_t byte_count) { return (uintptr_t)pointer % byte_count == 0; }
 public:
   HSAAMPAllocator() {}
   void init(void *data, int count) {
