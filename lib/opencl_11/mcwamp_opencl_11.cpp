@@ -119,10 +119,10 @@ public:
         // There may be unreleased mem object if an exception is thrown
         for (auto& it : mem_info)
             clReleaseMemObject(it.second);
-        clReleaseCommandQueue(queue);
-        clReleaseContext(context);
         clReleaseKernel(kernel);
         clReleaseProgram(program);
+        clReleaseCommandQueue(queue);
+        clReleaseContext(context);
     }
 
     std::map<void *, cl_mem> mem_info;
