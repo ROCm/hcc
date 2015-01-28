@@ -37,10 +37,13 @@ bool CpuRename::runOnModule(Module &M)
     Module::FunctionListType &funcs = M.getFunctionList();
 	for (Module::iterator I = funcs.begin(), E = funcs.end(); I != E; ) {
         Function *F = I++;
-        if (!F->isDeclaration() && !F->isIntrinsic() &&
-            F->getName().str().find("$_") == std::string::npos &&
-            F->getName().str().find("_cl") == std::string::npos)
-         F->setName(F->getName().str() + "_amp");
+        if (F->getName().str().find("$_") != std::string::npos ||
+            F->getName().str().find("_cl") != std::string::npos)
+            F->setLinkage(GlobalValue::ExternalLinkage);
+        else if (!F->isDeclaration() && !F->isIntrinsic()) {
+            F->setName(F->getName().str() + "_amp");
+            F->setLinkage(GlobalValue::InternalLinkage);
+        }
     }
     return true;
 }
