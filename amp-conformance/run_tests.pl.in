@@ -154,6 +154,9 @@ foreach my $test (@tests)
         if ($Test::config{'compile_only'}) {
             $command = "\\
                 $CLANG_AMP -cc1 -fcxx-exceptions -fsyntax-only -D__CPU__=1 $SHARED_CXXFLAGS $include_main $test $cflags_defs 2>>$run_log 1>>$run_log";
+       } elsif ($ENV{TEST_CPU} eq "ON") {
+           $command = "\\
+           $CLANG_AMP -std=c++amp -cpu $SHARED_CXXFLAGS $include_main $test $AMPTESTLIB $cflags_defs $CLAMP_LDFLAGS -o $tmpdir/test.out -g 2>>$run_log 1>>$run_log";
         } else {
             $command = "\\
                 $CLANG_AMP $SHARED_CXXFLAGS $include_main $test $AMPTESTLIB $cflags_defs $CLAMP_LDFLAGS -o $tmpdir/test.out -g 2>>$run_log 1>>$run_log";

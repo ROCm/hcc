@@ -10,6 +10,7 @@
 #include <cassert>
 
 #include <amp.h>
+#include <mutex>
 
 #include "mcwamp_impl.hpp"
 
@@ -25,6 +26,40 @@ const wchar_t accelerator::default_accelerator[] = L"default";
 std::shared_ptr<accelerator> accelerator::_gpu_accelerator = std::make_shared<accelerator>(accelerator::gpu_accelerator);
 std::shared_ptr<accelerator> accelerator::_cpu_accelerator = std::make_shared<accelerator>(accelerator::cpu_accelerator);
 std::shared_ptr<accelerator> accelerator::_default_accelerator = nullptr;
+
+std::mutex afa_u, afa_i;
+unsigned int atomic_add_unsigned(unsigned int *x, unsigned int y) {
+    std::lock_guard<std::mutex> guard(afa_u);
+    *x += y;
+    return *x;
+}
+int atomic_add_int(int *x, int y) {
+    std::lock_guard<std::mutex> guard(afa_i);
+    *x += y;
+    return *x;
+}
+std::mutex afm_u, afm_i;
+unsigned int atomic_max_unsigned(unsigned int *p, unsigned int val) {
+    std::lock_guard<std::mutex> guard(afm_u);
+    *p = std::max(*p, val);
+    return *p;
+}
+int atomic_max_int(int *p, int val) {
+    std::lock_guard<std::mutex> guard(afm_i);
+    *p = std::max(*p, val);
+    return *p;
+}
+std::mutex afi_u, afi_i;
+unsigned int atomic_inc_unsigned(unsigned int *p) {
+    std::lock_guard<std::mutex> guard(afi_u);
+    *p += 1;
+    return *p;
+}
+int atomic_inc_int(int *p) {
+    std::lock_guard<std::mutex> guard(afi_i);
+    *p += 1;
+    return *p;
+}
 
 } // namespace Concurrency
 
@@ -47,7 +82,7 @@ extern "C" char * hsa_kernel_size[] asm ("_binary_kernel_brig_size") __attribute
 
 // interface of C++AMP runtime implementation
 struct RuntimeImpl {
-  RuntimeImpl(const char* libraryName) : 
+  RuntimeImpl(const char* libraryName) :
     m_ImplName(libraryName),
     m_RuntimeHandle(nullptr),
     m_EnumerateDevicesImpl(nullptr),
@@ -57,7 +92,7 @@ struct RuntimeImpl {
     m_LaunchKernelAsyncImpl(nullptr),
     m_MatchKernelNamesImpl(nullptr),
     m_PushArgImpl(nullptr),
-    m_GetAllocatorImpl(nullptr) {
+    m_GetAllocatorImpl(nullptr), isCPU(false) {
     //std::cout << "dlopen(" << libraryName << ")\n";
     m_RuntimeHandle = dlopen(libraryName, RTLD_LAZY);
     if (!m_RuntimeHandle) {
@@ -88,6 +123,9 @@ struct RuntimeImpl {
 
   }
 
+  void set_cpu() { isCPU = true; }
+  bool is_cpu() const { return isCPU; }
+
   std::string m_ImplName;
   void* m_RuntimeHandle;
   EnumerateDevicesImpl_t m_EnumerateDevicesImpl;
@@ -98,6 +136,7 @@ struct RuntimeImpl {
   MatchKernelNamesImpl_t m_MatchKernelNamesImpl;
   PushArgImpl_t m_PushArgImpl;
   GetAllocatorImpl_t m_GetAllocatorImpl;
+  bool isCPU;
 };
 
 namespace Concurrency {
@@ -135,9 +174,9 @@ public:
     //std::cout << "dlopen(" << m_systemRuntimeLibrary << ")\n";
     handle = dlopen(m_systemRuntimeLibrary.c_str(), RTLD_LAZY);
     if (!handle) {
-      //std::cout << " system runtime not found" << std::endl;
-      //std::cout << dlerror() << std::endl;
-      return false;
+        //std::cout << " system runtime not found" << std::endl;
+        //std::cout << dlerror() << std::endl;
+        return false;
     }
     dlerror();  // clear any existing error
     //std::cout << " system runtime found...";
@@ -307,6 +346,19 @@ static RuntimeImpl* LoadHSARuntime() {
   return runtimeImpl;
 }
 
+static RuntimeImpl* LoadCPURuntime() {
+  RuntimeImpl* runtimeImpl = nullptr;
+  // load CPU runtime
+  std::cout << "Use CPU runtime" << std::endl;
+  runtimeImpl = new RuntimeImpl("libmcwamp_cpu.so");
+  if (!runtimeImpl->m_RuntimeHandle) {
+    std::cerr << "Can't load CPU runtime!" << std::endl;
+    delete runtimeImpl;
+    exit(-1);
+  }
+  return runtimeImpl;
+}
+
 RuntimeImpl* GetOrInitRuntime() {
   static RuntimeImpl* runtimeImpl = nullptr;
   if (runtimeImpl == nullptr) {
@@ -330,11 +382,15 @@ RuntimeImpl* GetOrInitRuntime() {
           std::cerr << "Ignore unsupported CLAMP_RUNTIME environment variable: " << runtime_env << std::endl;
         }
       } else if (std::string("CL11") == runtime_env) {
-        if (opencl11_rt.detect()) {
-          runtimeImpl = LoadOpenCL11Runtime();
-        } else {
-          std::cerr << "Ignore unsupported CLAMP_RUNTIME environment variable: " << runtime_env << std::endl;
-        }
+          if (opencl11_rt.detect()) {
+              runtimeImpl = LoadOpenCL11Runtime();
+          } else {
+              std::cerr << "Ignore unsupported CLAMP_RUNTIME environment variable: " << runtime_env << std::endl;
+          }
+      } else if(std::string("CPU") == runtime_env) {
+          // CPU runtime should be available
+          runtimeImpl = LoadCPURuntime();
+          runtimeImpl->set_cpu();
       } else {
         std::cerr << "Ignore unknown CLAMP_RUNTIME environment variable:" << runtime_env << std::endl;
       }
@@ -348,12 +404,11 @@ RuntimeImpl* GetOrInitRuntime() {
         runtimeImpl = LoadOpenCL12Runtime();
       } else if (opencl11_rt.detect()) {
         runtimeImpl = LoadOpenCL11Runtime();
+      } else {
+          runtimeImpl = LoadCPURuntime();
+          runtimeImpl->set_cpu();
+          std::cerr << "No suitable runtime detected. Fall back to CPU!" << std::endl;
       }
-    }
-
-    if (runtimeImpl == nullptr) {
-      std::cerr << "Can't load any C++AMP runtime!" << std::endl;
-      exit(-1);
     }
   } 
   return runtimeImpl;
@@ -378,6 +433,11 @@ std::vector<int> EnumerateDevices() {
   }
   delete[] devices;
   return ret;
+}
+
+bool is_cpu()
+{
+    return GetOrInitRuntime()->is_cpu();
 }
 
 // used in amp_impl.h

@@ -25,12 +25,15 @@ fi
 LINK_KERNEL_ARGS=""
 LINK_HOST_ARGS=""
 LINK_OTHER_ARGS=""
+LINK_CPU_ARG=""
 
 TEMP_DIR=`mktemp -d`
 
 # a file which contains the list of __cxxamp_serialize symbols in each CPU object file
 CXXAMP_SERIALIZE_SYMBOL_FILE=$TEMP_DIR/symbol.txt
+CXXAMP_KERNEL_SYMBOL_FILE=$TEMP_DIR/kernel.txt
 touch $CXXAMP_SERIALIZE_SYMBOL_FILE
+touch $CXXAMP_KERNEL_SYMBOL_FILE
 
 ARGS="$@"
 for ARG in $ARGS
@@ -38,6 +41,7 @@ do
   if [ -f $ARG ]; then
     FILE=`basename $ARG` # remove path
     FILENAME=${FILE%.o}  # check if it's an object file
+    CPUFILE=${FILE%.cpu}
     ISCRT=${ARG#/usr}    # exception for objects under /usr
     ISLIB=${ARG#/lib}    # exception for objects under /lib
     if [ $FILENAME != $FILE ] && [ $ISCRT == $ARG ] && [ $ISLIB == $ARG ]; then
@@ -59,6 +63,12 @@ do
 
       LINK_KERNEL_ARGS=$LINK_KERNEL_ARGS" "$KERNEL_FILE
       LINK_HOST_ARGS=$LINK_HOST_ARGS" "$HOST_FILE
+    elif [[ $CPUFILE != $FILE ]]; then
+        CPUFILE=$TEMP_DIR/$CPUFILE.cpu.o
+        cp $ARG $CPUFILE
+        nm $CPUFILE | awk '{print $3}' | grep "3\$_" > $CXXAMP_KERNEL_SYMBOL_FILE
+        objcopy $CPUFILE --globalize-symbols $CXXAMP_KERNEL_SYMBOL_FILE
+        LINK_CPU_ARG=$LINK_CPU_ARG" "$CPUFILE
     else
       LINK_OTHER_ARGS=$LINK_OTHER_ARGS" "$ARG
     fi
@@ -124,13 +134,13 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
   if [ $ret == 0 ]; then
     # link everything together
     if [ "@HAS_OPENCL@" == "1" ] && [ "@HAS_HSA@" == "1" ]; then
-      ld $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS $LINK_OTHER_ARGS
+      ld --allow-multiple-definition $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS  $LINK_CPU_ARG $LINK_OTHER_ARGS
       ret=$?
     elif [ "@HAS_OPENCL@" == "1" ] && [ "@HAS_HSA@" == "0" ]; then
-      ld $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $LINK_HOST_ARGS $LINK_OTHER_ARGS
+      ld --allow-multiple-definition $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $LINK_HOST_ARGS $LINK_CPU_ARG $LINK_OTHER_ARGS
       ret=$?
     elif [ "@HAS_OPENCL@" == "0" ] && [ "@HAS_HSA@" == "1" ]; then
-      ld $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS $LINK_OTHER_ARGS
+      ld --allow-multiple-definition $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS $LINK_CPU_ARG $LINK_OTHER_ARGS
       ret=$?
     else
       echo "Error in C++AMP link!"
