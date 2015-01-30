@@ -24,7 +24,7 @@ add_definitions (-D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS)
 add_definitions (-D_GNU_SOURCE -DHAVE_CLANG_CONFIG_H)
 add_definitions (-D__STDC_FORMAT_MACROS)
  
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall -fno-common -Woverloaded-virtual -Wcast-qual -fno-strict-aliasing -pedantic -Wno-long-long -Wno-unused-parameter -Wwrite-strings  -fno-rtti ")
+set (CMAKE_CXX_FLAGS "-fPIC -Wall -fno-common -Woverloaded-virtual -Wcast-qual -fno-strict-aliasing -pedantic -Wno-long-long -Wno-unused-parameter -Wwrite-strings  -fno-rtti ")
 set (CMAKE_MODULE_LINKER_FLAGS "-Wl,-flat_namespace -Wl,-undefined -Wl,suppress")
  
 set (LLVM_LIBS
@@ -82,7 +82,7 @@ macro(add_clang_plugin name)
   CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
   set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
   set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I${LIBCXX_INC_DIR} -I${CLAMP_INC_DIR} -stdlib=libc++ -std=c++amp" )
+  set(CMAKE_CXX_FLAGS "-I${LIBCXX_INC_DIR} -I${CLAMP_INC_DIR} -stdlib=libc++ -std=c++11" )
  
 endmacro(add_clang_plugin)
 
