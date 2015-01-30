@@ -243,14 +243,9 @@ extern "C" void *LaunchKernelAsyncImpl(void *ker, size_t nr_dim, size_t *global,
   Concurrency::HSAAMPAllocator& aloc = Concurrency::getHSAAMPAllocator();
   aloc.write();
   dispatch->setLaunchAttributes(nr_dim, global, local);
-  //std::cerr << "Now real launch\n";
-  //kernel->dispatchKernelWaitComplete();
-
-  static std::shared_future<void> fut = dispatch->dispatchKernelAndGetFuture();
-
+  std::shared_future<void>* fut = dispatch->dispatchKernelAndGetFuture();
   // FIXME what about aloc.read() ??
-
-  return static_cast<void*>(&fut);
+  return static_cast<void*>(fut);
 }
 
 extern "C" void MatchKernelNamesImpl(char *fixed_name) {

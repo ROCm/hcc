@@ -73,7 +73,7 @@ public:
                 virtual hsa_status_t waitComplete() = 0;
 
                 // dispatch a kernel asynchronously and get a future object
-                virtual std::shared_future<void> dispatchKernelAndGetFuture() = 0;
+                virtual std::shared_future<void>* dispatchKernelAndGetFuture() = 0;
         };
 
 	class Kernel {
