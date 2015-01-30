@@ -25,6 +25,8 @@
 #include "ParallelRewriter.h"
 using namespace clang;
 
+#define LLVM_OVERRIDE override
+
 raw_ostream & parallel::RewriteBuffer::write(raw_ostream &os) const {
   // FIXME: eliminate the copy by writing out each chunk at a time
   os << std::string(begin(), end());
