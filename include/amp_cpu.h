@@ -1614,7 +1614,7 @@ public:
 #ifndef __GPU__
       if(pav && (pav->get_accelerator() == accelerator(accelerator::gpu_accelerator))
 #ifdef __AMP_CPU__
-         && !CLAMP::is_cpu()
+         && m_device.not_in_cpu_kernel()
 #endif
         ) {
           throw runtime_exception("The array is not accessible on CPU.", 0);
@@ -1627,7 +1627,7 @@ public:
 #ifndef __GPU__
       if(pav && (pav->get_accelerator() == accelerator(accelerator::gpu_accelerator))
 #ifdef __AMP_CPU__
-         && !CLAMP::is_cpu()
+         && m_device.not_in_cpu_kernel()
 #endif
         ) {
           throw runtime_exception("The array is not accessible on CPU.", 0);

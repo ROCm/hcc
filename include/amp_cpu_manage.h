@@ -53,6 +53,7 @@ struct mm_info
         discard = false;
         getAllocator()->append(s.getKernel(), s.getAndIncCurrentIndex(), device);
     }
+    bool not_in_cpu_kernel() { return sync; }
     ~mm_info() {
         getAllocator()->free(device);
         if (host != device) {
@@ -99,6 +100,7 @@ public:
     void synchronize() const { mm->synchronize(); }
     void discard() const { mm->disc(); }
     void refresh() const { mm->refresh(); }
+    bool not_in_cpu_kernel() const { return mm->not_in_cpu_kernel(); }
 
     __attribute__((annotate("serialize")))
         void __cxxamp_serialize(Serialize& s) const {
