@@ -24,6 +24,7 @@ extern void MatchKernelNames(std::string &);
 
 // used in serialize.h
 extern void PushArg(void *, int, size_t, const void *);
+extern void PushArgPtr(void *, int, size_t, const void *);
 
 } // namespace CLAMP
 } // namespace Concurrency

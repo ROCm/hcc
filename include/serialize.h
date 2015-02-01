@@ -21,6 +21,9 @@ public:
   void Append(size_t sz, const void *s) {
     CLAMP::PushArg(k_, current_idx_++, sz, s);
   }
+  void AppendPtr(size_t sz, const void *s) {
+    CLAMP::PushArg(k_, current_idx_++, sz, s);
+  }
   void* getKernel() { 
     return k_; 
   }

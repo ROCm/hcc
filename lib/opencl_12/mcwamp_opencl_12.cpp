@@ -31,6 +31,7 @@ const wchar_t default_accelerator[] = L"default";
 }
 
 extern "C" void PushArgImpl(void *k_, int idx, size_t sz, const void *s);
+extern "C" void PushArgPtrImpl(void *k_, int idx, size_t sz, const void *s);
 
 ///
 /// memory allocator
@@ -437,6 +438,11 @@ extern "C" void MatchKernelNamesImpl(char *fixed_name) {
 }
 
 extern "C" void PushArgImpl(void *k_, int idx, size_t sz, const void *s) {
+  cl_int err;
+  err = clSetKernelArg(static_cast<cl_kernel>(k_), idx, sz, s);
+  assert(err == CL_SUCCESS);
+}
+extern "C" void PushArgPtrImpl(void *k_, int idx, size_t sz, const void *s) {
   cl_int err;
   err = clSetKernelArg(static_cast<cl_kernel>(k_), idx, sz, s);
   assert(err == CL_SUCCESS);

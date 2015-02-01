@@ -18,6 +18,7 @@
 #include "HSAContext.h"
 
 extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v);
+extern "C" void PushArgPtrImpl(void *ker, int idx, size_t sz, const void *v);
 
 namespace Concurrency {
 namespace CLAMP {
@@ -271,5 +272,13 @@ extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v) {
     default:
       assert(0 && "Unsupported kernel argument size");
   }
+}
+
+extern "C" void PushArgPtrImpl(void *ker, int idx, size_t sz, const void *v) {
+  //std::cerr << "pushing:" << ker << " of size " << sz << "\n";
+  HSAContext::Dispatch *dispatch =
+      reinterpret_cast<HSAContext::Dispatch*>(ker);
+  void *val = const_cast<void*>(v);
+  dispatch->pushPointerArg(val);
 }
 
