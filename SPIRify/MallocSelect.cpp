@@ -214,7 +214,7 @@ bool MallocSelect::runOnModule(Module &M) {
 
   if ((NewScalar = M.getFunction("_Znwm"))) { // new
 
-    for (Value::use_iterator UI = NewScalar->use_begin(), UE = NewScalar->use_end();
+    for (Value::user_iterator UI = NewScalar->user_begin(), UE = NewScalar->user_end();
           UI != UE; ++UI) {
 
       if (Instruction *I = dyn_cast<Instruction>(*UI)) {
@@ -256,7 +256,7 @@ bool MallocSelect::runOnModule(Module &M) {
 
   if ((NewArray = M.getFunction("_Znam"))) { // new[]
 
-    for (Value::use_iterator UI = NewArray->use_begin(), UE = NewArray->use_end();
+    for (Value::user_iterator UI = NewArray->user_begin(), UE = NewArray->user_end();
           UI != UE; ++UI) {
 
       if (Instruction *I = dyn_cast<Instruction>(*UI)) {
