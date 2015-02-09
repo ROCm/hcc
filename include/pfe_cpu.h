@@ -52,139 +52,107 @@ void partitioned_task(const Kernel& ker, const extent<N>& ext, int part) {
     }
 }
 
-struct bar_t {
-    unsigned const count;
-    std::atomic<unsigned> spaces;
-    std::atomic<unsigned> generation;
-    bar_t(unsigned count_) :
-        count(count_), spaces(count_), generation(0)
-    {}
-    void wait() noexcept {
-        unsigned const my_generation = generation;
-        if (!--spaces) {
-            spaces = count;
-            ++generation;
-        } else {
-            while(generation == my_generation);
-        }
-    }
-};
-
 template <typename Kernel, int D0>
-struct dummy1
-{
-    Kernel f;
-    tiled_extent<D0> ext;
-    dummy1(Kernel f, tiled_extent<D0> ext) : f(f), ext(ext) {}
-};
-
-template <typename Kernel, int D0>
-void partitioned_task_tile(dummy1<Kernel, D0> input, int part, bar_t& gbar) {
-    Kernel f = input.f;
-    tiled_extent<D0> ext = input.ext;
-    int start = D0 * part / NTHREAD;
-    int end = D0 * (part + 1) / NTHREAD;
+void partitioned_task_tile(Kernel const& f, tiled_extent<D0> const& ext, int part) {
+    int start = (ext[0] / D0) * part / NTHREAD;
+    int end = (ext[0] / D0) * (part + 1) / NTHREAD;
     int stride = end - start;
     if (stride == 0)
         return;
-    static tiled_index<D0> tidx[D0];
-    static char stk[D0][SSIZE];
-    tile_barrier::pb_t amp_bar = std::make_shared<barrier_t>(stride);
+    char *stk = new char[D0 * SSIZE];
+    tiled_index<D0> *tidx = new tiled_index<D0>[D0];
+    tile_barrier::pb_t amp_bar = std::make_shared<barrier_t>(D0);
     tile_barrier tbar(amp_bar);
-    for (int tx = 0; tx < ext[0] / D0; tx++) {
+    for (int tx = start; tx < end; tx++) {
         int id = 0;
-        for (int x = start; x < end; x++) {
-            tidx[x] = tiled_index<D0>(tx * D0 + x, x, tx, tbar);
-            amp_bar->setctx(++id, &stk[x], f, tidx[x]);
+        char *sp = stk;
+        tiled_index<D0> *tip = tidx;
+        for (int x = 0; x < D0; x++) {
+            *tip = tiled_index<D0>(tx * D0 + x, x, tx, tbar);
+            amp_bar->setctx(++id, sp, f, tip, SSIZE);
+            sp += SSIZE;
+            ++tip;
         }
         amp_bar->idx = 0;
         while (amp_bar->idx == 0) {
             amp_bar->idx = id;
             amp_bar->swap(0, id);
-            gbar.wait();
         }
     }
+    delete [] stk;
+    delete [] tidx;
 }
 template <typename Kernel, int D0, int D1>
-struct dummy2
-{
-    Kernel f;
-    tiled_extent<D0, D1> ext;
-    dummy2(Kernel f, tiled_extent<D0, D1> ext) : f(f), ext(ext) {}
-};
-template <typename Kernel, int D0, int D1>
-void partitioned_task_tile(dummy2<Kernel, D0, D1> input, int part, bar_t& gbar) {
-    Kernel f = input.f;
-    tiled_extent<D0, D1> ext = input.ext;
-    int start = D0 * part / NTHREAD;
-    int end = D0 * (part + 1) / NTHREAD;
+void partitioned_task_tile(Kernel const& f, tiled_extent<D0, D1> const& ext, int part) {
+    int start = (ext[0] / D0) * part / NTHREAD;
+    int end = (ext[0] / D0) * (part + 1) / NTHREAD;
     int stride = end - start;
     if (stride == 0)
         return;
-    static char stk[D1][D0][SSIZE];
-    static tiled_index<D0, D1> tidx[D1][D0];
-    tile_barrier::pb_t amp_bar = std::make_shared<barrier_t>(stride * D1);
+    char *stk = new char[D1 * D0 * SSIZE];
+    tiled_index<D0, D1> *tidx = new tiled_index<D0, D1>[D0 * D1];
+    tile_barrier::pb_t amp_bar = std::make_shared<barrier_t>(D0 * D1);
     tile_barrier tbar(amp_bar);
 
     for (int tx = 0; tx < ext[1] / D1; tx++)
-        for (int ty = 0; ty < ext[0] / D0; ty++) {
+        for (int ty = start; ty < end; ty++) {
             int id = 0;
+            char *sp = stk;
+            tiled_index<D0, D1> *tip = tidx;
             for (int x = 0; x < D1; x++)
-                for (int y = start; y < end; y++) {
-                    tidx[x][y] = tiled_index<D0, D1>(D1 * tx + x, D0 * ty + y, x, y, tx, ty, tbar);
-                    amp_bar->setctx(++id, &stk[x][y], f, tidx[x][y]);
+                for (int y = 0; y < D0; y++) {
+                    *tip = tiled_index<D0, D1>(D1 * tx + x, D0 * ty + y, x, y, tx, ty, tbar);
+                    amp_bar->setctx(++id, sp, f, tip, SSIZE);
+                    ++tip;
+                    sp += SSIZE;
                 }
             amp_bar->idx = 0;
             while (amp_bar->idx == 0) {
                 amp_bar->idx = id;
                 amp_bar->swap(0, id);
-                gbar.wait();
             }
         }
+    delete [] stk;
+    delete [] tidx;
 }
 
 template <typename Kernel, int D0, int D1, int D2>
-struct dummy3
-{
-    Kernel f;
-    tiled_extent<D0, D1, D2> ext;
-    dummy3(Kernel f, tiled_extent<D0, D1, D2> ext) : f(f), ext(ext) {}
-};
-
-template <typename Kernel, int D0, int D1, int D2>
-void partitioned_task_tile(dummy3<Kernel, D0, D1, D2> input, int part, bar_t& gbar) {
-    Kernel f = input.f;
-    const tiled_extent<D0, D1, D2> ext = input.ext;
-    int start = D0 * part / NTHREAD;
-    int end = D0 * (part + 1) / NTHREAD;
+void partitioned_task_tile(Kernel const& f, tiled_extent<D0, D1, D2> const& ext, int part) {
+    int start = (ext[0] / D0) * part / NTHREAD;
+    int end = (ext[0] / D0) * (part + 1) / NTHREAD;
     int stride = end - start;
     if (stride == 0)
         return;
-    static char stk[D2][D1][D0][SSIZE];
-    static tiled_index<D0, D1, D2> tidx[D2][D1][D0];
-    tile_barrier::pb_t amp_bar = std::make_shared<barrier_t>(stride * D1 * D2);
+    char *stk = new char[D2 * D1 * D0 * SSIZE];
+    tiled_index<D0, D1, D2> *tidx = new tiled_index<D0, D1, D2>[D0 * D1 * D2];
+    tile_barrier::pb_t amp_bar = std::make_shared<barrier_t>(D0 * D1 * D2);
     tile_barrier tbar(amp_bar);
 
     for (int i = 0; i < ext[2] / D2; i++)
         for (int j = 0; j < ext[1] / D1; j++)
-            for(int k = 0; k < ext[0] / D0; k++) {
+            for(int k = start; k < end; k++) {
                 int id = 0;
+                char *sp = stk;
+                tiled_index<D0, D1, D2> *tip = tidx;
                 for (int x = 0; x < D2; x++)
                     for (int y = 0; y < D1; y++)
-                        for (int z = start; z < end; z++) {
-                            tidx[x][y][z] = tiled_index<D0, D1, D2>(D2 * i + x,
+                        for (int z = 0; z < D0; z++) {
+                            *tip = tiled_index<D0, D1, D2>(D2 * i + x,
                                                                     D1 * j + y,
                                                                     D0 * k + z,
                                                                     x, y, z, i, j, k, tbar);
-                            amp_bar->setctx(++id, &stk[x][y][z], f, tidx[x][y][z]);
+                            amp_bar->setctx(++id, sp, f, tip, SSIZE);
+                            ++tip;
+                            sp += SSIZE;
                         }
                 amp_bar->idx = 0;
                 while (amp_bar->idx == 0) {
                     amp_bar->idx = id;
                     amp_bar->swap(0, id);
-                    gbar.wait();
                 }
             }
+    delete [] stk;
+    delete [] tidx;
 }
 #endif
 
@@ -601,14 +569,10 @@ __attribute__((noinline,used)) void parallel_for_each(
           Concurrency::Serialize s(nullptr, 0);
           f.__cxxamp_serialize(s);
       }
-      int k = D0 / NTHREAD;
-      k = k > 0 ? k : 1;
-      bar_t gbar(D0/k);
       std::vector<std::thread> th(NTHREAD);
       for (int i = 0; i < NTHREAD; ++i)
           th[i] = std::thread(partitioned_task_tile<Kernel, D0>,
-                              dummy1<Kernel, D0>(f, compute_domain),
-                              i, std::ref(gbar));
+                              std::cref(f), std::cref(compute_domain), i);
       for (auto& t : th)
           if (t.joinable())
               t.join();
@@ -681,14 +645,10 @@ __attribute__((noinline,used)) void parallel_for_each(
           Concurrency::Serialize s(nullptr, 0);
           f.__cxxamp_serialize(s);
       }
-      int k = D0 / NTHREAD;
-      k = k > 0 ? k : 1;
-      bar_t gbar(D0/k);
       std::vector<std::thread> th(NTHREAD);
       for (int i = 0; i < NTHREAD; ++i)
           th[i] = std::thread(partitioned_task_tile<Kernel, D0, D1>,
-                              dummy2<Kernel, D0, D1>(f, compute_domain),
-                              i, std::ref(gbar));
+                              std::cref(f), std::cref(compute_domain), i);
       for (auto& t : th)
           if (t.joinable())
               t.join();
@@ -771,14 +731,10 @@ __attribute__((noinline,used)) void parallel_for_each(
           Concurrency::Serialize s(nullptr, 0);
           f.__cxxamp_serialize(s);
       }
-      int k = D0 / NTHREAD;
-      k = k > 0 ? k : 1;
-      bar_t gbar(D0/k);
       std::vector<std::thread> th(NTHREAD);
       for (int i = 0; i < NTHREAD; ++i)
           th[i] = std::thread(partitioned_task_tile<Kernel, D0, D1, D2>,
-                              dummy3<Kernel, D0, D1, D2>(f, compute_domain),
-                              i, std::ref(gbar));
+                              std::cref(f), std::cref(compute_domain), i);
       for (auto& t : th)
           if (t.joinable())
               t.join();
