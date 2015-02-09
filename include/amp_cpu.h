@@ -50,7 +50,11 @@
 extern "C" __attribute__((pure)) int64_t amp_get_global_id(unsigned int n) restrict(amp);
 extern "C" __attribute__((pure)) int64_t amp_get_local_id(unsigned int n) restrict(amp);
 extern "C" __attribute__((pure)) int64_t amp_get_group_id(unsigned int n) restrict(amp);
+#ifdef __AMP_CPU__
+#define tile_static thread_local
+#else
 #define tile_static static __attribute__((section("clamp_opencl_local")))
+#endif
 extern "C" __attribute__((noduplicate)) void amp_barrier(unsigned int n) restrict(amp);
 
 namespace Concurrency {
@@ -717,13 +721,13 @@ struct barrier_t {
     int idx;
     barrier_t (int a) :
         ctx(new ucontext_t[a + 1]) {}
-    template <typename Ti, typename Ker, int S>
-    void setctx(int x, char (*stack)[S], Ker& f, Ti& tidx) {
+    template <typename Ti, typename Ker>
+    void setctx(int x, char *stack, Ker& f, Ti* tidx, int S) {
         getcontext(&ctx[x]);
-        ctx[x].uc_stack.ss_sp = *stack;
+        ctx[x].uc_stack.ss_sp = stack;
         ctx[x].uc_stack.ss_size = S;
         ctx[x].uc_link = &ctx[x - 1];
-        makecontext(&ctx[x], (void (*)(void))bar_wrapper<Ker, Ti>, 2, &f, &tidx);
+        makecontext(&ctx[x], (void (*)(void))bar_wrapper<Ker, Ti>, 2, &f, tidx);
     }
     void swap(int a, int b) {
         swapcontext(&ctx[a], &ctx[b]);
@@ -952,12 +956,6 @@ private:
 
 // C++AMP LPM 4.4.1
 
-#ifdef __AMP_CPU__
-struct bar_t;
-template <typename Kernel, int D0, int D1, int D2>
-struct dummy3;
-#endif
-
 template <int D0, int D1=0, int D2=0>
 class tiled_index {
  public:
@@ -1018,14 +1016,11 @@ class tiled_index {
   friend void parallel_for_each(tiled_extent<D0_, D1_, D2_>, const K&);
 #ifdef __AMP_CPU__
   template<typename K, int D1_, int D2_, int D3_>
-  friend void partitioned_task_tile(dummy3<K, D1_, D2_, D3_>, int, bar_t&);
+  friend void partitioned_task_tile(K const&, tiled_extent<D1_, D2_, D3_> const&, int);
 #endif
   template<int D0_, int D1_, int D2_, typename K>
   friend completion_future async_parallel_for_each(tiled_extent<D0_, D1_, D2_>, const K&);
 };
-
-template <typename Kernel, int D0>
-struct dummy1;
 
 template <int N> class extent;
 template <int D0>
@@ -1081,14 +1076,11 @@ class tiled_index<D0, 0, 0> {
   friend void parallel_for_each(tiled_extent<D>, const K&);
 #ifdef __AMP_CPU__
   template<typename K, int D>
-  friend void partitioned_task_tile(dummy1<K, D>, int, bar_t&);
+  friend void partitioned_task_tile(K const&, tiled_extent<D> const&, int);
 #endif
   template<int D, typename K>
   friend completion_future async_parallel_for_each(tiled_extent<D>, const K&);
 };
-
-template <typename Kernel, int D0, int D1>
-struct dummy2;
 
 template <int D0, int D1>
 class tiled_index<D0, D1, 0> {
@@ -1146,7 +1138,7 @@ class tiled_index<D0, D1, 0> {
   friend void parallel_for_each(tiled_extent<D0_, D1_>, const K&);
 #ifdef __AMP_CPU__
   template<typename K, int D1_, int D2_>
-  friend void partitioned_task_tile(dummy2<K, D1_, D2_>, int, bar_t&);
+  friend void partitioned_task_tile(K const&, tiled_extent<D1_, D2_> const&, int);
 #endif
   template<int D0_, int D1_, typename K>
   friend completion_future async_parallel_for_each(tiled_extent<D0_, D1_>, const K&);
