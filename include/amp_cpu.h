@@ -1413,7 +1413,7 @@ public:
     array<T, N>* p_arr = (array<T, N>*)m_arr;
     if (p_arr && p_arr->pav &&
 #ifdef __AMP_CPU__
-        !CLAMP::is_cpu() &&
+        p_arr->m_device.not_in_cpu_kernel() &&
 #endif
         p_arr->pav->get_accelerator() == accelerator(accelerator::cpu_accelerator)) {
       throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
