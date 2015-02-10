@@ -980,15 +980,6 @@ class tiled_index {
   static const int tile_dim2 = D2;
  private:
 #ifdef __AMP_CPU__
-  tiled_index& operator=(const tiled_index& other) {
-      const_cast<index<3>&>(global) = other.global;
-      const_cast<index<3>&>(local) = other.local;
-      const_cast<index<3>&>(tile) = other.tile;
-      const_cast<index<3>&>(tile_origin) = other.tile_origin;
-      const_cast<extent<3>&>(tile_extent) = other.tile_extent;
-      const_cast<tile_barrier&>(barrier) = other.barrier;
-      return *this;
-  }
   //CLAMP
   tiled_index(int a0, int a1, int a2, int b0, int b1, int b2,
               int c0, int c1, int c2, tile_barrier& pb) restrict(amp,cpu)
@@ -1044,15 +1035,6 @@ class tiled_index<D0, 0, 0> {
   static const int tile_dim0 = D0;
  private:
 #ifdef __AMP_CPU__
-  tiled_index& operator=(const tiled_index& other) {
-      const_cast<index<1>&>(global) = other.global;
-      const_cast<index<1>&>(local) = other.local;
-      const_cast<index<1>&>(tile) = other.tile;
-      const_cast<index<1>&>(tile_origin) = other.tile_origin;
-      const_cast<extent<1>&>(tile_extent) = other.tile_extent;
-      const_cast<tile_barrier&>(barrier) = other.barrier;
-      return *this;
-  }
   //CLAMP
   __attribute__((always_inline)) tiled_index(int a, int b, int c, tile_barrier& pb) restrict(amp, cpu)
   : global(a), local(b), tile(c), tile_origin(a - b), barrier(pb), tile_extent(D0) {}
@@ -1104,15 +1086,6 @@ class tiled_index<D0, D1, 0> {
   static const int tile_dim1 = D1;
  private:
 #ifdef __AMP_CPU__
-  tiled_index& operator=(const tiled_index& other) {
-      const_cast<index<2>&>(global) = other.global;
-      const_cast<index<2>&>(local) = other.local;
-      const_cast<index<2>&>(tile) = other.tile;
-      const_cast<index<2>&>(tile_origin) = other.tile_origin;
-      const_cast<extent<2>&>(tile_extent) = other.tile_extent;
-      const_cast<tile_barrier&>(barrier) = other.barrier;
-      return *this;
-  }
   //CLAMP
   tiled_index(int a0, int a1, int b0, int b1, int c0, int c1, tile_barrier& tbar) restrict(amp, cpu)
       : global(a1, a0), local(b1, b0), tile(c1, c0), tile_origin(a1 - b1, a0 - b0),
