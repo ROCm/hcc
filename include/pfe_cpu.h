@@ -68,7 +68,7 @@ void partitioned_task_tile(Kernel const& f, tiled_extent<D0> const& ext, int par
         char *sp = stk;
         tiled_index<D0> *tip = tidx;
         for (int x = 0; x < D0; x++) {
-            *tip = tiled_index<D0>(tx * D0 + x, x, tx, tbar);
+            new (tip) tiled_index<D0>(tx * D0 + x, x, tx, tbar);
             amp_bar->setctx(++id, sp, f, tip, SSIZE);
             sp += SSIZE;
             ++tip;
@@ -101,7 +101,7 @@ void partitioned_task_tile(Kernel const& f, tiled_extent<D0, D1> const& ext, int
             tiled_index<D0, D1> *tip = tidx;
             for (int x = 0; x < D1; x++)
                 for (int y = 0; y < D0; y++) {
-                    *tip = tiled_index<D0, D1>(D1 * tx + x, D0 * ty + y, x, y, tx, ty, tbar);
+                    new (tip) tiled_index<D0, D1>(D1 * tx + x, D0 * ty + y, x, y, tx, ty, tbar);
                     amp_bar->setctx(++id, sp, f, tip, SSIZE);
                     ++tip;
                     sp += SSIZE;
@@ -137,10 +137,10 @@ void partitioned_task_tile(Kernel const& f, tiled_extent<D0, D1, D2> const& ext,
                 for (int x = 0; x < D2; x++)
                     for (int y = 0; y < D1; y++)
                         for (int z = 0; z < D0; z++) {
-                            *tip = tiled_index<D0, D1, D2>(D2 * i + x,
-                                                                    D1 * j + y,
-                                                                    D0 * k + z,
-                                                                    x, y, z, i, j, k, tbar);
+                            new (tip) tiled_index<D0, D1, D2>(D2 * i + x,
+                                                              D1 * j + y,
+                                                              D0 * k + z,
+                                                              x, y, z, i, j, k, tbar);
                             amp_bar->setctx(++id, sp, f, tip, SSIZE);
                             ++tip;
                             sp += SSIZE;
