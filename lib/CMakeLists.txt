@@ -2,6 +2,7 @@
 # C++AMP runtime (mcwamp)
 ####################
 add_mcwamp_library(mcwamp mcwamp.cpp)
+add_mcwamp_library(mcwamp_atomic mcwamp_atomic.cpp)
 
 ####################
 # C++AMP config (clamp-config)
