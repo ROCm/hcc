@@ -9,7 +9,7 @@ add_mcwamp_library(mcwamp_atomic mcwamp_atomic.cpp)
 ####################
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 add_mcwamp_executable(clamp-config mcwamp_main.cpp)
-install(TARGETS mcwamp clamp-config
+install(TARGETS mcwamp clamp-config mcwamp_atomic
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
