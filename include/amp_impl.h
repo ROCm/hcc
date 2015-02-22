@@ -12,12 +12,12 @@
 // Specialization of AMP classes/templates
 namespace Concurrency {
 // Accelerators
-inline accelerator::accelerator() : 
+inline accelerator::accelerator() :
   accelerator(default_accelerator) {}
 
-inline accelerator::accelerator(const accelerator& other) : 
-  device_path(other.device_path), 
-  version(other.version), 
+inline accelerator::accelerator(const accelerator& other) :
+  device_path(other.device_path),
+  version(other.version),
   description(other.description),
   is_debug(other.is_debug),
   is_emulated(other.is_emulated),
@@ -31,12 +31,12 @@ inline accelerator::accelerator(const accelerator& other) :
   {}
 
 inline accelerator::accelerator(const std::wstring& path) :
-  device_path( (path != std::wstring(default_accelerator)) ? 
-					path : 
+  device_path( (path != std::wstring(default_accelerator)) ?
+					path :
 					(_default_accelerator != nullptr) ?
 						accelerator::_default_accelerator->get_device_path() :
 						std::wstring(gpu_accelerator) ),
-  version(0), 
+  version(0),
   description(L""),
   is_debug(false),
   is_emulated(false),
@@ -121,7 +121,7 @@ inline completion_future accelerator_view::create_marker(){return completion_fut
 inline bool accelerator::set_default_cpu_access_type(access_type type) {
   if(get_supports_cpu_shared_memory() == false &&
         ((type&access_type_read) || (type&access_type_write))) {
-    // TODO: Throw runtime exception here 
+    // TODO: Throw runtime exception here
   }
 #ifdef __AMP_CPU__
   if(type == access_type_auto)

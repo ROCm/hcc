@@ -349,7 +349,7 @@ __attribute__((noinline,used)) void parallel_for_each(
   if(compute_domain[0]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
   }
-  if (static_cast<size_t>(compute_domain[0]) > 4294967295L) 
+  if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
   if (CLAMP::is_cpu()) {
 #ifdef __AMP_CPU__
@@ -390,7 +390,7 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
   if(compute_domain[0]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
   }
-  if (static_cast<size_t>(compute_domain[0]) > 4294967295L) 
+  if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
   size_t ext = compute_domain[0];
   return completion_future(std::shared_future<void>(*mcw_cxxamp_launch_kernel_async<Kernel, 1>(&ext, NULL, f)));
@@ -555,7 +555,7 @@ __attribute__((noinline,used)) void parallel_for_each(
   if(compute_domain[0]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
   }
-  if (static_cast<size_t>(compute_domain[0]) > 4294967295L) 
+  if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
   size_t ext = compute_domain[0];
   size_t tile = compute_domain.tile_dim0;
@@ -602,7 +602,7 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
   if(compute_domain[0]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
   }
-  if (static_cast<size_t>(compute_domain[0]) > 4294967295L) 
+  if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
   size_t ext = compute_domain[0];
   size_t tile = compute_domain.tile_dim0;
@@ -666,7 +666,7 @@ __attribute__((noinline,used)) void parallel_for_each(
   int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
 #endif
 }
- 
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
 //2D async_parallel_for_each, tiled
