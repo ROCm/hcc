@@ -1294,7 +1294,7 @@ public:
     array<T, N>* p_arr = (array<T, N>*)m_arr;
     if (p_arr && p_arr->pav && p_arr->pav->get_accelerator() == accelerator(accelerator::cpu_accelerator)) {
       throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
-    }    
+    }
   }
 private:
   void* m_arr;
@@ -1646,7 +1646,7 @@ public:
     // TODO: If array's buffer is inaccessible on CPU, host pointer to that buffer must be NULL
     if(cpu_access_type == access_type_none) {
       //return reinterpret_cast<T*>(NULL);
-    }      
+    }
 #endif
     return reinterpret_cast<T*>(m_device.get());
   }
@@ -2490,7 +2490,7 @@ completion_future copy_async(const array_view<T, N>& src, OutputIter destBegin) 
 #ifdef __GPU__
 extern "C" unsigned atomic_add_unsigned(unsigned *p, unsigned val) restrict(amp);
 extern "C" int atomic_add_int(int *p, int val) restrict(amp);
-static inline unsigned atomic_fetch_add(unsigned *x, unsigned y) restrict(amp,cpu) { 
+static inline unsigned atomic_fetch_add(unsigned *x, unsigned y) restrict(amp,cpu) {
   return atomic_add_unsigned(x, y);
 }
 static inline int atomic_fetch_add(int *x, int y) restrict(amp,cpu) {
