@@ -62,8 +62,8 @@ do
       LINK_KERNEL_ARGS=$LINK_KERNEL_ARGS" "$KERNEL_FILE
       LINK_HOST_ARGS=$LINK_HOST_ARGS" "$HOST_FILE
     elif [[ $CPUFILE != $FILE ]]; then
-        cp $ARG $CPUFILE
-        LINK_CPU_ARG=$LINK_CPU_ARG" "$CPUFILE
+        cp $ARG $TEMP_DIR/kernel_cpu.o
+        LINK_CPU_ARG=$LINK_CPU_ARG" "$TEMP_DIR/kernel_cpu.o
     else
       LINK_OTHER_ARGS=$LINK_OTHER_ARGS" "$ARG
     fi
@@ -156,6 +156,10 @@ fi
 
 if [ -e $TEMP_DIR/kernel_hsa.o ]; then
   rm $TEMP_DIR/kernel_hsa.o
+fi
+
+if [ -e $TEMP_DIR/kernel_cpu.o ]; then
+  rm $TEMP_DIR/kernel_cpu.o
 fi
 
 if [ -e $TEMP_DIR/kernel.cl ]; then
