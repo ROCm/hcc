@@ -154,6 +154,24 @@ void partitioned_task_tile(Kernel const& f, tiled_extent<D0, D1, D2> const& ext,
     delete [] stk;
     delete [] tidx;
 }
+template <typename Kernel, int N>
+void launch_cpu_task(extent<N> const& compute_domain, Kernel const& f)
+{
+    {
+        Concurrency::Serialize s(nullptr, 0);
+        f.__cxxamp_serialize(s);
+    }
+    std::vector<std::thread> th(NTHREAD);
+    for (int i = 0; i < NTHREAD; ++i)
+        th[i] = std::thread(partitioned_task<Kernel, N>, std::cref(f), std::cref(compute_domain), i);
+    for (auto& t : th)
+        if (t.joinable())
+            t.join();
+    {
+        Concurrency::Serialize s(nullptr);
+        f.__cxxamp_serialize(s);
+    }
+}
 #endif
 
 static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu,amp) {
@@ -279,20 +297,7 @@ __attribute__((noinline,used)) void parallel_for_each(
         static_cast<size_t>(compute_domain[N - 3])};
     if (CLAMP::is_cpu()) {
 #ifdef __AMP_CPU__
-        {
-          Concurrency::Serialize s(nullptr, 0);
-          f.__cxxamp_serialize(s);
-        }
-        std::vector<std::thread> th(NTHREAD);
-        for (int i = 0; i < NTHREAD; ++i)
-            th[i] = std::thread(partitioned_task<Kernel, N>, std::cref(f), std::cref(compute_domain), i);
-        for (auto& t : th)
-            if (t.joinable())
-                t.join();
-        {
-          Concurrency::Serialize s(nullptr);
-          f.__cxxamp_serialize(s);
-        }
+        launch_cpu_task(compute_domain, f);
 #endif
     } else {
         const pfe_wrapper<N, Kernel> _pf(compute_domain, f);
@@ -353,20 +358,7 @@ __attribute__((noinline,used)) void parallel_for_each(
     throw invalid_compute_domain("Extent size too large.");
   if (CLAMP::is_cpu()) {
 #ifdef __AMP_CPU__
-      {
-          Concurrency::Serialize s(nullptr, 0);
-          f.__cxxamp_serialize(s);
-      }
-      std::vector<std::thread> th(NTHREAD);
-      for (int i = 0; i < NTHREAD; ++i)
-          th[i] = std::thread(partitioned_task<Kernel, 1>, std::cref(f), std::cref(compute_domain), i);
-      for (auto& t : th)
-          if (t.joinable())
-              t.join();
-      {
-          Concurrency::Serialize s(nullptr);
-          f.__cxxamp_serialize(s);
-      }
+      launch_cpu_task(compute_domain, f);
 #endif
   } else {
       size_t ext = compute_domain[0];
@@ -416,20 +408,7 @@ __attribute__((noinline,used)) void parallel_for_each(
     throw invalid_compute_domain("Extent size too large.");
   if (CLAMP::is_cpu()) {
 #ifdef __AMP_CPU__
-      {
-          Concurrency::Serialize s(nullptr, 0);
-          f.__cxxamp_serialize(s);
-      }
-      std::vector<std::thread> th(NTHREAD);
-      for (int i = 0; i < NTHREAD; ++i)
-          th[i] = std::thread(partitioned_task<Kernel, 2>, std::cref(f), std::cref(compute_domain), i);
-      for (auto& t : th)
-          if (t.joinable())
-              t.join();
-      {
-          Concurrency::Serialize s(nullptr);
-          f.__cxxamp_serialize(s);
-      }
+      launch_cpu_task(compute_domain, f);
 #endif
   } else {
       size_t ext[2] = {static_cast<size_t>(compute_domain[1]),
@@ -487,20 +466,7 @@ __attribute__((noinline,used)) void parallel_for_each(
     throw invalid_compute_domain("Extent size too large.");
   if (CLAMP::is_cpu()) {
 #ifdef __AMP_CPU__
-      {
-          Concurrency::Serialize s(nullptr, 0);
-          f.__cxxamp_serialize(s);
-      }
-      std::vector<std::thread> th(NTHREAD);
-      for (int i = 0; i < NTHREAD; ++i)
-          th[i] = std::thread(partitioned_task<Kernel, 3>, std::cref(f), std::cref(compute_domain), i);
-      for (auto& t : th)
-          if (t.joinable())
-              t.join();
-      {
-          Concurrency::Serialize s(nullptr);
-          f.__cxxamp_serialize(s);
-      }
+      launch_cpu_task(compute_domain, f);
 #endif
   } else {
       size_t ext[3] = {static_cast<size_t>(compute_domain[2]),
