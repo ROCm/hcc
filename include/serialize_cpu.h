@@ -5,10 +5,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef __AMP_CPU__
-#include <serialize_cpu.h>
-#else
-
 #pragma once
 
 #include <amp_runtime.h>
@@ -17,12 +13,9 @@ namespace Concurrency {
 class Serialize {
 public:
   typedef void *kernel;
-  Serialize(kernel k): k_(k), current_idx_(0) {}
+  Serialize(kernel k, int sync = 1): k_(k), current_idx_(0), sync(sync) {}
   void Append(size_t sz, const void *s) {
     CLAMP::PushArg(k_, current_idx_++, sz, s);
-  }
-  void AppendPtr(size_t sz, const void *s) {
-    CLAMP::PushArgPtr(k_, current_idx_++, sz, s);
   }
   void* getKernel() { 
     return k_; 
@@ -32,9 +25,10 @@ public:
     current_idx_++; 
     return ret; 
   }
+  int get_sync() const { return sync; }
 private:
   kernel k_;
   int current_idx_;
+  int sync;
 };
 }
-#endif

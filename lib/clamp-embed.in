@@ -11,8 +11,27 @@ if [ ! -f $1 ]; then
   exit 1
 fi
 
+if [ -d @LLVM_TOOLS_DIR@ ]; then
+    OPT=@LLVM_TOOLS_DIR@/opt
+    LLC=@LLVM_TOOLS_DIR@/llc
+    LIB=@LLVM_LIBS_DIR@
+else
+    OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
+    LLC=@CMAKE_INSTALL_PREFIX@/bin/llc
+    LIB=@CMAKE_INSTALL_PREFIX@/lib
+fi
+
 if [[ $OSTYPE == linux-gnu ]]; then
-  objcopy -B i386:x86-64 -I binary -O elf64-x86-64 --rename-section .data=.kernel $1 $2
+    FILE=`basename $1`
+    FILENAME=${FILE%cpu}
+    if [[ $FILE != $FILENAME ]]; then
+        $OPT -load $LIB/LLVMCpuRename@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+                -cpu-rename $1 -S -o $1.S
+        $LLC -O=2 $1.S -relocation-model=pic -filetype=obj -o $2
+        rm $1.S
+    else
+        objcopy -B i386:x86-64 -I binary -O elf64-x86-64 --rename-section .data=.kernel $1 $2
+    fi
 elif [[ $OSTYPE == darwin* ]]; then
 # OS X
   touch $2.stub.c

@@ -31,6 +31,15 @@ macro(add_mcwamp_library name )
 endmacro(add_mcwamp_library name )
 
 ####################
+# C++AMP runtime (CPU implementation)
+####################
+macro(add_mcwamp_library_cpu name )
+  CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXXAMP_FLAGS}")
+  add_library( ${name} SHARED ${ARGN} )
+endmacro(add_mcwamp_library_cpu name )
+
+####################
 # C++AMP runtime (OpenCL implementation) 
 ####################
 macro(add_mcwamp_library_opencl name )
