@@ -21,8 +21,11 @@ public:
   void Append(size_t sz, const void *s) {
     CLAMP::PushArg(k_, current_idx_++, sz, s);
   }
-  void* getKernel() {
-    return k_;
+  void AppendPtr(size_t sz, const void *s) {
+    CLAMP::PushArgPtr(k_, current_idx_++, sz, s);
+  }
+  void* getKernel() { 
+    return k_; 
   }
   int getAndIncCurrentIndex() {
     int ret = current_idx_;

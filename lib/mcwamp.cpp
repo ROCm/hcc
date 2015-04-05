@@ -58,7 +58,9 @@ struct RuntimeImpl {
     m_LaunchKernelAsyncImpl(nullptr),
     m_MatchKernelNamesImpl(nullptr),
     m_PushArgImpl(nullptr),
-    m_GetAllocatorImpl(nullptr), isCPU(false) {
+    m_PushArgPtrImpl(nullptr),
+    m_GetAllocatorImpl(nullptr), 
+    isCPU(false) {
     //std::cout << "dlopen(" << libraryName << ")\n";
     m_RuntimeHandle = dlopen(libraryName, RTLD_LAZY);
     if (!m_RuntimeHandle) {
@@ -85,6 +87,7 @@ struct RuntimeImpl {
     m_LaunchKernelAsyncImpl = (LaunchKernelAsyncImpl_t) dlsym(m_RuntimeHandle, "LaunchKernelAsyncImpl");
     m_MatchKernelNamesImpl = (MatchKernelNamesImpl_t) dlsym(m_RuntimeHandle, "MatchKernelNamesImpl");
     m_PushArgImpl = (PushArgImpl_t) dlsym(m_RuntimeHandle, "PushArgImpl");
+    m_PushArgPtrImpl = (PushArgPtrImpl_t) dlsym(m_RuntimeHandle, "PushArgPtrImpl");
     m_GetAllocatorImpl = (GetAllocatorImpl_t) dlsym(m_RuntimeHandle, "GetAllocatorImpl");
 
   }
@@ -101,6 +104,7 @@ struct RuntimeImpl {
   LaunchKernelAsyncImpl_t m_LaunchKernelAsyncImpl;
   MatchKernelNamesImpl_t m_MatchKernelNamesImpl;
   PushArgImpl_t m_PushArgImpl;
+  PushArgPtrImpl_t m_PushArgPtrImpl;
   GetAllocatorImpl_t m_GetAllocatorImpl;
   bool isCPU;
 };
@@ -475,6 +479,9 @@ void MatchKernelNames(std::string& fixed_name) {
 
 void PushArg(void *k_, int idx, size_t sz, const void *s) {
   GetOrInitRuntime()->m_PushArgImpl(k_, idx, sz, s);
+}
+void PushArgPtr(void *k_, int idx, size_t sz, const void *s) {
+  GetOrInitRuntime()->m_PushArgPtrImpl(k_, idx, sz, s);
 }
 
 } // namespace CLAMP

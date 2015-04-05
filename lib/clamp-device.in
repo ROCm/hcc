@@ -72,7 +72,7 @@ if [ "$3" == "--hsa" ]; then
       echo "Generating HSAIL BRIG kernel failed"
       exit 1
     fi
-    sed "s/call /call spir_func /g" < $2.promote.ll.orig > $2.promote.ll
+    sed "s/call /call spir_func /g" < $2.promote.ll.orig | sed "s/addrspacecast /bitcast /g" > $2.promote.ll
     $AS -o $2.promote.bc $2.promote.ll
     echo "Generating HSA Brig kernel"
     $LINK $MATHLIB/opencl_math.bc $2.promote.bc -o $2 2>/dev/null

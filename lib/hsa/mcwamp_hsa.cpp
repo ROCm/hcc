@@ -18,6 +18,7 @@
 #include "HSAContext.h"
 
 extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v);
+extern "C" void PushArgPtrImpl(void *ker, int idx, size_t sz, const void *v);
 
 namespace Concurrency {
 namespace CLAMP {
@@ -72,7 +73,6 @@ struct rw_info
 };
 class HSAAMPAllocator : public AMPAllocator
 { 
-  static inline bool is_aligned(const void *pointer, size_t byte_count) { return (uintptr_t)pointer % byte_count == 0; }
 public:
   HSAAMPAllocator() {}
   void init(void *data, int count) {
@@ -244,14 +244,9 @@ extern "C" void *LaunchKernelAsyncImpl(void *ker, size_t nr_dim, size_t *global,
   Concurrency::HSAAMPAllocator& aloc = Concurrency::getHSAAMPAllocator();
   aloc.write();
   dispatch->setLaunchAttributes(nr_dim, global, local);
-  //std::cerr << "Now real launch\n";
-  //kernel->dispatchKernelWaitComplete();
-
-  static std::shared_future<void> fut = dispatch->dispatchKernelAndGetFuture();
-
+  std::shared_future<void>* fut = dispatch->dispatchKernelAndGetFuture();
   // FIXME what about aloc.read() ??
-
-  return static_cast<void*>(&fut);
+  return static_cast<void*>(fut);
 }
 
 extern "C" void MatchKernelNamesImpl(char *fixed_name) {
@@ -277,5 +272,13 @@ extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v) {
     default:
       assert(0 && "Unsupported kernel argument size");
   }
+}
+
+extern "C" void PushArgPtrImpl(void *ker, int idx, size_t sz, const void *v) {
+  //std::cerr << "pushing:" << ker << " of size " << sz << "\n";
+  HSAContext::Dispatch *dispatch =
+      reinterpret_cast<HSAContext::Dispatch*>(ker);
+  void *val = const_cast<void*>(v);
+  dispatch->pushPointerArg(val);
 }
 

@@ -12,7 +12,7 @@ class baz {
 
 TEST(GPUCodeGen, TrampolineName) {
   // Inject the trampoline declaration
-  int bar = reinterpret_cast<intptr_t>(&baz::__cxxamp_trampoline);
+  void* bar = reinterpret_cast<void*>(&baz::__cxxamp_trampoline);
   // An injected member function __cxxamp_trampoline_name
   // should return the mangled name of the trampoline
   // hardcoded for now..

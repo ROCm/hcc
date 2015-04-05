@@ -273,6 +273,8 @@ private:
       hsa_dispatch_packet_t aql;
       bool isDispatched;
 
+      std::shared_future<void> fut;
+
    public:
       DispatchImpl(const KernelImpl* _kernel) : kernel(_kernel), isDispatched(false) {
          context = _kernel->context;
@@ -352,21 +354,22 @@ private:
          if (isDispatched) {
            return HSA_STATUS_ERROR_INVALID_ARGUMENT;
          }
-         dispatchKernelAndGetFuture().wait();
+         dispatchKernel();
+         waitComplete();
          return status;
       } 
 
 
-      std::shared_future<void> dispatchKernelAndGetFuture() {
+      std::shared_future<void>* dispatchKernelAndGetFuture() {
          dispatchKernel();
          auto waitFunc = [&]() {
            this->waitComplete();
          };
          std::packaged_task<void()> waitTask(waitFunc);
-         std::shared_future<void> fut = waitTask.get_future();
+         this->fut = waitTask.get_future();
          std::thread waitThread(std::move(waitTask));
          waitThread.detach();         
-         return fut;
+         return &this->fut;
       }
 
       // dispatch a kernel asynchronously
