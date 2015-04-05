@@ -1,1 +1,174 @@
+//===----------------------------------------------------------------------===//
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
 
+#ifndef _LIBCPP_coordinateINAT
+#define _LIBCPP_coordinateINAT
+
+#include <initializer_list>
+#include <__coordinateinate>
+
+namespace std
+{
+
+template <size_t _Ip>
+class __coordinate_leaf {
+    size_t __idx;
+public:
+    explicit __coordinate_leaf(size_t __t) : __idx(__t) {}
+
+    __coordinate_leaf& operator=(const size_t __t) {
+        __idx = __t;
+        return *this;
+    }
+    __coordinate_leaf& operator+=(const size_t __t) {
+        __idx += __t;
+        return *this;
+    }
+    __coordinate_leaf& operator-=(const size_t __t) {
+        __idx -= __t;
+        return *this;
+    }
+    __coordinate_leaf& operator*=(const size_t __t) {
+        __idx *= __t;
+        return *this;
+    }
+    __coordinate_leaf& operator/=(const size_t __t) {
+        __idx /= __t;
+        return *this;
+    }
+    size_t& get()       { return __idx; }
+    const size_t& get() const { return __idx; }
+};
+
+template <class ..._Tp>
+inline void __swallow(_Tp&&...) noexcept {}
+
+template <class _Indx> struct __coordinate_impl;
+
+template <size_t ...N>
+struct __coordinate_impl<__indices<N...> >
+    : public __coordinate_leaf<N>...
+{
+    constexpr __coordinate_impl() : __coordinate_leaf<N>(0)... {}
+
+    template<class ..._Up> explicit __coordinate_impl(_Up... __u) : __coordinate_leaf<N>(__u)... {}
+
+    constexpr __coordinate_impl(const __coordinate_impl& other)
+        : __coordinate_impl(static_cast<const __coordinate_leaf<N>&>(other).get()...) {}
+
+    constexpr __coordinate_impl(size_t component) : __coordinate_leaf<N>(component)... {}
+
+    size_t operator[] (unsigned size_t c) const {
+        return static_cast<const __coordinate_leaf<0>&>(*((__coordinate_leaf<0> *)this + c)).get();
+    }
+    size_t& operator[] (unsigned size_t c) {
+        return static_cast<__coordinate_leaf<0>&>(*((__coordinate_leaf<0> *)this + c)).get();
+    }
+    __coordinate_impl& operator=(const __coordinate_impl& __t) {
+        __swallow(__coordinate_leaf<N>::operator=(static_cast<const __coordinate_leaf<N>&>(__t).get())...);
+        return *this;
+    }
+    __coordinate_impl& operator+=(const __coordinate_impl& __t) {
+        __swallow(__coordinate_leaf<N>::operator+=(static_cast<const __coordinate_leaf<N>&>(__t).get())...);
+        return *this;
+    }
+    __coordinate_impl& operator-=(const __coordinate_impl& __t) {
+        __swallow(__coordinate_leaf<N>::operator-=(static_cast<const __coordinate_leaf<N>&>(__t).get())...);
+        return *this;
+    }
+    __coordinate_impl& operator*=(const __coordinate_impl& __t) {
+        __swallow(__coordinate_leaf<N>::operator*=(static_cast<const __coordinate_leaf<N>&>(__t).get())...);
+        return *this;
+    }
+    __coordinate_impl& operator/=(const __coordinate_impl& __t) {
+        __swallow(__coordinate_leaf<N>::operator/=(static_cast<const __coordinate_leaf<N>&>(__t).get())...);
+        return *this;
+    }
+    __coordinate_impl& operator+=(const size_t __t) {
+        __swallow(__coordinate_leaf<N>::operator+=(__t)...);
+        return *this;
+    }
+    __coordinate_impl& operator-=(const size_t __t) {
+        __swallow(__coordinate_leaf<N>::operator-=(__t)...);
+        return *this;
+    }
+    __coordinate_impl& operator*=(const size_t __t) {
+        __swallow(__coordinate_leaf<N>::operator*=(__t)...);
+        return *this;
+    }
+    __coordinate_impl& operator/=(const size_t __t) {
+        __swallow(__coordinate_leaf<N>::operator/=(__t)...);
+        return *this;
+    }
+};
+
+template <int Rank>
+class index
+{
+    static_assert(Rank >= 1, "Rank should be greater than or equal to 1");
+    typedef __coordinate_impl<typename __make_indices<Rank>::type> base;
+
+    base base_;
+
+public:
+    static constexpr int rank = Rank;
+    using reference           = ptrdiff_t&;
+    using const_reference     = const ptrdiff_t&;
+    using size_type           = size_t;
+    using value_type          = ptrdiff_t;
+
+    constexpr index() noexcept : base_() {}
+    constexpr index(value_type v) noexcept : base_(v) { static_assert(Rank == 1, "Rank should be 1") ;}
+    constexpr index(initializer_list<value_type> il) : base_(il) { assert(il.size() == Rank);};
+
+    constexpr bool operator==(const index& rhs) const noexcept {
+    }
+    constexpr bool operator!=(const index& rhs) const noexcept { return !(*this == rhs); }
+
+    constexpr reference       operator[](size_type n);
+    constexpr const_reference operator[](size_type n) const;
+
+    constexpr index  operator+(const index& rhs) const;
+    constexpr index  operator-(const index& rhs) const;
+    constexpr index& operator+=(const index& rhs);
+    constexpr index& operator-=(const index& rhs);
+
+    constexpr index& operator++() {
+        static_assert(N == 1, "Rank should be 1");
+        base_.operator+=(1);
+        return *this;
+    }
+    constexpr index  operator++(int) {
+        static_assert(N == 1, "Rank should be 1");
+        index ret = *this;
+        base_.operator+=(1);
+        return ret;
+    };
+    constexpr index& operator--() {
+        static_assert(N == 1, "Rank should be 1");
+        base_.operator-=(1);
+        return *this;
+    }
+    constexpr index  operator--(int) {
+        static_assert(N == 1, "Rank should be 1");
+        index ret = *this;
+        base_.operator-=(1);
+        return ret;
+    }
+
+    constexpr index  operator+() const noexcept;
+    constexpr index  operator-() const;
+
+    constexpr index  operator*(value_type v) const;
+    constexpr index  operator/(value_type v) const;
+    constexpr index& operator*=(value_type v);
+    constexpr index& operator/=(value_type v);
+};
+
+}  // std
+
+#endif
