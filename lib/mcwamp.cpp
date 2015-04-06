@@ -35,15 +35,15 @@ std::vector<std::string> __mcw_kernel_names;
 
 // OpenCL kernel codes
 extern "C" char * cl_kernel_source[] asm ("_binary_kernel_cl_start") __attribute__((weak));
-extern "C" char * cl_kernel_size[] asm ("_binary_kernel_cl_size") __attribute__((weak));
+extern "C" char * cl_kernel_end[] asm ("_binary_kernel_cl_end") __attribute__((weak));
 
 // SPIR kernel codes
 extern "C" char * spir_kernel_source[] asm ("_binary_kernel_spir_start") __attribute__((weak));
-extern "C" char * spir_kernel_size[] asm ("_binary_kernel_spir_size") __attribute__((weak));
+extern "C" char * spir_kernel_end[] asm ("_binary_kernel_spir_end") __attribute__((weak));
 
 // HSA kernel codes
 extern "C" char * hsa_kernel_source[] asm ("_binary_kernel_brig_start") __attribute__((weak));
-extern "C" char * hsa_kernel_size[] asm ("_binary_kernel_brig_size") __attribute__((weak));
+extern "C" char * hsa_kernel_end[] asm ("_binary_kernel_brig_end") __attribute__((weak));
 
 
 // interface of C++AMP runtime implementation
@@ -59,7 +59,7 @@ struct RuntimeImpl {
     m_MatchKernelNamesImpl(nullptr),
     m_PushArgImpl(nullptr),
     m_PushArgPtrImpl(nullptr),
-    m_GetAllocatorImpl(nullptr), 
+    m_GetAllocatorImpl(nullptr),
     isCPU(false) {
     //std::cout << "dlopen(" << libraryName << ")\n";
     m_RuntimeHandle = dlopen(libraryName, RTLD_LAZY);
@@ -67,7 +67,6 @@ struct RuntimeImpl {
       std::cerr << "C++AMP runtime load error: " << dlerror() << std::endl;
       return;
     }
-
     LoadSymbols();
   }
 
@@ -445,15 +444,24 @@ void *CreateKernel(std::string s) {
     }
     if (hasSPIR) {
       // SPIR path
-      return GetOrInitRuntime()->m_CreateKernelImpl(s.c_str(), spir_kernel_size, spir_kernel_source);
+        size_t kernel_size =
+        (ptrdiff_t)((void *)spir_kernel_end) -
+        (ptrdiff_t)((void *)spir_kernel_source);
+      return GetOrInitRuntime()->m_CreateKernelImpl(s.c_str(), (void *)kernel_size, spir_kernel_source);
     } else {
       // OpenCL path
-      return GetOrInitRuntime()->m_CreateKernelImpl(s.c_str(), cl_kernel_size, cl_kernel_source);
+        size_t kernel_size =
+        (ptrdiff_t)((void *)cl_kernel_end) -
+        (ptrdiff_t)((void *)cl_kernel_source);
+      return GetOrInitRuntime()->m_CreateKernelImpl(s.c_str(), (void *)kernel_size, cl_kernel_source);
     }
   } else {
     // HSA path
-    return GetOrInitRuntime()->m_CreateKernelImpl(s.c_str(), hsa_kernel_size, hsa_kernel_source);
-  }
+       size_t kernel_size =
+        (ptrdiff_t)((void *)hsa_kernel_end) -
+        (ptrdiff_t)((void *)hsa_kernel_source);
+     return GetOrInitRuntime()->m_CreateKernelImpl(s.c_str(), (void *)kernel_size, hsa_kernel_source);
+   }
 }
 
 void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {

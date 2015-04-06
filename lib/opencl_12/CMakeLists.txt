@@ -9,7 +9,7 @@ endif (HAS_OPENCL EQUAL 1)
 # C++AMP runtime (OpenCL zero-copy implementation)
 ####################
 if ((HAS_OPENCL EQUAL 1) AND (HAS_OPENCL12 EQUAL 1))
-add_mcwamp_library_opencl(mcwamp_opencl_12 mcwamp_opencl_12.cpp)
+add_mcwamp_library_opencl(mcwamp_opencl_12 mcwamp_opencl_12.cpp ../md5.cpp)
 install(TARGETS mcwamp_opencl_12
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib)
