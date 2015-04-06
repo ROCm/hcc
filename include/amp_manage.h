@@ -15,19 +15,49 @@
 
 namespace Concurrency {
 
+#define CXXAMP_NOCACHE (1)
+
 struct mm_info
 {
+#if CXXAMP_NOCACHE
+    void *data;
+    bool free;
+#else
     size_t count;
     void *host;
     void *device;
     void *dirty;
     bool discard;
+#endif
+
+#if CXXAMP_NOCACHE
     mm_info(int count)
-        : count(count), host(::operator new(count)), device(host),
+        : data(aligned_alloc(0x1000, count)), free(true) { getAllocator()->init(data, count); }
+    mm_info(int count, void *src)
+        : data(src), free(false) { getAllocator()->init(data, count); }
+#else
+    mm_info(int count)
+        : count(count), host(aligned_alloc(0x1000, count)), device(host),
         dirty(host), discard(false) { getAllocator()->init(device, count); }
     mm_info(int count, void *src)
-        : count(count), host(src), device(::operator new(count)),
+        : count(count), host(src), device(aligned_alloc(0x1000, count)),
         dirty(host), discard(false) { getAllocator()->init(device, count); }
+#endif
+
+#if CXXAMP_NOCACHE
+    void synchronize() {}
+    void refresh() {}
+    void* get() { return data; }
+    void disc() { getAllocator()->discard(data); }
+    void serialize(Serialize& s) {
+      getAllocator()->append(s.getKernel(), s.getAndIncCurrentIndex(), data);
+    }
+    ~mm_info() {
+      getAllocator()->free(data);
+      if (free)
+        ::operator delete(data);
+    }
+#else
     void synchronize() {
         if (dirty != host) {
             memmove(host, device, count);
@@ -61,6 +91,7 @@ struct mm_info
             ::operator delete(device);
         }
     }
+#endif
 };
 
 // Dummy interface that looks somewhat like std::shared_ptr<T>
@@ -84,7 +115,7 @@ private:
 template <typename T>
 class _data_host {
     std::shared_ptr<mm_info> mm;
-    template <typename U> friend struct _data_host;
+    template <typename U> friend class _data_host;
 public:
     _data_host(int count)
         : mm(std::make_shared<mm_info>(count * sizeof(T))) {}

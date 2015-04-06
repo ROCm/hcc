@@ -16,6 +16,11 @@
 
 #include <CL/opencl.h>
 
+#include <md5.h>
+#include <sstream>
+#include <fstream>
+#include <iomanip>
+
 #include <amp_allocator.h>
 #include <amp_runtime.h>
 
@@ -48,9 +53,25 @@ struct rw_info
     int count;
     bool used;
 };
+
+struct DimMaxSize {
+  cl_uint dimensions;
+  size_t* maxSizes;
+};
+static std::map<cl_device_id, struct DimMaxSize> Clid2DimSizeMap;
+typedef std::map<std::string, cl_kernel> KernelObject;
+std::map<cl_program, KernelObject> Pro2KernelObject;
+void ReleaseKernelObject() {
+  for(const auto& it : Pro2KernelObject)
+    for(const auto& itt : it.second)
+      if(itt.second)
+        clReleaseKernel(itt.second);
+}
+
 class OpenCLAMPAllocator : public AMPAllocator
 {
 public:
+    void* getQueue() { return queue; }
     OpenCLAMPAllocator() {
         cl_uint          num_platforms;
         cl_int           err;
@@ -74,6 +95,20 @@ public:
         assert(err == CL_SUCCESS);
         queue = clCreateCommandQueue(context, device, 0, &err);
         assert(err == CL_SUCCESS);
+        // C++ AMP specifications
+        // The maximum number of tiles per dimension will be no less than 65535.
+        // The maximum number of threads in a tile will be no less than 1024.
+        // In 3D tiling, the maximal value of D0 will be no less than 64.
+        cl_uint dimensions = 0;
+        err = clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, sizeof(cl_uint), &dimensions, NULL);
+        assert(err == CL_SUCCESS);
+        size_t *maxSizes = new size_t[dimensions];
+        err = clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(size_t) * dimensions, maxSizes, NULL);
+        assert(err == CL_SUCCESS);
+        struct DimMaxSize d;
+        d.dimensions = dimensions;
+        d.maxSizes = maxSizes;
+        Clid2DimSizeMap[device] = d;
     }
     void init(void *data, int count) {
         if (count > 0) {
@@ -88,27 +123,36 @@ public:
     }
     void write() {
     }
+    void* device_data(void* data) {
+        auto it = rwq.find(data);
+        if (it != std::end(rwq)) {
+            return mem_info[data];
+        }
+        return NULL;
+    }
     void read() {
     }
+    void discard(void *) {}
     void free(void *data) {
         auto iter = mem_info.find(data);
-        clReleaseMemObject(iter->second);
-        mem_info.erase(iter);
+        if (iter != std::end(mem_info)) {
+            clReleaseMemObject(iter->second);
+            mem_info.erase(iter);
+        }
     }
     ~OpenCLAMPAllocator() {
-        // There may be unreleased mem object if an exception is thrown
-        for (auto& it : mem_info)
-            clReleaseMemObject(it.second);
-        clReleaseKernel(kernel);
         clReleaseProgram(program);
         clReleaseCommandQueue(queue);
         clReleaseContext(context);
+        for(const auto& it : Clid2DimSizeMap)
+            if(it.second.maxSizes)
+                delete[] it.second.maxSizes;
+        ReleaseKernelObject();
     }
 
     std::map<void *, cl_mem> mem_info;
     cl_context       context;
     cl_device_id     device;
-    cl_kernel        kernel;
     cl_command_queue queue;
     cl_program       program;
     std::map<void *, rw_info> rwq;
@@ -141,13 +185,23 @@ static inline void getKernelNames(cl_program& prog) {
         cl_kernel *kl = new cl_kernel[kernel_num];
         ret = clCreateKernelsInProgram(prog, kernel_num + 1, kl, &kernel_num);
         if (ret == CL_SUCCESS) {
+            Concurrency::KernelObject& KO = Concurrency::Pro2KernelObject[prog];
             std::map<std::string, std::string> aMap;
             for (unsigned i = 0; i < unsigned(kernel_num); ++i) {
                 char s[1024] = { 0x0 };
                 size_t size;
                 ret = clGetKernelInfo(kl[i], CL_KERNEL_FUNCTION_NAME, 1024, s, &size);
                 n.push_back(std::string (s));
+                KO[std::string (s)] = kl[i];
+                // Some analysis tool will post warnings about not releasing kernel object in time, 
+                // for example, 
+                //   Warning: Memory leak detected [Ref = 1, Handle = 0x12f1420]: Object created by clCreateKernelsInProgram
+                //   Warning: Memory leak detected [Ref = 1, Handle = 0x12f17a0]: Object created by clCreateProgramWithBinary
+                // However these won't be taken as memory leaks in here since all created kenrel objects 
+                // will be released in ReleaseKernelObjects and the Ref count will be reset to 0
+                #if 0
                 clReleaseKernel(kl[i]);
+                #endif
             }
         }
         delete [] kl;
@@ -194,31 +248,125 @@ void CLCompileKernels(cl_program& program, cl_context& context, cl_device_id& de
         unsigned char *kernel_source = (unsigned char*)malloc(kernel_size+1);
         memcpy(kernel_source, kernel_source_, kernel_size);
         kernel_source[kernel_size] = '\0';
-        if (kernel_source[0] == 'B' && kernel_source[1] == 'C') {
-            // Bitcode magic number. Assuming it's in SPIR
-            const unsigned char *ks = (const unsigned char *)kernel_source;
-            program = clCreateProgramWithBinary(context, 1, &device, &kernel_size, &ks, NULL, &err);
+        // calculate MD5 checksum
+        unsigned char md5_hash[16];
+        memset(md5_hash, 0, sizeof(unsigned char) * 16);
+        MD5_CTX md5ctx;
+        MD5_Init(&md5ctx);
+        MD5_Update(&md5ctx, kernel_source, kernel_size);
+        MD5_Final(md5_hash, &md5ctx);
+
+        // compute compiled kernel file name
+        std::stringstream compiled_kernel_name;
+        compiled_kernel_name << "/tmp/";
+        compiled_kernel_name << std::setbase(16);
+        for (int i = 0; i < 16; ++i) {
+            compiled_kernel_name << static_cast<unsigned int>(md5_hash[i]);
+        }
+        compiled_kernel_name << ".bin";
+
+        //std::cout << "Try load precompiled kernel: " << compiled_kernel_name.str() << std::endl;
+
+        // check if pre-compiled kernel binary exist
+        std::ifstream precompiled_kernel(compiled_kernel_name.str(), std::ifstream::binary);
+        if (precompiled_kernel) {
+            // use pre-compiled kernel binary
+            precompiled_kernel.seekg(0, std::ios_base::end);
+            size_t len = precompiled_kernel.tellg();
+            precompiled_kernel.seekg(0, std::ios_base::beg);
+            //std::cout << "Length of precompiled kernel: " << len << std::endl;
+            unsigned char* compiled_kernel = new unsigned char[len];
+            precompiled_kernel.read(reinterpret_cast<char*>(compiled_kernel), len);
+            precompiled_kernel.close();
+
+            const unsigned char *ks = (const unsigned char *)compiled_kernel;
+            program = clCreateProgramWithBinary(context, 1, &device, &len, &ks, NULL, &err);
             if (err == CL_SUCCESS)
                 err = clBuildProgram(program, 1, &device, NULL, NULL, NULL);
+            if (err != CL_SUCCESS) {
+                size_t len;
+                err = clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &len);
+                assert(err == CL_SUCCESS);
+                char *msg = new char[len + 1];
+                err = clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, len, msg, NULL);
+                assert(err == CL_SUCCESS);
+                msg[len] = '\0';
+                std::cerr << msg;
+                delete [] msg;
+                exit(1);
+            }
+            delete [] compiled_kernel;
         } else {
-            // in OpenCL-C
-            const char *ks = (const char *)kernel_source;
-            program = clCreateProgramWithSource(context, 1, &ks, &kernel_size, &err);
-            if (err == CL_SUCCESS)
-                err = clBuildProgram(program, 1, &device, "-D__ATTRIBUTE_WEAK__=", NULL, NULL);
-        }
-        if (err != CL_SUCCESS) {
-            size_t len;
-            err = clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &len);
-            assert(err == CL_SUCCESS);
-            char *msg = new char[len + 1];
-            err = clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, len, msg, NULL);
-            assert(err == CL_SUCCESS);
-            msg[len] = '\0';
-            std::cerr << msg;
-            delete [] msg;
-            exit(1);
-        }
+            // pre-compiled kernel binary doesn't exist
+            // call CL compiler
+
+            if (kernel_source[0] == 'B' && kernel_source[1] == 'C') {
+                // Bitcode magic number. Assuming it's in SPIR
+                const unsigned char *ks = (const unsigned char *)kernel_source;
+                program = clCreateProgramWithBinary(context, 1, &device, &kernel_size, &ks, NULL, &err);
+                if (err == CL_SUCCESS)
+                    err = clBuildProgram(program, 1, &device, NULL, NULL, NULL);
+            } else {
+                // in OpenCL-C
+                const char *ks = (const char *)kernel_source;
+                program = clCreateProgramWithSource(context, 1, &ks, &kernel_size, &err);
+                if (err == CL_SUCCESS)
+                    err = clBuildProgram(program, 1, &device, "-D__ATTRIBUTE_WEAK__=", NULL, NULL);
+            }
+            if (err != CL_SUCCESS) {
+                size_t len;
+                err = clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &len);
+                assert(err == CL_SUCCESS);
+                char *msg = new char[len + 1];
+                err = clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, len, msg, NULL);
+                assert(err == CL_SUCCESS);
+                msg[len] = '\0';
+                std::cerr << msg;
+                delete [] msg;
+                exit(1);
+            }
+
+            //Get the number of devices attached with program object
+            cl_uint nDevices = 0;
+            clGetProgramInfo(program, CL_PROGRAM_NUM_DEVICES, sizeof(cl_uint),&nDevices, NULL);
+            assert(nDevices == 1);
+
+            //Get the Id of all the attached devices
+            cl_device_id *devices = new cl_device_id[nDevices];
+            clGetProgramInfo(program, CL_PROGRAM_DEVICES, sizeof(cl_device_id) * nDevices, devices, NULL);
+
+            // Get the sizes of all the binary objects
+            size_t *pgBinarySizes = new size_t[nDevices];
+            clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, sizeof(size_t) * nDevices, pgBinarySizes, NULL);
+
+            // Allocate storage for each binary objects
+            unsigned char **pgBinaries = new unsigned char*[nDevices];
+            for (cl_uint i = 0; i < nDevices; i++)
+            {
+                pgBinaries[i] = new unsigned char[pgBinarySizes[i]];
+            }
+
+            // Get all the binary objects
+            clGetProgramInfo(program, CL_PROGRAM_BINARIES, sizeof(unsigned char*) * nDevices, pgBinaries, NULL);
+
+            // save compiled kernel binary
+            std::ofstream compiled_kernel(compiled_kernel_name.str(), std::ostream::binary);
+            compiled_kernel.write(reinterpret_cast<const char*>(pgBinaries[0]), pgBinarySizes[0]);
+            compiled_kernel.close();
+
+            //std::cout << "Kernel written to: " << compiled_kernel_name.str() << std::endl;
+
+            // release memory
+            for (cl_uint i = 0; i < nDevices; ++i) {
+                delete [] pgBinaries[i];
+            }
+            delete [] pgBinaries;
+            delete [] pgBinarySizes;
+            delete [] devices;
+
+        } // if (precompiled_kernel) 
+
+
         __mcw_cxxamp_compiled = true;
         free(kernel_source);
         getKernelNames(program);
@@ -324,9 +472,14 @@ extern "C" void *CreateKernelImpl(const char* s, void* kernel_size, void* kernel
   cl_int err;
   Concurrency::OpenCLAMPAllocator& aloc = Concurrency::getOpenCLAMPAllocator();
   Concurrency::CLAMP::CLCompileKernels(aloc.program, aloc.context, aloc.device, kernel_size, kernel_source);
-  aloc.kernel = clCreateKernel(aloc.program, s, &err);
-  assert(err == CL_SUCCESS);
-  return aloc.kernel;
+  Concurrency::KernelObject& KO = Concurrency::Pro2KernelObject[aloc.program];
+  std::string name(s);
+  if (KO[name] == 0) {
+       cl_int err;
+       KO[name] = clCreateKernel(aloc.program, name.c_str(), &err);
+       assert(err == CL_SUCCESS);
+  }
+  return KO[name];
 }
 
 extern "C" void LaunchKernelImpl(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {
@@ -337,10 +490,7 @@ extern "C" void LaunchKernelImpl(void *kernel, size_t dim_ext, size_t *ext, size
       // The maximum number of tiles per dimension will be no less than 65535.
       // The maximum number of threads in a tile will be no less than 1024.
       // In 3D tiling, the maximal value of D0 will be no less than 64.
-      cl_uint dimensions;
-      err = clGetDeviceInfo(aloc.device, CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, sizeof(cl_uint), &dimensions, NULL);
-      size_t *maxSizes = new size_t[dimensions];
-      err = clGetDeviceInfo(aloc.device, CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(size_t) * dimensions, maxSizes, NULL);
+      size_t *maxSizes = Concurrency::Clid2DimSizeMap[aloc.device].maxSizes;
       bool is = true;
       int threads_per_tile = 1;
       for(int i = 0; local_size && i < dim_ext; i++) {
@@ -360,7 +510,7 @@ extern "C" void LaunchKernelImpl(void *kernel, size_t dim_ext, size_t *ext, size
   }
 
   aloc.write();
-  err = clEnqueueNDRangeKernel(aloc.queue, aloc.kernel, dim_ext, NULL, ext, local_size, 0, NULL, NULL);
+  err = clEnqueueNDRangeKernel(aloc.queue, (cl_kernel)kernel, dim_ext, NULL, ext, local_size, 0, NULL, NULL);
   assert(err == CL_SUCCESS);
   aloc.read();
   clFinish(aloc.queue);
