@@ -9,63 +9,102 @@
 #define _LIBCPP_coordinateINAT
 
 #include <initializer_list>
-#include <__coordinateinate>
+#include <vector>
+#include <cassert>
+#include <__coordinate>
 
 namespace std
 {
 
+template <int N> class bounds;
+
 template <size_t _Ip>
 class __coordinate_leaf {
-    size_t __idx;
+    ptrdiff_t __idx;
 public:
-    explicit __coordinate_leaf(size_t __t) : __idx(__t) {}
+    explicit __coordinate_leaf(ptrdiff_t __t) : __idx(__t) {}
 
-    __coordinate_leaf& operator=(const size_t __t) {
+    __coordinate_leaf& operator=(const ptrdiff_t __t) {
         __idx = __t;
         return *this;
     }
-    __coordinate_leaf& operator+=(const size_t __t) {
+    __coordinate_leaf& operator+=(const ptrdiff_t __t) {
         __idx += __t;
         return *this;
     }
-    __coordinate_leaf& operator-=(const size_t __t) {
+    __coordinate_leaf& operator-=(const ptrdiff_t __t) {
         __idx -= __t;
         return *this;
     }
-    __coordinate_leaf& operator*=(const size_t __t) {
+    __coordinate_leaf& operator*=(const ptrdiff_t __t) {
         __idx *= __t;
         return *this;
     }
-    __coordinate_leaf& operator/=(const size_t __t) {
+    __coordinate_leaf& operator/=(const ptrdiff_t __t) {
         __idx /= __t;
         return *this;
     }
-    size_t& get()       { return __idx; }
-    const size_t& get() const { return __idx; }
+    ptrdiff_t& get()       { return __idx; }
+    const ptrdiff_t& get() const { return __idx; }
 };
 
 template <class ..._Tp>
 inline void __swallow(_Tp&&...) noexcept {}
 
+inline const bool coordinate_check()
+{
+    return true;
+}
+template <typename ..._Tp>
+inline const bool coordinate_check(const bool& t, const _Tp&... tail)
+{
+    if (t)
+        return coordinate_check(tail...);
+    else
+        return false;
+}
+
+inline const ptrdiff_t coordinate_mul()
+{
+    return 1;
+}
+template <typename ..._Tp>
+inline const ptrdiff_t coordinate_mul(const ptrdiff_t& t, const _Tp&... tail)
+{
+    const ptrdiff_t ret =  t * coordinate_sum(tail...);
+    assert(ret <= numeric_limits<ptrdiff_t>::max());
+    return ret;
+}
+
 template <class _Indx> struct __coordinate_impl;
 
 template <size_t ...N>
-struct __coordinate_impl<__indices<N...> >
+struct __coordinate_impl<__indices<N...>>
     : public __coordinate_leaf<N>...
 {
-    constexpr __coordinate_impl() : __coordinate_leaf<N>(0)... {}
-
+private:
     template<class ..._Up> explicit __coordinate_impl(_Up... __u) : __coordinate_leaf<N>(__u)... {}
+public:
+    __coordinate_impl() : __coordinate_leaf<N>(0)... {}
 
-    constexpr __coordinate_impl(const __coordinate_impl& other)
+    __coordinate_impl(initializer_list<ptrdiff_t> il) :
+        __coordinate_leaf<N>(*(il.begin() + N))... {}
+
+    __coordinate_impl(const __coordinate_impl& other)
         : __coordinate_impl(static_cast<const __coordinate_leaf<N>&>(other).get()...) {}
 
-    constexpr __coordinate_impl(size_t component) : __coordinate_leaf<N>(component)... {}
+    __coordinate_impl(ptrdiff_t component) : __coordinate_leaf<N>(component)... {}
 
-    size_t operator[] (unsigned size_t c) const {
-        return static_cast<const __coordinate_leaf<0>&>(*((__coordinate_leaf<0> *)this + c)).get();
+
+    bool operator==(const __coordinate_impl& __t) const noexcept {
+        return coordinate_check((static_cast<const __coordinate_leaf<N>&>(__t).get() ==
+                                 static_cast<const __coordinate_leaf<N>&>(*this).get())...);
     }
-    size_t& operator[] (unsigned size_t c) {
+
+    const ptrdiff_t& operator[] (size_t c) const {
+        return static_cast<const __coordinate_leaf<0>&>(*((const __coordinate_leaf<0> *)this + c)).get();
+    }
+    ptrdiff_t& operator[] (size_t c) {
         return static_cast<__coordinate_leaf<0>&>(*((__coordinate_leaf<0> *)this + c)).get();
     }
     __coordinate_impl& operator=(const __coordinate_impl& __t) {
@@ -88,85 +127,295 @@ struct __coordinate_impl<__indices<N...> >
         __swallow(__coordinate_leaf<N>::operator/=(static_cast<const __coordinate_leaf<N>&>(__t).get())...);
         return *this;
     }
-    __coordinate_impl& operator+=(const size_t __t) {
+    __coordinate_impl& operator+=(const ptrdiff_t __t) {
         __swallow(__coordinate_leaf<N>::operator+=(__t)...);
         return *this;
     }
-    __coordinate_impl& operator-=(const size_t __t) {
+    __coordinate_impl& operator-=(const ptrdiff_t __t) {
         __swallow(__coordinate_leaf<N>::operator-=(__t)...);
         return *this;
     }
-    __coordinate_impl& operator*=(const size_t __t) {
+    __coordinate_impl& operator*=(const ptrdiff_t __t) {
         __swallow(__coordinate_leaf<N>::operator*=(__t)...);
         return *this;
     }
-    __coordinate_impl& operator/=(const size_t __t) {
+    __coordinate_impl& operator/=(const ptrdiff_t __t) {
         __swallow(__coordinate_leaf<N>::operator/=(__t)...);
         return *this;
     }
+
+    const ptrdiff_t size() const noexcept {
+        return coordinate_mul(static_cast<cosnt __coordinate_leaf<N>&>(*this)...);
+    }
+    const bool contains(const __coordinate_impl& __r) const noexcept {
+        auto check = [&] (const ptrdiff_t& id, const ptrdiff_t& ext) { return (id >= 0) && (id <= ext); };
+        return coordinate_check(check(static_cast<const __coordinate_leaf<N>&>(__r).get(),
+                                      static_cast<const __coordinate_leaf<N>&>(*this).get())...);
+    }
 };
 
-template <int Rank>
+template <int N>
 class index
 {
-    static_assert(Rank >= 1, "Rank should be greater than or equal to 1");
-    typedef __coordinate_impl<typename __make_indices<Rank>::type> base;
+    static_assert(N >= 1, "N should be greater than or equal to 1");
+    typedef __coordinate_impl<typename __make_indices<N>::type> base;
 
     base base_;
 
+    template <int N> friend class bounds;
+
 public:
-    static constexpr int rank = Rank;
+    static constexpr int rank = N;
     using reference           = ptrdiff_t&;
     using const_reference     = const ptrdiff_t&;
     using size_type           = size_t;
     using value_type          = ptrdiff_t;
 
-    constexpr index() noexcept : base_() {}
-    constexpr index(value_type v) noexcept : base_(v) { static_assert(Rank == 1, "Rank should be 1") ;}
-    constexpr index(initializer_list<value_type> il) : base_(il) { assert(il.size() == Rank);};
+    index() noexcept : base_() {}
+    index(value_type v) noexcept : base_(v)
+    { static_assert(N == 1, "N should be 1") ;}
+    index(initializer_list<value_type> il) : base_(il)
+    { assert(il.size() == N);};
 
-    constexpr bool operator==(const index& rhs) const noexcept {
+    bool operator==(const index& rhs) const noexcept
+    { return base_ == rhs.base_; }
+    bool operator!=(const index& rhs) const noexcept
+    { return !(*this == rhs); }
+
+    reference       operator[](size_type n) {
+        assert(n < N);
+        return base_[n];
     }
-    constexpr bool operator!=(const index& rhs) const noexcept { return !(*this == rhs); }
+    const_reference operator[](size_type n) const {
+        assert(n < N);
+        return base_[n];
+    }
 
-    constexpr reference       operator[](size_type n);
-    constexpr const_reference operator[](size_type n) const;
-
-    constexpr index  operator+(const index& rhs) const;
-    constexpr index  operator-(const index& rhs) const;
-    constexpr index& operator+=(const index& rhs);
-    constexpr index& operator-=(const index& rhs);
-
-    constexpr index& operator++() {
-        static_assert(N == 1, "Rank should be 1");
-        base_.operator+=(1);
+    index  operator+(const index& rhs) const {
+        index __r(*this);
+        __r += rhs;
+        return __r;
+    }
+    index  operator-(const index& rhs) const {
+        index __r(*this);
+        __r -= rhs;
+        return __r;
+    }
+    index& operator+=(const index& rhs) {
+        base_ += rhs.base_;
         return *this;
     }
-    constexpr index  operator++(int) {
-        static_assert(N == 1, "Rank should be 1");
+    index& operator-=(const index& rhs) {
+        base_ += rhs.base_;
+        return *this;
+    }
+
+    index& operator++() {
+        static_assert(N == 1, "N should be 1");
+        base_ += 1;
+        return *this;
+    }
+    index  operator++(int) {
+        static_assert(N == 1, "N should be 1");
         index ret = *this;
-        base_.operator+=(1);
+        base_ += 1;
         return ret;
     };
-    constexpr index& operator--() {
-        static_assert(N == 1, "Rank should be 1");
-        base_.operator-=(1);
+    index& operator--() {
+        static_assert(N == 1, "N should be 1");
+        base_ -= 1;
         return *this;
     }
-    constexpr index  operator--(int) {
-        static_assert(N == 1, "Rank should be 1");
+    index  operator--(int) {
+        static_assert(N == 1, "N should be 1");
         index ret = *this;
-        base_.operator-=(1);
+        base_ -= 1;
         return ret;
     }
 
-    constexpr index  operator+() const noexcept;
-    constexpr index  operator-() const;
+    index  operator+() const noexcept { return *this; }
+    index  operator-() {
+        index __r;
+        __r -= *this;
+        return __r;
+    }
 
-    constexpr index  operator*(value_type v) const;
-    constexpr index  operator/(value_type v) const;
-    constexpr index& operator*=(value_type v);
-    constexpr index& operator/=(value_type v);
+    index  operator*(value_type v) const {
+        index __r(*this);
+        __r *= v;
+        return __r;
+    }
+    index  operator/(value_type v) const {
+        index __r(*this);
+        __r /= v;
+        return __r;
+    }
+    index& operator*=(value_type v) {
+        base_ *= v;
+        return *this;
+    }
+    index& operator/=(value_type v) {
+        base_ /= v;
+        return *this;
+    }
+};
+
+template <int N>
+static inline index<N> operator*(ptrdiff_t v, const index<N>& rhs) {
+    index<N> __r = rhs;
+    __r *= v;
+    return __r;
+}
+
+template <int N>
+class bounds_iterator
+{
+    template <int N> friend class bounds;
+    ptrdiff_t stride;
+    bounds<N> bnd_;  // exposition only
+    explicit bounds_iterator(bounds<N>& bnd_, ptrdiff_t stride = 0)
+        : bnd_(bnd_), stride(stride) {}
+public:
+    using iterator_category = random_access_iterator_tag;
+    using value_type        = index<N>;
+    using difference_type   = ptrdiff_t;
+    using pointer           = unspecified;   // See [coord.bounds.iterator.require]
+    using reference         = const index<N>;
+
+    bool operator==(const bounds_iterator& rhs) const { return stride == rhs.stridr; }
+    bool operator!=(const bounds_iterator& rhs) const { return !(*this == rhs); }
+    bool operator<(const bounds_iterator& rhs) const { return stride < rhs.stride; }
+    bool operator<=(const bounds_iterator& rhs) const { return stride <= rhs.stride; }
+    bool operator>(const bounds_iterator& rhs) const { return !(*this <= rhs); }
+    bool operator>=(const bounds_iterator& rhs) const { return !(*this < rhs); }
+
+    bounds_iterator& operator++() {
+        ++stride;
+        return *this;
+    }
+    bounds_iterator  operator++(int) {
+        bounds_iterator ret(*this);
+        ++*this;
+        return ret;
+    }
+    bounds_iterator& operator--() {
+        --stride;
+        return *this;
+    }
+    bounds_iterator  operator--(int) {
+        bounds_iterator ret(*this);
+        --*this;
+        return ret;
+    }
+
+    bounds_iterator  operator+(difference_type n) const {
+        bounds_iterator ret(*this);
+        ret += n;
+        return ret;
+    }
+    bounds_iterator& operator+=(difference_type n) {
+        stride += n;
+        return ret;
+    }
+    bounds_iterator  operator-(difference_type n) const {
+        bounds_iterator ret(*this);
+        ret -= n;
+        return ret;
+    }
+    bounds_iterator& operator-=(difference_type n) {
+        stride -= n;
+        return ret;
+    }
+
+    difference_type  operator-(const bounds_iterator& rhs) const {
+        return stride - rhs.stride;
+    }
+
+    reference operator*() const {
+        index<N> idx;
+        ptrdiff_t str = stride;
+        for (size_t i = 0; i < N; i++) {
+            idx[i] = str % bnd_[i];
+            str -= idx[i];
+            str /= bnd_[i];
+        }
+        return idx;
+    }
+    pointer   operator->() const;
+    reference operator[](difference_type n) const {
+        bounds_iterator iter(bnd_, stride + n);
+        return *iter;
+    }
+};
+
+template <int N>
+class bounds {
+    static_assert(N >= 1, "N should be greater than or equal to 1");
+    typedef __coordinate_impl<typename __make_indices<N>::type> base;
+
+    base base_;
+public:
+    static constexpr int rank = N;
+    using reference           = ptrdiff_t&;
+    using const_reference     = const ptrdiff_t&;
+    using iterator            = bounds_iterator<N>;
+    using const_iterator      = bounds_iterator<N>;
+    using size_type           = size_t;
+    using value_type          = ptrdiff_t;
+
+    bounds() noexcept : base_() {}
+    bounds(value_type v) : base_(v) { static_assert(N >= 1, "N should be greater than or equal to 1"); }
+    bounds(initializer_list<value_type> il) : base_(il) {}
+
+    bool operator==(const bounds& rhs) const noexcept { return base_ == rhs.base_; }
+    bool operator!=(const bounds& rhs) const noexcept { return !(*this == rhs); }
+
+    size_type size() const noexcept { return base_.size(); }
+    bool      contains(const index<N>& idx) const noexcept { return base_.contains(idx.base_); }
+
+    const_iterator begin() const noexcept { return bounds_iterator(*this); }
+    const_iterator end() const noexcept { return bounds_iterator(*this, this->size()); }
+
+    reference       operator[](size_type n) { return base_[n]; }
+    const_reference operator[](size_type n) const { return base_[n]; };
+
+    bounds  operator+(const index<N>& rhs) const {
+        bounds __r(*this);
+        __r.base_ += rhs.base_;
+        return __r;
+    }
+    bounds  operator-(const index<N>& rhs) const {
+        bounds __r(*this);
+        __r.base_ -= rhs.base_;
+        return __r;
+    }
+    bounds& operator+=(const index<N>& rhs) {
+        base_ += rhs.base_;
+        return *this;
+    }
+    bounds& operator-=(const index<N>& rhs) {
+        base_ -= rhs.base_;
+        return *this;
+    }
+
+    bounds  operator*(value_type v) const {
+        bounds __r(*this);
+        __r *= v;
+        return __r;
+    }
+    bounds  operator/(value_type v) const {
+        bounds __r(*this);
+        __r /= v;
+        return __r;
+    }
+    bounds& operator*=(value_type v) {
+        base_ *= v;
+        return *this;
+    }
+    bounds& operator/=(value_type v) {
+        base_ *= v;
+        return *this;
+    }
 };
 
 }  // std
