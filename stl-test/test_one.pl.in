@@ -45,22 +45,10 @@ chdir($tests_root);
 
 my $CLANG_AMP_HOME="@PROJECT_SOURCE_DIR@";
 my $CLANG_AMP_BUILD_DIR="@PROJECT_BINARY_DIR@";
-
-my $AMPTESTLIB="@AMPTESTLIB@";
-my $AMPTESTINC="@AMPTESTINC@";
 my $RUNTESTSDIR="@RUNTESTSDIR@";
 
 my $CLANG_AMP="$CLANG_AMP_BUILD_DIR/compiler/bin/clang++";
-my $CLAMP_CONFIG=`find $CLANG_AMP_BUILD_DIR/build -name clamp-config -print`;
-$CLAMP_CONFIG =~ s/^\s+//;
-$CLAMP_CONFIG =~ s/\s+$//;
-my $CLAMP_CXXFLAGS=`$CLAMP_CONFIG --build --cxxflags`;
-$CLAMP_CXXFLAGS =~ s/^\s+//;
-$CLAMP_CXXFLAGS =~ s/\s+$//;
-my $CLAMP_LDFLAGS=`$CLAMP_CONFIG --build --ldflags`;
-$CLAMP_LDFLAGS =~ s/^\s+//;
-$CLAMP_LDFLAGS =~ s/\s+$//;
-my $SHARED_CXXFLAGS="$CLAMP_CXXFLAGS -I$AMPTESTINC -I/usr/include -I$CLANG_AMP_BUILD_DIR/compiler/lib/clang/3.5.0/include/";
+my $SHARED_CXXFLAGS="-std=c++11 -I$CLANG_AMP_HOME/include -I$AMPTESTINC -I/usr/include -I$CLANG_AMP_BUILD_DIR/compiler/lib/clang/3.5.0/include/";
 
 ### Execute tests
 use constant PASS => 0;
@@ -71,14 +59,6 @@ log_message("Test: $test");
 
 # Read test configuration
 undef %Test::config;
-
-my $conf_file = try_find_file_by_extension(abs_path(dirname(($test))), $tests_root, "conf");
-
-if(-e $conf_file)
-{
-    my $safe = new Safe('Test');
-    $safe->rdo($conf_file) or &exit_message(1, "Cannot open $conf_file");
-}
 
 if(not defined $Test::config{'definitions'})
 {
@@ -93,33 +73,17 @@ close(TEST_CPP);
 log_message('Compile only: '.bool_str($Test::config{'compile_only'})."\n"
     .'Expected success: '.bool_str($Test::config{'expected_success'}));
 
-# check to see if test has its own main
-# This solution taken from https://github.com/pathscale/amp-testsuite/commit/1f9f186d27446e52bd50dbcf429844f3fa308303
-my $include_main='';
-if (! system ("cat $test | grep ' main *(' > /dev/null")) {
-    $include_main="-include $RUNTESTSDIR/test_main.h";
-}
-
 # For each set of definitions
 chdir($tmpdir);
 foreach my $def_set (@{$Test::config{'definitions'}})
 {
-    # Build and execute test
-    my $cflags_defs = '';
-    while(my ($k, $v) = each(%{$def_set}))
-    {
-        $cflags_defs = $cflags_defs.sprintf($cflag_define.' ', $k, $v);
-    }
     my $command;
     if ($Test::config{'compile_only'}) {
         $command = "\\
-            $CLANG_AMP -cc1 -fcxx-exceptions -fsyntax-only -D__CPU__=1 $SHARED_CXXFLAGS $include_main $test $cflags_defs";
-    } elsif ($ENV{TEST_CPU} eq "ON") {
-        $command = "\\
-            $CLANG_AMP -std=c++amp -cpu $SHARED_CXXFLAGS $include_main $test $AMPTESTLIB $cflags_defs $CLAMP_LDFLAGS -o $tmpdir/test.out -g";
+            $CLANG_AMP -cc1 -fcxx-exceptions -fsyntax-only $SHARED_CXXFLAGS $test";
     } else {
             $command = "\\
-                $CLANG_AMP $SHARED_CXXFLAGS $include_main $test $AMPTESTLIB $cflags_defs $CLAMP_LDFLAGS -o $tmpdir/test.out -g";
+                $CLANG_AMP $SHARED_CXXFLAGS $test -o $tmpdir/test.out";
     }
 
     log_message("Command: $command\n"
@@ -222,70 +186,4 @@ sub log_message
 sub bool_str
 {
     return $_[0] ? 'true' : 'false';
-}
-
-## Use: get_files_by_extension($start_dir, $ext);
-## Returns: List of files with given extension
-sub get_files_by_extension($$)
-{
-    my $dir = $_[0];
-    my $ext = $_[1];
-    
-	my @files = `ls $dir`;
-    my @ext_files;
-	
-    for my $file (@files)
-    {
-		if($file =~ /\.$ext$/i)
-		{
-			chomp($file);
-			push(@ext_files, $file);
-		}
-    }
-    
-    return @ext_files;    	
-}
-
-## Use: try_find_file_by_extension($start_dir, $end_dir, $ext);
-## Returns: Relative path to file found. Empty if no file exists. -1 if error is encountered.
-sub try_find_file_by_extension($$$)
-{
-	my $start_dir = $_[0];
-	my $end_dir = $_[1];
-	my $ext = $_[2];
-	
-	if(index($start_dir, $end_dir) == -1)
-	{
-		print "ERROR: $start_dir is not a subdirectory of $end_dir.";
-		return -1;
-	}
-	
-	my @files;
-
-	do
-	{	
-		@files = get_files_by_extension($start_dir, $ext);
-		
-		if(@files > 1) 
-		{
-			print "Error: More than one (*.$ext) files present in directory $start_dir\n";
-			return -1; 
-		}
-		
-		if(@files != 0)
-		{
-			my $file = $files[0];
-			
-			if(-e "$start_dir/$file")
-			{
-				return "$start_dir/$file";
-			}
-		}
-		
-		# Move to parent directory to continue search
-		$start_dir = dirname($start_dir); 
-	}
-	while(index($start_dir, $end_dir) != -1);
-	
-	return "";
 }

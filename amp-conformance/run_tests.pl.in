@@ -111,6 +111,14 @@ foreach my $test (@tests)
     # Read test configuration
     undef %Test::config;
 	
+	my $conf_file = try_find_file_by_extension(abs_path(dirname(($test))), $tests_root, "conf");
+	
+	if(-e $conf_file)
+    {
+        my $safe = new Safe('Test');
+        $safe->rdo($conf_file) or &exit_message(1, "Cannot open $conf_file");
+    }
+    
     if(not defined $Test::config{'definitions'})
     {
         $Test::config{'definitions'} = [{}];

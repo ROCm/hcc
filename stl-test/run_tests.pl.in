@@ -120,10 +120,10 @@ foreach my $test (@tests)
         my $command;
         if ($Test::config{'compile_only'}) {
             $command = "\\
-                $CLANG_AMP -cc1 -fcxx-exceptions -fsyntax-only -D__CPU__=1 $SHARED_CXXFLAGS $test 2>>$run_log 1>>$run_log";
+                $CLANG_AMP -cc1 -fcxx-exceptions -fsyntax-only $SHARED_CXXFLAGS $test 2>>$run_log 1>>$run_log";
         } else {
             $command = "\\
-                $CLANG_AMP $SHARED_CXXFLAGS $test -o $tmpdir/test.out -g 2>>$run_log 1>>$run_log";
+                $CLANG_AMP $SHARED_CXXFLAGS $test -o $tmpdir/test.out 2>>$run_log 1>>$run_log";
         }
         
         log_message("Command: $command\n"
