@@ -72,7 +72,7 @@ inline const ptrdiff_t coordinate_mul()
 template <typename ..._Tp>
 inline const ptrdiff_t coordinate_mul(const ptrdiff_t& t, const _Tp&... tail)
 {
-    const ptrdiff_t ret =  t * coordinate_sum(tail...);
+    const ptrdiff_t ret =  t * coordinate_mul(tail...);
     assert(ret <= numeric_limits<ptrdiff_t>::max());
     return ret;
 }
@@ -146,19 +146,23 @@ public:
     }
 
     const ptrdiff_t size() const noexcept {
-        return coordinate_mul(static_cast<const __coordinate_leaf<N>&>(*this)...);
+        return coordinate_mul(static_cast<const __coordinate_leaf<N>&>(*this).get()...);
     }
     const bool contains(const __coordinate_impl& __r) const noexcept {
         auto check = [&] (const ptrdiff_t& id, const ptrdiff_t& ext) { return (id >= 0) && (id <= ext); };
         return coordinate_check(check(static_cast<const __coordinate_leaf<N>&>(__r).get(),
                                       static_cast<const __coordinate_leaf<N>&>(*this).get())...);
     }
+    const bool all_pos() const noexcept {
+        auto check = [&] (const ptrdiff_t& id) { return (id >= 0); };
+        return coordinate_check(check(static_cast<const __coordinate_leaf<N>&>(*this).get())...);
+    }
 };
 
 template <int N>
 class index
 {
-    static_assert(N >= 1, "N should be greater than or equal to 1");
+    static_assert(N >= 1, "Rank should be greater than or equal to 1");
     typedef __coordinate_impl<typename __make_indices<N>::type> base;
 
     base base_;
@@ -174,7 +178,7 @@ public:
 
     index() noexcept : base_() {}
     index(value_type v) noexcept : base_(v)
-    { static_assert(N == 1, "N should be 1") ;}
+    { static_assert(N == 1, "Rank should be 1") ;}
     index(initializer_list<value_type> il) : base_(il)
     { assert(il.size() == N);};
 
@@ -212,23 +216,23 @@ public:
     }
 
     index& operator++() {
-        static_assert(N == 1, "N should be 1");
+        static_assert(N == 1, "Rank should be 1");
         base_ += 1;
         return *this;
     }
     index  operator++(int) {
-        static_assert(N == 1, "N should be 1");
+        static_assert(N == 1, "Rank should be 1");
         index ret = *this;
         base_ += 1;
         return ret;
     };
     index& operator--() {
-        static_assert(N == 1, "N should be 1");
+        static_assert(N == 1, "Rank should be 1");
         base_ -= 1;
         return *this;
     }
     index  operator--(int) {
-        static_assert(N == 1, "N should be 1");
+        static_assert(N == 1, "Rank should be 1");
         index ret = *this;
         base_ -= 1;
         return ret;
@@ -274,7 +278,7 @@ class bounds_iterator
     template <int K> friend class bounds;
     ptrdiff_t stride;
     bounds<N> bnd_;  // exposition only
-    explicit bounds_iterator(bounds<N>& bnd_, ptrdiff_t stride = 0)
+    explicit bounds_iterator(const bounds<N>& bnd_, const ptrdiff_t stride = 0)
         : bnd_(bnd_), stride(stride) {}
 public:
     using iterator_category = random_access_iterator_tag;
@@ -282,7 +286,7 @@ public:
     using difference_type   = ptrdiff_t;
     using reference         = const index<N>;
 
-    bool operator==(const bounds_iterator& rhs) const { return stride == rhs.stridr; }
+    bool operator==(const bounds_iterator& rhs) const { return stride == rhs.stride; }
     bool operator!=(const bounds_iterator& rhs) const { return !(*this == rhs); }
     bool operator<(const bounds_iterator& rhs) const { return stride < rhs.stride; }
     bool operator<=(const bounds_iterator& rhs) const { return stride <= rhs.stride; }
@@ -349,8 +353,12 @@ public:
 
 template <int N>
 class bounds {
-    static_assert(N >= 1, "N should be greater than or equal to 1");
+    static_assert(N >= 1, "Rank should be greater than or equal to 1");
     typedef __coordinate_impl<typename __make_indices<N>::type> base;
+
+
+    template <int Rank>
+        friend bounds<Rank> operator+(const index<Rank>& lhs, const bounds<Rank>& rhs);
 
     base base_;
 public:
@@ -363,8 +371,16 @@ public:
     using value_type          = ptrdiff_t;
 
     bounds() noexcept : base_() {}
-    bounds(value_type v) : base_(v) { static_assert(N >= 1, "N should be greater than or equal to 1"); }
-    bounds(initializer_list<value_type> il) : base_(il) {}
+    bounds(value_type v) : base_(v) {
+        static_assert(N == 1, "Rank should be 1") ;
+        assert(v >= 0);
+        assert(this->size() <= numeric_limits<ptrdiff_t>::max());
+    }
+    bounds(initializer_list<value_type> il) : base_(il) {
+        assert(il.size() == N);
+        assert(this->size() <= numeric_limits<ptrdiff_t>::max());
+        assert(base_.all_pos());
+    }
 
     bool operator==(const bounds& rhs) const noexcept { return base_ == rhs.base_; }
     bool operator!=(const bounds& rhs) const noexcept { return !(*this == rhs); }
@@ -412,10 +428,24 @@ public:
         return *this;
     }
     bounds& operator/=(value_type v) {
-        base_ *= v;
+        base_ /= v;
         return *this;
     }
 };
+
+template <int Rank>
+bounds<Rank> operator+(const index<Rank>& lhs, const bounds<Rank>& rhs) {
+    bounds<Rank> ret(rhs);
+    ret += lhs;
+    return ret;
+}
+
+template <int Rank>
+bounds<Rank> operator*(ptrdiff_t v, const bounds<Rank>& rhs) {
+    bounds<Rank> ret(rhs);
+    ret *= v;
+    return ret;
+}
 
 }  // std
 
