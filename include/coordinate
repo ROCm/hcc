@@ -10,6 +10,7 @@
 
 #include <initializer_list>
 #include <vector>
+#include <limits>
 #include <cassert>
 #include <__coordinate>
 
@@ -145,7 +146,7 @@ public:
     }
 
     const ptrdiff_t size() const noexcept {
-        return coordinate_mul(static_cast<cosnt __coordinate_leaf<N>&>(*this)...);
+        return coordinate_mul(static_cast<const __coordinate_leaf<N>&>(*this)...);
     }
     const bool contains(const __coordinate_impl& __r) const noexcept {
         auto check = [&] (const ptrdiff_t& id, const ptrdiff_t& ext) { return (id >= 0) && (id <= ext); };
@@ -162,7 +163,7 @@ class index
 
     base base_;
 
-    template <int N> friend class bounds;
+    template <int K> friend class bounds;
 
 public:
     static constexpr int rank = N;
@@ -206,7 +207,7 @@ public:
         return *this;
     }
     index& operator-=(const index& rhs) {
-        base_ += rhs.base_;
+        base_ -= rhs.base_;
         return *this;
     }
 
@@ -270,7 +271,7 @@ static inline index<N> operator*(ptrdiff_t v, const index<N>& rhs) {
 template <int N>
 class bounds_iterator
 {
-    template <int N> friend class bounds;
+    template <int K> friend class bounds;
     ptrdiff_t stride;
     bounds<N> bnd_;  // exposition only
     explicit bounds_iterator(bounds<N>& bnd_, ptrdiff_t stride = 0)
@@ -279,7 +280,6 @@ public:
     using iterator_category = random_access_iterator_tag;
     using value_type        = index<N>;
     using difference_type   = ptrdiff_t;
-    using pointer           = unspecified;   // See [coord.bounds.iterator.require]
     using reference         = const index<N>;
 
     bool operator==(const bounds_iterator& rhs) const { return stride == rhs.stridr; }
@@ -315,7 +315,7 @@ public:
     }
     bounds_iterator& operator+=(difference_type n) {
         stride += n;
-        return ret;
+        return *this;
     }
     bounds_iterator  operator-(difference_type n) const {
         bounds_iterator ret(*this);
@@ -324,7 +324,7 @@ public:
     }
     bounds_iterator& operator-=(difference_type n) {
         stride -= n;
-        return ret;
+        return *this;
     }
 
     difference_type  operator-(const bounds_iterator& rhs) const {
@@ -341,7 +341,6 @@ public:
         }
         return idx;
     }
-    pointer   operator->() const;
     reference operator[](difference_type n) const {
         bounds_iterator iter(bnd_, stride + n);
         return *iter;
@@ -373,8 +372,8 @@ public:
     size_type size() const noexcept { return base_.size(); }
     bool      contains(const index<N>& idx) const noexcept { return base_.contains(idx.base_); }
 
-    const_iterator begin() const noexcept { return bounds_iterator(*this); }
-    const_iterator end() const noexcept { return bounds_iterator(*this, this->size()); }
+    const_iterator begin() const noexcept { return bounds_iterator<N>(*this); }
+    const_iterator end() const noexcept { return bounds_iterator<N>(*this, this->size()); }
 
     reference       operator[](size_type n) { return base_[n]; }
     const_reference operator[](size_type n) const { return base_[n]; };

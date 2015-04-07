@@ -4,24 +4,24 @@
 namespace std
 {
 
-template <size_t...> struct __indices {};
+template <int...> struct __indices {};
 
-template <size_t _Sp, class _size_tTuple, size_t _Ep>
+template <int _Sp, class _IntTuple, int _Ep>
 struct __make_indices_imp;
 
-template <size_t _Sp, size_t ..._Indices, size_t _Ep>
+template <int _Sp, int ..._Indices, int _Ep>
 struct __make_indices_imp<_Sp, __indices<_Indices...>, _Ep>
 {
     typedef typename __make_indices_imp<_Sp+1, __indices<_Indices..., _Sp>, _Ep>::type type;
 };
 
-template <size_t _Ep, size_t ..._Indices>
+template <int _Ep, int ..._Indices>
 struct __make_indices_imp<_Ep, __indices<_Indices...>, _Ep>
 {
     typedef __indices<_Indices...> type;
 };
 
-template <size_t _Ep, size_t _Sp = 0>
+template <int _Ep, int _Sp = 0>
 struct __make_indices
 {
     static_assert(_Sp <= _Ep, "__make_indices input error");
