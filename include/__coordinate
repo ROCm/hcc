@@ -1,3 +1,10 @@
+//===----------------------------------------------------------------------===//
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef __LIBCPP___COORDINATE
 #define __LIBCPP___COORDINATE
 
@@ -28,6 +35,6 @@ struct __make_indices
     typedef typename __make_indices_imp<_Sp, __indices<>, _Ep>::type type;
 };
 
-}
+}  // std
 
 #endif  // __LIBCPP___COORDINATE
