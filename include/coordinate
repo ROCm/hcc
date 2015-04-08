@@ -8,9 +8,9 @@
 #ifndef _LIBCPP_COORDINATE
 #define _LIBCPP_COORDINATE
 
+#include <iterator>
 #include <initializer_list>
 #include <type_traits>
-#include <vector>
 #include <limits>
 #include <cassert>
 
@@ -94,7 +94,7 @@ template <typename ..._Tp>
 inline const ptrdiff_t coordinate_mul(const ptrdiff_t& t, const _Tp&... tail)
 {
     const ptrdiff_t ret =  t * coordinate_mul(tail...);
-    assert(ret <= numeric_limits<ptrdiff_t>::max());
+    assert(ret <= numeric_limits<ptrdiff_t>::max() && ret >= 0);
     return ret;
 }
 
@@ -198,8 +198,10 @@ public:
     using value_type          = ptrdiff_t;
 
     index() noexcept : base_() {}
+
     template <int K = N, class = typename enable_if<K == 1>::type>
     index(value_type v) noexcept : base_(v) {}
+
     index(initializer_list<value_type> il) : base_(il)
     { assert(il.size() == N);};
 
@@ -392,14 +394,15 @@ public:
     using value_type          = ptrdiff_t;
 
     bounds() noexcept : base_() {}
+
+    template <int K = N, class = typename enable_if<K == 1>::type>
     bounds(value_type v) : base_(v) {
-        static_assert(N == 1, "Rank should be 1") ;
-        assert(v >= 0);
-        assert(this->size() <= numeric_limits<ptrdiff_t>::max());
+        assert(v >= 0 && v <= numeric_limits<ptrdiff_t>::max());
     }
+
     bounds(initializer_list<value_type> il) : base_(il) {
         assert(il.size() == N);
-        assert(this->size() <= numeric_limits<ptrdiff_t>::max());
+        assert(this->size() >= 0 && this->size() <= numeric_limits<ptrdiff_t>::max());
         assert(base_.all_pos());
     }
 
