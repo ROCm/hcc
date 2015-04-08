@@ -13,10 +13,33 @@
 #include <vector>
 #include <limits>
 #include <cassert>
-#include <__coordinate>
 
 namespace std
 {
+
+template <int...> struct __indices {};
+
+template <int _Sp, class _IntTuple, int _Ep>
+struct __make_indices_imp;
+
+template <int _Sp, int ..._Indices, int _Ep>
+struct __make_indices_imp<_Sp, __indices<_Indices...>, _Ep>
+{
+    typedef typename __make_indices_imp<_Sp+1, __indices<_Indices..., _Sp>, _Ep>::type type;
+};
+
+template <int _Ep, int ..._Indices>
+struct __make_indices_imp<_Ep, __indices<_Indices...>, _Ep>
+{
+    typedef __indices<_Indices...> type;
+};
+
+template <int _Ep, int _Sp = 0>
+struct __make_indices
+{
+    static_assert(_Sp <= _Ep, "__make_indices input error");
+    typedef typename __make_indices_imp<_Sp, __indices<>, _Ep>::type type;
+};
 
 template <int N> class bounds;
 
@@ -53,10 +76,7 @@ public:
 template <class ..._Tp>
 inline void __swallow(_Tp&&...) noexcept {}
 
-inline const bool coordinate_check()
-{
-    return true;
-}
+inline const bool coordinate_check() { return true; }
 template <typename ..._Tp>
 inline const bool coordinate_check(const bool& t, const _Tp&... tail)
 {
