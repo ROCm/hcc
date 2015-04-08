@@ -9,6 +9,7 @@
 #define _LIBCPP_COORDINATE
 
 #include <initializer_list>
+#include <type_traits>
 #include <vector>
 #include <limits>
 #include <cassert>
@@ -177,8 +178,8 @@ public:
     using value_type          = ptrdiff_t;
 
     index() noexcept : base_() {}
-    index(value_type v) noexcept : base_(v)
-    { static_assert(N == 1, "Rank should be 1") ;}
+    template <int K = N, class = typename enable_if<K == 1>::type>
+    index(value_type v) noexcept : base_(v) {}
     index(initializer_list<value_type> il) : base_(il)
     { assert(il.size() == N);};
 
@@ -338,7 +339,7 @@ public:
     reference operator*() const {
         index<N> idx;
         ptrdiff_t str = stride;
-        for (size_t i = 0; i < N; i++) {
+        for (auto i = N - 1; i >= 0; --i) {
             idx[i] = str % bnd_[i];
             str -= idx[i];
             str /= bnd_[i];

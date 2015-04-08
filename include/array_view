@@ -1,28 +1,149 @@
 #ifndef _LIBCPP_ARRAY_VIEW
 #define _LIBCPP_ARRAY_VIEW
 
-#include<coordinate>
+#include <coordinate>
+#include <type_traits>
 
 namespace std
 {
 
-template <class _Indx, class ArrayType>
-inline const initializer_list<ptrdiff_t> decompose(const ArrayType&);
+#define VIEW_ACCESS(data, idx, stride, rank) \
+    { \
+        ptrdiff_t offset = 0; \
+        for (int i = 0; i < rank; ++i) \
+            offset += stride[i] * idx[i]; \
+        return data[offset]; \
+    }
 
-template  <int ...N, class ArrayType>
-inline const initializer_list<ptrdiff_t> decompose<__indices<N..>, ArrayType>(const ArrayType&) {
-    return {get<N>(ArrayType)...};
-}
+template <class _Indx, class ArrayType> struct decompose {};
+
+template <int ...N, class ArrayType>
+struct decompose<__indices<N...>, ArrayType> {
+    static inline const bounds<sizeof...(N)> call() {
+        return {extent<ArrayType, N>::value...};
+    }
+};
 
 template <int N>
 static inline index<N> get_stride(const bounds<N>& bnd)
 {
     index<N> id;
     id[N - 1] = 1;
-    for (size_t i = n - 2; i >= 0; --i)
-        id[i] = id[i + 1] * bnd[i + 1];
+    for (size_t i = N - 1; i > 0; --i)
+        id[i - 1] = id[i] * bnd[i];
     return id;
 }
+
+
+template <class T, int Rank> class strided_array_view;
+
+template <class T, int Rank = 1>
+class array_view {
+public:
+    static constexpr int rank = Rank;
+    using index_type          = index<Rank>;
+    using bounds_type         = bounds<Rank>;
+    using size_type           = size_t;
+    using value_type          = T;
+    using pointer             = T*;
+    using reference           = T&;
+
+    array_view() noexcept : data_(nullptr), bnd_(), stride_() {}
+
+    template <class Viewable, int N = Rank,
+              typename = typename enable_if<N == 1>::type
+              >
+        array_view(Viewable&& vw) : data_(vw.data()), bnd_(vw.size()), stride_() {}
+
+    template <class U, int AnyN, int N = Rank, typename = typename enable_if<N == 1>::type>
+        array_view(const array_view<U, AnyN>& rhs) noexcept
+        : data_(rhs.data_), bnd_(rhs.size()), stride_(1) {}
+
+    template <class ArrayType,
+              int N = Rank,
+              typename = typename enable_if<
+                  is_convertible<
+                                 typename add_pointer<typename remove_all_extents<ArrayType>::type>::type,
+                                 pointer
+                                >::value &&
+                  is_same<typename remove_cv<
+                                             typename remove_all_extents<ArrayType>::type>::type,
+                                             typename remove_cv<value_type>::type
+                                            >::value &&
+                  std::rank<ArrayType>::value == N
+                  >::type
+             >
+        array_view(ArrayType& arr) noexcept
+        : data_(reinterpret_cast<pointer>(arr)),
+        bnd_(decompose<typename __make_indices<Rank>::type, ArrayType>::call()), stride_(get_stride(bnd_)) {}
+
+    template <class U,
+              typename = typename enable_if<
+                                            is_convertible<typename add_pointer<U>::type, pointer>::value &&
+                                            is_same<typename remove_cv<U>::type, typename remove_cv<value_type>::type>::value
+                                           >::type
+             >
+        array_view(const array_view<U, Rank>& rhs) noexcept
+        : data_(rhs.data()), bnd_(rhs.bounds()), stride_(rhs.stride()) {}
+
+    template <class Viewable>
+        array_view(Viewable&& vw, bounds_type bounds)
+    : data_(vw.data()), bnd_(bounds), stride_(get_stride(bounds)) { assert(bnd_.size() <= vw.size()); }
+
+    array_view(pointer ptr, bounds_type bounds)
+    : data_(ptr), bnd_(bounds), stride_(get_stride(bounds)) {}
+
+    template <class U,
+              typename = typename enable_if<
+                                            is_convertible<typename add_pointer<U>::type, pointer>::value &&
+                                            is_same<typename remove_cv<U>::type, typename remove_cv<value_type>::type>::value
+                                           >::type
+             >
+        array_view& operator=(const array_view<U, Rank>& rhs) noexcept {
+            data_ = rhs.data_;
+            bnd_ =  rhs.bnd_;
+            stride_ = rhs.stride_;
+        }
+
+    bounds_type bounds() const noexcept { return bnd_; }
+    size_type   size() const noexcept { return bnd_.size(); }
+    index_type  stride() const noexcept { return stride_; }
+    pointer     data() const noexcept { return data_; }
+
+    reference operator[](const index_type& idx) const {
+        assert(bnd_.contains(idx));
+        VIEW_ACCESS(data_, idx, stride_, Rank);
+    }
+
+    // [arrayview.subview], array_view slicing and sectioning
+    template<int N = Rank, typename = typename enable_if<(N > 1)>::type>
+    array_view<T, Rank - 1>
+        operator[](ptrdiff_t slice) const {
+            assert(slice < bnd_[0]);
+            std::bounds<Rank - 1> bnd;
+            for (auto i = 1; i < Rank; ++i)
+                bnd[i - 1] = bnd_[i];
+            return array_view<T, Rank - 1>(data_ + stride_[0] * slice, bnd);
+        }
+    strided_array_view<T, Rank>
+        section(const index_type& origin, const bounds_type& section_bnd) const {
+            auto range = bnd_ - origin;
+            for (auto i = 0; i < Rank; ++i)
+                assert(range[i] >= section_bnd[i]);
+            ptrdiff_t offset = 0;
+            for (int i = 0; i < Rank; ++i)
+                offset += origin[i] * stride_[i];
+            return strided_array_view<T, Rank>(data_ + offset, section_bnd, stride_);
+        }
+    strided_array_view<T, Rank>
+        section(const index_type& origin) const { return section(origin, bnd_ - origin); }
+
+private:
+    static_assert(Rank >= 1, "Rank should be greater than or equal to 1");
+    pointer data_;
+    bounds_type bnd_;
+    index_type stride_;
+};
 
 template <class T, int Rank = 1>
 class strided_array_view {
@@ -36,113 +157,96 @@ public:
     using pointer             = T*;
     using reference           = T&;
 
-    // [stridedarrayview.cons], strided_array_view constructors, copy, and assignment
-    strided_array_view() noexcept;
+    strided_array_view() noexcept : data_(nullptr), bnd_(), stride_() {}
 
-    template <class U>
-        strided_array_view(const array_view<U, Rank>& rhs) noexcept;
-    template <class U>
-        strided_array_view(const strided_array_view<U, Rank>& rhs) noexcept;
+    template <class U,
+              typename = typename enable_if<
+                                            is_convertible<typename add_pointer<U>::type, pointer>::value &&
+                                            is_same<
+                                                    typename remove_cv<U>::type,
+                                                    typename remove_cv<value_type>::type
+                                                   >::value
+                                           >::type
+             >
+        strided_array_view(const array_view<U, Rank>& rhs) noexcept
+        : data_(rhs.data()), bnd_(rhs.bounds()), stride_(rhs.stride()) {}
 
-    strided_array_view(pointer ptr, bounds_type bounds, index_type stride);
+    template <class U,
+              typename = typename enable_if<
+                                            is_convertible<typename add_pointer<U>::type, pointer>::value &&
+                                            is_same<
+                                                    typename remove_cv<U>::type,
+                                                    typename remove_cv<value_type>::type
+                                                   >::value
+                                           >::type
+             >
+        strided_array_view(const strided_array_view<U, Rank>& rhs) noexcept
+        : data_(rhs.data_), bnd_(rhs.bnd_), stride_(rhs.stride_) {}
 
-    template <class U>
-        strided_array_view& operator=(const strided_array_view<U, Rank>& rhs) noexcept;
+    strided_array_view(pointer ptr, bounds_type bounds, index_type stride)
+        : data_(ptr), bnd_(bounds), stride_(stride) {}
 
-    // [stridedarrayview.obs], strided_array_view observers
-    bounds_type bounds() const noexcept;
-    size_type   size() const noexcept;
-    index_type  stride() const noexcept;
-
-    // [stridedarrayview.elem], strided_array_view element access
-    reference operator[](const index_type& idx) const;
-
-    // [stridedarrayview.subview], strided_array_view slicing and sectioning
-    strided_array_view<T, Rank - 1>
-        operator[](ptrdiff_t slice) const;      // only if Rank > 1
-    strided_array_view<T, Rank>
-        section(const index_type& origin, const bounds_type& section_bnd) const;
-    strided_array_view<T, Rank>
-        section(const index_type& origin) const;
-
-private:
-    pointer data_;  // exposition only
-    bounds_type bnd_;
-    index_type idx;
-};
-
-template <class T, int N = 1>
-class array_view {
-public:
-    static constexpr int rank = N;
-    using index_type          = index<N>;
-    using bounds_type         = bounds<N>;
-    using size_type           = size_t;
-    using value_type          = T;
-    using pointer             = T*;
-    using reference           = T&;
-
-    array_view() noexcept : ptr_(nullptr), bnd_(), stride_() {}
-
-    template <class Viewable>
-        array_view(Viewable&& vw) : ptr_(vw.data()), bnd_(vw.size()), stride_(1) {}
-    template <class U, int AnyN>
-        array_view(const array_view<U, AnyN>& rhs) noexcept
-        : ptr_(rhs.ptr_), bnd_(rhs.size()), stride_(1) { static_assert(N == 1); }
-    template <class ArrayType>
-        array_view(ArrayType& arr) noexcept
-        : ptr_(arr), bnd_(decompose<typename __make_indices<N>::type, ArrayType>(arr)), stride_(get_stride(bnd_)) {}
-
-    template <class U>
-        array_view(const array_view<U, N>& rhs) noexcept
-        : ptr_(rhs.ptr_), bnd_(rhs.bnd_), stride_(get_stride(rhs.bnd_)) {}
-
-    template <class Viewable>
-        array_view(Viewable&& vw, bounds_type bounds)
-    : ptr_(vw.data()), bnd_(bounds), stride_(get_stride(bounds) {}
-    array_view(pointer ptr, bounds_type bounds)
-    : ptr_(ptr), bnd_(bounds), stride(get_stride(bounds)) {}
-
-    template <class U>
-        array_view& operator=(const array_view<U, N>& rhs) noexcep {
-            ptr_ = rhs.ptr_;
-            bnd_ =  rhs.bnd_;
-            stride = rhs.stride_;
+    template <class U,
+              typename = typename enable_if<
+                                            is_convertible<typename add_pointer<U>::type, pointer>::value &&
+                                            is_same<
+                                                    typename remove_cv<U>::type,
+                                                    typename remove_cv<value_type>::type
+                                                   >::value
+                                           >::type
+             >
+        strided_array_view& operator=(const strided_array_view<U, Rank>& rhs) noexcept {
+            data_ = rhs.data_;
+            bnd_ = rhs.bnd_;
+            stride_ = rhs.stride_;
         }
 
-    // [arrayview.obs], array_view observers
     bounds_type bounds() const noexcept { return bnd_; }
     size_type   size() const noexcept { return bnd_.size(); }
-    index_type  stride() const noexcept { return stride; }
-    pointer     data() const noexcept { return ptr_; }
+    index_type  stride() const noexcept { return stride_; }
 
-    // [arrayview.elem], array_view element access
     reference operator[](const index_type& idx) const {
-        size_t offset = 0;
-        for (size_t i = 0; i < N; ++i)
-            offset += idx[i] * stride[i];
-        return *(ptr_ + offset);
+        assert(bnd_.contains(idx));
+        VIEW_ACCESS(data_, idx, stride(), Rank);
     }
 
-    // [arrayview.subview], array_view slicing and sectioning
-    array_view<T, N - 1>
+    template<int N = Rank, typename = typename enable_if<(N > 1)>::type>
+    strided_array_view<T, Rank - 1>
         operator[](ptrdiff_t slice) const {
-            bounds<N - 1> bnd;
-            for (size_t i = 0; i < N - 1; ++i)
-                bnd[i] = bnd_[i];
-            return array_view<T, N - 1>(ptr + stride[0] * slice, bnd);
+            assert(slice < bnd_[0]);
+            std::bounds<Rank - 1> bnd;
+            for (auto i = 1; i < Rank; ++i)
+                bnd[i - 1] = bnd_[i];
+            std::index<Rank - 1> stride;
+            for (auto i = 1; i < Rank; ++i)
+                stride[i - 1] = stride_[i];
+            return strided_array_view<T, Rank - 1>(data_ + stride_[0] * slice, bnd, stride);
         }
-    strided_array_view<T, N>
-        section(const index_type& origin, const bounds_type& section_bnd) const;
-    strided_array_view<T, N>
-        section(const index_type& origin) const;
+    strided_array_view<T, Rank>
+        section(const index_type& origin, const bounds_type& section_bnd) const {
+            auto range = bnd_ - origin;
+            for (auto i = 0; i < Rank; ++i)
+                assert(range[i] >= section_bnd[i]);
+            ptrdiff_t offset = 0;
+            for (int i = 0; i < Rank; ++i)
+                offset += origin[i] * stride_[i];
+            return strided_array_view<T, Rank>(data_ + offset, section_bnd, stride_);
+        }
+    strided_array_view<T, Rank>
+        section(const index_type& origin) const { return section(origin, bnd_ - origin); }
 
 private:
-    static_assert(N >= 1, "Rank should be greater than or equal to 1");
-    pointer ptr_;
+    static_assert(Rank >= 1, "Rank should be greater than or equal to 1");
+    template <typename T_, int Rank_> friend class strided_array_view;
+    pointer data_;  // exposition only
     bounds_type bnd_;
     index_type stride_;
 };
+
+template <class T, int Rank = 1>
+using carray_view = array_view<const T, Rank>;
+template <class T, int Rank = 1>
+using cstrided_array_view = strided_array_view<const T, Rank>;
 
 }  // std
 

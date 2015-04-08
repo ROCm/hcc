@@ -12,7 +12,7 @@ int main()
         ret &= it1 <= it2;
         ret &= it1 >= it2;
         it2++;
-        ret &= *it2 == std::index<4>({1, 0, 0, 0});
+        ret &= *it2 == std::index<4>({0, 0, 0, 1});
         ret &= it1 < it2;
         ret &= it2 > it1;
     }
