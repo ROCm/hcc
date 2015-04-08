@@ -5,8 +5,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_coordinateINAT
-#define _LIBCPP_coordinateINAT
+#ifndef _LIBCPP_COORDINATE
+#define _LIBCPP_COORDINATE
 
 #include <initializer_list>
 #include <vector>
@@ -19,7 +19,7 @@ namespace std
 
 template <int N> class bounds;
 
-template <size_t _Ip>
+template <int _Ip>
 class __coordinate_leaf {
     ptrdiff_t __idx;
 public:
@@ -79,7 +79,7 @@ inline const ptrdiff_t coordinate_mul(const ptrdiff_t& t, const _Tp&... tail)
 
 template <class _Indx> struct __coordinate_impl;
 
-template <size_t ...N>
+template <int ...N>
 struct __coordinate_impl<__indices<N...>>
     : public __coordinate_leaf<N>...
 {
@@ -449,4 +449,4 @@ bounds<Rank> operator*(ptrdiff_t v, const bounds<Rank>& rhs) {
 
 }  // std
 
-#endif
+#endif  // _LIBCPP_COORDINATE
