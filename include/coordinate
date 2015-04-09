@@ -8,11 +8,11 @@
 #ifndef _LIBCPP_COORDINATE
 #define _LIBCPP_COORDINATE
 
-#include <iterator>
 #include <initializer_list>
 #include <type_traits>
 #include <limits>
 #include <cassert>
+#include <vector>
 
 namespace std
 {
