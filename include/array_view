@@ -27,7 +27,7 @@ template <class _Indx, class ArrayType> struct decompose {};
 template <int ...N, class ArrayType>
 struct decompose<__indices<N...>, ArrayType> {
     static inline const bounds<sizeof...(N)> call() {
-        return {extent<ArrayType, N>::value...};
+        return move(bounds<sizeof...(N)>{extent<ArrayType, N>::value...});
     }
 };
 
@@ -103,7 +103,10 @@ public:
     template <class U,
               typename = typename enable_if<
                                             is_convertible<typename add_pointer<U>::type, pointer>::value &&
-                                            is_same<typename remove_cv<U>::type, typename remove_cv<value_type>::type>::value
+                                            is_same<
+                                                    typename remove_cv<U>::type,
+                                                    typename remove_cv<value_type>::type
+                                                   >::value
                                            >::type
              >
         array_view& operator=(const array_view<U, Rank>& rhs) noexcept {

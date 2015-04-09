@@ -59,6 +59,9 @@ int main()
         ret &= k[1][0][0] == 103;
         auto m = k.section(std::index<3>{1, 1, 2});
         ret &= m[0][0][0] == 115;
+        ret &= av.section(std::index<3>{1, 1, 1}).
+                  section(std::index<3>{0, 1, 1}).
+                  section(std::index<3>{0, 0, 1})[0][0][0] == 63;
     }
     return !ret;
 }
