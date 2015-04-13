@@ -106,7 +106,10 @@ foreach my $test (@tests)
     
     # Find "expects error" directives in cpp
     open(TEST_CPP, $test) or &exit_message(1, "Cannot open $test");
-    $Test::config{'expected_success'} = (grep m@//#\s*Expects\s*(\d*)\s*:\s*(warning|error)@i, <TEST_CPP>) == 0;
+    $Test::config{'expected_success'} = (grep m@//#error@i, <TEST_CPP>) == 0;
+    close(TEST_CPP);
+    open(TEST_CPP, $test) or &exit_message(1, "Cannot open $test");
+    $Test::config{'expected_failure'} = (grep m@//#fail@i, <TEST_CPP>) != 0;
     close(TEST_CPP);
     
     log_message('Compile only: '.bool_str($Test::config{'compile_only'})."\n"
@@ -167,6 +170,16 @@ foreach my $test (@tests)
             else
             {
                 $result = FAIL;
+            }
+        }
+        elsif($Test::config{'expected_failure'}) # Compile only test
+        {
+            if($build_exit_code != 0) {
+                $result = FAIL;
+            } elsif($exec_exit_code == 0) {
+                $result = FAIL;
+            } else {
+                $result = PASS;
             }
         }
         elsif($Test::config{'compile_only'}) # Compile only test
