@@ -60,11 +60,21 @@ public:
     template <class Viewable, int N = Rank,
               typename = typename enable_if<N == 1>::type
               >
-        array_view(Viewable&& vw) : data_(vw.data()), bnd_(vw.size()), stride_() {}
+        array_view(Viewable&& vw) : data_(vw.data()), bnd_(vw.size()), stride_() {
+            static_assert(is_convertible<decltype(vw.size()), ptrdiff_t>::value, "illegal Viewable");
+            static_assert(is_convertible<decltype(vw.data()), pointer>::value, "illegal Viewable");
+            static_assert(is_same<typename remove_cv<typename remove_pointer<decltype(vw.data())>::type>::type,
+                                  typename remove_cv<T>::type>::value, "illegal Viewable");
+        }
 
-    template <class U, int AnyN, int N = Rank, typename = typename enable_if<N == 1>::type>
+    template <class U, int AnyN, int N = Rank, typename = typename enable_if<N == 1>::type,
+             typename = typename enable_if<
+                 is_convertible<typename add_pointer<U>::type, pointer>::value &&
+                 is_same<typename remove_cv<T>::type, typename remove_cv<value_type>::type>::value
+                 >::type
+             >
         array_view(const array_view<U, AnyN>& rhs) noexcept
-        : data_(rhs.data_), bnd_(rhs.size()), stride_(1) {}
+        : data_(rhs.data()), bnd_(rhs.size()), stride_(1) {}
 
     template <class ArrayType,
               int N = Rank,
@@ -95,7 +105,13 @@ public:
 
     template <class Viewable>
         array_view(Viewable&& vw, bounds_type bounds)
-    : data_(vw.data()), bnd_(bounds), stride_(get_stride(bounds)) { assert(bnd_.size() <= vw.size()); }
+        : data_(vw.data()), bnd_(bounds), stride_(get_stride(bounds)) { 
+            assert(bnd_.size() <= vw.size());
+            static_assert(is_convertible<decltype(vw.size()), ptrdiff_t>::value, "illegal Viewable");
+            static_assert(is_convertible<decltype(vw.data()), pointer>::value, "illegal Viewable");
+            static_assert(is_same<typename remove_cv<typename remove_pointer<decltype(vw.data())>::type>::type,
+                          typename remove_cv<T>::type>::value, "illegal Viewable");
+        }
 
     array_view(pointer ptr, bounds_type bounds)
     : data_(ptr), bnd_(bounds), stride_(get_stride(bounds)) {}
