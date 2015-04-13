@@ -384,6 +384,10 @@ class bounds {
         friend bounds<Rank> operator+(const index<Rank>& lhs, const bounds<Rank>& rhs);
 
     base base_;
+    void check() const {
+        assert(this->size() >= 0 && this->size() <= numeric_limits<ptrdiff_t>::max());
+        assert(base_.all_pos());
+    }
 public:
     static constexpr int rank = N;
     using reference           = ptrdiff_t&;
@@ -402,8 +406,7 @@ public:
 
     bounds(initializer_list<value_type> il) : base_(il) {
         assert(il.size() == N);
-        assert(this->size() >= 0 && this->size() <= numeric_limits<ptrdiff_t>::max());
-        assert(base_.all_pos());
+        check();
     }
 
     bool operator==(const bounds& rhs) const noexcept { return base_ == rhs.base_; }
@@ -421,38 +424,46 @@ public:
     bounds  operator+(const index<N>& rhs) const {
         bounds __r(*this);
         __r.base_ += rhs.base_;
+        __r.check();
         return __r;
     }
     bounds  operator-(const index<N>& rhs) const {
         bounds __r(*this);
         __r.base_ -= rhs.base_;
+        __r.check();
         return __r;
     }
     bounds& operator+=(const index<N>& rhs) {
         base_ += rhs.base_;
+        this->check();
         return *this;
     }
     bounds& operator-=(const index<N>& rhs) {
         base_ -= rhs.base_;
+        this->check();
         return *this;
     }
 
     bounds  operator*(value_type v) const {
         bounds __r(*this);
         __r *= v;
+        __r.check();
         return __r;
     }
     bounds  operator/(value_type v) const {
         bounds __r(*this);
         __r /= v;
+        __r.check();
         return __r;
     }
     bounds& operator*=(value_type v) {
         base_ *= v;
+        this->check();
         return *this;
     }
     bounds& operator/=(value_type v) {
         base_ /= v;
+        this->check();
         return *this;
     }
 };
