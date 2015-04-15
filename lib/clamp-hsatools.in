@@ -29,7 +29,6 @@ if [ ! -f $1 ]; then
 fi
 
 # Path to AMD library builtins
-AMD_BUILTINS=@HSAIL_BIN@
 if [ -d @LLVM_TOOLS_DIR@ ]; then
     NEWLIB=@CPPAMP_SOURCE_DIR@/lib
 else
@@ -44,7 +43,7 @@ if [ $KMDUMPLLVM == "1" ]; then
   cp $1 ./dump.fe.bc
 fi
 
-$LLVM_BIN/llvm-link -suppress-warnings -o $1.linked.bc $1 $AMD_BUILTINS/builtins-hsail.opt.bc
+$LLVM_BIN/llvm-link -suppress-warnings -o $1.linked.bc $1 $NEWLIB/builtins-hsail.opt.bc
 
 if [ $KMDUMPLLVM == "1" ]; then
   cp $1.linked.bc ./dump.linked.bc
