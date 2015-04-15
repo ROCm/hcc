@@ -9,6 +9,17 @@
 # in case $3 is not set, then either SPIR or OpenCL C kernel
 # will be emitted according to the capability of GPU
 
+# enable bash debugging
+KMDBSCRIPT="${KMDBSCRIPT:=0}"
+
+# dump the LLVM bitcode
+KMDUMPLLVM="${KMDUMPLLVM:=0}"
+
+if [ $KMDBSCRIPT == "1" ]
+then
+  set -x
+fi
+
 # check command line arguments
 if [ "$#" -lt 2 ]; then
   echo "Usage: $0 input_LLVM output_kernel (--hsa | --spir | --opencl)" >&2
@@ -73,9 +84,20 @@ if [ "$3" == "--hsa" ]; then
       exit 1
     fi
     sed "s/call /call spir_func /g" < $2.promote.ll.orig | sed "s/addrspacecast /bitcast /g" > $2.promote.ll
+
+    if [ $KMDUMPLLVM == "1" ]; then
+      cp $2.promote.ll ./dump.promote.ll
+    fi
+
     $AS -o $2.promote.bc $2.promote.ll
+
     echo "Generating HSA Brig kernel"
-    $LINK $MATHLIB/opencl_math.bc $2.promote.bc -o $2 2>/dev/null
+    $LINK $MATHLIB/hsa_math.bc $2.promote.bc -o $2 2>/dev/null
+
+    if [ $KMDUMPLLVM == "1" ]; then
+      cp $2 ./dump.hsa_math_linked.bc
+    fi
+
     $HSATOOLS $2
     mv -f $2 $2.orig
     mv $2.brig $2
