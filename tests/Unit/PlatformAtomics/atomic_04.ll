@@ -16,19 +16,19 @@ test_atomicrmw_xchg:
   ;
 
   %xchg1 = atomicrmw xchg i32* %0, i32 %1 monotonic
-;CHECK: atomic_exch_global_rlx_sys_b32 {{.*}}
+;CHECK: atomic_exch_global_rlx_system_b32 {{.*}}
 
   %xchg2 = atomicrmw xchg i32* %0, i32 %1 acquire
-;CHECK: atomic_exch_global_scacq_sys_b32 {{.*}}
+;CHECK: atomic_exch_global_scacq_system_b32 {{.*}}
 
   %xchg3 = atomicrmw xchg i32* %0, i32 %1 release
-;CHECK: atomic_exch_global_screl_sys_b32 {{.*}}
+;CHECK: atomic_exch_global_screl_system_b32 {{.*}}
 
   %xchg4 = atomicrmw xchg i32* %0, i32 %1 acq_rel
-;CHECK: atomic_exch_global_scar_sys_b32 {{.*}}
+;CHECK: atomic_exch_global_scar_system_b32 {{.*}}
 
   %xchg5 = atomicrmw xchg i32* %0, i32 %1 seq_cst
-;CHECK: atomic_exch_global_scar_sys_b32 {{.*}}
+;CHECK: atomic_exch_global_scar_system_b32 {{.*}}
 
   ret void
 }

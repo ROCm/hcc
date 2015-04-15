@@ -15,20 +15,20 @@ test_cmpxchg:
   ; test cmpxchg
   ;
 
-  %cmpxchg1 = cmpxchg i32* %0, i32 %1, i32 2 monotonic 
-;CHECK: atomicnoret_cas_global_rlx_sys_b32 {{.*}}
+  %cmpxchg1 = cmpxchg i32* %0, i32 %1, i32 2 monotonic monotonic
+;CHECK: atomic_cas_global_rlx_system_b32 {{.*}}
 
-  %cmpxchg2 = cmpxchg i32* %0, i32 %1, i32 2 acquire 
-;CHECK: atomicnoret_cas_global_scacq_sys_b32 {{.*}}
+  %cmpxchg2 = cmpxchg i32* %0, i32 %1, i32 2 acquire monotonic
+;CHECK: atomic_cas_global_scacq_system_b32 {{.*}}
 
-  %cmpxchg3 = cmpxchg i32* %0, i32 %1, i32 2 release 
-;CHECK: atomicnoret_cas_global_screl_sys_b32 {{.*}}
+  %cmpxchg3 = cmpxchg i32* %0, i32 %1, i32 2 release monotonic
+;CHECK: atomic_cas_global_screl_system_b32 {{.*}}
 
-  %cmpxchg4 = cmpxchg i32* %0, i32 %1, i32 2 acq_rel 
-;CHECK: atomicnoret_cas_global_scar_sys_b32 {{.*}}
+  %cmpxchg4 = cmpxchg i32* %0, i32 %1, i32 2 acq_rel monotonic
+;CHECK: atomic_cas_global_scar_system_b32 {{.*}}
 
-  %cmpxchg5 = cmpxchg i32* %0, i32 %1, i32 2 seq_cst 
-;CHECK: atomicnoret_cas_global_scar_sys_b32 {{.*}}
+  %cmpxchg5 = cmpxchg i32* %0, i32 %1, i32 2 seq_cst monotonic
+;CHECK: atomic_cas_global_scar_system_b32 {{.*}}
 
   ret void
 }
