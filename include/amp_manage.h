@@ -53,6 +53,7 @@ struct mm_info
       getAllocator()->append(s.getKernel(), s.getAndIncCurrentIndex(), data);
     }
     ~mm_info() {
+      synchronize();
       getAllocator()->free(data);
       if (free)
         ::operator delete(data);
