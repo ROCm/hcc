@@ -133,7 +133,6 @@ public:
     void read() {
     }
     void discard(void *) {}
-    void sync(void *data) {}
     void free(void *data) {
         auto iter = mem_info.find(data);
         if (iter != std::end(mem_info)) {
