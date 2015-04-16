@@ -2,7 +2,7 @@
 # HSA headers
 ####################
 if (HAS_HSA EQUAL 1)
-  include_directories(${HSA_HEADER} ${LIBHSAIL_HEADER} ${LIBHSAIL_HEADER}/generated)
+  include_directories(${HSA_HEADER} ${LIBHSAIL_HEADER_DIR} ${LIBHSAIL_HEADER_DIR}/generated)
 endif (HAS_HSA EQUAL 1)
 
 ####################
@@ -10,7 +10,7 @@ endif (HAS_HSA EQUAL 1)
 ####################
 if (HAS_HSA EQUAL 1)
 # TBD install commands for HSA-specific files here
-add_mcwamp_library_hsa(mcwamp_hsa mcwamp_hsa.cpp HSAContextKaveri.cpp elf_utils.cpp)
+add_mcwamp_library_hsa(mcwamp_hsa mcwamp_hsa.cpp HSAContextKaveri.cpp)
 install(TARGETS mcwamp_hsa
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib)

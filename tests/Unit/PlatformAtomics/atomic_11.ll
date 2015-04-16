@@ -16,19 +16,19 @@ test_atomicrmw_max:
   ;
 
   %max1 = atomicrmw max i32* %0, i32 %1 monotonic
-;CHECK: atomicnoret_max_global_rlx_sys_s32 {{.*}}
+;CHECK: atomicnoret_max_global_rlx_system_s32 {{.*}}
 
   %max2 = atomicrmw max i32* %0, i32 %1 acquire
-;CHECK: atomicnoret_max_global_scacq_sys_s32 {{.*}}
+;CHECK: atomicnoret_max_global_scacq_system_s32 {{.*}}
 
   %max3 = atomicrmw max i32* %0, i32 %1 release
-;CHECK: atomicnoret_max_global_screl_sys_s32 {{.*}}
+;CHECK: atomicnoret_max_global_screl_system_s32 {{.*}}
 
   %max4 = atomicrmw max i32* %0, i32 %1 acq_rel
-;CHECK: atomicnoret_max_global_scar_sys_s32 {{.*}}
+;CHECK: atomicnoret_max_global_scar_system_s32 {{.*}}
 
   %max5 = atomicrmw max i32* %0, i32 %1 seq_cst
-;CHECK: atomicnoret_max_global_scar_sys_s32 {{.*}}
+;CHECK: atomicnoret_max_global_scar_system_s32 {{.*}}
 
   ret void
 }

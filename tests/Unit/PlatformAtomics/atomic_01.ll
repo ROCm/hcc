@@ -17,10 +17,10 @@ test_load_store_atomic:
   ; store monotonic
   ;
   %ld1 = load atomic i32* %0 monotonic, align 4
-;CHECK: atomic_ld_global_rlx_sys_b32 {{.*}}
+;CHECK: atomic_ld_global_rlx_system_b32 {{.*}}
 
   store atomic i32 %ld1, i32* %0 monotonic, align 4, !tbaa !15
-;CHECK: atomicnoret_st_global_rlx_sys_b32 {{.*}}
+;CHECK: atomicnoret_st_global_rlx_system_b32 {{.*}}
 
   ret void
 }
