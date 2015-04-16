@@ -22,6 +22,7 @@ struct mm_info
 #if CXXAMP_NOCACHE
     void *data;
     bool free;
+    bool discard;
 #else
     size_t count;
     void *host;
@@ -32,9 +33,10 @@ struct mm_info
 
 #if CXXAMP_NOCACHE
     mm_info(int count)
-        : data(aligned_alloc(0x1000, count)), free(true) { getAllocator()->init(data, count); }
+        : data(aligned_alloc(0x1000, count)), free(true), discard(false)
+    { getAllocator()->init(data, count); }
     mm_info(int count, void *src)
-        : data(src), free(false) { getAllocator()->init(data, count); }
+        : data(src), free(false), discard(false) { getAllocator()->init(data, count); }
 #else
     mm_info(int count)
         : count(count), host(aligned_alloc(0x1000, count)), device(host),
@@ -45,14 +47,19 @@ struct mm_info
 #endif
 
 #if CXXAMP_NOCACHE
-    void synchronize() {}
+    void synchronize() { getAllocator()->sync(data); }
     void refresh() {}
     void* get() { return data; }
-    void disc() { getAllocator()->discard(data); }
+    void disc() { discard = true;
+        getAllocator()->discard(data);
+    }
     void serialize(Serialize& s) {
       getAllocator()->append(s.getKernel(), s.getAndIncCurrentIndex(), data);
+      discard = false;
     }
     ~mm_info() {
+      if (!discard)
+          synchronize();
       getAllocator()->free(data);
       if (free)
         ::operator delete(data);

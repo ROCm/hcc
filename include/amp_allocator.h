@@ -11,6 +11,7 @@ public:
   virtual void append(void*, int, void*) = 0;
   virtual void write() = 0;
   virtual void* device_data(void*) = 0;
+  virtual void sync(void*) = 0;
   virtual void discard(void*) = 0;
   virtual void* getQueue() = 0;
   virtual void read() = 0;

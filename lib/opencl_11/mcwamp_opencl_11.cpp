@@ -53,6 +53,7 @@ struct rw_info
     int count;
     bool used;
     bool discard;
+    bool dirty;
 };
 
 struct DimMaxSize {
@@ -167,7 +168,7 @@ public:
         if (count > 0) {
             cl_int err;
             cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, NULL, &err);
-            rwq[data] = {count, false, false};
+            rwq[data] = {count, false, false, false};
             assert(err == CL_SUCCESS);
             mem_info[data] = dm;
         }
@@ -180,7 +181,7 @@ public:
         cl_int err;
         for (auto& it : rwq) {
             rw_info& rw = it.second;
-            if (rw.used && !rw.discard) {
+            if (rw.used && !rw.discard && !rw.dirty) {
                 err = clEnqueueWriteBuffer(queue, mem_info[it.first], CL_TRUE, 0,
                                            rw.count, it.first, 0, NULL, NULL);
                 assert(err == CL_SUCCESS);
@@ -193,6 +194,19 @@ public:
         if (it != std::end(rwq))
             it->second.discard = true;
     }
+    void sync(void* data) {
+        auto it = rwq.find(data);
+        if (it == std::end(rwq))
+            return;
+        rw_info& rw = it->second;
+        if (rw.used && rw.dirty) {
+            cl_int err = clEnqueueReadBuffer(queue, mem_info[data], CL_TRUE, 0,
+                                             rw.count, data, 0, NULL, NULL);
+            assert(err == CL_SUCCESS);
+            rw.used = false;
+            rw.dirty = false;
+        }
+    }
     void* device_data(void* data) {
         auto it = rwq.find(data);
         if (it != std::end(rwq)) {
@@ -204,12 +218,8 @@ public:
         cl_int err;
         for (auto& it : rwq) {
             rw_info& rw = it.second;
-            if (rw.used) {
-                err = clEnqueueReadBuffer(queue, mem_info[it.first], CL_TRUE, 0,
-                                          rw.count, it.first, 0, NULL, NULL);
-                assert(err == CL_SUCCESS);
-                rw.used = false;
-            }
+            if (rw.used)
+                rw.dirty = false;
         }
     }
     void free(void *data) {
