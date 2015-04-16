@@ -51,8 +51,8 @@ namespace CLAMP {
 struct rw_info
 {
     int count;
-    bool used;
     bool discard;
+    bool dirty;
 };
 
 struct DimMaxSize {
@@ -174,53 +174,56 @@ public:
     }
     void append(void *kernel, int idx, void *data) {
         PushArgImpl(kernel, idx, sizeof(cl_mem), &mem_info[data]);
-        rwq[data].used = true;
-    }
-    void write() {
-        cl_int err;
-        for (auto& it : rwq) {
-            rw_info& rw = it.second;
-            if (rw.used && !rw.discard) {
-                err = clEnqueueWriteBuffer(queue, mem_info[it.first], CL_TRUE, 0,
-                                           rw.count, it.first, 0, NULL, NULL);
-                assert(err == CL_SUCCESS);
-            } else
-                rw.discard = false;
+        auto it = rwq.find(data);
+        rw_info& rw = it->second;
+        if (!rw.dirty && !rw.discard) {
+            rw.discard = false;
+            rw.dirty = true;
+            cl_int err;
+            err = clEnqueueWriteBuffer(queue, mem_info[data], CL_TRUE, 0,
+                                       rw.count, data, 0, NULL, NULL);
+            assert(err == CL_SUCCESS);
         }
     }
+    void write() {}
     void discard(void *data) {
         auto it = rwq.find(data);
-        if (it != std::end(rwq))
+        if (it != std::end(rwq)) {
             it->second.discard = true;
+            it->second.dirty = false;
+        }
+    }
+    void sync(void* data) {
+        auto it = rwq.find(data);
+        if (it == std::end(rwq))
+            return;
+        rw_info& rw = it->second;
+        if (rw.dirty && !rw.discard) {
+            cl_int err = clEnqueueReadBuffer(queue, mem_info[data], CL_TRUE, 0,
+                                             rw.count, data, 0, NULL, NULL);
+            assert(err == CL_SUCCESS);
+            rw.dirty = false;
+        }
     }
     void* device_data(void* data) {
-        auto it = rwq.find(data);
-        if (it != std::end(rwq)) {
-            return mem_info[data];
-        }
+        auto it = mem_info.find(data);
+        if (it != std::end(mem_info))
+            return it->second;
         return NULL;
     }
-    void read() {
-        cl_int err;
-        for (auto& it : rwq) {
-            rw_info& rw = it.second;
-            if (rw.used) {
-                err = clEnqueueReadBuffer(queue, mem_info[it.first], CL_TRUE, 0,
-                                          rw.count, it.first, 0, NULL, NULL);
-                assert(err == CL_SUCCESS);
-                rw.used = false;
-            }
-        }
-    }
+    void read() {}
     void free(void *data) {
+        auto it = rwq.find(data);
+        if (it != std::end(rwq)) {
+            rw_info& rw = it->second;
+            sync(data);
+            rwq.erase(it);
+        }
         auto iter = mem_info.find(data);
         if (iter != std::end(mem_info)) {
             clReleaseMemObject(iter->second);
             mem_info.erase(iter);
         }
-        auto it = rwq.find(data);
-        if (it != std::end(rwq))
-            rwq.erase(it);
     }
     ~OpenCLAMPAllocator() {
         clReleaseProgram(program);
@@ -590,7 +593,6 @@ extern "C" void LaunchKernelImpl(void *kernel, size_t dim_ext, size_t *ext, size
           local_size = NULL;
   }
 
-  aloc.write();
   err = clEnqueueNDRangeKernel(aloc.queue, (cl_kernel)kernel, dim_ext, NULL, ext, local_size, 0, NULL, NULL);
   assert(err == CL_SUCCESS);
   aloc.read();
