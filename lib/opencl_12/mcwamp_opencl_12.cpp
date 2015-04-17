@@ -121,8 +121,7 @@ public:
     void append(void *kernel, int idx, void *data) {
         PushArgImpl(kernel, idx, sizeof(cl_mem), &mem_info[data]);
     }
-    void write() {
-    }
+    void write() {}
     void* device_data(void* data) {
         auto it = rwq.find(data);
         if (it != std::end(rwq)) {
@@ -130,8 +129,7 @@ public:
         }
         return NULL;
     }
-    void read() {
-    }
+    void read() {}
     void discard(void *) {}
     void sync(void *) {}
     void free(void *data) {

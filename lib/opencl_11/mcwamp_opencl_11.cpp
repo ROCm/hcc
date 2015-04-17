@@ -176,13 +176,15 @@ public:
         PushArgImpl(kernel, idx, sizeof(cl_mem), &mem_info[data]);
         auto it = rwq.find(data);
         rw_info& rw = it->second;
-        if (!rw.dirty && !rw.discard) {
-            rw.discard = false;
+        if (!rw.dirty) {
             rw.dirty = true;
-            cl_int err;
-            err = clEnqueueWriteBuffer(queue, mem_info[data], CL_TRUE, 0,
-                                       rw.count, data, 0, NULL, NULL);
-            assert(err == CL_SUCCESS);
+            if (!rw.discard) {
+                cl_int err;
+                err = clEnqueueWriteBuffer(queue, mem_info[data], CL_TRUE, 0,
+                                           rw.count, data, 0, NULL, NULL);
+                assert(err == CL_SUCCESS);
+            }
+            rw.discard = false;
         }
     }
     void write() {}
@@ -595,8 +597,6 @@ extern "C" void LaunchKernelImpl(void *kernel, size_t dim_ext, size_t *ext, size
 
   err = clEnqueueNDRangeKernel(aloc.queue, (cl_kernel)kernel, dim_ext, NULL, ext, local_size, 0, NULL, NULL);
   assert(err == CL_SUCCESS);
-  aloc.read();
-  clFinish(aloc.queue);
 }
 
 extern "C" void *LaunchKernelAsyncImpl(void *ker, size_t nr_dim, size_t *global, size_t *local) {
