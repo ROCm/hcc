@@ -1227,10 +1227,16 @@ struct projection_helper<const T, 1>
     //      const T& operator[](int i) const restrict(amp,cpu);
     typedef __global const T& const_result_type;
     static const_result_type project(array_view<const T, 1>& now, int i) restrict(amp,cpu) {
+#ifndef __GPU__
+        now.cache.synchronize();
+#endif
         __global const T *ptr = reinterpret_cast<__global const T *>(now.cache.get() + i + now.offset + now.index_base[0]);
         return *ptr;
     }
     static const_result_type project(const array_view<const T, 1>& now, int i) restrict(amp,cpu) {
+#ifndef __GPU__
+        now.cache.synchronize();
+#endif
         __global const T *ptr = reinterpret_cast<__global const T *>(now.cache.get() + i + now.offset + now.index_base[0]);
         return *ptr;
     }
@@ -1278,6 +1284,9 @@ struct array_projection_helper<T, 1>
     typedef __global T& result_type;
     typedef __global const T& const_result_type;
     static result_type project(array<T, 1>& now, int i) restrict(amp,cpu) {
+#ifndef __GPU__
+        now.m_device.synchronize();
+#endif
         __global T *ptr = reinterpret_cast<__global T *>(now.m_device.get() + i);
         return *ptr;
     }
@@ -1664,6 +1673,7 @@ public:
     if(cpu_access_type == access_type_none) {
       //return reinterpret_cast<T*>(NULL);
     }
+    m_device.synchronize();
 #endif
     return reinterpret_cast<T*>(m_device.get());
   }
