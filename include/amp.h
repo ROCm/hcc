@@ -2399,7 +2399,7 @@ void copy(InputIter srcBegin, array<T, N>& dest) {
 template <typename OutputIter, typename T>
 void copy(const array_view<T, 1> &src, OutputIter destBegin) {
     for (int i = 0; i < src.get_extent()[0]; ++i) {
-        *destBegin = (src.get_data(i));
+        *destBegin = (src[i]);
         destBegin++;
     }
 }
