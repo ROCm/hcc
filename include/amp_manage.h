@@ -45,7 +45,7 @@ struct mm_info
 #endif
 
 #if CXXAMP_NOCACHE
-    void synchronize() {}
+    void synchronize() { getAllocator()->sync(data); }
     void refresh() {}
     void* get() { return data; }
     void disc() { getAllocator()->discard(data); }

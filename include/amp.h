@@ -1282,6 +1282,9 @@ struct array_projection_helper<T, 1>
         return *ptr;
     }
     static const_result_type project(const array<T, 1>& now, int i) restrict(amp,cpu) {
+#ifndef __GPU__
+        now.m_device.synchronize();
+#endif
         __global const T *ptr = reinterpret_cast<__global const T *>(now.m_device.get() + i);
         return *ptr;
     }
@@ -1645,6 +1648,9 @@ public:
       }
 
   operator std::vector<T>() const {
+#ifndef __GPU__
+      m_device.synchronize();
+#endif
       T *begin = reinterpret_cast<T*>(m_device.get()),
         *end = reinterpret_cast<T*>(m_device.get() + extent.size());
       return std::vector<T>(begin, end);
