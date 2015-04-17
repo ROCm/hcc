@@ -1496,6 +1496,7 @@ public:
       if(pav && (pav->get_accelerator() == _gpu_check)) {
           throw runtime_exception("The array is not accessible on CPU.", 0);
       }
+      m_device.synchronize();
 #endif
       __global T *ptr = reinterpret_cast<__global T*>(m_device.get());
       return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx, extent)];
@@ -1505,6 +1506,7 @@ public:
       if(pav && (pav->get_accelerator() == _gpu_check)) {
           throw runtime_exception("The array is not accessible on CPU.", 0);
       }
+      m_device.synchronize();
 #endif
       __global T *ptr = reinterpret_cast<__global T*>(m_device.get());
       return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx, extent)];
