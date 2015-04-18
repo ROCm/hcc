@@ -1432,6 +1432,9 @@ public:
 
 
   explicit array(const array_view<const T, N>& src) : array(src.extent) {
+#ifndef __GPU__
+      src.synchronize();
+#endif
       memmove(const_cast<void*>(reinterpret_cast<const void*>(m_device.get())),
       reinterpret_cast<const void*>(src.cache.get()), extent.size() * sizeof(T));
   }
