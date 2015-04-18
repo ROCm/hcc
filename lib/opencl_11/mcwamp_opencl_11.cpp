@@ -195,6 +195,18 @@ public:
             it->second.dirty = false;
         }
     }
+    void copy(void *src, void *dst) {
+        auto it = rwq.find(src);
+        if (it == std::end(rwq))
+            return;
+        rw_info& rw = it->second;
+        if (rw.dirty) {
+            cl_int err = clEnqueueReadBuffer(queue, mem_info[src], CL_TRUE, 0,
+                                             rw.count, dst, 0, NULL, NULL);
+            assert(err == CL_SUCCESS);
+        } else
+            memmove(dst, src, rw.count);
+    }
     void sync(void* data) {
         auto it = rwq.find(data);
         if (it == std::end(rwq))

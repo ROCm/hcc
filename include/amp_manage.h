@@ -48,6 +48,7 @@ struct mm_info
     void synchronize() { getAllocator()->sync(data); }
     void refresh() {}
     void* get() { return data; }
+    void copy(void *dst) { getAllocator()->copy(data, dst); }
     void disc() { getAllocator()->discard(data); }
     void serialize(Serialize& s) {
       getAllocator()->append(s.getKernel(), s.getAndIncCurrentIndex(), data);
@@ -131,6 +132,7 @@ public:
     void synchronize() const { mm->synchronize(); }
     void discard() const { mm->disc(); }
     void refresh() const { mm->refresh(); }
+    void copy(void *dst) const { mm->copy(dst); }
 
     __attribute__((annotate("serialize")))
         void __cxxamp_serialize(Serialize& s) const {
