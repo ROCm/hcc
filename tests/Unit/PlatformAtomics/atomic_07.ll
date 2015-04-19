@@ -16,19 +16,19 @@ test_atomicrmw_and:
   ;
 
   %and1 = atomicrmw and i32* %0, i32 %1 monotonic
-;CHECK: atomicnoret_and_global_rlx_sys_b32 {{.*}}
+;CHECK: atomicnoret_and_global_rlx_system_b32 {{.*}}
 
   %and2 = atomicrmw and i32* %0, i32 %1 acquire
-;CHECK: atomicnoret_and_global_scacq_sys_b32 {{.*}}
+;CHECK: atomicnoret_and_global_scacq_system_b32 {{.*}}
 
   %and3 = atomicrmw and i32* %0, i32 %1 release
-;CHECK: atomicnoret_and_global_screl_sys_b32 {{.*}}
+;CHECK: atomicnoret_and_global_screl_system_b32 {{.*}}
 
   %and4 = atomicrmw and i32* %0, i32 %1 acq_rel
-;CHECK: atomicnoret_and_global_scar_sys_b32 {{.*}}
+;CHECK: atomicnoret_and_global_scar_system_b32 {{.*}}
 
   %and5 = atomicrmw and i32* %0, i32 %1 seq_cst
-;CHECK: atomicnoret_and_global_scar_sys_b32 {{.*}}
+;CHECK: atomicnoret_and_global_scar_system_b32 {{.*}}
 
 
   ret void

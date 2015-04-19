@@ -429,24 +429,54 @@ NamedMDNode * getNewKernelListMDNode (Module & M)
 
 Type * mapTypeToGlobal ( Type *);
 
-StructType * mapTypeToGlobal ( StructType * T) {
-        std::vector<Type *> translatedTypes;
+namespace {
+  std::map<StructType*, StructType*> structTypeMap;
+}
 
-        for (unsigned elem = 0, last_elem = T->getNumElements();
-             elem != last_elem; ++elem) {
-                Type * baseType = T->getElementType (elem);
-                Type * translatedType = mapTypeToGlobal (baseType);
-                translatedTypes.push_back ( translatedType );
+StructType* mapTypeToGlobal(StructType* T) {
+  // create a new, empty StructType
+  StructType* newST = StructType::create(T->getContext(), T->getName());
+
+  // mark the original StructType as translated to the new StructType
+  structTypeMap[T] = newST;
+
+  // walk through each field in the old StructType, and translate them
+  // for types which are already translated, directly lookup the result in structTypeMap
+  // this way we can support recursive types, ex:
+  // %T1 = type { i32, %T1* }
+  std::vector<Type*> translatedTypes;
+  for (unsigned elem = 0, last_elem = T->getNumElements();
+       elem != last_elem; ++elem) {
+    Type* baseType = T->getElementType(elem);
+
+    Type* translatedType = nullptr;
+    // test if baseType points to a type which has already been translated
+    if (PointerType* PT = dyn_cast<PointerType>(baseType)) {
+      if (StructType* pointedStructType = dyn_cast<StructType>(PT->getElementType())) {
+        if (structTypeMap.find(pointedStructType) != structTypeMap.end()) {
+          translatedType = PointerType::get(structTypeMap[pointedStructType], GlobalAddressSpace);
         }
+      }
+    }
 
-        return StructType::get (T->getContext(),
-                                ArrayRef<Type *>(translatedTypes),
-                                T->isPacked() );
+    // use normal type translation logic if otherwise
+    if (translatedType == nullptr) {
+      translatedType = mapTypeToGlobal(baseType);
+    }
+
+    translatedTypes.push_back(translatedType);
+  }
+
+  // set the fields of the new StrucType
+  newST->setBody(ArrayRef<Type*>(translatedTypes), T->isPacked());
+
+  return newST;
 }
 
 ArrayType * mapTypeToGlobal ( ArrayType * T )
 {
-        return T;
+        Type* translatedType = mapTypeToGlobal(T->getElementType());
+        return ArrayType::get(translatedType, T->getNumElements());
 }
 
 PointerType * mapTypeToGlobal ( PointerType * PT )
@@ -525,7 +555,9 @@ FunctionType * createNewFunctionTypeWithPtrToGlobals (Function * F)
                                 translatedType =
                                         PointerType::get(translatedElement,
                                                          0);
-                        } else translatedType = mapTypeToGlobal (argType);
+                        } else {
+                                translatedType = mapTypeToGlobal (argType);
+                        }
                 }
                 translatedArgTypes.push_back ( translatedType );
         }
