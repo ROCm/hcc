@@ -16,19 +16,19 @@ test_atomicrmw_umax:
   ;
 
   %umax1 = atomicrmw umax i32* %0, i32 %1 monotonic
-;CHECK: atomicnoret_max_global_rlx_sys_u32 {{.*}}
+;CHECK: atomicnoret_max_global_rlx_system_u32 {{.*}}
 
   %umax2 = atomicrmw umax i32* %0, i32 %1 acquire
-;CHECK: atomicnoret_max_global_scacq_sys_u32 {{.*}}
+;CHECK: atomicnoret_max_global_scacq_system_u32 {{.*}}
 
   %umax3 = atomicrmw umax i32* %0, i32 %1 release
-;CHECK: atomicnoret_max_global_screl_sys_u32 {{.*}}
+;CHECK: atomicnoret_max_global_screl_system_u32 {{.*}}
 
   %umax4 = atomicrmw umax i32* %0, i32 %1 acq_rel
-;CHECK: atomicnoret_max_global_scar_sys_u32 {{.*}}
+;CHECK: atomicnoret_max_global_scar_system_u32 {{.*}}
 
   %umax5 = atomicrmw umax i32* %0, i32 %1 seq_cst
-;CHECK: atomicnoret_max_global_scar_sys_u32 {{.*}}
+;CHECK: atomicnoret_max_global_scar_system_u32 {{.*}}
 
   ret void
 }
