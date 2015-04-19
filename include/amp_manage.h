@@ -21,6 +21,7 @@ struct mm_info
 {
 #if CXXAMP_NOCACHE
     void *data;
+    size_t count;
     bool free;
 #else
     size_t count;
@@ -32,9 +33,11 @@ struct mm_info
 
 #if CXXAMP_NOCACHE
     mm_info(int count)
-        : data(aligned_alloc(0x1000, count)), free(true) { getAllocator()->init(data, count); }
+        : data(aligned_alloc(0x1000, count)), count(count), free(true)
+    { getAllocator()->init(data, count); }
     mm_info(int count, void *src)
-        : data(src), free(false) { getAllocator()->init(data, count); }
+        : data(src), count(count), free(false)
+    { getAllocator()->init(data, count); }
 #else
     mm_info(int count)
         : count(count), host(aligned_alloc(0x1000, count)), device(host),
@@ -50,6 +53,7 @@ struct mm_info
     void* get() { return data; }
     void copy(void *dst) { getAllocator()->copy(data, dst); }
     void disc() { getAllocator()->discard(data); }
+    size_t size() { return count; }
     void serialize(Serialize& s) {
       getAllocator()->append(s.getKernel(), s.getAndIncCurrentIndex(), data);
     }
@@ -133,6 +137,7 @@ public:
     void discard() const { mm->disc(); }
     void refresh() const { mm->refresh(); }
     void copy(void *dst) const { mm->copy(dst); }
+    size_t size() const { return mm->size(); }
 
     __attribute__((annotate("serialize")))
         void __cxxamp_serialize(Serialize& s) const {

@@ -1927,6 +1927,11 @@ private:
   template <typename Q, int K> friend class array;
   template <typename Q, int K> friend class array_view;
 
+  template <typename OutputIter, typename Q, int K>
+      friend void copy(const array_view<Q, K>&, OutputIter);
+  template <typename OutputIter, typename Q>
+      friend void copy(const array_view<Q, 1>&, OutputIter);
+
   // used by view_as and reinterpret_as
   array_view(const Concurrency::extent<N>& ext, const acc_buffer_t& cache,
              int offset) restrict(amp,cpu)
@@ -2151,6 +2156,14 @@ private:
   template <typename K, int Q> friend struct array_projection_helper;
   template <typename Q, int K> friend class array;
   template <typename Q, int K> friend class array_view;
+
+  template <typename OutputIter, typename Q, int K>
+      friend void copy(const array_view<Q, K>&, OutputIter);
+
+  template <typename OutputIter, typename Q>
+      friend void copy(const array_view<Q, 1>&, OutputIter);
+
+
 
   // used by view_as and reinterpret_as
   array_view(const Concurrency::extent<N>& ext, const acc_buffer_t& cache,
@@ -2398,7 +2411,7 @@ void copy(InputIter srcBegin, array<T, N>& dest) {
 }
 
 template <typename OutputIter, typename T>
-void copy(const array_view<T, 1> &src, OutputIter destBegin) {
+void copy_sp(const array_view<T, 1> &src, OutputIter destBegin) {
     for (int i = 0; i < src.get_extent()[0]; ++i) {
         *destBegin = (src[i]);
         destBegin++;
@@ -2406,12 +2419,38 @@ void copy(const array_view<T, 1> &src, OutputIter destBegin) {
 }
 
 template <typename OutputIter, typename T, int N>
-void copy(const array_view<T, N> &src, OutputIter destBegin) {
+void copy_sp(const array_view<T, N> &src, OutputIter destBegin) {
     int adv = src.get_extent().size() / src.get_extent()[0];
     for (int i = 0; i < src.get_extent()[0]; ++i) {
-        copy(src[i], destBegin);
+        copy_sp(src[i], destBegin);
         std::advance(destBegin, adv);
     }
+}
+
+template <typename OutputIter, typename T>
+void copy(const array_view<T, 1> &src, OutputIter destBegin) {
+#ifndef __GPU__
+    typename array_view<T, 1>::acc_buffer_t cache(src.cache.size());
+    src.cache.copy(cache.get());
+#else
+    typename array_view<T, 1>::acc_buffer_t cache(0);
+#endif
+    array_view<T, 1> target(src.extent, src.extent_base,
+                            src.index_base, cache, src.offset);
+    copy_sp(target, destBegin);
+}
+
+template <typename OutputIter, typename T, int N>
+void copy(const array_view<T, N> &src, OutputIter destBegin) {
+#ifndef __GPU__
+    typename array_view<T, N>::acc_buffer_t cache(src.cache.size());
+    src.cache.copy(cache.get());
+#else
+    typename array_view<T, N>::acc_buffer_t cache(0);
+#endif
+    array_view<T, N> target(src.extent, src.extent_base,
+                            src.index_base, cache, src.offset);
+    copy_sp(target, destBegin);
 }
 
 template <typename OutputIter, typename T>
@@ -2425,7 +2464,7 @@ template <typename OutputIter, typename T, int N>
 void copy(const array<T, N> &src, OutputIter destBegin) {
     int adv = src.get_extent().size() / src.get_extent()[0];
     for (int i = 0; i < src.get_extent()[0]; ++i) {
-        copy(src[i], destBegin);
+        copy_sp(src[i], destBegin);
         std::advance(destBegin, adv);
     }
 }
