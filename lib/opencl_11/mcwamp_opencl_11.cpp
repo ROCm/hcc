@@ -172,13 +172,13 @@ public:
             mem_info[data] = dm;
         }
     }
-    void append(void *kernel, int idx, void *data) {
+    void append(void *kernel, int idx, void *data, bool isArray) {
         PushArgImpl(kernel, idx, sizeof(cl_mem), &mem_info[data]);
         auto it = rwq.find(data);
         rw_info& rw = it->second;
         if (!rw.dirty) {
             rw.dirty = true;
-            if (!rw.discard) {
+            if (!rw.discard || isArray) {
                 cl_int err;
                 err = clEnqueueWriteBuffer(queue, mem_info[data], CL_TRUE, 0,
                                            rw.count, data, 0, NULL, NULL);
