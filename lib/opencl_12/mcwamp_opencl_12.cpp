@@ -118,7 +118,7 @@ public:
             mem_info[data] = dm;
         }
     }
-    void append(void *kernel, int idx, void *data) {
+    void append(void *kernel, int idx, void *data, bool isArray) {
         PushArgImpl(kernel, idx, sizeof(cl_mem), &mem_info[data]);
     }
     void write() {}

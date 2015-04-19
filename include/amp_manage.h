@@ -54,8 +54,8 @@ struct mm_info
     void copy(void *dst) { getAllocator()->copy(data, dst); }
     void disc() { getAllocator()->discard(data); }
     size_t size() { return count; }
-    void serialize(Serialize& s) {
-      getAllocator()->append(s.getKernel(), s.getAndIncCurrentIndex(), data);
+    void serialize(Serialize& s, bool isArray) {
+      getAllocator()->append(s.getKernel(), s.getAndIncCurrentIndex(), data, isArray);
     }
     ~mm_info() {
       synchronize();
@@ -105,7 +105,7 @@ template <typename T>
 class _data {
 public:
     _data() = delete;
-    _data(int count) {}
+    _data(int count, bool) {}
     _data(const _data& d) restrict(cpu, amp)
         : p_(d.p_) {}
     template <typename U>
@@ -121,16 +121,17 @@ private:
 template <typename T>
 class _data_host {
     std::shared_ptr<mm_info> mm;
+    bool isArray;
     template <typename U> friend class _data_host;
 public:
-    _data_host(int count)
-        : mm(std::make_shared<mm_info>(count * sizeof(T))) {}
-    _data_host(int count, T* src)
-        : mm(std::make_shared<mm_info>(count * sizeof(T), src)) {}
+    _data_host(int count, bool isArr = false)
+        : mm(std::make_shared<mm_info>(count * sizeof(T))), isArray(isArr) {}
+    _data_host(int count, T* src, bool isArr = false)
+        : mm(std::make_shared<mm_info>(count * sizeof(T), src)), isArray(isArr) {}
     _data_host(const _data_host& other)
-        : mm(other.mm) {}
+        : mm(other.mm), isArray(false) {}
     template <typename U>
-        _data_host(const _data_host<U>& other) : mm(other.mm) {}
+        _data_host(const _data_host<U>& other) : mm(other.mm), isArray(false) {}
 
     T *get() const { return (T *)mm->get(); }
     void synchronize() const { mm->synchronize(); }
@@ -141,7 +142,7 @@ public:
 
     __attribute__((annotate("serialize")))
         void __cxxamp_serialize(Serialize& s) const {
-            mm->serialize(s);
+            mm->serialize(s, isArray);
         }
     __attribute__((annotate("user_deserialize")))
         explicit _data_host(__global T* t);
