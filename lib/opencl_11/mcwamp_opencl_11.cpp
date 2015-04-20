@@ -195,6 +195,11 @@ public:
             it->second.dirty = false;
         }
     }
+    void refresh(void *data) {
+        auto it = rwq.find(data);
+        if (it != std::end(rwq))
+            it->second.dirty = false;
+    }
     void copy(void *src, void *dst) {
         auto it = rwq.find(src);
         if (it == std::end(rwq))

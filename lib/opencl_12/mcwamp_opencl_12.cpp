@@ -132,6 +132,7 @@ public:
     void read() {}
     void discard(void *) {}
     void sync(void *) {}
+    void refresh(void *) {}
     void copy(void *, void*) {}
     void free(void *data) {
         auto iter = mem_info.find(data);
