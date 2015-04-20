@@ -1171,14 +1171,14 @@ struct projection_helper<T, 1>
     typedef __global T& result_type;
     static result_type project(array_view<T, 1>& now, int i) restrict(amp,cpu) {
 #ifndef __GPU__
-        now.cache.synchronize();
+        now.cache.refresh();
 #endif
         __global T *ptr = reinterpret_cast<__global T *>(now.cache.get() + i + now.offset + now.index_base[0]);
         return *ptr;
     }
     static result_type project(const array_view<T, 1>& now, int i) restrict(amp,cpu) {
 #ifndef __GPU__
-        now.cache.synchronize();
+        now.cache.refresh();
 #endif
         __global T *ptr = reinterpret_cast<__global T *>(now.cache.get() + i + now.offset + now.index_base[0]);
         return *ptr;
@@ -1285,7 +1285,7 @@ struct array_projection_helper<T, 1>
     typedef __global const T& const_result_type;
     static result_type project(array<T, 1>& now, int i) restrict(amp,cpu) {
 #ifndef __GPU__
-        now.m_device.synchronize();
+        now.m_device.refresh();
 #endif
         __global T *ptr = reinterpret_cast<__global T *>(now.m_device.get() + i);
         return *ptr;
