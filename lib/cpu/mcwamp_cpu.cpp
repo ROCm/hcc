@@ -45,7 +45,7 @@ public:
   void *device_data(void *) { return nullptr; }
   void discard(void *) {}
   void sync(void *) {}
-  void refresh(void *) {}
+  void stash(void *) {}
   void copy(void *, void*) {}
   void read() {
     for (auto& it : rwq) {
