@@ -14,6 +14,7 @@ public:
   virtual void* device_data(void*) = 0;
   virtual void copy(void*, void*) = 0;
   virtual void discard(void*) = 0;
+  virtual void refresh(void*) = 0;
   virtual void* getQueue() = 0;
   virtual void read() = 0;
   virtual void free(void*) = 0;

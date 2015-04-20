@@ -57,17 +57,18 @@ public:
         : mm(aligned_alloc(0x1000, count * sizeof(T)), amp_delete), count(count),
         isArray(isArr) { getAllocator()->init(mm.get(), count * sizeof(T)); }
     _data_host(int count, T* src, bool isArr = false)
-        : mm(src, amp_no_delete), count(count),
-        isArray(isArr) { getAllocator()->init(mm.get(), count * sizeof(T)); }
+        : mm(src, amp_no_delete), count(count), isArray(isArr)
+    { getAllocator()->init(mm.get(), count * sizeof(T)); }
     _data_host(const _data_host& other)
         : mm(other.mm), count(other.count), isArray(false) {}
     template <typename U>
-        _data_host(const _data_host<U>& other) : mm(other.mm), count(other.count), isArray(false) {}
+        _data_host(const _data_host<U>& other)
+        : mm(other.mm), count(other.count), isArray(false) {}
 
     T *get() const { return (T *)mm.get(); }
     void synchronize() const { getAllocator()->sync(mm.get()); }
     void discard() const { getAllocator()->discard(mm.get()); }
-    void refresh() const {}
+    void refresh() const { getAllocator()->refresh(mm.get()); }
     void copy(void *dst) const { getAllocator()->copy(mm.get(), dst); }
     size_t size() const { return count; }
 
