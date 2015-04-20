@@ -1905,7 +1905,7 @@ public:
 #endif
   }
   // only get data do not synchronize
-  __global const T& get_data(int i0) const restrict(amp,cpu) {
+  __global T& get_data(int i0) const restrict(amp,cpu) {
     static_assert(N == 1, "Rank must be 1");
     index<1> idx(i0);
     __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
@@ -1931,6 +1931,8 @@ private:
       friend void copy(const array_view<Q, K>&, OutputIter);
   template <typename OutputIter, typename Q>
       friend void copy(const array_view<Q, 1>&, OutputIter);
+  template <typename InputIter, typename Q>
+      friend void copy(InputIter, const array_view<Q, 1>&);
 
   // used by view_as and reinterpret_as
   array_view(const Concurrency::extent<N>& ext, const acc_buffer_t& cache,
@@ -2380,10 +2382,12 @@ void copy(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest) {
 
 template <typename InputIter, typename T>
 void copy(InputIter srcBegin, const array_view<T, 1>& dest) {
-    for (int i = 0; i < dest.get_extent()[0]; ++i) {
-        reinterpret_cast<T&>(dest[i]) = *srcBegin;
-        ++srcBegin;
-    }
+#ifndef __GPU__
+    dest.cache.stash();
+#endif
+    InputIter end = srcBegin;
+    std::advance(end, dest.get_extent()[0]);
+    std::copy(srcBegin, end, &dest.get_data(0));
 }
 template <typename InputIter, typename T, int N>
 void copy(InputIter srcBegin, const array_view<T, N>& dest) {
