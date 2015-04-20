@@ -1171,14 +1171,14 @@ struct projection_helper<T, 1>
     typedef __global T& result_type;
     static result_type project(array_view<T, 1>& now, int i) restrict(amp,cpu) {
 #ifndef __GPU__
-        now.cache.refresh();
+        now.cache.synchronize();
 #endif
         __global T *ptr = reinterpret_cast<__global T *>(now.cache.get() + i + now.offset + now.index_base[0]);
         return *ptr;
     }
     static result_type project(const array_view<T, 1>& now, int i) restrict(amp,cpu) {
 #ifndef __GPU__
-        now.cache.refresh();
+        now.cache.synchronize();
 #endif
         __global T *ptr = reinterpret_cast<__global T *>(now.cache.get() + i + now.offset + now.index_base[0]);
         return *ptr;
@@ -1285,7 +1285,7 @@ struct array_projection_helper<T, 1>
     typedef __global const T& const_result_type;
     static result_type project(array<T, 1>& now, int i) restrict(amp,cpu) {
 #ifndef __GPU__
-        now.m_device.refresh();
+        now.m_device.discard();
 #endif
         __global T *ptr = reinterpret_cast<__global T *>(now.m_device.get() + i);
         return *ptr;
@@ -2455,18 +2455,17 @@ void copy(const array_view<T, N> &src, OutputIter destBegin) {
 
 template <typename OutputIter, typename T>
 void copy(const array<T, 1> &src, OutputIter destBegin) {
-    for (int i = 0; i < src.get_extent()[0]; ++i) {
-        *destBegin = src[i];
-        destBegin++;
-    }
+#ifndef __GPU__
+    std::copy(src.data(), src.data() + src.get_extent().size(), destBegin);
+    src.internal().stash();
+#endif
 }
 template <typename OutputIter, typename T, int N>
 void copy(const array<T, N> &src, OutputIter destBegin) {
-    int adv = src.get_extent().size() / src.get_extent()[0];
-    for (int i = 0; i < src.get_extent()[0]; ++i) {
-        copy_sp(src[i], destBegin);
-        std::advance(destBegin, adv);
-    }
+#ifndef __GPU__
+    std::copy(src.data(), src.data() + src.get_extent().size(), destBegin);
+    src.internal().stash();
+#endif
 }
 
 

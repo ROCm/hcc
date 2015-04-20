@@ -195,7 +195,7 @@ public:
             it->second.dirty = false;
         }
     }
-    void refresh(void *data) {
+    void stash(void *data) {
         auto it = rwq.find(data);
         if (it != std::end(rwq))
             it->second.dirty = false;

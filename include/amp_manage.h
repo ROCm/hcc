@@ -68,9 +68,10 @@ public:
     T *get() const { return (T *)mm.get(); }
     void synchronize() const { getAllocator()->sync(mm.get()); }
     void discard() const { getAllocator()->discard(mm.get()); }
-    void refresh() const { getAllocator()->refresh(mm.get()); }
+    void refresh() const {}
     void copy(void *dst) const { getAllocator()->copy(mm.get(), dst); }
     size_t size() const { return count; }
+    void stash() const { getAllocator()->stash(mm.get()); }
 
     __attribute__((annotate("serialize")))
         void __cxxamp_serialize(Serialize& s) const {
