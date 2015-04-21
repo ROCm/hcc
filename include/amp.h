@@ -1921,6 +1921,10 @@ public:
     return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
   }
 
+  accelerator_view get_source_accelerator_view() const {
+      return _gpu_check.get_default_view();
+  }
+
   const acc_buffer_t& internal() const restrict(amp,cpu) { return cache; }
 private:
   template <int K, typename Q> friend struct index_helper;
@@ -2040,7 +2044,9 @@ public:
   extent<N> get_extent() const restrict(amp,cpu) {
     return extent;
   }
-  accelerator_view get_source_accelerator_view() const;
+  accelerator_view get_source_accelerator_view() const {
+      return _gpu_check.get_default_view();
+  }
 
   __global const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
 #ifndef __GPU__
@@ -2407,12 +2413,10 @@ void copy(const array_view<T, N> &src, OutputIter destBegin) {
 #ifndef __GPU__
     typename array_view<T, N>::acc_buffer_t cache(src.cache.size());
     src.cache.copy(cache.get());
-#else
-    typename array_view<T, N>::acc_buffer_t cache(0);
-#endif
     array_view<T, N> target(src.extent, src.extent_base,
                             src.index_base, cache, src.offset);
     do_copy_s(target, destBegin);
+#endif
 }
 
 template <typename OutputIter, typename T, int N>
