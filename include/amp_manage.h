@@ -81,5 +81,8 @@ public:
         explicit _data_host(__global T* t);
 };
 
+inline void *getDevicePointer(void *ptr) { return getAllocator()->device_data(ptr); }
+inline void *getOCLQueue(void *ptr) { return getAllocator()->getQueue(); }
+
 } // namespace Concurrency
 #endif
