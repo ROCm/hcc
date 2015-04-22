@@ -12,10 +12,11 @@
 #include <type_traits>
 #include <limits>
 #include <cassert>
-#include <vector>
 
 namespace std
 {
+
+struct random_access_iterator_tag;
 
 template <int...> struct __indices {};
 
