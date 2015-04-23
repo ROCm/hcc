@@ -31,7 +31,7 @@ $SPIRIFY $INPUT > $FILENAME.spir.ll
 $OPT -O3 -dce -S -o $FILENAME.opt.ll < $FILENAME.spir.ll
 $AS -o $FILENAME.bc $FILENAME.opt.ll
 
-$HSAIL_LLC -O2 -march=hsail-64 -filetype=obj -o $FILENAME.brig $FILENAME.bc
+$HSAIL_LLC -O2 -march=hsail64 -filetype=obj -o $FILENAME.brig $FILENAME.bc
 $HSAIL_ASM -disassemble -o - $FILENAME.brig
 
 # remove artifacts

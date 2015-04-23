@@ -36,6 +36,8 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-hsatools
 # Math builtin bitcode (SPIR)
 ####################
 install(FILES opencl_math.bc DESTINATION lib)
+install(FILES hsa_math.bc DESTINATION lib)
+install(FILES builtins-hsail.opt.bc DESTINATION lib)
 
 ####################
 # OpenCL runtime version detection

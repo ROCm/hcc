@@ -159,7 +159,7 @@ if (NOT HSA_KMT_LIBRARY)
   MESSAGE("HSA Kernel library not found. Use -DHSA_KMT_LIBRARY_DIR=<path_to_libhsakmt.so.1>.")
 endif (NOT HSA_KMT_LIBRARY)
 
-find_program(HSAIL_COMPILER hsailasm PATHS ${HSAIL_COMPILER_DIR} ${HSAIL_ROOT}/bin)
+find_program(HSAIL_COMPILER HSAILasm PATHS ${HSAIL_COMPILER_DIR} ${HSAIL_ROOT}/bin)
 if (NOT HSAIL_COMPILER)
   MESSAGE("HSAIL compiler not found. Use -DHSAIL_COMPILER_DIR=<path_to_hsailasm>.")
 endif (NOT HSAIL_COMPILER)
