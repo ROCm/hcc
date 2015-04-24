@@ -13,7 +13,8 @@
 
 #include "hsa.h"
 #include "hsa_ext_finalize.h"
-#include "elf_utils.hpp"
+
+//#define KALMAR_DEBUG (1)
 
 #define STATUS_CHECK(s,line) if (s != HSA_STATUS_SUCCESS) {\
 		printf("### Error: %d at line:%d\n", s, line);\
@@ -27,68 +28,6 @@
                 assert(HSA_STATUS_SUCCESS == hsa_close());\
 		exit(-1);\
 	}
-
-#define BRIG_STATUS_CHECK(s,line) if (s != STATUS_SUCCESS) {\
-		printf("### Error: %d at line:%d\n", s, line);\
-                assert(HSA_STATUS_SUCCESS == hsa_queue_destroy(commandQueue));\
-                assert(HSA_STATUS_SUCCESS == hsa_close());\
-		exit(-1);\
-	}
-
-/*
- * Define required BRIG data structures.
- */
-
-typedef uint32_t BrigCodeOffset32_t;
-
-typedef uint32_t BrigDataOffset32_t;
-
-typedef uint16_t BrigKinds16_t;
-
-typedef uint8_t BrigLinkage8_t;
-
-typedef uint8_t BrigExecutableModifier8_t;
-
-typedef BrigDataOffset32_t BrigDataOffsetString32_t;
-
-enum BrigKinds {
-    BRIG_KIND_NONE = 0x0000,
-    BRIG_KIND_DIRECTIVE_BEGIN = 0x1000,
-    BRIG_KIND_DIRECTIVE_KERNEL = 0x1008,
-};
-
-typedef struct BrigBase BrigBase;
-struct BrigBase {
-    uint16_t byteCount;
-    BrigKinds16_t kind;
-};
-
-typedef struct BrigExecutableModifier BrigExecutableModifier;
-struct BrigExecutableModifier {
-    BrigExecutableModifier8_t allBits;
-};
-
-typedef struct BrigDirectiveExecutable BrigDirectiveExecutable;
-struct BrigDirectiveExecutable {
-    uint16_t byteCount;
-    BrigKinds16_t kind;
-    BrigDataOffsetString32_t name;
-    uint16_t outArgCount;
-    uint16_t inArgCount;
-    BrigCodeOffset32_t firstInArg;
-    BrigCodeOffset32_t firstCodeBlockEntry;
-    BrigCodeOffset32_t nextModuleEntry;
-    uint32_t codeBlockEntryCount;
-    BrigExecutableModifier modifier;
-    BrigLinkage8_t linkage;
-    uint16_t reserved;
-};
-
-typedef struct BrigData BrigData;
-struct BrigData {
-    uint32_t byteCount;
-    uint8_t bytes[1];
-};
 
 /*
  * Determines if the given agent is of type HSA_DEVICE_TYPE_GPU
@@ -107,20 +46,6 @@ static hsa_status_t find_gpu(hsa_agent_t agent, void *data) {
   }
   if (device_type == HSA_DEVICE_TYPE_GPU) {
     *((hsa_agent_t *)data) = agent;
-  }
-  return HSA_STATUS_SUCCESS;
-}
-
-/*
- * Determines if a memory region can be used for kernarg
- * allocations.
- */
-static hsa_status_t get_kernarg(hsa_region_t region, void* data) {
-  hsa_region_flag_t flags;
-  hsa_region_get_info(region, HSA_REGION_INFO_FLAGS, &flags);
-  if (flags & HSA_REGION_FLAG_KERNARG) {
-    hsa_region_t * ret = (hsa_region_t *) data;
-    *ret = region;
   }
   return HSA_STATUS_SUCCESS;
 }
@@ -165,66 +90,6 @@ static inline int ldistance(const std::string source, const std::string target)
   return matrix[n][m];
 }
 
-/*
- * Finds the specified symbols offset in the specified brig_module.
- * If the symbol is found the function returns HSA_STATUS_SUCCESS, 
- * otherwise it returns HSA_STATUS_ERROR.
- */
-hsa_status_t find_symbol_offset(hsa_ext_brig_module_t* brig_module, 
-    const char* symbol_name,
-    hsa_ext_brig_code_section_offset32_t* offset) {
-    
-    /* 
-     * Get the data section 
-     */
-    hsa_ext_brig_section_header_t* data_section_header =
-                brig_module->section[HSA_EXT_BRIG_SECTION_DATA];
-    /* 
-     * Get the code section
-     */
-    hsa_ext_brig_section_header_t* code_section_header =
-             brig_module->section[HSA_EXT_BRIG_SECTION_CODE];
-
-    int distance = 1024;
-    bool hit = false;
-    /* 
-     * First entry into the BRIG code section
-     */
-    BrigCodeOffset32_t code_offset = code_section_header->header_byte_count;
-    BrigBase* code_entry = (BrigBase*) ((char*)code_section_header + code_offset);
-    while (code_offset != code_section_header->byte_count) {
-        if (code_entry->kind == BRIG_KIND_DIRECTIVE_KERNEL) {
-            /* 
-             * Now find the data in the data section
-             */
-            BrigDirectiveExecutable* directive_kernel = (BrigDirectiveExecutable*) (code_entry);
-            BrigDataOffsetString32_t data_name_offset = directive_kernel->name;
-            BrigData* data_entry = (BrigData*)((char*) data_section_header + data_name_offset);
-            if (!strncmp(symbol_name, (char*) data_entry->bytes, strlen(symbol_name))) {
-                *offset = code_offset;
-                // perfect match. mark no need to replace and skip the loop
-                hit = true;
-                distance = 0;
-                break;
-            }
-            int n = ldistance((char*) data_entry->bytes, symbol_name);
-            if (n <= distance) {
-                distance = n;
-                hit = true;
-                *offset = code_offset;
-            }
-        }
-        code_offset += code_entry->byteCount;
-        code_entry = (BrigBase*) ((char*)code_section_header + code_offset);
-    }
-
-    if (hit && distance < 5) {
-        return HSA_STATUS_SUCCESS;
-    }
-    return HSA_STATUS_ERROR;
-}
-
-
 size_t roundUp(size_t size) {
   size_t times = size / 0x1000;
   size_t rem = size % 0x1000;
@@ -244,13 +109,33 @@ private:
    class KernelImpl : public HSAContext::Kernel {
    private:
       HSAContextKaveriImpl* context;
-      hsa_ext_code_descriptor_t *hsaCodeDescriptor;
+      hsa_code_object_t hsaCodeObject;
+      hsa_executable_t hsaExecutable;
+      uint64_t kernelCodeHandle;
+      hsa_executable_symbol_t hsaExecutableSymbol;
       friend class DispatchImpl;
 
    public:
-      KernelImpl(hsa_ext_code_descriptor_t* _hsaCodeDescriptor, HSAContextKaveriImpl* _context) {
+      KernelImpl(hsa_executable_t _hsaExecutable,
+                 hsa_code_object_t _hsaCodeObject,
+                 hsa_executable_symbol_t _hsaExecutableSymbol,
+                 uint64_t _kernelCodeHandle,
+                 HSAContextKaveriImpl* _context) {
+         hsaExecutable = _hsaExecutable;
+         hsaCodeObject = _hsaCodeObject;
+         hsaExecutableSymbol = _hsaExecutableSymbol;
+         kernelCodeHandle = _kernelCodeHandle;
          context = _context;
-         hsaCodeDescriptor =  _hsaCodeDescriptor;
+      }
+
+      ~KernelImpl() {
+         hsa_status_t status;
+
+         status = hsa_executable_destroy(hsaExecutable);
+         STATUS_CHECK_Q(status, __LINE__);
+
+         status = hsa_code_object_destroy(hsaCodeObject);
+         STATUS_CHECK_Q(status, __LINE__);
       }
 
    }; // end of KernelImpl
@@ -270,7 +155,7 @@ private:
       static const int ARGS_VEC_INITIAL_CAPACITY = 256 * 8;   
 
       hsa_signal_t signal;
-      hsa_dispatch_packet_t aql;
+      hsa_kernel_dispatch_packet_t aql;
       bool isDispatched;
 
       std::shared_future<void> fut;
@@ -402,57 +287,51 @@ private:
           * Setup the dispatch information.
           */
          aql.completion_signal = signal;
-         aql.dimensions = launchDimensions;
+         aql.setup = launchDimensions << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
          aql.workgroup_size_x = workgroup_size[0];
          aql.workgroup_size_y = workgroup_size[1];
          aql.workgroup_size_z = workgroup_size[2];
          aql.grid_size_x = global_size[0];
          aql.grid_size_y = global_size[1];
          aql.grid_size_z = global_size[2];
-         aql.header.type = HSA_PACKET_TYPE_DISPATCH;
-         aql.header.acquire_fence_scope = 2;
-         aql.header.release_fence_scope = 2;
-         aql.header.barrier = 1;
+
+         // set dispatch fences
+         aql.header = (HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE) |
+                      (1 << HSA_PACKET_HEADER_BARRIER) |
+                      (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
+                      (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
 
          // bind kernel code
-         aql.kernel_object_address = kernel->hsaCodeDescriptor->code.handle; 
+         aql.kernel_object = kernel->kernelCodeHandle;
 
-
-         /*
-          * Find a memory region that supports kernel arguments.
-          */
          // bind kernel arguments
          //printf("arg_vec size: %d in bytes: %d\n", arg_vec.size(), arg_vec.size());
-         hsa_region_t kernarg_region = 0;
-         //printf("hsa_agent_iterate_regions\n");
-         hsa_agent_iterate_regions(context->device, get_kernarg, &kernarg_region);
-         //printf("kernarg region: %08X\n", kernarg_region);
-
-         void* kernel_arg_buffer = NULL;
-         size_t kernel_arg_buffer_size = kernel->hsaCodeDescriptor->kernarg_segment_byte_size;
-         //printf("kernarg_segment_byte_size: %lu\n", kernel_arg_buffer_size);
-         //printf("hsa_memory_allocate in region: %08X size: %d bytes\n", kernarg_region, roundUp(arg_vec.size()));
-         if ((status = hsa_memory_allocate(kernarg_region, roundUp(arg_vec.size()), (void**) &aql.kernarg_address)) != HSA_STATUS_SUCCESS) {
-           printf("hsa_memory_allocate error: %d\n", status);
-           exit(1);
-         }
-
-         //printf("memcpy dst: %08X, src: %08X, %d kernargs, %d bytes\n", aql.kernarg_address, arg_vec.data(), arg_count, arg_vec.size());
-         memcpy((void*)aql.kernarg_address, arg_vec.data(), arg_vec.size());
+         aql.kernarg_address = arg_vec.data();
+         hsa_memory_register(arg_vec.data(), arg_vec.size());
          //for (size_t i = 0; i < arg_vec.size(); ++i) {
          //  printf("%02X ", *(((uint8_t*)aql.kernarg_address)+i));
          //}
          //printf("\n");
 
          // Initialize memory resources needed to execute
-         aql.group_segment_size = kernel->hsaCodeDescriptor->workgroup_group_segment_byte_size;
+         uint32_t group_segment_size;
+         status = hsa_executable_symbol_get_info(kernel->hsaExecutableSymbol,
+                                                 HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE,
+                                                 &group_segment_size);
+         STATUS_CHECK_Q(status, __LINE__);
+         aql.group_segment_size = group_segment_size;
 
-         aql.private_segment_size = kernel->hsaCodeDescriptor->workitem_private_segment_byte_size;
+         uint32_t private_segment_size;
+         status = hsa_executable_symbol_get_info(kernel->hsaExecutableSymbol,
+                                                 HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_PRIVATE_SEGMENT_SIZE,
+                                                 &private_segment_size);
+         STATUS_CHECK_Q(status, __LINE__);
+         aql.private_segment_size = private_segment_size;
 
          // write packet
          uint32_t queueMask = commandQueue->size - 1;
          uint64_t index = hsa_queue_load_write_index_relaxed(commandQueue);
-         ((hsa_dispatch_packet_t*)(commandQueue->base_address))[index & queueMask] = aql;
+         ((hsa_kernel_dispatch_packet_t*)(commandQueue->base_address))[index & queueMask] = aql;
          hsa_queue_store_write_index_relaxed(commandQueue, index + 1);
 
          //printf("ring door bell\n");
@@ -475,7 +354,7 @@ private:
          //printf("wait for completion...");
 
          // wait for completion
-         if (hsa_signal_wait_acquire(signal, HSA_LT, 1, uint64_t(-1), HSA_WAIT_EXPECTANCY_UNKNOWN)!=0) {
+         if (hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_LT, 1, uint64_t(-1), HSA_WAIT_STATE_ACTIVE)!=0) {
            printf("Signal wait returned unexpected value\n");
            exit(0);
          }
@@ -483,7 +362,6 @@ private:
          //printf("complete!\n");
 
          hsa_memory_deregister((void*)aql.kernarg_address, roundUp(arg_vec.size()));
-         free((void*)aql.kernarg_address);
 
          hsa_signal_store_relaxed(signal, 1);
          isDispatched = false;
@@ -558,12 +436,10 @@ private:
    private:
      hsa_agent_t device;
      hsa_queue_t* commandQueue;
-     hsa_ext_program_handle_t hsaProgram;
 
    // constructor
    HSAContextKaveriImpl() {
      hsa_status_t status;
-
 
      // initialize HSA runtime
      status = hsa_init();
@@ -573,10 +449,18 @@ private:
       * Iterate over the agents and pick the gpu agent using 
       * the find_gpu callback.
       */
-     device = 0;
+     device = {0};
      status = hsa_iterate_agents(find_gpu, &device);
      STATUS_CHECK(status, __LINE__);
 
+#ifdef KALMAR_DEBUG
+{
+     char name[64];
+     status = hsa_agent_get_info(device, HSA_AGENT_INFO_NAME, name);
+     STATUS_CHECK(status, __LINE__);
+     printf("using HSA agent %s\n", name);
+}
+#endif
 
      /*
       * Query the maximum size of the queue.
@@ -589,10 +473,9 @@ private:
       * Create a queue using the maximum size.
       */
      commandQueue = NULL;
-     status = hsa_queue_create(device, queue_size, HSA_QUEUE_TYPE_MULTI, NULL, NULL, &commandQueue);
+     status = hsa_queue_create(device, queue_size, HSA_QUEUE_TYPE_MULTI, NULL, NULL, 
+                               UINT32_MAX, UINT32_MAX, &commandQueue);
      STATUS_CHECK_Q(status, __LINE__);
-
-     hsaProgram.handle = 0;
    }
 
 public:
@@ -612,67 +495,76 @@ public:
     Kernel* createKernel(const char *hsailBuffer, int hsailSize, const char *entryName) {
 
       hsa_status_t status;
-      status_t brig_status;
 
       /*
        * Load BRIG, encapsulated in an ELF container, into a BRIG module.
        */
-      hsa_ext_brig_module_t* brigModule;
-      brig_status = create_brig_module_from_brig_memory((char*)hsailBuffer, hsailSize, &brigModule);
-      BRIG_STATUS_CHECK(brig_status, __LINE__);
+      hsa_ext_module_t hsaModule = 0;
+      hsaModule = (hsa_ext_module_t)hsailBuffer;
 
       /*
        * Create hsa program.
        */
-      status = hsa_ext_program_create(&device, 1, HSA_EXT_BRIG_MACHINE_LARGE, HSA_EXT_BRIG_PROFILE_FULL, &hsaProgram);
+      hsa_ext_program_t hsaProgram = {0};
+      status = hsa_ext_program_create(HSA_MACHINE_MODEL_LARGE, HSA_PROFILE_FULL,
+                                      HSA_DEFAULT_FLOAT_ROUNDING_MODE_ZERO, NULL, &hsaProgram);
       STATUS_CHECK(status, __LINE__);
 
       /*
        * Add the BRIG module to hsa program.
        */
-      hsa_ext_brig_module_handle_t module;
-      status = hsa_ext_add_module(hsaProgram, brigModule, &module);
-      STATUS_CHECK(status, __LINE__);
-
-      /* 
-       * Construct finalization request list.
-       */
-      hsa_ext_finalization_request_t finalization_request_list;
-      finalization_request_list.module = module;
-      finalization_request_list.program_call_convention = 0;
-      status = find_symbol_offset(brigModule, entryName, &finalization_request_list.symbol);
+      status = hsa_ext_program_add_module(hsaProgram, hsaModule);
       STATUS_CHECK(status, __LINE__);
 
       /*
        * Finalize the hsa program.
        */
-      status = hsa_ext_finalize_program(hsaProgram, device, 1, &finalization_request_list, NULL, NULL, 0, NULL, 0);
+      hsa_isa_t isa = {0};
+      status = hsa_agent_get_info(device, HSA_AGENT_INFO_ISA, &isa);
       STATUS_CHECK(status, __LINE__);
 
-      /*
-       * Get the hsa code descriptor address.
-       */
-      hsa_ext_code_descriptor_t *hsaCodeDescriptor;
-      status = hsa_ext_query_kernel_descriptor_address(hsaProgram, module, finalization_request_list.symbol, &hsaCodeDescriptor);
+      hsa_ext_control_directives_t control_directives;
+      memset(&control_directives, 0, sizeof(hsa_ext_control_directives_t));
+
+      hsa_code_object_t hsaCodeObject = {0};
+      status = hsa_ext_program_finalize(hsaProgram, isa, 0, control_directives,
+                                        "", HSA_CODE_OBJECT_TYPE_PROGRAM, &hsaCodeObject);
       STATUS_CHECK(status, __LINE__);
 
-      /*
-       * Destroy the brig module. The program was successfully created the 
-       * kernel symbol was found and the program was finalized, so it is no 
-       * longer needed.
-       */
-      destroy_brig_module(brigModule);
+      if (hsaProgram.handle != 0) {
+        status = hsa_ext_program_destroy(hsaProgram);
+        STATUS_CHECK(status, __LINE__);
+      }
 
-      return new KernelImpl(hsaCodeDescriptor, this); 
+      // Create the executable.
+      hsa_executable_t hsaExecutable;
+      status = hsa_executable_create(HSA_PROFILE_FULL, HSA_EXECUTABLE_STATE_UNFROZEN,
+                                     "", &hsaExecutable);
+      STATUS_CHECK(status, __LINE__);
+
+      // Load the code object.
+      status = hsa_executable_load_code_object(hsaExecutable, device, hsaCodeObject, "");
+      STATUS_CHECK(status, __LINE__);
+
+      // Freeze the executable.
+      status = hsa_executable_freeze(hsaExecutable, "");
+      STATUS_CHECK(status, __LINE__);
+
+      // Get symbol handle.
+      hsa_executable_symbol_t kernelSymbol;
+      status = hsa_executable_get_symbol(hsaExecutable, "", entryName, device, 0, &kernelSymbol);
+      STATUS_CHECK(status, __LINE__);
+
+      // Get code handle.
+      uint64_t kernelCodeHandle;
+      status = hsa_executable_symbol_get_info(kernelSymbol, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT, &kernelCodeHandle);
+      STATUS_CHECK(status, __LINE__);
+
+      return new KernelImpl(hsaExecutable, hsaCodeObject, kernelSymbol, kernelCodeHandle, this);
     }
 
    hsa_status_t dispose() {
       hsa_status_t status;
-
-      if (hsaProgram.handle != 0) {
-	      status = hsa_ext_program_destroy(hsaProgram);
-        STATUS_CHECK(status, __LINE__);
-      }
 
       status = hsa_queue_destroy(commandQueue);
       STATUS_CHECK(status, __LINE__);
