@@ -55,10 +55,10 @@ class _data_host {
 public:
     _data_host(int count, bool isArr = false)
         : mm(aligned_alloc(0x1000, count * sizeof(T)), amp_delete), count(count),
-        isArray(isArr) { getAllocator()->init(mm.get(), count * sizeof(T)); }
+        isArray(isArr) { getAllocator()->init(mm.get(), count * sizeof(T), true); }
     _data_host(int count, T* src, bool isArr = false)
         : mm(src, amp_no_delete), count(count), isArray(isArr)
-    { getAllocator()->init(mm.get(), count * sizeof(T)); }
+    { getAllocator()->init(mm.get(), count * sizeof(T), false); }
     _data_host(const _data_host& other)
         : mm(other.mm), count(other.count), isArray(false) {}
     template <typename U>
@@ -69,7 +69,7 @@ public:
     void synchronize() const { getAllocator()->sync(mm.get()); }
     void discard() const { getAllocator()->discard(mm.get()); }
     void refresh() const {}
-    void copy(void *dst) const { getAllocator()->copy(mm.get(), dst); }
+    void copy(void *dst) const { getAllocator()->copy(dst, mm.get(), count * sizeof(T)); }
     size_t size() const { return count; }
     void stash() const { getAllocator()->stash(mm.get()); }
 
