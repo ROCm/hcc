@@ -175,41 +175,8 @@ private:
 
 class OpenCLPlatformDetect : public PlatformDetect {
 public:
-  OpenCLPlatformDetect(const std::string& name,
-                       const std::string& ampRuntimeName,
-                       const std::string& systemRuntimeName,
-                       void* const kernel_source,
-                       int version) : PlatformDetect(name, ampRuntimeName, systemRuntimeName, kernel_source), m_clVersion(version) {}
-
-  bool detect() override {
-    void* ocl_version_test_handle = nullptr;
-    typedef int (*version_test_t) ();
-    version_test_t test_func = nullptr;
-    bool result = false;
-
-    result = PlatformDetect::detect();
-    if (result) {
-      //std::cout << "dlopen(libmcwamp_opencl_version.so)\n";
-      ocl_version_test_handle = dlopen("libmcwamp_opencl_version.so", RTLD_LAZY);
-      if (!ocl_version_test_handle) {
-        //std::cout << " OpenCL version test not found" << std::endl;
-        //std::cout << dlerror() << std::endl;
-        result = false;
-      } else {
-        test_func = (version_test_t) dlsym(ocl_version_test_handle, "GetOpenCLVersion");
-        if (!test_func) {
-          //std::cout << " OpenCL version test function not found" << std::endl
-          //std::cout << dlerror() << std::endl;
-          result = false;
-        } else {
-          result = (test_func() >= m_clVersion);
-        }
-      }
-    }
-    if (ocl_version_test_handle)
-      dlclose(ocl_version_test_handle);
-    return result;
-  }
+    OpenCLPlatformDetect()
+      : PlatformDetect("OpenCL", "libmcwamp_opencl.so", "libOpenCL.so", cl_kernel_source) {}
 
   bool hasSPIR() {
     void* ocl_version_test_handle = nullptr;
@@ -232,17 +199,6 @@ public:
       dlclose(ocl_version_test_handle);
     return result;
   }
-
-private:
-  int m_clVersion;
-};
-
-/**
- * \brief OpenCL 1.1 runtime detection
- */
-class OpenCL11PlatformDetect : public OpenCLPlatformDetect {
-public:
-  OpenCL11PlatformDetect() : OpenCLPlatformDetect("OpenCL", "libmcwamp_opencl_11.so", "libOpenCL.so", cl_kernel_source, 11) {}
 };
 
 /**
@@ -253,17 +209,17 @@ public:
   HSAPlatformDetect() : PlatformDetect("HSA", "libmcwamp_hsa.so", "libhsa-runtime64.so", hsa_kernel_source) {}
 };
 
-static RuntimeImpl* LoadOpenCL11Runtime() {
+static RuntimeImpl* LoadOpenCLRuntime() {
   RuntimeImpl* runtimeImpl = nullptr;
-  // load OpenCL 1.1 C++AMP runtime
-  std::cout << "Use OpenCL 1.1 C++AMP runtime" << std::endl;
-  runtimeImpl = new RuntimeImpl("libmcwamp_opencl_11.so");
+  // load OpenCL C++AMP runtime
+  std::cout << "Use OpenCL C++AMP runtime" << std::endl;
+  runtimeImpl = new RuntimeImpl("libmcwamp_opencl.so");
   if (!runtimeImpl->m_RuntimeHandle) {
-    std::cerr << "Can't load OpenCL 1.1 C++AMP runtime!" << std::endl;
+    std::cerr << "Can't load OpenCL C++AMP runtime!" << std::endl;
     delete runtimeImpl;
     exit(-1);
   } else {
-    //std::cout << "OpenCL 1.1 C++AMP runtime loaded" << std::endl;
+    //std::cout << "OpenCL C++AMP runtime loaded" << std::endl;
   }
   return runtimeImpl;
 }
@@ -300,7 +256,7 @@ RuntimeImpl* GetOrInitRuntime() {
   static RuntimeImpl* runtimeImpl = nullptr;
   if (runtimeImpl == nullptr) {
     HSAPlatformDetect hsa_rt;
-    OpenCL11PlatformDetect opencl11_rt;
+    OpenCLPlatformDetect opencl_rt;
 
     // force use certain C++AMP runtime from CLAMP_RUNTIME environment variable
     char* runtime_env = getenv("CLAMP_RUNTIME");
@@ -311,9 +267,9 @@ RuntimeImpl* GetOrInitRuntime() {
         } else {
           std::cerr << "Ignore unsupported CLAMP_RUNTIME environment variable: " << runtime_env << std::endl;
         }
-      } else if (std::string("CL11") == runtime_env || std::string("CL12") == runtime_env) {
-          if (opencl11_rt.detect()) {
-              runtimeImpl = LoadOpenCL11Runtime();
+      } else if (runtime_env[0] == 'C' && runtime_env[1] == 'L') {
+          if (opencl_rt.detect()) {
+              runtimeImpl = LoadOpenCLRuntime();
           } else {
               std::cerr << "Ignore unsupported CLAMP_RUNTIME environment variable: " << runtime_env << std::endl;
           }
@@ -330,8 +286,8 @@ RuntimeImpl* GetOrInitRuntime() {
     if (runtimeImpl == nullptr) {
       if (hsa_rt.detect()) {
         runtimeImpl = LoadHSARuntime();
-      } else if (opencl11_rt.detect()) {
-        runtimeImpl = LoadOpenCL11Runtime();
+      } else if (opencl_rt.detect()) {
+        runtimeImpl = LoadOpenCLRuntime();
       } else {
           runtimeImpl = LoadCPURuntime();
           runtimeImpl->set_cpu();
@@ -389,8 +345,8 @@ void *CreateKernel(std::string s) {
       // force use OpenCL C kernel from CLAMP_NOSPIR environment variable
       char* kernel_env = getenv("CLAMP_NOSPIR");
       if (kernel_env == nullptr) {
-          OpenCL11PlatformDetect opencl11_rt;
-        if (opencl11_rt.hasSPIR()) {
+          OpenCLPlatformDetect opencl_rt;
+        if (opencl_rt.hasSPIR()) {
           std::cout << "Use OpenCL SPIR kernel\n";
           hasSPIR = true;
         } else {
