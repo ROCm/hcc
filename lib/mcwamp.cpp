@@ -119,13 +119,13 @@ namespace CLAMP {
  */
 class PlatformDetect {
 public:
-  PlatformDetect(const std::string& name, 
-                 const std::string& ampRuntimeLibrary, 
+  PlatformDetect(const std::string& name,
+                 const std::string& ampRuntimeLibrary,
                  const std::string& systemRuntimeLibrary,
                  void* const kernel_source)
-    : m_name(name), 
-      m_ampRuntimeLibrary(ampRuntimeLibrary), 
-      m_systemRuntimeLibrary(systemRuntimeLibrary), 
+    : m_name(name),
+      m_ampRuntimeLibrary(ampRuntimeLibrary),
+      m_systemRuntimeLibrary(systemRuntimeLibrary),
       m_kernel_source(kernel_source) {}
 
   virtual bool detect() {
@@ -175,9 +175,9 @@ private:
 
 class OpenCLPlatformDetect : public PlatformDetect {
 public:
-  OpenCLPlatformDetect(const std::string& name, 
+  OpenCLPlatformDetect(const std::string& name,
                        const std::string& ampRuntimeName,
-                       const std::string& systemRuntimeName, 
+                       const std::string& systemRuntimeName,
                        void* const kernel_source,
                        int version) : PlatformDetect(name, ampRuntimeName, systemRuntimeName, kernel_source), m_clVersion(version) {}
 
@@ -237,23 +237,6 @@ private:
   int m_clVersion;
 };
 
-
-/**
- * \brief OpenCL SPIR 1.2 runtime detection
- */
-class SPIR12PlatformDetect : public OpenCLPlatformDetect {
-public:
-  SPIR12PlatformDetect() : OpenCLPlatformDetect("OpenCL", "libmcwamp_opencl_12.so", "libOpenCL.so", spir_kernel_source, 12) {}
-};
-
-/**
- * \brief OpenCL 1.2 runtime detection
- */
-class OpenCL12PlatformDetect : public OpenCLPlatformDetect {
-public:
-  OpenCL12PlatformDetect() : OpenCLPlatformDetect("OpenCL", "libmcwamp_opencl_12.so", "libOpenCL.so", cl_kernel_source, 12) {}
-};
-
 /**
  * \brief OpenCL 1.1 runtime detection
  */
@@ -281,21 +264,6 @@ static RuntimeImpl* LoadOpenCL11Runtime() {
     exit(-1);
   } else {
     //std::cout << "OpenCL 1.1 C++AMP runtime loaded" << std::endl;
-  }
-  return runtimeImpl;
-}
-
-static RuntimeImpl* LoadOpenCL12Runtime() {
-  RuntimeImpl* runtimeImpl = nullptr;
-  // load OpenCL 1.2 C++AMP runtime
-  std::cout << "Use OpenCL 1.2 C++AMP runtime" << std::endl;
-  runtimeImpl = new RuntimeImpl("libmcwamp_opencl_12.so");
-  if (!runtimeImpl->m_RuntimeHandle) {
-    std::cerr << "Can't load OpenCL 1.2 C++AMP runtime!" << std::endl;
-    delete runtimeImpl;
-    exit(-1);
-  } else {
-    //std::cout << "OpenCL 1.2 C++AMP runtime loaded" << std::endl;
   }
   return runtimeImpl;
 }
@@ -332,7 +300,6 @@ RuntimeImpl* GetOrInitRuntime() {
   static RuntimeImpl* runtimeImpl = nullptr;
   if (runtimeImpl == nullptr) {
     HSAPlatformDetect hsa_rt;
-    OpenCL12PlatformDetect opencl12_rt;
     OpenCL11PlatformDetect opencl11_rt;
 
     // force use certain C++AMP runtime from CLAMP_RUNTIME environment variable
@@ -344,13 +311,7 @@ RuntimeImpl* GetOrInitRuntime() {
         } else {
           std::cerr << "Ignore unsupported CLAMP_RUNTIME environment variable: " << runtime_env << std::endl;
         }
-      } else if (std::string("CL12") == runtime_env) {
-        if (opencl12_rt.detect()) {
-          runtimeImpl = LoadOpenCL12Runtime();
-        } else {
-          std::cerr << "Ignore unsupported CLAMP_RUNTIME environment variable: " << runtime_env << std::endl;
-        }
-      } else if (std::string("CL11") == runtime_env) {
+      } else if (std::string("CL11") == runtime_env || std::string("CL12") == runtime_env) {
           if (opencl11_rt.detect()) {
               runtimeImpl = LoadOpenCL11Runtime();
           } else {
@@ -369,8 +330,6 @@ RuntimeImpl* GetOrInitRuntime() {
     if (runtimeImpl == nullptr) {
       if (hsa_rt.detect()) {
         runtimeImpl = LoadHSARuntime();
-      } else if (opencl12_rt.detect()) {
-        runtimeImpl = LoadOpenCL12Runtime();
       } else if (opencl11_rt.detect()) {
         runtimeImpl = LoadOpenCL11Runtime();
       } else {
@@ -379,12 +338,12 @@ RuntimeImpl* GetOrInitRuntime() {
           std::cerr << "No suitable runtime detected. Fall back to CPU!" << std::endl;
       }
     }
-  } 
+  }
   return runtimeImpl;
 }
 
 //
-// implementation of C++AMP runtime interfaces 
+// implementation of C++AMP runtime interfaces
 // declared in amp_runtime.h and amp_allocator.h
 //
 
@@ -410,10 +369,10 @@ bool is_cpu()
 }
 
 // used in amp_impl.h
-void QueryDeviceInfo(const std::wstring& device_path, 
+void QueryDeviceInfo(const std::wstring& device_path,
   bool& supports_cpu_shared_memory,
-  size_t& dedicated_memory, 
-  bool& supports_limited_double_precision, 
+  size_t& dedicated_memory,
+  bool& supports_limited_double_precision,
   std::wstring& description) {
   wchar_t des[128];
   GetOrInitRuntime()->m_QueryDeviceInfoImpl(device_path.c_str(), &supports_cpu_shared_memory, &dedicated_memory, &supports_limited_double_precision, des);
@@ -430,8 +389,8 @@ void *CreateKernel(std::string s) {
       // force use OpenCL C kernel from CLAMP_NOSPIR environment variable
       char* kernel_env = getenv("CLAMP_NOSPIR");
       if (kernel_env == nullptr) {
-        SPIR12PlatformDetect spir_rt;
-        if (spir_rt.hasSPIR()) {
+          OpenCL11PlatformDetect opencl11_rt;
+        if (opencl11_rt.hasSPIR()) {
           std::cout << "Use OpenCL SPIR kernel\n";
           hasSPIR = true;
         } else {
