@@ -163,7 +163,7 @@ public:
         d.maxSizes = maxSizes;
         Clid2DimSizeMap[device] = d;
     }
-    void init(void *data, int count) {
+    void init(void *data, int count, bool) {
         if (count > 0) {
             cl_int err;
             cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, NULL, &err);
@@ -200,17 +200,17 @@ public:
         if (it != std::end(rwq))
             it->second.dirty = false;
     }
-    void copy(void *src, void *dst) {
+    void copy(void *dst, void *src, size_t count) {
         auto it = rwq.find(src);
         if (it == std::end(rwq))
             return;
         rw_info& rw = it->second;
         if (rw.dirty) {
             cl_int err = clEnqueueReadBuffer(queue, mem_info[src], CL_TRUE, 0,
-                                             rw.count, dst, 0, NULL, NULL);
+                                             count, dst, 0, NULL, NULL);
             assert(err == CL_SUCCESS);
         } else
-            memmove(dst, src, rw.count);
+            memmove(dst, src, count);
     }
     void sync(void* data) {
         auto it = rwq.find(data);

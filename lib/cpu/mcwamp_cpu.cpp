@@ -29,7 +29,7 @@ class CPUAMPAllocator : public AMPAllocator
 public:
   void* getQueue() { return nullptr; }
   CPUAMPAllocator() {}
-  void init(void *data, int count) {
+  void init(void *data, int count, bool) {
   }
   void append(void *kernel, int idx, void *data, bool isArray) {
     rwq[data].used = true;
@@ -46,7 +46,7 @@ public:
   void discard(void *) {}
   void sync(void *) {}
   void stash(void *) {}
-  void copy(void *, void*) {}
+  void copy(void *, void*, size_t) {}
   void read() {
     for (auto& it : rwq) {
       rw_info& rw = it.second;
