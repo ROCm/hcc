@@ -163,10 +163,10 @@ public:
         d.maxSizes = maxSizes;
         Clid2DimSizeMap[device] = d;
     }
-    void init(void *data, int count, bool) {
+    void init(void *data, int count) {
         if (count > 0) {
             cl_int err;
-            cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, NULL, &err);
+            cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, nullptr, &err);
             rwq[data] = {count, false, false};
             assert(err == CL_SUCCESS);
             mem_info[data] = dm;
@@ -260,6 +260,7 @@ public:
     cl_command_queue queue;
     cl_program       program;
     std::map<void *, rw_info> rwq;
+    bool AMP_APU;
 };
 
 static OpenCLAMPAllocator amp;
@@ -611,7 +612,6 @@ extern "C" void LaunchKernelImpl(void *kernel, size_t dim_ext, size_t *ext, size
       if(!is)
           local_size = NULL;
   }
-
   err = clEnqueueNDRangeKernel(aloc.queue, (cl_kernel)kernel, dim_ext, NULL, ext, local_size, 0, NULL, NULL);
   assert(err == CL_SUCCESS);
 }

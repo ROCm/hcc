@@ -55,10 +55,10 @@ class _data_host {
 public:
     _data_host(int count, bool isArr = false)
         : mm(aligned_alloc(0x1000, count * sizeof(T)), amp_delete), count(count),
-        isArray(isArr) { getAllocator()->init(mm.get(), count * sizeof(T), true); }
+        isArray(isArr) { getAllocator()->init(mm.get(), count * sizeof(T)); }
     _data_host(int count, T* src, bool isArr = false)
         : mm(src, amp_no_delete), count(count), isArray(isArr)
-    { getAllocator()->init(mm.get(), count * sizeof(T), false); }
+    { getAllocator()->init(mm.get(), count * sizeof(T)); }
     _data_host(const _data_host& other)
         : mm(other.mm), count(other.count), isArray(false) {}
     template <typename U>
