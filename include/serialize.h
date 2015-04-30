@@ -5,10 +5,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef __AMP_CPU__
-#include <serialize_cpu.h>
-#else
-
 #pragma once
 
 #include <amp_runtime.h>
@@ -37,4 +33,3 @@ private:
   int current_idx_;
 };
 }
-#endif
