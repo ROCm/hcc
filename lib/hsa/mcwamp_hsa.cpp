@@ -74,7 +74,7 @@ struct mm_info
 class HSAAMPAllocator : public AMPAllocator
 { 
 private:
-    void regist(int count, void *data, bool hasSrc) {
+    void regist(int count, void *data, bool hasSrc) override {
         //std::cerr << "HSAAMPAllocator::init()" << std::endl;
         void* p = data;
         if (hasSrc)
@@ -83,27 +83,27 @@ private:
         CLAMP::RegisterMemory(p, count);
         rwq[data] = {p, count};
     }
-    void append(void *kernel, int idx, std::shared_ptr<void> mm) {
+    void append(void *kernel, int idx, std::shared_ptr<void>& mm) override {
         PushArgImpl(kernel, idx, sizeof(void*), &mem_info[mm.get()].data);
     }
-    void amp_write(void *data) {
+    void amp_write(void *data) override {
         auto it = mem_info.find(data);
         mm_info &rw = it->second;
         if (rw.data != data)
             memmove(rw.data, data, rw.count);
     }
-    void amp_read(void *data) {
+    void amp_read(void *data) override {
         auto it = mem_info.find(data);
         mm_info &rw = it->second;
         if (rw.data != data)
             memmove(data, rw.data, rw.count);
     }
-    void amp_copy(void *dst, void *src, int n) {
+    void amp_copy(void *dst, void *src, int n) override {
         auto it = mem_info.find(src);
         mm_info &rw = it->second;
         memmove(dst, rw.data, n);
     }
-    void unregist(void *data) {
+    void unregist(void *data) override {
         auto it = mem_info.find(src);
         mm_info &rw = it->second;
         if (rw.data != data)
