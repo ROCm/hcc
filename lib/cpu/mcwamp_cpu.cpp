@@ -21,43 +21,52 @@ namespace Concurrency {
 
 struct mm_info
 {
-    void* data;
+    std::shared_ptr<void> data;
     int count;
 };
 
 class CPUAMPAllocator : public AMPAllocator
 {
     void regist(int count, void *data, bool hasSrc) {
-        void *p = data;
-        if (hasSrc)
-              p = aligned_alloc(0x1000, count);
-        mem_info[data] = {p, count};
+        if (hasSrc) {
+            std::shared_ptr<void> p((void*)aligned_alloc(0x1000, count),
+                                    [](void *ptr) { ::operator delete(ptr); });
+            mem_info[data] = {p, count};
+        }
     }
-    void PushArg(void *kernel, int idx, const std::shared_ptr<void> data) {}
+    void PushArg(void *kernel, int idx, std::shared_ptr<void> data) {
+        auto it = mem_info.find(data.get());
+        if (it != std::end(mem_info)) {
+            mm_info &rw = it->second;
+            data.swap(rw.data);
+        }
+    }
     void amp_write(void *data) {
         auto it = mem_info.find(data);
-        mm_info &rw = it->second;
-        if (rw.data != data)
-            memmove(rw.data, data, rw.count);
+        if (it != std::end(mem_info)) {
+            mm_info &rw = it->second;
+            memmove(rw.data.get(), data, rw.count);
+        }
     }
     void amp_read(void *data) {
         auto it = mem_info.find(data);
-        mm_info &rw = it->second;
-        if (rw.data != data)
-            memmove(data, rw.data, rw.count);
+        if (it != std::end(mem_info)) {
+            mm_info &rw = it->second;
+            memmove(data, rw.data.get(), rw.count);
+        }
     }
     void amp_copy(void *dst, void *src, int n) {
         auto it = mem_info.find(src);
-        mm_info &rw = it->second;
-        if (rw.data != src)
-            memmove(dst, rw.data, n);
+        if (it != std::end(mem_info)) {
+            mm_info &rw = it->second;
+            memmove(dst, rw.data.get(), n);
+        } else
+            memmove(dst, src, n);
     }
     void unregist(void *data) {
         auto it = mem_info.find(data);
-        mm_info &rw = it->second;
-        if (rw.data != data)
-            ::operator delete(rw.data);
-        mem_info.erase(it);
+        if (it != std::end(mem_info))
+            mem_info.erase(it);
     }
 
     std::map<void *, mm_info> mem_info;
