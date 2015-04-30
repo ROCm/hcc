@@ -101,8 +101,7 @@ private:
     void amp_copy(void *dst, void *src, int n) {
         auto it = mem_info.find(src);
         mm_info &rw = it->second;
-        if (rw.data != src)
-            memmove(dst, rw.data, n);
+        memmove(dst, rw.data, n);
     }
     void unregist(void *data) {
         auto it = mem_info.find(src);

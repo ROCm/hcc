@@ -5,10 +5,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef __AMP_CPU__
-#include <amp_cpu_manage.h>
-#else
-
 #pragma once
 
 #include <amp_allocator.h>
@@ -38,7 +34,7 @@ static inline void amp_delete(void *p) { getAllocator()->free(p); }
 
 template <typename T>
 class _data_host {
-    std::shared_ptr<void> mm;
+    mutable std::shared_ptr<void> mm;
     size_t count;
     bool isArray;
     template <typename U> friend class _data_host;
@@ -72,11 +68,10 @@ public:
             getAllocator()->append(s.getKernel(), s.getAndIncCurrentIndex(), mm, isArray);
         }
     __attribute__((annotate("user_deserialize")))
-        explicit _data_host(__global T* t);
+        explicit _data_host(__global T* t) {}
 };
 
 inline void *getDevicePointer(void *ptr) { return getAllocator()->device_data(ptr); }
 inline void *getOCLQueue(void *ptr) { return getAllocator()->getQueue(); }
 
 } // namespace Concurrency
-#endif

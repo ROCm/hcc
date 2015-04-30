@@ -18,7 +18,6 @@
 
 namespace Concurrency {
 
-
 #ifdef __AMP_CPU__
 #define SSIZE 1024 * 10
 const unsigned int NTHREAD = std::thread::hardware_concurrency();
@@ -159,6 +158,7 @@ void launch_cpu_task(extent<N> const& compute_domain, Kernel const& f)
 {
     Concurrency::Serialize s(nullptr);
     f.__cxxamp_serialize(s);
+    CLAMP::enter_kernel();
     std::vector<std::thread> th(NTHREAD);
     for (int i = 0; i < NTHREAD; ++i)
         th[i] = std::thread(partitioned_task<Kernel, N>, std::cref(f), std::cref(compute_domain), i);
@@ -166,10 +166,11 @@ void launch_cpu_task(extent<N> const& compute_domain, Kernel const& f)
         if (t.joinable())
             t.join();
     f.__cxxamp_serialize(s);
+    CLAMP::leave_kernel();
 }
 #endif
 
-static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu,amp) {
+static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu) {
     std::string s(f);
     std::string out;
 
@@ -527,6 +528,8 @@ __attribute__((noinline,used)) void parallel_for_each(
   if (CLAMP::is_cpu()) {
 #ifdef __AMP_CPU__
       Concurrency::Serialize s(nullptr);
+      f.__cxxamp_serialize(s);
+      CLAMP::enter_kernel();
       std::vector<std::thread> th(NTHREAD);
       for (int i = 0; i < NTHREAD; ++i)
           th[i] = std::thread(partitioned_task_tile<Kernel, D0>,
@@ -535,6 +538,7 @@ __attribute__((noinline,used)) void parallel_for_each(
           if (t.joinable())
               t.join();
       f.__cxxamp_serialize(s);
+      CLAMP::leave_kernel();
 #endif
   } else
       mcw_cxxamp_launch_kernel<Kernel, 1>(&ext, &tile, f);
@@ -598,6 +602,7 @@ __attribute__((noinline,used)) void parallel_for_each(
 #ifdef __AMP_CPU__
       Concurrency::Serialize s(nullptr);
       f.__cxxamp_serialize(s);
+      CLAMP::enter_kernel();
       std::vector<std::thread> th(NTHREAD);
       for (int i = 0; i < NTHREAD; ++i)
           th[i] = std::thread(partitioned_task_tile<Kernel, D0, D1>,
@@ -606,6 +611,7 @@ __attribute__((noinline,used)) void parallel_for_each(
           if (t.joinable())
               t.join();
       f.__cxxamp_serialize(s);
+      CLAMP::leave_kernel();
 #endif
   } else
       mcw_cxxamp_launch_kernel<Kernel, 2>(ext, tile, f);
@@ -679,6 +685,7 @@ __attribute__((noinline,used)) void parallel_for_each(
 #ifdef __AMP_CPU__
       Concurrency::Serialize s(nullptr);
       f.__cxxamp_serialize(s);
+      CLAMP::enter_kernel();
       std::vector<std::thread> th(NTHREAD);
       for (int i = 0; i < NTHREAD; ++i)
           th[i] = std::thread(partitioned_task_tile<Kernel, D0, D1, D2>,
@@ -687,6 +694,7 @@ __attribute__((noinline,used)) void parallel_for_each(
           if (t.joinable())
               t.join();
       f.__cxxamp_serialize(s);
+      CLAMP::leave_kernel();
 #endif
   } else
       mcw_cxxamp_launch_kernel<Kernel, 3>(ext, tile, f);
