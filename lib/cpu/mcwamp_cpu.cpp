@@ -19,66 +19,9 @@ extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v) {}
 
 namespace Concurrency {
 
-struct rw_info
-{
-  int count;
-  bool used;
-};
-class CPUAMPAllocator : public AMPAllocator
-{ 
-public:
-  void* getQueue() { return nullptr; }
-  CPUAMPAllocator() {}
-  void *init(int count, void *data) {
-      if (data == nullptr)
-          data = aligned_alloc(0x1000, count);
-      return data;
-  }
-  void append(void *kernel, int idx, void *data, bool isArray) {
-    rwq[data].used = true;
-  }
-  void write() {
-    //std::cerr << "HSAAMPAllocator::write()" << std::endl;
-    for (auto& it : rwq) {
-      rw_info& rw = it.second;
-      if (rw.used) {
-      }
-    }
-  }
-  void *device_data(void *) { return nullptr; }
-  void discard(void *) {}
-  void sync(void *) {}
-  void stash(void *) {}
-  void copy(void *, void*, size_t) {}
-  void read() {
-    for (auto& it : rwq) {
-      rw_info& rw = it.second;
-      if (rw.used) {
-        if (it.first != mem_info[it.first]) {
-        }
-        rw.used = false;
-      }
-    }
-  }
-  void free(void *data) {
-    auto iter = mem_info.find(data);
-    if (iter != mem_info.end()) {
-      free(iter->second);
-      mem_info.erase(iter);
-    }
-  }
-  ~CPUAMPAllocator() {
-    mem_info.clear();
-    rwq.clear();
-  }
+static AMPAllocator amp;
 
-  std::map<void *, void*> mem_info;
-  std::map<void *, rw_info> rwq;
-};
-
-static CPUAMPAllocator amp;
-
-CPUAMPAllocator& getCPUAMPAllocator() {
+AMPAllocator& getCPUAMPAllocator() {
   return amp;
 }
 
