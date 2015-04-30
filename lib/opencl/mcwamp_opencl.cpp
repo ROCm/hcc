@@ -260,7 +260,6 @@ public:
     cl_command_queue queue;
     cl_program       program;
     std::map<void *, rw_info> rwq;
-    bool AMP_APU;
 };
 
 static OpenCLAMPAllocator amp;
