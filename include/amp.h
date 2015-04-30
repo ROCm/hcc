@@ -1227,10 +1227,16 @@ struct projection_helper<const T, 1>
     //      const T& operator[](int i) const restrict(amp,cpu);
     typedef __global const T& const_result_type;
     static const_result_type project(array_view<const T, 1>& now, int i) restrict(amp,cpu) {
+#ifndef __GPU__
+        now.cache.synchronize();
+#endif
         __global const T *ptr = reinterpret_cast<__global const T *>(now.cache.get() + i + now.offset + now.index_base[0]);
         return *ptr;
     }
     static const_result_type project(const array_view<const T, 1>& now, int i) restrict(amp,cpu) {
+#ifndef __GPU__
+        now.cache.synchronize();
+#endif
         __global const T *ptr = reinterpret_cast<__global const T *>(now.cache.get() + i + now.offset + now.index_base[0]);
         return *ptr;
     }
@@ -1278,10 +1284,16 @@ struct array_projection_helper<T, 1>
     typedef __global T& result_type;
     typedef __global const T& const_result_type;
     static result_type project(array<T, 1>& now, int i) restrict(amp,cpu) {
+#ifndef __GPU__
+        now.m_device.discard();
+#endif
         __global T *ptr = reinterpret_cast<__global T *>(now.m_device.get() + i);
         return *ptr;
     }
     static const_result_type project(const array<T, 1>& now, int i) restrict(amp,cpu) {
+#ifndef __GPU__
+        now.m_device.synchronize();
+#endif
         __global const T *ptr = reinterpret_cast<__global const T *>(now.m_device.get() + i);
         return *ptr;
     }
@@ -1420,8 +1432,9 @@ public:
 
 
   explicit array(const array_view<const T, N>& src) : array(src.extent) {
-      memmove(const_cast<void*>(reinterpret_cast<const void*>(m_device.get())),
-      reinterpret_cast<const void*>(src.cache.get()), extent.size() * sizeof(T));
+#ifndef __GPU__
+      src.cache.copy(m_device.get());
+#endif
   }
 
 
@@ -1493,6 +1506,7 @@ public:
       if(pav && (pav->get_accelerator() == _gpu_check)) {
           throw runtime_exception("The array is not accessible on CPU.", 0);
       }
+      m_device.synchronize();
 #endif
       __global T *ptr = reinterpret_cast<__global T*>(m_device.get());
       return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx, extent)];
@@ -1502,6 +1516,7 @@ public:
       if(pav && (pav->get_accelerator() == _gpu_check)) {
           throw runtime_exception("The array is not accessible on CPU.", 0);
       }
+      m_device.synchronize();
 #endif
       __global T *ptr = reinterpret_cast<__global T*>(m_device.get());
       return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx, extent)];
@@ -1645,9 +1660,16 @@ public:
       }
 
   operator std::vector<T>() const {
+#ifndef __GPU__
+      m_device.synchronize();
+#endif
       T *begin = reinterpret_cast<T*>(m_device.get()),
         *end = reinterpret_cast<T*>(m_device.get() + extent.size());
       return std::vector<T>(begin, end);
+  }
+
+  T* get_data() const restrict(amp,cpu) {
+    return reinterpret_cast<T*>(m_device.get());
   }
 
   T* data() const restrict(amp,cpu) {
@@ -1656,6 +1678,7 @@ public:
     if(cpu_access_type == access_type_none) {
       //return reinterpret_cast<T*>(NULL);
     }
+    m_device.synchronize();
 #endif
     return reinterpret_cast<T*>(m_device.get());
   }
@@ -1886,11 +1909,9 @@ public:
 #endif
   }
   // only get data do not synchronize
-  __global const T& get_data(int i0) const restrict(amp,cpu) {
+  T* get_data() const restrict(amp,cpu) {
     static_assert(N == 1, "Rank must be 1");
-    index<1> idx(i0);
-    __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
-    return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
+    return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
   }
   T* data() const restrict(amp,cpu) {
 #ifndef __GPU__
@@ -1900,6 +1921,11 @@ public:
     return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
   }
 
+  accelerator_view get_source_accelerator_view() const {
+      return _gpu_check.get_default_view();
+  }
+
+  const acc_buffer_t& internal() const restrict(amp,cpu) { return cache; }
 private:
   template <int K, typename Q> friend struct index_helper;
   template <int K, typename Q1, typename Q2> friend struct amp_helper;
@@ -1907,6 +1933,9 @@ private:
   template <typename K, int Q> friend struct array_projection_helper;
   template <typename Q, int K> friend class array;
   template <typename Q, int K> friend class array_view;
+
+  template <typename OutputIter, typename Q, int K>
+      friend void copy(const array_view<Q, K>&, OutputIter);
 
   // used by view_as and reinterpret_as
   array_view(const Concurrency::extent<N>& ext, const acc_buffer_t& cache,
@@ -2015,7 +2044,9 @@ public:
   extent<N> get_extent() const restrict(amp,cpu) {
     return extent;
   }
-  accelerator_view get_source_accelerator_view() const;
+  accelerator_view get_source_accelerator_view() const {
+      return _gpu_check.get_default_view();
+  }
 
   __global const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
 #ifndef __GPU__
@@ -2115,16 +2146,15 @@ public:
 
   void refresh() const;
   // only get data do not synchronize
-  __global const T& get_data(int i0) const restrict(amp,cpu) {
+  T* get_data() const restrict(amp,cpu) {
     static_assert(N == 1, "Rank must be 1");
-    index<1> idx(i0);
-    __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
-    return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
+    return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
   }
   const T* data() const restrict(amp,cpu) {
     static_assert(N == 1, "data() is only permissible on array views of rank 1");
     return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
   }
+  const acc_buffer_t& internal() const restrict(amp,cpu) { return cache; }
 private:
   template <int K, typename Q> friend struct index_helper;
   template <int K, typename Q1, typename Q2> friend struct amp_helper;
@@ -2132,6 +2162,8 @@ private:
   template <typename K, int Q> friend struct array_projection_helper;
   template <typename Q, int K> friend class array;
   template <typename Q, int K> friend class array_view;
+  template <typename OutputIter, typename Q, int K>
+      friend void copy(const array_view<Q, K>&, OutputIter);
 
   // used by view_as and reinterpret_as
   array_view(const Concurrency::extent<N>& ext, const acc_buffer_t& cache,
@@ -2240,6 +2272,13 @@ namespace Concurrency {
 // never happen before.
 
 template <typename T>
+static inline void amp_stash(T& mm) {
+#ifndef __GPU__
+    mm.stash();
+#endif
+}
+
+template <typename T>
 void copy(const array_view<const T, 1>& src, const array_view<T, 1>& dest) {
     T* ptr_dest = dest.data();
     const T* ptr_src = src.data();
@@ -2275,12 +2314,9 @@ void copy(const array<T, N>& src, const array_view<T, N>& dest) {
         Concurrency::copy(src[i], dest[i]);
 }
 
-template <typename T>
-void copy(const array<T, 1>& src, array<T, 1>& dest) {
-    memmove(dest.data(), src.data(), dest.get_extent().size() * sizeof(T));
-}
 template <typename T, int N>
 void copy(const array<T, N>& src, array<T, N>& dest) {
+    amp_stash(dest.internal());
     memmove(dest.data(), src.data(), dest.get_extent().size() * sizeof(T));
 }
 
@@ -2297,118 +2333,95 @@ void copy(const array_view<const T, N>& src, array<T, N>& dest) {
 }
 
 template <typename T>
-void copy(const array_view<T, 1>& src, array<T, 1>& dest) {
+void do_copy(const array_view<T, 1>& src, array<T, 1>& dest) {
     T* ptr_dest = dest.data();
-    const T* ptr_src = src.data();
-    memcpy(ptr_dest, ptr_src, sizeof(T)*dest.get_extent()[0]);
+    const T* ptr_src = src.get_data();
+    memcpy(ptr_dest, ptr_src, sizeof(T) * dest.get_extent().size());
 }
 template <typename T, int N>
-void copy(const array_view<T, N>& src, array<T, N>& dest) {
+void do_copy(const array_view<T, N>& src, array<T, N>& dest) {
     for (int i = 0; i < dest.get_extent()[0]; ++i)
         Concurrency::copy(src[i], dest[i]);
 }
+template <typename T, int N>
+void copy(const array_view<T, N>& src, array<T, N>& dest) {
+    amp_stash(dest.internal());
+    do_copy(src, dest);
+}
+
 
 // TODO: __global should not be allowed in CPU Path
 template <typename InputIter, typename T>
-void copy(InputIter srcBegin, InputIter srcEnd, const array_view<T, 1>& dest) {
+void do_copy(InputIter srcBegin, InputIter srcEnd, const array_view<T, 1>& dest) {
+    std::copy(srcBegin, srcEnd, dest.get_data());
+}
+template <typename InputIter, typename T, int N>
+void do_copy(InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest) {
+    int adv = dest.get_extent().size() / dest.get_extent()[0];
     for (int i = 0; i < dest.get_extent()[0]; ++i) {
-        reinterpret_cast<T&>(dest[i]) = *srcBegin;
-        ++srcBegin;
+        do_copy(srcBegin, srcEnd, dest[i]);
+        std::advance(srcBegin, adv);
     }
 }
 template <typename InputIter, typename T, int N>
 void copy(InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest) {
-    int adv = dest.get_extent().size() / dest.get_extent()[0];
-    for (int i = 0; i < dest.get_extent()[0]; ++i) {
-        Concurrency::copy(srcBegin, srcEnd, dest[i]);
-        std::advance(srcBegin, adv);
-    }
+    amp_stash(dest.internal());
+    do_copy(srcBegin, srcEnd, dest);
 }
 
-// TODO: Boundary Check
-template <typename InputIter, typename T>
-void copy(InputIter srcBegin, InputIter srcEnd, array<T, 1>& dest) {
-#ifndef __GPU__
-    if( ( std::distance(srcBegin,srcEnd) <=0 )||( std::distance(srcBegin,srcEnd) < dest.get_extent()[0] ))
-      throw runtime_exception("errorMsg_throw ,copy between different types", 0);
-#endif
-    for (int i = 0; i < dest.get_extent()[0]; ++i) {
-        dest[i] = *srcBegin;
-        ++srcBegin;
-    }
-}
 template <typename InputIter, typename T, int N>
 void copy(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest) {
-    int adv = dest.get_extent().size() / dest.get_extent()[0];
-    for (int i = 0; i < dest.get_extent()[0]; ++i) {
-        Concurrency::copy(srcBegin, srcEnd, dest[i]);
-        std::advance(srcBegin, adv);
-    }
+#ifndef __GPU__
+    if( ( std::distance(srcBegin,srcEnd) <=0 )||( std::distance(srcBegin,srcEnd) < dest.get_extent().size() ))
+      throw runtime_exception("errorMsg_throw ,copy between different types", 0);
+#endif
+    amp_stash(dest.internal());
+    std::copy(srcBegin, srcEnd, dest.data());
 }
 
-template <typename InputIter, typename T>
-void copy(InputIter srcBegin, const array_view<T, 1>& dest) {
-    for (int i = 0; i < dest.get_extent()[0]; ++i) {
-        reinterpret_cast<T&>(dest[i]) = *srcBegin;
-        ++srcBegin;
-    }
-}
 template <typename InputIter, typename T, int N>
 void copy(InputIter srcBegin, const array_view<T, N>& dest) {
-    int adv = dest.get_extent().size() / dest.get_extent()[0];
-    for (int i = 0; i < dest.get_extent()[0]; ++i) {
-        Concurrency::copy(srcBegin, dest[i]);
-        std::advance(srcBegin, adv);
-    }
+    amp_stash(dest.internal());
+    InputIter srcEnd = srcBegin;
+    std::advance(srcEnd, dest.get_extent().size());
+    do_copy(srcBegin, srcEnd, dest);
 }
 
-template <typename InputIter, typename T>
-void copy(InputIter srcBegin, array<T, 1>& dest) {
-    for (int i = 0; i < dest.get_extent()[0]; ++i) {
-        dest[i] = *srcBegin;
-        ++srcBegin;
-    }
-}
 template <typename InputIter, typename T, int N>
 void copy(InputIter srcBegin, array<T, N>& dest) {
-    int adv = dest.get_extent().size() / dest.get_extent()[0];
-    for (int i = 0; i < dest.get_extent()[0]; ++i) {
-        Concurrency::copy(srcBegin, dest[i]);
-        std::advance(srcBegin, adv);
-    }
+    amp_stash(dest.internal());
+    InputIter srcEnd = srcBegin;
+    std::advance(srcEnd, dest.get_extent().size());
+    std::copy(srcBegin, srcEnd, dest.data());
 }
 
 template <typename OutputIter, typename T>
-void copy(const array_view<T, 1> &src, OutputIter destBegin) {
+void do_copy_s(const array_view<T, 1> &src, OutputIter destBegin) {
+    std::copy(src.get_data(), src.get_data() + src.get_extent().size(), destBegin);
+}
+template <typename OutputIter, typename T, int N>
+void do_copy_s(const array_view<T, N> &src, OutputIter destBegin) {
+    int adv = src.get_extent().size() / src.get_extent()[0];
     for (int i = 0; i < src.get_extent()[0]; ++i) {
-        *destBegin = (src.get_data(i));
-        destBegin++;
+        do_copy_s(src[i], destBegin);
+        std::advance(destBegin, adv);
     }
 }
 
 template <typename OutputIter, typename T, int N>
 void copy(const array_view<T, N> &src, OutputIter destBegin) {
-    int adv = src.get_extent().size() / src.get_extent()[0];
-    for (int i = 0; i < src.get_extent()[0]; ++i) {
-        copy(src[i], destBegin);
-        std::advance(destBegin, adv);
-    }
+#ifndef __GPU__
+    typename array_view<T, N>::acc_buffer_t cache(src.cache.size());
+    src.cache.copy(cache.get());
+    array_view<T, N> target(src.extent, src.extent_base,
+                            src.index_base, cache, src.offset);
+    do_copy_s(target, destBegin);
+#endif
 }
 
-template <typename OutputIter, typename T>
-void copy(const array<T, 1> &src, OutputIter destBegin) {
-    for (int i = 0; i < src.get_extent()[0]; ++i) {
-        *destBegin = src[i];
-        destBegin++;
-    }
-}
 template <typename OutputIter, typename T, int N>
 void copy(const array<T, N> &src, OutputIter destBegin) {
-    int adv = src.get_extent().size() / src.get_extent()[0];
-    for (int i = 0; i < src.get_extent()[0]; ++i) {
-        copy(src[i], destBegin);
-        std::advance(destBegin, adv);
-    }
+    std::copy(src.data(), src.data() + src.get_extent().size(), destBegin);
 }
 
 

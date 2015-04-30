@@ -1,0 +1,5 @@
+hsa_math.bc is compiled from lib/hsa_math.ll, using llvm-as from
+https://github.com/HSAFoundation/HLC-HSAIL-Development-LLVM/tree/hsail-1.0f
+
+Build instruction:
+llvm-as hsa_math.ll

@@ -51,7 +51,8 @@ namespace CLAMP {
 struct rw_info
 {
     int count;
-    bool used;
+    bool discard;
+    bool dirty;
 };
 
 struct DimMaxSize {
@@ -95,6 +96,58 @@ public:
         assert(err == CL_SUCCESS);
         queue = clCreateCommandQueue(context, device, 0, &err);
         assert(err == CL_SUCCESS);
+
+        // Propel underlying OpenCL driver to enque kernels faster (pthread-based)
+        // FIMXE: workable on AMD platforms only
+        pthread_t self = pthread_self();
+        pthread_attr_t attr;
+        pthread_attr_init(&attr);
+        int result = -1;
+        // Get max priority
+        int policy = 0;
+        result = pthread_attr_getschedpolicy(&attr, &policy);
+        if (result != 0)
+          perror("getsched error!\n");
+        int max_prio = sched_get_priority_max(policy);
+
+        struct sched_param param;
+        // Get self priority
+        result = pthread_getschedparam(self, &policy, &param);
+        if (result != 0)
+          perror("getsched self error!\n");
+        int self_prio = param.sched_priority;
+#if 0
+        printf("self=%d, self_prio = %d,  max = %d\n", (int)self, self_prio, max_prio);
+#endif
+#define CL_QUEUE_THREAD_HANDLE_AMD 0x403E
+#define PRIORITY_OFFSET 2
+        void* handle=NULL;
+        cl_int status = clGetCommandQueueInfo (queue, CL_QUEUE_THREAD_HANDLE_AMD, sizeof(handle), &handle, NULL );
+        // Ensure it is valid
+        if (status == CL_SUCCESS && handle) {
+            pthread_t thId = (pthread_t)handle;
+            result = pthread_getschedparam(thId, &policy, &param);
+            if (result != 0)
+                perror("getsched q error!\n");
+            int que_prio = param.sched_priority;
+#if 0
+            printf("que=%d, que_prio = %d\n", (int)thId, que_prio);
+#endif
+            // Strategy to renew the que thread's priority, the smaller the highest
+            if (max_prio == que_prio) {
+            } else if (max_prio < que_prio && que_prio <= self_prio) {
+                // self    que    max
+                que_prio = (que_prio-PRIORITY_OFFSET)>0?(que_prio-PRIORITY_OFFSET):que_prio;
+            } else if (que_prio > self_prio) {
+                // que   self    max
+                que_prio = (self_prio-PRIORITY_OFFSET)>0?(self_prio-PRIORITY_OFFSET):self_prio;
+            } 
+            int result = pthread_setschedprio(thId, que_prio);
+            if (result != 0)
+                perror("Renew p error!\n");
+        } 
+        pthread_attr_destroy(&attr);
+
         // C++ AMP specifications
         // The maximum number of tiles per dimension will be no less than 65535.
         // The maximum number of threads in a tile will be no less than 1024.
@@ -113,27 +166,78 @@ public:
     void init(void *data, int count) {
         if (count > 0) {
             cl_int err;
-            cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, count, data, &err);
+            cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, nullptr, &err);
+            rwq[data] = {count, false, false};
             assert(err == CL_SUCCESS);
             mem_info[data] = dm;
         }
     }
-    void append(void *kernel, int idx, void *data) {
+    void append(void *kernel, int idx, void *data, bool isArray) {
         PushArgImpl(kernel, idx, sizeof(cl_mem), &mem_info[data]);
+        auto it = rwq.find(data);
+        rw_info& rw = it->second;
+        if (!rw.dirty) {
+            rw.dirty = true;
+            if (!rw.discard || isArray) {
+                cl_int err;
+                err = clEnqueueWriteBuffer(queue, mem_info[data], CL_TRUE, 0,
+                                           rw.count, data, 0, NULL, NULL);
+                assert(err == CL_SUCCESS);
+            }
+            rw.discard = false;
+        }
     }
-    void write() {
-    }
-    void* device_data(void* data) {
+    void write() {}
+    void discard(void *data) {
         auto it = rwq.find(data);
         if (it != std::end(rwq)) {
-            return mem_info[data];
+            it->second.discard = true;
+            it->second.dirty = false;
         }
+    }
+    void stash(void *data) {
+        auto it = rwq.find(data);
+        if (it != std::end(rwq))
+            it->second.dirty = false;
+    }
+    void copy(void *dst, void *src, size_t count) {
+        auto it = rwq.find(src);
+        if (it == std::end(rwq))
+            return;
+        rw_info& rw = it->second;
+        if (rw.dirty) {
+            cl_int err = clEnqueueReadBuffer(queue, mem_info[src], CL_TRUE, 0,
+                                             count, dst, 0, NULL, NULL);
+            assert(err == CL_SUCCESS);
+        } else
+            memmove(dst, src, count);
+    }
+    void sync(void* data) {
+        auto it = rwq.find(data);
+        if (it == std::end(rwq))
+            return;
+        rw_info& rw = it->second;
+        if (rw.dirty && !rw.discard) {
+            cl_int err = clEnqueueReadBuffer(queue, mem_info[data], CL_TRUE, 0,
+                                             rw.count, data, 0, NULL, NULL);
+            assert(err == CL_SUCCESS);
+            rw.dirty = false;
+        }
+    }
+    void* device_data(void* data) {
+        auto it = mem_info.find(data);
+        if (it != std::end(mem_info))
+            return it->second;
         return NULL;
     }
-    void read() {
-    }
-    void discard(void *) {}
+    void read() {}
     void free(void *data) {
+        auto it = rwq.find(data);
+        if (it != std::end(rwq)) {
+            rw_info& rw = it->second;
+            sync(data);
+            rwq.erase(it);
+        }
         auto iter = mem_info.find(data);
         if (iter != std::end(mem_info)) {
             clReleaseMemObject(iter->second);
@@ -156,6 +260,7 @@ public:
     cl_command_queue queue;
     cl_program       program;
     std::map<void *, rw_info> rwq;
+    bool AMP_APU;
 };
 
 static OpenCLAMPAllocator amp;
@@ -366,7 +471,6 @@ void CLCompileKernels(cl_program& program, cl_context& context, cl_device_id& de
 
         } // if (precompiled_kernel) 
 
-
         __mcw_cxxamp_compiled = true;
         free(kernel_source);
         getKernelNames(program);
@@ -508,12 +612,8 @@ extern "C" void LaunchKernelImpl(void *kernel, size_t dim_ext, size_t *ext, size
       if(!is)
           local_size = NULL;
   }
-
-  aloc.write();
   err = clEnqueueNDRangeKernel(aloc.queue, (cl_kernel)kernel, dim_ext, NULL, ext, local_size, 0, NULL, NULL);
   assert(err == CL_SUCCESS);
-  aloc.read();
-  clFinish(aloc.queue);
 }
 
 extern "C" void *LaunchKernelAsyncImpl(void *ker, size_t nr_dim, size_t *global, size_t *local) {

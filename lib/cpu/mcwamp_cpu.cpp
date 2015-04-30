@@ -31,7 +31,7 @@ public:
   CPUAMPAllocator() {}
   void init(void *data, int count) {
   }
-  void append(void *kernel, int idx, void *data) {
+  void append(void *kernel, int idx, void *data, bool isArray) {
     rwq[data].used = true;
   }
   void write() {
@@ -44,6 +44,9 @@ public:
   }
   void *device_data(void *) { return nullptr; }
   void discard(void *) {}
+  void sync(void *) {}
+  void stash(void *) {}
+  void copy(void *, void*, size_t) {}
   void read() {
     for (auto& it : rwq) {
       rw_info& rw = it.second;

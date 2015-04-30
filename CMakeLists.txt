@@ -111,22 +111,6 @@ if ((NOT OPENCL_HEADER) OR (NOT OPENCL_LIBRARY))
   set(HAS_OPENCL 0)
 else ((NOT OPENCL_HEADER) OR (NOT OPENCL_LIBRARY))
   set(HAS_OPENCL 1)
-
-  # find detailed OpenCL version information
-  file(STRINGS "${OPENCL_HEADER}/cl.h" lines11 REGEX "CL_VERSION_1_1[ \t]*1")
-  if (lines11)
-    set (HAS_OPENCL11 1)
-  else (lines11)
-    set (HAS_OPENCL11 0)
-  endif (lines11)
-
-  file(STRINGS "${OPENCL_HEADER}/cl.h" lines12 REGEX "CL_VERSION_1_2[ \t]*1")
-  if (lines12)
-    set (HAS_OPENCL12 1)
-  else (lines12)
-    set (HAS_OPENCL12 0)
-  endif (lines12)
-
 endif ((NOT OPENCL_HEADER) OR (NOT OPENCL_LIBRARY))
 
 #################
@@ -159,7 +143,7 @@ if (NOT HSA_KMT_LIBRARY)
   MESSAGE("HSA Kernel library not found. Use -DHSA_KMT_LIBRARY_DIR=<path_to_libhsakmt.so.1>.")
 endif (NOT HSA_KMT_LIBRARY)
 
-find_program(HSAIL_COMPILER hsailasm PATHS ${HSAIL_COMPILER_DIR} ${HSAIL_ROOT}/bin)
+find_program(HSAIL_COMPILER HSAILasm PATHS ${HSAIL_COMPILER_DIR} ${HSAIL_ROOT}/bin)
 if (NOT HSAIL_COMPILER)
   MESSAGE("HSAIL compiler not found. Use -DHSAIL_COMPILER_DIR=<path_to_hsailasm>.")
 endif (NOT HSAIL_COMPILER)

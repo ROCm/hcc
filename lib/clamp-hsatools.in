@@ -1,5 +1,21 @@
 #!/bin/bash
-# Compiles an OpenCL file to HSAIL
+# Compiles an LLVM bitcode file to HSAIL
+
+# enable bash debugging
+KMDBSCRIPT="${KMDBSCRIPT:=0}"
+
+# dump the LLVM bitcode
+KMDUMPLLVM="${KMDUMPLLVM:=0}"
+
+# dump the brig
+KMDUMPBRIG="${KMDUMPBRIG:=0}"
+
+# pass extra options to llc
+KMLLOPT="${KMLLOPT:=""}"
+
+if [ $KMDBSCRIPT == "1" ]; then
+  set -x
+fi
 
 # check command line argument
 if [ "$#" -ne 1 ]; then
@@ -12,20 +28,42 @@ if [ ! -f $1 ]; then
   exit 1
 fi
 
-# Path to AMD OpenCL library builtins
-AMD_BUILTINS=@HSAIL_BIN@
+# Path to AMD library builtins
 if [ -d @LLVM_TOOLS_DIR@ ]; then
     NEWLIB=@CPPAMP_SOURCE_DIR@/lib
 else
     NEWLIB=@CMAKE_INSTALL_PREFIX@/lib
 fi
-# Path to HSAIL backend (LLVM-3.2-based)
+# Path to HSAIL backend (LLVM-3.6-based)
 LLVM_BIN=@HSAIL_BIN@
 # Path to HSAILASM
 HSAIL_ASM=@HSAIL_COMPILER@
-$LLVM_BIN/llvm-link -prelink-opt -o $1.linked.bc $1 -l $AMD_BUILTINS/builtins-hsail.bc
-$LLVM_BIN/opt -O3 -gpu -whole -verify $1.linked.bc -o $1.opt.bc
-$LLVM_BIN/llc -O2 -march=hsail-64 -filetype=obj -o $1.brig $1.opt.bc
-$HSAIL_ASM -disassemble -o $1.hsail $1.brig
-cat $NEWLIB/new_delete.hsail >> $1.hsail
+
+if [ $KMDUMPLLVM == "1" ]; then
+  cp $1 ./dump.fe.bc
+fi
+
+$LLVM_BIN/llvm-link -suppress-warnings -o $1.linked.bc $1 $NEWLIB/builtins-hsail.opt.bc
+
+if [ $KMDUMPLLVM == "1" ]; then
+  cp $1.linked.bc ./dump.linked.bc
+fi
+
+$LLVM_BIN/opt -O3 -verify $1.linked.bc -o $1.opt.bc
+
+if [ $KMDUMPLLVM == "1" ]; then
+  cp $1.opt.bc ./dump.opt.bc
+fi
+
+$LLVM_BIN/llc -O2 -march=hsail64 -filetype=asm -o $1.hsail $1.opt.bc
+
+if [ $KMDUMPBRIG == "1" ]; then
+    cp $1.hsail ./dump.hsail
+fi
+
+#cat $NEWLIB/new_delete.hsail >> $1.hsail
 $HSAIL_ASM -assemble -o $1.brig $1.hsail
+
+if [ $KMDUMPBRIG == "1" ]; then
+    cp $1.brig ./dump.new_delete.brig
+fi
