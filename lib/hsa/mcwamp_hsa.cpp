@@ -222,11 +222,9 @@ extern "C" void LaunchKernelImpl(void *ker, size_t nr_dim, size_t *global, size_
   //  std::cerr << "g: " << global[i] << " l: " << local[i] << "\n";
   //}
   Concurrency::HSAAMPAllocator& aloc = Concurrency::getHSAAMPAllocator();
-  aloc.write();
   dispatch->setLaunchAttributes(nr_dim, global, local);
   //std::cerr << "Now real launch\n";
   dispatch->dispatchKernelWaitComplete();
-  aloc.read();
 }
 
 extern "C" void *LaunchKernelAsyncImpl(void *ker, size_t nr_dim, size_t *global, size_t *local)
@@ -242,7 +240,6 @@ extern "C" void *LaunchKernelAsyncImpl(void *ker, size_t nr_dim, size_t *global,
   //  std::cerr << "g: " << global[i] << " l: " << local[i] << "\n";
   //}
   Concurrency::HSAAMPAllocator& aloc = Concurrency::getHSAAMPAllocator();
-  aloc.write();
   dispatch->setLaunchAttributes(nr_dim, global, local);
   std::shared_future<void>* fut = dispatch->dispatchKernelAndGetFuture();
   // FIXME what about aloc.read() ??
