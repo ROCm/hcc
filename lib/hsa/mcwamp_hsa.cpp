@@ -74,6 +74,7 @@ struct rw_info
 class HSAAMPAllocator : public AMPAllocator
 { 
 public:
+  void* getQueue() { return nullptr; }
   HSAAMPAllocator() {}
   void init(void *data, int count) {
     //std::cerr << "HSAAMPAllocator::init()" << std::endl;
@@ -84,7 +85,7 @@ public:
     mem_info[data] = p;
     //std::cerr << "add to rwq: " << data << " - " << p << std::endl;
   }
-  void append(void *kernel, int idx, void *data) {
+  void append(void *kernel, int idx, void *data, bool isArray) {
     PushArgImpl(kernel, idx, sizeof(void*), &mem_info[data]);
     rwq[data].used = true;
   }
@@ -99,6 +100,17 @@ public:
         }
       }
     }
+  }
+  void discard(void *data) {
+  }
+  void stash(void *data) {
+  }
+  void copy(void *dst, void *src, size_t count) {
+  }
+  void sync(void *data) {
+  }
+  void* device_data(void* data) {
+    return data;
   }
   void read() {
     //std::cerr << "HSAAMPAllocator::read()" << std::endl;
