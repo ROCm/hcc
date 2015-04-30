@@ -53,6 +53,7 @@ struct rw_info
     int count;
     bool discard;
     bool dirty;
+    bool del;
 };
 
 struct DimMaxSize {
@@ -163,14 +164,19 @@ public:
         d.maxSizes = maxSizes;
         Clid2DimSizeMap[device] = d;
     }
-    void init(void *data, int count) {
+    void *init(int count, void* data) {
         if (count > 0) {
             cl_int err;
             cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, nullptr, &err);
-            rwq[data] = {count, false, false};
             assert(err == CL_SUCCESS);
+            if (data == nullptr) {
+                data = aligned_alloc(0x1000, count);
+                rwq[data] = {count, false, false, true};
+            } else
+                rwq[data] = {count, false, false, false};
             mem_info[data] = dm;
         }
+        return data;
     }
     void append(void *kernel, int idx, void *data, bool isArray) {
         PushArgImpl(kernel, idx, sizeof(cl_mem), &mem_info[data]);
@@ -233,7 +239,10 @@ public:
         auto it = rwq.find(data);
         if (it != std::end(rwq)) {
             rw_info& rw = it->second;
-            sync(data);
+            if (rw.del)
+                ::operator delete(data);
+            else
+                sync(data);
             rwq.erase(it);
         }
         auto iter = mem_info.find(data);
