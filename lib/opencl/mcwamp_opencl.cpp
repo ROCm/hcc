@@ -187,7 +187,6 @@ public:
             rw.discard = false;
         }
     }
-    void write() {}
     void discard(void *data) {
         auto it = rwq.find(data);
         if (it != std::end(rwq)) {
@@ -230,7 +229,6 @@ public:
             return it->second;
         return NULL;
     }
-    void read() {}
     void free(void *data) {
         auto it = rwq.find(data);
         if (it != std::end(rwq)) {
@@ -260,7 +258,6 @@ public:
     cl_command_queue queue;
     cl_program       program;
     std::map<void *, rw_info> rwq;
-    bool AMP_APU;
 };
 
 static OpenCLAMPAllocator amp;
