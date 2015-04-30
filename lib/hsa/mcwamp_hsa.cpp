@@ -66,82 +66,53 @@ void RegisterMemory(void *p, size_t sz)
 ///
 namespace Concurrency {
 
-struct rw_info
+struct mm_info
 {
-  int count;
-  bool used;
+    void* data;
+    int count;
 };
 class HSAAMPAllocator : public AMPAllocator
 { 
-public:
-  void* getQueue() { return nullptr; }
-  HSAAMPAllocator() {}
-  void init(void *data, int count) {
-    //std::cerr << "HSAAMPAllocator::init()" << std::endl;
-    void *p = aligned_alloc(0x1000, count);
-    assert(p);
-    CLAMP::RegisterMemory(p, count);
-    rwq[data] = {count, false};
-    mem_info[data] = p;
-    //std::cerr << "add to rwq: " << data << " - " << p << std::endl;
-  }
-  void append(void *kernel, int idx, void *data, bool isArray) {
-    PushArgImpl(kernel, idx, sizeof(void*), &mem_info[data]);
-    rwq[data].used = true;
-  }
-  void write() {
-    //std::cerr << "HSAAMPAllocator::write()" << std::endl;
-    for (auto& it : rwq) {
-      rw_info& rw = it.second;
-      if (rw.used) {
-        //std::cerr << "copy from: " << mem_info[it.first] << " to: " << it.first << " size: " << rw.count << std::endl;
-        if (it.first != mem_info[it.first]) {
-          memcpy(mem_info[it.first], it.first, rw.count);
-        }
-      }
+private:
+    void regist(int count, void *data, bool hasSrc) {
+        //std::cerr << "HSAAMPAllocator::init()" << std::endl;
+        void* p = data;
+        if (hasSrc)
+            p = aligned_alloc(0x1000, count);
+        assert(p);
+        CLAMP::RegisterMemory(p, count);
+        rwq[data] = {p, count};
     }
-  }
-  void discard(void *data) {
-  }
-  void stash(void *data) {
-  }
-  void copy(void *dst, void *src, size_t count) {
-  }
-  void sync(void *data) {
-  }
-  void* device_data(void* data) {
-    return data;
-  }
-  void read() {
-    //std::cerr << "HSAAMPAllocator::read()" << std::endl;
-    for (auto& it : rwq) {
-      rw_info& rw = it.second;
-      if (rw.used) {
-        //std::cerr << "copy from: " << mem_info[it.first] << " to: " << it.first << " size: " << rw.count << std::endl;
-        if (it.first != mem_info[it.first]) {
-          memcpy(it.first, mem_info[it.first], rw.count);
-        }
-        rw.used = false;
-      }
+    void append(void *kernel, int idx, std::shared_ptr<void> mm) {
+        PushArgImpl(kernel, idx, sizeof(void*), &mem_info[mm.get()].data);
     }
-  }
-  void free(void *data) {
-    //std::cerr << "HSAAMPAllocator::free()" << std::endl;
-    //std::cerr << "data: " << data << std::endl;
-    auto iter = mem_info.find(data);
-    if (iter != mem_info.end()) {
-      free(iter->second);
-      mem_info.erase(iter);
+    void amp_write(void *data) {
+        auto it = mem_info.find(data);
+        mm_info &rw = it->second;
+        if (rw.data != data)
+            memmove(rw.data, data, rw.count);
     }
-  }
-  ~HSAAMPAllocator() {
-    // FIXME add more proper cleanup
-    mem_info.clear();
-    rwq.clear();
-  }
+    void amp_read(void *data) {
+        auto it = mem_info.find(data);
+        mm_info &rw = it->second;
+        if (rw.data != data)
+            memmove(data, rw.data, rw.count);
+    }
+    void amp_copy(void *dst, void *src, int n) {
+        auto it = mem_info.find(src);
+        mm_info &rw = it->second;
+        if (rw.data != src)
+            memmove(dst, rw.data, n);
+    }
+    void unregist(void *data) {
+        auto it = mem_info.find(src);
+        mm_info &rw = it->second;
+        if (rw.data != data)
+            ::operator delete(rw.data);
+        mem_info.erase(it);
+    }
 
-  std::map<void *, void*> mem_info;
-  std::map<void *, rw_info> rwq;
+    std::map<void *, mm_info> mem_info;
 };
 
 static HSAAMPAllocator amp;
