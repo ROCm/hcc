@@ -29,7 +29,10 @@ class CPUAMPAllocator : public AMPAllocator
 public:
   void* getQueue() { return nullptr; }
   CPUAMPAllocator() {}
-  void init(void *data, int count) {
+  void *init(int count, void *data) {
+      if (data == nullptr)
+          data = aligned_alloc(0x1000, count);
+      return data;
   }
   void append(void *kernel, int idx, void *data, bool isArray) {
     rwq[data].used = true;
