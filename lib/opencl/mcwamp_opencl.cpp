@@ -71,7 +71,6 @@ void ReleaseKernelObject() {
 class OpenCLAMPAllocator : public AMPAllocator
 {
 public:
-    void* getQueue() override { return queue; }
     OpenCLAMPAllocator() {
         cl_uint          num_platforms;
         cl_int           err;
@@ -162,37 +161,36 @@ public:
         d.maxSizes = maxSizes;
         Clid2DimSizeMap[device] = d;
     }
-    void regist(int count, void* data) override {
+private:
+    void* getQueue() override { return queue; }
+    void regist(int count, void* data, bool hasSource /* unused */) override {
         cl_int err;
         cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, nullptr, &err);
         assert(err == CL_SUCCESS);
         mem_info[data] = {dm, count};
     }
-    void PushArg(void *kernel, int idx, void *data) override {
-        PushArgImpl(kernel, idx, sizeof(cl_mem), &mem_info[data].dm);
+    void PushArg(void *kernel, int idx, std::shared_ptr<void> data) override {
+        PushArgImpl(kernel, idx, sizeof(cl_mem), &mem_info[data.get()].dm);
     }
     void amp_write(void *data) override {
         cl_int err;
         auto iter = mem_info.find(data);
         obj_info& obj = iter->second;
-        err = clEnqueueWriteBuffer(queue, obj.dm, CL_TRUE, 0,
-                                   obj.count, data, 0, NULL, NULL);
+        err = clEnqueueWriteBuffer(queue, obj.dm, CL_TRUE, 0, obj.count, data, 0, NULL, NULL);
         assert(err == CL_SUCCESS);
     }
     void amp_read(void *data) override {
         cl_int err;
         auto iter = mem_info.find(data);
         obj_info& obj = iter->second;
-        err = clEnqueueReadBuffer(queue, obj.dm, CL_TRUE, 0,
-                                  obj.count, data , 0, NULL, NULL);
+        err = clEnqueueReadBuffer(queue, obj.dm, CL_TRUE, 0, obj.count, data, 0, NULL, NULL);
         assert(err == CL_SUCCESS);
     }
-    void amp_read(void *dst, void *src, int count) override {
+    void amp_copy(void *dst, void *src, int count) override {
         cl_int err;
         auto iter = mem_info.find(src);
         obj_info& obj = iter->second;
-        err = clEnqueueReadBuffer(queue, obj.dm, CL_TRUE, 0,
-                                  count, src , 0, NULL, NULL);
+        err = clEnqueueReadBuffer(queue, obj.dm, CL_TRUE, 0, count, dst , 0, NULL, NULL);
         assert(err == CL_SUCCESS);
     }
     void* _device_data(void* data) override {
@@ -208,6 +206,11 @@ public:
             mem_info.erase(iter);
         }
     }
+
+
+    std::map<void *, obj_info> mem_info;
+public:
+
     ~OpenCLAMPAllocator() {
         clReleaseProgram(program);
         clReleaseCommandQueue(queue);
@@ -217,8 +220,6 @@ public:
                 delete[] it.second.maxSizes;
         ReleaseKernelObject();
     }
-
-    std::map<void *, obj_info> mem_info;
     cl_context       context;
     cl_device_id     device;
     cl_command_queue queue;

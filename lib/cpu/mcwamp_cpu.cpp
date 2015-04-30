@@ -19,9 +19,53 @@ extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v) {}
 
 namespace Concurrency {
 
-static AMPAllocator amp;
+struct mm_info
+{
+    void* data;
+    int count;
+};
 
-AMPAllocator& getCPUAMPAllocator() {
+class CPUAMPAllocator : public AMPAllocator
+{
+    void regist(int count, void *data, bool hasSrc) {
+        void *p = data;
+        if (hasSrc)
+              p = aligned_alloc(0x1000, count);
+        mem_info[data] = {p, count};
+    }
+    void PushArg(void *kernel, int idx, const std::shared_ptr<void> data) {}
+    void amp_write(void *data) {
+        auto it = mem_info.find(data);
+        mm_info &rw = it->second;
+        if (rw.data != data)
+            memmove(rw.data, data, rw.count);
+    }
+    void amp_read(void *data) {
+        auto it = mem_info.find(data);
+        mm_info &rw = it->second;
+        if (rw.data != data)
+            memmove(data, rw.data, rw.count);
+    }
+    void amp_copy(void *dst, void *src, int n) {
+        auto it = mem_info.find(src);
+        mm_info &rw = it->second;
+        if (rw.data != src)
+            memmove(dst, rw.data, n);
+    }
+    void unregist(void *data) {
+        auto it = mem_info.find(data);
+        mm_info &rw = it->second;
+        if (rw.data != data)
+            ::operator delete(rw.data);
+        mem_info.erase(it);
+    }
+
+    std::map<void *, mm_info> mem_info;
+};
+
+static CPUAMPAllocator amp;
+
+CPUAMPAllocator& getCPUAMPAllocator() {
   return amp;
 }
 

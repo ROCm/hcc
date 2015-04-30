@@ -7,7 +7,7 @@ struct rw_info
 {
     bool discard;
     bool dirty;
-    bool del;
+    bool hasSrc;
 };
 
 class AMPAllocator {
@@ -16,18 +16,18 @@ public:
 
   void *init(int count, void* data) {
       if (count > 0) {
-          if (data == nullptr) {
+          bool hasSrc = data != nullptr;
+          if (!hasSrc)
               data = aligned_alloc(0x1000, count);
-              rwq[data] = {false, false, true};
-          } else
-              rwq[data] = {false, false, false};
-          regist(count, data);
+          regist(count, data, hasSrc);
+          rwq[data] = {false, false, hasSrc};
       }
       return data;
   }
 
-  void append(void* kernel, int idx, void* data, bool isArray) {
-      PushArg(kernel, idx, data);
+  void append(void* kernel, int idx, std::shared_ptr<void> mm, bool isArray) {
+      PushArg(kernel, idx, mm);
+      void *data = mm.get();
       auto it = rwq.find(data);
       if (it != std::end(rwq)) {
           rw_info& rw = it->second;
@@ -74,16 +74,16 @@ public:
   }
 
   void free(void* data) {
+      unregist(data);
       auto it = rwq.find(data);
       if (it != std::end(rwq)) {
           rw_info& rw = it->second;
-          if (rw.del)
-              ::operator delete(data);
-          else
+          if (rw.hasSrc)
               sync(data);
+          else
+              ::operator delete(data);
           rwq.erase(it);
       }
-      unregist(data);
   }
 
 
@@ -96,12 +96,12 @@ private:
   virtual void* _getQueue() { return nullptr; }
   virtual void* _device_data(void *data) { return nullptr; }
   // overide function
-  virtual void regist(int count, void *data) {};
-  virtual void PushArg(void* kernel, int idx, void* data) {}
-  virtual void amp_write(void *data) {};
-  virtual void amp_read(void *data) {}
-  virtual void amp_copy(void *dst, void *src, int n) {};
-  virtual void unregist(void *data) {};
+  virtual void regist(int count, void *data, bool hasSrc) = 0;
+  virtual void PushArg(void* kernel, int idx, std::shared_ptr<void> data) = 0;
+  virtual void amp_write(void *data) = 0;
+  virtual void amp_read(void *data) = 0;
+  virtual void amp_copy(void *dst, void *src, int n) = 0;
+  virtual void unregist(void *data) = 0;
 };
 
 AMPAllocator *getAllocator();

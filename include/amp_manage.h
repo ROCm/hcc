@@ -69,7 +69,7 @@ public:
 
     __attribute__((annotate("serialize")))
         void __cxxamp_serialize(Serialize& s) const {
-            getAllocator()->append(s.getKernel(), s.getAndIncCurrentIndex(), mm.get(), isArray);
+            getAllocator()->append(s.getKernel(), s.getAndIncCurrentIndex(), mm, isArray);
         }
     __attribute__((annotate("user_deserialize")))
         explicit _data_host(__global T* t);
