@@ -169,7 +169,7 @@ private:
         assert(err == CL_SUCCESS);
         mem_info[data] = {dm, count};
     }
-    void PushArg(void *kernel, int idx, std::shared_ptr<void> data) override {
+    void PushArg(void *kernel, int idx, std::shared_ptr<void>& data) override {
         PushArgImpl(kernel, idx, sizeof(cl_mem), &mem_info[data.get()].dm);
     }
     void amp_write(void *data) override {

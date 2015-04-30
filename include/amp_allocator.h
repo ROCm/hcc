@@ -5,9 +5,10 @@ namespace Concurrency {
 
 struct rw_info
 {
-    bool discard;
-    bool dirty;
-    bool hasSrc;
+    unsigned int ref : 5;
+    unsigned int discard : 1;
+    unsigned int dirty : 1;
+    unsigned int hasSrc : 1;
 };
 
 class AMPAllocator {
@@ -16,17 +17,21 @@ public:
 
   void *init(int count, void* data) {
       if (count > 0) {
+          auto it = rwq.find(data);
+          if (std::end(rwq) != it) {
+              ++it->second.ref;
+              return data;
+          }
           bool hasSrc = data != nullptr;
           if (!hasSrc)
               data = aligned_alloc(0x1000, count);
           regist(count, data, hasSrc);
-          rwq[data] = {false, false, hasSrc};
+          rwq[data] = {1, false, false, hasSrc};
       }
       return data;
   }
 
-  void append(void* kernel, int idx, std::shared_ptr<void> mm, bool isArray) {
-      PushArg(kernel, idx, mm);
+  void append(void* kernel, int idx, std::shared_ptr<void>& mm, bool isArray) {
       void *data = mm.get();
       auto it = rwq.find(data);
       if (it != std::end(rwq)) {
@@ -38,6 +43,7 @@ public:
               rw.discard = false;
           }
       }
+      PushArg(kernel, idx, mm);
   }
 
   void discard(void *data) {
@@ -63,6 +69,10 @@ public:
   }
 
   void sync(void* data) {
+#ifdef __AMP_CPU__
+      if (CLAMP::in_cpu_kernel())
+          return;
+#endif
       auto it = rwq.find(data);
       if (it != std::end(rwq)) {
           rw_info& rw = it->second;
@@ -74,30 +84,33 @@ public:
   }
 
   void free(void* data) {
-      unregist(data);
       auto it = rwq.find(data);
+      void* p = data;
       if (it != std::end(rwq)) {
           rw_info& rw = it->second;
-          if (rw.hasSrc)
+          if (rw.hasSrc) {
               sync(data);
-          else
-              ::operator delete(data);
-          rwq.erase(it);
+              p = nullptr;
+          }
+          if (!--rw.ref) {
+              rwq.erase(it);
+              unregist(data);
+              if (p)
+                  ::operator delete(p);
+          }
       }
   }
-
 
   void* device_data(void* data) { return _device_data(data); }
   void* getQueue() { return _getQueue(); }
 private:
-
   std::map<void *, rw_info> rwq;
 
   virtual void* _getQueue() { return nullptr; }
   virtual void* _device_data(void *data) { return nullptr; }
   // overide function
   virtual void regist(int count, void *data, bool hasSrc) = 0;
-  virtual void PushArg(void* kernel, int idx, std::shared_ptr<void> data) = 0;
+  virtual void PushArg(void* kernel, int idx, std::shared_ptr<void>& data) = 0;
   virtual void amp_write(void *data) = 0;
   virtual void amp_read(void *data) = 0;
   virtual void amp_copy(void *dst, void *src, int n) = 0;

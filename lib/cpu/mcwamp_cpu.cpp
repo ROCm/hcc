@@ -27,43 +27,49 @@ struct mm_info
 
 class CPUAMPAllocator : public AMPAllocator
 {
-    void regist(int count, void *data, bool hasSrc) {
+    void regist(int count, void *data, bool hasSrc) override {
         if (hasSrc) {
             std::shared_ptr<void> p((void*)aligned_alloc(0x1000, count),
                                     [](void *ptr) { ::operator delete(ptr); });
             mem_info[data] = {p, count};
         }
     }
-    void PushArg(void *kernel, int idx, std::shared_ptr<void> data) {
+    void PushArg(void *kernel, int idx, std::shared_ptr<void>& data) override {
         auto it = mem_info.find(data.get());
         if (it != std::end(mem_info)) {
             mm_info &rw = it->second;
-            data.swap(rw.data);
+            if (rw.count != 0) {
+                mem_info[rw.data.get()] = {data, 0};
+                rw.data.swap(data);
+            } else {
+                mem_info[mem_info[data.get()].data.get()].data.swap(data);
+                mem_info.erase(it);
+            }
         }
     }
-    void amp_write(void *data) {
+    void amp_write(void *data) override {
         auto it = mem_info.find(data);
         if (it != std::end(mem_info)) {
             mm_info &rw = it->second;
             memmove(rw.data.get(), data, rw.count);
         }
     }
-    void amp_read(void *data) {
+    void amp_read(void *data) override {
         auto it = mem_info.find(data);
         if (it != std::end(mem_info)) {
             mm_info &rw = it->second;
             memmove(data, rw.data.get(), rw.count);
         }
     }
-    void amp_copy(void *dst, void *src, int n) {
+    void amp_copy(void *dst, void *src, int n) override {
         auto it = mem_info.find(src);
         if (it != std::end(mem_info)) {
             mm_info &rw = it->second;
-            memmove(dst, rw.data.get(), n);
-        } else
-            memmove(dst, src, n);
+            src = rw.data.get();
+        }
+        memmove(dst, src, n);
     }
-    void unregist(void *data) {
+    void unregist(void *data) override {
         auto it = mem_info.find(data);
         if (it != std::end(mem_info))
             mem_info.erase(it);
