@@ -118,7 +118,7 @@ public:
     //std::cerr << "data: " << data << std::endl;
     auto iter = mem_info.find(data);
     if (iter != mem_info.end()) {
-      std::free(iter->second);
+      free(iter->second);
       mem_info.erase(iter);
     }
   }
