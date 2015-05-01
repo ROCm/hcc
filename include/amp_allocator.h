@@ -16,6 +16,15 @@ public:
   virtual ~AMPAllocator() {}
 
   void *init(int count, void* data) {
+#ifdef __AMP_CPU__
+      if (CLAMP::in_cpu_kernel()) {
+          if (data == nullptr) {
+              data = aligned_alloc(0x1000, count);
+              rwq[data] = {1, false, false, false};
+          }
+          return data;
+      }
+#endif
       if (count > 0) {
           auto it = rwq.find(data);
           if (std::end(rwq) != it) {
@@ -88,15 +97,22 @@ public:
       void* p = data;
       if (it != std::end(rwq)) {
           rw_info& rw = it->second;
+#ifdef __AMP_CPU__
+          if (CLAMP::in_cpu_kernel()) {
+              ::operator delete(data);
+              rwq.erase(it);
+              return;
+          }
+#endif
           if (rw.hasSrc) {
               sync(data);
               p = nullptr;
           }
           if (!--rw.ref) {
-              rwq.erase(it);
               unregist(data);
               if (p)
                   ::operator delete(p);
+              rwq.erase(it);
           }
       }
   }

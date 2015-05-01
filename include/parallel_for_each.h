@@ -405,6 +405,7 @@ __attribute__((noinline,used)) void parallel_for_each(
 #ifdef __AMP_CPU__
   if (CLAMP::is_cpu()) {
       launch_cpu_task(compute_domain, f);
+      return;
   }
 #endif
   size_t ext[2] = {static_cast<size_t>(compute_domain[1]),
