@@ -23,6 +23,7 @@ struct mm_info
 {
     std::shared_ptr<void> data;
     int count;
+    int ref;
 };
 
 class CPUAMPAllocator : public AMPAllocator
@@ -31,7 +32,7 @@ class CPUAMPAllocator : public AMPAllocator
         if (hasSrc) {
             std::shared_ptr<void> p((void*)aligned_alloc(0x1000, count),
                                     [](void *ptr) { ::operator delete(ptr); });
-            mem_info[data] = {p, count};
+            mem_info[data] = {p, count, 1};
         }
     }
     void PushArg(void *kernel, int idx, std::shared_ptr<void>& data) override {
@@ -39,11 +40,16 @@ class CPUAMPAllocator : public AMPAllocator
         if (it != std::end(mem_info)) {
             mm_info &rw = it->second;
             if (rw.count != 0) {
-                mem_info[rw.data.get()] = {data, 0};
-                rw.data.swap(data);
+                auto iter = mem_info.find(rw.data.get());
+                if (iter == std::end(mem_info))
+                    mem_info[rw.data.get()] = {data, 0, 1};
+                else
+                    ++iter->second.ref;
+                data = rw.data;
             } else {
-                mem_info[mem_info[data.get()].data.get()].data.swap(data);
-                mem_info.erase(it);
+                data = mem_info[rw.data.get()].data;
+                if (!--rw.ref)
+                    mem_info.erase(it);
             }
         }
     }
