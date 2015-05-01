@@ -324,6 +324,11 @@ bool is_cpu()
     return GetOrInitRuntime()->is_cpu();
 }
 
+static bool in_kernel = false;
+bool in_cpu_kernel() { return in_kernel; }
+void enter_kernel() { in_kernel = true; }
+void leave_kernel() { in_kernel = false; }
+
 // used in amp_impl.h
 void QueryDeviceInfo(const std::wstring& device_path,
   bool& supports_cpu_shared_memory,

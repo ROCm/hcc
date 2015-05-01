@@ -16,7 +16,11 @@ extern void QueryDeviceInfo(const std::wstring&, bool&, size_t&, bool&, std::wst
 // used in parallel_for_each.h
 #ifdef __AMP_CPU__
 extern bool is_cpu();
+extern bool in_cpu_kernel();
+extern void enter_kernel();
+extern void leave_kernel();
 #endif
+
 extern void *CreateKernel(std::string);
 extern void LaunchKernel(void *, size_t, size_t *, size_t *);
 extern std::shared_future<void>* LaunchKernelAsync(void *, size_t, size_t *, size_t *);

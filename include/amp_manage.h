@@ -5,10 +5,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef __AMP_CPU__
-#include <amp_cpu_manage.h>
-#else
-
 #pragma once
 
 #include <amp_allocator.h>
@@ -34,38 +30,32 @@ private:
 };
 
 
-static inline void amp_no_delete(void *p)
-{
-    getAllocator()->sync(p);
-    getAllocator()->free(p);
-}
-
-static inline void amp_delete(void *p)
-{
-    amp_no_delete(p);
-    operator delete(p);
-}
+static inline void amp_delete(void *p) { getAllocator()->free(p); }
 
 template <typename T>
 class _data_host {
-    std::shared_ptr<void> mm;
+    mutable std::shared_ptr<void> mm;
     size_t count;
     bool isArray;
     template <typename U> friend class _data_host;
+
 public:
     _data_host(int count, bool isArr = false)
-        : mm(aligned_alloc(0x1000, count * sizeof(T)), amp_delete), count(count),
-        isArray(isArr) { getAllocator()->init(mm.get(), count * sizeof(T)); }
+        : mm(getAllocator()->init(count * sizeof(T), nullptr), amp_delete),
+        count(count), isArray(isArr) {}
+
     _data_host(int count, T* src, bool isArr = false)
-        : mm(src, amp_no_delete), count(count), isArray(isArr)
-    { getAllocator()->init(mm.get(), count * sizeof(T)); }
+        : mm(getAllocator()->init(count * sizeof(T), src), amp_delete),
+        count(count), isArray(isArr) {}
+
     _data_host(const _data_host& other)
         : mm(other.mm), count(other.count), isArray(false) {}
+
     template <typename U>
         _data_host(const _data_host<U>& other)
         : mm(other.mm), count(other.count), isArray(false) {}
 
-    T *get() const { return (T *)mm.get(); }
+    T *get() const { return static_cast<T*>(mm.get()); }
     void synchronize() const { getAllocator()->sync(mm.get()); }
     void discard() const { getAllocator()->discard(mm.get()); }
     void refresh() const {}
@@ -75,14 +65,13 @@ public:
 
     __attribute__((annotate("serialize")))
         void __cxxamp_serialize(Serialize& s) const {
-            getAllocator()->append(s.getKernel(), s.getAndIncCurrentIndex(), mm.get(), isArray);
+            getAllocator()->append(s.getKernel(), s.getAndIncCurrentIndex(), mm, isArray);
         }
     __attribute__((annotate("user_deserialize")))
-        explicit _data_host(__global T* t);
+        explicit _data_host(__global T* t) {}
 };
 
 inline void *getDevicePointer(void *ptr) { return getAllocator()->device_data(ptr); }
 inline void *getOCLQueue(void *ptr) { return getAllocator()->getQueue(); }
 
 } // namespace Concurrency
-#endif
