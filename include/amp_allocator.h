@@ -41,7 +41,6 @@ public:
   }
 
   void append(void* kernel, int idx, std::shared_ptr<void>& mm, bool isArray) {
-      PushArg(kernel, idx, mm);
       void *data = mm.get();
       auto it = rwq.find(data);
       if (it != std::end(rwq)) {
@@ -53,6 +52,7 @@ public:
               rw.discard = false;
           }
       }
+      PushArg(kernel, idx, mm);
   }
 
   void discard(void *data) {
