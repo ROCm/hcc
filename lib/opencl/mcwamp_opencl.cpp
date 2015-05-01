@@ -224,6 +224,7 @@ public:
     cl_device_id     device;
     cl_command_queue queue;
     cl_program       program;
+    std::map<void *, rw_info> rwq;
 };
 
 static OpenCLAMPAllocator amp;
