@@ -271,10 +271,12 @@ template <int N, typename Kernel>
 __attribute__((noinline,used)) void parallel_for_each(
     extent<N> compute_domain, const Kernel& f) restrict(cpu, amp) {
 #ifndef __GPU__
+#ifdef __AMP_CPU__
     int* foo1 = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
     auto bar = &pfe_wrapper<N, Kernel>::operator();
     auto qq = &index<N>::__cxxamp_opencl_index;
     int* foo = reinterpret_cast<int*>(&pfe_wrapper<N, Kernel>::__cxxamp_trampoline);
+#endif
 
     size_t compute_domain_size = 1;
     for(int i = 0 ; i < N ; i++)
@@ -300,7 +302,9 @@ __attribute__((noinline,used)) void parallel_for_each(
     const pfe_wrapper<N, Kernel> _pf(compute_domain, f);
     mcw_cxxamp_launch_kernel<pfe_wrapper<N, Kernel>, 3>(ext, NULL, _pf);
 #else
+#ifdef __AMP_CPU__
     int* foo1 = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
+#endif
     auto bar = &pfe_wrapper<N, Kernel>::operator();
     auto qq = &index<N>::__cxxamp_opencl_index;
     int* foo = reinterpret_cast<int*>(&pfe_wrapper<N, Kernel>::__cxxamp_trampoline);
@@ -332,7 +336,9 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
     const pfe_wrapper<N, Kernel> _pf(compute_domain, f);
     return completion_future(std::shared_future<void>(*mcw_cxxamp_launch_kernel_async<pfe_wrapper<N, Kernel>, 3>(ext, NULL, _pf)));
 #else
+#ifdef __AMP_CPU__
   int* foo1 = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
+#endif
     auto bar = &pfe_wrapper<N, Kernel>::operator();
     auto qq = &index<N>::__cxxamp_opencl_index;
     int* foo = reinterpret_cast<int*>(&pfe_wrapper<N, Kernel>::__cxxamp_trampoline);
