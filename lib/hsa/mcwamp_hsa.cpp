@@ -74,6 +74,9 @@ struct mm_info
 class HSAAMPAllocator : public AMPAllocator
 { 
 private:
+    void PushArg(void *kernel, int idx, std::shared_ptr<void>& data) override {
+        PushArgImpl(kernel, idx, sizeof(void*), &mem_info[data.get()].data);
+    }
     void regist(int count, void *data, bool hasSrc) override {
         //std::cerr << "HSAAMPAllocator::init()" << std::endl;
         void* p = data;
@@ -81,7 +84,7 @@ private:
             p = aligned_alloc(0x1000, count);
         assert(p);
         CLAMP::RegisterMemory(p, count);
-        rwq[data] = {p, count};
+        mem_info[data] = {p, count};
     }
     void append(void *kernel, int idx, std::shared_ptr<void>& mm) override {
         PushArgImpl(kernel, idx, sizeof(void*), &mem_info[mm.get()].data);
@@ -104,7 +107,7 @@ private:
         memmove(dst, rw.data, n);
     }
     void unregist(void *data) override {
-        auto it = mem_info.find(src);
+        auto it = mem_info.find(data);
         mm_info &rw = it->second;
         if (rw.data != data)
             ::operator delete(rw.data);
