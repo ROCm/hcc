@@ -5,7 +5,7 @@ namespace Concurrency {
 
 struct rw_info
 {
-    unsigned int ref : 5;
+    unsigned int ref : 29;
     unsigned int discard : 1;
     unsigned int dirty : 1;
     unsigned int hasSrc : 1;
