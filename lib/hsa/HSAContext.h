@@ -74,6 +74,9 @@ public:
 
                 // dispatch a kernel asynchronously and get a future object
                 virtual std::shared_future<void>* dispatchKernelAndGetFuture() = 0;
+
+                // destructor
+                virtual ~Dispatch() {}
         };
 
 	class Kernel {

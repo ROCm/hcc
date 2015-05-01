@@ -161,6 +161,13 @@ private:
       std::shared_future<void> fut;
 
    public:
+      ~DispatchImpl() {
+         if (isDispatched) {
+           waitComplete();
+           dispose();
+         }
+      }
+
       DispatchImpl(const KernelImpl* _kernel) : kernel(_kernel), isDispatched(false) {
          context = _kernel->context;
          
