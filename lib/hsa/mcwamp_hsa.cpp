@@ -118,7 +118,7 @@ public:
     //std::cerr << "data: " << data << std::endl;
     auto iter = mem_info.find(data);
     if (iter != mem_info.end()) {
-      free(iter->second);
+      std::free(iter->second);
       mem_info.erase(iter);
     }
   }
@@ -187,6 +187,7 @@ extern "C" void *CreateKernelImpl(const char* s, void* kernel_size_, void* kerne
       //std::cerr << "CLAMP::HSA::Creating kernel: " << kname << "\n";
       kernel = Concurrency::CLAMP::GetOrInitHSAContext()->
           createKernel(kernel_source, kernel_size, kname.c_str());
+      free(kernel_source);
       if (!kernel) {
           std::cerr << "CLAMP::HSA: Unable to create kernel\n";
           abort();
@@ -227,6 +228,7 @@ extern "C" void LaunchKernelImpl(void *ker, size_t nr_dim, size_t *global, size_
   //std::cerr << "Now real launch\n";
   dispatch->dispatchKernelWaitComplete();
   aloc.read();
+  delete(dispatch);
 }
 
 extern "C" void *LaunchKernelAsyncImpl(void *ker, size_t nr_dim, size_t *global, size_t *local)

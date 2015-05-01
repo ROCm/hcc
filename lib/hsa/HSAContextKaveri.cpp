@@ -249,6 +249,7 @@ private:
          dispatchKernel();
          auto waitFunc = [&]() {
            this->waitComplete();
+           delete(this); // destruct DispatchImpl instance
          };
          std::packaged_task<void()> waitTask(waitFunc);
          this->fut = waitTask.get_future();
@@ -365,6 +366,7 @@ private:
 
          hsa_signal_store_relaxed(signal, 1);
          isDispatched = false;
+         dispose();
          return status; 
       }
 
@@ -372,6 +374,9 @@ private:
          hsa_status_t status;
          status = hsa_memory_deregister(arg_vec.data(), arg_vec.capacity() * sizeof(uint8_t));
          assert(status == HSA_STATUS_SUCCESS);
+         hsa_signal_destroy(aql.completion_signal);
+         clearArgs();
+         std::vector<uint8_t>().swap(arg_vec);
       }
 
    private:
