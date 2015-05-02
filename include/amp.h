@@ -1764,12 +1764,11 @@ public:
       }
 
   operator std::vector<T>() const {
+      std::vector<T> vec(extent.size());
 #ifndef __GPU__
-      m_device.synchronize();
+      m_device.copy(vec.data());
 #endif
-      T *begin = reinterpret_cast<T*>(m_device.get()),
-        *end = reinterpret_cast<T*>(m_device.get() + extent.size());
-      return std::vector<T>(begin, end);
+      return std::move(vec);
   }
 
   T* get_data() const restrict(amp,cpu) {
