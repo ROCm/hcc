@@ -18,14 +18,14 @@
 
 #define STATUS_CHECK(s,line) if (s != HSA_STATUS_SUCCESS) {\
 		printf("### Error: %d at line:%d\n", s, line);\
-                assert(HSA_STATUS_SUCCESS == hsa_close());\
+                assert(HSA_STATUS_SUCCESS == hsa_shut_down());\
 		exit(-1);\
 	}
 
 #define STATUS_CHECK_Q(s,line) if (s != HSA_STATUS_SUCCESS) {\
 		printf("### Error: %d at line:%d\n", s, line);\
                 assert(HSA_STATUS_SUCCESS == hsa_queue_destroy(commandQueue));\
-                assert(HSA_STATUS_SUCCESS == hsa_close());\
+                assert(HSA_STATUS_SUCCESS == hsa_shut_down());\
 		exit(-1);\
 	}
 
@@ -132,10 +132,10 @@ private:
          hsa_status_t status;
 
          status = hsa_executable_destroy(hsaExecutable);
-         STATUS_CHECK_Q(status, __LINE__);
+         STATUS_CHECK(status, __LINE__);
 
          status = hsa_code_object_destroy(hsaCodeObject);
-         STATUS_CHECK_Q(status, __LINE__);
+         STATUS_CHECK(status, __LINE__);
       }
 
    }; // end of KernelImpl
