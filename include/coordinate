@@ -9,6 +9,7 @@
 #define _LIBCPP_COORDINATE
 
 #include <initializer_list>
+#include <functional>
 #include <type_traits>
 #include <limits>
 #include <cassert>
@@ -16,35 +17,43 @@
 namespace std
 {
 
-struct random_access_iterator_tag;
+template <size_t...> struct __indices {};
 
-template <int...> struct __indices {};
-
-template <int _Sp, class _IntTuple, int _Ep>
+template <size_t _Sp, class _IntTuple, size_t _Ep>
 struct __make_indices_imp;
 
-template <int _Sp, int ..._Indices, int _Ep>
+template <size_t _Sp, size_t ..._Indices, size_t _Ep>
 struct __make_indices_imp<_Sp, __indices<_Indices...>, _Ep>
 {
     typedef typename __make_indices_imp<_Sp+1, __indices<_Indices..., _Sp>, _Ep>::type type;
 };
 
-template <int _Ep, int ..._Indices>
+template <size_t _Ep, size_t ..._Indices>
 struct __make_indices_imp<_Ep, __indices<_Indices...>, _Ep>
 {
     typedef __indices<_Indices...> type;
 };
 
-template <int _Ep, int _Sp = 0>
+template <size_t _Ep, size_t _Sp = 0>
 struct __make_indices
 {
     static_assert(_Sp <= _Ep, "__make_indices input error");
     typedef typename __make_indices_imp<_Sp, __indices<>, _Ep>::type type;
 };
 
-template <int N> class bounds;
+inline const bool coordinate_check() { return true; }
+template <typename ..._Tp>
+inline const bool coordinate_check(const bool& t, const _Tp&... tail)
+{
+    if (t)
+        return coordinate_check(tail...);
+    else
+        return false;
+}
 
-template <int _Ip>
+template <size_t N> class bounds;
+
+template <size_t _Ip>
 class __coordinate_leaf {
     ptrdiff_t __idx;
 public:
@@ -77,16 +86,6 @@ public:
 template <class ..._Tp>
 inline void __swallow(_Tp&&...) noexcept {}
 
-inline const bool coordinate_check() { return true; }
-template <typename ..._Tp>
-inline const bool coordinate_check(const bool& t, const _Tp&... tail)
-{
-    if (t)
-        return coordinate_check(tail...);
-    else
-        return false;
-}
-
 inline const ptrdiff_t coordinate_mul()
 {
     return 1;
@@ -101,14 +100,18 @@ inline const ptrdiff_t coordinate_mul(const ptrdiff_t& t, const _Tp&... tail)
 
 template <class _Indx> struct __coordinate_impl;
 
-template <int ...N>
+template <size_t ...N>
 struct __coordinate_impl<__indices<N...>>
     : public __coordinate_leaf<N>...
 {
 private:
-    template<class ..._Up> explicit __coordinate_impl(_Up... __u) : __coordinate_leaf<N>(__u)... {}
+    template<class ..._Up>
+        explicit __coordinate_impl(_Up... __u)
+        : __coordinate_leaf<N>(__u)... {}
+
 public:
-    __coordinate_impl() : __coordinate_leaf<N>(0)... {}
+    __coordinate_impl()
+        : __coordinate_leaf<N>(0)... {}
 
     __coordinate_impl(initializer_list<ptrdiff_t> il) :
         __coordinate_leaf<N>(*(il.begin() + N))... {}
@@ -116,13 +119,8 @@ public:
     __coordinate_impl(const __coordinate_impl& other)
         : __coordinate_impl(static_cast<const __coordinate_leaf<N>&>(other).get()...) {}
 
-    __coordinate_impl(ptrdiff_t component) : __coordinate_leaf<N>(component)... {}
-
-
-    bool operator==(const __coordinate_impl& __t) const noexcept {
-        return coordinate_check((static_cast<const __coordinate_leaf<N>&>(__t).get() ==
-                                 static_cast<const __coordinate_leaf<N>&>(*this).get())...);
-    }
+    __coordinate_impl(ptrdiff_t component)
+        : __coordinate_leaf<N>(component)... {}
 
     const ptrdiff_t& operator[] (size_t c) const {
         return static_cast<const __coordinate_leaf<0>&>(*((const __coordinate_leaf<0> *)this + c)).get();
@@ -181,35 +179,30 @@ public:
     }
 };
 
-template <int N>
-class index
+template <size_t N>
+class offset
 {
     static_assert(N >= 1, "Rank should be greater than or equal to 1");
     typedef __coordinate_impl<typename __make_indices<N>::type> base;
 
     base base_;
 
-    template <int K> friend class bounds;
+    template <size_t K> friend class bounds;
 
 public:
-    static constexpr int rank = N;
+    static constexpr size_t rank = N;
     using reference           = ptrdiff_t&;
     using const_reference     = const ptrdiff_t&;
     using size_type           = size_t;
     using value_type          = ptrdiff_t;
 
-    index() noexcept : base_() {}
+    offset() noexcept : base_() {}
 
-    template <int K = N, class = typename enable_if<K == 1>::type>
-    index(value_type v) noexcept : base_(v) {}
+    template <size_t K = N, class = typename enable_if<K == 1>::type>
+    offset(value_type v) noexcept : base_(v) {}
 
-    index(initializer_list<value_type> il) : base_(il)
+    offset(initializer_list<value_type> il) : base_(il)
     { assert(il.size() == N);};
-
-    bool operator==(const index& rhs) const noexcept
-    { return base_ == rhs.base_; }
-    bool operator!=(const index& rhs) const noexcept
-    { return !(*this == rhs); }
 
     reference       operator[](size_type n) {
         assert(n < N);
@@ -220,105 +213,135 @@ public:
         return base_[n];
     }
 
-    index  operator+(const index& rhs) const {
-        index __r(*this);
-        __r += rhs;
-        return __r;
-    }
-    index  operator-(const index& rhs) const {
-        index __r(*this);
-        __r -= rhs;
-        return __r;
-    }
-    index& operator+=(const index& rhs) {
+    offset& operator+=(const offset& rhs) {
         base_ += rhs.base_;
         return *this;
     }
-    index& operator-=(const index& rhs) {
+    offset& operator-=(const offset& rhs) {
         base_ -= rhs.base_;
         return *this;
     }
 
-    index& operator++() {
-        static_assert(N == 1, "Rank should be 1");
+    template <size_t K = N, class = typename enable_if<K == 1>::type>
+    offset& operator++() {
         base_ += 1;
         return *this;
     }
-    index  operator++(int) {
-        static_assert(N == 1, "Rank should be 1");
-        index ret = *this;
+    template <size_t K = N, class = typename enable_if<K == 1>::type>
+    offset  operator++(int) {
+        offset ret = *this;
         base_ += 1;
         return ret;
     };
-    index& operator--() {
-        static_assert(N == 1, "Rank should be 1");
+    template <size_t K = N, class = typename enable_if<K == 1>::type>
+    offset& operator--() {
         base_ -= 1;
         return *this;
     }
-    index  operator--(int) {
-        static_assert(N == 1, "Rank should be 1");
-        index ret = *this;
+    template <size_t K = N, class = typename enable_if<K == 1>::type>
+    offset  operator--(int) {
+        offset ret = *this;
         base_ -= 1;
         return ret;
     }
 
-    index  operator+() const noexcept { return *this; }
-    index  operator-() {
-        index __r;
+    offset  operator+() const noexcept { return *this; }
+    offset  operator-() const {
+        offset __r;
         __r -= *this;
         return __r;
     }
 
-    index  operator*(value_type v) const {
-        index __r(*this);
-        __r *= v;
-        return __r;
-    }
-    index  operator/(value_type v) const {
-        index __r(*this);
-        __r /= v;
-        return __r;
-    }
-    index& operator*=(value_type v) {
+    offset& operator*=(value_type v) {
         base_ *= v;
         return *this;
     }
-    index& operator/=(value_type v) {
+    offset& operator/=(value_type v) {
         base_ /= v;
         return *this;
     }
 };
 
-template <int N>
-static inline index<N> operator*(ptrdiff_t v, const index<N>& rhs) {
-    index<N> __r = rhs;
+template <size_t idx, size_t N, template <size_t id> class coord,
+         typename Functor = std::equal_to<typename coord<N>::value_type>>
+struct __cord_compare
+{
+    bool operator()(const coord<N>& lhs, const coord<N>& rhs) noexcept {
+        return Functor()(lhs[idx], rhs[idx]) &&
+            __cord_compare<idx + 1, N, coord, Functor>()(lhs, rhs);
+    }
+};
+
+template <size_t N, template <size_t id> class coord, typename Functor>
+struct __cord_compare<N, N, coord, Functor>
+{
+    bool operator()(const coord<N>& lhs, const coord<N>& rhs) noexcept { return true; }
+};
+
+template <size_t N>
+bool operator==(const offset<N>& lhs, const offset<N>& rhs) noexcept {
+    return __cord_compare<0, N, offset>()(lhs, rhs);
+}
+
+template <size_t N>
+bool operator!=(const offset<N>& lhs, const offset<N>& rhs) noexcept {
+    return !(lhs == rhs);
+}
+
+template <size_t N>
+static inline offset<N> operator+(const offset<N>& lhs, const offset<N>& rhs) {
+    offset<N> __r = lhs;
+    __r += rhs;
+    return __r;
+}
+
+template <size_t N>
+static inline offset<N> operator-(const offset<N>& lhs, const offset<N>& rhs) {
+    offset<N> __r = lhs;
+    __r -= rhs;
+    return __r;
+}
+
+template <size_t N>
+static inline offset<N> operator*(const offset<N>& lhs, ptrdiff_t v) {
+    offset<N> __r = lhs;
     __r *= v;
     return __r;
 }
 
-template <int N>
+template <size_t N>
+static inline offset<N> operator*(ptrdiff_t v, const offset<N>& rhs) {
+    offset<N> __r = rhs;
+    __r *= v;
+    return __r;
+}
+
+template <size_t N>
+static inline offset<N> operator/(const offset<N>& lhs, ptrdiff_t v) {
+    offset<N> __r = lhs;
+    __r /= v;
+    return __r;
+}
+
+template <size_t N>
 class bounds_iterator
 {
-    template <int K> friend class bounds;
-    ptrdiff_t stride;
+    template <size_t K> friend class bounds;
+    offset<N> idx_;
     bounds<N> bnd_;  // exposition only
-    explicit bounds_iterator(const bounds<N>& bnd_, const ptrdiff_t stride = 0)
-        : bnd_(bnd_), stride(stride) {}
+    explicit bounds_iterator(const bounds<N>& bnd_)
+        : bnd_(bnd_), idx_() {}
 public:
-    using iterator_category = random_access_iterator_tag;
-    using value_type        = index<N>;
+    using value_type        = offset<N>;
     using difference_type   = ptrdiff_t;
-    using reference         = const index<N>;
-
-    bool operator==(const bounds_iterator& rhs) const { return stride == rhs.stride; }
-    bool operator!=(const bounds_iterator& rhs) const { return !(*this == rhs); }
-    bool operator<(const bounds_iterator& rhs) const { return stride < rhs.stride; }
-    bool operator<=(const bounds_iterator& rhs) const { return stride <= rhs.stride; }
-    bool operator>(const bounds_iterator& rhs) const { return !(*this <= rhs); }
-    bool operator>=(const bounds_iterator& rhs) const { return !(*this < rhs); }
+    using reference         = const offset<N>;
 
     bounds_iterator& operator++() {
-        ++stride;
+        for (int i = N - 1; i >= 0; --i) {
+            if (++idx_[i] < bnd_[i])
+                break;
+            idx_[i] = 0;
+        }
         return *this;
     }
     bounds_iterator  operator++(int) {
@@ -327,7 +350,11 @@ public:
         return ret;
     }
     bounds_iterator& operator--() {
-        --stride;
+        for (int i = N - 1; i >= 0; --i) {
+            if (--idx_[i] >= 0)
+                break;
+            idx_[i] = bnd_[i];
+        }
         return *this;
     }
     bounds_iterator  operator--(int) {
@@ -336,13 +363,19 @@ public:
         return ret;
     }
 
-    bounds_iterator  operator+(difference_type n) const {
+    bounds_iterator& operator+=(difference_type n) {
+        while (--n >= 0)
+            ++*this;
+        return *this;
+    }
+    bounds_iterator operator+(difference_type n) const {
         bounds_iterator ret(*this);
         ret += n;
         return ret;
     }
-    bounds_iterator& operator+=(difference_type n) {
-        stride += n;
+    bounds_iterator& operator-=(difference_type n) {
+        while (--n >= 0)
+            --this;
         return *this;
     }
     bounds_iterator  operator-(difference_type n) const {
@@ -350,39 +383,62 @@ public:
         ret -= n;
         return ret;
     }
-    bounds_iterator& operator-=(difference_type n) {
-        stride -= n;
-        return *this;
-    }
 
     difference_type  operator-(const bounds_iterator& rhs) const {
-        return stride - rhs.stride;
+        ptrdiff_t off = 0;
+        for (int i = N - 1; i >= 0; i++)
+            off += (rhs[i] * bnd_[i]);
+        return off;
     }
 
     reference operator*() const {
-        index<N> idx;
-        ptrdiff_t str = stride;
-        for (auto i = N - 1; i >= 0; --i) {
-            idx[i] = str % bnd_[i];
-            str -= idx[i];
-            str /= bnd_[i];
-        }
-        return idx;
+        return idx_;
     }
     reference operator[](difference_type n) const {
-        bounds_iterator iter(bnd_, stride + n);
-        return *iter;
+        return idx_;
     }
 };
 
-template <int N>
+template <size_t Rank>
+bool operator==(const bounds_iterator<Rank>& lhs, const bounds_iterator<Rank>& rhs) {
+    return __cord_compare<0, Rank, bounds_iterator>()(lhs, rhs);
+}
+
+template <size_t Rank>
+bool operator!=(const bounds_iterator<Rank>& lhs, const bounds_iterator<Rank>& rhs) {
+    return !(rhs == lhs);
+}
+
+template <size_t Rank>
+bool operator<(const bounds_iterator<Rank>& lhs, const bounds_iterator<Rank>& rhs) {
+    return __cord_compare<0, Rank, bounds_iterator,
+           std::less<typename offset<Rank>::value_type>>()(lhs, rhs);
+}
+
+template <size_t Rank>
+bool operator<=(const bounds_iterator<Rank>& lhs, const bounds_iterator<Rank>& rhs) {
+    return __cord_compare<0, Rank, bounds_iterator,
+           std::less_equal<typename offset<Rank>::value_type>>()(lhs, rhs);
+}
+
+template <size_t Rank>
+bool operator>(const bounds_iterator<Rank>& lhs, const bounds_iterator<Rank>& rhs) {
+    return !(lhs <= rhs);
+}
+
+template <size_t Rank>
+bool operator>=(const bounds_iterator<Rank>& lhs, const bounds_iterator<Rank>& rhs) {
+    return !(lhs < rhs);
+}
+
+template <size_t N>
 class bounds {
     static_assert(N >= 1, "Rank should be greater than or equal to 1");
     typedef __coordinate_impl<typename __make_indices<N>::type> base;
 
 
-    template <int Rank>
-        friend bounds<Rank> operator+(const index<Rank>& lhs, const bounds<Rank>& rhs);
+    template <size_t Rank>
+        friend bounds<Rank> operator+(const offset<Rank>& lhs, const bounds<Rank>& rhs);
 
     base base_;
     void check() const {
@@ -390,7 +446,7 @@ class bounds {
         assert(base_.all_pos());
     }
 public:
-    static constexpr int rank = N;
+    static constexpr size_t rank = N;
     using reference           = ptrdiff_t&;
     using const_reference     = const ptrdiff_t&;
     using iterator            = bounds_iterator<N>;
@@ -400,7 +456,7 @@ public:
 
     bounds() noexcept : base_() {}
 
-    template <int K = N, class = typename enable_if<K == 1>::type>
+    template <size_t K = N, class = typename enable_if<K == 1>::type>
     bounds(value_type v) : base_(v) {
         assert(v >= 0 && v <= numeric_limits<ptrdiff_t>::max());
     }
@@ -410,36 +466,33 @@ public:
         check();
     }
 
-    bool operator==(const bounds& rhs) const noexcept { return base_ == rhs.base_; }
-    bool operator!=(const bounds& rhs) const noexcept { return !(*this == rhs); }
-
     size_type size() const noexcept { return base_.size(); }
-    bool      contains(const index<N>& idx) const noexcept { return base_.contains(idx.base_); }
+    bool      contains(const offset<N>& idx) const noexcept { return base_.contains(idx.base_); }
 
     const_iterator begin() const noexcept { return bounds_iterator<N>(*this); }
-    const_iterator end() const noexcept { return bounds_iterator<N>(*this, this->size()); }
+    const_iterator end() const noexcept { return bounds_iterator<N>(*this); }
 
     reference       operator[](size_type n) { return base_[n]; }
     const_reference operator[](size_type n) const { return base_[n]; };
 
-    bounds  operator+(const index<N>& rhs) const {
+    bounds  operator+(const offset<N>& rhs) const {
         bounds __r(*this);
         __r.base_ += rhs.base_;
         __r.check();
         return __r;
     }
-    bounds  operator-(const index<N>& rhs) const {
+    bounds  operator-(const offset<N>& rhs) const {
         bounds __r(*this);
         __r.base_ -= rhs.base_;
         __r.check();
         return __r;
     }
-    bounds& operator+=(const index<N>& rhs) {
+    bounds& operator+=(const offset<N>& rhs) {
         base_ += rhs.base_;
         this->check();
         return *this;
     }
-    bounds& operator-=(const index<N>& rhs) {
+    bounds& operator-=(const offset<N>& rhs) {
         base_ -= rhs.base_;
         this->check();
         return *this;
@@ -469,14 +522,45 @@ public:
     }
 };
 
-template <int Rank>
-bounds<Rank> operator+(const index<Rank>& lhs, const bounds<Rank>& rhs) {
+template <size_t Rank>
+bool operator==(const bounds<Rank>& lhs, const bounds<Rank>& rhs) noexcept {
+    return __cord_compare<0, Rank, bounds>()(lhs, rhs);
+}
+
+template <size_t Rank>
+bool operator!=(const bounds<Rank>& lhs, const bounds<Rank>& rhs) noexcept {
+    return !(lhs == rhs);
+}
+
+template <size_t Rank>
+bounds<Rank> operator+(const bounds<Rank>& lhs, const offset<Rank>& rhs) {
+    bounds<Rank> ret(lhs);
+    ret += rhs;
+    return ret;
+}
+
+template <size_t Rank>
+bounds<Rank> operator+(const offset<Rank>& lhs, const bounds<Rank>& rhs) {
     bounds<Rank> ret(rhs);
     ret += lhs;
     return ret;
 }
 
-template <int Rank>
+template <size_t Rank>
+bounds<Rank> operator-(const bounds<Rank>& lhs, const offset<Rank>& rhs) {
+    bounds<Rank> ret(lhs);
+    ret -= rhs;
+    return ret;
+}
+
+template <size_t Rank>
+bounds<Rank> operator*(const bounds<Rank>& lhs, ptrdiff_t v) {
+    bounds<Rank> ret(lhs);
+    ret *= v;
+    return ret;
+}
+
+template <size_t Rank>
 bounds<Rank> operator*(ptrdiff_t v, const bounds<Rank>& rhs) {
     bounds<Rank> ret(rhs);
     ret *= v;

@@ -5,13 +5,13 @@ int main()
     bool ret = true;
     {
         std::bounds<4> a({2, 2, 3, 3});
-        std::index<4> b({3, 3, 3, 3});
+        std::offset<4> b({3, 3, 3, 3});
         std::bounds<4> c = a + b;
         ret &= c[0] == 5;
         ret &= c[3] == 6;
     }
     {
-        std::index<4> a({2, 2, 3, 3});
+        std::offset<4> a({2, 2, 3, 3});
         std::bounds<4> b({3, 3, 3, 3});
         std::bounds<4> c = b - a;
         ret &= c[0] == 1;
@@ -19,13 +19,13 @@ int main()
     }
     {
         std::bounds<4> a({2, 2, 3, 3});
-        std::index<4> b({3, 3, 3, 3});
+        std::offset<4> b({3, 3, 3, 3});
         a += b;
         ret &= a[0] == 5;
         ret &= a[3] == 6;
     }
     {
-        std::index<4> a({2, 2, 3, 3});
+        std::offset<4> a({2, 2, 3, 3});
         std::bounds<4> b({3, 3, 3, 3});
         b -= a;
         ret &= b[0] == 1;
@@ -73,7 +73,7 @@ int main()
     }
     {
         std::bounds<4> a({5, 5, 6, 6});
-        std::index<4> b({3, 3, 3, 3});
+        std::offset<4> b({3, 3, 3, 3});
         std::bounds<4> c = b + a;
         ret &= c[0] == 8;
         ret &= c[1] == 8;

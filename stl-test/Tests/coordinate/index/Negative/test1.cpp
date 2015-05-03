@@ -2,5 +2,5 @@
 #include <coordinate>
 int main(void)
 {
-    std::index<-1> cord;
+    std::offset<-1> cord;
 }

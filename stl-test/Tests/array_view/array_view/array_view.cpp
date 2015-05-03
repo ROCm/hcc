@@ -90,13 +90,13 @@ int main()
         for (int i = 0; i < 120; i++)
             vec[i] = i;
         std::array_view<int, 3> av(vec.data(), std::bounds<3>{3, 4, 10});
-        auto p = av.section(std::index<3>{0, 1, 2});
+        auto p = av.section(std::offset<3>{0, 1, 2});
         ret &= p[1][1][1] == 63;
         ret &= p[2][1][1] == 103;
-        auto k = p.section(std::index<3>{1, 1, 1});
+        auto k = p.section(std::offset<3>{1, 1, 1});
         ret &= k[0][0][0] == 63;
         ret &= k[1][0][0] == 103;
-        auto m = k.section(std::index<3>{1, 1, 2});
+        auto m = k.section(std::offset<3>{1, 1, 2});
         ret &= m[0][0][0] == 115;
     }
     return !ret;

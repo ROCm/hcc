@@ -2,6 +2,6 @@
 #include <coordinate>
 int main(void)
 {
-    std::index<2> cord{5566, 5566};
+    std::offset<2> cord{5566, 5566};
     cord++;
 }

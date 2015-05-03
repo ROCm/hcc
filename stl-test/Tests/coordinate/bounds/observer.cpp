@@ -8,8 +8,8 @@ int main()
     }
     {
         std::bounds<4> bnd({5, 5, 6, 6});
-        std::index<4> ia({5, 5, 6, 5});
-        std::index<4> ib({5, 5, 6, 7});
+        std::offset<4> ia({5, 5, 6, 5});
+        std::offset<4> ib({5, 5, 6, 7});
         ret &= bnd.contains(ia);
         ret &= !bnd.contains(ib);
     }

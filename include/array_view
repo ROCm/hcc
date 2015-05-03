@@ -32,9 +32,9 @@ struct decompose<__indices<N...>, ArrayType> {
 };
 
 template <int N>
-static inline index<N> get_stride(const bounds<N>& bnd)
+static inline offset<N> get_stride(const bounds<N>& bnd)
 {
-    index<N> id;
+    offset<N> id;
     id[N - 1] = 1;
     for (size_t i = N - 1; i > 0; --i)
         id[i - 1] = id[i] * bnd[i];
@@ -48,7 +48,7 @@ template <class T, int Rank = 1>
 class array_view {
 public:
     static constexpr int rank = Rank;
-    using index_type          = index<Rank>;
+    using offset_type          = offset<Rank>;
     using bounds_type         = bounds<Rank>;
     using size_type           = size_t;
     using value_type          = T;
@@ -133,10 +133,10 @@ public:
 
     bounds_type bounds() const noexcept { return bnd_; }
     size_type   size() const noexcept { return bnd_.size(); }
-    index_type  stride() const noexcept { return stride_; }
+    offset_type  stride() const noexcept { return stride_; }
     pointer     data() const noexcept { return data_; }
 
-    reference operator[](const index_type& idx) const {
+    reference operator[](const offset_type& idx) const {
         assert(bnd_.contains(idx));
         VIEW_ACCESS(data_, idx, stride_, Rank);
     }
@@ -152,7 +152,7 @@ public:
             return array_view<T, Rank - 1>(data_ + stride_[0] * slice, bnd);
         }
     strided_array_view<T, Rank>
-        section(const index_type& origin, const bounds_type& section_bnd) const {
+        section(const offset_type& origin, const bounds_type& section_bnd) const {
             auto range = bnd_ - origin;
             for (auto i = 0; i < Rank; ++i)
                 assert(range[i] >= section_bnd[i]);
@@ -162,13 +162,13 @@ public:
             return strided_array_view<T, Rank>(data_ + offset, section_bnd, stride_);
         }
     strided_array_view<T, Rank>
-        section(const index_type& origin) const { return section(origin, bnd_ - origin); }
+        section(const offset_type& origin) const { return section(origin, bnd_ - origin); }
 
 private:
     static_assert(Rank >= 1, "Rank should be greater than or equal to 1");
     pointer data_;
     bounds_type bnd_;
-    index_type stride_;
+    offset_type stride_;
 };
 
 template <class T, int Rank = 1>
@@ -176,7 +176,7 @@ class strided_array_view {
 public:
     // constants and types
     static constexpr int rank = Rank;
-    using index_type          = index<Rank>;
+    using offset_type          = offset<Rank>;
     using bounds_type         = bounds<Rank>;
     using size_type           = size_t;
     using value_type          = T;
@@ -209,7 +209,7 @@ public:
         strided_array_view(const strided_array_view<U, Rank>& rhs) noexcept
         : data_(rhs.data_), bnd_(rhs.bnd_), stride_(rhs.stride_) {}
 
-    strided_array_view(pointer ptr, bounds_type bounds, index_type stride)
+    strided_array_view(pointer ptr, bounds_type bounds, offset_type stride)
         : data_(ptr), bnd_(bounds), stride_(stride) {}
 
     template <class U,
@@ -229,9 +229,9 @@ public:
 
     bounds_type bounds() const noexcept { return bnd_; }
     size_type   size() const noexcept { return bnd_.size(); }
-    index_type  stride() const noexcept { return stride_; }
+    offset_type  stride() const noexcept { return stride_; }
 
-    reference operator[](const index_type& idx) const {
+    reference operator[](const offset_type& idx) const {
         assert(bnd_.contains(idx));
         VIEW_ACCESS(data_, idx, stride(), Rank);
     }
@@ -243,13 +243,13 @@ public:
             std::bounds<Rank - 1> bnd;
             for (auto i = 1; i < Rank; ++i)
                 bnd[i - 1] = bnd_[i];
-            std::index<Rank - 1> stride;
+            std::offset<Rank - 1> stride;
             for (auto i = 1; i < Rank; ++i)
                 stride[i - 1] = stride_[i];
             return strided_array_view<T, Rank - 1>(data_ + stride_[0] * slice, bnd, stride);
         }
     strided_array_view<T, Rank>
-        section(const index_type& origin, const bounds_type& section_bnd) const {
+        section(const offset_type& origin, const bounds_type& section_bnd) const {
             auto range = bnd_ - origin;
             for (auto i = 0; i < Rank; ++i)
                 assert(range[i] >= section_bnd[i]);
@@ -259,14 +259,14 @@ public:
             return strided_array_view<T, Rank>(data_ + offset, section_bnd, stride_);
         }
     strided_array_view<T, Rank>
-        section(const index_type& origin) const { return section(origin, bnd_ - origin); }
+        section(const offset_type& origin) const { return section(origin, bnd_ - origin); }
 
 private:
     static_assert(Rank >= 1, "Rank should be greater than or equal to 1");
     template <typename T_, int Rank_> friend class strided_array_view;
     pointer data_;  // exposition only
     bounds_type bnd_;
-    index_type stride_;
+    offset_type stride_;
 };
 
 template <class T, int Rank = 1>
