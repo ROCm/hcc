@@ -334,7 +334,7 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
         static_cast<size_t>(compute_domain[N - 2]),
         static_cast<size_t>(compute_domain[N - 3])};
     const pfe_wrapper<N, Kernel> _pf(compute_domain, f);
-    return completion_future(std::shared_future<void>(*mcw_cxxamp_launch_kernel_async<pfe_wrapper<N, Kernel>, 3>(ext, NULL, _pf)));
+    return completion_future(mcw_cxxamp_launch_kernel_async<pfe_wrapper<N, Kernel>, 3>(ext, NULL, _pf));
 #else
 #ifdef __AMP_CPU__
   int* foo1 = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
@@ -387,7 +387,7 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
   if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
   size_t ext = compute_domain[0];
-  return completion_future(std::shared_future<void>(*mcw_cxxamp_launch_kernel_async<Kernel, 1>(&ext, NULL, f)));
+  return completion_future(mcw_cxxamp_launch_kernel_async<Kernel, 1>(&ext, NULL, f));
 #else //ifndef __GPU__
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -439,7 +439,7 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
     throw invalid_compute_domain("Extent size too large.");
   size_t ext[2] = {static_cast<size_t>(compute_domain[1]),
                    static_cast<size_t>(compute_domain[0])};
-  return completion_future(std::shared_future<void>(*mcw_cxxamp_launch_kernel_async<Kernel, 2>(ext, NULL, f)));
+  return completion_future(mcw_cxxamp_launch_kernel_async<Kernel, 2>(ext, NULL, f));
 #else //ifndef __GPU__
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -505,7 +505,7 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
   size_t ext[3] = {static_cast<size_t>(compute_domain[2]),
                    static_cast<size_t>(compute_domain[1]),
                    static_cast<size_t>(compute_domain[0])};
-  return completion_future(std::shared_future<void>(*mcw_cxxamp_launch_kernel_async<Kernel, 3>(ext, NULL, f)));
+  return completion_future(mcw_cxxamp_launch_kernel_async<Kernel, 3>(ext, NULL, f));
 #else //ifndef __GPU__
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -576,7 +576,7 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
   if(ext % tile != 0) {
     throw invalid_compute_domain("Extent can't be evenly divisble by tile size.");
   }
-  return completion_future(std::shared_future<void>(*mcw_cxxamp_launch_kernel_async<Kernel, 1>(&ext, &tile, f)));
+  return completion_future(mcw_cxxamp_launch_kernel_async<Kernel, 1>(&ext, &tile, f));
 #else //ifndef __GPU__
   tiled_index<D0> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -652,7 +652,7 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
   if((ext[0] % tile[0] != 0) || (ext[1] % tile[1] != 0)) {
     throw invalid_compute_domain("Extent can't be evenly divisble by tile size.");
   }
-  return completion_future(std::shared_future<void>(*mcw_cxxamp_launch_kernel_async<Kernel, 2>(ext, tile, f)));
+  return completion_future(mcw_cxxamp_launch_kernel_async<Kernel, 2>(ext, tile, f));
 #else //ifndef __GPU__
   tiled_index<D0, D1> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -744,7 +744,7 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
   if((ext[0] % tile[0] != 0) || (ext[1] % tile[1] != 0) || (ext[2] % tile[2] != 0)) {
     throw invalid_compute_domain("Extent can't be evenly divisble by tile size.");
   }
-  return completion_future(std::shared_future<void>(*mcw_cxxamp_launch_kernel_async<Kernel, 3>(ext, tile, f)));
+  return completion_future(mcw_cxxamp_launch_kernel_async<Kernel, 3>(ext, tile, f));
 #else //ifndef __GPU__
   tiled_index<D0, D1, D2> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined

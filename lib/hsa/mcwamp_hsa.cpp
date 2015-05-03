@@ -5,7 +5,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// FIXME this file will place C++AMP Runtime implementation (HSA version)
+// C++AMP Runtime implementation (HSA version)
 #include <cstdlib>
 #include <cassert>
 #include <iostream>
