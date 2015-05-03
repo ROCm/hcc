@@ -5,7 +5,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// FIXME this file will place C++AMP Runtime implementation (HSA version)
+// C++AMP Runtime implementation (HSA version)
 #include <cstdlib>
 #include <cassert>
 #include <iostream>
@@ -229,7 +229,6 @@ extern "C" void *LaunchKernelAsyncImpl(void *ker, size_t nr_dim, size_t *global,
   Concurrency::HSAAMPAllocator& aloc = Concurrency::getHSAAMPAllocator();
   dispatch->setLaunchAttributes(nr_dim, global, local);
   std::shared_future<void>* fut = dispatch->dispatchKernelAndGetFuture();
-  // FIXME what about aloc.read() ??
   return static_cast<void*>(fut);
 }
 

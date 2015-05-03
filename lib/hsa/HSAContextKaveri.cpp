@@ -158,8 +158,6 @@ private:
       hsa_kernel_dispatch_packet_t aql;
       bool isDispatched;
 
-      std::shared_future<void> fut;
-
    public:
       ~DispatchImpl() {
          if (isDispatched) {
@@ -259,10 +257,14 @@ private:
            delete(this); // destruct DispatchImpl instance
          };
          std::packaged_task<void()> waitTask(waitFunc);
-         this->fut = waitTask.get_future();
+
+         // dynamically allocate a std::shared_future<void> object
+         // it will be released in the private ctor of completion_future
+         std::shared_future<void>* fut = new std::shared_future<void>(waitTask.get_future());
+
          std::thread waitThread(std::move(waitTask));
          waitThread.detach();         
-         return &this->fut;
+         return fut;
       }
 
       // dispatch a kernel asynchronously
