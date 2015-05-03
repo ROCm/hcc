@@ -5,7 +5,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// FIXME this file will place C++AMP Runtime implementation (HSA version)
+// C++AMP Runtime implementation (HSA version)
 #include <cstdlib>
 #include <cassert>
 #include <iostream>
@@ -66,70 +66,55 @@ void RegisterMemory(void *p, size_t sz)
 ///
 namespace Concurrency {
 
-struct rw_info
+struct mm_info
 {
-  int count;
-  bool used;
+    void* data;
+    int count;
 };
 class HSAAMPAllocator : public AMPAllocator
 { 
-public:
-  HSAAMPAllocator() {}
-  void init(void *data, int count) {
-    //std::cerr << "HSAAMPAllocator::init()" << std::endl;
-    void *p = aligned_alloc(0x1000, count);
-    assert(p);
-    CLAMP::RegisterMemory(p, count);
-    rwq[data] = {count, false};
-    mem_info[data] = p;
-    //std::cerr << "add to rwq: " << data << " - " << p << std::endl;
-  }
-  void append(void *kernel, int idx, void *data) {
-    PushArgImpl(kernel, idx, sizeof(void*), &mem_info[data]);
-    rwq[data].used = true;
-  }
-  void write() {
-    //std::cerr << "HSAAMPAllocator::write()" << std::endl;
-    for (auto& it : rwq) {
-      rw_info& rw = it.second;
-      if (rw.used) {
-        //std::cerr << "copy from: " << mem_info[it.first] << " to: " << it.first << " size: " << rw.count << std::endl;
-        if (it.first != mem_info[it.first]) {
-          memcpy(mem_info[it.first], it.first, rw.count);
-        }
-      }
+private:
+    void PushArg(void *kernel, int idx, std::shared_ptr<void>& data) override {
+        PushArgImpl(kernel, idx, sizeof(void*), &mem_info[data.get()].data);
     }
-  }
-  void read() {
-    //std::cerr << "HSAAMPAllocator::read()" << std::endl;
-    for (auto& it : rwq) {
-      rw_info& rw = it.second;
-      if (rw.used) {
-        //std::cerr << "copy from: " << mem_info[it.first] << " to: " << it.first << " size: " << rw.count << std::endl;
-        if (it.first != mem_info[it.first]) {
-          memcpy(it.first, mem_info[it.first], rw.count);
-        }
-        rw.used = false;
-      }
+    void regist(int count, void *data, bool hasSrc) override {
+        //std::cerr << "HSAAMPAllocator::init()" << std::endl;
+        void* p = data;
+        if (hasSrc)
+            p = aligned_alloc(0x1000, count);
+        assert(p);
+        CLAMP::RegisterMemory(p, count);
+        mem_info[data] = {p, count};
     }
-  }
-  void free(void *data) {
-    //std::cerr << "HSAAMPAllocator::free()" << std::endl;
-    //std::cerr << "data: " << data << std::endl;
-    auto iter = mem_info.find(data);
-    if (iter != mem_info.end()) {
-      free(iter->second);
-      mem_info.erase(iter);
+    void append(void *kernel, int idx, std::shared_ptr<void>& mm) override {
+        PushArgImpl(kernel, idx, sizeof(void*), &mem_info[mm.get()].data);
     }
-  }
-  ~HSAAMPAllocator() {
-    // FIXME add more proper cleanup
-    mem_info.clear();
-    rwq.clear();
-  }
+    void amp_write(void *data) override {
+        auto it = mem_info.find(data);
+        mm_info &rw = it->second;
+        if (rw.data != data)
+            memmove(rw.data, data, rw.count);
+    }
+    void amp_read(void *data) override {
+        auto it = mem_info.find(data);
+        mm_info &rw = it->second;
+        if (rw.data != data)
+            memmove(data, rw.data, rw.count);
+    }
+    void amp_copy(void *dst, void *src, int n) override {
+        auto it = mem_info.find(src);
+        mm_info &rw = it->second;
+        memmove(dst, rw.data, n);
+    }
+    void unregist(void *data) override {
+        auto it = mem_info.find(data);
+        mm_info &rw = it->second;
+        if (rw.data != data)
+            ::operator delete(rw.data);
+        mem_info.erase(it);
+    }
 
-  std::map<void *, void*> mem_info;
-  std::map<void *, rw_info> rwq;
+    std::map<void *, mm_info> mem_info;
 };
 
 static HSAAMPAllocator amp;
@@ -223,11 +208,9 @@ extern "C" void LaunchKernelImpl(void *ker, size_t nr_dim, size_t *global, size_
   //  std::cerr << "g: " << global[i] << " l: " << local[i] << "\n";
   //}
   Concurrency::HSAAMPAllocator& aloc = Concurrency::getHSAAMPAllocator();
-  aloc.write();
   dispatch->setLaunchAttributes(nr_dim, global, local);
   //std::cerr << "Now real launch\n";
   dispatch->dispatchKernelWaitComplete();
-  aloc.read();
   delete(dispatch);
 }
 
@@ -244,10 +227,8 @@ extern "C" void *LaunchKernelAsyncImpl(void *ker, size_t nr_dim, size_t *global,
   //  std::cerr << "g: " << global[i] << " l: " << local[i] << "\n";
   //}
   Concurrency::HSAAMPAllocator& aloc = Concurrency::getHSAAMPAllocator();
-  aloc.write();
   dispatch->setLaunchAttributes(nr_dim, global, local);
   std::shared_future<void>* fut = dispatch->dispatchKernelAndGetFuture();
-  // FIXME what about aloc.read() ??
   return static_cast<void*>(fut);
 }
 

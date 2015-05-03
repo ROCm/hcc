@@ -1,4 +1,4 @@
-//===- CpuRename.cpp - Remove non-GPU codes from LLVM IR -------------===//
+//===- CpuRename.cpp - Rename functions used in cpu kernel -------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements a pass which add suffix for function used in AMP kernel
+// This file implements a pss which renames functions used in cpu kernel
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,6 +15,7 @@
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IntrinsicInst.h" 
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
@@ -60,66 +61,55 @@ using std::map;
 class Traverse
 {
 public:
-    Traverse(queue<Function *>& WorkList, vector<Function *>& RenameList,
-             map<Function *, bool>& visited)
-        : WorkList(WorkList), RenameList(RenameList), visited(visited) {}
+    Traverse(queue<Function *>& WorkList, map<Function *, bool>& visited)
+        : WorkList(WorkList), visited(visited) {}
 
-    bool operator()(Function *F) {
-        bool update = false;
+    void operator()(Function *F) {
         for (Function::iterator BB = F->begin(), E = F->end(); BB != E; ++BB)
             for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E; ++I) {
                 CallSite CS(cast<Value>(I));
                 if (!CS || isa<IntrinsicInst>(I))
                     continue;
                 if (Function *save = CS.getCalledFunction()) {
-                    if (save->isDeclaration())
+                    if (save->isDeclaration() || save->isIntrinsic())
                         continue;
                     if (!visited[save]) {
-                        update = true;
                         visited[save] = true;
                         WorkList.push(save);
-                        RenameList.push_back(save);
                     }
                 }
             }
-        return update;
     }
 private:
     queue<Function *>& WorkList;
-    vector<Function *>& RenameList;
     map<Function *, bool>& visited;
 };
 
 bool CpuRename::runOnModule(Module &M)
 {
     findKernels(M, foundKernels);
-    if (foundKernels.empty())
-        return true;
     std::queue<Function *> WorkList;
-    std::vector<Function *> RenameList;
     std::map<Function *, bool> visited;
-    Traverse trav(WorkList, RenameList, visited);
+    Traverse trav(WorkList, visited);
     typedef FunctionVect::const_iterator kernel_iterator;
-    typedef std::vector<Function *>::iterator fun_iterator;
     for (kernel_iterator KernFunc = foundKernels.begin(), KernFuncEnd = foundKernels.end();
-         KernFunc != KernFuncEnd; ++KernFunc) {
-        Function *F = *KernFunc;
-        visited[F] = true;
-        // The last function call in trampoline function is operator() of kernel
-        if (trav(F))
-            RenameList.pop_back();
-    }
+         KernFunc != KernFuncEnd; ++KernFunc)
+        trav(*KernFunc);
     while (!WorkList.empty()) {
         Function *F = WorkList.front();
         WorkList.pop();
         trav(F);
     }
-    if (RenameList.size() == 0)
-        return true;
-    for (fun_iterator Fun = RenameList.begin(), E = RenameList.end();
-         Fun != E; ++Fun) {
-        Function *F = *Fun;
-        F->setName(F->getName().str() + "_amp");
+    Module::FunctionListType &funcs = M.getFunctionList();
+    for (Module::iterator I = funcs.begin(), E = funcs.end(); I != E; ) {
+        Function *F = I++;
+        if (F->getName().str().find("$_") != std::string::npos ||
+                F->getName().str().find("_cl") != std::string::npos)
+            F->setLinkage(GlobalValue::ExternalLinkage);
+        else if (visited[F])
+            F->setName(F->getName().str() + "_amp");
+        else if (!F->isDeclaration() && !F->isIntrinsic())
+            F->setLinkage(GlobalValue::PrivateLinkage);
     }
     return true;
 }
@@ -127,3 +117,4 @@ bool CpuRename::runOnModule(Module &M)
 char CpuRename::ID = 0;
 static RegisterPass<CpuRename>
 Y("cpu-rename", "Suffix functions used in kernel with _amp to avoid name conflict in cpu path.");
+

@@ -244,7 +244,7 @@ double opencl_modf_local(double x, __local double *iptr) {
 double opencl_modf(double x, double *iptr) {
   return modf(x, iptr);
 }
- 
+
 float opencl_frexpf_global(float x, __global int *exp) {
   return frexp(x, exp);
 }
@@ -358,6 +358,6 @@ int atomic_inc_int(volatile int *x) {
 static unsigned char * memcpy(unsigned char *dst,  __global unsigned char *src, unsigned int len) {
   for (int i = 0; i < len; ++i) {
     dst[i] = src[i];
-  }    
-  return dst; 
+  }
+  return dst;
 }
