@@ -265,7 +265,9 @@ void copy_pick_iterator( bolt::amp::control &ctrl,  const DVInputIterator& first
         //Now call the actual algorithm
         copy_enqueue( ctrl, dvInput.begin(), n, result );
         //Map the buffer back to the host
+#if 0
         dvInput.data( );
+#endif
      }
 }
 

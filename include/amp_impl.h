@@ -35,7 +35,7 @@ inline accelerator::accelerator(const std::wstring& path) :
 					path : 
 					(_default_accelerator != nullptr) ?
 						accelerator::_default_accelerator->get_device_path() :
-						std::wstring(gpu_accelerator) ),
+                        std::wstring(gpu_accelerator) ),
   version(0), 
   description(L""),
   is_debug(false),
@@ -52,8 +52,23 @@ inline accelerator::accelerator(const std::wstring& path) :
 					( (_cpu_accelerator != nullptr) ?
 						new accelerator_view(_cpu_accelerator.get()) : new accelerator_view(this)) )
 {
+    if (_gpu_accelerator != nullptr && device_path == std::wstring(gpu_accelerator)) {
+      supports_cpu_shared_memory = _gpu_accelerator->supports_cpu_shared_memory;
+      dedicated_memory = _gpu_accelerator->dedicated_memory;
+      supports_limited_double_precision = _gpu_accelerator->supports_limited_double_precision;
+      description = _gpu_accelerator->description;
+      default_view->is_auto_selection = !supports_cpu_shared_memory;
+      return;
+    } else if (_cpu_accelerator != nullptr && device_path == std::wstring(cpu_accelerator)) {
+      supports_cpu_shared_memory = _cpu_accelerator->supports_cpu_shared_memory;
+      dedicated_memory = _cpu_accelerator->dedicated_memory;
+      supports_limited_double_precision = _cpu_accelerator->supports_limited_double_precision;
+      description = _cpu_accelerator->description;
+      default_view->is_auto_selection = !supports_cpu_shared_memory;
+      is_emulated = true;
+      return;
+    }
     CLAMP::QueryDeviceInfo(device_path, supports_cpu_shared_memory, dedicated_memory, supports_limited_double_precision, description);
-    default_view->is_auto_selection = !supports_cpu_shared_memory;
     if (device_path == std::wstring(cpu_accelerator))
       is_emulated = true;
 }
@@ -125,9 +140,9 @@ inline bool accelerator::set_default_cpu_access_type(access_type type) {
   }
 #ifdef __AMP_CPU__
   if(type == access_type_auto)
-    default_access_type = access_type_none;
+      default_access_type = access_type_none;
   else
-    default_access_type = type;
+      default_access_type = type;
 #else
   if (&default_view->get_accelerator() == this) {
       if(type == access_type_auto)
@@ -302,7 +317,7 @@ const Concurrency::extent<N>& check(const Concurrency::extent<N>& ext)
     return ext;
 }
     template<typename T, int N> array<T, N>::array(const Concurrency::extent<N>& ext)
-: extent(check(ext)), m_device(ext.size()), pav(nullptr), paav(nullptr)
+: extent(check(ext)), m_device(ext.size(), true), pav(nullptr), paav(nullptr)
 {
     this->cpu_access_type = Concurrency::accelerator(accelerator::default_accelerator).get_default_view().get_accelerator().get_default_cpu_access_type();
 #ifndef __GPU__
@@ -364,7 +379,7 @@ array<T, N>::array(int e0, int e1, int e2, accelerator_view av, accelerator_view
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin)
-    : extent(ext), m_device(ext.size()), pav(nullptr), paav(nullptr) {
+    : extent(ext), m_device(ext.size(), true), pav(nullptr), paav(nullptr) {
   this->cpu_access_type = Concurrency::accelerator(accelerator::default_accelerator).get_default_view().get_accelerator().get_default_cpu_access_type();
 #ifndef __GPU__
         InputIterator srcEnd = srcBegin;
@@ -375,7 +390,7 @@ array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin)
 
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, InputIterator srcEnd)
-    : extent(ext), m_device(ext.size()), pav(nullptr), paav(nullptr) {
+    : extent(ext), m_device(ext.size(), true), pav(nullptr), paav(nullptr) {
 #ifndef __GPU__
     if(ext.size() < std::distance(srcBegin,srcEnd) )
       throw runtime_exception("errorMsg_throw", 0);
@@ -573,11 +588,11 @@ completion_future array_view<T, N>::synchronize_async() const {
 template <typename T, int N>
 array_view<T, N>::array_view(const Concurrency::extent<N>& ext,
                              value_type* src) restrict(amp,cpu)
-    : extent(ext), cache(ext.size(), src), offset(0), extent_base(ext) {}
+    : extent(ext), extent_base(ext), cache(ext.size(), src), offset(0) {}
 
 template <typename T, int N>
 array_view<T, N>::array_view(const Concurrency::extent<N>& ext) restrict(amp,cpu)
-    : extent(ext), cache(ext.size()), offset(0), extent_base(ext) {}
+    : extent(ext), extent_base(ext), cache(ext.size()), offset(0) {}
 
 template <typename T, int N>
 void array_view<T, N>::refresh() const {
@@ -592,8 +607,7 @@ void array_view<T, N>::refresh() const {
 template <typename T, int N>
 array_view<T,N>::array_view(const Concurrency::extent<N>& ext,
                             value_type* src) restrict(amp,cpu)
-    : extent(ext), cache((__global T *)(src)),
-    offset(0), extent_base(ext) {}
+    : extent(ext), extent_base(ext), cache((__global T *)(src)), offset(0) {}
 
 #endif
 
@@ -616,8 +630,8 @@ completion_future array_view<const T, N>::synchronize_async() const {
 template <typename T, int N>
 array_view<const T, N>::array_view(const Concurrency::extent<N>& ext,
                              value_type* src) restrict(amp,cpu)
-    : extent(ext), cache(ext.size(), const_cast<nc_T*>(src)),
-    offset(0), extent_base(ext) {}
+    : extent(ext), extent_base(ext), cache(ext.size(), const_cast<nc_T*>(src)),
+    offset(0) {}
 
 template <typename T, int N>
 void array_view<const T, N>::refresh() const {
@@ -632,8 +646,7 @@ void array_view<const T, N>::refresh() const {
 template <typename T, int N>
 array_view<const T,N>::array_view(const Concurrency::extent<N>& ext,
                             value_type* src) restrict(amp,cpu)
-    : extent(ext), cache((__global nc_T *)(src)),
-    offset(0), extent_base(ext) {}
+    : extent(ext), extent_base(ext), cache((__global nc_T *)(src)), offset(0) {}
 
 #endif
 #undef __global

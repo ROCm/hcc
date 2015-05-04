@@ -37,6 +37,8 @@ macro(add_mcwamp_library_cpu name )
   CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXXAMP_FLAGS}")
   add_library( ${name} SHARED ${ARGN} )
+  add_dependencies(${name} libcpprt)
+  target_link_libraries(${name} ${CMAKE_BINARY_DIR}/libc++/libcxxrt/lib/libcxxrt.so)
 endmacro(add_mcwamp_library_cpu name )
 
 ####################
@@ -48,8 +50,10 @@ macro(add_mcwamp_library_opencl name )
   # add OpenCL headers
   include_directories("${OPENCL_HEADER}/..")
   add_library( ${name} SHARED ${ARGN} )
+  add_dependencies(${name} libcpprt)
   # add OpenCL libraries
   target_link_libraries(${name} ${OPENCL_LIBRARY})
+  target_link_libraries(${name} ${CMAKE_BINARY_DIR}/libc++/libcxxrt/lib/libcxxrt.so)
 endmacro(add_mcwamp_library_opencl name )
 
 ####################

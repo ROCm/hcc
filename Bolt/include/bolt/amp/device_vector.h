@@ -681,6 +681,8 @@ private:
 			concurrency::array<value_type> tmp = array_type( ext, reinterpret_cast< value_type* >(&begin[ 0 ])  );
 			m_devMemory = tmp.view_as(tmp.get_extent());
 		}
+        if (discard)
+            m_devMemory.discard_data();
     };
 
 

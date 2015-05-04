@@ -31,9 +31,7 @@ TEMP_DIR=`mktemp -d`
 
 # a file which contains the list of __cxxamp_serialize symbols in each CPU object file
 CXXAMP_SERIALIZE_SYMBOL_FILE=$TEMP_DIR/symbol.txt
-CXXAMP_KERNEL_SYMBOL_FILE=$TEMP_DIR/kernel.txt
 touch $CXXAMP_SERIALIZE_SYMBOL_FILE
-touch $CXXAMP_KERNEL_SYMBOL_FILE
 
 ARGS="$@"
 for ARG in $ARGS
@@ -64,11 +62,8 @@ do
       LINK_KERNEL_ARGS=$LINK_KERNEL_ARGS" "$KERNEL_FILE
       LINK_HOST_ARGS=$LINK_HOST_ARGS" "$HOST_FILE
     elif [[ $CPUFILE != $FILE ]]; then
-        CPUFILE=$TEMP_DIR/$CPUFILE.cpu.o
-        cp $ARG $CPUFILE
-        nm $CPUFILE | awk '{print $3}' | grep "3\$_" > $CXXAMP_KERNEL_SYMBOL_FILE
-        objcopy $CPUFILE --globalize-symbols $CXXAMP_KERNEL_SYMBOL_FILE
-        LINK_CPU_ARG=$LINK_CPU_ARG" "$CPUFILE
+        cp $ARG $TEMP_DIR/kernel_cpu.o
+        LINK_CPU_ARG=$LINK_CPU_ARG" "$TEMP_DIR/kernel_cpu.o
     else
       LINK_OTHER_ARGS=$LINK_OTHER_ARGS" "$ARG
     fi
@@ -161,6 +156,10 @@ fi
 
 if [ -e $TEMP_DIR/kernel_hsa.o ]; then
   rm $TEMP_DIR/kernel_hsa.o
+fi
+
+if [ -e $TEMP_DIR/kernel_cpu.o ]; then
+  rm $TEMP_DIR/kernel_cpu.o
 fi
 
 if [ -e $TEMP_DIR/kernel.cl ]; then

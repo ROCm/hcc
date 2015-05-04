@@ -18,14 +18,14 @@
 
 #define STATUS_CHECK(s,line) if (s != HSA_STATUS_SUCCESS) {\
 		printf("### Error: %d at line:%d\n", s, line);\
-                assert(HSA_STATUS_SUCCESS == hsa_close());\
+                assert(HSA_STATUS_SUCCESS == hsa_shut_down());\
 		exit(-1);\
 	}
 
 #define STATUS_CHECK_Q(s,line) if (s != HSA_STATUS_SUCCESS) {\
 		printf("### Error: %d at line:%d\n", s, line);\
                 assert(HSA_STATUS_SUCCESS == hsa_queue_destroy(commandQueue));\
-                assert(HSA_STATUS_SUCCESS == hsa_close());\
+                assert(HSA_STATUS_SUCCESS == hsa_shut_down());\
 		exit(-1);\
 	}
 
@@ -132,10 +132,10 @@ private:
          hsa_status_t status;
 
          status = hsa_executable_destroy(hsaExecutable);
-         STATUS_CHECK_Q(status, __LINE__);
+         STATUS_CHECK(status, __LINE__);
 
          status = hsa_code_object_destroy(hsaCodeObject);
-         STATUS_CHECK_Q(status, __LINE__);
+         STATUS_CHECK(status, __LINE__);
       }
 
    }; // end of KernelImpl
@@ -157,8 +157,6 @@ private:
       hsa_signal_t signal;
       hsa_kernel_dispatch_packet_t aql;
       bool isDispatched;
-
-      std::shared_future<void> fut;
 
    public:
       ~DispatchImpl() {
@@ -259,10 +257,14 @@ private:
            delete(this); // destruct DispatchImpl instance
          };
          std::packaged_task<void()> waitTask(waitFunc);
-         this->fut = waitTask.get_future();
+
+         // dynamically allocate a std::shared_future<void> object
+         // it will be released in the private ctor of completion_future
+         std::shared_future<void>* fut = new std::shared_future<void>(waitTask.get_future());
+
          std::thread waitThread(std::move(waitTask));
          waitThread.detach();         
-         return &this->fut;
+         return fut;
       }
 
       // dispatch a kernel asynchronously
