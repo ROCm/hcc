@@ -29,13 +29,6 @@ int main()
             ret &= bv.data()[i] == i;
     }
     {
-        char a[3][1][4] {{{'H', 'i'}}};
-        auto av = std::array_view<char, 3>{a};
-        ret &= av.bounds() == std::bounds<3>{3, 1, 4};
-        ret &= av[{0, 0, 0}] == 'H';
-        ret &= av[{0, 0, 1}] == 'i';
-    }
-    {
         std::vector<int> vec(120);
         for (int i = 0; i < 120; i++)
             vec[i] = i;

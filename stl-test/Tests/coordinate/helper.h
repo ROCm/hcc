@@ -1,5 +1,5 @@
 #include <coordinate>
-template <size_t N, template <size_t> class coord>
+template <std::size_t N, template <std::size_t> class coord>
 bool IsZero(const coord<N>& act)
 {
     bool ret = true;

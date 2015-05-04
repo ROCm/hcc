@@ -9,7 +9,6 @@
 #define _LIBCPP_COORDINATE
 
 #include <initializer_list>
-#include <functional>
 #include <type_traits>
 #include <limits>
 #include <cassert>
@@ -262,25 +261,34 @@ public:
     }
 };
 
-template <size_t idx, size_t N, template <size_t id> class coord,
-         typename Functor = std::equal_to<typename coord<N>::value_type>>
-struct __cord_compare
+template <size_t idx, size_t N, template <size_t id> class coord>
+struct __coord_compare
 {
-    bool operator()(const coord<N>& lhs, const coord<N>& rhs) noexcept {
-        return Functor()(lhs[idx], rhs[idx]) &&
-            __cord_compare<idx + 1, N, coord, Functor>()(lhs, rhs);
+    static bool equal(const coord<N>& lhs, const coord<N>& rhs) noexcept {
+        return lhs[idx] == rhs[idx] &&
+            __coord_compare<idx + 1, N, coord>::equal(lhs, rhs);
+    }
+    static bool greater(const coord<N>& lhs, const coord<N>& rhs) noexcept {
+        return lhs[idx] < rhs[idx] &&
+            __coord_compare<idx + 1, N, coord>::greater(lhs, rhs);
+    }
+    static bool greater_equal(const coord<N>& lhs, const coord<N>& rhs) noexcept {
+        return lhs[idx] <= rhs[idx] &&
+            __coord_compare<idx + 1, N, coord>::greater_equal(lhs, rhs);
     }
 };
 
-template <size_t N, template <size_t id> class coord, typename Functor>
-struct __cord_compare<N, N, coord, Functor>
+template <size_t N, template <size_t id> class coord>
+struct __coord_compare<N, N, coord>
 {
-    bool operator()(const coord<N>& lhs, const coord<N>& rhs) noexcept { return true; }
+    static const inline bool equal(const coord<N>& lhs, const coord<N>& rhs) noexcept { return true; }
+    static const inline bool greater(const coord<N>& lhs, const coord<N>& rhs) noexcept { return true; }
+    static const inline bool greater_equal(const coord<N>& lhs, const coord<N>& rhs) noexcept { return true; }
 };
 
 template <size_t N>
 bool operator==(const offset<N>& lhs, const offset<N>& rhs) noexcept {
-    return __cord_compare<0, N, offset>()(lhs, rhs);
+    return __coord_compare<0, N, offset>::equal(lhs, rhs);
 }
 
 template <size_t N>
@@ -327,21 +335,17 @@ template <size_t N>
 class bounds_iterator
 {
     template <size_t K> friend class bounds;
-    offset<N> idx_;
+    ptrdiff_t stride;
     bounds<N> bnd_;  // exposition only
-    explicit bounds_iterator(const bounds<N>& bnd_)
-        : bnd_(bnd_), idx_() {}
+    explicit bounds_iterator(const bounds<N>& bnd_, ptrdiff_t stride = 0)
+        : bnd_(bnd_), stride(stride) {}
 public:
     using value_type        = offset<N>;
     using difference_type   = ptrdiff_t;
     using reference         = const offset<N>;
 
     bounds_iterator& operator++() {
-        for (int i = N - 1; i >= 0; --i) {
-            if (++idx_[i] < bnd_[i])
-                break;
-            idx_[i] = 0;
-        }
+        ++stride;
         return *this;
     }
     bounds_iterator  operator++(int) {
@@ -350,11 +354,7 @@ public:
         return ret;
     }
     bounds_iterator& operator--() {
-        for (int i = N - 1; i >= 0; --i) {
-            if (--idx_[i] >= 0)
-                break;
-            idx_[i] = bnd_[i];
-        }
+        --stride;
         return *this;
     }
     bounds_iterator  operator--(int) {
@@ -364,8 +364,7 @@ public:
     }
 
     bounds_iterator& operator+=(difference_type n) {
-        while (--n >= 0)
-            ++*this;
+        stride += n;
         return *this;
     }
     bounds_iterator operator+(difference_type n) const {
@@ -374,8 +373,7 @@ public:
         return ret;
     }
     bounds_iterator& operator-=(difference_type n) {
-        while (--n >= 0)
-            --this;
+        stride -= n;
         return *this;
     }
     bounds_iterator  operator-(difference_type n) const {
@@ -385,14 +383,12 @@ public:
     }
 
     difference_type  operator-(const bounds_iterator& rhs) const {
-        ptrdiff_t off = 0;
-        for (int i = N - 1; i >= 0; i++)
-            off += (rhs[i] * bnd_[i]);
-        return off;
+        bounds_iterator ret(*this);
+        ret -= rhs.stride;
+        return ret;
     }
 
     reference operator*() const {
-        return idx_;
     }
     reference operator[](difference_type n) const {
         return idx_;
@@ -401,7 +397,7 @@ public:
 
 template <size_t Rank>
 bool operator==(const bounds_iterator<Rank>& lhs, const bounds_iterator<Rank>& rhs) {
-    return __cord_compare<0, Rank, bounds_iterator>()(lhs, rhs);
+    return __coord_compare<0, Rank, offset>::equal(*lhs, *rhs);
 }
 
 template <size_t Rank>
@@ -411,14 +407,12 @@ bool operator!=(const bounds_iterator<Rank>& lhs, const bounds_iterator<Rank>& r
 
 template <size_t Rank>
 bool operator<(const bounds_iterator<Rank>& lhs, const bounds_iterator<Rank>& rhs) {
-    return __cord_compare<0, Rank, bounds_iterator,
-           std::less<typename offset<Rank>::value_type>>()(lhs, rhs);
+    return __coord_compare<0, Rank, offset>::greater(*lhs, *rhs);
 }
 
 template <size_t Rank>
 bool operator<=(const bounds_iterator<Rank>& lhs, const bounds_iterator<Rank>& rhs) {
-    return __cord_compare<0, Rank, bounds_iterator,
-           std::less_equal<typename offset<Rank>::value_type>>()(lhs, rhs);
+    return __coord_compare<0, Rank, offset>::greater_equal(*lhs, *rhs);
 }
 
 template <size_t Rank>
@@ -524,7 +518,7 @@ public:
 
 template <size_t Rank>
 bool operator==(const bounds<Rank>& lhs, const bounds<Rank>& rhs) noexcept {
-    return __cord_compare<0, Rank, bounds>()(lhs, rhs);
+    return __coord_compare<0, Rank, bounds>::equal(lhs, rhs);
 }
 
 template <size_t Rank>

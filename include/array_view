@@ -31,7 +31,7 @@ struct decompose<__indices<N...>, ArrayType> {
     }
 };
 
-template <int N>
+template <size_t N>
 static inline offset<N> get_stride(const bounds<N>& bnd)
 {
     offset<N> id;
@@ -44,22 +44,33 @@ static inline offset<N> get_stride(const bounds<N>& bnd)
 
 template <class T, int Rank> class strided_array_view;
 
-template<typename T, typename E>
-struct has_data
+template <typename T>
+struct __has_data
 {
-    template<typename U, E (U::*)() const> struct SFINAE {};
-    template<typename U> static char Test(SFINAE<U, &U::data>*);
-    template<typename U> static int Test(...);
-    static const bool value = sizeof(Test<T>(0)) == sizeof(char);
+private:
+    struct two {char __lx; char __lxx;};
+    template <typename C> static char test(decltype(std::declval<C>().data()));
+    template <typename C> static two test(...);
+public:
+    static const bool value = sizeof(test<T>(0)) == 1;
 };
 
-template<typename T, typename E>
-struct has_size
+template <typename T>
+struct __has_size
 {
-    template<typename U, E (U::*)() const> struct SFINAE {};
-    template<typename U> static char Test(SFINAE<U, &U::data>*);
-    template<typename U> static int Test(...);
-    static const bool value = sizeof(Test<T>(0)) == sizeof(char);
+private:
+    struct two {char __lx; char __lxx;};
+    template <typename C> static char test(decltype(&C::size));
+    template <typename C> static two test(...);
+public:
+    static const bool value = sizeof(test<T>(0)) == 1;
+};
+
+template <typename T>
+struct __is_container
+{
+    using _T = typename std::remove_reference<T>::type;
+    static const bool value = __has_size<_T>::value && __has_data<_T>::value;
 };
 
 template <class T, int Rank = 1>
@@ -76,7 +87,10 @@ public:
     array_view() noexcept : data_(nullptr), bnd_(), stride_() {}
 
     template <class Viewable, int N = Rank,
-              typename = typename enable_if<N == 1>::type
+              typename = typename enable_if<
+                  (N == 1) &&
+                  __is_container<Viewable>::value
+                  >::type
               >
         array_view(Viewable&& vw) : data_(vw.data()), bnd_(vw.size()), stride_() {
             static_assert(is_convertible<decltype(vw.size()), ptrdiff_t>::value, "illegal Viewable");
@@ -85,8 +99,9 @@ public:
                                   typename remove_cv<T>::type>::value, "illegal Viewable");
         }
 
-    template <class U, int AnyN, int N = Rank, typename = typename enable_if<N == 1>::type,
+    template <class U, int AnyN, int N = Rank,
              typename = typename enable_if<
+                 N == 1 &&
                  is_convertible<typename add_pointer<U>::type, pointer>::value &&
                  is_same<typename remove_cv<T>::type, typename remove_cv<value_type>::type>::value
                  >::type
