@@ -44,6 +44,24 @@ static inline offset<N> get_stride(const bounds<N>& bnd)
 
 template <class T, int Rank> class strided_array_view;
 
+template<typename T, typename E>
+struct has_data
+{
+    template<typename U, E (U::*)() const> struct SFINAE {};
+    template<typename U> static char Test(SFINAE<U, &U::data>*);
+    template<typename U> static int Test(...);
+    static const bool value = sizeof(Test<T>(0)) == sizeof(char);
+};
+
+template<typename T, typename E>
+struct has_size
+{
+    template<typename U, E (U::*)() const> struct SFINAE {};
+    template<typename U> static char Test(SFINAE<U, &U::data>*);
+    template<typename U> static int Test(...);
+    static const bool value = sizeof(Test<T>(0)) == sizeof(char);
+};
+
 template <class T, int Rank = 1>
 class array_view {
 public:
