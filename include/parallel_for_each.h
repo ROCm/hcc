@@ -165,7 +165,9 @@ void launch_cpu_task(extent<N> const& compute_domain, Kernel const& f)
     for (auto& t : th)
         if (t.joinable())
             t.join();
-    f.__cxxamp_serialize(s);
+    int a;
+    Concurrency::Serialize ss(&a);
+    f.__cxxamp_serialize(ss);
     CLAMP::leave_kernel();
 }
 #endif
@@ -543,7 +545,9 @@ __attribute__((noinline,used)) void parallel_for_each(
       for (auto& t : th)
           if (t.joinable())
               t.join();
-      f.__cxxamp_serialize(s);
+      int a;
+      Concurrency::Serialize ss(&a);
+      f.__cxxamp_serialize(ss);
       CLAMP::leave_kernel();
       return;
   }
@@ -617,7 +621,9 @@ __attribute__((noinline,used)) void parallel_for_each(
       for (auto& t : th)
           if (t.joinable())
               t.join();
-      f.__cxxamp_serialize(s);
+      int a;
+      Concurrency::Serialize ss(&a);
+      f.__cxxamp_serialize(ss);
       CLAMP::leave_kernel();
       return;
   }
@@ -701,7 +707,9 @@ __attribute__((noinline,used)) void parallel_for_each(
       for (auto& t : th)
           if (t.joinable())
               t.join();
-      f.__cxxamp_serialize(s);
+      int a;
+      Concurrency::Serialize ss(&a);
+      f.__cxxamp_serialize(ss);
       CLAMP::leave_kernel();
       return;
   }

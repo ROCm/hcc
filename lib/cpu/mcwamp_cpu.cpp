@@ -21,7 +21,7 @@ namespace Concurrency {
 
 struct mm_info
 {
-    std::shared_ptr<void> data;
+    void *data;
     int count;
     int ref;
 };
@@ -30,26 +30,23 @@ class CPUAMPAllocator : public AMPAllocator
 {
     void regist(int count, void *data, bool hasSrc) override {
         if (hasSrc) {
-            std::shared_ptr<void> p((void*)aligned_alloc(0x1000, count),
-                                    [](void *ptr) { ::operator delete(ptr); });
-            mem_info[data] = {p, count, 1};
+            auto it = mem_info.find(data);
+            if (it == std::end(mem_info)) {
+                void *p = aligned_alloc(0x1000, count);
+                mem_info[data] = {p, count, 1};
+            } else
+                ++it->second.ref;
         }
     }
-    void PushArg(void *kernel, int idx, std::shared_ptr<void>& data) override {
-        auto it = mem_info.find(data.get());
+    void PushArg(void *kernel, int idx, rw_info& data) override {
+        void *p = data.data;
+        auto it = mem_info.find(p);
         if (it != std::end(mem_info)) {
             mm_info &rw = it->second;
-            if (rw.count != 0) {
-                auto iter = mem_info.find(rw.data.get());
-                if (iter == std::end(mem_info))
-                    mem_info[rw.data.get()] = {data, 0, 1};
-                else
-                    ++iter->second.ref;
-                data = rw.data;
-            } else {
-                data = mem_info[rw.data.get()].data;
-                if (!--rw.ref)
-                    mem_info.erase(it);
+            if ((kernel == nullptr && rw.ref > 0) ||
+                (kernel != nullptr && rw.ref < 0)) {
+                std::swap(data.data, rw.data);
+                rw.ref = -rw.ref;
             }
         }
     }
@@ -57,28 +54,32 @@ class CPUAMPAllocator : public AMPAllocator
         auto it = mem_info.find(data);
         if (it != std::end(mem_info)) {
             mm_info &rw = it->second;
-            memmove(rw.data.get(), data, rw.count);
+            memmove(rw.data, data, rw.count);
         }
     }
     void amp_read(void *data) override {
         auto it = mem_info.find(data);
         if (it != std::end(mem_info)) {
             mm_info &rw = it->second;
-            memmove(data, rw.data.get(), rw.count);
+            memmove(data, rw.data, rw.count);
         }
     }
     void amp_copy(void *dst, void *src, int n) override {
         auto it = mem_info.find(src);
         if (it != std::end(mem_info)) {
             mm_info &rw = it->second;
-            src = rw.data.get();
+            src = rw.data;
         }
         memmove(dst, src, n);
     }
     void unregist(void *data) override {
         auto it = mem_info.find(data);
-        if (it != std::end(mem_info))
-            mem_info.erase(it);
+        if (it != std::end(mem_info)) {
+            if (!--it->second.ref) {
+                ::operator delete(it->second.data);
+                mem_info.erase(it);
+            }
+        }
     }
 
     std::map<void *, mm_info> mem_info;

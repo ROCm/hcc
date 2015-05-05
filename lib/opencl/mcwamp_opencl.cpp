@@ -52,6 +52,7 @@ struct obj_info
 {
     cl_mem dm;
     int count;
+    int ref;
 };
 
 struct DimMaxSize {
@@ -165,12 +166,16 @@ private:
     void* getQueue() override { return queue; }
     void regist(int count, void* data, bool hasSource /* unused */) override {
         cl_int err;
-        cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, nullptr, &err);
-        assert(err == CL_SUCCESS);
-        mem_info[data] = {dm, count};
+        auto it = mem_info.find(data);
+        if (it == std::end(mem_info)) {
+            cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, nullptr, &err);
+            assert(err == CL_SUCCESS);
+            mem_info[data] = {dm, count, 1};
+        } else
+            ++it->second.ref;
     }
-    void PushArg(void *kernel, int idx, std::shared_ptr<void>& data) override {
-        PushArgImpl(kernel, idx, sizeof(cl_mem), &mem_info[data.get()].dm);
+    void PushArg(void *kernel, int idx, rw_info& data) override {
+        PushArgImpl(kernel, idx, sizeof(cl_mem), &mem_info[data.data].dm);
     }
     void amp_write(void *data) override {
         cl_int err;
@@ -200,13 +205,15 @@ private:
         return NULL;
     }
     void unregist(void *data) override {
-        auto iter = mem_info.find(data);
-        if (iter != std::end(mem_info)) {
-            clReleaseMemObject(iter->second.dm);
-            mem_info.erase(iter);
+        auto it = mem_info.find(data);
+        if (it != std::end(mem_info)) {
+            obj_info& obj = it->second;
+            if (--obj.ref == 0) {
+                clReleaseMemObject(obj.dm);
+                mem_info.erase(it);
+            }
         }
     }
-
 
     std::map<void *, obj_info> mem_info;
 public:
