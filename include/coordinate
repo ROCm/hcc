@@ -268,13 +268,13 @@ struct __coord_compare
         return lhs[idx] == rhs[idx] &&
             __coord_compare<idx + 1, N, coord>::equal(lhs, rhs);
     }
-    static bool greater(const coord<N>& lhs, const coord<N>& rhs) noexcept {
-        return lhs[idx] < rhs[idx] &&
-            __coord_compare<idx + 1, N, coord>::greater(lhs, rhs);
+    static bool less(const coord<N>& lhs, const coord<N>& rhs) noexcept {
+        return lhs[idx] < rhs[idx] ||
+            __coord_compare<idx + 1, N, coord>::less(lhs, rhs);
     }
-    static bool greater_equal(const coord<N>& lhs, const coord<N>& rhs) noexcept {
+    static bool less_equal(const coord<N>& lhs, const coord<N>& rhs) noexcept {
         return lhs[idx] <= rhs[idx] &&
-            __coord_compare<idx + 1, N, coord>::greater_equal(lhs, rhs);
+            __coord_compare<idx + 1, N, coord>::less_equal(lhs, rhs);
     }
 };
 
@@ -282,8 +282,8 @@ template <size_t N, template <size_t id> class coord>
 struct __coord_compare<N, N, coord>
 {
     static const inline bool equal(const coord<N>& lhs, const coord<N>& rhs) noexcept { return true; }
-    static const inline bool greater(const coord<N>& lhs, const coord<N>& rhs) noexcept { return true; }
-    static const inline bool greater_equal(const coord<N>& lhs, const coord<N>& rhs) noexcept { return true; }
+    static const inline bool less(const coord<N>& lhs, const coord<N>& rhs) noexcept { return false; }
+    static const inline bool less_equal(const coord<N>& lhs, const coord<N>& rhs) noexcept { return true; }
 };
 
 template <size_t N>
@@ -389,9 +389,18 @@ public:
     }
 
     reference operator*() const {
+        offset<N> idx;
+        ptrdiff_t str = stride;
+        for (int i = N - 1; i >= 0; --i) {
+            idx[i] = str % bnd_[i];
+            str -= idx[i];
+            str /= bnd_[i];
+        }
+        return idx;
     }
     reference operator[](difference_type n) const {
-        return idx_;
+        bounds_iterator iter(bnd_, stride + n);
+        return *iter;
     }
 };
 
@@ -407,12 +416,12 @@ bool operator!=(const bounds_iterator<Rank>& lhs, const bounds_iterator<Rank>& r
 
 template <size_t Rank>
 bool operator<(const bounds_iterator<Rank>& lhs, const bounds_iterator<Rank>& rhs) {
-    return __coord_compare<0, Rank, offset>::greater(*lhs, *rhs);
+    return __coord_compare<0, Rank, offset>::less(*lhs, *rhs);
 }
 
 template <size_t Rank>
 bool operator<=(const bounds_iterator<Rank>& lhs, const bounds_iterator<Rank>& rhs) {
-    return __coord_compare<0, Rank, offset>::greater_equal(*lhs, *rhs);
+    return __coord_compare<0, Rank, offset>::less_equal(*lhs, *rhs);
 }
 
 template <size_t Rank>
@@ -464,7 +473,7 @@ public:
     bool      contains(const offset<N>& idx) const noexcept { return base_.contains(idx.base_); }
 
     const_iterator begin() const noexcept { return bounds_iterator<N>(*this); }
-    const_iterator end() const noexcept { return bounds_iterator<N>(*this); }
+    const_iterator end() const noexcept { return bounds_iterator<N>(*this, size()); }
 
     reference       operator[](size_type n) { return base_[n]; }
     const_reference operator[](size_type n) const { return base_[n]; };

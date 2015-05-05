@@ -10,6 +10,7 @@ int main()
         auto it2 = b.begin();
         ret &= it1 == it2;
         ret &= it1 <= it2;
+        ret &= !(it1 < it2);
         ret &= it1 >= it2;
         it2++;
         ret &= *it2 == std::offset<4>({0, 0, 0, 1});

@@ -302,11 +302,6 @@ private:
     offset_type stride_;
 };
 
-template <class T, int Rank = 1>
-using carray_view = array_view<const T, Rank>;
-template <class T, int Rank = 1>
-using cstrided_array_view = strided_array_view<const T, Rank>;
-
 }  // std
 
 #endif  // _LIBCPP_ARRAY_VIEW
