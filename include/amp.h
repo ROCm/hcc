@@ -1820,6 +1820,35 @@ private:
 #endif
 };
 
+template <typename T>
+struct __has_data
+{
+private:
+    struct two {char __lx; char __lxx;};
+    template <typename C> static char test(decltype(std::declval<C>().data()));
+    template <typename C> static two test(...);
+public:
+    static const bool value = sizeof(test<T>(0)) == 1;
+};
+
+template <typename T>
+struct __has_size
+{
+private:
+    struct two {char __lx; char __lxx;}; 
+    template <typename C> static char test(decltype(&C::size));
+    template <typename C> static two test(...);
+public:
+    static const bool value = sizeof(test<T>(0)) == 1;
+};
+
+template <typename T>
+struct __is_container
+{
+    using _T = typename std::remove_reference<T>::type;
+    static const bool value = __has_size<_T>::value && __has_data<_T>::value;
+};
+
 template <typename T, int N = 1>
 class array_view
 {
@@ -1842,19 +1871,19 @@ public:
       : extent(src.extent), extent_base(src.extent), index_base(),
       cache(src.internal()), offset(0) {}
 
-  template <typename Container, class = typename std::enable_if<!std::is_array<Container>::value>::type>
+  template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
       array_view(const Concurrency::extent<N>& extent, Container& src)
       : array_view(extent, src.data())
   { static_assert( std::is_same<decltype(src.data()), T*>::value, "container element type and array view element type must match"); }
-  template <typename Container, class = typename std::enable_if<!std::is_array<Container>::value>::type>
+  template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
       array_view(int e0, Container& src)
       : array_view(Concurrency::extent<1>(e0), src)
   { static_assert(N == 1, "Rank must be 1"); }
-  template <typename Container, class = typename std::enable_if<!std::is_array<Container>::value>::type>
+  template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
       array_view(int e0, int e1, Container& src)
       : array_view(Concurrency::extent<2>(e0, e1), src)
   { static_assert(N == 2, "Rank must be 2"); }
-  template <typename Container, class = typename std::enable_if<!std::is_array<Container>::value>::type>
+  template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
       array_view(int e0, int e1, int e2, Container& src)
       : array_view(Concurrency::extent<3>(e0, e1, e2), src)
   { static_assert(N == 3, "Rank must be 3"); }
