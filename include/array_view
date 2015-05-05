@@ -22,14 +22,6 @@ namespace std
         return data[offset]; \
     }
 
-template <class _Indx, class ArrayType> struct decompose {};
-
-template <int ...N, class ArrayType>
-struct decompose<__indices<N...>, ArrayType> {
-    static inline const bounds<sizeof...(N)> call() {
-        return move(bounds<sizeof...(N)>{extent<ArrayType, N>::value...});
-    }
-};
 
 template <size_t N>
 static inline offset<N> get_stride(const bounds<N>& bnd)
@@ -42,7 +34,7 @@ static inline offset<N> get_stride(const bounds<N>& bnd)
 }
 
 
-template <class T, int Rank> class strided_array_view;
+template <class T, size_t Rank> class strided_array_view;
 
 template <typename T>
 struct __has_data
@@ -67,17 +59,17 @@ public:
 };
 
 template <typename T>
-struct __is_container
+struct __is_viewable
 {
     using _T = typename std::remove_reference<T>::type;
     static const bool value = __has_size<_T>::value && __has_data<_T>::value;
 };
 
-template <class T, int Rank = 1>
+template <class T, size_t Rank = 1>
 class array_view {
 public:
-    static constexpr int rank = Rank;
-    using offset_type          = offset<Rank>;
+    static constexpr size_t rank = Rank;
+    using offset_type         = offset<Rank>;
     using bounds_type         = bounds<Rank>;
     using size_type           = size_t;
     using value_type          = T;
@@ -86,10 +78,10 @@ public:
 
     array_view() noexcept : data_(nullptr), bnd_(), stride_() {}
 
-    template <class Viewable, int N = Rank,
+    template <class Viewable, size_t N = Rank,
               typename = typename enable_if<
                   (N == 1) &&
-                  __is_container<Viewable>::value
+                  __is_viewable<Viewable>::value
                   >::type
               >
         array_view(Viewable&& vw) : data_(vw.data()), bnd_(vw.size()), stride_() {
@@ -99,7 +91,7 @@ public:
                                   typename remove_cv<T>::type>::value, "illegal Viewable");
         }
 
-    template <class U, int AnyN, int N = Rank,
+    template <class U, size_t AnyN, size_t N = Rank,
              typename = typename enable_if<
                  N == 1 &&
                  is_convertible<typename add_pointer<U>::type, pointer>::value &&
@@ -109,23 +101,12 @@ public:
         array_view(const array_view<U, AnyN>& rhs) noexcept
         : data_(rhs.data()), bnd_(rhs.size()), stride_(1) {}
 
-    template <class ArrayType,
-              int N = Rank,
-              typename = typename enable_if<
-                  is_convertible<
-                                 typename add_pointer<typename remove_all_extents<ArrayType>::type>::type,
-                                 pointer
-                                >::value &&
-                  is_same<typename remove_cv<
-                                             typename remove_all_extents<ArrayType>::type>::type,
-                                             typename remove_cv<value_type>::type
-                                            >::value &&
-                  std::rank<ArrayType>::value == N
-                  >::type
+    template <size_t Extent,
+              size_t N = Rank,
+              typename = typename enable_if<N == 1>::type
              >
-        array_view(ArrayType& arr) noexcept
-        : data_(reinterpret_cast<pointer>(arr)),
-        bnd_(decompose<typename __make_indices<Rank>::type, ArrayType>::call()), stride_(get_stride(bnd_)) {}
+        array_view(value_type (&arr)[Extent]) noexcept
+        : data_(arr), bnd_(Extent), stride_(get_stride(bnd_)) {}
 
     template <class U,
               typename = typename enable_if<
@@ -149,21 +130,6 @@ public:
     array_view(pointer ptr, bounds_type bounds)
     : data_(ptr), bnd_(bounds), stride_(get_stride(bounds)) {}
 
-    template <class U,
-              typename = typename enable_if<
-                                            is_convertible<typename add_pointer<U>::type, pointer>::value &&
-                                            is_same<
-                                                    typename remove_cv<U>::type,
-                                                    typename remove_cv<value_type>::type
-                                                   >::value
-                                           >::type
-             >
-        array_view& operator=(const array_view<U, Rank>& rhs) noexcept {
-            data_ = rhs.data_;
-            bnd_ =  rhs.bnd_;
-            stride_ = rhs.stride_;
-        }
-
     bounds_type bounds() const noexcept { return bnd_; }
     size_type   size() const noexcept { return bnd_.size(); }
     offset_type  stride() const noexcept { return stride_; }
@@ -175,7 +141,7 @@ public:
     }
 
     // [arrayview.subview], array_view slicing and sectioning
-    template<int N = Rank, typename = typename enable_if<(N > 1)>::type>
+    template<size_t N = Rank, typename = typename enable_if<(N > 1)>::type>
     array_view<T, Rank - 1>
         operator[](ptrdiff_t slice) const {
             assert(slice < bnd_[0]);
@@ -190,7 +156,7 @@ public:
             for (auto i = 0; i < Rank; ++i)
                 assert(range[i] >= section_bnd[i]);
             ptrdiff_t offset = 0;
-            for (int i = 0; i < Rank; ++i)
+            for (auto i = 0; i < Rank; ++i)
                 offset += origin[i] * stride_[i];
             return strided_array_view<T, Rank>(data_ + offset, section_bnd, stride_);
         }
@@ -204,11 +170,11 @@ private:
     offset_type stride_;
 };
 
-template <class T, int Rank = 1>
+template <class T, size_t Rank = 1>
 class strided_array_view {
 public:
     // constants and types
-    static constexpr int rank = Rank;
+    static constexpr size_t rank = Rank;
     using offset_type          = offset<Rank>;
     using bounds_type         = bounds<Rank>;
     using size_type           = size_t;
@@ -245,21 +211,6 @@ public:
     strided_array_view(pointer ptr, bounds_type bounds, offset_type stride)
         : data_(ptr), bnd_(bounds), stride_(stride) {}
 
-    template <class U,
-              typename = typename enable_if<
-                                            is_convertible<typename add_pointer<U>::type, pointer>::value &&
-                                            is_same<
-                                                    typename remove_cv<U>::type,
-                                                    typename remove_cv<value_type>::type
-                                                   >::value
-                                           >::type
-             >
-        strided_array_view& operator=(const strided_array_view<U, Rank>& rhs) noexcept {
-            data_ = rhs.data_;
-            bnd_ = rhs.bnd_;
-            stride_ = rhs.stride_;
-        }
-
     bounds_type bounds() const noexcept { return bnd_; }
     size_type   size() const noexcept { return bnd_.size(); }
     offset_type  stride() const noexcept { return stride_; }
@@ -269,7 +220,7 @@ public:
         VIEW_ACCESS(data_, idx, stride(), Rank);
     }
 
-    template<int N = Rank, typename = typename enable_if<(N > 1)>::type>
+    template<size_t N = Rank, typename = typename enable_if<(N > 1)>::type>
     strided_array_view<T, Rank - 1>
         operator[](ptrdiff_t slice) const {
             assert(slice < bnd_[0]);
@@ -287,7 +238,7 @@ public:
             for (auto i = 0; i < Rank; ++i)
                 assert(range[i] >= section_bnd[i]);
             ptrdiff_t offset = 0;
-            for (int i = 0; i < Rank; ++i)
+            for (auto i = 0; i < Rank; ++i)
                 offset += origin[i] * stride_[i];
             return strided_array_view<T, Rank>(data_ + offset, section_bnd, stride_);
         }
@@ -296,7 +247,7 @@ public:
 
 private:
     static_assert(Rank >= 1, "Rank should be greater than or equal to 1");
-    template <typename T_, int Rank_> friend class strided_array_view;
+    template <typename T_, size_t Rank_> friend class strided_array_view;
     pointer data_;  // exposition only
     bounds_type bnd_;
     offset_type stride_;
