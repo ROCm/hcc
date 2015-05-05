@@ -6,6 +6,7 @@
 #define AMP_DEVICE_TYPE_GPU (2)
 
 namespace Concurrency {
+    class AMPAllocator;
 namespace CLAMP {
 // used in amp.h
 extern std::vector<int> EnumerateDevices();
@@ -21,7 +22,7 @@ extern void enter_kernel();
 extern void leave_kernel();
 #endif
 
-extern void *CreateKernel(std::string);
+extern void *CreateKernel(std::string, AMPAllocator*);
 extern void LaunchKernel(void *, size_t, size_t *, size_t *);
 extern std::shared_future<void>* LaunchKernelAsync(void *, size_t, size_t *, size_t *);
 extern void MatchKernelNames(std::string &);

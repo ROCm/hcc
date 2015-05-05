@@ -48,12 +48,7 @@ namespace CLAMP {
     void CLCompileKernels(cl_program&, cl_context&, cl_device_id&, void*, void*);
 }
 
-struct obj_info
-{
-    cl_mem dm;
-    int count;
-    int ref;
-};
+
 
 struct DimMaxSize {
   cl_uint dimensions;
@@ -69,10 +64,10 @@ void ReleaseKernelObject() {
         clReleaseKernel(itt.second);
 }
 
-class OpenCLAMPAllocator : public AMPAllocator
+class OpenCLAMPManager : public AMPManager
 {
 public:
-    OpenCLAMPAllocator() {
+    OpenCLAMPManager() {
         cl_uint          num_platforms;
         cl_int           err;
         cl_platform_id   platform_id[10];
@@ -93,7 +88,81 @@ public:
         assert(err == CL_SUCCESS);
         context = clCreateContext(0, 1, &device, NULL, NULL, &err);
         assert(err == CL_SUCCESS);
-        queue = clCreateCommandQueue(context, device, 0, &err);
+
+        cl_uint dimensions = 0;
+        err = clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, sizeof(cl_uint), &dimensions, NULL);
+        assert(err == CL_SUCCESS);
+        size_t *maxSizes = new size_t[dimensions];
+        err = clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(size_t) * dimensions, maxSizes, NULL);
+        assert(err == CL_SUCCESS);
+        struct DimMaxSize d;
+        d.dimensions = dimensions;
+        d.maxSizes = maxSizes;
+        Clid2DimSizeMap[device] = d;
+    }
+    void* CreateKernel(const char* fun, void* size, void* source) override {
+        cl_int err;
+        Concurrency::CLAMP::CLCompileKernels(program, context, device, size, source);
+        Concurrency::KernelObject& KO = Concurrency::Pro2KernelObject[program];
+        std::string name(fun);
+        if (KO[name] == 0) {
+            cl_int err;
+            KO[name] = clCreateKernel(program, name.c_str(), &err);
+            assert(err == CL_SUCCESS);
+        }
+        return KO[name];
+    }
+    void* create(size_t count, void* data, bool hasSource /* unused */) override {
+        cl_int err;
+        cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, nullptr, &err);
+        assert(err == CL_SUCCESS);
+        return dm;
+    }
+    bool check(size_t* local_size, size_t dim_ext) override {
+        // C++ AMP specifications
+        // The maximum number of tiles per dimension will be no less than 65535.
+        // The maximum number of threads in a tile will be no less than 1024.
+        // In 3D tiling, the maximal value of D0 will be no less than 64.
+        size_t *maxSizes = Concurrency::Clid2DimSizeMap[device].maxSizes;
+        bool is = true;
+        int threads_per_tile = 1;
+        for(int i = 0; local_size && i < dim_ext; i++) {
+            threads_per_tile *= local_size[i];
+            // For the following cases, set local_size=NULL and let OpenCL driver arranges it instead
+            //(1) tils number exceeds CL_DEVICE_MAX_WORK_ITEM_SIZES per dimension
+            //(2) threads in a tile exceeds CL_DEVICE_MAX_WORK_ITEM_SIZES
+            //Note that the driver can still handle unregular tile_dim, e.g. tile_dim is undivisble by 2
+            //So skip this condition ((local_size[i]!=1) && (local_size[i] & 1))
+            if(local_size[i] > maxSizes[i] || threads_per_tile > maxSizes[i])
+                return false;
+        }
+        return true;
+    }
+    void release(void *device) override { clReleaseMemObject(static_cast<cl_mem>(device)); }
+    cl_device_id getDevice() const { return device; }
+    cl_context getContext() const { return context; }
+    ~OpenCLAMPManager() {
+        clReleaseProgram(program);
+        clReleaseContext(context);
+        for(const auto& it : Clid2DimSizeMap)
+            if(it.second.maxSizes)
+                delete[] it.second.maxSizes;
+        ReleaseKernelObject();
+    }
+private:
+    cl_context       context;
+    cl_device_id     device;
+    cl_program       program;
+};
+
+
+class OpenCLAMPAllocator : public AMPAllocator
+{
+    cl_command_queue queue;
+public:
+    OpenCLAMPAllocator(OpenCLAMPManager *Man) : AMPAllocator(Man) {
+        cl_int err;
+        queue = clCreateCommandQueue(Man->getContext(), Man->getDevice(), 0, &err);
         assert(err == CL_SUCCESS);
 
         // Propel underlying OpenCL driver to enque kernels faster (pthread-based)
@@ -115,9 +184,6 @@ public:
         if (result != 0)
           perror("getsched self error!\n");
         int self_prio = param.sched_priority;
-#if 0
-        printf("self=%d, self_prio = %d,  max = %d\n", (int)self, self_prio, max_prio);
-#endif
 #define CL_QUEUE_THREAD_HANDLE_AMD 0x403E
 #define PRIORITY_OFFSET 2
         void* handle=NULL;
@@ -129,9 +195,6 @@ public:
             if (result != 0)
                 perror("getsched q error!\n");
             int que_prio = param.sched_priority;
-#if 0
-            printf("que=%d, que_prio = %d\n", (int)thId, que_prio);
-#endif
             // Strategy to renew the que thread's priority, the smaller the highest
             if (max_prio == que_prio) {
             } else if (max_prio < que_prio && que_prio <= self_prio) {
@@ -146,99 +209,42 @@ public:
                 perror("Renew p error!\n");
         } 
         pthread_attr_destroy(&attr);
-
-        // C++ AMP specifications
-        // The maximum number of tiles per dimension will be no less than 65535.
-        // The maximum number of threads in a tile will be no less than 1024.
-        // In 3D tiling, the maximal value of D0 will be no less than 64.
-        cl_uint dimensions = 0;
-        err = clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, sizeof(cl_uint), &dimensions, NULL);
-        assert(err == CL_SUCCESS);
-        size_t *maxSizes = new size_t[dimensions];
-        err = clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(size_t) * dimensions, maxSizes, NULL);
-        assert(err == CL_SUCCESS);
-        struct DimMaxSize d;
-        d.dimensions = dimensions;
-        d.maxSizes = maxSizes;
-        Clid2DimSizeMap[device] = d;
     }
-private:
     void* getQueue() override { return queue; }
-    void regist(int count, void* data, bool hasSource /* unused */) override {
-        cl_int err;
-        auto it = mem_info.find(data);
-        if (it == std::end(mem_info)) {
-            cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, nullptr, &err);
-            assert(err == CL_SUCCESS);
-            mem_info[data] = {dm, count, 1};
-        } else
-            ++it->second.ref;
-    }
     void PushArg(void *kernel, int idx, rw_info& data) override {
-        PushArgImpl(kernel, idx, sizeof(cl_mem), &mem_info[data.data].dm);
+        obj_info obj = Man->device_data(data.data);
+        PushArgImpl(kernel, idx, sizeof(cl_mem), &obj.device);
     }
     void amp_write(void *data) override {
-        cl_int err;
-        auto iter = mem_info.find(data);
-        obj_info& obj = iter->second;
-        err = clEnqueueWriteBuffer(queue, obj.dm, CL_TRUE, 0, obj.count, data, 0, NULL, NULL);
+        obj_info obj = Man->device_data(data);
+        cl_mem dm = static_cast<cl_mem>(obj.device);
+        cl_int err = clEnqueueWriteBuffer(queue, dm, CL_TRUE, 0, obj.count, data, 0, NULL, NULL);
         assert(err == CL_SUCCESS);
     }
     void amp_read(void *data) override {
-        cl_int err;
-        auto iter = mem_info.find(data);
-        obj_info& obj = iter->second;
-        err = clEnqueueReadBuffer(queue, obj.dm, CL_TRUE, 0, obj.count, data, 0, NULL, NULL);
+        obj_info obj = Man->device_data(data);
+        cl_mem dm = static_cast<cl_mem>(obj.device);
+        cl_int err = clEnqueueReadBuffer(queue, dm, CL_TRUE, 0, obj.count, data, 0, NULL, NULL);
         assert(err == CL_SUCCESS);
     }
-    void amp_copy(void *dst, void *src, int count) override {
-        cl_int err;
-        auto iter = mem_info.find(src);
-        obj_info& obj = iter->second;
-        err = clEnqueueReadBuffer(queue, obj.dm, CL_TRUE, 0, count, dst , 0, NULL, NULL);
+    void amp_copy(void *dst, void *src, size_t count) override {
+        obj_info obj = Man->device_data(src);
+        cl_mem dm = static_cast<cl_mem>(obj.device);
+        cl_int err = clEnqueueReadBuffer(queue, dm, CL_TRUE, 0, count, dst , 0, NULL, NULL);
         assert(err == CL_SUCCESS);
     }
-    void* _device_data(void* data) override {
-        auto it = mem_info.find(data);
-        if (it != std::end(mem_info))
-            return it->second.dm;
-        return NULL;
+    void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) override {
+        cl_int err;
+        if(!Man->check(local_size, dim_ext))
+            local_size = NULL;
+        err = clEnqueueNDRangeKernel(queue, (cl_kernel)kernel, dim_ext, NULL, ext, local_size, 0, NULL, NULL);
+        assert(err == CL_SUCCESS);
     }
-    void unregist(void *data) override {
-        auto it = mem_info.find(data);
-        if (it != std::end(mem_info)) {
-            obj_info& obj = it->second;
-            if (--obj.ref == 0) {
-                clReleaseMemObject(obj.dm);
-                mem_info.erase(it);
-            }
-        }
-    }
-
-    std::map<void *, obj_info> mem_info;
-public:
-
-    ~OpenCLAMPAllocator() {
-        clReleaseProgram(program);
-        clReleaseCommandQueue(queue);
-        clReleaseContext(context);
-        for(const auto& it : Clid2DimSizeMap)
-            if(it.second.maxSizes)
-                delete[] it.second.maxSizes;
-        ReleaseKernelObject();
-    }
-    cl_context       context;
-    cl_device_id     device;
-    cl_command_queue queue;
-    cl_program       program;
+    ~OpenCLAMPAllocator() { clReleaseCommandQueue(queue); }
 };
 
-static OpenCLAMPAllocator amp;
-
-OpenCLAMPAllocator& getOpenCLAMPAllocator() {
-    return amp;
-}
-
+static OpenCLAMPManager man;
+static OpenCLAMPAllocator amp(&man);
 
 } // namespace Concurrency
 
@@ -315,7 +321,8 @@ static inline void getKernelNames(cl_program& prog) {
     }
 }
 
-void CLCompileKernels(cl_program& program, cl_context& context, cl_device_id& device, void* kernel_size_, void* kernel_source_)
+void CLCompileKernels(cl_program& program, cl_context& context, cl_device_id& device,
+                      void* kernel_size_, void* kernel_source_)
 {
     cl_int err;
     if (!__mcw_cxxamp_compiled) {
@@ -403,16 +410,19 @@ void CLCompileKernels(cl_program& program, cl_context& context, cl_device_id& de
 
             //Get the number of devices attached with program object
             cl_uint nDevices = 0;
-            clGetProgramInfo(program, CL_PROGRAM_NUM_DEVICES, sizeof(cl_uint),&nDevices, NULL);
+            err = clGetProgramInfo(program, CL_PROGRAM_NUM_DEVICES, sizeof(cl_uint),&nDevices, NULL);
             assert(nDevices == 1);
+            assert(err == CL_SUCCESS);
 
             //Get the Id of all the attached devices
             cl_device_id *devices = new cl_device_id[nDevices];
-            clGetProgramInfo(program, CL_PROGRAM_DEVICES, sizeof(cl_device_id) * nDevices, devices, NULL);
+            err = clGetProgramInfo(program, CL_PROGRAM_DEVICES, sizeof(cl_device_id) * nDevices, devices, NULL);
+            assert(err == CL_SUCCESS);
 
             // Get the sizes of all the binary objects
             size_t *pgBinarySizes = new size_t[nDevices];
-            clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, sizeof(size_t) * nDevices, pgBinarySizes, NULL);
+            err = clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, sizeof(size_t) * nDevices, pgBinarySizes, NULL);
+            assert(err == CL_SUCCESS);
 
             // Allocate storage for each binary objects
             unsigned char **pgBinaries = new unsigned char*[nDevices];
@@ -422,7 +432,8 @@ void CLCompileKernels(cl_program& program, cl_context& context, cl_device_id& de
             }
 
             // Get all the binary objects
-            clGetProgramInfo(program, CL_PROGRAM_BINARIES, sizeof(unsigned char*) * nDevices, pgBinaries, NULL);
+            err = clGetProgramInfo(program, CL_PROGRAM_BINARIES, sizeof(unsigned char*) * nDevices, pgBinaries, NULL);
+            assert(err == CL_SUCCESS);
 
             // save compiled kernel binary
             std::ofstream compiled_kernel(compiled_kernel_name.str(), std::ostream::binary);
@@ -449,7 +460,6 @@ void CLCompileKernels(cl_program& program, cl_context& context, cl_device_id& de
 
 } // namespce CLAMP
 } // namespace Concurrency
-
 
 extern "C" void *GetAllocatorImpl() {
     return &Concurrency::amp;
@@ -540,50 +550,6 @@ extern "C" void QueryDeviceInfoImpl(const wchar_t* device_path,
     if (singleFPConfig & CL_FP_FMA & CL_FP_DENORM & CL_FP_INF_NAN &
         CL_FP_ROUND_TO_NEAREST & CL_FP_ROUND_TO_ZERO)
          *supports_limited_double_precision = true;
-}
-
-extern "C" void *CreateKernelImpl(const char* s, void* kernel_size, void* kernel_source) {
-  cl_int err;
-  Concurrency::OpenCLAMPAllocator& aloc = Concurrency::getOpenCLAMPAllocator();
-  Concurrency::CLAMP::CLCompileKernels(aloc.program, aloc.context, aloc.device, kernel_size, kernel_source);
-  Concurrency::KernelObject& KO = Concurrency::Pro2KernelObject[aloc.program];
-  std::string name(s);
-  if (KO[name] == 0) {
-       cl_int err;
-       KO[name] = clCreateKernel(aloc.program, name.c_str(), &err);
-       assert(err == CL_SUCCESS);
-  }
-  return KO[name];
-}
-
-extern "C" void LaunchKernelImpl(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {
-  cl_int err;
-  Concurrency::OpenCLAMPAllocator& aloc = Concurrency::getOpenCLAMPAllocator();
-  {
-      // C++ AMP specifications
-      // The maximum number of tiles per dimension will be no less than 65535.
-      // The maximum number of threads in a tile will be no less than 1024.
-      // In 3D tiling, the maximal value of D0 will be no less than 64.
-      size_t *maxSizes = Concurrency::Clid2DimSizeMap[aloc.device].maxSizes;
-      bool is = true;
-      int threads_per_tile = 1;
-      for(int i = 0; local_size && i < dim_ext; i++) {
-          threads_per_tile *= local_size[i];
-          // For the following cases, set local_size=NULL and let OpenCL driver arranges it instead
-          //(1) tils number exceeds CL_DEVICE_MAX_WORK_ITEM_SIZES per dimension
-          //(2) threads in a tile exceeds CL_DEVICE_MAX_WORK_ITEM_SIZES
-          //Note that the driver can still handle unregular tile_dim, e.g. tile_dim is undivisble by 2
-          //So skip this condition ((local_size[i]!=1) && (local_size[i] & 1))
-          if(local_size[i] > maxSizes[i] || threads_per_tile > maxSizes[i]) {
-              is = false;
-              break;
-          }
-      }
-      if(!is)
-          local_size = NULL;
-  }
-  err = clEnqueueNDRangeKernel(aloc.queue, (cl_kernel)kernel, dim_ext, NULL, ext, local_size, 0, NULL, NULL);
-  assert(err == CL_SUCCESS);
 }
 
 extern "C" void *LaunchKernelAsyncImpl(void *ker, size_t nr_dim, size_t *global, size_t *local) {

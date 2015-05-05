@@ -5,23 +5,79 @@ namespace Concurrency {
 
 struct rw_info;
 
+struct obj_info
+{
+    void* device;
+    size_t count;
+    int ref;
+};
+
+class AMPManager {
+    virtual void* create(size_t count, void *data, bool hasSrc) = 0;
+    virtual void release(void *data) = 0;
+    std::map<void *, obj_info> mem_info;
+public:
+    virtual ~AMPManager() {}
+    virtual void* CreateKernel(const char* fun, void* size, void* source) = 0;
+    virtual bool check(size_t *local, size_t dim_ext) = 0;
+
+    void regist(size_t count, void* data, bool hasSrc) {
+        auto it = mem_info.find(data);
+        if (it == std::end(mem_info)) {
+            void* device = create(count, data, hasSrc);
+            mem_info[data] = {device, count, 1};
+        } else
+            ++it->second.ref;
+    }
+
+    void unregist(void *data) {
+        auto it = mem_info.find(data);
+        if (it != std::end(mem_info)) {
+            obj_info& obj = it->second;
+            if (!--obj.ref) {
+                release(obj.device);
+                mem_info.erase(it);
+            }
+        }
+    }
+
+    obj_info device_data(void* data) {
+        auto it = mem_info.find(data);
+        if (it != std::end(mem_info))
+            return it->second;
+        return obj_info();
+    }
+};
+
 class AMPAllocator {
+protected:
+    AMPManager *Man;
+    AMPAllocator(AMPManager* Man) : Man(Man) {}
 public:
   virtual ~AMPAllocator() {}
 
-  void* device_data(void* data) { return _device_data(data); }
   void* getQueue() { return _getQueue(); }
-public:
 
+  void regist(size_t count, void* data, bool hasSrc) {
+      Man->regist(count, data, hasSrc);
+  }
+
+  void unregist(void* data) {
+      Man->unregist(data);
+  }
+
+  void* CreateKernel(const char* fun, void* size, void* source) {
+      return Man->CreateKernel(fun, size, source);
+  }
+
+  void* device_data(void* data) { return Man->device_data(data).device; }
   virtual void* _getQueue() { return nullptr; }
-  virtual void* _device_data(void *data) { return nullptr; }
   // overide function
-  virtual void regist(int count, void *data, bool hasSrc) = 0;
-  virtual void PushArg(void* kernel, int idx, rw_info& data) = 0;
   virtual void amp_write(void *data) = 0;
   virtual void amp_read(void *data) = 0;
-  virtual void amp_copy(void *dst, void *src, int n) = 0;
-  virtual void unregist(void *data) = 0;
+  virtual void amp_copy(void *dst, void *src, size_t n) = 0;
+  virtual void PushArg(void* kernel, int idx, rw_info& data) = 0;
+  virtual void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) = 0;
 };
 
 AMPAllocator *getAllocator();
@@ -94,7 +150,8 @@ struct rw_info
     }
 };
 
-
+inline void *getDevicePointer(void *ptr) { return getAllocator()->device_data(ptr); }
+inline void *getOCLQueue(void *ptr) { return getAllocator()->getQueue(); }
 
 } // namespace Concurrency
 

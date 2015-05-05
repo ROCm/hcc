@@ -8,6 +8,7 @@
 #include <iostream>
 #include <string>
 #include <cassert>
+#include <tuple>
 
 #include <amp.h>
 #include <mutex>
@@ -53,8 +54,6 @@ struct RuntimeImpl {
     m_RuntimeHandle(nullptr),
     m_EnumerateDevicesImpl(nullptr),
     m_QueryDeviceInfoImpl(nullptr),
-    m_CreateKernelImpl(nullptr),
-    m_LaunchKernelImpl(nullptr),
     m_LaunchKernelAsyncImpl(nullptr),
     m_MatchKernelNamesImpl(nullptr),
     m_PushArgImpl(nullptr),
@@ -81,14 +80,11 @@ struct RuntimeImpl {
 
     m_EnumerateDevicesImpl = (EnumerateDevicesImpl_t) dlsym(m_RuntimeHandle, "EnumerateDevicesImpl");
     m_QueryDeviceInfoImpl = (QueryDeviceInfoImpl_t) dlsym(m_RuntimeHandle, "QueryDeviceInfoImpl");
-    m_CreateKernelImpl = (CreateKernelImpl_t) dlsym(m_RuntimeHandle, "CreateKernelImpl");
-    m_LaunchKernelImpl = (LaunchKernelImpl_t) dlsym(m_RuntimeHandle, "LaunchKernelImpl");
     m_LaunchKernelAsyncImpl = (LaunchKernelAsyncImpl_t) dlsym(m_RuntimeHandle, "LaunchKernelAsyncImpl");
     m_MatchKernelNamesImpl = (MatchKernelNamesImpl_t) dlsym(m_RuntimeHandle, "MatchKernelNamesImpl");
     m_PushArgImpl = (PushArgImpl_t) dlsym(m_RuntimeHandle, "PushArgImpl");
     m_PushArgPtrImpl = (PushArgPtrImpl_t) dlsym(m_RuntimeHandle, "PushArgPtrImpl");
     m_GetAllocatorImpl = (GetAllocatorImpl_t) dlsym(m_RuntimeHandle, "GetAllocatorImpl");
-
   }
 
   void set_cpu() { isCPU = true; }
@@ -98,8 +94,6 @@ struct RuntimeImpl {
   void* m_RuntimeHandle;
   EnumerateDevicesImpl_t m_EnumerateDevicesImpl;
   QueryDeviceInfoImpl_t m_QueryDeviceInfoImpl;
-  CreateKernelImpl_t m_CreateKernelImpl;
-  LaunchKernelImpl_t m_LaunchKernelImpl;
   LaunchKernelAsyncImpl_t m_LaunchKernelAsyncImpl;
   MatchKernelNamesImpl_t m_MatchKernelNamesImpl;
   PushArgImpl_t m_PushArgImpl;
@@ -341,7 +335,7 @@ void QueryDeviceInfo(const std::wstring& device_path,
 }
 
 // used in parallel_for_each.h
-void *CreateKernel(std::string s) {
+void *CreateKernel(std::string s, AMPAllocator* Aloc) {
   // FIXME need a more elegant way
   if (GetOrInitRuntime()->m_ImplName.find("libmcwamp_opencl") != std::string::npos) {
     static bool firstTime = true;
@@ -367,25 +361,21 @@ void *CreateKernel(std::string s) {
         size_t kernel_size =
         (ptrdiff_t)((void *)spir_kernel_end) -
         (ptrdiff_t)((void *)spir_kernel_source);
-      return GetOrInitRuntime()->m_CreateKernelImpl(s.c_str(), (void *)kernel_size, spir_kernel_source);
+      return Aloc->CreateKernel(s.c_str(), (void *)kernel_size, spir_kernel_source);
     } else {
       // OpenCL path
         size_t kernel_size =
         (ptrdiff_t)((void *)cl_kernel_end) -
         (ptrdiff_t)((void *)cl_kernel_source);
-      return GetOrInitRuntime()->m_CreateKernelImpl(s.c_str(), (void *)kernel_size, cl_kernel_source);
+      return Aloc->CreateKernel(s.c_str(), (void *)kernel_size, cl_kernel_source);
     }
   } else {
     // HSA path
        size_t kernel_size =
         (ptrdiff_t)((void *)hsa_kernel_end) -
         (ptrdiff_t)((void *)hsa_kernel_source);
-     return GetOrInitRuntime()->m_CreateKernelImpl(s.c_str(), (void *)kernel_size, hsa_kernel_source);
+     return Aloc->CreateKernel(s.c_str(), (void *)kernel_size, hsa_kernel_source);
    }
-}
-
-void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {
-  GetOrInitRuntime()->m_LaunchKernelImpl(kernel, dim_ext, ext, local_size);
 }
 
 std::shared_future<void>* LaunchKernelAsync(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {
@@ -417,5 +407,5 @@ void PushArgPtr(void *k_, int idx, size_t sz, const void *s) {
 AMPAllocator *getAllocator() {
   return static_cast<AMPAllocator*>(CLAMP::GetOrInitRuntime()->m_GetAllocatorImpl());
 }
-} // namespace Concurrency
 
+} // namespace Concurrency

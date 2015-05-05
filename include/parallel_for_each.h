@@ -203,7 +203,7 @@ static inline std::shared_future<void>* mcw_cxxamp_launch_kernel_async(size_t *e
   {
       std::string transformed_kernel_name =
           mcw_cxxamp_fixnames(f.__cxxamp_trampoline_name());
-      kernel = CLAMP::CreateKernel(transformed_kernel_name);
+      kernel = CLAMP::CreateKernel(transformed_kernel_name, getAllocator());
   }
   Concurrency::Serialize s(kernel);
   f.__cxxamp_serialize(s);
@@ -224,11 +224,11 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
   {
       std::string transformed_kernel_name =
           mcw_cxxamp_fixnames(f.__cxxamp_trampoline_name());
-      kernel = CLAMP::CreateKernel(transformed_kernel_name);
+      kernel = CLAMP::CreateKernel(transformed_kernel_name, getAllocator());
   }
   Concurrency::Serialize s(kernel);
   f.__cxxamp_serialize(s);
-  CLAMP::LaunchKernel(kernel, dim_ext, ext, local_size);
+  getAllocator()->LaunchKernel(kernel, dim_ext, ext, local_size);
 #endif // __GPU__
 }
 
