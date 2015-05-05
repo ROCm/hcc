@@ -94,6 +94,9 @@ void ldflags(void) {
     if (bolt_rewrite_mode) {
         std::cout << "-lampBolt.runtime.clang ";
     }
+    if (const char *p = getenv("TEST_CPU"))
+        if (p == std::string("ON"))
+        std::cout << " -lmcwamp_atomic ";
     std::cout << "-Wl,--whole-archive -lmcwamp -Wl,--no-whole-archive ";
 }
 

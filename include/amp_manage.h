@@ -5,70 +5,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef __AMP_CPU__
-#include <amp_cpu_manage.h>
-#else
-
 #pragma once
 
 #include <amp_allocator.h>
 
 namespace Concurrency {
 
-struct mm_info
-{
-    size_t count;
-    void *host;
-    void *device;
-    void *dirty;
-    bool discard;
-    mm_info(int count)
-        : count(count), host(::operator new(count)), device(host),
-        dirty(host), discard(false) { getAllocator()->init(device, count); }
-    mm_info(int count, void *src)
-        : count(count), host(src), device(::operator new(count)),
-        dirty(host), discard(false) { getAllocator()->init(device, count); }
-    void synchronize() {
-        if (dirty != host) {
-            memmove(host, device, count);
-            dirty = host;
-        }
-    }
-    void refresh() {
-        if (device != host)
-            memmove(device, host, count);
-    }
-    void* get() { return dirty; }
-    void disc() {
-        if (dirty != host)
-            dirty = host;
-        discard = true;
-    }
-    void serialize(Serialize& s) {
-        if (dirty == host && device != host) {
-            if (!discard)
-                refresh();
-            dirty = device;
-        }
-        discard = false;
-        getAllocator()->append(s.getKernel(), s.getAndIncCurrentIndex(), device);
-    }
-    ~mm_info() {
-        getAllocator()->free(device);
-        if (host != device) {
-            if (!discard)
-                synchronize();
-            ::operator delete(device);
-        }
-    }
-};
-
 // Dummy interface that looks somewhat like std::shared_ptr<T>
 template <typename T>
 class _data {
 public:
     _data() = delete;
-    _data(int count) {}
+    _data(int count, bool) {}
     _data(const _data& d) restrict(cpu, amp)
         : p_(d.p_) {}
     template <typename U>
@@ -81,32 +29,49 @@ private:
     __global T* p_;
 };
 
+
+static inline void amp_delete(void *p) { getAllocator()->free(p); }
+
 template <typename T>
 class _data_host {
-    std::shared_ptr<mm_info> mm;
-    template <typename U> friend struct _data_host;
-public:
-    _data_host(int count)
-        : mm(std::make_shared<mm_info>(count * sizeof(T))) {}
-    _data_host(int count, T* src)
-        : mm(std::make_shared<mm_info>(count * sizeof(T), src)) {}
-    _data_host(const _data_host& other)
-        : mm(other.mm) {}
-    template <typename U>
-        _data_host(const _data_host<U>& other) : mm(other.mm) {}
+    mutable std::shared_ptr<void> mm;
+    size_t count;
+    bool isArray;
+    template <typename U> friend class _data_host;
 
-    T *get() const { return (T *)mm->get(); }
-    void synchronize() const { mm->synchronize(); }
-    void discard() const { mm->disc(); }
-    void refresh() const { mm->refresh(); }
+public:
+    _data_host(int count, bool isArr = false)
+        : mm(getAllocator()->init(count * sizeof(T), nullptr), amp_delete),
+        count(count), isArray(isArr) {}
+
+    _data_host(int count, T* src, bool isArr = false)
+        : mm(getAllocator()->init(count * sizeof(T), src), amp_delete),
+        count(count), isArray(isArr) {}
+
+    _data_host(const _data_host& other)
+        : mm(other.mm), count(other.count), isArray(false) {}
+
+    template <typename U>
+        _data_host(const _data_host<U>& other)
+        : mm(other.mm), count(other.count), isArray(false) {}
+
+    T *get() const { return static_cast<T*>(mm.get()); }
+    void synchronize() const { getAllocator()->sync(mm.get()); }
+    void discard() const { getAllocator()->discard(mm.get()); }
+    void refresh() const {}
+    void copy(void *dst) const { getAllocator()->copy(dst, mm.get(), count * sizeof(T)); }
+    size_t size() const { return count; }
+    void stash() const { getAllocator()->stash(mm.get()); }
 
     __attribute__((annotate("serialize")))
         void __cxxamp_serialize(Serialize& s) const {
-            mm->serialize(s);
+            getAllocator()->append(s.getKernel(), s.getAndIncCurrentIndex(), mm, isArray);
         }
     __attribute__((annotate("user_deserialize")))
-        explicit _data_host(__global T* t);
+        explicit _data_host(__global T* t) {}
 };
 
+inline void *getDevicePointer(void *ptr) { return getAllocator()->device_data(ptr); }
+inline void *getOCLQueue(void *ptr) { return getAllocator()->getQueue(); }
+
 } // namespace Concurrency
-#endif

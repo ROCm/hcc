@@ -3749,11 +3749,11 @@ void CWriter::printGEPExpression(Value *Ptr, gep_type_iterator I,
       // we will see struct.array in GEP
       gep_type_iterator J = I;
       if (++J != E && ((*J)->isArrayTy()))
-	IsUserDefinedStructOfArray = true;
+    IsUserDefinedStructOfArray = true;
       Out << ".field" << cast<ConstantInt>(I.getOperand())->getZExtValue();
     } else if ((*I)->isArrayTy()) {
       if (!IsUserDefinedStructOfArray)
-	Out << ".field0";
+    Out << ".field0";
       Out << ".array[";
       writeOperandWithCast(I.getOperand(), Instruction::GetElementPtr);
       Out << ']';
