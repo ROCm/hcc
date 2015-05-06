@@ -231,7 +231,7 @@ void mcw_cxxamp_launch_kernel(const accelerator_view& av, size_t *ext,
           mcw_cxxamp_fixnames(f.__cxxamp_trampoline_name());
       kernel = CLAMP::CreateKernel(transformed_kernel_name, av.pAloc.get());
   }
-  Concurrency::Serialize s(kernel);
+  Concurrency::Serialize s(av.pAloc, kernel);
   f.__cxxamp_serialize(s);
   av.pAloc->LaunchKernel(kernel, dim_ext, ext, local_size);
 #endif // __GPU__

@@ -31,7 +31,6 @@
 #include <ucontext.h>
 #endif
 // CLAMP
-#include <serialize.h>
 #define __global
 #include <amp_runtime.h>
 #include <amp_manage.h>

@@ -21,7 +21,6 @@
 #include <fstream>
 #include <iomanip>
 
-#include <amp_allocator.h>
 #include <amp_runtime.h>
 
 ///
@@ -230,6 +229,25 @@ public:
         obj_info obj = Man->device_data(data);
         cl_mem dm = static_cast<cl_mem>(obj.device);
         cl_int err = clEnqueueReadBuffer(queue, dm, CL_TRUE, 0, obj.count, data, 0, NULL, NULL);
+        assert(err == CL_SUCCESS);
+    }
+    void* amp_map(void *data, bool Write) override {
+        obj_info obj = Man->device_data(data);
+        cl_mem dm = static_cast<cl_mem>(obj.device);
+        cl_int err;
+        cl_map_flags flags;
+        if (Write)
+            flags = CL_MAP_WRITE_INVALIDATE_REGION;
+        else
+            flags = CL_MAP_READ;
+        void* addr = clEnqueueMapBuffer(queue, dm, CL_TRUE, flags, 0, obj.count, 0, NULL, NULL, &err);
+        assert(err == CL_SUCCESS);
+        return addr;
+    }
+    void amp_unmap(void *data, void* addr) override {
+        obj_info obj = Man->device_data(data);
+        cl_mem dm = static_cast<cl_mem>(obj.device);
+        cl_int err = clEnqueueUnmapMemObject(queue, dm, addr, 0, NULL, NULL);
         assert(err == CL_SUCCESS);
     }
     void amp_copy(void *dst, void *src, size_t count) override {

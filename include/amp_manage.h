@@ -8,8 +8,7 @@
 #ifndef __CLAMP_AMP_MANAGE
 #define __CLAMP_AMP_MANAGE
 
-#include <amp_allocator.h>
-#include <serialize.h>
+#include <amp_runtime.h>
 
 namespace Concurrency {
 
@@ -59,11 +58,11 @@ public:
     void copy(void *dst) const { mm->copy(dst, count * sizeof(T)); }
     size_t size() const { return count; }
     void stash() const { mm->stash(); }
-    std::shared_ptr<AMPAllocator> get_av() const { return mm->Aloc; }
+    std::shared_ptr<AMPAllocator> get_av() const { return mm->master; }
 
     __attribute__((annotate("serialize")))
         void __cxxamp_serialize(Serialize& s) const {
-            mm->append(s.getKernel(), s.getAndIncCurrentIndex(), isArray);
+            mm->append(s, isArray);
         }
     __attribute__((annotate("user_deserialize")))
         explicit _data_host(__global T* t) {}
