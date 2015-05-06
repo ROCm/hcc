@@ -33,8 +33,8 @@
 // CLAMP
 #include <serialize.h>
 #define __global
-#include <amp_manage.h>
 #include <amp_runtime.h>
+#include <amp_manage.h>
 // End CLAMP
 
 /* COMPATIBILITY LAYER */
@@ -121,121 +121,104 @@ template <typename T, int N> class array_view;
 template <typename T, int N> class array;
 
 class accelerator_view {
+    accelerator_view(std::shared_ptr<AMPAllocator> pAloc,
+                     std::shared_ptr<AMPManager> pMan) : pAloc(pAloc), pMan(pMan) {}
 public:
-  accelerator_view() = delete;
-  accelerator_view(const accelerator_view& other) { *this = other; }
+  accelerator_view(const accelerator_view& other)
+      : pAloc(other.pAloc), pMan(other.pMan) {}
   accelerator_view& operator=(const accelerator_view& other) {
-    is_debug = other.is_debug;
-    is_auto_selection = other.is_auto_selection;
-    version = other.version;
-    queuing_mode = other.queuing_mode;
-    _accelerator = other._accelerator;
-    return *this;
+      pAloc = other.pAloc;
+      pMan = other.pMan;
+      return *this;
   }
 
-  accelerator& get_accelerator() const { return *_accelerator; }
-  enum queuing_mode get_queuing_mode() const { return queuing_mode; }
-  bool get_is_debug() const { return is_debug; }
-  bool get_version() const { return version; }
-  bool get_is_auto_selection() const { return is_auto_selection; }
-  void flush() {}
-  void wait() {}
+  accelerator get_accelerator() const;
+  bool get_is_debug() const { return 0; }
+  unsigned int get_version() const { return 0; }
+  queuing_mode get_queuing_mode() const { return queuing_mode_automatic; }
+  bool get_is_auto_selection() { return false; }
+
+  void flush() { pAloc->flush(); }
+  void wait() { pAloc->wait(); }
   completion_future create_marker();
-  bool operator==(const accelerator_view& other) const;
+
+  bool operator==(const accelerator_view& other) const {
+      return pAloc == other.pAloc && pMan == other.pMan;
+  }
   bool operator!=(const accelerator_view& other) const { return !(*this == other); }
-  ~accelerator_view() {}
- private:
-  bool is_debug;
-  bool is_auto_selection;
-  unsigned int version;
-  enum queuing_mode queuing_mode;
-  //CLAMP-specific
+
+  __attribute__((annotate("user_deserialize")))
+      accelerator_view() restrict(amp,cpu) {}
+private:
+  std::shared_ptr<AMPAllocator> pAloc;
+  std::shared_ptr<AMPManager> pMan;
   friend class accelerator;
-  template <typename T, int>
-  friend class array;
-  explicit accelerator_view(accelerator* accel) :
-    is_debug(false), is_auto_selection(false), version(0), queuing_mode(queuing_mode_automatic), _accelerator(accel) {}
-  //End CLAMP-specific
-  accelerator* _accelerator;
+  template <typename T> friend class _data_host;
+  template <typename Q, int K> friend class array;
+  template <typename Q, int K> friend class array_view;
+  template<typename Kernel, int dim_ext> friend
+      void mcw_cxxamp_launch_kernel(const accelerator_view&, size_t *, size_t *, const Kernel&);
 };
 
-class accelerator {
+
+class accelerator
+{
+  accelerator(std::shared_ptr<AMPManager> pMan) : pMan(pMan) {}
 public:
   static const wchar_t default_accelerator[];   // = L"default"
-  static const wchar_t gpu_accelerator[];       // = L"gpu"
   static const wchar_t cpu_accelerator[];       // = L"cpu"
 
-  accelerator();
-  explicit accelerator(const std::wstring& path);
-  accelerator(const accelerator& other);
+  accelerator() : accelerator(default_accelerator) {}
+  explicit accelerator(const std::wstring& path)
+      : pMan(getContext()->getDevice(path)) {}
+  accelerator(const accelerator& other) : pMan(other.pMan) {}
+
   static std::vector<accelerator> get_all() {
-    std::vector<accelerator> acc;
-    std::vector<int> devices = CLAMP::EnumerateDevices();
-    for (std::vector<int>::iterator it = devices.begin(); it != devices.end(); ++it) {
-      switch (*it) {
-        case AMP_DEVICE_TYPE_CPU:
-          acc.push_back(*_cpu_accelerator);
-          break;
-        case AMP_DEVICE_TYPE_GPU:
-          acc.push_back(*_gpu_accelerator);
-          break;
-        default:
-          break;
-      }
-    }
-    return acc;
+      auto size = getContext()->getNumDevices();
+      std::vector<accelerator> vec(size);
+      for (auto i = 0; i < size; i++)
+          vec[i] = getContext()->getDevices()[i];
+      return std::move(vec);
   }
   static bool set_default(const std::wstring& path) {
-    if (_default_accelerator != nullptr) {
-      return false;
-    }
-    if (path == std::wstring(cpu_accelerator)) {
-      _default_accelerator = _cpu_accelerator;
-      return true;
-    } else if (path == std::wstring(gpu_accelerator)) {
-      _default_accelerator = _gpu_accelerator;
-      return true;
-    }
-    return false;
+      return getContext()->set_default(path);
   }
-  accelerator& operator=(const accelerator& other);
+  static accelerator_view get_auto_selection_view() {
+      auto dMan = getContext()->getDevice();
+      return accelerator_view(dMan->getAloc(), dMan);
+  }
 
-  const std::wstring &get_device_path() const { return device_path; }
+  accelerator& operator=(const accelerator& other) {
+      pMan = other.pMan;
+      return *this;
+  }
 
-  const std::wstring &get_description() const { return description; }
-  bool get_supports_cpu_shared_memory() const {return supports_cpu_shared_memory; }
-  bool get_is_debug() const { return is_debug; }
-  bool get_version() const { return version; }
-  accelerator_view& get_default_view() const;
-  bool get_has_display() const { return has_display; }
-  accelerator_view create_view();
-  accelerator_view create_view(queuing_mode qmode);
-  bool get_is_emulated() const { return is_emulated; }
-  bool get_supports_double_precision() const { return supports_double_precision; }
-  bool get_supports_limited_double_precision() const { return supports_limited_double_precision; }
-  size_t get_dedicated_memory() const { return dedicated_memory; }
-  bool set_default_cpu_access_type(access_type type);
-  access_type get_default_cpu_access_type() const;
-  bool operator==(const accelerator& other) const;
-  bool operator!=(const accelerator& other) const;
- private:
-  std::wstring device_path;
-  unsigned int version; // hiword=major, loword=minor
-  std::wstring description;
-  bool is_debug;
-  bool is_emulated;
-  bool has_display;
-  bool supports_double_precision;
-  bool supports_limited_double_precision;
-  bool supports_cpu_shared_memory;
-  size_t dedicated_memory;
-  access_type default_access_type;
-  std::shared_ptr<accelerator_view> default_view;
+  std::wstring get_device_path() const { return pMan->get_path(); }
+  unsigned int get_version() const { return 0; }
+  std::wstring get_description() const { return pMan->get_des(); }
+  bool get_is_debug() const { return false; }
+  bool get_is_emulated() const { return false; }
+  bool get_has_display() const { return false; }
+  bool get_supports_double_precision() const { return pMan->is_double(); }
+  bool get_supports_limited_double_precision() const { return pMan->is_lim_double(); }
+  size_t get_dedicated_memory() const { return pMan->get_mem(); }
+  accelerator_view get_default_view() const {
+      return accelerator_view(pMan->getAloc(), pMan);
+  }
+  access_type get_default_cpu_access_type() const { return access_type_auto; }
+  bool get_supports_cpu_shared_memory() const { return pMan->is_uni(); }
 
-  // static class members
-  static std::shared_ptr<accelerator> _default_accelerator; // initialized as nullptr
-  static std::shared_ptr<accelerator> _gpu_accelerator;
-  static std::shared_ptr<accelerator> _cpu_accelerator;
+  bool set_default_cpu_access_type(access_type type) { return true; }
+  accelerator_view create_view() {
+      return accelerator_view(pMan->createAloc(), pMan);
+  };
+  accelerator_view create_view(queuing_mode qmode) { return create_view(); }
+
+  bool operator==(const accelerator& other) const { return pMan == other.pMan; }
+  bool operator!=(const accelerator& other) const { return !(*this == other); }
+private:
+  friend class accelerator_view;
+  std::shared_ptr<AMPManager> pMan;
 };
 
 template <int N> class extent;
@@ -704,6 +687,7 @@ private:
     template<int K, class Y>
         friend completion_future async_parallel_for_each(extent<K>, const Y&);
 
+public:
     __attribute__((annotate("__cxxamp_opencl_index")))
         void __cxxamp_opencl_index() restrict(amp,cpu)
 #ifdef __GPU__
@@ -1011,7 +995,7 @@ class tiled_index {
 #endif // __GPU__
   {}
   template<int D0_, int D1_, int D2_, typename K>
-  friend void parallel_for_each(tiled_extent<D0_, D1_, D2_>, const K&);
+  friend void parallel_for_each(const accelerator_view&, tiled_extent<D0_, D1_, D2_>, const K&);
 #ifdef __AMP_CPU__
   template<typename K, int D1_, int D2_, int D3_>
   friend void partitioned_task_tile(K const&, tiled_extent<D1_, D2_, D3_> const&, int);
@@ -1062,7 +1046,7 @@ class tiled_index<D0, 0, 0> {
 #endif // __GPU__
   {}
   template<int D, typename K>
-  friend void parallel_for_each(tiled_extent<D>, const K&);
+  friend void parallel_for_each(const accelerator_view&, tiled_extent<D>, const K&);
 #ifdef __AMP_CPU__
   template<typename K, int D>
   friend void partitioned_task_tile(K const&, tiled_extent<D> const&, int);
@@ -1115,7 +1099,7 @@ class tiled_index<D0, D1, 0> {
 #endif // __GPU__
   {}
   template<int D0_, int D1_, typename K>
-  friend void parallel_for_each(tiled_extent<D0_, D1_>, const K&);
+  friend void parallel_for_each(const accelerator_view&, tiled_extent<D0_, D1_>, const K&);
 #ifdef __AMP_CPU__
   template<typename K, int D1_, int D2_>
   friend void partitioned_task_tile(K const&, tiled_extent<D1_, D2_> const&, int);
@@ -1244,8 +1228,8 @@ struct projection_helper
         Concurrency::extent<N - 1> ext_now(ext_o);
         Concurrency::extent<N - 1> ext_base(ext);
         Concurrency::index<N - 1> idx_base(idx);
-        return result_type (ext_now, ext_base, idx_base, now.cache,
-                                now.offset + ext_base.size() * stride);
+        return result_type (now.cache, ext_now, ext_base, idx_base,
+                            now.offset + ext_base.size() * stride);
     }
     static result_type project(const array_view<T, N>& now, int stride) restrict(amp,cpu) {
         int ext[N - 1], i, idx[N - 1], ext_o[N - 1];
@@ -1258,8 +1242,8 @@ struct projection_helper
         Concurrency::extent<N - 1> ext_now(ext_o);
         Concurrency::extent<N - 1> ext_base(ext);
         Concurrency::index<N - 1> idx_base(idx);
-        return result_type (ext_now, ext_base, idx_base, now.cache,
-                                now.offset + ext_base.size() * stride);
+        return result_type (now.cache, ext_now, ext_base, idx_base,
+                            now.offset + ext_base.size() * stride);
     }
 };
 template <typename T>
@@ -1301,7 +1285,7 @@ struct projection_helper<const T, N>
         Concurrency::extent<N - 1> ext_now(ext_o);
         Concurrency::extent<N - 1> ext_base(ext);
         Concurrency::index<N - 1> idx_base(idx);
-        return const_result_type (ext_now, ext_base, idx_base, now.cache,
+        return const_result_type (now.cache, ext_now, ext_base, idx_base,
                                   now.offset + ext_base.size() * stride);
     }
     static const_result_type project(const array_view<const T, N>& now, int stride) restrict(amp,cpu) {
@@ -1315,7 +1299,7 @@ struct projection_helper<const T, N>
         Concurrency::extent<N - 1> ext_now(ext_o);
         Concurrency::extent<N - 1> ext_base(ext);
         Concurrency::index<N - 1> idx_base(idx);
-        return const_result_type (ext_now, ext_base, idx_base, now.cache,
+        return const_result_type (now.cache, ext_now, ext_base, idx_base,
                                   now.offset + ext_base.size() * stride);
     }
 };
@@ -1363,7 +1347,7 @@ struct array_projection_helper
         if( offset >= now.extent.size())
           throw runtime_exception("errorMsg_throw", 0);
 #endif
-        return result_type(ext, ext, index<N - 1>(), now.m_device, offset);
+        return result_type(now.m_device, ext, ext, index<N - 1>(), offset);
     }
     static const_result_type project(const array<T, N>& now, int stride) restrict(amp,cpu) {
         int comp[N - 1], i;
@@ -1371,7 +1355,7 @@ struct array_projection_helper
             comp[i - 1] = now.extent[i];
         Concurrency::extent<N - 1> ext(comp);
         int offset = ext.size() * stride;
-        return const_result_type(ext, ext, index<N - 1>(), now.m_device, offset);
+        return const_result_type(now.m_device, ext, ext, index<N - 1>(), offset);
     }
 };
 template <typename T>
@@ -1398,9 +1382,6 @@ struct array_projection_helper<T, 1>
     }
 };
 
-static const auto _cpu_check = accelerator(accelerator::cpu_accelerator);
-static const auto _gpu_check = accelerator(accelerator::gpu_accelerator);
-
 template <typename T, int N = 1>
 class array_helper {
 public:
@@ -1412,11 +1393,11 @@ public:
   __attribute__((annotate("serialize")))
   void __cxxamp_serialize(Serialize& s) const {
     array<T, N>* p_arr = (array<T, N>*)m_arr;
-    if (p_arr && p_arr->pav &&
+    if (p_arr &&
 #ifdef __AMP_CPU__
         !CLAMP::in_cpu_kernel() &&
 #endif
-        p_arr->pav->get_accelerator() == _cpu_check) {
+        p_arr->av.get_accelerator().get_device_path().substr(0, 3) == L"cpu") {
       throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
     }
   }
@@ -1442,104 +1423,141 @@ public:
   typedef T value_type;
   array() = delete;
 
-  explicit array(const Concurrency::extent<N>& ext);
-  explicit array(int e0);
-  explicit array(int e0, int e1);
-  explicit array(int e0, int e1, int e2);
+
+  array(const Concurrency::extent<N>& ext, accelerator_view av, accelerator_view associated_av)
+#ifdef __GPU__
+      : m_device(ext.size(), true), extent(ext), av(av), asv(av) { initialize(); }
+#else
+      : m_device(av.pAloc, ext.size(), true), extent(ext), av(av), asv(av) { initialize(); }
+#endif
+  array(int e0, accelerator_view av, accelerator_view associated_av)
+      : array(Concurrency::extent<N>(e0), av, associated_av) {}
+  array(int e0, int e1, accelerator_view av, accelerator_view associated_av)
+      : array(Concurrency::extent<N>(e0, e1), av, associated_av) {}
+  array(int e0, int e1, int e2, accelerator_view av, accelerator_view associated_av)
+      : array(Concurrency::extent<N>(e0, e1, e2), av, associated_av) {}
 
 
-  array(const Concurrency::extent<N>& ext, accelerator_view av,
-        access_type cpu_access_type = access_type_auto);
+  array(const extent<N>& ext, accelerator_view av,
+        access_type cpu_access_type = access_type_auto)
+      : array(ext, av, av) {}
   array(int e0, accelerator_view av,
-        access_type cpu_access_type = access_type_auto);
+        access_type cpu_access_type = access_type_auto)
+      : array(e0, av, av) {}
   array(int e0, int e1, accelerator_view av,
-        access_type cpu_access_type = access_type_auto);
+        access_type cpu_access_type = access_type_auto)
+      : array(e0, e1, av, av) {}
   array(int e0, int e1, int e2, accelerator_view av,
-        access_type cpu_access_type = access_type_auto);
+        access_type cpu_access_type = access_type_auto)
+      : array(e0, e1, e2, av, av) {}
 
 
-  array(const Concurrency::extent<N>& extent, accelerator_view av, accelerator_view associated_av);
-  array(int e0, accelerator_view av, accelerator_view associated_av);
-  array(int e0, int e1, accelerator_view av, accelerator_view associated_av); //staging
-  array(int e0, int e1, int e2, accelerator_view av, accelerator_view associated_av); //staging
-
-
-  template <typename InputIter>
-      array(const Concurrency::extent<N>& ext, InputIter srcBegin);
-  template <typename InputIter>
-      array(const Concurrency::extent<N>& ext, InputIter srcBegin, InputIter srcEnd);
-  template <typename InputIter>
-      array(int e0, InputIter srcBegin);
-  template <typename InputIter>
-      array(int e0, InputIter srcBegin, InputIter srcEnd);
-  template <typename InputIter>
-      array(int e0, int e1, InputIter srcBegin);
-  template <typename InputIter>
-      array(int e0, int e1, InputIter srcBegin, InputIter srcEnd);
-  template <typename InputIter>
-      array(int e0, int e1, int e2, InputIter srcBegin);
-  template <typename InputIter>
-      array(int e0, int e1, int e2, InputIter srcBegin, InputIter srcEnd);
-
-
-  template <typename InputIter>
-      array(const Concurrency::extent<N>& ext, InputIter srcBegin, accelerator_view av,
-            access_type cpu_access_type = access_type_auto);
-  template <typename InputIter>
-      array(const Concurrency::extent<N>& ext, InputIter srcBegin, InputIter srcEnd,
-            accelerator_view av, access_type cpu_access_type = access_type_auto);
-  template <typename InputIter>
-      array(int e0, InputIter srcBegin, accelerator_view av,
-            access_type cpu_access_type = access_type_auto);
-  template <typename InputIter>
-      array(int e0, InputIter srcBegin, InputIter srcEnd,
-            accelerator_view av, access_type cpu_access_type = access_type_auto);
-  template <typename InputIter>
-      array(int e0, int e1, InputIter srcBegin, accelerator_view av,
-            access_type cpu_access_type = access_type_auto);
-  template <typename InputIter>
-      array(int e0, int e1, InputIter srcBegin, InputIter srcEnd,
-            accelerator_view av, access_type cpu_access_type = access_type_auto);
-  template <typename InputIter>
-      array(int e0, int e1, int e2, InputIter srcBegin, accelerator_view av,
-            access_type cpu_access_type = access_type_auto);
-  template <typename InputIter>
-      array(int e0, int e1, int e2, InputIter srcBegin, InputIter srcEnd,
-            accelerator_view av, access_type cpu_access_type = access_type_auto);
+  explicit array(const extent<N>& ext) : array(ext, accelerator::get_auto_selection_view()) {}
+  explicit array(int e0) : array(Concurrency::extent<N>(e0)) {}
+  explicit array(int e0, int e1) : array(Concurrency::extent<N>(e0, e1)) {}
+  explicit array(int e0, int e1, int e2) : array(Concurrency::extent<N>(e0, e1, e2)) {}
 
 
   template <typename InputIter>
       array(const Concurrency::extent<N>& ext, InputIter srcBegin,
-            accelerator_view av, accelerator_view associated_av);
+            accelerator_view av, accelerator_view associated_av)
+      : array(ext, av, associated_av) {
+          InputIter srcEnd = srcBegin;
+          std::advance(srcEnd, ext.size());
+          copy(srcBegin, srcEnd, *this);
+      }
   template <typename InputIter>
       array(const Concurrency::extent<N>& ext, InputIter srcBegin, InputIter srcEnd,
-            accelerator_view av, accelerator_view associated_av);
+            accelerator_view av, accelerator_view associated_av)
+      : array(ext, av, associated_av) { copy(srcBegin, srcEnd, *this); }
   template <typename InputIter>
       array(int e0, InputIter srcBegin,
-            accelerator_view av, accelerator_view associated_av);
+            accelerator_view av, accelerator_view associated_av)
+      : array(Concurrency::extent<N>(e0), srcBegin, av, associated_av) {}
   template <typename InputIter>
       array(int e0, InputIter srcBegin, InputIter srcEnd,
-            accelerator_view av, accelerator_view associated_av);
+            accelerator_view av, accelerator_view associated_av)
+      : array(Concurrency::extent<N>(e0), srcBegin, srcEnd, av, associated_av) {}
   template <typename InputIter>
       array(int e0, int e1, InputIter srcBegin,
-            accelerator_view av, accelerator_view associated_av);
+            accelerator_view av, accelerator_view associated_av)
+      : array(Concurrency::extent<N>(e0, e1), srcBegin, av, associated_av) {}
   template <typename InputIter>
       array(int e0, int e1, InputIter srcBegin, InputIter srcEnd,
-            accelerator_view av, accelerator_view associated_av);
+            accelerator_view av, accelerator_view associated_av)
+      : array(Concurrency::extent<N>(e0, e1), srcBegin, srcEnd, av, associated_av) {}
   template <typename InputIter>
       array(int e0, int e1, int e2, InputIter srcBegin,
-            accelerator_view av, accelerator_view associated_av);
+            accelerator_view av, accelerator_view associated_av)
+      : array(Concurrency::extent<N>(e0, e1, e2), srcBegin, av, associated_av) {}
   template <typename InputIter>
       array(int e0, int e1, int e2, InputIter srcBegin, InputIter srcEnd,
-            accelerator_view av, accelerator_view associated_av);
+            accelerator_view av, accelerator_view associated_av)
+      : array(Concurrency::extent<N>(e0, e1, e2), srcBegin, srcEnd, av, associated_av) {}
 
 
-  explicit array(const array_view<const T, N>& src) : array(src.extent) {
-#ifndef __GPU__
-      src.cache.copy(m_device.get());
-#endif
-  }
+  template <typename InputIter>
+      array(const Concurrency::extent<N>& ext, InputIter srcBegin, accelerator_view av,
+            access_type cpu_access_type = access_type_auto)
+      : array(ext, srcBegin, av, av) {}
+  template <typename InputIter>
+      array(const Concurrency::extent<N>& ext, InputIter srcBegin, InputIter srcEnd,
+            accelerator_view av, access_type cpu_access_type = access_type_auto)
+      : array(ext, srcBegin, srcEnd, av, av) {}
+  template <typename InputIter>
+      array(int e0, InputIter srcBegin, accelerator_view av,
+            access_type cpu_access_type = access_type_auto)
+      : array(e0, srcBegin, av, av) {}
+  template <typename InputIter>
+      array(int e0, InputIter srcBegin, InputIter srcEnd,
+            accelerator_view av, access_type cpu_access_type = access_type_auto)
+      : array(e0, srcBegin, srcEnd, av, av) {}
+  template <typename InputIter>
+      array(int e0, int e1, InputIter srcBegin, accelerator_view av,
+            access_type cpu_access_type = access_type_auto)
+      : array(e0, e1, srcBegin, av, av) {}
+  template <typename InputIter>
+      array(int e0, int e1, InputIter srcBegin, InputIter srcEnd,
+            accelerator_view av, access_type cpu_access_type = access_type_auto)
+      : array(e0, e1, srcBegin, srcEnd, av, av) {}
+  template <typename InputIter>
+      array(int e0, int e1, int e2, InputIter srcBegin, accelerator_view av,
+            access_type cpu_access_type = access_type_auto)
+      : array(e0, e1, e2, srcBegin, av, av) {}
+  template <typename InputIter>
+      array(int e0, int e1, int e2, InputIter srcBegin, InputIter srcEnd,
+            accelerator_view av, access_type cpu_access_type = access_type_auto)
+      : array(e0, e1, e2, srcBegin, srcEnd, av, av) {}
 
+
+  template <typename InputIter>
+      array(const Concurrency::extent<N>& ext, InputIter srcBegin)
+      : array(ext, srcBegin, accelerator::get_auto_selection_view()) {}
+  template <typename InputIter>
+      array(const Concurrency::extent<N>& ext, InputIter srcBegin, InputIter srcEnd)
+      : array(ext, srcBegin, srcEnd, accelerator::get_auto_selection_view()) {}
+  template <typename InputIter>
+      array(int e0, InputIter srcBegin)
+      : array(extent<N>(e0), srcBegin) {}
+  template <typename InputIter>
+      array(int e0, InputIter srcBegin, InputIter srcEnd)
+      : array(extent<N>(e0), srcBegin, srcEnd) {}
+  template <typename InputIter>
+      array(int e0, int e1, InputIter srcBegin)
+      : array(Concurrency::extent<N>(e0, e1), srcBegin) {}
+  template <typename InputIter>
+      array(int e0, int e1, InputIter srcBegin, InputIter srcEnd)
+      : array(Concurrency::extent<N>(e0, e1), srcBegin, srcEnd) {}
+  template <typename InputIter>
+      array(int e0, int e1, int e2, InputIter srcBegin)
+      : array(Concurrency::extent<N>(e0, e1, e2), srcBegin) {}
+  template <typename InputIter>
+      array(int e0, int e1, int e2, InputIter srcBegin, InputIter srcEnd)
+      : array(Concurrency::extent<N>(e0, e1, e2), srcBegin, srcEnd) {}
+
+
+  explicit array(const array_view<const T, N>& src)
+      : array(src.extent), av(src.av), asv(src.asv) { copy(src, *this); }
 
   array(const array_view<const T, N>& src, accelerator_view av,
         access_type cpu_access_type = access_type_auto);
@@ -1547,24 +1565,27 @@ public:
         accelerator_view associated_av);
 
 
-  array(const array& other);
+  array(const array& other) : m_device(other.m_device), extent(other.extent)
+#ifndef __GPU__
+                              , av(other.av), asv(other.asv)
+#endif
+                              {}
   array(array&& other);
 
   array& operator=(const array& other) {
     if(this != &other) {
       extent = other.extent;
-      this->cpu_access_type = other.cpu_access_type;
-#ifndef __GPU__
-      this->initialize();
-#endif
-      copy(other, *this);
+      array nA(other.get_extent(), other.get_accelerator_view());
+      copy(other, nA);
+      m_device = nA.internal();
+      cpu_access_type = other.cpu_access_type;
     }
     return *this;
   }
   array& operator=(array&& other) {
     if(this != &other) {
       extent = other.extent;
-      this->cpu_access_type = other.cpu_access_type;
+      cpu_access_type = other.cpu_access_type;
       m_device = other.m_device;
       other.m_device = nullptr;
     }
@@ -1591,22 +1612,18 @@ public:
       copy(*this, dest);
   }
 
-  void copy_to(const array_view<T,N>& dest) const {
-      copy(*this, dest);
-  }
+  void copy_to(const array_view<T,N>& dest) const { copy(*this, dest); }
 
-  Concurrency::extent<N> get_extent() const restrict(amp,cpu) {
-      return extent;
-  }
+  Concurrency::extent<N> get_extent() const restrict(amp,cpu) { return extent; }
 
 
-  accelerator_view get_accelerator_view() const {return *pav;}
-  accelerator_view get_associated_accelerator_view() const {return *paav;}
-  access_type get_cpu_access_type() const {return cpu_access_type;}
+  accelerator_view get_accelerator_view() const { return av; }
+  accelerator_view get_associated_accelerator_view() const { return asv; }
+  access_type get_cpu_access_type() const { return cpu_access_type; }
 
   __global T& operator[](const index<N>& idx) restrict(amp,cpu) {
 #ifndef __GPU__
-      if(pav && (pav->get_accelerator() == _gpu_check)
+      if(av.get_accelerator().get_device_path().substr(0, 3) == L"gpu"
 #ifdef __AMP_CPU__
         && !CLAMP::in_cpu_kernel()
 #endif
@@ -1620,7 +1637,7 @@ public:
   }
   __global const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
 #ifndef __GPU__
-      if(pav && (pav->get_accelerator() == _gpu_check)
+      if(av.get_accelerator().get_device_path().substr(0, 3) == L"gpu"
 #ifdef __AMP_CPU__
         && !CLAMP::in_cpu_kernel()
 #endif
@@ -1757,7 +1774,7 @@ public:
     if( viewExtent.size() > extent.size())
       throw runtime_exception("errorMsg_throw", 0);
 #endif
-          array_view<T, K> av(viewExtent, m_device, 0);
+          array_view<T, K> av(m_device, viewExtent, 0);
           return av;
       }
   template <int K> array_view<const T, K>
@@ -1766,7 +1783,7 @@ public:
     if( viewExtent.size() > extent.size())
       throw runtime_exception("errorMsg_throw", 0);
 #endif
-          const array_view<T, K> av(viewExtent, m_device, 0);
+          const array_view<T, K> av(m_device, viewExtent, 0);
           return av;
       }
 
@@ -1791,33 +1808,24 @@ public:
 #endif
     return reinterpret_cast<T*>(m_device.get());
   }
-  ~array() {
-    if(pav) delete pav;
-    if(paav) delete paav;
-  }
+  ~array() {}
 
 
   const acc_buffer_t& internal() const restrict(amp,cpu) { return m_device; }
   Concurrency::extent<N> extent;
 private:
-  template <int K, typename Q> friend struct index_helper;
-  template <int K, typename Q1, typename Q2> friend struct amp_helper;
   template <typename K, int Q> friend struct projection_helper;
   template <typename K, int Q> friend struct array_projection_helper;
   template <typename K, int Q> friend class array_helper;
   acc_buffer_t m_device;
   access_type cpu_access_type;
   array_helper_t m_array_helper;
-  __attribute__((cpu)) accelerator_view *pav, *paav;
-
+  __attribute__((cpu)) accelerator_view av, asv;
+  void initialize() {
 #ifndef __GPU__
-  void initialize() { m_array_helper.setArray(this); }
-  template <typename InputIter>
-      void initialize(InputIter srcBegin, InputIter srcEnd) {
-          initialize();
-          std::copy(srcBegin, srcEnd, m_device.get());
-      }
+      m_array_helper.setArray(this);
 #endif
+  }
 };
 
 template <typename T>
@@ -1835,7 +1843,7 @@ template <typename T>
 struct __has_size
 {
 private:
-    struct two {char __lx; char __lxx;}; 
+    struct two {char __lx; char __lxx;};
     template <typename C> static char test(decltype(&C::size));
     template <typename C> static two test(...);
 public:
@@ -1868,8 +1876,8 @@ public:
   ~array_view() restrict(amp,cpu) {}
 
   array_view(array<T, N>& src) restrict(amp,cpu)
-      : extent(src.extent), extent_base(src.extent), index_base(),
-      cache(src.internal()), offset(0) {}
+      : cache(src.internal()), extent(src.extent), extent_base(src.extent), index_base(),
+      offset(0) {}
 
   template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
       array_view(const Concurrency::extent<N>& extent, Container& src)
@@ -1877,48 +1885,37 @@ public:
   { static_assert( std::is_same<decltype(src.data()), T*>::value, "container element type and array view element type must match"); }
   template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
       array_view(int e0, Container& src)
-      : array_view(Concurrency::extent<1>(e0), src)
-  { static_assert(N == 1, "Rank must be 1"); }
+      : array_view(Concurrency::extent<N>(e0), src) {}
   template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
       array_view(int e0, int e1, Container& src)
-      : array_view(Concurrency::extent<2>(e0, e1), src)
-  { static_assert(N == 2, "Rank must be 2"); }
+      : array_view(Concurrency::extent<N>(e0, e1), src) {}
   template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
       array_view(int e0, int e1, int e2, Container& src)
-      : array_view(Concurrency::extent<3>(e0, e1, e2), src)
-  { static_assert(N == 3, "Rank must be 3"); }
-
+      : array_view(Concurrency::extent<N>(e0, e1, e2), src) {}
 
   array_view(const Concurrency::extent<N>& extent, value_type* src) restrict(amp,cpu);
   array_view(int e0, value_type *src) restrict(amp,cpu)
-      : array_view(Concurrency::extent<1>(e0), src)
-  { static_assert(N == 1, "Rank must be 1"); }
+      : array_view(Concurrency::extent<N>(e0), src) {}
   array_view(int e0, int e1, value_type *src) restrict(amp,cpu)
-      : array_view(Concurrency::extent<2>(e0, e1), src)
-  { static_assert(N == 2, "Rank must be 2"); }
+      : array_view(Concurrency::extent<N>(e0, e1), src) {}
   array_view(int e0, int e1, int e2, value_type *src) restrict(amp,cpu)
-      : array_view(Concurrency::extent<3>(e0, e1, e2), src)
-  { static_assert(N == 3, "Rank must be 3"); }
+      : array_view(Concurrency::extent<N>(e0, e1, e2), src) {}
 
 
   explicit array_view(const Concurrency::extent<N>& extent);
-  explicit array_view(int e0)
-      : array_view(Concurrency::extent<1>(e0))
-  { static_assert(N == 1, "Rank must be 1"); }
+  explicit array_view(int e0) : array_view(Concurrency::extent<N>(e0)) {}
   explicit array_view(int e0, int e1)
-      : array_view(Concurrency::extent<2>(e0, e1))
-  { static_assert(N == 2, "Rank must be 2"); }
+      : array_view(Concurrency::extent<N>(e0, e1)) {}
   explicit array_view(int e0, int e1, int e2)
-      : array_view(Concurrency::extent<3>(e0, e1, e2))
-  { static_assert(N == 3, "Rank must be 3"); }
+      : array_view(Concurrency::extent<N>(e0, e1, e2)) {}
 
-   array_view(const array_view& other) restrict(amp,cpu) : extent(other.extent),
-    extent_base(other.extent_base), index_base(other.index_base),
-    cache(other.cache), offset(other.offset) {}
+  array_view(const array_view& other) restrict(amp,cpu) : cache(other.cache),
+    extent(other.extent), extent_base(other.extent_base), index_base(other.index_base),
+    offset(other.offset) {}
   array_view& operator=(const array_view& other) restrict(amp,cpu) {
       if (this != &other) {
-          extent = other.extent;
           cache = other.cache;
+          extent = other.extent;
           index_base = other.index_base;
           extent_base = other.extent_base;
           offset = other.offset;
@@ -1990,8 +1987,8 @@ public:
 #endif
           int size = extent.size() * sizeof(T) / sizeof(ElementType);
           using buffer_type = typename array_view<ElementType, 1>::acc_buffer_t;
-          array_view<ElementType, 1> av(Concurrency::extent<1>(size),
-                                        buffer_type(cache),
+          array_view<ElementType, 1> av(buffer_type(cache),
+                                        Concurrency::extent<1>(size),
                                         (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
           return av;
       }
@@ -2002,7 +1999,7 @@ public:
       if(  !amp_helper<N, index<N>, Concurrency::extent<N>>::contains(idx, ext,this->extent ) )
         throw runtime_exception("errorMsg_throw", 0);
 #endif
-      array_view<T, N> av(ext, extent_base, idx + index_base, cache, offset);
+      array_view<T, N> av(cache, ext, extent_base, idx + index_base, offset);
       return av;
   }
   array_view<T, N> section(const Concurrency::index<N>& idx) const restrict(amp,cpu) {
@@ -2034,7 +2031,7 @@ public:
     if( viewExtent.size() > extent.size())
       throw runtime_exception("errorMsg_throw", 0);
 #endif
-    array_view<T, K> av(viewExtent, cache, offset + index_base[0]);
+    array_view<T, K> av(cache, viewExtent, offset + index_base[0]);
     return av;
   }
 
@@ -2060,13 +2057,11 @@ public:
   }
 
   accelerator_view get_source_accelerator_view() const {
-      return _gpu_check.get_default_view();
+      return cache.get_av();
   }
 
   const acc_buffer_t& internal() const restrict(amp,cpu) { return cache; }
 private:
-  template <int K, typename Q> friend struct index_helper;
-  template <int K, typename Q1, typename Q2> friend struct amp_helper;
   template <typename K, int Q> friend struct projection_helper;
   template <typename K, int Q> friend struct array_projection_helper;
   template <typename Q, int K> friend class array;
@@ -2075,21 +2070,20 @@ private:
   template <typename OutputIter, typename Q, int K>
       friend void copy(const array_view<Q, K>&, OutputIter);
   // used by view_as and reinterpret_as
-  array_view(const Concurrency::extent<N>& ext, const acc_buffer_t& cache,
+  array_view(const acc_buffer_t& cache, const Concurrency::extent<N>& ext,
              int offset) restrict(amp,cpu)
-      : extent(ext), extent_base(ext), cache(cache), offset(offset) {}
+      : cache(cache), extent(ext), extent_base(ext), offset(offset) {}
   // used by section and projection
-  array_view(const Concurrency::extent<N>& ext_now,
+  array_view(const acc_buffer_t& cache, const Concurrency::extent<N>& ext_now,
              const Concurrency::extent<N>& ext_b,
-             const Concurrency::index<N>& idx_b,
-             const acc_buffer_t& cache, int off) restrict(amp,cpu)
-      : extent(ext_now), extent_base(ext_b), index_base(idx_b),
-      cache(cache), offset(off) {}
+             const Concurrency::index<N>& idx_b, int off) restrict(amp,cpu)
+      : cache(cache), extent(ext_now), extent_base(ext_b), index_base(idx_b),
+      offset(off) {}
 
+  acc_buffer_t cache;
   Concurrency::extent<N> extent;
   Concurrency::extent<N> extent_base;
   Concurrency::index<N> index_base;
-  acc_buffer_t cache;
   int offset;
 };
 
@@ -2112,47 +2106,40 @@ public:
   ~array_view() restrict(amp,cpu) {}
 
   array_view(const array<T,N>& src) restrict(amp,cpu)
-      : extent(src.extent), cache(src.internal()), offset(0),
-        index_base(), extent_base(src.extent) {}
-  template <typename Container, class = typename std::enable_if<!std::is_array<Container>::value && !std::is_pointer<Container>::value>::type>
+      : cache(src.internal()), extent(src.extent), offset(0), index_base(),
+      extent_base(src.extent) {}
+  template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
     array_view(const extent<N>& extent, const Container& src)
         : array_view(extent, src.data())
   { static_assert( std::is_same<typename std::remove_const<typename std::remove_reference<decltype(*src.data())>::type>::type, T>::value, "container element type and array view element type must match"); }
-    template <typename Container, class = typename std::enable_if<!std::is_array<Container>::value>::type>
-      array_view(int e0, Container& src)
-      : array_view(Concurrency::extent<1>(e0), src)
-  { static_assert(N == 1, "Rank must be 1"); }
-  template <typename Container, class = typename std::enable_if<!std::is_array<Container>::value>::type>
+    template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
+      array_view(int e0, Container& src) : array_view(Concurrency::extent<1>(e0), src) {}
+    template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
       array_view(int e0, int e1, Container& src)
-      : array_view(Concurrency::extent<2>(e0, e1), src)
-  { static_assert(N == 2, "Rank must be 2"); }
-  template <typename Container, class = typename std::enable_if<!std::is_array<Container>::value>::type>
+      : array_view(Concurrency::extent<N>(e0, e1), src) {}
+    template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
       array_view(int e0, int e1, int e2, Container& src)
-      : array_view(Concurrency::extent<3>(e0, e1, e2), src)
-  { static_assert(N == 3, "Rank must be 3"); }
+      : array_view(Concurrency::extent<N>(e0, e1, e2), src) {}
 
   array_view(const extent<N>& extent, const value_type* src) restrict(amp,cpu);
   array_view(int e0, value_type *src) restrict(amp,cpu)
-      : array_view(Concurrency::extent<1>(e0), src)
-  { static_assert(N == 1, "Rank must be 1"); }
+      : array_view(Concurrency::extent<1>(e0), src) {}
   array_view(int e0, int e1, value_type *src) restrict(amp,cpu)
-      : array_view(Concurrency::extent<2>(e0, e1), src)
-  { static_assert(N == 2, "Rank must be 2"); }
+      : array_view(Concurrency::extent<2>(e0, e1), src) {}
   array_view(int e0, int e1, int e2, value_type *src) restrict(amp,cpu)
-      : array_view(Concurrency::extent<3>(e0, e1, e2), src)
-  { static_assert(N == 3, "Rank must be 3"); }
+      : array_view(Concurrency::extent<3>(e0, e1, e2), src) {}
 
-  array_view(const array_view<T, N>& other) restrict(amp,cpu) : extent(other.extent),
-    extent_base(other.extent_base), index_base(other.index_base),
-    cache(other.cache), offset(other.offset) {}
+  array_view(const array_view<T, N>& other) restrict(amp,cpu) : cache(other.cache),
+    extent(other.extent), extent_base(other.extent_base), index_base(other.index_base),
+    offset(other.offset) {}
 
-  array_view(const array_view& other) restrict(amp,cpu) : extent(other.extent),
-    extent_base(other.extent_base), index_base(other.index_base),
-    cache(other.cache), offset(other.offset) {}
+  array_view(const array_view& other) restrict(amp,cpu) : cache(other.cache),
+    extent(other.extent), extent_base(other.extent_base), index_base(other.index_base),
+    offset(other.offset) {}
 
   array_view& operator=(const array_view<T,N>& other) restrict(amp,cpu) {
-    extent = other.extent;
     cache = other.cache;
+    extent = other.extent;
     index_base = other.index_base;
     extent_base = other.extent_base;
     offset = other.offset;
@@ -2161,8 +2148,8 @@ public:
 
   array_view& operator=(const array_view& other) restrict(amp,cpu) {
     if (this != &other) {
-      extent = other.extent;
       cache = other.cache;
+      extent = other.extent;
       index_base = other.index_base;
       extent_base = other.extent_base;
       offset = other.offset;
@@ -2170,20 +2157,11 @@ public:
     return *this;
   }
 
-  void copy_to(array<T,N>& dest) const {
-    copy(*this, dest);
-  }
+  void copy_to(array<T,N>& dest) const { copy(*this, dest); }
+  void copy_to(const array_view<T,N>& dest) const { copy(*this, dest); }
 
-  void copy_to(const array_view<T,N>& dest) const {
-    copy(*this, dest);
-  }
-
-  extent<N> get_extent() const restrict(amp,cpu) {
-    return extent;
-  }
-  accelerator_view get_source_accelerator_view() const {
-      return _gpu_check.get_default_view();
-  }
+  extent<N> get_extent() const restrict(amp,cpu) { return extent; }
+  accelerator_view get_source_accelerator_view() const { return cache.get_av(); }
 
   __global const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
 #ifndef __GPU__
@@ -2216,12 +2194,7 @@ public:
     static_assert(N == 3, "const T& array_view::operator()(int,int, int) is only permissible on array_view<T, 3>");
     return (*this)[index<3>(i0, i1, i2)];
   }
-/*
-  typename projection_helper<const T, N>::result_type
-      operator()(int i) const restrict(amp,cpu) {
-    return (*this)[idx];
-  }
-*/
+
   template <typename ElementType>
       array_view<const ElementType, N> reinterpret_as() const restrict(amp,cpu) {
           static_assert(N == 1, "reinterpret_as is only permissible on array views of rank 1");
@@ -2231,14 +2204,14 @@ public:
 #endif
           int size = extent.size() * sizeof(T) / sizeof(ElementType);
           using buffer_type = typename array_view<ElementType, 1>::acc_buffer_t;
-          array_view<const ElementType, 1> av(Concurrency::extent<1>(size),
-                                              buffer_type(cache),
+          array_view<const ElementType, 1> av(buffer_type(cache),
+                                              Concurrency::extent<1>(size),
                                               (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
           return av;
       }
   array_view<const T, N> section(const Concurrency::index<N>& idx,
                      const Concurrency::extent<N>& ext) const restrict(amp,cpu) {
-    array_view<const T, N> av(ext, extent_base, idx + index_base, cache, offset);
+    array_view<const T, N> av(cache, ext, extent_base, idx + index_base, offset);
     return av;
   }
   array_view<const T, N> section(const Concurrency::index<N>& idx) const restrict(amp,cpu) {
@@ -2271,7 +2244,7 @@ public:
     if( viewExtent.size() > extent.size())
       throw runtime_exception("errorMsg_throw", 0);
 #endif
-      array_view<const T, K> av(viewExtent, cache, offset + index_base[0]);
+      array_view<const T, K> av(cache, viewExtent, offset + index_base[0]);
       return av;
     }
 
@@ -2293,8 +2266,6 @@ public:
   }
   const acc_buffer_t& internal() const restrict(amp,cpu) { return cache; }
 private:
-  template <int K, typename Q> friend struct index_helper;
-  template <int K, typename Q1, typename Q2> friend struct amp_helper;
   template <typename K, int Q> friend struct projection_helper;
   template <typename K, int Q> friend struct array_projection_helper;
   template <typename Q, int K> friend class array;
@@ -2303,22 +2274,21 @@ private:
       friend void copy(const array_view<Q, K>&, OutputIter);
 
   // used by view_as and reinterpret_as
-  array_view(const Concurrency::extent<N>& ext, const acc_buffer_t& cache,
+  array_view(const acc_buffer_t& cache, const Concurrency::extent<N>& ext,
              int offset) restrict(amp,cpu)
-      : extent(ext), extent_base(ext), cache(cache), offset(offset) {}
+      : cache(cache), extent(ext), extent_base(ext), offset(offset) {}
 
   // used by section and projection
-  array_view(const Concurrency::extent<N>& ext_now,
+  array_view(const acc_buffer_t& cache, const Concurrency::extent<N>& ext_now,
              const Concurrency::extent<N>& ext_b,
-             const Concurrency::index<N>& idx_b,
-             const acc_buffer_t& cache, int off) restrict(amp,cpu)
-      : extent(ext_now), extent_base(ext_b), index_base(idx_b),
-      cache(cache), offset(off) {}
+             const Concurrency::index<N>& idx_b, int off) restrict(amp,cpu)
+      : cache(cache), extent(ext_now), extent_base(ext_b), index_base(idx_b),
+      offset(off) {}
 
+  acc_buffer_t cache;
   Concurrency::extent<N> extent;
   Concurrency::extent<N> extent_base;
   Concurrency::index<N> index_base;
-  acc_buffer_t cache;
   int offset;
 };
 
@@ -2340,47 +2310,38 @@ completion_future async_parallel_for_each(tiled_extent<D0> compute_domain, const
 
 // sync pfe
 template <int N, typename Kernel>
-void parallel_for_each(extent<N> compute_domain, const Kernel& f);
+void parallel_for_each(const accelerator_view&, extent<N> compute_domain, const Kernel& f);
 
 template <int D0, int D1, int D2, typename Kernel>
-void parallel_for_each(tiled_extent<D0,D1,D2> compute_domain, const Kernel& f);
+void parallel_for_each(const accelerator_view& accl_view,
+                       tiled_extent<D0,D1,D2> compute_domain, const Kernel& f);
 
 template <int D0, int D1, typename Kernel>
-void parallel_for_each(tiled_extent<D0,D1> compute_domain, const Kernel& f);
+void parallel_for_each(const accelerator_view& accl_view,
+                       tiled_extent<D0,D1> compute_domain, const Kernel& f);
 
 template <int D0, typename Kernel>
-void parallel_for_each(tiled_extent<D0> compute_domain, const Kernel& f);
+void parallel_for_each(const accelerator_view& accl_view,
+                       tiled_extent<D0> compute_domain, const Kernel& f);
 
 template <int N, typename Kernel>
-void parallel_for_each(const accelerator_view& accl_view, extent<N> compute_domain, const Kernel& f){
-    if (accl_view.get_accelerator() == _cpu_check) {
-      throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
-    }
-    parallel_for_each(compute_domain, f);
+void parallel_for_each(extent<N> compute_domain, const Kernel& f){
+    parallel_for_each(accelerator::get_auto_selection_view(), compute_domain, f);
 }
 
 template <int D0, int D1, int D2, typename Kernel>
-void parallel_for_each(const accelerator_view& accl_view, tiled_extent<D0,D1,D2> compute_domain, const Kernel& f) {
-    if (accl_view.get_accelerator() == _cpu_check) {
-      throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
-    }
-    parallel_for_each(compute_domain, f);
+void parallel_for_each(tiled_extent<D0,D1,D2> compute_domain, const Kernel& f) {
+    parallel_for_each(accelerator::get_auto_selection_view(), compute_domain, f);
 }
 
 template <int D0, int D1, typename Kernel>
-void parallel_for_each(const accelerator_view& accl_view, tiled_extent<D0,D1> compute_domain, const Kernel& f) {
-    if (accl_view.get_accelerator() == _cpu_check) {
-      throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
-    }
-    parallel_for_each(compute_domain, f);
+void parallel_for_each(tiled_extent<D0,D1> compute_domain, const Kernel& f) {
+    parallel_for_each(accelerator::get_auto_selection_view(), compute_domain, f);
 }
 
 template <int D0, typename Kernel>
-void parallel_for_each(const accelerator_view& accl_view, tiled_extent<D0> compute_domain, const Kernel& f) {
-    if (accl_view.get_accelerator() == _cpu_check) {
-      throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
-    }
-    parallel_for_each(compute_domain, f);
+void parallel_for_each(tiled_extent<D0> compute_domain, const Kernel& f) {
+    parallel_for_each(accelerator::get_auto_selection_view(), compute_domain, f);
 }
 
 } // namespace Concurrency
@@ -2402,7 +2363,7 @@ namespace Concurrency {
 
 // FIXME: the following overloadded Concurrency::copy only copy host2host
 // These are implementation specific for the implicit sync have been done earilier.
-// However, according to the specifciations, when src and des are located in different 
+// However, according to the specifciations, when src and des are located in different
 // accelerators, we need to consider copying data from CPU to GPU or vice versa.
 
 // For now, it is not safe to use all these copy routines since implicit syncs most likely
@@ -2548,10 +2509,10 @@ void do_copy_s(const array_view<T, N> &src, OutputIter destBegin) {
 template <typename OutputIter, typename T, int N>
 void copy(const array_view<T, N> &src, OutputIter destBegin) {
 #ifndef __GPU__
-    typename array_view<T, N>::acc_buffer_t cache(src.cache.size());
+    typename array_view<T, N>::acc_buffer_t cache(src.cache.get_av(), src.cache.size());
     src.cache.copy(cache.get());
-    array_view<T, N> target(src.extent, src.extent_base,
-                            src.index_base, cache, src.offset);
+    array_view<T, N> target(cache, src.extent, src.extent_base,
+                            src.index_base, src.offset);
     do_copy_s(target, destBegin);
 #endif
 }

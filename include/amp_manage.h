@@ -5,9 +5,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#pragma once
+#ifndef __CLAMP_AMP_MANAGE
+#define __CLAMP_AMP_MANAGE
 
 #include <amp_allocator.h>
+#include <serialize.h>
 
 namespace Concurrency {
 
@@ -29,7 +31,6 @@ private:
     __global T* p_;
 };
 
-
 template <typename T>
 class _data_host {
     mutable std::shared_ptr<rw_info> mm;
@@ -38,11 +39,11 @@ class _data_host {
     template <typename U> friend class _data_host;
 
 public:
-    _data_host(int count, bool isArr = false)
-        : mm(std::make_shared<rw_info>(count*sizeof(T))), count(count), isArray(isArr) {}
+    _data_host(std::shared_ptr<AMPAllocator> av, int count, bool isArr = false)
+        : mm(std::make_shared<rw_info>(av, count*sizeof(T))), count(count), isArray(isArr) {}
 
-    _data_host(int count, T* src, bool isArr = false)
-        : mm(std::make_shared<rw_info>(count * sizeof(T), src)), count(count), isArray(isArr) {}
+    _data_host(std::shared_ptr<AMPAllocator> av, int count, T* src, bool isArr = false)
+        : mm(std::make_shared<rw_info>(av, count*sizeof(T), src)), count(count), isArray(isArr) {}
 
     _data_host(const _data_host& other)
         : mm(other.mm), count(other.count), isArray(false) {}
@@ -58,6 +59,7 @@ public:
     void copy(void *dst) const { mm->copy(dst, count * sizeof(T)); }
     size_t size() const { return count; }
     void stash() const { mm->stash(); }
+    std::shared_ptr<AMPAllocator> get_av() const { return mm->Aloc; }
 
     __attribute__((annotate("serialize")))
         void __cxxamp_serialize(Serialize& s) const {
@@ -68,3 +70,5 @@ public:
 };
 
 } // namespace Concurrency
+
+#endif // __CLAMP_AMP_MANAGE

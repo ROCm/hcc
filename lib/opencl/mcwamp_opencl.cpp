@@ -48,8 +48,6 @@ namespace CLAMP {
     void CLCompileKernels(cl_program&, cl_context&, cl_device_id&, void*, void*);
 }
 
-
-
 struct DimMaxSize {
   cl_uint dimensions;
   size_t* maxSizes;
@@ -57,48 +55,54 @@ struct DimMaxSize {
 static std::map<cl_device_id, struct DimMaxSize> Clid2DimSizeMap;
 typedef std::map<std::string, cl_kernel> KernelObject;
 std::map<cl_program, KernelObject> Pro2KernelObject;
-void ReleaseKernelObject() {
-  for(const auto& it : Pro2KernelObject)
-    for(const auto& itt : it.second)
-      if(itt.second)
-        clReleaseKernel(itt.second);
+void ReleaseKernelObject(cl_program& program) {
+  for(const auto& itt : Pro2KernelObject[program])
+    if(itt.second)
+      clReleaseKernel(itt.second);
 }
 
-class OpenCLAMPManager : public AMPManager
+class OpenCLAllocator;
+
+class OpenCLManager : public AMPManager
 {
 public:
-    OpenCLAMPManager() {
-        cl_uint          num_platforms;
+    OpenCLManager(const cl_device_id device, const std::wstring& path)
+        : AMPManager(path), device(device), program(nullptr) {
         cl_int           err;
-        cl_platform_id   platform_id[10];
-        int i;
-        err = clGetPlatformIDs(10, platform_id, &num_platforms);
-        for (i = 0; i < num_platforms; i++) {
-            err = clGetDeviceIDs(platform_id[i], CL_DEVICE_TYPE_GPU, 1, &device, NULL);
-            if (err == CL_SUCCESS)
-                break;
-        }
-        if (err != CL_SUCCESS) {
-            for (i = 0; i < num_platforms; i++) {
-                err = clGetDeviceIDs(platform_id[i], CL_DEVICE_TYPE_CPU, 1, &device, NULL);
-                if (err == CL_SUCCESS)
-                    break;
-            }
-        }
-        assert(err == CL_SUCCESS);
         context = clCreateContext(0, 1, &device, NULL, NULL, &err);
         assert(err == CL_SUCCESS);
 
-        cl_uint dimensions = 0;
-        err = clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, sizeof(cl_uint), &dimensions, NULL);
+        // cl_uint dimensions = 0;
+        // err = clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, sizeof(cl_uint), &dimensions, NULL);
+        // assert(err == CL_SUCCESS);
+        // size_t *maxSizes = new size_t[dimensions];
+        // err = clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(size_t) * dimensions, maxSizes, NULL);
+        // assert(err == CL_SUCCESS);
+        // struct DimMaxSize d;
+        // d.dimensions = dimensions;
+        // d.maxSizes = maxSizes;
+        // Clid2DimSizeMap[device] = d;
+
+        cl_ulong memAllocSize;
+        err = clGetDeviceInfo(device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_ulong), &memAllocSize, NULL);
         assert(err == CL_SUCCESS);
-        size_t *maxSizes = new size_t[dimensions];
-        err = clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(size_t) * dimensions, maxSizes, NULL);
+        mem = memAllocSize >> 10;
+
+        cl_bool unified;
+        err = clGetDeviceInfo(device, CL_DEVICE_HOST_UNIFIED_MEMORY, sizeof(cl_bool), &unified, NULL);
         assert(err == CL_SUCCESS);
-        struct DimMaxSize d;
-        d.dimensions = dimensions;
-        d.maxSizes = maxSizes;
-        Clid2DimSizeMap[device] = d;
+        uni = unified;
+
+        lim_dou = false;
+        dou = false;
+        cl_device_fp_config fpconf;
+        err = clGetDeviceInfo(device, CL_DEVICE_DOUBLE_FP_CONFIG, sizeof(cl_device_fp_config), &fpconf, NULL);
+        if (fpconf & CL_FP_FMA & CL_FP_INF_NAN & CL_FP_DENORM) {
+            lim_dou = true;
+            if(fpconf & CL_FP_ROUND_TO_ZERO & CL_FP_ROUND_TO_NEAREST & CL_FP_ROUND_TO_INF)
+                dou = true;
+        }
+        init();
     }
     void* CreateKernel(const char* fun, void* size, void* source) override {
         cl_int err;
@@ -139,28 +143,34 @@ public:
         return true;
     }
     void release(void *device) override { clReleaseMemObject(static_cast<cl_mem>(device)); }
-    cl_device_id getDevice() const { return device; }
-    cl_context getContext() const { return context; }
-    ~OpenCLAMPManager() {
-        clReleaseProgram(program);
+    std::shared_ptr<AMPAllocator> createAloc() override { return newAloc(); }
+
+
+    ~OpenCLManager() {
+        if (program) {
+            ReleaseKernelObject(program);
+            clReleaseProgram(program);
+        }
         clReleaseContext(context);
         for(const auto& it : Clid2DimSizeMap)
             if(it.second.maxSizes)
                 delete[] it.second.maxSizes;
-        ReleaseKernelObject();
     }
+
+    cl_device_id getDevice() const { return device; }
+    cl_context getContext() const { return context; }
 private:
+    void init();
+    std::shared_ptr<AMPAllocator> newAloc();
     cl_context       context;
     cl_device_id     device;
     cl_program       program;
 };
 
-
-class OpenCLAMPAllocator : public AMPAllocator
+class OpenCLAllocator : public AMPAllocator
 {
-    cl_command_queue queue;
 public:
-    OpenCLAMPAllocator(OpenCLAMPManager *Man) : AMPAllocator(Man) {
+    OpenCLAllocator(OpenCLManager *Man) : AMPAllocator(Man) {
         cl_int err;
         queue = clCreateCommandQueue(Man->getContext(), Man->getDevice(), 0, &err);
         assert(err == CL_SUCCESS);
@@ -240,11 +250,60 @@ public:
         err = clEnqueueNDRangeKernel(queue, (cl_kernel)kernel, dim_ext, NULL, ext, local_size, 0, NULL, NULL);
         assert(err == CL_SUCCESS);
     }
-    ~OpenCLAMPAllocator() { clReleaseCommandQueue(queue); }
+    void flush() override { clFlush(queue); }
+    void wait() override { clFinish(queue); }
+    ~OpenCLAllocator() { clReleaseCommandQueue(queue); }
+private:
+    cl_command_queue queue;
 };
 
-static OpenCLAMPManager man;
-static OpenCLAMPAllocator amp(&man);
+void OpenCLManager::init() { pAloc = std::shared_ptr<AMPAllocator>(new OpenCLAllocator(this)); }
+std::shared_ptr<AMPAllocator> OpenCLManager::newAloc() {
+    return std::shared_ptr<AMPAllocator>(new OpenCLAllocator(this));
+}
+
+
+class OpenCLContext : public AMPContext
+{
+public:
+    OpenCLContext() : AMPContext() {
+        cl_uint num_platform;
+        cl_int err;
+        err = clGetPlatformIDs(0, nullptr, &num_platform);
+        assert(err == CL_SUCCESS);
+        std::vector<cl_platform_id> platform_id(num_platform);
+        err = clGetPlatformIDs(num_platform, platform_id.data(), nullptr);
+        int gpuid = 0;
+        int cpuid = 0;
+        std::vector<cl_device_id> dev;
+        for (const auto pId : platform_id) {
+            cl_uint num_device;
+            err = clGetDeviceIDs(pId, CL_DEVICE_TYPE_GPU, 0, nullptr, &num_device);
+            assert(err == CL_SUCCESS);
+            dev.resize(num_device);
+            err = clGetDeviceIDs(pId, CL_DEVICE_TYPE_GPU, num_device, dev.data(), nullptr);
+            assert(err == CL_SUCCESS);
+            for (const auto id : dev)
+                Devices.push_back(std::shared_ptr<AMPManager>(new OpenCLManager(id, L"gpu" + std::to_wstring(gpuid++))));
+
+            err = clGetDeviceIDs(pId, CL_DEVICE_TYPE_CPU, 0, nullptr, &num_device);
+            assert(err == CL_SUCCESS);
+            dev.resize(num_device);
+            err = clGetDeviceIDs(pId, CL_DEVICE_TYPE_CPU, num_device, dev.data(), nullptr);
+            assert(err == CL_SUCCESS);
+            for (const auto id : dev) {
+                if (cpuid == 0) {
+                    Devices.push_back(std::shared_ptr<AMPManager>(new OpenCLManager(id, L"cpu")));
+                    ++cpuid;
+                } else
+                    Devices.push_back(std::shared_ptr<AMPManager>
+                                      (new OpenCLManager(id, L"cpu" + std::to_wstring(cpuid++))));
+            }
+        }
+    }
+};
+
+static OpenCLContext ctx;
 
 } // namespace Concurrency
 
@@ -461,95 +520,8 @@ void CLCompileKernels(cl_program& program, cl_context& context, cl_device_id& de
 } // namespce CLAMP
 } // namespace Concurrency
 
-extern "C" void *GetAllocatorImpl() {
-    return &Concurrency::amp;
-}
-
-extern "C" void EnumerateDevicesImpl(int* devices, int* device_number) {
-    int deviceTotalCount = 0;
-    int idx = 0;
-    cl_int err;
-    cl_uint platformCount;
-    cl_uint deviceCount;
-    std::unique_ptr<cl_platform_id[]> platforms;
-
-    err = clGetPlatformIDs(0, nullptr, &platformCount);
-    platforms.reset(new cl_platform_id[platformCount]);
-    clGetPlatformIDs(platformCount, platforms.get(), nullptr);
-    for (int i = 0; i < platformCount; i++) {
-        clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_CPU, 0, nullptr, &deviceCount);
-        for (int j = 0; j < deviceCount; j++) {
-            if (devices != nullptr) {
-              devices[idx++] = AMP_DEVICE_TYPE_CPU;
-            }
-        }
-        deviceTotalCount += deviceCount;
-
-        clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_GPU, 0, nullptr, &deviceCount);
-        for (int j = 0; j < deviceCount; j++) {
-            if (devices != nullptr) {
-              devices[idx++] = AMP_DEVICE_TYPE_GPU;
-            }
-        }
-        deviceTotalCount += deviceCount;
-    }
-    assert(idx == deviceTotalCount);
-
-    if (device_number != nullptr) {
-      *device_number = deviceTotalCount;
-    }
-}
-
-extern "C" void QueryDeviceInfoImpl(const wchar_t* device_path,
-    bool* supports_cpu_shared_memory,
-    size_t* dedicated_memory,
-    bool* supports_limited_double_precision,
-    wchar_t* description) {
-
-    const wchar_t des[] = L"OpenCL";
-    wmemcpy(description, des, sizeof(des));
-
-    cl_int err;
-    cl_uint platformCount;
-    cl_device_id device;
-    cl_ulong memAllocSize;
-    cl_device_fp_config singleFPConfig;
-    std::unique_ptr<cl_platform_id[]> platforms;
-
-    err = clGetPlatformIDs(0, NULL, &platformCount);
-    assert(err == CL_SUCCESS);
-    platforms.reset(new cl_platform_id[platformCount]);
-    clGetPlatformIDs(platformCount, platforms.get(), NULL);
-    assert(err == CL_SUCCESS);
-    int i;
-    for (i = 0; i < platformCount; i++) {
-        if (std::wstring(gpu_accelerator) == device_path) {
-            
-            err = clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_GPU, 1, &device, NULL);
-            if (err != CL_SUCCESS)
-                continue;
-            *supports_cpu_shared_memory = false;
-            break;
-        } else if (std::wstring(cpu_accelerator) == device_path) {
-            err = clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_CPU, 1, &device, NULL);
-            if (err != CL_SUCCESS)
-                continue;
-            *supports_cpu_shared_memory = true;
-            break;
-        }
-    }
-    if (i == platformCount)
-        return;
-
-    err = clGetDeviceInfo(device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_ulong), &memAllocSize, NULL);
-    assert(err == CL_SUCCESS);
-    *dedicated_memory = memAllocSize / (size_t) 1024;
-
-    err = clGetDeviceInfo(device, CL_DEVICE_SINGLE_FP_CONFIG, sizeof(cl_device_fp_config), &singleFPConfig, NULL);
-    assert(err == CL_SUCCESS);
-    if (singleFPConfig & CL_FP_FMA & CL_FP_DENORM & CL_FP_INF_NAN &
-        CL_FP_ROUND_TO_NEAREST & CL_FP_ROUND_TO_ZERO)
-         *supports_limited_double_precision = true;
+extern "C" void *GetContextImpl() {
+    return &Concurrency::ctx;
 }
 
 extern "C" void *LaunchKernelAsyncImpl(void *ker, size_t nr_dim, size_t *global, size_t *local) {
@@ -636,4 +608,3 @@ extern "C" void PushArgPtrImpl(void *k_, int idx, size_t sz, const void *s) {
   err = clSetKernelArg(static_cast<cl_kernel>(k_), idx, sz, s);
   assert(err == CL_SUCCESS);
 }
-

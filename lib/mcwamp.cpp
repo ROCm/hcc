@@ -19,14 +19,8 @@
 
 namespace Concurrency {
 
-// initialize static class members
-const wchar_t accelerator::gpu_accelerator[] = L"gpu";
 const wchar_t accelerator::cpu_accelerator[] = L"cpu";
 const wchar_t accelerator::default_accelerator[] = L"default";
-
-std::shared_ptr<accelerator> accelerator::_gpu_accelerator = std::make_shared<accelerator>(accelerator::gpu_accelerator);
-std::shared_ptr<accelerator> accelerator::_cpu_accelerator = std::make_shared<accelerator>(accelerator::cpu_accelerator);
-std::shared_ptr<accelerator> accelerator::_default_accelerator = nullptr;
 
 } // namespace Concurrency
 
@@ -52,13 +46,11 @@ struct RuntimeImpl {
   RuntimeImpl(const char* libraryName) :
     m_ImplName(libraryName),
     m_RuntimeHandle(nullptr),
-    m_EnumerateDevicesImpl(nullptr),
-    m_QueryDeviceInfoImpl(nullptr),
     m_LaunchKernelAsyncImpl(nullptr),
     m_MatchKernelNamesImpl(nullptr),
     m_PushArgImpl(nullptr),
     m_PushArgPtrImpl(nullptr),
-    m_GetAllocatorImpl(nullptr),
+    m_GetContextImpl(nullptr),
     isCPU(false) {
     //std::cout << "dlopen(" << libraryName << ")\n";
     m_RuntimeHandle = dlopen(libraryName, RTLD_LAZY);
@@ -77,14 +69,11 @@ struct RuntimeImpl {
 
   // load symbols from C++AMP runtime implementation
   void LoadSymbols() {
-
-    m_EnumerateDevicesImpl = (EnumerateDevicesImpl_t) dlsym(m_RuntimeHandle, "EnumerateDevicesImpl");
-    m_QueryDeviceInfoImpl = (QueryDeviceInfoImpl_t) dlsym(m_RuntimeHandle, "QueryDeviceInfoImpl");
     m_LaunchKernelAsyncImpl = (LaunchKernelAsyncImpl_t) dlsym(m_RuntimeHandle, "LaunchKernelAsyncImpl");
     m_MatchKernelNamesImpl = (MatchKernelNamesImpl_t) dlsym(m_RuntimeHandle, "MatchKernelNamesImpl");
     m_PushArgImpl = (PushArgImpl_t) dlsym(m_RuntimeHandle, "PushArgImpl");
     m_PushArgPtrImpl = (PushArgPtrImpl_t) dlsym(m_RuntimeHandle, "PushArgPtrImpl");
-    m_GetAllocatorImpl = (GetAllocatorImpl_t) dlsym(m_RuntimeHandle, "GetAllocatorImpl");
+    m_GetContextImpl= (GetContextImpl_t) dlsym(m_RuntimeHandle, "GetContextImpl");
   }
 
   void set_cpu() { isCPU = true; }
@@ -92,13 +81,11 @@ struct RuntimeImpl {
 
   std::string m_ImplName;
   void* m_RuntimeHandle;
-  EnumerateDevicesImpl_t m_EnumerateDevicesImpl;
-  QueryDeviceInfoImpl_t m_QueryDeviceInfoImpl;
   LaunchKernelAsyncImpl_t m_LaunchKernelAsyncImpl;
   MatchKernelNamesImpl_t m_MatchKernelNamesImpl;
   PushArgImpl_t m_PushArgImpl;
   PushArgPtrImpl_t m_PushArgPtrImpl;
-  GetAllocatorImpl_t m_GetAllocatorImpl;
+  GetContextImpl_t m_GetContextImpl;
   bool isCPU;
 };
 
@@ -292,27 +279,6 @@ RuntimeImpl* GetOrInitRuntime() {
   return runtimeImpl;
 }
 
-//
-// implementation of C++AMP runtime interfaces
-// declared in amp_runtime.h and amp_allocator.h
-//
-
-// used in amp.h
-std::vector<int> EnumerateDevices() {
-  int num = 0;
-  std::vector<int> ret;
-  int* devices = nullptr;
-  GetOrInitRuntime()->m_EnumerateDevicesImpl(NULL, &num);
-  assert(num > 0);
-  devices = new int[num];
-  GetOrInitRuntime()->m_EnumerateDevicesImpl(devices, NULL);
-  for (int i = 0; i < num; ++i) {
-    ret.push_back(devices[i]);
-  }
-  delete[] devices;
-  return ret;
-}
-
 bool is_cpu()
 {
     return GetOrInitRuntime()->is_cpu();
@@ -322,17 +288,6 @@ static bool in_kernel = false;
 bool in_cpu_kernel() { return in_kernel; }
 void enter_kernel() { in_kernel = true; }
 void leave_kernel() { in_kernel = false; }
-
-// used in amp_impl.h
-void QueryDeviceInfo(const std::wstring& device_path,
-  bool& supports_cpu_shared_memory,
-  size_t& dedicated_memory,
-  bool& supports_limited_double_precision,
-  std::wstring& description) {
-  wchar_t des[128];
-  GetOrInitRuntime()->m_QueryDeviceInfoImpl(device_path.c_str(), &supports_cpu_shared_memory, &dedicated_memory, &supports_limited_double_precision, des);
-  description = std::wstring(des);
-}
 
 // used in parallel_for_each.h
 void *CreateKernel(std::string s, AMPAllocator* Aloc) {
@@ -404,8 +359,8 @@ void PushArgPtr(void *k_, int idx, size_t sz, const void *s) {
 
 } // namespace CLAMP
 
-AMPAllocator *getAllocator() {
-  return static_cast<AMPAllocator*>(CLAMP::GetOrInitRuntime()->m_GetAllocatorImpl());
+AMPContext *getContext() {
+  return static_cast<AMPContext*>(CLAMP::GetOrInitRuntime()->m_GetContextImpl());
 }
 
 } // namespace Concurrency

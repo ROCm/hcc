@@ -1,6 +1,6 @@
-#pragma once
+#ifndef __CLAMP_AMP_ALLOCATOR
+#define __CLAMP_AMP_ALLOCATOR
 
-#include <serialize.h>
 namespace Concurrency {
 
 struct rw_info;
@@ -12,14 +12,40 @@ struct obj_info
     int ref;
 };
 
-class AMPManager {
+class AMPAllocator;
+
+class AMPManager
+{
+private:
     virtual void* create(size_t count, void *data, bool hasSrc) = 0;
     virtual void release(void *data) = 0;
+
+
     std::map<void *, obj_info> mem_info;
+    const std::wstring path;
+    const std::wstring des;
+protected:
+    std::shared_ptr<AMPAllocator> pAloc;
+    size_t mem;
+    bool dou;
+    bool lim_dou;
+    bool uni;
+    AMPManager(const std::wstring& path) : path(path) {}
 public:
-    virtual ~AMPManager() {}
+
+    std::wstring get_path() { return path; }
+    std::wstring get_des() { return des; }
+    size_t get_mem() { return mem; }
+    bool is_double() { return dou; }
+    bool is_lim_double() { return lim_dou; }
+    bool is_uni() { return uni; }
+    std::shared_ptr<AMPAllocator> getAloc() { return pAloc; }
+
+
     virtual void* CreateKernel(const char* fun, void* size, void* source) = 0;
     virtual bool check(size_t *local, size_t dim_ext) = 0;
+    virtual std::shared_ptr<AMPAllocator> createAloc() = 0;
+    virtual ~AMPManager() {}
 
     void regist(size_t count, void* data, bool hasSrc) {
         auto it = mem_info.find(data);
@@ -49,7 +75,8 @@ public:
     }
 };
 
-class AMPAllocator {
+class AMPAllocator
+{
 protected:
     AMPManager *Man;
     AMPAllocator(AMPManager* Man) : Man(Man) {}
@@ -70,6 +97,9 @@ public:
       return Man->CreateKernel(fun, size, source);
   }
 
+  virtual void flush() {}
+  virtual void wait() {}
+
   void* device_data(void* data) { return Man->device_data(data).device; }
   virtual void* _getQueue() { return nullptr; }
   // overide function
@@ -80,33 +110,69 @@ public:
   virtual void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) = 0;
 };
 
-AMPAllocator *getAllocator();
+class accelerator;
+
+class AMPContext
+{
+private:
+    std::wstring def;
+    friend accelerator;
+protected:
+    std::vector<std::shared_ptr<AMPManager>> Devices;
+    AMPContext() : def(L"default"), Devices(0) {}
+public:
+    virtual ~AMPContext() {}
+    size_t getNumDevices() { return Devices.size(); }
+    std::shared_ptr<AMPManager>* getDevices() { return Devices.data(); }
+    bool set_default(const std::wstring& path) {
+        if (def == L"default") {
+            def = path;
+            return true;
+        } else
+            return false;
+    }
+    std::shared_ptr<AMPManager> getDevice(std::wstring path = L"") {
+        if (path == L"")
+            path = def;
+        if (path == L"default")
+            return Devices[0];
+        if (path == L"gpu")
+            path += L"0";
+        for (const auto dev : Devices)
+            if (dev->get_path() == path)
+                return dev;
+        return Devices[0];
+    }
+};
+
+AMPContext *getContext();
 
 struct rw_info
 {
     void *data;
+    std::shared_ptr<AMPAllocator> Aloc;
     unsigned int discard : 1;
     unsigned int dirty : 1;
     unsigned int hasSrc : 1;
 
-    rw_info(size_t count, void* p = nullptr) : data(p),
-    discard(false), dirty(false), hasSrc(data != nullptr) {
+    rw_info(std::shared_ptr<AMPAllocator> Aloc, size_t count, void* p = nullptr)
+        : data(p), Aloc(Aloc), discard(false), dirty(false), hasSrc(p != nullptr) {
         if (!hasSrc)
             data = aligned_alloc(0x1000, count);
 #ifdef __AMP_CPU__
         if (!CLAMP::in_cpu_kernel())
 #endif
-            getAllocator()->regist(count, data, hasSrc);
+            Aloc->regist(count, data, hasSrc);
     }
 
     void append(void* kernel, int idx, bool isArray) {
         if (!dirty) {
             dirty = true;
             if (!discard || isArray)
-                getAllocator()->amp_write(data);
+                Aloc->amp_write(data);
             discard = false;
         }
-        getAllocator()->PushArg(kernel, idx, *this);
+        Aloc->PushArg(kernel, idx, *this);
     }
 
     void disc() {
@@ -118,7 +184,7 @@ struct rw_info
 
     void copy(void* dst, size_t count) {
         if (dirty)
-            getAllocator()->amp_copy(dst, data, count);
+            Aloc->amp_copy(dst, data, count);
         else
             memmove(dst, data, count);
     }
@@ -129,7 +195,7 @@ struct rw_info
             return;
 #endif
         if (dirty && !discard) {
-            getAllocator()->amp_read(data);
+            Aloc->amp_read(data);
             dirty = false;
         }
     }
@@ -144,14 +210,15 @@ struct rw_info
 #endif
         if (hasSrc)
             synchronize();
-        getAllocator()->unregist(data);
+        Aloc->unregist(data);
         if (!hasSrc)
             ::operator delete(data);
     }
 };
 
-inline void *getDevicePointer(void *ptr) { return getAllocator()->device_data(ptr); }
-inline void *getOCLQueue(void *ptr) { return getAllocator()->getQueue(); }
+inline void *getDevicePointer(void *ptr) { return nullptr; }
+inline void *getOCLQueue(void *ptr) { return nullptr; }
 
 } // namespace Concurrency
 
+#endif // __CLAMP_AMP_ALLOCATOR
