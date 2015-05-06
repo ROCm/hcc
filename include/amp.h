@@ -1407,6 +1407,19 @@ private:
 
 // ------------------------------------------------------------------------
 
+template <int N>
+const Concurrency::extent<N>& check(const Concurrency::extent<N>& ext)
+{
+#ifndef __GPU__
+    for (int i = 0; i < N; i++)
+    {
+        if(ext[i] <=0)
+            throw runtime_exception("errorMsg_throw", 0);
+    }
+#endif
+    return ext;
+}
+
 template <typename T, int N = 1>
 class array {
   static_assert(!std::is_const<T>::value, "array<const T> is not supported");
@@ -1428,7 +1441,7 @@ public:
 #ifdef __GPU__
       : m_device(ext.size(), true), extent(ext), av(av), asv(av) { initialize(); }
 #else
-      : m_device(av.pAloc, ext.size(), true), extent(ext), av(av), asv(av) { initialize(); }
+      : m_device(av.pAloc, check(ext).size(), true), extent(ext), av(av), asv(av) { initialize(); }
 #endif
   array(int e0, accelerator_view av, accelerator_view associated_av)
       : array(Concurrency::extent<N>(e0), av, associated_av) {}
