@@ -52,7 +52,6 @@ struct DimMaxSize {
   cl_uint dimensions;
   size_t* maxSizes;
 };
-static std::map<cl_device_id, struct DimMaxSize> Clid2DimSizeMap;
 typedef std::map<std::string, cl_kernel> KernelObject;
 std::map<cl_program, KernelObject> Pro2KernelObject;
 void ReleaseKernelObject(cl_program& program) {
@@ -102,6 +101,15 @@ public:
             if(fpconf & CL_FP_ROUND_TO_ZERO & CL_FP_ROUND_TO_NEAREST & CL_FP_ROUND_TO_INF)
                 dou = true;
         }
+
+        cl_uint dimensions = 0;
+        err = clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, sizeof(cl_uint), &dimensions, NULL);
+        assert(err == CL_SUCCESS);
+        size_t *maxSizes = new size_t[dimensions];
+        err = clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(size_t) * dimensions, maxSizes, NULL);
+        assert(err == CL_SUCCESS);
+        d.dimensions = dimensions;
+        d.maxSizes = maxSizes;
         init();
     }
     void* CreateKernel(const char* fun, void* size, void* source) override {
@@ -127,7 +135,7 @@ public:
         // The maximum number of tiles per dimension will be no less than 65535.
         // The maximum number of threads in a tile will be no less than 1024.
         // In 3D tiling, the maximal value of D0 will be no less than 64.
-        size_t *maxSizes = Concurrency::Clid2DimSizeMap[device].maxSizes;
+        size_t *maxSizes = d.maxSizes;
         bool is = true;
         int threads_per_tile = 1;
         for(int i = 0; local_size && i < dim_ext; i++) {
@@ -151,10 +159,8 @@ public:
             ReleaseKernelObject(program);
             clReleaseProgram(program);
         }
+        delete[] d.maxSizes;
         clReleaseContext(context);
-        for(const auto& it : Clid2DimSizeMap)
-            if(it.second.maxSizes)
-                delete[] it.second.maxSizes;
     }
 
     cl_device_id getDevice() const { return device; }
@@ -162,6 +168,7 @@ public:
 private:
     void init();
     std::shared_ptr<AMPAllocator> newAloc();
+    struct DimMaxSize d;
     cl_context       context;
     cl_device_id     device;
     cl_program       program;

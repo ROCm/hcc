@@ -1551,10 +1551,10 @@ public:
       : array(ext, srcBegin, srcEnd, accelerator::get_auto_selection_view()) {}
   template <typename InputIter>
       array(int e0, InputIter srcBegin)
-      : array(extent<N>(e0), srcBegin) {}
+      : array(Concurrency::extent<N>(e0), srcBegin) {}
   template <typename InputIter>
       array(int e0, InputIter srcBegin, InputIter srcEnd)
-      : array(extent<N>(e0), srcBegin, srcEnd) {}
+      : array(Concurrency::extent<N>(e0), srcBegin, srcEnd) {}
   template <typename InputIter>
       array(int e0, int e1, InputIter srcBegin)
       : array(Concurrency::extent<N>(e0, e1), srcBegin) {}
@@ -1767,7 +1767,7 @@ public:
 #endif
           int size = extent.size() * sizeof(T) / sizeof(ElementType);
           using buffer_type = typename array_view<ElementType, 1>::acc_buffer_t;
-          array_view<ElementType, 1> av(Concurrency::extent<1>(size), buffer_type(m_device), 0);
+          array_view<ElementType, 1> av(buffer_type(m_device), Concurrency::extent<1>(size), 0);
           return av;
       }
   template <typename ElementType>
@@ -1778,7 +1778,7 @@ public:
 #endif
           int size = extent.size() * sizeof(T) / sizeof(ElementType);
           using buffer_type = typename array_view<ElementType, 1>::acc_buffer_t;
-          array_view<const ElementType, 1> av(Concurrency::extent<1>(size), buffer_type(m_device), 0);
+          array_view<const ElementType, 1> av(buffer_type(m_device), Concurrency::extent<1>(size), 0);
           return av;
       }
   template <int K> array_view<T, K>
