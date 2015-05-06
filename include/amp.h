@@ -1472,12 +1472,12 @@ public:
       : array(ext, av, associated_av) {
           InputIter srcEnd = srcBegin;
           std::advance(srcEnd, ext.size());
-          copy(srcBegin, srcEnd, *this);
+          std::copy(srcBegin, srcEnd, m_device.get());
       }
   template <typename InputIter>
       array(const Concurrency::extent<N>& ext, InputIter srcBegin, InputIter srcEnd,
             accelerator_view av, accelerator_view associated_av)
-      : array(ext, av, associated_av) { copy(srcBegin, srcEnd, *this); }
+      : array(ext, av, associated_av) { std::copy(srcBegin, srcEnd, m_device.get()); }
   template <typename InputIter>
       array(int e0, InputIter srcBegin,
             accelerator_view av, accelerator_view associated_av)
