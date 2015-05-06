@@ -12,7 +12,6 @@
 // Specialization of AMP classes/templates
 namespace Concurrency {
 
-inline accelerator accelerator_view::get_accelerator() const { return pMan; }
 inline completion_future accelerator_view::create_marker(){ return completion_future(); }
 
 template <int N>

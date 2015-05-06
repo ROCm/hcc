@@ -14,7 +14,7 @@ struct obj_info
 
 class AMPAllocator;
 
-class AMPManager
+class AMPManager : public std::enable_shared_from_this<AMPManager>
 {
 private:
     virtual void* create(size_t count, void *data, bool hasSrc) = 0;
@@ -25,7 +25,6 @@ private:
     const std::wstring path;
     const std::wstring des;
 protected:
-    std::shared_ptr<AMPAllocator> pAloc;
     size_t mem;
     bool dou;
     bool lim_dou;
@@ -39,7 +38,6 @@ public:
     bool is_double() { return dou; }
     bool is_lim_double() { return lim_dou; }
     bool is_uni() { return uni; }
-    std::shared_ptr<AMPAllocator> getAloc() { return pAloc; }
 
 
     virtual void* CreateKernel(const char* fun, void* size, void* source) = 0;
@@ -78,12 +76,10 @@ public:
 class AMPAllocator
 {
 protected:
-    AMPManager *Man;
-    AMPAllocator(AMPManager* Man) : Man(Man) {}
+    std::shared_ptr<AMPManager> Man;
+    AMPAllocator(std::shared_ptr<AMPManager> Man) : Man(Man) {}
 public:
   virtual ~AMPAllocator() {}
-
-  void* getQueue() { return _getQueue(); }
 
   void regist(size_t count, void* data, bool hasSrc) {
       Man->regist(count, data, hasSrc);
@@ -97,11 +93,11 @@ public:
       return Man->CreateKernel(fun, size, source);
   }
 
+  std::shared_ptr<AMPManager> getMan() { return Man; }
+
   virtual void flush() {}
   virtual void wait() {}
 
-  void* device_data(void* data) { return Man->device_data(data).device; }
-  virtual void* _getQueue() { return nullptr; }
   // overide function
   virtual void amp_write(void *data) = 0;
   virtual void amp_read(void *data) = 0;
@@ -119,6 +115,8 @@ private:
     friend accelerator;
 protected:
     std::vector<std::shared_ptr<AMPManager>> Devices;
+    std::map<std::shared_ptr<AMPManager>,
+        std::shared_ptr<AMPAllocator>> default_map;
     AMPContext() : def(L"default"), Devices(0) {}
 public:
     virtual ~AMPContext() {}
@@ -130,6 +128,9 @@ public:
             return true;
         } else
             return false;
+    }
+    std::shared_ptr<AMPAllocator> getView(const std::shared_ptr<AMPManager>& pMan) {
+        return default_map[pMan];
     }
     std::shared_ptr<AMPManager> getDevice(std::wstring path = L"") {
         if (path == L"")
@@ -215,9 +216,6 @@ struct rw_info
             ::operator delete(data);
     }
 };
-
-inline void *getDevicePointer(void *ptr) { return nullptr; }
-inline void *getOCLQueue(void *ptr) { return nullptr; }
 
 } // namespace Concurrency
 

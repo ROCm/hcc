@@ -121,14 +121,11 @@ template <typename T, int N> class array_view;
 template <typename T, int N> class array;
 
 class accelerator_view {
-    accelerator_view(std::shared_ptr<AMPAllocator> pAloc,
-                     std::shared_ptr<AMPManager> pMan) : pAloc(pAloc), pMan(pMan) {}
+    accelerator_view(std::shared_ptr<AMPAllocator> pAloc) : pAloc(pAloc) {}
 public:
-  accelerator_view(const accelerator_view& other)
-      : pAloc(other.pAloc), pMan(other.pMan) {}
+  accelerator_view(const accelerator_view& other) : pAloc(other.pAloc) {}
   accelerator_view& operator=(const accelerator_view& other) {
       pAloc = other.pAloc;
-      pMan = other.pMan;
       return *this;
   }
 
@@ -142,16 +139,13 @@ public:
   void wait() { pAloc->wait(); }
   completion_future create_marker();
 
-  bool operator==(const accelerator_view& other) const {
-      return pAloc == other.pAloc && pMan == other.pMan;
-  }
+  bool operator==(const accelerator_view& other) const { return pAloc == other.pAloc; }
   bool operator!=(const accelerator_view& other) const { return !(*this == other); }
 
   __attribute__((annotate("user_deserialize")))
       accelerator_view() restrict(amp,cpu) {}
 private:
   std::shared_ptr<AMPAllocator> pAloc;
-  std::shared_ptr<AMPManager> pMan;
   friend class accelerator;
   template <typename T> friend class _data_host;
   template <typename Q, int K> friend class array;
@@ -185,7 +179,7 @@ public:
   }
   static accelerator_view get_auto_selection_view() {
       auto dMan = getContext()->getDevice();
-      return accelerator_view(dMan->getAloc(), dMan);
+      return accelerator_view(getContext()->getView(dMan));
   }
 
   accelerator& operator=(const accelerator& other) {
@@ -202,16 +196,12 @@ public:
   bool get_supports_double_precision() const { return pMan->is_double(); }
   bool get_supports_limited_double_precision() const { return pMan->is_lim_double(); }
   size_t get_dedicated_memory() const { return pMan->get_mem(); }
-  accelerator_view get_default_view() const {
-      return accelerator_view(pMan->getAloc(), pMan);
-  }
+  accelerator_view get_default_view() const;
   access_type get_default_cpu_access_type() const { return access_type_auto; }
   bool get_supports_cpu_shared_memory() const { return pMan->is_uni(); }
 
   bool set_default_cpu_access_type(access_type type) { return true; }
-  accelerator_view create_view() {
-      return accelerator_view(pMan->createAloc(), pMan);
-  };
+  accelerator_view create_view();
   accelerator_view create_view(queuing_mode qmode) { return create_view(); }
 
   bool operator==(const accelerator& other) const { return pMan == other.pMan; }
@@ -220,6 +210,11 @@ private:
   friend class accelerator_view;
   std::shared_ptr<AMPManager> pMan;
 };
+
+accelerator accelerator_view::get_accelerator() const { return pAloc->getMan(); }
+accelerator_view accelerator::create_view() { return accelerator_view(pMan->createAloc()); }
+accelerator_view accelerator::get_default_view() const { return getContext()->getView(pMan); }
+
 
 template <int N> class extent;
 template <int D0, int D1=0, int D2=0> class tiled_extent;

@@ -71,17 +71,6 @@ public:
         context = clCreateContext(0, 1, &device, NULL, NULL, &err);
         assert(err == CL_SUCCESS);
 
-        // cl_uint dimensions = 0;
-        // err = clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, sizeof(cl_uint), &dimensions, NULL);
-        // assert(err == CL_SUCCESS);
-        // size_t *maxSizes = new size_t[dimensions];
-        // err = clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(size_t) * dimensions, maxSizes, NULL);
-        // assert(err == CL_SUCCESS);
-        // struct DimMaxSize d;
-        // d.dimensions = dimensions;
-        // d.maxSizes = maxSizes;
-        // Clid2DimSizeMap[device] = d;
-
         cl_ulong memAllocSize;
         err = clGetDeviceInfo(device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_ulong), &memAllocSize, NULL);
         assert(err == CL_SUCCESS);
@@ -110,7 +99,6 @@ public:
         assert(err == CL_SUCCESS);
         d.dimensions = dimensions;
         d.maxSizes = maxSizes;
-        init();
     }
     void* CreateKernel(const char* fun, void* size, void* source) override {
         cl_int err;
@@ -166,7 +154,6 @@ public:
     cl_device_id getDevice() const { return device; }
     cl_context getContext() const { return context; }
 private:
-    void init();
     std::shared_ptr<AMPAllocator> newAloc();
     struct DimMaxSize d;
     cl_context       context;
@@ -177,7 +164,8 @@ private:
 class OpenCLAllocator : public AMPAllocator
 {
 public:
-    OpenCLAllocator(OpenCLManager *Man) : AMPAllocator(Man) {
+    OpenCLAllocator(std::shared_ptr<AMPManager> pMan) : AMPAllocator(pMan) {
+        auto Man = std::dynamic_pointer_cast<OpenCLManager, AMPManager>(pMan);
         cl_int err;
         queue = clCreateCommandQueue(Man->getContext(), Man->getDevice(), 0, &err);
         assert(err == CL_SUCCESS);
@@ -264,9 +252,8 @@ private:
     cl_command_queue queue;
 };
 
-void OpenCLManager::init() { pAloc = std::shared_ptr<AMPAllocator>(new OpenCLAllocator(this)); }
 std::shared_ptr<AMPAllocator> OpenCLManager::newAloc() {
-    return std::shared_ptr<AMPAllocator>(new OpenCLAllocator(this));
+    return std::shared_ptr<AMPAllocator>(new OpenCLAllocator(shared_from_this()));
 }
 
 
@@ -290,8 +277,12 @@ public:
             dev.resize(num_device);
             err = clGetDeviceIDs(pId, CL_DEVICE_TYPE_GPU, num_device, dev.data(), nullptr);
             assert(err == CL_SUCCESS);
-            for (const auto id : dev)
-                Devices.push_back(std::shared_ptr<AMPManager>(new OpenCLManager(id, L"gpu" + std::to_wstring(gpuid++))));
+            for (const auto id : dev) {
+                auto path = L"gpu" + std::to_wstring(gpuid++);
+                auto Man = std::shared_ptr<AMPManager>(new OpenCLManager(id, path));
+                default_map[Man] = Man->createAloc();
+                Devices.push_back(Man);
+            }
 
             err = clGetDeviceIDs(pId, CL_DEVICE_TYPE_CPU, 0, nullptr, &num_device);
             assert(err == CL_SUCCESS);
@@ -299,12 +290,13 @@ public:
             err = clGetDeviceIDs(pId, CL_DEVICE_TYPE_CPU, num_device, dev.data(), nullptr);
             assert(err == CL_SUCCESS);
             for (const auto id : dev) {
-                if (cpuid == 0) {
-                    Devices.push_back(std::shared_ptr<AMPManager>(new OpenCLManager(id, L"cpu")));
-                    ++cpuid;
-                } else
-                    Devices.push_back(std::shared_ptr<AMPManager>
-                                      (new OpenCLManager(id, L"cpu" + std::to_wstring(cpuid++))));
+                std::wstring path = L"cpu";
+                if (cpuid)
+                    path += std::to_wstring(cpuid);
+                ++cpuid;
+                auto Man = std::shared_ptr<AMPManager>(new OpenCLManager(id, path));
+                default_map[Man] = Man->createAloc();
+                Devices.push_back(Man);
             }
         }
     }
