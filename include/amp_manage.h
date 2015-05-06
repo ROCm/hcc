@@ -53,14 +53,6 @@ public:
         _data_host(const _data_host<U>& other)
         : mm(other.mm), count(other.count), isArray(false) {}
 
-    _data_host(_data_host&& other) : mm(other.mm) { other.reset(); }
-    _data_host& operator=(const _data_host& other) {
-        mm = other.mm;
-        count = other.count;
-        isArray = false;
-        return *this;
-    }
-
     T *get() const { return static_cast<T*>(mm->data); }
     void synchronize() const { mm->synchronize(); }
     void discard() const { mm->disc(); }

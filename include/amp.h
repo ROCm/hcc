@@ -1594,7 +1594,7 @@ public:
     { copy(src, m_device.get()); }
 
 
-  array(const array& other) : m_device(std::move(other.m_device)), extent(other.extent)
+  array(const array& other) : m_device(other.m_device), extent(other.extent)
 #ifndef __GPU__
                               , av(other.av), asv(other.asv)
 #endif
