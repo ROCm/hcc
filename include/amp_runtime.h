@@ -31,6 +31,7 @@ protected:
     bool dou;
     bool lim_dou;
     bool uni;
+    bool emu;
     AMPManager(const std::wstring& path) : path(path) {}
 public:
 
@@ -40,6 +41,7 @@ public:
     bool is_double() { return dou; }
     bool is_lim_double() { return lim_dou; }
     bool is_uni() { return uni; }
+    bool is_emu() { return emu; }
 
 
     virtual void* CreateKernel(const char* fun, void* size, void* source) = 0;
@@ -139,8 +141,12 @@ public:
     std::shared_ptr<AMPManager> getDevice(std::wstring path = L"") {
         if (path == L"")
             path = def;
-        if (path == L"default")
-            return Devices[0];
+        if (path == L"default") {
+            if (def == L"default")
+                return Devices[0];
+            else
+                path = def;
+        }
         if (path == L"gpu")
             path += L"0";
         for (const auto dev : Devices)
@@ -226,14 +232,12 @@ struct rw_info
                     Alocs.insert(aloc);
                 }
                 if (!discard || isArray) {
-                    if (aloc->getMan() != latest->getMan()) {
-                        void* dst = aloc->amp_map(data, true);
-                        void* src = latest->amp_map(data, false);
-                        memmove(dst, src, count);
-                        aloc->amp_unmap(data, dst);
-                        latest->amp_unmap(data, src);
-                        latest = aloc;
-                    }
+                    void* dst = aloc->amp_map(data, true);
+                    void* src = latest->amp_map(data, false);
+                    memmove(dst, src, count);
+                    aloc->amp_unmap(data, dst);
+                    latest->amp_unmap(data, src);
+                    latest = aloc;
                 }
             }
         } else {

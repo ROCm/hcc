@@ -29,7 +29,6 @@
 namespace {
 bool __mcw_cxxamp_compiled = false;
 std::vector<std::string> __mcw_kernel_names;
-const wchar_t gpu_accelerator[] = L"gpu";
 const wchar_t cpu_accelerator[] = L"cpu";
 const wchar_t default_accelerator[] = L"default";
 }
@@ -98,6 +97,10 @@ public:
         assert(err == CL_SUCCESS);
         d.dimensions = dimensions;
         d.maxSizes = maxSizes;
+        if (path.substr(0, 3) == L"cpu")
+            emu = true;
+        else
+            emu = false;
     }
     void* CreateKernel(const char* fun, void* size, void* source) override {
         cl_int err;

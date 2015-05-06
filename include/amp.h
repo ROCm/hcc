@@ -120,37 +120,49 @@ template <typename T, int N> class array_view;
 template <typename T, int N> class array;
 
 class accelerator_view {
-    accelerator_view(std::shared_ptr<AMPAllocator> pAloc) : pAloc(pAloc) {}
+    accelerator_view(std::shared_ptr<AMPAllocator> pAloc,
+                     enum queuing_mode mode = queuing_mode_automatic)
+        : pAloc(pAloc), mode(mode) {}
 public:
-  accelerator_view(const accelerator_view& other) : pAloc(other.pAloc) {}
+  accelerator_view(const accelerator_view& other) :
+      pAloc(other.pAloc), mode(other.mode) {}
   accelerator_view& operator=(const accelerator_view& other) {
       pAloc = other.pAloc;
+      mode = other.mode;
       return *this;
   }
 
   accelerator get_accelerator() const;
   bool get_is_debug() const { return 0; }
   unsigned int get_version() const { return 0; }
-  queuing_mode get_queuing_mode() const { return queuing_mode_automatic; }
+  queuing_mode get_queuing_mode() const { return mode; }
   bool get_is_auto_selection() { return false; }
 
   void flush() { pAloc->flush(); }
   void wait() { pAloc->wait(); }
   completion_future create_marker();
 
-  bool operator==(const accelerator_view& other) const { return pAloc == other.pAloc; }
+  bool operator==(const accelerator_view& other) const {
+      return pAloc == other.pAloc && mode == other.mode;
+  }
   bool operator!=(const accelerator_view& other) const { return !(*this == other); }
 
   __attribute__((annotate("user_deserialize")))
-      accelerator_view() restrict(amp,cpu) {}
+      accelerator_view() restrict(amp,cpu) {
+#ifndef __GPU__
+          throw runtime_exception("errorMsg_throw", 0);
+#endif
+      }
 private:
   std::shared_ptr<AMPAllocator> pAloc;
+  enum queuing_mode mode;
   friend class accelerator;
   template <typename T> friend class _data_host;
   template <typename Q, int K> friend class array;
   template <typename Q, int K> friend class array_view;
   template<typename Kernel, int dim_ext> friend
       void mcw_cxxamp_launch_kernel(const accelerator_view&, size_t *, size_t *, const Kernel&);
+  template <typename T, int N> friend class array_helper;
 };
 
 
@@ -190,7 +202,7 @@ public:
   unsigned int get_version() const { return 0; }
   std::wstring get_description() const { return pMan->get_des(); }
   bool get_is_debug() const { return false; }
-  bool get_is_emulated() const { return false; }
+  bool get_is_emulated() const { return pMan->is_emu(); }
   bool get_has_display() const { return false; }
   bool get_supports_double_precision() const { return pMan->is_double(); }
   bool get_supports_limited_double_precision() const { return pMan->is_lim_double(); }
@@ -200,8 +212,8 @@ public:
   bool get_supports_cpu_shared_memory() const { return pMan->is_uni(); }
 
   bool set_default_cpu_access_type(access_type type) { return true; }
-  accelerator_view create_view();
-  accelerator_view create_view(queuing_mode qmode) { return create_view(); }
+  accelerator_view create_view(queuing_mode mode = queuing_mode_automatic);
+
 
   bool operator==(const accelerator& other) const { return pMan == other.pMan; }
   bool operator!=(const accelerator& other) const { return !(*this == other); }
@@ -211,7 +223,9 @@ private:
 };
 
 accelerator accelerator_view::get_accelerator() const { return pAloc->getMan(); }
-accelerator_view accelerator::create_view() { return accelerator_view(pMan->createAloc()); }
+accelerator_view accelerator::create_view(queuing_mode mode) {
+    return accelerator_view(pMan->createAloc(), mode);
+}
 accelerator_view accelerator::get_default_view() const { return getContext()->getView(pMan); }
 
 
@@ -1435,7 +1449,7 @@ public:
 #ifdef __GPU__
       : m_device(ext.size(), true), extent(ext), av(av), asv(av) { initialize(); }
 #else
-      : m_device(av.pAloc, check(ext).size(), true), extent(ext), av(av), asv(av) { initialize(); }
+      : m_device(av.pAloc, check(ext).size(), true), extent(ext), av(av), asv(associated_av) { initialize(); }
 #endif
   array(int e0, accelerator_view av, accelerator_view associated_av)
       : array(Concurrency::extent<N>(e0), av, associated_av) {}
@@ -1476,7 +1490,11 @@ public:
   template <typename InputIter>
       array(const Concurrency::extent<N>& ext, InputIter srcBegin, InputIter srcEnd,
             accelerator_view av, accelerator_view associated_av)
-      : array(ext, av, associated_av) { std::copy(srcBegin, srcEnd, m_device.get()); }
+      : array(ext, av, associated_av) {
+          if(ext.size() < std::distance(srcBegin,srcEnd))
+              throw runtime_exception("errorMsg_throw", 0);
+          std::copy(srcBegin, srcEnd, m_device.get());
+      }
   template <typename InputIter>
       array(int e0, InputIter srcBegin,
             accelerator_view av, accelerator_view associated_av)
@@ -1564,20 +1582,28 @@ public:
 
 
   explicit array(const array_view<const T, N>& src)
-      : array(src.extent), av(src.av), asv(src.asv) { copy(src, *this); }
+      : array(src.extent, src.get_source_accelerator_view())
+  { copy(src, *this); }
 
   array(const array_view<const T, N>& src, accelerator_view av,
-        access_type cpu_access_type = access_type_auto);
+        access_type cpu_access_type = access_type_auto)
+      : array(src.get_extent(), av)
+    { copy(src, m_device.get()); }
   array(const array_view<const T, N>& src, accelerator_view av,
-        accelerator_view associated_av);
+        accelerator_view associated_av) : array(src.extent, av, asv)
+    { copy(src, m_device.get()); }
 
 
-  array(const array& other) : m_device(other.m_device), extent(other.extent)
+  array(const array& other) : m_device(std::move(other.m_device)), extent(other.extent)
 #ifndef __GPU__
                               , av(other.av), asv(other.asv)
 #endif
                               {}
-  array(array&& other);
+  array(array&& other) : m_device(other.m_device), extent(other.extent)
+#ifndef __GPU__
+                              , av(other.av), asv(other.asv)
+#endif
+                              { other.m_device = nullptr; }
 
   array& operator=(const array& other) {
     if(this != &other) {

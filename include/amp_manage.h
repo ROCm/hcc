@@ -26,6 +26,7 @@ public:
     __attribute__((annotate("user_deserialize")))
         explicit _data(__global T* t) restrict(cpu, amp) { p_ = t; }
     __global T* get(void) const restrict(cpu, amp) { return p_; }
+    std::shared_ptr<AMPAllocator> get_av() const { return nullptr; }
 private:
     __global T* p_;
 };
@@ -50,6 +51,8 @@ public:
     template <typename U>
         _data_host(const _data_host<U>& other)
         : mm(other.mm), count(other.count), isArray(false) {}
+
+    _data_host(_data_host&& other) : mm(other.mm) { other.mm = nullptr; }
 
     T *get() const { return static_cast<T*>(mm->data); }
     void synchronize() const { mm->synchronize(); }
