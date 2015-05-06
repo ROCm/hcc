@@ -121,7 +121,7 @@ template <typename T, int N> class array;
 
 class accelerator_view {
     accelerator_view(std::shared_ptr<AMPAllocator> pAloc,
-                     enum queuing_mode mode = queuing_mode_automatic)
+                     queuing_mode mode = queuing_mode_automatic)
         : pAloc(pAloc), mode(mode) {}
 public:
   accelerator_view(const accelerator_view& other) :
@@ -155,7 +155,7 @@ public:
       }
 private:
   std::shared_ptr<AMPAllocator> pAloc;
-  enum queuing_mode mode;
+  queuing_mode mode;
   friend class accelerator;
   template <typename T> friend class _data_host;
   template <typename Q, int K> friend class array;
@@ -1603,7 +1603,7 @@ public:
 #ifndef __GPU__
                               , av(other.av), asv(other.asv)
 #endif
-                              { other.m_device = nullptr; }
+                              { other.m_device.reset(); }
 
   array& operator=(const array& other) {
     if(this != &other) {
@@ -1620,7 +1620,7 @@ public:
       extent = other.extent;
       cpu_access_type = other.cpu_access_type;
       m_device = other.m_device;
-      other.m_device = nullptr;
+      other.m_device.reset();
     }
     return *this;
   }

@@ -232,12 +232,14 @@ struct rw_info
                     Alocs.insert(aloc);
                 }
                 if (!discard || isArray) {
-                    void* dst = aloc->amp_map(data, true);
-                    void* src = latest->amp_map(data, false);
-                    memmove(dst, src, count);
-                    aloc->amp_unmap(data, dst);
-                    latest->amp_unmap(data, src);
-                    latest = aloc;
+                    if (latest->getMan() != aloc->getMan()) {
+                        void* dst = aloc->amp_map(data, true);
+                        void* src = latest->amp_map(data, false);
+                        memmove(dst, src, count);
+                        aloc->amp_unmap(data, dst);
+                        latest->amp_unmap(data, src);
+                        latest = aloc;
+                    }
                 }
             }
         } else {
@@ -300,4 +302,4 @@ struct rw_info
 
 } // namespace Concurrency
 
-#endif // __CLAMP_AMP_ALLOCATOR
+#endif // __CLAMP_AMP_RUNTIME
