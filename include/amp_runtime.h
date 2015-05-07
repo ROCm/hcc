@@ -238,8 +238,12 @@ struct rw_info
                         memmove(dst, src, count);
                         aloc->amp_unmap(data, dst);
                         latest->amp_unmap(data, src);
-                        latest = aloc;
+                    } else {
+                        // force previous execution finish
+                        // replace with more efficient implementation in the future
+                        latest->wait();
                     }
+                    latest = aloc;
                 }
             }
         } else {

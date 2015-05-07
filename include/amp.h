@@ -1474,7 +1474,9 @@ public:
 
 
   explicit array(const extent<N>& ext) : array(ext, accelerator::get_auto_selection_view()) {}
-  explicit array(int e0) : array(Concurrency::extent<N>(e0)) {}
+  explicit array(int e0) : array(Concurrency::extent<N>(e0)) {
+      static_assert(N == 1, "illegal");
+  }
   explicit array(int e0, int e1) : array(Concurrency::extent<N>(e0, e1)) {}
   explicit array(int e0, int e1, int e2) : array(Concurrency::extent<N>(e0, e1, e2)) {}
 
