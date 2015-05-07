@@ -225,7 +225,7 @@ public:
     void amp_write(void *data) override {
         obj_info obj = Man->device_data(data);
         cl_mem dm = static_cast<cl_mem>(obj.device);
-        cl_int err = clEnqueueWriteBuffer(queue, dm, CL_TRUE, 0, obj.count, data, 0, NULL, NULL);
+        cl_int err = clEnqueueWriteBuffer(queue, dm, CL_FALSE, 0, obj.count, data, 0, NULL, NULL);
         assert(err == CL_SUCCESS);
     }
     void amp_read(void *data) override {
