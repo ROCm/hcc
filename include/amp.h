@@ -147,13 +147,14 @@ public:
   }
   bool operator!=(const accelerator_view& other) const { return !(*this == other); }
 
+
+private:
   __attribute__((annotate("user_deserialize")))
       accelerator_view() restrict(amp,cpu) {
 #ifndef __GPU__
           throw runtime_exception("errorMsg_throw", 0);
 #endif
       }
-private:
   std::shared_ptr<AMPAllocator> pAloc;
   queuing_mode mode;
   friend class accelerator;
@@ -1456,7 +1457,7 @@ public:
 
   array(const Concurrency::extent<N>& ext, accelerator_view av, accelerator_view associated_av)
 #ifdef __GPU__
-      : m_device(ext.size(), true), extent(ext), av(av), asv(av) { initialize(); }
+      : m_device(ext.size(), true), extent(ext) {}
 #else
       : m_device(av.pAloc, check(ext).size(), true), extent(ext), av(av),
           asv(_array_staging_av(av, associated_av)) { initialize(); }
@@ -1602,7 +1603,7 @@ public:
       : array(src.get_extent(), av)
     { copy(src, m_device.get()); }
   array(const array_view<const T, N>& src, accelerator_view av,
-        accelerator_view associated_av) : array(src.extent, av, asv)
+        accelerator_view associated_av) : array(src.extent, av, associated_av)
     { copy(src, m_device.get()); }
 
 
@@ -1662,8 +1663,20 @@ public:
   Concurrency::extent<N> get_extent() const restrict(amp,cpu) { return extent; }
 
 
-  accelerator_view get_accelerator_view() const { return av; }
-  accelerator_view get_associated_accelerator_view() const { return asv; }
+  accelerator_view get_accelerator_view() const {
+#ifdef __GPU__
+      return accelerator().get_default_view();
+#else
+      return av;
+#endif
+  }
+  accelerator_view get_associated_accelerator_view() const {
+#ifdef __GPU__
+      return accelerator().get_default_view();
+#else
+      return asv;
+#endif
+  }
   access_type get_cpu_access_type() const { return cpu_access_type; }
 
   __global T& operator[](const index<N>& idx) restrict(amp,cpu) {
@@ -1864,13 +1877,13 @@ private:
   template <typename K, int Q> friend class array_helper;
   acc_buffer_t m_device;
   access_type cpu_access_type;
+#ifndef __GPU__
   array_helper_t m_array_helper;
   __attribute__((cpu)) accelerator_view av, asv;
   void initialize() {
-#ifndef __GPU__
       m_array_helper.setArray(this);
-#endif
   }
+#endif
 };
 
 template <typename T>
