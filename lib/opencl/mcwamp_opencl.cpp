@@ -69,6 +69,14 @@ public:
         context = clCreateContext(0, 1, &device, NULL, NULL, &err);
         assert(err == CL_SUCCESS);
 
+        char vendor[256];
+        err = clGetDeviceInfo(device, CL_DEVICE_VENDOR, sizeof(vendor), vendor, NULL);
+        assert(err == CL_SUCCESS);
+        std::string ven(vendor);
+        if (ven.find("Advanced Micro Devices") != std::string::npos)
+            des = L"AMD";
+
+
         cl_ulong memAllocSize;
         err = clGetDeviceInfo(device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_ulong), &memAllocSize, NULL);
         assert(err == CL_SUCCESS);
@@ -77,16 +85,16 @@ public:
         cl_bool unified;
         err = clGetDeviceInfo(device, CL_DEVICE_HOST_UNIFIED_MEMORY, sizeof(cl_bool), &unified, NULL);
         assert(err == CL_SUCCESS);
-        uni = unified;
+        cpu_shared_memory = unified;
 
-        lim_dou = false;
-        dou = false;
+        is_limited_double_ = false;
+        is_double_ = false;
         cl_device_fp_config fpconf;
         err = clGetDeviceInfo(device, CL_DEVICE_DOUBLE_FP_CONFIG, sizeof(cl_device_fp_config), &fpconf, NULL);
-        if (fpconf & CL_FP_FMA & CL_FP_INF_NAN & CL_FP_DENORM) {
-            lim_dou = true;
-            if(fpconf & CL_FP_ROUND_TO_ZERO & CL_FP_ROUND_TO_NEAREST & CL_FP_ROUND_TO_INF)
-                dou = true;
+        if (fpconf & (CL_FP_FMA | CL_FP_INF_NAN | CL_FP_DENORM)) {
+            is_limited_double_ = true;
+            if(fpconf & (CL_FP_ROUND_TO_ZERO | CL_FP_ROUND_TO_NEAREST | CL_FP_ROUND_TO_INF))
+                is_double_ = true;
         }
 
         cl_uint dimensions = 0;
@@ -98,9 +106,9 @@ public:
         d.dimensions = dimensions;
         d.maxSizes = maxSizes;
         if (path.substr(0, 3) == L"cpu")
-            emu = true;
+            emulated = true;
         else
-            emu = false;
+            emulated = false;
     }
     void* CreateKernel(const char* fun, void* size, void* source) override {
         cl_int err;
