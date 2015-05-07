@@ -11,14 +11,14 @@
 #include "./../../../constructor.h"
 #include <amptest_main.h>
 
-typedef struct 
+typedef struct
 {
     int n;
     unsigned u;
     long l;
     unsigned long ul;
-    float f; 
-    double  d; 
+    float f;
+    double  d;
 } User_Defined;
 
 template<typename _type, int _rank>
@@ -48,7 +48,7 @@ bool verify_kernel_userdefined(array<_type, _rank>& arr)
 
 runall_result test_main()
 {
-    // Test is using doubles therefore we have to make sure that it is not executed 
+    // Test is using doubles therefore we have to make sure that it is not executed
     // on devices that does not support double types.
 	accelerator::set_default(require_device_with_double().get_device_path());
 

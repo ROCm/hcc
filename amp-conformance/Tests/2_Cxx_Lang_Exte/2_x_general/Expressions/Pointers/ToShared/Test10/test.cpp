@@ -63,15 +63,15 @@ bool test(accelerator_view &rv)
         c *p1 = NULL, *p2 = NULL;
         if (aFlag[0] == 0)
         {
-            p1 = &o1; 
+            p1 = &o1;
             p2 = &o1;
         } else
         {
-            p1 = &o2; 
+            p1 = &o2;
             p2 = &o2;
         }
 
-        if (!Equal(p1->i, (int)1) || !Equal(p1->ui, (unsigned __int32)1) || !Equal(p1->f, (float)1) || !Equal(p1->d, (double)1) 
+        if (!Equal(p1->i, (int)1) || !Equal(p1->ui, (unsigned __int32)1) || !Equal(p1->f, (float)1) || !Equal(p1->d, (double)1)
             || !Equal(p2->i, (int)1) || !Equal(p2->ui, (unsigned __int32)1) || !Equal(p2->f, (float)1) || !Equal(p2->d, (double)1))
             aA[idx] = 1;
 

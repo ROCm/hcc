@@ -6,11 +6,11 @@
 /// <tags>P1</tags>
 /// <summary>throw in amp scope, but allowed because not used</summary>
 
-void foo() restrict(amp, cpu) 
+void foo() restrict(amp, cpu)
 {
-    struct A 
+    struct A
     {
-        void h(void) restrict(cpu) throw() { long long x; } 
+        void h(void) restrict(cpu) throw() { long long x; }
         void h(void) restrict(amp) { }
     } x;
 

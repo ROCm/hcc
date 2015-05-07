@@ -9,7 +9,7 @@
 /// <summary>Attempt to call reinterpret_as with a GPU prohibited type on the GPU</summary>
 //#Expects: Error: error C3581
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <amptest_main.h>
 
 using namespace Concurrency;
@@ -21,7 +21,7 @@ runall_result test_main()
     parallel_for_each(arr.get_extent(), [=,&arr](index<1> i) restrict(amp) {
         array_view<short, 1> r = arr.reinterpret_as<short>();
     });
-    
+
     // this test should not compile
     return runall_fail;
 }

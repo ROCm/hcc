@@ -16,13 +16,13 @@ static void foo(int &flag) __GPU
 class C1
 {
 public:
-    static void foo(int &flag)  
+    static void foo(int &flag)
     {
         ::foo(flag);
     }
 };
 
-bool test() 
+bool test()
 {
     int flag = 0;
 

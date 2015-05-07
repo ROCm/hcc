@@ -32,12 +32,12 @@ int main()
     std::vector<int> v_rw(20);
     Fill<int>(v_rw);
     array_view<int, 1> av_rw(20, v_rw);
-    
+
     std::vector<int> v_ro(30);
     Fill<int>(v_ro);
     array_view<const int, 1> av_ro(30, v_ro);
-    
+
     av_ro = av_rw;
-    
+
     return verify_extent(av_ro, av_rw.get_extent()) && Verify(av_ro.data(), v_rw.data(), av_rw.get_extent().size()) ? runall_pass : runall_fail;
 }

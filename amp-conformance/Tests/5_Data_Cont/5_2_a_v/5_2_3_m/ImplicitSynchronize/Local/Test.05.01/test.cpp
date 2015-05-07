@@ -45,10 +45,10 @@ runall_result test_main()
     });
 
     int result = av[3 + 5];
-    for(int i=0;i<100;++i) 
+    for(int i=0;i<100;++i)
     {
        std::cout << av[i] << " (" << (*(float*)&av[i]) << ") " << " ";
     }
     std::cout << std::endl;
     return *(reinterpret_cast<float *>(&result)) == 17.0 ? runall_pass : runall_fail;
-}  
+}

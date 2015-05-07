@@ -24,7 +24,7 @@ const int NumGroups = Size / GroupSize;     // Make sure that Size is divisible 
 //Calculate sum of all elements in a group - CPU version
 template<typename ElementType>
 void CalculateGroupSum(ElementType* A, ElementType* B)
-{        
+{
     for(int g = 0; g < NumGroups; g++)
     {
         B[g] = (ElementType) 0;
@@ -70,19 +70,19 @@ void kernel(tiled_index<GroupSize> idx, const Concurrency::array<ElementType, 1>
     // Only first thread initializes
     if(flatLocalIndex == 0) fB[idx.tile] = 100;
 
-    do { if(x <= 1)  break; do { if(x <= 2)  break; do { if(x <= 3)  break; do { if(x <= 4)  break; do { if(x <= 5)  break; 
-    do { if(x <= 6)  break; do { if(x <= 7)  break; do { if(x <= 8)  break; do { if(x <= 9)  break; do { if(x <= 10) break; 
-    switch(x > 11? 1:0) { case 0: break; case 1: switch(x > 12? 1:0) { case 0: break; case 1: 
-        switch(x > 13? 1:0) { case 0: break; case 1: switch(x > 14? 1:0) { case 0: break; case 1: 
-        switch(x > 15? 1:0) { case 0: break; case 1: switch(x > 16? 1:0) { case 0: break; case 1: 
-        switch(x > 17? 1:0) { case 0: break; case 1: switch(x > 18? 1:0) { case 0: break; case 1: 
-        switch(x > 19? 1:0) { case 0: break; case 1: switch(x > 20? 1:0) { case 0: break; case 1: 
+    do { if(x <= 1)  break; do { if(x <= 2)  break; do { if(x <= 3)  break; do { if(x <= 4)  break; do { if(x <= 5)  break;
+    do { if(x <= 6)  break; do { if(x <= 7)  break; do { if(x <= 8)  break; do { if(x <= 9)  break; do { if(x <= 10) break;
+    switch(x > 11? 1:0) { case 0: break; case 1: switch(x > 12? 1:0) { case 0: break; case 1:
+        switch(x > 13? 1:0) { case 0: break; case 1: switch(x > 14? 1:0) { case 0: break; case 1:
+        switch(x > 15? 1:0) { case 0: break; case 1: switch(x > 16? 1:0) { case 0: break; case 1:
+        switch(x > 17? 1:0) { case 0: break; case 1: switch(x > 18? 1:0) { case 0: break; case 1:
+        switch(x > 19? 1:0) { case 0: break; case 1: switch(x > 20? 1:0) { case 0: break; case 1:
 
         CalculateGroupSum<ElementType>(idx, flatLocalIndex, fA, fB);
 
     }}}}}}}}}}
     break;} while(true); break;} while(true); break;} while(true); break;} while(true); break;} while(true);
-    break;} while(true); break;} while(true); break;} while(true); break;} while(true); break;} while(true);    
+    break;} while(true); break;} while(true); break;} while(true); break;} while(true); break;} while(true);
 }
 
 template <typename ElementType>
@@ -128,7 +128,7 @@ runall_result test()
     {
         passed = false;
         cout << "Test1: failed" << endl;
-    }    
+    }
     else
     {
         cout << "Test1: passed" << endl;
@@ -139,7 +139,7 @@ runall_result test()
     x = 20;
     parallel_for_each(extentA.tile<GroupSize>(), [&, x] (tiled_index<GroupSize> idx) __GPU_ONLY {
         kernel<ElementType>(idx, fA, fB, x);
-    });    
+    });
 
     copy(fB, B);
 
@@ -147,11 +147,11 @@ runall_result test()
     {
         passed = false;
         cout << "Test2: " << "Failed!" << endl;
-    }        
+    }
     else
     {
         cout << "Test2: passed" << endl;
-    }      
+    }
 
     return passed;
 }

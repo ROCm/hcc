@@ -59,17 +59,17 @@ bool test_feature_3d(int *edata)
 }
 
 #define MAX 5
-int main() 
+int main()
 {
     int edata[MAX];
     for (int i = 0; i < MAX; i++)
         edata[i] = i+1;
 
-    int passed = 
+    int passed =
         test_feature_1d(edata) && test_feature_2d(edata) && test_feature_3d(edata)
             ? runall_pass : runall_fail;
 
-    printf("%s\n", (passed == runall_pass) ? "Passed!" : "Failed!"); 
+    printf("%s\n", (passed == runall_pass) ? "Passed!" : "Failed!");
 
     return passed;
 }

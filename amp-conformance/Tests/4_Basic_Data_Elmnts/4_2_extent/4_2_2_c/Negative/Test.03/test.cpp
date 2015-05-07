@@ -9,7 +9,7 @@
 /// <summary>(Negative) Create a new extent using an already initialized extent of the different rank and ensure that compilation fails.</summary>
 //#Expects: Error: error C2664
 
-#include <amptest.h> 
+#include <amptest.h>
 
 using namespace Concurrency;
 using namespace Concurrency::Test;
@@ -30,7 +30,7 @@ int test() __GPU
 
 void kernel(index<1>& idx, array<int, 1>& result) __GPU
 {
-    result[idx] = test();    
+    result[idx] = test();
 }
 
 const int size = 10;
@@ -66,13 +66,13 @@ int test_device()
     return 0;
 }
 
-int main() 
-{ 
+int main()
+{
     test();
     test_device();
 
     //Always fail if this succeeds to compile
-    printf("Failed!\n"); 
+    printf("Failed!\n");
     return 1;
 }
 

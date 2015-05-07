@@ -23,7 +23,7 @@ const int NumGroups = Size / GroupSize;     // Make sure that Size is divisible 
 //Calculate sum of all elements in a group - CPU version
 template<typename ElementType>
 void CalculateGroupSum(ElementType* A, ElementType* B)
-{        
+{
     for(int g = 0; g < NumGroups; g++)
     {
         B[g] = (ElementType) 0;
@@ -71,17 +71,17 @@ void kernel(tiled_index<GroupSize> idx, const Concurrency::array<ElementType, 1>
 
     for(;x > 1;)   { for(;x > 2;)  { for(;x > 3;)  { for(;x > 4;)  { for(;x > 5;)  {
         for(;x > 6;)   { for(;x > 7;)  { for(;x > 8;)  { for(;x > 9;)  { for(;x > 10;) {
-            switch(x > 11? 1:0) { case 0: break; case 1: switch(x > 12? 1:0) { case 0: break; case 1: 
-                switch(x > 13? 1:0) { case 0: break; case 1: switch(x > 14? 1:0) { case 0: break; case 1: 
-                switch(x > 15? 1:0) { case 0: break; case 1: switch(x > 16? 1:0) { case 0: break; case 1: 
-                switch(x > 17? 1:0) { case 0: break; case 1: switch(x > 18? 1:0) { case 0: break; case 1: 
-                switch(x > 19? 1:0) { case 0: break; case 1: switch(x > 20? 1:0) { case 0: break; case 1: 
+            switch(x > 11? 1:0) { case 0: break; case 1: switch(x > 12? 1:0) { case 0: break; case 1:
+                switch(x > 13? 1:0) { case 0: break; case 1: switch(x > 14? 1:0) { case 0: break; case 1:
+                switch(x > 15? 1:0) { case 0: break; case 1: switch(x > 16? 1:0) { case 0: break; case 1:
+                switch(x > 17? 1:0) { case 0: break; case 1: switch(x > 18? 1:0) { case 0: break; case 1:
+                switch(x > 19? 1:0) { case 0: break; case 1: switch(x > 20? 1:0) { case 0: break; case 1:
 
                 CalculateGroupSum<ElementType>(idx, flatLocalIndex, fA, fB);
 
             }}}}}}}}}}
             break;} break;} break;} break;} break;}
-        break;} break;} break;} break;} break;}    
+        break;} break;} break;} break;} break;}
 }
 
 template <typename ElementType>
@@ -127,7 +127,7 @@ int test()
     {
         passed = false;
         cout << "Test1: failed" << endl;
-    }    
+    }
     else
     {
         cout << "Test1: passed" << endl;
@@ -138,7 +138,7 @@ int test()
     x = 20;
     parallel_for_each(extentA.tile<GroupSize>(), [&, x] (tiled_index<GroupSize> idx) __GPU_ONLY {
         kernel<ElementType>(idx, fA, fB, x);
-    });    
+    });
 
     copy(fB, B);
 
@@ -146,11 +146,11 @@ int test()
     {
         passed = false;
         cout << "Test2: " << "Failed!" << endl;
-    }        
+    }
     else
     {
         cout << "Test2: passed" << endl;
-    }      
+    }
 
     return passed ? 0 : 1;
 }

@@ -20,64 +20,64 @@ void kernel(index<1> idx, array<int, 1> & fA, int x, int initialValue, int newVa
 {
     fA[idx] = initialValue;
 
-    switch(x > 1? 1:0)  { case 0: break; case 1: switch(x > 2? 1:0)  { case 0: break; case 1: 
-        switch(x > 3? 1:0)  { case 0: break; case 1: switch(x > 4? 1:0)  { case 0: break; case 1: 
-        switch(x > 5? 1:0)  { case 0: break; case 1: switch(x > 6? 1:0)  { case 0: break; case 1: 
-        switch(x > 7? 1:0)  { case 0: break; case 1: switch(x > 8? 1:0)  { case 0: break; case 1: 
-        switch(x > 9? 1:0)  { case 0: break; case 1: switch(x > 10? 1:0) { case 0: break; case 1: 
-        switch(x > 11? 1:0) { case 0: break; case 1: switch(x > 12? 1:0) { case 0: break; case 1: 
-        switch(x > 13? 1:0) { case 0: break; case 1: switch(x > 14? 1:0) { case 0: break; case 1: 
-        switch(x > 15? 1:0) { case 0: break; case 1: switch(x > 16? 1:0) { case 0: break; case 1: 
-        switch(x > 17? 1:0) { case 0: break; case 1: switch(x > 18? 1:0) { case 0: break; case 1: 
-        switch(x > 19? 1:0) { case 0: break; case 1: switch(x > 20? 1:0) { case 0: break; case 1: 
-        switch(x > 21? 1:0) { case 0: break; case 1: switch(x > 22? 1:0) { case 0: break; case 1: 
-        switch(x > 23? 1:0) { case 0: break; case 1: switch(x > 24? 1:0) { case 0: break; case 1: 
-        switch(x > 25? 1:0) { case 0: break; case 1: switch(x > 26? 1:0) { case 0: break; case 1: 
-        switch(x > 27? 1:0) { case 0: break; case 1: switch(x > 28? 1:0) { case 0: break; case 1: 
-        switch(x > 29? 1:0) { case 0: break; case 1: switch(x > 30? 1:0) { case 0: break; case 1: 
-        switch(x > 31? 1:0) { case 0: break; case 1: switch(x > 32? 1:0) { case 0: break; case 1: 
-        switch(x > 33? 1:0) { case 0: break; case 1: switch(x > 34? 1:0) { case 0: break; case 1: 
-        switch(x > 35? 1:0) { case 0: break; case 1: switch(x > 36? 1:0) { case 0: break; case 1: 
-        switch(x > 37? 1:0) { case 0: break; case 1: switch(x > 38? 1:0) { case 0: break; case 1: 
-        switch(x > 39? 1:0) { case 0: break; case 1: switch(x > 40? 1:0) { case 0: break; case 1: 
-        switch(x > 41? 1:0) { case 0: break; case 1: switch(x > 42? 1:0) { case 0: break; case 1: 
-        switch(x > 42? 1:0) { case 0: break; case 1: switch(x > 43? 1:0) { case 0: break; case 1: 
-        switch(x > 44? 1:0) { case 0: break; case 1: switch(x > 45? 1:0) { case 0: break; case 1: 
-        switch(x > 46? 1:0) { case 0: break; case 1: switch(x > 47? 1:0) { case 0: break; case 1: 
-        switch(x > 48? 1:0) { case 0: break; case 1: switch(x > 49? 1:0) { case 0: break; case 1: 
-        switch(x > 50? 1:0) { case 0: break; case 1: switch(x > 51? 1:0) { case 0: break; case 1: 
-        switch(x > 52? 1:0) { case 0: break; case 1: switch(x > 53? 1:0) { case 0: break; case 1: 
-        switch(x > 54? 1:0) { case 0: break; case 1: switch(x > 55? 1:0) { case 0: break; case 1: 
-        switch(x > 56? 1:0) { case 0: break; case 1: switch(x > 57? 1:0) { case 0: break; case 1: 
-        switch(x > 58? 1:0) { case 0: break; case 1: switch(x > 59? 1:0) { case 0: break; case 1: 
-        switch(x > 60? 1:0) { case 0: break; case 1: switch(x > 61? 1:0) { case 0: break; case 1: 
-        switch(x > 62? 1:0) { case 0: break; case 1: /*switch(x > 63? 1:0) { case 0: break; case 1: 
-                                                     switch(x > 64? 1:0) { case 0: break; case 1: switch(x > 65? 1:0) { case 0: break; case 1: 
-                                                     switch(x > 66? 1:0) { case 0: break; case 1: switch(x > 67? 1:0) { case 0: break; case 1: 
-                                                     switch(x > 68? 1:0) { case 0: break; case 1: switch(x > 69? 1:0) { case 0: break; case 1: 
-                                                     switch(x > 70? 1:0) { case 0: break; case 1: switch(x > 71? 1:0) { case 0: break; case 1: 
-                                                     switch(x > 72? 1:0) { case 0: break; case 1: switch(x > 73? 1:0) { case 0: break; case 1: 
-                                                     switch(x > 74? 1:0) { case 0: break; case 1: switch(x > 75? 1:0) { case 0: break; case 1: 
-                                                     switch(x > 76? 1:0) { case 0: break; case 1: switch(x > 77? 1:0) { case 0: break; case 1: 
-                                                     switch(x > 78? 1:0) { case 0: break; case 1: switch(x > 79? 1:0) { case 0: break; case 1: 
-                                                     switch(x > 80? 1:0) { case 0: break; case 1: switch(x > 81? 1:0) { case 0: break; case 1: 
-                                                     switch(x > 82? 1:0) { case 0: break; case 1: switch(x > 83? 1:0) { case 0: break; case 1: 
-                                                     switch(x > 84? 1:0) { case 0: break; case 1: switch(x > 85? 1:0) { case 0: break; case 1: 
-                                                     switch(x > 86? 1:0) { case 0: break; case 1: switch(x > 87? 1:0) { case 0: break; case 1: 
-                                                     switch(x > 88? 1:0) { case 0: break; case 1: switch(x > 89? 1:0) { case 0: break; case 1: 
-                                                     switch(x > 90? 1:0) { case 0: break; case 1: switch(x > 91? 1:0) { case 0: break; case 1: 
-                                                     switch(x > 92? 1:0) { case 0: break; case 1: switch(x > 93? 1:0) { case 0: break; case 1: 
-                                                     switch(x > 94? 1:0) { case 0: break; case 1: switch(x > 95? 1:0) { case 0: break; case 1: 
-                                                     switch(x > 96? 1:0) { case 0: break; case 1: switch(x > 97? 1:0) { case 0: break; case 1: 
-                                                     switch(x > 98? 1:0) { case 0: break; case 1: switch(x > 99? 1:0) { case 0: break; case 1: 
-                                                     switch(x > 100? 1:0) { case 0: break; case 1: switch(x > 101? 1:0) { case 0: break; case 1: 
-                                                     switch(x > 102? 1:0) { case 0: break; case 1: switch(x > 103? 1:0) { case 0: break; case 1: 
-                                                     switch(x > 104? 1:0) { case 0: break; case 1: switch(x > 105? 1:0) { case 0: break; case 1: 
-                                                     switch(x > 106? 1:0) { case 0: break; case 1: switch(x > 107? 1:0) { case 0: break; case 1: 
-                                                     switch(x > 108? 1:0) { case 0: break; case 1: switch(x > 109? 1:0) { case 0: break; case 1: 
+    switch(x > 1? 1:0)  { case 0: break; case 1: switch(x > 2? 1:0)  { case 0: break; case 1:
+        switch(x > 3? 1:0)  { case 0: break; case 1: switch(x > 4? 1:0)  { case 0: break; case 1:
+        switch(x > 5? 1:0)  { case 0: break; case 1: switch(x > 6? 1:0)  { case 0: break; case 1:
+        switch(x > 7? 1:0)  { case 0: break; case 1: switch(x > 8? 1:0)  { case 0: break; case 1:
+        switch(x > 9? 1:0)  { case 0: break; case 1: switch(x > 10? 1:0) { case 0: break; case 1:
+        switch(x > 11? 1:0) { case 0: break; case 1: switch(x > 12? 1:0) { case 0: break; case 1:
+        switch(x > 13? 1:0) { case 0: break; case 1: switch(x > 14? 1:0) { case 0: break; case 1:
+        switch(x > 15? 1:0) { case 0: break; case 1: switch(x > 16? 1:0) { case 0: break; case 1:
+        switch(x > 17? 1:0) { case 0: break; case 1: switch(x > 18? 1:0) { case 0: break; case 1:
+        switch(x > 19? 1:0) { case 0: break; case 1: switch(x > 20? 1:0) { case 0: break; case 1:
+        switch(x > 21? 1:0) { case 0: break; case 1: switch(x > 22? 1:0) { case 0: break; case 1:
+        switch(x > 23? 1:0) { case 0: break; case 1: switch(x > 24? 1:0) { case 0: break; case 1:
+        switch(x > 25? 1:0) { case 0: break; case 1: switch(x > 26? 1:0) { case 0: break; case 1:
+        switch(x > 27? 1:0) { case 0: break; case 1: switch(x > 28? 1:0) { case 0: break; case 1:
+        switch(x > 29? 1:0) { case 0: break; case 1: switch(x > 30? 1:0) { case 0: break; case 1:
+        switch(x > 31? 1:0) { case 0: break; case 1: switch(x > 32? 1:0) { case 0: break; case 1:
+        switch(x > 33? 1:0) { case 0: break; case 1: switch(x > 34? 1:0) { case 0: break; case 1:
+        switch(x > 35? 1:0) { case 0: break; case 1: switch(x > 36? 1:0) { case 0: break; case 1:
+        switch(x > 37? 1:0) { case 0: break; case 1: switch(x > 38? 1:0) { case 0: break; case 1:
+        switch(x > 39? 1:0) { case 0: break; case 1: switch(x > 40? 1:0) { case 0: break; case 1:
+        switch(x > 41? 1:0) { case 0: break; case 1: switch(x > 42? 1:0) { case 0: break; case 1:
+        switch(x > 42? 1:0) { case 0: break; case 1: switch(x > 43? 1:0) { case 0: break; case 1:
+        switch(x > 44? 1:0) { case 0: break; case 1: switch(x > 45? 1:0) { case 0: break; case 1:
+        switch(x > 46? 1:0) { case 0: break; case 1: switch(x > 47? 1:0) { case 0: break; case 1:
+        switch(x > 48? 1:0) { case 0: break; case 1: switch(x > 49? 1:0) { case 0: break; case 1:
+        switch(x > 50? 1:0) { case 0: break; case 1: switch(x > 51? 1:0) { case 0: break; case 1:
+        switch(x > 52? 1:0) { case 0: break; case 1: switch(x > 53? 1:0) { case 0: break; case 1:
+        switch(x > 54? 1:0) { case 0: break; case 1: switch(x > 55? 1:0) { case 0: break; case 1:
+        switch(x > 56? 1:0) { case 0: break; case 1: switch(x > 57? 1:0) { case 0: break; case 1:
+        switch(x > 58? 1:0) { case 0: break; case 1: switch(x > 59? 1:0) { case 0: break; case 1:
+        switch(x > 60? 1:0) { case 0: break; case 1: switch(x > 61? 1:0) { case 0: break; case 1:
+        switch(x > 62? 1:0) { case 0: break; case 1: /*switch(x > 63? 1:0) { case 0: break; case 1:
+                                                     switch(x > 64? 1:0) { case 0: break; case 1: switch(x > 65? 1:0) { case 0: break; case 1:
+                                                     switch(x > 66? 1:0) { case 0: break; case 1: switch(x > 67? 1:0) { case 0: break; case 1:
+                                                     switch(x > 68? 1:0) { case 0: break; case 1: switch(x > 69? 1:0) { case 0: break; case 1:
+                                                     switch(x > 70? 1:0) { case 0: break; case 1: switch(x > 71? 1:0) { case 0: break; case 1:
+                                                     switch(x > 72? 1:0) { case 0: break; case 1: switch(x > 73? 1:0) { case 0: break; case 1:
+                                                     switch(x > 74? 1:0) { case 0: break; case 1: switch(x > 75? 1:0) { case 0: break; case 1:
+                                                     switch(x > 76? 1:0) { case 0: break; case 1: switch(x > 77? 1:0) { case 0: break; case 1:
+                                                     switch(x > 78? 1:0) { case 0: break; case 1: switch(x > 79? 1:0) { case 0: break; case 1:
+                                                     switch(x > 80? 1:0) { case 0: break; case 1: switch(x > 81? 1:0) { case 0: break; case 1:
+                                                     switch(x > 82? 1:0) { case 0: break; case 1: switch(x > 83? 1:0) { case 0: break; case 1:
+                                                     switch(x > 84? 1:0) { case 0: break; case 1: switch(x > 85? 1:0) { case 0: break; case 1:
+                                                     switch(x > 86? 1:0) { case 0: break; case 1: switch(x > 87? 1:0) { case 0: break; case 1:
+                                                     switch(x > 88? 1:0) { case 0: break; case 1: switch(x > 89? 1:0) { case 0: break; case 1:
+                                                     switch(x > 90? 1:0) { case 0: break; case 1: switch(x > 91? 1:0) { case 0: break; case 1:
+                                                     switch(x > 92? 1:0) { case 0: break; case 1: switch(x > 93? 1:0) { case 0: break; case 1:
+                                                     switch(x > 94? 1:0) { case 0: break; case 1: switch(x > 95? 1:0) { case 0: break; case 1:
+                                                     switch(x > 96? 1:0) { case 0: break; case 1: switch(x > 97? 1:0) { case 0: break; case 1:
+                                                     switch(x > 98? 1:0) { case 0: break; case 1: switch(x > 99? 1:0) { case 0: break; case 1:
+                                                     switch(x > 100? 1:0) { case 0: break; case 1: switch(x > 101? 1:0) { case 0: break; case 1:
+                                                     switch(x > 102? 1:0) { case 0: break; case 1: switch(x > 103? 1:0) { case 0: break; case 1:
+                                                     switch(x > 104? 1:0) { case 0: break; case 1: switch(x > 105? 1:0) { case 0: break; case 1:
+                                                     switch(x > 106? 1:0) { case 0: break; case 1: switch(x > 107? 1:0) { case 0: break; case 1:
+                                                     switch(x > 108? 1:0) { case 0: break; case 1: switch(x > 109? 1:0) { case 0: break; case 1:
                                                      switch(x > 110? 1:0) { case 0: break; case 1: switch(x > 111? 1:0) { case 0: break; case 1: */
                                                      fA[idx] = newValue;
-    break;    
+    break;
     }}
     }}
     }}
@@ -132,7 +132,7 @@ void kernel(index<1> idx, array<int, 1> & fA, int x, int initialValue, int newVa
     }}
     }}
     }}
-    }}   
+    }}
     }*/}
 }
 

@@ -20,7 +20,7 @@
 /// <tags>P1</tags>
 /// <summary>Test that we can create an array_view with data of struct type (PODs only)</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 #include <algorithm>
 
@@ -130,7 +130,7 @@ int main()
         }
 
     }
-    
+
     printf("PASS!\n");
     return runall_pass;
 }

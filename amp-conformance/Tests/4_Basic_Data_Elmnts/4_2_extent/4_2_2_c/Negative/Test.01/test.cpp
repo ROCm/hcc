@@ -9,7 +9,7 @@
 /// <summary>(Negative) Create an extent with N = 0 and ensure that the compilation fails.</summary>
 //#Expects: Error: error C2338
 
-#include <amptest.h> 
+#include <amptest.h>
 
 using namespace Concurrency;
 using namespace Concurrency::Test;
@@ -24,7 +24,7 @@ int test() __GPU
 
 void kernel(index<1>& idx, array<int, 1>& result) __GPU
 {
-    result[idx] = test();    
+    result[idx] = test();
 }
 
 const int size = 10;
@@ -57,16 +57,16 @@ int test_device()
         }
     }
 
-    return 0; 
+    return 0;
 }
 
-int main(int argc, char **argv) 
-{ 
+int main(int argc, char **argv)
+{
     test();
     test_device();
 
     //Always fail if this succeeds to compile
-    printf("Failed!\n"); 
+    printf("Failed!\n");
     return 1;
 }
 

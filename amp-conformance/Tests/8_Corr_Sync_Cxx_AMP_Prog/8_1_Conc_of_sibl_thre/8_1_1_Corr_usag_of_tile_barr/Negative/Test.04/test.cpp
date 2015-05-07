@@ -17,9 +17,9 @@ const int XGroupSize = 8;
 const int YGroupSize = 8;
 const int ZGroupSize = 16;
 
-const int NumXGroups = 32;           
-const int NumYGroups = 32;           
-const int NumZGroups = 63;           
+const int NumXGroups = 32;
+const int NumYGroups = 32;
+const int NumZGroups = 63;
 const int NumGroups  =  NumXGroups * NumYGroups * NumZGroups;
 
 const int XSize      = XGroupSize * NumXGroups;
@@ -67,7 +67,7 @@ runall_result test()
     {
         passed = false;
         cout << "Test1: failed" << endl;
-    }    
+    }
     else
     {
         cout << "Test1: passed" << endl;

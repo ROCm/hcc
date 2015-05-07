@@ -31,7 +31,7 @@ int test() restrict(cpu,amp)
     return runall_pass;
 }
 
-int main(int argc, char **argv) 
+int main(int argc, char **argv)
 {
 	accelerator_view av = require_device().get_default_view();
 

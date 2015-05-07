@@ -27,32 +27,32 @@ namespace CustomIterator
 		CustomContainer<T>() { container = std::vector<T>(); }
 		CustomContainer<T>(int size) {	container = std::vector<T>(size); }
 
-		input_iterator read_begin() 
-		{ 
+		input_iterator read_begin()
+		{
 			auto var = container.begin();
-			return InputIterator<T>(var); 
+			return InputIterator<T>(var);
 		}
 		input_iterator read_end()
-		{ 
+		{
 			auto var = container.end();
-			return InputIterator<T>(var); 
+			return InputIterator<T>(var);
 		}
 
-		forward_iterator write_begin() 
+		forward_iterator write_begin()
 		{
 			auto var = container.begin();
 			return ForwardIterator<T>(var);
 		}
 		
 		forward_iterator write_end()
-		{ 
+		{
 			auto var = container.end();
-			return ForwardIterator<T>(container.end()); 
+			return ForwardIterator<T>(container.end());
 		}
 
 	};
 
-	template<typename T> 
+	template<typename T>
 	class InputIterator : public std::iterator<std::input_iterator_tag, T>
 	{
 		friend class CustomContainer<T>;
@@ -90,8 +90,8 @@ namespace CustomIterator
 	private:
 		typename std::vector<T>::iterator actual_iterator;
 
-		ForwardIterator(typename std::vector<T>::iterator& actual_iterator) 
-		{ 
+		ForwardIterator(typename std::vector<T>::iterator& actual_iterator)
+		{
 			this->actual_iterator = actual_iterator;
 		}
 

@@ -26,7 +26,7 @@ class StaticClass
 
 
 // Main entry point
-int main(int argc, char **argv) 
+int main(int argc, char **argv)
 {
     bool passed = true;
 
@@ -36,7 +36,7 @@ int main(int argc, char **argv)
     parallel_for_each(arr.get_extent(), [&](index<1> idx) __GPU_ONLY {
 
        arr[idx] = StaticClass::foo(1, 2);
-        
+
     });
 
     vector<int> v = arr;

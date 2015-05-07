@@ -24,7 +24,7 @@ int restrict(int a) restrict(cpu)
 
 
 // Main entry point
-int main(int argc, char **argv) 
+int main(int argc, char **argv)
 {
     bool passed = true;
     int x = 10;

@@ -43,10 +43,10 @@ runall_result test_main()
     {
         accel2.set_default_cpu_access_type(DEF_ACCESS_TYPE2);
     }
-    
+
     array<int, 1> a(extent<1>(10), accel1.get_default_view());
     array_view<int, 1> av(a);
-    
+
     for (int i = 0; i < 30; i++)
     {
         if (i % 3 == 0)
@@ -71,6 +71,6 @@ runall_result test_main()
             });
         }
     }
-    
-    return av(5) == 16 ? runall_pass : runall_fail;  
+
+    return av(5) == 16 ? runall_pass : runall_fail;
 }

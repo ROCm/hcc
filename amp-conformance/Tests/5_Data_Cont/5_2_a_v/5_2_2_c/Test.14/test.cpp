@@ -18,10 +18,10 @@
 //--------------------------------------------------------------------------------------
 //
 /// <tags>P1</tags>
-/// <summary>Copy construct an array_view from another array_view. Ensure that a shallow copy is made by 
+/// <summary>Copy construct an array_view from another array_view. Ensure that a shallow copy is made by
 /// changing data using one view and make sure the other view can see the update - in a gpu restricted function</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 #include <algorithm>
 
@@ -49,21 +49,21 @@ int main()
 
     parallel_for_each(acc_view, av1.get_extent(), [=](index<1> idx) restrict(amp) {
 
-        array_view<int, 1> av2(av1); // copy construct 
+        array_view<int, 1> av2(av1); // copy construct
 
         if(av1.get_extent()[0] != av2.get_extent()[0]) // Verify extent
         {
             result[idx] = 11;
             return;
         }
- 
+
         // verify data
         if(av1[idx] != av2[idx])
         {
             result[idx] = 55;
             return;
         }
-    
+
         // update data
         av1[idx] = av1[idx] + 1;
 

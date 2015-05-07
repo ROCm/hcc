@@ -41,7 +41,7 @@ bool test3()
 	array_view<int,2> arrViewSrc(M,N);
 	
 	// Verifying that the below operation should not throw any exception.
-	arrViewSrc(1,1); 
+	arrViewSrc(1,1);
 	
 	return true;
 }

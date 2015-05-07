@@ -28,7 +28,7 @@ const int NumGroups  =  NumXGroups * NumYGroups;     // Make sure that Size is d
 
 template<typename ElementType>
 void CalculateGroupSum(ElementType* A, ElementType* B)
-{ 
+{
     int g = 0;
     for(int y = 0; y < YSize; y += YGroupSize)
     {
@@ -41,9 +41,9 @@ void CalculateGroupSum(ElementType* A, ElementType* B)
             for(int gy = y; gy < (y + YGroupSize); gy++)
             {
                 for(int gx = x; gx < (x + XGroupSize); gx++)
-                {        
+                {
                     int flatLocalIndex = gy * XSize + gx;
-                    B[g] += A[flatLocalIndex];                    
+                    B[g] += A[flatLocalIndex];
                 }
             }
             g++;
@@ -56,8 +56,8 @@ template<typename ElementType>
 void CalculateGroupSum(tiled_index<YGroupSize, XGroupSize> idx, int flatLocalIndex, const Concurrency::array<ElementType, 2> & fA, Concurrency::array<ElementType, 2> & fB) __GPU_ONLY
 {
     // use shared memory
-    tile_static ElementType shared[XGroupSize * YGroupSize];         
-    shared[flatLocalIndex] = fA[idx.global];            
+    tile_static ElementType shared[XGroupSize * YGroupSize];
+    shared[flatLocalIndex] = fA[idx.global];
     idx.barrier.wait();
 
     if(flatLocalIndex == 0)
@@ -79,17 +79,17 @@ void kernel(tiled_index<YGroupSize, XGroupSize> idx, const Concurrency::array<El
 
     // Initialize to some fixed value; to check path when conditions are not true.
     // Only first thread initializes
-    if(flatLocalIndex == 0) fB[idx.tile] = 100;    
+    if(flatLocalIndex == 0) fB[idx.tile] = 100;
 
-    while(x > 1)  { while(x > 2)  { while(x > 3)  { while(x > 4)  { while(x > 5) { 
-        while(x > 6)  { while(x > 7)  { while(x > 8)  { while(x > 9)  { while(x > 10){ 
-            while(x > 11) { while(x > 12) { while(x > 13) { while(x > 14) { while(x > 15){     
+    while(x > 1)  { while(x > 2)  { while(x > 3)  { while(x > 4)  { while(x > 5) {
+        while(x > 6)  { while(x > 7)  { while(x > 8)  { while(x > 9)  { while(x > 10){
+            while(x > 11) { while(x > 12) { while(x > 13) { while(x > 14) { while(x > 15){
 
                 CalculateGroupSum<ElementType>(idx, flatLocalIndex, fA, fB);
 
-                break;} break;} break;} break;} break;}   
-            break;} break;} break;} break;} break;}   
-        break;} break;} break;} break;} break;}   
+                break;} break;} break;} break;} break;}
+            break;} break;} break;} break;} break;}
+        break;} break;} break;} break;} break;}
 }
 
 template <typename ElementType>
@@ -128,14 +128,14 @@ runall_result test()
         kernel<ElementType>(idx, fA, fB, x);
     });
 
-    copy(fB, B);     
+    copy(fB, B);
 
 
     if(!Verify<ElementType>(B, refB1, NumGroups))
     {
         passed = false;
         cout << "Test1: failed" << endl;
-    }    
+    }
     else
     {
         cout << "Test1: passed" << endl;
@@ -155,11 +155,11 @@ runall_result test()
     {
         passed = false;
         cout << "Test2: " << "Failed!" << endl;
-    }        
+    }
     else
     {
         cout << "Test2: passed" << endl;
-    }      
+    }
 
 
     return passed;

@@ -57,7 +57,7 @@ bool test(accelerator_view &rv)
     {
         c &p1 = aGc[idx], &p2 = aGc[idx];
 
-        if (!Equal(p1.i, (int)1) || !Equal(p1.ui, (unsigned __int32)1) || !Equal(p1.f, (float)1) || !Equal(p1.d, (double)1) 
+        if (!Equal(p1.i, (int)1) || !Equal(p1.ui, (unsigned __int32)1) || !Equal(p1.f, (float)1) || !Equal(p1.d, (double)1)
             || !Equal(p2.i, (int)1) || !Equal(p2.ui, (unsigned __int32)1) || !Equal(p2.f, (float)1) || !Equal(p2.d, (double)1))
             aA[idx] = 1;
 

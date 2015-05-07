@@ -72,7 +72,7 @@ class A6
 };
 
 // Class with data members having user-defined dtors
-struct A7_member_1 
+struct A7_member_1
 {
 	~A7_member_1() restrict(cpu,amp) {}
 };

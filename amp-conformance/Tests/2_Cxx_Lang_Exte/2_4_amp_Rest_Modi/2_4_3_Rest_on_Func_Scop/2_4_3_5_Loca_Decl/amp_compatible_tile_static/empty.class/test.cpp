@@ -24,15 +24,15 @@ struct A
 int test() restrict(amp)
 {
     tile_static A a;
-    
-    return a.get(); 
+
+    return a.get();
 }
 
 runall_result test_main()
 {
     accelerator_view av = require_device().get_default_view();
-    
+
     runall_result result = (GPU_INVOKE(av, int, test) == 1);
-    
+
     return result;
 }

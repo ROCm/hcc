@@ -30,13 +30,13 @@ runall_result test_main()
 
     const int size = 10;
 
-    vector<int> A(size);     
-    InitializeArray(A, sizeof(int));        
+    vector<int> A(size);
+    InitializeArray(A, sizeof(int));
     array<int, 1> aA(size, A.begin(), A.end(), rv);
 
-    vector<int> B(size); 
+    vector<int> B(size);
     InitializeArray(B, INT_MAX);
-    array<int, 1> aB(size, B.begin(), B.end(), rv);    
+    array<int, 1> aB(size, B.begin(), B.end(), rv);
 
     parallel_for_each(aA.get_extent(), [&](index<1> idx) __GPU {
         aB[idx] <<= aA[idx];
@@ -46,7 +46,7 @@ runall_result test_main()
 	
     vector<int> C = aB;
     bool passed = Verify(C, B);
-    
+
 	return passed;
 }
 

@@ -1,6 +1,6 @@
 // This file contains coomon funcs, #define and consts used accross array data container
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 
 #include <algorithm>

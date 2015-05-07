@@ -25,7 +25,7 @@ int main()
 
     bool hostSideBool = true;
 
-    parallel_for_each(ac.get_extent(), [&, hostSideBool](index<1> idx) __GPU { //error lambda cannot capture bool 
+    parallel_for_each(ac.get_extent(), [&, hostSideBool](index<1> idx) __GPU { //error lambda cannot capture bool
         if (hostSideBool)
         {
             ac[idx] = 1;
@@ -34,7 +34,7 @@ int main()
         {
             ac[idx] = 2;
         }
-    }); 
+    });
 
     c = ac;
 

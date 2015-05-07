@@ -38,9 +38,9 @@ runall_result test_main()
     }
 	
     OverlapTest<int, 4> t(make_extent(4, 4, 4, 4));
-    
+
     return t.negative_test(
         make_index(0, 0, 0, 0), make_extent(2, 2, 2, 2), //local
         make_index(2, 2, 0, 0), make_extent(2, 2, 4, 4) //remote
-    ) ? t.pass() : t.fail(); 
-} 
+    ) ? t.pass() : t.fail();
+}

@@ -22,7 +22,7 @@ const int NumGroups = Size / GroupSize;     // Make sure that Size is divisible 
 //Calculate sum of all elements in a group - CPU version
 template<typename ElementType>
 void CalculateGroupSum(ElementType* A, ElementType* B)
-{        
+{
     for(int g = 0; g < NumGroups; g++)
     {
         B[g] = (ElementType) 0;
@@ -71,8 +71,8 @@ void kernel(tiled_index<GroupSize> idx, const Concurrency::array<ElementType, 1>
     if(x > 1) if(x > 2) if(x > 3) if(x > 4) if(x > 5)
         if(x > 6) if(x > 7) if(x > 8) if(x > 9) if(x > 10)
         {
-            do { if(x <= 11) break; do { if(x <= 12) break; do { if(x <= 13) break; do { if(x <= 14) break; do { if(x <= 15) break; 
-            do { if(x <= 16) break; do { if(x <= 17) break; do { if(x <= 18) break; do { if(x <= 19) break; do { if(x <= 20) break;     
+            do { if(x <= 11) break; do { if(x <= 12) break; do { if(x <= 13) break; do { if(x <= 14) break; do { if(x <= 15) break;
+            do { if(x <= 16) break; do { if(x <= 17) break; do { if(x <= 18) break; do { if(x <= 19) break; do { if(x <= 20) break;
 
             CalculateGroupSum<ElementType>(idx, flatLocalIndex, fA, fB);
 
@@ -124,7 +124,7 @@ runall_result test()
     {
         passed = false;
         cout << "Test1: failed" << endl;
-    }    
+    }
     else
     {
         cout << "Test1: passed" << endl;
@@ -135,7 +135,7 @@ runall_result test()
     x = 20;
     parallel_for_each(extentA.tile<GroupSize>(), [&,x] (tiled_index<GroupSize> idx) __GPU_ONLY {
         kernel<ElementType>(idx, fA, fB, x);
-    });    
+    });
 
     copy(fB, B);
 
@@ -143,11 +143,11 @@ runall_result test()
     {
         passed = false;
         cout << "Test2: " << "Failed!" << endl;
-    }        
+    }
     else
     {
         cout << "Test2: passed" << endl;
-    }      
+    }
 
     return passed;
 }

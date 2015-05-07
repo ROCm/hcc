@@ -21,13 +21,13 @@
 /// <summary>Test a zero-length section</summary>
 
 
-#include <amptest.h> 
+#include <amptest.h>
 
 using namespace Concurrency;
 using namespace Concurrency::Test;
 using std::vector;
 
-int main()  
+int main()
 {
     std::vector<int> v(10);
     array_view<int, 1> av(extent<1>(10), v);

@@ -12,7 +12,7 @@
 using namespace Concurrency;
 using namespace Concurrency::Test;
 
-typedef struct 
+typedef struct
 {
 }EmptyStruct;
 

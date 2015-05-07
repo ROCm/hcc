@@ -21,7 +21,7 @@
 /// <summary>Attempt to assign to a const array view</summary>
 //#Expects: Error: test.cpp\(35\) : error C3892
 
-#include <amptest.h> 
+#include <amptest.h>
 
 using namespace Concurrency;
 using namespace Concurrency::Test;

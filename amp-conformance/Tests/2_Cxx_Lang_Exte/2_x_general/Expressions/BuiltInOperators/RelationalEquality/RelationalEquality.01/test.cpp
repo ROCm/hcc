@@ -31,8 +31,8 @@ void InitializeArray(vector <int> &vM, int size)
 }
 
 // Vector function testing the additive operators
-void KernelWithRelationalOperators(index<2> idx, 
-    array<int, 2> &aC, array<int, 2> &aD, array<int, 2> &aE, array<int, 2> &aF, array<int, 2> &aG, array<int, 2> &aH, 
+void KernelWithRelationalOperators(index<2> idx,
+    array<int, 2> &aC, array<int, 2> &aD, array<int, 2> &aE, array<int, 2> &aF, array<int, 2> &aG, array<int, 2> &aH,
     array<int, 2> &aA, array<int, 2> &aB) __GPU
 {
     // Equality, ==
@@ -55,7 +55,7 @@ void KernelWithRelationalOperators(index<2> idx,
     else
     {
         aD[idx] = 0;
-    }    
+    }
 
     // Greater than, >
     BOOL me = (aA[idx] > aB[idx]);
@@ -66,7 +66,7 @@ void KernelWithRelationalOperators(index<2> idx,
     else
     {
         aE[idx] = 0;
-    }    
+    }
 
     // Less than or equal to, <=
     BOOL mf = (aA[idx] <= aB[idx]);
@@ -77,7 +77,7 @@ void KernelWithRelationalOperators(index<2> idx,
     else
     {
         aF[idx] = 0;
-    }    
+    }
 
     // Less than, <
     BOOL mg = (aA[idx] < aB[idx]);
@@ -123,7 +123,7 @@ int main(int argc, char **argv)
     vector<int> A(size);
     vector<int> B(size);
 
-    // Initialize input 
+    // Initialize input
     srand(25763);
     InitializeArray(A, size);
     InitializeArray(B, size);
@@ -135,7 +135,7 @@ int main(int argc, char **argv)
     // setup input arrays
     array<int, 2> aA(e, A.begin(), A.end(), rv), aB(e, B.begin(), B.end(), rv);
 
-    // setup output 
+    // setup output
     array<int, 2> aC(e, rv), aD(e, rv), aE(e, rv), aF(e, rv), aG(e, rv), aH(e, rv);
     vector<int> C(size);
     vector<int> D(size);
@@ -278,7 +278,7 @@ int main(int argc, char **argv)
         }
     }
 
-    if(numFail > 0) 
+    if(numFail > 0)
     {
         printf("\n%s: %d test(s) failed\n", argv[0], numFail);
     }

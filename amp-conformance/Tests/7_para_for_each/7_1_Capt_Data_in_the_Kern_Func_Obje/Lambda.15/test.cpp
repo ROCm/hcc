@@ -26,22 +26,22 @@ void test(vector<T>& data, const int size, accelerator_view av)
 	{
 		arr[idx] = f(arr[idx], 20);
 	});
-    
+
     data = arr;
 }
 int main()
 {
     const int size = 10;
 	vector<int> data(size);
-    
-    for(int i = 0; i < size; i++) 
+
+    for(int i = 0; i < size; i++)
     {
         data[i] = i;
     }
 		
     accelerator_view av = require_device(Device::ALL_DEVICES).get_default_view();
 	test<int>(data, size, av);
-    
+
     for(int i = 0; i < size; i++)
     {
         if(data[i] != i+20)

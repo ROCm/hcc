@@ -9,7 +9,7 @@
 /// <summary>test array's assignment operator from an array_view.</summary>
 
 #include <amptest.h>
-#include <vector> 
+#include <vector>
 
 using  namespace concurrency;
 
@@ -27,7 +27,7 @@ bool test_feature()
         ex[i] = ev;
     }
 
-    // fill in data and zero out the result vector 
+    // fill in data and zero out the result vector
     std::vector<_type> vsrc(size);
     std::vector<_type> vdst(size);
     for (int i = 0; i < size; i++)
@@ -45,7 +45,7 @@ bool test_feature()
     // verify results
     for (int i = 0; i < size; i++)
     {
-        if (vdst[i] != vsrc[i]) 
+        if (vdst[i] != vsrc[i])
         {
             return false;
         }
@@ -54,15 +54,15 @@ bool test_feature()
     return true;
 }
 
-int main() 
-{ 
+int main()
+{
 
-    int passed = 
+    int passed =
         test_feature<int, 1>() && test_feature<int, 2>() && test_feature<int, 4>() &&
         test_feature<float, 1>() && test_feature<float, 2>() && test_feature<float, 4>()
         ? runall_pass : runall_fail;
 
-    printf("%s\n", (passed == runall_pass) ? "Passed!" : "Failed!"); 
+    printf("%s\n", (passed == runall_pass) ? "Passed!" : "Failed!");
 
     return runall_pass;
 }

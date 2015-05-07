@@ -44,14 +44,14 @@ template<typename type>
 struct kernel_local
 {
     static void func(tiled_index<BLOCK_SIZE_1D, BLOCK_SIZE_1D, BLOCK_SIZE_1D> idx, s1<type, 3> *p, array_view<int, 1> &flag, int b1, int b2, int b3, int b4) __GPU_ONLY
-        /* 
+        /*
         Test function tests pointers which point to local memory.
         idx: compute index
         p: input a, the first operand
         flag: control flags, which is used to test control flow.
         b1, b2, b3, b4: control flags. It's used to test pointer emulation. Make sure pointer can point to the correct values.
         */
-    { 
+    {
         type local_a[LOCAL_SIZE * LOCAL_SIZE * LOCAL_SIZE];
         type local_fa[LOCAL_SIZE * LOCAL_SIZE * LOCAL_SIZE];
         type local_b[LOCAL_SIZE * LOCAL_SIZE * LOCAL_SIZE];
@@ -77,7 +77,7 @@ struct kernel_local
         for (int i = 0; i < LOCAL_SIZE * LOCAL_SIZE * LOCAL_SIZE; i++)
         {
             local_c[i] = p->av[idx.global];
-            local_fc[i] = local_c[i] + 1;        
+            local_fc[i] = local_c[i] + 1;
         }
 
         extent<3> e(LOCAL_SIZE, LOCAL_SIZE, LOCAL_SIZE);
@@ -124,10 +124,10 @@ struct kernel_local
 };
 
 template<typename type>
-struct kernel_global 
+struct kernel_global
 {
     static void func(tiled_index<BLOCK_SIZE_1D, BLOCK_SIZE_1D, BLOCK_SIZE_1D> idx, s1<type, 3> *p, array_view<int, 1> &flag, int b1, int b2, int b3, int b4) __GPU_ONLY
-        /* 
+        /*
         Test function tests pointers which point to global memory.
         idx: compute index
         p: input a, the first operand
@@ -164,14 +164,14 @@ template<typename type>
 struct kernel_shared
 {
     static void func(tiled_index<BLOCK_SIZE_1D, BLOCK_SIZE_1D, BLOCK_SIZE_1D> idx, s1<type, 3> *p, array_view<int, 1> &flag, int b1, int b2, int b3, int b4) __GPU_ONLY
-        /* 
+        /*
         Test function tests pointers which point to shared memory.
         idx: compute index
         p: input a, the first operand
         flag: control flags, which is used to test control flow.
         b1, b2, b3, b4: control flags. It's used to test pointer emulation. Make sure pointer can point to the correct values.
         */
-    { 
+    {
         int local_idx = idx.local[0] * BLOCK_SIZE_1D * BLOCK_SIZE_1D + idx.local[1] * BLOCK_SIZE_1D + idx.local[2];
 
         tile_static type share_a[BLOCK_SIZE_1D * BLOCK_SIZE_1D * BLOCK_SIZE_1D];
@@ -265,7 +265,7 @@ void RunMyKernel(vector<type> &a, vector<type> &b, vector<type> &c, vector<type>
 }
 
 template<typename type, typename k>
-bool test(accelerator_view av) 
+bool test(accelerator_view av)
 {
     vector<type> a(DOMAIN_SIZE_1D * DOMAIN_SIZE_1D * DOMAIN_SIZE_1D);
     vector<type> b(DOMAIN_SIZE_1D * DOMAIN_SIZE_1D * DOMAIN_SIZE_1D);

@@ -130,7 +130,7 @@ bool VerifyConversion(T input, R gpu_result)
         // e.g. int = unsigned int + float + unsigned int * float
         result = IsEqual(static_cast<float>(cpu_result), static_cast<float>(gpu_result));
     }
-    else if (typeid(input) == typeid(double)) 
+    else if (typeid(input) == typeid(double))
     {
         // If right side of our arithmetic calculation is double, then lets do doubles comparison
         // e.g. unsigned int = int + double + int * double
@@ -165,13 +165,13 @@ void InitializeArrays(vector<srcType1> &vInput1, vector<srcType2> &vInput2, int 
         int min1 = min;
         double scale = rand() / static_cast<double>(RAND_MAX);
 
-        // min for unsigned int has to be adjusted 
+        // min for unsigned int has to be adjusted
         if (typeid(srcType1) == typeid(unsigned int))
         {
             min1 = 0;
         }
 
-        vInput1[i] = static_cast<srcType1>(scale * (max - min1) + min1); 
+        vInput1[i] = static_cast<srcType1>(scale * (max - min1) + min1);
 
         if (DEBUG)
         {
@@ -188,9 +188,9 @@ void InitializeArrays(vector<srcType1> &vInput1, vector<srcType2> &vInput2, int 
         if (typeid(srcType2) == typeid(unsigned int))
         {
             min2 = 0;
-        }        
+        }
 
-        vInput2[i] = static_cast<srcType2>(scale * (max - min2) + min2); 
+        vInput2[i] = static_cast<srcType2>(scale * (max - min2) + min2);
 
         if (DEBUG)
         {
@@ -218,7 +218,7 @@ bool test_arithmetic_conversion()
     accelerator device = require_device_with_double(Device::ALL_DEVICES);
     accelerator_view rv = device.get_default_view();
 
-    // Initialize input 
+    // Initialize input
     InitializeArrays<dstType, srcType1, srcType2>(A, B, size);
 
     Concurrency::extent<1> e(size);
@@ -236,7 +236,7 @@ bool test_arithmetic_conversion()
     bool passed = true;
 
     // Verify results
-    for (int i = 0; i < size; i++) 
+    for (int i = 0; i < size; i++)
     {
         auto input = A[i] + B[i] + A[i] * B[i];
 

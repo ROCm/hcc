@@ -28,10 +28,10 @@ int main()
         int *vectorSidePtr = &ac[idx];
 
         [vectorSidePtr]() mutable __GPU //error lambda cannot capture pointer
-        { 
+        {
             *vectorSidePtr = 1234;
         }();
-    }); 
+    });
     c = ac;
 
     bool passed = true;

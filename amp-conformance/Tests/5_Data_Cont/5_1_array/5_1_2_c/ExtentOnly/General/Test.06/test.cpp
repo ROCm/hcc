@@ -24,7 +24,7 @@ runall_result test_main()
 	result &= REPORT_RESULT((test_array_1d<unsigned long, rank, 117>()));
 	result &= REPORT_RESULT((test_array_1d<float, rank, 111>()));
 	result &= REPORT_RESULT((test_array_1d<double, rank, 131>()));
-    
+
     return result;
 }
 

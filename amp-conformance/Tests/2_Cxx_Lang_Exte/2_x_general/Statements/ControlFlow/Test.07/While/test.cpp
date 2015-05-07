@@ -4,7 +4,7 @@
 // THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 // See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
 /// <tags>P0</tags>
-/// <summary>Control Flow test: while calls group barrier first to do some computation 
+/// <summary>Control Flow test: while calls group barrier first to do some computation
 /// (typically, addition and multiplication) by using shared memory. Then call break statement.</summary>
 
 #include <iostream>
@@ -27,7 +27,7 @@ const int NumYGroups = YSize / YGroupSize;           // Make sure that Size is d
 const int NumGroups  =  NumXGroups * NumYGroups;     // Make sure that Size is divisible by GroupSize
 
 void CalculateGroupSum(int* A, int* B)
-{ 
+{
     int g = 0;
     for(int y = 0; y < YSize; y += YGroupSize)
     {
@@ -40,9 +40,9 @@ void CalculateGroupSum(int* A, int* B)
             for(int gy = y; gy < (y + YGroupSize); gy++)
             {
                 for(int gx = x; gx < (x + XGroupSize); gx++)
-                {        
+                {
                     int flatLocalIndex = gy * XSize + gx;
-                    B[g] += A[flatLocalIndex];                    
+                    B[g] += A[flatLocalIndex];
                 }
             }
             g++;
@@ -54,8 +54,8 @@ void CalculateGroupSum(int* A, int* B)
 void CalculateGroupSum(tiled_index<YGroupSize, XGroupSize> ti, int flatLocalIndex, Concurrency::array<int, 2>& fA, Concurrency::array<int, 2>& fB) __GPU_ONLY
 {
     // use shared memory
-    tile_static int shared[XGroupSize * YGroupSize];         
-    shared[flatLocalIndex] = fA[ti.global];            
+    tile_static int shared[XGroupSize * YGroupSize];
+    shared[flatLocalIndex] = fA[ti.global];
     ti.barrier.wait();
 
     if(flatLocalIndex == 0)
@@ -76,7 +76,7 @@ void kernel(tiled_index<YGroupSize, XGroupSize> ti, Concurrency::array<int, 2>& 
 
     // Initialize to some fixed value; to check path when conditions are not true.
     // Only first thread initializes
-    if(flatLocalIndex == 0) fB[ti.tile] = 100;    
+    if(flatLocalIndex == 0) fB[ti.tile] = 100;
 
     while(x > 1)
     {
@@ -92,10 +92,10 @@ runall_result test_main()
     vector<int> A(Size); // data
     vector<int> B(NumGroups);   // holds the grouped sum of data
 
-    vector<int> refB(NumGroups); // Expected value ; sum of elements in each group    
+    vector<int> refB(NumGroups); // Expected value ; sum of elements in each group
 
     //Init A
-    Fill<int>(A.data(), Size, 0, 100);    
+    Fill<int>(A.data(), Size, 0, 100);
 
     //Init expected values
     CalculateGroupSum(A.data(), refB.data());
@@ -112,16 +112,16 @@ runall_result test_main()
         int x = 123;
         kernel(ti, fA, fB, x);
 
-    });        
+    });
 
     B = fB;
 
     if(!Verify<int>(B.data(), refB.data(), NumGroups))
     {
         passed = false;
-        cout << "Test: failed" << endl;        
+        cout << "Test: failed" << endl;
         return runall_fail;
-    }    
+    }
     else
     {
         cout << "Test: passed" << endl;

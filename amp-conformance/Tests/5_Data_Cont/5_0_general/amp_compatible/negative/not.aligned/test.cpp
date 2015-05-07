@@ -21,17 +21,17 @@ using std::vector;
 #pragma pack(2)
 struct A
 {
-    int a;    
+    int a;
     double b;
 };
 
 runall_result test_main()
-{   
+{
     array<A, 1> arr(10);
-    
+
     vector<A> vec(10);
     array_view<A, 1> arr_view(10, vec);
-    
+
     return runall_fail;
 }
 

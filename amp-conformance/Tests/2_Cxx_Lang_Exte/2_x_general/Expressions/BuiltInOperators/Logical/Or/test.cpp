@@ -57,7 +57,7 @@ int main(int argc, char **argv)
     vector<long> A(size);
     vector<long> B(size);
 
-    // Initialize input 
+    // Initialize input
     srand(3163);
     InitializeArray(A, size);
     InitializeArray(B, size);
@@ -69,15 +69,15 @@ int main(int argc, char **argv)
     // setup input arrays
     array<long, 2> aA(e, A.begin(), A.end(), rv), aB(e, B.begin(), B.end(), rv);
 
-    // setup output 
+    // setup output
     array<long, 2> aC(e, rv);
-    vector<long> C(size);   
+    vector<long> C(size);
 
     parallel_for_each(aA.get_extent(), [&](index<2> idx) __GPU {
         Kernel(idx, aC, aA, aB);
     });
 
-    C = aC;    
+    C = aC;
 
     // Check GPU results
     bool passed = true;
@@ -91,7 +91,7 @@ int main(int argc, char **argv)
             {
                 printf("\nLogical OR aails\n");
                 printf("-Expression: %ld || %ld", A[i * N + j] , B[i * N + j]);
-                printf("-Actual C[%d]: %ld, Expected: %ld\n", i * N + j, C[i * N + j], expectedPc);                
+                printf("-Actual C[%d]: %ld, Expected: %ld\n", i * N + j, C[i * N + j], expectedPc);
                 passed = false;
                 break;
             }

@@ -16,8 +16,8 @@ using namespace Concurrency::Test;
 const int XGroupSize = 32;
 const int YGroupSize = 32;
 
-const int NumXGroups = 1024;           
-const int NumYGroups = 63;           
+const int NumXGroups = 1024;
+const int NumYGroups = 63;
 const int NumGroups  =  NumXGroups * NumYGroups;
 
 const int XSize      = XGroupSize * NumXGroups;
@@ -41,25 +41,25 @@ void CalculateGroupSum(tiled_index<YGroupSize, XGroupSize> idx, const Concurrenc
 template <typename ElementType>
 void kernel(tiled_index<YGroupSize, XGroupSize> idx, const Concurrency::array<ElementType, 2> & fA, Concurrency::array<ElementType, 2> & fB, int x) __GPU_ONLY
 {
-    do { if(x <= 1)  break; do { if(x <= 2)  break; do { if(x <= 3)  break; do { if(x <= 4)  break; do { if(x <= 5)  break; 
+    do { if(x <= 1)  break; do { if(x <= 2)  break; do { if(x <= 3)  break; do { if(x <= 4)  break; do { if(x <= 5)  break;
     for(;x > 6;)   { for(;x > 7;)  { for(;x > 8;)  { for(;x > 9;)  { for(;x > 10;) {
         if(x > 11) if(x > 12) if(x > 13) if(x > 14) if(x > 15)
         {
-            switch(x > 16? 1:0) { case 0: break; case 1: 
-                switch(x > 17? 1:0) { case 0: break; case 1: switch(x > 18? 1:0) { case 0: break; case 1: 
-                switch(x > 19? 1:0) { case 0: break; case 1: switch(x > 20? 1:0) { case 0: break; case 1: 
+            switch(x > 16? 1:0) { case 0: break; case 1:
+                switch(x > 17? 1:0) { case 0: break; case 1: switch(x > 18? 1:0) { case 0: break; case 1:
+                switch(x > 19? 1:0) { case 0: break; case 1: switch(x > 20? 1:0) { case 0: break; case 1:
             {
-                while(x > 21) { while(x > 22) { while(x > 23) { while(x > 24) { while(x > 25){ 
+                while(x > 21) { while(x > 22) { while(x > 23) { while(x > 24) { while(x > 25){
 
                     CalculateGroupSum(idx, fA, fB);
 
-                    break;} break;} break;} break;} break;}   
+                    break;} break;} break;} break;} break;}
 
             }
             }}}}}
         }
         break;} break;} break;} break;} break;}
-    break;} while(true); break;} while(true); break;} while(true); break;} while(true); break;} while(true);    
+    break;} while(true); break;} while(true); break;} while(true); break;} while(true); break;} while(true);
 }
 
 template <typename ElementType>
@@ -102,7 +102,7 @@ runall_result test()
     {
         passed = false;
         cout << "Test1: failed" << endl;
-    }    
+    }
     else
     {
         cout << "Test1: passed" << endl;

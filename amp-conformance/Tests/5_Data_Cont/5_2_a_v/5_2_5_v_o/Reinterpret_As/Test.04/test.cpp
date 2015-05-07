@@ -20,7 +20,7 @@
 /// <tags>P1</tags>
 /// <summary>Reinterpret an AV of 3 floats as float (CPU)</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 
 using namespace Concurrency;
@@ -31,24 +31,24 @@ class Foo
 public:
     float r;
     float b;
-    float g;    
+    float g;
 };
-    
+
 int main()
 {
     std::vector<float> v(10 * 3);
     Fill(v);
-    
+
     array_view<Foo, 1> av_rbg(10, reinterpret_cast<Foo *>(v.data()));
     array_view<float, 1> av_float = av_rbg.reinterpret_as<float>();
-    
+
     int expected_size = av_rbg.get_extent().size() * sizeof(Foo) / sizeof(float);
     Log() << "Expected size: " << expected_size << " actual: " << av_float.get_extent()[0] << std::endl;
     if (av_float.get_extent()[0] != expected_size)
     {
         return runall_fail;
     }
-    
+
     return Verify<float>(reinterpret_cast<float *>(av_rbg.data()), av_float.data(), expected_size) ? runall_pass : runall_fail;
 }
 

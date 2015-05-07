@@ -9,7 +9,7 @@
 /// <summary>Test a left section(1) of a 1D array(10) </summary>
 
 #include <amptest/array_test.h>
-#include <amptest.h> 
+#include <amptest.h>
 #include <amptest_main.h>
 
 using namespace Concurrency;
@@ -19,7 +19,7 @@ runall_result test_main()
 {
     ArrayTest<int, 1> original(extent<1>(10));
 	auto sect = original.arr().section(0, 1);
-    return 
+    return
         TestSection(original, sect, index<1>(0))
         ? original.pass() : original.fail();
 }

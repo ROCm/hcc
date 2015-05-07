@@ -13,7 +13,7 @@ void foo(int &flag) __GPU
     flag = 1;
 }
 
-static bool test() 
+static bool test()
 {
     int flag = 0;
 

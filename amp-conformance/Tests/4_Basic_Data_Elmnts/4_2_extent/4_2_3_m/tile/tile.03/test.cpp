@@ -14,17 +14,17 @@ template<typename _type>
 bool test_tile() restrict(amp,cpu)
 {
             // cubed extent in x, y, z
-    return  test_tile_3d<_type, 1, 1, 1>() && test_tile_3d<_type, 11, 11, 11>() && 
+    return  test_tile_3d<_type, 1, 1, 1>() && test_tile_3d<_type, 11, 11, 11>() &&
             test_tile_3d<_type, 1000, 1000, 1000>() && test_tile_3d<_type, 16, 16, 16>() &&
             // almost 2D block extent in x, y, z
-            test_tile_3d<_type,   1,   11, 1000>() && 
+            test_tile_3d<_type,   1,   11, 1000>() &&
             test_tile_3d<_type,  16, 1000, 1>() &&
-            test_tile_3d<_type, 1000,  16, 11>() && 
+            test_tile_3d<_type, 1000,  16, 11>() &&
             test_tile_3d<_type,   11,   1, 16>();
-            
+
 }
 
-runall_result test_main() 
+runall_result test_main()
 {
 	accelerator_view av = require_device().get_default_view();
 

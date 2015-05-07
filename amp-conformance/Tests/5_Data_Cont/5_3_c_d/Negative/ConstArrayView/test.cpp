@@ -11,7 +11,7 @@
 using namespace Concurrency;
 using namespace Concurrency::Test;
 
-int main() 
+int main()
 {	
 	accelerator cpuDevice(accelerator::cpu_accelerator);
 	

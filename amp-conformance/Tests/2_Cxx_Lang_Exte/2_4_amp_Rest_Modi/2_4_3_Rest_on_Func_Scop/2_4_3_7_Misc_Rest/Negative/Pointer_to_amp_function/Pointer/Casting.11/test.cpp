@@ -12,7 +12,7 @@
 class c
 {
 public:
-    int f(int) 
+    int f(int)
     {
         return 1;
     };

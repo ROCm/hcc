@@ -4,7 +4,7 @@
 // THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 // See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
 /// <tags>P0</tags>
-/// <summary>Call group_barrier with meaningless statement. For example, group_barrier is used without 
+/// <summary>Call group_barrier with meaningless statement. For example, group_barrier is used without
 /// shared memory and called directly. The program can be compiled and run. 1d</summary>
 
 #include <iostream>
@@ -16,7 +16,7 @@ using namespace Concurrency;
 using namespace Concurrency::Test;
 
 const int GroupSize = 10;
-const int NumGroups = 65;     
+const int NumGroups = 65;
 const int Size      = GroupSize * NumGroups;
 
 //Calculate sum of all elements in a group - GPU version
@@ -42,25 +42,25 @@ void kernel(tiled_index<GroupSize> idx, const Concurrency::array<ElementType, 1>
         // Only first thread initializes
         if(flatLocalIndex == 0) fB[idx.tile] = 100;
 
-        do { if(x <= 1)  break; do { if(x <= 2)  break; do { if(x <= 3)  break; do { if(x <= 4)  break; do { if(x <= 5)  break; 
+        do { if(x <= 1)  break; do { if(x <= 2)  break; do { if(x <= 3)  break; do { if(x <= 4)  break; do { if(x <= 5)  break;
         for(;x > 6;)   { for(;x > 7;)  { for(;x > 8;)  { for(;x > 9;)  { for(;x > 10;) {
             if(x > 11) if(x > 12) if(x > 13) if(x > 14) if(x > 15)
             {
-                switch(x > 16? 1:0) { case 0: break; case 1: 
-                    switch(x > 17? 1:0) { case 0: break; case 1: switch(x > 18? 1:0) { case 0: break; case 1: 
-                    switch(x > 19? 1:0) { case 0: break; case 1: switch(x > 20? 1:0) { case 0: break; case 1: 
+                switch(x > 16? 1:0) { case 0: break; case 1:
+                    switch(x > 17? 1:0) { case 0: break; case 1: switch(x > 18? 1:0) { case 0: break; case 1:
+                    switch(x > 19? 1:0) { case 0: break; case 1: switch(x > 20? 1:0) { case 0: break; case 1:
                 {
-                    while(x > 21) { while(x > 22) { while(x > 23) { while(x > 24) { while(x > 25){ 
+                    while(x > 21) { while(x > 22) { while(x > 23) { while(x > 24) { while(x > 25){
 
                         CalculateGroupSum(idx, flatLocalIndex, fA, fB);
 
-                        break;} break;} break;} break;} break;}   
+                        break;} break;} break;} break;} break;}
 
                 }
                 }}}}}
             }
             break;} break;} break;} break;} break;}
-        break;} while(true); break;} while(true); break;} while(true); break;} while(true); break;} while(true);    
+        break;} while(true); break;} while(true); break;} while(true); break;} while(true); break;} while(true);
     } else
     {
         if (idx.tile[0] == 0)
@@ -71,25 +71,25 @@ void kernel(tiled_index<GroupSize> idx, const Concurrency::array<ElementType, 1>
             // Only first thread initializes
             if(flatLocalIndex == 0) fB[idx.tile] = 100;
 
-            do { if(x <= 1)  break; do { if(x <= 2)  break; do { if(x <= 3)  break; do { if(x <= 4)  break; do { if(x <= 5)  break; 
+            do { if(x <= 1)  break; do { if(x <= 2)  break; do { if(x <= 3)  break; do { if(x <= 4)  break; do { if(x <= 5)  break;
             for(;x > 6;)   { for(;x > 7;)  { for(;x > 8;)  { for(;x > 9;)  { for(;x > 10;) {
                 if(x > 11) if(x > 12) if(x > 13) if(x > 14) if(x > 15)
                 {
-                    switch(x > 16? 1:0) { case 0: break; case 1: 
-                        switch(x > 17? 1:0) { case 0: break; case 1: switch(x > 18? 1:0) { case 0: break; case 1: 
-                        switch(x > 19? 1:0) { case 0: break; case 1: switch(x > 20? 1:0) { case 0: break; case 1: 
+                    switch(x > 16? 1:0) { case 0: break; case 1:
+                        switch(x > 17? 1:0) { case 0: break; case 1: switch(x > 18? 1:0) { case 0: break; case 1:
+                        switch(x > 19? 1:0) { case 0: break; case 1: switch(x > 20? 1:0) { case 0: break; case 1:
                     {
-                        while(x > 21) { while(x > 22) { while(x > 23) { while(x > 24) { while(x > 25){ 
+                        while(x > 21) { while(x > 22) { while(x > 23) { while(x > 24) { while(x > 25){
 
                             CalculateGroupSum(idx, flatLocalIndex, fA, fB);
 
-                            break;} break;} break;} break;} break;}   
+                            break;} break;} break;} break;} break;}
 
                     }
                     }}}}}
                 }
                 break;} break;} break;} break;} break;}
-            break;} while(true); break;} while(true); break;} while(true); break;} while(true); break;} while(true);    
+            break;} while(true); break;} while(true); break;} while(true); break;} while(true); break;} while(true);
 
         }
     }
@@ -138,7 +138,7 @@ runall_result test()
     {
         passed = false;
         cout << "Test1: failed" << endl;
-    }    
+    }
     else
     {
         cout << "Test1: passed" << endl;

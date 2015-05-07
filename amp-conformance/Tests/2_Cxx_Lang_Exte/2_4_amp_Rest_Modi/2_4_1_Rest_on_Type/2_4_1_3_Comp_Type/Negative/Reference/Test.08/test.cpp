@@ -4,21 +4,21 @@
 // THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 // See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
 #include "amptest_minimal.h"
- 
+
 using std::vector;
 using namespace Concurrency;
 using namespace Concurrency::Test;
- 
+
 void f() __GPU
 {
     int i = 0;
     int *&r = (int *&) i;
 }
- 
+
 int main()
 {
     f();
-    
+
     return runall_fail;
 }
 

@@ -201,14 +201,14 @@ bool test_feature()
 
 runall_result test_main()
 {
-    // Test is using doubles therefore we have to make sure that it is not executed 
+    // Test is using doubles therefore we have to make sure that it is not executed
     // on devices that does not support double types.
     // Test is relying on default device, therefore check below is also done on default device.
     accelerator device;
     if (!device.get_supports_limited_double_precision())
     {
         printf("Default device does not support limited double precision\n");
-        return runall_skip;    
+        return runall_skip;
     }
 
 	runall_result res;

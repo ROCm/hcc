@@ -4,8 +4,8 @@
 // THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 // See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
 /// <tags>P0</tags>
-/// <summary>Control Flow test: In switch statement, default path shall be tested. 
-/// The threads are synchronized by group id in the same group. Call group_barrier 
+/// <summary>Control Flow test: In switch statement, default path shall be tested.
+/// The threads are synchronized by group id in the same group. Call group_barrier
 /// to do some computation by using shared memory in default path.</summary>
 
 #include <iostream>
@@ -28,7 +28,7 @@ const int NumYGroups = YSize / YGroupSize;           // Make sure that Size is d
 const int NumGroups  =  NumXGroups * NumYGroups;     // Make sure that Size is divisible by GroupSize
 
 void CalculateGroupSum(int* A, int* B)
-{ 
+{
     int g = 0;
     for(int y = 0; y < YSize; y += YGroupSize)
     {
@@ -36,16 +36,16 @@ void CalculateGroupSum(int* A, int* B)
         {
             // x,y is now the origin of the next group
             // If group 0, then don't calculaue sum
-            if(g != 0) 
+            if(g != 0)
             {
                 B[g] = 0;
                 // calculate sum
                 for(int gy = y; gy < (y + YGroupSize); gy++)
                 {
                     for(int gx = x; gx < (x + XGroupSize); gx++)
-                    {        
-                        int flatLocalIndex = gy * XSize + gx;                    
-                        B[g] += A[flatLocalIndex];                    
+                    {
+                        int flatLocalIndex = gy * XSize + gx;
+                        B[g] += A[flatLocalIndex];
                     }
                 }
             }
@@ -63,7 +63,7 @@ void CalculateGroupSum(int* A, int* B)
 void CalculateGroupSum(tiled_index<YGroupSize, XGroupSize> ti, int flatLocalIndex, Concurrency::array<int, 2>& fA, Concurrency::array<int, 2>& fB) __GPU_ONLY
 {
     // use shared memory
-    tile_static int shared[XGroupSize * YGroupSize];         
+    tile_static int shared[XGroupSize * YGroupSize];
     shared[flatLocalIndex] = fA[ti.global];
     ti.barrier.wait();
 
@@ -86,7 +86,7 @@ void kernel(tiled_index<YGroupSize, XGroupSize> ti, Concurrency::array<int, 2>& 
 
     // Initialize to some fixed value; to check path when conditions are not true.
     // Only first thread initializes
-    if(flatLocalIndex == 0) fB[ti.tile] = 100;    
+    if(flatLocalIndex == 0) fB[ti.tile] = 100;
 
     switch (x)
     {
@@ -94,15 +94,15 @@ void kernel(tiled_index<YGroupSize, XGroupSize> ti, Concurrency::array<int, 2>& 
 
     case 1: if(flatLocalIndex == 0) fB[ti.tile] = 300; break;
 
-    default:       
+    default:
         // group 0 returns; other thread groups calculate group sum
-        if(groupIndex > 0) 
+        if(groupIndex > 0)
         {
             CalculateGroupSum(ti, flatLocalIndex, fA, fB);
             break;
         }
         break;
-    } 
+    }
 }
 
 runall_result test_main()
@@ -112,10 +112,10 @@ runall_result test_main()
     vector<int> A(Size); // data
     vector<int> B(NumGroups);   // holds the grouped sum of data
 
-    vector<int> refB(NumGroups); // Expected value ; sum of elements in each group    
+    vector<int> refB(NumGroups); // Expected value ; sum of elements in each group
 
     //Init A
-    Fill<int>(A.data(), Size, 0, 100);    
+    Fill<int>(A.data(), Size, 0, 100);
 
     //Init expected values
     CalculateGroupSum(A.data(), refB.data());
@@ -129,15 +129,15 @@ runall_result test_main()
     parallel_for_each(fA.get_extent().tile<YGroupSize, XGroupSize>(), [&](tiled_index<YGroupSize, XGroupSize> ti) __GPU_ONLY {
         int x = 123;
         kernel(ti, fA, fB, x);
-    });        
+    });
 
-    B = fB;    
+    B = fB;
     if(!Verify<int>(B.data(), refB.data(), NumGroups))
     {
         passed = false;
-        cout << "Test: failed" << endl;        
+        cout << "Test: failed" << endl;
         return runall_fail;
-    }    
+    }
     else
     {
         cout << "Test: passed" << endl;

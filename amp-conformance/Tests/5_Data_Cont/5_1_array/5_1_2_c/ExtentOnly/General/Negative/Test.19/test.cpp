@@ -8,12 +8,12 @@
 /// <tags>P1</tags>
 /// <summary>Verifies compiler errors when a 3D array constructor is used with an array with Rank != 3</summary>
 //#Expects: Error: error C2338
-    
+
 #include "./../../../../constructor.h"
 #include <amptest_main.h>
 
 runall_result test_main()
-{ 
+{
     array<float, 4>(223, 111, 2);
 
 	// We shouldn't compile

@@ -9,7 +9,7 @@
 
 #include <amptest.h>
 
-void foo(int &flag) 
+void foo(int &flag)
 {
     flag = 1;
 }
@@ -17,7 +17,7 @@ void foo(int &flag)
 class C1
 {
 public:
-    void foo(int &flag) __GPU 
+    void foo(int &flag) __GPU
     {
         ::foo(flag);
     }

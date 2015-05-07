@@ -37,7 +37,7 @@ template<int DIM>
 runall_result Shape(accelerator_view av, int extents[], int base)
 {
     srand(2010);
-    
+
     int size = 1;
     for (int i=0; i<DIM; ++i)
     {
@@ -51,18 +51,18 @@ runall_result Shape(accelerator_view av, int extents[], int base)
 
     InitializeArray(pA.data(), size);
     InitializeArray(pB.data(), size);
-    
+
     // Compute result on CPU
     for(int i=0; i<size; ++i)
     {
         pA[i] = static_cast<float>(i);
         pB[i] = static_cast<float>(i + 1);
-        
+
         pRef[i] = pA[i] + pB[i];
     }
-    
+
     extent<DIM> e(extents);
-    
+
     array<float, DIM> mA(e, pA.begin(), av), mB(e, pB.begin(), av), mC(e, av);
 
     parallel_for_each(e, [&](index<DIM> idx) restrict(amp) {
@@ -79,12 +79,12 @@ runall_result test_main()
 	accelerator_view av = require_device().get_default_view();
 
     const int base = 64;
-    
+
     int e1[] = {base};
     int e2[] = {base, base};
     int e3[] = {base, base, base};
     int e4[] = {base, base, base, base};
-    
+
 	runall_result result;
 
 	result &= REPORT_RESULT(Shape<1>(av, e1, base));

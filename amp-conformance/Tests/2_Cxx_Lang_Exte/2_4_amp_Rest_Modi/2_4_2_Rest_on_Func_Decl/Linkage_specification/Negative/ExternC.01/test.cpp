@@ -8,7 +8,7 @@
 
 extern "C" void foo() restrict(amp, cpu)
 {
-    
+
 }
 
 void main()

@@ -8,7 +8,7 @@
 
 #include <amptest.h>
 
-int f(int &) __GPU_ONLY 
+int f(int &) __GPU_ONLY
 {
     return 0;
 }
@@ -24,9 +24,9 @@ bool test()
     bool passed = true;
 
     int v = 0;
-    
+
     flag = f(v);
-    
+
     if (flag != 1)
     {
         return false;

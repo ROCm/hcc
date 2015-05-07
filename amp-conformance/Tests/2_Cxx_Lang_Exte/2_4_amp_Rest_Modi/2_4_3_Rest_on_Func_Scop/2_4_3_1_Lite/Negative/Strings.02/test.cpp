@@ -7,15 +7,15 @@
 /// <summary>test illegal usage of string literals</summary>
 //#Expects: Error: error C3589
 
-#include <amptest.h> 
+#include <amptest.h>
 
 void foo() __GPU
 {
     "Hello"[0];
 }
 
-int main(int argc, char **argv) 
-{ 
+int main(int argc, char **argv)
+{
     foo();
     return 1;
 }

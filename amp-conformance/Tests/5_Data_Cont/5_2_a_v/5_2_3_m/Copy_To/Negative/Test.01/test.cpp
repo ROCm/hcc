@@ -20,7 +20,7 @@
 /// <tags>P1</tags>
 /// <summary>Copy an array_view to an array with incompatible extent</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 
 using namespace Concurrency;
@@ -35,7 +35,7 @@ int main()
         return runall_skip;
     }
     accelerator_view acc_view = device.get_default_view();
-    
+
     extent<2> av_ex(20, 10);
     vector<long> vec(av_ex.size());
     Fill<long>(vec.data(), av_ex.size());

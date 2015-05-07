@@ -41,5 +41,5 @@ runall_result test_main()
     return t.positive_test(
         index<3>(0, 0, 0), extent<3>(4, 4, 4), //local
         index<3>(1, 0, 2), extent<3>(2, 3, 2) //remote
-    ) ? t.pass() : t.fail(); 
-} 
+    ) ? t.pass() : t.fail();
+}

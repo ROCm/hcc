@@ -43,11 +43,11 @@ runall_result test_main()
     {
         accel2.set_default_cpu_access_type(DEF_ACCESS_TYPE2);
     }
-    
+
     ArrayViewTest<int, 1> av(extent<1>(10));
     av.view()(5) = 13;
     av.set_known_value(index<1>(5), 13);
-    
+
     for (int i = 0; i < 30; i++)
     {
         if (i % 3 == 0)
@@ -75,6 +75,6 @@ runall_result test_main()
             av.set_known_value(index<1>(5), 16);
         }
     }
-    
-    return av.view()(5) == 16 ? av.pass() : av.fail();  
+
+    return av.view()(5) == 16 ? av.pass() : av.fail();
 }

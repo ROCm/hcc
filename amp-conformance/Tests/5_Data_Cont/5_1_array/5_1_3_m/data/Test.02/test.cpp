@@ -48,7 +48,7 @@ bool test_feature(accelerator_view device_view)
 
     {
         const array<_type, _rank> src(e1, data.begin(), data.end(), device_view);
-        
+
         const _type* dst_data = src.data();
 
         if (dst_data != NULL)
@@ -61,7 +61,7 @@ bool test_feature(accelerator_view device_view)
 runall_result test_main()
 {
 
-	// Test is using doubles therefore we have to make sure that it is not executed 
+	// Test is using doubles therefore we have to make sure that it is not executed
 	// on devices that does not support double types.
 	// Test is relying on default device, therefore check below is also done on default device.
 	accelerator device = require_device_with_double(Test::Device::ALL_DEVICES);
@@ -82,4 +82,4 @@ runall_result test_main()
 	
     return res;
 }
-                                                                                                                                      
+

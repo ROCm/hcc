@@ -21,7 +21,7 @@
 /// <summary>Test a section with an out of bounds index</summary>
 
 
-#include <amptest.h> 
+#include <amptest.h>
 
 using namespace Concurrency;
 using namespace Concurrency::Test;

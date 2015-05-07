@@ -17,7 +17,7 @@ public:
     }
 };
 
-bool test() 
+bool test()
 {
     int flag = 0;
 

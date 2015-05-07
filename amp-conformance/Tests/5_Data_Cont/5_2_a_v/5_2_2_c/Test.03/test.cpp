@@ -21,7 +21,7 @@
 /// <summary>Test that a readonly array_view can be constructed from an AMP array in a CPU restricted function</summary>
 
 #include "../../helper.h"
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 #include <algorithm>
 
@@ -45,7 +45,7 @@ int main()
     accelerator_view acc_view = device.get_default_view();
 
     array<int, 1> arr(ex, vec.begin(), acc_view);
-    
+
     array_view<int, 1> av1(arr);
     array_view<int, 1> av2(arr);
 
@@ -61,7 +61,7 @@ int main()
          printf("FAIL: vector not updated with array_view data\n");
          return runall_fail;
     }
-    
+
     // use in parallel_for_each
     parallel_for_each(arr.get_extent(), [=] (index<1> idx) __GPU
     {
@@ -83,7 +83,7 @@ int main()
             return runall_fail;
         }
     }
-    
+
     printf("PASS!\n");
     return runall_pass;
 }

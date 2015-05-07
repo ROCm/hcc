@@ -32,8 +32,8 @@ int main()
 {
     accelerator device = require_device(Device::ALL_DEVICES);
     accelerator_view acc_view = device.get_default_view();
-    
-    const int size = 100; 
+
+    const int size = 100;
 
     vector<int> vec(size);
     Fill<int>(vec.data(), size);
@@ -47,7 +47,7 @@ int main()
         printf("array_view extent different from extent used to initialize object. FAIL!\n");
         return runall_fail;
     }
-    
+
     if(av.get_extent() != ex) // Verify extent
     {
         printf("array_view extent is different from extent used to initialize object. FAIL!\n");
@@ -60,7 +60,7 @@ int main()
         printf("array_view data does not match original data. FAIL!\n");
         return runall_fail;
     }
-    
+
     // use in parallel_for_each
     parallel_for_each(acc_view, av.get_extent(), [=] (index<1> idx) __GPU
     {
@@ -69,7 +69,7 @@ int main()
 
     // vec should be updated after this
     printf("Accessing first element of array_view [%d] to force synchronize.\n", av[0]);
-    
+
     // verify data
     for(int i = 0; i < size; i++)
     {
@@ -85,7 +85,7 @@ int main()
             return runall_fail;
         }
     }
-    
+
     printf("PASS!\n");
     return runall_pass;
 }

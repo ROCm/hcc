@@ -44,8 +44,8 @@ int main()
 	result[0] = 0;
 	array<int, 1> gpustatus(1, result.begin());
 
-	parallel_for_each(t.get_extent(), [&, t](index<1> idx) __GPU 
-	{ 
+	parallel_for_each(t.get_extent(), [&, t](index<1> idx) __GPU
+	{
 		t[idx]= 15;
 		t[0]= 15;
 		t(1)= 15;

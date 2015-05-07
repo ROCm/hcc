@@ -23,7 +23,7 @@ const int NumGroups = Size / GroupSize;     // Make sure that Size is divisible 
 //Calculate sum of all elements in a group - CPU version
 template<typename ElementType>
 void CalculateGroupSum(ElementType* A, ElementType* B)
-{        
+{
     for(int g = 0; g < NumGroups; g++)
     {
         B[g] = (ElementType) 0;
@@ -69,8 +69,8 @@ void kernel(tiled_index<GroupSize> idx, const Concurrency::array<ElementType, 1>
     // Only first thread initializes
     if(flatLocalIndex == 0) fB[idx.tile] = 100;
 
-    while(x > 1)  { while(x > 2)  { while(x > 3)  { while(x > 4)  { while(x > 5) { 
-        while(x > 6)  { while(x > 7)  { while(x > 8)  { while(x > 9)  { while(x > 10){ 
+    while(x > 1)  { while(x > 2)  { while(x > 3)  { while(x > 4)  { while(x > 5) {
+        while(x > 6)  { while(x > 7)  { while(x > 8)  { while(x > 9)  { while(x > 10){
             for(;x > 11;)  { for(;x > 12;) { for(;x > 13;) { for(;x > 14;) { for(;x > 15;) {
                 for(;x > 16;)  { for(;x > 17;) { for(;x > 18;) { for(;x > 19;) { for(;x > 20;) {
 
@@ -78,8 +78,8 @@ void kernel(tiled_index<GroupSize> idx, const Concurrency::array<ElementType, 1>
 
                     break;} break;} break;} break;} break;}
                 break;} break;} break;} break;} break;}
-            break;} break;} break;} break;} break;}   
-        break;} break;} break;} break;} break;}   
+            break;} break;} break;} break;} break;}
+        break;} break;} break;} break;} break;}
 }
 
 template <typename ElementType>
@@ -125,7 +125,7 @@ runall_result test()
     {
         passed = false;
         cout << "Test1: failed" << endl;
-    }    
+    }
     else
     {
         cout << "Test1: passed" << endl;
@@ -136,7 +136,7 @@ runall_result test()
     x = 5;
     parallel_for_each(extentA.tile<GroupSize>(), [&,x] (tiled_index<GroupSize> idx) __GPU_ONLY {
         kernel<ElementType>(idx, fA, fB, 10);
-    });    
+    });
 
     copy(fB, B);
 
@@ -144,11 +144,11 @@ runall_result test()
     {
         passed = false;
         cout << "Test2: " << "Failed!" << endl;
-    }        
+    }
     else
     {
         cout << "Test2: passed" << endl;
-    }      
+    }
 
     return passed;
 }

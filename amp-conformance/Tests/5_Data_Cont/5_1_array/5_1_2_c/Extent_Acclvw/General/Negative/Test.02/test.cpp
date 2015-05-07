@@ -149,7 +149,7 @@ bool test_feature(const vector<accelerator>& devices)
 }
 
 runall_result test_main()
-{ 
+{
 	iteration = 0;
 	rank_step = 0;
 
@@ -160,7 +160,7 @@ runall_result test_main()
 	{
 		test_feature<int, 5>(devices);
 	}
-    catch (std::exception e) 
+    catch (std::exception e)
     {
 	if ((iteration > 0) || (rank_step > 0))
 	{

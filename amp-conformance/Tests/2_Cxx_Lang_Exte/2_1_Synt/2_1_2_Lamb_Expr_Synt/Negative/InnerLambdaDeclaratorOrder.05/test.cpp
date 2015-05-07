@@ -35,7 +35,7 @@ int main()
     Concurrency::array<int, 1> ac(e, c, rv);
 
     // error: inner lambda has incorrect lamda-declarator clause
-    parallel_for_each(ac.get_extent(), [&](index<1> idx) __GPU { []() mutable -> void __GPU {}(); ac[idx] += 1; }); 
+    parallel_for_each(ac.get_extent(), [&](index<1> idx) __GPU { []() mutable -> void __GPU {}(); ac[idx] += 1; });
 
     c = ac;
 

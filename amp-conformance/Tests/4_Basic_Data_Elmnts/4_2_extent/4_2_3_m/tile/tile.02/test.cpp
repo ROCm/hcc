@@ -14,14 +14,14 @@ template<typename _type>
 bool test_tile() restrict(amp,cpu)
 {
             // Squared extent
-    return  (test_tile_2d<_type, 1, 1>() && test_tile_2d<_type, 11, 11>() && 
+    return  (test_tile_2d<_type, 1, 1>() && test_tile_2d<_type, 11, 11>() &&
             test_tile_2d<_type, 1000, 1000>() && test_tile_2d<_type, 16, 16>() &&
             // rectangled extent
-            test_tile_2d<_type, 1, 11>() && test_tile_2d<_type, 1000, 16>() && 
+            test_tile_2d<_type, 1, 11>() && test_tile_2d<_type, 1000, 16>() &&
             test_tile_2d<_type, 1000, 1>() && test_tile_2d<_type, 16, 11>());
 }
 
-runall_result test_main() 
+runall_result test_main()
 {
 	accelerator_view av = require_device().get_default_view();
 

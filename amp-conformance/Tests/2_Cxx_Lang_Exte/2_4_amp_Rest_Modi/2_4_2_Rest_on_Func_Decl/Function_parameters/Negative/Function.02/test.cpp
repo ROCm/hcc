@@ -7,7 +7,7 @@
 /// <summary>test function with illegal parameter type</summary>
 //#Expects: Error: error C3581
 
-#include <amptest.h> 
+#include <amptest.h>
 
 struct A
 {
@@ -20,8 +20,8 @@ void foo(A & a) __GPU
     a.m2 = 3;
 }
 
-int main(int argc, char **argv) 
-{ 
+int main(int argc, char **argv)
+{
     A a;
     foo(a);
     return 1;

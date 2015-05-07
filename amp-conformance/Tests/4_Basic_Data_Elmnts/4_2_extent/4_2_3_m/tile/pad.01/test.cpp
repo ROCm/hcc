@@ -7,7 +7,7 @@
 // See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
 /// <tags>P1</tags>
 /// <summary>Test pad() function on tiled_extent.</summary>
-#include <amptest.h> 
+#include <amptest.h>
 #include <amptest_main.h>
 using namespace concurrency;
 using namespace concurrency::Test;

@@ -35,8 +35,8 @@ bool AsyncCopyAndVerifyArrayToArray(Concurrency::accelerator& srcDevice, Concurr
 	
 	copy_async(srcArray, destArray).then([&]() {
 		Log() << "Verifying destArray" << std::endl;
-		if(VerifyAllSameValue(destArray, expected_value) == -1) 
-		{ 
+		if(VerifyAllSameValue(destArray, expected_value) == -1)
+		{
 #ifdef _MSC_VER
 			InterlockedExchange (&flag, 1);
 #else
@@ -70,8 +70,8 @@ bool AsyncCopyAndVerifyArrayToArrayView(Concurrency::accelerator& srcDevice, Con
 
 	copy_async(srcArray, destArrayView).then([&]() {
 		Log() << "Verifying destArrayView" << std::endl;
-		if(VerifyAllSameValue(destArrayView, expected_value) == -1) 
-		{ 
+		if(VerifyAllSameValue(destArrayView, expected_value) == -1)
+		{
 #ifdef _MSC_VER
 			InterlockedExchange (&flag, 1);
 #else
@@ -104,8 +104,8 @@ bool AsyncCopyAndVerifyArrayViewToArray(Concurrency::accelerator& srcDevice, Con
 	
 	copy_async(srcArrayView, destArray).then([&]() {
 		Log() << "Verifying destArray" << std::endl;
-		if(VerifyAllSameValue(destArray, expected_value) == -1) 
-		{ 
+		if(VerifyAllSameValue(destArray, expected_value) == -1)
+		{
 #ifdef _MSC_VER
 			InterlockedExchange (&flag, 1);
 #else
@@ -139,8 +139,8 @@ bool AsyncCopyAndVerifyArrayViewConstToArray(Concurrency::accelerator& srcDevice
 
 	copy_async(srcArrayView, destArray).then([&]() {
 		Log() << "Verifying destArray" << std::endl;
-		if(VerifyAllSameValue(destArray, expected_value) == -1) 
-		{ 
+		if(VerifyAllSameValue(destArray, expected_value) == -1)
+		{
 #ifdef _MSC_VER
 			InterlockedExchange (&flag, 1);
 #else
@@ -175,8 +175,8 @@ bool AsyncCopyAndVerifyArrayViewToArrayView(Concurrency::accelerator& srcDevice,
 	
 	copy_async(srcArrayView, destArrayView).then([&]() {
 		Log() << "Verifying destArrayView" << std::endl;
-		if(VerifyAllSameValue(destArrayView, expected_value) == -1) 
-		{ 
+		if(VerifyAllSameValue(destArrayView, expected_value) == -1)
+		{
 #ifdef _MSC_VER
 			InterlockedExchange (&flag, 1);
 #else
@@ -209,8 +209,8 @@ bool AsyncCopyAndVerifyArrayToIter(Concurrency::accelerator& srcDevice)
 
 	copy_async(srcArray, destCont.begin()).then([&]() {
 		Log() << "Verifying destCont" << std::endl;
-		if(VerifyAllSameValue(destCont, expected_value) == -1) 
-		{ 
+		if(VerifyAllSameValue(destCont, expected_value) == -1)
+		{
 #ifdef _MSC_VER
 			InterlockedExchange (&flag, 1);
 #else
@@ -245,8 +245,8 @@ bool AsyncCopyAndVerifyArrayViewConstToArrayView(Concurrency::accelerator& srcDe
 	
 	copy_async(srcArrayView, destArrayView).then([&]() {
 		Log() << "Verifying destArrayView" << std::endl;
-		if(VerifyAllSameValue(destArrayView, expected_value) == -1) 
-		{ 
+		if(VerifyAllSameValue(destArrayView, expected_value) == -1)
+		{
 #ifdef _MSC_VER
 			InterlockedExchange (&flag, 1);
 #else
@@ -277,8 +277,8 @@ bool AsyncCopyAndVerifyIterToArray(Concurrency::accelerator& destDevice)
 
 	copy_async(srcCont.begin(), destArray).then([&]() {
 		Log() << "Verifying destArray" << std::endl;
-		if(VerifyAllSameValue(destArray, expected_value) == -1) 
-		{ 
+		if(VerifyAllSameValue(destArray, expected_value) == -1)
+		{
 #ifdef _MSC_VER
 			InterlockedExchange (&flag, 1);
 #else
@@ -309,8 +309,8 @@ bool AsyncCopyAndVerifyIter2ToArray(Concurrency::accelerator& destDevice)
 	
 	copy_async(srcCont.begin(), srcCont.end(), destArray).then([&]() {
 		Log() << "Verifying destArray" << std::endl;
-		if(VerifyAllSameValue(destArray, expected_value) == -1) 
-		{ 
+		if(VerifyAllSameValue(destArray, expected_value) == -1)
+		{
 #ifdef _MSC_VER
 			InterlockedExchange (&flag, 1);
 #else
@@ -344,8 +344,8 @@ bool AsyncCopyAndVerifyArrayViewToIter(Concurrency::accelerator& srcDevice)
 
 	copy_async(srcArrayView, destCont.begin()).then([&]() {
 		Log() << "Verifying destConst" << std::endl;
-		if(VerifyAllSameValue(destCont, expected_value) == -1) 
-		{ 
+		if(VerifyAllSameValue(destCont, expected_value) == -1)
+		{
 #ifdef _MSC_VER
 			InterlockedExchange (&flag, 1);
 #else
@@ -377,8 +377,8 @@ bool AsyncCopyAndVerifyIterToArrayView(Concurrency::accelerator& destDevice)
 	
 	copy_async(srcCont.begin(), destArrayView).then([&]() {
 		Log() << "Verifying destArrayView" << std::endl;
-		if(VerifyAllSameValue(destArrayView, expected_value) == -1) 
-		{ 
+		if(VerifyAllSameValue(destArrayView, expected_value) == -1)
+		{
 #ifdef _MSC_VER
 			InterlockedExchange (&flag, 1);
 #else
@@ -410,8 +410,8 @@ bool AsyncCopyAndVerifyIter2ToArrayView(Concurrency::accelerator& destDevice)
 
 	copy_async(srcCont.begin(), srcCont.end(), destArrayView).then([&]() {
 		Log() << "Verifying destArrayView" << std::endl;
-		if(VerifyAllSameValue(destArrayView, expected_value) == -1) 
-		{ 
+		if(VerifyAllSameValue(destArrayView, expected_value) == -1)
+		{
 #ifdef _MSC_VER
 			InterlockedExchange (&flag, 1);
 #else

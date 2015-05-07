@@ -36,10 +36,10 @@ runall_result test_main()
 	array<int, 1> arr1(DATA_SIZE, av);
 	
 	// Wait event is set when continuation finishes verification.
-	// Each continuation waits for its child continuation to complete 
+	// Each continuation waits for its child continuation to complete
 	// because child continuation captures variable from enclosing scope.
 	// If the continuation does not wait for child continuation to complete
-	// it may happen that parent continuation finishes before child 
+	// it may happen that parent continuation finishes before child
 	// continuation and the captured variables by child continuation will
 	// go out of scope and no longer valid.
 	concurrency::event waitEvent1;

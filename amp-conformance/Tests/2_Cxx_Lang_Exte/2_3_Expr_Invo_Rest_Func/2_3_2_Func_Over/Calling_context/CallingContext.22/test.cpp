@@ -8,12 +8,12 @@
 
 #include <amptest.h>
 
-static void foo(int &flag) 
+static void foo(int &flag)
 {
     flag = 1;
 }
 
-bool test() 
+bool test()
 {
     int flag = 0;
 

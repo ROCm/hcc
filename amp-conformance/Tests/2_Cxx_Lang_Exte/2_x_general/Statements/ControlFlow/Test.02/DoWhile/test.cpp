@@ -28,7 +28,7 @@ const int NumGroups  =  NumXGroups * NumYGroups;     // Make sure that Size is d
 
 template<typename ElementType>
 void CalculateGroupSum(ElementType* A, ElementType* B)
-{ 
+{
     int g = 0;
     for(int y = 0; y < YSize; y += YGroupSize)
     {
@@ -41,9 +41,9 @@ void CalculateGroupSum(ElementType* A, ElementType* B)
             for(int gy = y; gy < (y + YGroupSize); gy++)
             {
                 for(int gx = x; gx < (x + XGroupSize); gx++)
-                {        
+                {
                     int flatLocalIndex = gy * XSize + gx;
-                    B[g] += A[flatLocalIndex];                    
+                    B[g] += A[flatLocalIndex];
                 }
             }
             g++;
@@ -56,8 +56,8 @@ template<typename ElementType>
 void CalculateGroupSum(tiled_index<YGroupSize, XGroupSize> idx, int flatLocalIndex, const Concurrency::array<ElementType, 2> & fA, Concurrency::array<ElementType, 2> & fB) __GPU_ONLY
 {
     // use shared memory
-    tile_static ElementType shared[XGroupSize * YGroupSize];         
-    shared[flatLocalIndex] = fA[idx.global];            
+    tile_static ElementType shared[XGroupSize * YGroupSize];
+    shared[flatLocalIndex] = fA[idx.global];
     idx.barrier.wait();
 
     if(flatLocalIndex == 0)
@@ -79,18 +79,18 @@ void kernel(tiled_index<YGroupSize, XGroupSize> idx, const Concurrency::array<El
 
     // Initialize to some fixed value; to check path when conditions are not true.
     // Only first thread initializes
-    if(flatLocalIndex == 0) fB[idx.tile] = 100;    
+    if(flatLocalIndex == 0) fB[idx.tile] = 100;
 
-    do { if(x <= 1)  break; do { if(x <= 2)  break; do { if(x <= 3)  break; do { if(x <= 4)  break; 
-    do { if(x <= 5)  break; do { if(x <= 6)  break; do { if(x <= 7)  break; do { if(x <= 8)  break; 
-    do { if(x <= 9)  break; do { if(x <= 10) break; do { if(x <= 11) break; do { if(x <= 12) break; 
-    do { if(x <= 13) break; do { if(x <= 14) break; do { if(x <= 15) break; do { if(x <= 16) break; 
-    do { if(x <= 17) break; do { if(x <= 18) break; do { if(x <= 19) break; do { if(x <= 20) break; 
+    do { if(x <= 1)  break; do { if(x <= 2)  break; do { if(x <= 3)  break; do { if(x <= 4)  break;
+    do { if(x <= 5)  break; do { if(x <= 6)  break; do { if(x <= 7)  break; do { if(x <= 8)  break;
+    do { if(x <= 9)  break; do { if(x <= 10) break; do { if(x <= 11) break; do { if(x <= 12) break;
+    do { if(x <= 13) break; do { if(x <= 14) break; do { if(x <= 15) break; do { if(x <= 16) break;
+    do { if(x <= 17) break; do { if(x <= 18) break; do { if(x <= 19) break; do { if(x <= 20) break;
     do {
 
         CalculateGroupSum<ElementType>(idx, flatLocalIndex, fA, fB);
 
-        break;} while(true);    
+        break;} while(true);
         break;} while(true); break;} while(true); break;} while(true); break;} while(true);
         break;} while(true); break;} while(true); break;} while(true); break;} while(true);
         break;} while(true); break;} while(true); break;} while(true); break;} while(true);
@@ -134,14 +134,14 @@ runall_result test()
         kernel<ElementType>(idx, fA, fB, x);
     });
 
-    copy(fB, B);     
+    copy(fB, B);
 
 
     if(!Verify<ElementType>(B, refB1, NumGroups))
     {
         passed = false;
         cout << "Test1: failed" << endl;
-    }    
+    }
     else
     {
         cout << "Test1: passed" << endl;
@@ -161,11 +161,11 @@ runall_result test()
     {
         passed = false;
         cout << "Test2: " << "Failed!" << endl;
-    }        
+    }
     else
     {
         cout << "Test2: passed" << endl;
-    }      
+    }
 
 
     return passed;

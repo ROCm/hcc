@@ -22,7 +22,7 @@ bool test_feature()
 		accelerator device = devices[i];
 
 		printf("Device %d: %ws (%ws)\n", i, device.get_description().c_str(), device.get_device_path().c_str());
-		printf("Version %d \t Memory %u\n", device.get_version(), device.get_dedicated_memory()); 
+		printf("Version %d \t Memory %u\n", device.get_version(), device.get_dedicated_memory());
 		printf("Debug:%c \t Emulated:%c \t Display: %c\n", device.get_is_debug() ? 'Y' : 'N', device.get_is_emulated() ? 'Y' : 'N', device.get_has_display() ? 'Y' : 'N');
 
 		{
@@ -61,10 +61,10 @@ runall_result test_main()
 {
 	runall_result result;
 
-   
+
     result &= REPORT_RESULT((test_feature<int, 128>()));
 	result &= REPORT_RESULT((test_feature<float, 128>()));
-    
+
     return result;
 }
 

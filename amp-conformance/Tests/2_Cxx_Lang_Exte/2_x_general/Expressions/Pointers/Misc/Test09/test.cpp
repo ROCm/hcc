@@ -8,7 +8,7 @@
 
 #include "../../inc/common.h"
 
-class c1 
+class c1
 {
 public:
     c1(array_view<int, 1> a) __GPU : m_av(a)   {}

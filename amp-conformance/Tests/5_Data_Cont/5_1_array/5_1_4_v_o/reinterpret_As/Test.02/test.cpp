@@ -8,7 +8,7 @@
 /// <tags>P1</tags>
 /// <summary>Reinterpret an Array of float as const int (CPU)</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <amptest_main.h>
 
 using namespace Concurrency;
@@ -18,11 +18,11 @@ runall_result test_main()
 {
     std::vector<float> v(10);
     Fill(v);
-    
+
     array<float, 1> arr_float(static_cast<int>(v.size()), v.begin());
 	array_view<const float, 1> av_float(arr_float); // Created for verification
     array_view<const int, 1> av_int = arr_float.reinterpret_as<const int>();
-    
+
     return Verify<const int>(reinterpret_cast<const int *>(av_float.data()), av_int.data(), v.size()) ? runall_pass : runall_fail;
 }
 

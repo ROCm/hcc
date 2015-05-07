@@ -45,7 +45,7 @@ public:
 
     Foo3(int g) restrict(cpu) : restrict(g)
     {
-        
+
     }
 };
 
@@ -56,7 +56,7 @@ public:
 };
 
 // Main entry point
-int main(int argc, char **argv) 
+int main(int argc, char **argv)
 {
     cout << "Test: declare modifer as a class data member name" << endl;
 

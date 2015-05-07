@@ -10,12 +10,12 @@
 #pragma warning(disable : 4702)	// warning C4702: unreachable code - amp.h - This happens when optimizing with /O2
 // because the compiler is able to determine at compile-time that a runtime exception will be called before the lines with the warning.
 #include <amptest.h>
-#include <amptest_main.h> 
+#include <amptest_main.h>
 
 using namespace Concurrency;
 using namespace Concurrency::Test;
 
-runall_result test_main() 
+runall_result test_main()
 {
     array<int, 2> arr(extent<2>(10, 10));
     try

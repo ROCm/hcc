@@ -222,7 +222,7 @@ int main()
         printf("Target device does not support limited double precision\n");
         return 2;
     }
- 
+
     int passed = test_feature<int, 5>() && test_feature<float, 5>() &&
                     test_feature<5>() && test_feature<unsigned int, 5>() &&
                  test_feature<int, 1>() && test_feature<float, 1>() &&
@@ -232,8 +232,8 @@ int main()
                  test_feature<int, 3>() && test_feature<float, 3>() &&
                     test_feature<3>() && test_feature<unsigned int, 3>()
                     ? runall_pass : runall_fail;
-            
-    printf("%s\n", (passed == runall_pass) ? "Passed!" : "Failed!"); 
+
+    printf("%s\n", (passed == runall_pass) ? "Passed!" : "Failed!");
 
     return passed;
 }

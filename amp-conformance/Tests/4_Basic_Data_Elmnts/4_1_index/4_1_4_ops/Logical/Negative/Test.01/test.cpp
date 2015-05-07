@@ -90,11 +90,11 @@ bool test_device()
     return true;
 }
 
-runall_result test_main() 
-{ 
+runall_result test_main()
+{
     test();
     test_device();
-    
+
     // always fail. this test should fail to compile
     return runall_fail;
 }

@@ -33,11 +33,11 @@ int main()
     std::vector<int> v1(20);
     Fill<int>(v1);
     array_view<int, 3> av1(5, 2, 2, v1);
-    
+
     std::vector<int> v2(30);
     Fill<int>(v2);
     array_view<int, 3> av2(3, 2, 5, v2);
-    
+
     // av2 should now have the same extent and data as av1
     av2 = av1;
     return verify_extent(av2, av1.get_extent()) && VerifyDataOnCpu(av2, av1) ? runall_pass : runall_fail;

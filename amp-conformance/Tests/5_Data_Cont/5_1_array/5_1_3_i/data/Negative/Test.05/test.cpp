@@ -27,8 +27,8 @@ bool test_feature_d()
     return false;
 }
 
-int main(int argc, char **argv) 
-{ 
+int main(int argc, char **argv)
+{
     test_feature_d<4>();
 
     return runall_fail;

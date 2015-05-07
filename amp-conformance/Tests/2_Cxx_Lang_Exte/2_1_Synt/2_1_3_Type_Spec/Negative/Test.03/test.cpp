@@ -11,11 +11,11 @@
 #include "amptest/restrict.h"
 
 class testclass __CPU_ONLY_EXPLICIT {
-    
+
 };
 
 // Main entry point
-int main(int argc, char **argv) 
+int main(int argc, char **argv)
 {
     return 1;
 }

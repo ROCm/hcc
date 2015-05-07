@@ -34,6 +34,6 @@ int main()
 {
     FooClass<TEMPLATE_PARAMETER> f;
     return f.func(PARAMETER_VALUES) == RETURN_VALUE ? 0 : 1;
-    
+
 }
 

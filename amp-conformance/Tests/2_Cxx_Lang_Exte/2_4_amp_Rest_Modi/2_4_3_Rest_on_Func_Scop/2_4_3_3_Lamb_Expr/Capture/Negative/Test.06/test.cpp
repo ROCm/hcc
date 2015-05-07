@@ -14,12 +14,12 @@ int test() __GPU_ONLY
     return 1;
 }
 
-int main() 
+int main()
 {
     int (*pTest)() __GPU_ONLY = test;
-    
+
     auto l = [pTest] () {};
-        
+
     return runall_pass;
 }
 

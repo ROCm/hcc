@@ -20,7 +20,7 @@
 /// <tags>P1</tags>
 /// <summary>Copy from one section of an Array to Another</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 
 using namespace Concurrency;
@@ -31,19 +31,19 @@ int main()
 {
     accelerator device = require_device(Device::ALL_DEVICES);
     accelerator_view acc_view = device.get_default_view();
-    
+
     extent<2> ex(10, 20);
     std::vector<long> v(ex.size());
     Fill<long>(v);
 
     array<long, 2> arr(ex, v.begin(), acc_view);
-    
+
     // now create two sections
     array_view<long, 2> src = arr.section(index<2>(0, 0), extent<2>(10, 10));
     array_view<long, 2> dest = arr.section(index<2>(0, 10), extent<2>(10, 10));
-    
+
     src.copy_to(dest);
-    
+
     return VerifyDataOnCpu(dest, src) ? runall_pass : runall_fail;
 }
 

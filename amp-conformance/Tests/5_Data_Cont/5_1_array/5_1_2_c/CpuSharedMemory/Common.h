@@ -12,7 +12,7 @@
 namespace Concurrency {
 namespace Test {
 
-template<typename _type, int _rank, template<typename, int> class _amp_container_type> 
+template<typename _type, int _rank, template<typename, int> class _amp_container_type>
 bool ReadAndVerify(_amp_container_type<_type, _rank>& amp_container, _type value)
 {
 	index_iterator<_rank> idx_iter(amp_container.get_extent());
@@ -30,7 +30,7 @@ bool ReadAndVerify(_amp_container_type<_type, _rank>& amp_container, _type value
 	return true;
 }
 
-template<typename _type, int _rank, template<typename, int> class _amp_container_type> 
+template<typename _type, int _rank, template<typename, int> class _amp_container_type>
 void Write(_amp_container_type<_type, _rank>& amp_container, _type value)
 {
 	index_iterator<_rank> idx_iter(amp_container.get_extent());
@@ -41,7 +41,7 @@ void Write(_amp_container_type<_type, _rank>& amp_container, _type value)
 	}
 }
 
-template<typename _type, int _rank, template<typename, int> class _amp_container_type> 
+template<typename _type, int _rank, template<typename, int> class _amp_container_type>
 void Increment(_amp_container_type<_type, _rank>& amp_container, _type value)
 {
 	index_iterator<_rank> idx_iter(amp_container.get_extent());
@@ -52,28 +52,28 @@ void Increment(_amp_container_type<_type, _rank>& amp_container, _type value)
 	}
 }
 
-template<typename _type, int _rank> 
+template<typename _type, int _rank>
 bool VerifyCpuAccessType(concurrency::array<_type, _rank>& arr, concurrency::access_type exp_access_type)
 {
 	if(arr.get_cpu_access_type() != exp_access_type)
 	{
 		Log(LogType::Error) << "Wrong cpu_access_type." << std::endl;
 		Log(LogType::Error) << "Expect: " << exp_access_type << " Actual: " << arr.get_cpu_access_type() << std::endl;
-        // TODO: Current implementation is not accompliant with this standard 
+        // TODO: Current implementation is not accompliant with this standard
         //return false;
 	}
 	
 	if(arr.get_cpu_access_type() != access_type_none && arr.data() == NULL)
 	{
 		Log(LogType::Error) << "Array with CPU access type read or write or read-and-write has NULL arr.data()" << std::endl;
-        // TODO: Current implementation is not accompliant with this standard 
+        // TODO: Current implementation is not accompliant with this standard
         //return false;
 	}
 	
 	if(arr.get_cpu_access_type() == access_type_none && arr.data() != NULL)
 	{
 		Log(LogType::Error) << "Array with CPU access type none has non-NULL arr.data()" << std::endl;
-        // TODO: Current implementation is not accompliant with this standard 
+        // TODO: Current implementation is not accompliant with this standard
         //return false;
 	}
 	

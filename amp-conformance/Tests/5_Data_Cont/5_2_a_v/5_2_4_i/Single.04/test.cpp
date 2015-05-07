@@ -29,16 +29,16 @@ using namespace Concurrency::Test;
 int main()
 {
     ArrayViewTest<const int, 3> original(extent<3>(2, 3, 4));
-    
+
     // create a projection
     ArrayViewTest<const int, 2, 3> projection = original.projection(original.view()[1], 1);
-    
+
     // set some data in the original
     original.set_value(index<3>(1, 1, 2), 13);
-    
+
     // set some data in the projections
     projection.set_value(index<2>(1, 1), 11);
-    
+
     // verify each data point through the array_view interface
     return
         original.view()(1, 1, 1) == 11 &&

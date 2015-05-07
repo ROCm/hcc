@@ -19,7 +19,7 @@
 //
 //
 // Helper functions to compare data in a vector to data in an array_view
-// These are needed because the .data() member which serializes data out of 
+// These are needed because the .data() member which serializes data out of
 // on array is not available on a 2D and 3D array_view
 
 #pragma once

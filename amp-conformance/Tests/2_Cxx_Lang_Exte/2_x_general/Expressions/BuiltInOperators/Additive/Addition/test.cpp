@@ -54,7 +54,7 @@ int main(int argc, char **argv)
     vector<float> A(size);
     vector<float> B(size);
 
-    // Initialize input 
+    // Initialize input
     srand(1997);
     InitializeArray(A, size);
     InitializeArray(B, size);
@@ -66,7 +66,7 @@ int main(int argc, char **argv)
     // setup input arrays
     array<float, 2> aA(e, A.begin(), A.end(), rv), aB(e, B.begin(), B.end(), rv);
 
-    // setup output 
+    // setup output
     array<float, 2> aC(e, rv);
     vector<float> C(size);
 
@@ -74,7 +74,7 @@ int main(int argc, char **argv)
         kernel(idx, aC, aA, aB);
     });
 
-    C = aC;    
+    C = aC;
 
     bool passed = true;
     for (int i=0; i<M && passed; ++i)
@@ -92,7 +92,7 @@ int main(int argc, char **argv)
                 break;
             }
         }
-    }    
+    }
 
     printf("%s: %s\n",  argv[0], passed ? "Passed!" : "Failed!");
 

@@ -39,6 +39,6 @@ runall_result test_main()
     OverlapTest<int, 1> t(extent<1>(625)); // 5x5x5x5
     ArrayViewTest<int, 2, 1> remote = t.original().section(extent<1>(4)).view_as(extent<2>(2, 2));
     ArrayViewTest<int, 4, 1> local = t.original().view_as(make_extent(3, 3, 3, 3));
-    
+
     return t.positive_test(local, remote) ? t.pass() : t.fail();
-} 
+}

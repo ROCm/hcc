@@ -16,7 +16,7 @@ bool test_size() restrict(amp,cpu)
 	const int _rank = 5;
     int data[] = {-1, 2, 3, 4, 5};
 
-    extent<_rank> e1(data); 
+    extent<_rank> e1(data);
     extent<_rank> g1(e1);
 
 	int correct_size = 1;

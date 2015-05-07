@@ -58,7 +58,7 @@ bool test(accelerator_view &rv)
 
         c &p1 = o1, &p2 = o1;
 
-        if (!Equal(p1.i, (int)one) || !Equal(p1.ui, (unsigned __int32)one) || !Equal(p1.f, (float)one) || !Equal(p1.d, (double)1) 
+        if (!Equal(p1.i, (int)one) || !Equal(p1.ui, (unsigned __int32)one) || !Equal(p1.f, (float)one) || !Equal(p1.d, (double)1)
             || !Equal(p2.i, (int)one) || !Equal(p2.ui, (unsigned __int32)one) || !Equal(p2.f, (float)one) || !Equal(p2.d, (double)1))
             aA[idx] = 1;
 

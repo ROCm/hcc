@@ -7,7 +7,7 @@
 /// <summary>test base class with illegal member</summary>
 //#Expects: Error: error C3581
 
-#include <amptest.h> 
+#include <amptest.h>
 
 struct A
 {
@@ -27,8 +27,8 @@ void foo() __GPU
     b.m1 = 0.1;
 }
 
-int main(int argc, char **argv) 
-{ 
+int main(int argc, char **argv)
+{
     foo();
     return 1;
 }
