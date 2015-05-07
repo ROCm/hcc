@@ -1428,6 +1428,15 @@ const Concurrency::extent<N>& check(const Concurrency::extent<N>& ext)
     return ext;
 }
 
+const accelerator_view& _array_staging_av(const accelerator_view& a,
+                                          const accelerator_view& b)
+{
+    std::wstring path = a.get_accelerator().get_device_path().substr(0, 3);
+    if (path == L"gpu")
+        return a;
+    return b;
+}
+
 template <typename T, int N = 1>
 class array {
   static_assert(!std::is_const<T>::value, "array<const T> is not supported");
@@ -1449,7 +1458,8 @@ public:
 #ifdef __GPU__
       : m_device(ext.size(), true), extent(ext), av(av), asv(av) { initialize(); }
 #else
-      : m_device(av.pAloc, check(ext).size(), true), extent(ext), av(av), asv(associated_av) { initialize(); }
+      : m_device(av.pAloc, check(ext).size(), true), extent(ext), av(av),
+          asv(_array_staging_av(av, associated_av)) { initialize(); }
 #endif
   array(int e0, accelerator_view av, accelerator_view associated_av)
       : array(Concurrency::extent<N>(e0), av, associated_av) {}
