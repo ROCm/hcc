@@ -25,8 +25,8 @@ namespace Concurrency
 			ss << std::boolalpha;	// Make bool values print out as true/false rather than 1/0
 
 			ss << "Element at index " << idx << " is incorrect."
-				<< " Expected: " << expected <<","
-				<< " Actual: " << actual
+				<< " Expected: " << format_as_code(expected) << " (" << format_as_hex(expected) << "),"
+				<< " Actual: " << format_as_code(actual) << " (" << format_as_hex(actual) << ")"
 				;
 			return ss.str();
 		}
@@ -152,7 +152,7 @@ namespace Concurrency
 
 		#pragma region equal_to
 
-		/// Generic predicate for determining equality of a value 
+		/// Generic predicate for determining equality of a value
 		template <typename T, typename Texpected>
 		struct equal_to_func {
 		private:
@@ -180,7 +180,7 @@ namespace Concurrency
 
 		template <typename Tos, typename T, typename Texpected>
         inline Tos& operator<<(Tos& os, const equal_to_func<T, Texpected>& func) {
-			os << "equal_to<" << get_type_name<T>() << ">(" << func.get_expected() << ")";
+			os << "equal_to<" << get_type_name<T>() << ">(" << format_as_code(func.get_expected()) << ")";
 			return os;
 		}
 

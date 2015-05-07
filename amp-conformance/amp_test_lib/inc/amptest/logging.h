@@ -64,7 +64,7 @@ namespace Concurrency
 
 		///<summary>Logs the "logtype" and returns an wostream for further logging</summary>
         inline std::ostream& AMP_TEST_API WLog(LogType type = LogType::Info, bool print_line_prefix = true) { return Log(type, print_line_prefix); }
-         
+
 		void AMP_TEST_API Log_writeline(LogType type, const char *msg, ...);
         void AMP_TEST_API Log_writeline(const char *msg, ...);
 
@@ -73,7 +73,7 @@ namespace Concurrency
 
         void AMP_TEST_API SetVerbosity(LogType level);
         LogType AMP_TEST_API GetVerbosity();
-        
+
 		/// Reports a pass/fail result.
 		inline bool report_result(const std::string& description, const bool& passed) {
 			Log(passed ? LogType::Info : LogType::Error)
@@ -105,16 +105,21 @@ namespace Concurrency
 		std::string AMP_TEST_API get_type_name(const std::type_info& ti);
 
 		/// Safely gets the type of an expression.
-		/// This was created as a result of trying to write 
+		/// This was created as a result of trying to write
 		template <typename T>
 		inline std::string get_type_name(const T& val) {
 			// get rid of warning: 4100 Unreferenced formal parameter
-			(void)(val);
+#ifdef UNREFERENCED_PARAMETER	// defined in ntdef.h
+			UNREFERENCED_PARAMETER(val);
+#else	// This happens if logging.h is included but not ntdef.h
+			(val);
+#endif
+
 			return get_type_name(typeid(val));
 		}
 
 		/// Safely gets the type of an expression.
-		/// This was created as a result of trying to write 
+		/// This was created as a result of trying to write
 		template <typename T>
 		inline std::string get_type_name() {
 			return get_type_name(typeid(T));
@@ -164,6 +169,18 @@ namespace Concurrency
 				stream_value_as_hex<T>(dynamic_cast<std::ostream&>(s), v);
 			}
 		}
+
+		template <typename T>
+		inline T format_as_code(const T& v) {
+			return v;
+		}
+
+		template <typename T>
+		inline T format_as_hex(const T& v) {
+			return v;
+		}
+
+		#pragma endregion
 
 		namespace details
 		{

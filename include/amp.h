@@ -93,6 +93,16 @@ public:
   : runtime_exception(E_FAIL) {}
 };
 
+class accelerator_view_removed : public runtime_exception
+{
+public:
+  explicit accelerator_view_removed (const char * message, HRESULT view_removed_reason) throw()
+  : runtime_exception(message, view_removed_reason) {}
+  accelerator_view_removed(HRESULT view_removed_reason) throw()
+  : runtime_exception(view_removed_reason) {}
+  HRESULT get_view_removed_reason() const throw() { return get_error_code(); }
+};
+
 /*
   This is not part of C++AMP standard, but borrowed from Parallel Patterns
   Library.

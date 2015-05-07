@@ -4,9 +4,9 @@
 // THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 // See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
 // DMF.cpp
-  // 
+  //
   // This file contains the implementation of the AMPTest Device Management Framework (DMF)
-  // 
+  //
 #include <amptest/context.h>
 #include <amptest/device.h>
 #include <amptest/logging.h>
@@ -498,15 +498,14 @@ namespace Concurrency {
 
 					if(dpath == accelerator::cpu_accelerator) {
 						bit_flags |= device_bit_flags::IS_CPU;
-                    /*
+#ifdef AMP_TEST_PLATFORM_MSVC
 					} else if(dpath == accelerator::direct3d_warp) {
 						bit_flags |= device_bit_flags::IS_WARP;
 					} else if(dpath == accelerator::direct3d_ref) {
 						bit_flags |= device_bit_flags::IS_REF;
-                    */
+#endif
 					} else {
 						WLog(LogType::Error) << "Unknown accelerator '" << ddesc << "' (" << dpath << ")" << std::endl;
-						throw amptest_cascade_failure("compute_device_bit_flags could not determine the type of accelerator.");
 					}
 				}
 
@@ -659,8 +658,6 @@ namespace Concurrency {
 
 			inline bool is_device_known_IHV_failure(device_bit_flags device_bits) {
 				return std::any_of(dmf_known_IHV_failures.begin(), dmf_known_IHV_failures.end(), [device_bits](known_IHV_failure failure) {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wlogical-op-parentheses"
 					// Check the IHV first
 					if(!(  has_bits_set(failure, known_IHV_failure::IHV_ATI)    && has_bits_set(device_bits, device_bit_flags::IHV_ATI)
 						|| has_bits_set(failure, known_IHV_failure::IHV_NVIDIA) && has_bits_set(device_bits, device_bit_flags::IHV_NVIDIA)
@@ -669,7 +666,6 @@ namespace Concurrency {
 						// then the device isn't the same IHV as this failure
 						return false;
 					}
-#pragma clang diagnostic pop
 
 					// Check against the test context
 					bool matches_context = true;
@@ -751,15 +747,13 @@ namespace Concurrency {
 				} else if(dpath1 == dpath2) {
 					return true;
 				} else if(dev1.second.get_is_emulated()) {
-					// Compare emulated devices against eachother: WARP, REF, CPU
-					return false;
-						// If left is WARP or right is CPU, then they're in the right order
-						// Since there are only three possibilities, this is all that needs to be checked.
-                        /*
-						dpath1 == accelerator::direct3d_warp
-						|| dpath2 == accelerator::cpu_accelerator
+					// Compare emulated devices against each other
+					return
+#ifdef AMP_TEST_PLATFORM_MSVC
+						dpath1 == accelerator::direct3d_warp ||
+#endif
+						dpath2 == accelerator::cpu_accelerator
 						;
-                        */
 				} else {
 					// Compare GPUs: double precision support, is used for display
 
@@ -818,12 +812,6 @@ namespace Concurrency {
 					});
 				}
 
-                //TODO: take this out once accelerator is working fully.
-                //Assume default accelerator is a real gpu without double, and there are no other accelerators
-                //if (!(required_flags & ~(NOT_EMULATED | D3D11_GPU | NO_DOUBLE))) {
-                    return accelerator(accelerator::default_accelerator);
-                //}
-
 				vector<device_info> avail_infos = get_available_device_infos(required_flags);
 
 				auto newLast = avail_infos.end();
@@ -865,11 +853,10 @@ namespace Concurrency {
 				accelerator device = avail_infos[0].second;
 
 				// Log what we are returning
-                Log_writeline(LogType::Info, "DMF:    Returning %s (%s) accelerator: %ws"
-					, retrieved_device_type_to_string(device).c_str()
-					, retrieved_device_caps_to_string(device).c_str()
-					, device.get_description().c_str()
-					);
+				auto device_type = retrieved_device_type_to_string(device);
+				auto device_caps = retrieved_device_caps_to_string(device);
+				Log() << "DMF:    Returning " << device_type << " (" << device_caps << ")"
+					<< " accelerator: " << device.get_description() << " (" << device.get_device_path() << ")" << std::endl;
 
 				// Handle IHV failures
 				if(dmf_known_IHV_failure_behavior != known_IHV_failure_behavior::EXCLUDE_DEVICE
@@ -1212,10 +1199,10 @@ namespace Concurrency {
 					dev_type_match = false
 						|| (has_bits_set(required_flags, device_flags::EMULATED) && device.get_is_emulated())
 						|| (has_bits_set(required_flags, device_flags::NOT_EMULATED) && !device.get_is_emulated())
-                        /*
+#ifdef AMP_TEST_PLATFORM_MSVC
 						|| (has_bits_set(required_flags, device_flags::D3D11_REF) && dpath == accelerator::direct3d_ref)
 						|| (has_bits_set(required_flags, device_flags::D3D11_WARP) && dpath == accelerator::direct3d_warp)
-                        */
+#endif
 						|| (!device.get_is_emulated() && (
 							has_bits_set(required_flags, device_flags::D3D11_GPU)
 							|| (has_bits_set(required_flags, device_flags::D3D11_ATI) && (ddesc.find(L"ATI") != wstring::npos || ddesc.find(L"AMD") != wstring::npos))

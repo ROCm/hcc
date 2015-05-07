@@ -10,7 +10,7 @@
 **********************************************************************************/
 
 // Attach the dpctest.lib
-#include <amptest/force_link.h>
+#include <amptest/platform.h>
 
 #include <random>
 #include <vector>
@@ -21,8 +21,8 @@ namespace Concurrency
     {
 
         // Details namespace serves as private namespace
-        namespace details 
-        {            
+        namespace details
+        {
 			template<typename T> inline T get_default_fill_min() { return (std::is_unsigned<T>::value) ? 0 : (-1 << 15); }
 			template<typename T> inline T get_default_fill_max() { return  1 << 15; }
 
@@ -57,7 +57,7 @@ namespace Concurrency
 
 				std::mt19937 mersenne_twister_engine;
                 std::uniform_real_distribution<T> uni(min, max);
-            
+
                 for(size_t i = 0; i < size; ++i)
                 {
                     arr[i] = uni(mersenne_twister_engine);
@@ -71,7 +71,7 @@ namespace Concurrency
 
 				std::mt19937 mersenne_twister_engine;
                 std::uniform_int_distribution<T> uni(min, max);
-            
+
                 for(size_t i = 0; i < size; ++i)
                 {
                     arr[i] = uni(mersenne_twister_engine);
@@ -92,7 +92,7 @@ namespace Concurrency
 
             details::FillIntegral<T>(unpacked, unpackedSize, min, max);
 
-            size_t p = 0, up = 0; 
+            size_t p = 0, up = 0;
             while(up < unpackedSize)
             {
                  int packedVal = 0;
@@ -117,7 +117,7 @@ namespace Concurrency
             const int max = (1 << bitsPerT) - 1;
             const unsigned int unpackedSize = static_cast<int>(packedsize) * numPacked;
 
-            size_t p = 0, up = 0; 
+            size_t p = 0, up = 0;
             while(up < unpackedSize)
             {
                 int packedVal = packed[p++];
@@ -126,12 +126,12 @@ namespace Concurrency
                     T next = (packedVal & max);
                     unpacked[up+j] = next;
                     packedVal >>= bitsPerT;
-                }        
+                }
                 up+= numPacked;
             }
         }
-        
-        
+
+
         // Fill functions for c-style arrays
         template<typename T>
         inline void Fill(T *arr, size_t size, T min, T max)

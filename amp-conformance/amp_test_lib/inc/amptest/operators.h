@@ -33,7 +33,7 @@ namespace Concurrency
             os << ")";
             return os;
         };
-        
+
         ///<summary>Formats an extent for display</summary>
         template<int _Rank>
         std::ostream& operator<<(std::ostream &os, const concurrency::extent<_Rank> &extent)
@@ -50,7 +50,7 @@ namespace Concurrency
             os << ")";
             return os;
         };
-        
+
     }
 }
 

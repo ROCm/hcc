@@ -6,14 +6,14 @@
 #pragma once
 /**********************************************************************************
 * amptest\amp.math.h
-* 
+*
 * type-safe math functions.
 * On the cpu, these functions prefer those in the std namespace.
 * On the gpu, these functions default to the fast_math functions
 * and only use the precise_math functions when the inputs are of type double.
 **********************************************************************************/
 
-#include <amptest/force_link.h>
+#include <amptest/platform.h>
 #include <amp_math.h>
 #include <limits>
 
@@ -97,13 +97,15 @@ namespace Concurrency
             };
 
 
-            inline bool isnan(float v) restrict(cpu,amp) {
+            template<typename T>
+            inline bool isnan(T v) restrict(cpu) {
+                return std::isnan(v);
+            }
+            inline bool isnan(float v) restrict(amp) {
                 return fast_math::isnan(v) != 0;
             }
-            inline bool isnan(double v) restrict(cpu,amp) {
-                /* do not support precise_math*/
-                //return precise_math::isnan(v) != 0;
-                return fast_math::isnan(v) != 0;
+            inline bool isnan(double v) restrict(amp) {
+                return precise_math::isnan(v) != 0;
             }
 
 
@@ -116,9 +118,7 @@ namespace Concurrency
                 return fast_math::fabs(v);
             }
             inline double fabs(double v) restrict(amp) {
-                /* do not support precise_math*/
-                //return precise_math::fabs(v);
-                return fast_math::fabs(v);
+                return precise_math::fabs(v);
             }
 
 
@@ -184,7 +184,7 @@ namespace Concurrency
 
                 template <typename T>
                 inline typename ulp_value<T>::bits_t get_ulp_diff_impl(const T& v1, const T& v2) restrict(cpu) {
-                
+
                     typedef typename ulp_value<T>::bits_t bits_t;
 
                     const static bits_t sign_bit_mask = static_cast<bits_t>(1) << (8 * sizeof(T) - 1);
@@ -219,7 +219,7 @@ namespace Concurrency
 
             // Gets the ULP difference between two decimal numbers.
             // See http://en.wikipedia.org/wiki/Unit_in_the_last_place
-            // These two functions is to enforce using 
+            // These two functions is to enforce using
             // get_ulp_diff_impl only with float & double types
             inline ulp_value<float>::bits_t get_ulp_diff(float v1, float v2) {
                 return details::get_ulp_diff_impl<float>(v1, v2);

@@ -3,6 +3,7 @@
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
 // THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 // See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
+#pragma once
 
 #include <amptest/runall.h>
 
@@ -45,6 +46,6 @@ std::string runall_result::get_name() const {
 
 void runall_result::verify_exit_code() restrict(cpu) {
 	if(!is_runall_exit_code(_exit_code)) {
-		throw std::exception();
+		throw std::invalid_argument("Invalid exit_code passed to runall_result(int) constructor.");
 	}
 }
