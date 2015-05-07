@@ -5,10 +5,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef __AMP_CPU__
-#include <serialize_cpu.h>
-#else
-
 #pragma once
 
 #include <amp_runtime.h>
@@ -24,17 +20,16 @@ public:
   void AppendPtr(size_t sz, const void *s) {
     CLAMP::PushArgPtr(k_, current_idx_++, sz, s);
   }
-  void* getKernel() { 
-    return k_; 
+  void* getKernel() {
+    return k_;
   }
-  int getAndIncCurrentIndex() { 
-    int ret = current_idx_; 
-    current_idx_++; 
-    return ret; 
+  int getAndIncCurrentIndex() {
+    int ret = current_idx_;
+    current_idx_++;
+    return ret;
   }
 private:
   kernel k_;
   int current_idx_;
 };
 }
-#endif

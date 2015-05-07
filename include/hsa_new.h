@@ -20,11 +20,11 @@ if (status != HSA_STATUS_SUCCESS) { \
    printf("%s succeeded.\n", #msg); \
 }
 
-/// Helper rountines declaration - These pass the data structure used by 
-/// new/delet into HSA side. Function body is implemented in 
+/// Helper rountines declaration - These pass the data structure used by
+/// new/delet into HSA side. Function body is implemented in
 /// lib/new_delete.hsail
 ///
-/// Note that these routines needs called when you enter the amp restriced 
+/// Note that these routines needs called when you enter the amp restriced
 /// lambda because of the HSA's alloc qualifier issue
 
 void putXmallocFlag(hsa_signal_t handle) restrict(amp);
@@ -68,7 +68,7 @@ public:
   ~NewInit ();
 
   int get_Xmalloc_count() { return Xmalloc_count; }
-  int get_malloc_count() { return malloc_count; }  
+  int get_malloc_count() { return malloc_count; }
   int get_Xfree_count() { return Xfree_count; }
 
 private:

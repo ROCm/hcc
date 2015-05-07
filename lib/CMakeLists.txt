@@ -2,13 +2,14 @@
 # C++AMP runtime (mcwamp)
 ####################
 add_mcwamp_library(mcwamp mcwamp.cpp)
+add_mcwamp_library(mcwamp_atomic mcwamp_atomic.cpp)
 
 ####################
 # C++AMP config (clamp-config)
 ####################
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 add_mcwamp_executable(clamp-config mcwamp_main.cpp)
-install(TARGETS mcwamp clamp-config
+install(TARGETS mcwamp clamp-config mcwamp_atomic
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
@@ -62,8 +63,7 @@ install(FILES new_delete.hsail DESTINATION lib)
 ####################
 # add subdirectories
 ####################
-add_subdirectory(opencl_12)
-add_subdirectory(opencl_11)
+add_subdirectory(opencl)
 add_subdirectory(hsa)
 add_subdirectory(cpu)
 

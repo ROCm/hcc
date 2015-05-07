@@ -19,52 +19,69 @@ extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v) {}
 
 namespace Concurrency {
 
-struct rw_info
+struct mm_info
 {
-  int count;
-  bool used;
+    std::shared_ptr<void> data;
+    int count;
+    int ref;
 };
-class CPUAMPAllocator : public AMPAllocator
-{ 
-public:
-  CPUAMPAllocator() {}
-  void init(void *data, int count) {
-  }
-  void append(void *kernel, int idx, void *data) {
-    rwq[data].used = true;
-  }
-  void write() {
-    //std::cerr << "HSAAMPAllocator::write()" << std::endl;
-    for (auto& it : rwq) {
-      rw_info& rw = it.second;
-      if (rw.used) {
-      }
-    }
-  }
-  void read() {
-    for (auto& it : rwq) {
-      rw_info& rw = it.second;
-      if (rw.used) {
-        if (it.first != mem_info[it.first]) {
-        }
-        rw.used = false;
-      }
-    }
-  }
-  void free(void *data) {
-    auto iter = mem_info.find(data);
-    if (iter != mem_info.end()) {
-      free(iter->second);
-      mem_info.erase(iter);
-    }
-  }
-  ~CPUAMPAllocator() {
-    mem_info.clear();
-    rwq.clear();
-  }
 
-  std::map<void *, void*> mem_info;
-  std::map<void *, rw_info> rwq;
+class CPUAMPAllocator : public AMPAllocator
+{
+    void regist(int count, void *data, bool hasSrc) override {
+        if (hasSrc) {
+            std::shared_ptr<void> p((void*)aligned_alloc(0x1000, count),
+                                    [](void *ptr) { ::operator delete(ptr); });
+            mem_info[data] = {p, count, 1};
+        }
+    }
+    void PushArg(void *kernel, int idx, std::shared_ptr<void>& data) override {
+        auto it = mem_info.find(data.get());
+        if (it != std::end(mem_info)) {
+            mm_info &rw = it->second;
+            if (rw.count != 0) {
+                auto iter = mem_info.find(rw.data.get());
+                if (iter == std::end(mem_info))
+                    mem_info[rw.data.get()] = {data, 0, 1};
+                else
+                    ++iter->second.ref;
+                data = rw.data;
+            } else {
+                data = mem_info[rw.data.get()].data;
+                if (!--rw.ref)
+                    mem_info.erase(it);
+            }
+        }
+    }
+    void amp_write(void *data) override {
+        auto it = mem_info.find(data);
+        if (it != std::end(mem_info)) {
+            mm_info &rw = it->second;
+            memmove(rw.data.get(), data, rw.count);
+        }
+    }
+    void amp_read(void *data) override {
+        auto it = mem_info.find(data);
+        if (it != std::end(mem_info)) {
+            mm_info &rw = it->second;
+            memmove(data, rw.data.get(), rw.count);
+        }
+    }
+    void amp_copy(void *dst, void *src, int n) override {
+        auto it = mem_info.find(src);
+        if (it != std::end(mem_info)) {
+            mm_info &rw = it->second;
+            src = rw.data.get();
+        }
+        memmove(dst, src, n);
+    }
+    void unregist(void *data) override {
+        auto it = mem_info.find(data);
+        if (it != std::end(mem_info))
+            mem_info.erase(it);
+    }
+
+    std::map<void *, mm_info> mem_info;
 };
 
 static CPUAMPAllocator amp;
