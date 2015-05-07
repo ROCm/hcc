@@ -8,14 +8,12 @@
 
 #include "../../inc/common.h"
 
-#define __int32 int
-
 class c
 {
 public:
-    __int32 i;
+    int32_t i;
     double d;
-    unsigned __int32 ui;
+    uint32_t ui;
     float f;
 };
 
@@ -57,8 +55,8 @@ bool test(accelerator_view &rv)
     {
         c &p1 = aGc[idx], &p2 = aGc[idx];
 
-        if (!Equal(p1.i, (int)1) || !Equal(p1.ui, (unsigned __int32)1) || !Equal(p1.f, (float)1) || !Equal(p1.d, (double)1)
-            || !Equal(p2.i, (int)1) || !Equal(p2.ui, (unsigned __int32)1) || !Equal(p2.f, (float)1) || !Equal(p2.d, (double)1))
+        if (!Equal(p1.i, (int)1) || !Equal(p1.ui, (uint32_t)1) || !Equal(p1.f, (float)1) || !Equal(p1.d, (double)1)
+            || !Equal(p2.i, (int)1) || !Equal(p2.ui, (uint32_t)1) || !Equal(p2.f, (float)1) || !Equal(p2.d, (double)1))
             aA[idx] = 1;
 
         p1.i = 2;
@@ -66,7 +64,7 @@ bool test(accelerator_view &rv)
         p1.ui = 2;
         p1.f = 2;
 
-        if (!Equal(p2.i, (int)2) || !Equal(p2.ui, (unsigned __int32)2) || !Equal(p2.f, (float)2) || !Equal(p2.d, (double)2))
+        if (!Equal(p2.i, (int)2) || !Equal(p2.ui, (uint32_t)2) || !Equal(p2.f, (float)2) || !Equal(p2.d, (double)2))
             aA[idx] = 1;
 
         u &p3 = aGu[idx], &p4 = aGu[idx];
@@ -76,7 +74,7 @@ bool test(accelerator_view &rv)
         if (!Equal(p4.d, (double)2) )
             aA[idx] = 1;
 
-        __int32 &pi1 = aGi[idx], &pi2 = aGi[idx];
+        int32_t &pi1 = aGi[idx], &pi2 = aGi[idx];
         pi1 = 2;
         if (pi2 != 2)
             aA[idx] = 1;

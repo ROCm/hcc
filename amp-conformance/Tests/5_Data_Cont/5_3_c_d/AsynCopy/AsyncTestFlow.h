@@ -8,7 +8,6 @@
 #include "amptest_main.h"
 #include <typeinfo>
 
-using namespace Concurrency::Test;
 //
 //**************************************** BEGIN: Copy between data containers *************************************
 //
@@ -16,6 +15,8 @@ using namespace Concurrency::Test;
 template<typename _type, int _rank>
 bool AsyncCopyAndVerifyArrayToArray(concurrency::accelerator& srcDevice, concurrency::accelerator& destDevice)
 {
+	using namespace concurrency::Test;
+
 	LogStream() << std::endl << std::endl;
 	Log() << "Invoking AsyncCopyAndVerifyArrayToArray(...)" << std::endl;
 	Log() << "Source device: " << srcDevice.get_device_path() << " Destination device: " << destDevice.get_device_path() << std::endl;
@@ -64,6 +65,8 @@ bool AsyncCopyAndVerifyArrayToArray(concurrency::accelerator& srcDevice, concurr
 template<typename _type, int _rank>
 bool AsyncCopyAndVerifyArrayToArrayView(concurrency::accelerator& srcDevice, concurrency::accelerator& destDevice)
 {
+	using namespace concurrency::Test;
+
 	LogStream() << std::endl << std::endl;
 	Log() << "Invoking AsyncCopyAndVerifyArrayToArrayView(...)" << std::endl;
 	Log() << "Source device: " << srcDevice.get_device_path() << " Destination device: " << destDevice.get_device_path() << std::endl;
@@ -116,6 +119,8 @@ bool AsyncCopyAndVerifyArrayToArrayView(concurrency::accelerator& srcDevice, con
 template<typename _type, int _rank>
 bool AsyncCopyAndVerifyArrayViewToArray(concurrency::accelerator& srcDevice, concurrency::accelerator& destDevice)
 {
+	using namespace concurrency::Test;
+
 	LogStream() << std::endl << std::endl;
 	Log() << "Invoking AsyncCopyAndVerifyArrayViewToArray(...)" << std::endl;
 	Log() << "Source device: " << srcDevice.get_device_path() << " Destination device: " << destDevice.get_device_path() << std::endl;
@@ -166,6 +171,8 @@ bool AsyncCopyAndVerifyArrayViewToArray(concurrency::accelerator& srcDevice, con
 template<typename _type, int _rank>
 bool AsyncCopyAndVerifyArrayViewConstToArray(concurrency::accelerator& srcDevice, concurrency::accelerator& destDevice)
 {
+	using namespace concurrency::Test;
+
 	LogStream() << std::endl << std::endl;
 	Log() << "Invoking AsyncCopyAndVerifyArrayViewConstToArray(...)" << std::endl;
 	Log() << "Source device: " << srcDevice.get_device_path() << " Destination device: " << destDevice.get_device_path() << std::endl;
@@ -216,6 +223,8 @@ bool AsyncCopyAndVerifyArrayViewConstToArray(concurrency::accelerator& srcDevice
 template<typename _type, int _rank>
 bool AsyncCopyAndVerifyArrayViewToArrayView(concurrency::accelerator& srcDevice, concurrency::accelerator& destDevice)
 {
+	using namespace concurrency::Test;
+
 	LogStream() << std::endl << std::endl;
 	Log() << "Invoking AsyncCopyAndVerifyArrayViewToArrayView(...)" << std::endl;
 	Log() << "Source device: " << srcDevice.get_device_path() << " Destination device: " << destDevice.get_device_path() << std::endl;
@@ -269,6 +278,8 @@ bool AsyncCopyAndVerifyArrayViewToArrayView(concurrency::accelerator& srcDevice,
 template<typename _type, int _rank>
 bool AsyncCopyAndVerifyArrayToIter(concurrency::accelerator& srcDevice)
 {
+	using namespace concurrency::Test;
+
 	LogStream() << std::endl;
 	Log() << "Invoking AsyncCopyAndVerifyArrayToIter(...)" << std::endl;
 	Log() << "Source device: " << srcDevice.get_device_path() << std::endl;
@@ -318,6 +329,8 @@ bool AsyncCopyAndVerifyArrayToIter(concurrency::accelerator& srcDevice)
 template<typename _type, int _rank>
 bool AsyncCopyAndVerifyArrayViewConstToArrayView(concurrency::accelerator& srcDevice, concurrency::accelerator& destDevice)
 {
+	using namespace concurrency::Test;
+
 	LogStream() << std::endl;
 	Log() << "Invoking AsyncCopyAndVerifyArrayViewConstToArrayView(...)" << std::endl;
 	Log() << "Source device: " << srcDevice.get_device_path() << " Destination device: " << destDevice.get_device_path() << std::endl;
@@ -371,6 +384,8 @@ bool AsyncCopyAndVerifyArrayViewConstToArrayView(concurrency::accelerator& srcDe
 template<typename _type, int _rank>
 bool AsyncCopyAndVerifyIterToArray(concurrency::accelerator& destDevice)
 {
+	using namespace concurrency::Test;
+
 	LogStream() << std::endl << std::endl;
 	Log() << "Invoking AsyncCopyAndVerifyIterToArray(...)" << std::endl;
 	Log() << " Destination device: " << destDevice.get_device_path() << std::endl;
@@ -419,6 +434,8 @@ bool AsyncCopyAndVerifyIterToArray(concurrency::accelerator& destDevice)
 template<typename _type, int _rank>
 bool AsyncCopyAndVerifyIter2ToArray(concurrency::accelerator& destDevice)
 {
+	using namespace concurrency::Test;
+
 	LogStream() << std::endl << std::endl;
 	Log() << "Invoking AsyncCopyAndVerifyIter2ToArray(...)" << std::endl;
 	Log() << " Destination device: " << destDevice.get_device_path() << std::endl;
@@ -467,6 +484,8 @@ bool AsyncCopyAndVerifyIter2ToArray(concurrency::accelerator& destDevice)
 template<typename _type, int _rank>
 bool AsyncCopyAndVerifyArrayViewToIter(concurrency::accelerator& srcDevice)
 {
+	using namespace concurrency::Test;
+
 	LogStream() << std::endl << std::endl;
 	Log() << "Invoking AsyncCopyAndVerifyArrayViewToIter(...)" << std::endl;
 	Log() << "Source device: " << srcDevice.get_device_path() << std::endl;
@@ -517,6 +536,8 @@ bool AsyncCopyAndVerifyArrayViewToIter(concurrency::accelerator& srcDevice)
 template<typename _type, int _rank>
 bool AsyncCopyAndVerifyIterToArrayView(concurrency::accelerator& destDevice)
 {
+	using namespace concurrency::Test;
+
 	LogStream() << std::endl << std::endl;
 	Log() << "Invoking AsyncCopyAndVerifyIterToArrayView(...)" << std::endl;
 	Log() << " Destination device: " << destDevice.get_device_path() << std::endl;
@@ -568,6 +589,8 @@ bool AsyncCopyAndVerifyIterToArrayView(concurrency::accelerator& destDevice)
 template<typename _type, int _rank>
 bool AsyncCopyAndVerifyIter2ToArrayView(concurrency::accelerator& destDevice)
 {
+	using namespace concurrency::Test;
+	
 	LogStream() << std::endl << std::endl;
 	Log() << "Invoking AsyncCopyAndVerifyIter2ToArrayView(...)" << std::endl;
 	Log() << " Destination device: " << destDevice.get_device_path() << std::endl;

@@ -31,9 +31,9 @@ bool test(accelerator_view &rv)
 
     parallel_for_each(aA.get_extent(), [&](index<1>idx) __GPU
     {
-        tile_static std::nullptr_t v1; // not allowed here
+        tile_static nullptr_t v1; // not allowed here
 
-        std::nullptr_t *p1 = &v1;
+        nullptr_t *p1 = &v1;
 
         *p1 = nullptr;
 

@@ -8,12 +8,11 @@
 /// <tags>P1</tags>
 /// <summary>Verify function data() on device</summary>
 
+#include <cstdint>
 #include <iterator>
 #include "./../../member.h"
 #include <amptest.h>
 #include <amptest_main.h>
-
-typedef int32_t __int32;
 
 template<typename _type, int _rank>
 bool test_feature()
@@ -216,7 +215,7 @@ runall_result test_main()
 	res &= REPORT_RESULT((test_feature<int, 3>()));
 	res &= REPORT_RESULT((test_feature<float, 5>()));
 	res &= REPORT_RESULT((test_feature<3>()));
-	res &= REPORT_RESULT((test_feature<__int32, 5>()));
+	res &= REPORT_RESULT((test_feature<int32_t, 5>()));
 	
     return res;
 }

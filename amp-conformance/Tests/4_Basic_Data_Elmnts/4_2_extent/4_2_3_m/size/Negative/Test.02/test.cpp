@@ -29,8 +29,8 @@ runall_result test_main()
 			g1.size();
 		});
 		result = runall_fail;
-    }	
-    catch (std::exception e)
+    }
+    catch (const std::exception& e)
     {
         std::cout << "ok, Got exception as expected" << std::endl;
         result= runall_pass;

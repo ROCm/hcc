@@ -48,6 +48,7 @@ runall_result test_main()
 	}
 	
 	vec.clear();
+	vec.resize(arr.get_extent().size());
 	copy(arr, vec.begin());
 	
 	if(vec[arr.get_extent().size() - 1] != 50)
@@ -60,5 +61,5 @@ runall_result test_main()
 	
 	vec[arr.get_extent().size() - 1] = 300;
 	
-	return REPORT_RESULT((VerifyAllSameValue(vec, static_cast<DATA_TYPE>(300)) == -1));	
+	return REPORT_RESULT((VerifyAllSameValue(vec, static_cast<DATA_TYPE>(300)) == -1));
 }

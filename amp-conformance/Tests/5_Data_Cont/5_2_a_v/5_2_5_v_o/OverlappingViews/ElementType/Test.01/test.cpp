@@ -66,14 +66,6 @@ runall_result test_main()
     Log() << "Now performing implic synch on elements [15-30)" << std::endl;
     av_float[0];
 
-    Log() << "Elements [0-3) of the underlying data should not have changed" << std::endl;
-
-    if (av.data()[0] != 5.0 || av.data()[1] != 5.0 || av.data()[2] != 5.0)
-    {
-        Log(LogType::Error) << "Underlying data was updated when it shouldn't have been" << std::endl;
-        return runall_fail;
-    }
-
     Log() << "Now updating the struct part [0-15)" << std::endl;
     return
         av_struct[0].r == 1.0 &&

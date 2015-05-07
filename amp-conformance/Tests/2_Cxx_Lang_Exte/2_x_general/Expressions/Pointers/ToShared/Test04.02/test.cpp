@@ -8,14 +8,6 @@
 
 #include "../../inc/common.h"
 
-#ifndef FLT_EPSILON
-#define FLT_EPSILON     0x1.0p-23f
-#endif
-
-#ifndef DBL_EPSILON
-#define DBL_EPSILON     0x1.0p-52
-#endif
-
 struct s
 {
     int i;

@@ -46,7 +46,7 @@ int main()
 
     array<int, 1> arr(ex, vec.begin(), acc_view);
 
-    array_view<int, 1> av1(arr);
+    array_view<const int, 1> av1(arr);
     array_view<int, 1> av2(arr);
 
     if(arr.get_extent() != av1.get_extent()) // Verify extent

@@ -14,15 +14,11 @@
 
 using std::vector;
 using namespace concurrency;
-using namespace concurrency::fast_math;
 using namespace concurrency::Test;
 
 const static int DOMAIN_SIZE_1D = 64;
-const static int BLOCK_SIZE_1D = 4;
+const static int BLOCK_SIZE_1D = 8;
 const int LOCAL_SIZE = 0x4;
-
-template<typename type>
-void init(vector<type> &a, vector<type> &b, vector<type> &c, vector<type> &fa, vector<type> &fb, vector<type> &fc, vector<type> &ref_c, vector<int> &flag);
 
 template<typename type, int rank>
 struct s1
@@ -263,6 +259,9 @@ void RunMyKernel(vector<type> &a, vector<type> &b, vector<type> &c, vector<type>
 
     c = a_c;
 }
+
+template<typename type>
+void init(vector<type> &a, vector<type> &b, vector<type> &c, vector<type> &fa, vector<type> &fb, vector<type> &fc, vector<type> &ref_c, vector<int> &flag);
 
 template<typename type, typename k>
 bool test(accelerator_view av)

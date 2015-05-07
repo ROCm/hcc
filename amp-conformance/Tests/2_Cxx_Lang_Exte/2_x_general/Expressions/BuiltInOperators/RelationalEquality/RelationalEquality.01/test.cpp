@@ -13,10 +13,6 @@
 #include <time.h>
 #include <amptest.h>
 
-#define BOOL int
-#define TRUE 1
-#define FALSE 0
-
 using std::vector;
 using namespace Concurrency;
 using namespace Concurrency::Test;
@@ -36,8 +32,8 @@ void KernelWithRelationalOperators(index<2> idx,
     array<int, 2> &aA, array<int, 2> &aB) __GPU
 {
     // Equality, ==
-    BOOL mc = (aA[idx] == aB[idx]);
-    if(mc == TRUE)
+    bool mc = (aA[idx] == aB[idx]);
+    if(mc == true)
     {
         aC[idx] = 1;
     }
@@ -47,8 +43,8 @@ void KernelWithRelationalOperators(index<2> idx,
     }
 
     // Greater than or equal to, >=
-    BOOL md = (aA[idx] >= aB[idx]);
-    if(md == TRUE)
+    bool md = (aA[idx] >= aB[idx]);
+    if(md == true)
     {
         aD[idx] = 1;
     }
@@ -58,8 +54,8 @@ void KernelWithRelationalOperators(index<2> idx,
     }
 
     // Greater than, >
-    BOOL me = (aA[idx] > aB[idx]);
-    if(me == TRUE)
+    bool me = (aA[idx] > aB[idx]);
+    if(me == true)
     {
         aE[idx] = 1;
     }
@@ -69,8 +65,8 @@ void KernelWithRelationalOperators(index<2> idx,
     }
 
     // Less than or equal to, <=
-    BOOL mf = (aA[idx] <= aB[idx]);
-    if(mf == TRUE)
+    bool mf = (aA[idx] <= aB[idx]);
+    if(mf == true)
     {
         aF[idx] = 1;
     }
@@ -80,8 +76,8 @@ void KernelWithRelationalOperators(index<2> idx,
     }
 
     // Less than, <
-    BOOL mg = (aA[idx] < aB[idx]);
-    if(mg == TRUE)
+    bool mg = (aA[idx] < aB[idx]);
+    if(mg == true)
     {
         aG[idx] = 1;
     }
@@ -91,8 +87,8 @@ void KernelWithRelationalOperators(index<2> idx,
     }
 
     // Not equal to, !=
-    BOOL mh = (aA[idx] != aB[idx]);
-    if(mh == TRUE)
+    bool mh = (aA[idx] != aB[idx]);
+    if(mh == true)
     {
         aH[idx] = 1;
     }

@@ -10,15 +10,9 @@
 using namespace concurrency;
 using namespace concurrency::Test;
 
-array_view<int> make_empty_array_view() restrict(cpu)
+array_view<int> make_empty_array_view(int& storage) restrict(cpu,amp)
 {
-	static int storage;
 	return array_view<int>(1, &storage);
-}
-
-array_view<int> make_empty_array_view() restrict(amp)
-{
-	return array_view<int>(0, nullptr);
 }
 
 struct cpu_and_amp
@@ -27,7 +21,7 @@ struct cpu_and_amp
 		: default_ctor_called(1)
 		, copy_ctor_called(0)
 		, copy_assign_op_called(0)
-		, dtor_called_av(make_empty_array_view())
+		, dtor_called_av(make_empty_array_view(mock_storage))
 	{
 	}
 
@@ -35,7 +29,7 @@ struct cpu_and_amp
 		: default_ctor_called(0)
 		, copy_ctor_called(1)
 		, copy_assign_op_called(0)
-		, dtor_called_av(make_empty_array_view())
+		, dtor_called_av(make_empty_array_view(mock_storage))
 	{
 	}
 
@@ -53,6 +47,7 @@ struct cpu_and_amp
 	int default_ctor_called,
 		copy_ctor_called,
 		copy_assign_op_called;
+	int mock_storage;
 	array_view<int> dtor_called_av;
 };
 
@@ -144,7 +139,7 @@ struct amp
 		: default_ctor_called(1)
 		, copy_ctor_called(0)
 		, copy_assign_op_called(0)
-		, dtor_called_av(make_empty_array_view())
+		, dtor_called_av(make_empty_array_view(mock_storage))
 	{
 	}
 
@@ -152,7 +147,7 @@ struct amp
 		: default_ctor_called(0)
 		, copy_ctor_called(1)
 		, copy_assign_op_called(0)
-		, dtor_called_av(make_empty_array_view())
+		, dtor_called_av(make_empty_array_view(mock_storage))
 	{
 	}
 
@@ -170,6 +165,7 @@ struct amp
 	int default_ctor_called,
 		copy_ctor_called,
 		copy_assign_op_called;
+	int mock_storage;
 	array_view<int> dtor_called_av;
 };
 

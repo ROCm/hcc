@@ -19,7 +19,6 @@
 using std::vector;
 using namespace Concurrency;
 using namespace Concurrency::Test;
-using namespace std;
 
 // IsEqual is generic equality test for all types
 template<typename T>
@@ -119,7 +118,7 @@ bool VerifyConversion(T input, R gpu_result)
     if (DEBUG)
     {
         printf("(generic) verification %s to %s\n", typeid(T).name(), typeid(R).name());
-        cout << "input:" << input << " gpu_result:" << gpu_result << " cpu_result:" << cpu_result << endl;
+        std::cout << "input:" << input << " gpu_result:" << gpu_result << " cpu_result:" << cpu_result << std::endl;
     }
 
     bool result = false;
@@ -175,7 +174,7 @@ void InitializeArrays(vector<srcType1> &vInput1, vector<srcType2> &vInput2, int 
 
         if (DEBUG)
         {
-            cout << "generated input[" << i << "]:" << vInput1[i] << endl;
+            std::cout << "generated input[" << i << "]:" << vInput1[i] << std::endl;
         }
     }
 
@@ -194,7 +193,7 @@ void InitializeArrays(vector<srcType1> &vInput1, vector<srcType2> &vInput2, int 
 
         if (DEBUG)
         {
-            cout << "generated input[" << i << "]:" << vInput2[i] << endl;
+            std::cout << "generated input[" << i << "]:" << vInput2[i] << std::endl;
         }
     }
 }
@@ -223,9 +222,9 @@ bool test_arithmetic_conversion()
 
     Concurrency::extent<1> e(size);
 
-    Concurrency::array<srcType1, 1> aA(e, A.begin(), A.end(), rv);
-    Concurrency::array<srcType2, 1> aB(e, B.begin(), B.end(), rv);
-    Concurrency::array<dstType, 1> aC(e, rv);
+    array<srcType1, 1> aA(e, A.begin(), A.end(), rv);
+    array<srcType2, 1> aB(e, B.begin(), B.end(), rv);
+    array<dstType, 1> aC(e, rv);
 
     parallel_for_each(aA.get_extent(), [&](index<1> idx) __GPU {
         arithmetic_conversion<dstType, srcType1, srcType2>(aC[idx], aA[idx], aB[idx]);
@@ -257,7 +256,7 @@ bool test_arithmetic_conversion()
 int main(int argc, char **argv)
 {
     srand(2010);
-    cout.setf(ios::fixed | ios::showpoint);
+    std::cout.setf(std::ios::fixed | std::ios::showpoint);
 
     bool result = true;
 

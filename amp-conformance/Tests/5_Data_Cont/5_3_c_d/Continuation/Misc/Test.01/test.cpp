@@ -20,6 +20,7 @@
 
 #include <amptest.h>
 #include <amptest_main.h>
+#include <amptest/event.h>
 
 using namespace Concurrency;
 using namespace Concurrency::Test;
@@ -42,7 +43,7 @@ runall_result test_main()
 	// it may happen that parent continuation finishes before child
 	// continuation and the captured variables by child continuation will
 	// go out of scope and no longer valid.
-	concurrency::event waitEvent1;
+	event waitEvent1;
 	completion_future cf = copy_async(src_vec.begin(), src_vec.end(), arr1);
 	
 	task<void> t1 = cf.to_task().then([&]() {
@@ -50,27 +51,27 @@ runall_result test_main()
 		std::vector<int> data1(DATA_SIZE);
 		array_view<int, 1> arr_v1(DATA_SIZE, data1);
 		
-		concurrency::event waitEvent2;
+		event waitEvent2;
 		copy_async(arr1, arr_v1).then([&]() {
 			Log() << "Inside second continuation" << std::endl;
 			array<int, 1> arr2(DATA_SIZE, av);
 			
-			concurrency::event waitEvent3;
+			event waitEvent3;
 			copy_async(arr_v1, arr2).then([&]() {
 				Log() << "Inside third continuation" << std::endl;
 				array<int, 1> s_arr1(DATA_SIZE, cp_av, av);
 				
-				concurrency::event waitEvent4;
+				event waitEvent4;
 				copy_async(arr2, s_arr1).then([&]() {
 					Log() << "Inside fourth continuation" << std::endl;
 					std::vector<int> data2(DATA_SIZE);
 					array_view<int, 1> arr_v2(DATA_SIZE, data2);
 					
-					concurrency::event waitEvent5;
+					event waitEvent5;
 					copy_async(s_arr1, arr_v2).then([&]() {
 						Log() << "Inside fifth continuation" << std::endl;
 						
-						concurrency::event waitEvent6;						
+						event waitEvent6;
 						copy_async(arr_v2, dest_vec.begin()).then([&]() {
 							Log() << "Inside sixth continuation" << std::endl;
 							waitEvent6.set();

@@ -40,7 +40,7 @@ runall_result test_main()
     vector<int> vec2(size);
     for(int i = 0; i < size; i++) vec2[i] = i;
 
-    array_view<int, 2> av1(m, n, vec1);
+    array_view<const int, 2> av1(m, n, vec1);
     array_view<int, 2> av2(m, n, vec2);
 
     if(m != av1.get_extent()[0]) // Verify extent

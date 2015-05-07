@@ -9,8 +9,6 @@
 
 #include "common.h"
 
-#define __int32 int
-
 bool test(accelerator_view &rv)
 {
     const int size = 100;

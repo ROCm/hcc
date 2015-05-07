@@ -11,7 +11,6 @@
 #include <amptest.h>
 #include <amptest_main.h>
 
-using namespace std;
 using namespace Concurrency;
 using namespace Concurrency::Test;
 
@@ -51,7 +50,7 @@ void CalculateGroupSum(int* A, int* B)
 }
 
 //Calculate sum of all elements in a group - GPU version
-void CalculateGroupSum(tiled_index<YGroupSize, XGroupSize> ti, int flatLocalIndex, Concurrency::array<int, 2>& fA, Concurrency::array<int, 2>& fB) __GPU_ONLY
+void CalculateGroupSum(tiled_index<YGroupSize, XGroupSize> ti, int flatLocalIndex, array<int, 2>& fA, array<int, 2>& fB) __GPU_ONLY
 {
     // use shared memory
     tile_static int shared[XGroupSize * YGroupSize];
@@ -70,7 +69,7 @@ void CalculateGroupSum(tiled_index<YGroupSize, XGroupSize> ti, int flatLocalInde
     }
 }
 
-void kernel(tiled_index<YGroupSize, XGroupSize> ti, Concurrency::array<int, 2>& fA, Concurrency::array<int, 2>& fB, int x) __GPU_ONLY
+void kernel(tiled_index<YGroupSize, XGroupSize> ti, array<int, 2>& fA, array<int, 2>& fB, int x) __GPU_ONLY
 {
     int flatLocalIndex = ti.local[0] * XGroupSize + ti.local[1];
 
@@ -89,10 +88,10 @@ runall_result test_main()
 {
     bool passed = true;
 
-    vector<int> A(Size); // data
-    vector<int> B(NumGroups);   // holds the grouped sum of data
+    std::vector<int> A(Size); // data
+    std::vector<int> B(NumGroups);   // holds the grouped sum of data
 
-    vector<int> refB(NumGroups); // Expected value ; sum of elements in each group
+    std::vector<int> refB(NumGroups); // Expected value ; sum of elements in each group
 
     //Init A
     Fill<int>(A.data(), Size, 0, 100);
@@ -103,7 +102,7 @@ runall_result test_main()
     accelerator_view av =  require_device(Device::ALL_DEVICES).get_default_view();
 
     Concurrency::extent<2> extentA(XSize, YSize), extentB(NumYGroups, NumXGroups);
-    Concurrency::array<int, 2> fA(extentA, A.begin(), A.end(), av), fB(extentB, av);
+    array<int, 2> fA(extentA, A.begin(), A.end(), av), fB(extentB, av);
 
     //parallel_for_each where conditions are met
 
@@ -115,17 +114,5 @@ runall_result test_main()
     });
 
     B = fB;
-    if(!Verify<int>(B.data(), refB.data(), NumGroups))
-    {
-        passed = false;
-        cout << "Test: failed" << endl;
-        return runall_fail;
-    }
-    else
-    {
-        cout << "Test: passed" << endl;
-        return runall_pass;
-    }
-
-    return runall_fail;
+    return Verify<int>(B.data(), refB.data(), NumGroups);
 }

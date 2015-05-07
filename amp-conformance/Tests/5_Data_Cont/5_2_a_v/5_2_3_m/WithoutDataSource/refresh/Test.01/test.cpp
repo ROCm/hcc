@@ -29,12 +29,12 @@ runall_result test1(accelerator *device)
 	parallel_for_each(default_av,arrViewSrc.get_extent(),[=](index<1> idx) restrict(amp){
 		arrViewSrc(idx) = idx[0];
 	});
-
+	
 	parallel_for_each(av,arrViewSrc.get_extent(),[=](index<1> idx) restrict(amp){
 		arrViewSrc(idx) += 10;
 	});
 	arrViewSrc.refresh();
-
+	
 	int cmp_result = 0;
 	array_view<int,1> av_result(1,&cmp_result);
 	

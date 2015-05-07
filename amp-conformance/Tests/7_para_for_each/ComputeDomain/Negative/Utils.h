@@ -22,7 +22,7 @@
 #include <iostream>
 
 template <int _Rank>
-runall_result expect_exception(const concurrency::accelerator_view& av, const concurrency::extent<_Rank>& ext, const std::string& expectedMessage)
+runall_result expect_exception(const concurrency::accelerator_view& av, const concurrency::extent<_Rank>& ext)
 {
 	using namespace concurrency;
 	using namespace concurrency::Test;
@@ -32,12 +32,9 @@ runall_result expect_exception(const concurrency::accelerator_view& av, const co
 		int x;
 		parallel_for_each(av, ext, [=](index<_Rank>) restrict(amp) { int y = x; (void)y; });
 	}
-	catch(invalid_compute_domain e)
+	catch(const invalid_compute_domain& e)
 	{
-		//if(e.what() == expectedMessage)
-			return runall_pass;
-		//else
-		//	throw; // Propagate the unexpected exception
+		return runall_pass;
 	}
 
 	return runall_fail;

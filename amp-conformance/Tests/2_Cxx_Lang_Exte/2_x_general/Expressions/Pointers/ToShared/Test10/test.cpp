@@ -8,14 +8,12 @@
 
 #include "../../inc/common.h"
 
-#define __int32 int
-
 class c
 {
 public:
+    int32_t i;
     double d;
-    __int32 i;
-    unsigned __int32 ui;
+    uint32_t ui;
     float f;
 };
 
@@ -71,8 +69,8 @@ bool test(accelerator_view &rv)
             p2 = &o2;
         }
 
-        if (!Equal(p1->i, (int)1) || !Equal(p1->ui, (unsigned __int32)1) || !Equal(p1->f, (float)1) || !Equal(p1->d, (double)1)
-            || !Equal(p2->i, (int)1) || !Equal(p2->ui, (unsigned __int32)1) || !Equal(p2->f, (float)1) || !Equal(p2->d, (double)1))
+        if (!Equal(p1->i, (int)1) || !Equal(p1->ui, (uint32_t)1) || !Equal(p1->f, (float)1) || !Equal(p1->d, (double)1)
+            || !Equal(p2->i, (int)1) || !Equal(p2->ui, (uint32_t)1) || !Equal(p2->f, (float)1) || !Equal(p2->d, (double)1))
             aA[idx] = 1;
 
         p1->i = 2;
@@ -80,7 +78,7 @@ bool test(accelerator_view &rv)
         p1->ui = 2;
         p1->f = 2;
 
-        if (!Equal(p2->i, (int)2) || !Equal(p2->ui, (unsigned __int32)2) || !Equal(p2->f, (float)2) || !Equal(p2->d, (double)2.0))
+        if (!Equal(p2->i, (int)2) || !Equal(p2->ui, (uint32_t)2) || !Equal(p2->f, (float)2) || !Equal(p2->d, 2.0))
             aA[idx] = 1;
 
         tile_static u o3;
@@ -104,9 +102,9 @@ bool test(accelerator_view &rv)
         if (*pb2)
             aA[idx] = 1;
 
-        tile_static unsigned __int32 i1;
+        tile_static uint32_t i1;
         i1 = 1;
-        unsigned __int32 *pi1 = &i1, *pi2 = &i1;
+        uint32_t *pi1 = &i1, *pi2 = &i1;
 
         *pi1 = 2;
         if (*pi2 != 2)
@@ -127,7 +125,7 @@ bool test(accelerator_view &rv)
         p1->ui = 2;
         p1->f = 2;
 
-        if (!Equal(p2->i, (int)2) || !Equal(p2->ui, (unsigned __int32)2) || !Equal(p2->f, (float)2) || !Equal(p2->d, (double)2))
+        if (!Equal(p2->i, (int)2) || !Equal(p2->ui, (uint32_t)2) || !Equal(p2->f, (float)2) || !Equal(p2->d, (double)2))
             aA[idx] = 1;
     });
 
@@ -146,8 +144,7 @@ runall_result test_main()
 {
     bool passed = true;
 
-    //accelerator device = require_device_with_double(Device::ALL_DEVICES);
-    accelerator device = require_device();
+    accelerator device = require_device_with_double(Device::ALL_DEVICES);
 
     accelerator_view rv = device.get_default_view();
 

@@ -14,15 +14,11 @@
 
 using std::vector;
 using namespace concurrency;
-using namespace concurrency::fast_math;
 using namespace concurrency::Test;
 
 const static int DOMAIN_SIZE = 64 * 64;
 const static int BLOCK_SIZE = 16;
 const int LOCAL_SIZE = 0xF;
-
-template<typename type>
-void init(vector<type> &a, vector<type> &b, vector<type> &c, vector<type> &fa, vector<type> &fb, vector<type> &fc, vector<type> &ref_c, vector<int> &flag);
 
 template<typename type, int rank>
 struct s1
@@ -223,6 +219,9 @@ void RunMyKernel(vector<type> &a, vector<type> &b, vector<type> &c, vector<type>
     c = a_c;
 }
 
+template<typename type>
+void init(vector<type> &a, vector<type> &b, vector<type> &c, vector<type> &fa, vector<type> &fb, vector<type> &fc, vector<type> &ref_c, vector<int> &flag);
+
 template<typename type, typename k>
 bool test(accelerator_view av)
 {
@@ -248,7 +247,7 @@ runall_result test_main()
 {
     srand(2010);
 
-    accelerator_view av = require_device(Device::ALL_DEVICES).get_default_view();
+    accelerator_view av = require_device_with_double(Device::ALL_DEVICES).get_default_view();
 
     Log() << "test in local memory: \n";
     if (!test<AMP_ELEMENT_TYPE, kernel_local<AMP_ELEMENT_TYPE>>(av)) return runall_fail;

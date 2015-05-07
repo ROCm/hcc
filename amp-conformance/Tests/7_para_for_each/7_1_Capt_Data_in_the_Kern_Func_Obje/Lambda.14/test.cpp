@@ -9,8 +9,6 @@
 #include <iostream>
 #include <amptest.h>
 
-using std::vector;
-using namespace std;
 using namespace Concurrency;
 using namespace Concurrency::Test;
 
@@ -23,7 +21,7 @@ void kernel(T _Pred, int &c, int a) __GPU
 
 // One level of indirection in order to get the type of lambda
 template<typename T>
-void start(T lambda, Concurrency::array<int, 1> &ac, Concurrency::array<int, 1> &aa)
+void start(T lambda, array<int, 1> &ac, array<int, 1> &aa)
 {
     parallel_for_each(aa.get_extent(), [&, lambda](index<1> idx) __GPU {
         kernel<T>(lambda, ac[idx], aa[idx]);
@@ -36,13 +34,13 @@ int main()
 
     if (!get_device(Device::ALL_DEVICES, device))
     {
-        cout << "Unable to get required device to run this test" << endl;
+        std::cout << "Unable to get required device to run this test" << std::endl;
         return 2;
     }
     accelerator_view rv = device.get_default_view();
 
     const int size = 2020;
-    vector<int> a(size);
+    std::vector<int> a(size);
 
     for(int i=0;i<size;++i)
     {
@@ -50,8 +48,8 @@ int main()
     }
 
     Concurrency::extent<1> e(size);
-    Concurrency::array<int, 1> aa(e, a.begin(), rv);
-    Concurrency::array<int, 1> ac(e, rv);
+    array<int, 1> aa(e, a.begin(), rv);
+    array<int, 1> ac(e, rv);
 
     auto lambda = [](int x) __GPU -> int { return x % 2; };
 
@@ -63,7 +61,7 @@ int main()
     {
         if(a[i] != (lambda(i) ? i : -i))
         {
-            cout << "a[ " << i << "] = " << a[i] << " expected: " << (lambda(i) ? i : -i) << endl;
+            std::cout << "a[ " << i << "] = " << a[i] << " expected: " << (lambda(i) ? i : -i) << std::endl;
             passed = false;
             break;
         }

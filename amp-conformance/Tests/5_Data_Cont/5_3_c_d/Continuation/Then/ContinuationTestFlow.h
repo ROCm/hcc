@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft
+// Copyright (c) Microsoft
 // All rights reserved
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
 // THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
@@ -6,21 +6,17 @@
 
 #include "amptest.h"
 #include "amptest_main.h"
+#include <amptest/event.h>
 #include <typeinfo>
-
-#ifndef _MSC_VER
-#include "concrt.h"
-#endif
 
 #define RANGE 40
 #define VALUE 10
 
-using namespace Concurrency::Test;
-typedef long LONG;
-
 template<typename _type, int _rank>
 bool AsyncCopyAndVerifyArrayToArray(Concurrency::accelerator& srcDevice, Concurrency::accelerator& destDevice)
 {
+	using namespace concurrency::Test;
+
 	extent<_rank> dataExtent = CreateRandomExtent<_rank>(RANGE);
 	static const _type expected_value = static_cast<_type>(VALUE);
 	
@@ -28,20 +24,16 @@ bool AsyncCopyAndVerifyArrayToArray(Concurrency::accelerator& srcDevice, Concurr
 	array<_type, _rank> srcArray(dataExtent, data.begin(), srcDevice.create_view());
 	array<_type, _rank> destArray(dataExtent, destDevice.create_view());
 	
-	LONG flag = 0;
+	long flag = 0;
 	
 	// Wait event set when continuation finishes verification.
-	concurrency::event waitEvent;
+	event waitEvent;
 	
 	copy_async(srcArray, destArray).then([&]() {
 		Log() << "Verifying destArray" << std::endl;
 		if(VerifyAllSameValue(destArray, expected_value) == -1)
 		{
-#ifdef _MSC_VER
-			InterlockedExchange (&flag, 1);
-#else
-			__sync_fetch_and_add (&flag, 1);
-#endif
+			flag = 1;
 		}
 		
 		waitEvent.set();
@@ -54,6 +46,8 @@ bool AsyncCopyAndVerifyArrayToArray(Concurrency::accelerator& srcDevice, Concurr
 template<typename _type, int _rank>
 bool AsyncCopyAndVerifyArrayToArrayView(Concurrency::accelerator& srcDevice, Concurrency::accelerator& destDevice)
 {
+	using namespace concurrency::Test;
+	
 	extent<_rank> dataExtent = CreateRandomExtent<_rank>(RANGE);
 	static const _type expected_value = static_cast<_type>(VALUE);
 	
@@ -63,20 +57,16 @@ bool AsyncCopyAndVerifyArrayToArrayView(Concurrency::accelerator& srcDevice, Con
 	array<_type, _rank> dataArray(dataExtent, destDevice.create_view());
 	array_view<_type, _rank> destArrayView(dataArray);
 	
-	LONG flag = 0;
+	long flag = 0;
 
 	// Wait event set when continuation finishes verification.
-	concurrency::event waitEvent;
+	event waitEvent;
 
 	copy_async(srcArray, destArrayView).then([&]() {
 		Log() << "Verifying destArrayView" << std::endl;
 		if(VerifyAllSameValue(destArrayView, expected_value) == -1)
 		{
-#ifdef _MSC_VER
-			InterlockedExchange (&flag, 1);
-#else
-			__sync_fetch_and_add (&flag, 1);
-#endif
+			flag = 1;
 		}
 
 		waitEvent.set();
@@ -89,6 +79,8 @@ bool AsyncCopyAndVerifyArrayToArrayView(Concurrency::accelerator& srcDevice, Con
 template<typename _type, int _rank>
 bool AsyncCopyAndVerifyArrayViewToArray(Concurrency::accelerator& srcDevice, Concurrency::accelerator& destDevice)
 {
+	using namespace concurrency::Test;
+	
 	extent<_rank> dataExtent = CreateRandomExtent<_rank>(RANGE);
 	static const _type expected_value = static_cast<_type>(VALUE);
 	
@@ -97,20 +89,16 @@ bool AsyncCopyAndVerifyArrayViewToArray(Concurrency::accelerator& srcDevice, Con
 	array<_type, _rank> srcArrayView(dataArray);
 	array<_type, _rank> destArray(dataExtent, destDevice.create_view());
 	
-	LONG flag = 0;
+	long flag = 0;
 	
 	// Wait event set when continuation finishes verification.
-	concurrency::event waitEvent;
+	event waitEvent;
 	
 	copy_async(srcArrayView, destArray).then([&]() {
 		Log() << "Verifying destArray" << std::endl;
 		if(VerifyAllSameValue(destArray, expected_value) == -1)
 		{
-#ifdef _MSC_VER
-			InterlockedExchange (&flag, 1);
-#else
-			__sync_fetch_and_add (&flag, 1);
-#endif
+			flag = 1;
 		}
 		
 		waitEvent.set();
@@ -123,6 +111,8 @@ bool AsyncCopyAndVerifyArrayViewToArray(Concurrency::accelerator& srcDevice, Con
 template<typename _type, int _rank>
 bool AsyncCopyAndVerifyArrayViewConstToArray(Concurrency::accelerator& srcDevice, Concurrency::accelerator& destDevice)
 {
+	using namespace concurrency::Test;
+	
 	extent<_rank> dataExtent = CreateRandomExtent<_rank>(RANGE);
 	static const _type expected_value = static_cast<_type>(VALUE);
 	
@@ -132,20 +122,16 @@ bool AsyncCopyAndVerifyArrayViewConstToArray(Concurrency::accelerator& srcDevice
 	
 	array<_type, _rank> destArray(dataExtent, destDevice.create_view());
 	
-	LONG flag = 0;
+	long flag = 0;
 
 	// Wait event set when continuation finishes verification.
-	concurrency::event waitEvent;
+	event waitEvent;
 
 	copy_async(srcArrayView, destArray).then([&]() {
 		Log() << "Verifying destArray" << std::endl;
 		if(VerifyAllSameValue(destArray, expected_value) == -1)
 		{
-#ifdef _MSC_VER
-			InterlockedExchange (&flag, 1);
-#else
-			__sync_fetch_and_add (&flag, 1);
-#endif
+			flag = 1;
 		}
 
 		waitEvent.set();
@@ -158,6 +144,8 @@ bool AsyncCopyAndVerifyArrayViewConstToArray(Concurrency::accelerator& srcDevice
 template<typename _type, int _rank>
 bool AsyncCopyAndVerifyArrayViewToArrayView(Concurrency::accelerator& srcDevice, Concurrency::accelerator& destDevice)
 {
+	using namespace concurrency::Test;
+	
 	extent<_rank> dataExtent = CreateRandomExtent<_rank>(RANGE);
 	static const _type expected_value = static_cast<_type>(VALUE);
 	
@@ -168,20 +156,16 @@ bool AsyncCopyAndVerifyArrayViewToArrayView(Concurrency::accelerator& srcDevice,
 	array<_type, _rank> dataArray(dataExtent, destDevice.create_view());
 	array_view<_type, _rank> destArrayView(dataArray);
 	
-	LONG flag = 0;
+	long flag = 0;
 	
 	// Wait event set when continuation finishes verification.
-	concurrency::event waitEvent;
+	event waitEvent;
 	
 	copy_async(srcArrayView, destArrayView).then([&]() {
 		Log() << "Verifying destArrayView" << std::endl;
 		if(VerifyAllSameValue(destArrayView, expected_value) == -1)
 		{
-#ifdef _MSC_VER
-			InterlockedExchange (&flag, 1);
-#else
-			__sync_fetch_and_add (&flag, 1);
-#endif
+			flag = 1;
 		}
 		
 		waitEvent.set();
@@ -194,6 +178,8 @@ bool AsyncCopyAndVerifyArrayViewToArrayView(Concurrency::accelerator& srcDevice,
 template<typename _type, int _rank>
 bool AsyncCopyAndVerifyArrayToIter(Concurrency::accelerator& srcDevice)
 {
+	using namespace concurrency::Test;
+	
 	extent<_rank> dataExtent = CreateRandomExtent<_rank>(RANGE);
 	static const _type expected_value = static_cast<_type>(VALUE);
 	
@@ -202,20 +188,16 @@ bool AsyncCopyAndVerifyArrayToIter(Concurrency::accelerator& srcDevice)
 	
 	std::vector<_type> destCont(dataExtent.size());
 	
-	LONG flag = 0;
+	long flag = 0;
 
 	// Wait event set when continuation finishes verification.
-	concurrency::event waitEvent;
+	event waitEvent;
 
 	copy_async(srcArray, destCont.begin()).then([&]() {
 		Log() << "Verifying destCont" << std::endl;
 		if(VerifyAllSameValue(destCont, expected_value) == -1)
 		{
-#ifdef _MSC_VER
-			InterlockedExchange (&flag, 1);
-#else
-			__sync_fetch_and_add (&flag, 1);
-#endif
+			flag = 1;
 		}
 
 		waitEvent.set();
@@ -228,6 +210,8 @@ bool AsyncCopyAndVerifyArrayToIter(Concurrency::accelerator& srcDevice)
 template<typename _type, int _rank>
 bool AsyncCopyAndVerifyArrayViewConstToArrayView(Concurrency::accelerator& srcDevice, Concurrency::accelerator& destDevice)
 {
+	using namespace concurrency::Test;
+	
 	extent<_rank> dataExtent = CreateRandomExtent<_rank>(RANGE);
 	static const _type expected_value = static_cast<_type>(VALUE);
 	
@@ -238,20 +222,16 @@ bool AsyncCopyAndVerifyArrayViewConstToArrayView(Concurrency::accelerator& srcDe
 	array<_type, _rank> dataArray(dataExtent, destDevice.create_view());
 	array_view<_type, _rank> destArrayView(dataArray);
 	
-	LONG flag = 0;
+	long flag = 0;
 	
 	// Wait event set when continuation finishes verification.
-	concurrency::event waitEvent;
+	event waitEvent;
 	
 	copy_async(srcArrayView, destArrayView).then([&]() {
 		Log() << "Verifying destArrayView" << std::endl;
 		if(VerifyAllSameValue(destArrayView, expected_value) == -1)
 		{
-#ifdef _MSC_VER
-			InterlockedExchange (&flag, 1);
-#else
-			__sync_fetch_and_add (&flag, 1);
-#endif
+			flag = 1;
 		}
 		
 		waitEvent.set();
@@ -264,26 +244,24 @@ bool AsyncCopyAndVerifyArrayViewConstToArrayView(Concurrency::accelerator& srcDe
 template<typename _type, int _rank>
 bool AsyncCopyAndVerifyIterToArray(Concurrency::accelerator& destDevice)
 {
+	using namespace concurrency::Test;
+	
 	extent<_rank> dataExtent = CreateRandomExtent<_rank>(RANGE);
 	static const _type expected_value = static_cast<_type>(VALUE);
 	
 	std::vector<_type> srcCont(dataExtent.size(), expected_value);
 	array<_type, _rank> destArray(dataExtent, destDevice.create_view());
 	
-	LONG flag = 0;
+	long flag = 0;
 
 	// Wait event set when continuation finishes verification.
-	concurrency::event waitEvent;
+	event waitEvent;
 
 	copy_async(srcCont.begin(), destArray).then([&]() {
 		Log() << "Verifying destArray" << std::endl;
 		if(VerifyAllSameValue(destArray, expected_value) == -1)
 		{
-#ifdef _MSC_VER
-			InterlockedExchange (&flag, 1);
-#else
-			__sync_fetch_and_add (&flag, 1);
-#endif
+			flag = 1;
 		}
 
 		waitEvent.set();
@@ -296,26 +274,24 @@ bool AsyncCopyAndVerifyIterToArray(Concurrency::accelerator& destDevice)
 template<typename _type, int _rank>
 bool AsyncCopyAndVerifyIter2ToArray(Concurrency::accelerator& destDevice)
 {
+	using namespace concurrency::Test;
+	
 	extent<_rank> dataExtent = CreateRandomExtent<_rank>(RANGE);
 	static const _type expected_value = static_cast<_type>(VALUE);
 	
 	std::vector<_type> srcCont(dataExtent.size(), expected_value);
 	array<_type, _rank> destArray(dataExtent, destDevice.create_view());
 	
-	LONG flag = 0;
+	long flag = 0;
 	
 	// Wait event set when continuation finishes verification.
-	concurrency::event waitEvent;
+	event waitEvent;
 	
 	copy_async(srcCont.begin(), srcCont.end(), destArray).then([&]() {
 		Log() << "Verifying destArray" << std::endl;
 		if(VerifyAllSameValue(destArray, expected_value) == -1)
 		{
-#ifdef _MSC_VER
-			InterlockedExchange (&flag, 1);
-#else
-			__sync_fetch_and_add (&flag, 1);
-#endif
+			flag = 1;
 		}
 		
 		waitEvent.set();
@@ -328,6 +304,8 @@ bool AsyncCopyAndVerifyIter2ToArray(Concurrency::accelerator& destDevice)
 template<typename _type, int _rank>
 bool AsyncCopyAndVerifyArrayViewToIter(Concurrency::accelerator& srcDevice)
 {
+	using namespace concurrency::Test;
+	
 	extent<_rank> dataExtent = CreateRandomExtent<_rank>(RANGE);
 	static const _type expected_value = static_cast<_type>(VALUE);
 	
@@ -337,20 +315,16 @@ bool AsyncCopyAndVerifyArrayViewToIter(Concurrency::accelerator& srcDevice)
 	
 	std::vector<_type> destCont(dataExtent.size());
 	
-	LONG flag = 0;
+	long flag = 0;
 
 	// Wait event set when continuation finishes verification.
-	concurrency::event waitEvent;
+	event waitEvent;
 
 	copy_async(srcArrayView, destCont.begin()).then([&]() {
 		Log() << "Verifying destConst" << std::endl;
 		if(VerifyAllSameValue(destCont, expected_value) == -1)
 		{
-#ifdef _MSC_VER
-			InterlockedExchange (&flag, 1);
-#else
-			__sync_fetch_and_add (&flag, 1);
-#endif
+			flag = 1;
 		}
 
 		waitEvent.set();
@@ -363,6 +337,8 @@ bool AsyncCopyAndVerifyArrayViewToIter(Concurrency::accelerator& srcDevice)
 template<typename _type, int _rank>
 bool AsyncCopyAndVerifyIterToArrayView(Concurrency::accelerator& destDevice)
 {
+	using namespace concurrency::Test;
+	
 	extent<_rank> dataExtent = CreateRandomExtent<_rank>(RANGE);
 	static const _type expected_value = static_cast<_type>(VALUE);
 	
@@ -370,20 +346,16 @@ bool AsyncCopyAndVerifyIterToArrayView(Concurrency::accelerator& destDevice)
 	array<_type, _rank> dataArray(dataExtent, destDevice.create_view());
 	array_view<_type, _rank> destArrayView(dataArray);
 
-	LONG flag = 0;
+	long flag = 0;
 	
 	// Wait event set when continuation finishes verification.
-	concurrency::event waitEvent;
+	event waitEvent;
 	
 	copy_async(srcCont.begin(), destArrayView).then([&]() {
 		Log() << "Verifying destArrayView" << std::endl;
 		if(VerifyAllSameValue(destArrayView, expected_value) == -1)
 		{
-#ifdef _MSC_VER
-			InterlockedExchange (&flag, 1);
-#else
-			__sync_fetch_and_add (&flag, 1);
-#endif
+			flag = 1;
 		}
 		
 		waitEvent.set();
@@ -396,6 +368,8 @@ bool AsyncCopyAndVerifyIterToArrayView(Concurrency::accelerator& destDevice)
 template<typename _type, int _rank>
 bool AsyncCopyAndVerifyIter2ToArrayView(Concurrency::accelerator& destDevice)
 {
+	using namespace concurrency::Test;
+	
 	extent<_rank> dataExtent = CreateRandomExtent<_rank>(RANGE);
 	static const _type expected_value = static_cast<_type>(VALUE);
 	
@@ -403,20 +377,16 @@ bool AsyncCopyAndVerifyIter2ToArrayView(Concurrency::accelerator& destDevice)
 	array<_type, _rank> dataArray(dataExtent, destDevice.create_view());
 	array_view<_type, _rank> destArrayView(dataArray);
 
-	LONG flag = 0;
+	long flag = 0;
 
 	// Wait event set when continuation finishes verification.
-	concurrency::event waitEvent;
+	event waitEvent;
 
 	copy_async(srcCont.begin(), srcCont.end(), destArrayView).then([&]() {
 		Log() << "Verifying destArrayView" << std::endl;
 		if(VerifyAllSameValue(destArrayView, expected_value) == -1)
 		{
-#ifdef _MSC_VER
-			InterlockedExchange (&flag, 1);
-#else
-			__sync_fetch_and_add (&flag, 1);
-#endif
+			flag = 1;
 		}
 
 		waitEvent.set();

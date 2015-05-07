@@ -28,8 +28,8 @@ bool test_feature()
             test_feature_itr<_type, _rank, _D0, _D1, accelerator_view>(data, data+(_D0*_D1), (_gpu_device).create_view(queuing_mode_automatic)) &&
             test_feature_itr<_type, _rank, _D0, _D1, accelerator_view>(data, data+(_D0*_D1), (_gpu_device).create_view(queuing_mode_automatic));
 
-	Log() << "test_feature_itr(begin,end) :" << pass << std::endl;
- 	result &= pass;
+    Log() << "test_feature_itr(begin,end) :" << pass << std::endl;
+    result &= pass;
     }
 
     {
@@ -38,29 +38,29 @@ bool test_feature()
             test_feature_itr<_type, _rank, _D0, _D1, accelerator_view>(data, (_gpu_device).create_view(queuing_mode_automatic)) &&
             test_feature_itr<_type, _rank, _D0, _D1, accelerator_view>(data, (_gpu_device).create_view(queuing_mode_immediate));
 
-	Log() << "test_feature_itr(begin,end) :" << pass << std::endl;
- 	result &= pass;
+    Log() << "test_feature_itr(begin,end) :" << pass << std::endl;
+    result &= pass;
     }
 
-    delete data;
+    delete[] data;
     return result;
 }
 
 runall_result test_main()
 {
-	SKIP_IF(!is_gpu_hardware_available());
+    SKIP_IF(!is_gpu_hardware_available());
 
-	runall_result result;
+    runall_result result;
 
-	result &= REPORT_RESULT((test_feature<int, 1, 1>()));
-	result &= REPORT_RESULT((test_feature<int, 7, 31>()));
-	result &= REPORT_RESULT((test_feature<int, 91, 5>()));
-	result &= REPORT_RESULT((test_feature<unsigned, 31, 19>()));
-	result &= REPORT_RESULT((test_feature<signed, 91, 5>()));
-	result &= REPORT_RESULT((test_feature<float, 31, 19>()));
+    result &= REPORT_RESULT((test_feature<int, 1, 1>()));
+    result &= REPORT_RESULT((test_feature<int, 7, 31>()));
+    result &= REPORT_RESULT((test_feature<int, 91, 5>()));
+    result &= REPORT_RESULT((test_feature<unsigned, 31, 19>()));
+    result &= REPORT_RESULT((test_feature<signed, 91, 5>()));
+    result &= REPORT_RESULT((test_feature<float, 31, 19>()));
     result &= REPORT_RESULT((test_feature<float, 5, 1>()));
-	result &= REPORT_RESULT((test_feature<double, 13, 7>()));
-	
+    result &= REPORT_RESULT((test_feature<double, 13, 7>()));
+
     return result;
 }
 

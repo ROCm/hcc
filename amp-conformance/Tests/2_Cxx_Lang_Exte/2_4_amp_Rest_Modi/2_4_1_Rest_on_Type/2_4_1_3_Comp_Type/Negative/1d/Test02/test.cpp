@@ -13,13 +13,19 @@
 using std::vector;
 using namespace concurrency;
 
-struct s1
+struct S
 {
-    s1(array_view<int> a) __GPU : m(&a) {}
-    ~s1() __GPU {}
+    S(array_view<int>& a) restrict(cpu,amp) : m(&a) {}
+    ~S() restrict(cpu,amp) {}
 
     array_view<int> *m;
 };
+
+// Diagnostics may be deferred until the use of the class.
+void func_cpu_amp(array_view<int>& a) restrict(cpu,amp)
+{
+    S s(a);
+}
 
 runall_result test_main()
 {
