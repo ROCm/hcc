@@ -66,6 +66,6 @@ configure_file(
   ${CMAKE_CURRENT_BINARY_DIR}/../lib/clamp-hsail @ONLY)
 
 add_custom_target(test
-  COMMAND python ${LLVM_ROOT}/bin/llvm-lit -j 1 --path ${LLVM_TOOLS_DIR} ${LLVM_LIT_ARGS} ${CMAKE_CURRENT_BINARY_DIR}
+  COMMAND python ${LLVM_ROOT}/bin/llvm-lit -j 8 --path ${LLVM_TOOLS_DIR} ${LLVM_LIT_ARGS} ${CMAKE_CURRENT_BINARY_DIR}
   # DEPENDS ${CPPAMP_GTEST_LIB}
   COMMENT "Running C++AMP regression tests")
