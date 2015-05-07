@@ -25,23 +25,23 @@ private:
 
     std::map<void *, obj_info> mem_info;
     const std::wstring path;
-    const std::wstring des;
 protected:
+    std::wstring des;
     size_t mem;
-    bool dou;
-    bool lim_dou;
-    bool uni;
-    bool emu;
+    bool is_double_;
+    bool is_limited_double_;
+    bool cpu_shared_memory;
+    bool emulated;
     AMPManager(const std::wstring& path) : path(path) {}
 public:
 
     std::wstring get_path() { return path; }
     std::wstring get_des() { return des; }
     size_t get_mem() { return mem; }
-    bool is_double() { return dou; }
-    bool is_lim_double() { return lim_dou; }
-    bool is_uni() { return uni; }
-    bool is_emu() { return emu; }
+    bool is_double() { return is_double_; }
+    bool is_lim_double() { return is_limited_double_; }
+    bool is_uni() { return cpu_shared_memory; }
+    bool is_emu() { return emulated; }
 
 
     virtual void* CreateKernel(const char* fun, void* size, void* source) = 0;
