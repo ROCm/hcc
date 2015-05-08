@@ -2,6 +2,7 @@
 #define __CLAMP_AMP_RUNTIME
 
 #include <set>
+#include <future>
 
 namespace Concurrency {
 
@@ -189,6 +190,8 @@ extern void PushArgPtr(void *, int, size_t, const void *);
 class Serialize {
 public:
   typedef void *kernel;
+  Serialize(kernel k)
+      : aloc_(), k_(k), current_idx_(0) {}
   Serialize(std::shared_ptr<AMPAllocator> aloc, kernel k)
       : aloc_(aloc), k_(k), current_idx_(0) {}
   void Append(size_t sz, const void *s) {

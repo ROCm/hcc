@@ -12,84 +12,92 @@
 #include <map>
 #include <vector>
 
-#include <amp_allocator.h>
 #include <amp_runtime.h>
 
 extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v) {}
 
 namespace Concurrency {
 
-struct mm_info
+class CPUManager : public AMPManager
 {
-    void *data;
-    int count;
-    int ref;
+    std::shared_ptr<AMPAllocator> init();
+public:
+    CPUManager() : AMPManager(L"fallback") {
+        des = L"CPU Fallback";
+        mem = 0;
+        is_double_ = true;
+        is_limited_double_ = true;
+        cpu_shared_memory = true;
+        emulated = false;
+    }
+    void* create(size_t count, void *data, bool hasSrc) override {
+        if (hasSrc)
+            return data;
+        else
+            return aligned_alloc(0x1000, count);
+    }
+    void release(void *data) override {
+        ::operator delete(data);
+    }
+    std::shared_ptr<AMPAllocator> createAloc() override {
+        static auto aloc = init();
+        return aloc;
+    }
 };
 
-class CPUAMPAllocator : public AMPAllocator
+class CPUAllocator : public AMPAllocator
 {
-    void regist(int count, void *data, bool hasSrc) override {
-        if (hasSrc) {
-            auto it = mem_info.find(data);
-            if (it == std::end(mem_info)) {
-                void *p = aligned_alloc(0x1000, count);
-                mem_info[data] = {p, count, 1};
-            } else
-                ++it->second.ref;
-        }
-    }
-    void PushArg(void *kernel, int idx, rw_info& data) override {
-        void *p = data.data;
-        auto it = mem_info.find(p);
-        if (it != std::end(mem_info)) {
-            mm_info &rw = it->second;
-            if ((kernel == nullptr && rw.ref > 0) ||
-                (kernel != nullptr && rw.ref < 0)) {
-                std::swap(data.data, rw.data);
-                rw.ref = -rw.ref;
-            }
-        }
-    }
-    void amp_write(void *data) override {
-        auto it = mem_info.find(data);
-        if (it != std::end(mem_info)) {
-            mm_info &rw = it->second;
-            memmove(rw.data, data, rw.count);
-        }
-    }
-    void amp_read(void *data) override {
-        auto it = mem_info.find(data);
-        if (it != std::end(mem_info)) {
-            mm_info &rw = it->second;
-            memmove(data, rw.data, rw.count);
-        }
-    }
-    void amp_copy(void *dst, void *src, int n) override {
-        auto it = mem_info.find(src);
-        if (it != std::end(mem_info)) {
-            mm_info &rw = it->second;
-            src = rw.data;
-        }
-        memmove(dst, src, n);
-    }
-    void unregist(void *data) override {
-        auto it = mem_info.find(data);
-        if (it != std::end(mem_info)) {
-            if (!--it->second.ref) {
-                ::operator delete(it->second.data);
-                mem_info.erase(it);
-            }
-        }
-    }
-
-    std::map<void *, mm_info> mem_info;
+    std::map<void*, void*> addrs;
+public:
+    CPUAllocator(std::shared_ptr<AMPManager> pMan) : AMPAllocator(pMan) {}
+  void amp_write(void *data) override {
+      obj_info obj = Man->device_data(data);
+      if (obj.device != data)
+          memmove(obj.device, data, obj.count);
+  }
+  void amp_read(void *data) override {
+      obj_info obj = Man->device_data(data);
+      if (obj.device != data)
+          memmove(data, obj.device, obj.count);
+  }
+  void amp_copy(void *dst, void *src, size_t n) override {
+      obj_info obj = Man->device_data(src);
+      if (obj.device != dst)
+          memmove(dst, src, obj.count);
+  }
+  void PushArg(void* kernel, int idx, rw_info& data) override {
+      obj_info obj = Man->device_data(data.data);
+      if (data.data == obj.device)
+          return;
+      auto it = addrs.find(data.data);
+      bool find = it != std::end(addrs);
+      if (!kernel && !find) {
+          addrs[obj.device] = data.data;
+          data.data = obj.device;
+      } else if (kernel && find) {
+          void* addr = addrs[obj.device];
+          data.data = addr;
+          addrs.erase(addr);
+      }
+  }
 };
 
-static CPUAMPAllocator amp;
-
-CPUAMPAllocator& getCPUAMPAllocator() {
-  return amp;
+std::shared_ptr<AMPAllocator> CPUManager::init() {
+    return std::shared_ptr<AMPAllocator>(new CPUAllocator(shared_from_this()));
 }
+
+class CPUContext : public AMPContext
+{
+public:
+    CPUContext() {
+        auto Man = std::shared_ptr<AMPManager>(new CPUManager);
+        default_map[Man] = Man->createAloc();
+        Devices.push_back(Man);
+    }
+};
+
+
+static CPUContext ctx;
 
 } // namespace Concurrency
 
@@ -98,28 +106,6 @@ CPUAMPAllocator& getCPUAMPAllocator() {
 /// kernel compilation / kernel launching
 ///
 
-extern "C" void *GetAllocatorImpl() {
-  return &Concurrency::amp;
-}
-
-extern "C" void EnumerateDevicesImpl(int* devices, int* device_number) {
-  if (device_number != nullptr) {
-    *device_number = 1;
-  }
-  if (devices != nullptr) {
-    devices[0] = AMP_DEVICE_TYPE_CPU;
-  }
-}
-
-extern "C" void QueryDeviceInfoImpl(const wchar_t* device_path,
-  bool* supports_cpu_shared_memory,
-  size_t* dedicated_memory,
-  bool* supports_limited_double_precision,
-  wchar_t* description) {
-
-  const wchar_t des[] = L"CPU";
-  wmemcpy(description, des, sizeof(des));
-  *supports_cpu_shared_memory = true;
-  *supports_limited_double_precision = true;
-  *dedicated_memory = 0;
+extern "C" void *GetContextImpl() {
+  return &Concurrency::ctx;
 }
