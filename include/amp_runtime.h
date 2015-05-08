@@ -205,7 +205,7 @@ struct rw_info
 {
     void *data;
     size_t count;
-    std::shared_ptr<AMPAllocator> latest;
+    std::shared_ptr<AMPAllocator> curr;
     const std::shared_ptr<AMPAllocator> master;
     std::set<std::shared_ptr<AMPAllocator>> Alocs;
     unsigned int discard : 1;
@@ -213,53 +213,53 @@ struct rw_info
     unsigned int hasSrc : 1;
 
     rw_info(std::shared_ptr<AMPAllocator> Aloc, size_t count, void* p = nullptr)
-        : data(p), count(count), latest(Aloc), master(Aloc), Alocs({Aloc}), discard(false),
+        : data(p), count(count), curr(Aloc), master(Aloc), Alocs({Aloc}), discard(false),
         dirty(false), hasSrc(p != nullptr) {
         if (!hasSrc)
             data = aligned_alloc(0x1000, count);
 #ifdef __AMP_CPU__
         if (!CLAMP::in_cpu_kernel())
 #endif
-            latest->regist(count, data, hasSrc);
+            curr->regist(count, data, hasSrc);
     }
 
     void append(Serialize& s, bool isArray) {
         auto aloc = s.get_aloc();
         if (dirty) {
-            if (latest != aloc) {
+            if (curr != aloc) {
                 if (Alocs.find(aloc) == std::end(Alocs)) {
                     aloc->regist(count, data, hasSrc);
                     Alocs.insert(aloc);
                 }
                 if (!discard || isArray) {
-                    if (latest->getMan() != aloc->getMan()) {
+                    if (curr->getMan() != aloc->getMan()) {
                         void* dst = aloc->amp_map(data, true);
-                        void* src = latest->amp_map(data, false);
+                        void* src = curr->amp_map(data, false);
                         memmove(dst, src, count);
                         aloc->amp_unmap(data, dst);
-                        latest->amp_unmap(data, src);
+                        curr->amp_unmap(data, src);
                     } else {
                         // force previous execution finish
                         // replace with more efficient implementation in the future
-                        latest->wait();
+                        curr->wait();
                     }
-                    latest = aloc;
+                    curr = aloc;
                 }
             }
         } else {
-            if (latest != aloc) {
+            if (curr != aloc) {
                 if (Alocs.find(aloc) == std::end(Alocs)) {
                     aloc->regist(count, data, hasSrc);
                     Alocs.insert(aloc);
                 }
-                latest = aloc;
+                curr = aloc;
             }
             if (!discard || isArray)
-                latest->amp_write(data);
+                curr->amp_write(data);
         }
         dirty = true;
         discard = false;
-        latest->PushArg(s.getKernel(), s.getAndIncCurrentIndex(), *this);
+        curr->PushArg(s.getKernel(), s.getAndIncCurrentIndex(), *this);
     }
 
     void disc() {
@@ -271,7 +271,7 @@ struct rw_info
 
     void copy(void* dst, size_t count) {
         if (dirty)
-            latest->amp_copy(dst, data, count);
+            curr->amp_copy(dst, data, count);
         else
             memmove(dst, data, count);
     }
@@ -282,7 +282,7 @@ struct rw_info
             return;
 #endif
         if (dirty && !discard) {
-            latest->amp_read(data);
+            curr->amp_read(data);
             dirty = false;
         }
     }
