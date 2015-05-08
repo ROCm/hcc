@@ -69,6 +69,11 @@ public:
         context = clCreateContext(0, 1, &device, NULL, NULL, &err);
         assert(err == CL_SUCCESS);
 
+        cl_ulong memAllocSize;
+        err = clGetDeviceInfo(device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_ulong), &memAllocSize, NULL);
+        assert(err == CL_SUCCESS);
+        mem = memAllocSize >> 10;
+
         char vendor[256];
         err = clGetDeviceInfo(device, CL_DEVICE_VENDOR, sizeof(vendor), vendor, NULL);
         assert(err == CL_SUCCESS);
@@ -77,12 +82,12 @@ public:
             des = L"AMD";
         else if (ven.find("NVIDIA") != std::string::npos)
             des = L"NVIDIA";
+        else if (ven.find("Intel") != std::string::npos) {
+            des = L"Intel";
+            // Hack: Don't let conformance to choose this
+            mem = 0;
+        }
 
-
-        cl_ulong memAllocSize;
-        err = clGetDeviceInfo(device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_ulong), &memAllocSize, NULL);
-        assert(err == CL_SUCCESS);
-        mem = memAllocSize >> 10;
 
         cl_bool unified;
         err = clGetDeviceInfo(device, CL_DEVICE_HOST_UNIFIED_MEMORY, sizeof(cl_bool), &unified, NULL);
@@ -305,8 +310,8 @@ public:
         std::vector<cl_platform_id> platform_id(num_platform);
         err = clGetPlatformIDs(num_platform, platform_id.data(), nullptr);
         std::vector<CLFlag> Flags({CLFlag(CL_DEVICE_TYPE_GPU, L"gpu"),
-                                  CLFlag(CL_DEVICE_TYPE_ACCELERATOR, L"acc")
-                                  // , CLFlag(CL_DEVICE_TYPE_CPU, L"cpu")
+                                  CLFlag(CL_DEVICE_TYPE_ACCELERATOR, L"acc"),
+                                  CLFlag(CL_DEVICE_TYPE_CPU, L"cpu")
                                   });
 
         for (const auto& Conf : Flags) {
@@ -409,17 +414,23 @@ void CLCompileKernels(cl_program& program, cl_context& context, cl_device_id& de
                       void* kernel_size_, void* kernel_source_)
 {
     cl_int err;
-    if (!__mcw_cxxamp_compiled) {
-        size_t kernel_size = (size_t)((void *)kernel_size_);
-        unsigned char *kernel_source = (unsigned char*)malloc(kernel_size+1);
-        memcpy(kernel_source, kernel_source_, kernel_size);
-        kernel_source[kernel_size] = '\0';
+    if (!program) {
+        std::string kernel((const char*)kernel_source_, (size_t)((void *)kernel_size_));
+
+        std::string hash_str = kernel;
+        char name[256];
+        err = clGetDeviceInfo(device, CL_DEVICE_NAME, sizeof(name), name, NULL);
+        assert(err == CL_SUCCESS);
+        hash_str += "const const _device_name[] = \"";
+        hash_str += name;
+        hash_str += "\";";
+
         // calculate MD5 checksum
         unsigned char md5_hash[16];
         memset(md5_hash, 0, sizeof(unsigned char) * 16);
         MD5_CTX md5ctx;
         MD5_Init(&md5ctx);
-        MD5_Update(&md5ctx, kernel_source, kernel_size);
+        MD5_Update(&md5ctx, hash_str.data(), hash_str.length());
         MD5_Final(md5_hash, &md5ctx);
 
         // compute compiled kernel file name
@@ -466,16 +477,18 @@ void CLCompileKernels(cl_program& program, cl_context& context, cl_device_id& de
             // pre-compiled kernel binary doesn't exist
             // call CL compiler
 
-            if (kernel_source[0] == 'B' && kernel_source[1] == 'C') {
+            if (kernel[0] == 'B' && kernel[1] == 'C') {
                 // Bitcode magic number. Assuming it's in SPIR
-                const unsigned char *ks = (const unsigned char *)kernel_source;
-                program = clCreateProgramWithBinary(context, 1, &device, &kernel_size, &ks, NULL, &err);
+                auto size = kernel.length();
+                auto str = (const unsigned char*)kernel.data();
+                program = clCreateProgramWithBinary(context, 1, &device, &size, &str, NULL, &err);
                 if (err == CL_SUCCESS)
                     err = clBuildProgram(program, 1, &device, NULL, NULL, NULL);
             } else {
                 // in OpenCL-C
-                const char *ks = (const char *)kernel_source;
-                program = clCreateProgramWithSource(context, 1, &ks, &kernel_size, &err);
+                auto size = kernel.length();
+                auto str = kernel.data();
+                program = clCreateProgramWithSource(context, 1, &str, &size, &err);
                 if (err == CL_SUCCESS)
                     err = clBuildProgram(program, 1, &device, "-D__ATTRIBUTE_WEAK__=", NULL, NULL);
             }
@@ -537,7 +550,6 @@ void CLCompileKernels(cl_program& program, cl_context& context, cl_device_id& de
         } // if (precompiled_kernel) 
 
         __mcw_cxxamp_compiled = true;
-        free(kernel_source);
         getKernelNames(program);
     }
 }

@@ -2484,6 +2484,7 @@ void do_copy(const array_view<T, N>& src, array<T, N>& dest) {
 template <typename T, int N>
 void copy(const array_view<T, N>& src, array<T, N>& dest) {
     amp_stash(dest.internal());
+    src.synchronize();
     do_copy(src, dest);
 }
 
