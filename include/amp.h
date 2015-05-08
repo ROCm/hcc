@@ -1426,6 +1426,31 @@ const accelerator_view& _array_staging_av(const accelerator_view& a,
 }
 
 template <typename T, int N = 1>
+class array_helper {
+public:
+  __attribute__((annotate("user_deserialize")))
+  array_helper() restrict(cpu, amp) {}
+
+  void setArray(array<T, N>* arr) restrict(amp,cpu) { m_arr = arr; }
+
+  __attribute__((annotate("serialize")))
+  void __cxxamp_serialize(Serialize& s) const {
+    array<T, N>* p_arr = (array<T, N>*)m_arr;
+    if (!p_arr)
+        return;
+    auto curr = s.get_aloc()->getMan()->get_path();
+    auto path = p_arr->get_accelerator_view().get_accelerator().get_device_path();
+    if (path == L"cpu") {
+        auto asoc = p_arr->get_associated_accelerator_view().get_accelerator().get_device_path();
+        if (asoc == L"cpu" || path != curr)
+            throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
+    }
+  }
+private:
+  void* m_arr;
+};
+
+template <typename T, int N = 1>
 class array {
   static_assert(!std::is_const<T>::value, "array<const T> is not supported");
   static_assert(0 == (sizeof(T) % sizeof(int)), "only value types whose size is a multiple of the size of an integer are allowed in array");
@@ -1446,7 +1471,7 @@ public:
       : m_device(ext.size(), true), extent(ext) {}
 #else
       : m_device(av.pAloc, check(ext).size(), true), extent(ext), av(av),
-          asv(_array_staging_av(av, associated_av)) {}
+          asv(_array_staging_av(av, associated_av)) { initialize(); }
 #endif
   array(int e0, accelerator_view av, accelerator_view associated_av)
       : array(Concurrency::extent<N>(e0), av, associated_av) {}
@@ -1625,6 +1650,9 @@ public:
   }
   array& operator=(const array_view<T,N>& src) {
     extent = src.get_extent();
+#ifndef __GPU__
+    initialize();
+#endif
     src.copy_to(*this);
 
     return *this;
@@ -1861,7 +1889,9 @@ private:
   acc_buffer_t m_device;
   access_type cpu_access_type;
 #ifndef __GPU__
+  array_helper<T, N> m_array_helper;
   __attribute__((cpu)) accelerator_view av, asv;
+  void initialize() { m_array_helper.setArray(this); }
 #endif
 };
 

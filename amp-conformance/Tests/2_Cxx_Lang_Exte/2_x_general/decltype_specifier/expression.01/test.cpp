@@ -6,6 +6,7 @@
 /// <tags>P1</tags>
 /// <summary>Verify decltype expression evaluation.</summary>
 #include <type_traits>
+#include <amp.h>
 #define TEST(a,b) static_assert(std::is_same<a,b>::value, "Test failed, type of \"" #a "\" != type of \"" #b "\".")
 #pragma warning(disable: 4101 4189) // unreferenced local variable; unreferenced initialized local variable
 
