@@ -19,8 +19,9 @@ class AMPAllocator;
 class AMPManager : public std::enable_shared_from_this<AMPManager>
 {
 private:
-    virtual void* create(size_t count, void *data, bool hasSrc) = 0;
-    virtual void release(void *data) = 0;
+    virtual void* create(size_t count, void *data, bool hasSrc) { return data; }
+    virtual void release(void *data) {}
+    std::shared_ptr<AMPAllocator> newAloc();
 
 
     std::map<void *, obj_info> mem_info;
@@ -34,6 +35,9 @@ protected:
     bool emulated;
     AMPManager(const std::wstring& path) : path(path) {}
 public:
+    AMPManager() : path(L"cpu"), des(L"dummy"), mem(0), is_double_(true),
+    is_limited_double_(true), cpu_shared_memory(true), emulated(true) {}
+
 
     std::wstring get_path() { return path; }
     std::wstring get_des() { return des; }
@@ -44,9 +48,9 @@ public:
     bool is_emu() { return emulated; }
 
 
-    virtual void* CreateKernel(const char* fun, void* size, void* source) = 0;
-    virtual bool check(size_t *local, size_t dim_ext) = 0;
-    virtual std::shared_ptr<AMPAllocator> createAloc() = 0;
+    virtual void* CreateKernel(const char* fun, void* size, void* source) { return nullptr; }
+    virtual bool check(size_t *local, size_t dim_ext) { return true; }
+    virtual std::shared_ptr<AMPAllocator> createAloc() { return newAloc(); }
     virtual ~AMPManager() {}
 
     void regist(size_t count, void* data, bool hasSrc) {
@@ -80,9 +84,9 @@ public:
 class AMPAllocator
 {
 protected:
-    std::shared_ptr<AMPManager> Man;
-    AMPAllocator(std::shared_ptr<AMPManager> Man) : Man(Man) {}
+  std::shared_ptr<AMPManager> Man;
 public:
+  AMPAllocator(std::shared_ptr<AMPManager> Man) : Man(Man) {}
   virtual ~AMPAllocator() {}
 
   void regist(size_t count, void* data, bool hasSrc) {
@@ -103,14 +107,18 @@ public:
   virtual void wait() {}
 
   // overide function
-  virtual void amp_write(void *data) = 0;
-  virtual void amp_read(void *data) = 0;
-  virtual void* amp_map(void *data, bool Write) = 0;
-  virtual void amp_unmap(void *data, void* addr) = 0;
-  virtual void amp_copy(void *dst, void *src, size_t n) = 0;
-  virtual void PushArg(void* kernel, int idx, rw_info& data) = 0;
-  virtual void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) = 0;
+  virtual void amp_write(void *data) {}
+  virtual void amp_read(void *data) {}
+  virtual void* amp_map(void *data, bool Write) { return data; }
+  virtual void amp_unmap(void *data, void* addr) {}
+  virtual void amp_copy(void *dst, void *src, size_t n) { memmove(dst, src, n); }
+  virtual void PushArg(void* kernel, int idx, rw_info& data) {}
+  virtual void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {}
 };
+
+std::shared_ptr<AMPAllocator> AMPManager::newAloc() {
+    return std::shared_ptr<AMPAllocator>(new AMPAllocator(shared_from_this()));
+}
 
 class accelerator;
 
@@ -123,7 +131,11 @@ protected:
     std::vector<std::shared_ptr<AMPManager>> Devices;
     std::map<std::shared_ptr<AMPManager>,
         std::shared_ptr<AMPAllocator>> default_map;
-    AMPContext() : def(L"default"), Devices(0) {}
+    AMPContext() : def(L"default"), Devices(0) {
+        auto Man = std::shared_ptr<AMPManager>(new AMPManager());
+        default_map[Man] = Man->createAloc();
+        Devices.push_back(Man);
+    }
 public:
     virtual ~AMPContext() {}
     size_t getNumDevices() { return Devices.size(); }
@@ -143,12 +155,10 @@ public:
             path = def;
         if (path == L"default") {
             if (def == L"default")
-                return Devices[0];
+                return Devices[1];
             else
                 path = def;
         }
-        if (path == L"gpu")
-            path += L"0";
         for (const auto dev : Devices)
             if (dev->get_path() == path)
                 return dev;

@@ -75,6 +75,8 @@ public:
         std::string ven(vendor);
         if (ven.find("Advanced Micro Devices") != std::string::npos)
             des = L"AMD";
+        else if (ven.find("NVIDIA") != std::string::npos)
+            des = L"NVIDIA";
 
 
         cl_ulong memAllocSize;
@@ -105,10 +107,7 @@ public:
         assert(err == CL_SUCCESS);
         d.dimensions = dimensions;
         d.maxSizes = maxSizes;
-        if (path.substr(0, 3) == L"cpu")
-            emulated = true;
-        else
-            emulated = false;
+        emulated = false;
     }
     void* CreateKernel(const char* fun, void* size, void* source) override {
         cl_int err;
@@ -285,6 +284,15 @@ std::shared_ptr<AMPAllocator> OpenCLManager::newAloc() {
     return std::shared_ptr<AMPAllocator>(new OpenCLAllocator(shared_from_this()));
 }
 
+struct CLFlag
+{
+    const cl_device_type type;
+    const std::wstring base;
+    mutable int id;
+    CLFlag(const cl_device_type& type, const std::wstring& base)
+        : id(0), type(type), base(base) {}
+    const std::wstring getPath() const { return base + std::to_wstring(id++); }
+};
 
 class OpenCLContext : public AMPContext
 {
@@ -296,38 +304,27 @@ public:
         assert(err == CL_SUCCESS);
         std::vector<cl_platform_id> platform_id(num_platform);
         err = clGetPlatformIDs(num_platform, platform_id.data(), nullptr);
-        int gpuid = 0;
-        int cpuid = 0;
-        std::vector<cl_device_id> dev;
-        for (const auto pId : platform_id) {
-            cl_uint num_device;
-            err = clGetDeviceIDs(pId, CL_DEVICE_TYPE_GPU, 0, nullptr, &num_device);
-            assert(err == CL_SUCCESS);
-            dev.resize(num_device);
-            err = clGetDeviceIDs(pId, CL_DEVICE_TYPE_GPU, num_device, dev.data(), nullptr);
-            assert(err == CL_SUCCESS);
-            for (const auto id : dev) {
-                auto path = L"gpu" + std::to_wstring(gpuid++);
-                auto Man = std::shared_ptr<AMPManager>(new OpenCLManager(id, path));
-                default_map[Man] = Man->createAloc();
-                Devices.push_back(Man);
-            }
+        std::vector<CLFlag> Flags({CLFlag(CL_DEVICE_TYPE_GPU, L"gpu"),
+                                  CLFlag(CL_DEVICE_TYPE_ACCELERATOR, L"acc")
+                                  // , CLFlag(CL_DEVICE_TYPE_CPU, L"cpu")
+                                  });
 
-            err = clGetDeviceIDs(pId, CL_DEVICE_TYPE_CPU, 0, nullptr, &num_device);
-            assert(err == CL_SUCCESS);
-            dev.resize(num_device);
-            err = clGetDeviceIDs(pId, CL_DEVICE_TYPE_CPU, num_device, dev.data(), nullptr);
-            assert(err == CL_SUCCESS);
-            for (const auto id : dev) {
-                std::wstring path = L"cpu";
-                if (cpuid)
-                    path += std::to_wstring(cpuid);
-                ++cpuid;
-                auto Man = std::shared_ptr<AMPManager>(new OpenCLManager(id, path));
-                default_map[Man] = Man->createAloc();
-                Devices.push_back(Man);
+        for (const auto& Conf : Flags) {
+            for (const auto pId : platform_id) {
+                cl_uint num_device;
+                err = clGetDeviceIDs(pId, Conf.type, 0, nullptr, &num_device);
+                assert(err == CL_SUCCESS);
+                std::vector<cl_device_id> devs(num_device);
+                err = clGetDeviceIDs(pId, Conf.type, num_device, devs.data(), nullptr);
+                assert(err == CL_SUCCESS);
+                for (const auto dev : devs) {
+                    auto Man = std::shared_ptr<AMPManager>(new OpenCLManager(dev, Conf.getPath()));
+                    default_map[Man] = Man->createAloc();
+                    Devices.push_back(Man);
+                }
             }
         }
+
     }
 };
 

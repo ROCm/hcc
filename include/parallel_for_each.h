@@ -220,6 +220,9 @@ inline
 void mcw_cxxamp_launch_kernel(const accelerator_view& av, size_t *ext,
                               size_t *local_size, const Kernel& f) restrict(cpu,amp) {
 #ifndef __GPU__
+  if (av.get_accelerator().get_device_path() == L"cpu") {
+    throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
+  }
   //Invoke Kernel::__cxxamp_trampoline as an kernel
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -285,10 +288,6 @@ void parallel_for_each(const accelerator_view& av, extent<N> compute_domain,
     auto qq = &index<N>::__cxxamp_opencl_index;
     int* foo = reinterpret_cast<int*>(&pfe_wrapper<N, Kernel>::__cxxamp_trampoline);
 #endif
-    if (av.get_accelerator().get_device_path().substr(0, 3) == L"cpu") {
-      throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
-    }
-
     size_t compute_domain_size = 1;
     for(int i = 0 ; i < N ; i++)
     {
@@ -363,9 +362,6 @@ template <typename Kernel>
 __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av,
     extent<1> compute_domain, const Kernel& f) restrict(cpu,amp) {
 #ifndef __GPU__
-    if (av.get_accelerator().get_device_path().substr(0, 3) == L"cpu") {
-      throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
-    }
   if(compute_domain[0]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
   }
@@ -415,9 +411,6 @@ template <typename Kernel>
 __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av,
     extent<2> compute_domain, const Kernel& f) restrict(cpu,amp) {
 #ifndef __GPU__
-    if (av.get_accelerator().get_device_path().substr(0, 3) == L"cpu") {
-      throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
-    }
   if(compute_domain[0]<=0 || compute_domain[1]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
   }
@@ -469,9 +462,6 @@ template <typename Kernel>
 __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av,
     extent<3> compute_domain, const Kernel& f) restrict(cpu,amp) {
 #ifndef __GPU__
-    if (av.get_accelerator().get_device_path().substr(0, 3) == L"cpu") {
-      throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
-    }
   if(compute_domain[0]<=0 || compute_domain[1]<=0 || compute_domain[2]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
   }
@@ -536,9 +526,6 @@ template <int D0, typename Kernel>
 __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av,
     tiled_extent<D0> compute_domain, const Kernel& f) restrict(cpu,amp) {
 #ifndef __GPU__
-    if (av.get_accelerator().get_device_path().substr(0, 3) == L"cpu") {
-      throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
-    }
   if(compute_domain[0]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
   }
@@ -612,9 +599,6 @@ template <int D0, int D1, typename Kernel>
 __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av,
     tiled_extent<D0, D1> compute_domain, const Kernel& f) restrict(cpu,amp) {
 #ifndef __GPU__
-    if (av.get_accelerator().get_device_path().substr(0, 3) == L"cpu") {
-      throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
-    }
   if(compute_domain[0]<=0 || compute_domain[1]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
   }
@@ -692,9 +676,6 @@ template <int D0, int D1, int D2, typename Kernel>
 __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av,
     tiled_extent<D0, D1, D2> compute_domain, const Kernel& f) restrict(cpu,amp) {
 #ifndef __GPU__
-    if (av.get_accelerator().get_device_path().substr(0, 3) == L"cpu") {
-      throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
-    }
   if(compute_domain[0]<=0 || compute_domain[1]<=0 || compute_domain[2]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
   }
