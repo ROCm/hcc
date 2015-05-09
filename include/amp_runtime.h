@@ -19,11 +19,17 @@ class AMPAllocator;
 
 class AMPManager : public std::enable_shared_from_this<AMPManager>
 {
-private:
     virtual void* create(size_t count, void *data, bool hasSrc) { return data; }
     virtual void release(void *data) {}
     std::shared_ptr<AMPAllocator> newAloc();
 
+    obj_info device_data(void* data) {
+        auto it = mem_info.find(data);
+        if (it != std::end(mem_info))
+            return it->second;
+        return obj_info();
+    }
+    friend class AMPAllocator;
 
     std::map<void *, obj_info> mem_info;
     const std::wstring path;
@@ -73,13 +79,6 @@ public:
             }
         }
     }
-
-    obj_info device_data(void* data) {
-        auto it = mem_info.find(data);
-        if (it != std::end(mem_info))
-            return it->second;
-        return obj_info();
-    }
 };
 
 class AMPAllocator
@@ -89,32 +88,62 @@ protected:
 public:
   AMPAllocator(std::shared_ptr<AMPManager> Man) : Man(Man) {}
   virtual ~AMPAllocator() {}
+  virtual void flush() {}
+  virtual void wait() {}
+  virtual void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {}
+
 
   void regist(size_t count, void* data, bool hasSrc) {
       Man->regist(count, data, hasSrc);
   }
 
-  void unregist(void* data) {
-      Man->unregist(data);
-  }
+  void unregist(void* data) { Man->unregist(data); }
 
   void* CreateKernel(const char* fun, void* size, void* source) {
       return Man->CreateKernel(fun, size, source);
   }
 
   std::shared_ptr<AMPManager> getMan() { return Man; }
+  
+  void PushArg(void* kernel, int idx, void *&data) {
+      obj_info obj = Man->device_data(data);
+      Push(kernel, idx, data, obj);
+  }
 
-  virtual void flush() {}
-  virtual void wait() {}
+  void write(void* data) {
+      obj_info obj = Man->device_data(data);
+      if (obj.device != data)
+          amp_write(obj, data);
+  }
 
+  void read(void* data, void* dst = nullptr) {
+      obj_info obj = Man->device_data(data);
+      if (!dst)
+          dst = data;
+      if (obj.device != dst)
+          amp_read(obj, dst);
+  }
+
+  void* map(void* data, bool Write) {
+      obj_info obj = Man->device_data(data);
+      if (obj.device == data)
+          return data;
+      else
+          return amp_map(obj, Write);
+  }
+
+  void unmap(void* data, void* addr) {
+      obj_info obj = Man->device_data(data);
+      amp_unmap(obj, addr);
+  }
+
+private:
   // overide function
-  virtual void amp_write(void *data) {}
-  virtual void amp_read(void *data) {}
-  virtual void* amp_map(void *data, bool Write) { return data; }
-  virtual void amp_unmap(void *data, void* addr) {}
-  virtual void amp_copy(void *dst, void *src, size_t n) { memmove(dst, src, n); }
-  virtual void PushArg(void* kernel, int idx, rw_info& data) {}
-  virtual void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {}
+  virtual void amp_write(obj_info& obj, void* src) { memmove(obj.device, src, obj.count); }
+  virtual void amp_read(obj_info& obj, void* dst) { memmove(dst, obj.device, obj.count); }
+  virtual void* amp_map(obj_info& obj, bool Write) { return nullptr; }
+  virtual void amp_unmap(obj_info& obj, void* addr) {}
+  virtual void Push(void* kernel, int idx, void*& data, obj_info& obj) {}
 };
 
 std::shared_ptr<AMPAllocator> AMPManager::newAloc() {
@@ -246,11 +275,11 @@ struct rw_info
                 }
                 if (!discard || isArray) {
                     if (curr->getMan() != aloc->getMan()) {
-                        void* dst = aloc->amp_map(data, true);
-                        void* src = curr->amp_map(data, false);
+                        void* dst = aloc->map(data, true);
+                        void* src = curr->map(data, false);
                         memmove(dst, src, count);
-                        aloc->amp_unmap(data, dst);
-                        curr->amp_unmap(data, src);
+                        aloc->unmap(data, dst);
+                        curr->unmap(data, src);
                     } else {
                         // force previous execution finish
                         // replace with more efficient implementation in the future
@@ -268,11 +297,11 @@ struct rw_info
                 curr = aloc;
             }
             if (!discard || isArray)
-                curr->amp_write(data);
+                curr->write(data);
         }
         dirty = true;
         discard = false;
-        curr->PushArg(s.getKernel(), s.getAndIncCurrentIndex(), *this);
+        curr->PushArg(s.getKernel(), s.getAndIncCurrentIndex(), data);
     }
 
     void disc() {
@@ -284,7 +313,7 @@ struct rw_info
 
     void copy(void* dst, size_t count) {
         if (dirty)
-            curr->amp_copy(dst, data, count);
+            curr->read(data, dst);
         else
             memmove(dst, data, count);
     }
@@ -295,7 +324,7 @@ struct rw_info
             return;
 #endif
         if (dirty && !discard) {
-            curr->amp_read(data);
+            curr->read(data);
             dirty = false;
         }
     }

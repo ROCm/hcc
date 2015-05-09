@@ -126,12 +126,7 @@ public:
         }
         return KO[name];
     }
-    void* create(size_t count, void* data, bool hasSource /* unused */) override {
-        cl_int err;
-        cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, nullptr, &err);
-        assert(err == CL_SUCCESS);
-        return dm;
-    }
+
     bool check(size_t* local_size, size_t dim_ext) override {
         // C++ AMP specifications
         // The maximum number of tiles per dimension will be no less than 65535.
@@ -152,9 +147,6 @@ public:
         }
         return true;
     }
-    void release(void *device) override { clReleaseMemObject(static_cast<cl_mem>(device)); }
-    std::shared_ptr<AMPAllocator> createAloc() override { return newAloc(); }
-
 
     ~OpenCLManager() {
         if (program) {
@@ -168,6 +160,17 @@ public:
     cl_device_id getDevice() const { return device; }
     cl_context getContext() const { return context; }
 private:
+
+    void* create(size_t count, void* data, bool hasSource /* unused */) override {
+        cl_int err;
+        cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, nullptr, &err);
+        assert(err == CL_SUCCESS);
+        return dm;
+    }
+    void release(void *device) override { clReleaseMemObject(static_cast<cl_mem>(device)); }
+    std::shared_ptr<AMPAllocator> createAloc() override { return newAloc(); }
+
+
     std::shared_ptr<AMPAllocator> newAloc();
     struct DimMaxSize d;
     cl_context       context;
@@ -229,25 +232,26 @@ public:
         } 
         pthread_attr_destroy(&attr);
     }
-    void* getQueue() override { return queue; }
-    void PushArg(void *kernel, int idx, rw_info& data) override {
-        obj_info obj = Man->device_data(data.data);
+
+    void flush() override { clFlush(queue); }
+    void wait() override { clFinish(queue); }
+    ~OpenCLAllocator() { clReleaseCommandQueue(queue); }
+
+private:
+    void Push(void *kernel, int idx, void*& data, obj_info& obj) override {
         PushArgImpl(kernel, idx, sizeof(cl_mem), &obj.device);
     }
-    void amp_write(void *data) override {
-        obj_info obj = Man->device_data(data);
+    void amp_write(obj_info& obj, void *src) override {
         cl_mem dm = static_cast<cl_mem>(obj.device);
-        cl_int err = clEnqueueWriteBuffer(queue, dm, CL_FALSE, 0, obj.count, data, 0, NULL, NULL);
+        cl_int err = clEnqueueWriteBuffer(queue, dm, CL_FALSE, 0, obj.count, src, 0, NULL, NULL);
         assert(err == CL_SUCCESS);
     }
-    void amp_read(void *data) override {
-        obj_info obj = Man->device_data(data);
+    void amp_read(obj_info& obj, void* dst) override {
         cl_mem dm = static_cast<cl_mem>(obj.device);
-        cl_int err = clEnqueueReadBuffer(queue, dm, CL_TRUE, 0, obj.count, data, 0, NULL, NULL);
+        cl_int err = clEnqueueReadBuffer(queue, dm, CL_TRUE, 0, obj.count, dst, 0, NULL, NULL);
         assert(err == CL_SUCCESS);
     }
-    void* amp_map(void *data, bool Write) override {
-        obj_info obj = Man->device_data(data);
+    void* amp_map(obj_info& obj, bool Write) override {
         cl_mem dm = static_cast<cl_mem>(obj.device);
         cl_int err;
         cl_map_flags flags;
@@ -259,16 +263,9 @@ public:
         assert(err == CL_SUCCESS);
         return addr;
     }
-    void amp_unmap(void *data, void* addr) override {
-        obj_info obj = Man->device_data(data);
+    void amp_unmap(obj_info& obj, void* addr) override {
         cl_mem dm = static_cast<cl_mem>(obj.device);
         cl_int err = clEnqueueUnmapMemObject(queue, dm, addr, 0, NULL, NULL);
-        assert(err == CL_SUCCESS);
-    }
-    void amp_copy(void *dst, void *src, size_t count) override {
-        obj_info obj = Man->device_data(src);
-        cl_mem dm = static_cast<cl_mem>(obj.device);
-        cl_int err = clEnqueueReadBuffer(queue, dm, CL_TRUE, 0, count, dst , 0, NULL, NULL);
         assert(err == CL_SUCCESS);
     }
     void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) override {
@@ -278,10 +275,6 @@ public:
         err = clEnqueueNDRangeKernel(queue, (cl_kernel)kernel, dim_ext, NULL, ext, local_size, 0, NULL, NULL);
         assert(err == CL_SUCCESS);
     }
-    void flush() override { clFlush(queue); }
-    void wait() override { clFinish(queue); }
-    ~OpenCLAllocator() { clReleaseCommandQueue(queue); }
-private:
     cl_command_queue queue;
 };
 

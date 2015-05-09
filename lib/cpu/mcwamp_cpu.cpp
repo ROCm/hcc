@@ -37,9 +37,7 @@ public:
         else
             return aligned_alloc(0x1000, count);
     }
-    void release(void *data) override {
-        ::operator delete(data);
-    }
+    void release(void *data) override { ::operator delete(data); }
     std::shared_ptr<AMPAllocator> createAloc() override {
         if (!aloc)
             aloc = init();
@@ -52,32 +50,17 @@ class CPUAllocator : public AMPAllocator
     std::map<void*, void*> addrs;
 public:
     CPUAllocator(std::shared_ptr<AMPManager> pMan) : AMPAllocator(pMan) {}
-  void amp_write(void *data) override {
-      obj_info obj = Man->device_data(data);
-      if (obj.device != data)
-          memmove(obj.device, data, obj.count);
-  }
-  void amp_read(void *data) override {
-      obj_info obj = Man->device_data(data);
-      if (obj.device != data)
-          memmove(data, obj.device, obj.count);
-  }
-  void amp_copy(void *dst, void *src, size_t n) override {
-      obj_info obj = Man->device_data(src);
-      if (obj.device != dst)
-          memmove(dst, src, obj.count);
-  }
-  void PushArg(void* kernel, int idx, rw_info& data) override {
-      obj_info obj = Man->device_data(data.data);
-      if (data.data == obj.device)
+private:
+    void Push(void *kernel, int idx, void*& data, obj_info& obj) override {
+      if (data == obj.device)
           return;
-      auto it = addrs.find(data.data);
+      auto it = addrs.find(data);
       bool find = it != std::end(addrs);
       if (!kernel && !find) {
-          addrs[obj.device] = data.data;
-          data.data = obj.device;
+          addrs[obj.device] = data;
+          data = obj.device;
       } else if (kernel && find) {
-          data.data = it->second;
+          data = it->second;
           addrs.erase(it);
       }
   }
