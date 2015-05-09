@@ -66,8 +66,6 @@ void RegisterMemory(void *p, size_t sz)
 ///
 namespace Concurrency {
 
-static HSAContext ctx;
-
 class HSAManager : public AMPManager
 {
     std::shared_ptr<AMPAllocator> aloc;
@@ -78,6 +76,7 @@ class HSAManager : public AMPManager
         if (hasSrc)
             data = aligned_alloc(0x1000, count);
         CLAMP::RegisterMemory(data, count);
+        return data;
     }
 
     void release(void *data) override { ::operator delete(data); }
@@ -139,7 +138,6 @@ public:
         size_t tmp_local[] = {0, 0, 0};
         if (!local)
             local = tmp_local;
-        Concurrency::HSAAMPAllocator& aloc = Concurrency::getHSAAMPAllocator();
         dispatch->setLaunchAttributes(nr_dim, global, local);
         dispatch->dispatchKernelWaitComplete();
         delete(dispatch);
@@ -155,7 +153,6 @@ public:
         //for (size_t i = 0; i < nr_dim; ++i) {
         //  std::cerr << "g: " << global[i] << " l: " << local[i] << "\n";
         //}
-        Concurrency::HSAAMPAllocator& aloc = Concurrency::getHSAAMPAllocator();
         dispatch->setLaunchAttributes(nr_dim, global, local);
         std::shared_future<void>* fut = dispatch->dispatchKernelAndGetFuture();
         return static_cast<void*>(fut);
@@ -198,6 +195,8 @@ static HSAContext ctx;
 extern "C" void *GetContextImpl() {
   return &Concurrency::ctx;
 }
+
+extern "C" void MatchKernelNamesImpl(char *fixed_name) {}
 
 extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v) {
   //std::cerr << "pushing:" << ker << " of size " << sz << "\n";
