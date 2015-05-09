@@ -116,12 +116,15 @@ public:
           amp_write(obj, data);
   }
 
-  void read(void* data, void* dst = nullptr) {
+  void read(void* data) {
       obj_info obj = Man->device_data(data);
-      if (!dst)
-          dst = data;
-      if (obj.device != dst)
-          amp_read(obj, dst);
+      if (obj.device != data)
+          amp_read(obj, data);
+  }
+
+  void copy(void* dst, void* src, size_t count) {
+      obj_info obj = Man->device_data(src);
+      amp_copy(obj, dst, src, count);
   }
 
   void* map(void* data, bool Write) {
@@ -141,6 +144,9 @@ private:
   // overide function
   virtual void amp_write(obj_info& obj, void* src) { memmove(obj.device, src, obj.count); }
   virtual void amp_read(obj_info& obj, void* dst) { memmove(dst, obj.device, obj.count); }
+  virtual void amp_copy(obj_info& obj, void* dst, void* src, size_t count) {
+      memmove(dst, src, count);
+  }
   virtual void* amp_map(obj_info& obj, bool Write) { return nullptr; }
   virtual void amp_unmap(obj_info& obj, void* addr) {}
   virtual void Push(void* kernel, int idx, void*& data, obj_info& obj) {}
@@ -313,7 +319,7 @@ struct rw_info
 
     void copy(void* dst, size_t count) {
         if (dirty)
-            curr->read(data, dst);
+            curr->copy(dst, data, count);
         else
             memmove(dst, data, count);
     }
