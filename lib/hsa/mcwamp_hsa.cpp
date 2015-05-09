@@ -172,7 +172,7 @@ private:
     }
 };
 
-std::shared_ptr<AMPAllocator> CPUManager::init() {
+std::shared_ptr<AMPAllocator> HSAManager::init() {
     return std::shared_ptr<AMPAllocator>(new HSAAllocator(shared_from_this()));
 }
 
