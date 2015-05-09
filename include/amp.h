@@ -128,6 +128,8 @@ class completion_future;
 class accelerator;
 template <typename T, int N> class array_view;
 template <typename T, int N> class array;
+template <int N> class extent;
+template <int D0, int D1=0, int D2=0> class tiled_extent;
 
 class accelerator_view {
     accelerator_view(std::shared_ptr<AMPAllocator> pAloc,
@@ -157,14 +159,7 @@ public:
   }
   bool operator!=(const accelerator_view& other) const { return !(*this == other); }
 
-
 private:
-  __attribute__((annotate("user_deserialize")))
-      accelerator_view() restrict(amp,cpu) {
-#ifndef __GPU__
-          throw runtime_exception("errorMsg_throw", 0);
-#endif
-      }
   std::shared_ptr<AMPAllocator> pAloc;
   queuing_mode mode;
   friend class accelerator;
@@ -174,6 +169,28 @@ private:
   template<typename Kernel, int dim_ext> friend
       void mcw_cxxamp_launch_kernel(const accelerator_view&, size_t *, size_t *, const Kernel&);
   template <typename T, int N> friend class array_helper;
+
+  template <typename Kernel, int N>
+      friend void launch_cpu_task(const accelerator_view&, extent<N> const&, Kernel const&);
+  template <int D0, typename Kernel>
+      friend void parallel_for_each(const accelerator_view&,
+                                    tiled_extent<D0>, const Kernel&) restrict(cpu,amp);
+  template <int D0, int D1, typename Kernel>
+      friend void parallel_for_each(const accelerator_view&,
+                                    tiled_extent<D0, D1>, const Kernel&) restrict(cpu,amp);
+  template <int D0, int D1, int D2, typename Kernel>
+      friend void parallel_for_each(const accelerator_view&,
+                                    tiled_extent<D0, D1, D2>, const Kernel&) restrict(cpu,amp);
+
+#ifdef __AMP_CPU__
+public:
+#endif
+  __attribute__((annotate("user_deserialize")))
+      accelerator_view() restrict(amp,cpu) {
+#ifndef __GPU__
+          throw runtime_exception("errorMsg_throw", 0);
+#endif
+      }
 };
 
 
@@ -240,8 +257,6 @@ accelerator_view accelerator::create_view(queuing_mode mode) {
 accelerator_view accelerator::get_default_view() const { return getContext()->getView(pMan); }
 
 
-template <int N> class extent;
-template <int D0, int D1=0, int D2=0> class tiled_extent;
 class completion_future {
 public:
 

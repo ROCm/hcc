@@ -20,6 +20,7 @@ namespace Concurrency {
 
 class CPUManager : public AMPManager
 {
+    std::shared_ptr<AMPAllocator> aloc;
     std::shared_ptr<AMPAllocator> init();
 public:
     CPUManager() : AMPManager(L"fallback") {
@@ -31,7 +32,7 @@ public:
         emulated = false;
     }
     void* create(size_t count, void *data, bool hasSrc) override {
-        if (hasSrc)
+        if (!hasSrc)
             return data;
         else
             return aligned_alloc(0x1000, count);
@@ -40,7 +41,8 @@ public:
         ::operator delete(data);
     }
     std::shared_ptr<AMPAllocator> createAloc() override {
-        static auto aloc = init();
+        if (!aloc)
+            aloc = init();
         return aloc;
     }
 };
@@ -75,9 +77,8 @@ public:
           addrs[obj.device] = data.data;
           data.data = obj.device;
       } else if (kernel && find) {
-          void* addr = addrs[obj.device];
-          data.data = addr;
-          addrs.erase(addr);
+          data.data = it->second;
+          addrs.erase(it);
       }
   }
 };

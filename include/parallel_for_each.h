@@ -154,9 +154,9 @@ void partitioned_task_tile(Kernel const& f, tiled_extent<D0, D1, D2> const& ext,
     delete [] tidx;
 }
 template <typename Kernel, int N>
-void launch_cpu_task(extent<N> const& compute_domain, Kernel const& f)
+void launch_cpu_task(const accelerator_view& av, extent<N> const& compute_domain, Kernel const& f)
 {
-    Concurrency::Serialize s(nullptr);
+    Concurrency::Serialize s(av.pAloc, nullptr);
     f.__cxxamp_serialize(s);
     CLAMP::enter_kernel();
     std::vector<std::thread> th(NTHREAD);
@@ -166,7 +166,7 @@ void launch_cpu_task(extent<N> const& compute_domain, Kernel const& f)
         if (t.joinable())
             t.join();
     int a;
-    Concurrency::Serialize ss(&a);
+    Concurrency::Serialize ss(av.pAloc, (void*)0x5566);
     f.__cxxamp_serialize(ss);
     CLAMP::leave_kernel();
 }
@@ -305,7 +305,7 @@ void parallel_for_each(const accelerator_view& av, extent<N> compute_domain,
         static_cast<size_t>(compute_domain[N - 3])};
 #ifdef __AMP_CPU__
     if (CLAMP::is_cpu()) {
-        launch_cpu_task(compute_domain, f);
+        launch_cpu_task(av, compute_domain, f);
         return;
     }
 #endif
@@ -369,7 +369,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
     throw invalid_compute_domain("Extent size too large.");
 #ifdef __AMP_CPU__
   if (CLAMP::is_cpu()) {
-      launch_cpu_task(compute_domain, f);
+      launch_cpu_task(av, compute_domain, f);
       return;
   }
 #endif
@@ -418,7 +418,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
     throw invalid_compute_domain("Extent size too large.");
 #ifdef __AMP_CPU__
   if (CLAMP::is_cpu()) {
-      launch_cpu_task(compute_domain, f);
+      launch_cpu_task(av, compute_domain, f);
       return;
   }
 #endif
@@ -475,7 +475,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
     throw invalid_compute_domain("Extent size too large.");
 #ifdef __AMP_CPU__
   if (CLAMP::is_cpu()) {
-      launch_cpu_task(compute_domain, f);
+      launch_cpu_task(av, compute_domain, f);
       return;
   }
 #endif
@@ -539,7 +539,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
   }
 #ifdef __AMP_CPU__
   if (CLAMP::is_cpu()) {
-      Concurrency::Serialize s(nullptr);
+      Concurrency::Serialize s(av.pAloc, nullptr);
       f.__cxxamp_serialize(s);
       CLAMP::enter_kernel();
       std::vector<std::thread> th(NTHREAD);
@@ -550,7 +550,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
           if (t.joinable())
               t.join();
       int a;
-      Concurrency::Serialize ss(&a);
+      Concurrency::Serialize ss(av.pAloc, (void*)0x5566);
       f.__cxxamp_serialize(ss);
       CLAMP::leave_kernel();
       return;
@@ -614,7 +614,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
   }
 #ifdef __AMP_CPU__
   if (CLAMP::is_cpu()) {
-      Concurrency::Serialize s(nullptr);
+      Concurrency::Serialize s(av.pAloc, nullptr);
       f.__cxxamp_serialize(s);
       CLAMP::enter_kernel();
       std::vector<std::thread> th(NTHREAD);
@@ -625,7 +625,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
           if (t.joinable())
               t.join();
       int a;
-      Concurrency::Serialize ss(&a);
+      Concurrency::Serialize ss(av.pAloc, (void*)0x5566);
       f.__cxxamp_serialize(ss);
       CLAMP::leave_kernel();
       return;
@@ -699,7 +699,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
   }
 #ifdef __AMP_CPU__
   if (CLAMP::is_cpu()) {
-      Concurrency::Serialize s(nullptr);
+      Concurrency::Serialize s(av.pAloc, nullptr);
       f.__cxxamp_serialize(s);
       CLAMP::enter_kernel();
       std::vector<std::thread> th(NTHREAD);
@@ -710,7 +710,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
           if (t.joinable())
               t.join();
       int a;
-      Concurrency::Serialize ss(&a);
+      Concurrency::Serialize ss(av.pAloc, (void*)0x5566);
       f.__cxxamp_serialize(ss);
       CLAMP::leave_kernel();
       return;

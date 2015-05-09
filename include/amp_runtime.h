@@ -67,7 +67,7 @@ public:
         auto it = mem_info.find(data);
         if (it != std::end(mem_info)) {
             obj_info& obj = it->second;
-            if (!--obj.ref) {
+            if (!--obj.ref && obj.device != data) {
                 release(obj.device);
                 mem_info.erase(it);
             }
