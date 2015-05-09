@@ -20,8 +20,7 @@ namespace Concurrency {
 
 class CPUManager : public AMPManager
 {
-    std::shared_ptr<AMPAllocator> aloc;
-    std::shared_ptr<AMPAllocator> init();
+    std::shared_ptr<AMPAllocator> newAloc();
 public:
     CPUManager() : AMPManager(L"fallback") {
         des = L"CPU Fallback";
@@ -38,11 +37,7 @@ public:
             return aligned_alloc(0x1000, count);
     }
     void release(void *data) override { ::operator delete(data); }
-    std::shared_ptr<AMPAllocator> createAloc() override {
-        if (!aloc)
-            aloc = init();
-        return aloc;
-    }
+    std::shared_ptr<AMPAllocator> createAloc() override { return newAloc(); }
 };
 
 class CPUAllocator : public AMPAllocator
@@ -66,7 +61,7 @@ private:
   }
 };
 
-std::shared_ptr<AMPAllocator> CPUManager::init() {
+std::shared_ptr<AMPAllocator> CPUManager::newAloc() {
     return std::shared_ptr<AMPAllocator>(new CPUAllocator(shared_from_this()));
 }
 
