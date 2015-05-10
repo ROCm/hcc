@@ -124,7 +124,7 @@ public:
 
   void copy(void* dst, void* src, size_t count) {
       obj_info obj = Man->device_data(src);
-      amp_copy(obj, dst, src, count);
+      amp_copy(obj, dst, count);
   }
 
   void* map(void* data, bool Write) {
@@ -144,8 +144,8 @@ private:
   // overide function
   virtual void amp_write(obj_info& obj, void* src) { memmove(obj.device, src, obj.count); }
   virtual void amp_read(obj_info& obj, void* dst) { memmove(dst, obj.device, obj.count); }
-  virtual void amp_copy(obj_info& obj, void* dst, void* src, size_t count) {
-      memmove(dst, src, count);
+  virtual void amp_copy(obj_info& obj, void* dst, size_t count) {
+      memmove(dst, obj.device, count);
   }
   virtual void* amp_map(obj_info& obj, bool Write) { return nullptr; }
   virtual void amp_unmap(obj_info& obj, void* addr) {}

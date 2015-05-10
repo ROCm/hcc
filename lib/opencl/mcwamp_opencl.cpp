@@ -251,7 +251,7 @@ private:
         cl_int err = clEnqueueReadBuffer(queue, dm, CL_TRUE, 0, obj.count, dst, 0, NULL, NULL);
         assert(err == CL_SUCCESS);
     }
-    void amp_copy(obj_info& obj, void* dst, void* src, size_t count) override {
+    void amp_copy(obj_info& obj, void* dst, size_t count) override {
         cl_mem dm = static_cast<cl_mem>(obj.device);
         cl_int err = clEnqueueReadBuffer(queue, dm, CL_TRUE, 0, count, dst, 0, NULL, NULL);
         assert(err == CL_SUCCESS);

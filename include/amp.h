@@ -1621,16 +1621,25 @@ public:
 
 
   explicit array(const array_view<const T, N>& src)
-      : array(src.extent, src.get_source_accelerator_view())
-  { copy(src, *this); }
+      : array(src.extent, src.get_source_accelerator_view()) {
+#ifndef __GPU__
+      src.cache.copy(m_device.get());
+#endif
+  }
 
   array(const array_view<const T, N>& src, accelerator_view av,
         access_type cpu_access_type = access_type_auto)
-      : array(src.get_extent(), av)
-    { copy(src, m_device.get()); }
+      : array(src.get_extent(), av) {
+#ifndef __GPU__
+      src.cache.copy(m_device.get());
+#endif
+  }
   array(const array_view<const T, N>& src, accelerator_view av,
-        accelerator_view associated_av) : array(src.extent, av, associated_av)
-    { copy(src, m_device.get()); }
+        accelerator_view associated_av) : array(src.extent, av, associated_av) {
+#ifndef __GPU__
+      src.cache.copy(m_device.get());
+#endif
+  }
 
 
   array(const array& other) : m_device(other.m_device), extent(other.extent)
