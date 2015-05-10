@@ -115,6 +115,15 @@ enum queuing_mode {
   queuing_mode_automatic
 };
 
+enum access_type
+{
+  access_type_none,
+  access_type_read,
+  access_type_write,
+  access_type_read_write = access_type_read | access_type_write,
+  access_type_auto
+};
+
 class completion_future;
 class accelerator;
 template <typename T, int N> class array_view;
@@ -227,13 +236,10 @@ public:
   bool get_supports_limited_double_precision() const { return pMan->is_lim_double(); }
   size_t get_dedicated_memory() const { return pMan->get_mem(); }
   accelerator_view get_default_view() const;
-  access_type get_default_cpu_access_type() const { return pMan->cpu_type; }
+  access_type get_default_cpu_access_type() const { return access_type_auto; }
   bool get_supports_cpu_shared_memory() const { return pMan->is_uni(); }
 
-  bool set_default_cpu_access_type(access_type type) {
-      pMan->cpu_type = type;
-      return true;
-  }
+  bool set_default_cpu_access_type(access_type type) { return true; }
   accelerator_view create_view(queuing_mode mode = queuing_mode_automatic);
 
 
@@ -1428,8 +1434,8 @@ const Concurrency::extent<N>& check(const Concurrency::extent<N>& ext)
 const accelerator_view& _array_staging_av(const accelerator_view& a,
                                           const accelerator_view& b)
 {
-    std::wstring path = a.get_accelerator().get_device_path();
-    if (path != L"cpu")
+    std::wstring path = a.get_accelerator().get_device_path().substr(0, 3);
+    if (path == L"gpu")
         return a;
     return b;
 }
@@ -1477,11 +1483,10 @@ public:
 
   array(const Concurrency::extent<N>& ext, accelerator_view av, accelerator_view associated_av)
 #ifdef __GPU__
-      : m_device(ext.size(), true), extent(ext), cpu_type(access_type_auto) {}
+      : m_device(ext.size(), true), extent(ext) {}
 #else
       : m_device(av.pAloc, check(ext).size(), true), extent(ext), av(av),
-          asv(_array_staging_av(av, associated_av)), cpu_type(access_type_auto)
-          { initialize(); }
+          asv(_array_staging_av(av, associated_av)) { initialize(); }
 #endif
   array(int e0, accelerator_view av, accelerator_view associated_av)
       : array(Concurrency::extent<N>(e0), av, associated_av) {}
@@ -1493,16 +1498,16 @@ public:
 
   array(const extent<N>& ext, accelerator_view av,
         access_type cpu_access_type = access_type_auto)
-      : array(ext, av, av) { cpu_type = av.get_accelerator().get_default_cpu_access_type(); }
+      : array(ext, av, av) {}
   array(int e0, accelerator_view av,
         access_type cpu_access_type = access_type_auto)
-      : array(e0, av, av) { cpu_type = cpu_access_type; }
+      : array(e0, av, av) {}
   array(int e0, int e1, accelerator_view av,
         access_type cpu_access_type = access_type_auto)
-      : array(e0, e1, av, av) { cpu_type = cpu_access_type; }
+      : array(e0, e1, av, av) {}
   array(int e0, int e1, int e2, accelerator_view av,
         access_type cpu_access_type = access_type_auto)
-      : array(e0, e1, e2, av, av) { cpu_type = cpu_access_type; }
+      : array(e0, e1, e2, av, av) {}
 
 
   explicit array(const extent<N>& ext) : array(ext, accelerator::get_auto_selection_view()) {}
@@ -1558,35 +1563,35 @@ public:
   template <typename InputIter>
       array(const Concurrency::extent<N>& ext, InputIter srcBegin, accelerator_view av,
             access_type cpu_access_type = access_type_auto)
-      : array(ext, srcBegin, av, av) { cpu_type = av.get_accelerator().get_default_cpu_access_type(); }
+      : array(ext, srcBegin, av, av) {}
   template <typename InputIter>
       array(const Concurrency::extent<N>& ext, InputIter srcBegin, InputIter srcEnd,
             accelerator_view av, access_type cpu_access_type = access_type_auto)
-      : array(ext, srcBegin, srcEnd, av, av) { cpu_type = av.get_accelerator().get_default_cpu_access_type(); }
+      : array(ext, srcBegin, srcEnd, av, av) {}
   template <typename InputIter>
       array(int e0, InputIter srcBegin, accelerator_view av,
             access_type cpu_access_type = access_type_auto)
-      : array(e0, srcBegin, av, av) { cpu_type = cpu_access_type; }
+      : array(e0, srcBegin, av, av) {}
   template <typename InputIter>
       array(int e0, InputIter srcBegin, InputIter srcEnd,
             accelerator_view av, access_type cpu_access_type = access_type_auto)
-      : array(e0, srcBegin, srcEnd, av, av) { cpu_type = cpu_access_type; }
+      : array(e0, srcBegin, srcEnd, av, av) {}
   template <typename InputIter>
       array(int e0, int e1, InputIter srcBegin, accelerator_view av,
             access_type cpu_access_type = access_type_auto)
-      : array(e0, e1, srcBegin, av, av) { cpu_type = cpu_access_type; }
+      : array(e0, e1, srcBegin, av, av) {}
   template <typename InputIter>
       array(int e0, int e1, InputIter srcBegin, InputIter srcEnd,
             accelerator_view av, access_type cpu_access_type = access_type_auto)
-      : array(e0, e1, srcBegin, srcEnd, av, av) { cpu_type = cpu_access_type; }
+      : array(e0, e1, srcBegin, srcEnd, av, av) {}
   template <typename InputIter>
       array(int e0, int e1, int e2, InputIter srcBegin, accelerator_view av,
             access_type cpu_access_type = access_type_auto)
-      : array(e0, e1, e2, srcBegin, av, av) { cpu_type = cpu_access_type; }
+      : array(e0, e1, e2, srcBegin, av, av) {}
   template <typename InputIter>
       array(int e0, int e1, int e2, InputIter srcBegin, InputIter srcEnd,
             accelerator_view av, access_type cpu_access_type = access_type_auto)
-      : array(e0, e1, e2, srcBegin, srcEnd, av, av) { cpu_type = cpu_access_type; }
+      : array(e0, e1, e2, srcBegin, srcEnd, av, av) {}
 
 
   template <typename InputIter>
@@ -1617,30 +1622,26 @@ public:
 
   explicit array(const array_view<const T, N>& src)
       : array(src.extent, src.get_source_accelerator_view())
-  {
-#ifndef __GPU__
-      src.cache.copy(m_device.get());
-#endif
-  }
+  { copy(src, *this); }
 
   array(const array_view<const T, N>& src, accelerator_view av,
         access_type cpu_access_type = access_type_auto)
-      : array(src) {}
+      : array(src.get_extent(), av)
+    { copy(src, m_device.get()); }
   array(const array_view<const T, N>& src, accelerator_view av,
-        accelerator_view associated_av) : array(src.extent, av, associated_av) {}
+        accelerator_view associated_av) : array(src.extent, av, associated_av)
+    { copy(src, m_device.get()); }
 
 
   array(const array& other) : m_device(other.m_device), extent(other.extent)
 #ifndef __GPU__
                               , av(other.av), asv(other.asv)
 #endif
-                                  , cpu_type(other.cpu_type)
                               {}
   array(array&& other) : m_device(other.m_device), extent(other.extent)
 #ifndef __GPU__
                               , av(other.av), asv(other.asv)
 #endif
-                                  , cpu_type(other.cpu_type)
                               { other.m_device.reset(); }
 
   array& operator=(const array& other) {
@@ -1649,14 +1650,14 @@ public:
       array nA(other.get_extent(), other.get_accelerator_view());
       copy(other, nA);
       m_device = nA.internal();
-      cpu_type = other.cpu_type;
+      cpu_access_type = other.cpu_access_type;
     }
     return *this;
   }
   array& operator=(array&& other) {
     if(this != &other) {
       extent = other.extent;
-      cpu_type = other.cpu_type;
+      cpu_access_type = other.cpu_access_type;
       m_device = other.m_device;
       other.m_device.reset();
     }
@@ -1702,7 +1703,7 @@ public:
       return asv;
 #endif
   }
-  access_type get_cpu_access_type() const { return cpu_type; }
+  access_type get_cpu_access_type() const { return cpu_access_type; }
 
   __global T& operator[](const index<N>& idx) restrict(amp,cpu) {
 #ifndef __GPU__
@@ -1883,8 +1884,10 @@ public:
   }
   T* data() const restrict(amp,cpu) {
 #ifndef __GPU__
-    if(cpu_type == access_type_none)
-        return nullptr;
+    // TODO: If array's buffer is inaccessible on CPU, host pointer to that buffer must be NULL
+    if(cpu_access_type == access_type_none) {
+      //return reinterpret_cast<T*>(NULL);
+    }
     m_device.synchronize();
 #endif
     return reinterpret_cast<T*>(m_device.get());
@@ -1899,7 +1902,7 @@ private:
   template <typename K, int Q> friend struct array_projection_helper;
   template <typename K, int Q> friend class array_helper;
   acc_buffer_t m_device;
-  access_type cpu_type;
+  access_type cpu_access_type;
 #ifndef __GPU__
   array_helper<T, N> m_array_helper;
   __attribute__((cpu)) accelerator_view av, asv;
