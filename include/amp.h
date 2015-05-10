@@ -1501,13 +1501,13 @@ public:
       }
   array(int e0, accelerator_view av,
         access_type cpu_access_type = access_type_auto)
-      : array(e0, av, av) {}
+      : array(Concurrency::extent<N>(e0), av, cpu_access_type) {}
   array(int e0, int e1, accelerator_view av,
         access_type cpu_access_type = access_type_auto)
-      : array(e0, e1, av, av) {}
+      : array(Concurrency::extent<N>(e0, e1), av, cpu_access_type) {}
   array(int e0, int e1, int e2, accelerator_view av,
         access_type cpu_access_type = access_type_auto)
-      : array(e0, e1, e2, av, av) {}
+      : array(Concurrency::extent<N>(e0, e1, e2), av, cpu_access_type) {}
 
 
   explicit array(const extent<N>& ext) : array(ext, accelerator::get_auto_selection_view()) {}
@@ -1533,6 +1533,7 @@ public:
           if(ext.size() < std::distance(srcBegin,srcEnd))
               throw runtime_exception("errorMsg_throw", 0);
           std::copy(srcBegin, srcEnd, m_device.get());
+          cpu_type = av.get_accelerator().get_default_cpu_access_type();
       }
   template <typename InputIter>
       array(int e0, InputIter srcBegin,
@@ -1576,27 +1577,27 @@ public:
   template <typename InputIter>
       array(int e0, InputIter srcBegin, accelerator_view av,
             access_type cpu_access_type = access_type_auto)
-      : array(e0, srcBegin, av, av) {}
+      : array(Concurrency::extent<N>(e0), srcBegin, av, cpu_access_type) {}
   template <typename InputIter>
       array(int e0, InputIter srcBegin, InputIter srcEnd,
             accelerator_view av, access_type cpu_access_type = access_type_auto)
-      : array(e0, srcBegin, srcEnd, av, av) {}
+      : array(Concurrency::extent<N>(e0), srcBegin, srcEnd, av, cpu_access_type) {}
   template <typename InputIter>
       array(int e0, int e1, InputIter srcBegin, accelerator_view av,
             access_type cpu_access_type = access_type_auto)
-      : array(e0, e1, srcBegin, av, av) {}
+      : array(Concurrency::extent<N>(e0, e1), srcBegin, av, cpu_access_type) {}
   template <typename InputIter>
       array(int e0, int e1, InputIter srcBegin, InputIter srcEnd,
             accelerator_view av, access_type cpu_access_type = access_type_auto)
-      : array(e0, e1, srcBegin, srcEnd, av, av) {}
+      : array(Concurrency::extent<N>(e0, e1), srcBegin, srcEnd, av, cpu_access_type) {}
   template <typename InputIter>
       array(int e0, int e1, int e2, InputIter srcBegin, accelerator_view av,
             access_type cpu_access_type = access_type_auto)
-      : array(e0, e1, e2, srcBegin, av, av) {}
+      : array(Concurrency::extent<N>(e0, e1, e2), srcBegin, av, cpu_access_type) {}
   template <typename InputIter>
       array(int e0, int e1, int e2, InputIter srcBegin, InputIter srcEnd,
             accelerator_view av, access_type cpu_access_type = access_type_auto)
-      : array(e0, e1, e2, srcBegin, srcEnd, av, av) {}
+      : array(Concurrency::extent<N>(e0, e1, e2), srcBegin, srcEnd, av, cpu_access_type) {}
 
 
   template <typename InputIter>
@@ -1896,12 +1897,16 @@ public:
   T* get_data() const restrict(amp,cpu) {
     return reinterpret_cast<T*>(m_device.get());
   }
+  T* data_() const restrict(amp,cpu) {
+#ifndef __GPU__
+    m_device.synchronize();
+#endif
+    return reinterpret_cast<T*>(m_device.get());
+  }
   T* data() const restrict(amp,cpu) {
 #ifndef __GPU__
-    // TODO: If array's buffer is inaccessible on CPU, host pointer to that buffer must be NULL
-    if(cpu_type == access_type_none) {
-      //return reinterpret_cast<T*>(NULL);
-    }
+    if(cpu_type == access_type_none)
+        return nullptr;
     m_device.synchronize();
 #endif
     return reinterpret_cast<T*>(m_device.get());
@@ -2502,7 +2507,7 @@ void copy(const array_view<T, N>& src, const array_view<T, N>& dest) {
 template <typename T>
 void copy(const array<T, 1>& src, const array_view<T, 1>& dest) {
     T* ptr_dest = dest.data();
-    const T* ptr_src = src.data();
+    const T* ptr_src = src.data_();
     memcpy(ptr_dest, ptr_src, sizeof(T)*dest.get_extent()[0]);
 }
 template <typename T, int N>
@@ -2514,12 +2519,12 @@ void copy(const array<T, N>& src, const array_view<T, N>& dest) {
 template <typename T, int N>
 void copy(const array<T, N>& src, array<T, N>& dest) {
     amp_stash(dest.internal());
-    memmove(dest.data(), src.data(), dest.get_extent().size() * sizeof(T));
+    memmove(dest.data_(), src.data_(), dest.get_extent().size() * sizeof(T));
 }
 
 template <typename T>
 void copy(const array_view<const T, 1>& src, array<T, 1>& dest) {
-    T* ptr_dest = dest.data();
+    T* ptr_dest = dest.data_();
     const T* ptr_src = src.data();
     memcpy(ptr_dest, ptr_src, sizeof(T)*dest.get_extent()[0]);
 }
@@ -2531,7 +2536,7 @@ void copy(const array_view<const T, N>& src, array<T, N>& dest) {
 
 template <typename T>
 void do_copy(const array_view<T, 1>& src, array<T, 1>& dest) {
-    T* ptr_dest = dest.data();
+    T* ptr_dest = dest.data_();
     const T* ptr_src = src.get_data();
     memcpy(ptr_dest, ptr_src, sizeof(T) * dest.get_extent().size());
 }
@@ -2574,7 +2579,7 @@ void copy(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest) {
       throw runtime_exception("errorMsg_throw ,copy between different types", 0);
 #endif
     amp_stash(dest.internal());
-    std::copy(srcBegin, srcEnd, dest.data());
+    std::copy(srcBegin, srcEnd, dest.data_());
 }
 
 template <typename InputIter, typename T, int N>
@@ -2590,7 +2595,7 @@ void copy(InputIter srcBegin, array<T, N>& dest) {
     amp_stash(dest.internal());
     InputIter srcEnd = srcBegin;
     std::advance(srcEnd, dest.get_extent().size());
-    std::copy(srcBegin, srcEnd, dest.data());
+    std::copy(srcBegin, srcEnd, dest.data_());
 }
 
 template <typename OutputIter, typename T>
@@ -2619,7 +2624,7 @@ void copy(const array_view<T, N> &src, OutputIter destBegin) {
 
 template <typename OutputIter, typename T, int N>
 void copy(const array<T, N> &src, OutputIter destBegin) {
-    std::copy(src.data(), src.data() + src.get_extent().size(), destBegin);
+    std::copy(src.data_(), src.data_() + src.get_extent().size(), destBegin);
 }
 
 
