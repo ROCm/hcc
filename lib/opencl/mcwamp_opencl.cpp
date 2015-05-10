@@ -113,6 +113,7 @@ public:
         d.dimensions = dimensions;
         d.maxSizes = maxSizes;
         emulated = false;
+        cpu_type = access_type_read_write;
     }
     void* CreateKernel(const char* fun, void* size, void* source) override {
         cl_int err;

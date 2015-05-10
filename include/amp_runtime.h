@@ -6,7 +6,7 @@
 
 namespace Concurrency {
 
-struct rw_info;
+class AMPAllocator;
 
 struct obj_info
 {
@@ -15,7 +15,14 @@ struct obj_info
     int ref;
 };
 
-class AMPAllocator;
+enum access_type
+{
+  access_type_none,
+  access_type_read,
+  access_type_write,
+  access_type_read_write = access_type_read | access_type_write,
+  access_type_auto
+};
 
 class AMPManager : public std::enable_shared_from_this<AMPManager>
 {
@@ -42,8 +49,10 @@ protected:
     bool emulated;
     AMPManager(const std::wstring& path) : path(path) {}
 public:
+    access_type cpu_type;
     AMPManager() : path(L"cpu"), des(L"dummy"), mem(0), is_double_(true),
-    is_limited_double_(true), cpu_shared_memory(true), emulated(true) {}
+    is_limited_double_(true), cpu_shared_memory(true), emulated(true),
+    cpu_type(access_type_read_write) {}
 
 
     std::wstring get_path() { return path; }
