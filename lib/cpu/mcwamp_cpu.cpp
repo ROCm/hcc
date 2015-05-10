@@ -21,6 +21,15 @@ namespace Concurrency {
 class CPUManager : public AMPManager
 {
     std::shared_ptr<AMPAllocator> newAloc();
+
+    void* create(size_t count, void *data, bool hasSrc) override {
+        if (!hasSrc)
+            return data;
+        else
+            return aligned_alloc(0x1000, count);
+    }
+    void release(void *data) override { ::operator delete(data); }
+
 public:
     CPUManager() : AMPManager(L"fallback") {
         des = L"CPU Fallback";
@@ -29,14 +38,8 @@ public:
         is_limited_double_ = true;
         cpu_shared_memory = true;
         emulated = false;
+        cpu_type = access_type_read_write;
     }
-    void* create(size_t count, void *data, bool hasSrc) override {
-        if (!hasSrc)
-            return data;
-        else
-            return aligned_alloc(0x1000, count);
-    }
-    void release(void *data) override { ::operator delete(data); }
     std::shared_ptr<AMPAllocator> createAloc() override { return newAloc(); }
 };
 

@@ -191,27 +191,27 @@ static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu) {
 
 static std::set<std::string> __mcw_cxxamp_kernels;
 template<typename Kernel, int dim_ext>
-static inline std::shared_future<void>* mcw_cxxamp_launch_kernel_async(size_t *ext,
+inline std::shared_future<void>*
+mcw_cxxamp_launch_kernel_async(const accelerator_view& av, size_t *ext,
   size_t *local_size, const Kernel& f) restrict(cpu,amp) {
 #ifndef __GPU__
   //Invoke Kernel::__cxxamp_trampoline as an kernel
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
   // FIXME: implicitly casting to avoid pointer to int error
-#if 0
+  if (av.get_accelerator().get_device_path() == L"cpu") {
+    throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
+  }
   int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
   void *kernel = NULL;
   {
       std::string transformed_kernel_name =
           mcw_cxxamp_fixnames(f.__cxxamp_trampoline_name());
-      kernel = CLAMP::CreateKernel(transformed_kernel_name, getAllocator());
+      kernel = CLAMP::CreateKernel(transformed_kernel_name, av.pAloc.get());
   }
-  Concurrency::Serialize s(kernel);
+  Concurrency::Serialize s(av.pAloc, kernel);
   f.__cxxamp_serialize(s);
-  return CLAMP::LaunchKernelAsync(kernel, dim_ext, ext, local_size);
-#else
-  return new std::shared_future<void>();
-#endif
+  return static_cast<std::shared_future<void>*>(av.pAloc->LaunchKernelAsync(kernel, dim_ext, ext, local_size));
 #endif
 }
 
@@ -326,6 +326,7 @@ void parallel_for_each(const accelerator_view& av, extent<N> compute_domain,
 //ND async_parallel_for_each, nontiled
 template <int N, typename Kernel>
 __attribute__((noinline,used)) completion_future async_parallel_for_each(
+    const accelerator_view& av,
     extent<N> compute_domain, const Kernel& f) restrict(cpu,amp) {
 #ifndef __GPU__
     size_t compute_domain_size = 1;
@@ -344,7 +345,7 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
         static_cast<size_t>(compute_domain[N - 2]),
         static_cast<size_t>(compute_domain[N - 3])};
     const pfe_wrapper<N, Kernel> _pf(compute_domain, f);
-    return completion_future(mcw_cxxamp_launch_kernel_async<pfe_wrapper<N, Kernel>, 3>(ext, NULL, _pf));
+    return completion_future(mcw_cxxamp_launch_kernel_async<pfe_wrapper<N, Kernel>, 3>(av, ext, NULL, _pf));
 #else
 #ifdef __AMP_CPU__
   int* foo1 = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
@@ -387,8 +388,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
 //1D async_parallel_for_each, nontiled
 template <typename Kernel>
 __attribute__((noinline,used)) completion_future async_parallel_for_each(
-    extent<1> compute_domain,
-    const Kernel& f) restrict(cpu,amp) {
+    const accelerator_view& av, extent<1> compute_domain, const Kernel& f) restrict(cpu,amp) {
 #ifndef __GPU__
   if(compute_domain[0]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
@@ -396,7 +396,7 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
   if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
   size_t ext = compute_domain[0];
-  return completion_future(mcw_cxxamp_launch_kernel_async<Kernel, 1>(&ext, NULL, f));
+  return completion_future(mcw_cxxamp_launch_kernel_async<Kernel, 1>(av, &ext, NULL, f));
 #else //ifndef __GPU__
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -437,8 +437,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
 //2D async_parallel_for_each, nontiled
 template <typename Kernel>
 __attribute__((noinline,used)) completion_future async_parallel_for_each(
-    extent<2> compute_domain,
-    const Kernel& f) restrict(cpu,amp) {
+    const accelerator_view& av, extent<2> compute_domain, const Kernel& f) restrict(cpu,amp) {
 #ifndef __GPU__
   if(compute_domain[0]<=0 || compute_domain[1]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
@@ -447,7 +446,7 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
     throw invalid_compute_domain("Extent size too large.");
   size_t ext[2] = {static_cast<size_t>(compute_domain[1]),
                    static_cast<size_t>(compute_domain[0])};
-  return completion_future(mcw_cxxamp_launch_kernel_async<Kernel, 2>(ext, NULL, f));
+  return completion_future(mcw_cxxamp_launch_kernel_async<Kernel, 2>(av, ext, NULL, f));
 #else //ifndef __GPU__
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -495,8 +494,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
 //3D async_parallel_for_each, nontiled
 template <typename Kernel>
 __attribute__((noinline,used)) completion_future async_parallel_for_each(
-    extent<3> compute_domain,
-    const Kernel& f) restrict(cpu,amp) {
+    const accelerator_view& av, extent<3> compute_domain, const Kernel& f) restrict(cpu,amp) {
 #ifndef __GPU__
   if(compute_domain[0]<=0 || compute_domain[1]<=0 || compute_domain[2]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
@@ -512,7 +510,7 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
   size_t ext[3] = {static_cast<size_t>(compute_domain[2]),
                    static_cast<size_t>(compute_domain[1]),
                    static_cast<size_t>(compute_domain[0])};
-  return completion_future(mcw_cxxamp_launch_kernel_async<Kernel, 3>(ext, NULL, f));
+  return completion_future(mcw_cxxamp_launch_kernel_async<Kernel, 3>(av, ext, NULL, f));
 #else //ifndef __GPU__
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -570,8 +568,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
 //1D async_parallel_for_each, tiled
 template <int D0, typename Kernel>
 __attribute__((noinline,used)) completion_future async_parallel_for_each(
-    tiled_extent<D0> compute_domain,
-    const Kernel& f) restrict(cpu,amp) {
+    const accelerator_view& av, tiled_extent<D0> compute_domain, const Kernel& f) restrict(cpu,amp) {
 #ifndef __GPU__
   if(compute_domain[0]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
@@ -584,7 +581,7 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
   if(ext % tile != 0) {
     throw invalid_compute_domain("Extent can't be evenly divisble by tile size.");
   }
-  return completion_future(mcw_cxxamp_launch_kernel_async<Kernel, 1>(&ext, &tile, f));
+  return completion_future(mcw_cxxamp_launch_kernel_async<Kernel, 1>(av, &ext, &tile, f));
 #else //ifndef __GPU__
   tiled_index<D0> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -645,8 +642,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
 //2D async_parallel_for_each, tiled
 template <int D0, int D1, typename Kernel>
 __attribute__((noinline,used)) completion_future async_parallel_for_each(
-    tiled_extent<D0, D1> compute_domain,
-    const Kernel& f) restrict(cpu,amp) {
+    const accelerator_view& av, tiled_extent<D0, D1> compute_domain, const Kernel& f) restrict(cpu,amp) {
 #ifndef __GPU__
   if(compute_domain[0]<=0 || compute_domain[1]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
@@ -661,7 +657,7 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
   if((ext[0] % tile[0] != 0) || (ext[1] % tile[1] != 0)) {
     throw invalid_compute_domain("Extent can't be evenly divisble by tile size.");
   }
-  return completion_future(mcw_cxxamp_launch_kernel_async<Kernel, 2>(ext, tile, f));
+  return completion_future(mcw_cxxamp_launch_kernel_async<Kernel, 2>(av, ext, tile, f));
 #else //ifndef __GPU__
   tiled_index<D0, D1> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -730,8 +726,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
 //3D async_parallel_for_each, tiled
 template <int D0, int D1, int D2, typename Kernel>
 __attribute__((noinline,used)) completion_future async_parallel_for_each(
-    tiled_extent<D0, D1, D2> compute_domain,
-    const Kernel& f) restrict(cpu,amp) {
+    const accelerator_view& av, tiled_extent<D0, D1, D2> compute_domain, const Kernel& f) restrict(cpu,amp) {
 #ifndef __GPU__
   if(compute_domain[0]<=0 || compute_domain[1]<=0 || compute_domain[2]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
@@ -754,7 +749,7 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
   if((ext[0] % tile[0] != 0) || (ext[1] % tile[1] != 0) || (ext[2] % tile[2] != 0)) {
     throw invalid_compute_domain("Extent can't be evenly divisble by tile size.");
   }
-  return completion_future(mcw_cxxamp_launch_kernel_async<Kernel, 3>(ext, tile, f));
+  return completion_future(mcw_cxxamp_launch_kernel_async<Kernel, 3>(av, ext, tile, f));
 #else //ifndef __GPU__
   tiled_index<D0, D1, D2> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined

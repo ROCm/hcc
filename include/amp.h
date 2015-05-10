@@ -161,6 +161,8 @@ private:
   template<typename Kernel, int dim_ext> friend
       void mcw_cxxamp_launch_kernel(const accelerator_view&, size_t *, size_t *, const Kernel&);
   template <typename T, int N> friend class array_helper;
+  template<typename Kernel, int dim_ext> friend
+      std::shared_future<void>* mcw_cxxamp_launch_kernel_async(const accelerator_view&, size_t *, size_t *, const Kernel&);
 
   template <typename Kernel, int N>
       friend void launch_cpu_task(const accelerator_view&, extent<N> const&, Kernel const&);
@@ -363,31 +365,38 @@ private:
     // non-tiled async_parallel_for_each
     // generic version
     template <int N, typename Kernel>
-        friend completion_future async_parallel_for_each(Concurrency::extent<N> compute_domain, const Kernel& f);
+        friend completion_future async_parallel_for_each(const accelerator_view&,
+                                                         Concurrency::extent<N> compute_domain, const Kernel& f);
 
     // 1D specialization
     template <typename Kernel>
-        friend completion_future async_parallel_for_each(Concurrency::extent<1> compute_domain, const Kernel& f);
+        friend completion_future async_parallel_for_each(const accelerator_view&,
+                                                         Concurrency::extent<1> compute_domain, const Kernel& f);
 
     // 2D specialization
     template <typename Kernel>
-        friend completion_future async_parallel_for_each(Concurrency::extent<2> compute_domain, const Kernel& f);
+        friend completion_future async_parallel_for_each(const accelerator_view&,
+                                                         Concurrency::extent<2> compute_domain, const Kernel& f);
 
     // 3D specialization
     template <typename Kernel>
-        friend completion_future async_parallel_for_each(Concurrency::extent<3> compute_domain, const Kernel& f);
+        friend completion_future async_parallel_for_each(const accelerator_view&,
+                                                         Concurrency::extent<3> compute_domain, const Kernel& f);
 
     // tiled async_parallel_for_each, 3D version
     template <int D0, int D1, int D2, typename Kernel>
-        friend completion_future async_parallel_for_each(Concurrency::tiled_extent<D0,D1,D2> compute_domain, const Kernel& f);
+        friend completion_future async_parallel_for_each(const accelerator_view&,
+                                                         Concurrency::tiled_extent<D0,D1,D2> compute_domain, const Kernel& f);
 
     // tiled async_parallel_for_each, 2D version
     template <int D0, int D1, typename Kernel>
-        friend completion_future async_parallel_for_each(Concurrency::tiled_extent<D0,D1> compute_domain, const Kernel& f);
+        friend completion_future async_parallel_for_each(const accelerator_view&,
+                                                         Concurrency::tiled_extent<D0,D1> compute_domain, const Kernel& f);
 
     // tiled async_parallel_for_each, 1D version
      template <int D0, typename Kernel>
-        friend completion_future async_parallel_for_each(Concurrency::tiled_extent<D0> compute_domain, const Kernel& f);
+        friend completion_future async_parallel_for_each(const accelerator_view&,
+                                                         Concurrency::tiled_extent<D0> compute_domain, const Kernel& f);
 };
 
 template <int N> class extent;
@@ -2414,16 +2423,40 @@ private:
 
 // async pfe
 template <int N, typename Kernel>
-completion_future async_parallel_for_each(extent<N> compute_domain, const Kernel& f);
+completion_future async_parallel_for_each(const accelerator_view&,
+                                          extent<N> compute_domain, const Kernel& f);
 
 template <int D0, int D1, int D2, typename Kernel>
-completion_future async_parallel_for_each(tiled_extent<D0,D1,D2> compute_domain, const Kernel& f);
+completion_future async_parallel_for_each(const accelerator_view&,
+                                          tiled_extent<D0,D1,D2> compute_domain, const Kernel& f);
 
 template <int D0, int D1, typename Kernel>
-completion_future async_parallel_for_each(tiled_extent<D0,D1> compute_domain, const Kernel& f);
+completion_future async_parallel_for_each(const accelerator_view&,
+                                          tiled_extent<D0,D1> compute_domain, const Kernel& f);
 
 template <int D0, typename Kernel>
-completion_future async_parallel_for_each(tiled_extent<D0> compute_domain, const Kernel& f);
+completion_future async_parallel_for_each(const accelerator_view&,
+                                          tiled_extent<D0> compute_domain, const Kernel& f);
+
+template <int N, typename Kernel>
+completion_future async_parallel_for_each(extent<N> compute_domain, const Kernel& f) {
+    return async_parallel_for_each(accelerator::get_auto_selection_view(), compute_domain, f);
+}
+
+template <int D0, int D1, int D2, typename Kernel>
+completion_future async_parallel_for_each(tiled_extent<D0,D1,D2> compute_domain, const Kernel& f) {
+    return async_parallel_for_each(accelerator::get_auto_selection_view(), compute_domain, f);
+}
+
+template <int D0, int D1, typename Kernel>
+completion_future async_parallel_for_each(tiled_extent<D0,D1> compute_domain, const Kernel& f) {
+    return async_parallel_for_each(accelerator::get_auto_selection_view(), compute_domain, f);
+}
+
+template <int D0, typename Kernel>
+completion_future async_parallel_for_each(tiled_extent<D0> compute_domain, const Kernel& f) {
+    return async_parallel_for_each(accelerator::get_auto_selection_view(), compute_domain, f);
+}
 
 
 // sync pfe

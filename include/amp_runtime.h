@@ -36,20 +36,11 @@ class AMPManager : public std::enable_shared_from_this<AMPManager>
             return it->second;
         return obj_info();
     }
-    friend class AMPAllocator;
 
-    std::map<void *, obj_info> mem_info;
-    const std::wstring path;
+
 protected:
-    std::wstring des;
-    size_t mem;
-    bool is_double_;
-    bool is_limited_double_;
-    bool cpu_shared_memory;
-    bool emulated;
     AMPManager(const std::wstring& path) : path(path) {}
 public:
-    access_type cpu_type;
     AMPManager() : path(L"cpu"), des(L"dummy"), mem(0), is_double_(true),
     is_limited_double_(true), cpu_shared_memory(true), emulated(true),
     cpu_type(access_type_read_write) {}
@@ -62,11 +53,11 @@ public:
     bool is_lim_double() { return is_limited_double_; }
     bool is_uni() { return cpu_shared_memory; }
     bool is_emu() { return emulated; }
+    virtual std::shared_ptr<AMPAllocator> createAloc() { return newAloc(); }
 
 
     virtual void* CreateKernel(const char* fun, void* size, void* source) { return nullptr; }
     virtual bool check(size_t *local, size_t dim_ext) { return true; }
-    virtual std::shared_ptr<AMPAllocator> createAloc() { return newAloc(); }
     virtual ~AMPManager() {}
 
     void regist(size_t count, void* data, bool hasSrc) {
@@ -88,6 +79,21 @@ public:
             }
         }
     }
+
+public:
+    access_type cpu_type;
+private:
+    std::map<void *, obj_info> mem_info;
+    const std::wstring path;
+    friend class AMPAllocator;
+protected:
+    // override class should initialize them
+    std::wstring des;
+    size_t mem;
+    bool is_double_;
+    bool is_limited_double_;
+    bool cpu_shared_memory;
+    bool emulated;
 };
 
 class AMPAllocator
@@ -95,11 +101,13 @@ class AMPAllocator
 protected:
   std::shared_ptr<AMPManager> Man;
 public:
+  std::shared_ptr<AMPManager> getMan() { return Man; }
   AMPAllocator(std::shared_ptr<AMPManager> Man) : Man(Man) {}
   virtual ~AMPAllocator() {}
   virtual void flush() {}
   virtual void wait() {}
   virtual void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {}
+  virtual void* LaunchKernelAsync(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) { return nullptr; }
 
 
   void regist(size_t count, void* data, bool hasSrc) {
@@ -111,8 +119,6 @@ public:
   void* CreateKernel(const char* fun, void* size, void* source) {
       return Man->CreateKernel(fun, size, source);
   }
-
-  std::shared_ptr<AMPManager> getMan() { return Man; }
   
   void PushArg(void* kernel, int idx, void *&data) {
       obj_info obj = Man->device_data(data);
@@ -223,7 +229,6 @@ extern void leave_kernel();
 #endif
 
 extern void *CreateKernel(std::string, AMPAllocator*);
-extern std::shared_future<void>* LaunchKernelAsync(void *, size_t, size_t *, size_t *);
 extern void MatchKernelNames(std::string &);
 
 extern void PushArg(void *, int, size_t, const void *);

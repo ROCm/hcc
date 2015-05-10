@@ -68,25 +68,20 @@ namespace Concurrency {
 
 class HSAManager : public AMPManager
 {
-    std::shared_ptr<AMPAllocator> aloc;
+    std::shared_ptr<AMPAllocator> newAloc();
     std::map<std::string, HSAContext::Kernel *> __mcw_hsa_kernels;
-    std::shared_ptr<AMPAllocator> init();
 
     void* create(size_t count, void *data, bool hasSrc) override {
-        if (hasSrc)
+        if (!hasSrc)
             data = aligned_alloc(0x1000, count);
         CLAMP::RegisterMemory(data, count);
         return data;
     }
 
     void release(void *data) override { ::operator delete(data); }
-    std::shared_ptr<AMPAllocator> createAloc() override {
-        if (!aloc)
-            aloc = init();
-        return aloc;
-    }
 
 public:
+    std::shared_ptr<AMPAllocator> createAloc() override { return newAloc(); }
     HSAManager() : AMPManager(L"HSA") {
         des = L"HSA";
         mem = 0;
@@ -94,6 +89,7 @@ public:
         is_limited_double_ = true;
         cpu_shared_memory = true;
         emulated = false;
+        cpu_type = access_type_read_write;
     }
 
     void* CreateKernel(const char* fun, void* size, void* source) override {
@@ -157,6 +153,7 @@ public:
         std::shared_future<void>* fut = dispatch->dispatchKernelAndGetFuture();
         return static_cast<void*>(fut);
     }
+    std::shared_ptr<AMPAllocator> createAloc() override { return newAloc(); }
 };
 
 class HSAAllocator : public AMPAllocator
