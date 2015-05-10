@@ -339,6 +339,10 @@ struct rw_info
     }
 
     void synchronize() {
+#ifdef __AMP_CPU__
+        if (CLAMP::in_cpu_kernel())
+            return;
+#endif
         if (dirty && !discard) {
             curr->read(data);
             dirty = false;
