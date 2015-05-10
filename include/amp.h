@@ -1283,14 +1283,18 @@ struct projection_helper<T, 1>
     typedef __global T& result_type;
     static result_type project(array_view<T, 1>& now, int i) restrict(amp,cpu) {
 #ifndef __GPU__
+#ifndef __AMP_CPU__
         now.cache.synchronize();
+#endif
 #endif
         __global T *ptr = reinterpret_cast<__global T *>(now.cache.get() + i + now.offset + now.index_base[0]);
         return *ptr;
     }
     static result_type project(const array_view<T, 1>& now, int i) restrict(amp,cpu) {
 #ifndef __GPU__
+#ifndef __AMP_CPU__
         now.cache.synchronize();
+#endif
 #endif
         __global T *ptr = reinterpret_cast<__global T *>(now.cache.get() + i + now.offset + now.index_base[0]);
         return *ptr;
@@ -1340,14 +1344,18 @@ struct projection_helper<const T, 1>
     typedef __global const T& const_result_type;
     static const_result_type project(array_view<const T, 1>& now, int i) restrict(amp,cpu) {
 #ifndef __GPU__
+#ifndef __AMP_CPU__
         now.cache.synchronize();
+#endif
 #endif
         __global const T *ptr = reinterpret_cast<__global const T *>(now.cache.get() + i + now.offset + now.index_base[0]);
         return *ptr;
     }
     static const_result_type project(const array_view<const T, 1>& now, int i) restrict(amp,cpu) {
 #ifndef __GPU__
+#ifndef __AMP_CPU__
         now.cache.synchronize();
+#endif
 #endif
         __global const T *ptr = reinterpret_cast<__global const T *>(now.cache.get() + i + now.offset + now.index_base[0]);
         return *ptr;
@@ -1397,14 +1405,18 @@ struct array_projection_helper<T, 1>
     typedef __global const T& const_result_type;
     static result_type project(array<T, 1>& now, int i) restrict(amp,cpu) {
 #ifndef __GPU__
+#ifndef __AMP_CPU__
         now.m_device.discard();
+#endif
 #endif
         __global T *ptr = reinterpret_cast<__global T *>(now.m_device.get() + i);
         return *ptr;
     }
     static const_result_type project(const array<T, 1>& now, int i) restrict(amp,cpu) {
 #ifndef __GPU__
+#ifndef __AMP_CPU__
         now.m_device.synchronize();
+#endif
 #endif
         __global const T *ptr = reinterpret_cast<__global const T *>(now.m_device.get() + i);
         return *ptr;
@@ -1722,28 +1734,24 @@ public:
 
   __global T& operator[](const index<N>& idx) restrict(amp,cpu) {
 #ifndef __GPU__
-      if(av.get_accelerator().get_device_path() != L"cpu"
-#ifdef __AMP_CPU__
-        && !CLAMP::in_cpu_kernel()
-#endif
-        ) {
+#ifndef __AMP_CPU__
+      if(av.get_accelerator().get_device_path() != L"cpu") {
           throw runtime_exception("The array is not accessible on CPU.", 0);
       }
       m_device.synchronize();
+#endif
 #endif
       __global T *ptr = reinterpret_cast<__global T*>(m_device.get());
       return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx, extent)];
   }
   __global const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
 #ifndef __GPU__
-      if(av.get_accelerator().get_device_path() != L"cpu"
-#ifdef __AMP_CPU__
-        && !CLAMP::in_cpu_kernel()
-#endif
-        ) {
+#ifndef __AMP_CPU__
+      if(av.get_accelerator().get_device_path() != L"cpu") {
           throw runtime_exception("The array is not accessible on CPU.", 0);
       }
       m_device.synchronize();
+#endif
 #endif
       __global T *ptr = reinterpret_cast<__global T*>(m_device.get());
       return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx, extent)];
@@ -2043,7 +2051,9 @@ public:
 
   __global T& operator[](const index<N>& idx) const restrict(amp,cpu) {
 #ifndef __GPU__
+#ifndef __AMP_CPU__
       synchronize();
+#endif
 #endif
       __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
       return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
@@ -2051,7 +2061,9 @@ public:
   template <int D0, int D1=0, int D2=0>
   __global T& operator[](const tiled_index<D0, D1, D2>& idx) const restrict(amp,cpu) {
 #ifndef __GPU__
+#ifndef __AMP_CPU__
       synchronize();
+#endif
 #endif
       __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
       return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx.global + index_base, extent_base)];
@@ -2266,7 +2278,9 @@ public:
 
   __global const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
 #ifndef __GPU__
+#ifndef __AMP_CPU__
       synchronize();
+#endif
 #endif
     __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
     return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
