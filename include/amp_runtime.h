@@ -7,6 +7,7 @@
 namespace Concurrency {
 
 struct rw_info;
+class AMPAllocator;
 
 struct obj_info
 {
@@ -15,7 +16,14 @@ struct obj_info
     int ref;
 };
 
-class AMPAllocator;
+enum access_type
+{
+  access_type_none,
+  access_type_read,
+  access_type_write,
+  access_type_read_write = access_type_read | access_type_write,
+  access_type_auto
+};
 
 class AMPManager : public std::enable_shared_from_this<AMPManager>
 {
@@ -23,12 +31,7 @@ class AMPManager : public std::enable_shared_from_this<AMPManager>
     virtual void release(void *data) {}
     std::shared_ptr<AMPAllocator> newAloc();
 
-    obj_info device_data(void* data) {
-        auto it = mem_info.find(data);
-        if (it != std::end(mem_info))
-            return it->second;
-        return obj_info();
-    }
+    obj_info device_data(void* data) { return mem_info[data]; }
     friend class AMPAllocator;
 
     std::map<void *, obj_info> mem_info;
@@ -42,6 +45,7 @@ protected:
     bool emulated;
     AMPManager(const std::wstring& path) : path(path) {}
 public:
+    access_type cpu_type;
     AMPManager() : path(L"cpu"), des(L"dummy"), mem(0), is_double_(true),
     is_limited_double_(true), cpu_shared_memory(true), emulated(true) {}
 
@@ -124,7 +128,7 @@ public:
 
   void copy(void* dst, void* src, size_t count) {
       obj_info obj = Man->device_data(src);
-      amp_copy(obj, dst, src, count);
+      amp_copy(obj, dst, count);
   }
 
   void* map(void* data, bool Write) {
@@ -144,8 +148,8 @@ private:
   // overide function
   virtual void amp_write(obj_info& obj, void* src) { memmove(obj.device, src, obj.count); }
   virtual void amp_read(obj_info& obj, void* dst) { memmove(dst, obj.device, obj.count); }
-  virtual void amp_copy(obj_info& obj, void* dst, void* src, size_t count) {
-      memmove(dst, src, count);
+  virtual void amp_copy(obj_info& obj, void* dst, size_t count) {
+      memmove(dst, obj.device, count);
   }
   virtual void* amp_map(obj_info& obj, bool Write) { return nullptr; }
   virtual void amp_unmap(obj_info& obj, void* addr) {}
