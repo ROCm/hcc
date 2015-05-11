@@ -18,11 +18,11 @@ struct obj_info
 
 enum access_type
 {
-  access_type_none,
-  access_type_read,
-  access_type_write,
+  access_type_none = 0,
+  access_type_read = 1,
+  access_type_write = 2,
   access_type_read_write = access_type_read | access_type_write,
-  access_type_auto
+  access_type_auto = 4
 };
 
 class AMPManager : public std::enable_shared_from_this<AMPManager>
@@ -42,7 +42,6 @@ class AMPManager : public std::enable_shared_from_this<AMPManager>
 protected:
     AMPManager(const std::wstring& path) : path(path) {}
 public:
-    access_type = cpu_type;
     AMPManager() : path(L"cpu"), des(L"dummy"), mem(0), is_double_(true),
     is_limited_double_(true), cpu_shared_memory(true), emulated(true),
     cpu_type(access_type_read_write) {}

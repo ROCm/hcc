@@ -1581,7 +1581,12 @@ public:
   template <typename InputIter>
       array(const Concurrency::extent<N>& ext, InputIter srcBegin, InputIter srcEnd,
             accelerator_view av, access_type cpu_access_type = access_type_auto)
-      : array(ext, srcBegin, srcEnd, av, av) {}
+      : array(ext, srcBegin, srcEnd, av, av) {
+          if (cpu_access_type == access_type_auto)
+              cpu_type = av.get_accelerator().get_default_cpu_access_type();
+          else
+              cpu_type = cpu_access_type;
+      }
   template <typename InputIter>
       array(int e0, InputIter srcBegin, accelerator_view av,
             access_type cpu_access_type = access_type_auto)
@@ -1644,8 +1649,12 @@ public:
   array(const array_view<const T, N>& src, accelerator_view av,
         access_type cpu_access_type = access_type_auto)
       : array(src.get_extent(), av) {
+          if (cpu_access_type == access_type_auto)
+              cpu_type = av.get_accelerator().get_default_cpu_access_type();
+          else
+              cpu_type = cpu_access_type;
 #ifndef __GPU__
-      src.cache.copy(m_device.get());
+          src.cache.copy(m_device.get());
 #endif
   }
   array(const array_view<const T, N>& src, accelerator_view av,
@@ -1730,7 +1739,8 @@ public:
 
   __global T& operator[](const index<N>& idx) restrict(amp,cpu) {
 #ifndef __GPU__
-      if(av.get_accelerator().get_device_path() != L"cpu"
+      if(av.get_accelerator().get_device_path() != L"cpu" &&
+         av.get_accelerator().get_supports_cpu_shared_memory() && cpu_type == access_type_none
 #ifdef __AMP_CPU__
         && !CLAMP::in_cpu_kernel()
 #endif
@@ -1744,7 +1754,8 @@ public:
   }
   __global const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
 #ifndef __GPU__
-      if(av.get_accelerator().get_device_path() != L"cpu"
+      if(av.get_accelerator().get_device_path() != L"cpu" &&
+         av.get_accelerator().get_supports_cpu_shared_memory() && cpu_type == access_type_none
 #ifdef __AMP_CPU__
         && !CLAMP::in_cpu_kernel()
 #endif
@@ -1913,8 +1924,10 @@ public:
   }
   T* data() const restrict(amp,cpu) {
 #ifndef __GPU__
-    if(cpu_type == access_type_none && !av.get_accelerator().get_supports_cpu_shared_memory())
-        return nullptr;
+    if(cpu_type == access_type_none)
+      if (av.get_accelerator().get_device_path() != L"cpu")
+        if (av.get_accelerator().get_supports_cpu_shared_memory())
+          return nullptr;
     m_device.synchronize();
 #endif
     return reinterpret_cast<T*>(m_device.get());

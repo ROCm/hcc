@@ -306,9 +306,8 @@ public:
         assert(err == CL_SUCCESS);
         std::vector<cl_platform_id> platform_id(num_platform);
         err = clGetPlatformIDs(num_platform, platform_id.data(), nullptr);
-        std::vector<CLFlag> Flags({CLFlag(CL_DEVICE_TYPE_GPU, L"gpu"),
-                                  CLFlag(CL_DEVICE_TYPE_ACCELERATOR, L"acc"),
-                                  CLFlag(CL_DEVICE_TYPE_CPU, L"cpu")
+        std::vector<CLFlag> Flags({CLFlag(CL_DEVICE_TYPE_CPU, L"cpu"),
+                                  CLFlag(CL_DEVICE_TYPE_GPU, L"gpu")
                                   });
 
         for (const auto& Conf : Flags) {
