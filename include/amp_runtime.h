@@ -6,6 +6,7 @@
 
 namespace Concurrency {
 
+struct rw_info;
 class AMPAllocator;
 
 struct obj_info
@@ -17,11 +18,11 @@ struct obj_info
 
 enum access_type
 {
-  access_type_none,
-  access_type_read,
-  access_type_write,
+  access_type_none = 0,
+  access_type_read = 1,
+  access_type_write = 2,
   access_type_read_write = access_type_read | access_type_write,
-  access_type_auto
+  access_type_auto = 4
 };
 
 class AMPManager : public std::enable_shared_from_this<AMPManager>
