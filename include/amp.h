@@ -1914,7 +1914,7 @@ public:
   }
   T* data() const restrict(amp,cpu) {
 #ifndef __GPU__
-    if(cpu_type == access_type_none && !av.get_accelerator().get_supports_cpu_shared_memory())
+    if(cpu_type == access_type_none && av.get_accelerator().get_supports_cpu_shared_memory())
         return nullptr;
     m_device.synchronize();
 #endif
