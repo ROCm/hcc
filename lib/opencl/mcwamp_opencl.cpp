@@ -84,8 +84,6 @@ public:
             des = L"NVIDIA";
         else if (ven.find("Intel") != std::string::npos) {
             des = L"Intel";
-            // Hack: Don't let conformance to choose this
-            mem = 0;
         }
 
 
