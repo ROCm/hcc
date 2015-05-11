@@ -1731,7 +1731,8 @@ public:
 
   __global T& operator[](const index<N>& idx) restrict(amp,cpu) {
 #ifndef __GPU__
-      if(!av.get_accelerator().get_supports_cpu_shared_memory()
+      if((!av.get_accelerator().get_supports_cpu_shared_memory() ||
+         (cpu_type == access_type_none && av.get_accelerator().get_supports_cpu_shared_memory()))
 #ifdef __AMP_CPU__
         && !CLAMP::in_cpu_kernel()
 #endif
@@ -1745,7 +1746,8 @@ public:
   }
   __global const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
 #ifndef __GPU__
-      if(!av.get_accelerator().get_supports_cpu_shared_memory()
+      if((!av.get_accelerator().get_supports_cpu_shared_memory() ||
+         (cpu_type == access_type_none && av.get_accelerator().get_supports_cpu_shared_memory()))
 #ifdef __AMP_CPU__
         && !CLAMP::in_cpu_kernel()
 #endif
