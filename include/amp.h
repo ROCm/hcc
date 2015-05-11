@@ -115,7 +115,6 @@ enum queuing_mode {
   queuing_mode_automatic
 };
 
-
 class completion_future;
 class accelerator;
 template <typename T, int N> class array_view;
