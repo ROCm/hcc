@@ -1745,9 +1745,7 @@ public:
         && !CLAMP::in_cpu_kernel()
 #endif
         ) {
-          if (av.get_accelerator().get_supports_cpu_shared_memory() && cpu_type == access_type_none)
-              throw runtime_exception("The array is not accessible on CPU.", 0);
-          else
+          if (!av.get_accelerator().get_supports_cpu_shared_memory() || cpu_type == access_type_none)
               throw runtime_exception("The array is not accessible on CPU.", 0);
       }
       m_device.synchronize();
@@ -1757,13 +1755,13 @@ public:
   }
   __global const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
 #ifndef __GPU__
-      if(av.get_accelerator().get_device_path() != L"cpu" &&
-         av.get_accelerator().get_supports_cpu_shared_memory() && cpu_type == access_type_none
+      if(av.get_accelerator().get_device_path() != L"cpu"
 #ifdef __AMP_CPU__
         && !CLAMP::in_cpu_kernel()
 #endif
         ) {
-          throw runtime_exception("The array is not accessible on CPU.", 0);
+          if (!av.get_accelerator().get_supports_cpu_shared_memory() || cpu_type == access_type_none)
+              throw runtime_exception("The array is not accessible on CPU.", 0);
       }
       m_device.synchronize();
 #endif

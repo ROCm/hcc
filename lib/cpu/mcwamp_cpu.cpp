@@ -5,7 +5,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// FIXME this file will place C++AMP Runtime implementation (HSA version)
 #include <cstdlib>
 #include <cassert>
 #include <iostream>
@@ -82,11 +81,6 @@ public:
 static CPUContext ctx;
 
 } // namespace Concurrency
-
-
-///
-/// kernel compilation / kernel launching
-///
 
 extern "C" void *GetContextImpl() {
   return &Concurrency::ctx;
