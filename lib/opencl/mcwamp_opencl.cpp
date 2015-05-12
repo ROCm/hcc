@@ -43,7 +43,7 @@ namespace Concurrency {
 
 // forward declaration
 namespace CLAMP {
-    void CLCompileKernels(cl_program&, cl_context&, cl_device_id&, void*, void*);
+    void CLCompileKernels(cl_program&, cl_device_id&, void*, void*);
 }
 
 struct DimMaxSize {
@@ -59,15 +59,14 @@ void ReleaseKernelObject(cl_program& program) {
 }
 
 class OpenCLAllocator;
+static cl_context context;
 
 class OpenCLManager : public AMPManager
 {
 public:
     OpenCLManager(const cl_device_id device, const std::wstring& path)
         : AMPManager(path), device(device), program(nullptr) {
-        cl_int           err;
-        context = clCreateContext(0, 1, &device, NULL, NULL, &err);
-        assert(err == CL_SUCCESS);
+        cl_int err;
 
         cl_ulong memAllocSize;
         err = clGetDeviceInfo(device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_ulong), &memAllocSize, NULL);
@@ -82,9 +81,8 @@ public:
             des = L"AMD";
         else if (ven.find("NVIDIA") != std::string::npos)
             des = L"NVIDIA";
-        else if (ven.find("Intel") != std::string::npos) {
+        else if (ven.find("Intel") != std::string::npos)
             des = L"Intel";
-        }
 
 
         cl_bool unified;
@@ -118,7 +116,7 @@ public:
     }
     void* CreateKernel(const char* fun, void* size, void* source) override {
         cl_int err;
-        Concurrency::CLAMP::CLCompileKernels(program, context, device, size, source);
+        Concurrency::CLAMP::CLCompileKernels(program, device, size, source);
         Concurrency::KernelObject& KO = Concurrency::Pro2KernelObject[program];
         std::string name(fun);
         if (KO[name] == 0) {
@@ -156,11 +154,9 @@ public:
             clReleaseProgram(program);
         }
         delete[] d.maxSizes;
-        clReleaseContext(context);
     }
 
     cl_device_id getDevice() const { return device; }
-    cl_context getContext() const { return context; }
 private:
 
     void* create(size_t count, void* data, bool hasSource /* unused */) override {
@@ -175,7 +171,6 @@ private:
 
     std::shared_ptr<AMPAllocator> newAloc();
     struct DimMaxSize d;
-    cl_context       context;
     cl_device_id     device;
     cl_program       program;
 };
@@ -186,7 +181,7 @@ public:
     OpenCLAllocator(std::shared_ptr<AMPManager> pMan) : AMPAllocator(pMan) {
         auto Man = std::dynamic_pointer_cast<OpenCLManager, AMPManager>(pMan);
         cl_int err;
-        queue = clCreateCommandQueue(Man->getContext(), Man->getDevice(), 0, &err);
+        queue = clCreateCommandQueue(context, Man->getDevice(), 0, &err);
         assert(err == CL_SUCCESS);
 
         // Propel underlying OpenCL driver to enque kernels faster (pthread-based)
@@ -313,23 +308,33 @@ public:
                                   CLFlag(CL_DEVICE_TYPE_GPU, L"gpu")
                                   });
 
+        std::vector<cl_device_id> devs;
+        std::vector<std::wstring> path;
         for (const auto& Conf : Flags) {
             for (const auto pId : platform_id) {
                 cl_uint num_device;
                 err = clGetDeviceIDs(pId, Conf.type, 0, nullptr, &num_device);
                 assert(err == CL_SUCCESS);
-                std::vector<cl_device_id> devs(num_device);
-                err = clGetDeviceIDs(pId, Conf.type, num_device, devs.data(), nullptr);
+                if (num_device == 0)
+                    continue;
+                std::vector<cl_device_id> dev(num_device);
+                err = clGetDeviceIDs(pId, Conf.type, num_device, dev.data(), nullptr);
                 assert(err == CL_SUCCESS);
-                for (const auto dev : devs) {
-                    auto Man = std::shared_ptr<AMPManager>(new OpenCLManager(dev, Conf.getPath()));
-                    default_map[Man] = Man->createAloc();
-                    Devices.push_back(Man);
+                for (int i = 0; i < num_device; ++i) {
+                    path.push_back(Conf.getPath());
+                    devs.push_back(dev[i]);
                 }
             }
         }
-
+        context = clCreateContext(0, devs.size(), devs.data(), NULL, NULL, &err);
+        assert(err == CL_SUCCESS);
+        for (int i = 0; i < devs.size(); ++i) {
+            auto Man = std::shared_ptr<AMPManager>(new OpenCLManager(devs[i], path[i]));
+            default_map[Man] = Man->createAloc();
+            Devices.push_back(Man);
+        }
     }
+    ~OpenCLContext() { clReleaseContext(context); }
 };
 
 static OpenCLContext ctx;
@@ -409,7 +414,7 @@ static inline void getKernelNames(cl_program& prog) {
     }
 }
 
-void CLCompileKernels(cl_program& program, cl_context& context, cl_device_id& device,
+void CLCompileKernels(cl_program& program, cl_device_id& device,
                       void* kernel_size_, void* kernel_source_)
 {
     cl_int err;
@@ -456,7 +461,7 @@ void CLCompileKernels(cl_program& program, cl_context& context, cl_device_id& de
             precompiled_kernel.close();
 
             const unsigned char *ks = (const unsigned char *)compiled_kernel;
-            program = clCreateProgramWithBinary(context, 1, &device, &len, &ks, NULL, &err);
+            program = clCreateProgramWithBinary(Concurrency::context, 1, &device, &len, &ks, NULL, &err);
             if (err == CL_SUCCESS)
                 err = clBuildProgram(program, 1, &device, NULL, NULL, NULL);
             if (err != CL_SUCCESS) {
@@ -480,14 +485,14 @@ void CLCompileKernels(cl_program& program, cl_context& context, cl_device_id& de
                 // Bitcode magic number. Assuming it's in SPIR
                 auto size = kernel.length();
                 auto str = (const unsigned char*)kernel.data();
-                program = clCreateProgramWithBinary(context, 1, &device, &size, &str, NULL, &err);
+                program = clCreateProgramWithBinary(Concurrency::context, 1, &device, &size, &str, NULL, &err);
                 if (err == CL_SUCCESS)
                     err = clBuildProgram(program, 1, &device, NULL, NULL, NULL);
             } else {
                 // in OpenCL-C
                 auto size = kernel.length();
                 auto str = kernel.data();
-                program = clCreateProgramWithSource(context, 1, &str, &size, &err);
+                program = clCreateProgramWithSource(Concurrency::context, 1, &str, &size, &err);
                 if (err == CL_SUCCESS)
                     err = clBuildProgram(program, 1, &device, "-D__ATTRIBUTE_WEAK__=", NULL, NULL);
             }
