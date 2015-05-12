@@ -128,7 +128,7 @@ public:
         return dispatch;
     }
 
-    void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) override {
+    void LaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local) override {
         HSAContext::Dispatch *dispatch =
             reinterpret_cast<HSAContext::Dispatch*>(ker);
         size_t tmp_local[] = {0, 0, 0};
@@ -138,7 +138,7 @@ public:
         dispatch->dispatchKernelWaitComplete();
         delete(dispatch);
     }
-    void* LaunchKernelAsync(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) override {
+    void LaunchKernelAsync(void *ker, size_t nr_dim, size_t *global, size_t *local) override {
         HSAContext::Dispatch *dispatch =
             reinterpret_cast<HSAContext::Dispatch*>(ker);
         size_t tmp_local[] = {0, 0, 0};
