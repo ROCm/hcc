@@ -313,20 +313,20 @@ void *CreateKernel(std::string s, AMPAllocator* Aloc) {
         size_t kernel_size =
         (ptrdiff_t)((void *)spir_kernel_end) -
         (ptrdiff_t)((void *)spir_kernel_source);
-      return Aloc->CreateKernel(s.c_str(), (void *)kernel_size, spir_kernel_source);
+      return Aloc->getMan()->CreateKernel(s.c_str(), (void *)kernel_size, spir_kernel_source);
     } else {
       // OpenCL path
         size_t kernel_size =
         (ptrdiff_t)((void *)cl_kernel_end) -
         (ptrdiff_t)((void *)cl_kernel_source);
-      return Aloc->CreateKernel(s.c_str(), (void *)kernel_size, cl_kernel_source);
+      return Aloc->getMan()->CreateKernel(s.c_str(), (void *)kernel_size, cl_kernel_source);
     }
   } else {
     // HSA path
        size_t kernel_size =
         (ptrdiff_t)((void *)hsa_kernel_end) -
         (ptrdiff_t)((void *)hsa_kernel_source);
-     return Aloc->CreateKernel(s.c_str(), (void *)kernel_size, hsa_kernel_source);
+     return Aloc->getMan()->CreateKernel(s.c_str(), (void *)kernel_size, hsa_kernel_source);
    }
 }
 

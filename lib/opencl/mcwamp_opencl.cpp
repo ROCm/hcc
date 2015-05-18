@@ -65,7 +65,7 @@ class OpenCLManager : public AMPManager
 {
 public:
     OpenCLManager(const cl_device_id device, const std::wstring& path)
-        : AMPManager(path), device(device), program(nullptr) {
+        : AMPManager(), device(device), program(nullptr), path(path) {
         cl_int err;
 
         cl_ulong memAllocSize;
@@ -78,27 +78,11 @@ public:
         assert(err == CL_SUCCESS);
         std::string ven(vendor);
         if (ven.find("Advanced Micro Devices") != std::string::npos)
-            des = L"AMD";
+            description = L"AMD";
         else if (ven.find("NVIDIA") != std::string::npos)
-            des = L"NVIDIA";
+            description = L"NVIDIA";
         else if (ven.find("Intel") != std::string::npos)
-            des = L"Intel";
-
-
-        cl_bool unified;
-        err = clGetDeviceInfo(device, CL_DEVICE_HOST_UNIFIED_MEMORY, sizeof(cl_bool), &unified, NULL);
-        assert(err == CL_SUCCESS);
-        cpu_shared_memory = unified;
-
-        is_limited_double_ = false;
-        is_double_ = false;
-        cl_device_fp_config fpconf;
-        err = clGetDeviceInfo(device, CL_DEVICE_DOUBLE_FP_CONFIG, sizeof(cl_device_fp_config), &fpconf, NULL);
-        if (fpconf & (CL_FP_FMA | CL_FP_INF_NAN | CL_FP_DENORM)) {
-            is_limited_double_ = true;
-            if(fpconf & (CL_FP_ROUND_TO_ZERO | CL_FP_ROUND_TO_NEAREST | CL_FP_ROUND_TO_INF))
-                is_double_ = true;
-        }
+            description = L"Intel";
 
         cl_uint dimensions = 0;
         err = clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, sizeof(cl_uint), &dimensions, NULL);
@@ -108,12 +92,17 @@ public:
         assert(err == CL_SUCCESS);
         d.dimensions = dimensions;
         d.maxSizes = maxSizes;
-        emulated = false;
-        if (cpu_shared_memory)
-            cpu_type = access_type_read_write;
-        else
-            cpu_type = access_type_none;
+        cpu_type = access_type_none;
     }
+
+    std::wstring get_path() override { return path; }
+    std::wstring get_description() override { return description; }
+    size_t get_mem() override { return mem; }
+    bool is_double() override { return true; }
+    bool is_lim_double() override { return true; }
+    bool is_unified() override { return false; }
+    bool is_emulated() override { return false; }
+
     void* CreateKernel(const char* fun, void* size, void* source) override {
         cl_int err;
         Concurrency::CLAMP::CLCompileKernels(program, device, size, source);
@@ -157,22 +146,25 @@ public:
     }
 
     cl_device_id getDevice() const { return device; }
-private:
-
-    void* create(size_t count, void* data, bool hasSource /* unused */) override {
+    void* create(size_t count) override {
         cl_int err;
         cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, nullptr, &err);
         assert(err == CL_SUCCESS);
         return dm;
     }
+    void create(void* ptr) override {}
     void release(void *device) override { clReleaseMemObject(static_cast<cl_mem>(device)); }
     std::shared_ptr<AMPAllocator> createAloc() override { return newAloc(); }
 
 
+private:
     std::shared_ptr<AMPAllocator> newAloc();
     struct DimMaxSize d;
     cl_device_id     device;
     cl_program       program;
+    std::wstring path;
+    std::wstring description;
+    size_t mem;
 };
 
 class OpenCLAllocator : public AMPAllocator
@@ -234,44 +226,47 @@ public:
     void wait() override { clFinish(queue); }
     ~OpenCLAllocator() { clReleaseCommandQueue(queue); }
 
-private:
-    void Push(void *kernel, int idx, void*& data, obj_info& obj) override {
-        PushArgImpl(kernel, idx, sizeof(cl_mem), &obj.device);
+    void Push(void *kernel, int idx, void*& data, void* device) override {
+        cl_mem dm = static_cast<cl_mem>(device);
+        PushArgImpl(kernel, idx, sizeof(cl_mem), &dm);
     }
-    void amp_write(obj_info& obj, void *src) override {
-        cl_mem dm = static_cast<cl_mem>(obj.device);
-        cl_int err = clEnqueueWriteBuffer(queue, dm, CL_FALSE, 0, obj.count, src, 0, NULL, NULL);
+
+    void write(void* device, void *src, size_t count) override {
+        cl_mem dm = static_cast<cl_mem>(device);
+        cl_int err = clEnqueueWriteBuffer(queue, dm, CL_FALSE, 0, count, src, 0, NULL, NULL);
         assert(err == CL_SUCCESS);
     }
-    void amp_read(obj_info& obj, void* dst) override {
-        cl_mem dm = static_cast<cl_mem>(obj.device);
-        cl_int err = clEnqueueReadBuffer(queue, dm, CL_TRUE, 0, obj.count, dst, 0, NULL, NULL);
-        assert(err == CL_SUCCESS);
-    }
-    void amp_copy(obj_info& obj, void* dst, size_t count) override {
-        cl_mem dm = static_cast<cl_mem>(obj.device);
+    void read(void* device, void* dst, size_t count) override {
+        cl_mem dm = static_cast<cl_mem>(device);
         cl_int err = clEnqueueReadBuffer(queue, dm, CL_TRUE, 0, count, dst, 0, NULL, NULL);
         assert(err == CL_SUCCESS);
     }
-    void* amp_map(obj_info& obj, bool Write) override {
-        cl_mem dm = static_cast<cl_mem>(obj.device);
+    void copy(void* dst, void* src, size_t count) override {
+        cl_mem sdm = static_cast<cl_mem>(src);
+        cl_mem ddm = static_cast<cl_mem>(dst);
+        cl_int err = clEnqueueCopyBuffer(queue, sdm, ddm, 0, 0, count, 0, NULL, NULL);
+        assert(err == CL_SUCCESS);
+    }
+    void* map(void* device, size_t count, size_t offset, bool Write) override {
+        cl_mem dm = static_cast<cl_mem>(device);
         cl_int err;
         cl_map_flags flags;
         if (Write)
             flags = CL_MAP_WRITE_INVALIDATE_REGION;
         else
             flags = CL_MAP_READ;
-        void* addr = clEnqueueMapBuffer(queue, dm, CL_TRUE, flags, 0, obj.count, 0, NULL, NULL, &err);
+        void* addr = clEnqueueMapBuffer(queue, dm, CL_TRUE, flags, offset, count, 0, NULL, NULL, &err);
         assert(err == CL_SUCCESS);
         return addr;
     }
-    void amp_unmap(obj_info& obj, void* addr) override {
-        cl_mem dm = static_cast<cl_mem>(obj.device);
+    void unmap(void* device, void* addr) override {
+        cl_mem dm = static_cast<cl_mem>(device);
         cl_int err = clEnqueueUnmapMemObject(queue, dm, addr, 0, NULL, NULL);
         assert(err == CL_SUCCESS);
     }
     void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) override {
         cl_int err;
+        auto Man = std::dynamic_pointer_cast<OpenCLManager, AMPManager>(getMan());
         if(!Man->check(local_size, dim_ext))
             local_size = NULL;
         err = clEnqueueNDRangeKernel(queue, (cl_kernel)kernel, dim_ext, NULL, ext, local_size, 0, NULL, NULL);
@@ -304,7 +299,7 @@ public:
         assert(err == CL_SUCCESS);
         std::vector<cl_platform_id> platform_id(num_platform);
         err = clGetPlatformIDs(num_platform, platform_id.data(), nullptr);
-        std::vector<CLFlag> Flags({CLFlag(CL_DEVICE_TYPE_CPU, L"cpu"),
+        std::vector<CLFlag> Flags({//CLFlag(CL_DEVICE_TYPE_CPU, L"cpu"),
                                   CLFlag(CL_DEVICE_TYPE_GPU, L"gpu")
                                   });
 

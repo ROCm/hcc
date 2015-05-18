@@ -57,33 +57,6 @@ extern "C" __attribute__((pure)) int64_t amp_get_group_id(unsigned int n) restri
 extern "C" __attribute__((noduplicate)) void amp_barrier(unsigned int n) restrict(amp);
 
 namespace Concurrency {
-typedef int HRESULT;
-class runtime_exception : public std::exception
-{
-public:
-  runtime_exception(const char * message, HRESULT hresult) throw() : _M_msg(message), err_code(hresult) {}
-  explicit runtime_exception(HRESULT hresult) throw() : err_code(hresult) {}
-  runtime_exception(const runtime_exception& other) throw() : _M_msg(other.what()), err_code(other.err_code) {}
-  runtime_exception& operator=(const runtime_exception& other) throw() {
-    _M_msg = *(other.what());
-    err_code = other.err_code;
-    return *this;
-  }
-  virtual ~runtime_exception() throw() {}
-  virtual const char* what() const throw() {return _M_msg.c_str();}
-  HRESULT get_error_code() const {return err_code;}
-
-private:
-  std::string _M_msg;
-  HRESULT err_code;
-};
-
-#ifndef E_FAIL
-#define E_FAIL 0x80004005
-#endif
-
-static const char *__errorMsg_UnsupportedAccelerator = "concurrency::parallel_for_each is not supported on the selected accelerator \"CPU accelerator\".";
-
 class invalid_compute_domain : public runtime_exception
 {
 public:
@@ -154,7 +127,7 @@ private:
   std::shared_ptr<AMPAllocator> pAloc;
   queuing_mode mode;
   friend class accelerator;
-  template <typename T> friend class _data_host;
+
   template <typename Q, int K> friend class array;
   template <typename Q, int K> friend class array_view;
   template<typename Kernel, int dim_ext> friend
@@ -162,6 +135,17 @@ private:
   template <typename T, int N> friend class array_helper;
   template<typename Kernel, int dim_ext> friend
       std::shared_future<void>* mcw_cxxamp_launch_kernel_async(const accelerator_view&, size_t *, size_t *, const Kernel&);
+
+  template <int N, typename Kernel>
+      friend void parallel_for_each(extent<N> compute_domain, const Kernel& f);
+  template <int D0, int D1, int D2, typename Kernel>
+      friend void parallel_for_each(tiled_extent<D0,D1,D2> compute_domain, const Kernel& f);
+  template <int D0, int D1, typename Kernel>
+      friend void parallel_for_each(tiled_extent<D0,D1> compute_domain, const Kernel& f);
+  template <int D0, typename Kernel>
+      friend void parallel_for_each(tiled_extent<D0> compute_domain, const Kernel& f);
+
+
 
   template <typename Kernel, int N>
       friend void launch_cpu_task(const accelerator_view&, extent<N> const&, Kernel const&);
@@ -200,19 +184,16 @@ public:
   accelerator(const accelerator& other) : pMan(other.pMan) {}
 
   static std::vector<accelerator> get_all() {
-      auto size = getContext()->getNumDevices();
-      std::vector<accelerator> vec(size);
-      for (auto i = 0; i < size; i++)
-          vec[i] = getContext()->getDevices()[i];
-      return std::move(vec);
+      auto Devices = getContext()->getDevices();
+      std::vector<accelerator> ret(Devices.size());
+      for (int i = 0; i < ret.size(); ++i)
+          ret[i] = Devices[i];
+      return std::move(ret);
   }
   static bool set_default(const std::wstring& path) {
       return getContext()->set_default(path);
   }
-  static accelerator_view get_auto_selection_view() {
-      auto dMan = getContext()->getDevice();
-      return accelerator_view(getContext()->getView(dMan));
-  }
+  static accelerator_view get_auto_selection_view() { return getContext()->auto_select(); }
 
   accelerator& operator=(const accelerator& other) {
       pMan = other.pMan;
@@ -221,16 +202,16 @@ public:
 
   std::wstring get_device_path() const { return pMan->get_path(); }
   unsigned int get_version() const { return 0; }
-  std::wstring get_description() const { return pMan->get_des(); }
+  std::wstring get_description() const { return pMan->get_description(); }
   bool get_is_debug() const { return false; }
-  bool get_is_emulated() const { return pMan->is_emu(); }
+  bool get_is_emulated() const { return pMan->is_emulated(); }
   bool get_has_display() const { return false; }
   bool get_supports_double_precision() const { return pMan->is_double(); }
   bool get_supports_limited_double_precision() const { return pMan->is_lim_double(); }
   size_t get_dedicated_memory() const { return pMan->get_mem(); }
   accelerator_view get_default_view() const;
   access_type get_default_cpu_access_type() const { return pMan->cpu_type; }
-  bool get_supports_cpu_shared_memory() const { return pMan->is_uni(); }
+  bool get_supports_cpu_shared_memory() const { return pMan->is_unified(); }
 
   bool set_default_cpu_access_type(access_type type) {
       pMan->cpu_type = type;
@@ -344,8 +325,8 @@ private:
     completion_future(const std::shared_future<void> &__future)
         : __amp_future(__future) {}
 
-    template <typename InputType, typename OutputType>
-        friend completion_future __amp_copy_async_impl(InputType& src, OutputType& dst);
+    template <typename InputIter, typename OutputIter>
+        friend completion_future __amp_copy_async_impl(InputIter& src, OutputIter& dst);
     template <typename InputIter, typename T, int N>
         friend completion_future copy_async(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest);
     template <typename InputIter, typename T, int N>
@@ -1291,14 +1272,14 @@ struct projection_helper<T, 1>
     typedef __global T& result_type;
     static result_type project(array_view<T, 1>& now, int i) restrict(amp,cpu) {
 #ifndef __GPU__
-        now.cache.synchronize();
+        now.cache.get_cpu_access(true);
 #endif
         __global T *ptr = reinterpret_cast<__global T *>(now.cache.get() + i + now.offset + now.index_base[0]);
         return *ptr;
     }
     static result_type project(const array_view<T, 1>& now, int i) restrict(amp,cpu) {
 #ifndef __GPU__
-        now.cache.synchronize();
+        now.cache.get_cpu_access(true);
 #endif
         __global T *ptr = reinterpret_cast<__global T *>(now.cache.get() + i + now.offset + now.index_base[0]);
         return *ptr;
@@ -1348,14 +1329,14 @@ struct projection_helper<const T, 1>
     typedef __global const T& const_result_type;
     static const_result_type project(array_view<const T, 1>& now, int i) restrict(amp,cpu) {
 #ifndef __GPU__
-        now.cache.synchronize();
+        now.cache.get_cpu_access();
 #endif
         __global const T *ptr = reinterpret_cast<__global const T *>(now.cache.get() + i + now.offset + now.index_base[0]);
         return *ptr;
     }
     static const_result_type project(const array_view<const T, 1>& now, int i) restrict(amp,cpu) {
 #ifndef __GPU__
-        now.cache.synchronize();
+        now.cache.get_cpu_access();
 #endif
         __global const T *ptr = reinterpret_cast<__global const T *>(now.cache.get() + i + now.offset + now.index_base[0]);
         return *ptr;
@@ -1405,7 +1386,7 @@ struct array_projection_helper<T, 1>
     typedef __global const T& const_result_type;
     static result_type project(array<T, 1>& now, int i) restrict(amp,cpu) {
 #ifndef __GPU__
-        now.m_device.discard();
+        now.m_device.synchronize(true);
 #endif
         __global T *ptr = reinterpret_cast<__global T *>(now.m_device.get() + i);
         return *ptr;
@@ -1421,6 +1402,44 @@ struct array_projection_helper<T, 1>
 
 // ------------------------------------------------------------------------
 
+
+template <typename T, int N>
+void copy(const array_view<const T, N>& src, const array_view<T, N>& dest);
+
+template <typename T, int N>
+void copy(const array_view<T, N>& src, const array_view<T, N>& dest);
+
+template <typename T, int N>
+void copy(const array<T, N>& src, const array_view<T, N>& dest);
+
+template <typename T, int N>
+void copy(const array<T, N>& src, array<T, N>& dest);
+
+template <typename T, int N>
+void copy(const array_view<const T, N>& src, array<T, N>& dest);
+
+template <typename T, int N>
+void copy(const array_view<T, N>& src, array<T, N>& dest);
+
+template <typename InputIter, typename T, int N>
+void copy(InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest);
+
+template <typename InputIter, typename T, int N>
+void copy(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest);
+
+template <typename InputIter, typename T, int N>
+void copy(InputIter srcBegin, const array_view<T, N>& dest);
+
+template <typename InputIter, typename T, int N>
+void copy(InputIter srcBegin, array<T, N>& dest);
+
+template <typename OutputIter, typename T, int N>
+void copy(const array_view<T, N> &src, OutputIter destBegin);
+
+template <typename OutputIter, typename T, int N>
+void copy(const array<T, N> &src, OutputIter destBegin);
+
+
 template <int N>
 const Concurrency::extent<N>& check(const Concurrency::extent<N>& ext)
 {
@@ -1434,39 +1453,6 @@ const Concurrency::extent<N>& check(const Concurrency::extent<N>& ext)
     return ext;
 }
 
-const accelerator_view& _array_staging_av(const accelerator_view& a,
-                                          const accelerator_view& b)
-{
-    std::wstring path = a.get_accelerator().get_device_path();
-    if (path != L"cpu")
-        return a;
-    return b;
-}
-
-template <typename T, int N = 1>
-class array_helper {
-public:
-  __attribute__((annotate("user_deserialize")))
-  array_helper() restrict(cpu, amp) {}
-
-  void setArray(array<T, N>* arr) restrict(amp,cpu) { m_arr = arr; }
-
-  __attribute__((annotate("serialize")))
-  void __cxxamp_serialize(Serialize& s) const {
-    array<T, N>* p_arr = (array<T, N>*)m_arr;
-    if (!p_arr)
-        return;
-    auto curr = s.get_aloc()->getMan()->get_path();
-    auto path = p_arr->get_accelerator_view().get_accelerator().get_device_path();
-    if (path == L"cpu") {
-        auto asoc = p_arr->get_associated_accelerator_view().get_accelerator().get_device_path();
-        if (asoc == L"cpu" || path != curr)
-            throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
-    }
-  }
-private:
-  void* m_arr;
-};
 
 template <typename T, int N = 1>
 class array {
@@ -1483,13 +1469,11 @@ public:
   typedef T value_type;
   array() = delete;
 
-
   array(const Concurrency::extent<N>& ext, accelerator_view av, accelerator_view associated_av)
 #ifdef __GPU__
-      : m_device(ext.size(), true), extent(ext) {}
+      : m_device(ext.size()), extent(ext) {}
 #else
-      : m_device(av.pAloc, check(ext).size(), true), extent(ext), av(av),
-          asv(_array_staging_av(av, associated_av)) { initialize(); }
+      : m_device(av.pAloc, associated_av.pAloc, check(ext).size(), access_type_auto), extent(ext) {}
 #endif
   array(int e0, accelerator_view av, accelerator_view associated_av)
       : array(Concurrency::extent<N>(e0), av, associated_av) {}
@@ -1501,12 +1485,11 @@ public:
 
   array(const extent<N>& ext, accelerator_view av,
         access_type cpu_access_type = access_type_auto)
-      : array(ext, av, av) {
-          if (cpu_access_type == access_type_auto)
-              cpu_type = av.get_accelerator().get_default_cpu_access_type();
-          else
-              cpu_type = cpu_access_type;
-      }
+#ifdef __GPU__
+      : m_device(ext.size()), extent(ext) {}
+#else
+      : m_device(av.pAloc, av.pAloc, check(ext).size(), cpu_access_type), extent(ext) {}
+#endif
   array(int e0, accelerator_view av,
         access_type cpu_access_type = access_type_auto)
       : array(Concurrency::extent<N>(e0), av, cpu_access_type) {}
@@ -1518,10 +1501,9 @@ public:
       : array(Concurrency::extent<N>(e0, e1, e2), av, cpu_access_type) {}
 
 
-  explicit array(const extent<N>& ext) : array(ext, accelerator::get_auto_selection_view()) {}
-  explicit array(int e0) : array(Concurrency::extent<N>(e0)) {
-      static_assert(N == 1, "illegal");
-  }
+  explicit array(const extent<N>& ext) :
+      array(ext, accelerator::get_auto_selection_view()) {}
+  explicit array(int e0) : array(Concurrency::extent<N>(e0)) { static_assert(N == 1, "illegal"); }
   explicit array(int e0, int e1) : array(Concurrency::extent<N>(e0, e1)) {}
   explicit array(int e0, int e1, int e2) : array(Concurrency::extent<N>(e0, e1, e2)) {}
 
@@ -1529,19 +1511,14 @@ public:
   template <typename InputIter>
       array(const Concurrency::extent<N>& ext, InputIter srcBegin,
             accelerator_view av, accelerator_view associated_av)
-      : array(ext, av, associated_av) {
-          InputIter srcEnd = srcBegin;
-          std::advance(srcEnd, ext.size());
-          std::copy(srcBegin, srcEnd, m_device.get());
-      }
+      : array(ext, av, associated_av) { Concurrency::copy(srcBegin, *this); }
   template <typename InputIter>
       array(const Concurrency::extent<N>& ext, InputIter srcBegin, InputIter srcEnd,
             accelerator_view av, accelerator_view associated_av)
       : array(ext, av, associated_av) {
-          if(ext.size() < std::distance(srcBegin,srcEnd))
+          if(ext.size() < std::distance(srcBegin, srcEnd))
               throw runtime_exception("errorMsg_throw", 0);
-          std::copy(srcBegin, srcEnd, m_device.get());
-          cpu_type = av.get_accelerator().get_default_cpu_access_type();
+          Concurrency::copy(srcBegin, srcEnd, *this);
       }
   template <typename InputIter>
       array(int e0, InputIter srcBegin,
@@ -1572,21 +1549,11 @@ public:
   template <typename InputIter>
       array(const Concurrency::extent<N>& ext, InputIter srcBegin, accelerator_view av,
             access_type cpu_access_type = access_type_auto)
-      : array(ext, srcBegin, av, av) {
-          if (cpu_access_type == access_type_auto)
-              cpu_type = av.get_accelerator().get_default_cpu_access_type();
-          else
-              cpu_type = cpu_access_type;
-      }
+      : array(ext, av, cpu_access_type) { Concurrency::copy(srcBegin, *this); }
   template <typename InputIter>
       array(const Concurrency::extent<N>& ext, InputIter srcBegin, InputIter srcEnd,
             accelerator_view av, access_type cpu_access_type = access_type_auto)
-      : array(ext, srcBegin, srcEnd, av, av) {
-          if (cpu_access_type == access_type_auto)
-              cpu_type = av.get_accelerator().get_default_cpu_access_type();
-          else
-              cpu_type = cpu_access_type;
-      }
+      : array(ext, av, cpu_access_type) { Concurrency::copy(srcBegin, srcEnd, *this); }
   template <typename InputIter>
       array(int e0, InputIter srcBegin, accelerator_view av,
             access_type cpu_access_type = access_type_auto)
@@ -1640,70 +1607,41 @@ public:
 
 
   explicit array(const array_view<const T, N>& src)
-      : array(src.extent, src.get_source_accelerator_view()) {
-#ifndef __GPU__
-          cpu_type = src.get_source_accelerator_view().get_accelerator().get_default_cpu_access_type();
-      src.cache.copy(m_device.get());
-#endif
-  }
+      : array(src.get_extent(), accelerator::get_auto_selection_view())
+  { Concurrency::copy(src, *this); }
 
   array(const array_view<const T, N>& src, accelerator_view av,
         access_type cpu_access_type = access_type_auto)
-      : array(src.get_extent(), av) {
-          if (cpu_access_type == access_type_auto)
-              cpu_type = av.get_accelerator().get_default_cpu_access_type();
-          else
-              cpu_type = cpu_access_type;
-#ifndef __GPU__
-          src.cache.copy(m_device.get());
-#endif
-  }
+      : array(src.get_extent(), av, cpu_access_type) { Concurrency::copy(src, *this); }
   array(const array_view<const T, N>& src, accelerator_view av,
-        accelerator_view associated_av) : array(src.extent, av, associated_av) {
-#ifndef __GPU__
-      src.cache.copy(m_device.get());
-#endif
-  }
+        accelerator_view associated_av) : array(src.get_extent(), av, associated_av)
+    { Concurrency::copy(src, *this); }
 
 
-  array(const array& other) : m_device(other.m_device), extent(other.extent)
-#ifndef __GPU__
-                              , av(other.av), asv(other.asv)
-#endif
-                              {}
+  array(const array& other) : array(other.get_extent(), other.get_accelerator_view())
+    { Concurrency::copy(other, *this); }
   array(array&& other) : m_device(other.m_device), extent(other.extent)
-#ifndef __GPU__
-                              , av(other.av), asv(other.asv)
-#endif
-                              { other.m_device.reset(); }
+    { other.m_device.reset(); }
 
   array& operator=(const array& other) {
     if(this != &other) {
-      extent = other.extent;
-      array nA(other.get_extent(), other.get_accelerator_view());
-      copy(other, nA);
-      m_device = nA.internal();
-      cpu_type = other.cpu_type;
+        array arr(other);
+        *this = std::move(arr);
     }
     return *this;
   }
   array& operator=(array&& other) {
     if(this != &other) {
       extent = other.extent;
-      cpu_type = other.cpu_type;
       m_device = other.m_device;
       other.m_device.reset();
     }
     return *this;
   }
   array& operator=(const array_view<T,N>& src) {
-    extent = src.get_extent();
-#ifndef __GPU__
-    initialize();
-#endif
-    src.copy_to(*this);
-
-    return *this;
+      array arr(src);
+      *this = std::move(arr);
+      return *this;
   }
 
   void copy_to(array& dest) const {
@@ -1718,51 +1656,26 @@ public:
   }
 
   void copy_to(const array_view<T,N>& dest) const { copy(*this, dest); }
-
   Concurrency::extent<N> get_extent() const restrict(amp,cpu) { return extent; }
 
 
-  accelerator_view get_accelerator_view() const {
-#ifdef __GPU__
-      return accelerator().get_default_view();
-#else
-      return av;
-#endif
-  }
-  accelerator_view get_associated_accelerator_view() const {
-#ifdef __GPU__
-      return accelerator().get_default_view();
-#else
-      return asv;
-#endif
-  }
-  access_type get_cpu_access_type() const { return cpu_type; }
+  accelerator_view get_accelerator_view() const { return m_device.get_av(); }
+  accelerator_view get_associated_accelerator_view() const { return m_device.get_stage(); }
+  access_type get_cpu_access_type() const { return m_device.get_access(); }
 
   __global T& operator[](const index<N>& idx) restrict(amp,cpu) {
 #ifndef __GPU__
-      if(av.get_accelerator().get_device_path() != L"cpu"
-#ifdef __AMP_CPU__
-        && !CLAMP::in_cpu_kernel()
-#endif
-        ) {
-          if (!av.get_accelerator().get_supports_cpu_shared_memory() || cpu_type == access_type_none)
-              throw runtime_exception("The array is not accessible on CPU.", 0);
-      }
-      m_device.synchronize();
+      if (!m_device.get())
+          throw runtime_exception("The array is not accessible on CPU.", 0);
+      m_device.synchronize(true);
 #endif
       __global T *ptr = reinterpret_cast<__global T*>(m_device.get());
       return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx, extent)];
   }
   __global const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
 #ifndef __GPU__
-      if(av.get_accelerator().get_device_path() != L"cpu"
-#ifdef __AMP_CPU__
-        && !CLAMP::in_cpu_kernel()
-#endif
-        ) {
-          if (!av.get_accelerator().get_supports_cpu_shared_memory() || cpu_type == access_type_none)
-              throw runtime_exception("The array is not accessible on CPU.", 0);
-      }
+      if (!m_device.get())
+          throw runtime_exception("The array is not accessible on CPU.", 0);
       m_device.synchronize();
 #endif
       __global T *ptr = reinterpret_cast<__global T*>(m_device.get());
@@ -1908,28 +1821,15 @@ public:
 
   operator std::vector<T>() const {
       std::vector<T> vec(extent.size());
-#ifndef __GPU__
-      m_device.copy(vec.data());
-#endif
+      Concurrency::copy(*this, std::begin(vec));
       return std::move(vec);
   }
 
-  T* get_data() const restrict(amp,cpu) {
-    return reinterpret_cast<T*>(m_device.get());
-  }
-  T* data_() const restrict(amp,cpu) {
-#ifndef __GPU__
-    m_device.synchronize();
-#endif
-    return reinterpret_cast<T*>(m_device.get());
-  }
   T* data() const restrict(amp,cpu) {
 #ifndef __GPU__
-    if(cpu_type == access_type_none)
-      if (av.get_accelerator().get_device_path() != L"cpu")
-        if (av.get_accelerator().get_supports_cpu_shared_memory())
+      if (!m_device.get())
           return nullptr;
-    m_device.synchronize();
+    m_device.synchronize(true);
 #endif
     return reinterpret_cast<T*>(m_device.get());
   }
@@ -1937,18 +1837,12 @@ public:
 
 
   const acc_buffer_t& internal() const restrict(amp,cpu) { return m_device; }
-  Concurrency::extent<N> extent;
 private:
   template <typename K, int Q> friend struct projection_helper;
   template <typename K, int Q> friend struct array_projection_helper;
   template <typename K, int Q> friend class array_helper;
   acc_buffer_t m_device;
-  access_type cpu_type;
-#ifndef __GPU__
-  array_helper<T, N> m_array_helper;
-  __attribute__((cpu)) accelerator_view av, asv;
-  void initialize() { m_array_helper.setArray(this); }
-#endif
+  Concurrency::extent<N> extent;
 };
 
 template <typename T>
@@ -2016,7 +1910,12 @@ public:
       array_view(int e0, int e1, int e2, Container& src)
       : array_view(Concurrency::extent<N>(e0, e1, e2), src) {}
 
-  array_view(const Concurrency::extent<N>& extent, value_type* src) restrict(amp,cpu);
+  array_view(const Concurrency::extent<N>& ext, value_type* src) restrict(amp,cpu)
+#ifdef __GPU__
+      : cache((__global T *)(src)), extent(ext), extent_base(ext), offset(0) {}
+#else
+      : cache(ext.size(), (__global T *)(src)), extent(ext), extent_base(ext), offset(0) {}
+#endif
   array_view(int e0, value_type *src) restrict(amp,cpu)
       : array_view(Concurrency::extent<N>(e0), src) {}
   array_view(int e0, int e1, value_type *src) restrict(amp,cpu)
@@ -2025,7 +1924,8 @@ public:
       : array_view(Concurrency::extent<N>(e0, e1, e2), src) {}
 
 
-  explicit array_view(const Concurrency::extent<N>& extent);
+  explicit array_view(const Concurrency::extent<N>& ext)
+  : cache(ext.size()), extent(ext), extent_base(ext), offset(0) {}
   explicit array_view(int e0) : array_view(Concurrency::extent<N>(e0)) {}
   explicit array_view(int e0, int e1)
       : array_view(Concurrency::extent<N>(e0, e1)) {}
@@ -2055,17 +1955,12 @@ public:
 #endif
       copy(*this, dest);
   }
-  void copy_to(const array_view& dest) const {
-      copy(*this, dest);
-  }
-
-  extent<N> get_extent() const restrict(amp,cpu) {
-      return extent;
-  }
+  void copy_to(const array_view& dest) const { copy(*this, dest); }
+  extent<N> get_extent() const restrict(amp,cpu) { return extent; }
 
   __global T& operator[](const index<N>& idx) const restrict(amp,cpu) {
 #ifndef __GPU__
-      synchronize();
+      cache.get_cpu_access(true);
 #endif
       __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
       return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
@@ -2073,7 +1968,7 @@ public:
   template <int D0, int D1=0, int D2=0>
   __global T& operator[](const tiled_index<D0, D1, D2>& idx) const restrict(amp,cpu) {
 #ifndef __GPU__
-      synchronize();
+      cache.get_cpu_access(true);
 #endif
       __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
       return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx.global + index_base, extent_base)];
@@ -2084,12 +1979,10 @@ public:
           return projection_helper<T, N>::project(*this, i);
       }
   __global T& operator()(const index<N>& idx) const restrict(amp,cpu) {
-    return (*this)[idx];
+      return (*this)[idx];
   }
   typename projection_helper<T, N>::result_type
-      operator()(int i0) const restrict(amp,cpu) {
-          return (*this)[i0];
-  }
+      operator()(int i0) const restrict(amp,cpu) { return (*this)[i0]; }
   __global T& operator()(int i0, int i1) const restrict(amp,cpu) {
       static_assert(N == 2, "T& array_view::operator()(int,int) is only permissible on array_view<T, 2>");
       return (*this)[index<2>(i0, i1)];
@@ -2158,30 +2051,26 @@ public:
     return av;
   }
 
-  void synchronize() const;
-  completion_future synchronize_async() const;
-  void refresh() const;
+  void synchronize() const { cache.synchronize(); }
+  completion_future synchronize_async() const {
+      std::future<void> fut = std::async([&]() mutable { synchronize(); });
+      return completion_future(fut.share());
+  }
+  void refresh() const { cache.refresh(); }
   void discard_data() const {
 #ifndef __GPU__
       cache.discard();
 #endif
   }
-  // only get data do not synchronize
-  T* get_data() const restrict(amp,cpu) {
-    static_assert(N == 1, "Rank must be 1");
-    return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
-  }
   T* data() const restrict(amp,cpu) {
 #ifndef __GPU__
-      synchronize();
+      cache.get_cpu_access(true);
 #endif
     static_assert(N == 1, "data() is only permissible on array views of rank 1");
     return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
   }
 
-  accelerator_view get_source_accelerator_view() const {
-      return cache.get_av();
-  }
+  accelerator_view get_source_accelerator_view() const { return cache.get_av(); }
 
   const acc_buffer_t& internal() const restrict(amp,cpu) { return cache; }
 private:
@@ -2190,8 +2079,18 @@ private:
   template <typename Q, int K> friend class array;
   template <typename Q, int K> friend class array_view;
 
+  template<typename Q, int K>
+      friend bool is_flat(const array_view<Q, K>&) noexcept;
+  template <typename Q, int K>
+      friend void copy(const array<Q, K>&, const array_view<Q, K>&);
+  template <typename InputIter, typename Q, int K>
+      friend void copy(InputIter, InputIter, const array_view<Q, K>&);
+  template <typename Q, int K>
+      friend void copy(const array_view<const Q, K>&, array<Q, K>&);
   template <typename OutputIter, typename Q, int K>
       friend void copy(const array_view<Q, K>&, OutputIter);
+
+
   // used by view_as and reinterpret_as
   array_view(const acc_buffer_t& cache, const Concurrency::extent<N>& ext,
              int offset) restrict(amp,cpu)
@@ -2244,7 +2143,12 @@ public:
       array_view(int e0, int e1, int e2, Container& src)
       : array_view(Concurrency::extent<N>(e0, e1, e2), src) {}
 
-  array_view(const extent<N>& extent, const value_type* src) restrict(amp,cpu);
+  array_view(const extent<N>& ext, const value_type* src) restrict(amp,cpu)
+#ifdef __GPU__
+      : cache((__global nc_T*)(src)), extent(ext), extent_base(ext), offset(0) {}
+#else
+      : cache(ext.size(), const_cast<nc_T*>(src)), extent(ext), extent_base(ext), offset(0) {}
+#endif
   array_view(int e0, value_type *src) restrict(amp,cpu)
       : array_view(Concurrency::extent<1>(e0), src) {}
   array_view(int e0, int e1, value_type *src) restrict(amp,cpu)
@@ -2288,7 +2192,7 @@ public:
 
   __global const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
 #ifndef __GPU__
-      synchronize();
+      cache.get_cpu_access();
 #endif
     __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
     return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
@@ -2371,21 +2275,19 @@ public:
       return av;
     }
 
-  void synchronize() const;
-  completion_future synchronize_async() const;
+  void synchronize() const { cache.get_cpu_access(); }
+  completion_future synchronize_async() const {
+      std::future<void> fut = std::async([&]() mutable { synchronize(); });
+      return completion_future(fut.share());
+  }
 
   void synchronize_to(const accelerator_view& av) const;
   completion_future synchronize_to_async(const accelerator_view& av) const;
 
-  void refresh() const;
-  // only get data do not synchronize
-  T* get_data() const restrict(amp,cpu) {
-    static_assert(N == 1, "Rank must be 1");
-    return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
-  }
+  void refresh() const { cache.refresh(); }
   const T* data() const restrict(amp,cpu) {
 #ifndef __GPU__
-      synchronize();
+      cache.get_cpu_access();
 #endif
     static_assert(N == 1, "data() is only permissible on array views of rank 1");
     return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
@@ -2396,8 +2298,19 @@ private:
   template <typename K, int Q> friend struct array_projection_helper;
   template <typename Q, int K> friend class array;
   template <typename Q, int K> friend class array_view;
+
+
+  template<typename Q, int K>
+      friend bool is_flat(const array_view<Q, K>&) noexcept;
+  template <typename Q, int K>
+      friend void copy(const array<Q, K>&, const array_view<Q, K>&);
+  template <typename InputIter, typename Q, int K>
+      friend void copy(InputIter, InputIter, const array_view<Q, K>&);
+  template <typename Q, int K>
+      friend void copy(const array_view<const Q, K>&, array<Q, K>&);
   template <typename OutputIter, typename Q, int K>
       friend void copy(const array_view<Q, K>&, OutputIter);
+
 
   // used by view_as and reinterpret_as
   array_view(const acc_buffer_t& cache, const Concurrency::extent<N>& ext,
@@ -2476,22 +2389,42 @@ void parallel_for_each(const accelerator_view& accl_view,
 
 template <int N, typename Kernel>
 void parallel_for_each(extent<N> compute_domain, const Kernel& f){
-    parallel_for_each(accelerator::get_auto_selection_view(), compute_domain, f);
+    Serialize s(true);
+    f.__cxxamp_serialize(s);
+    accelerator_view best = s.best();
+    if (!best.pAloc)
+        best = accelerator::get_auto_selection_view();
+    parallel_for_each(best, compute_domain, f);
 }
 
 template <int D0, int D1, int D2, typename Kernel>
 void parallel_for_each(tiled_extent<D0,D1,D2> compute_domain, const Kernel& f) {
-    parallel_for_each(accelerator::get_auto_selection_view(), compute_domain, f);
+    Serialize s(true);
+    f.__cxxamp_serialize(s);
+    accelerator_view best = s.best();
+    if (!best.pAloc)
+        best = accelerator::get_auto_selection_view();
+    parallel_for_each(best, compute_domain, f);
 }
 
 template <int D0, int D1, typename Kernel>
 void parallel_for_each(tiled_extent<D0,D1> compute_domain, const Kernel& f) {
-    parallel_for_each(accelerator::get_auto_selection_view(), compute_domain, f);
+    Serialize s(true);
+    f.__cxxamp_serialize(s);
+    accelerator_view best = s.best();
+    if (!best.pAloc)
+        best = accelerator::get_auto_selection_view();
+    parallel_for_each(best, compute_domain, f);
 }
 
 template <int D0, typename Kernel>
 void parallel_for_each(tiled_extent<D0> compute_domain, const Kernel& f) {
-    parallel_for_each(accelerator::get_auto_selection_view(), compute_domain, f);
+    Serialize s(true);
+    f.__cxxamp_serialize(s);
+    accelerator_view best = s.best();
+    if (!best.pAloc)
+        best = accelerator::get_auto_selection_view();
+    parallel_for_each(best, compute_domain, f);
 }
 
 } // namespace Concurrency
@@ -2511,171 +2444,179 @@ namespace concurrency = Concurrency;
 
 namespace Concurrency {
 
-// FIXME: the following overloadded Concurrency::copy only copy host2host
-// These are implementation specific for the implicit sync have been done earilier.
-// However, according to the specifciations, when src and des are located in different
-// accelerators, we need to consider copying data from CPU to GPU or vice versa.
-
-// For now, it is not safe to use all these copy routines since implicit syncs most likely
-// never happen before.
-
-template <typename T>
-static inline void amp_stash(T& mm) {
-#ifndef __GPU__
-    mm.stash();
-#endif
+template<typename T, int N>
+static inline bool is_flat(const array_view<T, N>& av) noexcept {
+    return av.offset == 0 && av.extent == av.extent_base && av.index_base == index<N>();
 }
 
-template <typename T>
-void copy(const array_view<const T, 1>& src, const array_view<T, 1>& dest) {
-    T* ptr_dest = dest.data();
-    const T* ptr_src = src.data();
-    memcpy(ptr_dest, ptr_src, sizeof(T)*dest.get_extent()[0]);
-}
+template <typename InputIter, typename T, int N, int dim>
+struct copy_input
+{
+    void operator()(InputIter& It, T* ptr, const extent<N>& ext,
+                    const extent<N>& ext_base, const index<N>& idx)
+    {
+        size_t stride = 1;
+        for (int i = 0; i < dim; i++)
+            stride *= ext_base[i];
+        ptr += stride * idx[dim];
+        for (int i = 0; i < ext[dim]; i++) {
+            copy_input<InputIter, T, N, dim - 1>(It, ptr, ext, ext_base, idx);
+            ptr += stride;
+        }
+    }
+};
+
+template <typename InputIter, typename T, int N>
+struct copy_input<InputIter, T, N, 0>
+{
+    void operator()(InputIter& It, T* ptr, const extent<N>& ext,
+                      const extent<N>& ext_base, const index<N>& idx)
+    {
+        InputIter end = It;
+        std::advance(end, ext[0]);
+        std::copy(It, end, ptr + idx[0]);
+        It = end;
+    }
+};
+
+template <typename OutputIter, typename T, int N, int dim>
+struct copy_output
+{
+    void operator()(T* ptr, OutputIter& It, const extent<N>& ext,
+                    const extent<N>& ext_base, const index<N>& idx)
+    {
+        size_t stride = 1;
+        for (int i = 0; i < dim; i++)
+            stride *= ext_base[i];
+        ptr += stride * idx[dim];
+        for (int i = 0; i < ext[dim]; i++) {
+            copy_output<OutputIter, T, N, dim - 1>(It, ptr, ext, ext_base, idx);
+            ptr += stride;
+        }
+    }
+};
+
+template <typename OutputIter, typename T, int N>
+struct copy_output<OutputIter, T, N, 0>
+{
+    void operator()(T* ptr, OutputIter& It, const extent<N>& ext,
+                    const extent<N>& ext_base, const index<N>& idx)
+    {
+        ptr += idx[0];
+        It = std::copy(ptr, ptr + ext[0], It);
+    }
+};
+
 template <typename T, int N>
 void copy(const array_view<const T, N>& src, const array_view<T, N>& dest) {
-    for (int i = 0; i < dest.get_extent()[0]; ++i)
-        Concurrency::copy(src[i], dest[i]);
+    if (is_flat(src) && is_flat(dest))
+        dest.internal().copy(src.internal());
 }
 
-template <typename T>
-void copy(const array_view<T, 1>& src, const array_view<T, 1>& dest) {
-    T* ptr_dest = dest.data();
-    const T* ptr_src = src.data();
-    memcpy(ptr_dest, ptr_src, sizeof(T)*dest.get_extent()[0]);
-}
 template <typename T, int N>
 void copy(const array_view<T, N>& src, const array_view<T, N>& dest) {
-    for (int i = 0; i < dest.get_extent()[0]; ++i)
-        Concurrency::copy(src[i], dest[i]);
+    const array_view<const T, N> buf(src);
+    copy(buf, dest);
 }
 
-template <typename T>
-void copy(const array<T, 1>& src, const array_view<T, 1>& dest) {
-    T* ptr_dest = dest.data();
-    const T* ptr_src = src.data_();
-    memcpy(ptr_dest, ptr_src, sizeof(T)*dest.get_extent()[0]);
+template <typename T, int N>
+void copy(const array_view<const T, N>& src, array<T, N>& dest) {
+    T* pDst = dest.internal().map_ptr(true);
+    if (is_flat(src)) {
+        T* pSrc = src.internal().map_ptr();
+        std::copy(pSrc, pSrc + dest.get_extent().size(), pDst);
+        src.internal().unmap_ptr(pSrc);
+    } else {
+        T* pSrc = src.internal().map_ptr(src.extent_base.size(), src.offset);
+        copy_output<T*, T, N, N - 1>(pSrc, pDst, src.extent, src.extent_base, src.index_base);
+        src.internal().unmap_ptr(pSrc);
+    }
+    dest.internal().unmap_ptr(pDst);
 }
+
+template <typename T, int N>
+void copy(const array_view<T, N>& src, array<T, N>& dest) {
+    const array_view<const T, N> buf(src);
+    copy(buf, dest);
+}
+
 template <typename T, int N>
 void copy(const array<T, N>& src, const array_view<T, N>& dest) {
-    for (int i = 0; i < dest.get_extent()[0]; ++i)
-        Concurrency::copy(src[i], dest[i]);
+    T* pSrc = src.internal().map_ptr();
+    if (is_flat(dest)) {
+        T* pDst = dest.internal().map_ptr(true);
+        std::copy(pSrc, pSrc + src.get_extent().size(), pDst);
+        dest.internal().unmap_ptr(pDst);
+    } else {
+        T* pDst = dest.internal().map_ptr(true, dest.extent_base.size(), dest.offset);
+        copy_input<T*, T, N, N - 1>(pSrc, pDst, dest.extent, dest.extent_base, dest.index_base);
+        dest.internal().unmap_ptr(pDst);
+    }
+    src.internal().unmap_ptr(pSrc);
 }
 
 template <typename T, int N>
 void copy(const array<T, N>& src, array<T, N>& dest) {
-    amp_stash(dest.internal());
-    memmove(dest.data_(), src.data_(), dest.get_extent().size() * sizeof(T));
+    dest.internal().copy(src.internal());
 }
 
-template <typename T>
-void copy(const array_view<const T, 1>& src, array<T, 1>& dest) {
-    T* ptr_dest = dest.data_();
-    const T* ptr_src = src.data();
-    memcpy(ptr_dest, ptr_src, sizeof(T)*dest.get_extent()[0]);
-}
-template <typename T, int N>
-void copy(const array_view<const T, N>& src, array<T, N>& dest) {
-    for (int i = 0; i < dest.get_extent()[0]; ++i)
-        Concurrency::copy(src[i], dest[i]);
-}
-
-template <typename T>
-void do_copy(const array_view<T, 1>& src, array<T, 1>& dest) {
-    T* ptr_dest = dest.data_();
-    const T* ptr_src = src.get_data();
-    memcpy(ptr_dest, ptr_src, sizeof(T) * dest.get_extent().size());
-}
-template <typename T, int N>
-void do_copy(const array_view<T, N>& src, array<T, N>& dest) {
-    for (int i = 0; i < dest.get_extent()[0]; ++i)
-        Concurrency::copy(src[i], dest[i]);
-}
-template <typename T, int N>
-void copy(const array_view<T, N>& src, array<T, N>& dest) {
-    amp_stash(dest.internal());
-    src.synchronize();
-    do_copy(src, dest);
-}
-
-
-// TODO: __global should not be allowed in CPU Path
-template <typename InputIter, typename T>
-void do_copy(InputIter srcBegin, InputIter srcEnd, const array_view<T, 1>& dest) {
-    std::copy(srcBegin, srcEnd, dest.get_data());
-}
-template <typename InputIter, typename T, int N>
-void do_copy(InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest) {
-    int adv = dest.get_extent().size() / dest.get_extent()[0];
-    for (int i = 0; i < dest.get_extent()[0]; ++i) {
-        do_copy(srcBegin, srcEnd, dest[i]);
-        std::advance(srcBegin, adv);
-    }
-}
 template <typename InputIter, typename T, int N>
 void copy(InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest) {
-    amp_stash(dest.internal());
-    do_copy(srcBegin, srcEnd, dest);
+    if (is_flat(dest)) {
+        T* ptr = dest.internal().map_ptr(true);
+        std::copy(srcBegin, srcEnd, ptr);
+        dest.internal().unmap_ptr(ptr);
+    } else {
+        T* ptr = dest.internal().map_ptr(true, dest.extent_base.size(), dest.offset);
+        copy_input<InputIter, T, N, N - 1>(srcBegin, ptr, dest.extent, dest.extent_base, dest.index_base);
+        dest.internal().unmap_ptr(ptr);
+    }
 }
 
 template <typename InputIter, typename T, int N>
 void copy(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest) {
-#ifndef __GPU__
-    if( ( std::distance(srcBegin,srcEnd) <=0 )||( std::distance(srcBegin,srcEnd) < dest.get_extent().size() ))
-      throw runtime_exception("errorMsg_throw ,copy between different types", 0);
-#endif
-    amp_stash(dest.internal());
-    std::copy(srcBegin, srcEnd, dest.data_());
+    T* ptr = dest.internal().map_ptr(true);
+    std::copy(srcBegin, srcEnd, ptr);
+    dest.internal().unmap_ptr(ptr);
 }
 
 template <typename InputIter, typename T, int N>
 void copy(InputIter srcBegin, const array_view<T, N>& dest) {
-    amp_stash(dest.internal());
     InputIter srcEnd = srcBegin;
     std::advance(srcEnd, dest.get_extent().size());
-    do_copy(srcBegin, srcEnd, dest);
+    copy(srcBegin, srcEnd, dest);
 }
 
 template <typename InputIter, typename T, int N>
 void copy(InputIter srcBegin, array<T, N>& dest) {
-    amp_stash(dest.internal());
     InputIter srcEnd = srcBegin;
     std::advance(srcEnd, dest.get_extent().size());
-    std::copy(srcBegin, srcEnd, dest.data_());
-}
-
-template <typename OutputIter, typename T>
-void do_copy_s(const array_view<T, 1> &src, OutputIter destBegin) {
-    std::copy(src.get_data(), src.get_data() + src.get_extent().size(), destBegin);
-}
-template <typename OutputIter, typename T, int N>
-void do_copy_s(const array_view<T, N> &src, OutputIter destBegin) {
-    int adv = src.get_extent().size() / src.get_extent()[0];
-    for (int i = 0; i < src.get_extent()[0]; ++i) {
-        do_copy_s(src[i], destBegin);
-        std::advance(destBegin, adv);
-    }
+    copy(srcBegin, srcEnd, dest);
 }
 
 template <typename OutputIter, typename T, int N>
 void copy(const array_view<T, N> &src, OutputIter destBegin) {
-#ifndef __GPU__
-    typename array_view<T, N>::acc_buffer_t cache(src.cache.get_av(), src.cache.size());
-    src.cache.copy(cache.get());
-    array_view<T, N> target(cache, src.extent, src.extent_base,
-                            src.index_base, src.offset);
-    do_copy_s(target, destBegin);
-#endif
+    if (is_flat(src)) {
+        T* ptr = src.internal().map_ptr();
+        std::copy(ptr, ptr + src.get_extent().size(), destBegin);
+        src.internal().unmap_ptr(ptr);
+    } else {
+        T* ptr = src.internal().map_ptr(src.extent_base.size(), src.offset);
+        copy_output<OutputIter, T, N, N - 1>(ptr, destBegin, src.extent, src.extent_base, src.index_base);
+        src.internal().unmap_ptr(ptr);
+    }
 }
 
 template <typename OutputIter, typename T, int N>
 void copy(const array<T, N> &src, OutputIter destBegin) {
-    std::copy(src.data_(), src.data_() + src.get_extent().size(), destBegin);
+    T* ptr = src.internal().map_ptr();
+    std::copy(ptr, ptr + src.get_extent().size(), destBegin);
+    src.internal().unmap_ptr(ptr);
 }
 
 
-template <typename InputType, typename OutputType>
-completion_future __amp_copy_async_impl(InputType& src, OutputType& dst) {
+template <typename InputIter, typename OutputIter>
+completion_future __amp_copy_async_impl(InputIter& src, OutputIter& dst) {
     std::future<void> fut = std::async([&]() mutable { copy(src, dst); });
     fut.wait();
     return completion_future(fut.share());

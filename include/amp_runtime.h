@@ -1,216 +1,143 @@
 #ifndef __CLAMP_AMP_RUNTIME
 #define __CLAMP_AMP_RUNTIME
 
+#include <map>
 #include <set>
-#include <future>
 
 namespace Concurrency {
 
-struct rw_info;
 class AMPAllocator;
-
-struct obj_info
-{
-    void* device;
-    size_t count;
-    int ref;
-};
 
 enum access_type
 {
-  access_type_none = 0,
-  access_type_read = 1,
-  access_type_write = 2,
-  access_type_read_write = access_type_read | access_type_write,
-  access_type_auto = 4
+    access_type_none = 0,
+    access_type_read = (1 << 0),
+    access_type_write = (1 << 1),
+    access_type_read_write = access_type_read | access_type_write,
+    access_type_auto = (1 << 31)
 };
 
 class AMPManager : public std::enable_shared_from_this<AMPManager>
 {
-    virtual void* create(size_t count, void *data, bool hasSrc) { return data; }
-    virtual void release(void *data) {}
-    std::shared_ptr<AMPAllocator> newAloc();
-
-    obj_info device_data(void* data) {
-        auto it = mem_info.find(data);
-        if (it != std::end(mem_info))
-            return it->second;
-        return obj_info();
-    }
-
-
-protected:
-    AMPManager(const std::wstring& path) : path(path) {}
 public:
-    AMPManager() : path(L"cpu"), des(L"dummy"), mem(0), is_double_(true),
-    is_limited_double_(true), cpu_shared_memory(true), emulated(true),
-    cpu_type(access_type_read_write) {}
-
-
-    std::wstring get_path() { return path; }
-    std::wstring get_des() { return des; }
-    size_t get_mem() { return mem; }
-    bool is_double() { return is_double_; }
-    bool is_lim_double() { return is_limited_double_; }
-    bool is_uni() { return cpu_shared_memory; }
-    bool is_emu() { return emulated; }
-    virtual std::shared_ptr<AMPAllocator> createAloc() { return newAloc(); }
-
-
-    virtual void* CreateKernel(const char* fun, void* size, void* source) { return nullptr; }
-    virtual bool check(size_t *local, size_t dim_ext) { return true; }
-    virtual ~AMPManager() {}
-
-    void regist(size_t count, void* data, bool hasSrc) {
-        auto it = mem_info.find(data);
-        if (it == std::end(mem_info)) {
-            void* device = create(count, data, hasSrc);
-            mem_info[data] = {device, count, 1};
-        } else
-            ++it->second.ref;
-    }
-
-    void unregist(void *data) {
-        auto it = mem_info.find(data);
-        if (it != std::end(mem_info)) {
-            obj_info& obj = it->second;
-            if (!--obj.ref && obj.device != data) {
-                release(obj.device);
-                mem_info.erase(it);
-            }
-        }
-    }
-
-public:
+    virtual std::wstring get_path() = 0;
+    virtual std::wstring get_description() = 0;
+    virtual size_t get_mem() = 0;
+    virtual bool is_double() = 0;
+    virtual bool is_lim_double() = 0;
+    virtual bool is_unified() = 0;
+    virtual bool is_emulated() = 0;
     access_type cpu_type;
-private:
-    std::map<void *, obj_info> mem_info;
-    const std::wstring path;
-    friend class AMPAllocator;
-protected:
-    // override class should initialize them
-    std::wstring des;
-    size_t mem;
-    bool is_double_;
-    bool is_limited_double_;
-    bool cpu_shared_memory;
-    bool emulated;
+
+
+    virtual std::shared_ptr<AMPAllocator> createAloc() = 0;
+    virtual void* create(size_t count) = 0;
+    virtual void create(void* ptr) = 0;
+    virtual void release(void* ptr) = 0;
+    virtual void* CreateKernel(const char* fun, void* size, void* source) = 0;
+    virtual ~AMPManager() {}
 };
 
 class AMPAllocator
 {
-protected:
-  std::shared_ptr<AMPManager> Man;
 public:
-  std::shared_ptr<AMPManager> getMan() { return Man; }
-  AMPAllocator(std::shared_ptr<AMPManager> Man) : Man(Man) {}
   virtual ~AMPAllocator() {}
   virtual void flush() {}
   virtual void wait() {}
   virtual void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {}
   virtual void* LaunchKernelAsync(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) { return nullptr; }
 
+  virtual void read(void* device, void* dst, size_t count) = 0;
+  virtual void write(void* device, void* src, size_t count) = 0;
+  virtual void copy(void* dst, void* src, size_t count) = 0;
+  virtual void* map(void* device, size_t count, size_t offset, bool modify) = 0;
+  virtual void unmap(void* device, void* addr) = 0;
+  virtual void Push(void *kernel, int idx, void*& data, void* device) = 0;
 
-  void regist(size_t count, void* data, bool hasSrc) {
-      Man->regist(count, data, hasSrc);
-  }
-
-  void unregist(void* data) { Man->unregist(data); }
-
-  void* CreateKernel(const char* fun, void* size, void* source) {
-      return Man->CreateKernel(fun, size, source);
-  }
-  
-  void PushArg(void* kernel, int idx, void *&data) {
-      obj_info obj = Man->device_data(data);
-      Push(kernel, idx, data, obj);
-  }
-
-  void write(void* data) {
-      obj_info obj = Man->device_data(data);
-      if (obj.device != data)
-          amp_write(obj, data);
-  }
-
-  void read(void* data) {
-      obj_info obj = Man->device_data(data);
-      if (obj.device != data)
-          amp_read(obj, data);
-  }
-
-  void copy(void* dst, void* src, size_t count) {
-      obj_info obj = Man->device_data(src);
-      amp_copy(obj, dst, count);
-  }
-
-  void* map(void* data, bool Write) {
-      obj_info obj = Man->device_data(data);
-      if (obj.device == data)
-          return data;
-      else
-          return amp_map(obj, Write);
-  }
-
-  void unmap(void* data, void* addr) {
-      obj_info obj = Man->device_data(data);
-      amp_unmap(obj, addr);
-  }
-
+  std::shared_ptr<AMPManager> getMan() { return Man; }
+protected:
+  AMPAllocator(std::shared_ptr<AMPManager> Man) : Man(Man) {}
 private:
-  // overide function
-  virtual void amp_write(obj_info& obj, void* src) { memmove(obj.device, src, obj.count); }
-  virtual void amp_read(obj_info& obj, void* dst) { memmove(dst, obj.device, obj.count); }
-  virtual void amp_copy(obj_info& obj, void* dst, size_t count) {
-      memmove(dst, obj.device, count);
-  }
-  virtual void* amp_map(obj_info& obj, bool Write) { return nullptr; }
-  virtual void amp_unmap(obj_info& obj, void* addr) {}
-  virtual void Push(void* kernel, int idx, void*& data, obj_info& obj) {}
+  std::shared_ptr<AMPManager> Man;
 };
 
-std::shared_ptr<AMPAllocator> AMPManager::newAloc() {
-    return std::shared_ptr<AMPAllocator>(new AMPAllocator(shared_from_this()));
-}
+class CPUManager final : public AMPManager
+{
+    std::shared_ptr<AMPAllocator> newAloc();
+    std::set<void*> addr;
+public:
+    CPUManager() : addr() {}
 
-class accelerator;
+
+    std::wstring get_path() override { return L"cpu"; }
+    std::wstring get_description() override { return L"CPU Device"; }
+    size_t get_mem() override { return 0; }
+    bool is_double() override { return true; }
+    bool is_lim_double() override { return true; }
+    bool is_unified() override { return true; }
+    bool is_emulated() override { return true; }
+
+    std::shared_ptr<AMPAllocator> createAloc() { return newAloc(); }
+    void* create(size_t count) override { return aligned_alloc(0x1000, count); }
+    void create(void* ptr) override { addr.insert(ptr); }
+    void release(void* ptr) override {
+        auto it = addr.find(ptr);
+        if (it != std::end(addr))
+            addr.erase(it);
+        else
+            ::operator delete(ptr);
+    }
+    void* CreateKernel(const char* fun, void* size, void* source) { return nullptr; }
+};
+
+class CPUAllocator final : public AMPAllocator
+{
+public:
+    CPUAllocator(std::shared_ptr<AMPManager> Man) : AMPAllocator(Man) {}
+    void* map(void* device, size_t count, size_t offset, bool modify) override { return (char*)device + offset; }
+    void unmap(void* device, void* addr) override {}
+    void read(void* device, void* dst, size_t count) {}
+    void write(void* device, void* src, size_t count) {}
+    void copy(void* device, void* src, size_t count) override {}
+    void Push(void *kernel, int idx, void*& data, void* device) override {}
+};
+
+std::shared_ptr<AMPAllocator> CPUManager::newAloc() {
+    return std::shared_ptr<AMPAllocator>(new CPUAllocator(shared_from_this()));
+}
 
 class AMPContext
 {
 private:
-    std::wstring def;
-    friend accelerator;
+    std::shared_ptr<AMPManager> def;
 protected:
     std::vector<std::shared_ptr<AMPManager>> Devices;
     std::map<std::shared_ptr<AMPManager>,
         std::shared_ptr<AMPAllocator>> default_map;
-    AMPContext() : def(L"default"), Devices(0) {
-        auto Man = std::shared_ptr<AMPManager>(new AMPManager());
-        default_map[Man] = Man->createAloc();
-        Devices.push_back(Man);
+    AMPContext() : def(new CPUManager), Devices({def}) {
+        default_map[def] = def->createAloc();
     }
 public:
     virtual ~AMPContext() {}
-    size_t getNumDevices() { return Devices.size(); }
-    std::shared_ptr<AMPManager>* getDevices() { return Devices.data(); }
+
+    std::vector<std::shared_ptr<AMPManager>> getDevices() { return Devices; }
+
     bool set_default(const std::wstring& path) {
-        if (def == L"default") {
-            def = path;
-            return true;
-        } else
-            return false;
+        for (const auto dev : Devices)
+            if (dev->get_path() == path) {
+                def = dev;
+                return true;
+            }
+        return false;
     }
+
+    std::shared_ptr<AMPAllocator> auto_select() { return default_map[Devices[1]]; }
     std::shared_ptr<AMPAllocator> getView(const std::shared_ptr<AMPManager>& pMan) {
         return default_map[pMan];
     }
     std::shared_ptr<AMPManager> getDevice(std::wstring path = L"") {
-        if (path == L"")
-            path = def;
-        if (path == L"default") {
-            if (def == L"default")
-                return Devices[1];
-            else
-                path = def;
-        }
+        if (path == L"default")
+            return def;
         for (const auto dev : Devices)
             if (dev->get_path() == path)
                 return dev;
@@ -239,131 +166,202 @@ extern void PushArgPtr(void *, int, size_t, const void *);
 
 class Serialize {
 public:
-  typedef void *kernel;
-  Serialize(kernel k)
-      : aloc_(), k_(k), current_idx_(0) {}
-  Serialize(std::shared_ptr<AMPAllocator> aloc, kernel k)
-      : aloc_(aloc), k_(k), current_idx_(0) {}
-  void Append(size_t sz, const void *s) {
-    CLAMP::PushArg(k_, current_idx_++, sz, s);
-  }
-  std::shared_ptr<AMPAllocator> get_aloc() { return aloc_; }
-  void AppendPtr(size_t sz, const void *s) {
-    CLAMP::PushArgPtr(k_, current_idx_++, sz, s);
-  }
-  void* getKernel() { return k_; }
-  int getAndIncCurrentIndex() {
-    int ret = current_idx_;
-    current_idx_++;
-    return ret;
-  }
+    typedef void *kernel;
+    Serialize(bool flag)
+        : aloc_(), k_(nullptr), current_idx_(0), collector(), collect(true) {}
+    Serialize(kernel k)
+        : aloc_(), k_(k), current_idx_(0), collector(), collect(false) {}
+    Serialize(std::shared_ptr<AMPAllocator> aloc, kernel k)
+        : aloc_(aloc), k_(k), current_idx_(0), collector(), collect(false) {}
+    void Append(size_t sz, const void *s) {
+        if (!collect)
+            CLAMP::PushArg(k_, current_idx_++, sz, s);
+    }
+    std::shared_ptr<AMPAllocator> get_aloc() { return aloc_; }
+    void AppendPtr(size_t sz, const void *s) {
+        if (!collect)
+            CLAMP::PushArgPtr(k_, current_idx_++, sz, s);
+    }
+    void* getKernel() { return k_; }
+    int getAndIncCurrentIndex() {
+        int ret = current_idx_;
+        current_idx_++;
+        return ret;
+    }
+
+    // select best
+    void push(std::shared_ptr<AMPAllocator> aloc) { collector.push_back(aloc); }
+    bool is_collec() const { return collect; }
+    std::shared_ptr<AMPAllocator> best() {
+        std::sort(std::begin(collector), std::end(collector));
+        std::vector<std::shared_ptr<AMPAllocator>> candidate;
+        int max = 0;
+        for (int i = 0; i < collector.size(); ++i) {
+            auto head = collector[i];
+            int count = 1;
+            while (head == collector[++i])
+                ++count;
+            if (count > max) {
+                max = count;
+                candidate.clear();
+                candidate.push_back(head);
+            }
+        }
+        if (candidate.size())
+            return candidate[0];
+        else
+            return nullptr;
+    }
 private:
-  std::shared_ptr<AMPAllocator> aloc_;
-  kernel k_;
-  int current_idx_;
+    std::shared_ptr<AMPAllocator> aloc_;
+    kernel k_;
+    int current_idx_;
+    std::vector<std::shared_ptr<AMPAllocator>> collector;
+    bool collect;
 };
 
+static const std::shared_ptr<AMPAllocator> get_cpu_view() {
+    return getContext()->getView(getContext()->getDevice(L"cpu"));
+}
 
 struct rw_info
 {
     void *data;
-    size_t count;
+    const size_t count;
     std::shared_ptr<AMPAllocator> curr;
-    const std::shared_ptr<AMPAllocator> master;
-    std::set<std::shared_ptr<AMPAllocator>> Alocs;
+    std::shared_ptr<AMPAllocator> master;
+    std::shared_ptr<AMPAllocator> stage;
+    std::map<std::shared_ptr<AMPManager>, void*> Alocs;
+    access_type mode;
     unsigned int discard : 1;
-    unsigned int dirty : 1;
-    unsigned int hasSrc : 1;
+    unsigned int onDevice : 1;
 
-    rw_info(std::shared_ptr<AMPAllocator> Aloc, size_t count, void* p = nullptr)
-        : data(p), count(count), curr(Aloc), master(Aloc), Alocs({Aloc}), discard(false),
-        dirty(false), hasSrc(p != nullptr) {
-        if (!hasSrc)
-            data = aligned_alloc(0x1000, count);
-#ifdef __AMP_CPU__
-        if (!CLAMP::in_cpu_kernel())
-#endif
-            curr->regist(count, data, hasSrc);
+    // consruct array_view
+    rw_info(const size_t count, void* ptr)
+        : data(ptr), count(count), curr(nullptr), master(nullptr), stage(nullptr),
+        Alocs(), mode(access_type_read_write), discard(false), onDevice(false) {
+            if (ptr) {
+                curr = master = get_cpu_view();
+                curr->getMan()->create(ptr);
+                Alocs[curr->getMan()] = ptr;
+            }
+        }
+
+    // construct array
+    rw_info(const std::shared_ptr<AMPAllocator> Aloc, const std::shared_ptr<AMPAllocator> Stage,
+            const size_t count, access_type mode) : data(nullptr), count(count),
+    curr(Aloc), master(Aloc), stage(nullptr), Alocs(), mode(mode), discard(false), onDevice(false) {
+        Alocs[curr->getMan()] = curr->getMan()->create(count);
+        if (curr->getMan()->get_path() == L"cpu") {
+            data = Alocs[curr->getMan()];
+            if (Stage != curr) {
+                stage = Stage;
+                Alocs[stage->getMan()] = stage->getMan()->create(count);
+            } else
+                stage = curr;
+        } else {
+            stage = curr;
+            if (curr->getMan()->is_unified() && mode != access_type_none)
+                data = Alocs[curr->getMan()];
+        }
+
+        if (mode == access_type_auto)
+            mode = curr->getMan()->cpu_type;
     }
 
     void append(Serialize& s, bool isArray) {
         auto aloc = s.get_aloc();
-        if (dirty) {
-            if (curr != aloc) {
-                if (Alocs.find(aloc) == std::end(Alocs)) {
-                    aloc->regist(count, data, hasSrc);
-                    Alocs.insert(aloc);
-                }
-                if (!discard || isArray) {
-                    if (curr->getMan() != aloc->getMan()) {
-                        void* dst = aloc->map(data, true);
-                        void* src = curr->map(data, false);
-                        memmove(dst, src, count);
-                        aloc->unmap(data, dst);
-                        curr->unmap(data, src);
-                    } else {
-                        // force previous execution finish
-                        // replace with more efficient implementation in the future
-                        curr->wait();
-                    }
-                    curr = aloc;
-                }
+        if (aloc->getMan() != curr->getMan()) {
+            if (Alocs.find(aloc->getMan()) == std::end(Alocs))
+                Alocs[aloc->getMan()] = aloc->getMan()->create(count);
+            if (!discard || isArray) {
+                void* dst = Alocs[aloc->getMan()];
+                void* src = Alocs[curr->getMan()];
+                // assert(aloc->getMan()->get_path() != L"cpu");
+                if (curr->getMan()->get_path() == L"cpu")
+                    aloc->write(dst, src, count);
+                else
+                    aloc->copy(dst, src, count);
             }
-        } else {
-            if (curr != aloc) {
-                if (Alocs.find(aloc) == std::end(Alocs)) {
-                    aloc->regist(count, data, hasSrc);
-                    Alocs.insert(aloc);
-                }
-                curr = aloc;
-            }
-            if (!discard || isArray)
-                curr->write(data);
         }
-        dirty = true;
+        curr = aloc;
+        onDevice = true;
         discard = false;
-        curr->PushArg(s.getKernel(), s.getAndIncCurrentIndex(), data);
+        curr->Push(s.getKernel(), s.getAndIncCurrentIndex(), data, Alocs[curr->getMan()]);
     }
 
     void disc() {
+        onDevice = false;
         discard = true;
-        dirty = false;
     }
 
-    void stash() { dirty = false; }
+    void* map(size_t cnt, size_t offset, bool modify) {
+        if (cnt == 0)
+            cnt = count;
+        return curr->map(Alocs[curr->getMan()], cnt, offset, modify);
+    }
+    void unmap(void* addr) { curr->unmap(Alocs[curr->getMan()], addr); }
 
-    void copy(void* dst, size_t count) {
-        if (dirty)
-            curr->copy(dst, data, count);
-        else
-            memmove(dst, data, count);
+    void synchronize(bool modify) {
+        if (!discard && data && onDevice) {
+            onDevice = false;
+            void* src = Alocs[curr->getMan()];
+            if (src != data)
+                curr->read(src, data, count);
+            if (modify) {
+                if (master)
+                    curr = master;
+                else
+                    curr = get_cpu_view();
+            }
+        }
     }
 
-    void synchronize() {
-#ifdef __AMP_CPU__
-        if (CLAMP::in_cpu_kernel())
-            return;
-#endif
-        if (dirty && !discard) {
-            curr->read(data);
-            dirty = false;
+    void get_cpu_access(bool modify) {
+        if (onDevice && !discard) {
+            onDevice = false;
+            if (!master) {
+                if (!data) {
+                    auto cpu_view = get_cpu_view();
+                    data = cpu_view->getMan()->create(count);
+                    Alocs[cpu_view->getMan()] = data;
+                }
+                curr->read(Alocs[curr->getMan()], data, count);
+                if (modify)
+                    curr = get_cpu_view();
+            } else {
+                if (master->getMan() != curr->getMan() && data)
+                    curr->read(Alocs[curr->getMan()], data, count);
+                if (modify)
+                    curr = master;
+            }
+        }
+    }
+
+    void copy(rw_info* other) {
+        void* src = other->Alocs[other->curr->getMan()];
+        void* dst = Alocs[curr->getMan()];
+        if (curr->getMan()->get_path() == L"cpu") {
+            if (other->curr->getMan()->get_path() == L"cpu")
+                memmove(dst, src, count);
+            else
+                other->curr->read(src, dst, count);
+        } else {
+            if (other->curr->getMan()->get_path() == L"cpu")
+                curr->write(dst, src, count);
+            else
+                curr->copy(dst, src, count);
         }
     }
 
     ~rw_info() {
-#ifdef __AMP_CPU__
-        if (CLAMP::in_cpu_kernel()) {
-            if (!hasSrc)
-                ::operator delete(data);
-            return;
+        synchronize(false);
+        std::shared_ptr<AMPManager> pMan;
+        void* addr;
+        for (const auto it : Alocs) {
+            std::tie(pMan, addr) = it;
+            pMan->release(addr);
         }
-#endif
-        if (hasSrc)
-            synchronize();
-        for (const auto& aloc : Alocs)
-            aloc->unregist(data);
-        if (!hasSrc)
-            ::operator delete(data);
     }
 };
 

@@ -659,9 +659,9 @@ namespace Concurrency {
 			inline bool is_device_known_IHV_failure(device_bit_flags device_bits) {
 				return std::any_of(dmf_known_IHV_failures.begin(), dmf_known_IHV_failures.end(), [device_bits](known_IHV_failure failure) {
 					// Check the IHV first
-					if(!(  has_bits_set(failure, known_IHV_failure::IHV_ATI)    && has_bits_set(device_bits, device_bit_flags::IHV_ATI)
-						|| has_bits_set(failure, known_IHV_failure::IHV_NVIDIA) && has_bits_set(device_bits, device_bit_flags::IHV_NVIDIA)
-						|| has_bits_set(failure, known_IHV_failure::IHV_WARP)   && has_bits_set(device_bits, device_bit_flags::IS_WARP)
+					if(!(  (has_bits_set(failure, known_IHV_failure::IHV_ATI)    && has_bits_set(device_bits, device_bit_flags::IHV_ATI))
+						|| (has_bits_set(failure, known_IHV_failure::IHV_NVIDIA) && has_bits_set(device_bits, device_bit_flags::IHV_NVIDIA))
+						|| (has_bits_set(failure, known_IHV_failure::IHV_WARP)   && has_bits_set(device_bits, device_bit_flags::IS_WARP))
 						)) {
 						// then the device isn't the same IHV as this failure
 						return false;

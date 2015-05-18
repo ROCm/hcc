@@ -108,13 +108,6 @@ namespace Concurrency
 		/// This was created as a result of trying to write
 		template <typename T>
 		inline std::string get_type_name(const T& val) {
-			// get rid of warning: 4100 Unreferenced formal parameter
-#ifdef UNREFERENCED_PARAMETER	// defined in ntdef.h
-			UNREFERENCED_PARAMETER(val);
-#else	// This happens if logging.h is included but not ntdef.h
-			(val);
-#endif
-
 			return get_type_name(typeid(val));
 		}
 
