@@ -380,7 +380,8 @@ struct rw_info
     }
 
     ~rw_info() {
-        synchronize(false);
+        if (HostPtr)
+            synchronize(false);
         auto cpu_acc = get_cpu_view()->getManPtr();
         if (Alocs.find(cpu_acc) != std::end(Alocs)) {
             if (!HostPtr)
