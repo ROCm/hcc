@@ -106,15 +106,15 @@ public:
     __attribute__((annotate("serialize")))
         void __cxxamp_serialize(Serialize& s) const {
             if (s.is_collec()) {
-                if (isArray && mm->stage->getMan()->get_path() != L"cpu")
+                if (isArray && mm->stage->getManPtr()->get_path() != L"cpu")
                     s.push(mm->stage);
                 return;
             }
             if (isArray) {
-                auto curr = s.get_aloc()->getMan()->get_path();
-                auto path = mm->master->getMan()->get_path();
+                auto curr = s.get_aloc()->getManPtr()->get_path();
+                auto path = mm->master->getManPtr()->get_path();
                 if (path == L"cpu") {
-                    auto asoc = mm->stage->getMan()->get_path();
+                    auto asoc = mm->stage->getManPtr()->get_path();
                     if (asoc == L"cpu" || path != curr)
                         throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
                 }
