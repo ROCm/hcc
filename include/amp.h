@@ -2676,7 +2676,7 @@ void copy(const array_view<T, N> &src, OutputIter destBegin) {
         std::copy(ptr, ptr + src.get_extent().size(), destBegin);
         src.internal().unmap_ptr(ptr);
     } else {
-        typename array_view<T, N>::nc_T* ptr = src.internal().map_ptr(src.extent_base.size(), src.offset);
+        typename array_view<T, N>::nc_T* ptr = src.internal().map_ptr(false, src.extent_base.size(), src.offset);
         copy_output<OutputIter, T, N, 1>()(ptr, destBegin, src.extent, src.extent_base, src.index_base);
         src.internal().unmap_ptr(ptr);
     }
