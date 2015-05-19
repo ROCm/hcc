@@ -223,7 +223,7 @@ accelerator accelerator_view::get_accelerator() const { return pAloc->getMan(); 
 accelerator_view accelerator::create_view(queuing_mode mode) {
     auto aloc = pMan->createAloc();
     aloc->mode = mode;
-    return pMan->createAloc();
+    return aloc;
 }
 accelerator_view accelerator::get_default_view() const { return getContext()->getView(pMan); }
 
@@ -1547,7 +1547,11 @@ public:
   template <typename InputIter>
       array(const Concurrency::extent<N>& ext, InputIter srcBegin, InputIter srcEnd,
             accelerator_view av, access_type cpu_access_type = access_type_auto)
-      : array(ext, av, cpu_access_type) { Concurrency::copy(srcBegin, srcEnd, *this); }
+      : array(ext, av, cpu_access_type) {
+          if(ext.size() < std::distance(srcBegin, srcEnd))
+              throw runtime_exception("errorMsg_throw", 0);
+          Concurrency::copy(srcBegin, srcEnd, *this);
+      }
   template <typename InputIter>
       array(int e0, InputIter srcBegin, accelerator_view av,
             access_type cpu_access_type = access_type_auto)

@@ -63,7 +63,7 @@ public:
   std::shared_ptr<AMPManager> getMan() { return Man; }
   queuing_mode mode;
 protected:
-  AMPAllocator(std::shared_ptr<AMPManager> Man) : Man(Man) {}
+  AMPAllocator(std::shared_ptr<AMPManager> Man) : mode(queuing_mode_automatic), Man(Man) {}
 private:
   std::shared_ptr<AMPManager> Man;
 };
