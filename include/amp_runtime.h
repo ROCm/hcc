@@ -16,6 +16,13 @@ enum access_type
     access_type_auto = (1 << 31)
 };
 
+enum queuing_mode {
+  queuing_mode_immediate,
+  queuing_mode_automatic
+};
+
+
+
 class AMPManager : public std::enable_shared_from_this<AMPManager>
 {
 public:
@@ -54,6 +61,7 @@ public:
   virtual void Push(void *kernel, int idx, void*& data, void* device) = 0;
 
   std::shared_ptr<AMPManager> getMan() { return Man; }
+  queuing_mode mode;
 protected:
   AMPAllocator(std::shared_ptr<AMPManager> Man) : Man(Man) {}
 private:
@@ -373,9 +381,11 @@ struct rw_info
         } else {
             other->onDevice = true;
             if (curr->getMan()->get_path() == L"cpu")
-                curr->write(dst, src, count);
-            else
-                curr->copy(dst, src, count);
+                other->curr->write(dst, src, count);
+            else  {
+                curr->wait();
+                other->curr->copy(dst, src, count);
+            }
         }
     }
 

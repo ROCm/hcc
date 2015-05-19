@@ -63,6 +63,7 @@ public:
     void copy(_data<T> other) const {}
     void refresh() const {}
     access_type get_access() const { return access_type_auto; }
+    std::shared_ptr<AMPAllocator> get_stage() const { return nullptr; }
 
 private:
     __global T* p_;
@@ -129,9 +130,6 @@ public:
     __attribute__((annotate("user_deserialize")))
         explicit _data_host(__global T* t) {}
 };
-
-template <typename T>
-bool on_cpu(_data_host<T> data) { return data->get_av()->getMan()->is_unified(); }
 
 } // namespace Concurrency
 

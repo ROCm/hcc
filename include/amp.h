@@ -83,11 +83,6 @@ public:
   template <typename _Type> class task;
   template <> class task<void>;
 
-enum queuing_mode {
-  queuing_mode_immediate,
-  queuing_mode_automatic
-};
-
 class completion_future;
 class accelerator;
 template <typename T, int N> class array_view;
@@ -96,22 +91,20 @@ template <int N> class extent;
 template <int D0, int D1=0, int D2=0> class tiled_extent;
 
 class accelerator_view {
-    accelerator_view(std::shared_ptr<AMPAllocator> pAloc,
-                     queuing_mode mode = queuing_mode_automatic)
-        : pAloc(pAloc), mode(mode) {}
+    accelerator_view(std::shared_ptr<AMPAllocator> pAloc)
+        : pAloc(pAloc) {}
 public:
   accelerator_view(const accelerator_view& other) :
-      pAloc(other.pAloc), mode(other.mode) {}
+      pAloc(other.pAloc) {}
   accelerator_view& operator=(const accelerator_view& other) {
       pAloc = other.pAloc;
-      mode = other.mode;
       return *this;
   }
 
   accelerator get_accelerator() const;
   bool get_is_debug() const { return 0; }
   unsigned int get_version() const { return 0; }
-  queuing_mode get_queuing_mode() const { return mode; }
+  queuing_mode get_queuing_mode() const { return pAloc->mode; }
   bool get_is_auto_selection() { return false; }
 
   void flush() { pAloc->flush(); }
@@ -119,13 +112,12 @@ public:
   completion_future create_marker();
 
   bool operator==(const accelerator_view& other) const {
-      return pAloc == other.pAloc && mode == other.mode;
+      return pAloc == other.pAloc;
   }
   bool operator!=(const accelerator_view& other) const { return !(*this == other); }
 
 private:
   std::shared_ptr<AMPAllocator> pAloc;
-  queuing_mode mode;
   friend class accelerator;
 
   template <typename Q, int K> friend class array;
@@ -229,7 +221,9 @@ private:
 
 accelerator accelerator_view::get_accelerator() const { return pAloc->getMan(); }
 accelerator_view accelerator::create_view(queuing_mode mode) {
-    return accelerator_view(pMan->createAloc(), mode);
+    auto aloc = pMan->createAloc();
+    aloc->mode = mode;
+    return pMan->createAloc();
 }
 accelerator_view accelerator::get_default_view() const { return getContext()->getView(pMan); }
 
@@ -1241,7 +1235,7 @@ struct projection_helper
             ext_o[i - 1] = now.extent[i];
             ext[i - 1] = now.extent_base[i];
             idx[i - 1] = now.index_base[i];
-    }
+        }
         stride += now.index_base[0];
         Concurrency::extent<N - 1> ext_now(ext_o);
         Concurrency::extent<N - 1> ext_base(ext);
@@ -2459,28 +2453,28 @@ template <typename InputIter, typename T, int N, int dim>
 struct copy_input
 {
     void operator()(InputIter& It, T* ptr, const extent<N>& ext,
-                    const extent<N>& ext_base, const index<N>& idx)
+                    const extent<N>& base, const index<N>& idx)
     {
         size_t stride = 1;
-        for (int i = 0; i < dim; i++)
-            stride *= ext_base[i];
-        ptr += stride * idx[dim];
-        for (int i = 0; i < ext[dim]; i++) {
-            copy_input<InputIter, T, N, dim - 1>()(It, ptr, ext, ext_base, idx);
+        for (int i = dim; i < N; i++)
+            stride *= base[i];
+        ptr += stride * idx[dim - 1];
+        for (int i = 0; i < ext[dim - 1]; i++) {
+            copy_input<InputIter, T, N, dim + 1>()(It, ptr, ext, base, idx);
             ptr += stride;
         }
     }
 };
 
 template <typename InputIter, typename T, int N>
-struct copy_input<InputIter, T, N, 0>
+struct copy_input<InputIter, T, N, N>
 {
     void operator()(InputIter& It, T* ptr, const extent<N>& ext,
-                      const extent<N>& ext_base, const index<N>& idx)
+                      const extent<N>& base, const index<N>& idx)
     {
         InputIter end = It;
-        std::advance(end, ext[0]);
-        std::copy(It, end, ptr + idx[0]);
+        std::advance(end, ext[N - 1]);
+        std::copy(It, end, ptr + idx[N - 1]);
         It = end;
     }
 };
@@ -2489,27 +2483,27 @@ template <typename OutputIter, typename T, int N, int dim>
 struct copy_output
 {
     void operator()(T* ptr, OutputIter& It, const extent<N>& ext,
-                    const extent<N>& ext_base, const index<N>& idx)
+                    const extent<N>& base, const index<N>& idx)
     {
         size_t stride = 1;
-        for (int i = 0; i < dim; i++)
-            stride *= ext_base[i];
-        ptr += stride * idx[dim];
-        for (int i = 0; i < ext[dim]; i++) {
-            copy_output<OutputIter, T, N, dim - 1>()(ptr, It, ext, ext_base, idx);
+        for (int i = dim; i < N; i++)
+            stride *= base[i];
+        ptr += stride * idx[dim - 1];
+        for (int i = 0; i < ext[dim - 1]; i++) {
+            copy_output<OutputIter, T, N, dim + 1>()(ptr, It, ext, base, idx);
             ptr += stride;
         }
     }
 };
 
 template <typename OutputIter, typename T, int N>
-struct copy_output<OutputIter, T, N, 0>
+struct copy_output<OutputIter, T, N, N>
 {
     void operator()(T* ptr, OutputIter& It, const extent<N>& ext,
-                    const extent<N>& ext_base, const index<N>& idx)
+                    const extent<N>& base, const index<N>& idx)
     {
-        ptr += idx[0];
-        It = std::copy(ptr, ptr + ext[0], It);
+        ptr += idx[N - 1];
+        It = std::copy(ptr, ptr + ext[N - 1], It);
     }
 };
 
@@ -2521,17 +2515,17 @@ struct copy_bidir
                     const extent<N>& base2, const index<N>& idx2)
     {
         size_t stride1 = 1;
-        for (int i = 0; i < dim; i++)
+        for (int i = dim; i < N; i++)
             stride1 *= base1[i];
-        src += stride1 * idx1[dim];
+        src += stride1 * idx1[dim - 1];
 
         size_t stride2 = 1;
-        for (int i = 0; i < dim; i++)
+        for (int i = dim; i < N; i++)
             stride2 *= base2[i];
-        dst += stride2 * idx2[dim];
+        dst += stride2 * idx2[dim - 1];
 
-        for (int i = 0; i < ext[dim]; i++) {
-            copy_bidir<T, N, dim - 1>()(src, dst, ext, base1, idx1, base2, idx2);
+        for (int i = 0; i < ext[dim - 1]; i++) {
+            copy_bidir<T, N, dim + 1>()(src, dst, ext, base1, idx1, base2, idx2);
             src += stride1;
             dst += stride2;
         }
@@ -2539,15 +2533,15 @@ struct copy_bidir
 };
 
 template <typename T, int N>
-struct copy_bidir<T, N, 0>
+struct copy_bidir<T, N, N>
 {
     void operator()(T* src, T* dst, const extent<N>& ext,
                     const extent<N>& base1, const index<N>& idx1,
                     const extent<N>& base2, const index<N>& idx2)
     {
-        src += idx1[0];
-        dst += idx2[0];
-        std::copy(src, src + ext[0], dst);
+        src += idx1[N - 1];
+        dst += idx2[N - 1];
+        std::copy(src, src + ext[N - 1], dst);
     }
 };
 
@@ -2560,7 +2554,7 @@ void copy(const array_view<const T, N>& src, const array_view<T, N>& dest) {
             T* pSrc = src.internal().map_ptr();
             T* p = pSrc;
             T* pDst = dest.internal().map_ptr(dest.extent_base.size(), dest.offset);
-            copy_input<T*, T, N, N - 1>()(pSrc, pDst, dest.extent, dest.extent_base, dest.index_base);
+            copy_input<T*, T, N, 1>()(pSrc, pDst, dest.extent, dest.extent_base, dest.index_base);
             dest.internal().unmap_ptr(pDst);
             src.internal().unmap_ptr(p);
         }
@@ -2569,13 +2563,13 @@ void copy(const array_view<const T, N>& src, const array_view<T, N>& dest) {
             T* pDst = dest.internal().map_ptr();
             T* p = pDst;
             T* pSrc = src.internal().map_ptr(src.extent_base.size(), src.offset);
-            copy_output<T*, T, N, N - 1>()(pSrc, pDst, src.extent, src.extent_base, src.index_base);
+            copy_output<T*, T, N, 1>()(pSrc, pDst, src.extent, src.extent_base, src.index_base);
             dest.internal().unmap_ptr(p);
             src.internal().unmap_ptr(pSrc);
         } else {
             T* pSrc = src.internal().map_ptr(src.extent_base.size(), src.offset);
             T* pDst = dest.internal().map_ptr(dest.extent_base.size(), dest.offset);
-            copy_bidir<T, N, N - 1>()(pSrc, pDst, src.extent, src.extent_base,
+            copy_bidir<T, N, 1>()(pSrc, pDst, src.extent, src.extent_base,
                                       src.index_base, dest.extent_base, dest.index_base);
             dest.internal().unmap_ptr(pDst);
             src.internal().unmap_ptr(pSrc);
@@ -2600,7 +2594,7 @@ void copy(const array_view<const T, N>& src, array<T, N>& dest) {
         src.internal().unmap_ptr(pSrc);
     } else {
         T* pSrc = src.internal().map_ptr(src.extent_base.size(), src.offset);
-        copy_output<T*, T, N, N - 1>()(pSrc, pDst, src.extent, src.extent_base, src.index_base);
+        copy_output<T*, T, N, 1>()(pSrc, pDst, src.extent, src.extent_base, src.index_base);
         src.internal().unmap_ptr(pSrc);
     }
     dest.internal().unmap_ptr(p);
@@ -2622,7 +2616,7 @@ void copy(const array<T, N>& src, const array_view<T, N>& dest) {
         dest.internal().unmap_ptr(pDst);
     } else {
         T* pDst = dest.internal().map_ptr(true, dest.extent_base.size(), dest.offset);
-        copy_input<T*, T, N, N - 1>()(pSrc, pDst, dest.extent, dest.extent_base, dest.index_base);
+        copy_input<T*, T, N, 1>()(pSrc, pDst, dest.extent, dest.extent_base, dest.index_base);
         dest.internal().unmap_ptr(pDst);
     }
     src.internal().unmap_ptr(p);
@@ -2641,13 +2635,17 @@ void copy(InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest) {
         dest.internal().unmap_ptr(ptr);
     } else {
         T* ptr = dest.internal().map_ptr(true, dest.extent_base.size(), dest.offset);
-        copy_input<InputIter, T, N, N - 1>()(srcBegin, ptr, dest.extent, dest.extent_base, dest.index_base);
+        copy_input<InputIter, T, N, 1>()(srcBegin, ptr, dest.extent, dest.extent_base, dest.index_base);
         dest.internal().unmap_ptr(ptr);
     }
 }
 
 template <typename InputIter, typename T, int N>
 void copy(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest) {
+#ifndef __GPU__
+    if( ( std::distance(srcBegin,srcEnd) <=0 )||( std::distance(srcBegin,srcEnd) < dest.get_extent().size() ))
+      throw runtime_exception("errorMsg_throw ,copy between different types", 0);
+#endif
     T* ptr = dest.internal().map_ptr(true);
     std::copy(srcBegin, srcEnd, ptr);
     dest.internal().unmap_ptr(ptr);
@@ -2664,7 +2662,7 @@ template <typename InputIter, typename T, int N>
 void copy(InputIter srcBegin, array<T, N>& dest) {
     InputIter srcEnd = srcBegin;
     std::advance(srcEnd, dest.get_extent().size());
-    copy(srcBegin, srcEnd, dest);
+    Concurrency::copy(srcBegin, srcEnd, dest);
 }
 
 template <typename OutputIter, typename T, int N>
@@ -2675,7 +2673,7 @@ void copy(const array_view<T, N> &src, OutputIter destBegin) {
         src.internal().unmap_ptr(ptr);
     } else {
         typename array_view<T, N>::nc_T* ptr = src.internal().map_ptr(src.extent_base.size(), src.offset);
-        copy_output<OutputIter, T, N, N - 1>()(ptr, destBegin, src.extent, src.extent_base, src.index_base);
+        copy_output<OutputIter, T, N, 1>()(ptr, destBegin, src.extent, src.extent_base, src.index_base);
         src.internal().unmap_ptr(ptr);
     }
 }
@@ -2686,7 +2684,6 @@ void copy(const array<T, N> &src, OutputIter destBegin) {
     std::copy(ptr, ptr + src.get_extent().size(), destBegin);
     src.internal().unmap_ptr(ptr);
 }
-
 
 template <typename InputIter, typename OutputIter>
 completion_future __amp_copy_async_impl(InputIter& src, OutputIter& dst) {
