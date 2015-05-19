@@ -152,7 +152,6 @@ public:
         assert(err == CL_SUCCESS);
         return dm;
     }
-    void create(void* ptr) override {}
     void release(void *device) override { clReleaseMemObject(static_cast<cl_mem>(device)); }
     std::shared_ptr<AMPAllocator> createAloc() override { return newAloc(); }
 

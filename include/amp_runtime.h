@@ -21,8 +21,6 @@ enum queuing_mode {
   queuing_mode_automatic
 };
 
-
-
 class AMPManager : public std::enable_shared_from_this<AMPManager>
 {
 public:
@@ -38,7 +36,6 @@ public:
 
     virtual std::shared_ptr<AMPAllocator> createAloc() = 0;
     virtual void* create(size_t count) = 0;
-    virtual void create(void* ptr) = 0;
     virtual void release(void* ptr) = 0;
     virtual void* CreateKernel(const char* fun, void* size, void* source) = 0;
     virtual ~AMPManager() {}
@@ -71,11 +68,7 @@ private:
 class CPUManager final : public AMPManager
 {
     std::shared_ptr<AMPAllocator> newAloc();
-    std::map<void*, int> addr;
 public:
-    CPUManager() : addr() {}
-
-
     std::wstring get_path() override { return L"cpu"; }
     std::wstring get_description() override { return L"CPU Device"; }
     size_t get_mem() override { return 0; }
@@ -84,17 +77,10 @@ public:
     bool is_unified() override { return true; }
     bool is_emulated() override { return true; }
 
+
     std::shared_ptr<AMPAllocator> createAloc() { return newAloc(); }
     void* create(size_t count) override { return aligned_alloc(0x1000, count); }
-    void create(void* ptr) override { addr[ptr]++; }
-    void release(void* ptr) override {
-        auto it = addr.find(ptr);
-        if (it != std::end(addr)) {
-            if (!--it->second)
-                addr.erase(it);
-        } else
-            ::operator delete(ptr);
-    }
+    void release(void* ptr) override { ::operator delete(ptr); }
     void* CreateKernel(const char* fun, void* size, void* source) { return nullptr; }
 };
 
@@ -244,14 +230,16 @@ struct rw_info
     access_type mode;
     unsigned int discard : 1;
     unsigned int onDevice : 1;
+    unsigned int HostPtr : 1;
 
     // consruct array_view
     rw_info(const size_t count, void* ptr)
         : data(ptr), count(count), curr(nullptr), master(nullptr), stage(nullptr),
-        Alocs(), mode(access_type_read_write), discard(false), onDevice(false) {
+        Alocs(), mode(access_type_none), discard(false), onDevice(false), HostPtr(false) {
             if (ptr) {
+                HostPtr = true;
+                mode = access_type_read_write;
                 curr = master = get_cpu_view();
-                curr->getMan()->create(ptr);
                 Alocs[curr->getMan()] = ptr;
             }
         }
@@ -259,7 +247,8 @@ struct rw_info
     // construct array
     rw_info(const std::shared_ptr<AMPAllocator> Aloc, const std::shared_ptr<AMPAllocator> Stage,
             const size_t count, access_type mode) : data(nullptr), count(count),
-    curr(Aloc), master(Aloc), stage(nullptr), Alocs(), mode(mode), discard(false), onDevice(false) {
+    curr(Aloc), master(Aloc), stage(nullptr), Alocs(), mode(mode), discard(false),
+    onDevice(false), HostPtr(false) {
         Alocs[curr->getMan()] = curr->getMan()->create(count);
         if (curr->getMan()->get_path() == L"cpu") {
             data = Alocs[curr->getMan()];
@@ -391,6 +380,12 @@ struct rw_info
 
     ~rw_info() {
         synchronize(false);
+        auto cpu_acc = get_cpu_view()->getMan();
+        if (Alocs.find(cpu_acc) != std::end(Alocs)) {
+            if (!HostPtr)
+                cpu_acc->release(Alocs[cpu_acc]);
+            Alocs.erase(cpu_acc);
+        }
         std::shared_ptr<AMPManager> pMan;
         void* addr;
         for (const auto it : Alocs) {
