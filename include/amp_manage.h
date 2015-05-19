@@ -61,6 +61,8 @@ public:
     void unmap_ptr(void* addr) const {}
     void synchronize(bool modify = false) const {}
     void copy(_data<T> other) const {}
+    void refresh() const {}
+    access_type get_access() const { return access_type_auto; }
 
 private:
     __global T* p_;

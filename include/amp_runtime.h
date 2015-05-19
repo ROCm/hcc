@@ -2,7 +2,6 @@
 #define __CLAMP_AMP_RUNTIME
 
 #include <map>
-#include <set>
 
 namespace Concurrency {
 
@@ -64,7 +63,7 @@ private:
 class CPUManager final : public AMPManager
 {
     std::shared_ptr<AMPAllocator> newAloc();
-    std::set<void*> addr;
+    std::map<void*, int> addr;
 public:
     CPUManager() : addr() {}
 
@@ -79,12 +78,13 @@ public:
 
     std::shared_ptr<AMPAllocator> createAloc() { return newAloc(); }
     void* create(size_t count) override { return aligned_alloc(0x1000, count); }
-    void create(void* ptr) override { addr.insert(ptr); }
+    void create(void* ptr) override { addr[ptr]++; }
     void release(void* ptr) override {
         auto it = addr.find(ptr);
-        if (it != std::end(addr))
-            addr.erase(it);
-        else
+        if (it != std::end(addr)) {
+            if (!--it->second)
+                addr.erase(it);
+        } else
             ::operator delete(ptr);
     }
     void* CreateKernel(const char* fun, void* size, void* source) { return nullptr; }
@@ -108,14 +108,15 @@ std::shared_ptr<AMPAllocator> CPUManager::newAloc() {
 
 class AMPContext
 {
-private:
-    std::shared_ptr<AMPManager> def;
 protected:
+    std::shared_ptr<AMPManager> def;
     std::vector<std::shared_ptr<AMPManager>> Devices;
     std::map<std::shared_ptr<AMPManager>,
         std::shared_ptr<AMPAllocator>> default_map;
-    AMPContext() : def(new CPUManager), Devices({def}) {
-        default_map[def] = def->createAloc();
+    AMPContext() : def(), Devices() {
+        auto Man = std::shared_ptr<AMPManager>(new CPUManager);
+        default_map[Man] = Man->createAloc();
+        Devices.push_back(Man);
     }
 public:
     virtual ~AMPContext() {}
@@ -263,6 +264,8 @@ struct rw_info
             stage = curr;
             if (curr->getMan()->is_unified() && mode != access_type_none)
                 data = Alocs[curr->getMan()];
+            else
+                onDevice = true;
         }
 
         if (mode == access_type_auto)
@@ -271,6 +274,10 @@ struct rw_info
 
     void append(Serialize& s, bool isArray) {
         auto aloc = s.get_aloc();
+        if (!curr) {
+            Alocs[aloc->getMan()] = aloc->getMan()->create(count);
+            curr = aloc;
+        }
         if (aloc->getMan() != curr->getMan()) {
             if (Alocs.find(aloc->getMan()) == std::end(Alocs))
                 Alocs[aloc->getMan()] = aloc->getMan()->create(count);
@@ -280,11 +287,18 @@ struct rw_info
                 // assert(aloc->getMan()->get_path() != L"cpu");
                 if (curr->getMan()->get_path() == L"cpu")
                     aloc->write(dst, src, count);
-                else
+                else {
+                    curr->wait();
                     aloc->copy(dst, src, count);
+                }
+            }
+            curr = aloc;
+        } else {
+            if (curr != aloc) {
+                curr->wait();
+                curr = aloc;
             }
         }
-        curr = aloc;
         onDevice = true;
         discard = false;
         curr->Push(s.getKernel(), s.getAndIncCurrentIndex(), data, Alocs[curr->getMan()]);
@@ -296,6 +310,8 @@ struct rw_info
     }
 
     void* map(size_t cnt, size_t offset, bool modify) {
+        if (!curr)
+            get_cpu_access(modify);
         if (cnt == 0)
             cnt = count;
         return curr->map(Alocs[curr->getMan()], cnt, offset, modify);
@@ -308,46 +324,55 @@ struct rw_info
             void* src = Alocs[curr->getMan()];
             if (src != data)
                 curr->read(src, data, count);
-            if (modify) {
-                if (master)
-                    curr = master;
-                else
-                    curr = get_cpu_view();
-            }
+        }
+        if (modify) {
+            if (master)
+                curr = master;
+            else
+                curr = get_cpu_view();
         }
     }
 
     void get_cpu_access(bool modify) {
-        if (onDevice && !discard) {
-            onDevice = false;
-            if (!master) {
-                if (!data) {
-                    auto cpu_view = get_cpu_view();
-                    data = cpu_view->getMan()->create(count);
-                    Alocs[cpu_view->getMan()] = data;
-                }
-                curr->read(Alocs[curr->getMan()], data, count);
-                if (modify)
-                    curr = get_cpu_view();
-            } else {
-                if (master->getMan() != curr->getMan() && data)
-                    curr->read(Alocs[curr->getMan()], data, count);
-                if (modify)
-                    curr = master;
+        if (!discard) {
+            auto cpu_view = get_cpu_view();
+            if (Alocs.find(cpu_view->getMan()) == std::end(Alocs)) {
+                data = cpu_view->getMan()->create(count);
+                Alocs[cpu_view->getMan()] = data;
             }
+            if (onDevice)
+                curr->read(Alocs[curr->getMan()], data, count);
         }
+        if (modify || !curr)
+            curr = get_cpu_view();
+        onDevice = false;
     }
 
     void copy(rw_info* other) {
-        void* src = other->Alocs[other->curr->getMan()];
-        void* dst = Alocs[curr->getMan()];
-        if (curr->getMan()->get_path() == L"cpu") {
-            if (other->curr->getMan()->get_path() == L"cpu")
+        if (!curr) {
+            if (!other->curr) {
+                get_cpu_access(false);
+                other->get_cpu_access(true);
+            } else {
+                curr = other->curr;
+                Alocs[curr->getMan()] = curr->getMan()->create(count);
+            }
+        } else {
+            if (!other->curr) {
+                other->curr = curr;
+                other->Alocs[curr->getMan()] = curr->getMan()->create(count);
+            }
+        }
+        void* dst = other->Alocs[other->curr->getMan()];
+        void* src = Alocs[curr->getMan()];
+        if (other->curr->getMan()->get_path() == L"cpu") {
+            if (curr->getMan()->get_path() == L"cpu")
                 memmove(dst, src, count);
             else
-                other->curr->read(src, dst, count);
+                curr->read(src, dst, count);
         } else {
-            if (other->curr->getMan()->get_path() == L"cpu")
+            other->onDevice = true;
+            if (curr->getMan()->get_path() == L"cpu")
                 curr->write(dst, src, count);
             else
                 curr->copy(dst, src, count);
