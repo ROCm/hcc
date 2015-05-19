@@ -27,7 +27,7 @@ bool test_feature()
     std::vector<_type> dst_data;
 
     {
-        array<_type, _rank> src(e1, ++data.begin(), --data.end());
+        array<_type, _rank> src(e1, data.begin(), data.end());
         array<_type, _rank> dst(e1);
 
         src.copy_to(dst);

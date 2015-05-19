@@ -113,17 +113,11 @@ public:
             if (isArray) {
                 auto curr = s.get_aloc()->getMan()->get_path();
                 auto path = mm->master->getMan()->get_path();
-                bool except = false;
                 if (path == L"cpu") {
-                    if (mm->stage != mm->master) {
-                        auto asoc = mm->stage->getMan()->get_path();
-                        if (asoc != curr)
-                            except = true;
-                    } else
-                        except = true;
+                    auto asoc = mm->stage->getMan()->get_path();
+                    if (asoc == L"cpu" || path != curr)
+                        throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
                 }
-                if (except)
-                    throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
             }
             mm->append(s, isArray);
         }
