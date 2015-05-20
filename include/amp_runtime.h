@@ -127,12 +127,12 @@ public:
         return false;
     }
 
-    std::shared_ptr<AMPAllocator> auto_select() { return default_map[Devices[1]]; }
+    std::shared_ptr<AMPAllocator> auto_select() { return default_map[def]; }
     std::shared_ptr<AMPAllocator> getView(const std::shared_ptr<AMPManager>& pMan) {
         return default_map[pMan];
     }
     std::shared_ptr<AMPManager> getDevice(std::wstring path = L"") {
-        if (path == L"default")
+        if (path == L"default" || path == L"")
             return def;
         for (const auto dev : Devices)
             if (dev->get_path() == path)
@@ -217,7 +217,8 @@ private:
 };
 
 static const std::shared_ptr<AMPAllocator> get_cpu_view() {
-    return getContext()->getView(getContext()->getDevice(L"cpu"));
+    static auto cpu_view = getContext()->getView(getContext()->getDevice(L"cpu"));
+    return cpu_view;
 }
 
 struct rw_info
@@ -232,6 +233,7 @@ struct rw_info
     unsigned int discard : 1;
     unsigned int onDevice : 1;
     unsigned int HostPtr : 1;
+
 
     // consruct array_view
     rw_info(const size_t count, void* ptr)
@@ -270,12 +272,17 @@ struct rw_info
             mode = curr->getManPtr()->cpu_type;
     }
 
+    void construct(std::shared_ptr<AMPAllocator> aloc) {
+        curr = aloc;
+        Alocs[aloc->getManPtr()] = aloc->getManPtr()->create(count);
+        if (aloc->getManPtr()->get_path() == L"cpu")
+            data = Alocs[aloc->getManPtr()];
+    }
+
     void append(Serialize& s, bool isArray) {
         auto aloc = s.get_aloc();
-        if (!curr) {
-            Alocs[aloc->getManPtr()] = aloc->getManPtr()->create(count);
-            curr = aloc;
-        }
+        if (!curr)
+            construct(aloc);
         if (aloc->getManPtr() != curr->getManPtr()) {
             if (Alocs.find(aloc->getManPtr()) == std::end(Alocs))
                 Alocs[aloc->getManPtr()] = aloc->getManPtr()->create(count);
@@ -319,9 +326,9 @@ struct rw_info
     void synchronize(bool modify) {
         if (!discard && data && onDevice) {
             onDevice = false;
-            void* src = Alocs[curr->getManPtr()];
-            if (src != data)
-                curr->read(src, data, count);
+            void* device = Alocs[curr->getManPtr()];
+            if (device != data)
+                curr->read(device, data, count);
         }
         if (modify) {
             if (master)
@@ -332,13 +339,12 @@ struct rw_info
     }
 
     void get_cpu_access(bool modify) {
-        if (!discard) {
-            auto cpu_view = get_cpu_view();
-            if (Alocs.find(cpu_view->getManPtr()) == std::end(Alocs)) {
-                data = cpu_view->getManPtr()->create(count);
-                Alocs[cpu_view->getManPtr()] = data;
-            }
-            if (onDevice)
+        auto cpu_view = get_cpu_view();
+        if (Alocs.find(cpu_view->getManPtr()) == std::end(Alocs))
+            construct(cpu_view);
+        if (onDevice && !discard) {
+            void* device = Alocs[curr->getManPtr()];
+            if (device != data)
                 curr->read(Alocs[curr->getManPtr()], data, count);
         }
         if (modify || !curr)
@@ -348,18 +354,13 @@ struct rw_info
 
     void copy(rw_info* other) {
         if (!curr) {
-            if (!other->curr) {
-                get_cpu_access(false);
-                other->get_cpu_access(true);
-            } else {
-                curr = other->curr;
-                Alocs[curr->getManPtr()] = curr->getManPtr()->create(count);
-            }
+            if (!other->curr)
+                return;
+            else
+                construct(other->curr);
         } else {
-            if (!other->curr) {
-                other->curr = curr;
-                other->Alocs[curr->getManPtr()] = curr->getManPtr()->create(other->count);
-            }
+            if (!other->curr)
+                other->construct(curr);
         }
         void* dst = other->Alocs[other->curr->getManPtr()];
         void* src = Alocs[curr->getManPtr()];
@@ -380,7 +381,7 @@ struct rw_info
     }
 
     ~rw_info() {
-        if (HostPtr)
+        if (HostPtr && !discard)
             synchronize(false);
         auto cpu_acc = get_cpu_view()->getManPtr();
         if (Alocs.find(cpu_acc) != std::end(Alocs)) {
