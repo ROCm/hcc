@@ -358,7 +358,7 @@ struct rw_info
         } else {
             if (!other->curr) {
                 other->curr = curr;
-                other->Alocs[curr->getManPtr()] = curr->getManPtr()->create(count);
+                other->Alocs[curr->getManPtr()] = curr->getManPtr()->create(other->count);
             }
         }
         void* dst = other->Alocs[other->curr->getManPtr()];

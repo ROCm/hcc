@@ -303,8 +303,8 @@ public:
         assert(err == CL_SUCCESS);
         std::vector<cl_platform_id> platform_id(num_platform);
         err = clGetPlatformIDs(num_platform, platform_id.data(), nullptr);
-        std::vector<CLFlag> Flags({CLFlag(CL_DEVICE_TYPE_CPU, L"cpu"),
-                                  CLFlag(CL_DEVICE_TYPE_GPU, L"gpu")
+        std::vector<CLFlag> Flags({CLFlag(CL_DEVICE_TYPE_GPU, L"gpu"),
+                                  CLFlag(CL_DEVICE_TYPE_CPU, L"cpu")
                                   });
 
         std::vector<cl_device_id> devs;
@@ -330,7 +330,7 @@ public:
         for (int i = 0; i < devs.size(); ++i) {
             auto Man = std::shared_ptr<AMPManager>(new OpenCLManager(devs[i], path[i]));
             default_map[Man] = Man->createAloc();
-            if (i == 1)
+            if (i == 0)
                 def = Man;
             Devices.push_back(Man);
         }
