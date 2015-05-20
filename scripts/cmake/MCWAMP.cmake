@@ -28,6 +28,8 @@ macro(add_mcwamp_library name )
   CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXXAMP_FLAGS}")
   add_library( ${name} ${ARGN} )
+  # LLVM and Clang shall be compiled beforehand
+  add_dependencies(${name} llvm-link opt clang)
 endmacro(add_mcwamp_library name )
 
 ####################
@@ -37,6 +39,8 @@ macro(add_mcwamp_library_cpu name )
   CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXXAMP_FLAGS}")
   add_library( ${name} SHARED ${ARGN} )
+  # LLVM and Clang shall be compiled beforehand
+  add_dependencies(${name} llvm-link opt clang)
   add_dependencies(${name} libcpprt)
   target_link_libraries(${name} ${CMAKE_BINARY_DIR}/libc++/libcxxrt/lib/libcxxrt.so)
 endmacro(add_mcwamp_library_cpu name )
@@ -50,6 +54,8 @@ macro(add_mcwamp_library_opencl name )
   # add OpenCL headers
   include_directories("${OPENCL_HEADER}/..")
   add_library( ${name} SHARED ${ARGN} )
+  # LLVM and Clang shall be compiled beforehand
+  add_dependencies(${name} llvm-link opt clang)
   add_dependencies(${name} libcpprt)
   # add OpenCL libraries
   target_link_libraries(${name} ${OPENCL_LIBRARY})
@@ -65,6 +71,8 @@ macro(add_mcwamp_library_hsa name )
   # add HSA headers
   include_directories(${HSA_HEADER})
   add_library( ${name} SHARED ${ARGN} )
+  # LLVM and Clang shall be compiled beforehand
+  add_dependencies(${name} llvm-link opt clang)
   # add HSA libraries
   target_link_libraries(${name} ${HSA_LIBRARY})
   target_link_libraries(${name} ${HSA_EXT_LIBRARY})
@@ -83,6 +91,8 @@ macro(add_mcwamp_executable name )
   set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I${GTEST_INC_DIR} -I${LIBCXX_INC_DIR} -I${MCWAMP_INC_DIR} -stdlib=libc++ -std=c++amp" )
   add_executable( ${name} ${ARGN} )
+  # LLVM and Clang shall be compiled beforehand
+  add_dependencies(${name} llvm-link opt clang)
   if (APPLE)
     target_link_libraries( ${name} mcwamp c++abi)
   else (APPLE)
