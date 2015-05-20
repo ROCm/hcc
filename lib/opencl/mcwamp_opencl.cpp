@@ -65,7 +65,7 @@ class OpenCLManager : public AMPManager
 {
 public:
     OpenCLManager(const cl_device_id device, const std::wstring& path)
-        : AMPManager(), device(device), program(nullptr), path(path) {
+        : AMPManager(), programs(), device(device), path(path) {
         cl_int err;
 
         cl_ulong memAllocSize;
@@ -105,7 +105,12 @@ public:
 
     void* CreateKernel(const char* fun, void* size, void* source) override {
         cl_int err;
-        Concurrency::CLAMP::CLCompileKernels(program, device, size, source);
+        if (programs.find(source) == std::end(programs)) {
+            cl_program program = nullptr;
+            Concurrency::CLAMP::CLCompileKernels(program, device, size, source);
+            programs[source] = program;
+        }
+        cl_program program = programs[source];
         Concurrency::KernelObject& KO = Concurrency::Pro2KernelObject[program];
         std::string name(fun);
         if (KO[name] == 0) {
@@ -138,9 +143,9 @@ public:
     }
 
     ~OpenCLManager() {
-        if (program) {
-            ReleaseKernelObject(program);
-            clReleaseProgram(program);
+        for (auto& it : programs) {
+            ReleaseKernelObject(it.second);
+            clReleaseProgram(it.second);
         }
         delete[] d.maxSizes;
     }
@@ -158,9 +163,9 @@ public:
 
 private:
     std::shared_ptr<AMPAllocator> newAloc();
+    std::map<void*, cl_program> programs;
     struct DimMaxSize d;
     cl_device_id     device;
-    cl_program       program;
     std::wstring path;
     std::wstring description;
     size_t mem;
