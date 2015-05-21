@@ -340,8 +340,10 @@ struct rw_info
 
     void get_cpu_access(bool modify) {
         auto cpu_view = get_cpu_view();
-        if (Alocs.find(cpu_view->getManPtr()) == std::end(Alocs))
-            construct(cpu_view);
+        if (Alocs.find(cpu_view->getManPtr()) == std::end(Alocs)) {
+            data = cpu_view->getManPtr()->create(count);
+            Alocs[cpu_view->getManPtr()] = data;
+        }
         if (onDevice && !discard) {
             void* device = Alocs[curr->getManPtr()];
             if (device != data)
