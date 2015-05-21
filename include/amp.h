@@ -223,7 +223,7 @@ private:
   std::shared_ptr<AMPManager> pMan;
 };
 
-accelerator accelerator_view::get_accelerator() const { return pAloc->getMan(); }
+inline accelerator accelerator_view::get_accelerator() const { return pAloc->getMan(); }
 
 class completion_future {
 public:
