@@ -201,7 +201,7 @@ public:
   bool get_supports_double_precision() const { return pMan->is_double(); }
   bool get_supports_limited_double_precision() const { return pMan->is_lim_double(); }
   size_t get_dedicated_memory() const { return pMan->get_mem(); }
-  accelerator_view get_default_view() const;
+  accelerator_view get_default_view() const { return getContext()->getView(pMan); }
   access_type get_default_cpu_access_type() const { return pMan->cpu_type; }
   bool get_supports_cpu_shared_memory() const { return pMan->is_unified(); }
 
@@ -209,7 +209,11 @@ public:
       pMan->cpu_type = type;
       return true;
   }
-  accelerator_view create_view(queuing_mode mode = queuing_mode_automatic);
+  accelerator_view create_view(queuing_mode mode = queuing_mode_automatic) {
+      auto aloc = pMan->createAloc();
+      aloc->mode = mode;
+      return aloc;
+  }
 
 
   bool operator==(const accelerator& other) const { return pMan == other.pMan; }
@@ -220,13 +224,6 @@ private:
 };
 
 accelerator accelerator_view::get_accelerator() const { return pAloc->getMan(); }
-accelerator_view accelerator::create_view(queuing_mode mode) {
-    auto aloc = pMan->createAloc();
-    aloc->mode = mode;
-    return aloc;
-}
-accelerator_view accelerator::get_default_view() const { return getContext()->getView(pMan); }
-
 
 class completion_future {
 public:
