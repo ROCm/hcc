@@ -97,7 +97,7 @@ public:
     void Push(void *kernel, int idx, void*& data, void* device) override {}
 };
 
-std::shared_ptr<AMPAllocator> CPUManager::newAloc() {
+inline std::shared_ptr<AMPAllocator> CPUManager::newAloc() {
     return std::shared_ptr<AMPAllocator>(new CPUAllocator(shared_from_this()));
 }
 
