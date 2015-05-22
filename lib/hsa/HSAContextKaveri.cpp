@@ -566,7 +566,7 @@ public:
 
       // Get symbol handle.
       hsa_executable_symbol_t kernelSymbol;
-      status = hsa_executable_get_symbol(hsaExecutable, "", entryName, device, 0, &kernelSymbol);
+      status = hsa_executable_get_symbol(hsaExecutable, NULL, entryName, device, 0, &kernelSymbol);
       STATUS_CHECK(status, __LINE__);
 
       // Get code handle.

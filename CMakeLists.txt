@@ -81,8 +81,8 @@ include_directories( ${PROJ_SEARCH_PATH} )
 LINK_DIRECTORIES( ${LLVM_LIB_DIR} )
 
 
-# Turn on by default for now.
-option(CXXAMP_ENABLE_BOLT "Enable Bolt as external dependency" ON)
+# Turn off Bolt by default for now.
+option(CXXAMP_ENABLE_BOLT "Enable Bolt as external dependency" OFF)
 
 SET(FOO_BUILD_SHARED OFF CACHE BOOL "Build libfoo shared library")
 
