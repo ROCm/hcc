@@ -2050,7 +2050,7 @@ public:
     return av;
   }
 
-  void synchronize() const { cache.synchronize(); }
+  void synchronize() const { cache.get_cpu_access(); }
   completion_future synchronize_async() const {
       std::future<void> fut = std::async([&]() mutable { synchronize(); });
       return completion_future(fut.share());

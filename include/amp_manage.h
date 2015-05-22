@@ -60,6 +60,7 @@ public:
     T* map_ptr(bool modify = false, size_t count = 0, size_t offset = 0) const { return nullptr; }
     void unmap_ptr(void* addr) const {}
     void synchronize(bool modify = false) const {}
+    void get_cpu_access(bool modify = false) const {}
     void copy(_data<T> other) const {}
     void refresh() const {}
     void set_const() const {}
