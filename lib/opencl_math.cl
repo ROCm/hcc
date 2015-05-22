@@ -404,7 +404,13 @@ double opencl_nan_double(int tagp) {
   return nan((ulong)tagp);
 }
 
-/* FIXME: missing nearbyint */
+float opencl_nearbyint(float x) {
+  return rint(x);
+}
+
+double opencl_nearbyint_double(double x) {
+  return rint(x);
+}
 
 float opencl_nextafter(float x, float y) {
   return nextafter(x, y);
