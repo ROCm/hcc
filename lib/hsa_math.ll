@@ -1467,110 +1467,124 @@ entry:
 ; Function Attrs: nounwind readnone
 declare spir_func double @_Z9remainderdd(double, double) #1
 
+; FIXME: bug in HSAIL backend so call to @_Z6remquoffPU3AS4i can not be made as of now
 ; Function Attrs: nounwind
 define spir_func float @opencl_remquof_global(float %x, float %y, i32 addrspace(1)* %quo) #0 {
 entry:
-  %x.addr = alloca float, align 4
-  %y.addr = alloca float, align 4
-  %quo.addr = alloca i32 addrspace(1)*, align 8
-  store float %x, float* %x.addr, align 4
-  store float %y, float* %y.addr, align 4
-  store i32 addrspace(1)* %quo, i32 addrspace(1)** %quo.addr, align 8
-  %0 = load float* %x.addr, align 4
-  %1 = load float* %y.addr, align 4
-  %2 = load i32 addrspace(1)** %quo.addr, align 8
-  %3 = addrspacecast i32 addrspace(1)* %2 to i32 addrspace(4)*
-  %call = call spir_func float @_Z6remquoffPU3AS4i(float %0, float %1, i32 addrspace(4)* %3) #1
-  ret float %call
+;  %x.addr = alloca float, align 4
+;  %y.addr = alloca float, align 4
+;  %quo.addr = alloca i32 addrspace(1)*, align 8
+;  store float %x, float* %x.addr, align 4
+;  store float %y, float* %y.addr, align 4
+;  store i32 addrspace(1)* %quo, i32 addrspace(1)** %quo.addr, align 8
+;  %0 = load float* %x.addr, align 4
+;  %1 = load float* %y.addr, align 4
+;  %2 = load i32 addrspace(1)** %quo.addr, align 8
+;  %3 = addrspacecast i32 addrspace(1)* %2 to i32 addrspace(4)*
+;  %call = call spir_func float @_Z6remquoffPU3AS4i(float %0, float %1, i32 addrspace(4)* %3)
+;  ret float %call
+   ret float 0.0
 }
 
+; FIXME: bug in HSAIL backend so call to @_Z6remquoffPU3AS4i can not be made as of now
 ; Function Attrs: nounwind readnone
-declare spir_func float @_Z6remquoffPU3AS4i(float, float, i32 addrspace(4)*) #1
+declare spir_func float @_Z6remquoffPU3AS4i(float, float, i32 addrspace(4)*) 
 
+; FIXME: bug in HSAIL backend so call to @_Z6remquoffPU3AS4i can not be made as of now
 ; Function Attrs: nounwind
 define spir_func float @opencl_remquof_local(float %x, float %y, i32 addrspace(3)* %quo) #0 {
 entry:
-  %x.addr = alloca float, align 4
-  %y.addr = alloca float, align 4
-  %quo.addr = alloca i32 addrspace(3)*, align 8
-  store float %x, float* %x.addr, align 4
-  store float %y, float* %y.addr, align 4
-  store i32 addrspace(3)* %quo, i32 addrspace(3)** %quo.addr, align 8
-  %0 = load float* %x.addr, align 4
-  %1 = load float* %y.addr, align 4
-  %2 = load i32 addrspace(3)** %quo.addr, align 8
-  %3 = addrspacecast i32 addrspace(3)* %2 to i32 addrspace(4)*
-  %call = call spir_func float @_Z6remquoffPU3AS4i(float %0, float %1, i32 addrspace(4)* %3) #1
-  ret float %call
+;  %x.addr = alloca float, align 4
+;  %y.addr = alloca float, align 4
+;  %quo.addr = alloca i32 addrspace(3)*, align 8
+;  store float %x, float* %x.addr, align 4
+;  store float %y, float* %y.addr, align 4
+;  store i32 addrspace(3)* %quo, i32 addrspace(3)** %quo.addr, align 8
+;  %0 = load float* %x.addr, align 4
+;  %1 = load float* %y.addr, align 4
+;  %2 = load i32 addrspace(3)** %quo.addr, align 8
+;  %3 = addrspacecast i32 addrspace(3)* %2 to i32 addrspace(4)*
+;  %call = call spir_func float @_Z6remquoffPU3AS4i(float %0, float %1, i32 addrspace(4)* %3) #1
+;  ret float %call
+   ret float 0.0
 }
 
+; FIXME: bug in HSAIL backend so call to @_Z6remquoffPU3AS4i can not be made as of now
 ; Function Attrs: nounwind
 define spir_func float @opencl_remquof(float %x, float %y, i32 addrspace(4)* %quo) #0 {
 entry:
-  %x.addr = alloca float, align 4
-  %y.addr = alloca float, align 4
-  %quo.addr = alloca i32 addrspace(4)*, align 8
-  store float %x, float* %x.addr, align 4
-  store float %y, float* %y.addr, align 4
-  store i32 addrspace(4)* %quo, i32 addrspace(4)** %quo.addr, align 8
-  %0 = load float* %x.addr, align 4
-  %1 = load float* %y.addr, align 4
-  %2 = load i32 addrspace(4)** %quo.addr, align 8
-  %call = call spir_func float @_Z6remquoffPU3AS4i(float %0, float %1, i32 addrspace(4)* %2) #1
-  ret float %call
+;  %x.addr = alloca float, align 4
+;  %y.addr = alloca float, align 4
+;  %quo.addr = alloca i32 addrspace(4)*, align 8
+;  store float %x, float* %x.addr, align 4
+;  store float %y, float* %y.addr, align 4
+;  store i32 addrspace(4)* %quo, i32 addrspace(4)** %quo.addr, align 8
+;  %0 = load float* %x.addr, align 4
+;  %1 = load float* %y.addr, align 4
+;  %2 = load i32 addrspace(4)** %quo.addr, align 8
+;  %call = call spir_func float @_Z6remquoffPU3AS4i(float %0, float %1, i32 addrspace(4)* %2) #1
+;  ret float %call
+   ret float 0.0
 }
 
+; FIXME: bug in HSAIL backend so call to @_Z6remquoddPU3AS4i can not be made as of now
 ; Function Attrs: nounwind
 define spir_func double @opencl_remquo_global(double %x, double %y, i32 addrspace(1)* %quo) #0 {
 entry:
-  %x.addr = alloca double, align 8
-  %y.addr = alloca double, align 8
-  %quo.addr = alloca i32 addrspace(1)*, align 8
-  store double %x, double* %x.addr, align 8
-  store double %y, double* %y.addr, align 8
-  store i32 addrspace(1)* %quo, i32 addrspace(1)** %quo.addr, align 8
-  %0 = load double* %x.addr, align 8
-  %1 = load double* %y.addr, align 8
-  %2 = load i32 addrspace(1)** %quo.addr, align 8
-  %3 = addrspacecast i32 addrspace(1)* %2 to i32 addrspace(4)*
-  %call = call spir_func double @_Z6remquoddPU3AS4i(double %0, double %1, i32 addrspace(4)* %3) #1
-  ret double %call
+;  %x.addr = alloca double, align 8
+;  %y.addr = alloca double, align 8
+;  %quo.addr = alloca i32 addrspace(1)*, align 8
+;  store double %x, double* %x.addr, align 8
+;  store double %y, double* %y.addr, align 8
+;  store i32 addrspace(1)* %quo, i32 addrspace(1)** %quo.addr, align 8
+;  %0 = load double* %x.addr, align 8
+;  %1 = load double* %y.addr, align 8
+;  %2 = load i32 addrspace(1)** %quo.addr, align 8
+;  %3 = addrspacecast i32 addrspace(1)* %2 to i32 addrspace(4)*
+;  %call = call spir_func double @_Z6remquoddPU3AS4i(double %0, double %1, i32 addrspace(4)* %3) #1
+;  ret double %call
+   ret double 0.0
 }
 
+; FIXME: bug in HSAIL backend so call to @_Z6remquoddPU3AS4i can not be made as of now
 ; Function Attrs: nounwind readnone
 declare spir_func double @_Z6remquoddPU3AS4i(double, double, i32 addrspace(4)*) #1
 
+; FIXME: bug in HSAIL backend so call to @_Z6remquoddPU3AS4i can not be made as of now
 ; Function Attrs: nounwind
 define spir_func double @opencl_remquo_local(double %x, double %y, i32 addrspace(3)* %quo) #0 {
 entry:
-  %x.addr = alloca double, align 8
-  %y.addr = alloca double, align 8
-  %quo.addr = alloca i32 addrspace(3)*, align 8
-  store double %x, double* %x.addr, align 8
-  store double %y, double* %y.addr, align 8
-  store i32 addrspace(3)* %quo, i32 addrspace(3)** %quo.addr, align 8
-  %0 = load double* %x.addr, align 8
-  %1 = load double* %y.addr, align 8
-  %2 = load i32 addrspace(3)** %quo.addr, align 8
-  %3 = addrspacecast i32 addrspace(3)* %2 to i32 addrspace(4)*
-  %call = call spir_func double @_Z6remquoddPU3AS4i(double %0, double %1, i32 addrspace(4)* %3) #1
-  ret double %call
+;  %x.addr = alloca double, align 8
+;  %y.addr = alloca double, align 8
+;  %quo.addr = alloca i32 addrspace(3)*, align 8
+;  store double %x, double* %x.addr, align 8
+;  store double %y, double* %y.addr, align 8
+;  store i32 addrspace(3)* %quo, i32 addrspace(3)** %quo.addr, align 8
+;  %0 = load double* %x.addr, align 8
+;  %1 = load double* %y.addr, align 8
+;  %2 = load i32 addrspace(3)** %quo.addr, align 8
+;  %3 = addrspacecast i32 addrspace(3)* %2 to i32 addrspace(4)*
+;  %call = call spir_func double @_Z6remquoddPU3AS4i(double %0, double %1, i32 addrspace(4)* %3) #1
+;  ret double %call
+   ret double 0.0
 }
 
+; FIXME: bug in HSAIL backend so call to @_Z6remquoddPU3AS4i can not be made as of now
 ; Function Attrs: nounwind
 define spir_func double @opencl_remquo(double %x, double %y, i32 addrspace(4)* %quo) #0 {
 entry:
-  %x.addr = alloca double, align 8
-  %y.addr = alloca double, align 8
-  %quo.addr = alloca i32 addrspace(4)*, align 8
-  store double %x, double* %x.addr, align 8
-  store double %y, double* %y.addr, align 8
-  store i32 addrspace(4)* %quo, i32 addrspace(4)** %quo.addr, align 8
-  %0 = load double* %x.addr, align 8
-  %1 = load double* %y.addr, align 8
-  %2 = load i32 addrspace(4)** %quo.addr, align 8
-  %call = call spir_func double @_Z6remquoddPU3AS4i(double %0, double %1, i32 addrspace(4)* %2) #1
-  ret double %call
+;  %x.addr = alloca double, align 8
+;  %y.addr = alloca double, align 8
+;  %quo.addr = alloca i32 addrspace(4)*, align 8
+;  store double %x, double* %x.addr, align 8
+;  store double %y, double* %y.addr, align 8
+;  store i32 addrspace(4)* %quo, i32 addrspace(4)** %quo.addr, align 8
+;  %0 = load double* %x.addr, align 8
+;  %1 = load double* %y.addr, align 8
+;  %2 = load i32 addrspace(4)** %quo.addr, align 8
+;  %call = call spir_func double @_Z6remquoddPU3AS4i(double %0, double %1, i32 addrspace(4)* %2) #1
+;  ret double %call
+   ret double 0.0
 }
 
 ; Function Attrs: nounwind
