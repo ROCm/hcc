@@ -1372,6 +1372,32 @@ entry:
 declare spir_func double @_Z3nanm(i64) #1
 
 ; Function Attrs: nounwind
+define linkonce_odr spir_func float @opencl_nearbyint(float %x) #0 {
+entry:
+  %x.addr = alloca float, align 4
+  store float %x, float* %x.addr, align 4
+  %0 = load float* %x.addr, align 4
+  %call = call spir_func float @_Z4rintf(float %0) #1
+  ret float %call
+}
+
+; Function Attrs: nounwind readnone
+declare spir_func float @_Z4rintf(float) #1
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func double @opencl_nearbyint_double(double %x) #0 {
+entry:
+  %x.addr = alloca double, align 8
+  store double %x, double* %x.addr, align 8
+  %0 = load double* %x.addr, align 8
+  %call = call spir_func double @_Z4rintd(double %0) #1
+  ret double %call
+}
+
+; Function Attrs: nounwind readnone
+declare spir_func double @_Z4rintd(double) #1
+
+; Function Attrs: nounwind
 define linkonce_odr spir_func float @opencl_nextafter(float %x, float %y) #0 {
 entry:
   %x.addr = alloca float, align 4
