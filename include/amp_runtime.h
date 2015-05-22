@@ -279,7 +279,7 @@ struct rw_info
             data = Alocs[aloc->getManPtr()];
     }
 
-    void append(Serialize& s, bool isArray) {
+    void append(Serialize& s, bool isArray, bool isConst) {
         auto aloc = s.get_aloc();
         if (!curr)
             construct(aloc);
@@ -304,7 +304,8 @@ struct rw_info
                 curr = aloc;
             }
         }
-        onDevice = true;
+        if (!isConst)
+            onDevice = true;
         discard = false;
         curr->Push(s.getKernel(), s.getAndIncCurrentIndex(), data, Alocs[curr->getManPtr()]);
     }
