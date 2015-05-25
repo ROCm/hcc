@@ -235,20 +235,23 @@ public:
         PushArgImpl(kernel, idx, sizeof(cl_mem), &dm);
     }
 
-    void write(void* device, void *src, size_t count) override {
+    void write(void* device, void *src, size_t count, size_t offset, bool blocking) override {
         cl_mem dm = static_cast<cl_mem>(device);
-        cl_int err = clEnqueueWriteBuffer(queue, dm, CL_FALSE, 0, count, src, 0, NULL, NULL);
+        cl_bool block = CL_FALSE;
+        if (blocking)
+            block = CL_TRUE;
+        cl_int err = clEnqueueWriteBuffer(queue, dm, block, offset, count, src, 0, NULL, NULL);
         assert(err == CL_SUCCESS);
     }
-    void read(void* device, void* dst, size_t count) override {
+    void read(void* device, void* dst, size_t count, size_t offset) override {
         cl_mem dm = static_cast<cl_mem>(device);
-        cl_int err = clEnqueueReadBuffer(queue, dm, CL_TRUE, 0, count, dst, 0, NULL, NULL);
+        cl_int err = clEnqueueReadBuffer(queue, dm, CL_TRUE, offset, count, dst, 0, NULL, NULL);
         assert(err == CL_SUCCESS);
     }
-    void copy(void* dst, void* src, size_t count) override {
+    void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset) override {
         cl_mem sdm = static_cast<cl_mem>(src);
         cl_mem ddm = static_cast<cl_mem>(dst);
-        cl_int err = clEnqueueCopyBuffer(queue, sdm, ddm, 0, 0, count, 0, NULL, NULL);
+        cl_int err = clEnqueueCopyBuffer(queue, sdm, ddm, src_offset, dst_offset, count, 0, NULL, NULL);
         assert(err == CL_SUCCESS);
     }
     void* map(void* device, size_t count, size_t offset, bool Write) override {

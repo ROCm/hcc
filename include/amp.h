@@ -1836,6 +1836,8 @@ public:
 
 
   const acc_buffer_t& internal() const restrict(amp,cpu) { return m_device; }
+  int get_offset() const restrict(amp,cpu) { return 0; }
+  Concurrency::index<N> get_index_base() const restrict(amp,cpu) { return Concurrency::index<N>(); }
 private:
   template <typename K, int Q> friend struct projection_helper;
   template <typename K, int Q> friend struct array_projection_helper;
@@ -2072,6 +2074,8 @@ public:
   accelerator_view get_source_accelerator_view() const { return cache.get_av(); }
 
   const acc_buffer_t& internal() const restrict(amp,cpu) { return cache; }
+  int get_offset() const restrict(amp,cpu) { return offset; }
+  Concurrency::index<N> get_index_base() const restrict(amp,cpu) { return index_base; }
 private:
   template <typename K, int Q> friend struct projection_helper;
   template <typename K, int Q> friend struct array_projection_helper;
@@ -2298,6 +2302,8 @@ public:
     return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
   }
   const acc_buffer_t& internal() const restrict(amp,cpu) { return cache; }
+  int get_offset() const restrict(amp,cpu) { return offset; }
+  Concurrency::index<N> get_index_base() const restrict(amp,cpu) { return index_base; }
 private:
   template <typename K, int Q> friend struct projection_helper;
   template <typename K, int Q> friend struct array_projection_helper;
@@ -2454,7 +2460,12 @@ namespace Concurrency {
 
 template<typename T, int N>
 static inline bool is_flat(const array_view<T, N>& av) noexcept {
-    return av.offset == 0 && av.extent == av.extent_base && av.index_base == index<N>();
+    return av.extent == av.extent_base && av.index_base == index<N>();
+}
+
+template<typename T>
+static inline bool is_flat(const array_view<T, 1>& av) noexcept {
+    return true;
 }
 
 template <typename InputIter, typename T, int N, int dim>
@@ -2557,7 +2568,8 @@ template <typename T, int N>
 void copy(const array_view<const T, N>& src, const array_view<T, N>& dest) {
     if (is_flat(src)) {
         if (is_flat(dest))
-            src.internal().copy(dest.internal());
+            src.internal().copy(dest.internal(), src.get_offset(),
+                                dest.get_offset(), dest.get_extent().size());
         else {
             T* pSrc = src.internal().map_ptr();
             T* p = pSrc;
@@ -2578,12 +2590,20 @@ void copy(const array_view<const T, N>& src, const array_view<T, N>& dest) {
             T* pSrc = src.internal().map_ptr(src.extent_base.size(), src.offset);
             T* pDst = dest.internal().map_ptr(dest.extent_base.size(), dest.offset);
             copy_bidir<T, N, 1>()(pSrc, pDst, src.extent, src.extent_base,
-                                      src.index_base, dest.extent_base, dest.index_base);
+                                  src.index_base, dest.extent_base, dest.index_base);
             dest.internal().unmap_ptr(pDst);
             src.internal().unmap_ptr(pSrc);
 
         }
     }
+}
+
+template <typename T>
+void copy(const array_view<const T, 1>& src, const array_view<T, 1>& dest) {
+    src.internal().copy(dest.internal(),
+                        src.get_offset() + src.get_index_base()[0],
+                        dest.get_offset() + dest.get_index_base()[0],
+                        dest.get_extent().size());
 }
 
 template <typename T, int N>
@@ -2594,18 +2614,25 @@ void copy(const array_view<T, N>& src, const array_view<T, N>& dest) {
 
 template <typename T, int N>
 void copy(const array_view<const T, N>& src, array<T, N>& dest) {
-    T* pDst = dest.internal().map_ptr(true);
-    T* p = pDst;
     if (is_flat(src)) {
-        T* pSrc = src.internal().map_ptr();
-        std::copy(pSrc, pSrc + dest.get_extent().size(), pDst);
-        src.internal().unmap_ptr(pSrc);
+        src.internal().copy(dest.internal(), src.get_offset(),
+                            dest.get_offset(), dest.get_extent().size());
     } else {
-        T* pSrc = src.internal().map_ptr(src.extent_base.size(), src.offset);
+        T* pDst = dest.internal().map_ptr(true);
+        T* p = pDst;
+        T* pSrc = src.internal().map_ptr(false, src.extent_base.size(), src.offset);
         copy_output<T*, T, N, 1>()(pSrc, pDst, src.extent, src.extent_base, src.index_base);
         src.internal().unmap_ptr(pSrc);
+        dest.internal().unmap_ptr(p);
     }
-    dest.internal().unmap_ptr(p);
+}
+
+template <typename T>
+void copy(const array_view<const T, 1>& src, array<T, 1>& dest) {
+    src.internal().copy(dest.internal(),
+                        src.get_offset() + src.get_index_base()[0],
+                        dest.get_offset() + dest.get_index_base()[0],
+                        dest.get_extent().size());
 }
 
 template <typename T, int N>
@@ -2616,32 +2643,83 @@ void copy(const array_view<T, N>& src, array<T, N>& dest) {
 
 template <typename T, int N>
 void copy(const array<T, N>& src, const array_view<T, N>& dest) {
-    T* pSrc = src.internal().map_ptr();
-    T* p = pSrc;
-    if (is_flat(dest)) {
-        T* pDst = dest.internal().map_ptr(true);
-        std::copy(pSrc, pSrc + src.get_extent().size(), pDst);
-        dest.internal().unmap_ptr(pDst);
-    } else {
+    if (is_flat(dest))
+        src.internal().copy(dest.internal(), src.get_offset(),
+                            dest.get_offset(), dest.get_extent().size());
+    else {
+        T* pSrc = src.internal().map_ptr();
+        T* p = pSrc;
         T* pDst = dest.internal().map_ptr(true, dest.extent_base.size(), dest.offset);
         copy_input<T*, T, N, 1>()(pSrc, pDst, dest.extent, dest.extent_base, dest.index_base);
         dest.internal().unmap_ptr(pDst);
+        src.internal().unmap_ptr(p);
     }
-    src.internal().unmap_ptr(p);
+}
+
+template <typename T>
+void copy(const array<T, 1>& src, const array_view<T, 1>& dest) {
+    src.internal().copy(dest.internal(),
+                        src.get_offset() + src.get_index_base()[0],
+                        dest.get_offset() + dest.get_index_base()[0],
+                        dest.get_extent().size());
 }
 
 template <typename T, int N>
 void copy(const array<T, N>& src, array<T, N>& dest) {
-    src.internal().copy(dest.internal());
+    src.internal().copy(dest.internal(), 0, 0, 0);
 }
+
+template <typename Iter, typename T, int N>
+struct do_copy
+{
+    template<template <typename, int> class _amp_container>
+    void operator()(Iter srcBegin, Iter srcEnd, const _amp_container<T, N>& dest) {
+        T* ptr = dest.internal().map_ptr(true, dest.get_extent().size(), dest.get_offset());
+        std::copy(srcBegin, srcEnd, ptr);
+        dest.internal().unmap_ptr(ptr);
+    }
+    template<template <typename, int> class _amp_container>
+    void operator()(const _amp_container<T, N> &src, Iter destBegin) {
+        typename std::remove_const<T>::type* ptr = src.internal().map_ptr(false, src.get_extent().size(), src.get_offset());
+        std::copy(ptr, ptr + src.get_extent().size(), destBegin);
+        src.internal().unmap_ptr(ptr);
+    }
+
+};
+
+template <typename T, int N>
+struct do_copy<T*, T, N>
+{
+    template<template <typename, int> class _amp_container>
+    void operator()(T* srcBegin, T* srcEnd, const _amp_container<T, N>& dest) {
+        dest.internal().write(srcBegin, std::distance(srcBegin, srcEnd), dest.get_offset(), true);
+    }
+    template<template <typename, int> class _amp_container>
+    void operator()(const _amp_container<T, N> &src, T* destBegin) {
+        src.internal().read(destBegin, src.get_extent().size(), src.get_offset());
+    }
+};
+
+template <typename T>
+struct do_copy<T*, T, 1>
+{
+    template<template <typename, int> class _amp_container>
+    void operator()(T* srcBegin, T* srcEnd, const _amp_container<T, 1>& dest) {
+        dest.internal().write(srcBegin, std::distance(srcBegin, srcEnd),
+                              dest.get_offset() + dest.get_index_base()[0], true);
+    }
+    template<template <typename, int> class _amp_container>
+    void operator()(const _amp_container<T, 1> &src, T* destBegin) {
+        src.internal().read(destBegin, src.get_extent().size(),
+                            src.get_offset() + src.get_index_base()[0]);
+    }
+};
 
 template <typename InputIter, typename T, int N>
 void copy(InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest) {
-    if (is_flat(dest)) {
-        T* ptr = dest.internal().map_ptr(true);
-        std::copy(srcBegin, srcEnd, ptr);
-        dest.internal().unmap_ptr(ptr);
-    } else {
+    if (is_flat(dest))
+        do_copy<InputIter, T, N>()(srcBegin, srcEnd, dest);
+   else {
         T* ptr = dest.internal().map_ptr(true, dest.extent_base.size(), dest.offset);
         copy_input<InputIter, T, N, 1>()(srcBegin, ptr, dest.extent, dest.extent_base, dest.index_base);
         dest.internal().unmap_ptr(ptr);
@@ -2654,9 +2732,7 @@ void copy(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest) {
     if( ( std::distance(srcBegin,srcEnd) <=0 )||( std::distance(srcBegin,srcEnd) < dest.get_extent().size() ))
       throw runtime_exception("errorMsg_throw ,copy between different types", 0);
 #endif
-    T* ptr = dest.internal().map_ptr(true);
-    std::copy(srcBegin, srcEnd, ptr);
-    dest.internal().unmap_ptr(ptr);
+    do_copy<InputIter, T, N>()(srcBegin, srcEnd, dest);
 }
 
 template <typename InputIter, typename T, int N>
@@ -2675,11 +2751,9 @@ void copy(InputIter srcBegin, array<T, N>& dest) {
 
 template <typename OutputIter, typename T, int N>
 void copy(const array_view<T, N> &src, OutputIter destBegin) {
-    if (is_flat(src)) {
-        typename array_view<T, N>::nc_T* ptr = src.internal().map_ptr();
-        std::copy(ptr, ptr + src.get_extent().size(), destBegin);
-        src.internal().unmap_ptr(ptr);
-    } else {
+    if (is_flat(src))
+        do_copy<OutputIter, T, N>()(src, destBegin);
+    else {
         typename array_view<T, N>::nc_T* ptr = src.internal().map_ptr(false, src.extent_base.size(), src.offset);
         copy_output<OutputIter, T, N, 1>()(ptr, destBegin, src.extent, src.extent_base, src.index_base);
         src.internal().unmap_ptr(ptr);
@@ -2688,9 +2762,7 @@ void copy(const array_view<T, N> &src, OutputIter destBegin) {
 
 template <typename OutputIter, typename T, int N>
 void copy(const array<T, N> &src, OutputIter destBegin) {
-    T* ptr = src.internal().map_ptr();
-    std::copy(ptr, ptr + src.get_extent().size(), destBegin);
-    src.internal().unmap_ptr(ptr);
+    do_copy<OutputIter, T, N>()(src, destBegin);
 }
 
 template <typename InputIter, typename OutputIter>

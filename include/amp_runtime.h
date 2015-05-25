@@ -50,9 +50,9 @@ public:
   virtual void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {}
   virtual void* LaunchKernelAsync(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) { return nullptr; }
 
-  virtual void read(void* device, void* dst, size_t count) = 0;
-  virtual void write(void* device, void* src, size_t count) = 0;
-  virtual void copy(void* dst, void* src, size_t count) = 0;
+  virtual void read(void* device, void* dst, size_t count, size_t offset) = 0;
+  virtual void write(void* device, void* src, size_t count, size_t offset, bool blocking) = 0;
+  virtual void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset) = 0;
   virtual void* map(void* device, size_t count, size_t offset, bool modify) = 0;
   virtual void unmap(void* device, void* addr) = 0;
   virtual void Push(void *kernel, int idx, void*& data, void* device) = 0;
@@ -91,9 +91,13 @@ public:
     CPUAllocator(std::shared_ptr<AMPManager> Man) : AMPAllocator(Man) {}
     void* map(void* device, size_t count, size_t offset, bool modify) override { return (char*)device + offset; }
     void unmap(void* device, void* addr) override {}
-    void read(void* device, void* dst, size_t count) {}
-    void write(void* device, void* src, size_t count) {}
-    void copy(void* device, void* src, size_t count) override {}
+    void read(void* device, void* dst, size_t count, size_t offset)
+    { memmove(dst, (char*)device + offset, count); }
+    void write(void* device, void* src, size_t count, size_t offset, bool blocking)
+    { memmove((char*)device + offset, src, count); }
+    void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset) override {
+        memmove((char*)dst + dst_offset, (char*)src + src_offset, count);
+    }
     void Push(void *kernel, int idx, void*& data, void* device) override {}
 };
 
@@ -299,9 +303,9 @@ struct rw_info
         dev_info& dst = Alocs[aloc->getManPtr()];
         if (src.state != invalid) {
             if (aloc->getManPtr()->get_path() == L"cpu")
-                curr->read(src.data, dst.data, count);
+                curr->read(src.data, dst.data, count, 0);
             else
-                curr->copy(src.data, dst.data, count);
+                curr->copy(src.data, dst.data, count, 0, 0);
         }
         curr = aloc;
         if (modify) {
@@ -338,10 +342,10 @@ struct rw_info
                             src = Alocs[cpu_view->getManPtr()];
                         }
                 if (curr->getManPtr()->get_path() == L"cpu")
-                    aloc->write(dst.data, src.data, count);
+                    aloc->write(dst.data, src.data, count, 0, false);
                 else {
                     curr->wait();
-                    aloc->copy(dst.data, src.data, count);
+                    aloc->copy(src.data, dst.data, count, 0, 0);
                 }
             }
             if (isConst) {
@@ -409,7 +413,17 @@ struct rw_info
         sync(cpu_view, modify);
     }
 
-    void copy(rw_info* other) {
+    void write(void* src, int cnt, int offset, bool blocking) {
+        curr->write(Alocs[curr->getManPtr()].data, src, cnt, offset, blocking);
+    }
+
+    void read(void* dst, int cnt, int offset) {
+        curr->read(Alocs[curr->getManPtr()].data, dst, cnt, offset);
+    }
+
+    void copy(rw_info* other, int src_offset, int dst_offset, int cnt) {
+        if (cnt == 0)
+            cnt = count;
         if (!curr) {
             if (!other->curr)
                 return;
@@ -423,15 +437,15 @@ struct rw_info
         dev_info& src = Alocs[curr->getManPtr()];
         if (other->curr->getManPtr()->get_path() == L"cpu") {
             if (curr->getManPtr()->get_path() == L"cpu")
-                memmove(dst.data, src.data, count);
+                memmove((char*)dst.data + dst_offset, (char*)src.data + src_offset, cnt);
             else
-                curr->read(src.data, dst.data, count);
+                curr->read(src.data, (char*)dst.data + dst_offset, cnt, src_offset);
         } else {
             if (curr->getManPtr()->get_path() == L"cpu")
-                other->curr->write(dst.data, src.data, count);
+                other->curr->write(dst.data, (char*)src.data + src_offset, cnt, dst_offset, false);
             else {
                 curr->wait();
-                other->curr->copy(dst.data, src.data, count);
+                other->curr->copy(src.data, dst.data, cnt, src_offset, dst_offset);
             }
         }
         other->disc();

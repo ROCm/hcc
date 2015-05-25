@@ -61,7 +61,9 @@ public:
     void unmap_ptr(void* addr) const {}
     void synchronize(bool modify = false) const {}
     void get_cpu_access(bool modify = false) const {}
-    void copy(_data<T> other) const {}
+    void copy(_data<T> other, int, int, int) const {}
+    void write(T*, int , int offset = 0, bool blocking = false) const {}
+    void read(T*, int , int offset = 0) const {}
     void refresh() const {}
     void set_const() const {}
     access_type get_access() const { return access_type_auto; }
@@ -100,7 +102,15 @@ public:
     std::shared_ptr<AMPAllocator> get_av() const { return mm->master; }
     std::shared_ptr<AMPAllocator> get_stage() const { return mm->stage; }
     access_type get_access() const { return mm->mode; }
-    void copy(_data_host<T> other) const { mm->copy(other.mm.get()); }
+    void copy(_data_host<T> other, int src_offset, int dst_offset, int size) const {
+        mm->copy(other.mm.get(), src_offset * sizeof(T), dst_offset * sizeof(T), size * sizeof(T));
+    }
+    void write(T* src, int size, int offset = 0, bool blocking = false) const {
+        mm->write(src, size * sizeof(T), offset * sizeof(T), blocking);
+    }
+    void read(T* dst, int size, int offset = 0) const {
+        mm->read(dst, size * sizeof(T), offset * sizeof(T));
+    }
     T* map_ptr(bool modify = false, size_t count = 0, size_t offset = 0) const {
         return (T*)mm->map(count * sizeof(T), offset * sizeof(T), modify);
     }
