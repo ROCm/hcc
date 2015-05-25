@@ -37,7 +37,7 @@ public:
     virtual std::shared_ptr<AMPAllocator> createAloc() = 0;
     virtual void* create(size_t count) = 0;
     virtual void release(void* ptr) = 0;
-    virtual void* CreateKernel(const char* fun, void* size, void* source) = 0;
+    virtual void* CreateKernel(const char* fun, void* size, void* source) { return nullptr; }
     virtual ~AMPManager() {}
 };
 
@@ -364,7 +364,7 @@ struct rw_info
                 curr = aloc;
             }
         }
-        aloc->Push(s.getKernel(), s.getAndIncCurrentIndex(), data, Alocs[curr->getManPtr()].data);
+        aloc->Push(s.getKernel(), s.getAndIncCurrentIndex(), data, Alocs[aloc->getManPtr()].data);
     }
 
 

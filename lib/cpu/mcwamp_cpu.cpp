@@ -17,63 +17,73 @@ extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v) {}
 
 namespace Concurrency {
 
-class CPUManager : public AMPManager
+class CPUFallbackManager final : public AMPManager
 {
     std::shared_ptr<AMPAllocator> newAloc();
 
-    void* create(size_t count, void *data, bool hasSrc) override {
-        if (!hasSrc)
-            return data;
-        else
-            return aligned_alloc(0x1000, count);
-    }
+public:
+    void* create(size_t count) override { return aligned_alloc(0x1000, count); }
     void release(void *data) override { ::operator delete(data); }
 
-public:
-    CPUManager() : AMPManager(L"fallback") {
-        des = L"CPU Fallback";
-        mem = 0;
-        is_double_ = true;
-        is_limited_double_ = true;
-        cpu_shared_memory = true;
-        emulated = false;
-        cpu_type = access_type_read_write;
-    }
+    CPUFallbackManager() : AMPManager() { cpu_type = access_type_read_write; }
+
+    std::wstring get_path() override { return L"fallback"; }
+    std::wstring get_description() override { return L"CPU Fallback"; }
+    size_t get_mem() override { return 0; }
+    bool is_double() override { return true; }
+    bool is_lim_double() override { return true; }
+    bool is_unified() override { return true; }
+    bool is_emulated() override { return true; }
+
     std::shared_ptr<AMPAllocator> createAloc() override { return newAloc(); }
 };
 
-class CPUAllocator : public AMPAllocator
+class CPUFallbackAllocator final : public AMPAllocator
 {
     std::map<void*, void*> addrs;
 public:
-    CPUAllocator(std::shared_ptr<AMPManager> pMan) : AMPAllocator(pMan) {}
+    CPUFallbackAllocator(std::shared_ptr<AMPManager> pMan) : AMPAllocator(pMan) {}
 private:
-    void Push(void *kernel, int idx, void*& data, obj_info& obj) override {
-      if (data == obj.device)
+    void Push(void *kernel, int idx, void*& data, void* device) override {
+      if (data == device)
           return;
       auto it = addrs.find(data);
       bool find = it != std::end(addrs);
       if (!kernel && !find) {
-          addrs[obj.device] = data;
-          data = obj.device;
+          addrs[device] = data;
+          data = device;
       } else if (kernel && find) {
           data = it->second;
           addrs.erase(it);
       }
   }
+  void read(void* device, void* dst, size_t count, size_t offset) override {
+      memmove(dst, (char*)device + offset, count);
+  }
+  void write(void* device, void* src, size_t count, size_t offset, bool blocking) override {
+      memmove((char*)device + offset, src, count);
+  }
+  void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset) override {
+      memmove((char*)dst + dst_offset, (char*)src + src_offset, count);
+  }
+  void* map(void* device, size_t count, size_t offset, bool modify) override {
+      return (char*)device + offset;
+  }
+  void unmap(void* device, void* addr) override {}
 };
 
-std::shared_ptr<AMPAllocator> CPUManager::newAloc() {
-    return std::shared_ptr<AMPAllocator>(new CPUAllocator(shared_from_this()));
+std::shared_ptr<AMPAllocator> CPUFallbackManager::newAloc() {
+    return std::shared_ptr<AMPAllocator>(new CPUFallbackAllocator(shared_from_this()));
 }
 
 class CPUContext : public AMPContext
 {
 public:
     CPUContext() {
-        auto Man = std::shared_ptr<AMPManager>(new CPUManager);
+        auto Man = std::shared_ptr<AMPManager>(new CPUFallbackManager);
         default_map[Man] = Man->createAloc();
         Devices.push_back(Man);
+        def = Man;
     }
 };
 

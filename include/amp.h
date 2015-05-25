@@ -2464,9 +2464,7 @@ static inline bool is_flat(const array_view<T, N>& av) noexcept {
 }
 
 template<typename T>
-static inline bool is_flat(const array_view<T, 1>& av) noexcept {
-    return true;
-}
+static inline bool is_flat(const array_view<T, 1>& av) noexcept { return true; }
 
 template <typename InputIter, typename T, int N, int dim>
 struct copy_input
@@ -2684,7 +2682,26 @@ struct do_copy
         std::copy(ptr, ptr + src.get_extent().size(), destBegin);
         src.internal().unmap_ptr(ptr);
     }
+};
 
+template <typename Iter, typename T>
+struct do_copy<Iter, T, 1>
+{
+    template<template <typename, int> class _amp_container>
+    void operator()(Iter srcBegin, Iter srcEnd, const _amp_container<T, 1>& dest) {
+        T* ptr = dest.internal().map_ptr(true, dest.get_extent().size(),
+                                         dest.get_offset() + dest.get_index_base()[0]);
+        std::copy(srcBegin, srcEnd, ptr);
+        dest.internal().unmap_ptr(ptr);
+    }
+    template<template <typename, int> class _amp_container>
+    void operator()(const _amp_container<T, 1> &src, Iter destBegin) {
+        typename std::remove_const<T>::type*
+            ptr = src.internal().map_ptr(false, src.get_extent().size(),
+                                         src.get_offset() + src.get_index_base()[0]);
+        std::copy(ptr, ptr + src.get_extent().size(), destBegin);
+        src.internal().unmap_ptr(ptr);
+    }
 };
 
 template <typename T, int N>
