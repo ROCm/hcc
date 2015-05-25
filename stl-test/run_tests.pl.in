@@ -1,0 +1,286 @@
+#!/bin/perl
+##############################################################################################
+# Copyright (c) Microsoft
+#
+# All rights reserved
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file 
+# except in compliance with the License. You may obtain a copy of the License at 
+# http://www.apache.org/licenses/LICENSE-2.0  
+#
+# THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER 
+# EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF 
+# TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT. 
+#
+# See the Apache Version 2.0 License for specific language governing permissions and 
+# limitations under the License.
+##############################################################################################
+
+#usage:
+# perl run_test.pl <Test root dir> [<test list>]
+# test root dir: base directory to look for tests from.
+# test list: if provided, a list of test.cpp files to test, one per line.
+#            Otherwise all are run. If provided the script will exit 1 if any
+#            tests fail.
+
+use Cwd;
+use Cwd 'abs_path';
+use File::Basename;
+use File::Find;
+use Safe;
+use strict;
+
+my $cflag_define = '"-D%s=%s"'; # to be used as sprintf($cflag_define, "NAME", "VALUE");
+my $run_log = abs_path('run.log');
+mkdir("stl-temp");
+my $tmpdir = abs_path('./stl-temp');
+my $test_exec = "$tmpdir/test.out";
+
+my $tests_root = @ARGV[0];
+if (!$tests_root) {
+    print "ERROR: Test root dir not provided\n";
+    exit(1);
+}
+$tests_root = abs_path($tests_root);
+chdir($tests_root);
+
+
+my $CLANG_AMP_HOME="@PROJECT_SOURCE_DIR@";
+my $CLANG_AMP_BUILD_DIR="@PROJECT_BINARY_DIR@";
+my $RUNTESTSDIR="@RUNTESTSDIR@";
+
+
+my $CLANG_AMP="$CLANG_AMP_BUILD_DIR/compiler/bin/clang++";
+my $SHARED_CXXFLAGS="-std=c++11 -I$CLANG_AMP_HOME/include -I/usr/include -I$CLANG_AMP_BUILD_DIR/compiler/lib/clang/3.5.0/include/";
+
+### Prepare environment
+if(-e $run_log)
+{
+    system("rm $run_log");
+}
+
+### Find tests
+my @tests;
+my $has_test_list=0;
+
+sub match_tests
+{    
+    if(lc($_) =~ m/cpp/)
+    {
+        push @tests, cwd().'/'.$_;
+    }
+}
+
+if (@ARGV[1]) {
+    open(TESTLIST, @ARGV[1]) or &exit_message(1, "Cannot open test list: @ARGV[1]");
+    while(<TESTLIST>) {
+        chomp;
+        push @tests, abs_path($tests_root."/".$_);
+    }
+    close(TESTLIST);
+    $has_test_list=1;
+} else {
+    find(\&match_tests, cwd());
+}
+
+### Execute tests
+use constant PASS => 0;
+use constant SKIP => 1;
+use constant FAIL => 2;
+my $num_passed = 0;
+my $num_skipped = 0;
+my $num_failed = 0;
+
+chdir($tmpdir);
+foreach my $test (@tests)
+{
+    log_message("Test: $test");
+    
+    # Read test configuration
+    undef %Test::config;
+    
+    if(not defined $Test::config{'definitions'})
+    {
+        $Test::config{'definitions'} = [{}];
+    }
+    
+    # Find "expects error" directives in cpp
+    open(TEST_CPP, $test) or &exit_message(1, "Cannot open $test");
+    $Test::config{'expected_success'} = (grep m@//#error@i, <TEST_CPP>) == 0;
+    close(TEST_CPP);
+    open(TEST_CPP, $test) or &exit_message(1, "Cannot open $test");
+    $Test::config{'expected_failure'} = (grep m@//#fail@i, <TEST_CPP>) != 0;
+    close(TEST_CPP);
+    
+    log_message('Compile only: '.bool_str($Test::config{'compile_only'})."\n"
+        .'Expected success: '.bool_str($Test::config{'expected_success'}));
+
+    # For each set of definitions
+    foreach my $def_set (@{$Test::config{'definitions'}})
+    {
+        print "$test : ";
+    
+        my $command;
+        if ($Test::config{'compile_only'}) {
+            $command = "\\
+                $CLANG_AMP -cc1 -fcxx-exceptions -fsyntax-only $SHARED_CXXFLAGS $test 2>>$run_log 1>>$run_log";
+        } else {
+            $command = "\\
+                $CLANG_AMP $SHARED_CXXFLAGS $test -o $tmpdir/test.out 2>>$run_log 1>>$run_log";
+        }
+        
+        log_message("Command: $command\n"
+            ."Build output:\n"
+            ."<<<");
+        my $build_exit_code = system($command) >> 8;
+        log_message(">>>\n"
+            ."Build exit code: $build_exit_code");
+    
+        my $exec_exit_code;
+        my $timeout=0;
+        if((not $Test::config{'compile_only'}) && $build_exit_code == 0 && $Test::config{'expected_success'})
+        {
+            log_message("Execution output:\n"
+                .'<<<');
+            eval {
+                local $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
+                alarm 60;
+                $exec_exit_code = system("$test_exec 2>>$run_log 1>>$run_log") >> 8;
+                alarm 0;
+            };
+            if ($@) {
+                die unless $@ eq "alarm\n";   # propagate unexpected errors
+                $timeout=1;
+            }
+            log_message(">>>\n"
+                ."Execution exit code: $exec_exit_code");
+        }
+    
+        # Interpret result
+        my $result;
+        if($timeout == 1) {
+            $result = FAIL;
+        }
+        elsif(not $Test::config{'expected_success'}) # Negative test
+        {
+            if($build_exit_code != 0)
+            {
+                $result = PASS;
+            }
+            else
+            {
+                $result = FAIL;
+            }
+        }
+        elsif($Test::config{'expected_failure'}) # Compile only test
+        {
+            if($build_exit_code != 0) {
+                $result = FAIL;
+            } elsif($exec_exit_code == 0) {
+                $result = FAIL;
+            } else {
+                $result = PASS;
+            }
+        }
+        elsif($Test::config{'compile_only'}) # Compile only test
+        {
+            if($build_exit_code == 0)
+            {
+                $result = PASS;
+            }
+            else
+            {
+                $result = FAIL;
+            }
+        }
+        else # Executable test
+        {
+            if($build_exit_code != 0)
+            {
+                $result = FAIL;
+            }
+            elsif($exec_exit_code == 0)
+            {
+                $result = PASS;
+            }
+            elsif($exec_exit_code == 2)
+            {
+                $result = SKIP;
+            }
+            else
+            {
+                $result = FAIL;
+            }
+        }
+        
+        if($result == PASS)
+        {
+            $num_passed++;
+            print "passed\n";
+            log_message('Result: passed');
+        }
+        elsif($result == FAIL)
+        {
+            $num_failed++;
+            if ($timeout == 1) {
+                print "failed, timeout\n";
+                log_message('Result: failed, timeout');
+            } else {
+                print "failed\n";
+                log_message('Result: failed');
+            }
+        }
+        elsif($result == SKIP)
+        {
+            $num_skipped++;
+            print "skipped\n";
+            log_message('Result: skipped');
+        }
+        else
+        {
+            exit_message(1, "Unexpected result!");
+        }
+    }
+    #chdir($tests_root);
+    log_message("=====================================================");
+}
+
+### Print summary
+my $num_total = $num_passed + $num_skipped + $num_failed;
+print "==========================\n";
+if($num_total != 0)
+{
+    printf(" Passed:  %d (%.3f%%)\n", $num_passed,  $num_passed / $num_total * 100);
+    printf(" Skipped: %d (%.3f%%)\n", $num_skipped, $num_skipped / $num_total * 100);
+    printf(" Failed:  %d (%.3f%%)\n", $num_failed,  $num_failed / $num_total * 100);
+}
+print " Total:  $num_total\n";
+print "==========================\n";
+
+if ($has_test_list && $num_failed>0) {
+    exit_message(1, "Conformance tests failed\n");
+}
+
+### Subroutines
+# Use: exit_message(code, msg)
+sub exit_message
+{
+    if(@_ != 2) { die('exit_message expects 2 arguments'); }
+    print("\n".($_[0] == 0 ? 'SUCCESS' : 'FAILURE').": ".$_[1]);
+    exit($_[0]);
+}
+
+# Use: log_message(msg, ...)
+sub log_message
+{
+    open(FH, ">>", $run_log) or &exit_message(1, "Cannot open $run_log");
+    print FH "@_\n";
+    close(FH);
+}
+
+# Use: bool_str(val)
+# Returns: string 'true'/'false'
+sub bool_str
+{
+    return $_[0] ? 'true' : 'false';
+}
