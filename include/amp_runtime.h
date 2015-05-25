@@ -349,35 +349,35 @@ struct rw_info
                     src.state = shared;
                 dst.state = shared;
             } else {
+                curr = aloc;
                 if (src.state != invalid)
                     disc();
                 dst.state = modified;
             }
-            curr = aloc;
         } else {
             if (curr != aloc) {
                 curr->wait();
                 curr = aloc;
             }
         }
-        curr->Push(s.getKernel(), s.getAndIncCurrentIndex(), data, Alocs[curr->getManPtr()].data);
+        aloc->Push(s.getKernel(), s.getAndIncCurrentIndex(), data, Alocs[curr->getManPtr()].data);
     }
 
 
     void* map(size_t cnt, size_t offset, bool modify) {
-        // construct on default view in the future
-        auto cpu_view = get_cpu_view();
-        if (!curr) {
-            curr = cpu_view;
-            data = cpu_view->getManPtr()->create(count);
-            if (modify)
-                Alocs[cpu_view->getManPtr()] = {data, modified};
-            else
-                Alocs[cpu_view->getManPtr()] = {data, shared};
-            return data;
-        }
         if (cnt == 0)
             cnt = count;
+        if (!curr) {
+            auto def_view = getContext()->auto_select();
+            curr = def_view;
+            data = def_view->getManPtr()->create(count);
+            if (modify)
+                Alocs[def_view->getManPtr()] = {data, modified};
+            else
+                Alocs[def_view->getManPtr()] = {data, shared};
+            return curr->map(data, cnt, offset, modify);;
+        }
+        auto cpu_view = get_cpu_view();
         if (Alocs.find(cpu_view->getManPtr()) != std::end(Alocs))
             if (Alocs[cpu_view->getManPtr()].state == shared)
                 curr = cpu_view;
