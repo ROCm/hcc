@@ -4,10 +4,11 @@
 
 #include <iostream>
 #include <random>
+#include <cmath>
 
 using namespace concurrency;
 
-#define ERROR_THRESHOLD (1e-3)
+#define ERROR_THRESHOLD (1e-4)
 
 template<typename _Tp>
 bool test() {
@@ -22,7 +23,7 @@ bool test() {
   // setup RNG
   std::random_device rd;
   std::default_random_engine gen(rd());
-  std::uniform_real_distribution<_Tp> dis(0, 1);
+  std::uniform_real_distribution<_Tp> dis(-100, 100);
   for (index<1> i(0); i[0] < vecSize; i++) {
     a[i] = dis(gen);
   }
@@ -33,11 +34,11 @@ bool test() {
   parallel_for_each(
     e,
     [=](index<1> idx) restrict(amp) {
-    gc[idx] = precise_math::tgamma(ga[idx]);
+    gc[idx] = precise_math::tanpi(ga[idx]);
   });
 
   for(unsigned i = 0; i < vecSize; i++) {
-    gb[i] = precise_math::tgamma(ga[i]);
+    gb[i] = precise_math::tanpi(ga[i]);
   }
 
   _Tp sum = 0.0;

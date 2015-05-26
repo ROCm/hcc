@@ -44,18 +44,33 @@ if [ $KMDUMPLLVM == "1" ]; then
 fi
 
 $LLVM_BIN/llvm-link -suppress-warnings -o $1.linked.bc $1 $NEWLIB/builtins-hsail.opt.bc
+# error handling for HSAIL llvm-link
+RETVAL=$?
+if [ $RETVAL != 0 ]; then
+  exit $RETVAL
+fi
 
 if [ $KMDUMPLLVM == "1" ]; then
   cp $1.linked.bc ./dump.linked.bc
 fi
 
 $LLVM_BIN/opt -O3 -verify $1.linked.bc -o $1.opt.bc
+# error handling for HSAIL opt
+RETVAL=$?
+if [ $RETVAL != 0 ]; then
+  exit $RETVAL
+fi
 
 if [ $KMDUMPLLVM == "1" ]; then
   cp $1.opt.bc ./dump.opt.bc
 fi
 
 $LLVM_BIN/llc -O2 -march=hsail64 -filetype=asm -o $1.hsail $1.opt.bc
+# error handling for HSAIL llc
+RETVAL=$?
+if [ $RETVAL != 0 ]; then
+  exit $RETVAL
+fi
 
 if [ $KMDUMPBRIG == "1" ]; then
     cp $1.hsail ./dump.hsail
@@ -63,6 +78,11 @@ fi
 
 #cat $NEWLIB/new_delete.hsail >> $1.hsail
 $HSAIL_ASM -assemble -o $1.brig $1.hsail
+# error handling for HSAILasm
+RETVAL=$?
+if [ $RETVAL != 0 ]; then
+  exit $RETVAL
+fi
 
 if [ $KMDUMPBRIG == "1" ]; then
     cp $1.brig ./dump.new_delete.brig

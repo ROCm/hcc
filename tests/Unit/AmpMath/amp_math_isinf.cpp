@@ -21,7 +21,7 @@ int main(void) {
   parallel_for_each(
     e,
     [=](index<1> idx) restrict(amp) {
-    out[idx] = fast_math::isinf(6/in[idx]);
+    out[idx] = fast_math::isinf(6.5f/in[idx]);
   });
 
   //check accelerator results
