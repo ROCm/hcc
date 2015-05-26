@@ -212,10 +212,10 @@ public:
 static RuntimeImpl* LoadOpenCLRuntime() {
   RuntimeImpl* runtimeImpl = nullptr;
   // load OpenCL C++AMP runtime
-  std::cout << "Use OpenCL C++AMP runtime" << std::endl;
+  std::cout << "Use OpenCL runtime" << std::endl;
   runtimeImpl = new RuntimeImpl("libmcwamp_opencl.so");
   if (!runtimeImpl->m_RuntimeHandle) {
-    std::cerr << "Can't load OpenCL C++AMP runtime!" << std::endl;
+    std::cerr << "Can't load OpenCL runtime!" << std::endl;
     delete runtimeImpl;
     exit(-1);
   } else {
@@ -227,10 +227,10 @@ static RuntimeImpl* LoadOpenCLRuntime() {
 static RuntimeImpl* LoadHSARuntime() {
   RuntimeImpl* runtimeImpl = nullptr;
   // load HSA C++AMP runtime
-  std::cout << "Use HSA C++AMP runtime" << std::endl;
+  std::cout << "Use HSA runtime" << std::endl;
   runtimeImpl = new RuntimeImpl("libmcwamp_hsa.so");
   if (!runtimeImpl->m_RuntimeHandle) {
-    std::cerr << "Can't load HSA C++AMP runtime!" << std::endl;
+    std::cerr << "Can't load HSA runtime!" << std::endl;
     delete runtimeImpl;
     exit(-1);
   } else {
