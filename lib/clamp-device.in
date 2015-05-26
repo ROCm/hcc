@@ -39,7 +39,6 @@ if [ -d @LLVM_TOOLS_DIR@ ]; then
     OPT=@LLVM_TOOLS_DIR@/opt
     LLC=@LLVM_TOOLS_DIR@/llc
     LINK=@LLVM_TOOLS_DIR@/llvm-link
-    MATH=@OPENCL_MATH_DIR@
     MATHLIB=@CPPAMP_SOURCE_DIR@/lib
     LIB=@LLVM_LIBS_DIR@
     HSATOOLS=@PROJECT_BINARY_DIR@/lib/clamp-hsatools
@@ -48,7 +47,6 @@ else
     OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
     LLC=@CMAKE_INSTALL_PREFIX@/bin/llc
     LINK=@CMAKE_INSTALL_PREFIX@/bin/llvm-link
-    MATH=@CMAKE_INSTALL_PREFIX@/include
     MATHLIB=@CMAKE_INSTALL_PREFIX@/lib
     LIB=@CMAKE_INSTALL_PREFIX@/lib
     HSATOOLS=@CMAKE_INSTALL_PREFIX@/bin/clamp-hsatools
@@ -146,7 +144,7 @@ if [ "$3" == "--opencl" ]; then
       exit 1
     fi
     echo "Generating OpenCL C kernel"
-    $LLC $2.promote.bc -march=c -o - |cat $MATH/opencl_math.cl - > $2
+    $LLC $2.promote.bc -march=c -o - |cat $MATHLIB/opencl_math.cl - > $2
 
     if grep -q " double " $2; then
         cat $MATHLIB/opencl_prefix.cl $2 > $2.t
@@ -185,7 +183,7 @@ if hasSPIR; then
     exit $?
 else
     echo "Generating OpenCL C kernel"
-    $LLC $2.promote.bc -march=c -o - |cat $MATH/opencl_math.cl - > $2
+    $LLC $2.promote.bc -march=c -o - |cat $MATHLIB/opencl_math.cl - > $2
 
     if grep -q " double " $2; then
         cat $MATHLIB/opencl_prefix.cl $2 > $2.t
