@@ -34,9 +34,18 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-hsatools
     DESTINATION bin)
 
 ####################
-# Math builtin bitcode (SPIR)
+# builtin functions CL kernel (OpenCL C)
+####################
+INSTALL(FILES opencl_math.cl DESTINATION lib)
+
+####################
+# builtin functions bitcode (SPIR)
 ####################
 install(FILES opencl_math.bc DESTINATION lib)
+
+####################
+# builtin functions bitcode (HSA)
+####################
 install(FILES hsa_math.bc DESTINATION lib)
 install(FILES builtins-hsail.opt.bc DESTINATION lib)
 
