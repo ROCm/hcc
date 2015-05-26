@@ -45,7 +45,6 @@ bool test() {
   for(unsigned i = 0; i < vecSize; i++) {
     sum += precise_math::fabs(precise_math::fabs(gc[i]) - precise_math::fabs(gb[i]));
   }
-  std::cout << "sum: " << sum << "\n";
   return (sum < ERROR_THRESHOLD);
 }
 
