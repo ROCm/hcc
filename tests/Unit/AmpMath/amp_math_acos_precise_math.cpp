@@ -7,7 +7,7 @@
 
 using namespace concurrency;
 
-#define ERROR_THRESHOLD (1e-3)
+#define ERROR_THRESHOLD (1e-4)
 
 template<typename _Tp>
 bool test() {
@@ -33,11 +33,11 @@ bool test() {
   parallel_for_each(
     e,
     [=](index<1> idx) restrict(amp) {
-    gc[idx] = precise_math::tgamma(ga[idx]);
+    gc[idx] = precise_math::acos(ga[idx]);
   });
 
   for(unsigned i = 0; i < vecSize; i++) {
-    gb[i] = precise_math::tgamma(ga[i]);
+    gb[i] = precise_math::acos(ga[i]);
   }
 
   _Tp sum = 0.0;
