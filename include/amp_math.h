@@ -2434,6 +2434,33 @@ namespace fast_math {
     #endif
   }
 
+  inline float host_tanpif(float x) restrict(cpu) { return ::tanf(M_PI * x); }
+  inline float tanpif(float x) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_tanpi(x);
+    #else
+      return host_tanpif(x);
+    #endif
+  }
+
+  inline float host_tanpi(float x) restrict(cpu) { return ::tanf(M_PI * x); }
+  inline float tanpi(float x) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_tanpi(x);
+    #else
+      return host_tanpif(x);
+    #endif
+  }
+
+  inline double host_tanpi(double x) restrict(cpu) { return ::tan(M_PI * x); }
+  inline double tanpi(double x) restrict(amp, cpu) {
+    #ifdef __GPU__
+      return opencl_tanpi_double(x);
+    #else
+      return host_tanpi(x);
+    #endif
+  }
+
   inline float host_truncf(float x) restrict(cpu) { return ::truncf(x); }
   inline float truncf(float x) restrict(amp, cpu) {
     #ifdef __GPU__
