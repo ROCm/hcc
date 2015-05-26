@@ -124,19 +124,19 @@
   extern "C" double opencl_lgamma(double x, int *exp) restrict(amp);
 
   extern "C" float opencl_log(float x) restrict(amp);
-  extern "C" int opencl_log_double(double x) restrict(amp);
+  extern "C" double opencl_log_double(double x) restrict(amp);
 
   extern "C" float opencl_log10(float x) restrict(amp);
-  extern "C" int opencl_log10_double(double x) restrict(amp);
+  extern "C" double opencl_log10_double(double x) restrict(amp);
 
   extern "C" float opencl_log2(float x) restrict(amp);
-  extern "C" int opencl_log2_double(double x) restrict(amp);
+  extern "C" double opencl_log2_double(double x) restrict(amp);
 
   extern "C" float opencl_log1p(float x) restrict(amp);
-  extern "C" int opencl_log1p_double(double x) restrict(amp);
+  extern "C" double opencl_log1p_double(double x) restrict(amp);
 
   extern "C" float opencl_logb(float x) restrict(amp);
-  extern "C" int opencl_logb_double(double x) restrict(amp);
+  extern "C" double opencl_logb_double(double x) restrict(amp);
 
   /* SPIR pass will deduce the address space of the pointer and emit correct
      call instruction */
