@@ -426,20 +426,18 @@ struct rw_info
         if (CLAMP::in_cpu_kernel())
             return;
 #endif
-        auto view = getContext()->auto_select();
-        if (!view->getManPtr()->is_unified())
-            view = get_cpu_view();
-        if (Alocs.find(view->getManPtr()) == std::end(Alocs)) {
-            data = view->getManPtr()->create(count);
-            Alocs[view->getManPtr()] = {data, invalid};
+        auto cpu_view = get_cpu_view();
+        if (Alocs.find(cpu_view->getManPtr()) == std::end(Alocs)) {
+            data = cpu_view->getManPtr()->create(count);
+            Alocs[cpu_view->getManPtr()] = {data, invalid};
         }
         if (!curr) {
-            curr = view;
+            curr = cpu_view;
             return;
         }
-        if (curr == view)
+        if (curr == cpu_view)
             return;
-        sync(view, modify);
+        sync(cpu_view, modify);
     }
 
     void write(void* src, int cnt, int offset, bool blocking) {
