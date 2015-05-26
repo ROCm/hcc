@@ -261,9 +261,14 @@ struct rw_info
     // consruct array_view
     rw_info(const size_t count, void* ptr)
         : data(ptr), count(count), curr(nullptr), master(nullptr), stage(nullptr),
-        Alocs(), mode(access_type_none), HostPtr(false) {
+        Alocs(), mode(access_type_none), HostPtr(ptr != nullptr) {
+#ifdef __AMP_CPU__
+            if (CLAMP::in_cpu_kernel() && ptr == nullptr) {
+                data = aligned_alloc(0x1000, count);
+                return;
+            }
+#endif
             if (ptr) {
-                HostPtr = true;
                 mode = access_type_read_write;
                 curr = master = get_cpu_view();
                 Alocs[curr->getManPtr()] = {ptr, modified};
@@ -274,6 +279,12 @@ struct rw_info
     rw_info(const std::shared_ptr<AMPAllocator> Aloc, const std::shared_ptr<AMPAllocator> Stage,
             const size_t count, access_type mode) : data(nullptr), count(count),
     curr(Aloc), master(Aloc), stage(nullptr), Alocs(), mode(mode), HostPtr(false) {
+#ifdef __AMP_CPU__
+        if (CLAMP::in_cpu_kernel() && data == nullptr) {
+            data = aligned_alloc(0x1000, count);
+            return;
+        }
+#endif
         Alocs[curr->getManPtr()] = {curr->getManPtr()->create(count), modified};
         if (curr->getManPtr()->get_path() == L"cpu") {
             data = Alocs[curr->getManPtr()].data;
@@ -305,6 +316,10 @@ struct rw_info
     }
 
     void sync(std::shared_ptr<AMPAllocator> aloc, bool modify) {
+#ifdef __AMP_CPU__
+        if (CLAMP::in_cpu_kernel())
+            return;
+#endif
         if (curr->getManPtr() == aloc->getManPtr())
             return;
         dev_info& src = Alocs[curr->getManPtr()];
@@ -407,6 +422,10 @@ struct rw_info
     void synchronize(bool modify) { sync(master, modify); }
 
     void get_cpu_access(bool modify) {
+#ifdef __AMP_CPU__
+        if (CLAMP::in_cpu_kernel())
+            return;
+#endif
         auto cpu_view = get_cpu_view();
         if (Alocs.find(cpu_view->getManPtr()) == std::end(Alocs)) {
             data = cpu_view->getManPtr()->create(count);
@@ -472,6 +491,13 @@ struct rw_info
     }
 
     ~rw_info() {
+#ifdef __AMP_CPU__
+        if (CLAMP::in_cpu_kernel()) {
+            if (data && !HostPtr)
+                ::operator delete(data);
+            return;
+        }
+#endif
         if (HostPtr)
             synchronize(false);
         auto cpu_acc = get_cpu_view()->getManPtr();
