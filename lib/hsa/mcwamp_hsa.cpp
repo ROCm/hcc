@@ -66,14 +66,13 @@ void RegisterMemory(void *p, size_t sz)
 ///
 namespace Concurrency {
 
-class HSAManager : public AMPManager
+class HSAManager final : public AMPManager
 {
     std::shared_ptr<AMPAllocator> newAloc();
     std::map<std::string, HSAContext::Kernel *> __mcw_hsa_kernels;
 
-    void* create(size_t count, void *data, bool hasSrc) override {
-        if (!hasSrc)
-            data = aligned_alloc(0x1000, count);
+    void* create(size_t count) override {
+        void *data = aligned_alloc(0x1000, count);
         CLAMP::RegisterMemory(data, count);
         return data;
     }
@@ -82,15 +81,15 @@ class HSAManager : public AMPManager
 
 public:
     std::shared_ptr<AMPAllocator> createAloc() override { return newAloc(); }
-    HSAManager() : AMPManager(L"HSA") {
-        des = L"HSA";
-        mem = 0;
-        is_double_ = true;
-        is_limited_double_ = true;
-        cpu_shared_memory = true;
-        emulated = false;
-        cpu_type = access_type_read_write;
-    }
+    HSAManager() : AMPManager() { cpu_type = access_type_read_write; }
+
+    std::wstring get_path() override { return L"HSA"; }
+    std::wstring get_description() override { return L"HSA Device"; }
+    size_t get_mem() override { return 0; }
+    bool is_double() override { return true; }
+    bool is_lim_double() override { return true; }
+    bool is_unified() override { return true; }
+    bool is_emulated() override { return false; }
 
     void* CreateKernel(const char* fun, void* size, void* source) override {
         std::string str(s);
@@ -156,13 +155,13 @@ public:
     std::shared_ptr<AMPAllocator> createAloc() override { return newAloc(); }
 };
 
-class HSAAllocator : public AMPAllocator
+class HSAAllocator final : public AMPAllocator
 {
 public:
     HSAAllocator(std::shared_ptr<AMPManager> pMan) : AMPAllocator(pMan) {}
 private:
-    void Push(void *kernel, int idx, void*& data, obj_info& obj) override {
-        PushArgImpl(kernel, idx, sizeof(void*), &obj.device);
+    void Push(void *kernel, int idx, void*& data, void *device) override {
+        PushArgImpl(kernel, idx, sizeof(void*), &device);
     }
 };
 
@@ -170,13 +169,14 @@ std::shared_ptr<AMPAllocator> HSAManager::init() {
     return std::shared_ptr<AMPAllocator>(new HSAAllocator(shared_from_this()));
 }
 
-class HSAContext : public AMPContext
+class HSAContext final : public AMPContext
 {
 public:
     HSAContext() {
         auto Man = std::shared_ptr<AMPManager>(new HSAManager);
         default_map[Man] = Man->createAloc();
         Devices.push_back(Man);
+        def = Man;
     }
 };
 

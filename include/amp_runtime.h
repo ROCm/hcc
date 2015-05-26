@@ -50,11 +50,19 @@ public:
   virtual void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {}
   virtual void* LaunchKernelAsync(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) { return nullptr; }
 
-  virtual void read(void* device, void* dst, size_t count, size_t offset) = 0;
-  virtual void write(void* device, void* src, size_t count, size_t offset, bool blocking) = 0;
-  virtual void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset) = 0;
-  virtual void* map(void* device, size_t count, size_t offset, bool modify) = 0;
-  virtual void unmap(void* device, void* addr) = 0;
+  virtual void read(void* device, void* dst, size_t count, size_t offset) {
+      memmove(dst, (char*)device + offset, count);
+  }
+  virtual void write(void* device, void* src, size_t count, size_t offset, bool blocking) {
+      memmove((char*)device + offset, src, count);
+  }
+  virtual void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset) {
+      memmove((char*)dst + dst_offset, (char*)src + src_offset, count);
+  }
+  virtual void* map(void* device, size_t count, size_t offset, bool modify) {
+      return (char*)device + offset;
+  }
+  virtual void unmap(void* device, void* addr) {}
   virtual void Push(void *kernel, int idx, void*& data, void* device) = 0;
 
   std::shared_ptr<AMPManager> getMan() { return Man; }
@@ -435,6 +443,17 @@ struct rw_info
         }
         dev_info& dst = other->Alocs[other->curr->getManPtr()];
         dev_info& src = Alocs[curr->getManPtr()];
+        if (src.state == invalid) {
+            src.state = shared;
+            if (curr->getManPtr()->get_path() == L"cpu")
+                memset((char*)src.data + src_offset, 0, cnt);
+            else {
+                void *ptr = aligned_alloc(0x1000, cnt);
+                memset(ptr, 0, cnt);
+                curr->write(src.data, ptr, cnt, src_offset, true);
+                ::operator delete(ptr);
+            }
+        }
         if (other->curr->getManPtr()->get_path() == L"cpu") {
             if (curr->getManPtr()->get_path() == L"cpu")
                 memmove((char*)dst.data + dst_offset, (char*)src.data + src_offset, cnt);

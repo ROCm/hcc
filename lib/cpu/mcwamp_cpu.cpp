@@ -57,19 +57,6 @@ private:
           addrs.erase(it);
       }
   }
-  void read(void* device, void* dst, size_t count, size_t offset) override {
-      memmove(dst, (char*)device + offset, count);
-  }
-  void write(void* device, void* src, size_t count, size_t offset, bool blocking) override {
-      memmove((char*)device + offset, src, count);
-  }
-  void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset) override {
-      memmove((char*)dst + dst_offset, (char*)src + src_offset, count);
-  }
-  void* map(void* device, size_t count, size_t offset, bool modify) override {
-      return (char*)device + offset;
-  }
-  void unmap(void* device, void* addr) override {}
 };
 
 std::shared_ptr<AMPAllocator> CPUFallbackManager::newAloc() {
