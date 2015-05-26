@@ -22,7 +22,7 @@ bool test() {
   // setup RNG
   std::random_device rd;
   std::default_random_engine gen(rd());
-  std::uniform_real_distribution<_Tp> dis(0, 1);
+  std::uniform_real_distribution<_Tp> dis(-100, 100);
   for (index<1> i(0); i[0] < vecSize; i++) {
     a[i] = dis(gen);
   }
