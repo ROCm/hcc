@@ -1188,6 +1188,19 @@ entry:
 declare spir_func double @_Z5log10d(double) #1
 
 ; Function Attrs: nounwind
+define linkonce_odr spir_func float @opencl_log2(float %x) #0 {
+entry:
+  %x.addr = alloca float, align 4
+  store float %x, float* %x.addr, align 4
+  %0 = load float* %x.addr, align 4
+  %call = call spir_func float @_Z4log2f(float %0) #1
+  ret float %call
+}
+
+; Function Attrs: nounwind readnone
+declare spir_func float @_Z4log2f(float) #1
+
+; Function Attrs: nounwind
 define linkonce_odr spir_func double @opencl_log2_double(double %x) #0 {
 entry:
   %x.addr = alloca double, align 8
