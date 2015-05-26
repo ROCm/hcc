@@ -698,12 +698,12 @@ entry:
   store float %y, float* %y.addr, align 4
   %0 = load float* %x.addr, align 4
   %1 = load float* %y.addr, align 4
-  %call = call spir_func float @_Z4fmaxff(float %0, float %1) #1
+  %call = call spir_func float @_Z3maxff(float %0, float %1) #1
   ret float %call
 }
 
 ; Function Attrs: nounwind readnone
-declare spir_func float @_Z4fmaxff(float, float) #1
+declare spir_func float @_Z3maxff(float, float) #1
 
 ; Function Attrs: nounwind
 define linkonce_odr spir_func double @opencl_fmax_double(double %x, double %y) #0 {
@@ -714,12 +714,12 @@ entry:
   store double %y, double* %y.addr, align 8
   %0 = load double* %x.addr, align 8
   %1 = load double* %y.addr, align 8
-  %call = call spir_func double @_Z4fmaxdd(double %0, double %1) #1
+  %call = call spir_func double @_Z3maxdd(double %0, double %1) #1
   ret double %call
 }
 
 ; Function Attrs: nounwind readnone
-declare spir_func double @_Z4fmaxdd(double, double) #1
+declare spir_func double @_Z3maxdd(double, double) #1
 
 ; Function Attrs: nounwind
 define linkonce_odr spir_func float @opencl_fmin(float %x, float %y) #0 {
@@ -730,12 +730,12 @@ entry:
   store float %y, float* %y.addr, align 4
   %0 = load float* %x.addr, align 4
   %1 = load float* %y.addr, align 4
-  %call = call spir_func float @_Z4fminff(float %0, float %1) #1
+  %call = call spir_func float @_Z3minff(float %0, float %1) #1
   ret float %call
 }
 
 ; Function Attrs: nounwind readnone
-declare spir_func float @_Z4fminff(float, float) #1
+declare spir_func float @_Z3minff(float, float) #1
 
 ; Function Attrs: nounwind
 define linkonce_odr spir_func double @opencl_fmin_double(double %x, double %y) #0 {
@@ -746,12 +746,12 @@ entry:
   store double %y, double* %y.addr, align 8
   %0 = load double* %x.addr, align 8
   %1 = load double* %y.addr, align 8
-  %call = call spir_func double @_Z4fmindd(double %0, double %1) #1
+  %call = call spir_func double @_Z3mindd(double %0, double %1) #1
   ret double %call
 }
 
 ; Function Attrs: nounwind readnone
-declare spir_func double @_Z4fmindd(double, double) #1
+declare spir_func double @_Z3mindd(double, double) #1
 
 ; Function Attrs: nounwind
 define linkonce_odr spir_func float @opencl_fmod(float %x, float %y) #0 {
@@ -1186,6 +1186,19 @@ entry:
 
 ; Function Attrs: nounwind readnone
 declare spir_func double @_Z5log10d(double) #1
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func float @opencl_log2(float %x) #0 {
+entry:
+  %x.addr = alloca float, align 4
+  store float %x, float* %x.addr, align 4
+  %0 = load float* %x.addr, align 4
+  %call = call spir_func float @_Z4log2f(float %0) #1
+  ret float %call
+}
+
+; Function Attrs: nounwind readnone
+declare spir_func float @_Z4log2f(float) #1
 
 ; Function Attrs: nounwind
 define linkonce_odr spir_func double @opencl_log2_double(double %x) #0 {

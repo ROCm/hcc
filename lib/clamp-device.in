@@ -97,11 +97,14 @@ if [ "$3" == "--hsa" ]; then
     fi
 
     $HSATOOLS $2
-    mv -f $2 $2.orig
-    mv $2.brig $2
-    # remove temp file
-    rm $2.promote.ll.orig $2.promote.ll $2.promote.bc
-    exit $?
+    RETVAL=$?
+    if [ $RETVAL == 0 ]; then
+      mv -f $2 $2.orig
+      mv $2.brig $2
+      # remove temp file
+      rm $2.promote.ll.orig $2.promote.ll $2.promote.bc
+    fi
+    exit $RETVAL
 fi
 
 # emit SPIR kernel

@@ -7,7 +7,7 @@
 
 using namespace concurrency;
 
-#define ERROR_THRESHOLD (1e-3)
+#define ERROR_THRESHOLD (1e-4)
 
 template<typename _Tp>
 bool test() {
@@ -18,29 +18,33 @@ bool test() {
   array<_Tp, 1> a(vecSize);
   array<_Tp, 1> b(vecSize);
   array<_Tp, 1> c(vecSize);
-
+  array<_Tp, 1> exp(vecSize);
+   
   // setup RNG
   std::random_device rd;
   std::default_random_engine gen(rd());
-  std::uniform_real_distribution<_Tp> dis(0, 1);
+  std::uniform_real_distribution<_Tp> dis(1, 10);
+  std::uniform_int_distribution<int> dis_int(1, 10);
   for (index<1> i(0); i[0] < vecSize; i++) {
     a[i] = dis(gen);
+    exp[i] = static_cast<_Tp>(dis_int(gen));
   }
 
   array_view<_Tp> ga(a);
   array_view<_Tp> gb(b);
   array_view<_Tp> gc(c);
+  array_view<_Tp> gexp(exp);
   parallel_for_each(
     e,
     [=](index<1> idx) restrict(amp) {
-    gc[idx] = precise_math::tgamma(ga[idx]);
+    gb[idx] = precise_math::scalb(ga[idx], gexp[idx]);
   });
 
   for(unsigned i = 0; i < vecSize; i++) {
-    gb[i] = precise_math::tgamma(ga[i]);
+    gc[i] = precise_math::scalb(ga[i], gexp[i]);
   }
 
-  _Tp sum = 0.0;
+  _Tp sum = 0;
   for(unsigned i = 0; i < vecSize; i++) {
     sum += precise_math::fabs(precise_math::fabs(gc[i]) - precise_math::fabs(gb[i]));
   }

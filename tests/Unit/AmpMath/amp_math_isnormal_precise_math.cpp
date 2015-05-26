@@ -16,25 +16,24 @@ bool test() {
   array_view<_Tp, 1> in(vecSize);
   array_view<int, 1> out(vecSize);
 
-  in[0] = std::numeric_limits<_Tp>::quiet_NaN();
-  in[1] = 413.612;
-  in[2] = std::numeric_limits<_Tp>::signaling_NaN();
+  in[0] = 1.0;
+  in[1] = 0.0;
 
   parallel_for_each(
     e,
     [=](index<1> idx) restrict(amp) {
-    out[idx] = precise_math::isnan(in[idx]);
+    out[idx] = precise_math::isnormal(in[idx]);
   });
 
   //check accelerator results
   for (int i=0; i<vecSize; ++i) {
-    if (std::isnan(in[i]) != (out[i] ? true : false))
+    if (std::isnormal(in[i]) != (out[i] ? true : false))
       return false;
   }
 
   //check on cpu
   for (int i=0; i<vecSize; ++i) {
-    if (std::isnan(in[i]) != (precise_math::isnan(in[i]) ? true : false))
+    if (std::isnormal(in[i]) != (precise_math::isnormal(in[i]) ? true : false))
       return false;
   }
 
