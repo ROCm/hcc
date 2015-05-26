@@ -277,14 +277,16 @@ struct rw_info
 
     // construct array
     rw_info(const std::shared_ptr<AMPAllocator> Aloc, const std::shared_ptr<AMPAllocator> Stage,
-            const size_t count, access_type mode) : data(nullptr), count(count),
-    curr(Aloc), master(Aloc), stage(nullptr), Alocs(), mode(mode), HostPtr(false) {
+            const size_t count, access_type mode_) : data(nullptr), count(count),
+    curr(Aloc), master(Aloc), stage(nullptr), Alocs(), mode(mode_), HostPtr(false) {
 #ifdef __AMP_CPU__
         if (CLAMP::in_cpu_kernel() && data == nullptr) {
             data = aligned_alloc(0x1000, count);
             return;
         }
 #endif
+        if (mode == access_type_auto)
+            mode = curr->getManPtr()->cpu_type;
         Alocs[curr->getManPtr()] = {curr->getManPtr()->create(count), modified};
         if (curr->getManPtr()->get_path() == L"cpu") {
             data = Alocs[curr->getManPtr()].data;
@@ -298,9 +300,6 @@ struct rw_info
             if (curr->getManPtr()->is_unified() && mode != access_type_none)
                 data = Alocs[curr->getManPtr()].data;
         }
-
-        if (mode == access_type_auto)
-            mode = curr->getManPtr()->cpu_type;
     }
 
     void construct(std::shared_ptr<AMPAllocator> aloc) {
