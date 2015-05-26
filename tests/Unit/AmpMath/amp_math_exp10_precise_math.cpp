@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <random>
+#include <cmath>
 
 using namespace concurrency;
 
@@ -22,7 +23,7 @@ bool test() {
   // setup RNG
   std::random_device rd;
   std::default_random_engine gen(rd());
-  std::uniform_real_distribution<_Tp> dis(0, 0.999);
+  std::uniform_real_distribution<_Tp> dis(1, 10);
   for (index<1> i(0); i[0] < vecSize; i++) {
     a[i] = dis(gen);
   }
@@ -33,17 +34,18 @@ bool test() {
   parallel_for_each(
     e,
     [=](index<1> idx) restrict(amp) {
-    gc[idx] = precise_math::atanh(ga[idx]);
+    gc[idx] = precise_math::exp10(ga[idx]);
   });
 
   for(unsigned i = 0; i < vecSize; i++) {
-    gb[i] = precise_math::atanh(ga[i]);
+    gb[i] = precise_math::exp10(ga[i]);
   }
 
   _Tp sum = 0.0;
   for(unsigned i = 0; i < vecSize; i++) {
     sum += precise_math::fabs(precise_math::fabs(gc[i]) - precise_math::fabs(gb[i]));
   }
+  std::cout << "sum: " << sum << "\n";
   return (sum < ERROR_THRESHOLD);
 }
 
