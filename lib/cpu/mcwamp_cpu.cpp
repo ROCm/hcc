@@ -45,8 +45,6 @@ public:
     CPUFallbackAllocator(std::shared_ptr<AMPManager> pMan) : AMPAllocator(pMan) {}
 private:
     void Push(void *kernel, int idx, void*& data, void* device) override {
-      if (data == device)
-          return;
       auto it = addrs.find(data);
       bool find = it != std::end(addrs);
       if (!kernel && !find) {
@@ -63,7 +61,7 @@ std::shared_ptr<AMPAllocator> CPUFallbackManager::newAloc() {
     return std::shared_ptr<AMPAllocator>(new CPUFallbackAllocator(shared_from_this()));
 }
 
-class CPUContext : public AMPContext
+class CPUContext final : public AMPContext
 {
 public:
     CPUContext() {

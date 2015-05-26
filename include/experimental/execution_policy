@@ -1,0 +1,43 @@
+#pragma once
+
+namespace std {
+namespace experimental {
+namespace parallel {
+inline namespace v1 {
+
+  // 2.3, Execution policy type trait
+  //template<class T> struct is_execution_policy;
+  //template<class T> constexpr bool is_execution_policy_v = is_execution_policy<T>::value;
+
+  // 2.4, Sequential execution policy
+  class sequential_execution_policy {};
+
+  // 2.5, Parallel execution policy
+  class parallel_execution_policy {};
+
+  // 2.6, Parallel+Vector execution policy
+  class parallel_vector_execution_policy {};
+
+  // 2.7, Dynamic execution policy
+  class execution_policy {
+    public:
+      // 2.7.1, execution_policy construct/assign
+      template<class T> execution_policy(const T& exec);
+      template<class T> execution_policy& operator=(const T& exec);
+
+      // 2.7.2, execution_policy object access
+      const type_info& type() const noexcept;
+      template<class T> T* get() noexcept;
+      template<class T> const T* get() const noexcept;
+  };
+
+  // 2.8, Execution policy objects
+  constexpr sequential_execution_policy      seq{};
+  constexpr parallel_execution_policy        par{};
+  constexpr parallel_vector_execution_policy par_vec{};
+
+} // inline namespace v1
+} // namespace parallel
+} // namespace experimental
+} // namespace std
+
