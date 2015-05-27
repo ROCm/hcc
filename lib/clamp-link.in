@@ -19,6 +19,13 @@ else
 fi
 
 ################
+# GPU targets
+################
+
+LOWER_OPENCL=@HAS_OPENCL@
+LOWER_HSA=@HAS_HSA@
+
+################
 # link
 ################
 
@@ -67,6 +74,10 @@ do
     else
       LINK_OTHER_ARGS=$LINK_OTHER_ARGS" "$ARG
     fi
+  elif [ $ARG == "--disable-opencl" ]; then
+    LOWER_OPENCL=0
+  elif [ $ARG == "--disable-hsa" ]; then
+    LOWER_HSA=0
   else
     LINK_OTHER_ARGS=$LINK_OTHER_ARGS" "$ARG
   fi
@@ -85,7 +96,7 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
   $LINK $LINK_KERNEL_ARGS | $OPT -always-inline - -o $TEMP_DIR/kernel.bc
   
   # lower to SPIR
-  if [ "@HAS_OPENCL@" == "1" ]; then
+  if [ $LOWER_OPENCL == 1 ]; then
     # lower to SPIR
     $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.spir --spir
     ret=$?
@@ -99,7 +110,7 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
   fi
   
   # lower to OpenCL C
-  if [ "@HAS_OPENCL@" == "1" ]; then
+  if [ $LOWER_OPENCL == 1 ]; then
     # lower to SPIR
     $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.cl --opencl
     ret=$?
@@ -113,7 +124,7 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
   fi
   
   # lower to HSA
-  if [ "@HAS_HSA@" == "1" ]; then
+  if [ $LOWER_HSA == 1 ]; then
     # lower to HSAIL
     $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.brig --hsa
     ret=$?
@@ -128,13 +139,13 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
   
   if [ $ret == 0 ]; then
     # link everything together
-    if [ "@HAS_OPENCL@" == "1" ] && [ "@HAS_HSA@" == "1" ]; then
+    if [ $LOWER_OPENCL == 1 ] && [ $LOWER_HSA == 1 ]; then
       ld --allow-multiple-definition $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS  $LINK_CPU_ARG $LINK_OTHER_ARGS
       ret=$?
-    elif [ "@HAS_OPENCL@" == "1" ] && [ "@HAS_HSA@" == "0" ]; then
+    elif [ $LOWER_OPENCL == 1 ] && [ $LOWER_HSA == 0 ]; then
       ld --allow-multiple-definition $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $LINK_HOST_ARGS $LINK_CPU_ARG $LINK_OTHER_ARGS
       ret=$?
-    elif [ "@HAS_OPENCL@" == "0" ] && [ "@HAS_HSA@" == "1" ]; then
+    elif [ $LOWER_OPENCL == 0 ] && [ $LOWER_HSA == 1 ]; then
       ld --allow-multiple-definition $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS $LINK_CPU_ARG $LINK_OTHER_ARGS
       ret=$?
     else
