@@ -1358,7 +1358,7 @@ entry:
 }
 
 ; Function Attrs: nounwind
-define spir_func float @opencl_nan(i32 %tagp) #0 {
+define linkonce_odr spir_func float @opencl_nan(i32 %tagp) #0 {
 entry:
   %tagp.addr = alloca i32, align 4
   store i32 %tagp, i32* %tagp.addr, align 4
@@ -1371,7 +1371,7 @@ entry:
 declare spir_func float @_Z3nanj(i32) #1
 
 ; Function Attrs: nounwind
-define spir_func double @opencl_nan_double(i32 %tagp) #0 {
+define linkonce_odr spir_func double @opencl_nan_double(i32 %tagp) #0 {
 entry:
   %tagp.addr = alloca i32, align 4
   store i32 %tagp, i32* %tagp.addr, align 4
@@ -1508,7 +1508,7 @@ declare spir_func double @_Z9remainderdd(double, double) #1
 
 ; FIXME: bug in HSAIL backend so call to @_Z6remquoffPU3AS4i can not be made as of now
 ; Function Attrs: nounwind
-define spir_func float @opencl_remquof_global(float %x, float %y, i32 addrspace(1)* %quo) #0 {
+define linkonce_odr spir_func float @opencl_remquof_global(float %x, float %y, i32 addrspace(1)* %quo) #0 {
 entry:
 ;  %x.addr = alloca float, align 4
 ;  %y.addr = alloca float, align 4
@@ -1531,7 +1531,7 @@ declare spir_func float @_Z6remquoffPU3AS4i(float, float, i32 addrspace(4)*)
 
 ; FIXME: bug in HSAIL backend so call to @_Z6remquoffPU3AS4i can not be made as of now
 ; Function Attrs: nounwind
-define spir_func float @opencl_remquof_local(float %x, float %y, i32 addrspace(3)* %quo) #0 {
+define linkonce_odr spir_func float @opencl_remquof_local(float %x, float %y, i32 addrspace(3)* %quo) #0 {
 entry:
 ;  %x.addr = alloca float, align 4
 ;  %y.addr = alloca float, align 4
@@ -1550,7 +1550,7 @@ entry:
 
 ; FIXME: bug in HSAIL backend so call to @_Z6remquoffPU3AS4i can not be made as of now
 ; Function Attrs: nounwind
-define spir_func float @opencl_remquof(float %x, float %y, i32 addrspace(4)* %quo) #0 {
+define linkonce_odr spir_func float @opencl_remquof(float %x, float %y, i32 addrspace(4)* %quo) #0 {
 entry:
 ;  %x.addr = alloca float, align 4
 ;  %y.addr = alloca float, align 4
@@ -1568,7 +1568,7 @@ entry:
 
 ; FIXME: bug in HSAIL backend so call to @_Z6remquoddPU3AS4i can not be made as of now
 ; Function Attrs: nounwind
-define spir_func double @opencl_remquo_global(double %x, double %y, i32 addrspace(1)* %quo) #0 {
+define linkonce_odr spir_func double @opencl_remquo_global(double %x, double %y, i32 addrspace(1)* %quo) #0 {
 entry:
 ;  %x.addr = alloca double, align 8
 ;  %y.addr = alloca double, align 8
@@ -1591,7 +1591,7 @@ declare spir_func double @_Z6remquoddPU3AS4i(double, double, i32 addrspace(4)*) 
 
 ; FIXME: bug in HSAIL backend so call to @_Z6remquoddPU3AS4i can not be made as of now
 ; Function Attrs: nounwind
-define spir_func double @opencl_remquo_local(double %x, double %y, i32 addrspace(3)* %quo) #0 {
+define linkonce_odr spir_func double @opencl_remquo_local(double %x, double %y, i32 addrspace(3)* %quo) #0 {
 entry:
 ;  %x.addr = alloca double, align 8
 ;  %y.addr = alloca double, align 8
@@ -1610,7 +1610,7 @@ entry:
 
 ; FIXME: bug in HSAIL backend so call to @_Z6remquoddPU3AS4i can not be made as of now
 ; Function Attrs: nounwind
-define spir_func double @opencl_remquo(double %x, double %y, i32 addrspace(4)* %quo) #0 {
+define linkonce_odr spir_func double @opencl_remquo(double %x, double %y, i32 addrspace(4)* %quo) #0 {
 entry:
 ;  %x.addr = alloca double, align 8
 ;  %y.addr = alloca double, align 8
@@ -1795,7 +1795,7 @@ entry:
 declare spir_func double @_Z3sind(double) #1
 
 ; Function Attrs: nounwind
-define spir_func void @opencl_sincosf_global(float %x, float addrspace(1)* %s, float addrspace(1)* %c) #0 {
+define linkonce_odr spir_func void @opencl_sincosf_global(float %x, float addrspace(1)* %s, float addrspace(1)* %c) #0 {
 entry:
   %x.addr = alloca float, align 4
   %s.addr = alloca float addrspace(1)*, align 8
@@ -1816,7 +1816,7 @@ entry:
 declare spir_func float @_Z6sincosfPU3AS4f(float, float addrspace(4)*) #1
 
 ; Function Attrs: nounwind
-define spir_func void @opencl_sincosf_local(float %x, float addrspace(3)* %s, float addrspace(3)* %c) #0 {
+define linkonce_odr spir_func void @opencl_sincosf_local(float %x, float addrspace(3)* %s, float addrspace(3)* %c) #0 {
 entry:
   %x.addr = alloca float, align 4
   %s.addr = alloca float addrspace(3)*, align 8
@@ -1834,7 +1834,7 @@ entry:
 }
 
 ; Function Attrs: nounwind
-define spir_func void @opencl_sincosf(float %x, float addrspace(4)* %s, float addrspace(4)* %c) #0 {
+define linkonce_odr spir_func void @opencl_sincosf(float %x, float addrspace(4)* %s, float addrspace(4)* %c) #0 {
 entry:
   %x.addr = alloca float, align 4
   %s.addr = alloca float addrspace(4)*, align 8
@@ -1851,7 +1851,7 @@ entry:
 }
 
 ; Function Attrs: nounwind
-define spir_func void @opencl_sincos_global(double %x, double addrspace(1)* %s, double addrspace(1)* %c) #0 {
+define linkonce_odr spir_func void @opencl_sincos_global(double %x, double addrspace(1)* %s, double addrspace(1)* %c) #0 {
 entry:
   %x.addr = alloca double, align 8
   %s.addr = alloca double addrspace(1)*, align 8
@@ -1872,7 +1872,7 @@ entry:
 declare spir_func double @_Z6sincosdPU3AS4d(double, double addrspace(4)*) #1
 
 ; Function Attrs: nounwind
-define spir_func void @opencl_sincos_local(double %x, double addrspace(3)* %s, double addrspace(3)* %c) #0 {
+define linkonce_odr spir_func void @opencl_sincos_local(double %x, double addrspace(3)* %s, double addrspace(3)* %c) #0 {
 entry:
   %x.addr = alloca double, align 8
   %s.addr = alloca double addrspace(3)*, align 8
@@ -1890,7 +1890,7 @@ entry:
 }
 
 ; Function Attrs: nounwind
-define spir_func void @opencl_sincos(double %x, double addrspace(4)* %s, double addrspace(4)* %c) #0 {
+define linkonce_odr spir_func void @opencl_sincos(double %x, double addrspace(4)* %s, double addrspace(4)* %c) #0 {
 entry:
   %x.addr = alloca double, align 8
   %s.addr = alloca double addrspace(4)*, align 8
