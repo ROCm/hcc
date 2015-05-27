@@ -363,7 +363,7 @@ struct rw_info
                 if (curr->getManPtr()->get_path() == L"cpu")
                     aloc->write(dst.data, src.data, count, 0, false);
                 else {
-                    curr->wait();
+                    // curr->wait();
                     aloc->copy(src.data, dst.data, count, 0, 0);
                 }
             }
@@ -379,7 +379,7 @@ struct rw_info
             }
         } else {
             if (curr != aloc) {
-                curr->wait();
+                // curr->wait();
                 curr = aloc;
             }
         }
@@ -478,7 +478,7 @@ struct rw_info
             if (curr->getManPtr()->get_path() == L"cpu")
                 other->curr->write(dst.data, (char*)src.data + src_offset, cnt, dst_offset, false);
             else {
-                curr->wait();
+                // curr->wait();
                 other->curr->copy(src.data, dst.data, cnt, src_offset, dst_offset);
             }
         }

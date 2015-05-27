@@ -60,6 +60,8 @@ void ReleaseKernelObject(cl_program& program) {
 
 class OpenCLAllocator;
 static cl_context context;
+static std::map<cl_mem, cl_event> events;
+static std::map<cl_event, std::vector<cl_mem>> etomem;
 
 class OpenCLManager : public AMPManager
 {
@@ -173,11 +175,13 @@ private:
 
 class OpenCLAllocator : public AMPAllocator
 {
+    cl_command_queue queue;
+    std::vector<cl_mem> mems;
 public:
-    OpenCLAllocator(std::shared_ptr<AMPManager> pMan) : AMPAllocator(pMan) {
+    OpenCLAllocator(std::shared_ptr<AMPManager> pMan) : AMPAllocator(pMan), mems() {
         auto Man = std::dynamic_pointer_cast<OpenCLManager, AMPManager>(pMan);
         cl_int err;
-        queue = clCreateCommandQueue(context, Man->getDevice(), 0, &err);
+        queue = clCreateCommandQueue(context, Man->getDevice(), CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &err);
         assert(err == CL_SUCCESS);
 
         // Propel underlying OpenCL driver to enque kernels faster (pthread-based)
@@ -233,6 +237,7 @@ public:
     void Push(void *kernel, int idx, void*& data, void* device) override {
         cl_mem dm = static_cast<cl_mem>(device);
         PushArgImpl(kernel, idx, sizeof(cl_mem), &dm);
+        mems.push_back(dm);
     }
 
     void write(void* device, const void *src, size_t count, size_t offset, bool blocking) override {
@@ -240,19 +245,32 @@ public:
         cl_bool block = CL_FALSE;
         if (blocking)
             block = CL_TRUE;
-        cl_int err = clEnqueueWriteBuffer(queue, dm, block, offset, count, src, 0, NULL, NULL);
+        cl_event ent;
+        cl_int err = clEnqueueWriteBuffer(queue, dm, block, offset, count, src, 0, NULL, &ent);
         assert(err == CL_SUCCESS);
+        events[dm] = ent;
     }
     void read(void* device, void* dst, size_t count, size_t offset) override {
         cl_mem dm = static_cast<cl_mem>(device);
-        cl_int err = clEnqueueReadBuffer(queue, dm, CL_TRUE, offset, count, dst, 0, NULL, NULL);
+        if (events.find(dm) != std::end(events))
+            cl_int err = clEnqueueReadBuffer(queue, dm, CL_TRUE, offset, count, dst, 1, &events[dm], NULL);
+        else
+            cl_int err = clEnqueueReadBuffer(queue, dm, CL_TRUE, offset, count, dst, 0, NULL, NULL);
         assert(err == CL_SUCCESS);
+        events.erase(dm);
     }
     void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset) override {
         cl_mem sdm = static_cast<cl_mem>(src);
         cl_mem ddm = static_cast<cl_mem>(dst);
-        cl_int err = clEnqueueCopyBuffer(queue, sdm, ddm, src_offset, dst_offset, count, 0, NULL, NULL);
+        cl_int err;
+        cl_event evt;
+        if (events.find(sdm) == std::end(events))
+            err = clEnqueueCopyBuffer(queue, sdm, ddm, src_offset, dst_offset, count, 0, NULL, &evt);
+        else
+            err = clEnqueueCopyBuffer(queue, sdm, ddm, src_offset, dst_offset, count, 1, &events[sdm], &evt);
         assert(err == CL_SUCCESS);
+        events.erase(sdm);
+        events[ddm] = evt;
     }
     void* map(void* device, size_t count, size_t offset, bool Write) override {
         cl_mem dm = static_cast<cl_mem>(device);
@@ -262,8 +280,13 @@ public:
             flags = CL_MAP_WRITE_INVALIDATE_REGION;
         else
             flags = CL_MAP_READ;
-        void* addr = clEnqueueMapBuffer(queue, dm, CL_TRUE, flags, offset, count, 0, NULL, NULL, &err);
+        void* addr = nullptr;
+        if (events.find(dm) == std::end(events))
+            addr = clEnqueueMapBuffer(queue, dm, CL_TRUE, flags, offset, count, 0, NULL, NULL, &err);
+        else
+            addr = clEnqueueMapBuffer(queue, dm, CL_TRUE, flags, offset, count, 1, &events[dm], NULL, &err);
         assert(err == CL_SUCCESS);
+        events.erase(dm);
         return addr;
     }
     void unmap(void* device, void* addr) override {
@@ -276,10 +299,22 @@ public:
         auto Man = std::dynamic_pointer_cast<OpenCLManager, AMPManager>(getMan());
         if(!Man->check(local_size, dim_ext))
             local_size = NULL;
-        err = clEnqueueNDRangeKernel(queue, (cl_kernel)kernel, dim_ext, NULL, ext, local_size, 0, NULL, NULL);
+        std::sort(std::begin(mems), std::end(mems));
+        std::unique(std::begin(mems), std::end(mems));
+        std::vector<cl_event> eve;
+        std::for_each(std::begin(mems), std::end(mems),
+                      [&] (cl_mem mm) {
+                        if (events.find(mm) != std::end(events))
+                            eve.push_back(events[mm]);
+                      });
+        cl_event evt;
+        err = clEnqueueNDRangeKernel(queue, (cl_kernel)kernel, dim_ext, NULL, ext, local_size,
+                                     eve.size(), eve.data(), &evt);
         assert(err == CL_SUCCESS);
+        std::for_each(std::begin(mems), std::end(mems),
+                      [&](cl_mem mm) { events[mm] = evt; });
+        mems.clear();
     }
-    cl_command_queue queue;
 };
 
 std::shared_ptr<AMPAllocator> OpenCLManager::newAloc() {
