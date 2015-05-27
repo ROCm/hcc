@@ -19,6 +19,35 @@ else
 fi
 
 ################
+# GPU targets
+################
+
+LOWER_OPENCL=@HAS_OPENCL@
+LOWER_HSA=@HAS_HSA@
+
+################
+# Sanity check for HSAIL backend
+################
+
+if [ $LOWER_HSA == 1 ]; then
+  # Path to HSAIL backend (LLVM-3.6-based)
+  LLVM_BIN=@HSAIL_BIN@
+  # Path to HSAILASM
+  HSAIL_ASM=@HSAIL_COMPILER@
+
+  if [ -d $LLVM_BIN ] && [ -e $LLVM_BIN/llvm-link ] && [ -e $LLVM_BIN/opt ] && [ -e $LLVM_BIN/llc ] && [ -e $HSAIL_ASM ]; then
+    # all HSA tools are available
+    LOWER_HSA=1
+  else
+    # disable HSA lowering in case any of the required tools is missing
+    echo "WARNING: Missing HSA toolchain.  Disable HSA target."
+    LOWER_HSA=0
+  fi
+fi
+
+
+
+################
 # link
 ################
 
@@ -67,6 +96,10 @@ do
     else
       LINK_OTHER_ARGS=$LINK_OTHER_ARGS" "$ARG
     fi
+  elif [ $ARG == "--disable-opencl" ]; then
+    LOWER_OPENCL=0
+  elif [ $ARG == "--disable-hsa" ]; then
+    LOWER_HSA=0
   else
     LINK_OTHER_ARGS=$LINK_OTHER_ARGS" "$ARG
   fi
@@ -85,7 +118,7 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
   $LINK $LINK_KERNEL_ARGS | $OPT -always-inline - -o $TEMP_DIR/kernel.bc
   
   # lower to SPIR
-  if [ "@HAS_OPENCL@" == "1" ]; then
+  if [ $LOWER_OPENCL == 1 ]; then
     # lower to SPIR
     $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.spir --spir
     ret=$?
@@ -99,7 +132,7 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
   fi
   
   # lower to OpenCL C
-  if [ "@HAS_OPENCL@" == "1" ]; then
+  if [ $LOWER_OPENCL == 1 ]; then
     # lower to SPIR
     $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.cl --opencl
     ret=$?
@@ -113,7 +146,7 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
   fi
   
   # lower to HSA
-  if [ "@HAS_HSA@" == "1" ]; then
+  if [ $LOWER_HSA == 1 ]; then
     # lower to HSAIL
     $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.brig --hsa
     ret=$?
@@ -128,17 +161,17 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
   
   if [ $ret == 0 ]; then
     # link everything together
-    if [ "@HAS_OPENCL@" == "1" ] && [ "@HAS_HSA@" == "1" ]; then
+    if [ $LOWER_OPENCL == 1 ] && [ $LOWER_HSA == 1 ]; then
       ld --allow-multiple-definition $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS  $LINK_CPU_ARG $LINK_OTHER_ARGS
       ret=$?
-    elif [ "@HAS_OPENCL@" == "1" ] && [ "@HAS_HSA@" == "0" ]; then
+    elif [ $LOWER_OPENCL == 1 ] && [ $LOWER_HSA == 0 ]; then
       ld --allow-multiple-definition $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $LINK_HOST_ARGS $LINK_CPU_ARG $LINK_OTHER_ARGS
       ret=$?
-    elif [ "@HAS_OPENCL@" == "0" ] && [ "@HAS_HSA@" == "1" ]; then
+    elif [ $LOWER_OPENCL == 0 ] && [ $LOWER_HSA == 1 ]; then
       ld --allow-multiple-definition $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS $LINK_CPU_ARG $LINK_OTHER_ARGS
       ret=$?
     else
-      echo "Error in C++AMP link!"
+      echo "ERROR: No GPU target available! Linker failed."
       ret=1
     fi
   fi
