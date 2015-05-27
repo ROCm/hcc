@@ -235,7 +235,7 @@ public:
         PushArgImpl(kernel, idx, sizeof(cl_mem), &dm);
     }
 
-    void write(void* device, void *src, size_t count, size_t offset, bool blocking) override {
+    void write(void* device, const void *src, size_t count, size_t offset, bool blocking) override {
         cl_mem dm = static_cast<cl_mem>(device);
         cl_bool block = CL_FALSE;
         if (blocking)

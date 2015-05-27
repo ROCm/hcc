@@ -53,7 +53,7 @@ public:
   virtual void read(void* device, void* dst, size_t count, size_t offset) {
       memmove(dst, (char*)device + offset, count);
   }
-  virtual void write(void* device, void* src, size_t count, size_t offset, bool blocking) {
+  virtual void write(void* device, const void* src, size_t count, size_t offset, bool blocking) {
       memmove((char*)device + offset, src, count);
   }
   virtual void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset) {
@@ -97,15 +97,6 @@ class CPUAllocator final : public AMPAllocator
 {
 public:
     CPUAllocator(std::shared_ptr<AMPManager> Man) : AMPAllocator(Man) {}
-    void* map(void* device, size_t count, size_t offset, bool modify) override { return (char*)device + offset; }
-    void unmap(void* device, void* addr) override {}
-    void read(void* device, void* dst, size_t count, size_t offset)
-    { memmove(dst, (char*)device + offset, count); }
-    void write(void* device, void* src, size_t count, size_t offset, bool blocking)
-    { memmove((char*)device + offset, src, count); }
-    void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset) override {
-        memmove((char*)dst + dst_offset, (char*)src + src_offset, count);
-    }
     void Push(void *kernel, int idx, void*& data, void* device) override {}
 };
 
@@ -131,12 +122,15 @@ public:
     std::vector<std::shared_ptr<AMPManager>> getDevices() { return Devices; }
 
     bool set_default(const std::wstring& path) {
-        for (const auto dev : Devices)
-            if (dev->get_path() == path) {
-                def = dev;
-                return true;
-            }
-        return false;
+        auto result = std::find_if(std::begin(Devices), std::end(Devices),
+                                   [&] (const std::shared_ptr<AMPManager>& Man)
+                                   { return Man->get_path() == path; });
+        if (result == std::end(Devices))
+            return false;
+        else {
+            def = *result;
+            return true;
+        }
     }
 
     std::shared_ptr<AMPAllocator> auto_select() { return default_map[def]; }
@@ -146,10 +140,13 @@ public:
     std::shared_ptr<AMPManager> getDevice(std::wstring path = L"") {
         if (path == L"default" || path == L"")
             return def;
-        for (const auto dev : Devices)
-            if (dev->get_path() == path)
-                return dev;
-        return Devices[0];
+        auto result = std::find_if(std::begin(Devices), std::end(Devices),
+                                   [&] (const std::shared_ptr<AMPManager>& man)
+                                   { return man->get_path() == path; });
+        if (result != std::end(Devices))
+            return *result;
+        else
+            return Devices[0];
     }
 };
 
@@ -439,7 +436,7 @@ struct rw_info
         sync(cpu_view, modify);
     }
 
-    void write(void* src, int cnt, int offset, bool blocking) {
+    void write(const void* src, int cnt, int offset, bool blocking) {
         curr->write(Alocs[curr->getManPtr()].data, src, cnt, offset, blocking);
     }
 
