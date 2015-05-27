@@ -437,7 +437,10 @@ struct rw_info
     }
 
     void write(const void* src, int cnt, int offset) {
-        curr->write(Alocs[curr->getManPtr()].data, src, cnt, offset);
+        dev_info& dev = Alocs[curr->getManPtr()];
+        curr->write(dev.data, src, cnt, offset);
+        disc();
+        dev.state = modified;
     }
 
     void read(void* dst, int cnt, int offset) {
