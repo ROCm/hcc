@@ -26,6 +26,28 @@ LOWER_OPENCL=@HAS_OPENCL@
 LOWER_HSA=@HAS_HSA@
 
 ################
+# Sanity check for HSAIL backend
+################
+
+if [ $LOWER_HSA == 1 ]; then
+  # Path to HSAIL backend (LLVM-3.6-based)
+  LLVM_BIN=@HSAIL_BIN@
+  # Path to HSAILASM
+  HSAIL_ASM=@HSAIL_COMPILER@
+
+  if [ -d $LLVM_BIN ] && [ -e $LLVM_BIN/llvm-link ] && [ -e $LLVM_BIN/opt ] && [ -e $LLVM_BIN/llc ] && [ -e $HSAIL_ASM ]; then
+    # all HSA tools are available
+    LOWER_HSA=1
+  else
+    # disable HSA lowering in case any of the required tools is missing
+    echo "WARNING: Missing HSA toolchain.  Disable HSA target."
+    LOWER_HSA=0
+  fi
+fi
+
+
+
+################
 # link
 ################
 
@@ -149,7 +171,7 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
       ld --allow-multiple-definition $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS $LINK_CPU_ARG $LINK_OTHER_ARGS
       ret=$?
     else
-      echo "Error in C++AMP link!"
+      echo "ERROR: No GPU target available! Linker failed."
       ret=1
     fi
   fi
