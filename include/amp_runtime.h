@@ -63,7 +63,7 @@ public:
       return (char*)device + offset;
   }
   virtual void unmap(void* device, void* addr) {}
-  virtual void Push(void *kernel, int idx, void*& data, void* device) = 0;
+  virtual void Push(void *kernel, int idx, void*& data, void* device, bool isConst) = 0;
 
   std::shared_ptr<AMPManager> getMan() { return Man; }
   AMPManager* getManPtr() { return Man.get(); }
@@ -97,7 +97,7 @@ class CPUAllocator final : public AMPAllocator
 {
 public:
     CPUAllocator(std::shared_ptr<AMPManager> Man) : AMPAllocator(Man) {}
-    void Push(void *kernel, int idx, void*& data, void* device) override {}
+    void Push(void *kernel, int idx, void*& data, void* device, bool isConst) override {}
 };
 
 inline std::shared_ptr<AMPAllocator> CPUManager::newAloc() {
@@ -383,7 +383,7 @@ struct rw_info
                 curr = aloc;
             }
         }
-        aloc->Push(s.getKernel(), s.getAndIncCurrentIndex(), data, Alocs[aloc->getManPtr()].data);
+        aloc->Push(s.getKernel(), s.getAndIncCurrentIndex(), data, Alocs[aloc->getManPtr()].data, isConst);
     }
 
 
@@ -439,8 +439,10 @@ struct rw_info
     void write(const void* src, int cnt, int offset) {
         dev_info& dev = Alocs[curr->getManPtr()];
         curr->write(dev.data, src, cnt, offset);
-        disc();
-        dev.state = modified;
+        if (dev.state != modified) {
+            disc();
+            dev.state = modified;
+        }
     }
 
     void read(void* dst, int cnt, int offset) {

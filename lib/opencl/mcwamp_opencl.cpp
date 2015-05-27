@@ -173,10 +173,16 @@ private:
     size_t mem;
 };
 
+struct cl_info
+{
+    cl_mem dm;
+    bool isConst;
+};
+
 class OpenCLAllocator : public AMPAllocator
 {
     cl_command_queue queue;
-    std::vector<cl_mem> mems;
+    std::vector<cl_info> mems;
 public:
     OpenCLAllocator(std::shared_ptr<AMPManager> pMan) : AMPAllocator(pMan), mems() {
         auto Man = std::dynamic_pointer_cast<OpenCLManager, AMPManager>(pMan);
@@ -234,10 +240,10 @@ public:
     void wait() override { clFinish(queue); }
     ~OpenCLAllocator() { clReleaseCommandQueue(queue); }
 
-    void Push(void *kernel, int idx, void*& data, void* device) override {
+    void Push(void *kernel, int idx, void*& data, void* device, bool isConst) override {
         cl_mem dm = static_cast<cl_mem>(device);
         PushArgImpl(kernel, idx, sizeof(cl_mem), &dm);
-        mems.push_back(dm);
+        mems.push_back({dm, isConst});
     }
 
     void write(void* device, const void *src, size_t count, size_t offset) override {
@@ -296,20 +302,32 @@ public:
         auto Man = std::dynamic_pointer_cast<OpenCLManager, AMPManager>(getMan());
         if(!Man->check(local_size, dim_ext))
             local_size = NULL;
-        std::sort(std::begin(mems), std::end(mems));
-        std::unique(std::begin(mems), std::end(mems));
+        std::sort(std::begin(mems), std::end(mems),
+                  [](const cl_info& a, const cl_info& b) {
+                    if (a.dm == b.dm)
+                        return a.isConst < b.isConst;
+                    else
+                        return a.dm < b.dm;
+                  });
+        std::unique(std::begin(mems), std::end(mems),
+                    [](const cl_info& a, const cl_info& b) {
+                        return a.dm == b.dm;
+                    });
         std::vector<cl_event> eve;
         std::for_each(std::begin(mems), std::end(mems),
-                      [&] (cl_mem mm) {
-                        if (events.find(mm) != std::end(events))
-                            eve.push_back(events[mm]);
+                      [&] (const cl_info& mm) {
+                        if (events.find(mm.dm) != std::end(events))
+                            eve.push_back(events[mm.dm]);
                       });
         cl_event evt;
         err = clEnqueueNDRangeKernel(queue, (cl_kernel)kernel, dim_ext, NULL, ext, local_size,
                                      eve.size(), eve.data(), &evt);
         assert(err == CL_SUCCESS);
         std::for_each(std::begin(mems), std::end(mems),
-                      [&](cl_mem mm) { events[mm] = evt; });
+                      [&](const cl_info& mm) {
+                      if (!mm.isConst)
+                        events[mm.dm] = evt;
+                      });
         mems.clear();
     }
 };

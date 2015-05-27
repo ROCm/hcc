@@ -44,7 +44,7 @@ class CPUFallbackAllocator final : public AMPAllocator
 public:
     CPUFallbackAllocator(std::shared_ptr<AMPManager> pMan) : AMPAllocator(pMan) {}
 private:
-    void Push(void *kernel, int idx, void*& data, void* device) override {
+    void Push(void *kernel, int idx, void*& data, void* device, bool isConst) override {
       auto it = addrs.find(data);
       bool find = it != std::end(addrs);
       if (!kernel && !find) {
