@@ -284,19 +284,17 @@ public:
         else
             flags = CL_MAP_READ;
         void* addr = nullptr;
-        if (events.find(dm) != std::end(events) && !Write)
-            addr = clEnqueueMapBuffer(queue, dm, CL_TRUE, flags, offset, count, 1, &events[dm], NULL, &err);
-        else
+        if (events.find(dm) == std::end(events))
             addr = clEnqueueMapBuffer(queue, dm, CL_TRUE, flags, offset, count, 0, NULL, NULL, &err);
+        else
+            addr = clEnqueueMapBuffer(queue, dm, CL_TRUE, flags, offset, count, 1, &events[dm], NULL, &err);
         assert(err == CL_SUCCESS);
         events.erase(dm);
         return addr;
     }
     void unmap(void* device, void* addr) override {
         cl_mem dm = static_cast<cl_mem>(device);
-        cl_event evt;
-        cl_int err = clEnqueueUnmapMemObject(queue, dm, addr, 0, NULL, &evt);
-        events[dm] = evt;
+        cl_int err = clEnqueueUnmapMemObject(queue, dm, addr, 0, NULL, NULL);
         assert(err == CL_SUCCESS);
     }
     void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) override {
