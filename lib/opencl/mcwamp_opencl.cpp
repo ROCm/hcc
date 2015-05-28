@@ -258,10 +258,11 @@ public:
     }
     void read(void* device, void* dst, size_t count, size_t offset) override {
         cl_mem dm = static_cast<cl_mem>(device);
+        cl_int err;
         if (events.find(dm) != std::end(events))
-            cl_int err = clEnqueueReadBuffer(queue, dm, CL_TRUE, offset, count, dst, 1, &events[dm], NULL);
+            err = clEnqueueReadBuffer(queue, dm, CL_TRUE, offset, count, dst, 1, &events[dm], NULL);
         else
-            cl_int err = clEnqueueReadBuffer(queue, dm, CL_TRUE, offset, count, dst, 0, NULL, NULL);
+            err = clEnqueueReadBuffer(queue, dm, CL_TRUE, offset, count, dst, 0, NULL, NULL);
         assert(err == CL_SUCCESS);
         events.erase(dm);
     }
