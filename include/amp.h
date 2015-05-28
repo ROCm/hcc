@@ -2163,7 +2163,7 @@ public:
   array_view(int e0, int e1, int e2, value_type *src) restrict(amp,cpu)
       : array_view(Concurrency::extent<3>(e0, e1, e2), src) {}
 
-  array_view(const array_view<T, N>& other) restrict(amp,cpu) : cache(other.cache),
+  array_view(const array_view<nc_T, N>& other) restrict(amp,cpu) : cache(other.cache),
     extent(other.extent), extent_base(other.extent_base), index_base(other.index_base),
     offset(other.offset) { cache.set_const(); }
 
@@ -2709,7 +2709,7 @@ struct do_copy<T*, T, N>
 {
     template<template <typename, int> class _amp_container>
     void operator()(T* srcBegin, T* srcEnd, const _amp_container<T, N>& dest) {
-        dest.internal().write(srcBegin, std::distance(srcBegin, srcEnd), dest.get_offset(), true);
+        dest.internal().write(srcBegin, std::distance(srcBegin, srcEnd), dest.get_offset());
     }
     template<template <typename, int> class _amp_container>
     void operator()(const _amp_container<T, N> &src, T* destBegin) {
@@ -2723,7 +2723,7 @@ struct do_copy<T*, T, 1>
     template<template <typename, int> class _amp_container>
     void operator()(const T* srcBegin, const T* srcEnd, const _amp_container<T, 1>& dest) {
         dest.internal().write(srcBegin, std::distance(srcBegin, srcEnd),
-                              dest.get_offset() + dest.get_index_base()[0], true);
+                              dest.get_offset() + dest.get_index_base()[0]);
     }
     template<template <typename, int> class _amp_container>
     void operator()(const _amp_container<T, 1> &src, T* destBegin) {
