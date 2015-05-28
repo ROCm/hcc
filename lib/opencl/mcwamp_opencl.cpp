@@ -50,13 +50,6 @@ struct DimMaxSize {
   cl_uint dimensions;
   size_t* maxSizes;
 };
-typedef std::map<std::string, cl_kernel> KernelObject;
-std::map<cl_program, KernelObject> Pro2KernelObject;
-void ReleaseKernelObject(cl_program& program) {
-  for(const auto& itt : Pro2KernelObject[program])
-    if(itt.second)
-      clReleaseKernel(itt.second);
-}
 
 class OpenCLAllocator;
 static cl_context context;
@@ -113,14 +106,10 @@ public:
             programs[source] = program;
         }
         cl_program program = programs[source];
-        Concurrency::KernelObject& KO = Concurrency::Pro2KernelObject[program];
         std::string name(fun);
-        if (KO[name] == 0) {
-            cl_int err;
-            KO[name] = clCreateKernel(program, name.c_str(), &err);
-            assert(err == CL_SUCCESS);
-        }
-        return KO[name];
+        cl_kernel kernel = clCreateKernel(program, fun, &err);
+        assert(err == CL_SUCCESS);
+        return kernel;
     }
 
     bool check(size_t* local_size, size_t dim_ext) override {
@@ -145,10 +134,8 @@ public:
     }
 
     ~OpenCLManager() {
-        for (auto& it : programs) {
-            ReleaseKernelObject(it.second);
+        for (auto& it : programs)
             clReleaseProgram(it.second);
-        }
         delete[] d.maxSizes;
     }
 
@@ -417,23 +404,13 @@ static inline void getKernelNames(cl_program& prog) {
         cl_kernel *kl = new cl_kernel[kernel_num];
         ret = clCreateKernelsInProgram(prog, kernel_num + 1, kl, &kernel_num);
         if (ret == CL_SUCCESS) {
-            Concurrency::KernelObject& KO = Concurrency::Pro2KernelObject[prog];
             std::map<std::string, std::string> aMap;
             for (unsigned i = 0; i < unsigned(kernel_num); ++i) {
                 char s[1024] = { 0x0 };
                 size_t size;
                 ret = clGetKernelInfo(kl[i], CL_KERNEL_FUNCTION_NAME, 1024, s, &size);
                 n.push_back(std::string (s));
-                KO[std::string (s)] = kl[i];
-                // Some analysis tool will post warnings about not releasing kernel object in time, 
-                // for example, 
-                //   Warning: Memory leak detected [Ref = 1, Handle = 0x12f1420]: Object created by clCreateKernelsInProgram
-                //   Warning: Memory leak detected [Ref = 1, Handle = 0x12f17a0]: Object created by clCreateProgramWithBinary
-                // However these won't be taken as memory leaks in here since all created kenrel objects 
-                // will be released in ReleaseKernelObjects and the Ref count will be reset to 0
-                #if 0
                 clReleaseKernel(kl[i]);
-                #endif
             }
         }
         delete [] kl;
