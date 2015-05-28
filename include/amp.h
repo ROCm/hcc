@@ -2708,8 +2708,8 @@ template <typename T, int N>
 struct do_copy<T*, T, N>
 {
     template<template <typename, int> class _amp_container>
-    void operator()(const T* srcBegin, const T* srcEnd, const _amp_container<T, N>& dest) {
-        dest.internal().write(srcBegin, std::distance(srcBegin, srcEnd), dest.get_offset());
+    void operator()(T* srcBegin, T* srcEnd, const _amp_container<T, N>& dest) {
+        dest.internal().write(srcBegin, std::distance(srcBegin, srcEnd), dest.get_offset(), true);
     }
     template<template <typename, int> class _amp_container>
     void operator()(const _amp_container<T, N> &src, T* destBegin) {
@@ -2723,7 +2723,7 @@ struct do_copy<T*, T, 1>
     template<template <typename, int> class _amp_container>
     void operator()(const T* srcBegin, const T* srcEnd, const _amp_container<T, 1>& dest) {
         dest.internal().write(srcBegin, std::distance(srcBegin, srcEnd),
-                              dest.get_offset() + dest.get_index_base()[0]);
+                              dest.get_offset() + dest.get_index_base()[0], true);
     }
     template<template <typename, int> class _amp_container>
     void operator()(const _amp_container<T, 1> &src, T* destBegin) {

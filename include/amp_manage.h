@@ -62,7 +62,7 @@ public:
     void synchronize(bool modify = false) const {}
     void get_cpu_access(bool modify = false) const {}
     void copy(_data<T> other, int, int, int) const {}
-    void write(const T*, int , int offset = 0) const {}
+    void write(const T*, int , int offset = 0, bool blocking = false) const {}
     void read(T*, int , int offset = 0) const {}
     void refresh() const {}
     void set_const() const {}
@@ -105,8 +105,8 @@ public:
     void copy(_data_host<T> other, int src_offset, int dst_offset, int size) const {
         mm->copy(other.mm.get(), src_offset * sizeof(T), dst_offset * sizeof(T), size * sizeof(T));
     }
-    void write(const T* src, int size, int offset = 0) const {
-        mm->write(src, size * sizeof(T), offset * sizeof(T));
+    void write(const T* src, int size, int offset = 0, bool blocking = false) const {
+        mm->write(src, size * sizeof(T), offset * sizeof(T), blocking);
     }
     void read(T* dst, int size, int offset = 0) const {
         mm->read(dst, size * sizeof(T), offset * sizeof(T));

@@ -246,10 +246,13 @@ public:
         mems.push_back({dm, isConst});
     }
 
-    void write(void* device, const void *src, size_t count, size_t offset) override {
+    void write(void* device, const void *src, size_t count, size_t offset, bool blocking) override {
         cl_mem dm = static_cast<cl_mem>(device);
+        cl_bool block = CL_FALSE;
+        if (blocking)
+            block = CL_TRUE;
         cl_event ent;
-        cl_int err = clEnqueueWriteBuffer(queue, dm, CL_FALSE, offset, count, src, 0, NULL, &ent);
+        cl_int err = clEnqueueWriteBuffer(queue, dm, block, offset, count, src, 0, NULL, &ent);
         assert(err == CL_SUCCESS);
         events[dm] = ent;
     }

@@ -53,7 +53,7 @@ public:
   virtual void read(void* device, void* dst, size_t count, size_t offset) {
       memmove(dst, (char*)device + offset, count);
   }
-  virtual void write(void* device, const void* src, size_t count, size_t offset) {
+  virtual void write(void* device, const void* src, size_t count, size_t offset, bool blocking) {
       memmove((char*)device + offset, src, count);
   }
   virtual void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset) {
@@ -361,7 +361,7 @@ struct rw_info
                             src = Alocs[cpu_view->getManPtr()];
                         }
                 if (curr->getManPtr()->get_path() == L"cpu")
-                    aloc->write(dst.data, src.data, count, 0);
+                    aloc->write(dst.data, src.data, count, 0, false);
                 else {
                     // curr->wait();
                     aloc->copy(src.data, dst.data, count, 0, 0);
@@ -436,9 +436,9 @@ struct rw_info
         sync(cpu_view, modify);
     }
 
-    void write(const void* src, int cnt, int offset) {
+    void write(const void* src, int cnt, int offset, bool blocking) {
+        curr->write(Alocs[curr->getManPtr()].data, src, cnt, offset, blocking);
         dev_info& dev = Alocs[curr->getManPtr()];
-        curr->write(dev.data, src, cnt, offset);
         if (dev.state != modified) {
             disc();
             dev.state = modified;
@@ -470,7 +470,7 @@ struct rw_info
             else {
                 void *ptr = aligned_alloc(0x1000, cnt);
                 memset(ptr, 0, cnt);
-                curr->write(src.data, ptr, cnt, src_offset);
+                curr->write(src.data, ptr, cnt, src_offset, true);
                 ::operator delete(ptr);
             }
         }
@@ -481,7 +481,7 @@ struct rw_info
                 curr->read(src.data, (char*)dst.data + dst_offset, cnt, src_offset);
         } else {
             if (curr->getManPtr()->get_path() == L"cpu")
-                other->curr->write(dst.data, (char*)src.data + src_offset, cnt, dst_offset);
+                other->curr->write(dst.data, (char*)src.data + src_offset, cnt, dst_offset, false);
             else {
                 // curr->wait();
                 other->curr->copy(src.data, dst.data, cnt, src_offset, dst_offset);
