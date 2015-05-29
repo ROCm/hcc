@@ -173,6 +173,33 @@ if ((HAS_OPENCL EQUAL 0) AND (HAS_HSA EQUAL 0))
   MESSAGE(FATAL_ERROR "Neither OpenCL nor HSA is available on the system!")
 endif ((HAS_OPENCL EQUAL 0) AND (HAS_HSA EQUAL 0))
 
+#################
+# Set up version information
+#################
+
+# define Kalmar version information
+SET(KALMAR_VERSION_MAJOR "0")
+SET(KALMAR_VERSION_MINOR "6")
+SET(KALMAR_VERSION_PATCH "0")
+
+# get commit information
+execute_process(COMMAND git rev-parse --short HEAD
+                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+                OUTPUT_VARIABLE KALMAR_DRIVER_COMMIT
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process(COMMAND git rev-parse --short HEAD
+                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/compiler/tools/clang
+                OUTPUT_VARIABLE KALMAR_COMPILER_COMMIT
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+# set Kalmar version string
+set(KALMAR_VERSION_STRING "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}.${KALMAR_VERSION_PATCH}-${KALMAR_DRIVER_COMMIT}-${KALMAR_COMPILER_COMMIT}")
+
+# show Kalmar version string
+MESSAGE("========================================")
+MESSAGE("Kalmar version: ${KALMAR_VERSION_STRING}")
+MESSAGE("========================================")
+
 
 add_subdirectory(compiler)
 # libc++
@@ -257,10 +284,10 @@ set(CPACK_SET_DESTDIR TRUE)
 set(CPACK_INSTALL_PREFIX "/opt/kalmar")
 set(CPACK_PACKAGE_NAME "kalmar")
 set(CPACK_PACKAGE_VENDOR "MulticoreWare, Inc")
-set(CPACK_PACKAGE_VERSION "0.6.0-${GIT_VERSION}")
-set(CPACK_PACKAGE_VERSION_MAJOR "0")
-set(CPACK_PACKAGE_VERSION_MINOR "6")
-set(CPACK_PACKAGE_VERSION_PATCH "0")
+set(CPACK_PACKAGE_VERSION ${KALMAR_VERSION_STRING})
+set(CPACK_PACKAGE_VERSION_MAJOR ${KALMAR_VERSION_MAJOR})
+set(CPACK_PACKAGE_VERSION_MINOR ${KALMAR_VERSION_MINOR})
+set(CPACK_PACKAGE_VERSION_PATCH ${KALMAR_VERSION_PATCH})
 set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_SYSTEM_NAME})
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "Kalmar: a Heterogeneous C++ to OpenCL/HSA compiler")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Jack Chung <jack@multicorewareinc.com>")
