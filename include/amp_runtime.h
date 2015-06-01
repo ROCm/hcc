@@ -420,7 +420,10 @@ struct rw_info
         auto Man = aloc->getManPtr();
         if (Alocs.find(Man) == std::end(Alocs))
             Alocs[Man] = {Man->create(count), invalid};
-        sync(aloc, false);
+        if (curr)
+            sync(aloc, false);
+        else
+            curr = aloc;
     }
 
     void get_cpu_access(bool modify) {
