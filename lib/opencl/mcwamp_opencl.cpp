@@ -146,7 +146,11 @@ public:
         assert(err == CL_SUCCESS);
         return dm;
     }
-    void release(void *device) override { clReleaseMemObject(static_cast<cl_mem>(device)); }
+    void release(void *device) override {
+        cl_mem dm = static_cast<cl_mem>(device);
+        events.erase(dm);
+        clReleaseMemObject(dm);
+    }
     std::shared_ptr<AMPAllocator> createAloc() override { return newAloc(); }
 
 
@@ -235,13 +239,15 @@ public:
 
     void write(void* device, const void *src, size_t count, size_t offset, bool blocking) override {
         cl_mem dm = static_cast<cl_mem>(device);
-        cl_bool block = CL_FALSE;
+        cl_int err = CL_SUCCESS;
         if (blocking)
-            block = CL_TRUE;
-        cl_event ent;
-        cl_int err = clEnqueueWriteBuffer(queue, dm, block, offset, count, src, 0, NULL, &ent);
+            err = clEnqueueWriteBuffer(queue, dm, CL_TRUE, offset, count, src, 0, NULL, NULL);
+        else {
+            cl_event ent;
+            err = clEnqueueWriteBuffer(queue, dm, CL_FALSE, offset, count, src, 0, NULL, &ent);
+            events[dm] = ent;
+        }
         assert(err == CL_SUCCESS);
-        events[dm] = ent;
     }
     void read(void* device, void* dst, size_t count, size_t offset) override {
         cl_mem dm = static_cast<cl_mem>(device);
@@ -251,7 +257,6 @@ public:
         else
             err = clEnqueueReadBuffer(queue, dm, CL_TRUE, offset, count, dst, 0, NULL, NULL);
         assert(err == CL_SUCCESS);
-        events.erase(dm);
     }
     void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset) override {
         cl_mem sdm = static_cast<cl_mem>(src);
@@ -263,7 +268,6 @@ public:
         else
             err = clEnqueueCopyBuffer(queue, sdm, ddm, src_offset, dst_offset, count, 1, &events[sdm], &evt);
         assert(err == CL_SUCCESS);
-        events.erase(sdm);
         events[ddm] = evt;
     }
     void* map(void* device, size_t count, size_t offset, bool Write) override {
@@ -280,7 +284,6 @@ public:
         else
             addr = clEnqueueMapBuffer(queue, dm, CL_TRUE, flags, offset, count, 1, &events[dm], NULL, &err);
         assert(err == CL_SUCCESS);
-        events.erase(dm);
         return addr;
     }
     void unmap(void* device, void* addr) override {
