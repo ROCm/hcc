@@ -423,7 +423,7 @@ struct rw_info
         if (curr)
             sync(aloc, false);
         else
-            curr = aloc;
+            curr = master = aloc;
     }
 
     void get_cpu_access(bool modify) {
