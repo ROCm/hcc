@@ -416,6 +416,12 @@ struct rw_info
     void unmap(void* addr) { curr->unmap(Alocs[curr->getManPtr()].data, addr); }
 
     void synchronize(bool modify) { sync(master, modify); }
+    void sync_to(std::shared_ptr<AMPAllocator> aloc) {
+        auto Man = aloc->getManPtr();
+        if (Alocs.find(Man) == std::end(Alocs))
+            Alocs[Man] = {Man->create(count), invalid};
+        sync(aloc, false);
+    }
 
     void get_cpu_access(bool modify) {
 #ifdef __AMP_CPU__

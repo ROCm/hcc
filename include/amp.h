@@ -2053,6 +2053,11 @@ public:
   }
 
   void synchronize() const { cache.get_cpu_access(); }
+  void synchronize_to(const accelerator_view& av) const {
+#ifndef __GPU__
+      cache.sync_to(av.pAloc);
+#endif
+  }
   completion_future synchronize_async() const {
       std::future<void> fut = std::async([&]() mutable { synchronize(); });
       return completion_future(fut.share());
@@ -2290,7 +2295,11 @@ public:
       return completion_future(fut.share());
   }
 
-  void synchronize_to(const accelerator_view& av) const;
+  void synchronize_to(const accelerator_view& av) const {
+#ifndef __GPU__
+      cache.sync_to(av.pAloc);
+#endif
+  }
   completion_future synchronize_to_async(const accelerator_view& av) const;
 
   void refresh() const { cache.refresh(); }
@@ -2709,7 +2718,7 @@ struct do_copy<T*, T, N>
 {
     template<template <typename, int> class _amp_container>
     void operator()(T* srcBegin, T* srcEnd, const _amp_container<T, N>& dest) {
-        dest.internal().write(srcBegin, std::distance(srcBegin, srcEnd), dest.get_offset());
+        dest.internal().write(srcBegin, std::distance(srcBegin, srcEnd), dest.get_offset(), true);
     }
     template<template <typename, int> class _amp_container>
     void operator()(const _amp_container<T, N> &src, T* destBegin) {
@@ -2723,7 +2732,7 @@ struct do_copy<T*, T, 1>
     template<template <typename, int> class _amp_container>
     void operator()(const T* srcBegin, const T* srcEnd, const _amp_container<T, 1>& dest) {
         dest.internal().write(srcBegin, std::distance(srcBegin, srcEnd),
-                              dest.get_offset() + dest.get_index_base()[0]);
+                              dest.get_offset() + dest.get_index_base()[0], true);
     }
     template<template <typename, int> class _amp_container>
     void operator()(const _amp_container<T, 1> &src, T* destBegin) {
