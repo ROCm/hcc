@@ -296,23 +296,14 @@ public:
         auto Man = std::dynamic_pointer_cast<OpenCLManager, AMPManager>(getMan());
         if(!Man->check(local_size, dim_ext))
             local_size = NULL;
-        std::sort(std::begin(mems), std::end(mems),
-                  [](const cl_info& a, const cl_info& b) {
-                    if (a.dm == b.dm)
-                        return a.isConst < b.isConst;
-                    else
-                        return a.dm < b.dm;
-                  });
-        std::unique(std::begin(mems), std::end(mems),
-                    [](const cl_info& a, const cl_info& b) {
-                        return a.dm == b.dm;
-                    });
         std::vector<cl_event> eve;
         std::for_each(std::begin(mems), std::end(mems),
                       [&] (const cl_info& mm) {
                         if (events.find(mm.dm) != std::end(events))
                             eve.push_back(events[mm.dm]);
                       });
+        std::sort(std::begin(eve), std::end(eve));
+        std::unique(std::begin(eve), std::end(eve));
         cl_event evt;
         err = clEnqueueNDRangeKernel(queue, (cl_kernel)kernel, dim_ext, NULL, ext, local_size,
                                      eve.size(), eve.data(), &evt);
