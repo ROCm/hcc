@@ -24,7 +24,7 @@
 #include <amp_runtime.h>
 
 ///
-/// global values 
+/// global values
 ///
 namespace {
 bool __mcw_cxxamp_compiled = false;
@@ -172,14 +172,20 @@ struct cl_info
 
 class OpenCLAllocator : public AMPAllocator
 {
-    cl_command_queue queue;
+    enum { queue_size = 4 };
+    cl_command_queue queues[queue_size];
+    int idx;
     std::vector<cl_info> mems;
+    cl_command_queue getQueue() { return queues[(idx++) % queue_size]; }
 public:
     OpenCLAllocator(std::shared_ptr<AMPManager> pMan) : AMPAllocator(pMan), mems() {
         auto Man = std::dynamic_pointer_cast<OpenCLManager, AMPManager>(pMan);
         cl_int err;
-        queue = clCreateCommandQueue(context, Man->getDevice(), CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &err);
-        assert(err == CL_SUCCESS);
+        idx = 0;
+        for (int i = 0; i < queue_size; ++i) {
+            queues[i] = clCreateCommandQueue(context, Man->getDevice(), CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &err);
+            assert(err == CL_SUCCESS);
+        }
 
         // Propel underlying OpenCL driver to enque kernels faster (pthread-based)
         // FIMXE: workable on AMD platforms only
@@ -203,33 +209,44 @@ public:
 #define CL_QUEUE_THREAD_HANDLE_AMD 0x403E
 #define PRIORITY_OFFSET 2
         void* handle=NULL;
-        cl_int status = clGetCommandQueueInfo (queue, CL_QUEUE_THREAD_HANDLE_AMD, sizeof(handle), &handle, NULL );
-        // Ensure it is valid
-        if (status == CL_SUCCESS && handle) {
-            pthread_t thId = (pthread_t)handle;
-            result = pthread_getschedparam(thId, &policy, &param);
-            if (result != 0)
-                perror("getsched q error!\n");
-            int que_prio = param.sched_priority;
-            // Strategy to renew the que thread's priority, the smaller the highest
-            if (max_prio == que_prio) {
-            } else if (max_prio < que_prio && que_prio <= self_prio) {
-                // self    que    max
-                que_prio = (que_prio-PRIORITY_OFFSET)>0?(que_prio-PRIORITY_OFFSET):que_prio;
-            } else if (que_prio > self_prio) {
-                // que   self    max
-                que_prio = (self_prio-PRIORITY_OFFSET)>0?(self_prio-PRIORITY_OFFSET):self_prio;
-            } 
-            int result = pthread_setschedprio(thId, que_prio);
-            if (result != 0)
-                perror("Renew p error!\n");
-        } 
+        for (auto queue : queues) {
+            cl_int status = clGetCommandQueueInfo (queue, CL_QUEUE_THREAD_HANDLE_AMD, sizeof(handle), &handle, NULL );
+            // Ensure it is valid
+            if (status == CL_SUCCESS && handle) {
+                pthread_t thId = (pthread_t)handle;
+                result = pthread_getschedparam(thId, &policy, &param);
+                if (result != 0)
+                    perror("getsched q error!\n");
+                int que_prio = param.sched_priority;
+                // Strategy to renew the que thread's priority, the smaller the highest
+                if (max_prio == que_prio) {
+                } else if (max_prio < que_prio && que_prio <= self_prio) {
+                    // self    que    max
+                    que_prio = (que_prio-PRIORITY_OFFSET)>0?(que_prio-PRIORITY_OFFSET):que_prio;
+                } else if (que_prio > self_prio) {
+                    // que   self    max
+                    que_prio = (self_prio-PRIORITY_OFFSET)>0?(self_prio-PRIORITY_OFFSET):self_prio;
+                }
+                int result = pthread_setschedprio(thId, que_prio);
+                if (result != 0)
+                    perror("Renew p error!\n");
+            }
+        }
         pthread_attr_destroy(&attr);
     }
 
-    void flush() override { clFlush(queue); }
-    void wait() override { clFinish(queue); }
-    ~OpenCLAllocator() { clReleaseCommandQueue(queue); }
+    void flush() override {
+        for (auto queue : queues)
+            clFlush(queue);
+    }
+    void wait() override {
+        for (auto queue : queues)
+            clFinish(queue);
+    }
+    ~OpenCLAllocator() {
+        for (auto queue : queues)
+            clReleaseCommandQueue(queue);
+    }
 
     void Push(void *kernel, int idx, void*& data, void* device, bool isConst) override {
         cl_mem dm = static_cast<cl_mem>(device);
@@ -241,10 +258,10 @@ public:
         cl_mem dm = static_cast<cl_mem>(device);
         cl_int err = CL_SUCCESS;
         if (blocking)
-            err = clEnqueueWriteBuffer(queue, dm, CL_TRUE, offset, count, src, 0, NULL, NULL);
+            err = clEnqueueWriteBuffer(getQueue(), dm, CL_TRUE, offset, count, src, 0, NULL, NULL);
         else {
             cl_event ent;
-            err = clEnqueueWriteBuffer(queue, dm, CL_FALSE, offset, count, src, 0, NULL, &ent);
+            err = clEnqueueWriteBuffer(getQueue(), dm, CL_FALSE, offset, count, src, 0, NULL, &ent);
             events[dm] = ent;
         }
         assert(err == CL_SUCCESS);
@@ -253,9 +270,9 @@ public:
         cl_mem dm = static_cast<cl_mem>(device);
         cl_int err;
         if (events.find(dm) != std::end(events))
-            err = clEnqueueReadBuffer(queue, dm, CL_TRUE, offset, count, dst, 1, &events[dm], NULL);
+            err = clEnqueueReadBuffer(getQueue(), dm, CL_TRUE, offset, count, dst, 1, &events[dm], NULL);
         else
-            err = clEnqueueReadBuffer(queue, dm, CL_TRUE, offset, count, dst, 0, NULL, NULL);
+            err = clEnqueueReadBuffer(getQueue(), dm, CL_TRUE, offset, count, dst, 0, NULL, NULL);
         assert(err == CL_SUCCESS);
     }
     void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset) override {
@@ -264,9 +281,9 @@ public:
         cl_int err;
         cl_event evt;
         if (events.find(sdm) == std::end(events))
-            err = clEnqueueCopyBuffer(queue, sdm, ddm, src_offset, dst_offset, count, 0, NULL, &evt);
+            err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, 0, NULL, &evt);
         else
-            err = clEnqueueCopyBuffer(queue, sdm, ddm, src_offset, dst_offset, count, 1, &events[sdm], &evt);
+            err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, 1, &events[sdm], &evt);
         assert(err == CL_SUCCESS);
         events[ddm] = evt;
     }
@@ -280,15 +297,15 @@ public:
             flags = CL_MAP_READ;
         void* addr = nullptr;
         if (events.find(dm) == std::end(events))
-            addr = clEnqueueMapBuffer(queue, dm, CL_TRUE, flags, offset, count, 0, NULL, NULL, &err);
+            addr = clEnqueueMapBuffer(getQueue(), dm, CL_TRUE, flags, offset, count, 0, NULL, NULL, &err);
         else
-            addr = clEnqueueMapBuffer(queue, dm, CL_TRUE, flags, offset, count, 1, &events[dm], NULL, &err);
+            addr = clEnqueueMapBuffer(getQueue(), dm, CL_TRUE, flags, offset, count, 1, &events[dm], NULL, &err);
         assert(err == CL_SUCCESS);
         return addr;
     }
     void unmap(void* device, void* addr) override {
         cl_mem dm = static_cast<cl_mem>(device);
-        cl_int err = clEnqueueUnmapMemObject(queue, dm, addr, 0, NULL, NULL);
+        cl_int err = clEnqueueUnmapMemObject(getQueue(), dm, addr, 0, NULL, NULL);
         assert(err == CL_SUCCESS);
     }
     void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) override {
@@ -303,9 +320,9 @@ public:
                             eve.push_back(events[mm.dm]);
                       });
         std::sort(std::begin(eve), std::end(eve));
-        std::unique(std::begin(eve), std::end(eve));
+        eve.erase(std::unique(std::begin(eve), std::end(eve)), std::end(eve));
         cl_event evt;
-        err = clEnqueueNDRangeKernel(queue, (cl_kernel)kernel, dim_ext, NULL, ext, local_size,
+        err = clEnqueueNDRangeKernel(getQueue(), (cl_kernel)kernel, dim_ext, NULL, ext, local_size,
                                      eve.size(), eve.data(), &evt);
         assert(err == CL_SUCCESS);
         std::for_each(std::begin(mems), std::end(mems),
@@ -580,7 +597,7 @@ void CLCompileKernels(cl_program& program, cl_device_id& device,
             delete [] pgBinarySizes;
             delete [] devices;
 
-        } // if (precompiled_kernel) 
+        } // if (precompiled_kernel)
 
         __mcw_cxxamp_compiled = true;
         getKernelNames(program);
@@ -640,7 +657,7 @@ static inline int ldistance(const std::string source, const std::string target)
 
 // transformed_kernel_name (mangled) might differ if usages of 'm32' flag in CPU/GPU
 // paths are mutually exclusive. We can scan all kernel names and replace
-// transformed_kernel_name with the one that has the shortest distance from it by using 
+// transformed_kernel_name with the one that has the shortest distance from it by using
 // Levenshtein Distance measurement
 extern "C" void MatchKernelNamesImpl(char *fixed_name) {
     if (__mcw_kernel_names.size()) {

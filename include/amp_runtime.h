@@ -318,13 +318,23 @@ struct rw_info
 #endif
         if (curr->getManPtr() == aloc->getManPtr())
             return;
-        dev_info& src = Alocs[curr->getManPtr()];
         dev_info& dst = Alocs[aloc->getManPtr()];
-        if (src.state != invalid) {
-            if (aloc->getManPtr()->get_path() == L"cpu")
-                curr->read(src.data, dst.data, count, 0);
-            else
-                curr->copy(src.data, dst.data, count, 0, 0);
+        dev_info& src = Alocs[curr->getManPtr()];
+        if (dst.state == invalid) {
+            auto cpu_view = get_cpu_view();
+            if (Alocs.find(cpu_view->getManPtr()) != std::end(Alocs))
+                if (Alocs[cpu_view->getManPtr()].state == shared) {
+                    curr = cpu_view;
+                    src = Alocs[cpu_view->getManPtr()];
+                }
+            if (src.state != invalid) {
+                if (aloc->getManPtr()->get_path() == L"cpu")
+                    curr->read(src.data, dst.data, count, 0);
+                else if (curr->getManPtr()->get_path() == L"cpu")
+                    aloc->write(dst.data, src.data, count, 0, false);
+                else
+                    curr->copy(src.data, dst.data, count, 0, 0);
+            }
         }
         curr = aloc;
         if (modify) {
@@ -405,11 +415,9 @@ struct rw_info
             if (Alocs[cpu_view->getManPtr()].state == shared)
                 curr = cpu_view;
         dev_info& info = Alocs[curr->getManPtr()];
-        if (info.state == shared) {
-            if (modify) {
-                disc();
-                info.state = modified;
-            }
+        if (info.state == shared && modify) {
+            disc();
+            info.state = modified;
         }
         return curr->map(info.data, cnt, offset, modify);
     }
