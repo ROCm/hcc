@@ -27,7 +27,6 @@
 /// global values
 ///
 namespace {
-bool __mcw_cxxamp_compiled = false;
 std::vector<std::string> __mcw_kernel_names;
 const wchar_t cpu_accelerator[] = L"cpu";
 const wchar_t default_accelerator[] = L"default";
@@ -610,8 +609,6 @@ void CLCompileKernels(cl_program& program, cl_device_id& device,
             delete [] devices;
 
         } // if (precompiled_kernel)
-
-        __mcw_cxxamp_compiled = true;
         getKernelNames(program);
     }
 }
@@ -629,7 +626,7 @@ extern "C" void *LaunchKernelAsyncImpl(void *ker, size_t nr_dim, size_t *global,
 
 // Levenshtein Distance to measure the difference of two sequences
 // The shortest distance it returns the more likely the two sequences are equal
-static inline int ldistance(const std::string source, const std::string target)
+static inline int ldistance(const std::string& source, const std::string& target)
 {
   int n = source.length();
   int m = target.length();
@@ -640,10 +637,8 @@ static inline int ldistance(const std::string source, const std::string target)
 
   //Construct a matrix
   typedef std::vector < std::vector < int >>Tmatrix;
-  Tmatrix matrix(n + 1);
+  Tmatrix matrix(n + 1, std::vector<int>(m + 1));
 
-  for (int i = 0; i <= n; i++)
-    matrix[i].resize(m + 1);
   for (int i = 1; i <= n; i++)
     matrix[i][0] = i;
   for (int i = 1; i <= m; i++)
