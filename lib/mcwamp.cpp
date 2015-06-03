@@ -287,7 +287,7 @@ void enter_kernel() { in_kernel = true; }
 void leave_kernel() { in_kernel = false; }
 
 // used in parallel_for_each.h
-void *CreateKernel(std::string s, AMPAllocator* Aloc) {
+void *CreateKernel(std::string s, AMPView* Aloc) {
   // FIXME need a more elegant way
   if (GetOrInitRuntime()->m_ImplName.find("libmcwamp_opencl") != std::string::npos) {
     static bool firstTime = true;

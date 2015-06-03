@@ -61,11 +61,11 @@ static inline void callback_release_kernel(cl_event event, cl_int event_command_
         clReleaseKernel(static_cast<cl_kernel>(user_data));
 }
 
-class OpenCLManager : public AMPManager
+class OpenCLManager : public AMPDevice
 {
 public:
     OpenCLManager(const cl_device_id device, const std::wstring& path)
-        : AMPManager(), programs(), device(device), path(path) {
+        : AMPDevice(), programs(), device(device), path(path) {
         cl_int err;
 
         cl_ulong memAllocSize;
@@ -156,11 +156,11 @@ public:
         events.erase(dm);
         clReleaseMemObject(dm);
     }
-    std::shared_ptr<AMPAllocator> createAloc() override { return newAloc(); }
+    std::shared_ptr<AMPView> createAloc() override { return newAloc(); }
 
 
 private:
-    std::shared_ptr<AMPAllocator> newAloc();
+    std::shared_ptr<AMPView> newAloc();
     std::map<void*, cl_program> programs;
     struct DimMaxSize d;
     cl_device_id     device;
@@ -175,7 +175,7 @@ struct cl_info
     bool isConst;
 };
 
-class OpenCLAllocator : public AMPAllocator
+class OpenCLAllocator : public AMPView
 {
     enum { queue_size = 1 };
     cl_command_queue queues[queue_size];
@@ -183,8 +183,8 @@ class OpenCLAllocator : public AMPAllocator
     std::vector<cl_info> mems;
     cl_command_queue getQueue() { return queues[(idx++) % queue_size]; }
 public:
-    OpenCLAllocator(std::shared_ptr<AMPManager> pMan) : AMPAllocator(pMan), mems() {
-        auto Man = std::dynamic_pointer_cast<OpenCLManager, AMPManager>(pMan);
+    OpenCLAllocator(std::shared_ptr<AMPDevice> pMan) : AMPView(pMan), mems() {
+        auto Man = std::dynamic_pointer_cast<OpenCLManager, AMPDevice>(pMan);
         cl_int err;
         idx = 0;
         for (int i = 0; i < queue_size; ++i) {
@@ -315,7 +315,7 @@ public:
     }
     void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) override {
         cl_int err;
-        auto Man = std::dynamic_pointer_cast<OpenCLManager, AMPManager>(getMan());
+        auto Man = std::dynamic_pointer_cast<OpenCLManager, AMPDevice>(getMan());
         if(!Man->check(local_size, dim_ext))
             local_size = NULL;
         std::vector<cl_event> eve;
@@ -341,8 +341,8 @@ public:
     }
 };
 
-std::shared_ptr<AMPAllocator> OpenCLManager::newAloc() {
-    return std::shared_ptr<AMPAllocator>(new OpenCLAllocator(shared_from_this()));
+std::shared_ptr<AMPView> OpenCLManager::newAloc() {
+    return std::shared_ptr<AMPView>(new OpenCLAllocator(shared_from_this()));
 }
 
 struct CLFlag
@@ -390,7 +390,7 @@ public:
         context = clCreateContext(0, devs.size(), devs.data(), NULL, NULL, &err);
         assert(err == CL_SUCCESS);
         for (int i = 0; i < devs.size(); ++i) {
-            auto Man = std::shared_ptr<AMPManager>(new OpenCLManager(devs[i], path[i]));
+            auto Man = std::shared_ptr<AMPDevice>(new OpenCLManager(devs[i], path[i]));
             default_map[Man] = Man->createAloc();
             if (i == 0)
                 def = Man;

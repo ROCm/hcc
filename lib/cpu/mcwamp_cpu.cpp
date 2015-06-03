@@ -17,15 +17,15 @@ extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v) {}
 
 namespace Concurrency {
 
-class CPUFallbackManager final : public AMPManager
+class CPUFallbackManager final : public AMPDevice
 {
-    std::shared_ptr<AMPAllocator> newAloc();
+    std::shared_ptr<AMPView> newAloc();
 
 public:
     void* create(size_t count) override { return aligned_alloc(0x1000, count); }
     void release(void *data) override { ::operator delete(data); }
 
-    CPUFallbackManager() : AMPManager() { cpu_type = access_type_read_write; }
+    CPUFallbackManager() : AMPDevice() { cpu_type = access_type_read_write; }
 
     std::wstring get_path() override { return L"fallback"; }
     std::wstring get_description() override { return L"CPU Fallback"; }
@@ -35,14 +35,14 @@ public:
     bool is_unified() override { return true; }
     bool is_emulated() override { return true; }
 
-    std::shared_ptr<AMPAllocator> createAloc() override { return newAloc(); }
+    std::shared_ptr<AMPView> createAloc() override { return newAloc(); }
 };
 
-class CPUFallbackAllocator final : public AMPAllocator
+class CPUFallbackAllocator final : public AMPView
 {
     std::map<void*, void*> addrs;
 public:
-    CPUFallbackAllocator(std::shared_ptr<AMPManager> pMan) : AMPAllocator(pMan) {}
+    CPUFallbackAllocator(std::shared_ptr<AMPDevice> pMan) : AMPView(pMan) {}
 private:
     void Push(void *kernel, int idx, void*& data, void* device, bool isConst) override {
       auto it = addrs.find(data);
@@ -57,15 +57,15 @@ private:
   }
 };
 
-std::shared_ptr<AMPAllocator> CPUFallbackManager::newAloc() {
-    return std::shared_ptr<AMPAllocator>(new CPUFallbackAllocator(shared_from_this()));
+std::shared_ptr<AMPView> CPUFallbackManager::newAloc() {
+    return std::shared_ptr<AMPView>(new CPUFallbackAllocator(shared_from_this()));
 }
 
 class CPUContext final : public AMPContext
 {
 public:
     CPUContext() {
-        auto Man = std::shared_ptr<AMPManager>(new CPUFallbackManager);
+        auto Man = std::shared_ptr<AMPDevice>(new CPUFallbackManager);
         default_map[Man] = Man->createAloc();
         Devices.push_back(Man);
         def = Man;

@@ -66,9 +66,9 @@ void RegisterMemory(void *p, size_t sz)
 ///
 namespace Concurrency {
 
-class HSAManager final : public AMPManager
+class HSAManager final : public AMPDevice
 {
-    std::shared_ptr<AMPAllocator> newAloc();
+    std::shared_ptr<AMPView> newAloc();
     std::map<std::string, HSAContext::Kernel *> __mcw_hsa_kernels;
 public:
 
@@ -80,8 +80,8 @@ public:
 
     void release(void *data) override { ::operator delete(data); }
 
-    std::shared_ptr<AMPAllocator> createAloc() override { return newAloc(); }
-    HSAManager() : AMPManager() { cpu_type = access_type_read_write; }
+    std::shared_ptr<AMPView> createAloc() override { return newAloc(); }
+    HSAManager() : AMPDevice() { cpu_type = access_type_read_write; }
 
     std::wstring get_path() override { return L"HSA"; }
     std::wstring get_description() override { return L"HSA Device"; }
@@ -152,28 +152,28 @@ public:
         std::shared_future<void>* fut = dispatch->dispatchKernelAndGetFuture();
         return static_cast<void*>(fut);
     }
-    std::shared_ptr<AMPAllocator> createAloc() override { return newAloc(); }
+    std::shared_ptr<AMPView> createAloc() override { return newAloc(); }
 };
 
-class HSAAllocator final : public AMPAllocator
+class HSAAllocator final : public AMPView
 {
 public:
-    HSAAllocator(std::shared_ptr<AMPManager> pMan) : AMPAllocator(pMan) {}
+    HSAAllocator(std::shared_ptr<AMPDevice> pMan) : AMPView(pMan) {}
 private:
     void Push(void *kernel, int idx, void*& data, void *device) override {
         PushArgImpl(kernel, idx, sizeof(void*), &device);
     }
 };
 
-std::shared_ptr<AMPAllocator> HSAManager::init() {
-    return std::shared_ptr<AMPAllocator>(new HSAAllocator(shared_from_this()));
+std::shared_ptr<AMPView> HSAManager::init() {
+    return std::shared_ptr<AMPView>(new HSAAllocator(shared_from_this()));
 }
 
 class HSAContext final : public AMPContext
 {
 public:
     HSAContext() {
-        auto Man = std::shared_ptr<AMPManager>(new HSAManager);
+        auto Man = std::shared_ptr<AMPDevice>(new HSAManager);
         default_map[Man] = Man->createAloc();
         Devices.push_back(Man);
         def = Man;

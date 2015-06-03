@@ -91,7 +91,7 @@ template <int N> class extent;
 template <int D0, int D1=0, int D2=0> class tiled_extent;
 
 class accelerator_view {
-    accelerator_view(std::shared_ptr<AMPAllocator> pAloc)
+    accelerator_view(std::shared_ptr<AMPView> pAloc)
         : pAloc(pAloc) {}
 public:
   accelerator_view(const accelerator_view& other) :
@@ -117,7 +117,7 @@ public:
   bool operator!=(const accelerator_view& other) const { return !(*this == other); }
 
 private:
-  std::shared_ptr<AMPAllocator> pAloc;
+  std::shared_ptr<AMPView> pAloc;
   friend class accelerator;
 
   template <typename Q, int K> friend class array;
@@ -165,7 +165,7 @@ public:
 
 class accelerator
 {
-  accelerator(std::shared_ptr<AMPManager> pMan) : pMan(pMan) {}
+  accelerator(std::shared_ptr<AMPDevice> pMan) : pMan(pMan) {}
 public:
   static const wchar_t default_accelerator[];   // = L"default"
   static const wchar_t cpu_accelerator[];       // = L"cpu"
@@ -220,7 +220,7 @@ public:
   bool operator!=(const accelerator& other) const { return !(*this == other); }
 private:
   friend class accelerator_view;
-  std::shared_ptr<AMPManager> pMan;
+  std::shared_ptr<AMPDevice> pMan;
 };
 
 inline accelerator accelerator_view::get_accelerator() const { return pAloc->getMan(); }

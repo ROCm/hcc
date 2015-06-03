@@ -54,7 +54,7 @@ public:
     __attribute__((annotate("user_deserialize")))
         explicit _data(__global T* t) restrict(cpu, amp) { p_ = t; }
     __global T* get(void) const restrict(cpu, amp) { return p_; }
-    std::shared_ptr<AMPAllocator> get_av() const { return nullptr; }
+    std::shared_ptr<AMPView> get_av() const { return nullptr; }
     void reset() const {}
 
     T* map_ptr(bool modify = false, size_t count = 0, size_t offset = 0) const { return nullptr; }
@@ -67,7 +67,7 @@ public:
     void refresh() const {}
     void set_const() const {}
     access_type get_access() const { return access_type_auto; }
-    std::shared_ptr<AMPAllocator> get_stage() const { return nullptr; }
+    std::shared_ptr<AMPView> get_stage() const { return nullptr; }
 
 private:
     __global T* p_;
@@ -84,7 +84,7 @@ public:
     _data_host(size_t count, void* src = nullptr)
         : mm(std::make_shared<rw_info>(count*sizeof(T), src)), isArray(false), isConst(false) {}
 
-    _data_host(std::shared_ptr<AMPAllocator> av, std::shared_ptr<AMPAllocator> stage, int count, access_type mode)
+    _data_host(std::shared_ptr<AMPView> av, std::shared_ptr<AMPView> stage, int count, access_type mode)
         : mm(std::make_shared<rw_info>(av, stage, count*sizeof(T), mode)), isArray(true), isConst(false) {}
 
     _data_host(const _data_host& other) : mm(other.mm), isArray(false), isConst(false) {}
@@ -99,8 +99,8 @@ public:
     size_t size() const { return mm->count; }
     void reset() const { mm.reset(); }
     void get_cpu_access(bool modify = false) const { mm->get_cpu_access(modify); }
-    std::shared_ptr<AMPAllocator> get_av() const { return mm->master; }
-    std::shared_ptr<AMPAllocator> get_stage() const { return mm->stage; }
+    std::shared_ptr<AMPView> get_av() const { return mm->master; }
+    std::shared_ptr<AMPView> get_stage() const { return mm->stage; }
     access_type get_access() const { return mm->mode; }
     void copy(_data_host<T> other, int src_offset, int dst_offset, int size) const {
         mm->copy(other.mm.get(), src_offset * sizeof(T), dst_offset * sizeof(T), size * sizeof(T));
@@ -116,7 +116,7 @@ public:
     }
     void unmap_ptr(void* addr) const { return mm->unmap(addr); }
     void set_const() const { isConst = true; }
-    void sync_to(std::shared_ptr<AMPAllocator> Aloc) const {
+    void sync_to(std::shared_ptr<AMPView> Aloc) const {
         mm->sync_to(Aloc);
     }
 
