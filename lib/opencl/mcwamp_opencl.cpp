@@ -482,9 +482,7 @@ void CLCompileKernels(cl_program& program, cl_device_id& device,
         char name[256];
         err = clGetDeviceInfo(device, CL_DEVICE_NAME, sizeof(name), name, NULL);
         assert(err == CL_SUCCESS);
-        hash_str += "const const _device_name[] = \"";
         hash_str += name;
-        hash_str += "\";";
 
         // calculate MD5 checksum
         unsigned char md5_hash[16];
