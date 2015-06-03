@@ -1820,7 +1820,7 @@ public:
 
   operator std::vector<T>() const {
       std::vector<T> vec(extent.size());
-      Concurrency::copy(*this, std::begin(vec));
+      Concurrency::copy(*this, vec.data());
       return std::move(vec);
   }
 
