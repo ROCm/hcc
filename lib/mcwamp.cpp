@@ -331,13 +331,7 @@ void *CreateKernel(std::string s, AMPAllocator* Aloc) {
 }
 
 void MatchKernelNames(std::string& fixed_name) {
-  char* ret = new char[fixed_name.length() * 2];
-  assert(ret);
-  memset(ret, 0, fixed_name.length() * 2);
-  memcpy(ret, fixed_name.c_str(), fixed_name.length());
-  GetOrInitRuntime()->m_MatchKernelNamesImpl(ret);
-  fixed_name = ret;
-  delete[] ret;
+  GetOrInitRuntime()->m_MatchKernelNamesImpl(fixed_name);
 }
 
 void PushArg(void *k_, int idx, size_t sz, const void *s) {

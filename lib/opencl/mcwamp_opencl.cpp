@@ -56,6 +56,12 @@ static cl_context context;
 static std::map<cl_mem, cl_event> events;
 static std::map<cl_event, std::vector<cl_mem>> etomem;
 
+static inline void callback_release_kernel(cl_event event, cl_int event_command_exec_status, void *user_data)
+{
+    if (user_data)
+        clReleaseKernel(static_cast<cl_kernel>(user_data));
+}
+
 class OpenCLManager : public AMPManager
 {
 public:
@@ -328,6 +334,8 @@ public:
         cl_event evt;
         err = clEnqueueNDRangeKernel(getQueue(), (cl_kernel)kernel, dim_ext, NULL, ext, local_size,
                                      eve.size(), eve.data(), &evt);
+        assert(err == CL_SUCCESS);
+        err = clSetEventCallback(evt, CL_COMPLETE, &callback_release_kernel, (cl_kernel)kernel);
         assert(err == CL_SUCCESS);
         std::for_each(std::begin(mems), std::end(mems),
                       [&](const cl_info& mm) {
@@ -663,7 +671,8 @@ static inline int ldistance(const std::string source, const std::string target)
 // paths are mutually exclusive. We can scan all kernel names and replace
 // transformed_kernel_name with the one that has the shortest distance from it by using
 // Levenshtein Distance measurement
-extern "C" void MatchKernelNamesImpl(char *fixed_name) {
+extern "C" void MatchKernelNamesImpl(std::string& fixed_name) {
+    return;
     if (__mcw_kernel_names.size()) {
     // Must start from a big value > 10
     int distance = 1024;
@@ -685,7 +694,7 @@ extern "C" void MatchKernelNamesImpl(char *fixed_name) {
     }
     /* Replacement. Skip if not hit or the distance is too far (>5)*/
     if (hit >= 0 && distance < 5)
-      memcpy(fixed_name, shortest.c_str(), shortest.length());
+        fixed_name = std::move(shortest);
   }
 }
 
