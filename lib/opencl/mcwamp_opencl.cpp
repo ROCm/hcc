@@ -156,10 +156,6 @@ public:
         events.erase(dm);
         clReleaseMemObject(dm);
     }
-    void discard(void *device) override {
-        cl_mem dm = static_cast<cl_mem>(device);
-        events.erase(dm);
-    }
     std::shared_ptr<AMPAllocator> createAloc() override { return newAloc(); }
 
 

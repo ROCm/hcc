@@ -38,7 +38,6 @@ public:
     virtual void* create(size_t count) = 0;
     virtual void release(void* ptr) = 0;
     virtual void* CreateKernel(const char* fun, void* size, void* source) { return nullptr; }
-    virtual void discard(void* ptr) {}
     virtual ~AMPManager() {}
 };
 
@@ -310,13 +309,6 @@ struct rw_info
     void disc() {
         for (auto& it : Alocs)
             it.second.state = invalid;
-    }
-
-    void discard() {
-        for (auto& it : Alocs) {
-            it.second.state = invalid;
-            it.first->discard(it.second.data);
-        }
     }
 
     void sync(std::shared_ptr<AMPAllocator> aloc, bool modify) {

@@ -94,7 +94,7 @@ public:
 
     T *get() const { return static_cast<T*>(mm->data); }
     void synchronize(bool modify = false) const { mm->synchronize(modify); }
-    void discard() const { mm->discard(); }
+    void discard() const { mm->disc(); }
     void refresh() const {}
     size_t size() const { return mm->count; }
     void reset() const { mm.reset(); }
