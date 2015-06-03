@@ -677,7 +677,7 @@ extern "C" void MatchKernelNamesImpl(std::string& fixed_name) {
     // Must start from a big value > 10
     int distance = 1024;
     int hit = -1;
-    std::string shortest;
+    std::vector<std::string>::iterator shortest;
     for (std::vector < std::string >::iterator it = __mcw_kernel_names.begin();
          it != __mcw_kernel_names.end(); ++it) {
       if ((*it) == fixed_name) {
@@ -689,12 +689,12 @@ extern "C" void MatchKernelNamesImpl(std::string& fixed_name) {
       if (n <= distance) {
         distance = n;
         hit = 1;
-        shortest = (*it);
+        shortest = it;
       }
     }
     /* Replacement. Skip if not hit or the distance is too far (>5)*/
     if (hit >= 0 && distance < 5)
-        fixed_name = std::move(shortest);
+        fixed_name = *shortest;
   }
 }
 
