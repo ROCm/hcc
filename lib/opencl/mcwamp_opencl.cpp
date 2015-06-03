@@ -181,7 +181,7 @@ struct cl_info
 
 class OpenCLAllocator : public AMPAllocator
 {
-    enum { queue_size = 4 };
+    enum { queue_size = 1 };
     cl_command_queue queues[queue_size];
     int idx;
     std::vector<cl_info> mems;
