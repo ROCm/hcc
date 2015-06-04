@@ -16,6 +16,7 @@ bool test() {
   // Alloc & init input data
   extent<1> e(vecSize);
   array<_Tp, 1> a(vecSize);
+
   array<_Tp, 1> b(vecSize);
   array<_Tp, 1> c(vecSize);
   array<_Tp, 1> d(vecSize);

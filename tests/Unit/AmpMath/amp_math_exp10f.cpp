@@ -14,13 +14,13 @@ int main(void) {
   array<float, 1> a(vecSize);
   array<float, 1> b(vecSize);
   array<float, 1> c(vecSize);
+  array_view<float> ga(a);
+  array_view<float> gb(b);
+  array_view<float> gc(c);
   for (index<1> i(0); i[0] < vecSize; i++) {
     a[i] = rand() / 1000.0f;
   }
 
-  array_view<float> ga(a);
-  array_view<float> gb(b);
-  array_view<float> gc(c);
   parallel_for_each(
     e,
     [=](index<1> idx) restrict(amp) {
