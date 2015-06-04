@@ -10,6 +10,7 @@
 #include <iostream>
 #include <vector>
 #include <map>
+#include <set>
 #include <future>
 #include <cassert>
 #include <stdexcept>
@@ -151,7 +152,10 @@ public:
     }
     void release(void *device) override {
         cl_mem dm = static_cast<cl_mem>(device);
-        events.erase(dm);
+        if (events.find(dm) != std::end(events)) {
+            clReleaseEvent(events[dm]);
+            events.erase(dm);
+        }
         clReleaseMemObject(dm);
     }
     std::shared_ptr<AMPView> createAloc() override { return newAloc(); }
@@ -341,14 +345,20 @@ public:
         assert(err == CL_SUCCESS);
         err = clSetEventCallback(evt, CL_COMPLETE, &callback_release_kernel, kernel);
         assert(err == CL_SUCCESS);
+        std::set<cl_mem> mms;
         std::for_each(std::begin(mems), std::end(mems),
                       [&](const cl_info& mm) {
-                        if (!mm.isConst) {
-                            if (events.find(mm.dm) != std::end(events))
-                                clReleaseEvent(events[mm.dm]);
-                            events[mm.dm] = evt;
-                        }
+                        if (!mm.isConst)
+                            mms.insert(mm.dm);
                       });
+        std::for_each(std::begin(mms), std::end(mms),
+                      [&](const cl_mem& dm) {
+                        if (events.find(dm) != std::end(events))
+                            clReleaseEvent(events[dm]);
+                        clRetainEvent(evt);
+                        events[dm] = evt;
+                      });
+        clReleaseEvent(evt);
         mems.clear();
     }
 };
