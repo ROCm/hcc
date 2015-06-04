@@ -25,14 +25,14 @@ bool test() {
   std::random_device rd;
   std::default_random_engine gen(rd());
   std::uniform_real_distribution<_Tp> dis(-100, 100);
-  for (index<1> i(0); i[0] < vecSize; i++) {
-    a[i] = dis(gen);
-  }
-
   array_view<_Tp> ga(a);
   array_view<_Tp> gb(b);
   array_view<_Tp> gc(c);
-  parallel_for_each(
+  for (index<1> i(0); i[0] < vecSize; i++) {
+    ga[i] = dis(gen);
+  }
+
+   parallel_for_each(
     e,
     [=](index<1> idx) restrict(amp) {
     gc[idx] = precise_math::tan(ga[idx]);

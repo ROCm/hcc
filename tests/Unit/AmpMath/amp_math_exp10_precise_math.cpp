@@ -29,7 +29,7 @@ bool test() {
   array_view<_Tp> gb(b);
   array_view<_Tp> gc(c);
   for (index<1> i(0); i[0] < vecSize; i++) {
-    a[i] = dis(gen);
+    ga[i] = dis(gen);
   }
 
   parallel_for_each(
