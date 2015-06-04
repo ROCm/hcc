@@ -46,7 +46,6 @@ struct RuntimeImpl {
   RuntimeImpl(const char* libraryName) :
     m_ImplName(libraryName),
     m_RuntimeHandle(nullptr),
-    m_MatchKernelNamesImpl(nullptr),
     m_PushArgImpl(nullptr),
     m_PushArgPtrImpl(nullptr),
     m_GetContextImpl(nullptr),
@@ -68,7 +67,6 @@ struct RuntimeImpl {
 
   // load symbols from C++AMP runtime implementation
   void LoadSymbols() {
-    m_MatchKernelNamesImpl = (MatchKernelNamesImpl_t) dlsym(m_RuntimeHandle, "MatchKernelNamesImpl");
     m_PushArgImpl = (PushArgImpl_t) dlsym(m_RuntimeHandle, "PushArgImpl");
     m_PushArgPtrImpl = (PushArgPtrImpl_t) dlsym(m_RuntimeHandle, "PushArgPtrImpl");
     m_GetContextImpl= (GetContextImpl_t) dlsym(m_RuntimeHandle, "GetContextImpl");
@@ -79,7 +77,6 @@ struct RuntimeImpl {
 
   std::string m_ImplName;
   void* m_RuntimeHandle;
-  MatchKernelNamesImpl_t m_MatchKernelNamesImpl;
   PushArgImpl_t m_PushArgImpl;
   PushArgPtrImpl_t m_PushArgPtrImpl;
   GetContextImpl_t m_GetContextImpl;
@@ -328,10 +325,6 @@ void *CreateKernel(std::string s, AMPView* Aloc) {
         (ptrdiff_t)((void *)hsa_kernel_source);
      return Aloc->getMan()->CreateKernel(s.c_str(), (void *)kernel_size, hsa_kernel_source);
    }
-}
-
-void MatchKernelNames(std::string& fixed_name) {
-  GetOrInitRuntime()->m_MatchKernelNamesImpl(fixed_name);
 }
 
 void PushArg(void *k_, int idx, size_t sz, const void *s) {

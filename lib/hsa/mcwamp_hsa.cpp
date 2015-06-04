@@ -193,8 +193,6 @@ extern "C" void *GetContextImpl() {
   return &Concurrency::ctx;
 }
 
-extern "C" void MatchKernelNamesImpl(char *fixed_name) {}
-
 extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v) {
   //std::cerr << "pushing:" << ker << " of size " << sz << "\n";
   HSAContext::Dispatch *dispatch =
