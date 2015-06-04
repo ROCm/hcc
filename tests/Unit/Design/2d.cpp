@@ -1,4 +1,4 @@
-// RUN: %gtest_amp %s -o %t.out && %t.out
+//_view RUN: %gtest_amp %s -o %t.out && %t.out
 
 #include <amp.h>
 #include <stdlib.h>
@@ -12,7 +12,7 @@ class myVecAdd {
   // CPU-side constructor. Written by the user
   myVecAdd(Concurrency::array_view<int, 2>& a,
     Concurrency::array_view<int, 2> &b,
-    Concurrency::array<int, 2> &c):
+    Concurrency::array_view<int, 2> &c):
     a_(a), b_(b), c_(c) {
   }
   void operator() (Concurrency::index<2> idx) restrict(amp) {
@@ -22,7 +22,7 @@ class myVecAdd {
     c_[idx] = a_[idx]+b_[idx];
   }
  private:
-  Concurrency::array<int, 2> &c_;
+  Concurrency::array_view<int, 2> &c_;
   Concurrency::array_view<int, 2> a_, b_;
 };
 void bar(void) restrict(amp,cpu) {
@@ -43,7 +43,7 @@ TEST(Design, Final) {
   EXPECT_EQ(vector_a[2], av(0,2));
   concurrency::array_view<int, 2> bv(e, vector_b);
   { // Test untiled version
-    concurrency::array<int, 2> c(e);
+    concurrency::array_view<int, 2> c(e);
     myVecAdd mf(av, bv, c);
     Concurrency::parallel_for_each(e, mf);
     int error=0;
@@ -59,7 +59,7 @@ TEST(Design, Final) {
   }
   {
    // Test tiled version
-    concurrency::array<int, 2> c(e);
+    concurrency::array_view<int, 2> c(e);
     myVecAdd mf(av, bv, c);
     Concurrency::parallel_for_each(e.tile<4, 4>(), mf);
     int error=0;

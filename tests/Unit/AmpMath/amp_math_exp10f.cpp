@@ -18,7 +18,7 @@ int main(void) {
   array_view<float> gb(b);
   array_view<float> gc(c);
   for (index<1> i(0); i[0] < vecSize; i++) {
-    a[i] = rand() / 1000.0f;
+    ga[i] = rand() / 1000.0f;
   }
 
   parallel_for_each(
