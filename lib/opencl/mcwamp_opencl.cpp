@@ -28,7 +28,6 @@
 /// global values
 ///
 namespace {
-std::vector<std::string> __mcw_kernel_names;
 const wchar_t cpu_accelerator[] = L"cpu";
 const wchar_t default_accelerator[] = L"default";
 }
@@ -433,200 +432,141 @@ static OpenCLContext ctx;
 namespace Concurrency {
 namespace CLAMP {
 
-static inline void getKernelNames(cl_program& prog) {
-    std::vector<std::string> n;
-    cl_uint kernel_num = 0;
-    cl_uint ret = CL_SUCCESS;
-    char **names;
-    int count = 0;
-    ret = clCreateKernelsInProgram(prog, 1024, NULL, &kernel_num);
-    if (ret == CL_SUCCESS && kernel_num > 0) {
-        cl_kernel *kl = new cl_kernel[kernel_num];
-        ret = clCreateKernelsInProgram(prog, kernel_num + 1, kl, &kernel_num);
-        if (ret == CL_SUCCESS) {
-            std::map<std::string, std::string> aMap;
-            for (unsigned i = 0; i < unsigned(kernel_num); ++i) {
-                char s[1024] = { 0x0 };
-                size_t size;
-                ret = clGetKernelInfo(kl[i], CL_KERNEL_FUNCTION_NAME, 1024, s, &size);
-                n.push_back(std::string (s));
-                clReleaseKernel(kl[i]);
-            }
-        }
-        delete [] kl;
-    }
-    if (n.size()) {
-        std::sort(n.begin(), n.end());
-        n.erase(std::unique(n.begin(), n.end()), n.end());
-    }
-    if (n.size()) {
-        names = new char *[n.size()];
-        int i = 0;
-        std::vector<std::string>::iterator it;
-        for (it = n.begin(); it != n.end(); ++it, ++i) {
-            size_t len = (*it).length();
-            char *name = new char[len + 1];
-            memcpy(name, (*it).c_str(), len);
-            name[len] = '\0';
-            names[i] = name;
-        }
-        count = unsigned(n.size());
-    }
-    if (count) {
-        int i = 0;
-        while (names && i < count) {
-            __mcw_kernel_names.push_back(std::string(names[i]));
-            delete [] names[i];
-            ++i;
-        }
-        delete [] names;
-        if (__mcw_kernel_names.size()) {
-            std::sort(std::begin(__mcw_kernel_names), std::end(__mcw_kernel_names));
-            __mcw_kernel_names.erase (std::unique (__mcw_kernel_names.begin (),
-                                                   __mcw_kernel_names.end ()),
-                                      __mcw_kernel_names.end ());
-        }
-    }
-}
-
 void CLCompileKernels(cl_program& program, cl_device_id& device,
                       void* kernel_size_, void* kernel_source_)
 {
     cl_int err;
-    if (!program) {
-        std::string kernel((const char*)kernel_source_, (size_t)((void *)kernel_size_));
+    std::string kernel((const char*)kernel_source_, (size_t)((void *)kernel_size_));
 
-        std::string hash_str = kernel;
-        char name[256];
-        err = clGetDeviceInfo(device, CL_DEVICE_NAME, sizeof(name), name, NULL);
-        assert(err == CL_SUCCESS);
-        hash_str += name;
+    std::string hash_str = kernel;
+    char name[256];
+    err = clGetDeviceInfo(device, CL_DEVICE_NAME, sizeof(name), name, NULL);
+    assert(err == CL_SUCCESS);
+    hash_str += name;
 
-        // calculate MD5 checksum
-        unsigned char md5_hash[16];
-        memset(md5_hash, 0, sizeof(unsigned char) * 16);
-        MD5_CTX md5ctx;
-        MD5_Init(&md5ctx);
-        MD5_Update(&md5ctx, hash_str.data(), hash_str.length());
-        MD5_Final(md5_hash, &md5ctx);
+    // calculate MD5 checksum
+    unsigned char md5_hash[16];
+    memset(md5_hash, 0, sizeof(unsigned char) * 16);
+    MD5_CTX md5ctx;
+    MD5_Init(&md5ctx);
+    MD5_Update(&md5ctx, hash_str.data(), hash_str.length());
+    MD5_Final(md5_hash, &md5ctx);
 
-        // compute compiled kernel file name
-        std::stringstream compiled_kernel_name;
-        compiled_kernel_name << "/tmp/";
-        compiled_kernel_name << std::setbase(16);
-        for (int i = 0; i < 16; ++i) {
-            compiled_kernel_name << static_cast<unsigned int>(md5_hash[i]);
+    // compute compiled kernel file name
+    std::stringstream compiled_kernel_name;
+    compiled_kernel_name << "/tmp/";
+    compiled_kernel_name << std::setbase(16);
+    for (int i = 0; i < 16; ++i) {
+        compiled_kernel_name << static_cast<unsigned int>(md5_hash[i]);
+    }
+    compiled_kernel_name << ".bin";
+
+    //std::cout << "Try load precompiled kernel: " << compiled_kernel_name.str() << std::endl;
+
+    // check if pre-compiled kernel binary exist
+    std::ifstream precompiled_kernel(compiled_kernel_name.str(), std::ifstream::binary);
+    if (precompiled_kernel) {
+        // use pre-compiled kernel binary
+        precompiled_kernel.seekg(0, std::ios_base::end);
+        size_t len = precompiled_kernel.tellg();
+        precompiled_kernel.seekg(0, std::ios_base::beg);
+        //std::cout << "Length of precompiled kernel: " << len << std::endl;
+        unsigned char* compiled_kernel = new unsigned char[len];
+        precompiled_kernel.read(reinterpret_cast<char*>(compiled_kernel), len);
+        precompiled_kernel.close();
+
+        const unsigned char *ks = (const unsigned char *)compiled_kernel;
+        program = clCreateProgramWithBinary(Concurrency::context, 1, &device, &len, &ks, NULL, &err);
+        if (err == CL_SUCCESS)
+            err = clBuildProgram(program, 1, &device, NULL, NULL, NULL);
+        if (err != CL_SUCCESS) {
+            size_t len;
+            err = clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &len);
+            assert(err == CL_SUCCESS);
+            char *msg = new char[len + 1];
+            err = clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, len, msg, NULL);
+            assert(err == CL_SUCCESS);
+            msg[len] = '\0';
+            std::cerr << msg;
+            delete [] msg;
+            exit(1);
         }
-        compiled_kernel_name << ".bin";
+        delete [] compiled_kernel;
+    } else {
+        // pre-compiled kernel binary doesn't exist
+        // call CL compiler
 
-        //std::cout << "Try load precompiled kernel: " << compiled_kernel_name.str() << std::endl;
-
-        // check if pre-compiled kernel binary exist
-        std::ifstream precompiled_kernel(compiled_kernel_name.str(), std::ifstream::binary);
-        if (precompiled_kernel) {
-            // use pre-compiled kernel binary
-            precompiled_kernel.seekg(0, std::ios_base::end);
-            size_t len = precompiled_kernel.tellg();
-            precompiled_kernel.seekg(0, std::ios_base::beg);
-            //std::cout << "Length of precompiled kernel: " << len << std::endl;
-            unsigned char* compiled_kernel = new unsigned char[len];
-            precompiled_kernel.read(reinterpret_cast<char*>(compiled_kernel), len);
-            precompiled_kernel.close();
-
-            const unsigned char *ks = (const unsigned char *)compiled_kernel;
-            program = clCreateProgramWithBinary(Concurrency::context, 1, &device, &len, &ks, NULL, &err);
+        if (kernel[0] == 'B' && kernel[1] == 'C') {
+            // Bitcode magic number. Assuming it's in SPIR
+            auto size = kernel.length();
+            auto str = (const unsigned char*)kernel.data();
+            program = clCreateProgramWithBinary(Concurrency::context, 1, &device, &size, &str, NULL, &err);
             if (err == CL_SUCCESS)
                 err = clBuildProgram(program, 1, &device, NULL, NULL, NULL);
-            if (err != CL_SUCCESS) {
-                size_t len;
-                err = clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &len);
-                assert(err == CL_SUCCESS);
-                char *msg = new char[len + 1];
-                err = clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, len, msg, NULL);
-                assert(err == CL_SUCCESS);
-                msg[len] = '\0';
-                std::cerr << msg;
-                delete [] msg;
-                exit(1);
-            }
-            delete [] compiled_kernel;
         } else {
-            // pre-compiled kernel binary doesn't exist
-            // call CL compiler
-
-            if (kernel[0] == 'B' && kernel[1] == 'C') {
-                // Bitcode magic number. Assuming it's in SPIR
-                auto size = kernel.length();
-                auto str = (const unsigned char*)kernel.data();
-                program = clCreateProgramWithBinary(Concurrency::context, 1, &device, &size, &str, NULL, &err);
-                if (err == CL_SUCCESS)
-                    err = clBuildProgram(program, 1, &device, NULL, NULL, NULL);
-            } else {
-                // in OpenCL-C
-                auto size = kernel.length();
-                auto str = kernel.data();
-                program = clCreateProgramWithSource(Concurrency::context, 1, &str, &size, &err);
-                if (err == CL_SUCCESS)
-                    err = clBuildProgram(program, 1, &device, "-D__ATTRIBUTE_WEAK__=", NULL, NULL);
-            }
-            if (err != CL_SUCCESS) {
-                size_t len;
-                err = clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &len);
-                assert(err == CL_SUCCESS);
-                char *msg = new char[len + 1];
-                err = clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, len, msg, NULL);
-                assert(err == CL_SUCCESS);
-                msg[len] = '\0';
-                std::cerr << msg;
-                delete [] msg;
-                exit(1);
-            }
-
-            //Get the number of devices attached with program object
-            cl_uint nDevices = 0;
-            err = clGetProgramInfo(program, CL_PROGRAM_NUM_DEVICES, sizeof(cl_uint),&nDevices, NULL);
-            assert(nDevices == 1);
+            // in OpenCL-C
+            auto size = kernel.length();
+            auto str = kernel.data();
+            program = clCreateProgramWithSource(Concurrency::context, 1, &str, &size, &err);
+            if (err == CL_SUCCESS)
+                err = clBuildProgram(program, 1, &device, "-D__ATTRIBUTE_WEAK__=", NULL, NULL);
+        }
+        if (err != CL_SUCCESS) {
+            size_t len;
+            err = clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &len);
             assert(err == CL_SUCCESS);
-
-            //Get the Id of all the attached devices
-            cl_device_id *devices = new cl_device_id[nDevices];
-            err = clGetProgramInfo(program, CL_PROGRAM_DEVICES, sizeof(cl_device_id) * nDevices, devices, NULL);
+            char *msg = new char[len + 1];
+            err = clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, len, msg, NULL);
             assert(err == CL_SUCCESS);
+            msg[len] = '\0';
+            std::cerr << msg;
+            delete [] msg;
+            exit(1);
+        }
 
-            // Get the sizes of all the binary objects
-            size_t *pgBinarySizes = new size_t[nDevices];
-            err = clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, sizeof(size_t) * nDevices, pgBinarySizes, NULL);
-            assert(err == CL_SUCCESS);
+        //Get the number of devices attached with program object
+        cl_uint nDevices = 0;
+        err = clGetProgramInfo(program, CL_PROGRAM_NUM_DEVICES, sizeof(cl_uint),&nDevices, NULL);
+        assert(nDevices == 1);
+        assert(err == CL_SUCCESS);
 
-            // Allocate storage for each binary objects
-            unsigned char **pgBinaries = new unsigned char*[nDevices];
-            for (cl_uint i = 0; i < nDevices; i++)
-            {
-                pgBinaries[i] = new unsigned char[pgBinarySizes[i]];
-            }
+        //Get the Id of all the attached devices
+        cl_device_id *devices = new cl_device_id[nDevices];
+        err = clGetProgramInfo(program, CL_PROGRAM_DEVICES, sizeof(cl_device_id) * nDevices, devices, NULL);
+        assert(err == CL_SUCCESS);
 
-            // Get all the binary objects
-            err = clGetProgramInfo(program, CL_PROGRAM_BINARIES, sizeof(unsigned char*) * nDevices, pgBinaries, NULL);
-            assert(err == CL_SUCCESS);
+        // Get the sizes of all the binary objects
+        size_t *pgBinarySizes = new size_t[nDevices];
+        err = clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, sizeof(size_t) * nDevices, pgBinarySizes, NULL);
+        assert(err == CL_SUCCESS);
 
-            // save compiled kernel binary
-            std::ofstream compiled_kernel(compiled_kernel_name.str(), std::ostream::binary);
-            compiled_kernel.write(reinterpret_cast<const char*>(pgBinaries[0]), pgBinarySizes[0]);
-            compiled_kernel.close();
+        // Allocate storage for each binary objects
+        unsigned char **pgBinaries = new unsigned char*[nDevices];
+        for (cl_uint i = 0; i < nDevices; i++)
+        {
+            pgBinaries[i] = new unsigned char[pgBinarySizes[i]];
+        }
 
-            //std::cout << "Kernel written to: " << compiled_kernel_name.str() << std::endl;
+        // Get all the binary objects
+        err = clGetProgramInfo(program, CL_PROGRAM_BINARIES, sizeof(unsigned char*) * nDevices, pgBinaries, NULL);
+        assert(err == CL_SUCCESS);
 
-            // release memory
-            for (cl_uint i = 0; i < nDevices; ++i) {
-                delete [] pgBinaries[i];
-            }
-            delete [] pgBinaries;
-            delete [] pgBinarySizes;
-            delete [] devices;
+        // save compiled kernel binary
+        std::ofstream compiled_kernel(compiled_kernel_name.str(), std::ostream::binary);
+        compiled_kernel.write(reinterpret_cast<const char*>(pgBinaries[0]), pgBinarySizes[0]);
+        compiled_kernel.close();
 
-        } // if (precompiled_kernel)
-        getKernelNames(program);
-    }
+        //std::cout << "Kernel written to: " << compiled_kernel_name.str() << std::endl;
+
+        // release memory
+        for (cl_uint i = 0; i < nDevices; ++i) {
+            delete [] pgBinaries[i];
+        }
+        delete [] pgBinaries;
+        delete [] pgBinarySizes;
+        delete [] devices;
+
+    } // if (precompiled_kernel)
 }
 
 } // namespce CLAMP
