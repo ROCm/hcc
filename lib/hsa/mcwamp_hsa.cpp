@@ -66,22 +66,33 @@ void RegisterMemory(void *p, size_t sz)
 ///
 namespace Concurrency {
 
+class HSADevice;
+
+class HSAView final : public AMPView
+{
+public:
+    HSAView(AMPDevice* pMan) : AMPView(pMan) {}
+private:
+    void Push(void *kernel, int idx, void*& data, void *device) override {
+        PushArgImpl(kernel, idx, sizeof(void*), &device);
+    }
+};
+
 class HSADevice final : public AMPDevice
 {
-    std::shared_ptr<AMPView> newAloc();
     std::map<std::string, HSAContext::Kernel *> __mcw_hsa_kernels;
 public:
+    HSADevice() : AMPDevice() {
+        cpu_type = access_type_read_write;
+        def = createAloc();
+    }
 
     void* create(size_t count) override {
         void *data = aligned_alloc(0x1000, count);
         CLAMP::RegisterMemory(data, count);
         return data;
     }
-
     void release(void *data) override { ::operator delete(data); }
-
-    std::shared_ptr<AMPView> createAloc() override { return newAloc(); }
-    HSADevice() : AMPDevice() { cpu_type = access_type_read_write; }
 
     std::wstring get_path() override { return L"HSA"; }
     std::wstring get_description() override { return L"HSA Device"; }
@@ -152,22 +163,10 @@ public:
         std::shared_future<void>* fut = dispatch->dispatchKernelAndGetFuture();
         return static_cast<void*>(fut);
     }
-    std::shared_ptr<AMPView> createAloc() override { return newAloc(); }
-};
-
-class HSAView final : public AMPView
-{
-public:
-    HSAView(std::shared_ptr<AMPDevice> pMan) : AMPView(pMan) {}
-private:
-    void Push(void *kernel, int idx, void*& data, void *device) override {
-        PushArgImpl(kernel, idx, sizeof(void*), &device);
+    std::shared_ptr<AMPView> createAloc() override {
+        return std::shared_ptr<AMPView>(new HSAView(this));
     }
 };
-
-std::shared_ptr<AMPView> HSADevice::init() {
-    return std::shared_ptr<AMPView>(new HSAView(shared_from_this()));
-}
 
 class HSAContext final : public AMPContext
 {

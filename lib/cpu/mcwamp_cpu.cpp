@@ -17,26 +17,7 @@ extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v) {}
 
 namespace Concurrency {
 
-class CPUFallbackDevice final : public AMPDevice
-{
-    std::shared_ptr<AMPView> newAloc();
-
-public:
-    void* create(size_t count) override { return aligned_alloc(0x1000, count); }
-    void release(void *data) override { ::operator delete(data); }
-
-    CPUFallbackDevice() : AMPDevice() { cpu_type = access_type_read_write; }
-
-    std::wstring get_path() const override { return L"fallback"; }
-    std::wstring get_description() const override { return L"CPU Fallback"; }
-    size_t get_mem() const override { return 0; }
-    bool is_double() const override { return true; }
-    bool is_lim_double() const override { return true; }
-    bool is_unified() const override { return true; }
-    bool is_emulated() const override { return true; }
-
-    std::shared_ptr<AMPView> createAloc() override { return newAloc(); }
-};
+class CPUFallbackDevice;
 
 class CPUFallbackView final : public AMPView
 {
@@ -57,16 +38,32 @@ private:
   }
 };
 
-std::shared_ptr<AMPView> CPUFallbackDevice::newAloc() {
-    return std::shared_ptr<AMPView>(new CPUFallbackView(this));
-}
+class CPUFallbackDevice final : public AMPDevice
+{
+public:
+    void* create(size_t count) override { return aligned_alloc(0x1000, count); }
+    void release(void *data) override { ::operator delete(data); }
+
+    CPUFallbackDevice() : AMPDevice() { cpu_type = access_type_read_write; }
+
+    std::wstring get_path() const override { return L"fallback"; }
+    std::wstring get_description() const override { return L"CPU Fallback"; }
+    size_t get_mem() const override { return 0; }
+    bool is_double() const override { return true; }
+    bool is_lim_double() const override { return true; }
+    bool is_unified() const override { return true; }
+    bool is_emulated() const override { return true; }
+
+    std::shared_ptr<AMPView> createAloc() override {
+        return std::shared_ptr<AMPView>(new CPUFallbackView(this));
+    }
+};
 
 class CPUContext final : public AMPContext
 {
 public:
     CPUContext() {
         auto Man = new CPUFallbackDevice;
-        default_map[Man] = Man->createAloc();
         Devices.push_back(Man);
         def = Man;
     }

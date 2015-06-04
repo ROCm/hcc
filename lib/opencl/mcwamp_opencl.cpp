@@ -50,7 +50,7 @@ struct DimMaxSize {
   size_t* maxSizes;
 };
 
-class OpenCLView;
+class OpenCLDevice;
 static cl_context context;
 static std::map<cl_mem, cl_event> events;
 
@@ -58,116 +58,6 @@ static inline void callback_release_kernel(cl_event event, cl_int event_command_
     if (user_data)
         clReleaseKernel(static_cast<cl_kernel>(user_data));
 }
-
-class OpenCLDevice : public AMPDevice
-{
-public:
-    OpenCLDevice(const cl_device_id device, const std::wstring& path)
-        : AMPDevice(), programs(), device(device), path(path) {
-        cl_int err;
-
-        cl_ulong memAllocSize;
-        err = clGetDeviceInfo(device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_ulong), &memAllocSize, NULL);
-        assert(err == CL_SUCCESS);
-        mem = memAllocSize >> 10;
-
-        char vendor[64];
-        err = clGetDeviceInfo(device, CL_DEVICE_VENDOR, sizeof(vendor), vendor, NULL);
-        assert(err == CL_SUCCESS);
-        std::string ven(vendor);
-        if (ven.find("Advanced Micro Devices") != std::string::npos)
-            description = L"AMD";
-        else if (ven.find("NVIDIA") != std::string::npos)
-            description = L"NVIDIA";
-        else if (ven.find("Intel") != std::string::npos)
-            description = L"Intel";
-
-        cl_uint dimensions = 0;
-        err = clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, sizeof(cl_uint), &dimensions, NULL);
-        assert(err == CL_SUCCESS);
-        size_t *maxSizes = new size_t[dimensions];
-        err = clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(size_t) * dimensions, maxSizes, NULL);
-        assert(err == CL_SUCCESS);
-        d.dimensions = dimensions;
-        d.maxSizes = maxSizes;
-        cpu_type = access_type_none;
-    }
-
-    std::wstring get_path() const override { return path; }
-    std::wstring get_description() const override { return description; }
-    size_t get_mem() const override { return mem; }
-    bool is_double() const override { return true; }
-    bool is_lim_double() const override { return true; }
-    bool is_unified() const override { return false; }
-    bool is_emulated() const override { return false; }
-
-    void* CreateKernel(const char* fun, void* size, void* source) override {
-        cl_int err;
-        if (programs.find(source) == std::end(programs)) {
-            cl_program program = nullptr;
-            Concurrency::CLAMP::CLCompileKernels(program, device, size, source);
-            programs[source] = program;
-        }
-        cl_program program = programs[source];
-        cl_kernel kernel = clCreateKernel(program, fun, &err);
-        assert(err == CL_SUCCESS);
-        return kernel;
-    }
-
-    bool check(size_t* local_size, size_t dim_ext) override {
-        // C++ AMP specifications
-        // The maximum number of tiles per dimension will be no less than 65535.
-        // The maximum number of threads in a tile will be no less than 1024.
-        // In 3D tiling, the maximal value of D0 will be no less than 64.
-        size_t *maxSizes = d.maxSizes;
-        bool is = true;
-        int threads_per_tile = 1;
-        for(int i = 0; local_size && i < dim_ext; i++) {
-            threads_per_tile *= local_size[i];
-            // For the following cases, set local_size=NULL and let OpenCL driver arranges it instead
-            //(1) tils number exceeds CL_DEVICE_MAX_WORK_ITEM_SIZES per dimension
-            //(2) threads in a tile exceeds CL_DEVICE_MAX_WORK_ITEM_SIZES
-            //Note that the driver can still handle unregular tile_dim, e.g. tile_dim is undivisble by 2
-            //So skip this condition ((local_size[i]!=1) && (local_size[i] & 1))
-            if(local_size[i] > maxSizes[i] || threads_per_tile > maxSizes[i])
-                return false;
-        }
-        return true;
-    }
-
-    ~OpenCLDevice() {
-        for (auto& it : programs)
-            clReleaseProgram(it.second);
-        delete[] d.maxSizes;
-    }
-
-    cl_device_id getDevice() const { return device; }
-    void* create(size_t count) override {
-        cl_int err;
-        cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, nullptr, &err);
-        assert(err == CL_SUCCESS);
-        return dm;
-    }
-    void release(void *device) override {
-        cl_mem dm = static_cast<cl_mem>(device);
-        if (events.find(dm) != std::end(events)) {
-            clReleaseEvent(events[dm]);
-            events.erase(dm);
-        }
-        clReleaseMemObject(dm);
-    }
-    std::shared_ptr<AMPView> createAloc() override { return newAloc(); }
-
-
-private:
-    std::shared_ptr<AMPView> newAloc();
-    std::map<void*, cl_program> programs;
-    struct DimMaxSize d;
-    cl_device_id     device;
-    std::wstring path;
-    std::wstring description;
-    size_t mem;
-};
 
 struct cl_info
 {
@@ -183,12 +73,11 @@ class OpenCLView : public AMPView
     std::vector<cl_info> mems;
     cl_command_queue getQueue() { return queues[(idx++) % queue_size]; }
 public:
-    OpenCLView(AMPDevice* pMan) : AMPView(pMan), mems() {
-        auto Man = dynamic_cast<OpenCLDevice*>(pMan);
+    OpenCLView(AMPDevice* pMan, cl_device_id dev) : AMPView(pMan), mems() {
         cl_int err;
         idx = 0;
         for (int i = 0; i < queue_size; ++i) {
-            queues[i] = clCreateCommandQueue(context, Man->getDevice(), CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &err);
+            queues[i] = clCreateCommandQueue(context, dev, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &err);
             assert(err == CL_SUCCESS);
         }
 
@@ -326,8 +215,7 @@ public:
     }
     void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) override {
         cl_int err;
-        auto Man = dynamic_cast<OpenCLDevice*>(getMan());
-        if(!Man->check(local_size, dim_ext))
+        if(!getMan()->check(local_size, dim_ext))
             local_size = NULL;
         std::vector<cl_event> eve;
         std::for_each(std::begin(mems), std::end(mems),
@@ -361,9 +249,117 @@ public:
     }
 };
 
-std::shared_ptr<AMPView> OpenCLDevice::newAloc() {
-    return std::shared_ptr<AMPView>(new OpenCLView(this));
-}
+class OpenCLDevice : public AMPDevice
+{
+public:
+    OpenCLDevice(const cl_device_id device, const std::wstring& path)
+        : AMPDevice(), programs(), device(device), path(path) {
+        cl_int err;
+
+        cl_ulong memAllocSize;
+        err = clGetDeviceInfo(device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_ulong), &memAllocSize, NULL);
+        assert(err == CL_SUCCESS);
+        mem = memAllocSize >> 10;
+
+        char vendor[64];
+        err = clGetDeviceInfo(device, CL_DEVICE_VENDOR, sizeof(vendor), vendor, NULL);
+        assert(err == CL_SUCCESS);
+        std::string ven(vendor);
+        if (ven.find("Advanced Micro Devices") != std::string::npos)
+            description = L"AMD";
+        else if (ven.find("NVIDIA") != std::string::npos)
+            description = L"NVIDIA";
+        else if (ven.find("Intel") != std::string::npos)
+            description = L"Intel";
+
+        cl_uint dimensions = 0;
+        err = clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, sizeof(cl_uint), &dimensions, NULL);
+        assert(err == CL_SUCCESS);
+        size_t *maxSizes = new size_t[dimensions];
+        err = clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(size_t) * dimensions, maxSizes, NULL);
+        assert(err == CL_SUCCESS);
+        d.dimensions = dimensions;
+        d.maxSizes = maxSizes;
+        cpu_type = access_type_none;
+
+        def = createAloc();
+    }
+
+    std::wstring get_path() const override { return path; }
+    std::wstring get_description() const override { return description; }
+    size_t get_mem() const override { return mem; }
+    bool is_double() const override { return true; }
+    bool is_lim_double() const override { return true; }
+    bool is_unified() const override { return false; }
+    bool is_emulated() const override { return false; }
+
+    void* CreateKernel(const char* fun, void* size, void* source) override {
+        cl_int err;
+        if (programs.find(source) == std::end(programs)) {
+            cl_program program = nullptr;
+            Concurrency::CLAMP::CLCompileKernels(program, device, size, source);
+            programs[source] = program;
+        }
+        cl_program program = programs[source];
+        cl_kernel kernel = clCreateKernel(program, fun, &err);
+        assert(err == CL_SUCCESS);
+        return kernel;
+    }
+
+    bool check(size_t* local_size, size_t dim_ext) override {
+        // C++ AMP specifications
+        // The maximum number of tiles per dimension will be no less than 65535.
+        // The maximum number of threads in a tile will be no less than 1024.
+        // In 3D tiling, the maximal value of D0 will be no less than 64.
+        size_t *maxSizes = d.maxSizes;
+        bool is = true;
+        int threads_per_tile = 1;
+        for(int i = 0; local_size && i < dim_ext; i++) {
+            threads_per_tile *= local_size[i];
+            // For the following cases, set local_size=NULL and let OpenCL driver arranges it instead
+            //(1) tils number exceeds CL_DEVICE_MAX_WORK_ITEM_SIZES per dimension
+            //(2) threads in a tile exceeds CL_DEVICE_MAX_WORK_ITEM_SIZES
+            //Note that the driver can still handle unregular tile_dim, e.g. tile_dim is undivisble by 2
+            //So skip this condition ((local_size[i]!=1) && (local_size[i] & 1))
+            if(local_size[i] > maxSizes[i] || threads_per_tile > maxSizes[i])
+                return false;
+        }
+        return true;
+    }
+
+    ~OpenCLDevice() {
+        for (auto& it : programs)
+            clReleaseProgram(it.second);
+        delete[] d.maxSizes;
+    }
+
+    cl_device_id getDevice() const { return device; }
+    void* create(size_t count) override {
+        cl_int err;
+        cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, nullptr, &err);
+        assert(err == CL_SUCCESS);
+        return dm;
+    }
+    void release(void *device) override {
+        cl_mem dm = static_cast<cl_mem>(device);
+        if (events.find(dm) != std::end(events)) {
+            clReleaseEvent(events[dm]);
+            events.erase(dm);
+        }
+        clReleaseMemObject(dm);
+    }
+    std::shared_ptr<AMPView> createAloc() override {
+        return std::shared_ptr<AMPView>(new OpenCLView(this, device));
+    }
+
+private:
+    std::map<void*, cl_program> programs;
+    struct DimMaxSize d;
+    cl_device_id     device;
+    std::wstring path;
+    std::wstring description;
+    size_t mem;
+};
 
 struct CLFlag
 {
@@ -411,7 +407,6 @@ public:
         assert(err == CL_SUCCESS);
         for (int i = 0; i < devs.size(); ++i) {
             auto Man = new OpenCLDevice(devs[i], path[i]);
-            default_map[Man] = Man->createAloc();
             if (i == 0)
                 def = Man;
             Devices.push_back(Man);

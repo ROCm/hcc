@@ -201,7 +201,7 @@ public:
   bool get_supports_double_precision() const { return pMan->is_double(); }
   bool get_supports_limited_double_precision() const { return pMan->is_lim_double(); }
   size_t get_dedicated_memory() const { return pMan->get_mem(); }
-  accelerator_view get_default_view() const { return getContext()->getView(pMan); }
+  accelerator_view get_default_view() const { return pMan->get_default(); }
   access_type get_default_cpu_access_type() const { return pMan->cpu_type; }
   bool get_supports_cpu_shared_memory() const { return pMan->is_unified(); }
 

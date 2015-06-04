@@ -5,7 +5,7 @@
 
 namespace Concurrency {
 
-class AMPView;
+class AMPDevice;
 
 enum access_type
 {
@@ -19,26 +19,6 @@ enum access_type
 enum queuing_mode {
   queuing_mode_immediate,
   queuing_mode_automatic
-};
-
-class AMPDevice
-{
-public:
-    virtual std::wstring get_path() const = 0;
-    virtual std::wstring get_description() const = 0;
-    virtual size_t get_mem() const = 0;
-    virtual bool is_double() const = 0;
-    virtual bool is_lim_double() const = 0;
-    virtual bool is_unified() const = 0;
-    virtual bool is_emulated() const = 0;
-    access_type cpu_type;
-
-
-    virtual std::shared_ptr<AMPView> createAloc() = 0;
-    virtual void* create(size_t count) = 0;
-    virtual void release(void* ptr) = 0;
-    virtual void* CreateKernel(const char* fun, void* size, void* source) { return nullptr; }
-    virtual ~AMPDevice() {}
 };
 
 class AMPView
@@ -73,23 +53,29 @@ private:
   AMPDevice* Man;
 };
 
-class CPUDevice final : public AMPDevice
+class AMPDevice
 {
-    std::shared_ptr<AMPView> newAloc();
+protected:
+    std::shared_ptr<AMPView> def;
 public:
-    std::wstring get_path() const override { return L"cpu"; }
-    std::wstring get_description() const override { return L"CPU Device"; }
-    size_t get_mem() const override { return 0; }
-    bool is_double() const override { return true; }
-    bool is_lim_double() const override { return true; }
-    bool is_unified() const override { return true; }
-    bool is_emulated() const override { return true; }
+    virtual std::wstring get_path() const = 0;
+    virtual std::wstring get_description() const = 0;
+    virtual size_t get_mem() const = 0;
+    virtual bool is_double() const = 0;
+    virtual bool is_lim_double() const = 0;
+    virtual bool is_unified() const = 0;
+    virtual bool is_emulated() const = 0;
+    access_type cpu_type;
 
 
-    std::shared_ptr<AMPView> createAloc() { return newAloc(); }
-    void* create(size_t count) override { return aligned_alloc(0x1000, count); }
-    void release(void* ptr) override { ::operator delete(ptr); }
-    void* CreateKernel(const char* fun, void* size, void* source) { return nullptr; }
+    virtual std::shared_ptr<AMPView> createAloc() = 0;
+    virtual void* create(size_t count) = 0;
+    virtual void release(void* ptr) = 0;
+    virtual void* CreateKernel(const char* fun, void* size, void* source) { return nullptr; }
+    virtual bool check(size_t* size, size_t dim_ext) { return true; }
+    virtual ~AMPDevice() {}
+
+    std::shared_ptr<AMPView> get_default() const { return def; }
 };
 
 class CPUView final : public AMPView
@@ -99,19 +85,33 @@ public:
     void Push(void *kernel, int idx, void*& data, void* device, bool isConst) override {}
 };
 
-inline std::shared_ptr<AMPView> CPUDevice::newAloc() {
-    return std::shared_ptr<AMPView>(new CPUView(this));
-}
+
+class CPUDevice final : public AMPDevice
+{
+public:
+    CPUDevice() { def = createAloc(); }
+    std::wstring get_path() const override { return L"cpu"; }
+    std::wstring get_description() const override { return L"CPU Device"; }
+    size_t get_mem() const override { return 0; }
+    bool is_double() const override { return true; }
+    bool is_lim_double() const override { return true; }
+    bool is_unified() const override { return true; }
+    bool is_emulated() const override { return true; }
+
+
+    std::shared_ptr<AMPView> createAloc() { return std::shared_ptr<AMPView>(new CPUView(this)); }
+    void* create(size_t count) override { return aligned_alloc(0x1000, count); }
+    void release(void* ptr) override { ::operator delete(ptr); }
+    void* CreateKernel(const char* fun, void* size, void* source) { return nullptr; }
+};
 
 class AMPContext
 {
 protected:
     AMPDevice* def;
     std::vector<AMPDevice*> Devices;
-    std::map<AMPDevice*, std::shared_ptr<AMPView>> default_map;
     AMPContext() : def(), Devices() {
         auto Man = new CPUDevice;
-        default_map[Man] = Man->createAloc();
         Devices.push_back(Man);
     }
 public:
@@ -134,10 +134,7 @@ public:
         }
     }
 
-    std::shared_ptr<AMPView> auto_select() { return default_map[def]; }
-    std::shared_ptr<AMPView> getView(AMPDevice* pMan) {
-        return default_map[pMan];
-    }
+    std::shared_ptr<AMPView> auto_select() { return def->get_default(); }
     AMPDevice* getDevice(std::wstring path = L"") {
         if (path == L"default" || path == L"")
             return def;
@@ -227,7 +224,7 @@ private:
 };
 
 static const std::shared_ptr<AMPView> get_cpu_view() {
-    static auto cpu_view = getContext()->getView(getContext()->getDevice(L"cpu"));
+    static auto cpu_view = getContext()->getDevice(L"cpu")->get_default();
     return cpu_view;
 }
 
