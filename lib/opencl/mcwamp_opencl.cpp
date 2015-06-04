@@ -284,13 +284,11 @@ public:
         cl_mem sdm = static_cast<cl_mem>(src);
         cl_mem ddm = static_cast<cl_mem>(dst);
         cl_int err;
-        cl_event evt;
         if (events.find(sdm) == std::end(events))
-            err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, 0, NULL, &evt);
+            err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, 0, NULL, NULL);
         else
-            err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, 1, &events[sdm], &evt);
+            err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, 1, &events[sdm], NULL);
         assert(err == CL_SUCCESS);
-        events[ddm] = evt;
     }
     void* map(void* device, size_t count, size_t offset, bool Write) override {
         cl_mem dm = static_cast<cl_mem>(device);
