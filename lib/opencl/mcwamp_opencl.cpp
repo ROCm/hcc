@@ -280,14 +280,23 @@ public:
             err = clEnqueueReadBuffer(getQueue(), dm, CL_TRUE, offset, count, dst, 0, NULL, NULL);
         assert(err == CL_SUCCESS);
     }
-    void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset) override {
+    void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset, bool blocking) override {
         cl_mem sdm = static_cast<cl_mem>(src);
         cl_mem ddm = static_cast<cl_mem>(dst);
         cl_int err;
-        if (events.find(sdm) == std::end(events))
-            err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, 0, NULL, NULL);
-        else
-            err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, 1, &events[sdm], NULL);
+        if (blocking) {
+            if (events.find(sdm) == std::end(events))
+                err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, 0, NULL, NULL);
+            else
+                err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, 1, &events[sdm], NULL);
+        } else {
+            cl_event ent;
+            if (events.find(sdm) == std::end(events))
+                err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, 0, NULL, &ent);
+            else
+                err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, 1, &events[sdm], &ent);
+            events[ddm] = ent;
+        }
         assert(err == CL_SUCCESS);
     }
     void* map(void* device, size_t count, size_t offset, bool Write) override {

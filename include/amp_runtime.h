@@ -56,7 +56,7 @@ public:
   virtual void write(void* device, const void* src, size_t count, size_t offset, bool blocking) {
       memmove((char*)device + offset, src, count);
   }
-  virtual void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset) {
+  virtual void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset, bool blocking) {
       memmove((char*)dst + dst_offset, (char*)src + src_offset, count);
   }
   virtual void* map(void* device, size_t count, size_t offset, bool modify) {
@@ -333,7 +333,7 @@ struct rw_info
                 else if (curr->getManPtr()->get_path() == L"cpu")
                     aloc->write(dst.data, src.data, count, 0, false);
                 else
-                    curr->copy(src.data, dst.data, count, 0, 0);
+                    curr->copy(src.data, dst.data, count, 0, 0, false);
             }
         }
         curr = aloc;
@@ -374,7 +374,7 @@ struct rw_info
                     aloc->write(dst.data, src.data, count, 0, false);
                 else {
                     // curr->wait();
-                    aloc->copy(src.data, dst.data, count, 0, 0);
+                    aloc->copy(src.data, dst.data, count, 0, 0, false);
                 }
             }
             if (isConst) {
@@ -501,11 +501,11 @@ struct rw_info
                 other->curr->write(dst.data, (char*)src.data + src_offset, cnt, dst_offset, false);
             else {
                 // curr->wait();
-                other->curr->copy(src.data, dst.data, cnt, src_offset, dst_offset);
+                other->curr->copy(src.data, dst.data, cnt, src_offset, dst_offset, true);
             }
         }
         other->disc();
-        other->Alocs[other->curr->getManPtr()].state = modified;
+        dst.state = modified;
     }
 
     ~rw_info() {
