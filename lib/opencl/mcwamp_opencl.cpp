@@ -53,7 +53,11 @@ struct DimMaxSize {
 class OpenCLView;
 static cl_context context;
 static std::map<cl_mem, cl_event> events;
-static std::map<cl_event, std::vector<cl_mem>> etomem;
+
+static inline void callback_release_kernel(cl_event event, cl_int event_command_exec_status, void *user_data) {
+    if (user_data)
+        clReleaseKernel(static_cast<cl_kernel>(user_data));
+}
 
 class OpenCLDevice : public AMPDevice
 {
@@ -261,6 +265,8 @@ public:
         else {
             cl_event ent;
             err = clEnqueueWriteBuffer(getQueue(), dm, CL_FALSE, offset, count, src, 0, NULL, &ent);
+            if (events.find(dm) != std::end(events))
+                clReleaseEvent(events[dm]);
             events[dm] = ent;
         }
         assert(err == CL_SUCCESS);
@@ -289,6 +295,8 @@ public:
                 err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, 0, NULL, &ent);
             else
                 err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, 1, &events[sdm], &ent);
+            if (events.find(ddm) != std::end(events))
+                clReleaseEvent(events[ddm]);
             events[ddm] = ent;
         }
         assert(err == CL_SUCCESS);
@@ -331,10 +339,15 @@ public:
         err = clEnqueueNDRangeKernel(getQueue(), (cl_kernel)kernel, dim_ext, NULL, ext, local_size,
                                      eve.size(), eve.data(), &evt);
         assert(err == CL_SUCCESS);
+        err = clSetEventCallback(evt, CL_COMPLETE, &callback_release_kernel, kernel);
+        assert(err == CL_SUCCESS);
         std::for_each(std::begin(mems), std::end(mems),
                       [&](const cl_info& mm) {
-                      if (!mm.isConst)
-                        events[mm.dm] = evt;
+                        if (!mm.isConst) {
+                            if (events.find(mm.dm) != std::end(events))
+                                clReleaseEvent(events[mm.dm]);
+                            events[mm.dm] = evt;
+                        }
                       });
         mems.clear();
     }
