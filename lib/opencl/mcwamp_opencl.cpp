@@ -50,21 +50,15 @@ struct DimMaxSize {
   size_t* maxSizes;
 };
 
-class OpenCLAllocator;
+class OpenCLView;
 static cl_context context;
 static std::map<cl_mem, cl_event> events;
 static std::map<cl_event, std::vector<cl_mem>> etomem;
 
-static inline void callback_release_kernel(cl_event event, cl_int event_command_exec_status, void *user_data)
-{
-    if (user_data)
-        clReleaseKernel(static_cast<cl_kernel>(user_data));
-}
-
-class OpenCLManager : public AMPDevice
+class OpenCLDevice : public AMPDevice
 {
 public:
-    OpenCLManager(const cl_device_id device, const std::wstring& path)
+    OpenCLDevice(const cl_device_id device, const std::wstring& path)
         : AMPDevice(), programs(), device(device), path(path) {
         cl_int err;
 
@@ -138,7 +132,7 @@ public:
         return true;
     }
 
-    ~OpenCLManager() {
+    ~OpenCLDevice() {
         for (auto& it : programs)
             clReleaseProgram(it.second);
         delete[] d.maxSizes;
@@ -175,7 +169,7 @@ struct cl_info
     bool isConst;
 };
 
-class OpenCLAllocator : public AMPView
+class OpenCLView : public AMPView
 {
     enum { queue_size = 1 };
     cl_command_queue queues[queue_size];
@@ -183,8 +177,8 @@ class OpenCLAllocator : public AMPView
     std::vector<cl_info> mems;
     cl_command_queue getQueue() { return queues[(idx++) % queue_size]; }
 public:
-    OpenCLAllocator(std::shared_ptr<AMPDevice> pMan) : AMPView(pMan), mems() {
-        auto Man = std::dynamic_pointer_cast<OpenCLManager, AMPDevice>(pMan);
+    OpenCLView(std::shared_ptr<AMPDevice> pMan) : AMPView(pMan), mems() {
+        auto Man = std::dynamic_pointer_cast<OpenCLDevice, AMPDevice>(pMan);
         cl_int err;
         idx = 0;
         for (int i = 0; i < queue_size; ++i) {
@@ -248,7 +242,7 @@ public:
         for (auto queue : queues)
             clFinish(queue);
     }
-    ~OpenCLAllocator() {
+    ~OpenCLView() {
         for (auto queue : queues)
             clReleaseCommandQueue(queue);
     }
@@ -322,7 +316,7 @@ public:
     }
     void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) override {
         cl_int err;
-        auto Man = std::dynamic_pointer_cast<OpenCLManager, AMPDevice>(getMan());
+        auto Man = std::dynamic_pointer_cast<OpenCLDevice, AMPDevice>(getMan());
         if(!Man->check(local_size, dim_ext))
             local_size = NULL;
         std::vector<cl_event> eve;
@@ -337,8 +331,6 @@ public:
         err = clEnqueueNDRangeKernel(getQueue(), (cl_kernel)kernel, dim_ext, NULL, ext, local_size,
                                      eve.size(), eve.data(), &evt);
         assert(err == CL_SUCCESS);
-        err = clSetEventCallback(evt, CL_COMPLETE, &callback_release_kernel, (cl_kernel)kernel);
-        assert(err == CL_SUCCESS);
         std::for_each(std::begin(mems), std::end(mems),
                       [&](const cl_info& mm) {
                       if (!mm.isConst)
@@ -348,8 +340,8 @@ public:
     }
 };
 
-std::shared_ptr<AMPView> OpenCLManager::newAloc() {
-    return std::shared_ptr<AMPView>(new OpenCLAllocator(shared_from_this()));
+std::shared_ptr<AMPView> OpenCLDevice::newAloc() {
+    return std::shared_ptr<AMPView>(new OpenCLView(shared_from_this()));
 }
 
 struct CLFlag
@@ -397,7 +389,7 @@ public:
         context = clCreateContext(0, devs.size(), devs.data(), NULL, NULL, &err);
         assert(err == CL_SUCCESS);
         for (int i = 0; i < devs.size(); ++i) {
-            auto Man = std::shared_ptr<AMPDevice>(new OpenCLManager(devs[i], path[i]));
+            auto Man = std::shared_ptr<AMPDevice>(new OpenCLDevice(devs[i], path[i]));
             default_map[Man] = Man->createAloc();
             if (i == 0)
                 def = Man;

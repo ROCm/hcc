@@ -17,7 +17,7 @@ extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v) {}
 
 namespace Concurrency {
 
-class CPUFallbackManager final : public AMPDevice
+class CPUFallbackDevice final : public AMPDevice
 {
     std::shared_ptr<AMPView> newAloc();
 
@@ -25,7 +25,7 @@ public:
     void* create(size_t count) override { return aligned_alloc(0x1000, count); }
     void release(void *data) override { ::operator delete(data); }
 
-    CPUFallbackManager() : AMPDevice() { cpu_type = access_type_read_write; }
+    CPUFallbackDevice() : AMPDevice() { cpu_type = access_type_read_write; }
 
     std::wstring get_path() override { return L"fallback"; }
     std::wstring get_description() override { return L"CPU Fallback"; }
@@ -38,11 +38,11 @@ public:
     std::shared_ptr<AMPView> createAloc() override { return newAloc(); }
 };
 
-class CPUFallbackAllocator final : public AMPView
+class CPUFallbackView final : public AMPView
 {
     std::map<void*, void*> addrs;
 public:
-    CPUFallbackAllocator(std::shared_ptr<AMPDevice> pMan) : AMPView(pMan) {}
+    CPUFallbackView(std::shared_ptr<AMPDevice> pMan) : AMPView(pMan) {}
 private:
     void Push(void *kernel, int idx, void*& data, void* device, bool isConst) override {
       auto it = addrs.find(data);
@@ -57,15 +57,15 @@ private:
   }
 };
 
-std::shared_ptr<AMPView> CPUFallbackManager::newAloc() {
-    return std::shared_ptr<AMPView>(new CPUFallbackAllocator(shared_from_this()));
+std::shared_ptr<AMPView> CPUFallbackDevice::newAloc() {
+    return std::shared_ptr<AMPView>(new CPUFallbackView(shared_from_this()));
 }
 
 class CPUContext final : public AMPContext
 {
 public:
     CPUContext() {
-        auto Man = std::shared_ptr<AMPDevice>(new CPUFallbackManager);
+        auto Man = std::shared_ptr<AMPDevice>(new CPUFallbackDevice);
         default_map[Man] = Man->createAloc();
         Devices.push_back(Man);
         def = Man;
