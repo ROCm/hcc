@@ -71,7 +71,7 @@ public:
         assert(err == CL_SUCCESS);
         mem = memAllocSize >> 10;
 
-        char vendor[256];
+        char vendor[64];
         err = clGetDeviceInfo(device, CL_DEVICE_VENDOR, sizeof(vendor), vendor, NULL);
         assert(err == CL_SUCCESS);
         std::string ven(vendor);
@@ -438,18 +438,17 @@ void CLCompileKernels(cl_program& program, cl_device_id& device,
     cl_int err;
     std::string kernel((const char*)kernel_source_, (size_t)((void *)kernel_size_));
 
-    std::string hash_str = kernel;
-    char name[256];
+    char name[64];
     err = clGetDeviceInfo(device, CL_DEVICE_NAME, sizeof(name), name, NULL);
     assert(err == CL_SUCCESS);
-    hash_str += name;
 
     // calculate MD5 checksum
     unsigned char md5_hash[16];
     memset(md5_hash, 0, sizeof(unsigned char) * 16);
     MD5_CTX md5ctx;
     MD5_Init(&md5ctx);
-    MD5_Update(&md5ctx, hash_str.data(), hash_str.length());
+    MD5_Update(&md5ctx, kernel.data(), kernel.length());
+    MD5_Update(&md5ctx, name, strlen(name));
     MD5_Final(md5_hash, &md5ctx);
 
     // compute compiled kernel file name
