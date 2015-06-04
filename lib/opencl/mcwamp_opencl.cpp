@@ -93,13 +93,13 @@ public:
         cpu_type = access_type_none;
     }
 
-    std::wstring get_path() override { return path; }
-    std::wstring get_description() override { return description; }
-    size_t get_mem() override { return mem; }
-    bool is_double() override { return true; }
-    bool is_lim_double() override { return true; }
-    bool is_unified() override { return false; }
-    bool is_emulated() override { return false; }
+    std::wstring get_path() const override { return path; }
+    std::wstring get_description() const override { return description; }
+    size_t get_mem() const override { return mem; }
+    bool is_double() const override { return true; }
+    bool is_lim_double() const override { return true; }
+    bool is_unified() const override { return false; }
+    bool is_emulated() const override { return false; }
 
     void* CreateKernel(const char* fun, void* size, void* source) override {
         cl_int err;
@@ -109,7 +109,6 @@ public:
             programs[source] = program;
         }
         cl_program program = programs[source];
-        std::string name(fun);
         cl_kernel kernel = clCreateKernel(program, fun, &err);
         assert(err == CL_SUCCESS);
         return kernel;
@@ -184,8 +183,8 @@ class OpenCLView : public AMPView
     std::vector<cl_info> mems;
     cl_command_queue getQueue() { return queues[(idx++) % queue_size]; }
 public:
-    OpenCLView(std::shared_ptr<AMPDevice> pMan) : AMPView(pMan), mems() {
-        auto Man = std::dynamic_pointer_cast<OpenCLDevice, AMPDevice>(pMan);
+    OpenCLView(AMPDevice* pMan) : AMPView(pMan), mems() {
+        auto Man = dynamic_cast<OpenCLDevice*>(pMan);
         cl_int err;
         idx = 0;
         for (int i = 0; i < queue_size; ++i) {
@@ -327,7 +326,7 @@ public:
     }
     void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) override {
         cl_int err;
-        auto Man = std::dynamic_pointer_cast<OpenCLDevice, AMPDevice>(getMan());
+        auto Man = dynamic_cast<OpenCLDevice*>(getMan());
         if(!Man->check(local_size, dim_ext))
             local_size = NULL;
         std::vector<cl_event> eve;
@@ -363,7 +362,7 @@ public:
 };
 
 std::shared_ptr<AMPView> OpenCLDevice::newAloc() {
-    return std::shared_ptr<AMPView>(new OpenCLView(shared_from_this()));
+    return std::shared_ptr<AMPView>(new OpenCLView(this));
 }
 
 struct CLFlag
@@ -411,7 +410,7 @@ public:
         context = clCreateContext(0, devs.size(), devs.data(), NULL, NULL, &err);
         assert(err == CL_SUCCESS);
         for (int i = 0; i < devs.size(); ++i) {
-            auto Man = std::shared_ptr<AMPDevice>(new OpenCLDevice(devs[i], path[i]));
+            auto Man = new OpenCLDevice(devs[i], path[i]);
             default_map[Man] = Man->createAloc();
             if (i == 0)
                 def = Man;

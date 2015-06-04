@@ -165,7 +165,7 @@ public:
 
 class accelerator
 {
-  accelerator(std::shared_ptr<AMPDevice> pMan) : pMan(pMan) {}
+  accelerator(AMPDevice* pMan) : pMan(pMan) {}
 public:
   static const wchar_t default_accelerator[];   // = L"default"
   static const wchar_t cpu_accelerator[];       // = L"cpu"
@@ -220,7 +220,7 @@ public:
   bool operator!=(const accelerator& other) const { return !(*this == other); }
 private:
   friend class accelerator_view;
-  std::shared_ptr<AMPDevice> pMan;
+  AMPDevice* pMan;
 };
 
 inline accelerator accelerator_view::get_accelerator() const { return pAloc->getMan(); }

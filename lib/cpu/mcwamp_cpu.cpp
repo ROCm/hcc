@@ -27,13 +27,13 @@ public:
 
     CPUFallbackDevice() : AMPDevice() { cpu_type = access_type_read_write; }
 
-    std::wstring get_path() override { return L"fallback"; }
-    std::wstring get_description() override { return L"CPU Fallback"; }
-    size_t get_mem() override { return 0; }
-    bool is_double() override { return true; }
-    bool is_lim_double() override { return true; }
-    bool is_unified() override { return true; }
-    bool is_emulated() override { return true; }
+    std::wstring get_path() const override { return L"fallback"; }
+    std::wstring get_description() const override { return L"CPU Fallback"; }
+    size_t get_mem() const override { return 0; }
+    bool is_double() const override { return true; }
+    bool is_lim_double() const override { return true; }
+    bool is_unified() const override { return true; }
+    bool is_emulated() const override { return true; }
 
     std::shared_ptr<AMPView> createAloc() override { return newAloc(); }
 };
@@ -42,7 +42,7 @@ class CPUFallbackView final : public AMPView
 {
     std::map<void*, void*> addrs;
 public:
-    CPUFallbackView(std::shared_ptr<AMPDevice> pMan) : AMPView(pMan) {}
+    CPUFallbackView(AMPDevice* pMan) : AMPView(pMan) {}
 private:
     void Push(void *kernel, int idx, void*& data, void* device, bool isConst) override {
       auto it = addrs.find(data);
@@ -58,14 +58,14 @@ private:
 };
 
 std::shared_ptr<AMPView> CPUFallbackDevice::newAloc() {
-    return std::shared_ptr<AMPView>(new CPUFallbackView(shared_from_this()));
+    return std::shared_ptr<AMPView>(new CPUFallbackView(this));
 }
 
 class CPUContext final : public AMPContext
 {
 public:
     CPUContext() {
-        auto Man = std::shared_ptr<AMPDevice>(new CPUFallbackDevice);
+        auto Man = new CPUFallbackDevice;
         default_map[Man] = Man->createAloc();
         Devices.push_back(Man);
         def = Man;
