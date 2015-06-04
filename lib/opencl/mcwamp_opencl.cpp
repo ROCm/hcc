@@ -435,7 +435,8 @@ void CLCompileKernels(cl_program& program, cl_device_id& device,
                       void* kernel_size_, void* kernel_source_)
 {
     cl_int err;
-    std::string kernel((const char*)kernel_source_, (size_t)((void *)kernel_size_));
+    const char* source = static_cast<const char*>(kernel_source_);
+    size_t size = reinterpret_cast<size_t>(kernel_size_);
 
     char name[64];
     err = clGetDeviceInfo(device, CL_DEVICE_NAME, sizeof(name), name, NULL);
@@ -446,7 +447,7 @@ void CLCompileKernels(cl_program& program, cl_device_id& device,
     memset(md5_hash, 0, sizeof(unsigned char) * 16);
     MD5_CTX md5ctx;
     MD5_Init(&md5ctx);
-    MD5_Update(&md5ctx, kernel.data(), kernel.length());
+    MD5_Update(&md5ctx, source, size);
     MD5_Update(&md5ctx, name, strlen(name));
     MD5_Final(md5_hash, &md5ctx);
 
@@ -494,17 +495,15 @@ void CLCompileKernels(cl_program& program, cl_device_id& device,
         // pre-compiled kernel binary doesn't exist
         // call CL compiler
 
-        if (kernel[0] == 'B' && kernel[1] == 'C') {
+        if (source[0] == 'B' && source[1] == 'C') {
             // Bitcode magic number. Assuming it's in SPIR
-            auto size = kernel.length();
-            auto str = (const unsigned char*)kernel.data();
+            auto str = (const unsigned char*)source;
             program = clCreateProgramWithBinary(Concurrency::context, 1, &device, &size, &str, NULL, &err);
             if (err == CL_SUCCESS)
                 err = clBuildProgram(program, 1, &device, NULL, NULL, NULL);
         } else {
             // in OpenCL-C
-            auto size = kernel.length();
-            auto str = kernel.data();
+            auto str = source;
             program = clCreateProgramWithSource(Concurrency::context, 1, &str, &size, &err);
             if (err == CL_SUCCESS)
                 err = clBuildProgram(program, 1, &device, "-D__ATTRIBUTE_WEAK__=", NULL, NULL);
