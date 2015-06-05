@@ -17,14 +17,11 @@ extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v) {}
 
 namespace Concurrency {
 
-class CPUFallbackDevice;
-
 class CPUFallbackView final : public AMPView
 {
     std::map<void*, void*> addrs;
 public:
     CPUFallbackView(AMPDevice* pMan) : AMPView(pMan) {}
-private:
     void Push(void *kernel, int idx, void*& data, void* device, bool isConst) override {
       auto it = addrs.find(data);
       bool find = it != std::end(addrs);
@@ -41,9 +38,6 @@ private:
 class CPUFallbackDevice final : public AMPDevice
 {
 public:
-    void* create(size_t count) override { return aligned_alloc(0x1000, count); }
-    void release(void *data) override { ::operator delete(data); }
-
     CPUFallbackDevice() : AMPDevice() { cpu_type = access_type_read_write; }
 
     std::wstring get_path() const override { return L"fallback"; }
@@ -54,6 +48,8 @@ public:
     bool is_unified() const override { return true; }
     bool is_emulated() const override { return true; }
 
+    void* create(size_t count) override { return aligned_alloc(0x1000, count); }
+    void release(void *data) override { ::operator delete(data); }
     std::shared_ptr<AMPView> createAloc() override {
         return std::shared_ptr<AMPView>(new CPUFallbackView(this));
     }
@@ -62,11 +58,7 @@ public:
 class CPUContext final : public AMPContext
 {
 public:
-    CPUContext() {
-        auto Man = new CPUFallbackDevice;
-        Devices.push_back(Man);
-        def = Man;
-    }
+    CPUContext() { Devices.push_back(new CPUFallbackDevice); }
 };
 
 

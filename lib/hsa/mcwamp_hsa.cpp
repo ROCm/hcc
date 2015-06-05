@@ -82,10 +82,7 @@ class HSADevice final : public AMPDevice
 {
     std::map<std::string, HSAContext::Kernel *> __mcw_hsa_kernels;
 public:
-    HSADevice() : AMPDevice() {
-        cpu_type = access_type_read_write;
-        def = createAloc();
-    }
+    HSADevice() : AMPDevice() { cpu_type = access_type_read_write; }
 
     void* create(size_t count) override {
         void *data = aligned_alloc(0x1000, count);

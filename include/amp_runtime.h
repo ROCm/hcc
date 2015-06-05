@@ -2,6 +2,7 @@
 #define __CLAMP_AMP_RUNTIME
 
 #include <map>
+#include <mutex>
 
 namespace Concurrency {
 
@@ -55,9 +56,11 @@ private:
 
 class AMPDevice
 {
-protected:
+private:
     std::shared_ptr<AMPView> def;
+    std::once_flag flag;
 public:
+    AMPDevice() : def() {}
     virtual std::wstring get_path() const = 0;
     virtual std::wstring get_description() const = 0;
     virtual size_t get_mem() const = 0;
@@ -75,7 +78,10 @@ public:
     virtual bool check(size_t* size, size_t dim_ext) { return true; }
     virtual ~AMPDevice() {}
 
-    std::shared_ptr<AMPView> get_default() const { return def; }
+    std::shared_ptr<AMPView> get_default() {
+        std::call_once(flag, [&]() { def = createAloc(); });
+        return def;
+    }
 };
 
 class CPUView final : public AMPView
@@ -89,7 +95,6 @@ public:
 class CPUDevice final : public AMPDevice
 {
 public:
-    CPUDevice() { def = createAloc(); }
     std::wstring get_path() const override { return L"cpu"; }
     std::wstring get_description() const override { return L"CPU Device"; }
     size_t get_mem() const override { return 0; }

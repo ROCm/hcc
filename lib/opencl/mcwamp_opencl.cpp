@@ -281,8 +281,6 @@ public:
         d.dimensions = dimensions;
         d.maxSizes = maxSizes;
         cpu_type = access_type_none;
-
-        def = createAloc();
     }
 
     std::wstring get_path() const override { return path; }
