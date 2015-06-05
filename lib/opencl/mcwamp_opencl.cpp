@@ -11,36 +11,23 @@
 #include <vector>
 #include <map>
 #include <set>
-#include <future>
 #include <cassert>
-#include <stdexcept>
-
-#include <CL/opencl.h>
-
-#include <md5.h>
 #include <sstream>
 #include <fstream>
 #include <iomanip>
 
-#include <amp_runtime.h>
+#include <CL/opencl.h>
 
-///
-/// global values
-///
-namespace {
-const wchar_t cpu_accelerator[] = L"cpu";
-const wchar_t default_accelerator[] = L"default";
-}
+#include <md5.h>
+#include <amp_runtime.h>
 
 extern "C" void PushArgImpl(void *k_, int idx, size_t sz, const void *s);
 extern "C" void PushArgPtrImpl(void *k_, int idx, size_t sz, const void *s);
 
-///
-/// memory allocator
-///
 namespace Concurrency {
 
 // forward declaration
+class OpenCLDevice;
 namespace CLAMP {
     cl_program CLCompileKernels(cl_device_id&, void*, void*);
 }
@@ -50,7 +37,6 @@ struct DimMaxSize {
   size_t* maxSizes;
 };
 
-class OpenCLDevice;
 static cl_context context;
 static std::map<cl_mem, cl_event> events;
 
@@ -67,11 +53,6 @@ struct cl_info
 
 class OpenCLView : public AMPView
 {
-    enum { queue_size = 1 };
-    cl_command_queue queues[queue_size];
-    int idx;
-    std::vector<cl_info> mems;
-    cl_command_queue getQueue() { return queues[(idx++) % queue_size]; }
 public:
     OpenCLView(AMPDevice* pMan, cl_device_id dev) : AMPView(pMan), mems() {
         cl_int err;
@@ -137,10 +118,6 @@ public:
         for (auto queue : queues)
             clFinish(queue);
     }
-    ~OpenCLView() {
-        for (auto queue : queues)
-            clReleaseCommandQueue(queue);
-    }
 
     void Push(void *kernel, int idx, void*& data, void* device, bool isConst) override {
         cl_mem dm = static_cast<cl_mem>(device);
@@ -162,6 +139,7 @@ public:
         }
         assert(err == CL_SUCCESS);
     }
+
     void read(void* device, void* dst, size_t count, size_t offset) override {
         cl_mem dm = static_cast<cl_mem>(device);
         cl_int err;
@@ -171,6 +149,7 @@ public:
             err = clEnqueueReadBuffer(getQueue(), dm, CL_TRUE, offset, count, dst, 0, NULL, NULL);
         assert(err == CL_SUCCESS);
     }
+
     void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset, bool blocking) override {
         cl_mem sdm = static_cast<cl_mem>(src);
         cl_mem ddm = static_cast<cl_mem>(dst);
@@ -192,6 +171,7 @@ public:
         }
         assert(err == CL_SUCCESS);
     }
+
     void* map(void* device, size_t count, size_t offset, bool Write) override {
         cl_mem dm = static_cast<cl_mem>(device);
         cl_int err;
@@ -208,11 +188,13 @@ public:
         assert(err == CL_SUCCESS);
         return addr;
     }
+
     void unmap(void* device, void* addr) override {
         cl_mem dm = static_cast<cl_mem>(device);
         cl_int err = clEnqueueUnmapMemObject(getQueue(), dm, addr, 0, NULL, NULL);
         assert(err == CL_SUCCESS);
     }
+
     void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) override {
         cl_int err;
         if(!getMan()->check(local_size, dim_ext))
@@ -247,6 +229,17 @@ public:
         clReleaseEvent(evt);
         mems.clear();
     }
+
+    ~OpenCLView() {
+        for (auto queue : queues)
+            clReleaseCommandQueue(queue);
+    }
+private:
+    enum { queue_size = 1 };
+    cl_command_queue queues[queue_size];
+    int idx;
+    std::vector<cl_info> mems;
+    cl_command_queue getQueue() { return queues[(idx++) % queue_size]; }
 };
 
 class OpenCLDevice : public AMPDevice
@@ -322,19 +315,13 @@ public:
         return true;
     }
 
-    ~OpenCLDevice() {
-        for (auto& it : programs)
-            clReleaseProgram(it.second);
-        delete[] d.maxSizes;
-    }
-
-    cl_device_id getDevice() const { return device; }
     void* create(size_t count) override {
         cl_int err;
         cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, nullptr, &err);
         assert(err == CL_SUCCESS);
         return dm;
     }
+
     void release(void *device) override {
         cl_mem dm = static_cast<cl_mem>(device);
         if (events.find(dm) != std::end(events)) {
@@ -343,8 +330,15 @@ public:
         }
         clReleaseMemObject(dm);
     }
+
     std::shared_ptr<AMPView> createAloc() override {
         return std::shared_ptr<AMPView>(new OpenCLView(this, device));
+    }
+
+    ~OpenCLDevice() {
+        for (auto& it : programs)
+            clReleaseProgram(it.second);
+        delete[] d.maxSizes;
     }
 
 private:
@@ -365,6 +359,10 @@ struct CLFlag
         : id(0), type(type), base(base) {}
     const std::wstring getPath() const { return base + std::to_wstring(id++); }
 };
+static const CLFlag Flags[] = {
+    CLFlag(CL_DEVICE_TYPE_GPU, L"gpu"),
+    CLFlag(CL_DEVICE_TYPE_CPU, L"cpu")
+};
 
 class OpenCLContext : public AMPContext
 {
@@ -376,9 +374,6 @@ public:
         assert(err == CL_SUCCESS);
         std::vector<cl_platform_id> platform_id(num_platform);
         err = clGetPlatformIDs(num_platform, platform_id.data(), nullptr);
-        std::vector<CLFlag> Flags({CLFlag(CL_DEVICE_TYPE_GPU, L"gpu"),
-                                  CLFlag(CL_DEVICE_TYPE_CPU, L"cpu")
-                                  });
 
         std::vector<cl_device_id> devs;
         std::vector<std::wstring> path;
