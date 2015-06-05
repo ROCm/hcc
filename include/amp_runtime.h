@@ -255,9 +255,9 @@ static inline void copy_helper(std::shared_ptr<AMPView>& srcView, dev_info& src,
                                size_t cnt, bool block,
                                size_t src_offset = 0, size_t dst_offset = 0) {
     if (is_cpu_acc(srcView))
-        dstView->write(dst.data, src.data, cnt, 0, block, false);
+        dstView->write(dst.data, (char*)src.data + src_offset, cnt, dst_offset, block, false);
     else if (is_cpu_acc(dstView))
-        srcView->read(src.data, dst.data, cnt, 0);
+        srcView->read(src.data, (char*)dst.data + dst_offset, cnt, src_offset);
     else {
         if (dstView->getMan() == srcView->getMan())
             dstView->copy(src.data, dst.data, cnt, src_offset, dst_offset, block);
