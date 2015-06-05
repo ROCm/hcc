@@ -34,8 +34,10 @@ public:
   virtual void read(void* device, void* dst, size_t count, size_t offset) {
       memmove(dst, (char*)device + offset, count);
   }
-  virtual void write(void* device, const void* src, size_t count, size_t offset, bool blocking) {
+  virtual void write(void* device, const void* src, size_t count, size_t offset, bool blocking, bool free) {
       memmove((char*)device + offset, src, count);
+      if (free)
+          ::operator delete(const_cast<void*>(src));
   }
   virtual void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset, bool blocking) {
       memmove((char*)dst + dst_offset, (char*)src + src_offset, count);
@@ -248,6 +250,25 @@ static inline bool is_cpu_acc(const std::shared_ptr<AMPView>& View) {
     return View->getMan()->get_path() == L"cpu";
 }
 
+static inline void copy_helper(std::shared_ptr<AMPView>& srcView, dev_info& src,
+                               std::shared_ptr<AMPView>& dstView, dev_info& dst,
+                               size_t cnt, bool block,
+                               size_t src_offset = 0, size_t dst_offset = 0) {
+    if (is_cpu_acc(srcView))
+        dstView->write(dst.data, src.data, cnt, 0, block, false);
+    else if (is_cpu_acc(dstView))
+        srcView->read(src.data, dst.data, cnt, 0);
+    else {
+        if (dstView->getMan() == srcView->getMan())
+            dstView->copy(src.data, dst.data, cnt, src_offset, dst_offset, block);
+        else {
+            void* temp = ::operator new(cnt);
+            srcView->read(src.data, temp, cnt, src_offset);
+            dstView->write(dst.data, temp, cnt, dst_offset, true, true);
+        }
+    }
+}
+
 struct rw_info
 {
     void *data;
@@ -316,6 +337,13 @@ struct rw_info
             it.second.state = invalid;
     }
 
+    void try_switch_to_cpu() {
+        auto cpu_view = get_cpu_view();
+        if (Alocs.find(cpu_view->getMan()) != std::end(Alocs))
+            if (Alocs[cpu_view->getMan()].state == shared)
+                curr = cpu_view;
+    }
+
     void sync(std::shared_ptr<AMPView> aloc, bool modify) {
 #ifdef __AMP_CPU__
         if (CLAMP::in_cpu_kernel())
@@ -323,24 +351,11 @@ struct rw_info
 #endif
         if (curr->getMan() == aloc->getMan())
             return;
+        try_switch_to_cpu();
         dev_info& dst = Alocs[aloc->getMan()];
         dev_info& src = Alocs[curr->getMan()];
-        if (dst.state == invalid) {
-            auto cpu_view = get_cpu_view();
-            if (Alocs.find(cpu_view->getMan()) != std::end(Alocs))
-                if (Alocs[cpu_view->getMan()].state == shared) {
-                    curr = cpu_view;
-                    src = Alocs[cpu_view->getMan()];
-                }
-            if (src.state != invalid) {
-                if (is_cpu_acc(aloc))
-                    curr->read(src.data, dst.data, count, 0);
-                else if (is_cpu_acc(curr))
-                    aloc->write(dst.data, src.data, count, 0, false);
-                else
-                    curr->copy(src.data, dst.data, count, 0, 0, false);
-            }
-        }
+        if (dst.state == invalid && src.state != invalid)
+            copy_helper(curr, src, aloc, dst, count, true);
         curr = aloc;
         if (modify) {
             disc();
@@ -365,23 +380,11 @@ struct rw_info
         if (aloc->getMan() != curr->getMan()) {
             if (Alocs.find(aloc->getMan()) == std::end(Alocs))
                 Alocs[aloc->getMan()] = {aloc->getMan()->create(count), invalid};
+            try_switch_to_cpu();
             dev_info& dst = Alocs[aloc->getMan()];
             dev_info& src = Alocs[curr->getMan()];
-            if (dst.state == invalid && (src.state != invalid || isArray)) {
-                auto cpu_view = get_cpu_view();
-                if (src.state == shared && cpu_view != curr)
-                    if (Alocs.find(cpu_view->getMan()) != std::end(Alocs))
-                        if (Alocs[cpu_view->getMan()].state == shared) {
-                            curr = cpu_view;
-                            src = Alocs[cpu_view->getMan()];
-                        }
-                if (is_cpu_acc(curr))
-                    aloc->write(dst.data, src.data, count, 0, false);
-                else {
-                    // curr->wait();
-                    aloc->copy(src.data, dst.data, count, 0, 0, false);
-                }
-            }
+            if (dst.state == invalid && (src.state != invalid || isArray))
+                copy_helper(curr, src, aloc, dst, count, false);
             if (isConst) {
                 if (src.state == modified)
                     src.state = shared;
@@ -410,10 +413,7 @@ struct rw_info
             Alocs[curr->getMan()] = {curr->getMan()->create(count), modify ? modified : shared};
             return curr->map(data, cnt, offset, modify);;
         }
-        auto cpu_view = get_cpu_view();
-        if (Alocs.find(cpu_view->getMan()) != std::end(Alocs))
-            if (Alocs[cpu_view->getMan()].state == shared)
-                curr = cpu_view;
+        try_switch_to_cpu();
         dev_info& info = Alocs[curr->getMan()];
         if (info.state == shared && modify) {
             disc();
@@ -455,7 +455,7 @@ struct rw_info
     }
 
     void write(const void* src, int cnt, int offset, bool blocking) {
-        curr->write(Alocs[curr->getMan()].data, src, cnt, offset, blocking);
+        curr->write(Alocs[curr->getMan()].data, src, cnt, offset, blocking, false);
         dev_info& dev = Alocs[curr->getMan()];
         if (dev.state != modified) {
             disc();
@@ -488,23 +488,11 @@ struct rw_info
             else {
                 void *ptr = aligned_alloc(0x1000, cnt);
                 memset(ptr, 0, cnt);
-                curr->write(src.data, ptr, cnt, src_offset, true);
+                curr->write(src.data, ptr, cnt, src_offset, true, false);
                 ::operator delete(ptr);
             }
         }
-        if (is_cpu_acc(other->curr)) {
-            if (is_cpu_acc(curr))
-                memmove((char*)dst.data + dst_offset, (char*)src.data + src_offset, cnt);
-            else
-                curr->read(src.data, (char*)dst.data + dst_offset, cnt, src_offset);
-        } else {
-            if (is_cpu_acc(curr))
-                other->curr->write(dst.data, (char*)src.data + src_offset, cnt, dst_offset, false);
-            else {
-                // curr->wait();
-                other->curr->copy(src.data, dst.data, cnt, src_offset, dst_offset, true);
-            }
-        }
+        copy_helper(curr, src, other->curr, dst, cnt, true, src_offset, dst_offset);
         other->disc();
         dst.state = modified;
     }

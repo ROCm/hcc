@@ -45,6 +45,11 @@ static inline void callback_release_kernel(cl_event event, cl_int event_command_
         clReleaseKernel(static_cast<cl_kernel>(user_data));
 }
 
+static inline void free_memory(cl_event event, cl_int event_command_exec_status, void *user_data) {
+    if (user_data)
+        ::operator delete(user_data);
+}
+
 struct cl_info
 {
     cl_mem dm;
@@ -125,17 +130,23 @@ public:
         mems.push_back({dm, isConst});
     }
 
-    void write(void* device, const void *src, size_t count, size_t offset, bool blocking) override {
+    void write(void* device, const void *src, size_t count, size_t offset, bool blocking, bool free) override {
         cl_mem dm = static_cast<cl_mem>(device);
         cl_int err = CL_SUCCESS;
-        if (blocking)
+        if (blocking) {
             err = clEnqueueWriteBuffer(getQueue(), dm, CL_TRUE, offset, count, src, 0, NULL, NULL);
-        else {
+            if (free)
+                ::operator delete(const_cast<void*>(src));
+        } else {
             cl_event ent;
             err = clEnqueueWriteBuffer(getQueue(), dm, CL_FALSE, offset, count, src, 0, NULL, &ent);
             if (events.find(dm) != std::end(events))
                 clReleaseEvent(events[dm]);
             events[dm] = ent;
+            if (free) {
+                assert(err == CL_SUCCESS);
+                err = clSetEventCallback(ent, CL_COMPLETE, &free_memory, const_cast<void*>(src));
+            }
         }
         assert(err == CL_SUCCESS);
     }
