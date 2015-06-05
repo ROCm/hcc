@@ -42,7 +42,7 @@ namespace Concurrency {
 
 // forward declaration
 namespace CLAMP {
-    void CLCompileKernels(cl_program&, cl_device_id&, void*, void*);
+    cl_program CLCompileKernels(cl_device_id&, void*, void*);
 }
 
 struct DimMaxSize {
@@ -293,11 +293,8 @@ public:
 
     void* CreateKernel(const char* fun, void* size, void* source) override {
         cl_int err;
-        if (programs.find(source) == std::end(programs)) {
-            cl_program program = nullptr;
-            Concurrency::CLAMP::CLCompileKernels(program, device, size, source);
-            programs[source] = program;
-        }
+        if (programs.find(source) == std::end(programs))
+            programs[source] = Concurrency::CLAMP::CLCompileKernels(device, size, source);
         cl_program program = programs[source];
         cl_kernel kernel = clCreateKernel(program, fun, &err);
         assert(err == CL_SUCCESS);
@@ -424,10 +421,10 @@ static OpenCLContext ctx;
 namespace Concurrency {
 namespace CLAMP {
 
-void CLCompileKernels(cl_program& program, cl_device_id& device,
-                      void* kernel_size_, void* kernel_source_)
+cl_program CLCompileKernels(cl_device_id& device, void* kernel_size_, void* kernel_source_)
 {
     cl_int err;
+    cl_program program = nullptr;
     const char* source = static_cast<const char*>(kernel_source_);
     size_t size = reinterpret_cast<size_t>(kernel_size_);
 
@@ -557,6 +554,7 @@ void CLCompileKernels(cl_program& program, cl_device_id& device,
         delete [] devices;
 
     } // if (precompiled_kernel)
+    return program;
 }
 
 } // namespce CLAMP
