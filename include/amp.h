@@ -2580,22 +2580,22 @@ void copy(const array_view<const T, N>& src, const array_view<T, N>& dest) {
         else {
             T* pSrc = src.internal().map_ptr();
             T* p = pSrc;
-            T* pDst = dest.internal().map_ptr(dest.extent_base.size(), dest.offset);
+            T* pDst = dest.internal().map_ptr(true, dest.extent_base.size(), dest.offset);
             copy_input<T*, T, N, 1>()(pSrc, pDst, dest.extent, dest.extent_base, dest.index_base);
             dest.internal().unmap_ptr(pDst);
             src.internal().unmap_ptr(p);
         }
     } else {
         if (is_flat(dest)) {
-            T* pDst = dest.internal().map_ptr();
+            T* pDst = dest.internal().map_ptr(true);
             T* p = pDst;
-            T* pSrc = src.internal().map_ptr(src.extent_base.size(), src.offset);
+            T* pSrc = src.internal().map_ptr(false, src.extent_base.size(), src.offset);
             copy_output<T*, T, N, 1>()(pSrc, pDst, src.extent, src.extent_base, src.index_base);
             dest.internal().unmap_ptr(p);
             src.internal().unmap_ptr(pSrc);
         } else {
-            T* pSrc = src.internal().map_ptr(src.extent_base.size(), src.offset);
-            T* pDst = dest.internal().map_ptr(dest.extent_base.size(), dest.offset);
+            T* pSrc = src.internal().map_ptr(false, src.extent_base.size(), src.offset);
+            T* pDst = dest.internal().map_ptr(true, dest.extent_base.size(), dest.offset);
             copy_bidir<T, N, 1>()(pSrc, pDst, src.extent, src.extent_base,
                                   src.index_base, dest.extent_base, dest.index_base);
             dest.internal().unmap_ptr(pDst);

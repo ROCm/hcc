@@ -411,7 +411,7 @@ struct rw_info
         if (!curr) {
             curr = getContext()->auto_select();
             Alocs[curr->getMan()] = {curr->getMan()->create(count), modify ? modified : shared};
-            return curr->map(data, cnt, offset, modify);;
+            return curr->map(data, cnt, offset, modify);
         }
         try_switch_to_cpu();
         dev_info& info = Alocs[curr->getMan()];
