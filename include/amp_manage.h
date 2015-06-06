@@ -117,7 +117,7 @@ public:
     void unmap_ptr(void* addr) const { return mm->unmap(addr); }
     void set_const() const { isConst = true; }
     void sync_to(std::shared_ptr<AMPView> Aloc) const {
-        mm->sync_to(Aloc);
+        mm->sync(Aloc, false);
     }
 
     __attribute__((annotate("serialize")))

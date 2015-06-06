@@ -264,7 +264,7 @@ static inline void copy_helper(std::shared_ptr<AMPView>& srcView, dev_info& src,
         else {
             void* temp = ::operator new(cnt);
             srcView->read(src.data, temp, cnt, src_offset);
-            dstView->write(dst.data, temp, cnt, dst_offset, true, true);
+            dstView->write(dst.data, temp, cnt, dst_offset, block, true);
         }
     }
 }
@@ -349,6 +349,15 @@ struct rw_info
         if (CLAMP::in_cpu_kernel())
             return;
 #endif
+        if (Alocs.find(aloc->getMan()) == std::end(Alocs)) {
+            Alocs[aloc->getMan()] = {aloc->getMan()->create(count), invalid};
+            if (is_cpu_acc(aloc))
+                data = Alocs[aloc->getMan()].data;
+        }
+        if (!curr) {
+            curr = aloc;
+            return;
+        }
         if (curr->getMan() == aloc->getMan())
             return;
         try_switch_to_cpu();
@@ -386,9 +395,9 @@ struct rw_info
             if (dst.state == invalid && (src.state != invalid || isArray))
                 copy_helper(curr, src, aloc, dst, count, false);
             if (isConst) {
+                dst.state = shared;
                 if (src.state == modified)
                     src.state = shared;
-                dst.state = shared;
             } else {
                 curr = aloc;
                 if (src.state != invalid)
@@ -425,33 +434,12 @@ struct rw_info
 
     void synchronize(bool modify) { sync(master, modify); }
 
-    void sync_to(std::shared_ptr<AMPView> aloc) {
-        auto Man = aloc->getMan();
-        if (Alocs.find(Man) == std::end(Alocs))
-            Alocs[Man] = {Man->create(count), invalid};
-        if (curr)
-            sync(aloc, false);
-        else
-            curr = master = aloc;
-    }
-
     void get_cpu_access(bool modify) {
 #ifdef __AMP_CPU__
         if (CLAMP::in_cpu_kernel())
             return;
 #endif
-        auto cpu_view = get_cpu_view();
-        if (Alocs.find(cpu_view->getMan()) == std::end(Alocs)) {
-            data = cpu_view->getMan()->create(count);
-            Alocs[cpu_view->getMan()] = {data, invalid};
-        }
-        if (!curr) {
-            curr = cpu_view;
-            return;
-        }
-        if (curr == cpu_view)
-            return;
-        sync(cpu_view, modify);
+        sync(get_cpu_view(), modify);
     }
 
     void write(const void* src, int cnt, int offset, bool blocking) {
