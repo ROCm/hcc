@@ -133,22 +133,20 @@ public:
     void write(void* device, const void *src, size_t count, size_t offset, bool blocking, bool free) override {
         cl_mem dm = static_cast<cl_mem>(device);
         cl_int err = CL_SUCCESS;
-        if (blocking) {
-            err = clEnqueueWriteBuffer(getQueue(), dm, CL_TRUE, offset, count, src, 0, NULL, NULL);
-            if (free)
-                ::operator delete(const_cast<void*>(src));
-        } else {
-            cl_event ent;
-            err = clEnqueueWriteBuffer(getQueue(), dm, CL_FALSE, offset, count, src, 0, NULL, &ent);
+        cl_event ent;
+        err = clEnqueueWriteBuffer(getQueue(), dm, CL_FALSE, offset, count, src, 0, NULL, &ent);
+        assert(err == CL_SUCCESS);
+        if (free) {
+            err = clSetEventCallback(ent, CL_COMPLETE, &free_memory, const_cast<void*>(src));
+            assert(err == CL_SUCCESS);
+        }
+        if (blocking)
+            clWaitForEvents(1, &ent);
+        else {
             if (events.find(dm) != std::end(events))
                 clReleaseEvent(events[dm]);
             events[dm] = ent;
-            if (free) {
-                assert(err == CL_SUCCESS);
-                err = clSetEventCallback(ent, CL_COMPLETE, &free_memory, const_cast<void*>(src));
-            }
         }
-        assert(err == CL_SUCCESS);
     }
 
     void read(void* device, void* dst, size_t count, size_t offset) override {
@@ -165,17 +163,14 @@ public:
         cl_mem sdm = static_cast<cl_mem>(src);
         cl_mem ddm = static_cast<cl_mem>(dst);
         cl_int err;
-        if (blocking) {
-            if (events.find(sdm) == std::end(events))
-                err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, 0, NULL, NULL);
-            else
-                err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, 1, &events[sdm], NULL);
-        } else {
-            cl_event ent;
-            if (events.find(sdm) == std::end(events))
-                err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, 0, NULL, &ent);
-            else
-                err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, 1, &events[sdm], &ent);
+        cl_event ent;
+        if (events.find(sdm) == std::end(events))
+            err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, 0, NULL, &ent);
+        else
+            err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, 1, &events[sdm], &ent);
+        if (blocking)
+            clWaitForEvents(1, &ent);
+        else {
             if (events.find(ddm) != std::end(events))
                 clReleaseEvent(events[ddm]);
             events[ddm] = ent;
@@ -202,7 +197,11 @@ public:
 
     void unmap(void* device, void* addr) override {
         cl_mem dm = static_cast<cl_mem>(device);
-        cl_int err = clEnqueueUnmapMemObject(getQueue(), dm, addr, 0, NULL, NULL);
+        cl_event evt;
+        cl_int err = clEnqueueUnmapMemObject(getQueue(), dm, addr, 0, NULL, &evt);
+        if (events.find(dm) != std::end(events))
+            clReleaseEvent(events[dm]);
+        events[dm] = evt;
         assert(err == CL_SUCCESS);
     }
 
