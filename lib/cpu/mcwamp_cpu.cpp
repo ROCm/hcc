@@ -38,7 +38,7 @@ public:
 class CPUFallbackDevice final : public AMPDevice
 {
 public:
-    CPUFallbackDevice() : AMPDevice() { cpu_type = access_type_read_write; }
+    CPUFallbackDevice() : AMPDevice() {}
 
     std::wstring get_path() const override { return L"fallback"; }
     std::wstring get_description() const override { return L"CPU Fallback"; }

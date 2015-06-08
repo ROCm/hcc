@@ -18,8 +18,8 @@ enum access_type
 };
 
 enum queuing_mode {
-  queuing_mode_immediate,
-  queuing_mode_automatic
+    queuing_mode_immediate,
+    queuing_mode_automatic
 };
 
 class AMPView
@@ -49,20 +49,28 @@ public:
   virtual void Push(void *kernel, int idx, void*& data, void* device, bool isConst) = 0;
 
   AMPDevice* getMan() { return Man; }
-  queuing_mode mode;
+  queuing_mode get_mode() const { return mode; }
+  void set_mode(queuing_mode mod) { mode = mod; }
 protected:
-  AMPView(AMPDevice* Man) : mode(queuing_mode_automatic), Man(Man) {}
+  AMPView(AMPDevice* Man, queuing_mode mode = queuing_mode_automatic)
+      : mode(mode), Man(Man) {}
 private:
   AMPDevice* Man;
+  queuing_mode mode;
 };
 
 class AMPDevice
 {
 private:
+    access_type cpu_type;
     std::shared_ptr<AMPView> def;
     std::once_flag flag;
+protected:
+    AMPDevice(access_type type = access_type_read_write) : cpu_type(type), def(), flag() {}
 public:
-    AMPDevice() : def() {}
+    access_type get_access() const { return cpu_type; }
+    void set_access(access_type type) { cpu_type = type; }
+
     virtual std::wstring get_path() const = 0;
     virtual std::wstring get_description() const = 0;
     virtual size_t get_mem() const = 0;
@@ -70,7 +78,6 @@ public:
     virtual bool is_lim_double() const = 0;
     virtual bool is_unified() const = 0;
     virtual bool is_emulated() const = 0;
-    access_type cpu_type;
 
 
     virtual void* create(size_t count) = 0;
@@ -309,7 +316,7 @@ struct rw_info
         }
 #endif
         if (mode == access_type_auto)
-            mode = curr->getMan()->cpu_type;
+            mode = curr->getMan()->get_access();
         Alocs[curr->getMan()] = {curr->getMan()->create(count), modified};
         if (is_cpu_acc(curr)) {
             data = Alocs[curr->getMan()].data;

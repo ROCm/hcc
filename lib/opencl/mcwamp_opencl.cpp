@@ -256,7 +256,7 @@ class OpenCLDevice : public AMPDevice
 {
 public:
     OpenCLDevice(const cl_device_id device, const std::wstring& path)
-        : AMPDevice(), programs(), device(device), path(path) {
+        : AMPDevice(access_type_none), programs(), device(device), path(path) {
         cl_int err;
 
         cl_ulong memAllocSize;
@@ -283,7 +283,6 @@ public:
         assert(err == CL_SUCCESS);
         d.dimensions = dimensions;
         d.maxSizes = maxSizes;
-        cpu_type = access_type_none;
     }
 
     std::wstring get_path() const override { return path; }

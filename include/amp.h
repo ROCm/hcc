@@ -104,7 +104,7 @@ public:
   accelerator get_accelerator() const;
   bool get_is_debug() const { return 0; }
   unsigned int get_version() const { return 0; }
-  queuing_mode get_queuing_mode() const { return pAloc->mode; }
+  queuing_mode get_queuing_mode() const { return pAloc->get_mode(); }
   bool get_is_auto_selection() { return false; }
 
   void flush() { pAloc->flush(); }
@@ -202,16 +202,16 @@ public:
   bool get_supports_limited_double_precision() const { return pMan->is_lim_double(); }
   size_t get_dedicated_memory() const { return pMan->get_mem(); }
   accelerator_view get_default_view() const { return pMan->get_default(); }
-  access_type get_default_cpu_access_type() const { return pMan->cpu_type; }
+  access_type get_default_cpu_access_type() const { return pMan->get_access(); }
   bool get_supports_cpu_shared_memory() const { return pMan->is_unified(); }
 
   bool set_default_cpu_access_type(access_type type) {
-      pMan->cpu_type = type;
+      pMan->set_access(type);
       return true;
   }
   accelerator_view create_view(queuing_mode mode = queuing_mode_automatic) {
       auto aloc = pMan->createAloc();
-      aloc->mode = mode;
+      aloc->set_mode(mode);
       return aloc;
   }
 
