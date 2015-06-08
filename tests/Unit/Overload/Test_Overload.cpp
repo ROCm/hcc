@@ -58,7 +58,7 @@ bool AMP_Func() restrict(amp)
 #ifdef TEST_BOTH
 bool BOTH_CPU_AND_AMP() restrict(cpu,amp)
 {
-#if __GPU__
+#if __KALMAR_ACCELERATOR__
     if (callee() != 1)
 #else
     if (callee() != 2)

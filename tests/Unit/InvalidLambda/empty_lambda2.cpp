@@ -13,7 +13,7 @@ int main()
 // Wrong scripts to cause "__ATTRIBUTE_CTOR__" without any identifier in kernel.cl
 //
 #if 0
-// R1UN: %amp_device -D__GPU__ %s -m32 -emit-llvm -c -S -O3 -o %t.ll && mkdir -p %t
+// R1UN: %amp_device -D__KALMAR_ACCELERATOR__ %s -m32 -emit-llvm -c -S -O3 -o %t.ll && mkdir -p %t
 // R1UN: %llc -march=c -o %t/kernel_.cl < %t.ll
 // R1UN: cat %opencl_math_dir/opencl_math.cl %t/kernel_.cl > %t/kernel.cl
 // R1UN: pushd %t && objcopy -B i386:x86-64 -I binary -O elf64-x86-64 kernel.cl %t/kernel.o && popd
