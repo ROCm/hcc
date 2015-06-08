@@ -77,20 +77,20 @@ template <typename T>
 class _data_host {
     mutable std::shared_ptr<rw_info> mm;
     bool isArray;
-    mutable bool isConst;
     template <typename U> friend class _data_host;
-
 public:
-    _data_host(size_t count, void* src = nullptr)
-        : mm(std::make_shared<rw_info>(count*sizeof(T), src)), isArray(false), isConst(false) {}
+    _data_host(size_t count, const void* src = nullptr)
+        : mm(std::make_shared<rw_info>(count*sizeof(T), const_cast<void*>(src))),
+        isArray(false) {}
 
-    _data_host(std::shared_ptr<AMPView> av, std::shared_ptr<AMPView> stage, int count, access_type mode)
-        : mm(std::make_shared<rw_info>(av, stage, count*sizeof(T), mode)), isArray(true), isConst(false) {}
+    _data_host(std::shared_ptr<AMPView> av, std::shared_ptr<AMPView> stage, int count,
+               access_type mode)
+        : mm(std::make_shared<rw_info>(av, stage, count*sizeof(T), mode)), isArray(true) {}
 
-    _data_host(const _data_host& other) : mm(other.mm), isArray(false), isConst(false) {}
+    _data_host(const _data_host& other) : mm(other.mm), isArray(false) {}
 
     template <typename U>
-        _data_host(const _data_host<U>& other) : mm(other.mm), isArray(false), isConst(false) {}
+        _data_host(const _data_host<U>& other) : mm(other.mm), isArray(false) {}
 
     T *get() const { return static_cast<T*>(mm->data); }
     void synchronize(bool modify = false) const { mm->synchronize(modify); }
@@ -115,7 +115,6 @@ public:
         return (T*)mm->map(count * sizeof(T), offset * sizeof(T), modify);
     }
     void unmap_ptr(void* addr) const { return mm->unmap(addr); }
-    void set_const() const { isConst = true; }
     void sync_to(std::shared_ptr<AMPView> Aloc) const { mm->sync(Aloc, false); }
 
     __attribute__((annotate("serialize")))
@@ -134,7 +133,7 @@ public:
                         throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
                 }
             }
-            mm->append(s, isArray, isConst);
+            mm->append(s, isArray, std::is_const<T>::value);
         }
     __attribute__((annotate("user_deserialize")))
         explicit _data_host(__global T* t) {}
