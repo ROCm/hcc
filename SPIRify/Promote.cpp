@@ -1413,6 +1413,11 @@ Function * createPromotedFunctionToType ( Function * F, FunctionType * promoteTy
         DEBUG(llvm::errs() << "New function name: " << newFunction->getName() << "\n" << "\n";);
 
 
+        // let new function get all attributes from the old function
+        newFunction->setAttributes(F->getAttributes());
+        DEBUG(llvm::errs() << "Old function attributes: "; F->getAttributes().dump();
+        llvm::errs() << "New function attributes: "; newFunction->getAttributes().dump(););
+
         // rewrite function with pointer type parameters
         if (F->getName().find("opencl_") != StringRef::npos ||
             F->getName().find("atomic_") != StringRef::npos) {
