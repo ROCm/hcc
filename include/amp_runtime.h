@@ -318,18 +318,14 @@ struct rw_info
         if (mode == access_type_auto)
             mode = curr->getMan()->get_access();
         Alocs[curr->getMan()] = {curr->getMan()->create(count), modified};
-        if (is_cpu_acc(curr)) {
+        if (is_cpu_acc(curr) || (curr->getMan()->is_unified() && mode != access_type_none))
             data = Alocs[curr->getMan()].data;
-            if (Stage != curr) {
-                stage = Stage;
+        if (is_cpu_acc(curr)) {
+            stage = Stage;
+            if (Stage != curr)
                 Alocs[stage->getMan()] = {stage->getMan()->create(count), invalid};
-            } else
-                stage = curr;
-        } else {
+        } else
             stage = curr;
-            if (curr->getMan()->is_unified() && mode != access_type_none)
-                data = Alocs[curr->getMan()].data;
-        }
     }
 
     void construct(std::shared_ptr<AMPView> aloc) {

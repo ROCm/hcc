@@ -141,12 +141,13 @@ public:
             assert(err == CL_SUCCESS);
         }
         if (blocking)
-            clWaitForEvents(1, &ent);
+            err = clWaitForEvents(1, &ent);
         else {
             if (events.find(dm) != std::end(events))
-                clReleaseEvent(events[dm]);
+                err = clReleaseEvent(events[dm]);
             events[dm] = ent;
         }
+        assert(err == CL_SUCCESS);
     }
 
     void read(void* device, void* dst, size_t count, size_t offset) override {
