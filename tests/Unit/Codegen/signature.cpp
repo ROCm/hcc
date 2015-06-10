@@ -1,7 +1,7 @@
-// RUN: %amp_device -O2 -D__GPU__=1 %s -c -o %t.device.o
+// RUN: %amp_device -O2 -D__KALMAR_ACCELERATOR__=1 %s -c -o %t.device.o
 // RUN: %gtest_amp %s %t.device.o -O2 -o %t && %t
 #include <stdlib.h>
-#ifndef __GPU__ //gtest requires rtti, but amp_device forbids rtti
+#ifndef __KALMAR_ACCELERATOR__ //gtest requires rtti, but amp_device forbids rtti
 #include <gtest/gtest.h>
 #endif
 class member {
@@ -29,7 +29,7 @@ class baz: public base {
   int bar;
   member m;
 };
-#ifdef __GPU__
+#ifdef __KALMAR_ACCELERATOR__
 __attribute__((annotate("user_deserialize")))
 float fake_use(void) restrict(amp) {
   baz bll(1.1, 2, 1); // calls the deserializer

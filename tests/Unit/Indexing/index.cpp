@@ -1,8 +1,8 @@
-// RUN: %amp_device -c -S -D__GPU__ -emit-llvm %s -O -o -|%cppfilt|%FileCheck %s
+// RUN: %amp_device -c -S -D__KALMAR_ACCELERATOR__ -emit-llvm %s -O -o -|%cppfilt|%FileCheck %s
 // RUN: %gtest_amp %s -o %t && %t
 // Testing if an efficient (i.e. fully inlined version) of Concurrency::index
 #include <amp.h>
-#ifndef __GPU__ //Device mode compilation cannot have RTTI
+#ifndef __KALMAR_ACCELERATOR__ //Device mode compilation cannot have RTTI
 #include <gtest/gtest.h>
 #endif
 #define N0 10
@@ -18,7 +18,7 @@ int foo(int k) restrict(amp){
 //CHECK-NOT: load
 //CHECK: }
 
-#ifndef __GPU__ //Device mode compilation cannot have RTTI
+#ifndef __KALMAR_ACCELERATOR__ //Device mode compilation cannot have RTTI
 // Test correctness
 TEST(ClassIndex, Index1D) {
   int n0 = N0;

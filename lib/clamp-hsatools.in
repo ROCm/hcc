@@ -76,7 +76,7 @@ if [ $KMDUMPBRIG == "1" ]; then
     cp $1.hsail ./dump.hsail
 fi
 
-#cat $NEWLIB/new_delete.hsail >> $1.hsail
+cat $NEWLIB/new_delete.hsail >> $1.hsail
 $HSAIL_ASM -assemble -o $1.brig $1.hsail
 # error handling for HSAILasm
 RETVAL=$?

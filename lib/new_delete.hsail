@@ -110,11 +110,11 @@ ld_global_u64 $d2, [&ptr_y_address];
 add_u64 $d1, $d2, $d1;
 mov_b32 $s0, 2;
 ld_arg_u64 $d2, [%arg_p0];
-atomicnoret_st_global_screl_sys_equiv(255)_b64  [$d1], $d2;
-atomicnoret_st_global_screl_sys_equiv(255)_b32  [$d0], $s0;
+atomicnoret_st_global_screl_system_b64  [$d1], $d2;
+atomicnoret_st_global_screl_system_b32  [$d0], $s0;
 
 @BB0_1:
-atomic_ld_global_scacq_sys_equiv(255)_b32       $s0, [$d0];
+atomic_ld_global_scacq_system_b32       $s0, [$d0];
 cmp_ne_b1_s32   $c0, $s0, 0;
 cbr_b1  $c0, @BB0_1;
 // BB#2:                                // %_ZZ4mainENK3$_2clE_1N11Concurrency11tiled_indexILi4ELi0ELi0EEE.exit
@@ -149,11 +149,11 @@ ld_global_u64 $d2, [&ptr_y_address];
 add_u64 $d1, $d2, $d1;
 mov_b32 $s0, 2;
 ld_arg_u64 $d2, [%arg_p0];
-atomicnoret_st_global_screl_sys_equiv(255)_b64  [$d1], $d2;
-atomicnoret_st_global_screl_sys_equiv(255)_b32  [$d0], $s0;
+atomicnoret_st_global_screl_system_b64  [$d1], $d2;
+atomicnoret_st_global_screl_system_b32  [$d0], $s0;
 
 @BB0_1:
-atomic_ld_global_scacq_sys_equiv(255)_b32       $s0, [$d0];
+atomic_ld_global_scacq_system_b32       $s0, [$d0];
 cmp_ne_b1_s32   $c0, $s0, 0;
 cbr_b1  $c0, @BB0_1;
 // BB#2:                                // %_ZZ4mainENK3$_2clE_1N11Concurrency11tiled_indexILi4ELi0ELi0EEE.exit
@@ -229,21 +229,21 @@ add_u64 $d1, $d4, 34359738368;
 shr_s64 $d4, $d1, 32;
 ld_global_u64 $d1, [&ptr_z_address];
 mov_b32 $s0, 1;
-atomicnoret_st_global_screl_sys_equiv(255)_b64  [$d2], $d4;
-atomicnoret_st_global_screl_sys_equiv(255)_b32  [$d3], $s0;
+atomicnoret_st_global_screl_system_b64  [$d2], $d4;
+atomicnoret_st_global_screl_system_b32  [$d3], $s0;
 
 @BB0_1:
-atomic_ld_global_scacq_sys_equiv(255)_b32       $s1, [$d3];
+atomic_ld_global_scacq_system_b32       $s1, [$d3];
 cmp_ne_b1_s32   $c0, $s1, 0;
 cbr_b1  $c0, @BB0_1;
 // BB#2:                                // %_ZZ4mainENK3$_1clE_0N11Concurrency11tiled_indexILi1ELi0ELi0EEE.exit
-atomic_ld_global_scacq_sys_equiv(255)_b64       $d2, [$d2];
+atomic_ld_global_scacq_system_b64       $d2, [$d2];
 st_global_align(4)_u32  $s0, [$d2];
 mov_b32 $s0, 4;
 st_global_align(4)_u32  $s0, [$d2+4];
 add_u64 $d0, $d1, $d0;
 add_u64 $d1, $d2, 8;
-// atomicnoret_st_global_screl_sys_equiv(255)_b64       [$d0], $d1;
+// atomicnoret_st_global_screl_system_b64       [$d0], $d1;
 st_arg_u64  $d1, [%ret_r0];
 
 ld_global_u64 $d10, [&signal_malloc];
@@ -280,21 +280,21 @@ add_u64 $d1, $d4, 34359738368;
 shr_s64 $d4, $d1, 32;
 ld_global_u64 $d1, [&ptr_z_address];
 mov_b32 $s0, 1;
-atomicnoret_st_global_screl_sys_equiv(255)_b64  [$d2], $d4;
-atomicnoret_st_global_screl_sys_equiv(255)_b32  [$d3], $s0;
+atomicnoret_st_global_screl_system_b64  [$d2], $d4;
+atomicnoret_st_global_screl_system_b32  [$d3], $s0;
 
 @BB0_1:
-atomic_ld_global_scacq_sys_equiv(255)_b32       $s1, [$d3];
+atomic_ld_global_scacq_system_b32       $s1, [$d3];
 cmp_ne_b1_s32   $c0, $s1, 0;
 cbr_b1  $c0, @BB0_1;
 // BB#2:                                // %_ZZ4mainENK3$_1clE_0N11Concurrency11tiled_indexILi1ELi0ELi0EEE.exit
-atomic_ld_global_scacq_sys_equiv(255)_b64       $d2, [$d2];
+atomic_ld_global_scacq_system_b64       $d2, [$d2];
 st_global_align(4)_u32  $s0, [$d2];
 mov_b32 $s0, 4;
 st_global_align(4)_u32  $s0, [$d2+4];
 add_u64 $d0, $d1, $d0;
 add_u64 $d1, $d2, 8;
-// atomicnoret_st_global_screl_sys_equiv(255)_b64       [$d0], $d1;
+// atomicnoret_st_global_screl_system_b64       [$d0], $d1;
 st_arg_u64  $d1, [%ret_r0];
 
 ld_global_u64 $d10, [&signal_malloc];
@@ -503,7 +503,7 @@ cbr_b1	$c1, @BB0_10;
 cvt_u64_u32	$d4, $s4;
 workgroupid_u32	$s3, 0;
 add_u64	$d3, $d4, $d3;
-pack_u32x2_u32	$d4, _u32x2(0,0), $s2, 1;
+pack_u32x2_u32	$d4, u32x2(0,0), $s2, 1;
 barrier;
 cmp_eq_b1_s32	$c1, $s2, 0;
 cbr_b1	$c1, @BB0_15;
@@ -527,11 +527,11 @@ ld_group_align(8)_width(WAVESIZE)_u64	$d7, [%__hsa_replaced_ZZ4mainEN3_EC__219__
 add_u64	$d6, $d6, $d7;
 mov_b32	$s2, 1;
 add_u64	$d6, $d6, 4;
-atomicnoret_st_global_screl_sys_equiv(255)_b64	[$d8], $d6;
-atomicnoret_st_global_screl_sys_equiv(255)_b32	[$d2], $s2;
+atomicnoret_st_global_screl_system_b64	[$d8], $d6;
+atomicnoret_st_global_screl_system_b32	[$d2], $s2;
 
 @BB0_16:
-atomic_ld_global_scacq_sys_equiv(255)_b32	$s2, [$d2];
+atomic_ld_global_scacq_system_b32	$s2, [$d2];
 cmp_ne_b1_s32	$c1, $s2, 0;
 cbr_b1	$c1, @BB0_16;
 
@@ -540,7 +540,7 @@ cbr_b1	$c1, @BB0_16;
 shl_u64	$d2, $d5, 3;
 add_u64	$d1, $d1, $d2;
 barrier;
-atomic_ld_global_scacq_sys_equiv(255)_b64	$d1, [$d1];
+atomic_ld_global_scacq_system_b64	$d1, [$d1];
 cbr_b1	$c0, @BB0_19;
 // BB#18:
 st_global_align(4)_u32	$s1, [$d1];
@@ -562,7 +562,7 @@ st_global_align(4)_u32	$s0, [$d1];
 shl_u64	$d2, $d2, 3;
 add_u64	$d0, $d0, $d2;
 add_u64	$d1, $d1, 4;
-// atomicnoret_st_global_screl_sys_equiv(255)_b64   [$d0], $d1;
+// atomicnoret_st_global_screl_system_b64   [$d0], $d1;
 st_arg_u64  $d1, [%ret_r0];
 
 ld_global_u64 $d10, [&signal_Xmalloc];
@@ -678,7 +678,7 @@ cbr_b1	$c1, @BB0_10;
 cvt_u64_u32	$d4, $s4;
 workgroupid_u32	$s3, 0;
 add_u64	$d3, $d4, $d3;
-pack_u32x2_u32	$d4, _u32x2(0,0), $s2, 1;
+pack_u32x2_u32	$d4, u32x2(0,0), $s2, 1;
 barrier;
 cmp_eq_b1_s32	$c1, $s2, 0;
 cbr_b1	$c1, @BB0_15;
@@ -702,11 +702,11 @@ ld_group_align(8)_width(WAVESIZE)_u64	$d7, [%__hsa_replaced_ZZ4mainEN3_EC__219__
 add_u64	$d6, $d6, $d7;
 mov_b32	$s2, 1;
 add_u64	$d6, $d6, 4;
-atomicnoret_st_global_screl_sys_equiv(255)_b64	[$d8], $d6;
-atomicnoret_st_global_screl_sys_equiv(255)_b32	[$d2], $s2;
+atomicnoret_st_global_screl_system_b64	[$d8], $d6;
+atomicnoret_st_global_screl_system_b32	[$d2], $s2;
 
 @BB0_16:
-atomic_ld_global_scacq_sys_equiv(255)_b32	$s2, [$d2];
+atomic_ld_global_scacq_system_b32	$s2, [$d2];
 cmp_ne_b1_s32	$c1, $s2, 0;
 cbr_b1	$c1, @BB0_16;
 
@@ -715,7 +715,7 @@ cbr_b1	$c1, @BB0_16;
 shl_u64	$d2, $d5, 3;
 add_u64	$d1, $d1, $d2;
 barrier;
-atomic_ld_global_scacq_sys_equiv(255)_b64	$d1, [$d1];
+atomic_ld_global_scacq_system_b64	$d1, [$d1];
 cbr_b1	$c0, @BB0_19;
 // BB#18:
 st_global_align(4)_u32	$s1, [$d1];
@@ -737,7 +737,7 @@ st_global_align(4)_u32	$s0, [$d1];
 shl_u64	$d2, $d2, 3;
 add_u64	$d0, $d0, $d2;
 add_u64	$d1, $d1, 4;
-// atomicnoret_st_global_screl_sys_equiv(255)_b64	[$d0], $d1;
+// atomicnoret_st_global_screl_system_b64	[$d0], $d1;
 st_arg_u64  $d1, [%ret_r0];
 
 ld_global_u64 $d10, [&signal_Xmalloc];

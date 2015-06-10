@@ -209,10 +209,17 @@ public:
   HSAPlatformDetect() : PlatformDetect("HSA", "libmcwamp_hsa.so", "libhsa-runtime64.so", hsa_kernel_source) {}
 };
 
+
+/**
+ * \brief Flag to turn on/off platform-dependent runtime messages
+ */
+static bool mcwamp_verbose = false;
+
 static RuntimeImpl* LoadOpenCLRuntime() {
   RuntimeImpl* runtimeImpl = nullptr;
   // load OpenCL C++AMP runtime
-  std::cout << "Use OpenCL runtime" << std::endl;
+  if (mcwamp_verbose)
+    std::cout << "Use OpenCL runtime" << std::endl;
   runtimeImpl = new RuntimeImpl("libmcwamp_opencl.so");
   if (!runtimeImpl->m_RuntimeHandle) {
     std::cerr << "Can't load OpenCL runtime!" << std::endl;
@@ -227,7 +234,8 @@ static RuntimeImpl* LoadOpenCLRuntime() {
 static RuntimeImpl* LoadHSARuntime() {
   RuntimeImpl* runtimeImpl = nullptr;
   // load HSA C++AMP runtime
-  std::cout << "Use HSA runtime" << std::endl;
+  if (mcwamp_verbose)
+    std::cout << "Use HSA runtime" << std::endl;
   runtimeImpl = new RuntimeImpl("libmcwamp_hsa.so");
   if (!runtimeImpl->m_RuntimeHandle) {
     std::cerr << "Can't load HSA runtime!" << std::endl;
@@ -242,7 +250,8 @@ static RuntimeImpl* LoadHSARuntime() {
 static RuntimeImpl* LoadCPURuntime() {
   RuntimeImpl* runtimeImpl = nullptr;
   // load CPU runtime
-  std::cout << "Use CPU runtime" << std::endl;
+  if (mcwamp_verbose)
+    std::cout << "Use CPU runtime" << std::endl;
   runtimeImpl = new RuntimeImpl("libmcwamp_cpu.so");
   if (!runtimeImpl->m_RuntimeHandle) {
     std::cerr << "Can't load CPU runtime!" << std::endl;
@@ -257,6 +266,13 @@ RuntimeImpl* GetOrInitRuntime() {
   if (runtimeImpl == nullptr) {
     HSAPlatformDetect hsa_rt;
     OpenCLPlatformDetect opencl_rt;
+
+    char* verbose_env = getenv("CLAMP_VERBOSE");
+    if (verbose_env != nullptr) {
+      if (std::string("ON") == verbose_env) {
+        mcwamp_verbose = true;
+      }
+    }
 
     // force use certain C++AMP runtime from CLAMP_RUNTIME environment variable
     char* runtime_env = getenv("CLAMP_RUNTIME");
@@ -352,13 +368,16 @@ void *CreateKernel(std::string s) {
       if (kernel_env == nullptr) {
           OpenCLPlatformDetect opencl_rt;
         if (opencl_rt.hasSPIR()) {
-          std::cout << "Use OpenCL SPIR kernel\n";
+          if (mcwamp_verbose)
+            std::cout << "Use OpenCL SPIR kernel\n";
           hasSPIR = true;
         } else {
-          std::cout << "Use OpenCL C kernel\n";
+          if (mcwamp_verbose)
+            std::cout << "Use OpenCL C kernel\n";
         }
       } else {
-        std::cout << "Use OpenCL C kernel\n";
+        if (mcwamp_verbose)
+          std::cout << "Use OpenCL C kernel\n";
       }
       firstTime = false;
     }

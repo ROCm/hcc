@@ -13,7 +13,8 @@ bool TestOnHost()
 
 bool TestOnDevice()
 {
-    array<int, 1> A((extent<1>(1)));
+    array<int, 1> a((extent<1>(1)));
+    array_view<int> A(a);
     extent<1> ex(1);
     parallel_for_each(ex, [&](index<1> idx) restrict(amp,cpu) {
         A(idx) = g();

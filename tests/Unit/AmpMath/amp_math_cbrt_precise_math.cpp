@@ -16,6 +16,7 @@ bool test() {
   // Alloc & init input data
   extent<1> e(vecSize);
   array<_Tp, 1> a(vecSize);
+
   array<_Tp, 1> b(vecSize);
   array<_Tp, 1> c(vecSize);
 
@@ -23,13 +24,13 @@ bool test() {
   std::random_device rd;
   std::default_random_engine gen(rd());
   std::uniform_real_distribution<_Tp> dis(0, 1);
-  for (index<1> i(0); i[0] < vecSize; i++) {
-    a[i] = dis(gen);
-  }
-
   array_view<_Tp> ga(a);
   array_view<_Tp> gb(b);
   array_view<_Tp> gc(c);
+  for (index<1> i(0); i[0] < vecSize; i++) {
+    ga[i] = dis(gen);
+  }
+
   parallel_for_each(
     e,
     [=](index<1> idx) restrict(amp) {
