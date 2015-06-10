@@ -6,6 +6,35 @@
 
 namespace Concurrency {
 
+#ifndef E_FAIL
+#define E_FAIL 0x80004005
+#endif
+
+static const char *__errorMsg_UnsupportedAccelerator = "concurrency::parallel_for_each is not supported on the selected accelerator \"CPU accelerator\".";
+
+typedef int HRESULT;
+class runtime_exception : public std::exception
+{
+public:
+  runtime_exception(const char * message, HRESULT hresult) throw() : _M_msg(message), err_code(hresult) {}
+  explicit runtime_exception(HRESULT hresult) throw() : err_code(hresult) {}
+  runtime_exception(const runtime_exception& other) throw() : _M_msg(other.what()), err_code(other.err_code) {}
+  runtime_exception& operator=(const runtime_exception& other) throw() {
+    _M_msg = *(other.what());
+    err_code = other.err_code;
+    return *this;
+  }
+  virtual ~runtime_exception() throw() {}
+  virtual const char* what() const throw() {return _M_msg.c_str();}
+  HRESULT get_error_code() const {return err_code;}
+
+private:
+  std::string _M_msg;
+  HRESULT err_code;
+};
+
+
+
 class AMPDevice;
 
 enum access_type
@@ -179,62 +208,6 @@ extern void PushArgPtr(void *, int, size_t, const void *);
 
 } // namespace CLAMP
 
-class Serialize {
-public:
-    typedef void *kernel;
-    Serialize(bool flag)
-        : aloc_(), k_(nullptr), current_idx_(0), collector(), collect(true) {}
-    Serialize(kernel k)
-        : aloc_(), k_(k), current_idx_(0), collector(), collect(false) {}
-    Serialize(std::shared_ptr<AMPView> aloc, kernel k)
-        : aloc_(aloc), k_(k), current_idx_(0), collector(), collect(false) {}
-    void Append(size_t sz, const void *s) {
-        if (!collect)
-            CLAMP::PushArg(k_, current_idx_++, sz, s);
-    }
-    std::shared_ptr<AMPView> get_aloc() { return aloc_; }
-    void AppendPtr(size_t sz, const void *s) {
-        if (!collect)
-            CLAMP::PushArgPtr(k_, current_idx_++, sz, s);
-    }
-    void* getKernel() { return k_; }
-    int getAndIncCurrentIndex() {
-        int ret = current_idx_;
-        current_idx_++;
-        return ret;
-    }
-
-    // select best
-    void push(std::shared_ptr<AMPView> aloc) { collector.push_back(aloc); }
-    bool is_collec() const { return collect; }
-    std::shared_ptr<AMPView> best() {
-        std::sort(std::begin(collector), std::end(collector));
-        std::vector<std::shared_ptr<AMPView>> candidate;
-        int max = 0;
-        for (int i = 0; i < collector.size(); ++i) {
-            auto head = collector[i];
-            int count = 1;
-            while (head == collector[++i])
-                ++count;
-            if (count > max) {
-                max = count;
-                candidate.clear();
-                candidate.push_back(head);
-            }
-        }
-        if (candidate.size())
-            return candidate[0];
-        else
-            return nullptr;
-    }
-private:
-    std::shared_ptr<AMPView> aloc_;
-    kernel k_;
-    int current_idx_;
-    std::vector<std::shared_ptr<AMPView>> collector;
-    bool collect;
-};
-
 static inline const std::shared_ptr<AMPView> get_cpu_view() {
     static auto cpu_view = getContext()->getDevice(L"cpu")->get_default();
     return cpu_view;
@@ -379,8 +352,7 @@ struct rw_info
         }
     }
 
-    void append(Serialize& s, bool isArray, bool isConst) {
-        auto aloc = s.get_aloc();
+    void append(std::shared_ptr<AMPView>& aloc, bool isArray, bool isConst) {
         if (!curr) {
             construct(aloc);
             dev_info& obj = Alocs[curr->getMan()];
@@ -413,9 +385,7 @@ struct rw_info
                 curr = aloc;
             }
         }
-        aloc->Push(s.getKernel(), s.getAndIncCurrentIndex(), data, Alocs[aloc->getMan()].data, isConst);
     }
-
 
     void* map(size_t cnt, size_t offset, bool modify) {
         if (cnt == 0)

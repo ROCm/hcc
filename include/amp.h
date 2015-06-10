@@ -34,6 +34,7 @@
 #define __global
 #include <amp_runtime.h>
 #include <amp_manage.h>
+#include <serialize.h>
 // End CLAMP
 
 /* COMPATIBILITY LAYER */
@@ -130,6 +131,9 @@ private:
 
   template <int N, typename Kernel>
       friend void parallel_for_each(extent<N> compute_domain, const Kernel& f);
+  template <typename Kernel, int N>
+      friend void launch_cpu_task(const accelerator_view& av, Kernel const& f,
+                                  extent<N> const& compute_domain);
   template <int D0, int D1, int D2, typename Kernel>
       friend void parallel_for_each(tiled_extent<D0,D1,D2> compute_domain, const Kernel& f);
   template <int D0, int D1, typename Kernel>
@@ -2408,9 +2412,10 @@ void parallel_for_each(const accelerator_view& accl_view,
 
 template <int N, typename Kernel>
 void parallel_for_each(extent<N> compute_domain, const Kernel& f){
-    Serialize s(true);
+    ChooseVisitor vis;
+    Serialize s(&vis);
     f.__cxxamp_serialize(s);
-    accelerator_view best = s.best();
+    accelerator_view best = vis.best();
     if (!best.pAloc)
         best = accelerator(L"default").get_default_view();
     parallel_for_each(best, compute_domain, f);
@@ -2418,9 +2423,10 @@ void parallel_for_each(extent<N> compute_domain, const Kernel& f){
 
 template <int D0, int D1, int D2, typename Kernel>
 void parallel_for_each(tiled_extent<D0,D1,D2> compute_domain, const Kernel& f) {
-    Serialize s(true);
+    ChooseVisitor vis;
+    Serialize s(&vis);
     f.__cxxamp_serialize(s);
-    accelerator_view best = s.best();
+    accelerator_view best = vis.best();
     if (!best.pAloc)
         best = accelerator(L"default").get_default_view();
     parallel_for_each(best, compute_domain, f);
@@ -2428,9 +2434,10 @@ void parallel_for_each(tiled_extent<D0,D1,D2> compute_domain, const Kernel& f) {
 
 template <int D0, int D1, typename Kernel>
 void parallel_for_each(tiled_extent<D0,D1> compute_domain, const Kernel& f) {
-    Serialize s(true);
+    ChooseVisitor vis;
+    Serialize s(&vis);
     f.__cxxamp_serialize(s);
-    accelerator_view best = s.best();
+    accelerator_view best = vis.best();
     if (!best.pAloc)
         best = accelerator(L"default").get_default_view();
     parallel_for_each(best, compute_domain, f);
@@ -2438,9 +2445,10 @@ void parallel_for_each(tiled_extent<D0,D1> compute_domain, const Kernel& f) {
 
 template <int D0, typename Kernel>
 void parallel_for_each(tiled_extent<D0> compute_domain, const Kernel& f) {
-    Serialize s(true);
+    ChooseVisitor vis;
+    Serialize s(&vis);
     f.__cxxamp_serialize(s);
-    accelerator_view best = s.best();
+    accelerator_view best = vis.best();
     if (!best.pAloc)
         best = accelerator(L"default").get_default_view();
     parallel_for_each(best, compute_domain, f);
