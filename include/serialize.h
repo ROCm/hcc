@@ -25,6 +25,34 @@ public:
     }
 };
 
+class CPUVisitor : public AMPVisitor
+{
+    std::shared_ptr<AMPView> aloc_;
+    std::set<void*> addrs;
+public:
+    CPUVisitor(std::shared_ptr<AMPView> aloc) : aloc_(aloc) {}
+    void Push(struct rw_info* rw, bool isArray, bool isConst) override {
+        if (isArray) {
+            auto curr = aloc_->getMan()->get_path();
+            auto path = rw->master->getMan()->get_path();
+            if (path == L"cpu") {
+                auto asoc = rw->stage->getMan()->get_path();
+                if (asoc == L"cpu" || path != curr)
+                    throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
+            }
+        }
+        rw->append(aloc_, isArray, isConst);
+        bool find = addrs.find(rw->data) != std::end(addrs);
+        if (!find) {
+            void*& device = rw->Alocs[aloc_->getMan()].data;
+            void*& data = rw->data;
+            addrs.insert(device);
+            addrs.insert(data);
+            std::swap(device, data);
+        }
+    }
+};
+
 class AppendVisitor : public AMPVisitor
 {
     std::shared_ptr<AMPView> aloc_;
@@ -50,7 +78,7 @@ public:
             }
         }
         rw->append(aloc_, isArray, isConst);
-        aloc_->Push(k_, current_idx_++, rw->data, rw->Alocs[aloc_->getMan()].data, isConst);
+        aloc_->Push(k_, current_idx_++, rw->Alocs[aloc_->getMan()].data, isConst);
     }
 };
 

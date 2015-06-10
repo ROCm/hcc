@@ -17,24 +17,6 @@ extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v) {}
 
 namespace Concurrency {
 
-class CPUFallbackView final : public AMPView
-{
-    std::map<void*, void*> addrs;
-public:
-    CPUFallbackView(AMPDevice* pMan) : AMPView(pMan) {}
-    void Push(void *kernel, int idx, void*& data, void* device, bool isConst) override {
-      auto it = addrs.find(data);
-      bool find = it != std::end(addrs);
-      if (!kernel && !find) {
-          addrs[device] = data;
-          data = device;
-      } else if (kernel && find) {
-          data = it->second;
-          addrs.erase(it);
-      }
-  }
-};
-
 class CPUFallbackDevice final : public AMPDevice
 {
 public:
@@ -51,7 +33,7 @@ public:
     void* create(size_t count) override { return aligned_alloc(0x1000, count); }
     void release(void *data) override { ::operator delete(data); }
     std::shared_ptr<AMPView> createAloc() override {
-        return std::shared_ptr<AMPView>(new CPUFallbackView(this));
+        return std::shared_ptr<AMPView>(new AMPView(this));
     }
 };
 

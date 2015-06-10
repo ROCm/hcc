@@ -163,7 +163,7 @@ class CPUKernelRAII
 public:
     CPUKernelRAII(const std::shared_ptr<AMPView> pAloc, const Kernel& f)
         : pAloc(pAloc), f(f), th(NTHREAD) {
-        Concurrency::AppendVisitor vis(pAloc, nullptr);
+        Concurrency::CPUVisitor vis(pAloc);
         Concurrency::Serialize s(&vis);
         f.__cxxamp_serialize(s);
         CLAMP::enter_kernel();
@@ -173,7 +173,7 @@ public:
         for (auto& t : th)
             if (t.joinable())
                 t.join();
-        Concurrency::AppendVisitor vis(pAloc, (void*)0x5566);
+        Concurrency::CPUVisitor vis(pAloc);
         Concurrency::Serialize ss(&vis);
         f.__cxxamp_serialize(ss);
         CLAMP::leave_kernel();

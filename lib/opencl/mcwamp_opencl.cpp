@@ -124,7 +124,7 @@ public:
             clFinish(queue);
     }
 
-    void Push(void *kernel, int idx, void*& data, void* device, bool isConst) override {
+    void Push(void *kernel, int idx, void* device, bool isConst) override {
         cl_mem dm = static_cast<cl_mem>(device);
         PushArgImpl(kernel, idx, sizeof(cl_mem), &dm);
         mems.push_back({dm, isConst});

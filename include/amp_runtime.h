@@ -75,12 +75,11 @@ public:
       return (char*)device + offset;
   }
   virtual void unmap(void* device, void* addr) {}
-  virtual void Push(void *kernel, int idx, void*& data, void* device, bool isConst) = 0;
+  virtual void Push(void *kernel, int idx, void* device, bool isConst) {}
 
   AMPDevice* getMan() { return Man; }
   queuing_mode get_mode() const { return mode; }
   void set_mode(queuing_mode mod) { mode = mod; }
-protected:
   AMPView(AMPDevice* Man, queuing_mode mode = queuing_mode_automatic)
       : mode(mode), Man(Man) {}
 private:
@@ -126,7 +125,6 @@ class CPUView final : public AMPView
 {
 public:
     CPUView(AMPDevice* Man) : AMPView(Man) {}
-    void Push(void *kernel, int idx, void*& data, void* device, bool isConst) override {}
 };
 
 
@@ -408,10 +406,6 @@ struct rw_info
     void synchronize(bool modify) { sync(master, modify); }
 
     void get_cpu_access(bool modify) {
-#ifdef __AMP_CPU__
-        if (CLAMP::in_cpu_kernel())
-            return;
-#endif
         sync(get_cpu_view(), modify);
     }
 
