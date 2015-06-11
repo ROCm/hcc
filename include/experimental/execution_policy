@@ -5,10 +5,6 @@ namespace experimental {
 namespace parallel {
 inline namespace v1 {
 
-  // 2.3, Execution policy type trait
-  //template<class T> struct is_execution_policy;
-  //template<class T> constexpr bool is_execution_policy_v = is_execution_policy<T>::value;
-
   // 2.4, Sequential execution policy
   class sequential_execution_policy {};
 
@@ -30,6 +26,17 @@ inline namespace v1 {
       template<class T> T* get() noexcept;
       template<class T> const T* get() const noexcept;
   };
+
+  // 2.3, Execution policy type trait
+  template<typename T> struct is_execution_policy : std::false_type{};
+  template<> struct is_execution_policy<sequential_execution_policy> : std::true_type{};
+  template<> struct is_execution_policy<parallel_execution_policy> : std::true_type{};
+  template<> struct is_execution_policy<parallel_vector_execution_policy> : std::true_type{};
+
+  template<> struct is_execution_policy<execution_policy> : std::true_type{};
+
+  // FIXME this will cause clang to throw some warnings, disable it for now
+  //template<class T> constexpr bool is_execution_policy_v = is_execution_policy<T>::value;
 
   // 2.8, Execution policy objects
   constexpr sequential_execution_policy      seq{};
