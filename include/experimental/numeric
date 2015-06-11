@@ -29,6 +29,9 @@ inline namespace v1 {
 #include "impl/transform_exclusive_scan.inl"
 #include "impl/transform_inclusive_scan.inl"
 
+// FIXME: these algorithms shall be placed in another header?
+#include "impl/count.inl"
+
 } // inline namespace v1
 } // namespace parallel
 } // namespace experimental 
