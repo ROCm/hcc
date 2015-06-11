@@ -1413,6 +1413,11 @@ Function * createPromotedFunctionToType ( Function * F, FunctionType * promoteTy
         DEBUG(llvm::errs() << "New function name: " << newFunction->getName() << "\n" << "\n";);
 
 
+        // let new function get all attributes from the old function
+        newFunction->setAttributes(F->getAttributes());
+        DEBUG(llvm::errs() << "Old function attributes: "; F->getAttributes().dump();
+        llvm::errs() << "New function attributes: "; newFunction->getAttributes().dump(););
+
         // rewrite function with pointer type parameters
         if (F->getName().find("opencl_") != StringRef::npos ||
             F->getName().find("atomic_") != StringRef::npos) {
@@ -1499,7 +1504,9 @@ Function * createPromotedFunctionToType ( Function * F, FunctionType * promoteTy
         } while ( !workList.empty() );
 
         eraseOldTileStaticDefs(F->getParent());
-        if (verifyFunction (*newFunction/*, PrintMessageAction*/)) {
+
+        // don't verify the new function if it is only a declaration
+        if (!newFunction->isDeclaration() && verifyFunction (*newFunction/*, PrintMessageAction*/)) {
                 llvm::errs() << "When checking the updated function of: ";
                 F->dump();
                 llvm::errs() << " into: ";
@@ -1775,6 +1782,10 @@ bool PromoteGlobals::runOnModule(Module& M)
         }
         updateKernels (M, promotedKernels);
 
+        /// FIXME: The following code can be removed. It is too late to add
+        ///        NoDuplicate attribute on barrier in SPIRify pass. We already
+        //         add NoDuplicate attribute in clang
+#if 0
         // If the barrier present is used, we need to ensure it cannot be duplicated.
         for (Module::iterator F = M.begin(), Fe = M.end(); F != Fe; ++F) {
                 StringRef name = F->getName();
@@ -1782,6 +1793,7 @@ bool PromoteGlobals::runOnModule(Module& M)
                         F->addFnAttr (Attribute::NoDuplicate);
                 }
         }
+#endif
 
         // Rename local variables per SPIR naming rule
         Module::GlobalListType &globals = M.getGlobalList();

@@ -16,15 +16,15 @@ int main(void) {
   array<float, 1> c(vecSize);
   array<int, 1>   exp(vecSize);
    
-  for (index<1> i(0); i[0] < vecSize; i++) {
-    a[i] = rand() / 1000.0f;
-    exp[i] = rand();
-  }
-
   array_view<float> ga(a);
   array_view<float> gb(b);
   array_view<float> gc(c);
   array_view<int> gexp(exp);
+  for (index<1> i(0); i[0] < vecSize; i++) {
+    ga[i] = rand() / 1000.0f;
+    gexp[i] = rand();
+  }
+
   parallel_for_each(
     e,
     [=](index<1> idx) restrict(amp) {

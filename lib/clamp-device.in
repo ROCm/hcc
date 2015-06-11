@@ -22,10 +22,11 @@ fi
 
 # check command line arguments
 if [ "$#" -lt 2 ]; then
-  echo "Usage: $0 input_LLVM output_kernel (--hsa | --spir | --opencl)" >&2
+  echo "Usage: $0 input_LLVM output_kernel (--hsa | --spir | --opencl) (--verbose)" >&2
   echo "  --hsa    will trigger HSAIL/BRIG kernel output" >&2
   echo "  --spir   will trigger SPIR       kernel output" >&2
   echo "  --opencl will trigger OpenCL C   kernel output" >&2
+  echo "  --verbose will enable GPU target lowering output" >&2
   exit 1
 fi
 
@@ -51,6 +52,21 @@ else
     LIB=@CMAKE_INSTALL_PREFIX@/lib
     HSATOOLS=@CMAKE_INSTALL_PREFIX@/bin/clamp-hsatools
 fi
+
+################
+# Verbose flag
+################
+
+VERBOSE=0
+
+# set verbose flag
+ARGS="$@"
+for ARG in $ARGS
+do
+  if [ $ARG == "--verbose" ]; then
+    VERBOSE=1
+  fi
+done
 
 # emit HSAIL/BRIG kernel
 if [ "$3" == "--hsa" ]; then
@@ -89,7 +105,9 @@ if [ "$3" == "--hsa" ]; then
 
     $AS -o $2.promote.bc $2.promote.ll
 
-    echo "Generating HSA Brig kernel"
+    if [ $VERBOSE == 1 ]; then
+      echo "Generating HSA Brig kernel"
+    fi
     $LINK $MATHLIB/hsa_math.bc $2.promote.bc -o $2 2>/dev/null
 
     if [ $KMDUMPLLVM == "1" ]; then
@@ -123,7 +141,9 @@ if [ "$3" == "--spir" ]; then
       echo "Generating OpenCL SPIR kernel failed"
       exit 1
     fi
-    echo "Generating OpenCL SPIR kernel"
+    if [ $VERBOSE == 1 ]; then
+      echo "Generating OpenCL SPIR kernel"
+    fi
     $LINK $MATHLIB/opencl_math.bc $2.promote.bc -o $2 2>/dev/null
     # remove temp file
     rm $2.promote.bc
@@ -146,7 +166,9 @@ if [ "$3" == "--opencl" ]; then
       echo "Generating OpenCL C kernel failed"
       exit 1
     fi
-    echo "Generating OpenCL C kernel"
+    if [ $VERBOSE == 1 ]; then
+      echo "Generating OpenCL C kernel"
+    fi
     $LLC $2.promote.bc -march=c -o - |cat $MATHLIB/opencl_math.cl - > $2
 
     if grep -q " double " $2; then
@@ -179,13 +201,17 @@ if [ $? == 1 ]; then
   exit 1
 fi
 if hasSPIR; then
-    echo "Generating OpenCL SPIR kernel"
+    if [ $VERBOSE == 1 ]; then
+      echo "Generating OpenCL SPIR kernel"
+    fi
     $LINK $MATHLIB/opencl_math.bc $2.promote.bc -o $2 2>/dev/null
     # remove temp file
     rm $2.promote.bc
     exit $?
 else
-    echo "Generating OpenCL C kernel"
+    if [ $VERBOSE == 1 ]; then
+      echo "Generating OpenCL C kernel"
+    fi
     $LLC $2.promote.bc -march=c -o - |cat $MATHLIB/opencl_math.cl - > $2
 
     if grep -q " double " $2; then
