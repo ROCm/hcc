@@ -1,0 +1,35 @@
+//===----------------------------------------------------------------------===//
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+#pragma once
+
+// FIXME: remove C++AMP dependency in the near future
+#include <amp.h>
+
+#include <experimental/execution_policy>
+
+#include <algorithm>
+#include <numeric>
+#include <iterator>
+#include <type_traits>
+
+namespace std {
+namespace experimental {
+namespace parallel {
+inline namespace v1 {
+
+#include "impl/reduce.inl"
+#include "impl/exclusive_scan.inl"
+#include "impl/inclusive_scan.inl"
+#include "impl/transform_reduce.inl"
+#include "impl/transform_exclusive_scan.inl"
+#include "impl/transform_inclusive_scan.inl"
+
+} // inline namespace v1
+} // namespace parallel
+} // namespace experimental 
+} // namespace std
