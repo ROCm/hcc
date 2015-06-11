@@ -32,7 +32,7 @@ $OPT -O3 -dce -S -o $FILENAME.opt.ll < $FILENAME.spir.ll
 $AS -o $FILENAME.bc $FILENAME.opt.ll
 
 $HSAIL_LLC -O2 -march=hsail64 -filetype=obj -o $FILENAME.brig $FILENAME.bc
-$HSAIL_ASM -disassemble -o - $FILENAME.brig
+$HSAIL_ASM -disassemble -o /dev/stdout $FILENAME.brig
 
 # remove artifacts
 rm $FILENAME.spir.ll $FILENAME.opt.ll $FILENAME.bc $FILENAME.brig
