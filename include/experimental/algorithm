@@ -6,11 +6,15 @@
 //===----------------------------------------------------------------------===//
 
 #pragma once
+// FIXME: remove amp.h dependency from this header file
+#include <amp.h>
+
+#include <experimental/execution_policy>
+
 #include <cassert>
 #include <future>
 #include <utility>
 #include <coordinate>
-#include <amp.h>
 #include <iostream>
 
 namespace std {
@@ -37,7 +41,7 @@ static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu) {
 template<typename Kernel, int dim_ext>
 static inline void mcw_cxxamp_launch_kernel(size_t *ext,
   size_t *local_size, const Kernel& f) restrict(cpu,amp) {
-#ifndef __GPU__
+#ifndef __KALMAR_ACCELERATOR__
   //Invoke Kernel::__cxxamp_trampoline as an kernel
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -52,7 +56,7 @@ static inline void mcw_cxxamp_launch_kernel(size_t *ext,
   Concurrency::Serialize s(kernel);
   f.__cxxamp_serialize(s);
   Concurrency::CLAMP::LaunchKernel(kernel, dim_ext, ext, local_size);
-#endif // __GPU__
+#endif // __KALMAR_ACCELERATOR__
 }
 
 
@@ -63,7 +67,7 @@ public:
   explicit fe_wrapper(size_t ext, const Kernel f, const InputIterator& first) restrict(amp,cpu)
       : _ext(ext), k(f), _first(first) {}
   void operator() (std::offset<1> idx) restrict(amp,cpu) {
-#ifdef __GPU__
+#ifdef __KALMAR_ACCELERATOR__
       k(*(_first + idx[0]));
 #endif
   }
@@ -80,11 +84,11 @@ __attribute__((noinline,used))
 void for_each(ExecutionPolicy&& exec,
               InputIterator first, InputIterator last,
               Function f) restrict(cpu,amp) {
-#ifndef __GPU__
+#ifndef __KALMAR_ACCELERATOR__
   size_t ext = std::distance(first, last);
   fe_wrapper<Function, InputIterator> _pf(ext, f, first);
   mcw_cxxamp_launch_kernel<fe_wrapper<Function, InputIterator>, 1>(&ext, NULL, _pf);
-#else //ifndef __GPU__
+#else //ifndef __KALMAR_ACCELERATOR__
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
   auto bar = &fe_wrapper<Function, InputIterator>::operator();
@@ -94,23 +98,44 @@ void for_each(ExecutionPolicy&& exec,
 }
 
 // for_each_n
-template <typename ExecutionPolicy,
-          typename InputIterator, typename Size, typename Function>
+template <typename InputIterator, typename Size, typename Function>
 __attribute__((noinline,used))
-void for_each_n(ExecutionPolicy&& exec,
-                InputIterator first, Size n,
+InputIterator for_each_n(InputIterator first, Size n,
                 Function f) restrict(cpu,amp) {
-#ifndef __GPU__
+#ifndef __KALMAR_ACCELERATOR__
   size_t ext = std::distance(first, first + n);
   fe_wrapper<Function, InputIterator> _pf(ext, f, first);
   mcw_cxxamp_launch_kernel<fe_wrapper<Function, InputIterator>, 1>(&ext, NULL, _pf);
-#else //ifndef __GPU__
+#else //ifndef __KALMAR_ACCELERATOR__
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
   auto bar = &fe_wrapper<Function, InputIterator>::operator();
   auto qq = &std::offset<1>::__cxxamp_opencl_index;
   int* foo = reinterpret_cast<int*>(&fe_wrapper<Function, InputIterator>::__cxxamp_trampoline);
 #endif
+  return first;
+}
+
+// for_each_n
+template <typename ExecutionPolicy,
+          typename InputIterator, typename Size, typename Function>
+__attribute__((noinline,used))
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, InputIterator>::type
+for_each_n(ExecutionPolicy&& exec,
+           InputIterator first, Size n,
+           Function f) restrict(cpu,amp) {
+#ifndef __KALMAR_ACCELERATOR__
+  size_t ext = std::distance(first, first + n);
+  fe_wrapper<Function, InputIterator> _pf(ext, f, first);
+  mcw_cxxamp_launch_kernel<fe_wrapper<Function, InputIterator>, 1>(&ext, NULL, _pf);
+#else //ifndef __KALMAR_ACCELERATOR__
+  //to ensure functor has right operator() defined
+  //this triggers the trampoline code being emitted
+  auto bar = &fe_wrapper<Function, InputIterator>::operator();
+  auto qq = &std::offset<1>::__cxxamp_opencl_index;
+  int* foo = reinterpret_cast<int*>(&fe_wrapper<Function, InputIterator>::__cxxamp_trampoline);
+#endif
+  return first;
 }
 
 } // inline namespace v1
