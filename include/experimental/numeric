@@ -32,6 +32,7 @@ inline namespace v1 {
 // FIXME: these algorithms shall be placed in another header?
 #include "impl/count.inl"
 #include "impl/max_element.inl"
+#include "impl/min_element.inl"
 
 } // inline namespace v1
 } // namespace parallel
