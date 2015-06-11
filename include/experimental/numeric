@@ -33,6 +33,7 @@ inline namespace v1 {
 #include "impl/count.inl"
 #include "impl/max_element.inl"
 #include "impl/min_element.inl"
+#include "impl/minmax_element.inl"
 
 } // inline namespace v1
 } // namespace parallel
