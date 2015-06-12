@@ -34,6 +34,7 @@ inline namespace v1 {
 #include "impl/max_element.inl"
 #include "impl/min_element.inl"
 #include "impl/minmax_element.inl"
+#include "impl/all_any_none_of.inl"
 
 } // inline namespace v1
 } // namespace parallel
