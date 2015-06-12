@@ -388,7 +388,7 @@ OutputIterator copy_n(ExecutionPolicy&& exec,
               InputIterator first, Size count,
               OutputIterator result) {
   if (count >= Size()) {
-    // launch kernel
+    // use copy to implement copy_n
     auto last = std::next(first, count);
     return copy(exec, first, last, result);
   }
@@ -403,7 +403,7 @@ __attribute__((noinline,used))
 void replace(ExecutionPolicy&& exec,
             ForwardIterator first, ForwardIterator last,
             const T& old_value, const T& new_value) {
-  // fill kernel
+  // replace kernel
   auto k = [&](typename std::iterator_traits<ForwardIterator>::value_type& v) {
     if (v == old_value)
       v = new_value;
