@@ -114,6 +114,27 @@ void generate(ExecutionPolicy&& exec,
 #endif
 }
 
+// generate_n
+template <typename ExecutionPolicy,
+          typename OutputIterator, typename Size, typename Generator>
+__attribute__((noinline,used))
+OutputIterator generate_n(ExecutionPolicy&& exec,
+              OutputIterator first, Size count,
+              Generator g) restrict(cpu,amp) {
+#ifndef __KALMAR_ACCELERATOR__
+  size_t ext = std::distance(first, first + count);
+  generate_wrapper<Generator, OutputIterator> _pf(ext, g, first);
+  mcw_cxxamp_launch_kernel<generate_wrapper<Generator, OutputIterator>, 1>(&ext, NULL, _pf);
+#else //ifndef __KALMAR_ACCELERATOR__
+  //to ensure functor has right operator() defined
+  //this triggers the trampoline code being emitted
+  auto bar = &generate_wrapper<Generator, OutputIterator>::operator();
+  auto qq = &std::offset<1>::__cxxamp_opencl_index;
+  int* foo = reinterpret_cast<int*>(&generate_wrapper<Generator, OutputIterator>::__cxxamp_trampoline);
+#endif
+  return first;
+}
+
 // for_each
 template <typename ExecutionPolicy,
           typename InputIterator, typename Function>
