@@ -7,6 +7,19 @@
 
 #pragma once
   #include <cmath>
+
+#ifdef __AMP_CPU__
+  inline float opencl_fabs(float x) restrict(amp) { return std::fabs(x); }
+  inline double opencl_fabs_double(double x) restrict(amp) { return std::fabs(x); }
+  inline int opencl_isnan(float x) restrict(amp) { return std::isnan(x); }
+  inline int opencl_isnan_double(float x) restrict(amp) { return std::isnan(x); }
+#else
+  extern "C" float opencl_fabs(float x) restrict(amp);
+  extern "C" double opencl_fabs_double(double x) restrict(amp);
+  extern "C" int opencl_isnan(float x) restrict(amp);
+  extern "C" int opencl_isnan_double(double x) restrict(amp);
+#endif
+
 #ifdef __KALMAR_ACCELERATOR__
   extern "C" float opencl_acos(float x) restrict(amp);
   extern "C" double opencl_acos_double(double x) restrict(amp);
@@ -69,9 +82,6 @@
   extern "C" float opencl_expm1(float x) restrict(amp);
   extern "C" double opencl_expm1_double(double x) restrict(amp);
 
-  extern "C" float opencl_fabs(float x) restrict(amp);
-  extern "C" double opencl_fabs_double(double x) restrict(amp);
-
   extern "C" float opencl_fdim(float x, float y) restrict(amp);
   extern "C" double opencl_fdim_double(double x, double y) restrict(amp);
 
@@ -108,9 +118,6 @@
 
   extern "C" int opencl_isinf(float x) restrict(amp);
   extern "C" int opencl_isinf_double(double x) restrict(amp);
-
-  extern "C" int opencl_isnan(float x) restrict(amp);
-  extern "C" int opencl_isnan_double(double x) restrict(amp);
 
   extern "C" int opencl_isnormal(float x) restrict(amp);
   extern "C" int opencl_isnormal_double(double x) restrict(amp);
