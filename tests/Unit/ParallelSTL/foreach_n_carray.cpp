@@ -126,15 +126,15 @@ int main() {
   ret &= test_negative<float, TEST_SIZE, 2, 0>();
   ret &= test_negative<double, TEST_SIZE, 2, 0>();
 
-  ret &= test<int, TEST_SIZE, COL * 2, COL>();
-  ret &= test<unsigned, TEST_SIZE, COL * 2, COL>();
-  ret &= test<float, TEST_SIZE, COL * 2, COL>();
-  ret &= test<double, TEST_SIZE, COL * 2, COL>();
+  ret &= test_negative<int, TEST_SIZE, COL * 2, COL>();
+  ret &= test_negative<unsigned, TEST_SIZE, COL * 2, COL>();
+  ret &= test_negative<float, TEST_SIZE, COL * 2, COL>();
+  ret &= test_negative<double, TEST_SIZE, COL * 2, COL>();
 
-  ret &= test<int, ROW * COL, COL * 2, COL / 2 + COL / 2>();
-  ret &= test<unsigned, ROW * COL, COL * 2, COL / 2 + COL / 2>();
-  ret &= test<float, ROW * COL, COL * 2, COL / 2 + COL / 2>();
-  ret &= test<double, ROW * COL, COL * 2, COL / 2 + COL / 2>();
+  ret &= test_negative<int, ROW * COL, COL * 2, COL * 2 - COL / 2>();
+  ret &= test_negative<unsigned, ROW * COL, COL * 2, COL * 2 - COL / 2>();
+  ret &= test_negative<float, ROW * COL, COL * 2, COL * 2 - COL / 2>();
+  ret &= test_negative<double, ROW * COL, COL * 2, COL * 2 - COL / 2>();
 
   return !(ret == true);
 }
