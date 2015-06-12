@@ -205,6 +205,7 @@ template <typename InputIterator, typename Size, typename Function>
 __attribute__((noinline,used))
 InputIterator for_each_n(InputIterator first, Size n,
                 Function f) restrict(cpu,amp) {
+  if (n >= Size()) {
 #ifndef __KALMAR_ACCELERATOR__
   size_t ext = std::distance(first, first + n);
   fe_wrapper<Function, InputIterator> _pf(ext, f, first);
@@ -216,7 +217,8 @@ InputIterator for_each_n(InputIterator first, Size n,
   auto qq = &std::offset<1>::__cxxamp_opencl_index;
   int* foo = reinterpret_cast<int*>(&fe_wrapper<Function, InputIterator>::__cxxamp_trampoline);
 #endif
-  return first;
+  }
+  return (n < Size()) ? first : first + n;
 }
 
 // for_each_n
@@ -227,6 +229,7 @@ typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>
 for_each_n(ExecutionPolicy&& exec,
            InputIterator first, Size n,
            Function f) restrict(cpu,amp) {
+  if (n >= Size()) {
 #ifndef __KALMAR_ACCELERATOR__
   size_t ext = std::distance(first, first + n);
   fe_wrapper<Function, InputIterator> _pf(ext, f, first);
@@ -238,7 +241,8 @@ for_each_n(ExecutionPolicy&& exec,
   auto qq = &std::offset<1>::__cxxamp_opencl_index;
   int* foo = reinterpret_cast<int*>(&fe_wrapper<Function, InputIterator>::__cxxamp_trampoline);
 #endif
-  return first;
+  }
+  return (n < Size()) ? first : first + n;
 }
 
 // fill
