@@ -164,6 +164,7 @@ __attribute__((noinline,used))
 OutputIterator generate_n(ExecutionPolicy&& exec,
               OutputIterator first, Size count,
               Generator g) restrict(cpu,amp) {
+  if (count >= Size()) {
 #ifndef __KALMAR_ACCELERATOR__
   size_t ext = std::distance(first, first + count);
   generate_wrapper<Generator, OutputIterator> _pf(ext, g, first);
@@ -175,7 +176,8 @@ OutputIterator generate_n(ExecutionPolicy&& exec,
   auto qq = &std::offset<1>::__cxxamp_opencl_index;
   int* foo = reinterpret_cast<int*>(&generate_wrapper<Generator, OutputIterator>::__cxxamp_trampoline);
 #endif
-  return first;
+  }
+  return (count < Size()) ? first : first + count;
 }
 
 // for_each
