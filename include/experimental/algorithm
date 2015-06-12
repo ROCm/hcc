@@ -524,6 +524,22 @@ OutputIterator replace_copy(ExecutionPolicy&& exec,
   return transform(exec, first, last, d_first, k);
 }
 
+// adjacent_difference (without predicate version)
+template <typename ExecutionPolicy,
+          typename InputIterator, typename OutputIterator>
+__attribute__((noinline,used))
+OutputIterator adjacent_difference(ExecutionPolicy&& exec,
+              InputIterator first, InputIterator last,
+              OutputIterator d_first) restrict(cpu,amp) {
+  typedef typename std::iterator_traits<InputIterator>::value_type Type;
+  // adjacent_difference kernel
+  auto k = [](const Type& a, const Type& b) {
+      return a - b;
+  };
+
+  return adjacent_difference(exec, first, last, d_first, k);
+}
+
 
 } // inline namespace v1
 } // namespace parallel
