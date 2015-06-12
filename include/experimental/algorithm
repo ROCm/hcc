@@ -413,6 +413,23 @@ void replace(ExecutionPolicy&& exec,
   for_each(exec, first, last, k);
 }
 
+// replace_copy
+template <typename ExecutionPolicy,
+          typename InputIterator, typename OutputIterator, typename T>
+__attribute__((noinline,used))
+OutputIterator replace_copy(ExecutionPolicy&& exec,
+                            InputIterator first, InputIterator last,
+                            OutputIterator d_first,
+                            const T& old_value, const T& new_value) {
+  // replace_copy kernel
+  auto k = [&](typename std::iterator_traits<InputIterator>::value_type& v) {
+    return (v == old_value) ? new_value : v;
+  };
+
+  // launch kernel
+  return transform(exec, first, last, d_first, k);
+}
+
 
 } // inline namespace v1
 } // namespace parallel
