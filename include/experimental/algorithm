@@ -268,15 +268,16 @@ __attribute__((noinline,used))
 OutputIterator fill_n(ExecutionPolicy&& exec,
             OutputIterator first, Size count,
             const T& value) {
-  // fill_n kernel
-  auto k = [&](typename std::iterator_traits<OutputIterator>::value_type& v) {
-    v = value;
-  };
+  if (count >= Size()) {
+    // fill_n kernel
+    auto k = [&](typename std::iterator_traits<OutputIterator>::value_type& v) {
+      v = value;
+    };
 
-  // launch kernel
-  for_each_n(exec, first, count, k);
-
-  return first + count;
+    // launch kernel
+    for_each_n(exec, first, count, k);
+  }
+  return (count < Size()) ? first : first + count;
 }
 
 
