@@ -196,6 +196,22 @@ for_each_n(ExecutionPolicy&& exec,
   return first;
 }
 
+// fill
+template <typename ExecutionPolicy,
+          typename ForwardIterator, typename T>
+__attribute__((noinline,used))
+void fill(ExecutionPolicy&& exec,
+            ForwardIterator first, ForwardIterator last,
+            const T& value) {
+  // fill kernel
+  auto k = [&](typename std::iterator_traits<ForwardIterator>::value_type& v) {
+    v = value;
+  };
+
+  // launch kernel
+  for_each(exec, first, last, k);
+}
+
 } // inline namespace v1
 } // namespace parallel
 } // namespace experimental 
