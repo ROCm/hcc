@@ -131,6 +131,25 @@ private:
   const OutputIterator& _d_first;
 };
 
+template<typename Kernel, typename InputIterator, typename T>
+class replace_if_wrapper
+{
+public:
+  explicit replace_if_wrapper(size_t ext, const Kernel f, const InputIterator& first, const T& new_value) restrict(amp,cpu)
+      : _ext(ext), k(f), _first(first), _new_value(new_value) {}
+  void operator() (std::offset<1> idx) restrict(amp,cpu) {
+#ifdef __KALMAR_ACCELERATOR__
+      if (k(*(_first + idx[0])))
+        *(_first + idx[0]) = _new_value;
+#endif
+  }
+private:
+  const size_t _ext;
+  const Kernel k;
+  const InputIterator& _first;
+  const T& _new_value;
+};
+
 // transform (unary version)
 template <typename ExecutionPolicy,
           typename InputIterator, typename OutputIterator, typename Function>
@@ -288,6 +307,26 @@ for_each_n(ExecutionPolicy&& exec,
 #endif
   }
   return (n < Size()) ? first : first + n;
+}
+
+// replace_if
+template <typename ExecutionPolicy,
+          typename ForwardIterator, typename Function, typename T>
+__attribute__((noinline,used))
+void replace_if(ExecutionPolicy&& exec,
+              ForwardIterator first, ForwardIterator last,
+              Function f, const T& new_value) restrict(cpu,amp) {
+#ifndef __KALMAR_ACCELERATOR__
+  size_t ext = std::distance(first, last);
+  replace_if_wrapper<Function, ForwardIterator, T> _pf(ext, f, first, new_value);
+  mcw_cxxamp_launch_kernel<replace_if_wrapper<Function, ForwardIterator, T>, 1>(&ext, NULL, _pf);
+#else //ifndef __KALMAR_ACCELERATOR__
+  //to ensure functor has right operator() defined
+  //this triggers the trampoline code being emitted
+  auto bar = &replace_if_wrapper<Function, ForwardIterator, T>::operator();
+  auto qq = &std::offset<1>::__cxxamp_opencl_index;
+  int* foo = reinterpret_cast<int*>(&replace_if_wrapper<Function, ForwardIterator, T>::__cxxamp_trampoline);
+#endif
 }
 
 // fill
