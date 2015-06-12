@@ -112,11 +112,11 @@ public:
     virtual void release(void* ptr) = 0;
     virtual void* CreateKernel(const char* fun, void* size, void* source) { return nullptr; }
     virtual bool check(size_t* size, size_t dim_ext) { return true; }
-    virtual std::shared_ptr<AMPView> createAloc() = 0;
+    virtual std::shared_ptr<AMPView> createView() = 0;
     virtual ~AMPDevice() {}
 
     std::shared_ptr<AMPView> get_default() {
-        std::call_once(flag, [&]() { def = createAloc(); });
+        std::call_once(flag, [&]() { def = createView(); });
         return def;
     }
 };
@@ -140,7 +140,7 @@ public:
     bool is_emulated() const override { return true; }
 
 
-    std::shared_ptr<AMPView> createAloc() { return std::shared_ptr<AMPView>(new CPUView(this)); }
+    std::shared_ptr<AMPView> createView() { return std::shared_ptr<AMPView>(new CPUView(this)); }
     void* create(size_t count) override { return aligned_alloc(0x1000, count); }
     void release(void* ptr) override { ::operator delete(ptr); }
     void* CreateKernel(const char* fun, void* size, void* source) { return nullptr; }

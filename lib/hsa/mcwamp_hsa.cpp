@@ -160,7 +160,7 @@ public:
         std::shared_future<void>* fut = dispatch->dispatchKernelAndGetFuture();
         return static_cast<void*>(fut);
     }
-    std::shared_ptr<AMPView> createAloc() override {
+    std::shared_ptr<AMPView> createView() override {
         return std::shared_ptr<AMPView>(new HSAView(this));
     }
 };
@@ -170,7 +170,6 @@ class HSAContext final : public AMPContext
 public:
     HSAContext() {
         auto Man = std::shared_ptr<AMPDevice>(new HSADevice);
-        default_map[Man] = Man->createAloc();
         Devices.push_back(Man);
         def = Man;
     }

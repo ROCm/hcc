@@ -341,7 +341,7 @@ public:
         clReleaseMemObject(dm);
     }
 
-    std::shared_ptr<AMPView> createAloc() override {
+    std::shared_ptr<AMPView> createView() override {
         return std::shared_ptr<AMPView>(new OpenCLView(this, device));
     }
 

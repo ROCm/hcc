@@ -217,7 +217,7 @@ public:
       return true;
   }
   accelerator_view create_view(queuing_mode mode = queuing_mode_automatic) {
-      auto aloc = pMan->createAloc();
+      auto aloc = pMan->createView();
       aloc->set_mode(mode);
       return aloc;
   }

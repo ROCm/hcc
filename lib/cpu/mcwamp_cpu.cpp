@@ -32,7 +32,7 @@ public:
 
     void* create(size_t count) override { return aligned_alloc(0x1000, count); }
     void release(void *data) override { ::operator delete(data); }
-    std::shared_ptr<AMPView> createAloc() override {
+    std::shared_ptr<AMPView> createView() override {
         return std::shared_ptr<AMPView>(new AMPView(this));
     }
 };
