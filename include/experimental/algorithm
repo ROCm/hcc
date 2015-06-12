@@ -112,6 +112,25 @@ private:
   const OutputIterator& _d_first;
 };
 
+template<typename Kernel, typename InputIterator, typename OutputIterator>
+class binary_transform_wrapper
+{
+public:
+  explicit binary_transform_wrapper(size_t ext, const Kernel f, const InputIterator& first, const InputIterator& first2, const OutputIterator& d_first) restrict(amp,cpu)
+      : _ext(ext), k(f), _first(first), _first2(first2), _d_first(d_first) {}
+  void operator() (std::offset<1> idx) restrict(amp,cpu) {
+#ifdef __KALMAR_ACCELERATOR__
+      *(_d_first + idx[0]) = k(*(_first + idx[0]), *(_first2 + idx[0]));
+#endif
+  }
+private:
+  const size_t _ext;
+  const Kernel k;
+  const InputIterator& _first;
+  const InputIterator& _first2;
+  const OutputIterator& _d_first;
+};
+
 // transform (unary version)
 template <typename ExecutionPolicy,
           typename InputIterator, typename OutputIterator, typename Function>
@@ -132,6 +151,32 @@ OutputIterator transform(ExecutionPolicy&& exec,
   auto bar = &transform_wrapper<Function, InputIterator, OutputIterator>::operator();
   auto qq = &std::offset<1>::__cxxamp_opencl_index;
   int* foo = reinterpret_cast<int*>(&transform_wrapper<Function, InputIterator, OutputIterator>::__cxxamp_trampoline);
+#endif
+  }
+  return (distance < 0) ? d_first : d_first + distance;
+}
+
+// transform (binary version)
+template <typename ExecutionPolicy,
+          typename InputIterator, typename OutputIterator, typename Function>
+__attribute__((noinline,used))
+OutputIterator transform(ExecutionPolicy&& exec,
+              InputIterator first, InputIterator last,
+              InputIterator first2,
+              OutputIterator d_first,
+              Function f) restrict(cpu,amp) {
+  auto distance = std::distance(first, last);
+  if (distance >= 0) {
+#ifndef __KALMAR_ACCELERATOR__
+  size_t ext = std::distance(first, last);
+  binary_transform_wrapper<Function, InputIterator, OutputIterator> _pf(ext, f, first, first2, d_first);
+  mcw_cxxamp_launch_kernel<binary_transform_wrapper<Function, InputIterator, OutputIterator>, 1>(&ext, NULL, _pf);
+#else //ifndef __KALMAR_ACCELERATOR__
+  //to ensure functor has right operator() defined
+  //this triggers the trampoline code being emitted
+  auto bar = &binary_transform_wrapper<Function, InputIterator, OutputIterator>::operator();
+  auto qq = &std::offset<1>::__cxxamp_opencl_index;
+  int* foo = reinterpret_cast<int*>(&binary_transform_wrapper<Function, InputIterator, OutputIterator>::__cxxamp_trampoline);
 #endif
   }
   return (distance < 0) ? d_first : d_first + distance;
