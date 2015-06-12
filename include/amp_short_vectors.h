@@ -152,7 +152,7 @@ public:
   NORM_COMMON_PUBLIC_MEMBER(unorm)
 };
 
-norm::norm(const unorm& other) restrict(cpu, amp)
+inline norm::norm(const unorm& other) restrict(cpu, amp)
 {
   set(other.Value);
 }
@@ -161,52 +161,52 @@ norm::norm(const unorm& other) restrict(cpu, amp)
 #undef NORM_COMMON_PUBLIC_MEMBER
 
 #define NORM_OPERATOR(C) \
-C operator+(const C& lhs, const C& rhs) restrict(cpu, amp) \
+inline C operator+(const C& lhs, const C& rhs) restrict(cpu, amp) \
 { \
   return C(static_cast<float>(lhs) + static_cast<float>(rhs)); \
 } \
 \
-C operator-(const C& lhs, const C& rhs) restrict(cpu, amp) \
+inline C operator-(const C& lhs, const C& rhs) restrict(cpu, amp) \
 { \
   return C(static_cast<float>(lhs) - static_cast<float>(rhs)); \
 } \
 \
-C operator*(const C& lhs, const C& rhs) restrict(cpu, amp) \
+inline C operator*(const C& lhs, const C& rhs) restrict(cpu, amp) \
 { \
   return C(static_cast<float>(lhs) * static_cast<float>(rhs)); \
 } \
 \
-C operator/(const C& lhs, const C& rhs) restrict(cpu, amp) \
+inline C operator/(const C& lhs, const C& rhs) restrict(cpu, amp) \
 { \
   return C(static_cast<float>(lhs) / static_cast<float>(rhs)); \
 } \
 \
-bool operator==(const C& lhs, const C& rhs) restrict(cpu, amp) \
+inline bool operator==(const C& lhs, const C& rhs) restrict(cpu, amp) \
 { \
   return static_cast<float>(lhs) == static_cast<float>(rhs); \
 } \
 \
-bool operator!=(const C& lhs, const C& rhs) restrict(cpu, amp) \
+inline bool operator!=(const C& lhs, const C& rhs) restrict(cpu, amp) \
 { \
   return static_cast<float>(lhs) != static_cast<float>(rhs); \
 } \
 \
-bool operator>(const C& lhs, const C& rhs) restrict(cpu, amp) \
+inline bool operator>(const C& lhs, const C& rhs) restrict(cpu, amp) \
 { \
   return static_cast<float>(lhs) > static_cast<float>(rhs); \
 } \
 \
-bool operator<(const C& lhs, const C& rhs) restrict(cpu, amp) \
+inline bool operator<(const C& lhs, const C& rhs) restrict(cpu, amp) \
 { \
   return static_cast<float>(lhs) < static_cast<float>(rhs); \
 } \
 \
-bool operator>=(const C& lhs, const C& rhs) restrict(cpu, amp) \
+inline bool operator>=(const C& lhs, const C& rhs) restrict(cpu, amp) \
 { \
   return static_cast<float>(lhs) >= static_cast<float>(rhs); \
 } \
 \
-bool operator<=(const C& lhs, const C& rhs) restrict(cpu, amp) \
+inline bool operator<=(const C& lhs, const C& rhs) restrict(cpu, amp) \
 { \
   return static_cast<float>(lhs) <= static_cast<float>(rhs); \
 }
@@ -1787,31 +1787,31 @@ public:
 
 #define SCALARTYPE_2_EXPLICIT_CONVERSION_CONSTRUCTORS(ST, ST_2, \
 ST_2_o1, ST_2_o2, ST_2_o3, ST_2_o4, ST_2_o5) \
-ST_2::ST_2(const ST_2_o1& other) restrict(cpu, amp) \
+inline ST_2::ST_2(const ST_2_o1& other) restrict(cpu, amp) \
 { \
   x = static_cast<ST>(other.get_x()); \
   y = static_cast<ST>(other.get_y()); \
 } \
 \
-ST_2::ST_2(const ST_2_o2& other) restrict(cpu, amp) \
+inline ST_2::ST_2(const ST_2_o2& other) restrict(cpu, amp) \
 { \
   x = static_cast<ST>(other.get_x()); \
   y = static_cast<ST>(other.get_y()); \
 } \
 \
-ST_2::ST_2(const ST_2_o3& other) restrict(cpu, amp) \
+inline ST_2::ST_2(const ST_2_o3& other) restrict(cpu, amp) \
 { \
   x = static_cast<ST>(other.get_x()); \
   y = static_cast<ST>(other.get_y()); \
 } \
 \
-ST_2::ST_2(const ST_2_o4& other) restrict(cpu, amp) \
+inline ST_2::ST_2(const ST_2_o4& other) restrict(cpu, amp) \
 { \
   x = static_cast<ST>(other.get_x()); \
   y = static_cast<ST>(other.get_y()); \
 } \
 \
-ST_2::ST_2(const ST_2_o5& other) restrict(cpu, amp) \
+inline ST_2::ST_2(const ST_2_o5& other) restrict(cpu, amp) \
 { \
   x = static_cast<ST>(other.get_x()); \
   y = static_cast<ST>(other.get_y()); \
@@ -1839,35 +1839,35 @@ SCALARTYPE_2_EXPLICIT_CONVERSION_CONSTRUCTORS(unorm, unorm_2,
 
 #define SCALARTYPE_3_EXPLICIT_CONVERSION_CONSTRUCTORS(ST, ST_3, \
 ST_3_o1, ST_3_o2, ST_3_o3, ST_3_o4, ST_3_o5) \
-ST_3::ST_3(const ST_3_o1& other) restrict(cpu, amp) \
+inline ST_3::ST_3(const ST_3_o1& other) restrict(cpu, amp) \
 { \
   x = static_cast<ST>(other.get_x()); \
   y = static_cast<ST>(other.get_y()); \
   z = static_cast<ST>(other.get_z()); \
 } \
 \
-ST_3::ST_3(const ST_3_o2& other) restrict(cpu, amp) \
+inline ST_3::ST_3(const ST_3_o2& other) restrict(cpu, amp) \
 { \
   x = static_cast<ST>(other.get_x()); \
   y = static_cast<ST>(other.get_y()); \
   z = static_cast<ST>(other.get_z()); \
 } \
 \
-ST_3::ST_3(const ST_3_o3& other) restrict(cpu, amp) \
+inline ST_3::ST_3(const ST_3_o3& other) restrict(cpu, amp) \
 { \
   x = static_cast<ST>(other.get_x()); \
   y = static_cast<ST>(other.get_y()); \
   z = static_cast<ST>(other.get_z()); \
 } \
 \
-ST_3::ST_3(const ST_3_o4& other) restrict(cpu, amp) \
+inline ST_3::ST_3(const ST_3_o4& other) restrict(cpu, amp) \
 { \
   x = static_cast<ST>(other.get_x()); \
   y = static_cast<ST>(other.get_y()); \
   z = static_cast<ST>(other.get_z()); \
 } \
 \
-ST_3::ST_3(const ST_3_o5& other) restrict(cpu, amp) \
+inline ST_3::ST_3(const ST_3_o5& other) restrict(cpu, amp) \
 { \
   x = static_cast<ST>(other.get_x()); \
   y = static_cast<ST>(other.get_y()); \
@@ -1896,7 +1896,7 @@ SCALARTYPE_3_EXPLICIT_CONVERSION_CONSTRUCTORS(unorm, unorm_3,
 
 #define SCALARTYPE_4_EXPLICIT_CONVERSION_CONSTRUCTORS(ST, ST_4, \
 ST_4_o1, ST_4_o2, ST_4_o3, ST_4_o4, ST_4_o5) \
-ST_4::ST_4(const ST_4_o1& other) restrict(cpu, amp) \
+inline ST_4::ST_4(const ST_4_o1& other) restrict(cpu, amp) \
 { \
   x = static_cast<ST>(other.get_x()); \
   y = static_cast<ST>(other.get_y()); \
@@ -1904,7 +1904,7 @@ ST_4::ST_4(const ST_4_o1& other) restrict(cpu, amp) \
   w = static_cast<ST>(other.get_w()); \
 } \
 \
-ST_4::ST_4(const ST_4_o2& other) restrict(cpu, amp) \
+inline ST_4::ST_4(const ST_4_o2& other) restrict(cpu, amp) \
 { \
   x = static_cast<ST>(other.get_x()); \
   y = static_cast<ST>(other.get_y()); \
@@ -1912,7 +1912,7 @@ ST_4::ST_4(const ST_4_o2& other) restrict(cpu, amp) \
   w = static_cast<ST>(other.get_w()); \
 } \
 \
-ST_4::ST_4(const ST_4_o3& other) restrict(cpu, amp) \
+inline ST_4::ST_4(const ST_4_o3& other) restrict(cpu, amp) \
 { \
   x = static_cast<ST>(other.get_x()); \
   y = static_cast<ST>(other.get_y()); \
@@ -1920,7 +1920,7 @@ ST_4::ST_4(const ST_4_o3& other) restrict(cpu, amp) \
   w = static_cast<ST>(other.get_w()); \
 } \
 \
-ST_4::ST_4(const ST_4_o4& other) restrict(cpu, amp) \
+inline ST_4::ST_4(const ST_4_o4& other) restrict(cpu, amp) \
 { \
   x = static_cast<ST>(other.get_x()); \
   y = static_cast<ST>(other.get_y()); \
@@ -1928,7 +1928,7 @@ ST_4::ST_4(const ST_4_o4& other) restrict(cpu, amp) \
   w = static_cast<ST>(other.get_w()); \
 } \
 \
-ST_4::ST_4(const ST_4_o5& other) restrict(cpu, amp) \
+inline ST_4::ST_4(const ST_4_o5& other) restrict(cpu, amp) \
 { \
   x = static_cast<ST>(other.get_x()); \
   y = static_cast<ST>(other.get_y()); \
@@ -1959,32 +1959,32 @@ SCALARTYPE_4_EXPLICIT_CONVERSION_CONSTRUCTORS(unorm, unorm_4,
 //   Operators between Two References (10.8.1 Synopsis)
 
 #define SCALARTYPE_2_OPERATOR(ST_2) \
-ST_2 operator+(const ST_2& lhs, const ST_2& rhs) restrict(cpu, amp) \
+inline ST_2 operator+(const ST_2& lhs, const ST_2& rhs) restrict(cpu, amp) \
 { \
   return ST_2(lhs.get_x() + rhs.get_x(), lhs.get_y() + rhs.get_y()); \
 } \
 \
-ST_2 operator-(const ST_2& lhs, const ST_2& rhs) restrict(cpu, amp) \
+inline ST_2 operator-(const ST_2& lhs, const ST_2& rhs) restrict(cpu, amp) \
 { \
   return ST_2(lhs.get_x() - rhs.get_x(), lhs.get_y() - rhs.get_y()); \
 } \
 \
-ST_2 operator*(const ST_2& lhs, const ST_2& rhs) restrict(cpu, amp) \
+inline ST_2 operator*(const ST_2& lhs, const ST_2& rhs) restrict(cpu, amp) \
 { \
   return ST_2(lhs.get_x() * rhs.get_x(), lhs.get_y() * rhs.get_y()); \
 } \
 \
-ST_2 operator/(const ST_2& lhs, const ST_2& rhs) restrict(cpu, amp) \
+inline ST_2 operator/(const ST_2& lhs, const ST_2& rhs) restrict(cpu, amp) \
 { \
   return ST_2(lhs.get_x() / rhs.get_x(), lhs.get_y() / rhs.get_y()); \
 } \
 \
-bool operator==(const ST_2& lhs, const ST_2& rhs) restrict(cpu, amp) \
+inline bool operator==(const ST_2& lhs, const ST_2& rhs) restrict(cpu, amp) \
 { \
   return (lhs.get_x() == rhs.get_x()) && (lhs.get_y() == rhs.get_y()); \
 } \
 \
-bool operator!=(const ST_2& lhs, const ST_2& rhs) restrict(cpu, amp) \
+inline bool operator!=(const ST_2& lhs, const ST_2& rhs) restrict(cpu, amp) \
 { \
   return (lhs.get_x() != rhs.get_x()) || (lhs.get_y() != rhs.get_y()); \
 }
@@ -2003,98 +2003,98 @@ SCALARTYPE_2_OPERATOR(unorm_2)
 
 #undef SCALARTYPE_2_OPERATOR
 
-int_2 operator%(const int_2& lhs, const int_2& rhs) restrict(cpu, amp)
+inline int_2 operator%(const int_2& lhs, const int_2& rhs) restrict(cpu, amp)
 {
   return int_2(lhs.get_x() % rhs.get_x(), lhs.get_y() % rhs.get_y());
 }
 
-int_2 operator^(const int_2& lhs, const int_2& rhs) restrict(cpu, amp)
+inline int_2 operator^(const int_2& lhs, const int_2& rhs) restrict(cpu, amp)
 {
   return int_2(lhs.get_x() ^ rhs.get_x(), lhs.get_y() ^ rhs.get_y());
 }
 
-int_2 operator|(const int_2& lhs, const int_2& rhs) restrict(cpu, amp)
+inline int_2 operator|(const int_2& lhs, const int_2& rhs) restrict(cpu, amp)
 {
   return int_2(lhs.get_x() | rhs.get_x(), lhs.get_y() | rhs.get_y());
 }
 
-int_2 operator&(const int_2& lhs, const int_2& rhs) restrict(cpu, amp)
+inline int_2 operator&(const int_2& lhs, const int_2& rhs) restrict(cpu, amp)
 {
   return int_2(lhs.get_x() & rhs.get_x(), lhs.get_y() & rhs.get_y());
 }
 
-int_2 operator<<(const int_2& lhs, const int_2& rhs) restrict(cpu, amp)
+inline int_2 operator<<(const int_2& lhs, const int_2& rhs) restrict(cpu, amp)
 {
   return int_2(lhs.get_x() << rhs.get_x(), lhs.get_y() << rhs.get_y());
 }
 
-int_2 operator>>(const int_2& lhs, const int_2& rhs) restrict(cpu, amp)
+inline int_2 operator>>(const int_2& lhs, const int_2& rhs) restrict(cpu, amp)
 {
   return int_2(lhs.get_x() >> rhs.get_x(), lhs.get_y() >> rhs.get_y());
 }
 
-uint_2 operator%(const uint_2& lhs, const uint_2& rhs) restrict(cpu, amp)
+inline uint_2 operator%(const uint_2& lhs, const uint_2& rhs) restrict(cpu, amp)
 {
   return uint_2(lhs.get_x() % rhs.get_x(), lhs.get_y() % rhs.get_y());
 }
 
-uint_2 operator^(const uint_2& lhs, const uint_2& rhs) restrict(cpu, amp)
+inline uint_2 operator^(const uint_2& lhs, const uint_2& rhs) restrict(cpu, amp)
 {
   return uint_2(lhs.get_x() ^ rhs.get_x(), lhs.get_y() ^ rhs.get_y());
 }
 
-uint_2 operator|(const uint_2& lhs, const uint_2& rhs) restrict(cpu, amp)
+inline uint_2 operator|(const uint_2& lhs, const uint_2& rhs) restrict(cpu, amp)
 {
   return uint_2(lhs.get_x() | rhs.get_x(), lhs.get_y() | rhs.get_y());
 }
 
-uint_2 operator&(const uint_2& lhs, const uint_2& rhs) restrict(cpu, amp)
+inline uint_2 operator&(const uint_2& lhs, const uint_2& rhs) restrict(cpu, amp)
 {
   return uint_2(lhs.get_x() & rhs.get_x(), lhs.get_y() & rhs.get_y());
 }
 
-uint_2 operator<<(const uint_2& lhs, const uint_2& rhs) restrict(cpu, amp)
+inline uint_2 operator<<(const uint_2& lhs, const uint_2& rhs) restrict(cpu, amp)
 {
   return uint_2(lhs.get_x() << rhs.get_x(), lhs.get_y() << rhs.get_y());
 }
 
-uint_2 operator>>(const uint_2& lhs, const uint_2& rhs) restrict(cpu, amp)
+inline uint_2 operator>>(const uint_2& lhs, const uint_2& rhs) restrict(cpu, amp)
 {
   return uint_2(lhs.get_x() >> rhs.get_x(), lhs.get_y() >> rhs.get_y());
 }
 
 #define SCALARTYPE_3_OPERATOR(ST_3) \
-ST_3 operator+(const ST_3& lhs, const ST_3& rhs) restrict(cpu, amp) \
+inline ST_3 operator+(const ST_3& lhs, const ST_3& rhs) restrict(cpu, amp) \
 { \
   return ST_3(lhs.get_x() + rhs.get_x(), lhs.get_y() + rhs.get_y(), \
                lhs.get_z() + rhs.get_z()); \
 } \
 \
-ST_3 operator-(const ST_3& lhs, const ST_3& rhs) restrict(cpu, amp) \
+inline ST_3 operator-(const ST_3& lhs, const ST_3& rhs) restrict(cpu, amp) \
 { \
   return ST_3(lhs.get_x() - rhs.get_x(), lhs.get_y() - rhs.get_y(), \
                lhs.get_z() - rhs.get_z()); \
 } \
 \
-ST_3 operator*(const ST_3& lhs, const ST_3& rhs) restrict(cpu, amp) \
+inline ST_3 operator*(const ST_3& lhs, const ST_3& rhs) restrict(cpu, amp) \
 { \
   return ST_3(lhs.get_x() * rhs.get_x(), lhs.get_y() * rhs.get_y(), \
                lhs.get_z() * rhs.get_z()); \
 } \
 \
-ST_3 operator/(const ST_3& lhs, const ST_3& rhs) restrict(cpu, amp) \
+inline ST_3 operator/(const ST_3& lhs, const ST_3& rhs) restrict(cpu, amp) \
 { \
   return ST_3(lhs.get_x() / rhs.get_x(), lhs.get_y() / rhs.get_y(), \
                lhs.get_z() / rhs.get_z()); \
 } \
 \
-bool operator==(const ST_3& lhs, const ST_3& rhs) restrict(cpu, amp) \
+inline bool operator==(const ST_3& lhs, const ST_3& rhs) restrict(cpu, amp) \
 { \
   return (lhs.get_x() == rhs.get_x()) && (lhs.get_y() == rhs.get_y()) \
            && (lhs.get_z() == rhs.get_z()); \
 } \
 \
-bool operator!=(const ST_3& lhs, const ST_3& rhs) restrict(cpu, amp) \
+inline bool operator!=(const ST_3& lhs, const ST_3& rhs) restrict(cpu, amp) \
 { \
   return (lhs.get_x() != rhs.get_x()) || (lhs.get_y() != rhs.get_y()) \
            || (lhs.get_z() != rhs.get_z()); \
@@ -2114,110 +2114,110 @@ SCALARTYPE_3_OPERATOR(unorm_3)
 
 #undef SCALARTYPE_3_OPERATOR
 
-int_3 operator%(const int_3& lhs, const int_3& rhs) restrict(cpu, amp)
+inline int_3 operator%(const int_3& lhs, const int_3& rhs) restrict(cpu, amp)
 {
   return int_3(lhs.get_x() % rhs.get_x(), lhs.get_y() % rhs.get_y(),
                 lhs.get_z() % rhs.get_z());
 }
 
-int_3 operator^(const int_3& lhs, const int_3& rhs) restrict(cpu, amp)
+inline int_3 operator^(const int_3& lhs, const int_3& rhs) restrict(cpu, amp)
 {
   return int_3(lhs.get_x() ^ rhs.get_x(), lhs.get_y() ^ rhs.get_y(),
                 lhs.get_z() ^ rhs.get_z());
 }
 
-int_3 operator|(const int_3& lhs, const int_3& rhs) restrict(cpu, amp)
+inline int_3 operator|(const int_3& lhs, const int_3& rhs) restrict(cpu, amp)
 {
   return int_3(lhs.get_x() | rhs.get_x(), lhs.get_y() | rhs.get_y(),
                 lhs.get_z() | rhs.get_z());
 }
 
-int_3 operator&(const int_3& lhs, const int_3& rhs) restrict(cpu, amp)
+inline int_3 operator&(const int_3& lhs, const int_3& rhs) restrict(cpu, amp)
 {
   return int_3(lhs.get_x() & rhs.get_x(), lhs.get_y() & rhs.get_y(),
                 lhs.get_z() & rhs.get_z());
 }
 
-int_3 operator<<(const int_3& lhs, const int_3& rhs) restrict(cpu, amp)
+inline int_3 operator<<(const int_3& lhs, const int_3& rhs) restrict(cpu, amp)
 {
   return int_3(lhs.get_x() << rhs.get_x(), lhs.get_y() << rhs.get_y(),
                 lhs.get_z() << rhs.get_z());
 }
 
-int_3 operator>>(const int_3& lhs, const int_3& rhs) restrict(cpu, amp)
+inline int_3 operator>>(const int_3& lhs, const int_3& rhs) restrict(cpu, amp)
 {
   return int_3(lhs.get_x() >> rhs.get_x(), lhs.get_y() >> rhs.get_y(),
                 lhs.get_z() >> rhs.get_z());
 }
 
-uint_3 operator%(const uint_3& lhs, const uint_3& rhs) restrict(cpu, amp)
+inline uint_3 operator%(const uint_3& lhs, const uint_3& rhs) restrict(cpu, amp)
 {
   return uint_3(lhs.get_x() % rhs.get_x(), lhs.get_y() % rhs.get_y(),
                  lhs.get_z() % rhs.get_z());
 }
 
-uint_3 operator^(const uint_3& lhs, const uint_3& rhs) restrict(cpu, amp)
+inline uint_3 operator^(const uint_3& lhs, const uint_3& rhs) restrict(cpu, amp)
 {
   return uint_3(lhs.get_x() ^ rhs.get_x(), lhs.get_y() ^ rhs.get_y(),
                  lhs.get_z() ^ rhs.get_z());
 }
 
-uint_3 operator|(const uint_3& lhs, const uint_3& rhs) restrict(cpu, amp)
+inline uint_3 operator|(const uint_3& lhs, const uint_3& rhs) restrict(cpu, amp)
 {
   return uint_3(lhs.get_x() | rhs.get_x(), lhs.get_y() | rhs.get_y(),
                  lhs.get_z() | rhs.get_z());
 }
 
-uint_3 operator&(const uint_3& lhs, const uint_3& rhs) restrict(cpu, amp)
+inline uint_3 operator&(const uint_3& lhs, const uint_3& rhs) restrict(cpu, amp)
 {
   return uint_3(lhs.get_x() & rhs.get_x(), lhs.get_y() & rhs.get_y(),
                  lhs.get_z() & rhs.get_z());
 }
 
-uint_3 operator<<(const uint_3& lhs, const uint_3& rhs) restrict(cpu, amp)
+inline uint_3 operator<<(const uint_3& lhs, const uint_3& rhs) restrict(cpu, amp)
 {
   return uint_3(lhs.get_x() << rhs.get_x(), lhs.get_y() << rhs.get_y(),
                  lhs.get_z() << rhs.get_z());
 }
 
-uint_3 operator>>(const uint_3& lhs, const uint_3& rhs) restrict(cpu, amp)
+inline uint_3 operator>>(const uint_3& lhs, const uint_3& rhs) restrict(cpu, amp)
 {
   return uint_3(lhs.get_x() >> rhs.get_x(), lhs.get_y() >> rhs.get_y(),
                  lhs.get_z() >> rhs.get_z());
 }
 
 #define SCALARTYPE_4_OPERATOR(ST_4) \
-ST_4 operator+(const ST_4& lhs, const ST_4& rhs) restrict(cpu, amp) \
+inline ST_4 operator+(const ST_4& lhs, const ST_4& rhs) restrict(cpu, amp) \
 { \
   return ST_4(lhs.get_x() + rhs.get_x(), lhs.get_y() + rhs.get_y(), \
                lhs.get_z() + rhs.get_z(), lhs.get_w() + rhs.get_w()); \
 } \
 \
-ST_4 operator-(const ST_4& lhs, const ST_4& rhs) restrict(cpu, amp) \
+inline ST_4 operator-(const ST_4& lhs, const ST_4& rhs) restrict(cpu, amp) \
 { \
   return ST_4(lhs.get_x() - rhs.get_x(), lhs.get_y() - rhs.get_y(), \
                lhs.get_z() - rhs.get_z(), lhs.get_w() - rhs.get_w()); \
 } \
 \
-ST_4 operator*(const ST_4& lhs, const ST_4& rhs) restrict(cpu, amp) \
+inline ST_4 operator*(const ST_4& lhs, const ST_4& rhs) restrict(cpu, amp) \
 { \
   return ST_4(lhs.get_x() * rhs.get_x(), lhs.get_y() * rhs.get_y(), \
                lhs.get_z() * rhs.get_z(), lhs.get_w() * rhs.get_w()); \
 } \
 \
-ST_4 operator/(const ST_4& lhs, const ST_4& rhs) restrict(cpu, amp) \
+inline ST_4 operator/(const ST_4& lhs, const ST_4& rhs) restrict(cpu, amp) \
 { \
   return ST_4(lhs.get_x() / rhs.get_x(), lhs.get_y() / rhs.get_y(), \
                lhs.get_z() / rhs.get_z(), lhs.get_w() / rhs.get_w()); \
 } \
 \
-bool operator==(const ST_4& lhs, const ST_4& rhs) restrict(cpu, amp) \
+inline bool operator==(const ST_4& lhs, const ST_4& rhs) restrict(cpu, amp) \
 { \
   return (lhs.get_x() == rhs.get_x()) && (lhs.get_y() == rhs.get_y()) \
            && (lhs.get_z() == rhs.get_z()) && (lhs.get_w() == rhs.get_w()); \
 } \
 \
-bool operator!=(const ST_4& lhs, const ST_4& rhs) restrict(cpu, amp) \
+inline bool operator!=(const ST_4& lhs, const ST_4& rhs) restrict(cpu, amp) \
 { \
   return (lhs.get_x() != rhs.get_x()) || (lhs.get_y() != rhs.get_y()) \
            || (lhs.get_z() != rhs.get_z()) || (lhs.get_w() != rhs.get_w()); \
@@ -2237,73 +2237,73 @@ SCALARTYPE_4_OPERATOR(unorm_4)
 
 #undef SCALARTYPE_4_OPERATOR
 
-int_4 operator%(const int_4& lhs, const int_4& rhs) restrict(cpu, amp)
+inline int_4 operator%(const int_4& lhs, const int_4& rhs) restrict(cpu, amp)
 {
   return int_4(lhs.get_x() % rhs.get_x(), lhs.get_y() % rhs.get_y(),
                 lhs.get_z() % rhs.get_z(), lhs.get_w() % rhs.get_w());
 }
 
-int_4 operator^(const int_4& lhs, const int_4& rhs) restrict(cpu, amp)
+inline int_4 operator^(const int_4& lhs, const int_4& rhs) restrict(cpu, amp)
 {
   return int_4(lhs.get_x() ^ rhs.get_x(), lhs.get_y() ^ rhs.get_y(),
                 lhs.get_z() ^ rhs.get_z(), lhs.get_w() ^ rhs.get_w());
 }
 
-int_4 operator|(const int_4& lhs, const int_4& rhs) restrict(cpu, amp)
+inline int_4 operator|(const int_4& lhs, const int_4& rhs) restrict(cpu, amp)
 {
   return int_4(lhs.get_x() | rhs.get_x(), lhs.get_y() | rhs.get_y(),
                 lhs.get_z() | rhs.get_z(), lhs.get_w() | rhs.get_w());
 }
 
-int_4 operator&(const int_4& lhs, const int_4& rhs) restrict(cpu, amp)
+inline int_4 operator&(const int_4& lhs, const int_4& rhs) restrict(cpu, amp)
 {
   return int_4(lhs.get_x() & rhs.get_x(), lhs.get_y() & rhs.get_y(),
                 lhs.get_z() & rhs.get_z(), lhs.get_w() & rhs.get_w());
 }
 
-int_4 operator<<(const int_4& lhs, const int_4& rhs) restrict(cpu, amp)
+inline int_4 operator<<(const int_4& lhs, const int_4& rhs) restrict(cpu, amp)
 {
   return int_4(lhs.get_x() << rhs.get_x(), lhs.get_y() << rhs.get_y(),
                 lhs.get_z() << rhs.get_z(), lhs.get_w() << rhs.get_w());
 }
 
-int_4 operator>>(const int_4& lhs, const int_4& rhs) restrict(cpu, amp)
+inline int_4 operator>>(const int_4& lhs, const int_4& rhs) restrict(cpu, amp)
 {
   return int_4(lhs.get_x() >> rhs.get_x(), lhs.get_y() >> rhs.get_y(),
                 lhs.get_z() >> rhs.get_z(), lhs.get_w() >> rhs.get_w());
 }
 
-uint_4 operator%(const uint_4& lhs, const uint_4& rhs) restrict(cpu, amp)
+inline uint_4 operator%(const uint_4& lhs, const uint_4& rhs) restrict(cpu, amp)
 {
   return uint_4(lhs.get_x() % rhs.get_x(), lhs.get_y() % rhs.get_y(),
                  lhs.get_z() % rhs.get_z(), lhs.get_w() % rhs.get_w());
 }
 
-uint_4 operator^(const uint_4& lhs, const uint_4& rhs) restrict(cpu, amp)
+inline uint_4 operator^(const uint_4& lhs, const uint_4& rhs) restrict(cpu, amp)
 {
   return uint_4(lhs.get_x() ^ rhs.get_x(), lhs.get_y() ^ rhs.get_y(),
                  lhs.get_z() ^ rhs.get_z(), lhs.get_w() ^ rhs.get_w());
 }
 
-uint_4 operator|(const uint_4& lhs, const uint_4& rhs) restrict(cpu, amp)
+inline uint_4 operator|(const uint_4& lhs, const uint_4& rhs) restrict(cpu, amp)
 {
   return uint_4(lhs.get_x() | rhs.get_x(), lhs.get_y() | rhs.get_y(),
                  lhs.get_z() | rhs.get_z(), lhs.get_w() | rhs.get_w());
 }
 
-uint_4 operator&(const uint_4& lhs, const uint_4& rhs) restrict(cpu, amp)
+inline uint_4 operator&(const uint_4& lhs, const uint_4& rhs) restrict(cpu, amp)
 {
   return uint_4(lhs.get_x() & rhs.get_x(), lhs.get_y() & rhs.get_y(),
                  lhs.get_z() & rhs.get_z(), lhs.get_w() & rhs.get_w());
 }
 
-uint_4 operator<<(const uint_4& lhs, const uint_4& rhs) restrict(cpu, amp)
+inline uint_4 operator<<(const uint_4& lhs, const uint_4& rhs) restrict(cpu, amp)
 {
   return uint_4(lhs.get_x() << rhs.get_x(), lhs.get_y() << rhs.get_y(),
                  lhs.get_z() << rhs.get_z(), lhs.get_w() << rhs.get_w());
 }
 
-uint_4 operator>>(const uint_4& lhs, const uint_4& rhs) restrict(cpu, amp)
+inline uint_4 operator>>(const uint_4& lhs, const uint_4& rhs) restrict(cpu, amp)
 {
   return uint_4(lhs.get_x() >> rhs.get_x(), lhs.get_y() >> rhs.get_y(),
                  lhs.get_z() >> rhs.get_z(), lhs.get_w() >> rhs.get_w());

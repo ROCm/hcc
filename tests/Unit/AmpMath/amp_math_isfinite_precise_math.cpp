@@ -13,8 +13,8 @@ bool test() {
 
   // Alloc & init input data
   extent<1> e(vecSize);
-  array<_Tp> a;
-  array<int> b;
+  array<_Tp> a(vecSize);
+  array<int> b(vecSize);
   array_view<_Tp, 1> in(a);
   array_view<int, 1> out(b);
 

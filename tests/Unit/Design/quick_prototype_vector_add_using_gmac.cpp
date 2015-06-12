@@ -3,7 +3,7 @@
 #include <amp.h>
 #include <stdlib.h>
 #include <iostream>
-#ifndef __GPU__
+#ifndef __KALMAR_ACCELERATOR__
 #include <gtest/gtest.h>
 #endif
 
@@ -24,7 +24,7 @@ class myVecAdd {
 void bar(void) restrict(amp,cpu) {
   int* foo = reinterpret_cast<int*>(&myVecAdd::__cxxamp_trampoline);
 }
-#ifndef __GPU__
+#ifndef __KALMAR_ACCELERATOR__
 TEST(Design, Final) {
   const int vecSize = 100;
 

@@ -215,25 +215,27 @@ private:
          assert((0 < dims) && (dims <= 3));
 
          // defaults
-         workgroup_size[1] = workgroup_size[2] = global_size[1] = global_size[2] = 1;
          launchDimensions = dims;
+         workgroup_size[0] = workgroup_size[1] = workgroup_size[2] = 1;
+         global_size[0] = global_size[1] = global_size[2] = 1;
 
-         switch (dims) {
-           case 1:
-             // according to the hsa folks, this is 256 for all current targets
-             computeLaunchAttr(0, globalDims[0], localDims[0], 256);
-             break;
-           case 2:
-             // according to some experiments, 64 * 32 (2048 workitems) is the best configuration
-             computeLaunchAttr(0, globalDims[0], localDims[0], 64);
-             computeLaunchAttr(1, globalDims[1], localDims[1], 32);
-             break;
-           case 3:
-             // according to some experiments, 32 * 32 * 2 (2048 workitems) is the best configuration
-             computeLaunchAttr(0, globalDims[0], localDims[0], 32);
-             computeLaunchAttr(1, globalDims[1], localDims[1], 32);
-             computeLaunchAttr(2, globalDims[2], localDims[2], 2);
-             break;
+         // for each workgroup dimension, make sure it does not exceed the maximum allowable limit
+         const uint16_t* workgroup_max_dim = context->getWorkgroupMaxDim();
+         for (int i = 0; i < dims; ++i) {
+           computeLaunchAttr(i, globalDims[i], localDims[i], workgroup_max_dim[i]);
+         }
+
+         // reduce each dimension in case the overall workgroup limit is exceeded
+         uint32_t workgroup_max_size = context->getWorkgroupMaxSize();
+         int dim_iterator = 2;
+         while(workgroup_size[0] * workgroup_size[1] * workgroup_size[2] > workgroup_max_size) {
+           // repeatedly cut each dimension into half until we are within the limit
+           if (workgroup_size[dim_iterator] >= 2) {
+             workgroup_size[dim_iterator] >>= 1;
+           }
+           if (--dim_iterator < 0) {
+             dim_iterator = 2;
+           }
          }
 
          return HSA_STATUS_SUCCESS;
@@ -450,6 +452,8 @@ private:
    private:
      hsa_agent_t device;
      hsa_queue_t* commandQueue;
+     uint32_t workgroup_max_size;
+     uint16_t workgroup_max_dim[3];
 
    // constructor
    HSAContextKaveriImpl() {
@@ -490,9 +494,26 @@ private:
      status = hsa_queue_create(device, queue_size, HSA_QUEUE_TYPE_MULTI, NULL, NULL, 
                                UINT32_MAX, UINT32_MAX, &commandQueue);
      STATUS_CHECK_Q(status, __LINE__);
+
+     // Query the maximum number of work-items in a workgroup
+     hsa_agent_get_info(device, HSA_AGENT_INFO_WORKGROUP_MAX_SIZE, &workgroup_max_size);
+     STATUS_CHECK_Q(status, __LINE__);
+
+     // Query the maximum number of work-items in each dimension of a workgroup
+     hsa_agent_get_info(device, HSA_AGENT_INFO_WORKGROUP_MAX_DIM, &workgroup_max_dim);
+     STATUS_CHECK_Q(status, __LINE__);
+
    }
 
 public:
+
+    uint32_t getWorkgroupMaxSize() {
+      return workgroup_max_size;
+    }
+
+    const uint16_t* getWorkgroupMaxDim() {
+      return &workgroup_max_dim[0];
+    }
 
     hsa_agent_t* getDevice() {
       return &device;

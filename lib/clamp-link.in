@@ -19,6 +19,12 @@ else
 fi
 
 ################
+# Verbose flag
+################
+
+VERBOSE=0
+
+################
 # GPU targets
 ################
 
@@ -96,6 +102,8 @@ do
     else
       LINK_OTHER_ARGS=$LINK_OTHER_ARGS" "$ARG
     fi
+  elif [ $ARG == "--verbose" ]; then
+    VERBOSE=1
   elif [ $ARG == "--disable-opencl" ]; then
     LOWER_OPENCL=0
   elif [ $ARG == "--disable-hsa" ]; then
@@ -120,7 +128,11 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
   # lower to SPIR
   if [ $LOWER_OPENCL == 1 ]; then
     # lower to SPIR
-    $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.spir --spir
+    if [ $VERBOSE == 0 ]; then
+      $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.spir --spir
+    else
+      $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.spir --spir --verbose
+    fi
     ret=$?
     if [ $ret == 0 ]; then
       # build a new kernel object
@@ -133,8 +145,12 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
   
   # lower to OpenCL C
   if [ $LOWER_OPENCL == 1 ]; then
-    # lower to SPIR
-    $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.cl --opencl
+    # lower to OpenCL C
+    if [ $VERBOSE == 0 ]; then
+      $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.cl --opencl
+    else
+      $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.cl --opencl --verbose
+    fi
     ret=$?
     if [ $ret == 0 ]; then
       # build a new kernel object
@@ -147,8 +163,12 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
   
   # lower to HSA
   if [ $LOWER_HSA == 1 ]; then
-    # lower to HSAIL
-    $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.brig --hsa
+    # lower to HSA BRIG
+    if [ $VERBOSE == 0 ]; then
+      $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.brig --hsa
+    else
+      $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.brig --hsa --verbose
+    fi
     ret=$?
     if [ $ret == 0 ]; then
       # build a new kernel object
