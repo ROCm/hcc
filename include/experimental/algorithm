@@ -77,6 +77,43 @@ private:
   const InputIterator& _first;
 };
 
+template<typename Kernel, typename InputIterator>
+class generate_wrapper
+{
+public:
+  explicit generate_wrapper(size_t ext, const Kernel f, const InputIterator& first) restrict(amp,cpu)
+      : _ext(ext), k(f), _first(first) {}
+  void operator() (std::offset<1> idx) restrict(amp,cpu) {
+#ifdef __KALMAR_ACCELERATOR__
+      *(_first + idx[0]) = k();
+#endif
+  }
+private:
+  const size_t _ext;
+  const Kernel k;
+  const InputIterator& _first;
+};
+
+// generate
+template <typename ExecutionPolicy,
+          typename ForwardIterator, typename Generator>
+__attribute__((noinline,used))
+void generate(ExecutionPolicy&& exec,
+              ForwardIterator first, ForwardIterator last,
+              Generator g) restrict(cpu,amp) {
+#ifndef __KALMAR_ACCELERATOR__
+  size_t ext = std::distance(first, last);
+  generate_wrapper<Generator, ForwardIterator> _pf(ext, g, first);
+  mcw_cxxamp_launch_kernel<generate_wrapper<Generator, ForwardIterator>, 1>(&ext, NULL, _pf);
+#else //ifndef __KALMAR_ACCELERATOR__
+  //to ensure functor has right operator() defined
+  //this triggers the trampoline code being emitted
+  auto bar = &generate_wrapper<Generator, ForwardIterator>::operator();
+  auto qq = &std::offset<1>::__cxxamp_opencl_index;
+  int* foo = reinterpret_cast<int*>(&generate_wrapper<Generator, ForwardIterator>::__cxxamp_trampoline);
+#endif
+}
+
 // for_each
 template <typename ExecutionPolicy,
           typename InputIterator, typename Function>
