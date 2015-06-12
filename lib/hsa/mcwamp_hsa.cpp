@@ -73,7 +73,7 @@ class HSAView final : public AMPView
 public:
     HSAView(AMPDevice* pMan) : AMPView(pMan) {}
 private:
-    void Push(void *kernel, int idx, void*& data, void *device) override {
+    void Push(void *kernel, int idx, void *device, bool isConst) override {
         PushArgImpl(kernel, idx, sizeof(void*), &device);
     }
 };
@@ -82,7 +82,7 @@ class HSADevice final : public AMPDevice
 {
     std::map<std::string, HSAContext::Kernel *> __mcw_hsa_kernels;
 public:
-    HSADevice() : AMPDevice() { cpu_type = access_type_read_write; }
+    HSADevice() : AMPDevice(access_type_read_write) {}
 
     void* create(size_t count) override {
         void *data = aligned_alloc(0x1000, count);
@@ -91,7 +91,7 @@ public:
     }
     void release(void *data) override { ::operator delete(data); }
 
-    std::wstring get_path() override { return L"HSA"; }
+    std::wstring get_path() override { return L"hsa"; }
     std::wstring get_description() override { return L"HSA Device"; }
     size_t get_mem() override { return 0; }
     bool is_double() override { return true; }
@@ -100,12 +100,12 @@ public:
     bool is_emulated() override { return false; }
 
     void* CreateKernel(const char* fun, void* size, void* source) override {
-        std::string str(s);
+        std::string str(fun);
         HSAContext::Kernel *kernel = __mcw_hsa_kernels[str];
         if (!kernel) {
-            size_t kernel_size = (size_t)((void *)kernel_size_);
+            size_t kernel_size = (size_t)((void *)size);
             char *kernel_source = (char*)malloc(kernel_size+1);
-            memcpy(kernel_source, kernel_source_, kernel_size);
+            memcpy(kernel_source, source, kernel_size);
             kernel_source[kernel_size] = '\0';
             std::string kname = std::string("&")+s;
             //std::cerr << "CLAMP::HSA::Creating kernel: " << kname << "\n";
