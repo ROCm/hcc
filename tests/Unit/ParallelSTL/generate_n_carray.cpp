@@ -18,7 +18,7 @@
 #define _DEBUG (0)
 
 // negative test
-// no transform shall commence
+// no generate_n shall commence
 template<typename _Tp, size_t SIZE, int FIRST_OFFSET, int LAST_OFFSET>
 bool test_negative() {
 
@@ -47,7 +47,7 @@ bool test_negative() {
 }
 
 // positive test
-// transform shall commence
+// generate_n shall commence
 template<typename _Tp, size_t SIZE, size_t FIRST_OFFSET, size_t TEST_LENGTH>
 bool test() {
 
