@@ -172,6 +172,27 @@ private:
   const T& _new_value;
 };
 
+template<typename Kernel, typename InputIterator, typename OutputIterator>
+class adjdiff_wrapper
+{
+public:
+  explicit adjdiff_wrapper(size_t ext, const Kernel f, const InputIterator& first, const OutputIterator& d_first) restrict(amp,cpu)
+      : _ext(ext), k(f), _first(first), _d_first(d_first) {}
+  void operator() (std::offset<1> idx) restrict(amp,cpu) {
+#ifdef __KALMAR_ACCELERATOR__
+      if (idx[0] == 0)
+        *(_d_first + idx[0]) = *(_first + idx[0]);
+      else
+        *(_d_first + idx[0]) = k(*(_first + idx[0]), *(_first + (idx[0] - 1)));
+#endif
+  }
+private:
+  const size_t _ext;
+  const Kernel k;
+  const InputIterator& _first;
+  const OutputIterator& _d_first;
+};
+
 // transform (unary version)
 template <typename ExecutionPolicy,
           typename InputIterator, typename OutputIterator, typename Function>
@@ -372,6 +393,31 @@ OutputIterator replace_copy_if(ExecutionPolicy&& exec,
   auto bar = &replace_copy_if_wrapper<Function, InputIterator, OutputIterator, T>::operator();
   auto qq = &std::offset<1>::__cxxamp_opencl_index;
   int* foo = reinterpret_cast<int*>(&replace_copy_if_wrapper<Function, InputIterator, OutputIterator, T>::__cxxamp_trampoline);
+#endif
+  }
+  return (distance < 0) ? d_first : d_first + distance;
+}
+
+// adjacent_difference (with predicate version)
+template <typename ExecutionPolicy,
+          typename InputIterator, typename OutputIterator, typename Function>
+__attribute__((noinline,used))
+OutputIterator adjacent_difference(ExecutionPolicy&& exec,
+              InputIterator first, InputIterator last,
+              OutputIterator d_first,
+              Function f) restrict(cpu,amp) {
+  auto distance = std::distance(first, last);
+  if (distance >= 0) {
+#ifndef __KALMAR_ACCELERATOR__
+  size_t ext = std::distance(first, last);
+  adjdiff_wrapper<Function, InputIterator, OutputIterator> _pf(ext, f, first, d_first);
+  mcw_cxxamp_launch_kernel<adjdiff_wrapper<Function, InputIterator, OutputIterator>, 1>(&ext, NULL, _pf);
+#else //ifndef __KALMAR_ACCELERATOR__
+  //to ensure functor has right operator() defined
+  //this triggers the trampoline code being emitted
+  auto bar = &adjdiff_wrapper<Function, InputIterator, OutputIterator>::operator();
+  auto qq = &std::offset<1>::__cxxamp_opencl_index;
+  int* foo = reinterpret_cast<int*>(&adjdiff_wrapper<Function, InputIterator, OutputIterator>::__cxxamp_trampoline);
 #endif
   }
   return (distance < 0) ? d_first : d_first + distance;
