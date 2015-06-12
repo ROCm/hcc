@@ -193,6 +193,23 @@ private:
   const OutputIterator& _d_first;
 };
 
+template<typename InputIterator, typename OutputIterator>
+class swap_ranges_wrapper
+{
+public:
+  explicit swap_ranges_wrapper(size_t ext, const InputIterator& first, const OutputIterator& d_first) restrict(amp,cpu)
+      : _ext(ext), _first(first), _d_first(d_first) {}
+  void operator() (std::offset<1> idx) restrict(amp,cpu) {
+#ifdef __KALMAR_ACCELERATOR__
+      std::iter_swap(_first + idx[0], _d_first + idx[0]);
+#endif
+  }
+private:
+  const size_t _ext;
+  const InputIterator& _first;
+  const OutputIterator& _d_first;
+};
+
 // transform (unary version)
 template <typename ExecutionPolicy,
           typename InputIterator, typename OutputIterator, typename Function>
@@ -422,6 +439,31 @@ OutputIterator adjacent_difference(ExecutionPolicy&& exec,
   }
   return (distance < 0) ? d_first : d_first + distance;
 }
+
+// swap_ranges
+template <typename ExecutionPolicy,
+          typename InputIterator, typename OutputIterator>
+__attribute__((noinline,used))
+OutputIterator swap_ranges(ExecutionPolicy&& exec,
+              InputIterator first, InputIterator last,
+              OutputIterator d_first) restrict(cpu,amp) {
+  auto distance = std::distance(first, last);
+  if (distance >= 0) {
+#ifndef __KALMAR_ACCELERATOR__
+  size_t ext = std::distance(first, last);
+  swap_ranges_wrapper<InputIterator, OutputIterator> _pf(ext, first, d_first);
+  mcw_cxxamp_launch_kernel<swap_ranges_wrapper<InputIterator, OutputIterator>, 1>(&ext, NULL, _pf);
+#else //ifndef __KALMAR_ACCELERATOR__
+  //to ensure functor has right operator() defined
+  //this triggers the trampoline code being emitted
+  auto bar = &swap_ranges_wrapper<InputIterator, OutputIterator>::operator();
+  auto qq = &std::offset<1>::__cxxamp_opencl_index;
+  int* foo = reinterpret_cast<int*>(&swap_ranges_wrapper<InputIterator, OutputIterator>::__cxxamp_trampoline);
+#endif
+  }
+  return (distance < 0) ? d_first : d_first + distance;
+}
+
 
 // fill
 template <typename ExecutionPolicy,
