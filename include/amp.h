@@ -47,15 +47,12 @@
 //
 // work-item related builtin functions
 //
-#ifdef __AMP_CPU__
-inline int64_t amp_get_global_id(unsigned int n) restrict(amp) { return 0; }
-inline int64_t amp_get_local_id(unsigned int n) restrict(amp) { return 0; }
-inline int64_t amp_get_group_id(unsigned int n) restrict(amp) { return 0; }
-#define tile_static thread_local
-#else
 extern "C" __attribute__((pure)) int64_t amp_get_global_id(unsigned int n) restrict(amp);
 extern "C" __attribute__((pure)) int64_t amp_get_local_id(unsigned int n) restrict(amp);
 extern "C" __attribute__((pure)) int64_t amp_get_group_id(unsigned int n) restrict(amp);
+#ifdef __AMP_CPU__
+#define tile_static thread_local
+#else
 #define tile_static static __attribute__((section("clamp_opencl_local")))
 #endif
 extern "C" __attribute__((noduplicate)) void amp_barrier(unsigned int n) restrict(amp);
@@ -706,13 +703,14 @@ private:
 public:
     __attribute__((annotate("__cxxamp_opencl_index")))
         void __cxxamp_opencl_index() restrict(amp,cpu)
-#ifdef __KALMAR_ACCELERATOR__
+#ifdef __AMP_CPU__
+    {}
+#elif __KALMAR_ACCELERATOR__
         {
             index_helper<N, index<N>>::set(*this);
         }
-#elif __AMP_CPU__
-    {}
 #else
+
     ;
 #endif
 };
@@ -765,31 +763,31 @@ class tile_barrier {
   tile_barrier(const tile_barrier& other) restrict(amp,cpu) {}
 #endif
   void wait() const restrict(amp) {
-#ifdef __KALMAR_ACCELERATOR__
-    wait_with_all_memory_fence();
-#elif __AMP_CPU__
+#ifdef __AMP_CPU__
       pbar->wait();
+#elif __KALMAR_ACCELERATOR__
+      wait_with_all_memory_fence();
 #endif
   }
   void wait_with_all_memory_fence() const restrict(amp) {
-#ifdef __KALMAR_ACCELERATOR__
-    amp_barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
-#elif __AMP_CPU__
+#ifdef __AMP_CPU__
       pbar->wait();
+#elif __KALMAR_ACCELERATOR__
+      amp_barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
 #endif
   }
   void wait_with_global_memory_fence() const restrict(amp) {
-#ifdef __KALMAR_ACCELERATOR__
-    amp_barrier(CLK_GLOBAL_MEM_FENCE);
-#elif __AMP_CPU__
+#ifdef __AMP_CPU__
       pbar->wait();
+#elif __KALMAR_ACCELERATOR__
+      amp_barrier(CLK_GLOBAL_MEM_FENCE);
 #endif
   }
   void wait_with_tile_static_memory_fence() const restrict(amp) {
-#ifdef __KALMAR_ACCELERATOR__
-    amp_barrier(CLK_LOCAL_MEM_FENCE);
-#elif __AMP_CPU__
+#ifdef __AMP_CPU__
       pbar->wait();
+#elif __KALMAR_ACCELERATOR__
+      amp_barrier(CLK_LOCAL_MEM_FENCE);
 #endif
   }
  private:
@@ -995,7 +993,9 @@ class tiled_index {
 #endif
   //CLAMP
   __attribute__((annotate("__cxxamp_opencl_index")))
-#ifdef __KALMAR_ACCELERATOR__
+#ifdef __AMP_CPU__
+  __attribute__((always_inline)) tiled_index() restrict(amp, cpu)
+#elif __KALMAR_ACCELERATOR__
   __attribute__((always_inline)) tiled_index() restrict(amp)
   : global(index<3>(amp_get_global_id(2), amp_get_global_id(1), amp_get_global_id(0))),
     local(index<3>(amp_get_local_id(2), amp_get_local_id(1), amp_get_local_id(0))),
@@ -1004,8 +1004,6 @@ class tiled_index {
                          amp_get_global_id(1)-amp_get_local_id(1),
                          amp_get_global_id(0)-amp_get_local_id(0))),
     tile_extent(D0, D1, D2)
-#elif __AMP_CPU__
-  __attribute__((always_inline)) tiled_index() restrict(amp, cpu)
 #else
   __attribute__((always_inline)) tiled_index() restrict(amp)
 #endif // __KALMAR_ACCELERATOR__
@@ -1048,15 +1046,15 @@ class tiled_index<D0, 0, 0> {
 #endif
   //CLAMP
   __attribute__((annotate("__cxxamp_opencl_index")))
-#ifdef __KALMAR_ACCELERATOR__
+#ifdef __AMP_CPU__
+  __attribute__((always_inline)) tiled_index() restrict(amp,cpu)
+#elif __KALMAR_ACCELERATOR__
   __attribute__((always_inline)) tiled_index() restrict(amp)
   : global(index<1>(amp_get_global_id(0))),
     local(index<1>(amp_get_local_id(0))),
     tile(index<1>(amp_get_group_id(0))),
     tile_origin(index<1>(amp_get_global_id(0)-amp_get_local_id(0))),
     tile_extent(D0)
-#elif __AMP_CPU__
-  __attribute__((always_inline)) tiled_index() restrict(amp,cpu)
 #else
   __attribute__((always_inline)) tiled_index() restrict(amp)
 #endif // __KALMAR_ACCELERATOR__
@@ -1100,7 +1098,9 @@ class tiled_index<D0, D1, 0> {
 #endif
   //CLAMP
   __attribute__((annotate("__cxxamp_opencl_index")))
-#ifdef __KALMAR_ACCELERATOR__
+#ifdef __AMP_CPU__
+  __attribute__((always_inline)) tiled_index() restrict(amp,cpu)
+#elif __KALMAR_ACCELERATOR__
   __attribute__((always_inline)) tiled_index() restrict(amp)
   : global(index<2>(amp_get_global_id(1), amp_get_global_id(0))),
     local(index<2>(amp_get_local_id(1), amp_get_local_id(0))),
@@ -1108,8 +1108,6 @@ class tiled_index<D0, D1, 0> {
     tile_origin(index<2>(amp_get_global_id(1)-amp_get_local_id(1),
                          amp_get_global_id(0)-amp_get_local_id(0))),
     tile_extent(D0, D1)
-#elif __AMP_CPU__
-  __attribute__((always_inline)) tiled_index() restrict(amp,cpu)
 #else
   __attribute__((always_inline)) tiled_index() restrict(amp)
 #endif // __KALMAR_ACCELERATOR__
