@@ -151,7 +151,7 @@ class AMPContext
 protected:
     KalmarDevice* def;
     std::vector<KalmarDevice*> Devices;
-    AMPContext() : def(), Devices() { Devices.push_back(new CPUDevice); }
+    AMPContext() : def(nullptr), Devices() { Devices.push_back(new CPUDevice); }
 public:
     virtual ~AMPContext() {
         for (auto dev : Devices)
@@ -172,11 +172,18 @@ public:
         }
     }
 
-    std::shared_ptr<KalmarQueue> auto_select() { return def->get_default(); }
+    std::shared_ptr<KalmarQueue> auto_select() {
+        if (!def)
+            def = Devices[1];
+        return def->get_default();
+    }
 
     KalmarDevice* getDevice(std::wstring path = L"") {
-        if (path == L"default" || path == L"")
+        if (path == L"default" || path == L"") {
+            if (!def)
+                def = Devices[1];
             return def;
+        }
         auto result = std::find_if(std::begin(Devices), std::end(Devices),
                                    [&] (const KalmarDevice* man)
                                    { return man->get_path() == path; });

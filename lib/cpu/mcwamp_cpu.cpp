@@ -40,10 +40,7 @@ public:
 class CPUContext final : public AMPContext
 {
 public:
-    CPUContext() {
-        Devices.push_back(new CPUFallbackDevice);
-        def = Devices[1];
-    }
+    CPUContext() { Devices.push_back(new CPUFallbackDevice); }
 };
 
 
