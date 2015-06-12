@@ -56,10 +56,10 @@ struct cl_info
     bool isConst;
 };
 
-class OpenCLView : public AMPView
+class OpenCLView : public KalmarQueue
 {
 public:
-    OpenCLView(AMPDevice* pMan, cl_device_id dev) : AMPView(pMan), mems() {
+    OpenCLView(KalmarDevice* pMan, cl_device_id dev) : KalmarQueue(pMan), mems() {
         cl_int err;
         idx = 0;
         for (int i = 0; i < queue_size; ++i) {
@@ -208,7 +208,7 @@ public:
 
     void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) override {
         cl_int err;
-        if(!getMan()->check(local_size, dim_ext))
+        if(!getDev()->check(local_size, dim_ext))
             local_size = NULL;
         std::vector<cl_event> eve;
         std::for_each(std::begin(mems), std::end(mems),
@@ -253,11 +253,11 @@ private:
     cl_command_queue getQueue() { return queues[(idx++) % queue_size]; }
 };
 
-class OpenCLDevice : public AMPDevice
+class OpenCLDevice : public KalmarDevice
 {
 public:
     OpenCLDevice(const cl_device_id device, const std::wstring& path)
-        : AMPDevice(access_type_none), programs(), device(device), path(path) {
+        : KalmarDevice(access_type_none), programs(), device(device), path(path) {
         cl_int err;
 
         cl_ulong memAllocSize;
@@ -341,8 +341,8 @@ public:
         clReleaseMemObject(dm);
     }
 
-    std::shared_ptr<AMPView> createView() override {
-        return std::shared_ptr<AMPView>(new OpenCLView(this, device));
+    std::shared_ptr<KalmarQueue> createView() override {
+        return std::shared_ptr<KalmarQueue>(new OpenCLView(this, device));
     }
 
     ~OpenCLDevice() {

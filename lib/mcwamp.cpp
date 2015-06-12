@@ -300,7 +300,7 @@ void enter_kernel() { in_kernel = true; }
 void leave_kernel() { in_kernel = false; }
 
 // used in parallel_for_each.h
-void *CreateKernel(std::string s, AMPView* Aloc) {
+void *CreateKernel(std::string s, KalmarQueue* pQueue) {
   // FIXME need a more elegant way
   if (GetOrInitRuntime()->m_ImplName.find("libmcwamp_opencl") != std::string::npos) {
     static bool firstTime = true;
@@ -329,20 +329,20 @@ void *CreateKernel(std::string s, AMPView* Aloc) {
         size_t kernel_size =
         (ptrdiff_t)((void *)spir_kernel_end) -
         (ptrdiff_t)((void *)spir_kernel_source);
-      return Aloc->getMan()->CreateKernel(s.c_str(), (void *)kernel_size, spir_kernel_source);
+      return pQueue->getDev()->CreateKernel(s.c_str(), (void *)kernel_size, spir_kernel_source);
     } else {
       // OpenCL path
         size_t kernel_size =
         (ptrdiff_t)((void *)cl_kernel_end) -
         (ptrdiff_t)((void *)cl_kernel_source);
-      return Aloc->getMan()->CreateKernel(s.c_str(), (void *)kernel_size, cl_kernel_source);
+      return pQueue->getDev()->CreateKernel(s.c_str(), (void *)kernel_size, cl_kernel_source);
     }
   } else {
     // HSA path
        size_t kernel_size =
         (ptrdiff_t)((void *)hsa_kernel_end) -
         (ptrdiff_t)((void *)hsa_kernel_source);
-     return Aloc->getMan()->CreateKernel(s.c_str(), (void *)kernel_size, hsa_kernel_source);
+     return pQueue->getDev()->CreateKernel(s.c_str(), (void *)kernel_size, hsa_kernel_source);
    }
 }
 

@@ -17,10 +17,10 @@ extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v) {}
 
 namespace Concurrency {
 
-class CPUFallbackDevice final : public AMPDevice
+class CPUFallbackDevice final : public KalmarDevice
 {
 public:
-    CPUFallbackDevice() : AMPDevice() {}
+    CPUFallbackDevice() : KalmarDevice() {}
 
     std::wstring get_path() const override { return L"fallback"; }
     std::wstring get_description() const override { return L"CPU Fallback"; }
@@ -32,8 +32,8 @@ public:
 
     void* create(size_t count) override { return aligned_alloc(0x1000, count); }
     void release(void *data) override { ::operator delete(data); }
-    std::shared_ptr<AMPView> createView() override {
-        return std::shared_ptr<AMPView>(new AMPView(this));
+    std::shared_ptr<KalmarQueue> createView() override {
+        return std::shared_ptr<KalmarQueue>(new KalmarQueue(this));
     }
 };
 

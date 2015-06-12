@@ -27,24 +27,24 @@ public:
 
 class CPUVisitor : public AMPVisitor
 {
-    std::shared_ptr<AMPView> aloc_;
+    std::shared_ptr<KalmarQueue> pQueue;
     std::set<void*> addrs;
 public:
-    CPUVisitor(std::shared_ptr<AMPView> aloc) : aloc_(aloc) {}
+    CPUVisitor(std::shared_ptr<KalmarQueue> aloc) : pQueue(aloc) {}
     void Push(struct rw_info* rw, bool isArray, bool isConst) override {
         if (isArray) {
-            auto curr = aloc_->getMan()->get_path();
-            auto path = rw->master->getMan()->get_path();
+            auto curr = pQueue->getDev()->get_path();
+            auto path = rw->master->getDev()->get_path();
             if (path == L"cpu") {
-                auto asoc = rw->stage->getMan()->get_path();
+                auto asoc = rw->stage->getDev()->get_path();
                 if (asoc == L"cpu" || path != curr)
                     throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
             }
         }
-        rw->append(aloc_, isArray, isConst);
+        rw->append(pQueue, isArray, isConst);
         bool find = addrs.find(rw->data) != std::end(addrs);
         if (!find) {
-            void*& device = rw->Alocs[aloc_->getMan()].data;
+            void*& device = rw->devs[pQueue->getDev()].data;
             void*& data = rw->data;
             addrs.insert(device);
             addrs.insert(data);
@@ -55,12 +55,12 @@ public:
 
 class AppendVisitor : public AMPVisitor
 {
-    std::shared_ptr<AMPView> aloc_;
+    std::shared_ptr<KalmarQueue> pQueue;
     void* k_;
     int current_idx_;
 public:
-    AppendVisitor(std::shared_ptr<AMPView> aloc, void* k)
-        : aloc_(aloc), k_(k), current_idx_(0) {}
+    AppendVisitor(std::shared_ptr<KalmarQueue> aloc, void* k)
+        : pQueue(aloc), k_(k), current_idx_(0) {}
     void Append(size_t sz, const void *s) override {
         CLAMP::PushArg(k_, current_idx_++, sz, s);
     }
@@ -69,16 +69,16 @@ public:
     }
     void Push(struct rw_info* rw, bool isArray, bool isConst) override {
         if (isArray) {
-            auto curr = aloc_->getMan()->get_path();
-            auto path = rw->master->getMan()->get_path();
+            auto curr = pQueue->getDev()->get_path();
+            auto path = rw->master->getDev()->get_path();
             if (path == L"cpu") {
-                auto asoc = rw->stage->getMan()->get_path();
+                auto asoc = rw->stage->getDev()->get_path();
                 if (asoc == L"cpu" || path != curr)
                     throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
             }
         }
-        rw->append(aloc_, isArray, isConst);
-        aloc_->Push(k_, current_idx_++, rw->Alocs[aloc_->getMan()].data, isConst);
+        rw->append(pQueue, isArray, isConst);
+        pQueue->Push(k_, current_idx_++, rw->devs[pQueue->getDev()].data, isConst);
     }
 };
 
@@ -86,9 +86,9 @@ class ChooseVisitor : public AMPVisitor
 {
 public:
     ChooseVisitor() : collector() {}
-    std::shared_ptr<AMPView> best() {
+    std::shared_ptr<KalmarQueue> best() {
         std::sort(std::begin(collector), std::end(collector));
-        std::vector<std::shared_ptr<AMPView>> candidate;
+        std::vector<std::shared_ptr<KalmarQueue>> candidate;
         int max = 0;
         for (int i = 0; i < collector.size(); ++i) {
             auto head = collector[i];
@@ -107,11 +107,11 @@ public:
             return nullptr;
     }
     void Push(struct rw_info* rw, bool isArray, bool isConst) override {
-        if (isArray && rw->stage->getMan()->get_path() != L"cpu")
+        if (isArray && rw->stage->getDev()->get_path() != L"cpu")
             collector.push_back(rw->stage);
     }
 private:
-    std::vector<std::shared_ptr<AMPView>> collector;
+    std::vector<std::shared_ptr<KalmarQueue>> collector;
 };
 
 } // namespace Concurrency

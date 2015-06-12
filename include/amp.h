@@ -95,33 +95,33 @@ template <int N> class extent;
 template <int D0, int D1=0, int D2=0> class tiled_extent;
 
 class accelerator_view {
-    accelerator_view(std::shared_ptr<AMPView> pAloc)
-        : pAloc(pAloc) {}
+    accelerator_view(std::shared_ptr<KalmarQueue> pQueue)
+        : pQueue(pQueue) {}
 public:
   accelerator_view(const accelerator_view& other) :
-      pAloc(other.pAloc) {}
+      pQueue(other.pQueue) {}
   accelerator_view& operator=(const accelerator_view& other) {
-      pAloc = other.pAloc;
+      pQueue = other.pQueue;
       return *this;
   }
 
   accelerator get_accelerator() const;
   bool get_is_debug() const { return 0; }
   unsigned int get_version() const { return 0; }
-  queuing_mode get_queuing_mode() const { return pAloc->get_mode(); }
+  queuing_mode get_queuing_mode() const { return pQueue->get_mode(); }
   bool get_is_auto_selection() { return false; }
 
-  void flush() { pAloc->flush(); }
-  void wait() { pAloc->wait(); }
+  void flush() { pQueue->flush(); }
+  void wait() { pQueue->wait(); }
   completion_future create_marker();
 
   bool operator==(const accelerator_view& other) const {
-      return pAloc == other.pAloc;
+      return pQueue == other.pQueue;
   }
   bool operator!=(const accelerator_view& other) const { return !(*this == other); }
 
 private:
-  std::shared_ptr<AMPView> pAloc;
+  std::shared_ptr<KalmarQueue> pQueue;
   friend class accelerator;
 
   template <typename Q, int K> friend class array;
@@ -172,15 +172,15 @@ public:
 
 class accelerator
 {
-  accelerator(AMPDevice* pMan) : pMan(pMan) {}
+  accelerator(KalmarDevice* pDev) : pDev(pDev) {}
 public:
   static const wchar_t default_accelerator[];   // = L"default"
   static const wchar_t cpu_accelerator[];       // = L"cpu"
 
   accelerator() : accelerator(default_accelerator) {}
   explicit accelerator(const std::wstring& path)
-      : pMan(getContext()->getDevice(path)) {}
-  accelerator(const accelerator& other) : pMan(other.pMan) {}
+      : pDev(getContext()->getDevice(path)) {}
+  accelerator(const accelerator& other) : pDev(other.pDev) {}
 
   static std::vector<accelerator> get_all() {
       auto Devices = getContext()->getDevices();
@@ -195,42 +195,42 @@ public:
   static accelerator_view get_auto_selection_view() { return getContext()->auto_select(); }
 
   accelerator& operator=(const accelerator& other) {
-      pMan = other.pMan;
+      pDev = other.pDev;
       return *this;
   }
 
-  std::wstring get_device_path() const { return pMan->get_path(); }
+  std::wstring get_device_path() const { return pDev->get_path(); }
   unsigned int get_version() const { return 0; }
-  std::wstring get_description() const { return pMan->get_description(); }
+  std::wstring get_description() const { return pDev->get_description(); }
   bool get_is_debug() const { return false; }
-  bool get_is_emulated() const { return pMan->is_emulated(); }
+  bool get_is_emulated() const { return pDev->is_emulated(); }
   bool get_has_display() const { return false; }
-  bool get_supports_double_precision() const { return pMan->is_double(); }
-  bool get_supports_limited_double_precision() const { return pMan->is_lim_double(); }
-  size_t get_dedicated_memory() const { return pMan->get_mem(); }
-  accelerator_view get_default_view() const { return pMan->get_default(); }
-  access_type get_default_cpu_access_type() const { return pMan->get_access(); }
-  bool get_supports_cpu_shared_memory() const { return pMan->is_unified(); }
+  bool get_supports_double_precision() const { return pDev->is_double(); }
+  bool get_supports_limited_double_precision() const { return pDev->is_lim_double(); }
+  size_t get_dedicated_memory() const { return pDev->get_mem(); }
+  accelerator_view get_default_view() const { return pDev->get_default(); }
+  access_type get_default_cpu_access_type() const { return pDev->get_access(); }
+  bool get_supports_cpu_shared_memory() const { return pDev->is_unified(); }
 
   bool set_default_cpu_access_type(access_type type) {
-      pMan->set_access(type);
+      pDev->set_access(type);
       return true;
   }
   accelerator_view create_view(queuing_mode mode = queuing_mode_automatic) {
-      auto aloc = pMan->createView();
-      aloc->set_mode(mode);
-      return aloc;
+      auto pQueue = pDev->createView();
+      pQueue->set_mode(mode);
+      return pQueue;
   }
 
 
-  bool operator==(const accelerator& other) const { return pMan == other.pMan; }
+  bool operator==(const accelerator& other) const { return pDev == other.pDev; }
   bool operator!=(const accelerator& other) const { return !(*this == other); }
 private:
   friend class accelerator_view;
-  AMPDevice* pMan;
+  KalmarDevice* pDev;
 };
 
-inline accelerator accelerator_view::get_accelerator() const { return pAloc->getMan(); }
+inline accelerator accelerator_view::get_accelerator() const { return pQueue->getDev(); }
 
 class completion_future {
 public:
@@ -1473,7 +1473,7 @@ public:
 #ifdef __KALMAR_ACCELERATOR__
       : m_device(ext.size()), extent(ext) {}
 #else
-      : m_device(av.pAloc, associated_av.pAloc, check(ext).size(), access_type_auto), extent(ext) {}
+      : m_device(av.pQueue, associated_av.pQueue, check(ext).size(), access_type_auto), extent(ext) {}
 #endif
   array(int e0, accelerator_view av, accelerator_view associated_av)
       : array(Concurrency::extent<N>(e0), av, associated_av) {}
@@ -1488,7 +1488,7 @@ public:
 #ifdef __KALMAR_ACCELERATOR__
       : m_device(ext.size()), extent(ext) {}
 #else
-      : m_device(av.pAloc, av.pAloc, check(ext).size(), cpu_access_type), extent(ext) {}
+      : m_device(av.pQueue, av.pQueue, check(ext).size(), cpu_access_type), extent(ext) {}
 #endif
   array(int e0, accelerator_view av,
         access_type cpu_access_type = access_type_auto)
@@ -2060,7 +2060,7 @@ public:
   void synchronize() const { cache.get_cpu_access(); }
   void synchronize_to(const accelerator_view& av) const {
 #ifndef __KALMAR_ACCELERATOR__
-      cache.sync_to(av.pAloc);
+      cache.sync_to(av.pQueue);
 #endif
   }
   completion_future synchronize_async() const {
@@ -2300,7 +2300,7 @@ public:
 
   void synchronize_to(const accelerator_view& av) const {
 #ifndef __KALMAR_ACCELERATOR__
-      cache.sync_to(av.pAloc);
+      cache.sync_to(av.pQueue);
 #endif
   }
   completion_future synchronize_to_async(const accelerator_view& av) const;
@@ -2419,7 +2419,7 @@ void parallel_for_each(extent<N> compute_domain, const Kernel& f){
     Serialize s(&vis);
     f.__cxxamp_serialize(s);
     accelerator_view best = vis.best();
-    if (!best.pAloc)
+    if (!best.pQueue)
         best = accelerator(L"default").get_default_view();
     parallel_for_each(best, compute_domain, f);
 }
@@ -2430,7 +2430,7 @@ void parallel_for_each(tiled_extent<D0,D1,D2> compute_domain, const Kernel& f) {
     Serialize s(&vis);
     f.__cxxamp_serialize(s);
     accelerator_view best = vis.best();
-    if (!best.pAloc)
+    if (!best.pQueue)
         best = accelerator(L"default").get_default_view();
     parallel_for_each(best, compute_domain, f);
 }
@@ -2441,7 +2441,7 @@ void parallel_for_each(tiled_extent<D0,D1> compute_domain, const Kernel& f) {
     Serialize s(&vis);
     f.__cxxamp_serialize(s);
     accelerator_view best = vis.best();
-    if (!best.pAloc)
+    if (!best.pQueue)
         best = accelerator(L"default").get_default_view();
     parallel_for_each(best, compute_domain, f);
 }
@@ -2452,7 +2452,7 @@ void parallel_for_each(tiled_extent<D0> compute_domain, const Kernel& f) {
     Serialize s(&vis);
     f.__cxxamp_serialize(s);
     accelerator_view best = vis.best();
-    if (!best.pAloc)
+    if (!best.pQueue)
         best = accelerator(L"default").get_default_view();
     parallel_for_each(best, compute_domain, f);
 }

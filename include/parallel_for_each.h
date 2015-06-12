@@ -157,13 +157,13 @@ void partitioned_task_tile(Kernel const& f, tiled_extent<D0, D1, D2> const& ext,
 template <typename Kernel>
 class CPUKernelRAII
 {
-    const std::shared_ptr<AMPView> pAloc;
+    const std::shared_ptr<KalmarQueue> pQueue;
     const Kernel& f;
     std::vector<std::thread> th;
 public:
-    CPUKernelRAII(const std::shared_ptr<AMPView> pAloc, const Kernel& f)
-        : pAloc(pAloc), f(f), th(NTHREAD) {
-        Concurrency::CPUVisitor vis(pAloc);
+    CPUKernelRAII(const std::shared_ptr<KalmarQueue> pQueue, const Kernel& f)
+        : pQueue(pQueue), f(f), th(NTHREAD) {
+        Concurrency::CPUVisitor vis(pQueue);
         Concurrency::Serialize s(&vis);
         f.__cxxamp_serialize(s);
         CLAMP::enter_kernel();
@@ -173,7 +173,7 @@ public:
         for (auto& t : th)
             if (t.joinable())
                 t.join();
-        Concurrency::CPUVisitor vis(pAloc);
+        Concurrency::CPUVisitor vis(pQueue);
         Concurrency::Serialize ss(&vis);
         f.__cxxamp_serialize(ss);
         CLAMP::leave_kernel();
@@ -184,36 +184,36 @@ template <typename Kernel, int N>
 void launch_cpu_task(const accelerator_view& av, Kernel const& f,
                      extent<N> const& compute_domain)
 {
-    CPUKernelRAII<Kernel> obj(av.pAloc, f);
+    CPUKernelRAII<Kernel> obj(av.pQueue, f);
     for (int i = 0; i < NTHREAD; ++i)
         obj[i] = std::thread(partitioned_task<Kernel, N>, std::cref(f), std::cref(compute_domain), i);
 }
 
 template <typename Kernel, int D0>
-void launch_cpu_task(const std::shared_ptr<AMPView>& pAloc, Kernel const& f,
+void launch_cpu_task(const std::shared_ptr<KalmarQueue>& pQueue, Kernel const& f,
                      tiled_extent<D0> const& compute_domain)
 {
-    CPUKernelRAII<Kernel> obj(pAloc, f);
+    CPUKernelRAII<Kernel> obj(pQueue, f);
     for (int i = 0; i < NTHREAD; ++i)
         obj[i] = std::thread(partitioned_task_tile<Kernel, D0>,
                              std::cref(f), std::cref(compute_domain), i);
 }
 
 template <typename Kernel, int D0, int D1>
-void launch_cpu_task(const std::shared_ptr<AMPView>& pAloc, Kernel const& f,
+void launch_cpu_task(const std::shared_ptr<KalmarQueue>& pQueue, Kernel const& f,
                      tiled_extent<D0, D1> const& compute_domain)
 {
-    CPUKernelRAII<Kernel> obj(pAloc, f);
+    CPUKernelRAII<Kernel> obj(pQueue, f);
     for (int i = 0; i < NTHREAD; ++i)
         obj[i] = std::thread(partitioned_task_tile<Kernel, D0, D1>,
                              std::cref(f), std::cref(compute_domain), i);
 }
 
 template <typename Kernel, int D0, int D1, int D2>
-void launch_cpu_task(const std::shared_ptr<AMPView>& pAloc, Kernel const& f,
+void launch_cpu_task(const std::shared_ptr<KalmarQueue>& pQueue, Kernel const& f,
                      tiled_extent<D0, D1, D2> const& compute_domain)
 {
-    CPUKernelRAII<Kernel> obj(pAloc, f);
+    CPUKernelRAII<Kernel> obj(pQueue, f);
     for (int i = 0; i < NTHREAD; ++i)
         obj[i] = std::thread(partitioned_task_tile<Kernel, D0, D1, D2>,
                              std::cref(f), std::cref(compute_domain), i);
@@ -237,7 +237,7 @@ static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu) {
 }
 
 template <typename Kernel>
-static void append_kernel(std::shared_ptr<AMPView> av, const Kernel& f, void* kernel)
+static void append_kernel(std::shared_ptr<KalmarQueue> av, const Kernel& f, void* kernel)
 {
   Concurrency::AppendVisitor vis(av, kernel);
   Concurrency::Serialize s(&vis);
@@ -262,10 +262,10 @@ mcw_cxxamp_launch_kernel_async(const accelerator_view& av, size_t *ext,
   {
       std::string transformed_kernel_name =
           mcw_cxxamp_fixnames(f.__cxxamp_trampoline_name());
-      kernel = CLAMP::CreateKernel(transformed_kernel_name, av.pAloc.get());
+      kernel = CLAMP::CreateKernel(transformed_kernel_name, av.pQueue.get());
   }
-  append_kernel(av.pAloc, f, kernel);
-  return static_cast<std::shared_future<void>*>(av.pAloc->LaunchKernelAsync(kernel, dim_ext, ext, local_size));
+  append_kernel(av.pQueue, f, kernel);
+  return static_cast<std::shared_future<void>*>(av.pQueue->LaunchKernelAsync(kernel, dim_ext, ext, local_size));
 #endif
 }
 
@@ -286,10 +286,10 @@ void mcw_cxxamp_launch_kernel(const accelerator_view& av, size_t *ext,
   {
       std::string transformed_kernel_name =
           mcw_cxxamp_fixnames(f.__cxxamp_trampoline_name());
-      kernel = CLAMP::CreateKernel(transformed_kernel_name, av.pAloc.get());
+      kernel = CLAMP::CreateKernel(transformed_kernel_name, av.pQueue.get());
   }
-  append_kernel(av.pAloc, f, kernel);
-  av.pAloc->LaunchKernel(kernel, dim_ext, ext, local_size);
+  append_kernel(av.pQueue, f, kernel);
+  av.pQueue->LaunchKernel(kernel, dim_ext, ext, local_size);
 #endif // __KALMAR_ACCELERATOR__
 }
 
@@ -590,7 +590,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
   }
 #ifdef __AMP_CPU__
   if (CLAMP::is_cpu()) {
-      launch_cpu_task(av.pAloc, f, compute_domain);
+      launch_cpu_task(av.pQueue, f, compute_domain);
   } else
 #endif
   mcw_cxxamp_launch_kernel<Kernel, 1>(av, &ext, &tile, f);
@@ -650,7 +650,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
   }
 #ifdef __AMP_CPU__
   if (CLAMP::is_cpu()) {
-      launch_cpu_task(av.pAloc, f, compute_domain);
+      launch_cpu_task(av.pQueue, f, compute_domain);
   } else
 #endif
   mcw_cxxamp_launch_kernel<Kernel, 2>(av, ext, tile, f);
@@ -720,7 +720,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
   }
 #ifdef __AMP_CPU__
   if (CLAMP::is_cpu()) {
-      launch_cpu_task(av.pAloc, f, compute_domain);
+      launch_cpu_task(av.pQueue, f, compute_domain);
   } else
 #endif
   mcw_cxxamp_launch_kernel<Kernel, 3>(av, ext, tile, f);
