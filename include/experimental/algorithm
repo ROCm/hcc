@@ -357,6 +357,23 @@ OutputIterator copy_n(ExecutionPolicy&& exec,
   return result;
 }
 
+// replace
+template <typename ExecutionPolicy,
+          typename ForwardIterator, typename T>
+__attribute__((noinline,used))
+void replace(ExecutionPolicy&& exec,
+            ForwardIterator first, ForwardIterator last,
+            const T& old_value, const T& new_value) {
+  // fill kernel
+  auto k = [&](typename std::iterator_traits<ForwardIterator>::value_type& v) {
+    if (v == old_value)
+      v = new_value;
+  };
+
+  // launch kernel
+  for_each(exec, first, last, k);
+}
+
 
 } // inline namespace v1
 } // namespace parallel
