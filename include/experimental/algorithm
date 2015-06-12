@@ -212,6 +212,25 @@ void fill(ExecutionPolicy&& exec,
   for_each(exec, first, last, k);
 }
 
+// fill_n
+template <typename ExecutionPolicy,
+          typename OutputIterator, typename Size, typename T>
+__attribute__((noinline,used))
+OutputIterator fill_n(ExecutionPolicy&& exec,
+            OutputIterator first, Size count,
+            const T& value) {
+  // fill_n kernel
+  auto k = [&](typename std::iterator_traits<OutputIterator>::value_type& v) {
+    v = value;
+  };
+
+  // launch kernel
+  for_each_n(exec, first, count, k);
+
+  return first + count;
+}
+
+
 } // inline namespace v1
 } // namespace parallel
 } // namespace experimental 
