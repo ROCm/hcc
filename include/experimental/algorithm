@@ -325,6 +325,22 @@ OutputIterator fill_n(ExecutionPolicy&& exec,
   return (count < Size()) ? first : first + count;
 }
 
+// copy
+template <typename ExecutionPolicy,
+          typename InputIterator, typename OutputIterator>
+__attribute__((noinline,used))
+OutputIterator copy(ExecutionPolicy&& exec,
+              InputIterator first, InputIterator last,
+              OutputIterator d_first) {
+  // copy kernel
+  auto k = [](typename std::iterator_traits<InputIterator>::value_type& v) {
+    return v;
+  };
+
+  // launch kernel
+  return transform(exec, first, last, d_first, k);
+}
+
 
 } // inline namespace v1
 } // namespace parallel
