@@ -198,7 +198,7 @@ AMPContext *getContext();
 
 namespace CLAMP {
 // used in parallel_for_each.h
-#ifdef __AMP_CPU__
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
 extern bool is_cpu();
 extern bool in_cpu_kernel();
 extern void enter_kernel();
@@ -270,7 +270,7 @@ struct rw_info
     rw_info(const size_t count, void* ptr)
         : data(ptr), count(count), curr(nullptr), master(nullptr), stage(nullptr),
         devs(), mode(access_type_none), HostPtr(ptr != nullptr) {
-#ifdef __AMP_CPU__
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
             if (CLAMP::in_cpu_kernel() && ptr == nullptr) {
                 data = aligned_alloc(0x1000, count);
                 return;
@@ -287,7 +287,7 @@ struct rw_info
     rw_info(const std::shared_ptr<KalmarQueue> View, const std::shared_ptr<KalmarQueue> Stage,
             const size_t count, access_type mode_) : data(nullptr), count(count),
     curr(View), master(View), stage(nullptr), devs(), mode(mode_), HostPtr(false) {
-#ifdef __AMP_CPU__
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
         if (CLAMP::in_cpu_kernel() && data == nullptr) {
             data = aligned_alloc(0x1000, count);
             return;
@@ -326,7 +326,7 @@ struct rw_info
     }
 
     void sync(std::shared_ptr<KalmarQueue> view, bool modify) {
-#ifdef __AMP_CPU__
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
         if (CLAMP::in_cpu_kernel())
             return;
 #endif
@@ -460,7 +460,7 @@ struct rw_info
     }
 
     ~rw_info() {
-#ifdef __AMP_CPU__
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
         if (CLAMP::in_cpu_kernel()) {
             if (data && !HostPtr)
                 ::operator delete(data);
