@@ -2577,6 +2577,8 @@ struct copy_bidir<T, N, N>
 
 template <typename T, int N>
 void copy(const array_view<const T, N>& src, const array_view<T, N>& dest) {
+    if (src.internal() == dest.internal())
+        return;
     if (is_flat(src)) {
         if (is_flat(dest))
             src.internal().copy(dest.internal(), src.get_offset(),
@@ -2611,6 +2613,8 @@ void copy(const array_view<const T, N>& src, const array_view<T, N>& dest) {
 
 template <typename T>
 void copy(const array_view<const T, 1>& src, const array_view<T, 1>& dest) {
+    if (src.internal() == dest.internal())
+        return;
     src.internal().copy(dest.internal(),
                         src.get_offset() + src.get_index_base()[0],
                         dest.get_offset() + dest.get_index_base()[0],
@@ -2625,6 +2629,8 @@ void copy(const array_view<T, N>& src, const array_view<T, N>& dest) {
 
 template <typename T, int N>
 void copy(const array_view<const T, N>& src, array<T, N>& dest) {
+    if (src.internal() == dest.internal())
+        return;
     if (is_flat(src)) {
         src.internal().copy(dest.internal(), src.get_offset(),
                             dest.get_offset(), dest.get_extent().size());
@@ -2640,6 +2646,8 @@ void copy(const array_view<const T, N>& src, array<T, N>& dest) {
 
 template <typename T>
 void copy(const array_view<const T, 1>& src, array<T, 1>& dest) {
+    if (src.internal() == dest.internal())
+        return;
     src.internal().copy(dest.internal(),
                         src.get_offset() + src.get_index_base()[0],
                         dest.get_offset() + dest.get_index_base()[0],
@@ -2654,6 +2662,8 @@ void copy(const array_view<T, N>& src, array<T, N>& dest) {
 
 template <typename T, int N>
 void copy(const array<T, N>& src, const array_view<T, N>& dest) {
+    if (src.internal() == dest.internal())
+        return;
     if (is_flat(dest))
         src.internal().copy(dest.internal(), src.get_offset(),
                             dest.get_offset(), dest.get_extent().size());
@@ -2669,6 +2679,8 @@ void copy(const array<T, N>& src, const array_view<T, N>& dest) {
 
 template <typename T>
 void copy(const array<T, 1>& src, const array_view<T, 1>& dest) {
+    if (src.internal() == dest.internal())
+        return;
     src.internal().copy(dest.internal(),
                         src.get_offset() + src.get_index_base()[0],
                         dest.get_offset() + dest.get_index_base()[0],
@@ -2677,6 +2689,8 @@ void copy(const array<T, 1>& src, const array_view<T, 1>& dest) {
 
 template <typename T, int N>
 void copy(const array<T, N>& src, array<T, N>& dest) {
+    if (src.internal() == dest.internal())
+        return;
     src.internal().copy(dest.internal(), 0, 0, 0);
 }
 

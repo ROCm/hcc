@@ -62,15 +62,18 @@ public:
   virtual void* LaunchKernelAsync(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) { return nullptr; }
 
   virtual void read(void* device, void* dst, size_t count, size_t offset) {
-      memmove(dst, (char*)device + offset, count);
+      if (dst != device)
+          memmove(dst, (char*)device + offset, count);
   }
   virtual void write(void* device, const void* src, size_t count, size_t offset, bool blocking, bool free) {
-      memmove((char*)device + offset, src, count);
+      if (src != device)
+          memmove((char*)device + offset, src, count);
       if (free)
           ::operator delete(const_cast<void*>(src));
   }
   virtual void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset, bool blocking) {
-      memmove((char*)dst + dst_offset, (char*)src + src_offset, count);
+      if (src != dst)
+          memmove((char*)dst + dst_offset, (char*)src + src_offset, count);
   }
   virtual void* map(void* device, size_t count, size_t offset, bool modify) {
       return (char*)device + offset;
@@ -248,9 +251,11 @@ static inline void copy_helper(std::shared_ptr<KalmarQueue>& srcView, dev_info& 
         if (dstView->getDev() == srcView->getDev())
             dstView->copy(src.data, dst.data, cnt, src_offset, dst_offset, block);
         else {
-            void* temp = ::operator new(cnt);
-            srcView->read(src.data, temp, cnt, src_offset);
-            dstView->write(dst.data, temp, cnt, dst_offset, block, true);
+            if (src.data != dst.data) {
+                void* temp = ::operator new(cnt);
+                srcView->read(src.data, temp, cnt, src_offset);
+                dstView->write(dst.data, temp, cnt, dst_offset, block, true);
+            }
         }
     }
 }
