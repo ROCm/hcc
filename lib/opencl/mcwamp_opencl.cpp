@@ -59,7 +59,7 @@ struct cl_info
 class OpenCLView : public KalmarQueue
 {
 public:
-    OpenCLView(KalmarDevice* pMan, cl_device_id dev) : KalmarQueue(pMan), mems() {
+    OpenCLView(KalmarDevice* pDev, cl_device_id dev) : KalmarQueue(pDev), mems() {
         cl_int err;
         idx = 0;
         for (int i = 0; i < queue_size; ++i) {

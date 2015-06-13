@@ -30,7 +30,7 @@ class CPUVisitor : public AMPVisitor
     std::shared_ptr<KalmarQueue> pQueue;
     std::set<void*> addrs;
 public:
-    CPUVisitor(std::shared_ptr<KalmarQueue> aloc) : pQueue(aloc) {}
+    CPUVisitor(std::shared_ptr<KalmarQueue> pQueue) : pQueue(pQueue) {}
     void Push(struct rw_info* rw, bool isArray, bool isConst) override {
         if (isArray) {
             auto curr = pQueue->getDev()->get_path();
@@ -59,8 +59,8 @@ class AppendVisitor : public AMPVisitor
     void* k_;
     int current_idx_;
 public:
-    AppendVisitor(std::shared_ptr<KalmarQueue> aloc, void* k)
-        : pQueue(aloc), k_(k), current_idx_(0) {}
+    AppendVisitor(std::shared_ptr<KalmarQueue> pQueue, void* k)
+        : pQueue(pQueue), k_(k), current_idx_(0) {}
     void Append(size_t sz, const void *s) override {
         CLAMP::PushArg(k_, current_idx_++, sz, s);
     }

@@ -174,9 +174,9 @@ class HSAContext final : public AMPContext
 {
 public:
     HSAContext() {
-        auto Man = std::shared_ptr<AMPDevice>(new HSADevice);
-        Devices.push_back(Man);
-        def = Man;
+        auto Dev = std::shared_ptr<AMPDevice>(new HSADevice);
+        Devices.push_back(Dev);
+        def = Dev;
     }
 };
 
