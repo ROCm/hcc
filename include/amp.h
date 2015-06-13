@@ -214,7 +214,7 @@ public:
       return true;
   }
   accelerator_view create_view(queuing_mode mode = queuing_mode_automatic) {
-      auto pQueue = pDev->createView();
+      auto pQueue = pDev->createQueue();
       pQueue->set_mode(mode);
       return pQueue;
   }

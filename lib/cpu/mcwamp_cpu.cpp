@@ -34,7 +34,7 @@ public:
         return aligned_alloc(0x1000, count);
     }
     void release(void *data) override { ::operator delete(data); }
-    std::shared_ptr<KalmarQueue> createView() override {
+    std::shared_ptr<KalmarQueue> createQueue() override {
         return std::shared_ptr<KalmarQueue>(new KalmarQueue(this));
     }
 };

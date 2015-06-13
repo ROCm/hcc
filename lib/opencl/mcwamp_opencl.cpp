@@ -56,10 +56,10 @@ struct cl_info
     bool isConst;
 };
 
-class OpenCLView : public KalmarQueue
+class OpenCLQueue : public KalmarQueue
 {
 public:
-    OpenCLView(KalmarDevice* pDev, cl_device_id dev) : KalmarQueue(pDev), mems() {
+    OpenCLQueue(KalmarDevice* pDev, cl_device_id dev) : KalmarQueue(pDev), mems() {
         cl_int err;
         idx = 0;
         for (int i = 0; i < queue_size; ++i) {
@@ -241,7 +241,7 @@ public:
         mems.clear();
     }
 
-    ~OpenCLView() {
+    ~OpenCLQueue() {
         for (auto queue : queues)
             clReleaseCommandQueue(queue);
     }
@@ -341,8 +341,8 @@ public:
         clReleaseMemObject(dm);
     }
 
-    std::shared_ptr<KalmarQueue> createView() override {
-        return std::shared_ptr<KalmarQueue>(new OpenCLView(this, device));
+    std::shared_ptr<KalmarQueue> createQueue() override {
+        return std::shared_ptr<KalmarQueue>(new OpenCLQueue(this, device));
     }
 
     ~OpenCLDevice() {

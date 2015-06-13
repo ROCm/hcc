@@ -68,10 +68,10 @@ namespace Concurrency {
 
 class HSADevice;
 
-class HSAView final : public AMPView
+class HSAQueue final : public KalmarQueue
 {
 public:
-    HSAView(AMPDevice* pDev) : AMPView(pDev) {}
+    HSAQueue(AMPDevice* pDev) : KalmarQueue(pDev) {}
 private:
     void Push(void *kernel, int idx, void *device, bool isConst) override {
         PushArgImpl(kernel, idx, sizeof(void*), &device);
@@ -165,8 +165,8 @@ public:
         std::shared_future<void>* fut = dispatch->dispatchKernelAndGetFuture();
         return static_cast<void*>(fut);
     }
-    std::shared_ptr<AMPView> createView() override {
-        return std::shared_ptr<AMPView>(new HSAView(this));
+    std::shared_ptr<KalmarQueue> createQueue() override {
+        return std::shared_ptr<KalmarQueue>(new HSAQueue(this));
     }
 };
 
