@@ -30,7 +30,9 @@ public:
     bool is_unified() const override { return true; }
     bool is_emulated() const override { return true; }
 
-    void* create(size_t count) override { return aligned_alloc(0x1000, count); }
+    void* create(size_t count, struct rw_info* /* not used */) override {
+        return aligned_alloc(0x1000, count);
+    }
     void release(void *data) override { ::operator delete(data); }
     std::shared_ptr<KalmarQueue> createView() override {
         return std::shared_ptr<KalmarQueue>(new KalmarQueue(this));

@@ -71,12 +71,14 @@ class HSADevice;
 class HSAView final : public AMPView
 {
 public:
-    HSAView(AMPDevice* pMan) : AMPView(pMan) {}
+    HSAView(AMPDevice* pDev) : AMPView(pDev) {}
 private:
     void Push(void *kernel, int idx, void *device, bool isConst) override {
         PushArgImpl(kernel, idx, sizeof(void*), &device);
     }
 };
+
+static std::map<rw_info*, void*> addrs;
 
 class HSADevice final : public AMPDevice
 {
@@ -84,10 +86,13 @@ class HSADevice final : public AMPDevice
 public:
     HSADevice() : AMPDevice(access_type_read_write) {}
 
-    void* create(size_t count) override {
-        void *data = aligned_alloc(0x1000, count);
-        CLAMP::RegisterMemory(data, count);
-        return data;
+    void* create(size_t count, struct rw_info* key) override {
+        if (addrs.find(key) == std::end(addrs)) {
+            void *data = aligned_alloc(0x1000, count);
+            CLAMP::RegisterMemory(data, count);
+            addrs[key] = data;
+        }
+        return addrs[key];
     }
     void release(void *data) override { ::operator delete(data); }
 

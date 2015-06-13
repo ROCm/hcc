@@ -325,7 +325,7 @@ public:
         return true;
     }
 
-    void* create(size_t count) override {
+    void* create(size_t count, struct rw_info* /* not used */ ) override {
         cl_int err;
         cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, nullptr, &err);
         assert(err == CL_SUCCESS);
@@ -406,10 +406,10 @@ public:
         context = clCreateContext(0, devs.size(), devs.data(), NULL, NULL, &err);
         assert(err == CL_SUCCESS);
         for (int i = 0; i < devs.size(); ++i) {
-            auto Man = new OpenCLDevice(devs[i], path[i]);
+            auto Dev = new OpenCLDevice(devs[i], path[i]);
             if (i == 0)
-                def = Man;
-            Devices.push_back(Man);
+                def = Dev;
+            Devices.push_back(Dev);
         }
     }
     ~OpenCLContext() { clReleaseContext(context); }

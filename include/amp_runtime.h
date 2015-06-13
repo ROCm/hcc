@@ -36,6 +36,7 @@ private:
 
 
 class KalmarDevice;
+struct rw_info;
 
 enum access_type
 {
@@ -108,7 +109,7 @@ public:
     virtual bool is_emulated() const = 0;
 
 
-    virtual void* create(size_t count) = 0;
+    virtual void* create(size_t count, struct rw_info* key) = 0;
     virtual void release(void* ptr) = 0;
     virtual void* CreateKernel(const char* fun, void* size, void* source) { return nullptr; }
     virtual bool check(size_t* size, size_t dim_ext) { return true; }
@@ -141,7 +142,7 @@ public:
 
 
     std::shared_ptr<KalmarQueue> createView() { return std::shared_ptr<KalmarQueue>(new CPUView(this)); }
-    void* create(size_t count) override { return aligned_alloc(0x1000, count); }
+    void* create(size_t count, struct rw_info* /* not used */ ) override { return aligned_alloc(0x1000, count); }
     void release(void* ptr) override { ::operator delete(ptr); }
     void* CreateKernel(const char* fun, void* size, void* source) { return nullptr; }
 };
@@ -185,8 +186,8 @@ public:
             return def;
         }
         auto result = std::find_if(std::begin(Devices), std::end(Devices),
-                                   [&] (const KalmarDevice* man)
-                                   { return man->get_path() == path; });
+                                   [&] (const KalmarDevice* dev)
+                                   { return dev->get_path() == path; });
         if (result != std::end(Devices))
             return *result;
         else
@@ -295,20 +296,20 @@ struct rw_info
 #endif
         if (mode == access_type_auto)
             mode = curr->getDev()->get_access();
-        devs[curr->getDev()] = {curr->getDev()->create(count), modified};
+        devs[curr->getDev()] = {curr->getDev()->create(count, this), modified};
         if (is_cpu_acc(curr) || (curr->getDev()->is_unified() && mode != access_type_none))
             data = devs[curr->getDev()].data;
         if (is_cpu_acc(curr)) {
             stage = Stage;
             if (Stage != curr)
-                devs[stage->getDev()] = {stage->getDev()->create(count), invalid};
+                devs[stage->getDev()] = {stage->getDev()->create(count, this), invalid};
         } else
             stage = curr;
     }
 
     void construct(std::shared_ptr<KalmarQueue> view) {
         curr = view;
-        devs[view->getDev()] = {view->getDev()->create(count), invalid};
+        devs[view->getDev()] = {view->getDev()->create(count, this), invalid};
         if (is_cpu_acc(view))
             data = devs[view->getDev()].data;
     }
@@ -331,7 +332,7 @@ struct rw_info
             return;
 #endif
         if (devs.find(view->getDev()) == std::end(devs)) {
-            devs[view->getDev()] = {view->getDev()->create(count), invalid};
+            devs[view->getDev()] = {view->getDev()->create(count, this), invalid};
             if (is_cpu_acc(view))
                 data = devs[view->getDev()].data;
         }
@@ -368,7 +369,7 @@ struct rw_info
         }
         if (view->getDev() != curr->getDev()) {
             if (devs.find(view->getDev()) == std::end(devs))
-                devs[view->getDev()] = {view->getDev()->create(count), invalid};
+                devs[view->getDev()] = {view->getDev()->create(count, this), invalid};
             try_switch_to_cpu();
             dev_info& dst = devs[view->getDev()];
             dev_info& src = devs[curr->getDev()];
@@ -397,7 +398,7 @@ struct rw_info
             cnt = count;
         if (!curr) {
             curr = getContext()->auto_select();
-            devs[curr->getDev()] = {curr->getDev()->create(count), modify ? modified : shared};
+            devs[curr->getDev()] = {curr->getDev()->create(count, this), modify ? modified : shared};
             return curr->map(data, cnt, offset, modify);
         }
         try_switch_to_cpu();
