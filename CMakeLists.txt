@@ -1,4 +1,5 @@
 cmake_minimum_required( VERSION 2.8 )
+set(CMAKE_INSTALL_PREFIX "/opt/kalmar")
 project (CLAMP)
 SET(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/scripts/cmake")
 MESSAGE("Module path: ${CMAKE_MODULE_PATH}")
@@ -58,7 +59,6 @@ set(LLVM_ROOT "${PROJECT_BINARY_DIR}/compiler")
 SET(LOCAL_LLVM_INCLUDE compiler/include)
 
 # setup compilation environment
-set(CMAKE_INSTALL_PREFIX "/opt/kalmar")
 if (UNIX)
 SET(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/build/${CMAKE_CFG_INTDIR}/${CMAKE_BUILD_TYPE}/bin" )
 SET(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/build/${CMAKE_CFG_INTDIR}/${CMAKE_BUILD_TYPE}/lib" )
