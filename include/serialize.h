@@ -28,7 +28,7 @@ public:
 class CPUVisitor : public AMPVisitor
 {
     std::shared_ptr<KalmarQueue> pQueue;
-    std::set<void*> addrs;
+    std::set<struct rw_info*> bufs;
 public:
     CPUVisitor(std::shared_ptr<KalmarQueue> pQueue) : pQueue(pQueue) {}
     void Push(struct rw_info* rw, bool modify, bool isArray) override {
@@ -42,12 +42,10 @@ public:
             }
         }
         rw->sync(pQueue, modify, false);
-        bool find = addrs.find(rw->data) != std::end(addrs);
-        if (!find) {
+        if (bufs.find(rw) == std::end(bufs)) {
             void*& device = rw->devs[pQueue->getDev()].data;
             void*& data = rw->data;
-            addrs.insert(device);
-            addrs.insert(data);
+            bufs.insert(rw);
             std::swap(device, data);
         }
     }
