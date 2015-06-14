@@ -93,7 +93,7 @@ public:
 
     __attribute__((annotate("serialize")))
         void __cxxamp_serialize(Serialize& s) const {
-            s.Push(mm.get(), isArray, std::is_const<T>::value);
+            s.Push(mm.get(), !std::is_const<T>::value, isArray);
         }
     __attribute__((annotate("user_deserialize")))
         explicit _data_host(__global T* t) {}

@@ -11,7 +11,7 @@ class AMPVisitor {
 public:
     virtual void Append(size_t sz, const void* s) {}
     virtual void AppendPtr(size_t sz, const void* s) {}
-    virtual void Push(struct rw_info* rw, bool isArray, bool isConst) = 0;
+    virtual void Push(struct rw_info* rw, bool modify, bool isArray) = 0;
 };
 
 class Serialize {
@@ -20,8 +20,8 @@ public:
     Serialize(AMPVisitor* vis) : vis(vis) {}
     void Append(size_t sz, const void* s) { vis->Append(sz, s); }
     void AppendPtr(size_t sz, const void* s) { vis->AppendPtr(sz, s); }
-    void Push(struct rw_info* rw, bool isArray, bool isConst) {
-        vis->Push(rw, isArray, isConst);
+    void Push(struct rw_info* rw, bool modify, bool isArray) {
+        vis->Push(rw, modify, isArray);
     }
 };
 
@@ -31,7 +31,7 @@ class CPUVisitor : public AMPVisitor
     std::set<void*> addrs;
 public:
     CPUVisitor(std::shared_ptr<KalmarQueue> pQueue) : pQueue(pQueue) {}
-    void Push(struct rw_info* rw, bool isArray, bool isConst) override {
+    void Push(struct rw_info* rw, bool modify, bool isArray) override {
         if (isArray) {
             auto curr = pQueue->getDev()->get_path();
             auto path = rw->master->getDev()->get_path();
@@ -41,7 +41,7 @@ public:
                     throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
             }
         }
-        rw->append(pQueue, isArray, isConst);
+        rw->sync(pQueue, modify, false);
         bool find = addrs.find(rw->data) != std::end(addrs);
         if (!find) {
             void*& device = rw->devs[pQueue->getDev()].data;
@@ -67,7 +67,7 @@ public:
     void AppendPtr(size_t sz, const void *s) override {
         CLAMP::PushArgPtr(k_, current_idx_++, sz, s);
     }
-    void Push(struct rw_info* rw, bool isArray, bool isConst) override {
+    void Push(struct rw_info* rw, bool modify, bool isArray) override {
         if (isArray) {
             auto curr = pQueue->getDev()->get_path();
             auto path = rw->master->getDev()->get_path();
@@ -77,8 +77,8 @@ public:
                     throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
             }
         }
-        rw->append(pQueue, isArray, isConst);
-        pQueue->Push(k_, current_idx_++, rw->devs[pQueue->getDev()].data, isConst);
+        rw->sync(pQueue, modify, false);
+        pQueue->Push(k_, current_idx_++, rw->devs[pQueue->getDev()].data, modify);
     }
 };
 
@@ -106,7 +106,7 @@ public:
         else
             return nullptr;
     }
-    void Push(struct rw_info* rw, bool isArray, bool isConst) override {
+    void Push(struct rw_info* rw, bool modify, bool isArray) {
         if (isArray && rw->stage->getDev()->get_path() != L"cpu")
             collector.push_back(rw->stage);
     }
