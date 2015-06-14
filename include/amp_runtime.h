@@ -234,9 +234,9 @@ extern void PushArgPtr(void *, int, size_t, const void *);
 
 } // namespace CLAMP
 
-static inline const std::shared_ptr<KalmarQueue> get_cpu_view() {
-    static auto cpu_view = getContext()->getDevice(L"cpu")->get_default();
-    return cpu_view;
+static inline const std::shared_ptr<KalmarQueue> get_cpu_queue() {
+    static auto cpu_queue = getContext()->getDevice(L"cpu")->get_default();
+    return cpu_queue;
 }
 
 enum states
@@ -289,7 +289,7 @@ struct rw_info
     unsigned int HostPtr : 1;
 
 
-    // consruct array_view
+    // consruct array_queue
     rw_info(const size_t count, void* ptr)
         : data(ptr), count(count), curr(nullptr), master(nullptr), stage(nullptr),
         devs(), mode(access_type_none), HostPtr(ptr != nullptr) {
@@ -301,7 +301,7 @@ struct rw_info
 #endif
             if (ptr) {
                 mode = access_type_read_write;
-                curr = master = get_cpu_view();
+                curr = master = get_cpu_queue();
                 devs[curr->getDev()] = {ptr, modified};
             }
         }
@@ -329,11 +329,11 @@ struct rw_info
             stage = curr;
     }
 
-    void construct(std::shared_ptr<KalmarQueue> view) {
-        curr = view;
-        devs[view->getDev()] = {view->getDev()->create(count, this), invalid};
-        if (is_cpu_acc(view))
-            data = devs[view->getDev()].data;
+    void construct(std::shared_ptr<KalmarQueue> pQueue) {
+        curr = pQueue;
+        devs[pQueue->getDev()] = {pQueue->getDev()->create(count, this), invalid};
+        if (is_cpu_acc(pQueue))
+            data = devs[pQueue->getDev()].data;
     }
 
     void disc() {
@@ -342,34 +342,34 @@ struct rw_info
     }
 
     void try_switch_to_cpu() {
-        auto cpu_view = get_cpu_view();
-        if (devs.find(cpu_view->getDev()) != std::end(devs))
-            if (devs[cpu_view->getDev()].state == shared)
-                curr = cpu_view;
+        auto cpu_queue = get_cpu_queue();
+        if (devs.find(cpu_queue->getDev()) != std::end(devs))
+            if (devs[cpu_queue->getDev()].state == shared)
+                curr = cpu_queue;
     }
 
-    void sync(std::shared_ptr<KalmarQueue> view, bool modify) {
+    void sync(std::shared_ptr<KalmarQueue> pQueue, bool modify) {
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
         if (CLAMP::in_cpu_kernel())
             return;
 #endif
-        if (devs.find(view->getDev()) == std::end(devs)) {
-            devs[view->getDev()] = {view->getDev()->create(count, this), invalid};
-            if (is_cpu_acc(view))
-                data = devs[view->getDev()].data;
+        if (devs.find(pQueue->getDev()) == std::end(devs)) {
+            devs[pQueue->getDev()] = {pQueue->getDev()->create(count, this), invalid};
+            if (is_cpu_acc(pQueue))
+                data = devs[pQueue->getDev()].data;
         }
         if (!curr) {
-            curr = view;
+            curr = pQueue;
             return;
         }
-        if (curr->getDev() == view->getDev())
+        if (curr->getDev() == pQueue->getDev())
             return;
         try_switch_to_cpu();
-        dev_info& dst = devs[view->getDev()];
+        dev_info& dst = devs[pQueue->getDev()];
         dev_info& src = devs[curr->getDev()];
         if (dst.state == invalid && src.state != invalid)
-            copy_helper(curr, src, view, dst, count, true);
-        curr = view;
+            copy_helper(curr, src, pQueue, dst, count, true);
+        curr = pQueue;
         if (modify) {
             disc();
             dst.state = modified;
@@ -380,37 +380,37 @@ struct rw_info
         }
     }
 
-    void append(std::shared_ptr<KalmarQueue>& view, bool isArray, bool isConst) {
+    void append(std::shared_ptr<KalmarQueue>& pQueue, bool isArray, bool isConst) {
         if (!curr) {
-            construct(view);
+            construct(pQueue);
             dev_info& obj = devs[curr->getDev()];
             if (isConst)
                 obj.state = shared;
             else
                 obj.state = modified;
         }
-        if (view->getDev() != curr->getDev()) {
-            if (devs.find(view->getDev()) == std::end(devs))
-                devs[view->getDev()] = {view->getDev()->create(count, this), invalid};
+        if (pQueue->getDev() != curr->getDev()) {
+            if (devs.find(pQueue->getDev()) == std::end(devs))
+                devs[pQueue->getDev()] = {pQueue->getDev()->create(count, this), invalid};
             try_switch_to_cpu();
-            dev_info& dst = devs[view->getDev()];
+            dev_info& dst = devs[pQueue->getDev()];
             dev_info& src = devs[curr->getDev()];
             if (dst.state == invalid && (src.state != invalid || isArray))
-                copy_helper(curr, src, view, dst, count, false);
+                copy_helper(curr, src, pQueue, dst, count, false);
             if (isConst) {
                 dst.state = shared;
                 if (src.state == modified)
                     src.state = shared;
             } else {
-                curr = view;
+                curr = pQueue;
                 if (src.state != invalid)
                     disc();
                 dst.state = modified;
             }
         } else {
-            if (curr != view) {
+            if (curr != pQueue) {
                 // curr->wait();
-                curr = view;
+                curr = pQueue;
             }
         }
     }
@@ -436,7 +436,7 @@ struct rw_info
     void synchronize(bool modify) { sync(master, modify); }
 
     void get_cpu_access(bool modify) {
-        sync(get_cpu_view(), modify);
+        sync(get_cpu_queue(), modify);
     }
 
     void write(const void* src, int cnt, int offset, bool blocking) {
@@ -492,7 +492,7 @@ struct rw_info
 #endif
         if (HostPtr)
             synchronize(false);
-        auto cpu_acc = get_cpu_view()->getDev();
+        auto cpu_acc = get_cpu_queue()->getDev();
         if (devs.find(cpu_acc) != std::end(devs)) {
             if (!HostPtr)
                 cpu_acc->release(devs[cpu_acc].data);
