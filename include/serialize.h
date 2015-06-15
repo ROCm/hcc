@@ -89,6 +89,7 @@ class QueueSelector : public FunctorBufferWalker
 {
 public:
     QueueSelector() : collector() {}
+    /// select the queue that most of input containers reside
     std::shared_ptr<KalmarQueue> best() {
         std::sort(std::begin(collector), std::end(collector));
         std::vector<std::shared_ptr<KalmarQueue>> candidate;

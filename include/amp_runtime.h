@@ -241,19 +241,20 @@ static inline const std::shared_ptr<KalmarQueue> get_cpu_queue() {
     return cpu_queue;
 }
 
-/// MSI protocol
-/// Used to avoid unnecessary when array_view<const, T> is used
+/// software MSI protocol
+/// Used to avoid unnecessary copy when array_view<const, T> is used
 enum states
 {
-    modified,
-    shared,
-    invalid
+    modified, // exclusive owned data, can read and write to it
+    shared, // shared on multiple device, the content on it is the same
+    invalid // not able to read and write on the data, need to read from other device
 };
 
+/// store information of each device
 struct dev_info
 {
-    void* data;
-    states state;
+    void* data; /// pointer to device data
+    states state; /// state of the current data
 };
 
 static inline bool is_cpu_dev(const std::shared_ptr<KalmarQueue>& Queue) {
@@ -287,7 +288,7 @@ struct rw_info
     /// it will be set if
     /// 1. rw_info constructed on cpu accelerator
     /// 2. rw_info constructed on accelerator supports
-    ///    shared virtual memory and access_type is not none
+    ///    unified memory and access_type is not none
     void *data;
     const size_t count;
     std::shared_ptr<KalmarQueue> curr;
@@ -295,6 +296,8 @@ struct rw_info
     std::shared_ptr<KalmarQueue> stage;
     std::map<KalmarDevice*, dev_info> devs;
     access_type mode;
+    /// This will be set if this rw_info is constructed with host pointer
+    /// because rw_info cannot free host pointer
     unsigned int HostPtr : 1;
 
 
@@ -354,7 +357,7 @@ struct rw_info
             it.second.state = invalid;
     }
 
-    /// optimization: Before copy, if the state of cpu accelerator is shared,
+    /// optimization: Before performing copy, if the state of cpu accelerator is shared,
     /// it means the data on cpu is the ssame on curr accelerator, use the data
     /// on cpu to perform the copy
     void try_switch_to_cpu() {
