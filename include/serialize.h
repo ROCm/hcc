@@ -7,6 +7,7 @@
 namespace Concurrency
 {
 
+/// traverse all the buffers that are going to be used in kernel
 class FunctorBufferWalker {
 public:
     virtual void Append(size_t sz, const void* s) {}
@@ -14,6 +15,7 @@ public:
     virtual void Push(struct rw_info* rw, bool modify, bool isArray) = 0;
 };
 
+/// This is used to avoid incorrect compiler error
 class Serialize {
     FunctorBufferWalker* vis;
 public:
@@ -25,6 +27,8 @@ public:
     }
 };
 
+/// Change the data pointer with device pointer
+/// before/after kernel launches in cpu path
 class CPUVisitor : public FunctorBufferWalker
 {
     std::shared_ptr<KalmarQueue> pQueue;
@@ -51,6 +55,7 @@ public:
     }
 };
 
+/// Append kernel argument to kernel
 class BufferArgumentsAppender : public FunctorBufferWalker
 {
     std::shared_ptr<KalmarQueue> pQueue;

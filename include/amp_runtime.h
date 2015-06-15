@@ -124,6 +124,8 @@ public:
 
 
     /// create buffer on device
+    /// @key on accelerator that supports shared memory
+    //       key can used to avoid duplicate allocation
     virtual void* create(size_t count, struct rw_info* key) = 0;
 
     /// release buffer on device
@@ -239,6 +241,8 @@ static inline const std::shared_ptr<KalmarQueue> get_cpu_queue() {
     return cpu_queue;
 }
 
+/// MSI protocol
+/// Used to avoid unnecessary when array_view<const, T> is used
 enum states
 {
     modified,
@@ -279,6 +283,11 @@ static inline void copy_helper(std::shared_ptr<KalmarQueue>& srcQueue, dev_info&
 
 struct rw_info
 {
+    /// host accessible pointer
+    /// it will be set if
+    /// 1. rw_info constructed on cpu accelerator
+    /// 2. rw_info constructed on accelerator supports
+    ///    shared virtual memory and access_type is not none
     void *data;
     const size_t count;
     std::shared_ptr<KalmarQueue> curr;
@@ -289,11 +298,13 @@ struct rw_info
     unsigned int HostPtr : 1;
 
 
-    // consruct array_queue
+    // consruct array_view
     rw_info(const size_t count, void* ptr)
         : data(ptr), count(count), curr(nullptr), master(nullptr), stage(nullptr),
         devs(), mode(access_type_none), HostPtr(ptr != nullptr) {
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+            /// if array_view is constructed in cpu path kernel
+            /// allocate memory for it and do nothing
             if (CLAMP::in_cpu_kernel() && ptr == nullptr) {
                 data = aligned_alloc(0x1000, count);
                 return;
@@ -319,6 +330,8 @@ struct rw_info
         if (mode == access_type_auto)
             mode = curr->getDev()->get_access();
         devs[curr->getDev()] = {curr->getDev()->create(count, this), modified};
+
+        // set data pointer
         if (is_cpu_dev(curr) || (curr->getDev()->is_unified() && mode != access_type_none))
             data = devs[curr->getDev()].data;
         if (is_cpu_dev(curr)) {
@@ -341,6 +354,9 @@ struct rw_info
             it.second.state = invalid;
     }
 
+    /// optimization: Before copy, if the state of cpu accelerator is shared,
+    /// it means the data on cpu is the ssame on curr accelerator, use the data
+    /// on cpu to perform the copy
     void try_switch_to_cpu() {
         if (is_cpu_dev(curr))
             return;
