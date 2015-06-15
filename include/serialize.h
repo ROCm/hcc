@@ -7,7 +7,7 @@
 namespace Concurrency
 {
 
-class AMPVisitor {
+class FunctorBufferWalker {
 public:
     virtual void Append(size_t sz, const void* s) {}
     virtual void AppendPtr(size_t sz, const void* s) {}
@@ -15,9 +15,9 @@ public:
 };
 
 class Serialize {
-    AMPVisitor* vis;
+    FunctorBufferWalker* vis;
 public:
-    Serialize(AMPVisitor* vis) : vis(vis) {}
+    Serialize(FunctorBufferWalker* vis) : vis(vis) {}
     void Append(size_t sz, const void* s) { vis->Append(sz, s); }
     void AppendPtr(size_t sz, const void* s) { vis->AppendPtr(sz, s); }
     void Push(struct rw_info* rw, bool modify, bool isArray) {
@@ -25,7 +25,7 @@ public:
     }
 };
 
-class CPUVisitor : public AMPVisitor
+class CPUVisitor : public FunctorBufferWalker
 {
     std::shared_ptr<KalmarQueue> pQueue;
     std::set<struct rw_info*> bufs;
@@ -51,13 +51,13 @@ public:
     }
 };
 
-class AppendVisitor : public AMPVisitor
+class BufferArgumentsAppender : public FunctorBufferWalker
 {
     std::shared_ptr<KalmarQueue> pQueue;
     void* k_;
     int current_idx_;
 public:
-    AppendVisitor(std::shared_ptr<KalmarQueue> pQueue, void* k)
+    BufferArgumentsAppender(std::shared_ptr<KalmarQueue> pQueue, void* k)
         : pQueue(pQueue), k_(k), current_idx_(0) {}
     void Append(size_t sz, const void *s) override {
         CLAMP::PushArg(k_, current_idx_++, sz, s);
@@ -80,10 +80,10 @@ public:
     }
 };
 
-class ChooseVisitor : public AMPVisitor
+class QueueSelector : public FunctorBufferWalker
 {
 public:
-    ChooseVisitor() : collector() {}
+    QueueSelector() : collector() {}
     std::shared_ptr<KalmarQueue> best() {
         std::sort(std::begin(collector), std::end(collector));
         std::vector<std::shared_ptr<KalmarQueue>> candidate;

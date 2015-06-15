@@ -239,7 +239,7 @@ static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu) {
 template <typename Kernel>
 static void append_kernel(std::shared_ptr<KalmarQueue> av, const Kernel& f, void* kernel)
 {
-  Concurrency::AppendVisitor vis(av, kernel);
+  Concurrency::BufferArgumentsAppender vis(av, kernel);
   Concurrency::Serialize s(&vis);
   f.__cxxamp_serialize(s);
 }
