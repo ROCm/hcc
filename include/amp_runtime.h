@@ -96,7 +96,7 @@ public:
   queuing_mode get_mode() const { return mode; }
   void set_mode(queuing_mode mod) { mode = mod; }
   KalmarQueue(KalmarDevice* pDev, queuing_mode mode = queuing_mode_automatic)
-      : mode(mode), pDev(pDev) {}
+      : pDev(pDev), mode(mode) {}
 private:
   KalmarDevice* pDev;
   queuing_mode mode;
