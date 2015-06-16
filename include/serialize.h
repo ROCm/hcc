@@ -85,39 +85,6 @@ public:
     }
 };
 
-class QueueSelector : public FunctorBufferWalker
-{
-public:
-    QueueSelector() : collector() {}
-    /// select the queue that most of input containers reside
-    std::shared_ptr<KalmarQueue> best() {
-        std::sort(std::begin(collector), std::end(collector));
-        std::vector<std::shared_ptr<KalmarQueue>> candidate;
-        int max = 0;
-        for (int i = 0; i < collector.size(); ++i) {
-            auto head = collector[i];
-            int count = 1;
-            while (head == collector[++i])
-                ++count;
-            if (count > max) {
-                max = count;
-                candidate.clear();
-                candidate.push_back(head);
-            }
-        }
-        if (candidate.size())
-            return candidate[0];
-        else
-            return nullptr;
-    }
-    void Push(struct rw_info* rw, bool modify, bool isArray) {
-        if (isArray && rw->stage->getDev()->get_path() != L"cpu")
-            collector.push_back(rw->stage);
-    }
-private:
-    std::vector<std::shared_ptr<KalmarQueue>> collector;
-};
-
 } // namespace Concurrency
 
 #endif // __CLAMP_SERIALIZE

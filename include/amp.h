@@ -2412,46 +2412,22 @@ void parallel_for_each(const accelerator_view& accl_view,
 
 template <int N, typename Kernel>
 void parallel_for_each(extent<N> compute_domain, const Kernel& f){
-    QueueSelector vis;
-    Serialize s(&vis);
-    f.__cxxamp_serialize(s);
-    accelerator_view best = vis.best();
-    if (!best.pQueue)
-        best = accelerator(L"default").get_default_view();
-    parallel_for_each(best, compute_domain, f);
+    parallel_for_each(accelerator().get_default_view(), compute_domain, f);
 }
 
 template <int D0, int D1, int D2, typename Kernel>
 void parallel_for_each(tiled_extent<D0,D1,D2> compute_domain, const Kernel& f) {
-    QueueSelector vis;
-    Serialize s(&vis);
-    f.__cxxamp_serialize(s);
-    accelerator_view best = vis.best();
-    if (!best.pQueue)
-        best = accelerator(L"default").get_default_view();
-    parallel_for_each(best, compute_domain, f);
+    parallel_for_each(accelerator().get_default_view(), compute_domain, f);
 }
 
 template <int D0, int D1, typename Kernel>
 void parallel_for_each(tiled_extent<D0,D1> compute_domain, const Kernel& f) {
-    QueueSelector vis;
-    Serialize s(&vis);
-    f.__cxxamp_serialize(s);
-    accelerator_view best = vis.best();
-    if (!best.pQueue)
-        best = accelerator(L"default").get_default_view();
-    parallel_for_each(best, compute_domain, f);
+    parallel_for_each(accelerator().get_default_view(), compute_domain, f);
 }
 
 template <int D0, typename Kernel>
 void parallel_for_each(tiled_extent<D0> compute_domain, const Kernel& f) {
-    QueueSelector vis;
-    Serialize s(&vis);
-    f.__cxxamp_serialize(s);
-    accelerator_view best = vis.best();
-    if (!best.pQueue)
-        best = accelerator(L"default").get_default_view();
-    parallel_for_each(best, compute_domain, f);
+    parallel_for_each(accelerator().get_default_view(), compute_domain, f);
 }
 
 } // namespace Concurrency
