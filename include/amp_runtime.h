@@ -254,7 +254,7 @@ enum states
 struct dev_info
 {
     void* data; /// pointer to device data
-    states state; /// state of the current data
+    states state; /// state of the data on current device
 };
 
 static inline bool is_cpu_dev(const std::shared_ptr<KalmarQueue>& Queue) {
@@ -369,22 +369,28 @@ struct rw_info
                 curr = cpu_queue;
     }
 
+    /// synchronize data to device pQueue belongs to
     void sync(std::shared_ptr<KalmarQueue> pQueue, bool modify, bool block = true) {
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
         if (CLAMP::in_cpu_kernel())
             return;
 #endif
-        if (devs.find(pQueue->getDev()) == std::end(devs)) {
-            dev_info dev = {pQueue->getDev()->create(count, this), invalid};
+        if (!curr) {
+            /// This can only happen if array_view is constructed with size and
+            /// is not accessed before
+            dev_info dev = {pQueue->getDev()->create(count, this),
+                modify ? modified : shared};
             devs[pQueue->getDev()] = dev;
             if (is_cpu_dev(pQueue))
                 data = dev.data;
-        }
-        if (!curr) {
             curr = pQueue;
-            devs[pQueue->getDev()].state = modify ? modified : shared;
             return;
         }
+
+        if (curr == pQueue)
+            return;
+
+        /// If both queues are from the same device, change state only
         if (curr->getDev() == pQueue->getDev()) {
             // curr->wait();
             curr = pQueue;
@@ -392,21 +398,32 @@ struct rw_info
                 disc();
                 devs[curr->getDev()].state = modified;
             }
+            return;
+        }
+
+        /// If the buffer on device is not allocate, allocated space for it
+        if (devs.find(pQueue->getDev()) == std::end(devs)) {
+            dev_info dev = {pQueue->getDev()->create(count, this), invalid};
+            devs[pQueue->getDev()] = dev;
+            if (is_cpu_dev(pQueue))
+                data = dev.data;
+        }
+
+        try_switch_to_cpu();
+        dev_info& dst = devs[pQueue->getDev()];
+        dev_info& src = devs[curr->getDev()];
+        if (dst.state == invalid && src.state != invalid)
+            copy_helper(curr, src, pQueue, dst, count, block);
+        /// if the data on current device is going to be modified
+        /// changed the state of current device as modified
+        if (modify) {
+            curr = pQueue;
+            disc();
+            dst.state = modified;
         } else {
-            try_switch_to_cpu();
-            dev_info& dst = devs[pQueue->getDev()];
-            dev_info& src = devs[curr->getDev()];
-            if (dst.state == invalid && src.state != invalid)
-                copy_helper(curr, src, pQueue, dst, count, block);
-            if (modify) {
-                curr = pQueue;
-                disc();
-                dst.state = modified;
-            } else {
-                dst.state = shared;
-                if (src.state == modified)
-                    src.state = shared;
-            }
+            dst.state = shared;
+            if (src.state == modified)
+                src.state = shared;
         }
     }
 
@@ -484,11 +501,11 @@ struct rw_info
 #endif
         if (HostPtr)
             synchronize(false);
-        auto cpu_acc = get_cpu_queue()->getDev();
-        if (devs.find(cpu_acc) != std::end(devs)) {
+        auto cpu_queue = get_cpu_queue()->getDev();
+        if (devs.find(cpu_queue) != std::end(devs)) {
             if (!HostPtr)
-                cpu_acc->release(devs[cpu_acc].data);
-            devs.erase(cpu_acc);
+                cpu_queue->release(devs[cpu_queue].data);
+            devs.erase(cpu_queue);
         }
         KalmarDevice* pDev;
         dev_info info;
