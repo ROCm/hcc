@@ -56,10 +56,10 @@ struct cl_info
     bool isConst;
 };
 
-class OpenCLQueue : public KalmarQueue
+class OpenCLQueue final : public KalmarQueue
 {
 public:
-    OpenCLQueue(KalmarDevice* pDev, cl_device_id dev) : KalmarQueue(pDev), mems() {
+    OpenCLQueue(KalmarDevice* pDev, cl_device_id dev, bool isAMD) : KalmarQueue(pDev), mems() {
         cl_int err;
         idx = 0;
         for (int i = 0; i < queue_size; ++i) {
@@ -67,52 +67,54 @@ public:
             assert(err == CL_SUCCESS);
         }
 
-        // Propel underlying OpenCL driver to enque kernels faster (pthread-based)
-        // FIMXE: workable on AMD platforms only
-        pthread_t self = pthread_self();
-        pthread_attr_t attr;
-        pthread_attr_init(&attr);
-        int result = -1;
-        // Get max priority
-        int policy = 0;
-        result = pthread_attr_getschedpolicy(&attr, &policy);
-        if (result != 0)
-          perror("getsched error!\n");
-        int max_prio = sched_get_priority_max(policy);
+        if (isAMD) {
+            // Propel underlying OpenCL driver to enque kernels faster (pthread-based)
+            // FIMXE: workable on AMD platforms only
+            pthread_t self = pthread_self();
+            pthread_attr_t attr;
+            pthread_attr_init(&attr);
+            int result = -1;
+            // Get max priority
+            int policy = 0;
+            result = pthread_attr_getschedpolicy(&attr, &policy);
+            if (result != 0)
+                perror("getsched error!\n");
+            int max_prio = sched_get_priority_max(policy);
 
-        struct sched_param param;
-        // Get self priority
-        result = pthread_getschedparam(self, &policy, &param);
-        if (result != 0)
-          perror("getsched self error!\n");
-        int self_prio = param.sched_priority;
+            struct sched_param param;
+            // Get self priority
+            result = pthread_getschedparam(self, &policy, &param);
+            if (result != 0)
+                perror("getsched self error!\n");
+            int self_prio = param.sched_priority;
 #define CL_QUEUE_THREAD_HANDLE_AMD 0x403E
 #define PRIORITY_OFFSET 2
-        void* handle=NULL;
-        for (auto queue : queues) {
-            cl_int status = clGetCommandQueueInfo (queue, CL_QUEUE_THREAD_HANDLE_AMD, sizeof(handle), &handle, NULL );
-            // Ensure it is valid
-            if (status == CL_SUCCESS && handle) {
-                pthread_t thId = (pthread_t)handle;
-                result = pthread_getschedparam(thId, &policy, &param);
-                if (result != 0)
-                    perror("getsched q error!\n");
-                int que_prio = param.sched_priority;
-                // Strategy to renew the que thread's priority, the smaller the highest
-                if (max_prio == que_prio) {
-                } else if (max_prio < que_prio && que_prio <= self_prio) {
-                    // self    que    max
-                    que_prio = (que_prio-PRIORITY_OFFSET)>0?(que_prio-PRIORITY_OFFSET):que_prio;
-                } else if (que_prio > self_prio) {
-                    // que   self    max
-                    que_prio = (self_prio-PRIORITY_OFFSET)>0?(self_prio-PRIORITY_OFFSET):self_prio;
+            void* handle=NULL;
+            for (auto queue : queues) {
+                cl_int status = clGetCommandQueueInfo (queue, CL_QUEUE_THREAD_HANDLE_AMD, sizeof(handle), &handle, NULL );
+                // Ensure it is valid
+                if (status == CL_SUCCESS && handle) {
+                    pthread_t thId = (pthread_t)handle;
+                    result = pthread_getschedparam(thId, &policy, &param);
+                    if (result != 0)
+                        perror("getsched q error!\n");
+                    int que_prio = param.sched_priority;
+                    // Strategy to renew the que thread's priority, the smaller the highest
+                    if (max_prio == que_prio) {
+                    } else if (max_prio < que_prio && que_prio <= self_prio) {
+                        // self    que    max
+                        que_prio = (que_prio-PRIORITY_OFFSET)>0?(que_prio-PRIORITY_OFFSET):que_prio;
+                    } else if (que_prio > self_prio) {
+                        // que   self    max
+                        que_prio = (self_prio-PRIORITY_OFFSET)>0?(self_prio-PRIORITY_OFFSET):self_prio;
+                    }
+                    int result = pthread_setschedprio(thId, que_prio);
+                    if (result != 0)
+                        perror("Renew p error!\n");
                 }
-                int result = pthread_setschedprio(thId, que_prio);
-                if (result != 0)
-                    perror("Renew p error!\n");
             }
+            pthread_attr_destroy(&attr);
         }
-        pthread_attr_destroy(&attr);
     }
 
     void flush() override {
@@ -253,11 +255,11 @@ private:
     cl_command_queue getQueue() { return queues[(idx++) % queue_size]; }
 };
 
-class OpenCLDevice : public KalmarDevice
+class OpenCLDevice final : public KalmarDevice
 {
 public:
     OpenCLDevice(const cl_device_id device, const std::wstring& path)
-        : KalmarDevice(access_type_none), programs(), device(device), path(path) {
+        : KalmarDevice(access_type_none), programs(), device(device), path(path), isAMD(false) {
         cl_int err;
 
         cl_ulong memAllocSize;
@@ -269,9 +271,10 @@ public:
         err = clGetDeviceInfo(device, CL_DEVICE_VENDOR, sizeof(vendor), vendor, NULL);
         assert(err == CL_SUCCESS);
         std::string ven(vendor);
-        if (ven.find("Advanced Micro Devices") != std::string::npos)
+        if (ven.find("Advanced Micro Devices") != std::string::npos) {
             description = L"AMD";
-        else if (ven.find("NVIDIA") != std::string::npos)
+            isAMD = true;
+        } else if (ven.find("NVIDIA") != std::string::npos)
             description = L"NVIDIA";
         else if (ven.find("Intel") != std::string::npos)
             description = L"Intel";
@@ -342,7 +345,7 @@ public:
     }
 
     std::shared_ptr<KalmarQueue> createQueue() override {
-        return std::shared_ptr<KalmarQueue>(new OpenCLQueue(this, device));
+        return std::shared_ptr<KalmarQueue>(new OpenCLQueue(this, device, isAMD));
     }
 
     ~OpenCLDevice() {
@@ -358,6 +361,7 @@ private:
     std::wstring path;
     std::wstring description;
     size_t mem;
+    bool isAMD;
 };
 
 struct CLFlag
