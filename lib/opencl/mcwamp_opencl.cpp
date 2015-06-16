@@ -54,7 +54,7 @@ static inline void free_memory(cl_event event, cl_int event_command_exec_status,
 struct cl_info
 {
     cl_mem dm;
-    bool isConst;
+    bool modify;
 };
 
 class OpenCLQueue final : public KalmarQueue
@@ -127,12 +127,12 @@ public:
             clFinish(queue);
     }
 
-    void Push(void *kernel, int idx, void* device, bool isConst) override {
+    void Push(void *kernel, int idx, void* device, bool modify) override {
         cl_mem dm = static_cast<cl_mem>(device);
         PushArgImpl(kernel, idx, sizeof(cl_mem), &dm);
         /// store const informantion for each opencl memory object
         /// after kernel launches, const data don't need to wait for kernel finish
-        mems.push_back({dm, isConst});
+        mems.push_back({dm, modify});
     }
 
     void write(void* device, const void *src, size_t count, size_t offset, bool blocking, bool free) override {
@@ -234,7 +234,7 @@ public:
         std::set<cl_mem> mms;
         std::for_each(std::begin(mems), std::end(mems),
                       [&](const cl_info& mm) {
-                        if (!mm.isConst)
+                        if (mm.modify)
                             mms.insert(mm.dm);
                       });
         std::for_each(std::begin(mms), std::end(mms),

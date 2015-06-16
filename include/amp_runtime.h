@@ -387,8 +387,13 @@ struct rw_info
             return;
         }
 
-        if (curr == pQueue)
+        if (curr == pQueue) {
+            if (modify) {
+                disc();
+                devs[curr->getDev()].state = modified;
+            }
             return;
+        }
 
         /// If both queues are from the same device, change state only
         if (curr->getDev() == pQueue->getDev()) {
