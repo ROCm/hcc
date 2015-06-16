@@ -381,7 +381,7 @@ namespace fast_math {
     #endif
   }
 
-#ifdef __AMP_CPU__
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   inline float host_fabs(float x) restrict(cpu,amp) { return std::fabs(x); }
 #else
   inline float host_fabs(float x) restrict(cpu) { return ::fabsf(x); }
@@ -1331,7 +1331,7 @@ namespace fast_math {
     #endif
   }
 
-#ifdef __AMP_CPU__
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   inline float host_fabs(float x) restrict(cpu,amp) { return std::fabs(x); }
 #else
   inline float host_fabs(float x) restrict(cpu) { return ::fabsf(x); }
@@ -1344,7 +1344,7 @@ namespace fast_math {
     #endif
   }
 
-#ifdef __AMP_CPU__
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   inline double host_fabs(double x) restrict(cpu,amp) { return std::fabs(x); }
 #else
   inline double host_fabs(double x) restrict(cpu) { return ::fabs(x); }
@@ -1531,7 +1531,7 @@ namespace fast_math {
     #endif
   }
 
-#ifdef __AMP_CPU__
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   inline float host_frexp(float x, int *exp) restrict(cpu,amp) { return std::frexp(x, exp); }
 #else
   inline float host_frexp(float x, int *exp) restrict(cpu) { return ::frexpf(x, exp); }
@@ -1868,7 +1868,7 @@ namespace fast_math {
     #endif
   }
 
-#ifdef __AMP_CPU__
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   inline float host_modff(float x, float *iptr) restrict(cpu,amp) { return std::modf(x, iptr); }
 #else
   inline float host_modff(float x, float *iptr) restrict(cpu) { return ::modff(x, iptr); }
@@ -1881,7 +1881,7 @@ namespace fast_math {
     #endif
   }
 
-#ifdef __AMP_CPU__
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   inline float host_modf(float x, float *iptr) restrict(cpu,amp) { return std::modf(x, iptr); }
 #else
   inline float host_modf(float x, float *iptr) restrict(cpu) { return ::modff(x, iptr); }
