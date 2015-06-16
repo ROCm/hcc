@@ -1782,10 +1782,6 @@ bool PromoteGlobals::runOnModule(Module& M)
         }
         updateKernels (M, promotedKernels);
 
-        /// FIXME: The following code can be removed. It is too late to add
-        ///        NoDuplicate attribute on barrier in SPIRify pass. We already
-        //         add NoDuplicate attribute in clang
-#if 0
         // If the barrier present is used, we need to ensure it cannot be duplicated.
         for (Module::iterator F = M.begin(), Fe = M.end(); F != Fe; ++F) {
                 StringRef name = F->getName();
@@ -1793,7 +1789,6 @@ bool PromoteGlobals::runOnModule(Module& M)
                         F->addFnAttr (Attribute::NoDuplicate);
                 }
         }
-#endif
 
         // Rename local variables per SPIR naming rule
         Module::GlobalListType &globals = M.getGlobalList();

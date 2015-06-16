@@ -432,7 +432,8 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
 #else //if __KALMAR_ACCELERATOR__ != 1
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
-  int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
+  auto foo = &Kernel::__cxxamp_trampoline;
+  auto bar = &Kernel::operator();
 #endif
 }
 
@@ -453,7 +454,8 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
 #else //if __KALMAR_ACCELERATOR__ != 1
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
-  int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
+  auto foo = &Kernel::__cxxamp_trampoline;
+  auto bar = &Kernel::operator();
 #endif
 }
 #pragma clang diagnostic pop
@@ -481,7 +483,8 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
 #else //if __KALMAR_ACCELERATOR__ != 1
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
-  int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
+  auto foo = &Kernel::__cxxamp_trampoline;
+  auto bar = &Kernel::operator();
 #endif
 }
 
@@ -503,7 +506,8 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
 #else //if __KALMAR_ACCELERATOR__ != 1
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
-  int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
+  auto foo = &Kernel::__cxxamp_trampoline;
+  auto bar = &Kernel::operator();
 #endif
 }
 #pragma clang diagnostic pop
@@ -538,7 +542,8 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
 #else //if __KALMAR_ACCELERATOR__ != 1
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
-  int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
+  auto foo = &Kernel::__cxxamp_trampoline;
+  auto bar = &Kernel::operator();
 #endif
 }
 
@@ -567,7 +572,8 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
 #else //if __KALMAR_ACCELERATOR__ != 1
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
-  int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
+  auto foo = &Kernel::__cxxamp_trampoline;
+  auto bar = &Kernel::operator();
 #endif
 }
 #pragma clang diagnostic pop
@@ -598,7 +604,8 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
   tiled_index<D0> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
-  int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
+  auto foo = &Kernel::__cxxamp_trampoline;
+  auto bar = &Kernel::operator();
 #endif
 }
 
@@ -625,7 +632,8 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
   tiled_index<D0> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
-  int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
+  auto foo = &Kernel::__cxxamp_trampoline;
+  auto bar = &Kernel::operator();
 #endif
 }
 #pragma clang diagnostic pop
@@ -658,7 +666,8 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
   tiled_index<D0, D1> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
-  int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
+  auto foo = &Kernel::__cxxamp_trampoline;
+  auto bar = &Kernel::operator();
 #endif
 }
 
@@ -687,7 +696,8 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
   tiled_index<D0, D1> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
-  int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
+  auto foo = &Kernel::__cxxamp_trampoline;
+  auto bar = &Kernel::operator();
 #endif
 }
 #pragma clang diagnostic pop
@@ -728,7 +738,8 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
   tiled_index<D0, D1, D2> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
-  int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
+  auto foo = &Kernel::__cxxamp_trampoline;
+  auto bar = &Kernel::operator();
 #endif
 }
 
@@ -765,7 +776,8 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
   tiled_index<D0, D1, D2> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
-  int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
+  auto foo = &Kernel::__cxxamp_trampoline;
+  auto bar = &Kernel::operator();
 #endif
 }
 #pragma clang diagnostic pop
