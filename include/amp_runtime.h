@@ -165,15 +165,15 @@ public:
     void* CreateKernel(const char* fun, void* size, void* source) { return nullptr; }
 };
 
-class AMPContext
+class KalmarContext
 {
 protected:
     /// default device
     KalmarDevice* def;
     std::vector<KalmarDevice*> Devices;
-    AMPContext() : def(nullptr), Devices() { Devices.push_back(new CPUDevice); }
+    KalmarContext() : def(nullptr), Devices() { Devices.push_back(new CPUDevice); }
 public:
-    virtual ~AMPContext() {
+    virtual ~KalmarContext() {
         for (auto dev : Devices)
             delete dev;
     }
@@ -217,7 +217,7 @@ public:
     }
 };
 
-AMPContext *getContext();
+KalmarContext *getContext();
 
 namespace CLAMP {
 // used in parallel_for_each.h

@@ -170,7 +170,7 @@ public:
     }
 };
 
-class HSAContext final : public AMPContext
+class HSAContext final : public KalmarContext
 {
 public:
     HSAContext() {

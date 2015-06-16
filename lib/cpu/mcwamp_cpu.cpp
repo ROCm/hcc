@@ -39,7 +39,7 @@ public:
     }
 };
 
-class CPUContext final : public AMPContext
+class CPUContext final : public KalmarContext
 {
 public:
     CPUContext() { Devices.push_back(new CPUFallbackDevice); }

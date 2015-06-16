@@ -385,10 +385,10 @@ static const CLFlag Flags[] = {
     // CLFlag(CL_DEVICE_TYPE_CPU, L"cpu")
 };
 
-class OpenCLContext : public AMPContext
+class OpenCLContext : public KalmarContext
 {
 public:
-    OpenCLContext() : AMPContext() {
+    OpenCLContext() : KalmarContext() {
         cl_uint num_platform;
         cl_int err;
         err = clGetPlatformIDs(0, nullptr, &num_platform);

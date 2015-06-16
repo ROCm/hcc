@@ -355,8 +355,8 @@ void PushArgPtr(void *k_, int idx, size_t sz, const void *s) {
 
 } // namespace CLAMP
 
-AMPContext *getContext() {
-  return static_cast<AMPContext*>(CLAMP::GetOrInitRuntime()->m_GetContextImpl());
+KalmarContext *getContext() {
+  return static_cast<KalmarContext*>(CLAMP::GetOrInitRuntime()->m_GetContextImpl());
 }
 
 } // namespace Concurrency
