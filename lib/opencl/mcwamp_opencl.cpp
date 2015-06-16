@@ -38,6 +38,7 @@ struct DimMaxSize {
 };
 
 static cl_context context;
+// store the latest event the current memory buffer should wait;
 static std::map<cl_mem, cl_event> events;
 
 static inline void callback_release_kernel(cl_event event, cl_int event_command_exec_status, void *user_data) {
@@ -129,6 +130,8 @@ public:
     void Push(void *kernel, int idx, void* device, bool isConst) override {
         cl_mem dm = static_cast<cl_mem>(device);
         PushArgImpl(kernel, idx, sizeof(cl_mem), &dm);
+        /// store const informantion for each opencl memory object
+        /// after kernel launches, const data don't need to wait for kernel finish
         mems.push_back({dm, isConst});
     }
 
@@ -226,6 +229,8 @@ public:
         assert(err == CL_SUCCESS);
         err = clSetEventCallback(evt, CL_COMPLETE, &callback_release_kernel, kernel);
         assert(err == CL_SUCCESS);
+
+        /// update latest event for non const buffer
         std::set<cl_mem> mms;
         std::for_each(std::begin(mems), std::end(mems),
                       [&](const cl_info& mm) {
@@ -355,6 +360,8 @@ public:
     }
 
 private:
+    /// important map, more than one kernel will be created on this device
+    /// cache each program for them
     std::map<void*, cl_program> programs;
     struct DimMaxSize d;
     cl_device_id     device;
@@ -447,6 +454,7 @@ cl_program CLCompileKernels(cl_device_id& device, void* kernel_size_, void* kern
     MD5_CTX md5ctx;
     MD5_Init(&md5ctx);
     MD5_Update(&md5ctx, source, size);
+    // hash device name, prevent storing the same kernel for different device
     MD5_Update(&md5ctx, name, strlen(name));
     MD5_Final(md5_hash, &md5ctx);
 
