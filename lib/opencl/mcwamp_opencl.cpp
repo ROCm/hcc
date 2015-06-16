@@ -38,6 +38,7 @@ struct DimMaxSize {
 };
 
 static cl_context context;
+// store the latest event the current memory buffer should wait;
 static std::map<cl_mem, cl_event> events;
 
 static inline void callback_release_kernel(cl_event event, cl_int event_command_exec_status, void *user_data) {
@@ -53,13 +54,13 @@ static inline void free_memory(cl_event event, cl_int event_command_exec_status,
 struct cl_info
 {
     cl_mem dm;
-    bool isConst;
+    bool modify;
 };
 
-class OpenCLView : public AMPView
+class OpenCLQueue final : public KalmarQueue
 {
 public:
-    OpenCLView(AMPDevice* pMan, cl_device_id dev) : AMPView(pMan), mems() {
+    OpenCLQueue(KalmarDevice* pDev, cl_device_id dev, bool isAMD) : KalmarQueue(pDev), mems() {
         cl_int err;
         idx = 0;
         for (int i = 0; i < queue_size; ++i) {
@@ -67,52 +68,54 @@ public:
             assert(err == CL_SUCCESS);
         }
 
-        // Propel underlying OpenCL driver to enque kernels faster (pthread-based)
-        // FIMXE: workable on AMD platforms only
-        pthread_t self = pthread_self();
-        pthread_attr_t attr;
-        pthread_attr_init(&attr);
-        int result = -1;
-        // Get max priority
-        int policy = 0;
-        result = pthread_attr_getschedpolicy(&attr, &policy);
-        if (result != 0)
-          perror("getsched error!\n");
-        int max_prio = sched_get_priority_max(policy);
+        if (isAMD) {
+            // Propel underlying OpenCL driver to enque kernels faster (pthread-based)
+            // FIMXE: workable on AMD platforms only
+            pthread_t self = pthread_self();
+            pthread_attr_t attr;
+            pthread_attr_init(&attr);
+            int result = -1;
+            // Get max priority
+            int policy = 0;
+            result = pthread_attr_getschedpolicy(&attr, &policy);
+            if (result != 0)
+                perror("getsched error!\n");
+            int max_prio = sched_get_priority_max(policy);
 
-        struct sched_param param;
-        // Get self priority
-        result = pthread_getschedparam(self, &policy, &param);
-        if (result != 0)
-          perror("getsched self error!\n");
-        int self_prio = param.sched_priority;
+            struct sched_param param;
+            // Get self priority
+            result = pthread_getschedparam(self, &policy, &param);
+            if (result != 0)
+                perror("getsched self error!\n");
+            int self_prio = param.sched_priority;
 #define CL_QUEUE_THREAD_HANDLE_AMD 0x403E
 #define PRIORITY_OFFSET 2
-        void* handle=NULL;
-        for (auto queue : queues) {
-            cl_int status = clGetCommandQueueInfo (queue, CL_QUEUE_THREAD_HANDLE_AMD, sizeof(handle), &handle, NULL );
-            // Ensure it is valid
-            if (status == CL_SUCCESS && handle) {
-                pthread_t thId = (pthread_t)handle;
-                result = pthread_getschedparam(thId, &policy, &param);
-                if (result != 0)
-                    perror("getsched q error!\n");
-                int que_prio = param.sched_priority;
-                // Strategy to renew the que thread's priority, the smaller the highest
-                if (max_prio == que_prio) {
-                } else if (max_prio < que_prio && que_prio <= self_prio) {
-                    // self    que    max
-                    que_prio = (que_prio-PRIORITY_OFFSET)>0?(que_prio-PRIORITY_OFFSET):que_prio;
-                } else if (que_prio > self_prio) {
-                    // que   self    max
-                    que_prio = (self_prio-PRIORITY_OFFSET)>0?(self_prio-PRIORITY_OFFSET):self_prio;
+            void* handle=NULL;
+            for (auto queue : queues) {
+                cl_int status = clGetCommandQueueInfo (queue, CL_QUEUE_THREAD_HANDLE_AMD, sizeof(handle), &handle, NULL );
+                // Ensure it is valid
+                if (status == CL_SUCCESS && handle) {
+                    pthread_t thId = (pthread_t)handle;
+                    result = pthread_getschedparam(thId, &policy, &param);
+                    if (result != 0)
+                        perror("getsched q error!\n");
+                    int que_prio = param.sched_priority;
+                    // Strategy to renew the que thread's priority, the smaller the highest
+                    if (max_prio == que_prio) {
+                    } else if (max_prio < que_prio && que_prio <= self_prio) {
+                        // self    que    max
+                        que_prio = (que_prio-PRIORITY_OFFSET)>0?(que_prio-PRIORITY_OFFSET):que_prio;
+                    } else if (que_prio > self_prio) {
+                        // que   self    max
+                        que_prio = (self_prio-PRIORITY_OFFSET)>0?(self_prio-PRIORITY_OFFSET):self_prio;
+                    }
+                    int result = pthread_setschedprio(thId, que_prio);
+                    if (result != 0)
+                        perror("Renew p error!\n");
                 }
-                int result = pthread_setschedprio(thId, que_prio);
-                if (result != 0)
-                    perror("Renew p error!\n");
             }
+            pthread_attr_destroy(&attr);
         }
-        pthread_attr_destroy(&attr);
     }
 
     void flush() override {
@@ -124,10 +127,12 @@ public:
             clFinish(queue);
     }
 
-    void Push(void *kernel, int idx, void* device, bool isConst) override {
+    void Push(void *kernel, int idx, void* device, bool modify) override {
         cl_mem dm = static_cast<cl_mem>(device);
         PushArgImpl(kernel, idx, sizeof(cl_mem), &dm);
-        mems.push_back({dm, isConst});
+        /// store const informantion for each opencl memory object
+        /// after kernel launches, const data don't need to wait for kernel finish
+        mems.push_back({dm, modify});
     }
 
     void write(void* device, const void *src, size_t count, size_t offset, bool blocking, bool free) override {
@@ -208,7 +213,7 @@ public:
 
     void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) override {
         cl_int err;
-        if(!getMan()->check(local_size, dim_ext))
+        if(!getDev()->check(local_size, dim_ext))
             local_size = NULL;
         std::vector<cl_event> eve;
         std::for_each(std::begin(mems), std::end(mems),
@@ -224,10 +229,12 @@ public:
         assert(err == CL_SUCCESS);
         err = clSetEventCallback(evt, CL_COMPLETE, &callback_release_kernel, kernel);
         assert(err == CL_SUCCESS);
+
+        /// update latest event for non const buffer
         std::set<cl_mem> mms;
         std::for_each(std::begin(mems), std::end(mems),
                       [&](const cl_info& mm) {
-                        if (!mm.isConst)
+                        if (mm.modify)
                             mms.insert(mm.dm);
                       });
         std::for_each(std::begin(mms), std::end(mms),
@@ -241,7 +248,7 @@ public:
         mems.clear();
     }
 
-    ~OpenCLView() {
+    ~OpenCLQueue() {
         for (auto queue : queues)
             clReleaseCommandQueue(queue);
     }
@@ -253,11 +260,11 @@ private:
     cl_command_queue getQueue() { return queues[(idx++) % queue_size]; }
 };
 
-class OpenCLDevice : public AMPDevice
+class OpenCLDevice final : public KalmarDevice
 {
 public:
     OpenCLDevice(const cl_device_id device, const std::wstring& path)
-        : AMPDevice(access_type_none), programs(), device(device), path(path) {
+        : KalmarDevice(access_type_none), programs(), device(device), path(path), isAMD(false) {
         cl_int err;
 
         cl_ulong memAllocSize;
@@ -269,9 +276,10 @@ public:
         err = clGetDeviceInfo(device, CL_DEVICE_VENDOR, sizeof(vendor), vendor, NULL);
         assert(err == CL_SUCCESS);
         std::string ven(vendor);
-        if (ven.find("Advanced Micro Devices") != std::string::npos)
+        if (ven.find("Advanced Micro Devices") != std::string::npos) {
             description = L"AMD";
-        else if (ven.find("NVIDIA") != std::string::npos)
+            isAMD = true;
+        } else if (ven.find("NVIDIA") != std::string::npos)
             description = L"NVIDIA";
         else if (ven.find("Intel") != std::string::npos)
             description = L"Intel";
@@ -325,7 +333,7 @@ public:
         return true;
     }
 
-    void* create(size_t count) override {
+    void* create(size_t count, struct rw_info* /* not used */ ) override {
         cl_int err;
         cl_mem dm = clCreateBuffer(context, CL_MEM_READ_WRITE, count, nullptr, &err);
         assert(err == CL_SUCCESS);
@@ -341,8 +349,8 @@ public:
         clReleaseMemObject(dm);
     }
 
-    std::shared_ptr<AMPView> createAloc() override {
-        return std::shared_ptr<AMPView>(new OpenCLView(this, device));
+    std::shared_ptr<KalmarQueue> createQueue() override {
+        return std::shared_ptr<KalmarQueue>(new OpenCLQueue(this, device, isAMD));
     }
 
     ~OpenCLDevice() {
@@ -352,12 +360,15 @@ public:
     }
 
 private:
+    /// important map, more than one kernel will be created on this device
+    /// cache each program for them
     std::map<void*, cl_program> programs;
     struct DimMaxSize d;
     cl_device_id     device;
     std::wstring path;
     std::wstring description;
     size_t mem;
+    bool isAMD;
 };
 
 struct CLFlag
@@ -374,10 +385,10 @@ static const CLFlag Flags[] = {
     // CLFlag(CL_DEVICE_TYPE_CPU, L"cpu")
 };
 
-class OpenCLContext : public AMPContext
+class OpenCLContext : public KalmarContext
 {
 public:
-    OpenCLContext() : AMPContext() {
+    OpenCLContext() : KalmarContext() {
         cl_uint num_platform;
         cl_int err;
         err = clGetPlatformIDs(0, nullptr, &num_platform);
@@ -406,10 +417,10 @@ public:
         context = clCreateContext(0, devs.size(), devs.data(), NULL, NULL, &err);
         assert(err == CL_SUCCESS);
         for (int i = 0; i < devs.size(); ++i) {
-            auto Man = new OpenCLDevice(devs[i], path[i]);
+            auto Dev = new OpenCLDevice(devs[i], path[i]);
             if (i == 0)
-                def = Man;
-            Devices.push_back(Man);
+                def = Dev;
+            Devices.push_back(Dev);
         }
     }
     ~OpenCLContext() { clReleaseContext(context); }
@@ -443,6 +454,7 @@ cl_program CLCompileKernels(cl_device_id& device, void* kernel_size_, void* kern
     MD5_CTX md5ctx;
     MD5_Init(&md5ctx);
     MD5_Update(&md5ctx, source, size);
+    // hash device name, prevent storing the same kernel for different device
     MD5_Update(&md5ctx, name, strlen(name));
     MD5_Final(md5_hash, &md5ctx);
 

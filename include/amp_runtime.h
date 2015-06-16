@@ -35,7 +35,8 @@ private:
 
 
 
-class AMPDevice;
+class KalmarDevice;
+struct rw_info;
 
 enum access_type
 {
@@ -51,50 +52,64 @@ enum queuing_mode {
     queuing_mode_automatic
 };
 
-class AMPView
+class KalmarQueue
 {
 public:
-  virtual ~AMPView() {}
+  virtual ~KalmarQueue() {}
   virtual void flush() {}
   virtual void wait() {}
   virtual void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {}
   virtual void* LaunchKernelAsync(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) { return nullptr; }
 
+  /// read data from device to host
   virtual void read(void* device, void* dst, size_t count, size_t offset) {
-      memmove(dst, (char*)device + offset, count);
+      if (dst != device)
+          memmove(dst, (char*)device + offset, count);
   }
+
+  /// wrtie data from host to device
   virtual void write(void* device, const void* src, size_t count, size_t offset, bool blocking, bool free) {
-      memmove((char*)device + offset, src, count);
+      if (src != device)
+          memmove((char*)device + offset, src, count);
       if (free)
           ::operator delete(const_cast<void*>(src));
   }
+
+  /// copy data between device pointer
   virtual void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset, bool blocking) {
-      memmove((char*)dst + dst_offset, (char*)src + src_offset, count);
+      if (src != dst)
+          memmove((char*)dst + dst_offset, (char*)src + src_offset, count);
   }
+
+  /// map host accessible pointer from device
   virtual void* map(void* device, size_t count, size_t offset, bool modify) {
       return (char*)device + offset;
   }
+
+  /// unmap host accessible pointer
   virtual void unmap(void* device, void* addr) {}
+  
+  /// push device pointer to kernel argument list
   virtual void Push(void *kernel, int idx, void* device, bool isConst) {}
 
-  AMPDevice* getMan() { return Man; }
+  KalmarDevice* getDev() { return pDev; }
   queuing_mode get_mode() const { return mode; }
   void set_mode(queuing_mode mod) { mode = mod; }
-  AMPView(AMPDevice* Man, queuing_mode mode = queuing_mode_automatic)
-      : mode(mode), Man(Man) {}
+  KalmarQueue(KalmarDevice* pDev, queuing_mode mode = queuing_mode_automatic)
+      : pDev(pDev), mode(mode) {}
 private:
-  AMPDevice* Man;
+  KalmarDevice* pDev;
   queuing_mode mode;
 };
 
-class AMPDevice
+class KalmarDevice
 {
 private:
     access_type cpu_type;
-    std::shared_ptr<AMPView> def;
+    std::shared_ptr<KalmarQueue> def;
     std::once_flag flag;
 protected:
-    AMPDevice(access_type type = access_type_read_write) : cpu_type(type), def(), flag() {}
+    KalmarDevice(access_type type = access_type_read_write) : cpu_type(type), def(), flag() {}
 public:
     access_type get_access() const { return cpu_type; }
     void set_access(access_type type) { cpu_type = type; }
@@ -108,27 +123,31 @@ public:
     virtual bool is_emulated() const = 0;
 
 
-    virtual void* create(size_t count) = 0;
-    virtual void release(void* ptr) = 0;
-    virtual void* CreateKernel(const char* fun, void* size, void* source) { return nullptr; }
-    virtual bool check(size_t* size, size_t dim_ext) { return true; }
-    virtual std::shared_ptr<AMPView> createAloc() = 0;
-    virtual ~AMPDevice() {}
+    /// create buffer on device
+    /// @key on accelerator that supports shared memory
+    //       key can used to avoid duplicate allocation
+    virtual void* create(size_t count, struct rw_info* key) = 0;
 
-    std::shared_ptr<AMPView> get_default() {
-        std::call_once(flag, [&]() { def = createAloc(); });
+    /// release buffer on device
+    virtual void release(void* ptr) = 0;
+
+    /// create kernel for current device
+    virtual void* CreateKernel(const char* fun, void* size, void* source) { return nullptr; }
+
+    /// check the dimension information is correct
+    virtual bool check(size_t* size, size_t dim_ext) { return true; }
+
+    /// create work queue from current device
+    virtual std::shared_ptr<KalmarQueue> createQueue() = 0;
+    virtual ~KalmarDevice() {}
+
+    std::shared_ptr<KalmarQueue> get_default() {
+        std::call_once(flag, [&]() { def = createQueue(); });
         return def;
     }
 };
 
-class CPUView final : public AMPView
-{
-public:
-    CPUView(AMPDevice* Man) : AMPView(Man) {}
-};
-
-
-class CPUDevice final : public AMPDevice
+class CPUDevice final : public KalmarDevice
 {
 public:
     std::wstring get_path() const override { return L"cpu"; }
@@ -140,30 +159,32 @@ public:
     bool is_emulated() const override { return true; }
 
 
-    std::shared_ptr<AMPView> createAloc() { return std::shared_ptr<AMPView>(new CPUView(this)); }
-    void* create(size_t count) override { return aligned_alloc(0x1000, count); }
+    std::shared_ptr<KalmarQueue> createQueue() { return std::shared_ptr<KalmarQueue>(new KalmarQueue(this)); }
+    void* create(size_t count, struct rw_info* /* not used */ ) override { return aligned_alloc(0x1000, count); }
     void release(void* ptr) override { ::operator delete(ptr); }
     void* CreateKernel(const char* fun, void* size, void* source) { return nullptr; }
 };
 
-class AMPContext
+class KalmarContext
 {
 protected:
-    AMPDevice* def;
-    std::vector<AMPDevice*> Devices;
-    AMPContext() : def(), Devices() { Devices.push_back(new CPUDevice); }
+    /// default device
+    KalmarDevice* def;
+    std::vector<KalmarDevice*> Devices;
+    KalmarContext() : def(nullptr), Devices() { Devices.push_back(new CPUDevice); }
 public:
-    virtual ~AMPContext() {
+    virtual ~KalmarContext() {
         for (auto dev : Devices)
             delete dev;
     }
 
-    std::vector<AMPDevice*> getDevices() { return Devices; }
+    std::vector<KalmarDevice*> getDevices() { return Devices; }
 
+    /// set default device by path
     bool set_default(const std::wstring& path) {
         auto result = std::find_if(std::begin(Devices), std::end(Devices),
-                                   [&] (const AMPDevice* Man)
-                                   { return Man->get_path() == path; });
+                                   [&] (const KalmarDevice* pDev)
+                                   { return pDev->get_path() == path; });
         if (result == std::end(Devices))
             return false;
         else {
@@ -172,14 +193,23 @@ public:
         }
     }
 
-    std::shared_ptr<AMPView> auto_select() { return def->get_default(); }
+    /// get auto selection queue
+    std::shared_ptr<KalmarQueue> auto_select() {
+        if (!def)
+            def = Devices[1];
+        return def->get_default();
+    }
 
-    AMPDevice* getDevice(std::wstring path = L"") {
-        if (path == L"default" || path == L"")
+    /// get device from path
+    KalmarDevice* getDevice(std::wstring path = L"") {
+        if (path == L"default" || path == L"") {
+            if (!def)
+                def = Devices[1];
             return def;
+        }
         auto result = std::find_if(std::begin(Devices), std::end(Devices),
-                                   [&] (const AMPDevice* man)
-                                   { return man->get_path() == path; });
+                                   [&] (const KalmarDevice* dev)
+                                   { return dev->get_path() == path; });
         if (result != std::end(Devices))
             return *result;
         else
@@ -187,18 +217,18 @@ public:
     }
 };
 
-AMPContext *getContext();
+KalmarContext *getContext();
 
 namespace CLAMP {
 // used in parallel_for_each.h
-#ifdef __AMP_CPU__
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
 extern bool is_cpu();
 extern bool in_cpu_kernel();
 extern void enter_kernel();
 extern void leave_kernel();
 #endif
 
-extern void *CreateKernel(std::string, AMPView*);
+extern void *CreateKernel(std::string, KalmarQueue*);
 extern void MatchKernelNames(std::string &);
 
 extern void PushArg(void *, int, size_t, const void *);
@@ -206,64 +236,78 @@ extern void PushArgPtr(void *, int, size_t, const void *);
 
 } // namespace CLAMP
 
-static inline const std::shared_ptr<AMPView> get_cpu_view() {
-    static auto cpu_view = getContext()->getDevice(L"cpu")->get_default();
-    return cpu_view;
+static inline const std::shared_ptr<KalmarQueue> get_cpu_queue() {
+    static auto cpu_queue = getContext()->getDevice(L"cpu")->get_default();
+    return cpu_queue;
 }
 
+/// software MSI protocol
+/// Used to avoid unnecessary copy when array_view<const, T> is used
 enum states
 {
-    modified,
-    shared,
-    invalid
+    modified, // exclusive owned data, can read and write to it
+    shared, // shared on multiple device, the content on it is the same
+    invalid // not able to read and write on the data, need to read from other device
 };
 
+/// store information of each device
 struct dev_info
 {
-    void* data;
-    states state;
+    void* data; /// pointer to device data
+    states state; /// state of the data on current device
 };
 
-static inline bool is_cpu_acc(const std::shared_ptr<AMPView>& View) {
-    return View->getMan()->get_path() == L"cpu";
+static inline bool is_cpu_dev(const std::shared_ptr<KalmarQueue>& Queue) {
+    return Queue->getDev()->get_path() == L"cpu";
 }
 
-static inline void copy_helper(std::shared_ptr<AMPView>& srcView, dev_info& src,
-                               std::shared_ptr<AMPView>& dstView, dev_info& dst,
+static inline void copy_helper(std::shared_ptr<KalmarQueue>& srcQueue, dev_info& src,
+                               std::shared_ptr<KalmarQueue>& dstQueue, dev_info& dst,
                                size_t cnt, bool block,
                                size_t src_offset = 0, size_t dst_offset = 0) {
-    if (is_cpu_acc(srcView))
-        dstView->write(dst.data, (char*)src.data + src_offset, cnt, dst_offset, block, false);
-    else if (is_cpu_acc(dstView))
-        srcView->read(src.data, (char*)dst.data + dst_offset, cnt, src_offset);
+    if (is_cpu_dev(srcQueue))
+        dstQueue->write(dst.data, (char*)src.data + src_offset, cnt, dst_offset, block, false);
+    else if (is_cpu_dev(dstQueue))
+        srcQueue->read(src.data, (char*)dst.data + dst_offset, cnt, src_offset);
     else {
-        if (dstView->getMan() == srcView->getMan())
-            dstView->copy(src.data, dst.data, cnt, src_offset, dst_offset, block);
+        if (dstQueue->getDev() == srcQueue->getDev())
+            dstQueue->copy(src.data, dst.data, cnt, src_offset, dst_offset, block);
         else {
-            void* temp = ::operator new(cnt);
-            srcView->read(src.data, temp, cnt, src_offset);
-            dstView->write(dst.data, temp, cnt, dst_offset, block, true);
+            if (src.data != dst.data) {
+                void* temp = ::operator new(cnt);
+                srcQueue->read(src.data, temp, cnt, src_offset);
+                dstQueue->write(dst.data, temp, cnt, dst_offset, block, true);
+            }
         }
     }
 }
 
 struct rw_info
 {
+    /// host accessible pointer
+    /// it will be set if
+    /// 1. rw_info constructed on cpu accelerator
+    /// 2. rw_info constructed on accelerator supports
+    ///    unified memory and access_type is not none
     void *data;
     const size_t count;
-    std::shared_ptr<AMPView> curr;
-    std::shared_ptr<AMPView> master;
-    std::shared_ptr<AMPView> stage;
-    std::map<AMPDevice*, dev_info> Alocs;
+    std::shared_ptr<KalmarQueue> curr;
+    std::shared_ptr<KalmarQueue> master;
+    std::shared_ptr<KalmarQueue> stage;
+    std::map<KalmarDevice*, dev_info> devs;
     access_type mode;
+    /// This will be set if this rw_info is constructed with host pointer
+    /// because rw_info cannot free host pointer
     unsigned int HostPtr : 1;
 
 
     // consruct array_view
     rw_info(const size_t count, void* ptr)
         : data(ptr), count(count), curr(nullptr), master(nullptr), stage(nullptr),
-        Alocs(), mode(access_type_none), HostPtr(ptr != nullptr) {
-#ifdef __AMP_CPU__
+        devs(), mode(access_type_none), HostPtr(ptr != nullptr) {
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+            /// if array_view is constructed in cpu path kernel
+            /// allocate memory for it and do nothing
             if (CLAMP::in_cpu_kernel() && ptr == nullptr) {
                 data = aligned_alloc(0x1000, count);
                 return;
@@ -271,76 +315,114 @@ struct rw_info
 #endif
             if (ptr) {
                 mode = access_type_read_write;
-                curr = master = get_cpu_view();
-                Alocs[curr->getMan()] = {ptr, modified};
+                curr = master = get_cpu_queue();
+                devs[curr->getDev()] = {ptr, modified};
             }
         }
 
     // construct array
-    rw_info(const std::shared_ptr<AMPView> Aloc, const std::shared_ptr<AMPView> Stage,
+    rw_info(const std::shared_ptr<KalmarQueue> Queue, const std::shared_ptr<KalmarQueue> Stage,
             const size_t count, access_type mode_) : data(nullptr), count(count),
-    curr(Aloc), master(Aloc), stage(nullptr), Alocs(), mode(mode_), HostPtr(false) {
-#ifdef __AMP_CPU__
+    curr(Queue), master(Queue), stage(nullptr), devs(), mode(mode_), HostPtr(false) {
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
         if (CLAMP::in_cpu_kernel() && data == nullptr) {
             data = aligned_alloc(0x1000, count);
             return;
         }
 #endif
         if (mode == access_type_auto)
-            mode = curr->getMan()->get_access();
-        Alocs[curr->getMan()] = {curr->getMan()->create(count), modified};
-        if (is_cpu_acc(curr) || (curr->getMan()->is_unified() && mode != access_type_none))
-            data = Alocs[curr->getMan()].data;
-        if (is_cpu_acc(curr)) {
+            mode = curr->getDev()->get_access();
+        devs[curr->getDev()] = {curr->getDev()->create(count, this), modified};
+
+        // set data pointer
+        if (is_cpu_dev(curr) || (curr->getDev()->is_unified() && mode != access_type_none))
+            data = devs[curr->getDev()].data;
+        if (is_cpu_dev(curr)) {
             stage = Stage;
             if (Stage != curr)
-                Alocs[stage->getMan()] = {stage->getMan()->create(count), invalid};
+                devs[stage->getDev()] = {stage->getDev()->create(count, this), invalid};
         } else
             stage = curr;
     }
 
-    void construct(std::shared_ptr<AMPView> aloc) {
-        curr = aloc;
-        Alocs[aloc->getMan()] = {aloc->getMan()->create(count), invalid};
-        if (is_cpu_acc(aloc))
-            data = Alocs[aloc->getMan()].data;
+    void construct(std::shared_ptr<KalmarQueue> pQueue) {
+        curr = pQueue;
+        devs[pQueue->getDev()] = {pQueue->getDev()->create(count, this), invalid};
+        if (is_cpu_dev(pQueue))
+            data = devs[pQueue->getDev()].data;
     }
 
     void disc() {
-        for (auto& it : Alocs)
+        for (auto& it : devs)
             it.second.state = invalid;
     }
 
+    /// optimization: Before performing copy, if the state of cpu accelerator is shared,
+    /// it means the data on cpu is the ssame on curr accelerator, use the data
+    /// on cpu to perform the copy
     void try_switch_to_cpu() {
-        auto cpu_view = get_cpu_view();
-        if (Alocs.find(cpu_view->getMan()) != std::end(Alocs))
-            if (Alocs[cpu_view->getMan()].state == shared)
-                curr = cpu_view;
+        if (is_cpu_dev(curr))
+            return;
+        auto cpu_queue = get_cpu_queue();
+        if (devs.find(cpu_queue->getDev()) != std::end(devs))
+            if (devs[cpu_queue->getDev()].state == shared)
+                curr = cpu_queue;
     }
 
-    void sync(std::shared_ptr<AMPView> aloc, bool modify) {
-#ifdef __AMP_CPU__
+    /// synchronize data to device pQueue belongs to
+    void sync(std::shared_ptr<KalmarQueue> pQueue, bool modify, bool block = true) {
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
         if (CLAMP::in_cpu_kernel())
             return;
 #endif
-        if (Alocs.find(aloc->getMan()) == std::end(Alocs)) {
-            Alocs[aloc->getMan()] = {aloc->getMan()->create(count), invalid};
-            if (is_cpu_acc(aloc))
-                data = Alocs[aloc->getMan()].data;
-        }
         if (!curr) {
-            curr = aloc;
+            /// This can only happen if array_view is constructed with size and
+            /// is not accessed before
+            dev_info dev = {pQueue->getDev()->create(count, this),
+                modify ? modified : shared};
+            devs[pQueue->getDev()] = dev;
+            if (is_cpu_dev(pQueue))
+                data = dev.data;
+            curr = pQueue;
             return;
         }
-        if (curr->getMan() == aloc->getMan())
+
+        if (curr == pQueue) {
+            if (modify) {
+                disc();
+                devs[curr->getDev()].state = modified;
+            }
             return;
+        }
+
+        /// If both queues are from the same device, change state only
+        if (curr->getDev() == pQueue->getDev()) {
+            // curr->wait();
+            curr = pQueue;
+            if (modify) {
+                disc();
+                devs[curr->getDev()].state = modified;
+            }
+            return;
+        }
+
+        /// If the buffer on device is not allocate, allocated space for it
+        if (devs.find(pQueue->getDev()) == std::end(devs)) {
+            dev_info dev = {pQueue->getDev()->create(count, this), invalid};
+            devs[pQueue->getDev()] = dev;
+            if (is_cpu_dev(pQueue))
+                data = dev.data;
+        }
+
         try_switch_to_cpu();
-        dev_info& dst = Alocs[aloc->getMan()];
-        dev_info& src = Alocs[curr->getMan()];
+        dev_info& dst = devs[pQueue->getDev()];
+        dev_info& src = devs[curr->getDev()];
         if (dst.state == invalid && src.state != invalid)
-            copy_helper(curr, src, aloc, dst, count, true);
-        curr = aloc;
+            copy_helper(curr, src, pQueue, dst, count, block);
+        /// if the data on current device is going to be modified
+        /// changed the state of current device as modified
         if (modify) {
+            curr = pQueue;
             disc();
             dst.state = modified;
         } else {
@@ -350,68 +432,30 @@ struct rw_info
         }
     }
 
-    void append(std::shared_ptr<AMPView>& aloc, bool isArray, bool isConst) {
-        if (!curr) {
-            construct(aloc);
-            dev_info& obj = Alocs[curr->getMan()];
-            if (isConst)
-                obj.state = shared;
-            else
-                obj.state = modified;
-        }
-        if (aloc->getMan() != curr->getMan()) {
-            if (Alocs.find(aloc->getMan()) == std::end(Alocs))
-                Alocs[aloc->getMan()] = {aloc->getMan()->create(count), invalid};
-            try_switch_to_cpu();
-            dev_info& dst = Alocs[aloc->getMan()];
-            dev_info& src = Alocs[curr->getMan()];
-            if (dst.state == invalid && (src.state != invalid || isArray))
-                copy_helper(curr, src, aloc, dst, count, false);
-            if (isConst) {
-                dst.state = shared;
-                if (src.state == modified)
-                    src.state = shared;
-            } else {
-                curr = aloc;
-                if (src.state != invalid)
-                    disc();
-                dst.state = modified;
-            }
-        } else {
-            if (curr != aloc) {
-                // curr->wait();
-                curr = aloc;
-            }
-        }
-    }
-
     void* map(size_t cnt, size_t offset, bool modify) {
         if (cnt == 0)
             cnt = count;
         if (!curr) {
             curr = getContext()->auto_select();
-            Alocs[curr->getMan()] = {curr->getMan()->create(count), modify ? modified : shared};
+            devs[curr->getDev()] = {curr->getDev()->create(count, this), modify ? modified : shared};
             return curr->map(data, cnt, offset, modify);
         }
         try_switch_to_cpu();
-        dev_info& info = Alocs[curr->getMan()];
+        dev_info& info = devs[curr->getDev()];
         if (info.state == shared && modify) {
             disc();
             info.state = modified;
         }
         return curr->map(info.data, cnt, offset, modify);
     }
-    void unmap(void* addr) { curr->unmap(Alocs[curr->getMan()].data, addr); }
 
+    void unmap(void* addr) { curr->unmap(devs[curr->getDev()].data, addr); }
     void synchronize(bool modify) { sync(master, modify); }
-
-    void get_cpu_access(bool modify) {
-        sync(get_cpu_view(), modify);
-    }
+    void get_cpu_access(bool modify) { sync(get_cpu_queue(), modify); }
 
     void write(const void* src, int cnt, int offset, bool blocking) {
-        curr->write(Alocs[curr->getMan()].data, src, cnt, offset, blocking, false);
-        dev_info& dev = Alocs[curr->getMan()];
+        curr->write(devs[curr->getDev()].data, src, cnt, offset, blocking, false);
+        dev_info& dev = devs[curr->getDev()];
         if (dev.state != modified) {
             disc();
             dev.state = modified;
@@ -419,7 +463,7 @@ struct rw_info
     }
 
     void read(void* dst, int cnt, int offset) {
-        curr->read(Alocs[curr->getMan()].data, dst, cnt, offset);
+        curr->read(devs[curr->getDev()].data, dst, cnt, offset);
     }
 
     void copy(rw_info* other, int src_offset, int dst_offset, int cnt) {
@@ -434,11 +478,11 @@ struct rw_info
             if (!other->curr)
                 other->construct(curr);
         }
-        dev_info& dst = other->Alocs[other->curr->getMan()];
-        dev_info& src = Alocs[curr->getMan()];
+        dev_info& dst = other->devs[other->curr->getDev()];
+        dev_info& src = devs[curr->getDev()];
         if (src.state == invalid) {
             src.state = shared;
-            if (is_cpu_acc(curr))
+            if (is_cpu_dev(curr))
                 memset((char*)src.data + src_offset, 0, cnt);
             else {
                 void *ptr = aligned_alloc(0x1000, cnt);
@@ -453,7 +497,7 @@ struct rw_info
     }
 
     ~rw_info() {
-#ifdef __AMP_CPU__
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
         if (CLAMP::in_cpu_kernel()) {
             if (data && !HostPtr)
                 ::operator delete(data);
@@ -462,17 +506,17 @@ struct rw_info
 #endif
         if (HostPtr)
             synchronize(false);
-        auto cpu_acc = get_cpu_view()->getMan();
-        if (Alocs.find(cpu_acc) != std::end(Alocs)) {
+        auto cpu_queue = get_cpu_queue()->getDev();
+        if (devs.find(cpu_queue) != std::end(devs)) {
             if (!HostPtr)
-                cpu_acc->release(Alocs[cpu_acc].data);
-            Alocs.erase(cpu_acc);
+                cpu_queue->release(devs[cpu_queue].data);
+            devs.erase(cpu_queue);
         }
-        AMPDevice* pMan;
+        KalmarDevice* pDev;
         dev_info info;
-        for (const auto it : Alocs) {
-            std::tie(pMan, info) = it;
-            pMan->release(info.data);
+        for (const auto it : devs) {
+            std::tie(pDev, info) = it;
+            pDev->release(info.data);
         }
     }
 };

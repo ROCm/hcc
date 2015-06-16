@@ -68,15 +68,17 @@ namespace Concurrency {
 
 class HSADevice;
 
-class HSAView final : public AMPView
+class HSAQueue final : public KalmarQueue
 {
 public:
-    HSAView(AMPDevice* pMan) : AMPView(pMan) {}
+    HSAQueue(AMPDevice* pDev) : KalmarQueue(pDev) {}
 private:
     void Push(void *kernel, int idx, void *device, bool isConst) override {
         PushArgImpl(kernel, idx, sizeof(void*), &device);
     }
 };
+
+static std::map<rw_info*, void*> addrs;
 
 class HSADevice final : public AMPDevice
 {
@@ -84,10 +86,13 @@ class HSADevice final : public AMPDevice
 public:
     HSADevice() : AMPDevice(access_type_read_write) {}
 
-    void* create(size_t count) override {
-        void *data = aligned_alloc(0x1000, count);
-        CLAMP::RegisterMemory(data, count);
-        return data;
+    void* create(size_t count, struct rw_info* key) override {
+        if (addrs.find(key) == std::end(addrs)) {
+            void *data = aligned_alloc(0x1000, count);
+            CLAMP::RegisterMemory(data, count);
+            addrs[key] = data;
+        }
+        return addrs[key];
     }
     void release(void *data) override { ::operator delete(data); }
 
@@ -160,19 +165,18 @@ public:
         std::shared_future<void>* fut = dispatch->dispatchKernelAndGetFuture();
         return static_cast<void*>(fut);
     }
-    std::shared_ptr<AMPView> createAloc() override {
-        return std::shared_ptr<AMPView>(new HSAView(this));
+    std::shared_ptr<KalmarQueue> createQueue() override {
+        return std::shared_ptr<KalmarQueue>(new HSAQueue(this));
     }
 };
 
-class HSAContext final : public AMPContext
+class HSAContext final : public KalmarContext
 {
 public:
     HSAContext() {
-        auto Man = std::shared_ptr<AMPDevice>(new HSADevice);
-        default_map[Man] = Man->createAloc();
-        Devices.push_back(Man);
-        def = Man;
+        auto Dev = std::shared_ptr<AMPDevice>(new HSADevice);
+        Devices.push_back(Dev);
+        def = Dev;
     }
 };
 
