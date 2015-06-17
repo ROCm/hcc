@@ -1665,7 +1665,7 @@ public:
   access_type get_cpu_access_type() const { return m_device.get_access(); }
 
   __global T& operator[](const index<N>& idx) restrict(amp,cpu) {
-#if __KALMAR_ACCELERATOR__ != 1
+#ifndef __KALMAR_ACCELERATOR__
       if (!m_device.get())
           throw runtime_exception("The array is not accessible on CPU.", 0);
       m_device.synchronize(true);
