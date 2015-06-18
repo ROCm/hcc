@@ -5,7 +5,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// FIXME this file will place C++AMP Runtime implementation (OpenCL version)
+// Kalmar Runtime implementation (OpenCL version)
 
 #include <iostream>
 #include <vector>
