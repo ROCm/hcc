@@ -10,13 +10,6 @@
 
 #define HSA_PRINTF_DEBUG  (0)
 
-#define VA_NARGS_IMPL(_1, _2, _3, _4, _5, N, ...) N
-#define VA_NARGS(...) VA_NARGS_IMPL(__VA_ARGS__, 5, 4, 3, 2, 1)
-
-#define HSA_PRINTF_IMPL2(count, ...) hsa_printf ## count (__VA_ARGS__)
-#define HSA_PRINTF_IMPL(count, ...) HSA_PRINTF_IMPL2(count, __VA_ARGS__) 
-#define HSA_PRINTF(...) HSA_PRINTF_IMPL(VA_NARGS(__VA_ARGS__), __VA_ARGS__)
-
 union HSAPrintfPacketData {
   unsigned int ui;
   int i;
@@ -26,15 +19,17 @@ union HSAPrintfPacketData {
 };
 
 enum HSAPrintfPacketDataType {
-  HSA_PRINTF_UNSIGNED_INT
-  ,HSA_PRINTF_SIGNED_INT
-  ,HSA_PRINTF_FLOAT
-  ,HSA_PRINTF_VOID_PTR
-  ,HSA_PRINTF_CONST_VOID_PTR
+  HSA_PRINTF_UNUSED       // 0
+  ,HSA_PRINTF_UNSIGNED_INT // 1
+  ,HSA_PRINTF_SIGNED_INT  // 2
+  ,HSA_PRINTF_FLOAT       // 3
+  ,HSA_PRINTF_VOID_PTR    // 4
+  ,HSA_PRINTF_CONST_VOID_PTR  // 5
 };
 
 class HSAPrintfPacket {
 public:
+  void clear() { type = HSA_PRINTF_UNUSED; }
   void set(unsigned int d)  { type = HSA_PRINTF_UNSIGNED_INT;   data.ui = d; }
   void set(int d)           { type = HSA_PRINTF_SIGNED_INT;     data.i = d; }
   void set(float d)         { type = HSA_PRINTF_FLOAT;          data.f = d; }
@@ -52,14 +47,11 @@ enum HSAPrintfError {
 class HSAPrintfPacketQueue {
 public:
   HSAPrintfPacketQueue(HSAPrintfPacket* buffer, unsigned int num)
-        :queue(buffer),num(num),cursor(0),overflow(0) {
-    lock = 0;
-  }
+        :queue(buffer),num(num),overflow(false),cursor(0) {}
   HSAPrintfPacket* queue;
   unsigned int num;
-  unsigned int cursor;
-  unsigned int overflow;
-  std::atomic_int lock;
+  bool overflow;
+  std::atomic_int cursor;
 };
 
 static inline HSAPrintfPacketQueue* createHSAPrintfPacketQueue(unsigned int num) {
@@ -75,56 +67,54 @@ static inline HSAPrintfPacketQueue* destroyHSAPrintfPacketQueue(HSAPrintfPacketQ
 }
 
 static inline void dumpHSAPrintfPacketQueue(const HSAPrintfPacketQueue* q) {
-  std::cout << "num: " << q->num << " "
-            << "cursor: " << q->cursor << " "
-            << "overflow: " << q->overflow << " "
-            << "lock: " << q->lock.load() << "\n";
+  std::cout << "buffer size: " << q->num << " "
+            << "cursor: " << q->cursor.load() << " "
+            << "overflow: " << q->overflow << "\n";
+
+#if HSA_PRINTF_DEBUG 
+  for (int i = 0; i < q->num / 16; ++i) {
+    for (int j = 0; j < 16; ++j) {
+      std::cout << q->queue[i * 16 + j].type << " ";
+    }
+    std::cout << "\n";
+  }
+#endif
 }
 
 // get the argument count
 static inline void countArg(unsigned int& count) {}
 template <typename T> 
-static inline void countArg(unsigned int& count, const T& t) { count++; }
+static inline void countArg(unsigned int& count, const T& t) { ++count; }
 template <typename T, typename... Rest> 
 static inline void countArg(unsigned int& count, const T& t, const Rest&... rest) {
-  count++;
+  ++count;
   countArg(count,rest...);
 }
 
 template <typename T>
-static inline void set_batch(HSAPrintfPacketQueue* queue, const T t) {
-  queue->queue[queue->cursor++].set(t);
+static inline void set_batch(HSAPrintfPacketQueue* queue, int offset, const T t) {
+  queue->queue[offset].set(t);
 }
 template <typename T, typename... Rest>
-static inline void set_batch(HSAPrintfPacketQueue* queue, const T t, Rest... rest) {
-  queue->queue[queue->cursor++].set(t);
-  set_batch(queue, rest...);
+static inline void set_batch(HSAPrintfPacketQueue* queue, int offset, const T t, Rest... rest) {
+  queue->queue[offset].set(t);
+  set_batch(queue, offset + 1, rest...);
 }
 
 template <typename... All>
-static inline HSAPrintfError hsa_printf(HSAPrintfPacketQueue* queue, const char* format, All... all) restrict(amp,cpu) {
-  int unlocked = 0;
-  int locked = 1;
-
+static inline HSAPrintfError hsa_printf(HSAPrintfPacketQueue* queue, All... all) restrict(amp,cpu) {
   unsigned int count = 0;      
-  countArg(count, format, all...);
+  countArg(count, all...);
 
   HSAPrintfError error = HSA_PRINTF_SUCCESS;
 
-  // disable queue lock for now as HSA cas instruction seems to have trouble
-  //while(queue->lock.compare_exchange_strong(unlocked, locked) == false) {
-  //  unlocked = 0;
-  //}
-
-  if ((count + 1) + queue->cursor >= queue->num) {
-    queue->overflow = 1;
+  if (count + 1 + queue->cursor.load() > queue->num) {
+    queue->overflow = true;
     error = HSA_PRINTF_BUFFER_OVERFLOW;
   } else {
-    set_batch(queue, count, format, all...);
+    unsigned int offset = queue->cursor.fetch_add(count + 1);
+    set_batch(queue, offset, count, all...);
   }
-
-  // disable queue lock for now as HSA cas instruction seems to have trouble
-  //queue->lock.store(unlocked);
 
   return error;
 }
@@ -138,16 +128,8 @@ static std::regex pointerPattern("(%){1}[ps]");
 static std::regex doubleAmpersandPattern("(%){2}");
 
 static inline void hsa_process_printf_queue(HSAPrintfPacketQueue* queue) {
-  int unlocked = 0;
-  int locked = 1;
-
-  // disable queue lock for now as HSA cas instruction seems to have trouble
-  //while(queue->lock.compare_exchange_strong(unlocked, locked) == false) {
-  //  unlocked = 0;
-  //}
-    
   unsigned int numPackets = 0;
-  for (unsigned int i = 0; i < queue->cursor; ) {
+  for (unsigned int i = 0; i < queue->cursor.load(); ) {
     numPackets = queue->queue[i++].data.ui;
     if (numPackets == 0)
       continue;
@@ -165,12 +147,11 @@ static inline void hsa_process_printf_queue(HSAPrintfPacketQueue* queue) {
     printf("%s:%d \t number of matches = %d\n", __FUNCTION__, __LINE__, (int)specifierMatches.size());
 #endif
     
-    for (unsigned int j = 1; j < numPackets; j++,i++) {
+    for (unsigned int j = 1; j < numPackets; ++j, ++i) {
 
       if (!std::regex_search(formatString, specifierMatches, specifierPattern)) {
         // More printf argument than format specifier??
         // Just skip to the next printf request
-        i = formatStringIndex + numPackets;
         break;
       }
 
@@ -211,10 +192,11 @@ static inline void hsa_process_printf_queue(HSAPrintfPacketQueue* queue) {
     printf("Overflow detected!\n");
   }
 #endif
-  queue->overflow = 0;
-  queue->cursor = 0;
 
-  // disable queue lock for now as HSA cas instruction seems to have trouble
-  //while(queue->lock.compare_exchange_strong(unlocked, locked) == false) {
-  //queue->lock.store(unlocked,std::memory_order_release);
+  // reset internal data
+  for (int i = 0; i < queue->cursor.load(); ++i) {
+    queue->queue[i].clear();
+  }
+  queue->overflow = false;
+  queue->cursor.store(0);
 }

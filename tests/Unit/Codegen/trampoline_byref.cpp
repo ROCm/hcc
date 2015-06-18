@@ -1,4 +1,4 @@
-// RUN: %amp_device -D__GPU__ -c -S -emit-llvm %s -o -|%cppfilt|%FileCheck %s
+// RUN: %amp_device -D__KALMAR_ACCELERATOR__ -c -S -emit-llvm %s -o -|%cppfilt|%FileCheck %s
 #include "amp.h"
 class baz {
  public:

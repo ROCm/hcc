@@ -1,8 +1,8 @@
 // XFAIL: *
-// RUN: %amp_device -c -D__GPU__=1 -S -emit-llvm %s -o -|%cppfilt|%FileCheck %s
-// RUN: %amp_device -c -D__GPU__=1 %s -o %t.device.o
+// RUN: %amp_device -c -D__KALMAR_ACCELERATOR__=1 -S -emit-llvm %s -o -|%cppfilt|%FileCheck %s
+// RUN: %amp_device -c -D__KALMAR_ACCELERATOR__=1 %s -o %t.device.o
 // RUN: %gtest_amp %s %t.device.o -o %t && %t
-#ifndef __GPU__
+#ifndef __KALMAR_ACCELERATOR__
 #include <gtest/gtest.h>
 #endif
 class base{
@@ -24,7 +24,7 @@ class baz {
   int bar;
 };
 
-#ifdef __GPU__
+#ifdef __KALMAR_ACCELERATOR__
 int kerker(void) restrict(amp,cpu) {
   base b(1234, 0.0f);
   // Will pass if deserializer declaration and definition are generated

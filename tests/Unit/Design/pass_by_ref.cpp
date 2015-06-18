@@ -4,7 +4,7 @@
 #include <amp.h>
 #include <stdlib.h>
 #include <iostream>
-#ifndef __GPU__
+#ifndef __KALMAR_ACCELERATOR__
 #include <gtest/gtest.h>
 #endif
 
@@ -13,7 +13,7 @@ class myVecAdd {
   // CPU-side constructor. Written by the user
   myVecAdd(Concurrency::array_view<int>& a,
     Concurrency::array_view<int> &b,
-    Concurrency::array<int, 1> &c):
+    Concurrency::array_view<int, 1> &c):
     a_(a), b_(b), c_(c) {
   }
   void operator() (Concurrency::index<1> idx) restrict(amp) {
@@ -21,30 +21,30 @@ class myVecAdd {
   }
  private:
   Concurrency::array_view<int> a_, b_;
-  Concurrency::array<int>& c_;
+  Concurrency::array_view<int>& c_;
 };
 void bar(void) restrict(amp,cpu) {
   int* foo = reinterpret_cast<int*>(&myVecAdd::__cxxamp_trampoline);
 }
-#ifndef __GPU__
+#ifndef __KALMAR_ACCELERATOR__
 TEST(Design, Final) {
   const int vecSize = 100;
 
   // Alloc & init input data
   Concurrency::extent<1> e(vecSize);
-  Concurrency::array<int, 1> a(vecSize);
-  Concurrency::array<int, 1> b(vecSize);
-  Concurrency::array<int, 1> c(vecSize);
+  Concurrency::array_view<int, 1> a(vecSize);
+  Concurrency::array_view<int, 1> b(vecSize);
+  Concurrency::array_view<int, 1> c(vecSize);
   int sum = 0;
-  for (Concurrency::index<1> i(0); i[0] < vecSize; i++) {
-    a[i] = 100.0f * rand() / RAND_MAX;
-    b[i] = 100.0f * rand() / RAND_MAX;
-    sum += a[i] + b[i];
-  }
-
   Concurrency::array_view<int> ga(a);
   Concurrency::array_view<int> gb(b);
   myVecAdd mf(ga, gb, c);
+  for (Concurrency::index<1> i(0); i[0] < vecSize; i++) {
+    ga[i] = 100.0f * rand() / RAND_MAX;
+    gb[i] = 100.0f * rand() / RAND_MAX;
+    sum += a[i] + b[i];
+  }
+
   Concurrency::parallel_for_each(
     e,
     mf);

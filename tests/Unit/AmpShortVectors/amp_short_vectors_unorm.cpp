@@ -238,17 +238,17 @@ int main(void) {
     array<unorm, 1> b(vecSize);
     array<unorm, 1> c(vecSize); // Parallel results
     array<unorm, 1> d(vecSize); // Sequential results
-    for (index<1> i(0); i[0] < vecSize; i++) {
-      unorm tmp1(rand() / 1000.0f);
-      a[i] = tmp1;
-      unorm tmp2(rand() / 1000.0f);
-      b[i] = tmp2;
-    }
-
     array_view<unorm> ga(a);
     array_view<unorm> gb(b);
     array_view<unorm> gc(c);
     array_view<unorm> gd(d);
+    for (index<1> i(0); i[0] < vecSize; i++) {
+      unorm tmp1(rand() / 1000.0f);
+      ga[i] = tmp1;
+      unorm tmp2(rand() / 1000.0f);
+      gb[i] = tmp2;
+    }
+
     parallel_for_each(
       e,
       [=](index<1> idx) restrict(amp) {
