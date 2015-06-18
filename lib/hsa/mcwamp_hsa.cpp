@@ -5,14 +5,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C++AMP Runtime implementation (HSA version)
+// Kalmar Runtime implementation (HSA version)
+
 #include <cstdlib>
 #include <cassert>
 #include <iostream>
 #include <map>
 #include <vector>
 
-#include <amp_allocator.h>
 #include <amp_runtime.h>
 
 #include "HSAContext.h"
@@ -71,7 +71,7 @@ class HSADevice;
 class HSAQueue final : public KalmarQueue
 {
 public:
-    HSAQueue(AMPDevice* pDev) : KalmarQueue(pDev) {}
+    HSAQueue(KalmarDevice* pDev) : KalmarQueue(pDev) {}
 private:
     void Push(void *kernel, int idx, void *device, bool isConst) override {
         PushArgImpl(kernel, idx, sizeof(void*), &device);
@@ -80,11 +80,11 @@ private:
 
 static std::map<rw_info*, void*> addrs;
 
-class HSADevice final : public AMPDevice
+class HSADevice final : public KalmarDevice
 {
     std::map<std::string, HSAContext::Kernel *> __mcw_hsa_kernels;
 public:
-    HSADevice() : AMPDevice(access_type_read_write) {}
+    HSADevice() : KalmarDevice(access_type_read_write) {}
 
     void* create(size_t count, struct rw_info* key) override {
         if (addrs.find(key) == std::end(addrs)) {
@@ -96,13 +96,13 @@ public:
     }
     void release(void *data) override { ::operator delete(data); }
 
-    std::wstring get_path() override { return L"hsa"; }
-    std::wstring get_description() override { return L"HSA Device"; }
-    size_t get_mem() override { return 0; }
-    bool is_double() override { return true; }
-    bool is_lim_double() override { return true; }
-    bool is_unified() override { return true; }
-    bool is_emulated() override { return false; }
+    std::wstring get_path() const override { return L"hsa"; }
+    std::wstring get_description() const override { return L"HSA Device"; }
+    size_t get_mem() const override { return 0; }
+    bool is_double() const override { return true; }
+    bool is_lim_double() const override { return true; }
+    bool is_unified() const override { return true; }
+    bool is_emulated() const override { return false; }
 
     void* CreateKernel(const char* fun, void* size, void* source) override {
         std::string str(fun);
@@ -112,7 +112,7 @@ public:
             char *kernel_source = (char*)malloc(kernel_size+1);
             memcpy(kernel_source, source, kernel_size);
             kernel_source[kernel_size] = '\0';
-            std::string kname = std::string("&")+s;
+            std::string kname = std::string("&")+fun;
             //std::cerr << "CLAMP::HSA::Creating kernel: " << kname << "\n";
             kernel = Concurrency::CLAMP::GetOrInitHSAContext()->
                 createKernel(kernel_source, kernel_size, kname.c_str());
@@ -150,7 +150,7 @@ public:
         dispatch->dispatchKernelWaitComplete();
         delete(dispatch);
     }
-    void LaunchKernelAsync(void *ker, size_t nr_dim, size_t *global, size_t *local) override {
+    void* LaunchKernelAsync(void *ker, size_t nr_dim, size_t *global, size_t *local) override {
         HSAContext::Dispatch *dispatch =
             reinterpret_cast<HSAContext::Dispatch*>(ker);
         size_t tmp_local[] = {0, 0, 0};
@@ -174,7 +174,7 @@ class HSAContext final : public KalmarContext
 {
 public:
     HSAContext() {
-        auto Dev = std::shared_ptr<AMPDevice>(new HSADevice);
+        auto Dev = new HSADevice;
         Devices.push_back(Dev);
         def = Dev;
     }
