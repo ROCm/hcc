@@ -16,7 +16,7 @@ public:
   virtual ~AMPAllocator() {}
 
   void *init(int count, void* data) {
-#ifdef __AMP_CPU__
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
       if (CLAMP::in_cpu_kernel()) {
           if (data == nullptr) {
               data = aligned_alloc(0x1000, count);
@@ -78,7 +78,7 @@ public:
   }
 
   void sync(void* data) {
-#ifdef __AMP_CPU__
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
       if (CLAMP::in_cpu_kernel())
           return;
 #endif
@@ -97,7 +97,7 @@ public:
       void* p = data;
       if (it != std::end(rwq)) {
           rw_info& rw = it->second;
-#ifdef __AMP_CPU__
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
           if (CLAMP::in_cpu_kernel()) {
               ::operator delete(data);
               rwq.erase(it);

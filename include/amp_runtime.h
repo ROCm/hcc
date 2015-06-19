@@ -14,7 +14,7 @@ extern std::vector<int> EnumerateDevices();
 extern void QueryDeviceInfo(const std::wstring&, bool&, size_t&, bool&, std::wstring&);
 
 // used in parallel_for_each.h
-#ifdef __AMP_CPU__
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
 extern bool is_cpu();
 extern bool in_cpu_kernel();
 extern void enter_kernel();

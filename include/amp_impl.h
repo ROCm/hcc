@@ -138,7 +138,7 @@ inline bool accelerator::set_default_cpu_access_type(access_type type) {
         ((type&access_type_read) || (type&access_type_write))) {
     // TODO: Throw runtime exception here 
   }
-#ifdef __AMP_CPU__
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   if(type == access_type_auto)
       default_access_type = access_type_none;
   else
@@ -307,7 +307,7 @@ template<int N> class extent;
 template <int N>
 const Concurrency::extent<N>& check(const Concurrency::extent<N>& ext)
 {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
     for (int i = 0; i < N; i++)
     {
         if(ext[i] <=0)
@@ -320,7 +320,7 @@ const Concurrency::extent<N>& check(const Concurrency::extent<N>& ext)
 : extent(check(ext)), m_device(ext.size(), true), pav(nullptr), paav(nullptr)
 {
     this->cpu_access_type = Concurrency::accelerator(accelerator::default_accelerator).get_default_view().get_accelerator().get_default_cpu_access_type();
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
     initialize();
 #endif
 }
@@ -381,7 +381,7 @@ template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin)
     : extent(ext), m_device(ext.size(), true), pav(nullptr), paav(nullptr) {
   this->cpu_access_type = Concurrency::accelerator(accelerator::default_accelerator).get_default_view().get_accelerator().get_default_cpu_access_type();
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
         InputIterator srcEnd = srcBegin;
         std::advance(srcEnd, extent.size());
         initialize(srcBegin, srcEnd);
@@ -391,12 +391,12 @@ array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin)
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, InputIterator srcEnd)
     : extent(ext), m_device(ext.size(), true), pav(nullptr), paav(nullptr) {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
     if(ext.size() < std::distance(srcBegin,srcEnd) )
       throw runtime_exception("errorMsg_throw", 0);
 #endif
   this->cpu_access_type = Concurrency::accelerator(accelerator::default_accelerator).get_default_view().get_accelerator().get_default_cpu_access_type();
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
         initialize(srcBegin, srcEnd);
 #endif
  }
@@ -436,7 +436,7 @@ array<T, N>::array(int e0, int e1, int e2, InputIterator srcBegin, InputIterator
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, accelerator_view av,
                    access_type cpu_access_type) : array(ext, av, cpu_access_type) {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
   InputIterator srcEnd = srcBegin;
   std::advance(srcEnd, extent.size());
   initialize(srcBegin, srcEnd);
@@ -446,7 +446,7 @@ array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, ac
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, InputIterator srcEnd,
                    accelerator_view av, access_type cpu_access_type) : array(ext, srcBegin, av, cpu_access_type) {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
   initialize(srcBegin, srcEnd);
 #endif
 }
@@ -488,7 +488,7 @@ array<T, N>::array(int e0, int e1, int e2, InputIterator srcBegin, InputIterator
 template<typename T, int N> template <typename InputIterator>
 array<T, N>::array(const Concurrency::extent<N>& ext, InputIterator srcBegin, accelerator_view av,
                    accelerator_view associated_av) : array(ext, av, associated_av) {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
   InputIterator srcEnd = srcBegin;
   std::advance(srcEnd, extent.size());
   initialize(srcBegin, srcEnd);
@@ -570,7 +570,7 @@ array<T, N>::array(const array_view<const T, N>& src, accelerator_view av,
 
 #define __global
 //array_view<T, N>
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
 
 template <typename T, int N>
 void array_view<T, N>::synchronize() const {
@@ -612,7 +612,7 @@ array_view<T,N>::array_view(const Concurrency::extent<N>& ext,
 #endif
 
 //array_view<const T, N>
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
 
 template <typename T, int N>
 void array_view<const T, N>::synchronize() const {
