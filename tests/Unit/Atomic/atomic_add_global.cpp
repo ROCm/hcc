@@ -14,7 +14,7 @@ int main(void) {
     count[i] = 0;
   }
 
-  parallel_for_each(count.extent, [=, &count](index<1> idx) restrict(amp) {
+  parallel_for_each(count.get_extent(), [=, &count](index<1> idx) restrict(amp) {
     for(unsigned i = 0; i < vecSize; i++) {
       atomic_fetch_add(&count[i], 1);
     }
