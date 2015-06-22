@@ -20,12 +20,14 @@ int main(void) {
     }
   });
 
-  std::vector<accelerator> accs = accelerator::get_all();
-  for(unsigned i = 0; i < vecSize && accs.size(); i++) {
-      if(count[i] != vecSize) {
-        return 1;
+  array_view<int, 1> av(count);
+
+  bool ret = true;
+  for(unsigned i = 0; i < vecSize; ++i) {
+      if(av[i] != vecSize) {
+        ret = false;
       }
   }
 
-  return 0;
+  return !(ret == true);
 }
