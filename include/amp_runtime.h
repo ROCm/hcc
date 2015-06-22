@@ -231,7 +231,6 @@ extern void leave_kernel();
 #endif
 
 extern void *CreateKernel(std::string, KalmarQueue*);
-extern void MatchKernelNames(std::string &);
 
 extern void PushArg(void *, int, size_t, const void *);
 extern void PushArgPtr(void *, int, size_t, const void *);
