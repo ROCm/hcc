@@ -33,7 +33,9 @@ public:
     void* create(size_t count, struct rw_info* /* not used */) override {
         return aligned_alloc(0x1000, count);
     }
-    void release(void *data) override { ::operator delete(data); }
+    void release(void *device, struct rw_info* /* not used */ ) override { 
+        ::operator delete(device);
+    }
     std::shared_ptr<KalmarQueue> createQueue() override {
         return std::shared_ptr<KalmarQueue>(new KalmarQueue(this));
     }

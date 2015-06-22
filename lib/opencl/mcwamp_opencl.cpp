@@ -340,7 +340,7 @@ public:
         return dm;
     }
 
-    void release(void *device) override {
+    void release(void *device, struct rw_info* /* not used */ ) override {
         cl_mem dm = static_cast<cl_mem>(device);
         if (events.find(dm) != std::end(events)) {
             clReleaseEvent(events[dm]);

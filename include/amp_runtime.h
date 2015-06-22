@@ -129,7 +129,7 @@ public:
     virtual void* create(size_t count, struct rw_info* key) = 0;
 
     /// release buffer on device
-    virtual void release(void* ptr) = 0;
+    virtual void release(void* ptr, struct rw_info* key) = 0;
 
     /// create kernel for current device
     virtual void* CreateKernel(const char* fun, void* size, void* source) { return nullptr; }
@@ -161,7 +161,7 @@ public:
 
     std::shared_ptr<KalmarQueue> createQueue() { return std::shared_ptr<KalmarQueue>(new KalmarQueue(this)); }
     void* create(size_t count, struct rw_info* /* not used */ ) override { return aligned_alloc(0x1000, count); }
-    void release(void* ptr) override { ::operator delete(ptr); }
+    void release(void* ptr, struct rw_info* /* nout used */) override { ::operator delete(ptr); }
     void* CreateKernel(const char* fun, void* size, void* source) { return nullptr; }
 };
 
@@ -509,14 +509,14 @@ struct rw_info
         auto cpu_queue = get_cpu_queue()->getDev();
         if (devs.find(cpu_queue) != std::end(devs)) {
             if (!HostPtr)
-                cpu_queue->release(devs[cpu_queue].data);
+                cpu_queue->release(devs[cpu_queue].data, this);
             devs.erase(cpu_queue);
         }
         KalmarDevice* pDev;
         dev_info info;
         for (const auto it : devs) {
             std::tie(pDev, info) = it;
-            pDev->release(info.data);
+            pDev->release(info.data, this);
         }
     }
 };
