@@ -17,6 +17,38 @@ extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v) {}
 
 namespace Concurrency {
 
+class CPUFallbackQueue final : public KalmarQueue
+{
+public:
+
+  CPUFallbackQueue(KalmarDevice* pDev) : KalmarQueue(pDev) {}
+
+  void read(void* device, void* dst, size_t count, size_t offset) override {
+      if (dst != device)
+          memmove(dst, (char*)device + offset, count);
+  }
+
+  void write(void* device, const void* src, size_t count, size_t offset, bool blocking, bool free) override {
+      if (src != device)
+          memmove((char*)device + offset, src, count);
+      if (free)
+          ::operator delete(const_cast<void*>(src));
+  }
+
+  void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset, bool blocking) override {
+      if (src != dst)
+          memmove((char*)dst + dst_offset, (char*)src + src_offset, count);
+  }
+
+  void* map(void* device, size_t count, size_t offset, bool modify) override {
+      return (char*)device + offset;
+  }
+
+  void unmap(void* device, void* addr) override {}
+
+  void Push(void *kernel, int idx, void* device, bool isConst) override {}
+};
+
 class CPUFallbackDevice final : public KalmarDevice
 {
 public:
@@ -37,7 +69,7 @@ public:
         ::operator delete(device);
     }
     std::shared_ptr<KalmarQueue> createQueue() override {
-        return std::shared_ptr<KalmarQueue>(new KalmarQueue(this));
+        return std::shared_ptr<KalmarQueue>(new CPUFallbackQueue(this));
     }
 };
 

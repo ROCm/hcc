@@ -62,35 +62,22 @@ public:
   virtual void* LaunchKernelAsync(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) { return nullptr; }
 
   /// read data from device to host
-  virtual void read(void* device, void* dst, size_t count, size_t offset) {
-      if (dst != device)
-          memmove(dst, (char*)device + offset, count);
-  }
+  virtual void read(void* device, void* dst, size_t count, size_t offset) = 0;
 
   /// wrtie data from host to device
-  virtual void write(void* device, const void* src, size_t count, size_t offset, bool blocking, bool free) {
-      if (src != device)
-          memmove((char*)device + offset, src, count);
-      if (free)
-          ::operator delete(const_cast<void*>(src));
-  }
+  virtual void write(void* device, const void* src, size_t count, size_t offset, bool blocking, bool free) = 0;
 
   /// copy data between device pointer
-  virtual void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset, bool blocking) {
-      if (src != dst)
-          memmove((char*)dst + dst_offset, (char*)src + src_offset, count);
-  }
+  virtual void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset, bool blocking) = 0;
 
   /// map host accessible pointer from device
-  virtual void* map(void* device, size_t count, size_t offset, bool modify) {
-      return (char*)device + offset;
-  }
+  virtual void* map(void* device, size_t count, size_t offset, bool modify) = 0;
 
   /// unmap host accessible pointer
-  virtual void unmap(void* device, void* addr) {}
+  virtual void unmap(void* device, void* addr) = 0;
   
   /// push device pointer to kernel argument list
-  virtual void Push(void *kernel, int idx, void* device, bool isConst) {}
+  virtual void Push(void *kernel, int idx, void* device, bool isConst) = 0;
 
   KalmarDevice* getDev() { return pDev; }
   queuing_mode get_mode() const { return mode; }
@@ -147,6 +134,38 @@ public:
     }
 };
 
+class CPUQueue final : public KalmarQueue
+{
+public:
+
+  CPUQueue(KalmarDevice* pDev) : KalmarQueue(pDev) {}
+
+  void read(void* device, void* dst, size_t count, size_t offset) override {
+      if (dst != device)
+          memmove(dst, (char*)device + offset, count);
+  }
+
+  void write(void* device, const void* src, size_t count, size_t offset, bool blocking, bool free) override {
+      if (src != device)
+          memmove((char*)device + offset, src, count);
+      if (free)
+          ::operator delete(const_cast<void*>(src));
+  }
+
+  void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset, bool blocking) override {
+      if (src != dst)
+          memmove((char*)dst + dst_offset, (char*)src + src_offset, count);
+  }
+
+  void* map(void* device, size_t count, size_t offset, bool modify) override {
+      return (char*)device + offset;
+  }
+
+  void unmap(void* device, void* addr) override {}
+
+  void Push(void *kernel, int idx, void* device, bool isConst) override {}
+};
+
 class CPUDevice final : public KalmarDevice
 {
 public:
@@ -159,7 +178,7 @@ public:
     bool is_emulated() const override { return true; }
 
 
-    std::shared_ptr<KalmarQueue> createQueue() { return std::shared_ptr<KalmarQueue>(new KalmarQueue(this)); }
+    std::shared_ptr<KalmarQueue> createQueue() { return std::shared_ptr<KalmarQueue>(new CPUQueue(this)); }
     void* create(size_t count, struct rw_info* /* not used */ ) override { return aligned_alloc(0x1000, count); }
     void release(void* ptr, struct rw_info* /* nout used */) override { ::operator delete(ptr); }
     void* CreateKernel(const char* fun, void* size, void* source) { return nullptr; }
