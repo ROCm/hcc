@@ -192,7 +192,7 @@ public:
         dispatchKernel(_queue);
         auto waitFunc = [&]() {
             this->waitComplete();
-            delete(this); // destruct DispatchImpl instance
+            delete(this); // destruct HSADispatch instance
         };
         std::packaged_task<void()> waitTask(waitFunc);
  
@@ -469,13 +469,24 @@ public:
 
     HSADevice(hsa_agent_t a) : KalmarDevice(access_type_read_write),
                                agent(a), programs(), addrs() {
+#if KALMAR_DEBUG
+        std::cerr << "HSADevice::HSADevice()\n";
+#endif
     }
 
     ~HSADevice() {
+#if KALMAR_DEBUG
+        std::cerr << "HSADevice::~HSADevice()\n";
+#endif
         // release all data in addrs
+        // buffers in addrs would be released by release() in a prior stage
+        addrs.clear();
 
         // release all data in programs
-
+        for (auto kernel_iterator : programs) {
+            delete kernel_iterator.second;
+        }
+        programs.clear();
     }
 
     std::wstring get_path() const override { return L"hsa"; }
@@ -522,6 +533,9 @@ public:
             programs[str] = kernel;
         }
 
+        // HSADispatch instance will be deleted in:
+        // HSAQueue::LaunchKernel()
+        // HSAQueue::LaunchKernelAsync()
         HSADispatch *dispatch = new HSADispatch(agent, kernel);
         dispatch->clearArgs();
 
@@ -632,7 +646,7 @@ class HSAContext final : public KalmarContext
             return stat;
         }
 
-#if KALMAR_DEBUG
+#if KALMAR_DEBUG 
         {
             char name[64];
             status = hsa_agent_get_info(agent, HSA_AGENT_INFO_NAME, name);
@@ -656,12 +670,11 @@ class HSAContext final : public KalmarContext
 
 public:
     HSAContext() : KalmarContext() {
-        hsa_status_t status;
-
         // initialize HSA runtime
 #if KALMAR_DEBUG
         std::cerr << "HSAContext::HSAContext(): init HSA runtime\n";
 #endif
+        hsa_status_t status;
         status = hsa_init();
         STATUS_CHECK(status, __LINE__);
 
@@ -680,12 +693,17 @@ public:
     }
 
     ~HSAContext() {
-        hsa_status_t status;
+        // destroy all KalmarDevices associated with this context
+        for (auto dev : Devices)
+            delete dev;
+        Devices.clear();
+        def = nullptr;
 
         // shutdown HSA runtime
 #if KALMAR_DEBUG
         std::cerr << "HSAContext::~HSAContext(): shut down HSA runtime\n";
 #endif
+        hsa_status_t status;
         status = hsa_shut_down();
         STATUS_CHECK(status, __LINE__);
     }

@@ -176,6 +176,8 @@ public:
     virtual ~KalmarContext() {
         for (auto dev : Devices)
             delete dev;
+        Devices.clear();
+        def = nullptr;
     }
 
     std::vector<KalmarDevice*> getDevices() { return Devices; }
