@@ -27,7 +27,7 @@
 #include <algorithm>
 #include <set>
 #include <type_traits>
-#ifdef __AMP_CPU__
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
 #include <ucontext.h>
 #endif
 // CLAMP
@@ -50,7 +50,7 @@
 extern "C" __attribute__((pure)) int64_t amp_get_global_id(unsigned int n) restrict(amp);
 extern "C" __attribute__((pure)) int64_t amp_get_local_id(unsigned int n) restrict(amp);
 extern "C" __attribute__((pure)) int64_t amp_get_group_id(unsigned int n) restrict(amp);
-#ifdef __AMP_CPU__
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
 #define tile_static thread_local
 #else
 #define tile_static static __attribute__((section("clamp_opencl_local")))
@@ -304,7 +304,7 @@ public:
     // notice we removed const from the signature here
     template<typename functor>
     void then(const functor & func) {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
       // could only assign once
       if (__thread_then == nullptr) {
         // spawn a new thread to wait on the future and then execute the callback functor
@@ -706,18 +706,18 @@ private:
 
     __attribute__((annotate("__cxxamp_opencl_index")))
         void __cxxamp_opencl_index() restrict(amp,cpu)
-#ifdef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ == 1
         {
             index_helper<N, index<N>>::set(*this);
         }
-#elif __AMP_CPU__
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
     {}
 #else
     ;
 #endif
 };
 
-#ifdef __AMP_CPU__
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
 template <typename Ker, typename Ti>
 void bar_wrapper(Ker *f, Ti *t)
 {
@@ -757,7 +757,7 @@ struct barrier_t {
 // C++AMP LPM 4.5
 class tile_barrier {
  public:
-#ifdef __AMP_CPU__
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   using pb_t = std::shared_ptr<barrier_t>;
   tile_barrier(pb_t pb) : pbar(pb) {}
   tile_barrier(const tile_barrier& other) restrict(amp,cpu) : pbar(other.pbar) {}
@@ -765,35 +765,35 @@ class tile_barrier {
   tile_barrier(const tile_barrier& other) restrict(amp,cpu) {}
 #endif
   void wait() const restrict(amp) {
-#ifdef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ == 1
     wait_with_all_memory_fence();
-#elif __AMP_CPU__
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
       pbar->wait();
 #endif
   }
   void wait_with_all_memory_fence() const restrict(amp) {
-#ifdef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ == 1
     amp_barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
-#elif __AMP_CPU__
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
       pbar->wait();
 #endif
   }
   void wait_with_global_memory_fence() const restrict(amp) {
-#ifdef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ == 1
     amp_barrier(CLK_GLOBAL_MEM_FENCE);
-#elif __AMP_CPU__
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
       pbar->wait();
 #endif
   }
   void wait_with_tile_static_memory_fence() const restrict(amp) {
-#ifdef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ == 1
     amp_barrier(CLK_LOCAL_MEM_FENCE);
-#elif __AMP_CPU__
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
       pbar->wait();
 #endif
   }
  private:
-#ifdef __AMP_CPU__
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   tile_barrier() restrict(amp,cpu) = default;
   pb_t pbar;
 #else
@@ -986,7 +986,7 @@ class tiled_index {
   static const int tile_dim1 = D1;
   static const int tile_dim2 = D2;
  private:
-#ifdef __AMP_CPU__
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   //CLAMP
   tiled_index(int a0, int a1, int a2, int b0, int b1, int b2,
               int c0, int c1, int c2, tile_barrier& pb) restrict(amp,cpu)
@@ -995,7 +995,7 @@ class tiled_index {
 #endif
   //CLAMP
   __attribute__((annotate("__cxxamp_opencl_index")))
-#ifdef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ == 1
   __attribute__((always_inline)) tiled_index() restrict(amp)
   : global(index<3>(amp_get_global_id(2), amp_get_global_id(1), amp_get_global_id(0))),
     local(index<3>(amp_get_local_id(2), amp_get_local_id(1), amp_get_local_id(0))),
@@ -1004,7 +1004,7 @@ class tiled_index {
                          amp_get_global_id(1)-amp_get_local_id(1),
                          amp_get_global_id(0)-amp_get_local_id(0))),
     tile_extent(D0, D1, D2)
-#elif __AMP_CPU__
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   __attribute__((always_inline)) tiled_index() restrict(amp, cpu)
 #else
   __attribute__((always_inline)) tiled_index() restrict(amp)
@@ -1012,7 +1012,7 @@ class tiled_index {
   {}
   template<int D0_, int D1_, int D2_, typename K>
   friend void parallel_for_each(tiled_extent<D0_, D1_, D2_>, const K&);
-#ifdef __AMP_CPU__
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   template<typename K, int D1_, int D2_, int D3_>
   friend void partitioned_task_tile(K const&, tiled_extent<D1_, D2_, D3_> const&, int);
 #endif
@@ -1041,21 +1041,21 @@ class tiled_index<D0, 0, 0> {
   }
   static const int tile_dim0 = D0;
  private:
-#ifdef __AMP_CPU__
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   //CLAMP
   __attribute__((always_inline)) tiled_index(int a, int b, int c, tile_barrier& pb) restrict(amp, cpu)
   : global(a), local(b), tile(c), tile_origin(a - b), barrier(pb), tile_extent(D0) {}
 #endif
   //CLAMP
   __attribute__((annotate("__cxxamp_opencl_index")))
-#ifdef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ == 1
   __attribute__((always_inline)) tiled_index() restrict(amp)
   : global(index<1>(amp_get_global_id(0))),
     local(index<1>(amp_get_local_id(0))),
     tile(index<1>(amp_get_group_id(0))),
     tile_origin(index<1>(amp_get_global_id(0)-amp_get_local_id(0))),
     tile_extent(D0)
-#elif __AMP_CPU__
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   __attribute__((always_inline)) tiled_index() restrict(amp,cpu)
 #else
   __attribute__((always_inline)) tiled_index() restrict(amp)
@@ -1063,7 +1063,7 @@ class tiled_index<D0, 0, 0> {
   {}
   template<int D, typename K>
   friend void parallel_for_each(tiled_extent<D>, const K&);
-#ifdef __AMP_CPU__
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   template<typename K, int D>
   friend void partitioned_task_tile(K const&, tiled_extent<D> const&, int);
 #endif
@@ -1092,7 +1092,7 @@ class tiled_index<D0, D1, 0> {
   static const int tile_dim0 = D0;
   static const int tile_dim1 = D1;
  private:
-#ifdef __AMP_CPU__
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   //CLAMP
   tiled_index(int a0, int a1, int b0, int b1, int c0, int c1, tile_barrier& tbar) restrict(amp, cpu)
       : global(a1, a0), local(b1, b0), tile(c1, c0), tile_origin(a1 - b1, a0 - b0),
@@ -1100,7 +1100,7 @@ class tiled_index<D0, D1, 0> {
 #endif
   //CLAMP
   __attribute__((annotate("__cxxamp_opencl_index")))
-#ifdef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ == 1
   __attribute__((always_inline)) tiled_index() restrict(amp)
   : global(index<2>(amp_get_global_id(1), amp_get_global_id(0))),
     local(index<2>(amp_get_local_id(1), amp_get_local_id(0))),
@@ -1108,7 +1108,7 @@ class tiled_index<D0, D1, 0> {
     tile_origin(index<2>(amp_get_global_id(1)-amp_get_local_id(1),
                          amp_get_global_id(0)-amp_get_local_id(0))),
     tile_extent(D0, D1)
-#elif __AMP_CPU__
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   __attribute__((always_inline)) tiled_index() restrict(amp,cpu)
 #else
   __attribute__((always_inline)) tiled_index() restrict(amp)
@@ -1116,7 +1116,7 @@ class tiled_index<D0, D1, 0> {
   {}
   template<int D0_, int D1_, typename K>
   friend void parallel_for_each(tiled_extent<D0_, D1_>, const K&);
-#ifdef __AMP_CPU__
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   template<typename K, int D1_, int D2_>
   friend void partitioned_task_tile(K const&, tiled_extent<D1_, D2_> const&, int);
 #endif
@@ -1269,14 +1269,14 @@ struct projection_helper<T, 1>
     //      T& operator[](int i) const restrict(amp,cpu);
     typedef __global T& result_type;
     static result_type project(array_view<T, 1>& now, int i) restrict(amp,cpu) {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
         now.cache.synchronize();
 #endif
         __global T *ptr = reinterpret_cast<__global T *>(now.cache.get() + i + now.offset + now.index_base[0]);
         return *ptr;
     }
     static result_type project(const array_view<T, 1>& now, int i) restrict(amp,cpu) {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
         now.cache.synchronize();
 #endif
         __global T *ptr = reinterpret_cast<__global T *>(now.cache.get() + i + now.offset + now.index_base[0]);
@@ -1326,14 +1326,14 @@ struct projection_helper<const T, 1>
     //      const T& operator[](int i) const restrict(amp,cpu);
     typedef __global const T& const_result_type;
     static const_result_type project(array_view<const T, 1>& now, int i) restrict(amp,cpu) {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
         now.cache.synchronize();
 #endif
         __global const T *ptr = reinterpret_cast<__global const T *>(now.cache.get() + i + now.offset + now.index_base[0]);
         return *ptr;
     }
     static const_result_type project(const array_view<const T, 1>& now, int i) restrict(amp,cpu) {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
         now.cache.synchronize();
 #endif
         __global const T *ptr = reinterpret_cast<__global const T *>(now.cache.get() + i + now.offset + now.index_base[0]);
@@ -1350,7 +1350,7 @@ struct array_projection_helper
     typedef array_view<T, N - 1> result_type;
     typedef array_view<const T, N - 1> const_result_type;
     static result_type project(array<T, N>& now, int stride) restrict(amp,cpu) {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
         if( stride < 0)
           throw runtime_exception("errorMsg_throw", 0);
 #endif
@@ -1359,7 +1359,7 @@ struct array_projection_helper
             comp[i - 1] = now.extent[i];
         Concurrency::extent<N - 1> ext(comp);
         int offset = ext.size() * stride;
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
         if( offset >= now.extent.size())
           throw runtime_exception("errorMsg_throw", 0);
 #endif
@@ -1383,14 +1383,14 @@ struct array_projection_helper<T, 1>
     typedef __global T& result_type;
     typedef __global const T& const_result_type;
     static result_type project(array<T, 1>& now, int i) restrict(amp,cpu) {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
         now.m_device.discard();
 #endif
         __global T *ptr = reinterpret_cast<__global T *>(now.m_device.get() + i);
         return *ptr;
     }
     static const_result_type project(const array<T, 1>& now, int i) restrict(amp,cpu) {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
         now.m_device.synchronize();
 #endif
         __global const T *ptr = reinterpret_cast<__global const T *>(now.m_device.get() + i);
@@ -1413,7 +1413,7 @@ public:
   void __cxxamp_serialize(Serialize& s) const {
     array<T, N>* p_arr = (array<T, N>*)m_arr;
     if (p_arr && p_arr->pav &&
-#ifdef __AMP_CPU__
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
         !CLAMP::in_cpu_kernel() &&
 #endif
         p_arr->pav->get_accelerator() == _cpu_check) {
@@ -1431,7 +1431,7 @@ class array {
   static_assert(!std::is_const<T>::value, "array<const T> is not supported");
   static_assert(0 == (sizeof(T) % sizeof(int)), "only value types whose size is a multiple of the size of an integer are allowed in array");
 public:
-#ifdef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ == 1
   typedef _data<T> acc_buffer_t;
 #else
   typedef _data_host<T> acc_buffer_t;
@@ -1535,7 +1535,7 @@ public:
 
 
   explicit array(const array_view<const T, N>& src) : array(src.extent) {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
       src.cache.copy(m_device.get());
 #endif
   }
@@ -1554,7 +1554,7 @@ public:
     if(this != &other) {
       extent = other.extent;
       this->cpu_access_type = other.cpu_access_type;
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
       this->initialize();
 #endif
       copy(other, *this);
@@ -1572,7 +1572,7 @@ public:
   }
   array& operator=(const array_view<T,N>& src) {
     extent = src.get_extent();
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
     this->initialize();
 #endif
     src.copy_to(*this);
@@ -1581,7 +1581,7 @@ public:
   }
 
   void copy_to(array& dest) const {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
       for(int i = 0 ; i < N ; i++)
       {
         if(dest.extent[i] < this->extent[i] )
@@ -1605,9 +1605,9 @@ public:
   access_type get_cpu_access_type() const {return cpu_access_type;}
 
   __global T& operator[](const index<N>& idx) restrict(amp,cpu) {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
       if(pav && (pav->get_accelerator() == _gpu_check)
-#ifdef __AMP_CPU__
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
         && !CLAMP::in_cpu_kernel()
 #endif
         ) {
@@ -1619,9 +1619,9 @@ public:
       return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx, extent)];
   }
   __global const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
       if(pav && (pav->get_accelerator() == _gpu_check)
-#ifdef __AMP_CPU__
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
         && !CLAMP::in_cpu_kernel()
 #endif
         ) {
@@ -1670,7 +1670,7 @@ public:
   }
 
   array_view<T, N> section(const Concurrency::index<N>& idx, const Concurrency::extent<N>& ext) restrict(amp,cpu) {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
       if(  !amp_helper<N, index<N>, Concurrency::extent<N>>::contains(idx,  ext ,this->extent) )
         throw runtime_exception("errorMsg_throw", 0);
 #endif
@@ -1682,7 +1682,7 @@ public:
       return av.section(idx, ext);
   }
   array_view<T, N> section(const index<N>& idx) restrict(amp,cpu) {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
       if(  !amp_helper<N, index<N>, Concurrency::extent<N>>::contains(idx, this->extent ) )
         throw runtime_exception("errorMsg_throw", 0);
 #endif
@@ -1729,7 +1729,7 @@ public:
 
   template <typename ElementType>
       array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu) {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
           static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
           static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
           if( (extent.size() * sizeof(T)) % sizeof(ElementType))
@@ -1742,7 +1742,7 @@ public:
       }
   template <typename ElementType>
       array_view<const ElementType, 1> reinterpret_as() const restrict(amp,cpu) {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
           static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
           static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
 #endif
@@ -1753,7 +1753,7 @@ public:
       }
   template <int K> array_view<T, K>
       view_as(const Concurrency::extent<K>& viewExtent) restrict(amp,cpu) {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
     if( viewExtent.size() > extent.size())
       throw runtime_exception("errorMsg_throw", 0);
 #endif
@@ -1762,7 +1762,7 @@ public:
       }
   template <int K> array_view<const T, K>
       view_as(const Concurrency::extent<K>& viewExtent) const restrict(amp,cpu) {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
     if( viewExtent.size() > extent.size())
       throw runtime_exception("errorMsg_throw", 0);
 #endif
@@ -1772,7 +1772,7 @@ public:
 
   operator std::vector<T>() const {
       std::vector<T> vec(extent.size());
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
       m_device.copy(vec.data());
 #endif
       return std::move(vec);
@@ -1782,7 +1782,7 @@ public:
     return reinterpret_cast<T*>(m_device.get());
   }
   T* data() const restrict(amp,cpu) {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
     // TODO: If array's buffer is inaccessible on CPU, host pointer to that buffer must be NULL
     if(cpu_access_type == access_type_none) {
       //return reinterpret_cast<T*>(NULL);
@@ -1810,7 +1810,7 @@ private:
   array_helper_t m_array_helper;
   __attribute__((cpu)) accelerator_view *pav, *paav;
 
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
   void initialize() { m_array_helper.setArray(this); }
   template <typename InputIter>
       void initialize(InputIter srcBegin, InputIter srcEnd) {
@@ -1826,7 +1826,7 @@ class array_view
   static_assert(0 == (sizeof(T) % sizeof(int)), "only value types whose size is a multiple of the size of an integer are allowed in array views");
   typedef typename std::remove_const<T>::type nc_T;
 public:
-#ifdef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ == 1
   typedef _data<T> acc_buffer_t;
 #else
   typedef _data_host<T> acc_buffer_t;
@@ -1897,7 +1897,7 @@ public:
       return *this;
   }
   void copy_to(array<T,N>& dest) const {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
       for(int i= 0 ;i< N;i++)
       {
         if(dest.extent[i] < this->extent[i])
@@ -1915,7 +1915,7 @@ public:
   }
 
   __global T& operator[](const index<N>& idx) const restrict(amp,cpu) {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
       synchronize();
 #endif
       __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
@@ -1923,7 +1923,7 @@ public:
   }
   template <int D0, int D1=0, int D2=0>
   __global T& operator[](const tiled_index<D0, D1, D2>& idx) const restrict(amp,cpu) {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
       synchronize();
 #endif
       __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
@@ -1953,7 +1953,7 @@ public:
   template <typename ElementType>
       array_view<ElementType, N> reinterpret_as() const restrict(amp,cpu) {
           static_assert(N == 1, "reinterpret_as is only permissible on array views of rank 1");
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
           static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
           static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
           if( (extent.size() * sizeof(T)) % sizeof(ElementType))
@@ -1969,7 +1969,7 @@ public:
 
   array_view<T, N> section(const Concurrency::index<N>& idx,
                            const Concurrency::extent<N>& ext) const restrict(amp,cpu) {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
       if(  !amp_helper<N, index<N>, Concurrency::extent<N>>::contains(idx, ext,this->extent ) )
         throw runtime_exception("errorMsg_throw", 0);
 #endif
@@ -2001,7 +2001,7 @@ public:
   template <int K>
   array_view<T, K> view_as(Concurrency::extent<K> viewExtent) const restrict(amp,cpu) {
     static_assert(N == 1, "view_as is only permissible on array views of rank 1");
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
     if( viewExtent.size() > extent.size())
       throw runtime_exception("errorMsg_throw", 0);
 #endif
@@ -2013,7 +2013,7 @@ public:
   completion_future synchronize_async() const;
   void refresh() const;
   void discard_data() const {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
       cache.discard();
 #endif
   }
@@ -2023,7 +2023,7 @@ public:
     return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
   }
   T* data() const restrict(amp,cpu) {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
       synchronize();
 #endif
     static_assert(N == 1, "data() is only permissible on array views of rank 1");
@@ -2072,7 +2072,7 @@ public:
   static const int rank = N;
   typedef const T value_type;
 
-#ifdef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ == 1
   typedef _data<nc_T> acc_buffer_t;
 #else
   typedef _data_host<nc_T> acc_buffer_t;
@@ -2157,7 +2157,7 @@ public:
   }
 
   __global const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
       synchronize();
 #endif
     __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
@@ -2196,7 +2196,7 @@ public:
   template <typename ElementType>
       array_view<const ElementType, N> reinterpret_as() const restrict(amp,cpu) {
           static_assert(N == 1, "reinterpret_as is only permissible on array views of rank 1");
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
           static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
           static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
 #endif
@@ -2238,7 +2238,7 @@ public:
   template <int K>
     array_view<const T, K> view_as(Concurrency::extent<K> viewExtent) const restrict(amp,cpu) {
       static_assert(N == 1, "view_as is only permissible on array views of rank 1");
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
     if( viewExtent.size() > extent.size())
       throw runtime_exception("errorMsg_throw", 0);
 #endif
@@ -2381,7 +2381,7 @@ namespace Concurrency {
 
 template <typename T>
 static inline void amp_stash(T& mm) {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
     mm.stash();
 #endif
 }
@@ -2479,7 +2479,7 @@ void copy(InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest) {
 
 template <typename InputIter, typename T, int N>
 void copy(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest) {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
     if( ( std::distance(srcBegin,srcEnd) <=0 )||( std::distance(srcBegin,srcEnd) < dest.get_extent().size() ))
       throw runtime_exception("errorMsg_throw ,copy between different types", 0);
 #endif
@@ -2518,7 +2518,7 @@ void do_copy_s(const array_view<T, N> &src, OutputIter destBegin) {
 
 template <typename OutputIter, typename T, int N>
 void copy(const array_view<T, N> &src, OutputIter destBegin) {
-#ifndef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ != 1
     typename array_view<T, N>::acc_buffer_t cache(src.cache.size());
     src.cache.copy(cache.get());
     array_view<T, N> target(src.extent, src.extent_base,
@@ -2631,7 +2631,7 @@ completion_future copy_async(const array_view<T, N>& src, OutputIter destBegin) 
     return completion_future(fut.share());
 }
 
-#ifdef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ == 1
 extern "C" unsigned atomic_add_unsigned(unsigned *p, unsigned val) restrict(amp);
 extern "C" int atomic_add_int(int *p, int val) restrict(amp);
 static inline unsigned atomic_fetch_add(unsigned *x, unsigned y) restrict(amp,cpu) {
@@ -2640,7 +2640,7 @@ static inline unsigned atomic_fetch_add(unsigned *x, unsigned y) restrict(amp,cp
 static inline int atomic_fetch_add(int *x, int y) restrict(amp,cpu) {
   return atomic_add_int(x, y);
 }
-#elif __AMP_CPU__
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
 unsigned atomic_add_unsigned(unsigned *p, unsigned val);
 int atomic_add_int(int *p, int val);
 static inline unsigned atomic_fetch_add(unsigned *x, unsigned y) restrict(amp,cpu) {
@@ -2654,7 +2654,7 @@ extern unsigned atomic_fetch_add(unsigned *x, unsigned y) restrict(amp,cpu);
 extern int atomic_fetch_add(int *x, int y) restrict(amp, cpu);
 #endif
 
-#ifdef __KALMAR_ACCELERATOR__
+#if __KALMAR_ACCELERATOR__ == 1
 extern "C" unsigned atomic_max_unsigned(unsigned *p, unsigned val) restrict(amp);
 extern "C" int atomic_max_int(int *p, int val) restrict(amp);
 
@@ -2673,7 +2673,7 @@ static inline unsigned atomic_fetch_inc(unsigned *x) restrict(amp,cpu) {
 static inline int atomic_fetch_inc(int *x) restrict(amp,cpu) {
   return atomic_inc_int(x);
 }
-#elif __AMP_CPU__
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
 unsigned atomic_max_unsigned(unsigned *p, unsigned val);
 int atomic_max_int(int *p, int val);
 
