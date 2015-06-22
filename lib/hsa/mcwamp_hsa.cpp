@@ -459,7 +459,6 @@ class HSADevice final : public KalmarDevice
 {
 private:
     std::map<std::string, HSAKernel *> programs;
-    std::map<rw_info*, void*> addrs;
     hsa_agent_t agent;
 
 public:
@@ -468,7 +467,7 @@ public:
     }
 
     HSADevice(hsa_agent_t a) : KalmarDevice(access_type_read_write),
-                               agent(a), programs(), addrs() {
+                               agent(a), programs() {
 #if KALMAR_DEBUG
         std::cerr << "HSADevice::HSADevice()\n";
 #endif
@@ -478,10 +477,6 @@ public:
 #if KALMAR_DEBUG
         std::cerr << "HSADevice::~HSADevice()\n";
 #endif
-        // release all data in addrs
-        // buffers in addrs would be released by release() in a prior stage
-        addrs.clear();
-
         // release all data in programs
         for (auto kernel_iterator : programs) {
             delete kernel_iterator.second;
@@ -498,12 +493,9 @@ public:
     bool is_emulated() const override { return false; }
 
     void* create(size_t count, struct rw_info* key) override {
-        if (addrs.find(key) == std::end(addrs)) {
-            void *data = aligned_alloc(0x1000, count);
-            hsa_memory_register(data, count);
-            addrs[key] = data;
-        }
-        return addrs[key];
+        void *data = aligned_alloc(0x1000, count);
+        hsa_memory_register(data, count);
+        return data;
     }
     
     void release(void *data) override {
