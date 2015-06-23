@@ -54,12 +54,17 @@ enum queuing_mode {
 };
 
 /// KalmarQueue
-/// This is the base implementation of accelerator_view
-/// KalamrQueue is responsible for data operation and launch kernel
+/// This is the implementation of accelerator_view
+/// KalamrQueue is responsible for data operations and launch kernel
 class KalmarQueue
 {
 public:
+
+  KalmarQueue(KalmarDevice* pDev, queuing_mode mode = queuing_mode_automatic)
+      : pDev(pDev), mode(mode) {}
+
   virtual ~KalmarQueue() {}
+
   virtual void flush() {}
   virtual void wait() {}
   virtual void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {}
@@ -86,8 +91,7 @@ public:
   KalmarDevice* getDev() { return pDev; }
   queuing_mode get_mode() const { return mode; }
   void set_mode(queuing_mode mod) { mode = mod; }
-  KalmarQueue(KalmarDevice* pDev, queuing_mode mode = queuing_mode_automatic)
-      : pDev(pDev), mode(mode) {}
+
 private:
   KalmarDevice* pDev;
   queuing_mode mode;
