@@ -301,6 +301,8 @@ static inline void copy_helper(std::shared_ptr<KalmarQueue>& srcQueue, dev_info&
                                std::shared_ptr<KalmarQueue>& dstQueue, dev_info& dst,
                                size_t cnt, bool block,
                                size_t src_offset = 0, size_t dst_offset = 0) {
+    if (src.data == dst.data)
+        return ;
     if (is_cpu_queue(srcQueue))
         dstQueue->write(dst.data, (char*)src.data + src_offset, cnt, dst_offset, block, false);
     else if (is_cpu_queue(dstQueue))
@@ -309,11 +311,9 @@ static inline void copy_helper(std::shared_ptr<KalmarQueue>& srcQueue, dev_info&
         if (dstQueue->getDev() == srcQueue->getDev())
             dstQueue->copy(src.data, dst.data, cnt, src_offset, dst_offset, block);
         else {
-            if (src.data != dst.data) {
-                void* temp = ::operator new(cnt);
-                srcQueue->read(src.data, temp, cnt, src_offset);
-                dstQueue->write(dst.data, temp, cnt, dst_offset, block, true);
-            }
+            void* temp = ::operator new(cnt);
+            srcQueue->read(src.data, temp, cnt, src_offset);
+            dstQueue->write(dst.data, temp, cnt, dst_offset, block, true);
         }
     }
 }
