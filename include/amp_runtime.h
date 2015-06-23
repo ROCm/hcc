@@ -275,22 +275,25 @@ static inline const std::shared_ptr<KalmarQueue> get_cpu_queue() {
 }
 
 /// software MSI protocol
+/// https://en.wikipedia.org/wiki/MSI_protocol
 /// Used to avoid unnecessary copy when array_view<const, T> is used
 enum states
 {
-    modified, // exclusive owned data, can read and write to it
-    shared, // shared on multiple device, the content on it is the same
+    modified, // exclusive owned data, safe to read and wrtie
+    shared, // shared on multiple device, the content on it is the same, read only
     invalid // not able to read and write on the data, need to read from other device
 };
 
 /// buffer information
+/// Whenever rw_info is going to be used on device, it will create a device pointer
+/// for it. Additional state info is stored to implement MSI protocol
 struct dev_info
 {
     void* data; /// pointer to device data
     states state; /// state of the data on current device
 };
 
-static inline bool is_cpu_dev(const std::shared_ptr<KalmarQueue>& Queue) {
+static inline bool is_cpu_queue(const std::shared_ptr<KalmarQueue>& Queue) {
     return Queue->getDev()->get_path() == L"cpu";
 }
 
@@ -298,9 +301,9 @@ static inline void copy_helper(std::shared_ptr<KalmarQueue>& srcQueue, dev_info&
                                std::shared_ptr<KalmarQueue>& dstQueue, dev_info& dst,
                                size_t cnt, bool block,
                                size_t src_offset = 0, size_t dst_offset = 0) {
-    if (is_cpu_dev(srcQueue))
+    if (is_cpu_queue(srcQueue))
         dstQueue->write(dst.data, (char*)src.data + src_offset, cnt, dst_offset, block, false);
-    else if (is_cpu_dev(dstQueue))
+    else if (is_cpu_queue(dstQueue))
         srcQueue->read(src.data, (char*)dst.data + dst_offset, cnt, src_offset);
     else {
         if (dstQueue->getDev() == srcQueue->getDev())
@@ -383,9 +386,9 @@ struct rw_info
         devs[curr->getDev()] = {curr->getDev()->create(count, this), modified};
 
         /// set data pointer
-        if (is_cpu_dev(curr) || (curr->getDev()->is_unified() && mode != access_type_none))
+        if (is_cpu_queue(curr) || (curr->getDev()->is_unified() && mode != access_type_none))
             data = devs[curr->getDev()].data;
-        if (is_cpu_dev(curr)) {
+        if (is_cpu_queue(curr)) {
             stage = Stage;
             if (Stage != curr)
                 devs[stage->getDev()] = {stage->getDev()->create(count, this), invalid};
@@ -396,7 +399,7 @@ struct rw_info
     void construct(std::shared_ptr<KalmarQueue> pQueue) {
         curr = pQueue;
         devs[pQueue->getDev()] = {pQueue->getDev()->create(count, this), invalid};
-        if (is_cpu_dev(pQueue))
+        if (is_cpu_queue(pQueue))
             data = devs[pQueue->getDev()].data;
     }
 
@@ -409,7 +412,7 @@ struct rw_info
     /// shared, it implies that the data on cpu is the same on device where
     /// curr located, it is safe to use the data on cpu to perform the later operation
     void try_switch_to_cpu() {
-        if (is_cpu_dev(curr))
+        if (is_cpu_queue(curr))
             return;
         auto cpu_queue = get_cpu_queue();
         if (devs.find(cpu_queue->getDev()) != std::end(devs))
@@ -433,19 +436,14 @@ struct rw_info
             dev_info dev = {pQueue->getDev()->create(count, this),
                 modify ? modified : shared};
             devs[pQueue->getDev()] = dev;
-            if (is_cpu_dev(pQueue))
+            if (is_cpu_queue(pQueue))
                 data = dev.data;
             curr = pQueue;
             return;
         }
 
-        if (curr == pQueue) {
-            if (modify) {
-                disc();
-                devs[curr->getDev()].state = modified;
-            }
+        if (curr == pQueue)
             return;
-        }
 
         /// If both queues are from the same device, change state only
         if (curr->getDev() == pQueue->getDev()) {
@@ -458,11 +456,11 @@ struct rw_info
             return;
         }
 
-        /// If the buffer on device is not allocate, allocated space for it
+        /// If the buffer on device is not allocated, allocate space for it
         if (devs.find(pQueue->getDev()) == std::end(devs)) {
             dev_info dev = {pQueue->getDev()->create(count, this), invalid};
             devs[pQueue->getDev()] = dev;
-            if (is_cpu_dev(pQueue))
+            if (is_cpu_queue(pQueue))
                 data = dev.data;
         }
 
@@ -473,8 +471,8 @@ struct rw_info
             copy_helper(curr, src, pQueue, dst, count, block);
         /// if the data on current device is going to be modified
         /// changed the state of current device as modified
+        curr = pQueue;
         if (modify) {
-            curr = pQueue;
             disc();
             dst.state = modified;
         } else {
@@ -517,7 +515,8 @@ struct rw_info
     /// used in array_view
     void get_cpu_access(bool modify) { sync(get_cpu_queue(), modify); }
 
-    /// Write data from host source pointer
+    /// Write data from host source pointer to device
+    /// Change state to modified, because the device has exclusive copy of data
     void write(const void* src, int cnt, int offset, bool blocking) {
         curr->write(devs[curr->getDev()].data, src, cnt, offset, blocking, false);
         dev_info& dev = devs[curr->getDev()];
@@ -527,7 +526,7 @@ struct rw_info
         }
     }
 
-    /// Read data to host pointer
+    /// Read data to host pointer from device
     void read(void* dst, int cnt, int offset) {
         curr->read(devs[curr->getDev()].data, dst, cnt, offset);
     }
@@ -550,7 +549,7 @@ struct rw_info
         /// If src.state is invalid, zero the data on it
         if (src.state == invalid) {
             src.state = shared;
-            if (is_cpu_dev(curr))
+            if (is_cpu_queue(curr))
                 memset((char*)src.data + src_offset, 0, cnt);
             else {
                 void *ptr = aligned_alloc(0x1000, cnt);
