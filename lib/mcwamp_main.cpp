@@ -82,7 +82,7 @@ void ldflags(void) {
             CMAKE_LIBCXXRT_LIB_DIR ;
 
         if (bolt_rewrite_mode) {
-            std::cout << CMAKE_BOLT_LIB_DIR ":"
+            std::cout << ":" CMAKE_BOLT_LIB_DIR ":"
                          CMAKE_BOOST_LIB_DIR ;
         }
     } else if (install_mode) {
