@@ -210,10 +210,7 @@ protected:
     std::vector<KalmarDevice*> Devices;
     KalmarContext() : def(nullptr), Devices() { Devices.push_back(new CPUDevice); }
 public:
-    virtual ~KalmarContext() {
-        for (auto dev : Devices)
-            delete dev;
-    }
+    virtual ~KalmarContext() {}
 
     std::vector<KalmarDevice*> getDevices() { return Devices; }
 

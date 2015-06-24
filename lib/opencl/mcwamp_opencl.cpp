@@ -145,9 +145,11 @@ public:
             err = clSetEventCallback(ent, CL_COMPLETE, &free_memory, const_cast<void*>(src));
             assert(err == CL_SUCCESS);
         }
-        if (blocking)
+        if (blocking) {
             err = clWaitForEvents(1, &ent);
-        else {
+            assert(err = CL_SUCCESS);
+            err = clReleaseEvent(ent);
+        } else {
             if (events.find(dm) != std::end(events))
                 err = clReleaseEvent(events[dm]);
             events[dm] = ent;
@@ -174,9 +176,11 @@ public:
             err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, 0, NULL, &ent);
         else
             err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, 1, &events[sdm], &ent);
-        if (blocking)
-            clWaitForEvents(1, &ent);
-        else {
+        if (blocking) {
+            err = clWaitForEvents(1, &ent);
+            assert(err = CL_SUCCESS);
+            err = clReleaseEvent(ent);
+        } else {
             if (events.find(ddm) != std::end(events))
                 clReleaseEvent(events[ddm]);
             events[ddm] = ent;
@@ -385,6 +389,8 @@ static const CLFlag Flags[] = {
     // CLFlag(CL_DEVICE_TYPE_CPU, L"cpu")
 };
 
+template <typename T> inline void deleter(T* ptr) { delete ptr; }
+
 class OpenCLContext : public KalmarContext
 {
 public:
@@ -423,7 +429,10 @@ public:
             Devices.push_back(Dev);
         }
     }
-    ~OpenCLContext() { clReleaseContext(context); }
+    ~OpenCLContext() {
+        std::for_each(std::begin(Devices), std::end(Devices), deleter<KalmarDevice>);
+        clReleaseContext(context);
+    }
 };
 
 static OpenCLContext ctx;

@@ -73,10 +73,13 @@ public:
     }
 };
 
+template <typename T> inline void deleter(T* ptr) { delete ptr; }
+
 class CPUContext final : public KalmarContext
 {
 public:
     CPUContext() { Devices.push_back(new CPUFallbackDevice); }
+    ~CPUContext() { std::for_each(std::begin(Devices), std::end(Devices), deleter<KalmarDevice>); }
 };
 
 
