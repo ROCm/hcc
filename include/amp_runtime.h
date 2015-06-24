@@ -280,14 +280,18 @@ static inline const std::shared_ptr<KalmarQueue> get_cpu_queue() {
 /// Used to avoid unnecessary copy when array_view<const, T> is used
 enum states
 {
-    modified, // exclusive owned data, safe to read and wrtie
-    shared, // shared on multiple device, the content on it is the same, read only
-    invalid // not able to read and write on the data, need to read from other device
+    /// exclusive owned data, safe to read and wrtie
+    modified,
+    /// shared on multiple devices, the content are all the same, cannot modify
+    shared,
+    // not able to read and write
+    invalid
 };
 
 /// buffer information
-/// Whenever rw_info is going to be used on device, it will create a device pointer
-/// for it. Additional state info is stored to implement MSI protocol
+/// Whenever rw_info is going to be used on device, it will create a buffer at
+/// that device. data pointer points to device data pointer
+/// state info is stored to implement MSI protocol in rw_info
 struct dev_info
 {
     void* data; /// pointer to device data
@@ -319,6 +323,15 @@ static inline void copy_helper(std::shared_ptr<KalmarQueue>& srcQueue, dev_info&
     }
 }
 
+/// rw_info is modeled as multiprocessor without shared cache
+/// each accelerator represents a processor in the system
+///
+/// +---+  +----+  +----+
+/// |cpu|  |acc1|  |acc2|
+/// +---+  +----+  +----+
+///
+/// Whenever rw_info is going to be used on device, it will allocate space on
+/// targeting device and do the computation
 struct rw_info
 {
     /// host accessible pointer, it will be set if
@@ -345,9 +358,9 @@ struct rw_info
 
 
     /// consruct array_view
-    /// From standard, array_view will be constructed by size, or size with
+    /// According to standard, array_view will be constructed by size, or size with
     /// host pointer.
-    /// If it is constructed by host pointer, treat it is constructed on cpu
+    /// If it is constructed with host pointer, treat it is constructed on cpu
     /// device, set the HostPtr flag to prevent destructor to release it
     rw_info(const size_t count, void* ptr)
         : data(ptr), count(count), curr(nullptr), master(nullptr), stage(nullptr),
@@ -368,7 +381,7 @@ struct rw_info
         }
 
     /// construct array
-    /// From AMP standard, array should be constructed with
+    /// According to AMP standard, array should be constructed with
     /// 1. one accelerator_view
     /// 2. one acceleratir_view, with another staged one
     ///    In this case, master should be cpu device
@@ -386,7 +399,7 @@ struct rw_info
             mode = curr->getDev()->get_access();
         devs[curr->getDev()] = {curr->getDev()->create(count, this), modified};
 
-        /// set data pointer
+        /// set data pointer, if it is accessible from cpu
         if (is_cpu_queue(curr) || (curr->getDev()->is_unified() && mode != access_type_none))
             data = devs[curr->getDev()].data;
         if (is_cpu_queue(curr)) {
@@ -394,6 +407,7 @@ struct rw_info
             if (Stage != curr)
                 devs[stage->getDev()] = {stage->getDev()->create(count, this), invalid};
         } else
+            /// if curr is not cpu, ignore the stage one
             stage = curr;
     }
 
@@ -411,7 +425,10 @@ struct rw_info
 
     /// optimization: Before performing copy, if the state of cpu accelerator is
     /// shared, it implies that the data on cpu is the same on device where
-    /// curr located, it is safe to use the data on cpu to perform the later operation
+    /// curr located, use data on cpu to perform the later operation
+    /// For example, if data on device a is going to be copied to device b
+    /// and the data on device a and cpu is the same, it is okay to copy data 
+    /// from cpu to device b
     void try_switch_to_cpu() {
         if (is_cpu_queue(curr))
             return;
