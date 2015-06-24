@@ -160,9 +160,12 @@ public:
     void read(void* device, void* dst, size_t count, size_t offset) override {
         cl_mem dm = static_cast<cl_mem>(device);
         cl_int err;
-        if (events.find(dm) != std::end(events))
-            err = clEnqueueReadBuffer(getQueue(), dm, CL_TRUE, offset, count, dst, 1, &events[dm], NULL);
-        else
+        if (events.find(dm) != std::end(events)) {
+            cl_event ent = events[dm];
+            err = clEnqueueReadBuffer(getQueue(), dm, CL_TRUE, offset, count, dst, 1, &ent, NULL);
+            clReleaseEvent(ent);
+            events.erase(dm);
+        } else
             err = clEnqueueReadBuffer(getQueue(), dm, CL_TRUE, offset, count, dst, 0, NULL, NULL);
         assert(err == CL_SUCCESS);
     }
@@ -174,8 +177,12 @@ public:
         cl_event ent;
         if (events.find(sdm) == std::end(events))
             err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, 0, NULL, &ent);
-        else
-            err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, 1, &events[sdm], &ent);
+        else {
+            cl_event evt = events[sdm];
+            err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, 1, &evt, &ent);
+            clReleaseEvent(evt);
+            events.erase(sdm);
+        }
         if (blocking) {
             err = clWaitForEvents(1, &ent);
             assert(err = CL_SUCCESS);
@@ -199,8 +206,12 @@ public:
         void* addr = nullptr;
         if (events.find(dm) == std::end(events))
             addr = clEnqueueMapBuffer(getQueue(), dm, CL_TRUE, flags, offset, count, 0, NULL, NULL, &err);
-        else
-            addr = clEnqueueMapBuffer(getQueue(), dm, CL_TRUE, flags, offset, count, 1, &events[dm], NULL, &err);
+        else {
+            cl_event evt = events[dm];
+            addr = clEnqueueMapBuffer(getQueue(), dm, CL_TRUE, flags, offset, count, 1, &evt, NULL, &err);
+            clReleaseEvent(evt);
+            events.erase(dm);
+        }
         assert(err == CL_SUCCESS);
         return addr;
     }
