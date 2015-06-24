@@ -1010,57 +1010,6 @@ class tiled_index {
   template<int D0_, int D1_, int D2_, typename K>
   friend void parallel_for_each(const accelerator_view&, tiled_extent<D0_, D1_, D2_>, const K&);
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  template<typename K, int D1_, int D2_, int D3_>
-  friend void partitioned_task_tile(K const&, tiled_extent<D1_, D2_, D3_> const&, int);
-#endif
-  template<int D0_, int D1_, int D2_, typename K>
-  friend completion_future async_parallel_for_each(tiled_extent<D0_, D1_, D2_>, const K&);
-};
-
-template <int N> class extent;
-template <int D0>
-class tiled_index<D0, 0, 0> {
- public:
-  const index<1> global;
-  const index<1> local;
-  const index<1> tile;
-  const index<1> tile_origin;
-  const tile_barrier barrier;
-  tiled_index(const index<1>& g) restrict(amp, cpu):global(g){}
-  tiled_index(const tiled_index<D0>& o) restrict(amp, cpu):
-    global(o.global), local(o.local), tile(o.tile), tile_origin(o.tile_origin), barrier(o.barrier) {}
-  operator const index<1>() const restrict(amp,cpu) {
-    return global;
-  }
-  const Concurrency::extent<1> tile_extent;
-  Concurrency::extent<1> get_tile_extent() const restrict(amp, cpu) {
-    return tile_extent;
-  }
-  static const int tile_dim0 = D0;
- private:
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  //CLAMP
-  __attribute__((always_inline)) tiled_index(int a, int b, int c, tile_barrier& pb) restrict(amp, cpu)
-  : global(a), local(b), tile(c), tile_origin(a - b), barrier(pb), tile_extent(D0) {}
-#endif
-  //CLAMP
-  __attribute__((annotate("__cxxamp_opencl_index")))
-#if __KALMAR_ACCELERATOR__ == 1
-  __attribute__((always_inline)) tiled_index() restrict(amp)
-  : global(index<1>(amp_get_global_id(0))),
-    local(index<1>(amp_get_local_id(0))),
-    tile(index<1>(amp_get_group_id(0))),
-    tile_origin(index<1>(amp_get_global_id(0)-amp_get_local_id(0))),
-    tile_extent(D0)
-#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  __attribute__((always_inline)) tiled_index() restrict(amp,cpu)
-#else
-  __attribute__((always_inline)) tiled_index() restrict(amp)
-#endif // __KALMAR_ACCELERATOR__
-  {}
-  template<int D, typename K>
-  friend void parallel_for_each(const accelerator_view&, tiled_extent<D>, const K&);
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   template<typename K, int D>
   friend void partitioned_task_tile(K const&, tiled_extent<D> const&, int);
 #endif
