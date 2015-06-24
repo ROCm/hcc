@@ -2133,7 +2133,7 @@ public:
 #if __KALMAR_ACCELERATOR__ == 1
   typedef _data<nc_T> acc_buffer_t;
 #else
-  typedef _data_host<T> acc_buffer_t;
+  typedef _data_host<const T> acc_buffer_t;
 #endif
 
   array_view() = delete;
@@ -2208,7 +2208,7 @@ public:
 #if __KALMAR_ACCELERATOR__ != 1
       cache.get_cpu_access();
 #endif
-    __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
+    __global const T *ptr = reinterpret_cast<__global const T*>(cache.get() + offset);
     return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
   }
 
@@ -2308,7 +2308,7 @@ public:
       cache.get_cpu_access();
 #endif
     static_assert(N == 1, "data() is only permissible on array views of rank 1");
-    return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
+    return reinterpret_cast<const T*>(cache.get() + offset + index_base[0]);
   }
   const acc_buffer_t& internal() const restrict(amp,cpu) { return cache; }
   int get_offset() const restrict(amp,cpu) { return offset; }
@@ -2476,7 +2476,7 @@ template <typename InputIter, typename T, int N>
 struct copy_input<InputIter, T, N, N>
 {
     void operator()(InputIter& It, T* ptr, const extent<N>& ext,
-                      const extent<N>& base, const index<N>& idx)
+                    const extent<N>& base, const index<N>& idx)
     {
         InputIter end = It;
         std::advance(end, ext[N - 1]);
@@ -2488,7 +2488,7 @@ struct copy_input<InputIter, T, N, N>
 template <typename OutputIter, typename T, int N, int dim>
 struct copy_output
 {
-    void operator()(T* ptr, OutputIter& It, const extent<N>& ext,
+    void operator()(const T* ptr, OutputIter& It, const extent<N>& ext,
                     const extent<N>& base, const index<N>& idx)
     {
         size_t stride = 1;
@@ -2505,7 +2505,7 @@ struct copy_output
 template <typename OutputIter, typename T, int N>
 struct copy_output<OutputIter, T, N, N>
 {
-    void operator()(T* ptr, OutputIter& It, const extent<N>& ext,
+    void operator()(const T* ptr, OutputIter& It, const extent<N>& ext,
                     const extent<N>& base, const index<N>& idx)
     {
         ptr += idx[N - 1];
@@ -2516,7 +2516,7 @@ struct copy_output<OutputIter, T, N, N>
 template <typename T, int N, int dim>
 struct copy_bidir
 {
-    void operator()(T* src, T* dst, const extent<N>& ext,
+    void operator()(const T* src, T* dst, const extent<N>& ext,
                     const extent<N>& base1, const index<N>& idx1,
                     const extent<N>& base2, const index<N>& idx2)
     {
@@ -2541,7 +2541,7 @@ struct copy_bidir
 template <typename T, int N>
 struct copy_bidir<T, N, N>
 {
-    void operator()(T* src, T* dst, const extent<N>& ext,
+    void operator()(const T* src, T* dst, const extent<N>& ext,
                     const extent<N>& base1, const index<N>& idx1,
                     const extent<N>& base2, const index<N>& idx2)
     {
@@ -2558,10 +2558,10 @@ void copy(const array_view<const T, N>& src, const array_view<T, N>& dest) {
             src.internal().copy(dest.internal(), src.get_offset(),
                                 dest.get_offset(), dest.get_extent().size());
         else {
-            T* pSrc = src.internal().map_ptr();
-            T* p = pSrc;
+            const T* pSrc = src.internal().map_ptr();
+            const T* p = pSrc;
             T* pDst = dest.internal().map_ptr(true, dest.extent_base.size(), dest.offset);
-            copy_input<T*, T, N, 1>()(pSrc, pDst, dest.extent, dest.extent_base, dest.index_base);
+            copy_input<const T*, T, N, 1>()(pSrc, pDst, dest.extent, dest.extent_base, dest.index_base);
             dest.internal().unmap_ptr(pDst);
             src.internal().unmap_ptr(p);
         }
@@ -2569,12 +2569,12 @@ void copy(const array_view<const T, N>& src, const array_view<T, N>& dest) {
         if (is_flat(dest)) {
             T* pDst = dest.internal().map_ptr(true);
             T* p = pDst;
-            T* pSrc = src.internal().map_ptr(false, src.extent_base.size(), src.offset);
+            const T* pSrc = src.internal().map_ptr(false, src.extent_base.size(), src.offset);
             copy_output<T*, T, N, 1>()(pSrc, pDst, src.extent, src.extent_base, src.index_base);
             dest.internal().unmap_ptr(p);
             src.internal().unmap_ptr(pSrc);
         } else {
-            T* pSrc = src.internal().map_ptr(false, src.extent_base.size(), src.offset);
+            const T* pSrc = src.internal().map_ptr(false, src.extent_base.size(), src.offset);
             T* pDst = dest.internal().map_ptr(true, dest.extent_base.size(), dest.offset);
             copy_bidir<T, N, 1>()(pSrc, pDst, src.extent, src.extent_base,
                                   src.index_base, dest.extent_base, dest.index_base);
@@ -2607,7 +2607,7 @@ void copy(const array_view<const T, N>& src, array<T, N>& dest) {
     } else {
         T* pDst = dest.internal().map_ptr(true);
         T* p = pDst;
-        T* pSrc = src.internal().map_ptr(false, src.extent_base.size(), src.offset);
+        const T* pSrc = src.internal().map_ptr(false, src.extent_base.size(), src.offset);
         copy_output<T*, T, N, 1>()(pSrc, pDst, src.extent, src.extent_base, src.index_base);
         src.internal().unmap_ptr(pSrc);
         dest.internal().unmap_ptr(p);
@@ -2667,7 +2667,7 @@ struct do_copy
     }
     template<template <typename, int> class _amp_container>
     void operator()(const _amp_container<T, N> &src, Iter destBegin) {
-        typename std::remove_const<T>::type* ptr = src.internal().map_ptr(false, src.get_extent().size(), src.get_offset());
+        const T* ptr = src.internal().map_ptr(false, src.get_extent().size(), src.get_offset());
         std::copy(ptr, ptr + src.get_extent().size(), destBegin);
         src.internal().unmap_ptr(ptr);
     }
@@ -2685,9 +2685,8 @@ struct do_copy<Iter, T, 1>
     }
     template<template <typename, int> class _amp_container>
     void operator()(const _amp_container<T, 1> &src, Iter destBegin) {
-        typename std::remove_const<T>::type*
-            ptr = src.internal().map_ptr(false, src.get_extent().size(),
-                                         src.get_offset() + src.get_index_base()[0]);
+        const T* ptr = src.internal().map_ptr(false, src.get_extent().size(),
+                                              src.get_offset() + src.get_index_base()[0]);
         std::copy(ptr, ptr + src.get_extent().size(), destBegin);
         src.internal().unmap_ptr(ptr);
     }
@@ -2760,7 +2759,7 @@ void copy(const array_view<T, N> &src, OutputIter destBegin) {
     if (is_flat(src))
         do_copy<OutputIter, T, N>()(src, destBegin);
     else {
-        typename array_view<T, N>::nc_T* ptr = src.internal().map_ptr(false, src.extent_base.size(), src.offset);
+        T* ptr = src.internal().map_ptr(false, src.extent_base.size(), src.offset);
         copy_output<OutputIter, T, N, 1>()(ptr, destBegin, src.extent, src.extent_base, src.index_base);
         src.internal().unmap_ptr(ptr);
     }

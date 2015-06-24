@@ -340,7 +340,7 @@ struct rw_info
     ///    unified memory and access_type is not none
     void *data;
     const size_t count;
-    /// This pointer pointes to the queue that contains the latest data
+    /// This pointer pointes to the latest queue that manages the data
     std::shared_ptr<KalmarQueue> curr;
     /// This pointer pointes to the queue that used to construct this rw_info
     /// This will be null if the constructor is constructed by size only
