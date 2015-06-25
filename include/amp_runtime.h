@@ -146,7 +146,7 @@ public:
     virtual std::shared_ptr<KalmarQueue> createQueue() = 0;
     virtual ~KalmarDevice() {}
 
-    std::shared_ptr<KalmarQueue> get_default() {
+    std::shared_ptr<KalmarQueue> get_default_queue() {
         std::call_once(flag, [&]() { def = createQueue(); });
         return def;
     }
@@ -206,7 +206,7 @@ public:
 /// User will need to add their customize devices
 class KalmarContext
 {
-    KalmarDevice* get_default() {
+    KalmarDevice* get_default_dev() {
         if (!def) {
             if (Devices.size() <= 1) {
                 fprintf(stderr, "There is no device can be used to do the computation\n");
@@ -241,20 +241,20 @@ public:
 
     /// get auto selection queue
     std::shared_ptr<KalmarQueue> auto_select() {
-        return get_default()->get_default();
+        return get_default_dev()->get_default_queue();
     }
 
     /// get device from path
     KalmarDevice* getDevice(std::wstring path = L"") {
         if (path == L"default" || path == L"")
-            return get_default();
+            return get_default_dev();
         auto result = std::find_if(std::begin(Devices), std::end(Devices),
                                    [&] (const KalmarDevice* dev)
                                    { return dev->get_path() == path; });
         if (result != std::end(Devices))
             return *result;
         else
-            return get_default();
+            return get_default_dev();
     }
 };
 
@@ -277,7 +277,7 @@ extern void PushArgPtr(void *, int, size_t, const void *);
 } // namespace CLAMP
 
 static inline const std::shared_ptr<KalmarQueue> get_cpu_queue() {
-    static auto cpu_queue = getContext()->getDevice(L"cpu")->get_default();
+    static auto cpu_queue = getContext()->getDevice(L"cpu")->get_default_queue();
     return cpu_queue;
 }
 

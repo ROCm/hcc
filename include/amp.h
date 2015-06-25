@@ -205,7 +205,7 @@ public:
   bool get_supports_double_precision() const { return pDev->is_double(); }
   bool get_supports_limited_double_precision() const { return pDev->is_lim_double(); }
   size_t get_dedicated_memory() const { return pDev->get_mem(); }
-  accelerator_view get_default_view() const { return pDev->get_default(); }
+  accelerator_view get_default_view() const { return pDev->get_default_queue(); }
   access_type get_default_cpu_access_type() const { return pDev->get_access(); }
   bool get_supports_cpu_shared_memory() const { return pDev->is_unified(); }
 
