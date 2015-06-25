@@ -204,6 +204,16 @@ public:
 /// User will need to add their customize devices
 class KalmarContext
 {
+    KalmarDevice* get_default() {
+        if (!def) {
+            if (Devices.size() <= 1) {
+                fprintf(stderr, "There is no device can be used to do the computation\n");
+                exit(-1);
+            }
+            def = Devices[1];
+        }
+        return def;
+    }
 protected:
     /// default device
     KalmarDevice* def;
@@ -229,25 +239,20 @@ public:
 
     /// get auto selection queue
     std::shared_ptr<KalmarQueue> auto_select() {
-        if (!def)
-            def = Devices[1];
-        return def->get_default();
+        return get_default()->get_default();
     }
 
     /// get device from path
     KalmarDevice* getDevice(std::wstring path = L"") {
-        if (path == L"default" || path == L"") {
-            if (!def)
-                def = Devices[1];
-            return def;
-        }
+        if (path == L"default" || path == L"")
+            return get_default();
         auto result = std::find_if(std::begin(Devices), std::end(Devices),
                                    [&] (const KalmarDevice* dev)
                                    { return dev->get_path() == path; });
         if (result != std::end(Devices))
             return *result;
         else
-            return Devices[1];
+            return get_default();
     }
 };
 
