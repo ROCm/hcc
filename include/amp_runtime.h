@@ -289,6 +289,8 @@ static inline void copy_helper(std::shared_ptr<KalmarQueue>& srcQueue, void* src
                                std::shared_ptr<KalmarQueue>& dstQueue, void* dst,
                                size_t cnt, bool block,
                                size_t src_offset = 0, size_t dst_offset = 0) {
+    /// In shared memory architecture, src and dst may points to the same buffer
+    /// avoid unnecessary copy
     if (src == dst)
         return ;
     if (is_cpu_queue(srcQueue))
@@ -313,9 +315,11 @@ enum states
 };
 
 /// buffer information
+/// Used in rw_info, represent cached data for each device
 /// Whenever rw_info is going to be used on device, it will create a buffer at
-/// that device. data pointer points to device data pointer
-/// state info is stored to implement MSI protocol in rw_info
+/// that device.
+/// @data: device data pointer
+/// @state: used to implement MSI protocol
 struct dev_info
 {
     void* data; /// pointer to device data
@@ -439,9 +443,9 @@ struct rw_info
 
     /// synchronize data to device pQueue belongs to by using pQuquq
     /// @pQueue: queue that used to synchronize
-    /// @modify:
-    /// @blcok: this call should act blocking or not
-    //          non-blocking call will occur in serilization stage
+    /// @modify: the data will be modified or not
+    /// @blcok: this call will be blocking or not
+    ///         none blocking occurs in serialization stage
     void sync(std::shared_ptr<KalmarQueue> pQueue, bool modify, bool block = true) {
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
         if (CLAMP::in_cpu_kernel())
@@ -462,7 +466,7 @@ struct rw_info
         if (curr == pQueue)
             return;
 
-        /// If both queues are from the same device, change state only
+        /// If both queues are from the same device, upadte state only
         if (curr->getDev() == pQueue->getDev()) {
             // curr->wait();
             curr = pQueue;
@@ -526,6 +530,7 @@ struct rw_info
 
     /// synchronize data to master accelerator
     /// used in array
+    /// master is not necessary to be cpu device
     void synchronize(bool modify) { sync(master, modify); }
 
     /// synchronize data to cpu accelerator

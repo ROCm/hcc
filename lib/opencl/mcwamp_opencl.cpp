@@ -188,6 +188,10 @@ public:
             clGetCommandQueueInfo(getQueue(), CL_QUEUE_DEVICE, sizeof(cl_device_id), &dev1, NULL);
             clGetCommandQueueInfo(queue, CL_QUEUE_DEVICE, sizeof(cl_device_id), &dev2, NULL);
 
+            /// In OpenCL, the buffer write to different device cannot be copied
+            /// simply by EnqueuCopyBuffer. CopyBuffer can only work when the device
+            /// of the queue used to write data is the same as the device of the
+            /// queue used to copy data
             if (dev1 == dev2) {
                 err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, 1, &evt, &ent);
                 assert(err = CL_SUCCESS);
