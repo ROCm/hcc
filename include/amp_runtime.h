@@ -206,6 +206,7 @@ public:
 /// User will need to add their customize devices
 class KalmarContext
 {
+private:
     KalmarDevice* get_default_dev() {
         if (!def) {
             if (Devices.size() <= 1) {
@@ -293,6 +294,9 @@ static inline void copy_helper(std::shared_ptr<KalmarQueue>& srcQueue, void* src
     /// avoid unnecessary copy
     if (src == dst)
         return ;
+    /// If device pointer comes from cpu, let the device queue to handle the copy
+    /// For example, if src is on cpu and dst is on device,
+    /// in OpenCL, clEnqueueWrtieBuffer to write data from src to device
     if (is_cpu_queue(srcQueue))
         dstQueue->write(dst, (char*)src + src_offset, cnt, dst_offset, block);
     else if (is_cpu_queue(dstQueue))
@@ -333,7 +337,7 @@ struct dev_info
 /// |cpu|  |acc1|  |acc2|
 /// +---+  +----+  +----+
 ///
-/// Whenever rw_info is going to be used on device, it will allocate space on
+/// Whenever rw_info is going to be used on device, it will allocate memory on
 /// targeting device and do the computation
 struct rw_info
 {
