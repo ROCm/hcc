@@ -281,6 +281,24 @@ static inline const std::shared_ptr<KalmarQueue> get_cpu_queue() {
     return cpu_queue;
 }
 
+static inline bool is_cpu_queue(const std::shared_ptr<KalmarQueue>& Queue) {
+    return Queue->getDev()->get_path() == L"cpu";
+}
+
+static inline void copy_helper(std::shared_ptr<KalmarQueue>& srcQueue, void* src,
+                               std::shared_ptr<KalmarQueue>& dstQueue, void* dst,
+                               size_t cnt, bool block,
+                               size_t src_offset = 0, size_t dst_offset = 0) {
+    if (src == dst)
+        return ;
+    if (is_cpu_queue(srcQueue))
+        dstQueue->write(dst, (char*)src + src_offset, cnt, dst_offset, block);
+    else if (is_cpu_queue(dstQueue))
+        srcQueue->read(src, (char*)dst + dst_offset, cnt, src_offset);
+    else
+        dstQueue->copy(src, dst, cnt, src_offset, dst_offset, block);
+}
+
 /// software MSI protocol
 /// https://en.wikipedia.org/wiki/MSI_protocol
 /// Used to avoid unnecessary copy when array_view<const, T> is used
@@ -303,24 +321,6 @@ struct dev_info
     void* data; /// pointer to device data
     states state; /// state of the data on current device
 };
-
-static inline bool is_cpu_queue(const std::shared_ptr<KalmarQueue>& Queue) {
-    return Queue->getDev()->get_path() == L"cpu";
-}
-
-static inline void copy_helper(std::shared_ptr<KalmarQueue>& srcQueue, dev_info& src,
-                               std::shared_ptr<KalmarQueue>& dstQueue, dev_info& dst,
-                               size_t cnt, bool block,
-                               size_t src_offset = 0, size_t dst_offset = 0) {
-    if (src.data == dst.data)
-        return ;
-    if (is_cpu_queue(srcQueue))
-        dstQueue->write(dst.data, (char*)src.data + src_offset, cnt, dst_offset, block);
-    else if (is_cpu_queue(dstQueue))
-        srcQueue->read(src.data, (char*)dst.data + dst_offset, cnt, src_offset);
-    else
-        dstQueue->copy(src.data, dst.data, cnt, src_offset, dst_offset, block);
-}
 
 /// rw_info is modeled as multiprocessor without shared cache
 /// each accelerator represents a processor in the system
@@ -485,7 +485,7 @@ struct rw_info
         dev_info& dst = devs[pQueue->getDev()];
         dev_info& src = devs[curr->getDev()];
         if (dst.state == invalid && src.state != invalid)
-            copy_helper(curr, src, pQueue, dst, count, block);
+            copy_helper(curr, src.data, pQueue, dst.data, count, block);
         /// if the data on current device is going to be modified
         /// changed the state of current device as modified
         curr = pQueue;
@@ -575,7 +575,7 @@ struct rw_info
                 ::operator delete(ptr);
             }
         }
-        copy_helper(curr, src, other->curr, dst, cnt, true, src_offset, dst_offset);
+        copy_helper(curr, src.data, other->curr, dst.data, cnt, true, src_offset, dst_offset);
         other->disc();
         dst.state = modified;
     }
