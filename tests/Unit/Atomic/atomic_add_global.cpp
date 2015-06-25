@@ -14,18 +14,20 @@ int main(void) {
     count[i] = 0;
   }
 
-  parallel_for_each(count.extent, [=, &count](index<1> idx) restrict(amp) {
+  parallel_for_each(count.get_extent(), [=, &count](index<1> idx) restrict(amp) {
     for(unsigned i = 0; i < vecSize; i++) {
       atomic_fetch_add(&count[i], 1);
     }
   });
 
-  std::vector<accelerator> accs = accelerator::get_all();
-  for(unsigned i = 0; i < vecSize && accs.size(); i++) {
-      if(count[i] != vecSize) {
-        return 1;
+  array_view<int, 1> av(count);
+
+  bool ret = true;
+  for(unsigned i = 0; i < vecSize; ++i) {
+      if(av[i] != vecSize) {
+        ret = false;
       }
   }
 
-  return 0;
+  return !(ret == true);
 }
