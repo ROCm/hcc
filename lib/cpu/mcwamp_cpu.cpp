@@ -28,11 +28,9 @@ public:
           memmove(dst, (char*)device + offset, count);
   }
 
-  void write(void* device, const void* src, size_t count, size_t offset, bool blocking, bool free) override {
+  void write(void* device, const void* src, size_t count, size_t offset, bool blocking) override {
       if (src != device)
           memmove((char*)device + offset, src, count);
-      if (free)
-          ::operator delete(const_cast<void*>(src));
   }
 
   void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset, bool blocking) override {

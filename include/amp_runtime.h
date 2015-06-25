@@ -39,6 +39,9 @@ private:
 class KalmarDevice;
 struct rw_info;
 
+/// access_type is used for accelerator that supports unified memory
+/// Such accelerator can use access_type to control whether can access data on
+/// it or not
 enum access_type
 {
     access_type_none = 0,
@@ -48,7 +51,8 @@ enum access_type
     access_type_auto = (1 << 31)
 };
 
-enum queuing_mode {
+enum queuing_mode
+{
     queuing_mode_immediate,
     queuing_mode_automatic
 };
@@ -74,7 +78,7 @@ public:
   virtual void read(void* device, void* dst, size_t count, size_t offset) = 0;
 
   /// wrtie data from host to device
-  virtual void write(void* device, const void* src, size_t count, size_t offset, bool blocking, bool free) = 0;
+  virtual void write(void* device, const void* src, size_t count, size_t offset, bool blocking) = 0;
 
   /// copy data between two device pointers
   virtual void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset, bool blocking) = 0;
@@ -159,11 +163,9 @@ public:
           memmove(dst, (char*)device + offset, count);
   }
 
-  void write(void* device, const void* src, size_t count, size_t offset, bool blocking, bool free) override {
+  void write(void* device, const void* src, size_t count, size_t offset, bool blocking) override {
       if (src != device)
           memmove((char*)device + offset, src, count);
-      if (free)
-          ::operator delete(const_cast<void*>(src));
   }
 
   void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset, bool blocking) override {
@@ -313,18 +315,11 @@ static inline void copy_helper(std::shared_ptr<KalmarQueue>& srcQueue, dev_info&
     if (src.data == dst.data)
         return ;
     if (is_cpu_queue(srcQueue))
-        dstQueue->write(dst.data, (char*)src.data + src_offset, cnt, dst_offset, block, false);
+        dstQueue->write(dst.data, (char*)src.data + src_offset, cnt, dst_offset, block);
     else if (is_cpu_queue(dstQueue))
         srcQueue->read(src.data, (char*)dst.data + dst_offset, cnt, src_offset);
-    else {
-        if (dstQueue->getDev() == srcQueue->getDev())
-            dstQueue->copy(src.data, dst.data, cnt, src_offset, dst_offset, block);
-        else {
-            void* temp = ::operator new(cnt);
-            srcQueue->read(src.data, temp, cnt, src_offset);
-            dstQueue->write(dst.data, temp, cnt, dst_offset, block, true);
-        }
-    }
+    else
+        dstQueue->copy(src.data, dst.data, cnt, src_offset, dst_offset, block);
 }
 
 /// rw_info is modeled as multiprocessor without shared cache
@@ -540,7 +535,7 @@ struct rw_info
     /// Write data from host source pointer to device
     /// Change state to modified, because the device has exclusive copy of data
     void write(const void* src, int cnt, int offset, bool blocking) {
-        curr->write(devs[curr->getDev()].data, src, cnt, offset, blocking, false);
+        curr->write(devs[curr->getDev()].data, src, cnt, offset, blocking);
         dev_info& dev = devs[curr->getDev()];
         if (dev.state != modified) {
             disc();
@@ -576,7 +571,7 @@ struct rw_info
             else {
                 void *ptr = aligned_alloc(0x1000, cnt);
                 memset(ptr, 0, cnt);
-                curr->write(src.data, ptr, cnt, src_offset, true, false);
+                curr->write(src.data, ptr, cnt, src_offset, true);
                 ::operator delete(ptr);
             }
         }
