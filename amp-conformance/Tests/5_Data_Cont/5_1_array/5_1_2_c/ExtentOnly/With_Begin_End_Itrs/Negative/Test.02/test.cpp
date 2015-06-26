@@ -39,7 +39,7 @@ bool test_feature()
 }
 
 runall_result test_main()
-{ 
+{
     try
     {
         test_feature<int, 5>();
@@ -48,7 +48,7 @@ runall_result test_main()
 	{
 		return runall_pass;
 	}
-    catch (std::exception e) 
+    catch (std::exception e)
     {
         return runall_fail;
     }	

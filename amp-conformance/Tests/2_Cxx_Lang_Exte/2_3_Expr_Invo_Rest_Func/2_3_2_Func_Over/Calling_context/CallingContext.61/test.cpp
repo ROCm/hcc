@@ -18,7 +18,7 @@ auto l = [](int &flag) {c::f(flag);};
 
 bool test()
 {
-    int flag = 0;    
+    int flag = 0;
 
     l(flag);
 

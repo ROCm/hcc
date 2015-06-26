@@ -8,7 +8,7 @@
 
 #include <amptest.h>
 
-class c 
+class c
 {
 public:
     int func(int) __GPU
@@ -17,7 +17,7 @@ public:
     }
 };
 
-bool test() 
+bool test()
 {
     int flag = 0;
 

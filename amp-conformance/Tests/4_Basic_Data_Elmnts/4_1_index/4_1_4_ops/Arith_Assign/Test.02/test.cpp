@@ -36,7 +36,7 @@ int test1() restrict(cpu,amp)
     i1 += 1;
     if (!(i1 == ia))
     {
-        return 11;   // test1 scenario1 failed            
+        return 11;   // test1 scenario1 failed
     }
 
     i1 = i1o;
@@ -219,7 +219,7 @@ int test4() restrict(cpu,amp)
 int test() restrict(cpu,amp)
 {
     int result = test1();
-    
+
     result = (result == 0) ? test2() : result;
 
     result = (result == 0) ? test3() : result;
@@ -264,8 +264,8 @@ int test_device()
     return 0;
 }
 
-runall_result test_main() 
-{ 
+runall_result test_main()
+{
     // Test on host
     int host_result = test();
     if(host_result == 0)
@@ -274,7 +274,7 @@ runall_result test_main()
     }
     else
     {
-        printf("Test failed on host. Failing test: %d\n", host_result);        
+        printf("Test failed on host. Failing test: %d\n", host_result);
         return runall_fail;
     }
 
@@ -287,8 +287,8 @@ runall_result test_main()
     else
     {
         printf("Test failed on device. Failed test: %d\n", device_result);
-	return runall_fail;        
-    }    
+	return runall_fail;
+    }
 
     return runall_pass;
 }

@@ -38,7 +38,7 @@ runall_result test_main()
 	
     array<int, 1> a(extent<1>(100));
     array_view<int, 1> av(a);
-    
+
     for (int i = 0; i < 10; i++)
     {
         if (i % 2 == 0)
@@ -46,7 +46,7 @@ runall_result test_main()
             // write remotely first
             array_view<int, 1> section1 = av.section(extent<1>(20));
             section1[10] = 17;
-            
+
             parallel_for_each(extent<1>(1), [=](index<1>) __GPU {
                 array_view<int, 1> section2 = av.section(index<1>(10), extent<1>(10));
                 section2[0] = 19;
@@ -59,7 +59,7 @@ runall_result test_main()
                 array_view<int, 1> section2 = av.section(index<1>(10), extent<1>(10));
                 section2[0] = 19;
             });
-            
+
             array_view<int, 1> section1 = av.section(extent<1>(20));
             section1[10] = 17;
         }

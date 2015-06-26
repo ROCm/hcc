@@ -29,16 +29,16 @@ using namespace Concurrency::Test;
 runall_result test_main()
 {
     accelerator::set_default(require_device().get_device_path());
-    
+
     int size = 30;
     std::vector<int> v(size);
     Fill<int>(v);
     array_view<int, 1> av(size, v);
-    
+
     parallel_for_each(av.get_extent(), [av](index<1> i) __GPU {
         av[i] = 3;
     });
-    
+
     std::shared_future<void> w = av.synchronize_async();
     w.wait();
 	

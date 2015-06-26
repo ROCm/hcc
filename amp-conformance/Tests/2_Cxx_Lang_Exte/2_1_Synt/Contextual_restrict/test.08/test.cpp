@@ -13,9 +13,9 @@ using namespace Concurrency;
 using namespace std;
 
 class Foo
-{    
+{
     int data;
-public:    
+public:
 
     explicit Foo(int d) __GPU
     {
@@ -36,14 +36,14 @@ int Test1(int d)
 }
 
 int Test2(int d) __GPU
-{    
+{
     Foo f(d);
 
     return((f.restrict() == d) ? 0 : 1);
 }
 
 // Main entry point
-int main(int argc, char **argv) 
+int main(int argc, char **argv)
 {
     bool passed = true;
 

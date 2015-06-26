@@ -9,10 +9,9 @@
 #include <amptest.h>
 #include <iostream>
 
-using namespace Concurrency;
-using namespace std;
+using namespace concurrency;
 
-void restrict(index<1>& idx, Concurrency::array<int, 1>& a) restrict(amp)
+void restrict(index<1>& idx, array<int, 1>& a) restrict(amp)
 {
    a(0) = 1;
 }
@@ -24,37 +23,37 @@ int restrict(int a) restrict(cpu)
 
 
 // Main entry point
-int main(int argc, char **argv) 
+int main(int argc, char **argv)
 {
     bool passed = true;
     int x = 10;
 
-    cout << "Test: Use restrict as a restricted cpu function name" << endl;
+    std::cout << "Test: Use restrict as a restricted cpu function name" << std::endl;
     if(restrict(x) == x + 1)
     {
-        cout << "Passed!" << endl;
+        std::cout << "Passed!" << std::endl;
     }
     else
     {
         passed = false;
-        cout << "Failed!" << endl;
+        std::cout << "Failed!" << std::endl;
     }
 
-    cout << "Test: Use restrict as a restricted amp function name" << endl;
+    std::cout << "Test: Use restrict as a restricted amp function name" << std::endl;
     Concurrency::extent<1> ex(1);
-    Concurrency::array<int, 1> arr(ex);
+    array<int, 1> arr(ex);
 
     parallel_for_each(arr.get_extent(), [&](index<1> idx) restrict(amp) { restrict(idx, arr);});
 
-    vector<int> v = arr;
+    std::vector<int> v = arr;
     if(v[0] == 1)
     {
-        cout << "Passed!" << endl;
+        std::cout << "Passed!" << std::endl;
     }
     else
     {
         passed = false;
-        cout << "Failed!" << endl;
+        std::cout << "Failed!" << std::endl;
     }
 
     return passed ? 0 : 1;

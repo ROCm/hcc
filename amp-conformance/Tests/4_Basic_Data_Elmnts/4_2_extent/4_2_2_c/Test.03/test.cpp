@@ -8,7 +8,7 @@
 /// <tags>P1</tags>
 /// <summary>Create a new extent using an already initialized extent of the same rank and ensure that dimensions are copied correctly.</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 
 using namespace Concurrency;
 using namespace Concurrency::Test;
@@ -67,7 +67,7 @@ int test() __GPU
 
 void kernel(index<1>& idx, array<int, 1>& result) __GPU
 {
-    result[idx] = test();    
+    result[idx] = test();
 }
 
 const int size = 10;
@@ -104,14 +104,14 @@ int test_device()
 }
 
 int main()
-{ 
+{
     int result = test();
-    
-    printf("Test %s on host\n", ((result == 0) ? "passed" : "failed")); 
+
+    printf("Test %s on host\n", ((result == 0) ? "passed" : "failed"));
     if(result != 0) return result;
-    
+
     result = test_device();
-    printf("Test %s on device\n", ((result == 0) ? "passed" : "failed")); 
+    printf("Test %s on device\n", ((result == 0) ? "passed" : "failed"));
     return result;
-} 
+}
 

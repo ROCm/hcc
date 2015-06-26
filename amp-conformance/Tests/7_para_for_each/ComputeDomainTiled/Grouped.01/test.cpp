@@ -42,7 +42,7 @@ void vector_invoker(const vector<int> &A, const vector<int> &B, vector<int> &C, 
     const array<int, 1> fB(vector, B.begin(), B.end(), av);
     array<int, 1> fC(vector, av);
 
-    parallel_for_each(vector.tile<7>(), [&] (tiled_index<7> ti) __GPU 
+    parallel_for_each(vector.tile<7>(), [&] (tiled_index<7> ti) __GPU
     {
         kernel1(fC[ti], fA[ti], fB[ti]);
     });
@@ -64,7 +64,7 @@ void matrix_invoker(const vector<int> &A, const vector<int> &B, vector<int> &C, 
 
     parallel_for_each(matrix.tile<N, W>(), [&] (tiled_index<N, W> ti) __GPU
     {
-        kernel2(ti, fC[ti], fA, fB[ti]);     
+        kernel2(ti, fC[ti], fA, fB[ti]);
     });
 
     C = fC;
@@ -96,11 +96,11 @@ int int_add_grouped(void(*invoker)(const vector<int> &, const vector<int> &, vec
     vector<int> B(size);
     vector<int> C(size);
     vector<int> refC(size);
-    
+
     for (unsigned int i = 0; i < size; i++)
     {
-        A[i] = i; 
-        B[i] = i; 
+        A[i] = i;
+        B[i] = i;
     }
 
     for (unsigned int i = 0; i < size; i++)
@@ -111,7 +111,7 @@ int int_add_grouped(void(*invoker)(const vector<int> &, const vector<int> &, vec
     accelerator device;
     if (!Test::get_device(Test::Device::ALL_DEVICES, device))
     {
-        std::cout << "Unable to get requested accelerator" << std::endl; 
+        std::cout << "Unable to get requested accelerator" << std::endl;
         return 2;
     }
     accelerator_view av = device.get_default_view();
@@ -129,21 +129,21 @@ int int_add_grouped(void(*invoker)(const vector<int> &, const vector<int> &, vec
 int main()
 {
     int status = 0;
-    
+
     status = int_add_grouped(vector_invoker, "vector");
     if (status)
     {
         return status;
     }
-        
+
     status = int_add_grouped(matrix_invoker, "matrix");
     if (status)
     {
         return status;
     }
-    
+
     status = int_add_grouped(cube_invoker, "cube");
-    
+
     return status;
 }
 

@@ -22,7 +22,7 @@
 //#Expects: Error: error C2338
 
 
-#include <amptest.h> 
+#include <amptest.h>
 
 using namespace Concurrency;
 using namespace Concurrency::Test;
@@ -31,7 +31,7 @@ using std::vector;
 int main()
 {
     array_view<int, -1> av;
-    
+
     // this shouldn't compile
     return 1;
 }

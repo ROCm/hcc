@@ -20,7 +20,7 @@
 /// <tags>P1</tags>
 /// <summary>Use refresh on an array_view after modifying the data, multiple views</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 
 using namespace Concurrency;
@@ -34,10 +34,10 @@ int main()
     Fill<int>(v);
     array_view<int, 1> a(size, v);
     array_view<const int, 1> b(a);
-    
+
     v[17] = 93;
     a.refresh();
-    
+
     return a[17] == 93 && b[17] == 93 ? runall_pass : runall_fail;
 }
 

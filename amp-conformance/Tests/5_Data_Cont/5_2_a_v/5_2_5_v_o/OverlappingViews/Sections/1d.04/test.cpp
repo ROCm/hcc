@@ -36,6 +36,6 @@ runall_result test_main()
         acc.set_default_cpu_access_type(ACCESS_TYPE);
     }
 	
-    OverlapTest<int, 1> t(extent<1>(10));    
-    return t.positive_test(index<1>(2), extent<1>(5), index<1>(2), extent<1>(5)) ? t.pass() : t.fail(); 
+    OverlapTest<int, 1> t(extent<1>(10));
+    return t.positive_test(index<1>(2), extent<1>(5), index<1>(2), extent<1>(5)) ? t.pass() : t.fail();
 }

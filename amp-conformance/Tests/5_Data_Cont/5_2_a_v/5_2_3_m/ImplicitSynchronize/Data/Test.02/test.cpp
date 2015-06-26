@@ -35,17 +35,17 @@ runall_result test_main()
     {
         acc.set_default_cpu_access_type(ACCESS_TYPE);
     }
-    
+
     ArrayViewTest<int, 1> av(extent<1>(10));
-    
+
     Log() << "Writing on the GPU" << std::endl;
     array_view<int, 1> gpu_view = av.view();
     parallel_for_each(extent<1>(1), [=](index<1>) __GPU {
         gpu_view(0) = 17;
     });
     av.set_known_value(index<1>(0), 17);
-    
+
     int result = av.view().data()[0];
     Log() << "Result is: " << result << " Expected: 17" << std::endl;
     return result == 17 ? av.pass() : av.fail();
-}   
+}

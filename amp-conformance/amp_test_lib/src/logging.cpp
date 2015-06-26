@@ -34,7 +34,7 @@ namespace Concurrency
             ///<summary>A basic_streambuf implementation that doesn't log anything</summary>
             template <class cT, class traits = std::char_traits<cT> >
             class noop_streambuf : public std::basic_streambuf<cT, traits> {
-                
+
                 typename traits::int_type overflow(typename traits::int_type c)
                 {
                     return traits::not_eof(c); // indicate success
@@ -44,7 +44,7 @@ namespace Concurrency
             ///<summary>A basic_ostream implementation that doesn't log anything</summary>
             template <class cT, class traits = std::char_traits<cT> >
             class basic_noop_ostream: public std::basic_ostream<cT, traits> {
-                
+
                 public:
                     basic_noop_ostream():
                         std::basic_ios<cT, traits>(&m_sbuf),
@@ -58,18 +58,18 @@ namespace Concurrency
             };
 
             static basic_noop_ostream<char> noop_ostream;
-            
+
             // Controls verbosity of wrapper, default is Info level
             LogType g_verbose = LogType::Info;
-            
+
 			static inline std::ostream& get_raw_log_stream(LogType type) {
 	
 				switch (type)
 				{
-				case LogType::Info: 
+				case LogType::Info:
 					return amptest_context.get_raw_stdout_stream();
 				case LogType::Warning:
-				case LogType::Error: 
+				case LogType::Error:
 					return amptest_context.get_raw_stderr_stream();
 				case LogType::Silent: return noop_ostream;
 				default: throw new std::invalid_argument("Invalid LogType argument value.");
@@ -160,7 +160,7 @@ namespace Concurrency
                 // message does not have required verbosity
                 return details::noop_ostream;
             }
-            
+
 			std::ostream& log_stream = details::get_raw_log_stream(type);
 
 			if(print_line_prefix) {
@@ -187,21 +187,25 @@ namespace Concurrency
 
             va_list args;
             va_start(args, msg);
-			
+
 #pragma warning(disable:4996)
 			int len = vsnprintf(nullptr, 0, msg, args);
 #pragma warning(default:4996)
 
+			va_end(args);
+
+			va_start(args, msg);
+
 			std::unique_ptr<char[]> c_msg(new char[len+1]);
 			memset(c_msg.get(), 0, sizeof(char) * (len+1));
 #pragma warning(disable:4996)
-			int actual_len = vsnprintf(c_msg.get(), len, msg, args);
+			int actual_len = vsnprintf(c_msg.get(), len+1, msg, args);
 #pragma warning(default:4996)
 			Log(type) << c_msg.get() << std::endl;
 
             va_end(args);
 
-			if (len > actual_len) 
+			if (len > actual_len)
 			{
 				// The code above should ensure this doesn't happen.  However, I'd prefer to fail fast if we
 				// do ever see it.

@@ -13,7 +13,7 @@ class c2 {};
 class c1
 {
 public:
-    
+
     operator c2() __GPU_ONLY
     {
         flag = 1;
@@ -21,7 +21,7 @@ public:
         return o;
     }
 
-    operator c2() 
+    operator c2()
     {
         flag = 2;
         c2 o;

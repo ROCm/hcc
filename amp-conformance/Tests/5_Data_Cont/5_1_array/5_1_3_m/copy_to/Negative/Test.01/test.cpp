@@ -54,8 +54,8 @@ bool test_feature()
     return true;
 }
 
-int main() 
-{ 
+int main()
+{
     try
     {
         test_feature<float, 5>();
@@ -64,12 +64,12 @@ int main()
     {
 	return runall_pass;
     }
-    catch (std::exception e) 
+    catch (std::exception e)
     {
 	return runall_fail;
     }
 
-    printf("Failed!"); 
+    printf("Failed!");
 
     return runall_fail;
 }

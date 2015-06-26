@@ -7,15 +7,15 @@
 /// <summary>test char</summary>
 //#Expects: Error: error C3581
 
-#include <amptest.h> 
+#include <amptest.h>
 
 void foo() __GPU
 {
     long long ll = 6LL;
 }
 
-int main(int argc, char **argv) 
-{ 
+int main(int argc, char **argv)
+{
     foo();
     return 1;
 }

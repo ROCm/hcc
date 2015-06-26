@@ -13,7 +13,7 @@ void test() throw(...) __CPU_ONLY_EXPLICIT
 {}
 
 // Main entry point
-int main(int argc, char **argv) 
+int main(int argc, char **argv)
 {
     return 1;
 }

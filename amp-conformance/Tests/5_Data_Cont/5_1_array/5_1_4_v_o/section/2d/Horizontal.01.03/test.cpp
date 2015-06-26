@@ -19,7 +19,7 @@ runall_result test_main()
 {
     ArrayTest<int, 2> original(extent<2>(10, 10));
 	auto sect = original.arr().section(index<2>(4, 0), extent<2>(2, 8));
-    return 
+    return
         TestSection(original, sect, index<2>(4, 0))
         ? original.pass() : original.fail();
 }

@@ -21,7 +21,7 @@
 /// <summary>Test a negative extent in a convenience API</summary>
 
 
-#include <amptest.h> 
+#include <amptest.h>
 
 using namespace Concurrency;
 using namespace Concurrency::Test;

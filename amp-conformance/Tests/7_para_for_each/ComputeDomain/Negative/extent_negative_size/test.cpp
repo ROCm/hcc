@@ -34,42 +34,24 @@ runall_result test_main()
 
 	runall_result result;
 
-	result &= REPORT_RESULT(expect_exception(av,
-		extent<1>(-1),
-		"concurrency::parallel_for_each: unsupported compute domain, the extent of dimension 0 of the compute domain (-1) cannot be smaller than or equal to 0."));
-	result &= REPORT_RESULT(expect_exception(av,
-		extent<2>(-2, 3),
-		"concurrency::parallel_for_each: unsupported compute domain, the extent of dimension 0 of the compute domain (-2) cannot be smaller than or equal to 0."));
-	result &= REPORT_RESULT(expect_exception(av,
-		extent<2>(-2, -2),
-		"concurrency::parallel_for_each: unsupported compute domain, the extent of dimension 0 of the compute domain (-2) cannot be smaller than or equal to 0."));
-	result &= REPORT_RESULT(expect_exception(av,
-		extent<2>(0, -1),
-		"concurrency::parallel_for_each: unsupported compute domain, the extent of dimension 0 of the compute domain (0) cannot be smaller than or equal to 0."));
-	result &= REPORT_RESULT(expect_exception(av,
-		extent<2>(std::numeric_limits<int>::min(), std::numeric_limits<int>::min()),
-		"concurrency::parallel_for_each: unsupported compute domain, the extent of dimension 0 of the compute domain (-2147483648) cannot be smaller than or equal to 0."));
-	result &= REPORT_RESULT(expect_exception(av,
-		extent<3>(8, -1, 8),
-		"concurrency::parallel_for_each: unsupported compute domain, the extent of dimension 1 of the compute domain (-1) cannot be smaller than or equal to 0."));
+	result &= REPORT_RESULT(expect_exception(av, extent<1>(-1)));
+	result &= REPORT_RESULT(expect_exception(av, extent<2>(-2, 3)));
+	result &= REPORT_RESULT(expect_exception(av, extent<2>(-2, -2)));
+	result &= REPORT_RESULT(expect_exception(av, extent<2>(0, -1)));
+	result &= REPORT_RESULT(expect_exception(av, extent<2>(std::numeric_limits<int>::min(), std::numeric_limits<int>::min())));
+	result &= REPORT_RESULT(expect_exception(av, extent<3>(8, -1, 8)));
 	
 	int dimSize[128];
 
 	std::fill(dimSize, dimSize + 128, -1);
-	result &= REPORT_RESULT(expect_exception(av,
-		extent<128>(dimSize), // -1,...,-1
-		"concurrency::parallel_for_each: unsupported compute domain, the extent of dimension 0 of the compute domain (-1) cannot be smaller than or equal to 0."));
+	result &= REPORT_RESULT(expect_exception(av, extent<128>(dimSize))); // -1,...,-1
 
 	std::fill(dimSize, dimSize + 128, 2);
 	dimSize[70] = -2;
-	result &= REPORT_RESULT(expect_exception(av,
-		extent<128>(dimSize), // 2,...,2,-2,2,...,2
-		"concurrency::parallel_for_each: unsupported compute domain, the extent of dimension 70 of the compute domain (-2) cannot be smaller than or equal to 0."));
+	result &= REPORT_RESULT(expect_exception(av, extent<128>(dimSize))); // 2,...,2,-2,2,...,2
 
 	std::fill(dimSize, dimSize + 128, std::numeric_limits<int>::min());
-	result &= REPORT_RESULT(expect_exception(av,
-		extent<128>(dimSize), // min,...,min
-		"concurrency::parallel_for_each: unsupported compute domain, the extent of dimension 0 of the compute domain (-2147483648) cannot be smaller than or equal to 0."));
+	result &= REPORT_RESULT(expect_exception(av, extent<128>(dimSize))); // min,...,min
 
 	return result;
 }

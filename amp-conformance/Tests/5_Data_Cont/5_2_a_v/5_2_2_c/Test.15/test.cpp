@@ -18,10 +18,10 @@
 //--------------------------------------------------------------------------------------
 //
 /// <tags>P1</tags>
-/// <summary>Copy construct an array_view from another array_view. Ensure that a shallow copy is made by 
+/// <summary>Copy construct an array_view from another array_view. Ensure that a shallow copy is made by
 /// changing data using one view and make sure the other view can see the update - use function parameter on a gpu function</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 #include <algorithm>
 
@@ -41,10 +41,10 @@ int test(index<1> idx, const array_view<int, 1> &av1, array_view<int, 1> av2) __
     {
         return 55;
     }
-    
+
     // update
     av2[idx] = av2[idx] + 1;
-    
+
     // verify data
     if(av1[idx] != av2[idx])
     {

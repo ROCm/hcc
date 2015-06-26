@@ -20,7 +20,7 @@ bool test_tile() restrict(amp,cpu)
         const int dim = 1;
         extent<dim> e1(extsize);
         const extent<dim> g1(e1);
-    
+
         const tiled_extent<tileby> t1 = g1.tile<tileby>();
     }
 
@@ -31,7 +31,7 @@ bool test_tile() restrict(amp,cpu)
         const int dim = 2;
         extent<dim> e2(extsize, extsize);
         const extent<dim> g2(e2);
-    
+
         const tiled_extent<tileby, tileby> t2 = g2.tile<tileby, tileby>();
     }
 
@@ -42,7 +42,7 @@ bool test_tile() restrict(amp,cpu)
         const int dim = 3;
         extent<dim> e3(extsize, extsize, extsize);
         const extent<dim> g3(e3);
-    
+
         const tiled_extent<tileby, tileby, tileby> t3 = g3.tile<tileby, tileby, tileby>();
     }
 
@@ -50,7 +50,7 @@ bool test_tile() restrict(amp,cpu)
     return true;
 }
 
-runall_result test_main() 
+runall_result test_main()
 {
 	accelerator_view av = require_device().get_default_view();
 

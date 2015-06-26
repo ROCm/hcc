@@ -40,7 +40,7 @@ runall_result test_main()
     vector<int> vec2(size);
     for(int i = 0; i < size; i++) vec2[i] = i;
 
-    array_view<int, 2> av1(m, n, vec1);
+    array_view<const int, 2> av1(m, n, vec1);
     array_view<int, 2> av2(m, n, vec2);
 
     if(m != av1.get_extent()[0]) // Verify extent
@@ -71,7 +71,7 @@ runall_result test_main()
         return runall_skip;
     }
     accelerator_view acc_view = device.get_default_view();
-    
+
     // use in parallel_for_each
     parallel_for_each(acc_view, av2.get_extent(), [=] (index<2> idx) __GPU
     {
@@ -79,17 +79,17 @@ runall_result test_main()
     });
 
     // vec should be updated after this
-    printf("Accessing first element of array_view [%d] to force synchronize.\n", av2(0,0));    
-    
-    // verify data    
+    printf("Accessing first element of array_view [%d] to force synchronize.\n", av2(0,0));
+
+    // verify data
     for(int i = 0; i < size; i++)
     {
         if(vec2[i] != i + 1)
         {
             printf("Incorrect updated data. Expected [%d] Actual: [%d] FAIL!\n", i + 1, vec2[i]);
             return runall_fail;
-        } 
-    }   
+        }
+    }
 
     printf("PASS!\n");
     return runall_pass;

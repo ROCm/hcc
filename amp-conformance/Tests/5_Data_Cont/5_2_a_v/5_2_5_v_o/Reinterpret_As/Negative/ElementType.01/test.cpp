@@ -22,7 +22,7 @@
 //#Expects: Error: error C3581
 //#Expects: Error: test.cpp\(35\)
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 
 using namespace Concurrency;
@@ -33,7 +33,7 @@ int main()
     std::vector<int> v(10);
     array_view<int, 1> av(v.size(), v);
     array_view<int *, 1> r = av.reinterpret_as<int *>();
-    
+
     // this test should not compile
     return runall_fail;
 }

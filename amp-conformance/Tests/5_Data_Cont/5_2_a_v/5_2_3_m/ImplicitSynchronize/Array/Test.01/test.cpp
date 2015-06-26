@@ -19,7 +19,7 @@
 //
 /// <tags>P1</tags>
 /// <summary>
-/// Create an array_view on the CPU, write on the GPU, copy construct an array and verify pending writes are 
+/// Create an array_view on the CPU, write on the GPU, copy construct an array and verify pending writes are
 /// copied directly from cached copy on GPU and the underlying data on cpu is unaffected.
 /// </summary>
 
@@ -41,25 +41,25 @@ runall_result test_main()
 	}
 	
 	accelerator_view av = acc.get_default_view();
-    
+
     ArrayViewTest<int, 1> arr_v(extent<1>(10));
-    
+
     Log() << "Writing on the GPU" << std::endl;
     array_view<int, 1> gpu_view = arr_v.view();
     parallel_for_each(av, extent<1>(1), [=](index<1>) restrict(amp) {
         gpu_view(0) = 17;
     });
-        
+
     Log() << "Copying to array" << std::endl;
     array<int, 1> a(arr_v.view(), av);
-    
+
 	std::vector<int> results_v(1);
     array_view<int, 1> results(1, results_v);
 	
     parallel_for_each(av, extent<1>(1), [=, &a](index<1>) restrict(amp) {
         results[0] = a[0];
     });
-    
+
     int result = results[0];
     Log() << "Result is: " << result << " Expected: 17" << std::endl;
     return result == 17 ? arr_v.pass() : arr_v.fail();

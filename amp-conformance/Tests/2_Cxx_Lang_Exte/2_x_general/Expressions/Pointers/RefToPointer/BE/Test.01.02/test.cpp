@@ -4,7 +4,7 @@
 // THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 // See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
 /// <tags>P0</tags>
-/// <summary>Initialize reference to pointers from two struct pointers (controlled by a switch variable). 
+/// <summary>Initialize reference to pointers from two struct pointers (controlled by a switch variable).
 /// Each struct contain multiple fields. Test control flow. </summary>
 
 #include <amptest.h>
@@ -21,8 +21,8 @@ const static int LOCAL_SIZE = 9;
 
 struct s1
 {
-    double y;
     float x;
+    double y;
 	int z;
 	float w;
 
@@ -120,7 +120,7 @@ bool VerifyStruct(const std::vector< s1 > &c, const std::vector< s1 > &refc)
     if (c.size() != refc.size()) { return false; }
 
     bool passed = true;
-    
+
     const int size = c.size();
 
 	type_comparer<decltype(s1::z)> zcomparer;
@@ -138,7 +138,7 @@ bool VerifyStruct(const std::vector< s1 > &c, const std::vector< s1 > &refc)
             passed = false;
             break;
         }
-    
+
         double d1 = c[i].y;
         double d2 = refc[i].y;
         if (!AreAlmostEqual(d1, d2))
@@ -179,8 +179,8 @@ bool VerifyStruct(const std::vector< s1 > &c, const std::vector< s1 > &refc)
     return passed;
 }
 
-void init(vector<s1> &a1, vector<s1> &a1f1, vector<s1> &a2, vector<s1> &a2f1, vector<s1> &a3, 
-    vector<s1> &a3f1, vector<s1> &ref, vector<int> &flag) 
+void init(vector<s1> &a1, vector<s1> &a1f1, vector<s1> &a2, vector<s1> &a2f1, vector<s1> &a3,
+    vector<s1> &a3f1, vector<s1> &ref, vector<int> &flag)
 {
     srand(2010);
     size_t size = a1.size();
@@ -242,9 +242,9 @@ void cf_test(s1 *&rpa1, s1 *&rpa2, s1 *&rpa3, array_view<int, 1> &flag) __GPU_ON
 	*rpa1 = *rpa2 + *rpa3;
 }
 
-struct kernel_global 
+struct kernel_global
 {
-	static void func(tiled_index<BLOCK_SIZE> idx, const array_view<s1, 1> *&rpa1, const array_view<s1, 1> *&rpa1f1, const array_view<s1, 1> *&rpa2, const array_view<s1, 1> *&rpa2f1, 
+	static void func(tiled_index<BLOCK_SIZE> idx, const array_view<s1, 1> *&rpa1, const array_view<s1, 1> *&rpa1f1, const array_view<s1, 1> *&rpa2, const array_view<s1, 1> *&rpa2f1,
 		const array_view<s1, 1> *&rpa3, const array_view<s1, 1> *&rpa3f1, array_view<int, 1> flag, int b1, int b2, int b3, int b4) __GPU_ONLY
     {
 		s1 *p1 = !b1 ? &(*rpa1)[idx] : &(*rpa1f1)[idx] ;
@@ -269,9 +269,9 @@ struct kernel_global
 
 struct kernel_shared
 {
-	static void func(tiled_index<BLOCK_SIZE> idx, const array_view<s1, 1> *&rpa1, const array_view<s1, 1> *&rpa1f1, const array_view<s1, 1> *&rpa2, const array_view<s1, 1> *&rpa2f1, 
+	static void func(tiled_index<BLOCK_SIZE> idx, const array_view<s1, 1> *&rpa1, const array_view<s1, 1> *&rpa1f1, const array_view<s1, 1> *&rpa2, const array_view<s1, 1> *&rpa2f1,
 		const array_view<s1, 1> *&rpa3, const array_view<s1, 1> *&rpa3f1, array_view<int, 1> flag, int b1, int b2, int b3, int b4) __GPU_ONLY
-    { 
+    {
 		int local_idx = idx.local[0];
 
 		tile_static s1 share_a1[BLOCK_SIZE];
@@ -302,7 +302,7 @@ struct kernel_shared
 			b1 ? p1f1 : p1,
 			b2 ? p2 : p2f1,
 			b3 ? p3 : p3f1,
-			flag);            
+			flag);
 
 		idx.barrier.wait();
 
@@ -315,9 +315,9 @@ struct kernel_shared
 
 struct kernel_local
 {
-	static void func(tiled_index<BLOCK_SIZE> idx, const array_view<s1, 1> *&rpa1, const array_view<s1, 1> *&rpa1f1, const array_view<s1, 1> *&rpa2, const array_view<s1, 1> *&rpa2f1, 
+	static void func(tiled_index<BLOCK_SIZE> idx, const array_view<s1, 1> *&rpa1, const array_view<s1, 1> *&rpa1f1, const array_view<s1, 1> *&rpa2, const array_view<s1, 1> *&rpa2f1,
 		const array_view<s1, 1> *&rpa3, const array_view<s1, 1> *&rpa3f1, array_view<int, 1> flag, int b1, int b2, int b3, int b4) __GPU_ONLY
-    { 
+    {
 		s1 local_a1[LOCAL_SIZE];
 		s1 local_a1f1[LOCAL_SIZE];
 
@@ -396,7 +396,7 @@ void run_mykernel(vector<s1> &a1, vector<s1> &a1f1, vector<s1> &a2, vector<s1> &
 		const array_view<s1> *p3 = b3 ? &av3 : &av3f1;
 		const array_view<s1> *p3f1 = &av3f1;
 		
-		k::func(idx, 
+		k::func(idx,
 			b1 ? p1f1 : p1,
 			p1f1,
 			b2 ? p2 : p2f1,
@@ -410,7 +410,7 @@ void run_mykernel(vector<s1> &a1, vector<s1> &a1f1, vector<s1> &a2, vector<s1> &
 }
 
 template<typename k>
-bool test(accelerator_view av) 
+bool test(accelerator_view av)
 {
     vector<s1> a1(DOMAIN_SIZE);
     vector<s1> a1f1(DOMAIN_SIZE);
@@ -433,8 +433,7 @@ bool test(accelerator_view av)
 runall_result test_main()
 {
     srand(2010);
-    //accelerator_view av = require_device_with_double().get_default_view();;
-    accelerator_view av = require_device().get_default_view();;
+    accelerator_view av = require_device_with_double().get_default_view();;
 
     runall_result ret;
 

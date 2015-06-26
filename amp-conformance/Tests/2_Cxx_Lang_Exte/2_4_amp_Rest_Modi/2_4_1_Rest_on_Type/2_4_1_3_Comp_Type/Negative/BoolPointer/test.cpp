@@ -7,7 +7,7 @@
 /// <summary>test pointer to bool</summary>
 
 // Not a negative test anymore since pointer to bool is now supported
-#include <amptest.h> 
+#include <amptest.h>
 
 void foo() __GPU
 {
@@ -16,8 +16,8 @@ void foo() __GPU
     *pb = true;
 }
 
-int main(int argc, char **argv) 
-{ 
+int main(int argc, char **argv)
+{
     foo();
     return 0;
 }

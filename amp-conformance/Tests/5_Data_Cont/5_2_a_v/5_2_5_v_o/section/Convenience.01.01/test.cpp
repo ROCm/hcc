@@ -30,10 +30,10 @@ runall_result scalar_values()
 {
     ArrayViewTest<int, 1> original(extent<1>(10));
     ArrayViewTest<int, 1> section = original.section(original.view().section(2, 5), index<1>(2));
-    
+
 	original.view()(2) = 13;
     original.set_known_value(index<1>(2), 13);
-    
+
     // create a section on the GPU, use it to read and write
     auto gpu_original = original.view();
     parallel_for_each(extent<1>(1), [=](index<1>) restrict(amp) {
@@ -42,7 +42,7 @@ runall_result scalar_values()
     });
 
     section.set_known_value(index<1>(3), 13);
-    
+
     return (original.view()(5) == 13 && section.view()(0) == 13) ? original.pass() : original.fail();
 }
 
@@ -50,10 +50,10 @@ runall_result only_index()
 {
     ArrayViewTest<int, 1> original(extent<1>(10));
     ArrayViewTest<int, 1> section = original.section(original.view().section(index<1>(2)), index<1>(2));
-    
+
 	original.view()(2) = 13;
     original.set_known_value(index<1>(2), 13);
-    
+
     // create a section on the GPU, use it to read and write
     auto gpu_original = original.view();
     parallel_for_each(extent<1>(1), [=](index<1>) restrict(amp) {
@@ -62,7 +62,7 @@ runall_result only_index()
     });
 
     section.set_known_value(index<1>(3), 13);
-    
+
     return (original.view()(5) == 13 && section.view()(0) == 13) ? original.pass() : original.fail();
 }
 
@@ -70,10 +70,10 @@ runall_result only_extent()
 {
     ArrayViewTest<int, 1> original(extent<1>(10));
     ArrayViewTest<int, 1> section = original.section(original.view().section(extent<1>(5)), index<1>(0));
-    
+
 	original.view()(2) = 13;
     original.set_known_value(index<1>(2), 13);
-    
+
     // create a section on the GPU, use it to read and write
     auto gpu_original = original.view();
     parallel_for_each(extent<1>(1), [=](index<1>) restrict(amp) {
@@ -82,7 +82,7 @@ runall_result only_extent()
     });
 
     section.set_known_value(index<1>(1), 13);
-    
+
     return (original.view()(1) == 13 && section.view()(2) == 13) ? original.pass() : original.fail();
 }
 

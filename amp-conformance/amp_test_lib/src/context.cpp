@@ -3,7 +3,6 @@
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
 // THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 // See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
-
 #include <amptest/context.h>
 #include <amptest/logging.h>
 #include <amptest/string_utils.h>
@@ -14,7 +13,7 @@ namespace Concurrency
 	namespace Test
 	{
 
-		int AMP_TEST_API __initialize_globals() 
+		int AMP_TEST_API __initialize_globals()
 		{
 			details::amptest_initialize_logging();
 			return 0;
@@ -29,29 +28,29 @@ namespace Concurrency
 			_cerr_logfile_path(""),
 			_cout_logfile_path(""),
 			_using_env_cache(false),
-			_argc(0), 
+			_argc(0),
 			_argv(nullptr)
-        {              
+        {
 		}
 
-		amptest_context_t::amptest_context_t(int argc, char** argv) : 
+		amptest_context_t::amptest_context_t(int argc, char** argv) :
 			_cerr_logfile_override(nullptr),
 			_cout_logfile_override(nullptr),
 			_cerr_logfile_path(),
 			_cout_logfile_path(),
 			_using_env_cache(false),
-			_argc(argc), 
+			_argc(argc),
 			_argv(argv)
-        {            
+        {
 		}
 
-		const std::string& amptest_context_t::get_stderr_logfile_path() const 
-		{ 
+		const std::string& amptest_context_t::get_stderr_logfile_path() const
+		{
 			return _cerr_logfile_path;
 		}
 
-		const std::string& amptest_context_t::get_stdout_logfile_path() const 
-		{ 
+		const std::string& amptest_context_t::get_stdout_logfile_path() const
+		{
 			return _cout_logfile_path;
 		}
 
@@ -64,11 +63,11 @@ namespace Concurrency
 			_cout_logfile_override.reset();
 		}
 
-		void amptest_context_t::set_stderr_logfile_path(const std::string& stderr_filename) 
-		{ 
-			if (stderr_filename.empty()) 
-			{ 
-				throw amptest_exception("set_stderr_logfile_path() stderr_filename was an empty string"); 
+		void amptest_context_t::set_stderr_logfile_path(const std::string& stderr_filename)
+		{
+			if (stderr_filename.empty())
+			{
+				throw amptest_exception("set_stderr_logfile_path() stderr_filename was an empty string");
 			}
 
 			if (_cerr_logfile_path != stderr_filename)
@@ -88,11 +87,11 @@ namespace Concurrency
 			}
 		}
 
-		void amptest_context_t::set_stdout_logfile_path(const std::string& stdout_filename) 
-		{ 
-			if (stdout_filename.empty()) 
-			{ 
-				throw amptest_exception("set_stdout_logfile_path() stdout_filename was an empty string"); 
+		void amptest_context_t::set_stdout_logfile_path(const std::string& stdout_filename)
+		{
+			if (stdout_filename.empty())
+			{
+				throw amptest_exception("set_stdout_logfile_path() stdout_filename was an empty string");
 			}
 
 			if (_cout_logfile_path != stdout_filename)
@@ -112,13 +111,13 @@ namespace Concurrency
 			}
 		}
 
-		std::ostream& amptest_context_t::get_raw_stderr_stream() const 
-		{ 
+		std::ostream& amptest_context_t::get_raw_stderr_stream() const
+		{
 			return (_cerr_logfile_override.get() == nullptr) ? std::cerr : *_cerr_logfile_override;
 		}
 
-		std::ostream& amptest_context_t::get_raw_stdout_stream() const 
-		{ 
+		std::ostream& amptest_context_t::get_raw_stdout_stream() const
+		{
 			return (_cout_logfile_override.get() == nullptr) ? std::cout : *_cout_logfile_override;
 		}
 
@@ -134,7 +133,7 @@ namespace Concurrency
 		}
 
 		std::string amptest_context_t::get_environment_variable(const std::string& name) const {
-            
+
 			std::string val_str;
 
 			if (!_using_env_cache)
@@ -149,7 +148,7 @@ namespace Concurrency
 				}
 			}
 			else
-			{	
+			{
 				auto val = _env_cache.find(name);
 				if (val != _env_cache.end())
 				{
@@ -211,7 +210,7 @@ namespace Concurrency
 				std::string in;
 				std::getline(infile, in);
 
-				size_t index = in.find_first_of(L'=');
+				size_t index = in.find_first_of('=');
 				if (index != std::string::npos)
 				{
 
@@ -234,7 +233,7 @@ namespace Concurrency
 						}
 						else
 						{
-							// If value is empty, treat this as an "set <var>=", which removes the 
+							// If value is empty, treat this as an "set <var>=", which removes the
 							// environment variable.
 							--count;
 							_env_cache.erase(it);
@@ -258,7 +257,7 @@ namespace Concurrency
 
 		int amptest_context_t::dump_environment_variable_cache() const
 		{
-			if (!_using_env_cache) 
+			if (!_using_env_cache)
 			{
 				Log() << "Environment Variable Cache is not being used" << std::endl;
 				return 0;
@@ -267,10 +266,10 @@ namespace Concurrency
 			int count = 0;
 			Log() << "Environment Variable Cache: dumping entries" << std::endl;
 			std::for_each(_env_cache.begin(), _env_cache.end(), [&](std::pair<std::string, std::string> value)
-						  {
-							  Log() << "    " << value.first << "=" << value.second <<std::endl;
-							  ++count;
-						  });
+			{
+				Log() << "    " << value.first << "=" << value.second <<std::endl;
+				++count;
+			});
 
 			return count;
 		}

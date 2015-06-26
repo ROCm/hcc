@@ -22,7 +22,7 @@ auto l = [](int &flag)
 
 bool test()
 {
-    int flag = 0;    
+    int flag = 0;
 
     l(flag);
 

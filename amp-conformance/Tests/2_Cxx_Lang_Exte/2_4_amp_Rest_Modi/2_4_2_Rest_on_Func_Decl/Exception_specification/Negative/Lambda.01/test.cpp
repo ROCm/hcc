@@ -10,7 +10,7 @@
 #include "amptest/restrict.h"
 #include "amptest/runall.h"
 
-int main() 
+int main()
 {
     auto lam = []() __GPU throw() {
         return 4;

@@ -105,7 +105,7 @@ bool test(accelerator_view &rv)
 
     array<type, 1> aA(e, A.begin(), rv), aA2(e, rv);
 
-    parallel_for_each(aA.get_extent(), [&](index<1>idx) __GPU 
+    parallel_for_each(aA.get_extent(), [&](index<1>idx) __GPU
     {
         type *p = NULL;
 

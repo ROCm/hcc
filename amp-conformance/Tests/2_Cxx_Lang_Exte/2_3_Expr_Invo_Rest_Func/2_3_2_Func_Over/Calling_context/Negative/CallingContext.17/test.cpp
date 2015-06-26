@@ -9,7 +9,7 @@
 
 #include <amptest.h>
 
-void f(int &flag) 
+void f(int &flag)
 {
     flag = 1;
 }
@@ -19,7 +19,7 @@ auto l = [](int &flag) __GPU {f(flag);};
 bool test()
 {
     int flag = 0;
-    
+
     l(flag);
 
     if (flag == 1)

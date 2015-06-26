@@ -71,13 +71,13 @@ bool test(accelerator_view &rv)
         for(int cnt = 0; cnt < 10; cnt++)
         {
 
-            s *ps = NULL; 
+            s *ps = NULL;
             u* pu = NULL;
             c* pc = NULL;
             int *pi = NULL;
-            unsigned long *pul = NULL; 
-            double *pd = NULL; 
-            float *pf = NULL; 
+            unsigned long *pul = NULL;
+            double *pd = NULL;
+            float *pf = NULL;
 
             if (aFlag[0] == 0)
             {

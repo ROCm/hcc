@@ -10,7 +10,7 @@
 
 bool test()
 {
-    int flag = 0;    
+    int flag = 0;
 
     [](int &flag)
     {

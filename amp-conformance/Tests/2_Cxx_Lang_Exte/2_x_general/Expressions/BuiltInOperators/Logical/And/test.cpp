@@ -17,7 +17,7 @@ using namespace Concurrency::Test;
 void Kernel(index<2> idx, array<long, 2> &aC, array<long, 2> &aA, array<long, 2> &aB) __GPU
 {
     // Logical AND, &&
-    aC[idx] = aA[idx] && aB[idx];    
+    aC[idx] = aA[idx] && aB[idx];
 }
 
 // Main entry point
@@ -35,7 +35,7 @@ runall_result test_main()
     vector<long> A(size);
     vector<long> B(size);
 
-    // Initialize input 
+    // Initialize input
     srand(3163);
     Fill(A);
     Fill(B);
@@ -47,7 +47,7 @@ runall_result test_main()
     // setup input arrays
     array<long, 2> aA(e, A.begin(), A.end(), rv), aB(e, B.begin(), B.end(), rv);
 
-    // setup output 
+    // setup output
     array<long, 2> aC(e, rv);
     vector<long> C(size);
 
@@ -55,7 +55,7 @@ runall_result test_main()
         Kernel(idx, aC, aA, aB);
     });
 
-    C = aC;    
+    C = aC;
 
     // Check GPU results
     runall_result result;

@@ -29,9 +29,9 @@ void InitializeArray(vector <int> &vM, int size, int value = 0)
 }
 
 // This kernel tests the Simple assignment, =, operator
-void kernel(index<2> idx, array<int, 2> &aB, array<int, 2> &aA) __GPU 
+void kernel(index<2> idx, array<int, 2> &aB, array<int, 2> &aA) __GPU
 {
-    aB[idx] = aA[idx];   
+    aB[idx] = aA[idx];
 }
 
 // --- End vector functions
@@ -54,17 +54,17 @@ int main(int argc, char **argv)
     // Initialize input, outputs
     srand(13);
 
-    vector<int> A(size);     
-    InitializeArray(A, size);        
+    vector<int> A(size);
+    InitializeArray(A, size);
     array<int, 2> aA(e, A.begin(), A.end(), rv);
 
     // these are both input & output arrays
 
-    vector<int> B(size); 
+    vector<int> B(size);
 
     int value = rand();
     InitializeArray(B, size, value);
-    array<int, 2> aB(e, B.begin(), B.end(), rv);    
+    array<int, 2> aB(e, B.begin(), B.end(), rv);
 
     // Test simple assignment in a parallel_for_each
     parallel_for_each(aA.get_extent(), [&](index<2> idx) __GPU {
@@ -73,7 +73,7 @@ int main(int argc, char **argv)
 
     B = aB;
 
-    // Verify results        
+    // Verify results
 
     bool passed = true;
     for (int i=0; i<M & passed; ++i)
@@ -88,7 +88,7 @@ int main(int argc, char **argv)
                 printf("\nSimple Assignment failed\n");
                 printf("-Expression: %d = %d\n", value, A[i * N + j]);
                 printf("-Actual: B[%d] = %d, Expected: %d\n", i * N + j, B[i * N + j], expectedPb);
-                passed = false;               
+                passed = false;
                 break;
             }
         }

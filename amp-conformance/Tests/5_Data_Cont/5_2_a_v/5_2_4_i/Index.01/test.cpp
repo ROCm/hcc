@@ -30,7 +30,7 @@ using namespace Concurrency::Test;
 int main()
 {
     ArrayViewTest<const int, 3> t(extent<3>(2, 3, 4));
-    
+
     // set values through the underlying data pointer (since this is const)
     t.set_value(index<3>(0, 0, 0), 1);
     t.set_value(index<3>(0, 1, 3), 7);
@@ -38,7 +38,7 @@ int main()
     return
         t.view()[index<3>(0, 0, 0)] == 1 &&
         t.view()[index<3>(0, 1, 3)] == 7 &&
-        t.view()[index<3>(1, 2, 3)] == 23 
+        t.view()[index<3>(1, 2, 3)] == 23
         ? t.pass() : t.fail();
 }
 

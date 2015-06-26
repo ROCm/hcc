@@ -8,15 +8,15 @@
 /// <tags>P1</tags>
 /// <summary>(Negative) Check that applying the operator *,/ on index objects of same ranks results in a compilation error</summary>
 //#Expects: Error: test.cpp\(35\) : error C2679
-//#Expects: Error: test.cpp\(35\) : error C2088 
+//#Expects: Error: test.cpp\(35\) : error C2088
 //#Expects: Error: test.cpp\(36\) : error C2679
-//#Expects: Error: test.cpp\(36\) : error C2088  
+//#Expects: Error: test.cpp\(36\) : error C2088
 //#Expects: Error: test.cpp\(38\) : error C2679
-//#Expects: Error: test.cpp\(38\) : error C2088 
+//#Expects: Error: test.cpp\(38\) : error C2088
 //#Expects: Error: test.cpp\(39\) : error C2679
 //#Expects: Error: test.cpp\(39\) : error C2088
 
-#include <amptest.h> 
+#include <amptest.h>
 
 using namespace Concurrency;
 using namespace Concurrency::Test;
@@ -30,19 +30,19 @@ bool test1() __GPU
     index<2> i3;
 
     i1 *= 10; // Multiplication, Division using const value are valid
-    i1 /= 10; 
+    i1 /= 10;
 
     i1 *= i2; // Compilation error expected at this line
     i1 /= i2; // Compilation error expected at this line
 
     i3 = i1 * i2; // Compilation error expected at this line
     i3 = i1 / i2; // Compilation error expected at this line
-    
+
     return false;
 }
 
-runall_result test_main() 
-{ 
+runall_result test_main()
+{
       return runall_fail;
 }
 

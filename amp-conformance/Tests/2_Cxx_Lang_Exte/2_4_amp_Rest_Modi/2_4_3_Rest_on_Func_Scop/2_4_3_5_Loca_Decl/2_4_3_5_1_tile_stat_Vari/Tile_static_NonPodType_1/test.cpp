@@ -26,7 +26,7 @@ void NonPodTypeNotSupported(int x) __GPU_ONLY
 {
     tile_static NonPodClass var;
     tile_static NonPodClass arr[10]; // array of non POD should also be allowed
-    
+
 }
 
 int main()

@@ -5,11 +5,12 @@
 // See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
 /// <tags>P0</tags>
 /// <summary>struct has array reference as members. 2d.</summary>
+
+#include <cmath>
 #include "../av.h"
 
-
 template<typename type>
-void init(vector<type> &a, vector<type> &b, vector<type> &c, vector<type> &fa, vector<type> &fb, vector<type> &fc, vector<type> &ref_c, vector<int> &flag) 
+void init(vector<type> &a, vector<type> &b, vector<type> &c, vector<type> &fa, vector<type> &fb, vector<type> &fc, vector<type> &ref_c, vector<int> &flag)
 {
     srand(2010);
     size_t SIZE = a.size();
@@ -21,7 +22,7 @@ void init(vector<type> &a, vector<type> &b, vector<type> &c, vector<type> &fa, v
     {
         fa[i] = a[i] - 1;
         fb[i] = b[i] - 1;
-        ref_c[i] = modf(a[i], &b[i]) * LOCAL_SIZE * LOCAL_SIZE; // Because in kernel_local, the results have been added up. So here it needs multiplication.
+        ref_c[i] = std::modf(a[i], &b[i]) * LOCAL_SIZE * LOCAL_SIZE; // Because in kernel_local, the results have been added up. So here it needs multiplication.
     }
 
     flag[0] = 10;

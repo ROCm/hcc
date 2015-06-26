@@ -8,14 +8,12 @@
 
 #include "../../inc/common.h"
 
-#define __int32 int
-
 class c
 {
 public:
-    __int32 i;
+    int32_t i;
     double d;
-    unsigned __int32 ui;
+    uint32_t ui;
     float f;
 };
 
@@ -58,7 +56,7 @@ bool test(accelerator_view &rv)
         double di = 0;
         for (int i = 0; i < 100; i++)
         {
-            if (!Equal((*p).i, (int)i) || !Equal((*p).d, di) || !Equal((*p).ui, (unsigned __int32)i) || !Equal((*p).f, (float)i))
+            if (!Equal((*p).i, (int)i) || !Equal((*p).d, di) || !Equal((*p).ui, (uint32_t)i) || !Equal((*p).f, (float)i))
             {
                 aA[idx] = 1;
             }

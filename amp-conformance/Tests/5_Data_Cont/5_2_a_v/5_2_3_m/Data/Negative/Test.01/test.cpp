@@ -21,7 +21,7 @@
 /// <summary>Verify that .data is not allowed on rank > 1 array_view </summary>
 //#Expects: Error: error C2338
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 #include <algorithm>
 
@@ -39,7 +39,7 @@ int main()
     array_view<int, 2> av(m, n, vec);
 
     // verify data
-    equal(vec.begin(), vec.end(), av.data());    
+    equal(vec.begin(), vec.end(), av.data());
 
     return runall_fail;
 }

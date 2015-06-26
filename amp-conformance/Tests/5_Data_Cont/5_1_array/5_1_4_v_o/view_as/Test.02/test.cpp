@@ -10,9 +10,9 @@
 
 #include <amptest/array_test.h>
 #include <amptest/coordinates.h>
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
-#include <amptest_main.h> 
+#include <amptest_main.h>
 
 using namespace Concurrency;
 using namespace Concurrency::Test;
@@ -22,18 +22,18 @@ runall_result test_main()
     extent<2> ex(4, 5);
     extent_coordinate_nest<2> coordinates(ex);
     ArrayTest<int, 1> original(extent<1>(ex.size()));
-    
+
     // set a value in the underlying data
 	index<2> set_original(2,3);
 	index<1> set_original_linear(coordinates.get_linear(set_original));
     original.set_value(set_original_linear, 17);
-    
+
     array_view<const int, 2> rank2 = original.arr().view_as(ex);
 	index<2> set_view(2,2);
     index<1> set_view_linear(coordinates.get_linear(set_view));
     original.set_value(index<1>(set_view_linear), 13);
-    
-    return 
+
+    return
         rank2[index<2>(2, 3)] == 17 &&
         rank2[index<2>(2, 2)] == 13
         ? original.pass() : original.fail();

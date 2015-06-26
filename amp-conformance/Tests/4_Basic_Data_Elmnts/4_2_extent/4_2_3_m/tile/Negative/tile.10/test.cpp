@@ -17,7 +17,7 @@ bool test_tile()
     return test_tile_3d_negative_incorrect_template_param<_type, 2, 2, 2>();
 }
 
-runall_result test_main() 
+runall_result test_main()
 {
 	bool result = test_tile<extent<4>>() && test_tile<extent<1>>() && test_tile<extent<2>>();
 	return runall_fail;

@@ -11,7 +11,7 @@
 
 
 template<typename type>
-void init(vector<type> &a, vector<type> &b, vector<type> &c, vector<type> &fa, vector<type> &fb, vector<type> &fc, vector<type> &ref_c, vector<int> &flag) 
+void init(vector<type> &a, vector<type> &b, vector<type> &c, vector<type> &fa, vector<type> &fb, vector<type> &fc, vector<type> &ref_c, vector<int> &flag)
 {
     srand(2010);
     size_t SIZE = a.size();
@@ -81,7 +81,7 @@ void cf_test(type *pa, type *pb, type *pc, array_view<int, 1> &flag) __GPU_ONLY
                 }
                 break;
 
-            }            
+            }
         } while (i5 < flag[3]);
     } while (i4 < flag[1]);
 

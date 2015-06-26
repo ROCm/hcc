@@ -13,7 +13,7 @@
 using namespace Concurrency;
 using namespace Concurrency::Test;
 
-runall_result test_main() 
+runall_result test_main()
 {	
 	accelerator_view cpu_av = accelerator(accelerator::cpu_accelerator).get_default_view();
 	accelerator_view gpu_av = require_device(Device::ALL_DEVICES).get_default_view();

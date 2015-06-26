@@ -14,7 +14,7 @@ public:
     static void foo(int &flag) {flag = 1;}
 };
 
-static bool test() 
+static bool test()
 {
     int flag = 0;
 

@@ -16,7 +16,7 @@ runall_result test_main()
 
     try
     {
-        // The default ctor for accelerator will return cpu as 
+        // The default ctor for accelerator will return cpu as
         // default accelerator when no accelerator is present.
         // It should never throw an exception.
         accelerator acc;

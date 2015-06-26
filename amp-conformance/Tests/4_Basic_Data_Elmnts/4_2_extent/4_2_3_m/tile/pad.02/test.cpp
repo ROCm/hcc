@@ -20,7 +20,7 @@ bool Test1() restrict(cpu,amp)
 	auto      tiled_ext = ext.tile<4>();
 	auto      padded_tiled_ext = tiled_ext.pad();
 
-	return (padded_tiled_ext[0] == 16) ? true : false; 
+	return (padded_tiled_ext[0] == 16) ? true : false;
 }
 
 bool Test2() restrict(cpu,amp)
@@ -29,7 +29,7 @@ bool Test2() restrict(cpu,amp)
 	auto      tiled_ext = ext.tile<4, 8>();
 	auto      padded_tiled_ext = tiled_ext.pad();
 
-	return (padded_tiled_ext[0] == 16 && padded_tiled_ext[1] == 40) ? true : false; 
+	return (padded_tiled_ext[0] == 16 && padded_tiled_ext[1] == 40) ? true : false;
 }
 
 bool Test3() restrict(cpu,amp)
@@ -38,7 +38,7 @@ bool Test3() restrict(cpu,amp)
 	auto      tiled_ext = ext.tile<4, 8, 12>();
 	auto      padded_tiled_ext = tiled_ext.pad();
 
-	return (padded_tiled_ext[0] == 16 && padded_tiled_ext[1] == 40 && padded_tiled_ext[2] == 60) ? true : false; 
+	return (padded_tiled_ext[0] == 16 && padded_tiled_ext[1] == 40 && padded_tiled_ext[2] == 60) ? true : false;
 }
 
 bool Test11() restrict(cpu,amp)
@@ -47,7 +47,7 @@ bool Test11() restrict(cpu,amp)
 	auto      tiled_ext = ext.tile<INT_MAX-1>();
 	auto      padded_tiled_ext = tiled_ext.pad();
 
-	return (padded_tiled_ext[0] == (INT_MAX-1)) ? true : false; 
+	return (padded_tiled_ext[0] == (INT_MAX-1)) ? true : false;
 }
 
 bool Test21() restrict(cpu,amp)
@@ -56,7 +56,7 @@ bool Test21() restrict(cpu,amp)
 	auto      tiled_ext = ext.tile<INT_MAX-1, INT_MAX-11>();
 	auto      padded_tiled_ext = tiled_ext.pad();
 
-	return (padded_tiled_ext[0] == (INT_MAX-1) && padded_tiled_ext[1] == (INT_MAX-11)) ? true : false; 
+	return (padded_tiled_ext[0] == (INT_MAX-1) && padded_tiled_ext[1] == (INT_MAX-11)) ? true : false;
 }
 
 bool Test31() restrict(cpu,amp)
@@ -65,7 +65,7 @@ bool Test31() restrict(cpu,amp)
 	auto      tiled_ext = ext.tile<INT_MAX-1, INT_MAX-11, INT_MAX-111>();
 	auto      padded_tiled_ext = tiled_ext.pad();
 
-	return (padded_tiled_ext[0] == (INT_MAX-1) && padded_tiled_ext[1] == (INT_MAX-11) && padded_tiled_ext[2] == (INT_MAX-111)) ? true : false; 
+	return (padded_tiled_ext[0] == (INT_MAX-1) && padded_tiled_ext[1] == (INT_MAX-11) && padded_tiled_ext[2] == (INT_MAX-111)) ? true : false;
 }
 
 runall_result test_main()

@@ -7,7 +7,7 @@
 /// <summary>test illegal usage of static const integer variable</summary>
 //#Expects: Error: error C3586
 
-#include <amptest.h> 
+#include <amptest.h>
 
 static const int flag = 2;
 
@@ -18,8 +18,8 @@ void foo(bool set) __GPU
 
 }
 
-int main(int argc, char **argv) 
-{ 
+int main(int argc, char **argv)
+{
     foo(true);
     return 1;
 }

@@ -8,7 +8,7 @@
 
 //#Expects: Error: test.cpp\(11\) : error C3936:.*(\bhello\b).*:.*(unrecognized restriction specifier)?
 
-int f1() restrict(hello) {} 
+int f1() restrict(hello) {}
 
 int main()
 {

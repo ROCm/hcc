@@ -22,7 +22,7 @@
 //#Expects: Error: error C2338
 
 
-#include <amptest.h> 
+#include <amptest.h>
 
 using namespace Concurrency;
 using namespace Concurrency::Test;

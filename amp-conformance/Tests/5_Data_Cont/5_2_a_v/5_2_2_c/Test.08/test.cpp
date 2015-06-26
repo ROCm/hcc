@@ -20,7 +20,7 @@
 /// <tags>P1</tags>
 /// <summary>- Create an array_view using extent value, e0, e1 and e2, and a container in a CPU restricted function. </summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 #include <algorithm>
 #include "../../helper.h"
@@ -61,7 +61,7 @@ int main()
         printf("Expected: [%d] Actual : [%d]\n", o, av.get_extent()[2]);
         return runall_fail;
     }
-    
+
     // verify data
     if(!compare(vec, av))
     {
@@ -75,7 +75,7 @@ int main()
         return runall_skip;
     }
     accelerator_view acc_view = device.get_default_view();
-    
+
     // use in parallel_for_each
     parallel_for_each(acc_view, av.get_extent(), [=] (index<3> idx) __GPU
     {
@@ -83,12 +83,8 @@ int main()
     });
 
     // vec should be updated after this
-    // array_view is non-POD and is not allowed as variadic argument at least in Clang
-    // however Microsoft VC++ compiler allows it. 
-    // Comment out it as it is Compiler specific
-    #if 0
-    printf("Accessing first element of array_view [%d] to force synchronize.\n", av[0]);
-    #endif
+    printf("Accessing first element of array_view [%d] to force synchronize.\n", av[0][0][0]);
+
     // verify data
     for(int i = 0; i < av.get_extent()[0]; i++)
     {
@@ -100,14 +96,14 @@ int main()
                 auto actual = av(i,j,k);
 
                 if(expected != actual)
-                {   
+                {
                     printf("Incorrect data. Expected [%d] Actual: [%d] FAIL!\n", expected, actual);
                     return false;
                 }
              }
         }
     }
-    
+
 
     printf("PASS!\n");
     return runall_pass;

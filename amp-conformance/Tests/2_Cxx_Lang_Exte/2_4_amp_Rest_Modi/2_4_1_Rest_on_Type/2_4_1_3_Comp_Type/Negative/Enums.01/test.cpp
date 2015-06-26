@@ -7,7 +7,7 @@
 /// <summary>test enum with illegal underlying type</summary>
 //#Expects: Error: error C3581
 
-#include <amptest.h> 
+#include <amptest.h>
 
 enum Suit : char {
     Diamonds,
@@ -24,8 +24,8 @@ bool foo(Suit suit) __GPU
         return false;
 }
 
-int main(int argc, char **argv) 
-{ 
+int main(int argc, char **argv)
+{
     foo(Hearts);
     return 1;
 }

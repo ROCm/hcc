@@ -16,7 +16,7 @@ using namespace Concurrency;
 using namespace Concurrency::Test;
 
 // Overloaded std::ostream::operator<< for graphics::int_2 type
-std::ostream& operator<<(std::ostream &outStream, const graphics::int_3 &val) 
+std::ostream& operator<<(std::ostream &outStream, const graphics::int_3 &val)
 {
     outStream << "(" << val.get_x() << ", " << val.get_y() << ", " << val.get_z() << ")";
     return outStream;
@@ -53,19 +53,19 @@ bool TestCopy1(accelerator_view av, int numElems, bool async)
     };
 
     bool passed = false;
-    if (async) 
+    if (async)
     {
         auto fut = copy_async(srcArray, destArrayView);
         passed = fut.to_task().then([&]() -> bool { return verificationFunc(); }).get();
     }
-    else 
+    else
     {
         copy(srcArray, destArrayView);
         passed = verificationFunc();
     }
 
     return passed;
-}   
+}
 
 // Tests copy from begin and end iterators to an array_view without a data source
 template<typename T>
@@ -96,19 +96,19 @@ bool TestCopy2(int numElems, bool async)
     };
 
     bool passed = false;
-    if (async) 
+    if (async)
     {
         auto fut = copy_async(srcVec.cbegin(), srcVec.cend(), destArrayView);
         passed = fut.to_task().then([&]() -> bool { return verificationFunc(); }).get();
     }
-    else 
+    else
     {
         copy(srcVec.cbegin(), srcVec.cend(), destArrayView);
         passed = verificationFunc();
     }
 
     return passed;
-}   
+}
 
 // Tests copy from a begin iterator to an array_view without a data source
 template<typename T>
@@ -139,19 +139,19 @@ bool TestCopy2_1(int numElems, bool async)
     };
 
     bool passed = false;
-    if (async) 
+    if (async)
     {
         auto fut = copy_async(srcVec.cbegin(), destArrayView);
         passed = fut.to_task().then([&]() -> bool { return verificationFunc(); }).get();
     }
-    else 
+    else
     {
         copy(srcVec.cbegin(), destArrayView);
         passed = verificationFunc();
     }
 
     return passed;
-}   
+}
 
 // Tests copy from an array_view to an array_view without a data source
 template<typename T>
@@ -184,19 +184,19 @@ bool TestCopy3(int numElems, bool async)
     };
 
     bool passed = false;
-    if (async) 
+    if (async)
     {
         auto fut = copy_async(srcArrayView, destArrayView);
         passed = fut.to_task().then([&]() -> bool { return verificationFunc(); }).get();
     }
-    else 
+    else
     {
         copy(srcArrayView, destArrayView);
         passed = verificationFunc();
     }
 
     return passed;
-}   
+}
 
 // Tests copy from an array_view without data source to an array
 template<typename T>
@@ -228,19 +228,19 @@ bool TestCopy4(const accelerator_view &av, int numElems, bool async)
     };
 
     bool passed = false;
-    if (async) 
+    if (async)
     {
         auto fut = copy_async(srcArrayView, destArray);
         passed = fut.to_task().then([&]() -> bool { return verificationFunc(); }).get();
     }
-    else 
+    else
     {
         copy(srcArrayView, destArray);
         passed = verificationFunc();
     }
 
     return passed;
-}   
+}
 
 // Tests copy from an array_view without data source to an array_view
 template<typename T>
@@ -272,19 +272,19 @@ bool TestCopy4_1(const accelerator_view &av, int numElems, bool async)
     };
 
     bool passed = false;
-    if (async) 
+    if (async)
     {
         auto fut = copy_async(srcArrayView, destArrayView);
         passed = fut.to_task().then([&]() -> bool { return verificationFunc(); }).get();
     }
-    else 
+    else
     {
         copy(srcArrayView, destArrayView);
         passed = verificationFunc();
     }
 
     return passed;
-}   
+}
 
 // Tests copy from an array_view without data source to an output iterator
 template<typename T>
@@ -315,12 +315,12 @@ bool TestCopy5(int numElems, bool async)
     };
 
     bool passed = false;
-    if (async) 
+    if (async)
     {
         auto fut = copy_async(srcArrayView, destIter);
         passed = fut.to_task().then([&]() -> bool { return verificationFunc(); }).get();
     }
-    else 
+    else
     {
         copy(srcArrayView, destIter);
         passed = verificationFunc();
@@ -328,7 +328,7 @@ bool TestCopy5(int numElems, bool async)
 
     delete [] destIter;
     return passed;
-}   
+}
 
 // Tests copy from an array_view without data source to an output iterator
 // Here the input data is uninitialized and the test just ensures that there is no
@@ -347,12 +347,12 @@ bool TestCopy6(bool async)
     };
 
     bool passed = false;
-    if (async) 
+    if (async)
     {
         auto fut = copy_async(srcArrayView, destIter);
         passed = fut.to_task().then([&]() -> bool { return verificationFunc(); }).get();
     }
-    else 
+    else
     {
         copy(srcArrayView, destIter);
         passed = verificationFunc();
@@ -360,7 +360,7 @@ bool TestCopy6(bool async)
 
     delete [] destIter;
     return passed;
-}   
+}
 
 runall_result test_main()
 {

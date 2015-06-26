@@ -20,7 +20,7 @@
 /// <tags>P1</tags>
 /// <summary>Access the data pointer of an array_view with a different coordinate system</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 
 using namespace Concurrency;
@@ -28,7 +28,7 @@ using namespace Concurrency::Test;
 using std::vector;
 
 int main()
-{    
+{
     const int size = 20;
 
     vector<int> vec(size);
@@ -39,7 +39,7 @@ int main()
 
     //create a shifted view
     array_view<int, 1> shifted = original.view_as(extent<1>(size));
-    
+
     return Verify(shifted.data(), original.data(), size) ? runall_pass : runall_fail;
 }
 

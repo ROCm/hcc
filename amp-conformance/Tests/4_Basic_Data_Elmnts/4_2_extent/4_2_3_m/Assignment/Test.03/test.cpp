@@ -8,7 +8,7 @@
 /// <tags>P1</tags>
 /// <summary>Check that the assignment works the same as copy constructor</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 
 using namespace Concurrency;
 using namespace Concurrency::Test;
@@ -32,18 +32,18 @@ int test() __GPU
     extent<1> e1(100);
     extent<1> e1n;
     extent<1> e1n2(e1);
-    
+
     e1n = e1;
 
     if (!(compare_extent(e1n, e1n2)))
     {
         return 11;
     }
-    
+
     extent<3> e3(100, 200, 300);
     extent<3> e3n;
     extent<3> e3n2(e3);
-    
+
     e3n = e3;
 
     if (!(compare_extent(e3n, e3n2)))
@@ -67,11 +67,11 @@ int test() __GPU
     return 0;
 }
 
-int main() 
-{ 
+int main()
+{
     int result = test();
-    
-    printf("Test %s\n", ((result == 0) ? "passed" : "failed")); 
-    return result;    
-} 
+
+    printf("Test %s\n", ((result == 0) ? "passed" : "failed"));
+    return result;
+}
 

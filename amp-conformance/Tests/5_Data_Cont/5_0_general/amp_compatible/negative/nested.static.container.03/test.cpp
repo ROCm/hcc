@@ -27,7 +27,7 @@ struct A2
 };
 
 runall_result test_main()
-{   
+{
     array<A2, 1> arr(10);
     array_view<A2, 1> arr_view(arr);
 

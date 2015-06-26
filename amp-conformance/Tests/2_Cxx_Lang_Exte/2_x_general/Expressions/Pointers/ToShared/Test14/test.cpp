@@ -8,8 +8,6 @@
 
 #include "../../inc/common.h"
 
-#define __int32 int
-
 class c1
 {
 public:
@@ -22,7 +20,7 @@ public:
 class c2 : public c1
 {
 public:
-    unsigned __int32 i2;
+    uint32_t i2;
     double md;
 };
 
@@ -57,13 +55,13 @@ bool test(accelerator_view &rv)
         if (i2 != 1)
             aA[idx] = 1;
 
-        tile_static unsigned __int32 i3;
+        tile_static uint32_t i3;
         i3 = 1;
-        unsigned __int32 *pi2 = &i3;
+        uint32_t *pi2 = &i3;
         double * pd1 = (double *)pi2;
         double td = *pd1;
-        tile_static unsigned __int32 i4;
-        i4 = *(unsigned __int32 *)pd1;
+        tile_static uint32_t i4;
+        i4 = *(uint32_t *)pd1;
 
         if (i4 != 1)
             aA[idx] = 1;
@@ -99,7 +97,7 @@ runall_result test_main()
 
     accelerator_view rv = device.get_default_view();
 
-    passed = test<__int32>(rv) && test<unsigned long>(rv) && test<double>(rv) && test<float>(rv);
+    passed = test<int32_t>(rv) && test<unsigned long>(rv) && test<double>(rv) && test<float>(rv);
 
     printf("%s\n", passed ? "Passed!" : "Failed!");
 

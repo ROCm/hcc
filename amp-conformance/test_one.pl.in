@@ -4,15 +4,15 @@
 #
 # All rights reserved
 #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file 
-# except in compliance with the License. You may obtain a copy of the License at 
-# http://www.apache.org/licenses/LICENSE-2.0  
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
+# except in compliance with the License. You may obtain a copy of the License at
+# http://www.apache.org/licenses/LICENSE-2.0
 #
-# THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER 
-# EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF 
-# TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT. 
+# THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER
+# EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF
+# TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 #
-# See the Apache Version 2.0 License for specific language governing permissions and 
+# See the Apache Version 2.0 License for specific language governing permissions and
 # limitations under the License.
 ##############################################################################################
 
@@ -182,7 +182,7 @@ foreach my $def_set (@{$Test::config{'definitions'}})
             $result = FAIL;
         }
     }
-    
+
     if($result == PASS)
     {
         log_message('Result: passed');
@@ -230,7 +230,7 @@ sub get_files_by_extension($$)
 {
     my $dir = $_[0];
     my $ext = $_[1];
-    
+
 	my @files = `ls $dir`;
     my @ext_files;
 	
@@ -242,7 +242,7 @@ sub get_files_by_extension($$)
 			push(@ext_files, $file);
 		}
     }
-    
+
     return @ext_files;    	
 }
 
@@ -266,10 +266,10 @@ sub try_find_file_by_extension($$$)
 	{	
 		@files = get_files_by_extension($start_dir, $ext);
 		
-		if(@files > 1) 
+		if(@files > 1)
 		{
 			print "Error: More than one (*.$ext) files present in directory $start_dir\n";
-			return -1; 
+			return -1;
 		}
 		
 		if(@files != 0)
@@ -283,7 +283,7 @@ sub try_find_file_by_extension($$$)
 		}
 		
 		# Move to parent directory to continue search
-		$start_dir = dirname($start_dir); 
+		$start_dir = dirname($start_dir);
 	}
 	while(index($start_dir, $end_dir) != -1);
 	

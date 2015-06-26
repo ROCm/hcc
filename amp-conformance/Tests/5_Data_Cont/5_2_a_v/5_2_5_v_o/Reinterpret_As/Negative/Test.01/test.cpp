@@ -22,7 +22,7 @@
 //#Expects: Error: error C2338
 //#Expects: Error: test.cpp\(35\)
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 
 using namespace Concurrency;
@@ -33,7 +33,7 @@ int main()
     std::vector<int> v(10);
     array_view<int, 2> av(5, 2, v);
     array_view<unsigned int, 2> r = av.reinterpret_as<unsigned int>();
-    
+
     // this test should not compile
     return runall_fail;
 }

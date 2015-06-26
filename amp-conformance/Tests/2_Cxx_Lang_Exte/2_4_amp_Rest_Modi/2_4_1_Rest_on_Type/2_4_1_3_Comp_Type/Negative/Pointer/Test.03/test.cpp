@@ -22,7 +22,7 @@ using namespace Concurrency::Test;
 
 void f1(double **p1, float ***p2, int ****p3) __GPU {}
 
-double ***** f2() __GPU 
+double ***** f2() __GPU
 {
     double ***** pd = NULL;
     return pd;

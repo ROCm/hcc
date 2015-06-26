@@ -8,7 +8,7 @@
 /// <tags>P1</tags>
 /// <summary>Assign an initialized extent of the same rank to this extent and ensure that dimensions are copied correctly. Repeat by assigning to an uninitialized const.</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 
 using namespace Concurrency;
 using namespace Concurrency::Test;
@@ -33,18 +33,18 @@ int test() __GPU
     extent<1> e1(100);
 
     extent<1> e1n;
-    
+
     e1n = e1;
 
     if (!(compare_extent(e1, e1n)))
     {
         return 11;
     }
-    
+
     extent<3> e3(100, 200, 300);
 
     extent<3> e3n;
-    
+
     e3n = e3;
 
     if (!(compare_extent(e3, e3n)))
@@ -106,15 +106,15 @@ int test_device()
     return 0;
 }
 
-int main() 
-{ 
+int main()
+{
     int result = test();
-    
-    printf("Test %s on host\n", ((result == 0) ? "passed" : "failed")); 
+
+    printf("Test %s on host\n", ((result == 0) ? "passed" : "failed"));
     if(result != 0) return result;
-    
+
     result = test_device();
-    printf("Test %s on device\n", ((result == 0) ? "passed" : "failed")); 
+    printf("Test %s on device\n", ((result == 0) ? "passed" : "failed"));
     return result;
 }
 

@@ -45,9 +45,7 @@ bool test(const accelerator_view& av, const tiled_extent<D0>& ext)
 
 runall_result test_main()
 {
-        // test doesn't require double support but require high end cards with high performance
-        // to finish compute in less than windows timeout.
-	accelerator_view av = require_device(device_flags::D3D11_GPU|device_flags::DOUBLE).get_default_view();
+	accelerator_view av = require_device().get_default_view();
 	
 	runall_result result;
 

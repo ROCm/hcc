@@ -34,14 +34,14 @@ bool test_feature()
 	}
 }
 
-int main() 
-{ 
-    int passed = 
+int main()
+{
+    int passed =
         test_feature<int, 1>() && test_feature<int, 2>() && test_feature<int, 5>() &&
         test_feature<float, 1>() && test_feature<float, 2>() && test_feature<float, 5>()
             ? runall_pass : runall_fail;
 
-    printf("%s\n", (passed == runall_pass) ? "Passed!" : "Failed!"); 
+    printf("%s\n", (passed == runall_pass) ? "Passed!" : "Failed!");
 
     return passed;
 }

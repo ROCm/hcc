@@ -29,19 +29,19 @@ using namespace Concurrency::Test;
 int main()
 {
     int original_ex[6] = {4, 4, 4, 4, 4, 4};
-    
+
     int section1_offset[6] = { 2, 0, 0, 0, 2, 2 };
     int section1_ex[6] =     { 2, 4, 4, 1, 2, 2 };
-    
+
     int section2_offset[6] = { 0, 1, 3, 0, 0, 0 };
     int section2_ex[6] =     { 2, 2, 1, 1, 2, 2 };
-    
+
     ArrayViewTest<float, 6> original((extent<6>(original_ex)));
     ArrayViewTest<float, 6> section1 = original.section(index<6>(section1_offset), extent<6>(section1_ex));
     ArrayViewTest<float, 6> section2 = section1.section(index<6>(section2_offset), extent<6>(section2_ex));
-    
+
     // the index parameters here are of the offset (second - first)
-    return 
+    return
         TestSection(original, section1, index<6>(section1_offset)) &&
         TestSection(original, section2, index<6>(section1_offset) + index<6>(section2_offset)) &&
         TestSection(section1, section2, index<6>(section2_offset))

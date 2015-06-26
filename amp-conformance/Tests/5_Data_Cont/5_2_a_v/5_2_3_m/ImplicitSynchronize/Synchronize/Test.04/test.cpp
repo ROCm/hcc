@@ -35,8 +35,8 @@ runall_result test_main()
         acc.set_default_cpu_access_type(ACCESS_TYPE);
     }
 	
-    accelerator::set_default(acc.get_device_path());   
-    
+    accelerator::set_default(acc.get_device_path());
+
     std::vector<int> v(10);
     std::fill(v.begin(), v.end(), 5);
 	
@@ -46,7 +46,7 @@ runall_result test_main()
     parallel_for_each(extent<1>(1), [=](index<1>) restrict(amp) {
         av[0] = 17;
     });
-    
+
     Log() << "Forcing a synch" << std::endl;
     std::shared_future<void> w = av.synchronize_async();
     w.wait();

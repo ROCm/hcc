@@ -30,10 +30,10 @@ namespace Test
             parallel_for_each(result.get_extent(), [&src,result,idx](index<1>) restrict(amp) {
                 result[0] = src[idx];
             });
-            
+
             return result[0];
         }
-        
+
 		// ARRAY OVERLOADED
         template<typename value_type, int rank>
         void gpu_write(array<value_type, rank> &dest, index<rank> idx, value_type value)
@@ -43,15 +43,15 @@ namespace Test
             });
         }
     }
-    
+
     // forward declaration
     template<typename _value_type, int _rank, int _original_rank = _rank + 1>
     class ProjectedArrayTest;
-    
+
     // forward declaration
     template<typename _value_type, int _rank>
     class ViewAsArrayTest;
-    
+
     ///<summary>A common test class for positive tests that exercise indexing and other array operations</summary>
     ///<remarks>
     /// This class holds an array, as well as a map of known-values. A test should use this
@@ -60,27 +60,27 @@ namespace Test
     ///
     /// Adding data via set_known_value() opts in to validation and logging via the pass() and fail()
     /// methods.
-    /// 
+    ///
     ///</remarks>
     template<typename _value_type, int _rank = 1, int _data_rank = _rank>
     class ArrayTest
-    {  
+    {
     public:
-        
+
         static const int rank = _rank;
-    
+
         ///<summary> the type of the index for this array</summary>
         typedef index<_rank> index_type;
-    
+
         ///<summary>The type of value_type </summary>
         typedef _value_type value_type;
-        
+
         ///<summary>The type of value_type with const removed</summary>
         // typedef typename std::remove_const<_value_type>::type value_type;
-    
+
         ///<summary>The structure used to hold known-values</summary>
         typedef typename std::unordered_map<index<_data_rank>, value_type, details::IndexHash<_data_rank>> known_values_store;
-        
+
         ///<summary>Creates a new ArrayTest -- creating a vector of the given size, and an array from it</summary>
         ArrayTest(extent<rank> extent) :
         _coordinates(new extent_coordinate_nest<rank>(extent)),
@@ -90,7 +90,7 @@ namespace Test
         {
             Log(LogType::Info) << "Created Array of: " << extent << std::endl;
         }
-        
+
         ///<summary>Creates a new ArrayTest -- with initial data, and an array from it</summary>
         ArrayTest(extent<rank> extent, std::vector<value_type> &data) :
         _coordinates(new extent_coordinate_nest<rank>(extent)),
@@ -99,14 +99,14 @@ namespace Test
         _arr(extent, (*_data.get()).begin())
         {
             assert(_data.get()->size() == extent.size());
-            
+
             Log(LogType::Info) << "Created Array of: " << extent << std::endl;
             Log(LogType::Info) << "Initial data: ";
             std::ostream_iterator<value_type> os_iter(LogStream(), ", ");
             std::copy(_data.get()->begin(), _data.get()->end(), os_iter);
             LogStream() << std::endl;
         }
-        
+
         ///<summary>Creates a new ArrayTest</summary>
         ArrayTest(
             std::shared_ptr<coordinate_nest<rank, _data_rank>> coordinates,
@@ -132,18 +132,18 @@ namespace Test
             _arr(arr)
         {
         };
-        
+
         ///<summary>Creates a new ArrayTest -- with sequential data</summary>
         template<int initial_value>
         static ArrayTest sequential(extent<rank> extent)
         {
             std::vector<value_type> data(extent.size());
-            
+
             value_type n = initial_value;
             std::generate(data.begin(), data.end(), [&n]() mutable { return n++; });
             return ArrayTest(extent, data);
         }
-        
+
         ///<summary>Registers a section of original array</summary>
         ///<remarks>
         ///The nested section shares the underlying data and known-values store with the original.
@@ -154,7 +154,7 @@ namespace Test
         {
             return projection(_arr[i], i);
         }
-        
+
         ///<summary>Registers a section of original array</summary>
         ///<remarks>
         ///The nested section shares the underlying data and known-values store with the original.
@@ -164,7 +164,7 @@ namespace Test
         ArrayViewTest<value_type, rank - 1, _data_rank> projection(array_view<value_type, rank - 1> other, int i)
         {
             Log(LogType::Info) << "Creating projection on: " << i << std::endl;
-            
+
             std::shared_ptr<coordinate_nest<rank - 1, _data_rank>> p(new projected_coordinate_nest<rank - 1, rank, _data_rank>(_coordinates, index<1>(i)));
             return ArrayViewTest<value_type, rank - 1, _data_rank>(
                 p,
@@ -172,7 +172,7 @@ namespace Test
                 _known_values,
                 other);
         }
-        
+
         ///<summary>Creates a section of original array</summary>
         ///<remarks>
         ///The nested section shares the underlying data and known-values store with the original.
@@ -183,7 +183,7 @@ namespace Test
         {
             return section(this->arr().section(offset), offset);
         };
-        
+
         ///<summary>Creates a section of original array</summary>
         ///<remarks>
         ///The nested section shares the underlying data and known-values store with the original.
@@ -194,7 +194,7 @@ namespace Test
         {
             return section(this->arr().section(ex), index<rank>());
         };
-        
+
         ///<summary>Creates a section of original array</summary>
         ///<remarks>
         ///The nested section shares the underlying data and known-values store with the original.
@@ -205,7 +205,7 @@ namespace Test
         {
             return section(this->arr().section(origin, ex), origin);
         };
-        
+
         ///<summary>Registers a section of original array</summary>
         ///<remarks>
         ///The nested section shares the underlying data and known-values store with the original.
@@ -214,7 +214,7 @@ namespace Test
         ///</remarks>
         ArrayViewTest<value_type, rank, _data_rank> section(array_view<value_type, rank> other, index<rank> origin)
         {
-            Log(LogType::Info) << "Creating section: (origin: " << origin << " extent: " 
+            Log(LogType::Info) << "Creating section: (origin: " << origin << " extent: "
                 << other.get_extent() << ")" << std::endl;
 			
 			// make a copy
@@ -226,7 +226,7 @@ namespace Test
                 other);
             return otherTest;
         };
-        
+
         template<int new_rank>
         ArrayViewTest<_value_type, new_rank, _data_rank> view_as(extent<new_rank> ex)
         {
@@ -238,15 +238,15 @@ namespace Test
                 _known_values,
                 _arr.view_as(ex));
         }
-        
+
         ///<summary>sets the given value in the array and known-values store</summary>
         void set_value(index<rank> i, value_type value)
         {
             set_known_value(i, value);
-            
+
             details::gpu_write(_arr,i,value);
         }
-        
+
         ///<summary>sets the given value in the known-values store</summary>
         void set_known_value(index<rank> i, value_type value)
         {
@@ -255,39 +255,39 @@ namespace Test
 
             (*_known_values)[_coordinates.get()->get_absolute(i)] = value;
         };
-        
+
         typename std::vector<value_type>::iterator begin()
         {
             return _data.get()->begin();
         }
-        
+
         typename std::vector<value_type>::iterator end()
         {
             return _data.get()->end();
         }
-        
+
         coordinate_nest<rank, _data_rank>& coordinates() const
         {
             return *_coordinates.get();
         }
-        
+
         ///<summary>returns a reference to the underlying data</summary>
         value_type* data()
         {
             return _data.get()->data();
         }
-        
+
         ///<summary>returns a reference to the array</summary>
         array<value_type, rank>& arr()
         {
             return _arr;
         }
-        
+
         const known_values_store& known_values()
         {
             return *_known_values.get();
         }
-        
+
         ///<summary>uses the known-values to verify the underlying data, then returns runall_pass</summary>
         int pass()
         {
@@ -304,7 +304,7 @@ namespace Test
             Log(LogType::Info) << "Pass" << std::endl;
             return runall_pass;
         };
-        
+
         ///<summary>logs information, then returns runall_fail</summary>
         int fail()
         {
@@ -318,7 +318,7 @@ namespace Test
 						<< this->data()[_coordinates.get()->get_linear(iter->first)] << std::endl;
 				}
             }
-            
+
             Log(LogType::Info) << "Raw data: ";
             std::ostream_iterator<value_type> os_iter(LogStream(), ", ");
             std::copy(_data.get()->begin(), _data.get()->end(), os_iter);
@@ -333,7 +333,7 @@ namespace Test
         std::shared_ptr<known_values_store> _known_values;
         array<value_type, rank> _arr;
     };
-    
+
 	 // ARRAY OVERLOADED
     template<typename value_type, int rank>
     value_type gpu_read(array<value_type, rank> &src, index<rank> idx)
@@ -352,23 +352,23 @@ namespace Test
     {
         ArrayViewTest<value_type, rank> section = original.section(origin);
         return TestSection(original, section, origin);
-        
+
     }
-    
+
     template<typename value_type, int rank>
     bool TestSection(ArrayTest<value_type, rank> &original, index<rank> origin, extent<rank> ex)
     {
         ArrayViewTest<value_type, rank> section = original.section(origin, ex);
         return TestSection(original, section, origin);
     }
-    
+
     template<typename value_type, int rank>
     bool TestSection(ArrayTest<value_type, rank> &original, array_view<value_type, rank> &section_av, index<rank> origin)
     {
         ArrayViewTest<value_type, rank> section = original.section(section_av, origin);
         return TestSection(original, section, origin);
     }
-    
+
     template<typename value_type, int rank>
     bool TestSection(ArrayTest<value_type, rank> &original, ArrayViewTest<value_type, rank> &section, index<rank> origin)
     {
@@ -377,11 +377,11 @@ namespace Test
         // now choose random points in the section
         // relative to the original
         index<rank> set_original_on_gpu = details::random_index(origin, section.view().get_extent());
-        
+
         // relative to the section
         index<rank> set_section_on_gpu = details::random_index(origin, section.view().get_extent()) - origin;
         index<rank> set_section_on_cpu = details::random_index(origin, section.view().get_extent()) - origin;
-        
+
         // set a value in the section on the GPU
         value_type expected_value = static_cast<value_type>(rand());
         Log() << "Setting a value in the section AV on the GPU" << std::endl;
@@ -393,7 +393,7 @@ namespace Test
             Log(LogType::Error) << "Reading original (CPU) expected: " << expected_value << " actual: " << actual_value << std::endl;
             return false;
         }
-        
+
         // set a value in the original on the GPU
         expected_value = static_cast<value_type>(rand());
         Log() << "Setting a value in the original AV on the GPU" << std::endl;
@@ -405,7 +405,7 @@ namespace Test
             Log(LogType::Error) << "Reading section (GPU) expected: " << expected_value << " actual: " << actual_value << std::endl;
             return false;
         }
-        
+
         // set a value in the section on the CPU
         expected_value = static_cast<value_type>(rand());
         Log() << "Setting a value in the section AV on the CPU" << std::endl;
@@ -417,7 +417,7 @@ namespace Test
             Log(LogType::Error) << "Reading original (GPU) expected: " << expected_value << " actual: " << actual_value << std::endl;
             return false;
         }
-        
+
         return true;
     }
 }

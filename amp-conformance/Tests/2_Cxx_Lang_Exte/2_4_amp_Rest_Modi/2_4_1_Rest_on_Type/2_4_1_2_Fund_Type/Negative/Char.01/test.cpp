@@ -7,10 +7,10 @@
 /// <summary>test char</summary>
 //#Expects: Error: error C3581
 
-#include <amptest.h> 
+#include <amptest.h>
 
-int main(int argc, char **argv) 
-{ 
+int main(int argc, char **argv)
+{
     [=]() __GPU
     {
         char c = 65;

@@ -69,7 +69,7 @@ int int_vect_add()
     accelerator device;
     if (!Test::get_device(Test::Device::ALL_DEVICES, device))
     {
-        std::cout << "Unable to get requested accelerator" << std::endl; 
+        std::cout << "Unable to get requested accelerator" << std::endl;
         return 2;
     }
     accelerator_view rv = device.get_default_view();
@@ -93,7 +93,7 @@ int int_vect_add()
 
     printf("kernel1: %s\n", passed? "Passed!" : "Failed!");
 
-    if (passed == false) goto Cleanup;   
+    if (passed == false) goto Cleanup;
 
     C.assign(C.size(), 0);
 
@@ -118,8 +118,8 @@ void init_data(int size, vector<int> &A, vector<int> &B, vector<int> &C, vector<
     for (size_t i = 0; i < size; i++)
     {
         if (rand() % 2 == 0) {
-            A[i] = static_cast<int>(i); 
-            B[i] = static_cast<int>(i); 
+            A[i] = static_cast<int>(i);
+            B[i] = static_cast<int>(i);
         } else {
             A[i] = rand() % size;
             B[i] = rand() % size;
@@ -147,7 +147,7 @@ bool verify_result(int size, vector<int> &C, vector<int> &refC)
     return passed;
 }
 
-int main() 
+int main()
 {
     return int_vect_add();
 }
