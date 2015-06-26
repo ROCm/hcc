@@ -449,7 +449,27 @@ public:
         return static_cast<void*>(fut);
     }
 
-private:
+    void read(void* device, void* dst, size_t count, size_t offset) override {
+        if (dst != device)
+            memmove(dst, (char*)device + offset, count);
+    }
+
+    void write(void* device, const void* src, size_t count, size_t offset, bool blocking) override {
+        if (src != device)
+            memmove((char*)device + offset, src, count);
+    }
+
+    void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset, bool blocking) override {
+        if (src != dst)
+            memmove((char*)dst + dst_offset, (char*)src + src_offset, count);
+    }
+
+    void* map(void* device, size_t count, size_t offset, bool modify) override {
+        return (char*)device + offset;
+    }
+
+    void unmap(void* device, void* addr) override {}
+
     void Push(void *kernel, int idx, void *device, bool isConst) override {
         PushArgImpl(kernel, idx, sizeof(void*), &device);
     }
@@ -498,10 +518,9 @@ public:
         return data;
     }
     
-    void release(void *data) override {
-        // TBD use hsa_memory_deregister to deregister the buffer from HSA RT
-
-        ::operator delete(data);
+    void release(void *ptr, struct rw_info* key ) override {
+        hsa_memory_deregister(ptr, key->count);
+        ::operator delete(ptr);
     }
 
     void* CreateKernel(const char* fun, void* size, void* source) override {
