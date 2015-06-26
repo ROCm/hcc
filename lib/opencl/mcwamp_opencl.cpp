@@ -135,34 +135,40 @@ public:
         mems.push_back({dm, modify});
     }
 
-    void write(void* device, const void *src, size_t count, size_t offset, bool blocking, bool free) override {
+    void write(void* device, const void *src, size_t count, size_t offset, bool blocking) override {
         cl_mem dm = static_cast<cl_mem>(device);
         cl_int err = CL_SUCCESS;
         cl_event ent;
         err = clEnqueueWriteBuffer(getQueue(), dm, CL_FALSE, offset, count, src, 0, NULL, &ent);
         assert(err == CL_SUCCESS);
-        if (free) {
-            err = clSetEventCallback(ent, CL_COMPLETE, &free_memory, const_cast<void*>(src));
-            assert(err == CL_SUCCESS);
-        }
-        if (blocking)
+        if (blocking) {
             err = clWaitForEvents(1, &ent);
-        else {
-            if (events.find(dm) != std::end(events))
+            assert(err = CL_SUCCESS);
+            err = clReleaseEvent(ent);
+            assert(err == CL_SUCCESS);
+        } else {
+            if (events.find(dm) != std::end(events)) {
                 err = clReleaseEvent(events[dm]);
+                assert(err == CL_SUCCESS);
+            }
             events[dm] = ent;
         }
-        assert(err == CL_SUCCESS);
     }
 
     void read(void* device, void* dst, size_t count, size_t offset) override {
         cl_mem dm = static_cast<cl_mem>(device);
         cl_int err;
-        if (events.find(dm) != std::end(events))
-            err = clEnqueueReadBuffer(getQueue(), dm, CL_TRUE, offset, count, dst, 1, &events[dm], NULL);
-        else
+        if (events.find(dm) != std::end(events)) {
+            cl_event ent = events[dm];
+            err = clEnqueueReadBuffer(getQueue(), dm, CL_TRUE, offset, count, dst, 1, &ent, NULL);
+            assert(err == CL_SUCCESS);
+            err = clReleaseEvent(ent);
+            assert(err == CL_SUCCESS);
+            events.erase(dm);
+        } else {
             err = clEnqueueReadBuffer(getQueue(), dm, CL_TRUE, offset, count, dst, 0, NULL, NULL);
-        assert(err == CL_SUCCESS);
+            assert(err == CL_SUCCESS);
+        }
     }
 
     void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset, bool blocking) override {
@@ -170,18 +176,51 @@ public:
         cl_mem ddm = static_cast<cl_mem>(dst);
         cl_int err;
         cl_event ent;
-        if (events.find(sdm) == std::end(events))
+        if (events.find(sdm) == std::end(events)) {
             err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, 0, NULL, &ent);
-        else
-            err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, 1, &events[sdm], &ent);
-        if (blocking)
-            clWaitForEvents(1, &ent);
-        else {
-            if (events.find(ddm) != std::end(events))
-                clReleaseEvent(events[ddm]);
+            assert(err == CL_SUCCESS);
+        } else {
+            cl_event evt = events[sdm];
+            cl_command_queue queue;
+            clGetEventInfo(evt, CL_EVENT_COMMAND_QUEUE, sizeof(cl_command_queue), &queue, NULL);
+
+            cl_device_id dev1, dev2;
+            clGetCommandQueueInfo(getQueue(), CL_QUEUE_DEVICE, sizeof(cl_device_id), &dev1, NULL);
+            clGetCommandQueueInfo(queue, CL_QUEUE_DEVICE, sizeof(cl_device_id), &dev2, NULL);
+
+            /// In OpenCL, the buffer write to different device cannot be copied
+            /// simply by EnqueuCopyBuffer. CopyBuffer can only work when the device
+            /// of the queue used to write data is the same as the device of the
+            /// queue used to copy data
+            if (dev1 == dev2) {
+                err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, 1, &evt, &ent);
+                assert(err = CL_SUCCESS);
+            } else {
+                void* stage = aligned_alloc(0x1000, count);
+                cl_event stage_evt;
+                err = clEnqueueReadBuffer(queue, sdm, CL_FALSE, src_offset, count, stage, 1, &evt, &stage_evt);
+                assert(err = CL_SUCCESS);
+                err = clEnqueueWriteBuffer(getQueue(), ddm, CL_FALSE, dst_offset, count, stage, 1, &stage_evt, &ent);
+                assert(err = CL_SUCCESS);
+                err = clSetEventCallback(ent, CL_COMPLETE, &free_memory, stage);
+                assert(err = CL_SUCCESS);
+            }
+            err = clReleaseEvent(evt);
+            assert(err = CL_SUCCESS);
+            events.erase(sdm);
+        }
+        if (blocking) {
+            err = clWaitForEvents(1, &ent);
+            assert(err = CL_SUCCESS);
+            err = clReleaseEvent(ent);
+            assert(err == CL_SUCCESS);
+        } else {
+            if (events.find(ddm) != std::end(events)) {
+                err = clReleaseEvent(events[ddm]);
+                assert(err == CL_SUCCESS);
+            }
             events[ddm] = ent;
         }
-        assert(err == CL_SUCCESS);
     }
 
     void* map(void* device, size_t count, size_t offset, bool Write) override {
@@ -193,11 +232,17 @@ public:
         else
             flags = CL_MAP_READ;
         void* addr = nullptr;
-        if (events.find(dm) == std::end(events))
+        if (events.find(dm) == std::end(events)) {
             addr = clEnqueueMapBuffer(getQueue(), dm, CL_TRUE, flags, offset, count, 0, NULL, NULL, &err);
-        else
-            addr = clEnqueueMapBuffer(getQueue(), dm, CL_TRUE, flags, offset, count, 1, &events[dm], NULL, &err);
-        assert(err == CL_SUCCESS);
+            assert(err == CL_SUCCESS);
+        } else {
+            cl_event evt = events[dm];
+            addr = clEnqueueMapBuffer(getQueue(), dm, CL_TRUE, flags, offset, count, 1, &evt, NULL, &err);
+            assert(err == CL_SUCCESS);
+            err = clReleaseEvent(evt);
+            assert(err == CL_SUCCESS);
+            events.erase(dm);
+        }
         return addr;
     }
 
@@ -205,10 +250,12 @@ public:
         cl_mem dm = static_cast<cl_mem>(device);
         cl_event evt;
         cl_int err = clEnqueueUnmapMemObject(getQueue(), dm, addr, 0, NULL, &evt);
-        if (events.find(dm) != std::end(events))
-            clReleaseEvent(events[dm]);
-        events[dm] = evt;
         assert(err == CL_SUCCESS);
+        if (events.find(dm) != std::end(events)) {
+            err = clReleaseEvent(events[dm]);
+            assert(err == CL_SUCCESS);
+        }
+        events[dm] = evt;
     }
 
     void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) override {
@@ -340,7 +387,7 @@ public:
         return dm;
     }
 
-    void release(void *device) override {
+    void release(void *device, struct rw_info* /* not used */ ) override {
         cl_mem dm = static_cast<cl_mem>(device);
         if (events.find(dm) != std::end(events)) {
             clReleaseEvent(events[dm]);
@@ -385,6 +432,8 @@ static const CLFlag Flags[] = {
     // CLFlag(CL_DEVICE_TYPE_CPU, L"cpu")
 };
 
+template <typename T> inline void deleter(T* ptr) { delete ptr; }
+
 class OpenCLContext : public KalmarContext
 {
 public:
@@ -423,7 +472,10 @@ public:
             Devices.push_back(Dev);
         }
     }
-    ~OpenCLContext() { clReleaseContext(context); }
+    ~OpenCLContext() {
+        std::for_each(std::begin(Devices), std::end(Devices), deleter<KalmarDevice>);
+        clReleaseContext(context);
+    }
 };
 
 static OpenCLContext ctx;

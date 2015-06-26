@@ -32,7 +32,7 @@ public:
     void reset() const {}
 
     T* map_ptr(bool modify = false, size_t count = 0, size_t offset = 0) const { return nullptr; }
-    void unmap_ptr(void* addr) const {}
+    void unmap_ptr(const void* addr) const {}
     void synchronize(bool modify = false) const {}
     void get_cpu_access(bool modify = false) const {}
     void copy(_data<T> other, int, int, int) const {}
@@ -88,7 +88,7 @@ public:
     T* map_ptr(bool modify = false, size_t count = 0, size_t offset = 0) const {
         return (T*)mm->map(count * sizeof(T), offset * sizeof(T), modify);
     }
-    void unmap_ptr(void* addr) const { return mm->unmap(addr); }
+    void unmap_ptr(const void* addr) const { return mm->unmap(const_cast<void*>(addr)); }
     void sync_to(std::shared_ptr<KalmarQueue> pQueue) const { mm->sync(pQueue, false); }
 
     __attribute__((annotate("serialize")))
@@ -96,7 +96,7 @@ public:
             s.Push(mm.get(), !std::is_const<T>::value, isArray);
         }
     __attribute__((annotate("user_deserialize")))
-        explicit _data_host(__global T* t) {}
+        explicit _data_host(__global typename std::remove_const<T>::type* t) {}
 };
 
 } // namespace Concurrency
