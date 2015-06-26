@@ -506,7 +506,7 @@ namespace fast_math {
   inline int isnan(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return opencl_isnan(x);
-    #elif __AMP_CPU__
+    #elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
       return std::isnan(x);
     #else
       return host_isnan(x);

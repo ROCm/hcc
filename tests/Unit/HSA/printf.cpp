@@ -37,7 +37,7 @@ int main() {
 
   dumpHSAPrintfPacketQueue(q);
 
-  hsa_process_printf_queue(q);
+  processHSAPrintfPacketQueue(q);
 
   destroyHSAPrintfPacketQueue(q);
 
