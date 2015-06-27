@@ -8,7 +8,7 @@
 /// <tags>P1</tags>
 /// <summary>Attempt to call view_as on array object as another array_view object of same rank</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <amptest_main.h>
 #include <amptest/array_test.h>
 

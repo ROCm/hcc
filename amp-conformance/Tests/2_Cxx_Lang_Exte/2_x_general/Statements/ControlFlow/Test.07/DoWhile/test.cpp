@@ -4,14 +4,13 @@
 // THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 // See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
 /// <tags>P0</tags>
-/// <summary>Control Flow test: do/while calls group barrier first to do some computation 
+/// <summary>Control Flow test: do/while calls group barrier first to do some computation
 /// (typically, addition and multiplication) by using shared memory. Then call break statement.</summary>
 
 #include <iostream>
 #include <amptest.h>
 #include <amptest_main.h>
 
-using namespace std;
 using namespace Concurrency;
 using namespace Concurrency::Test;
 
@@ -27,7 +26,7 @@ const int NumYGroups = YSize / YGroupSize;           // Make sure that Size is d
 const int NumGroups  =  NumXGroups * NumYGroups;     // Make sure that Size is divisible by GroupSize
 
 void CalculateGroupSum(int* A, int* B)
-{ 
+{
     int g = 0;
     for(int y = 0; y < YSize; y += YGroupSize)
     {
@@ -40,9 +39,9 @@ void CalculateGroupSum(int* A, int* B)
             for(int gy = y; gy < (y + YGroupSize); gy++)
             {
                 for(int gx = x; gx < (x + XGroupSize); gx++)
-                {        
+                {
                     int flatLocalIndex = gy * XSize + gx;
-                    B[g] += A[flatLocalIndex];         
+                    B[g] += A[flatLocalIndex];
                 }
             }
             g++;
@@ -51,11 +50,11 @@ void CalculateGroupSum(int* A, int* B)
 }
 
 //Calculate sum of all elements in a group - GPU version
-void CalculateGroupSum(tiled_index<YGroupSize, XGroupSize> ti, int flatLocalIndex, Concurrency::array<int, 2>& fA, Concurrency::array<int, 2>& fB) __GPU_ONLY
+void CalculateGroupSum(tiled_index<YGroupSize, XGroupSize> ti, int flatLocalIndex, array<int, 2>& fA, array<int, 2>& fB) __GPU_ONLY
 {
     // use shared memory
-    tile_static int shared[XGroupSize * YGroupSize];         
-    shared[flatLocalIndex] = fA[ti.global];            
+    tile_static int shared[XGroupSize * YGroupSize];
+    shared[flatLocalIndex] = fA[ti.global];
     ti.barrier.wait();
 
     if(flatLocalIndex == 0)
@@ -70,30 +69,30 @@ void CalculateGroupSum(tiled_index<YGroupSize, XGroupSize> ti, int flatLocalInde
     }
 }
 
-void kernel(tiled_index<YGroupSize, XGroupSize> ti, Concurrency::array<int, 2>& fA, Concurrency::array<int, 2>& fB, int x) __GPU_ONLY
+void kernel(tiled_index<YGroupSize, XGroupSize> ti, array<int, 2>& fA, array<int, 2>& fB, int x) __GPU_ONLY
 {
     int flatLocalIndex = ti.local[0] * XGroupSize + ti.local[1];
 
     // Initialize to some fixed value; to check path when conditions are not true.
     // Only first thread initializes
-    if(flatLocalIndex == 0) fB[ti.tile] = 100;    
+    if(flatLocalIndex == 0) fB[ti.tile] = 100;
 
-    do 
+    do
     {
         CalculateGroupSum(ti, flatLocalIndex, fA, fB);
         break;
-    } 
-    while(x > 1);    
+    }
+    while(x > 1);
 }
 
 runall_result test_main()
 {
     bool passed = true;
 
-    vector<int> A(Size); // data
-    vector<int> B(NumGroups);   // holds the grouped sum of data
+    std::vector<int> A(Size); // data
+    std::vector<int> B(NumGroups);   // holds the grouped sum of data
 
-    vector<int> refB(NumGroups); // Expected value ; sum of elements in each group    
+    std::vector<int> refB(NumGroups); // Expected value ; sum of elements in each group
 
     //Init A
     Fill<int>(A.data(), Size, 0, 100);
@@ -104,7 +103,7 @@ runall_result test_main()
     accelerator_view av =  require_device(Device::ALL_DEVICES).get_default_view();
 
     Concurrency::extent<2> extentA(XSize, YSize), extentB(NumYGroups, NumXGroups);
-    Concurrency::array<int, 2> fA(extentA, A.begin(), A.end(), av), fB(extentB, av);
+    array<int, 2> fA(extentA, A.begin(), A.end(), av), fB(extentB, av);
 
     //parallel_for_each where conditions are met
 
@@ -113,20 +112,8 @@ runall_result test_main()
         int x = 123;
         kernel(ti, fA, fB, x);
 
-    });        
+    });
 
-    B = fB;    
-    if(!Verify<int>(B.data(), refB.data(), NumGroups))
-    {
-        passed = false;
-        cout << "Test: failed" << endl;        
-        return runall_fail;
-    }    
-    else
-    {
-        cout << "Test: passed" << endl;
-        return runall_pass;
-    }
-
-    return runall_fail;
+    B = fB;
+    return Verify<int>(B.data(), refB.data(), NumGroups);
 }

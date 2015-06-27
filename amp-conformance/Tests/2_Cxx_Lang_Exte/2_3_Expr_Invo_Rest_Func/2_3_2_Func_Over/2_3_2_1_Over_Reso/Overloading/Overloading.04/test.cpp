@@ -16,7 +16,7 @@ public:
         return 1;
     }
 
-    int f(int) 
+    int f(int)
     {
         return 0;
     }

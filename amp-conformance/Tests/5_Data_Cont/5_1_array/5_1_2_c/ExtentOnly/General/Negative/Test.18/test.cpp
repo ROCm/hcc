@@ -13,7 +13,7 @@
 #include <amptest_main.h>
 
 runall_result test_main()
-{ 
+{
     array<long, 3>(13, 331);
 
 	// We shouldn't compile

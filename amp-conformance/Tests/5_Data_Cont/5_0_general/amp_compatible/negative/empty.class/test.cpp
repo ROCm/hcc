@@ -26,7 +26,7 @@ struct A
 runall_result test_main()
 {
     array<A, 1> arr(10);
-    
+
     return runall_fail;
 }
 

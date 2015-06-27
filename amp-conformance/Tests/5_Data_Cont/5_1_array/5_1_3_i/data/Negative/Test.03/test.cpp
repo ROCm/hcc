@@ -30,8 +30,8 @@ bool test_feature_d()
     return false;
 }
 
-int main(int argc, char **argv) 
-{ 
+int main(int argc, char **argv)
+{
     test_feature_d<1>();
     test_feature_d<2>();
     test_feature_d<3>();

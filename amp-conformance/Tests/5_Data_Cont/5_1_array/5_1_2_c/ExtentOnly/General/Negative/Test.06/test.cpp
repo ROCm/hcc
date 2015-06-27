@@ -22,7 +22,7 @@
 #include "./../../../../constructor.h"
 #include <amptest_main.h>
 
-typedef struct 
+typedef struct
 {
     int* n;
     float* u;

@@ -18,7 +18,7 @@
 //--------------------------------------------------------------------------------------
 //
 
-#pragma once 
+#pragma once
 
 #include <amp.h>
 #include <iterator>
@@ -37,7 +37,7 @@ namespace Test
         subscripts[3] = i3;
         return index<4>(subscripts);
     };
-    
+
     index<5> make_index(int i0, int i1, int i2, int i3, int i4) restrict(cpu,amp)
     {
         int subscripts[5];
@@ -48,7 +48,7 @@ namespace Test
         subscripts[4] = i4;
         return index<5>(subscripts);
     };
-    
+
     extent<4> make_extent(int i0, int i1, int i2, int i3) restrict(cpu,amp)
     {
         int subscripts[4];
@@ -58,7 +58,7 @@ namespace Test
         subscripts[3] = i3;
         return extent<4>(subscripts);
     };
-    
+
     extent<5> make_extent(int i0, int i1, int i2, int i3, int i4) restrict(cpu,amp)
     {
         int subscripts[5];
@@ -69,7 +69,7 @@ namespace Test
         subscripts[4] = i4;
         return extent<5>(subscripts);
     };
-    
+
     ///<summary>
     /// An abstract base class for classes mapping an index of a certain rank to another
     /// potentially different rank
@@ -79,10 +79,10 @@ namespace Test
     {
     public:
         virtual index<original_rank> get_absolute(index<rank> i) const = 0;
-        
+
         virtual unsigned int get_linear(index<rank> i) const = 0;
     };
-    
+
     template<int rank>
     class extent_coordinate_nest : public coordinate_nest<rank, rank>
     {
@@ -91,16 +91,16 @@ namespace Test
             data_extent(ex)
         {
         };
-        
+
         virtual index<rank> get_absolute(index<rank> i) const
         {
             return i;
         }
-        
+
         virtual unsigned int get_linear(index<rank> i) const
         {
             auto absolute_index = this->get_absolute(i);
-            
+
             unsigned int stride = 1;
             unsigned int linear = 0;
             for (int i = rank - 1; i >= 0; i--)
@@ -108,14 +108,14 @@ namespace Test
                 linear += absolute_index[i] * stride;
                 stride *= data_extent[i];
             }
-            
+
             return linear;
         };
-        
+
     private:
         extent<rank> data_extent;
     };
-    
+
     template<int rank, int original_rank = rank>
     class offset_coordinate_nest : public coordinate_nest<rank, original_rank>
     {
@@ -123,24 +123,24 @@ namespace Test
         offset_coordinate_nest(std::shared_ptr<coordinate_nest<rank, original_rank>> n, index<rank> o) :
             next(n),
             offset(o)
-        { 
+        {
         };
-        
+
         virtual index<original_rank> get_absolute(index<rank> i) const
         {
             return next.get()->get_absolute(i + offset);
         }
-        
+
         virtual unsigned int get_linear(index<rank> i) const
         {
             return next.get()->get_linear(i + offset);
         };
-        
+
     private:
         std::shared_ptr<coordinate_nest<rank, original_rank>> next;
         index<rank> offset;
     };
-    
+
     template<int rank, int next_rank = rank + 1, int original_rank = next_rank>
     class projected_coordinate_nest : public coordinate_nest<rank, original_rank>
     {
@@ -150,17 +150,17 @@ namespace Test
         origin(origin)
         {
         };
-        
+
         virtual index<original_rank> get_absolute(index<rank> i) const
         {
             return next.get()->get_absolute(this->get_relative_index(i));
         };
-        
+
         virtual unsigned int get_linear(index<rank> i) const
         {
             return next.get()->get_linear(this->get_relative_index(i));
         };
-    
+
     private:
         index<next_rank> get_relative_index(index<rank> projected_index) const
         {
@@ -173,14 +173,14 @@ namespace Test
             {
                 subscripts[i + next_rank - rank] = projected_index[i];
             }
-            
+
             return index<next_rank>(subscripts);
         };
-        
+
         std::shared_ptr<coordinate_nest<next_rank, original_rank>> next;
         index<original_rank - rank> origin;
     };
-    
+
     template<int rank, int original_rank>
     class reshaped_coordinate_nest : public coordinate_nest<rank, original_rank>
     {
@@ -190,33 +190,33 @@ namespace Test
             original(ex)
         {
         };
-        
+
         virtual index<1> get_absolute(index<rank> i) const
         {
             return next.get()->get_absolute(index<1>(original.get_linear(i)));
         };
-        
+
         virtual unsigned int get_linear(index<rank> i) const
         {
             return next.get()->get_linear(index<1>(original.get_linear(i)));
         };
-        
+
     private:
         std::shared_ptr<coordinate_nest<1, original_rank>> next;
         extent_coordinate_nest<rank> original;
     };
-    
+
     template<int rank>
     class index_iterator
     {
     public:
-        
+
         typedef std::input_iterator_tag iterator_category;
         typedef index<rank> value_type;
         typedef ptrdiff_t difference_type;
         typedef index<rank>* pointer;
         typedef index<rank>& reference;
-    
+
         index_iterator(extent<rank> extent) :
             _position(0),
             _extent(extent)
@@ -228,20 +228,20 @@ namespace Test
                 stride *= _extent[i];
             }
         }
-        
+
         index_iterator& operator++()
         {
             _position++;
             return *this;
         };
-        
+
         index_iterator& operator++(int)
         {
             _position++;
             return *this;
         };
-        
-        
+
+
         index<rank> operator*()
         {
             int linear = _position;
@@ -253,31 +253,31 @@ namespace Test
             }
             return index<rank>(subscripts);
         };
-        
+
         bool operator==(const index_iterator<rank> &other)
         {
             return _position == other._position && _extent == other._extent;
         };
-        
+
         bool operator!=(const index_iterator<rank> &other)
         {
             return !(*this == other);
         };
-        
+
         index_iterator<rank> begin()
         {
             index_iterator other(*this);
             other._position = 0;
             return other;
         };
-        
+
         index_iterator<rank> end()
         {
             index_iterator other(*this);
             other._position = other._extent.size();
             return other;
         };
-        
+
     private:
         int _position;
         extent<rank> _extent;

@@ -14,11 +14,11 @@
 //#Expects: Error: test.cpp\(34\) : error C3581:.*(\bmain::<lambda_\w*>)
 
 #include "./../../pointer.h"
- 
+
 int main()
 {
     int numBodies = 1024;
- 
+
     int *dataSrc = new int[numBodies];
     for (int i = 0; i < numBodies; i++)
         dataSrc[i] = rand();
@@ -27,7 +27,7 @@ int main()
 
     array<int, 1> *pDataA = new array<int, 1>(e, dataSrc);
     array<int, 1> *pDataB = new array<int, 1>(e);
-    
+
     parallel_for_each(e, [=](index<1> idx) __GPU_ONLY
     {
         (*pDataB)[idx] = (*pDataA)[idx];

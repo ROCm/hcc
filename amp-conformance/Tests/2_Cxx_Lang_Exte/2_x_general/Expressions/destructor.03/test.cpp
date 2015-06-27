@@ -35,12 +35,12 @@ class A
 };
 
 void test_nullptr(accelerator_view av)
-{    
+{
     extent<1> ext(10);
-    parallel_for_each(av,ext,[=](index<1> idx) restrict(amp){	    	   
+    parallel_for_each(av,ext,[=](index<1> idx) restrict(amp){	    	
               A *localPtrObject = NULL; //  Valid stmt only.
 	       // Delete,New operators are not allowed in AMP. Even 'deletion' of NULL Ptr is not allowed.
-    	      delete localPtrObject;  
+    	      delete localPtrObject;
               delete []localPtrObject;
 
 	      localPtrObject = new A();
@@ -50,7 +50,7 @@ void test_nullptr(accelerator_view av)
 }
 
 /*
-   Compiler reports errors errors at regions #1,#2,#3,#4   
+   Compiler reports errors errors at regions #1,#2,#3,#4
 */
 
 void function1() restrict(cpu,amp)

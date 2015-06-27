@@ -6,7 +6,7 @@
 // INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 // See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
 /// <tags>P1</tags>
-/// <summary>Create array using 1-D accelerator_view staging specialized constructors - uses hash_set - CPU host GPU target</summary>
+/// <summary>Create array using 1-D accelerator_view staging specialized constructors - uses unordered_set - CPU host GPU target</summary>
 
 #include <unordered_set>
 #include "./../../../../constructor.h"
@@ -26,7 +26,9 @@ bool test_feature()
 
     {
         bool pass = test_feature_staging_itr<_type, _rank, _D0, accelerator_view>(data.begin(), data.end(), (_gpu_device).get_default_view(), _cpu_device.get_default_view()) &&
-            test_feature_staging_itr<_type, _rank, _D0, accelerator_view>(data.cbegin(), data.cend(), (_gpu_device).create_view(queuing_mode_automatic), _cpu_device.create_view(queuing_mode_immediate));
+            test_feature_staging_itr<_type, _rank, _D0, accelerator_view>(data.begin(), data.end(), (_gpu_device).create_view(queuing_mode_immediate), _cpu_device.create_view(queuing_mode_immediate)) &&
+            test_feature_staging_itr<_type, _rank, _D0, accelerator_view>(data.cbegin(), data.cend(), (_gpu_device).create_view(queuing_mode_automatic), _cpu_device.create_view(queuing_mode_immediate)) &&
+            test_feature_staging_itr<_type, _rank, _D0, accelerator_view>(data.cbegin(), data.cend(), (_gpu_device).create_view(queuing_mode_automatic), _cpu_device.create_view(queuing_mode_automatic));
 
         if (!pass)
             return false;
@@ -35,7 +37,9 @@ bool test_feature()
 
     {
         bool pass = test_feature_staging_itr<_type, _rank, _D0, accelerator_view>(data.begin(), (_gpu_device).get_default_view(), _cpu_device.get_default_view()) &&
-            test_feature_staging_itr<_type, _rank, _D0, accelerator_view>(data.cbegin(), (_gpu_device).create_view(queuing_mode_immediate), _cpu_device.create_view(queuing_mode_automatic));
+            test_feature_staging_itr<_type, _rank, _D0, accelerator_view>(data.begin(), (_gpu_device).create_view(queuing_mode_immediate), _cpu_device.create_view(queuing_mode_immediate)) &&
+            test_feature_staging_itr<_type, _rank, _D0, accelerator_view>(data.cbegin(), (_gpu_device).create_view(queuing_mode_immediate), _cpu_device.create_view(queuing_mode_automatic)) &&
+            test_feature_staging_itr<_type, _rank, _D0, accelerator_view>(data.cbegin(), (_gpu_device).create_view(queuing_mode_automatic), _cpu_device.create_view(queuing_mode_automatic));
 
         if (!pass)
             return false;
@@ -54,7 +58,7 @@ runall_result test_main()
 	result &= REPORT_RESULT((test_feature<unsigned int, 91>()));
 	result &= REPORT_RESULT((test_feature<float, 5>()));
 	result &= REPORT_RESULT((test_feature<double, 31>()));
-    
+
     return result;
 }
 

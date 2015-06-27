@@ -11,16 +11,16 @@
 template <typename T>
 void func(T arg)
 {};
-    
+
 template <typename T>
 struct S
 {};
-    
+
 //explicit instantiations
 template void func<int (*)(int, int) restrict(cpu) throw()>(int (*arg)(int, int) restrict(cpu) throw());
 
 template struct S<const int && (int) restrict(cpu)>;
-    
+
 int main()
 {
     // if this compiles it passes

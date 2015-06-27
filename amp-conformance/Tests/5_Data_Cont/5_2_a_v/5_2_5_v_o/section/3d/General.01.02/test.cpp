@@ -30,7 +30,7 @@ int main()
 {
     ArrayViewTest<int, 3> original(extent<3>(10, 10, 10));
 	auto sect = original.section(index<3>(1, 1, 0), extent<3>(7, 7, 10));
-    return 
+    return
         TestSection(original, sect, index<3>(1, 1, 0))
         ? original.pass() : original.fail();
 }

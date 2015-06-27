@@ -22,7 +22,7 @@ runall_result test_main()
 		return runall_skip;
 	}
 	
-	extent<RANK> arr_extent = CreateRandomExtent<RANK>(256);            
+	extent<RANK> arr_extent = CreateRandomExtent<RANK>(256);
 		array<DATA_TYPE, RANK> arr(arr_extent, device.get_default_view(), access_type_read_write);
 	
 	if(!VerifyCpuAccessType(arr, access_type_read_write)) { return runall_fail; }

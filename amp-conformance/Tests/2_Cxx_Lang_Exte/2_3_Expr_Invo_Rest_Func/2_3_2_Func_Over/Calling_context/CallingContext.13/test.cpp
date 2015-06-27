@@ -16,7 +16,7 @@ void foo(int &flag) __GPU
 class C1
 {
 public:
-    void foo(int &flag) __GPU 
+    void foo(int &flag) __GPU
     {
         ::foo(flag);
     }

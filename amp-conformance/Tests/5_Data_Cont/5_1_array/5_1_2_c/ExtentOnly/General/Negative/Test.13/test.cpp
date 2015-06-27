@@ -13,8 +13,8 @@
 #include <amptest_main.h>
 
 runall_result test_main()
-{ 
-    array<int, 0> arr(0); 
+{
+    array<int, 0> arr(0);
 
 	// We shouldn't compile
     return runall_fail;

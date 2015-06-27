@@ -26,7 +26,7 @@ runall_result test1(const accelerator_view &av)
 	array<int,2> arrDest(M,N);
 	
 	arrViewSrc.copy_to(arrDest); // Copying to Array
-	result &= REPORT_RESULT(VerifyDataOnCpu(arrViewSrc,arrDest)); 
+	result &= REPORT_RESULT(VerifyDataOnCpu(arrViewSrc,arrDest));
 	return result;
 }
 

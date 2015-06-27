@@ -21,9 +21,9 @@ runall_result TestOnHost()
 {
 	runall_result result;
     Log() << "Testing Index-assignment operator on host" << std::endl;
-    
-    index<RANK> idx(START, START + 1, START + 2);    
-    
+
+    index<RANK> idx(START, START + 1, START + 2);
+
     index<RANK> idx1(idx); // copy construct
     index<RANK> idx2;
     idx2 = idx;            // assign
@@ -39,7 +39,7 @@ runall_result TestOnHost()
 /* fA, fB will return components of the index and fC returns the rank */
 void kernel(array<int, 1>& fA, array<int, 1>& fB, array<int, 1>& fC) __GPU
 {
-    index<RANK> idx(START, START + 1, START + 2);   
+    index<RANK> idx(START, START + 1, START + 2);
 
     index<RANK> idx1(idx); // copy construct
     index<RANK> idx2;
@@ -63,7 +63,7 @@ runall_result TestOnDevice()
     accelerator_view av = require_device().get_default_view();
 
     array<int, 1> A(extent<1>(RANK), av), B(extent<1>(RANK), av), C(extent<1>(2), av);
-    
+
     extent<1> ex(1);
     parallel_for_each(ex, [&](index<1> idx) __GPU{
         kernel(A, B, C);
@@ -76,14 +76,14 @@ runall_result TestOnDevice()
 
     result &= REPORT_RESULT(IsIndexSetToSequence<RANK>(vA, vC[0], START));
     result &= REPORT_RESULT(IsIndexSetToSequence<RANK>(vB, vC[1], START));
-    
+
     return result;
 }
 
 
 /*--------------------- Main -------------------- */
 
-runall_result test_main() 
+runall_result test_main()
 {
     runall_result result;
 	result &= REPORT_RESULT(TestOnHost());

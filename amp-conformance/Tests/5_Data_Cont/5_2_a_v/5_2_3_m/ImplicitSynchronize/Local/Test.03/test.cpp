@@ -32,16 +32,16 @@ int main()
     std::vector<int> v(100);
     Fill(v);
     array_view<int, 1> av(extent<1>(100), v);
-    
+
     std::vector<int> random_data(v.size());
     Fill(v);
-    
+
     // create a new read/write av and write to that
     array_view<int, 1> other = av.section(av.get_extent());
     for (unsigned int i = 0; i < static_cast<unsigned int>(v.size()); i++)
     {
         other[i] = random_data[i];
     }
-    
+
     return VerifyDataOnCpu(av, random_data) ? runall_pass : runall_fail;
 }

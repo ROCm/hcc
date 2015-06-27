@@ -20,7 +20,7 @@
 /// <tags>P1</tags>
 /// <summary>Reinterpret an AV of unsigned int as int (GPU)</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 #include <algorithm>
 
@@ -31,9 +31,9 @@ int main()
 {
     std::vector<unsigned int> v(10);
     Fill(v);
-    
+
     array_view<unsigned int, 1> av_uint(static_cast<int>(v.size()), v);
-    
+
     // reinterpret on the GPU and copy back
     std::vector<int> results_v(v.size());
     array_view<int, 1> results(static_cast<int>(results_v.size()), results_v);
@@ -41,7 +41,7 @@ int main()
         array_view<int, 1> av_int = av_uint.reinterpret_as<int>();
         results[i] = av_int[i];
     });
-    
+
     return Verify<int>(reinterpret_cast<int *>(av_uint.data()), results.data(), v.size()) ? runall_pass : runall_fail;
 }
 

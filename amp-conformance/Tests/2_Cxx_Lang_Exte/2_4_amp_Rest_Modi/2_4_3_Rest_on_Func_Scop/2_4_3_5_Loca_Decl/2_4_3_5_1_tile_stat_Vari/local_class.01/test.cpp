@@ -17,7 +17,7 @@ runall_result test_main()
 	parallel_for_each(extent<1>(1).tile<1>(), [=](tiled_index<1>) restrict(amp)
 	{
 		tile_static int ts_i;
-		ts_i = 0; 
+		ts_i = 0;
 		struct obj
 		{
 			void f() { ts_i = 1; } // Store

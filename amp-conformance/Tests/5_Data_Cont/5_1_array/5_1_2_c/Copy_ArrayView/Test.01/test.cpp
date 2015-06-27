@@ -53,7 +53,7 @@ runall_result test_main()
 	result &= REPORT_RESULT((test_feature<unsigned int, 2>()));
 	result &= REPORT_RESULT((test_feature<float, 3>()));
 	result &= REPORT_RESULT((test_feature<double, 5>()));
-    
+
     return result;
 }
 

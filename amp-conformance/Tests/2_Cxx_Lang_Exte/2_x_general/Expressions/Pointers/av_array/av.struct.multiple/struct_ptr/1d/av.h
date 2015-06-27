@@ -14,15 +14,11 @@
 
 using std::vector;
 using namespace concurrency;
-using namespace concurrency::fast_math;
 using namespace concurrency::Test;
 
 const static int DOMAIN_SIZE = 64 * 64;
 const static int BLOCK_SIZE = 16;
 const int LOCAL_SIZE = 0xF;
-
-template<typename type>
-void init(vector<type> &a, vector<type> &b, vector<type> &c, vector<type> &fa, vector<type> &fb, vector<type> &fc, vector<type> &ref_c, vector<int> &flag);
 
 template<typename type, int rank>
 struct s1
@@ -45,14 +41,14 @@ template<typename type>
 struct kernel_local
 {
     static void func(tiled_index<BLOCK_SIZE> idx, s1<type, 1> *p, array_view<int, 1> &flag, int b1, int b2, int b3, int b4) __GPU_ONLY
-        /* 
+        /*
         Test function tests pointers which point to local memory.
         idx: compute index
         p: input
         flag: control flags, which is used to test control flow.
         b1, b2, b3, b4: control flags. It's used to test pointer emulation. Make sure pointer can point to the correct values.
         */
-    { 
+    {
         type local_a[LOCAL_SIZE];
         type local_fa[LOCAL_SIZE];
         type local_b[LOCAL_SIZE];
@@ -67,7 +63,7 @@ struct kernel_local
             local_b[i] = p->av_b[idx.global];
             local_fb[i] = local_fb[i] + 1;
             local_c[i] = p->av_c[idx.global];
-            local_fc[i] = local_c[i] + 1;        
+            local_fc[i] = local_c[i] + 1;
         }
 
         extent<1> e(LOCAL_SIZE);
@@ -107,10 +103,10 @@ struct kernel_local
 };
 
 template<typename type>
-struct kernel_global 
+struct kernel_global
 {
     static void func(tiled_index<BLOCK_SIZE> idx, s1<type, 1> *p, array_view<int, 1> &flag, int b1, int b2, int b3, int b4) __GPU_ONLY
-        /* 
+        /*
         Test function tests pointers which point to local memory.
         idx: compute index
         p: input
@@ -141,14 +137,14 @@ template<typename type>
 struct kernel_shared
 {
     static void func(tiled_index<BLOCK_SIZE> idx, s1<type, 1> *p, array_view<int, 1> &flag, int b1, int b2, int b3, int b4) __GPU_ONLY
-        /* 
+        /*
         Test function tests pointers which point to local memory.
         idx: compute index
         p: input
         flag: control flags, which is used to test control flow.
         b1, b2, b3, b4: control flags. It's used to test pointer emulation. Make sure pointer can point to the correct values.
         */
-    { 
+    {
         tile_static type share_a[BLOCK_SIZE];
         share_a[idx.local[0]] = p->av_a[idx.global];
         tile_static type share_fa[BLOCK_SIZE];
@@ -223,8 +219,11 @@ void RunMyKernel(vector<type> &a, vector<type> &b, vector<type> &c, vector<type>
     c = a_c;
 }
 
+template<typename type>
+void init(vector<type> &a, vector<type> &b, vector<type> &c, vector<type> &fa, vector<type> &fb, vector<type> &fc, vector<type> &ref_c, vector<int> &flag);
+
 template<typename type, typename k>
-bool test(accelerator_view av) 
+bool test(accelerator_view av)
 {
     vector<type> a(DOMAIN_SIZE);
     vector<type> b(DOMAIN_SIZE);
@@ -248,7 +247,7 @@ runall_result test_main()
 {
     srand(2010);
 
-    accelerator_view av = require_device(Device::ALL_DEVICES).get_default_view();
+    accelerator_view av = require_device_with_double(Device::ALL_DEVICES).get_default_view();
 
     Log() << "test in local memory: \n";
     if (!test<AMP_ELEMENT_TYPE, kernel_local<AMP_ELEMENT_TYPE>>(av)) return runall_fail;

@@ -16,11 +16,11 @@ static int test(int a, long b, float c, long d) __GPU
     return a > 0 && b > 0 && c > 0 && d > 0;
 }
 
-int main() 
+int main()
 {
     accelerator device = require_device(Device::ALL_DEVICES);
     accelerator_view av = device.get_default_view();
-    
+
     int r = GPU_INVOKE(av, int, test, 1, 1, 2, 15);
     return r == 1 ? runall_pass : runall_fail;
 }

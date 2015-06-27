@@ -21,7 +21,7 @@
 /// <summary>Test that an Rank 2, float array_view can be constructed from an AMP array in a cpu restricted function</summary>
 
 #include "../../helper.h"
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 #include <algorithm>
 
@@ -63,7 +63,7 @@ int main()
          printf("FAIL: array_view and vector data do not match\n");
          return runall_fail;
     }
-    
+
     // use in parallel_for_each
     parallel_for_each(arr.get_extent(), [=] (index<2> idx) __GPU
     {
@@ -89,7 +89,7 @@ int main()
             return runall_fail;
         }
     }
-    
+
     printf("PASS!\n");
     return runall_pass;
 }

@@ -17,7 +17,7 @@ class testclass {
 };
 
 
-int main() 
+int main()
 {
     return 1;
 }

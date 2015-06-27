@@ -20,7 +20,7 @@
 /// <tags>P1</tags>
 /// <summary>Reinterpret an AV of const float as const int (CPU)</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 #include <algorithm>
 
@@ -31,10 +31,10 @@ int main()
 {
     std::vector<float> v(10);
     Fill(v);
-    
+
     array_view<const float, 1> av_float(static_cast<int>(v.size()), v);
     array_view<const int, 1> av_int = av_float.reinterpret_as<const int>();
-    
+
     return Verify<const int>(reinterpret_cast<const int *>(av_float.data()), av_int.data(), v.size()) ? runall_pass : runall_fail;
 }
 

@@ -31,10 +31,10 @@ int main()
 {
     std::vector<int> v_readonly(30);
     array_view<const int, 1> av_readonly(30, v_readonly);
-    
+
     std::vector<int> v_readwrite(30);
     array_view<int, 1> av_readwrite(30, v_readwrite);
-    
+
     av_readwrite = av_readonly;
 
     return 1;

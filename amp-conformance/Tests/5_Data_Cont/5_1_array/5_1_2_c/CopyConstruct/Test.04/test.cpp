@@ -8,7 +8,7 @@
 /// <tags>P1</tags>
 /// <summary>Verifies that the copy constructor will copy pending writes to data</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 #include <ostream>
 #include <amptest_main.h>
@@ -20,26 +20,26 @@ using std::vector;
 runall_result test_main()
 {
     runall_result result;
-    
+
     accelerator_view acc_view = require_device().get_default_view();
-    
+
     int size = 20;
     std::vector<float> src_v(size);
     Fill(src_v);
-    
+
     array<float, 1> src_arr(size, src_v.begin(), acc_view);
-    
-    // create a new array and copy data 
+
+    // create a new array and copy data
     array<float> dest1(size, acc_view);
     src_arr.copy_to(dest1);
-    
+
     // now copy construct from the new copy of the data
     array<float> dest2(dest1);
-    
+
     array_view<float> av(dest1);
     Log() << "Verifying original array" << std::endl;
     result &= REPORT_RESULT(VerifyDataOnCpu(av, src_v));
-    
+
     av = array_view<float>(dest2);
     Log() << "Now verifying copy constructed array" << std::endl;
     result &= REPORT_RESULT(VerifyDataOnCpu(av, src_v));

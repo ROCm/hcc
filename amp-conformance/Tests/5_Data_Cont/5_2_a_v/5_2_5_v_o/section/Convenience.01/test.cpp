@@ -30,13 +30,13 @@ runall_result scalar_values()
 {
 	ArrayViewTest<int, 1> original(extent<1>(10));
     ArrayViewTest<int, 1> section = original.section(original.view().section(2, 5), index<1>(2));
-    
+
     original.view()(2) = 13;
     original.set_known_value(index<1>(2), 13);
-    
+
     section.view()(3) = 15;
     section.set_known_value(index<1>(3), 15);
-    
+
     return (original.view()(5) == 15 && section.view()(0) == 13) ? original.pass() : original.fail();
 }
 
@@ -44,13 +44,13 @@ runall_result only_index()
 {
 	ArrayViewTest<int, 1> original(extent<1>(10));
     ArrayViewTest<int, 1> section = original.section(original.view().section(index<1>(2)), index<1>(2));
-    
+
     original.view()(2) = 13;
     original.set_known_value(index<1>(2), 13);
-    
+
     section.view()(3) = 15;
     section.set_known_value(index<1>(3), 15);
-    
+
     return (original.view()(5) == 15 && section.view()(0) == 13) ? original.pass() : original.fail();
 }
 
@@ -58,13 +58,13 @@ runall_result only_extent()
 {
 	ArrayViewTest<int, 1> original(extent<1>(10));
     ArrayViewTest<int, 1> section = original.section(original.view().section(extent<1>(5)), index<1>(0));
-    
+
     original.view()(2) = 13;
     original.set_known_value(index<1>(2), 13);
-    
+
     section.view()(3) = 15;
     section.set_known_value(index<1>(3), 15);
-    
+
     return (original.view()(3) == 15 && section.view()(2) == 13) ? original.pass() : original.fail();
 }
 

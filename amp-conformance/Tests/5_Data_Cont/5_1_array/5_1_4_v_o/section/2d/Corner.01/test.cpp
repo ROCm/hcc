@@ -9,7 +9,7 @@
 /// <summary>Test a corner section (row-aligned, sized (1, 4)) of a 2D array(10, 10) </summary>
 
 #include <amptest/array_test.h>
-#include <amptest.h> 
+#include <amptest.h>
 #include <amptest_main.h>
 
 using namespace Concurrency;

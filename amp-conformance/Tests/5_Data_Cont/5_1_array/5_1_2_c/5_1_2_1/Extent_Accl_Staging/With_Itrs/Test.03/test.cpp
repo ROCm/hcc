@@ -6,7 +6,7 @@
 // INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 // See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
 /// <tags>P1</tags>
-/// <summary>Create array using 2-D accelerator_view and staging specialized constructors - uses hash_multiset - GPU Host CPU target</summary>
+/// <summary>Create array using 2-D accelerator_view and staging specialized constructors - uses unordered_multiset - GPU Host CPU target</summary>
 
 #include <unordered_set>
 #include "./../../../../constructor.h"
@@ -54,7 +54,7 @@ runall_result test_main()
 	result &= REPORT_RESULT((test_feature<float, 31, 19>()));
     result &= REPORT_RESULT((test_feature<float, 5, 1>()));
 	result &= REPORT_RESULT((test_feature<double, 13, 7>()));
-
+	
     return result;
 }
 

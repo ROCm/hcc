@@ -7,11 +7,12 @@
 /// <summary>Test pointer emulation with array_view and control flow, 1d. Use pointer to test CF. Use pointer to struct. All av are in a single struct.
 // It tests local, shared and global memory. cf: for for switch switch switch</summary>
 
+#include <cmath>
 #include "../av.h"
 
 
 template<typename type>
-void init(vector<type> &a, vector<type> &b, vector<type> &c, vector<type> &fa, vector<type> &fb, vector<type> &fc, vector<type> &ref_c, vector<int> &flag) 
+void init(vector<type> &a, vector<type> &b, vector<type> &c, vector<type> &fa, vector<type> &fb, vector<type> &fc, vector<type> &ref_c, vector<int> &flag)
 {
     srand(2010);
     size_t SIZE = a.size();
@@ -23,7 +24,7 @@ void init(vector<type> &a, vector<type> &b, vector<type> &c, vector<type> &fa, v
     {
         fa[i] = a[i] - 1;
         fb[i] = b[i] - 1;
-        ref_c[i] = modf(a[i] + 4, &b[i]) * LOCAL_SIZE; // Because in kernel_local, the results have been added up. So here it needs multiplication.
+        ref_c[i] = std::modf(a[i] + 4, &b[i]) * LOCAL_SIZE; // Because in kernel_local, the results have been added up. So here it needs multiplication.
     }
 
     flag[0] = 10;

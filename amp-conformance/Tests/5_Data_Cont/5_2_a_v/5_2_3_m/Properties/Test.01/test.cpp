@@ -46,7 +46,7 @@ runall_result test_main()
         printf("array and array_view extents do not match. FAIL!\n");
         return runall_fail;
     }
-    
+
     return runall_pass;
 }
 

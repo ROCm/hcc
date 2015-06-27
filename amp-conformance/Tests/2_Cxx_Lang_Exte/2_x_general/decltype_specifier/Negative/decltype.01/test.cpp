@@ -11,12 +11,12 @@ int y;
 float z;
 int f() restrict(cpu) { return 1;}
 
-void foo() restrict(amp) 
+void foo() restrict(amp)
 {
     decltype(x == 4 ? y : z);
 
     decltype(f());
-    
+
     int p;
     decltype(typeid(p));
 

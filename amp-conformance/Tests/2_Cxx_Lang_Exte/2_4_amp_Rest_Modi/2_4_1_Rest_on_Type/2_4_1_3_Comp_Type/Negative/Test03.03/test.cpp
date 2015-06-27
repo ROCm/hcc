@@ -71,7 +71,7 @@ runall_result test_main()
 
     for (size_t i = 0; i < M * M; i++)
     {
-        A[i] = rand();         
+        A[i] = rand();
     }
 
     for (size_t i = 0; i < M * M; i++)

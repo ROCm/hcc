@@ -21,7 +21,7 @@ bool CopyConstructWithIndexOnHost()
 
     index<RANK> idx1(0, 1, 2);
     index<RANK> idx2(idx1);   // copy construct
-    
+
     return IsIndexSetToSequence<RANK>(idx2);
 }
 
@@ -62,7 +62,7 @@ bool CopyConstructWithIndexOnDevice()
 
 
 /*--------------------- Main -------------------- */
-runall_result test_main() 
+runall_result test_main()
 {
     runall_result result;
 

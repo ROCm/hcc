@@ -20,7 +20,7 @@
 /// <tags>P1</tags>
 /// <summary>Reinterpret an AV of unsigned int as int (CPU)</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 #include <algorithm>
 
@@ -31,10 +31,10 @@ int main()
 {
     std::vector<unsigned int> v(10);
     Fill(v);
-    
+
     array_view<unsigned int, 1> av_uint(static_cast<int>(v.size()), v);
     array_view<int, 1> av_int = av_uint.reinterpret_as<int>();
-    
+
     return Verify<int>(reinterpret_cast<int *>(av_uint.data()), av_int.data(), v.size()) ? runall_pass : runall_fail;
 }
 

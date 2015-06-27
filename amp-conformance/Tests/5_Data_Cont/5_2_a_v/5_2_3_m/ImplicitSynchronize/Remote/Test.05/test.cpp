@@ -41,18 +41,18 @@ runall_result test_main()
     {
         accel2.set_default_cpu_access_type(DEF_ACCESS_TYPE2);
     }
-    
+
     std::vector<int> v(25 * 25);
     Fill(v);
     array_view<int, 2> av(extent<2>(25, 25), v);
-    
+
     // read remotely on both GPUs
     std::vector<int> result_1v(5 *5);
     array_view<int, 2> result_1(extent<2>(5, 5), result_1v);
     parallel_for_each(accel1.get_default_view(), result_1.get_extent(), [=](index<2> i) __GPU {
         result_1[i] = av[i];
     });
-    
+
     std::vector<int> result_2v(5 *5);
     array_view<int, 2> result_2(extent<2>(5, 5), result_2v);
     parallel_for_each(accel2.get_default_view(), result_2.get_extent(), [=](index<2> i) __GPU {
@@ -61,8 +61,8 @@ runall_result test_main()
 
 	auto avsec1 = av.section(extent<2>(5, 5));
 	auto avsec2 = av.section(index<2>(20, 20), extent<2>(5, 5));
-    return 
+    return
         VerifyDataOnCpu(avsec1, result_1) &&
         VerifyDataOnCpu(avsec2, result_2)
         ? runall_pass : runall_fail;
-}                  
+}

@@ -6,7 +6,7 @@
 /// <tags>P0</tags>
 /// <summary>test the use of Enum with supported datatypes</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 
 using namespace Concurrency;
 using namespace Concurrency::Test;
@@ -29,7 +29,7 @@ bool foo(Suit suit) __GPU
 
 Suit typeCast( long value ) __GPU
 {
-	if( value < (long)Diamonds  || value > (long) Spades ) 
+	if( value < (long)Diamonds  || value > (long) Spades )
 		return Invalid;
 	return (Suit)value;
 }
@@ -44,7 +44,7 @@ Suit& testEnumRef( long value ) __GPU
 
 int testEnum()
 {
-	bool passed = true ; 
+	bool passed = true ;
 	passed &= ( foo(Hearts) == false );
 	passed &= ( foo(Diamonds) == true );
 	
@@ -60,8 +60,8 @@ int testEnum()
 	return ( passed ? 0 : 1 );	
 }
 
-int main(int argc, char **argv) 
-{ 
+int main(int argc, char **argv)
+{
 	accelerator device;
     if (!get_device(Device::ALL_DEVICES, device))
     {

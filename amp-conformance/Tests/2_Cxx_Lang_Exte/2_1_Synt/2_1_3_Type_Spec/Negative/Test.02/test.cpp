@@ -10,7 +10,7 @@
 #include "amptest/restrict.h"
 
 typedef int binary_math(int, int);
-    
+
 int main()
 {
     binary_math *foo restrict(cpu);

@@ -105,24 +105,7 @@ namespace Concurrency {
 // e.g. EVALUATE_TEST_ON_CPU_AND_GPU(av, test1());
 // e.g. EVALUATE_TEST_ON_CPU_AND_GPU(av, test1<int>());
 // e.g. EVALUATE_TEST_ON_CPU_AND_GPU(av, (test1<int, 2>()));  // Note since there's a comma in the template args you must surround the function call with parenthesese.
-//#define EVALUATE_TEST_ON_CPU_AND_GPU(_av, _expr) Concurrency::Test::run_test_on_cpu_and_gpu(_av, #_expr, [&]() restrict(cpu,amp) { return _expr; })
-#define EVALUATE_TEST_ON_CPU_AND_GPU(_av, _expr) \
-[&](){ \
-    runall_result cpu_out; \
-    runall_result cpu_result = _expr; \
-    runall_result gpu_result; \
-    concurrency::array_view<runall_result> gpu_resultsv(1, &gpu_result); \
-    gpu_resultsv.discard_data(); \
-    concurrency::parallel_for_each(_av, gpu_resultsv.get_extent() \
-        , [=](concurrency::index<1> idx) restrict(amp) { \
-            gpu_resultsv[idx] = _expr; \
-    }); \
-    gpu_resultsv.synchronize(); \
-    details::log_run_test_result(#_expr, "CPU", cpu_result); \
-    details::log_run_test_result(#_expr, "GPU", gpu_result); \
-    return cpu_result & gpu_result; \
-}()
-
+#define EVALUATE_TEST_ON_CPU_AND_GPU(_av, _expr) Concurrency::Test::run_test_on_cpu_and_gpu(_av, #_expr, [&]() restrict(cpu,amp) { return _expr; })
 
 /*
 * This macro can be used to invoke a function (gpui_func) on the GPU and return the result.

@@ -36,10 +36,10 @@ runall_result test() restrict(cpu,amp)
     test_container<int_4>();
     test_container<uint_2>();
     test_container<uint_4>();
-    
+
     test_container<float_2>();
     test_container<float_4>();
-    
+
     //compilation should succeed
     return runall_pass;
 }

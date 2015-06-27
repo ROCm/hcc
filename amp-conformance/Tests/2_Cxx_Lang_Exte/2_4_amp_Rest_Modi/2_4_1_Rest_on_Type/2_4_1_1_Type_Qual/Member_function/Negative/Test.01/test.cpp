@@ -18,7 +18,7 @@ struct S
     }
 };
 
-int main() 
+int main()
 {
     return runall_fail;
 }

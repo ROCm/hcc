@@ -15,9 +15,9 @@ template<typename _type, int _rank>
 runall_result test_feature(accelerator *p_device_gpu,accelerator *p_device_cpu)
 {
     Log(LogType::Info) << "Testing _type:" << typeid(_type).name() << " _rank:" << _rank << std::endl;
-    
+
     if (p_device_cpu && p_device_gpu)
-    { 
+    {
         if (!test_accl_staging_buffer_constructor<_type, _rank, accelerator_view>((*p_device_gpu).create_view(queuing_mode_automatic), (*p_device_cpu).create_view(queuing_mode_automatic)))
             return runall_fail;
         if (!test_accl_staging_buffer_constructor<_type, _rank, accelerator_view>((*p_device_gpu).create_view(queuing_mode_immediate), (*p_device_cpu).create_view(queuing_mode_automatic)))
@@ -53,7 +53,7 @@ runall_result test_main()
     result &= REPORT_RESULT((test_feature<int, 5>(p_device_gpu,p_device_cpu)));
     result &= REPORT_RESULT((test_feature<unsigned int, 5>(p_device_gpu,p_device_cpu)));
     result &= REPORT_RESULT((test_feature<float, 5>(p_device_gpu,p_device_cpu)));
-    
+
     return result;
 }
 

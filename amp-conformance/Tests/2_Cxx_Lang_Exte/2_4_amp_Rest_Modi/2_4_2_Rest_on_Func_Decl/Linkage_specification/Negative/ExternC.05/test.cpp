@@ -10,18 +10,18 @@
 
 extern "C" void foo() restrict(amp)
 {
-    
+
 }
 
 extern "C" void foo() restrict(cpu)
 {
-    
+
 }
 
 
 void main()
 {
-    
+
 }
 
 //#Expects: Error: error C2733

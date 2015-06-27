@@ -23,7 +23,7 @@ runall_result test_main()
     result &= REPORT_RESULT(test_array_type<long>());
     result &= REPORT_RESULT(test_array_type<unsigned long>());
     result &= REPORT_RESULT(test_array_type<float>());
-    
+
     accelerator device;
     if (device.get_supports_double_precision())
     {

@@ -13,9 +13,9 @@ int func(int flag) __GPU
     return 1;
 }
 
-bool test() 
+bool test()
 {
-    int flag = 0;    
+    int flag = 0;
 
     bool passed = true;
 

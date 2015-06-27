@@ -21,7 +21,7 @@
 /// <summary>An array view can have it's data pointer accessed in the GPU context.
 /// This time the backing store is a staging buffer</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 #include <algorithm>
 
@@ -34,7 +34,7 @@ int main()
     accelerator cpu(accelerator::cpu_accelerator);
     accelerator device = require_device(Device::ALL_DEVICES);
     accelerator_view acc_view = device.get_default_view();
-    
+
     const int size = 20;
     vector<int> vec(size);
     Fill<int>(vec.data(), size);
@@ -48,11 +48,11 @@ int main()
     // fill this on the GPU
     vector<int> result_v(size);
     array_view<int, 1> result(20, result_v);
-    
+
     parallel_for_each(av.get_extent(), [av, result](index<1> i) __GPU {
        result.data()[i[0]] =  av.data()[i[0]]; // get and set data using the pointer
     });
-    
+
     return Verify(result.data(), av.data(), size) ? runall_pass : runall_fail;
 }
 

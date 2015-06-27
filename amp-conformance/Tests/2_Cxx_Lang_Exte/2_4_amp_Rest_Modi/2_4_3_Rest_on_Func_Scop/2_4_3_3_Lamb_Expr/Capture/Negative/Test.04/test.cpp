@@ -9,7 +9,7 @@
 
 #include "amptest.h"
 
-int main() 
+int main()
 {
     concurrency::array<int, 1> a(100);
     auto l = [a]() __GPU {};

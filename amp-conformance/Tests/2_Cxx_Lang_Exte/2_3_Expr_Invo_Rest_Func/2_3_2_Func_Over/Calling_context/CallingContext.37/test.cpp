@@ -8,7 +8,7 @@
 
 #include <amptest.h>
 
-void foo(int &flag) 
+void foo(int &flag)
 {
     flag = 1;
 }
@@ -16,7 +16,7 @@ void foo(int &flag)
 class C1
 {
 public:
-    static void foo(int &flag)  
+    static void foo(int &flag)
     {
         ::foo(flag);
     }

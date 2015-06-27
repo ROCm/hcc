@@ -19,7 +19,7 @@
 //
 /// <tags>P1</tags>
 /// <summary>
-/// Matrix multiplication using multiple GPUs. Each GPU updates a different section using array_views. 
+/// Matrix multiplication using multiple GPUs. Each GPU updates a different section using array_views.
 /// Array is used as underlying data source.
 /// </summary>
 
@@ -67,7 +67,7 @@ runall_result test_main()
     accelerator_view av2 = device2.get_default_view();
     accelerator_view av3 = device2.create_view();
     accelerator_view av4 = device2.create_view();
-    
+
     vector<float> vA(M * N);
     vector<float> vB(N * W);
     vector<float> vC(M * W);
@@ -75,7 +75,7 @@ runall_result test_main()
 
     InitializeArray(vA, M * N);
     InitializeArray(vB, N * W);
-    
+
     // Compute mxm on CPU
 	Log() << "Performing matrix multiply on the CPU..." << std::endl;
     for(int k=0; k<M; ++k)
@@ -100,8 +100,8 @@ runall_result test_main()
     extent<2> eA(M, N), eB(N, W), eC(M, W);
     extent<2> eA_half(M/2, N), eC_half(M/2, W);
 
-    array<float, 2> mA(eA, vA.begin(), av1); 
-    array<float, 2> mB(eB, vB.begin(), av2); 
+    array<float, 2> mA(eA, vA.begin(), av1);
+    array<float, 2> mB(eB, vB.begin(), av2);
     array<float, 2> mC(eC, vC.begin(), av3);
 
     array_view<float, 2> mA_view1(mA.section(0,0,M/2,N));

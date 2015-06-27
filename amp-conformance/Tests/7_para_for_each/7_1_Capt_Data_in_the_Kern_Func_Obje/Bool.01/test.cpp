@@ -10,8 +10,6 @@
 #include <iostream>
 #include <amptest.h>
 
-using namespace std;
-
 using std::vector;
 using namespace Concurrency;
 using namespace Concurrency::Test;
@@ -21,11 +19,11 @@ int main()
     const int size = 2048;
     vector<int> c(size);
     Concurrency::extent<1> e(size);
-    Concurrency::array<int, 1> ac(e);
+    array<int, 1> ac(e);
 
     bool hostSideBool = true;
 
-    parallel_for_each(ac.get_extent(), [&, hostSideBool](index<1> idx) __GPU { //error lambda cannot capture bool 
+    parallel_for_each(ac.get_extent(), [&, hostSideBool](index<1> idx) __GPU { //error lambda cannot capture bool
         if (hostSideBool)
         {
             ac[idx] = 1;
@@ -34,7 +32,7 @@ int main()
         {
             ac[idx] = 2;
         }
-    }); 
+    });
 
     c = ac;
 
@@ -44,13 +42,13 @@ int main()
         int expectedResult = hostSideBool? 1 : 2;
         if (c[i] != expectedResult)
         {
-            cout << "c[" << i << "] = " << c[i] << " expected:" << expectedResult << endl;
+            std::cout << "c[" << i << "] = " << c[i] << " expected:" << expectedResult << std::endl;
             passed = false;
             break;
         }
     }
 
-    cout << "lambda test: " << (passed ? "pass" : "fail") << endl;
+    std::cout << "lambda test: " << (passed ? "pass" : "fail") << std::endl;
 
     return passed ? 0 : 1;
 }

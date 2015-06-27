@@ -8,6 +8,7 @@
 /// <tags>P1</tags>
 /// <summary>Create array using 2D accelerator_view specialized constructors - uses plain array</summary>
 
+#include <unordered_map>
 #include "./../../../constructor.h"
 #include <amptest_main.h>
 

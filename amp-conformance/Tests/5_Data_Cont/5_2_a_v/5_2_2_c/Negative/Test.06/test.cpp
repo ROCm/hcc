@@ -22,7 +22,7 @@
 //#Expects: Error: error C2228
 
 
-#include <amptest.h> 
+#include <amptest.h>
 
 using namespace Concurrency;
 using namespace Concurrency::Test;
@@ -31,7 +31,7 @@ using std::vector;
 int main()
 {
     const int* a = new int[100];
-    
+
     array_view<int, 1> av(100, a);
 
     delete a;

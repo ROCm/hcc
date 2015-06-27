@@ -22,7 +22,7 @@
 //#Expects: Error: test.cpp\(33\) : error C2248
 
 
-#include <amptest.h> 
+#include <amptest.h>
 
 using namespace Concurrency;
 using namespace Concurrency::Test;

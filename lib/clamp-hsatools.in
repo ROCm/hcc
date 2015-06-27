@@ -54,7 +54,10 @@ if [ $KMDUMPLLVM == "1" ]; then
   cp $1.linked.bc ./dump.linked.bc
 fi
 
-$LLVM_BIN/opt -O3 -verify $1.linked.bc -o $1.opt.bc
+
+# Optimization notes:
+#  -disable-simplify-libcalls:  prevents transforming loops into library calls such as memset, memcopy on GPU 
+$LLVM_BIN/opt -O3 -disable-simplify-libcalls -verify $1.linked.bc -o $1.opt.bc
 # error handling for HSAIL opt
 RETVAL=$?
 if [ $RETVAL != 0 ]; then

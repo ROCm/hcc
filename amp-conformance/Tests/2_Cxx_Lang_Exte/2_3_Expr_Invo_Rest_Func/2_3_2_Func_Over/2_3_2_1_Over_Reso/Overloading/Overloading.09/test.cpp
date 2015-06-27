@@ -25,7 +25,7 @@ bool test()
     int flag = 0;
 
     flag = f(v);
-    
+
     if (flag != 0)
     {
         return false;

@@ -7,7 +7,7 @@
 /// <summary>test illegal c-style casting from int to pointer</summary>
 //#Expects: Error: error C3588
 
-#include <amptest.h> 
+#include <amptest.h>
 
 void foo() __GPU
 {
@@ -15,8 +15,8 @@ void foo() __GPU
     int * p = (int*)n;
 }
 
-int main(int argc, char **argv) 
-{ 
+int main(int argc, char **argv)
+{
     foo();
     return 1;
 }

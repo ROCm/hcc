@@ -19,7 +19,7 @@
 //
 /// <tags>P1</tags>
 /// <summary>Test that an array_view can be constructed from an extent and container supporting .data() and .size() members in a CPU restricted function</summary>
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 #include <algorithm>
 
@@ -57,7 +57,7 @@ int main()
         return runall_skip;
     }
     accelerator_view acc_view = device.get_default_view();
-    
+
     // use in parallel_for_each
     parallel_for_each(acc_view, av.get_extent(), [=] (index<1> idx) __GPU
     {
@@ -66,7 +66,7 @@ int main()
 
     // vec should be updated after this
     printf("Accessing first element of array_view [%d] to force synchronize.\n", av[0]);
-    
+
     // verify data
     for(int i = 0; i < size; i++)
     {
@@ -82,7 +82,7 @@ int main()
             return runall_fail;
         }
     }
-    
+
     printf("PASS!\n");
     return runall_pass;
 }

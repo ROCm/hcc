@@ -176,7 +176,7 @@ bool test_local(accelerator_view &alv)
             for (int j = 0; j < LOCAL_SIZE; j++)
             {
                 for (int k = 0; k < LOCAL_SIZE; k++)
-                {        
+                {
                     type *p = &local[i][j][k];
                     type *p2 = &local2[i][j][k];
 
