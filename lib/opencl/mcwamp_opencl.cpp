@@ -74,10 +74,9 @@ public:
             pthread_t self = pthread_self();
             pthread_attr_t attr;
             pthread_attr_init(&attr);
-            int result = -1;
             // Get max priority
             int policy = 0;
-            result = pthread_attr_getschedpolicy(&attr, &policy);
+            int result = pthread_attr_getschedpolicy(&attr, &policy);
             if (result != 0)
                 perror("getsched error!\n");
             int max_prio = sched_get_priority_max(policy);
@@ -137,13 +136,12 @@ public:
 
     void write(void* device, const void *src, size_t count, size_t offset, bool blocking) override {
         cl_mem dm = static_cast<cl_mem>(device);
-        cl_int err = CL_SUCCESS;
         cl_event ent;
-        err = clEnqueueWriteBuffer(getQueue(), dm, CL_FALSE, offset, count, src, 0, NULL, &ent);
+        cl_int err = clEnqueueWriteBuffer(getQueue(), dm, CL_FALSE, offset, count, src, 0, NULL, &ent);
         assert(err == CL_SUCCESS);
         if (blocking) {
             err = clWaitForEvents(1, &ent);
-            assert(err = CL_SUCCESS);
+            assert(err == CL_SUCCESS);
             err = clReleaseEvent(ent);
             assert(err == CL_SUCCESS);
         } else {
@@ -194,24 +192,24 @@ public:
             /// queue used to copy data
             if (dev1 == dev2) {
                 err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, 1, &evt, &ent);
-                assert(err = CL_SUCCESS);
+                assert(err == CL_SUCCESS);
             } else {
                 void* stage = aligned_alloc(0x1000, count);
                 cl_event stage_evt;
                 err = clEnqueueReadBuffer(queue, sdm, CL_FALSE, src_offset, count, stage, 1, &evt, &stage_evt);
-                assert(err = CL_SUCCESS);
+                assert(err == CL_SUCCESS);
                 err = clEnqueueWriteBuffer(getQueue(), ddm, CL_FALSE, dst_offset, count, stage, 1, &stage_evt, &ent);
-                assert(err = CL_SUCCESS);
+                assert(err == CL_SUCCESS);
                 err = clSetEventCallback(ent, CL_COMPLETE, &free_memory, stage);
-                assert(err = CL_SUCCESS);
+                assert(err == CL_SUCCESS);
             }
             err = clReleaseEvent(evt);
-            assert(err = CL_SUCCESS);
+            assert(err == CL_SUCCESS);
             events.erase(sdm);
         }
         if (blocking) {
             err = clWaitForEvents(1, &ent);
-            assert(err = CL_SUCCESS);
+            assert(err == CL_SUCCESS);
             err = clReleaseEvent(ent);
             assert(err == CL_SUCCESS);
         } else {
@@ -365,7 +363,6 @@ public:
         // The maximum number of threads in a tile will be no less than 1024.
         // In 3D tiling, the maximal value of D0 will be no less than 64.
         size_t *maxSizes = d.maxSizes;
-        bool is = true;
         int threads_per_tile = 1;
         for(int i = 0; local_size && i < dim_ext; i++) {
             threads_per_tile *= local_size[i];
