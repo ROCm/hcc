@@ -393,7 +393,7 @@ struct rw_info
     /// 2. one acceleratir_view, with another staged one
     ///    In this case, master should be cpu device
     ///    If it is not, ignore the stage one, fallback to case 1.
-    rw_info(const std::shared_ptr<KalmarQueue> Queue, const std::shared_ptr<KalmarQueue> Stage,
+    rw_info(const std::shared_ptr<KalmarQueue>& Queue, const std::shared_ptr<KalmarQueue>& Stage,
             const size_t count, access_type mode_) : data(nullptr), count(count),
     curr(Queue), master(Queue), stage(nullptr), devs(), mode(mode_), HostPtr(false) {
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
