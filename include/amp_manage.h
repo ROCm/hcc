@@ -19,7 +19,7 @@ template <typename T>
 class _data {
 public:
     _data() = delete;
-    _data(int count) {}
+    _data(int count) : p_(nullptr) {}
     _data(const _data& d) restrict(cpu, amp)
         : p_(d.p_) {}
     template <typename U>
