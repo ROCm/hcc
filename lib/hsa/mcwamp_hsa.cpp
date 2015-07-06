@@ -480,17 +480,48 @@ class HSADevice final : public KalmarDevice
 private:
     std::map<std::string, HSAKernel *> programs;
     hsa_agent_t agent;
+    size_t max_tile_static_size;
 
 public:
+    static hsa_status_t find_group_memory(hsa_region_t region, void* data) {
+      hsa_region_segment_t segment;
+      size_t size = 0;
+      bool flag = false;
+
+      hsa_status_t status = HSA_STATUS_SUCCESS;
+
+      // get segment information
+      status = hsa_region_get_info(region, HSA_REGION_INFO_SEGMENT, &segment);
+      STATUS_CHECK(status, __LINE__);
+
+      if (segment == HSA_REGION_SEGMENT_GROUP) {
+        // found group segment, get its size
+        status = hsa_region_get_info(region, HSA_REGION_INFO_SIZE, &size);
+        STATUS_CHECK(status, __LINE__);
+
+        // save the result to data
+        size_t* result = (size_t*)data;
+        *result = size;
+      }
+
+      // continue iteration
+      return HSA_STATUS_SUCCESS;
+    }
+
     hsa_agent_t getAgent() {
         return agent;
     }
 
     HSADevice(hsa_agent_t a) : KalmarDevice(access_type_read_write),
-                               agent(a), programs() {
+                               agent(a), programs(), max_tile_static_size(0) {
 #if KALMAR_DEBUG
         std::cerr << "HSADevice::HSADevice()\n";
 #endif
+
+        /// iterate over memory regions of the agent
+        hsa_status_t status = HSA_STATUS_SUCCESS;
+        status = hsa_agent_iterate_regions(agent, HSADevice::find_group_memory, &max_tile_static_size);
+        STATUS_CHECK(status, __LINE__);
     }
 
     ~HSADevice() {
@@ -563,6 +594,10 @@ public:
 
     std::shared_ptr<KalmarQueue> createQueue() override {
         return std::shared_ptr<KalmarQueue>(new HSAQueue(this, agent));
+    }
+
+    size_t GetMaxTileStaticSize() override {
+        return max_tile_static_size;
     }
 
 private:
