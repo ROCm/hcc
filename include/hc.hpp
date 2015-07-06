@@ -92,6 +92,44 @@ private:
   friend void parallel_for_each(const accelerator_view&, const tiled_extent_1D&, size_t, const Kernel&);
 };
 
+class tiled_index_2D {
+public:
+  const index<2> global;
+  const index<2> local;
+  const index<2> tile;
+  const index<2> tile_origin;
+  // FIXME: add tile_barrier
+  // const tile_barrier barrier;
+  tiled_index_2D(const index<2>& g) restrict(amp,cpu) : global(g) {}
+  tiled_index_2D(const tiled_index_2D& other) restrict(amp,cpu) : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin) /*, barrier(o.barrier)*/ {}
+  operator const index<2>() const restrict(amp,cpu) {
+    return global;
+  }
+private:
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+  __attribute__((always_inline)) tiled_index_2D(int a0, int a1, int b0, int b1, int c0, int c1/*, tile_barrier& pb*/) restrict(amp,cpu) :
+    global(a1, a0), local(b1, b0), tile(c1, c0), tile_origin(a1 - b1, a0 - b0)/*, barrier(pb) */ {}
+#endif
+
+  __attribute__((annotate("__cxxamp_opencl_index")))
+#if __KALMAR_ACCELERATOR__ == 1
+  __attribute__((always_inline)) tiled_index_2D() restrict(amp) :
+    global(index<2>(amp_get_global_id(1), amp_get_global_id(0))),
+    local(index<2>(amp_get_local_id(1), amp_get_local_id(0))),
+    tile(index<2>(amp_get_group_id(1), amp_get_group_id(0))),
+    tile_origin(index<2>(amp_get_global_id(1) - amp_get_local_id(1),
+                         amp_get_global_id(0) - amp_get_local_id(0)))
+#elif __KALMAR__ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+  __attribute__((always_inline)) tiled_index_2D() restrict(amp,cpu)
+#else
+  __attribute__((always_inline)) tiled_index_2D() restrict(amp)
+#endif // __KALMAR_ACCELERATOR__
+  {}
+
+  template<typename Kernel>
+  friend void parallel_for_each(const accelerator_view&, const tiled_extent_2D&, size_t, const Kernel&);
+};
+
 // variants of parallel_for_each that supports runtime allocation of tile static
 // FIXME: move from Concurrency namespace to hc
 // FIXME: take tile_static_allocatable_size into consideration
@@ -129,11 +167,45 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
 }
 
 
-// FIXME: enable it after 1D case work
-#if 0
+// variants of parallel_for_each that supports runtime allocation of tile static
+// FIXME: move from Concurrency namespace to hc
+// FIXME: take tile_static_allocatable_size into consideration
 template<typename Kernel>
-void parallel_for_each(const accelerator_view& av, tiled_extent_2D compute_domain, size_t tile_static_allocatable_size, const Kernel& f) {}
+__attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av, const tiled_extent_2D& compute_domain, size_t tile_static_allocatable_size, const Kernel& f) restrict(amp,cpu) {
+#if __KALMAR_ACCELERATOR__ != 1
+  if(compute_domain[0]<=0 || compute_domain[1]<=0) {
+    throw invalid_compute_domain("Extent is less or equal than 0.");
+  }
+  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L) {
+    throw invalid_compute_domain("Extent size too large.");
+  }
+  size_t ext[2] = { static_cast<size_t>(compute_domain[1]),
+                    static_cast<size_t>(compute_domain[0])};
+  size_t tile[2] = { static_cast<size_t>(compute_domain.tile_dim1),
+                     static_cast<size_t>(compute_domain.tile_dim0)};
+  if (compute_domain.tile_dim1 * compute_domain.tile_dim0 > 1024) {
+    throw invalid_compute_domain("The maximum nuimber of threads in a tile is 1024");
+  }
+  if((ext[0] % tile[0] != 0) || (ext[1] % tile[1] != 0)) {
+    throw invalid_compute_domain("Extent can't be evenly divisble by tile size.");
+  }
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+  if (CLAMP::is_cpu()) {
+      launch_cpu_task(av.pQueue, f, compute_domain);
+  } else
+#endif
+  mcw_cxxamp_launch_kernel<Kernel, 2>(av, ext, tile, f);
+#else //if __KALMAR_ACCELERATOR__ != 1
+  tiled_index_2D this_is_used_to_instantiate_the_right_index;
+  //to ensure functor has right operator() defined
+  //this triggers the trampoline code being emitted
+  auto foo = &Kernel::__cxxamp_trampoline;
+  auto bar = &Kernel::operator();
+#endif
+}
 
+// FIXME: enable it after 2D case work
+#if 0
 template<typename Kernel>
 void parallel_for_each(const accelerator_view& av, tiled_extent_3D compute_domain, size_t tile_static_allocatable_size, const Kernel& f) {}
 #endif
@@ -143,13 +215,13 @@ void parallel_for_each(tiled_extent_1D compute_domain, size_t tile_static_alloca
   parallel_for_each(accelerator().get_default_view(), compute_domain, tile_static_allocatable_size, f);
 }
 
-// FIXME: enable it after 1D case work
-#if 0
 template<typename Kernel>
 void parallel_for_each(tiled_extent_2D compute_domain, size_t tile_static_allocatable_size, const Kernel& f) {
   parallel_for_each(accelerator().get_default_view(), compute_domain, tile_static_allocatable_size, f);
 }
 
+// FIXME: enable it after 2D case work
+#if 0
 template<typename Kernel>
 void parallel_for_each(tiled_extent_3D compute_domain, size_t tile_static_allocatable_size, const Kernel& f) {
   parallel_for_each(accelerator().get_default_view(), compute_domain, tile_static_allocatable_size, f);
