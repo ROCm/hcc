@@ -30,19 +30,17 @@ public:
   tiled_extent_1D(const extent<1>& ext, int t0) restrict(amp,cpu) : extent(ext), tile_dim0(t0) {} 
 };
 
-#if 0
 // FIXME: move to hc namespace
 class tiled_extent_2D : public extent<2> {
 public:
   static const int rank = 2;
   int tile_dim0;
   int tile_dim1;
-  tiled_extent_2D() restrict(amp,cpu) {}
+  tiled_extent_2D() restrict(amp,cpu) : extent(0, 0), tile_dim0(0), tile_dim1(0) {}
   tiled_extent_2D(int e0, int e1, int t0, int t1) restrict(amp,cpu) : extent(e0, e1), tile_dim0(t0), tile_dim1(t1) {}
   tiled_extent_2D(const tiled_extent_2D& other) restrict(amp,cpu) : extent(other[0], other[1]), tile_dim0(other.tile_dim0), tile_dim1(other.tile_dim1) {}
   tiled_extent_2D(const extent<2>& ext, int t0, int t1) restrict(amp,cpu) : extent(ext), tile_dim0(t0), tile_dim1(t1) {}
 };
-#endif
 
 #if 0
 // FIXME: move to hc namespace
