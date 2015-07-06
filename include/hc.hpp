@@ -18,40 +18,51 @@ size_t get_max_tile_static_size(const accelerator& acc) {
 }
 
 
-#if 0
 // tile extent supporting dynamic tile size
-class tiled_extent_1D : public Concurrency::extent<1> {
+// FIXME: move to hc namespace
+class tiled_extent_1D : public extent<1> {
 public:
   static const int rank = 1;
-  tiled_extent_1D() restrict(amp,cpu) {}
-  tiled_extent_1D(int e0) restrict(amp,cpu) : extent(e0) {}
-  tiled_extent_1D(const tiled_extent_1D& other) restrict(amp,cpu) : extent(other[0]) {}
-  tiled_extent_1D(const extent<1>& ext) restrict(amp,cpu) : extent(ext) {} 
+  int tile_dim0;
+  tiled_extent_1D() restrict(amp,cpu) : extent(0), tile_dim0(0) {}
+  tiled_extent_1D(int e0, int t0) restrict(amp,cpu) : extent(e0), tile_dim0(t0) {}
+  tiled_extent_1D(const tiled_extent_1D& other) restrict(amp,cpu) : extent(other[0]), tile_dim0(other.tile_dim0) {}
+  tiled_extent_1D(const extent<1>& ext, int t0) restrict(amp,cpu) : extent(ext), tile_dim0(t0) {} 
 };
 
-class tiled_extent_2D : public Concurrency::extent<2> {
+#if 0
+// FIXME: move to hc namespace
+class tiled_extent_2D : public extent<2> {
 public:
   static const int rank = 2;
+  int tile_dim0;
+  int tile_dim1;
   tiled_extent_2D() restrict(amp,cpu) {}
-  tiled_extent_2D(int e0, int e1) restrict(amp,cpu) : extent(e0, e1) {}
-  tiled_extent_2D(const tiled_extent_2D& other) restrict(amp,cpu) : extent(other[0], other[1]) {}
-  tiled_extent_2D(const extent<2>& ext) restrict(amp,cpu) : extent(ext) {}
-};
-
-class tiled_extent_3D : public Concurrency::extent<3> {
-public:
-  static const int rank = 3;
-  tiled_extent_3D() restrict(amp,cpu) {}
-  tiled_extent_3D(int e0, int e1, int e2) restrict(amp,cpu) : extent(e0, e1, e2) {}
-  tiled_extent_3D(const tiled_extent_3D& other) restrict(amp,cpu) : extent(other[0], other[1], other[2]) {}
-  tiled_extent_3D(const extent<3>& ext) restrict(amp,cpu) : extent(ext) {}
+  tiled_extent_2D(int e0, int e1, int t0, int t1) restrict(amp,cpu) : extent(e0, e1), tile_dim0(t0), tile_dim1(t1) {}
+  tiled_extent_2D(const tiled_extent_2D& other) restrict(amp,cpu) : extent(other[0], other[1]), tile_dim0(other.tile_dim0), tile_dim1(other.tile_dim1) {}
+  tiled_extent_2D(const extent<2>& ext, int t0, int t1) restrict(amp,cpu) : extent(ext), tile_dim0(t0), tile_dim1(t1) {}
 };
 #endif
 
+#if 0
+// FIXME: move to hc namespace
+class tiled_extent_3D : public extent<3> {
+public:
+  static const int rank = 3;
+  int tile_dim0;
+  int tile_dim1;
+  int tile_dim2;
+  tiled_extent_3D() restrict(amp,cpu) {}
+  tiled_extent_3D(int e0, int e1, int e2, int t0, int t1, int t2) restrict(amp,cpu) : extent(e0, e1, e2), tile_dim0(t0), tile_dim1(t1), tile_dim2(t2) {}
+  tiled_extent_3D(const tiled_extent_3D& other) restrict(amp,cpu) : extent(other[0], other[1], other[2]), tile_dim0(other.tile_dim0), tile_dim1(other.tile_dim1), tile_dim2(other.tile_dim2) {}
+  tiled_extent_3D(const extent<3>& ext, int t0, int t1, int t2) restrict(amp,cpu) : extent(ext), tile_dim0(t0), tile_dim1(t1), tile_dim2(t2) {}
+};
+#endif
 
 #if 0
 // variants of parallel_for_each that supports runtime allocation of tile static
-// FIXME: move from Concurrency::accelerator_view to fire::accelerator_view
+// FIXME: move from Concurrency::accelerator_view to hc::accelerator_view
+// FIXME: take tile_static_allocatable_size into consideration
 template <typename Kernel>
 __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av, tiled_extent_1D compute_domain, size_t tile_static_allocatable_size, const Kernel& f) restrict(amp,cpu) {
 #if __KALMAR_ACCELERATOR__ != 1
