@@ -150,6 +150,9 @@ public:
         std::call_once(flag, [&]() { def = createQueue(); });
         return def;
     }
+
+    /// get max tile static area size
+    virtual size_t GetMaxTileStaticSize() { return 0; }
 };
 
 class CPUQueue final : public KalmarQueue
@@ -274,6 +277,9 @@ extern void *CreateKernel(std::string, KalmarQueue*);
 
 extern void PushArg(void *, int, size_t, const void *);
 extern void PushArgPtr(void *, int, size_t, const void *);
+
+// FIXME: move to hc namespace
+extern size_t GetMaxTileStaticSize(KalmarQueue*);
 
 } // namespace CLAMP
 
