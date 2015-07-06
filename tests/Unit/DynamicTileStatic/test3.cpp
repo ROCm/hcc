@@ -50,13 +50,13 @@ bool test1D() {
     av8(idx) = idx.tile_origin[0];
   });
 
-#define SHOW_CONTENT(str,av,table) \
+#define SHOW_CONTENT_1D(str,av,table) \
   { \
     std::cout << str << "\n"; \
     av.synchronize(); \
-    for (int i = 0; i < GRID_SIZE / TILE_SIZE; ++i) { \
-      for (int j = 0; j < TILE_SIZE; ++j) { \
-        std::cout << table[i * TILE_SIZE + j] << " "; \
+    for (int i = 0; i < grid_size / tile_size; ++i) { \
+      for (int j = 0; j < tile_size; ++j) { \
+        std::cout << table[i * tile_size + j] << " "; \
       } \
       std::cout << "\n"; \
     } \
@@ -64,20 +64,20 @@ bool test1D() {
   } \
 
 #if 0
-  SHOW_CONTENT("global", av1, table1)
-  SHOW_CONTENT("local", av2, table2)
-  SHOW_CONTENT("tile", av3, table3)
-  SHOW_CONTENT("tile_origin", av4, table4)
+  SHOW_CONTENT_1D("global", av1, table1)
+  SHOW_CONTENT_1D("local", av2, table2)
+  SHOW_CONTENT_1D("tile", av3, table3)
+  SHOW_CONTENT_1D("tile_origin", av4, table4)
 #endif
 
 #if 0
-  SHOW_CONTENT("global", av5, table5)
-  SHOW_CONTENT("local", av6, table6)
-  SHOW_CONTENT("tile", av7, table7)
-  SHOW_CONTENT("tile_origin", av8, table8)
+  SHOW_CONTENT_1D("global", av5, table5)
+  SHOW_CONTENT_1D("local", av6, table6)
+  SHOW_CONTENT_1D("tile", av7, table7)
+  SHOW_CONTENT_1D("tile_origin", av8, table8)
 #endif
 
-#define VERIFY_CONTENT(av1, table1, av2, table2) \
+#define VERIFY_CONTENT_1D(av1, table1, av2, table2) \
   { \
     av1.synchronize(); av2.synchronize(); \
     for (int i = 0; i < grid_size; ++i) { \
@@ -88,10 +88,10 @@ bool test1D() {
     } \
   }
 
-  VERIFY_CONTENT(av1, table1, av5, table5)
-  VERIFY_CONTENT(av2, table2, av6, table6)
-  VERIFY_CONTENT(av3, table3, av7, table7)
-  VERIFY_CONTENT(av4, table4, av8, table8)
+  VERIFY_CONTENT_1D(av1, table1, av5, table5)
+  VERIFY_CONTENT_1D(av2, table2, av6, table6)
+  VERIFY_CONTENT_1D(av3, table3, av7, table7)
+  VERIFY_CONTENT_1D(av4, table4, av8, table8)
 
   return ret;
 }
