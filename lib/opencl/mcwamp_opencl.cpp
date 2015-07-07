@@ -426,7 +426,7 @@ struct CLFlag
 };
 static const CLFlag Flags[] = {
     CLFlag(CL_DEVICE_TYPE_GPU, L"gpu")
-    // CLFlag(CL_DEVICE_TYPE_CPU, L"cpu")
+    CLFlag(CL_DEVICE_TYPE_CPU, L"cpu")
 };
 
 template <typename T> inline void deleter(T* ptr) { delete ptr; }
