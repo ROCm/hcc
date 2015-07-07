@@ -304,16 +304,30 @@ void parallel_for_each(tiled_extent_3D compute_domain, size_t tile_static_alloca
   parallel_for_each(accelerator().get_default_view(), compute_domain, tile_static_allocatable_size, f);
 }
 
-#if 0
-// Allocate the requested size in tile static memory and return its pointer
-// returns NULL if the requested size can't be allocated
-// It requires all threads in a tile to hit the same ts_alloc call site at the
-// same time.
-// Only one instance of the tile static memory will be allocated per call site
-// and all threads within a tile will get the same tile static memory address.
-__attribute__((amp))
-void* ts_alloc(size_t size);
-#endif
+class ts_allocator {
+public:
+  ts_allocator(void* ptr) : cursor(0), buffer(ptr) {}
+  ~ts_allocator() { reset(); }
+
+  void reset() {
+    cursor.store(0);
+    buffer = nullptr;
+  }
+
+  // Allocate the requested size in tile static memory and return its pointer
+  // returns NULL if the requested size can't be allocated
+  // It requires all threads in a tile to hit the same ts_alloc call site at the
+  // same time.
+  // Only one instance of the tile static memory will be allocated per call site
+  // and all threads within a tile will get the same tile static memory address.
+  __attribute__((amp))
+  void* alloc(size_t size) {
+    return static_cast<void*>(static_cast<unsigned char*>(buffer) + cursor.fetch_add(size));
+  }
+
+  std::atomic<size_t> cursor;
+  void* buffer;
+};
 
 } // namespace Concurrency
 // FIXME: use hc namespace
