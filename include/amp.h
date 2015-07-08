@@ -121,6 +121,9 @@ private:
   std::shared_ptr<KalmarQueue> pQueue;
   friend class accelerator;
 
+  // FIXME: move this to hc::accelerator_view
+  friend size_t get_max_tile_static_size(const accelerator_view&);
+
   template <typename Q, int K> friend class array;
   template <typename Q, int K> friend class array_view;
   template<typename Kernel, int dim_ext> friend
