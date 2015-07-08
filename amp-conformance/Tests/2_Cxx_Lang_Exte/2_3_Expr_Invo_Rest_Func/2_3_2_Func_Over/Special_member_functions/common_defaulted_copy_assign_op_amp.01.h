@@ -8,7 +8,7 @@
 // Empty class with base class having user-defined copy op=
 struct A1_base
 {
-	A1_base& operator=(const A1_base&) restrict(amp) {}
+	A1_base& operator=(const A1_base&) restrict(amp) { return *this; }
 };
 class A1 : public A1_base
 {
@@ -19,13 +19,13 @@ class A1 : public A1_base
 struct A2_base_1
 {
 	int i;
-	A2_base_1& operator=(const A2_base_1&) restrict(cpu,amp) {}
+	A2_base_1& operator=(const A2_base_1&) restrict(cpu,amp) { return *this; }
 };
 class A2_base_2
 {
 	int i;
 public:
-	A2_base_2& operator=(const A2_base_2&) restrict(amp) {}
+	A2_base_2& operator=(const A2_base_2&) restrict(amp) { return *this; }
 };
 struct A2 : A2_base_1, A2_base_2
 {
@@ -36,7 +36,7 @@ struct A2 : A2_base_1, A2_base_2
 class A3_member_1
 {
 public:
-	A3_member_1& operator=(const A3_member_1&) restrict(amp) {}
+	A3_member_1& operator=(const A3_member_1&) restrict(amp) { return *this; }
 };
 class A3
 {
@@ -48,12 +48,12 @@ class A3
 struct A4_member_1
 {
 	int i;
-	A4_member_1& operator=(const A4_member_1&) restrict(cpu,amp) {}
+	A4_member_1& operator=(const A4_member_1&) restrict(cpu,amp) { return *this; }
 };
 union A4_member_2
 {
 	int i;
-	A4_member_2& operator=(const A4_member_2&) restrict(amp) {}
+	A4_member_2& operator=(const A4_member_2&) restrict(amp) { return *this; }
 };
 struct A4
 {
@@ -66,12 +66,12 @@ struct A4
 struct A5_base_1
 {
 	int i;
-	A5_base_1& operator=(const A5_base_1&) restrict(amp) {}
+	A5_base_1& operator=(const A5_base_1&) restrict(amp) { return *this; }
 };
 struct A5_member_1
 {
 	int i;
-	A5_member_1& operator=(const A5_member_1&) restrict(cpu,amp) {}
+	A5_member_1& operator=(const A5_member_1&) restrict(cpu,amp) { return *this; }
 };
 struct A5 : A5_base_1
 {
@@ -82,12 +82,12 @@ struct A5 : A5_base_1
 struct A6_base_1
 {
 	int i;
-	A6_base_1& operator=(const A6_base_1&) restrict(cpu,amp) {}
+	A6_base_1& operator=(const A6_base_1&) restrict(cpu,amp) { return *this; }
 };
 struct A6_member_1
 {
 	int i;
-	A6_member_1& operator=(const A6_member_1&) restrict(amp) {}
+	A6_member_1& operator=(const A6_member_1&) restrict(amp) { return *this; }
 };
 struct A6 : A6_base_1
 {

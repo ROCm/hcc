@@ -13,7 +13,7 @@ using namespace std;
 using namespace Concurrency;
 
 namespace restrict
-{ 
+{
     class Foo
     {
     public:
@@ -36,8 +36,8 @@ restrict::Foo func(double d)
 }
 
 // Main entry point
-int main(int argc, char **argv) 
-{    
+int main(int argc, char **argv)
+{
     cout << "Test: declare function modifier as a namespace" << endl;
     double d = 445.344;
     bool passed = true;
@@ -49,7 +49,7 @@ int main(int argc, char **argv)
     passed &= (bar.data == d);
 
     cout << (passed? "Passed!" : "Failed!") << endl;
- 
+
     return passed ? 0 : 1;
 }
 

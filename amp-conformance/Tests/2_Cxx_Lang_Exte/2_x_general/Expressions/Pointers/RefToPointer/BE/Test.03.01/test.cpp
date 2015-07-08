@@ -4,8 +4,8 @@
 // THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 // See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
 /// <tags>P0</tags>
-/// <summary>Initialize reference to pointers from two (or even more) array_view pointers (controlled by a switch variable). 
-/// Each pointer is initialized from two c_array of array_view. Totally there are four c_array of array_view. One c_array of array_view has real data. 
+/// <summary>Initialize reference to pointers from two (or even more) array_view pointers (controlled by a switch variable).
+/// Each pointer is initialized from two c_array of array_view. Totally there are four c_array of array_view. One c_array of array_view has real data.
 /// The other three have fake data. Test control flow. More than one real the array and use part of array. </summary>
 
 #include <amptest.h>
@@ -20,8 +20,8 @@ const static int BLOCK_SIZE = 16;
 const static int LOCAL_SIZE = 15;
 
 template<typename type>
-void init(vector<type> &a, vector<int> &b, vector<type> &fa1, vector<type> &fa2, vector<type> &fa3, vector<int> &fb1, 
-    vector<int> &fb2, vector<type> &refa, vector<int> &refb, vector<int> &flag) 
+void init(vector<type> &a, vector<int> &b, vector<type> &fa1, vector<type> &fa2, vector<type> &fa3, vector<int> &fb1,
+    vector<int> &fb2, vector<type> &refa, vector<int> &refb, vector<int> &flag)
 {
     srand(2010);
     size_t size = a.size();
@@ -31,7 +31,7 @@ void init(vector<type> &a, vector<int> &b, vector<type> &fa1, vector<type> &fa2,
     for (size_t i = 0; i < size; i++)
     {
         fa1[i] = fa2[i] = fa3[i] = fb1[i] = fb2[i] = a[i] - 1;
-        int tmp; 
+        int tmp;
         refa[i] = frexp(a[i], &tmp) * LOCAL_SIZE; // Because in kernel_local, the results have been added up. So here it needs multiplication.
         refb[i] = tmp * LOCAL_SIZE; // Because in kernel_local, the results have been added up. So here it needs multiplication.
     }
@@ -83,7 +83,7 @@ void cf_test(type *&rpa, int *&rpb, array_view<int, 1> &flag) __GPU_ONLY
 }
 
 template<typename type>
-struct kernel_global 
+struct kernel_global
 {
     static void func(tiled_index<BLOCK_SIZE> idx, array_view<type, 1> *&rpa, array_view<int, 1> *&rpb, array_view<type, 1> *&rpaf1, array_view<int, 1> *&rpbf1, array_view<int, 1> &flag, int b1, int b2, int b3, int b4) __GPU_ONLY
     {
@@ -103,7 +103,7 @@ template<typename type>
 struct kernel_shared
 {
     static void func(tiled_index<BLOCK_SIZE> idx, array_view<type, 1> *&rpa, array_view<int, 1> *&rpb, array_view<type, 1> *&rpaf1, array_view<int, 1> *&rpbf1, array_view<int, 1> &flag, int b1, int b2, int b3, int b4) __GPU_ONLY
-    { 
+    {
         tile_static type share_a[BLOCK_SIZE];
         share_a[idx.local[0]] = (*rpa)[idx.global];
         tile_static int share_b[BLOCK_SIZE];
@@ -135,7 +135,7 @@ template<typename type>
 struct kernel_local
 {
     static void func(tiled_index<BLOCK_SIZE> idx, array_view<type, 1> *&rpa, array_view<int, 1> *&rpb, array_view<type, 1> *&rpaf1, array_view<int, 1> *&rpbf1, array_view<int, 1> &flag, int b1, int b2, int b3, int b4) __GPU_ONLY
-    { 
+    {
         type local_a[LOCAL_SIZE];
         int local_b[LOCAL_SIZE];
         type local_af1[LOCAL_SIZE];
@@ -218,7 +218,7 @@ void run_mykernel(vector<type> &a, vector<int> &b, vector<type> &fa1, vector<typ
 
         array_view<int, 1> av_flag(a_flag);
 
-        k::func(idx, 
+        k::func(idx,
             b1? (--local_b2, paf1) : pa, local_b2 ? pb : pbf1, paf1, pbf1,
             av_flag, b1, local_b2, b3, b4);
     });
@@ -228,7 +228,7 @@ void run_mykernel(vector<type> &a, vector<int> &b, vector<type> &fa1, vector<typ
 }
 
 template<typename type, typename k>
-bool test(accelerator_view av) 
+bool test(accelerator_view av)
 {
 	static_assert(std::is_floating_point<type>::value, "test<type>: template parameter 'type' must be a floating-point type.");
 

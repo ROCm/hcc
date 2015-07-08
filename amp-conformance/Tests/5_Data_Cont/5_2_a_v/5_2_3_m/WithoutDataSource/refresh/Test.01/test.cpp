@@ -53,7 +53,7 @@ runall_result test1(accelerator *device)
 runall_result test_main()
 {
     accelerator a = require_device();
-    
+
     runall_result res;
     res &= REPORT_RESULT(test1(&a));
     return res;

@@ -19,7 +19,7 @@
 //
 /// <tags>P1</tags>
 /// <summary>
-/// Create two overlapping array_view(s) on top of another array_view. Capture and modify all three in a p_f_e. 
+/// Create two overlapping array_view(s) on top of another array_view. Capture and modify all three in a p_f_e.
 /// Verify copy from base array_view works correctly but underlying data on cpu remain unaffected.
 /// </summary>
 

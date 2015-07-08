@@ -18,44 +18,6 @@ namespace experimental {
 namespace parallel {
 inline namespace v1 {
 
-static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu) {
-    std::string s(f);
-    std::string out;
-
-    for(std::string::iterator it = s.begin(); it != s.end(); it++ ) {
-      if (*it == '_' && it == s.begin()) {
-        continue;
-      } else if (isalnum(*it) || (*it == '_')) {
-        out.append(1, *it);
-      } else if (*it == '$') {
-        out.append("_EC_");
-      }
-    }
-    return out;
-}
-
-template<typename Kernel, int dim_ext>
-static inline void mcw_cxxamp_launch_kernel(size_t *ext,
-  size_t *local_size, const Kernel& f) restrict(cpu,amp) {
-#ifndef __GPU__
-  //Invoke Kernel::__cxxamp_trampoline as an kernel
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  // FIXME: implicitly casting to avoid pointer to int error
-  int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
-  void *kernel = NULL;
-  {
-      std::string transformed_kernel_name =
-          mcw_cxxamp_fixnames(f.__cxxamp_trampoline_name());
-      kernel = Concurrency::CLAMP::CreateKernel(transformed_kernel_name);
-  }
-  Concurrency::Serialize s(kernel);
-  f.__cxxamp_serialize(s);
-  Concurrency::CLAMP::LaunchKernel(kernel, dim_ext, ext, local_size);
-#endif // __GPU__
-}
-
-
 template<typename Kernel, typename InputIterator>
 class fe_wrapper
 {
@@ -63,7 +25,7 @@ public:
   explicit fe_wrapper(size_t ext, const Kernel f, const InputIterator& first) restrict(amp,cpu)
       : _ext(ext), k(f), _first(first) {}
   void operator() (std::offset<1> idx) restrict(amp,cpu) {
-#ifdef __GPU__
+#ifdef __KALMAR_ACCELERATOR__
       k(*(_first + idx[0]));
 #endif
   }
@@ -80,11 +42,11 @@ __attribute__((noinline,used))
 void for_each(ExecutionPolicy&& exec,
               InputIterator first, InputIterator last,
               Function f) restrict(cpu,amp) {
-#ifndef __GPU__
+#ifndef __KALMAR_ACCELERATOR__
   size_t ext = std::distance(first, last);
   fe_wrapper<Function, InputIterator> _pf(ext, f, first);
-  mcw_cxxamp_launch_kernel<fe_wrapper<Function, InputIterator>, 1>(&ext, NULL, _pf);
-#else //ifndef __GPU__
+  Concurrency::mcw_cxxamp_launch_kernel<fe_wrapper<Function, InputIterator>, 1>(Concurrency::accelerator().get_default_view(), &ext, NULL, _pf);
+#else //ifndef __KALMAR_ACCELERATOR__
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
   auto bar = &fe_wrapper<Function, InputIterator>::operator();
@@ -100,11 +62,11 @@ __attribute__((noinline,used))
 void for_each_n(ExecutionPolicy&& exec,
                 InputIterator first, Size n,
                 Function f) restrict(cpu,amp) {
-#ifndef __GPU__
+#ifndef __KALMAR_ACCELERATOR__
   size_t ext = std::distance(first, first + n);
   fe_wrapper<Function, InputIterator> _pf(ext, f, first);
-  mcw_cxxamp_launch_kernel<fe_wrapper<Function, InputIterator>, 1>(&ext, NULL, _pf);
-#else //ifndef __GPU__
+  Concurrency::mcw_cxxamp_launch_kernel<fe_wrapper<Function, InputIterator>, 1>(Concurrency::accelerator().get_default_view(), &ext, NULL, _pf);
+#else //ifndef __KALMAR_ACCELERATOR__
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
   auto bar = &fe_wrapper<Function, InputIterator>::operator();

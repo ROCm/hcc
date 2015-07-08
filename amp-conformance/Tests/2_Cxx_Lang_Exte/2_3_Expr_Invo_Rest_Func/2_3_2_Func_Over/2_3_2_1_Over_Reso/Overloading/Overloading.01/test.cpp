@@ -23,11 +23,11 @@ bool test() __GPU
     bool passed = true;
 
     int v = 0;
-    
+
     int ret = 0;
 
     ret = f(v);
-    
+
     if (ret != 1)
     {
         return false;

@@ -17,7 +17,7 @@
 //#Expects: Error: test.cpp\(73\)
 
 
-#include <amptest.h> 
+#include <amptest.h>
 
 using namespace Concurrency;
 using namespace Concurrency::Test;
@@ -120,10 +120,10 @@ int test_device()
 }
 
 int main()
-{     
+{
     test();
     test_device();
-    
+
     // always fail. this test is expected to fail compilation
     return 1;
 }

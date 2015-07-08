@@ -69,7 +69,7 @@ runall_result test_main()
     result &= REPORT_RESULT((test_feature<float, 1>()));
 	result &= REPORT_RESULT((test_feature<float, 2>()));
 	result &= REPORT_RESULT((test_feature<float, 5>()));
-    
+
     return result;
 }
 

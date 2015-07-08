@@ -37,6 +37,6 @@ int main()
     FooClass f;
     TYPE_SPECIFIER (DECL_MODIFIER1 FooClass::* pointer)(PARAMETERS) CV_QUALIFIER REF_QUALIFIER __CPU_ONLY_EXPLICIT EXCEPTION_SPECIFICATION = &FooClass::func;
     return ((f).*(pointer))(PARAMETER_VALUES) == RETURN_VALUE ? 0 : 1;
-    
+
 }
 

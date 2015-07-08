@@ -23,7 +23,7 @@ runall_result test_main()
 	result &= REPORT_RESULT((test_array_copy_constructor<float, 1>()));
 	result &= REPORT_RESULT((test_array_copy_constructor<float, 2>()));
 	result &= REPORT_RESULT((test_array_copy_constructor<float, 5>()));
-    
+
     return result;
 }
 

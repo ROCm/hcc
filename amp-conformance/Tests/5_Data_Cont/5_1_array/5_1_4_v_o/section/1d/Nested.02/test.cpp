@@ -9,7 +9,7 @@
 /// <summary>Test a nested section (0, 4) of a section (4, 4) of a 1D array(10) </summary>
 
 #include <amptest/array_test.h>
-#include <amptest.h> 
+#include <amptest.h>
 #include <amptest_main.h>
 
 using namespace Concurrency;
@@ -20,9 +20,9 @@ runall_result test_main()
     ArrayTest<long, 1> original(extent<1>(10));
     ArrayViewTest<long, 1> section1 = original.section(original.arr().section(4, 4), index<1>(4));
     ArrayViewTest<long, 1> section2 = section1.section(section1.view().section(0, 4), index<1>(0));
-    
+
     // the index<1> parameters here are of the offset (second - first)
-    return 
+    return
         TestSection(original, section1, index<1>(4)) &&
         TestSection(original, section2, index<1>(4)) &&
         TestSection(section1, section2, index<1>(0))

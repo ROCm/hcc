@@ -5,120 +5,86 @@
 //
 //===----------------------------------------------------------------------===//
 
-// FIXME this file will place C++AMP Runtime implementation (HSA version)
 #include <cstdlib>
 #include <cassert>
 #include <iostream>
 #include <map>
 #include <vector>
 
-#include <amp_allocator.h>
 #include <amp_runtime.h>
 
 extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v) {}
 
 namespace Concurrency {
 
-struct mm_info
+class CPUFallbackQueue final : public KalmarQueue
 {
-    std::shared_ptr<void> data;
-    int count;
-    int ref;
+public:
+
+  CPUFallbackQueue(KalmarDevice* pDev) : KalmarQueue(pDev) {}
+
+  void read(void* device, void* dst, size_t count, size_t offset) override {
+      if (dst != device)
+          memmove(dst, (char*)device + offset, count);
+  }
+
+  void write(void* device, const void* src, size_t count, size_t offset, bool blocking) override {
+      if (src != device)
+          memmove((char*)device + offset, src, count);
+  }
+
+  void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset, bool blocking) override {
+      if (src != dst)
+          memmove((char*)dst + dst_offset, (char*)src + src_offset, count);
+  }
+
+  void* map(void* device, size_t count, size_t offset, bool modify) override {
+      return (char*)device + offset;
+  }
+
+  void unmap(void* device, void* addr) override {}
+
+  void Push(void *kernel, int idx, void* device, bool isConst) override {}
 };
 
-class CPUAMPAllocator : public AMPAllocator
+class CPUFallbackDevice final : public KalmarDevice
 {
-    void regist(int count, void *data, bool hasSrc) override {
-        if (hasSrc) {
-            std::shared_ptr<void> p((void*)aligned_alloc(0x1000, count),
-                                    [](void *ptr) { ::operator delete(ptr); });
-            mem_info[data] = {p, count, 1};
-        }
-    }
-    void PushArg(void *kernel, int idx, std::shared_ptr<void>& data) override {
-        auto it = mem_info.find(data.get());
-        if (it != std::end(mem_info)) {
-            mm_info &rw = it->second;
-            if (rw.count != 0) {
-                auto iter = mem_info.find(rw.data.get());
-                if (iter == std::end(mem_info))
-                    mem_info[rw.data.get()] = {data, 0, 1};
-                else
-                    ++iter->second.ref;
-                data = rw.data;
-            } else {
-                data = mem_info[rw.data.get()].data;
-                if (!--rw.ref)
-                    mem_info.erase(it);
-            }
-        }
-    }
-    void amp_write(void *data) override {
-        auto it = mem_info.find(data);
-        if (it != std::end(mem_info)) {
-            mm_info &rw = it->second;
-            memmove(rw.data.get(), data, rw.count);
-        }
-    }
-    void amp_read(void *data) override {
-        auto it = mem_info.find(data);
-        if (it != std::end(mem_info)) {
-            mm_info &rw = it->second;
-            memmove(data, rw.data.get(), rw.count);
-        }
-    }
-    void amp_copy(void *dst, void *src, int n) override {
-        auto it = mem_info.find(src);
-        if (it != std::end(mem_info)) {
-            mm_info &rw = it->second;
-            src = rw.data.get();
-        }
-        memmove(dst, src, n);
-    }
-    void unregist(void *data) override {
-        auto it = mem_info.find(data);
-        if (it != std::end(mem_info))
-            mem_info.erase(it);
-    }
+public:
+    CPUFallbackDevice() : KalmarDevice() {}
 
-    std::map<void *, mm_info> mem_info;
+    std::wstring get_path() const override { return L"fallback"; }
+    std::wstring get_description() const override { return L"CPU Fallback"; }
+    size_t get_mem() const override { return 0; }
+    bool is_double() const override { return true; }
+    bool is_lim_double() const override { return true; }
+    bool is_unified() const override { return true; }
+    bool is_emulated() const override { return true; }
+
+    void* create(size_t count, struct rw_info* /* not used */) override {
+        return aligned_alloc(0x1000, count);
+    }
+    void release(void *device, struct rw_info* /* not used */ ) override { 
+        ::operator delete(device);
+    }
+    std::shared_ptr<KalmarQueue> createQueue() override {
+        return std::shared_ptr<KalmarQueue>(new CPUFallbackQueue(this));
+    }
 };
 
-static CPUAMPAllocator amp;
+template <typename T> inline void deleter(T* ptr) { delete ptr; }
 
-CPUAMPAllocator& getCPUAMPAllocator() {
-  return amp;
-}
+class CPUContext final : public KalmarContext
+{
+public:
+    CPUContext() { Devices.push_back(new CPUFallbackDevice); }
+    ~CPUContext() { std::for_each(std::begin(Devices), std::end(Devices), deleter<KalmarDevice>); }
+};
+
+
+static CPUContext ctx;
 
 } // namespace Concurrency
 
-
-///
-/// kernel compilation / kernel launching
-///
-
-extern "C" void *GetAllocatorImpl() {
-  return &Concurrency::amp;
-}
-
-extern "C" void EnumerateDevicesImpl(int* devices, int* device_number) {
-  if (device_number != nullptr) {
-    *device_number = 1;
-  }
-  if (devices != nullptr) {
-    devices[0] = AMP_DEVICE_TYPE_CPU;
-  }
-}
-
-extern "C" void QueryDeviceInfoImpl(const wchar_t* device_path,
-  bool* supports_cpu_shared_memory,
-  size_t* dedicated_memory,
-  bool* supports_limited_double_precision,
-  wchar_t* description) {
-
-  const wchar_t des[] = L"CPU";
-  wmemcpy(description, des, sizeof(des));
-  *supports_cpu_shared_memory = true;
-  *supports_limited_double_precision = true;
-  *dedicated_memory = 0;
+extern "C" void *GetContextImpl() {
+  return &Concurrency::ctx;
 }

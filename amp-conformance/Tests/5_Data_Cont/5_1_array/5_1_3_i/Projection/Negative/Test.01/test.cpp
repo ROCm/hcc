@@ -10,12 +10,12 @@
 
 
 #include <amptest.h>
-#include <amptest_main.h> 
+#include <amptest_main.h>
 
 using namespace Concurrency;
 using namespace Concurrency::Test;
 
-runall_result test_main()  
+runall_result test_main()
 {
     array<int, 2> arr(extent<2>(10, 10));
     try

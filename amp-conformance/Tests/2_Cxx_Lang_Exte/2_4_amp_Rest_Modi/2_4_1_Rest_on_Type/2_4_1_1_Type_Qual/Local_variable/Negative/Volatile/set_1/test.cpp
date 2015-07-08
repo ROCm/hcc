@@ -7,7 +7,7 @@
 /// <summary>test voilatile type qualifier</summary>
 //#Expects: Error: error C3581
 
-#include <amptest.h> 
+#include <amptest.h>
 
 void foo() __GPU
 {
@@ -16,8 +16,8 @@ void foo() __GPU
 }
 
 
-int main(int argc, char **argv) 
-{ 
+int main(int argc, char **argv)
+{
     foo();
 	 [=]() __GPU
     {

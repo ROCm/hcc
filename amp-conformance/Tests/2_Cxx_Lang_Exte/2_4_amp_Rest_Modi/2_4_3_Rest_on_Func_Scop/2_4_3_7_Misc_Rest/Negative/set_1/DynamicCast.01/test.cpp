@@ -7,7 +7,7 @@
 /// <summary>test dynamic_cast</summary>
 //#Expects: Error: error C3587
 
-#include <amptest.h> 
+#include <amptest.h>
 
 class A {};
 class B : public A {};
@@ -18,8 +18,8 @@ void foo() __GPU
     A * a = dynamic_cast<A*>(b);
 }
 
-int main(int argc, char **argv) 
-{ 
+int main(int argc, char **argv)
+{
     foo();
     return 1;
 }

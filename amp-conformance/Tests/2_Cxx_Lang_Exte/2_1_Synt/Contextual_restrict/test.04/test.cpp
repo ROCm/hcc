@@ -13,19 +13,19 @@ using namespace Concurrency;
 using namespace std;
 
 int restrict(int a) __GPU
-{    
+{
     int x = a * a;
     return ((x == a*a) ? 0 : 1);
 }
 
 int restrict(int a, int b) __GPU
-{    
+{
     int y = a * b;
     return ((y == a*b) ? 0 : 1);
 }
 
 // Main entry point
-int main(int argc, char **argv) 
+int main(int argc, char **argv)
 {
     bool passed = true;
     int x = 10;

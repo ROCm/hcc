@@ -34,21 +34,11 @@ runall_result test_main()
 
 	runall_result result;
 
-	result &= REPORT_RESULT(expect_exception(av,
-		extent<1>(0).tile<16>(),
-		"concurrency::parallel_for_each: unsupported compute domain, the extent of dimension 0 of the compute domain (0) cannot be smaller than or equal to 0."));
-	result &= REPORT_RESULT(expect_exception(av,
-		extent<2>(0, 0).tile<3, 7>(),
-		"concurrency::parallel_for_each: unsupported compute domain, the extent of dimension 0 of the compute domain (0) cannot be smaller than or equal to 0."));
-	result &= REPORT_RESULT(expect_exception(av,
-		extent<2>(0, 5).tile<2, 5>(),
-		"concurrency::parallel_for_each: unsupported compute domain, the extent of dimension 0 of the compute domain (0) cannot be smaller than or equal to 0."));
-	result &= REPORT_RESULT(expect_exception(av,
-		extent<2>(16, 0).tile<7, 1>(),
-		"concurrency::parallel_for_each: unsupported compute domain, the extent of dimension 1 of the compute domain (0) cannot be smaller than or equal to 0."));
-	result &= REPORT_RESULT(expect_exception(av,
-		extent<3>(8, 0, 8).tile<4, 3, 3>(),
-		"concurrency::parallel_for_each: unsupported compute domain, the extent of dimension 1 of the compute domain (0) cannot be smaller than or equal to 0."));
+	result &= REPORT_RESULT(expect_exception(av, extent<1>(0).tile<16>()));
+	result &= REPORT_RESULT(expect_exception(av, extent<2>(0, 0).tile<3, 7>()));
+	result &= REPORT_RESULT(expect_exception(av, extent<2>(0, 5).tile<2, 5>()));
+	result &= REPORT_RESULT(expect_exception(av, extent<2>(16, 0).tile<7, 1>()));
+	result &= REPORT_RESULT(expect_exception(av, extent<3>(8, 0, 8).tile<4, 3, 3>()));
 
 	return result;
 }

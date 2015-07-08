@@ -7,7 +7,7 @@
 /// <summary>test illegal usage of extern variable</summary>
 //#Expects: Error: error C3586
 
-#include <amptest.h> 
+#include <amptest.h>
 
 extern int flag;
 
@@ -16,8 +16,8 @@ void foo(bool set) __GPU
     flag = set ? 1 : 0;
 }
 
-int main(int argc, char **argv) 
-{ 
+int main(int argc, char **argv)
+{
     foo(true);
     return 1;
 }

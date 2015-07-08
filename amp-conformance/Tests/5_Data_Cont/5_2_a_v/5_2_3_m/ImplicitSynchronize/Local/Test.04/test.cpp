@@ -30,7 +30,7 @@ int main()
 {
     ArrayViewTest<int, 2> av(extent<2>(10, 10));
     ArrayViewTest<int, 1, 2> projection = av.section(index<2>(), extent<2>(5, 5)).projection(1);
-    
+
     projection.view()[1] = 15;
     projection.set_known_value(index<1>(1), 15);
     return av.view()[index<2>(1, 1)] == 15 ? av.pass() : av.fail();

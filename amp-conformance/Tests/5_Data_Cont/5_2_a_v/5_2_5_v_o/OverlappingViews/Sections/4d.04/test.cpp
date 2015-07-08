@@ -42,5 +42,5 @@ runall_result test_main()
     return t.negative_test(
         make_index(0, 0, 0, 0), make_extent(2, 2, 2, 2), //local
         make_index(3, 3, 0, 0), make_extent(1, 1, 4, 4) //remote
-    ) ? t.pass() : t.fail(); 
-} 
+    ) ? t.pass() : t.fail();
+}

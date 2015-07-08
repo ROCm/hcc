@@ -33,7 +33,7 @@ int test1() restrict(amp,cpu)
 
     if (!((e1 + 1) == ea))
     {
-        return 11;                
+        return 11;
     }
 
     if (!((e1 - 1) == es))
@@ -353,7 +353,7 @@ int test8() restrict(amp,cpu)
 int test() restrict(amp,cpu)
 {
     int result = test1();
-    
+
     result = (result == 0) ? test2() : result;
 
     result = (result == 0) ? test3() : result;
@@ -375,7 +375,7 @@ int test() restrict(amp,cpu)
 
 void kernel(index<1>& idx, array<int, 1>& result) restrict(amp,cpu)
 {
-    result[idx] = test();    
+    result[idx] = test();
 }
 
 const int size = 10;
@@ -385,12 +385,12 @@ int test_device()
     accelerator_view av = require_device().get_default_view();
 
     extent<1> e(size);
-    array<int, 1> result(e, av);    
-    
+    array<int, 1> result(e, av);
+
     parallel_for_each(e, [&](index<1> idx) restrict(amp,cpu) {
             kernel(idx, result);
     });
-    
+
     vector<int> presult = result;
 
     for (int i = 0; i < 10; i++)
@@ -401,17 +401,17 @@ int test_device()
             return 1;
         }
     }
-    
+
     return 0;
 }
 
-runall_result test_main() 
+runall_result test_main()
 {
     runall_result result;
 	
 	result &= REPORT_RESULT(test());
 	result &= REPORT_RESULT(test_device());
-    
+
     return result;
 }
 

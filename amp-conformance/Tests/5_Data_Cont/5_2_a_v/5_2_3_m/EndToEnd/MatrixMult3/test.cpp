@@ -55,7 +55,7 @@ runall_result test_main()
 
     InitializeArray(vA, M * N);
     InitializeArray(vB, N * W);
-    
+
     // Compute mxm on CPU
 	Log() << "Performing matrix multiply on the CPU..." << std::endl;
     for(int k=0; k<M; ++k)
@@ -85,12 +85,12 @@ runall_result test_main()
 	}
 	
 	accelerator_view av = acc.get_default_view();
-    
+
     extent<2> eA(M, N), eB(N, W), eC(M, W);
     extent<2> eA_half(M/2, N), eC_half(M/2, W);
 
-    array_view<float, 2> mA_view(eA, vA); 
-    array_view<float, 2> mB_view(eB, vB); 
+    array_view<float, 2> mA_view(eA, vA);
+    array_view<float, 2> mB_view(eB, vB);
     array_view<float, 2> mC_view(eC, vC);
 
     array_view<float, 2> mA_view1(mA_view.section(0, 0, M/2, N));

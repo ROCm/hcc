@@ -22,7 +22,7 @@
 
 #include <amptest/array_view_test.h>
 #include <amptest/coordinates.h>
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 
 using namespace Concurrency;
@@ -33,7 +33,7 @@ int main()
     extent<3> ex(4, 5, 3);
     ArrayViewTest<int, 1> original(extent<1>(ex.size()));
     array_view<int, 1> original_av = original.view();
-    
+
     extent_coordinate_nest<3> coordinates(ex);
     int linear = coordinates.get_linear(index<3>(2, 3, 1));
     parallel_for_each(extent<1>(1), [=](index<1>) __GPU {
@@ -42,12 +42,12 @@ int main()
         original_av[linear] = 17;
         rank3[index<3>(2, 3, 2)] = rank3[index<3>(2, 3, 1)];
     });
-    
+
     original.set_known_value(index<1>(coordinates.get_linear(index<3>(2, 3, 1))), 17);
     original.set_known_value(index<1>(coordinates.get_linear(index<3>(2, 3, 2))), 17);
-    
-    
-    return 
+
+
+    return
         original.view()[coordinates.get_linear(index<3>(2, 3, 2))] == 17 &&
         original.view()[coordinates.get_linear(index<3>(2, 3, 1))] == 17
         ? original.pass() : original.fail();

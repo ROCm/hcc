@@ -4,7 +4,7 @@
 // THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 // See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
 /// <tags>P0</tags>
-/// <summary>Concurrency::arrays passed by value</summary>
+/// <summary>Arrays passed by value</summary>
 //#Expects: error C3597
 
 #include <iostream>
@@ -47,9 +47,9 @@ int main()
     c.assign(c.size(), 0);
 
     Concurrency::extent<1> e(size);
-    Concurrency::array<int, 1> aa(e, a.begin(), rv);
-    Concurrency::array<int, 1> ab(e, b.begin(), rv);
-    Concurrency::array<int, 1> ac(e, c.begin(), rv);
+    array<int, 1> aa(e, a.begin(), rv);
+    array<int, 1> ab(e, b.begin(), rv);
+    array<int, 1> ac(e, c.begin(), rv);
 
     // error ac and ab is passed by reference
     parallel_for_each(aa.get_extent(), [=](index<1> idx) __GPU {

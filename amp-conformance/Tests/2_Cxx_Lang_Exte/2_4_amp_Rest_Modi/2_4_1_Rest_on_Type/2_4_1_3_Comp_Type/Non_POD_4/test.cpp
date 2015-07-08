@@ -21,10 +21,10 @@ public:
     {
         m1 = i;
     }
-    
+
     int get_m1() const __GPU_ONLY
-    { 
-        return m1; 
+    {
+        return m1;
     }
 };
 
@@ -32,29 +32,29 @@ class NonPodClass2
 {
 protected:
     NonPodClass1 pod1;
-    
+
 public:
     NonPodClass2() __GPU_ONLY : pod1(10)
     {
-        
+
     }
-    
+
     NonPodClass1 get_pod1() const __GPU_ONLY
-    { 
-        return pod1; 
+    {
+        return pod1;
     }
 };
 
 runall_result Test1() __GPU_ONLY
 {
     NonPodClass2 arr1[5];
-    
-    return (arr1[0].get_pod1().get_m1() == 10) ? runall_pass : runall_fail;    
+
+    return (arr1[0].get_pod1().get_m1() == 10) ? runall_pass : runall_fail;
 }
 
 int main()
 {
-    accelerator_view av = require_device(Device::ALL_DEVICES).get_default_view();    
+    accelerator_view av = require_device(Device::ALL_DEVICES).get_default_view();
 
     runall_result result = GPU_INVOKE(av, runall_result, Test1);
 

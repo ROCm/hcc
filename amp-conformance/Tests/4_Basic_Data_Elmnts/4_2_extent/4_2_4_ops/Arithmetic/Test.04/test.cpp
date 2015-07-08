@@ -17,7 +17,7 @@ using std::vector;
 
 int test() restrict(amp,cpu)
 {
-    extent<3> ea(4, 4, 4);    
+    extent<3> ea(4, 4, 4);
     extent<3> er, et;
 
     er = extent<3>(6, 6, 6);
@@ -66,7 +66,7 @@ int test() restrict(amp,cpu)
 
 void kernel(index<1>& idx, array<int, 1>& result) restrict(amp,cpu)
 {
-    result[idx] = test();    
+    result[idx] = test();
 }
 
 const int size = 10;
@@ -82,7 +82,7 @@ int test_device()
     accelerator_view av = acc.get_default_view();
 
     extent<1> e(size);
-    array<int, 1> result(e, av);    
+    array<int, 1> result(e, av);
 
     parallel_for_each(e, [&](index<1> idx) restrict(amp,cpu) {
         kernel(idx, result);
@@ -101,12 +101,12 @@ int test_device()
     return 0;
 }
 
-runall_result test_main() 
+runall_result test_main()
 {
     runall_result result;
 	
 	result &= REPORT_RESULT(test());
 	result &= REPORT_RESULT(test_device());
-    
+
     return result;
 }

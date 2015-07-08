@@ -19,11 +19,11 @@ const int START = 11;
 bool TestOnHost()
 {
     Log() << "Testing Index-self assignment operator on host" << std::endl;
-    
+
     index<RANK> idx(START, START + 1, START + 2);
-    
+
     // check self assignment
-    idx = idx;    
+    idx = idx;
 
     return IsIndexSetToSequence<RANK>(idx, START);
 }
@@ -33,14 +33,14 @@ bool TestOnHost()
 /* fA will return components of the index and fB returns the rank */
 void kernel(array<int, 1>& A, array<int, 1>& B) __GPU
 {
-    index<RANK> idx(START, START + 1, START + 2);    
+    index<RANK> idx(START, START + 1, START + 2);
 
     // check self assignment
     idx = idx;
-    
+
     for(int i = 0; i < RANK; i++)
     {
-        A(i) = idx[i];    
+        A(i) = idx[i];
     }
 
     B(0) = idx.rank;
@@ -67,7 +67,7 @@ bool TestOnDevice()
 }
 
 /*--------------------- Main -------------------- */
-runall_result test_main() 
+runall_result test_main()
 {
     runall_result result;
 	result &= REPORT_RESULT(TestOnHost());

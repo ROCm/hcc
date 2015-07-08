@@ -9,7 +9,7 @@
 /// <summary>(Negative) Create an extent of Rank 4 with the individual coordinate values and check that this results in a compilation error.</summary>
 //#Expects: Error: error C2661
 
-#include <amptest.h> 
+#include <amptest.h>
 
 using namespace Concurrency;
 using namespace Concurrency::Test;
@@ -24,7 +24,7 @@ int test() __GPU
 
 void kernel(index<1>& idx, array<int, 1>& result) __GPU
 {
-    result[idx] = 0;    
+    result[idx] = 0;
 }
 
 const int size = 10;
@@ -60,13 +60,13 @@ int test_device()
     return 0;
 }
 
-int main() 
-{ 
+int main()
+{
     test();
     test_device();
 
     //Always fail if this succeeds to compile
-    printf("Failed!\n"); 
+    printf("Failed!\n");
     return 1;
 }
 

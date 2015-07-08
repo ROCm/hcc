@@ -26,7 +26,7 @@ bool test_feature()
     {
         bool pass = test_feature_itr<_type, _rank>(e1, data.begin(), data.end()) &&
             test_feature_itr<_type, _rank>(e1, data.rbegin(), data.rend()) &&
-            test_feature_itr<_type, _rank>(e1, data.cbegin(), data.cend()) && 
+            test_feature_itr<_type, _rank>(e1, data.cbegin(), data.cend()) &&
             test_feature_itr<_type, _rank>(e1, data.crbegin(), data.crend());
 
         if (!pass)
@@ -38,7 +38,7 @@ bool test_feature()
 
 runall_result test_main()
 {
-    // Test is using doubles therefore we have to make sure that it is not executed 
+    // Test is using doubles therefore we have to make sure that it is not executed
     // on devices that does not support double types.
 	accelerator::set_default(require_device_with_double().get_device_path());
 

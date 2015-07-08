@@ -27,7 +27,7 @@ public:
         return o;
     }
 
-    operator c2() 
+    operator c2()
     {
         c2 o;
 
@@ -42,7 +42,7 @@ runall_result test() __GPU
 {
     c1 obj;
     c2 obj2 = obj;
-    
+
     // this value would be 2 if the CPU version were called
     return obj.m == 1;
 }

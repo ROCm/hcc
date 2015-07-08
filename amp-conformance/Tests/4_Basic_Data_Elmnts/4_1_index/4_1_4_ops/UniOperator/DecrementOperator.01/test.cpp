@@ -45,8 +45,8 @@ bool test_pre_decrement() restrict(cpu,amp)
     return ((ir == i1) && (i1 == i_dec));
 }
 
-runall_result test_main() 
-{ 
+runall_result test_main()
+{
     runall_result result;
 
     accelerator_view av = require_device().get_default_view();

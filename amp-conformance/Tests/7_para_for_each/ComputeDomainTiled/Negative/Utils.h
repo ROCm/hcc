@@ -23,7 +23,7 @@
 
 // Runs a p_f_e on a given accelerator view with a given extent and expects an invalid_compute_domain exception with a given message.
 template <int _Dim0, int _Dim1, int _Dim2>
-runall_result expect_exception(const concurrency::accelerator_view& av, const concurrency::tiled_extent<_Dim0, _Dim1, _Dim2>& ext, const std::string& expectedMessage)
+runall_result expect_exception(const concurrency::accelerator_view& av, const concurrency::tiled_extent<_Dim0, _Dim1, _Dim2>& ext)
 {
 	using namespace concurrency;
 	using namespace concurrency::Test;
@@ -33,12 +33,9 @@ runall_result expect_exception(const concurrency::accelerator_view& av, const co
 		int x;
 		parallel_for_each(av, ext, [=](tiled_index<_Dim0, _Dim1, _Dim2>) restrict(amp) { int y = x; (void)y; });
 	}
-	catch(invalid_compute_domain e)
+	catch(const invalid_compute_domain& e)
 	{
-		//if(e.what() == expectedMessage)
-			return runall_pass;
-		//else
-		//	throw; // Propagate the unexpected exception
+		return runall_pass;
 	}
 
 	return runall_fail;

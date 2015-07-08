@@ -6,7 +6,7 @@
 #pragma once
 /**********************************************************************************
 * amp.compare.h
-* 
+*
 *
 **********************************************************************************/
 
@@ -30,7 +30,7 @@ namespace Concurrency
 		static const size_t max_failed_elements_to_log = 20;
 
         // Details namespace serves as private namespace
-        namespace details 
+        namespace details
         {
 			// TODO: These AreEqual (and the AreAlmostEqual) functions are now obsolete. Use a type_comparer<T> instead as
 			// it provides the 'are almost equal' semantics by default.
@@ -43,7 +43,7 @@ namespace Concurrency
             {
                 // This function is constructed in a way that requires T
                 // only to define operator< to check for equality
-                
+
                 if (v1 < v2)
                 {
                     return false;
@@ -59,7 +59,7 @@ namespace Concurrency
 			inline bool AreEqual(const short &v1, const short &v2) { return v1 == v2; }
 			inline bool AreEqual(const unsigned char &v1, const unsigned char &v2) { return v1 == v2; }
 			inline bool AreEqual(const unsigned short &v1, const unsigned short &v2) { return v1 == v2; }
-            
+
             template<typename T, typename Tpredicate>
             bool Verify_impl(const T* ary_actual, const T* ary_expected, size_t ary_length, const Tpredicate& pred)
 			{
@@ -87,20 +87,20 @@ namespace Concurrency
 
 				return num_failed == 0;
 			}
-            
+
 		}
 
         // Compare two floats and return true if they are close to each other.
-        inline bool AreAlmostEqual(float v1, float v2, 
+        inline bool AreAlmostEqual(float v1, float v2,
             const float maxAbsoluteDiff = DEFAULT_MAX_ABS_DIFF_FLT,
             const float maxRelativeDiff = DEFAULT_MAX_REL_DIFF_FLT
 			) restrict(cpu,amp)
         {
             return amptest_math::are_almost_equal(v1, v2, maxAbsoluteDiff, maxRelativeDiff);
         }
-        
+
         // Compare two doubles and return true if they are close to each other.
-        inline bool AreAlmostEqual(double v1, double v2, 
+        inline bool AreAlmostEqual(double v1, double v2,
             const double maxAbsoluteDiff = DEFAULT_MAX_ABS_DIFF_DBL,
             const double maxRelativeDiff = DEFAULT_MAX_REL_DIFF_DBL
 			) restrict(cpu,amp)
@@ -133,9 +133,9 @@ namespace Concurrency
 		// This overload just simplifies when wanting to control the options when comparing floating-point types.
 		template<typename T, typename Tmax_args>
 		bool Verify(
-			const std::vector<T> &c, 
-			const std::vector<T> &refc, 
-			const Tmax_args maxAbsoluteDiff, 
+			const std::vector<T> &c,
+			const std::vector<T> &refc,
+			const Tmax_args maxAbsoluteDiff,
 			const Tmax_args maxRelativeDiff)
         {
 			static_assert(std::is_floating_point<Tmax_args>::value, "The args passed in for the limits should be a floating point type (i.e. both float or both double)");
@@ -149,13 +149,11 @@ namespace Concurrency
         // End of Verify functions for c-style arrays
 
 		#pragma region VerifyDataOnCpu()
-		template<typename _type, int _rank,	template<typename, int> class _amp_container_type, template<typename T, typename=std::allocator<T>> class _stl_cont>
-		bool VerifyDataOnCpu(const _stl_cont<_type>& actual, const _amp_container_type<_type, _rank>& expected, _type diff = 0.0001);
 
 		// Verifies that data contained in the two C++ AMP containers differs by value 'diff'. The computation
 		// happens on CPU. If any of supplied array is on GPU, it will get copied to CPU.
 		template<typename _type, int _rank, template<typename, int> class _amp_container_type_1, template<typename, int> class _amp_container_type_2>
-		bool VerifyDataOnCpu(const _amp_container_type_1<_type, _rank>& actual, const _amp_container_type_2<_type, _rank>& expected, _type diff = 0.0001)
+		bool VerifyDataOnCpu(const _amp_container_type_1<_type, _rank>& actual, const _amp_container_type_2<_type, _rank>& expected, _type diff = 0)
 		{
 			if(actual.get_extent() != expected.get_extent())
 			{
@@ -172,22 +170,11 @@ namespace Concurrency
 
 			return Equal(vect_actual.begin(), vect_actual.end(), vect_expected.begin(), Difference<_type>(diff));
 		}
-		
-		// Verifies that data contained in the two array_view<const T, N> and C++ AMP container differs by 
-		// value 'diff'. The computation happens on CPU. If any of supplied array is on GPU, it will get copied to CPU.
-		template<typename _type, int _rank, template<typename, int> class _amp_container_type>
-		bool VerifyDataOnCpu(const array_view<const _type, _rank>& actual, const _amp_container_type<_type, _rank>& expected, _type diff = 0.0001)
-		{
-			std::vector<_type> vect_actual(actual.get_extent().size());
-			copy(actual, vect_actual.begin());
 
-			return VerifyDataOnCpu(vect_actual, expected, diff);
-		}
-
-		// Verifies that data contained in the supplied C++ AMP container and standard container differs by value 'diff'. 
+		// Verifies that data contained in the supplied C++ AMP container and standard container differs by value 'diff'.
 		// The computation happens on CPU. If the supplied array have data on GPU, it will get copied on CPU.
 		template<typename _type, int _rank, template<typename, int> class _amp_container_type, template<typename T, typename=std::allocator<T>> class _stl_cont>
-		bool VerifyDataOnCpu(const _amp_container_type<_type, _rank>& actual, const _stl_cont<_type>& expected, _type diff = 0.0001)
+		bool VerifyDataOnCpu(const _amp_container_type<_type, _rank>& actual, const _stl_cont<_type>& expected, _type diff = 0)
 		{
 			if(actual.get_extent().size() != expected.size())
 			{
@@ -203,10 +190,10 @@ namespace Concurrency
 			return Equal(temp_cont.begin(), temp_cont.end(), expected.begin(), Difference<_type>(diff));
 		}
 
-		// Verifies that data contained in the supplied array_view<const T, N> and standard container differs by value 'diff'. 
+		// Verifies that data contained in the supplied array_view<const T, N> and standard container differs by value 'diff'.
 		// The computation happens on CPU. If the supplied array have data on GPU, it will get copied on CPU.
 		template<typename _type, int _rank,	template<typename T, typename=std::allocator<T>> class _stl_cont>
-		bool VerifyDataOnCpu(const array_view<const _type, _rank>& actual, const _stl_cont<_type>& expected, _type diff = 0.0001)
+		bool VerifyDataOnCpu(const array_view<const _type, _rank>& actual, const _stl_cont<_type>& expected, _type diff = 0)
 		{
 			if(actual.get_extent().size() != expected.size())
 			{
@@ -222,10 +209,10 @@ namespace Concurrency
 			return Equal(temp_cont.begin(), temp_cont.end(), expected.begin(), Difference<_type>(diff));
 		}
 
-		// Verifies that data containes in the supplied C++ AMP container and standard container differs by value 'diff'. 
+		// Verifies that data containes in the supplied C++ AMP container and standard container differs by value 'diff'.
 		// The computation happens on CPU. If the supplied array have data on GPU, it will get copied on CPU.
 		template<typename _type, int _rank,	template<typename, int> class _amp_container_type, template<typename T, typename=std::allocator<T>> class _stl_cont>
-		bool VerifyDataOnCpu(const _stl_cont<_type>& actual, const _amp_container_type<_type, _rank>& expected, _type diff)
+		bool VerifyDataOnCpu(const _stl_cont<_type>& actual, const _amp_container_type<_type, _rank>& expected, _type diff = 0)
 		{
 			if(expected.get_extent().size() != actual.size())
 			{
@@ -239,6 +226,17 @@ namespace Concurrency
 			copy(expected, temp_cont.begin());
 		
 			return Equal(actual.begin(), actual.end(), temp_cont.begin(), Difference<_type>(diff));
+		}
+		
+		// Verifies that data contained in the two array_view<const T, N> and C++ AMP container differs by
+		// value 'diff'. The computation happens on CPU. If any of supplied array is on GPU, it will get copied to CPU.
+		template<typename _type, int _rank, template<typename, int> class _amp_container_type>
+		bool VerifyDataOnCpu(const array_view<const _type, _rank>& actual, const _amp_container_type<_type, _rank>& expected, _type diff = 0)
+		{
+			std::vector<_type> vect_actual(actual.get_extent().size());
+			copy(actual, vect_actual.begin());
+
+			return VerifyDataOnCpu(vect_actual, expected, diff);
 		}
 	
 		
@@ -254,7 +252,7 @@ namespace Concurrency
             typename std::vector<_type>::const_iterator iter = std::find_if_not(inputVector.begin(), inputVector.end(), [&](_type el) -> bool {
 				return comparer.are_equal(el, value);
 			});
-        
+
             if(iter == inputVector.end())
             {
                 return -1;
@@ -264,7 +262,7 @@ namespace Concurrency
                 int res = (int)(iter - inputVector.begin());
 
 				// Now report all the failed elements
-				Log(LogType::Error) << "VerifyAllSameValue found elements with incorrect values. Expected value: " << value << std::endl;
+				Log(LogType::Error) << "VerifyAllSameValue found elements with incorrect values. Expected value: " << format_as_code(value) << std::endl;
 				size_t num_failed = 0;
 				for(; iter < inputVector.end(); ++iter)
 				{
@@ -310,31 +308,31 @@ namespace Concurrency
 
 		#pragma region VerifyDataOnAcc()
 
-        // Verifies that data containes in the supplied arrays differs by value 'diff'. 
+        // Verifies that data containes in the supplied arrays differs by value 'diff'.
         // The computation happens on GPU. The supplied input arrays are required to be on GPU.
         // The result array 'stagingArrResult' should be staging array with source device GPU and dest device CPU.
         template<typename _type, int _rank>
         bool VerifyDataOnAcc(array<_type, _rank>& actual, array<_type, _rank>& expected, array<_type, _rank>& stagingArrResult, _type diff = 0)
         {
             if(actual.get_extent() != expected.get_extent())
-            {        
+            {
                 Log(LogType::Error) << "Grid values for actual and expected array does not match.";
                 Log(LogType::Error) << "Actual: " << actual.get_extent() << " Expected: " << expected.get_extent();
                 return false;
             }
-            
+
             if(stagingArrResult.get_extent() != expected.get_extent())
-            {        
+            {
                 Log(LogType::Error) << "Grid value for result staging array and input containers does not match.";
                 Log(LogType::Error) << "Input containers: " << actual.get_extent() << " staging array result: " << expected.get_extent();
                 return false;
             }
-            
+
             parallel_for_each(actual.get_extent(), [&actual, &expected, &stagingArrResult](index<_rank> idx) restrict(amp)
             {
                 stagingArrResult[idx] = expected[idx] - actual[idx];
             });
-            
+
             int res = VerifyAllSameValue<_type, _rank>(stagingArrResult, diff);
             if(res == -1)
             {
@@ -346,33 +344,33 @@ namespace Concurrency
                 return false;
             }
         }
-        
-        // Verifies that data containes in the supplied array views differs by value 'diff'. 
-        // The computation happens on GPU. The supplied input array views should have data on GPU otherwise it 
-        // will involve implicit caching of data. The result array 'stagingArrResult' should be staging array with source 
+
+        // Verifies that data containes in the supplied array views differs by value 'diff'.
+        // The computation happens on GPU. The supplied input array views should have data on GPU otherwise it
+        // will involve implicit caching of data. The result array 'stagingArrResult' should be staging array with source
         // device as GPU and dest as device CPU.
         template<typename _type, int _rank>
         bool VerifyDataOnAcc(array_view<_type, _rank>& actual, array_view<_type, _rank>& expected, array<_type, _rank>& stagingArrResult, _type diff = 0)
         {
             if(actual.get_extent() != expected.get_extent())
-            {        
+            {
                 Log(LogType::Error) << "Grid values for actual and  expected array view does not match.";
                 Log(LogType::Error) << "Actual: " << actual.get_extent() << " Expected: " << expected.get_extent();
                 return false;
             }
-            
+
             if(stagingArrResult.get_extent() != expected.get_extent())
-            {        
+            {
                 Log(LogType::Error) << "Grid value for result staging array and input containers does not match.";
                 Log(LogType::Error) << "Input containers: " << actual.get_extent() << " staging array result: " << expected.get_extent();
                 return false;
             }
-            
+
             parallel_for_each(actual.get_extent(), [actual, expected, &stagingArrResult](index<_rank> idx) restrict(amp)
             {
                 stagingArrResult[idx] = expected[idx] - actual[idx];
             });
-            
+
             int res = VerifyAllSameValue<_type, _rank>(stagingArrResult, diff);
             if(res == -1)
             {
@@ -384,32 +382,32 @@ namespace Concurrency
                 return false;
             }
         }
-        
-        // Verifies that data containes in the supplied array and array view differs by value 'diff'. 
+
+        // Verifies that data containes in the supplied array and array view differs by value 'diff'.
         // The computation happens on GPU. The supplied input array and array view are required to have data on GPU.
         // The result array 'stagingArrResult' should be staging array with source device GPU and dest device CPU.
         template<typename _type, int _rank>
         bool VerifyDataOnAcc(array<_type, _rank>& actual, array_view<_type, _rank>& expected, array<_type, _rank>& stagingArrResult, _type diff = 0)
         {
             if(actual.get_extent() != expected.get_extent())
-            {        
+            {
                 Log(LogType::Error) << "Grid values for actual array and  expected array view does not match.";
                 Log(LogType::Error) << "Actual: " << actual.get_extent() << " Expected: " << expected.get_extent();
                 return false;
             }
-            
+
             if(stagingArrResult.get_extent() != expected.get_extent())
-            {        
+            {
                 Log(LogType::Error) << "Grid value for result staging array and input containers does not match.";
                 Log(LogType::Error) << "Input containers: " << actual.get_extent() << " staging array result: " << expected.get_extent();
                 return false;
             }
-            
+
             parallel_for_each(actual.get_extent(), [&actual, expected, &stagingArrResult](index<_rank> idx) restrict(amp)
             {
                 stagingArrResult[idx] = expected[idx] - actual[idx];
             });
-            
+
             int res = VerifyAllSameValue<_type, _rank>(stagingArrResult, diff);
             if(res == -1)
             {
@@ -421,10 +419,10 @@ namespace Concurrency
                 return false;
             }
         }
-        
+
 		#pragma endregion
 
-		// Compares two iterators for equivalence as specified by binary predicate. 
+		// Compares two iterators for equivalence as specified by binary predicate.
 		// It uses the standard template library method mismatch(...) for this and reports the first mismatch.
 		template<typename InputIterator1, typename InputIterator2, typename BinaryPredicate>
 		bool Equal(InputIterator1 beginActual, InputIterator1 endActual, InputIterator2 beginExpected, BinaryPredicate comp)
@@ -445,7 +443,7 @@ namespace Concurrency
 			}
 		}
 
-		// A functor class which compares the difference between two values with a 
+		// A functor class which compares the difference between two values with a
 		// given value.
 		template<typename _type>
 		class Difference
@@ -459,7 +457,7 @@ namespace Concurrency
 	
 			bool operator()(_type actualValue, _type expectedValue) const
 			{
-				return std::fabs(expectedValue - actualValue) <= diff;
+				return (expectedValue - actualValue == diff);
 			}
 		};
 

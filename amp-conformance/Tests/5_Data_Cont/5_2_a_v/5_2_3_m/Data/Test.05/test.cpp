@@ -20,7 +20,7 @@
 /// <tags>P1</tags>
 /// <summary>Create and access the data point for an array view of one element/summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 
 using namespace Concurrency;
@@ -28,7 +28,7 @@ using namespace Concurrency::Test;
 using std::vector;
 
 int main()
-{    
+{
     const int size = 1;
 
     vector<float> vec(size);

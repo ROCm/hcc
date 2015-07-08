@@ -32,7 +32,7 @@ public:
 
 
 // Main entry point
-int main(int argc, char **argv) 
+int main(int argc, char **argv)
 {
     cout<< "Test: declare template parameter with the same name as a function modifier" << endl;
 

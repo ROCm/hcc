@@ -26,7 +26,7 @@ namespace Concurrency
 
 		/// Converts a null terminated wchar_t* string to a UTF-8 encoded std::string
 		std::string AMP_TEST_API convert_to_utf8(const wchar_t* str);
-		std::string AMP_TEST_API convert_to_utf8(const std::wstring& str); 
+		std::string AMP_TEST_API convert_to_utf8(const std::wstring& str);
 
 		/// Converts a multi-byte encoded string to wchar_t encoded string.
 		/// <remarks>Note: this function is not properly named.</remarks>

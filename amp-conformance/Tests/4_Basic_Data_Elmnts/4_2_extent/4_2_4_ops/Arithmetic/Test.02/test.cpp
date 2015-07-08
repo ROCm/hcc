@@ -37,7 +37,7 @@ int test1() restrict(amp,cpu)
     e1 += 1;
     if (!(e1 == ea))
     {
-        return 11;                
+        return 11;
     }
 
     e1 = e1o;
@@ -272,13 +272,13 @@ int test_device()
     return 0;
 }
 
-runall_result test_main() 
+runall_result test_main()
 {
     runall_result result;
 	
 	result &= REPORT_RESULT(test());
 	result &= REPORT_RESULT(test_device());
-    
+
     return result;
 }
 

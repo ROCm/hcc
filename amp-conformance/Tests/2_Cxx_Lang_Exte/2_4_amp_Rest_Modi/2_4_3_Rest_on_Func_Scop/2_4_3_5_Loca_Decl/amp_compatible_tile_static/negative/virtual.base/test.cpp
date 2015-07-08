@@ -18,7 +18,7 @@ using namespace Concurrency::Test;
 struct A_base
 {
     int m1;
-    
+
 public:
     int get() restrict(amp)
     {
@@ -28,20 +28,20 @@ public:
 
 struct A : virtual A_base
 {
-    
+
 };
 
 runall_result test_main()
 {
     array<int, 1> arr(10);
-    
+
     parallel_for_each(arr.get_extent(), [&](index<1> idx) restrict(amp)
     {
         tile_static A a[2];
 
-        arr[idx] = a.get();        
+        arr[idx] = a.get();
     });
-    
+
     return runall_fail;
 }
 

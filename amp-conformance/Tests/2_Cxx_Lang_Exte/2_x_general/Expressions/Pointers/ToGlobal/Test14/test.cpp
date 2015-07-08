@@ -8,8 +8,6 @@
 
 #include "../../inc/common.h"
 
-#define __int32  int
-
 class c1
 {
 public:
@@ -22,7 +20,7 @@ public:
 class c2 : public c1
 {
 public:
-    unsigned __int32 i2;
+    uint32_t i2;
     double md;
 };
 
@@ -34,7 +32,7 @@ bool test(accelerator_view &rv)
     vector<int> A(size);
     vector<c2> Gc(size);
     vector<int> Gi(size);
-    vector<unsigned __int32> Gui(size);
+    vector<uint32_t> Gui(size);
 
     for(int i = 0; i < size; i++)
     {
@@ -52,7 +50,7 @@ bool test(accelerator_view &rv)
     array<int, 1> aA(e, A.begin(), rv);
     array<c2, 1> aGc(e, Gc.begin(), rv);
     array<int, 1> aGi(e, Gi.begin(), rv);
-    array<unsigned __int32, 1> aGui(e, Gui.begin(), rv);
+    array<uint32_t, 1> aGui(e, Gui.begin(), rv);
 
     parallel_for_each(aA.get_extent(), [&](index<1>idx) __GPU
     {
@@ -62,9 +60,9 @@ bool test(accelerator_view &rv)
         if (i2 != 1)
             aA[idx] = 1;
 
-        unsigned __int32 *pi2 = &aGui[idx];
+        uint32_t *pi2 = &aGui[idx];
         double * pd1 = (double *)pi2;
-        unsigned __int32 i4 = *(unsigned __int32 *)pd1;
+        uint32_t i4 = *(uint32_t *)pd1;
 
         if (i4 != 1)
             aA[idx] = 1;
@@ -100,7 +98,7 @@ runall_result test_main()
 
     accelerator_view rv = device.get_default_view();
 
-    passed = test<__int32>(rv) && test<unsigned long>(rv) && test<double>(rv) && test<float>(rv);
+    passed = test<int32_t>(rv) && test<unsigned long>(rv) && test<double>(rv) && test<float>(rv);
 
     printf("%s\n", passed ? "Passed!" : "Failed!");
 

@@ -43,10 +43,10 @@ runall_result test(vector<int> &C1, vector<int> &C2, const vector<int> &refC, ac
         index<3> groupIdx = idxGroup.tile;
         index<3> localIdx = idxGroup.local;
         extent<3> groupShape(BLOCK0, BLOCK1, BLOCK2);
-        
+
         // flat index constructed with group and local index
-        int flatIdx = (groupIdx[0] * groupShape[0] + localIdx[0]) * DIM1 * DIM2 + 
-                      (groupIdx[1] * groupShape[1] + localIdx[1]) * DIM2 + 
+        int flatIdx = (groupIdx[0] * groupShape[0] + localIdx[0]) * DIM1 * DIM2 +
+                      (groupIdx[1] * groupShape[1] + localIdx[1]) * DIM2 +
                       (groupIdx[2] * groupShape[2] + localIdx[2]);
 
         // flat index constructed with global index
@@ -59,11 +59,11 @@ runall_result test(vector<int> &C1, vector<int> &C2, const vector<int> &refC, ac
     C2 = fC2;
 
     int verify_size = DIM0 * DIM1 * DIM2;
-    
+
     runall_result result;
     result &= REPORT_RESULT(Verify(C1.data(), refC.data(), verify_size));
     result &= REPORT_RESULT(Verify(C2.data(), refC.data(), verify_size));
-    
+
     return result;
 }
 
@@ -82,9 +82,9 @@ runall_result test(vector<int> &C1, vector<int> &C2, const vector<int> &refC, ac
         index<2> groupIdx = idxGroup.tile;
         index<2> localIdx = idxGroup.local;
         extent<2> groupShape(BLOCK0, BLOCK1);
-        
+
         // flat index constructed with group and local index
-        int flatIdx = (groupIdx[0] * groupShape[0] + localIdx[0]) * DIM1 + 
+        int flatIdx = (groupIdx[0] * groupShape[0] + localIdx[0]) * DIM1 +
                       (groupIdx[1] * groupShape[1] + localIdx[1]);
 
         // flat index constructed with global index
@@ -101,7 +101,7 @@ runall_result test(vector<int> &C1, vector<int> &C2, const vector<int> &refC, ac
     runall_result result;
     result &= REPORT_RESULT(Verify(C1.data(), refC.data(), verify_size));
     result &= REPORT_RESULT(Verify(C2.data(), refC.data(), verify_size));
-    
+
     return result;
 }
 
@@ -113,14 +113,14 @@ runall_result test(vector<int> &C1, vector<int> &C2, const vector<int> &refC, ac
     array<int, 1> fC2(vec, av);
 
     parallel_for_each(vec.tile<BLOCK0>(), [&] (tiled_index<BLOCK0> idxGroup) __GPU
-    {   
+    {
         // c is the flat index calculated from global and group/local indices
         // obtained from the special tiled_index
         index<1> globalIdx = idxGroup;
         index<1> groupIdx = idxGroup.tile;
         index<1> localIdx = idxGroup.local;
         extent<1> groupShape(BLOCK0);
-        
+
         // flat index constructed with group and local index
         int flatIdx = (groupIdx[0] * groupShape[0] + localIdx[0]);
 
@@ -130,7 +130,7 @@ runall_result test(vector<int> &C1, vector<int> &C2, const vector<int> &refC, ac
         fC1[idxGroup] = flatIdx;
         fC2[idxGroup] = flatIdx2;
     });
-    
+
     C1 = fC1;
     C2 = fC2;
 
@@ -139,7 +139,7 @@ runall_result test(vector<int> &C1, vector<int> &C2, const vector<int> &refC, ac
     runall_result result;
     result &= REPORT_RESULT(Verify(C1.data(), refC.data(), verify_size));
     result &= REPORT_RESULT(Verify(C2.data(), refC.data(), verify_size));
-    
+
     return result;
 }
 
@@ -156,21 +156,21 @@ runall_result test_main()
 
     vector<int> C1(size), C2(size);
     vector<int> refC(size);
-    
+
     for (unsigned int i = 0; i < size; i++)
     {
         refC[i] = i;
     }
-    
+
     // test doesn't require double support but require high end cards with high performance
     // to finish compute in less than windows timeout.
     accelerator_view av = require_device(device_flags::D3D11_GPU|device_flags::DOUBLE).get_default_view();
-    
+
     runall_result result;
     result &= REPORT_RESULT((test<DIM0, BLOCK0>(C1, C2, refC, av)));
     result &= REPORT_RESULT((test<DIM0, DIM1, BLOCK0, BLOCK1>(C1, C2, refC, av)));
     result &= REPORT_RESULT((test<DIM0, DIM1, DIM2, BLOCK0, BLOCK1, BLOCK2>(C1, C2, refC, av)));
-    
+
     return result;
 
 }

@@ -181,7 +181,7 @@ namespace Concurrency {
 		class amptest_exception : public std::exception {
 		public:
 			explicit amptest_exception(const std::string& what) : m_what(what) {}
-			virtual const char* what() const noexcept override { return m_what.c_str(); }
+			virtual const char* what() const AMP_NOEXCEPT override { return m_what.c_str(); }
 		private:
 			std::string m_what;
 		};

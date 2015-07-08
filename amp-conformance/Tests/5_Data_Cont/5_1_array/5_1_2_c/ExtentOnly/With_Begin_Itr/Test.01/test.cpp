@@ -6,7 +6,7 @@
 // INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 // See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
 /// <tags>P1</tags>
-/// <summary>Array(extent based) constructed with only begin iterator - use hash_multiset</summary>
+/// <summary>Array(extent based) constructed with only begin iterator - use unordered_multiset</summary>
 
 #include <unordered_set>
 #include "./../../../constructor.h"

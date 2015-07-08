@@ -34,9 +34,9 @@ runall_result test_main()
     {
         acc.set_default_cpu_access_type(ACCESS_TYPE);
     }
-    
+
     std::vector<int> v(10);
-    
+
     array_view<int, 1> *av = new array_view<int, 1>(10, v);
     {
         array_view<int, 1> alias = *av;
@@ -45,10 +45,10 @@ runall_result test_main()
             alias[0] = 17;
         });
     }
-    
+
     Log() << "Destructing the AV for an implicit synch" << std::endl;
     av->~array_view();
-    
+
     Log() << "Result is: " << v[0] << " Expected: 17" << std::endl;
     return REPORT_RESULT(v[0] == 17) ? runall_pass : runall_fail;
 }

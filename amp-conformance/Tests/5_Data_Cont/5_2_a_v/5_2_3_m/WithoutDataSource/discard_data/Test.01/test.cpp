@@ -47,7 +47,7 @@ runall_result test1(const accelerator_view &av)
 runall_result test_main()
 {
     accelerator_view av = require_device().get_default_view();
-    
+
     runall_result res;
     res &= REPORT_RESULT(test1(av));
     return res;

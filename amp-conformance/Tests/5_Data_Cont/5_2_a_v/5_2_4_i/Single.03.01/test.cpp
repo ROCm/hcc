@@ -31,35 +31,35 @@ using namespace Concurrency::Test;
 int main()
 {
     ArrayViewTest<int, 2> original(extent<2>(5, 5));
-    
+
     // set some data in the original
     original.view()[index<2>(2, 3)] = 13;
     original.set_known_value(index<2>(2, 3), 13);
-    
+
     // create a section and projection on the GPU and set data
     array_view<int, 2> original_av = original.view();
     parallel_for_each(extent<1>(1), [original_av] (index<1>) __GPU {
-        
+
         // this section is from [2-5), 2-5) of the original
         array_view<int, 2> gpu_section = original_av.section(index<2>(2, 2));
-        
+
         // create a projection -- this is row 2 of the original (2, [2-5))
         array_view<int, 1> gpu_projection = gpu_section[0];
-        
+
         // set some data in the section -- (2, 4) in the original
         gpu_section[index<2>(0, 2)] = 17;
-        
+
         // set some data in the projection -- (2, 2) in the original
         gpu_projection[index<1>(0)] = original_av[index<2>(2, 3)];
     });
-    
+
     // create tracking structures
     ArrayViewTest<int, 2> section = original.section(original.view().section(index<2>(2, 2)), index<2>(2, 2));
     section.set_known_value(index<2>(0, 2), 17);
-    
+
     ArrayViewTest<int, 1, 2> projection = section.projection(section.view()[0], 0);
     projection.set_known_value(index<1>(0), 13);
-    
+
     // verify each data point through the array_view interface
     return
         original.view()(2, 2) == 13 &&

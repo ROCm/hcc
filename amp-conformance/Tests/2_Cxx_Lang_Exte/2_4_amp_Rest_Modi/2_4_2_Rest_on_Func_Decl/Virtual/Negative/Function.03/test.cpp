@@ -7,7 +7,7 @@
 /// <summary>test virtual member function with restrict(amp)</summary>
 //#Expects: Error: error C3581
 
-#include <amptest.h> 
+#include <amptest.h>
 
 class A
 {
@@ -24,8 +24,8 @@ void foo() __GPU
     a.get();
 }
 
-int main(int argc, char **argv) 
-{ 
+int main(int argc, char **argv)
+{
     foo();
     return 1;
 }

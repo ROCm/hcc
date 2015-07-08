@@ -48,7 +48,7 @@ int test() __GPU
     i9 = index<3>(9, 9, 9);
 
     ir = index<3>(61, 61, 61);
-    
+
     it = (i1 += i2) += (i3 -= i4 += i5) += (i6 += i7 -= i8 -= i9);
 
     if (!(it == ir))

@@ -174,4 +174,4 @@ bool CopyBetweenStdContAndArrayView(Concurrency::accelerator& destDevice)
 	
 	Log() << "PASSED" << std::endl;
 	return true;
-}                                                                                                                                                                            
+}

@@ -21,6 +21,6 @@ int main()
 {
     int (S::*p1)(float a, double b) = &S::foo;
     int (S::*p2)(float a, double b) __CPU_ONLY_EXPLICIT = &S::foo;
-    
+
     return typeid(p1) == typeid(p2) ? runall_pass : runall_fail;
 }

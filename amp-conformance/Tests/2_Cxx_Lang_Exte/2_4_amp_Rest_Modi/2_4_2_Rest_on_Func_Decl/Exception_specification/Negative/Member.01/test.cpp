@@ -13,13 +13,13 @@
 
 struct S
 {
-    int test() __GPU throw() 
+    int test() __GPU throw()
     {
         return 0;
     }
 };
 
-int main() 
+int main()
 {
     return runall_fail;
 }

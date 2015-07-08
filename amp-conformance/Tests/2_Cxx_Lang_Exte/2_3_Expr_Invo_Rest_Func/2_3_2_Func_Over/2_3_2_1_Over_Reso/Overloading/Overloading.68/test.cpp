@@ -13,18 +13,18 @@ void f(int &v) __GPU
     v = 1;
 }
 
-void f(float &f) 
+void f(float &f)
 {
 }
 
-bool test() 
+bool test()
 {
     bool passed = true;
 
     int v = 0;
-    
+
     f(v);
-    
+
     if (v != 1)
         passed = false;
 

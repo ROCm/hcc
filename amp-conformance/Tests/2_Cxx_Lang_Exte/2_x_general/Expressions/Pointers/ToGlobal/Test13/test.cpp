@@ -8,8 +8,6 @@
 
 #include "../../inc/common.h"
 
-#define __int32 int
-
 class c1
 {
 public:
@@ -22,7 +20,7 @@ public:
 class c2 : public c1
 {
 public:
-    unsigned __int32 i2;
+    uint32_t i2;
     double md;
 };
 
@@ -82,7 +80,7 @@ runall_result test_main()
 
     accelerator_view rv = device.get_default_view();
 
-    passed = test<__int32>(rv) && test<unsigned long>(rv) && test<double>(rv) && test<float>(rv);
+    passed = test<int32_t>(rv) && test<unsigned long>(rv) && test<double>(rv) && test<float>(rv);
 
     printf("%s\n", passed ? "Passed!" : "Failed!");
 

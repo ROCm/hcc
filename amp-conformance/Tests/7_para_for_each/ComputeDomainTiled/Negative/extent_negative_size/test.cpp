@@ -33,27 +33,13 @@ runall_result test_main()
 
 	runall_result result;
 
-	result &= REPORT_RESULT(expect_exception(av,
-		extent<1>(-1).tile<1>(),
-		"concurrency::parallel_for_each: unsupported compute domain, the extent of dimension 0 of the compute domain (-1) cannot be smaller than or equal to 0."));
-	result &= REPORT_RESULT(expect_exception(av,
-		extent<2>(-2, 3).tile<2, 1>(),
-		"concurrency::parallel_for_each: unsupported compute domain, the extent of dimension 0 of the compute domain (-2) cannot be smaller than or equal to 0."));
-	result &= REPORT_RESULT(expect_exception(av,
-		extent<2>(-2, -2).tile<2, 2>(),
-		"concurrency::parallel_for_each: unsupported compute domain, the extent of dimension 0 of the compute domain (-2) cannot be smaller than or equal to 0."));
-	result &= REPORT_RESULT(expect_exception(av,
-		extent<2>(2, -1).tile<32, 1>(),
-		"concurrency::parallel_for_each: unsupported compute domain, the extent of dimension 1 of the compute domain (-1) cannot be smaller than or equal to 0."));
-	result &= REPORT_RESULT(expect_exception(av,
-		extent<2>(std::numeric_limits<int>::min(), std::numeric_limits<int>::min()).tile<3, 3>(),
-		"concurrency::parallel_for_each: unsupported compute domain, the extent of dimension 0 of the compute domain (-2147483648) cannot be smaller than or equal to 0."));
-	result &= REPORT_RESULT(expect_exception(av,
-		extent<3>(8, -1, 8).tile<2, 1, 5>(),
-		"concurrency::parallel_for_each: unsupported compute domain, the extent of dimension 1 of the compute domain (-1) cannot be smaller than or equal to 0."));
-	result &= REPORT_RESULT(expect_exception(av,
-		extent<3>(8, 3, -2).tile<2, 1, 5>(),
-		"concurrency::parallel_for_each: unsupported compute domain, the extent of dimension 2 of the compute domain (-2) cannot be smaller than or equal to 0."));
+	result &= REPORT_RESULT(expect_exception(av, extent<1>(-1).tile<1>()));
+	result &= REPORT_RESULT(expect_exception(av, extent<2>(-2, 3).tile<2, 1>()));
+	result &= REPORT_RESULT(expect_exception(av, extent<2>(-2, -2).tile<2, 2>()));
+	result &= REPORT_RESULT(expect_exception(av, extent<2>(2, -1).tile<32, 1>()));
+	result &= REPORT_RESULT(expect_exception(av, extent<2>(std::numeric_limits<int>::min(), std::numeric_limits<int>::min()).tile<3, 3>()));
+	result &= REPORT_RESULT(expect_exception(av, extent<3>(8, -1, 8).tile<2, 1, 5>()));
+	result &= REPORT_RESULT(expect_exception(av, extent<3>(8, 3, -2).tile<2, 1, 5>()));
 
 	return result;
 }

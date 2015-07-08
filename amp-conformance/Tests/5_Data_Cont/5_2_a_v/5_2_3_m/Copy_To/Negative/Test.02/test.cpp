@@ -21,7 +21,7 @@
 /// <summary>Copy an array_view to another array_view with incompatible rank</summary>
 //#Expects: Error: test.cpp\(44\) : error C2664
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 
 using namespace Concurrency;
@@ -34,7 +34,7 @@ int main()
     vector<long> src_vec(src_ex.size());
     Fill<long>(src_vec.data(), src_ex.size());
     array_view<long, 2> src(src_ex, src_vec);
-    
+
     // same size, different rank
     extent<1> dest_ex(src_ex.size());
     vector<long> dest_vec(dest_ex.size());

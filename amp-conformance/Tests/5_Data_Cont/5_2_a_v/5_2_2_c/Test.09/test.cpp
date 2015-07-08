@@ -19,7 +19,7 @@
 //
 /// <tags>P1</tags>
 /// <summary>Create an array_view of const type using a single extent value, e0, and a container in a CPU restricted function</summary>
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 #include <algorithm>
 
@@ -57,7 +57,7 @@ int main()
         return runall_skip;
     }
     accelerator_view acc_view = device.get_default_view();
-    
+
     // use in parallel_for_each
     parallel_for_each(acc_view, av2.get_extent(), [=] (index<1> idx) __GPU
     {
@@ -66,7 +66,7 @@ int main()
 
     // vec should be updated after this
     printf("Accessing first element of array_view [%d] to force synchronize.\n", av2[0]);
-    
+
     // verify data
     for(unsigned int i = 0; i < static_cast<unsigned int>(vec.size()); i++)
     {
@@ -88,7 +88,7 @@ int main()
             return runall_fail;
         }
     }
-    
+
     printf("PASS!\n");
     return runall_pass;
 }

@@ -11,7 +11,7 @@
 class c
 {
 public:
-    void f(int &flag) __GPU 
+    void f(int &flag) __GPU
     {
         [](int &flag) __GPU
         {

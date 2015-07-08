@@ -8,7 +8,7 @@
 /// <tags>P1</tags>
 /// <summary>Reinterpret an Array of 3 floats as float (GPU)</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <amptest_main.h>
 
 using namespace Concurrency;
@@ -21,15 +21,15 @@ runall_result test_main()
     public:
         float r;
         float b;
-        float g;    
+        float g;
     };
 
     std::vector<float> v(10 * 3);
     Fill(v);
-    
+
     array<Foo, 1> arr_rbg(10, reinterpret_cast<Foo *>(v.data()));
 	array_view<Foo, 1> av_rbg(arr_rbg);
-    
+
     int expected_size = arr_rbg.reinterpret_as<float>().get_extent().size();
 
     // reinterpret on the GPU and copy back
@@ -39,6 +39,6 @@ runall_result test_main()
         array_view<const float, 1> av_float = arr_rbg.reinterpret_as<float>();
         results[i] = av_float[i];
     });
-    
+
     return Verify<float>(reinterpret_cast<float *>(av_rbg.data()), results.data(), expected_size) ? runall_pass : runall_fail;
 }

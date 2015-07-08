@@ -13,10 +13,6 @@
 #include <time.h>
 #include <amptest.h>
 
-#define BOOL int
-#define TRUE 1
-#define FALSE 0
-
 using std::vector;
 using namespace Concurrency;
 using namespace Concurrency::Test;
@@ -31,13 +27,13 @@ void InitializeArray(vector <int> &vM, int size)
 }
 
 // Vector function testing the additive operators
-void KernelWithRelationalOperators(index<2> idx, 
-    array<int, 2> &aC, array<int, 2> &aD, array<int, 2> &aE, array<int, 2> &aF, array<int, 2> &aG, array<int, 2> &aH, 
+void KernelWithRelationalOperators(index<2> idx,
+    array<int, 2> &aC, array<int, 2> &aD, array<int, 2> &aE, array<int, 2> &aF, array<int, 2> &aG, array<int, 2> &aH,
     array<int, 2> &aA, array<int, 2> &aB) __GPU
 {
     // Equality, ==
-    BOOL mc = (aA[idx] == aB[idx]);
-    if(mc == TRUE)
+    bool mc = (aA[idx] == aB[idx]);
+    if(mc == true)
     {
         aC[idx] = 1;
     }
@@ -47,41 +43,41 @@ void KernelWithRelationalOperators(index<2> idx,
     }
 
     // Greater than or equal to, >=
-    BOOL md = (aA[idx] >= aB[idx]);
-    if(md == TRUE)
+    bool md = (aA[idx] >= aB[idx]);
+    if(md == true)
     {
         aD[idx] = 1;
     }
     else
     {
         aD[idx] = 0;
-    }    
+    }
 
     // Greater than, >
-    BOOL me = (aA[idx] > aB[idx]);
-    if(me == TRUE)
+    bool me = (aA[idx] > aB[idx]);
+    if(me == true)
     {
         aE[idx] = 1;
     }
     else
     {
         aE[idx] = 0;
-    }    
+    }
 
     // Less than or equal to, <=
-    BOOL mf = (aA[idx] <= aB[idx]);
-    if(mf == TRUE)
+    bool mf = (aA[idx] <= aB[idx]);
+    if(mf == true)
     {
         aF[idx] = 1;
     }
     else
     {
         aF[idx] = 0;
-    }    
+    }
 
     // Less than, <
-    BOOL mg = (aA[idx] < aB[idx]);
-    if(mg == TRUE)
+    bool mg = (aA[idx] < aB[idx]);
+    if(mg == true)
     {
         aG[idx] = 1;
     }
@@ -91,8 +87,8 @@ void KernelWithRelationalOperators(index<2> idx,
     }
 
     // Not equal to, !=
-    BOOL mh = (aA[idx] != aB[idx]);
-    if(mh == TRUE)
+    bool mh = (aA[idx] != aB[idx]);
+    if(mh == true)
     {
         aH[idx] = 1;
     }
@@ -123,7 +119,7 @@ int main(int argc, char **argv)
     vector<int> A(size);
     vector<int> B(size);
 
-    // Initialize input 
+    // Initialize input
     srand(25763);
     InitializeArray(A, size);
     InitializeArray(B, size);
@@ -135,7 +131,7 @@ int main(int argc, char **argv)
     // setup input arrays
     array<int, 2> aA(e, A.begin(), A.end(), rv), aB(e, B.begin(), B.end(), rv);
 
-    // setup output 
+    // setup output
     array<int, 2> aC(e, rv), aD(e, rv), aE(e, rv), aF(e, rv), aG(e, rv), aH(e, rv);
     vector<int> C(size);
     vector<int> D(size);
@@ -278,7 +274,7 @@ int main(int argc, char **argv)
         }
     }
 
-    if(numFail > 0) 
+    if(numFail > 0)
     {
         printf("\n%s: %d test(s) failed\n", argv[0], numFail);
     }

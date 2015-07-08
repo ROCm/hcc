@@ -34,7 +34,7 @@ restrict test1(restrict a = 1)
 }
 
 // Main entry point
-int main(int argc, char **argv) 
+int main(int argc, char **argv)
 {
     bool passed = true;
     int x = 10;

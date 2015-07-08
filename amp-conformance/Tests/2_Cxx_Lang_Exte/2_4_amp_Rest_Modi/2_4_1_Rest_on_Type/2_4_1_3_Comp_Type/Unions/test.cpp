@@ -89,7 +89,7 @@ int test(accelerator_view &rv)
 	
 	// Verifying Array Declaration of Union does not result in Compilation Error
 	extent<1> vector(128);
-    array<SampleUnion, 1> aS(vector, rv);   
+    array<SampleUnion, 1> aS(vector, rv);
 	
 	printf("Test : %s \n",pass?"passed" : "failed");
 	return ( pass ? 0 : 1 );

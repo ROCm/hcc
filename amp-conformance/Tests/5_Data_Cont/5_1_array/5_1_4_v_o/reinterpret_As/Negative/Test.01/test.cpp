@@ -8,7 +8,7 @@
 /// <tags>P1</tags>
 /// <summary>Call reinterpret_as in a way that doesn't evenly divide length</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <amptest_main.h>
 
 using namespace Concurrency;

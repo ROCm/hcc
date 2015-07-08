@@ -23,8 +23,8 @@ bool test(accelerator_view &rv)
 
     vector<int> A(size);
     vector<s> G1(size);
-    vector<const int> G2(size);
-    vector<const double> G3(size);
+    vector<int> G2(size);
+    vector<double> G3(size);
 
     for(int i = 0; i < size; i++)
     {

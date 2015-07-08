@@ -14,27 +14,27 @@
 
 using namespace Concurrency;
 using namespace Concurrency::Test;
-        
+
 runall_result test_main()
 {
     array<int, 1> arr(10);
-    
+
     parallel_for_each(arr.get_extent(), [&](index<1> idx) restrict(amp)
     {
         struct A_base
         {
             bool m1;
         };
-        
+
         class A : A_base
         {
 
         };
-        
-        A local_array[10];        
-        
+
+        A local_array[10];
+
     });
-    
+
     return runall_fail;
 }
 

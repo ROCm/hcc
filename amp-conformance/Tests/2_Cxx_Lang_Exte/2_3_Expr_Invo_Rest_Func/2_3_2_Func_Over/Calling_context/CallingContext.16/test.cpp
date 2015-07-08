@@ -17,7 +17,7 @@ public:
 class C2
 {
 public:
-    void foo(int &flag) __GPU 
+    void foo(int &flag) __GPU
     {
         C1 c;
 

@@ -10,7 +10,7 @@ endif (HAS_HSA EQUAL 1)
 ####################
 if (HAS_HSA EQUAL 1)
 # TBD install commands for HSA-specific files here
-add_mcwamp_library_hsa(mcwamp_hsa mcwamp_hsa.cpp HSAContextKaveri.cpp)
+add_mcwamp_library_hsa(mcwamp_hsa mcwamp_hsa.cpp)
 install(TARGETS mcwamp_hsa
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib)

@@ -18,7 +18,7 @@
 //--------------------------------------------------------------------------------------
 //
 /// <tags>P1</tags>
-/// <summary>Copy construct an array_view from another array_view. Ensure that a shallow copy is made by 
+/// <summary>Copy construct an array_view from another array_view. Ensure that a shallow copy is made by
 /// changing data using one view and make sure the other view can see the update - use function parameter</summary>
 #include <amptest.h>
 #include <amptest_main.h>
@@ -43,7 +43,7 @@ runall_result test(array_view<int, 1> &av1, array_view<int, 1> av2, vector<int>&
     }
 
     accelerator_view acc_view = require_device().get_default_view();
-    
+
     // use in parallel_for_each
     parallel_for_each(acc_view, av2.get_extent(), [=] (index<1> idx) __GPU
     {
@@ -52,7 +52,7 @@ runall_result test(array_view<int, 1> &av1, array_view<int, 1> av2, vector<int>&
 
     // vec should be updated after this
     printf("Accessing first element of array_view [%d] to force synchronize.\n", av2[0]);
-    
+
     // verify data
     if(!VerifyDataOnCpu(av1, vec))
     {
@@ -66,7 +66,7 @@ runall_result test(array_view<int, 1> &av1, array_view<int, 1> av2, vector<int>&
         printf("data copied to vector doesnt contained updated data. FAIL!\n");
         return runall_fail;
     }
-    
+
     printf("PASS!\n");
     return runall_pass;
 }

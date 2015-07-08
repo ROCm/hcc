@@ -22,7 +22,7 @@
 #include "./../../../../constructor.h"
 #include <amptest_main.h>
 
-typedef union 
+typedef union
 {
     int* n;
     float* u;

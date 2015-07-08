@@ -18,6 +18,6 @@ int main()
 {
     int (*p1)(float a, double b) = &foo;
     int (*p2)(float a, double b) __CPU_ONLY_EXPLICIT = &foo;
-    
+
     return typeid(p1) == typeid(p2) ? runall_pass : runall_fail;
 }

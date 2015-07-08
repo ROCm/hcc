@@ -9,7 +9,7 @@
 
 #include <amptest.h>
 
-void Tile_staticNotSupported(int x) 
+void Tile_staticNotSupported(int x)
 {
 	tile_static int var;
 }

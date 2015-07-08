@@ -47,7 +47,7 @@ int test() __GPU
     index<3> i7(7, 7, 7);
     index<3> i8(8, 8, 8);
     index<3> i9(9, 9, 9);
-    
+
     ir = index<3>(-7, -7, -7);
     it = i1 + i2 + i3 - i4 - i5 + i6 + i7 - i8 - i9 ;
 
@@ -56,9 +56,9 @@ int test() __GPU
         return 13;   // test1 scenario3 failed
     }
 
-    ir = index<3>(19, 19, 19);    
+    ir = index<3>(19, 19, 19);
     it = (i1 + i2 ) + (i3 - i4 + i5) - i2 + (i6 + i7) - (i8 - i9);
-    
+
     if (!(it == ir))
     {
         return 14;   // test1 scenario4 failed
@@ -104,12 +104,12 @@ int test_device()
     return 0;
 }
 
-runall_result test_main() 
-{ 
+runall_result test_main()
+{
 	runall_result result;
     // Test on host
     result &= REPORT_RESULT(test() == 0);
-   
+
     // Test on device
 	result &= REPORT_RESULT(test_device() == 0);
     return result;

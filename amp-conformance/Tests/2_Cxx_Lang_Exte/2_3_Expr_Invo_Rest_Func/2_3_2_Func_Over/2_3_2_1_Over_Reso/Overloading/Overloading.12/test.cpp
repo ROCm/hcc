@@ -11,7 +11,7 @@
 class c
 {
 public:
-    int f(int *) 
+    int f(int *)
     {
         return 0;
     }
@@ -26,7 +26,7 @@ bool test()
 {
     int flag = 0;
     bool passed = true;
-    
+
     c o;
 
     int *p = NULL;

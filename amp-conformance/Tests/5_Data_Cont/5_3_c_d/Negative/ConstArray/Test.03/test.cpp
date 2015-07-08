@@ -10,7 +10,7 @@
 
 using namespace Concurrency;
 
-int main() 
+int main()
 {	
     accelerator cpuDevice(accelerator::cpu_accelerator);
 	

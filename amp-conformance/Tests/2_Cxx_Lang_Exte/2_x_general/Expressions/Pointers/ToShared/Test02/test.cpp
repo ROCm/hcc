@@ -8,7 +8,7 @@
 
 #include "../../inc/common.h"
 
-class derived_c 
+class derived_c
 {
 public:
     void f1(double d) {m_d = d;}
@@ -22,7 +22,7 @@ public:
     double m_d;
 };
 
-struct derived_s 
+struct derived_s
 {
 public:
     void f1(double d) {m_d = d;}

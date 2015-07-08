@@ -20,7 +20,7 @@
 /// <tags>P1</tags>
 /// <summary>Access the data pointer of an array_view section</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 
 using namespace Concurrency;
@@ -28,7 +28,7 @@ using namespace Concurrency::Test;
 using std::vector;
 
 int main()
-{    
+{
     const int size = 20;
 
     vector<int> vec(size);
@@ -39,7 +39,7 @@ int main()
 
     //create a subsection
     array_view<int> section = original.section(5, 15);
-    
+
     // the data pointer of the section is offset by 5
     return Verify(section.data(), original.data() + 5, 15) ? runall_pass : runall_fail;
 }

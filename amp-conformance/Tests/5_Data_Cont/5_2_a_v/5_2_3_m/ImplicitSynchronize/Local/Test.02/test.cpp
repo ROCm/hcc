@@ -32,10 +32,10 @@ int main()
     std::vector<int> v(100);
     Fill(v);
     array_view<int, 1> av(extent<1>(static_cast<int>(v.size())), v);
-    
+
     std::vector<int> random_data(v.size());
     Fill(v);
-    
+
     // create a new readonly av and verify that writes to the underlying data are visible
     array_view<const int, 1> other(av);
     for (unsigned int i = 0; i < static_cast<unsigned int>(v.size()); i++)

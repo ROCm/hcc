@@ -37,14 +37,14 @@ runall_result test_main()
 	
     array<int, 2> a(extent<2>(10, 10));
     array_view<int, 2> av(a);
-    
+
     parallel_for_each(extent<1>(1), [=](index<1>) __GPU {
         array_view<int, 1> projection = av.section(extent<2>(5, 5))[1];
         projection[1] = 15;
         av(0, 1) = projection[1];
     });
-    
-    return 
+
+    return
         av[index<2>(1, 1)] == 15 &&
         av[index<2>(0, 1)] == 15 ? runall_pass : runall_fail;
 }

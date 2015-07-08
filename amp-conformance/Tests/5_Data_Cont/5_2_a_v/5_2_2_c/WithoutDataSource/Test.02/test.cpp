@@ -11,7 +11,7 @@
 using namespace Concurrency;
 using namespace Concurrency::Test;
 
-/* 
+/*
 * Test copy construct of array_view object using array_view having no data source , before p_f_e
 */	
 bool test1(const accelerator_view &av)
@@ -47,7 +47,7 @@ bool test1(const accelerator_view &av)
 	return passed;
 }
 
-/* 
+/*
 * Test copy construct of array_view object using array_view having no data source , after p_f_e
 */
 bool test2(const accelerator_view &av)

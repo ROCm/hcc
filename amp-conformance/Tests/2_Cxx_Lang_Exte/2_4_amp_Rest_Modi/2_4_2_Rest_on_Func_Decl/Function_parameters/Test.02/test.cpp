@@ -17,11 +17,11 @@ int test() __GPU
 }
 
 
-int main() 
+int main()
 {
     accelerator device = require_device(Device::ALL_DEVICES);
     accelerator_view av = device.get_default_view();
-    
+
     int r = GPU_INVOKE(av, int, test);
     return r == 2 ? runall_pass : runall_fail;
 }

@@ -37,13 +37,13 @@ runall_result test_main()
     {
         acc.set_default_cpu_access_type(ACCESS_TYPE);
     }
-    
+
     ArrayViewTest<int, 1> av(extent<1>(10));
     av.view().data()[0] = 17;
     av.set_known_value(index<1>(0), 17);
-    
+
     av.view().refresh();
-    
+
     Log() << "Reading on the GPU" << std::endl;
     std::vector<int> result_v(1);
     array_view<int, 1> result(1, result_v);
@@ -53,6 +53,6 @@ runall_result test_main()
         gpu_view[1] = gpu_view[0];
     });
     av.set_known_value(index<1>(1), 17);
-    
+
     return result[0] == 17 && av.view()[0] == 17 && av.view()[1] == 17 ? av.pass() : av.fail();
 }

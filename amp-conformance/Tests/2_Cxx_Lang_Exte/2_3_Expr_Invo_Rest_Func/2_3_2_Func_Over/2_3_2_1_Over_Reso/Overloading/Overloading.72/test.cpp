@@ -14,7 +14,7 @@ class c2
 class c
 {
 public:
-    int f(const int c2::*) 
+    int f(const int c2::*)
     {
         return 0;
     }

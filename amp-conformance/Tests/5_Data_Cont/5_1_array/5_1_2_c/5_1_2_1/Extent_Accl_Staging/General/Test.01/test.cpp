@@ -67,12 +67,12 @@ runall_result test_main()
 	result &= REPORT_RESULT((test_feature<int, 5>()));
 	result &= REPORT_RESULT((test_feature<unsigned int, 3>()));
 	result &= REPORT_RESULT((test_feature<float, 4>()));
-    
+
 	// test with double
 	runall_result dbl_result = REPORT_RESULT(test_feature<8>());
 	if(!dbl_result.get_is_skip()) // don't aggregate if skipped
 		result &= dbl_result;
-    
+
     return result;
 }
 

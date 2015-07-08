@@ -34,20 +34,20 @@ runall_result test_main()
     {
         acc.set_default_cpu_access_type(ACCESS_TYPE);
     }
-    
+
     std::vector<int> v(10);
-    
+
     {
         array_view<int, 1> av(10, v);
-        
+
 		Log() << "Writing on the GPU" << std::endl;
         parallel_for_each(extent<1>(1), [=](index<1>) restrict(amp) {
             av[0] = 17;
         });
-        
+
         Log() << "Destructing the AV for an implicit synch" << std::endl;
     }
-    
+
     Log() << "Result is: " << v[0] << " Expected: 17" << std::endl;
     return REPORT_RESULT(v[0] == 17);
 }

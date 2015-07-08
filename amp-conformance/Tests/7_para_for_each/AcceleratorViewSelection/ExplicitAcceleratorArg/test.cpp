@@ -72,14 +72,14 @@ public:
     {
         extent<_Rank> e = create_extent<_Rank>();
         unsigned int size = e.size();
-        
-        vector<unsigned int> input(size), expected(size);       
+
+        vector<unsigned int> input(size), expected(size);
         Fill<unsigned int>(input, 0, MAX_INPUT_VAL);
         for(size_t i = 0; i < size; i++)
         {
             expected[i] = input[i] + 1;
         }
-        
+
         array<unsigned int, _Rank> arr(e, input.begin(), target);
 
         if (_D0 == INVALID_TILE_DIM) {
@@ -108,8 +108,8 @@ public:
     {
         extent<_Rank> e = create_extent<_Rank>();
         unsigned int size = e.size();
-        
-        vector<unsigned int> input(size), expected(size);       
+
+        vector<unsigned int> input(size), expected(size);
         Fill<unsigned int>(input, 0, MAX_INPUT_VAL);
         for(size_t i = 0; i < size; i++)
         {

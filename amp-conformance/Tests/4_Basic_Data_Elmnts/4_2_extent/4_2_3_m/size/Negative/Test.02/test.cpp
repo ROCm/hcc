@@ -13,7 +13,7 @@
 
 using namespace concurrency;
 
-runall_result test_main() 
+runall_result test_main()
 {
 	runall_result result;
     try
@@ -21,7 +21,7 @@ runall_result test_main()
 		const int _rank = 5;
 		int data[] = {-1, 2, 3, 4, 5};
 
-		extent<_rank> e1(data); 
+		extent<_rank> e1(data);
 		extent<_rank> g1(e1);
 
 		parallel_for_each (g1, [=](index<_rank> idx) restrict(amp,cpu)
@@ -29,8 +29,8 @@ runall_result test_main()
 			g1.size();
 		});
 		result = runall_fail;
-    }	
-    catch (std::exception e) 
+    }
+    catch (const std::exception& e)
     {
         std::cout << "ok, Got exception as expected" << std::endl;
         result= runall_pass;

@@ -14,7 +14,7 @@ public:
     static void foo(int &flag) __GPU {flag = 1;}
 };
 
-bool test() 
+bool test()
 {
     int flag = 0;
 

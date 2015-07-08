@@ -5,18 +5,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#pragma once
+#ifndef __CLAMP_AMP_MANAGE
+#define __CLAMP_AMP_MANAGE
 
-#include <amp_allocator.h>
+#include <amp_runtime.h>
+#include <serialize.h>
 
 namespace Concurrency {
+
 
 // Dummy interface that looks somewhat like std::shared_ptr<T>
 template <typename T>
 class _data {
 public:
     _data() = delete;
-    _data(int count, bool) {}
+    _data(int count) : p_(nullptr) {}
     _data(const _data& d) restrict(cpu, amp)
         : p_(d.p_) {}
     template <typename U>
@@ -25,53 +28,77 @@ public:
     __attribute__((annotate("user_deserialize")))
         explicit _data(__global T* t) restrict(cpu, amp) { p_ = t; }
     __global T* get(void) const restrict(cpu, amp) { return p_; }
+    std::shared_ptr<KalmarQueue> get_av() const { return nullptr; }
+    void reset() const {}
+
+    T* map_ptr(bool modify = false, size_t count = 0, size_t offset = 0) const { return nullptr; }
+    void unmap_ptr(const void* addr) const {}
+    void synchronize(bool modify = false) const {}
+    void get_cpu_access(bool modify = false) const {}
+    void copy(_data<T> other, int, int, int) const {}
+    void write(const T*, int , int offset = 0, bool blocking = false) const {}
+    void read(T*, int , int offset = 0) const {}
+    void refresh() const {}
+    void set_const() const {}
+    access_type get_access() const { return access_type_auto; }
+    std::shared_ptr<KalmarQueue> get_stage() const { return nullptr; }
+
 private:
     __global T* p_;
 };
 
-
-static inline void amp_delete(void *p) { getAllocator()->free(p); }
-
 template <typename T>
 class _data_host {
-    mutable std::shared_ptr<void> mm;
-    size_t count;
+    mutable std::shared_ptr<rw_info> mm;
     bool isArray;
     template <typename U> friend class _data_host;
-
 public:
-    _data_host(int count, bool isArr = false)
-        : mm(getAllocator()->init(count * sizeof(T), nullptr), amp_delete),
-        count(count), isArray(isArr) {}
+    _data_host(size_t count, const void* src = nullptr)
+        : mm(std::make_shared<rw_info>(count*sizeof(T), const_cast<void*>(src))),
+        isArray(false) {}
 
-    _data_host(int count, T* src, bool isArr = false)
-        : mm(getAllocator()->init(count * sizeof(T), src), amp_delete),
-        count(count), isArray(isArr) {}
+    _data_host(std::shared_ptr<KalmarQueue> av, std::shared_ptr<KalmarQueue> stage, int count,
+               access_type mode)
+        : mm(std::make_shared<rw_info>(av, stage, count*sizeof(T), mode)), isArray(true) {}
 
-    _data_host(const _data_host& other)
-        : mm(other.mm), count(other.count), isArray(false) {}
+    _data_host(const _data_host& other) : mm(other.mm), isArray(false) {}
 
     template <typename U>
-        _data_host(const _data_host<U>& other)
-        : mm(other.mm), count(other.count), isArray(false) {}
+        _data_host(const _data_host<U>& other) : mm(other.mm), isArray(false) {}
 
-    T *get() const { return static_cast<T*>(mm.get()); }
-    void synchronize() const { getAllocator()->sync(mm.get()); }
-    void discard() const { getAllocator()->discard(mm.get()); }
+    T *get() const { return static_cast<T*>(mm->data); }
+    void synchronize(bool modify = false) const { mm->synchronize(modify); }
+    void discard() const { mm->disc(); }
     void refresh() const {}
-    void copy(void *dst) const { getAllocator()->copy(dst, mm.get(), count * sizeof(T)); }
-    size_t size() const { return count; }
-    void stash() const { getAllocator()->stash(mm.get()); }
+    size_t size() const { return mm->count; }
+    void reset() const { mm.reset(); }
+    void get_cpu_access(bool modify = false) const { mm->get_cpu_access(modify); }
+    std::shared_ptr<KalmarQueue> get_av() const { return mm->master; }
+    std::shared_ptr<KalmarQueue> get_stage() const { return mm->stage; }
+    access_type get_access() const { return mm->mode; }
+    void copy(_data_host<T> other, int src_offset, int dst_offset, int size) const {
+        mm->copy(other.mm.get(), src_offset * sizeof(T), dst_offset * sizeof(T), size * sizeof(T));
+    }
+    void write(const T* src, int size, int offset = 0, bool blocking = false) const {
+        mm->write(src, size * sizeof(T), offset * sizeof(T), blocking);
+    }
+    void read(T* dst, int size, int offset = 0) const {
+        mm->read(dst, size * sizeof(T), offset * sizeof(T));
+    }
+    T* map_ptr(bool modify = false, size_t count = 0, size_t offset = 0) const {
+        return (T*)mm->map(count * sizeof(T), offset * sizeof(T), modify);
+    }
+    void unmap_ptr(const void* addr) const { return mm->unmap(const_cast<void*>(addr)); }
+    void sync_to(std::shared_ptr<KalmarQueue> pQueue) const { mm->sync(pQueue, false); }
 
     __attribute__((annotate("serialize")))
         void __cxxamp_serialize(Serialize& s) const {
-            getAllocator()->append(s.getKernel(), s.getAndIncCurrentIndex(), mm, isArray);
+            s.Push(mm.get(), !std::is_const<T>::value, isArray);
         }
     __attribute__((annotate("user_deserialize")))
-        explicit _data_host(__global T* t) {}
+        explicit _data_host(__global typename std::remove_const<T>::type* t) {}
 };
 
-inline void *getDevicePointer(void *ptr) { return getAllocator()->device_data(ptr); }
-inline void *getOCLQueue(void *ptr) { return getAllocator()->getQueue(); }
-
 } // namespace Concurrency
+
+#endif // __CLAMP_AMP_MANAGE

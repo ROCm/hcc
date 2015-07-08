@@ -5,19 +5,13 @@
 // See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
 #pragma once
 
-// Microsoft Visual C++
-#ifdef _MSC_VER
-	#if _MSC_VER < 1700
-		#error Non-supported version of MSVC.
-	#endif
-	
-	#define AMP_TEST_PLATFORM_MSVC
-	#define AMP_TEST_API __cdecl
-	
+#if __clang__
+
+    #define AMP_TEST_API
+	#define AMP_NOEXCEPT noexcept
+
 // else
 #else
-    //assume clamp
-    #define AMP_TEST_PLATFORM_CLAMP
-    #define AMP_TEST_API
+	#error Unrecognized compiler.
 
 #endif

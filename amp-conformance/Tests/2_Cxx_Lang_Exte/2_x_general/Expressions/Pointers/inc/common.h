@@ -7,6 +7,7 @@
 
 #include <amptest.h>
 #include <amptest_main.h>
+#include <cstdint>
 
 using std::vector;
 using namespace Concurrency;

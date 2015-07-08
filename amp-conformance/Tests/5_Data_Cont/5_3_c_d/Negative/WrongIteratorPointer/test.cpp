@@ -15,7 +15,7 @@ using namespace Concurrency::Test;
 runall_result test_main()
 {
     accelerator cpuDevice(accelerator::cpu_accelerator);
-    
+
     std::vector<int> cont(3);
     std::fill(cont.begin(), cont.end(), 5);
     array<int, 1> destArray(3, cpuDevice.get_default_view());

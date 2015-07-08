@@ -20,7 +20,7 @@
 /// <tags>P1</tags>
 /// <summary>Test that a array_view<const int, N> can be created can be created from int*</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 #include <algorithm>
 

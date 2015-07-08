@@ -16,16 +16,16 @@ public:
         v = 1;
     }
 
-    void f(float &f) 
+    void f(float &f)
     {
-        
+
     }
 };
 
-bool test() 
+bool test()
 {
     bool passed = true;
-    
+
     c o;
 
     int v = 0;

@@ -23,7 +23,7 @@ int Test1(double d)
 
 
 // Main entry point
-int main(int argc, char **argv) 
+int main(int argc, char **argv)
 {
     bool passed = true;
 
