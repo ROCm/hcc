@@ -425,7 +425,7 @@ struct CLFlag
     const std::wstring getPath() const { return base + std::to_wstring(id++); }
 };
 static const CLFlag Flags[] = {
-    CLFlag(CL_DEVICE_TYPE_GPU, L"gpu")
+    CLFlag(CL_DEVICE_TYPE_GPU, L"gpu"),
     CLFlag(CL_DEVICE_TYPE_CPU, L"cpu")
 };
 
