@@ -213,6 +213,16 @@ public:
         return fut;
     }
 
+    uint32_t getGroupSegmentSize() {
+        hsa_status_t status = HSA_STATUS_SUCCESS;
+        uint32_t group_segment_size = 0;
+        status = hsa_executable_symbol_get_info(kernel->hsaExecutableSymbol,
+                                                HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE,
+                                                &group_segment_size);
+        STATUS_CHECK_Q(status, __LINE__);
+        return group_segment_size;
+    }
+
     // dispatch a kernel asynchronously
     hsa_status_t dispatchKernel(hsa_queue_t* commandQueue) {
         hsa_status_t status = HSA_STATUS_SUCCESS;
@@ -443,6 +453,11 @@ public:
         dispatch->setDynamicGroupSegment(dynamic_group_size);
         dispatch->dispatchKernelWaitComplete(commandQueue);
         delete(dispatch);
+    }
+
+    uint32_t GetGroupSegmentSize(void *ker) override {
+        HSADispatch *dispatch = reinterpret_cast<HSADispatch*>(ker);
+        return dispatch->getGroupSegmentSize();
     }
 
     void LaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local) override {

@@ -269,11 +269,8 @@ mcw_cxxamp_launch_kernel_async(const accelerator_view& av, size_t *ext,
 #endif
 }
 
-template<typename Kernel, int dim_ext>
-inline
-void mcw_cxxamp_launch_kernel_with_dynamic_group_memory(
-  const accelerator_view& av, size_t *ext, size_t *local_size,
-  const Kernel& f, size_t dynamic_group_memory_size) restrict(cpu,amp) {
+template<typename Kernel>
+inline void* mcw_cxxamp_get_kernel(const accelerator_view& av, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
   if (av.get_accelerator().get_device_path() == L"cpu") {
     throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
@@ -284,11 +281,21 @@ void mcw_cxxamp_launch_kernel_with_dynamic_group_memory(
   // FIXME: implicitly casting to avoid pointer to int error
   int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
   void *kernel = NULL;
-  {
-      std::string transformed_kernel_name =
-          mcw_cxxamp_fixnames(f.__cxxamp_trampoline_name());
-      kernel = CLAMP::CreateKernel(transformed_kernel_name, av.pQueue.get());
-  }
+  std::string transformed_kernel_name =
+      mcw_cxxamp_fixnames(f.__cxxamp_trampoline_name());
+  kernel = CLAMP::CreateKernel(transformed_kernel_name, av.pQueue.get());
+  return kernel;
+#else
+  return NULL;
+#endif
+}
+
+template<typename Kernel, int dim_ext>
+inline
+void mcw_cxxamp_execute_kernel_with_dynamic_group_memory(
+  const accelerator_view& av, size_t *ext, size_t *local_size,
+  const Kernel& f, void *kernel, size_t dynamic_group_memory_size) restrict(cpu,amp) {
+#if __KALMAR_ACCELERATOR__ != 1
   append_kernel(av.pQueue, f, kernel);
   av.pQueue->LaunchKernelWithDynamicGroupMemory(kernel, dim_ext, ext, local_size, dynamic_group_memory_size);
 #endif // __KALMAR_ACCELERATOR__
