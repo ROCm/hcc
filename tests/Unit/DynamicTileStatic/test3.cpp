@@ -1,4 +1,5 @@
-// RUN: %cxxamp %s -o %t.out && %t.out
+// XFAIL: Linux
+// RUN: %cxxamp %s -Xclang -fhsa-ext -o %t.out && %t.out
 
 #include <hc.hpp>
 
@@ -43,7 +44,8 @@ bool test1D() {
   array_view<int, 1> av8(grid_size, table8);
 
   // set dynamic tile size as 0 for now as we don't test this feature in this test yet
-  parallel_for_each(tiled_extent_1D(grid_size, tile_size), 0, [=](tiled_index_1D& idx) restrict(amp) {
+  ts_allocator tsa;
+  parallel_for_each(tiled_extent_1D(grid_size, tile_size), tsa, [=](tiled_index_1D& idx) restrict(amp) {
     av5(idx) = idx.global[0];
     av6(idx) = idx.local[0];
     av7(idx) = idx.tile[0];
@@ -154,7 +156,8 @@ bool test2D() {
   array_view<int, 2> av16(grid_size_0, grid_size_1, table16);
 
   // set dynamic tile size as 0 for now as we don't test this feature in this test yet
-  parallel_for_each(tiled_extent_2D(grid_size_0, grid_size_1, tile_size_0, tile_size_1), 0, [=](tiled_index_2D& idx) restrict(amp) {
+  ts_allocator tsa;
+  parallel_for_each(tiled_extent_2D(grid_size_0, grid_size_1, tile_size_0, tile_size_1), tsa, [=](tiled_index_2D& idx) restrict(amp) {
     av9(idx) = idx.global[0];
     av10(idx) = idx.global[1];
     av11(idx) = idx.local[0];
@@ -298,7 +301,8 @@ bool test3D() {
   array_view<int, 3> av24(grid_size_0, grid_size_1, grid_size_2, table24);
 
   // set dynamic tile size as 0 for now as we don't test this feature in this test yet
-  parallel_for_each(tiled_extent_3D(grid_size_0, grid_size_1, grid_size_2, tile_size_0, tile_size_1, tile_size_2), 0, [=](tiled_index_3D& idx) restrict(amp) {
+  ts_allocator tsa;
+  parallel_for_each(tiled_extent_3D(grid_size_0, grid_size_1, grid_size_2, tile_size_0, tile_size_1, tile_size_2), tsa, [=](tiled_index_3D& idx) restrict(amp) {
     av13(idx) = idx.global[0];
     av14(idx) = idx.global[1];
     av15(idx) = idx.global[2];
