@@ -195,7 +195,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
       return;
   }
 #endif
-  mcw_cxxamp_launch_kernel<Kernel, 1>(av, &ext, &tile, f);
+  mcw_cxxamp_launch_kernel_with_dynamic_group_memory<Kernel, 1>(av, &ext, &tile, f, tile_static_allocatable_size);
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index_1D this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -233,7 +233,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
       launch_cpu_task(av.pQueue, f, compute_domain);
   } else
 #endif
-  mcw_cxxamp_launch_kernel<Kernel, 2>(av, ext, tile, f);
+  mcw_cxxamp_launch_kernel_with_dynamic_group_memory<Kernel, 2>(av, ext, tile, f, tile_static_allocatable_size);
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index_2D this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -278,7 +278,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
       launch_cpu_task(av.pQueue, f, compute_domain);
   } else
 #endif
-  mcw_cxxamp_launch_kernel<Kernel, 3>(av, ext, tile, f);
+  mcw_cxxamp_launch_kernel_with_dynamic_group_memory<Kernel, 3>(av, ext, tile, f, tile_static_allocatable_size);
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index_3D this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
