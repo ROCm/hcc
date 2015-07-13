@@ -1,4 +1,5 @@
-// RUN: %cxxamp %s -o %t.out && %t.out
+// XFAIL: Linux
+// RUN: %cxxamp %s -Xclang -fhsa-ext -o %t.out && %t.out
 
 #include <hc.hpp>
 
