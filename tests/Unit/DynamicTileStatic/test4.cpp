@@ -5,77 +5,56 @@
 
 #include <iostream>
 
-/// each work item will allocate 1 plus its global index of elements
-/// in the assigned host buffer
-/// FIXME: use group segment instead of global segment
+#define __GROUP__ __attribute__((address_space(3)))
+
+/// each workgroup will allocate 1 element in the group segment for each workitem
 template<typename T>
 bool test1D(size_t grid_size, size_t tile_size) {
+  // FIXME: move to hc namespace
   using namespace concurrency;
 
-  size_t buffer_elements = ((grid_size + 1) * grid_size / 2);
-  size_t sizeof_element = sizeof(T);
-  size_t buffer_size = buffer_elements * sizeof_element;
-
-  // dynamically allocate a host buffer
-  // FIXME: use group segment instead of global segment
-  T* table = static_cast<T*>(malloc(buffer_size));
-
-  // initialize ts_allocator which uses the host buffer
-  // FIXME: use group segment instead of global segment
-  ts_allocator tsa(table);
-
   // array_view which will store the offset of allocated memory for each
-  // work item, relative to the beginning of table
-  array_view<T, 1> av(grid_size);
+  // work item, relative to the beginning of group segment
+  array_view<T, 1> avOffset(grid_size);
+
+  // initialize ts_allocator
+  ts_allocator tsa;
+  tsa.setDynamicGroupSegmentSize(tile_size * sizeof(T));
 
   // launch kernel in tiled fashion
   tiled_extent_1D ex(grid_size, tile_size);
-  parallel_for_each(ex, 0, [&, av](tiled_index_1D& idx) restrict(amp) {
-
-    // fetch work item global index
-    index<1> global = idx.global;
+  parallel_for_each(ex, tsa, [&, avOffset](tiled_index_1D& idx) restrict(amp) {
 
     // call ts_allocator
-    // allocate (global index + 1) of element for each work item
-    T* p = static_cast<T*>(tsa.alloc((global[0] + 1) * sizeof(T)));
+    // allocate 1 element for each work item
+    __GROUP__ T* p = (__GROUP__ T*) tsa.alloc(sizeof(T) * 1);
 
-    // write offset to av
-    av(idx) = (p - table);
+    // get the beginning of dynamic group memory
+    __GROUP__ T* lds = (__GROUP__ T*) getLDS(tsa.getStaticGroupSegmentSize());
 
-    // fill in data into allocated buffer
-    for (int i = 0; i < global[0] + 1; ++i) {
-      p[i] = (global[0] + 1);
-    }
+    // write allocated offset to avOffset
+    avOffset(idx) = (p - lds) * sizeof(T);
   });
 
 #if 0
   // print offset
   for (int i = 0; i < grid_size; ++i) {
-    std::cout << av[i] << " ";
-  }
-  std::cout << "\n";
-#endif
-
-#if 0
-  // print array data
-  for (int i = 0; i < buffer_elements; ++i) {
-    std::cout << table[i] << " ";
+    std::cout << avOffset[i] << " ";
   }
   std::cout << "\n";
 #endif
 
   // verify data
   bool ret = true;
-  for (int i = 0; i < grid_size; ++i) {
-    int offset = av[i];
-    for (int j = 0; j < (i + 1); ++j) {
-      if (table[offset + j] != (i + 1)) {
-#if 0
-        std::cout << "verify failed at: " << offset + j << "\n";
-#endif
-        ret = false;
-        break;
-      }
+  for (int i = 0; i < grid_size; i += tile_size) {
+    int sum = 0;
+    for (int j = 0; j < tile_size; ++j) {
+      sum += avOffset[i + j];
+    }
+    // check if the sum of offsets allocated for each tile is correct
+    if (sum != (sizeof(T) * (tile_size * (tile_size - 1) / 2))) {
+      ret = false;
+      break;
     }
   }
 #if 0
@@ -83,10 +62,6 @@ bool test1D(size_t grid_size, size_t tile_size) {
     std::cout << "verify success\n";
   }
 #endif
-
-  // release dynamically allocated host buffer
-  // FIXME: use group segment instead of global segment
-  free(table);
 
   return ret;
 }
