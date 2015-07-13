@@ -93,6 +93,8 @@ public:
   /// push device pointer to kernel argument list
   virtual void Push(void *kernel, int idx, void* device, bool isConst) = 0;
 
+  virtual uint32_t GetGroupSegmentSize(void *kernel) { return 0; }
+
   KalmarDevice* getDev() { return pDev; }
   queuing_mode get_mode() const { return mode; }
   void set_mode(queuing_mode mod) { mode = mod; }

@@ -2,6 +2,8 @@
 
 #include <amp.h>
 
+#include <hsa_atomic.h>
+
 // FIXME: use hc namespace
 namespace Concurrency {
 
@@ -55,23 +57,71 @@ public:
   tiled_extent_3D(const extent<3>& ext, int t0, int t1, int t2) restrict(amp,cpu) : extent(ext), tile_dim0(t0), tile_dim1(t1), tile_dim2(t2) {}
 };
 
+/// getLDS : C interface of HSA builtin function to fetch an address within group segment
+extern "C" __attribute__((address_space(3))) void* getLDS(unsigned int offset) restrict(amp);
+
+class ts_allocator {
+private:
+  unsigned int static_group_segment_size;
+  unsigned int dynamic_group_segment_size;
+
+public:
+  ts_allocator() :
+    static_group_segment_size(0), 
+    dynamic_group_segment_size(0) {}
+
+  ~ts_allocator() {}
+
+  void setStaticGroupSegmentSize(unsigned int size) restrict(cpu) {
+    static_group_segment_size = size;
+  } 
+
+  unsigned int getStaticGroupSegmentSize() restrict(amp,cpu) {
+    return static_group_segment_size;
+  }
+
+  void setDynamicGroupSegmentSize(unsigned int size) restrict(cpu) {
+    dynamic_group_segment_size = size;
+  }
+
+  unsigned int getDynamicGroupSegmentSize() restrict(amp,cpu) {
+    return dynamic_group_segment_size;
+  }
+
+  // Allocate the requested size in tile static memory and return its pointer
+  // returns NULL if the requested size can't be allocated
+  // It requires all threads in a tile to hit the same ts_alloc call site at the
+  // same time.
+  // Only one instance of the tile static memory will be allocated per call site
+  // and all threads within a tile will get the same tile static memory address.
+  __attribute__((address_space(3))) void* alloc(unsigned int size) restrict(amp) {
+    tile_static int cursor;
+    cursor = 0;
+
+    // fetch the beginning address of dynamic group segment
+    __attribute__((address_space(3))) unsigned char* lds = (__attribute__((address_space(3))) unsigned char*) getLDS(static_group_segment_size);
+
+    // use atomic fetch_add to allocate
+    return lds + __hsail_atomic_fetch_add_int(&cursor, size);
+  }   
+};  
+
 class tiled_index_1D {
 public:
   const index<1> global;
   const index<1> local;
   const index<1> tile;
   const index<1> tile_origin;
-  // FIXME: add tile_barrier
-  // const tile_barrier barrier;
+  const tile_barrier barrier;
   tiled_index_1D(const index<1>& g) restrict(amp,cpu) : global(g) {}
-  tiled_index_1D(const tiled_index_1D& other) restrict(amp,cpu) : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin) /*, barrier(o.barrier)*/ {}
+  tiled_index_1D(const tiled_index_1D& other) restrict(amp,cpu) : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin), barrier(other.barrier) {}
   operator const index<1>() const restrict(amp,cpu) {
     return global;
   }
 private:
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  __attribute__((always_inline)) tiled_index_1D(int a, int b, int c/*, tile_barrier& pb*/) restrict(amp,cpu) :
-    global(a), local(b), tile(c), tile_origin(a - b)/*, barrier(pb) */ {}
+  __attribute__((always_inline)) tiled_index_1D(int a, int b, int c, tile_barrier& pb) restrict(amp,cpu) :
+    global(a), local(b), tile(c), tile_origin(a - b), barrier(pb) {}
 #endif
 
   __attribute__((annotate("__cxxamp_opencl_index")))
@@ -89,7 +139,7 @@ private:
   {}
 
   template<typename Kernel>
-  friend void parallel_for_each(const accelerator_view&, const tiled_extent_1D&, size_t, const Kernel&);
+  friend void parallel_for_each(const accelerator_view&, const tiled_extent_1D&, ts_allocator&, const Kernel&);
 };
 
 class tiled_index_2D {
@@ -127,7 +177,7 @@ private:
   {}
 
   template<typename Kernel>
-  friend void parallel_for_each(const accelerator_view&, const tiled_extent_2D&, size_t, const Kernel&);
+  friend void parallel_for_each(const accelerator_view&, const tiled_extent_2D&, ts_allocator&, const Kernel&);
 };
 
 class tiled_index_3D {
@@ -166,14 +216,14 @@ private:
   {}
 
   template<typename Kernel>
-  friend void parallel_for_each(const accelerator_view&, const tiled_extent_3D&, size_t, const Kernel&);
+  friend void parallel_for_each(const accelerator_view&, const tiled_extent_3D&, ts_allocator&, const Kernel&);
 };
 
 // variants of parallel_for_each that supports runtime allocation of tile static
 // FIXME: move from Concurrency namespace to hc
-// FIXME: take tile_static_allocatable_size into consideration
 template <typename Kernel>
-__attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av, const tiled_extent_1D& compute_domain, size_t tile_static_allocatable_size, const Kernel& f) restrict(amp,cpu) {
+__attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av, const tiled_extent_1D& compute_domain,
+                                                      ts_allocator& allocator, const Kernel& f) restrict(amp,cpu) {
 #if __KALMAR_ACCELERATOR__ != 1
   if(compute_domain[0]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
@@ -195,7 +245,9 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
       return;
   }
 #endif
-  mcw_cxxamp_launch_kernel_with_dynamic_group_memory<Kernel, 1>(av, &ext, &tile, f, tile_static_allocatable_size);
+  void *kernel = mcw_cxxamp_get_kernel<Kernel>(av, f);
+  allocator.setStaticGroupSegmentSize(av.pQueue->GetGroupSegmentSize(kernel));
+  mcw_cxxamp_execute_kernel_with_dynamic_group_memory<Kernel, 1>(av, &ext, &tile, f, kernel, allocator.getDynamicGroupSegmentSize());
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index_1D this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -205,24 +257,22 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
 #endif
 }
 
-
 // variants of parallel_for_each that supports runtime allocation of tile static
 // FIXME: move from Concurrency namespace to hc
-// FIXME: take tile_static_allocatable_size into consideration
-template<typename Kernel>
-__attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av, const tiled_extent_2D& compute_domain, size_t tile_static_allocatable_size, const Kernel& f) restrict(amp,cpu) {
+template <typename Kernel>
+__attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av, const tiled_extent_2D& compute_domain,
+                                                      ts_allocator& allocator, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
   if(compute_domain[0]<=0 || compute_domain[1]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
   }
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L) {
+  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
-  }
   size_t ext[2] = { static_cast<size_t>(compute_domain[1]),
                     static_cast<size_t>(compute_domain[0])};
   size_t tile[2] = { static_cast<size_t>(compute_domain.tile_dim1),
-                     static_cast<size_t>(compute_domain.tile_dim0)};
-  if (compute_domain.tile_dim1 * compute_domain.tile_dim0 > 1024) {
+                     static_cast<size_t>(compute_domain.tile_dim0) };
+  if (static_cast<size_t>(compute_domain.tile_dim1 * compute_domain.tile_dim0) > 1024) {
     throw invalid_compute_domain("The maximum nuimber of threads in a tile is 1024");
   }
   if((ext[0] % tile[0] != 0) || (ext[1] % tile[1] != 0)) {
@@ -233,7 +283,9 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
       launch_cpu_task(av.pQueue, f, compute_domain);
   } else
 #endif
-  mcw_cxxamp_launch_kernel_with_dynamic_group_memory<Kernel, 2>(av, ext, tile, f, tile_static_allocatable_size);
+  void *kernel = mcw_cxxamp_get_kernel<Kernel>(av, f);
+  allocator.setStaticGroupSegmentSize(av.pQueue->GetGroupSegmentSize(kernel));
+  mcw_cxxamp_execute_kernel_with_dynamic_group_memory<Kernel, 2>(av, ext, tile, f, kernel, allocator.getDynamicGroupSegmentSize());
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index_2D this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -243,12 +295,11 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
 #endif
 }
 
-
 // variants of parallel_for_each that supports runtime allocation of tile static
 // FIXME: move from Concurrency namespace to hc
-// FIXME: take tile_static_allocatable_size into consideration
-template<typename Kernel>
-__attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av, const tiled_extent_3D& compute_domain, size_t tile_static_allocatable_size, const Kernel& f) restrict(amp,cpu) {
+template <typename Kernel>
+__attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av, const tiled_extent_3D& compute_domain,
+                                                      ts_allocator& allocator, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
   if(compute_domain[0]<=0 || compute_domain[1]<=0 || compute_domain[2]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
@@ -266,8 +317,8 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
                     static_cast<size_t>(compute_domain[0])};
   size_t tile[3] = { static_cast<size_t>(compute_domain.tile_dim2),
                      static_cast<size_t>(compute_domain.tile_dim1),
-                     static_cast<size_t>(compute_domain.tile_dim0)};
-  if(compute_domain.tile_dim2 * compute_domain.tile_dim1* compute_domain.tile_dim0 > 1024) {
+                     static_cast<size_t>(compute_domain.tile_dim0) };
+  if (static_cast<size_t>(compute_domain.tile_dim2 * compute_domain.tile_dim1* compute_domain.tile_dim0) > 1024) {
     throw invalid_compute_domain("The maximum nuimber of threads in a tile is 1024");
   }
   if((ext[0] % tile[0] != 0) || (ext[1] % tile[1] != 0) || (ext[2] % tile[2] != 0)) {
@@ -278,7 +329,9 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
       launch_cpu_task(av.pQueue, f, compute_domain);
   } else
 #endif
-  mcw_cxxamp_launch_kernel_with_dynamic_group_memory<Kernel, 3>(av, ext, tile, f, tile_static_allocatable_size);
+  void *kernel = mcw_cxxamp_get_kernel<Kernel>(av, f);
+  allocator.setStaticGroupSegmentSize(av.pQueue->GetGroupSegmentSize(kernel));
+  mcw_cxxamp_execute_kernel_with_dynamic_group_memory<Kernel, 3>(av, ext, tile, f, kernel, allocator.getDynamicGroupSegmentSize());
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index_3D this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -288,46 +341,21 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
 #endif
 }
 
-
 template <typename Kernel>
-void parallel_for_each(tiled_extent_1D compute_domain, size_t tile_static_allocatable_size, const Kernel& f) {
-  parallel_for_each(accelerator().get_default_view(), compute_domain, tile_static_allocatable_size, f);
+void parallel_for_each(const tiled_extent_1D& compute_domain, ts_allocator& allocator, const Kernel& f) {
+  parallel_for_each(accelerator().get_default_view(), compute_domain, allocator, f);
 }
 
 template<typename Kernel>
-void parallel_for_each(tiled_extent_2D compute_domain, size_t tile_static_allocatable_size, const Kernel& f) {
-  parallel_for_each(accelerator().get_default_view(), compute_domain, tile_static_allocatable_size, f);
+void parallel_for_each(const tiled_extent_2D& compute_domain, ts_allocator& allocator, const Kernel& f) {
+  parallel_for_each(accelerator().get_default_view(), compute_domain, allocator, f);
 }
 
 template<typename Kernel>
-void parallel_for_each(tiled_extent_3D compute_domain, size_t tile_static_allocatable_size, const Kernel& f) {
-  parallel_for_each(accelerator().get_default_view(), compute_domain, tile_static_allocatable_size, f);
+void parallel_for_each(const tiled_extent_3D& compute_domain, ts_allocator& allocator, const Kernel& f) {
+  parallel_for_each(accelerator().get_default_view(), compute_domain, allocator, f);
 }
 
-class ts_allocator {
-public:
-  ts_allocator(void* ptr) : cursor(0), buffer(ptr) {}
-  ~ts_allocator() { reset(); }
-
-  void reset() {
-    cursor.store(0);
-    buffer = nullptr;
-  }
-
-  // Allocate the requested size in tile static memory and return its pointer
-  // returns NULL if the requested size can't be allocated
-  // It requires all threads in a tile to hit the same ts_alloc call site at the
-  // same time.
-  // Only one instance of the tile static memory will be allocated per call site
-  // and all threads within a tile will get the same tile static memory address.
-  __attribute__((amp))
-  void* alloc(size_t size) {
-    return static_cast<void*>(static_cast<unsigned char*>(buffer) + cursor.fetch_add(size));
-  }
-
-  std::atomic<size_t> cursor;
-  void* buffer;
-};
 
 } // namespace Concurrency
 // FIXME: use hc namespace

@@ -84,6 +84,14 @@ public:
   template <typename _Type> class task;
   template <> class task<void>;
 
+
+// FIXME: move to hc namespace, remove these forward declarations
+// forward declaration
+class tiled_extent_1D;
+class tiled_extent_2D;
+class tiled_extent_3D;
+class ts_allocator;
+
 class completion_future;
 class accelerator;
 template <typename T, int N> class array_view;
@@ -125,8 +133,19 @@ private:
   friend size_t get_max_tile_static_size(const accelerator_view&);
 
   // FIXME: move this to hc
+  template<typename Kernel> friend
+      void* mcw_cxxamp_get_kernel(const accelerator_view&, const Kernel&);
   template<typename Kernel, int dim_ext> friend
-     void mcw_cxxamp_launch_kernel_with_dynamic_group_memory(const accelerator_view&, size_t *, size_t *, const Kernel&, size_t);
+      void mcw_cxxamp_execute_kernel_with_dynamic_group_memory(const accelerator_view&, size_t *, size_t *, const Kernel&, void*, size_t);
+
+  // FIXME: move this to hc
+  // FIXME: remove cyclical dependency!
+  template<typename Kernel> friend
+      void parallel_for_each(const accelerator_view&, const tiled_extent_1D&, ts_allocator&, const Kernel&);
+  template<typename Kernel> friend
+      void parallel_for_each(const accelerator_view&, const tiled_extent_2D&, ts_allocator&, const Kernel&);
+  template<typename Kernel> friend
+      void parallel_for_each(const accelerator_view&, const tiled_extent_3D&, ts_allocator&, const Kernel&);
 
   template <typename Q, int K> friend class array;
   template <typename Q, int K> friend class array_view;
@@ -750,6 +769,12 @@ struct barrier_t {
 };
 #endif
 
+// forward declaration
+// FIXME: move to hc namespace
+class tiled_index_1D;
+class tiled_index_2D;
+class tiled_index_3D;
+
 #ifndef CLK_LOCAL_MEM_FENCE
 #define CLK_LOCAL_MEM_FENCE (1)
 #endif
@@ -805,6 +830,11 @@ class tile_barrier {
 #endif
   template<int D0, int D1, int D2>
   friend class tiled_index;
+
+  // FIXME: move to hc namespae
+  friend class tiled_index_1D;
+  friend class tiled_index_2D;
+  friend class tiled_index_3D;
 };
 
 template <typename T, int N> class array;
