@@ -96,6 +96,8 @@ private:
     hsa_kernel_dispatch_packet_t aql;
     bool isDispatched;
 
+    size_t dynamicGroupSize;
+
 public:
     ~HSADispatch() {
         if (isDispatched) {
@@ -104,10 +106,16 @@ public:
         }
     }
 
+    hsa_status_t setDynamicGroupSegment(size_t dynamicGroupSize) {
+        this->dynamicGroupSize = dynamicGroupSize;
+        return HSA_STATUS_SUCCESS;
+    }
+
     HSADispatch(hsa_agent_t _agent, const HSAKernel* _kernel) :
         agent(_agent),
         kernel(_kernel),
-        isDispatched(false) {
+        isDispatched(false),
+        dynamicGroupSize(0) {
 
         // allocate the initial argument vector capacity
         arg_vec.reserve(ARGS_VEC_INITIAL_CAPACITY);
@@ -260,6 +268,9 @@ public:
                                                 HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE,
                                                 &group_segment_size);
         STATUS_CHECK_Q(status, __LINE__);
+
+        // add dynamic group segment size
+        group_segment_size += this->dynamicGroupSize;
         aql.group_segment_size = group_segment_size;
   
         uint32_t private_segment_size;
@@ -414,6 +425,18 @@ public:
 #endif
         status = hsa_queue_destroy(commandQueue);
         STATUS_CHECK(status, __LINE__);
+    }
+
+    void LaunchKernelWithDynamicGroupMemory(void *ker, size_t nr_dim, size_t *global, size_t *local, size_t dynamic_group_size) override {
+        HSADispatch *dispatch =
+            reinterpret_cast<HSADispatch*>(ker);
+        size_t tmp_local[] = {0, 0, 0};
+        if (!local)
+            local = tmp_local;
+        dispatch->setLaunchAttributes(nr_dim, global, local);
+        dispatch->setDynamicGroupSegment(dynamic_group_size);
+        dispatch->dispatchKernelWaitComplete(commandQueue);
+        delete(dispatch);
     }
 
     void LaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local) override {

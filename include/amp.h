@@ -124,6 +124,10 @@ private:
   // FIXME: move this to hc::accelerator_view
   friend size_t get_max_tile_static_size(const accelerator_view&);
 
+  // FIXME: move this to hc
+  template<typename Kernel, int dim_ext> friend
+     void mcw_cxxamp_launch_kernel_with_dynamic_group_memory(const accelerator_view&, size_t *, size_t *, const Kernel&, size_t);
+
   template <typename Q, int K> friend class array;
   template <typename Q, int K> friend class array_view;
   template<typename Kernel, int dim_ext> friend
