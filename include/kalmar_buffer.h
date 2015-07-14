@@ -12,8 +12,6 @@
 
 namespace Kalmar {
 
-using namespace Concurrency;
-
 // Dummy interface that looks somewhat like std::shared_ptr<T>
 template <typename T>
 class _data {

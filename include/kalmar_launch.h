@@ -13,10 +13,13 @@
 #include <thread>
 #endif
 
+// FIXME: remove C++AMP public header dependency
 #include <amp.h>
-#include <kalmar_runtime.h>
 
 namespace Kalmar {
+
+// FIXME: remove Concurrency namespace dependency
+using namespace Concurrency;
 
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
 #define SSIZE 1024 * 10
@@ -181,7 +184,7 @@ public:
 };
 
 template <typename Kernel, int N>
-void launch_cpu_task(const accelerator_view& av, Kernel const& f,
+void launch_cpu_task(const Concurrency::accelerator_view& av, Kernel const& f,
                      extent<N> const& compute_domain)
 {
     CPUKernelRAII<Kernel> obj(av.pQueue, f);
@@ -247,7 +250,7 @@ static void append_kernel(std::shared_ptr<KalmarQueue> av, const Kernel& f, void
 static std::set<std::string> __mcw_cxxamp_kernels;
 template<typename Kernel, int dim_ext>
 inline std::shared_future<void>*
-mcw_cxxamp_launch_kernel_async(const accelerator_view& av, size_t *ext,
+mcw_cxxamp_launch_kernel_async(const Concurrency::accelerator_view& av, size_t *ext,
   size_t *local_size, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
   //Invoke Kernel::__cxxamp_trampoline as an kernel
@@ -270,7 +273,7 @@ mcw_cxxamp_launch_kernel_async(const accelerator_view& av, size_t *ext,
 }
 
 template<typename Kernel>
-inline void* mcw_cxxamp_get_kernel(const accelerator_view& av, const Kernel& f) restrict(cpu,amp) {
+inline void* mcw_cxxamp_get_kernel(const Concurrency::accelerator_view& av, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
   if (av.get_accelerator().get_device_path() == L"cpu") {
     throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
@@ -293,7 +296,7 @@ inline void* mcw_cxxamp_get_kernel(const accelerator_view& av, const Kernel& f) 
 template<typename Kernel, int dim_ext>
 inline
 void mcw_cxxamp_execute_kernel_with_dynamic_group_memory(
-  const accelerator_view& av, size_t *ext, size_t *local_size,
+  const Concurrency::accelerator_view& av, size_t *ext, size_t *local_size,
   const Kernel& f, void *kernel, size_t dynamic_group_memory_size) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
   append_kernel(av.pQueue, f, kernel);
@@ -303,7 +306,7 @@ void mcw_cxxamp_execute_kernel_with_dynamic_group_memory(
 
 template<typename Kernel, int dim_ext>
 inline
-void mcw_cxxamp_launch_kernel(const accelerator_view& av, size_t *ext,
+void mcw_cxxamp_launch_kernel(const Concurrency::accelerator_view& av, size_t *ext,
                               size_t *local_size, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
   if (av.get_accelerator().get_device_path() == L"cpu") {

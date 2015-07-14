@@ -80,15 +80,15 @@ template <int D0, int D1=0, int D2=0> class tiled_extent;
 // forward declaration
 namespace Kalmar {
 template<typename Kernel>
-    void* mcw_cxxamp_get_kernel(const accelerator_view&, const Kernel&);
+    void* mcw_cxxamp_get_kernel(const Concurrency::accelerator_view&, const Kernel&);
 template<typename Kernel, int dim_ext>
-    void mcw_cxxamp_execute_kernel_with_dynamic_group_memory(const accelerator_view&, size_t *, size_t *, const Kernel&, void*, size_t);
+    void mcw_cxxamp_execute_kernel_with_dynamic_group_memory(const Concurrency::accelerator_view&, size_t *, size_t *, const Kernel&, void*, size_t);
 template<typename Kernel, int dim_ext>
-    void mcw_cxxamp_launch_kernel(const accelerator_view&, size_t *, size_t *, const Kernel&);
+    void mcw_cxxamp_launch_kernel(const Concurrency::accelerator_view&, size_t *, size_t *, const Kernel&);
 template<typename Kernel, int dim_ext>
-    std::shared_future<void>* mcw_cxxamp_launch_kernel_async(const accelerator_view&, size_t *, size_t *, const Kernel&);
+    std::shared_future<void>* mcw_cxxamp_launch_kernel_async(const Concurrency::accelerator_view&, size_t *, size_t *, const Kernel&);
 template <typename Kernel, int N>
-    void launch_cpu_task(const accelerator_view&, Kernel const&, extent<N> const&);
+    void launch_cpu_task(const Concurrency::accelerator_view&, Kernel const&, Concurrency::extent<N> const&);
 } // namespace Kalmar
 
 namespace Concurrency {
