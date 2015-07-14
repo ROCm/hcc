@@ -2,8 +2,9 @@
 
 #include <amp.h>
 
-namespace Concurrency
+namespace Kalmar
 {
+using namespace Concurrency;
 
 /// traverse all the buffers that are going to be used in kernel
 class FunctorBufferWalker {
@@ -83,5 +84,5 @@ public:
     }
 };
 
-} // namespace Concurrency
+} // namespace Kalmar
 

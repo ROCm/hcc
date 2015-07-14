@@ -35,7 +35,7 @@
 #include <amp_exception.h>
 #include <amp_runtime.h>
 #include <kalmar_buffer.h>
-#include <serialize.h>
+#include <kalmar_serialize.h>
 // End CLAMP
 
 /* COMPATIBILITY LAYER */
