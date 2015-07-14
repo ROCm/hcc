@@ -3,7 +3,7 @@
 #include <map>
 
 namespace Kalmar {
-namespace details {
+namespace enums {
 
 /// access_type is used for accelerator that supports unified memory
 /// Such accelerator can use access_type to control whether can access data on
@@ -23,13 +23,13 @@ enum queuing_mode
     queuing_mode_automatic
 };
 
-} // namespace details
+} // namespace enums
 } // namespace Kalmar
 
 
-namespace Concurrency {
+namespace Kalmar {
 
-using namespace Kalmar::details;
+using namespace Kalmar::enums;
 
 /// forward declaration
 class KalmarDevice;
@@ -604,5 +604,5 @@ struct rw_info
     }
 };
 
-} // namespace Concurrency
+} // namespace Kalmar
 

@@ -15,7 +15,7 @@
 
 extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v) {}
 
-namespace Concurrency {
+namespace Kalmar {
 
 class CPUFallbackQueue final : public KalmarQueue
 {
@@ -83,8 +83,8 @@ public:
 
 static CPUContext ctx;
 
-} // namespace Concurrency
+} // namespace Kalmar
 
 extern "C" void *GetContextImpl() {
-  return &Concurrency::ctx;
+  return &Kalmar::ctx;
 }

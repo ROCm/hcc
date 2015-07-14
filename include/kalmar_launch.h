@@ -16,7 +16,7 @@
 #include <amp.h>
 #include <kalmar_runtime.h>
 
-namespace Concurrency {
+namespace Kalmar {
 
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
 #define SSIZE 1024 * 10
@@ -325,5 +325,5 @@ void mcw_cxxamp_launch_kernel(const accelerator_view& av, size_t *ext,
 #endif // __KALMAR_ACCELERATOR__
 }
 
-} // namespace Concurrency
+} // namespace Kalmar
 

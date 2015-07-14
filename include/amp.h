@@ -60,9 +60,9 @@ extern "C" __attribute__((noduplicate)) void amp_barrier(unsigned int n) restric
 
 namespace concurrency = Concurrency;
 
+// forward declaration
 namespace Concurrency {
 // FIXME: move to hc namespace, remove these forward declarations
-// forward declaration
 class tiled_extent_1D;
 class tiled_extent_2D;
 class tiled_extent_3D;
@@ -70,13 +70,33 @@ class ts_allocator;
 
 class completion_future;
 class accelerator;
+class accelerator_view;
 template <typename T, int N> class array_view;
 template <typename T, int N> class array;
 template <int N> class extent;
 template <int D0, int D1=0, int D2=0> class tiled_extent;
+} // namespace Concurrency
+
+// forward declaration
+namespace Kalmar {
+template<typename Kernel>
+    void* mcw_cxxamp_get_kernel(const accelerator_view&, const Kernel&);
+template<typename Kernel, int dim_ext>
+    void mcw_cxxamp_execute_kernel_with_dynamic_group_memory(const accelerator_view&, size_t *, size_t *, const Kernel&, void*, size_t);
+template<typename Kernel, int dim_ext>
+    void mcw_cxxamp_launch_kernel(const accelerator_view&, size_t *, size_t *, const Kernel&);
+template<typename Kernel, int dim_ext>
+    std::shared_future<void>* mcw_cxxamp_launch_kernel_async(const accelerator_view&, size_t *, size_t *, const Kernel&);
+template <typename Kernel, int N>
+    void launch_cpu_task(const accelerator_view&, Kernel const&, extent<N> const&);
+} // namespace Kalmar
+
+namespace Concurrency {
+
+using namespace Kalmar::enums;
 
 class accelerator_view {
-    accelerator_view(std::shared_ptr<KalmarQueue> pQueue)
+    accelerator_view(std::shared_ptr<Kalmar::KalmarQueue> pQueue)
         : pQueue(pQueue) {}
 public:
   accelerator_view(const accelerator_view& other) :
@@ -102,7 +122,7 @@ public:
   bool operator!=(const accelerator_view& other) const { return !(*this == other); }
 
 private:
-  std::shared_ptr<KalmarQueue> pQueue;
+  std::shared_ptr<Kalmar::KalmarQueue> pQueue;
   friend class accelerator;
 
   // FIXME: move this to hc::accelerator_view
@@ -110,9 +130,15 @@ private:
 
   // FIXME: move this to hc
   template<typename Kernel> friend
-      void* mcw_cxxamp_get_kernel(const accelerator_view&, const Kernel&);
+      void* Kalmar::mcw_cxxamp_get_kernel(const accelerator_view&, const Kernel&);
   template<typename Kernel, int dim_ext> friend
-      void mcw_cxxamp_execute_kernel_with_dynamic_group_memory(const accelerator_view&, size_t *, size_t *, const Kernel&, void*, size_t);
+      void Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory(const accelerator_view&, size_t *, size_t *, const Kernel&, void*, size_t);
+  template<typename Kernel, int dim_ext> friend
+      void Kalmar::mcw_cxxamp_launch_kernel(const accelerator_view&, size_t *, size_t *, const Kernel&);
+  template<typename Kernel, int dim_ext> friend
+      std::shared_future<void>* Kalmar::mcw_cxxamp_launch_kernel_async(const accelerator_view&, size_t *, size_t *, const Kernel&);
+  template <typename Kernel, int N> friend
+      void Kalmar::launch_cpu_task(const accelerator_view&, Kernel const&, extent<N> const&);
 
   // FIXME: move this to hc
   // FIXME: remove cyclical dependency!
@@ -125,33 +151,22 @@ private:
 
   template <typename Q, int K> friend class array;
   template <typename Q, int K> friend class array_view;
-  template<typename Kernel, int dim_ext> friend
-      void mcw_cxxamp_launch_kernel(const accelerator_view&, size_t *, size_t *, const Kernel&);
   template <typename T, int N> friend class array_helper;
-  template<typename Kernel, int dim_ext> friend
-      std::shared_future<void>* mcw_cxxamp_launch_kernel_async(const accelerator_view&, size_t *, size_t *, const Kernel&);
 
   template <int N, typename Kernel>
       friend void parallel_for_each(extent<N> compute_domain, const Kernel& f);
-  template <typename Kernel, int N>
-      friend void launch_cpu_task(const accelerator_view& av, Kernel const& f,
-                                  extent<N> const& compute_domain);
   template <int D0, int D1, int D2, typename Kernel>
       friend void parallel_for_each(tiled_extent<D0,D1,D2> compute_domain, const Kernel& f);
   template <int D0, int D1, typename Kernel>
       friend void parallel_for_each(tiled_extent<D0,D1> compute_domain, const Kernel& f);
   template <int D0, typename Kernel>
       friend void parallel_for_each(tiled_extent<D0> compute_domain, const Kernel& f);
-
   template <int D0, typename Kernel>
-      friend void parallel_for_each(const accelerator_view&,
-                                    tiled_extent<D0>, const Kernel&) restrict(cpu,amp);
+      friend void parallel_for_each(const accelerator_view&, tiled_extent<D0>, const Kernel&) restrict(cpu,amp);
   template <int D0, int D1, typename Kernel>
-      friend void parallel_for_each(const accelerator_view&,
-                                    tiled_extent<D0, D1>, const Kernel&) restrict(cpu,amp);
+      friend void parallel_for_each(const accelerator_view&, tiled_extent<D0, D1>, const Kernel&) restrict(cpu,amp);
   template <int D0, int D1, int D2, typename Kernel>
-      friend void parallel_for_each(const accelerator_view&,
-                                    tiled_extent<D0, D1, D2>, const Kernel&) restrict(cpu,amp);
+      friend void parallel_for_each(const accelerator_view&, tiled_extent<D0, D1, D2>, const Kernel&) restrict(cpu,amp);
 
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
 public:
@@ -167,27 +182,27 @@ public:
 
 class accelerator
 {
-  accelerator(KalmarDevice* pDev) : pDev(pDev) {}
+  accelerator(Kalmar::KalmarDevice* pDev) : pDev(pDev) {}
 public:
   static const wchar_t default_accelerator[];   // = L"default"
   static const wchar_t cpu_accelerator[];       // = L"cpu"
 
   accelerator() : accelerator(default_accelerator) {}
   explicit accelerator(const std::wstring& path)
-      : pDev(getContext()->getDevice(path)) {}
+      : pDev(Kalmar::getContext()->getDevice(path)) {}
   accelerator(const accelerator& other) : pDev(other.pDev) {}
 
   static std::vector<accelerator> get_all() {
-      auto Devices = getContext()->getDevices();
+      auto Devices = Kalmar::getContext()->getDevices();
       std::vector<accelerator> ret(Devices.size());
       for (std::size_t i = 0; i < ret.size(); ++i)
           ret[i] = Devices[i];
       return std::move(ret);
   }
   static bool set_default(const std::wstring& path) {
-      return getContext()->set_default(path);
+      return Kalmar::getContext()->set_default(path);
   }
-  static accelerator_view get_auto_selection_view() { return getContext()->auto_select(); }
+  static accelerator_view get_auto_selection_view() { return Kalmar::getContext()->auto_select(); }
 
   accelerator& operator=(const accelerator& other) {
       pDev = other.pDev;
@@ -222,7 +237,7 @@ public:
   bool operator!=(const accelerator& other) const { return !(*this == other); }
 private:
   friend class accelerator_view;
-  KalmarDevice* pDev;
+  Kalmar::KalmarDevice* pDev;
 };
 
 inline accelerator accelerator_view::get_accelerator() const { return pQueue->getDev(); }

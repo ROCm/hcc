@@ -401,7 +401,7 @@ private:
 ///
 /// memory allocator
 ///
-namespace Concurrency {
+namespace Kalmar {
 
 
 class HSAQueue final : public KalmarQueue
@@ -829,11 +829,11 @@ public:
 
 static HSAContext ctx;
 
-} // namespace Concurrency
+} // namespace Kalmar
 
 
 extern "C" void *GetContextImpl() {
-  return &Concurrency::ctx;
+  return &Kalmar::ctx;
 }
 
 extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v) {
