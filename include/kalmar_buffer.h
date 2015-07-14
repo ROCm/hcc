@@ -8,7 +8,7 @@
 #pragma once
 
 #include <amp_runtime.h>
-#include <serialize.h>
+#include <kalmar_serialize.h>
 
 namespace Kalmar {
 

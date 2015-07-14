@@ -163,8 +163,8 @@ class CPUKernelRAII
 public:
     CPUKernelRAII(const std::shared_ptr<KalmarQueue> pQueue, const Kernel& f)
         : pQueue(pQueue), f(f), th(NTHREAD) {
-        Concurrency::CPUVisitor vis(pQueue);
-        Concurrency::Serialize s(&vis);
+        Kalmar::CPUVisitor vis(pQueue);
+        Kalmar::Serialize s(&vis);
         f.__cxxamp_serialize(s);
         CLAMP::enter_kernel();
     }
@@ -173,8 +173,8 @@ public:
         for (auto& t : th)
             if (t.joinable())
                 t.join();
-        Concurrency::CPUVisitor vis(pQueue);
-        Concurrency::Serialize ss(&vis);
+        Kalmar::CPUVisitor vis(pQueue);
+        Kalmar::Serialize ss(&vis);
         f.__cxxamp_serialize(ss);
         CLAMP::leave_kernel();
     }
@@ -239,8 +239,8 @@ static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu) {
 template <typename Kernel>
 static void append_kernel(std::shared_ptr<KalmarQueue> av, const Kernel& f, void* kernel)
 {
-  Concurrency::BufferArgumentsAppender vis(av, kernel);
-  Concurrency::Serialize s(&vis);
+  Kalmar::BufferArgumentsAppender vis(av, kernel);
+  Kalmar::Serialize s(&vis);
   f.__cxxamp_serialize(s);
 }
 
