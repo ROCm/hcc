@@ -152,10 +152,6 @@ private:
   template <int D0, typename Kernel>
       friend void parallel_for_each(tiled_extent<D0> compute_domain, const Kernel& f);
 
-
-
-  template <typename Kernel, int N>
-      friend void launch_cpu_task(const accelerator_view&, extent<N> const&, Kernel const&);
   template <int D0, typename Kernel>
       friend void parallel_for_each(const accelerator_view&,
                                     tiled_extent<D0>, const Kernel&) restrict(cpu,amp);
