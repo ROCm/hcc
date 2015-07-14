@@ -58,6 +58,8 @@ extern "C" __attribute__((pure)) int64_t amp_get_group_id(unsigned int n) restri
 #endif
 extern "C" __attribute__((noduplicate)) void amp_barrier(unsigned int n) restrict(amp);
 
+namespace concurrency = Concurrency;
+
 namespace Concurrency {
 
 /*
@@ -2450,10 +2452,156 @@ void parallel_for_each(tiled_extent<D0> compute_domain, const Kernel& f) {
     parallel_for_each(accelerator().get_default_view(), compute_domain, f);
 }
 
-} // namespace Concurrency
-namespace concurrency = Concurrency;
-// Specialization and inlined implementation of C++AMP classes/templates
-#include "amp_impl.h"
+// Specialization of AMP classes/templates
+inline completion_future accelerator_view::create_marker(){ return completion_future(); }
+
+template <int N>
+index<N> operator+(const index<N>& lhs, const index<N>& rhs) restrict(amp,cpu) {
+    index<N> __r = lhs;
+    __r += rhs;
+    return __r;
+}
+template <int N>
+index<N> operator+(const index<N>& lhs, int rhs) restrict(amp,cpu) {
+    index<N> __r = lhs;
+    __r += rhs;
+    return __r;
+}
+template <int N>
+index<N> operator+(int lhs, const index<N>& rhs) restrict(amp,cpu) {
+    index<N> __r = rhs;
+    __r += lhs;
+    return __r;
+}
+template <int N>
+index<N> operator-(const index<N>& lhs, const index<N>& rhs) restrict(amp,cpu) {
+    index<N> __r = lhs;
+    __r -= rhs;
+    return __r;
+}
+template <int N>
+index<N> operator-(const index<N>& lhs, int rhs) restrict(amp,cpu) {
+    index<N> __r = lhs;
+    __r -= rhs;
+    return __r;
+}
+template <int N>
+index<N> operator-(int lhs, const index<N>& rhs) restrict(amp,cpu) {
+    index<N> __r(lhs);
+    __r -= rhs;
+    return __r;
+}
+template <int N>
+index<N> operator*(const index<N>& lhs, int rhs) restrict(amp,cpu) {
+    index<N> __r = lhs;
+    __r *= rhs;
+    return __r;
+}
+template <int N>
+index<N> operator*(int lhs, const index<N>& rhs) restrict(amp,cpu) {
+    index<N> __r = rhs;
+    __r *= lhs;
+    return __r;
+}
+template <int N>
+index<N> operator/(const index<N>& lhs, int rhs) restrict(amp,cpu) {
+    index<N> __r = lhs;
+    __r /= rhs;
+    return __r;
+}
+template <int N>
+index<N> operator/(int lhs, const index<N>& rhs) restrict(amp,cpu) {
+    index<N> __r(lhs);
+    __r /= rhs;
+    return __r;
+}
+template <int N>
+index<N> operator%(const index<N>& lhs, int rhs) restrict(amp,cpu) {
+    index<N> __r = lhs;
+    __r %= rhs;
+    return __r;
+}
+template <int N>
+index<N> operator%(int lhs, const index<N>& rhs) restrict(amp,cpu) {
+    index<N> __r(lhs);
+    __r %= rhs;
+    return __r;
+}
+
+template <int N>
+extent<N> operator+(const extent<N>& lhs, const extent<N>& rhs) restrict(amp,cpu) {
+    extent<N> __r = lhs;
+    __r += rhs;
+    return __r;
+}
+template <int N>
+extent<N> operator+(const extent<N>& lhs, int rhs) restrict(amp,cpu) {
+    extent<N> __r = lhs;
+    __r += rhs;
+    return __r;
+}
+template <int N>
+extent<N> operator+(int lhs, const extent<N>& rhs) restrict(amp,cpu) {
+    extent<N> __r = rhs;
+    __r += lhs;
+    return __r;
+}
+template <int N>
+extent<N> operator-(const extent<N>& lhs, const extent<N>& rhs) restrict(amp,cpu) {
+    extent<N> __r = lhs;
+    __r -= rhs;
+    return __r;
+}
+template <int N>
+extent<N> operator-(const extent<N>& lhs, int rhs) restrict(amp,cpu) {
+    extent<N> __r = lhs;
+    __r -= rhs;
+    return __r;
+}
+template <int N>
+extent<N> operator-(int lhs, const extent<N>& rhs) restrict(amp,cpu) {
+    extent<N> __r(lhs);
+    __r -= rhs;
+    return __r;
+}
+template <int N>
+extent<N> operator*(const extent<N>& lhs, int rhs) restrict(amp,cpu) {
+    extent<N> __r = lhs;
+    __r *= rhs;
+    return __r;
+}
+template <int N>
+extent<N> operator*(int lhs, const extent<N>& rhs) restrict(amp,cpu) {
+    extent<N> __r = rhs;
+    __r *= lhs;
+    return __r;
+}
+template <int N>
+extent<N> operator/(const extent<N>& lhs, int rhs) restrict(amp,cpu) {
+    extent<N> __r = lhs;
+    __r /= rhs;
+    return __r;
+}
+template <int N>
+extent<N> operator/(int lhs, const extent<N>& rhs) restrict(amp,cpu) {
+    extent<N> __r(lhs);
+    __r /= rhs;
+    return __r;
+}
+template <int N>
+extent<N> operator%(const extent<N>& lhs, int rhs) restrict(amp,cpu) {
+    extent<N> __r = lhs;
+    __r %= rhs;
+    return __r;
+}
+template <int N>
+extent<N> operator%(int lhs, const extent<N>& rhs) restrict(amp,cpu) {
+    extent<N> __r(lhs);
+    __r %= rhs;
+    return __r;
+}
+
+} //namespace Concurrency
 
 // Remove warning: unused variable 'foo' [-Wunused-variable]
 #ifdef __clang__
