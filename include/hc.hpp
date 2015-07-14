@@ -155,17 +155,16 @@ public:
   const index<2> local;
   const index<2> tile;
   const index<2> tile_origin;
-  // FIXME: add tile_barrier
-  // const tile_barrier barrier;
+  const tile_barrier barrier;
   tiled_index_2D(const index<2>& g) restrict(amp,cpu) : global(g) {}
-  tiled_index_2D(const tiled_index_2D& other) restrict(amp,cpu) : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin) /*, barrier(o.barrier)*/ {}
+  tiled_index_2D(const tiled_index_2D& other) restrict(amp,cpu) : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin), barrier(other.barrier) {}
   operator const index<2>() const restrict(amp,cpu) {
     return global;
   }
 private:
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  __attribute__((always_inline)) tiled_index_2D(int a0, int a1, int b0, int b1, int c0, int c1/*, tile_barrier& pb*/) restrict(amp,cpu) :
-    global(a1, a0), local(b1, b0), tile(c1, c0), tile_origin(a1 - b1, a0 - b0)/*, barrier(pb) */ {}
+  __attribute__((always_inline)) tiled_index_2D(int a0, int a1, int b0, int b1, int c0, int c1, tile_barrier& pb) restrict(amp,cpu) :
+    global(a1, a0), local(b1, b0), tile(c1, c0), tile_origin(a1 - b1, a0 - b0), barrier(pb) {}
 #endif
 
   __attribute__((annotate("__cxxamp_opencl_index")))
@@ -193,17 +192,16 @@ public:
   const index<3> local;
   const index<3> tile;
   const index<3> tile_origin;
-  // FIXME: add tile_barrier
-  // const tile_barrier barrier;
+  const tile_barrier barrier;
   tiled_index_3D(const index<3>& g) restrict(amp,cpu) : global(g) {}
-  tiled_index_3D(const tiled_index_3D& other) restrict(amp,cpu) : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin) /*, barrier(o.barrier)*/ {}
+  tiled_index_3D(const tiled_index_3D& other) restrict(amp,cpu) : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin), barrier(other.barrier) {}
   operator const index<3>() const restrict(amp,cpu) {
     return global;
   }
 private:
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  __attribute__((always_inline)) tiled_index_3D(int a0, int a1, int a2, int b0, int b1, int b2, int c0, int c1, int c2/*, tile_barrier& pb*/) restrict(amp,cpu) :
-    global(a2, a1, a0), local(b2, b1, b0), tile(c2, c1, c0), tile_origin(a2 - b2, a1 - b1, a0 - b0)/*, barrier(pb) */ {}
+  __attribute__((always_inline)) tiled_index_3D(int a0, int a1, int a2, int b0, int b1, int b2, int c0, int c1, int c2, tile_barrier& pb) restrict(amp,cpu) :
+    global(a2, a1, a0), local(b2, b1, b0), tile(c2, c1, c0), tile_origin(a2 - b2, a1 - b1, a0 - b0), barrier(pb) {}
 #endif
 
   __attribute__((annotate("__cxxamp_opencl_index")))
