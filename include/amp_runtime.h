@@ -2,42 +2,9 @@
 #define __CLAMP_AMP_RUNTIME
 
 #include <map>
-#include <mutex>
 
-namespace Concurrency {
-
-#ifndef E_FAIL
-#define E_FAIL 0x80004005
-#endif
-
-static const char *__errorMsg_UnsupportedAccelerator = "concurrency::parallel_for_each is not supported on the selected accelerator \"CPU accelerator\".";
-
-typedef int HRESULT;
-class runtime_exception : public std::exception
-{
-public:
-  runtime_exception(const char * message, HRESULT hresult) throw() : _M_msg(message), err_code(hresult) {}
-  explicit runtime_exception(HRESULT hresult) throw() : err_code(hresult) {}
-  runtime_exception(const runtime_exception& other) throw() : _M_msg(other.what()), err_code(other.err_code) {}
-  runtime_exception& operator=(const runtime_exception& other) throw() {
-    _M_msg = *(other.what());
-    err_code = other.err_code;
-    return *this;
-  }
-  virtual ~runtime_exception() throw() {}
-  virtual const char* what() const throw() {return _M_msg.c_str();}
-  HRESULT get_error_code() const {return err_code;}
-
-private:
-  std::string _M_msg;
-  HRESULT err_code;
-};
-
-
-
-/// forward declaration
-class KalmarDevice;
-struct rw_info;
+namespace Kalmar {
+namespace details {
 
 /// access_type is used for accelerator that supports unified memory
 /// Such accelerator can use access_type to control whether can access data on
@@ -56,6 +23,18 @@ enum queuing_mode
     queuing_mode_immediate,
     queuing_mode_automatic
 };
+
+} // namespace details
+} // namespace Kalmar
+
+
+namespace Concurrency {
+
+using namespace Kalmar::details;
+
+/// forward declaration
+class KalmarDevice;
+struct rw_info;
 
 /// KalmarQueue
 /// This is the implementation of accelerator_view
