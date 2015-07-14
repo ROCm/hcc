@@ -10,7 +10,7 @@
 bool test1D() {
   bool ret = true;
 
-  using namespace concurrency;
+  using namespace hc;
 
   // test default constructor
   tiled_extent_1D tile1;
@@ -65,7 +65,7 @@ bool test1D() {
 bool test2D() {
   bool ret = true;
 
-  using namespace concurrency;
+  using namespace hc;
 
   // test default constructor
   tiled_extent_2D tile1;
@@ -134,7 +134,7 @@ bool test2D() {
 bool test3D() {
   bool ret = true;
 
-  using namespace concurrency;
+  using namespace hc;
 
   // test default constructor
   tiled_extent_3D tile1;

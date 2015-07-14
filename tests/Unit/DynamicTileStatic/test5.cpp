@@ -16,13 +16,12 @@
 
 template<size_t GRID_SIZE, size_t TILE_SIZE>
 bool test() {
-  // FIXME: use hc namespace
-  using namespace concurrency;
+  using namespace hc;
 
   ts_allocator tsa;
   tsa.setDynamicGroupSegmentSize(DYNAMIC_GROUP_SEGMENT_SIZE);
 
-  array_view<int, 1> av(GRID_SIZE);
+  Concurrency::array_view<int, 1> av(GRID_SIZE);
   tiled_extent_1D ex(GRID_SIZE, TILE_SIZE);
   
   parallel_for_each(accelerator().get_default_view(),
