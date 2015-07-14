@@ -11,7 +11,7 @@
 #include <map>
 #include <vector>
 
-#include <amp_runtime.h>
+#include <kalmar_runtime.h>
 
 extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v) {}
 
