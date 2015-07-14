@@ -10,12 +10,11 @@
 /// each workgroup will allocate 1 element in the group segment for each workitem
 template<typename T>
 bool test1D(size_t grid_size, size_t tile_size) {
-  // FIXME: move to hc namespace
-  using namespace concurrency;
+  using namespace hc;
 
   // array_view which will store the offset of allocated memory for each
   // work item, relative to the beginning of group segment
-  array_view<T, 1> avOffset(grid_size);
+  Concurrency::array_view<T, 1> avOffset(grid_size);
 
   // initialize ts_allocator
   ts_allocator tsa;

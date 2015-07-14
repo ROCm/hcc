@@ -7,18 +7,16 @@
 
 // a test which queries the size of tile static area
 bool test() {
-  // FIXME: use hc namespace
-  using namespace Concurrency;
 
-  accelerator acc;
-  accelerator_view av = acc.get_default_view();
+  Concurrency::accelerator acc;
+  Concurrency::accelerator_view av = acc.get_default_view();
 
   // FIXME: migrate to hc::acclerator::get_max_tile_static_size()
-  size_t size1 = get_max_tile_static_size(acc);
+  size_t size1 = hc::get_max_tile_static_size(acc);
   std::cout << "Max tile static size of accelerator: " << size1 << "\n";
 
   // FIXME: migrate to hc::acclerator_view::get_max_tile_static_size()
-  size_t size2 = get_max_tile_static_size(av);
+  size_t size2 = hc::get_max_tile_static_size(av);
   std::cout << "Max tile static size of accelerator_view: " << size2 << "\n";
 
   // size1 and size2 shall agree

@@ -1,11 +1,13 @@
 #pragma once
 
+// FIXME: remove C++AMP header dependency
 #include <amp.h>
 
 #include <hsa_atomic.h>
 
-// FIXME: use hc namespace
-namespace Concurrency {
+namespace hc {
+
+using namespace Concurrency;
 
 // returns the size of tile static area
 // FIXME: make it a member function inside hc::acclerator_view
@@ -362,5 +364,4 @@ void parallel_for_each(const tiled_extent_3D& compute_domain, ts_allocator& allo
 }
 
 
-} // namespace Concurrency
-// FIXME: use hc namespace
+} // namespace hc
