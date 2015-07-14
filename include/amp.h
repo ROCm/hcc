@@ -32,7 +32,7 @@
 #endif
 // CLAMP
 #define __global
-#include <amp_exception.h>
+#include <amp_exception.inl>
 #include <amp_runtime.h>
 #include <kalmar_buffer.h>
 #include <kalmar_serialize.h>
