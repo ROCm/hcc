@@ -61,15 +61,6 @@ extern "C" __attribute__((noduplicate)) void amp_barrier(unsigned int n) restric
 namespace concurrency = Concurrency;
 
 namespace Concurrency {
-
-/*
-  This is not part of C++AMP standard, but borrowed from Parallel Patterns
-  Library.
-*/
-  template <typename _Type> class task;
-  template <> class task<void>;
-
-
 // FIXME: move to hc namespace, remove these forward declarations
 // forward declaration
 class tiled_extent_1D;
