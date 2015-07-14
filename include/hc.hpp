@@ -65,16 +65,23 @@ private:
   unsigned int static_group_segment_size;
   unsigned int dynamic_group_segment_size;
 
+  void setStaticGroupSegmentSize(unsigned int size) restrict(cpu) {
+    static_group_segment_size = size;
+  } 
+
+  template <typename Kernel> friend
+    void parallel_for_each(const accelerator_view&, const tiled_extent_1D&, ts_allocator&, const Kernel&);
+  template <typename Kernel> friend
+    void parallel_for_each(const accelerator_view&, const tiled_extent_2D&, ts_allocator&, const Kernel&);
+  template <typename Kernel> friend
+    void parallel_for_each(const accelerator_view&, const tiled_extent_3D&, ts_allocator&, const Kernel&);
+
 public:
   ts_allocator() :
     static_group_segment_size(0), 
     dynamic_group_segment_size(0) {}
 
   ~ts_allocator() {}
-
-  void setStaticGroupSegmentSize(unsigned int size) restrict(cpu) {
-    static_group_segment_size = size;
-  } 
 
   unsigned int getStaticGroupSegmentSize() restrict(amp,cpu) {
     return static_group_segment_size;
