@@ -2604,7 +2604,8 @@ extent<N> operator%(int lhs, const extent<N>& rhs) restrict(amp,cpu) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-variable"
 #endif
-#include "parallel_for_each.h"
+#include <kalmar_launch.h>
+#include <amp_pfe.inl>
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif
