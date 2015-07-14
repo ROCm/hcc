@@ -1,10 +1,9 @@
 #pragma once
 
-#include <amp.h>
+#include <kalmar_exception.h>
 
 namespace Kalmar
 {
-using namespace Concurrency;
 
 /// traverse all the buffers that are going to be used in kernel
 class FunctorBufferWalker {
