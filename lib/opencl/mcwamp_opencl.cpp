@@ -19,7 +19,7 @@
 #include <CL/opencl.h>
 
 #include <md5.h>
-#include <amp_runtime.h>
+#include <kalmar_runtime.h>
 
 extern "C" void PushArgImpl(void *k_, int idx, size_t sz, const void *s);
 extern "C" void PushArgPtrImpl(void *k_, int idx, size_t sz, const void *s);

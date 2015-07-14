@@ -14,7 +14,7 @@
 #endif
 
 #include <amp.h>
-#include <amp_runtime.h>
+#include <kalmar_runtime.h>
 
 namespace Concurrency {
 

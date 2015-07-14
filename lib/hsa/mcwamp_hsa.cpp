@@ -23,7 +23,7 @@
 #include <hsa.h>
 #include <hsa_ext_finalize.h>
 
-#include <amp_runtime.h>
+#include <kalmar_runtime.h>
 
 #define KALMAR_DEBUG (0)
 
