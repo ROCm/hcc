@@ -5,8 +5,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLAMP_AMP_MANAGE
-#define __CLAMP_AMP_MANAGE
+#pragma once
 
 #include <amp_runtime.h>
 #include <serialize.h>
@@ -101,4 +100,3 @@ public:
 
 } // namespace Concurrency
 
-#endif // __CLAMP_AMP_MANAGE

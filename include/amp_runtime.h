@@ -1,5 +1,4 @@
-#ifndef __CLAMP_AMP_RUNTIME
-#define __CLAMP_AMP_RUNTIME
+#pragma once
 
 #include <map>
 
@@ -607,4 +606,3 @@ struct rw_info
 
 } // namespace Concurrency
 
-#endif // __CLAMP_AMP_RUNTIME

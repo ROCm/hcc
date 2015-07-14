@@ -1,8 +1,6 @@
-#ifndef __CLAMP_SERIALIZE
-#define __CLAMP_SERIALIZE
+#pragma once
 
-#include <amp_runtime.h>
-#include <stdio.h>
+#include <amp.h>
 
 namespace Concurrency
 {
@@ -87,4 +85,3 @@ public:
 
 } // namespace Concurrency
 
-#endif // __CLAMP_SERIALIZE

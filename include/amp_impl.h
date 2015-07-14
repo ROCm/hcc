@@ -7,8 +7,6 @@
 
 #pragma once
 
-#include <amp_runtime.h>
-
 // Specialization of AMP classes/templates
 namespace Concurrency {
 
