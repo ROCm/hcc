@@ -10,8 +10,9 @@
 #include <amp_runtime.h>
 #include <serialize.h>
 
-namespace Concurrency {
+namespace Kalmar {
 
+using namespace Concurrency;
 
 // Dummy interface that looks somewhat like std::shared_ptr<T>
 template <typename T>
@@ -98,5 +99,5 @@ public:
         explicit _data_host(__global typename std::remove_const<T>::type* t) {}
 };
 
-} // namespace Concurrency
+} // namespace Kalmar
 

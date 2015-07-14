@@ -34,7 +34,7 @@
 #define __global
 #include <amp_exception.h>
 #include <amp_runtime.h>
-#include <amp_manage.h>
+#include <kalmar_buffer.h>
 #include <serialize.h>
 // End CLAMP
 
@@ -1479,9 +1479,9 @@ class array {
   static_assert(0 == (sizeof(T) % sizeof(int)), "only value types whose size is a multiple of the size of an integer are allowed in array");
 public:
 #if __KALMAR_ACCELERATOR__ == 1
-  typedef _data<T> acc_buffer_t;
+  typedef Kalmar::_data<T> acc_buffer_t;
 #else
-  typedef _data_host<T> acc_buffer_t;
+  typedef Kalmar::_data_host<T> acc_buffer_t;
 #endif
 
   static const int rank = N;
@@ -1906,9 +1906,9 @@ class array_view
 public:
   typedef typename std::remove_const<T>::type nc_T;
 #if __KALMAR_ACCELERATOR__ == 1
-  typedef _data<T> acc_buffer_t;
+  typedef Kalmar::_data<T> acc_buffer_t;
 #else
-  typedef _data_host<T> acc_buffer_t;
+  typedef Kalmar::_data_host<T> acc_buffer_t;
 #endif
 
   static const int rank = N;
@@ -2153,9 +2153,9 @@ public:
   typedef const T value_type;
 
 #if __KALMAR_ACCELERATOR__ == 1
-  typedef _data<nc_T> acc_buffer_t;
+  typedef Kalmar::_data<nc_T> acc_buffer_t;
 #else
-  typedef _data_host<const T> acc_buffer_t;
+  typedef Kalmar::_data_host<const T> acc_buffer_t;
 #endif
 
   array_view() = delete;
