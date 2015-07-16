@@ -13,13 +13,7 @@
 #include <thread>
 #endif
 
-// FIXME: remove C++AMP public header dependency
-#include <amp.h>
-
 namespace Kalmar {
-
-// FIXME: remove Concurrency namespace dependency
-using namespace Concurrency;
 
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
 #define SSIZE 1024 * 10
@@ -183,15 +177,15 @@ public:
     }
 };
 
+// FIXME: need to resolve the dependency to extent
 template <typename Kernel, int N>
-void launch_cpu_task(const Concurrency::accelerator_view& av, Kernel const& f,
+void launch_cpu_task(const std::shared_ptr<KalmarQueue>& av, Kernel const& f,
                      extent<N> const& compute_domain)
 {
     CPUKernelRAII<Kernel> obj(av.pQueue, f);
     for (int i = 0; i < NTHREAD; ++i)
         obj[i] = std::thread(partitioned_task<Kernel, N>, std::cref(f), std::cref(compute_domain), i);
 }
-
 template <typename Kernel, int D0>
 void launch_cpu_task(const std::shared_ptr<KalmarQueue>& pQueue, Kernel const& f,
                      tiled_extent<D0> const& compute_domain)
@@ -240,9 +234,9 @@ static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu) {
 }
 
 template <typename Kernel>
-static void append_kernel(std::shared_ptr<KalmarQueue> av, const Kernel& f, void* kernel)
+static void append_kernel(const std::shared_ptr<KalmarQueue>& pQueue, const Kernel& f, void* kernel)
 {
-  Kalmar::BufferArgumentsAppender vis(av, kernel);
+  Kalmar::BufferArgumentsAppender vis(pQueue, kernel);
   Kalmar::Serialize s(&vis);
   f.__cxxamp_serialize(s);
 }
@@ -250,36 +244,30 @@ static void append_kernel(std::shared_ptr<KalmarQueue> av, const Kernel& f, void
 static std::set<std::string> __mcw_cxxamp_kernels;
 template<typename Kernel, int dim_ext>
 inline std::shared_future<void>*
-mcw_cxxamp_launch_kernel_async(const Concurrency::accelerator_view& av, size_t *ext,
+mcw_cxxamp_launch_kernel_async(const std::shared_ptr<KalmarQueue>& pQueue, size_t *ext,
   size_t *local_size, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
   //Invoke Kernel::__cxxamp_trampoline as an kernel
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
   // FIXME: implicitly casting to avoid pointer to int error
-  if (av.get_accelerator().get_device_path() == L"cpu") {
-    throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
-  }
   int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
   void *kernel = NULL;
   {
       std::string transformed_kernel_name =
           mcw_cxxamp_fixnames(f.__cxxamp_trampoline_name());
-      kernel = CLAMP::CreateKernel(transformed_kernel_name, av.pQueue.get());
+      kernel = CLAMP::CreateKernel(transformed_kernel_name, pQueue.get());
   }
-  append_kernel(av.pQueue, f, kernel);
-  return static_cast<std::shared_future<void>*>(av.pQueue->LaunchKernelAsync(kernel, dim_ext, ext, local_size));
+  append_kernel(pQueue, f, kernel);
+  return static_cast<std::shared_future<void>*>(pQueue->LaunchKernelAsync(kernel, dim_ext, ext, local_size));
 #endif
 }
 
 template<typename Kernel, int dim_ext>
 inline
-void mcw_cxxamp_launch_kernel(const Concurrency::accelerator_view& av, size_t *ext,
+void mcw_cxxamp_launch_kernel(const std::shared_ptr<KalmarQueue>& pQueue, size_t *ext,
                               size_t *local_size, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
-  if (av.get_accelerator().get_device_path() == L"cpu") {
-    throw runtime_exception(__errorMsg_UnsupportedAccelerator, E_FAIL);
-  }
   //Invoke Kernel::__cxxamp_trampoline as an kernel
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -289,15 +277,15 @@ void mcw_cxxamp_launch_kernel(const Concurrency::accelerator_view& av, size_t *e
   {
       std::string transformed_kernel_name =
           mcw_cxxamp_fixnames(f.__cxxamp_trampoline_name());
-      kernel = CLAMP::CreateKernel(transformed_kernel_name, av.pQueue.get());
+      kernel = CLAMP::CreateKernel(transformed_kernel_name, pQueue.get());
   }
-  append_kernel(av.pQueue, f, kernel);
-  av.pQueue->LaunchKernel(kernel, dim_ext, ext, local_size);
+  append_kernel(pQueue, f, kernel);
+  pQueue->LaunchKernel(kernel, dim_ext, ext, local_size);
 #endif // __KALMAR_ACCELERATOR__
 }
 
 template<typename Kernel>
-inline void* mcw_cxxamp_get_kernel(std::shared_ptr<KalmarQueue> pQueue, const Kernel& f) restrict(cpu,amp) {
+inline void* mcw_cxxamp_get_kernel(const std::shared_ptr<KalmarQueue>& pQueue, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
   //Invoke Kernel::__cxxamp_trampoline as an kernel
   //to ensure functor has right operator() defined
@@ -317,7 +305,7 @@ inline void* mcw_cxxamp_get_kernel(std::shared_ptr<KalmarQueue> pQueue, const Ke
 template<typename Kernel, int dim_ext>
 inline
 void mcw_cxxamp_execute_kernel_with_dynamic_group_memory(
-  std::shared_ptr<KalmarQueue> pQueue, size_t *ext, size_t *local_size,
+  const std::shared_ptr<KalmarQueue>& pQueue, size_t *ext, size_t *local_size,
   const Kernel& f, void *kernel, size_t dynamic_group_memory_size) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
   append_kernel(pQueue, f, kernel);
