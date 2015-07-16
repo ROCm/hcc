@@ -15,27 +15,6 @@
 
 #pragma once
 
-#include <algorithm>
-#include <cassert>
-#include <chrono>
-#include <cstdlib>
-#include <exception>
-#include <future>
-#include <map>
-#include <memory>
-#include <set>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <vector>
-
-// CPU execution path
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-#include <thread>
-#include <ucontext.h>
-#endif
-
-// Kalmar internals
 #define __global
 #include <kalmar_defines.h>
 #include <kalmar_exception.h>

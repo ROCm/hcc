@@ -1,6 +1,6 @@
 #pragma once
 
-#include <map>
+#include <kalmar_defines.h>
 
 namespace Kalmar {
 namespace enums {

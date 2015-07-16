@@ -6,12 +6,10 @@
 //===----------------------------------------------------------------------===//
 
 #pragma once
-#include <cassert>
-#include <future>
-#include <utility>
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-#include <thread>
-#endif
+
+#include <kalmar_defines.h>
+#include <kalmar_runtime.h>
+#include <kalmar_serialize.h>
 
 namespace Kalmar {
 
