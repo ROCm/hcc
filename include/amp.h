@@ -74,10 +74,6 @@ template <int D0, int D1=0, int D2=0> class tiled_extent;
 
 // forward declaration
 namespace hc {
-class tiled_extent_1D;
-class tiled_extent_2D;
-class tiled_extent_3D;
-
 class tiled_index_1D;
 class tiled_index_2D;
 class tiled_index_3D;
