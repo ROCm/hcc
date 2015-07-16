@@ -1,18 +1,32 @@
 #pragma once
 
-// FIXME: remove C++AMP header dependency
-#include <amp.h>
+#include <cstdlib>
+#include <future>
+#include <memory>
+#include <string>
+#include <thread>
+#include <vector>
+
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+#include <ucontext.h>
+#endif
+
+#include <kalmar_defines.h>
+#include <kalmar_exception.h>
+#include <kalmar_index.h>
+#include <kalmar_launch.h>
+#include <kalmar_runtime.h>
 
 #include <hsa_atomic.h>
 
 namespace hc {
 
-// FIXME: remove Concurrency dependency
-using namespace Concurrency;
+using namespace Kalmar::enums;
 
 // forward declaration
 class accelerator;
 class accelerator_view;
+template <int N> class extent;
 class tiled_extent_1D;
 class tiled_extent_2D;
 class tiled_extent_3D;
@@ -20,6 +34,16 @@ class tiled_index_1D;
 class tiled_index_2D;
 class tiled_index_3D;
 class ts_allocator;
+
+// type alias
+// hc::index is just an alias of Kalmar::index
+template <int N>
+using index = Kalmar::index<N>;
+
+using runtime_exception = Kalmar::runtime_exception;
+using invalid_compute_domain = Kalmar::invalid_compute_domain;
+using accelerator_view_removed = Kalmar::accelerator_view_removed;
+
 
 class accelerator_view {
     accelerator_view(std::shared_ptr<Kalmar::KalmarQueue> pQueue)
@@ -40,7 +64,6 @@ public:
 
   void flush() { pQueue->flush(); }
   void wait() { pQueue->wait(); }
-  completion_future create_marker();
 
   bool operator==(const accelerator_view& other) const {
       return pQueue == other.pQueue;
@@ -73,11 +96,6 @@ private:
       void parallel_for_each(const accelerator_view&, const tiled_extent_2D&, ts_allocator&, const Kernel&);
   template<typename Kernel> friend
       void parallel_for_each(const accelerator_view&, const tiled_extent_3D&, ts_allocator&, const Kernel&);
-
-  // FIXME: remove C++AMP dependencies
-  template <typename Q, int K> friend class array;
-  template <typename Q, int K> friend class array_view;
-  template <typename T, int N> friend class array_helper;
 
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
 public:
@@ -161,8 +179,139 @@ inline accelerator accelerator_view::get_accelerator() const { return pQueue->ge
 const wchar_t accelerator::cpu_accelerator[] = L"cpu";
 const wchar_t accelerator::default_accelerator[] = L"default";
 
+template <int N>
+class extent {
+public:
+    static const int rank = N;
+    typedef int value_type;
+
+    extent() restrict(amp,cpu) : base_() {
+      static_assert(N > 0, "Dimensionality must be positive");
+    };
+    extent(const extent& other) restrict(amp,cpu)
+        : base_(other.base_) {}
+    template <typename ..._Tp>
+        explicit extent(_Tp ... __t) restrict(amp,cpu)
+        : base_(__t...) {
+      static_assert(sizeof...(__t) <= 3, "Can only supply at most 3 individual coordinates in the constructor");
+      static_assert(sizeof...(__t) == N, "rank should be consistency");
+    }
+    explicit extent(int component) restrict(amp,cpu)
+        : base_(component) {}
+    explicit extent(int components[]) restrict(amp,cpu)
+        : base_(components) {}
+    explicit extent(const int components[]) restrict(amp,cpu)
+        : base_(components) {}
+
+    extent& operator=(const extent& other) restrict(amp,cpu) {
+        base_.operator=(other.base_);
+        return *this;
+    }
+
+    int operator[] (unsigned int c) const restrict(amp,cpu) {
+        return base_[c];
+    }
+    int& operator[] (unsigned int c) restrict(amp,cpu) {
+        return base_[c];
+    }
+
+    bool operator==(const extent& other) const restrict(amp,cpu) {
+        return Kalmar::index_helper<N, extent<N> >::equal(*this, other);
+    }
+    bool operator!=(const extent& other) const restrict(amp,cpu) {
+        return !(*this == other);
+    }
+
+    unsigned int size() const restrict(amp,cpu) {
+        return Kalmar::index_helper<N, extent<N>>::count_size(*this);
+    }
+    bool contains(const index<N>& idx) const restrict(amp,cpu) {
+        return Kalmar::amp_helper<N, index<N>, extent<N>>::contains(idx, *this);
+    }
+    extent operator+(const index<N>& idx) restrict(amp,cpu) {
+        extent __r = *this;
+        __r += idx;
+        return __r;
+    }
+    extent operator-(const index<N>& idx) restrict(amp,cpu) {
+        extent __r = *this;
+        __r -= idx;
+        return __r;
+    }
+    extent& operator+=(const index<N>& idx) restrict(amp,cpu) {
+        base_.operator+=(idx.base_);
+        return *this;
+    }
+    extent& operator-=(const index<N>& idx) restrict(amp,cpu) {
+        base_.operator-=(idx.base_);
+        return *this;
+    }
+    extent& operator+=(const extent& __r) restrict(amp,cpu) {
+        base_.operator+=(__r.base_);
+        return *this;
+    }
+    extent& operator-=(const extent& __r) restrict(amp,cpu) {
+        base_.operator-=(__r.base_);
+        return *this;
+    }
+    extent& operator*=(const extent& __r) restrict(amp,cpu) {
+        base_.operator*=(__r.base_);
+        return *this;
+    }
+    extent& operator/=(const extent& __r) restrict(amp,cpu) {
+        base_.operator/=(__r.base_);
+        return *this;
+    }
+    extent& operator%=(const extent& __r) restrict(amp,cpu) {
+        base_.operator%=(__r.base_);
+        return *this;
+    }
+    extent& operator+=(int __r) restrict(amp,cpu) {
+        base_.operator+=(__r);
+        return *this;
+    }
+    extent& operator-=(int __r) restrict(amp,cpu) {
+        base_.operator-=(__r);
+        return *this;
+    }
+    extent& operator*=(int __r) restrict(amp,cpu) {
+        base_.operator*=(__r);
+        return *this;
+    }
+    extent& operator/=(int __r) restrict(amp,cpu) {
+        base_.operator/=(__r);
+        return *this;
+    }
+    extent& operator%=(int __r) restrict(amp,cpu) {
+        base_.operator%=(__r);
+        return *this;
+    }
+    extent& operator++() restrict(amp,cpu) {
+        base_.operator+=(1);
+        return *this;
+    }
+    extent operator++(int) restrict(amp,cpu) {
+        extent ret = *this;
+        base_.operator+=(1);
+        return ret;
+    }
+    extent& operator--() restrict(amp,cpu) {
+        base_.operator-=(1);
+        return *this;
+    }
+    extent operator--(int) restrict(amp,cpu) {
+        extent ret = *this;
+        base_.operator-=(1);
+        return ret;
+    }
+private:
+    typedef Kalmar::index_impl<typename Kalmar::__make_indices<N>::type> base;
+    base base_;
+    template <int K, typename Q> friend struct Kalmar::index_helper;
+    template <int K, typename Q1, typename Q2> friend struct Kalmar::amp_helper;
+};
+
 // tile extent supporting dynamic tile size
-// FIXME: disable dependency to Concurrency::extent
 class tiled_extent_1D : public extent<1> {
 public:
   static const int rank = 1;
@@ -174,7 +323,6 @@ public:
 };
 
 // tile extent supporting dynamic tile size
-// FIXME: disable dependency to Concurrency::extent
 class tiled_extent_2D : public extent<2> {
 public:
   static const int rank = 2;
@@ -187,7 +335,6 @@ public:
 };
 
 // tile extent supporting dynamic tile size
-// FIXME: disable dependency to Concurrency::extent
 class tiled_extent_3D : public extent<3> {
 public:
   static const int rank = 3;
@@ -343,7 +490,6 @@ class tile_barrier {
 };
 
 
-// FIXME: disable dependency to Concurrency::index
 class tiled_index_1D {
 public:
   const index<1> global;
@@ -380,7 +526,6 @@ private:
   friend void parallel_for_each(const accelerator_view&, const tiled_extent_1D&, ts_allocator&, const Kernel&);
 };
 
-// FIXME: disable dependency to Concurrency::index
 class tiled_index_2D {
 public:
   const index<2> global;
@@ -418,7 +563,6 @@ private:
   friend void parallel_for_each(const accelerator_view&, const tiled_extent_2D&, ts_allocator&, const Kernel&);
 };
 
-// FIXME: disable dependency to Concurrency::index
 class tiled_index_3D {
 public:
   const index<3> global;
