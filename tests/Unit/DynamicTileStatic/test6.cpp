@@ -1,6 +1,7 @@
 // XFAIL: Linux
 // RUN: %cxxamp %s -Xclang -fhsa-ext -o %t.out && %t.out
 
+#include <amp.h>
 #include <hc.hpp>
 
 #include <iostream>

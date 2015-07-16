@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <future>
 #include <memory>
+#include <set>
 #include <string>
 #include <thread>
 #include <vector>
@@ -14,8 +15,9 @@
 #include <kalmar_defines.h>
 #include <kalmar_exception.h>
 #include <kalmar_index.h>
-#include <kalmar_launch.h>
 #include <kalmar_runtime.h>
+#include <kalmar_serialize.h>
+#include <kalmar_launch.h>
 
 #include <hsa_atomic.h>
 
@@ -80,15 +82,19 @@ private:
   friend class accelerator;
 
   template<typename Kernel> friend
-      void* Kalmar::mcw_cxxamp_get_kernel(const accelerator_view&, const Kernel&);
+      void* Kalmar::mcw_cxxamp_get_kernel(const std::shared_ptr<Kalmar::KalmarQueue>&, const Kernel&);
   template<typename Kernel, int dim_ext> friend
-      void Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory(const accelerator_view&, size_t *, size_t *, const Kernel&, void*, size_t);
+      void Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&, void*, size_t);
   template<typename Kernel, int dim_ext> friend
-      void Kalmar::mcw_cxxamp_launch_kernel(const accelerator_view&, size_t *, size_t *, const Kernel&);
+      void Kalmar::mcw_cxxamp_launch_kernel(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&);
   template<typename Kernel, int dim_ext> friend
-      std::shared_future<void>* Kalmar::mcw_cxxamp_launch_kernel_async(const accelerator_view&, size_t *, size_t *, const Kernel&);
+      std::shared_future<void>* Kalmar::mcw_cxxamp_launch_kernel_async(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&);
+
+  // FIXME: enable CPU execution path for HC
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   template <typename Kernel, int N> friend
-      void Kalmar::launch_cpu_task(const accelerator_view&, Kernel const&, extent<N> const&);
+      void Kalmar::launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>&, Kernel const&, extent<N> const&);
+#endif
 
   template<typename Kernel> friend
       void parallel_for_each(const accelerator_view&, const tiled_extent_1D&, ts_allocator&, const Kernel&);
