@@ -24,7 +24,7 @@ bool test() {
   Concurrency::array_view<int, 1> av(GRID_SIZE);
   tiled_extent_1D ex(GRID_SIZE, TILE_SIZE);
   
-  parallel_for_each(accelerator().get_default_view(),
+  parallel_for_each(hc::accelerator().get_default_view(),
                     ex,
                     tsa,
                     __KERNEL__ [=, &tsa](tiled_index_1D& tidx) {
