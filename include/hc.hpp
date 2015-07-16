@@ -12,9 +12,13 @@ using namespace Concurrency;
 
 // forward declaration
 class accelerator;
+class accelerator_view;
 class tiled_extent_1D;
 class tiled_extent_2D;
 class tiled_extent_3D;
+class tiled_index_1D;
+class tiled_index_2D;
+class tiled_index_3D;
 class ts_allocator;
 
 class accelerator_view {
@@ -355,9 +359,9 @@ class tile_barrier {
 #else
   tile_barrier() restrict(amp) {}
 #endif
-  friend class hc::tiled_index_1D;
-  friend class hc::tiled_index_2D;
-  friend class hc::tiled_index_3D;
+  friend class tiled_index_1D;
+  friend class tiled_index_2D;
+  friend class tiled_index_3D;
 };
 
 
