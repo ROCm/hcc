@@ -1,17 +1,5 @@
 #pragma once
 
-#include <cstdlib>
-#include <future>
-#include <memory>
-#include <set>
-#include <string>
-#include <thread>
-#include <vector>
-
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-#include <ucontext.h>
-#endif
-
 #include <kalmar_defines.h>
 #include <kalmar_exception.h>
 #include <kalmar_index.h>
