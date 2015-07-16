@@ -10,8 +10,10 @@
 #include <future>
 #include <utility>
 #include <coordinate>
-#include <amp.h>
 #include <iostream>
+
+#include <kalmar_launch.h>
+#include <kalmar_runtime.h>
 
 namespace std {
 namespace experimental {
@@ -45,7 +47,7 @@ void for_each(ExecutionPolicy&& exec,
 #ifndef __KALMAR_ACCELERATOR__
   size_t ext = std::distance(first, last);
   fe_wrapper<Function, InputIterator> _pf(ext, f, first);
-  Kalmar::mcw_cxxamp_launch_kernel<fe_wrapper<Function, InputIterator>, 1>(Concurrency::accelerator().get_default_view(), &ext, NULL, _pf);
+  Kalmar::mcw_cxxamp_launch_kernel<fe_wrapper<Function, InputIterator>, 1>(Kalmar::getContext()->getDevice(L"default")->get_default_queue(), &ext, NULL, _pf);
 #else //ifndef __KALMAR_ACCELERATOR__
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -65,7 +67,7 @@ void for_each_n(ExecutionPolicy&& exec,
 #ifndef __KALMAR_ACCELERATOR__
   size_t ext = std::distance(first, first + n);
   fe_wrapper<Function, InputIterator> _pf(ext, f, first);
-  Kalmar::mcw_cxxamp_launch_kernel<fe_wrapper<Function, InputIterator>, 1>(Concurrency::accelerator().get_default_view(), &ext, NULL, _pf);
+  Kalmar::mcw_cxxamp_launch_kernel<fe_wrapper<Function, InputIterator>, 1>(Kalmar::getContext()->getDevice(L"default")->get_default_queue(), &ext, NULL, _pf);
 #else //ifndef __KALMAR_ACCELERATOR__
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
