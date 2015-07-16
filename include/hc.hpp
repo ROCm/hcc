@@ -7,20 +7,173 @@
 
 namespace hc {
 
+// FIXME: remove Concurrency dependency
 using namespace Concurrency;
 
-// returns the size of tile static area
-// FIXME: make it a member function inside hc::acclerator_view
-size_t get_max_tile_static_size(const accelerator_view& av) {
-  return av.pQueue.get()->getDev()->GetMaxTileStaticSize();
-}
+// forward declaration
+class accelerator;
 
-// returns the size of tile static area
-// FIXME: make it a member function inside hc::accelerator
-size_t get_max_tile_static_size(const accelerator& acc) {
-  return get_max_tile_static_size(acc.get_default_view());
-}
+class accelerator_view {
+    accelerator_view(std::shared_ptr<Kalmar::KalmarQueue> pQueue)
+        : pQueue(pQueue) {}
+public:
+  accelerator_view(const accelerator_view& other) :
+      pQueue(other.pQueue) {}
+  accelerator_view& operator=(const accelerator_view& other) {
+      pQueue = other.pQueue;
+      return *this;
+  }
 
+  accelerator get_accelerator() const;
+  bool get_is_debug() const { return 0; } 
+  unsigned int get_version() const { return 0; } 
+  queuing_mode get_queuing_mode() const { return pQueue->get_mode(); }
+  bool get_is_auto_selection() { return false; }
+
+  void flush() { pQueue->flush(); }
+  void wait() { pQueue->wait(); }
+  completion_future create_marker();
+
+  bool operator==(const accelerator_view& other) const {
+      return pQueue == other.pQueue;
+  }
+  bool operator!=(const accelerator_view& other) const { return !(*this == other); }
+
+  // returns the size of tile static area
+  size_t get_max_tile_static_size() {
+    return pQueue.get()->getDev()->GetMaxTileStaticSize();
+  }
+
+private:
+  std::shared_ptr<Kalmar::KalmarQueue> pQueue;
+  friend class accelerator;
+
+  template<typename Kernel> friend
+      void* Kalmar::mcw_cxxamp_get_kernel(const accelerator_view&, const Kernel&);
+  template<typename Kernel, int dim_ext> friend
+      void Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory(const accelerator_view&, size_t *, size_t *, const Kernel&, void*, size_t);
+  template<typename Kernel, int dim_ext> friend
+      void Kalmar::mcw_cxxamp_launch_kernel(const accelerator_view&, size_t *, size_t *, const Kernel&);
+  template<typename Kernel, int dim_ext> friend
+      std::shared_future<void>* Kalmar::mcw_cxxamp_launch_kernel_async(const accelerator_view&, size_t *, size_t *, const Kernel&);
+  template <typename Kernel, int N> friend
+      void Kalmar::launch_cpu_task(const accelerator_view&, Kernel const&, extent<N> const&);
+
+  template<typename Kernel> friend
+      void parallel_for_each(const accelerator_view&, const tiled_extent_1D&, ts_allocator&, const Kernel&);
+  template<typename Kernel> friend
+      void parallel_for_each(const accelerator_view&, const tiled_extent_2D&, ts_allocator&, const Kernel&);
+  template<typename Kernel> friend
+      void parallel_for_each(const accelerator_view&, const tiled_extent_3D&, ts_allocator&, const Kernel&);
+
+  // FIXME: remove C++AMP dependencies
+  template <typename Q, int K> friend class array;
+  template <typename Q, int K> friend class array_view;
+  template <typename T, int N> friend class array_helper;
+
+  // FIXME: C++AMP parallel_for_each interfaces
+#if 0
+  template <int N, typename Kernel>
+      friend void parallel_for_each(extent<N> compute_domain, const Kernel& f);
+  template <int D0, int D1, int D2, typename Kernel>
+      friend void parallel_for_each(tiled_extent<D0,D1,D2> compute_domain, const Kernel& f);
+  template <int D0, int D1, typename Kernel>
+      friend void parallel_for_each(tiled_extent<D0,D1> compute_domain, const Kernel& f);
+  template <int D0, typename Kernel>
+      friend void parallel_for_each(tiled_extent<D0> compute_domain, const Kernel& f);
+#endif
+
+  // FIXME: C++AMP parallel_for_each interfaces
+#if 0
+  template <int D0, typename Kernel>
+      friend void parallel_for_each(const accelerator_view&, tiled_extent<D0>, const Kernel&) restrict(cpu,amp);
+  template <int D0, int D1, typename Kernel>
+      friend void parallel_for_each(const accelerator_view&, tiled_extent<D0, D1>, const Kernel&) restrict(cpu,amp);
+  template <int D0, int D1, int D2, typename Kernel>
+      friend void parallel_for_each(const accelerator_view&, tiled_extent<D0, D1, D2>, const Kernel&) restrict(cpu,amp);
+#endif
+
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+public:
+#endif
+  __attribute__((annotate("user_deserialize")))
+      accelerator_view() restrict(amp,cpu) {
+#if __KALMAR_ACCELERATOR__ != 1
+          throw runtime_exception("errorMsg_throw", 0);
+#endif
+      }
+};
+
+class accelerator
+{
+  accelerator(Kalmar::KalmarDevice* pDev) : pDev(pDev) {}
+public:
+  static const wchar_t default_accelerator[];
+  static const wchar_t cpu_accelerator[];
+
+  accelerator() : accelerator(default_accelerator) {}
+  explicit accelerator(const std::wstring& path)
+      : pDev(Kalmar::getContext()->getDevice(path)) {}
+  accelerator(const accelerator& other) : pDev(other.pDev) {}
+
+  static std::vector<accelerator> get_all() {
+      auto Devices = Kalmar::getContext()->getDevices();
+      std::vector<accelerator> ret(Devices.size());
+      for (int i = 0; i < ret.size(); ++i)
+          ret[i] = Devices[i];
+      return std::move(ret);
+  }
+  static bool set_default(const std::wstring& path) {
+      return Kalmar::getContext()->set_default(path);
+  }
+  static accelerator_view get_auto_selection_view() { return Kalmar::getContext()->auto_select(); }
+
+  accelerator& operator=(const accelerator& other) {
+      pDev = other.pDev;
+      return *this;
+  }
+
+  std::wstring get_device_path() const { return pDev->get_path(); }
+  unsigned int get_version() const { return 0; }
+  std::wstring get_description() const { return pDev->get_description(); }
+  bool get_is_debug() const { return false; }
+  bool get_is_emulated() const { return pDev->is_emulated(); }
+  bool get_has_display() const { return false; }
+  bool get_supports_double_precision() const { return pDev->is_double(); }
+  bool get_supports_limited_double_precision() const { return pDev->is_lim_double(); }
+  size_t get_dedicated_memory() const { return pDev->get_mem(); }
+  accelerator_view get_default_view() const { return pDev->get_default_queue(); }
+  access_type get_default_cpu_access_type() const { return pDev->get_access(); }
+  bool get_supports_cpu_shared_memory() const { return pDev->is_unified(); }
+
+  bool set_default_cpu_access_type(access_type type) {
+      pDev->set_access(type);
+      return true;
+  }
+  accelerator_view create_view(queuing_mode mode = queuing_mode_automatic) {
+      auto pQueue = pDev->createQueue();
+      pQueue->set_mode(mode);
+      return pQueue;
+  }
+
+  bool operator==(const accelerator& other) const { return pDev == other.pDev; }
+  bool operator!=(const accelerator& other) const { return !(*this == other); }
+
+  // returns the size of tile static area
+  size_t get_max_tile_static_size() {
+    return get_default_view().get_max_tile_static_size();
+  }
+
+private:
+  friend class accelerator_view;
+  Kalmar::KalmarDevice* pDev;
+};
+
+inline accelerator accelerator_view::get_accelerator() const { return pQueue->getDev(); }
+
+// FIXME: this will cause troubles later in separated compilation
+const wchar_t accelerator::cpu_accelerator[] = L"cpu";
+const wchar_t accelerator::default_accelerator[] = L"default";
 
 // tile extent supporting dynamic tile size
 // FIXME: move to hc namespace
@@ -227,10 +380,12 @@ private:
 };
 
 // variants of parallel_for_each that supports runtime allocation of tile static
-// FIXME: move from Concurrency namespace to hc
 template <typename Kernel>
-__attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av, const tiled_extent_1D& compute_domain,
-                                                      ts_allocator& allocator, const Kernel& f) restrict(amp,cpu) {
+__attribute__((noinline,used))
+void parallel_for_each(const accelerator_view& av,
+                       const tiled_extent_1D& compute_domain,
+                       ts_allocator& allocator,
+                       const Kernel& f) restrict(amp,cpu) {
 #if __KALMAR_ACCELERATOR__ != 1
   if(compute_domain[0]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
@@ -252,9 +407,12 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
       return;
   }
 #endif
-  void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av, f);
+  if (av.get_accelerator().get_device_path() == L"cpu") {
+    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
+  }
+  void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
   allocator.setStaticGroupSegmentSize(av.pQueue->GetGroupSegmentSize(kernel));
-  Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory<Kernel, 1>(av, &ext, &tile, f, kernel, allocator.getDynamicGroupSegmentSize());
+  Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory<Kernel, 1>(av.pQueue, &ext, &tile, f, kernel, allocator.getDynamicGroupSegmentSize());
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index_1D this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -265,10 +423,12 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
 }
 
 // variants of parallel_for_each that supports runtime allocation of tile static
-// FIXME: move from Concurrency namespace to hc
 template <typename Kernel>
-__attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av, const tiled_extent_2D& compute_domain,
-                                                      ts_allocator& allocator, const Kernel& f) restrict(cpu,amp) {
+__attribute__((noinline,used))
+void parallel_for_each(const accelerator_view& av,
+                       const tiled_extent_2D& compute_domain,
+                       ts_allocator& allocator,
+                       const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
   if(compute_domain[0]<=0 || compute_domain[1]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
@@ -290,9 +450,12 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
       launch_cpu_task(av.pQueue, f, compute_domain);
   } else
 #endif
-  void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av, f);
+  if (av.get_accelerator().get_device_path() == L"cpu") {
+    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
+  }
+  void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
   allocator.setStaticGroupSegmentSize(av.pQueue->GetGroupSegmentSize(kernel));
-  Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory<Kernel, 2>(av, ext, tile, f, kernel, allocator.getDynamicGroupSegmentSize());
+  Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory<Kernel, 2>(av.pQueue, ext, tile, f, kernel, allocator.getDynamicGroupSegmentSize());
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index_2D this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -303,10 +466,12 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
 }
 
 // variants of parallel_for_each that supports runtime allocation of tile static
-// FIXME: move from Concurrency namespace to hc
 template <typename Kernel>
-__attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av, const tiled_extent_3D& compute_domain,
-                                                      ts_allocator& allocator, const Kernel& f) restrict(cpu,amp) {
+__attribute__((noinline,used))
+void parallel_for_each(const accelerator_view& av,
+                       const tiled_extent_3D& compute_domain,
+                       ts_allocator& allocator,
+                       const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
   if(compute_domain[0]<=0 || compute_domain[1]<=0 || compute_domain[2]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
@@ -336,9 +501,12 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
       launch_cpu_task(av.pQueue, f, compute_domain);
   } else
 #endif
-  void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av, f);
+  if (av.get_accelerator().get_device_path() == L"cpu") {
+    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
+  }
+  void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
   allocator.setStaticGroupSegmentSize(av.pQueue->GetGroupSegmentSize(kernel));
-  Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory<Kernel, 3>(av, ext, tile, f, kernel, allocator.getDynamicGroupSegmentSize());
+  Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory<Kernel, 3>(av.pQueue, ext, tile, f, kernel, allocator.getDynamicGroupSegmentSize());
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index_3D this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -349,17 +517,23 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
 }
 
 template <typename Kernel>
-void parallel_for_each(const tiled_extent_1D& compute_domain, ts_allocator& allocator, const Kernel& f) {
+void parallel_for_each(const tiled_extent_1D& compute_domain,
+                       ts_allocator& allocator,
+                       const Kernel& f) {
   parallel_for_each(accelerator().get_default_view(), compute_domain, allocator, f);
 }
 
 template<typename Kernel>
-void parallel_for_each(const tiled_extent_2D& compute_domain, ts_allocator& allocator, const Kernel& f) {
+void parallel_for_each(const tiled_extent_2D& compute_domain,
+                       ts_allocator& allocator,
+                       const Kernel& f) {
   parallel_for_each(accelerator().get_default_view(), compute_domain, allocator, f);
 }
 
 template<typename Kernel>
-void parallel_for_each(const tiled_extent_3D& compute_domain, ts_allocator& allocator, const Kernel& f) {
+void parallel_for_each(const tiled_extent_3D& compute_domain,
+                       ts_allocator& allocator,
+                       const Kernel& f) {
   parallel_for_each(accelerator().get_default_view(), compute_domain, allocator, f);
 }
 
