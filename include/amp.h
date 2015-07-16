@@ -39,13 +39,6 @@
 #include <kalmar_serialize.h>
 // End CLAMP
 
-/* COMPATIBILITY LAYER */
-#define STD__FUTURE_STATUS__FUTURE_STATUS std::future_status
-
-#ifndef WIN32
-#define __declspec(ignored) /* */
-#endif
-
 namespace concurrency = Concurrency;
 
 // forward declaration
@@ -1125,7 +1118,6 @@ public:
     return trunc;
   }
 
-  // __declspec(property(get)) extent<3> tile_extent;
   extent<3> get_tile_extent() const;
   static const int tile_dim0 = D0;
   static const int tile_dim1 = D1;
@@ -1157,7 +1149,6 @@ public:
     trunc[1] = (trunc[1]/D1) * D1;
     return trunc;
   }
-  // __declspec(property(get)) extent<2> tile_extent;
   extent<2> get_tile_extent() const;
   static const int tile_dim0 = D0;
   static const int tile_dim1 = D1;
@@ -1187,7 +1178,6 @@ public:
     trunc[0] = (trunc[0]/D0) * D0;
     return trunc;
   }
-  // __declspec(property(get)) extent<1> tile_extent;
   extent<1> get_tile_extent() const;
   static const int tile_dim0 = D0;
   friend bool operator==(const tiled_extent& lhs, const tiled_extent& rhs) restrict(amp,cpu);
