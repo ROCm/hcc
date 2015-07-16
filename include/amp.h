@@ -454,12 +454,6 @@ private:
     template <int K, typename Q> friend struct Kalmar::index_helper;
     template <int K, typename Q1, typename Q2> friend struct Kalmar::amp_helper;
 
-    template<int K, class Y>
-        friend void parallel_for_each(extent<K>, const Y&);
-
-    template<int K, class Y>
-        friend completion_future async_parallel_for_each(extent<K>, const Y&);
-
 public:
     __attribute__((annotate("__cxxamp_opencl_index")))
         void __cxxamp_opencl_index() restrict(amp,cpu)
