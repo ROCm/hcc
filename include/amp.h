@@ -32,15 +32,13 @@
 #endif
 // CLAMP
 #define __global
-#include <amp_exception.inl>
 #include <kalmar_defines.h>
+#include <kalmar_exception.h>
 #include <kalmar_index.h>
 #include <kalmar_runtime.h>
 #include <kalmar_buffer.h>
 #include <kalmar_serialize.h>
 // End CLAMP
-
-namespace concurrency = Concurrency;
 
 // forward declaration
 namespace Concurrency {
@@ -56,7 +54,15 @@ template <int D0, int D1=0, int D2=0> class tiled_extent;
 // Concurrency::index is just an alias of Kalmar::index
 template <int N>
 using index = Kalmar::index<N>;
+
+using runtime_exception = Kalmar::runtime_exception;
+using invalid_compute_domain = Kalmar::invalid_compute_domain;
+using accelerator_view_removed = Kalmar::accelerator_view_removed;
 } // namespace Concurrency
+
+// namespace alias
+// namespace concurrency is an alias of namespace Concurrency
+namespace concurrency = Concurrency;
 
 // forward declaration
 namespace Kalmar {
