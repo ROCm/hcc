@@ -176,7 +176,7 @@ const wchar_t accelerator::cpu_accelerator[] = L"cpu";
 const wchar_t accelerator::default_accelerator[] = L"default";
 
 // tile extent supporting dynamic tile size
-// FIXME: move to hc namespace
+// FIXME: disable dependency to Concurrency::extent
 class tiled_extent_1D : public extent<1> {
 public:
   static const int rank = 1;
@@ -187,7 +187,8 @@ public:
   tiled_extent_1D(const extent<1>& ext, int t0) restrict(amp,cpu) : extent(ext), tile_dim0(t0) {} 
 };
 
-// FIXME: move to hc namespace
+// tile extent supporting dynamic tile size
+// FIXME: disable dependency to Concurrency::extent
 class tiled_extent_2D : public extent<2> {
 public:
   static const int rank = 2;
@@ -199,7 +200,8 @@ public:
   tiled_extent_2D(const extent<2>& ext, int t0, int t1) restrict(amp,cpu) : extent(ext), tile_dim0(t0), tile_dim1(t1) {}
 };
 
-// FIXME: move to hc namespace
+// tile extent supporting dynamic tile size
+// FIXME: disable dependency to Concurrency::extent
 class tiled_extent_3D : public extent<3> {
 public:
   static const int rank = 3;
@@ -268,6 +270,8 @@ public:
   }   
 };  
 
+// FIXME: disable dependency to Concurrency::index
+// FIXME: disable dependency to Concurrency::tile_barrier
 class tiled_index_1D {
 public:
   const index<1> global;
@@ -304,6 +308,8 @@ private:
   friend void parallel_for_each(const accelerator_view&, const tiled_extent_1D&, ts_allocator&, const Kernel&);
 };
 
+// FIXME: disable dependency to Concurrency::index
+// FIXME: disable dependency to Concurrency::tile_barrier
 class tiled_index_2D {
 public:
   const index<2> global;
@@ -341,6 +347,8 @@ private:
   friend void parallel_for_each(const accelerator_view&, const tiled_extent_2D&, ts_allocator&, const Kernel&);
 };
 
+// FIXME: disable dependency to Concurrency::index
+// FIXME: disable dependency to Concurrency::tile_barrier
 class tiled_index_3D {
 public:
   const index<3> global;
