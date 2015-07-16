@@ -81,25 +81,10 @@ class tiled_extent_3D;
 class tiled_index_1D;
 class tiled_index_2D;
 class tiled_index_3D;
-
-class ts_allocator;
-
-size_t get_max_tile_static_size(const Concurrency::accelerator_view&);
-
-template<typename Kernel>
-    void parallel_for_each(const Concurrency::accelerator_view&, const tiled_extent_1D&, ts_allocator&, const Kernel&);
-template<typename Kernel>
-    void parallel_for_each(const Concurrency::accelerator_view&, const tiled_extent_2D&, ts_allocator&, const Kernel&);
-template<typename Kernel>
-    void parallel_for_each(const Concurrency::accelerator_view&, const tiled_extent_3D&, ts_allocator&, const Kernel&);
 } // namespace hc
 
 // forward declaration
 namespace Kalmar {
-template<typename Kernel>
-    void* mcw_cxxamp_get_kernel(const Concurrency::accelerator_view&, const Kernel&);
-template<typename Kernel, int dim_ext>
-    void mcw_cxxamp_execute_kernel_with_dynamic_group_memory(const Concurrency::accelerator_view&, size_t *, size_t *, const Kernel&, void*, size_t);
 template<typename Kernel, int dim_ext>
     void mcw_cxxamp_launch_kernel(const Concurrency::accelerator_view&, size_t *, size_t *, const Kernel&);
 template<typename Kernel, int dim_ext>
@@ -142,28 +127,12 @@ private:
   std::shared_ptr<Kalmar::KalmarQueue> pQueue;
   friend class accelerator;
 
-  // FIXME: move this to hc
-  template<typename Kernel> friend
-      void* Kalmar::mcw_cxxamp_get_kernel(const accelerator_view&, const Kernel&);
-  template<typename Kernel, int dim_ext> friend
-      void Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory(const accelerator_view&, size_t *, size_t *, const Kernel&, void*, size_t);
   template<typename Kernel, int dim_ext> friend
       void Kalmar::mcw_cxxamp_launch_kernel(const accelerator_view&, size_t *, size_t *, const Kernel&);
   template<typename Kernel, int dim_ext> friend
       std::shared_future<void>* Kalmar::mcw_cxxamp_launch_kernel_async(const accelerator_view&, size_t *, size_t *, const Kernel&);
   template <typename Kernel, int N> friend
       void Kalmar::launch_cpu_task(const accelerator_view&, Kernel const&, extent<N> const&);
-
-  // FIXME: move this to hc::accelerator_view
-  friend size_t hc::get_max_tile_static_size(const accelerator_view&);
-
-  // FIXME: move this to hc
-  template<typename Kernel> friend
-      void hc::parallel_for_each(const accelerator_view&, const hc::tiled_extent_1D&, hc::ts_allocator&, const Kernel&);
-  template<typename Kernel> friend
-      void hc::parallel_for_each(const accelerator_view&, const hc::tiled_extent_2D&, hc::ts_allocator&, const Kernel&);
-  template<typename Kernel> friend
-      void hc::parallel_for_each(const accelerator_view&, const hc::tiled_extent_3D&, hc::ts_allocator&, const Kernel&);
 
   template <typename Q, int K> friend class array;
   template <typename Q, int K> friend class array_view;
