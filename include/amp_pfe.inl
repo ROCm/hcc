@@ -14,7 +14,6 @@
 #endif
 
 #include <amp.h>
-#include <kalmar_runtime.h>
 
 namespace Concurrency {
 
@@ -83,12 +82,15 @@ void parallel_for_each(const accelerator_view& av, extent<N> compute_domain,
         static_cast<size_t>(compute_domain[N - 3])};
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
     if (CLAMP::is_cpu()) {
-        launch_cpu_task(av, f, compute_domain);
+        launch_cpu_task(av.pQueue, f, compute_domain);
         return;
     }
 #endif
+    if (av.get_accelerator().get_device_path() == L"cpu") {
+      throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
+    }
     const pfe_wrapper<N, Kernel> _pf(compute_domain, f);
-    Kalmar::mcw_cxxamp_launch_kernel<pfe_wrapper<N, Kernel>, 3>(av, ext, NULL, _pf);
+    Kalmar::mcw_cxxamp_launch_kernel<pfe_wrapper<N, Kernel>, 3>(av.pQueue, ext, NULL, _pf);
 #else
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
     int* foo1 = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
@@ -118,12 +120,14 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
       if (compute_domain_size > 4294967295L)
         throw invalid_compute_domain("Extent size too large.");
     }
-
     size_t ext[3] = {static_cast<size_t>(compute_domain[N - 1]),
         static_cast<size_t>(compute_domain[N - 2]),
         static_cast<size_t>(compute_domain[N - 3])};
+    if (av.get_accelerator().get_device_path() == L"cpu") {
+      throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
+    }
     const pfe_wrapper<N, Kernel> _pf(compute_domain, f);
-    return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<pfe_wrapper<N, Kernel>, 3>(av, ext, NULL, _pf));
+    return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<pfe_wrapper<N, Kernel>, 3>(av.pQueue, ext, NULL, _pf));
 #else
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   int* foo1 = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
@@ -147,12 +151,15 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
     throw invalid_compute_domain("Extent size too large.");
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   if (CLAMP::is_cpu()) {
-      launch_cpu_task(av, f, compute_domain);
+      launch_cpu_task(av.pQueue, f, compute_domain);
       return;
   }
 #endif
   size_t ext = compute_domain[0];
-  Kalmar::mcw_cxxamp_launch_kernel<Kernel, 1>(av, &ext, NULL, f);
+  if (av.get_accelerator().get_device_path() == L"cpu") {
+    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
+  }
+  Kalmar::mcw_cxxamp_launch_kernel<Kernel, 1>(av.pQueue, &ext, NULL, f);
 #else //if __KALMAR_ACCELERATOR__ != 1
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -174,7 +181,10 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
   if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
   size_t ext = compute_domain[0];
-  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 1>(av, &ext, NULL, f));
+  if (av.get_accelerator().get_device_path() == L"cpu") {
+    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
+  }
+  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 1>(av.pQueue, &ext, NULL, f));
 #else //if __KALMAR_ACCELERATOR__ != 1
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -196,13 +206,16 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
     throw invalid_compute_domain("Extent size too large.");
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   if (CLAMP::is_cpu()) {
-      launch_cpu_task(av, f, compute_domain);
+      launch_cpu_task(av.pQueue, f, compute_domain);
       return;
   }
 #endif
   size_t ext[2] = {static_cast<size_t>(compute_domain[1]),
       static_cast<size_t>(compute_domain[0])};
-  Kalmar::mcw_cxxamp_launch_kernel<Kernel, 2>(av, ext, NULL, f);
+  if (av.get_accelerator().get_device_path() == L"cpu") {
+    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
+  }
+  Kalmar::mcw_cxxamp_launch_kernel<Kernel, 2>(av.pQueue, ext, NULL, f);
 #else //if __KALMAR_ACCELERATOR__ != 1
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -224,8 +237,11 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
   if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
   size_t ext[2] = {static_cast<size_t>(compute_domain[1]),
-                   static_cast<size_t>(compute_domain[0])};
-  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 2>(av, ext, NULL, f));
+                   static_cast<size_t>(compute_domain[0])}; 
+  if (av.get_accelerator().get_device_path() == L"cpu") {
+    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
+  }
+  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 2>(av.pQueue, ext, NULL, f));
 #else //if __KALMAR_ACCELERATOR__ != 1
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -253,14 +269,17 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
     throw invalid_compute_domain("Extent size too large.");
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   if (CLAMP::is_cpu()) {
-      launch_cpu_task(av, f, compute_domain);
+      launch_cpu_task(av.pQueue, f, compute_domain);
       return;
   }
 #endif
   size_t ext[3] = {static_cast<size_t>(compute_domain[2]),
       static_cast<size_t>(compute_domain[1]),
       static_cast<size_t>(compute_domain[0])};
-  Kalmar::mcw_cxxamp_launch_kernel<Kernel, 3>(av, ext, NULL, f);
+  if (av.get_accelerator().get_device_path() == L"cpu") {
+    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
+  }
+  Kalmar::mcw_cxxamp_launch_kernel<Kernel, 3>(av.pQueue, ext, NULL, f);
 #else //if __KALMAR_ACCELERATOR__ != 1
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -290,7 +309,10 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
   size_t ext[3] = {static_cast<size_t>(compute_domain[2]),
                    static_cast<size_t>(compute_domain[1]),
                    static_cast<size_t>(compute_domain[0])};
-  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 3>(av, ext, NULL, f));
+  if (av.get_accelerator().get_device_path() == L"cpu") {
+    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
+  }
+  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 3>(av.pQueue, ext, NULL, f));
 #else //if __KALMAR_ACCELERATOR__ != 1
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -321,7 +343,10 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
       launch_cpu_task(av.pQueue, f, compute_domain);
   } else
 #endif
-  Kalmar::mcw_cxxamp_launch_kernel<Kernel, 1>(av, &ext, &tile, f);
+  if (av.get_accelerator().get_device_path() == L"cpu") {
+    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
+  }
+  Kalmar::mcw_cxxamp_launch_kernel<Kernel, 1>(av.pQueue, &ext, &tile, f);
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index<D0> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -349,7 +374,10 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
   if(ext % tile != 0) {
     throw invalid_compute_domain("Extent can't be evenly divisble by tile size.");
   }
-  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 1>(av, &ext, &tile, f));
+  if (av.get_accelerator().get_device_path() == L"cpu") {
+    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
+  }
+  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 1>(av.pQueue, &ext, &tile, f));
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index<D0> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -383,7 +411,10 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
       launch_cpu_task(av.pQueue, f, compute_domain);
   } else
 #endif
-  Kalmar::mcw_cxxamp_launch_kernel<Kernel, 2>(av, ext, tile, f);
+  if (av.get_accelerator().get_device_path() == L"cpu") {
+    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
+  }
+  Kalmar::mcw_cxxamp_launch_kernel<Kernel, 2>(av.pQueue, ext, tile, f);
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index<D0, D1> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -413,7 +444,10 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
   if((ext[0] % tile[0] != 0) || (ext[1] % tile[1] != 0)) {
     throw invalid_compute_domain("Extent can't be evenly divisble by tile size.");
   }
-  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 2>(av, ext, tile, f));
+  if (av.get_accelerator().get_device_path() == L"cpu") {
+    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
+  }
+  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 2>(av.pQueue, ext, tile, f));
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index<D0, D1> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -455,7 +489,10 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
       launch_cpu_task(av.pQueue, f, compute_domain);
   } else
 #endif
-  Kalmar::mcw_cxxamp_launch_kernel<Kernel, 3>(av, ext, tile, f);
+  if (av.get_accelerator().get_device_path() == L"cpu") {
+    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
+  }
+  Kalmar::mcw_cxxamp_launch_kernel<Kernel, 3>(av.pQueue, ext, tile, f);
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index<D0, D1, D2> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -493,7 +530,10 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
   if((ext[0] % tile[0] != 0) || (ext[1] % tile[1] != 0) || (ext[2] % tile[2] != 0)) {
     throw invalid_compute_domain("Extent can't be evenly divisble by tile size.");
   }
-  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 3>(av, ext, tile, f));
+  if (av.get_accelerator().get_device_path() == L"cpu") {
+    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
+  }
+  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 3>(av.pQueue, ext, tile, f));
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index<D0, D1, D2> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined

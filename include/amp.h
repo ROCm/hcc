@@ -109,30 +109,72 @@ private:
   friend class accelerator;
 
   template<typename Kernel, int dim_ext> friend
-      void Kalmar::mcw_cxxamp_launch_kernel(const accelerator_view&, size_t *, size_t *, const Kernel&);
+      void Kalmar::mcw_cxxamp_launch_kernel(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&);
   template<typename Kernel, int dim_ext> friend
-      std::shared_future<void>* Kalmar::mcw_cxxamp_launch_kernel_async(const accelerator_view&, size_t *, size_t *, const Kernel&);
+      std::shared_future<void>* Kalmar::mcw_cxxamp_launch_kernel_async(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&);
   template <typename Kernel, int N> friend
-      void Kalmar::launch_cpu_task(const accelerator_view&, Kernel const&, extent<N> const&);
+      void Kalmar::launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>&, Kernel const&, extent<N> const&);
 
   template <typename Q, int K> friend class array;
   template <typename Q, int K> friend class array_view;
   template <typename T, int N> friend class array_helper;
 
-  template <int N, typename Kernel>
-      friend void parallel_for_each(extent<N> compute_domain, const Kernel& f);
-  template <int D0, int D1, int D2, typename Kernel>
-      friend void parallel_for_each(tiled_extent<D0,D1,D2> compute_domain, const Kernel& f);
-  template <int D0, int D1, typename Kernel>
-      friend void parallel_for_each(tiled_extent<D0,D1> compute_domain, const Kernel& f);
-  template <int D0, typename Kernel>
-      friend void parallel_for_each(tiled_extent<D0> compute_domain, const Kernel& f);
-  template <int D0, typename Kernel>
-      friend void parallel_for_each(const accelerator_view&, tiled_extent<D0>, const Kernel&) restrict(cpu,amp);
-  template <int D0, int D1, typename Kernel>
-      friend void parallel_for_each(const accelerator_view&, tiled_extent<D0, D1>, const Kernel&) restrict(cpu,amp);
-  template <int D0, int D1, int D2, typename Kernel>
-      friend void parallel_for_each(const accelerator_view&, tiled_extent<D0, D1, D2>, const Kernel&) restrict(cpu,amp);
+  template <int N, typename Kernel> friend
+      void parallel_for_each(Concurrency::extent<N>, const Kernel&);
+  template <int N, typename Kernel> friend
+      void parallel_for_each(const accelerator_view&, Concurrency::extent<N>, const Kernel&);
+  template <typename Kernel> friend
+      void parallel_for_each(const accelerator_view&, Concurrency::extent<1>, const Kernel&);
+  template <typename Kernel> friend
+      void parallel_for_each(const accelerator_view&, Concurrency::extent<2>, const Kernel&);
+  template <typename Kernel> friend
+      void parallel_for_each(const accelerator_view&, Concurrency::extent<3>, const Kernel&);
+
+  template <int D0, typename Kernel> friend
+      void parallel_for_each(tiled_extent<D0>, const Kernel&);
+  template <int D0, typename Kernel> friend
+      void parallel_for_each(const accelerator_view&, tiled_extent<D0>, const Kernel&);
+
+  template <int D0, int D1, typename Kernel> friend
+      void parallel_for_each(tiled_extent<D0,D1>, const Kernel&);
+  template <int D0, int D1, typename Kernel> friend
+      void parallel_for_each(const accelerator_view&, tiled_extent<D0, D1>, const Kernel&);
+
+  template <int D0, int D1, int D2, typename Kernel> friend
+      void parallel_for_each(tiled_extent<D0,D1,D2>, const Kernel&);
+  template <int D0, int D1, int D2, typename Kernel> friend
+      void parallel_for_each(const accelerator_view&, tiled_extent<D0, D1, D2>, const Kernel&);
+
+  // FIXME: move to hc namespace
+  // non-tiled async_parallel_for_each
+  // generic version
+  template <int N, typename Kernel> friend
+      completion_future async_parallel_for_each(const accelerator_view&, Concurrency::extent<N>, const Kernel&);
+
+  // 1D specialization
+  template <typename Kernel> friend
+      completion_future async_parallel_for_each(const accelerator_view&, Concurrency::extent<1>, const Kernel&);
+
+  // 2D specialization
+  template <typename Kernel> friend
+      completion_future async_parallel_for_each(const accelerator_view&, Concurrency::extent<2>, const Kernel&);
+
+  // 3D specialization
+  template <typename Kernel> friend
+      completion_future async_parallel_for_each(const accelerator_view&, Concurrency::extent<3>, const Kernel&);
+
+  // tiled async_parallel_for_each, 3D version
+  template <int D0, int D1, int D2, typename Kernel> friend
+      completion_future async_parallel_for_each(const accelerator_view&, Concurrency::tiled_extent<D0,D1,D2>, const Kernel&);
+
+  // tiled async_parallel_for_each, 2D version
+  template <int D0, int D1, typename Kernel> friend
+      completion_future async_parallel_for_each(const accelerator_view&, Concurrency::tiled_extent<D0,D1>, const Kernel&);
+
+  // tiled async_parallel_for_each, 1D version
+   template <int D0, typename Kernel> friend
+      completion_future async_parallel_for_each(const accelerator_view&, Concurrency::tiled_extent<D0>, const Kernel&);
+
 
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
 public:
@@ -316,6 +358,7 @@ private:
     template <typename T, int N> friend class array_view;
 
 
+    // FIXME: move to hc namespace
     // non-tiled async_parallel_for_each
     // generic version
     template <int N, typename Kernel>
@@ -1989,6 +2032,7 @@ private:
 
 #undef __global
 
+// FIXME: move to hc namespace
 // async pfe
 template <int N, typename Kernel>
 completion_future async_parallel_for_each(const accelerator_view&,
