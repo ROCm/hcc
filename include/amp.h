@@ -34,6 +34,7 @@
 #define __global
 #include <amp_exception.inl>
 #include <kalmar_defines.h>
+#include <kalmar_index.h>
 #include <kalmar_runtime.h>
 #include <kalmar_buffer.h>
 #include <kalmar_serialize.h>
@@ -43,7 +44,6 @@ namespace concurrency = Concurrency;
 
 // forward declaration
 namespace Concurrency {
-
 class completion_future;
 class accelerator;
 class accelerator_view;
@@ -51,6 +51,7 @@ template <typename T, int N> class array_view;
 template <typename T, int N> class array;
 template <int N> class extent;
 template <int D0, int D1=0, int D2=0> class tiled_extent;
+template <int N> class index;
 } // namespace Concurrency
 
 // forward declaration
@@ -342,215 +343,6 @@ private:
                                                          Concurrency::tiled_extent<D0> compute_domain, const Kernel& f);
 };
 
-template <int N> class extent;
-
-template <int...> struct __indices {};
-
-template <int _Sp, class _IntTuple, int _Ep>
-    struct __make_indices_imp;
-
-template <int _Sp, int ..._Indices, int _Ep>
-    struct __make_indices_imp<_Sp, __indices<_Indices...>, _Ep>
-    {
-        typedef typename __make_indices_imp<_Sp+1, __indices<_Indices..., _Sp>, _Ep>::type type;
-    };
-
-template <int _Ep, int ..._Indices>
-    struct __make_indices_imp<_Ep, __indices<_Indices...>, _Ep>
-    {
-        typedef __indices<_Indices...> type;
-    };
-
-template <int _Ep, int _Sp = 0>
-    struct __make_indices
-    {
-        static_assert(_Sp <= _Ep, "__make_indices input error");
-        typedef typename __make_indices_imp<_Sp, __indices<>, _Ep>::type type;
-    };
-
-template <int _Ip>
-    class __index_leaf {
-        int __idx;
-        int dummy;
-    public:
-        explicit __index_leaf(int __t) restrict(amp,cpu) : __idx(__t) {}
-
-        __index_leaf& operator=(const int __t) restrict(amp,cpu) {
-            __idx = __t;
-            return *this;
-        }
-        __index_leaf& operator+=(const int __t) restrict(amp,cpu) {
-            __idx += __t;
-            return *this;
-        }
-        __index_leaf& operator-=(const int __t) restrict(amp,cpu) {
-            __idx -= __t;
-            return *this;
-        }
-        __index_leaf& operator*=(const int __t) restrict(amp,cpu) {
-            __idx *= __t;
-            return *this;
-        }
-        __index_leaf& operator/=(const int __t) restrict(amp,cpu) {
-            __idx /= __t;
-            return *this;
-        }
-        __index_leaf& operator%=(const int __t) restrict(amp,cpu) {
-            __idx %= __t;
-            return *this;
-        }
-              int& get()       restrict(amp,cpu) { return __idx; }
-        const int& get() const restrict(amp,cpu) { return __idx; }
-    };
-
-
-template <class _Indx> struct index_impl;
-template <int ...N>
-    struct index_impl<__indices<N...> >
-    : public __index_leaf<N>...
-    {
-        index_impl() restrict(amp,cpu) : __index_leaf<N>(0)... {}
-
-        template<class ..._Up>
-            explicit index_impl(_Up... __u) restrict(amp,cpu)
-            : __index_leaf<N>(__u)... {}
-
-        index_impl(const index_impl& other) restrict(amp,cpu)
-            : index_impl(static_cast<const __index_leaf<N>&>(other).get()...) {}
-
-        index_impl(int component) restrict(amp,cpu)
-            : __index_leaf<N>(component)... {}
-        index_impl(int components[]) restrict(amp,cpu)
-            : __index_leaf<N>(components[N])... {}
-        index_impl(const int components[]) restrict(amp,cpu)
-            : __index_leaf<N>(components[N])... {}
-
-        template<class ..._Tp>
-            inline void __swallow(_Tp...) restrict(amp,cpu) {}
-
-        int operator[] (unsigned int c) const restrict(amp,cpu) {
-            return static_cast<const __index_leaf<0>&>(*((__index_leaf<0> *)this + c)).get();
-        }
-        int& operator[] (unsigned int c) restrict(amp,cpu) {
-            return static_cast<__index_leaf<0>&>(*((__index_leaf<0> *)this + c)).get();
-        }
-        index_impl& operator=(const index_impl& __t) restrict(amp,cpu) {
-            __swallow(__index_leaf<N>::operator=(static_cast<const __index_leaf<N>&>(__t).get())...);
-            return *this;
-        }
-        index_impl& operator+=(const index_impl& __t) restrict(amp,cpu) {
-            __swallow(__index_leaf<N>::operator+=(static_cast<const __index_leaf<N>&>(__t).get())...);
-            return *this;
-        }
-        index_impl& operator-=(const index_impl& __t) restrict(amp,cpu) {
-            __swallow(__index_leaf<N>::operator-=(static_cast<const __index_leaf<N>&>(__t).get())...);
-            return *this;
-        }
-        index_impl& operator*=(const index_impl& __t) restrict(amp,cpu) {
-            __swallow(__index_leaf<N>::operator*=(static_cast<const __index_leaf<N>&>(__t).get())...);
-            return *this;
-        }
-        index_impl& operator/=(const index_impl& __t) restrict(amp,cpu) {
-            __swallow(__index_leaf<N>::operator/=(static_cast<const __index_leaf<N>&>(__t).get())...);
-            return *this;
-        }
-        index_impl& operator%=(const index_impl& __t) restrict(amp,cpu) {
-            __swallow(__index_leaf<N>::operator%=(static_cast<const __index_leaf<N>&>(__t).get())...);
-            return *this;
-        }
-        index_impl& operator+=(const int __t) restrict(amp,cpu) {
-            __swallow(__index_leaf<N>::operator+=(__t)...);
-            return *this;
-        }
-        index_impl& operator-=(const int __t) restrict(amp,cpu) {
-            __swallow(__index_leaf<N>::operator-=(__t)...);
-            return *this;
-        }
-        index_impl& operator*=(const int __t) restrict(amp,cpu) {
-            __swallow(__index_leaf<N>::operator*=(__t)...);
-            return *this;
-        }
-        index_impl& operator/=(const int __t) restrict(amp,cpu) {
-            __swallow(__index_leaf<N>::operator/=(__t)...);
-            return *this;
-        }
-        index_impl& operator%=(const int __t) restrict(amp,cpu) {
-            __swallow(__index_leaf<N>::operator%=(__t)...);
-            return *this;
-        }
-    };
-
-template<int N> class index;
-template<int N> class extent;
-
-template <int N, typename _Tp>
-struct index_helper
-{
-    static inline void set(_Tp& now) restrict(amp,cpu) {
-        now[N - 1] = amp_get_global_id(_Tp::rank - N);
-        index_helper<N - 1, _Tp>::set(now);
-    }
-    static inline bool equal(const _Tp& _lhs, const _Tp& _rhs) restrict(amp,cpu) {
-        return (_lhs[N - 1] == _rhs[N - 1]) &&
-            (index_helper<N - 1, _Tp>::equal(_lhs, _rhs));
-    }
-    static inline int count_size(const _Tp& now) restrict(amp,cpu) {
-        return now[N - 1] * index_helper<N - 1, _Tp>::count_size(now);
-    }
-};
-template<typename _Tp>
-struct index_helper<1, _Tp>
-{
-    static inline void set(_Tp& now) restrict(amp,cpu) {
-        now[0] = amp_get_global_id(_Tp::rank - 1);
-    }
-    static inline bool equal(const _Tp& _lhs, const _Tp& _rhs) restrict(amp,cpu) {
-        return (_lhs[0] == _rhs[0]);
-    }
-    static inline int count_size(const _Tp& now) restrict(amp,cpu) {
-        return now[0];
-    }
-};
-
-template <int N, typename _Tp1, typename _Tp2>
-struct amp_helper
-{
-    static bool inline contains(const _Tp1& idx, const _Tp2& ext) restrict(amp,cpu) {
-        return idx[N - 1] >= 0 && idx[N - 1] < ext[N - 1] &&
-            amp_helper<N - 1, _Tp1, _Tp2>::contains(idx, ext);
-    }
-
-    static bool inline contains(const _Tp1& idx, const _Tp2& ext,const _Tp2& ext2) restrict(amp,cpu) {
-        return idx[N - 1] >= 0 && ext[N - 1] > 0 && (idx[N - 1] + ext[N - 1]) <= ext2[N - 1] &&
-            amp_helper<N - 1, _Tp1, _Tp2>::contains(idx, ext,ext2);
-    }
-
-    static int inline flatten(const _Tp1& idx, const _Tp2& ext) restrict(amp,cpu) {
-        return idx[N - 1] + ext[N - 1] * amp_helper<N - 1, _Tp1, _Tp2>::flatten(idx, ext);
-    }
-    static void inline minus(const _Tp1& idx, _Tp2& ext) restrict(amp,cpu) {
-        ext.base_ -= idx.base_;
-    }
-};
-template <typename _Tp1, typename _Tp2>
-struct amp_helper<1, _Tp1, _Tp2>
-{
-    static bool inline contains(const _Tp1& idx, const _Tp2& ext) restrict(amp,cpu) {
-        return idx[0] >= 0 && idx[0] < ext[0];
-    }
-
-    static bool inline contains(const _Tp1& idx, const _Tp2& ext,const _Tp2& ext2) restrict(amp,cpu) {
-        return idx[0] >= 0 && ext[0] > 0 && (idx[0] + ext[0]) <= ext2[0] ;
-    }
-
-    static int inline flatten(const _Tp1& idx, const _Tp2& ext) restrict(amp,cpu) {
-        return idx[0];
-    }
-    static void inline minus(const _Tp1& idx, _Tp2& ext) restrict(amp,cpu) {
-        ext.base_ -= idx.base_;
-    }
-};
-
 template <int N>
 class index {
 public:
@@ -588,7 +380,7 @@ public:
     }
 
     bool operator== (const index& other) const restrict(amp,cpu) {
-        return index_helper<N, index<N> >::equal(*this, other);
+        return Kalmar::index_helper<N, index<N> >::equal(*this, other);
     }
     bool operator!= (const index& other) const restrict(amp,cpu) {
         return !(*this == other);
@@ -657,10 +449,10 @@ public:
     template<int T>
     friend class extent;
 private:
-    typedef index_impl<typename __make_indices<N>::type> base;
+    typedef Kalmar::index_impl<typename Kalmar::__make_indices<N>::type> base;
     base base_;
-    template <int K, typename Q> friend struct index_helper;
-    template <int K, typename Q1, typename Q2> friend struct amp_helper;
+    template <int K, typename Q> friend struct Kalmar::index_helper;
+    template <int K, typename Q1, typename Q2> friend struct Kalmar::amp_helper;
 
     template<int K, class Y>
         friend void parallel_for_each(extent<K>, const Y&);
@@ -673,7 +465,7 @@ public:
         void __cxxamp_opencl_index() restrict(amp,cpu)
 #if __KALMAR_ACCELERATOR__ == 1
         {
-            index_helper<N, index<N>>::set(*this);
+            Kalmar::index_helper<N, index<N>>::set(*this);
         }
 #elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
     {}
@@ -811,17 +603,17 @@ public:
     }
 
     bool operator==(const extent& other) const restrict(amp,cpu) {
-        return index_helper<N, extent<N> >::equal(*this, other);
+        return Kalmar::index_helper<N, extent<N> >::equal(*this, other);
     }
     bool operator!=(const extent& other) const restrict(amp,cpu) {
         return !(*this == other);
     }
 
     unsigned int size() const restrict(amp,cpu) {
-        return index_helper<N, extent<N>>::count_size(*this);
+        return Kalmar::index_helper<N, extent<N>>::count_size(*this);
     }
     bool contains(const index<N>& idx) const restrict(amp,cpu) {
-        return amp_helper<N, index<N>, extent<N>>::contains(idx, *this);
+        return Kalmar::amp_helper<N, index<N>, extent<N>>::contains(idx, *this);
     }
     template <int D0>
       tiled_extent<D0> tile() const restrict(amp,cpu) {
@@ -919,10 +711,10 @@ public:
         return ret;
     }
 private:
-    typedef index_impl<typename __make_indices<N>::type> base;
+    typedef Kalmar::index_impl<typename Kalmar::__make_indices<N>::type> base;
     base base_;
-    template <int K, typename Q> friend struct index_helper;
-    template <int K, typename Q1, typename Q2> friend struct amp_helper;
+    template <int K, typename Q> friend struct Kalmar::index_helper;
+    template <int K, typename Q1, typename Q2> friend struct Kalmar::amp_helper;
 };
 
 
@@ -1636,7 +1428,7 @@ public:
       m_device.synchronize(true);
 #endif
       __global T *ptr = reinterpret_cast<__global T*>(m_device.get());
-      return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx, extent)];
+      return ptr[Kalmar::amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx, extent)];
   }
   __global const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
 #if __KALMAR_ACCELERATOR__ != 1
@@ -1645,7 +1437,7 @@ public:
       m_device.synchronize();
 #endif
       __global T *ptr = reinterpret_cast<__global T*>(m_device.get());
-      return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx, extent)];
+      return ptr[Kalmar::amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx, extent)];
   }
 
   typename array_projection_helper<T, N>::result_type
@@ -1686,7 +1478,7 @@ public:
 
   array_view<T, N> section(const Concurrency::index<N>& idx, const Concurrency::extent<N>& ext) restrict(amp,cpu) {
 #if __KALMAR_ACCELERATOR__ != 1
-      if(  !amp_helper<N, index<N>, Concurrency::extent<N>>::contains(idx,  ext ,this->extent) )
+      if(  !Kalmar::amp_helper<N, index<N>, Concurrency::extent<N>>::contains(idx,  ext ,this->extent) )
         throw runtime_exception("errorMsg_throw", 0);
 #endif
       array_view<T, N> av(*this);
@@ -1698,7 +1490,7 @@ public:
   }
   array_view<T, N> section(const index<N>& idx) restrict(amp,cpu) {
 #if __KALMAR_ACCELERATOR__ != 1
-      if(  !amp_helper<N, index<N>, Concurrency::extent<N>>::contains(idx, this->extent ) )
+      if(  !Kalmar::amp_helper<N, index<N>, Concurrency::extent<N>>::contains(idx, this->extent ) )
         throw runtime_exception("errorMsg_throw", 0);
 #endif
       array_view<T, N> av(*this);
@@ -1931,7 +1723,7 @@ public:
       cache.get_cpu_access(true);
 #endif
       __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
-      return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
+      return ptr[Kalmar::amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
   }
   template <int D0, int D1=0, int D2=0>
   __global T& operator[](const tiled_index<D0, D1, D2>& idx) const restrict(amp,cpu) {
@@ -1939,7 +1731,7 @@ public:
       cache.get_cpu_access(true);
 #endif
       __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
-      return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx.global + index_base, extent_base)];
+      return ptr[Kalmar::amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx.global + index_base, extent_base)];
   }
 
   typename projection_helper<T, N>::result_type
@@ -1980,7 +1772,7 @@ public:
   array_view<T, N> section(const Concurrency::index<N>& idx,
                            const Concurrency::extent<N>& ext) const restrict(amp,cpu) {
 #if __KALMAR_ACCELERATOR__ != 1
-      if(  !amp_helper<N, index<N>, Concurrency::extent<N>>::contains(idx, ext,this->extent ) )
+      if(  !Kalmar::amp_helper<N, index<N>, Concurrency::extent<N>>::contains(idx, ext,this->extent ) )
         throw runtime_exception("errorMsg_throw", 0);
 #endif
       array_view<T, N> av(cache, ext, extent_base, idx + index_base, offset);
@@ -1988,7 +1780,7 @@ public:
   }
   array_view<T, N> section(const Concurrency::index<N>& idx) const restrict(amp,cpu) {
       Concurrency::extent<N> ext(extent);
-      amp_helper<N, Concurrency::index<N>, Concurrency::extent<N>>::minus(idx, ext);
+      Kalmar::amp_helper<N, Concurrency::index<N>, Concurrency::extent<N>>::minus(idx, ext);
       return section(idx, ext);
   }
   array_view<T, N> section(const Concurrency::extent<N>& ext) const restrict(amp,cpu) {
@@ -2174,7 +1966,7 @@ public:
       cache.get_cpu_access();
 #endif
     __global const T *ptr = reinterpret_cast<__global const T*>(cache.get() + offset);
-    return ptr[amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
+    return ptr[Kalmar::amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
   }
 
   typename projection_helper<const T, N>::const_result_type
@@ -2222,7 +2014,7 @@ public:
   }
   array_view<const T, N> section(const Concurrency::index<N>& idx) const restrict(amp,cpu) {
     Concurrency::extent<N> ext(extent);
-    amp_helper<N, Concurrency::index<N>, Concurrency::extent<N>>::minus(idx, ext);
+    Kalmar::amp_helper<N, Concurrency::index<N>, Concurrency::extent<N>>::minus(idx, ext);
     return section(idx, ext);
   }
 
