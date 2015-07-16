@@ -79,28 +79,6 @@ private:
   template <typename Q, int K> friend class array_view;
   template <typename T, int N> friend class array_helper;
 
-  // FIXME: C++AMP parallel_for_each interfaces
-#if 0
-  template <int N, typename Kernel>
-      friend void parallel_for_each(extent<N> compute_domain, const Kernel& f);
-  template <int D0, int D1, int D2, typename Kernel>
-      friend void parallel_for_each(tiled_extent<D0,D1,D2> compute_domain, const Kernel& f);
-  template <int D0, int D1, typename Kernel>
-      friend void parallel_for_each(tiled_extent<D0,D1> compute_domain, const Kernel& f);
-  template <int D0, typename Kernel>
-      friend void parallel_for_each(tiled_extent<D0> compute_domain, const Kernel& f);
-#endif
-
-  // FIXME: C++AMP parallel_for_each interfaces
-#if 0
-  template <int D0, typename Kernel>
-      friend void parallel_for_each(const accelerator_view&, tiled_extent<D0>, const Kernel&) restrict(cpu,amp);
-  template <int D0, int D1, typename Kernel>
-      friend void parallel_for_each(const accelerator_view&, tiled_extent<D0, D1>, const Kernel&) restrict(cpu,amp);
-  template <int D0, int D1, int D2, typename Kernel>
-      friend void parallel_for_each(const accelerator_view&, tiled_extent<D0, D1, D2>, const Kernel&) restrict(cpu,amp);
-#endif
-
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
 public:
 #endif
