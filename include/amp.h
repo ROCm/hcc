@@ -71,7 +71,7 @@ template<typename Kernel, int dim_ext>
 template<typename Kernel, int dim_ext>
     std::shared_future<void>* mcw_cxxamp_launch_kernel_async(const Concurrency::accelerator_view&, size_t *, size_t *, const Kernel&);
 template <typename Kernel, int N>
-    void launch_cpu_task(const Concurrency::accelerator_view&, Kernel const&, Concurrency::extent<N> const&);
+    void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>&, Kernel const&, Concurrency::extent<N> const&);
 } // namespace Kalmar
 
 namespace Concurrency {
