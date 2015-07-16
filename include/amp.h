@@ -73,13 +73,6 @@ template <int D0, int D1=0, int D2=0> class tiled_extent;
 } // namespace Concurrency
 
 // forward declaration
-namespace hc {
-class tiled_index_1D;
-class tiled_index_2D;
-class tiled_index_3D;
-} // namespace hc
-
-// forward declaration
 namespace Kalmar {
 template<typename Kernel, int dim_ext>
     void mcw_cxxamp_launch_kernel(const Concurrency::accelerator_view&, size_t *, size_t *, const Kernel&);
@@ -792,10 +785,6 @@ class tile_barrier {
 #endif
   template<int D0, int D1, int D2>
   friend class tiled_index;
-
-  friend class hc::tiled_index_1D;
-  friend class hc::tiled_index_2D;
-  friend class hc::tiled_index_3D;
 };
 
 template <typename T, int N> class array;
