@@ -51,7 +51,11 @@ template <typename T, int N> class array_view;
 template <typename T, int N> class array;
 template <int N> class extent;
 template <int D0, int D1=0, int D2=0> class tiled_extent;
-template <int N> class index;
+
+// type alias
+// Concurrency::index is just an alias of Kalmar::index
+template <int N>
+using index = Kalmar::index<N>;
 } // namespace Concurrency
 
 // forward declaration
@@ -341,131 +345,6 @@ private:
      template <int D0, typename Kernel>
         friend completion_future async_parallel_for_each(const accelerator_view&,
                                                          Concurrency::tiled_extent<D0> compute_domain, const Kernel& f);
-};
-
-template <int N>
-class index {
-public:
-    static const int rank = N;
-    typedef int value_type;
-
-    index() restrict(amp,cpu) : base_() {
-        static_assert( N>0, "rank should bigger than 0 ");
-    };
-    index(const index& other) restrict(amp,cpu)
-        : base_(other.base_) {}
-    template <typename ..._Tp>
-        explicit index(_Tp ... __t) restrict(amp,cpu)
-        : base_(__t...) {
-            static_assert(sizeof...(_Tp) <= 3, "Explicit constructor with rank greater than 3 is not allowed");
-            static_assert(sizeof...(_Tp) == N, "rank should be consistency");
-        }
-    explicit index(int component) restrict(amp,cpu)
-        : base_(component) {}
-    explicit index(int components[]) restrict(amp,cpu)
-        : base_(components) {}
-    explicit index(const int components[]) restrict(amp,cpu)
-        : base_(components) {}
-
-    index& operator=(const index& __t) restrict(amp,cpu) {
-        base_.operator=(__t.base_);
-        return *this;
-    }
-
-    int operator[] (unsigned int c) const restrict(amp,cpu) {
-        return base_[c];
-    }
-    int& operator[] (unsigned int c) restrict(amp,cpu) {
-        return base_[c];
-    }
-
-    bool operator== (const index& other) const restrict(amp,cpu) {
-        return Kalmar::index_helper<N, index<N> >::equal(*this, other);
-    }
-    bool operator!= (const index& other) const restrict(amp,cpu) {
-        return !(*this == other);
-    }
-
-    index& operator+=(const index& __r) restrict(amp,cpu) {
-        base_.operator+=(__r.base_);
-        return *this;
-    }
-    index& operator-=(const index& __r) restrict(amp,cpu) {
-        base_.operator-=(__r.base_);
-        return *this;
-    }
-    index& operator*=(const index& __r) restrict(amp,cpu) {
-        base_.operator*=(__r.base_);
-        return *this;
-    }
-    index& operator/=(const index& __r) restrict(amp,cpu) {
-        base_.operator/=(__r.base_);
-        return *this;
-    }
-    index& operator%=(const index& __r) restrict(amp,cpu) {
-        base_.operator%=(__r.base_);
-        return *this;
-    }
-    index& operator+=(int __r) restrict(amp,cpu) {
-        base_.operator+=(__r);
-        return *this;
-    }
-    index& operator-=(int __r) restrict(amp,cpu) {
-        base_.operator-=(__r);
-        return *this;
-    }
-    index& operator*=(int __r) restrict(amp,cpu) {
-        base_.operator*=(__r);
-        return *this;
-    }
-    index& operator/=(int __r) restrict(amp,cpu) {
-        base_.operator/=(__r);
-        return *this;
-    }
-    index& operator%=(int __r) restrict(amp,cpu) {
-        base_.operator%=(__r);
-        return *this;
-    }
-
-    index& operator++() restrict(amp,cpu) {
-        base_.operator+=(1);
-        return *this;
-    }
-    index operator++(int) restrict(amp,cpu) {
-        index ret = *this;
-        base_.operator+=(1);
-        return ret;
-    }
-    index& operator--() restrict(amp,cpu) {
-        base_.operator-=(1);
-        return *this;
-    }
-    index operator--(int) restrict(amp,cpu) {
-        index ret = *this;
-        base_.operator-=(1);
-        return ret;
-    }
-
-    template<int T>
-    friend class extent;
-private:
-    typedef Kalmar::index_impl<typename Kalmar::__make_indices<N>::type> base;
-    base base_;
-    template <int K, typename Q> friend struct Kalmar::index_helper;
-    template <int K, typename Q1, typename Q2> friend struct Kalmar::amp_helper;
-
-public:
-    __attribute__((annotate("__cxxamp_opencl_index")))
-        void __cxxamp_opencl_index() restrict(amp,cpu)
-#if __KALMAR_ACCELERATOR__ == 1
-        {
-            Kalmar::index_helper<N, index<N>>::set(*this);
-        }
-#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    {}
-#else
-    ;
-#endif
 };
 
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
@@ -2183,79 +2062,6 @@ void parallel_for_each(tiled_extent<D0> compute_domain, const Kernel& f) {
 
 // Specialization of AMP classes/templates
 inline completion_future accelerator_view::create_marker(){ return completion_future(); }
-
-template <int N>
-index<N> operator+(const index<N>& lhs, const index<N>& rhs) restrict(amp,cpu) {
-    index<N> __r = lhs;
-    __r += rhs;
-    return __r;
-}
-template <int N>
-index<N> operator+(const index<N>& lhs, int rhs) restrict(amp,cpu) {
-    index<N> __r = lhs;
-    __r += rhs;
-    return __r;
-}
-template <int N>
-index<N> operator+(int lhs, const index<N>& rhs) restrict(amp,cpu) {
-    index<N> __r = rhs;
-    __r += lhs;
-    return __r;
-}
-template <int N>
-index<N> operator-(const index<N>& lhs, const index<N>& rhs) restrict(amp,cpu) {
-    index<N> __r = lhs;
-    __r -= rhs;
-    return __r;
-}
-template <int N>
-index<N> operator-(const index<N>& lhs, int rhs) restrict(amp,cpu) {
-    index<N> __r = lhs;
-    __r -= rhs;
-    return __r;
-}
-template <int N>
-index<N> operator-(int lhs, const index<N>& rhs) restrict(amp,cpu) {
-    index<N> __r(lhs);
-    __r -= rhs;
-    return __r;
-}
-template <int N>
-index<N> operator*(const index<N>& lhs, int rhs) restrict(amp,cpu) {
-    index<N> __r = lhs;
-    __r *= rhs;
-    return __r;
-}
-template <int N>
-index<N> operator*(int lhs, const index<N>& rhs) restrict(amp,cpu) {
-    index<N> __r = rhs;
-    __r *= lhs;
-    return __r;
-}
-template <int N>
-index<N> operator/(const index<N>& lhs, int rhs) restrict(amp,cpu) {
-    index<N> __r = lhs;
-    __r /= rhs;
-    return __r;
-}
-template <int N>
-index<N> operator/(int lhs, const index<N>& rhs) restrict(amp,cpu) {
-    index<N> __r(lhs);
-    __r /= rhs;
-    return __r;
-}
-template <int N>
-index<N> operator%(const index<N>& lhs, int rhs) restrict(amp,cpu) {
-    index<N> __r = lhs;
-    __r %= rhs;
-    return __r;
-}
-template <int N>
-index<N> operator%(int lhs, const index<N>& rhs) restrict(amp,cpu) {
-    index<N> __r(lhs);
-    __r %= rhs;
-    return __r;
-}
 
 template <int N>
 extent<N> operator+(const extent<N>& lhs, const extent<N>& rhs) restrict(amp,cpu) {

@@ -135,7 +135,6 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
 }
 #pragma clang diagnostic pop
 
-template class index<1>;
 //1D parallel_for_each, nontiled
 template <typename Kernel>
 __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av,
@@ -185,7 +184,6 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
 }
 #pragma clang diagnostic pop
 
-template class index<2>;
 //2D parallel_for_each, nontiled
 template <typename Kernel>
 __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av,
@@ -237,7 +235,6 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
 }
 #pragma clang diagnostic pop
 
-template class index<3>;
 //3D parallel_for_each, nontiled
 template <typename Kernel>
 __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av,
