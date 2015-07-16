@@ -12,6 +12,10 @@ using namespace Concurrency;
 
 // forward declaration
 class accelerator;
+class tiled_extent_1D;
+class tiled_extent_2D;
+class tiled_extent_3D;
+class ts_allocator;
 
 class accelerator_view {
     accelerator_view(std::shared_ptr<Kalmar::KalmarQueue> pQueue)
@@ -270,8 +274,94 @@ public:
   }   
 };  
 
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+template <typename Ker, typename Ti>
+void bar_wrapper(Ker *f, Ti *t)
+{
+    (*f)(*t);
+}
+struct barrier_t {
+    std::unique_ptr<ucontext_t[]> ctx;
+    int idx;
+    barrier_t (int a) :
+        ctx(new ucontext_t[a + 1]) {}
+    template <typename Ti, typename Ker>
+    void setctx(int x, char *stack, Ker& f, Ti* tidx, int S) {
+        getcontext(&ctx[x]);
+        ctx[x].uc_stack.ss_sp = stack;
+        ctx[x].uc_stack.ss_size = S;
+        ctx[x].uc_link = &ctx[x - 1];
+        makecontext(&ctx[x], (void (*)(void))bar_wrapper<Ker, Ti>, 2, &f, tidx);
+    }
+    void swap(int a, int b) {
+        swapcontext(&ctx[a], &ctx[b]);
+    }
+    void wait() {
+        --idx;
+        swapcontext(&ctx[idx + 1], &ctx[idx]);
+    }
+};
+#endif
+
+#ifndef CLK_LOCAL_MEM_FENCE
+#define CLK_LOCAL_MEM_FENCE (1)
+#endif
+
+#ifndef CLK_GLOBAL_MEM_FENCE
+#define CLK_GLOBAL_MEM_FENCE (2)
+#endif
+
+class tile_barrier {
+ public:
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+  using pb_t = std::shared_ptr<barrier_t>;
+  tile_barrier(pb_t pb) : pbar(pb) {}
+  tile_barrier(const tile_barrier& other) restrict(amp,cpu) : pbar(other.pbar) {}
+#else
+  tile_barrier(const tile_barrier& other) restrict(amp,cpu) {}
+#endif
+  void wait() const restrict(amp) {
+#if __KALMAR_ACCELERATOR__ == 1
+    wait_with_all_memory_fence();
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+      pbar->wait();
+#endif
+  }
+  void wait_with_all_memory_fence() const restrict(amp) {
+#if __KALMAR_ACCELERATOR__ == 1
+    amp_barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+      pbar->wait();
+#endif
+  }
+  void wait_with_global_memory_fence() const restrict(amp) {
+#if __KALMAR_ACCELERATOR__ == 1
+    amp_barrier(CLK_GLOBAL_MEM_FENCE);
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+      pbar->wait();
+#endif
+  }
+  void wait_with_tile_static_memory_fence() const restrict(amp) {
+#if __KALMAR_ACCELERATOR__ == 1
+    amp_barrier(CLK_LOCAL_MEM_FENCE);
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+      pbar->wait();
+#endif
+  }
+ private:
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+  tile_barrier() restrict(amp,cpu) = default;
+  pb_t pbar;
+#else
+  tile_barrier() restrict(amp) {}
+#endif
+  friend class hc::tiled_index_1D;
+  friend class hc::tiled_index_2D;
+  friend class hc::tiled_index_3D;
+};
+
+
 // FIXME: disable dependency to Concurrency::index
-// FIXME: disable dependency to Concurrency::tile_barrier
 class tiled_index_1D {
 public:
   const index<1> global;
@@ -309,7 +399,6 @@ private:
 };
 
 // FIXME: disable dependency to Concurrency::index
-// FIXME: disable dependency to Concurrency::tile_barrier
 class tiled_index_2D {
 public:
   const index<2> global;
@@ -348,7 +437,6 @@ private:
 };
 
 // FIXME: disable dependency to Concurrency::index
-// FIXME: disable dependency to Concurrency::tile_barrier
 class tiled_index_3D {
 public:
   const index<3> global;
