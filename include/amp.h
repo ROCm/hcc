@@ -38,6 +38,7 @@
 #include <kalmar_runtime.h>
 #include <kalmar_buffer.h>
 #include <kalmar_serialize.h>
+#include <kalmar_launch.h>
 // End CLAMP
 
 // forward declaration
@@ -2185,16 +2186,8 @@ extent<N> operator%(int lhs, const extent<N>& rhs) restrict(amp,cpu) {
 
 } //namespace Concurrency
 
-// Remove warning: unused variable 'foo' [-Wunused-variable]
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-variable"
-#endif
-#include <kalmar_launch.h>
+// FIXME: move it to a better place
 #include <amp_pfe.inl>
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
 
 namespace Concurrency {
 
