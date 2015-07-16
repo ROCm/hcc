@@ -67,9 +67,9 @@ namespace concurrency = Concurrency;
 // forward declaration
 namespace Kalmar {
 template<typename Kernel, int dim_ext>
-    void mcw_cxxamp_launch_kernel(const Concurrency::accelerator_view&, size_t *, size_t *, const Kernel&);
+    void mcw_cxxamp_launch_kernel(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&);
 template<typename Kernel, int dim_ext>
-    std::shared_future<void>* mcw_cxxamp_launch_kernel_async(const Concurrency::accelerator_view&, size_t *, size_t *, const Kernel&);
+    std::shared_future<void>* mcw_cxxamp_launch_kernel_async(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&);
 template <typename Kernel, int N>
     void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>&, Kernel const&, Concurrency::extent<N> const&);
 } // namespace Kalmar
