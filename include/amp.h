@@ -433,9 +433,6 @@ class tile_barrier {
   friend class tiled_index;
 };
 
-template <typename T, int N> class array;
-template <typename T, int N> class array_view;
-
 template <int N>
 class extent {
 public:
