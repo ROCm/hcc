@@ -17,6 +17,7 @@ using namespace Kalmar::enums;
 class accelerator;
 class accelerator_view;
 template <int N> class extent;
+template <int N> class tiled_extent;
 class tiled_extent_1D;
 class tiled_extent_2D;
 class tiled_extent_3D;
@@ -304,6 +305,60 @@ private:
     template <int K, typename Q> friend struct Kalmar::index_helper;
     template <int K, typename Q1, typename Q2> friend struct Kalmar::amp_helper;
 };
+
+// tile extent supporting dynamic tile size
+template <int N>
+class tiled_extent : public extent<N> {
+public:
+  static const int rank = N;
+  int tile_dim[N];
+  tiled_extent() restrict(amp,cpu) : extent<N>(), tile_dim{0} {}
+  tiled_extent(const tiled_extent& other) restrict(amp,cpu) : extent<N>(other) {
+    for (int i = 0; i < N; ++i) {
+      tile_dim[i] = other.tile_dim[i];
+    }
+  }
+};
+
+// tile extent supporting dynamic tile size
+// 1D specialization
+template <>
+class tiled_extent<1> : public extent<1> {
+public:
+  static const int rank = 1;
+  int tile_dim[1];
+  tiled_extent() restrict(amp,cpu) : extent(0), tile_dim{0} {}
+  tiled_extent(int e0, int t0) restrict(amp,cpu) : extent(e0), tile_dim{t0} {}
+  tiled_extent(const tiled_extent<1>& other) restrict(amp,cpu) : extent(other[0]), tile_dim{other.tile_dim[0]} {}
+  tiled_extent(const extent<1>& ext, int t0) restrict(amp,cpu) : extent(ext), tile_dim{t0} {} 
+};
+
+// tile extent supporting dynamic tile size
+// 2D specialization
+template <>
+class tiled_extent<2> : public extent<2> {
+public:
+  static const int rank = 2;
+  int tile_dim[2];
+  tiled_extent() restrict(amp,cpu) : extent(0, 0), tile_dim{0, 0} {}
+  tiled_extent(int e0, int e1, int t0, int t1) restrict(amp,cpu) : extent(e0, e1), tile_dim{t0, t1} {}
+  tiled_extent(const tiled_extent<2>& other) restrict(amp,cpu) : extent(other[0], other[1]), tile_dim{other.tile_dim[0], other.tile_dim[1]} {}
+  tiled_extent(const extent<2>& ext, int t0, int t1) restrict(amp,cpu) : extent(ext), tile_dim{t0, t1} {}
+};
+
+// tile extent supporting dynamic tile size
+// 3D specialization
+template <>
+class tiled_extent<3> : public extent<3> {
+public:
+  static const int rank = 3;
+  int tile_dim[3];
+  tiled_extent() restrict(amp,cpu) : extent(0, 0, 0), tile_dim{0, 0, 0} {}
+  tiled_extent(int e0, int e1, int e2, int t0, int t1, int t2) restrict(amp,cpu) : extent(e0, e1, e2), tile_dim{t0, t1, t2} {}
+  tiled_extent(const tiled_extent<3>& other) restrict(amp,cpu) : extent(other[0], other[1], other[2]), tile_dim{other.tile_dim[0], other.tile_dim[1], other.tile_dim[2]} {}
+  tiled_extent(const extent<3>& ext, int t0, int t1, int t2) restrict(amp,cpu) : extent(ext), tile_dim{t0, t1, t2} {}
+};
+
 
 // tile extent supporting dynamic tile size
 class tiled_extent_1D : public extent<1> {
