@@ -23,12 +23,12 @@ bool test() {
   tsa.setDynamicGroupSegmentSize(DYNAMIC_GROUP_SEGMENT_SIZE);
 
   Concurrency::array_view<int, 1> av(GRID_SIZE);
-  tiled_extent_1D ex(GRID_SIZE, TILE_SIZE);
+  tiled_extent<1> ex(GRID_SIZE, TILE_SIZE);
   
   parallel_for_each(hc::accelerator().get_default_view(),
                     ex,
                     tsa,
-                    __KERNEL__ [=, &tsa](tiled_index_1D& tidx) {
+                    __KERNEL__ [=, &tsa](tiled_index<1>& tidx) {
     tile_static int lds1[TILE_SIZE];
     tile_static int lds2[TILE_SIZE];
 
