@@ -22,8 +22,8 @@ bool test1D(size_t grid_size, size_t tile_size) {
   tsa.setDynamicGroupSegmentSize(tile_size * sizeof(T));
 
   // launch kernel in tiled fashion
-  tiled_extent_1D ex(grid_size, tile_size);
-  parallel_for_each(ex, tsa, [&, avOffset](tiled_index_1D& idx) restrict(amp) {
+  tiled_extent<1> ex(grid_size, tile_size);
+  parallel_for_each(ex, tsa, [&, avOffset](tiled_index<1>& idx) restrict(amp) {
 
     // call ts_allocator
     // allocate 1 element for each work item
