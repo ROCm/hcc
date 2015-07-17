@@ -52,7 +52,7 @@ bool test1D() {
   std::default_random_engine gen(rd());
   std::uniform_int_distribution<int> dis(1, 1024);
 
-  // test create tiled_extent_1D where tile size is determined at runtime
+  // test create tiled_extent<1> where tile size is determined at runtime
   for (int i = 0; i < 10; ++i) {
     int extentSize = dis(gen);
     int tileSize = dis(gen);
@@ -123,7 +123,7 @@ bool test2D() {
   std::default_random_engine gen(rd());
   std::uniform_int_distribution<int> dis(1, 1024);
 
-  // test create tiled_extent_2D where tile size is determined at runtime
+  // test create tiled_extent<2> where tile size is determined at runtime
   for (int i = 0; i < 10; ++i) {
     int extentSize0 = dis(gen);
     int extentSize1 = dis(gen);
@@ -208,7 +208,7 @@ bool test3D() {
   std::default_random_engine gen(rd());
   std::uniform_int_distribution<int> dis(1, 1024);
 
-  // test create tiled_extent_3D where tile size is determined at runtime
+  // test create tiled_extent<3> where tile size is determined at runtime
   for (int i = 0; i < 10; ++i) {
     int extentSize0 = dis(gen);
     int extentSize1 = dis(gen);
@@ -231,7 +231,7 @@ bool test3D() {
   return ret;
 }
 
-/// a test which checks if tiled_extent_1D is implemented correctly
+/// a test which checks if tiled_extent<> is implemented correctly
 int main() {
   bool ret = true;
 
