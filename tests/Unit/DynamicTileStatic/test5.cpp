@@ -36,9 +36,15 @@ bool test() {
     index<1> global = tidx.global;
     index<1> local = tidx.local;
 
+    // reset allocator
+    tsa.reset();
+
     // allocate dynamic group memory
     // each work item will allocate 1 plus its workgroup index
-    __GROUP__ int* p = (__GROUP__ int*) tsa.alloc(ALLOC_SIZE);
+    __GROUP__ int* p = (__GROUP__ int*) tsa.alloc(DYNAMIC_GROUP_SEGMENT_SIZE);
+
+    // move the allocated pointer to workitem-specific location
+    p += (local[0] * (local[0] + 1)) / 2;
 
     // fill in with value of 1 plus its workgroup index to the allocated buffer
     // for workgroup id 0: 1
