@@ -386,6 +386,7 @@ class ts_allocator {
 private:
   unsigned int static_group_segment_size;
   unsigned int dynamic_group_segment_size;
+  int cursor;
 
   void setStaticGroupSegmentSize(unsigned int size) restrict(cpu) {
     static_group_segment_size = size;
@@ -401,7 +402,8 @@ private:
 public:
   ts_allocator() :
     static_group_segment_size(0), 
-    dynamic_group_segment_size(0) {}
+    dynamic_group_segment_size(0),
+    cursor(0) {}
 
   ~ts_allocator() {}
 
@@ -417,6 +419,10 @@ public:
     return dynamic_group_segment_size;
   }
 
+  void reset() restrict(amp,cpu) {
+    cursor = 0;
+  }
+
   // Allocate the requested size in tile static memory and return its pointer
   // returns NULL if the requested size can't be allocated
   // It requires all threads in a tile to hit the same ts_alloc call site at the
@@ -424,14 +430,18 @@ public:
   // Only one instance of the tile static memory will be allocated per call site
   // and all threads within a tile will get the same tile static memory address.
   __attribute__((address_space(3))) void* alloc(unsigned int size) restrict(amp) {
-    tile_static int cursor;
-    cursor = 0;
+    int offset = cursor;
+
+    // only the first workitem in the workgroup moves the cursor
+    if (amp_get_local_id(0) == 0 && amp_get_local_id(1) == 0 && amp_get_local_id(2) == 0) {
+      cursor += size;
+    }
 
     // fetch the beginning address of dynamic group segment
     __attribute__((address_space(3))) unsigned char* lds = (__attribute__((address_space(3))) unsigned char*) getLDS(static_group_segment_size);
 
-    // use atomic fetch_add to allocate
-    return lds + __hsail_atomic_fetch_add_int(&cursor, size);
+    // return the address
+    return lds + offset;
   }   
 };  
 
