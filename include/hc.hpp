@@ -92,6 +92,13 @@ private:
   template<typename Kernel> friend
       void parallel_for_each(const accelerator_view&, const tiled_extent_3D&, ts_allocator&, const Kernel&);
 
+  template<typename Kernel> friend
+      void parallel_for_each(const accelerator_view&, const tiled_extent<1>&, ts_allocator&, const Kernel&);
+  template<typename Kernel> friend
+      void parallel_for_each(const accelerator_view&, const tiled_extent<2>&, ts_allocator&, const Kernel&);
+  template<typename Kernel> friend
+      void parallel_for_each(const accelerator_view&, const tiled_extent<3>&, ts_allocator&, const Kernel&);
+
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
 public:
 #endif
@@ -415,6 +422,13 @@ private:
   template <typename Kernel> friend
     void parallel_for_each(const accelerator_view&, const tiled_extent_3D&, ts_allocator&, const Kernel&);
 
+  template <typename Kernel> friend
+    void parallel_for_each(const accelerator_view&, const tiled_extent<1>&, ts_allocator&, const Kernel&);
+  template <typename Kernel> friend
+    void parallel_for_each(const accelerator_view&, const tiled_extent<2>&, ts_allocator&, const Kernel&);
+  template <typename Kernel> friend
+    void parallel_for_each(const accelerator_view&, const tiled_extent<3>&, ts_allocator&, const Kernel&);
+
 public:
   ts_allocator() :
     static_group_segment_size(0), 
@@ -533,9 +547,126 @@ class tile_barrier {
 #else
   tile_barrier() restrict(amp) {}
 #endif
+  template <int N> friend
+    class tiled_index;
+
   friend class tiled_index_1D;
   friend class tiled_index_2D;
   friend class tiled_index_3D;
+};
+
+template <int N=3>
+class tiled_index {
+public:
+  const index<3> global;
+  const index<3> local;
+  const index<3> tile;
+  const index<3> tile_origin;
+  const tile_barrier barrier;
+  tiled_index(const index<3>& g) restrict(amp,cpu) : global(g) {}
+  tiled_index(const tiled_index& other) restrict(amp,cpu) : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin), barrier(other.barrier) {}
+  operator const index<3>() const restrict(amp,cpu) {
+    return global;
+  }
+private:
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+  __attribute__((always_inline)) tiled_index(int a0, int a1, int a2, int b0, int b1, int b2, int c0, int c1, int c2, tile_barrier& pb) restrict(amp,cpu) :
+    global(a2, a1, a0), local(b2, b1, b0), tile(c2, c1, c0), tile_origin(a2 - b2, a1 - b1, a0 - b0), barrier(pb) {}
+#endif
+
+  __attribute__((annotate("__cxxamp_opencl_index")))
+#if __KALMAR_ACCELERATOR__ == 1
+  __attribute__((always_inline)) tiled_index() restrict(amp) :
+    global(index<3>(amp_get_global_id(2), amp_get_global_id(1), amp_get_global_id(0))),
+    local(index<3>(amp_get_local_id(2), amp_get_local_id(1), amp_get_local_id(0))),
+    tile(index<3>(amp_get_group_id(2), amp_get_group_id(1), amp_get_group_id(0))),
+    tile_origin(index<3>(amp_get_global_id(2) - amp_get_local_id(2),
+                         amp_get_global_id(1) - amp_get_local_id(1),
+                         amp_get_global_id(0) - amp_get_local_id(0)))
+#elif __KALMAR__ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+  __attribute__((always_inline)) tiled_index() restrict(amp,cpu)
+#else
+  __attribute__((always_inline)) tiled_index() restrict(amp)
+#endif // __KALMAR_ACCELERATOR__
+  {}
+
+  template<typename Kernel>
+  friend void parallel_for_each(const accelerator_view&, const tiled_extent<N>&, ts_allocator&, const Kernel&);
+};
+
+template<>
+class tiled_index<1> {
+public:
+  const index<1> global;
+  const index<1> local;
+  const index<1> tile;
+  const index<1> tile_origin;
+  const tile_barrier barrier;
+  tiled_index(const index<1>& g) restrict(amp,cpu) : global(g) {}
+  tiled_index(const tiled_index& other) restrict(amp,cpu) : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin), barrier(other.barrier) {}
+  operator const index<1>() const restrict(amp,cpu) {
+    return global;
+  }
+private:
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+  __attribute__((always_inline)) tiled_index(int a, int b, int c, tile_barrier& pb) restrict(amp,cpu) :
+    global(a), local(b), tile(c), tile_origin(a - b), barrier(pb) {}
+#endif
+
+  __attribute__((annotate("__cxxamp_opencl_index")))
+#if __KALMAR_ACCELERATOR__ == 1
+  __attribute__((always_inline)) tiled_index() restrict(amp) :
+    global(index<1>(amp_get_global_id(0))),
+    local(index<1>(amp_get_local_id(0))),
+    tile(index<1>(amp_get_group_id(0))),
+    tile_origin(index<1>(amp_get_global_id(0) - amp_get_local_id(0)))
+#elif __KALMAR__ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+  __attribute__((always_inline)) tiled_index() restrict(amp,cpu)
+#else
+  __attribute__((always_inline)) tiled_index() restrict(amp)
+#endif // __KALMAR_ACCELERATOR__
+  {}
+
+  template<typename Kernel>
+  friend void parallel_for_each(const accelerator_view&, const tiled_extent<1>&, ts_allocator&, const Kernel&);
+};
+
+template<>
+class tiled_index<2> {
+public:
+  const index<2> global;
+  const index<2> local;
+  const index<2> tile;
+  const index<2> tile_origin;
+  const tile_barrier barrier;
+  tiled_index(const index<2>& g) restrict(amp,cpu) : global(g) {}
+  tiled_index(const tiled_index& other) restrict(amp,cpu) : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin), barrier(other.barrier) {}
+  operator const index<2>() const restrict(amp,cpu) {
+    return global;
+  }
+private:
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+  __attribute__((always_inline)) tiled_index(int a0, int a1, int b0, int b1, int c0, int c1, tile_barrier& pb) restrict(amp,cpu) :
+    global(a1, a0), local(b1, b0), tile(c1, c0), tile_origin(a1 - b1, a0 - b0), barrier(pb) {}
+#endif
+
+  __attribute__((annotate("__cxxamp_opencl_index")))
+#if __KALMAR_ACCELERATOR__ == 1
+  __attribute__((always_inline)) tiled_index() restrict(amp) :
+    global(index<2>(amp_get_global_id(1), amp_get_global_id(0))),
+    local(index<2>(amp_get_local_id(1), amp_get_local_id(0))),
+    tile(index<2>(amp_get_group_id(1), amp_get_group_id(0))),
+    tile_origin(index<2>(amp_get_global_id(1) - amp_get_local_id(1),
+                         amp_get_global_id(0) - amp_get_local_id(0)))
+#elif __KALMAR__ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+  __attribute__((always_inline)) tiled_index() restrict(amp,cpu)
+#else
+  __attribute__((always_inline)) tiled_index() restrict(amp)
+#endif // __KALMAR_ACCELERATOR__
+  {}
+
+  template<typename Kernel>
+  friend void parallel_for_each(const accelerator_view&, const tiled_extent<2>&, ts_allocator&, const Kernel&);
 };
 
 
@@ -649,6 +780,143 @@ private:
   template<typename Kernel>
   friend void parallel_for_each(const accelerator_view&, const tiled_extent_3D&, ts_allocator&, const Kernel&);
 };
+
+// variants of parallel_for_each that supports runtime allocation of tile static
+template <typename Kernel>
+__attribute__((noinline,used))
+void parallel_for_each(const accelerator_view& av,
+                       const tiled_extent<1>& compute_domain,
+                       ts_allocator& allocator,
+                       const Kernel& f) restrict(amp,cpu) {
+#if __KALMAR_ACCELERATOR__ != 1
+  if(compute_domain[0]<=0) {
+    throw invalid_compute_domain("Extent is less or equal than 0.");
+  }
+  if (static_cast<size_t>(compute_domain[0]) > 4294967295L) {
+    throw invalid_compute_domain("Extent size too large.");
+  }
+  size_t ext = compute_domain[0];
+  size_t tile = compute_domain.tile_dim[0];
+  if (static_cast<size_t>(compute_domain.tile_dim[0]) > 1024) {
+    throw invalid_compute_domain("The maximum number of threads in a tile is 1024");
+  }
+  if (ext % tile != 0) {
+    throw invalid_compute_domain("Extent can't be evenly divisible by tile size.");
+  }
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+  if (CLAMP::is_cpu()) {
+      launch_cpu_task(av, f, compute_domain);
+      return;
+  }
+#endif
+  if (av.get_accelerator().get_device_path() == L"cpu") {
+    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
+  }
+  void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
+  allocator.setStaticGroupSegmentSize(av.pQueue->GetGroupSegmentSize(kernel));
+  Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory<Kernel, 1>(av.pQueue, &ext, &tile, f, kernel, allocator.getDynamicGroupSegmentSize());
+#else //if __KALMAR_ACCELERATOR__ != 1
+  tiled_index<1> this_is_used_to_instantiate_the_right_index;
+  //to ensure functor has right operator() defined
+  //this triggers the trampoline code being emitted
+  auto foo = &Kernel::__cxxamp_trampoline;
+  auto bar = &Kernel::operator();
+#endif
+}
+
+// variants of parallel_for_each that supports runtime allocation of tile static
+template <typename Kernel>
+__attribute__((noinline,used))
+void parallel_for_each(const accelerator_view& av,
+                       const tiled_extent<2>& compute_domain,
+                       ts_allocator& allocator,
+                       const Kernel& f) restrict(cpu,amp) {
+#if __KALMAR_ACCELERATOR__ != 1
+  if(compute_domain[0]<=0 || compute_domain[1]<=0) {
+    throw invalid_compute_domain("Extent is less or equal than 0.");
+  }
+  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
+    throw invalid_compute_domain("Extent size too large.");
+  size_t ext[2] = { static_cast<size_t>(compute_domain[1]),
+                    static_cast<size_t>(compute_domain[0])};
+  size_t tile[2] = { static_cast<size_t>(compute_domain.tile_dim[1]),
+                     static_cast<size_t>(compute_domain.tile_dim[0]) };
+  if (static_cast<size_t>(compute_domain.tile_dim[1] * compute_domain.tile_dim[0]) > 1024) {
+    throw invalid_compute_domain("The maximum nuimber of threads in a tile is 1024");
+  }
+  if((ext[0] % tile[0] != 0) || (ext[1] % tile[1] != 0)) {
+    throw invalid_compute_domain("Extent can't be evenly divisble by tile size.");
+  }
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+  if (CLAMP::is_cpu()) {
+      launch_cpu_task(av.pQueue, f, compute_domain);
+  } else
+#endif
+  if (av.get_accelerator().get_device_path() == L"cpu") {
+    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
+  }
+  void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
+  allocator.setStaticGroupSegmentSize(av.pQueue->GetGroupSegmentSize(kernel));
+  Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory<Kernel, 2>(av.pQueue, ext, tile, f, kernel, allocator.getDynamicGroupSegmentSize());
+#else //if __KALMAR_ACCELERATOR__ != 1
+  tiled_index<2> this_is_used_to_instantiate_the_right_index;
+  //to ensure functor has right operator() defined
+  //this triggers the trampoline code being emitted
+  auto foo = &Kernel::__cxxamp_trampoline;
+  auto bar = &Kernel::operator();
+#endif
+}
+
+// variants of parallel_for_each that supports runtime allocation of tile static
+template <typename Kernel>
+__attribute__((noinline,used))
+void parallel_for_each(const accelerator_view& av,
+                       const tiled_extent<3>& compute_domain,
+                       ts_allocator& allocator,
+                       const Kernel& f) restrict(cpu,amp) {
+#if __KALMAR_ACCELERATOR__ != 1
+  if(compute_domain[0]<=0 || compute_domain[1]<=0 || compute_domain[2]<=0) {
+    throw invalid_compute_domain("Extent is less or equal than 0.");
+  }
+  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
+    throw invalid_compute_domain("Extent size too large.");
+  if (static_cast<size_t>(compute_domain[1]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
+    throw invalid_compute_domain("Extent size too large.");
+  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
+    throw invalid_compute_domain("Extent size too large.");
+  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
+    throw invalid_compute_domain("Extent size too large.");
+  size_t ext[3] = { static_cast<size_t>(compute_domain[2]),
+                    static_cast<size_t>(compute_domain[1]),
+                    static_cast<size_t>(compute_domain[0])};
+  size_t tile[3] = { static_cast<size_t>(compute_domain.tile_dim[2]),
+                     static_cast<size_t>(compute_domain.tile_dim[1]),
+                     static_cast<size_t>(compute_domain.tile_dim[0]) };
+  if (static_cast<size_t>(compute_domain.tile_dim[2] * compute_domain.tile_dim[1]* compute_domain.tile_dim[0]) > 1024) {
+    throw invalid_compute_domain("The maximum nuimber of threads in a tile is 1024");
+  }
+  if((ext[0] % tile[0] != 0) || (ext[1] % tile[1] != 0) || (ext[2] % tile[2] != 0)) {
+    throw invalid_compute_domain("Extent can't be evenly divisble by tile size.");
+  }
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+  if (CLAMP::is_cpu()) {
+      launch_cpu_task(av.pQueue, f, compute_domain);
+  } else
+#endif
+  if (av.get_accelerator().get_device_path() == L"cpu") {
+    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
+  }
+  void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
+  allocator.setStaticGroupSegmentSize(av.pQueue->GetGroupSegmentSize(kernel));
+  Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory<Kernel, 3>(av.pQueue, ext, tile, f, kernel, allocator.getDynamicGroupSegmentSize());
+#else //if __KALMAR_ACCELERATOR__ != 1
+  tiled_index<3> this_is_used_to_instantiate_the_right_index;
+  //to ensure functor has right operator() defined
+  //this triggers the trampoline code being emitted
+  auto foo = &Kernel::__cxxamp_trampoline;
+  auto bar = &Kernel::operator();
+#endif
+}
 
 // variants of parallel_for_each that supports runtime allocation of tile static
 template <typename Kernel>
@@ -808,5 +1076,25 @@ void parallel_for_each(const tiled_extent_3D& compute_domain,
   parallel_for_each(accelerator().get_default_view(), compute_domain, allocator, f);
 }
 
+template <typename Kernel>
+void parallel_for_each(const tiled_extent<1>& compute_domain,
+                       ts_allocator& allocator,
+                       const Kernel& f) {
+  parallel_for_each(accelerator().get_default_view(), compute_domain, allocator, f);
+}
+
+template<typename Kernel>
+void parallel_for_each(const tiled_extent<2>& compute_domain,
+                       ts_allocator& allocator,
+                       const Kernel& f) {
+  parallel_for_each(accelerator().get_default_view(), compute_domain, allocator, f);
+}
+
+template<typename Kernel>
+void parallel_for_each(const tiled_extent<3>& compute_domain,
+                       ts_allocator& allocator,
+                       const Kernel& f) {
+  parallel_for_each(accelerator().get_default_view(), compute_domain, allocator, f);
+}
 
 } // namespace hc
