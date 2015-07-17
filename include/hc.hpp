@@ -217,6 +217,10 @@ public:
     bool contains(const index<N>& idx) const restrict(amp,cpu) {
         return Kalmar::amp_helper<N, index<N>, extent<N>>::contains(idx, *this);
     }
+    tiled_extent<1> tile(int t0) const;
+    tiled_extent<2> tile(int t0, int t1) const;
+    tiled_extent<3> tile(int t0, int t1, int t2) const;
+
     extent operator+(const index<N>& idx) restrict(amp,cpu) {
         extent __r = *this;
         __r += idx;
@@ -352,6 +356,27 @@ public:
   tiled_extent(const tiled_extent<3>& other) restrict(amp,cpu) : extent(other[0], other[1], other[2]), tile_dim{other.tile_dim[0], other.tile_dim[1], other.tile_dim[2]} {}
   tiled_extent(const extent<3>& ext, int t0, int t1, int t2) restrict(amp,cpu) : extent(ext), tile_dim{t0, t1, t2} {}
 };
+
+template <int N>
+inline
+tiled_extent<1> extent<N>::tile(int t0) const restrict(amp,cpu) {
+  static_assert(N == 1, "One-dimensional tile() method only available on extent<1>");
+  return tiled_extent<1>(*this, t0);
+}
+
+template <int N>
+inline
+tiled_extent<2> extent<N>::tile(int t0, int t1) const restrict(amp,cpu) {
+  static_assert(N == 2, "Two-dimensional tile() method only available on extent<2>");
+  return tiled_extent<2>(*this, t0, t1);
+}
+
+template <int N>
+inline
+tiled_extent<3> extent<N>::tile(int t0, int t1, int t2) const restrict(amp,cpu) {
+  static_assert(N == 3, "Three-dimensional tile() method only available on extent<3>");
+  return tiled_extent<3>(*this, t0, t1, t2);
+}
 
 
 /// getLDS : C interface of HSA builtin function to fetch an address within group segment
