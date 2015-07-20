@@ -259,9 +259,6 @@ extern void *CreateKernel(std::string, KalmarQueue*);
 extern void PushArg(void *, int, size_t, const void *);
 extern void PushArgPtr(void *, int, size_t, const void *);
 
-// FIXME: move to hc namespace
-extern size_t GetMaxTileStaticSize(KalmarQueue*);
-
 } // namespace CLAMP
 
 static inline const std::shared_ptr<KalmarQueue> get_cpu_queue() {
