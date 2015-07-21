@@ -416,10 +416,8 @@ public:
 #if KALMAR_DEBUG
         std::cerr << "HSAQueue::~HSAQueue(): destroy an HSA command queue: " << commandQueue << "\n";
 #endif
-        // FIXME HSAContext is destroyed prior to HSAQueue at this moment
-        // so the following call should be disabled for now
-        //status = hsa_queue_destroy(commandQueue);
-        //STATUS_CHECK(status, __LINE__);
+        status = hsa_queue_destroy(commandQueue);
+        STATUS_CHECK(status, __LINE__);
     }
 
     void LaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local) override {
