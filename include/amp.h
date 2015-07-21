@@ -182,7 +182,7 @@ public:
   static std::vector<accelerator> get_all() {
       auto Devices = getContext()->getDevices();
       std::vector<accelerator> ret(Devices.size());
-      for (int i = 0; i < ret.size(); ++i)
+      for (std::size_t i = 0; i < ret.size(); ++i)
           ret[i] = Devices[i];
       return std::move(ret);
   }
