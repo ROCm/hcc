@@ -100,10 +100,6 @@ are:
 2. Pull your cppamp-driver-ng repository from bitbucket.
   # cd cppamp
   # git clone git@bitbucket.org:${username}/cppamp-driver-ng-35.git src
-  # cd src/
-  # git fetch origin
-  # git checkout -b AMP-439_on_master origin/AMP-439_on_master
-  # cd ..
 
 3. Create a build directory and configure using CMake.
   # mkdir build
@@ -139,11 +135,6 @@ are:
    - CMAKE_BUILD_TYPE : Release or Debug
 
    - CXXAMP_ENABLE_BOLT : ON / OFF AMD Bolt API (default is ON)
-
-  # cd ../src/compiler/tools/clang/
-  # git fetch origin
-  # git checkout -b AMP-439 origin/AMP-439
-  # cd -
 
 4. Build the whole system. This will build clang and other libraries
    that require one time build.
