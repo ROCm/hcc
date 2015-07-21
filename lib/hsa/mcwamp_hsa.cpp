@@ -23,7 +23,7 @@
 #include <hsa.h>
 #include <hsa_ext_finalize.h>
 
-#include <amp_runtime.h>
+#include <kalmar_runtime.h>
 
 #define KALMAR_DEBUG (0)
 
@@ -96,6 +96,8 @@ private:
     hsa_kernel_dispatch_packet_t aql;
     bool isDispatched;
 
+    size_t dynamicGroupSize;
+
 public:
     ~HSADispatch() {
         if (isDispatched) {
@@ -104,10 +106,16 @@ public:
         }
     }
 
+    hsa_status_t setDynamicGroupSegment(size_t dynamicGroupSize) {
+        this->dynamicGroupSize = dynamicGroupSize;
+        return HSA_STATUS_SUCCESS;
+    }
+
     HSADispatch(hsa_agent_t _agent, const HSAKernel* _kernel) :
         agent(_agent),
         kernel(_kernel),
-        isDispatched(false) {
+        isDispatched(false),
+        dynamicGroupSize(0) {
 
         // allocate the initial argument vector capacity
         arg_vec.reserve(ARGS_VEC_INITIAL_CAPACITY);
@@ -205,6 +213,16 @@ public:
         return fut;
     }
 
+    uint32_t getGroupSegmentSize() {
+        hsa_status_t status = HSA_STATUS_SUCCESS;
+        uint32_t group_segment_size = 0;
+        status = hsa_executable_symbol_get_info(kernel->hsaExecutableSymbol,
+                                                HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE,
+                                                &group_segment_size);
+        STATUS_CHECK_Q(status, __LINE__);
+        return group_segment_size;
+    }
+
     // dispatch a kernel asynchronously
     hsa_status_t dispatchKernel(hsa_queue_t* commandQueue) {
         hsa_status_t status = HSA_STATUS_SUCCESS;
@@ -264,6 +282,9 @@ public:
                                                 HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE,
                                                 &group_segment_size);
         STATUS_CHECK_Q(status, __LINE__);
+
+        // add dynamic group segment size
+        group_segment_size += this->dynamicGroupSize;
         aql.group_segment_size = group_segment_size;
   
         uint32_t private_segment_size;
@@ -384,7 +405,7 @@ private:
 ///
 /// memory allocator
 ///
-namespace Concurrency {
+namespace Kalmar {
 
 
 class HSAQueue final : public KalmarQueue
@@ -420,6 +441,23 @@ public:
         // so the following call should be disabled for now
         //status = hsa_queue_destroy(commandQueue);
         //STATUS_CHECK(status, __LINE__);
+    }
+
+    void LaunchKernelWithDynamicGroupMemory(void *ker, size_t nr_dim, size_t *global, size_t *local, size_t dynamic_group_size) override {
+        HSADispatch *dispatch =
+            reinterpret_cast<HSADispatch*>(ker);
+        size_t tmp_local[] = {0, 0, 0};
+        if (!local)
+            local = tmp_local;
+        dispatch->setLaunchAttributes(nr_dim, global, local);
+        dispatch->setDynamicGroupSegment(dynamic_group_size);
+        dispatch->dispatchKernelWaitComplete(commandQueue);
+        delete(dispatch);
+    }
+
+    uint32_t GetGroupSegmentSize(void *ker) override {
+        HSADispatch *dispatch = reinterpret_cast<HSADispatch*>(ker);
+        return dispatch->getGroupSegmentSize();
     }
 
     void LaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local) override {
@@ -757,11 +795,11 @@ public:
 
 static HSAContext ctx;
 
-} // namespace Concurrency
+} // namespace Kalmar
 
 
 extern "C" void *GetContextImpl() {
-  return &Concurrency::ctx;
+  return &Kalmar::ctx;
 }
 
 extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v) {

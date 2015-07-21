@@ -6,13 +6,13 @@
 
 #include <iostream>
 
-/// test HC parallel_for_each interface
+/// test HC tiled_extent vs extent::tile interface
 template<size_t grid_size, size_t tile_size>
 bool test1D() {
 
   bool ret = true;
 
-  // first run normal C++AMP parallel_for_each
+  // first run HC parallel_for_each with tile() interface
   std::vector<int> table1(grid_size);
   std::vector<int> table2(grid_size);
   std::vector<int> table3(grid_size);
@@ -22,16 +22,16 @@ bool test1D() {
   Concurrency::array_view<int, 1> av3(grid_size, table3);
   Concurrency::array_view<int, 1> av4(grid_size, table4);
 
-  Concurrency::parallel_for_each(Concurrency::extent<1>(grid_size).tile<tile_size>(), [=](Concurrency::tiled_index<tile_size>& idx) restrict(amp) {
+  // set dynamic tile size as 0 for now as we don't test this feature in this test yet
+  hc::ts_allocator tsa1;
+  hc::parallel_for_each(hc::extent<1>(grid_size).tile(tile_size), tsa1, [=](hc::tiled_index<1>& idx) restrict(amp) {
     av1(idx) = idx.global[0];
     av2(idx) = idx.local[0];
     av3(idx) = idx.tile[0];
     av4(idx) = idx.tile_origin[0];
   });
 
-
-  // next run HC parallel_for_each
-
+  // next run HC parallel_for_each with tiled_extent
   std::vector<int> table5(grid_size);
   std::vector<int> table6(grid_size);
   std::vector<int> table7(grid_size);
@@ -42,8 +42,8 @@ bool test1D() {
   Concurrency::array_view<int, 1> av8(grid_size, table8);
 
   // set dynamic tile size as 0 for now as we don't test this feature in this test yet
-  hc::ts_allocator tsa;
-  hc::parallel_for_each(hc::tiled_extent<1>(grid_size, tile_size), tsa, [=](hc::tiled_index<1>& idx) restrict(amp) {
+  hc::ts_allocator tsa2;
+  hc::parallel_for_each(hc::tiled_extent<1>(grid_size, tile_size), tsa2, [=](hc::tiled_index<1>& idx) restrict(amp) {
     av5(idx) = idx.global[0];
     av6(idx) = idx.local[0];
     av7(idx) = idx.tile[0];
@@ -96,14 +96,13 @@ bool test1D() {
   return ret;
 }
 
-/// test HC parallel_for_each interface
+/// test HC tiled_extent vs extent::tile interface
 template<size_t grid_size_0, size_t grid_size_1, size_t tile_size_0, size_t tile_size_1>
 bool test2D() {
 
   bool ret = true;
 
-  // first run normal C++AMP parallel_for_each
-
+  // first run HC parallel_for_each with tile() interface
   std::vector<int> table1(grid_size_0 * grid_size_1);
   std::vector<int> table2(grid_size_0 * grid_size_1);
   std::vector<int> table3(grid_size_0 * grid_size_1);
@@ -121,7 +120,9 @@ bool test2D() {
   Concurrency::array_view<int, 2> av7(grid_size_0, grid_size_1, table7);
   Concurrency::array_view<int, 2> av8(grid_size_0, grid_size_1, table8);
 
-  Concurrency::parallel_for_each(Concurrency::extent<2>(grid_size_0, grid_size_1).tile<tile_size_0, tile_size_1>(), [=](Concurrency::tiled_index<tile_size_0, tile_size_1>& idx) restrict(amp) {
+  // set dynamic tile size as 0 for now as we don't test this feature in this test yet
+  hc::ts_allocator tsa1;
+  hc::parallel_for_each(hc::extent<2>(grid_size_0, grid_size_1).tile(tile_size_0, tile_size_1), tsa1, [=](hc::tiled_index<2>& idx) restrict(amp) {
     av1(idx) = idx.global[0];
     av2(idx) = idx.global[1];
     av3(idx) = idx.local[0];
@@ -133,7 +134,6 @@ bool test2D() {
   });
 
   // next run HC parallel_for_each
-
   std::vector<int> table9(grid_size_0 * grid_size_1);
   std::vector<int> table10(grid_size_0 * grid_size_1);
   std::vector<int> table11(grid_size_0 * grid_size_1);
@@ -152,8 +152,8 @@ bool test2D() {
   Concurrency::array_view<int, 2> av16(grid_size_0, grid_size_1, table16);
 
   // set dynamic tile size as 0 for now as we don't test this feature in this test yet
-  hc::ts_allocator tsa;
-  hc::parallel_for_each(hc::tiled_extent<2>(grid_size_0, grid_size_1, tile_size_0, tile_size_1), tsa, [=](hc::tiled_index<2>& idx) restrict(amp) {
+  hc::ts_allocator tsa2;
+  hc::parallel_for_each(hc::tiled_extent<2>(grid_size_0, grid_size_1, tile_size_0, tile_size_1), tsa2, [=](hc::tiled_index<2>& idx) restrict(amp) {
     av9(idx) = idx.global[0];
     av10(idx) = idx.global[1];
     av11(idx) = idx.local[0];
@@ -219,14 +219,13 @@ bool test2D() {
   return ret;
 }
 
-/// test HC parallel_for_each interface
+/// test HC tiled_extent vs extent::tile interface
 template<size_t grid_size_0, size_t grid_size_1, size_t grid_size_2, size_t tile_size_0, size_t tile_size_1, size_t tile_size_2>
 bool test3D() {
 
   bool ret = true;
 
-  // first run normal C++AMP parallel_for_each
-
+  // first run HC parallel_for_each with tile() interface
   std::vector<int> table1(grid_size_0 * grid_size_1 * grid_size_2);
   std::vector<int> table2(grid_size_0 * grid_size_1 * grid_size_2);
   std::vector<int> table3(grid_size_0 * grid_size_1 * grid_size_2);
@@ -252,7 +251,9 @@ bool test3D() {
   Concurrency::array_view<int, 3> av11(grid_size_0, grid_size_1, grid_size_2, table11);
   Concurrency::array_view<int, 3> av12(grid_size_0, grid_size_1, grid_size_2, table12);
 
-  Concurrency::parallel_for_each(Concurrency::extent<3>(grid_size_0, grid_size_1, grid_size_2).tile<tile_size_0, tile_size_1, tile_size_2>(), [=](Concurrency::tiled_index<tile_size_0, tile_size_1, tile_size_2>& idx) restrict(amp) {
+  // set dynamic tile size as 0 for now as we don't test this feature in this test yet
+  hc::ts_allocator tsa1;
+  hc::parallel_for_each(hc::extent<3>(grid_size_0, grid_size_1, grid_size_2).tile(tile_size_0, tile_size_1, tile_size_2), tsa1, [=](hc::tiled_index<3>& idx) restrict(amp) {
     av1(idx) = idx.global[0];
     av2(idx) = idx.global[1];
     av3(idx) = idx.global[2];
@@ -295,8 +296,8 @@ bool test3D() {
   Concurrency::array_view<int, 3> av24(grid_size_0, grid_size_1, grid_size_2, table24);
 
   // set dynamic tile size as 0 for now as we don't test this feature in this test yet
-  hc::ts_allocator tsa;
-  hc::parallel_for_each(hc::tiled_extent<3>(grid_size_0, grid_size_1, grid_size_2, tile_size_0, tile_size_1, tile_size_2), tsa, [=](hc::tiled_index<3>& idx) restrict(amp) {
+  hc::ts_allocator tsa2;
+  hc::parallel_for_each(hc::tiled_extent<3>(grid_size_0, grid_size_1, grid_size_2, tile_size_0, tile_size_1, tile_size_2), tsa2, [=](hc::tiled_index<3>& idx) restrict(amp) {
     av13(idx) = idx.global[0];
     av14(idx) = idx.global[1];
     av15(idx) = idx.global[2];

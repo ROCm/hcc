@@ -83,7 +83,7 @@ struct RuntimeImpl {
   bool isCPU;
 };
 
-namespace Concurrency {
+namespace Kalmar {
 namespace CLAMP {
 
 ////////////////////////////////////////////////////////////
@@ -359,4 +359,4 @@ KalmarContext *getContext() {
   return static_cast<KalmarContext*>(CLAMP::GetOrInitRuntime()->m_GetContextImpl());
 }
 
-} // namespace Concurrency
+} // namespace Kalmar

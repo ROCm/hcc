@@ -5,14 +5,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLAMP_AMP_MANAGE
-#define __CLAMP_AMP_MANAGE
+#pragma once
 
-#include <amp_runtime.h>
-#include <serialize.h>
+#include <kalmar_runtime.h>
+#include <kalmar_serialize.h>
 
-namespace Concurrency {
-
+namespace Kalmar {
 
 // Dummy interface that looks somewhat like std::shared_ptr<T>
 template <typename T>
@@ -99,6 +97,5 @@ public:
         explicit _data_host(__global typename std::remove_const<T>::type* t) {}
 };
 
-} // namespace Concurrency
+} // namespace Kalmar
 
-#endif // __CLAMP_AMP_MANAGE

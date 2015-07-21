@@ -1,10 +1,8 @@
-#ifndef __CLAMP_SERIALIZE
-#define __CLAMP_SERIALIZE
+#pragma once
 
-#include <amp_runtime.h>
-#include <stdio.h>
+#include <kalmar_exception.h>
 
-namespace Concurrency
+namespace Kalmar
 {
 
 /// traverse all the buffers that are going to be used in kernel
@@ -85,6 +83,5 @@ public:
     }
 };
 
-} // namespace Concurrency
+} // namespace Kalmar
 
-#endif // __CLAMP_SERIALIZE

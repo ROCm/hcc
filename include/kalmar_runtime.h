@@ -1,43 +1,9 @@
-#ifndef __CLAMP_AMP_RUNTIME
-#define __CLAMP_AMP_RUNTIME
+#pragma once
 
-#include <map>
-#include <mutex>
+#include <kalmar_defines.h>
 
-namespace Concurrency {
-
-#ifndef E_FAIL
-#define E_FAIL 0x80004005
-#endif
-
-static const char *__errorMsg_UnsupportedAccelerator = "concurrency::parallel_for_each is not supported on the selected accelerator \"CPU accelerator\".";
-
-typedef int HRESULT;
-class runtime_exception : public std::exception
-{
-public:
-  runtime_exception(const char * message, HRESULT hresult) throw() : _M_msg(message), err_code(hresult) {}
-  explicit runtime_exception(HRESULT hresult) throw() : err_code(hresult) {}
-  runtime_exception(const runtime_exception& other) throw() : _M_msg(other.what()), err_code(other.err_code) {}
-  runtime_exception& operator=(const runtime_exception& other) throw() {
-    _M_msg = *(other.what());
-    err_code = other.err_code;
-    return *this;
-  }
-  virtual ~runtime_exception() throw() {}
-  virtual const char* what() const throw() {return _M_msg.c_str();}
-  HRESULT get_error_code() const {return err_code;}
-
-private:
-  std::string _M_msg;
-  HRESULT err_code;
-};
-
-
-
-/// forward declaration
-class KalmarDevice;
-struct rw_info;
+namespace Kalmar {
+namespace enums {
 
 /// access_type is used for accelerator that supports unified memory
 /// Such accelerator can use access_type to control whether can access data on
@@ -57,6 +23,18 @@ enum queuing_mode
     queuing_mode_automatic
 };
 
+} // namespace enums
+} // namespace Kalmar
+
+
+namespace Kalmar {
+
+using namespace Kalmar::enums;
+
+/// forward declaration
+class KalmarDevice;
+struct rw_info;
+
 /// KalmarQueue
 /// This is the implementation of accelerator_view
 /// KalamrQueue is responsible for data operations and launch kernel
@@ -71,6 +49,7 @@ public:
 
   virtual void flush() {}
   virtual void wait() {}
+  virtual void LaunchKernelWithDynamicGroupMemory(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size, size_t dynamic_group_size) {}
   virtual void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {}
   virtual void* LaunchKernelAsync(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) { return nullptr; }
 
@@ -91,6 +70,8 @@ public:
 
   /// push device pointer to kernel argument list
   virtual void Push(void *kernel, int idx, void* device, bool isConst) = 0;
+
+  virtual uint32_t GetGroupSegmentSize(void *kernel) { return 0; }
 
   KalmarDevice* getDev() { return pDev; }
   queuing_mode get_mode() const { return mode; }
@@ -277,9 +258,6 @@ extern void *CreateKernel(std::string, KalmarQueue*);
 
 extern void PushArg(void *, int, size_t, const void *);
 extern void PushArgPtr(void *, int, size_t, const void *);
-
-// FIXME: move to hc namespace
-extern size_t GetMaxTileStaticSize(KalmarQueue*);
 
 } // namespace CLAMP
 
@@ -623,6 +601,5 @@ struct rw_info
     }
 };
 
-} // namespace Concurrency
+} // namespace Kalmar
 
-#endif // __CLAMP_AMP_RUNTIME
