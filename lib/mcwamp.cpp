@@ -353,37 +353,34 @@ void *CreateKernel(std::string s, KalmarQueue* pQueue) {
       // force use HSA BRIG kernel from CLAMP_NOISA environment variable
       kernel_env = getenv("CLAMP_NOISA");
       if (kernel_env == nullptr) {
-
         // check if offline finalized kernels are available
-        kernel_size =
+        size_t kernel_finalized_size = 
           (ptrdiff_t)((void *)hsa_offline_finalized_kernel_end) -
           (ptrdiff_t)((void *)hsa_offline_finalized_kernel_source);
-        if (kernel_size > 0) {
+        if (kernel_finalized_size > 0) {
           if (mcwamp_verbose)
             std::cout << "Use offline finalized HSA kernels\n";
           hasFinalized = true;
         } else {
-          kernel_size = 
-            (ptrdiff_t)((void *)hsa_kernel_end) -
-            (ptrdiff_t)((void *)hsa_kernel_source);
           if (mcwamp_verbose)
             std::cout << "Use HSA BRIG kernel\n";
         }
-
       } else {
-
         // force use BRIG kernel
-        kernel_size = 
-          (ptrdiff_t)((void *)hsa_kernel_end) -
-          (ptrdiff_t)((void *)hsa_kernel_source);
         if (mcwamp_verbose)
           std::cout << "Use HSA BRIG kernel\n";
       }
       firstTime = false;
     }
     if (hasFinalized) {
+      kernel_size =
+        (ptrdiff_t)((void *)hsa_offline_finalized_kernel_end) -
+        (ptrdiff_t)((void *)hsa_offline_finalized_kernel_source);
       return pQueue->getDev()->CreateKernel(s.c_str(), (void *)kernel_size, hsa_offline_finalized_kernel_source, false);
     } else {
+      kernel_size = 
+        (ptrdiff_t)((void *)hsa_kernel_end) -
+        (ptrdiff_t)((void *)hsa_kernel_source);
       return pQueue->getDev()->CreateKernel(s.c_str(), (void *)kernel_size, hsa_kernel_source, true);
     }
   }
