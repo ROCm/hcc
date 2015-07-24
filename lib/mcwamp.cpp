@@ -40,6 +40,10 @@ extern "C" char * spir_kernel_end[] asm ("_binary_kernel_spir_end") __attribute_
 extern "C" char * hsa_kernel_source[] asm ("_binary_kernel_brig_start") __attribute__((weak));
 extern "C" char * hsa_kernel_end[] asm ("_binary_kernel_brig_end") __attribute__((weak));
 
+// HSA offline finalized kernel codes
+extern "C" char * hsa_offline_finalized_kernel_source[] asm ("_binary_kernel_isa_start") __attribute__((weak));
+extern "C" char * hsa_offline_finalized_kernel_end[] asm ("_binary_kernel_isa_end") __attribute__((weak));
+
 
 // interface of C++AMP runtime implementation
 struct RuntimeImpl {
