@@ -333,20 +333,33 @@ void *CreateKernel(std::string s, KalmarQueue* pQueue) {
         size_t kernel_size =
         (ptrdiff_t)((void *)spir_kernel_end) -
         (ptrdiff_t)((void *)spir_kernel_source);
-      return pQueue->getDev()->CreateKernel(s.c_str(), (void *)kernel_size, spir_kernel_source);
+      return pQueue->getDev()->CreateKernel(s.c_str(), (void *)kernel_size, spir_kernel_source, true);
     } else {
       // OpenCL path
         size_t kernel_size =
         (ptrdiff_t)((void *)cl_kernel_end) -
         (ptrdiff_t)((void *)cl_kernel_source);
-      return pQueue->getDev()->CreateKernel(s.c_str(), (void *)kernel_size, cl_kernel_source);
+      return pQueue->getDev()->CreateKernel(s.c_str(), (void *)kernel_size, cl_kernel_source, true);
     }
   } else {
     // HSA path
-       size_t kernel_size =
+
+    // use offline finalized kernel if it's availble
+    size_t kernel_size =
+      (ptrdiff_t)((void *)hsa_offline_finalized_kernel_end) -
+      (ptrdiff_t)((void *)hsa_offline_finalized_kernel_source);
+    if (kernel_size > 0) {
+      if (mcwamp_verbose)
+        std::cout << "Use offline finalized kernel\n";
+      return pQueue->getDev()->CreateKernel(s.c_str(), (void *)kernel_size, hsa_offline_finalized_kernel_source, false);
+    } else {
+      kernel_size = 
         (ptrdiff_t)((void *)hsa_kernel_end) -
         (ptrdiff_t)((void *)hsa_kernel_source);
-     return pQueue->getDev()->CreateKernel(s.c_str(), (void *)kernel_size, hsa_kernel_source);
+      if (mcwamp_verbose)
+        std::cout << "Use BRIG kernel\n";
+      return pQueue->getDev()->CreateKernel(s.c_str(), (void *)kernel_size, hsa_kernel_source, true);
+    }
    }
 }
 
