@@ -90,35 +90,3 @@ fi
 if [ $KMDUMPBRIG == "1" ]; then
     cp $1.brig ./dump.new_delete.brig
 fi
-
-# hack for HSA HOF
-# codes below may likely move to a standalone script
-LOWER_HOF=@HAS_HSA_HOF@
-
-# Path to HOF
-HOF_BIN=@HOF_BIN@
-
-if [ $LOWER_HOF == 1 ]; then
-
-  if [ -d $HOF_BIN ] && [ -e $HOF_BIN/hof ]; then
-    # all HOF tools are available
-    LOWER_HOF=1
-  else
-    # disable HOF in case any of the required tools is missing
-    echo "WARNING: Missing HOF tools.  Disable HSA offline finalization."
-    LOWER_HOF=0
-  fi
-fi
-
-if [ $LOWER_HOF == 1 ]; then
-  $HOF_BIN/hof -output=$1.isa -hsail $1.hsail
-  # error handling for HOF
-  RETVAL=$?
-  if [ $RETVAL != 0 ]; then
-    exit $RETVAL
-  fi
-
-  if [ $KMDUMPBRIG == "1" ]; then
-    cp $1.isa ./dump.isa
-  fi
-fi
