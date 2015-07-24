@@ -305,13 +305,18 @@ void leave_kernel() { in_kernel = false; }
 
 // used in parallel_for_each.h
 void *CreateKernel(std::string s, KalmarQueue* pQueue) {
+  static bool firstTime = true;
+  static bool hasSPIR = false;
+  static bool hasFinalized = false;
+
+  char* kernel_env = nullptr;
+  size_t kernel_size = 0;
+
   // FIXME need a more elegant way
   if (GetOrInitRuntime()->m_ImplName.find("libmcwamp_opencl") != std::string::npos) {
-    static bool firstTime = true;
-    static bool hasSPIR = false;
     if (firstTime) {
       // force use OpenCL C kernel from CLAMP_NOSPIR environment variable
-      char* kernel_env = getenv("CLAMP_NOSPIR");
+      kernel_env = getenv("CLAMP_NOSPIR");
       if (kernel_env == nullptr) {
           OpenCLPlatformDetect opencl_rt;
         if (opencl_rt.hasSPIR()) {
@@ -330,13 +335,13 @@ void *CreateKernel(std::string s, KalmarQueue* pQueue) {
     }
     if (hasSPIR) {
       // SPIR path
-        size_t kernel_size =
+      kernel_size =
         (ptrdiff_t)((void *)spir_kernel_end) -
         (ptrdiff_t)((void *)spir_kernel_source);
       return pQueue->getDev()->CreateKernel(s.c_str(), (void *)kernel_size, spir_kernel_source, true);
     } else {
       // OpenCL path
-        size_t kernel_size =
+      kernel_size =
         (ptrdiff_t)((void *)cl_kernel_end) -
         (ptrdiff_t)((void *)cl_kernel_source);
       return pQueue->getDev()->CreateKernel(s.c_str(), (void *)kernel_size, cl_kernel_source, true);
@@ -344,23 +349,44 @@ void *CreateKernel(std::string s, KalmarQueue* pQueue) {
   } else {
     // HSA path
 
-    // use offline finalized kernel if it's availble
-    size_t kernel_size =
-      (ptrdiff_t)((void *)hsa_offline_finalized_kernel_end) -
-      (ptrdiff_t)((void *)hsa_offline_finalized_kernel_source);
-    if (kernel_size > 0) {
-      if (mcwamp_verbose)
-        std::cout << "Use offline finalized kernel\n";
+    if (firstTime) {
+      // force use HSA BRIG kernel from CLAMP_NOISA environment variable
+      kernel_env = getenv("CLAMP_NOISA");
+      if (kernel_env == nullptr) {
+
+        // check if offline finalized kernels are available
+        kernel_size =
+          (ptrdiff_t)((void *)hsa_offline_finalized_kernel_end) -
+          (ptrdiff_t)((void *)hsa_offline_finalized_kernel_source);
+        if (kernel_size > 0) {
+          if (mcwamp_verbose)
+            std::cout << "Use offline finalized HSA kernels\n";
+          hasFinalized = true;
+        } else {
+          kernel_size = 
+            (ptrdiff_t)((void *)hsa_kernel_end) -
+            (ptrdiff_t)((void *)hsa_kernel_source);
+          if (mcwamp_verbose)
+            std::cout << "Use HSA BRIG kernel\n";
+        }
+
+      } else {
+
+        // force use BRIG kernel
+        kernel_size = 
+          (ptrdiff_t)((void *)hsa_kernel_end) -
+          (ptrdiff_t)((void *)hsa_kernel_source);
+        if (mcwamp_verbose)
+          std::cout << "Use HSA BRIG kernel\n";
+      }
+      firstTime = false;
+    }
+    if (hasFinalized) {
       return pQueue->getDev()->CreateKernel(s.c_str(), (void *)kernel_size, hsa_offline_finalized_kernel_source, false);
     } else {
-      kernel_size = 
-        (ptrdiff_t)((void *)hsa_kernel_end) -
-        (ptrdiff_t)((void *)hsa_kernel_source);
-      if (mcwamp_verbose)
-        std::cout << "Use BRIG kernel\n";
       return pQueue->getDev()->CreateKernel(s.c_str(), (void *)kernel_size, hsa_kernel_source, true);
     }
-   }
+  }
 }
 
 void PushArg(void *k_, int idx, size_t sz, const void *s) {
