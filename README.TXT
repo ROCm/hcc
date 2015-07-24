@@ -70,6 +70,11 @@ Build Instruction for HSA
   - Stable: https://github.com/HSAFoundation/HSAIL-HLC-Stable
   - Development: https://github.com/HSAFoundation/HSAIL-HLC-Development
 
+5. (optional) HSA HOF:
+   This is an optional tool to help you finalize HSA kernels at compile-time
+   rather than runtime.  It can be found at:
+   - https://github.com/HSAFoundation/HSA-HOF-AMD
+
 * Prerequisite/Repository
 
 For any development work, you should fork from them and create your own
@@ -116,6 +121,7 @@ are:
       -DHSA_EXT_LIBRARY_DIR=/opt/hsa/lib \
       -DHSA_KMT_LIBRARY_DIR=/opt/hsa/lib \
       -DHSAIL_COMPILER_DIR=/opt/amd/bin \
+      -DHSA_HOF_DIR=/opt/amd/bin \
       -DCMAKE_BUILD_TYPE=Release \
       -DCXXAMP_ENABLE_BOLT=ON
 
@@ -131,6 +137,8 @@ are:
    - HSA_KMT_LIBRARY_DIR : HSA kernel library path
 
    - HSAIL_COMPILER_DIR : HSAIL compiler binary path
+
+   - HSA_HOF_DIR : HSA offline finalizer binary path
 
    - CMAKE_BUILD_TYPE : Release or Debug
 

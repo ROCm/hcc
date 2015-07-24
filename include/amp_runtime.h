@@ -137,7 +137,7 @@ public:
     virtual void release(void* ptr, struct rw_info* key) = 0;
 
     /// create kernel
-    virtual void* CreateKernel(const char* fun, void* size, void* source) { return nullptr; }
+    virtual void* CreateKernel(const char* fun, void* size, void* source, bool needsCompilation = true) { return nullptr; }
 
     /// check the dimension information is correct
     virtual bool check(size_t* size, size_t dim_ext) { return true; }
@@ -198,7 +198,7 @@ public:
     std::shared_ptr<KalmarQueue> createQueue() { return std::shared_ptr<KalmarQueue>(new CPUQueue(this)); }
     void* create(size_t count, struct rw_info* /* not used */ ) override { return aligned_alloc(0x1000, count); }
     void release(void* ptr, struct rw_info* /* nout used */) override { ::operator delete(ptr); }
-    void* CreateKernel(const char* fun, void* size, void* source) { return nullptr; }
+    void* CreateKernel(const char* fun, void* size, void* source, bool needsCompilation = true) { return nullptr; }
 };
 
 /// KalmarContext
