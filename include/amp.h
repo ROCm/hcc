@@ -2071,22 +2071,30 @@ void parallel_for_each(const accelerator_view& accl_view,
 
 template <int N, typename Kernel>
 void parallel_for_each(extent<N> compute_domain, const Kernel& f){
-    parallel_for_each(accelerator().get_default_view(), compute_domain, f);
+    auto que = Kalmar::get_availabe_que(f);
+    const accelerator_view av(que);
+    parallel_for_each(av, compute_domain, f);
 }
 
 template <int D0, int D1, int D2, typename Kernel>
 void parallel_for_each(tiled_extent<D0,D1,D2> compute_domain, const Kernel& f) {
-    parallel_for_each(accelerator().get_default_view(), compute_domain, f);
+    auto que = Kalmar::get_availabe_que(f);
+    const accelerator_view av(que);
+    parallel_for_each(av, compute_domain, f);
 }
 
 template <int D0, int D1, typename Kernel>
 void parallel_for_each(tiled_extent<D0,D1> compute_domain, const Kernel& f) {
-    parallel_for_each(accelerator().get_default_view(), compute_domain, f);
+    auto que = Kalmar::get_availabe_que(f);
+    const accelerator_view av(que);
+    parallel_for_each(av, compute_domain, f);
 }
 
 template <int D0, typename Kernel>
 void parallel_for_each(tiled_extent<D0> compute_domain, const Kernel& f) {
-    parallel_for_each(accelerator().get_default_view(), compute_domain, f);
+    auto que = Kalmar::get_availabe_que(f);
+    const accelerator_view av(que);
+    parallel_for_each(av, compute_domain, f);
 }
 
 // Specialization of AMP classes/templates

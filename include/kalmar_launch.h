@@ -239,6 +239,18 @@ static void append_kernel(const std::shared_ptr<KalmarQueue>& pQueue, const Kern
   f.__cxxamp_serialize(s);
 }
 
+template <typename Kernel>
+static inline std::shared_ptr<KalmarQueue> get_availabe_que(const Kernel& f)
+{
+    Kalmar::QueueSearcher ser;
+    Kalmar::Serialize s(&ser);
+    f.__cxxamp_serialize(s);
+    if (ser.get_que())
+        return ser.get_que();
+    else
+        return getContext()->auto_select();
+}
+
 static std::set<std::string> __mcw_cxxamp_kernels;
 template<typename Kernel, int dim_ext>
 inline std::shared_future<void>*
