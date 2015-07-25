@@ -416,10 +416,8 @@ public:
 #if KALMAR_DEBUG
         std::cerr << "HSAQueue::~HSAQueue(): destroy an HSA command queue: " << commandQueue << "\n";
 #endif
-        // FIXME HSAContext is destroyed prior to HSAQueue at this moment
-        // so the following call should be disabled for now
-        //status = hsa_queue_destroy(commandQueue);
-        //STATUS_CHECK(status, __LINE__);
+        status = hsa_queue_destroy(commandQueue);
+        STATUS_CHECK(status, __LINE__);
     }
 
     void LaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local) override {
@@ -523,7 +521,7 @@ public:
         ::operator delete(ptr);
     }
 
-    void* CreateKernel(const char* fun, void* size, void* source) override {
+    void* CreateKernel(const char* fun, void* size, void* source, bool needsCompilation = true) override {
         std::string str(fun);
         HSAKernel *kernel = programs[str];
         if (!kernel) {
@@ -533,7 +531,11 @@ public:
             kernel_source[kernel_size] = '\0';
             std::string kname = std::string("&")+fun;
             //std::cerr << "HSADevice::CreateKernel(): Creating kernel: " << kname << "\n";
-            kernel = CreateKernelImpl(kernel_source, kernel_size, kname.c_str());
+            if (needsCompilation) {
+              kernel = CreateKernelImpl(kernel_source, kernel_size, kname.c_str());
+            } else {
+              kernel = CreateOfflineFinalizedKernelImpl(kernel_source, kernel_size, kname.c_str());
+            }
             free(kernel_source);
             if (!kernel) {
                 std::cerr << "HSADevice::CreateKernel(): Unable to create kernel\n";
@@ -566,6 +568,42 @@ public:
     }
 
 private:
+
+    HSAKernel* CreateOfflineFinalizedKernelImpl(void *kernelBuffer, int kernelSize, const char *entryName) {
+        hsa_status_t status;
+
+        // Deserialize code object.
+        hsa_code_object_t code_object = {0};
+        status = hsa_code_object_deserialize(kernelBuffer, kernelSize, NULL, &code_object);
+        STATUS_CHECK(status, __LINE__);
+        assert(0 != code_object.handle);
+
+        // Create the executable.
+        hsa_executable_t hsaExecutable;
+        status = hsa_executable_create(HSA_PROFILE_FULL, HSA_EXECUTABLE_STATE_UNFROZEN,
+                                       NULL, &hsaExecutable);
+        STATUS_CHECK(status, __LINE__);
+
+        // Load the code object.
+        status = hsa_executable_load_code_object(hsaExecutable, agent, code_object, NULL);
+        STATUS_CHECK(status, __LINE__);
+
+        // Freeze the executable.
+        status = hsa_executable_freeze(hsaExecutable, NULL);
+        STATUS_CHECK(status, __LINE__);
+
+        // Get symbol handle.
+        hsa_executable_symbol_t kernelSymbol;
+        status = hsa_executable_get_symbol(hsaExecutable, NULL, entryName, agent, 0, &kernelSymbol);
+        STATUS_CHECK(status, __LINE__);
+
+        // Get code handle.
+        uint64_t kernelCodeHandle;
+        status = hsa_executable_symbol_get_info(kernelSymbol, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT, &kernelCodeHandle);
+        STATUS_CHECK(status, __LINE__);
+
+        return new HSAKernel(hsaExecutable, code_object, kernelSymbol, kernelCodeHandle);
+    }
 
     HSAKernel* CreateKernelImpl(const char *hsailBuffer, int hsailSize, const char *entryName) {
         hsa_status_t status;
@@ -602,7 +640,7 @@ private:
   
         hsa_code_object_t hsaCodeObject = {0};
         status = hsa_ext_program_finalize(hsaProgram, isa, 0, control_directives,
-                                          "", HSA_CODE_OBJECT_TYPE_PROGRAM, &hsaCodeObject);
+                                          NULL, HSA_CODE_OBJECT_TYPE_PROGRAM, &hsaCodeObject);
         STATUS_CHECK(status, __LINE__);
   
         if (hsaProgram.handle != 0) {
@@ -613,15 +651,15 @@ private:
         // Create the executable.
         hsa_executable_t hsaExecutable;
         status = hsa_executable_create(HSA_PROFILE_FULL, HSA_EXECUTABLE_STATE_UNFROZEN,
-                                       "", &hsaExecutable);
+                                       NULL, &hsaExecutable);
         STATUS_CHECK(status, __LINE__);
   
         // Load the code object.
-        status = hsa_executable_load_code_object(hsaExecutable, agent, hsaCodeObject, "");
+        status = hsa_executable_load_code_object(hsaExecutable, agent, hsaCodeObject, NULL);
         STATUS_CHECK(status, __LINE__);
   
         // Freeze the executable.
-        status = hsa_executable_freeze(hsaExecutable, "");
+        status = hsa_executable_freeze(hsaExecutable, NULL);
         STATUS_CHECK(status, __LINE__);
   
         // Get symbol handle.
