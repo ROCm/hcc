@@ -921,42 +921,54 @@ template <typename Kernel>
 void parallel_for_each(const extent<1>& compute_domain,
                        ts_allocator& allocator,
                        const Kernel& f) {
-  parallel_for_each(accelerator().get_default_view(), compute_domain, allocator, f);
+  auto que = Kalmar::get_availabe_que(f);
+  const accelerator_view av(que);
+  parallel_for_each(av, compute_domain, allocator, f);
 }
 
 template <typename Kernel>
 void parallel_for_each(const extent<2>& compute_domain,
                        ts_allocator& allocator,
                        const Kernel& f) {
-  parallel_for_each(accelerator().get_default_view(), compute_domain, allocator, f);
+  auto que = Kalmar::get_availabe_que(f);
+  const accelerator_view av(que);
+  parallel_for_each(av, compute_domain, allocator, f);
 }
 
 template <typename Kernel>
 void parallel_for_each(const extent<3>& compute_domain,
                        ts_allocator& allocator,
                        const Kernel& f) {
-  parallel_for_each(accelerator().get_default_view(), compute_domain, allocator, f);
+  auto que = Kalmar::get_availabe_que(f);
+  const accelerator_view av(que);
+  parallel_for_each(av, compute_domain, allocator, f);
 }
 
 template <typename Kernel>
 void parallel_for_each(const tiled_extent<1>& compute_domain,
                        ts_allocator& allocator,
                        const Kernel& f) {
-  parallel_for_each(accelerator().get_default_view(), compute_domain, allocator, f);
+  auto que = Kalmar::get_availabe_que(f);
+  const accelerator_view av(que);
+  parallel_for_each(av, compute_domain, allocator, f);
 }
 
 template<typename Kernel>
 void parallel_for_each(const tiled_extent<2>& compute_domain,
                        ts_allocator& allocator,
                        const Kernel& f) {
-  parallel_for_each(accelerator().get_default_view(), compute_domain, allocator, f);
+  auto que = Kalmar::get_availabe_que(f);
+  const accelerator_view av(que);
+  parallel_for_each(av, compute_domain, allocator, f);
 }
 
 template<typename Kernel>
 void parallel_for_each(const tiled_extent<3>& compute_domain,
                        ts_allocator& allocator,
                        const Kernel& f) {
-  parallel_for_each(accelerator().get_default_view(), compute_domain, allocator, f);
+  auto que = Kalmar::get_availabe_que(f);
+  const accelerator_view av(que);
+  parallel_for_each(av, compute_domain, allocator, f);
 }
 
 } // namespace hc
