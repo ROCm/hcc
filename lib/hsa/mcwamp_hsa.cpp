@@ -190,18 +190,14 @@ public:
 
     std::shared_future<void>* dispatchKernelAndGetFuture(hsa_queue_t* _queue) {
         dispatchKernel(_queue);
-        auto waitFunc = [&]() {
-            this->waitComplete();
-            delete(this); // destruct HSADispatch instance
-        };
-        std::packaged_task<void()> waitTask(waitFunc);
- 
+
         // dynamically allocate a std::shared_future<void> object
         // it will be released in the private ctor of completion_future
-        std::shared_future<void>* fut = new std::shared_future<void>(waitTask.get_future());
- 
-        std::thread waitThread(std::move(waitTask));
-        waitThread.detach();         
+        std::shared_future<void>* fut = new std::shared_future<void>(std::async(std::launch::deferred, [&] {
+          waitComplete();
+          delete(this);  // destruct HSADispatch instance
+        }));
+
         return fut;
     }
 
