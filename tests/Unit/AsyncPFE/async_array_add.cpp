@@ -5,6 +5,10 @@
 #include <future>
 #include <amp.h>
 
+// FIXME: HSA runtime seems buggy in case LOOP_COUNT is very big
+// (ex: 1024 * 1024).
+#define LOOP_COUNT (1)
+
 // An HSA version of C++AMP program
 int main ()
 {
@@ -31,7 +35,7 @@ int main ()
   Concurrency::completion_future fut = Concurrency::async_parallel_for_each(
     e,
     [=](Concurrency::index<1> idx) restrict(amp) {
-      for (int i = 0; i < 1024 * 1024; ++i) 
+      for (int i = 0; i < LOOP_COUNT; ++i) 
         p_c[idx[0]] = p_a[idx[0]] + p_b[idx[0]];
 
   });

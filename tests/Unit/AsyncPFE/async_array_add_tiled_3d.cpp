@@ -5,6 +5,10 @@
 #include <future>
 #include <amp.h>
 
+// FIXME: HSA runtime seems buggy in case LOOP_COUNT is very big
+// (ex: 1024 * 1024).
+#define LOOP_COUNT (1)
+
 // An HSA version of C++AMP program
 int main ()
 {
@@ -33,7 +37,7 @@ int main ()
     e.tile<2, 2, 2>(),
     [=](Concurrency::tiled_index<2, 2, 2> idx) restrict(amp) {
       int fidx = idx.global[0] * dimSize * dimSize + idx.global[1] * dimSize + idx.global[2];
-      for (int i = 0; i < 1024; ++i) 
+      for (int i = 0; i < LOOP_COUNT; ++i) 
         p_c[fidx] = p_a[fidx] + p_b[fidx];
 
   });

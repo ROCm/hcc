@@ -8,6 +8,10 @@
 #include <utility>
 #include <amp.h>
 
+// FIXME: HSA runtime seems buggy in case LOOP_COUNT is very big
+// (ex: 1024 * 1024).
+#define LOOP_COUNT (1)
+
 // An HSA version of C++AMP program
 int main ()
 {
@@ -41,7 +45,7 @@ int main ()
     [=](Concurrency::tiled_index<256> idx) restrict(amp) { \
       const int offset = vecSize/(x)*(y); \
       const int fidx = idx.global[0]; \
-      for (int i = 0; i < 1024 * 1024; ++i) \
+      for (int i = 0; i < LOOP_COUNT; ++i) \
         p_c[fidx + offset] = p_a[fidx + offset] + p_b[fidx + offset]; \
   })
 
