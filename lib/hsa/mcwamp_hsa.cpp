@@ -393,7 +393,7 @@ public:
         hsa_status_t status;
 
         /// Query the maximum size of the queue.
-        size_t queue_size = 0;
+        uint32_t queue_size = 0;
         status = hsa_agent_get_info(agent, HSA_AGENT_INFO_QUEUE_MAX_SIZE, &queue_size);
         STATUS_CHECK(status, __LINE__);
 
