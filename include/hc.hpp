@@ -86,12 +86,26 @@ private:
   template<typename Kernel> friend
       void parallel_for_each(const accelerator_view&, const extent<3>&, ts_allocator&, const Kernel&);
 
+  template <typename Kernel> friend
+      void parallel_for_each(const extent<1>&, ts_allocator&, const Kernel&);
+  template <typename Kernel> friend
+      void parallel_for_each(const extent<2>&, ts_allocator&, const Kernel&);
+  template <typename Kernel> friend
+      void parallel_for_each(const extent<3>&, ts_allocator&, const Kernel&);
+
   template<typename Kernel> friend
       void parallel_for_each(const accelerator_view&, const tiled_extent<1>&, ts_allocator&, const Kernel&);
   template<typename Kernel> friend
       void parallel_for_each(const accelerator_view&, const tiled_extent<2>&, ts_allocator&, const Kernel&);
   template<typename Kernel> friend
       void parallel_for_each(const accelerator_view&, const tiled_extent<3>&, ts_allocator&, const Kernel&);
+
+  template <typename Kernel> friend
+      void parallel_for_each(const tiled_extent<1>&, ts_allocator&, const Kernel&);
+  template <typename Kernel> friend
+      void parallel_for_each(const tiled_extent<2>&, ts_allocator&, const Kernel&);
+  template <typename Kernel> friend
+      void parallel_for_each(const tiled_extent<3>&, ts_allocator&, const Kernel&);
 
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
 public:
