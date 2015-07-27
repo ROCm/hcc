@@ -1,10 +1,8 @@
-#ifndef __CLAMP_SERIALIZE
-#define __CLAMP_SERIALIZE
+#pragma once
 
-#include <amp_runtime.h>
-#include <stdio.h>
+#include <kalmar_exception.h>
 
-namespace Concurrency
+namespace Kalmar
 {
 
 /// traverse all the buffers that are going to be used in kernel
@@ -12,7 +10,7 @@ class FunctorBufferWalker {
 public:
     virtual void Append(size_t sz, const void* s) {}
     virtual void AppendPtr(size_t sz, const void* s) {}
-    virtual void Push(struct rw_info* rw, bool modify, bool isArray) = 0;
+    virtual void visit_buffer(struct rw_info* rw, bool modify, bool isArray) = 0;
 };
 
 /// This is used to avoid incorrect compiler error
@@ -22,8 +20,8 @@ public:
     Serialize(FunctorBufferWalker* vis) : vis(vis) {}
     void Append(size_t sz, const void* s) { vis->Append(sz, s); }
     void AppendPtr(size_t sz, const void* s) { vis->AppendPtr(sz, s); }
-    void Push(struct rw_info* rw, bool modify, bool isArray) {
-        vis->Push(rw, modify, isArray);
+    void visit_buffer(struct rw_info* rw, bool modify, bool isArray) {
+        vis->visit_buffer(rw, modify, isArray);
     }
 };
 
@@ -35,7 +33,7 @@ class CPUVisitor : public FunctorBufferWalker
     std::set<struct rw_info*> bufs;
 public:
     CPUVisitor(std::shared_ptr<KalmarQueue> pQueue) : pQueue(pQueue) {}
-    void Push(struct rw_info* rw, bool modify, bool isArray) override {
+    void visit_buffer(struct rw_info* rw, bool modify, bool isArray) override {
         if (isArray) {
             auto curr = pQueue->getDev()->get_path();
             auto path = rw->master->getDev()->get_path();
@@ -70,7 +68,7 @@ public:
     void AppendPtr(size_t sz, const void *s) override {
         CLAMP::PushArgPtr(k_, current_idx_++, sz, s);
     }
-    void Push(struct rw_info* rw, bool modify, bool isArray) override {
+    void visit_buffer(struct rw_info* rw, bool modify, bool isArray) override {
         if (isArray) {
             auto curr = pQueue->getDev()->get_path();
             auto path = rw->master->getDev()->get_path();
@@ -85,6 +83,26 @@ public:
     }
 };
 
-} // namespace Concurrency
+/// In C++AMP Standard V1.2 Line 3014
+/// If pfe is launched without explicitly specified view, the target accelerator
+/// and the view using which work is submitted to the accelerator, is chosen
+/// from the objects of type array<T,N> that were captured in the kernel lambda.
+///
+/// Thise Searcher will visit all the array<T, N> and find a view to launch kernel
+class QueueSearcher : public FunctorBufferWalker
+{
+    std::shared_ptr<KalmarQueue> pQueue;
+public:
+    QueueSearcher() = default;
+    void visit_buffer(struct rw_info* rw, bool modify, bool isArray) override {
+        if (isArray && !pQueue) {
+            if (rw->master->getDev()->get_path() != L"cpu")
+                pQueue = rw->master;
+            else if (rw->stage->getDev()->get_path() != L"cpu")
+                pQueue = rw->stage;
+        }
+    }
+    std::shared_ptr<KalmarQueue> get_que() const { return pQueue; }
+};
 
-#endif // __CLAMP_SERIALIZE
+} // namespace Kalmar
