@@ -6,16 +6,13 @@
 #include <vector>
 #include <algorithm>
 #include <utility>
-
-// FIXME: remove C++AMP dependency
-#include <amp.h>
 #include <hc.hpp>
 
 // FIXME: HSA runtime seems buggy in case LOOP_COUNT is very big
 // (ex: 1024 * 1024).
 #define LOOP_COUNT (1)
 
-// An HSA version of C++AMP program
+// An example which shows how to launch a kernel asynchronously
 int main ()
 {
   // define inputs and output
@@ -43,12 +40,12 @@ int main ()
   // divide the array into 4 quarters
   // each quarter contains 512 elements
   // treat each quarter as a 8*8*8 3D array
-  Concurrency::extent<3> e(dimSize, dimSize, dimSize);
+  hc::extent<3> e(dimSize, dimSize, dimSize);
 
 #define ASYNC_KERNEL_DISPATCH(x, y) \
   hc::async_parallel_for_each( \
-    e.tile<2,2,2>(), \
-    [=](Concurrency::tiled_index<2,2,2> idx) restrict(amp) { \
+    e.tile(2,2,2), \
+    [=](hc::tiled_index<3> idx) restrict(amp) { \
       const int offset = vecSize/(x)*(y); \
       const int fidx = idx.global[0] * dimSize * dimSize + idx.global[1] * dimSize + idx.global[2]; \
       for (int i = 0; i < LOOP_COUNT; ++i) \
