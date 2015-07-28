@@ -3,7 +3,10 @@
 #include <iostream>
 #include <random>
 #include <future>
+
+// FIXME: remove C++AMP dependency
 #include <amp.h>
+#include <hc.hpp>
 
 // FIXME: HSA runtime seems buggy in case LOOP_COUNT is very big
 // (ex: 1024 * 1024).
@@ -33,7 +36,7 @@ int main ()
 
   // launch kernel
   Concurrency::extent<3> e(dimSize, dimSize, dimSize);
-  Concurrency::completion_future fut = Concurrency::async_parallel_for_each(
+  hc::completion_future fut = hc::async_parallel_for_each(
     e.tile<2, 2, 2>(),
     [=](Concurrency::tiled_index<2, 2, 2> idx) restrict(amp) {
       int fidx = idx.global[0] * dimSize * dimSize + idx.global[1] * dimSize + idx.global[2];

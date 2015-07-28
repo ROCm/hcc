@@ -3,7 +3,10 @@
 #include <iostream>
 #include <random>
 #include <future>
+
+// FIXME: remove C++AMP dependency
 #include <amp.h>
+#include <hc.hpp>
 
 // An HSA version of C++AMP program
 int main ()
@@ -29,7 +32,7 @@ int main ()
   // launch kernel
   std::cout << "async launch the 1st kernel\n";
   Concurrency::extent<1> e(vecSize);
-  Concurrency::completion_future fut = Concurrency::async_parallel_for_each(
+  hc::completion_future fut = hc::async_parallel_for_each(
     e,
     [=](Concurrency::index<1> idx) restrict(amp) {
       p_c[idx[0]] = p_a[idx[0]] + p_b[idx[0]];
@@ -40,7 +43,7 @@ int main ()
   std::promise<void> done_promise;
   fut.then([=, &done_promise] {
     std::cout << "async launch the 2nd kernel\n";
-    Concurrency::completion_future fut2 = async_parallel_for_each(
+    hc::completion_future fut2 = hc::async_parallel_for_each(
       e,
       [=](Concurrency::index<1> idx) restrict(amp) {
         p_c[idx[0]] += p_a[idx[0]] + p_b[idx[0]];
@@ -49,7 +52,7 @@ int main ()
     // use completion_future::then() yet again
     fut2.then([=, &done_promise] {
       std::cout << "sync launch the 3rd kernel\n";
-      parallel_for_each(
+      Concurrency::parallel_for_each(
         e,
         [=](Concurrency::index<1> idx) restrict(amp) {
           p_c[idx[0]] += p_a[idx[0]] + p_b[idx[0]];

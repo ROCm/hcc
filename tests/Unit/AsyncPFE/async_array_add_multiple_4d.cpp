@@ -6,7 +6,10 @@
 #include <vector>
 #include <algorithm>
 #include <utility>
+
+// FIXME: remove C++AMP dependency
 #include <amp.h>
+#include <hc.hpp>
 
 // FIXME: HSA runtime seems buggy in case LOOP_COUNT is very big
 // (ex: 1024 * 1024).
@@ -35,7 +38,7 @@ int main ()
   }
 
   // the vector to store handles to each async pfe 
-  std::vector<Concurrency::completion_future> futures;
+  std::vector<hc::completion_future> futures;
 
   // divide the array into 4 quarters
   // each quarter contains 4096 elements
@@ -44,7 +47,7 @@ int main ()
   Concurrency::extent<4> e(dim);
 
 #define ASYNC_KERNEL_DISPATCH(x, y) \
-  Concurrency::async_parallel_for_each( \
+  hc::async_parallel_for_each( \
     e, \
     [=](Concurrency::index<4> idx) restrict(amp) { \
       const int offset = vecSize / (x) * (y); \
@@ -60,7 +63,7 @@ int main ()
   futures.push_back(std::move(ASYNC_KERNEL_DISPATCH(4, 3)));
 
   // wait for all kernels to finish execution
-  std::for_each(futures.cbegin(), futures.cend(), [](const Concurrency::completion_future& fut) { fut.wait(); });
+  std::for_each(futures.cbegin(), futures.cend(), [](const hc::completion_future& fut) { fut.wait(); });
 
   // verify
   int error = 0;
