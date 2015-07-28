@@ -346,6 +346,47 @@ unique_copy(ExecutionPolicy&& exec,
 }
 
 
+// is_partitioned
+template <typename ExecutionPolicy, typename InputIt, typename UnaryPredicate>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, bool>::type
+is_partitioned(ExecutionPolicy&& exec,
+               InputIt first, InputIt last,
+               UnaryPredicate p) {
+    return std::is_partitioned(first, last, p);
+}
+
+
+// partition
+template <typename ExecutionPolicy, typename ForwardIt, typename UnaryPredicate>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt>::type
+partition(ExecutionPolicy&& exec,
+          ForwardIt first, ForwardIt last,
+          UnaryPredicate p) {
+    return std::partition(first, last, p);
+}
+
+
+// partition_copy
+template <typename ExecutionPolicy, typename InputIt, typename OutputIt1, typename OutputIt2, typename UnaryPredicate>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, std::pair<OutputIt1, OutputIt2>>::type
+partition_copy(ExecutionPolicy&& exec,
+               InputIt first, InputIt last,
+               OutputIt1 d_first_true,
+               OutputIt2 d_first_false,
+               UnaryPredicate p) {
+    return std::partition_copy(first, last, d_first_true, d_first_false, p);
+}
+
+
+// stable_partition
+template <typename ExecutionPolicy, typename BidirIt, typename UnaryPredicate>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, BidirIt>::type
+stable_partition(ExecutionPolicy&& exec,
+                 BidirIt first, BidirIt last,
+                 UnaryPredicate p) {
+    return std::stable_partition(first, last, p);
+}
+
 } // inline namespace v1
 } // namespace parallel
 } // namespace experimental 
