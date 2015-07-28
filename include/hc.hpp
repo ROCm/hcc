@@ -108,24 +108,24 @@ private:
   template <typename Kernel> friend
       void parallel_for_each(const tiled_extent<3>&, ts_allocator&, const Kernel&);
 
-  // FIXME: remove Concurrency dependency
   // non-tiled async_parallel_for_each
   // generic version
   template <int N, typename Kernel> friend
-      completion_future async_parallel_for_each(const accelerator_view&, Concurrency::extent<N>, const Kernel&);
+      completion_future async_parallel_for_each(const accelerator_view&, extent<N>, const Kernel&);
 
   // 1D specialization
   template <typename Kernel> friend
-      completion_future async_parallel_for_each(const accelerator_view&, Concurrency::extent<1>, const Kernel&);
+      completion_future async_parallel_for_each(const accelerator_view&, extent<1>, const Kernel&);
 
   // 2D specialization
   template <typename Kernel> friend
-      completion_future async_parallel_for_each(const accelerator_view&, Concurrency::extent<2>, const Kernel&);
+      completion_future async_parallel_for_each(const accelerator_view&, extent<2>, const Kernel&);
 
   // 3D specialization
   template <typename Kernel> friend
-      completion_future async_parallel_for_each(const accelerator_view&, Concurrency::extent<3>, const Kernel&);
+      completion_future async_parallel_for_each(const accelerator_view&, extent<3>, const Kernel&);
 
+  // FIXME: remove Concurrency dependency
   // tiled async_parallel_for_each, 3D version
   template <int D0, int D1, int D2, typename Kernel> friend
       completion_future async_parallel_for_each(const accelerator_view&, Concurrency::tiled_extent<D0,D1,D2>, const Kernel&);
@@ -318,22 +318,22 @@ private:
     // generic version
     template <int N, typename Kernel>
         friend completion_future async_parallel_for_each(const accelerator_view&,
-                                                         Concurrency::extent<N> compute_domain, const Kernel& f);
+                                                         extent<N> compute_domain, const Kernel& f);
 
     // 1D specialization
     template <typename Kernel>
         friend completion_future async_parallel_for_each(const accelerator_view&,
-                                                         Concurrency::extent<1> compute_domain, const Kernel& f);
+                                                         extent<1> compute_domain, const Kernel& f);
 
     // 2D specialization
     template <typename Kernel>
         friend completion_future async_parallel_for_each(const accelerator_view&,
-                                                         Concurrency::extent<2> compute_domain, const Kernel& f);
+                                                         extent<2> compute_domain, const Kernel& f);
 
     // 3D specialization
     template <typename Kernel>
         friend completion_future async_parallel_for_each(const accelerator_view&,
-                                                         Concurrency::extent<3> compute_domain, const Kernel& f);
+                                                         extent<3> compute_domain, const Kernel& f);
 
     // tiled async_parallel_for_each, 3D version
     template <int D0, int D1, int D2, typename Kernel>
@@ -842,7 +842,7 @@ private:
 // async pfe
 template <int N, typename Kernel>
 completion_future async_parallel_for_each(const accelerator_view&,
-                                          Concurrency::extent<N> compute_domain, const Kernel& f);
+                                          extent<N> compute_domain, const Kernel& f);
 
 template <int D0, int D1, int D2, typename Kernel>
 completion_future async_parallel_for_each(const accelerator_view&,
@@ -857,7 +857,7 @@ completion_future async_parallel_for_each(const accelerator_view&,
                                           Concurrency::tiled_extent<D0> compute_domain, const Kernel& f);
 
 template <int N, typename Kernel>
-completion_future async_parallel_for_each(Concurrency::extent<N> compute_domain, const Kernel& f) {
+completion_future async_parallel_for_each(extent<N> compute_domain, const Kernel& f) {
     return async_parallel_for_each(accelerator::get_auto_selection_view(), compute_domain, f);
 }
 
@@ -901,13 +901,13 @@ template <int N, typename Kernel>
 class pfe_wrapper
 {
 public:
-    explicit pfe_wrapper(Concurrency::extent<N>& other, const Kernel& f) restrict(amp,cpu)
+    explicit pfe_wrapper(extent<N>& other, const Kernel& f) restrict(amp,cpu)
         : ext(other), k(f) {}
     void operator() (index<N> idx) restrict(amp,cpu) {
         pfe_helper<N - 3, pfe_wrapper<N, Kernel>, index<N>>::call(*this, idx);
     }
 private:
-    const Concurrency::extent<N> ext;
+    const extent<N> ext;
     const Kernel k;
     template <int K, typename Ker, typename _Tp>
         friend struct pfe_helper;
@@ -920,7 +920,7 @@ private:
 template <int N, typename Kernel>
 __attribute__((noinline,used)) completion_future async_parallel_for_each(
     const accelerator_view& av,
-    Concurrency::extent<N> compute_domain, const Kernel& f) restrict(cpu,amp) {
+    extent<N> compute_domain, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
     size_t compute_domain_size = 1;
     for(int i = 0 ; i < N ; i++)
@@ -957,7 +957,7 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
 //1D async_parallel_for_each, nontiled
 template <typename Kernel>
 __attribute__((noinline,used)) completion_future async_parallel_for_each(
-    const accelerator_view& av, Concurrency::extent<1> compute_domain, const Kernel& f) restrict(cpu,amp) {
+    const accelerator_view& av, extent<1> compute_domain, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
   if(compute_domain[0]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
@@ -983,7 +983,7 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
 //2D async_parallel_for_each, nontiled
 template <typename Kernel>
 __attribute__((noinline,used)) completion_future async_parallel_for_each(
-    const accelerator_view& av, Concurrency::extent<2> compute_domain, const Kernel& f) restrict(cpu,amp) {
+    const accelerator_view& av, extent<2> compute_domain, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
   if(compute_domain[0]<=0 || compute_domain[1]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
@@ -1010,7 +1010,7 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
 //3D async_parallel_for_each, nontiled
 template <typename Kernel>
 __attribute__((noinline,used)) completion_future async_parallel_for_each(
-    const accelerator_view& av, Concurrency::extent<3> compute_domain, const Kernel& f) restrict(cpu,amp) {
+    const accelerator_view& av, extent<3> compute_domain, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
   if(compute_domain[0]<=0 || compute_domain[1]<=0 || compute_domain[2]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
