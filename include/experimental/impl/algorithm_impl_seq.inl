@@ -168,6 +168,24 @@ adjacent_find(ExecutionPolicy&& exec,
 }
 
 
+// search
+template <typename ExecutionPolicy, typename ForwardIt1, typename ForwardIt2>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt1>::type
+search(ExecutionPolicy&& exec,
+       ForwardIt1 first, ForwardIt1 last,
+       ForwardIt2 s_first, ForwardIt2 s_last) {
+    return std::search(first, last, s_first, s_last);
+}
+
+template <typename ExecutionPolicy, typename ForwardIt1, typename ForwardIt2, typename BinaryPredicate>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt1>::type
+search(ExecutionPolicy&& exec,
+       ForwardIt1 first, ForwardIt1 last,
+       ForwardIt2 s_first, ForwardIt2 s_last, BinaryPredicate p) {
+    return std::search(first, last, s_first, s_last, p);
+}
+
+
 } // inline namespace v1
 } // namespace parallel
 } // namespace experimental 
