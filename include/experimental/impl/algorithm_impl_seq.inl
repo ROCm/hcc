@@ -310,6 +310,23 @@ rotate_copy(ExecutionPolicy&& exec,
 }
 
 
+// unique
+template <typename ExecutionPolicy, typename ForwardIt>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt>::type
+unique(ExecutionPolicy&& exec,
+       ForwardIt first, ForwardIt last) {
+    return std::unique(first, last);
+}
+
+template <typename ExecutionPolicy, typename ForwardIt, typename BinaryPredicate>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt>::type
+unique(ExecutionPolicy&& exec,
+       ForwardIt first, ForwardIt last,
+       BinaryPredicate p) {
+    return std::unique(first, last, p);
+}
+
+
 } // inline namespace v1
 } // namespace parallel
 } // namespace experimental 
