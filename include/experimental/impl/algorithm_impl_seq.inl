@@ -300,6 +300,15 @@ rotate(ExecutionPolicy&& exec,
     return std::rotate(first, n_first, last);
 }
 
+// rotate_copy
+template <typename ExecutionPolicy, typename ForwardIt, typename OutputIt>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
+rotate_copy(ExecutionPolicy&& exec,
+            ForwardIt first, ForwardIt n_first, ForwardIt last,
+            OutputIt d_first) {
+    return std::rotate_copy(first, n_first, last, d_first);
+}
+
 
 } // inline namespace v1
 } // namespace parallel
