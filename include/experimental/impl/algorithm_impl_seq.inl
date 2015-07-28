@@ -387,6 +387,128 @@ stable_partition(ExecutionPolicy&& exec,
     return std::stable_partition(first, last, p);
 }
 
+
+// is_sorted
+template <typename ExecutionPolicy, typename ForwardIt>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, bool>::type
+is_sorted(ExecutionPolicy&& exec,
+          ForwardIt first, ForwardIt last) {
+    return is_sorted(first, last);
+}
+
+template <typename ExecutionPolicy, typename ForwardIt, typename Compare>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, bool>::type
+is_sorted(ExecutionPolicy&& exec,
+          ForwardIt first, ForwardIt last,
+          Compare comp) {
+    return is_sorted(first, last, comp);
+}
+
+
+// is_sorted_until
+template <typename ExecutionPolicy, typename ForwardIt>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt>::type
+is_sorted_until(ExecutionPolicy&& exec,
+                ForwardIt first, ForwardIt last) {
+    return std::is_sorted_until(first, last);
+}
+
+template <typename ExecutionPolicy, typename ForwardIt, typename Compare>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt>::type
+is_sorted_until(ExecutionPolicy&& exec,
+                ForwardIt first, ForwardIt last, 
+                Compare comp) {
+    return std::is_sorted_until(first, last, comp);
+}
+
+
+// sort
+template <typename ExecutionPolicy, typename RandomIt>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, void>::type
+sort(ExecutionPolicy&& exec,
+     RandomIt first, RandomIt last) {
+    return std::sort(first, last);
+}
+
+template <typename ExecutionPolicy, typename RandomIt, typename Compare>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, void>::type
+sort(ExecutionPolicy&& exec,
+     RandomIt first, RandomIt last,
+     Compare comp) {
+    return std::sort(first, last, comp);
+}
+
+
+// partial_sort
+template <typename ExecutionPolicy, typename RandomIt>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, void>::type
+partial_sort(ExecutionPolicy&& exec,
+             RandomIt first, RandomIt middle, RandomIt last) {
+    return std::partial_sort(first, middle, last);
+}
+
+
+template <typename ExecutionPolicy, typename RandomIt, typename Compare>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, void>::type
+partial_sort(ExecutionPolicy&& exec,
+             RandomIt first, RandomIt middle, RandomIt last,
+             Compare comp) {
+    return std::partial_sort(first, middle, last, comp);
+}
+
+
+// partial_sort_copy
+template <typename ExecutionPolicy, typename InputIt, typename RandomIt>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, RandomIt>::type
+partial_sort_copy(ExecutionPolicy&& exec,
+                  InputIt first, InputIt last,
+                  RandomIt d_first, RandomIt d_last) {
+    return std::partial_sort_copy(first, last, d_first, d_last);
+}
+
+template <typename ExecutionPolicy, typename InputIt, typename RandomIt, typename Compare>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, RandomIt>::type
+partial_sort_copy(ExecutionPolicy&& exec,
+                  InputIt first, InputIt last,
+                  RandomIt d_first, RandomIt d_last,
+                  Compare comp) {
+    return std::partial_sort_copy(first, last, d_first, d_last, comp);
+}
+
+
+// stable_sort
+template <typename ExecutionPolicy, typename RandomIt>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, void>::type
+stable_sort(ExecutionPolicy&& exec,
+            RandomIt first, RandomIt last) {
+    return std::stable_sort(first, last);
+}
+
+template <typename ExecutionPolicy, typename RandomIt, typename Compare>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, void>::type
+stable_sort(ExecutionPolicy&& exec,
+            RandomIt first, RandomIt last,
+            Compare comp) {
+    return std::stable_sort(first, last, comp);
+}
+
+
+// nth_element
+template <typename ExecutionPolicy, typename RandomIt>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, void>::type
+nth_element(ExecutionPolicy&& exec,
+            RandomIt first, RandomIt nth, RandomIt last) {
+    return std::nth_element(first, nth, last);
+}
+
+template <typename ExecutionPolicy, typename RandomIt, typename Compare>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, void>::type
+nth_element(ExecutionPolicy&& exec,
+            RandomIt first, RandomIt nth, RandomIt last,
+            Compare comp) {
+    return std::nth_element(first, nth, last);
+}
+
 } // inline namespace v1
 } // namespace parallel
 } // namespace experimental 
