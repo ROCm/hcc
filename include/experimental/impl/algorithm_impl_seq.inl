@@ -274,11 +274,21 @@ remove_copy_if(ExecutionPolicy&& exec,
 
 
 // reverse
-template <typename ExecutionPolicy, class BidirIt>
+template <typename ExecutionPolicy, typename BidirIt>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, void>::type
 reverse(ExecutionPolicy&& exec,
         BidirIt first, BidirIt last) {
     return std::reverse(first, last);
+}
+
+
+// reverse_copy
+template <typename ExecutionPolicy, typename BidirIt, typename OutputIt>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
+reverse_copy(ExecutionPolicy&& exec,
+             BidirIt first, BidirIt last,
+             OutputIt d_first) {
+    return reverse_copy(first, last, d_first);
 }
 
 
