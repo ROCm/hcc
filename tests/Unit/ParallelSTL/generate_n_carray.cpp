@@ -18,7 +18,7 @@
 #define _DEBUG (0)
 
 // negative test
-// no for_each_n shall commence
+// no generate_n shall commence
 template<typename _Tp, size_t SIZE, int FIRST_OFFSET, int LAST_OFFSET>
 bool test_negative() {
 
@@ -27,9 +27,9 @@ bool test_negative() {
 
   _Tp table[SIZE] { 0 };
 
-  // launch kernel with parallel STL for_each_n
+  // launch kernel with parallel STL generate_n
   using namespace std::experimental::parallel;
-  auto iter = for_each_n(par, std::begin(table) + FIRST_OFFSET, (LAST_OFFSET - FIRST_OFFSET), [](_Tp& v) { v = 1; });
+  auto iter = generate_n(par, std::begin(table) + FIRST_OFFSET, (LAST_OFFSET - FIRST_OFFSET), [] { return SIZE + 1; });
 
   // verify data
   bool ret = true;
@@ -37,7 +37,7 @@ bool test_negative() {
     ret = false;
   }
   for (int i = 0; i < SIZE; ++i) {
-    // no for_each_n shall commence
+    // no transform shall commence
     if (table[i] != 0) {
       ret = false;
       break;
@@ -47,7 +47,7 @@ bool test_negative() {
 }
 
 // positive test
-// for_each_n shall commence
+// generate_n shall commence
 template<typename _Tp, size_t SIZE, size_t FIRST_OFFSET, size_t TEST_LENGTH>
 bool test() {
 
@@ -57,16 +57,9 @@ bool test() {
   // initialize test data
   std::generate(std::begin(table), std::end(table), [&] { return n++; });
 
-  // test kernel
-  auto f = [&](_Tp& v)
-  {
-    v *= 8;
-    v += 3;
-  };
-
-  // launch kernel with parallel STL for_each
+  // launch kernel with parallel STL generate_n
   using namespace std::experimental::parallel;
-  auto iter = for_each_n(par, std::begin(table) + FIRST_OFFSET, TEST_LENGTH, f);
+  auto iter = generate_n(par, std::begin(table) + FIRST_OFFSET, TEST_LENGTH, [] { return SIZE + 1; });
 
   // verify data
   bool ret = true;
@@ -75,13 +68,13 @@ bool test() {
   }
   for (int i = 0; i < SIZE; ++i) {
     if ((i >= FIRST_OFFSET) && i < (FIRST_OFFSET + TEST_LENGTH)) {
-      // for items within for_each_n, the result value shall agree with the kernel
-      if (table[i] != i * 8 + 3)  {
+      // for items within generate_n, the result value shall agree with the kernel
+      if (table[i] != SIZE + 1)  {
         ret = false;
         break;
       }
     } else {
-      // for items outside for_each_n, the result value shall be the initial value
+      // for items outside generate_n, the result value shall be the initial value
       if (table[i] != i) {
         ret = false;
         break;
@@ -115,10 +108,10 @@ int main() {
   ret &= test<float, TEST_SIZE, COL, COL * 2>();
   ret &= test<double, TEST_SIZE, COL, COL * 2>();
 
-  ret &= test<int, ROW * COL, COL * 2 + COL / 2, COL / 2>();
-  ret &= test<unsigned, ROW * COL, COL * 2 + COL / 2, COL / 2>();
-  ret &= test<float, ROW * COL, COL * 2 + COL / 2, COL / 2>();
-  ret &= test<double, ROW * COL, COL * 2 + COL / 2, COL / 2>();
+  ret &= test<int, TEST_SIZE, COL * 2 + COL / 2, COL / 2>();
+  ret &= test<unsigned, TEST_SIZE, COL * 2 + COL / 2, COL / 2>();
+  ret &= test<float, TEST_SIZE, COL * 2 + COL / 2, COL / 2>();
+  ret &= test<double, TEST_SIZE, COL * 2 + COL / 2, COL / 2>();
 
   // negative tests
   ret &= test_negative<int, TEST_SIZE, 2, 0>();
@@ -131,10 +124,10 @@ int main() {
   ret &= test_negative<float, TEST_SIZE, COL * 2, COL>();
   ret &= test_negative<double, TEST_SIZE, COL * 2, COL>();
 
-  ret &= test_negative<int, ROW * COL, COL * 2, COL * 2 - COL / 2>();
-  ret &= test_negative<unsigned, ROW * COL, COL * 2, COL * 2 - COL / 2>();
-  ret &= test_negative<float, ROW * COL, COL * 2, COL * 2 - COL / 2>();
-  ret &= test_negative<double, ROW * COL, COL * 2, COL * 2 - COL / 2>();
+  ret &= test_negative<int, TEST_SIZE, COL * 2, COL * 2 - COL / 2>();
+  ret &= test_negative<unsigned, TEST_SIZE, COL * 2, COL * 2 - COL / 2>();
+  ret &= test_negative<float, TEST_SIZE, COL * 2, COL * 2 - COL / 2>();
+  ret &= test_negative<double, TEST_SIZE, COL * 2, COL * 2 - COL / 2>();
 
   return !(ret == true);
 }
