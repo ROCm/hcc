@@ -86,6 +86,35 @@ equal(ExecutionPolicy&& exec,
     return std::equal(first1, last1, first2, last2, p);
 }
 
+
+// find
+template <typename ExecutionPolicy, typename InputIt, typename T>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, InputIt>::type
+find(ExecutionPolicy&& exec,
+     InputIt first, InputIt last, const T& value) {
+    return std::find(first, last, value);
+}
+
+
+// find_if
+template <typename ExecutionPolicy, typename InputIt, typename UnaryPredicate>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, InputIt>::type
+find_if(ExecutionPolicy&& exec,
+        InputIt first, InputIt last, 
+        UnaryPredicate p) {
+    return std::find_if(first, last, p);
+}
+
+
+// find_if_not
+template <typename ExecutionPolicy, typename InputIt, typename UnaryPredicate>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, InputIt>::type
+find_if_not(ExecutionPolicy&& exec,
+            InputIt first, InputIt last, 
+            UnaryPredicate p) {
+    return std::find_if_not(first, last, p);
+}
+
 } // inline namespace v1
 } // namespace parallel
 } // namespace experimental 
