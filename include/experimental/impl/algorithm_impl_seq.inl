@@ -247,7 +247,29 @@ typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>
 remove_if(ExecutionPolicy&& exec,
           ForwardIt first, ForwardIt last,
           UnaryPredicate p) {
-     return std::remove_if(first, last, p);
+    return std::remove_if(first, last, p);
+}
+
+
+// remove_copy
+template <typename ExecutionPolicy, typename InputIt, typename OutputIt, typename T>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
+remove_copy(ExecutionPolicy&& exec,
+            InputIt first, InputIt last,
+            OutputIt d_first,
+            const T& value) {
+    return std::remove_copy(first, last, d_first, value);
+}
+
+
+// remove_copy_if
+template <typename ExecutionPolicy, typename InputIt, typename OutputIt, typename UnaryPredicate>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
+remove_copy_if(ExecutionPolicy&& exec,
+               InputIt first, InputIt last,
+               OutputIt d_first,
+               UnaryPredicate p) {
+    return std::remove_copy_if(first, last, d_first, p);
 }
 
 
