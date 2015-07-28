@@ -186,6 +186,22 @@ search(ExecutionPolicy&& exec,
 }
 
 
+// search_n
+template <typename ExecutionPolicy, typename ForwardIt, typename Size, typename T >
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt>::type
+search_n(ExecutionPolicy&& exec,
+         ForwardIt first, ForwardIt last, Size count, const T& value) {
+    return std::search_n(first, last, count, value);
+}
+
+template <typename ExecutionPolicy, typename ForwardIt, typename Size, typename T, typename BinaryPredicate >
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt>::type
+search_n(ExecutionPolicy&& exec,
+         ForwardIt first, ForwardIt last, Size count, const T& value, BinaryPredicate p) {
+    return std::search_n(first, last, count, value, p);
+}
+
+
 } // inline namespace v1
 } // namespace parallel
 } // namespace experimental 
