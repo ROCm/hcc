@@ -134,6 +134,24 @@ find_end(ExecutionPolicy&& exec,
 }
 
 
+// find_first_of
+template <typename ExecutionPolicy, typename InputIt, typename ForwardIt>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, InputIt>::type
+find_first_of(ExecutionPolicy&& exec,
+              InputIt first, InputIt last,
+              ForwardIt s_first, ForwardIt s_last) {
+    return std::find_first_of(first, last, s_first, s_last);
+}
+
+template <typename ExecutionPolicy, typename InputIt, typename ForwardIt, typename BinaryPredicate>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, InputIt>::type
+find_first_of(ExecutionPolicy&& exec,
+              InputIt first, InputIt last,
+              ForwardIt s_first, ForwardIt s_last, BinaryPredicate p) {
+    return std::find_first_of(first, last, s_first, s_last, p);
+}
+
+
 } // inline namespace v1
 } // namespace parallel
 } // namespace experimental 
