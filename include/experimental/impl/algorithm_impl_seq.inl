@@ -65,7 +65,8 @@ template <typename ExecutionPolicy, typename InputIt1, typename InputIt2, typena
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, bool>::type
 equal(ExecutionPolicy&& exec,
       InputIt1 first1, InputIt1 last1, 
-      InputIt2 first2, BinaryPredicate p) {
+      InputIt2 first2,
+      BinaryPredicate p) {
     return std::equal(first1, last1, first2, p);
 }
 
@@ -91,7 +92,8 @@ equal(ExecutionPolicy&& exec,
 template <typename ExecutionPolicy, typename InputIt, typename T>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, InputIt>::type
 find(ExecutionPolicy&& exec,
-     InputIt first, InputIt last, const T& value) {
+     InputIt first, InputIt last,
+     const T& value) {
     return std::find(first, last, value);
 }
 
@@ -129,7 +131,8 @@ template <typename ExecutionPolicy, typename ForwardIt1, typename ForwardIt2, ty
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt1>::type
 find_end(ExecutionPolicy&& exec,
          ForwardIt1 first, ForwardIt1 last,
-         ForwardIt2 s_first, ForwardIt2 s_last, BinaryPredicate p) {
+         ForwardIt2 s_first, ForwardIt2 s_last,
+         BinaryPredicate p) {
     return std::find_end(first, last, s_first, s_last, p);
 }
 
@@ -147,7 +150,8 @@ template <typename ExecutionPolicy, typename InputIt, typename ForwardIt, typena
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, InputIt>::type
 find_first_of(ExecutionPolicy&& exec,
               InputIt first, InputIt last,
-              ForwardIt s_first, ForwardIt s_last, BinaryPredicate p) {
+              ForwardIt s_first, ForwardIt s_last,
+              BinaryPredicate p) {
     return std::find_first_of(first, last, s_first, s_last, p);
 }
 
@@ -163,7 +167,8 @@ adjacent_find(ExecutionPolicy&& exec,
 template <typename ExecutionPolicy, typename ForwardIt, typename BinaryPredicate>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt>::type
 adjacent_find(ExecutionPolicy&& exec,
-              ForwardIt first, ForwardIt last, BinaryPredicate p) {
+              ForwardIt first, ForwardIt last,
+              BinaryPredicate p) {
     return std::adjacent_find(first, last, p);
 }
 
@@ -181,24 +186,38 @@ template <typename ExecutionPolicy, typename ForwardIt1, typename ForwardIt2, ty
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt1>::type
 search(ExecutionPolicy&& exec,
        ForwardIt1 first, ForwardIt1 last,
-       ForwardIt2 s_first, ForwardIt2 s_last, BinaryPredicate p) {
+       ForwardIt2 s_first, ForwardIt2 s_last,
+       BinaryPredicate p) {
     return std::search(first, last, s_first, s_last, p);
 }
 
 
 // search_n
-template <typename ExecutionPolicy, typename ForwardIt, typename Size, typename T >
+template <typename ExecutionPolicy, typename ForwardIt, typename Size, typename T>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt>::type
 search_n(ExecutionPolicy&& exec,
          ForwardIt first, ForwardIt last, Size count, const T& value) {
     return std::search_n(first, last, count, value);
 }
 
-template <typename ExecutionPolicy, typename ForwardIt, typename Size, typename T, typename BinaryPredicate >
+template <typename ExecutionPolicy, typename ForwardIt, typename Size, typename T, typename BinaryPredicate>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt>::type
 search_n(ExecutionPolicy&& exec,
-         ForwardIt first, ForwardIt last, Size count, const T& value, BinaryPredicate p) {
+         ForwardIt first, ForwardIt last,
+         Size count, const T& value,
+         BinaryPredicate p) {
     return std::search_n(first, last, count, value, p);
+}
+
+
+// copy_if
+template <typename ExecutionPolicy, typename InputIt, typename OutputIt, typename UnaryPredicate>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
+copy_if(ExecutionPolicy&& exec,
+        InputIt first, InputIt last,
+        OutputIt d_first,
+        UnaryPredicate pred) {
+    return std::copy_if(first, last, d_first, pred);
 }
 
 
