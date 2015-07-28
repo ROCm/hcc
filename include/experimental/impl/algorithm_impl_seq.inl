@@ -157,7 +157,7 @@ find_first_of(ExecutionPolicy&& exec,
 
 
 // adjacent_find
-template <typename ExecutionPolicy, typename ForwardIt >
+template <typename ExecutionPolicy, typename ForwardIt>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt>::type
 adjacent_find(ExecutionPolicy&& exec,
               ForwardIt first, ForwardIt last) {
@@ -222,7 +222,7 @@ copy_if(ExecutionPolicy&& exec,
 
 
 // move
-template <typename ExecutionPolicy, typename InputIt, typename OutputIt >
+template <typename ExecutionPolicy, typename InputIt, typename OutputIt>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
 move(ExecutionPolicy&& exec,
      InputIt first, InputIt last,
@@ -230,6 +230,25 @@ move(ExecutionPolicy&& exec,
     return std::move(first, last, d_first);
 }
 
+
+// remove
+template <typename ExecutionPolicy, typename ForwardIt, typename T>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt>::type
+remove(ExecutionPolicy&& exec,
+       ForwardIt first, ForwardIt last,
+       const T& value) {
+    return std::remove(first, last, value);
+}
+
+
+// remove_if
+template <typename ExecutionPolicy, typename ForwardIt, typename UnaryPredicate>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt>::type
+remove_if(ExecutionPolicy&& exec,
+          ForwardIt first, ForwardIt last,
+          UnaryPredicate p) {
+     return std::remove_if(first, last, p);
+}
 
 
 } // inline namespace v1
