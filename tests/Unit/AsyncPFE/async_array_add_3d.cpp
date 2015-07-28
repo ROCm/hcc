@@ -3,9 +3,6 @@
 #include <iostream>
 #include <random>
 #include <future>
-
-// FIXME: remove C++AMP dependency
-#include <amp.h>
 #include <hc.hpp>
 
 // FIXME: HSA runtime seems buggy in case LOOP_COUNT is very big
