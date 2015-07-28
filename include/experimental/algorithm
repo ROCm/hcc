@@ -188,7 +188,7 @@ OutputIterator transform(ExecutionPolicy&& exec,
 #ifndef __KALMAR_ACCELERATOR__
   size_t ext = std::distance(first, last);
   transform_wrapper<Function, InputIterator, OutputIterator> _pf(ext, f, first, d_first);
-  mcw_cxxamp_launch_kernel<transform_wrapper<Function, InputIterator, OutputIterator>, 1>(&ext, NULL, _pf);
+  Kalmar::mcw_cxxamp_launch_kernel<transform_wrapper<Function, InputIterator, OutputIterator>, 1>(Kalmar::getContext()->getDevice(L"default")->get_default_queue(), &ext, NULL, _pf);
 #else //ifndef __KALMAR_ACCELERATOR__
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -214,7 +214,7 @@ OutputIterator transform(ExecutionPolicy&& exec,
 #ifndef __KALMAR_ACCELERATOR__
   size_t ext = std::distance(first, last);
   binary_transform_wrapper<Function, InputIterator, OutputIterator> _pf(ext, f, first, first2, d_first);
-  mcw_cxxamp_launch_kernel<binary_transform_wrapper<Function, InputIterator, OutputIterator>, 1>(&ext, NULL, _pf);
+  Kalmar::mcw_cxxamp_launch_kernel<binary_transform_wrapper<Function, InputIterator, OutputIterator>, 1>(Kalmar::getContext()->getDevice(L"default")->get_default_queue(), &ext, NULL, _pf);
 #else //ifndef __KALMAR_ACCELERATOR__
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -236,7 +236,7 @@ void generate(ExecutionPolicy&& exec,
 #ifndef __KALMAR_ACCELERATOR__
   size_t ext = std::distance(first, last);
   generate_wrapper<Generator, ForwardIterator> _pf(ext, g, first);
-  mcw_cxxamp_launch_kernel<generate_wrapper<Generator, ForwardIterator>, 1>(&ext, NULL, _pf);
+  Kalmar::mcw_cxxamp_launch_kernel<generate_wrapper<Generator, ForwardIterator>, 1>(Kalmar::getContext()->getDevice(L"default")->get_default_queue(), &ext, NULL, _pf);
 #else //ifndef __KALMAR_ACCELERATOR__
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -257,7 +257,7 @@ OutputIterator generate_n(ExecutionPolicy&& exec,
 #ifndef __KALMAR_ACCELERATOR__
   size_t ext = std::distance(first, first + count);
   generate_wrapper<Generator, OutputIterator> _pf(ext, g, first);
-  mcw_cxxamp_launch_kernel<generate_wrapper<Generator, OutputIterator>, 1>(&ext, NULL, _pf);
+  Kalmar::mcw_cxxamp_launch_kernel<generate_wrapper<Generator, OutputIterator>, 1>(Kalmar::getContext()->getDevice(L"default")->get_default_queue(), &ext, NULL, _pf);
 #else //ifndef __KALMAR_ACCELERATOR__
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -287,8 +287,6 @@ void for_each(ExecutionPolicy&& exec,
   auto qq = &std::offset<1>::__cxxamp_opencl_index;
   int* foo = reinterpret_cast<int*>(&fe_wrapper<Function, InputIterator>::__cxxamp_trampoline);
 #endif
-  }
-  return (n < Size()) ? first : first + n;
 }
 
 // for_each_n
@@ -325,7 +323,7 @@ void replace_if(ExecutionPolicy&& exec,
 #ifndef __KALMAR_ACCELERATOR__
   size_t ext = std::distance(first, last);
   replace_if_wrapper<Function, ForwardIterator, T> _pf(ext, f, first, new_value);
-  mcw_cxxamp_launch_kernel<replace_if_wrapper<Function, ForwardIterator, T>, 1>(&ext, NULL, _pf);
+  Kalmar::mcw_cxxamp_launch_kernel<replace_if_wrapper<Function, ForwardIterator, T>, 1>(Kalmar::getContext()->getDevice(L"default")->get_default_queue(), &ext, NULL, _pf);
 #else //ifndef __KALMAR_ACCELERATOR__
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -349,7 +347,7 @@ OutputIterator replace_copy_if(ExecutionPolicy&& exec,
 #ifndef __KALMAR_ACCELERATOR__
   size_t ext = std::distance(first, last);
   replace_copy_if_wrapper<Function, InputIterator, OutputIterator, T> _pf(ext, f, first, d_first, new_value);
-  mcw_cxxamp_launch_kernel<replace_copy_if_wrapper<Function, InputIterator, OutputIterator, T>, 1>(&ext, NULL, _pf);
+  Kalmar::mcw_cxxamp_launch_kernel<replace_copy_if_wrapper<Function, InputIterator, OutputIterator, T>, 1>(Kalmar::getContext()->getDevice(L"default")->get_default_queue(), &ext, NULL, _pf);
 #else //ifndef __KALMAR_ACCELERATOR__
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -374,7 +372,7 @@ OutputIterator adjacent_difference(ExecutionPolicy&& exec,
 #ifndef __KALMAR_ACCELERATOR__
   size_t ext = std::distance(first, last);
   adjdiff_wrapper<Function, InputIterator, OutputIterator> _pf(ext, f, first, d_first);
-  mcw_cxxamp_launch_kernel<adjdiff_wrapper<Function, InputIterator, OutputIterator>, 1>(&ext, NULL, _pf);
+  Kalmar::mcw_cxxamp_launch_kernel<adjdiff_wrapper<Function, InputIterator, OutputIterator>, 1>(Kalmar::getContext()->getDevice(L"default")->get_default_queue(), &ext, NULL, _pf);
 #else //ifndef __KALMAR_ACCELERATOR__
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -398,7 +396,7 @@ OutputIterator swap_ranges(ExecutionPolicy&& exec,
 #ifndef __KALMAR_ACCELERATOR__
   size_t ext = std::distance(first, last);
   swap_ranges_wrapper<InputIterator, OutputIterator> _pf(ext, first, d_first);
-  mcw_cxxamp_launch_kernel<swap_ranges_wrapper<InputIterator, OutputIterator>, 1>(&ext, NULL, _pf);
+  Kalmar::mcw_cxxamp_launch_kernel<swap_ranges_wrapper<InputIterator, OutputIterator>, 1>(Kalmar::getContext()->getDevice(L"default")->get_default_queue(), &ext, NULL, _pf);
 #else //ifndef __KALMAR_ACCELERATOR__
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
