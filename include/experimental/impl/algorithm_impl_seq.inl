@@ -682,6 +682,24 @@ is_heap_until(ExecutionPolicy&& exec,
 }
 
 
+// lexicographical_compare
+template <typename ExecutionPolicy, typename InputIt1, typename InputIt2>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, bool>::type
+lexicographical_compare(ExecutionPolicy&& exec,
+                        InputIt1 first1, InputIt1 last1,
+                        InputIt2 first2, InputIt2 last2) {
+    return std::lexicographical_compare(first1, last1, first2, last2);
+}
+
+template <typename ExecutionPolicy, typename InputIt1, typename InputIt2, typename Compare>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, bool>::type
+lexicographical_compare(ExecutionPolicy&& exec,
+                        InputIt1 first1, InputIt1 last1,
+                        InputIt2 first2, InputIt2 last2,
+                        Compare comp) {
+    return std::lexicographical_compare(first1, last1, first2, last2, comp);
+}
+
 } // inline namespace v1
 } // namespace parallel
 } // namespace experimental 
