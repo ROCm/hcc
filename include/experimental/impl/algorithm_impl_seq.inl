@@ -509,6 +509,145 @@ nth_element(ExecutionPolicy&& exec,
     return std::nth_element(first, nth, last);
 }
 
+
+// merge
+template <typename ExecutionPolicy, typename InputIt1, typename InputIt2, typename OutputIt>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
+merge(ExecutionPolicy&& exec,
+      InputIt1 first1, InputIt1 last1,
+      InputIt2 first2, InputIt2 last2,
+      OutputIt d_first) {
+    return std::merge(first1, last1, first2, last2, d_first);
+}
+
+template <typename ExecutionPolicy, typename InputIt1, typename InputIt2, typename OutputIt, typename Compare>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
+merge(ExecutionPolicy&& exec,
+      InputIt1 first1, InputIt1 last1,
+      InputIt2 first2, InputIt2 last2,
+      OutputIt d_first, Compare comp) {
+    return std::merge(first1, last1, first2, last2, d_first, comp);
+}
+
+
+// inplace_merge
+template <typename ExecutionPolicy, typename BidirIt>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, void>::type
+inplace_merge(ExecutionPolicy&& exec,
+              BidirIt first, BidirIt middle, BidirIt last) {
+    return std::inplace_merge(first, middle, last);
+}
+
+template <typename ExecutionPolicy, typename BidirIt, typename Compare>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, void>::type
+inplace_merge(ExecutionPolicy&& exec,
+              BidirIt first, BidirIt middle, BidirIt last, Compare comp) {
+    return std::inplace_merge(first, middle, last, comp);
+}
+
+
+// includes
+template <typename ExecutionPolicy, typename InputIt1, typename InputIt2>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, bool>::type
+includes(ExecutionPolicy&& exec,
+         InputIt1 first1, InputIt1 last1,
+         InputIt2 first2, InputIt2 last2) {
+    return std::includes(first1, last1, first2, last2);
+}
+
+template <typename ExecutionPolicy, typename InputIt1, typename InputIt2, typename Compare>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, bool>::type
+includes(ExecutionPolicy&& exec,
+         InputIt1 first1, InputIt1 last1,
+         InputIt2 first2, InputIt2 last2,
+         Compare comp) {
+    return std::includes(first1, last1, first2, last2, comp);
+}
+
+
+// set_difference
+template <typename ExecutionPolicy, typename InputIt1, typename InputIt2, typename OutputIt>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
+set_difference(ExecutionPolicy&& exec,
+               InputIt1 first1, InputIt1 last1,
+               InputIt2 first2, InputIt2 last2,
+               OutputIt d_first) {
+    return std::set_difference(first1, last1, first2, last2, d_first);
+}
+
+template <typename ExecutionPolicy, typename InputIt1, typename InputIt2, typename OutputIt, typename Compare>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
+set_difference(ExecutionPolicy&& exec,
+               InputIt1 first1, InputIt1 last1,
+               InputIt2 first2, InputIt2 last2,
+               OutputIt d_first,
+               Compare comp) {
+    return std::set_difference(first1, last2, first2, last2, d_first, comp);
+}
+
+
+// set_intersection
+template <typename ExecutionPolicy, typename InputIt1, typename InputIt2, typename OutputIt>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
+set_intersection(ExecutionPolicy&& exec,
+                 InputIt1 first1, InputIt1 last1,
+                 InputIt2 first2, InputIt2 last2,
+                 OutputIt d_first) {
+    return std::set_intersection(first1, last1, first2, last2, d_first);
+}
+
+template <typename ExecutionPolicy, typename InputIt1, typename InputIt2, typename OutputIt, typename Compare>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
+set_intersection(ExecutionPolicy&& exec,
+                 InputIt1 first1, InputIt1 last1,
+                 InputIt2 first2, InputIt2 last2,
+                 OutputIt d_first, Compare comp) {
+    return std::set_intersection(first1, last1, first2, last2, d_first, comp);
+}
+
+
+// set_symmetric_difference
+template <typename ExecutionPolicy, typename InputIt1, typename InputIt2, typename OutputIt>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
+set_symmetric_difference(ExecutionPolicy&& exec,
+                         InputIt1 first1, InputIt1 last1,
+                         InputIt2 first2, InputIt2 last2,
+                         OutputIt d_first) {
+    return std::set_symmetric_difference(first1, last1, first2, last2, d_first);
+}
+
+template <typename ExecutionPolicy, typename InputIt1, typename InputIt2, typename OutputIt, typename Compare>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
+set_symmetric_difference(ExecutionPolicy&& exec,
+                         InputIt1 first1, InputIt1 last1,
+                         InputIt2 first2, InputIt2 last2,
+                         OutputIt d_first,
+                         Compare comp) {
+    return std::set_symmetric_difference(first1, last1, first2, last2, d_first, comp);
+}
+
+
+// set_union
+template <typename ExecutionPolicy, typename InputIt1, typename InputIt2, typename OutputIt>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
+set_union(ExecutionPolicy&& exec,
+          InputIt1 first1, InputIt1 last1,
+          InputIt2 first2, InputIt2 last2,
+          OutputIt d_first) {
+    return std::set_union(first1, last1, first2, last2, d_first);
+}
+
+template <typename ExecutionPolicy, typename InputIt1, typename InputIt2, typename OutputIt, typename Compare>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
+set_union(ExecutionPolicy&& exec,
+          InputIt1 first1, InputIt1 last1,
+          InputIt2 first2, InputIt2 last2,
+          OutputIt d_first,
+          Compare comp) {
+    return std::set_union(first1, last1, first2, last2, d_first, comp);
+}
+
+
 } // inline namespace v1
 } // namespace parallel
 } // namespace experimental 
