@@ -292,6 +292,15 @@ reverse_copy(ExecutionPolicy&& exec,
 }
 
 
+// rotate
+template <typename ExecutionPolicy, typename ForwardIt>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt>::type
+rotate(ExecutionPolicy&& exec,
+       ForwardIt first, ForwardIt n_first, ForwardIt last) {
+    return std::rotate(first, n_first, last);
+}
+
+
 } // inline namespace v1
 } // namespace parallel
 } // namespace experimental 
