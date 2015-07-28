@@ -26,7 +26,7 @@ int test_feature()
         accelerator device = devices[i];
 
 		printf("Device %d: %ws (%ws)\n", i, device.get_description().c_str(), device.get_device_path().c_str());
-        printf("Version %d \t Memory %u\n", device.get_version(), device.get_dedicated_memory()); 
+        printf("Version %d \t Memory %u\n", device.get_version(), device.get_dedicated_memory());
         printf("Debug:%c \t Emulated:%c \t Display: %c\n", device.get_is_debug() ? 'Y' : 'N', device.get_is_emulated() ? 'Y' : 'N', device.get_has_display() ? 'Y' : 'N');
 
         test_accl_constructor<_type, _rank, accelerator_view>(device.get_default_view());
@@ -51,14 +51,14 @@ int test_feature()
             continue;
 
         accelerator device = devices[i];
-        
+
         if (!device.get_supports_double_precision())
         {
             return runall_skip;
         }
 
 		printf("Device %d: %ws (%ws)\n", i, device.get_description().c_str(), device.get_device_path().c_str());
-        printf("Version %d \t Memory %u\n", device.get_version(), device.get_dedicated_memory()); 
+        printf("Version %d \t Memory %u\n", device.get_version(), device.get_dedicated_memory());
         printf("Debug:%c \t Emulated:%c \t Display: %c\n", device.get_is_debug() ? 'Y' : 'N', device.get_is_emulated() ? 'Y' : 'N', device.get_has_display() ? 'Y' : 'N');
 
         test_accl_constructor<double, _rank, accelerator_view>(device.get_default_view());
@@ -76,12 +76,12 @@ runall_result test_main()
 	result &= REPORT_RESULT((test_feature<int, 5>()));
 	result &= REPORT_RESULT((test_feature<unsigned int, 5>()));
 	result &= REPORT_RESULT((test_feature<float, 5>()));
-    
+
 	// test with double
 	runall_result dbl_result = REPORT_RESULT(test_feature<5>());
 	if(!dbl_result.get_is_skip()) // don't aggregate if skipped
 		result &= dbl_result;
-    
+
     return result;
 }
 

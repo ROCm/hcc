@@ -36,7 +36,7 @@ bool test_feature()
 
 runall_result test_main()
 {
-    // Test is using doubles therefore we have to make sure that it is not executed 
+    // Test is using doubles therefore we have to make sure that it is not executed
     // on devices that does not support double types.
 	accelerator::set_default(require_device_with_double().get_device_path());
 

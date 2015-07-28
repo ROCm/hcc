@@ -20,7 +20,7 @@
 /// <tags>P1</tags>
 /// <summary>Test that a read-write array_view<int, N> can be created can be created from int*</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 #include <algorithm>
 
@@ -36,7 +36,7 @@ int main()
     Fill<int>(data, size);
 
     array_view<int, 1> av1(size, data);
-    array_view<int, 1> av2(av1); // copy construct 
+    array_view<int, 1> av2(av1); // copy construct
 
     if(av1.get_extent()[0] != av2.get_extent()[0]) // Verify extent
     {
@@ -54,7 +54,7 @@ int main()
             return runall_fail;
         }
     }
-    
+
     accelerator device;
     if (!get_device(Device::ALL_DEVICES, device))
     {
@@ -70,7 +70,7 @@ int main()
 
     // vec should be updated after this
     printf("Accessing first element of array_view [%d] to force synchronize.\n", av1[0]);
-    
+
     // verify data
     for(int i = 0; i < size; i++)
     {
@@ -81,7 +81,7 @@ int main()
             return runall_fail;
         }
     }
-    
+
     delete[] data;
     printf("PASS!\n");
     return runall_pass;

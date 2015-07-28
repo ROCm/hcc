@@ -18,10 +18,10 @@ runall_result TestOnHost()
 {
 	runall_result result;
     Log() << "Testing constructor that takes individual co-ordinates on host" << std::endl;
-    
+
     index<1> idx1(0);
     index<2> idx2(0, 1);
-    index<3> idx3(0, 1, 2);    
+    index<3> idx3(0, 1, 2);
 
     result &= REPORT_RESULT(IsIndexSetToSequence<1>(idx1));
     result &= REPORT_RESULT(IsIndexSetToSequence<2>(idx2));
@@ -37,21 +37,21 @@ void kernel(array<int, 1>& A, array<int, 1>& B, array<int, 1>& C, array<int, 1>&
     index<1> idx1(0);
     index<2> idx2(0, 1);
     index<3> idx3(0, 1, 2);
-    
-    A(0) = idx1[0];            
+
+    A(0) = idx1[0];
     D(0) = idx1.rank;
 
     for(int i = 0; i < 2; i++)
     {
-        B(i) = idx2[i];        
+        B(i) = idx2[i];
     }
-    D(1) = idx2.rank;   
+    D(1) = idx2.rank;
 
     for(int i = 0; i < 3; i++)
     {
-        C(i) = idx3[i];        
+        C(i) = idx3[i];
     }
-    D(2) = idx3.rank;  
+    D(2) = idx3.rank;
 }
 
 runall_result TestOnDevice()
@@ -74,7 +74,7 @@ runall_result TestOnDevice()
     vB = B;
     vC = C;
     vD = D;
-    
+
 	result &= REPORT_RESULT(IsIndexSetToSequence<1>(vA, vD[0]));
     result &= REPORT_RESULT(IsIndexSetToSequence<2>(vB, vD[1]));
     result &= REPORT_RESULT(IsIndexSetToSequence<3>(vC, vD[2]));
@@ -83,7 +83,7 @@ runall_result TestOnDevice()
 }
 
 /*--------------------- Main -------------------- */
-runall_result test_main() 
+runall_result test_main()
 {
     runall_result result;
 	result &= REPORT_RESULT(TestOnHost());

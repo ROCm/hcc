@@ -30,11 +30,11 @@ runall_result test_main()
 {
     ArrayViewTest<const int, 1> original(extent<1>(10));
     ArrayViewTest<const int, 1> section = original.section(index<1>(3), extent<1>(5));
-    
+
     // set values through the data pointer
     original.set_value(index<1>(4), 13);
     section.set_value(index<1>(3), 15);
-    
+
     return (original.view()(6) == 15 && section.view()(1) == 13) ? original.pass() : original.fail();
 }
 

@@ -20,7 +20,7 @@ using std::vector;
 struct A_base
 {
     int m1;
-    
+
 public:
     int get()
     {
@@ -30,16 +30,16 @@ public:
 
 struct A : virtual A_base
 {
-    
+
 };
 
 runall_result test_main()
 {
     array<A, 1> arr(10);
-    
+
     vector<A> vec(10);
     array_view<A, 1> arr_view(10, vec);
-    
+
     return runall_fail;
 }
 

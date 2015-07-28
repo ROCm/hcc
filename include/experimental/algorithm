@@ -17,48 +17,13 @@
 #include <coordinate>
 #include <iostream>
 
+#include <kalmar_launch.h>
+#include <kalmar_runtime.h>
+
 namespace std {
 namespace experimental {
 namespace parallel {
 inline namespace v1 {
-
-static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu) {
-    std::string s(f);
-    std::string out;
-
-    for(std::string::iterator it = s.begin(); it != s.end(); it++ ) {
-      if (*it == '_' && it == s.begin()) {
-        continue;
-      } else if (isalnum(*it) || (*it == '_')) {
-        out.append(1, *it);
-      } else if (*it == '$') {
-        out.append("_EC_");
-      }
-    }
-    return out;
-}
-
-template<typename Kernel, int dim_ext>
-static inline void mcw_cxxamp_launch_kernel(size_t *ext,
-  size_t *local_size, const Kernel& f) restrict(cpu,amp) {
-#ifndef __KALMAR_ACCELERATOR__
-  //Invoke Kernel::__cxxamp_trampoline as an kernel
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  // FIXME: implicitly casting to avoid pointer to int error
-  int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
-  void *kernel = NULL;
-  {
-      std::string transformed_kernel_name =
-          mcw_cxxamp_fixnames(f.__cxxamp_trampoline_name());
-      kernel = Concurrency::CLAMP::CreateKernel(transformed_kernel_name);
-  }
-  Concurrency::Serialize s(kernel);
-  f.__cxxamp_serialize(s);
-  Concurrency::CLAMP::LaunchKernel(kernel, dim_ext, ext, local_size);
-#endif // __KALMAR_ACCELERATOR__
-}
-
 
 template<typename Kernel, typename InputIterator>
 class fe_wrapper
@@ -314,26 +279,7 @@ void for_each(ExecutionPolicy&& exec,
 #ifndef __KALMAR_ACCELERATOR__
   size_t ext = std::distance(first, last);
   fe_wrapper<Function, InputIterator> _pf(ext, f, first);
-  mcw_cxxamp_launch_kernel<fe_wrapper<Function, InputIterator>, 1>(&ext, NULL, _pf);
-#else //ifndef __KALMAR_ACCELERATOR__
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  auto bar = &fe_wrapper<Function, InputIterator>::operator();
-  auto qq = &std::offset<1>::__cxxamp_opencl_index;
-  int* foo = reinterpret_cast<int*>(&fe_wrapper<Function, InputIterator>::__cxxamp_trampoline);
-#endif
-}
-
-// for_each_n
-template <typename InputIterator, typename Size, typename Function>
-__attribute__((noinline,used))
-InputIterator for_each_n(InputIterator first, Size n,
-                Function f) restrict(cpu,amp) {
-  if (n >= Size()) {
-#ifndef __KALMAR_ACCELERATOR__
-  size_t ext = std::distance(first, first + n);
-  fe_wrapper<Function, InputIterator> _pf(ext, f, first);
-  mcw_cxxamp_launch_kernel<fe_wrapper<Function, InputIterator>, 1>(&ext, NULL, _pf);
+  Kalmar::mcw_cxxamp_launch_kernel<fe_wrapper<Function, InputIterator>, 1>(Kalmar::getContext()->getDevice(L"default")->get_default_queue(), &ext, NULL, _pf);
 #else //ifndef __KALMAR_ACCELERATOR__
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -357,7 +303,7 @@ for_each_n(ExecutionPolicy&& exec,
 #ifndef __KALMAR_ACCELERATOR__
   size_t ext = std::distance(first, first + n);
   fe_wrapper<Function, InputIterator> _pf(ext, f, first);
-  mcw_cxxamp_launch_kernel<fe_wrapper<Function, InputIterator>, 1>(&ext, NULL, _pf);
+  Kalmar::mcw_cxxamp_launch_kernel<fe_wrapper<Function, InputIterator>, 1>(Kalmar::getContext()->getDevice(L"default")->get_default_queue(), &ext, NULL, _pf);
 #else //ifndef __KALMAR_ACCELERATOR__
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted

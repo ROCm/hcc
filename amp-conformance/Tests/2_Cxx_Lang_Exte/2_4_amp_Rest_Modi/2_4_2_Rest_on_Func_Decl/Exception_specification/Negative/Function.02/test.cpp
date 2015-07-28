@@ -8,15 +8,15 @@
 //#Expects: Error: error C3581
 //#Expects: Error: error C3594
 
-#include <amptest.h> 
+#include <amptest.h>
 
 void foo() __GPU throw(int)
 {
     throw(1);
 }
 
-int main(int argc, char **argv) 
-{ 
+int main(int argc, char **argv)
+{
     foo();
     return 1;
 }

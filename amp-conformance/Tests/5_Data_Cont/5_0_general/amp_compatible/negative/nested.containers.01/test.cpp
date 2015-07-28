@@ -15,28 +15,28 @@ using namespace Concurrency;
 using namespace Concurrency::Test;
 
 runall_result test_main()
-{ 
+{
     array<array<int>, 1> a(16);
     array<array_view<int, 2>, 1> b(16);
-    
+
     struct Type1
     {
        array<float> a;
     };
     array<Type1, 1> c(16);
-    
+
     struct Type2
     {
        array<float, 3> &a;
     };
     array<Type2, 1> d(16);
-    
+
     struct Type3
     {
        array_view<float, 2> a;
     };
     array<Type3, 1> e(16);
-    
+
     struct Type4
     {
        array_view<const float> a;

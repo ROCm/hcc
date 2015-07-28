@@ -20,7 +20,7 @@
 /// <tags>P1</tags>
 /// <summary>Test that a const array_view can be copy constructed from a read-write array_view</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 #include <algorithm>
 
@@ -33,7 +33,7 @@ int main()
     const int size = 100;
 
     vector<int> vec_rw(size), vec_ro(size);
-    for(int i = 0; i < size; i++) 
+    for(int i = 0; i < size; i++)
     {
         vec_rw[i] = i;
         vec_ro[i] = i;
@@ -65,7 +65,7 @@ int main()
 
     // vec should be updated after this
     printf("Accessing first element of array_view [%d] to force synchronize.\n", av_rw[0]);
-    
+
     // verify data
     for(int i = 0; i < size; i++)
     {
@@ -76,7 +76,7 @@ int main()
             return runall_fail;
         }
     }
-    
+
     printf("PASS!\n");
     return runall_pass;
 }

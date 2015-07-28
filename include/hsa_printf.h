@@ -29,12 +29,12 @@ enum HSAPrintfPacketDataType {
 
 class HSAPrintfPacket {
 public:
-  void clear() { type = HSA_PRINTF_UNUSED; }
-  void set(unsigned int d)  { type = HSA_PRINTF_UNSIGNED_INT;   data.ui = d; }
-  void set(int d)           { type = HSA_PRINTF_SIGNED_INT;     data.i = d; }
-  void set(float d)         { type = HSA_PRINTF_FLOAT;          data.f = d; }
-  void set(void* d)         { type = HSA_PRINTF_VOID_PTR;       data.ptr = d; }
-  void set(const void* d)   { type = HSA_PRINTF_CONST_VOID_PTR; data.cptr = d; }
+  __attribute__((amp,cpu)) void clear() { type = HSA_PRINTF_UNUSED; }
+  __attribute__((amp,cpu)) void set(unsigned int d)  { type = HSA_PRINTF_UNSIGNED_INT;   data.ui = d; }
+  __attribute__((amp,cpu)) void set(int d)           { type = HSA_PRINTF_SIGNED_INT;     data.i = d; }
+  __attribute__((amp,cpu)) void set(float d)         { type = HSA_PRINTF_FLOAT;          data.f = d; }
+  __attribute__((amp,cpu)) void set(void* d)         { type = HSA_PRINTF_VOID_PTR;       data.ptr = d; }
+  __attribute__((amp,cpu)) void set(const void* d)   { type = HSA_PRINTF_CONST_VOID_PTR; data.cptr = d; }
   HSAPrintfPacketDataType type;
   HSAPrintfPacketData data;
 };
@@ -82,11 +82,11 @@ static inline void dumpHSAPrintfPacketQueue(const HSAPrintfPacketQueue* q) {
 }
 
 // get the argument count
-static inline void countArg(unsigned int& count) {}
+static inline __attribute__((amp,cpu)) void countArg(unsigned int& count) {}
 template <typename T> 
-static inline void countArg(unsigned int& count, const T& t) { ++count; }
+static inline __attribute__((amp,cpu)) void countArg(unsigned int& count, const T& t) { ++count; }
 template <typename T, typename... Rest> 
-static inline void countArg(unsigned int& count, const T& t, const Rest&... rest) {
+static inline __attribute__((amp,cpu)) void countArg(unsigned int& count, const T& t, const Rest&... rest) {
   ++count;
   countArg(count,rest...);
 }
@@ -127,7 +127,7 @@ static std::regex floatPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([fFeEgGaA]){
 static std::regex pointerPattern("(%){1}[ps]");
 static std::regex doubleAmpersandPattern("(%){2}");
 
-static inline void hsa_process_printf_queue(HSAPrintfPacketQueue* queue) {
+static inline void processHSAPrintfPacketQueue(HSAPrintfPacketQueue* queue) {
   unsigned int numPackets = 0;
   for (unsigned int i = 0; i < queue->cursor.load(); ) {
     numPackets = queue->queue[i++].data.ui;

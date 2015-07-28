@@ -21,7 +21,7 @@ runall_result TestOnHost()
 {
 	runall_result result;
     Log() << "Testing Index-assignment operator on host" << std::endl;
-    
+
     index<RANK> idx1(START, START + 1, START + 2);
     index<RANK> idx2;
     index<RANK> idx3;
@@ -63,7 +63,7 @@ runall_result TestOnDevice()
 {
 	runall_result result;
     Log() << "Testing Index-assignment operator on Device" << std::endl;
-    
+
     accelerator_view av = require_device().get_default_view();
 
     array<int, 1> A(extent<1>(RANK), av), B(extent<1>(RANK), av), C(extent<1>(2), av);
@@ -87,7 +87,7 @@ runall_result TestOnDevice()
 
 /*--------------------- Main -------------------- */
 
-runall_result test_main() 
+runall_result test_main()
 {
     runall_result result;
 	result &= REPORT_RESULT(TestOnHost());

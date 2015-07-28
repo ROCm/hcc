@@ -229,23 +229,23 @@ bool test_feature()
     return test_feature_idx<_rank, _D0>(data.begin());
 }
 
-int main() 
-{ 
-    // Test is using doubles therefore we have to make sure that it is not executed 
+int main()
+{
+    // Test is using doubles therefore we have to make sure that it is not executed
     // on devices that does not support double precision.
     // Please note that test is relying on default device, therefore check below is also done on default device.
     accelerator device;
     if (!device.get_supports_limited_double_precision())
     {
         printf("Default device does not support limited double precision\n");
-        return 2;    
+        return 2;
     }
 
     int passed = test_feature<int, 1>() && test_feature<float, 5>() &&
                     test_feature<31>() && test_feature<unsigned int, 91>()
             ? runall_pass : runall_fail;
 
-    printf("%s\n", (passed == runall_pass) ? "Passed!" : "Failed!"); 
+    printf("%s\n", (passed == runall_pass) ? "Passed!" : "Failed!");
 
     return passed;
 }

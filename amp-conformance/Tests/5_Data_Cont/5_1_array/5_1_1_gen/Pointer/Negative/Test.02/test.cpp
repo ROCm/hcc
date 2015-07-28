@@ -10,10 +10,10 @@
 //#Expects: Error: test\.cpp\(29\) : error C3581
 
 #include "./../../pointer.h"
- 
+
 void compile_only() {
     size_t numBodies = 1024;
- 
+
     int *dataSrc = new int[numBodies];
     for (int i = 0; i < numBodies; i++)
         dataSrc[i] = rand();
@@ -22,7 +22,7 @@ void compile_only() {
 
     // lambda captured by value plus pointer by value
     array<int, 1> *pDataA = new array<int, 1>(e, dataSrc);
-    
+
     parallel_for_each(e, [pDataA](index<1> idx) __GPU_ONLY
     {
         (*pDataA)[idx] = 1;

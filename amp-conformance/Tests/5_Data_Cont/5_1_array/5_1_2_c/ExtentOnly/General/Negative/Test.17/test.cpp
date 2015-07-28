@@ -13,7 +13,7 @@
 #include <amptest_main.h>
 
 runall_result test_main()
-{ 
+{
     array<unsigned, 1>(111, 223);
 
 	// We shouldn't compile

@@ -20,7 +20,7 @@
 /// <tags>P1</tags>
 /// <summary>Copy from an Array View (Array) to another Array View (C-array)</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 
 using namespace Concurrency;
@@ -31,16 +31,16 @@ int main()
 {
     accelerator device = require_device(Device::ALL_DEVICES);
     accelerator_view acc_view = device.get_default_view();
-    
+
     int size = 23;
     std::vector<float> src_v(size);
     Fill<float>(src_v);
     array<float> src_data(size, src_v.begin(), src_v.end(), acc_view);
     array_view<float, 1> src(src_data);
-    
+
     std::vector<float> dest_v(size);
     array_view<float> dest(size, dest_v);
-    
+
     src.copy_to(dest);
     return VerifyDataOnCpu(dest, src) ? runall_pass : runall_fail;
 }

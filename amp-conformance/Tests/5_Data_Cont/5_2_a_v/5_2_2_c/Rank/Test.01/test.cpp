@@ -32,6 +32,6 @@ runall_result test_main()
     std::vector<int> v1(20);
     Fill<int>(v1);
     array_view<int> av(extent<1>(20), v1);
-    
+
     return verify_extent(av, extent<1>(20)) && Verify(av.data(), v1.data(), v1.size());
 }

@@ -22,7 +22,7 @@
 /// Declare the underlying array outside the loop, declare the array_view inside the loop</summary>
 
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 #include <algorithm>
 

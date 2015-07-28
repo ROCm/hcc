@@ -66,7 +66,7 @@ int test(accelerator_view acc_view)
     Fill<T>(data_vec.data(), size);
 
     extent<1> ex(size);
-    
+
 
     array<T,1> data_arr(ex, data_vec.begin(), acc_view);
     array<int,1> result_arr(ex, acc_view);

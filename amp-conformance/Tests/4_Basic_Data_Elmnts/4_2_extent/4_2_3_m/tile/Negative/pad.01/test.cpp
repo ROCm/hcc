@@ -21,10 +21,10 @@ bool Test1()
 	auto      tiled_ext = ext.tile<4>();
 	auto      padded_tiled_ext = tiled_ext.pad();
 
-	try 
+	try
 	{
 		array<int, 1> ar(padded_tiled_ext);
-	} 
+	}
 	catch (const runtime_exception &e)
 	{
 		return true;
@@ -39,10 +39,10 @@ bool Test2()
 	auto      tiled_ext = ext.tile<4,4>();
 	auto      padded_tiled_ext = tiled_ext.pad();
 
-	try 
+	try
 	{
 		array<int, 2> ar(padded_tiled_ext);
-	} 
+	}
 	catch (const runtime_exception &e)
 	{
 		return true;
@@ -57,10 +57,10 @@ bool Test3()
 	auto      tiled_ext = ext.tile<4,4,4>();
 	auto      padded_tiled_ext = tiled_ext.pad();
 
-	try 
+	try
 	{
 		array<int, 3> ar(padded_tiled_ext);
-	} 
+	}
 	catch (const runtime_exception &e)
 	{
 		return true;

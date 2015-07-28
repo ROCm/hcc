@@ -7,7 +7,7 @@
 /// <summary>test a class with non amp restricted virtual member function</summary>
 //#Expects: Error: error C3581
 
-#include <amptest.h> 
+#include <amptest.h>
 
 struct A
 {
@@ -23,8 +23,8 @@ void foo() __GPU
     a.m1 = 0.1;
 }
 
-int main(int argc, char **argv) 
-{ 
+int main(int argc, char **argv)
+{
     foo();
     return 1;
 }

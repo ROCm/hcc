@@ -9,11 +9,11 @@
 #include "../../inc/common.h"
 
 #ifndef FLT_EPSILON
-#define FLT_EPSILON	0x1.0p-23f
+#define FLT_EPSILON     0x1.0p-23f
 #endif
 
 #ifndef DBL_EPSILON
-#define DBL_EPSILON	0x1.0p-52
+#define DBL_EPSILON     0x1.0p-52
 #endif
 
 struct s
@@ -43,10 +43,10 @@ bool test(accelerator_view &rv)
     {
         s arr[10];
 
-        arr[0].i = 0; arr[1].i = 1; arr[2].i = 2; arr[3].i = 3; arr[4].i = 4; 
-        arr[0].d = 0; arr[1].d = 1; arr[2].d = 2; arr[3].d = 3; arr[4].d = 4; 
-        arr[0].ul = 0; arr[1].ul = 1; arr[2].ul = 2; arr[3].ul = 3; arr[4].ul = 4; 
-        arr[0].f = 0; arr[1].f = 1; arr[2].f = 2; arr[3].f = 3; arr[4].f = 4; 
+        arr[0].i = 0; arr[1].i = 1; arr[2].i = 2; arr[3].i = 3; arr[4].i = 4;
+        arr[0].d = 0; arr[1].d = 1; arr[2].d = 2; arr[3].d = 3; arr[4].d = 4;
+        arr[0].ul = 0; arr[1].ul = 1; arr[2].ul = 2; arr[3].ul = 3; arr[4].ul = 4;
+        arr[0].f = 0; arr[1].f = 1; arr[2].f = 2; arr[3].f = 3; arr[4].f = 4;
         arr[5].i = 5; arr[6].i = 6; arr[7].i = 7; arr[8].i = 8; arr[9].i = 9;
         arr[5].d = 5; arr[6].d = 6; arr[7].d = 7; arr[8].d = 8; arr[9].d = 9;
         arr[5].ul = 5; arr[6].ul = 6; arr[7].ul = 7; arr[8].ul = 8; arr[9].ul = 9;

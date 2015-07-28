@@ -33,11 +33,11 @@ int main()
     std::vector<float> v1(20);
     Fill<float>(v1);
     array_view<float, 3> av1(5, 2, 2, v1);
-    
+
     array_view<float, 3> section = av1.section(index<3>(1, 1, 1), extent<3>(3, 1, 1));
-    
+
     // self-assign a section
     av1 = av1.section(index<3>(1, 1, 1), extent<3>(3, 1, 1));
-    
+
     return verify_extent(av1, section.get_extent()) && VerifyDataOnCpu(av1, section) ? runall_pass : runall_fail;
 }

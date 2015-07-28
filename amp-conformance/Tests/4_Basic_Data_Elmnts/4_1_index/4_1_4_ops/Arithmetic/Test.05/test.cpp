@@ -43,7 +43,7 @@ int test() __GPU
 
 void kernel(index<1>& idx, array<int, 1>& result) __GPU
 {
-    result[idx] = test();    
+    result[idx] = test();
 }
 
 const int size = 10;
@@ -73,12 +73,12 @@ int test_device()
     return 0;
 }
 
-runall_result test_main() 
-{ 
+runall_result test_main()
+{
 	runall_result result;
     // Test on host
     result &= REPORT_RESULT(test() == 0);
-   
+
     // Test on device
 	result &= REPORT_RESULT(test_device() == 0);
     return result;

@@ -55,7 +55,7 @@ bool test() {
 int main(void) {
   bool ret = true;
 
-  ret &= test<float>();
+  //ret &= test<float>();
   ret &= test<double>();
 
   return !(ret == true);

@@ -15,9 +15,6 @@
 
 #pragma region utility methods
 
-namespace Concurrency {
-namespace Test {
-
 int get_max_dim(int rank)
 {
 	if(rank == 1) { return 512; }
@@ -43,9 +40,9 @@ void compute_access_type_list(access_list& access_types_vec, concurrency::accele
 		// Set the default cpu access type for this accelerator
 		gpu_acc.set_default_cpu_access_type(def_acc_type);
 		
-		concurrency::access_type a_t_list[] = { concurrency::access_type_none, 
-												concurrency::access_type_read, 
-												concurrency::access_type_write, 
+		concurrency::access_type a_t_list[] = { concurrency::access_type_none,
+												concurrency::access_type_read,
+												concurrency::access_type_write,
 												concurrency::access_type_read_write };
 	
 		for(int i = 0; i < 4; i++)
@@ -63,9 +60,9 @@ void compute_access_type_list(access_list& access_types_vec, concurrency::accele
 }
 
 void compute_access_type_list(
-				access_list& access_types_vec, 
-				concurrency::accelerator& gpu_acc1, 
-				concurrency::accelerator& gpu_acc2, 
+				access_list& access_types_vec,
+				concurrency::accelerator& gpu_acc1,
+				concurrency::accelerator& gpu_acc2,
 				concurrency::access_type def_acc_type1,
 				concurrency::access_type def_acc_type2)
 {	
@@ -106,9 +103,9 @@ void compute_access_type_list(
 		gpu_acc1.set_default_cpu_access_type(def_acc_type1);
 		gpu_acc2.set_default_cpu_access_type(def_acc_type2);
 		
-		concurrency::access_type a_t_list[] = { concurrency::access_type_none, 
-												concurrency::access_type_read, 
-												concurrency::access_type_write, 
+		concurrency::access_type a_t_list[] = { concurrency::access_type_none,
+												concurrency::access_type_read,
+												concurrency::access_type_write,
 												concurrency::access_type_read_write };
 	
 		for(int i = 0; i < 4; i++)
@@ -124,9 +121,11 @@ void compute_access_type_list(
 
 // We cannot invoke p_f_e for an accelerator_view on CPU. This method is invoked
 // to modify array and array_view on accelerator_view(s) on CPU
-template<typename _type, int _rank, template<typename, int> class _amp_container_type> 
+template<typename _type, int _rank, template<typename, int> class _amp_container_type>
 void ModifyOnCpu(_amp_container_type<_type, _rank>& amp_container, _type value)
 {
+	using namespace concurrency::Test;
+
 	index_iterator<_rank> idx_iter(amp_container.get_extent());
 
 	for(index_iterator<_rank> iter = idx_iter.begin(); iter != idx_iter.end(); iter++)
@@ -175,12 +174,14 @@ void ModifyOnAcceleratorView(const concurrency::accelerator_view& av, concurrenc
 
 template<typename _type, int _rank>
 bool CopyAndVerifyFromArrayToArray(
-								const concurrency::accelerator_view& src_av, 
+								const concurrency::accelerator_view& src_av,
 								const concurrency::accelerator_view& target_av,
 								concurrency::access_type src_access_type,
 							  	concurrency::access_type target_access_type,
 							  	concurrency::access_type dest_access_type)
 {
+	using namespace concurrency::Test;
+
 	// Create source data
 	array<_type, _rank> src_arr = CreateArrayAndFillData<_type, _rank>(src_av, get_max_dim(_rank), src_access_type);
 	
@@ -200,12 +201,14 @@ bool CopyAndVerifyFromArrayToArray(
 
 template<typename _type, int _rank>
 bool CopyAndVerifyFromArrayToArrayView(
-								const concurrency::accelerator_view& src_av, 
+								const concurrency::accelerator_view& src_av,
 								const concurrency::accelerator_view& target_av,
 							  	concurrency::access_type src_access_type,
 							  	concurrency::access_type target_access_type,
 							  	concurrency::access_type dest_access_type)
 {
+	using namespace concurrency::Test;
+
 	// Create source data
 	array<_type, _rank> src_arr = CreateArrayAndFillData<_type, _rank>(src_av, get_max_dim(_rank), src_access_type);
 
@@ -226,12 +229,14 @@ bool CopyAndVerifyFromArrayToArrayView(
 
 template<typename _type, int _rank>
 bool CopyAndVerifyFromArrayToStagingArray(
-								const concurrency::accelerator_view& cpu_av, 
-								const concurrency::accelerator_view& arr_av, 
+								const concurrency::accelerator_view& cpu_av,
+								const concurrency::accelerator_view& arr_av,
 								const concurrency::accelerator_view& stg_arr_av,
 							  	concurrency::access_type src_access_type,
 							  	concurrency::access_type dest_access_type)
 {
+	using namespace concurrency::Test;
+
 	// Create source data
 	array<_type, _rank> src_arr = CreateArrayAndFillData<_type, _rank>(arr_av, get_max_dim(_rank), src_access_type);
 	
@@ -251,12 +256,14 @@ bool CopyAndVerifyFromArrayToStagingArray(
 
 template<typename _type, int _rank>
 bool CopyAndVerifyFromArrayToNonContiguousArrayView(
-								const concurrency::accelerator_view& src_av, 
+								const concurrency::accelerator_view& src_av,
 								const concurrency::accelerator_view& target_av,
 							  	concurrency::access_type src_access_type,
 							  	concurrency::access_type target_access_type,
 							  	concurrency::access_type dest_access_type)
-{	
+{
+	using namespace concurrency::Test;
+
 	array<_type, _rank> data_arr = CreateArrayAndFillData<_type, _rank>(target_av, get_max_dim(_rank), target_access_type);
 	array_view<_type, _rank> non_contig_arr_v = CreateNonContiguousArrayView<_type, _rank>(data_arr);
 
@@ -283,12 +290,14 @@ bool CopyAndVerifyFromArrayToNonContiguousArrayView(
 
 template<typename _type, int _rank>
 bool CopyAndVerifyFromArrayViewToArray(
-								const concurrency::accelerator_view& src_av, 
+								const concurrency::accelerator_view& src_av,
 								const concurrency::accelerator_view& target_av,
 							  	concurrency::access_type src_access_type,
 							  	concurrency::access_type target_access_type,
 							  	concurrency::access_type dest_access_type)
-{		
+{
+	using namespace concurrency::Test;
+
 	// Create source data
 	array<_type, _rank> src_data_arr = CreateArrayAndFillData<_type, _rank>(src_av, get_max_dim(_rank), src_access_type);
 	array_view<_type, _rank> src_arr_v(src_data_arr);
@@ -300,7 +309,7 @@ bool CopyAndVerifyFromArrayViewToArray(
 	// Modify target array on target accelerator_view
 	ModifyOnAcceleratorView(target_av, target_arr, static_cast<_type>(MODIFY_VALUE));
 
-	// Copy: target array (target_av) -> array_view (src_av) 
+	// Copy: target array (target_av) -> array_view (src_av)
 	array<_type, _rank> dest_data_arr(src_arr_v.get_extent(), src_av, dest_access_type);
 	array_view<_type, _rank> dest_arr_v(dest_data_arr);
 	copy(target_arr, dest_arr_v);
@@ -310,12 +319,14 @@ bool CopyAndVerifyFromArrayViewToArray(
 
 template<typename _type, int _rank>
 bool CopyAndVerifyFromArrayViewToArrayView(
-								const concurrency::accelerator_view& src_av, 
+								const concurrency::accelerator_view& src_av,
 								const concurrency::accelerator_view& target_av,
 							  	concurrency::access_type src_access_type,
 							  	concurrency::access_type target_access_type,
 							  	concurrency::access_type dest_access_type)
 {
+	using namespace concurrency::Test;
+
 	// Create source data
 	array<_type, _rank> src_data_arr = CreateArrayAndFillData<_type, _rank>(src_av, get_max_dim(_rank), src_access_type);
 	array_view<_type, _rank> src_arr_v(src_data_arr);
@@ -339,6 +350,8 @@ bool CopyAndVerifyFromArrayViewToArrayView(
 template<typename _type, int _rank, template<typename T, typename=std::allocator<T>> class _stl_cont>
 bool CopyAndVerifyFromArrayViewToIterator(const concurrency::accelerator_view& av,   concurrency::access_type src_access_type)
 {
+	using namespace concurrency::Test;
+
 	// Create source data
 	array<_type, _rank> src_data_arr = CreateArrayAndFillData<_type, _rank>(av, get_max_dim(_rank), src_access_type);
 	array_view<_type, _rank> src_arr_v(src_data_arr);
@@ -352,12 +365,14 @@ bool CopyAndVerifyFromArrayViewToIterator(const concurrency::accelerator_view& a
 
 template<typename _type, int _rank>
 bool CopyAndVerifyFromArrayViewToStagingArray(
-								const concurrency::accelerator_view& cpu_av, 
-								const concurrency::accelerator_view& arr_v_av, 
+								const concurrency::accelerator_view& cpu_av,
+								const concurrency::accelerator_view& arr_v_av,
 								const concurrency::accelerator_view& stg_arr_av,
 							  	concurrency::access_type src_access_type,
 							  	concurrency::access_type dest_access_type)
 {
+	using namespace concurrency::Test;
+
 	// Create source data
 	array<_type, _rank> src_data_arr = CreateArrayAndFillData<_type, _rank>(arr_v_av, get_max_dim(_rank), src_access_type);
 	array_view<_type, _rank> src_arr_v(src_data_arr);
@@ -379,12 +394,14 @@ bool CopyAndVerifyFromArrayViewToStagingArray(
 
 template<typename _type, int _rank>
 bool CopyAndVerifyFromArrayViewToNonContiguousArrayView(
-								const concurrency::accelerator_view& src_av, 
+								const concurrency::accelerator_view& src_av,
 								const concurrency::accelerator_view& target_av,
 							  	concurrency::access_type src_access_type,
 							  	concurrency::access_type target_access_type,
 							  	concurrency::access_type dest_access_type)
-{		
+{
+	using namespace concurrency::Test;
+
 	array<_type, _rank> data_arr = CreateArrayAndFillData<_type, _rank>(target_av, get_max_dim(_rank), src_access_type);
 	array_view<_type, _rank> non_contig_arr_v = CreateNonContiguousArrayView<_type, _rank>(data_arr);
 
@@ -420,11 +437,13 @@ bool CopyAndVerifyFromArrayViewToNonContiguousArrayView(
 
 template<typename _type, int _rank>
 bool CopyAndVerifyFromNonContigArrayViewToArray(
-								const concurrency::accelerator_view& src_av, 
+								const concurrency::accelerator_view& src_av,
 								const concurrency::accelerator_view& target_av,
 							  	concurrency::access_type src_access_type,
 							  	concurrency::access_type target_access_type)
-{		
+{
+	using namespace concurrency::Test;
+
 	// Create source data
 	array<_type, _rank> src_data_arr = CreateArrayAndFillData<_type, _rank>(src_av, get_max_dim(_rank), src_access_type);
 	array_view<_type, _rank> src_non_contig_arr_v = CreateNonContiguousArrayView<_type, _rank>(src_data_arr);
@@ -438,11 +457,13 @@ bool CopyAndVerifyFromNonContigArrayViewToArray(
 
 template<typename _type, int _rank>
 bool CopyAndVerifyFromNonContigArrayViewToArrayView(
-								const concurrency::accelerator_view& src_av, 
+								const concurrency::accelerator_view& src_av,
 								const concurrency::accelerator_view& target_av,
 							  	concurrency::access_type src_access_type,
 							  	concurrency::access_type target_access_type)
 {
+	using namespace concurrency::Test;
+
 	// Create source data
 	array<_type, _rank> src_data_arr = CreateArrayAndFillData<_type, _rank>(src_av, get_max_dim(_rank), src_access_type);
 	array_view<_type, _rank> src_non_contig_arr_v = CreateNonContiguousArrayView<_type, _rank>(src_data_arr);
@@ -458,6 +479,9 @@ bool CopyAndVerifyFromNonContigArrayViewToArrayView(
 template<typename _type, int _rank, template<typename T, typename=std::allocator<T>> class _stl_cont>
 bool CopyAndVerifyFromNonContigArrayViewToIterator(const concurrency::accelerator_view& av,   concurrency::access_type src_access_type)
 {
+
+	using namespace concurrency::Test;
+
 	// Create source data
 	array<_type, _rank> src_data_arr = CreateArrayAndFillData<_type, _rank>(av, get_max_dim(_rank), src_access_type);
 	array_view<_type, _rank> src_non_contig_arr_v = CreateNonContiguousArrayView<_type, _rank>(src_data_arr);
@@ -471,11 +495,13 @@ bool CopyAndVerifyFromNonContigArrayViewToIterator(const concurrency::accelerato
 
 template<typename _type, int _rank>
 bool CopyAndVerifyFromNonContigArrayViewToStagingArray(
-								const concurrency::accelerator_view& cpu_av, 
-								const concurrency::accelerator_view& arr_v_av, 
+								const concurrency::accelerator_view& cpu_av,
+								const concurrency::accelerator_view& arr_v_av,
 								const concurrency::accelerator_view& stg_arr_av,
 							  	concurrency::access_type src_access_type)
 {
+	using namespace concurrency::Test;
+
 	// Create source data
 	array<_type, _rank> src_data_arr = CreateArrayAndFillData<_type, _rank>(arr_v_av, get_max_dim(_rank), src_access_type);
 	array_view<_type, _rank> src_non_contig_arr_v = CreateNonContiguousArrayView<_type, _rank>(src_data_arr);
@@ -489,11 +515,13 @@ bool CopyAndVerifyFromNonContigArrayViewToStagingArray(
 
 template<typename _type, int _rank>
 bool CopyAndVerifyFromNonContigArrayViewToNonContigArrayView(
-								const concurrency::accelerator_view& src_av, 
+								const concurrency::accelerator_view& src_av,
 								const concurrency::accelerator_view& target_av,
 							  	concurrency::access_type src_access_type,
 							  	concurrency::access_type target_access_type)
-{		
+{
+	using namespace concurrency::Test;
+
 	// Create source data
 	array<_type, _rank> src_data_arr = CreateArrayAndFillData<_type, _rank>(src_av, get_max_dim(_rank), src_access_type);
 	array_view<_type, _rank> src_non_contig_arr_v = CreateNonContiguousArrayView<_type, _rank>(src_data_arr);
@@ -515,11 +543,13 @@ bool CopyAndVerifyFromNonContigArrayViewToNonContigArrayView(
 
 template<typename _type, int _rank>
 bool CopyAndVerifyFromArrayViewConstToArray(
-								const concurrency::accelerator_view& src_av, 
+								const concurrency::accelerator_view& src_av,
 								const concurrency::accelerator_view& target_av,
 							  	concurrency::access_type src_access_type,
 							  	concurrency::access_type target_access_type)
-{		
+{
+	using namespace concurrency::Test;
+
 	// Create source data
 	array<_type, _rank> src_data_arr = CreateArrayAndFillData<_type, _rank>(src_av, get_max_dim(_rank), src_access_type);
 	array_view<const _type, _rank> src_arr_v(src_data_arr);
@@ -533,11 +563,13 @@ bool CopyAndVerifyFromArrayViewConstToArray(
 
 template<typename _type, int _rank>
 bool CopyAndVerifyFromArrayViewConstToArrayView(
-								const concurrency::accelerator_view& src_av, 
+								const concurrency::accelerator_view& src_av,
 								const concurrency::accelerator_view& target_av,
 							  	concurrency::access_type src_access_type,
 							  	concurrency::access_type target_access_type)
 {
+	using namespace concurrency::Test;
+
 	// Create source data
 	array<_type, _rank> src_data_arr = CreateArrayAndFillData<_type, _rank>(src_av, get_max_dim(_rank), src_access_type);
 	array_view<const _type, _rank> src_arr_v(src_data_arr);
@@ -553,6 +585,8 @@ bool CopyAndVerifyFromArrayViewConstToArrayView(
 template<typename _type, int _rank, template<typename U, typename=std::allocator<U>> class _stl_cont>
 bool CopyAndVerifyFromArrayViewConstToIterator(const concurrency::accelerator_view& av,   concurrency::access_type src_access_type)
 {
+	using namespace concurrency::Test;
+
 	// Create source data
 	array<_type, _rank> src_data_arr = CreateArrayAndFillData<_type, _rank>(av, get_max_dim(_rank), src_access_type);
 	array_view<const _type, _rank> src_arr_v(src_data_arr);
@@ -566,11 +600,13 @@ bool CopyAndVerifyFromArrayViewConstToIterator(const concurrency::accelerator_vi
 
 template<typename _type, int _rank>
 bool CopyAndVerifyFromArrayViewConstToStagingArray(
-								const concurrency::accelerator_view& cpu_av, 
-								const concurrency::accelerator_view& arr_v_av, 
+								const concurrency::accelerator_view& cpu_av,
+								const concurrency::accelerator_view& arr_v_av,
 								const concurrency::accelerator_view& stg_arr_av,
 							  	concurrency::access_type src_access_type)
 {
+	using namespace concurrency::Test;
+
 	// Create source data
 	array<_type, _rank> src_data_arr = CreateArrayAndFillData<_type, _rank>(arr_v_av, get_max_dim(_rank), src_access_type);
 	array_view<const _type, _rank> src_arr_v(src_data_arr);
@@ -584,11 +620,13 @@ bool CopyAndVerifyFromArrayViewConstToStagingArray(
 
 template<typename _type, int _rank>
 bool CopyAndVerifyFromNonContigArrayViewConstToArray(
-								const concurrency::accelerator_view& src_av, 
+								const concurrency::accelerator_view& src_av,
 								const concurrency::accelerator_view& target_av,
 							  	concurrency::access_type src_access_type,
 							  	concurrency::access_type target_access_type)
-{		
+{
+	using namespace concurrency::Test;
+
 	// Create source data
 	array<_type, _rank> src_data_arr = CreateArrayAndFillData<_type, _rank>(src_av, get_max_dim(_rank), src_access_type);
 	array_view<const _type, _rank> src_non_contig_arr_v = CreateNonContiguousArrayViewWithConstType<_type, _rank>(src_data_arr);
@@ -607,6 +645,8 @@ bool CopyAndVerifyFromNonContigArrayViewConstToArray(
 template<typename _type, int _rank, template<typename U, typename=std::allocator<U>> class _stl_cont>
 bool CopyAndVerifyBetweenArrayAndIterator(const concurrency::accelerator_view& target_av,   concurrency::access_type target_access_type)
 {
+	using namespace concurrency::Test;
+
 	concurrency::extent<_rank> arr_extent = CreateRandomExtent<_rank>(get_max_dim(_rank));
 	Log() << "arr_extent = " << arr_extent << std::endl;
 
@@ -620,7 +660,7 @@ bool CopyAndVerifyBetweenArrayAndIterator(const concurrency::accelerator_view& t
 	// Modify target array on target_av
 	ModifyOnAcceleratorView(target_av, target_arr, static_cast<_type>(MODIFY_VALUE));
 
-	// Copy: target array (target_av) -> STL container 
+	// Copy: target array (target_av) -> STL container
 	_stl_cont<_type> dest_stl_cont(arr_extent.size());
 	copy(target_arr, dest_stl_cont.begin());
 
@@ -630,6 +670,8 @@ bool CopyAndVerifyBetweenArrayAndIterator(const concurrency::accelerator_view& t
 template<typename _type, int _rank, template<typename U, typename=std::allocator<U>> class _stl_cont>
 bool CopyAndVerifyFromIteratorToArrayView(const concurrency::accelerator_view& target_av,   concurrency::access_type target_access_type)
 {
+	using namespace concurrency::Test;
+
 	concurrency::extent<_rank> arr_v_extent = CreateRandomExtent<_rank>(get_max_dim(_rank));
 	Log() << "arr_extent = " << arr_v_extent << std::endl;
 
@@ -654,6 +696,8 @@ bool CopyAndVerifyFromIteratorToArrayView(const concurrency::accelerator_view& t
 template<typename _type, int _rank, template<typename U, typename=std::allocator<U>> class _stl_cont>
 bool CopyAndVerifyFromIteratorToNonContigArrayView(const concurrency::accelerator_view& target_av,   concurrency::access_type target_access_type)
 {
+	using namespace concurrency::Test;
+
 	array<_type, _rank> target_data_arr = CreateArrayAndFillData<_type, _rank>(target_av, get_max_dim(_rank), target_access_type);
 	array_view<_type, _rank> target_non_contig_arr_v = CreateNonContiguousArrayView<_type, _rank>(target_data_arr);
 	
@@ -676,6 +720,8 @@ bool CopyAndVerifyFromIteratorToNonContigArrayView(const concurrency::accelerato
 template<typename _type, int _rank, template<typename U, typename=std::allocator<U>> class _stl_cont>
 bool CopyAndVerifyBetweenStagingArrayAndIterator(const concurrency::accelerator_view& cpu_av, const concurrency::accelerator_view& stg_arr_av)
 {
+	using namespace concurrency::Test;
+
 	concurrency::extent<_rank> arr_extent = CreateRandomExtent<_rank>(get_max_dim(_rank));
 	Log() << "arr_extent = " << arr_extent << std::endl;
 
@@ -702,11 +748,13 @@ bool CopyAndVerifyBetweenStagingArrayAndIterator(const concurrency::accelerator_
 
 template<typename _type, int _rank>
 bool CopyAndVerifyFromStagingArrayToArray(
-								const concurrency::accelerator_view& cpu_av, 
-								const concurrency::accelerator_view& arr_av, 
+								const concurrency::accelerator_view& cpu_av,
+								const concurrency::accelerator_view& arr_av,
 								const concurrency::accelerator_view& stg_arr_av,
 							  	concurrency::access_type target_access_type)
 {
+	using namespace concurrency::Test;
+
 	// Create source data
 	array<_type, _rank> src_stg_arr = CreateStagingArrayAndFillData<_type, _rank>(cpu_av, stg_arr_av, get_max_dim(_rank));
 	
@@ -726,11 +774,13 @@ bool CopyAndVerifyFromStagingArrayToArray(
 
 template<typename _type, int _rank>
 bool CopyAndVerifyFromStagingArrayToArrayView(
-								const concurrency::accelerator_view& cpu_av, 
-								const concurrency::accelerator_view& arr_v_av, 
+								const concurrency::accelerator_view& cpu_av,
+								const concurrency::accelerator_view& arr_v_av,
 								const concurrency::accelerator_view& stg_arr_av,
 							  	concurrency::access_type target_access_type)
 {
+	using namespace concurrency::Test;
+
 	// Create source data
 	array<_type, _rank> src_stg_arr = CreateStagingArrayAndFillData<_type, _rank>(cpu_av, stg_arr_av, get_max_dim(_rank));
 
@@ -752,6 +802,8 @@ bool CopyAndVerifyFromStagingArrayToArrayView(
 template<typename _type, int _rank>
 bool CopyAndVerifyFromStagingArrayToStagingArray(const concurrency::accelerator_view& src_cpu_av, const concurrency::accelerator_view& src_stg_arr_av, const concurrency::accelerator_view& target_cpu_av, const concurrency::accelerator_view& target_stg_arr_av)
 {
+	using namespace concurrency::Test;
+
 	// Create source data
 	array<_type, _rank> src_stg_arr = CreateStagingArrayAndFillData<_type, _rank>(src_cpu_av, src_stg_arr_av, get_max_dim(_rank));
 
@@ -771,11 +823,13 @@ bool CopyAndVerifyFromStagingArrayToStagingArray(const concurrency::accelerator_
 
 template<typename _type, int _rank>
 bool CopyAndVerifyFromStagingArrayToNonContigArrayView(
-								const concurrency::accelerator_view& cpu_av, 
-								const concurrency::accelerator_view& arr_v_av, 
+								const concurrency::accelerator_view& cpu_av,
+								const concurrency::accelerator_view& arr_v_av,
 								const concurrency::accelerator_view& stg_arr_av,
 							  	concurrency::access_type target_access_type)
 {
+	using namespace concurrency::Test;
+	
 	array<_type, _rank> data_arr = CreateArrayAndFillData<_type, _rank>(arr_v_av, get_max_dim(_rank), target_access_type);
 	array_view<_type, _rank> non_contig_arr_v = CreateNonContiguousArrayView<_type, _rank>(data_arr);
 
@@ -795,8 +849,5 @@ bool CopyAndVerifyFromStagingArrayToNonContigArrayView(
 
 	return VerifyDataOnCpu(src_stg_arr, dest_stg_arr, static_cast<_type>(MODIFY_VALUE));
 }
-
-} //namespace Test
-} //namespace Concurrency
 
 #pragma endregion

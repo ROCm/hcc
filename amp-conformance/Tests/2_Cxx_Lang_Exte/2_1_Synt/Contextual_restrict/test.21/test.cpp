@@ -17,8 +17,8 @@ bool test1()
    typedef int restrict;
 
    cout << "Test if context of restriction modifier is shielded from type-name in trailing-return-type clause" << endl;
- 
-   auto x = []()mutable restrict(cpu) -> restrict { return 1;}();   
+
+   auto x = []()mutable restrict(cpu) -> restrict { return 1;}();
 
    return (x == 1);
 }
@@ -44,7 +44,7 @@ bool test2()
    }
    catch(restrict ex)
    {
-      return true;   
+      return true;
    }
 }
 
@@ -75,14 +75,14 @@ bool test4()
 
    int  result = [&](restrict a) restrict(cpu) -> int {return x.data + a.data;}(y);
 
-    return (result == 30);   
+    return (result == 30);
 }
 
 bool test5()
 {
     cout << "[](int restrict) restrict(cpu) {}(); - use variable name that is d3d11." << endl;
 
-    auto result  = [](int restrict) restrict(cpu) -> int {return 10;}(10); 
+    auto result  = [](int restrict) restrict(cpu) -> int {return 10;}(10);
 
     return (result == 10);
 }
@@ -111,7 +111,7 @@ bool test7()
 }
 
 // Main entry point
-int main(int argc, char **argv) 
+int main(int argc, char **argv)
 {
     bool passed = true;
 
@@ -142,7 +142,7 @@ int main(int argc, char **argv)
     else
     {
         passed = false;
-        cout << "Failed!" << endl;        
+        cout << "Failed!" << endl;
     }
 
     if(test4())
@@ -152,7 +152,7 @@ int main(int argc, char **argv)
     else
     {
         passed = false;
-        cout << "Failed!" << endl;        
+        cout << "Failed!" << endl;
     }
 
     if(test5())
@@ -162,7 +162,7 @@ int main(int argc, char **argv)
     else
     {
         passed = false;
-        cout << "Failed!" << endl;        
+        cout << "Failed!" << endl;
     }
 
     if(test6())
@@ -172,7 +172,7 @@ int main(int argc, char **argv)
     else
     {
         passed = false;
-        cout << "Failed!" << endl;        
+        cout << "Failed!" << endl;
     }
 
     if(test7())
@@ -182,7 +182,7 @@ int main(int argc, char **argv)
     else
     {
         passed = false;
-        cout << "Failed!" << endl;        
+        cout << "Failed!" << endl;
     }
 
     return passed ? 0 : 1;

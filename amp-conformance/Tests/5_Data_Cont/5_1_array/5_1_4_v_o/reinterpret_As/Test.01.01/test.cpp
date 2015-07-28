@@ -8,7 +8,7 @@
 /// <tags>P1</tags>
 /// <summary>Reinterpret an Array of unsigned int as int (GPU)</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <amptest_main.h>
 
 using namespace Concurrency;
@@ -18,7 +18,7 @@ runall_result test_main()
 {
     std::vector<unsigned int> v(10);
     Fill(v);
-    
+
     array<unsigned int, 1> arr_uint(static_cast<int>(v.size()), v.begin());
     array_view<unsigned int, 1> av_uint(arr_uint);// Created for verification.
 	
@@ -30,7 +30,7 @@ runall_result test_main()
         array_view<int, 1> av_int = arr_uint.reinterpret_as<int>();
         results[i] = av_int[i];
     });
-    
+
     return Verify<int>(reinterpret_cast<int *>(av_uint.data()), results.data(), v.size()) ? runall_pass : runall_fail;
 }
 

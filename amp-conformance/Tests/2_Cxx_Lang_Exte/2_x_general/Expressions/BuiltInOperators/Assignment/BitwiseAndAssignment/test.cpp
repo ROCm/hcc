@@ -53,12 +53,12 @@ int main(int argc, char **argv)
     // Initialize input, outputs
     srand(13);
 
-    vector<int> A(size);     
-    InitializeArray(A, size);        
+    vector<int> A(size);
+    InitializeArray(A, size);
     array<int, 2> aA(e, A.begin(), A.end(), rv);
 
     // these are both input & output arrays
-    vector<int> B(size); 
+    vector<int> B(size);
     int value = rand();
     InitializeArray(B, size, value);
     array<int, 2> aB(e, B.begin(), B.end(), rv);
@@ -84,7 +84,7 @@ int main(int argc, char **argv)
                 printf("\nBitwise AND Assignment failed\n");
                 printf("-Expression: %d &= %d\n", value, A[i * N + j]);
                 printf("-Actual: B[%d] = %d, Expected: %d\n", i * N + j, B[i * N + j], expectedPb);
-                passed = false;                
+                passed = false;
                 break;
             }
         }

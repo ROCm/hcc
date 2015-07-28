@@ -10,7 +10,7 @@
 
 #include "./../../../member.h"
 
-int main() 
+int main()
 {
 	if (!is_gpu_hardware_available())
 		return runall_skip;
@@ -32,7 +32,7 @@ int main()
             passed = runall_pass;
     }
 
-    printf("%s\n", (passed == runall_pass) ? "Passed!" : "Failed!"); 
+    printf("%s\n", (passed == runall_pass) ? "Passed!" : "Failed!");
 
     return passed;
 }

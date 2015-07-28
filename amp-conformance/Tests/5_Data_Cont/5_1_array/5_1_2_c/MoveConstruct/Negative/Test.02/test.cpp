@@ -63,7 +63,7 @@ bool test_feature()
 }
 
 runall_result test_main()
-{ 
+{
     test_feature<int, 1, float>();
 
 	// We shouldn't compile

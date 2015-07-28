@@ -32,12 +32,10 @@ bool test(const accelerator_view& av, const extent<N>& ext)
 	array_view<int, N> vec_view(ext, vec);
 	vec_view.discard_data();
 
-	#pragma warning(disable:4871) // sum of registers times the number of threads (256) in a tile exceeds the recommended total 16384
 	parallel_for_each(av, ext, [=] (index<N> idx) restrict(amp)
 	{
 		vec_view[idx] = flatten(idx, ext) + 1;
 	});
-	#pragma warning(default:4871)
 
 	vec_view.synchronize();
 

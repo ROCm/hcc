@@ -34,11 +34,11 @@ bool test_feature()
     return false;
 }
 
-int main(int argc, char **argv) 
-{ 
+int main(int argc, char **argv)
+{
     test_feature<int>();
 
-    printf("Failed!"); 
+    printf("Failed!");
 
     return runall_fail;
 }

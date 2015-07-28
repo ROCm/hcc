@@ -27,7 +27,7 @@ bool test(accelerator_view &rv)
 
     array<int, 1> aA(e, A.begin(), rv);
 
-    parallel_for_each(aA.get_extent(), [&](index<1>idx) __GPU 
+    parallel_for_each(aA.get_extent(), [&](index<1>idx) __GPU
     {
         char &p1 = (char &)aA[idx]; // not allowed here
         short int &p2 = (short int &)aA[idx];

@@ -8,17 +8,15 @@
 
 #include "../../inc/common.h"
 
-#define __int32 int
-
 class c
 {
 public:
     c() __GPU_ONLY {}
     ~c() __GPU_ONLY {}
 
-    __int32 i;
+    int32_t i;
     double d;
-    unsigned __int32 ui;
+    uint32_t ui;
     float f;
 };
 
@@ -73,7 +71,7 @@ bool test(accelerator_view &rv)
         double tmpd = 0;
         for (int i = 0; i < 100; i++)
         {
-            if (!Equal((*p).d, tmpd) || !Equal((*p).i, (int)i) || !Equal((*p).ui, (unsigned __int32)i) || !Equal((*p).f, (float)i))
+            if (!Equal((*p).d, tmpd) || !Equal((*p).i, (int)i) || !Equal((*p).ui, (uint32_t)i) || !Equal((*p).f, (float)i))
             {
                 aA[idx] = 1;
             }

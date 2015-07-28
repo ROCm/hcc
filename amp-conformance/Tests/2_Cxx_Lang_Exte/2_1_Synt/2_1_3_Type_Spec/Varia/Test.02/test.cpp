@@ -11,14 +11,14 @@
 template <typename T>
 struct S
 {};
-    
+
 //explicit specialization
 
 template<> struct S<const int && (int) restrict(cpu)>
 {
     void do_something();
 };
-    
+
 int main()
 {
     // if this compiles it passes

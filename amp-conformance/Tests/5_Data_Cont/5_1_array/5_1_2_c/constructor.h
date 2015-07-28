@@ -65,8 +65,8 @@ bool test_array_type()
 {
     int data[5] = {1, 2, 3, 4, 5};
 
-    return test_array_type_rank<_type, 1>(data) && 
-        test_array_type_rank<_type, 2>(data) && 
+    return test_array_type_rank<_type, 1>(data) &&
+        test_array_type_rank<_type, 2>(data) &&
         test_array_type_rank<_type, 5>(data);
 }
 
@@ -339,7 +339,7 @@ bool test_feature_itr(_Iterator _first, _Iterator _last)
         {
             dst(idx) = 0;
         }
-        
+
     });
 
     std::vector<_type> dst_data = dst;
@@ -541,7 +541,7 @@ bool test_feature_itr(_BeginIterator _first)
     return Verify(dst_data, src_data);
 }
 
-// Testing accelerator/accelerator_view based array constructor 
+// Testing accelerator/accelerator_view based array constructor
 template<typename _type, int _rank, typename _accl>
 bool test_accl_constructor(_accl device)
 {
@@ -549,7 +549,7 @@ bool test_accl_constructor(_accl device)
     for (int i = 0; i < _rank; i++)
         edata[i] = 3;
 
-    { 
+    {
         extent<_rank> e1(edata);
         array<_type, _rank> src(e1, device);
 
@@ -627,7 +627,7 @@ bool test_accl_constructor(_accl device)
         {
             src[idx] = _rank;
         });
-        
+
         // Copy data to CPU
         vector<_type> opt(e1.size());
         opt = src;

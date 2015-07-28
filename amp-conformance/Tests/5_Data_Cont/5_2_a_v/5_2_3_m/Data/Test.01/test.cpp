@@ -20,7 +20,7 @@
 /// <tags>P1</tags>
 /// <summary>An array view can have it's data pointer accessed in the GPU context</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 
 using namespace Concurrency;
@@ -31,7 +31,7 @@ int main()
 {
     accelerator device = require_device(Device::ALL_DEVICES);
     accelerator_view acc_view = device.get_default_view();
-    
+
     const int size = 20;
 
     vector<int> vec(size);
@@ -46,11 +46,11 @@ int main()
     // fill this on the GPU
     vector<int> result_v(size);
     array_view<int, 1> result(20, result_v);
-    
+
     parallel_for_each(av.get_extent(), [av, result](index<1> i) __GPU {
        result.data()[i[0]] =  av.data()[i[0]]; // get and set data using the pointer
     });
-    
+
     return Verify(result.data(), av.data(), size) ? runall_pass : runall_fail;
 }
 

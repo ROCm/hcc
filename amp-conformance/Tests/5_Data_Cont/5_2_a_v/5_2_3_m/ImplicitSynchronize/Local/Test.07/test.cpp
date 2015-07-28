@@ -34,13 +34,13 @@ int main()
     ArrayViewTest<long, 1> av(extent<1>(50));
     ArrayViewTest<long, 1> section1 = av.section(index<1>(10), extent<1>(30));
     ArrayViewTest<long, 1> section2 = av.section(index<1>(0), extent<1>(25));
-    
+
     section1.view()[3] = 17;
     section1.set_known_value(index<1>(3), 17);
     section2.view()[13] = 19;
     section2.set_known_value(index<1>(13), 19);
     section2.view()[3] = 15;
     section2.set_known_value(index<1>(3), 15);
-    
+
     return av.view()[13] == 19 && av.view()[3] == 15 ? av.pass() : av.fail();
 }

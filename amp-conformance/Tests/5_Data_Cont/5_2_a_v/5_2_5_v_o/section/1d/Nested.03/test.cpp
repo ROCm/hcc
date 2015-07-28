@@ -31,9 +31,9 @@ int main()
     ArrayViewTest<long, 1> original(extent<1>(10));
     ArrayViewTest<long, 1> section1 = original.section(original.view().section(4, 4), index<1>(4));
     ArrayViewTest<long, 1> section2 = section1.section(section1.view().section(1, 3), index<1>(1));
-    
+
     // the index<1> parameters here are of the offset (second - first)
-    return 
+    return
         TestSection(original, section1, index<1>(4)) &&
         TestSection(original, section2, index<1>(5)) &&
         TestSection(section1, section2, index<1>(1))

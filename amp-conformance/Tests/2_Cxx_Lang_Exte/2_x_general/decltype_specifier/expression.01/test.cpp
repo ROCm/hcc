@@ -5,8 +5,8 @@
 // See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
 /// <tags>P1</tags>
 /// <summary>Verify decltype expression evaluation.</summary>
-#include <amp.h>
 #include <type_traits>
+#include <amp.h>
 #define TEST(a,b) static_assert(std::is_same<a,b>::value, "Test failed, type of \"" #a "\" != type of \"" #b "\".")
 #pragma warning(disable: 4101 4189) // unreferenced local variable; unreferenced initialized local variable
 
@@ -58,7 +58,7 @@ void f_cpu() restrict(cpu)
 		// Argument conversions
 		float f;
 #pragma warning(push)
-#pragma warning(disable: 4244) // conversion from 'float' to 'int' 
+#pragma warning(disable: 4244) // conversion from 'float' to 'int'
 		TEST(decltype(f_d_1(1.f)), int); // implicit floating-integral conversion of the argument
 		TEST(decltype(f_d_1(f)), int);
 #pragma warning(pop)
@@ -78,7 +78,7 @@ void f_cpu() restrict(cpu)
 		// Argument conversions
 		float f;
 #pragma warning(push)
-#pragma warning(disable: 4244) // conversion from 'float' to 'int' 
+#pragma warning(disable: 4244) // conversion from 'float' to 'int'
 		TEST(decltype(f_d_1(1.f)), int); // implicit floating-integral conversion of the argument
 		TEST(decltype(f_d_1(f)), int);
 #pragma warning(pop)
@@ -106,7 +106,7 @@ void f_amp() restrict(amp)
 		// Argument conversions
 		int i;
 #pragma warning(push)
-#pragma warning(disable: 4244) // conversion from 'int' to 'float' 
+#pragma warning(disable: 4244) // conversion from 'int' to 'float'
 		TEST(decltype(f_d_1(1)), float); // implicit floating-integral conversion of the argument
 		TEST(decltype(f_d_1(i)), float);
 #pragma warning(pop)
@@ -141,7 +141,7 @@ void f_amp() restrict(amp)
 		// Argument conversions
 		int i;
 	#pragma warning(push)
-	#pragma warning(disable: 4244) // conversion from 'int' to 'float' 
+	#pragma warning(disable: 4244) // conversion from 'int' to 'float'
 		TEST(decltype(f_d_1(1)), float); // implicit floating-integral conversion of the argument
 		TEST(decltype(f_d_1(i)), float);
 	#pragma warning(pop)
@@ -227,7 +227,7 @@ void f_cpu_amp() restrict(cpu,amp)
 		[=]
 		{
 			TEST(decltype(f), float);
-			TEST(decltype((f)), const float&); 
+			TEST(decltype((f)), const float&);
 			//TEST(decltype(rb), const bool&); // FE bug #386754
 			TEST(decltype((rb)), const bool&);
 		};
@@ -292,7 +292,7 @@ void f_cpu_amp() restrict(cpu,amp)
 		[=]
 		{
 			TEST(decltype(f), float);
-			TEST(decltype((f)), const float&); 
+			TEST(decltype((f)), const float&);
 			// TEST(decltype(rb), const bool&); // FE bug #386754
 			TEST(decltype((rb)), const bool&);
 		};

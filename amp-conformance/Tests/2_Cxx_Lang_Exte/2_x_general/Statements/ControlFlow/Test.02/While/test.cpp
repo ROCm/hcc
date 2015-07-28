@@ -11,7 +11,6 @@
 #include <amptest.h>
 #include <amptest_main.h>
 
-using namespace std;
 using namespace Concurrency;
 using namespace Concurrency::Test;
 
@@ -28,7 +27,7 @@ const int NumGroups  =  NumXGroups * NumYGroups;     // Make sure that Size is d
 
 template<typename ElementType>
 void CalculateGroupSum(ElementType* A, ElementType* B)
-{ 
+{
     int g = 0;
     for(int y = 0; y < YSize; y += YGroupSize)
     {
@@ -41,9 +40,9 @@ void CalculateGroupSum(ElementType* A, ElementType* B)
             for(int gy = y; gy < (y + YGroupSize); gy++)
             {
                 for(int gx = x; gx < (x + XGroupSize); gx++)
-                {        
+                {
                     int flatLocalIndex = gy * XSize + gx;
-                    B[g] += A[flatLocalIndex];                    
+                    B[g] += A[flatLocalIndex];
                 }
             }
             g++;
@@ -53,11 +52,11 @@ void CalculateGroupSum(ElementType* A, ElementType* B)
 
 //Calculate sum of all elements in a group - GPU version
 template<typename ElementType>
-void CalculateGroupSum(tiled_index<YGroupSize, XGroupSize> idx, int flatLocalIndex, const Concurrency::array<ElementType, 2> & fA, Concurrency::array<ElementType, 2> & fB) __GPU_ONLY
+void CalculateGroupSum(tiled_index<YGroupSize, XGroupSize> idx, int flatLocalIndex, const array<ElementType, 2> & fA, array<ElementType, 2> & fB) __GPU_ONLY
 {
     // use shared memory
-    tile_static ElementType shared[XGroupSize * YGroupSize];         
-    shared[flatLocalIndex] = fA[idx.global];            
+    tile_static ElementType shared[XGroupSize * YGroupSize];
+    shared[flatLocalIndex] = fA[idx.global];
     idx.barrier.wait();
 
     if(flatLocalIndex == 0)
@@ -73,23 +72,23 @@ void CalculateGroupSum(tiled_index<YGroupSize, XGroupSize> idx, int flatLocalInd
 }
 
 template <typename ElementType>
-void kernel(tiled_index<YGroupSize, XGroupSize> idx, const Concurrency::array<ElementType, 2> & fA, Concurrency::array<ElementType, 2> & fB, int x) __GPU_ONLY
+void kernel(tiled_index<YGroupSize, XGroupSize> idx, const array<ElementType, 2> & fA, array<ElementType, 2> & fB, int x) __GPU_ONLY
 {
     int flatLocalIndex = idx.local[0] * XGroupSize + idx.local[1];
 
     // Initialize to some fixed value; to check path when conditions are not true.
     // Only first thread initializes
-    if(flatLocalIndex == 0) fB[idx.tile] = 100;    
+    if(flatLocalIndex == 0) fB[idx.tile] = 100;
 
-    while(x > 1)  { while(x > 2)  { while(x > 3)  { while(x > 4)  { while(x > 5) { 
-        while(x > 6)  { while(x > 7)  { while(x > 8)  { while(x > 9)  { while(x > 10){ 
-            while(x > 11) { while(x > 12) { while(x > 13) { while(x > 14) { while(x > 15){     
+    while(x > 1)  { while(x > 2)  { while(x > 3)  { while(x > 4)  { while(x > 5) {
+        while(x > 6)  { while(x > 7)  { while(x > 8)  { while(x > 9)  { while(x > 10){
+            while(x > 11) { while(x > 12) { while(x > 13) { while(x > 14) { while(x > 15){
 
                 CalculateGroupSum<ElementType>(idx, flatLocalIndex, fA, fB);
 
-                break;} break;} break;} break;} break;}   
-            break;} break;} break;} break;} break;}   
-        break;} break;} break;} break;} break;}   
+                break;} break;} break;} break;} break;}
+            break;} break;} break;} break;} break;}
+        break;} break;} break;} break;} break;}
 }
 
 template <typename ElementType>
@@ -119,7 +118,7 @@ runall_result test()
     accelerator_view rv = device.get_default_view();
 
     Concurrency::extent<2> extentA(XSize, YSize), extentB(NumYGroups, NumXGroups);
-    Concurrency::array<ElementType, 2> fA(extentA, rv), fB(extentB, rv);
+    array<ElementType, 2> fA(extentA, rv), fB(extentB, rv);
 
     //forall where conditions are met
     copy(A, fA);
@@ -128,17 +127,17 @@ runall_result test()
         kernel<ElementType>(idx, fA, fB, x);
     });
 
-    copy(fB, B);     
+    copy(fB, B);
 
 
     if(!Verify<ElementType>(B, refB1, NumGroups))
     {
         passed = false;
-        cout << "Test1: failed" << endl;
-    }    
+        std::cout << "Test1: failed" << std::endl;
+    }
     else
     {
-        cout << "Test1: passed" << endl;
+        std::cout << "Test1: passed" << std::endl;
     }
 
 
@@ -154,12 +153,12 @@ runall_result test()
     if(!Verify<ElementType>(B, refB2, NumGroups))
     {
         passed = false;
-        cout << "Test2: " << "Failed!" << endl;
-    }        
+        std::cout << "Test2: " << "Failed!" << std::endl;
+    }
     else
     {
-        cout << "Test2: passed" << endl;
-    }      
+        std::cout << "Test2: passed" << std::endl;
+    }
 
 
     return passed;
@@ -169,27 +168,27 @@ runall_result test_main()
 {
     runall_result result;
 
-    cout << "Test shared memory with \'int\'" << endl;
+    std::cout << "Test shared memory with \'int\'" << std::endl;
     result = test<int>();
     if(result != runall_pass) return result;
 
-    cout << "Test shared memory with \'unsigned int\'" << endl;
+    std::cout << "Test shared memory with \'unsigned int\'" << std::endl;
     result = test<unsigned int>();
     if(result != runall_pass) return result;
 
-    cout << "Test shared memory with \'long\'" << endl;
+    std::cout << "Test shared memory with \'long\'" << std::endl;
     result = test<long>();
     if(result != runall_pass) return result;
 
-    cout << "Test shared memory with \'unsigned long\'" << endl;
+    std::cout << "Test shared memory with \'unsigned long\'" << std::endl;
     result = test<unsigned long>();
     if(result != runall_pass) return result;
 
-    cout << "Test shared memory with \'float\'" << endl;
+    std::cout << "Test shared memory with \'float\'" << std::endl;
     result = test<float>();
     if(result != runall_pass) return result;
 
-    cout << "Test shared memory with \'double\'" << endl;
+    std::cout << "Test shared memory with \'double\'" << std::endl;
     result = test<double>();
     if(result != runall_pass) return result;
 

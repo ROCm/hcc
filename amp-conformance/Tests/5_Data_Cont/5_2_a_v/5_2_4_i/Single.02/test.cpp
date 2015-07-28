@@ -29,23 +29,23 @@ using namespace Concurrency::Test;
 int main()
 {
     ArrayViewTest<int, 3> original(extent<3>(2, 3, 4));
-    
+
     // create projections
     ArrayViewTest<int, 2, 3> proj0 = original.projection(original.view()[0], 0);
     ArrayViewTest<int, 2, 3> proj1 = original.projection(original.view()[1], 1);
-    
+
     // set some data in the original
     original.view()[index<3>(0, 1, 2)] = 13;
     original.view()[index<3>(1, 2, 2)] = 17;
     original.set_known_value(index<3>(0, 1, 2), 13);
     original.set_known_value(index<3>(1, 2, 2), 17);
-    
+
     // set some data in the projections
     proj0.view()[index<2>(1, 1)] = 11;
     proj0.set_known_value(index<2>(1, 1), 11);
     proj1.view()[index<2>(1, 1)] = 12;
     proj1.set_known_value(index<2>(1, 1), 12);
-    
+
     // verify each data point through the array_view interface
     return
         original.view()(0, 1, 1) == 11 &&

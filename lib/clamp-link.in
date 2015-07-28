@@ -30,6 +30,7 @@ VERBOSE=0
 
 LOWER_OPENCL=@HAS_OPENCL@
 LOWER_HSA=@HAS_HSA@
+LOWER_HOF=@HAS_HSA_HOF@
 
 ################
 # Sanity check for HSAIL backend
@@ -51,7 +52,23 @@ if [ $LOWER_HSA == 1 ]; then
   fi
 fi
 
+################
+# Sanity check for HSA offline finalization
+################
 
+if [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 1 ]; then
+  # Path to HOF
+  HOF_BIN=@HOF_BIN@
+
+  if [ -d $HOF_BIN ] && [ -e $HOF_BIN/hof ]; then
+    # all HOF tools are available
+    LOWER_HOF=1
+  else
+    # disable HOF in case any of the required tools is missing
+    echo "WARNING: Missing HOF tools.  Disable HSA offline finalization."
+    LOWER_HOF=0
+  fi
+fi
 
 ################
 # link
@@ -178,16 +195,41 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
       popd > /dev/null
     fi
   fi
+
+  # HSA offline finalization
+  if [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 1 ]; then
+    # conduct HSA offline finalization
+    $HOF_BIN/hof -output=$TEMP_DIR/kernel.isa -brig $TEMP_DIR/kernel.brig
+    ret=$?
+    if [ $ret == 0 ]; then
+      # build a new kernel object
+      pushd . > /dev/null
+      cd $TEMP_DIR
+      $CLAMP_EMBED kernel.isa kernel_hof.o
+      popd > /dev/null
+
+      # debug purpose
+      # dump the brig
+      KMDUMPBRIG="${KMDUMPBRIG:=0}"
+      if [ $KMDUMPBRIG == "1" ]; then
+        cp $TEMP_DIR/kernel.isa ./dump.isa
+      fi
+    fi
+  fi
   
   if [ $ret == 0 ]; then
     # link everything together
-    if [ $LOWER_OPENCL == 1 ] && [ $LOWER_HSA == 1 ]; then
+    if [ $LOWER_OPENCL == 1 ] && [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 1 ]; then
+      ld --allow-multiple-definition $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $TEMP_DIR/kernel_hsa.o $TEMP_DIR/kernel_hof.o $LINK_HOST_ARGS $LINK_CPU_ARG $LINK_OTHER_ARGS
+    elif [ $LOWER_OPENCL == 1 ] && [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 0 ]; then
       ld --allow-multiple-definition $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS  $LINK_CPU_ARG $LINK_OTHER_ARGS
       ret=$?
     elif [ $LOWER_OPENCL == 1 ] && [ $LOWER_HSA == 0 ]; then
       ld --allow-multiple-definition $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $LINK_HOST_ARGS $LINK_CPU_ARG $LINK_OTHER_ARGS
       ret=$?
-    elif [ $LOWER_OPENCL == 0 ] && [ $LOWER_HSA == 1 ]; then
+    elif [ $LOWER_OPENCL == 0 ] && [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 1 ]; then
+      ld --allow-multiple-definition $TEMP_DIR/kernel_hsa.o $TEMP_DIR/kernel_hof.o $LINK_HOST_ARGS $LINK_CPU_ARG $LINK_OTHER_ARGS
+    elif [ $LOWER_OPENCL == 0 ] && [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 0 ]; then
       ld --allow-multiple-definition $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS $LINK_CPU_ARG $LINK_OTHER_ARGS
       ret=$?
     else
@@ -207,6 +249,10 @@ if [ -e $TEMP_DIR/kernel_spir.o ]; then
   rm $TEMP_DIR/kernel_spir.o
 fi
 
+if [ -e $TEMP_DIR/kernel_hof.o ]; then
+  rm $TEMP_DIR/kernel_hof.o
+fi
+
 if [ -e $TEMP_DIR/kernel_hsa.o ]; then
   rm $TEMP_DIR/kernel_hsa.o
 fi
@@ -221,6 +267,10 @@ fi
 
 if [ -e $TEMP_DIR/kernel.spir ]; then
   rm $TEMP_DIR/kernel.spir
+fi
+
+if [ -e $TEMP_DIR/kernel.isa ]; then
+  rm $TEMP_DIR/kernel.isa
 fi
 
 if [ -e $TEMP_DIR/kernel.brig ]; then

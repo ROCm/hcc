@@ -38,12 +38,12 @@ runall_result test_main()
 	
     array<int, 1> a(extent<1>(100));
     array_view<int, 1> av(a);
-    
+
     array_view<int, 1> section1 = av.section(extent<1>(15));
     section1[14] = 97;
     array_view<int, 1> section2 = av.section(index<1>(15), extent<1>(10));
     section2[0] = 98;
-    
+
     std::vector<int> result_v(2);
     array_view<int, 1> result(2, result_v);
     parallel_for_each(extent<1>(1), [=](index<1>) __GPU {
@@ -51,6 +51,6 @@ runall_result test_main()
         result[0] = local[4];
         result[1] = local[5];
     });
-    
+
     return result[0] == 97 && result[1] == 98 ? runall_pass : runall_fail;
 }

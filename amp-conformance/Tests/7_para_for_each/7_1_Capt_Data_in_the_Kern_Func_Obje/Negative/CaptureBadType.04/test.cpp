@@ -36,7 +36,7 @@ int main()
     const int size = 11;
     vector<int> c(size);
     Concurrency::extent<1> e(size);
-    Concurrency::array<int, 1> ac(e);
+    array<int, 1> ac(e);
 
     A a(22);
     parallel_for_each(ac.get_extent(), [&, a](index<1> idx) __GPU {

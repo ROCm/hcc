@@ -32,12 +32,12 @@ int main()
     c.assign(c.size(), 0);
 
     Concurrency::extent<1> e(size);
-    Concurrency::array<int, 1> ac(e, c.begin(), rv);
+    array<int, 1> ac(e, c.begin(), rv);
 
     // error: inner lambda has wrong order of mutable <-> __GPU
-    parallel_for_each(ac.get_extent(), [&](index<1> idx) __GPU { 
-        []() __GPU mutable {}(); ac[idx] += 1; 
-    }); 
+    parallel_for_each(ac.get_extent(), [&](index<1> idx) __GPU {
+        []() __GPU mutable {}(); ac[idx] += 1;
+    });
 
     c = ac;
 

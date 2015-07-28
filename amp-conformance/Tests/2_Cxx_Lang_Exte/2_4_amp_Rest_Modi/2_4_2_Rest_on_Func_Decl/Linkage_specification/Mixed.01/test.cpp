@@ -16,7 +16,7 @@ extern "C++" {
 
 extern "C" void hoo() restrict(cpu); // ok, single restriction modifier
 
-extern "C" void poo(); // default restriction modifier 
+extern "C" void poo(); // default restriction modifier
 
 extern "C" void qoo() restrict(amp); // ok, single restriction modifier
 

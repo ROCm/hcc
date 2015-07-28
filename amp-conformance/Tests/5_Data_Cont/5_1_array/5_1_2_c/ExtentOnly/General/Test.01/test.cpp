@@ -19,7 +19,7 @@ runall_result test_main()
 
 	result &= REPORT_RESULT((test_array_rank<int, 1>()));
 	result &= REPORT_RESULT((test_array_rank<int, 5>()));
-    
+
     return result;
 }
 

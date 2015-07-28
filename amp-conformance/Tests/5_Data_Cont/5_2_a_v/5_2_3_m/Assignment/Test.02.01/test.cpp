@@ -32,14 +32,14 @@ int main()
 {
     accelerator device = require_device(Device::ALL_DEVICES);
     accelerator_view acc_view = device.get_default_view();
-    
+
     // now assign av1 on the GPU and copy back the data
     std::vector<int> results_v(10, -1);
 	array_view<int, 2> results(5, 2, results_v);
 
 	std::vector<int> expected(results_v.size());
 	std::iota(expected.begin(), expected.end(), 0);
-    
+
     // something here will break if the extent aren't copied properly
     parallel_for_each(results.get_extent(), [=](index<2> i) __GPU {
 		int data[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
@@ -48,6 +48,6 @@ int main()
         results[i] = av1[i];
     });
     results.synchronize(); // push pending writes to the local vector
-    
+
     return Verify(results_v, expected) ? runall_pass : runall_fail;
 }

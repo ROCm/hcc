@@ -18,7 +18,7 @@
 //--------------------------------------------------------------------------------------
 //
 /// <tags>P1</tags>
-/// <summary>Copy construct an array_view from another array_view. Ensure that a shallow copy is made by 
+/// <summary>Copy construct an array_view from another array_view. Ensure that a shallow copy is made by
 /// changing data using one view and make sure the other view can see the update</summary>
 #include <amptest.h>
 #include <amptest_main.h>
@@ -35,7 +35,7 @@ runall_result test_main()
     Fill<int>(vec.data(), size);
 
     array_view<int, 1> av1(size, vec);
-    array_view<int, 1> av2(av1); // copy construct 
+    array_view<int, 1> av2(av1); // copy construct
 
     if(av1.get_extent()[0] != av2.get_extent()[0]) // Verify extent
     {
@@ -49,7 +49,7 @@ runall_result test_main()
         printf("array_view data does not match original data. FAIL!\n");
         return runall_fail;
     }
-    
+
     accelerator device;
     if (!get_device(Device::ALL_DEVICES, device))
     {
@@ -65,14 +65,14 @@ runall_result test_main()
 
     // vec should be updated after this
     printf("Accessing first element of array_view [%d] to force synchronize.\n", av1[0]);
-    
+
     // verify data
     if(!VerifyDataOnCpu(av2, vec))
     {
         printf("data copied to vector doesnt contained updated data. FAIL!\n");
         return runall_fail;
     }
-    
+
     printf("PASS!\n");
     return runall_pass;
 }

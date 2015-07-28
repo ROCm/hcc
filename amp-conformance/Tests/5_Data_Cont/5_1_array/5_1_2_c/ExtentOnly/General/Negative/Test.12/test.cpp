@@ -42,7 +42,7 @@ bool test_feature()
 }
 
 runall_result test_main()
-{ 
+{
     test_feature<int, 3>();
 
 	// We shouldn't compile

@@ -15,7 +15,7 @@ public:
     MyClass() {}
     MyClass() __GPU_ONLY {}
 
-    ~MyClass(); 
+    ~MyClass();
 };
 
 int main()

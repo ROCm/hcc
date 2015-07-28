@@ -39,7 +39,7 @@ bool test(accelerator_view &rv)
         type *p;
         if (aFlag[0] == 0)
             p = &v1;
-        else 
+        else
             p = &v2;
 
         *p = (type)1;

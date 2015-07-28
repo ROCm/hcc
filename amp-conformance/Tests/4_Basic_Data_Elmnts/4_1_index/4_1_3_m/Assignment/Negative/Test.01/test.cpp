@@ -15,12 +15,12 @@
 using namespace Concurrency;
 using namespace Concurrency::Test;
 
-runall_result test_main() 
+runall_result test_main()
 {
     const int N = 3;
-    index<N> idx1(10, 11, 12);    
+    index<N> idx1(10, 11, 12);
     index<N+1> idx2;
-    
+
     // Assign to index of different rank
     idx2 = idx1;
 

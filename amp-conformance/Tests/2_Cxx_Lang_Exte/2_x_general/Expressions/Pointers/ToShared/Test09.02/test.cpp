@@ -33,7 +33,7 @@ void f3(float *pf, double *pd, int *pi, unsigned long *pul, u *pu, s *ps, c *pc)
 
     s soi = *pst;
 
-    u* put = pu;    
+    u* put = pu;
     put->d = 4;
     put->f = 2;
 

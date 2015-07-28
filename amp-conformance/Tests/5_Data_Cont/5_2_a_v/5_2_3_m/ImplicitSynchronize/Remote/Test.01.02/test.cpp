@@ -38,15 +38,15 @@ runall_result test_main()
 	
     array<int, 1> a(extent<1>(100));
     array_view<int, 1> av(a);
-    
+
     array_view<int, 1> local = av.section(index<1>(10), extent<1>(10));
     local[0] = 13;
-    
+
     parallel_for_each(extent<1>(1), [=](index<1>) __GPU {
         array_view<int, 1> remote = av.section(extent<1>(15));
         remote[13] = remote[10];
         remote[10] = 17;
     });
-    
+
     return av[10] == 17 && av[13] == 13 ? runall_pass : runall_fail;
-} 
+}

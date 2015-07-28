@@ -25,7 +25,7 @@ int restrict(int a, int b) __GPU
 }
 
 // Main entry point
-int main(int argc, char **argv) 
+int main(int argc, char **argv)
 {
     bool passed = true;
     int x = 10;

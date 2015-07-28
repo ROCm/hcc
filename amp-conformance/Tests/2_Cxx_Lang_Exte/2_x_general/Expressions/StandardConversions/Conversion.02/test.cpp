@@ -19,7 +19,6 @@
 using std::vector;
 using namespace Concurrency;
 using namespace Concurrency::Test;
-using namespace std;
 
 // IsEqual is generic equality test for all types
 template<typename T>
@@ -119,7 +118,7 @@ bool VerifyConversion(T input, R gpu_result)
     if (DEBUG)
     {
         printf("(generic) verification %s to %s\n", typeid(T).name(), typeid(R).name());
-        cout << "input:" << input << " gpu_result:" << gpu_result << " cpu_result:" << cpu_result << endl;
+        std::cout << "input:" << input << " gpu_result:" << gpu_result << " cpu_result:" << cpu_result << std::endl;
     }
 
     bool result = false;
@@ -130,7 +129,7 @@ bool VerifyConversion(T input, R gpu_result)
         // e.g. int = unsigned int + float + unsigned int * float
         result = IsEqual(static_cast<float>(cpu_result), static_cast<float>(gpu_result));
     }
-    else if (typeid(input) == typeid(double)) 
+    else if (typeid(input) == typeid(double))
     {
         // If right side of our arithmetic calculation is double, then lets do doubles comparison
         // e.g. unsigned int = int + double + int * double
@@ -165,17 +164,17 @@ void InitializeArrays(vector<srcType1> &vInput1, vector<srcType2> &vInput2, int 
         int min1 = min;
         double scale = rand() / static_cast<double>(RAND_MAX);
 
-        // min for unsigned int has to be adjusted 
+        // min for unsigned int has to be adjusted
         if (typeid(srcType1) == typeid(unsigned int))
         {
             min1 = 0;
         }
 
-        vInput1[i] = static_cast<srcType1>(scale * (max - min1) + min1); 
+        vInput1[i] = static_cast<srcType1>(scale * (max - min1) + min1);
 
         if (DEBUG)
         {
-            cout << "generated input[" << i << "]:" << vInput1[i] << endl;
+            std::cout << "generated input[" << i << "]:" << vInput1[i] << std::endl;
         }
     }
 
@@ -188,13 +187,13 @@ void InitializeArrays(vector<srcType1> &vInput1, vector<srcType2> &vInput2, int 
         if (typeid(srcType2) == typeid(unsigned int))
         {
             min2 = 0;
-        }        
+        }
 
-        vInput2[i] = static_cast<srcType2>(scale * (max - min2) + min2); 
+        vInput2[i] = static_cast<srcType2>(scale * (max - min2) + min2);
 
         if (DEBUG)
         {
-            cout << "generated input[" << i << "]:" << vInput2[i] << endl;
+            std::cout << "generated input[" << i << "]:" << vInput2[i] << std::endl;
         }
     }
 }
@@ -218,14 +217,14 @@ bool test_arithmetic_conversion()
     accelerator device = require_device_with_double(Device::ALL_DEVICES);
     accelerator_view rv = device.get_default_view();
 
-    // Initialize input 
+    // Initialize input
     InitializeArrays<dstType, srcType1, srcType2>(A, B, size);
 
     Concurrency::extent<1> e(size);
 
-    Concurrency::array<srcType1, 1> aA(e, A.begin(), A.end(), rv);
-    Concurrency::array<srcType2, 1> aB(e, B.begin(), B.end(), rv);
-    Concurrency::array<dstType, 1> aC(e, rv);
+    array<srcType1, 1> aA(e, A.begin(), A.end(), rv);
+    array<srcType2, 1> aB(e, B.begin(), B.end(), rv);
+    array<dstType, 1> aC(e, rv);
 
     parallel_for_each(aA.get_extent(), [&](index<1> idx) __GPU {
         arithmetic_conversion<dstType, srcType1, srcType2>(aC[idx], aA[idx], aB[idx]);
@@ -236,7 +235,7 @@ bool test_arithmetic_conversion()
     bool passed = true;
 
     // Verify results
-    for (int i = 0; i < size; i++) 
+    for (int i = 0; i < size; i++)
     {
         auto input = A[i] + B[i] + A[i] * B[i];
 
@@ -257,7 +256,7 @@ bool test_arithmetic_conversion()
 int main(int argc, char **argv)
 {
     srand(2010);
-    cout.setf(ios::fixed | ios::showpoint);
+    std::cout.setf(std::ios::fixed | std::ios::showpoint);
 
     bool result = true;
 

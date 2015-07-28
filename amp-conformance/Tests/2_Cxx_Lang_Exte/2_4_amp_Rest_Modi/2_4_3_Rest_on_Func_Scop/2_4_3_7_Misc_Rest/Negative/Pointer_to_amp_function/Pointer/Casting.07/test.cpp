@@ -9,7 +9,7 @@
 
 #include <amptest.h>
 
-int func(int flag) 
+int func(int flag)
 {
     return 1;
 }

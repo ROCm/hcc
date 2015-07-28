@@ -39,11 +39,11 @@ runall_result test_main()
 	
     array<int> a(extent<1>(100));
     array_view<int, 1> av(a);
-    
+
     std::vector<int> random_data(a.get_extent().size());
     Fill(random_data);
     array<int, 1> random_array(a.get_extent(), random_data.begin(), random_data.end());
-    
+
     // create a section verify that writes to the underlying data are visible
     parallel_for_each(av.get_extent(), [=, &random_array](index<1> i) __GPU {
         array_view<int, 1> section = av.section(av.get_extent());
@@ -51,4 +51,4 @@ runall_result test_main()
     });
 
     return VerifyDataOnCpu(av, random_data) ? runall_pass : runall_fail;
-}     
+}

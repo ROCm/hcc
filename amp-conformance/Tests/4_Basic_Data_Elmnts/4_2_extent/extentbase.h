@@ -5,7 +5,7 @@
 // THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 // INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 // See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
-#include <amptest.h> 
+#include <amptest.h>
 #include <amptest_main.h>
 #include <vector>
 
@@ -23,7 +23,7 @@ bool test() restrict(amp,cpu)
     return test_feature<T>();
 }
 
-runall_result test_main() 
+runall_result test_main()
 {
 	accelerator_view av = require_device().get_default_view();
 	runall_result result;

@@ -9,7 +9,7 @@
 
 #include <amptest.h>
 
-int func(int) 
+int func(int)
 {
     return 0;
 }

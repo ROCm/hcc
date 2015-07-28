@@ -20,7 +20,7 @@
 /// <tags>P1</tags>
 /// <summary>discard_data with array_view</summary>
 
-// Create an array_view on CPU and create three random section of it. 
+// Create an array_view on CPU and create three random section of it.
 // Modify all the three section on gpu, discard their data, call synchronize().
 // Do it in a loop for multiple time and verify the underlying data.
 
@@ -55,7 +55,7 @@ runall_result test_main()
 		array_view<int, 3> arr_v2 = arr_v.section(idx2);
 		array_view<int, 3> arr_v3 = arr_v.section(idx3);
 		
-		parallel_for_each(extent<3>(2, 2, 2), [=] (index<3> idx) restrict(amp) { 
+		parallel_for_each(extent<3>(2, 2, 2), [=] (index<3> idx) restrict(amp) {
 			arr_v1[idx] = 2;
 			arr_v2[idx] = 3;
 			arr_v3[idx] = 4;

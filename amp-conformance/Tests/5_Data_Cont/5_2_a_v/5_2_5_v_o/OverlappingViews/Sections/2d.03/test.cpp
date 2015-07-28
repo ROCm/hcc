@@ -37,9 +37,9 @@ runall_result test_main()
     }
 	
     OverlapTest<int, 2> t(extent<2>(5, 5));
-    
+
     return t.positive_test(
         index<2>(0, 0), extent<2>(5, 3), //local
         index<2>(0, 2), extent<2>(3, 2) //remote
-    ) ? t.pass() : t.fail(); 
+    ) ? t.pass() : t.fail();
 }

@@ -12,7 +12,7 @@ using std::vector;
 using namespace Concurrency;
 using namespace Concurrency::Test;
 
-void test() 
+void test()
 {
     double *p;
     double *&rp = p;

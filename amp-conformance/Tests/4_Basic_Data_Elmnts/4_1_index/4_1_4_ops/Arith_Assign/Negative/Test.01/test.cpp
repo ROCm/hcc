@@ -14,7 +14,7 @@
 //#Expects: Error: test.cpp\(52\) : error C2679
 //#Expects: Error: test.cpp\(52\) : error C2088
 //#Expects: Error: test.cpp\(53\) : error C2679
-//#Expects: Error: test.cpp\(53\) : error C2088 
+//#Expects: Error: test.cpp\(53\) : error C2088
 //#Expects: Error: test.cpp\(64\) : error C2679
 //#Expects: Error: test.cpp\(64\) : error C2088
 //#Expects: Error: test.cpp\(65\) : error C2679
@@ -24,7 +24,7 @@
 //#Expects: Error: test.cpp\(77\) : error C2679
 //#Expects: Error: test.cpp\(77\) : error C2088
 
-#include <amptest.h> 
+#include <amptest.h>
 
 using namespace Concurrency;
 using namespace Concurrency::Test;
@@ -79,8 +79,8 @@ bool test4() restrict(cpu,amp)
     return false;
 }
 
-runall_result test_main() 
-{ 
+runall_result test_main()
+{
     //Always fail if this runs to completion. Test is expected to fail compilation
     return runall_fail;
 }

@@ -54,7 +54,10 @@ if [ $KMDUMPLLVM == "1" ]; then
   cp $1.linked.bc ./dump.linked.bc
 fi
 
-$LLVM_BIN/opt -O3 -verify $1.linked.bc -o $1.opt.bc
+
+# Optimization notes:
+#  -disable-simplify-libcalls:  prevents transforming loops into library calls such as memset, memcopy on GPU 
+$LLVM_BIN/opt -O3 -disable-simplify-libcalls -verify $1.linked.bc -o $1.opt.bc
 # error handling for HSAIL opt
 RETVAL=$?
 if [ $RETVAL != 0 ]; then
@@ -76,7 +79,7 @@ if [ $KMDUMPBRIG == "1" ]; then
     cp $1.hsail ./dump.hsail
 fi
 
-cat $NEWLIB/new_delete.hsail >> $1.hsail
+cat $NEWLIB/hsa_builtins.hsail >> $1.hsail
 $HSAIL_ASM -assemble -o $1.brig $1.hsail
 # error handling for HSAILasm
 RETVAL=$?
@@ -85,5 +88,5 @@ if [ $RETVAL != 0 ]; then
 fi
 
 if [ $KMDUMPBRIG == "1" ]; then
-    cp $1.brig ./dump.new_delete.brig
+    cp $1.brig ./dump.hsa_builtins.brig
 fi

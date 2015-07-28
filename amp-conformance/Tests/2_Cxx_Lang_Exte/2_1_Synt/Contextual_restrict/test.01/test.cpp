@@ -32,7 +32,7 @@ int test1(int a)
 }
 
 int test2(int a) __GPU
-{    
+{
     int restrict = a * a;
     return ((restrict == a*a) ? 0 : 1);
 }
@@ -41,7 +41,7 @@ int test3(const int start)
 {
     int restrict[2];
     for(int i = 0; i < 2;i++)
-    { 
+    {
        restrict[i] = start + i;
     }
 
@@ -52,7 +52,7 @@ int test4(const int start) __GPU
 {
     int restrict[2];
     for(int i = 0; i < 2;i++)
-    { 
+    {
        restrict[i] = start + i;
     }
 
@@ -63,7 +63,7 @@ int test5(const int x)
 {
     Foo *restrict = new Foo(x);
 
-    int result = (restrict->data == x) ? 0 : 1;    
+    int result = (restrict->data == x) ? 0 : 1;
     delete restrict;
 
     return result;
@@ -90,15 +90,15 @@ int test7(const int x) __GPU
     {
          int restrict = x  + 1;
 
-     
-         result = restrict * 10;         
+
+         result = restrict * 10;
     }
 
     return (result == (x + 1)*10);
 }
 
 // Main entry point
-int main(int argc, char **argv) 
+int main(int argc, char **argv)
 {
     bool passed = true;
     int x = 10;
@@ -133,7 +133,7 @@ int main(int argc, char **argv)
     else
     {
         passed = false;
-        cout << "Failed!" << endl;        
+        cout << "Failed!" << endl;
     }
 
     cout << "Test: declare function modifieras a local variable of type array in function with modifier" << endl;
@@ -146,7 +146,7 @@ int main(int argc, char **argv)
         passed = false;
         cout << "Failed1" << endl;
     }
- 
+
     cout << "Test: declare function modifieras a local variable of user defined data type" << endl;
     if(test5(x) == 0)
     {

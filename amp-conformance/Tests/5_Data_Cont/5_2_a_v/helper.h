@@ -19,7 +19,7 @@
 //
 //
 // Helper functions to compare data in a vector to data in an array_view
-// These are needed because the .data() member which serializes data out of 
+// These are needed because the .data() member which serializes data out of
 // on array is not available on a 2D and 3D array_view
 
 #pragma once
@@ -31,8 +31,8 @@ using namespace Concurrency;
 using namespace Concurrency::Test;
 using std::vector;
 
-template<typename T>
-bool compare(const vector<T>& vec, const array_view<T, 1>& av)
+template<typename T, typename U>
+bool compare(const vector<T>& vec, const array_view<U, 1>& av)
 {
 	for(int i = 0; i < av.get_extent()[0]; i++)
 	{
@@ -46,8 +46,8 @@ bool compare(const vector<T>& vec, const array_view<T, 1>& av)
 	return true;
 }
 
-template<typename T>
-bool compare(const vector<T>& vec, const array_view<T, 2>& av)
+template<typename T, typename U>
+bool compare(const vector<T>& vec, const array_view<U, 2>& av)
 {
 	for(int i = 0; i < av.get_extent()[1]; i++)
 	{
@@ -64,8 +64,8 @@ bool compare(const vector<T>& vec, const array_view<T, 2>& av)
 	return true;
 }
 
-template<typename T>
-bool compare(const vector<T>& vec, const array_view<T, 3>& av)
+template<typename T, typename U>
+bool compare(const vector<T>& vec, const array_view<U, 3>& av)
 {
 	for(int i = 0; i < av.get_extent()[0]; i++)
 	{

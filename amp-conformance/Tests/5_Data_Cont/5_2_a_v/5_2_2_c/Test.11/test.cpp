@@ -38,7 +38,7 @@ runall_result test_main()
     Fill<int>(vec1.data(), size);
     vector<int> vec2(vec1);
 
-    array_view<int, 3> av1(m, n, o, vec1);
+    array_view<const int, 3> av1(m, n, o, vec1);
     array_view<int, 3> av2(m, n, o, vec2);
 
     if(m != av1.get_extent()[0]) // Verify extent
@@ -70,7 +70,7 @@ runall_result test_main()
     }
 
     accelerator_view acc_view = require_device().get_default_view();
-    
+
     // use in parallel_for_each
     parallel_for_each(acc_view, av1.get_extent(), [=](index<3> idx) restrict(amp)
     {
@@ -88,9 +88,9 @@ runall_result test_main()
         {
 			Log(LogType::Error) << compose_incorrect_element_message(i, vec1[i] + 1, vec2[i]) << std::endl;
             passed = false;
-        } 
+        }
     }
-        
+
     return passed;
 }
 

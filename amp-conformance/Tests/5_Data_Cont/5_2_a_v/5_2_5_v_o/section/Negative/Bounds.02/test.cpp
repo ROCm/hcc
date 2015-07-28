@@ -21,7 +21,7 @@
 /// <summary>Test a section that is too long</summary>
 
 
-#include <amptest.h> 
+#include <amptest.h>
 
 using namespace Concurrency;
 using namespace Concurrency::Test;

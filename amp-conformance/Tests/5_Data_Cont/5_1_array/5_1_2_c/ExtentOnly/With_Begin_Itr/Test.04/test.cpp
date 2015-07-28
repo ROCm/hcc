@@ -6,7 +6,7 @@
 // INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 // See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
 /// <tags>P1</tags>
-/// <summary>Array(3D) constructed with only begin iterator - use hash_set</summary>
+/// <summary>Array(3D) constructed with only begin iterator - use unordered_set</summary>
 
 #include <unordered_set>
 #include "./../../../constructor.h"
@@ -20,7 +20,7 @@ bool test_feature()
     {
         std::unordered_set<_type> data;
         for (int i = 0; i < _D0*_D1*_D2; i++)
-            data.insert((_type)rand());
+            data.insert((_type)i);
 
         bool pass = test_feature_itr<_type, _rank, _D0, _D1, _D2>(data.begin()) &&
             test_feature_itr<_type, _rank, _D0, _D1, _D2>(data.cbegin());
@@ -34,19 +34,19 @@ bool test_feature()
 
 runall_result test_main()
 {
-	accelerator::set_default(require_device().get_device_path());
+    accelerator::set_default(require_device().get_device_path());
 
-	runall_result result;
+    runall_result result;
 
-	result &= REPORT_RESULT((test_feature<int, 1, 1, 1>()));
-	result &= REPORT_RESULT((test_feature<int, 7, 31, 2>()));
-	result &= REPORT_RESULT((test_feature<int, 5, 91, 5>()));
+    result &= REPORT_RESULT((test_feature<int, 1, 1, 1>()));
+    result &= REPORT_RESULT((test_feature<int, 7, 31, 2>()));
+    result &= REPORT_RESULT((test_feature<int, 5, 91, 5>()));
     result &= REPORT_RESULT((test_feature<unsigned, 31, 19, 1>()));
-	result &= REPORT_RESULT((test_feature<signed, 91, 5, 5>()));
+    result &= REPORT_RESULT((test_feature<signed, 91, 5, 5>()));
     result &= REPORT_RESULT((test_feature<float, 2, 31, 19>()));
-	result &= REPORT_RESULT((test_feature<float, 5, 1, 5>()));
-	result &= REPORT_RESULT((test_feature<double, 13, 7, 7>()));
+    result &= REPORT_RESULT((test_feature<float, 5, 1, 5>()));
+    result &= REPORT_RESULT((test_feature<double, 13, 7, 7>()));
 
-	return result;
+    return result;
 }
 

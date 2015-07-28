@@ -33,18 +33,10 @@ runall_result test_main()
 
 	runall_result result;
 
-	result &= REPORT_RESULT(expect_exception(av,
-		extent<1>(1764).tile<19>(),
-		"concurrency::parallel_for_each (tiling): unsupported compute domain, the extent of dimension 0 of the compute domain (1764) cannot be evenly divided by the extent of dimension 0 of the tile (19)."));
-	result &= REPORT_RESULT(expect_exception(av,
-		extent<1>(1024).tile<1023>(),
-		"concurrency::parallel_for_each (tiling): unsupported compute domain, the extent of dimension 0 of the compute domain (1024) cannot be evenly divided by the extent of dimension 0 of the tile (1023)."));
-	result &= REPORT_RESULT(expect_exception(av,
-		extent<1>(1023).tile<1024>(),
-		"concurrency::parallel_for_each (tiling): unsupported compute domain, the extent of dimension 0 of the compute domain (1023) cannot be evenly divided by the extent of dimension 0 of the tile (1024)."));
-	result &= REPORT_RESULT(expect_exception(av,
-		extent<1>(std::numeric_limits<int>::max()).tile<2>(),
-		"concurrency::parallel_for_each (tiling): unsupported compute domain, the extent of dimension 0 of the compute domain (2147483647) cannot be evenly divided by the extent of dimension 0 of the tile (2)."));
+	result &= REPORT_RESULT(expect_exception(av, extent<1>(1764).tile<19>()));
+	result &= REPORT_RESULT(expect_exception(av, extent<1>(1024).tile<1023>()));
+	result &= REPORT_RESULT(expect_exception(av, extent<1>(1023).tile<1024>()));
+	result &= REPORT_RESULT(expect_exception(av, extent<1>(std::numeric_limits<int>::max()).tile<2>()));
 
 	return result;
 }

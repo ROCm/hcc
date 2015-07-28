@@ -17,22 +17,22 @@ int & test(int &in) __GPU
     return in;
 }
 
-int main() 
+int main()
 {
     std::vector<int> v(1);
     array_view<int, 1> av(1, v);
-    
+
     auto lam = [=](index<1> i) __GPU {
         int a = 15;
         av[0] = test(a);
     };
     parallel_for_each(extent<1>(1), lam);
-    
+
     if (av[0] =! 15)
     {
         Log() << "Result was: " << av[0] << " Expected: 15" << std::endl;
         return runall_fail;
     }
-    
+
     return runall_pass;
 }

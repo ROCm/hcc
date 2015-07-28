@@ -16,7 +16,7 @@ public:
     {
         m1 = x;
     }
-    
+
 private:
     int m1;
 };

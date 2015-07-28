@@ -20,7 +20,7 @@
 /// <tags>P1</tags>
 /// <summary>Test that a array_view<const int, N> can be created can be created from a const int*</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 #include <algorithm>
 
@@ -34,10 +34,10 @@ int main()
 
     int rw_data[size];
     for(int i = 0; i < size; i++) rw_data[i] = i;
-    
+
     int ro_data[size];
-    for(int i = 0; i < size; i++) ro_data[i] = i;    
-    const int* data = ro_data; // const int *    
+    for(int i = 0; i < size; i++) ro_data[i] = i;
+    const int* data = ro_data; // const int *
 
     array_view<const int, 1> av1(size, data);
     array_view<int, 1> av2(size, rw_data); // for verification

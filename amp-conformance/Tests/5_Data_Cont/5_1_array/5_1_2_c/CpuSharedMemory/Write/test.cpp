@@ -22,7 +22,7 @@ runall_result test_main()
 		return runall_skip;
 	}
 	
-	extent<RANK> arr_extent = CreateRandomExtent<RANK>(256);            
+	extent<RANK> arr_extent = CreateRandomExtent<RANK>(256);
 		array<DATA_TYPE, RANK> arr(arr_extent, device.get_default_view(), access_type_write);
 	
 	if(!VerifyCpuAccessType(arr, access_type_write)) { return runall_fail; }
@@ -48,6 +48,7 @@ runall_result test_main()
 	}
 	
 	vec.clear();
+	vec.resize(arr.get_extent().size());
 	copy(arr, vec.begin());
 	
 	if(vec[arr.get_extent().size() - 1] != 50)
@@ -60,5 +61,5 @@ runall_result test_main()
 	
 	vec[arr.get_extent().size() - 1] = 300;
 	
-	return REPORT_RESULT((VerifyAllSameValue(vec, static_cast<DATA_TYPE>(300)) == -1));	
+	return REPORT_RESULT((VerifyAllSameValue(vec, static_cast<DATA_TYPE>(300)) == -1));
 }

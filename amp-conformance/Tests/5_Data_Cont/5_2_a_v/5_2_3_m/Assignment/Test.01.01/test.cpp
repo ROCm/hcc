@@ -31,16 +31,16 @@ int main()
 {
     accelerator device = require_device(Device::ALL_DEVICES);
     accelerator_view acc_view = device.get_default_view();
-    
+
     // create two AVs with different data
     std::vector<int> v1(20);
     Fill<int>(v1);
     array_view<int, 2> av1(5, 4, v1);
-    
+
     // now assign av2 on the GPU and copy back the data
     std::vector<int> results_v(v1.size());
     array_view<int, 2> results(5, 4, results_v);
-    
+
     // something here will break if the extent aren't copied properly
     parallel_for_each(av1.get_extent(), [=](index<2> i) __GPU {
         // av2 should now have the same extent and data as av1
@@ -50,6 +50,6 @@ int main()
         results[i] = av2[i];
     });
     results.synchronize(); // push pending writes to the local vector
-    
+
     return Verify(results_v, v1) ? runall_pass : runall_fail;
 }

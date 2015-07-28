@@ -41,19 +41,19 @@ runall_result test_main()
     {
         accel2.set_default_cpu_access_type(DEF_ACCESS_TYPE2);
     }
-    
+
     std::vector<int> v(25 * 25);
     Fill(v);
     array<int, 2> a(extent<2>(25, 25), v.begin(), accel1.get_default_view());
     array_view<int, 2> av(a);
-    
+
     // read remotely on the GPU
     std::vector<int> result_1v(5 * 5);
     array_view<int, 2> result_1(extent<2>(5, 5), result_1v);
     parallel_for_each(accel2.get_default_view(), result_1.get_extent(), [=](index<2> i) __GPU {
         result_1[i] = av[i + index<2>(20, 20)];
     });
-    
+
     // force a synch
     av(0, 0);
     Log() << "Comparing Array View on Accel1 to the vector that was used to initalize it" << std::endl;
@@ -61,7 +61,7 @@ runall_result test_main()
     {
         return runall_fail;
     }
-    
+
     // force a synch
     result_1(0, 0);
     Log() << "Comparing Array View on Accel1 with Array View on Accel2" << std::endl;

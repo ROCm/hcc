@@ -8,7 +8,7 @@
 /// <tags>P1</tags>
 /// <summary>Check for addition and muplication operators, a @ b is equal to b @ a.</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 
 using namespace Concurrency;
 using namespace Concurrency::Test;
@@ -17,7 +17,7 @@ using std::vector;
 int test() __GPU
 {
     int data[] = {-100, -10, -1, 0,  1,  10, 100};
-    extent<7> e(data);    
+    extent<7> e(data);
     extent<7> er1;
     extent<7> er2;
 
@@ -42,7 +42,7 @@ int test() __GPU
 
 void kernel(index<1>& idx, array<int, 1>& result) __GPU
 {
-    result[idx] = test();    
+    result[idx] = test();
 }
 
 const int size = 10;
@@ -79,15 +79,15 @@ int test_device()
     return 0;
 }
 
-int main(int argc, char **argv) 
-{ 
+int main(int argc, char **argv)
+{
     int result = test();
-    
-    printf("Test %s on host\n", ((result == 0) ? "passed" : "failed")); 
+
+    printf("Test %s on host\n", ((result == 0) ? "passed" : "failed"));
     if(result != 0) return result;
-    
+
     result = test_device();
-    printf("Test %s on device\n", ((result == 0) ? "passed" : "failed")); 
+    printf("Test %s on device\n", ((result == 0) ? "passed" : "failed"));
     return result;
 }
 

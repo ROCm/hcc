@@ -31,15 +31,15 @@ int main()
 {
     ArrayViewTest<int, 2> original(extent<2>(3, 3));
     ArrayViewTest<int, 2> section = original.section(original.view().section(index<2>(1, 1)), index<2>(1, 1));
-    
+
     // set a value through the section -- this is (1,1) in the original view
     section.view()[index<2>(0, 0)] = 5;
     section.set_known_value(index<2>(0, 0), 5);
-    
+
     // set a value through the original -- this is (1, 0) in the section
     original.view()[index<2>(2, 1)] = 2;
     original.set_known_value(index<2>(2, 1), 2);
-    
+
     return
         original.view()[index<2>(1, 1)] == 5 &&
         section.view()[index<2>(1, 0)] == 2

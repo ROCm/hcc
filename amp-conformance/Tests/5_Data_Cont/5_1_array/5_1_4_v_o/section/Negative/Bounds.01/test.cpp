@@ -15,7 +15,7 @@
 using namespace Concurrency;
 using namespace Concurrency::Test;
 
-runall_result test_main() 
+runall_result test_main()
 {
     std::vector<int> v(10);
     array<int, 1> arr(extent<1>(10), v.begin());

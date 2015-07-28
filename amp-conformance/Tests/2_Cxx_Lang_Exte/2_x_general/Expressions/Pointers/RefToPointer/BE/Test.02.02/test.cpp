@@ -4,7 +4,7 @@
 // THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 // See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
 /// <tags>P0</tags>
-/// <summary>Initialize reference to pointers from two (or even more) array_views pointer which points to array_view which are members of a structure (controlled by a switch variable). Each pointer is initialized from two structures. Totally there are four structures. 
+/// <summary>Initialize reference to pointers from two (or even more) array_views pointer which points to array_view which are members of a structure (controlled by a switch variable). Each pointer is initialized from two structures. Totally there are four structures.
 /// One structure has real data. The other three have fake data. Test control flow. In control flow, all the correct data is from more than one struture. </summary>
 
 #include <amptest.h>
@@ -47,7 +47,7 @@ struct sc
 };
 
 template<typename type>
-void init(vector<type> &a, vector<type> &b,  vector<type> &c, vector<type> &fa1, vector<type> &fa2, vector<type> &fa3, vector<type> &fa4, vector<type> &refb, vector<type> &refc, vector<int> &flag) 
+void init(vector<type> &a, vector<type> &b,  vector<type> &c, vector<type> &fa1, vector<type> &fa2, vector<type> &fa3, vector<type> &fa4, vector<type> &refb, vector<type> &refc, vector<int> &flag)
 {
     srand(2010);
     size_t size = a.size();
@@ -123,7 +123,7 @@ void cf_test(type *&rpa, type *&rpb, type *&rpc, array_view<int, 1> &flag) __GPU
                     }
                 }
                 break;
-            }        
+            }
         }
         break;
     default:
@@ -136,7 +136,7 @@ void cf_test(type *&rpa, type *&rpb, type *&rpc, array_view<int, 1> &flag) __GPU
 }
 
 template<typename type>
-struct kernel_global 
+struct kernel_global
 {
     static void func(tiled_index<BLOCK_SIZE_1D, BLOCK_SIZE_1D, BLOCK_SIZE_1D> idx, sab<type> *&rpab, sab<type> *&rpabf1, sab<type> *&rpabf2, sc<type> *&rpc, sc<type> *&rpcf1, sc<type> *&rpcf2, array_view<int, 1> flag, int b1, int b2, int b3, int b4) __GPU_ONLY
     {
@@ -160,7 +160,7 @@ template<typename type>
 struct kernel_shared
 {
     static void func(tiled_index<BLOCK_SIZE_1D, BLOCK_SIZE_1D, BLOCK_SIZE_1D> idx, sab<type> *&rpab, sab<type> *&rpabf1, sab<type> *&rpabf2, sc<type> *&rpc, sc<type> *&rpcf1, sc<type> *&rpcf2, array_view<int, 1> flag, int b1, int b2, int b3, int b4) __GPU_ONLY
-    { 
+    {
         tile_static type share_a[BLOCK_SIZE_1D][BLOCK_SIZE_1D][BLOCK_SIZE_1D];
         tile_static type share_b[BLOCK_SIZE_1D][BLOCK_SIZE_1D][BLOCK_SIZE_1D];
         tile_static type share_c[BLOCK_SIZE_1D][BLOCK_SIZE_1D][BLOCK_SIZE_1D];
@@ -204,7 +204,7 @@ template<typename type>
 struct kernel_local
 {
     static void func(tiled_index<BLOCK_SIZE_1D, BLOCK_SIZE_1D, BLOCK_SIZE_1D> idx, sab<type> *&rpab, sab<type> *&rpabf1, sab<type> *&rpabf2, sc<type> *&rpc, sc<type> *&rpcf1, sc<type> *&rpcf2, array_view<int, 1> flag, int b1, int b2, int b3, int b4) __GPU_ONLY
-    { 
+    {
         type local_a[LOCAL_SIZE_1D][LOCAL_SIZE_1D][LOCAL_SIZE_1D];
         type local_b[LOCAL_SIZE_1D][LOCAL_SIZE_1D][LOCAL_SIZE_1D];
         type local_c[LOCAL_SIZE_1D][LOCAL_SIZE_1D][LOCAL_SIZE_1D];
@@ -312,7 +312,7 @@ void run_mykernel(vector<type> &a, vector<type> &b, vector<type> &c, vector<type
 }
 
 template<typename type, typename k>
-bool test(accelerator_view av) 
+bool test(accelerator_view av)
 {
     vector<type> a(DOMAIN_SIZE_1D * DOMAIN_SIZE_1D * DOMAIN_SIZE_1D);
     vector<type> b(DOMAIN_SIZE_1D * DOMAIN_SIZE_1D * DOMAIN_SIZE_1D);

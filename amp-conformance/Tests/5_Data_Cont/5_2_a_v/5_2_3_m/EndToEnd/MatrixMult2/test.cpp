@@ -54,18 +54,18 @@ void mxm_cpu_seq(vector<float> & A, vector<float> & B, vector<float> & C,
                 C[i * N + j] += A[i * W + k] * B[k * N + j];
             }
         }
-    }   
+    }
 }
 
 index<2> calc_idx(int tileIdx0, int tileIdx1, index<2> localIdx) restrict(amp)
 {
-    index<2> idx(tileIdx0 * BLOCK_SIZE + localIdx[0], 
+    index<2> idx(tileIdx0 * BLOCK_SIZE + localIdx[0],
         tileIdx1 * BLOCK_SIZE + localIdx[1]);
     return idx;
 }
 
 
-void mxm_kernel_tiling(tiled_index<BLOCK_SIZE, BLOCK_SIZE> idxGroup, 
+void mxm_kernel_tiling(tiled_index<BLOCK_SIZE, BLOCK_SIZE> idxGroup,
     float & c, const array_view<float, 2> &mA, const array_view<float, 2> &mB) restrict(amp)
 {
     index<2> tileIdx = idxGroup.tile;
@@ -88,12 +88,12 @@ void mxm_kernel_tiling(tiled_index<BLOCK_SIZE, BLOCK_SIZE> idxGroup,
         for (int k = 0; k < BLOCK_SIZE; k++)
         {
             tempC += localA[localIdx[0]][k] * localA[k+BLOCK_SIZE][localIdx[1]];
-        }        
+        }
 
         idxGroup.barrier.wait();
     }
 
-    c = tempC;    
+    c = tempC;
 }
 
 
@@ -121,7 +121,7 @@ runall_result test_main()
 	Log() << "Performing matrix multiply on the CPU..." << std::endl;
     mxm_cpu_seq(A, B, refC, M, N, W);
 	Log() << "   Done." << std::endl;
-    
+
 	accelerator acc = require_device();
 	
 	if(acc.get_supports_cpu_shared_memory())

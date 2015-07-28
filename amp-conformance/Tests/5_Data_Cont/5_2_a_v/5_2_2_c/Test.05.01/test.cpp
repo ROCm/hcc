@@ -19,7 +19,7 @@
 //
 /// <tags>P1</tags>
 /// <summary>Test that an array_view can be constructed from a T* in a CPU restricted function</summary>
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 #include <algorithm>
 
@@ -31,7 +31,7 @@ int main()
 {
     accelerator device = require_device(Device::ALL_DEVICES);
     accelerator_view acc_view = device.get_default_view();
-    
+
     const int size = 100;
 
     vector<int> vec(size);
@@ -54,7 +54,7 @@ int main()
         printf("array_view data does not match original data. FAIL!\n");
         return runall_fail;
     }
-    
+
     // use in parallel_for_each
     parallel_for_each(acc_view, av1.get_extent(), [=] (index<1> idx) __GPU
     {
@@ -63,7 +63,7 @@ int main()
 
     // vec should be updated after this
     printf("Accessing first element of array_view [%d] to force synchronize.\n", av2[0]);
-    
+
     // verify data
     for(int i = 0; i < size; i++)
     {
@@ -79,7 +79,7 @@ int main()
             return runall_fail;
         }
     }
-    
+
     printf("PASS!\n");
     return runall_pass;
 }

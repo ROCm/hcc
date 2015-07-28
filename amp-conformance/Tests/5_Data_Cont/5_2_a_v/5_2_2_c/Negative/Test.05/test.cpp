@@ -24,7 +24,7 @@
 //#Expects: Error: error C3581
 //#Expects: Error: error C3581
 
-#include <amptest.h> 
+#include <amptest.h>
 
 using namespace Concurrency;
 using namespace Concurrency::Test;

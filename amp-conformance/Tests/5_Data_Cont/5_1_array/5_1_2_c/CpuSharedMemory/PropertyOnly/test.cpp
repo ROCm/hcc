@@ -14,7 +14,7 @@ using namespace Concurrency::Test;
 
 runall_result test1()
 {
-	extent<2> arr_extent = CreateRandomExtent<2>(64);        
+	extent<2> arr_extent = CreateRandomExtent<2>(64);
     	array<float, 2> arr(arr_extent);
 	
 	return REPORT_RESULT(VerifyCpuAccessType(arr, ACCESS_TYPE));
@@ -37,7 +37,7 @@ runall_result test2()
 
 runall_result test3()
 {
-	extent<3> arr_extent = CreateRandomExtent<3>(64);  
+	extent<3> arr_extent = CreateRandomExtent<3>(64);
 	std::vector<int> cont(arr_extent.size(), 10);
 	array<int, 3> arr(arr_extent, cont.begin());
 	
@@ -46,7 +46,7 @@ runall_result test3()
 
 runall_result test4()
 {
-	extent<2> arr_extent = CreateRandomExtent<2>(64);  
+	extent<2> arr_extent = CreateRandomExtent<2>(64);
 	std::vector<int> cont(arr_extent.size(), 10);
 	array<int, 2> arr(arr_extent, cont.begin(), cont.end());
 	
@@ -95,7 +95,7 @@ runall_result test6()
 
 runall_result test7()
 {
-	extent<3> arr_extent = CreateRandomExtent<3>(64);  
+	extent<3> arr_extent = CreateRandomExtent<3>(64);
 	
 	array_view<int , 3> arr_v(arr_extent);
 	array_view<const int, 3> arr_v_c(arr_v);	
@@ -106,7 +106,7 @@ runall_result test7()
 
 runall_result test8(accelerator& device)
 {
-	extent<2> arr_extent = CreateRandomExtent<2>(64);  
+	extent<2> arr_extent = CreateRandomExtent<2>(64);
 	
 	array_view<int , 2> arr_v(arr_extent);
 	array_view<const int, 2> arr_v_c(arr_v);	
@@ -117,7 +117,7 @@ runall_result test8(accelerator& device)
 
 runall_result test9(accelerator& device)
 {
-	extent<2> arr_extent = CreateRandomExtent<2>(64);        
+	extent<2> arr_extent = CreateRandomExtent<2>(64);
     array<float, 2> arr(arr_extent, device.get_default_view(), ACCESS_TYPE);
 	
 	return REPORT_RESULT(VerifyCpuAccessType(arr, ACCESS_TYPE));
@@ -140,7 +140,7 @@ runall_result test10(accelerator& device)
 
 runall_result test11(accelerator& device)
 {
-	extent<3> arr_extent = CreateRandomExtent<3>(64);  
+	extent<3> arr_extent = CreateRandomExtent<3>(64);
 	std::vector<int> cont(arr_extent.size(), 10);
 	array<int, 3> arr(arr_extent, cont.begin(), device.get_default_view(), ACCESS_TYPE);
 	
@@ -149,7 +149,7 @@ runall_result test11(accelerator& device)
 
 runall_result test12(accelerator& device)
 {
-	extent<2> arr_extent = CreateRandomExtent<2>(64);  
+	extent<2> arr_extent = CreateRandomExtent<2>(64);
 	std::vector<int> cont(arr_extent.size(), 10);
 	array<int, 2> arr(arr_extent, cont.begin(), cont.end(), device.get_default_view(), ACCESS_TYPE);
 	

@@ -14,7 +14,7 @@ namespace Concurrency
 {
 	namespace Test
 	{
-		std::string convert_to_utf8(const std::wstring& str) { return convert_to_utf8(str.c_str()); }; 
+		std::string convert_to_utf8(const std::wstring& str) { return convert_to_utf8(str.c_str()); };
 
 		/// <summary>Converts a null terminated wchar_t string to UTF-8.</summary>
 		/// <param name="str">null-terminated wchar_t string</param>
@@ -36,7 +36,7 @@ namespace Concurrency
 
 #pragma warning(disable:4996)
 			size_t wlen = mbstowcs(nullptr, str.c_str(), 0);
-			if (wlen == (size_t)-1) 
+			if (wlen == (size_t)-1)
 			{
 				return std::wstring(L"[convert_to_wchar_t() failed]");
 			}
@@ -62,11 +62,11 @@ namespace Concurrency
 
 		std::string AMP_TEST_API remove_quote(const std::string& str)
 		{
-			if(str.length() >= 2 && 
-				*str.begin() == '\"' && 
+			if(str.length() >= 2 &&
+				*str.begin() == '\"' &&
 				*(--str.end()) == '\"')
 			{
-				return std::string(++str.begin(), --str.end());   
+				return std::string(++str.begin(), --str.end());
 			}
 
 			return str;
@@ -74,11 +74,11 @@ namespace Concurrency
 
 		std::wstring AMP_TEST_API remove_quote(const std::wstring& str)
 		{
-			if(str.length() >= 2 && 
-				*str.begin() == L'\"' && 
+			if(str.length() >= 2 &&
+				*str.begin() == L'\"' &&
 				*(--str.end()) == L'\"')
 			{
-				return std::wstring(++str.begin(), --str.end());   
+				return std::wstring(++str.begin(), --str.end());
 			}
 
 			return str;
