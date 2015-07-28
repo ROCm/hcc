@@ -2701,6 +2701,8 @@ private:
         friend struct pfe_helper;
 };
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-variable"
 template <int N, typename Kernel>
 __attribute__((noinline,used))
 void parallel_for_each(const accelerator_view& av, extent<N> compute_domain,
@@ -2747,9 +2749,11 @@ void parallel_for_each(const accelerator_view& av, extent<N> compute_domain,
     int* foo = reinterpret_cast<int*>(&pfe_wrapper<N, Kernel>::__cxxamp_trampoline);
 #endif
 }
+#pragma clang diagnostic pop
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
+#pragma clang diagnostic ignored "-Wunused-variable"
 //ND async_parallel_for_each, nontiled
 template <int N, typename Kernel>
 __attribute__((noinline,used)) completion_future async_parallel_for_each(
@@ -2786,6 +2790,8 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
 }
 #pragma clang diagnostic pop
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-variable"
 //1D parallel_for_each, nontiled
 template <typename Kernel>
 __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av,
@@ -2814,6 +2820,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
   auto bar = &Kernel::operator();
 #endif
 }
+#pragma clang diagnostic pop
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
@@ -2841,6 +2848,8 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
 }
 #pragma clang diagnostic pop
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-variable"
 //2D parallel_for_each, nontiled
 template <typename Kernel>
 __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av,
@@ -2870,6 +2879,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
   auto bar = &Kernel::operator();
 #endif
 }
+#pragma clang diagnostic pop
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
@@ -2898,6 +2908,8 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
 }
 #pragma clang diagnostic pop
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-variable"
 //3D parallel_for_each, nontiled
 template <typename Kernel>
 __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av,
@@ -2934,6 +2946,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
   auto bar = &Kernel::operator();
 #endif
 }
+#pragma clang diagnostic pop
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
@@ -2969,6 +2982,8 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
 }
 #pragma clang diagnostic pop
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-variable"
 //1D parallel_for_each, tiled
 template <int D0, typename Kernel>
 __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av,
@@ -3002,6 +3017,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
   auto bar = &Kernel::operator();
 #endif
 }
+#pragma clang diagnostic pop
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
@@ -3035,6 +3051,8 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
 }
 #pragma clang diagnostic pop
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-variable"
 //2D parallel_for_each, tiled
 template <int D0, int D1, typename Kernel>
 __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av,
@@ -3070,6 +3088,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
   auto bar = &Kernel::operator();
 #endif
 }
+#pragma clang diagnostic pop
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
@@ -3105,6 +3124,8 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
 }
 #pragma clang diagnostic pop
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-variable"
 //3D parallel_for_each, tiled
 template <int D0, int D1, int D2, typename Kernel>
 __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av,
@@ -3148,6 +3169,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
   auto bar = &Kernel::operator();
 #endif
 }
+#pragma clang diagnostic pop
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
