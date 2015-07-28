@@ -273,6 +273,15 @@ remove_copy_if(ExecutionPolicy&& exec,
 }
 
 
+// reverse
+template <typename ExecutionPolicy, class BidirIt>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, void>::type
+reverse(ExecutionPolicy&& exec,
+        BidirIt first, BidirIt last) {
+    return std::reverse(first, last);
+}
+
+
 } // inline namespace v1
 } // namespace parallel
 } // namespace experimental 
