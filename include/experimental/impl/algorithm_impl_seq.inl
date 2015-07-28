@@ -327,6 +327,25 @@ unique(ExecutionPolicy&& exec,
 }
 
 
+// unique_copy
+template <typename ExecutionPolicy, typename InputIt, typename OutputIt>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
+unique_copy(ExecutionPolicy&&,
+            InputIt first, InputIt last,
+            OutputIt d_first) {
+    return std::unique_copy(first, last, d_first);
+}
+
+template <typename ExecutionPolicy, typename InputIt, typename OutputIt, typename BinaryPredicate>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
+unique_copy(ExecutionPolicy&& exec,
+            InputIt first, InputIt last,
+            OutputIt d_first,
+            BinaryPredicate p) {
+    return std::unique_copy(first, last, d_first, p);
+}
+
+
 } // inline namespace v1
 } // namespace parallel
 } // namespace experimental 
