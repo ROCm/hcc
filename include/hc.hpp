@@ -126,16 +126,16 @@ private:
       completion_future async_parallel_for_each(const accelerator_view&, const extent<3>&, const Kernel&);
 
   // tiled async_parallel_for_each, 3D version
-  template <int D0, int D1, int D2, typename Kernel> friend
-      completion_future async_parallel_for_each(const accelerator_view&, Concurrency::tiled_extent<D0,D1,D2>, const Kernel&);
+  template <typename Kernel> friend
+      completion_future async_parallel_for_each(const accelerator_view&, const tiled_extent<3>&, const Kernel&);
 
   // tiled async_parallel_for_each, 2D version
-  template <int D0, int D1, typename Kernel> friend
-      completion_future async_parallel_for_each(const accelerator_view&, Concurrency::tiled_extent<D0,D1>, const Kernel&);
+  template <typename Kernel> friend
+      completion_future async_parallel_for_each(const accelerator_view&, const tiled_extent<2>&, const Kernel&);
 
   // tiled async_parallel_for_each, 1D version
-   template <int D0, typename Kernel> friend
-      completion_future async_parallel_for_each(const accelerator_view&, Concurrency::tiled_extent<D0>, const Kernel&);
+  template <typename Kernel> friend
+      completion_future async_parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
 
 
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
@@ -220,8 +220,8 @@ inline accelerator accelerator_view::get_accelerator() const { return pQueue->ge
 const wchar_t accelerator::cpu_accelerator[] = L"cpu";
 const wchar_t accelerator::default_accelerator[] = L"default";
 
-// FIXME: curretly hc::completion_future is just a replica of Concurrency::completion_future
 // FIXME: needs to think about what its new semantic should be
+// FIXME: get create_marker() implemented
 class completion_future {
 public:
 
@@ -312,7 +312,6 @@ private:
     completion_future(const std::shared_future<void> &__future)
         : __amp_future(__future) {}
 
-    // FIXME: move to hc namespace
     // non-tiled async_parallel_for_each
     // generic version
     template <int N, typename Kernel> friend
@@ -331,19 +330,16 @@ private:
         completion_future async_parallel_for_each(const accelerator_view&, const extent<3>&, const Kernel&);
 
     // tiled async_parallel_for_each, 3D version
-    template <int D0, int D1, int D2, typename Kernel> friend
-        completion_future async_parallel_for_each(const accelerator_view&,
-                                                  Concurrency::tiled_extent<D0,D1,D2>, const Kernel& f);
+    template <typename Kernel> friend
+        completion_future async_parallel_for_each(const accelerator_view&, const tiled_extent<3>&, const Kernel&);
 
     // tiled async_parallel_for_each, 2D version
-    template <int D0, int D1, typename Kernel> friend
-        completion_future async_parallel_for_each(const accelerator_view&,
-                                                  Concurrency::tiled_extent<D0,D1>, const Kernel& f);
+    template <typename Kernel> friend
+        completion_future async_parallel_for_each(const accelerator_view&, const tiled_extent<2>&, const Kernel&);
 
     // tiled async_parallel_for_each, 1D version
-     template <int D0, typename Kernel> friend
-        completion_future async_parallel_for_each(const accelerator_view&,
-                                                  Concurrency::tiled_extent<D0>, const Kernel& f);
+    template <typename Kernel> friend
+        completion_future async_parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
 };
 
 
@@ -755,8 +751,11 @@ private:
 #endif // __KALMAR_ACCELERATOR__
   {}
 
-  template<typename Kernel>
-  friend void parallel_for_each(const accelerator_view&, const tiled_extent<N>&, ts_allocator&, const Kernel&);
+  template<typename Kernel> friend
+      void parallel_for_each(const accelerator_view&, const tiled_extent<N>&, ts_allocator&, const Kernel&);
+
+  template<typename Kernel> friend
+      completion_future async_parallel_for_each(const accelerator_view&, const tiled_extent<N>&, const Kernel&);
 };
 
 template<>
@@ -792,8 +791,11 @@ private:
 #endif // __KALMAR_ACCELERATOR__
   {}
 
-  template<typename Kernel>
-  friend void parallel_for_each(const accelerator_view&, const tiled_extent<1>&, ts_allocator&, const Kernel&);
+  template<typename Kernel> friend
+      void parallel_for_each(const accelerator_view&, const tiled_extent<1>&, ts_allocator&, const Kernel&);
+
+  template<typename Kernel> friend
+      completion_future async_parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
 };
 
 template<>
@@ -830,43 +832,43 @@ private:
 #endif // __KALMAR_ACCELERATOR__
   {}
 
-  template<typename Kernel>
-  friend void parallel_for_each(const accelerator_view&, const tiled_extent<2>&, ts_allocator&, const Kernel&);
+  template<typename Kernel> friend
+      void parallel_for_each(const accelerator_view&, const tiled_extent<2>&, ts_allocator&, const Kernel&);
+
+  template<typename Kernel> friend
+      completion_future async_parallel_for_each(const accelerator_view&, const tiled_extent<2>&, const Kernel&);
 };
 
 // async pfe
 template <int N, typename Kernel>
 completion_future async_parallel_for_each(const accelerator_view&, const extent<N>&, const Kernel&);
 
-template <int D0, int D1, int D2, typename Kernel>
-completion_future async_parallel_for_each(const accelerator_view&,
-                                          Concurrency::tiled_extent<D0,D1,D2>, const Kernel&);
+template <typename Kernel>
+completion_future async_parallel_for_each(const accelerator_view&, const tiled_extent<3>&, const Kernel&);
 
-template <int D0, int D1, typename Kernel>
-completion_future async_parallel_for_each(const accelerator_view&,
-                                          Concurrency::tiled_extent<D0,D1>, const Kernel&);
+template <typename Kernel>
+completion_future async_parallel_for_each(const accelerator_view&, const tiled_extent<2>&, const Kernel&);
 
-template <int D0, typename Kernel>
-completion_future async_parallel_for_each(const accelerator_view&,
-                                          Concurrency::tiled_extent<D0>, const Kernel&);
+template <typename Kernel>
+completion_future async_parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
 
 template <int N, typename Kernel>
 completion_future async_parallel_for_each(const extent<N>& compute_domain, const Kernel& f) {
     return async_parallel_for_each(accelerator::get_auto_selection_view(), compute_domain, f);
 }
 
-template <int D0, int D1, int D2, typename Kernel>
-completion_future async_parallel_for_each(Concurrency::tiled_extent<D0,D1,D2> compute_domain, const Kernel& f) {
+template <typename Kernel>
+completion_future async_parallel_for_each(const tiled_extent<3>& compute_domain, const Kernel& f) {
     return async_parallel_for_each(accelerator::get_auto_selection_view(), compute_domain, f);
 }
 
-template <int D0, int D1, typename Kernel>
-completion_future async_parallel_for_each(Concurrency::tiled_extent<D0,D1> compute_domain, const Kernel& f) {
+template <typename Kernel>
+completion_future async_parallel_for_each(const tiled_extent<2>& compute_domain, const Kernel& f) {
     return async_parallel_for_each(accelerator::get_auto_selection_view(), compute_domain, f);
 }
 
-template <int D0, typename Kernel>
-completion_future async_parallel_for_each(Concurrency::tiled_extent<D0> compute_domain, const Kernel& f) {
+template <typename Kernel>
+completion_future async_parallel_for_each(const tiled_extent<1>& compute_domain, const Kernel& f) {
     return async_parallel_for_each(accelerator::get_auto_selection_view(), compute_domain, f);
 }
 
@@ -1036,9 +1038,9 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
 //1D async_parallel_for_each, tiled
-template <int D0, typename Kernel>
+template <typename Kernel>
 __attribute__((noinline,used)) completion_future async_parallel_for_each(
-    const accelerator_view& av, Concurrency::tiled_extent<D0> compute_domain, const Kernel& f) restrict(cpu,amp) {
+    const accelerator_view& av, const tiled_extent<1>& compute_domain, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
   if(compute_domain[0]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
@@ -1046,8 +1048,10 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
   if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
   size_t ext = compute_domain[0];
-  size_t tile = compute_domain.tile_dim0;
-  static_assert( compute_domain.tile_dim0 <= 1024, "The maximum nuimber of threads in a tile is 1024");
+  size_t tile = compute_domain.tile_dim[0];
+  if (static_cast<size_t>(compute_domain.tile_dim[0]) > 1024) {
+    throw invalid_compute_domain("The maximum number of threads in a tile is 1024");
+  }
   if(ext % tile != 0) {
     throw invalid_compute_domain("Extent can't be evenly divisble by tile size.");
   }
@@ -1056,7 +1060,7 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
   }
   return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 1>(av.pQueue, &ext, &tile, f));
 #else //if __KALMAR_ACCELERATOR__ != 1
-  Concurrency::tiled_index<D0> this_is_used_to_instantiate_the_right_index;
+  tiled_index<1> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
   auto foo = &Kernel::__cxxamp_trampoline;
@@ -1068,9 +1072,9 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
 //2D async_parallel_for_each, tiled
-template <int D0, int D1, typename Kernel>
+template <typename Kernel>
 __attribute__((noinline,used)) completion_future async_parallel_for_each(
-    const accelerator_view& av, Concurrency::tiled_extent<D0, D1> compute_domain, const Kernel& f) restrict(cpu,amp) {
+    const accelerator_view& av, const tiled_extent<2>& compute_domain, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
   if(compute_domain[0]<=0 || compute_domain[1]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
@@ -1079,9 +1083,11 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
     throw invalid_compute_domain("Extent size too large.");
   size_t ext[2] = { static_cast<size_t>(compute_domain[1]),
                     static_cast<size_t>(compute_domain[0])};
-  size_t tile[2] = { compute_domain.tile_dim1,
-                     compute_domain.tile_dim0};
-  static_assert( (compute_domain.tile_dim1 * compute_domain.tile_dim0)<= 1024, "The maximum nuimber of threads in a tile is 1024");
+  size_t tile[2] = { static_cast<size_t>(compute_domain.tile_dim[1]),
+                     static_cast<size_t>(compute_domain.tile_dim[0]) };
+  if (static_cast<size_t>(compute_domain.tile_dim[1] * compute_domain.tile_dim[0]) > 1024) {
+    throw invalid_compute_domain("The maximum number of threads in a tile is 1024");
+  }
   if((ext[0] % tile[0] != 0) || (ext[1] % tile[1] != 0)) {
     throw invalid_compute_domain("Extent can't be evenly divisble by tile size.");
   }
@@ -1090,7 +1096,7 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
   }
   return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 2>(av.pQueue, ext, tile, f));
 #else //if __KALMAR_ACCELERATOR__ != 1
-  Concurrency::tiled_index<D0, D1> this_is_used_to_instantiate_the_right_index;
+  tiled_index<2> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
   auto foo = &Kernel::__cxxamp_trampoline;
@@ -1102,9 +1108,9 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
 //3D async_parallel_for_each, tiled
-template <int D0, int D1, int D2, typename Kernel>
+template <typename Kernel>
 __attribute__((noinline,used)) completion_future async_parallel_for_each(
-    const accelerator_view& av, Concurrency::tiled_extent<D0, D1, D2> compute_domain, const Kernel& f) restrict(cpu,amp) {
+    const accelerator_view& av, const tiled_extent<3>& compute_domain, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
   if(compute_domain[0]<=0 || compute_domain[1]<=0 || compute_domain[2]<=0) {
     throw invalid_compute_domain("Extent is less or equal than 0.");
@@ -1120,10 +1126,12 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
   size_t ext[3] = { static_cast<size_t>(compute_domain[2]),
                     static_cast<size_t>(compute_domain[1]),
                     static_cast<size_t>(compute_domain[0])};
-  size_t tile[3] = { compute_domain.tile_dim2,
-                     compute_domain.tile_dim1,
-                     compute_domain.tile_dim0};
-  static_assert(( compute_domain.tile_dim2 * compute_domain.tile_dim1* compute_domain.tile_dim0)<= 1024, "The maximum nuimber of threads in a tile is 1024");
+  size_t tile[3] = { static_cast<size_t>(compute_domain.tile_dim[2]),
+                     static_cast<size_t>(compute_domain.tile_dim[1]),
+                     static_cast<size_t>(compute_domain.tile_dim[0]) };
+  if (static_cast<size_t>(compute_domain.tile_dim[2] * compute_domain.tile_dim[1]* compute_domain.tile_dim[0]) > 1024) {
+    throw invalid_compute_domain("The maximum number of threads in a tile is 1024");
+  }
   if((ext[0] % tile[0] != 0) || (ext[1] % tile[1] != 0) || (ext[2] % tile[2] != 0)) {
     throw invalid_compute_domain("Extent can't be evenly divisble by tile size.");
   }
@@ -1132,7 +1140,7 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
   }
   return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 3>(av.pQueue, ext, tile, f));
 #else //if __KALMAR_ACCELERATOR__ != 1
-  Concurrency::tiled_index<D0, D1, D2> this_is_used_to_instantiate_the_right_index;
+  tiled_index<3> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
   auto foo = &Kernel::__cxxamp_trampoline;
@@ -1319,7 +1327,7 @@ void parallel_for_each(const accelerator_view& av,
   size_t tile[2] = { static_cast<size_t>(compute_domain.tile_dim[1]),
                      static_cast<size_t>(compute_domain.tile_dim[0]) };
   if (static_cast<size_t>(compute_domain.tile_dim[1] * compute_domain.tile_dim[0]) > 1024) {
-    throw invalid_compute_domain("The maximum nuimber of threads in a tile is 1024");
+    throw invalid_compute_domain("The maximum number of threads in a tile is 1024");
   }
   if((ext[0] % tile[0] != 0) || (ext[1] % tile[1] != 0)) {
     throw invalid_compute_domain("Extent can't be evenly divisble by tile size.");
@@ -1371,7 +1379,7 @@ void parallel_for_each(const accelerator_view& av,
                      static_cast<size_t>(compute_domain.tile_dim[1]),
                      static_cast<size_t>(compute_domain.tile_dim[0]) };
   if (static_cast<size_t>(compute_domain.tile_dim[2] * compute_domain.tile_dim[1]* compute_domain.tile_dim[0]) > 1024) {
-    throw invalid_compute_domain("The maximum nuimber of threads in a tile is 1024");
+    throw invalid_compute_domain("The maximum number of threads in a tile is 1024");
   }
   if((ext[0] % tile[0] != 0) || (ext[1] % tile[1] != 0) || (ext[2] % tile[2] != 0)) {
     throw invalid_compute_domain("Extent can't be evenly divisble by tile size.");

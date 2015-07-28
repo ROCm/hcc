@@ -35,21 +35,6 @@ template <int N> class extent;
 template <int D0, int D1=0, int D2=0> class tiled_extent;
 } // namespace Concurrency
 
-// forward declaration
-namespace hc {
-class accelerator_view;
-class completion_future;
-
-template<int D0_, int D1_, int D2_, typename K>
-completion_future async_parallel_for_each(const accelerator_view&, Concurrency::tiled_extent<D0_, D1_, D2_>, const K&);
-
-template<int D0_, int D1_, typename K>
-completion_future async_parallel_for_each(const accelerator_view&, Concurrency::tiled_extent<D0_, D1_>, const K&);
-
-template<int D, typename K>
-completion_future async_parallel_for_each(const accelerator_view&, Concurrency::tiled_extent<D>, const K&);
-} // namespace hc
-
 // namespace alias
 // namespace concurrency is an alias of namespace Concurrency
 namespace concurrency = Concurrency;
@@ -619,10 +604,6 @@ class tiled_index {
 template<typename K, int D1_, int D2_, int D3_>
   friend void partitioned_task_tile(K const&, tiled_extent<D1_, D2_, D3_> const&, int);
 #endif
-
-  // FIXME: move to hc namespace
-  template<int D0_, int D1_, int D2_, typename K>
-  friend hc::completion_future hc::async_parallel_for_each(const hc::accelerator_view&, tiled_extent<D0_, D1_, D2_>, const K&);
 };
 
 template <int N> class extent;
@@ -672,10 +653,6 @@ class tiled_index<D0, 0, 0> {
   template<typename K, int D>
   friend void partitioned_task_tile(K const&, tiled_extent<D> const&, int);
 #endif
-
-  // FIXME: move to hc namespace
-  template<int D, typename K>
-  friend hc::completion_future hc::async_parallel_for_each(const hc::accelerator_view&, tiled_extent<D>, const K&);
 };
 
 template <int D0, int D1>
@@ -727,10 +704,6 @@ class tiled_index<D0, D1, 0> {
   template<typename K, int D1_, int D2_>
   friend void partitioned_task_tile(K const&, tiled_extent<D1_, D2_> const&, int);
 #endif
-
-  // FIXME: move to hc namespace
-  template<int D0_, int D1_, typename K>
-  friend hc::completion_future hc::async_parallel_for_each(const hc::accelerator_view&, tiled_extent<D0_, D1_>, const K&);
 };
 
 
