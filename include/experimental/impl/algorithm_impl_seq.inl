@@ -221,6 +221,17 @@ copy_if(ExecutionPolicy&& exec,
 }
 
 
+// move
+template <typename ExecutionPolicy, typename InputIt, typename OutputIt >
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
+move(ExecutionPolicy&& exec,
+     InputIt first, InputIt last,
+     OutputIt d_first) {
+    return std::move(first, last, d_first);
+}
+
+
+
 } // inline namespace v1
 } // namespace parallel
 } // namespace experimental 
