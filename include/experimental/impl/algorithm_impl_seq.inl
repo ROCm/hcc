@@ -648,6 +648,40 @@ set_union(ExecutionPolicy&& exec,
 }
 
 
+// is_heap
+template <typename ExecutionPolicy, typename RandomIt>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, bool>::type
+is_heap(ExecutionPolicy&& exec,
+        RandomIt first, RandomIt last) {
+    return std::is_heap(first, last);
+}
+
+template <typename ExecutionPolicy, typename RandomIt, typename Compare>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, bool>::type
+is_heap(ExecutionPolicy&& exec,
+        RandomIt first, RandomIt last,
+        Compare comp) {
+    return std::is_heap(first, last, comp);
+}
+
+
+// is_heap_until
+template <typename ExecutionPolicy, typename RandomIt>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, RandomIt>::type
+is_heap_until(ExecutionPolicy&& exec,
+              RandomIt first, RandomIt last) {
+    return std::is_heap_until(first, last);
+}
+
+template <typename ExecutionPolicy, typename RandomIt, typename Compare>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, RandomIt>::type
+is_heap_until(ExecutionPolicy&& exec,
+              RandomIt first, RandomIt last,
+              Compare comp) {
+    return is_heap_until(first, last, comp);
+}
+
+
 } // inline namespace v1
 } // namespace parallel
 } // namespace experimental 
