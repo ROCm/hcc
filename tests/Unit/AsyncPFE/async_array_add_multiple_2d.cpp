@@ -15,7 +15,7 @@
 // (ex: 1024 * 1024).
 #define LOOP_COUNT (1)
 
-// An HSA version of C++AMP program
+// An example which shows how to launch a kernel asynchronously
 int main ()
 {
   // define inputs and output
@@ -43,12 +43,12 @@ int main ()
   // divide the array into 4 quarters
   // each quarter contains 256 elements
   // treat each quarter as a 16*16 2D array
-  Concurrency::extent<2> e(dimSize, dimSize);
+  hc::extent<2> e(dimSize, dimSize);
 
 #define ASYNC_KERNEL_DISPATCH(x, y) \
   hc::async_parallel_for_each( \
     e, \
-    [=](Concurrency::index<2> idx) restrict(amp) { \
+    [=](hc::index<2> idx) restrict(amp) { \
       const int offset = vecSize / (x) * (y); \
       const int fidx = idx[0] * dimSize + idx[1]; \
       for (int i = 0; i < LOOP_COUNT; ++i) \

@@ -31,10 +31,12 @@ int main ()
 
   // launch kernel
   std::cout << "async launch the 1st kernel\n";
-  Concurrency::extent<1> e(vecSize);
+  hc::extent<1> e(vecSize);
+  // FIXME: remove Concurrency dependency
+  Concurrency::extent<1> e2(vecSize);
   hc::completion_future fut = hc::async_parallel_for_each(
     e,
-    [=](Concurrency::index<1> idx) restrict(amp) {
+    [=](hc::index<1> idx) restrict(amp) {
       p_c[idx[0]] = p_a[idx[0]] + p_b[idx[0]];
 
   });
@@ -45,15 +47,16 @@ int main ()
     std::cout << "async launch the 2nd kernel\n";
     hc::completion_future fut2 = hc::async_parallel_for_each(
       e,
-      [=](Concurrency::index<1> idx) restrict(amp) {
+      [=](hc::index<1> idx) restrict(amp) {
         p_c[idx[0]] += p_a[idx[0]] + p_b[idx[0]];
       });
 
     // use completion_future::then() yet again
     fut2.then([=, &done_promise] {
       std::cout << "sync launch the 3rd kernel\n";
+      // FIXME: remove Concurrency dependency
       Concurrency::parallel_for_each(
-        e,
+        e2,
         [=](Concurrency::index<1> idx) restrict(amp) {
           p_c[idx[0]] += p_a[idx[0]] + p_b[idx[0]];
         });

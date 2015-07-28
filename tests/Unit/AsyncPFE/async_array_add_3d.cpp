@@ -12,7 +12,7 @@
 // (ex: 1024 * 1024).
 #define LOOP_COUNT (1)
 
-// An HSA version of C++AMP program
+// An example which shows how to launch a kernel asynchronously
 int main ()
 {
   // define inputs and output
@@ -35,10 +35,10 @@ int main ()
   }
 
   // launch kernel
-  Concurrency::extent<3> e(dimSize, dimSize, dimSize);
+  hc::extent<3> e(dimSize, dimSize, dimSize);
   hc::completion_future fut = hc::async_parallel_for_each(
     e,
-    [=](Concurrency::index<3> idx) restrict(amp) {
+    [=](hc::index<3> idx) restrict(amp) {
       int fidx = idx[0] * dimSize * dimSize + idx[1] * dimSize + idx[2];
       for (int i = 0; i < LOOP_COUNT; ++i)
         p_c[fidx] = p_a[fidx] + p_b[fidx];
