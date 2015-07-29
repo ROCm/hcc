@@ -254,7 +254,7 @@ typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>
 reverse_copy(ExecutionPolicy&& exec,
              BidirIt first, BidirIt last,
              OutputIt d_first) {
-    return reverse_copy(first, last, d_first);
+    return std::reverse_copy(first, last, d_first);
 }
 
 
