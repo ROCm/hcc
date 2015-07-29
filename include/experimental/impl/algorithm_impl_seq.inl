@@ -34,23 +34,6 @@ mismatch(ExecutionPolicy&& exec,
     return std::mismatch(first1, last1, first2, p);
 }
 
-template <typename ExecutionPolicy, typename InputIt1, typename InputIt2>
-typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, std::pair<InputIt1, InputIt2>>::type
-mismatch(ExecutionPolicy&& exec,
-         InputIt1 first1, InputIt1 last1,
-         InputIt2 first2, InputIt2 last2) {
-    return std::mismatch(first1, last1, first2, last2);
-}
-
-template <typename ExecutionPolicy, typename InputIt1, typename InputIt2, typename BinaryPredicate>
-typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, std::pair<InputIt1, InputIt2>>::type
-mismatch(ExecutionPolicy&& exec,
-         InputIt1 first1, InputIt1 last1,
-         InputIt2 first2, InputIt2 last2,
-         BinaryPredicate p) {
-    return std::mismatch(first1, last1, first2, last2, p);
-}
-
 
 // equal
 template <typename ExecutionPolicy, typename InputIt1, typename InputIt2>
