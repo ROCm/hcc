@@ -233,7 +233,7 @@ private:
         m_unroll(1)
     {
 
-		if(m_accelerator.default_accelerator == NULL)
+		if(m_accelerator.get_device_path() == L"cpu")
         {
 #ifdef ENABLE_TBB
             m_forceRunMode = MultiCoreCpu;
