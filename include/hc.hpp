@@ -6,6 +6,7 @@
 #include <kalmar_runtime.h>
 #include <kalmar_serialize.h>
 #include <kalmar_launch.h>
+#include <kalmar_buffer.h>
 
 #include <hsa_atomic.h>
 
@@ -20,6 +21,9 @@ class completion_future;
 template <int N> class extent;
 template <int N> class tiled_extent;
 class ts_allocator;
+template <typename T, int N> class array_view;
+template <typename T, int N> class array;
+
 
 // type alias
 // hc::index is just an alias of Kalmar::index
@@ -66,7 +70,10 @@ public:
 
 private:
   std::shared_ptr<Kalmar::KalmarQueue> pQueue;
+
   friend class accelerator;
+  template <typename Q, int K> friend class array;
+  template <typename Q, int K> friend class array_view;
 
   template<typename Kernel> friend
       void* Kalmar::mcw_cxxamp_get_kernel(const std::shared_ptr<Kalmar::KalmarQueue>&, const Kernel&);
@@ -389,6 +396,27 @@ private:
     // tiled parallel_for_each, 1D version
     template <typename Kernel> friend
         completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
+
+    // implementation of copy_async
+    template <typename InputIter, typename OutputIter>
+        friend completion_future __amp_copy_async_impl(InputIter& src, OutputIter& dst);
+
+    // copy_async
+    template <typename InputIter, typename T, int N>
+        friend completion_future copy_async(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest);
+    template <typename InputIter, typename T, int N>
+        friend completion_future copy_async(InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest);
+    template <typename InputIter, typename T, int N>
+        friend completion_future copy_async(InputIter srcBegin, array<T, N>& dest);
+    template <typename InputIter, typename T, int N>
+        friend completion_future copy_async(InputIter srcBegin, const array_view<T, N>& dest);
+    template <typename OutputIter, typename T, int N>
+        friend completion_future copy_async(const array<T, N>& src, OutputIter destBegin);
+    template <typename OutputIter, typename T, int N>
+        friend completion_future copy_async(const array_view<T, N>& src, OutputIter destBegin);
+
+    // array_view
+    template <typename T, int N> friend class array_view;
 };
 
 // ------------------------------------------------------------------------
@@ -914,7 +942,1594 @@ private:
       completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, const Kernel&);
 };
 
-// async pfe
+
+// ------------------------------------------------------------------------
+// utility helper classes for array_view
+// ------------------------------------------------------------------------
+
+template <typename T, int N>
+struct projection_helper
+{
+    // array_view<T,N>, where N>1
+    //    array_view<T,N-1> operator[](int i) const restrict(amp,cpu)
+    static_assert(N > 1, "projection_helper is only supported on array_view with a rank of 2 or higher");
+    typedef array_view<T, N - 1> result_type;
+    static result_type project(array_view<T, N>& now, int stride) restrict(amp,cpu) {
+        int ext[N - 1], i, idx[N - 1], ext_o[N - 1];
+        for (i = N - 1; i > 0; --i) {
+            ext_o[i - 1] = now.extent[i];
+            ext[i - 1] = now.extent_base[i];
+            idx[i - 1] = now.index_base[i];
+        }
+        stride += now.index_base[0];
+        extent<N - 1> ext_now(ext_o);
+        extent<N - 1> ext_base(ext);
+        index<N - 1> idx_base(idx);
+        return result_type (now.cache, ext_now, ext_base, idx_base,
+                            now.offset + ext_base.size() * stride);
+    }
+    static result_type project(const array_view<T, N>& now, int stride) restrict(amp,cpu) {
+        int ext[N - 1], i, idx[N - 1], ext_o[N - 1];
+        for (i = N - 1; i > 0; --i) {
+            ext_o[i - 1] = now.extent[i];
+            ext[i - 1] = now.extent_base[i];
+            idx[i - 1] = now.index_base[i];
+        }
+        stride += now.index_base[0];
+        extent<N - 1> ext_now(ext_o);
+        extent<N - 1> ext_base(ext);
+        index<N - 1> idx_base(idx);
+        return result_type (now.cache, ext_now, ext_base, idx_base,
+                            now.offset + ext_base.size() * stride);
+    }
+};
+
+template <typename T>
+struct projection_helper<T, 1>
+{
+    // array_view<T,1>
+    //      T& operator[](int i) const restrict(amp,cpu);
+    typedef T& result_type;
+    static result_type project(array_view<T, 1>& now, int i) restrict(amp,cpu) {
+#if __KALMAR_ACCELERATOR__ != 1
+        now.cache.get_cpu_access(true);
+#endif
+        T *ptr = reinterpret_cast<T *>(now.cache.get() + i + now.offset + now.index_base[0]);
+        return *ptr;
+    }
+    static result_type project(const array_view<T, 1>& now, int i) restrict(amp,cpu) {
+#if __KALMAR_ACCELERATOR__ != 1
+        now.cache.get_cpu_access(true);
+#endif
+        T *ptr = reinterpret_cast<T *>(now.cache.get() + i + now.offset + now.index_base[0]);
+        return *ptr;
+    }
+};
+
+template <typename T, int N>
+struct projection_helper<const T, N>
+{
+    // array_view<T,N>, where N>1
+    //    array_view<const T,N-1> operator[](int i) const restrict(amp,cpu);
+    static_assert(N > 1, "projection_helper is only supported on array_view with a rank of 2 or higher");
+    typedef array_view<const T, N - 1> const_result_type;
+    static const_result_type project(array_view<const T, N>& now, int stride) restrict(amp,cpu) {
+        int ext[N - 1], i, idx[N - 1], ext_o[N - 1];
+        for (i = N - 1; i > 0; --i) {
+            ext_o[i - 1] = now.extent[i];
+            ext[i - 1] = now.extent_base[i];
+            idx[i - 1] = now.index_base[i];
+        }
+        stride += now.index_base[0];
+        extent<N - 1> ext_now(ext_o);
+        extent<N - 1> ext_base(ext);
+        index<N - 1> idx_base(idx);
+        auto ret = const_result_type (now.cache, ext_now, ext_base, idx_base,
+                                      now.offset + ext_base.size() * stride);
+        return ret;
+    }
+    static const_result_type project(const array_view<const T, N>& now, int stride) restrict(amp,cpu) {
+        int ext[N - 1], i, idx[N - 1], ext_o[N - 1];
+        for (i = N - 1; i > 0; --i) {
+            ext_o[i - 1] = now.extent[i];
+            ext[i - 1] = now.extent_base[i];
+            idx[i - 1] = now.index_base[i];
+        }
+        stride += now.index_base[0];
+        extent<N - 1> ext_now(ext_o);
+        extent<N - 1> ext_base(ext);
+        index<N - 1> idx_base(idx);
+        auto ret = const_result_type (now.cache, ext_now, ext_base, idx_base,
+                                      now.offset + ext_base.size() * stride);
+        return ret;
+    }
+};
+
+template <typename T>
+struct projection_helper<const T, 1>
+{
+    // array_view<const T,1>
+    //      const T& operator[](int i) const restrict(amp,cpu);
+    typedef const T& const_result_type;
+    static const_result_type project(array_view<const T, 1>& now, int i) restrict(amp,cpu) {
+#if __KALMAR_ACCELERATOR__ != 1
+        now.cache.get_cpu_access();
+#endif
+        const T *ptr = reinterpret_cast<const T *>(now.cache.get() + i + now.offset + now.index_base[0]);
+        return *ptr;
+    }
+    static const_result_type project(const array_view<const T, 1>& now, int i) restrict(amp,cpu) {
+#if __KALMAR_ACCELERATOR__ != 1
+        now.cache.get_cpu_access();
+#endif
+        const T *ptr = reinterpret_cast<const T *>(now.cache.get() + i + now.offset + now.index_base[0]);
+        return *ptr;
+    }
+};
+
+// ------------------------------------------------------------------------
+// utility helper classes for array_view
+// ------------------------------------------------------------------------
+
+template <typename T>
+struct __has_data
+{
+private:
+    struct two {char __lx; char __lxx;};
+    template <typename C> static char test(decltype(std::declval<C>().data()));
+    template <typename C> static two test(...);
+public:
+    static const bool value = sizeof(test<T>(0)) == 1;
+};
+
+template <typename T>
+struct __has_size
+{
+private:
+    struct two {char __lx; char __lxx;};
+    template <typename C> static char test(decltype(&C::size));
+    template <typename C> static two test(...);
+public:
+    static const bool value = sizeof(test<T>(0)) == 1;
+};
+
+template <typename T>
+struct __is_container
+{
+    using _T = typename std::remove_reference<T>::type;
+    static const bool value = __has_size<_T>::value && __has_data<_T>::value;
+};
+
+
+// ------------------------------------------------------------------------
+// utility helper classes for array
+// ------------------------------------------------------------------------
+
+template <typename T, int N>
+struct array_projection_helper
+{
+    // array<T,N>, where N>1
+    //     array_view<T,N-1> operator[](int i0) restrict(amp,cpu);
+    //     array_view<const T,N-1> operator[](int i0) const restrict(amp,cpu);
+    static_assert(N > 1, "projection_helper is only supported on array with a rank of 2 or higher");
+    typedef array_view<T, N - 1> result_type;
+    typedef array_view<const T, N - 1> const_result_type;
+    static result_type project(array<T, N>& now, int stride) restrict(amp,cpu) {
+#if __KALMAR_ACCELERATOR__ != 1
+        if( stride < 0)
+          throw runtime_exception("errorMsg_throw", 0);
+#endif
+        int comp[N - 1], i;
+        for (i = N - 1; i > 0; --i)
+            comp[i - 1] = now.extent[i];
+        extent<N - 1> ext(comp);
+        int offset = ext.size() * stride;
+#if __KALMAR_ACCELERATOR__ != 1
+        if( offset >= now.extent.size())
+          throw runtime_exception("errorMsg_throw", 0);
+#endif
+        return result_type(now.m_device, ext, ext, index<N - 1>(), offset);
+    }
+    static const_result_type project(const array<T, N>& now, int stride) restrict(amp,cpu) {
+        int comp[N - 1], i;
+        for (i = N - 1; i > 0; --i)
+            comp[i - 1] = now.extent[i];
+        extent<N - 1> ext(comp);
+        int offset = ext.size() * stride;
+        return const_result_type(now.m_device, ext, ext, index<N - 1>(), offset);
+    }
+};
+
+template <typename T>
+struct array_projection_helper<T, 1>
+{
+    // array<T,1>
+    //    T& operator[](int i0) restrict(amp,cpu);
+    //    const T& operator[](int i0) const restrict(amp,cpu);
+    typedef T& result_type;
+    typedef const T& const_result_type;
+    static result_type project(array<T, 1>& now, int i) restrict(amp,cpu) {
+#if __KALMAR_ACCELERATOR__ != 1
+        now.m_device.synchronize(true);
+#endif
+        T *ptr = reinterpret_cast<T *>(now.m_device.get() + i);
+        return *ptr;
+    }
+    static const_result_type project(const array<T, 1>& now, int i) restrict(amp,cpu) {
+#if __KALMAR_ACCELERATOR__ != 1
+        now.m_device.synchronize();
+#endif
+        const T *ptr = reinterpret_cast<const T *>(now.m_device.get() + i);
+        return *ptr;
+    }
+};
+
+template <int N>
+const extent<N>& check(const extent<N>& ext)
+{
+#if __KALMAR_ACCELERATOR__ != 1
+    for (int i = 0; i < N; i++)
+    {
+        if(ext[i] <=0)
+            throw runtime_exception("errorMsg_throw", 0);
+    }
+#endif
+    return ext;
+}
+
+// ------------------------------------------------------------------------
+// forward declarations of copy routines used by array / array_view
+// ------------------------------------------------------------------------
+
+template <typename T, int N>
+void copy(const array_view<const T, N>& src, const array_view<T, N>& dest);
+
+template <typename T, int N>
+void copy(const array_view<T, N>& src, const array_view<T, N>& dest);
+
+template <typename T, int N>
+void copy(const array<T, N>& src, const array_view<T, N>& dest);
+
+template <typename T, int N>
+void copy(const array<T, N>& src, array<T, N>& dest);
+
+template <typename T, int N>
+void copy(const array_view<const T, N>& src, array<T, N>& dest);
+
+template <typename T, int N>
+void copy(const array_view<T, N>& src, array<T, N>& dest);
+
+template <typename InputIter, typename T, int N>
+void copy(InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest);
+
+template <typename InputIter, typename T, int N>
+void copy(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest);
+
+template <typename InputIter, typename T, int N>
+void copy(InputIter srcBegin, const array_view<T, N>& dest);
+
+template <typename InputIter, typename T, int N>
+void copy(InputIter srcBegin, array<T, N>& dest);
+
+template <typename OutputIter, typename T, int N>
+void copy(const array_view<T, N> &src, OutputIter destBegin);
+
+template <typename OutputIter, typename T, int N>
+void copy(const array<T, N> &src, OutputIter destBegin);
+
+// ------------------------------------------------------------------------
+// array
+// ------------------------------------------------------------------------
+
+template <typename T, int N = 1>
+class array {
+  static_assert(!std::is_const<T>::value, "array<const T> is not supported");
+  static_assert(0 == (sizeof(T) % sizeof(int)), "only value types whose size is a multiple of the size of an integer are allowed in array");
+public:
+#if __KALMAR_ACCELERATOR__ == 1
+  typedef Kalmar::_data<T> acc_buffer_t;
+#else
+  typedef Kalmar::_data_host<T> acc_buffer_t;
+#endif
+
+  static const int rank = N;
+  typedef T value_type;
+  array() = delete;
+
+  array(const extent<N>& ext, accelerator_view av, accelerator_view associated_av)
+#if __KALMAR_ACCELERATOR__ == 1
+      : m_device(ext.size()), extent(ext) {}
+#else
+      : m_device(av.pQueue, associated_av.pQueue, check(ext).size(), access_type_auto), extent(ext) {}
+#endif
+  array(int e0, accelerator_view av, accelerator_view associated_av)
+      : array(hc::extent<N>(e0), av, associated_av) {}
+  array(int e0, int e1, accelerator_view av, accelerator_view associated_av)
+      : array(hc::extent<N>(e0, e1), av, associated_av) {}
+  array(int e0, int e1, int e2, accelerator_view av, accelerator_view associated_av)
+      : array(hc::extent<N>(e0, e1, e2), av, associated_av) {}
+
+  array(const extent<N>& ext, accelerator_view av,
+        access_type cpu_access_type = access_type_auto)
+#if __KALMAR_ACCELERATOR__ == 1
+      : m_device(ext.size()), extent(ext) {}
+#else
+      : m_device(av.pQueue, av.pQueue, check(ext).size(), cpu_access_type), extent(ext) {}
+#endif
+  array(int e0, accelerator_view av,
+        access_type cpu_access_type = access_type_auto)
+      : array(hc::extent<N>(e0), av, cpu_access_type) {}
+  array(int e0, int e1, accelerator_view av,
+        access_type cpu_access_type = access_type_auto)
+      : array(hc::extent<N>(e0, e1), av, cpu_access_type) {}
+  array(int e0, int e1, int e2, accelerator_view av,
+        access_type cpu_access_type = access_type_auto)
+      : array(hc::extent<N>(e0, e1, e2), av, cpu_access_type) {}
+
+
+  explicit array(const extent<N>& ext) :
+      array(ext, accelerator(L"default").get_default_view()) {}
+  explicit array(int e0) : array(hc::extent<N>(e0)) { static_assert(N == 1, "illegal"); }
+  explicit array(int e0, int e1) : array(hc::extent<N>(e0, e1)) {}
+  explicit array(int e0, int e1, int e2) : array(hc::extent<N>(e0, e1, e2)) {}
+
+  template <typename InputIter>
+      array(const extent<N>& ext, InputIter srcBegin,
+            accelerator_view av, accelerator_view associated_av)
+      : array(ext, av, associated_av) { copy(srcBegin, *this); }
+  template <typename InputIter>
+      array(const extent<N>& ext, InputIter srcBegin, InputIter srcEnd,
+            accelerator_view av, accelerator_view associated_av)
+      : array(ext, av, associated_av) {
+          if(ext.size() < std::distance(srcBegin, srcEnd))
+              throw runtime_exception("errorMsg_throw", 0);
+          copy(srcBegin, srcEnd, *this);
+      }
+  template <typename InputIter>
+      array(int e0, InputIter srcBegin,
+            accelerator_view av, accelerator_view associated_av)
+      : array(extent<N>(e0), srcBegin, av, associated_av) {}
+  template <typename InputIter>
+      array(int e0, InputIter srcBegin, InputIter srcEnd,
+            accelerator_view av, accelerator_view associated_av)
+      : array(extent<N>(e0), srcBegin, srcEnd, av, associated_av) {}
+  template <typename InputIter>
+      array(int e0, int e1, InputIter srcBegin,
+            accelerator_view av, accelerator_view associated_av)
+      : array(hc::extent<N>(e0, e1), srcBegin, av, associated_av) {}
+  template <typename InputIter>
+      array(int e0, int e1, InputIter srcBegin, InputIter srcEnd,
+            accelerator_view av, accelerator_view associated_av)
+      : array(hc::extent<N>(e0, e1), srcBegin, srcEnd, av, associated_av) {}
+  template <typename InputIter>
+      array(int e0, int e1, int e2, InputIter srcBegin,
+            accelerator_view av, accelerator_view associated_av)
+      : array(hc::extent<N>(e0, e1, e2), srcBegin, av, associated_av) {}
+  template <typename InputIter>
+      array(int e0, int e1, int e2, InputIter srcBegin, InputIter srcEnd,
+            accelerator_view av, accelerator_view associated_av)
+      : array(hc::extent<N>(e0, e1, e2), srcBegin, srcEnd, av, associated_av) {}
+
+  template <typename InputIter>
+      array(const extent<N>& ext, InputIter srcBegin, accelerator_view av,
+            access_type cpu_access_type = access_type_auto)
+      : array(ext, av, cpu_access_type) { copy(srcBegin, *this); }
+  template <typename InputIter>
+      array(const extent<N>& ext, InputIter srcBegin, InputIter srcEnd,
+            accelerator_view av, access_type cpu_access_type = access_type_auto)
+      : array(ext, av, cpu_access_type) {
+          if(ext.size() < std::distance(srcBegin, srcEnd))
+              throw runtime_exception("errorMsg_throw", 0);
+          copy(srcBegin, srcEnd, *this);
+      }
+  template <typename InputIter>
+      array(int e0, InputIter srcBegin, accelerator_view av,
+            access_type cpu_access_type = access_type_auto)
+      : array(extent<N>(e0), srcBegin, av, cpu_access_type) {}
+  template <typename InputIter>
+      array(int e0, InputIter srcBegin, InputIter srcEnd,
+            accelerator_view av, access_type cpu_access_type = access_type_auto)
+      : array(extent<N>(e0), srcBegin, srcEnd, av, cpu_access_type) {}
+  template <typename InputIter>
+      array(int e0, int e1, InputIter srcBegin, accelerator_view av,
+            access_type cpu_access_type = access_type_auto)
+      : array(hc::extent<N>(e0, e1), srcBegin, av, cpu_access_type) {}
+  template <typename InputIter>
+      array(int e0, int e1, InputIter srcBegin, InputIter srcEnd,
+            accelerator_view av, access_type cpu_access_type = access_type_auto)
+      : array(hc::extent<N>(e0, e1), srcBegin, srcEnd, av, cpu_access_type) {}
+  template <typename InputIter>
+      array(int e0, int e1, int e2, InputIter srcBegin, accelerator_view av,
+            access_type cpu_access_type = access_type_auto)
+      : array(hc::extent<N>(e0, e1, e2), srcBegin, av, cpu_access_type) {}
+  template <typename InputIter>
+      array(int e0, int e1, int e2, InputIter srcBegin, InputIter srcEnd,
+            accelerator_view av, access_type cpu_access_type = access_type_auto)
+      : array(hc::extent<N>(e0, e1, e2), srcBegin, srcEnd, av, cpu_access_type) {}
+
+  template <typename InputIter>
+      array(const extent<N>& ext, InputIter srcBegin)
+      : array(ext, srcBegin, accelerator(L"default").get_default_view()) {}
+  template <typename InputIter>
+      array(const extent<N>& ext, InputIter srcBegin, InputIter srcEnd)
+      : array(ext, srcBegin, srcEnd, accelerator(L"default").get_default_view()) {}
+  template <typename InputIter>
+      array(int e0, InputIter srcBegin)
+      : array(extent<N>(e0), srcBegin) {}
+  template <typename InputIter>
+      array(int e0, InputIter srcBegin, InputIter srcEnd)
+      : array(extent<N>(e0), srcBegin, srcEnd) {}
+  template <typename InputIter>
+      array(int e0, int e1, InputIter srcBegin)
+      : array(hc::extent<N>(e0, e1), srcBegin) {}
+  template <typename InputIter>
+      array(int e0, int e1, InputIter srcBegin, InputIter srcEnd)
+      : array(hc::extent<N>(e0, e1), srcBegin, srcEnd) {}
+  template <typename InputIter>
+      array(int e0, int e1, int e2, InputIter srcBegin)
+      : array(hc::extent<N>(e0, e1, e2), srcBegin) {}
+  template <typename InputIter>
+      array(int e0, int e1, int e2, InputIter srcBegin, InputIter srcEnd)
+      : array(hc::extent<N>(e0, e1, e2), srcBegin, srcEnd) {}
+
+
+  explicit array(const array_view<const T, N>& src)
+      : array(src.get_extent(), accelerator(L"default").get_default_view())
+  { copy(src, *this); }
+
+  array(const array_view<const T, N>& src, accelerator_view av,
+        access_type cpu_access_type = access_type_auto)
+      : array(src.get_extent(), av, cpu_access_type) { copy(src, *this); }
+  array(const array_view<const T, N>& src, accelerator_view av,
+        accelerator_view associated_av) : array(src.get_extent(), av, associated_av)
+    { copy(src, *this); }
+
+
+  array(const array& other) : array(other.get_extent(), other.get_accelerator_view())
+    { copy(other, *this); }
+  array(array&& other) : m_device(other.m_device), extent(other.extent)
+    { other.m_device.reset(); }
+
+  array& operator=(const array& other) {
+    if(this != &other) {
+        array arr(other);
+        *this = std::move(arr);
+    }
+    return *this;
+  }
+  array& operator=(array&& other) {
+    if(this != &other) {
+      extent = other.extent;
+      m_device = other.m_device;
+      other.m_device.reset();
+    }
+    return *this;
+  }
+  array& operator=(const array_view<T,N>& src) {
+      array arr(src);
+      *this = std::move(arr);
+      return *this;
+  }
+
+  void copy_to(array& dest) const {
+#if __KALMAR_ACCELERATOR__ != 1
+      for(int i = 0 ; i < N ; i++)
+      {
+        if(dest.extent[i] < this->extent[i] )
+          throw runtime_exception("errorMsg_throw", 0);
+      }
+#endif
+      copy(*this, dest);
+  }
+
+  void copy_to(const array_view<T,N>& dest) const { copy(*this, dest); }
+  extent<N> get_extent() const restrict(amp,cpu) { return extent; }
+
+  accelerator_view get_accelerator_view() const { return m_device.get_av(); }
+  accelerator_view get_associated_accelerator_view() const { return m_device.get_stage(); }
+  access_type get_cpu_access_type() const { return m_device.get_access(); }
+
+  T& operator[](const index<N>& idx) restrict(amp,cpu) {
+#ifndef __KALMAR_ACCELERATOR__
+      if (!m_device.get())
+          throw runtime_exception("The array is not accessible on CPU.", 0);
+      m_device.synchronize(true);
+#endif
+      T *ptr = reinterpret_cast<T*>(m_device.get());
+      return ptr[Kalmar::amp_helper<N, index<N>, hc::extent<N>>::flatten(idx, extent)];
+  }
+  const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
+#if __KALMAR_ACCELERATOR__ != 1
+      if (!m_device.get())
+          throw runtime_exception("The array is not accessible on CPU.", 0);
+      m_device.synchronize();
+#endif
+      T *ptr = reinterpret_cast<T*>(m_device.get());
+      return ptr[Kalmar::amp_helper<N, index<N>, hc::extent<N>>::flatten(idx, extent)];
+  }
+
+  typename array_projection_helper<T, N>::result_type
+      operator[] (int i) restrict(amp,cpu) {
+          return array_projection_helper<T, N>::project(*this, i);
+      }
+  typename array_projection_helper<T, N>::const_result_type
+      operator[] (int i) const restrict(amp,cpu) {
+          return array_projection_helper<T, N>::project(*this, i);
+      }
+
+  T& operator()(const index<N>& idx) restrict(amp,cpu) {
+    return (*this)[idx];
+  }
+  const T& operator()(const index<N>& idx) const restrict(amp,cpu) {
+    return (*this)[idx];
+  }
+  typename array_projection_helper<T, N>::result_type
+      operator()(int i0) restrict(amp,cpu) {
+          return (*this)[i0];
+  }
+  typename array_projection_helper<T, N>::const_result_type
+      operator()(int i0) const restrict(amp,cpu) {
+          return (*this)[i0];
+  }
+  T& operator()(int i0, int i1) restrict(amp,cpu) {
+      return (*this)[index<2>(i0, i1)];
+  }
+  const T& operator()(int i0, int i1) const restrict(amp,cpu) {
+      return (*this)[index<2>(i0, i1)];
+  }
+  T& operator()(int i0, int i1, int i2) restrict(amp,cpu) {
+      return (*this)[index<3>(i0, i1, i2)];
+  }
+  const T& operator()(int i0, int i1, int i2) const restrict(amp,cpu) {
+      return (*this)[index<3>(i0, i1, i2)];
+  }
+
+  array_view<T, N> section(const index<N>& idx, const extent<N>& ext) restrict(amp,cpu) {
+#if __KALMAR_ACCELERATOR__ != 1
+      if(  !Kalmar::amp_helper<N, index<N>, hc::extent<N>>::contains(idx,  ext ,this->extent) )
+        throw runtime_exception("errorMsg_throw", 0);
+#endif
+      array_view<T, N> av(*this);
+      return av.section(idx, ext);
+  }
+  array_view<const T, N> section(const index<N>& idx, const extent<N>& ext) const restrict(amp,cpu) {
+      array_view<const T, N> av(*this);
+      return av.section(idx, ext);
+  }
+  array_view<T, N> section(const index<N>& idx) restrict(amp,cpu) {
+#if __KALMAR_ACCELERATOR__ != 1
+      if(  !Kalmar::amp_helper<N, index<N>, hc::extent<N>>::contains(idx, this->extent ) )
+        throw runtime_exception("errorMsg_throw", 0);
+#endif
+      array_view<T, N> av(*this);
+      return av.section(idx);
+  }
+  array_view<const T, N> section(const index<N>& idx) const restrict(amp,cpu) {
+      array_view<const T, N> av(*this);
+      return av.section(idx);
+  }
+  array_view<T,N> section(const extent<N>& ext) restrict(amp,cpu) {
+      array_view<T, N> av(*this);
+      return av.section(ext);
+  }
+  array_view<const T,N> section(const extent<N>& ext) const restrict(amp,cpu) {
+      array_view<const T, N> av(*this);
+      return av.section(ext);
+  }
+
+  array_view<T, 1> section(int i0, int e0) restrict(amp,cpu) {
+      static_assert(N == 1, "Rank must be 1");
+      return section(index<1>(i0), hc::extent<1>(e0));
+  }
+  array_view<const T, 1> section(int i0, int e0) const restrict(amp,cpu) {
+      static_assert(N == 1, "Rank must be 1");
+      return section(index<1>(i0), hc::extent<1>(e0));
+  }
+  array_view<T, 2> section(int i0, int i1, int e0, int e1) const restrict(amp,cpu) {
+      static_assert(N == 2, "Rank must be 2");
+      return section(index<2>(i0, i1), hc::extent<2>(e0, e1));
+  }
+  array_view<T, 2> section(int i0, int i1, int e0, int e1) restrict(amp,cpu) {
+      static_assert(N == 2, "Rank must be 2");
+      return section(index<2>(i0, i1), hc::extent<2>(e0, e1));
+  }
+  array_view<T, 3> section(int i0, int i1, int i2, int e0, int e1, int e2) restrict(amp,cpu) {
+      static_assert(N == 3, "Rank must be 3");
+      return section(index<3>(i0, i1, i2), hc::extent<3>(e0, e1, e2));
+  }
+  array_view<const T, 3> section(int i0, int i1, int i2, int e0, int e1, int e2) const restrict(amp,cpu) {
+      static_assert(N == 3, "Rank must be 3");
+      return section(index<3>(i0, i1, i2), hc::extent<3>(e0, e1, e2));
+  }
+
+  template <typename ElementType>
+      array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu) {
+#if __KALMAR_ACCELERATOR__ != 1
+          static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
+          static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
+          if( (extent.size() * sizeof(T)) % sizeof(ElementType))
+              throw runtime_exception("errorMsg_throw", 0);
+#endif
+          int size = extent.size() * sizeof(T) / sizeof(ElementType);
+          using buffer_type = typename array_view<ElementType, 1>::acc_buffer_t;
+          array_view<ElementType, 1> av(buffer_type(m_device), extent<1>(size), 0);
+          return av;
+      }
+  template <typename ElementType>
+      array_view<const ElementType, 1> reinterpret_as() const restrict(amp,cpu) {
+#if __KALMAR_ACCELERATOR__ != 1
+          static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
+          static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
+#endif
+          int size = extent.size() * sizeof(T) / sizeof(ElementType);
+          using buffer_type = typename array_view<ElementType, 1>::acc_buffer_t;
+          array_view<const ElementType, 1> av(buffer_type(m_device), extent<1>(size), 0);
+          return av;
+      }
+
+  template <int K> array_view<T, K>
+      view_as(const extent<K>& viewExtent) restrict(amp,cpu) {
+#if __KALMAR_ACCELERATOR__ != 1
+    if( viewExtent.size() > extent.size())
+      throw runtime_exception("errorMsg_throw", 0);
+#endif
+          array_view<T, K> av(m_device, viewExtent, 0);
+          return av;
+      }
+  template <int K> array_view<const T, K>
+      view_as(const extent<K>& viewExtent) const restrict(amp,cpu) {
+#if __KALMAR_ACCELERATOR__ != 1
+    if( viewExtent.size() > extent.size())
+      throw runtime_exception("errorMsg_throw", 0);
+#endif
+          const array_view<T, K> av(m_device, viewExtent, 0);
+          return av;
+      }
+
+  operator std::vector<T>() const {
+      std::vector<T> vec(extent.size());
+      copy(*this, vec.data());
+      return std::move(vec);
+  }
+
+  T* data() const restrict(amp,cpu) {
+#if __KALMAR_ACCELERATOR__ != 1
+      if (!m_device.get())
+          return nullptr;
+    m_device.synchronize(true);
+#endif
+    return reinterpret_cast<T*>(m_device.get());
+  }
+  ~array() {}
+
+
+  const acc_buffer_t& internal() const restrict(amp,cpu) { return m_device; }
+  int get_offset() const restrict(amp,cpu) { return 0; }
+  index<N> get_index_base() const restrict(amp,cpu) { return index<N>(); }
+private:
+  template <typename K, int Q> friend struct projection_helper;
+  template <typename K, int Q> friend struct array_projection_helper;
+  acc_buffer_t m_device;
+  extent<N> extent;
+};
+
+// ------------------------------------------------------------------------
+// array_view
+// ------------------------------------------------------------------------
+
+template <typename T, int N = 1>
+class array_view
+{
+  static_assert(0 == (sizeof(T) % sizeof(int)), "only value types whose size is a multiple of the size of an integer are allowed in array views");
+public:
+  typedef typename std::remove_const<T>::type nc_T;
+#if __KALMAR_ACCELERATOR__ == 1
+  typedef Kalmar::_data<T> acc_buffer_t;
+#else
+  typedef Kalmar::_data_host<T> acc_buffer_t;
+#endif
+
+  static const int rank = N;
+  typedef T value_type;
+  array_view() = delete;
+
+  ~array_view() restrict(amp,cpu) {}
+
+  array_view(array<T, N>& src) restrict(amp,cpu)
+      : cache(src.internal()), extent(src.get_extent()), extent_base(extent), index_base(),
+      offset(0) {}
+
+  template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
+      array_view(const extent<N>& extent, Container& src)
+      : array_view(extent, src.data())
+  { static_assert( std::is_same<decltype(src.data()), T*>::value, "container element type and array view element type must match"); }
+  template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
+      array_view(int e0, Container& src)
+      : array_view(hc::extent<N>(e0), src) {}
+  template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
+      array_view(int e0, int e1, Container& src)
+      : array_view(hc::extent<N>(e0, e1), src) {}
+  template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
+      array_view(int e0, int e1, int e2, Container& src)
+      : array_view(hc::extent<N>(e0, e1, e2), src) {}
+
+  array_view(const extent<N>& ext, value_type* src) restrict(amp,cpu)
+#if __KALMAR_ACCELERATOR__ == 1
+      : cache((T *)(src)), extent(ext), extent_base(ext), offset(0) {}
+#else
+      : cache(ext.size(), (T *)(src)), extent(ext), extent_base(ext), offset(0) {}
+#endif
+  array_view(int e0, value_type *src) restrict(amp,cpu)
+      : array_view(hc::extent<N>(e0), src) {}
+  array_view(int e0, int e1, value_type *src) restrict(amp,cpu)
+      : array_view(hc::extent<N>(e0, e1), src) {}
+  array_view(int e0, int e1, int e2, value_type *src) restrict(amp,cpu)
+      : array_view(hc::extent<N>(e0, e1, e2), src) {}
+
+
+  explicit array_view(const extent<N>& ext)
+  : cache(ext.size()), extent(ext), extent_base(ext), offset(0) {}
+  explicit array_view(int e0) : array_view(hc::extent<N>(e0)) {}
+  explicit array_view(int e0, int e1)
+      : array_view(hc::extent<N>(e0, e1)) {}
+  explicit array_view(int e0, int e1, int e2)
+      : array_view(hc::extent<N>(e0, e1, e2)) {}
+
+  array_view(const array_view& other) restrict(amp,cpu) : cache(other.cache),
+    extent(other.extent), extent_base(other.extent_base), index_base(other.index_base),
+    offset(other.offset) {}
+  array_view& operator=(const array_view& other) restrict(amp,cpu) {
+      if (this != &other) {
+          cache = other.cache;
+          extent = other.extent;
+          index_base = other.index_base;
+          extent_base = other.extent_base;
+          offset = other.offset;
+      }
+      return *this;
+  }
+  void copy_to(array<T,N>& dest) const {
+#if __KALMAR_ACCELERATOR__ != 1
+      for(int i= 0 ;i< N;i++)
+      {
+        if(dest.get_extent()[i] < this->extent[i])
+          throw runtime_exception("errorMsg_throw", 0);
+      }
+#endif
+      copy(*this, dest);
+  }
+  void copy_to(const array_view& dest) const { copy(*this, dest); }
+  extent<N> get_extent() const restrict(amp,cpu) { return extent; }
+
+  T& operator[](const index<N>& idx) const restrict(amp,cpu) {
+#if __KALMAR_ACCELERATOR__ != 1
+      cache.get_cpu_access(true);
+#endif
+      T *ptr = reinterpret_cast<T*>(cache.get() + offset);
+      return ptr[Kalmar::amp_helper<N, index<N>, hc::extent<N>>::flatten(idx + index_base, extent_base)];
+  }
+
+/* FIXME: implement this with hc tiled_index */
+/*
+  template <int D0, int D1=0, int D2=0>
+  T& operator[](const tiled_index<D0, D1, D2>& idx) const restrict(amp,cpu) {
+#if __KALMAR_ACCELERATOR__ != 1
+      cache.get_cpu_access(true);
+#endif
+      T *ptr = reinterpret_cast<T*>(cache.get() + offset);
+      return ptr[Kalmar::amp_helper<N, index<N>, hc::extent<N>>::flatten(idx.global + index_base, extent_base)];
+  }
+*/
+
+  typename projection_helper<T, N>::result_type
+      operator[] (int i) const restrict(amp,cpu) {
+          return projection_helper<T, N>::project(*this, i);
+      }
+  T& operator()(const index<N>& idx) const restrict(amp,cpu) {
+      return (*this)[idx];
+  }
+  typename projection_helper<T, N>::result_type
+      operator()(int i0) const restrict(amp,cpu) { return (*this)[i0]; }
+  T& operator()(int i0, int i1) const restrict(amp,cpu) {
+      static_assert(N == 2, "T& array_view::operator()(int,int) is only permissible on array_view<T, 2>");
+      return (*this)[index<2>(i0, i1)];
+  }
+  T& operator()(int i0, int i1, int i2) const restrict(amp,cpu) {
+      static_assert(N == 3, "T& array_view::operator()(int,int, int) is only permissible on array_view<T, 3>");
+      return (*this)[index<3>(i0, i1, i2)];
+  }
+  template <typename ElementType>
+      array_view<ElementType, N> reinterpret_as() const restrict(amp,cpu) {
+          static_assert(N == 1, "reinterpret_as is only permissible on array views of rank 1");
+#if __KALMAR_ACCELERATOR__ != 1
+          static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
+          static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
+          if( (extent.size() * sizeof(T)) % sizeof(ElementType))
+              throw runtime_exception("errorMsg_throw", 0);
+#endif
+          int size = extent.size() * sizeof(T) / sizeof(ElementType);
+          using buffer_type = typename array_view<ElementType, 1>::acc_buffer_t;
+          array_view<ElementType, 1> av(buffer_type(cache),
+                                        extent<1>(size),
+                                        (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
+          return av;
+      }
+
+  array_view<T, N> section(const index<N>& idx,
+                           const extent<N>& ext) const restrict(amp,cpu) {
+#if __KALMAR_ACCELERATOR__ != 1
+      if(  !Kalmar::amp_helper<N, index<N>, hc::extent<N>>::contains(idx, ext,this->extent ) )
+        throw runtime_exception("errorMsg_throw", 0);
+#endif
+      array_view<T, N> av(cache, ext, extent_base, idx + index_base, offset);
+      return av;
+  }
+  array_view<T, N> section(const index<N>& idx) const restrict(amp,cpu) {
+      hc::extent<N> ext(extent);
+      Kalmar::amp_helper<N, index<N>, hc::extent<N>>::minus(idx, ext);
+      return section(idx, ext);
+  }
+  array_view<T, N> section(const extent<N>& ext) const restrict(amp,cpu) {
+      index<N> idx;
+      return section(idx, ext);
+  }
+  array_view<T, 1> section(int i0, int e0) const restrict(amp,cpu) {
+      static_assert(N == 1, "Rank must be 1");
+      return section(index<1>(i0), extent<1>(e0));
+  }
+  array_view<T, 2> section(int i0, int i1, int e0, int e1) const restrict(amp,cpu) {
+      static_assert(N == 2, "Rank must be 2");
+      return section(index<2>(i0, i1), hc::extent<2>(e0, e1));
+  }
+  array_view<T, 3> section(int i0, int i1, int i2, int e0, int e1, int e2) const restrict(amp,cpu) {
+      static_assert(N == 3, "Rank must be 3");
+      return section(index<3>(i0, i1, i2), hc::extent<3>(e0, e1, e2));
+  }
+  template <int K>
+  array_view<T, K> view_as(extent<K> viewExtent) const restrict(amp,cpu) {
+    static_assert(N == 1, "view_as is only permissible on array views of rank 1");
+#if __KALMAR_ACCELERATOR__ != 1
+    if( viewExtent.size() > extent.size())
+      throw runtime_exception("errorMsg_throw", 0);
+#endif
+    array_view<T, K> av(cache, viewExtent, offset + index_base[0]);
+    return av;
+  }
+
+  void synchronize() const { cache.get_cpu_access(); }
+  void synchronize_to(const accelerator_view& av) const {
+#if __KALMAR_ACCELERATOR__ != 1
+      cache.sync_to(av.pQueue);
+#endif
+  }
+  completion_future synchronize_async() const {
+      std::future<void> fut = std::async([&]() mutable { synchronize(); });
+      return completion_future(fut.share());
+  }
+  void refresh() const { cache.refresh(); }
+  void discard_data() const {
+#if __KALMAR_ACCELERATOR__ != 1
+      cache.discard();
+#endif
+  }
+  T* data() const restrict(amp,cpu) {
+#if __KALMAR_ACCELERATOR__ != 1
+      cache.get_cpu_access(true);
+#endif
+    static_assert(N == 1, "data() is only permissible on array views of rank 1");
+    return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
+  }
+
+  accelerator_view get_source_accelerator_view() const { return cache.get_av(); }
+
+  const acc_buffer_t& internal() const restrict(amp,cpu) { return cache; }
+  int get_offset() const restrict(amp,cpu) { return offset; }
+  index<N> get_index_base() const restrict(amp,cpu) { return index_base; }
+private:
+  template <typename K, int Q> friend struct projection_helper;
+  template <typename K, int Q> friend struct array_projection_helper;
+  template <typename Q, int K> friend class array;
+  template <typename Q, int K> friend class array_view;
+
+  template<typename Q, int K>
+      friend bool is_flat(const array_view<Q, K>&) noexcept;
+  template <typename Q, int K>
+      friend void copy(const array<Q, K>&, const array_view<Q, K>&);
+  template <typename InputIter, typename Q, int K>
+      friend void copy(InputIter, InputIter, const array_view<Q, K>&);
+  template <typename Q, int K>
+      friend void copy(const array_view<const Q, K>&, array<Q, K>&);
+  template <typename OutputIter, typename Q, int K>
+      friend void copy(const array_view<Q, K>&, OutputIter);
+  template <typename Q, int K>
+      friend void copy(const array_view<const Q, K>& src, const array_view<Q, K>& dest);
+
+
+  // used by view_as and reinterpret_as
+  array_view(const acc_buffer_t& cache, const hc::extent<N>& ext,
+             int offset) restrict(amp,cpu)
+      : cache(cache), extent(ext), extent_base(ext), offset(offset) {}
+  // used by section and projection
+  array_view(const acc_buffer_t& cache, const hc::extent<N>& ext_now,
+             const hc::extent<N>& ext_b,
+             const index<N>& idx_b, int off) restrict(amp,cpu)
+      : cache(cache), extent(ext_now), extent_base(ext_b), index_base(idx_b),
+      offset(off) {}
+
+  acc_buffer_t cache;
+  hc::extent<N> extent;
+  hc::extent<N> extent_base;
+  index<N> index_base;
+  int offset;
+};
+
+// ------------------------------------------------------------------------
+// array_view (read-only)
+// ------------------------------------------------------------------------
+
+template <typename T, int N>
+class array_view<const T, N>
+{
+public:
+  typedef typename std::remove_const<T>::type nc_T;
+  static const int rank = N;
+  typedef const T value_type;
+
+#if __KALMAR_ACCELERATOR__ == 1
+  typedef Kalmar::_data<nc_T> acc_buffer_t;
+#else
+  typedef Kalmar::_data_host<const T> acc_buffer_t;
+#endif
+
+  array_view() = delete;
+
+  ~array_view() restrict(amp,cpu) {}
+
+  array_view(const array<T,N>& src) restrict(amp,cpu)
+      : cache(src.internal()), extent(src.get_extent()), extent_base(extent), index_base(),
+      offset(0) {}
+  template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
+    array_view(const extent<N>& extent, const Container& src)
+        : array_view(extent, src.data())
+  { static_assert( std::is_same<typename std::remove_const<typename std::remove_reference<decltype(*src.data())>::type>::type, T>::value, "container element type and array view element type must match"); }
+    template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
+      array_view(int e0, Container& src) : array_view(hc::extent<1>(e0), src) {}
+    template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
+      array_view(int e0, int e1, Container& src)
+      : array_view(hc::extent<N>(e0, e1), src) {}
+    template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
+      array_view(int e0, int e1, int e2, Container& src)
+      : array_view(hc::extent<N>(e0, e1, e2), src) {}
+
+  array_view(const extent<N>& ext, const value_type* src) restrict(amp,cpu)
+#if __KALMAR_ACCELERATOR__ == 1
+      : cache((nc_T*)(src)), extent(ext), extent_base(ext), offset(0) {}
+#else
+      : cache(ext.size(), src), extent(ext), extent_base(ext),
+          offset(0) {}
+#endif
+  array_view(int e0, value_type *src) restrict(amp,cpu)
+      : array_view(hc::extent<1>(e0), src) {}
+  array_view(int e0, int e1, value_type *src) restrict(amp,cpu)
+      : array_view(hc::extent<2>(e0, e1), src) {}
+  array_view(int e0, int e1, int e2, value_type *src) restrict(amp,cpu)
+      : array_view(hc::extent<3>(e0, e1, e2), src) {}
+
+  array_view(const array_view<nc_T, N>& other) restrict(amp,cpu) : cache(other.cache),
+    extent(other.extent), extent_base(other.extent_base), index_base(other.index_base),
+    offset(other.offset) {}
+
+  array_view(const array_view& other) restrict(amp,cpu) : cache(other.cache),
+    extent(other.extent), extent_base(other.extent_base), index_base(other.index_base),
+    offset(other.offset) {}
+
+  array_view& operator=(const array_view<T,N>& other) restrict(amp,cpu) {
+    cache = other.cache;
+    extent = other.extent;
+    index_base = other.index_base;
+    extent_base = other.extent_base;
+    offset = other.offset;
+    return *this;
+  }
+
+  array_view& operator=(const array_view& other) restrict(amp,cpu) {
+    if (this != &other) {
+      cache = other.cache;
+      extent = other.extent;
+      index_base = other.index_base;
+      extent_base = other.extent_base;
+      offset = other.offset;
+    }
+    return *this;
+  }
+
+  void copy_to(array<T,N>& dest) const { copy(*this, dest); }
+  void copy_to(const array_view<T,N>& dest) const { copy(*this, dest); }
+
+  extent<N> get_extent() const restrict(amp,cpu) { return extent; }
+  accelerator_view get_source_accelerator_view() const { return cache.get_av(); }
+
+  const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
+#if __KALMAR_ACCELERATOR__ != 1
+      cache.get_cpu_access();
+#endif
+    const T *ptr = reinterpret_cast<const T*>(cache.get() + offset);
+    return ptr[Kalmar::amp_helper<N, index<N>, hc::extent<N>>::flatten(idx + index_base, extent_base)];
+  }
+
+  typename projection_helper<const T, N>::const_result_type
+      operator[] (int i) const restrict(amp,cpu) {
+    return projection_helper<const T, N>::project(*this, i);
+  }
+
+  const T& get_ref(const index<N>& idx) const restrict(amp,cpu);
+
+  const T& operator()(const index<N>& idx) const restrict(amp,cpu) {
+    return (*this)[idx];
+  }
+  const T& operator()(int i0) const restrict(amp,cpu) {
+    static_assert(N == 1, "const T& array_view::operator()(int) is only permissible on array_view<T, 1>");
+    return (*this)[index<1>(i0)];
+  }
+
+  const T& operator()(int i0, int i1) const restrict(amp,cpu) {
+    static_assert(N == 2, "const T& array_view::operator()(int,int) is only permissible on array_view<T, 2>");
+    return (*this)[index<2>(i0, i1)];
+  }
+  const T& operator()(int i0, int i1, int i2) const restrict(amp,cpu) {
+    static_assert(N == 3, "const T& array_view::operator()(int,int, int) is only permissible on array_view<T, 3>");
+    return (*this)[index<3>(i0, i1, i2)];
+  }
+
+  template <typename ElementType>
+      array_view<const ElementType, N> reinterpret_as() const restrict(amp,cpu) {
+          static_assert(N == 1, "reinterpret_as is only permissible on array views of rank 1");
+#if __KALMAR_ACCELERATOR__ != 1
+          static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
+          static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
+#endif
+          int size = extent.size() * sizeof(T) / sizeof(ElementType);
+          using buffer_type = typename array_view<ElementType, 1>::acc_buffer_t;
+          array_view<const ElementType, 1> av(buffer_type(cache),
+                                              extent<1>(size),
+                                              (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
+          return av;
+      }
+  array_view<const T, N> section(const index<N>& idx,
+                     const extent<N>& ext) const restrict(amp,cpu) {
+    array_view<const T, N> av(cache, ext, extent_base, idx + index_base, offset);
+    return av;
+  }
+  array_view<const T, N> section(const index<N>& idx) const restrict(amp,cpu) {
+    hc::extent<N> ext(extent);
+    Kalmar::amp_helper<N, index<N>, hc::extent<N>>::minus(idx, ext);
+    return section(idx, ext);
+  }
+
+  array_view<const T, N> section(const extent<N>& ext) const restrict(amp,cpu) {
+    index<N> idx;
+    return section(idx, ext);
+  }
+  array_view<const T, 1> section(int i0, int e0) const restrict(amp,cpu) {
+    static_assert(N == 1, "Rank must be 1");
+    return section(index<1>(i0), hc::extent<1>(e0));
+  }
+  array_view<const T, 2> section(int i0, int i1, int e0, int e1) const restrict(amp,cpu) {
+    static_assert(N == 2, "Rank must be 2");
+    return section(index<2>(i0, i1), hc::extent<2>(e0, e1));
+  }
+  array_view<const T, 3> section(int i0, int i1, int i2, int e0, int e1, int e2) const restrict(amp,cpu) {
+    static_assert(N == 3, "Rank must be 3");
+    return section(index<3>(i0, i1, i2), hc::extent<3>(e0, e1, e2));
+  }
+
+  template <int K>
+    array_view<const T, K> view_as(extent<K> viewExtent) const restrict(amp,cpu) {
+      static_assert(N == 1, "view_as is only permissible on array views of rank 1");
+#if __KALMAR_ACCELERATOR__ != 1
+    if( viewExtent.size() > extent.size())
+      throw runtime_exception("errorMsg_throw", 0);
+#endif
+      array_view<const T, K> av(cache, viewExtent, offset + index_base[0]);
+      return av;
+    }
+
+  void synchronize() const { cache.get_cpu_access(); }
+  completion_future synchronize_async() const {
+      std::future<void> fut = std::async([&]() mutable { synchronize(); });
+      return completion_future(fut.share());
+  }
+
+  void synchronize_to(const accelerator_view& av) const {
+#if __KALMAR_ACCELERATOR__ != 1
+      cache.sync_to(av.pQueue);
+#endif
+  }
+  completion_future synchronize_to_async(const accelerator_view& av) const;
+
+  void refresh() const { cache.refresh(); }
+  const T* data() const restrict(amp,cpu) {
+#if __KALMAR_ACCELERATOR__ != 1
+      cache.get_cpu_access();
+#endif
+    static_assert(N == 1, "data() is only permissible on array views of rank 1");
+    return reinterpret_cast<const T*>(cache.get() + offset + index_base[0]);
+  }
+  const acc_buffer_t& internal() const restrict(amp,cpu) { return cache; }
+  int get_offset() const restrict(amp,cpu) { return offset; }
+  index<N> get_index_base() const restrict(amp,cpu) { return index_base; }
+private:
+  template <typename K, int Q> friend struct projection_helper;
+  template <typename K, int Q> friend struct array_projection_helper;
+  template <typename Q, int K> friend class array;
+  template <typename Q, int K> friend class array_view;
+
+
+  template<typename Q, int K>
+      friend bool is_flat(const array_view<Q, K>&) noexcept;
+  template <typename Q, int K>
+      friend void copy(const array<Q, K>&, const array_view<Q, K>&);
+  template <typename InputIter, typename Q, int K>
+      friend void copy(InputIter, InputIter, const array_view<Q, K>&);
+  template <typename Q, int K>
+      friend void copy(const array_view<const Q, K>&, array<Q, K>&);
+  template <typename OutputIter, typename Q, int K>
+      friend void copy(const array_view<Q, K>&, OutputIter);
+  template <typename Q, int K>
+      friend void copy(const array_view<const Q, K>& src, const array_view<Q, K>& dest);
+
+  // used by view_as and reinterpret_as
+  array_view(const acc_buffer_t& cache, const hc::extent<N>& ext,
+             int offset) restrict(amp,cpu)
+      : cache(cache), extent(ext), extent_base(ext), offset(offset) {}
+
+  // used by section and projection
+  array_view(const acc_buffer_t& cache, const hc::extent<N>& ext_now,
+             const extent<N>& ext_b,
+             const index<N>& idx_b, int off) restrict(amp,cpu)
+      : cache(cache), extent(ext_now), extent_base(ext_b), index_base(idx_b),
+      offset(off) {}
+
+  acc_buffer_t cache;
+  hc::extent<N> extent;
+  hc::extent<N> extent_base;
+  index<N> index_base;
+  int offset;
+};
+
+// ------------------------------------------------------------------------
+// utility functions for copy
+// ------------------------------------------------------------------------
+
+template<typename T, int N>
+static inline bool is_flat(const array_view<T, N>& av) noexcept {
+    return av.extent == av.extent_base && av.index_base == index<N>();
+}
+
+template<typename T>
+static inline bool is_flat(const array_view<T, 1>& av) noexcept { return true; }
+
+template <typename InputIter, typename T, int N, int dim>
+struct copy_input
+{
+    void operator()(InputIter& It, T* ptr, const extent<N>& ext,
+                    const extent<N>& base, const index<N>& idx)
+    {
+        size_t stride = 1;
+        for (int i = dim; i < N; i++)
+            stride *= base[i];
+        ptr += stride * idx[dim - 1];
+        for (int i = 0; i < ext[dim - 1]; i++) {
+            copy_input<InputIter, T, N, dim + 1>()(It, ptr, ext, base, idx);
+            ptr += stride;
+        }
+    }
+};
+
+template <typename InputIter, typename T, int N>
+struct copy_input<InputIter, T, N, N>
+{
+    void operator()(InputIter& It, T* ptr, const extent<N>& ext,
+                    const extent<N>& base, const index<N>& idx)
+    {
+        InputIter end = It;
+        std::advance(end, ext[N - 1]);
+        std::copy(It, end, ptr + idx[N - 1]);
+        It = end;
+    }
+};
+
+template <typename OutputIter, typename T, int N, int dim>
+struct copy_output
+{
+    void operator()(const T* ptr, OutputIter& It, const extent<N>& ext,
+                    const extent<N>& base, const index<N>& idx)
+    {
+        size_t stride = 1;
+        for (int i = dim; i < N; i++)
+            stride *= base[i];
+        ptr += stride * idx[dim - 1];
+        for (int i = 0; i < ext[dim - 1]; i++) {
+            copy_output<OutputIter, T, N, dim + 1>()(ptr, It, ext, base, idx);
+            ptr += stride;
+        }
+    }
+};
+
+template <typename OutputIter, typename T, int N>
+struct copy_output<OutputIter, T, N, N>
+{
+    void operator()(const T* ptr, OutputIter& It, const extent<N>& ext,
+                    const extent<N>& base, const index<N>& idx)
+    {
+        ptr += idx[N - 1];
+        It = std::copy(ptr, ptr + ext[N - 1], It);
+    }
+};
+
+template <typename T, int N, int dim>
+struct copy_bidir
+{
+    void operator()(const T* src, T* dst, const extent<N>& ext,
+                    const extent<N>& base1, const index<N>& idx1,
+                    const extent<N>& base2, const index<N>& idx2)
+    {
+        size_t stride1 = 1;
+        for (int i = dim; i < N; i++)
+            stride1 *= base1[i];
+        src += stride1 * idx1[dim - 1];
+
+        size_t stride2 = 1;
+        for (int i = dim; i < N; i++)
+            stride2 *= base2[i];
+        dst += stride2 * idx2[dim - 1];
+
+        for (int i = 0; i < ext[dim - 1]; i++) {
+            copy_bidir<T, N, dim + 1>()(src, dst, ext, base1, idx1, base2, idx2);
+            src += stride1;
+            dst += stride2;
+        }
+    }
+};
+
+template <typename T, int N>
+struct copy_bidir<T, N, N>
+{
+    void operator()(const T* src, T* dst, const extent<N>& ext,
+                    const extent<N>& base1, const index<N>& idx1,
+                    const extent<N>& base2, const index<N>& idx2)
+    {
+        src += idx1[N - 1];
+        dst += idx2[N - 1];
+        std::copy(src, src + ext[N - 1], dst);
+    }
+};
+
+template <typename Iter, typename T, int N>
+struct do_copy
+{
+    template<template <typename, int> class _amp_container>
+    void operator()(Iter srcBegin, Iter srcEnd, const _amp_container<T, N>& dest) {
+        T* ptr = dest.internal().map_ptr(true, dest.get_extent().size(), dest.get_offset());
+        std::copy(srcBegin, srcEnd, ptr);
+        dest.internal().unmap_ptr(ptr);
+    }
+    template<template <typename, int> class _amp_container>
+    void operator()(const _amp_container<T, N> &src, Iter destBegin) {
+        const T* ptr = src.internal().map_ptr(false, src.get_extent().size(), src.get_offset());
+        std::copy(ptr, ptr + src.get_extent().size(), destBegin);
+        src.internal().unmap_ptr(ptr);
+    }
+};
+
+template <typename Iter, typename T>
+struct do_copy<Iter, T, 1>
+{
+    template<template <typename, int> class _amp_container>
+    void operator()(Iter srcBegin, Iter srcEnd, const _amp_container<T, 1>& dest) {
+        T* ptr = dest.internal().map_ptr(true, dest.get_extent().size(),
+                                         dest.get_offset() + dest.get_index_base()[0]);
+        std::copy(srcBegin, srcEnd, ptr);
+        dest.internal().unmap_ptr(ptr);
+    }
+    template<template <typename, int> class _amp_container>
+    void operator()(const _amp_container<T, 1> &src, Iter destBegin) {
+        const T* ptr = src.internal().map_ptr(false, src.get_extent().size(),
+                                              src.get_offset() + src.get_index_base()[0]);
+        std::copy(ptr, ptr + src.get_extent().size(), destBegin);
+        src.internal().unmap_ptr(ptr);
+    }
+};
+
+template <typename T, int N>
+struct do_copy<T*, T, N>
+{
+    template<template <typename, int> class _amp_container>
+    void operator()(T* srcBegin, T* srcEnd, const _amp_container<T, N>& dest) {
+        dest.internal().write(srcBegin, std::distance(srcBegin, srcEnd), dest.get_offset(), true);
+    }
+    template<template <typename, int> class _amp_container>
+    void operator()(const _amp_container<T, N> &src, T* destBegin) {
+        src.internal().read(destBegin, src.get_extent().size(), src.get_offset());
+    }
+};
+
+template <typename T>
+struct do_copy<T*, T, 1>
+{
+    template<template <typename, int> class _amp_container>
+    void operator()(const T* srcBegin, const T* srcEnd, const _amp_container<T, 1>& dest) {
+        dest.internal().write(srcBegin, std::distance(srcBegin, srcEnd),
+                              dest.get_offset() + dest.get_index_base()[0], true);
+    }
+    template<template <typename, int> class _amp_container>
+    void operator()(const _amp_container<T, 1> &src, T* destBegin) {
+        src.internal().read(destBegin, src.get_extent().size(),
+                            src.get_offset() + src.get_index_base()[0]);
+    }
+};
+
+// ------------------------------------------------------------------------
+// copy
+// ------------------------------------------------------------------------
+
+template <typename T, int N>
+void copy(const array_view<const T, N>& src, const array_view<T, N>& dest) {
+    if (is_flat(src)) {
+        if (is_flat(dest))
+            src.internal().copy(dest.internal(), src.get_offset(),
+                                dest.get_offset(), dest.get_extent().size());
+        else {
+            const T* pSrc = src.internal().map_ptr();
+            const T* p = pSrc;
+            T* pDst = dest.internal().map_ptr(true, dest.extent_base.size(), dest.offset);
+            copy_input<const T*, T, N, 1>()(pSrc, pDst, dest.extent, dest.extent_base, dest.index_base);
+            dest.internal().unmap_ptr(pDst);
+            src.internal().unmap_ptr(p);
+        }
+    } else {
+        if (is_flat(dest)) {
+            T* pDst = dest.internal().map_ptr(true);
+            T* p = pDst;
+            const T* pSrc = src.internal().map_ptr(false, src.extent_base.size(), src.offset);
+            copy_output<T*, T, N, 1>()(pSrc, pDst, src.extent, src.extent_base, src.index_base);
+            dest.internal().unmap_ptr(p);
+            src.internal().unmap_ptr(pSrc);
+        } else {
+            const T* pSrc = src.internal().map_ptr(false, src.extent_base.size(), src.offset);
+            T* pDst = dest.internal().map_ptr(true, dest.extent_base.size(), dest.offset);
+            copy_bidir<T, N, 1>()(pSrc, pDst, src.extent, src.extent_base,
+                                  src.index_base, dest.extent_base, dest.index_base);
+            dest.internal().unmap_ptr(pDst);
+            src.internal().unmap_ptr(pSrc);
+
+        }
+    }
+}
+
+template <typename T>
+void copy(const array_view<const T, 1>& src, const array_view<T, 1>& dest) {
+    src.internal().copy(dest.internal(),
+                        src.get_offset() + src.get_index_base()[0],
+                        dest.get_offset() + dest.get_index_base()[0],
+                        dest.get_extent().size());
+}
+
+template <typename T, int N>
+void copy(const array_view<T, N>& src, const array_view<T, N>& dest) {
+    const array_view<const T, N> buf(src);
+    copy(buf, dest);
+}
+
+template <typename T, int N>
+void copy(const array_view<const T, N>& src, array<T, N>& dest) {
+    if (is_flat(src)) {
+        src.internal().copy(dest.internal(), src.get_offset(),
+                            dest.get_offset(), dest.get_extent().size());
+    } else {
+        T* pDst = dest.internal().map_ptr(true);
+        T* p = pDst;
+        const T* pSrc = src.internal().map_ptr(false, src.extent_base.size(), src.offset);
+        copy_output<T*, T, N, 1>()(pSrc, pDst, src.extent, src.extent_base, src.index_base);
+        src.internal().unmap_ptr(pSrc);
+        dest.internal().unmap_ptr(p);
+    }
+}
+
+template <typename T>
+void copy(const array_view<const T, 1>& src, array<T, 1>& dest) {
+    src.internal().copy(dest.internal(),
+                        src.get_offset() + src.get_index_base()[0],
+                        dest.get_offset() + dest.get_index_base()[0],
+                        dest.get_extent().size());
+}
+
+template <typename T, int N>
+void copy(const array_view<T, N>& src, array<T, N>& dest) {
+    const array_view<const T, N> buf(src);
+    copy(buf, dest);
+}
+
+template <typename T, int N>
+void copy(const array<T, N>& src, const array_view<T, N>& dest) {
+    if (is_flat(dest))
+        src.internal().copy(dest.internal(), src.get_offset(),
+                            dest.get_offset(), dest.get_extent().size());
+    else {
+        T* pSrc = src.internal().map_ptr();
+        T* p = pSrc;
+        T* pDst = dest.internal().map_ptr(true, dest.extent_base.size(), dest.offset);
+        copy_input<T*, T, N, 1>()(pSrc, pDst, dest.extent, dest.extent_base, dest.index_base);
+        dest.internal().unmap_ptr(pDst);
+        src.internal().unmap_ptr(p);
+    }
+}
+
+template <typename T>
+void copy(const array<T, 1>& src, const array_view<T, 1>& dest) {
+    src.internal().copy(dest.internal(),
+                        src.get_offset() + src.get_index_base()[0],
+                        dest.get_offset() + dest.get_index_base()[0],
+                        dest.get_extent().size());
+}
+
+template <typename T, int N>
+void copy(const array<T, N>& src, array<T, N>& dest) {
+    src.internal().copy(dest.internal(), 0, 0, 0);
+}
+
+template <typename InputIter, typename T, int N>
+void copy(InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest) {
+    if (is_flat(dest))
+        do_copy<InputIter, T, N>()(srcBegin, srcEnd, dest);
+   else {
+        T* ptr = dest.internal().map_ptr(true, dest.extent_base.size(), dest.offset);
+        copy_input<InputIter, T, N, 1>()(srcBegin, ptr, dest.extent, dest.extent_base, dest.index_base);
+        dest.internal().unmap_ptr(ptr);
+    }
+}
+
+template <typename InputIter, typename T, int N>
+void copy(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest) {
+#if __KALMAR_ACCELERATOR__ != 1
+    if( ( std::distance(srcBegin,srcEnd) <=0 )||( std::distance(srcBegin,srcEnd) < dest.get_extent().size() ))
+      throw runtime_exception("errorMsg_throw ,copy between different types", 0);
+#endif
+    do_copy<InputIter, T, N>()(srcBegin, srcEnd, dest);
+}
+
+template <typename InputIter, typename T, int N>
+void copy(InputIter srcBegin, const array_view<T, N>& dest) {
+    InputIter srcEnd = srcBegin;
+    std::advance(srcEnd, dest.get_extent().size());
+    copy(srcBegin, srcEnd, dest);
+}
+
+template <typename InputIter, typename T, int N>
+void copy(InputIter srcBegin, array<T, N>& dest) {
+    InputIter srcEnd = srcBegin;
+    std::advance(srcEnd, dest.get_extent().size());
+    copy(srcBegin, srcEnd, dest);
+}
+
+template <typename OutputIter, typename T, int N>
+void copy(const array_view<T, N> &src, OutputIter destBegin) {
+    if (is_flat(src))
+        do_copy<OutputIter, T, N>()(src, destBegin);
+    else {
+        T* ptr = src.internal().map_ptr(false, src.extent_base.size(), src.offset);
+        copy_output<OutputIter, T, N, 1>()(ptr, destBegin, src.extent, src.extent_base, src.index_base);
+        src.internal().unmap_ptr(ptr);
+    }
+}
+
+template <typename OutputIter, typename T, int N>
+void copy(const array<T, N> &src, OutputIter destBegin) {
+    do_copy<OutputIter, T, N>()(src, destBegin);
+}
+
+// ------------------------------------------------------------------------
+// utility function for copy_async_
+// ------------------------------------------------------------------------
+
+template <typename InputIter, typename OutputIter>
+completion_future __amp_copy_async_impl(InputIter& src, OutputIter& dst) {
+    std::future<void> fut = std::async([&]() mutable { copy(src, dst); });
+    return completion_future(fut.share());
+}
+
+// ------------------------------------------------------------------------
+// copy_async
+// ------------------------------------------------------------------------
+
+template <typename T, int N>
+completion_future copy_async(const array<T, N>& src, array<T, N>& dest) {
+    return __amp_copy_async_impl(src, dest);
+}
+
+template <typename T, int N>
+completion_future copy_async(const array<T, N>& src, const array<T, N>& dest) {
+    return __amp_copy_async_impl(src, dest);
+}
+
+template <typename T, int N>
+completion_future copy_async(const array<T, N>& src, const array_view<T, N>& dest) {
+    return __amp_copy_async_impl(src, dest);
+}
+
+
+template <typename T, int N>
+completion_future copy_async(const array_view<const T, N>& src, array<T, N>& dest) {
+    return __amp_copy_async_impl(src, dest);
+}
+
+template <typename T, int N>
+completion_future copy_async(const array_view<const T, N>& src, const array<T, N>& dest) {
+    return __amp_copy_async_impl(src, dest);
+}
+
+template <typename T, int N>
+completion_future copy_async(const array_view<const T, N>& src, const array_view<T, N>& dest) {
+    return __amp_copy_async_impl(src, dest);
+}
+
+
+template <typename T, int N>
+completion_future copy_async(const array_view<T, N>& src, array<T, N>& dest) {
+    return __amp_copy_async_impl(src, dest);
+}
+
+template <typename T, int N>
+completion_future copy_async(const array_view<T, N>& src, const array<T, N>& dest) {
+    return __amp_copy_async_impl(src, dest);
+}
+
+template <typename T, int N>
+completion_future copy_async(const array_view<T, N>& src, const array_view<T, N>& dest) {
+    return __amp_copy_async_impl(src, dest);
+}
+
+
+template <typename InputIter, typename T, int N>
+completion_future copy_async(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest) {
+    std::future<void> fut = std::async([&]() mutable { copy(srcBegin, srcEnd, dest); });
+    return completion_future(fut.share());
+}
+
+template <typename InputIter, typename T, int N>
+completion_future copy_async(InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest) {
+    std::future<void> fut = std::async([&]() mutable { copy(srcBegin, srcEnd, dest); });
+    return completion_future(fut.share());
+}
+
+
+template <typename InputIter, typename T, int N>
+completion_future copy_async(InputIter srcBegin, array<T, N>& dest) {
+    std::future<void> fut = std::async([&]() mutable { copy(srcBegin, dest); });
+    return completion_future(fut.share());
+}
+template <typename InputIter, typename T, int N>
+completion_future copy_async(InputIter srcBegin, const array_view<T, N>& dest) {
+    std::future<void> fut = std::async([&]() mutable { copy(srcBegin, dest); });
+    return completion_future(fut.share());
+}
+
+
+template <typename OutputIter, typename T, int N>
+completion_future copy_async(const array<T, N>& src, OutputIter destBegin) {
+    std::future<void> fut = std::async([&]() mutable { copy(src, destBegin); });
+    return completion_future(fut.share());
+}
+template <typename OutputIter, typename T, int N>
+completion_future copy_async(const array_view<T, N>& src, OutputIter destBegin) {
+    std::future<void> fut = std::async([&]() mutable { copy(src, destBegin); });
+    return completion_future(fut.share());
+}
+
+// ------------------------------------------------------------------------
+// parallel_for_each
+// ------------------------------------------------------------------------
+
 template <int N, typename Kernel>
 completion_future parallel_for_each(const accelerator_view&, const extent<N>&, const Kernel&);
 
