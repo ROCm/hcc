@@ -5,14 +5,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// CAVEATS: There could be walkarounds for quick evaluation purposes. Here we
-// list such features that are used in the code with description.
-//
-// ACCELERATOR
-//  According to specification, each array should have its binding accelerator
-//  instance. For now, we haven't implemented such binding nor actual
-//  implementation of accelerator.
-
 #pragma once
 
 #define __global
