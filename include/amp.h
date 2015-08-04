@@ -793,9 +793,6 @@ public:
   friend bool operator!=(const tiled_extent& lhs, const tiled_extent& rhs) restrict(amp,cpu);
 };
 
-}
-
-namespace Concurrency {
 
 template <typename T, int N>
 struct projection_helper
