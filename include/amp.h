@@ -89,7 +89,6 @@ private:
 
   template <typename Q, int K> friend class array;
   template <typename Q, int K> friend class array_view;
-  template <typename T, int N> friend class array_helper;
 
   template <int N, typename Kernel> friend
       void parallel_for_each(Concurrency::extent<N>, const Kernel&);
@@ -1413,7 +1412,6 @@ public:
 private:
   template <typename K, int Q> friend struct projection_helper;
   template <typename K, int Q> friend struct array_projection_helper;
-  template <typename K, int Q> friend class array_helper;
   acc_buffer_t m_device;
   Concurrency::extent<N> extent;
 };
