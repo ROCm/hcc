@@ -265,6 +265,9 @@ public:
         : __amp_future(std::move(_Other.__amp_future)), __thread_then(_Other.__thread_then) {}
 
     ~completion_future() {
+      // implicitly wait for the future inside to complete at destruction
+      wait();
+
       if (__thread_then != nullptr) {
         __thread_then->join();
       }
