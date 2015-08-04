@@ -1922,8 +1922,6 @@ private:
   int offset;
 };
 
-#undef __global
-
 // pfe interfaces
 template <int N, typename Kernel>
 void parallel_for_each(const accelerator_view&, extent<N> compute_domain, const Kernel& f);
