@@ -80,6 +80,8 @@ private:
       void Kalmar::launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>&, Kernel const&, extent<N> const&);
 #endif
 
+  // parallel_for_each with returns void, non-tiled, with dynamic group segment
+  // FIXME: make them deprecated
   template<typename Kernel> friend
       void parallel_for_each(const accelerator_view&, const extent<1>&, ts_allocator&, const Kernel&);
   template<typename Kernel> friend
@@ -87,6 +89,8 @@ private:
   template<typename Kernel> friend
       void parallel_for_each(const accelerator_view&, const extent<3>&, ts_allocator&, const Kernel&);
 
+  // parallel_for_each with returns void, non-tiled, with dynamic group segment
+  // FIXME: make them deprecated
   template <typename Kernel> friend
       void parallel_for_each(const extent<1>&, ts_allocator&, const Kernel&);
   template <typename Kernel> friend
@@ -94,6 +98,8 @@ private:
   template <typename Kernel> friend
       void parallel_for_each(const extent<3>&, ts_allocator&, const Kernel&);
 
+  // parallel_for_each with returns void, tiled, with dynamic group segment
+  // FIXME: make them deprecated
   template<typename Kernel> friend
       void parallel_for_each(const accelerator_view&, const tiled_extent<1>&, ts_allocator&, const Kernel&);
   template<typename Kernel> friend
@@ -101,6 +107,8 @@ private:
   template<typename Kernel> friend
       void parallel_for_each(const accelerator_view&, const tiled_extent<3>&, ts_allocator&, const Kernel&);
 
+  // parallel_for_each with returns void, tiled, with dynamic group segment
+  // FIXME: make them deprecated
   template <typename Kernel> friend
       void parallel_for_each(const tiled_extent<1>&, ts_allocator&, const Kernel&);
   template <typename Kernel> friend
@@ -108,34 +116,34 @@ private:
   template <typename Kernel> friend
       void parallel_for_each(const tiled_extent<3>&, ts_allocator&, const Kernel&);
 
-  // non-tiled async_parallel_for_each
+  // non-tiled parallel_for_each
   // generic version
   template <int N, typename Kernel> friend
-      completion_future async_parallel_for_each(const accelerator_view&, const extent<N>&, const Kernel&);
+      completion_future parallel_for_each(const accelerator_view&, const extent<N>&, const Kernel&);
 
   // 1D specialization
   template <typename Kernel> friend
-      completion_future async_parallel_for_each(const accelerator_view&, const extent<1>&, const Kernel&);
+      completion_future parallel_for_each(const accelerator_view&, const extent<1>&, const Kernel&);
 
   // 2D specialization
   template <typename Kernel> friend
-      completion_future async_parallel_for_each(const accelerator_view&, const extent<2>&, const Kernel&);
+      completion_future parallel_for_each(const accelerator_view&, const extent<2>&, const Kernel&);
 
   // 3D specialization
   template <typename Kernel> friend
-      completion_future async_parallel_for_each(const accelerator_view&, const extent<3>&, const Kernel&);
+      completion_future parallel_for_each(const accelerator_view&, const extent<3>&, const Kernel&);
 
-  // tiled async_parallel_for_each, 3D version
+  // tiled parallel_for_each, 3D version
   template <typename Kernel> friend
-      completion_future async_parallel_for_each(const accelerator_view&, const tiled_extent<3>&, const Kernel&);
+      completion_future parallel_for_each(const accelerator_view&, const tiled_extent<3>&, const Kernel&);
 
-  // tiled async_parallel_for_each, 2D version
+  // tiled parallel_for_each, 2D version
   template <typename Kernel> friend
-      completion_future async_parallel_for_each(const accelerator_view&, const tiled_extent<2>&, const Kernel&);
+      completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, const Kernel&);
 
-  // tiled async_parallel_for_each, 1D version
+  // tiled parallel_for_each, 1D version
   template <typename Kernel> friend
-      completion_future async_parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
+      completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
 
 
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
@@ -312,34 +320,34 @@ private:
     completion_future(const std::shared_future<void> &__future)
         : __amp_future(__future) {}
 
-    // non-tiled async_parallel_for_each
+    // non-tiled parallel_for_each
     // generic version
     template <int N, typename Kernel> friend
-        completion_future async_parallel_for_each(const accelerator_view&, const extent<N>&, const Kernel&);
+        completion_future parallel_for_each(const accelerator_view&, const extent<N>&, const Kernel&);
 
     // 1D specialization
     template <typename Kernel> friend
-        completion_future async_parallel_for_each(const accelerator_view&, const extent<1>&, const Kernel&);
+        completion_future parallel_for_each(const accelerator_view&, const extent<1>&, const Kernel&);
 
     // 2D specialization
     template <typename Kernel> friend
-        completion_future async_parallel_for_each(const accelerator_view&, const extent<2>&, const Kernel&);
+        completion_future parallel_for_each(const accelerator_view&, const extent<2>&, const Kernel&);
 
     // 3D specialization
     template <typename Kernel> friend
-        completion_future async_parallel_for_each(const accelerator_view&, const extent<3>&, const Kernel&);
+        completion_future parallel_for_each(const accelerator_view&, const extent<3>&, const Kernel&);
 
-    // tiled async_parallel_for_each, 3D version
+    // tiled parallel_for_each, 3D version
     template <typename Kernel> friend
-        completion_future async_parallel_for_each(const accelerator_view&, const tiled_extent<3>&, const Kernel&);
+        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<3>&, const Kernel&);
 
-    // tiled async_parallel_for_each, 2D version
+    // tiled parallel_for_each, 2D version
     template <typename Kernel> friend
-        completion_future async_parallel_for_each(const accelerator_view&, const tiled_extent<2>&, const Kernel&);
+        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, const Kernel&);
 
-    // tiled async_parallel_for_each, 1D version
+    // tiled parallel_for_each, 1D version
     template <typename Kernel> friend
-        completion_future async_parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
+        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
 };
 
 
@@ -755,7 +763,7 @@ private:
       void parallel_for_each(const accelerator_view&, const tiled_extent<N>&, ts_allocator&, const Kernel&);
 
   template<typename Kernel> friend
-      completion_future async_parallel_for_each(const accelerator_view&, const tiled_extent<N>&, const Kernel&);
+      completion_future parallel_for_each(const accelerator_view&, const tiled_extent<N>&, const Kernel&);
 };
 
 template<>
@@ -795,7 +803,7 @@ private:
       void parallel_for_each(const accelerator_view&, const tiled_extent<1>&, ts_allocator&, const Kernel&);
 
   template<typename Kernel> friend
-      completion_future async_parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
+      completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
 };
 
 template<>
@@ -836,40 +844,40 @@ private:
       void parallel_for_each(const accelerator_view&, const tiled_extent<2>&, ts_allocator&, const Kernel&);
 
   template<typename Kernel> friend
-      completion_future async_parallel_for_each(const accelerator_view&, const tiled_extent<2>&, const Kernel&);
+      completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, const Kernel&);
 };
 
 // async pfe
 template <int N, typename Kernel>
-completion_future async_parallel_for_each(const accelerator_view&, const extent<N>&, const Kernel&);
+completion_future parallel_for_each(const accelerator_view&, const extent<N>&, const Kernel&);
 
 template <typename Kernel>
-completion_future async_parallel_for_each(const accelerator_view&, const tiled_extent<3>&, const Kernel&);
+completion_future parallel_for_each(const accelerator_view&, const tiled_extent<3>&, const Kernel&);
 
 template <typename Kernel>
-completion_future async_parallel_for_each(const accelerator_view&, const tiled_extent<2>&, const Kernel&);
+completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, const Kernel&);
 
 template <typename Kernel>
-completion_future async_parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
+completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
 
 template <int N, typename Kernel>
-completion_future async_parallel_for_each(const extent<N>& compute_domain, const Kernel& f) {
-    return async_parallel_for_each(accelerator::get_auto_selection_view(), compute_domain, f);
+completion_future parallel_for_each(const extent<N>& compute_domain, const Kernel& f) {
+    return parallel_for_each(accelerator::get_auto_selection_view(), compute_domain, f);
 }
 
 template <typename Kernel>
-completion_future async_parallel_for_each(const tiled_extent<3>& compute_domain, const Kernel& f) {
-    return async_parallel_for_each(accelerator::get_auto_selection_view(), compute_domain, f);
+completion_future parallel_for_each(const tiled_extent<3>& compute_domain, const Kernel& f) {
+    return parallel_for_each(accelerator::get_auto_selection_view(), compute_domain, f);
 }
 
 template <typename Kernel>
-completion_future async_parallel_for_each(const tiled_extent<2>& compute_domain, const Kernel& f) {
-    return async_parallel_for_each(accelerator::get_auto_selection_view(), compute_domain, f);
+completion_future parallel_for_each(const tiled_extent<2>& compute_domain, const Kernel& f) {
+    return parallel_for_each(accelerator::get_auto_selection_view(), compute_domain, f);
 }
 
 template <typename Kernel>
-completion_future async_parallel_for_each(const tiled_extent<1>& compute_domain, const Kernel& f) {
-    return async_parallel_for_each(accelerator::get_auto_selection_view(), compute_domain, f);
+completion_future parallel_for_each(const tiled_extent<1>& compute_domain, const Kernel& f) {
+    return parallel_for_each(accelerator::get_auto_selection_view(), compute_domain, f);
 }
 
 template <int N, typename Kernel, typename _Tp>
@@ -912,9 +920,9 @@ private:
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
 #pragma clang diagnostic ignored "-Wunused-variable"
-//ND async_parallel_for_each, nontiled
+//ND parallel_for_each, nontiled
 template <int N, typename Kernel>
-__attribute__((noinline,used)) completion_future async_parallel_for_each(
+__attribute__((noinline,used)) completion_future parallel_for_each(
     const accelerator_view& av,
     const extent<N>& compute_domain, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
@@ -950,9 +958,9 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
-//1D async_parallel_for_each, nontiled
+//1D parallel_for_each, nontiled
 template <typename Kernel>
-__attribute__((noinline,used)) completion_future async_parallel_for_each(
+__attribute__((noinline,used)) completion_future parallel_for_each(
     const accelerator_view& av, const extent<1>& compute_domain, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
   if(compute_domain[0]<=0) {
@@ -976,9 +984,9 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
-//2D async_parallel_for_each, nontiled
+//2D parallel_for_each, nontiled
 template <typename Kernel>
-__attribute__((noinline,used)) completion_future async_parallel_for_each(
+__attribute__((noinline,used)) completion_future parallel_for_each(
     const accelerator_view& av, const extent<2>& compute_domain, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
   if(compute_domain[0]<=0 || compute_domain[1]<=0) {
@@ -1003,9 +1011,9 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
-//3D async_parallel_for_each, nontiled
+//3D parallel_for_each, nontiled
 template <typename Kernel>
-__attribute__((noinline,used)) completion_future async_parallel_for_each(
+__attribute__((noinline,used)) completion_future parallel_for_each(
     const accelerator_view& av, const extent<3>& compute_domain, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
   if(compute_domain[0]<=0 || compute_domain[1]<=0 || compute_domain[2]<=0) {
@@ -1037,9 +1045,9 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
-//1D async_parallel_for_each, tiled
+//1D parallel_for_each, tiled
 template <typename Kernel>
-__attribute__((noinline,used)) completion_future async_parallel_for_each(
+__attribute__((noinline,used)) completion_future parallel_for_each(
     const accelerator_view& av, const tiled_extent<1>& compute_domain, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
   if(compute_domain[0]<=0) {
@@ -1071,9 +1079,9 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
-//2D async_parallel_for_each, tiled
+//2D parallel_for_each, tiled
 template <typename Kernel>
-__attribute__((noinline,used)) completion_future async_parallel_for_each(
+__attribute__((noinline,used)) completion_future parallel_for_each(
     const accelerator_view& av, const tiled_extent<2>& compute_domain, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
   if(compute_domain[0]<=0 || compute_domain[1]<=0) {
@@ -1107,9 +1115,9 @@ __attribute__((noinline,used)) completion_future async_parallel_for_each(
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
-//3D async_parallel_for_each, tiled
+//3D parallel_for_each, tiled
 template <typename Kernel>
-__attribute__((noinline,used)) completion_future async_parallel_for_each(
+__attribute__((noinline,used)) completion_future parallel_for_each(
     const accelerator_view& av, const tiled_extent<3>& compute_domain, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
   if(compute_domain[0]<=0 || compute_domain[1]<=0 || compute_domain[2]<=0) {
