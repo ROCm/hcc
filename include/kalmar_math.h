@@ -207,7 +207,7 @@
 
 #endif
 
-namespace Concurrency {
+namespace Kalmar {
 namespace fast_math {
 
   inline float host_acosf(float x) restrict(cpu) { return ::acosf(x); }
@@ -2490,4 +2490,4 @@ namespace fast_math {
 
 } // namespace precise_math
 
-} // namespace Concurrency
+} // namespace Kalmar
