@@ -23,7 +23,7 @@ bool test1D(size_t grid_size, size_t tile_size) {
 
   // launch kernel in tiled fashion
   tiled_extent<1> ex(grid_size, tile_size);
-  parallel_for_each(ex, tsa, [&, avOffset](tiled_index<1>& idx) restrict(amp) {
+  completion_future fut = parallel_for_each(ex, tsa, [&, avOffset](tiled_index<1>& idx) restrict(amp) {
 
     // reset allocator
     tsa.reset();
@@ -40,6 +40,9 @@ bool test1D(size_t grid_size, size_t tile_size) {
     // write allocated offset to avOffset
     avOffset(idx) = (p - lds) * sizeof(T);
   });
+
+  // wait for kernel to complete
+  fut.wait();
 
 #if 0
   // print offset

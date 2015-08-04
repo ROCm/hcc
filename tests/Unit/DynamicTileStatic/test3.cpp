@@ -43,12 +43,15 @@ bool test1D() {
 
   // set dynamic tile size as 0 for now as we don't test this feature in this test yet
   hc::ts_allocator tsa;
-  hc::parallel_for_each(hc::tiled_extent<1>(grid_size, tile_size), tsa, [=](hc::tiled_index<1>& idx) restrict(amp) {
+  hc::completion_future fut = hc::parallel_for_each(hc::tiled_extent<1>(grid_size, tile_size), tsa, [=](hc::tiled_index<1>& idx) restrict(amp) {
     av5(idx) = idx.global[0];
     av6(idx) = idx.local[0];
     av7(idx) = idx.tile[0];
     av8(idx) = idx.tile_origin[0];
   });
+
+  // wait for kernel completion
+  fut.wait();
 
 #define SHOW_CONTENT_1D(str,av,table) \
   { \
@@ -153,7 +156,7 @@ bool test2D() {
 
   // set dynamic tile size as 0 for now as we don't test this feature in this test yet
   hc::ts_allocator tsa;
-  hc::parallel_for_each(hc::tiled_extent<2>(grid_size_0, grid_size_1, tile_size_0, tile_size_1), tsa, [=](hc::tiled_index<2>& idx) restrict(amp) {
+  hc::completion_future fut = hc::parallel_for_each(hc::tiled_extent<2>(grid_size_0, grid_size_1, tile_size_0, tile_size_1), tsa, [=](hc::tiled_index<2>& idx) restrict(amp) {
     av9(idx) = idx.global[0];
     av10(idx) = idx.global[1];
     av11(idx) = idx.local[0];
@@ -163,6 +166,9 @@ bool test2D() {
     av15(idx) = idx.tile_origin[0];
     av16(idx) = idx.tile_origin[1];
   });
+
+  // wait for kernel completion
+  fut.wait();
 
 #define SHOW_CONTENT_2D(str,av,table) \
   { \
@@ -296,7 +302,7 @@ bool test3D() {
 
   // set dynamic tile size as 0 for now as we don't test this feature in this test yet
   hc::ts_allocator tsa;
-  hc::parallel_for_each(hc::tiled_extent<3>(grid_size_0, grid_size_1, grid_size_2, tile_size_0, tile_size_1, tile_size_2), tsa, [=](hc::tiled_index<3>& idx) restrict(amp) {
+  hc::completion_future fut = hc::parallel_for_each(hc::tiled_extent<3>(grid_size_0, grid_size_1, grid_size_2, tile_size_0, tile_size_1, tile_size_2), tsa, [=](hc::tiled_index<3>& idx) restrict(amp) {
     av13(idx) = idx.global[0];
     av14(idx) = idx.global[1];
     av15(idx) = idx.global[2];
@@ -310,6 +316,9 @@ bool test3D() {
     av23(idx) = idx.tile_origin[1];
     av24(idx) = idx.tile_origin[2];
   });
+
+  // wait for kernel completion
+  fut.wait();
 
 #define SHOW_CONTENT_3D(str,av,table) \
   { \

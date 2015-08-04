@@ -19,7 +19,7 @@ bool test() {
   Concurrency::array_view<int, 1> av(GRID_SIZE);
   tiled_extent<1> ex(GRID_SIZE, TILE_SIZE);
   
-  parallel_for_each(hc::accelerator().get_default_view(),
+  completion_future fut = parallel_for_each(hc::accelerator().get_default_view(),
                     ex, tsa,
                     __KERNEL__ [=, &tsa](tiled_index<1>& tidx) {
     tile_static int lds1[TILE_SIZE];
@@ -37,6 +37,9 @@ bool test() {
     // calculate the offset and set to the result global array_view
     av(global) = (ptr - lds);
   });
+
+  // wait for kernel to complete
+  fut.wait();
 
   // verify data
   bool ret = true;
