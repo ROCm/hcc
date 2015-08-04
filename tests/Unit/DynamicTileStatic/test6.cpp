@@ -1,7 +1,6 @@
 // XFAIL: Linux
 // RUN: %cxxamp %s -Xclang -fhsa-ext -o %t.out && %t.out
 
-#include <amp.h>
 #include <hc.hpp>
 
 #include <iostream>
@@ -16,7 +15,7 @@ bool test() {
   ts_allocator tsa;
   tsa.setDynamicGroupSegmentSize(0);
 
-  Concurrency::array_view<int, 1> av(GRID_SIZE);
+  array_view<int, 1> av(GRID_SIZE);
   tiled_extent<1> ex(GRID_SIZE, TILE_SIZE);
   
   completion_future fut = parallel_for_each(hc::accelerator().get_default_view(),

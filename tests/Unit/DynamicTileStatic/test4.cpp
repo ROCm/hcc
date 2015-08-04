@@ -1,7 +1,6 @@
 // XFAIL: Linux
 // RUN: %cxxamp %s -Xclang -fhsa-ext -o %t.out && %t.out
 
-#include <amp.h>
 #include <hc.hpp>
 
 #include <iostream>
@@ -15,7 +14,7 @@ bool test1D(size_t grid_size, size_t tile_size) {
 
   // array_view which will store the offset of allocated memory for each
   // work item, relative to the beginning of group segment
-  Concurrency::array_view<T, 1> avOffset(grid_size);
+  array_view<T, 1> avOffset(grid_size);
 
   // initialize ts_allocator
   ts_allocator tsa;

@@ -36,10 +36,10 @@ bool test1D() {
   std::vector<int> table6(grid_size);
   std::vector<int> table7(grid_size);
   std::vector<int> table8(grid_size);
-  Concurrency::array_view<int, 1> av5(grid_size, table5);
-  Concurrency::array_view<int, 1> av6(grid_size, table6);
-  Concurrency::array_view<int, 1> av7(grid_size, table7);
-  Concurrency::array_view<int, 1> av8(grid_size, table8);
+  hc::array_view<int, 1> av5(grid_size, table5);
+  hc::array_view<int, 1> av6(grid_size, table6);
+  hc::array_view<int, 1> av7(grid_size, table7);
+  hc::array_view<int, 1> av8(grid_size, table8);
 
   // set dynamic tile size as 0 for now as we don't test this feature in this test yet
   hc::ts_allocator tsa;
@@ -145,14 +145,14 @@ bool test2D() {
   std::vector<int> table14(grid_size_0 * grid_size_1);
   std::vector<int> table15(grid_size_0 * grid_size_1);
   std::vector<int> table16(grid_size_0 * grid_size_1);
-  Concurrency::array_view<int, 2> av9(grid_size_0, grid_size_1, table9);
-  Concurrency::array_view<int, 2> av10(grid_size_0, grid_size_1, table10);
-  Concurrency::array_view<int, 2> av11(grid_size_0, grid_size_1, table11);
-  Concurrency::array_view<int, 2> av12(grid_size_0, grid_size_1, table12);
-  Concurrency::array_view<int, 2> av13(grid_size_0, grid_size_1, table13);
-  Concurrency::array_view<int, 2> av14(grid_size_0, grid_size_1, table14);
-  Concurrency::array_view<int, 2> av15(grid_size_0, grid_size_1, table15);
-  Concurrency::array_view<int, 2> av16(grid_size_0, grid_size_1, table16);
+  hc::array_view<int, 2> av9(grid_size_0, grid_size_1, table9);
+  hc::array_view<int, 2> av10(grid_size_0, grid_size_1, table10);
+  hc::array_view<int, 2> av11(grid_size_0, grid_size_1, table11);
+  hc::array_view<int, 2> av12(grid_size_0, grid_size_1, table12);
+  hc::array_view<int, 2> av13(grid_size_0, grid_size_1, table13);
+  hc::array_view<int, 2> av14(grid_size_0, grid_size_1, table14);
+  hc::array_view<int, 2> av15(grid_size_0, grid_size_1, table15);
+  hc::array_view<int, 2> av16(grid_size_0, grid_size_1, table16);
 
   // set dynamic tile size as 0 for now as we don't test this feature in this test yet
   hc::ts_allocator tsa;
@@ -287,18 +287,18 @@ bool test3D() {
   std::vector<int> table22(grid_size_0 * grid_size_1 * grid_size_2);
   std::vector<int> table23(grid_size_0 * grid_size_1 * grid_size_2);
   std::vector<int> table24(grid_size_0 * grid_size_1 * grid_size_2);
-  Concurrency::array_view<int, 3> av13(grid_size_0, grid_size_1, grid_size_2, table13);
-  Concurrency::array_view<int, 3> av14(grid_size_0, grid_size_1, grid_size_2, table14);
-  Concurrency::array_view<int, 3> av15(grid_size_0, grid_size_1, grid_size_2, table15);
-  Concurrency::array_view<int, 3> av16(grid_size_0, grid_size_1, grid_size_2, table16);
-  Concurrency::array_view<int, 3> av17(grid_size_0, grid_size_1, grid_size_2, table17);
-  Concurrency::array_view<int, 3> av18(grid_size_0, grid_size_1, grid_size_2, table18);
-  Concurrency::array_view<int, 3> av19(grid_size_0, grid_size_1, grid_size_2, table19);
-  Concurrency::array_view<int, 3> av20(grid_size_0, grid_size_1, grid_size_2, table20);
-  Concurrency::array_view<int, 3> av21(grid_size_0, grid_size_1, grid_size_2, table21);
-  Concurrency::array_view<int, 3> av22(grid_size_0, grid_size_1, grid_size_2, table22);
-  Concurrency::array_view<int, 3> av23(grid_size_0, grid_size_1, grid_size_2, table23);
-  Concurrency::array_view<int, 3> av24(grid_size_0, grid_size_1, grid_size_2, table24);
+  hc::array_view<int, 3> av13(grid_size_0, grid_size_1, grid_size_2, table13);
+  hc::array_view<int, 3> av14(grid_size_0, grid_size_1, grid_size_2, table14);
+  hc::array_view<int, 3> av15(grid_size_0, grid_size_1, grid_size_2, table15);
+  hc::array_view<int, 3> av16(grid_size_0, grid_size_1, grid_size_2, table16);
+  hc::array_view<int, 3> av17(grid_size_0, grid_size_1, grid_size_2, table17);
+  hc::array_view<int, 3> av18(grid_size_0, grid_size_1, grid_size_2, table18);
+  hc::array_view<int, 3> av19(grid_size_0, grid_size_1, grid_size_2, table19);
+  hc::array_view<int, 3> av20(grid_size_0, grid_size_1, grid_size_2, table20);
+  hc::array_view<int, 3> av21(grid_size_0, grid_size_1, grid_size_2, table21);
+  hc::array_view<int, 3> av22(grid_size_0, grid_size_1, grid_size_2, table22);
+  hc::array_view<int, 3> av23(grid_size_0, grid_size_1, grid_size_2, table23);
+  hc::array_view<int, 3> av24(grid_size_0, grid_size_1, grid_size_2, table24);
 
   // set dynamic tile size as 0 for now as we don't test this feature in this test yet
   hc::ts_allocator tsa;
