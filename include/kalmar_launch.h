@@ -332,5 +332,17 @@ void mcw_cxxamp_execute_kernel_with_dynamic_group_memory(
 #endif // __KALMAR_ACCELERATOR__
 }
 
+template<typename Kernel, int dim_ext>
+inline std::shared_future<void>*
+mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async(
+  const std::shared_ptr<KalmarQueue>& pQueue, size_t *ext, size_t *local_size,
+  const Kernel& f, void *kernel, size_t dynamic_group_memory_size) restrict(cpu,amp) {
+#if __KALMAR_ACCELERATOR__ != 1
+  append_kernel(pQueue, f, kernel);
+  return static_cast<std::shared_future<void>*>(pQueue->LaunchKernelWithDynamicGroupMemoryAsync(kernel, dim_ext, ext, local_size, dynamic_group_memory_size));
+#endif // __KALMAR_ACCELERATOR__
+}
+
+
 } // namespace Kalmar
 

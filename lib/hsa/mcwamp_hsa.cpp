@@ -449,6 +449,18 @@ public:
         delete(dispatch);
     }
 
+    void* LaunchKernelWithDynamicGroupMemoryAsync(void *ker, size_t nr_dim, size_t *global, size_t *local, size_t dynamic_group_size) override {
+        HSADispatch *dispatch =
+            reinterpret_cast<HSADispatch*>(ker);
+        size_t tmp_local[] = {0, 0, 0};
+        if (!local)
+            local = tmp_local;
+        dispatch->setLaunchAttributes(nr_dim, global, local);
+        dispatch->setDynamicGroupSegment(dynamic_group_size);
+        std::shared_future<void>* fut = dispatch->dispatchKernelAndGetFuture(commandQueue);
+        return static_cast<void*>(fut);
+    }
+
     uint32_t GetGroupSegmentSize(void *ker) override {
         HSADispatch *dispatch = reinterpret_cast<HSADispatch*>(ker);
         return dispatch->getGroupSegmentSize();

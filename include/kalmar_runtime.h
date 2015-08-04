@@ -49,8 +49,17 @@ public:
 
   virtual void flush() {}
   virtual void wait() {}
+
+  // sync kernel launch with dynamic group memory
   virtual void LaunchKernelWithDynamicGroupMemory(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size, size_t dynamic_group_size) {}
+
+  // async kernel launch with dynamic group memory
+  virtual void* LaunchKernelWithDynamicGroupMemoryAsync(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size, size_t dynamic_group_size) { return nullptr; }
+
+  // sync kernel launch
   virtual void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {}
+
+  // async kernel launch
   virtual void* LaunchKernelAsync(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) { return nullptr; }
 
   /// read data from device to host

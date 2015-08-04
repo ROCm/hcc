@@ -82,41 +82,37 @@ private:
       void Kalmar::launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>&, Kernel const&, extent<N> const&);
 #endif
 
-  // parallel_for_each with returns void, non-tiled, with dynamic group segment
-  // FIXME: make them deprecated
+  // non-tiled parallel_for_each with dynamic group segment
   template<typename Kernel> friend
-      void parallel_for_each(const accelerator_view&, const extent<1>&, ts_allocator&, const Kernel&);
+      completion_future parallel_for_each(const accelerator_view&, const extent<1>&, ts_allocator&, const Kernel&);
   template<typename Kernel> friend
-      void parallel_for_each(const accelerator_view&, const extent<2>&, ts_allocator&, const Kernel&);
+      completion_future parallel_for_each(const accelerator_view&, const extent<2>&, ts_allocator&, const Kernel&);
   template<typename Kernel> friend
-      void parallel_for_each(const accelerator_view&, const extent<3>&, ts_allocator&, const Kernel&);
+      completion_future parallel_for_each(const accelerator_view&, const extent<3>&, ts_allocator&, const Kernel&);
 
-  // parallel_for_each with returns void, non-tiled, with dynamic group segment
-  // FIXME: make them deprecated
+  // non-tiled parallel_for_each with dynamic group segment
   template <typename Kernel> friend
-      void parallel_for_each(const extent<1>&, ts_allocator&, const Kernel&);
+      completion_future parallel_for_each(const extent<1>&, ts_allocator&, const Kernel&);
   template <typename Kernel> friend
-      void parallel_for_each(const extent<2>&, ts_allocator&, const Kernel&);
+      completion_future parallel_for_each(const extent<2>&, ts_allocator&, const Kernel&);
   template <typename Kernel> friend
-      void parallel_for_each(const extent<3>&, ts_allocator&, const Kernel&);
+      completion_future parallel_for_each(const extent<3>&, ts_allocator&, const Kernel&);
 
-  // parallel_for_each with returns void, tiled, with dynamic group segment
-  // FIXME: make them deprecated
+  // tiled parallel_for_each with dynamic group segment
   template<typename Kernel> friend
-      void parallel_for_each(const accelerator_view&, const tiled_extent<1>&, ts_allocator&, const Kernel&);
+      completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, ts_allocator&, const Kernel&);
   template<typename Kernel> friend
-      void parallel_for_each(const accelerator_view&, const tiled_extent<2>&, ts_allocator&, const Kernel&);
+      completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, ts_allocator&, const Kernel&);
   template<typename Kernel> friend
-      void parallel_for_each(const accelerator_view&, const tiled_extent<3>&, ts_allocator&, const Kernel&);
+      completion_future parallel_for_each(const accelerator_view&, const tiled_extent<3>&, ts_allocator&, const Kernel&);
 
-  // parallel_for_each with returns void, tiled, with dynamic group segment
-  // FIXME: make them deprecated
+  // tiled parallel_for_each with dynamic group segment
   template <typename Kernel> friend
-      void parallel_for_each(const tiled_extent<1>&, ts_allocator&, const Kernel&);
+      completion_future parallel_for_each(const tiled_extent<1>&, ts_allocator&, const Kernel&);
   template <typename Kernel> friend
-      void parallel_for_each(const tiled_extent<2>&, ts_allocator&, const Kernel&);
+      completion_future parallel_for_each(const tiled_extent<2>&, ts_allocator&, const Kernel&);
   template <typename Kernel> friend
-      void parallel_for_each(const tiled_extent<3>&, ts_allocator&, const Kernel&);
+      completion_future parallel_for_each(const tiled_extent<3>&, ts_allocator&, const Kernel&);
 
   // non-tiled parallel_for_each
   // generic version
@@ -321,6 +317,38 @@ private:
 
     completion_future(const std::shared_future<void> &__future)
         : __amp_future(__future) {}
+
+    // non-tiled parallel_for_each with dynamic group segment
+    template<typename Kernel> friend
+        completion_future parallel_for_each(const accelerator_view&, const extent<1>&, ts_allocator&, const Kernel&);
+    template<typename Kernel> friend
+        completion_future parallel_for_each(const accelerator_view&, const extent<2>&, ts_allocator&, const Kernel&);
+    template<typename Kernel> friend
+        completion_future parallel_for_each(const accelerator_view&, const extent<3>&, ts_allocator&, const Kernel&);
+  
+    // non-tiled parallel_for_each with dynamic group segment
+    template <typename Kernel> friend
+        completion_future parallel_for_each(const extent<1>&, ts_allocator&, const Kernel&);
+    template <typename Kernel> friend
+        completion_future parallel_for_each(const extent<2>&, ts_allocator&, const Kernel&);
+    template <typename Kernel> friend
+        completion_future parallel_for_each(const extent<3>&, ts_allocator&, const Kernel&);
+  
+    // tiled parallel_for_each with dynamic group segment
+    template<typename Kernel> friend
+        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, ts_allocator&, const Kernel&);
+    template<typename Kernel> friend
+        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, ts_allocator&, const Kernel&);
+    template<typename Kernel> friend
+        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<3>&, ts_allocator&, const Kernel&);
+  
+    // tiled parallel_for_each with dynamic group segment
+    template <typename Kernel> friend
+        completion_future parallel_for_each(const tiled_extent<1>&, ts_allocator&, const Kernel&);
+    template <typename Kernel> friend
+        completion_future parallel_for_each(const tiled_extent<2>&, ts_allocator&, const Kernel&);
+    template <typename Kernel> friend
+        completion_future parallel_for_each(const tiled_extent<3>&, ts_allocator&, const Kernel&);
 
     // non-tiled parallel_for_each
     // generic version
@@ -578,18 +606,18 @@ private:
   } 
 
   template <typename Kernel> friend
-    void parallel_for_each(const accelerator_view&, const extent<1>&, ts_allocator&, const Kernel&);
+    completion_future parallel_for_each(const accelerator_view&, const extent<1>&, ts_allocator&, const Kernel&);
   template <typename Kernel> friend
-    void parallel_for_each(const accelerator_view&, const extent<2>&, ts_allocator&, const Kernel&);
+    completion_future parallel_for_each(const accelerator_view&, const extent<2>&, ts_allocator&, const Kernel&);
   template <typename Kernel> friend
-    void parallel_for_each(const accelerator_view&, const extent<3>&, ts_allocator&, const Kernel&);
+    completion_future parallel_for_each(const accelerator_view&, const extent<3>&, ts_allocator&, const Kernel&);
 
   template <typename Kernel> friend
-    void parallel_for_each(const accelerator_view&, const tiled_extent<1>&, ts_allocator&, const Kernel&);
+    completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, ts_allocator&, const Kernel&);
   template <typename Kernel> friend
-    void parallel_for_each(const accelerator_view&, const tiled_extent<2>&, ts_allocator&, const Kernel&);
+    completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, ts_allocator&, const Kernel&);
   template <typename Kernel> friend
-    void parallel_for_each(const accelerator_view&, const tiled_extent<3>&, ts_allocator&, const Kernel&);
+    completion_future parallel_for_each(const accelerator_view&, const tiled_extent<3>&, ts_allocator&, const Kernel&);
 
 public:
   ts_allocator() :
@@ -762,7 +790,7 @@ private:
   {}
 
   template<typename Kernel> friend
-      void parallel_for_each(const accelerator_view&, const tiled_extent<N>&, ts_allocator&, const Kernel&);
+      completion_future parallel_for_each(const accelerator_view&, const tiled_extent<N>&, ts_allocator&, const Kernel&);
 
   template<typename Kernel> friend
       completion_future parallel_for_each(const accelerator_view&, const tiled_extent<N>&, const Kernel&);
@@ -802,7 +830,7 @@ private:
   {}
 
   template<typename Kernel> friend
-      void parallel_for_each(const accelerator_view&, const tiled_extent<1>&, ts_allocator&, const Kernel&);
+      completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, ts_allocator&, const Kernel&);
 
   template<typename Kernel> friend
       completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
@@ -843,7 +871,7 @@ private:
   {}
 
   template<typename Kernel> friend
-      void parallel_for_each(const accelerator_view&, const tiled_extent<2>&, ts_allocator&, const Kernel&);
+      completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, ts_allocator&, const Kernel&);
 
   template<typename Kernel> friend
       completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, const Kernel&);
@@ -1159,11 +1187,13 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
 }
 #pragma clang diagnostic pop
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreturn-type"
 // variants of parallel_for_each that supports runtime allocation of tile static
 //1D parallel_for_each, nontiled
 template <typename Kernel>
 __attribute__((noinline,used))
-void parallel_for_each(const accelerator_view& av,
+completion_future parallel_for_each(const accelerator_view& av,
                        const extent<1>& compute_domain,
                        ts_allocator& allocator,
                        const Kernel& f) restrict(cpu,amp) {
@@ -1185,7 +1215,7 @@ void parallel_for_each(const accelerator_view& av,
   }
   void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
   allocator.setStaticGroupSegmentSize(av.pQueue->GetGroupSegmentSize(kernel));
-  Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory<Kernel, 1>(av.pQueue, &ext, NULL, f, kernel, allocator.getDynamicGroupSegmentSize());
+  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 1>(av.pQueue, &ext, NULL, f, kernel, allocator.getDynamicGroupSegmentSize()));
 #else //if __KALMAR_ACCELERATOR__ != 1
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -1193,12 +1223,16 @@ void parallel_for_each(const accelerator_view& av,
   auto bar = &Kernel::operator();
 #endif
 }
+#pragma clang diagnostic pop
 
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreturn-type"
 // variants of parallel_for_each that supports runtime allocation of tile static
 //2D parallel_for_each, nontiled
 template <typename Kernel>
 __attribute__((noinline,used))
-void parallel_for_each(const accelerator_view& av,
+completion_future parallel_for_each(const accelerator_view& av,
                        const extent<2>& compute_domain,
                        ts_allocator& allocator,
                        const Kernel& f) restrict(cpu,amp) {
@@ -1221,7 +1255,7 @@ void parallel_for_each(const accelerator_view& av,
   }
   void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
   allocator.setStaticGroupSegmentSize(av.pQueue->GetGroupSegmentSize(kernel));
-  Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory<Kernel, 2>(av.pQueue, ext, NULL, f, kernel, allocator.getDynamicGroupSegmentSize());
+  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 2>(av.pQueue, ext, NULL, f, kernel, allocator.getDynamicGroupSegmentSize()));
 #else //if __KALMAR_ACCELERATOR__ != 1
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -1229,12 +1263,16 @@ void parallel_for_each(const accelerator_view& av,
   auto bar = &Kernel::operator();
 #endif
 }
+#pragma clang diagnostic pop
 
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreturn-type"
 // variants of parallel_for_each that supports runtime allocation of tile static
 //3D parallel_for_each, nontiled
 template <typename Kernel>
 __attribute__((noinline,used))
-void parallel_for_each(const accelerator_view& av,
+completion_future parallel_for_each(const accelerator_view& av,
                        const extent<3>& compute_domain,
                        ts_allocator& allocator,
                        const Kernel& f) restrict(cpu,amp) {
@@ -1264,7 +1302,7 @@ void parallel_for_each(const accelerator_view& av,
   }
   void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
   allocator.setStaticGroupSegmentSize(av.pQueue->GetGroupSegmentSize(kernel));
-  Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory<Kernel, 3>(av.pQueue, ext, NULL, f, kernel, allocator.getDynamicGroupSegmentSize());
+  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 3>(av.pQueue, ext, NULL, f, kernel, allocator.getDynamicGroupSegmentSize()));
 #else //if __KALMAR_ACCELERATOR__ != 1
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -1272,13 +1310,16 @@ void parallel_for_each(const accelerator_view& av,
   auto bar = &Kernel::operator();
 #endif
 }
+#pragma clang diagnostic pop
 
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreturn-type"
 // variants of parallel_for_each that supports runtime allocation of tile static
 //1D parallel_for_each, tiled
 template <typename Kernel>
 __attribute__((noinline,used))
-void parallel_for_each(const accelerator_view& av,
+completion_future parallel_for_each(const accelerator_view& av,
                        const tiled_extent<1>& compute_domain,
                        ts_allocator& allocator,
                        const Kernel& f) restrict(amp,cpu) {
@@ -1308,7 +1349,7 @@ void parallel_for_each(const accelerator_view& av,
   }
   void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
   allocator.setStaticGroupSegmentSize(av.pQueue->GetGroupSegmentSize(kernel));
-  Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory<Kernel, 1>(av.pQueue, &ext, &tile, f, kernel, allocator.getDynamicGroupSegmentSize());
+  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 1>(av.pQueue, &ext, &tile, f, kernel, allocator.getDynamicGroupSegmentSize()));
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index<1> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -1317,12 +1358,16 @@ void parallel_for_each(const accelerator_view& av,
   auto bar = &Kernel::operator();
 #endif
 }
+#pragma clang diagnostic pop
 
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreturn-type"
 // variants of parallel_for_each that supports runtime allocation of tile static
 //2D parallel_for_each, tiled
 template <typename Kernel>
 __attribute__((noinline,used))
-void parallel_for_each(const accelerator_view& av,
+completion_future parallel_for_each(const accelerator_view& av,
                        const tiled_extent<2>& compute_domain,
                        ts_allocator& allocator,
                        const Kernel& f) restrict(cpu,amp) {
@@ -1352,7 +1397,7 @@ void parallel_for_each(const accelerator_view& av,
   }
   void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
   allocator.setStaticGroupSegmentSize(av.pQueue->GetGroupSegmentSize(kernel));
-  Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory<Kernel, 2>(av.pQueue, ext, tile, f, kernel, allocator.getDynamicGroupSegmentSize());
+  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 2>(av.pQueue, ext, tile, f, kernel, allocator.getDynamicGroupSegmentSize()));
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index<2> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -1361,12 +1406,16 @@ void parallel_for_each(const accelerator_view& av,
   auto bar = &Kernel::operator();
 #endif
 }
+#pragma clang diagnostic pop
 
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreturn-type"
 // variants of parallel_for_each that supports runtime allocation of tile static
 //3D parallel_for_each, tiled
 template <typename Kernel>
 __attribute__((noinline,used))
-void parallel_for_each(const accelerator_view& av,
+completion_future parallel_for_each(const accelerator_view& av,
                        const tiled_extent<3>& compute_domain,
                        ts_allocator& allocator,
                        const Kernel& f) restrict(cpu,amp) {
@@ -1404,7 +1453,7 @@ void parallel_for_each(const accelerator_view& av,
   }
   void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
   allocator.setStaticGroupSegmentSize(av.pQueue->GetGroupSegmentSize(kernel));
-  Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory<Kernel, 3>(av.pQueue, ext, tile, f, kernel, allocator.getDynamicGroupSegmentSize());
+  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 3>(av.pQueue, ext, tile, f, kernel, allocator.getDynamicGroupSegmentSize()));
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index<3> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -1413,59 +1462,60 @@ void parallel_for_each(const accelerator_view& av,
   auto bar = &Kernel::operator();
 #endif
 }
+#pragma clang diagnostic pop
 
 template <typename Kernel>
-void parallel_for_each(const extent<1>& compute_domain,
+completion_future parallel_for_each(const extent<1>& compute_domain,
                        ts_allocator& allocator,
                        const Kernel& f) {
   auto que = Kalmar::get_availabe_que(f);
   const accelerator_view av(que);
-  parallel_for_each(av, compute_domain, allocator, f);
+  return parallel_for_each(av, compute_domain, allocator, f);
 }
 
 template <typename Kernel>
-void parallel_for_each(const extent<2>& compute_domain,
+completion_future parallel_for_each(const extent<2>& compute_domain,
                        ts_allocator& allocator,
                        const Kernel& f) {
   auto que = Kalmar::get_availabe_que(f);
   const accelerator_view av(que);
-  parallel_for_each(av, compute_domain, allocator, f);
+  return parallel_for_each(av, compute_domain, allocator, f);
 }
 
 template <typename Kernel>
-void parallel_for_each(const extent<3>& compute_domain,
+completion_future parallel_for_each(const extent<3>& compute_domain,
                        ts_allocator& allocator,
                        const Kernel& f) {
   auto que = Kalmar::get_availabe_que(f);
   const accelerator_view av(que);
-  parallel_for_each(av, compute_domain, allocator, f);
+  return parallel_for_each(av, compute_domain, allocator, f);
 }
 
 template <typename Kernel>
-void parallel_for_each(const tiled_extent<1>& compute_domain,
+completion_future parallel_for_each(const tiled_extent<1>& compute_domain,
                        ts_allocator& allocator,
                        const Kernel& f) {
   auto que = Kalmar::get_availabe_que(f);
   const accelerator_view av(que);
-  parallel_for_each(av, compute_domain, allocator, f);
+  return parallel_for_each(av, compute_domain, allocator, f);
 }
 
 template<typename Kernel>
-void parallel_for_each(const tiled_extent<2>& compute_domain,
+completion_future parallel_for_each(const tiled_extent<2>& compute_domain,
                        ts_allocator& allocator,
                        const Kernel& f) {
   auto que = Kalmar::get_availabe_que(f);
   const accelerator_view av(que);
-  parallel_for_each(av, compute_domain, allocator, f);
+  return parallel_for_each(av, compute_domain, allocator, f);
 }
 
 template<typename Kernel>
-void parallel_for_each(const tiled_extent<3>& compute_domain,
+completion_future parallel_for_each(const tiled_extent<3>& compute_domain,
                        ts_allocator& allocator,
                        const Kernel& f) {
   auto que = Kalmar::get_availabe_que(f);
   const accelerator_view av(que);
-  parallel_for_each(av, compute_domain, allocator, f);
+  return parallel_for_each(av, compute_domain, allocator, f);
 }
 
 } // namespace hc
