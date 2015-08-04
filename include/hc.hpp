@@ -30,6 +30,9 @@ using runtime_exception = Kalmar::runtime_exception;
 using invalid_compute_domain = Kalmar::invalid_compute_domain;
 using accelerator_view_removed = Kalmar::accelerator_view_removed;
 
+// ------------------------------------------------------------------------
+// accelerator_view
+// ------------------------------------------------------------------------
 
 class accelerator_view {
     accelerator_view(std::shared_ptr<Kalmar::KalmarQueue> pQueue)
@@ -155,6 +158,10 @@ public:
       }
 };
 
+// ------------------------------------------------------------------------
+// accelerator
+// ------------------------------------------------------------------------
+
 class accelerator
 {
   accelerator(Kalmar::KalmarDevice* pDev) : pDev(pDev) {}
@@ -225,6 +232,10 @@ inline accelerator accelerator_view::get_accelerator() const { return pQueue->ge
 // FIXME: this will cause troubles later in separated compilation
 const wchar_t accelerator::cpu_accelerator[] = L"cpu";
 const wchar_t accelerator::default_accelerator[] = L"default";
+
+// ------------------------------------------------------------------------
+// completion_future
+// ------------------------------------------------------------------------
 
 // FIXME: needs to think about what its new semantic should be
 // FIXME: get create_marker() implemented
@@ -380,6 +391,9 @@ private:
         completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
 };
 
+// ------------------------------------------------------------------------
+// extent
+// ------------------------------------------------------------------------
 
 template <int N>
 class extent {
@@ -517,6 +531,10 @@ private:
     template <int K, typename Q1, typename Q2> friend struct Kalmar::amp_helper;
 };
 
+// ------------------------------------------------------------------------
+// tiled_extent
+// ------------------------------------------------------------------------
+
 // tile extent supporting dynamic tile size
 template <int N>
 class tiled_extent : public extent<N> {
@@ -570,6 +588,10 @@ public:
   tiled_extent(const extent<3>& ext, int t0, int t1, int t2) restrict(amp,cpu) : extent(ext), tile_dim{t0, t1, t2} {}
 };
 
+// ------------------------------------------------------------------------
+// implementation of extent<N>::tile()
+// ------------------------------------------------------------------------
+
 template <int N>
 inline
 tiled_extent<1> extent<N>::tile(int t0) const restrict(amp,cpu) {
@@ -591,6 +613,9 @@ tiled_extent<3> extent<N>::tile(int t0, int t1, int t2) const restrict(amp,cpu) 
   return tiled_extent<3>(*this, t0, t1, t2);
 }
 
+// ------------------------------------------------------------------------
+// ts_allocator
+// ------------------------------------------------------------------------
 
 /// getLDS : C interface of HSA builtin function to fetch an address within group segment
 extern "C" __attribute__((address_space(3))) void* getLDS(unsigned int offset) restrict(amp);
@@ -665,6 +690,10 @@ public:
   }   
 };  
 
+// ------------------------------------------------------------------------
+// utility class for tiled_barrier
+// ------------------------------------------------------------------------
+
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
 template <typename Ker, typename Ti>
 void bar_wrapper(Ker *f, Ti *t)
@@ -693,6 +722,10 @@ struct barrier_t {
     }
 };
 #endif
+
+// ------------------------------------------------------------------------
+// tiled_barrier
+// ------------------------------------------------------------------------
 
 #ifndef CLK_LOCAL_MEM_FENCE
 #define CLK_LOCAL_MEM_FENCE (1)
@@ -753,6 +786,10 @@ class tile_barrier {
   friend class tiled_index_2D;
   friend class tiled_index_3D;
 };
+
+// ------------------------------------------------------------------------
+// tiled_index
+// ------------------------------------------------------------------------
 
 template <int N=3>
 class tiled_index {
