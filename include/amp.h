@@ -2368,7 +2368,6 @@ void copy(const array<T, N> &src, OutputIter destBegin) {
 template <typename InputIter, typename OutputIter>
 completion_future __amp_copy_async_impl(InputIter& src, OutputIter& dst) {
     std::future<void> fut = std::async([&]() mutable { copy(src, dst); });
-    fut.wait();
     return completion_future(fut.share());
 }
 
@@ -2424,7 +2423,6 @@ completion_future copy_async(const array_view<T, N>& src, const array_view<T, N>
 template <typename InputIter, typename T, int N>
 completion_future copy_async(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest) {
     std::future<void> fut = std::async([&]() mutable { copy(srcBegin, srcEnd, dest); });
-    fut.wait();
     return completion_future(fut.share());
 }
 
