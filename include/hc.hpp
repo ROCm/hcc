@@ -7,6 +7,7 @@
 #include <kalmar_serialize.h>
 #include <kalmar_launch.h>
 #include <kalmar_buffer.h>
+#include <kalmar_math.h>
 
 #include <hsa_atomic.h>
 
@@ -24,6 +25,12 @@ class ts_allocator;
 template <typename T, int N> class array_view;
 template <typename T, int N> class array;
 
+// namespace alias
+// namespace hc::fast_math is an alias of namespace Kalmar::fast_math
+namespace fast_math = Kalmar::fast_math;
+
+// namespace hc::precise_math is an alias of namespace Kalmar::precise_math
+namespace precise_math = Kalmar::precise_math;
 
 // type alias
 // hc::index is just an alias of Kalmar::index
