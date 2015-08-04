@@ -33,7 +33,7 @@ int main ()
 
   // launch kernel
   hc::extent<3> e(dimSize, dimSize, dimSize);
-  hc::completion_future fut = hc::async_parallel_for_each(
+  hc::completion_future fut = hc::parallel_for_each(
     e.tile(2, 2, 2),
     [=](hc::tiled_index<3> idx) restrict(amp) {
       int fidx = idx.global[0] * dimSize * dimSize + idx.global[1] * dimSize + idx.global[2];

@@ -29,7 +29,7 @@ int main ()
   // launch kernel
   std::cout << "async launch the 1st kernel\n";
   hc::extent<1> e(vecSize);
-  hc::completion_future fut = hc::async_parallel_for_each(
+  hc::completion_future fut = hc::parallel_for_each(
     e,
     [=](hc::index<1> idx) restrict(amp) {
       p_c[idx[0]] = p_a[idx[0]] + p_b[idx[0]];
@@ -40,7 +40,7 @@ int main ()
   std::promise<void> done_promise;
   fut.then([=, &done_promise] {
     std::cout << "async launch the 2nd kernel\n";
-    hc::completion_future fut2 = hc::async_parallel_for_each(
+    hc::completion_future fut2 = hc::parallel_for_each(
       e,
       [=](hc::index<1> idx) restrict(amp) {
         p_c[idx[0]] += p_a[idx[0]] + p_b[idx[0]];
