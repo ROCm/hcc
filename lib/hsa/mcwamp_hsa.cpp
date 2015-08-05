@@ -68,6 +68,10 @@ public:
    ~HSAKernel() {
       hsa_status_t status;
 
+#if KALMAR_DEBUG
+      std::cerr << "HSAKernel::~HSAKernel\n";
+#endif
+
       status = hsa_executable_destroy(hsaExecutable);
       STATUS_CHECK(status, __LINE__);
 
@@ -100,6 +104,10 @@ private:
 
 public:
     ~HSADispatch() {
+#if KALMAR_DEBUG
+        std::cerr << "HSADispatch::~HSADispatch()\n";
+#endif
+
         if (isDispatched) {
             waitComplete();
             dispose();
@@ -203,8 +211,13 @@ public:
         // it will be released in the private ctor of completion_future
         std::shared_future<void>* fut = new std::shared_future<void>(std::async(std::launch::deferred, [&] {
           waitComplete();
+
+#if KALMAR_DEBUG
+          std::cerr << "destruct HSADispatch instance\n";
+#endif
+
           delete(this);  // destruct HSADispatch instance
-        }));
+        }).share());
 
         return fut;
     }
@@ -313,7 +326,9 @@ public:
             return HSA_STATUS_ERROR_INVALID_ARGUMENT;
         }
 
-        //printf("wait for completion...");
+#if KALMAR_DEBUG
+        std::cerr << "wait for completion...\n";
+#endif
 
         // wait for completion
         if (hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_LT, 1, uint64_t(-1), HSA_WAIT_STATE_ACTIVE)!=0) {
@@ -321,7 +336,9 @@ public:
             exit(0);
         }
 
-        //printf("complete!\n");
+#if KALMAR_DEBUG
+        std::cerr << "complete!\n";
+#endif
 
         hsa_memory_deregister((void*)aql.kernarg_address, arg_vec.size());
 
@@ -407,10 +424,14 @@ namespace Kalmar {
 class HSAQueue final : public KalmarQueue
 {
 private:
+    // HSA commmand queue associated with this HSAQueue instance
     hsa_queue_t* commandQueue;
 
+    // kernel dispatches associated with this HSAQueue instance
+    std::vector< std::shared_future<void> > dispatches;
+
 public:
-    HSAQueue(KalmarDevice* pDev, hsa_agent_t agent) : KalmarQueue(pDev), commandQueue(nullptr) {
+    HSAQueue(KalmarDevice* pDev, hsa_agent_t agent) : KalmarQueue(pDev), commandQueue(nullptr), dispatches() {
         hsa_status_t status;
 
         /// Query the maximum size of the queue.
@@ -430,11 +451,28 @@ public:
     ~HSAQueue() {
         hsa_status_t status;
 
+        // wait on all existing kernel dispatches to complete
+        wait();
+
 #if KALMAR_DEBUG
         std::cerr << "HSAQueue::~HSAQueue(): destroy an HSA command queue: " << commandQueue << "\n";
 #endif
         status = hsa_queue_destroy(commandQueue);
         STATUS_CHECK(status, __LINE__);
+    }
+
+    // FIXME: implement flush
+
+    void wait() override {
+      // wait on all previous dispatches to complete
+      for (int i = 0; i < dispatches.size(); ++i) {
+        // wait on valid futures only
+        if (dispatches[i].valid()) {
+          dispatches[i].wait();
+        }
+      }
+      // clear previous dispatched kernel table
+      dispatches.clear();
     }
 
     void LaunchKernelWithDynamicGroupMemory(void *ker, size_t nr_dim, size_t *global, size_t *local, size_t dynamic_group_size) override {
@@ -458,6 +496,10 @@ public:
         dispatch->setLaunchAttributes(nr_dim, global, local);
         dispatch->setDynamicGroupSegment(dynamic_group_size);
         std::shared_future<void>* fut = dispatch->dispatchKernelAndGetFuture(commandQueue);
+
+        // associate the kernel dispatch with this queue
+        dispatches.push_back(*fut);
+
         return static_cast<void*>(fut);
     }
 
@@ -490,6 +532,10 @@ public:
         //}
         dispatch->setLaunchAttributes(nr_dim, global, local);
         std::shared_future<void>* fut = dispatch->dispatchKernelAndGetFuture(commandQueue);
+
+        // associate the kernel dispatch with this queue
+        dispatches.push_back(*fut);
+
         return static_cast<void*>(fut);
     }
 
