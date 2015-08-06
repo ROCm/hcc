@@ -437,8 +437,39 @@ private:
     //
     std::vector< std::shared_future<void> > dispatches;
 
+    //
+    // kernelBufferMap and bufferKernelMap forms the dependency graph of
+    // kernel / kernel dispatches / buffers
+    //
+    // For a particular kernel k, kernelBufferMap[k] holds a vector of 
+    // host buffers used by k. The vector is filled at HSAQueue::Push(),
+    // when kernel arguments are prepared.
+    //
+    // When a kenrel k is to be dispatched, kernelBufferMap[k] will be traversed
+    // to figure out if there is any previous kernel dispatch associated for
+    // each buffer b used by k.  This is done by checking bufferKernelMap[b].
+    // If there are previous kernel dispatches which use b, then we wait on
+    // them before dispatch kernel k. bufferKernelMap[b] will be cleared then.
+    //
+    // After kernel k is dispatched, we'll get a future object f for k, we then
+    // walk through each buffer b used by k and mark the association as:
+    // bufferKernelMap[b] = f
+    //
+    // Finally kernelBufferMap[k] will be cleared.
+    //
+
+    // association between buffers and kernel dispatches
+    // key: buffer address
+    // value: a vector of kernel dispatches
+    std::map<void*, std::vector< std::shared_future<void> > > bufferKernelMap;
+
+    // association between a kernel and buffers used by it
+    // key: kernel
+    // value: a vector of buffers used by the kernel
+    std::map<void*, std::vector<void*> > kernelBufferMap;
+
 public:
-    HSAQueue(KalmarDevice* pDev, hsa_agent_t agent) : KalmarQueue(pDev), commandQueue(nullptr), dispatches() {
+    HSAQueue(KalmarDevice* pDev, hsa_agent_t agent) : KalmarQueue(pDev), commandQueue(nullptr), dispatches(), bufferKernelMap(), kernelBufferMap() {
         hsa_status_t status;
 
         /// Query the maximum size of the queue.
@@ -460,6 +491,16 @@ public:
 
         // wait on all existing kernel dispatches to complete
         wait();
+
+        // clear bufferKernelMap
+        for (auto iter = bufferKernelMap.begin(); iter != bufferKernelMap.end(); ++iter) {
+           iter->second.clear();
+        }
+
+        // clear kernelBufferMap
+        for (auto iter = kernelBufferMap.begin(); iter != kernelBufferMap.end(); ++iter) {
+           iter->second.clear();
+        }
 
 #if KALMAR_DEBUG
         std::cerr << "HSAQueue::~HSAQueue(): destroy an HSA command queue: " << commandQueue << "\n";
@@ -494,7 +535,23 @@ public:
             local = tmp_local;
         dispatch->setLaunchAttributes(nr_dim, global, local);
         dispatch->setDynamicGroupSegment(dynamic_group_size);
+
+        // wait for previous kernel dispatches be completed
+        std::for_each(std::begin(kernelBufferMap[ker]), std::end(kernelBufferMap[ker]),
+                      [&] (void* buffer) {
+                        for (int i = 0; i < bufferKernelMap[buffer].size(); ++i) {
+                          bufferKernelMap[buffer][i].wait();
+                        }
+                        bufferKernelMap[buffer].clear();
+                      });
+
+        // dispatch the kernel
+        // and wait for its completion
         dispatch->dispatchKernelWaitComplete(commandQueue);
+
+        // clear data in kernelBufferMap
+        kernelBufferMap[ker].clear();
+
         delete(dispatch);
     }
 
@@ -510,10 +567,31 @@ public:
             local = tmp_local;
         dispatch->setLaunchAttributes(nr_dim, global, local);
         dispatch->setDynamicGroupSegment(dynamic_group_size);
+
+        // wait for previous kernel dispatches be completed
+        std::for_each(std::begin(kernelBufferMap[ker]), std::end(kernelBufferMap[ker]),
+                      [&] (void* buffer) {
+                        for (int i = 0; i < bufferKernelMap[buffer].size(); ++i) {
+                          bufferKernelMap[buffer][i].wait();
+                        }
+                        bufferKernelMap[buffer].clear();
+                      });
+
+        // dispatch the kernel
         std::shared_future<void>* fut = dispatch->dispatchKernelAndGetFuture(commandQueue);
 
         // associate the kernel dispatch with this queue
         dispatches.push_back(*fut);
+
+        // associate all buffers used by the kernel with the kernel dispatch instance
+        // FIXME: we probably want to distinguish read-only buffers from r/w buffers
+        std::for_each(std::begin(kernelBufferMap[ker]), std::end(kernelBufferMap[ker]),
+                      [&] (void* buffer) {
+                        bufferKernelMap[buffer].push_back(*fut);
+                      });
+
+        // clear data in kernelBufferMap
+        kernelBufferMap[ker].clear();
 
         return static_cast<void*>(fut);
     }
@@ -546,6 +624,10 @@ public:
 
     void Push(void *kernel, int idx, void *device, bool isConst) override {
         PushArgImpl(kernel, idx, sizeof(void*), &device);
+
+        // register the buffer with the kernel
+        // FIXME: we probably want to distinguish read-only buffers from r/w buffers
+        kernelBufferMap[kernel].push_back(device);
     }
 };
 
