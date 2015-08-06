@@ -475,6 +475,10 @@ public:
       dispatches.clear();
     }
 
+    void LaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local) override {
+        LaunchKernelWithDynamicGroupMemory(ker, nr_dim, global, local, 0);
+    }
+
     void LaunchKernelWithDynamicGroupMemory(void *ker, size_t nr_dim, size_t *global, size_t *local, size_t dynamic_group_size) override {
         HSADispatch *dispatch =
             reinterpret_cast<HSADispatch*>(ker);
@@ -485,6 +489,10 @@ public:
         dispatch->setDynamicGroupSegment(dynamic_group_size);
         dispatch->dispatchKernelWaitComplete(commandQueue);
         delete(dispatch);
+    }
+
+    void* LaunchKernelAsync(void *ker, size_t nr_dim, size_t *global, size_t *local) override {
+        return LaunchKernelWithDynamicGroupMemoryAsync(ker, nr_dim, global, local, 0);
     }
 
     void* LaunchKernelWithDynamicGroupMemoryAsync(void *ker, size_t nr_dim, size_t *global, size_t *local, size_t dynamic_group_size) override {
@@ -506,37 +514,6 @@ public:
     uint32_t GetGroupSegmentSize(void *ker) override {
         HSADispatch *dispatch = reinterpret_cast<HSADispatch*>(ker);
         return dispatch->getGroupSegmentSize();
-    }
-
-    void LaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local) override {
-        HSADispatch *dispatch =
-            reinterpret_cast<HSADispatch*>(ker);
-        size_t tmp_local[] = {0, 0, 0};
-        if (!local)
-            local = tmp_local;
-        dispatch->setLaunchAttributes(nr_dim, global, local);
-        dispatch->dispatchKernelWaitComplete(commandQueue);
-        delete(dispatch);
-    }
-
-    void* LaunchKernelAsync(void *ker, size_t nr_dim, size_t *global, size_t *local) override {
-        HSADispatch *dispatch =
-            reinterpret_cast<HSADispatch*>(ker);
-        size_t tmp_local[] = {0, 0, 0};
-        if (!local)
-            local = tmp_local;
-
-        //std::cerr<<"Launching: nr dim = " << nr_dim << "\n";
-        //for (size_t i = 0; i < nr_dim; ++i) {
-        //  std::cerr << "g: " << global[i] << " l: " << local[i] << "\n";
-        //}
-        dispatch->setLaunchAttributes(nr_dim, global, local);
-        std::shared_future<void>* fut = dispatch->dispatchKernelAndGetFuture(commandQueue);
-
-        // associate the kernel dispatch with this queue
-        dispatches.push_back(*fut);
-
-        return static_cast<void*>(fut);
     }
 
     void read(void* device, void* dst, size_t count, size_t offset) override {
