@@ -586,7 +586,6 @@ public:
         dispatches.push_back(*fut);
 
         // associate all buffers used by the kernel with the kernel dispatch instance
-        // FIXME: we probably want to distinguish read-only buffers from r/w buffers
         std::for_each(std::begin(kernelBufferMap[ker]), std::end(kernelBufferMap[ker]),
                       [&] (void* buffer) {
                         bufferKernelMap[buffer].push_back(*fut);
@@ -662,8 +661,11 @@ public:
         PushArgImpl(kernel, idx, sizeof(void*), &device);
 
         // register the buffer with the kernel
-        // FIXME: we probably want to distinguish read-only buffers from r/w buffers
-        kernelBufferMap[kernel].push_back(device);
+        // when the buffer may be read/written by the kernel
+        // the buffer is not registered if it's only read by the kernel
+        if (modify) {
+          kernelBufferMap[kernel].push_back(device);
+        }
     }
 };
 
