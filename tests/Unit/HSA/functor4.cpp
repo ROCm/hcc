@@ -16,7 +16,6 @@ class prog {
 
 public:
   prog(_Tp (&t)[N]) : input(t) {
-    run();
   }
 
   void operator() (index<1>& idx) restrict(amp) {
@@ -51,9 +50,13 @@ int main() {
 
   // launch kernel
   prog<int, SIZE>      p1(input_int);
+  p1.run();
   prog<unsigned, SIZE> p2(input_unsigned);
+  p2.run();
   prog<float, SIZE>    p3(input_float);
+  p3.run();
   prog<double, SIZE>   p4(input_double);
+  p4.run();
 
   // check result
   ret &= p1.test();
