@@ -604,21 +604,55 @@ public:
     }
 
     void read(void* device, void* dst, size_t count, size_t offset) override {
+        // wait on previous kernel dispatches to complete
+        for (int i = 0; i < bufferKernelMap[device].size(); ++i) {
+          bufferKernelMap[device][i].wait();
+        }
+        bufferKernelMap[device].clear();
+
+        // do read
         if (dst != device)
             memmove(dst, (char*)device + offset, count);
     }
 
     void write(void* device, const void* src, size_t count, size_t offset, bool blocking) override {
+        // wait on previous kernel dispatches to complete
+        for (int i = 0; i < bufferKernelMap[device].size(); ++i) {
+          bufferKernelMap[device][i].wait();
+        }
+        bufferKernelMap[device].clear();
+
+        // do write
         if (src != device)
             memmove((char*)device + offset, src, count);
     }
 
     void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset, bool blocking) override {
+        // wait on previous kernel dispatches to complete
+        for (int i = 0; i < bufferKernelMap[dst].size(); ++i) {
+          bufferKernelMap[dst][i].wait();
+        }
+        bufferKernelMap[dst].clear();
+
+        // wait on previous kernel dispatches to complete
+        for (int i = 0; i < bufferKernelMap[src].size(); ++i) {
+          bufferKernelMap[src][i].wait();
+        }
+        bufferKernelMap[src].clear();
+
+        // do copy
         if (src != dst)
             memmove((char*)dst + dst_offset, (char*)src + src_offset, count);
     }
 
     void* map(void* device, size_t count, size_t offset, bool modify) override {
+        // wait on previous kernel dispatches to complete
+        for (int i = 0; i < bufferKernelMap[device].size(); ++i) {
+          bufferKernelMap[device][i].wait();
+        }
+        bufferKernelMap[device].clear();
+
+        // do map
         return (char*)device + offset;
     }
 
