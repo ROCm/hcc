@@ -658,7 +658,7 @@ public:
 
     void unmap(void* device, void* addr) override {}
 
-    void Push(void *kernel, int idx, void *device, bool isConst) override {
+    void Push(void *kernel, int idx, void *device, bool modify) override {
         PushArgImpl(kernel, idx, sizeof(void*), &device);
 
         // register the buffer with the kernel

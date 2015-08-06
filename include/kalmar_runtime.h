@@ -78,7 +78,7 @@ public:
   virtual void unmap(void* device, void* addr) = 0;
 
   /// push device pointer to kernel argument list
-  virtual void Push(void *kernel, int idx, void* device, bool isConst) = 0;
+  virtual void Push(void *kernel, int idx, void* device, bool modify) = 0;
 
   virtual uint32_t GetGroupSegmentSize(void *kernel) { return 0; }
 
@@ -172,7 +172,7 @@ public:
 
   void unmap(void* device, void* addr) override {}
 
-  void Push(void *kernel, int idx, void* device, bool isConst) override {}
+  void Push(void *kernel, int idx, void* device, bool modify) override {}
 };
 
 /// cpu accelerator
