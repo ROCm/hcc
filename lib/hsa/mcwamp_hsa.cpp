@@ -127,11 +127,11 @@ public:
 
         /// Query the maximum number of work-items in a workgroup
         hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_SIZE, &workgroup_max_size);
-        STATUS_CHECK_Q(status, __LINE__);
+        STATUS_CHECK(status, __LINE__);
 
         /// Query the maximum number of work-items in each dimension of a workgroup
         hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_DIM, &workgroup_max_dim);
-        STATUS_CHECK_Q(status, __LINE__);
+        STATUS_CHECK(status, __LINE__);
     }
 
     hsa_status_t pushFloatArg(float f) { return pushArgPrivate(f); }
@@ -215,7 +215,7 @@ public:
         status = hsa_executable_symbol_get_info(kernel->hsaExecutableSymbol,
                                                 HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE,
                                                 &group_segment_size);
-        STATUS_CHECK_Q(status, __LINE__);
+        STATUS_CHECK(status, __LINE__);
         return group_segment_size;
     }
 
