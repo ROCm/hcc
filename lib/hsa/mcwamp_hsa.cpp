@@ -496,11 +496,13 @@ public:
         for (auto iter = bufferKernelMap.begin(); iter != bufferKernelMap.end(); ++iter) {
            iter->second.clear();
         }
+        bufferKernelMap.clear();
 
         // clear kernelBufferMap
         for (auto iter = kernelBufferMap.begin(); iter != kernelBufferMap.end(); ++iter) {
            iter->second.clear();
         }
+        kernelBufferMap.clear();
 
 #if KALMAR_DEBUG
         std::cerr << "HSAQueue::~HSAQueue(): destroy an HSA command queue: " << commandQueue << "\n";
