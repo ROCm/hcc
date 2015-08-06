@@ -427,7 +427,14 @@ private:
     // HSA commmand queue associated with this HSAQueue instance
     hsa_queue_t* commandQueue;
 
+    //
     // kernel dispatches associated with this HSAQueue instance
+    //
+    // When a kernel k is dispatched, we'll get a future object f for k.
+    // This vector would hold f.  acccelerator_view::wait() would trigger
+    // HSAQueue::wait(), and all future objects in this vector will be waited
+    // on.
+    //
     std::vector< std::shared_future<void> > dispatches;
 
 public:
