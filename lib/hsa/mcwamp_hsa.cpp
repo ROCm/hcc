@@ -344,13 +344,13 @@ private:
     template <typename T>
     hsa_status_t pushArgPrivate(T val) {
         /* add padding if necessary */
-        int padding_size = arg_vec.size() % sizeof(T);
+        int padding_size = (arg_vec.size() % sizeof(T)) ? (sizeof(T) - (arg_vec.size() % sizeof(T))) : 0;
         //printf("push %lu bytes into kernarg: ", sizeof(T) + padding_size);
         for (size_t i = 0; i < padding_size; ++i) {
             arg_vec.push_back((uint8_t)0x00);
             //printf("%02X ", (uint8_t)0x00);
         }
-        uint8_t*ptr = static_cast<uint8_t*>(static_cast<void*>(&val));
+        uint8_t* ptr = static_cast<uint8_t*>(static_cast<void*>(&val));
         for (size_t i = 0; i < sizeof(T); ++i) {
             arg_vec.push_back(ptr[i]);
             //printf("%02X ", ptr[i]);
