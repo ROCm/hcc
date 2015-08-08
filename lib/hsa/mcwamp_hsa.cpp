@@ -126,11 +126,11 @@ public:
         hsa_status_t status;
 
         /// Query the maximum number of work-items in a workgroup
-        hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_SIZE, &workgroup_max_size);
+        status = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_SIZE, &workgroup_max_size);
         STATUS_CHECK(status, __LINE__);
 
         /// Query the maximum number of work-items in each dimension of a workgroup
-        hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_DIM, &workgroup_max_dim);
+        status = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_DIM, &workgroup_max_dim);
         STATUS_CHECK(status, __LINE__);
     }
 

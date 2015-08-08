@@ -271,7 +271,7 @@ if(CXXAMP_ENABLE_BOLT)
   SET( CLAMP_C_COMPILER "${PROJECT_BINARY_DIR}/compiler/bin/clang"  )
   SET( CLAMP_CXX_COMPILER "${PROJECT_BINARY_DIR}/compiler/bin/clang++"  )
   SET( CLAMP_LIBCXX_INC_DIR "${PROJECT_SOURCE_DIR}/libc++/libcxx/include" )
-  SET( CLAMP_LIBCXX_LIB_DIR "${PROJECT_BINARY_DIR}/libc++/libcxx/lib" )
+  SET( CLAMP_LIBCXX_LIB_DIR "${PROJECT_BINARY_DIR}/libc++/lib" )
   SET( CLAMP_LIBCXXRT_LIB_DIR "${PROJECT_BINARY_DIR}/libc++/libcxxrt/lib" )
 
   SET( CLAMP_LIBRARIES mcwamp c++ cxxrt dl )
