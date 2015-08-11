@@ -344,6 +344,15 @@ public:
       }
 #endif
     }
+
+    void* getNativeHandle() {
+      if (__asyncOp != nullptr) {
+        return __asyncOp->getNativeHandle();
+      } else {
+        return nullptr;
+      }
+    }
+
 private:
     std::shared_future<void> __amp_future;
     std::thread* __thread_then = nullptr;
