@@ -86,6 +86,12 @@ public:
   queuing_mode get_mode() const { return mode; }
   void set_mode(queuing_mode mod) { mode = mod; }
 
+  /// get underlying native queue handle
+  virtual void* getHSAQueue() { return nullptr; }
+
+  /// check if the queue is an HSA queue
+  virtual bool hasHSAInterOp() { return false; }
+
 private:
   KalmarDevice* pDev;
   queuing_mode mode;

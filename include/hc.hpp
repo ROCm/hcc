@@ -75,6 +75,14 @@ public:
     return pQueue.get()->getDev()->GetMaxTileStaticSize();
   }
 
+  void* getHSAQueue() {
+    return pQueue->getHSAQueue();
+  }
+
+  bool hasHSAInterOp() {
+    return pQueue->hasHSAInterOp();
+  }
+
 private:
   std::shared_ptr<Kalmar::KalmarQueue> pQueue;
 

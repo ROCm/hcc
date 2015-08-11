@@ -667,6 +667,15 @@ public:
           kernelBufferMap[kernel].push_back(device);
         }
     }
+
+    void* getHSAQueue() override {
+        return static_cast<void*>(commandQueue);
+    }
+
+    bool hasHSAInterOp() override {
+        return true;
+    }
+
 };
 
 class HSADevice final : public KalmarDevice
