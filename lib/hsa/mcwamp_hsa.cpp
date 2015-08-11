@@ -309,13 +309,15 @@ public:
         ((hsa_kernel_dispatch_packet_t*)(commandQueue->base_address))[index & queueMask] = aql;
         hsa_queue_store_write_index_relaxed(commandQueue, index + 1);
   
-        //printf("ring door bell\n");
+#if KALMAR_DEBUG
+        std::cerr << "ring door bell to dispatch kernel\n";
+#endif
   
         // Ring door bell
         hsa_signal_store_relaxed(commandQueue->doorbell_signal, index);
   
         isDispatched = true;
-  
+
         return status;
     }
 
