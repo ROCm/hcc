@@ -8,7 +8,7 @@ set(CPPAMP_OBJ_DIR "${CMAKE_BINARY_DIR}")
 
 # libcxx
 set(LIBCXX_SRC_DIR "${PROJECT_SOURCE_DIR}/libc++/libcxx")
-set(LIBCXX_LIB_DIR "${PROJECT_BINARY_DIR}/libc++/libcxx/lib")
+set(LIBCXX_LIB_DIR "${PROJECT_BINARY_DIR}/libc++/lib")
 set(LIBCXXRT_LIB_DIR "${PROJECT_BINARY_DIR}/libc++/libcxxrt/lib")
 
 # gtest

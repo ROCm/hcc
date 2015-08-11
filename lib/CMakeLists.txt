@@ -67,7 +67,7 @@ install(FILES opencl_prefix.cl DESTINATION lib)
 ####################
 # Dynamic memory allocation HSAIL logic (HSA)
 ####################
-install(FILES new_delete.hsail DESTINATION lib)
+install(FILES hsa_builtins.hsail DESTINATION lib)
 
 ####################
 # add subdirectories

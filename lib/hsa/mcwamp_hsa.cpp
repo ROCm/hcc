@@ -23,7 +23,7 @@
 #include <hsa.h>
 #include <hsa_ext_finalize.h>
 
-#include <amp_runtime.h>
+#include <kalmar_runtime.h>
 
 #define KALMAR_DEBUG (0)
 
@@ -96,6 +96,8 @@ private:
     hsa_kernel_dispatch_packet_t aql;
     bool isDispatched;
 
+    size_t dynamicGroupSize;
+
 public:
     ~HSADispatch() {
         if (isDispatched) {
@@ -104,10 +106,16 @@ public:
         }
     }
 
+    hsa_status_t setDynamicGroupSegment(size_t dynamicGroupSize) {
+        this->dynamicGroupSize = dynamicGroupSize;
+        return HSA_STATUS_SUCCESS;
+    }
+
     HSADispatch(hsa_agent_t _agent, const HSAKernel* _kernel) :
         agent(_agent),
         kernel(_kernel),
-        isDispatched(false) {
+        isDispatched(false),
+        dynamicGroupSize(0) {
 
         // allocate the initial argument vector capacity
         arg_vec.reserve(ARGS_VEC_INITIAL_CAPACITY);
@@ -118,12 +126,12 @@ public:
         hsa_status_t status;
 
         /// Query the maximum number of work-items in a workgroup
-        hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_SIZE, &workgroup_max_size);
-        STATUS_CHECK_Q(status, __LINE__);
+        status = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_SIZE, &workgroup_max_size);
+        STATUS_CHECK(status, __LINE__);
 
         /// Query the maximum number of work-items in each dimension of a workgroup
-        hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_DIM, &workgroup_max_dim);
-        STATUS_CHECK_Q(status, __LINE__);
+        status = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_DIM, &workgroup_max_dim);
+        STATUS_CHECK(status, __LINE__);
     }
 
     hsa_status_t pushFloatArg(float f) { return pushArgPrivate(f); }
@@ -190,19 +198,25 @@ public:
 
     std::shared_future<void>* dispatchKernelAndGetFuture(hsa_queue_t* _queue) {
         dispatchKernel(_queue);
-        auto waitFunc = [&]() {
-            this->waitComplete();
-            delete(this); // destruct HSADispatch instance
-        };
-        std::packaged_task<void()> waitTask(waitFunc);
- 
+
         // dynamically allocate a std::shared_future<void> object
         // it will be released in the private ctor of completion_future
-        std::shared_future<void>* fut = new std::shared_future<void>(waitTask.get_future());
- 
-        std::thread waitThread(std::move(waitTask));
-        waitThread.detach();         
+        std::shared_future<void>* fut = new std::shared_future<void>(std::async(std::launch::deferred, [&] {
+          waitComplete();
+          delete(this);  // destruct HSADispatch instance
+        }));
+
         return fut;
+    }
+
+    uint32_t getGroupSegmentSize() {
+        hsa_status_t status = HSA_STATUS_SUCCESS;
+        uint32_t group_segment_size = 0;
+        status = hsa_executable_symbol_get_info(kernel->hsaExecutableSymbol,
+                                                HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE,
+                                                &group_segment_size);
+        STATUS_CHECK(status, __LINE__);
+        return group_segment_size;
     }
 
     // dispatch a kernel asynchronously
@@ -264,6 +278,9 @@ public:
                                                 HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE,
                                                 &group_segment_size);
         STATUS_CHECK_Q(status, __LINE__);
+
+        // add dynamic group segment size
+        group_segment_size += this->dynamicGroupSize;
         aql.group_segment_size = group_segment_size;
   
         uint32_t private_segment_size;
@@ -327,13 +344,13 @@ private:
     template <typename T>
     hsa_status_t pushArgPrivate(T val) {
         /* add padding if necessary */
-        int padding_size = arg_vec.size() % sizeof(T);
+        int padding_size = (arg_vec.size() % sizeof(T)) ? (sizeof(T) - (arg_vec.size() % sizeof(T))) : 0;
         //printf("push %lu bytes into kernarg: ", sizeof(T) + padding_size);
         for (size_t i = 0; i < padding_size; ++i) {
             arg_vec.push_back((uint8_t)0x00);
             //printf("%02X ", (uint8_t)0x00);
         }
-        uint8_t*ptr = static_cast<uint8_t*>(static_cast<void*>(&val));
+        uint8_t* ptr = static_cast<uint8_t*>(static_cast<void*>(&val));
         for (size_t i = 0; i < sizeof(T); ++i) {
             arg_vec.push_back(ptr[i]);
             //printf("%02X ", ptr[i]);
@@ -384,7 +401,7 @@ private:
 ///
 /// memory allocator
 ///
-namespace Concurrency {
+namespace Kalmar {
 
 
 class HSAQueue final : public KalmarQueue
@@ -397,7 +414,7 @@ public:
         hsa_status_t status;
 
         /// Query the maximum size of the queue.
-        size_t queue_size = 0;
+        uint32_t queue_size = 0;
         status = hsa_agent_get_info(agent, HSA_AGENT_INFO_QUEUE_MAX_SIZE, &queue_size);
         STATUS_CHECK(status, __LINE__);
 
@@ -416,10 +433,25 @@ public:
 #if KALMAR_DEBUG
         std::cerr << "HSAQueue::~HSAQueue(): destroy an HSA command queue: " << commandQueue << "\n";
 #endif
-        // FIXME HSAContext is destroyed prior to HSAQueue at this moment
-        // so the following call should be disabled for now
-        //status = hsa_queue_destroy(commandQueue);
-        //STATUS_CHECK(status, __LINE__);
+        status = hsa_queue_destroy(commandQueue);
+        STATUS_CHECK(status, __LINE__);
+    }
+
+    void LaunchKernelWithDynamicGroupMemory(void *ker, size_t nr_dim, size_t *global, size_t *local, size_t dynamic_group_size) override {
+        HSADispatch *dispatch =
+            reinterpret_cast<HSADispatch*>(ker);
+        size_t tmp_local[] = {0, 0, 0};
+        if (!local)
+            local = tmp_local;
+        dispatch->setLaunchAttributes(nr_dim, global, local);
+        dispatch->setDynamicGroupSegment(dynamic_group_size);
+        dispatch->dispatchKernelWaitComplete(commandQueue);
+        delete(dispatch);
+    }
+
+    uint32_t GetGroupSegmentSize(void *ker) override {
+        HSADispatch *dispatch = reinterpret_cast<HSADispatch*>(ker);
+        return dispatch->getGroupSegmentSize();
     }
 
     void LaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local) override {
@@ -480,17 +512,48 @@ class HSADevice final : public KalmarDevice
 private:
     std::map<std::string, HSAKernel *> programs;
     hsa_agent_t agent;
+    size_t max_tile_static_size;
 
 public:
+    static hsa_status_t find_group_memory(hsa_region_t region, void* data) {
+      hsa_region_segment_t segment;
+      size_t size = 0;
+      bool flag = false;
+
+      hsa_status_t status = HSA_STATUS_SUCCESS;
+
+      // get segment information
+      status = hsa_region_get_info(region, HSA_REGION_INFO_SEGMENT, &segment);
+      STATUS_CHECK(status, __LINE__);
+
+      if (segment == HSA_REGION_SEGMENT_GROUP) {
+        // found group segment, get its size
+        status = hsa_region_get_info(region, HSA_REGION_INFO_SIZE, &size);
+        STATUS_CHECK(status, __LINE__);
+
+        // save the result to data
+        size_t* result = (size_t*)data;
+        *result = size;
+      }
+
+      // continue iteration
+      return HSA_STATUS_SUCCESS;
+    }
+
     hsa_agent_t getAgent() {
         return agent;
     }
 
     HSADevice(hsa_agent_t a) : KalmarDevice(access_type_read_write),
-                               agent(a), programs() {
+                               agent(a), programs(), max_tile_static_size(0) {
 #if KALMAR_DEBUG
         std::cerr << "HSADevice::HSADevice()\n";
 #endif
+
+        /// iterate over memory regions of the agent
+        hsa_status_t status = HSA_STATUS_SUCCESS;
+        status = hsa_agent_iterate_regions(agent, HSADevice::find_group_memory, &max_tile_static_size);
+        STATUS_CHECK(status, __LINE__);
     }
 
     ~HSADevice() {
@@ -523,7 +586,7 @@ public:
         ::operator delete(ptr);
     }
 
-    void* CreateKernel(const char* fun, void* size, void* source) override {
+    void* CreateKernel(const char* fun, void* size, void* source, bool needsCompilation = true) override {
         std::string str(fun);
         HSAKernel *kernel = programs[str];
         if (!kernel) {
@@ -533,7 +596,11 @@ public:
             kernel_source[kernel_size] = '\0';
             std::string kname = std::string("&")+fun;
             //std::cerr << "HSADevice::CreateKernel(): Creating kernel: " << kname << "\n";
-            kernel = CreateKernelImpl(kernel_source, kernel_size, kname.c_str());
+            if (needsCompilation) {
+              kernel = CreateKernelImpl(kernel_source, kernel_size, kname.c_str());
+            } else {
+              kernel = CreateOfflineFinalizedKernelImpl(kernel_source, kernel_size, kname.c_str());
+            }
             free(kernel_source);
             if (!kernel) {
                 std::cerr << "HSADevice::CreateKernel(): Unable to create kernel\n";
@@ -565,7 +632,47 @@ public:
         return std::shared_ptr<KalmarQueue>(new HSAQueue(this, agent));
     }
 
+    size_t GetMaxTileStaticSize() override {
+        return max_tile_static_size;
+    }
+
 private:
+
+    HSAKernel* CreateOfflineFinalizedKernelImpl(void *kernelBuffer, int kernelSize, const char *entryName) {
+        hsa_status_t status;
+
+        // Deserialize code object.
+        hsa_code_object_t code_object = {0};
+        status = hsa_code_object_deserialize(kernelBuffer, kernelSize, NULL, &code_object);
+        STATUS_CHECK(status, __LINE__);
+        assert(0 != code_object.handle);
+
+        // Create the executable.
+        hsa_executable_t hsaExecutable;
+        status = hsa_executable_create(HSA_PROFILE_FULL, HSA_EXECUTABLE_STATE_UNFROZEN,
+                                       NULL, &hsaExecutable);
+        STATUS_CHECK(status, __LINE__);
+
+        // Load the code object.
+        status = hsa_executable_load_code_object(hsaExecutable, agent, code_object, NULL);
+        STATUS_CHECK(status, __LINE__);
+
+        // Freeze the executable.
+        status = hsa_executable_freeze(hsaExecutable, NULL);
+        STATUS_CHECK(status, __LINE__);
+
+        // Get symbol handle.
+        hsa_executable_symbol_t kernelSymbol;
+        status = hsa_executable_get_symbol(hsaExecutable, NULL, entryName, agent, 0, &kernelSymbol);
+        STATUS_CHECK(status, __LINE__);
+
+        // Get code handle.
+        uint64_t kernelCodeHandle;
+        status = hsa_executable_symbol_get_info(kernelSymbol, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT, &kernelCodeHandle);
+        STATUS_CHECK(status, __LINE__);
+
+        return new HSAKernel(hsaExecutable, code_object, kernelSymbol, kernelCodeHandle);
+    }
 
     HSAKernel* CreateKernelImpl(const char *hsailBuffer, int hsailSize, const char *entryName) {
         hsa_status_t status;
@@ -602,7 +709,7 @@ private:
   
         hsa_code_object_t hsaCodeObject = {0};
         status = hsa_ext_program_finalize(hsaProgram, isa, 0, control_directives,
-                                          "", HSA_CODE_OBJECT_TYPE_PROGRAM, &hsaCodeObject);
+                                          NULL, HSA_CODE_OBJECT_TYPE_PROGRAM, &hsaCodeObject);
         STATUS_CHECK(status, __LINE__);
   
         if (hsaProgram.handle != 0) {
@@ -613,15 +720,15 @@ private:
         // Create the executable.
         hsa_executable_t hsaExecutable;
         status = hsa_executable_create(HSA_PROFILE_FULL, HSA_EXECUTABLE_STATE_UNFROZEN,
-                                       "", &hsaExecutable);
+                                       NULL, &hsaExecutable);
         STATUS_CHECK(status, __LINE__);
   
         // Load the code object.
-        status = hsa_executable_load_code_object(hsaExecutable, agent, hsaCodeObject, "");
+        status = hsa_executable_load_code_object(hsaExecutable, agent, hsaCodeObject, NULL);
         STATUS_CHECK(status, __LINE__);
   
         // Freeze the executable.
-        status = hsa_executable_freeze(hsaExecutable, "");
+        status = hsa_executable_freeze(hsaExecutable, NULL);
         STATUS_CHECK(status, __LINE__);
   
         // Get symbol handle.
@@ -722,11 +829,11 @@ public:
 
 static HSAContext ctx;
 
-} // namespace Concurrency
+} // namespace Kalmar
 
 
 extern "C" void *GetContextImpl() {
-  return &Concurrency::ctx;
+  return &Kalmar::ctx;
 }
 
 extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v) {

@@ -3,7 +3,7 @@ include (CMakeForceCompiler)
 # libc++
 set(LIBCXX_SRC_DIR "${PROJECT_SOURCE_DIR}/libc++/libcxx")
 set(LIBCXX_INC_DIR "${LIBCXX_SRC_DIR}/include")
-set(LIBCXX_LIB_DIR "${PROJECT_BINARY_DIR}/libc++/libcxx/lib")
+set(LIBCXX_LIB_DIR "${PROJECT_BINARY_DIR}/libc++/lib")
 
 if (NOT APPLE)
 # libcxxrt
@@ -75,7 +75,6 @@ macro(add_mcwamp_library_hsa name )
   add_dependencies(${name} llvm-link opt clang)
   # add HSA libraries
   target_link_libraries(${name} ${HSA_LIBRARY})
-  target_link_libraries(${name} ${HSA_EXT_LIBRARY})
   target_link_libraries(${name} ${HSA_KMT_LIBRARY})
   target_link_libraries(${name} pthread)
   target_link_libraries(${name} elf)

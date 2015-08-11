@@ -5,21 +5,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLAMP_AMP_MANAGE
-#define __CLAMP_AMP_MANAGE
+#pragma once
 
-#include <amp_runtime.h>
-#include <serialize.h>
+#include <kalmar_runtime.h>
+#include <kalmar_serialize.h>
 
-namespace Concurrency {
-
+namespace Kalmar {
 
 // Dummy interface that looks somewhat like std::shared_ptr<T>
 template <typename T>
 class _data {
 public:
     _data() = delete;
-    _data(int count) {}
+    _data(int count) : p_(nullptr) {}
     _data(const _data& d) restrict(cpu, amp)
         : p_(d.p_) {}
     template <typename U>
@@ -93,12 +91,11 @@ public:
 
     __attribute__((annotate("serialize")))
         void __cxxamp_serialize(Serialize& s) const {
-            s.Push(mm.get(), !std::is_const<T>::value, isArray);
+            s.visit_buffer(mm.get(), !std::is_const<T>::value, isArray);
         }
     __attribute__((annotate("user_deserialize")))
         explicit _data_host(__global typename std::remove_const<T>::type* t) {}
 };
 
-} // namespace Concurrency
+} // namespace Kalmar
 
-#endif // __CLAMP_AMP_MANAGE

@@ -1,43 +1,9 @@
-#ifndef __CLAMP_AMP_RUNTIME
-#define __CLAMP_AMP_RUNTIME
+#pragma once
 
-#include <map>
-#include <mutex>
+#include <kalmar_defines.h>
 
-namespace Concurrency {
-
-#ifndef E_FAIL
-#define E_FAIL 0x80004005
-#endif
-
-static const char *__errorMsg_UnsupportedAccelerator = "concurrency::parallel_for_each is not supported on the selected accelerator \"CPU accelerator\".";
-
-typedef int HRESULT;
-class runtime_exception : public std::exception
-{
-public:
-  runtime_exception(const char * message, HRESULT hresult) throw() : _M_msg(message), err_code(hresult) {}
-  explicit runtime_exception(HRESULT hresult) throw() : err_code(hresult) {}
-  runtime_exception(const runtime_exception& other) throw() : _M_msg(other.what()), err_code(other.err_code) {}
-  runtime_exception& operator=(const runtime_exception& other) throw() {
-    _M_msg = *(other.what());
-    err_code = other.err_code;
-    return *this;
-  }
-  virtual ~runtime_exception() throw() {}
-  virtual const char* what() const throw() {return _M_msg.c_str();}
-  HRESULT get_error_code() const {return err_code;}
-
-private:
-  std::string _M_msg;
-  HRESULT err_code;
-};
-
-
-
-/// forward declaration
-class KalmarDevice;
-struct rw_info;
+namespace Kalmar {
+namespace enums {
 
 /// access_type is used for accelerator that supports unified memory
 /// Such accelerator can use access_type to control whether can access data on
@@ -57,6 +23,18 @@ enum queuing_mode
     queuing_mode_automatic
 };
 
+} // namespace enums
+} // namespace Kalmar
+
+
+namespace Kalmar {
+
+using namespace Kalmar::enums;
+
+/// forward declaration
+class KalmarDevice;
+struct rw_info;
+
 /// KalmarQueue
 /// This is the implementation of accelerator_view
 /// KalamrQueue is responsible for data operations and launch kernel
@@ -71,6 +49,7 @@ public:
 
   virtual void flush() {}
   virtual void wait() {}
+  virtual void LaunchKernelWithDynamicGroupMemory(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size, size_t dynamic_group_size) {}
   virtual void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {}
   virtual void* LaunchKernelAsync(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) { return nullptr; }
 
@@ -91,6 +70,8 @@ public:
 
   /// push device pointer to kernel argument list
   virtual void Push(void *kernel, int idx, void* device, bool isConst) = 0;
+
+  virtual uint32_t GetGroupSegmentSize(void *kernel) { return 0; }
 
   KalmarDevice* getDev() { return pDev; }
   queuing_mode get_mode() const { return mode; }
@@ -137,7 +118,7 @@ public:
     virtual void release(void* ptr, struct rw_info* key) = 0;
 
     /// create kernel
-    virtual void* CreateKernel(const char* fun, void* size, void* source) { return nullptr; }
+    virtual void* CreateKernel(const char* fun, void* size, void* source, bool needsCompilation = true) { return nullptr; }
 
     /// check the dimension information is correct
     virtual bool check(size_t* size, size_t dim_ext) { return true; }
@@ -150,6 +131,9 @@ public:
         std::call_once(flag, [&]() { def = createQueue(); });
         return def;
     }
+
+    /// get max tile static area size
+    virtual size_t GetMaxTileStaticSize() { return 0; }
 };
 
 class CPUQueue final : public KalmarQueue
@@ -198,7 +182,7 @@ public:
     std::shared_ptr<KalmarQueue> createQueue() { return std::shared_ptr<KalmarQueue>(new CPUQueue(this)); }
     void* create(size_t count, struct rw_info* /* not used */ ) override { return aligned_alloc(0x1000, count); }
     void release(void* ptr, struct rw_info* /* nout used */) override { ::operator delete(ptr); }
-    void* CreateKernel(const char* fun, void* size, void* source) { return nullptr; }
+    void* CreateKernel(const char* fun, void* size, void* source, bool needsCompilation = true) { return nullptr; }
 };
 
 /// KalmarContext
@@ -393,7 +377,7 @@ struct rw_info
     /// 2. one acceleratir_view, with another staged one
     ///    In this case, master should be cpu device
     ///    If it is not, ignore the stage one, fallback to case 1.
-    rw_info(const std::shared_ptr<KalmarQueue> Queue, const std::shared_ptr<KalmarQueue> Stage,
+    rw_info(const std::shared_ptr<KalmarQueue>& Queue, const std::shared_ptr<KalmarQueue>& Stage,
             const size_t count, access_type mode_) : data(nullptr), count(count),
     curr(Queue), master(Queue), stage(nullptr), devs(), mode(mode_), HostPtr(false) {
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
@@ -617,6 +601,5 @@ struct rw_info
     }
 };
 
-} // namespace Concurrency
+} // namespace Kalmar
 
-#endif // __CLAMP_AMP_RUNTIME
