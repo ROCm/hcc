@@ -49,14 +49,14 @@ extern "C" void PushArgPtrImpl(void *ker, int idx, size_t sz, const void *v);
 
 class HSAKernel {
 private:
-   hsa_code_object_t hsaCodeObject;
-   hsa_executable_t hsaExecutable;
-   uint64_t kernelCodeHandle;
-   hsa_executable_symbol_t hsaExecutableSymbol;
-   friend class HSADispatch;
+    hsa_code_object_t hsaCodeObject;
+    hsa_executable_t hsaExecutable;
+    uint64_t kernelCodeHandle;
+    hsa_executable_symbol_t hsaExecutableSymbol;
+    friend class HSADispatch;
 
 public:
-   HSAKernel(hsa_executable_t _hsaExecutable,
+    HSAKernel(hsa_executable_t _hsaExecutable,
               hsa_code_object_t _hsaCodeObject,
               hsa_executable_symbol_t _hsaExecutableSymbol,
               uint64_t _kernelCodeHandle) :
@@ -65,7 +65,7 @@ public:
       hsaExecutableSymbol(_hsaExecutableSymbol),
       kernelCodeHandle(_kernelCodeHandle) {}
 
-   ~HSAKernel() {
+    ~HSAKernel() {
       hsa_status_t status;
 
 #if KALMAR_DEBUG
@@ -77,7 +77,7 @@ public:
 
       status = hsa_code_object_destroy(hsaCodeObject);
       STATUS_CHECK(status, __LINE__);
-   }
+    }
 }; // end of HSAKernel
 
 class HSADispatch {
