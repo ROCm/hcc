@@ -83,6 +83,8 @@ public:
     return pQueue->hasHSAInterOp();
   }
 
+  completion_future create_marker();
+
 private:
   std::shared_ptr<Kalmar::KalmarQueue> pQueue;
 
@@ -259,8 +261,6 @@ const wchar_t accelerator::default_accelerator[] = L"default";
 // completion_future
 // ------------------------------------------------------------------------
 
-// FIXME: needs to think about what its new semantic should be
-// FIXME: get create_marker() implemented
 class completion_future {
 public:
 
@@ -432,7 +432,19 @@ private:
 
     // array_view
     template <typename T, int N> friend class array_view;
+
+    // accelerator_view
+    friend class accelerator_view;
 };
+
+
+// ------------------------------------------------------------------------
+// accelerator_view::create_marker()
+// ------------------------------------------------------------------------
+
+inline completion_future accelerator_view::create_marker() {
+    return completion_future(static_cast<std::shared_future<void>*>(pQueue->EnqueueMarker()));
+}
 
 // ------------------------------------------------------------------------
 // extent
