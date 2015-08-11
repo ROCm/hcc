@@ -97,11 +97,11 @@ private:
   template<typename Kernel, int dim_ext> friend
       void Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&, void*, size_t);
   template<typename Kernel, int dim_ext> friend
-      std::shared_future<void>* Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&, void*, size_t);
+      Kalmar::KalmarEvent Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&, void*, size_t);
   template<typename Kernel, int dim_ext> friend
       void Kalmar::mcw_cxxamp_launch_kernel(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&);
   template<typename Kernel, int dim_ext> friend
-      std::shared_future<void>* Kalmar::mcw_cxxamp_launch_kernel_async(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&);
+      Kalmar::KalmarEvent Kalmar::mcw_cxxamp_launch_kernel_async(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&);
 
   // FIXME: enable CPU execution path for HC
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
@@ -264,13 +264,13 @@ const wchar_t accelerator::default_accelerator[] = L"default";
 class completion_future {
 public:
 
-    completion_future() {};
+    completion_future() : __amp_future(), __thread_then(nullptr), __asyncOp(nullptr) {};
 
     completion_future(const completion_future& _Other)
-        : __amp_future(_Other.__amp_future), __thread_then(_Other.__thread_then) {}
+        : __amp_future(_Other.__amp_future), __thread_then(_Other.__thread_then), __asyncOp(_Other.__asyncOp) {}
 
     completion_future(completion_future&& _Other)
-        : __amp_future(std::move(_Other.__amp_future)), __thread_then(_Other.__thread_then) {}
+        : __amp_future(std::move(_Other.__amp_future)), __thread_then(_Other.__thread_then), __asyncOp(_Other.__asyncOp) {}
 
     ~completion_future() {
       if (__thread_then != nullptr) {
@@ -278,12 +278,18 @@ public:
       }
       delete __thread_then;
       __thread_then = nullptr;
+      
+      if (__asyncOp != nullptr) {
+        delete __asyncOp;
+        __asyncOp = nullptr;
+      }
     }
 
     completion_future& operator=(const completion_future& _Other) {
         if (this != &_Other) {
            __amp_future = _Other.__amp_future;
            __thread_then = _Other.__thread_then;
+           __asyncOp = _Other.__asyncOp;
         }
         return (*this);
     }
@@ -292,6 +298,7 @@ public:
         if (this != &_Other) {
             __amp_future = std::move(_Other.__amp_future);
             __thread_then = _Other.__thread_then;
+           __asyncOp = _Other.__asyncOp;
         }
         return (*this);
     }
@@ -340,16 +347,16 @@ public:
 private:
     std::shared_future<void> __amp_future;
     std::thread* __thread_then = nullptr;
+    Kalmar::KalmarAsyncOp* __asyncOp;
 
-    // __future is dynamically allocated in C++AMP runtime implementation
+    // event.getFuture() is dynamically allocated in C++AMP runtime implementation
     // after we copy its content in __amp_future, we need to delete it
-    completion_future(std::shared_future<void>* __future)
-        : __amp_future(*__future) {
-      delete __future;
+    completion_future(Kalmar::KalmarEvent& event) : __amp_future(*(event.getFuture())), __asyncOp(event.getAsyncOp()) {
+      delete event.getFuture();
     }
 
     completion_future(const std::shared_future<void> &__future)
-        : __amp_future(__future) {}
+        : __amp_future(__future), __thread_then(nullptr), __asyncOp(nullptr) {}
 
     // non-tiled parallel_for_each with dynamic group segment
     template<typename Kernel> friend
@@ -443,7 +450,8 @@ private:
 // ------------------------------------------------------------------------
 
 inline completion_future accelerator_view::create_marker() {
-    return completion_future(static_cast<std::shared_future<void>*>(pQueue->EnqueueMarker()));
+    Kalmar::KalmarEvent event = pQueue->EnqueueMarker();
+    return completion_future(event);
 }
 
 // ------------------------------------------------------------------------
@@ -2681,7 +2689,8 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   if (av.get_accelerator().get_device_path() == L"cpu") {
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
   }
-  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 1>(av.pQueue, &ext, NULL, f));
+  Kalmar::KalmarEvent event = Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 1>(av.pQueue, &ext, NULL, f);
+  return completion_future(event);
 #else //if __KALMAR_ACCELERATOR__ != 1
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -2708,7 +2717,8 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   if (av.get_accelerator().get_device_path() == L"cpu") {
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
   }
-  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 2>(av.pQueue, ext, NULL, f));
+  Kalmar::KalmarEvent event = Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 2>(av.pQueue, ext, NULL, f);
+  return completion_future(event);
 #else //if __KALMAR_ACCELERATOR__ != 1
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -2742,7 +2752,8 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   if (av.get_accelerator().get_device_path() == L"cpu") {
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
   }
-  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 3>(av.pQueue, ext, NULL, f));
+  Kalmar::KalmarEvent event = Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 3>(av.pQueue, ext, NULL, f);
+  return completion_future(event);
 #else //if __KALMAR_ACCELERATOR__ != 1
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -2775,7 +2786,8 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   if (av.get_accelerator().get_device_path() == L"cpu") {
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
   }
-  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 1>(av.pQueue, &ext, &tile, f));
+  Kalmar::KalmarEvent event = Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 1>(av.pQueue, &ext, &tile, f);
+  return completion_future(event);
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index<1> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -2811,7 +2823,8 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   if (av.get_accelerator().get_device_path() == L"cpu") {
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
   }
-  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 2>(av.pQueue, ext, tile, f));
+  Kalmar::KalmarEvent event = Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 2>(av.pQueue, ext, tile, f);
+  return completion_future(event);
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index<2> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -2855,7 +2868,8 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   if (av.get_accelerator().get_device_path() == L"cpu") {
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
   }
-  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 3>(av.pQueue, ext, tile, f));
+  Kalmar::KalmarEvent event = Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 3>(av.pQueue, ext, tile, f);
+  return completion_future(event);
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index<3> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -2894,7 +2908,8 @@ completion_future parallel_for_each(const accelerator_view& av,
   }
   void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
   allocator.setStaticGroupSegmentSize(av.pQueue->GetGroupSegmentSize(kernel));
-  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 1>(av.pQueue, &ext, NULL, f, kernel, allocator.getDynamicGroupSegmentSize()));
+  Kalmar::KalmarEvent event = Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 1>(av.pQueue, &ext, NULL, f, kernel, allocator.getDynamicGroupSegmentSize());
+  return completion_future(event);
 #else //if __KALMAR_ACCELERATOR__ != 1
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -2934,7 +2949,8 @@ completion_future parallel_for_each(const accelerator_view& av,
   }
   void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
   allocator.setStaticGroupSegmentSize(av.pQueue->GetGroupSegmentSize(kernel));
-  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 2>(av.pQueue, ext, NULL, f, kernel, allocator.getDynamicGroupSegmentSize()));
+  Kalmar::KalmarEvent event = Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 2>(av.pQueue, ext, NULL, f, kernel, allocator.getDynamicGroupSegmentSize());
+  return completion_future(event);
 #else //if __KALMAR_ACCELERATOR__ != 1
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -2981,7 +2997,8 @@ completion_future parallel_for_each(const accelerator_view& av,
   }
   void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
   allocator.setStaticGroupSegmentSize(av.pQueue->GetGroupSegmentSize(kernel));
-  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 3>(av.pQueue, ext, NULL, f, kernel, allocator.getDynamicGroupSegmentSize()));
+  Kalmar::KalmarEvent event = Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 3>(av.pQueue, ext, NULL, f, kernel, allocator.getDynamicGroupSegmentSize());
+  return completion_future(event);
 #else //if __KALMAR_ACCELERATOR__ != 1
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -3028,7 +3045,8 @@ completion_future parallel_for_each(const accelerator_view& av,
   }
   void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
   allocator.setStaticGroupSegmentSize(av.pQueue->GetGroupSegmentSize(kernel));
-  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 1>(av.pQueue, &ext, &tile, f, kernel, allocator.getDynamicGroupSegmentSize()));
+  Kalmar::KalmarEvent event = Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 1>(av.pQueue, &ext, &tile, f, kernel, allocator.getDynamicGroupSegmentSize());
+  return completion_future(event);
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index<1> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -3076,7 +3094,8 @@ completion_future parallel_for_each(const accelerator_view& av,
   }
   void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
   allocator.setStaticGroupSegmentSize(av.pQueue->GetGroupSegmentSize(kernel));
-  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 2>(av.pQueue, ext, tile, f, kernel, allocator.getDynamicGroupSegmentSize()));
+  Kalmar::KalmarEvent event = Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 2>(av.pQueue, ext, tile, f, kernel, allocator.getDynamicGroupSegmentSize());
+  return completion_future(event);
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index<2> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -3132,7 +3151,8 @@ completion_future parallel_for_each(const accelerator_view& av,
   }
   void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
   allocator.setStaticGroupSegmentSize(av.pQueue->GetGroupSegmentSize(kernel));
-  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 3>(av.pQueue, ext, tile, f, kernel, allocator.getDynamicGroupSegmentSize()));
+  Kalmar::KalmarEvent event = Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 3>(av.pQueue, ext, tile, f, kernel, allocator.getDynamicGroupSegmentSize());
+  return completion_future(event);
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index<3> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
