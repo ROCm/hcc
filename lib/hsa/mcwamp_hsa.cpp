@@ -80,6 +80,112 @@ public:
     }
 }; // end of HSAKernel
 
+class HSABarrier {
+private:
+    hsa_signal_t signal;
+    bool isDispatched;
+
+public:
+    HSABarrier() : isDispatched(false) {}
+
+    ~HSABarrier() {
+#if KALMAR_DEBUG
+        std::cerr << "HSABarrier::~HSABarrier()\n";
+#endif
+        if (isDispatched) {
+            waitComplete();
+            dispose();
+        }
+    }
+
+    hsa_status_t enqueueBarrier(hsa_queue_t* queue) {
+        hsa_status_t status = HSA_STATUS_SUCCESS;
+        if (isDispatched) {
+            return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+        }
+
+        status = hsa_signal_create(1, 0, NULL, &signal);
+        STATUS_CHECK_Q(status, __LINE__);
+
+        // Obtain the write index for the command queue
+        uint64_t index = hsa_queue_load_write_index_relaxed(queue);
+        const uint32_t queueMask = queue->size - 1;
+
+        // Define the barrier packet to be at the calculated queue index address
+        hsa_barrier_and_packet_t* barrier = &(((hsa_barrier_and_packet_t*)(queue->base_address))[index&queueMask]);
+        memset(barrier, 0, sizeof(hsa_barrier_and_packet_t));
+
+        // setup header
+        uint16_t header = HSA_PACKET_TYPE_BARRIER_AND << HSA_PACKET_HEADER_TYPE;
+        header |= 1 << HSA_PACKET_HEADER_BARRIER;
+        header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE;
+        header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE;
+        barrier->header = header;
+
+        barrier->completion_signal = signal;
+
+#if KALMAR_DEBUG
+        std::cerr << "ring door bell to dispatch barrier\n";
+#endif
+
+        // Increment write index and ring doorbell to dispatch the kernel
+        hsa_queue_store_write_index_relaxed(queue, index+1);
+        hsa_signal_store_relaxed(queue->doorbell_signal, index);
+
+        isDispatched = true;
+
+        return status;
+    }
+
+    std::shared_future<void>* enqueueAndGetFuture(hsa_queue_t* queue) {
+        enqueueBarrier(queue);
+
+        // dynamically allocate a std::shared_future<void> object
+        // it will be released in the private ctor of completion_future
+        std::shared_future<void>* fut = new std::shared_future<void>(std::async(std::launch::deferred, [&] {
+            waitComplete();
+
+#if KALMAR_DEBUG
+          std::cerr << "destruct HSABarrier instance\n";
+#endif
+
+            delete(this); // destruct HSABarrier instance
+        }).share());
+
+        return fut;
+    }
+
+    // wait for the barrier to complete
+    hsa_status_t waitComplete() {
+        hsa_status_t status = HSA_STATUS_SUCCESS;
+        if (!isDispatched)  {
+            return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+        }
+
+#if KALMAR_DEBUG
+        std::cerr << "wait for barrier completion...\n";
+#endif
+
+        // Wait on completion signal until the barrier is finished
+        hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_STATE_BLOCKED);
+
+#if KALMAR_DEBUG
+        std::cerr << "complete!\n";
+#endif
+
+        isDispatched = false;
+        dispose();
+        return status;
+    }
+
+    void dispose() {
+        hsa_status_t status;
+        status = hsa_signal_destroy(signal);
+        STATUS_CHECK_Q(status, __LINE__);
+    }
+
+}; // end of HSABarrier
+
 class HSADispatch {
 private:
     hsa_agent_t agent;
@@ -329,7 +435,7 @@ public:
         }
 
 #if KALMAR_DEBUG
-        std::cerr << "wait for completion...\n";
+        std::cerr << "wait for kernel dispatch completion...\n";
 #endif
 
         // wait for completion
@@ -430,7 +536,7 @@ private:
     hsa_queue_t* commandQueue;
 
     //
-    // kernel dispatches associated with this HSAQueue instance
+    // kernel dispatches and barriers associated with this HSAQueue instance
     //
     // When a kernel k is dispatched, we'll get a future object f for k.
     // This vector would hold f.  acccelerator_view::wait() would trigger
@@ -491,7 +597,7 @@ public:
     ~HSAQueue() {
         hsa_status_t status;
 
-        // wait on all existing kernel dispatches to complete
+        // wait on all existing kernel dispatches and barriers to complete
         wait();
 
         // clear bufferKernelMap
@@ -678,6 +784,19 @@ public:
         return true;
     }
 
+    // enqueue a barrier packet
+    void* EnqueueMarker() {
+        // HSABarrier instance will be deleted after the future object created is waited on
+        HSABarrier *barrier = new HSABarrier();
+
+        // enqueue the barrier
+        std::shared_future<void>* fut = barrier->enqueueAndGetFuture(commandQueue);
+
+        // associate the barrier with this queue
+        dispatches.push_back(*fut);
+
+        return static_cast<void*>(fut);
+    }
 };
 
 class HSADevice final : public KalmarDevice

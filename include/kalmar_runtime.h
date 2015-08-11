@@ -92,6 +92,9 @@ public:
   /// check if the queue is an HSA queue
   virtual bool hasHSAInterOp() { return false; }
 
+  /// enqueue marker
+  virtual void* EnqueueMarker() { return nullptr; }
+
 private:
   KalmarDevice* pDev;
   queuing_mode mode;
