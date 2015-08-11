@@ -94,7 +94,6 @@ public:
 #endif
         if (isDispatched) {
             waitComplete();
-            dispose();
         }
     }
 
@@ -216,7 +215,6 @@ public:
 
         if (isDispatched) {
             waitComplete();
-            dispose();
         }
     }
 
@@ -450,7 +448,6 @@ public:
 
         hsa_memory_deregister((void*)aql.kernarg_address, arg_vec.size());
 
-        hsa_signal_store_relaxed(signal, 1);
         isDispatched = false;
         dispose();
         return status; 
