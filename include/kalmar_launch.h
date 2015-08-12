@@ -255,7 +255,7 @@ static inline std::shared_ptr<KalmarQueue> get_availabe_que(const Kernel& f)
 #pragma clang diagnostic ignored "-Wunused-variable"
 static std::set<std::string> __mcw_cxxamp_kernels;
 template<typename Kernel, int dim_ext>
-inline KalmarEvent 
+inline std::shared_ptr<KalmarAsyncOp>
 mcw_cxxamp_launch_kernel_async(const std::shared_ptr<KalmarQueue>& pQueue, size_t *ext,
   size_t *local_size, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
@@ -333,7 +333,7 @@ void mcw_cxxamp_execute_kernel_with_dynamic_group_memory(
 }
 
 template<typename Kernel, int dim_ext>
-inline KalmarEvent
+inline std::shared_ptr<KalmarAsyncOp>
 mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async(
   const std::shared_ptr<KalmarQueue>& pQueue, size_t *ext, size_t *local_size,
   const Kernel& f, void *kernel, size_t dynamic_group_memory_size) restrict(cpu,amp) {

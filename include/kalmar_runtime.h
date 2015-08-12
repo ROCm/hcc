@@ -41,43 +41,8 @@ struct rw_info;
 class KalmarAsyncOp {
 public:
   virtual ~KalmarAsyncOp() {} 
-  virtual void* getNativeHandle() = 0;
-};
-
-/// KalmarEvent
-///
-/// This is a POD class to store the future object, along with native handle
-/// for asynchronous operations.
-/// 
-/// KalmarEvent is NOT responsible for lifecycle management of its members.
-class KalmarEvent
-{
-private:
-  std::shared_ptr<KalmarAsyncOp> m_asyncOp;
-  std::shared_future<void>* m_future;
-public:
-
-  // constructor
-  KalmarEvent() : m_asyncOp(nullptr), m_future(nullptr) {}
-  KalmarEvent(KalmarAsyncOp* asyncOp, std::shared_future<void>* future) : m_asyncOp(asyncOp), m_future(future) {}
-
-  // destructor
-  ~KalmarEvent() {}
-
-  // copy constructor
-  KalmarEvent(const KalmarEvent& other) : m_asyncOp(other.m_asyncOp), m_future(other.m_future) {}
-
-  // assignment operator
-  KalmarEvent& operator=(const KalmarEvent& other) {
-    if (this != &other) {
-      m_asyncOp = other.m_asyncOp;
-      m_future = other.m_future;
-    }
-    return (*this);
-  }
-
-  std::shared_future<void>* getFuture() { return m_future; }
-  std::shared_ptr<KalmarAsyncOp> getAsyncOp() { return m_asyncOp; }
+  virtual std::shared_future<void>* getFuture() { return nullptr; };
+  virtual void* getNativeHandle() { return nullptr;};
 };
 
 /// KalmarQueue
@@ -99,13 +64,13 @@ public:
   virtual void LaunchKernelWithDynamicGroupMemory(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size, size_t dynamic_group_size) {}
 
   // async kernel launch with dynamic group memory
-  virtual KalmarEvent LaunchKernelWithDynamicGroupMemoryAsync(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size, size_t dynamic_group_size) { return KalmarEvent(); }
+  virtual std::shared_ptr<KalmarAsyncOp> LaunchKernelWithDynamicGroupMemoryAsync(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size, size_t dynamic_group_size) { return nullptr; }
 
   // sync kernel launch
   virtual void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {}
 
   // async kernel launch
-  virtual KalmarEvent LaunchKernelAsync(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) { return LaunchKernelWithDynamicGroupMemoryAsync(kernel, dim_ext, ext, local_size, 0); }
+  virtual std::shared_ptr<KalmarAsyncOp> LaunchKernelAsync(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) { return LaunchKernelWithDynamicGroupMemoryAsync(kernel, dim_ext, ext, local_size, 0); }
 
   /// read data from device to host
   virtual void read(void* device, void* dst, size_t count, size_t offset) = 0;
@@ -138,7 +103,7 @@ public:
   virtual bool hasHSAInterOp() { return false; }
 
   /// enqueue marker
-  virtual KalmarEvent EnqueueMarker() { return KalmarEvent(nullptr, nullptr); }
+  virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarker() { return nullptr; }
 
 private:
   KalmarDevice* pDev;

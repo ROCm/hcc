@@ -85,17 +85,23 @@ private:
     hsa_signal_t signal;
     bool isDispatched;
 
+    std::shared_future<void>* future;
+
 public:
+    std::shared_future<void>* getFuture() override { return future; }
+
     void* getNativeHandle() override { return &signal; }
 
-    HSABarrier() : isDispatched(false) {}
+    HSABarrier() : isDispatched(false), future(nullptr) {}
 
     ~HSABarrier() {
 #if KALMAR_DEBUG
         std::cerr << "HSABarrier::~HSABarrier()\n";
 #endif
         if (isDispatched) {
-            waitComplete();
+            hsa_status_t status = HSA_STATUS_SUCCESS;
+            status = waitComplete();
+            STATUS_CHECK_Q(status, __LINE__);
         }
         dispose();
     }
@@ -139,16 +145,17 @@ public:
         return status;
     }
 
-    Kalmar::KalmarEvent enqueueAndGetFuture(hsa_queue_t* queue) {
-        enqueueBarrier(queue);
+    hsa_status_t enqueueAsync(hsa_queue_t* queue) {
+        hsa_status_t status = HSA_STATUS_SUCCESS;
+        status = enqueueBarrier(queue);
+        STATUS_CHECK_Q(status, __LINE__);
 
         // dynamically allocate a std::shared_future<void> object
-        // it will be released in the private ctor of completion_future
-        std::shared_future<void>* fut = new std::shared_future<void>(std::async(std::launch::deferred, [&] {
+        future = new std::shared_future<void>(std::async(std::launch::deferred, [&] {
             waitComplete();
         }).share());
 
-        return Kalmar::KalmarEvent(this, fut);
+        return status;
     }
 
     // wait for the barrier to complete
@@ -177,6 +184,11 @@ public:
         hsa_status_t status;
         status = hsa_signal_destroy(signal);
         STATUS_CHECK_Q(status, __LINE__);
+
+        if (future != nullptr) {
+          delete future;
+          future = nullptr;
+        }
     }
 
 }; // end of HSABarrier
@@ -203,7 +215,11 @@ private:
 
     size_t dynamicGroupSize;
 
+    std::shared_future<void>* future;
+
 public:
+    std::shared_future<void>* getFuture() override { return future; }
+
     void* getNativeHandle() override { return &signal; }
 
     ~HSADispatch() {
@@ -212,7 +228,9 @@ public:
 #endif
 
         if (isDispatched) {
-            waitComplete();
+            hsa_status_t status = HSA_STATUS_SUCCESS;
+            status = waitComplete();
+            STATUS_CHECK_Q(status, __LINE__);
         }
         dispose();
     }
@@ -226,7 +244,8 @@ public:
         agent(_agent),
         kernel(_kernel),
         isDispatched(false),
-        dynamicGroupSize(0) {
+        dynamicGroupSize(0),
+        future(nullptr) {
 
         // allocate the initial argument vector capacity
         arg_vec.reserve(ARGS_VEC_INITIAL_CAPACITY);
@@ -302,21 +321,26 @@ public:
         if (isDispatched) {
             return HSA_STATUS_ERROR_INVALID_ARGUMENT;
         }
-        dispatchKernel(_queue);
-        waitComplete();
+        status = dispatchKernel(_queue);
+        STATUS_CHECK_Q(status, __LINE__);
+
+        status = waitComplete();
+        STATUS_CHECK_Q(status, __LINE__);
+
         return status;
     } 
 
-    Kalmar::KalmarEvent dispatchKernelAndGetFuture(hsa_queue_t* _queue) {
-        dispatchKernel(_queue);
+    hsa_status_t dispatchKernelAsync(hsa_queue_t* _queue) {
+        hsa_status_t status = HSA_STATUS_SUCCESS;
+        status = dispatchKernel(_queue);
+        STATUS_CHECK_Q(status, __LINE__);
 
         // dynamically allocate a std::shared_future<void> object
-        // it will be released in the private ctor of completion_future
-        std::shared_future<void>* fut = new std::shared_future<void>(std::async(std::launch::deferred, [&] {
+        future = new std::shared_future<void>(std::async(std::launch::deferred, [&] {
           waitComplete();
         }).share());
 
-        return Kalmar::KalmarEvent(this, fut);
+        return status;
     }
 
     uint32_t getGroupSegmentSize() {
@@ -452,6 +476,11 @@ public:
         hsa_signal_destroy(aql.completion_signal);
         clearArgs();
         std::vector<uint8_t>().swap(arg_vec);
+
+        if (future != nullptr) {
+          delete future;
+          future = nullptr;
+        }
     }
 
 private:
@@ -532,7 +561,7 @@ private:
     // HSAQueue::wait(), and all future objects in this vector will be waited
     // on.
     //
-    std::vector< std::shared_future<void> > dispatches;
+    std::vector< std::shared_ptr<KalmarAsyncOp> > asyncOps;
 
     //
     // kernelBufferMap and bufferKernelMap forms the dependency graph of
@@ -566,7 +595,7 @@ private:
     std::map<void*, std::vector<void*> > kernelBufferMap;
 
 public:
-    HSAQueue(KalmarDevice* pDev, hsa_agent_t agent) : KalmarQueue(pDev), commandQueue(nullptr), dispatches(), bufferKernelMap(), kernelBufferMap() {
+    HSAQueue(KalmarDevice* pDev, hsa_agent_t agent) : KalmarQueue(pDev), commandQueue(nullptr), asyncOps(), bufferKernelMap(), kernelBufferMap() {
         hsa_status_t status;
 
         /// Query the maximum size of the queue.
@@ -615,15 +644,16 @@ public:
     // FIXME: implement flush
 
     void wait() override {
-      // wait on all previous dispatches to complete
-      for (int i = 0; i < dispatches.size(); ++i) {
+      // wait on all previous async operations to complete
+      for (int i = 0; i < asyncOps.size(); ++i) {
         // wait on valid futures only
-        if (dispatches[i].valid()) {
-          dispatches[i].wait();
+        std::shared_future<void>* future = asyncOps[i]->getFuture();
+        if (future->valid()) {
+          future->wait();
         }
       }
-      // clear previous dispatched kernel table
-      dispatches.clear();
+      // clear async operations table
+      asyncOps.clear();
     }
 
     void LaunchKernel(void *ker, size_t nr_dim, size_t *global, size_t *local) override {
@@ -658,13 +688,16 @@ public:
         delete(dispatch);
     }
 
-    KalmarEvent LaunchKernelAsync(void *ker, size_t nr_dim, size_t *global, size_t *local) override {
+    std::shared_ptr<KalmarAsyncOp> LaunchKernelAsync(void *ker, size_t nr_dim, size_t *global, size_t *local) override {
         return LaunchKernelWithDynamicGroupMemoryAsync(ker, nr_dim, global, local, 0);
     }
 
-    KalmarEvent LaunchKernelWithDynamicGroupMemoryAsync(void *ker, size_t nr_dim, size_t *global, size_t *local, size_t dynamic_group_size) override {
+    std::shared_ptr<KalmarAsyncOp> LaunchKernelWithDynamicGroupMemoryAsync(void *ker, size_t nr_dim, size_t *global, size_t *local, size_t dynamic_group_size) override {
+        hsa_status_t status = HSA_STATUS_SUCCESS;      
+
         HSADispatch *dispatch =
             reinterpret_cast<HSADispatch*>(ker);
+
         size_t tmp_local[] = {0, 0, 0};
         if (!local)
             local = tmp_local;
@@ -681,21 +714,25 @@ public:
                       });
 
         // dispatch the kernel
-        KalmarEvent event = dispatch->dispatchKernelAndGetFuture(commandQueue);
+        status = dispatch->dispatchKernelAsync(commandQueue);
+        STATUS_CHECK(status, __LINE__);
+
+        // create a shared_ptr instance
+        std::shared_ptr<KalmarAsyncOp> sp_dispatch(dispatch);
 
         // associate the kernel dispatch with this queue
-        dispatches.push_back(*(event.getFuture()));
+        asyncOps.push_back(sp_dispatch);
 
         // associate all buffers used by the kernel with the kernel dispatch instance
         std::for_each(std::begin(kernelBufferMap[ker]), std::end(kernelBufferMap[ker]),
                       [&] (void* buffer) {
-                        bufferKernelMap[buffer].push_back(*(event.getFuture()));
+                        bufferKernelMap[buffer].push_back(*(dispatch->getFuture()));
                       });
 
         // clear data in kernelBufferMap
         kernelBufferMap[ker].clear();
 
-        return event;
+        return sp_dispatch;
     }
 
     uint32_t GetGroupSegmentSize(void *ker) override {
@@ -778,17 +815,20 @@ public:
     }
 
     // enqueue a barrier packet
-    KalmarEvent EnqueueMarker() {
-        // HSABarrier instance will be deleted after the future object created is waited on
-        HSABarrier *barrier = new HSABarrier();
+    std::shared_ptr<KalmarAsyncOp> EnqueueMarker() {
+        hsa_status_t status = HSA_STATUS_SUCCESS;
+
+        // create shared_ptr instance
+        std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>();
 
         // enqueue the barrier
-        KalmarEvent event = barrier->enqueueAndGetFuture(commandQueue);
+        status = barrier.get()->enqueueAsync(commandQueue);
+        STATUS_CHECK(status, __LINE__);
 
         // associate the barrier with this queue
-        dispatches.push_back(*(event.getFuture()));
+        asyncOps.push_back(barrier);
 
-        return event;
+        return barrier;
     }
 };
 
@@ -898,6 +938,7 @@ public:
 
         // HSADispatch instance will be deleted in:
         // HSAQueue::LaunchKernel()
+        // or it will be created as a shared_ptr<KalmarAsyncOp> in:
         // HSAQueue::LaunchKernelAsync()
         HSADispatch *dispatch = new HSADispatch(agent, kernel);
         dispatch->clearArgs();
