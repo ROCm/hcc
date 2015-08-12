@@ -126,12 +126,12 @@ public:
         hsa_status_t status;
 
         /// Query the maximum number of work-items in a workgroup
-        hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_SIZE, &workgroup_max_size);
-        STATUS_CHECK_Q(status, __LINE__);
+        status = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_SIZE, &workgroup_max_size);
+        STATUS_CHECK(status, __LINE__);
 
         /// Query the maximum number of work-items in each dimension of a workgroup
-        hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_DIM, &workgroup_max_dim);
-        STATUS_CHECK_Q(status, __LINE__);
+        status = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_DIM, &workgroup_max_dim);
+        STATUS_CHECK(status, __LINE__);
     }
 
     hsa_status_t pushFloatArg(float f) { return pushArgPrivate(f); }
@@ -215,7 +215,7 @@ public:
         status = hsa_executable_symbol_get_info(kernel->hsaExecutableSymbol,
                                                 HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE,
                                                 &group_segment_size);
-        STATUS_CHECK_Q(status, __LINE__);
+        STATUS_CHECK(status, __LINE__);
         return group_segment_size;
     }
 
@@ -344,13 +344,13 @@ private:
     template <typename T>
     hsa_status_t pushArgPrivate(T val) {
         /* add padding if necessary */
-        int padding_size = arg_vec.size() % sizeof(T);
+        int padding_size = (arg_vec.size() % sizeof(T)) ? (sizeof(T) - (arg_vec.size() % sizeof(T))) : 0;
         //printf("push %lu bytes into kernarg: ", sizeof(T) + padding_size);
         for (size_t i = 0; i < padding_size; ++i) {
             arg_vec.push_back((uint8_t)0x00);
             //printf("%02X ", (uint8_t)0x00);
         }
-        uint8_t*ptr = static_cast<uint8_t*>(static_cast<void*>(&val));
+        uint8_t* ptr = static_cast<uint8_t*>(static_cast<void*>(&val));
         for (size_t i = 0; i < sizeof(T); ++i) {
             arg_vec.push_back(ptr[i]);
             //printf("%02X ", ptr[i]);
