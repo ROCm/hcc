@@ -2670,7 +2670,8 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
       throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
     }
     const pfe_wrapper<N, Kernel> _pf(compute_domain, f);
-    return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<pfe_wrapper<N, Kernel>, 3>(av.pQueue, ext, NULL, _pf));
+    Kalmar::KalmarEvent event = Kalmar::mcw_cxxamp_launch_kernel_async<pfe_wrapper<N, Kernel>, 3>(av.pQueue, ext, NULL, _pf);
+    return completion_future(event);
 #else
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   int* foo1 = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
