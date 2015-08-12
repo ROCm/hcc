@@ -586,6 +586,10 @@ public:
     ~HSAQueue() {
         hsa_status_t status;
 
+#if KALMAR_DEBUG
+        std::cerr << "HSAQueue::~HSAQueue()\n";
+#endif
+
         // wait on all existing kernel dispatches and barriers to complete
         wait();
 
