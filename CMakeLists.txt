@@ -1,12 +1,8 @@
 cmake_minimum_required( VERSION 2.8 )
 set(CMAKE_INSTALL_PREFIX "/opt/kalmar")
-project (CLAMP)
+project (Kalmar)
 SET(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/scripts/cmake")
 MESSAGE("Module path: ${CMAKE_MODULE_PATH}")
-execute_process(COMMAND git describe --abbrev=4 --dirty --always --tags
-                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-                OUTPUT_VARIABLE GIT_VERSION
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 # set as release build by default
 IF (NOT CMAKE_BUILD_TYPE)
@@ -199,8 +195,14 @@ endif ((HAS_OPENCL EQUAL 0) AND (HAS_HSA EQUAL 0))
 
 # define Kalmar version information
 SET(KALMAR_VERSION_MAJOR "0")
-SET(KALMAR_VERSION_MINOR "6")
-SET(KALMAR_VERSION_PATCH "0")
+SET(KALMAR_VERSION_MINOR "7")
+
+# get date information
+# use the last two digits of year + week number as KALMAR_VERSION_PATCH
+execute_process(COMMAND date +%y%W
+                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+                OUTPUT_VARIABLE KALMAR_VERSION_PATCH
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 # get commit information
 execute_process(COMMAND git rev-parse --short HEAD
