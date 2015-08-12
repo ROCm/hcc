@@ -556,12 +556,12 @@ private:
     //
     // kernel dispatches and barriers associated with this HSAQueue instance
     //
-    // When a kernel k is dispatched, we'll get a future object f for k.
+    // When a kernel k is dispatched, we'll get a KalmarAsyncOp f.
     // This vector would hold f.  acccelerator_view::wait() would trigger
-    // HSAQueue::wait(), and all future objects in this vector will be waited
-    // on.
+    // HSAQueue::wait(), and all future objects in the KalmarAsyncOp objects
+    // will be waited on.
     //
-    std::vector< std::shared_ptr<KalmarAsyncOp> > asyncOps;
+    std::vector< std::weak_ptr<KalmarAsyncOp> > asyncOps;
 
     //
     // kernelBufferMap and bufferKernelMap forms the dependency graph of
@@ -577,7 +577,7 @@ private:
     // If there are previous kernel dispatches which use b, then we wait on
     // them before dispatch kernel k. bufferKernelMap[b] will be cleared then.
     //
-    // After kernel k is dispatched, we'll get a future object f for k, we then
+    // After kernel k is dispatched, we'll get a KalmarAsync object f, we then
     // walk through each buffer b used by k and mark the association as:
     // bufferKernelMap[b] = f
     //
@@ -587,7 +587,7 @@ private:
     // association between buffers and kernel dispatches
     // key: buffer address
     // value: a vector of kernel dispatches
-    std::map<void*, std::vector< std::shared_future<void> > > bufferKernelMap;
+    std::map<void*, std::vector< std::weak_ptr<KalmarAsyncOp> > > bufferKernelMap;
 
     // association between a kernel and buffers used by it
     // key: kernel
@@ -646,10 +646,13 @@ public:
     void wait() override {
       // wait on all previous async operations to complete
       for (int i = 0; i < asyncOps.size(); ++i) {
-        // wait on valid futures only
-        std::shared_future<void>* future = asyncOps[i]->getFuture();
-        if (future->valid()) {
-          future->wait();
+        if (!asyncOps[i].expired()) {
+            auto asyncOp = asyncOps[i].lock();
+            // wait on valid futures only
+            std::shared_future<void>* future = asyncOp->getFuture();
+            if (future->valid()) {
+                future->wait();
+            }
         }
       }
       // clear async operations table
@@ -672,10 +675,7 @@ public:
         // wait for previous kernel dispatches be completed
         std::for_each(std::begin(kernelBufferMap[ker]), std::end(kernelBufferMap[ker]),
                       [&] (void* buffer) {
-                        for (int i = 0; i < bufferKernelMap[buffer].size(); ++i) {
-                          bufferKernelMap[buffer][i].wait();
-                        }
-                        bufferKernelMap[buffer].clear();
+                        waitForDependentAsyncOps(buffer);
                       });
 
         // dispatch the kernel
@@ -707,10 +707,7 @@ public:
         // wait for previous kernel dispatches be completed
         std::for_each(std::begin(kernelBufferMap[ker]), std::end(kernelBufferMap[ker]),
                       [&] (void* buffer) {
-                        for (int i = 0; i < bufferKernelMap[buffer].size(); ++i) {
-                          bufferKernelMap[buffer][i].wait();
-                        }
-                        bufferKernelMap[buffer].clear();
+                        waitForDependentAsyncOps(buffer);
                       });
 
         // dispatch the kernel
@@ -726,7 +723,7 @@ public:
         // associate all buffers used by the kernel with the kernel dispatch instance
         std::for_each(std::begin(kernelBufferMap[ker]), std::end(kernelBufferMap[ker]),
                       [&] (void* buffer) {
-                        bufferKernelMap[buffer].push_back(*(dispatch->getFuture()));
+                        bufferKernelMap[buffer].push_back(sp_dispatch);
                       });
 
         // clear data in kernelBufferMap
@@ -740,12 +737,25 @@ public:
         return dispatch->getGroupSegmentSize();
     }
 
-    void read(void* device, void* dst, size_t count, size_t offset) override {
-        // wait on previous kernel dispatches to complete
-        for (int i = 0; i < bufferKernelMap[device].size(); ++i) {
-          bufferKernelMap[device][i].wait();
+    // wait for dependent async operations to complete
+    void waitForDependentAsyncOps(void* buffer) {
+        auto dependentAsyncOpVector = bufferKernelMap[buffer];
+        for (int i = 0; i < dependentAsyncOpVector.size(); ++i) {
+          auto dependentAsyncOp = dependentAsyncOpVector[i];
+          if (!dependentAsyncOp.expired()) {
+            auto dependentAsyncOpPointer = dependentAsyncOp.lock();
+            // wait on valid futures only
+            std::shared_future<void>* future = dependentAsyncOpPointer->getFuture();
+            if (future->valid()) {
+              future->wait();
+            }
+          }
         }
-        bufferKernelMap[device].clear();
+        dependentAsyncOpVector.clear();
+    }
+
+    void read(void* device, void* dst, size_t count, size_t offset) override {
+        waitForDependentAsyncOps(device);
 
         // do read
         if (dst != device)
@@ -753,11 +763,7 @@ public:
     }
 
     void write(void* device, const void* src, size_t count, size_t offset, bool blocking) override {
-        // wait on previous kernel dispatches to complete
-        for (int i = 0; i < bufferKernelMap[device].size(); ++i) {
-          bufferKernelMap[device][i].wait();
-        }
-        bufferKernelMap[device].clear();
+        waitForDependentAsyncOps(device);
 
         // do write
         if (src != device)
@@ -765,17 +771,8 @@ public:
     }
 
     void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset, bool blocking) override {
-        // wait on previous kernel dispatches to complete
-        for (int i = 0; i < bufferKernelMap[dst].size(); ++i) {
-          bufferKernelMap[dst][i].wait();
-        }
-        bufferKernelMap[dst].clear();
-
-        // wait on previous kernel dispatches to complete
-        for (int i = 0; i < bufferKernelMap[src].size(); ++i) {
-          bufferKernelMap[src][i].wait();
-        }
-        bufferKernelMap[src].clear();
+        waitForDependentAsyncOps(dst);
+        waitForDependentAsyncOps(src);
 
         // do copy
         if (src != dst)
@@ -783,11 +780,7 @@ public:
     }
 
     void* map(void* device, size_t count, size_t offset, bool modify) override {
-        // wait on previous kernel dispatches to complete
-        for (int i = 0; i < bufferKernelMap[device].size(); ++i) {
-          bufferKernelMap[device][i].wait();
-        }
-        bufferKernelMap[device].clear();
+        waitForDependentAsyncOps(device);
 
         // do map
         return (char*)device + offset;
