@@ -280,7 +280,6 @@ public:
       __thread_then = nullptr;
       
       if (__asyncOp != nullptr) {
-        delete __asyncOp;
         __asyncOp = nullptr;
       }
     }
@@ -356,7 +355,7 @@ public:
 private:
     std::shared_future<void> __amp_future;
     std::thread* __thread_then = nullptr;
-    Kalmar::KalmarAsyncOp* __asyncOp;
+    std::shared_ptr<Kalmar::KalmarAsyncOp> __asyncOp;
 
     // event.getFuture() is dynamically allocated in C++AMP runtime implementation
     // after we copy its content in __amp_future, we need to delete it

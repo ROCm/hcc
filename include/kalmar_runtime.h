@@ -53,7 +53,7 @@ public:
 class KalmarEvent
 {
 private:
-  KalmarAsyncOp* m_asyncOp;
+  std::shared_ptr<KalmarAsyncOp> m_asyncOp;
   std::shared_future<void>* m_future;
 public:
 
@@ -77,7 +77,7 @@ public:
   }
 
   std::shared_future<void>* getFuture() { return m_future; }
-  KalmarAsyncOp* getAsyncOp() { return m_asyncOp; }
+  std::shared_ptr<KalmarAsyncOp> getAsyncOp() { return m_asyncOp; }
 };
 
 /// KalmarQueue
