@@ -271,13 +271,6 @@ private:
     std::shared_future<void> __amp_future;
     std::thread* __thread_then = nullptr;
 
-    // __future is dynamically allocated in C++AMP runtime implementation
-    // after we copy its content in __amp_future, we need to delete it
-    completion_future(std::shared_future<void>* __future)
-        : __amp_future(*__future) {
-      delete __future;
-    }
-
     completion_future(const std::shared_future<void> &__future)
         : __amp_future(__future) {}
 
