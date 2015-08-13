@@ -10,6 +10,8 @@
 
 #define LOOP_COUNT (1024)
 
+#define TEST_DEBUG (0)
+
 /// test which checks the behavior of:
 /// accelerator_view::wait()
 ///
@@ -69,7 +71,9 @@ int main() {
   // retrieve HSA signal value
   hsa_signal_value_t signal_value1;
   signal_value1 = hsa_signal_load_relaxed(*static_cast<hsa_signal_t*>(handle1));
-  //std::cout << "signal value #1: " << signal_value1 << "\n";
+#if TEST_DEBUG
+  std::cout << "signal value #1: " << signal_value1 << "\n";
+#endif
   // signal value shall be 1 before the kernel is completed
   ret &= (signal_value1 == 1);
 
@@ -95,7 +99,9 @@ int main() {
   // retrieve HSA signal value
   hsa_signal_value_t signal_value2;
   signal_value2 = hsa_signal_load_relaxed(*static_cast<hsa_signal_t*>(handle2));
-  //std::cout << "signal value #2: " << signal_value2 << "\n";
+#if TEST_DEBUG
+  std::cout << "signal value #2: " << signal_value2 << "\n";
+#endif
   // signal value shall be 1 before the kernel is completed
   ret &= (signal_value2 == 1);
 
@@ -121,7 +127,9 @@ int main() {
   // retrieve HSA signal value
   hsa_signal_value_t signal_value3;
   signal_value3 = hsa_signal_load_relaxed(*static_cast<hsa_signal_t*>(handle3));
-  //std::cout << "signal value #3: " << signal_value3 << "\n";
+#if TEST_DEBUG
+  std::cout << "signal value #3: " << signal_value3 << "\n";
+#endif
   // signal value shall be 1 before the kernel is completed
   ret &= (signal_value3 == 1);
 
@@ -132,17 +140,23 @@ int main() {
   // after acclerator_view::wait(), all signals shall become 0 because all
   // kernels are completed
   signal_value1 = hsa_signal_load_relaxed(*static_cast<hsa_signal_t*>(handle1));
-  //std::cout << "signal value #1: " << signal_value1 << "\n";
+#if TEST_DEBUG
+  std::cout << "signal value #1: " << signal_value1 << "\n";
+#endif
   // signal value shall be 0 after the kernel is completed
   ret &= (signal_value1 == 0);
 
   signal_value2 = hsa_signal_load_relaxed(*static_cast<hsa_signal_t*>(handle2));
-  //std::cout << "signal value #2: " << signal_value2 << "\n";
+#if TEST_DEBUG
+  std::cout << "signal value #2: " << signal_value2 << "\n";
+#endif
   // signal value shall be 0 after the kernel is completed
   ret &= (signal_value2 == 0);
 
   signal_value3 = hsa_signal_load_relaxed(*static_cast<hsa_signal_t*>(handle3));
-  //std::cout << "signal value #3: " << signal_value3 << "\n";
+#if TEST_DEBUG
+  std::cout << "signal value #3: " << signal_value3 << "\n";
+#endif
   // signal value shall be 0 after the kernel is completed
   ret &= (signal_value3 == 0);
 
@@ -151,17 +165,23 @@ int main() {
   hc::accelerator().get_default_view().wait();
 
   signal_value1 = hsa_signal_load_relaxed(*static_cast<hsa_signal_t*>(handle1));
-  //std::cout << "signal value #1: " << signal_value1 << "\n";
+#if TEST_DEBUG
+  std::cout << "signal value #1: " << signal_value1 << "\n";
+#endif
   // signal value shall be 0 after the kernel is completed
   ret &= (signal_value1 == 0);
 
   signal_value2 = hsa_signal_load_relaxed(*static_cast<hsa_signal_t*>(handle2));
-  //std::cout << "signal value #2: " << signal_value2 << "\n";
+#if TEST_DEBUG
+  std::cout << "signal value #2: " << signal_value2 << "\n";
+#endif
   // signal value shall be 0 after the kernel is completed
   ret &= (signal_value2 == 0);
 
   signal_value3 = hsa_signal_load_relaxed(*static_cast<hsa_signal_t*>(handle3));
-  //std::cout << "signal value #3: " << signal_value3 << "\n";
+#if TEST_DEBUG
+  std::cout << "signal value #3: " << signal_value3 << "\n";
+#endif
   // signal value shall be 0 after the kernel is completed
   ret &= (signal_value3 == 0);
 

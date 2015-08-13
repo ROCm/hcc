@@ -10,6 +10,8 @@
 
 #define LOOP_COUNT (1024)
 
+#define TEST_DEBUG (0)
+
 /// test which checks the behavior of:
 /// completion_future::wait()
 ///
@@ -69,7 +71,9 @@ int main() {
   // retrieve HSA signal value
   hsa_signal_value_t signal_value;
   signal_value = hsa_signal_load_relaxed(*static_cast<hsa_signal_t*>(handle));
-  //std::cout << "signal value: " << signal_value << "\n";
+#if TEST_DEBUG
+  std::cout << "signal value: " << signal_value << "\n";
+#endif
   // signal value shall be 1 before the kernel is completed
   ret &= (signal_value == 1);
 
@@ -80,7 +84,9 @@ int main() {
   // after completion_future::wait(), the signal shall become 0 because the
   // kernel is completed
   signal_value = hsa_signal_load_relaxed(*static_cast<hsa_signal_t*>(handle));
-  //std::cout << "signal value: " << signal_value << "\n";
+#if TEST_DEBUG
+  std::cout << "signal value: " << signal_value << "\n";
+#endif
   // signal value shall be 0 after the kernel is completed
   ret &= (signal_value == 0);
 
@@ -89,7 +95,9 @@ int main() {
   fut.wait();
 
   signal_value = hsa_signal_load_relaxed(*static_cast<hsa_signal_t*>(handle));
-  //std::cout << "signal value: " << signal_value << "\n";
+#if TEST_DEBUG
+  std::cout << "signal value: " << signal_value << "\n";
+#endif
   // signal value shall be 0 after the kernel is completed
   ret &= (signal_value == 0);
 

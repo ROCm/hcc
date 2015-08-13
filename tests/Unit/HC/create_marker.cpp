@@ -11,6 +11,8 @@
 // loop to deliberately slow down kernel execution
 #define LOOP_COUNT (1024)
 
+#define TEST_DEBUG (0)
+
 // An example which shows how to use accelerator_view::create_marker()
 ///
 /// The test case only works on HSA because it directly uses HSA runtime API
@@ -55,18 +57,24 @@ bool test() {
   void* nativeHandle = fut.getNativeHandle();
   void* nativeHandle2 = fut2.getNativeHandle();
 
-  //std::cerr << nativeHandle << "\n";
-  //std::cerr << nativeHandle2 << "\n";
+#if TEST_DEBUG
+  std::cout << nativeHandle << "\n";
+  std::cout << nativeHandle2 << "\n";
+#endif
 
   hsa_signal_value_t signal_value;
   hsa_signal_value_t signal_value2;
 
   signal_value = hsa_signal_load_relaxed(*static_cast<hsa_signal_t*>(nativeHandle));
-  //std::cerr << "kernel signal value: " << signal_value << "\n";
+#if TEST_DEBUG
+  std::cout << "kernel signal value: " << signal_value << "\n";
+#endif
   ret &= (signal_value == 1);
 
   signal_value2 = hsa_signal_load_relaxed(*static_cast<hsa_signal_t*>(nativeHandle2));
-  //std::cerr << "barrier signal value: " << signal_value << "\n";
+#if TEST_DEBUG
+  std::cout << "barrier signal value: " << signal_value << "\n";
+#endif
   ret &= (signal_value2 == 1);
 
   // wait on the barrier packet
@@ -75,11 +83,15 @@ bool test() {
   // the barrier packet would ensure all previous packets were processed
 
   signal_value = hsa_signal_load_relaxed(*static_cast<hsa_signal_t*>(nativeHandle));
-  //std::cerr << "kernel signal value: " << signal_value << "\n";
+#if TEST_DEBUG
+  std::cout << "kernel signal value: " << signal_value << "\n";
+#endif
   ret &= (signal_value == 0);
 
   signal_value2 = hsa_signal_load_relaxed(*static_cast<hsa_signal_t*>(nativeHandle2));
-  //std::cerr << "barrier signal value: " << signal_value << "\n";
+#if TEST_DEBUG
+  std::cout << "barrier signal value: " << signal_value << "\n";
+#endif
   ret &= (signal_value2 == 0);
 
   // verify
