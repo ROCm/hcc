@@ -3,7 +3,7 @@ include (CMakeForceCompiler)
 # libc++
 set(LIBCXX_SRC_DIR "${PROJECT_SOURCE_DIR}/libc++/libcxx")
 set(LIBCXX_INC_DIR "${LIBCXX_SRC_DIR}/include")
-set(LIBCXX_LIB_DIR "${PROJECT_BINARY_DIR}/libc++/libcxx/lib")
+set(LIBCXX_LIB_DIR "${PROJECT_BINARY_DIR}/libc++/lib")
 
 if (NOT APPLE)
 # libcxxrt

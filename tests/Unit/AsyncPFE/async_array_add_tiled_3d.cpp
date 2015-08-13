@@ -3,13 +3,13 @@
 #include <iostream>
 #include <random>
 #include <future>
-#include <amp.h>
+#include <hc.hpp>
 
 // FIXME: HSA runtime seems buggy in case LOOP_COUNT is very big
 // (ex: 1024 * 1024).
 #define LOOP_COUNT (1)
 
-// An HSA version of C++AMP program
+// An example which shows how to launch a kernel asynchronously
 int main ()
 {
   // define inputs and output
@@ -32,10 +32,10 @@ int main ()
   }
 
   // launch kernel
-  Concurrency::extent<3> e(dimSize, dimSize, dimSize);
-  Concurrency::completion_future fut = Concurrency::async_parallel_for_each(
-    e.tile<2, 2, 2>(),
-    [=](Concurrency::tiled_index<2, 2, 2> idx) restrict(amp) {
+  hc::extent<3> e(dimSize, dimSize, dimSize);
+  hc::completion_future fut = hc::async_parallel_for_each(
+    e.tile(2, 2, 2),
+    [=](hc::tiled_index<3> idx) restrict(amp) {
       int fidx = idx.global[0] * dimSize * dimSize + idx.global[1] * dimSize + idx.global[2];
       for (int i = 0; i < LOOP_COUNT; ++i) 
         p_c[fidx] = p_a[fidx] + p_b[fidx];

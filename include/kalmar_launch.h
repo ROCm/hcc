@@ -251,6 +251,8 @@ static inline std::shared_ptr<KalmarQueue> get_availabe_que(const Kernel& f)
         return getContext()->auto_select();
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-variable"
 static std::set<std::string> __mcw_cxxamp_kernels;
 template<typename Kernel, int dim_ext>
 inline std::shared_future<void>*
@@ -272,7 +274,10 @@ mcw_cxxamp_launch_kernel_async(const std::shared_ptr<KalmarQueue>& pQueue, size_
   return static_cast<std::shared_future<void>*>(pQueue->LaunchKernelAsync(kernel, dim_ext, ext, local_size));
 #endif
 }
+#pragma clang diagnostic pop
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-variable"
 template<typename Kernel, int dim_ext>
 inline
 void mcw_cxxamp_launch_kernel(const std::shared_ptr<KalmarQueue>& pQueue, size_t *ext,
@@ -293,7 +298,10 @@ void mcw_cxxamp_launch_kernel(const std::shared_ptr<KalmarQueue>& pQueue, size_t
   pQueue->LaunchKernel(kernel, dim_ext, ext, local_size);
 #endif // __KALMAR_ACCELERATOR__
 }
+#pragma clang diagnostic pop
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-variable"
 template<typename Kernel>
 inline void* mcw_cxxamp_get_kernel(const std::shared_ptr<KalmarQueue>& pQueue, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
@@ -311,6 +319,7 @@ inline void* mcw_cxxamp_get_kernel(const std::shared_ptr<KalmarQueue>& pQueue, c
   return NULL;
 #endif
 }
+#pragma clang diagnostic pop
 
 template<typename Kernel, int dim_ext>
 inline
