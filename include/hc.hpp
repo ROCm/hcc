@@ -75,6 +75,10 @@ public:
     return pQueue.get()->getDev()->GetMaxTileStaticSize();
   }
 
+  int getPendingAsyncOps() {
+    return pQueue->getPendingAsyncOps();
+  }
+
   void* getHSAQueue() {
     return pQueue->getHSAQueue();
   }

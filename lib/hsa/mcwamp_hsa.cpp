@@ -588,6 +588,16 @@ public:
 
     // FIXME: implement flush
 
+    int getPendingAsyncOps() override {
+        int count = 0;
+        for (int i = 0; i < asyncOps.size(); ++i) {
+            if (asyncOps[i] != nullptr) {
+                ++count;
+            }
+        }
+        return count;
+    }
+
     void wait() override {
       // wait on all previous async operations to complete
       for (int i = 0; i < asyncOps.size(); ++i) {

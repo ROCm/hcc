@@ -96,6 +96,9 @@ public:
   queuing_mode get_mode() const { return mode; }
   void set_mode(queuing_mode mod) { mode = mod; }
 
+  /// get number of pending async operations in the queue
+  virtual int getPendingAsyncOps() { return 0; }
+
   /// get underlying native queue handle
   virtual void* getHSAQueue() { return nullptr; }
 
