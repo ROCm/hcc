@@ -43,6 +43,11 @@
 extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v);
 extern "C" void PushArgPtrImpl(void *ker, int idx, size_t sz, const void *v);
 
+// forward declaration
+namespace Kalmar {
+class HSAQueue;
+} // namespace Kalmar
+
 ///
 /// kernel compilation / kernel launching
 ///
@@ -87,12 +92,14 @@ private:
 
     std::shared_future<void>* future;
 
+    Kalmar::HSAQueue* hsaQueue;
+
 public:
     std::shared_future<void>* getFuture() override { return future; }
 
     void* getNativeHandle() override { return &signal; }
 
-    HSABarrier() : isDispatched(false), future(nullptr) {}
+    HSABarrier() : isDispatched(false), future(nullptr), hsaQueue(nullptr) {}
 
     ~HSABarrier() {
 #if KALMAR_DEBUG
@@ -145,40 +152,10 @@ public:
         return status;
     }
 
-    hsa_status_t enqueueAsync(hsa_queue_t* queue) {
-        hsa_status_t status = HSA_STATUS_SUCCESS;
-        status = enqueueBarrier(queue);
-        STATUS_CHECK_Q(status, __LINE__);
-
-        // dynamically allocate a std::shared_future<void> object
-        future = new std::shared_future<void>(std::async(std::launch::deferred, [&] {
-            waitComplete();
-        }).share());
-
-        return status;
-    }
+    hsa_status_t enqueueAsync(Kalmar::HSAQueue*);
 
     // wait for the barrier to complete
-    hsa_status_t waitComplete() {
-        hsa_status_t status = HSA_STATUS_SUCCESS;
-        if (!isDispatched)  {
-            return HSA_STATUS_ERROR_INVALID_ARGUMENT;
-        }
-
-#if KALMAR_DEBUG
-        std::cerr << "wait for barrier completion...\n";
-#endif
-
-        // Wait on completion signal until the barrier is finished
-        hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_STATE_BLOCKED);
-
-#if KALMAR_DEBUG
-        std::cerr << "complete!\n";
-#endif
-
-        isDispatched = false;
-        return status;
-    }
+    hsa_status_t waitComplete();
 
     void dispose() {
         hsa_status_t status;
@@ -217,6 +194,8 @@ private:
 
     std::shared_future<void>* future;
 
+    Kalmar::HSAQueue* hsaQueue;
+
 public:
     std::shared_future<void>* getFuture() override { return future; }
 
@@ -245,7 +224,8 @@ public:
         kernel(_kernel),
         isDispatched(false),
         dynamicGroupSize(0),
-        future(nullptr) {
+        future(nullptr),
+        hsaQueue(nullptr) {
 
         // allocate the initial argument vector capacity
         arg_vec.reserve(ARGS_VEC_INITIAL_CAPACITY);
@@ -330,18 +310,7 @@ public:
         return status;
     } 
 
-    hsa_status_t dispatchKernelAsync(hsa_queue_t* _queue) {
-        hsa_status_t status = HSA_STATUS_SUCCESS;
-        status = dispatchKernel(_queue);
-        STATUS_CHECK_Q(status, __LINE__);
-
-        // dynamically allocate a std::shared_future<void> object
-        future = new std::shared_future<void>(std::async(std::launch::deferred, [&] {
-          waitComplete();
-        }).share());
-
-        return status;
-    }
+    hsa_status_t dispatchKernelAsync(Kalmar::HSAQueue*);
 
     uint32_t getGroupSegmentSize() {
         hsa_status_t status = HSA_STATUS_SUCCESS;
@@ -443,31 +412,7 @@ public:
     }
 
     // wait for the kernel to finish execution
-    hsa_status_t waitComplete() {
-        hsa_status_t status = HSA_STATUS_SUCCESS;
-        if (!isDispatched)  {
-            return HSA_STATUS_ERROR_INVALID_ARGUMENT;
-        }
-
-#if KALMAR_DEBUG
-        std::cerr << "wait for kernel dispatch completion...\n";
-#endif
-
-        // wait for completion
-        if (hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_LT, 1, uint64_t(-1), HSA_WAIT_STATE_ACTIVE)!=0) {
-            printf("Signal wait returned unexpected value\n");
-            exit(0);
-        }
-
-#if KALMAR_DEBUG
-        std::cerr << "complete!\n";
-#endif
-
-        hsa_memory_deregister((void*)aql.kernarg_address, arg_vec.size());
-
-        isDispatched = false;
-        return status; 
-    }
+    hsa_status_t waitComplete();
 
     void dispose() {
         hsa_status_t status;
@@ -561,7 +506,7 @@ private:
     // HSAQueue::wait(), and all future objects in the KalmarAsyncOp objects
     // will be waited on.
     //
-    std::vector< std::weak_ptr<KalmarAsyncOp> > asyncOps;
+    std::vector< std::shared_ptr<KalmarAsyncOp> > asyncOps;
 
     //
     // kernelBufferMap and bufferKernelMap forms the dependency graph of
@@ -646,8 +591,8 @@ public:
     void wait() override {
       // wait on all previous async operations to complete
       for (int i = 0; i < asyncOps.size(); ++i) {
-        if (!asyncOps[i].expired()) {
-            auto asyncOp = asyncOps[i].lock();
+        if (asyncOps[i] != nullptr) {
+            auto asyncOp = asyncOps[i];
             // wait on valid futures only
             std::shared_future<void>* future = asyncOp->getFuture();
             if (future->valid()) {
@@ -711,7 +656,7 @@ public:
                       });
 
         // dispatch the kernel
-        status = dispatch->dispatchKernelAsync(commandQueue);
+        status = dispatch->dispatchKernelAsync(this);
         STATUS_CHECK(status, __LINE__);
 
         // create a shared_ptr instance
@@ -815,13 +760,22 @@ public:
         std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>();
 
         // enqueue the barrier
-        status = barrier.get()->enqueueAsync(commandQueue);
+        status = barrier.get()->enqueueAsync(this);
         STATUS_CHECK(status, __LINE__);
 
         // associate the barrier with this queue
         asyncOps.push_back(barrier);
 
         return barrier;
+    }
+
+    // remove finished async operation from waiting list
+    void removeAsyncOp(KalmarAsyncOp* asyncOp) {
+        for (int i = 0; i < asyncOps.size(); ++i) {
+            if (asyncOps[i].get() == asyncOp) {
+                asyncOps[i] = nullptr;
+            }
+        }
     }
 };
 
@@ -1150,6 +1104,122 @@ static HSAContext ctx;
 
 } // namespace Kalmar
 
+
+// ----------------------------------------------------------------------
+// member function implementation of HSADispatch
+// ----------------------------------------------------------------------
+
+// wait for the kernel to finish execution
+inline hsa_status_t
+HSADispatch::waitComplete() {
+    hsa_status_t status = HSA_STATUS_SUCCESS;
+    if (!isDispatched)  {
+        return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+    }
+
+#if KALMAR_DEBUG
+    std::cerr << "wait for kernel dispatch completion...\n";
+#endif
+
+    // wait for completion
+    if (hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_LT, 1, uint64_t(-1), HSA_WAIT_STATE_ACTIVE)!=0) {
+        printf("Signal wait returned unexpected value\n");
+        exit(0);
+    }
+
+#if KALMAR_DEBUG
+    std::cerr << "complete!\n";
+#endif
+
+    hsa_memory_deregister((void*)aql.kernarg_address, arg_vec.size());
+
+    // unregister this async operation from HSAQueue
+    if (this->hsaQueue != nullptr) {
+        this->hsaQueue->removeAsyncOp(this);
+    }
+
+    isDispatched = false;
+    return status;
+}
+
+inline hsa_status_t
+HSADispatch::dispatchKernelAsync(Kalmar::HSAQueue* hsaQueue) {
+    hsa_status_t status = HSA_STATUS_SUCCESS;
+
+    // record HSAQueue association
+    this->hsaQueue = hsaQueue;
+    // extract hsa_queue_t from HSAQueue
+    hsa_queue_t* queue = static_cast<hsa_queue_t*>(hsaQueue->getHSAQueue());
+
+    // dispatch kernel
+    status = dispatchKernel(queue);
+    STATUS_CHECK_Q(status, __LINE__);
+
+    // dynamically allocate a std::shared_future<void> object
+    future = new std::shared_future<void>(std::async(std::launch::deferred, [&] {
+        waitComplete();
+    }).share());
+
+    return status;
+}
+
+// ----------------------------------------------------------------------
+// member function implementation of HSABarrier
+// ----------------------------------------------------------------------
+
+// wait for the barrier to complete
+inline hsa_status_t
+HSABarrier::waitComplete() {
+    hsa_status_t status = HSA_STATUS_SUCCESS;
+    if (!isDispatched)  {
+        return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+    }
+
+#if KALMAR_DEBUG
+    std::cerr << "wait for barrier completion...\n";
+#endif
+
+    // Wait on completion signal until the barrier is finished
+    hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_STATE_BLOCKED);
+
+#if KALMAR_DEBUG
+    std::cerr << "complete!\n";
+#endif
+
+    // unregister this async operation from HSAQueue
+    if (this->hsaQueue != nullptr) {
+        this->hsaQueue->removeAsyncOp(this);
+    }
+
+    isDispatched = false;
+    return status;
+}
+
+inline hsa_status_t
+HSABarrier::enqueueAsync(Kalmar::HSAQueue* hsaQueue) {
+    hsa_status_t status = HSA_STATUS_SUCCESS;
+
+    // record HSAQueue association
+    this->hsaQueue = hsaQueue;
+    // extract hsa_queue_t from HSAQueue
+    hsa_queue_t* queue = static_cast<hsa_queue_t*>(hsaQueue->getHSAQueue());
+
+    // enqueue barrier packet
+    status = enqueueBarrier(queue);
+    STATUS_CHECK_Q(status, __LINE__);
+
+    // dynamically allocate a std::shared_future<void> object
+    future = new std::shared_future<void>(std::async(std::launch::deferred, [&] {
+        waitComplete();
+    }).share());
+
+    return status;
+}
+
+
+// ----------------------------------------------------------------------
+// extern "C" functions
+// ----------------------------------------------------------------------
 
 extern "C" void *GetContextImpl() {
   return &Kalmar::ctx;
