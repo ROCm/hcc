@@ -46,10 +46,6 @@ bool lexicographical_compare_impl(InputIt1 first1, InputIt1 last1,
 //
 //
 
-inline int trans(int a, int b) restrict(amp, cpu) {
-  return a == 1 ? b : a;
-}
-
 // Note: 1. the comparison needs both operator== and operator< (or a functor),
 //       both of them should be restrict(amp)
 template<class InputIt1, class InputIt2, class Compare>
@@ -57,8 +53,10 @@ bool lexicographical_compare_impl(InputIt1 first1, InputIt1 last1,
                                   InputIt2 first2, InputIt2 last2,
                                   Compare comp,
                                   std::random_access_iterator_tag) {
-  using Concurrency::extent;
-  using Concurrency::index;
+  using hc::extent;
+  using hc::index;
+  using hc::parallel_for_each;
+  hc::ts_allocator tsa;
 
   unsigned n1 = std::distance(first1, last1);
   unsigned n2 = std::distance(first2, last2);
@@ -70,28 +68,37 @@ bool lexicographical_compare_impl(InputIt1 first1, InputIt1 last1,
     return n1 < n2;
   }
 
+  // call to std::lexicographical_compare when small data size
+  if (N <= 16) {
+    return std::lexicographical_compare(first1, last1, first2, last2, comp);
+  }
+
+  auto trans = [](char &a, char &b) restrict(amp, cpu) {
+    return a == 1 ? b : a;
+  };
+
   char *tmp = new char [N];
+
   typename std::iterator_traits<InputIt1>::pointer first1_ = &(*first1);
   typename std::iterator_traits<InputIt2>::pointer first2_ = &(*first2);
-  parallel_for_each(extent<1>(N), [tmp,first1_,first2_,comp] (index<1> idx) restrict(amp) {
-      tmp[idx[0]] = comp(first1_[idx[0]], first2_[idx[0]]) ? 0 :
-                    first1_[idx[0]] == first2_[idx[0]] ? 1 : 2;
+  parallel_for_each(extent<1>(N), tsa,
+                    [tmp, first1_, first2_, comp] (index<1> idx) restrict(amp) {
+    tmp[idx[0]] = comp(first1_[idx[0]], first2_[idx[0]]) ? 0 :
+                  first1_[idx[0]] == first2_[idx[0]] ? 1 : 2;
   });
 
   // Reduction kernel: apply the transition table for logN times
   unsigned s = N;
-  if (s > 3) {
-    do {
-      s /= 2;
-      parallel_for_each(extent<1>(s), [tmp,s] (index<1> idx) restrict(amp) {
-        int i = idx[0];
-        if (2*i+1 < s*2) {
-          tmp[i] = trans(tmp[2*i], tmp[2*i+1]);
-        } else {
-          tmp[i] = tmp[2*i];
-        }
-      });
-    } while (s > 3);
+  for (s = N / 2; s > 3; s /= 2) {
+    parallel_for_each(extent<1>(s), tsa,
+                      [tmp, s, trans] (index<1> idx) restrict(amp) {
+      const int i = idx[0];
+      if (2*i+1 < s*2) {
+        tmp[i] = trans(tmp[2*i], tmp[2*i+1]);
+      } else {
+        tmp[i] = tmp[2*i];
+      }
+    });
   }
 
   if (s == 3) {

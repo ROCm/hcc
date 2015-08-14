@@ -8,6 +8,7 @@
 #pragma once
 // FIXME: remove amp.h dependency from this header file
 #include <amp.h>
+#include <hc.hpp>
 
 #include <experimental/execution_policy>
 
