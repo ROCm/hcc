@@ -1,4 +1,4 @@
-// XFAIL: Linux
+// UNSUPPORTED: Linux
 // RUN: %cxxamp -Xclang -fhsa-ext %s -o %t.out && %t.out
 #include <vector>
 #include <amp.h>

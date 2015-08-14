@@ -40,6 +40,10 @@ extern "C" char * spir_kernel_end[] asm ("_binary_kernel_spir_end") __attribute_
 extern "C" char * hsa_kernel_source[] asm ("_binary_kernel_brig_start") __attribute__((weak));
 extern "C" char * hsa_kernel_end[] asm ("_binary_kernel_brig_end") __attribute__((weak));
 
+// HSA offline finalized kernel codes
+extern "C" char * hsa_offline_finalized_kernel_source[] asm ("_binary_kernel_isa_start") __attribute__((weak));
+extern "C" char * hsa_offline_finalized_kernel_end[] asm ("_binary_kernel_isa_end") __attribute__((weak));
+
 
 // interface of C++AMP runtime implementation
 struct RuntimeImpl {
@@ -301,13 +305,18 @@ void leave_kernel() { in_kernel = false; }
 
 // used in parallel_for_each.h
 void *CreateKernel(std::string s, KalmarQueue* pQueue) {
+  static bool firstTime = true;
+  static bool hasSPIR = false;
+  static bool hasFinalized = false;
+
+  char* kernel_env = nullptr;
+  size_t kernel_size = 0;
+
   // FIXME need a more elegant way
   if (GetOrInitRuntime()->m_ImplName.find("libmcwamp_opencl") != std::string::npos) {
-    static bool firstTime = true;
-    static bool hasSPIR = false;
     if (firstTime) {
       // force use OpenCL C kernel from CLAMP_NOSPIR environment variable
-      char* kernel_env = getenv("CLAMP_NOSPIR");
+      kernel_env = getenv("CLAMP_NOSPIR");
       if (kernel_env == nullptr) {
           OpenCLPlatformDetect opencl_rt;
         if (opencl_rt.hasSPIR()) {
@@ -326,24 +335,55 @@ void *CreateKernel(std::string s, KalmarQueue* pQueue) {
     }
     if (hasSPIR) {
       // SPIR path
-        size_t kernel_size =
+      kernel_size =
         (ptrdiff_t)((void *)spir_kernel_end) -
         (ptrdiff_t)((void *)spir_kernel_source);
-      return pQueue->getDev()->CreateKernel(s.c_str(), (void *)kernel_size, spir_kernel_source);
+      return pQueue->getDev()->CreateKernel(s.c_str(), (void *)kernel_size, spir_kernel_source, true);
     } else {
       // OpenCL path
-        size_t kernel_size =
+      kernel_size =
         (ptrdiff_t)((void *)cl_kernel_end) -
         (ptrdiff_t)((void *)cl_kernel_source);
-      return pQueue->getDev()->CreateKernel(s.c_str(), (void *)kernel_size, cl_kernel_source);
+      return pQueue->getDev()->CreateKernel(s.c_str(), (void *)kernel_size, cl_kernel_source, true);
     }
   } else {
     // HSA path
-       size_t kernel_size =
+
+    if (firstTime) {
+      // force use HSA BRIG kernel from CLAMP_NOISA environment variable
+      kernel_env = getenv("CLAMP_NOISA");
+      if (kernel_env == nullptr) {
+        // check if offline finalized kernels are available
+        size_t kernel_finalized_size = 
+          (ptrdiff_t)((void *)hsa_offline_finalized_kernel_end) -
+          (ptrdiff_t)((void *)hsa_offline_finalized_kernel_source);
+        if (kernel_finalized_size > 0) {
+          if (mcwamp_verbose)
+            std::cout << "Use offline finalized HSA kernels\n";
+          hasFinalized = true;
+        } else {
+          if (mcwamp_verbose)
+            std::cout << "Use HSA BRIG kernel\n";
+        }
+      } else {
+        // force use BRIG kernel
+        if (mcwamp_verbose)
+          std::cout << "Use HSA BRIG kernel\n";
+      }
+      firstTime = false;
+    }
+    if (hasFinalized) {
+      kernel_size =
+        (ptrdiff_t)((void *)hsa_offline_finalized_kernel_end) -
+        (ptrdiff_t)((void *)hsa_offline_finalized_kernel_source);
+      return pQueue->getDev()->CreateKernel(s.c_str(), (void *)kernel_size, hsa_offline_finalized_kernel_source, false);
+    } else {
+      kernel_size = 
         (ptrdiff_t)((void *)hsa_kernel_end) -
         (ptrdiff_t)((void *)hsa_kernel_source);
-     return pQueue->getDev()->CreateKernel(s.c_str(), (void *)kernel_size, hsa_kernel_source);
-   }
+      return pQueue->getDev()->CreateKernel(s.c_str(), (void *)kernel_size, hsa_kernel_source, true);
+    }
+  }
 }
 
 void PushArg(void *k_, int idx, size_t sz, const void *s) {

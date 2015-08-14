@@ -1,12 +1,8 @@
 cmake_minimum_required( VERSION 2.8 )
 set(CMAKE_INSTALL_PREFIX "/opt/kalmar")
-project (CLAMP)
+project (Kalmar)
 SET(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/scripts/cmake")
 MESSAGE("Module path: ${CMAKE_MODULE_PATH}")
-execute_process(COMMAND git describe --abbrev=4 --dirty --always --tags
-                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-                OUTPUT_VARIABLE GIT_VERSION
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 # set as release build by default
 IF (NOT CMAKE_BUILD_TYPE)
@@ -133,11 +129,6 @@ if (NOT HSA_LIBRARY)
   MESSAGE("HSA runtime library not found. Use -DHSA_LIBRARY_DIR=<path_to_libhsa-runtime64.so>.")
 endif (NOT HSA_LIBRARY)
 
-find_library(HSA_EXT_LIBRARY hsa-runtime-ext64 PATHS ${HSA_EXT_LIBRARY_DIR} ${HSA_ROOT}/lib)
-if (NOT HSA_EXT_LIBRARY)
-  MESSAGE("HSA runtime extension library not found. Use -DHSA_EXT_LIBRARY_DIR=<path_to_libhsa-runtime-ext64.so>.")
-endif (NOT HSA_EXT_LIBRARY)
-
 find_library(HSA_KMT_LIBRARY libhsakmt.so.1 PATHS ${HSA_KMT_LIBRARY_DIR} ${HSA_ROOT}/lib)
 if (NOT HSA_KMT_LIBRARY)
   MESSAGE("HSA Kernel library not found. Use -DHSA_KMT_LIBRARY_DIR=<path_to_libhsakmt.so.1>.")
@@ -148,23 +139,48 @@ if (NOT HSAIL_COMPILER)
   MESSAGE("HSAIL compiler not found. Use -DHSAIL_COMPILER_DIR=<path_to_hsailasm>.")
 endif (NOT HSAIL_COMPILER)
 
+find_program(HSA_HOF hof PATHS ${HSA_HOF_DIR} ${HSAIL_ROOT}/bin)
+if (NOT HSA_HOF)
+  MESSAGE("HSA offline finalizer (HOF) not found.  Use -DHSA_HOF_DIR=<path_to_hof>.")
+endif (NOT HSA_HOF)
+
 
 # display HSA information
 MESSAGE("")
 MESSAGE("HSA INFORMATION:")
 MESSAGE("HSA_HEADER_DIR = ${HSA_HEADER_DIR}, actually found at: ${HSA_HEADER}")
 MESSAGE("HSA_LIBRARY_DIR = ${HSA_LIBRARY_DIR}, actually found at: ${HSA_LIBRARY}")
-MESSAGE("HSA_EXT_LIBRARY_DIR = ${HSA_EXT_LIBRARY_DIR}, actually found at: ${HSA_EXT_LIBRARY}")
 MESSAGE("HSA_KMT_LIBRARY_DIR = ${HSA_KMT_LIBRARY_DIR}, actually found at: ${HSA_KMT_LIBRARY}")
 MESSAGE("HSAIL_COMPILER_DIR = ${HSAIL_COMPILER_DIR}, actually found at: ${HSAIL_COMPILER}")
+MESSAGE("HSA_HOF_DIR = ${HSA_HOF_DIR}, actually found at: ${HSA_HOF}")
 MESSAGE("")
 
-if ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT HSA_EXT_LIBRARY) OR (NOT HSA_KMT_LIBRARY) OR (NOT HSAIL_COMPILER))
+# determine if we have HSA stack available
+# at least we need the followings:
+# - HSA headers (installed by HSA runtime)
+# - HSA runtime libraries (installed by HSA runtime)
+# - HSA ext64 library (installed by HSA runtime)
+# - HSA KMT library (installed by HSA KFD driver)
+# - HSAIL compiler (installed by HLC)
+if ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT HSA_KMT_LIBRARY) OR (NOT HSAIL_COMPILER))
   set(HAS_HSA 0)
-else ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT HSA_EXT_LIBRARY) OR (NOT HSA_KMT_LIBRARY) OR (NOT HSAIL_COMPILER))
+else ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT HSA_KMT_LIBRARY) OR (NOT HSAIL_COMPILER))
   set(HAS_HSA 1)
   get_filename_component(HSAIL_BIN ${HSAIL_COMPILER} DIRECTORY)
-endif ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT HSA_EXT_LIBRARY) OR (NOT HSA_KMT_LIBRARY) OR (NOT HSAIL_COMPILER))
+endif ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT HSA_KMT_LIBRARY) OR (NOT HSAIL_COMPILER))
+
+# determine if HSA offline finalization is possible
+# at least we need the followings:
+# - a working HSA stack (HAS_HSA is 1)
+# - HOF executable (install by HSA HOF)
+if (HAS_HSA)
+  if (NOT HSA_HOF)
+    set (HAS_HSA_HOF 0)
+  else (NOT HSA_HOF)
+    set (HAS_HSA_HOF 1)
+    get_filename_component(HOF_BIN ${HSA_HOF} DIRECTORY)
+  endif (NOT HSA_HOF)
+endif (HAS_HSA)
 
 #################
 # Detect if we have at least one of OpenCL or HSA available
@@ -179,8 +195,14 @@ endif ((HAS_OPENCL EQUAL 0) AND (HAS_HSA EQUAL 0))
 
 # define Kalmar version information
 SET(KALMAR_VERSION_MAJOR "0")
-SET(KALMAR_VERSION_MINOR "6")
-SET(KALMAR_VERSION_PATCH "0")
+SET(KALMAR_VERSION_MINOR "7")
+
+# get date information
+# use the last two digits of year + week number as KALMAR_VERSION_PATCH
+execute_process(COMMAND date +%y%W
+                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+                OUTPUT_VARIABLE KALMAR_VERSION_PATCH
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 # get commit information
 execute_process(COMMAND git rev-parse --short HEAD

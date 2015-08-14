@@ -30,7 +30,6 @@ class prog {
 
 public:
   prog(_Tp& f) : kernel(f) {
-    run();
   }
 
   void operator() (index<1>& idx) restrict(amp) {
@@ -69,9 +68,13 @@ int main() {
   user_functor<float, SIZE>    kernel_float(input_float);
   user_functor<double, SIZE>   kernel_double(input_double);
   prog<user_functor<int, SIZE>, SIZE>      p1(kernel_int);
+  p1.run();
   prog<user_functor<unsigned, SIZE>, SIZE> p2(kernel_unsigned);
+  p2.run();
   prog<user_functor<float, SIZE>, SIZE>    p3(kernel_float);
+  p3.run();
   prog<user_functor<double, SIZE>, SIZE>   p4(kernel_double);
+  p4.run();
 
   // check result
   ret &= p1.test();

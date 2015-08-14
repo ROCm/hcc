@@ -239,9 +239,23 @@ static void append_kernel(const std::shared_ptr<KalmarQueue>& pQueue, const Kern
   f.__cxxamp_serialize(s);
 }
 
+template <typename Kernel>
+static inline std::shared_ptr<KalmarQueue> get_availabe_que(const Kernel& f)
+{
+    Kalmar::QueueSearcher ser;
+    Kalmar::Serialize s(&ser);
+    f.__cxxamp_serialize(s);
+    if (ser.get_que())
+        return ser.get_que();
+    else
+        return getContext()->auto_select();
+}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-variable"
 static std::set<std::string> __mcw_cxxamp_kernels;
 template<typename Kernel, int dim_ext>
-inline std::shared_future<void>*
+inline std::shared_ptr<KalmarAsyncOp>
 mcw_cxxamp_launch_kernel_async(const std::shared_ptr<KalmarQueue>& pQueue, size_t *ext,
   size_t *local_size, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
@@ -257,10 +271,13 @@ mcw_cxxamp_launch_kernel_async(const std::shared_ptr<KalmarQueue>& pQueue, size_
       kernel = CLAMP::CreateKernel(transformed_kernel_name, pQueue.get());
   }
   append_kernel(pQueue, f, kernel);
-  return static_cast<std::shared_future<void>*>(pQueue->LaunchKernelAsync(kernel, dim_ext, ext, local_size));
+  return pQueue->LaunchKernelAsync(kernel, dim_ext, ext, local_size);
 #endif
 }
+#pragma clang diagnostic pop
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-variable"
 template<typename Kernel, int dim_ext>
 inline
 void mcw_cxxamp_launch_kernel(const std::shared_ptr<KalmarQueue>& pQueue, size_t *ext,
@@ -281,7 +298,10 @@ void mcw_cxxamp_launch_kernel(const std::shared_ptr<KalmarQueue>& pQueue, size_t
   pQueue->LaunchKernel(kernel, dim_ext, ext, local_size);
 #endif // __KALMAR_ACCELERATOR__
 }
+#pragma clang diagnostic pop
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-variable"
 template<typename Kernel>
 inline void* mcw_cxxamp_get_kernel(const std::shared_ptr<KalmarQueue>& pQueue, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
@@ -299,6 +319,7 @@ inline void* mcw_cxxamp_get_kernel(const std::shared_ptr<KalmarQueue>& pQueue, c
   return NULL;
 #endif
 }
+#pragma clang diagnostic pop
 
 template<typename Kernel, int dim_ext>
 inline
@@ -308,6 +329,17 @@ void mcw_cxxamp_execute_kernel_with_dynamic_group_memory(
 #if __KALMAR_ACCELERATOR__ != 1
   append_kernel(pQueue, f, kernel);
   pQueue->LaunchKernelWithDynamicGroupMemory(kernel, dim_ext, ext, local_size, dynamic_group_memory_size);
+#endif // __KALMAR_ACCELERATOR__
+}
+
+template<typename Kernel, int dim_ext>
+inline std::shared_ptr<KalmarAsyncOp>
+mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async(
+  const std::shared_ptr<KalmarQueue>& pQueue, size_t *ext, size_t *local_size,
+  const Kernel& f, void *kernel, size_t dynamic_group_memory_size) restrict(cpu,amp) {
+#if __KALMAR_ACCELERATOR__ != 1
+  append_kernel(pQueue, f, kernel);
+  return pQueue->LaunchKernelWithDynamicGroupMemoryAsync(kernel, dim_ext, ext, local_size, dynamic_group_memory_size);
 #endif // __KALMAR_ACCELERATOR__
 }
 

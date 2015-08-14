@@ -347,7 +347,7 @@ public:
     bool is_unified() const override { return false; }
     bool is_emulated() const override { return false; }
 
-    void* CreateKernel(const char* fun, void* size, void* source) override {
+    void* CreateKernel(const char* fun, void* size, void* source, bool needsCompilation = true) override {
         cl_int err;
         if (programs.find(source) == std::end(programs))
             programs[source] = Kalmar::CLAMP::CLCompileKernels(device, size, source);

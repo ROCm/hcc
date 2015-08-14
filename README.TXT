@@ -70,6 +70,11 @@ Build Instruction for HSA
   - Stable: https://github.com/HSAFoundation/HSAIL-HLC-Stable
   - Development: https://github.com/HSAFoundation/HSAIL-HLC-Development
 
+5. (optional) HSA HOF:
+   This is an optional tool to help you finalize HSA kernels at compile-time
+   rather than runtime.  It can be found at:
+   - https://github.com/HSAFoundation/HSA-HOF-AMD
+
 * Prerequisite/Repository
 
 For any development work, you should fork from them and create your own
@@ -100,10 +105,6 @@ are:
 2. Pull your cppamp-driver-ng repository from bitbucket.
   # cd cppamp
   # git clone git@bitbucket.org:${username}/cppamp-driver-ng-35.git src
-  # cd src/
-  # git fetch origin
-  # git checkout -b AMP-439_on_master origin/AMP-439_on_master
-  # cd ..
 
 3. Create a build directory and configure using CMake.
   # mkdir build
@@ -117,33 +118,29 @@ are:
       -DOPENCL_LIBRARY_DIR=/opt/AMDAPP/lib/x86_64 \
       -DHSA_HEADER_DIR=/opt/hsa/include \
       -DHSA_LIBRARY_DIR=/opt/hsa/lib \
-      -DHSA_EXT_LIBRARY_DIR=/opt/hsa/lib \
       -DHSA_KMT_LIBRARY_DIR=/opt/hsa/lib \
       -DHSAIL_COMPILER_DIR=/opt/amd/bin \
+      -DHSA_HOF_DIR=/opt/amd/bin \
       -DCMAKE_BUILD_TYPE=Release \
-      -DCXXAMP_ENABLE_BOLT=ON
+      -DCXXAMP_ENABLE_BOLT=OFF
 
    - CLANG_URL : URL of C++AMP clang implementation
 
    - OPENCL_HEADER_DIR : OpenCL header include path
    - OPENCL_LIBRARY_DIR : OpenCL runtime library path
 
-   - HSA_HEADER_DIR : HSA runtime header include path
-   - HSA_LIBRARY_DIR : HSA runtime library path
-   - HSA_EXT_LIBRARY_DIR : HSA runtime extension library path
+   - HSA_HEADER_DIR : HSA runtime header include path (default is /opt/hsa/include )
+   - HSA_LIBRARY_DIR : HSA runtime library path (default is /opt/hsa/lib )
 
-   - HSA_KMT_LIBRARY_DIR : HSA kernel library path
+   - HSA_KMT_LIBRARY_DIR : HSA kernel library path (default is /opt/hsa/lib )
 
-   - HSAIL_COMPILER_DIR : HSAIL compiler binary path
+   - HSAIL_COMPILER_DIR : HSAIL compiler binary path (default is /opt/amd/bin )
 
-   - CMAKE_BUILD_TYPE : Release or Debug
+   - HSA_HOF_DIR : HSA offline finalizer binary path (default is /opt/amd/bin )
 
-   - CXXAMP_ENABLE_BOLT : ON / OFF AMD Bolt API (default is ON)
+   - CMAKE_BUILD_TYPE : Release or Debug (default is Release )
 
-  # cd ../src/compiler/tools/clang/
-  # git fetch origin
-  # git checkout -b AMP-439 origin/AMP-439
-  # cd -
+   - CXXAMP_ENABLE_BOLT : ON / OFF AMD Bolt API (default is OFF )
 
 4. Build the whole system. This will build clang and other libraries
    that require one time build.
