@@ -39,7 +39,7 @@ mismatch(ExecutionPolicy&& exec,
 template <typename ExecutionPolicy, typename InputIt1, typename InputIt2>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, bool>::type
 equal(ExecutionPolicy&& exec,
-      InputIt1 first1, InputIt1 last1, 
+      InputIt1 first1, InputIt1 last1,
       InputIt2 first2) {
     return std::equal(first1, last1, first2);
 }
@@ -47,7 +47,7 @@ equal(ExecutionPolicy&& exec,
 template <typename ExecutionPolicy, typename InputIt1, typename InputIt2, typename BinaryPredicate>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, bool>::type
 equal(ExecutionPolicy&& exec,
-      InputIt1 first1, InputIt1 last1, 
+      InputIt1 first1, InputIt1 last1,
       InputIt2 first2,
       BinaryPredicate p) {
     return std::equal(first1, last1, first2, p);
@@ -68,7 +68,7 @@ find(ExecutionPolicy&& exec,
 template <typename ExecutionPolicy, typename InputIt, typename UnaryPredicate>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, InputIt>::type
 find_if(ExecutionPolicy&& exec,
-        InputIt first, InputIt last, 
+        InputIt first, InputIt last,
         UnaryPredicate p) {
     return std::find_if(first, last, p);
 }
@@ -78,7 +78,7 @@ find_if(ExecutionPolicy&& exec,
 template <typename ExecutionPolicy, typename InputIt, typename UnaryPredicate>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, InputIt>::type
 find_if_not(ExecutionPolicy&& exec,
-            InputIt first, InputIt last, 
+            InputIt first, InputIt last,
             UnaryPredicate p) {
     return std::find_if_not(first, last, p);
 }
@@ -382,7 +382,7 @@ is_sorted_until(ExecutionPolicy&& exec,
 template <typename ExecutionPolicy, typename ForwardIt, typename Compare>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt>::type
 is_sorted_until(ExecutionPolicy&& exec,
-                ForwardIt first, ForwardIt last, 
+                ForwardIt first, ForwardIt last,
                 Compare comp) {
     return std::is_sorted_until(first, last, comp);
 }
@@ -648,26 +648,8 @@ is_heap_until(ExecutionPolicy&& exec,
 }
 
 
-// lexicographical_compare
-template <typename ExecutionPolicy, typename InputIt1, typename InputIt2>
-typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, bool>::type
-lexicographical_compare(ExecutionPolicy&& exec,
-                        InputIt1 first1, InputIt1 last1,
-                        InputIt2 first2, InputIt2 last2) {
-    return std::lexicographical_compare(first1, last1, first2, last2);
-}
-
-template <typename ExecutionPolicy, typename InputIt1, typename InputIt2, typename Compare>
-typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, bool>::type
-lexicographical_compare(ExecutionPolicy&& exec,
-                        InputIt1 first1, InputIt1 last1,
-                        InputIt2 first2, InputIt2 last2,
-                        Compare comp) {
-    return std::lexicographical_compare(first1, last1, first2, last2, comp);
-}
-
 } // inline namespace v1
 } // namespace parallel
-} // namespace experimental 
+} // namespace experimental
 } // namespace std
 

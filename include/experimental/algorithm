@@ -20,6 +20,9 @@
 #include <kalmar_launch.h>
 #include <kalmar_runtime.h>
 
+// implimentation of SPMD algorithms
+#include "impl/algorithm_impl.inl"
+
 namespace std {
 namespace experimental {
 namespace parallel {
@@ -527,9 +530,32 @@ OutputIterator adjacent_difference(ExecutionPolicy&& exec,
 }
 
 
+// lexicographical_compare
+template <typename ExecutionPolicy, typename InputIt1, typename InputIt2>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, bool>::type
+lexicographical_compare(ExecutionPolicy&& exec,
+                        InputIt1 first1, InputIt1 last1,
+                        InputIt2 first2, InputIt2 last2) {
+  return details::lexicographical_compare_impl(first1, last1, first2, last2,
+           std::less<typename std::iterator_traits<InputIt1>::value_type>(),
+           typename std::iterator_traits<InputIt1>::iterator_category());
+}
+
+
+template <typename ExecutionPolicy, typename InputIt1, typename InputIt2, typename Compare>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, bool>::type
+lexicographical_compare(ExecutionPolicy&& exec,
+                        InputIt1 first1, InputIt1 last1,
+                        InputIt2 first2, InputIt2 last2,
+                        Compare comp) {
+  return details::lexicographical_compare_impl(first1, last1, first2, last2,
+           comp,
+           typename std::iterator_traits<InputIt1>::iterator_category());
+}
+
 } // inline namespace v1
 } // namespace parallel
-} // namespace experimental 
+} // namespace experimental
 } // namespace std
 
 // sequential versions of algorithms are implemented inside this  file
