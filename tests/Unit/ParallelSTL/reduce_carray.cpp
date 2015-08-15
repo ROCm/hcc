@@ -39,17 +39,14 @@ bool test() {
   ret &= (expected == reduce(std::begin(table), std::end(table), 10));
   ret &= (expected == reduce(par, std::begin(table), std::end(table), 10));
 
-  expected = std::accumulate(std::begin(table), std::end(table), -10, std::minus<_Tp>());
-  ret &= (expected == reduce(std::begin(table), std::end(table), -10, std::minus<_Tp>()));
-  ret &= (expected == reduce(par, std::begin(table), std::end(table), -10, std::minus<_Tp>()));
 
-#if _DEBUG 
+#if _DEBUG
   for (int i = 0; i < ROW; ++i) {
     for (int j = 0; j < COL; ++j) {
       std::cout << std::setw(5) << table[i * COL + j];
     }
     std::cout << "\n";
-  } 
+  }
 #endif
 
   return ret;
