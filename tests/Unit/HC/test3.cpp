@@ -17,11 +17,14 @@ int main() {
 
   int n(0);
   std::generate(v1, v1+GRID_SIZE, [&n]{ return n++; });
-
-  hc::parallel_for_each(hc::extent<1>(GRID_SIZE), [=](hc::index<1>& idx) __attribute((hc)) {
+ 
+  hc::completion_future fut = hc::parallel_for_each(
+    hc::extent<1>(GRID_SIZE), 
+    [=](hc::index<1>& idx) __attribute((hc)) {
       v1[idx[0]]++;
   });
-  
+  fut.wait();
+
   n = 1;
   int errors = std::count_if(v1, v1+GRID_SIZE, [=,&n](int i) { return (i!=n++); });
 
