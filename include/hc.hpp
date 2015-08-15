@@ -11,6 +11,8 @@
 
 #include <hsa_atomic.h>
 
+#include <am.h>
+
 namespace hc {
 
 using namespace Kalmar::enums;
