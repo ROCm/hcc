@@ -1,5 +1,5 @@
 // UNSUPPORTED: Linux
-// RUN: %cxxamp -Xclang -fhsa-ext %s -o %t.out && %t.out
+// RUN: %hc -Xclang -fauto-auto %s -o %t.out && %t.out
 #include <vector>
 #include <amp.h>
 #include <iostream>

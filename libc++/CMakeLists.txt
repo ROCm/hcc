@@ -1,10 +1,30 @@
 set(CMAKE_INSTALL_PREFIX "/opt/kalmar")
 project(libcxx)
 cmake_minimum_required(VERSION 2.8)
-execute_process(COMMAND git describe --abbrev=4 --dirty --always --tags
+
+# define Kalmar version information
+SET(KALMAR_VERSION_MAJOR "0")
+SET(KALMAR_VERSION_MINOR "7")
+
+# get date information
+# use the last two digits of year + week number as KALMAR_VERSION_PATCH
+execute_process(COMMAND date +%y%W
                 WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-                OUTPUT_VARIABLE GIT_VERSION
+                OUTPUT_VARIABLE KALMAR_VERSION_PATCH
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+# get commit information
+execute_process(COMMAND git rev-parse --short HEAD
+                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+                OUTPUT_VARIABLE KALMAR_DRIVER_COMMIT
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process(COMMAND git rev-parse --short HEAD
+                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/libcxx
+                OUTPUT_VARIABLE LIBCXX_COMMIT
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+# set Kalmar version string
+set(KALMAR_VERSION_STRING "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}.${KALMAR_VERSION_PATCH}-${KALMAR_DRIVER_COMMIT}-${LIBCXX_COMMIT}")
 
 if(NOT APPLE)
 include_directories(${PROJECT_SOURCE_DIR}/libcxxrt/src)
@@ -20,10 +40,10 @@ set(CPACK_SET_DESTDIR TRUE)
 set(CPACK_INSTALL_PREFIX "/opt/kalmar")
 set(CPACK_PACKAGE_NAME "libcxxamp")
 set(CPACK_PACKAGE_VENDOR "MulticoreWare, Inc")
-set(CPACK_PACKAGE_VERSION "0.6.0-${GIT_VERSION}")
-set(CPACK_PACKAGE_VERSION_MAJOR "0")
-set(CPACK_PACKAGE_VERSION_MINOR "6")
-set(CPACK_PACKAGE_VERSION_PATCH "0")
+set(CPACK_PACKAGE_VERSION ${KALMAR_VERSION_STRING})
+set(CPACK_PACKAGE_VERSION_MAJOR ${KALMAR_VERSION_MAJOR})
+set(CPACK_PACKAGE_VERSION_MINOR ${KALMAR_VERSION_MINOR})
+set(CPACK_PACKAGE_VERSION_PATCH ${KALMAR_VERSION_PATCH})
 set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_SYSTEM_NAME})
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "libcxxamp: libc++ for Heterogeneous C++ to OpenCL/HSA compiler")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Jack Chung <jack@multicorewareinc.com>")
