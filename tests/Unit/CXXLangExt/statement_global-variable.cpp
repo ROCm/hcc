@@ -8,7 +8,7 @@
 //#Expects: Error: error C3586
 
 // XFAIL: Linux
-// RUN: %cxxamp -Xclang -fhsa-ext %s -o %t.out && %t.out
+// RUN: %hc %s -o %t.out && %t.out
 
 #include <iostream>
 #include <amp.h>

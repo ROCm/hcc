@@ -1,5 +1,5 @@
 // XFAIL: Linux
-// RUN: %cxxamp -Xclang -fhsa-ext %s -I/opt/hsa/include -L/opt/hsa/lib -lhsa-runtime64 -o %t.out && %t.out
+// RUN: %hc %s -I/opt/hsa/include -L/opt/hsa/lib -lhsa-runtime64 -o %t.out && %t.out
 
 #include <hc.hpp>
 
