@@ -44,7 +44,7 @@ int main ()
   hc::extent<4> e(dim);
 
 #define ASYNC_KERNEL_DISPATCH(x, y) \
-  hc::async_parallel_for_each( \
+  hc::parallel_for_each( \
     e, \
     [=](hc::index<4> idx) restrict(amp) { \
       const int offset = vecSize / (x) * (y); \

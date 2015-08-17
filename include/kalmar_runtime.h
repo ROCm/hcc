@@ -35,6 +35,16 @@ using namespace Kalmar::enums;
 class KalmarDevice;
 struct rw_info;
 
+/// KalmarAsyncOp
+///
+/// This is an abstraction of all asynchronous operations within Kalmar
+class KalmarAsyncOp {
+public:
+  virtual ~KalmarAsyncOp() {} 
+  virtual std::shared_future<void>* getFuture() { return nullptr; };
+  virtual void* getNativeHandle() { return nullptr;};
+};
+
 /// KalmarQueue
 /// This is the implementation of accelerator_view
 /// KalamrQueue is responsible for data operations and launch kernel
@@ -49,9 +59,18 @@ public:
 
   virtual void flush() {}
   virtual void wait() {}
+
+  // sync kernel launch with dynamic group memory
   virtual void LaunchKernelWithDynamicGroupMemory(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size, size_t dynamic_group_size) {}
+
+  // async kernel launch with dynamic group memory
+  virtual std::shared_ptr<KalmarAsyncOp> LaunchKernelWithDynamicGroupMemoryAsync(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size, size_t dynamic_group_size) { return nullptr; }
+
+  // sync kernel launch
   virtual void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {}
-  virtual void* LaunchKernelAsync(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) { return nullptr; }
+
+  // async kernel launch
+  virtual std::shared_ptr<KalmarAsyncOp> LaunchKernelAsync(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) { return LaunchKernelWithDynamicGroupMemoryAsync(kernel, dim_ext, ext, local_size, 0); }
 
   /// read data from device to host
   virtual void read(void* device, void* dst, size_t count, size_t offset) = 0;
@@ -69,13 +88,25 @@ public:
   virtual void unmap(void* device, void* addr) = 0;
 
   /// push device pointer to kernel argument list
-  virtual void Push(void *kernel, int idx, void* device, bool isConst) = 0;
+  virtual void Push(void *kernel, int idx, void* device, bool modify) = 0;
 
   virtual uint32_t GetGroupSegmentSize(void *kernel) { return 0; }
 
   KalmarDevice* getDev() { return pDev; }
   queuing_mode get_mode() const { return mode; }
   void set_mode(queuing_mode mod) { mode = mod; }
+
+  /// get number of pending async operations in the queue
+  virtual int getPendingAsyncOps() { return 0; }
+
+  /// get underlying native queue handle
+  virtual void* getHSAQueue() { return nullptr; }
+
+  /// check if the queue is an HSA queue
+  virtual bool hasHSAInterOp() { return false; }
+
+  /// enqueue marker
+  virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarker() { return nullptr; }
 
 private:
   KalmarDevice* pDev;
@@ -163,7 +194,7 @@ public:
 
   void unmap(void* device, void* addr) override {}
 
-  void Push(void *kernel, int idx, void* device, bool isConst) override {}
+  void Push(void *kernel, int idx, void* device, bool modify) override {}
 };
 
 /// cpu accelerator
