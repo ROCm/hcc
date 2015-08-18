@@ -23,6 +23,7 @@ namespace parallel {
 inline namespace v1 {
 
 #include "impl/reduce.inl"
+#include "impl/scan.inl"
 #include "impl/exclusive_scan.inl"
 #include "impl/inclusive_scan.inl"
 #include "impl/transform_reduce.inl"
@@ -38,7 +39,7 @@ inline namespace v1 {
 
 } // inline namespace v1
 } // namespace parallel
-} // namespace experimental 
+} // namespace experimental
 } // namespace std
 
 // sequential versions of algorithms are implemented inside this  file
