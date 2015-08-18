@@ -264,6 +264,15 @@ add_custom_target(world
     DEPENDS clang libc++ ${DEPS}
 )
 
+# create documentation
+configure_file(
+  ${PROJECT_SOURCE_DIR}/lib/doxygen_config.in
+  ${PROJECT_BINARY_DIR}/lib/doxygen_config @ONLY)
+
+add_custom_target(docs
+    COMMAND doxygen "${PROJECT_BINARY_DIR}/lib/doxygen_config"
+)
+
 # Must build after 'world' target
 if(CXXAMP_ENABLE_BOLT)
   # TODO: add an independent repo. for Bolt ported on clamp
@@ -327,5 +336,6 @@ MESSAGE("")
 MESSAGE("** For the first time:")
 MESSAGE("   'make world' to build clang, libc++ and library for testing.")
 MESSAGE("   'make' to build the rest of LLVM tools")
+MESSAGE("   'make docs' to build the HTML API reference")
 MESSAGE("")
 
