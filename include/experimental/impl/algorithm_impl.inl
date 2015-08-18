@@ -69,16 +69,16 @@ bool lexicographical_compare_impl(InputIt1 first1, InputIt1 last1,
   }
 
   // call to std::lexicographical_compare when small data size
-  if (N <= 16) {
+  if (N <= details::PARALLELIZE_THRESHOLD) {
     return std::lexicographical_compare(first1, last1, first2, last2, comp);
   }
 
-  auto trans = [](const char &a, const char &b) restrict(amp, cpu) {
+  const auto trans = [](const int &a, const int &b) restrict(amp, cpu) {
     return a == 1 ? b : a;
   };
 
-  std::vector<char> tmp(N);
-  char *tmp_ = tmp.data();
+  std::vector<int> tmp(N);
+  int *tmp_ = tmp.data();
 
   typename std::iterator_traits<InputIt1>::pointer first1_ = &(*first1);
   typename std::iterator_traits<InputIt2>::pointer first2_ = &(*first2);
@@ -88,7 +88,7 @@ bool lexicographical_compare_impl(InputIt1 first1, InputIt1 last1,
                    first1_[idx[0]] == first2_[idx[0]] ? 1 : 2;
   });
 
-  tmp[0] = reduce(tmp.begin(), tmp.end(), (char)1, trans);
+  tmp[0] = reduce(tmp.begin(), tmp.end(), 1, trans);
 
   // If one range is a prefix of another, the shorter range is
   // lexicographically less than the other.

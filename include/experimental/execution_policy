@@ -5,6 +5,12 @@ namespace experimental {
 namespace parallel {
 inline namespace v1 {
 
+namespace details {
+// FIXME: change the threshold to 256 after increase the test size
+const int PARALLELIZE_THRESHOLD = 10;
+}
+
+
   // 2.4, Sequential execution policy
   class sequential_execution_policy {};
 

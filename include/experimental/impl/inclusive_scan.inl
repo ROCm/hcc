@@ -23,28 +23,27 @@ inclusive_scan(InputIterator first, InputIterator last,
                BinaryOperation binary_op, T init) {
 
   // call to std::partial_sum when small data size
-  // FIXME: ignore init?
   const size_t N = static_cast<size_t>(std::distance(first, last));
-  if (N <= 10) {
+  if (N <= details::PARALLELIZE_THRESHOLD) {
     return std::partial_sum(first, last, result, binary_op);
   }
-
-  typedef typename std::iterator_traits<InputIterator>::value_type _Tp;
-  _Tp *result_ = &(*result);
-  _Tp *tmp = details::scan_impl(first, last, binary_op);
 
   using hc::extent;
   using hc::index;
   using hc::parallel_for_each;
   hc::ts_allocator tsa;
 
+  typedef typename std::iterator_traits<InputIterator>::value_type _Tp;
+  _Tp *result_ = &(*result);
+  std::unique_ptr<_Tp> stride = details::scan_impl(first, last, binary_op);
+  _Tp *stride_ = stride.get();
+
   // copy back the result
   parallel_for_each(extent<1>(N), tsa,
-    [tmp, result_, init, binary_op](index<1> idx) restrict(amp) {
-    result_[idx[0]] = binary_op(init, tmp[idx[0]]);
+    [stride_, result_, init, binary_op](index<1> idx) restrict(amp) {
+    result_[idx[0]] = binary_op(init, stride_[idx[0]]);
   });
 
-  delete [] tmp;
   return result + N;
 }
 

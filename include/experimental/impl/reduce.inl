@@ -28,7 +28,7 @@ T reduce(InputIterator first, InputIterator last,
   size_t N = static_cast<size_t>(std::distance(first, last));
 
   // call to std::accumulate when small data size
-  if (N <= 10) {
+  if (N <= details::PARALLELIZE_THRESHOLD) {
     return std::accumulate(first, last, init, binary_op);
   }
 
