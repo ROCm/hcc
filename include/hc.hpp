@@ -201,6 +201,15 @@ public:
       : pDev(Kalmar::getContext()->getDevice(path)) {}
   accelerator(const accelerator& other) : pDev(other.pDev) {}
 
+  std::vector<accelerator_view> get_all_views() {
+      std::vector<accelerator_view> result;
+      std::vector< std::shared_ptr<Kalmar::KalmarQueue> > queues = pDev->get_all_queues();
+      for (auto q : queues) {
+          result.push_back(q);
+      }
+      return result;
+  }
+
   static std::vector<accelerator> get_all() {
       auto Devices = Kalmar::getContext()->getDevices();
       std::vector<accelerator> ret(Devices.size());

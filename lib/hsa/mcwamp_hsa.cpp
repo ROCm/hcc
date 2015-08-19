@@ -796,6 +796,8 @@ private:
     hsa_agent_t agent;
     size_t max_tile_static_size;
 
+    std::vector< std::weak_ptr<KalmarQueue> > queues;
+
 public:
     static hsa_status_t find_group_memory(hsa_region_t region, void* data) {
       hsa_region_segment_t segment;
@@ -827,7 +829,8 @@ public:
     }
 
     HSADevice(hsa_agent_t a) : KalmarDevice(access_type_read_write),
-                               agent(a), programs(), max_tile_static_size(0) {
+                               agent(a), programs(), max_tile_static_size(0),
+                               queues() {
 #if KALMAR_DEBUG
         std::cerr << "HSADevice::HSADevice()\n";
 #endif
@@ -842,6 +845,9 @@ public:
 #if KALMAR_DEBUG
         std::cerr << "HSADevice::~HSADevice()\n";
 #endif
+        // release all queues
+        queues.clear();
+
         // release all data in programs
         for (auto kernel_iterator : programs) {
             delete kernel_iterator.second;
@@ -912,11 +918,23 @@ public:
     }
 
     std::shared_ptr<KalmarQueue> createQueue() override {
-        return std::shared_ptr<KalmarQueue>(new HSAQueue(this, agent));
+        std::shared_ptr<KalmarQueue> q =  std::shared_ptr<KalmarQueue>(new HSAQueue(this, agent));
+        queues.push_back(q);
+        return q;
     }
 
     size_t GetMaxTileStaticSize() override {
         return max_tile_static_size;
+    }
+
+    std::vector< std::shared_ptr<KalmarQueue> > get_all_queues() override {
+        std::vector< std::shared_ptr<KalmarQueue> > result;
+        for (auto queue : queues) {
+            if (!queue.expired()) {
+                result.push_back(queue.lock());
+            }
+        }
+        return result;
     }
 
 private:
