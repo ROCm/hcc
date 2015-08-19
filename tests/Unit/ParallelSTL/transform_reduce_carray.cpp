@@ -29,22 +29,23 @@ bool test() {
   // initialize test data
   std::iota(std::begin(table), std::end(table), 1);
   _Tp buffer[SIZE] { _Tp{} };
-  std::transform(std::begin(table), std::end(table), std::begin(buffer), std::negate<_Tp>());
+  auto op = [](const _Tp &x) { return x+5566; };
+  std::transform(std::begin(table), std::end(table), std::begin(buffer), op);
   _Tp expected = std::accumulate(std::begin(buffer), std::end(buffer), _Tp{}, std::plus<_Tp>());
 
   // launch kernel with parallel STL transform reduce
   using namespace std::experimental::parallel;
 
-  ret &= (expected == transform_reduce(std::begin(table), std::end(table), std::negate<_Tp>(), _Tp{}, std::plus<_Tp>()));
-  ret &= (expected == transform_reduce(par, std::begin(table), std::end(table), std::negate<_Tp>(), _Tp{}, std::plus<_Tp>()));
+  ret &= (expected == transform_reduce(std::begin(table), std::end(table), op, _Tp{}, std::plus<_Tp>()));
+  ret &= (expected == transform_reduce(par, std::begin(table), std::end(table), op, _Tp{}, std::plus<_Tp>()));
 
-#if _DEBUG 
+#if _DEBUG
   for (int i = 0; i < ROW; ++i) {
     for (int j = 0; j < COL; ++j) {
       std::cout << std::setw(5) << table[i * COL + j];
     }
     std::cout << "\n";
-  } 
+  }
 #endif
 
   return ret;

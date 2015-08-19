@@ -1,4 +1,3 @@
-// FIXME, this is a SEQUENTIAL implementation of transform_reduce!
 template<typename InputIterator, typename UnaryOperation,
          typename T, typename BinaryOperation>
 T transform_reduce(InputIterator first, InputIterator last,
@@ -9,7 +8,8 @@ T transform_reduce(InputIterator first, InputIterator last,
     return binary_op(a, unary_op(b));
   };
 
-  return std::accumulate(first, last, init, new_op);
+  // invoke std::experimental::parallel::reduce
+  return reduce(first, last, init, new_op);
 }
 
 template<typename ExecutionPolicy,
