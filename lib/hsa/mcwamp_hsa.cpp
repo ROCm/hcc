@@ -16,6 +16,7 @@
 #include <future>
 #include <iostream>
 #include <map>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
@@ -796,6 +797,7 @@ private:
     hsa_agent_t agent;
     size_t max_tile_static_size;
 
+    std::mutex queues_mutex;
     std::vector< std::weak_ptr<KalmarQueue> > queues;
 
 public:
@@ -830,7 +832,7 @@ public:
 
     HSADevice(hsa_agent_t a) : KalmarDevice(access_type_read_write),
                                agent(a), programs(), max_tile_static_size(0),
-                               queues() {
+                               queues(), queues_mutex() {
 #if KALMAR_DEBUG
         std::cerr << "HSADevice::HSADevice()\n";
 #endif
@@ -846,7 +848,9 @@ public:
         std::cerr << "HSADevice::~HSADevice()\n";
 #endif
         // release all queues
+        queues_mutex.lock();
         queues.clear();
+        queues_mutex.unlock();
 
         // release all data in programs
         for (auto kernel_iterator : programs) {
@@ -919,7 +923,9 @@ public:
 
     std::shared_ptr<KalmarQueue> createQueue() override {
         std::shared_ptr<KalmarQueue> q =  std::shared_ptr<KalmarQueue>(new HSAQueue(this, agent));
+        queues_mutex.lock();
         queues.push_back(q);
+        queues_mutex.unlock();
         return q;
     }
 
@@ -929,11 +935,13 @@ public:
 
     std::vector< std::shared_ptr<KalmarQueue> > get_all_queues() override {
         std::vector< std::shared_ptr<KalmarQueue> > result;
+        queues_mutex.lock();
         for (auto queue : queues) {
             if (!queue.expired()) {
                 result.push_back(queue.lock());
             }
         }
+        queues_mutex.unlock();
         return result;
     }
 
