@@ -4,7 +4,10 @@ project (Kalmar)
 # set default installation path
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND CMAKE_INSTALL_PREFIX MATCHES "/usr/local")
   set(CMAKE_INSTALL_PREFIX "/opt/kalmar")
+else ()
+  set(CMAKE_INSTALL_PREFIX "/opt/kalmar")
 endif ()
+MESSAGE("Package installation path: ${CMAKE_INSTALL_PREFIX}")
 
 SET(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/scripts/cmake")
 MESSAGE("Module path: ${CMAKE_MODULE_PATH}")
