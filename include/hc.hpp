@@ -2655,8 +2655,11 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
     size_t compute_domain_size = 1;
     for(int i = 0 ; i < N ; i++)
     {
-      if(compute_domain[i]<=0)
-        throw invalid_compute_domain("Extent is less or equal than 0.");
+      // silently return in case the any dimension of the extent is 0
+      if (compute_domain == 0)
+        return completion_future();
+      if (compute_domain[i] < 0)
+        throw invalid_compute_domain("Extent is less than 0.");
       if (static_cast<size_t>(compute_domain[i]) > 4294967295L)
         throw invalid_compute_domain("Extent size too large.");
       compute_domain_size *= static_cast<size_t>(compute_domain[i]);
@@ -2689,8 +2692,11 @@ template <typename Kernel>
 __attribute__((noinline,used)) completion_future parallel_for_each(
     const accelerator_view& av, const extent<1>& compute_domain, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
-  if(compute_domain[0]<=0) {
-    throw invalid_compute_domain("Extent is less or equal than 0.");
+  // silently return in case the any dimension of the extent is 0
+  if (compute_domain[0] == 0)
+    return completion_future();
+  if (compute_domain[0] < 0) {
+    throw invalid_compute_domain("Extent is less than 0.");
   }
   if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
@@ -2715,8 +2721,11 @@ template <typename Kernel>
 __attribute__((noinline,used)) completion_future parallel_for_each(
     const accelerator_view& av, const extent<2>& compute_domain, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
-  if(compute_domain[0]<=0 || compute_domain[1]<=0) {
-    throw invalid_compute_domain("Extent is less or equal than 0.");
+  // silently return in case the any dimension of the extent is 0
+  if (compute_domain[0] == 0 || compute_domain[1] == 0)
+    return completion_future();
+  if (compute_domain[0] < 0 || compute_domain[1] < 0) {
+    throw invalid_compute_domain("Extent is less than 0.");
   }
   if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
@@ -2742,8 +2751,11 @@ template <typename Kernel>
 __attribute__((noinline,used)) completion_future parallel_for_each(
     const accelerator_view& av, const extent<3>& compute_domain, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
-  if(compute_domain[0]<=0 || compute_domain[1]<=0 || compute_domain[2]<=0) {
-    throw invalid_compute_domain("Extent is less or equal than 0.");
+  // silently return in case the any dimension of the extent is 0
+  if (compute_domain[0] == 0 || compute_domain[1] == 0 || compute_domain[2] == 0)
+    return completion_future();
+  if (compute_domain[0] < 0 || compute_domain[1] < 0 || compute_domain[2] < 0) {
+    throw invalid_compute_domain("Extent is less than 0.");
   }
   if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
@@ -2776,8 +2788,11 @@ template <typename Kernel>
 __attribute__((noinline,used)) completion_future parallel_for_each(
     const accelerator_view& av, const tiled_extent<1>& compute_domain, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
-  if(compute_domain[0]<=0) {
-    throw invalid_compute_domain("Extent is less or equal than 0.");
+  // silently return in case the any dimension of the extent is 0
+  if (compute_domain[0] == 0)
+    return completion_future();
+  if (compute_domain[0] < 0) {
+    throw invalid_compute_domain("Extent is less than 0.");
   }
   if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
@@ -2810,8 +2825,11 @@ template <typename Kernel>
 __attribute__((noinline,used)) completion_future parallel_for_each(
     const accelerator_view& av, const tiled_extent<2>& compute_domain, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
-  if(compute_domain[0]<=0 || compute_domain[1]<=0) {
-    throw invalid_compute_domain("Extent is less or equal than 0.");
+  // silently return in case the any dimension of the extent is 0
+  if (compute_domain[0] == 0 || compute_domain[1] == 0)
+    return completion_future();
+  if (compute_domain[0] < 0 || compute_domain[1] < 0) {
+    throw invalid_compute_domain("Extent is less than 0.");
   }
   if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
@@ -2846,8 +2864,11 @@ template <typename Kernel>
 __attribute__((noinline,used)) completion_future parallel_for_each(
     const accelerator_view& av, const tiled_extent<3>& compute_domain, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
-  if(compute_domain[0]<=0 || compute_domain[1]<=0 || compute_domain[2]<=0) {
-    throw invalid_compute_domain("Extent is less or equal than 0.");
+  // silently return in case the any dimension of the extent is 0
+  if (compute_domain[0] == 0 || compute_domain[1] == 0 || compute_domain[2] == 0)
+    return completion_future();
+  if (compute_domain[0] < 0 || compute_domain[1] < 0 || compute_domain[2] < 0) {
+    throw invalid_compute_domain("Extent is less than 0.");
   }
   if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
@@ -2894,8 +2915,11 @@ completion_future parallel_for_each(const accelerator_view& av,
                        ts_allocator& allocator,
                        const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
-  if(compute_domain[0]<=0) {
-    throw invalid_compute_domain("Extent is less or equal than 0.");
+  // silently return in case the any dimension of the extent is 0
+  if (compute_domain[0] == 0)
+    return completion_future();
+  if (compute_domain[0] < 0) {
+    throw invalid_compute_domain("Extent is less than 0.");
   }
   if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
@@ -2933,8 +2957,11 @@ completion_future parallel_for_each(const accelerator_view& av,
                        ts_allocator& allocator,
                        const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
-  if(compute_domain[0]<=0 || compute_domain[1]<=0) {
-    throw invalid_compute_domain("Extent is less or equal than 0.");
+  // silently return in case the any dimension of the extent is 0
+  if (compute_domain[0] == 0 || compute_domain[1] == 0)
+    return completion_future();
+  if (compute_domain[0] < 0 || compute_domain[1] < 0) {
+    throw invalid_compute_domain("Extent is less than 0.");
   }
   if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
@@ -2973,8 +3000,11 @@ completion_future parallel_for_each(const accelerator_view& av,
                        ts_allocator& allocator,
                        const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
-  if(compute_domain[0]<=0 || compute_domain[1]<=0 || compute_domain[2]<=0) {
-    throw invalid_compute_domain("Extent is less or equal than 0.");
+  // silently return in case the any dimension of the extent is 0
+  if (compute_domain[0] == 0 || compute_domain[1] == 0 || compute_domain[2] == 0)
+    return completion_future();
+  if (compute_domain[0] < 0 || compute_domain[1] < 0 || compute_domain[2] < 0) {
+    throw invalid_compute_domain("Extent is less than 0.");
   }
   if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
@@ -3020,8 +3050,11 @@ completion_future parallel_for_each(const accelerator_view& av,
                        ts_allocator& allocator,
                        const Kernel& f) restrict(amp,cpu) {
 #if __KALMAR_ACCELERATOR__ != 1
-  if(compute_domain[0]<=0) {
-    throw invalid_compute_domain("Extent is less or equal than 0.");
+  // silently return in case the any dimension of the extent is 0
+  if (compute_domain[0] == 0)
+    return completion_future();
+  if (compute_domain[0] < 0) {
+    throw invalid_compute_domain("Extent is less than 0.");
   }
   if (static_cast<size_t>(compute_domain[0]) > 4294967295L) {
     throw invalid_compute_domain("Extent size too large.");
@@ -3068,8 +3101,11 @@ completion_future parallel_for_each(const accelerator_view& av,
                        ts_allocator& allocator,
                        const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
-  if(compute_domain[0]<=0 || compute_domain[1]<=0) {
-    throw invalid_compute_domain("Extent is less or equal than 0.");
+  // silently return in case the any dimension of the extent is 0
+  if (compute_domain[0] == 0 || compute_domain[1] == 0)
+    return completion_future();
+  if (compute_domain[0] < 0 || compute_domain[1] < 0) {
+    throw invalid_compute_domain("Extent is less than 0.");
   }
   if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
@@ -3116,8 +3152,11 @@ completion_future parallel_for_each(const accelerator_view& av,
                        ts_allocator& allocator,
                        const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
-  if(compute_domain[0]<=0 || compute_domain[1]<=0 || compute_domain[2]<=0) {
-    throw invalid_compute_domain("Extent is less or equal than 0.");
+  // silently return in case the any dimension of the extent is 0
+  if (compute_domain[0] == 0 || compute_domain[1] == 0 || compute_domain[2] == 0)
+    return completion_future();
+  if (compute_domain[0] < 0 || compute_domain[1] < 0 || compute_domain[2] < 0) {
+    throw invalid_compute_domain("Extent is less than 0.");
   }
   if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
