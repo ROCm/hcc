@@ -2649,7 +2649,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
     for(int i = 0 ; i < N ; i++)
     {
       // silently return in case the any dimension of the extent is 0
-      if (compute_domain == 0)
+      if (compute_domain[i] == 0)
         return completion_future();
       if (compute_domain[i] < 0)
         throw invalid_compute_domain("Extent is less than 0.");
