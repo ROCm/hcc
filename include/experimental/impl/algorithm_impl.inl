@@ -70,7 +70,8 @@ bool lexicographical_compare_impl(InputIt1 first1, InputIt1 last1,
 
   // call to std::lexicographical_compare when small data size
   if (N <= details::PARALLELIZE_THRESHOLD) {
-    return std::lexicographical_compare(first1, last1, first2, last2, comp);
+    return lexicographical_compare_impl(first1, last1, first2, last2, comp,
+             std::input_iterator_tag{});
   }
 
   const auto trans = [](const int &a, const int &b) restrict(amp, cpu) {

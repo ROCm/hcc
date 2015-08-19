@@ -15,21 +15,34 @@ __exclusive_scan(InputIterator first, InputIterator last,
   return result;
 }
 
+namespace details {
 template<class InputIterator, class OutputIterator,
          class T, class BinaryOperation>
 OutputIterator
-exclusive_scan(InputIterator first, InputIterator last,
-               OutputIterator result,
-               T init, BinaryOperation binary_op) {
+exclusive_scan_impl(InputIterator first, InputIterator last,
+                    OutputIterator result,
+                    T init, BinaryOperation binary_op,
+                    std::input_iterator_tag) {
+  std::partial_sum(first, last, result, binary_op);
+  const size_t N = static_cast<size_t>(std::distance(first, last));
+  for (int i = N-2; i >= 0; i--)
+    result[i+1] = binary_op(init, result[i]);
+  result[0] = init;
+  return result + N;
+}
 
+template<class RandomAccessIterator, class OutputIterator,
+         class T, class BinaryOperation>
+OutputIterator
+exclusive_scan_impl(RandomAccessIterator first, RandomAccessIterator last,
+               OutputIterator result,
+               T init, BinaryOperation binary_op,
+               std::random_access_iterator_tag) {
   // call to std::partial_sum when small data size
   const size_t N = static_cast<size_t>(std::distance(first, last));
   if (N <= details::PARALLELIZE_THRESHOLD) {
-    std::partial_sum(first, last, result, binary_op);
-    for (int i = N-2; i >= 0; i--)
-      result[i+1] = binary_op(init, result[i]);
-    result[0] = init;
-    return result + N;
+    return details::exclusive_scan_impl(first, last, result, init, binary_op,
+             std::input_iterator_tag{});
   }
 
   using hc::extent;
@@ -37,7 +50,7 @@ exclusive_scan(InputIterator first, InputIterator last,
   using hc::parallel_for_each;
   hc::ts_allocator tsa;
 
-  typedef typename std::iterator_traits<InputIterator>::value_type _Tp;
+  typedef typename std::iterator_traits<RandomAccessIterator>::value_type _Tp;
   _Tp *result_ = &(*result);
   std::unique_ptr<_Tp> stride = details::scan_impl(first, last, binary_op);
   _Tp *stride_ = stride.get();
@@ -51,6 +64,19 @@ exclusive_scan(InputIterator first, InputIterator last,
   result[0] = init;
 
   return result + N;
+}
+
+} // namespace details
+
+
+template<class InputIterator, class OutputIterator,
+         class T, class BinaryOperation>
+OutputIterator
+exclusive_scan(InputIterator first, InputIterator last,
+               OutputIterator result,
+               T init, BinaryOperation binary_op) {
+  return details::exclusive_scan_impl(first, last, result, init, binary_op,
+           typename std::iterator_traits<InputIterator>::iterator_category());
 }
 
 template<typename ExecutionPolicy,

@@ -15,17 +15,30 @@ __inclusive_scan(InputIterator first, InputIterator last,
   return result;
 }
 
+namespace details {
 template<class InputIterator, class OutputIterator,
          class T, class BinaryOperation>
 OutputIterator
-inclusive_scan(InputIterator first, InputIterator last,
-               OutputIterator result,
-               BinaryOperation binary_op, T init) {
+inclusive_scan_impl(InputIterator first, InputIterator last,
+                    OutputIterator result,
+                    BinaryOperation binary_op, T init,
+                    std::input_iterator_tag) {
+  return std::partial_sum(first, last, result, binary_op);
+}
+
+template<class RandomAccessIterator, class OutputIterator,
+         class T, class BinaryOperation>
+OutputIterator
+inclusive_scan_impl(RandomAccessIterator first, RandomAccessIterator last,
+                    OutputIterator result,
+                    BinaryOperation binary_op, T init,
+                    std::random_access_iterator_tag) {
 
   // call to std::partial_sum when small data size
   const size_t N = static_cast<size_t>(std::distance(first, last));
   if (N <= details::PARALLELIZE_THRESHOLD) {
-    return std::partial_sum(first, last, result, binary_op);
+    return inclusive_scan_impl(first, last, result, binary_op, init,
+             std::input_iterator_tag{});
   }
 
   using hc::extent;
@@ -33,7 +46,7 @@ inclusive_scan(InputIterator first, InputIterator last,
   using hc::parallel_for_each;
   hc::ts_allocator tsa;
 
-  typedef typename std::iterator_traits<InputIterator>::value_type _Tp;
+  typedef typename std::iterator_traits<RandomAccessIterator>::value_type _Tp;
   _Tp *result_ = &(*result);
   std::unique_ptr<_Tp> stride = details::scan_impl(first, last, binary_op);
   _Tp *stride_ = stride.get();
@@ -45,6 +58,18 @@ inclusive_scan(InputIterator first, InputIterator last,
   });
 
   return result + N;
+}
+
+} // namespace details
+
+template<class InputIterator, class OutputIterator,
+         class T, class BinaryOperation>
+OutputIterator
+inclusive_scan(InputIterator first, InputIterator last,
+               OutputIterator result,
+               BinaryOperation binary_op, T init) {
+  return details::inclusive_scan_impl(first, last, result, binary_op, init,
+           typename std::iterator_traits<InputIterator>::iterator_category());
 }
 
 template<typename ExecutionPolicy,

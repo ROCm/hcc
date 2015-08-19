@@ -13,12 +13,22 @@ T __reduce(InputIterator first, InputIterator last, T init,
   return result;
 }
 
+namespace details {
 template<class InputIterator, class T, class BinaryOperation>
-T reduce(InputIterator first, InputIterator last,
+T reduce_impl(InputIterator first, InputIterator last,
          T init,
-         BinaryOperation binary_op) {
+         BinaryOperation binary_op,
+         std::input_iterator_tag) {
+  return std::accumulate(first, last, init, binary_op);
+}
 
-  typedef typename std::iterator_traits<InputIterator>::value_type _Tp;
+template<class RandomAccessIterator, class T, class BinaryOperation>
+T reduce_impl(RandomAccessIterator first, RandomAccessIterator last,
+         T init,
+         BinaryOperation binary_op,
+         std::random_access_iterator_tag) {
+
+  typedef typename std::iterator_traits<RandomAccessIterator>::value_type _Tp;
 
   using hc::extent;
   using hc::index;
@@ -29,7 +39,7 @@ T reduce(InputIterator first, InputIterator last,
 
   // call to std::accumulate when small data size
   if (N <= details::PARALLELIZE_THRESHOLD) {
-    return std::accumulate(first, last, init, binary_op);
+    return reduce_impl(first, last, init, binary_op, std::input_iterator_tag{});
   }
 
   unsigned s = (N + 1) / 2;
@@ -70,6 +80,7 @@ T reduce(InputIterator first, InputIterator last,
   delete [] tmp;
   return ans;
 }
+} // namespace details
 
 //// FIXME, this is a implementation of reduce based on C++AMP
 //// ideally we want to drop all C++AMP stuffs in parallel STL
@@ -125,6 +136,14 @@ T reduce(InputIterator first, InputIterator last,
 //
 //  return resultValue;
 //}
+
+template<class InputIterator, class T, class BinaryOperation>
+T reduce(InputIterator first, InputIterator last,
+         T init,
+         BinaryOperation binary_op) {
+  return details::reduce_impl(first, last, init, binary_op,
+           typename std::iterator_traits<InputIterator>::iterator_category());
+}
 
 template<class ExecutionPolicy, class InputIterator, class T, class BinaryOperation>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, T>::type
