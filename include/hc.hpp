@@ -196,10 +196,7 @@ class accelerator
 {
   accelerator(Kalmar::KalmarDevice* pDev) : pDev(pDev) {}
 public:
-  static const wchar_t default_accelerator[];
-  static const wchar_t cpu_accelerator[];
-
-  accelerator() : accelerator(default_accelerator) {}
+  accelerator() : accelerator(L"default") {}
   explicit accelerator(const std::wstring& path)
       : pDev(Kalmar::getContext()->getDevice(path)) {}
   accelerator(const accelerator& other) : pDev(other.pDev) {}
@@ -258,10 +255,6 @@ private:
 };
 
 inline accelerator accelerator_view::get_accelerator() const { return pQueue->getDev(); }
-
-// FIXME: this will cause troubles later in separated compilation
-const wchar_t accelerator::cpu_accelerator[] = L"cpu";
-const wchar_t accelerator::default_accelerator[] = L"default";
 
 // ------------------------------------------------------------------------
 // completion_future
