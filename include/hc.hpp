@@ -1723,129 +1723,280 @@ void tile_static_memory_fence(const tile_barrier&) restrict(amp);
 // tiled_index
 // ------------------------------------------------------------------------
 
+/**
+ * Represents a set of related indices subdivided into 1-, 2-, or 3-dimensional
+ * tiles.
+ *
+ * @tparam N Tile dimension.
+ */
 template <int N=3>
 class tiled_index {
 public:
-  const index<3> global;
-  const index<3> local;
-  const index<3> tile;
-  const index<3> tile_origin;
-  const tile_barrier barrier;
-  tiled_index(const index<3>& g) restrict(amp,cpu) : global(g) {}
-  tiled_index(const tiled_index& other) restrict(amp,cpu) : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin), barrier(other.barrier) {}
-  operator const index<3>() const restrict(amp,cpu) {
-    return global;
-  }
+    /**
+     * A static member of tiled_index that contains the rank of this tiled
+     * extent, and is either 1, 2, or 3 depending on the specialization used.
+     */
+    static const int rank = 3;
+
+    /**
+     * Copy constructor. Constructs a new tiled_index from the supplied
+     * argument "other".
+     *
+     * @param[in] other An object of type tiled_index from which to initialize
+     *                  this.
+     */
+    tiled_index(const tiled_index& other) restrict(amp,cpu) : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin), barrier(other.barrier) {}
+
+    /**
+     * An index of rank 1, 2, or 3 that represents the global index within an
+     * extent.
+     */
+    const index<3> global;
+
+    /**
+     * An index of rank 1, 2, or 3 that represents the relative index within
+     * the current tile of a tiled extent.
+     */
+    const index<3> local;
+
+    /**
+     * An index of rank 1, 2, or 3 that represents the coordinates of the
+     * current tile of a tiled extent.
+     */
+    const index<3> tile;
+
+    /**
+     * An index of rank 1, 2, or 3 that represents the global coordinates of
+     * the origin of the current tile within a tiled extent.
+     */
+    const index<3> tile_origin;
+
+    /**
+     * An object which represents a barrier within the current tile of threads.
+     */
+    const tile_barrier barrier;
+
+    /**
+     * Implicit conversion operator that converts a tiled_index<N> into
+     * an index<N>. The implicit conversion converts to the .global index
+     * member.
+     */
+    operator const index<3>() const restrict(amp,cpu) {
+        return global;
+    }
+
+    tiled_index(const index<3>& g) restrict(amp,cpu) : global(g) {}
+
 private:
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  __attribute__((always_inline)) tiled_index(int a0, int a1, int a2, int b0, int b1, int b2, int c0, int c1, int c2, tile_barrier& pb) restrict(amp,cpu) :
-    global(a2, a1, a0), local(b2, b1, b0), tile(c2, c1, c0), tile_origin(a2 - b2, a1 - b1, a0 - b0), barrier(pb) {}
+    __attribute__((always_inline)) tiled_index(int a0, int a1, int a2, int b0, int b1, int b2, int c0, int c1, int c2, tile_barrier& pb) restrict(amp,cpu)
+        : global(a2, a1, a0), local(b2, b1, b0), tile(c2, c1, c0), tile_origin(a2 - b2, a1 - b1, a0 - b0), barrier(pb) {}
 #endif
 
-  __attribute__((annotate("__cxxamp_opencl_index")))
+    __attribute__((annotate("__cxxamp_opencl_index")))
 #if __KALMAR_ACCELERATOR__ == 1
-  __attribute__((always_inline)) tiled_index() restrict(amp) :
-    global(index<3>(amp_get_global_id(2), amp_get_global_id(1), amp_get_global_id(0))),
-    local(index<3>(amp_get_local_id(2), amp_get_local_id(1), amp_get_local_id(0))),
-    tile(index<3>(amp_get_group_id(2), amp_get_group_id(1), amp_get_group_id(0))),
-    tile_origin(index<3>(amp_get_global_id(2) - amp_get_local_id(2),
-                         amp_get_global_id(1) - amp_get_local_id(1),
-                         amp_get_global_id(0) - amp_get_local_id(0)))
+    __attribute__((always_inline)) tiled_index() restrict(amp)
+        : global(index<3>(amp_get_global_id(2), amp_get_global_id(1), amp_get_global_id(0))),
+          local(index<3>(amp_get_local_id(2), amp_get_local_id(1), amp_get_local_id(0))),
+          tile(index<3>(amp_get_group_id(2), amp_get_group_id(1), amp_get_group_id(0))),
+          tile_origin(index<3>(amp_get_global_id(2) - amp_get_local_id(2),
+                               amp_get_global_id(1) - amp_get_local_id(1),
+                               amp_get_global_id(0) - amp_get_local_id(0)))
 #elif __KALMAR__ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  __attribute__((always_inline)) tiled_index() restrict(amp,cpu)
+    __attribute__((always_inline)) tiled_index() restrict(amp,cpu)
 #else
-  __attribute__((always_inline)) tiled_index() restrict(amp)
+    __attribute__((always_inline)) tiled_index() restrict(amp)
 #endif // __KALMAR_ACCELERATOR__
-  {}
+    {}
 
-  template<typename Kernel> friend
-      completion_future parallel_for_each(const accelerator_view&, const tiled_extent<N>&, ts_allocator&, const Kernel&);
+    template<typename Kernel> friend
+        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<N>&, ts_allocator&, const Kernel&);
 
-  template<typename Kernel> friend
-      completion_future parallel_for_each(const accelerator_view&, const tiled_extent<N>&, const Kernel&);
+    template<typename Kernel> friend
+        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<N>&, const Kernel&);
 };
 
+
+/**
+ * Represents a set of related indices subdivided into 1-, 2-, or 3-dimensional
+ * tiles.
+ * This class is 1D specialization of tiled_index.
+ */
 template<>
 class tiled_index<1> {
 public:
-  const index<1> global;
-  const index<1> local;
-  const index<1> tile;
-  const index<1> tile_origin;
-  const tile_barrier barrier;
-  tiled_index(const index<1>& g) restrict(amp,cpu) : global(g) {}
-  tiled_index(const tiled_index& other) restrict(amp,cpu) : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin), barrier(other.barrier) {}
-  operator const index<1>() const restrict(amp,cpu) {
-    return global;
-  }
+    /**
+     * A static member of tiled_index that contains the rank of this tiled
+     * extent, and is either 1, 2, or 3 depending on the specialization used.
+     */
+    static const int rank = 1;
+
+    /**
+     * Copy constructor. Constructs a new tiled_index from the supplied
+     * argument "other".
+     *
+     * @param[in] other An object of type tiled_index from which to initialize
+     *                  this.
+     */
+    tiled_index(const tiled_index& other) restrict(amp,cpu) : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin), barrier(other.barrier) {}
+
+    /**
+     * An index of rank 1, 2, or 3 that represents the global index within an
+     * extent.
+     */
+    const index<1> global;
+
+    /**
+     * An index of rank 1, 2, or 3 that represents the relative index within
+     * the current tile of a tiled extent.
+     */
+    const index<1> local;
+
+    /**
+     * An index of rank 1, 2, or 3 that represents the coordinates of the
+     * current tile of a tiled extent.
+     */
+    const index<1> tile;
+
+    /**
+     * An index of rank 1, 2, or 3 that represents the global coordinates of
+     * the origin of the current tile within a tiled extent.
+     */
+    const index<1> tile_origin;
+
+    /**
+     * An object which represents a barrier within the current tile of threads.
+     */
+    const tile_barrier barrier;
+
+    /**
+     * Implicit conversion operator that converts a tiled_index<N> into
+     * an index<N>. The implicit conversion converts to the .global index
+     * member.
+     */
+    operator const index<1>() const restrict(amp,cpu) {
+        return global;
+    }
+
+    tiled_index(const index<1>& g) restrict(amp,cpu) : global(g) {}
+
 private:
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  __attribute__((always_inline)) tiled_index(int a, int b, int c, tile_barrier& pb) restrict(amp,cpu) :
-    global(a), local(b), tile(c), tile_origin(a - b), barrier(pb) {}
+    __attribute__((always_inline)) tiled_index(int a, int b, int c, tile_barrier& pb) restrict(amp,cpu)
+        : global(a), local(b), tile(c), tile_origin(a - b), barrier(pb) {}
 #endif
 
-  __attribute__((annotate("__cxxamp_opencl_index")))
+    __attribute__((annotate("__cxxamp_opencl_index")))
 #if __KALMAR_ACCELERATOR__ == 1
-  __attribute__((always_inline)) tiled_index() restrict(amp) :
-    global(index<1>(amp_get_global_id(0))),
-    local(index<1>(amp_get_local_id(0))),
-    tile(index<1>(amp_get_group_id(0))),
-    tile_origin(index<1>(amp_get_global_id(0) - amp_get_local_id(0)))
+    __attribute__((always_inline)) tiled_index() restrict(amp)
+        : global(index<1>(amp_get_global_id(0))),
+          local(index<1>(amp_get_local_id(0))),
+          tile(index<1>(amp_get_group_id(0))),
+          tile_origin(index<1>(amp_get_global_id(0) - amp_get_local_id(0)))
 #elif __KALMAR__ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  __attribute__((always_inline)) tiled_index() restrict(amp,cpu)
+    __attribute__((always_inline)) tiled_index() restrict(amp,cpu)
 #else
-  __attribute__((always_inline)) tiled_index() restrict(amp)
+    __attribute__((always_inline)) tiled_index() restrict(amp)
 #endif // __KALMAR_ACCELERATOR__
-  {}
+    {}
 
-  template<typename Kernel> friend
-      completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, ts_allocator&, const Kernel&);
+    template<typename Kernel> friend
+        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, ts_allocator&, const Kernel&);
 
-  template<typename Kernel> friend
-      completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
+    template<typename Kernel> friend
+        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
 };
 
+/**
+ * Represents a set of related indices subdivided into 1-, 2-, or 3-dimensional
+ * tiles.
+ * This class is 2D specialization of tiled_index.
+ */
 template<>
 class tiled_index<2> {
 public:
-  const index<2> global;
-  const index<2> local;
-  const index<2> tile;
-  const index<2> tile_origin;
-  const tile_barrier barrier;
-  tiled_index(const index<2>& g) restrict(amp,cpu) : global(g) {}
-  tiled_index(const tiled_index& other) restrict(amp,cpu) : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin), barrier(other.barrier) {}
-  operator const index<2>() const restrict(amp,cpu) {
-    return global;
-  }
+    /**
+     * A static member of tiled_index that contains the rank of this tiled
+     * extent, and is either 1, 2, or 3 depending on the specialization used.
+     */
+    static const int rank = 2;
+
+    /**
+     * Copy constructor. Constructs a new tiled_index from the supplied
+     * argument "other".
+     *
+     * @param[in] other An object of type tiled_index from which to initialize
+     *                  this.
+     */
+    tiled_index(const tiled_index& other) restrict(amp,cpu) : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin), barrier(other.barrier) {}
+
+    /**
+     * An index of rank 1, 2, or 3 that represents the global index within an
+     * extent.
+     */
+    const index<2> global;
+
+    /**
+     * An index of rank 1, 2, or 3 that represents the relative index within
+     * the current tile of a tiled extent.
+     */
+    const index<2> local;
+
+    /**
+     * An index of rank 1, 2, or 3 that represents the coordinates of the
+     * current tile of a tiled extent.
+     */
+    const index<2> tile;
+
+    /**
+     * An index of rank 1, 2, or 3 that represents the global coordinates of
+     * the origin of the current tile within a tiled extent.
+     */
+    const index<2> tile_origin;
+
+    /**
+     * An object which represents a barrier within the current tile of threads.
+     */
+    const tile_barrier barrier;
+
+    /**
+     * Implicit conversion operator that converts a tiled_index<N> into
+     * an index<N>. The implicit conversion converts to the .global index
+     * member.
+     */
+    operator const index<2>() const restrict(amp,cpu) {
+      return global;
+    }
+
+    tiled_index(const index<2>& g) restrict(amp,cpu) : global(g) {}
+
 private:
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  __attribute__((always_inline)) tiled_index(int a0, int a1, int b0, int b1, int c0, int c1, tile_barrier& pb) restrict(amp,cpu) :
-    global(a1, a0), local(b1, b0), tile(c1, c0), tile_origin(a1 - b1, a0 - b0), barrier(pb) {}
+    __attribute__((always_inline)) tiled_index(int a0, int a1, int b0, int b1, int c0, int c1, tile_barrier& pb) restrict(amp,cpu)
+        : global(a1, a0), local(b1, b0), tile(c1, c0), tile_origin(a1 - b1, a0 - b0), barrier(pb) {}
 #endif
 
-  __attribute__((annotate("__cxxamp_opencl_index")))
+    __attribute__((annotate("__cxxamp_opencl_index")))
 #if __KALMAR_ACCELERATOR__ == 1
-  __attribute__((always_inline)) tiled_index() restrict(amp) :
-    global(index<2>(amp_get_global_id(1), amp_get_global_id(0))),
-    local(index<2>(amp_get_local_id(1), amp_get_local_id(0))),
-    tile(index<2>(amp_get_group_id(1), amp_get_group_id(0))),
-    tile_origin(index<2>(amp_get_global_id(1) - amp_get_local_id(1),
-                         amp_get_global_id(0) - amp_get_local_id(0)))
+    __attribute__((always_inline)) tiled_index() restrict(amp)
+        : global(index<2>(amp_get_global_id(1), amp_get_global_id(0))),
+          local(index<2>(amp_get_local_id(1), amp_get_local_id(0))),
+          tile(index<2>(amp_get_group_id(1), amp_get_group_id(0))),
+          tile_origin(index<2>(amp_get_global_id(1) - amp_get_local_id(1),
+                               amp_get_global_id(0) - amp_get_local_id(0)))
 #elif __KALMAR__ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  __attribute__((always_inline)) tiled_index() restrict(amp,cpu)
+    __attribute__((always_inline)) tiled_index() restrict(amp,cpu)
 #else
-  __attribute__((always_inline)) tiled_index() restrict(amp)
+    __attribute__((always_inline)) tiled_index() restrict(amp)
 #endif // __KALMAR_ACCELERATOR__
-  {}
+    {}
 
-  template<typename Kernel> friend
-      completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, ts_allocator&, const Kernel&);
+    template<typename Kernel> friend
+        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, ts_allocator&, const Kernel&);
 
-  template<typename Kernel> friend
-      completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, const Kernel&);
+    template<typename Kernel> friend
+        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, const Kernel&);
 };
-
 
 // ------------------------------------------------------------------------
 // utility helper classes for array_view
