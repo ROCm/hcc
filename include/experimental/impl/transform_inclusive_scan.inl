@@ -1,5 +1,6 @@
 template<typename InputIterator, typename OutputIterator,
-         typename UnaryOperation, typename BinaryOperation, typename T>
+         typename UnaryOperation, typename BinaryOperation, typename T,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
 OutputIterator
 transform_inclusive_scan(InputIterator first, InputIterator last,
                          OutputIterator result,
@@ -14,8 +15,10 @@ transform_inclusive_scan(InputIterator first, InputIterator last,
 
 template<typename ExecutionPolicy,
          typename InputIterator, typename OutputIterator,
-         typename UnaryOperation, typename BinaryOperation, typename T>
-typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIterator>::type
+         typename UnaryOperation, typename BinaryOperation, typename T,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
+OutputIterator
 transform_inclusive_scan(ExecutionPolicy&& exec,
                InputIterator first, InputIterator last,
                OutputIterator result,
@@ -25,7 +28,8 @@ transform_inclusive_scan(ExecutionPolicy&& exec,
 }
 
 template<typename InputIterator, typename OutputIterator,
-         typename UnaryOperation, typename BinaryOperation>
+         typename UnaryOperation, typename BinaryOperation,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
 OutputIterator
 transform_inclusive_scan(InputIterator first, InputIterator last,
                OutputIterator result,
@@ -37,8 +41,10 @@ transform_inclusive_scan(InputIterator first, InputIterator last,
 
 template<typename ExecutionPolicy,
          typename InputIterator, typename OutputIterator,
-         typename UnaryOperation, typename BinaryOperation>
-typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIterator>::type
+         typename UnaryOperation, typename BinaryOperation,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
+OutputIterator
 transform_inclusive_scan(ExecutionPolicy&& exec,
                          InputIterator first, InputIterator last,
                          OutputIterator result,

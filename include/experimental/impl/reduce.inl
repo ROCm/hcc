@@ -137,7 +137,8 @@ T reduce_impl(RandomAccessIterator first, RandomAccessIterator last,
 //  return resultValue;
 //}
 
-template<class InputIterator, class T, class BinaryOperation>
+template<class InputIterator, class T, class BinaryOperation,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
 T reduce(InputIterator first, InputIterator last,
          T init,
          BinaryOperation binary_op) {
@@ -145,28 +146,34 @@ T reduce(InputIterator first, InputIterator last,
            typename std::iterator_traits<InputIterator>::iterator_category());
 }
 
-template<class ExecutionPolicy, class InputIterator, class T, class BinaryOperation>
-typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, T>::type
+template<class ExecutionPolicy, class InputIterator, class T, class BinaryOperation,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
+T
 reduce(ExecutionPolicy&& exec,
                InputIterator first, InputIterator last, T init,
                BinaryOperation binary_op) {
   return reduce(first, last, init, binary_op);
 }
 
-template<typename InputIterator, typename T>
+template<typename InputIterator, typename T,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
 T reduce(InputIterator first, InputIterator last, T init) {
   return reduce(first, last, init, std::plus<T>());
 }
 
 template<typename ExecutionPolicy,
-         typename InputIterator, typename T>
-typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, T>::type
+         typename InputIterator, typename T,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
+T
 reduce(ExecutionPolicy&& exec,
          InputIterator first, InputIterator last, T init) {
   return reduce(first, last, init);
 }
 
-template<typename InputIterator>
+template<typename InputIterator,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
 typename std::iterator_traits<InputIterator>::value_type
 reduce(InputIterator first, InputIterator last) {
   typedef typename std::iterator_traits<InputIterator>::value_type Type;
@@ -174,8 +181,10 @@ reduce(InputIterator first, InputIterator last) {
 }
 
 template<typename ExecutionPolicy,
-         typename InputIterator>
-typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, typename std::iterator_traits<InputIterator>::value_type>::type
+         typename InputIterator,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
+typename std::iterator_traits<InputIterator>::value_type
 reduce(ExecutionPolicy&& exec,
        InputIterator first, InputIterator last) {
   return reduce(first, last);

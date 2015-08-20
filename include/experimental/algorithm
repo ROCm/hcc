@@ -182,7 +182,9 @@ private:
 // transform (unary version)
 template <class ExecutionPolicy,
           class InputIterator, class OutputIterator,
-          class UnaryOperation>
+          class UnaryOperation,
+          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+          utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
 OutputIterator
 transform(ExecutionPolicy&& exec,
           InputIterator first, InputIterator last,
@@ -195,7 +197,9 @@ transform(ExecutionPolicy&& exec,
 // transform (binary version)
 template<class ExecutionPolicy,
          class InputIterator, class OutputIterator,
-         class BinaryOperation>
+         class BinaryOperation,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
 OutputIterator
 transform(ExecutionPolicy&& exec,
           InputIterator first1, InputIterator last1,
@@ -558,8 +562,11 @@ OutputIterator adjacent_difference(ExecutionPolicy&& exec,
 
 
 // lexicographical_compare
-template <typename ExecutionPolicy, typename InputIt1, typename InputIt2>
-typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, bool>::type
+template <typename ExecutionPolicy, typename InputIt1, typename InputIt2,
+          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+          utils::EnableIf<utils::isInputIt<InputIt1>> = nullptr,
+          utils::EnableIf<utils::isInputIt<InputIt2>> = nullptr>
+bool
 lexicographical_compare(ExecutionPolicy&& exec,
                         InputIt1 first1, InputIt1 last1,
                         InputIt2 first2, InputIt2 last2) {
@@ -569,8 +576,12 @@ lexicographical_compare(ExecutionPolicy&& exec,
 }
 
 
-template <typename ExecutionPolicy, typename InputIt1, typename InputIt2, typename Compare>
-typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, bool>::type
+template <typename ExecutionPolicy, typename InputIt1, typename InputIt2,
+          typename Compare,
+          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+          utils::EnableIf<utils::isInputIt<InputIt1>> = nullptr,
+          utils::EnableIf<utils::isInputIt<InputIt2>> = nullptr>
+bool
 lexicographical_compare(ExecutionPolicy&& exec,
                         InputIt1 first1, InputIt1 last1,
                         InputIt2 first2, InputIt2 last2,

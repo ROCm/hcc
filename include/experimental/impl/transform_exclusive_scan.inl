@@ -1,5 +1,6 @@
 template<typename InputIterator, typename OutputIterator,
-         typename UnaryOperation, typename T, typename BinaryOperation>
+         typename UnaryOperation, typename T, typename BinaryOperation,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
 OutputIterator
 transform_exclusive_scan(InputIterator first, InputIterator last,
                          OutputIterator result,
@@ -14,8 +15,10 @@ transform_exclusive_scan(InputIterator first, InputIterator last,
 
 template<typename ExecutionPolicy,
          typename InputIterator, typename OutputIterator,
-         typename UnaryOperation, typename T, typename BinaryOperation>
-typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIterator>::type
+         typename UnaryOperation, typename T, typename BinaryOperation,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
+OutputIterator
 transform_exclusive_scan(ExecutionPolicy&& exec,
                          InputIterator first, InputIterator last,
                          OutputIterator result,

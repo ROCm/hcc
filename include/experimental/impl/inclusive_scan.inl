@@ -63,7 +63,8 @@ inclusive_scan_impl(RandomAccessIterator first, RandomAccessIterator last,
 } // namespace details
 
 template<class InputIterator, class OutputIterator,
-         class T, class BinaryOperation>
+         class T, class BinaryOperation,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
 OutputIterator
 inclusive_scan(InputIterator first, InputIterator last,
                OutputIterator result,
@@ -74,8 +75,10 @@ inclusive_scan(InputIterator first, InputIterator last,
 
 template<typename ExecutionPolicy,
          typename InputIterator, typename OutputIterator,
-         typename BinaryOperation, typename T>
-typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIterator>::type
+         typename BinaryOperation, typename T,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
+OutputIterator
 inclusive_scan(ExecutionPolicy&& exec,
                InputIterator first, InputIterator last,
                OutputIterator result,
@@ -84,7 +87,8 @@ inclusive_scan(ExecutionPolicy&& exec,
 }
 
 template<typename InputIterator, typename OutputIterator,
-         typename BinaryOperation>
+         typename BinaryOperation,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
 OutputIterator
 inclusive_scan(InputIterator first, InputIterator last,
                OutputIterator result,
@@ -95,8 +99,10 @@ inclusive_scan(InputIterator first, InputIterator last,
 
 template<typename ExecutionPolicy,
          typename InputIterator, typename OutputIterator,
-         typename BinaryOperation>
-typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIterator>::type
+         typename BinaryOperation,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
+OutputIterator
 inclusive_scan(ExecutionPolicy&& exec,
                InputIterator first, InputIterator last,
                OutputIterator result,
@@ -104,7 +110,8 @@ inclusive_scan(ExecutionPolicy&& exec,
   return inclusive_scan(first, last, result, binary_op);
 }
 
-template<typename InputIterator, typename OutputIterator>
+template<typename InputIterator, typename OutputIterator,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
 OutputIterator
 inclusive_scan(InputIterator first, InputIterator last,
                OutputIterator result) {
@@ -113,8 +120,10 @@ inclusive_scan(InputIterator first, InputIterator last,
 }
 
 template<typename ExecutionPolicy,
-         typename InputIterator, typename OutputIterator>
-typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIterator>::type
+         typename InputIterator, typename OutputIterator,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
+OutputIterator
 inclusive_scan(ExecutionPolicy&& exec,
                InputIterator first, InputIterator last,
                OutputIterator result) {

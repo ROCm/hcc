@@ -23,6 +23,7 @@ namespace experimental {
 namespace parallel {
 inline namespace v1 {
 
+#include "impl/type_utils.inl"
 #include "impl/reduce.inl"
 #include "impl/scan.inl"
 #include "impl/transform.inl"

@@ -70,7 +70,8 @@ exclusive_scan_impl(RandomAccessIterator first, RandomAccessIterator last,
 
 
 template<class InputIterator, class OutputIterator,
-         class T, class BinaryOperation>
+         class T, class BinaryOperation,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
 OutputIterator
 exclusive_scan(InputIterator first, InputIterator last,
                OutputIterator result,
@@ -81,8 +82,10 @@ exclusive_scan(InputIterator first, InputIterator last,
 
 template<typename ExecutionPolicy,
          typename InputIterator, typename OutputIterator,
-         typename T, typename BinaryOperation>
-typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIterator>::type
+         typename T, typename BinaryOperation,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
+OutputIterator
 exclusive_scan(ExecutionPolicy&& exec,
                InputIterator first, InputIterator last,
                OutputIterator result,
@@ -91,7 +94,8 @@ exclusive_scan(ExecutionPolicy&& exec,
 }
 
 template<typename InputIterator, typename OutputIterator,
-         typename T>
+         typename T,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
 OutputIterator
 exclusive_scan(InputIterator first, InputIterator last,
                OutputIterator result,
@@ -101,8 +105,10 @@ exclusive_scan(InputIterator first, InputIterator last,
 
 template<typename ExecutionPolicy,
          typename InputIterator, typename OutputIterator,
-         typename T>
-typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIterator>::type
+         typename T,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
+OutputIterator
 exclusive_scan(ExecutionPolicy&& exec,
                InputIterator first, InputIterator last,
                OutputIterator result,
