@@ -5,6 +5,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+/**
+ * @file amp.h
+ * C++ AMP API.
+ */
+
 #pragma once
 
 #include <kalmar_defines.h>
@@ -127,65 +132,288 @@ public:
       }
 };
 
-
+/**
+ * Represents a physical accelerated computing device. An object of
+ * this type can be created by enumerating the available devices, or
+ * getting the default device.
+ */
 class accelerator
 {
-  accelerator(Kalmar::KalmarDevice* pDev) : pDev(pDev) {}
 public:
-  static const wchar_t default_accelerator[];   // = L"default"
-  static const wchar_t cpu_accelerator[];       // = L"cpu"
+  
+    /** @name Accelerator paths. 
+     * These are static constant string literals that represent device paths for
+     * known accelerators, or in the case of "default_accelerator", direct the
+     * runtime to choose an accelerator automatically.
+     */
+  
+    /** @{ */
+  
+    /**
+     * default_accelerator: The string L"default" represents the default
+     * accelerator, which directs the runtime to choose the fastest accelerator
+     * available. The selection criteria are discussed in section 3.2.1 Default
+     * Accelerator.
+     */
+    static const wchar_t default_accelerator[];   // = L"default"
+  
+    /**
+     * cpu_accelerator: The string L"cpu" represents the host system. This
+     * accelerator is used to provide a location for system-allocated memory
+     * such as host arrays and staging arrays. It is not a valid target for
+     * accelerated computations.
+     */
+    static const wchar_t cpu_accelerator[];       // = L"cpu"
+  
+    /** @} */
+  
+    /**
+     * Constructs a new accelerator object that represents the default
+     * accelerator. This is equivalent to calling the constructor 
+     * @code{.cpp}
+     * accelerator(accelerator::default_accelerator)
+     * @endcode
+     *
+     * The actual accelerator chosen as the default can be affected by calling
+     * accelerator::set_default().
+     */
+    accelerator() : accelerator(default_accelerator) {}
+  
+    /**
+     * Constructs a new accelerator object that represents the physical device
+     * named by the "path" argument. If the path represents an unknown or
+     * unsupported device, an exception will be thrown.
+     *
+     * The path can be one of the following:
+     * 1. accelerator::default_accelerator (or L"default"), which represents the
+     *    path of the fastest accelerator available, as chosen by the runtime.
+     * 2. accelerator::cpu_accelerator (or L"cpu"), which represents the CPU.
+     *    Note that parallel_for_each shall not be invoked over this accelerator.
+     * 3. A valid device path that uniquely identifies a hardware accelerator
+     *    available on the host system.
+     *
+     * @param[in] path The device path of this accelerator.
+     */
+    explicit accelerator(const std::wstring& path)
+        : pDev(Kalmar::getContext()->getDevice(path)) {}
+  
+    /**
+     * Copy constructs an accelerator object. This function does a shallow copy
+     * with the newly created accelerator object pointing to the same underlying
+     * device as the passed accelerator parameter.
+     *
+     * @param[in] other The accelerator object to be copied.
+     */
+    accelerator(const accelerator& other) : pDev(other.pDev) {}
+  
+    /**
+     * Returns a std::vector of accelerator objects (in no specific
+     * order) representing all accelerators that are available, including
+     * reference accelerators and WARP accelerators if available.
+     *
+     * @return A vector of accelerators.
+     */
+    static std::vector<accelerator> get_all() {
+        auto Devices = Kalmar::getContext()->getDevices();
+        std::vector<accelerator> ret(Devices.size());
+        for (std::size_t i = 0; i < ret.size(); ++i)
+            ret[i] = Devices[i];
+        return std::move(ret);
+    }
+  
+    /**
+     * Sets the default accelerator to the device path identified by the "path"
+     * argument. See the constructor accelerator(const std::wstring& path)
+     * for a description of the allowable path strings.
+     *
+     * This establishes a process-wide default accelerator and influences all
+     * subsequent operations that might use a default accelerator.
+     *
+     * @param[in] path The device path of the default accelerator.
+     * @return A Boolean flag indicating whether the default was set. If the
+     *         default has already been set for this process, this value will be
+     *         false, and the function will have no effect.
+     */
+    static bool set_default(const std::wstring& path) {
+        return Kalmar::getContext()->set_default(path);
+    }
 
-  accelerator() : accelerator(default_accelerator) {}
-  explicit accelerator(const std::wstring& path)
-      : pDev(Kalmar::getContext()->getDevice(path)) {}
-  accelerator(const accelerator& other) : pDev(other.pDev) {}
+    /**
+     * Returns an accelerator_view which when passed as the first argument to a
+     * parallel_for_each call causes the runtime to automatically select the
+     * target accelerator_view for executing the parallel_for_each kernel. In
+     * other words, a parallel_for_each invocation with the accelerator_view
+     * returned by get_auto_selection_view() is the same as a parallel_for_each
+     * invocation without an accelerator_view argument.
+     *
+     * For all other purposes, the accelerator_view returned by
+     * get_auto_selection_view() behaves the same as the default accelerator_view
+     * of the default accelerator (aka accelerator().get_default_view() ).
+     *
+     * @return An accelerator_view than can be used to indicate auto selection
+     *         of the target for a parallel_for_each execution.
+     */
+    static accelerator_view get_auto_selection_view() {
+        return Kalmar::getContext()->auto_select();
+    }
 
-  static std::vector<accelerator> get_all() {
-      auto Devices = Kalmar::getContext()->getDevices();
-      std::vector<accelerator> ret(Devices.size());
-      for (std::size_t i = 0; i < ret.size(); ++i)
-          ret[i] = Devices[i];
-      return std::move(ret);
-  }
-  static bool set_default(const std::wstring& path) {
-      return Kalmar::getContext()->set_default(path);
-  }
-  static accelerator_view get_auto_selection_view() { return Kalmar::getContext()->auto_select(); }
+    /**
+     * Assigns an accelerator object to "this" accelerator object and returns a
+     * reference to "this" object. This function does a shallow assignment with
+     * the newly created accelerator object pointing to the same underlying
+     * device as the passed accelerator parameter.
+     *
+     * @param other The accelerator object to be assigned from.
+     * @return A reference to "this" accelerator object.
+     */
+    accelerator& operator=(const accelerator& other) {
+        pDev = other.pDev;
+        return *this;
+    }
 
-  accelerator& operator=(const accelerator& other) {
-      pDev = other.pDev;
-      return *this;
-  }
+    /**
+     * Returns the default accelerator_view associated with the accelerator.
+     * The queuing_mode of the default accelerator_view is queuing_mode_automatic.
+     *
+     * @return The default accelerator_view object associated with the accelerator.
+     */
+    accelerator_view get_default_view() const { return pDev->get_default_queue(); }
 
-  std::wstring get_device_path() const { return pDev->get_path(); }
-  unsigned int get_version() const { return 0; }
-  std::wstring get_description() const { return pDev->get_description(); }
-  bool get_is_debug() const { return false; }
-  bool get_is_emulated() const { return pDev->is_emulated(); }
-  bool get_has_display() const { return false; }
-  bool get_supports_double_precision() const { return pDev->is_double(); }
-  bool get_supports_limited_double_precision() const { return pDev->is_lim_double(); }
-  size_t get_dedicated_memory() const { return pDev->get_mem(); }
-  accelerator_view get_default_view() const { return pDev->get_default_queue(); }
-  access_type get_default_cpu_access_type() const { return pDev->get_access(); }
-  bool get_supports_cpu_shared_memory() const { return pDev->is_unified(); }
+    /**
+     * Creates and returns a new accelerator view on the accelerator with the
+     * supplied queuing mode.
+     *
+     * @param[in] qmode The queuing mode of the accelerator_view to be created.
+     *                  See "Queuing Mode". The default value would be
+     *                  queueing_mdoe_automatic if not specified.
+     */
+    accelerator_view create_view(queuing_mode qmode = queuing_mode_automatic) {
+        auto pQueue = pDev->createQueue();
+        pQueue->set_mode(qmode);
+        return pQueue;
+    }
 
-  bool set_default_cpu_access_type(access_type type) {
-      pDev->set_access(type);
-      return true;
-  }
-  accelerator_view create_view(queuing_mode mode = queuing_mode_automatic) {
-      auto pQueue = pDev->createQueue();
-      pQueue->set_mode(mode);
-      return pQueue;
-  }
+    /**
+     * Compares "this" accelerator with the passed accelerator object to
+     * determine if they represent the same underlying device.
+     *
+     * @param[in] other The accelerator object to be compared against.
+     * @return A boolean value indicating whether the passed accelerator
+     *         object is same as "this" accelerator.
+     */
+    bool operator==(const accelerator& other) const { return pDev == other.pDev; }
 
+    /**
+     * Compares "this" accelerator with the passed accelerator object to
+     * determine if they represent different devices.
+     *
+     * @param[in] other The accelerator object to be compared against.
+     * @return A boolean value indicating whether the passed accelerator
+     *         object is different from "this" accelerator.
+     */
+    bool operator!=(const accelerator& other) const { return !(*this == other); }
 
-  bool operator==(const accelerator& other) const { return pDev == other.pDev; }
-  bool operator!=(const accelerator& other) const { return !(*this == other); }
+    /**
+     * Sets the default_cpu_access_type for this accelerator.
+     *
+     * The default_cpu_access_type is used for arrays created on this
+     * accelerator or for implicit array_view memory allocations accessed on
+     * this this accelerator.
+     *
+     * This method only succeeds if the default_cpu_access_type for the
+     * accelerator has not already been overriden by a previous call to this 
+     * method and the runtime selected default_cpu_access_type for this 
+     * accelerator has not yet been used for allocating an array or for an 
+     * implicit array_view memory allocation on this accelerator.
+     *
+     * @param[in] default_cpu_access_type The default cpu access_type to be used
+     *            for array/array_view memory allocations on this accelerator.
+     * @return A boolean value indicating if the default cpu access_type for the
+     *         accelerator was successfully set.
+     */
+    bool set_default_cpu_access_type(access_type default_cpu_access_type) {
+        pDev->set_access(default_cpu_access_type);
+        return true;
+    }
+
+    /**
+     * Returns a system-wide unique device instance path that matches the
+     * "Device Instance Path" property for the device in Device Manager, or one
+     * of the predefined path constants cpu_accelerator.
+     */
+    std::wstring get_device_path() const { return pDev->get_path(); }
+
+    /**
+     * Returns a short textual description of the accelerator device.
+     */
+    std::wstring get_description() const { return pDev->get_description(); }
+  
+    /**
+     * Returns a 32-bit unsigned integer representing the version number of this
+     * accelerator. The format of the integer is major.minor, where the major
+     * version number is in the high-order 16 bits, and the minor version number
+     * is in the low-order bits.
+     */
+    unsigned int get_version() const { return 0; }
+
+    /**
+     * This property indicates that the accelerator may be shared by (and thus
+     * have interference from) the operating system or other system software
+     * components for rendering purposes. A C++ AMP implementation may set this
+     * property to false should such interference not be applicable for a
+     * particular accelerator.
+     */
+    bool get_has_display() const { return false; }
+
+    /**
+     * Returns the amount of dedicated memory (in KB) on an accelerator device.
+     * There is no guarantee that this amount of memory is actually available to
+     * use.
+     */
+    size_t get_dedicated_memory() const { return pDev->get_mem(); }
+
+    /**
+     * Returns a Boolean value indicating whether this accelerator supports
+     * double-precision (double) computations. When this returns true,
+     * supports_limited_double_precision also returns true.
+     */
+    bool get_supports_double_precision() const { return pDev->is_double(); }
+
+    /**
+     * Returns a boolean value indicating whether the accelerator has limited
+     * double precision support (excludes double division, precise_math
+     * functions, int to double, double to int conversions) for a
+     * parallel_for_each kernel.
+     */
+    bool get_supports_limited_double_precision() const { return pDev->is_lim_double(); }
+
+    /**
+     * Returns a boolean value indicating whether the accelerator supports
+     * debugging.
+     */
+    bool get_is_debug() const { return false; }
+
+    /**
+     * Returns a boolean value indicating whether the accelerator is emulated.
+     * This is true, for example, with the reference, WARP, and CPU accelerators.
+     */
+    bool get_is_emulated() const { return pDev->is_emulated(); }
+
+    /**
+     * Returns a boolean value indicating whether the accelerator supports memory
+     * accessible both by the accelerator and the CPU.
+     */
+    bool get_supports_cpu_shared_memory() const { return pDev->is_unified(); }
+
+    /**
+     * Get the default cpu access_type for buffers created on this accelerator
+     */
+    access_type get_default_cpu_access_type() const { return pDev->get_access(); }
+
 private:
-  friend class accelerator_view;
-  Kalmar::KalmarDevice* pDev;
+    accelerator(Kalmar::KalmarDevice* pDev) : pDev(pDev) {}
+    friend class accelerator_view;
+    Kalmar::KalmarDevice* pDev;
 };
 
 inline accelerator accelerator_view::get_accelerator() const { return pQueue->getDev(); }
