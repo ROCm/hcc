@@ -551,7 +551,9 @@ private:
     Kalmar::KalmarDevice* pDev;
 };
 
-inline accelerator accelerator_view::get_accelerator() const { return pQueue->getDev(); }
+// ------------------------------------------------------------------------
+// completion_future
+// ------------------------------------------------------------------------
 
 class completion_future {
 public:
@@ -2490,7 +2492,12 @@ void parallel_for_each(tiled_extent<D0> compute_domain, const Kernel& f) {
     parallel_for_each(av, compute_domain, f);
 }
 
-// Specialization of AMP classes/templates
+// ------------------------------------------------------------------------
+// member function implementations
+// ------------------------------------------------------------------------
+
+inline accelerator accelerator_view::get_accelerator() const { return pQueue->getDev(); }
+
 inline completion_future accelerator_view::create_marker(){ return completion_future(); }
 
 /** @{ */
