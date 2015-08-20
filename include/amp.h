@@ -55,6 +55,10 @@ namespace Concurrency {
 
 using namespace Kalmar::enums;
 
+// ------------------------------------------------------------------------
+// accelerator_view
+// ------------------------------------------------------------------------
+
 /**
  * Represents a logical (isolated) accelerator view of a compute accelerator.
  * An object of this type can be obtained by calling the default_view property
@@ -260,6 +264,10 @@ public:
 #endif
     }
 };
+
+// ------------------------------------------------------------------------
+// accelerator
+// ------------------------------------------------------------------------
 
 /**
  * Represents a physical accelerated computing device. An object of
