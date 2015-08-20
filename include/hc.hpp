@@ -1241,57 +1241,194 @@ extent<N> operator%(int value, const extent<N>& ext) restrict(amp,cpu) {
 // tiled_extent
 // ------------------------------------------------------------------------
 
-// tile extent supporting dynamic tile size
+/**
+ * Represents an extent subdivided into tiles.
+ * Tile sizes can be specified at runtime.
+ *
+ * @tparam N The dimension of the extent and the tile.
+ */
 template <int N>
 class tiled_extent : public extent<N> {
 public:
-  static const int rank = N;
-  int tile_dim[N];
-  tiled_extent() restrict(amp,cpu) : extent<N>(), tile_dim{0} {}
-  tiled_extent(const tiled_extent& other) restrict(amp,cpu) : extent<N>(other) {
-    for (int i = 0; i < N; ++i) {
-      tile_dim[i] = other.tile_dim[i];
+    static const int rank = N;
+  
+    /**
+     * Tile size for each dimension.
+     */
+    int tile_dim[N];
+  
+    /**
+     * Default constructor. The origin and extent is default-constructed and
+     * thus zero.
+     */
+    tiled_extent() restrict(amp,cpu) : extent<N>(), tile_dim{0} {}
+
+    /**
+     * Copy constructor. Constructs a new tiled_extent from the supplied
+     * argument "other".
+     *
+     * @param[in] other An object of type tiled_extent from which to initialize
+     *                  this new extent.
+     */
+    tiled_extent(const tiled_extent& other) restrict(amp,cpu) : extent<N>(other) {
+      for (int i = 0; i < N; ++i) {
+        tile_dim[i] = other.tile_dim[i];
+      }
     }
-  }
 };
 
-// tile extent supporting dynamic tile size
-// 1D specialization
+/**
+ * Represents an extent subdivided into tiles.
+ * Tile sizes can be specified at runtime.
+ * This class is 1D specialization of tiled_extent.
+ */
 template <>
 class tiled_extent<1> : public extent<1> {
 public:
-  static const int rank = 1;
-  int tile_dim[1];
-  tiled_extent() restrict(amp,cpu) : extent(0), tile_dim{0} {}
-  tiled_extent(int e0, int t0) restrict(amp,cpu) : extent(e0), tile_dim{t0} {}
-  tiled_extent(const tiled_extent<1>& other) restrict(amp,cpu) : extent(other[0]), tile_dim{other.tile_dim[0]} {}
-  tiled_extent(const extent<1>& ext, int t0) restrict(amp,cpu) : extent(ext), tile_dim{t0} {} 
+    static const int rank = 1;
+
+    /**
+     * Tile size for each dimension.
+     */
+    int tile_dim[1];
+
+    /**
+     * Default constructor. The origin and extent is default-constructed and
+     * thus zero.
+     */
+    tiled_extent() restrict(amp,cpu) : extent(0), tile_dim{0} {}
+
+    /**
+     * Construct an tiled extent with the size of extent and the size of tile
+     * specified.
+     *
+     * @param[in] e0 Size of extent.
+     * @param[in] t0 Size of tile.
+     */
+    tiled_extent(int e0, int t0) restrict(amp,cpu) : extent(e0), tile_dim{t0} {}
+
+    /**
+     * Copy constructor. Constructs a new tiled_extent from the supplied
+     * argument "other".
+     *
+     * @param[in] other An object of type tiled_extent from which to initialize
+     *                  this new extent.
+     */
+    tiled_extent(const tiled_extent<1>& other) restrict(amp,cpu) : extent(other[0]), tile_dim{other.tile_dim[0]} {}
+
+
+    /**
+     * Constructs a tiled_extent<N> with the extent "ext".
+     *
+     * @param[in] ext The extent of this tiled_extent
+     * @param[in] t0 Size of tile.
+     */
+    tiled_extent(const extent<1>& ext, int t0) restrict(amp,cpu) : extent(ext), tile_dim{t0} {} 
 };
 
-// tile extent supporting dynamic tile size
-// 2D specialization
+/**
+ * Represents an extent subdivided into tiles.
+ * Tile sizes can be specified at runtime.
+ * This class is 2D specialization of tiled_extent.
+ */
 template <>
 class tiled_extent<2> : public extent<2> {
 public:
-  static const int rank = 2;
-  int tile_dim[2];
-  tiled_extent() restrict(amp,cpu) : extent(0, 0), tile_dim{0, 0} {}
-  tiled_extent(int e0, int e1, int t0, int t1) restrict(amp,cpu) : extent(e0, e1), tile_dim{t0, t1} {}
-  tiled_extent(const tiled_extent<2>& other) restrict(amp,cpu) : extent(other[0], other[1]), tile_dim{other.tile_dim[0], other.tile_dim[1]} {}
-  tiled_extent(const extent<2>& ext, int t0, int t1) restrict(amp,cpu) : extent(ext), tile_dim{t0, t1} {}
+    static const int rank = 2;
+
+    /**
+     * Tile size for each dimension.
+     */
+    int tile_dim[2];
+
+    /**
+     * Default constructor. The origin and extent is default-constructed and
+     * thus zero.
+     */
+    tiled_extent() restrict(amp,cpu) : extent(0, 0), tile_dim{0, 0} {}
+
+    /**
+     * Construct an tiled extent with the size of extent and the size of tile
+     * specified.
+     *
+     * @param[in] e0 Size of extent in the 1st dimension.
+     * @param[in] e1 Size of extent in the 2nd dimension.
+     * @param[in] t0 Size of tile in the 1st dimension.
+     * @param[in] t1 Size of tile in the 2nd dimension.
+     */
+    tiled_extent(int e0, int e1, int t0, int t1) restrict(amp,cpu) : extent(e0, e1), tile_dim{t0, t1} {}
+
+    /**
+     * Copy constructor. Constructs a new tiled_extent from the supplied
+     * argument "other".
+     *
+     * @param[in] other An object of type tiled_extent from which to initialize
+     *                  this new extent.
+     */
+    tiled_extent(const tiled_extent<2>& other) restrict(amp,cpu) : extent(other[0], other[1]), tile_dim{other.tile_dim[0], other.tile_dim[1]} {}
+
+    /**
+     * Constructs a tiled_extent<N> with the extent "ext".
+     *
+     * @param[in] ext The extent of this tiled_extent
+     * @param[in] t0 Size of tile in the 1st dimension.
+     * @param[in] t1 Size of tile in the 2nd dimension.
+     */
+    tiled_extent(const extent<2>& ext, int t0, int t1) restrict(amp,cpu) : extent(ext), tile_dim{t0, t1} {}
 };
 
-// tile extent supporting dynamic tile size
-// 3D specialization
+/**
+ * Represents an extent subdivided into tiles.
+ * Tile sizes can be specified at runtime.
+ * This class is 3D specialization of tiled_extent.
+ */
 template <>
 class tiled_extent<3> : public extent<3> {
 public:
-  static const int rank = 3;
-  int tile_dim[3];
-  tiled_extent() restrict(amp,cpu) : extent(0, 0, 0), tile_dim{0, 0, 0} {}
-  tiled_extent(int e0, int e1, int e2, int t0, int t1, int t2) restrict(amp,cpu) : extent(e0, e1, e2), tile_dim{t0, t1, t2} {}
-  tiled_extent(const tiled_extent<3>& other) restrict(amp,cpu) : extent(other[0], other[1], other[2]), tile_dim{other.tile_dim[0], other.tile_dim[1], other.tile_dim[2]} {}
-  tiled_extent(const extent<3>& ext, int t0, int t1, int t2) restrict(amp,cpu) : extent(ext), tile_dim{t0, t1, t2} {}
+    static const int rank = 3;
+
+    /**
+     * Tile size for each dimension.
+     */
+    int tile_dim[3];
+
+    /**
+     * Default constructor. The origin and extent is default-constructed and
+     * thus zero.
+     */
+    tiled_extent() restrict(amp,cpu) : extent(0, 0, 0), tile_dim{0, 0, 0} {}
+
+    /**
+     * Construct an tiled extent with the size of extent and the size of tile
+     * specified.
+     *
+     * @param[in] e0 Size of extent in the 1st dimension.
+     * @param[in] e1 Size of extent in the 2nd dimension.
+     * @param[in] e2 Size of extent in the 3rd dimension.
+     * @param[in] t0 Size of tile in the 1st dimension.
+     * @param[in] t1 Size of tile in the 2nd dimension.
+     * @param[in] t2 Size of tile in the 3rd dimension.
+     */
+    tiled_extent(int e0, int e1, int e2, int t0, int t1, int t2) restrict(amp,cpu) : extent(e0, e1, e2), tile_dim{t0, t1, t2} {}
+
+    /**
+     * Copy constructor. Constructs a new tiled_extent from the supplied
+     * argument "other".
+     *
+     * @param[in] other An object of type tiled_extent from which to initialize
+     *                  this new extent.
+     */
+    tiled_extent(const tiled_extent<3>& other) restrict(amp,cpu) : extent(other[0], other[1], other[2]), tile_dim{other.tile_dim[0], other.tile_dim[1], other.tile_dim[2]} {}
+
+    /**
+     * Constructs a tiled_extent<N> with the extent "ext".
+     *
+     * @param[in] ext The extent of this tiled_extent
+     * @param[in] t0 Size of tile in the 1st dimension.
+     * @param[in] t1 Size of tile in the 2nd dimension.
+     * @param[in] t2 Size of tile in the 3rd dimension.
+     */
+    tiled_extent(const extent<3>& ext, int t0, int t1, int t2) restrict(amp,cpu) : extent(ext), tile_dim{t0, t1, t2} {}
 };
 
 // ------------------------------------------------------------------------
