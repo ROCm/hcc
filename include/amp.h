@@ -354,6 +354,7 @@ public:
      * version number is in the high-order 16 bits, and the minor version number
      * is in the low-order bits.
      */
+    // FIXME: dummy implementation now
     unsigned int get_version() const { return 0; }
 
     /**
@@ -363,6 +364,7 @@ public:
      * property to false should such interference not be applicable for a
      * particular accelerator.
      */
+    // FIXME: dummy implementation now
     bool get_has_display() const { return false; }
 
     /**
@@ -391,6 +393,7 @@ public:
      * Returns a boolean value indicating whether the accelerator supports
      * debugging.
      */
+    // FIXME: dummy implementation now
     bool get_is_debug() const { return false; }
 
     /**
