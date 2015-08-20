@@ -180,10 +180,36 @@ private:
 };
 
 // transform (unary version)
+template <class ExecutionPolicy,
+          class InputIterator, class OutputIterator,
+          class UnaryOperation>
+OutputIterator
+transform(ExecutionPolicy&& exec,
+          InputIterator first, InputIterator last,
+          OutputIterator d_first,
+          UnaryOperation unary_op) {
+  return details::transform_impl(first, last, d_first, unary_op,
+           typename std::iterator_traits<InputIterator>::iterator_category());
+}
+
+// transform (binary version)
+template<class ExecutionPolicy,
+         class InputIterator, class OutputIterator,
+         class BinaryOperation>
+OutputIterator
+transform(ExecutionPolicy&& exec,
+          InputIterator first1, InputIterator last1,
+          InputIterator first2, OutputIterator d_first,
+          BinaryOperation binary_op) {
+  return details::transform_impl(first1, last1, first2, d_first, binary_op,
+           typename std::iterator_traits<InputIterator>::iterator_category());
+}
+
+// transform (unary version)
 template <typename ExecutionPolicy,
           typename InputIterator, typename OutputIterator, typename Function>
 __attribute__((noinline,used))
-OutputIterator transform(ExecutionPolicy&& exec,
+OutputIterator __transform(ExecutionPolicy&& exec,
               InputIterator first, InputIterator last,
               OutputIterator d_first,
               Function f) restrict(cpu,amp) {
@@ -208,7 +234,7 @@ OutputIterator transform(ExecutionPolicy&& exec,
 template <typename ExecutionPolicy,
           typename InputIterator, typename OutputIterator, typename Function>
 __attribute__((noinline,used))
-OutputIterator transform(ExecutionPolicy&& exec,
+OutputIterator __transform(ExecutionPolicy&& exec,
               InputIterator first, InputIterator last,
               InputIterator first2,
               OutputIterator d_first,

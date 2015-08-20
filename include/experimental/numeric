@@ -25,6 +25,7 @@ inline namespace v1 {
 
 #include "impl/reduce.inl"
 #include "impl/scan.inl"
+#include "impl/transform.inl"
 #include "impl/exclusive_scan.inl"
 #include "impl/inclusive_scan.inl"
 #include "impl/transform_reduce.inl"
