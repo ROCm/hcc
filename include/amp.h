@@ -656,91 +656,19 @@ private:
     template <typename T, int N> friend class array_view;
 };
 
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-template <typename Ker, typename Ti>
-void bar_wrapper(Ker *f, Ti *t)
-{
-    (*f)(*t);
-}
-struct barrier_t {
-    std::unique_ptr<ucontext_t[]> ctx;
-    int idx;
-    barrier_t (int a) :
-        ctx(new ucontext_t[a + 1]) {}
-    template <typename Ti, typename Ker>
-    void setctx(int x, char *stack, Ker& f, Ti* tidx, int S) {
-        getcontext(&ctx[x]);
-        ctx[x].uc_stack.ss_sp = stack;
-        ctx[x].uc_stack.ss_size = S;
-        ctx[x].uc_link = &ctx[x - 1];
-        makecontext(&ctx[x], (void (*)(void))bar_wrapper<Ker, Ti>, 2, &f, tidx);
-    }
-    void swap(int a, int b) {
-        swapcontext(&ctx[a], &ctx[b]);
-    }
-    void wait() {
-        --idx;
-        swapcontext(&ctx[idx + 1], &ctx[idx]);
-    }
-};
-#endif
+// ------------------------------------------------------------------------
+// member function implementations
+// ------------------------------------------------------------------------
 
-#ifndef CLK_LOCAL_MEM_FENCE
-#define CLK_LOCAL_MEM_FENCE (1)
-#endif
+inline accelerator accelerator_view::get_accelerator() const { return pQueue->getDev(); }
 
-#ifndef CLK_GLOBAL_MEM_FENCE
-#define CLK_GLOBAL_MEM_FENCE (2)
-#endif
+inline completion_future accelerator_view::create_marker(){ return completion_future(); }
 
-// C++AMP LPM 4.5
-class tile_barrier {
- public:
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  using pb_t = std::shared_ptr<barrier_t>;
-  tile_barrier(pb_t pb) : pbar(pb) {}
-  tile_barrier(const tile_barrier& other) restrict(amp,cpu) : pbar(other.pbar) {}
-#else
-  tile_barrier(const tile_barrier& other) restrict(amp,cpu) {}
-#endif
-  void wait() const restrict(amp) {
-#if __KALMAR_ACCELERATOR__ == 1
-    wait_with_all_memory_fence();
-#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-      pbar->wait();
-#endif
-  }
-  void wait_with_all_memory_fence() const restrict(amp) {
-#if __KALMAR_ACCELERATOR__ == 1
-    amp_barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
-#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-      pbar->wait();
-#endif
-  }
-  void wait_with_global_memory_fence() const restrict(amp) {
-#if __KALMAR_ACCELERATOR__ == 1
-    amp_barrier(CLK_GLOBAL_MEM_FENCE);
-#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-      pbar->wait();
-#endif
-  }
-  void wait_with_tile_static_memory_fence() const restrict(amp) {
-#if __KALMAR_ACCELERATOR__ == 1
-    amp_barrier(CLK_LOCAL_MEM_FENCE);
-#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-      pbar->wait();
-#endif
-  }
- private:
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  tile_barrier() restrict(amp,cpu) = default;
-  pb_t pbar;
-#else
-  tile_barrier() restrict(amp) {}
-#endif
-  template<int D0, int D1, int D2>
-  friend class tiled_index;
-};
+
+
+// ------------------------------------------------------------------------
+// extent
+// ------------------------------------------------------------------------
 
 /**
  * Represents a unique position in N-dimensional space.
@@ -1064,6 +992,92 @@ private:
     template <int K, typename Q1, typename Q2> friend struct Kalmar::amp_helper;
 };
 
+
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+template <typename Ker, typename Ti>
+void bar_wrapper(Ker *f, Ti *t)
+{
+    (*f)(*t);
+}
+struct barrier_t {
+    std::unique_ptr<ucontext_t[]> ctx;
+    int idx;
+    barrier_t (int a) :
+        ctx(new ucontext_t[a + 1]) {}
+    template <typename Ti, typename Ker>
+    void setctx(int x, char *stack, Ker& f, Ti* tidx, int S) {
+        getcontext(&ctx[x]);
+        ctx[x].uc_stack.ss_sp = stack;
+        ctx[x].uc_stack.ss_size = S;
+        ctx[x].uc_link = &ctx[x - 1];
+        makecontext(&ctx[x], (void (*)(void))bar_wrapper<Ker, Ti>, 2, &f, tidx);
+    }
+    void swap(int a, int b) {
+        swapcontext(&ctx[a], &ctx[b]);
+    }
+    void wait() {
+        --idx;
+        swapcontext(&ctx[idx + 1], &ctx[idx]);
+    }
+};
+#endif
+
+#ifndef CLK_LOCAL_MEM_FENCE
+#define CLK_LOCAL_MEM_FENCE (1)
+#endif
+
+#ifndef CLK_GLOBAL_MEM_FENCE
+#define CLK_GLOBAL_MEM_FENCE (2)
+#endif
+
+// C++AMP LPM 4.5
+class tile_barrier {
+ public:
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+  using pb_t = std::shared_ptr<barrier_t>;
+  tile_barrier(pb_t pb) : pbar(pb) {}
+  tile_barrier(const tile_barrier& other) restrict(amp,cpu) : pbar(other.pbar) {}
+#else
+  tile_barrier(const tile_barrier& other) restrict(amp,cpu) {}
+#endif
+  void wait() const restrict(amp) {
+#if __KALMAR_ACCELERATOR__ == 1
+    wait_with_all_memory_fence();
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+      pbar->wait();
+#endif
+  }
+  void wait_with_all_memory_fence() const restrict(amp) {
+#if __KALMAR_ACCELERATOR__ == 1
+    amp_barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+      pbar->wait();
+#endif
+  }
+  void wait_with_global_memory_fence() const restrict(amp) {
+#if __KALMAR_ACCELERATOR__ == 1
+    amp_barrier(CLK_GLOBAL_MEM_FENCE);
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+      pbar->wait();
+#endif
+  }
+  void wait_with_tile_static_memory_fence() const restrict(amp) {
+#if __KALMAR_ACCELERATOR__ == 1
+    amp_barrier(CLK_LOCAL_MEM_FENCE);
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+      pbar->wait();
+#endif
+  }
+ private:
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+  tile_barrier() restrict(amp,cpu) = default;
+  pb_t pbar;
+#else
+  tile_barrier() restrict(amp) {}
+#endif
+  template<int D0, int D1, int D2>
+  friend class tiled_index;
+};
 
 // C++AMP LPM 4.4.1
 
@@ -2493,12 +2507,8 @@ void parallel_for_each(tiled_extent<D0> compute_domain, const Kernel& f) {
 }
 
 // ------------------------------------------------------------------------
-// member function implementations
+// global functions for extent
 // ------------------------------------------------------------------------
-
-inline accelerator accelerator_view::get_accelerator() const { return pQueue->getDev(); }
-
-inline completion_future accelerator_view::create_marker(){ return completion_future(); }
 
 /** @{ */
 /**
