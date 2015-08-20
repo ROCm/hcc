@@ -203,35 +203,107 @@ struct amp_helper<1, _Tp1, _Tp2>
     }
 };
 
+/**
+ * Represents a unique position in N-dimensional space.
+ *
+ * @param N The dimensionality space into which this index applies. Special
+ *          constructors are supplied for the cases where @f$N \in \{1,2,3\}@f$, but N
+ *          can be any integer greater than 0.
+ */
 template <int N>
 class index {
 public:
+    /**
+     * A static member of index<N> that contains the rank of this index.
+     */
     static const int rank = N;
+
+    /**
+     * The element type of index<N>.
+     */
     typedef int value_type;
 
+    /**
+     * Default constructor. The value at each dimension is initialized to zero.
+     * Thus, "index<3> ix;" initializes the variable to the position (0,0,0).
+     */
     index() restrict(amp,cpu) : base_() {
         static_assert( N>0, "rank should bigger than 0 ");
     };
+
+    /**
+     * Copy constructor. Constructs a new index<N> from the supplied argument
+     * "other".
+     *
+     * @param[in] other An object of type index<N> from which to initialize
+     *                  this new index.
+     */
     index(const index& other) restrict(amp,cpu)
         : base_(other.base_) {}
+
+    /** @{ */
+    /**
+     * Constructs an index<N> with the coordinate values provided by @f$i_{0..2}@f$.
+     * These are specialized constructors that are only valid when the rank of
+     * the index @f$N \in \{1,2,3\}@f$. Invoking a specialized constructor whose argument
+     * @f$count \ne N@f$ will result in a compilation error.
+     *
+     * @param i0 The component values of the index vector.
+     */
+    explicit index(int i0) restrict(amp,cpu)
+        : base_(i0) {}
+
     template <typename ..._Tp>
         explicit index(_Tp ... __t) restrict(amp,cpu)
         : base_(__t...) {
             static_assert(sizeof...(_Tp) <= 3, "Explicit constructor with rank greater than 3 is not allowed");
             static_assert(sizeof...(_Tp) == N, "rank should be consistency");
         }
-    explicit index(int component) restrict(amp,cpu)
-        : base_(component) {}
-    explicit index(int components[]) restrict(amp,cpu)
-        : base_(components) {}
+
+    /** @} */
+
+    /**
+     * Constructs an index<N> with the coordinate values provided the array of
+     * int component values. If the coordinate array @f$length \ne N@f$, the
+     * behavior is undefined. If the array value is NULL or not a valid
+     * pointer, the behavior is undefined.
+     *
+     * @param[in] components An array of N int values.
+     */
     explicit index(const int components[]) restrict(amp,cpu)
         : base_(components) {}
 
-    index& operator=(const index& __t) restrict(amp,cpu) {
-        base_.operator=(__t.base_);
+    /**
+     * Constructs an index<N> with the coordinate values provided the array of
+     * int component values. If the coordinate array @f$length \ne N@f$, the
+     * behavior is undefined. If the array value is NULL or not a valid
+     * pointer, the behavior is undefined.
+     *
+     * @param[in] components An array of N int values.
+     */
+    // FIXME: this function is not defined in C++AMP specification.
+    explicit index(int components[]) restrict(amp,cpu)
+        : base_(components) {}
+
+    /**
+     * Assigns the component values of "other" to this index<N> object.
+     *
+     * @param[in] other An object of type index<N> from which to copy into this
+     *                  index.
+     * @return Returns *this.
+     */
+    index& operator=(const index& other) restrict(amp,cpu) {
+        base_.operator=(other.base_);
         return *this;
     }
 
+    /** @{ */
+    /**
+     * Returns the index component value at position c.
+     *
+     * @param[in] c The dimension axis whose coordinate is to be accessed.
+     * @return A the component value at position c.
+     */
     int operator[] (unsigned int c) const restrict(amp,cpu) {
         return base_[c];
     }
@@ -239,53 +311,103 @@ public:
         return base_[c];
     }
 
+    /** @} */
+
+    /** @{ */
+    /**
+     * Compares two objects of index<N>.
+     *
+     * The expression
+     * @f$leftIdx \oplus rightIdx@f$
+     * is true if @f$leftIdx[i] \oplus rightIdx[i]@f$ for every i from 0 to N-1.
+     *
+     * @param[in] other The right-hand index<N> to be compared.
+     */
+    // FIXME: the signature is not entirely the same as defined in:
+    //        C++AMP spec v1.2 #1137
     bool operator== (const index& other) const restrict(amp,cpu) {
         return index_helper<N, index<N> >::equal(*this, other);
     }
     bool operator!= (const index& other) const restrict(amp,cpu) {
         return !(*this == other);
     }
-    index& operator+=(const index& __r) restrict(amp,cpu) {
-        base_.operator+=(__r.base_);
+
+    /** @} */
+
+    /** @{ */
+    /**
+     * For a given operator @f$\oplus@f$, produces the same effect as
+     * (*this) = (*this) @f$\oplus@f$ rhs;
+     * The return value is "*this".
+     *
+     * @param[in] rhs The right-hand index<N> of the arithmetic operation.
+     */
+    index& operator+=(const index& rhs) restrict(amp,cpu) {
+        base_.operator+=(rhs.base_);
         return *this;
     }
-    index& operator-=(const index& __r) restrict(amp,cpu) {
-        base_.operator-=(__r.base_);
+    index& operator-=(const index& rhs) restrict(amp,cpu) {
+        base_.operator-=(rhs.base_);
         return *this;
     }
+
+    // FIXME: this function is not defined in C++AMP specification.
     index& operator*=(const index& __r) restrict(amp,cpu) {
         base_.operator*=(__r.base_);
         return *this;
     }
+    // FIXME: this function is not defined in C++AMP specification.
     index& operator/=(const index& __r) restrict(amp,cpu) {
         base_.operator/=(__r.base_);
         return *this;
     }
+    // FIXME: this function is not defined in C++AMP specification.
     index& operator%=(const index& __r) restrict(amp,cpu) {
         base_.operator%=(__r.base_);
         return *this;
     }
-    index& operator+=(int __r) restrict(amp,cpu) {
-        base_.operator+=(__r);
+
+    /** @} */
+
+    /** @{ */
+    /**
+     * For a given operator @f$\oplus@f$, produces the same effect as
+     * (*this) = (*this) @f$\oplus@f$ value;
+     * The return value is "*this".
+     *
+     * @param[in] value The right-hand int of the arithmetic operation.
+     */
+    index& operator+=(int value) restrict(amp,cpu) {
+        base_.operator+=(value);
         return *this;
     }
-    index& operator-=(int __r) restrict(amp,cpu) {
-        base_.operator-=(__r);
+    index& operator-=(int value) restrict(amp,cpu) {
+        base_.operator-=(value);
         return *this;
     }
-    index& operator*=(int __r) restrict(amp,cpu) {
-        base_.operator*=(__r);
+    index& operator*=(int value) restrict(amp,cpu) {
+        base_.operator*=(value);
         return *this;
     }
-    index& operator/=(int __r) restrict(amp,cpu) {
-        base_.operator/=(__r);
+    index& operator/=(int value) restrict(amp,cpu) {
+        base_.operator/=(value);
         return *this;
     }
-    index& operator%=(int __r) restrict(amp,cpu) {
-        base_.operator%=(__r);
+    index& operator%=(int value) restrict(amp,cpu) {
+        base_.operator%=(value);
         return *this;
     }
 
+    /** @} */
+
+    /** @{ */
+    /**
+     * For a given operator @f$\oplus@f$, produces the same effect as
+     * (*this) = (*this) @f$\oplus@f$ 1;
+     *
+     * For prefix increment and decrement, the return value is "*this".
+     * Otherwise a new index<N> is returned.
+     */
     index& operator++() restrict(amp,cpu) {
         base_.operator+=(1);
         return *this;
@@ -305,11 +427,12 @@ public:
         return ret;
     }
 
-    template<int T>
-    friend class extent;
+    /** @} */
+
 private:
     typedef index_impl<typename __make_indices<N>::type> base;
     base base_;
+    template<int T> friend class extent;
     template <int K, typename Q> friend struct index_helper;
     template <int K, typename Q1, typename Q2> friend struct amp_helper;
 
@@ -327,28 +450,35 @@ public:
 #endif
 };
 
+///////////////////////////////////////////////////////////////////////////////
 // explicit instantions
+///////////////////////////////////////////////////////////////////////////////
 template class index<1>;
 template class index<2>;
 template class index<3>;
 
+///////////////////////////////////////////////////////////////////////////////
 // operators for index<N>
+///////////////////////////////////////////////////////////////////////////////
+
+/** @{ */
+/**
+ * Binary arithmetic operations that produce a new index<N> that is the result
+ * of performing the corresponding pair-wise binary arithmetic operation on the
+ * elements of the operands. The result index<N> is such that for a given
+ * operator @f$\oplus@f$,
+ * @f$result[i] = leftIdx[i] \oplus rightIdx[i]@f$
+ * for every i from 0 to N-1.
+ *
+ * @param[in] lhs The left-hand index<N> of the arithmetic operation.
+ * @param[in] rhs The right-hand index<N> of the arithmetic operation.
+ */
+// FIXME: the signature is not entirely the same as defined in:
+//        C++AMP spec v1.2 #1138
 template <int N>
 index<N> operator+(const index<N>& lhs, const index<N>& rhs) restrict(amp,cpu) {
     index<N> __r = lhs;
     __r += rhs;
-    return __r;
-}
-template <int N>
-index<N> operator+(const index<N>& lhs, int rhs) restrict(amp,cpu) {
-    index<N> __r = lhs;
-    __r += rhs;
-    return __r;
-}
-template <int N>
-index<N> operator+(int lhs, const index<N>& rhs) restrict(amp,cpu) {
-    index<N> __r = rhs;
-    __r += lhs;
     return __r;
 }
 template <int N>
@@ -357,48 +487,87 @@ index<N> operator-(const index<N>& lhs, const index<N>& rhs) restrict(amp,cpu) {
     __r -= rhs;
     return __r;
 }
+
+/** @} */
+
+/** @{ */
+/**
+ * Binary arithmetic operations that produce a new index<N> that is the result
+ * of performing the corresponding binary arithmetic operation on the elements
+ * of the index operands. The result index<N> is such that for a given
+ * operator @f$\oplus@f$,
+ * result[i] = idx[i] @f$\oplus@f$ value
+ * or
+ * result[i] = value @f$\oplus@f$ idx[i]
+ * for every i from 0 to N-1.
+ *
+ * @param[in] idx The index<N> operand
+ * @param[in] value The integer operand
+ */
+// FIXME: the signature is not entirely the same as defined in:
+//        C++AMP spec v1.2 #1141
 template <int N>
-index<N> operator-(const index<N>& lhs, int rhs) restrict(amp,cpu) {
-    index<N> __r = lhs;
-    __r -= rhs;
+index<N> operator+(const index<N>& idx, int value) restrict(amp,cpu) {
+    index<N> __r = idx;
+    __r += value;
     return __r;
 }
 template <int N>
-index<N> operator-(int lhs, const index<N>& rhs) restrict(amp,cpu) {
-    index<N> __r(lhs);
-    __r -= rhs;
+index<N> operator+(int value, const index<N>& idx) restrict(amp,cpu) {
+    index<N> __r = idx;
+    __r += value;
     return __r;
 }
 template <int N>
-index<N> operator*(const index<N>& lhs, int rhs) restrict(amp,cpu) {
-    index<N> __r = lhs;
-    __r *= rhs;
+index<N> operator-(const index<N>& idx, int value) restrict(amp,cpu) {
+    index<N> __r = idx;
+    __r -= value;
     return __r;
 }
 template <int N>
-index<N> operator/(const index<N>& lhs, int rhs) restrict(amp,cpu) {
-    index<N> __r = lhs;
-    __r /= rhs;
+index<N> operator-(int value, const index<N>& idx) restrict(amp,cpu) {
+    index<N> __r(value);
+    __r -= idx;
     return __r;
 }
 template <int N>
-index<N> operator/(int lhs, const index<N>& rhs) restrict(amp,cpu) {
-    index<N> __r(lhs);
-    __r /= rhs;
+index<N> operator*(const index<N>& idx, int value) restrict(amp,cpu) {
+    index<N> __r = idx;
+    __r *= value;
     return __r;
 }
 template <int N>
-index<N> operator%(const index<N>& lhs, int rhs) restrict(amp,cpu) {
-    index<N> __r = lhs;
-    __r %= rhs;
+index<N> operator*(int value, const index<N>& idx) restrict(amp,cpu) {
+    index<N> __r(value);
+    __r *= idx;
     return __r;
 }
 template <int N>
-index<N> operator%(int lhs, const index<N>& rhs) restrict(amp,cpu) {
-    index<N> __r(lhs);
-    __r %= rhs;
+index<N> operator/(const index<N>& idx, int value) restrict(amp,cpu) {
+    index<N> __r = idx;
+    __r /= value;
     return __r;
 }
+template <int N>
+index<N> operator/(int value, const index<N>& idx) restrict(amp,cpu) {
+    index<N> __r(value);
+    __r /= idx;
+    return __r;
+}
+template <int N>
+index<N> operator%(const index<N>& idx, int value) restrict(amp,cpu) {
+    index<N> __r = idx;
+    __r %= value;
+    return __r;
+}
+template <int N>
+index<N> operator%(int value, const index<N>& idx) restrict(amp,cpu) {
+    index<N> __r(value);
+    __r %= idx;
+    return __r;
+}
+
+/** @} */
 
 
 } // namespace Kalmar
