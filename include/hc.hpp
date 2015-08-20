@@ -35,7 +35,10 @@ namespace fast_math = Kalmar::fast_math;
 namespace precise_math = Kalmar::precise_math;
 
 // type alias
-// hc::index is just an alias of Kalmar::index
+
+/**
+ * Represents a unique position in N-dimensional space.
+ */
 template <int N>
 using index = Kalmar::index<N>;
 
@@ -47,49 +50,190 @@ using accelerator_view_removed = Kalmar::accelerator_view_removed;
 // accelerator_view
 // ------------------------------------------------------------------------
 
+/**
+ * Represents a logical (isolated) accelerator view of a compute accelerator.
+ * An object of this type can be obtained by calling the default_view property
+ * or create_view member functions on an accelerator object.
+ */
 class accelerator_view {
-    accelerator_view(std::shared_ptr<Kalmar::KalmarQueue> pQueue)
-        : pQueue(pQueue) {}
 public:
-  accelerator_view(const accelerator_view& other) :
-      pQueue(other.pQueue) {}
-  accelerator_view& operator=(const accelerator_view& other) {
-      pQueue = other.pQueue;
-      return *this;
-  }
-
-  accelerator get_accelerator() const;
-  bool get_is_debug() const { return 0; } 
-  unsigned int get_version() const { return 0; } 
-  queuing_mode get_queuing_mode() const { return pQueue->get_mode(); }
-  bool get_is_auto_selection() { return false; }
-
-  void flush() { pQueue->flush(); }
-  void wait() { pQueue->wait(); }
-
-  bool operator==(const accelerator_view& other) const {
-      return pQueue == other.pQueue;
-  }
-  bool operator!=(const accelerator_view& other) const { return !(*this == other); }
-
-  // returns the size of tile static area
-  size_t get_max_tile_static_size() {
-    return pQueue.get()->getDev()->GetMaxTileStaticSize();
-  }
-
-  int getPendingAsyncOps() {
-    return pQueue->getPendingAsyncOps();
-  }
-
-  void* getHSAQueue() {
-    return pQueue->getHSAQueue();
-  }
-
-  bool hasHSAInterOp() {
-    return pQueue->hasHSAInterOp();
-  }
+    /**
+     * Copy-constructs an accelerator_view object. This function does a shallow
+     * copy with the newly created accelerator_view object pointing to the same
+     * underlying view as the "other" parameter.
+     *
+     * @param[in] other The accelerator_view object to be copied.
+     */
+    accelerator_view(const accelerator_view& other) :
+        pQueue(other.pQueue) {}
 
     /**
+     * Assigns an accelerator_view object to "this" accelerator_view object and
+     * returns a reference to "this" object. This function does a shallow
+     * assignment with the newly created accelerator_view object pointing to
+     * the same underlying view as the passed accelerator_view parameter.
+     *
+     * @param[in] other The accelerator_view object to be assigned from.
+     * @return A reference to "this" accelerator_view object.
+     */
+    accelerator_view& operator=(const accelerator_view& other) {
+        pQueue = other.pQueue;
+        return *this;
+    }
+
+    /**
+     * Returns the queuing mode that this accelerator_view was created with.
+     * See "Queuing Mode".
+     *
+     * @return The queuing mode.
+     */
+    queuing_mode get_queuing_mode() const { return pQueue->get_mode(); }
+
+    /**
+     * Returns a boolean value indicating whether the accelerator view when
+     * passed to a parallel_for_each would result in automatic selection of an
+     * appropriate execution target by the runtime. In other words, this is the
+     * accelerator view that will be automatically selected if
+     * parallel_for_each is invoked without explicitly specifying an
+     * accelerator view.
+     *
+     * @return A boolean value indicating if the accelerator_view is the auto
+     *         selection accelerator_view.
+     */
+    // FIXME: dummy implementation now
+    bool get_is_auto_selection() { return false; }
+
+    /**
+     * Returns a 32-bit unsigned integer representing the version number of
+     * this accelerator view. The format of the integer is major.minor, where
+     * the major version number is in the high-order 16 bits, and the minor
+     * version number is in the low-order bits.
+     *
+     * The version of the accelerator view is usually the same as that of the
+     * parent accelerator.
+     */
+    // FIXME: dummy implementation now
+    unsigned int get_version() const { return 0; } 
+
+    /**
+     * Returns the accelerator that this accelerator_view has been created on.
+     */
+    accelerator get_accelerator() const;
+
+    /**
+     * Returns a boolean value indicating whether the accelerator_view supports
+     * debugging through extensive error reporting.
+     *
+     * The is_debug property of the accelerator view is usually same as that of
+     * the parent accelerator.
+     */
+    // FIXME: dummy implementation now
+    bool get_is_debug() const { return 0; } 
+
+    /**
+     * Performs a blocking wait for completion of all commands submitted to the
+     * accelerator view prior to calling wait().
+     */
+    void wait() { pQueue->wait(); }
+
+    /**
+     * Sends the queued up commands in the accelerator_view to the device for
+     * execution.
+     *
+     * An accelerator_view internally maintains a buffer of commands such as
+     * data transfers between the host memory and device buffers, and kernel
+     * invocations (parallel_for_each calls). This member function sends the
+     * commands to the device for processing. Normally, these commands are sent
+     * to the GPU automatically whenever the runtime determines that they need
+     * to be, such as when the command buffer is full or when waiting for 
+     * transfer of data from the device buffers to host memory. The flush 
+     * member function will send the commands manually to the device.
+     *
+     * Calling this member function incurs an overhead and must be used with
+     * discretion. A typical use of this member function would be when the CPU
+     * waits for an arbitrary amount of time and would like to force the
+     * execution of queued device commands in the meantime. It can also be used
+     * to ensure that resources on the accelerator are reclaimed after all
+     * references to them have been removed.
+     *
+     * Because flush operates asynchronously, it can return either before or
+     * after the device finishes executing the buffered commands. However, the
+     * commands will eventually always complete.
+     *
+     * If the queuing_mode is queuing_mode_immediate, this function does
+     * nothing.
+     *
+     * @return None
+     */
+    void flush() { pQueue->flush(); }
+
+    /**
+     * This command inserts a marker event into the accelerator_view's command
+     * queue. This marker is returned as a completion_future object. When all
+     * commands that were submitted prior to the marker event creation have
+     * completed, the future is ready.
+     *
+     * @return A future which can be waited on, and will block until the
+     *         current batch of commands has completed.
+     */
+    completion_future create_marker();
+
+    /**
+     * Compares "this" accelerator_view with the passed accelerator_view object
+     * to determine if they represent the same underlying object.
+     *
+     * @param[in] other The accelerator_view object to be compared against.
+     * @return A boolean value indicating whether the passed accelerator_view
+     *         object is same as "this" accelerator_view.
+     */
+    bool operator==(const accelerator_view& other) const {
+        return pQueue == other.pQueue;
+    }
+
+    /**
+     * Compares "this" accelerator_view with the passed accelerator_view object
+     * to determine if they represent different underlying objects.
+     *
+     * @param[in] other The accelerator_view object to be compared against.
+     * @return A boolean value indicating whether the passed accelerator_view
+     *         object is different from "this" accelerator_view.
+     */
+    bool operator!=(const accelerator_view& other) const { return !(*this == other); }
+
+    /**
+     * Returns the maximum size of tile static area available on this
+     * accelerator view.
+     */
+    size_t get_max_tile_static_size() {
+        return pQueue.get()->getDev()->GetMaxTileStaticSize();
+    }
+
+    /**
+     * Returns the number of pending asynchronous operations on this
+     * accelerator view.
+     */
+    int getPendingAsyncOps() {
+        return pQueue->getPendingAsyncOps();
+    }
+
+    /**
+     * Returns an opaque handle which points to the underlying HSA queue.
+     *
+     * @return An opaque handle of the underlying HSA queue, if the accelerator
+     *         view is based on HSA.  NULL if otherwise.
+     */
+    void* getHSAQueue() {
+        return pQueue->getHSAQueue();
+    }
+
+    /**
+     * Returns if the accelerator view is based on HSA.
+     */
+    bool hasHSAInterOp() {
+        return pQueue->hasHSAInterOp();
+    }
+
+    /*
      * Set AM index.
      *
      * @param[in] av_index index given by AM API for this accelerator_view
@@ -111,103 +255,101 @@ public:
      */
     operator am_accelerator_view_t() const { return pQueue->getAMIndex(); }
 
-  completion_future create_marker();
-
 private:
-  std::shared_ptr<Kalmar::KalmarQueue> pQueue;
+    accelerator_view(std::shared_ptr<Kalmar::KalmarQueue> pQueue) : pQueue(pQueue) {}
+    std::shared_ptr<Kalmar::KalmarQueue> pQueue;
 
-  friend class accelerator;
-  template <typename Q, int K> friend class array;
-  template <typename Q, int K> friend class array_view;
-
-  template<typename Kernel> friend
-      void* Kalmar::mcw_cxxamp_get_kernel(const std::shared_ptr<Kalmar::KalmarQueue>&, const Kernel&);
-  template<typename Kernel, int dim_ext> friend
-      void Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&, void*, size_t);
-  template<typename Kernel, int dim_ext> friend
-      std::shared_ptr<Kalmar::KalmarAsyncOp> Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&, void*, size_t);
-  template<typename Kernel, int dim_ext> friend
-      void Kalmar::mcw_cxxamp_launch_kernel(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&);
-  template<typename Kernel, int dim_ext> friend
-      std::shared_ptr<Kalmar::KalmarAsyncOp> Kalmar::mcw_cxxamp_launch_kernel_async(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&);
-
-  // FIXME: enable CPU execution path for HC
+    friend class accelerator;
+    template <typename Q, int K> friend class array;
+    template <typename Q, int K> friend class array_view;
+  
+    template<typename Kernel> friend
+        void* Kalmar::mcw_cxxamp_get_kernel(const std::shared_ptr<Kalmar::KalmarQueue>&, const Kernel&);
+    template<typename Kernel, int dim_ext> friend
+        void Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&, void*, size_t);
+    template<typename Kernel, int dim_ext> friend
+        std::shared_ptr<Kalmar::KalmarAsyncOp> Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&, void*, size_t);
+    template<typename Kernel, int dim_ext> friend
+        void Kalmar::mcw_cxxamp_launch_kernel(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&);
+    template<typename Kernel, int dim_ext> friend
+        std::shared_ptr<Kalmar::KalmarAsyncOp> Kalmar::mcw_cxxamp_launch_kernel_async(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&);
+  
+    // FIXME: enable CPU execution path for HC
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  template <typename Kernel, int N> friend
-      void Kalmar::launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>&, Kernel const&, extent<N> const&);
+    template <typename Kernel, int N> friend
+        void Kalmar::launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>&, Kernel const&, extent<N> const&);
 #endif
 
-  // non-tiled parallel_for_each with dynamic group segment
-  template<typename Kernel> friend
-      completion_future parallel_for_each(const accelerator_view&, const extent<1>&, ts_allocator&, const Kernel&);
-  template<typename Kernel> friend
-      completion_future parallel_for_each(const accelerator_view&, const extent<2>&, ts_allocator&, const Kernel&);
-  template<typename Kernel> friend
-      completion_future parallel_for_each(const accelerator_view&, const extent<3>&, ts_allocator&, const Kernel&);
-
-  // non-tiled parallel_for_each with dynamic group segment
-  template <typename Kernel> friend
-      completion_future parallel_for_each(const extent<1>&, ts_allocator&, const Kernel&);
-  template <typename Kernel> friend
-      completion_future parallel_for_each(const extent<2>&, ts_allocator&, const Kernel&);
-  template <typename Kernel> friend
-      completion_future parallel_for_each(const extent<3>&, ts_allocator&, const Kernel&);
-
-  // tiled parallel_for_each with dynamic group segment
-  template<typename Kernel> friend
-      completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, ts_allocator&, const Kernel&);
-  template<typename Kernel> friend
-      completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, ts_allocator&, const Kernel&);
-  template<typename Kernel> friend
-      completion_future parallel_for_each(const accelerator_view&, const tiled_extent<3>&, ts_allocator&, const Kernel&);
-
-  // tiled parallel_for_each with dynamic group segment
-  template <typename Kernel> friend
-      completion_future parallel_for_each(const tiled_extent<1>&, ts_allocator&, const Kernel&);
-  template <typename Kernel> friend
-      completion_future parallel_for_each(const tiled_extent<2>&, ts_allocator&, const Kernel&);
-  template <typename Kernel> friend
-      completion_future parallel_for_each(const tiled_extent<3>&, ts_allocator&, const Kernel&);
-
-  // non-tiled parallel_for_each
-  // generic version
-  template <int N, typename Kernel> friend
-      completion_future parallel_for_each(const accelerator_view&, const extent<N>&, const Kernel&);
-
-  // 1D specialization
-  template <typename Kernel> friend
-      completion_future parallel_for_each(const accelerator_view&, const extent<1>&, const Kernel&);
-
-  // 2D specialization
-  template <typename Kernel> friend
-      completion_future parallel_for_each(const accelerator_view&, const extent<2>&, const Kernel&);
-
-  // 3D specialization
-  template <typename Kernel> friend
-      completion_future parallel_for_each(const accelerator_view&, const extent<3>&, const Kernel&);
-
-  // tiled parallel_for_each, 3D version
-  template <typename Kernel> friend
-      completion_future parallel_for_each(const accelerator_view&, const tiled_extent<3>&, const Kernel&);
-
-  // tiled parallel_for_each, 2D version
-  template <typename Kernel> friend
-      completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, const Kernel&);
-
-  // tiled parallel_for_each, 1D version
-  template <typename Kernel> friend
-      completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
-
+    // non-tiled parallel_for_each with dynamic group segment
+    template<typename Kernel> friend
+        completion_future parallel_for_each(const accelerator_view&, const extent<1>&, ts_allocator&, const Kernel&);
+    template<typename Kernel> friend
+        completion_future parallel_for_each(const accelerator_view&, const extent<2>&, ts_allocator&, const Kernel&);
+    template<typename Kernel> friend
+        completion_future parallel_for_each(const accelerator_view&, const extent<3>&, ts_allocator&, const Kernel&);
+  
+    // non-tiled parallel_for_each with dynamic group segment
+    template <typename Kernel> friend
+        completion_future parallel_for_each(const extent<1>&, ts_allocator&, const Kernel&);
+    template <typename Kernel> friend
+        completion_future parallel_for_each(const extent<2>&, ts_allocator&, const Kernel&);
+    template <typename Kernel> friend
+        completion_future parallel_for_each(const extent<3>&, ts_allocator&, const Kernel&);
+  
+    // tiled parallel_for_each with dynamic group segment
+    template<typename Kernel> friend
+        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, ts_allocator&, const Kernel&);
+    template<typename Kernel> friend
+        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, ts_allocator&, const Kernel&);
+    template<typename Kernel> friend
+        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<3>&, ts_allocator&, const Kernel&);
+  
+    // tiled parallel_for_each with dynamic group segment
+    template <typename Kernel> friend
+        completion_future parallel_for_each(const tiled_extent<1>&, ts_allocator&, const Kernel&);
+    template <typename Kernel> friend
+        completion_future parallel_for_each(const tiled_extent<2>&, ts_allocator&, const Kernel&);
+    template <typename Kernel> friend
+        completion_future parallel_for_each(const tiled_extent<3>&, ts_allocator&, const Kernel&);
+  
+    // non-tiled parallel_for_each
+    // generic version
+    template <int N, typename Kernel> friend
+        completion_future parallel_for_each(const accelerator_view&, const extent<N>&, const Kernel&);
+  
+    // 1D specialization
+    template <typename Kernel> friend
+        completion_future parallel_for_each(const accelerator_view&, const extent<1>&, const Kernel&);
+  
+    // 2D specialization
+    template <typename Kernel> friend
+        completion_future parallel_for_each(const accelerator_view&, const extent<2>&, const Kernel&);
+  
+    // 3D specialization
+    template <typename Kernel> friend
+        completion_future parallel_for_each(const accelerator_view&, const extent<3>&, const Kernel&);
+  
+    // tiled parallel_for_each, 3D version
+    template <typename Kernel> friend
+        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<3>&, const Kernel&);
+  
+    // tiled parallel_for_each, 2D version
+    template <typename Kernel> friend
+        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, const Kernel&);
+  
+    // tiled parallel_for_each, 1D version
+    template <typename Kernel> friend
+        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
 
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
 public:
 #endif
-  __attribute__((annotate("user_deserialize")))
-      accelerator_view() restrict(amp,cpu) {
+    __attribute__((annotate("user_deserialize")))
+    accelerator_view() restrict(amp,cpu) {
 #if __KALMAR_ACCELERATOR__ != 1
-          throw runtime_exception("errorMsg_throw", 0);
+        throw runtime_exception("errorMsg_throw", 0);
 #endif
-      }
+    }
 };
 
 // ------------------------------------------------------------------------
