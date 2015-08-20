@@ -1128,6 +1128,116 @@ private:
 };
 
 // ------------------------------------------------------------------------
+// global functions for extent
+// ------------------------------------------------------------------------
+
+/** @{ */
+/**
+ * Adds (or subtracts) two objects of extent<N> to form a new extent. The
+ * result extent<N> is such that for a given operator @f$\oplus@f$,
+ * result[i] = leftExt[i] @f$\oplus@f$ rightExt[i]
+ * for every i from 0 to N-1.
+ *
+ * @param[in] lhs The left-hand extent<N> to be compared.
+ * @param[in] rhs The right-hand extent<N> to be compared.
+ */
+// FIXME: the signature is not entirely the same as defined in:
+//        C++AMP spec v1.2 #1253
+template <int N>
+extent<N> operator+(const extent<N>& lhs, const extent<N>& rhs) restrict(amp,cpu) {
+    extent<N> __r = lhs;
+    __r += rhs;
+    return __r;
+}
+template <int N>
+extent<N> operator-(const extent<N>& lhs, const extent<N>& rhs) restrict(amp,cpu) {
+    extent<N> __r = lhs;
+    __r -= rhs;
+    return __r;
+}
+
+/** @} */
+
+/** @{ */
+/**
+ * Binary arithmetic operations that produce a new extent<N> that is the result
+ * of performing the corresponding binary arithmetic operation on the elements
+ * of the extent operands. The result extent<N> is such that for a given
+ * operator @f$\oplus@f$,
+ * result[i] = ext[i] @f$\oplus@f$ value
+ * or
+ * result[i] = value @f$\oplus@f$ ext[i]
+ * for every i from 0 to N-1.
+ *
+ * @param[in] ext The extent<N> operand
+ * @param[in] value The integer operand
+ */
+// FIXME: the signature is not entirely the same as defined in:
+//        C++AMP spec v1.2 #1259
+template <int N>
+extent<N> operator+(const extent<N>& ext, int value) restrict(amp,cpu) {
+    extent<N> __r = ext;
+    __r += value;
+    return __r;
+}
+template <int N>
+extent<N> operator+(int value, const extent<N>& ext) restrict(amp,cpu) {
+    extent<N> __r = ext;
+    __r += value;
+    return __r;
+}
+template <int N>
+extent<N> operator-(const extent<N>& ext, int value) restrict(amp,cpu) {
+    extent<N> __r = ext;
+    __r -= value;
+    return __r;
+}
+template <int N>
+extent<N> operator-(int value, const extent<N>& ext) restrict(amp,cpu) {
+    extent<N> __r(value);
+    __r -= ext;
+    return __r;
+}
+template <int N>
+extent<N> operator*(const extent<N>& ext, int value) restrict(amp,cpu) {
+    extent<N> __r = ext;
+    __r *= value;
+    return __r;
+}
+template <int N>
+extent<N> operator*(int value, const extent<N>& ext) restrict(amp,cpu) {
+    extent<N> __r = ext;
+    __r *= value;
+    return __r;
+}
+template <int N>
+extent<N> operator/(const extent<N>& ext, int value) restrict(amp,cpu) {
+    extent<N> __r = ext;
+    __r /= value;
+    return __r;
+}
+template <int N>
+extent<N> operator/(int value, const extent<N>& ext) restrict(amp,cpu) {
+    extent<N> __r(value);
+    __r /= ext;
+    return __r;
+}
+template <int N>
+extent<N> operator%(const extent<N>& ext, int value) restrict(amp,cpu) {
+    extent<N> __r = ext;
+    __r %= value;
+    return __r;
+}
+template <int N>
+extent<N> operator%(int value, const extent<N>& ext) restrict(amp,cpu) {
+    extent<N> __r(value);
+    __r %= ext;
+    return __r;
+}
+
+/** @} */
+
+// ------------------------------------------------------------------------
 // tiled_extent
 // ------------------------------------------------------------------------
 
