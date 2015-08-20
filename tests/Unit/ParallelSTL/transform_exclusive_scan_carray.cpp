@@ -30,28 +30,29 @@ bool test() {
   // initialize test data
   std::iota(std::begin(input), std::end(input), 1);
 
+  auto op = [](const _Tp &x) { return x+1; };
   // launch kernel with parallel STL transform exclusive scan
   using namespace std::experimental::parallel;
-  transform_exclusive_scan(par, std::begin(input), std::end(input), std::begin(output), std::negate<_Tp>(), _Tp{}, std::plus<_Tp>());
+  transform_exclusive_scan(par, std::begin(input), std::end(input), std::begin(output), op, _Tp{}, std::plus<_Tp>());
 
   // verify data
-  if (output[0] != -_Tp{})
+  if (output[0] != _Tp{})
     ret = false;
 
   for (int i = 1; i < SIZE; ++i) {
-    if (output[i] != output[i - 1] - input[i - 1]) {
+    if (output[i] != output[i - 1] + op(input[i - 1])) {
       ret = false;
       break;
     }
   }
 
-#if _DEBUG 
+#if _DEBUG
   for (int i = 0; i < ROW; ++i) {
     for (int j = 0; j < COL; ++j) {
       std::cout << std::setw(5) << output[i * COL + j];
     }
     std::cout << "\n";
-  } 
+  }
 #endif
 
   return ret;

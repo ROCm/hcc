@@ -1,4 +1,3 @@
-// FIXME this is a SEQUENTIAL implementation of transform_inclusive_scan!
 template<typename InputIterator, typename OutputIterator,
          typename UnaryOperation, typename BinaryOperation, typename T>
 OutputIterator
@@ -6,17 +5,14 @@ transform_inclusive_scan(InputIterator first, InputIterator last,
                          OutputIterator result,
                          UnaryOperation unary_op,
                          BinaryOperation binary_op, T init) {
-  T sum = init;
-  OutputIterator iter_input = first;
-  OutputIterator iter_output = result;
-  for (; iter_input != last; ++iter_input, ++iter_output) {
-    sum = binary_op(sum, unary_op(*iter_input));
-    *iter_output = sum;
-  }
-  return result;
+  // invoke std::experimental::parallel::transform and
+  //        std::experimental::parallel::inclusive_scan
+  transform(first, last, result, unary_op);
+  const size_t N = static_cast<size_t>(std::distance(first, last));
+  return inclusive_scan(result, result + N, result, binary_op, init);
 }
 
-template<typename ExecutionPolicy, 
+template<typename ExecutionPolicy,
          typename InputIterator, typename OutputIterator,
          typename UnaryOperation, typename BinaryOperation, typename T>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIterator>::type

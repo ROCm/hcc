@@ -1,4 +1,3 @@
-// FIXME this is a SEQUENTIAL implementation of transform_exclusive_scan!
 template<typename InputIterator, typename OutputIterator,
          typename UnaryOperation, typename T, typename BinaryOperation>
 OutputIterator
@@ -6,14 +5,11 @@ transform_exclusive_scan(InputIterator first, InputIterator last,
                          OutputIterator result,
                          UnaryOperation unary_op,
                          T init, BinaryOperation binary_op) {
-  T sum = init;
-  OutputIterator iter_input = first;
-  OutputIterator iter_output = result;
-  for (; iter_input != last; ++iter_input, ++iter_output) {
-    *iter_output = sum;
-    sum = binary_op(sum, unary_op(*iter_input));
-  }
-  return result;
+  // invoke std::experimental::parallel::transform and
+  //        std::experimental::parallel::exclusive_scan
+  transform(first, last, result, unary_op);
+  const size_t N = static_cast<size_t>(std::distance(first, last));
+  return exclusive_scan(result, result + N, result, init, binary_op);
 }
 
 template<typename ExecutionPolicy,
