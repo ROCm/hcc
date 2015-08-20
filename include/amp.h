@@ -38,7 +38,10 @@ namespace concurrency = Concurrency;
 
 // type alias
 namespace Concurrency {
-// Concurrency::index is just an alias of Kalmar::index
+
+/**
+ * Represents a unique position in N-dimensional space.
+ */
 template <int N>
 using index = Kalmar::index<N>;
 
@@ -267,28 +270,23 @@ class accelerator
 {
 public:
   
-    /** @name Accelerator paths. 
+    /** @{ */
+    /** 
      * These are static constant string literals that represent device paths for
      * known accelerators, or in the case of "default_accelerator", direct the
      * runtime to choose an accelerator automatically.
-     */
-  
-    /** @{ */
-  
-    /**
+     *
      * default_accelerator: The string L"default" represents the default
      * accelerator, which directs the runtime to choose the fastest accelerator
      * available. The selection criteria are discussed in section 3.2.1 Default
      * Accelerator.
-     */
-    static const wchar_t default_accelerator[];   // = L"default"
-  
-    /**
+     *
      * cpu_accelerator: The string L"cpu" represents the host system. This
      * accelerator is used to provide a location for system-allocated memory
      * such as host arrays and staging arrays. It is not a valid target for
      * accelerated computations.
      */
+    static const wchar_t default_accelerator[];   // = L"default"
     static const wchar_t cpu_accelerator[];       // = L"cpu"
   
     /** @} */
