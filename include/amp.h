@@ -993,7 +993,7 @@ private:
 };
 
 // ------------------------------------------------------------------------
-// utility for tiled_barrier
+// utility class for tiled_barrier
 // ------------------------------------------------------------------------
 
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
