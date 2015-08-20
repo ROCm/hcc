@@ -206,9 +206,9 @@ struct amp_helper<1, _Tp1, _Tp2>
 /**
  * Represents a unique position in N-dimensional space.
  *
- * @param N The dimensionality space into which this index applies. Special
- *          constructors are supplied for the cases where @f$N \in \{1,2,3\}@f$, but N
- *          can be any integer greater than 0.
+ * @tparam N The dimensionality space into which this index applies. Special
+ *           constructors are supplied for the cases where @f$N \in \{1,2,3\}@f$,
+ *           but N can be any integer greater than 0.
  */
 template <int N>
 class index {
