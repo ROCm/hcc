@@ -248,7 +248,7 @@ public:
      * the index @f$N \in \{1,2,3\}@f$. Invoking a specialized constructor whose argument
      * @f$count \ne N@f$ will result in a compilation error.
      *
-     * @param i0 The component values of the index vector.
+     * @param[in] i0 The component values of the index vector.
      */
     explicit index(int i0) restrict(amp,cpu)
         : base_(i0) {}
@@ -264,7 +264,7 @@ public:
 
     /**
      * Constructs an index<N> with the coordinate values provided the array of
-     * int component values. If the coordinate array @f$length \ne N@f$, the
+     * int component values. If the coordinate array length @f$\ne@f$ N, the
      * behavior is undefined. If the array value is NULL or not a valid
      * pointer, the behavior is undefined.
      *
@@ -275,7 +275,7 @@ public:
 
     /**
      * Constructs an index<N> with the coordinate values provided the array of
-     * int component values. If the coordinate array @f$length \ne N@f$, the
+     * int component values. If the coordinate array length @f$\ne@f$ N, the
      * behavior is undefined. If the array value is NULL or not a valid
      * pointer, the behavior is undefined.
      *
