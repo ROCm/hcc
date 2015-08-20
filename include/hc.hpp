@@ -829,7 +829,6 @@ private:
     friend class accelerator_view;
 };
 
-
 // ------------------------------------------------------------------------
 // member function implementations
 // ------------------------------------------------------------------------
@@ -844,35 +843,105 @@ inline completion_future accelerator_view::create_marker() {
 // extent
 // ------------------------------------------------------------------------
 
+/**
+ * Represents a unique position in N-dimensional space.
+ *
+ * @tparam N The dimension to this extent applies. Special constructors are
+ *           supplied for the cases where @f$N \in \{ 1,2,3 \}@f$, but N can
+ *           be any integer greater than or equal to 1.
+ */
 template <int N>
 class extent {
 public:
+    /**
+     * A static member of extent<N> that contains the rank of this extent.
+     */
     static const int rank = N;
+
+    /**
+     * The element type of extent<N>.
+     */
     typedef int value_type;
 
+    /**
+     * Default constructor. The value at each dimension is initialized to zero.
+     * Thus, "extent<3> ix;" initializes the variable to the position (0,0,0).
+     */
     extent() restrict(amp,cpu) : base_() {
       static_assert(N > 0, "Dimensionality must be positive");
     };
+
+    /**
+     * Copy constructor. Constructs a new extent<N> from the supplied argument.
+     *
+     * @param other An object of type extent<N> from which to initialize this
+     *              new extent.
+     */
     extent(const extent& other) restrict(amp,cpu)
         : base_(other.base_) {}
+
+    /** @{ */
+    /**
+     * Constructs an extent<N> with the coordinate values provided by @f$e_{0..2}@f$.
+     * These are specialized constructors that are only valid when the rank of
+     * the extent @f$N \in \{1,2,3\}@f$. Invoking a specialized constructor
+     * whose argument @f$count \ne N@f$ will result in a compilation error.
+     *
+     * @param[in] e0 The component values of the extent vector.
+     */
+    explicit extent(int e0) restrict(amp,cpu)
+        : base_(e0) {}
+
     template <typename ..._Tp>
         explicit extent(_Tp ... __t) restrict(amp,cpu)
         : base_(__t...) {
       static_assert(sizeof...(__t) <= 3, "Can only supply at most 3 individual coordinates in the constructor");
       static_assert(sizeof...(__t) == N, "rank should be consistency");
     }
-    explicit extent(int component) restrict(amp,cpu)
-        : base_(component) {}
-    explicit extent(int components[]) restrict(amp,cpu)
-        : base_(components) {}
+
+    /** @} */
+
+    /**
+     * Constructs an extent<N> with the coordinate values provided the array of
+     * int component values. If the coordinate array length @f$\ne@f$ N, the
+     * behavior is undefined. If the array value is NULL or not a valid
+     * pointer, the behavior is undefined.
+     *
+     * @param[in] components An array of N int values.
+     */
     explicit extent(const int components[]) restrict(amp,cpu)
         : base_(components) {}
 
+    /**
+     * Constructs an extent<N> with the coordinate values provided the array of
+     * int component values. If the coordinate array length @f$\ne@f$ N, the
+     * behavior is undefined. If the array value is NULL or not a valid
+     * pointer, the behavior is undefined.
+     *
+     * @param[in] components An array of N int values.
+     */
+    explicit extent(int components[]) restrict(amp,cpu)
+        : base_(components) {}
+
+    /**
+     * Assigns the component values of "other" to this extent<N> object.
+     *
+     * @param[in] other An object of type extent<N> from which to copy into
+     *                  this extent.
+     * @return Returns *this.
+     */
     extent& operator=(const extent& other) restrict(amp,cpu) {
         base_.operator=(other.base_);
         return *this;
     }
 
+    /** @{ */
+    /**
+     * Returns the extent component value at position c.
+     *
+     * @param[in] c The dimension axis whose coordinate is to be accessed.
+     * @return A the component value at position c.
+     */
     int operator[] (unsigned int c) const restrict(amp,cpu) {
         return base_[c];
     }
@@ -880,6 +949,57 @@ public:
         return base_[c];
     }
 
+    /** @} */
+
+    /**
+     * Tests whether the index "idx" is properly contained within this extent
+     * (with an assumed origin of zero).
+     *
+     * @param[in] idx An object of type index<N>
+     * @return Returns true if the "idx" is contained within the space defined
+     *         by this extent (with an assumed origin of zero).
+     */
+    bool contains(const index<N>& idx) const restrict(amp,cpu) {
+        return Kalmar::amp_helper<N, index<N>, extent<N>>::contains(idx, *this);
+    }
+
+    /**
+     * This member function returns the total linear size of this extent<N> (in
+     * units of elements), which is computed as:
+     * extent[0] * extent[1] ... * extent[N-1]
+     */
+    unsigned int size() const restrict(amp,cpu) {
+        return Kalmar::index_helper<N, extent<N>>::count_size(*this);
+    }
+
+    /** @{ */
+    /**
+     * Produces a tiled_extent object with the tile extents given by t0, t1,
+     * and t2.
+     *
+     * tile(t0, t1, t2) is only supported on extent<1>. It will produce a
+     * compile-time error if used on an extent where N @f$\ne@f$ 3.
+     * tile(t0, t1) is only supported on extent<2>. It will produce a
+     * compile-time error if used on an extent where N @f$\ne@f$ 2.
+     * tile(t0) is only supported on extent<1>. It will produce a
+     * compile-time error if used on an extent where N @f$\ne@f$ 1.
+     */
+    tiled_extent<1> tile(int t0) const;
+    tiled_extent<2> tile(int t0, int t1) const;
+    tiled_extent<3> tile(int t0, int t1, int t2) const;
+
+    /** @} */
+
+    /** @{ */
+    /**
+     * Compares two objects of extent<N>.
+     *
+     * The expression
+     * leftExt @f$\oplus@f$ rightExt
+     * is true if leftExt[i] @f$\oplus@f$ rightExt[i] for every i from 0 to N-1.
+     *
+     * @param[in] other The right-hand extent<N> to be compared.
+     */
     bool operator==(const extent& other) const restrict(amp,cpu) {
         return Kalmar::index_helper<N, extent<N> >::equal(*this, other);
     }
@@ -887,34 +1007,16 @@ public:
         return !(*this == other);
     }
 
-    unsigned int size() const restrict(amp,cpu) {
-        return Kalmar::index_helper<N, extent<N>>::count_size(*this);
-    }
-    bool contains(const index<N>& idx) const restrict(amp,cpu) {
-        return Kalmar::amp_helper<N, index<N>, extent<N>>::contains(idx, *this);
-    }
-    tiled_extent<1> tile(int t0) const;
-    tiled_extent<2> tile(int t0, int t1) const;
-    tiled_extent<3> tile(int t0, int t1, int t2) const;
+    /** @} */
 
-    extent operator+(const index<N>& idx) restrict(amp,cpu) {
-        extent __r = *this;
-        __r += idx;
-        return __r;
-    }
-    extent operator-(const index<N>& idx) restrict(amp,cpu) {
-        extent __r = *this;
-        __r -= idx;
-        return __r;
-    }
-    extent& operator+=(const index<N>& idx) restrict(amp,cpu) {
-        base_.operator+=(idx.base_);
-        return *this;
-    }
-    extent& operator-=(const index<N>& idx) restrict(amp,cpu) {
-        base_.operator-=(idx.base_);
-        return *this;
-    }
+    /** @{ */
+    /**
+     * Adds (or subtracts) an object of type extent<N> from this extent to form
+     * a new extent. The result extent<N> is such that for a given operator @f$\oplus@f$,
+     * result[i] = this[i] @f$\oplus@f$ ext[i]
+     *
+     * @param[in] ext The right-hand extent<N> to be added or subtracted.
+     */
     extent& operator+=(const extent& __r) restrict(amp,cpu) {
         base_.operator+=(__r.base_);
         return *this;
@@ -935,26 +1037,78 @@ public:
         base_.operator%=(__r.base_);
         return *this;
     }
-    extent& operator+=(int __r) restrict(amp,cpu) {
-        base_.operator+=(__r);
+
+    /** @} */
+
+    /** @{ */
+    /**
+     * Adds (or subtracts) an object of type index<N> from this extent to form
+     * a new extent. The result extent<N> is such that for a given operator @f$\oplus@f$,
+     * result[i] = this[i] @f$\oplus@f$ idx[i]
+     *
+     * @param[in] idx The right-hand index<N> to be added or subtracted.
+     */
+    extent operator+(const index<N>& idx) restrict(amp,cpu) {
+        extent __r = *this;
+        __r += idx;
+        return __r;
+    }
+    extent operator-(const index<N>& idx) restrict(amp,cpu) {
+        extent __r = *this;
+        __r -= idx;
+        return __r;
+    }
+    extent& operator+=(const index<N>& idx) restrict(amp,cpu) {
+        base_.operator+=(idx.base_);
         return *this;
     }
-    extent& operator-=(int __r) restrict(amp,cpu) {
-        base_.operator-=(__r);
+    extent& operator-=(const index<N>& idx) restrict(amp,cpu) {
+        base_.operator-=(idx.base_);
         return *this;
     }
-    extent& operator*=(int __r) restrict(amp,cpu) {
-        base_.operator*=(__r);
+
+    /** @} */
+
+    /** @{ */
+    /**
+     * For a given operator @f$\oplus@f$, produces the same effect as
+     * (*this) = (*this) @f$\oplus@f$ value
+     *
+     * The return value is "*this".
+     *
+     * @param[in] value The right-hand int of the arithmetic operation.
+     */
+    extent& operator+=(int value) restrict(amp,cpu) {
+        base_.operator+=(value);
         return *this;
     }
-    extent& operator/=(int __r) restrict(amp,cpu) {
-        base_.operator/=(__r);
+    extent& operator-=(int value) restrict(amp,cpu) {
+        base_.operator-=(value);
         return *this;
     }
-    extent& operator%=(int __r) restrict(amp,cpu) {
-        base_.operator%=(__r);
+    extent& operator*=(int value) restrict(amp,cpu) {
+        base_.operator*=(value);
         return *this;
     }
+    extent& operator/=(int value) restrict(amp,cpu) {
+        base_.operator/=(value);
+        return *this;
+    }
+    extent& operator%=(int value) restrict(amp,cpu) {
+        base_.operator%=(value);
+        return *this;
+    }
+
+    /** @} */
+
+    /** @{ */
+    /**
+     * For a given operator @f$\oplus@f$, produces the same effect as
+     * (*this) = (*this) @f$\oplus@f$ 1
+     *
+     * For prefix increment and decrement, the return value is "*this".
+     * Otherwise a new extent<N> is returned.
+     */
     extent& operator++() restrict(amp,cpu) {
         base_.operator+=(1);
         return *this;
@@ -973,6 +1127,9 @@ public:
         base_.operator-=(1);
         return ret;
     }
+
+    /** @} */
+
 private:
     typedef Kalmar::index_impl<typename Kalmar::__make_indices<N>::type> base;
     base base_;
