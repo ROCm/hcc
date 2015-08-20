@@ -1553,6 +1553,7 @@ void bar_wrapper(Ker *f, Ti *t)
 {
     (*f)(*t);
 }
+
 struct barrier_t {
     std::unique_ptr<ucontext_t[]> ctx;
     int idx;
@@ -1576,10 +1577,6 @@ struct barrier_t {
 };
 #endif
 
-// ------------------------------------------------------------------------
-// tiled_barrier
-// ------------------------------------------------------------------------
-
 #ifndef CLK_LOCAL_MEM_FENCE
 #define CLK_LOCAL_MEM_FENCE (1)
 #endif
@@ -1588,57 +1585,149 @@ struct barrier_t {
 #define CLK_GLOBAL_MEM_FENCE (2)
 #endif
 
-class tile_barrier {
- public:
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  using pb_t = std::shared_ptr<barrier_t>;
-  tile_barrier(pb_t pb) : pbar(pb) {}
-  tile_barrier(const tile_barrier& other) restrict(amp,cpu) : pbar(other.pbar) {}
-#else
-  tile_barrier(const tile_barrier& other) restrict(amp,cpu) {}
-#endif
-  void wait() const restrict(amp) {
-#if __KALMAR_ACCELERATOR__ == 1
-    wait_with_all_memory_fence();
-#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-      pbar->wait();
-#endif
-  }
-  void wait_with_all_memory_fence() const restrict(amp) {
-#if __KALMAR_ACCELERATOR__ == 1
-    amp_barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
-#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-      pbar->wait();
-#endif
-  }
-  void wait_with_global_memory_fence() const restrict(amp) {
-#if __KALMAR_ACCELERATOR__ == 1
-    amp_barrier(CLK_GLOBAL_MEM_FENCE);
-#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-      pbar->wait();
-#endif
-  }
-  void wait_with_tile_static_memory_fence() const restrict(amp) {
-#if __KALMAR_ACCELERATOR__ == 1
-    amp_barrier(CLK_LOCAL_MEM_FENCE);
-#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-      pbar->wait();
-#endif
-  }
- private:
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  tile_barrier() restrict(amp,cpu) = default;
-  pb_t pbar;
-#else
-  tile_barrier() restrict(amp) {}
-#endif
-  template <int N> friend
-    class tiled_index;
+// ------------------------------------------------------------------------
+// tiled_barrier
+// ------------------------------------------------------------------------
 
-  friend class tiled_index_1D;
-  friend class tiled_index_2D;
-  friend class tiled_index_3D;
+class tile_barrier {
+public:
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+    using pb_t = std::shared_ptr<barrier_t>;
+    tile_barrier(pb_t pb) : pbar(pb) {}
+
+    /**
+     * Copy constructor. Constructs a new tile_barrier from the supplied
+     * argument "other".
+     *
+     * @param[in] other An object of type tile_barrier from which to initialize
+     *                  this.
+     */
+    tile_barrier(const tile_barrier& other) restrict(amp,cpu) : pbar(other.pbar) {}
+#else
+
+    /**
+     * Copy constructor. Constructs a new tile_barrier from the supplied
+     * argument "other".
+     *
+     * @param[in] other An object of type tile_barrier from which to initialize
+     *                  this.
+     */
+    tile_barrier(const tile_barrier& other) restrict(amp,cpu) {}
+#endif
+
+    /**
+     * Blocks execution of all threads in the thread tile until all threads in
+     * the tile have reached this call. Establishes a memory fence on all
+     * tile_static and global memory operations executed by the threads in the
+     * tile such that all memory operations issued prior to hitting the barrier
+     * are visible to all other threads after the barrier has completed and
+     * none of the memory operations occurring after the barrier are executed
+     * before hitting the barrier. This is identical to
+     * wait_with_all_memory_fence().
+     */
+    void wait() const restrict(amp) {
+#if __KALMAR_ACCELERATOR__ == 1
+        wait_with_all_memory_fence();
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+        pbar->wait();
+#endif
+    }
+
+    /**
+     * Blocks execution of all threads in the thread tile until all threads in
+     * the tile have reached this call. Establishes a memory fence on all
+     * tile_static and global memory operations executed by the threads in the
+     * tile such that all memory operations issued prior to hitting the barrier
+     * are visible to all other threads after the barrier has completed and
+     * none of the memory operations occurring after the barrier are executed
+     * before hitting the barrier. This is identical to wait().
+     */
+    void wait_with_all_memory_fence() const restrict(amp) {
+#if __KALMAR_ACCELERATOR__ == 1
+        amp_barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+        pbar->wait();
+#endif
+    }
+
+    /**
+     * Blocks execution of all threads in the thread tile until all threads in
+     * the tile have reached this call. Establishes a memory fence on global
+     * memory operations (but not tile-static memory operations) executed by
+     * the threads in the tile such that all global memory operations issued
+     * prior to hitting the barrier are visible to all other threads after the
+     * barrier has completed and none of the global memory operations occurring
+     * after the barrier are executed before hitting the barrier.
+     */
+    void wait_with_global_memory_fence() const restrict(amp) {
+#if __KALMAR_ACCELERATOR__ == 1
+        amp_barrier(CLK_GLOBAL_MEM_FENCE);
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+        pbar->wait();
+#endif
+    }
+
+    /**
+     * Blocks execution of all threads in the thread tile until all threads in
+     * the tile have reached this call. Establishes a memory fence on
+     * tile-static memory operations (but not global memory operations)
+     * executed by the threads in the tile such that all tile_static memory
+     * operations issued prior to hitting the barrier are visible to all other
+     * threads after the barrier has completed and none of the tile-static
+     * memory operations occurring after the barrier are executed before
+     * hitting the barrier.
+     */
+    void wait_with_tile_static_memory_fence() const restrict(amp) {
+#if __KALMAR_ACCELERATOR__ == 1
+        amp_barrier(CLK_LOCAL_MEM_FENCE);
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+        pbar->wait();
+#endif
+    }
+
+private:
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+    tile_barrier() restrict(amp,cpu) = default;
+    pb_t pbar;
+#else
+    tile_barrier() restrict(amp) {}
+#endif
+
+    template <int N> friend
+        class tiled_index;
+
+    friend class tiled_index_1D;
+    friend class tiled_index_2D;
+    friend class tiled_index_3D;
 };
+
+// ------------------------------------------------------------------------
+// other memory fences
+// ------------------------------------------------------------------------
+
+/**
+ * Establishes a thread-tile scoped memory fence for both global and
+ * tile-static memory operations. This function does not imply a barrier and
+ * is therefore permitted in divergent code.
+ */
+// FIXME: this functions has not been implemented.
+void all_memory_fence(const tile_barrier&) restrict(amp);
+
+/**
+ * Establishes a thread-tile scoped memory fence for global (but not
+ * tile-static) memory operations. This function does not imply a barrier and
+ * is therefore permitted in divergent code.
+ */
+// FIXME: this functions has not been implemented.
+void global_memory_fence(const tile_barrier&) restrict(amp);
+
+/**
+ * Establishes a thread-tile scoped memory fence for tile-static (but not
+ * global) memory operations. This function does not imply a barrier and is
+ * therefore permitted in divergent code.
+ */
+// FIXME: this functions has not been implemented.
+void tile_static_memory_fence(const tile_barrier&) restrict(amp);
 
 // ------------------------------------------------------------------------
 // tiled_index
