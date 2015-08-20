@@ -1237,98 +1237,336 @@ class tiled_index<D0, D1, 0> {
 };
 
 
+// ------------------------------------------------------------------------
+// tiled_extent
+// ------------------------------------------------------------------------
 
+/**
+ * Represents an extent subdivided into 1-, 2-, or 3-dimensional tiles.
+ *
+ * @tparam D0,D1,D2 The length of the tile in each specified dimension, where
+ *                  D0 is the most-significant dimension and D2 is the
+ *                  least-significant.
+ */
 template <int D0, int D1/*=0*/, int D2/*=0*/>
 class tiled_extent : public extent<3>
 {
 public:
-  static_assert(D0 > 0, "Tile size must be positive");
-  static_assert(D1 > 0, "Tile size must be positive");
-  static_assert(D2 > 0, "Tile size must be positive");
-  static const int rank = 3;
-  tiled_extent() restrict(amp,cpu) { }
-  tiled_extent(const tiled_extent& other) restrict(amp,cpu): extent(other[0], other[1], other[2]) {}
-  tiled_extent(const extent<3>& ext) restrict(amp,cpu): extent(ext) {}
-  tiled_extent& operator=(const tiled_extent& other) restrict(amp,cpu);
-  tiled_extent pad() const restrict(amp,cpu) {
-    tiled_extent padded(*this);
-    padded[0] = (padded[0] <= D0) ? D0 : (((padded[0] + D0 - 1) / D0) * D0);
-    padded[1] = (padded[1] <= D1) ? D1 : (((padded[1] + D1 - 1) / D1) * D1);
-    padded[2] = (padded[2] <= D2) ? D2 : (((padded[2] + D2 - 1) / D2) * D2);
-    return padded;
-  }
-  tiled_extent truncate() const restrict(amp,cpu) {
-    tiled_extent trunc(*this);
-    trunc[0] = (trunc[0]/D0) * D0;
-    trunc[1] = (trunc[1]/D1) * D1;
-    trunc[2] = (trunc[2]/D2) * D2;
-    return trunc;
-  }
+    static_assert(D0 > 0, "Tile size must be positive");
+    static_assert(D1 > 0, "Tile size must be positive");
+    static_assert(D2 > 0, "Tile size must be positive");
+    static const int rank = 3;
 
-  extent<3> get_tile_extent() const;
-  static const int tile_dim0 = D0;
-  static const int tile_dim1 = D1;
-  static const int tile_dim2 = D2;
-  friend bool operator==(const tiled_extent& lhs, const tiled_extent& rhs) restrict(amp,cpu);
-  friend bool operator!=(const tiled_extent& lhs, const tiled_extent& rhs) restrict(amp,cpu);
+    /**
+     * Default constructor. The origin and extent is default-constructed and
+     * thus zero.
+     */
+    tiled_extent() restrict(amp,cpu) { }
+
+    /**
+     * Copy constructor. Constructs a new tiled_extent from the supplied
+     * argument "other".
+     *
+     * @param[in] other An object of type tiled_extent from which to initialize
+     *                  this new extent.
+     */
+    tiled_extent(const tiled_extent& other) restrict(amp,cpu): extent(other[0], other[1], other[2]) {}
+
+    /**
+     * Constructs a tiled_extent<N> with the extent "ext".
+     * Notice that this constructor allows implicit conversions from extent<N>
+     * to tiled_extent<N>.
+     *
+     * @param[in] ext The extent of this tiled_extent
+     */
+    tiled_extent(const extent<3>& ext) restrict(amp,cpu): extent(ext) {}
+
+    /**
+     * Assigns the component values of "other" to this tiled_extent<N> object.
+     *
+     * @param[in] other An object of type tiled_extent<N> from which to copy
+     *                  into this.
+     * @return Returns *this.
+     */
+    tiled_extent& operator=(const tiled_extent& other) restrict(amp,cpu);
+
+    /**
+     * Returns a new tiled_extent with the extents adjusted up to be evenly
+     * divisible by the tile dimensions. The origin of the new tiled_extent is
+     * the same as the origin of this one.
+     */
+    tiled_extent pad() const restrict(amp,cpu) {
+        tiled_extent padded(*this);
+        padded[0] = (padded[0] <= D0) ? D0 : (((padded[0] + D0 - 1) / D0) * D0);
+        padded[1] = (padded[1] <= D1) ? D1 : (((padded[1] + D1 - 1) / D1) * D1);
+        padded[2] = (padded[2] <= D2) ? D2 : (((padded[2] + D2 - 1) / D2) * D2);
+        return padded;
+    }
+
+    /**
+     * Returns a new tiled_extent with the extents adjusted down to be evenly
+     * divisible by the tile dimensions. The origin of the new tiled_extent is
+     * the same as the origin of this one.
+     */
+    tiled_extent truncate() const restrict(amp,cpu) {
+        tiled_extent trunc(*this);
+        trunc[0] = (trunc[0]/D0) * D0;
+        trunc[1] = (trunc[1]/D1) * D1;
+        trunc[2] = (trunc[2]/D2) * D2;
+        return trunc;
+    }
+  
+    /**
+     * Returns an instance of an extent<N> that captures the values of the
+     * tiled_extent template arguments D0, D1, and D2. For example:
+     *
+     * @code{.cpp}
+     * tiled_extent<64,16,4> tg;
+     * extent<3> myTileExtent = tg.tile_extent;
+     * assert(myTileExtent[0] == 64);
+     * assert(myTileExtent[1] == 16);
+     * assert(myTileExtent[2] == 4);
+     * @endcode
+     */
+    // FIXME: this functions has not been implemented.
+    extent<3> get_tile_extent() const;
+
+    /** @{ */
+    /**
+     * These constants allow access to the template arguments of tiled_extent.
+     */
+    static const int tile_dim0 = D0;
+    static const int tile_dim1 = D1;
+    static const int tile_dim2 = D2;
+    /** @} */
+
+    /** @{ */
+    /**
+     * Compares two objects of tiled_extent<N>.
+     *
+     * The expression
+     * lhs @f$\oplus@f$ rhs
+     * is true if lhs.extent @f$\oplus@f$ rhs.extent and lhs.origin @f$\oplus@f$ rhs.origin.
+     */
+    friend bool operator==(const tiled_extent& lhs, const tiled_extent& rhs) restrict(amp,cpu);
+    friend bool operator!=(const tiled_extent& lhs, const tiled_extent& rhs) restrict(amp,cpu);
+
+    /** @} */
 };
 
+/**
+ * Represents an extent subdivided into 1-, 2-, or 3-dimensional tiles.
+ *
+ * @tparam D0,D1,D2 The length of the tile in each specified dimension, where
+ *                  D0 is the most-significant dimension and D2 is the
+ *                  least-significant.
+ */
 template <int D0, int D1>
 class tiled_extent<D0,D1,0> : public extent<2>
 {
 public:
-  static_assert(D0 > 0, "Tile size must be positive");
-  static_assert(D1 > 0, "Tile size must be positive");
-  static const int rank = 2;
-  tiled_extent() restrict(amp,cpu) { }
-  tiled_extent(const tiled_extent& other) restrict(amp,cpu):extent(other[0], other[1]) {}
-  tiled_extent(const extent<2>& ext) restrict(amp,cpu):extent(ext) {}
-  tiled_extent& operator=(const tiled_extent& other) restrict(amp,cpu);
-  tiled_extent pad() const restrict(amp,cpu) {
-    tiled_extent padded(*this);
-    padded[0] = (padded[0] <= D0) ? D0 : (((padded[0] + D0 - 1) / D0) * D0);
-    padded[1] = (padded[1] <= D1) ? D1 : (((padded[1] + D1 - 1) / D1) * D1);
-    return padded;
-  }
-  tiled_extent truncate() const restrict(amp,cpu) {
-    tiled_extent trunc(*this);
-    trunc[0] = (trunc[0]/D0) * D0;
-    trunc[1] = (trunc[1]/D1) * D1;
-    return trunc;
-  }
-  extent<2> get_tile_extent() const;
-  static const int tile_dim0 = D0;
-  static const int tile_dim1 = D1;
-  friend bool operator==(const tiled_extent& lhs, const tiled_extent& rhs) restrict(amp,cpu);
-  friend bool operator!=(const tiled_extent& lhs, const tiled_extent& rhs) restrict(amp,cpu);
+    static_assert(D0 > 0, "Tile size must be positive");
+    static_assert(D1 > 0, "Tile size must be positive");
+    static const int rank = 2;
+
+    /**
+     * Default constructor. The origin and extent is default-constructed and
+     * thus zero.
+     */
+    tiled_extent() restrict(amp,cpu) { }
+
+    /**
+     * Copy constructor. Constructs a new tiled_extent from the supplied
+     * argument "other".
+     *
+     * @param[in] other An object of type tiled_extent from which to initialize
+     *                  this new extent.
+     */
+    tiled_extent(const tiled_extent& other) restrict(amp,cpu):extent(other[0], other[1]) {}
+
+    /**
+     * Constructs a tiled_extent<N> with the extent "ext".
+     * Notice that this constructor allows implicit conversions from extent<N>
+     * to tiled_extent<N>.
+     *
+     * @param[in] ext The extent of this tiled_extent
+     */
+    tiled_extent(const extent<2>& ext) restrict(amp,cpu):extent(ext) {}
+
+    /**
+     * Assigns the component values of "other" to this tiled_extent<N> object.
+     *
+     * @param[in] other An object of type tiled_extent<N> from which to copy
+     *                  into this.
+     * @return Returns *this.
+     */
+    tiled_extent& operator=(const tiled_extent& other) restrict(amp,cpu);
+
+    /**
+     * Returns a new tiled_extent with the extents adjusted up to be evenly
+     * divisible by the tile dimensions. The origin of the new tiled_extent is
+     * the same as the origin of this one.
+     */
+    tiled_extent pad() const restrict(amp,cpu) {
+        tiled_extent padded(*this);
+        padded[0] = (padded[0] <= D0) ? D0 : (((padded[0] + D0 - 1) / D0) * D0);
+        padded[1] = (padded[1] <= D1) ? D1 : (((padded[1] + D1 - 1) / D1) * D1);
+        return padded;
+    }
+
+    /**
+     * Returns a new tiled_extent with the extents adjusted down to be evenly
+     * divisible by the tile dimensions. The origin of the new tiled_extent is
+     * the same as the origin of this one.
+     */
+    tiled_extent truncate() const restrict(amp,cpu) {
+        tiled_extent trunc(*this);
+        trunc[0] = (trunc[0]/D0) * D0;
+        trunc[1] = (trunc[1]/D1) * D1;
+        return trunc;
+    }
+
+    /**
+     * Returns an instance of an extent<N> that captures the values of the
+     * tiled_extent template arguments D0, D1, and D2. For example:
+     *
+     * @code{.cpp}
+     * tiled_extent<64,16,4> tg;
+     * extent<3> myTileExtent = tg.tile_extent;
+     * assert(myTileExtent[0] == 64);
+     * assert(myTileExtent[1] == 16);
+     * assert(myTileExtent[2] == 4);
+     * @endcode
+     */
+    // FIXME: this functions has not been implemented.
+    extent<2> get_tile_extent() const;
+
+    /** @{ */
+    /**
+     * These constants allow access to the template arguments of tiled_extent.
+     */
+    static const int tile_dim0 = D0;
+    static const int tile_dim1 = D1;
+    /** @} */
+
+    /** @{ */
+    /**
+     * Compares two objects of tiled_extent<N>.
+     *
+     * The expression
+     * lhs @f$\oplus@f$ rhs
+     * is true if lhs.extent @f$\oplus@f$ rhs.extent and lhs.origin @f$\oplus@f$ rhs.origin.
+     */
+    friend bool operator==(const tiled_extent& lhs, const tiled_extent& rhs) restrict(amp,cpu);
+    friend bool operator!=(const tiled_extent& lhs, const tiled_extent& rhs) restrict(amp,cpu);
+
+    /** @} */
 };
 
-
+/**
+ * Represents an extent subdivided into 1-, 2-, or 3-dimensional tiles.
+ *
+ * @tparam D0,D1,D2 The length of the tile in each specified dimension, where
+ *                  D0 is the most-significant dimension and D2 is the
+ *                  least-significant.
+ */
 template <int D0>
 class tiled_extent<D0,0,0> : public extent<1>
 {
 public:
-  static_assert(D0 > 0, "Tile size must be positive");
-  static const int rank = 1;
-  tiled_extent() restrict(amp,cpu) { }
-  tiled_extent(const tiled_extent& other) restrict(amp,cpu):
-    extent(other[0]) {}
-  tiled_extent(const extent<1>& ext) restrict(amp,cpu):extent(ext) {}
-  tiled_extent& operator=(const tiled_extent& other) restrict(amp,cpu);
-  tiled_extent pad() const restrict(amp,cpu) {
-    tiled_extent padded(*this);
-    padded[0] = (padded[0] <= D0) ? D0 : (((padded[0] + D0 - 1) / D0) * D0);
-    return padded;
-  }
-  tiled_extent truncate() const restrict(amp,cpu) {
-    tiled_extent trunc(*this);
-    trunc[0] = (trunc[0]/D0) * D0;
-    return trunc;
-  }
-  extent<1> get_tile_extent() const;
-  static const int tile_dim0 = D0;
-  friend bool operator==(const tiled_extent& lhs, const tiled_extent& rhs) restrict(amp,cpu);
-  friend bool operator!=(const tiled_extent& lhs, const tiled_extent& rhs) restrict(amp,cpu);
+    static_assert(D0 > 0, "Tile size must be positive");
+    static const int rank = 1;
+
+    /**
+     * Default constructor. The origin and extent is default-constructed and
+     * thus zero.
+     */
+    tiled_extent() restrict(amp,cpu) { }
+
+    /**
+     * Copy constructor. Constructs a new tiled_extent from the supplied
+     * argument "other".
+     *
+     * @param[in] other An object of type tiled_extent from which to initialize
+     *                  this new extent.
+     */
+    tiled_extent(const tiled_extent& other) restrict(amp,cpu): extent(other[0]) {}
+
+    /**
+     * Constructs a tiled_extent<N> with the extent "ext".
+     * Notice that this constructor allows implicit conversions from extent<N>
+     * to tiled_extent<N>.
+     *
+     * @param[in] ext The extent of this tiled_extent
+     */
+    tiled_extent(const extent<1>& ext) restrict(amp,cpu):extent(ext) {}
+
+    /**
+     * Assigns the component values of "other" to this tiled_extent<N> object.
+     *
+     * @param[in] other An object of type tiled_extent<N> from which to copy
+     *                  into this.
+     * @return Returns *this.
+     */
+    tiled_extent& operator=(const tiled_extent& other) restrict(amp,cpu);
+
+    /**
+     * Returns a new tiled_extent with the extents adjusted up to be evenly
+     * divisible by the tile dimensions. The origin of the new tiled_extent is
+     * the same as the origin of this one.
+     */
+    tiled_extent pad() const restrict(amp,cpu) {
+        tiled_extent padded(*this);
+        padded[0] = (padded[0] <= D0) ? D0 : (((padded[0] + D0 - 1) / D0) * D0);
+        return padded;
+    }
+
+    /**
+     * Returns a new tiled_extent with the extents adjusted down to be evenly
+     * divisible by the tile dimensions. The origin of the new tiled_extent is
+     * the same as the origin of this one.
+     */
+    tiled_extent truncate() const restrict(amp,cpu) {
+        tiled_extent trunc(*this);
+        trunc[0] = (trunc[0]/D0) * D0;
+        return trunc;
+    }
+
+    /**
+     * Returns an instance of an extent<N> that captures the values of the
+     * tiled_extent template arguments D0, D1, and D2. For example:
+     *
+     * @code{.cpp}
+     * tiled_extent<64,16,4> tg;
+     * extent<3> myTileExtent = tg.tile_extent;
+     * assert(myTileExtent[0] == 64);
+     * assert(myTileExtent[1] == 16);
+     * assert(myTileExtent[2] == 4);
+     * @endcode
+     */
+    // FIXME: this functions has not been implemented.
+    extent<1> get_tile_extent() const;
+
+    /** @{ */
+    /**
+     * These constants allow access to the template arguments of tiled_extent.
+     */
+    static const int tile_dim0 = D0;
+    /** @} */
+
+
+    /** @{ */
+    /**
+     * Compares two objects of tiled_extent<N>.
+     *
+     * The expression
+     * lhs @f$\oplus@f$ rhs
+     * is true if lhs.extent @f$\oplus@f$ rhs.extent and lhs.origin @f$\oplus@f$ rhs.origin.
+     */
+    friend bool operator==(const tiled_extent& lhs, const tiled_extent& rhs) restrict(amp,cpu);
+    friend bool operator!=(const tiled_extent& lhs, const tiled_extent& rhs) restrict(amp,cpu);
+
+    /** @} */
 };
 
 
