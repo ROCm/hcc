@@ -73,9 +73,7 @@ T reduce_impl(RandomAccessIterator first, RandomAccessIterator last,
   } while (s > 1);
 
   // apply initial value
-  tmp[0] = binary_op(tmp[0], init);
-
-  _Tp ans = tmp[0];
+  _Tp ans  = binary_op(init, tmp[0]);
 
   delete [] tmp;
   return ans;
