@@ -431,6 +431,9 @@ Type * mapTypeToGlobal ( Type *);
 
 namespace {
   std::map<StructType*, StructType*> structTypeMap;
+
+  // a mapping of old types to newly translated types
+  std::map<Type *, Type *> translatedTypeMap;
 }
 
 StructType* mapTypeToGlobal(StructType* T) {
@@ -462,6 +465,9 @@ StructType* mapTypeToGlobal(StructType* T) {
     // use normal type translation logic if otherwise
     if (translatedType == nullptr) {
       translatedType = mapTypeToGlobal(baseType);
+
+      // associate the newly created translated type with the old type
+      translatedTypeMap[baseType] = translatedType;
     }
 
     translatedTypes.push_back(translatedType);
@@ -523,42 +529,49 @@ FunctionType * createNewFunctionTypeWithPtrToGlobals (Function * F)
         FunctionType * baseType = F->getFunctionType();
 
         std::vector<Type *> translatedArgTypes;
-/*
-        for (unsigned arg = 0, arg_end = baseType->getNumParams();
-             arg != arg_end; ++arg) {
-                Type * argType = baseType->getParamType(arg);
-                Type * translatedType = mapTypeToGlobal (argType);
-                translatedArgTypes.push_back ( translatedType );
-        }*/
+
+        // keep track of mapping of the original type and translated type
+
         unsigned argIdx = 0;
         for (Function::arg_iterator A = F->arg_begin(), Ae = F->arg_end();
              A != Ae; ++A, ++argIdx) {
                 Type * argType = baseType->getParamType(argIdx);
                 Type * translatedType;
 
-                StringRef argName = A->getName();
-                if (argName.equals("scratch")
-                    || argName.equals("lds")
-                    || argName.equals("scratch_count")) {
-                        PointerType * Ptr = dyn_cast<PointerType>(argType);
-                        assert(Ptr && "Pointer type expected");
-                        translatedType = PointerType::get(Ptr->getElementType(),
-                                                          LocalAddressSpace);
-                } else {
-                        if (A->hasByValAttr()) {
-                                PointerType * ptrType =
-                                        cast<PointerType>(argType);
-                                Type * elementType =
-                                        ptrType->getElementType();
-                                Type * translatedElement =
-                                        mapTypeToGlobal(elementType);
-                                translatedType =
-                                        PointerType::get(translatedElement,
-                                                         0);
-                        } else {
-                                translatedType = mapTypeToGlobal (argType);
-                        }
+                // try use previously translated type
+                translatedType = translatedTypeMap[argType];
+
+                // create new translated type if there is none
+                if (translatedType == nullptr) {
+
+                    StringRef argName = A->getName();
+                    if (argName.equals("scratch")
+                        || argName.equals("lds")
+                        || argName.equals("scratch_count")) {
+                            PointerType * Ptr = dyn_cast<PointerType>(argType);
+                            assert(Ptr && "Pointer type expected");
+                            translatedType = PointerType::get(Ptr->getElementType(),
+                                                              LocalAddressSpace);
+                    } else {
+                            if (A->hasByValAttr()) {
+                                    PointerType * ptrType =
+                                            cast<PointerType>(argType);
+                                    Type * elementType =
+                                            ptrType->getElementType();
+                                    Type * translatedElement =
+                                            mapTypeToGlobal(elementType);
+                                    translatedType =
+                                            PointerType::get(translatedElement,
+                                                             0);
+                            } else {
+                                    translatedType = mapTypeToGlobal (argType);
+                            }
+                    }
+
+                    // associate the newly created translated type with the old type
+                    translatedTypeMap[argType] = translatedType;
                 }
+
                 translatedArgTypes.push_back ( translatedType );
         }
 
