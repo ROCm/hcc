@@ -1,3 +1,15 @@
+//===----------------------------------------------------------------------===//
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+/**
+ * @file hc.hpp
+ * Heterogeneous C++ (HC) API.
+ */
+
 #pragma once
 
 #include <kalmar_defines.h>
