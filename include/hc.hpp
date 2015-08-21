@@ -658,29 +658,54 @@ inline accelerator accelerator_view::get_accelerator() const { return pQueue->ge
 // completion_future
 // ------------------------------------------------------------------------
 
+/**
+ * This class is the return type of all asynchronous APIs and has an interface
+ * analogous to std::shared_future<void>. Similar to std::shared_future, this
+ * type provides member methods such as wait and get to wait for asynchronous
+ * operations to finish, and the type additionally provides a member method
+ * then(), to specify a completion callback functor to be executed upon
+ * completion of an asynchronous operation.
+ */
 class completion_future {
 public:
 
+    /**
+     * Default constructor. Constructs an empty uninitialized completion_future
+     * object which does not refer to any asynchronous operation. Default
+     * constructed completion_future objects have valid() == false
+     */
     completion_future() : __amp_future(), __thread_then(nullptr), __asyncOp(nullptr) {};
 
-    completion_future(const completion_future& _Other)
-        : __amp_future(_Other.__amp_future), __thread_then(_Other.__thread_then), __asyncOp(_Other.__asyncOp) {}
+    /**
+     * Copy constructor. Constructs a new completion_future object that referes
+     * to the same asynchronous operation as the other completion_future object.
+     *
+     * @param[in] other An object of type completion_future from which to
+     *                  initialize this.
+     */
+    completion_future(const completion_future& other)
+        : __amp_future(other.__amp_future), __thread_then(other.__thread_then), __asyncOp(other.__asyncOp) {}
 
-    completion_future(completion_future&& _Other)
-        : __amp_future(std::move(_Other.__amp_future)), __thread_then(_Other.__thread_then), __asyncOp(_Other.__asyncOp) {}
+    /**
+     * Move constructor. Move constructs a new completion_future object that
+     * referes to the same asynchronous operation as originally refered by the
+     * other completion_future object. After this constructor returns,
+     * other.valid() == false
+     *
+     * @param[in] other An object of type completion_future which the new
+     *                  completion_future
+     */
+    completion_future(completion_future&& other)
+        : __amp_future(std::move(other.__amp_future)), __thread_then(other.__thread_then), __asyncOp(other.__asyncOp) {}
 
-    ~completion_future() {
-      if (__thread_then != nullptr) {
-        __thread_then->join();
-      }
-      delete __thread_then;
-      __thread_then = nullptr;
-      
-      if (__asyncOp != nullptr) {
-        __asyncOp = nullptr;
-      }
-    }
-
+    /**
+     * Copy assignment. Copy assigns the contents of other to this. This method
+     * causes this to stop referring its current asynchronous operation and
+     * start referring the same asynchronous operation as other.
+     *
+     * @param[in] other An object of type completion_future which is copy
+     *                  assigned to this.
+     */
     completion_future& operator=(const completion_future& _Other) {
         if (this != &_Other) {
            __amp_future = _Other.__amp_future;
@@ -690,6 +715,15 @@ public:
         return (*this);
     }
 
+    /**
+     * Move assignment. Move assigns the contents of other to this. This method
+     * causes this to stop referring its current asynchronous operation and
+     * start referring the same asynchronous operation as other. After this
+     * method returns, other.valid() == false
+     *
+     * @param[in] other An object of type completion_future which is move
+     *                  assigned to this.
+     */
     completion_future& operator=(completion_future&& _Other) {
         if (this != &_Other) {
             __amp_future = std::move(_Other.__amp_future);
@@ -699,13 +733,39 @@ public:
         return (*this);
     }
 
+    /**
+     * This method is functionally identical to std::shared_future<void>::get.
+     * This method waits for the associated asynchronous operation to finish
+     * and returns only upon the completion of the asynchronous operation. If
+     * an exception was encountered during the execution of the asynchronous
+     * operation, this method throws that stored exception.
+     */
     void get() const {
         __amp_future.get();
     }
 
+    /**
+     * This method is functionally identical to
+     * std::shared_future<void>::valid. This returns true if this
+     * completion_future is associated with an asynchronous operation.
+     */
     bool valid() const {
         return __amp_future.valid();
     }
+
+    /** @{ */
+    /**
+     * These methods are functionally identical to the corresponding
+     * std::shared_future<void> methods.
+     *
+     * The wait method waits for the associated asynchronous operation to
+     * finish and returns only upon completion of the associated asynchronous
+     * operation or if an exception was encountered when executing the
+     * asynchronous operation.
+     *
+     * The other variants are functionally identical to the
+     * std::shared_future<void> member methods with same names.
+     */
     void wait() const {
         if(this->valid())
           __amp_future.wait();
@@ -721,11 +781,27 @@ public:
         return __amp_future.wait_until(_Abs_time);
     }
 
+    /** @} */
+
+    /**
+     * Conversion operator to std::shared_future<void>. This method returns a
+     * shared_future<void> object corresponding to this completion_future
+     * object and refers to the same asynchronous operation.
+     */
     operator std::shared_future<void>() const {
         return __amp_future;
     }
 
-    // notice we removed const from the signature here
+    /**
+     * This method enables specification of a completion callback func which is
+     * executed upon completion of the asynchronous operation associated with
+     * this completion_future object. The completion callback func should have
+     * an operator() that is valid when invoked with non arguments, i.e., "func()".
+     */
+    // FIXME: notice we removed const from the signature here
+    //        the original signature in the specification should be
+    //        template<typename functor>
+    //        void then(const functor& func) const;
     template<typename functor>
     void then(const functor & func) {
 #if __KALMAR_ACCELERATOR__ != 1
@@ -741,11 +817,28 @@ public:
 #endif
     }
 
+    /**
+     * Get the native handle for the asynchronous operation encapsulated in
+     * this completion_future object. The method is mostly used for debugging
+     * purpose.
+     */
     void* getNativeHandle() {
       if (__asyncOp != nullptr) {
         return __asyncOp->getNativeHandle();
       } else {
         return nullptr;
+      }
+    }
+
+    ~completion_future() {
+      if (__thread_then != nullptr) {
+        __thread_then->join();
+      }
+      delete __thread_then;
+      __thread_then = nullptr;
+      
+      if (__asyncOp != nullptr) {
+        __asyncOp = nullptr;
       }
     }
 
@@ -821,22 +914,22 @@ private:
         completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
 
     // implementation of copy_async
-    template <typename InputIter, typename OutputIter>
-        friend completion_future __amp_copy_async_impl(InputIter& src, OutputIter& dst);
+    template <typename InputIter, typename OutputIter> friend
+        completion_future __amp_copy_async_impl(InputIter& src, OutputIter& dst);
 
     // copy_async
-    template <typename InputIter, typename T, int N>
-        friend completion_future copy_async(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest);
-    template <typename InputIter, typename T, int N>
-        friend completion_future copy_async(InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest);
-    template <typename InputIter, typename T, int N>
-        friend completion_future copy_async(InputIter srcBegin, array<T, N>& dest);
-    template <typename InputIter, typename T, int N>
-        friend completion_future copy_async(InputIter srcBegin, const array_view<T, N>& dest);
-    template <typename OutputIter, typename T, int N>
-        friend completion_future copy_async(const array<T, N>& src, OutputIter destBegin);
-    template <typename OutputIter, typename T, int N>
-        friend completion_future copy_async(const array_view<T, N>& src, OutputIter destBegin);
+    template <typename InputIter, typename T, int N> friend
+        completion_future copy_async(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest);
+    template <typename InputIter, typename T, int N> friend
+        completion_future copy_async(InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest);
+    template <typename InputIter, typename T, int N> friend
+        completion_future copy_async(InputIter srcBegin, array<T, N>& dest);
+    template <typename InputIter, typename T, int N> friend
+        completion_future copy_async(InputIter srcBegin, const array_view<T, N>& dest);
+    template <typename OutputIter, typename T, int N> friend
+        completion_future copy_async(const array<T, N>& src, OutputIter destBegin);
+    template <typename OutputIter, typename T, int N> friend
+        completion_future copy_async(const array_view<T, N>& src, OutputIter destBegin);
 
     // array_view
     template <typename T, int N> friend class array_view;
