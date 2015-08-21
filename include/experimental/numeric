@@ -16,6 +16,7 @@
 #include <numeric>
 #include <iterator>
 #include <type_traits>
+#include <utility>
 #include <memory>
 
 namespace std {
@@ -33,12 +34,7 @@ inline namespace v1 {
 #include "impl/transform_exclusive_scan.inl"
 #include "impl/transform_inclusive_scan.inl"
 
-// FIXME: these algorithms shall be placed in another header?
-#include "impl/count.inl"
-#include "impl/max_element.inl"
-#include "impl/min_element.inl"
-#include "impl/minmax_element.inl"
-#include "impl/all_any_none_of.inl"
+#include "impl/numeric_impl.inl"
 
 } // inline namespace v1
 } // namespace parallel

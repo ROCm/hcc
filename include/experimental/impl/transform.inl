@@ -49,7 +49,6 @@ OutputIterator transform_impl(RandomAccessIterator first, RandomAccessIterator l
   using hc::parallel_for_each;
   hc::ts_allocator tsa;
 
-  // initialize the stride
   parallel_for_each(extent<1>(N), tsa,
     [d_first_, first_, unary_op](index<1> idx) restrict(amp) {
       d_first_[idx[0]] = unary_op(first_[idx[0]]);
@@ -84,7 +83,6 @@ OutputIterator transform_impl(RandomAccessIterator first1, RandomAccessIterator 
   using hc::parallel_for_each;
   hc::ts_allocator tsa;
 
-  // initialize the stride
   parallel_for_each(extent<1>(N), tsa,
     [d_first_, first1_, first2_, binary_op](index<1> idx) restrict(amp) {
       d_first_[idx[0]] = binary_op(first1_[idx[0]], first2_[idx[0]]);

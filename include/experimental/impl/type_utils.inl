@@ -9,6 +9,9 @@ using EnableIf = typename std::enable_if<Condition::value, T>::type *;
 template<class It>
 using isInputIt = std::is_base_of<std::input_iterator_tag,
                                   tag<It>>;
+template<class It>
+using isForwardIt = std::is_base_of<std::forward_iterator_tag,
+                                    tag<It>>;
 
 template<class It>
 using isRandomAccessIt = std::is_base_of<std::random_access_iterator_tag,
