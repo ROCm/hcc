@@ -51,6 +51,10 @@ using accelerator_view_removed = Kalmar::accelerator_view_removed;
 } // namespace Concurrency
 
 
+/**
+ * @namespace Concurrency
+ * C++ AMP namespace
+ */
 namespace Concurrency {
 
 using namespace Kalmar::enums;

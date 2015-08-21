@@ -25,6 +25,10 @@
 
 #include <am.h>
 
+/**
+ * @namespace hc
+ * Heterogeneous  C++ (HC) namespace
+ */
 namespace hc {
 
 using namespace Kalmar::enums;
