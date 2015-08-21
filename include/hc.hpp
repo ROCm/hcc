@@ -1698,6 +1698,13 @@ struct barrier_t {
 // tiled_barrier
 // ------------------------------------------------------------------------
 
+/**
+ * The tile_barrier class is a capability class that is only creatable by the
+ * system, and passed to a tiled parallel_for_each function object as part of
+ * the tiled_index parameter. It provides member functions, such as wait, whose
+ * purpose is to synchronize execution of threads running within the thread
+ * tile.
+ */
 class tile_barrier {
 public:
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
