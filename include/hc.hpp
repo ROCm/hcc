@@ -2803,9 +2803,6 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   if (static_cast<size_t>(compute_domain.tile_dim[0]) > 1024) {
     throw invalid_compute_domain("The maximum number of threads in a tile is 1024");
   }
-  if(ext % tile != 0) {
-    throw invalid_compute_domain("Extent can't be evenly divisble by tile size.");
-  }
   if (av.get_accelerator().get_device_path() == L"cpu") {
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
   }
@@ -2841,9 +2838,6 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
                      static_cast<size_t>(compute_domain.tile_dim[0]) };
   if (static_cast<size_t>(compute_domain.tile_dim[1] * compute_domain.tile_dim[0]) > 1024) {
     throw invalid_compute_domain("The maximum number of threads in a tile is 1024");
-  }
-  if((ext[0] % tile[0] != 0) || (ext[1] % tile[1] != 0)) {
-    throw invalid_compute_domain("Extent can't be evenly divisble by tile size.");
   }
   if (av.get_accelerator().get_device_path() == L"cpu") {
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
@@ -2888,9 +2882,6 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
                      static_cast<size_t>(compute_domain.tile_dim[0]) };
   if (static_cast<size_t>(compute_domain.tile_dim[2] * compute_domain.tile_dim[1]* compute_domain.tile_dim[0]) > 1024) {
     throw invalid_compute_domain("The maximum number of threads in a tile is 1024");
-  }
-  if((ext[0] % tile[0] != 0) || (ext[1] % tile[1] != 0) || (ext[2] % tile[2] != 0)) {
-    throw invalid_compute_domain("Extent can't be evenly divisble by tile size.");
   }
   if (av.get_accelerator().get_device_path() == L"cpu") {
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
@@ -3066,9 +3057,6 @@ completion_future parallel_for_each(const accelerator_view& av,
   if (static_cast<size_t>(compute_domain.tile_dim[0]) > 1024) {
     throw invalid_compute_domain("The maximum number of threads in a tile is 1024");
   }
-  if (ext % tile != 0) {
-    throw invalid_compute_domain("Extent can't be evenly divisible by tile size.");
-  }
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   if (CLAMP::is_cpu()) {
       launch_cpu_task(av.pQueue, f, compute_domain);
@@ -3117,9 +3105,6 @@ completion_future parallel_for_each(const accelerator_view& av,
                      static_cast<size_t>(compute_domain.tile_dim[0]) };
   if (static_cast<size_t>(compute_domain.tile_dim[1] * compute_domain.tile_dim[0]) > 1024) {
     throw invalid_compute_domain("The maximum number of threads in a tile is 1024");
-  }
-  if((ext[0] % tile[0] != 0) || (ext[1] % tile[1] != 0)) {
-    throw invalid_compute_domain("Extent can't be evenly divisble by tile size.");
   }
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   if (CLAMP::is_cpu()) {
@@ -3176,9 +3161,6 @@ completion_future parallel_for_each(const accelerator_view& av,
                      static_cast<size_t>(compute_domain.tile_dim[0]) };
   if (static_cast<size_t>(compute_domain.tile_dim[2] * compute_domain.tile_dim[1]* compute_domain.tile_dim[0]) > 1024) {
     throw invalid_compute_domain("The maximum number of threads in a tile is 1024");
-  }
-  if((ext[0] % tile[0] != 0) || (ext[1] % tile[1] != 0) || (ext[2] % tile[2] != 0)) {
-    throw invalid_compute_domain("Extent can't be evenly divisble by tile size.");
   }
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   if (CLAMP::is_cpu()) {
