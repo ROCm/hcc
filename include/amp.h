@@ -3370,18 +3370,18 @@ private:
   template <typename Q, int K> friend class array;
   template <typename Q, int K> friend class array_view;
 
-  template<typename Q, int K>
-      friend bool is_flat(const array_view<Q, K>&) noexcept;
-  template <typename Q, int K>
-      friend void copy(const array<Q, K>&, const array_view<Q, K>&);
-  template <typename InputIter, typename Q, int K>
-      friend void copy(InputIter, InputIter, const array_view<Q, K>&);
-  template <typename Q, int K>
-      friend void copy(const array_view<const Q, K>&, array<Q, K>&);
-  template <typename OutputIter, typename Q, int K>
-      friend void copy(const array_view<Q, K>&, OutputIter);
-template <typename Q, int K>
-      friend void copy(const array_view<const Q, K>& src, const array_view<Q, K>& dest);
+  template<typename Q, int K> friend
+      bool is_flat(const array_view<Q, K>&) noexcept;
+  template <typename Q, int K> friend
+      void copy(const array<Q, K>&, const array_view<Q, K>&);
+  template <typename InputIter, typename Q, int K> friend
+      void copy(InputIter, InputIter, const array_view<Q, K>&);
+  template <typename Q, int K> friend
+      void copy(const array_view<const Q, K>&, array<Q, K>&);
+  template <typename OutputIter, typename Q, int K> friend
+      void copy(const array_view<Q, K>&, OutputIter);
+template <typename Q, int K> friend
+      void copy(const array_view<const Q, K>& src, const array_view<Q, K>& dest);
 
 
 
@@ -3601,18 +3601,18 @@ private:
   template <typename Q, int K> friend class array_view;
 
 
-  template<typename Q, int K>
-      friend bool is_flat(const array_view<Q, K>&) noexcept;
-  template <typename Q, int K>
-      friend void copy(const array<Q, K>&, const array_view<Q, K>&);
-  template <typename InputIter, typename Q, int K>
-      friend void copy(InputIter, InputIter, const array_view<Q, K>&);
-  template <typename Q, int K>
-      friend void copy(const array_view<const Q, K>&, array<Q, K>&);
-  template <typename OutputIter, typename Q, int K>
-      friend void copy(const array_view<Q, K>&, OutputIter);
-  template <typename Q, int K>
-      friend void copy(const array_view<const Q, K>& src, const array_view<Q, K>& dest);
+  template<typename Q, int K> friend
+      bool is_flat(const array_view<Q, K>&) noexcept;
+  template <typename Q, int K> friend
+      void copy(const array<Q, K>&, const array_view<Q, K>&);
+  template <typename InputIter, typename Q, int K> friend
+      void copy(InputIter, InputIter, const array_view<Q, K>&);
+  template <typename Q, int K> friend
+      void copy(const array_view<const Q, K>&, array<Q, K>&);
+  template <typename OutputIter, typename Q, int K> friend
+      void copy(const array_view<Q, K>&, OutputIter);
+  template <typename Q, int K> friend
+      void copy(const array_view<const Q, K>& src, const array_view<Q, K>& dest);
 
 
 
@@ -4481,7 +4481,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
   size_t tile = compute_domain.tile_dim0;
   static_assert( compute_domain.tile_dim0 <= 1024, "The maximum nuimber of threads in a tile is 1024");
   if(ext % tile != 0) {
-    throw invalid_compute_domain("Extent can't be evenly divisble by tile size.");
+    throw invalid_compute_domain("Extent can't be evenly divisible by tile size.");
   }
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   if (CLAMP::is_cpu()) {
@@ -4520,7 +4520,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
                      compute_domain.tile_dim0};
   static_assert( (compute_domain.tile_dim1 * compute_domain.tile_dim0)<= 1024, "The maximum nuimber of threads in a tile is 1024");
   if((ext[0] % tile[0] != 0) || (ext[1] % tile[1] != 0)) {
-    throw invalid_compute_domain("Extent can't be evenly divisble by tile size.");
+    throw invalid_compute_domain("Extent can't be evenly divisible by tile size.");
   }
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   if (CLAMP::is_cpu()) {
@@ -4567,7 +4567,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
                      compute_domain.tile_dim0};
   static_assert(( compute_domain.tile_dim2 * compute_domain.tile_dim1* compute_domain.tile_dim0)<= 1024, "The maximum nuimber of threads in a tile is 1024");
   if((ext[0] % tile[0] != 0) || (ext[1] % tile[1] != 0) || (ext[2] % tile[2] != 0)) {
-    throw invalid_compute_domain("Extent can't be evenly divisble by tile size.");
+    throw invalid_compute_domain("Extent can't be evenly divisible by tile size.");
   }
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   if (CLAMP::is_cpu()) {
