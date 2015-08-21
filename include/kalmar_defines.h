@@ -34,3 +34,13 @@ extern "C" __attribute__((pure)) int64_t amp_get_group_id(unsigned int n) restri
 #endif
 extern "C" __attribute__((noduplicate)) void amp_barrier(unsigned int n) restrict(amp);
 
+//
+// AM-specific defines
+//
+// FIXME: they shall be moved to AM header file later on
+
+/**
+ * Typedef for AM index.
+ */
+typedef int am_accelerator_view_t;
+

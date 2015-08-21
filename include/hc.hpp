@@ -89,6 +89,28 @@ public:
     return pQueue->hasHSAInterOp();
   }
 
+    /**
+     * Set AM index.
+     *
+     * @param[in] av_index index given by AM API for this accelerator_view
+     *                     instance.
+     */
+    void set_av_index(am_accelerator_view_t av_index) {
+        pQueue->setAMIndex(av_index);
+    }
+
+    /**
+     * Returns AM index.
+     */
+    am_accelerator_view_t get_av_index() {
+        return pQueue->getAMIndex();
+    }
+
+    /**
+     * Returns AM index via conversion.
+     */
+    operator am_accelerator_view_t() const { return pQueue->getAMIndex(); }
+
   completion_future create_marker();
 
 private:
