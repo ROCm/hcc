@@ -1,6 +1,3 @@
-
-#include <vector>
-
 // FIXME, this is a SEQUENTIAL implementation of reduce!
 // a special version of reduce which does NOT dereference the iterator
 template<class InputIterator, class T, class BinaryOperation>
@@ -22,11 +19,22 @@ T reduce_impl(InputIterator first, InputIterator last,
   return std::accumulate(first, last, init, binary_op);
 }
 
+template<class T, class U, class BinaryOperation>
+inline void round(const unsigned &i, const unsigned &N,
+                  T *tmp, U *src,
+                  BinaryOperation binary_op) {
+  if (2*i+1 < N) {
+    tmp[i] = binary_op(src[2*i], src[2*i+1]);
+  } else {
+    tmp[i] = src[2*i];
+  }
+}
+
 template<class RandomAccessIterator, class T, class BinaryOperation>
 T reduce_impl(RandomAccessIterator first, RandomAccessIterator last,
-         T init,
-         BinaryOperation binary_op,
-         std::random_access_iterator_tag) {
+              T init,
+              BinaryOperation binary_op,
+              std::random_access_iterator_tag) {
 
   typedef typename std::iterator_traits<RandomAccessIterator>::value_type _Tp;
 
@@ -43,37 +51,23 @@ T reduce_impl(RandomAccessIterator first, RandomAccessIterator last,
   }
 
   unsigned s = (N + 1) / 2;
-  _Tp *tmp = new _Tp [s];
-
-  // for each round
-  auto round = [tmp, binary_op](const unsigned &i,
-                                const unsigned &N,
-                                const _Tp *src) {
-    if (2*i+1 < N) {
-      tmp[i] = binary_op(src[2*i], src[2*i+1]);
-    } else {
-      tmp[i] = src[2*i];
-    }
-  };
-
-  // first round
+  T *tmp = new T [s];
   _Tp *first_ = &(*first);
+
   parallel_for_each(extent<1>(s), tsa,
-                    [first_, N, round](index<1> idx) restrict(amp) {
-    round(idx[0], N, first_);
+                    [tmp, first_, N, &s, binary_op](index<1> idx) restrict(amp) {
+    // first round
+    round(idx[0], N, tmp, first_, binary_op);
+
+    // Reduction kernel: apply logN - 1 times
+    do {
+      round(idx[0], s, tmp, tmp, binary_op);
+      s = (s + 1) / 2;
+    } while (s > 1);
   });
 
-  // Reduction kernel: apply logN - 1 times
-  do {
-    parallel_for_each(extent<1>((s + 1) / 2), tsa,
-                      [tmp, s, round](index<1> idx) restrict(amp) {
-      round(idx[0], s, tmp);
-    });
-    s = (s + 1) / 2;
-  } while (s > 1);
-
   // apply initial value
-  _Tp ans  = binary_op(init, tmp[0]);
+  T ans  = binary_op(init, tmp[0]);
 
   delete [] tmp;
   return ans;
