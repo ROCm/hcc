@@ -463,26 +463,10 @@ private:
         if (localSize == 0) localSize = recommendedSize;   // (globalSize > 16 ? 1 : globalSize);   
         localSize = std::min(localSize, recommendedSize);
   
-        // Check if globalSize is a multiple of localSize
-        // (this might be temporary until the runtime really does handle non-full last groups)
-        int legalGroupSize = findLargestFactor(globalSize, localSize);
-        //if (legalGroupSize != localSize) {
-        //  std::cout << "WARNING: groupSize[" << level << "] reduced to " << legalGroupSize << std::endl;
-        //}
-  
         global_size[level] = globalSize;
-        workgroup_size[level] = legalGroupSize;
+        workgroup_size[level] = localSize;
         //std::cout << "level " << level << ", grid=" << global_size[level] 
         //          << ", group=" << workgroup_size[level] << std::endl;
-    }
-
-    // find largest factor less than or equal to start
-    int findLargestFactor(int n, int start) {
-        if (start > n) return n;
-        for (int div = start; div >=1; div--) {
-            if (n % div == 0) return div;
-        }
-        return 1;
     }
 
 }; // end of HSADispatch
