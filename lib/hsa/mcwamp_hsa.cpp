@@ -242,6 +242,9 @@ public:
 
         /// Query the maximum number of work-items in each dimension of a workgroup
         status = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_DIM, &workgroup_max_dim);
+
+        // XXX: seems it's a hidden limitation imposed by the current HSA RT
+        workgroup_max_dim[2] = 256;
         STATUS_CHECK(status, __LINE__);
     }
 
