@@ -895,13 +895,18 @@ public:
   const index<3> tile;
   const index<3> tile_origin;
   const tile_barrier barrier;
-  tiled_index(const index<3>& g) restrict(amp,cpu) : global(g) {}
-  tiled_index(const tiled_index& other) restrict(amp,cpu) : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin), barrier(other.barrier) {}
+  const index<3> tile_dim;
+
+  tiled_index(const tiled_index& other) restrict(amp,cpu) : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin), barrier(other.barrier), tile_dim(other.dim) {}
+
   operator const index<3>() const restrict(amp,cpu) {
     return global;
   }
+
+  tiled_index(const index<3>& g) restrict(amp,cpu) : global(g) {}
 private:
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+  // FIXME: get x86 path working for HC
   __attribute__((always_inline)) tiled_index(int a0, int a1, int a2, int b0, int b1, int b2, int c0, int c1, int c2, tile_barrier& pb) restrict(amp,cpu) :
     global(a2, a1, a0), local(b2, b1, b0), tile(c2, c1, c0), tile_origin(a2 - b2, a1 - b1, a0 - b0), barrier(pb) {}
 #endif
@@ -914,7 +919,8 @@ private:
     tile(index<3>(amp_get_group_id(2), amp_get_group_id(1), amp_get_group_id(0))),
     tile_origin(index<3>(amp_get_global_id(2) - amp_get_local_id(2),
                          amp_get_global_id(1) - amp_get_local_id(1),
-                         amp_get_global_id(0) - amp_get_local_id(0)))
+                         amp_get_global_id(0) - amp_get_local_id(0))),
+    tile_dim(index<3>(amp_get_local_size(2), amp_get_local_size(1), amp_get_local_size(0)))
 #elif __KALMAR__ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   __attribute__((always_inline)) tiled_index() restrict(amp,cpu)
 #else
@@ -937,13 +943,18 @@ public:
   const index<1> tile;
   const index<1> tile_origin;
   const tile_barrier barrier;
-  tiled_index(const index<1>& g) restrict(amp,cpu) : global(g) {}
-  tiled_index(const tiled_index& other) restrict(amp,cpu) : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin), barrier(other.barrier) {}
+  const index<1> tile_dim;
+
+  tiled_index(const tiled_index& other) restrict(amp,cpu) : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin), barrier(other.barrier), tile_dim(other.tile_dim) {}
+
   operator const index<1>() const restrict(amp,cpu) {
     return global;
   }
+
+  tiled_index(const index<1>& g) restrict(amp,cpu) : global(g) {}
 private:
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+  // FIXME: get x86 path working for HC
   __attribute__((always_inline)) tiled_index(int a, int b, int c, tile_barrier& pb) restrict(amp,cpu) :
     global(a), local(b), tile(c), tile_origin(a - b), barrier(pb) {}
 #endif
@@ -954,7 +965,8 @@ private:
     global(index<1>(amp_get_global_id(0))),
     local(index<1>(amp_get_local_id(0))),
     tile(index<1>(amp_get_group_id(0))),
-    tile_origin(index<1>(amp_get_global_id(0) - amp_get_local_id(0)))
+    tile_origin(index<1>(amp_get_global_id(0) - amp_get_local_id(0))),
+    tile_dim(index<1>(amp_get_local_size(0)))
 #elif __KALMAR__ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   __attribute__((always_inline)) tiled_index() restrict(amp,cpu)
 #else
@@ -977,13 +989,18 @@ public:
   const index<2> tile;
   const index<2> tile_origin;
   const tile_barrier barrier;
-  tiled_index(const index<2>& g) restrict(amp,cpu) : global(g) {}
-  tiled_index(const tiled_index& other) restrict(amp,cpu) : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin), barrier(other.barrier) {}
+  const index<2> tile_dim;
+
+  tiled_index(const tiled_index& other) restrict(amp,cpu) : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin), barrier(other.barrier), tile_dim(other.tile_dim) {}
+
   operator const index<2>() const restrict(amp,cpu) {
     return global;
   }
+
+  tiled_index(const index<2>& g) restrict(amp,cpu) : global(g) {}
 private:
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+  // FIXME: get x86 path working for HC
   __attribute__((always_inline)) tiled_index(int a0, int a1, int b0, int b1, int c0, int c1, tile_barrier& pb) restrict(amp,cpu) :
     global(a1, a0), local(b1, b0), tile(c1, c0), tile_origin(a1 - b1, a0 - b0), barrier(pb) {}
 #endif
@@ -995,7 +1012,8 @@ private:
     local(index<2>(amp_get_local_id(1), amp_get_local_id(0))),
     tile(index<2>(amp_get_group_id(1), amp_get_group_id(0))),
     tile_origin(index<2>(amp_get_global_id(1) - amp_get_local_id(1),
-                         amp_get_global_id(0) - amp_get_local_id(0)))
+                         amp_get_global_id(0) - amp_get_local_id(0))),
+    tile_dim(index<2>(amp_get_local_size(1), amp_get_local_size(0)))
 #elif __KALMAR__ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
   __attribute__((always_inline)) tiled_index() restrict(amp,cpu)
 #else

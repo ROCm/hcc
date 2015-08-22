@@ -57,6 +57,19 @@ entry:
 
 declare spir_func void @_Z7barrierj(i32)
 
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @amp_get_local_size(i32 %n) #0 {
+entry:
+  %n.addr = alloca i32, align 4
+  store i32 %n, i32* %n.addr, align 4
+  %0 = load i32* %n.addr, align 4
+  %call = call spir_func i64 @_Z14get_local_sizej(i32 %0) #1
+  ret i64 %call
+}
+
+; Function Attrs: nounwind readnone
+declare spir_func i64 @_Z14get_local_sizej(i32) #1
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; math functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
