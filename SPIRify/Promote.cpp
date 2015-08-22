@@ -1129,6 +1129,10 @@ void updateInstructionWithNewOperand(Instruction * I,
            return; 
        }
 
+       if (isa<ReturnInst>(I)) {
+           DEBUG(llvm::errs() << "No need to update ret\n";);
+           return;
+       }
 
        llvm::errs() << "DO NOT KNOW HOW TO UPDATE INSTRUCTION: ";
              I->print(llvm::errs()); llvm::errs() << "\n";
