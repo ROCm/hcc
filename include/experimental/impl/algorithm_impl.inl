@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include <algorithm>
 #include "../numeric"
 
 namespace std {
@@ -17,8 +16,119 @@ inline namespace v1 {
 
 namespace details {
 
+// generate
+// std::generate forwarder
+template<typename ForwardIterator, typename Generator>
+void generate_impl(ForwardIterator first, ForwardIterator last,
+                   Generator g,
+                   std::input_iterator_tag) {
+  std::generate(first, last, g);
+}
+
+// parallel::generate
+template<typename ForwardIterator, typename Generator>
+void generate_impl(ForwardIterator first, ForwardIterator last,
+                   Generator g,
+                   std::random_access_iterator_tag) {
+  generate_impl(first, last, g,
+           std::input_iterator_tag{});
+}
+
+// for_each
+// std::for_each forwarder
+template<typename InputIterator, typename Function>
+void for_each_impl(InputIterator first, InputIterator last,
+                   Function f,
+                   std::input_iterator_tag) {
+  std::for_each(first, last, f);
+}
+
+// parallel::for_each
+template<typename InputIterator, typename Function>
+void for_each_impl(InputIterator first, InputIterator last,
+                   Function f,
+                   std::random_access_iterator_tag) {
+  for_each_impl(first, last, f, std::input_iterator_tag{});
+}
+
+// replace_if
+// std::replace_if forwarder
+template<typename ForwardIterator, typename Function, typename T>
+void replace_if_impl(ForwardIterator first, ForwardIterator last,
+                     Function f, const T& new_value,
+                     std::input_iterator_tag) {
+  std::replace_if(first, last, f, new_value);
+}
+
+// parallel::replace_if
+template<typename ForwardIterator, typename Function, typename T>
+void replace_if_impl(ForwardIterator first, ForwardIterator last,
+                     Function f, const T& new_value,
+                     std::random_access_iterator_tag) {
+  replace_if_impl(first, last, f, new_value, std::input_iterator_tag{});
+}
+
+// replace_copy_if
+// std::replace_copy_if forwarder
+template<typename InputIterator, typename OutputIterator,
+         typename Function, typename T>
+OutputIterator replace_copy_if_impl(InputIterator first, InputIterator last,
+                                    OutputIterator d_first,
+                                    Function f, const T& new_value,
+                                    std::input_iterator_tag) {
+  return std::replace_copy_if(first, last, d_first, f, new_value);
+}
+
+// parallel::replace_copy_if
+template<typename InputIterator, typename OutputIterator,
+         typename Function, typename T>
+OutputIterator replace_copy_if_impl(InputIterator first, InputIterator last,
+                                    OutputIterator d_first,
+                                    Function f, const T& new_value,
+                                    std::random_access_iterator_tag) {
+  return replace_copy_if_impl(first, last, d_first, f, new_value,
+           std::input_iterator_tag{});
+}
+
+// adjacent_difference (with predicate version)
+// std::adjacent_difference forwarder
+template<typename InputIterator, typename OutputIterator, typename Function>
+OutputIterator adjacent_difference_impl(InputIterator first, InputIterator last,
+                                        OutputIterator d_first,
+                                        Function f,
+                                        std::input_iterator_tag) {
+  return std::adjacent_difference(first, last, d_first, f);
+}
+
+// parallel::adjacent_difference (with predicate version)
+template<typename InputIterator, typename OutputIterator, typename Function>
+OutputIterator adjacent_difference_impl(InputIterator first, InputIterator last,
+                                        OutputIterator d_first,
+                                        Function f,
+                                        std::random_access_iterator_tag) {
+  return adjacent_difference_impl(first, last, d_first, f,
+           std::input_iterator_tag{});
+}
+
+// swap_ranges
+// std::swap_ranges forwarder
+template<typename InputIterator, typename OutputIterator>
+OutputIterator swap_ranges_impl(InputIterator first, InputIterator last,
+                                OutputIterator d_first,
+                                std::input_iterator_tag) {
+  return std::swap_ranges(first, last, d_first);
+}
+
+// parallel::swap_ranges
+template<typename InputIterator, typename OutputIterator>
+OutputIterator swap_ranges_impl(InputIterator first, InputIterator last,
+                                OutputIterator d_first,
+                                std::random_access_iterator_tag) {
+  return swap_ranges_impl(first, last, d_first, std::input_iterator_tag{});
+}
+
 // lexicographical_compare
-// The parallized version requires random access iterators
+// std::lexicographical_compare forwarder
 template<class InputIt1, class InputIt2, class Compare>
 bool lexicographical_compare_impl(InputIt1 first1, InputIt1 last1,
                                   InputIt2 first2, InputIt2 last2,
