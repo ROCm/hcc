@@ -1,5 +1,5 @@
 // XFAIL: Linux
-// RUN: %cxxamp -Xclang -fhsa-ext %s -o %t.out && %t.out
+// RUN: %hc %s -o %t.out && %t.out
 #include <iostream>
 #include <random>
 #include <future>
@@ -40,7 +40,7 @@ int main ()
   hc::extent<1> e(vecSize / 4);
 
 #define ASYNC_KERNEL_DISPATCH(x, y) \
-  hc::async_parallel_for_each( \
+  hc::parallel_for_each( \
     e, \
     [=](hc::index<1> idx) restrict(amp) { \
       for (int i = 0; i < LOOP_COUNT; ++i) \

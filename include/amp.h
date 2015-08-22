@@ -5,17 +5,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// CAVEATS: There could be walkarounds for quick evaluation purposes. Here we
-// list such features that are used in the code with description.
-//
-// ACCELERATOR
-//  According to specification, each array should have its binding accelerator
-//  instance. For now, we haven't implemented such binding nor actual
-//  implementation of accelerator.
-
 #pragma once
 
-#define __global
 #include <kalmar_defines.h>
 #include <kalmar_exception.h>
 #include <kalmar_index.h>
@@ -98,7 +89,6 @@ private:
 
   template <typename Q, int K> friend class array;
   template <typename Q, int K> friend class array_view;
-  template <typename T, int N> friend class array_helper;
 
   template <int N, typename Kernel> friend
       void parallel_for_each(Concurrency::extent<N>, const Kernel&);
@@ -280,13 +270,6 @@ public:
 private:
     std::shared_future<void> __amp_future;
     std::thread* __thread_then = nullptr;
-
-    // __future is dynamically allocated in C++AMP runtime implementation
-    // after we copy its content in __amp_future, we need to delete it
-    completion_future(std::shared_future<void>* __future)
-        : __amp_future(*__future) {
-      delete __future;
-    }
 
     completion_future(const std::shared_future<void> &__future)
         : __amp_future(__future) {}
@@ -801,9 +784,6 @@ public:
   friend bool operator!=(const tiled_extent& lhs, const tiled_extent& rhs) restrict(amp,cpu);
 };
 
-}
-
-namespace Concurrency {
 
 template <typename T, int N>
 struct projection_helper
@@ -846,19 +826,19 @@ struct projection_helper<T, 1>
 {
     // array_view<T,1>
     //      T& operator[](int i) const restrict(amp,cpu);
-    typedef __global T& result_type;
+    typedef T& result_type;
     static result_type project(array_view<T, 1>& now, int i) restrict(amp,cpu) {
 #if __KALMAR_ACCELERATOR__ != 1
         now.cache.get_cpu_access(true);
 #endif
-        __global T *ptr = reinterpret_cast<__global T *>(now.cache.get() + i + now.offset + now.index_base[0]);
+        T *ptr = reinterpret_cast<T *>(now.cache.get() + i + now.offset + now.index_base[0]);
         return *ptr;
     }
     static result_type project(const array_view<T, 1>& now, int i) restrict(amp,cpu) {
 #if __KALMAR_ACCELERATOR__ != 1
         now.cache.get_cpu_access(true);
 #endif
-        __global T *ptr = reinterpret_cast<__global T *>(now.cache.get() + i + now.offset + now.index_base[0]);
+        T *ptr = reinterpret_cast<T *>(now.cache.get() + i + now.offset + now.index_base[0]);
         return *ptr;
     }
 };
@@ -905,19 +885,19 @@ struct projection_helper<const T, 1>
 {
     // array_view<const T,1>
     //      const T& operator[](int i) const restrict(amp,cpu);
-    typedef __global const T& const_result_type;
+    typedef const T& const_result_type;
     static const_result_type project(array_view<const T, 1>& now, int i) restrict(amp,cpu) {
 #if __KALMAR_ACCELERATOR__ != 1
         now.cache.get_cpu_access();
 #endif
-        __global const T *ptr = reinterpret_cast<__global const T *>(now.cache.get() + i + now.offset + now.index_base[0]);
+        const T *ptr = reinterpret_cast<const T *>(now.cache.get() + i + now.offset + now.index_base[0]);
         return *ptr;
     }
     static const_result_type project(const array_view<const T, 1>& now, int i) restrict(amp,cpu) {
 #if __KALMAR_ACCELERATOR__ != 1
         now.cache.get_cpu_access();
 #endif
-        __global const T *ptr = reinterpret_cast<__global const T *>(now.cache.get() + i + now.offset + now.index_base[0]);
+        const T *ptr = reinterpret_cast<const T *>(now.cache.get() + i + now.offset + now.index_base[0]);
         return *ptr;
     }
 };
@@ -961,20 +941,20 @@ struct array_projection_helper<T, 1>
     // array<T,1>
     //    T& operator[](int i0) restrict(amp,cpu);
     //    const T& operator[](int i0) const restrict(amp,cpu);
-    typedef __global T& result_type;
-    typedef __global const T& const_result_type;
+    typedef T& result_type;
+    typedef const T& const_result_type;
     static result_type project(array<T, 1>& now, int i) restrict(amp,cpu) {
 #if __KALMAR_ACCELERATOR__ != 1
         now.m_device.synchronize(true);
 #endif
-        __global T *ptr = reinterpret_cast<__global T *>(now.m_device.get() + i);
+        T *ptr = reinterpret_cast<T *>(now.m_device.get() + i);
         return *ptr;
     }
     static const_result_type project(const array<T, 1>& now, int i) restrict(amp,cpu) {
 #if __KALMAR_ACCELERATOR__ != 1
         now.m_device.synchronize();
 #endif
-        __global const T *ptr = reinterpret_cast<__global const T *>(now.m_device.get() + i);
+        const T *ptr = reinterpret_cast<const T *>(now.m_device.get() + i);
         return *ptr;
     }
 };
@@ -1246,22 +1226,22 @@ public:
   accelerator_view get_associated_accelerator_view() const { return m_device.get_stage(); }
   access_type get_cpu_access_type() const { return m_device.get_access(); }
 
-  __global T& operator[](const index<N>& idx) restrict(amp,cpu) {
+  T& operator[](const index<N>& idx) restrict(amp,cpu) {
 #ifndef __KALMAR_ACCELERATOR__
       if (!m_device.get())
           throw runtime_exception("The array is not accessible on CPU.", 0);
       m_device.synchronize(true);
 #endif
-      __global T *ptr = reinterpret_cast<__global T*>(m_device.get());
+      T *ptr = reinterpret_cast<T*>(m_device.get());
       return ptr[Kalmar::amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx, extent)];
   }
-  __global const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
+  const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
 #if __KALMAR_ACCELERATOR__ != 1
       if (!m_device.get())
           throw runtime_exception("The array is not accessible on CPU.", 0);
       m_device.synchronize();
 #endif
-      __global T *ptr = reinterpret_cast<__global T*>(m_device.get());
+      T *ptr = reinterpret_cast<T*>(m_device.get());
       return ptr[Kalmar::amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx, extent)];
   }
 
@@ -1274,10 +1254,10 @@ public:
           return array_projection_helper<T, N>::project(*this, i);
       }
 
-  __global T& operator()(const index<N>& idx) restrict(amp,cpu) {
+  T& operator()(const index<N>& idx) restrict(amp,cpu) {
     return (*this)[idx];
   }
-  __global const T& operator()(const index<N>& idx) const restrict(amp,cpu) {
+  const T& operator()(const index<N>& idx) const restrict(amp,cpu) {
     return (*this)[idx];
   }
   typename array_projection_helper<T, N>::result_type
@@ -1288,16 +1268,16 @@ public:
       operator()(int i0) const restrict(amp,cpu) {
           return (*this)[i0];
   }
-  __global T& operator()(int i0, int i1) restrict(amp,cpu) {
+  T& operator()(int i0, int i1) restrict(amp,cpu) {
       return (*this)[index<2>(i0, i1)];
   }
-  __global const T& operator()(int i0, int i1) const restrict(amp,cpu) {
+  const T& operator()(int i0, int i1) const restrict(amp,cpu) {
       return (*this)[index<2>(i0, i1)];
   }
-  __global T& operator()(int i0, int i1, int i2) restrict(amp,cpu) {
+  T& operator()(int i0, int i1, int i2) restrict(amp,cpu) {
       return (*this)[index<3>(i0, i1, i2)];
   }
-  __global const T& operator()(int i0, int i1, int i2) const restrict(amp,cpu) {
+  const T& operator()(int i0, int i1, int i2) const restrict(amp,cpu) {
       return (*this)[index<3>(i0, i1, i2)];
   }
 
@@ -1425,7 +1405,6 @@ public:
 private:
   template <typename K, int Q> friend struct projection_helper;
   template <typename K, int Q> friend struct array_projection_helper;
-  template <typename K, int Q> friend class array_helper;
   acc_buffer_t m_device;
   Concurrency::extent<N> extent;
 };
@@ -1497,9 +1476,9 @@ public:
 
   array_view(const Concurrency::extent<N>& ext, value_type* src) restrict(amp,cpu)
 #if __KALMAR_ACCELERATOR__ == 1
-      : cache((__global T *)(src)), extent(ext), extent_base(ext), offset(0) {}
+      : cache((T *)(src)), extent(ext), extent_base(ext), offset(0) {}
 #else
-      : cache(ext.size(), (__global T *)(src)), extent(ext), extent_base(ext), offset(0) {}
+      : cache(ext.size(), (T *)(src)), extent(ext), extent_base(ext), offset(0) {}
 #endif
   array_view(int e0, value_type *src) restrict(amp,cpu)
       : array_view(Concurrency::extent<N>(e0), src) {}
@@ -1543,19 +1522,19 @@ public:
   void copy_to(const array_view& dest) const { copy(*this, dest); }
   extent<N> get_extent() const restrict(amp,cpu) { return extent; }
 
-  __global T& operator[](const index<N>& idx) const restrict(amp,cpu) {
+  T& operator[](const index<N>& idx) const restrict(amp,cpu) {
 #if __KALMAR_ACCELERATOR__ != 1
       cache.get_cpu_access(true);
 #endif
-      __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
+      T *ptr = reinterpret_cast<T*>(cache.get() + offset);
       return ptr[Kalmar::amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
   }
   template <int D0, int D1=0, int D2=0>
-  __global T& operator[](const tiled_index<D0, D1, D2>& idx) const restrict(amp,cpu) {
+  T& operator[](const tiled_index<D0, D1, D2>& idx) const restrict(amp,cpu) {
 #if __KALMAR_ACCELERATOR__ != 1
       cache.get_cpu_access(true);
 #endif
-      __global T *ptr = reinterpret_cast<__global T*>(cache.get() + offset);
+      T *ptr = reinterpret_cast<T*>(cache.get() + offset);
       return ptr[Kalmar::amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx.global + index_base, extent_base)];
   }
 
@@ -1563,16 +1542,16 @@ public:
       operator[] (int i) const restrict(amp,cpu) {
           return projection_helper<T, N>::project(*this, i);
       }
-  __global T& operator()(const index<N>& idx) const restrict(amp,cpu) {
+  T& operator()(const index<N>& idx) const restrict(amp,cpu) {
       return (*this)[idx];
   }
   typename projection_helper<T, N>::result_type
       operator()(int i0) const restrict(amp,cpu) { return (*this)[i0]; }
-  __global T& operator()(int i0, int i1) const restrict(amp,cpu) {
+  T& operator()(int i0, int i1) const restrict(amp,cpu) {
       static_assert(N == 2, "T& array_view::operator()(int,int) is only permissible on array_view<T, 2>");
       return (*this)[index<2>(i0, i1)];
   }
-  __global T& operator()(int i0, int i1, int i2) const restrict(amp,cpu) {
+  T& operator()(int i0, int i1, int i2) const restrict(amp,cpu) {
       static_assert(N == 3, "T& array_view::operator()(int,int, int) is only permissible on array_view<T, 3>");
       return (*this)[index<3>(i0, i1, i2)];
   }
@@ -1740,7 +1719,7 @@ public:
 
   array_view(const extent<N>& ext, const value_type* src) restrict(amp,cpu)
 #if __KALMAR_ACCELERATOR__ == 1
-      : cache((__global nc_T*)(src)), extent(ext), extent_base(ext), offset(0) {}
+      : cache((nc_T*)(src)), extent(ext), extent_base(ext), offset(0) {}
 #else
       : cache(ext.size(), src), extent(ext), extent_base(ext),
           offset(0) {}
@@ -1786,11 +1765,11 @@ public:
   extent<N> get_extent() const restrict(amp,cpu) { return extent; }
   accelerator_view get_source_accelerator_view() const { return cache.get_av(); }
 
-  __global const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
+  const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
 #if __KALMAR_ACCELERATOR__ != 1
       cache.get_cpu_access();
 #endif
-    __global const T *ptr = reinterpret_cast<__global const T*>(cache.get() + offset);
+    const T *ptr = reinterpret_cast<const T*>(cache.get() + offset);
     return ptr[Kalmar::amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
   }
 
@@ -1801,19 +1780,19 @@ public:
 
   const T& get_ref(const index<N>& idx) const restrict(amp,cpu);
 
-  __global const T& operator()(const index<N>& idx) const restrict(amp,cpu) {
+  const T& operator()(const index<N>& idx) const restrict(amp,cpu) {
     return (*this)[idx];
   }
-  __global const T& operator()(int i0) const restrict(amp,cpu) {
+  const T& operator()(int i0) const restrict(amp,cpu) {
     static_assert(N == 1, "const T& array_view::operator()(int) is only permissible on array_view<T, 1>");
     return (*this)[index<1>(i0)];
   }
 
-  __global const T& operator()(int i0, int i1) const restrict(amp,cpu) {
+  const T& operator()(int i0, int i1) const restrict(amp,cpu) {
     static_assert(N == 2, "const T& array_view::operator()(int,int) is only permissible on array_view<T, 2>");
     return (*this)[index<2>(i0, i1)];
   }
-  __global const T& operator()(int i0, int i1, int i2) const restrict(amp,cpu) {
+  const T& operator()(int i0, int i1, int i2) const restrict(amp,cpu) {
     static_assert(N == 3, "const T& array_view::operator()(int,int, int) is only permissible on array_view<T, 3>");
     return (*this)[index<3>(i0, i1, i2)];
   }
@@ -1935,8 +1914,6 @@ private:
   Concurrency::index<N> index_base;
   int offset;
 };
-
-#undef __global
 
 // pfe interfaces
 template <int N, typename Kernel>
@@ -2384,7 +2361,6 @@ void copy(const array<T, N> &src, OutputIter destBegin) {
 template <typename InputIter, typename OutputIter>
 completion_future __amp_copy_async_impl(InputIter& src, OutputIter& dst) {
     std::future<void> fut = std::async([&]() mutable { copy(src, dst); });
-    fut.wait();
     return completion_future(fut.share());
 }
 
@@ -2440,14 +2416,12 @@ completion_future copy_async(const array_view<T, N>& src, const array_view<T, N>
 template <typename InputIter, typename T, int N>
 completion_future copy_async(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest) {
     std::future<void> fut = std::async([&]() mutable { copy(srcBegin, srcEnd, dest); });
-    fut.wait();
     return completion_future(fut.share());
 }
 
 template <typename InputIter, typename T, int N>
 completion_future copy_async(InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest) {
     std::future<void> fut = std::async([&]() mutable { copy(srcBegin, srcEnd, dest); });
-    fut.wait();
     return completion_future(fut.share());
 }
 
@@ -2455,13 +2429,11 @@ completion_future copy_async(InputIter srcBegin, InputIter srcEnd, const array_v
 template <typename InputIter, typename T, int N>
 completion_future copy_async(InputIter srcBegin, array<T, N>& dest) {
     std::future<void> fut = std::async([&]() mutable { copy(srcBegin, dest); });
-    fut.wait();
     return completion_future(fut.share());
 }
 template <typename InputIter, typename T, int N>
 completion_future copy_async(InputIter srcBegin, const array_view<T, N>& dest) {
     std::future<void> fut = std::async([&]() mutable { copy(srcBegin, dest); });
-    fut.wait();
     return completion_future(fut.share());
 }
 
@@ -2469,13 +2441,11 @@ completion_future copy_async(InputIter srcBegin, const array_view<T, N>& dest) {
 template <typename OutputIter, typename T, int N>
 completion_future copy_async(const array<T, N>& src, OutputIter destBegin) {
     std::future<void> fut = std::async([&]() mutable { copy(src, destBegin); });
-    fut.wait();
     return completion_future(fut.share());
 }
 template <typename OutputIter, typename T, int N>
 completion_future copy_async(const array_view<T, N>& src, OutputIter destBegin) {
     std::future<void> fut = std::async([&]() mutable { copy(src, destBegin); });
-    fut.wait();
     return completion_future(fut.share());
 }
 

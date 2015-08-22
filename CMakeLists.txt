@@ -1,12 +1,16 @@
 cmake_minimum_required( VERSION 2.8 )
-set(CMAKE_INSTALL_PREFIX "/opt/kalmar")
-project (CLAMP)
+project (Kalmar)
+
+# set default installation path
+if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND CMAKE_INSTALL_PREFIX MATCHES "/usr/local")
+  set(CMAKE_INSTALL_PREFIX "/opt/kalmar")
+else ()
+  set(CMAKE_INSTALL_PREFIX "/opt/kalmar")
+endif ()
+MESSAGE("Package installation path: ${CMAKE_INSTALL_PREFIX}")
+
 SET(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/scripts/cmake")
 MESSAGE("Module path: ${CMAKE_MODULE_PATH}")
-execute_process(COMMAND git describe --abbrev=4 --dirty --always --tags
-                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-                OUTPUT_VARIABLE GIT_VERSION
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 # set as release build by default
 IF (NOT CMAKE_BUILD_TYPE)
@@ -31,6 +35,7 @@ include (SetupTileUniform)
 include (SetupUtils)
 include (MCWAMP)
 include (PatchAsmParser)
+include (SetupGridLaunch)
 
 ensure_llvm_is_present(${PROJECT_SOURCE_DIR} compiler)
 ensure_clang_is_present(${PROJECT_SOURCE_DIR} compiler ${CLANG_URL})
@@ -45,6 +50,7 @@ setup_CpuRename(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms CpuRename)
 setup_TileUniform(${PROJECT_SOURCE_DIR}/compiler/lib/Analysis TileUniform)
 setup_Utils(utils)
 patch_AsmParser(SPIRify)
+setup_GridLaunch(${PROJECT_SOURCE_DIR}/compiler GridLaunch)
 set(LLVM_TARGETS_TO_BUILD X86 CACHE STRING "LLVM host target")
 set(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD CBackend CACHE STRING "set this to 'CBackend' to enable generating OpenCL-C")
 set(LLVM_INCLUDE_EXAMPLES off)
@@ -199,8 +205,14 @@ endif ((HAS_OPENCL EQUAL 0) AND (HAS_HSA EQUAL 0))
 
 # define Kalmar version information
 SET(KALMAR_VERSION_MAJOR "0")
-SET(KALMAR_VERSION_MINOR "6")
-SET(KALMAR_VERSION_PATCH "0")
+SET(KALMAR_VERSION_MINOR "7")
+
+# get date information
+# use the last two digits of year + week number as KALMAR_VERSION_PATCH
+execute_process(COMMAND date +%y%W
+                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+                OUTPUT_VARIABLE KALMAR_VERSION_PATCH
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 # get commit information
 execute_process(COMMAND git rev-parse --short HEAD

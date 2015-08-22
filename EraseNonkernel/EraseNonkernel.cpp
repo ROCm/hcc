@@ -171,6 +171,7 @@ bool EraseNonkernels::runOnModule(Module &M)
 			I->getName().find("get_local_id") != StringRef::npos ||
 			I->getName().find("get_group_id") != StringRef::npos ||
 			I->getName().find("barrier") != StringRef::npos ||
+			I->getName().find("get_local_size") != StringRef::npos ||
 			I->getName().find("opencl_") != StringRef::npos ||
 			I->getName().find("atomic_") != StringRef::npos ||
 			I->getName().find("llvm.") != StringRef::npos || 
