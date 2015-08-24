@@ -34,9 +34,9 @@
 		exit(-1);\
 	}
 
-#define STATUS_CHECK_Q(s,line) if (s != HSA_STATUS_SUCCESS) {\
+#define STATUS_CHECK_Q(s,q,line) if (s != HSA_STATUS_SUCCESS) {\
 		printf("### Error: %d at line:%d\n", s, line);\
-                assert(HSA_STATUS_SUCCESS == hsa_queue_destroy(commandQueue));\
+                assert(HSA_STATUS_SUCCESS == hsa_queue_destroy(q));\
                 assert(HSA_STATUS_SUCCESS == hsa_shut_down());\
 		exit(-1);\
 	}
@@ -121,7 +121,7 @@ public:
         }
 
         status = hsa_signal_create(1, 0, NULL, &signal);
-        STATUS_CHECK_Q(status, __LINE__);
+        STATUS_CHECK_Q(status, queue, __LINE__);
 
         // Obtain the write index for the command queue
         uint64_t index = hsa_queue_load_write_index_relaxed(queue);
@@ -306,10 +306,10 @@ public:
             return HSA_STATUS_ERROR_INVALID_ARGUMENT;
         }
         status = dispatchKernel(_queue);
-        STATUS_CHECK_Q(status, __LINE__);
+        STATUS_CHECK_Q(status, _queue, __LINE__);
 
         status = waitComplete();
-        STATUS_CHECK_Q(status, __LINE__);
+        STATUS_CHECK_Q(status, _queue, __LINE__);
 
         return status;
     } 
@@ -342,7 +342,7 @@ public:
          * Create a signal to wait for the dispatch to finish.
          */
         status = hsa_signal_create(1, 0, NULL, &signal);
-        STATUS_CHECK_Q(status, __LINE__);
+        STATUS_CHECK_Q(status, commandQueue, __LINE__);
   
         /*
          * Initialize the dispatch packet.
@@ -384,7 +384,7 @@ public:
         status = hsa_executable_symbol_get_info(kernel->hsaExecutableSymbol,
                                                 HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE,
                                                 &group_segment_size);
-        STATUS_CHECK_Q(status, __LINE__);
+        STATUS_CHECK_Q(status, commandQueue, __LINE__);
 
         // add dynamic group segment size
         group_segment_size += this->dynamicGroupSize;
@@ -394,7 +394,7 @@ public:
         status = hsa_executable_symbol_get_info(kernel->hsaExecutableSymbol,
                                                 HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_PRIVATE_SEGMENT_SIZE,
                                                 &private_segment_size);
-        STATUS_CHECK_Q(status, __LINE__);
+        STATUS_CHECK_Q(status, commandQueue, __LINE__);
         aql.private_segment_size = private_segment_size;
   
         // write packet
@@ -542,7 +542,7 @@ public:
 #if KALMAR_DEBUG
         std::cerr << "HSAQueue::HSAQueue(): created an HSA command queue: " << commandQueue << "\n";
 #endif
-        STATUS_CHECK_Q(status, __LINE__);
+        STATUS_CHECK_Q(status, commandQueue, __LINE__);
     }
 
     ~HSAQueue() {
@@ -1176,7 +1176,7 @@ HSADispatch::dispatchKernelAsync(Kalmar::HSAQueue* hsaQueue) {
 
     // dispatch kernel
     status = dispatchKernel(queue);
-    STATUS_CHECK_Q(status, __LINE__);
+    STATUS_CHECK_Q(status, queue, __LINE__);
 
     // dynamically allocate a std::shared_future<void> object
     future = new std::shared_future<void>(std::async(std::launch::deferred, [&] {
@@ -1229,7 +1229,7 @@ HSABarrier::enqueueAsync(Kalmar::HSAQueue* hsaQueue) {
 
     // enqueue barrier packet
     status = enqueueBarrier(queue);
-    STATUS_CHECK_Q(status, __LINE__);
+    STATUS_CHECK_Q(status, queue, __LINE__);
 
     // dynamically allocate a std::shared_future<void> object
     future = new std::shared_future<void>(std::async(std::launch::deferred, [&] {
