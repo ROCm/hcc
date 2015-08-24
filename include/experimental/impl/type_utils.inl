@@ -21,5 +21,15 @@ template<class ExecutionPolicy>
 using isExecutionPolicy =
         is_execution_policy<typename std::decay<ExecutionPolicy>::type>;
 
+template<class ExecutionPolicy>
+inline bool isParallel(ExecutionPolicy &&exec) {
+  typedef typename std::decay<decltype(exec)>::type Tp;
+  if (std::is_base_of<parallel_execution_policy, Tp>::value ||
+      std::is_base_of<parallel_vector_execution_policy, Tp>::value) {
+    return true;
+  }
+  return false;
+}
+
 } // namespace utils
 

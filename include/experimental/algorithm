@@ -29,8 +29,13 @@ transform(ExecutionPolicy&& exec,
           InputIterator first, InputIterator last,
           OutputIterator d_first,
           UnaryOperation unary_op) {
-  return details::transform_impl(first, last, d_first, unary_op,
-           typename std::iterator_traits<InputIterator>::iterator_category());
+  if (utils::isParallel(exec)) {
+    return details::transform_impl(first, last, d_first, unary_op,
+             typename std::iterator_traits<InputIterator>::iterator_category());
+  } else {
+    return details::transform_impl(first, last, d_first, unary_op,
+             std::input_iterator_tag{});
+  }
 }
 
 // transform (binary version)
@@ -44,8 +49,13 @@ transform(ExecutionPolicy&& exec,
           InputIterator first1, InputIterator last1,
           InputIterator first2, OutputIterator d_first,
           BinaryOperation binary_op) {
-  return details::transform_impl(first1, last1, first2, d_first, binary_op,
-           typename std::iterator_traits<InputIterator>::iterator_category());
+  if (utils::isParallel(exec)) {
+    return details::transform_impl(first1, last1, first2, d_first, binary_op,
+             typename std::iterator_traits<InputIterator>::iterator_category());
+  } else {
+    return details::transform_impl(first1, last1, first2, d_first, binary_op,
+             std::input_iterator_tag{});
+  }
 }
 
 // generate
@@ -57,8 +67,13 @@ void
 generate(ExecutionPolicy&& exec,
          ForwardIterator first, ForwardIterator last,
          Generator g) {
-  details::generate_impl(first, last, g,
-    typename std::iterator_traits<ForwardIterator>::iterator_category());
+  if (utils::isParallel(exec)) {
+    details::generate_impl(first, last, g,
+      typename std::iterator_traits<ForwardIterator>::iterator_category());
+  } else {
+    details::generate_impl(first, last, g,
+      std::input_iterator_tag{});
+  }
 }
 
 // generate_n
@@ -70,8 +85,13 @@ generate_n(ExecutionPolicy&& exec,
            OutputIterator first, Size count,
            Generator g) {
   if (count >= Size()) {
-    details::generate_impl(first, first + count, g,
-      typename std::iterator_traits<OutputIterator>::iterator_category());
+    if (utils::isParallel(exec)) {
+      details::generate_impl(first, first + count, g,
+        typename std::iterator_traits<OutputIterator>::iterator_category());
+    } else {
+      details::generate_impl(first, first + count, g,
+        std::input_iterator_tag{});
+    }
   }
   return (count < Size()) ? first : first + count;
 }
@@ -85,8 +105,13 @@ void
 for_each(ExecutionPolicy&& exec,
          InputIterator first, InputIterator last,
          Function f) {
-  details::for_each_impl(first, last, f,
-    typename std::iterator_traits<InputIterator>::iterator_category());
+  if (utils::isParallel(exec)) {
+    details::for_each_impl(first, last, f,
+      typename std::iterator_traits<InputIterator>::iterator_category());
+  } else {
+    details::for_each_impl(first, last, f,
+      std::input_iterator_tag{});
+  }
 }
 
 // for_each_n
@@ -96,8 +121,8 @@ InputIterator
 for_each_n(InputIterator first, Size n,
            Function f) {
   if (n >= Size()) {
-      details::for_each_impl(first, first + n, f,
-        typename std::iterator_traits<InputIterator>::iterator_category());
+    details::for_each_impl(first, first + n, f,
+      typename std::iterator_traits<InputIterator>::iterator_category());
   }
   return (n < Size()) ? first : first + n;
 }
@@ -111,7 +136,15 @@ InputIterator
 for_each_n(ExecutionPolicy&& exec,
            InputIterator first, Size n,
            Function f) {
-  return for_each_n(first, n, f);
+  if (n >= Size()) {
+    if (utils::isParallel(exec)) {
+      for_each_n(first, n, f);
+    } else {
+      details::for_each_impl(first, first + n, f,
+        std::input_iterator_tag{});
+    }
+  }
+  return (n < Size()) ? first : first + n;
 }
 
 // replace_if
@@ -123,8 +156,13 @@ void
 replace_if(ExecutionPolicy&& exec,
            ForwardIterator first, ForwardIterator last,
            Function f, const T& new_value) {
-  details::replace_if_impl(first, last, f, new_value,
-    typename std::iterator_traits<ForwardIterator>::iterator_category());
+  if (utils::isParallel(exec)) {
+    details::replace_if_impl(first, last, f, new_value,
+      typename std::iterator_traits<ForwardIterator>::iterator_category());
+  } else {
+    details::replace_if_impl(first, last, f, new_value,
+      std::input_iterator_tag{});
+  }
 }
 
 // replace_copy_if
@@ -138,8 +176,13 @@ replace_copy_if(ExecutionPolicy&& exec,
                 InputIterator first, InputIterator last,
                 OutputIterator d_first,
                 Function f, const T& new_value) {
-  return details::replace_copy_if_impl(first, last, d_first, f, new_value,
-           typename std::iterator_traits<InputIterator>::iterator_category());
+  if (utils::isParallel(exec)) {
+    return details::replace_copy_if_impl(first, last, d_first, f, new_value,
+             typename std::iterator_traits<InputIterator>::iterator_category());
+  } else {
+    return details::replace_copy_if_impl(first, last, d_first, f, new_value,
+             std::input_iterator_tag{});
+  }
 }
 
 // adjacent_difference (with predicate version)
@@ -152,8 +195,13 @@ adjacent_difference(ExecutionPolicy&& exec,
                     InputIterator first, InputIterator last,
                     OutputIterator d_first,
                     Function f) {
-  return details::adjacent_difference_impl(first, last, d_first, f,
-           typename std::iterator_traits<InputIterator>::iterator_category());
+  if (utils::isParallel(exec)) {
+    return details::adjacent_difference_impl(first, last, d_first, f,
+             typename std::iterator_traits<InputIterator>::iterator_category());
+  } else {
+    return details::adjacent_difference_impl(first, last, d_first, f,
+             std::input_iterator_tag{});
+  }
 }
 
 // swap_ranges
@@ -165,8 +213,13 @@ OutputIterator
 swap_ranges(ExecutionPolicy&& exec,
             InputIterator first, InputIterator last,
             OutputIterator d_first) {
-  return details::swap_ranges_impl(first, last, d_first,
-           typename std::iterator_traits<InputIterator>::iterator_category());
+  if (utils::isParallel(exec)) {
+    return details::swap_ranges_impl(first, last, d_first,
+             typename std::iterator_traits<InputIterator>::iterator_category());
+  } else {
+    return details::swap_ranges_impl(first, last, d_first,
+             std::input_iterator_tag{});
+  }
 }
 
 // fill
@@ -309,9 +362,15 @@ bool
 lexicographical_compare(ExecutionPolicy&& exec,
                         InputIt1 first1, InputIt1 last1,
                         InputIt2 first2, InputIt2 last2) {
-  return details::lexicographical_compare_impl(first1, last1, first2, last2,
-           std::less<typename std::iterator_traits<InputIt1>::value_type>(),
-           typename std::iterator_traits<InputIt1>::iterator_category());
+  if (utils::isParallel(exec)) {
+    return details::lexicographical_compare_impl(first1, last1, first2, last2,
+             std::less<typename std::iterator_traits<InputIt1>::value_type>(),
+             typename std::iterator_traits<InputIt1>::iterator_category());
+  } else {
+    return details::lexicographical_compare_impl(first1, last1, first2, last2,
+             std::less<typename std::iterator_traits<InputIt1>::value_type>(),
+             std::input_iterator_tag{});
+  }
 }
 
 
@@ -325,9 +384,15 @@ lexicographical_compare(ExecutionPolicy&& exec,
                         InputIt1 first1, InputIt1 last1,
                         InputIt2 first2, InputIt2 last2,
                         Compare comp) {
-  return details::lexicographical_compare_impl(first1, last1, first2, last2,
-           comp,
-           typename std::iterator_traits<InputIt1>::iterator_category());
+  if (utils::isParallel(exec)) {
+    return details::lexicographical_compare_impl(first1, last1, first2, last2,
+             comp,
+             typename std::iterator_traits<InputIt1>::iterator_category());
+  } else {
+    return details::lexicographical_compare_impl(first1, last1, first2, last2,
+             comp,
+             std::input_iterator_tag{});
+  }
 }
 
 } // inline namespace v1
