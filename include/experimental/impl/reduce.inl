@@ -36,8 +36,6 @@ T reduce_impl(RandomAccessIterator first, RandomAccessIterator last,
               BinaryOperation binary_op,
               std::random_access_iterator_tag) {
 
-  typedef typename std::iterator_traits<RandomAccessIterator>::value_type _Tp;
-
   using hc::extent;
   using hc::index;
   using hc::parallel_for_each;
@@ -52,7 +50,7 @@ T reduce_impl(RandomAccessIterator first, RandomAccessIterator last,
 
   unsigned s = (N + 1) / 2;
   T *tmp = new T [s];
-  _Tp *first_ = &(*first);
+  auto first_ = utils::get_pointer(first);
 
   parallel_for_each(extent<1>(s), tsa,
                     [tmp, first_, N, &s, binary_op](index<1> idx) restrict(amp) {

@@ -31,5 +31,16 @@ inline bool isParallel(ExecutionPolicy &&exec) {
   return false;
 }
 
+// get raw pointer from an iterator
+template<typename T>
+inline typename std::iterator_traits<T>::pointer
+get_pointer(T it) { return &*(it); }
+
+// for array_view
+template<size_t N>
+inline std::bounds_iterator<N>
+get_pointer(std::bounds_iterator<N> it) { return it; }
+
+
 } // namespace utils
 

@@ -38,11 +38,8 @@ OutputIterator transform_impl(RandomAccessIterator first, RandomAccessIterator l
              std::input_iterator_tag{});
   }
 
-  typedef typename std::iterator_traits<RandomAccessIterator>::value_type _Tp1;
-  typedef typename std::iterator_traits<OutputIterator>::value_type _Tp2;
-
-  _Tp1 *first_ = &(*first);
-  _Tp2 *d_first_ = &(*d_first);
+  auto first_ = utils::get_pointer(first);
+  auto d_first_ = utils::get_pointer(d_first);
 
   using hc::extent;
   using hc::index;
@@ -71,12 +68,9 @@ OutputIterator transform_impl(RandomAccessIterator first1, RandomAccessIterator 
              std::input_iterator_tag{});
   }
 
-  typedef typename std::iterator_traits<RandomAccessIterator>::value_type _Tp1;
-  typedef typename std::iterator_traits<OutputIterator>::value_type _Tp2;
-
-  _Tp1 *first1_ = &(*first1);
-  _Tp1 *first2_ = &(*first2);
-  _Tp2 *d_first_ = &(*d_first);
+  auto first1_ = utils::get_pointer(first1);
+  auto first2_ = utils::get_pointer(first2);
+  auto d_first_ = utils::get_pointer(d_first);
 
   using hc::extent;
   using hc::index;

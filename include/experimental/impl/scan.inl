@@ -14,8 +14,7 @@ std::unique_ptr<typename std::iterator_traits<InputIterator>::value_type>
 scan_impl(InputIterator first, InputIterator last,
           BinaryOperation binary_op) {
 
-  typedef typename std::iterator_traits<InputIterator>::value_type _Tp;
-  _Tp *first_ = &(*first);
+  auto first_ = utils::get_pointer(first);
 
   using hc::extent;
   using hc::index;
@@ -23,6 +22,7 @@ scan_impl(InputIterator first, InputIterator last,
   hc::ts_allocator tsa;
 
   const size_t N = static_cast<size_t>(std::distance(first, last));
+  typedef typename std::iterator_traits<InputIterator>::value_type _Tp;
   _Tp *stride = new _Tp [N];
 
   // initialize the stride
