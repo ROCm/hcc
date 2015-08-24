@@ -109,7 +109,7 @@ public:
         if (isDispatched) {
             hsa_status_t status = HSA_STATUS_SUCCESS;
             status = waitComplete();
-            STATUS_CHECK_Q(status, __LINE__);
+            STATUS_CHECK(status, __LINE__);
         }
         dispose();
     }
@@ -161,7 +161,7 @@ public:
     void dispose() {
         hsa_status_t status;
         status = hsa_signal_destroy(signal);
-        STATUS_CHECK_Q(status, __LINE__);
+        STATUS_CHECK(status, __LINE__);
 
         if (future != nullptr) {
           delete future;
@@ -210,7 +210,7 @@ public:
         if (isDispatched) {
             hsa_status_t status = HSA_STATUS_SUCCESS;
             status = waitComplete();
-            STATUS_CHECK_Q(status, __LINE__);
+            STATUS_CHECK(status, __LINE__);
         }
         dispose();
     }
