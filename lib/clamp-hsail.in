@@ -25,6 +25,10 @@ else
     HLC_ASM=@CMAKE_INSTALL_PREFIX@/HSAILasm/HSAILasm
 fi
 
+if [ -n "@HSA_LLVM_BIN_DIR@" ]; then
+    HLC_LLC=@HSA_LLVM_BIN_DIR@/llc
+fi
+
 INPUT=$1
 SUFFIX=ll
 FILENAME=${INPUT%.$SUFFIX}

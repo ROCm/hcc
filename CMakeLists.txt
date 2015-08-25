@@ -123,8 +123,11 @@ endif ((NOT OPENCL_HEADER) OR (NOT OPENCL_LIBRARY))
 set (HSA_ROOT "/opt/hsa"
         CACHE PATH "HSA runtime path")
 
+set (HSA_LLVM_BIN_DIR CACHE PATH "Path to llvm tools with hsail/amdgpu support")
+
 find_path(HSA_HEADER hsa.h PATHS ${HSA_HEADER_DIR} ${HSA_ROOT}/include NO_DEFAULT_PATH)
 find_path(HSA_HEADER hsa.h)
+
 if (NOT HSA_HEADER)
   MESSAGE("HSA header not found. Use -DHSA_HEADER_DIR=<path_to_hsa.h>.")
 endif (NOT HSA_HEADER)
@@ -246,6 +249,9 @@ ensure_HLC_is_present(${PROJECT_SOURCE_DIR} hlc)
 ensure_HSAILASM_is_present(${PROJECT_SOURCE_DIR} HSAILasm)
 
 # build HLC
+
+if (NOT HSA_LLVM_BIN_DIR)
+
 set(HLC_SRC_DIR "${PROJECT_SOURCE_DIR}/hlc")
 set(HLC_BIN_DIR "${PROJECT_BINARY_DIR}/hlc")
 file(MAKE_DIRECTORY ${HLC_BIN_DIR})
@@ -266,6 +272,9 @@ install(DIRECTORY ${HLC_BIN_DIR}/bin
         COMPONENT hlc
         PATTERN * PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
+endif(NOT HSA_LLVM_BIN_DIR)
+
+
 # build HSAILasm
 set(HSAILASM_SRC_DIR "${PROJECT_SOURCE_DIR}/HSAILasm")
 set(HSAILASM_BIN_DIR "${PROJECT_BINARY_DIR}/HSAILasm")
@@ -283,8 +292,14 @@ install(FILES ${HSAILASM_BIN_DIR}/HSAILAsm/HSAILasm
         PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
         COMPONENT HSAILasm)
 
+set (DEPS "HSAILasm ${DEPS}")
+
+if (NOT HSA_LLVM_BIN_DIR)
+  set(DEPS "hlc ${DEPS}")
+endif()
+
 add_custom_target(world
-    DEPENDS clang hlc HSAILasm ${DEPS}
+    DEPENDS clang ${DEPS}
 )
 
 else (HAS_HSA)

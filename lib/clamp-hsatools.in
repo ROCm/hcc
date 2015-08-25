@@ -28,6 +28,7 @@ if [ ! -f $1 ]; then
   exit 1
 fi
 
+
 # Path to AMD library builtins
 if [ -d @PROJECT_BINARY_DIR@ ]; then
     HLC_LLVM_LINK=@PROJECT_BINARY_DIR@/hlc/bin/llvm-link
@@ -41,6 +42,12 @@ else
     HLC_LLC=@CMAKE_INSTALL_PREFIX@/hlc/bin/llc
     HLC_ASM=@CMAKE_INSTALL_PREFIX@/HSAILasm/HSAILasm
     NEWLIB=@CMAKE_INSTALL_PREFIX@/lib
+fi
+
+if [ -n "@HSA_LLVM_BIN_DIR@" ]; then
+    HLC_LLVM_LINK=@HSA_LLVM_BIN_DIR@/llvm-link
+    HLC_OPT=@HSA_LLVM_BIN_DIR@/opt
+    HLC_LLC=@HSA_LLVM_BIN_DIR@/llc
 fi
 
 if [ $KMDUMPLLVM == "1" ]; then

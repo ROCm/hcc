@@ -30,6 +30,13 @@ else
     HLC_ASM=@CMAKE_INSTALL_PREFIX@/HSAILasm/HSAILasm
 fi
 
+if [ -n "@HSA_LLVM_BIN_DIR@" ]; then
+    HLC_DIR=@HSA_LLVM_BIN_DIR@
+    HLC_LLVM_LINK=@HSA_LLVM_BIN_DIR@/llvm-link
+    HLC_OPT=@HSA_LLVM_BIN_DIR@/opt
+    HLC_LLC=@HSA_LLVM_BIN_DIR@/llc
+fi
+
 ################
 # Verbose flag
 ################
