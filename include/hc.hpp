@@ -2729,6 +2729,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
+#pragma clang diagnostic ignored "-Wunused-variable"
 //1D parallel_for_each, nontiled
 template <typename Kernel>
 __attribute__((noinline,used)) completion_future parallel_for_each(
@@ -2758,6 +2759,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
+#pragma clang diagnostic ignored "-Wunused-variable"
 //2D parallel_for_each, nontiled
 template <typename Kernel>
 __attribute__((noinline,used)) completion_future parallel_for_each(
@@ -2788,6 +2790,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
+#pragma clang diagnostic ignored "-Wunused-variable"
 //3D parallel_for_each, nontiled
 template <typename Kernel>
 __attribute__((noinline,used)) completion_future parallel_for_each(
@@ -2825,6 +2828,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
+#pragma clang diagnostic ignored "-Wunused-variable"
 //1D parallel_for_each, tiled
 template <typename Kernel>
 __attribute__((noinline,used)) completion_future parallel_for_each(
@@ -2856,6 +2860,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
+#pragma clang diagnostic ignored "-Wunused-variable"
 //2D parallel_for_each, tiled
 template <typename Kernel>
 __attribute__((noinline,used)) completion_future parallel_for_each(
@@ -2889,6 +2894,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
+#pragma clang diagnostic ignored "-Wunused-variable"
 //3D parallel_for_each, tiled
 template <typename Kernel>
 __attribute__((noinline,used)) completion_future parallel_for_each(
@@ -2930,6 +2936,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
+#pragma clang diagnostic ignored "-Wunused-variable"
 // variants of parallel_for_each that supports runtime allocation of tile static
 //1D parallel_for_each, nontiled
 template <typename Kernel>
@@ -2972,6 +2979,7 @@ completion_future parallel_for_each(const accelerator_view& av,
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
+#pragma clang diagnostic ignored "-Wunused-variable"
 // variants of parallel_for_each that supports runtime allocation of tile static
 //2D parallel_for_each, nontiled
 template <typename Kernel>
@@ -3015,6 +3023,7 @@ completion_future parallel_for_each(const accelerator_view& av,
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
+#pragma clang diagnostic ignored "-Wunused-variable"
 // variants of parallel_for_each that supports runtime allocation of tile static
 //3D parallel_for_each, nontiled
 template <typename Kernel>
@@ -3065,6 +3074,7 @@ completion_future parallel_for_each(const accelerator_view& av,
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
+#pragma clang diagnostic ignored "-Wunused-variable"
 // variants of parallel_for_each that supports runtime allocation of tile static
 //1D parallel_for_each, tiled
 template <typename Kernel>
@@ -3110,6 +3120,7 @@ completion_future parallel_for_each(const accelerator_view& av,
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
+#pragma clang diagnostic ignored "-Wunused-variable"
 // variants of parallel_for_each that supports runtime allocation of tile static
 //2D parallel_for_each, tiled
 template <typename Kernel>
@@ -3155,6 +3166,7 @@ completion_future parallel_for_each(const accelerator_view& av,
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
+#pragma clang diagnostic ignored "-Wunused-variable"
 // variants of parallel_for_each that supports runtime allocation of tile static
 //3D parallel_for_each, tiled
 template <typename Kernel>
