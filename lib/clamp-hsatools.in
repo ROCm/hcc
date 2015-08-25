@@ -50,11 +50,23 @@ if [ -n "@HSA_LLVM_BIN_DIR@" ]; then
     HLC_LLC=@HSA_LLVM_BIN_DIR@/llc
 fi
 
+HSA_USE_AMDGPU_BACKEND=@HSA_USE_AMDGPU_BACKEND@
+
+if [ $HSA_USE_AMDGPU_BACKEND == "ON" ]; then
+  LLD=@HSA_LLVM_BIN_DIR@/lld
+  KM_USE_AMDGPU="${KM_USE_AMDGPU:=1}"
+fi
+
 if [ $KMDUMPLLVM == "1" ]; then
   cp $1 ./dump.fe.bc
 fi
 
-$HLC_LLVM_LINK -suppress-warnings -o $1.linked.bc $1 $NEWLIB/builtins-hsail.opt.bc
+if [ $KM_USE_AMDGPU ]; then
+  EXTRA_LIBRARY=@HSA_AMDGPU_BUILTIN_LIBRARY_WRAPPER@
+fi
+
+$HLC_LLVM_LINK -suppress-warnings -o $1.linked.bc $1 $NEWLIB/builtins-hsail.opt.bc $EXTRA_LIBRARY
+
 # error handling for HSAIL llvm-link
 RETVAL=$?
 if [ $RETVAL != 0 ]; then
@@ -79,7 +91,12 @@ if [ $KMDUMPLLVM == "1" ]; then
   cp $1.opt.bc ./dump.opt.bc
 fi
 
-$HLC_LLC -O2 -march=hsail64 -filetype=asm -o $1.hsail $1.opt.bc
+if [ $KM_USE_AMDGPU  ]; then
+  $HLC_LLC -O2 -mtriple amdgcn--amdhsa -mcpu=kaveri -filetype=obj -o $1.hsail $1.opt.bc
+else
+  $HLC_LLC -O2 -march=hsail64 -filetype=asm -o $1.hsail $1.opt.bc
+fi
+
 # error handling for HSAIL llc
 RETVAL=$?
 if [ $RETVAL != 0 ]; then
@@ -90,8 +107,13 @@ if [ $KMDUMPBRIG == "1" ]; then
     cp $1.hsail ./dump.hsail
 fi
 
-cat $NEWLIB/hsa_builtins.hsail >> $1.hsail
-$HLC_ASM -assemble -o $1.brig $1.hsail
+if [ $KM_USE_AMDGPU ]; then
+  $LLD -flavor gnu -target amdgcn--amdhsa $1.hsail -o $1.brig
+else
+  cat $NEWLIB/hsa_builtins.hsail >> $1.hsail
+  $HLC_ASM -assemble -o $1.brig $1.hsail
+fi
+
 # error handling for HSAILasm
 RETVAL=$?
 if [ $RETVAL != 0 ]; then

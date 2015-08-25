@@ -55,8 +55,14 @@ LOWER_HOF=@HAS_HSA_HOF@
 # Sanity check for HSAIL backend
 ################
 
+HSA_USE_AMDGPU_BACKEND=@HSA_USE_AMDGPU_BACKEND@
+
+if [ $HSA_USE_AMDGPU_BACKEND == "ON" ]; then
+  KM_USE_AMDGPU="${KM_USE_AMDGPU:=1}"
+fi
+
 if [ $LOWER_HSA == 1 ]; then
-  if [ -d $HLC_DIR ] && [ -e $HLC_LLVM_LINK ] && [ -e $HLC_OPT ] && [ -e $HLC_LLC ] && [ -d $HLC_ASM_DIR ] && [ -e $HLC_ASM ]; then
+  if [ -d $HLC_DIR ] && [ -e $HLC_LLVM_LINK ] && [ -e $HLC_OPT ] && [ -e $HLC_LLC ] && [ -d $HLC_ASM_DIR ] && [ -e $HLC_ASM ] || [ $KM_USE_AMDGPU -eq 1 ] ; then
     # all HSA tools are available
     LOWER_HSA=1
   else

@@ -195,6 +195,20 @@ if ((HAS_OPENCL EQUAL 0) AND (HAS_HSA EQUAL 0))
 endif ((HAS_OPENCL EQUAL 0) AND (HAS_HSA EQUAL 0))
 
 #################
+# Detect AMDGPU backend for native codegen
+#################
+option(HSA_USE_AMDGPU_BACKEND "Use AMDGPU LLVM backend as compiler for HSA" OFF)
+set(HSA_AMDGPU_BUILTIN_LIBRARY_WRAPPER CACHE STRING "Path to LLVM bitcode library which replaces hasil intrinsics with AMDGPU intrinsics")
+
+if (HSA_USE_AMDGPU_BACKEND AND NOT HSA_AMDGPU_BUILTIN_LIBRARY_WRAPPER)
+  MESSAGE(FATAL_ERROR "You must specify a value for HSA_AMDGPU_BUILTIN_LIBRARY_WRAPPER to use the AMDGPU backend")
+endif ()
+
+if (HSA_USE_AMDGPU_BACKEND)
+  add_definitions(-DHSA_USE_AMDGPU_BACKEND)
+endif ()
+
+#################
 # Set up version information
 #################
 
@@ -285,6 +299,10 @@ add_custom_target(HSAILasm
   WORKING_DIRECTORY ${HSAILASM_BIN_DIR}
 )
 
+if (NOT HSA_USE_AMDGPU_BACKEND)
+  set (DEPS "HSAILasm ${DEPS}")
+endif()
+
 # install HSAILasm along with Kalmar
 # stored under HSAILasm/
 install(FILES ${HSAILASM_BIN_DIR}/HSAILAsm/HSAILasm
@@ -292,7 +310,6 @@ install(FILES ${HSAILASM_BIN_DIR}/HSAILAsm/HSAILasm
         PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
         COMPONENT HSAILasm)
 
-set (DEPS "HSAILasm ${DEPS}")
 
 if (NOT HSA_LLVM_BIN_DIR)
   set(DEPS "hlc ${DEPS}")
