@@ -1,3 +1,5 @@
+#pragma once
+
 // FIXME, this is a SEQUENTIAL implementation of reduce!
 // a special version of reduce which does NOT dereference the iterator
 template<class InputIterator, class T, class BinaryOperation>
@@ -36,11 +38,6 @@ T reduce_impl(RandomAccessIterator first, RandomAccessIterator last,
               BinaryOperation binary_op,
               std::random_access_iterator_tag) {
 
-  using hc::extent;
-  using hc::index;
-  using hc::parallel_for_each;
-  hc::ts_allocator tsa;
-
   size_t N = static_cast<size_t>(std::distance(first, last));
 
   // call to std::accumulate when small data size
@@ -52,8 +49,7 @@ T reduce_impl(RandomAccessIterator first, RandomAccessIterator last,
   T *tmp = new T [s];
   auto first_ = utils::get_pointer(first);
 
-  parallel_for_each(extent<1>(s), tsa,
-                    [tmp, first_, N, &s, binary_op](index<1> idx) restrict(amp) {
+  kernel_launch(s, [tmp, first_, N, &s, binary_op](hc::index<1> idx) __attribute((hc)) {
     // first round
     round(idx[0], N, tmp, first_, binary_op);
 
@@ -72,61 +68,8 @@ T reduce_impl(RandomAccessIterator first, RandomAccessIterator last,
 }
 } // namespace details
 
-//// FIXME, this is a implementation of reduce based on C++AMP
-//// ideally we want to drop all C++AMP stuffs in parallel STL
-//template<class InputIterator, class T, class BinaryOperation>
-//T reduce(InputIterator first, InputIterator last, T init,
-//               BinaryOperation binary_op) {
-//  typedef typename std::iterator_traits<InputIterator>::value_type _Tp;
-//
-//#define TILE_SIZE (64)
-//  size_t elementCount = static_cast<size_t>(std::distance(first, last));
-//  int numTiles = (elementCount / TILE_SIZE) ? (elementCount / TILE_SIZE) : 1;
-//
-//  std::vector<_Tp> av_src(elementCount);
-//  std::copy(first, last, av_src.data());  // FIXME: how can we get rid of this copy?
-//  std::vector<_Tp> av_dst(numTiles);
-//
-//  while((elementCount % TILE_SIZE) == 0) {
-//    concurrency::parallel_for_each(concurrency::extent<1>(elementCount).tile<TILE_SIZE>(), [&](concurrency::tiled_index<TILE_SIZE> tidx) restrict(amp) {
-//      tile_static _Tp scratch[TILE_SIZE];
-//
-//      unsigned tileIndex = tidx.local[0];
-//      unsigned globalIndex = tidx.global[0];
-//      scratch[tileIndex] = av_src[globalIndex];
-//      tidx.barrier.wait();
-//
-//      for (unsigned stride = TILE_SIZE / 2; stride > 0; stride >>= 1) {
-//        if (tileIndex < stride) {
-//          scratch[tileIndex] = binary_op(scratch[tileIndex], scratch[tileIndex + stride]);
-//        }
-//        tidx.barrier.wait();
-//      }
-//
-//      if (tileIndex == 0) {
-//        av_dst[tidx.tile[0]] = scratch[0];
-//      }
-//    });
-//
-//
-//    elementCount /= TILE_SIZE;
-//    std::swap(av_src, av_dst);
-//
-//#if 0
-//    for (int i = 0; i < elementCount; ++i) {
-//      std::cout << av_src[i] << " ";
-//    }
-//    std::cout << "\n";
-//#endif
-//  }
-//
-//  std::vector<_Tp> resultVector(elementCount);
-//  std::copy(av_src.data(), av_src.data() + elementCount, std::begin(resultVector));
-//  _Tp resultValue = std::accumulate(std::begin(resultVector), std::end(resultVector), init, binary_op);
-//
-//  return resultValue;
-//}
 
+// public interface
 template<class InputIterator, class T, class BinaryOperation,
          utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
 T reduce(InputIterator first, InputIterator last,

@@ -1,3 +1,5 @@
+#pragma once
+
 namespace details {
 
 // std::transform forwarder
@@ -28,7 +30,8 @@ transform_impl(InputIterator first1, InputIterator last1,
 // transform (unary version)
 template <class RandomAccessIterator, class OutputIterator,
           class UnaryOperation>
-OutputIterator transform_impl(RandomAccessIterator first, RandomAccessIterator last,
+OutputIterator transform_impl(RandomAccessIterator first,
+                              RandomAccessIterator last,
                               OutputIterator d_first,
                               UnaryOperation unary_op,
                               std::random_access_iterator_tag) {
@@ -41,14 +44,8 @@ OutputIterator transform_impl(RandomAccessIterator first, RandomAccessIterator l
   auto first_ = utils::get_pointer(first);
   auto d_first_ = utils::get_pointer(d_first);
 
-  using hc::extent;
-  using hc::index;
-  using hc::parallel_for_each;
-  hc::ts_allocator tsa;
-
-  parallel_for_each(extent<1>(N), tsa,
-    [d_first_, first_, unary_op](index<1> idx) restrict(amp) {
-      d_first_[idx[0]] = unary_op(first_[idx[0]]);
+  kernel_launch(N, [d_first_, first_, unary_op](hc::index<1> idx) __attribute((hc)) {
+    d_first_[idx[0]] = unary_op(first_[idx[0]]);
   });
 
   return d_first + N;
@@ -57,7 +54,8 @@ OutputIterator transform_impl(RandomAccessIterator first, RandomAccessIterator l
 // transform (binary version)
 template <class RandomAccessIterator, class OutputIterator,
           class BinaryOperation>
-OutputIterator transform_impl(RandomAccessIterator first1, RandomAccessIterator last1,
+OutputIterator transform_impl(RandomAccessIterator first1,
+                              RandomAccessIterator last1,
                               RandomAccessIterator first2,
                               OutputIterator d_first,
                               BinaryOperation binary_op,
@@ -72,14 +70,8 @@ OutputIterator transform_impl(RandomAccessIterator first1, RandomAccessIterator 
   auto first2_ = utils::get_pointer(first2);
   auto d_first_ = utils::get_pointer(d_first);
 
-  using hc::extent;
-  using hc::index;
-  using hc::parallel_for_each;
-  hc::ts_allocator tsa;
-
-  parallel_for_each(extent<1>(N), tsa,
-    [d_first_, first1_, first2_, binary_op](index<1> idx) restrict(amp) {
-      d_first_[idx[0]] = binary_op(first1_[idx[0]], first2_[idx[0]]);
+  kernel_launch(N, [d_first_, first1_, first2_, binary_op](hc::index<1> idx) __attribute((hc)) {
+    d_first_[idx[0]] = binary_op(first1_[idx[0]], first2_[idx[0]]);
   });
 
   return d_first + N;

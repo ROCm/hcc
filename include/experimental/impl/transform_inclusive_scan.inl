@@ -8,7 +8,8 @@ transform_inclusive_scan(InputIterator first, InputIterator last,
                          BinaryOperation binary_op, T init) {
   // invoke std::experimental::parallel::transform and
   //        std::experimental::parallel::inclusive_scan
-  transform(first, last, result, unary_op);
+  details::transform_impl(first, last, result, unary_op,
+    typename std::iterator_traits<InputIterator>::iterator_category());
   const size_t N = static_cast<size_t>(std::distance(first, last));
   return inclusive_scan(result, result + N, result, binary_op, init);
 }

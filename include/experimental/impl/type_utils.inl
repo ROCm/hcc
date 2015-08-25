@@ -1,3 +1,5 @@
+#pragma once
+
 namespace utils {
 // type traits utils
 template<class It>
@@ -34,8 +36,12 @@ inline bool isParallel(ExecutionPolicy &&exec) {
 // get raw pointer from an iterator
 template<typename T>
 inline typename std::iterator_traits<T>::pointer
-get_pointer(T it) { return &*(it); }
+get_pointer(T it) { return &(*it); }
 
+// FIXME: there will be a wrapper on std::array_view implementation,
+//        so that operator * works properly
+//
+//        Reference: N4512
 // for array_view
 template<size_t N>
 inline std::bounds_iterator<N>
