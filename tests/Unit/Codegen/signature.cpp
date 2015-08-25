@@ -1,3 +1,4 @@
+// XFAIL: *
 // RUN: %amp_device -O2 -D__KALMAR_ACCELERATOR__=1 %s -c -o %t.device.o
 // RUN: %gtest_amp %s %t.device.o -O2 -o %t && %t
 #include <stdlib.h>
