@@ -35,6 +35,3 @@ inline namespace v1 {
 } // namespace experimental
 } // namespace std
 
-// sequential versions of algorithms are implemented inside this  file
-// FIXME: gradually move them to SPMD-version of algorithms
-#include "impl/numeric_impl_seq.inl"

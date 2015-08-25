@@ -141,3 +141,43 @@ bool none_of( InputIt first, InputIt last, UnaryPredicate p ) {
   return any_of(first, last, p) == false;
 }
 
+
+// inner_product
+template<typename ExecutionPolicy,
+         typename InputIt1, typename InputIt2,
+         typename T,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIt1>> = nullptr>
+T inner_product(ExecutionPolicy&& exec,
+              InputIt1 first1, InputIt1 last1,
+              InputIt2 first2,
+              T value) {
+  typedef typename std::iterator_traits<InputIt1>::value_type _Tp;
+  return inner_product(first1, last1, first2, value,
+                       std::plus<_Tp>(), std::multiplies<_Tp>());
+}
+
+template<typename ExecutionPolicy,
+         typename InputIt1, typename InputIt2,
+         typename T,
+         typename BinaryOperation1, typename BinaryOperation2,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIt1>> = nullptr>
+T inner_product(ExecutionPolicy&& exec,
+              InputIt1 first1, InputIt1 last1,
+              InputIt2 first2,
+              T value,
+              BinaryOperation1 op1,
+              BinaryOperation2 op2) {
+  const size_t N = static_cast<size_t>(std::distance(first1, last1));
+  if (N <= details::PARALLELIZE_THRESHOLD) {
+    return std::inner_product(first1, last1, first2, value, op1, op2);
+  }
+
+  typedef typename std::iterator_traits<InputIt1>::value_type _Tp;
+  std::unique_ptr<_Tp> tmp(new _Tp [N]);
+
+  // implement inner_product by transform & reduce
+  transform(exec, first1, last1, first2, tmp.get(), op2);
+  return reduce(exec, tmp.get(), tmp.get() + N, value, op1);
+}
