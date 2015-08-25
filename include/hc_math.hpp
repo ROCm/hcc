@@ -17,6 +17,12 @@ inline T function(T arg1, T arg2) __attribute((hc,cpu)) { \
   return hc::precise_math::function(arg1, arg2); \
 }
 
+#define HC_MATH_ALIAS_2(alias, function, arg1, arg2) \
+template<typename T> \
+inline T alias(T arg1, T arg2) __attribute((hc,cpu)) { \
+  return hc::precise_math::function(arg1, arg2); \
+}
+
 #define HC_MATH_WRAPPER_3(function, arg1, arg2, arg3) \
 template<typename T> \
 inline T function(T arg1, T arg2, T arg3) __attribute((hc,cpu)) { \
@@ -58,6 +64,12 @@ inline T function(T arg1) __attribute((hc,cpu)) { \
 #define HC_MATH_WRAPPER_2(function, arg1, arg2) \
 template<typename T> \
 inline T function(T arg1, T arg2) __attribute((hc,cpu)) { \
+  return ::function(arg1, arg2); \
+}
+
+#define HC_MATH_ALIAS_2(alias, function, arg1, arg2) \
+template<typename T> \
+inline T alias(T arg1, T arg2) __attribute((hc,cpu)) { \
   return ::function(arg1, arg2); \
 }
 
@@ -229,6 +241,9 @@ HC_MATH_WRAPPER_1(tanhf, x)
 HC_MATH_WRAPPER_1(tanh, x)
 HC_MATH_WRAPPER_1(truncf, x)
 HC_MATH_WRAPPER_1(trunc, x)
+
+HC_MATH_ALIAS_2(min, fmin, x, y)
+HC_MATH_ALIAS_2(max, fmax, x, y)
 
 } // namespace
 
