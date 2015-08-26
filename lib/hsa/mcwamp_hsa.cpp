@@ -243,8 +243,6 @@ public:
         /// Query the maximum number of work-items in each dimension of a workgroup
         status = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_DIM, &workgroup_max_dim);
 
-        // XXX: seems it's a hidden limitation imposed by the current HSA RT
-        workgroup_max_dim[2] = 256;
         STATUS_CHECK(status, __LINE__);
     }
 
@@ -287,7 +285,8 @@ public:
         // reduce each dimension in case the overall workgroup limit is exceeded
         uint32_t workgroup_max_size = getWorkgroupMaxSize();
         int dim_iterator = 2;
-        while(workgroup_size[0] * workgroup_size[1] * workgroup_size[2] > workgroup_max_size) {
+        size_t workgroup_total_size = workgroup_size[0] * workgroup_size[1] * workgroup_size[2];
+        while(workgroup_total_size > workgroup_max_size) {
           // repeatedly cut each dimension into half until we are within the limit
           if (workgroup_size[dim_iterator] >= 2) {
             workgroup_size[dim_iterator] >>= 1;
@@ -295,6 +294,7 @@ public:
           if (--dim_iterator < 0) {
             dim_iterator = 2;
           }
+          workgroup_total_size = workgroup_size[0] * workgroup_size[1] * workgroup_size[2];
         }
   
         return HSA_STATUS_SUCCESS;
@@ -463,8 +463,9 @@ private:
 
     void computeLaunchAttr(int level, int globalSize, int localSize, int recommendedSize) {
         // localSize of 0 means pick best
-        if (localSize == 0) localSize = recommendedSize;   // (globalSize > 16 ? 1 : globalSize);   
+        if (localSize == 0) localSize = recommendedSize;
         localSize = std::min(localSize, recommendedSize);
+        localSize = std::min(localSize, globalSize); // workgroup size shall not exceed grid size
   
         global_size[level] = globalSize;
         workgroup_size[level] = localSize;
