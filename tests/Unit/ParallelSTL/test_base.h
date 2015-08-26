@@ -9,13 +9,14 @@
 #define COL (16)
 #define TEST_SIZE (ROW * COL)
 
-// f(first, last) => f(first, first+SIZE)
-template <typename _Tp, size_t SIZE>
-bool run(std::function<void(_Tp *,_Tp *)> f) {
+// PSTL(std::begin(first), std::end(first))
+template <typename T, size_t SIZE>
+bool run(std::function<void(T (&)[SIZE],
+                            T (&)[SIZE])> f) {
 
   // first
-  _Tp input1[SIZE] { 0 };
-  _Tp input2[SIZE] { 0 };
+  T input1[SIZE] { 0 };
+  T input2[SIZE] { 0 };
 
   // initialize test data
   std::iota(std::begin(input1), std::end(input1), 1);
@@ -46,18 +47,18 @@ bool run(std::function<void(_Tp *,_Tp *)> f) {
 }
 
 
-// f(first, last, d_first) => f(first, first+SIZE, d_first)
-template <typename _Tp, size_t SIZE>
-bool run(std::function<void(_Tp *, _Tp *,
-                            _Tp *, _Tp *)> f) {
+// PSTL(std::begin(first), std::end(first), std::begin(d_first))
+template <typename T, size_t SIZE>
+bool run(std::function<void(T (&)[SIZE], T (&)[SIZE],
+                            T (&)[SIZE], T (&)[SIZE])> f) {
 
   // first
-  _Tp input1[SIZE] { 0 };
-  _Tp input2[SIZE] { 0 };
+  T input1[SIZE] { 0 };
+  T input2[SIZE] { 0 };
 
   // d_first
-  _Tp output1[SIZE] { 0 };
-  _Tp output2[SIZE] { 0 };
+  T output1[SIZE] { 0 };
+  T output2[SIZE] { 0 };
 
   // initialize test data
   std::iota(std::begin(input1), std::end(input1), 1);
@@ -89,20 +90,20 @@ bool run(std::function<void(_Tp *, _Tp *,
 }
 
 
-// f(first1, last1, first2, d_first) => f(first1, first1+SIZE, first2, d_first)
-template <typename _Tp, size_t SIZE>
-bool run(std::function<void(_Tp *, _Tp *, _Tp *,
-                            _Tp *, _Tp *, _Tp *)> f) {
+// PSTL(std::begin(first1), std::end(first1), std::begin(first2), std::begin(d_first))
+template <typename T, size_t SIZE>
+bool run(std::function<void(T (&)[SIZE], T (&)[SIZE], T (&)[SIZE],
+                            T (&)[SIZE], T (&)[SIZE], T (&)[SIZE])> f) {
 
   // first1
-  _Tp input1[SIZE] { 0 };
-  _Tp input2[SIZE] { 0 };
+  T input1[SIZE] { 0 };
+  T input2[SIZE] { 0 };
   // first2
-  _Tp input3[SIZE] { 0 };
-  _Tp input4[SIZE] { 0 };
+  T input3[SIZE] { 0 };
+  T input4[SIZE] { 0 };
   // d_first
-  _Tp output1[SIZE] { 0 };
-  _Tp output2[SIZE] { 0 };
+  T output1[SIZE] { 0 };
+  T output2[SIZE] { 0 };
 
   // initialize test data
   std::iota(std::begin(input1), std::end(input1), 1);

@@ -10,33 +10,25 @@
 #include "test_base.h"
 
 
-template<typename _Tp, size_t SIZE>
-bool test() {
+template<typename T, size_t SIZE>
+bool test(void) {
   // test kernel
-  auto f = [&](_Tp& v)
-  {
-    return v * 2;
-  };
+  auto f = [](T& v) { return v * 2; };
+  auto g = [](T& v) { return v + 5566; };
 
   using namespace std::experimental::parallel;
 
   bool ret = true;
-  ret &= run<_Tp, SIZE>([f](_Tp *input1, _Tp *output1,
-                            _Tp *input2, _Tp *output2) {
-    std::transform(input1, input1+SIZE, output1, f);
-    transform(par, input2, input2+SIZE, output2, f);
+  ret &= run<T, SIZE>([f](T (&input1)[SIZE], T (&output1)[SIZE],
+                          T (&input2)[SIZE], T (&output2)[SIZE]) {
+    std::transform(std::begin(input1), std::end(input1), std::begin(output1), f);
+    transform(par, std::begin(input2), std::end(input2), std::begin(output2), f);
   });
 
-  // test kernel 2
-  auto g = [&](_Tp& v)
-  {
-    return v + 5566;
-  };
-
-  ret &= run<_Tp, SIZE>([g](_Tp *input1, _Tp *output1,
-                            _Tp *input2, _Tp *output2) {
-    std::transform(input1, input1+SIZE, output1, g);
-    transform(par, input2, input2+SIZE, output2, g);
+  ret &= run<T, SIZE>([g](T (&input1)[SIZE], T (&output1)[SIZE],
+                          T (&input2)[SIZE], T (&output2)[SIZE]) {
+    std::transform(std::begin(input1), std::end(input1), std::begin(output1), g);
+    transform(par, std::begin(input2), std::end(input2), std::begin(output2), g);
   });
 
   return ret;
