@@ -25,6 +25,14 @@ transform_exclusive_scan(ExecutionPolicy&& exec,
                          OutputIterator result,
                          UnaryOperation unary_op,
                          T init, BinaryOperation binary_op) {
-  return transform_exclusive_scan(first, last, result, unary_op, init, binary_op);
+  if (utils::isParallel(exec)) {
+    return transform_exclusive_scan(first, last, result, unary_op, init, binary_op);
+  } else {
+    details::transform_impl(first, last, result, unary_op,
+      std::input_iterator_tag{});
+    const size_t N = static_cast<size_t>(std::distance(first, last));
+    return details::exclusive_scan_impl(result, result + N, result, init, binary_op,
+             std::input_iterator_tag{});
+  }
 }
 

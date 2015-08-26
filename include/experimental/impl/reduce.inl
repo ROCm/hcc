@@ -86,7 +86,12 @@ T
 reduce(ExecutionPolicy&& exec,
                InputIterator first, InputIterator last, T init,
                BinaryOperation binary_op) {
-  return reduce(first, last, init, binary_op);
+  if (utils::isParallel(exec)) {
+    return reduce(first, last, init, binary_op);
+  } else {
+    return details::reduce_impl(first, last, init, binary_op,
+             std::input_iterator_tag{});
+  }
 }
 
 template<typename InputIterator, typename T,
@@ -102,7 +107,12 @@ template<typename ExecutionPolicy,
 T
 reduce(ExecutionPolicy&& exec,
          InputIterator first, InputIterator last, T init) {
-  return reduce(first, last, init);
+  if (utils::isParallel(exec)) {
+    return reduce(first, last, init);
+  } else {
+    return details::reduce_impl(first, last, init, std::plus<T>(),
+             std::input_iterator_tag{});
+  }
 }
 
 template<typename InputIterator,
@@ -120,6 +130,12 @@ template<typename ExecutionPolicy,
 typename std::iterator_traits<InputIterator>::value_type
 reduce(ExecutionPolicy&& exec,
        InputIterator first, InputIterator last) {
-  return reduce(first, last);
+  typedef typename std::iterator_traits<InputIterator>::value_type Type;
+  if (utils::isParallel(exec)) {
+    return reduce(first, last);
+  } else {
+    return details::reduce_impl(first, last, Type{}, std::plus<Type>(),
+             std::input_iterator_tag{});
+  }
 }
 

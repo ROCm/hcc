@@ -23,6 +23,14 @@ transform_reduce(ExecutionPolicy&& exec,
                  InputIterator first, InputIterator last,
                  UnaryOperation unary_op,
                  T init, BinaryOperation binary_op) {
-  return transform_reduce(first, last, unary_op, init, binary_op);
+  if (utils::isParallel(exec)) {
+    return transform_reduce(first, last, unary_op, init, binary_op);
+  } else {
+    typedef typename std::iterator_traits<InputIterator>::value_type _Tp;
+    auto new_op = [&](const T& a, const _Tp& b) {
+      return binary_op(a, unary_op(b));
+    };
+    return std::accumulate(first, last, init, new_op);
+  }
 }
 

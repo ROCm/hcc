@@ -25,7 +25,15 @@ transform_inclusive_scan(ExecutionPolicy&& exec,
                OutputIterator result,
                UnaryOperation unary_op,
                BinaryOperation binary_op, T init) {
-  return transform_inclusive_scan(first, last, result, unary_op, binary_op, init);
+  if (utils::isParallel(exec)) {
+    return transform_inclusive_scan(first, last, result, unary_op, binary_op, init);
+  } else {
+    details::transform_impl(first, last, result, unary_op,
+      std::input_iterator_tag{});
+    const size_t N = static_cast<size_t>(std::distance(first, last));
+    return details::inclusive_scan_impl(result, result + N, result, binary_op, init,
+             std::input_iterator_tag{});
+  }
 }
 
 template<typename InputIterator, typename OutputIterator,
@@ -51,6 +59,15 @@ transform_inclusive_scan(ExecutionPolicy&& exec,
                          OutputIterator result,
                          UnaryOperation unary_op,
                          BinaryOperation binary_op) {
-  return transform_inclusive_scan(first, last, result, binary_op);
+  if (utils::isParallel(exec)) {
+    return transform_inclusive_scan(first, last, result, binary_op);
+  } else {
+    details::transform_impl(first, last, result, unary_op,
+      std::input_iterator_tag{});
+    const size_t N = static_cast<size_t>(std::distance(first, last));
+    typedef typename std::iterator_traits<OutputIterator>::value_type Type;
+    return details::inclusive_scan_impl(result, result + N, result, binary_op, Type{},
+             std::input_iterator_tag{});
+  }
 }
 
