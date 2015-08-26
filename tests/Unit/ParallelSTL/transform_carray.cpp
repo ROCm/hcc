@@ -6,54 +6,38 @@
 #include <experimental/algorithm>
 #include <experimental/execution_policy>
 
-// C++ headers
-#include <iostream>
-#include <iomanip>
-#include <algorithm>
-#include <numeric>
-
-#define ROW (8)
-#define COL (16)
-#define TEST_SIZE (ROW * COL)
-
 #define _DEBUG (0)
+#include "test_base.h"
+
 
 template<typename _Tp, size_t SIZE>
 bool test() {
-
-  _Tp input[SIZE] { 0 };
-  _Tp output[SIZE] { 0 };
-
-  // initialize test data
-  std::iota(std::begin(input), std::end(input), 0);
-
   // test kernel
   auto f = [&](_Tp& v)
   {
     return v * 2;
   };
 
-  // launch kernel with parallel STL transform
   using namespace std::experimental::parallel;
-  transform(par, std::begin(input), std::end(input), std::begin(output), f);
 
-  // verify data
   bool ret = true;
-  for (int i = 0; i < SIZE; ++i) {
-    if (output[i] != i * 2)  {
-      ret = false;
-      break;
-    }
-  }
+  ret &= run<_Tp, SIZE>([f](_Tp *input1, _Tp *output1,
+                            _Tp *input2, _Tp *output2) {
+    std::transform(input1, input1+SIZE, output1, f);
+    transform(par, input2, input2+SIZE, output2, f);
+  });
 
-#if _DEBUG 
-  for (int i = 0; i < ROW; ++i) {
-    for (int j = 0; j < COL; ++j) {
-      std::cout << std::setw(5) << output[i * COL + j];
-    }
-    std::cout << "\n";
-  } 
-#endif
+  // test kernel 2
+  auto g = [&](_Tp& v)
+  {
+    return v + 5566;
+  };
+
+  ret &= run<_Tp, SIZE>([g](_Tp *input1, _Tp *output1,
+                            _Tp *input2, _Tp *output2) {
+    std::transform(input1, input1+SIZE, output1, g);
+    transform(par, input2, input2+SIZE, output2, g);
+  });
 
   return ret;
 }
