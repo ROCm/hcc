@@ -6,57 +6,22 @@
 #include <experimental/algorithm>
 #include <experimental/execution_policy>
 
-// C++ headers
-#include <iostream>
-#include <iomanip>
-#include <algorithm>
-
-#define ROW (8)
-#define COL (16)
-#define TEST_SIZE (ROW * COL)
-
 #define _DEBUG (0)
+#include "test_base.h"
 
-template<typename _Tp, size_t SIZE>
-bool test() {
 
-  _Tp table[SIZE] { 0 };
-  _Tp n { 0 };
+template<typename T, size_t SIZE>
+bool test(void) {
 
-  // initialize test data
-  auto first = std::begin(table);
-  auto last = std::end(table);
-  auto mid = std::next(first, std::distance(first, last) / 2);
-  std::generate(first, mid, [] { return 1; });
-  std::generate(mid, last, [] { return 2; });
-
-  // launch kernel with parallel STL for_each
   using namespace std::experimental::parallel;
-  replace(par, std::begin(table), std::end(table), 2, 3);
 
-  // verify data
   bool ret = true;
-  for (int i = 0; i < SIZE / 2; ++i) {
-    if (table[i] != 1) {
-      ret = false;
-      break;
-    }
-  }
-  for (int i = SIZE / 2; i < SIZE; ++i) {
-    if (table[i] != 3) {
-      ret = false;
-      break;
-    }
-  }
+  ret &= run<T, SIZE>([](T (&input1)[SIZE],
+                         T (&input2)[SIZE]) {
+    std::replace(std::begin(input1), std::end(input1), 2, 3);
+    replace(par, std::begin(input2), std::end(input2), 2, 3);
+  });
 
-#if _DEBUG 
-  for (int i = 0; i < ROW; ++i) {
-    for (int j = 0; j < COL; ++j) {
-      std::cout << std::setw(5) << table[i * COL + j];
-    }
-    std::cout << "\n";
-  } 
-#endif
 
   return ret;
 }

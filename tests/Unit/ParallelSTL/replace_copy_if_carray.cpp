@@ -6,62 +6,24 @@
 #include <experimental/algorithm>
 #include <experimental/execution_policy>
 
-// C++ headers
-#include <iostream>
-#include <iomanip>
-#include <algorithm>
-#include <numeric>
-
-#define ROW (8)
-#define COL (16)
-#define TEST_SIZE (ROW * COL)
-
 #define _DEBUG (0)
+#include "test_base.h"
 
-template<typename _Tp, size_t SIZE>
-bool test() {
 
-  _Tp input[SIZE] { 0 };
-  _Tp output[SIZE] { 0 };
-
-  // initialize test data
-  std::iota(std::begin(input), std::end(input), 0);
+template<typename T, size_t SIZE>
+bool test(void) {
 
   // test predicate
-  auto pred = [](const _Tp& v) { return static_cast<int>(v) % 3 == 0; };
+  auto pred = [](const T& v) { return static_cast<int>(v) % 3 == 0; };
 
-  // launch kernel with parallel STL copy
   using namespace std::experimental::parallel;
-  auto iter = replace_copy_if(par, std::begin(input), std::end(input), std::begin(output),
-                                   pred, SIZE + 1);
 
-  // verify data
   bool ret = true;
-  if (iter != std::begin(output) + SIZE) {
-    ret = false;
-  }
-  for (int i = 0; i < SIZE; ++i) {
-    if (pred(input[i])) {
-      if (output[i] != SIZE + 1) {
-        ret = false;
-        break;
-      }
-    } else {
-      if (output[i] != i)  {
-        ret = false;
-        break;
-      }
-    }
-  }
-
-#if _DEBUG 
-  for (int i = 0; i < ROW; ++i) {
-    for (int j = 0; j < COL; ++j) {
-      std::cout << std::setw(5) << output[i * COL + j];
-    }
-    std::cout << "\n";
-  } 
-#endif
+  ret &= run<T, SIZE>([pred](T (&input1)[SIZE], T (&output1)[SIZE],
+                             T (&input2)[SIZE], T (&output2)[SIZE]) {
+    std::replace_copy_if(std::begin(input1), std::end(input1), std::begin(output1), pred, SIZE + 1);
+    replace_copy_if(par, std::begin(input2), std::end(input2), std::begin(output2), pred, SIZE + 1);
+  });
 
   return ret;
 }

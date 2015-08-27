@@ -7,54 +7,30 @@
 #include <experimental/numeric>
 #include <experimental/execution_policy>
 
-// C++ headers
-#include <iostream>
-#include <iomanip>
-#include <numeric>
-#include <algorithm>
-#include <iterator>
-
-#define ROW (2)
-#define COL (8)
-#define TEST_SIZE (ROW * COL)
-
 #define _DEBUG (0)
+#include "test_base.h"
 
-template<typename _Tp, size_t SIZE>
-bool test() {
-  bool ret = true;
+template<typename T, size_t SIZE>
+bool test(void) {
 
-  _Tp input[SIZE] { 0 };
-  _Tp output[SIZE] { 0 };
+  auto op = [](const T &x) { return x+1; };
+  auto binary_op = std::plus<T>();
+  auto init = T{};
 
-  // initialize test data
-  std::iota(std::begin(input), std::end(input), 1);
-
-  auto op = [](const _Tp &x) { return x+1; };
-  // launch kernel with parallel STL transform inclusive scan
   using namespace std::experimental::parallel;
-  transform_inclusive_scan(par, std::begin(input), std::end(input), std::begin(output), op, std::plus<_Tp>(), _Tp{});
 
-  // verify data
-  if (output[0] != op(input[0]))
-    ret = false;
+  bool ret = true;
+  ret &= run<T, SIZE>([op, binary_op, init]
+                      (T (&input1)[SIZE], T (&output1)[SIZE],
+                       T (&input2)[SIZE], T (&output2)[SIZE]) {
+    // transform_exclusive_scan = transform + partial_sum (inclusive)
+    std::transform(std::begin(input1), std::end(input1), std::begin(output1), op);
+    std::partial_sum(std::begin(output1), std::end(output1), std::begin(output1), binary_op);
 
-  for (int i = 1; i < SIZE; ++i) {
-    if (output[i] != output[i - 1] + op(input[i])) {
-      ret = false;
-      break;
-    }
-  }
-
-#if _DEBUG
-  for (int i = 0; i < ROW; ++i) {
-    for (int j = 0; j < COL; ++j) {
-      std::cout << std::setw(5) << output[i * COL + j];
-    }
-    std::cout << "\n";
-  }
-#endif
-
+    // parallel::transform_exclusive_scan
+    transform_inclusive_scan(par, std::begin(input2), std::end(input2),
+                                  std::begin(output2), op, binary_op, init);
+  });
   return ret;
 }
 

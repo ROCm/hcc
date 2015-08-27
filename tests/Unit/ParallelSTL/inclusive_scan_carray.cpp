@@ -7,53 +7,25 @@
 #include <experimental/numeric>
 #include <experimental/execution_policy>
 
-// C++ headers
-#include <iostream>
-#include <iomanip>
-#include <numeric>
-#include <algorithm>
-#include <iterator>
-
-#define ROW (2)
-#define COL (8)
-#define TEST_SIZE (ROW * COL)
-
 #define _DEBUG (0)
+#include "test_base.h"
 
-template<typename _Tp, size_t SIZE>
-bool test() {
+
+template<typename T, size_t SIZE>
+bool test(void) {
+
+  auto binary_op = std::plus<T>();
+  auto init = T{};
+
+  using namespace std::experimental::parallel;
 
   bool ret = true;
-
-  _Tp input[SIZE] { 0 };
-  _Tp output[SIZE] { 0 };
-
-  // initialize test data
-  std::iota(std::begin(input), std::end(input), 1);
-
-  // launch kernel with parallel STL inclsive scan
-  using namespace std::experimental::parallel;
-  inclusive_scan(par, std::begin(input), std::end(input), std::begin(output));
-
-  // verify data
-  if (output[0] != input[0])
-    ret = false;
-
-  for (int i = 1; i < SIZE; ++i) {
-    if (output[i] != output[i - 1] + input[i]) {
-      ret = false;
-      break;
-    }
-  }
-
-#if _DEBUG 
-  for (int i = 0; i < ROW; ++i) {
-    for (int j = 0; j < COL; ++j) {
-      std::cout << std::setw(5) << output[i * COL + j];
-    }
-    std::cout << "\n";
-  } 
-#endif
+  ret &= run<T, SIZE>([init, binary_op]
+                      (T (&input1)[SIZE], T (&output1)[SIZE],
+                       T (&input2)[SIZE], T (&output2)[SIZE]) {
+    std::partial_sum(std::begin(input1), std::end(input1), std::begin(output1), binary_op);
+    inclusive_scan(par, std::begin(input2), std::end(input2), std::begin(output2), binary_op, init);
+  });
 
   return ret;
 }

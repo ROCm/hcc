@@ -6,53 +6,29 @@
 #include <experimental/algorithm>
 #include <experimental/execution_policy>
 
-// C++ headers
-#include <iostream>
-#include <iomanip>
-#include <algorithm>
-
-#define ROW (8)
-#define COL (16)
-
 #define _DEBUG (0)
+#include "test_base.h"
 
-template<typename _Tp, size_t SIZE>
-bool test() {
 
-  _Tp table[SIZE] { 0 };
-  _Tp n { 0 };
+template<typename T, size_t SIZE>
+bool test(void) {
 
-  // initialize test data
-  std::generate(std::begin(table), std::end(table), [&] { return n++; });
 
   // test kernel
-  auto f = [&](_Tp& v)
+  auto f = [&](T& v)
   {
     v *= 8;
     v += 3;
   };
 
-  // launch kernel with parallel STL for_each
   using namespace std::experimental::parallel;
-  for_each(par, std::begin(table), std::end(table), f);
 
-  // verify data
   bool ret = true;
-  for (int i = 0; i < SIZE; ++i) {
-    if (table[i] != i * 8 + 3)  {
-      ret = false;
-      break;
-    }
-  }
-
-#if _DEBUG 
-  for (int i = 0; i < ROW; ++i) {
-    for (int j = 0; j < COL; ++j) {
-      std::cout << std::setw(5) << table[i * COL + j];
-    }
-    std::cout << "\n";
-  } 
-#endif
+  ret &= run<T, SIZE>([f](T (&input1)[SIZE],
+                          T (&input2)[SIZE]) {
+    std::for_each(std::begin(input1), std::end(input1), f);
+    for_each(par, std::begin(input2), std::end(input2), f);
+  });
 
   return ret;
 }

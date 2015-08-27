@@ -9,23 +9,30 @@
 #define COL (16)
 #define TEST_SIZE (ROW * COL)
 
+// for floating numbers
+#define EQ(a,b) ((((a) - (b)) > 0 ? ((a) - (b)) : ((b) - (a))) < 0.001)
+
+// check outputs
 // PSTL(std::begin(first), std::end(first))
 template <typename T, size_t SIZE>
 bool run(std::function<void(T (&)[SIZE],
-                            T (&)[SIZE])> f) {
+                            T (&)[SIZE])> f,
+                       bool checkOutput=true) {
 
   // first
   T input1[SIZE] { 0 };
   T input2[SIZE] { 0 };
 
   // initialize test data
-  std::iota(std::begin(input1), std::end(input1), 1);
+  std::iota(std::begin(input1), std::end(input1), 0);
   std::copy(std::begin(input1), std::end(input1), std::begin(input2));
 
   bool ret = true;
 
   f(input1, input2);
-  ret &= std::equal(std::begin(input1), std::end(input1), std::begin(input2));
+  if (checkOutput) {
+    ret &= std::equal(std::begin(input1), std::end(input1), std::begin(input2));
+  }
 
 #if _DEBUG
   for (int i = 0; i < ROW; ++i) {
@@ -50,7 +57,8 @@ bool run(std::function<void(T (&)[SIZE],
 // PSTL(std::begin(first), std::end(first), std::begin(d_first))
 template <typename T, size_t SIZE>
 bool run(std::function<void(T (&)[SIZE], T (&)[SIZE],
-                            T (&)[SIZE], T (&)[SIZE])> f) {
+                            T (&)[SIZE], T (&)[SIZE])> f,
+                       bool checkOutput=true) {
 
   // first
   T input1[SIZE] { 0 };
@@ -68,7 +76,9 @@ bool run(std::function<void(T (&)[SIZE], T (&)[SIZE],
 
   f(input1, output1,
     input2, output2);
-  ret &= std::equal(std::begin(output1), std::end(output1), std::begin(output2));
+  if (checkOutput) {
+    ret &= std::equal(std::begin(output1), std::end(output1), std::begin(output2));
+  }
 
 #if _DEBUG
   for (int i = 0; i < ROW; ++i) {
@@ -93,7 +103,8 @@ bool run(std::function<void(T (&)[SIZE], T (&)[SIZE],
 // PSTL(std::begin(first1), std::end(first1), std::begin(first2), std::begin(d_first))
 template <typename T, size_t SIZE>
 bool run(std::function<void(T (&)[SIZE], T (&)[SIZE], T (&)[SIZE],
-                            T (&)[SIZE], T (&)[SIZE], T (&)[SIZE])> f) {
+                            T (&)[SIZE], T (&)[SIZE], T (&)[SIZE])> f,
+                       bool checkOutput=true) {
 
   // first1
   T input1[SIZE] { 0 };
@@ -115,7 +126,9 @@ bool run(std::function<void(T (&)[SIZE], T (&)[SIZE], T (&)[SIZE],
 
   f(input1, input3, output1,
     input2, input4, output2);
-  ret &= std::equal(std::begin(output1), std::end(output1), std::begin(output2));
+  if (checkOutput) {
+    ret &= std::equal(std::begin(output1), std::end(output1), std::begin(output2));
+  }
 
 #if _DEBUG
   for (int i = 0; i < ROW; ++i) {

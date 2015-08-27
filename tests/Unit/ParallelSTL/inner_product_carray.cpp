@@ -7,46 +7,36 @@
 #include <experimental/numeric>
 #include <experimental/execution_policy>
 
-// C++ headers
-#include <iostream>
-#include <iomanip>
-#include <algorithm>
-#include <numeric>
-
-#define ROW (8)
-#define COL (16)
-#define TEST_SIZE (ROW * COL)
-
 #define _DEBUG (0)
+#include "test_base.h"
 
-template<typename _Tp, size_t SIZE>
-bool test() {
 
-  _Tp input1[SIZE] { 0 };
-  _Tp input2[SIZE] { 0 };
-
-  // initialize test data
-  std::iota(std::begin(input1), std::end(input1), 0);
-  std::iota(std::begin(input2), std::end(input2), 0);
+template<typename T, size_t SIZE>
+bool test(void) {
 
   // test kernel
-  auto f = [](const _Tp& v1, const _Tp& v2)
+  auto f = [](const T& v1, const T& v2)
   {
     return v1 * v2+1;
   };
+  auto binary_op = std::plus<T>();
+  auto init = T{};
 
-  auto expect = std::inner_product(std::begin(input1), std::end(input1),
-                 std::begin(input2), _Tp{}, std::plus<_Tp>(), f);
-
-  // launch kernel with parallel STL inner_product
   using namespace std::experimental::parallel;
 
+  bool ret = true;
+  bool eq = true;
+  ret &= run<T, SIZE>([init, binary_op, f, &eq]
+                      (T (&input1)[SIZE], T (&input3)[SIZE], T (&output1)[SIZE],
+                       T (&input2)[SIZE], T (&input4)[SIZE], T (&output2)[SIZE]) {
+    auto expected = std::inner_product(std::begin(input1), std::end(input1), std::begin(input3), init, binary_op, f);
+    auto result =   inner_product(par, std::begin(input2), std::end(input2), std::begin(input4), init, binary_op, f);
 
-  auto ans =  inner_product(par, std::begin(input1), std::end(input1),
-                 std::begin(input2), _Tp{}, std::plus<_Tp>(), f);
+    eq = EQ(expected, result);
 
-  // verify data
-  bool ret = expect == ans;
+  }, false);
+  ret &= eq;
+
   return ret;
 }
 

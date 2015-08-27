@@ -7,47 +7,37 @@
 #include <experimental/numeric>
 #include <experimental/execution_policy>
 
-// C++ headers
-#include <iostream>
-#include <iomanip>
-#include <numeric>
-#include <algorithm>
-#include <iterator>
-
-#define ROW (2)
-#define COL (8)
-#define TEST_SIZE (ROW * COL)
-
 #define _DEBUG (0)
+#include "test_base.h"
 
-template<typename _Tp, size_t SIZE>
-bool test() {
-  bool ret = true;
 
-  _Tp table[SIZE] { 0 };
+template<typename T, size_t SIZE>
+bool test(void) {
 
-  // initialize test data
-  std::iota(std::begin(table), std::end(table), 0);
-
-  // launch kernel with parallel STL reduce
   using namespace std::experimental::parallel;
-  _Tp expected = std::accumulate(std::begin(table), std::end(table), _Tp{});
-  ret &= (expected == reduce(std::begin(table), std::end(table)));
-  ret &= (expected == reduce(par, std::begin(table), std::end(table)));
 
-  expected = std::accumulate(std::begin(table), std::end(table), 10);
-  ret &= (expected == reduce(std::begin(table), std::end(table), 10));
-  ret &= (expected == reduce(par, std::begin(table), std::end(table), 10));
+  bool ret = true;
+  bool eq = true;
+  ret &= run<T, SIZE>([&eq]
+                      (T (&input1)[SIZE],
+                       T (&input2)[SIZE]) {
+    auto expected = std::accumulate(std::begin(input1), std::end(input1), T{});
+    auto result   = reduce(par, std::begin(input2), std::end(input2), T{});
 
+    eq = EQ(expected, result);
+  }, false);
+  ret &= eq;
 
-#if _DEBUG
-  for (int i = 0; i < ROW; ++i) {
-    for (int j = 0; j < COL; ++j) {
-      std::cout << std::setw(5) << table[i * COL + j];
-    }
-    std::cout << "\n";
-  }
-#endif
+  ret &= run<T, SIZE>([&eq]
+                      (T (&input1)[SIZE],
+                       T (&input2)[SIZE]) {
+    auto expected = std::accumulate(std::begin(input1), std::end(input1), 10);
+    auto result   = reduce(par, std::begin(input2), std::end(input2), 10);
+
+    eq = EQ(expected, result);
+  }, false);
+  ret &= eq;
+
 
   return ret;
 }

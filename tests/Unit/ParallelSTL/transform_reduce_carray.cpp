@@ -7,46 +7,30 @@
 #include <experimental/numeric>
 #include <experimental/execution_policy>
 
-// C++ headers
-#include <iostream>
-#include <iomanip>
-#include <numeric>
-#include <algorithm>
-#include <iterator>
-
-#define ROW (2)
-#define COL (8)
-#define TEST_SIZE (ROW * COL)
-
 #define _DEBUG (0)
+#include "test_base.h"
 
-template<typename _Tp, size_t SIZE>
-bool test() {
-  bool ret = true;
+template<typename T, size_t SIZE>
+bool test(void) {
 
-  _Tp table[SIZE] { _Tp{} };
+  auto op = [](const T &x) { return x+5566; };
+  auto binary_op = std::plus<T>();
+  auto init = T{};
 
-  // initialize test data
-  std::iota(std::begin(table), std::end(table), 1);
-  _Tp buffer[SIZE] { _Tp{} };
-  auto op = [](const _Tp &x) { return x+5566; };
-  std::transform(std::begin(table), std::end(table), std::begin(buffer), op);
-  _Tp expected = std::accumulate(std::begin(buffer), std::end(buffer), _Tp{}, std::plus<_Tp>());
-
-  // launch kernel with parallel STL transform reduce
   using namespace std::experimental::parallel;
 
-  ret &= (expected == transform_reduce(std::begin(table), std::end(table), op, _Tp{}, std::plus<_Tp>()));
-  ret &= (expected == transform_reduce(par, std::begin(table), std::end(table), op, _Tp{}, std::plus<_Tp>()));
+  bool ret = true;
+  bool eq = true;
+  ret &= run<T, SIZE>([op, init, binary_op, &eq]
+                      (T (&input1)[SIZE], T (&output1)[SIZE],
+                       T (&input2)[SIZE], T (&output2)[SIZE]) {
+    std::transform(std::begin(input1), std::end(input1), std::begin(output1), op);
+    auto expected = std::accumulate(std::begin(output1), std::end(output1), init, binary_op);
 
-#if _DEBUG
-  for (int i = 0; i < ROW; ++i) {
-    for (int j = 0; j < COL; ++j) {
-      std::cout << std::setw(5) << table[i * COL + j];
-    }
-    std::cout << "\n";
-  }
-#endif
+    auto result = transform_reduce(par, std::begin(input2), std::end(input2), op, init, binary_op);
+    eq = EQ(expected, result);
+  }, false);
+  ret &= eq;
 
   return ret;
 }
