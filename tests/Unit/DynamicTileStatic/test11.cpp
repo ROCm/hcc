@@ -48,8 +48,6 @@ bool test1D() {
   return ret;
 }
 
-// FIXME the case for 2D need some more study
-#if 0
 template<size_t GRID_SIZE_Y, size_t GRID_SIZE_X, size_t TILE_SIZE_Y, size_t TILE_SIZE_X>
 bool test2D() {
   static_assert((GRID_SIZE_Y % TILE_SIZE_Y) || 
@@ -75,55 +73,44 @@ bool test2D() {
   int remainder_y = GRID_SIZE_Y % TILE_SIZE_Y;
   int remainder_x = GRID_SIZE_X % TILE_SIZE_X;
 
-  std::cout << GRID_SIZE_Y << " " << GRID_SIZE_X << " " << TILE_SIZE_Y << " " << TILE_SIZE_X << " " << full_tiles_y << " " << full_tiles_x << " " << remainder_y << " " << remainder_x << "\n";
-
   for (int i = 0; i < GRID_SIZE_Y; ++i) {
     for (int j = 0; j < GRID_SIZE_X; ++j) {
       int gid = i * GRID_SIZE_X + j;
-      std::cout << output2[gid] << " ";
-/*
-      if (i < full_tiles_y) {
-        if (output1[gid] != TILE_SIZE_Y) {
+      if (i < full_tiles_y * TILE_SIZE_Y) {
+        if (output2[gid] != TILE_SIZE_Y) {
           ret = false;
           break;
         }
       } else {
-        if (output1[gid] != remainder_y) {
+        if (output2[gid] != remainder_y) {
           ret = false;
           break;
         }
       }
-*/
 
-/*
-      if (j < full_tiles_x) {
-        if (output2[gid] != TILE_SIZE_X) {
+      if (j < full_tiles_x * TILE_SIZE_X) {
+        if (output1[gid] != TILE_SIZE_X) {
           ret = false;
           break;
         }
       } else {
-        if (output2[gid] != remainder_x) {
+        if (output1[gid] != remainder_x) {
           ret = false;
           break;
         }
       }
-*/
     }
-    std::cout << "\n";
   }
 
   return ret;
 }
-#endif
 
-// FIXME the case for 3D need some more study
-#if 0
 template<size_t GRID_SIZE_Z, size_t GRID_SIZE_Y, size_t GRID_SIZE_X,
          size_t TILE_SIZE_Z, size_t TILE_SIZE_Y, size_t TILE_SIZE_X>
 bool test3D() {
-  static_assert((GRID_SIZE_Z % TILE_SIZE_Z == 0) &&
-                (GRID_SIZE_Y % TILE_SIZE_Y == 0) &&
-                (GRID_SIZE_X % TILE_SIZE_X == 0), "The test is known not working if tile size does not divide grid size.\n");
+  static_assert((GRID_SIZE_Z % TILE_SIZE_Z) || 
+                (GRID_SIZE_Y % TILE_SIZE_Y) || 
+                (GRID_SIZE_X % TILE_SIZE_X), "The test wants to check cases where tile sizes do NOT divide grid sizes.\n");
 
   bool ret = true;
 
@@ -143,16 +130,58 @@ bool test3D() {
     output3(global_index) = idx.tile_dim[2];
   });
 
-  for (int i = 0; i < GRID_SIZE_X * GRID_SIZE_Y * GRID_SIZE_X; ++i) {
-    if (output1[i] != TILE_SIZE_Z || output2[i] != TILE_SIZE_Y || output3[i] != TILE_SIZE_X) {
-      ret = false;
-      break;
+  int full_tiles_z = GRID_SIZE_Z / TILE_SIZE_Z;
+  int full_tiles_y = GRID_SIZE_Y / TILE_SIZE_Y;
+  int full_tiles_x = GRID_SIZE_X / TILE_SIZE_X;
+  int remainder_z = GRID_SIZE_Z % TILE_SIZE_Z;
+  int remainder_y = GRID_SIZE_Y % TILE_SIZE_Y;
+  int remainder_x = GRID_SIZE_X % TILE_SIZE_X;
+
+  for (int i = 0; i < GRID_SIZE_Z; ++i) {
+    for (int j = 0; j < GRID_SIZE_Y; ++j) {
+      for (int k = 0; k < GRID_SIZE_X; ++k) {
+        int gid = i * GRID_SIZE_Y * GRID_SIZE_X + j * GRID_SIZE_X + k;
+        if (i < full_tiles_z * TILE_SIZE_Z) {
+          if (output3[gid] != TILE_SIZE_Z) {
+            ret = false;
+            break;
+          }
+        } else {
+          if (output3[gid] != remainder_z) {
+            ret = false;
+            break;
+          }
+        }
+
+        if (j < full_tiles_y * TILE_SIZE_Y) {
+          if (output2[gid] != TILE_SIZE_Y) {
+            ret = false;
+            break;
+          }
+        } else {
+          if (output2[gid] != remainder_y) {
+            ret = false;
+            break;
+          }
+        }
+
+        if (k < full_tiles_x * TILE_SIZE_X) {
+          if (output1[gid] != TILE_SIZE_X) {
+            ret = false;
+            break;
+          }
+        } else {
+          if (output1[gid] != remainder_x) {
+            ret = false;
+            break;
+          }
+        }
+      }
     }
   }
 
   return ret;
 }
-#endif
 
 int main() {
   bool ret = true;
@@ -162,15 +191,11 @@ int main() {
   ret &= test1D<19, 4>();
   ret &= test1D<1023, 17>();
 
-#if 0
   ret &= test2D<5, 5, 2, 2>();
   ret &= test2D<7, 7, 5, 5>();
-#endif
 
-#if 0
-  ret &= test3D<8, 8, 8, 4, 4, 4>();
-  ret &= test3D<15, 15, 15, 5, 5, 5>();
-#endif
+  ret &= test3D<5, 5, 5, 2, 2, 2>();
+  ret &= test3D<7, 7, 7, 5, 5, 5>();
 
   return !(ret == true);
 }
