@@ -22,12 +22,12 @@ bool test(void) {
   bool ret = true;
   bool eq = true;
   ret &= run<T, SIZE>([op, init, binary_op, &eq]
-                      (T (&input1)[SIZE], T (&output1)[SIZE],
-                       T (&input2)[SIZE], T (&output2)[SIZE]) {
-    std::transform(std::begin(input1), std::end(input1), std::begin(output1), op);
+                      (T (&input)[SIZE], T (&output1)[SIZE],
+                                         T (&output2)[SIZE]) {
+    std::transform(std::begin(input), std::end(input), std::begin(output1), op);
     auto expected = std::accumulate(std::begin(output1), std::end(output1), init, binary_op);
 
-    auto result = transform_reduce(par, std::begin(input2), std::end(input2), op, init, binary_op);
+    auto result = transform_reduce(par, std::begin(input), std::end(input), op, init, binary_op);
     eq = EQ(expected, result);
   }, false);
   ret &= eq;

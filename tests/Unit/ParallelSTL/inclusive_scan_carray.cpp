@@ -21,10 +21,10 @@ bool test(void) {
 
   bool ret = true;
   ret &= run<T, SIZE>([init, binary_op]
-                      (T (&input1)[SIZE], T (&output1)[SIZE],
-                       T (&input2)[SIZE], T (&output2)[SIZE]) {
-    std::partial_sum(std::begin(input1), std::end(input1), std::begin(output1), binary_op);
-    inclusive_scan(par, std::begin(input2), std::end(input2), std::begin(output2), binary_op, init);
+                      (T (&input)[SIZE], T (&output1)[SIZE],
+                                          T (&output2)[SIZE]) {
+    std::partial_sum(std::begin(input), std::end(input), std::begin(output1), binary_op);
+    inclusive_scan(par, std::begin(input), std::end(input), std::begin(output2), binary_op, init);
   });
 
   return ret;

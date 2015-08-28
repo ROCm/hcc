@@ -27,10 +27,10 @@ bool test(void) {
   bool ret = true;
   bool eq = true;
   ret &= run<T, SIZE>([init, binary_op, f, &eq]
-                      (T (&input1)[SIZE], T (&input3)[SIZE], T (&output1)[SIZE],
-                       T (&input2)[SIZE], T (&input4)[SIZE], T (&output2)[SIZE]) {
-    auto expected = std::inner_product(std::begin(input1), std::end(input1), std::begin(input3), init, binary_op, f);
-    auto result =   inner_product(par, std::begin(input2), std::end(input2), std::begin(input4), init, binary_op, f);
+                      (T (&input1)[SIZE], T (&input2)[SIZE], T (&output1)[SIZE],
+                                                             T (&output2)[SIZE]) {
+    auto expected = std::inner_product(std::begin(input1), std::end(input1), std::begin(input2), init, binary_op, f);
+    auto result =   inner_product(par, std::begin(input1), std::end(input1), std::begin(input2), init, binary_op, f);
 
     eq = EQ(expected, result);
 

@@ -21,17 +21,17 @@ bool test(void) {
 
   bool ret = true;
   ret &= run<T, SIZE>([op, binary_op, init]
-                      (T (&input1)[SIZE], T (&output1)[SIZE],
-                       T (&input2)[SIZE], T (&output2)[SIZE]) {
+                      (T (&input)[SIZE], T (&output1)[SIZE],
+                                         T (&output2)[SIZE]) {
     // transform_exclusive_scan = transform + partial_sum (exclusive)
-    std::transform(std::begin(input1), std::end(input1), std::begin(output1), op);
+    std::transform(std::begin(input), std::end(input), std::begin(output1), op);
     std::partial_sum(std::begin(output1), std::end(output1), std::begin(output1), binary_op);
     for (int i = SIZE-2; i >= 0; i--)
       output1[i+1] = binary_op(init, output1[i]);
     output1[0] = init;
 
     // parallel::transform_exclusive_scan
-    transform_exclusive_scan(par, std::begin(input2), std::end(input2),
+    transform_exclusive_scan(par, std::begin(input), std::end(input),
                                   std::begin(output2), op, init, binary_op);
   });
 

@@ -16,10 +16,10 @@ bool test(void) {
   using namespace std::experimental::parallel;
 
   bool ret = true;
-  ret &= run<T, SIZE>([](T (&input1)[SIZE], T (&output1)[SIZE],
-                         T (&input2)[SIZE], T (&output2)[SIZE]) {
-    std::adjacent_difference(std::begin(input1), std::end(input1), std::begin(output1));
-    adjacent_difference(par, std::begin(input2), std::end(input2), std::begin(output2));
+  ret &= run<T, SIZE>([](T (&input)[SIZE], T (&output1)[SIZE],
+                                           T (&output2)[SIZE]) {
+    std::adjacent_difference(std::begin(input), std::end(input), std::begin(output1));
+    adjacent_difference(par, std::begin(input), std::end(input), std::begin(output2));
   });
 
   return ret;

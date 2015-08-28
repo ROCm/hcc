@@ -57,12 +57,11 @@ bool run(std::function<void(T (&)[SIZE],
 // PSTL(std::begin(first), std::end(first), std::begin(d_first))
 template <typename T, size_t SIZE>
 bool run(std::function<void(T (&)[SIZE], T (&)[SIZE],
-                            T (&)[SIZE], T (&)[SIZE])> f,
+                                         T (&)[SIZE])> f,
                        bool checkOutput=true) {
 
   // first
   T input1[SIZE] { 0 };
-  T input2[SIZE] { 0 };
 
   // d_first
   T output1[SIZE] { 0 };
@@ -70,12 +69,11 @@ bool run(std::function<void(T (&)[SIZE], T (&)[SIZE],
 
   // initialize test data
   std::iota(std::begin(input1), std::end(input1), 1);
-  std::copy(std::begin(input1), std::end(input1), std::begin(input2));
 
   bool ret = true;
 
   f(input1, output1,
-    input2, output2);
+            output2);
   if (checkOutput) {
     ret &= std::equal(std::begin(output1), std::end(output1), std::begin(output2));
   }
@@ -103,15 +101,15 @@ bool run(std::function<void(T (&)[SIZE], T (&)[SIZE],
 // PSTL(std::begin(first1), std::end(first1), std::begin(first2), std::begin(d_first))
 template <typename T, size_t SIZE>
 bool run(std::function<void(T (&)[SIZE], T (&)[SIZE], T (&)[SIZE],
-                            T (&)[SIZE], T (&)[SIZE], T (&)[SIZE])> f,
+                                                      T (&)[SIZE])> f,
                        bool checkOutput=true) {
 
   // first1
   T input1[SIZE] { 0 };
-  T input2[SIZE] { 0 };
+
   // first2
-  T input3[SIZE] { 0 };
-  T input4[SIZE] { 0 };
+  T input2[SIZE] { 0 };
+
   // d_first
   T output1[SIZE] { 0 };
   T output2[SIZE] { 0 };
@@ -119,13 +117,11 @@ bool run(std::function<void(T (&)[SIZE], T (&)[SIZE], T (&)[SIZE],
   // initialize test data
   std::iota(std::begin(input1), std::end(input1), 1);
   std::copy(std::begin(input1), std::end(input1), std::begin(input2));
-  std::copy(std::begin(input1), std::end(input1), std::begin(input3));
-  std::copy(std::begin(input1), std::end(input1), std::begin(input4));
 
   bool ret = true;
 
-  f(input1, input3, output1,
-    input2, input4, output2);
+  f(input1, input2, output1,
+                    output2);
   if (checkOutput) {
     ret &= std::equal(std::begin(output1), std::end(output1), std::begin(output2));
   }

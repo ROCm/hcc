@@ -18,16 +18,16 @@ bool test(void) {
   using namespace std::experimental::parallel;
 
   bool ret = true;
-  ret &= run<T, SIZE>([f](T (&input1)[SIZE], T (&input3)[SIZE], T (&output1)[SIZE],
-                          T (&input2)[SIZE], T (&input4)[SIZE], T (&output2)[SIZE]) {
-    std::transform(std::begin(input1), std::end(input1), std::begin(input3), std::begin(output1), f);
-    transform(par, std::begin(input2), std::end(input2), std::begin(input4), std::begin(output2), f);
+  ret &= run<T, SIZE>([f](T (&input1)[SIZE], T (&input2)[SIZE], T (&output1)[SIZE],
+                                                                T (&output2)[SIZE]) {
+    std::transform(std::begin(input1), std::end(input1), std::begin(input2), std::begin(output1), f);
+    transform(par, std::begin(input1), std::end(input1), std::begin(input2), std::begin(output2), f);
   });
 
-  ret &= run<T, SIZE>([g](T (&input1)[SIZE], T (&input3)[SIZE], T (&output1)[SIZE],
-                          T (&input2)[SIZE], T (&input4)[SIZE], T (&output2)[SIZE]) {
-    std::transform(std::begin(input1), std::end(input1), std::begin(input3), std::begin(output1), g);
-    transform(par, std::begin(input2), std::end(input2), std::begin(input4), std::begin(output2), g);
+  ret &= run<T, SIZE>([g](T (&input1)[SIZE], T (&input2)[SIZE], T (&output1)[SIZE],
+                                                                T (&output2)[SIZE]) {
+    std::transform(std::begin(input1), std::end(input1), std::begin(input2), std::begin(output1), g);
+    transform(par, std::begin(input1), std::end(input1), std::begin(input2), std::begin(output2), g);
   });
 
   return ret;
