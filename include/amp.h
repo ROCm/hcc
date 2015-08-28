@@ -4655,6 +4655,105 @@ struct do_copy<T*, T, 1>
     }
 };
 
+// ------------------------------------------------------------------------
+// copy
+// ------------------------------------------------------------------------
+
+/**
+ * The contents of "src" are copied into "dest". The source and destination may
+ * reside on different accelerators. If the extents of "src" and "dest" don't
+ * match, a runtime exception is thrown.
+ *
+ * @param[in] src An object of type array<T,N> to be copied from.
+ * @param[out] dest An object of type array<T,N> to be copied to.
+ */
+template <typename T, int N>
+void copy(const array<T, N>& src, array<T, N>& dest) {
+    src.internal().copy(dest.internal(), 0, 0, 0);
+}
+
+/** @{ */
+/**
+ * The contents of "src" are copied into "dest". If the extents of "src" and
+ * "dest" don't match, a runtime exception is thrown.
+ *
+ * @param[in] src An object of type array<T,N> to be copied from.
+ * @param[out] dest An object of type array_view<T,N> to be copied to.
+ */
+template <typename T, int N>
+void copy(const array<T, N>& src, const array_view<T, N>& dest) {
+    if (is_flat(dest))
+        src.internal().copy(dest.internal(), src.get_offset(),
+                            dest.get_offset(), dest.get_extent().size());
+    else {
+        T* pSrc = src.internal().map_ptr();
+        T* p = pSrc;
+        T* pDst = dest.internal().map_ptr(true, dest.extent_base.size(), dest.offset);
+        copy_input<T*, T, N, 1>()(pSrc, pDst, dest.extent, dest.extent_base, dest.index_base);
+        dest.internal().unmap_ptr(pDst);
+        src.internal().unmap_ptr(p);
+    }
+}
+
+template <typename T>
+void copy(const array<T, 1>& src, const array_view<T, 1>& dest) {
+    src.internal().copy(dest.internal(),
+                        src.get_offset() + src.get_index_base()[0],
+                        dest.get_offset() + dest.get_index_base()[0],
+                        dest.get_extent().size());
+}
+
+/** @} */
+
+/** @{ */
+/**
+ * The contents of "src" are copied into "dest". If the extents of "src" and
+ * "dest" don't match, a runtime exception is thrown.
+ *
+ * @param[in] src An object of type array_view<T,N> (or array_view<const T, N>)
+ *                to be copied from.
+ * @param[out] dest An object of type array<T,N> to be copied to.
+ */
+template <typename T, int N>
+void copy(const array_view<const T, N>& src, array<T, N>& dest) {
+    if (is_flat(src)) {
+        src.internal().copy(dest.internal(), src.get_offset(),
+                            dest.get_offset(), dest.get_extent().size());
+    } else {
+        T* pDst = dest.internal().map_ptr(true);
+        T* p = pDst;
+        const T* pSrc = src.internal().map_ptr(false, src.extent_base.size(), src.offset);
+        copy_output<T*, T, N, 1>()(pSrc, pDst, src.extent, src.extent_base, src.index_base);
+        src.internal().unmap_ptr(pSrc);
+        dest.internal().unmap_ptr(p);
+    }
+}
+
+template <typename T, int N>
+void copy(const array_view<T, N>& src, array<T, N>& dest) {
+    const array_view<const T, N> buf(src);
+    copy(buf, dest);
+}
+
+template <typename T>
+void copy(const array_view<const T, 1>& src, array<T, 1>& dest) {
+    src.internal().copy(dest.internal(),
+                        src.get_offset() + src.get_index_base()[0],
+                        dest.get_offset() + dest.get_index_base()[0],
+                        dest.get_extent().size());
+}
+
+/** @} */
+
+/** @{ */
+/**
+ * The contents of "src" are copied into "dest". If the extents of "src" and
+ * "dest" don't match, a runtime exception is thrown.
+ *
+ * @param[in] src An object of type array_view<T,N> (or array_view<const T, N>)
+ *                to be copied from.
+ * @param[out] dest An object of type array_view<T,N> to be copied to.
+ */
 template <typename T, int N>
 void copy(const array_view<const T, N>& src, const array_view<T, N>& dest) {
     if (is_flat(src)) {
@@ -4689,9 +4788,11 @@ void copy(const array_view<const T, N>& src, const array_view<T, N>& dest) {
     }
 }
 
-// ------------------------------------------------------------------------
-// copy
-// ------------------------------------------------------------------------
+template <typename T, int N>
+void copy(const array_view<T, N>& src, const array_view<T, N>& dest) {
+    const array_view<const T, N> buf(src);
+    copy(buf, dest);
+}
 
 template <typename T>
 void copy(const array_view<const T, 1>& src, const array_view<T, 1>& dest) {
@@ -4701,69 +4802,54 @@ void copy(const array_view<const T, 1>& src, const array_view<T, 1>& dest) {
                         dest.get_extent().size());
 }
 
-template <typename T, int N>
-void copy(const array_view<T, N>& src, const array_view<T, N>& dest) {
-    const array_view<const T, N> buf(src);
-    copy(buf, dest);
+/** @} */
+
+/** @{ */
+/**
+ * The contents of a source container from the iterator range [srcBegin,srcEnd)
+ * are copied into "dest". If the number of elements in the iterator range is
+ * not equal to "dest.extent.size()", an exception is thrown.
+ *
+ * In the overloads which don't take an end-iterator it is assumed that the
+ * source iterator is able to provide at least dest.extent.size() elements, but
+ * no checking is performed (nor possible).
+ *
+ * @param[in] srcBegin An iterator to the first element of a source container.
+ * @param[in] srcEnd An interator to the end of a source container.
+ * @param[out] dest An object of type array<T,N> to be copied to.
+ */
+template <typename InputIter, typename T, int N>
+void copy(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest) {
+#if __KALMAR_ACCELERATOR__ != 1
+    if( ( std::distance(srcBegin,srcEnd) <=0 )||( std::distance(srcBegin,srcEnd) < dest.get_extent().size() ))
+      throw runtime_exception("errorMsg_throw ,copy between different types", 0);
+#endif
+    do_copy<InputIter, T, N>()(srcBegin, srcEnd, dest);
 }
 
-template <typename T, int N>
-void copy(const array_view<const T, N>& src, array<T, N>& dest) {
-    if (is_flat(src)) {
-        src.internal().copy(dest.internal(), src.get_offset(),
-                            dest.get_offset(), dest.get_extent().size());
-    } else {
-        T* pDst = dest.internal().map_ptr(true);
-        T* p = pDst;
-        const T* pSrc = src.internal().map_ptr(false, src.extent_base.size(), src.offset);
-        copy_output<T*, T, N, 1>()(pSrc, pDst, src.extent, src.extent_base, src.index_base);
-        src.internal().unmap_ptr(pSrc);
-        dest.internal().unmap_ptr(p);
-    }
+template <typename InputIter, typename T, int N>
+void copy(InputIter srcBegin, array<T, N>& dest) {
+    InputIter srcEnd = srcBegin;
+    std::advance(srcEnd, dest.get_extent().size());
+    Concurrency::copy(srcBegin, srcEnd, dest);
 }
 
-template <typename T>
-void copy(const array_view<const T, 1>& src, array<T, 1>& dest) {
-    src.internal().copy(dest.internal(),
-                        src.get_offset() + src.get_index_base()[0],
-                        dest.get_offset() + dest.get_index_base()[0],
-                        dest.get_extent().size());
-}
+/** @} */
 
-template <typename T, int N>
-void copy(const array_view<T, N>& src, array<T, N>& dest) {
-    const array_view<const T, N> buf(src);
-    copy(buf, dest);
-}
-
-template <typename T, int N>
-void copy(const array<T, N>& src, const array_view<T, N>& dest) {
-    if (is_flat(dest))
-        src.internal().copy(dest.internal(), src.get_offset(),
-                            dest.get_offset(), dest.get_extent().size());
-    else {
-        T* pSrc = src.internal().map_ptr();
-        T* p = pSrc;
-        T* pDst = dest.internal().map_ptr(true, dest.extent_base.size(), dest.offset);
-        copy_input<T*, T, N, 1>()(pSrc, pDst, dest.extent, dest.extent_base, dest.index_base);
-        dest.internal().unmap_ptr(pDst);
-        src.internal().unmap_ptr(p);
-    }
-}
-
-template <typename T>
-void copy(const array<T, 1>& src, const array_view<T, 1>& dest) {
-    src.internal().copy(dest.internal(),
-                        src.get_offset() + src.get_index_base()[0],
-                        dest.get_offset() + dest.get_index_base()[0],
-                        dest.get_extent().size());
-}
-
-template <typename T, int N>
-void copy(const array<T, N>& src, array<T, N>& dest) {
-    src.internal().copy(dest.internal(), 0, 0, 0);
-}
-
+/** @{ */
+/**
+ * The contents of a source container from the iterator range [srcBegin,srcEnd)
+ * are copied into "dest". If the number of elements in the iterator range is
+ * not equal to "dest.extent.size()", an exception is thrown.
+ *
+ * In the overloads which don't take an end-iterator it is assumed that the
+ * source iterator is able to provide at least dest.extent.size() elements, but
+ * no checking is performed (nor possible).
+ *
+ * @param[in] srcBegin An iterator to the first element of a source container.
+ * @param[in] srcEnd An interator to the end of a source container.
+ * @param[out] dest An object of type array_view<T,N> to be copied to.
+ */
 template <typename InputIter, typename T, int N>
 void copy(InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest) {
     if (is_flat(dest))
@@ -4776,28 +4862,39 @@ void copy(InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest) {
 }
 
 template <typename InputIter, typename T, int N>
-void copy(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest) {
-#if __KALMAR_ACCELERATOR__ != 1
-    if( ( std::distance(srcBegin,srcEnd) <=0 )||( std::distance(srcBegin,srcEnd) < dest.get_extent().size() ))
-      throw runtime_exception("errorMsg_throw ,copy between different types", 0);
-#endif
-    do_copy<InputIter, T, N>()(srcBegin, srcEnd, dest);
-}
-
-template <typename InputIter, typename T, int N>
 void copy(InputIter srcBegin, const array_view<T, N>& dest) {
     InputIter srcEnd = srcBegin;
     std::advance(srcEnd, dest.get_extent().size());
     copy(srcBegin, srcEnd, dest);
 }
 
-template <typename InputIter, typename T, int N>
-void copy(InputIter srcBegin, array<T, N>& dest) {
-    InputIter srcEnd = srcBegin;
-    std::advance(srcEnd, dest.get_extent().size());
-    Concurrency::copy(srcBegin, srcEnd, dest);
+/** @} */
+
+/**
+ * The contents of a source array are copied into "dest" starting with iterator
+ * destBegin. If the number of elements in the range starting destBegin in the
+ * destination container is smaller than "src.extent.size()", the behavior is
+ * undefined.
+ *
+ * @param[in] src An object of type array<T,N> to be copied from.
+ * @param[out] destBegin An output iterator addressing the position of the
+ *                       first element in the destination container.
+ */
+template <typename OutputIter, typename T, int N>
+void copy(const array<T, N> &src, OutputIter destBegin) {
+    do_copy<OutputIter, T, N>()(src, destBegin);
 }
 
+/**
+ * The contents of a source array are copied into "dest" starting with iterator
+ * destBegin. If the number of elements in the range starting destBegin in the
+ * destination container is smaller than "src.extent.size()", the behavior is
+ * undefined.
+ *
+ * @param[in] src An object of type array_view<T,N> to be copied from.
+ * @param[out] destBegin An output iterator addressing the position of the
+ *                       first element in the destination container.
+ */
 template <typename OutputIter, typename T, int N>
 void copy(const array_view<T, N> &src, OutputIter destBegin) {
     if (is_flat(src))
@@ -4807,11 +4904,6 @@ void copy(const array_view<T, N> &src, OutputIter destBegin) {
         copy_output<OutputIter, T, N, 1>()(ptr, destBegin, src.extent, src.extent_base, src.index_base);
         src.internal().unmap_ptr(ptr);
     }
-}
-
-template <typename OutputIter, typename T, int N>
-void copy(const array<T, N> &src, OutputIter destBegin) {
-    do_copy<OutputIter, T, N>()(src, destBegin);
 }
 
 // ------------------------------------------------------------------------
@@ -4828,24 +4920,164 @@ completion_future __amp_copy_async_impl(InputIter& src, OutputIter& dst) {
 // copy_async
 // ------------------------------------------------------------------------
 
+/**
+ * The contents of "src" are copied into "dest". The source and destination may
+ * reside on different accelerators. If the extents of "src" and "dest" don't
+ * match, a runtime exception is thrown.
+ *
+ * @param[in] src An object of type array<T,N> to be copied from.
+ * @param[out] dest An object of type array<T,N> to be copied to.
+ */
 template <typename T, int N>
 completion_future copy_async(const array<T, N>& src, array<T, N>& dest) {
     return __amp_copy_async_impl(src, dest);
 }
 
-template <typename T, int N>
-completion_future copy_async(const array<T, N>& src, const array<T, N>& dest) {
-    return __amp_copy_async_impl(src, dest);
-}
-
+/**
+ * The contents of "src" are copied into "dest". If the extents of "src" and
+ * "dest" don't match, a runtime exception is thrown.
+ *
+ * @param[in] src An object of type array<T,N> to be copied from.
+ * @param[out] dest An object of type array_view<T,N> to be copied to.
+ */
 template <typename T, int N>
 completion_future copy_async(const array<T, N>& src, const array_view<T, N>& dest) {
     return __amp_copy_async_impl(src, dest);
 }
 
-
+/** @{ */
+/**
+ * The contents of "src" are copied into "dest". If the extents of "src" and
+ * "dest" don't match, a runtime exception is thrown.
+ *
+ * @param[in] src An object of type array_view<T,N> (or array_view<const T, N>)
+ *                to be copied from.
+ * @param[out] dest An object of type array<T,N> to be copied to.
+ */
 template <typename T, int N>
 completion_future copy_async(const array_view<const T, N>& src, array<T, N>& dest) {
+    return __amp_copy_async_impl(src, dest);
+}
+
+template <typename T, int N>
+completion_future copy_async(const array_view<T, N>& src, array<T, N>& dest) {
+    return __amp_copy_async_impl(src, dest);
+}
+
+/** @} */
+
+/** @{ */
+/**
+ * The contents of "src" are copied into "dest". If the extents of "src" and
+ * "dest" don't match, a runtime exception is thrown.
+ *
+ * @param[in] src An object of type array_view<T,N> (or array_view<const T, N>)
+ *                to be copied from.
+ * @param[out] dest An object of type array_view<T,N> to be copied to.
+ */
+template <typename T, int N>
+completion_future copy_async(const array_view<const T, N>& src, const array_view<T, N>& dest) {
+    return __amp_copy_async_impl(src, dest);
+}
+
+template <typename T, int N>
+completion_future copy_async(const array_view<T, N>& src, const array_view<T, N>& dest) {
+    return __amp_copy_async_impl(src, dest);
+}
+
+/** @} */
+
+/** @{ */
+/**
+ * The contents of a source container from the iterator range [srcBegin,srcEnd)
+ * are copied into "dest". If the number of elements in the iterator range is
+ * not equal to "dest.extent.size()", an exception is thrown.
+ *
+ * In the overloads which don't take an end-iterator it is assumed that the
+ * source iterator is able to provide at least dest.extent.size() elements, but
+ * no checking is performed (nor possible).
+ *
+ * @param[in] srcBegin An iterator to the first element of a source container.
+ * @param[in] srcEnd An interator to the end of a source container.
+ * @param[out] dest An object of type array<T,N> to be copied to.
+ */
+template <typename InputIter, typename T, int N>
+completion_future copy_async(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest) {
+    std::future<void> fut = std::async([&]() mutable { copy(srcBegin, srcEnd, dest); });
+    return completion_future(fut.share());
+}
+
+template <typename InputIter, typename T, int N>
+completion_future copy_async(InputIter srcBegin, array<T, N>& dest) {
+    std::future<void> fut = std::async([&]() mutable { copy(srcBegin, dest); });
+    return completion_future(fut.share());
+}
+
+/** @} */
+
+/** @{ */
+/**
+ * The contents of a source container from the iterator range [srcBegin,srcEnd)
+ * are copied into "dest". If the number of elements in the iterator range is
+ * not equal to "dest.extent.size()", an exception is thrown.
+ *
+ * In the overloads which don't take an end-iterator it is assumed that the
+ * source iterator is able to provide at least dest.extent.size() elements, but
+ * no checking is performed (nor possible).
+ *
+ * @param[in] srcBegin An iterator to the first element of a source container.
+ * @param[in] srcEnd An interator to the end of a source container.
+ * @param[out] dest An object of type array_view<T,N> to be copied to.
+ */
+template <typename InputIter, typename T, int N>
+completion_future copy_async(InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest) {
+    std::future<void> fut = std::async([&]() mutable { copy(srcBegin, srcEnd, dest); });
+    return completion_future(fut.share());
+}
+
+template <typename InputIter, typename T, int N>
+completion_future copy_async(InputIter srcBegin, const array_view<T, N>& dest) {
+    std::future<void> fut = std::async([&]() mutable { copy(srcBegin, dest); });
+    return completion_future(fut.share());
+}
+
+/** @} */
+
+/**
+ * The contents of a source array are copied into "dest" starting with iterator
+ * destBegin. If the number of elements in the range starting destBegin in the
+ * destination container is smaller than "src.extent.size()", the behavior is
+ * undefined.
+ *
+ * @param[in] src An object of type array<T,N> to be copied from.
+ * @param[out] destBegin An output iterator addressing the position of the
+ *                       first element in the destination container.
+ */
+template <typename OutputIter, typename T, int N>
+completion_future copy_async(const array<T, N>& src, OutputIter destBegin) {
+    std::future<void> fut = std::async([&]() mutable { copy(src, destBegin); });
+    return completion_future(fut.share());
+}
+
+/**
+ * The contents of a source array are copied into "dest" starting with iterator
+ * destBegin. If the number of elements in the range starting destBegin in the
+ * destination container is smaller than "src.extent.size()", the behavior is
+ * undefined.
+ *
+ * @param[in] src An object of type array_view<T,N> to be copied from.
+ * @param[out] destBegin An output iterator addressing the position of the
+ *                       first element in the destination container.
+ */
+template <typename OutputIter, typename T, int N>
+completion_future copy_async(const array_view<T, N>& src, OutputIter destBegin) {
+    std::future<void> fut = std::async([&]() mutable { copy(src, destBegin); });
+    return completion_future(fut.share());
+}
+
+// FIXME: these functions are not defined in C++ AMP specification
+template <typename T, int N>
+completion_future copy_async(const array<T, N>& src, const array<T, N>& dest) {
     return __amp_copy_async_impl(src, dest);
 }
 
@@ -4855,61 +5087,8 @@ completion_future copy_async(const array_view<const T, N>& src, const array<T, N
 }
 
 template <typename T, int N>
-completion_future copy_async(const array_view<const T, N>& src, const array_view<T, N>& dest) {
-    return __amp_copy_async_impl(src, dest);
-}
-
-
-template <typename T, int N>
-completion_future copy_async(const array_view<T, N>& src, array<T, N>& dest) {
-    return __amp_copy_async_impl(src, dest);
-}
-
-template <typename T, int N>
 completion_future copy_async(const array_view<T, N>& src, const array<T, N>& dest) {
     return __amp_copy_async_impl(src, dest);
-}
-
-template <typename T, int N>
-completion_future copy_async(const array_view<T, N>& src, const array_view<T, N>& dest) {
-    return __amp_copy_async_impl(src, dest);
-}
-
-
-template <typename InputIter, typename T, int N>
-completion_future copy_async(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest) {
-    std::future<void> fut = std::async([&]() mutable { copy(srcBegin, srcEnd, dest); });
-    return completion_future(fut.share());
-}
-
-template <typename InputIter, typename T, int N>
-completion_future copy_async(InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest) {
-    std::future<void> fut = std::async([&]() mutable { copy(srcBegin, srcEnd, dest); });
-    return completion_future(fut.share());
-}
-
-
-template <typename InputIter, typename T, int N>
-completion_future copy_async(InputIter srcBegin, array<T, N>& dest) {
-    std::future<void> fut = std::async([&]() mutable { copy(srcBegin, dest); });
-    return completion_future(fut.share());
-}
-template <typename InputIter, typename T, int N>
-completion_future copy_async(InputIter srcBegin, const array_view<T, N>& dest) {
-    std::future<void> fut = std::async([&]() mutable { copy(srcBegin, dest); });
-    return completion_future(fut.share());
-}
-
-
-template <typename OutputIter, typename T, int N>
-completion_future copy_async(const array<T, N>& src, OutputIter destBegin) {
-    std::future<void> fut = std::async([&]() mutable { copy(src, destBegin); });
-    return completion_future(fut.share());
-}
-template <typename OutputIter, typename T, int N>
-completion_future copy_async(const array_view<T, N>& src, OutputIter destBegin) {
-    std::future<void> fut = std::async([&]() mutable { copy(src, destBegin); });
-    return completion_future(fut.share());
 }
 
 // ------------------------------------------------------------------------
