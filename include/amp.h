@@ -3129,6 +3129,10 @@ private:
     Concurrency::extent<N> extent;
 };
 
+// ------------------------------------------------------------------------
+// utility classes for array_view
+// ------------------------------------------------------------------------
+
 template <typename T>
 struct __has_data
 {
@@ -3158,481 +3162,1205 @@ struct __is_container
     static const bool value = __has_size<_T>::value && __has_data<_T>::value;
 };
 
+// ------------------------------------------------------------------------
+// array_view<T,N>
+// ------------------------------------------------------------------------
+
+/**
+ * The array_view<T,N> type represents a possibly cached view into the data
+ * held in an array<T,N>, or a section thereof. It also provides such views
+ * over native CPU data. It exposes an indexing interface congruent to that of
+ * array<T,N>.
+ */
 template <typename T, int N = 1>
 class array_view
 {
-  static_assert(0 == (sizeof(T) % sizeof(int)), "only value types whose size is a multiple of the size of an integer are allowed in array views");
+    static_assert(0 == (sizeof(T) % sizeof(int)), "only value types whose size is a multiple of the size of an integer are allowed in array views");
 public:
-  typedef typename std::remove_const<T>::type nc_T;
+    typedef typename std::remove_const<T>::type nc_T;
 #if __KALMAR_ACCELERATOR__ == 1
-  typedef Kalmar::_data<T> acc_buffer_t;
+    typedef Kalmar::_data<T> acc_buffer_t;
 #else
-  typedef Kalmar::_data_host<T> acc_buffer_t;
+    typedef Kalmar::_data_host<T> acc_buffer_t;
 #endif
 
-  static const int rank = N;
-  typedef T value_type;
-  array_view() = delete;
+    /**
+     * The rank of this array.
+     */
+    static const int rank = N;
 
-  ~array_view() restrict(amp,cpu) {}
+    /**
+     * The element type of this array.
+     */
+    typedef T value_type;
 
-  array_view(array<T, N>& src) restrict(amp,cpu)
-      : cache(src.internal()), extent(src.get_extent()), extent_base(extent), index_base(),
-      offset(0) {}
+    /**
+     * There is no default constructor for array_view<T,N>.
+     */
+    array_view() = delete;
 
-  template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
-      array_view(const Concurrency::extent<N>& extent, Container& src)
-      : array_view(extent, src.data())
-  { static_assert( std::is_same<decltype(src.data()), T*>::value, "container element type and array view element type must match"); }
-  template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
-      array_view(int e0, Container& src)
-      : array_view(Concurrency::extent<N>(e0), src) {}
-  template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
-      array_view(int e0, int e1, Container& src)
-      : array_view(Concurrency::extent<N>(e0, e1), src) {}
-  template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
-      array_view(int e0, int e1, int e2, Container& src)
-      : array_view(Concurrency::extent<N>(e0, e1, e2), src) {}
+    /**
+     * Constructs an array_view which is bound to the data contained in the
+     * "src" array. The extent of the array_view is that of the src array, and
+     * the origin of the array view is at zero.
+     *
+     * @param[in] src An array which contains the data that this array_view is
+     *                bound to.
+     */
+    array_view(array<T, N>& src) restrict(amp,cpu)
+        : cache(src.internal()), extent(src.get_extent()), extent_base(extent), index_base(), offset(0) {}
 
-  array_view(const Concurrency::extent<N>& ext, value_type* src) restrict(amp,cpu)
+    // FIXME: following interfaces were not implemented yet
+    // template <typename Container>
+    //     explicit array_view<T, 1>::array_view(Container& src);
+    // template <typename value_type, int Size>
+    //     explicit array_view<T, 1>::array_view(value_type (&src) [Size]) restrict(amp,cpu);
+
+    /**
+     * Constructs an array_view which is bound to the data contained in the
+     * "src" container. The extent of the array_view is that given by the
+     * "extent" argument, and the origin of the array view is at zero.
+     *
+     * @param[in] src A template argument that must resolve to a linear
+     *                container that supports .data() and .size() members (such
+     *                as std::vector or std::array)
+     * @param[in] extent The extent of this array_view.
+     */
+    template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
+        array_view(const Concurrency::extent<N>& extent, Container& src)
+            : array_view(extent, src.data())
+        { static_assert( std::is_same<decltype(src.data()), T*>::value, "container element type and array view element type must match"); }
+
+    /**
+     * Constructs an array_view which is bound to the data contained in the
+     * "src" container. The extent of the array_view is that given by the
+     * "extent" argument, and the origin of the array view is at zero.
+     *
+     * @param[in] src A pointer to the source data this array_view will bind
+     *                to. If the number of elements pointed to is less than the
+     *                size of extent, the behavior is undefined.
+     * @param[in] ext The extent of this array_view.
+     */
+    array_view(const Concurrency::extent<N>& ext, value_type* src) restrict(amp,cpu)
 #if __KALMAR_ACCELERATOR__ == 1
-      : cache((T *)(src)), extent(ext), extent_base(ext), offset(0) {}
+        : cache((T *)(src)), extent(ext), extent_base(ext), offset(0) {}
 #else
-      : cache(ext.size(), (T *)(src)), extent(ext), extent_base(ext), offset(0) {}
+        : cache(ext.size(), (T *)(src)), extent(ext), extent_base(ext), offset(0) {}
 #endif
-  array_view(int e0, value_type *src) restrict(amp,cpu)
-      : array_view(Concurrency::extent<N>(e0), src) {}
-  array_view(int e0, int e1, value_type *src) restrict(amp,cpu)
-      : array_view(Concurrency::extent<N>(e0, e1), src) {}
-  array_view(int e0, int e1, int e2, value_type *src) restrict(amp,cpu)
-      : array_view(Concurrency::extent<N>(e0, e1, e2), src) {}
+
+    /**
+     * Constructs an array_view which is not bound to a data source. The extent
+     * of the array_view is that given by the "extent" argument, and the origin
+     * of the array view is at zero. An array_view thus constructed represents
+     * uninitialized data and the underlying allocations are created lazily as
+     * the array_view is accessed on different locations (on an
+     * accelerator_view or on the CPU).
+     *
+     * @param[in] ext The extent of this array_view.
+     */
+    explicit array_view(const Concurrency::extent<N>& ext)
+        : cache(ext.size()), extent(ext), extent_base(ext), offset(0) {}
+
+    /**
+     * Equivalent to construction using
+     * "array_view(extent<N>(e0 [, e1 [, e2 ]]), src)".
+     *
+     * @param[in] e0,e1,e2 The component values that will form the extent of
+     *                     this array_view.
+     * @param[in] src A template argument that must resolve to a contiguousi
+     *                container that supports .data() and .size() members (such
+     *                as std::vector or std::array)
+     */
+    template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
+        array_view(int e0, Container& src)
+            : array_view(Concurrency::extent<N>(e0), src) {}
+    template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
+        array_view(int e0, int e1, Container& src)
+            : array_view(Concurrency::extent<N>(e0, e1), src) {}
+    template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
+        array_view(int e0, int e1, int e2, Container& src)
+            : array_view(Concurrency::extent<N>(e0, e1, e2), src) {}
+
+    /**
+     * Equivalent to construction using
+     * "array_view(extent<N>(e0 [, e1 [, e2 ]]), src)".
+     *
+     * @param[in] e0,e1,e2 The component values that will form the extent of
+     *                     this array_view.
+     * @param[in] src A pointer to the source data this array_view will bind
+     *                to. If the number of elements pointed to is less than
+     *                the size of extent, the behavior is undefined.
+     */
+    array_view(int e0, value_type *src) restrict(amp,cpu)
+        : array_view(Concurrency::extent<N>(e0), src) {}
+    array_view(int e0, int e1, value_type *src) restrict(amp,cpu)
+        : array_view(Concurrency::extent<N>(e0, e1), src) {}
+    array_view(int e0, int e1, int e2, value_type *src) restrict(amp,cpu)
+        : array_view(Concurrency::extent<N>(e0, e1, e2), src) {}
 
 
-  explicit array_view(const Concurrency::extent<N>& ext)
-  : cache(ext.size()), extent(ext), extent_base(ext), offset(0) {}
-  explicit array_view(int e0) : array_view(Concurrency::extent<N>(e0)) {}
-  explicit array_view(int e0, int e1)
-      : array_view(Concurrency::extent<N>(e0, e1)) {}
-  explicit array_view(int e0, int e1, int e2)
-      : array_view(Concurrency::extent<N>(e0, e1, e2)) {}
+    /**
+     * Equivalent to construction using
+     * "array_view(extent<N>(e0 [, e1 [, e2 ]]))".
+     *
+     * @param[in] e0,e1,e2 The component values that will form the extent of
+     *                     this array_view.
+     */
+    explicit array_view(int e0) : array_view(Concurrency::extent<N>(e0)) {}
+    explicit array_view(int e0, int e1)
+        : array_view(Concurrency::extent<N>(e0, e1)) {}
+    explicit array_view(int e0, int e1, int e2)
+        : array_view(Concurrency::extent<N>(e0, e1, e2)) {}
 
-  array_view(const array_view& other) restrict(amp,cpu) : cache(other.cache),
-    extent(other.extent), extent_base(other.extent_base), index_base(other.index_base),
-    offset(other.offset) {}
-  array_view& operator=(const array_view& other) restrict(amp,cpu) {
-      if (this != &other) {
-          cache = other.cache;
-          extent = other.extent;
-          index_base = other.index_base;
-          extent_base = other.extent_base;
-          offset = other.offset;
-      }
-      return *this;
-  }
-  void copy_to(array<T,N>& dest) const {
+    /**
+     * Copy constructor. Constructs an array_view from the supplied argument
+     * other. A shallow copy is performed.
+     *
+     * @param[in] other An object of type array_view<T,N> or
+     *                  array_view<const T,N> from which to initialize this
+     *                  new array_view.
+     */
+    array_view(const array_view& other) restrict(amp,cpu)
+        : cache(other.cache), extent(other.extent), extent_base(other.extent_base), index_base(other.index_base), offset(other.offset) {}
+
+    /**
+     * Access the extent that defines the shape of this array_view.
+     */
+    extent<N> get_extent() const restrict(amp,cpu) { return extent; }
+
+    /**
+     * Access the accelerator_view where the data source of the array_view is
+     * located.
+     *
+     * When the data source of the array_view is native CPU memory, the method
+     * returns accelerator(accelerator::cpu_accelerator).default_view. When the
+     * data source underlying the array_view is an array, the method returns
+     * the accelerator_view where the source array is located.
+     */
+    accelerator_view get_source_accelerator_view() const { return cache.get_av(); }
+
+    /**
+     * Assigns the contents of the array_view "other" to this array_view, using
+     * a shallow copy. Both array_views will refer to the same data.
+     *
+     * @param[in] other An object of type array_view<T,N> from which to copy
+     *                  into this array.
+     * @return Returns *this.
+     */
+    array_view& operator=(const array_view& other) restrict(amp,cpu) {
+        if (this != &other) {
+            cache = other.cache;
+            extent = other.extent;
+            index_base = other.index_base;
+            extent_base = other.extent_base;
+            offset = other.offset;
+        }
+        return *this;
+    }
+
+    /**
+     * Copies the data referred to by this array_view to the array given by
+     * "dest", as if by calling "copy(*this, dest)"
+     *
+     * @param[in] dest An object of type array <T,N> to which to copy data from
+     *                 this array.
+     */
+    void copy_to(array<T,N>& dest) const {
 #if __KALMAR_ACCELERATOR__ != 1
-      for(int i= 0 ;i< N;i++)
-      {
-        if(dest.get_extent()[i] < this->extent[i])
-          throw runtime_exception("errorMsg_throw", 0);
-      }
+        for(int i= 0 ;i< N;i++) {
+            if (dest.get_extent()[i] < this->extent[i])
+                throw runtime_exception("errorMsg_throw", 0);
+        }
 #endif
-      copy(*this, dest);
-  }
-  void copy_to(const array_view& dest) const { copy(*this, dest); }
-  extent<N> get_extent() const restrict(amp,cpu) { return extent; }
+        copy(*this, dest);
+    }
 
-  T& operator[](const index<N>& idx) const restrict(amp,cpu) {
-#if __KALMAR_ACCELERATOR__ != 1
-      cache.get_cpu_access(true);
-#endif
-      T *ptr = reinterpret_cast<T*>(cache.get() + offset);
-      return ptr[Kalmar::amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
-  }
-  template <int D0, int D1=0, int D2=0>
-  T& operator[](const tiled_index<D0, D1, D2>& idx) const restrict(amp,cpu) {
-#if __KALMAR_ACCELERATOR__ != 1
-      cache.get_cpu_access(true);
-#endif
-      T *ptr = reinterpret_cast<T*>(cache.get() + offset);
-      return ptr[Kalmar::amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx.global + index_base, extent_base)];
-  }
+    /**
+     * Copies the contents of this array_view to the array_view given by
+     * "dest", as if by calling "copy(*this, dest)"
+     *
+     * @param[in] dest An object of type array_view<T,N> to which to copy data
+     * from this array.
+     */
+    void copy_to(const array_view& dest) const { copy(*this, dest); }
 
-  typename projection_helper<T, N>::result_type
-      operator[] (int i) const restrict(amp,cpu) {
-          return projection_helper<T, N>::project(*this, i);
-      }
-  T& operator()(const index<N>& idx) const restrict(amp,cpu) {
-      return (*this)[idx];
-  }
-  typename projection_helper<T, N>::result_type
-      operator()(int i0) const restrict(amp,cpu) { return (*this)[i0]; }
-  T& operator()(int i0, int i1) const restrict(amp,cpu) {
-      static_assert(N == 2, "T& array_view::operator()(int,int) is only permissible on array_view<T, 2>");
-      return (*this)[index<2>(i0, i1)];
-  }
-  T& operator()(int i0, int i1, int i2) const restrict(amp,cpu) {
-      static_assert(N == 3, "T& array_view::operator()(int,int, int) is only permissible on array_view<T, 3>");
-      return (*this)[index<3>(i0, i1, i2)];
-  }
-
-  template <typename ElementType>
-      array_view<ElementType, N> reinterpret_as() const restrict(amp,cpu) {
-          static_assert(N == 1, "reinterpret_as is only permissible on array views of rank 1");
+    /**
+     * Returns a pointer to the first data element underlying this array_view.
+     * This is only available on array_views of rank 1.
+     *
+     * When the data source of the array_view is native CPU memory, the pointer
+     * returned by data() is valid for the lifetime of the data source.
+     *
+     * When the data source underlying the array_view is an array, or the array
+     * view is created without a data source, the pointer returned by data() in
+     * CPU context is ephemeral and is invalidated when the original data
+     * source or any of its views are accessed on an accelerator_view through a
+     *  parallel_for_each or a copy operation.
+     *
+     * @return A pointer to the first element in the linearized array.
+     */
+    T* data() const restrict(amp,cpu) {
 #if __KALMAR_ACCELERATOR__ != 1
-          static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
-          static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
-          if( (extent.size() * sizeof(T)) % sizeof(ElementType))
-              throw runtime_exception("errorMsg_throw", 0);
+        cache.get_cpu_access(true);
 #endif
-          int size = extent.size() * sizeof(T) / sizeof(ElementType);
-          using buffer_type = typename array_view<ElementType, 1>::acc_buffer_t;
-          array_view<ElementType, 1> av(buffer_type(cache),
-                                        Concurrency::extent<1>(size),
-                                        (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
-          return av;
-      }
+        static_assert(N == 1, "data() is only permissible on array views of rank 1");
+        return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
+    }
 
-  array_view<T, N> section(const Concurrency::index<N>& idx,
-                           const Concurrency::extent<N>& ext) const restrict(amp,cpu) {
-#if __KALMAR_ACCELERATOR__ != 1
-      if(  !Kalmar::amp_helper<N, index<N>, Concurrency::extent<N>>::contains(idx, ext,this->extent ) )
-        throw runtime_exception("errorMsg_throw", 0);
-#endif
-      array_view<T, N> av(cache, ext, extent_base, idx + index_base, offset);
-      return av;
-  }
-  array_view<T, N> section(const Concurrency::index<N>& idx) const restrict(amp,cpu) {
-      Concurrency::extent<N> ext(extent);
-      Kalmar::amp_helper<N, Concurrency::index<N>, Concurrency::extent<N>>::minus(idx, ext);
-      return section(idx, ext);
-  }
-  array_view<T, N> section(const Concurrency::extent<N>& ext) const restrict(amp,cpu) {
-      Concurrency::index<N> idx;
-      return section(idx, ext);
-  }
-  array_view<T, 1> section(int i0, int e0) const restrict(amp,cpu) {
-      static_assert(N == 1, "Rank must be 1");
-      return section(Concurrency::index<1>(i0), Concurrency::extent<1>(e0));
-  }
-  array_view<T, 2> section(int i0, int i1, int e0, int e1) const restrict(amp,cpu) {
-      static_assert(N == 2, "Rank must be 2");
-      return section(Concurrency::index<2>(i0, i1), Concurrency::extent<2>(e0, e1));
-  }
-  array_view<T, 3> section(int i0, int i1, int i2, int e0, int e1, int e2) const restrict(amp,cpu) {
-      static_assert(N == 3, "Rank must be 3");
-      return section(Concurrency::index<3>(i0, i1, i2), Concurrency::extent<3>(e0, e1, e2));
-  }
+    /**
+     * Calling this member function informs the array_view that its bound
+     * memory has been modified outside the array_view interface. This will
+     * render all cached information stale.
+     */
+    void refresh() const { cache.refresh(); }
 
-  template <int K>
-  array_view<T, K> view_as(Concurrency::extent<K> viewExtent) const restrict(amp,cpu) {
-    static_assert(N == 1, "view_as is only permissible on array views of rank 1");
-#if __KALMAR_ACCELERATOR__ != 1
-    if( viewExtent.size() > extent.size())
-      throw runtime_exception("errorMsg_throw", 0);
-#endif
-    array_view<T, K> av(cache, viewExtent, offset + index_base[0]);
-    return av;
-  }
+    /**
+     * Calling this member function synchronizes any modifications made to the
+     * data underlying "this" array_view to its source data container. For
+     * example, for an array_view on system memory, if the data underlying the
+     * view are modified on a remote accelerator_view through a
+     * parallel_for_each invocation, calling synchronize ensures that the
+     * modifications are synchronized to the source data and will be visible
+     * through the system memory pointer which the array_view was created over.
+     *
+     * For writable array_view objects, callers of this functional can
+     * optionally specify the type of access desired on the source data
+     * container through the "type" parameter. For example specifying a
+     * "access_type_read" (which is also the default value of the parameter)
+     * indicates that the data has been synchronized to its source location
+     * only for reading. On the other hand, specifying an access_type of
+     * "access_type_read_write" synchronizes the data to its source location
+     * both for reading and writing; i.e. any modifications to the source data
+     * directly through the source data container are legal after synchronizing
+     * the array_view with write access and before subsequently accessing the
+     * array_view on another remote location.
+     *
+     * It is advisable to be precise about the access_type specified in the
+     * synchronize call; i.e. if only write access it required, specifying
+     * access_type_write may yield better performance that calling synchronize
+     * with "access_type_read_write" since the later may require any
+     * modifications made to the data on remote locations to be synchronized to
+     * the source location, which is unnecessary if the contents are intended
+     * to be overwritten without reading.
+     *
+     * @param[in] type An argument of type "access_type" which specifies the
+     *                 type of access on the data source that the array_view is
+     *                 synchronized for.
+     */
+    // FIXME: type parameter is not implemented
+    void synchronize() const { cache.get_cpu_access(); }
 
-  void synchronize() const { cache.get_cpu_access(); }
-  void synchronize_to(const accelerator_view& av) const {
-#if __KALMAR_ACCELERATOR__ != 1
-      cache.sync_to(av.pQueue);
-#endif
-  }
-  completion_future synchronize_async() const {
-      std::future<void> fut = std::async([&]() mutable { synchronize(); });
-      return completion_future(fut.share());
-  }
-  void refresh() const { cache.refresh(); }
-  void discard_data() const {
-#if __KALMAR_ACCELERATOR__ != 1
-      cache.discard();
-#endif
-  }
-  T* data() const restrict(amp,cpu) {
-#if __KALMAR_ACCELERATOR__ != 1
-      cache.get_cpu_access(true);
-#endif
-    static_assert(N == 1, "data() is only permissible on array views of rank 1");
-    return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
-  }
+    /**
+     * An asynchronous version of synchronize, which returns a completion
+     * future object. When the future is ready, the synchronization operation
+     * is complete.
+     *
+     * @return An object of type completion_future that can be used to
+     *         determine the status of the asynchronous operation or can be
+     *         used to chain other operations to be executed after the
+     *         completion of the asynchronous operation.
+     */
+    // FIXME: type parameter is not implemented
+    completion_future synchronize_async() const {
+        std::future<void> fut = std::async([&]() mutable { synchronize(); });
+        return completion_future(fut.share());
+    }
 
-  accelerator_view get_source_accelerator_view() const { return cache.get_av(); }
+    /**
+     * Calling this member function synchronizes any modifications made to the
+     * data underlying "this" array_view to the specified accelerator_view
+     * "av". For example, for an array_view on system memory, if the data
+     * underlying the view is modified on the CPU, and synchronize_to is called
+     * on "this" array_view, then the array_view contents are cached on the
+     * specified accelerator_view location.
+     *
+     * For writable array_view objects, callers of this functional can
+     * optionally specify the type of access desired on the specified target
+     * accelerator_view "av", through the "type" parameter. For example
+     * specifying a "access_type_read" (which is also the default value of the
+     * parameter) indicates that the data has been synchronized to "av" only
+     * for reading. On the other hand, specifying an access_type of
+     * "access_type_read_write" synchronizes the data to "av" both for reading
+     * and writing; i.e. any modifications to the data on "av" are legal after
+     * synchronizing the array_view with write access and before subsequently
+     * accessing the array_view on a location other than "av".
+     *
+     * It is advisable to be precise about the access_type specified in the
+     * synchronize call; i.e. if only write access it required, specifying
+     * access_type_write may yield better performance that calling synchronize
+     * with "access_type_read_write" since the later may require any
+     * modifications made to the data on remote locations to be synchronized to
+     * "av", which is unnecessary if the contents are intended to be
+     * immediately overwritten without reading.
+     *
+     * @param[in] av The target accelerator_view that "this" array_view is
+     *               synchronized for access on.
+     * @param[in] type An argument of type "access_type" which specifies the
+     *                 type of access on the data source that the array_view is
+     *                 synchronized for.
+     */
+    // FIXME: type parameter is not implemented
+    void synchronize_to(const accelerator_view& av) const {
+#if __KALMAR_ACCELERATOR__ != 1
+        cache.sync_to(av.pQueue);
+#endif
+    }
 
-  const acc_buffer_t& internal() const restrict(amp,cpu) { return cache; }
-  int get_offset() const restrict(amp,cpu) { return offset; }
-  Concurrency::index<N> get_index_base() const restrict(amp,cpu) { return index_base; }
+    /**
+     * An asynchronous version of synchronize_to, which returns a completion
+     * future object. When the future is ready, the synchronization operation
+     * is complete.
+     *
+     * @param[in] av The target accelerator_view that "this" array_view is
+     *               synchronized for access on.
+     * @param[in] type An argument of type "access_type" which specifies the
+     *                 type of access on the data source that the array_view is
+     *                 synchronized for.
+     * @return An object of type completion_future that can be used to
+     *         determine the status of the asynchronous operation or can be
+     *         used to chain other operations to be executed after the
+     *         completion of the asynchronous operation.
+     */
+    // FIXME: this method is not implemented yet
+    completion_future synchronize_to_async(const accelerator_view& av) const;
+
+    /**
+     * Indicates to the runtime that it may discard the current logical
+     * contents of this array_view. This is an optimization hint to the runtime
+     * used to avoid copying the current contents of the view to a target
+     * accelerator_view, and its use is recommended if the existing content is
+     * not needed.
+     */
+    void discard_data() const {
+#if __KALMAR_ACCELERATOR__ != 1
+        cache.discard();
+#endif
+    }
+
+    /** @{ */
+    /**
+     * Returns a reference to the element of this array_view that is at the
+     * location in N-dimensional space specified by "idx".
+     *
+     * @param[in] idx An object of type index<N> that specifies the location of
+     *                the element.
+     */
+    T& operator[] (const index<N>& idx) const restrict(amp,cpu) {
+#if __KALMAR_ACCELERATOR__ != 1
+        cache.get_cpu_access(true);
+#endif
+        T *ptr = reinterpret_cast<T*>(cache.get() + offset);
+        return ptr[Kalmar::amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
+    }
+
+    T& operator() (const index<N>& idx) const restrict(amp,cpu) {
+        return (*this)[idx];
+    }
+
+    /** @} */
+
+    /**
+     * Returns a reference to the element of this array_view that is at the
+     * location in N-dimensional space specified by "idx".
+     *
+     * Unlike the other indexing operators for accessing the array_view on the
+     * CPU, this method does not implicitly synchronize this array_view's
+     * contents to the CPU. After accessing the array_view on a remote location
+     * or performing a copy operation involving this array_view, users are
+     * responsible to explicitly synchronize the array_view to the CPU before
+     * calling this method. Failure to do so results in undefined behavior.
+     */
+    // FIXME: this method is not implemented
+    T& get_ref(const index<N>& idx) const restrict(amp,cpu);
+
+    /** @{ */
+    /**
+     * Equivalent to
+     * "array_view<T,N>::operator()(index<N>(i0 [, i1 [, i2 ]]))".
+     *
+     * @param[in] i0,i1,i2 The component values that will form the index into
+     *                     this array.
+     */
+    T& operator() (int i0, int i1) const restrict(amp,cpu) {
+        static_assert(N == 2, "T& array_view::operator()(int,int) is only permissible on array_view<T, 2>");
+        return (*this)[index<2>(i0, i1)];
+    }
+
+    T& operator() (int i0, int i1, int i2) const restrict(amp,cpu) {
+        static_assert(N == 3, "T& array_view::operator()(int,int, int) is only permissible on array_view<T, 3>");
+        return (*this)[index<3>(i0, i1, i2)];
+    }
+
+    /** @} */
+
+    /** @{ */
+    /**
+     * This overload is defined for array_view<T,N> where @f$N \ge 2@f$.
+     *
+     * This mode of indexing is equivalent to projecting on the
+     * most-significant dimension. It allows C-style indexing. For example:
+     *
+     * @code{.cpp}
+     * array<float,4> myArray(myExtents, ...);
+     *
+     * myArray[index<4>(5,4,3,2)] = 7;
+     * assert(myArray[5][4][3][2] == 7);
+     * @endcode
+     *
+     * @param[in] i0 An integer that is the index into the most-significant
+     *               dimension of this array.
+     * @return Returns an array_view whose dimension is one lower than that of
+     *         this array_view.
+     */
+    typename projection_helper<T, N>::result_type
+        operator[] (int i) const restrict(amp,cpu) {
+            return projection_helper<T, N>::project(*this, i);
+        }
+
+    typename projection_helper<T, N>::result_type
+        operator() (int i0) const restrict(amp,cpu) { return (*this)[i0]; }
+
+    /** @} */
+
+    /**
+     * Returns a subsection of the source array view at the origin specified by
+     * "idx" and with the extent specified by "ext".
+     *
+     * Example:
+     *
+     * @code{.cpp}
+     * array<float,2> a(extent<2>(200,100));
+     * array_view<float,2> v1(a); // v1.extent = <200,100>
+     * array_view<float,2> v2 = v1.section(index<2>(15,25), extent<2>(40,50));
+     * assert(v2(0,0) == v1(15,25));
+     * @endcode
+     *
+     * @param[in] idx Provides the offset/origin of the resulting section.
+     * @param[in] ext Provides the extent of the resulting section.
+     * @return Returns a subsection of the source array at specified origin,
+     *         and with the specified extent.
+     */
+    array_view<T, N> section(const Concurrency::index<N>& idx,
+                             const Concurrency::extent<N>& ext) const restrict(amp,cpu) {
+#if __KALMAR_ACCELERATOR__ != 1
+        if ( !Kalmar::amp_helper<N, index<N>, Concurrency::extent<N>>::contains(idx, ext,this->extent ) )
+            throw runtime_exception("errorMsg_throw", 0);
+#endif
+        array_view<T, N> av(cache, ext, extent_base, idx + index_base, offset);
+        return av;
+    }
+
+    /**
+     * Equivalent to "section(idx, this->extent – idx)".
+     */
+    array_view<T, N> section(const Concurrency::index<N>& idx) const restrict(amp,cpu) {
+        Concurrency::extent<N> ext(extent);
+        Kalmar::amp_helper<N, Concurrency::index<N>, Concurrency::extent<N>>::minus(idx, ext);
+        return section(idx, ext);
+    }
+
+    /**
+     * Equivalent to "section(index<N>(), ext)".
+     */
+    array_view<T, N> section(const Concurrency::extent<N>& ext) const restrict(amp,cpu) {
+        Concurrency::index<N> idx;
+        return section(idx, ext);
+    }
+
+    /** @{ */
+    /**
+     * Equivalent to 
+     * "section(index<N>(i0 [, i1 [, i2 ]]), extent<N>(e0 [, e1 [, e2 ]]))".
+     *
+     * @param[in] i0,i1,i2 The component values that will form the origin of
+     *                     the section
+     * @param[in] e0,e1,e2 The component values that will form the extent of
+     *                     the section
+     */
+    array_view<T, 1> section(int i0, int e0) const restrict(amp,cpu) {
+        static_assert(N == 1, "Rank must be 1");
+        return section(Concurrency::index<1>(i0), Concurrency::extent<1>(e0));
+    }
+
+    array_view<T, 2> section(int i0, int i1, int e0, int e1) const restrict(amp,cpu) {
+        static_assert(N == 2, "Rank must be 2");
+        return section(Concurrency::index<2>(i0, i1), Concurrency::extent<2>(e0, e1));
+    }
+
+    array_view<T, 3> section(int i0, int i1, int i2, int e0, int e1, int e2) const restrict(amp,cpu) {
+        static_assert(N == 3, "Rank must be 3");
+        return section(Concurrency::index<3>(i0, i1, i2), Concurrency::extent<3>(e0, e1, e2));
+    }
+
+    /** @} */
+
+    /**
+     * This member function is similar to "array<T,N>::reinterpret_as",
+     * although it only supports array_views of rank 1 (only those guarantee
+     * that all elements are laid out contiguously).
+     *
+     * The size of the reinterpreted ElementType must evenly divide into the
+     * total size of this array_view.
+     *
+     * @return Returns an array_view from this array_view<T,1> with the element
+     *         type reinterpreted from T to ElementType.
+     */
+    template <typename ElementType>
+        array_view<ElementType, N> reinterpret_as() const restrict(amp,cpu) {
+            static_assert(N == 1, "reinterpret_as is only permissible on array views of rank 1");
+#if __KALMAR_ACCELERATOR__ != 1
+            static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
+            static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
+            if ( (extent.size() * sizeof(T)) % sizeof(ElementType))
+                throw runtime_exception("errorMsg_throw", 0);
+#endif
+            int size = extent.size() * sizeof(T) / sizeof(ElementType);
+            using buffer_type = typename array_view<ElementType, 1>::acc_buffer_t;
+            array_view<ElementType, 1> av(buffer_type(cache),
+                                          Concurrency::extent<1>(size),
+                                          (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
+            return av;
+        }
+
+    /**
+     * This member function is similar to "array<T,N>::view_as", although it
+     * only supports array_views of rank 1 (only those guarantee that all
+     * elements are laid out contiguously).
+     *
+     * @return Returns an array_view from this array_view<T,1> with the rank
+     * changed to K from 1.
+     */
+    template <int K>
+        array_view<T, K> view_as(Concurrency::extent<K> viewExtent) const restrict(amp,cpu) {
+            static_assert(N == 1, "view_as is only permissible on array views of rank 1");
+#if __KALMAR_ACCELERATOR__ != 1
+            if ( viewExtent.size() > extent.size())
+                throw runtime_exception("errorMsg_throw", 0);
+#endif
+            array_view<T, K> av(cache, viewExtent, offset + index_base[0]);
+            return av;
+        }
+
+    ~array_view() restrict(amp,cpu) {}
+
+    // FIXME: functions below are not defined in C++ AMP specification
+    template <int D0, int D1=0, int D2=0>
+        T& operator[] (const tiled_index<D0, D1, D2>& idx) const restrict(amp,cpu) {
+#if __KALMAR_ACCELERATOR__ != 1
+            cache.get_cpu_access(true);
+#endif
+            T *ptr = reinterpret_cast<T*>(cache.get() + offset);
+            return ptr[Kalmar::amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx.global + index_base, extent_base)];
+        }
+
+    const acc_buffer_t& internal() const restrict(amp,cpu) { return cache; }
+
+    int get_offset() const restrict(amp,cpu) { return offset; }
+
+    Concurrency::index<N> get_index_base() const restrict(amp,cpu) { return index_base; }
+
 private:
-  template <typename K, int Q> friend struct projection_helper;
-  template <typename K, int Q> friend struct array_projection_helper;
-  template <typename Q, int K> friend class array;
-  template <typename Q, int K> friend class array_view;
+    template <typename K, int Q> friend struct projection_helper;
+    template <typename K, int Q> friend struct array_projection_helper;
+    template <typename Q, int K> friend class array;
+    template <typename Q, int K> friend class array_view;
 
-  template<typename Q, int K> friend
-      bool is_flat(const array_view<Q, K>&) noexcept;
-  template <typename Q, int K> friend
-      void copy(const array<Q, K>&, const array_view<Q, K>&);
-  template <typename InputIter, typename Q, int K> friend
-      void copy(InputIter, InputIter, const array_view<Q, K>&);
-  template <typename Q, int K> friend
-      void copy(const array_view<const Q, K>&, array<Q, K>&);
-  template <typename OutputIter, typename Q, int K> friend
-      void copy(const array_view<Q, K>&, OutputIter);
-template <typename Q, int K> friend
-      void copy(const array_view<const Q, K>& src, const array_view<Q, K>& dest);
+    template<typename Q, int K> friend
+        bool is_flat(const array_view<Q, K>&) noexcept;
+    template <typename Q, int K> friend
+        void copy(const array<Q, K>&, const array_view<Q, K>&);
+    template <typename InputIter, typename Q, int K> friend
+        void copy(InputIter, InputIter, const array_view<Q, K>&);
+    template <typename Q, int K> friend
+        void copy(const array_view<const Q, K>&, array<Q, K>&);
+    template <typename OutputIter, typename Q, int K> friend
+        void copy(const array_view<Q, K>&, OutputIter);
+    template <typename Q, int K> friend
+        void copy(const array_view<const Q, K>& src, const array_view<Q, K>& dest);
 
+    // used by view_as and reinterpret_as
+    array_view(const acc_buffer_t& cache, const Concurrency::extent<N>& ext,
+               int offset) restrict(amp,cpu)
+        : cache(cache), extent(ext), extent_base(ext), offset(offset) {}
 
-
-  // used by view_as and reinterpret_as
-  array_view(const acc_buffer_t& cache, const Concurrency::extent<N>& ext,
-             int offset) restrict(amp,cpu)
-      : cache(cache), extent(ext), extent_base(ext), offset(offset) {}
-  // used by section and projection
-  array_view(const acc_buffer_t& cache, const Concurrency::extent<N>& ext_now,
-             const Concurrency::extent<N>& ext_b,
-             const Concurrency::index<N>& idx_b, int off) restrict(amp,cpu)
-      : cache(cache), extent(ext_now), extent_base(ext_b), index_base(idx_b),
-      offset(off) {}
-
-  acc_buffer_t cache;
-  Concurrency::extent<N> extent;
-  Concurrency::extent<N> extent_base;
-  Concurrency::index<N> index_base;
-  int offset;
+    // used by section and projection
+    array_view(const acc_buffer_t& cache, const Concurrency::extent<N>& ext_now,
+               const Concurrency::extent<N>& ext_b,
+               const Concurrency::index<N>& idx_b, int off) restrict(amp,cpu)
+        : cache(cache), extent(ext_now), extent_base(ext_b), index_base(idx_b), offset(off) {}
+  
+    acc_buffer_t cache;
+    Concurrency::extent<N> extent;
+    Concurrency::extent<N> extent_base;
+    Concurrency::index<N> index_base;
+    int offset;
 };
 
+// ------------------------------------------------------------------------
+// array_view<const T,N>
+// ------------------------------------------------------------------------
+
+/**
+ * The partial specialization array_view<const T,N> represents a view over
+ * elements of type const T with rank N. The elements are readonly. At the
+ * boundary of a call site (such as parallel_for_each), this form of array_view
+ * need only be copied to the target accelerator if it isn't already there. It
+ * will not be copied out.
+ */
 template <typename T, int N>
 class array_view<const T, N>
 {
 public:
-  typedef typename std::remove_const<T>::type nc_T;
-  static const int rank = N;
-  typedef const T value_type;
+    typedef typename std::remove_const<T>::type nc_T;
 
 #if __KALMAR_ACCELERATOR__ == 1
-  typedef Kalmar::_data<nc_T> acc_buffer_t;
+    typedef Kalmar::_data<nc_T> acc_buffer_t;
 #else
-  typedef Kalmar::_data_host<const T> acc_buffer_t;
+    typedef Kalmar::_data_host<const T> acc_buffer_t;
 #endif
 
-  array_view() = delete;
+    /**
+     * The rank of this array.
+     */
+    static const int rank = N;
 
-  ~array_view() restrict(amp,cpu) {}
+    /**
+     * The element type of this array.
+     */
+    typedef T value_type;
 
-  array_view(const array<T,N>& src) restrict(amp,cpu)
-      : cache(src.internal()), extent(src.get_extent()), extent_base(extent), index_base(),
-      offset(0) {}
-  template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
-    array_view(const extent<N>& extent, const Container& src)
-        : array_view(extent, src.data())
-  { static_assert( std::is_same<typename std::remove_const<typename std::remove_reference<decltype(*src.data())>::type>::type, T>::value, "container element type and array view element type must match"); }
-    template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
-      array_view(int e0, Container& src) : array_view(Concurrency::extent<1>(e0), src) {}
-    template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
-      array_view(int e0, int e1, Container& src)
-      : array_view(Concurrency::extent<N>(e0, e1), src) {}
-    template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
-      array_view(int e0, int e1, int e2, Container& src)
-      : array_view(Concurrency::extent<N>(e0, e1, e2), src) {}
+    /**
+     * There is no default constructor for array_view<T,N>.
+     */
+    array_view() = delete;
 
-  array_view(const extent<N>& ext, const value_type* src) restrict(amp,cpu)
+    /**
+     * Constructs an array_view which is bound to the data contained in the
+     * "src" array. The extent of the array_view is that of the src array, and
+     * the origin of the array view is at zero.
+     *
+     * @param[in] src An array which contains the data that this array_view is
+     *                bound to.
+     */
+    array_view(const array<T,N>& src) restrict(amp,cpu)
+        : cache(src.internal()), extent(src.get_extent()), extent_base(extent), index_base(), offset(0) {}
+
+    // FIXME: following interfaces were not implemented yet
+    // template <typename Container>
+    //     explicit array_view<const T, 1>::array_view(const Container& src);
+    // template <typename value_type, int Size>
+    //     explicit array_view<const T, 1>::array_view(const value_type (&src) [Size]) restrict(amp,cpu);
+
+    /**
+     * Constructs an array_view which is bound to the data contained in the
+     * "src" container. The extent of the array_view is that given by the
+     * "extent" argument, and the origin of the array view is at zero.
+     *
+     * @param[in] src A template argument that must resolve to a linear
+     *                container that supports .data() and .size() members (such
+     *                as std::vector or std::array)
+     * @param[in] extent The extent of this array_view.
+     */
+    template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
+        array_view(const extent<N>& extent, const Container& src)
+            : array_view(extent, src.data())
+        { static_assert( std::is_same<typename std::remove_const<typename std::remove_reference<decltype(*src.data())>::type>::type, T>::value, "container element type and array view element type must match"); }
+
+    /**
+     * Constructs an array_view which is bound to the data contained in the
+     * "src" container. The extent of the array_view is that given by the
+     * "extent" argument, and the origin of the array view is at zero.
+     *
+     * @param[in] src A pointer to the source data this array_view will bind
+     *                to. If the number of elements pointed to is less than the
+     *                size of extent, the behavior is undefined.
+     * @param[in] ext The extent of this array_view.
+     */
+    array_view(const extent<N>& ext, const value_type* src) restrict(amp,cpu)
 #if __KALMAR_ACCELERATOR__ == 1
-      : cache((nc_T*)(src)), extent(ext), extent_base(ext), offset(0) {}
+        : cache((nc_T*)(src)), extent(ext), extent_base(ext), offset(0) {}
 #else
-      : cache(ext.size(), src), extent(ext), extent_base(ext),
-          offset(0) {}
+        : cache(ext.size(), src), extent(ext), extent_base(ext), offset(0) {}
 #endif
-  array_view(int e0, value_type *src) restrict(amp,cpu)
-      : array_view(Concurrency::extent<1>(e0), src) {}
-  array_view(int e0, int e1, value_type *src) restrict(amp,cpu)
-      : array_view(Concurrency::extent<2>(e0, e1), src) {}
-  array_view(int e0, int e1, int e2, value_type *src) restrict(amp,cpu)
-      : array_view(Concurrency::extent<3>(e0, e1, e2), src) {}
 
-  array_view(const array_view<nc_T, N>& other) restrict(amp,cpu) : cache(other.cache),
-    extent(other.extent), extent_base(other.extent_base), index_base(other.index_base),
-    offset(other.offset) {}
+    /**
+     * Equivalent to construction using
+     * "array_view(extent<N>(e0 [, e1 [, e2 ]]), src)".
+     *
+     * @param[in] e0,e1,e2 The component values that will form the extent of
+     *                     this array_view.
+     * @param[in] src A template argument that must resolve to a contiguousi
+     *                container that supports .data() and .size() members (such
+     *                as std::vector or std::array)
+     */
+    template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
+        array_view(int e0, Container& src) : array_view(Concurrency::extent<1>(e0), src) {}
+    template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
+        array_view(int e0, int e1, Container& src)
+            : array_view(Concurrency::extent<N>(e0, e1), src) {}
+    template <typename Container, class = typename std::enable_if<__is_container<Container>::value>::type>
+        array_view(int e0, int e1, int e2, Container& src)
+            : array_view(Concurrency::extent<N>(e0, e1, e2), src) {}
 
-  array_view(const array_view& other) restrict(amp,cpu) : cache(other.cache),
-    extent(other.extent), extent_base(other.extent_base), index_base(other.index_base),
-    offset(other.offset) {}
+    /**
+     * Equivalent to construction using
+     * "array_view(extent<N>(e0 [, e1 [, e2 ]]), src)".
+     *
+     * @param[in] e0,e1,e2 The component values that will form the extent of
+     *                     this array_view.
+     * @param[in] src A pointer to the source data this array_view will bind
+     *                to. If the number of elements pointed to is less than
+     *                the size of extent, the behavior is undefined.
+     */
+    array_view(int e0, value_type *src) restrict(amp,cpu)
+        : array_view(Concurrency::extent<1>(e0), src) {}
+    array_view(int e0, int e1, value_type *src) restrict(amp,cpu)
+        : array_view(Concurrency::extent<2>(e0, e1), src) {}
+    array_view(int e0, int e1, int e2, value_type *src) restrict(amp,cpu)
+        : array_view(Concurrency::extent<3>(e0, e1, e2), src) {}
 
-  array_view& operator=(const array_view<T,N>& other) restrict(amp,cpu) {
-    cache = other.cache;
-    extent = other.extent;
-    index_base = other.index_base;
-    extent_base = other.extent_base;
-    offset = other.offset;
-    return *this;
-  }
+    /**
+     * Copy constructor. Constructs an array_view from the supplied argument
+     * other. A shallow copy is performed.
+     *
+     * @param[in] other An object of type array_view<T,N> or
+     *                  array_view<const T,N> from which to initialize this
+     *                  new array_view.
+     */
+    array_view(const array_view& other) restrict(amp,cpu)
+        : cache(other.cache), extent(other.extent), extent_base(other.extent_base), index_base(other.index_base), offset(other.offset) {}
 
-  array_view& operator=(const array_view& other) restrict(amp,cpu) {
-    if (this != &other) {
+    /**
+     * Copy constructor. Constructs an array_view from the supplied argument
+     * other. A shallow copy is performed.
+     *
+     * @param[in] other An object of type array_view<T,N> from which to
+     *                  initialize this new array_view.
+     */
+    array_view(const array_view<nc_T, N>& other) restrict(amp,cpu)
+        : cache(other.cache), extent(other.extent), extent_base(other.extent_base), index_base(other.index_base), offset(other.offset) {}
+    /**
+     * Access the extent that defines the shape of this array_view.
+     */
+    extent<N> get_extent() const restrict(amp,cpu) { return extent; }
+
+    /**
+     * Access the accelerator_view where the data source of the array_view is
+     * located.
+     *
+     * When the data source of the array_view is native CPU memory, the method
+     * returns accelerator(accelerator::cpu_accelerator).default_view. When the
+     * data source underlying the array_view is an array, the method returns
+     * the accelerator_view where the source array is located.
+     */
+    accelerator_view get_source_accelerator_view() const { return cache.get_av(); }
+
+    /** @{ */
+    /**
+     * Assigns the contents of the array_view "other" to this array_view, using
+     * a shallow copy. Both array_views will refer to the same data.
+     *
+     * @param[in] other An object of type array_view<T,N> from which to copy
+     *                  into this array.
+     * @return Returns *this.
+     */
+    array_view& operator=(const array_view<T,N>& other) restrict(amp,cpu) {
       cache = other.cache;
       extent = other.extent;
       index_base = other.index_base;
       extent_base = other.extent_base;
       offset = other.offset;
-    }
-    return *this;
-  }
-
-  void copy_to(array<T,N>& dest) const { copy(*this, dest); }
-  void copy_to(const array_view<T,N>& dest) const { copy(*this, dest); }
-
-  extent<N> get_extent() const restrict(amp,cpu) { return extent; }
-  accelerator_view get_source_accelerator_view() const { return cache.get_av(); }
-
-  const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
-#if __KALMAR_ACCELERATOR__ != 1
-      cache.get_cpu_access();
-#endif
-    const T *ptr = reinterpret_cast<const T*>(cache.get() + offset);
-    return ptr[Kalmar::amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
-  }
-
-  typename projection_helper<const T, N>::const_result_type
-      operator[] (int i) const restrict(amp,cpu) {
-    return projection_helper<const T, N>::project(*this, i);
-  }
-
-  const T& get_ref(const index<N>& idx) const restrict(amp,cpu);
-
-  const T& operator()(const index<N>& idx) const restrict(amp,cpu) {
-    return (*this)[idx];
-  }
-  const T& operator()(int i0) const restrict(amp,cpu) {
-    static_assert(N == 1, "const T& array_view::operator()(int) is only permissible on array_view<T, 1>");
-    return (*this)[index<1>(i0)];
-  }
-
-  const T& operator()(int i0, int i1) const restrict(amp,cpu) {
-    static_assert(N == 2, "const T& array_view::operator()(int,int) is only permissible on array_view<T, 2>");
-    return (*this)[index<2>(i0, i1)];
-  }
-  const T& operator()(int i0, int i1, int i2) const restrict(amp,cpu) {
-    static_assert(N == 3, "const T& array_view::operator()(int,int, int) is only permissible on array_view<T, 3>");
-    return (*this)[index<3>(i0, i1, i2)];
-  }
-
-  template <typename ElementType>
-      array_view<const ElementType, N> reinterpret_as() const restrict(amp,cpu) {
-          static_assert(N == 1, "reinterpret_as is only permissible on array views of rank 1");
-#if __KALMAR_ACCELERATOR__ != 1
-          static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
-          static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
-#endif
-          int size = extent.size() * sizeof(T) / sizeof(ElementType);
-          using buffer_type = typename array_view<ElementType, 1>::acc_buffer_t;
-          array_view<const ElementType, 1> av(buffer_type(cache),
-                                              Concurrency::extent<1>(size),
-                                              (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
-          return av;
-      }
-  array_view<const T, N> section(const Concurrency::index<N>& idx,
-                     const Concurrency::extent<N>& ext) const restrict(amp,cpu) {
-    array_view<const T, N> av(cache, ext, extent_base, idx + index_base, offset);
-    return av;
-  }
-  array_view<const T, N> section(const Concurrency::index<N>& idx) const restrict(amp,cpu) {
-    Concurrency::extent<N> ext(extent);
-    Kalmar::amp_helper<N, Concurrency::index<N>, Concurrency::extent<N>>::minus(idx, ext);
-    return section(idx, ext);
-  }
-
-  array_view<const T, N> section(const Concurrency::extent<N>& ext) const restrict(amp,cpu) {
-    Concurrency::index<N> idx;
-    return section(idx, ext);
-  }
-  array_view<const T, 1> section(int i0, int e0) const restrict(amp,cpu) {
-    static_assert(N == 1, "Rank must be 1");
-    return section(Concurrency::index<1>(i0), Concurrency::extent<1>(e0));
-  }
-  array_view<const T, 2> section(int i0, int i1, int e0, int e1) const restrict(amp,cpu) {
-    static_assert(N == 2, "Rank must be 2");
-    return section(Concurrency::index<2>(i0, i1), Concurrency::extent<2>(e0, e1));
-  }
-  array_view<const T, 3> section(int i0, int i1, int i2, int e0, int e1, int e2) const restrict(amp,cpu) {
-    static_assert(N == 3, "Rank must be 3");
-    return section(Concurrency::index<3>(i0, i1, i2), Concurrency::extent<3>(e0, e1, e2));
-  }
-
-  template <int K>
-    array_view<const T, K> view_as(Concurrency::extent<K> viewExtent) const restrict(amp,cpu) {
-      static_assert(N == 1, "view_as is only permissible on array views of rank 1");
-#if __KALMAR_ACCELERATOR__ != 1
-    if( viewExtent.size() > extent.size())
-      throw runtime_exception("errorMsg_throw", 0);
-#endif
-      array_view<const T, K> av(cache, viewExtent, offset + index_base[0]);
-      return av;
+      return *this;
     }
 
-  void synchronize() const { cache.get_cpu_access(); }
-  completion_future synchronize_async() const {
-      std::future<void> fut = std::async([&]() mutable { synchronize(); });
-      return completion_future(fut.share());
-  }
+    array_view& operator=(const array_view& other) restrict(amp,cpu) {
+        if (this != &other) {
+            cache = other.cache;
+            extent = other.extent;
+            index_base = other.index_base;
+            extent_base = other.extent_base;
+            offset = other.offset;
+        }
+        return *this;
+    }
+ 
+    /** @} */
 
-  void synchronize_to(const accelerator_view& av) const {
-#if __KALMAR_ACCELERATOR__ != 1
-      cache.sync_to(av.pQueue);
-#endif
-  }
-  completion_future synchronize_to_async(const accelerator_view& av) const;
+    /**
+     * Copies the data referred to by this array_view to the array given by
+     * "dest", as if by calling "copy(*this, dest)"
+     *
+     * @param[in] dest An object of type array <T,N> to which to copy data from
+     *                 this array.
+     */
+    void copy_to(array<T,N>& dest) const { copy(*this, dest); }
 
-  void refresh() const { cache.refresh(); }
-  const T* data() const restrict(amp,cpu) {
+    /**
+     * Copies the contents of this array_view to the array_view given by
+     * "dest", as if by calling "copy(*this, dest)"
+     *
+     * @param[in] dest An object of type array_view<T,N> to which to copy data
+     * from this array.
+     */
+    void copy_to(const array_view<T,N>& dest) const { copy(*this, dest); }
+
+    /**
+     * Returns a pointer to the first data element underlying this array_view.
+     * This is only available on array_views of rank 1.
+     *
+     * When the data source of the array_view is native CPU memory, the pointer
+     * returned by data() is valid for the lifetime of the data source.
+     *
+     * When the data source underlying the array_view is an array, or the array
+     * view is created without a data source, the pointer returned by data() in
+     * CPU context is ephemeral and is invalidated when the original data
+     * source or any of its views are accessed on an accelerator_view through a
+     *  parallel_for_each or a copy operation.
+     *
+     * @return A const pointer to the first element in the linearized array.
+     */
+    const T* data() const restrict(amp,cpu) {
 #if __KALMAR_ACCELERATOR__ != 1
-      cache.get_cpu_access();
+        cache.get_cpu_access();
 #endif
-    static_assert(N == 1, "data() is only permissible on array views of rank 1");
-    return reinterpret_cast<const T*>(cache.get() + offset + index_base[0]);
-  }
-  const acc_buffer_t& internal() const restrict(amp,cpu) { return cache; }
-  int get_offset() const restrict(amp,cpu) { return offset; }
-  Concurrency::index<N> get_index_base() const restrict(amp,cpu) { return index_base; }
+        static_assert(N == 1, "data() is only permissible on array views of rank 1");
+        return reinterpret_cast<const T*>(cache.get() + offset + index_base[0]);
+    }
+
+    /**
+     * Calling this member function informs the array_view that its bound
+     * memory has been modified outside the array_view interface. This will
+     * render all cached information stale.
+     */
+    void refresh() const { cache.refresh(); }
+
+    /**
+     * Calling this member function synchronizes any modifications made to the
+     * data underlying "this" array_view to its source data container. For
+     * example, for an array_view on system memory, if the data underlying the
+     * view are modified on a remote accelerator_view through a
+     * parallel_for_each invocation, calling synchronize ensures that the
+     * modifications are synchronized to the source data and will be visible
+     * through the system memory pointer which the array_view was created over.
+     *
+     * For writable array_view objects, callers of this functional can
+     * optionally specify the type of access desired on the source data
+     * container through the "type" parameter. For example specifying a
+     * "access_type_read" (which is also the default value of the parameter)
+     * indicates that the data has been synchronized to its source location
+     * only for reading. On the other hand, specifying an access_type of
+     * "access_type_read_write" synchronizes the data to its source location
+     * both for reading and writing; i.e. any modifications to the source data
+     * directly through the source data container are legal after synchronizing
+     * the array_view with write access and before subsequently accessing the
+     * array_view on another remote location.
+     *
+     * It is advisable to be precise about the access_type specified in the
+     * synchronize call; i.e. if only write access it required, specifying
+     * access_type_write may yield better performance that calling synchronize
+     * with "access_type_read_write" since the later may require any
+     * modifications made to the data on remote locations to be synchronized to
+     * the source location, which is unnecessary if the contents are intended
+     * to be overwritten without reading.
+     */
+    void synchronize() const { cache.get_cpu_access(); }
+
+    /**
+     * An asynchronous version of synchronize, which returns a completion
+     * future object. When the future is ready, the synchronization operation
+     * is complete.
+     *
+     * @return An object of type completion_future that can be used to
+     *         determine the status of the asynchronous operation or can be
+     *         used to chain other operations to be executed after the
+     *         completion of the asynchronous operation.
+     */
+    completion_future synchronize_async() const {
+        std::future<void> fut = std::async([&]() mutable { synchronize(); });
+        return completion_future(fut.share());
+    }
+  
+    /**
+     * Calling this member function synchronizes any modifications made to the
+     * data underlying "this" array_view to the specified accelerator_view
+     * "av". For example, for an array_view on system memory, if the data
+     * underlying the view is modified on the CPU, and synchronize_to is called
+     * on "this" array_view, then the array_view contents are cached on the
+     * specified accelerator_view location.
+     *
+     * @param[in] av The target accelerator_view that "this" array_view is
+     *               synchronized for access on.
+     */
+    void synchronize_to(const accelerator_view& av) const {
+#if __KALMAR_ACCELERATOR__ != 1
+        cache.sync_to(av.pQueue);
+#endif
+    }
+
+    /**
+     * An asynchronous version of synchronize_to, which returns a completion
+     * future object. When the future is ready, the synchronization operation
+     * is complete.
+     *
+     * @param[in] av The target accelerator_view that "this" array_view is
+     *               synchronized for access on.
+     * @param[in] type An argument of type "access_type" which specifies the
+     *                 type of access on the data source that the array_view is
+     *                 synchronized for.
+     * @return An object of type completion_future that can be used to
+     *         determine the status of the asynchronous operation or can be
+     *         used to chain other operations to be executed after the
+     *         completion of the asynchronous operation.
+     */
+    // FIXME: this method is not implemented yet
+    completion_future synchronize_to_async(const accelerator_view& av) const;
+
+    /** @{ */
+    /**
+     * Returns a const reference to the element of this array_view that is at
+     * the location in N-dimensional space specified by "idx".
+     *
+     * @param[in] idx An object of type index<N> that specifies the location of
+     *                the element.
+     */
+    const T& operator[] (const index<N>& idx) const restrict(amp,cpu) {
+#if __KALMAR_ACCELERATOR__ != 1
+        cache.get_cpu_access();
+#endif
+        const T *ptr = reinterpret_cast<const T*>(cache.get() + offset);
+        return ptr[Kalmar::amp_helper<N, index<N>, Concurrency::extent<N>>::flatten(idx + index_base, extent_base)];
+    }
+    const T& operator() (const index<N>& idx) const restrict(amp,cpu) {
+        return (*this)[idx];
+    }
+
+    /** @} */
+
+    /**
+     * Returns a reference to the element of this array_view that is at the
+     * location in N-dimensional space specified by "idx".
+     *
+     * Unlike the other indexing operators for accessing the array_view on the
+     * CPU, this method does not implicitly synchronize this array_view's
+     * contents to the CPU. After accessing the array_view on a remote location
+     * or performing a copy operation involving this array_view, users are
+     * responsible to explicitly synchronize the array_view to the CPU before
+     * calling this method. Failure to do so results in undefined behavior.
+     */
+    // FIXME: this method is not implemented
+    const T& get_ref(const index<N>& idx) const restrict(amp,cpu);
+  
+    /** @{ */
+    /**
+     * Equivalent to
+     * "array_view<T,N>::operator()(index<N>(i0 [, i1 [, i2 ]]))".
+     *
+     * @param[in] i0,i1,i2 The component values that will form the index into
+     *                     this array.
+     */
+    const T& operator() (int i0) const restrict(amp,cpu) {
+        static_assert(N == 1, "const T& array_view::operator()(int) is only permissible on array_view<T, 1>");
+        return (*this)[index<1>(i0)];
+    }
+  
+    const T& operator() (int i0, int i1) const restrict(amp,cpu) {
+        static_assert(N == 2, "const T& array_view::operator()(int,int) is only permissible on array_view<T, 2>");
+        return (*this)[index<2>(i0, i1)];
+    }
+    const T& operator() (int i0, int i1, int i2) const restrict(amp,cpu) {
+        static_assert(N == 3, "const T& array_view::operator()(int,int, int) is only permissible on array_view<T, 3>");
+        return (*this)[index<3>(i0, i1, i2)];
+    }
+
+    /** @} */
+  
+    /** @{ */
+    /**
+     * This overload is defined for array_view<T,N> where @f$N \ge 2@f$.
+     *
+     * This mode of indexing is equivalent to projecting on the
+     * most-significant dimension. It allows C-style indexing. For example:
+     *
+     * @code{.cpp}
+     * array<float,4> myArray(myExtents, ...);
+     *
+     * myArray[index<4>(5,4,3,2)] = 7;
+     * assert(myArray[5][4][3][2] == 7);
+     * @endcode
+     *
+     * @param[in] i0 An integer that is the index into the most-significant
+     *               dimension of this array.
+     * @return Returns an array_view whose dimension is one lower than that of
+     *         this array_view.
+     */
+    typename projection_helper<const T, N>::const_result_type
+        operator[] (int i) const restrict(amp,cpu) {
+        return projection_helper<const T, N>::project(*this, i);
+    }
+
+    // FIXME: typename projection_helper<const T, N>::const_result_type
+    //            operator() (int i0) const restrict(cmp,cpu);
+    // is not implemented
+
+    /** @} */
+  
+    /**
+     * Returns a subsection of the source array view at the origin specified by
+     * "idx" and with the extent specified by "ext".
+     *
+     * Example:
+     *
+     * @code{.cpp}
+     * array<float,2> a(extent<2>(200,100));
+     * array_view<float,2> v1(a); // v1.extent = <200,100>
+     * array_view<float,2> v2 = v1.section(index<2>(15,25), extent<2>(40,50));
+     * assert(v2(0,0) == v1(15,25));
+     * @endcode
+     *
+     * @param[in] idx Provides the offset/origin of the resulting section.
+     * @param[in] ext Provides the extent of the resulting section.
+     * @return Returns a subsection of the source array at specified origin,
+     *         and with the specified extent.
+     */
+    array_view<const T, N> section(const Concurrency::index<N>& idx,
+                                   const Concurrency::extent<N>& ext) const restrict(amp,cpu) {
+        array_view<const T, N> av(cache, ext, extent_base, idx + index_base, offset);
+        return av;
+    }
+
+    /**
+     * Equivalent to "section(idx, this->extent – idx)".
+     */
+    array_view<const T, N> section(const Concurrency::index<N>& idx) const restrict(amp,cpu) {
+        Concurrency::extent<N> ext(extent);
+        Kalmar::amp_helper<N, Concurrency::index<N>, Concurrency::extent<N>>::minus(idx, ext);
+        return section(idx, ext);
+    }
+  
+    /**
+     * Equivalent to "section(index<N>(), ext)".
+     */
+    array_view<const T, N> section(const Concurrency::extent<N>& ext) const restrict(amp,cpu) {
+        Concurrency::index<N> idx;
+        return section(idx, ext);
+    }
+
+    /** @{ */
+    /**
+     * Equivalent to 
+     * "section(index<N>(i0 [, i1 [, i2 ]]), extent<N>(e0 [, e1 [, e2 ]]))".
+     *
+     * @param[in] i0,i1,i2 The component values that will form the origin of
+     *                     the section
+     * @param[in] e0,e1,e2 The component values that will form the extent of
+     *                     the section
+     */
+    array_view<const T, 1> section(int i0, int e0) const restrict(amp,cpu) {
+        static_assert(N == 1, "Rank must be 1");
+        return section(Concurrency::index<1>(i0), Concurrency::extent<1>(e0));
+    }
+
+    array_view<const T, 2> section(int i0, int i1, int e0, int e1) const restrict(amp,cpu) {
+        static_assert(N == 2, "Rank must be 2");
+        return section(Concurrency::index<2>(i0, i1), Concurrency::extent<2>(e0, e1));
+    }
+
+    array_view<const T, 3> section(int i0, int i1, int i2, int e0, int e1, int e2) const restrict(amp,cpu) {
+        static_assert(N == 3, "Rank must be 3");
+        return section(Concurrency::index<3>(i0, i1, i2), Concurrency::extent<3>(e0, e1, e2));
+    }
+
+    /** @} */
+  
+    /**
+     * This member function is similar to "array<T,N>::reinterpret_as",
+     * although it only supports array_views of rank 1 (only those guarantee
+     * that all elements are laid out contiguously).
+     *
+     * The size of the reinterpreted ElementType must evenly divide into the
+     * total size of this array_view.
+     *
+     * @return Returns an array_view from this array_view<T,1> with the element
+     *         type reinterpreted from T to ElementType.
+     */
+    template <typename ElementType>
+        array_view<const ElementType, N> reinterpret_as() const restrict(amp,cpu) {
+            static_assert(N == 1, "reinterpret_as is only permissible on array views of rank 1");
+#if __KALMAR_ACCELERATOR__ != 1
+            static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
+            static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
+#endif
+            int size = extent.size() * sizeof(T) / sizeof(ElementType);
+            using buffer_type = typename array_view<ElementType, 1>::acc_buffer_t;
+            array_view<const ElementType, 1> av(buffer_type(cache),
+                                                Concurrency::extent<1>(size),
+                                                (offset + index_base[0])* sizeof(T) / sizeof(ElementType));
+            return av;
+        }
+
+    /**
+     * This member function is similar to "array<T,N>::view_as", although it
+     * only supports array_views of rank 1 (only those guarantee that all
+     * elements are laid out contiguously).
+     *
+     * @return Returns an array_view from this array_view<T,1> with the rank
+     * changed to K from 1.
+     */
+    template <int K>
+        array_view<const T, K> view_as(Concurrency::extent<K> viewExtent) const restrict(amp,cpu) {
+            static_assert(N == 1, "view_as is only permissible on array views of rank 1");
+#if __KALMAR_ACCELERATOR__ != 1
+            if ( viewExtent.size() > extent.size())
+                throw runtime_exception("errorMsg_throw", 0);
+#endif
+            array_view<const T, K> av(cache, viewExtent, offset + index_base[0]);
+            return av;
+        }
+  
+    ~array_view() restrict(amp,cpu) {}
+
+    // FIXME: functions below are not defined in C++ AMP specification
+    const acc_buffer_t& internal() const restrict(amp,cpu) { return cache; }
+
+    int get_offset() const restrict(amp,cpu) { return offset; }
+
+    Concurrency::index<N> get_index_base() const restrict(amp,cpu) { return index_base; }
+
 private:
-  template <typename K, int Q> friend struct projection_helper;
-  template <typename K, int Q> friend struct array_projection_helper;
-  template <typename Q, int K> friend class array;
-  template <typename Q, int K> friend class array_view;
-
-
-  template<typename Q, int K> friend
-      bool is_flat(const array_view<Q, K>&) noexcept;
-  template <typename Q, int K> friend
-      void copy(const array<Q, K>&, const array_view<Q, K>&);
-  template <typename InputIter, typename Q, int K> friend
-      void copy(InputIter, InputIter, const array_view<Q, K>&);
-  template <typename Q, int K> friend
-      void copy(const array_view<const Q, K>&, array<Q, K>&);
-  template <typename OutputIter, typename Q, int K> friend
-      void copy(const array_view<Q, K>&, OutputIter);
-  template <typename Q, int K> friend
-      void copy(const array_view<const Q, K>& src, const array_view<Q, K>& dest);
-
-
-
-  // used by view_as and reinterpret_as
-  array_view(const acc_buffer_t& cache, const Concurrency::extent<N>& ext,
-             int offset) restrict(amp,cpu)
-      : cache(cache), extent(ext), extent_base(ext), offset(offset) {}
-
-  // used by section and projection
-  array_view(const acc_buffer_t& cache, const Concurrency::extent<N>& ext_now,
-             const Concurrency::extent<N>& ext_b,
-             const Concurrency::index<N>& idx_b, int off) restrict(amp,cpu)
-      : cache(cache), extent(ext_now), extent_base(ext_b), index_base(idx_b),
-      offset(off) {}
-
-  acc_buffer_t cache;
-  Concurrency::extent<N> extent;
-  Concurrency::extent<N> extent_base;
-  Concurrency::index<N> index_base;
-  int offset;
+    template <typename K, int Q> friend struct projection_helper;
+    template <typename K, int Q> friend struct array_projection_helper;
+    template <typename Q, int K> friend class array;
+    template <typename Q, int K> friend class array_view;
+  
+    template<typename Q, int K> friend
+        bool is_flat(const array_view<Q, K>&) noexcept;
+    template <typename Q, int K> friend
+        void copy(const array<Q, K>&, const array_view<Q, K>&);
+    template <typename InputIter, typename Q, int K> friend
+        void copy(InputIter, InputIter, const array_view<Q, K>&);
+    template <typename Q, int K> friend
+        void copy(const array_view<const Q, K>&, array<Q, K>&);
+    template <typename OutputIter, typename Q, int K> friend
+        void copy(const array_view<Q, K>&, OutputIter);
+    template <typename Q, int K> friend
+        void copy(const array_view<const Q, K>& src, const array_view<Q, K>& dest);
+  
+    // used by view_as and reinterpret_as
+    array_view(const acc_buffer_t& cache, const Concurrency::extent<N>& ext,
+               int offset) restrict(amp,cpu)
+        : cache(cache), extent(ext), extent_base(ext), offset(offset) {}
+  
+    // used by section and projection
+    array_view(const acc_buffer_t& cache, const Concurrency::extent<N>& ext_now,
+               const Concurrency::extent<N>& ext_b,
+               const Concurrency::index<N>& idx_b, int off) restrict(amp,cpu)
+        : cache(cache), extent(ext_now), extent_base(ext_b), index_base(idx_b), offset(off) {}
+  
+    acc_buffer_t cache;
+    Concurrency::extent<N> extent;
+    Concurrency::extent<N> extent_base;
+    Concurrency::index<N> index_base;
+    int offset;
 };
 
 // pfe interfaces
