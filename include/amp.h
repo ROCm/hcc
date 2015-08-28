@@ -3116,6 +3116,8 @@ public:
             return av;
         }
 
+    /** @} */
+
     ~array() {}
 
     // FIXME: functions below are not defined in C++ AMP specification
