@@ -5095,6 +5095,59 @@ completion_future copy_async(const array_view<T, N>& src, const array<T, N>& des
 // atomic functions
 // ------------------------------------------------------------------------
 
+// FIXME: following functions are not implemented
+// int atomic_exchange(int * dest, int val) restrict(amp);
+// unsigned int atomic_exchange(unsigned int * dest, unsigned int val) restrict(amp);
+// float atomic_exchange(float * dest, float val) restrict(amp);
+
+// FIXME: following functions are not implemented
+// bool atomic_compare_exchange(int * dest, int * expected_val, int val) restrict(amp);
+// bool atomic_compare_exchange(unsigned int * dest, unsigned int * expected_val, unsigned int val) restrict(amp);
+
+
+/** @{ */
+/**
+ * Atomically read the value stored in dest, apply the binary numerical
+ * operation specific to the function with the read value and val serving as
+ * input operands, and store the result back to the location pointed by dest.
+ *
+ * In terms of sequential semantics, the operation performed by any of the
+ * above function is described by the following piece of pseudo-code:
+ *
+ * *dest = *dest @f$\otimes@f$ val;
+ *
+ * Where the operation denoted by @f$\otimes@f$ is one of: addition
+ * (atomic_fetch_add), subtraction (atomic_fetch_sub), find maximum
+ * (atomic_fetch_max), find minimum (atomic_fetch_min), bit-wise AND
+ * (atomic_fetch_and), bit-wise OR (atomic_fetch_or), bit-wise XOR
+ * (atomic_fetch_xor).
+ *
+ * @param[out] dest An pointer to the location which needs to be atomically
+ *                  modified. The location may reside within a
+ *                  concurrency::array or concurrency::array_view or within a
+ *                  tile_static variable.
+ * @param[in] val The second operand which participates in the calculation of
+ *                the binary operation whose result is stored into the
+ *                location pointed to be dest.
+ * @return These functions return the old value which was previously stored at
+ *         dest, and that was atomically replaced. These functions always
+ *         succeed.
+ */
+// FIXME: following funtions are not implemented:
+// int atomic_fetch_sub(int * dest, int val) restrict(amp);
+// unsigned int atomic_fetch_sub(unsigned int * dest, unsigned int val) restrict(amp);
+//
+// int atomic_fetch_min(int * dest, int val) restrict(amp);
+// unsigned int atomic_fetch_min(unsigned int * dest, unsigned int val) restrict(amp);
+//
+// int atomic_fetch_and(int * dest, int val) restrict(amp);
+// unsigned int atomic_fetch_and(unsigned int * dest, unsigned int val) restrict(amp);
+//
+// int atomic_fetch_or(int * dest, int val) restrict(amp);
+// unsigned int atomic_fetch_or(unsigned int * dest, unsigned int val) restrict(amp);
+//
+// int atomic_fetch_xor(int * dest, int val) restrict(amp);
+// unsigned int atomic_fetch_xor(unsigned int * dest, unsigned int val) restrict(amp);
 #if __KALMAR_ACCELERATOR__ == 1
 extern "C" unsigned atomic_add_unsigned(unsigned *p, unsigned val) restrict(amp);
 extern "C" int atomic_add_int(int *p, int val) restrict(amp);
@@ -5121,14 +5174,45 @@ extern int atomic_fetch_add(int *x, int y) restrict(amp, cpu);
 #if __KALMAR_ACCELERATOR__ == 1
 extern "C" unsigned atomic_max_unsigned(unsigned *p, unsigned val) restrict(amp);
 extern "C" int atomic_max_int(int *p, int val) restrict(amp);
-
 static inline unsigned atomic_fetch_max(unsigned *x, unsigned y) restrict(amp) {
   return atomic_max_unsigned(x, y);
 }
 static inline int atomic_fetch_max(int *x, int y) restrict(amp) {
   return atomic_max_int(x, y);
 }
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+unsigned atomic_max_unsigned(unsigned *p, unsigned val);
+int atomic_max_int(int *p, int val);
+static inline unsigned atomic_fetch_max(unsigned *x, unsigned y) restrict(amp) {
+  return atomic_max_unsigned(x, y);
+}
+static inline int atomic_fetch_max(int *x, int y) restrict(amp) {
+  return atomic_max_int(x, y);
+}
+#else
+extern int atomic_fetch_max(int * dest, int val) restrict(amp, cpu);
+extern unsigned int atomic_fetch_max(unsigned int * dest, unsigned int val) restrict(amp, cpu);
+#endif
 
+/** @} */
+
+/** @{ */
+/**
+ * Atomically increment or decrement the value stored at the location point to
+ * by dest.
+ *
+ * @param[inout] dest An pointer to the location which needs to be atomically
+ *                    modified. The location may reside within a
+ *                    concurrency::array or concurrency::array_view or within a
+ *                    tile_static variable.
+ * @return These functions return the old value which was previously stored at
+ *         dest, and that was atomically replaced. These functions always
+ *         succeed.
+ */
+// FIXME: following funtions are not implemented:
+// int atomic_fetch_dec(int * dest) restrict(amp);
+// unsigned int atomic_fetch_dec(unsigned int * dest) restrict(amp);
+#if __KALMAR_ACCELERATOR__ == 1
 extern "C" unsigned atomic_inc_unsigned(unsigned *p) restrict(amp);
 extern "C" int atomic_inc_int(int *p) restrict(amp);
 static inline unsigned atomic_fetch_inc(unsigned *x) restrict(amp,cpu) {
@@ -5138,16 +5222,6 @@ static inline int atomic_fetch_inc(int *x) restrict(amp,cpu) {
   return atomic_inc_int(x);
 }
 #elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-unsigned atomic_max_unsigned(unsigned *p, unsigned val);
-int atomic_max_int(int *p, int val);
-
-static inline unsigned atomic_fetch_max(unsigned *x, unsigned y) restrict(amp) {
-  return atomic_max_unsigned(x, y);
-}
-static inline int atomic_fetch_max(int *x, int y) restrict(amp) {
-  return atomic_max_int(x, y);
-}
-
 unsigned atomic_inc_unsigned(unsigned *p);
 int atomic_inc_int(int *p);
 static inline unsigned atomic_fetch_inc(unsigned *x) restrict(amp,cpu) {
@@ -5159,11 +5233,9 @@ static inline int atomic_fetch_inc(int *x) restrict(amp,cpu) {
 #else
 extern int atomic_fetch_inc(int * _Dest) restrict(amp, cpu);
 extern unsigned atomic_fetch_inc(unsigned * _Dest) restrict(amp, cpu);
-
-extern int atomic_fetch_max(int * dest, int val) restrict(amp, cpu);
-extern unsigned int atomic_fetch_max(unsigned int * dest, unsigned int val) restrict(amp, cpu);
-
 #endif
+
+/** @} */
 
 // ------------------------------------------------------------------------
 // parallel_for_each
