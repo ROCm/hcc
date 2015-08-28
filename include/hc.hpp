@@ -2174,7 +2174,6 @@ private:
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
     __attribute__((always_inline)) tiled_index(int a0, int a1, int b0, int b1, int c0, int c1, tile_barrier& pb) restrict(amp,cpu)
         : global(a1, a0), local(b1, b0), tile(c1, c0), tile_origin(a1 - b1, a0 - b0), barrier(pb) {}
->>>>>>> [doc] supply documentation to hc::tiled_index
 #endif
 
     __attribute__((annotate("__cxxamp_opencl_index")))

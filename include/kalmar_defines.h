@@ -45,7 +45,6 @@ extern "C" __attribute__((pure)) int64_t amp_get_local_size(unsigned int n) rest
  */
 typedef int am_accelerator_view_t;
 
-
 /**
  * @namespace Kalmar
  * namespace for internal classes of Kalmar compiler / runtime
