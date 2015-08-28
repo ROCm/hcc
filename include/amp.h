@@ -2023,6 +2023,9 @@ public:
     /** @} */
 };
 
+// ------------------------------------------------------------------------
+// utility helper classes for array_view
+// ------------------------------------------------------------------------
 
 template <typename T, int N>
 struct projection_helper
@@ -2140,6 +2143,11 @@ struct projection_helper<const T, 1>
         return *ptr;
     }
 };
+
+// ------------------------------------------------------------------------
+// utility helper classes for array
+// ------------------------------------------------------------------------
+
 template <typename T, int N>
 struct array_projection_helper
 {
@@ -2198,8 +2206,22 @@ struct array_projection_helper<T, 1>
     }
 };
 
-// ------------------------------------------------------------------------
+template <int N>
+const Concurrency::extent<N>& check(const Concurrency::extent<N>& ext)
+{
+#if __KALMAR_ACCELERATOR__ != 1
+    for (int i = 0; i < N; i++)
+    {
+        if(ext[i] <=0)
+            throw runtime_exception("errorMsg_throw", 0);
+    }
+#endif
+    return ext;
+}
 
+// ------------------------------------------------------------------------
+// forward declarations of copy routines used by array / array_view
+// ------------------------------------------------------------------------
 
 template <typename T, int N>
 void copy(const array_view<const T, N>& src, const array_view<T, N>& dest);
@@ -2236,21 +2258,6 @@ void copy(const array_view<T, N> &src, OutputIter destBegin);
 
 template <typename OutputIter, typename T, int N>
 void copy(const array<T, N> &src, OutputIter destBegin);
-
-
-template <int N>
-const Concurrency::extent<N>& check(const Concurrency::extent<N>& ext)
-{
-#if __KALMAR_ACCELERATOR__ != 1
-    for (int i = 0; i < N; i++)
-    {
-        if(ext[i] <=0)
-            throw runtime_exception("errorMsg_throw", 0);
-    }
-#endif
-    return ext;
-}
-
 
 // ------------------------------------------------------------------------
 // array
@@ -4366,50 +4373,6 @@ private:
     int offset;
 };
 
-// pfe interfaces
-template <int N, typename Kernel>
-void parallel_for_each(const accelerator_view&, extent<N> compute_domain, const Kernel& f);
-
-template <int D0, int D1, int D2, typename Kernel>
-void parallel_for_each(const accelerator_view& accl_view,
-                       tiled_extent<D0,D1,D2> compute_domain, const Kernel& f);
-
-template <int D0, int D1, typename Kernel>
-void parallel_for_each(const accelerator_view& accl_view,
-                       tiled_extent<D0,D1> compute_domain, const Kernel& f);
-
-template <int D0, typename Kernel>
-void parallel_for_each(const accelerator_view& accl_view,
-                       tiled_extent<D0> compute_domain, const Kernel& f);
-
-template <int N, typename Kernel>
-void parallel_for_each(extent<N> compute_domain, const Kernel& f){
-    auto que = Kalmar::get_availabe_que(f);
-    const accelerator_view av(que);
-    parallel_for_each(av, compute_domain, f);
-}
-
-template <int D0, int D1, int D2, typename Kernel>
-void parallel_for_each(tiled_extent<D0,D1,D2> compute_domain, const Kernel& f) {
-    auto que = Kalmar::get_availabe_que(f);
-    const accelerator_view av(que);
-    parallel_for_each(av, compute_domain, f);
-}
-
-template <int D0, int D1, typename Kernel>
-void parallel_for_each(tiled_extent<D0,D1> compute_domain, const Kernel& f) {
-    auto que = Kalmar::get_availabe_que(f);
-    const accelerator_view av(que);
-    parallel_for_each(av, compute_domain, f);
-}
-
-template <int D0, typename Kernel>
-void parallel_for_each(tiled_extent<D0> compute_domain, const Kernel& f) {
-    auto que = Kalmar::get_availabe_que(f);
-    const accelerator_view av(que);
-    parallel_for_each(av, compute_domain, f);
-}
-
 // ------------------------------------------------------------------------
 // global functions for extent
 // ------------------------------------------------------------------------
@@ -4520,6 +4483,10 @@ extent<N> operator%(int value, const extent<N>& ext) restrict(amp,cpu) {
 
 /** @} */
 
+// ------------------------------------------------------------------------
+// utility functions for copy
+// ------------------------------------------------------------------------
+
 template<typename T, int N>
 static inline bool is_flat(const array_view<T, N>& av) noexcept {
     return av.extent == av.extent_base && av.index_base == index<N>();
@@ -4624,6 +4591,70 @@ struct copy_bidir<T, N, N>
     }
 };
 
+template <typename Iter, typename T, int N>
+struct do_copy
+{
+    template<template <typename, int> class _amp_container>
+    void operator()(Iter srcBegin, Iter srcEnd, const _amp_container<T, N>& dest) {
+        T* ptr = dest.internal().map_ptr(true, dest.get_extent().size(), dest.get_offset());
+        std::copy(srcBegin, srcEnd, ptr);
+        dest.internal().unmap_ptr(ptr);
+    }
+    template<template <typename, int> class _amp_container>
+    void operator()(const _amp_container<T, N> &src, Iter destBegin) {
+        const T* ptr = src.internal().map_ptr(false, src.get_extent().size(), src.get_offset());
+        std::copy(ptr, ptr + src.get_extent().size(), destBegin);
+        src.internal().unmap_ptr(ptr);
+    }
+};
+
+template <typename Iter, typename T>
+struct do_copy<Iter, T, 1>
+{
+    template<template <typename, int> class _amp_container>
+    void operator()(Iter srcBegin, Iter srcEnd, const _amp_container<T, 1>& dest) {
+        T* ptr = dest.internal().map_ptr(true, dest.get_extent().size(),
+                                         dest.get_offset() + dest.get_index_base()[0]);
+        std::copy(srcBegin, srcEnd, ptr);
+        dest.internal().unmap_ptr(ptr);
+    }
+    template<template <typename, int> class _amp_container>
+    void operator()(const _amp_container<T, 1> &src, Iter destBegin) {
+        const T* ptr = src.internal().map_ptr(false, src.get_extent().size(),
+                                              src.get_offset() + src.get_index_base()[0]);
+        std::copy(ptr, ptr + src.get_extent().size(), destBegin);
+        src.internal().unmap_ptr(ptr);
+    }
+};
+
+template <typename T, int N>
+struct do_copy<T*, T, N>
+{
+    template<template <typename, int> class _amp_container>
+    void operator()(T* srcBegin, T* srcEnd, const _amp_container<T, N>& dest) {
+        dest.internal().write(srcBegin, std::distance(srcBegin, srcEnd), dest.get_offset(), true);
+    }
+    template<template <typename, int> class _amp_container>
+    void operator()(const _amp_container<T, N> &src, T* destBegin) {
+        src.internal().read(destBegin, src.get_extent().size(), src.get_offset());
+    }
+};
+
+template <typename T>
+struct do_copy<T*, T, 1>
+{
+    template<template <typename, int> class _amp_container>
+    void operator()(const T* srcBegin, const T* srcEnd, const _amp_container<T, 1>& dest) {
+        dest.internal().write(srcBegin, std::distance(srcBegin, srcEnd),
+                              dest.get_offset() + dest.get_index_base()[0], true);
+    }
+    template<template <typename, int> class _amp_container>
+    void operator()(const _amp_container<T, 1> &src, T* destBegin) {
+        src.internal().read(destBegin, src.get_extent().size(),
+                            src.get_offset() + src.get_index_base()[0]);
+    }
+};
+
 template <typename T, int N>
 void copy(const array_view<const T, N>& src, const array_view<T, N>& dest) {
     if (is_flat(src)) {
@@ -4657,6 +4688,10 @@ void copy(const array_view<const T, N>& src, const array_view<T, N>& dest) {
         }
     }
 }
+
+// ------------------------------------------------------------------------
+// copy
+// ------------------------------------------------------------------------
 
 template <typename T>
 void copy(const array_view<const T, 1>& src, const array_view<T, 1>& dest) {
@@ -4729,70 +4764,6 @@ void copy(const array<T, N>& src, array<T, N>& dest) {
     src.internal().copy(dest.internal(), 0, 0, 0);
 }
 
-template <typename Iter, typename T, int N>
-struct do_copy
-{
-    template<template <typename, int> class _amp_container>
-    void operator()(Iter srcBegin, Iter srcEnd, const _amp_container<T, N>& dest) {
-        T* ptr = dest.internal().map_ptr(true, dest.get_extent().size(), dest.get_offset());
-        std::copy(srcBegin, srcEnd, ptr);
-        dest.internal().unmap_ptr(ptr);
-    }
-    template<template <typename, int> class _amp_container>
-    void operator()(const _amp_container<T, N> &src, Iter destBegin) {
-        const T* ptr = src.internal().map_ptr(false, src.get_extent().size(), src.get_offset());
-        std::copy(ptr, ptr + src.get_extent().size(), destBegin);
-        src.internal().unmap_ptr(ptr);
-    }
-};
-
-template <typename Iter, typename T>
-struct do_copy<Iter, T, 1>
-{
-    template<template <typename, int> class _amp_container>
-    void operator()(Iter srcBegin, Iter srcEnd, const _amp_container<T, 1>& dest) {
-        T* ptr = dest.internal().map_ptr(true, dest.get_extent().size(),
-                                         dest.get_offset() + dest.get_index_base()[0]);
-        std::copy(srcBegin, srcEnd, ptr);
-        dest.internal().unmap_ptr(ptr);
-    }
-    template<template <typename, int> class _amp_container>
-    void operator()(const _amp_container<T, 1> &src, Iter destBegin) {
-        const T* ptr = src.internal().map_ptr(false, src.get_extent().size(),
-                                              src.get_offset() + src.get_index_base()[0]);
-        std::copy(ptr, ptr + src.get_extent().size(), destBegin);
-        src.internal().unmap_ptr(ptr);
-    }
-};
-
-template <typename T, int N>
-struct do_copy<T*, T, N>
-{
-    template<template <typename, int> class _amp_container>
-    void operator()(T* srcBegin, T* srcEnd, const _amp_container<T, N>& dest) {
-        dest.internal().write(srcBegin, std::distance(srcBegin, srcEnd), dest.get_offset(), true);
-    }
-    template<template <typename, int> class _amp_container>
-    void operator()(const _amp_container<T, N> &src, T* destBegin) {
-        src.internal().read(destBegin, src.get_extent().size(), src.get_offset());
-    }
-};
-
-template <typename T>
-struct do_copy<T*, T, 1>
-{
-    template<template <typename, int> class _amp_container>
-    void operator()(const T* srcBegin, const T* srcEnd, const _amp_container<T, 1>& dest) {
-        dest.internal().write(srcBegin, std::distance(srcBegin, srcEnd),
-                              dest.get_offset() + dest.get_index_base()[0], true);
-    }
-    template<template <typename, int> class _amp_container>
-    void operator()(const _amp_container<T, 1> &src, T* destBegin) {
-        src.internal().read(destBegin, src.get_extent().size(),
-                            src.get_offset() + src.get_index_base()[0]);
-    }
-};
-
 template <typename InputIter, typename T, int N>
 void copy(InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest) {
     if (is_flat(dest))
@@ -4843,12 +4814,19 @@ void copy(const array<T, N> &src, OutputIter destBegin) {
     do_copy<OutputIter, T, N>()(src, destBegin);
 }
 
+// ------------------------------------------------------------------------
+// utility function for copy_async
+// ------------------------------------------------------------------------
+
 template <typename InputIter, typename OutputIter>
 completion_future __amp_copy_async_impl(InputIter& src, OutputIter& dst) {
     std::future<void> fut = std::async([&]() mutable { copy(src, dst); });
     return completion_future(fut.share());
 }
 
+// ------------------------------------------------------------------------
+// copy_async
+// ------------------------------------------------------------------------
 
 template <typename T, int N>
 completion_future copy_async(const array<T, N>& src, array<T, N>& dest) {
@@ -4934,6 +4912,10 @@ completion_future copy_async(const array_view<T, N>& src, OutputIter destBegin) 
     return completion_future(fut.share());
 }
 
+// ------------------------------------------------------------------------
+// atomic functions
+// ------------------------------------------------------------------------
+
 #if __KALMAR_ACCELERATOR__ == 1
 extern "C" unsigned atomic_add_unsigned(unsigned *p, unsigned val) restrict(amp);
 extern "C" int atomic_add_int(int *p, int val) restrict(amp);
@@ -5003,6 +4985,53 @@ extern int atomic_fetch_max(int * dest, int val) restrict(amp, cpu);
 extern unsigned int atomic_fetch_max(unsigned int * dest, unsigned int val) restrict(amp, cpu);
 
 #endif
+
+// ------------------------------------------------------------------------
+// parallel_for_each
+// ------------------------------------------------------------------------
+
+template <int N, typename Kernel>
+void parallel_for_each(const accelerator_view&, extent<N> compute_domain, const Kernel& f);
+
+template <int D0, int D1, int D2, typename Kernel>
+void parallel_for_each(const accelerator_view& accl_view,
+                       tiled_extent<D0,D1,D2> compute_domain, const Kernel& f);
+
+template <int D0, int D1, typename Kernel>
+void parallel_for_each(const accelerator_view& accl_view,
+                       tiled_extent<D0,D1> compute_domain, const Kernel& f);
+
+template <int D0, typename Kernel>
+void parallel_for_each(const accelerator_view& accl_view,
+                       tiled_extent<D0> compute_domain, const Kernel& f);
+
+template <int N, typename Kernel>
+void parallel_for_each(extent<N> compute_domain, const Kernel& f){
+    auto que = Kalmar::get_availabe_que(f);
+    const accelerator_view av(que);
+    parallel_for_each(av, compute_domain, f);
+}
+
+template <int D0, int D1, int D2, typename Kernel>
+void parallel_for_each(tiled_extent<D0,D1,D2> compute_domain, const Kernel& f) {
+    auto que = Kalmar::get_availabe_que(f);
+    const accelerator_view av(que);
+    parallel_for_each(av, compute_domain, f);
+}
+
+template <int D0, int D1, typename Kernel>
+void parallel_for_each(tiled_extent<D0,D1> compute_domain, const Kernel& f) {
+    auto que = Kalmar::get_availabe_que(f);
+    const accelerator_view av(que);
+    parallel_for_each(av, compute_domain, f);
+}
+
+template <int D0, typename Kernel>
+void parallel_for_each(tiled_extent<D0> compute_domain, const Kernel& f) {
+    auto que = Kalmar::get_availabe_que(f);
+    const accelerator_view av(que);
+    parallel_for_each(av, compute_domain, f);
+}
 
 template <int N, typename Kernel, typename _Tp>
 struct pfe_helper
