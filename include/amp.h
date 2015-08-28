@@ -3941,6 +3941,7 @@ public:
      */
     array_view(const array_view<nc_T, N>& other) restrict(amp,cpu)
         : cache(other.cache), extent(other.extent), extent_base(other.extent_base), index_base(other.index_base), offset(other.offset) {}
+
     /**
      * Access the extent that defines the shape of this array_view.
      */
@@ -3967,12 +3968,12 @@ public:
      * @return Returns *this.
      */
     array_view& operator=(const array_view<T,N>& other) restrict(amp,cpu) {
-      cache = other.cache;
-      extent = other.extent;
-      index_base = other.index_base;
-      extent_base = other.extent_base;
-      offset = other.offset;
-      return *this;
+        cache = other.cache;
+        extent = other.extent;
+        index_base = other.index_base;
+        extent_base = other.extent_base;
+        offset = other.offset;
+        return *this;
     }
 
     array_view& operator=(const array_view& other) restrict(amp,cpu) {
