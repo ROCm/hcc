@@ -4816,7 +4816,7 @@ void copy(const array<T, N> &src, OutputIter destBegin) {
 }
 
 // ------------------------------------------------------------------------
-// utility function for copy_async_
+// utility function for copy_async
 // ------------------------------------------------------------------------
 
 template <typename InputIter, typename OutputIter>
