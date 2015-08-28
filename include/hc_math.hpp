@@ -7,49 +7,49 @@
 
 #define HC_MATH_WRAPPER_1(function, arg1) \
 template<typename T> \
-inline T function(T arg1) __attribute((hc,cpu)) { \
+inline T function(T arg1) __attribute__((hc,cpu)) { \
   return hc::precise_math::function(arg1); \
 }
 
 #define HC_MATH_WRAPPER_2(function, arg1, arg2) \
 template<typename T> \
-inline T function(T arg1, T arg2) __attribute((hc,cpu)) { \
+inline T function(T arg1, T arg2) __attribute__((hc,cpu)) { \
   return hc::precise_math::function(arg1, arg2); \
 }
 
 #define HC_MATH_ALIAS_2(alias, function, arg1, arg2) \
 template<typename T> \
-inline T alias(T arg1, T arg2) __attribute((hc,cpu)) { \
+inline T alias(T arg1, T arg2) __attribute__((hc,cpu)) { \
   return hc::precise_math::function(arg1, arg2); \
 }
 
 #define HC_MATH_WRAPPER_3(function, arg1, arg2, arg3) \
 template<typename T> \
-inline T function(T arg1, T arg2, T arg3) __attribute((hc,cpu)) { \
+inline T function(T arg1, T arg2, T arg3) __attribute__((hc,cpu)) { \
   return hc::precise_math::function(arg1, arg2, arg3); \
 }
 
 #define HC_MATH_WRAPPER_TQ(function, arg1) \
 template<typename T, typename Q> \
-inline T function(Q arg1) __attribute((hc,cpu)) { \
+inline T function(Q arg1) __attribute__((hc,cpu)) { \
   return hc::precise_math::function(arg1); \
 }
 
 #define HC_MATH_WRAPPER_TTQ(function, arg1, arg2) \
 template<typename T, typename Q> \
-inline T function(T arg1, Q arg2) __attribute((hc,cpu)) { \
+inline T function(T arg1, Q arg2) __attribute__((hc,cpu)) { \
   return hc::precise_math::function(arg1, arg2); \
 }
 
 #define HC_MATH_WRAPPER_TTTQ(function, arg1, arg2, arg3) \
 template<typename T, typename Q> \
-inline T function(T arg1, T arg2, Q arg3) __attribute((hc,cpu)) { \
+inline T function(T arg1, T arg2, Q arg3) __attribute__((hc,cpu)) { \
   return hc::precise_math::function(arg1, arg2, arg3); \
 }
 
 #define HC_MATH_WRAPPER_VTQQ(function, arg1, arg2, arg3) \
 template<typename T, typename Q> \
-inline void function(T arg1, Q arg2, Q arg3) __attribute((hc,cpu)) { \
+inline void function(T arg1, Q arg2, Q arg3) __attribute__((hc,cpu)) { \
   hc::precise_math::function(arg1, arg2, arg3); \
 }
 
@@ -57,49 +57,49 @@ inline void function(T arg1, Q arg2, Q arg3) __attribute((hc,cpu)) { \
 
 #define HC_MATH_WRAPPER_1(function, arg1) \
 template<typename T> \
-inline T function(T arg1) __attribute((hc,cpu)) { \
+inline T function(T arg1) __attribute__((hc,cpu)) { \
   return ::function(arg1); \
 }
 
 #define HC_MATH_WRAPPER_2(function, arg1, arg2) \
 template<typename T> \
-inline T function(T arg1, T arg2) __attribute((hc,cpu)) { \
+inline T function(T arg1, T arg2) __attribute__((hc,cpu)) { \
   return ::function(arg1, arg2); \
 }
 
 #define HC_MATH_ALIAS_2(alias, function, arg1, arg2) \
 template<typename T> \
-inline T alias(T arg1, T arg2) __attribute((hc,cpu)) { \
+inline T alias(T arg1, T arg2) __attribute__((hc,cpu)) { \
   return ::function(arg1, arg2); \
 }
 
 #define HC_MATH_WRAPPER_3(function, arg1, arg2, arg3) \
 template<typename T> \
-inline T function(T arg1, T arg2, T arg3) __attribute((hc,cpu)) { \
+inline T function(T arg1, T arg2, T arg3) __attribute__((hc,cpu)) { \
   return ::function(arg1, arg2, arg3); \
 }
 
 #define HC_MATH_WRAPPER_TQ(function, arg1) \
 template<typename T, typename Q> \
-inline T function(Q arg1) __attribute((hc,cpu)) { \
+inline T function(Q arg1) __attribute__((hc,cpu)) { \
   return ::function(arg1); \
 }
 
 #define HC_MATH_WRAPPER_TTQ(function, arg1, arg2) \
 template<typename T, typename Q> \
-inline T function(T arg1, Q arg2) __attribute((hc,cpu)) { \
+inline T function(T arg1, Q arg2) __attribute__((hc,cpu)) { \
   return ::function(arg1, arg2); \
 }
 
 #define HC_MATH_WRAPPER_TTTQ(function, arg1, arg2, arg3) \
 template<typename T, typename Q> \
-inline T function(T arg1, T arg2, Q arg3) __attribute((hc,cpu)) { \
+inline T function(T arg1, T arg2, Q arg3) __attribute__((hc,cpu)) { \
   return ::function(arg1, arg2, arg3); \
 }
 
 #define HC_MATH_WRAPPER_VTQQ(function, arg1, arg2, arg3) \
 template<typename T, typename Q> \
-inline void function(T arg1, Q arg2, Q arg3) __attribute((hc,cpu)) { \
+inline void function(T arg1, Q arg2, Q arg3) __attribute__((hc,cpu)) { \
   ::function(arg1, arg2, arg3); \
 }
 
