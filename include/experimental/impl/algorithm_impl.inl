@@ -279,6 +279,33 @@ bool lexicographical_compare_impl(InputIt1 first1, InputIt1 last1,
   return ans;
 }
 
+template <typename InputIt1, typename InputIt2, typename BinaryPredicate>
+bool equal_impl(InputIt1 first1, InputIt1 last1,
+                InputIt2 first2,
+                BinaryPredicate p,
+                std::input_iterator_tag) {
+  return std::equal(first1, last1, first2, p);
+}
+
+
+template <typename InputIt1, typename InputIt2, typename BinaryPredicate>
+bool equal_impl(InputIt1 first1, InputIt1 last1,
+                InputIt2 first2,
+                BinaryPredicate p,
+                std::random_access_iterator_tag) {
+  const size_t N = static_cast<size_t>(std::distance(first1, last1));
+  if (N <= details::PARALLELIZE_THRESHOLD) {
+    return equal_impl(first1, last1, first2, p, std::input_iterator_tag{});
+  }
+
+  std::unique_ptr<bool> tmp(new bool [N]);
+
+  // implement equal by transform & all_of
+  transform(first1, last1, first2, tmp.get(), p);
+  return all_of(tmp.get(), tmp.get() + N, [](bool &v){ return v; });
+}
+
+
 } // namespace details
 
 } // inline namespace v1

@@ -389,6 +389,40 @@ lexicographical_compare(ExecutionPolicy&& exec,
   }
 }
 
+// equal
+template<typename ExecutionPolicy,
+         typename InputIt1, typename InputIt2,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIt1>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIt2>> = nullptr>
+bool
+equal(ExecutionPolicy&& exec,
+      InputIt1 first1, InputIt1 last1,
+      InputIt2 first2) {
+  return equal(exec, first1, last1, first2,
+           std::equal_to<typename std::iterator_traits<InputIt1>::value_type>());
+}
+
+template<typename ExecutionPolicy,
+         typename InputIt1, typename InputIt2,
+         typename BinaryPredicate,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIt1>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIt2>> = nullptr>
+bool
+equal(ExecutionPolicy&& exec,
+      InputIt1 first1, InputIt1 last1,
+      InputIt2 first2,
+      BinaryPredicate p) {
+  if (utils::isParallel(exec)) {
+    return details::equal_impl(first1, last1, first2, p,
+             typename std::iterator_traits<InputIt1>::iterator_category());
+  } else {
+    return details::equal_impl(first1, last1, first2, p,
+             std::input_iterator_tag{});
+  }
+}
+
 } // inline namespace v1
 } // namespace parallel
 } // namespace experimental
