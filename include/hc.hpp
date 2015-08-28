@@ -652,8 +652,6 @@ private:
     Kalmar::KalmarDevice* pDev;
 };
 
-inline accelerator accelerator_view::get_accelerator() const { return pQueue->getDev(); }
-
 // ------------------------------------------------------------------------
 // completion_future
 // ------------------------------------------------------------------------
