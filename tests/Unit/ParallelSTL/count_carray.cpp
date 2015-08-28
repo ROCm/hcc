@@ -14,39 +14,38 @@
 #include <algorithm>
 #include <iterator>
 
-#define ROW (8)
-#define COL (12)
-#define TEST_SIZE (ROW * COL)
-
 #define _DEBUG (0)
+#include "test_base.h"
 
-template<typename _Tp, size_t SIZE>
-bool test() {
+
+template<typename T, size_t SIZE>
+bool test(void) {
+
+  using namespace std::experimental::parallel;
+
   bool ret = true;
+  bool eq = true;
+  ret &= run<T, SIZE>([&eq](T (&input)[SIZE], T (&output1)[SIZE],
+                                              T (&output2)[SIZE]) {
+    auto expected = std::count(std::begin(input), std::end(input), 42);
+    auto result   = count(     std::begin(input), std::end(input), 42);
 
-  _Tp table[SIZE] { 0 };
+    eq = EQ(expected, result);
+  }, false);
+  ret &= eq;
 
-  // initialize test data
-  std::iota(std::begin(table), std::end(table), 0);
 
-  // launch kernel with parallel STL count
-  auto expected = std::count(std::begin(table), std::end(table), 377);
 
-  ret &= (expected == std::experimental::parallel::count(std::begin(table), std::end(table), 377));
+  auto pred = [](const T& v) { return static_cast<int>(v) % 3 == 0; };
 
-  auto pred = [](const _Tp& v) { return static_cast<int>(v) % 3 == 0; };
+  ret &= run<T, SIZE>([&eq, pred](T (&input)[SIZE], T (&output1)[SIZE],
+                                                    T (&output2)[SIZE]) {
+    auto expected = std::count_if(std::begin(input), std::end(input), pred);
+    auto result   = count_if(     std::begin(input), std::end(input), pred);
 
-  expected = std::count_if(std::begin(table), std::end(table), pred);
-  ret &= (expected == std::experimental::parallel::count_if(std::begin(table), std::end(table), pred));
-
-#if _DEBUG 
-  for (int i = 0; i < ROW; ++i) {
-    for (int j = 0; j < COL; ++j) {
-      std::cout << std::setw(5) << table[i * COL + j];
-    }
-    std::cout << "\n";
-  } 
-#endif
+    eq = EQ(expected, result);
+  }, false);
+  ret &= eq;
 
   return ret;
 }

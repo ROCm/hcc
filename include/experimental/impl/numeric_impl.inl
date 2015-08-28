@@ -15,10 +15,21 @@ template<typename InputIt, typename UnaryPredicate,
 typename std::iterator_traits<InputIt>::difference_type
 count_if(InputIt first, InputIt last, UnaryPredicate p) {
   typedef typename std::iterator_traits<InputIt>::value_type T;
+  typedef typename std::iterator_traits<InputIt>::difference_type DT;
 
-  return reduce(first, last, 0, [&](const T& a, const T& b) {
-    return p(b) ? (a + 1) : a;
-  });
+  const size_t N = static_cast<size_t>(std::distance(first, last));
+  if (N <= details::PARALLELIZE_THRESHOLD) {
+    return std::count_if(first, last, p);
+  }
+
+  std::unique_ptr<DT> tmp(new DT [N]);
+
+  // implement count_if by transform & reduce
+  // transform to a boolean array and sum them up
+  details::transform_impl(first, last, tmp.get(),
+                          [p](const T &v) -> DT { return DT(p(v)); },
+                          std::input_iterator_tag{});
+  return reduce(tmp.get(), tmp.get() + N, DT{}, std::plus<DT>());
 }
 
 //
@@ -28,9 +39,8 @@ template<typename InputIt, typename T,
          utils::EnableIf<utils::isInputIt<InputIt>> = nullptr>
 typename std::iterator_traits<InputIt>::difference_type
 count(InputIt first, InputIt last, const T& value) {
-  return reduce(first, last, 0, [&](const T& a, const T& b) {
-    return (b == value) ? (a + 1) : a;
-  });
+  return count_if(first, last,
+                  [&value](const T &v) -> bool { return v == value; });
 }
 
 
