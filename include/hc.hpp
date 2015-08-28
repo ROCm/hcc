@@ -2421,396 +2421,873 @@ void copy(const array<T, N> &src, OutputIter destBegin);
 // array
 // ------------------------------------------------------------------------
 
+/**
+ * Represents an N-dimensional region of memory (with type T) located on an
+ * accelerator.
+ *
+ * @tparam T The element type of this array
+ * @tparam N The dimensionality of the array, defaults to 1 if elided.
+ */
 template <typename T, int N = 1>
 class array {
-  static_assert(!std::is_const<T>::value, "array<const T> is not supported");
-  static_assert(0 == (sizeof(T) % sizeof(int)), "only value types whose size is a multiple of the size of an integer are allowed in array");
+    static_assert(!std::is_const<T>::value, "array<const T> is not supported");
+    static_assert(0 == (sizeof(T) % sizeof(int)), "only value types whose size is a multiple of the size of an integer are allowed in array");
 public:
 #if __KALMAR_ACCELERATOR__ == 1
-  typedef Kalmar::_data<T> acc_buffer_t;
+    typedef Kalmar::_data<T> acc_buffer_t;
 #else
-  typedef Kalmar::_data_host<T> acc_buffer_t;
+    typedef Kalmar::_data_host<T> acc_buffer_t;
 #endif
 
-  static const int rank = N;
-  typedef T value_type;
-  array() = delete;
+    /**
+     * The rank of this array.
+     */
+    static const int rank = N;
 
-  array(const extent<N>& ext, accelerator_view av, accelerator_view associated_av)
-#if __KALMAR_ACCELERATOR__ == 1
-      : m_device(ext.size()), extent(ext) {}
-#else
-      : m_device(av.pQueue, associated_av.pQueue, check(ext).size(), access_type_auto), extent(ext) {}
-#endif
-  array(int e0, accelerator_view av, accelerator_view associated_av)
-      : array(hc::extent<N>(e0), av, associated_av) {}
-  array(int e0, int e1, accelerator_view av, accelerator_view associated_av)
-      : array(hc::extent<N>(e0, e1), av, associated_av) {}
-  array(int e0, int e1, int e2, accelerator_view av, accelerator_view associated_av)
-      : array(hc::extent<N>(e0, e1, e2), av, associated_av) {}
+    /**
+     * The element type of this array.
+     */
+    typedef T value_type;
 
-  array(const extent<N>& ext, accelerator_view av,
-        access_type cpu_access_type = access_type_auto)
-#if __KALMAR_ACCELERATOR__ == 1
-      : m_device(ext.size()), extent(ext) {}
-#else
-      : m_device(av.pQueue, av.pQueue, check(ext).size(), cpu_access_type), extent(ext) {}
-#endif
-  array(int e0, accelerator_view av,
-        access_type cpu_access_type = access_type_auto)
-      : array(hc::extent<N>(e0), av, cpu_access_type) {}
-  array(int e0, int e1, accelerator_view av,
-        access_type cpu_access_type = access_type_auto)
-      : array(hc::extent<N>(e0, e1), av, cpu_access_type) {}
-  array(int e0, int e1, int e2, accelerator_view av,
-        access_type cpu_access_type = access_type_auto)
-      : array(hc::extent<N>(e0, e1, e2), av, cpu_access_type) {}
-
-
-  explicit array(const extent<N>& ext) :
-      array(ext, accelerator(L"default").get_default_view()) {}
-  explicit array(int e0) : array(hc::extent<N>(e0)) { static_assert(N == 1, "illegal"); }
-  explicit array(int e0, int e1) : array(hc::extent<N>(e0, e1)) {}
-  explicit array(int e0, int e1, int e2) : array(hc::extent<N>(e0, e1, e2)) {}
-
-  template <typename InputIter>
-      array(const extent<N>& ext, InputIter srcBegin,
-            accelerator_view av, accelerator_view associated_av)
-      : array(ext, av, associated_av) { copy(srcBegin, *this); }
-  template <typename InputIter>
-      array(const extent<N>& ext, InputIter srcBegin, InputIter srcEnd,
-            accelerator_view av, accelerator_view associated_av)
-      : array(ext, av, associated_av) {
-          if(ext.size() < std::distance(srcBegin, srcEnd))
-              throw runtime_exception("errorMsg_throw", 0);
-          copy(srcBegin, srcEnd, *this);
-      }
-  template <typename InputIter>
-      array(int e0, InputIter srcBegin,
-            accelerator_view av, accelerator_view associated_av)
-      : array(extent<N>(e0), srcBegin, av, associated_av) {}
-  template <typename InputIter>
-      array(int e0, InputIter srcBegin, InputIter srcEnd,
-            accelerator_view av, accelerator_view associated_av)
-      : array(extent<N>(e0), srcBegin, srcEnd, av, associated_av) {}
-  template <typename InputIter>
-      array(int e0, int e1, InputIter srcBegin,
-            accelerator_view av, accelerator_view associated_av)
-      : array(hc::extent<N>(e0, e1), srcBegin, av, associated_av) {}
-  template <typename InputIter>
-      array(int e0, int e1, InputIter srcBegin, InputIter srcEnd,
-            accelerator_view av, accelerator_view associated_av)
-      : array(hc::extent<N>(e0, e1), srcBegin, srcEnd, av, associated_av) {}
-  template <typename InputIter>
-      array(int e0, int e1, int e2, InputIter srcBegin,
-            accelerator_view av, accelerator_view associated_av)
-      : array(hc::extent<N>(e0, e1, e2), srcBegin, av, associated_av) {}
-  template <typename InputIter>
-      array(int e0, int e1, int e2, InputIter srcBegin, InputIter srcEnd,
-            accelerator_view av, accelerator_view associated_av)
-      : array(hc::extent<N>(e0, e1, e2), srcBegin, srcEnd, av, associated_av) {}
-
-  template <typename InputIter>
-      array(const extent<N>& ext, InputIter srcBegin, accelerator_view av,
-            access_type cpu_access_type = access_type_auto)
-      : array(ext, av, cpu_access_type) { copy(srcBegin, *this); }
-  template <typename InputIter>
-      array(const extent<N>& ext, InputIter srcBegin, InputIter srcEnd,
-            accelerator_view av, access_type cpu_access_type = access_type_auto)
-      : array(ext, av, cpu_access_type) {
-          if(ext.size() < std::distance(srcBegin, srcEnd))
-              throw runtime_exception("errorMsg_throw", 0);
-          copy(srcBegin, srcEnd, *this);
-      }
-  template <typename InputIter>
-      array(int e0, InputIter srcBegin, accelerator_view av,
-            access_type cpu_access_type = access_type_auto)
-      : array(extent<N>(e0), srcBegin, av, cpu_access_type) {}
-  template <typename InputIter>
-      array(int e0, InputIter srcBegin, InputIter srcEnd,
-            accelerator_view av, access_type cpu_access_type = access_type_auto)
-      : array(extent<N>(e0), srcBegin, srcEnd, av, cpu_access_type) {}
-  template <typename InputIter>
-      array(int e0, int e1, InputIter srcBegin, accelerator_view av,
-            access_type cpu_access_type = access_type_auto)
-      : array(hc::extent<N>(e0, e1), srcBegin, av, cpu_access_type) {}
-  template <typename InputIter>
-      array(int e0, int e1, InputIter srcBegin, InputIter srcEnd,
-            accelerator_view av, access_type cpu_access_type = access_type_auto)
-      : array(hc::extent<N>(e0, e1), srcBegin, srcEnd, av, cpu_access_type) {}
-  template <typename InputIter>
-      array(int e0, int e1, int e2, InputIter srcBegin, accelerator_view av,
-            access_type cpu_access_type = access_type_auto)
-      : array(hc::extent<N>(e0, e1, e2), srcBegin, av, cpu_access_type) {}
-  template <typename InputIter>
-      array(int e0, int e1, int e2, InputIter srcBegin, InputIter srcEnd,
-            accelerator_view av, access_type cpu_access_type = access_type_auto)
-      : array(hc::extent<N>(e0, e1, e2), srcBegin, srcEnd, av, cpu_access_type) {}
-
-  template <typename InputIter>
-      array(const extent<N>& ext, InputIter srcBegin)
-      : array(ext, srcBegin, accelerator(L"default").get_default_view()) {}
-  template <typename InputIter>
-      array(const extent<N>& ext, InputIter srcBegin, InputIter srcEnd)
-      : array(ext, srcBegin, srcEnd, accelerator(L"default").get_default_view()) {}
-  template <typename InputIter>
-      array(int e0, InputIter srcBegin)
-      : array(extent<N>(e0), srcBegin) {}
-  template <typename InputIter>
-      array(int e0, InputIter srcBegin, InputIter srcEnd)
-      : array(extent<N>(e0), srcBegin, srcEnd) {}
-  template <typename InputIter>
-      array(int e0, int e1, InputIter srcBegin)
-      : array(hc::extent<N>(e0, e1), srcBegin) {}
-  template <typename InputIter>
-      array(int e0, int e1, InputIter srcBegin, InputIter srcEnd)
-      : array(hc::extent<N>(e0, e1), srcBegin, srcEnd) {}
-  template <typename InputIter>
-      array(int e0, int e1, int e2, InputIter srcBegin)
-      : array(hc::extent<N>(e0, e1, e2), srcBegin) {}
-  template <typename InputIter>
-      array(int e0, int e1, int e2, InputIter srcBegin, InputIter srcEnd)
-      : array(hc::extent<N>(e0, e1, e2), srcBegin, srcEnd) {}
-
-
-  explicit array(const array_view<const T, N>& src)
-      : array(src.get_extent(), accelerator(L"default").get_default_view())
-  { copy(src, *this); }
-
-  array(const array_view<const T, N>& src, accelerator_view av,
-        access_type cpu_access_type = access_type_auto)
-      : array(src.get_extent(), av, cpu_access_type) { copy(src, *this); }
-  array(const array_view<const T, N>& src, accelerator_view av,
-        accelerator_view associated_av) : array(src.get_extent(), av, associated_av)
-    { copy(src, *this); }
-
-
-  array(const array& other) : array(other.get_extent(), other.get_accelerator_view())
+    /**
+     * There is no default constructor for array<T,N>.
+     */
+    array() = delete;
+ 
+    /**
+     * Copy constructor. Constructs a new array<T,N> from the supplied argument
+     * other. The new array is located on the same accelerator_view as the
+     * source array. A deep copy is performed.
+     *
+     * @param[in] other An object of type array<T,N> from which to initialize
+     *                  this new array.
+     */
+    array(const array& other)
+        : array(other.get_extent(), other.get_accelerator_view())
     { copy(other, *this); }
-  array(array&& other) : m_device(other.m_device), extent(other.extent)
+
+    /**
+     * Move constructor. Constructs a new array<T,N> by moving from the
+     * supplied argument other.
+     *
+     * @param[in] other An object of type array<T,N> from which to initialize
+     *                  this new array.
+     */
+    array(array&& other)
+        : m_device(other.m_device), extent(other.extent)
     { other.m_device.reset(); }
 
-  array& operator=(const array& other) {
-    if(this != &other) {
-        array arr(other);
+    /**
+     * Constructs a new array with the supplied extent, located on the default
+     * view of the default accelerator. If any components of the extent are
+     * non-positive, an exception will be thrown.
+     *
+     * @param[in] ext The extent in each dimension of this array.
+     */
+    explicit array(const extent<N>& ext)
+        : array(ext, accelerator(L"default").get_default_view()) {}
+
+    /** @{ */
+    /**
+     * Equivalent to construction using "array(extent<N>(e0 [, e1 [, e2 ]]))".
+     *
+     * @param[in] e0,e1,e2 The component values that will form the extent of
+     *                     this array.
+     */
+    explicit array(int e0)
+        : array(hc::extent<N>(e0)) { static_assert(N == 1, "illegal"); }
+    explicit array(int e0, int e1)
+        : array(hc::extent<N>(e0, e1)) {}
+    explicit array(int e0, int e1, int e2)
+        : array(hc::extent<N>(e0, e1, e2)) {}
+
+    /** @} */
+
+    /** @{ */
+    /**
+     * Constructs a new array with the supplied extent, located on the default
+     * accelerator, initialized with the contents of a source container
+     * specified by a beginning and optional ending iterator. The source data
+     * is copied by value into this array as if by calling "copy()".
+     *
+     * If the number of available container elements is less than
+     * this->extent.size(), undefined behavior results.
+     *
+     * @param[in] ext The extent in each dimension of this array.
+     * @param[in] srcBegin A beginning iterator into the source container.
+     * @param[in] srcEnd An ending iterator into the source container.
+     */
+    template <typename InputIter>
+        array(const extent<N>& ext, InputIter srcBegin)
+            : array(ext, srcBegin, accelerator(L"default").get_default_view()) {}
+    template <typename InputIter>
+        array(const extent<N>& ext, InputIter srcBegin, InputIter srcEnd)
+            : array(ext, srcBegin, srcEnd, accelerator(L"default").get_default_view()) {}
+
+    /** @} */
+
+    /** @{ */
+    /**
+     * Equivalent to construction using
+     * "array(extent<N>(e0 [, e1 [, e2 ]]), src)".
+     *
+     * @param[in] e0,e1,e2 The component values that will form the extent of
+     *                     this array.
+     * @param[in] srcBegin A beginning iterator into the source container. 
+     * @param[in] srcEnd An ending iterator into the source container.
+     */
+    template <typename InputIter>
+        array(int e0, InputIter srcBegin)
+            : array(extent<N>(e0), srcBegin) {}
+    template <typename InputIter>
+        array(int e0, InputIter srcBegin, InputIter srcEnd)
+            : array(extent<N>(e0), srcBegin, srcEnd) {}
+    template <typename InputIter>
+        array(int e0, int e1, InputIter srcBegin)
+            : array(hc::extent<N>(e0, e1), srcBegin) {}
+    template <typename InputIter>
+        array(int e0, int e1, InputIter srcBegin, InputIter srcEnd)
+            : array(hc::extent<N>(e0, e1), srcBegin, srcEnd) {}
+    template <typename InputIter>
+        array(int e0, int e1, int e2, InputIter srcBegin)
+            : array(hc::extent<N>(e0, e1, e2), srcBegin) {}
+    template <typename InputIter>
+        array(int e0, int e1, int e2, InputIter srcBegin, InputIter srcEnd)
+            : array(hc::extent<N>(e0, e1, e2), srcBegin, srcEnd) {}
+
+    /** @} */
+
+    /**
+     * Constructs a new array, located on the default view of the default
+     * accelerator, initialized with the contents of the array_view "src". The
+     * extent of this array is taken from the extent of the source array_view.
+     * The "src" is copied by value into this array as if by calling
+     * "copy(src, *this)".
+     *
+     * @param[in] src An array_view object from which to copy the data into
+     *                this array (and also to determine the extent of this
+     *                array).
+     */
+    explicit array(const array_view<const T, N>& src)
+        : array(src.get_extent(), accelerator(L"default").get_default_view())
+    { copy(src, *this); }
+
+    /**
+     * Constructs a new array with the supplied extent, located on the
+     * accelerator bound to the accelerator_view "av".
+     *
+     * Users can optionally specify the type of CPU access desired for "this"
+     * array thus requesting creation of an array that is accessible both on
+     * the specified accelerator_view "av" as well as the CPU (with the
+     * specified CPU access_type). If a value other than access_type_auto or
+     * access_type_none is specified for the cpu_access_type parameter and the
+     * accelerator corresponding to the accelerator_view "av" does not support
+     * cpu_shared_memory, a runtime_exception is thrown. The cpu_access_type
+     * parameter has a default value of access_type_auto which leaves it up to
+     * the implementation to decide what type of allowed CPU access should the
+     * array be created with. The actual CPU access_type allowed for the
+     * created array can be queried using the get_cpu_access_type member
+     * method.
+     *
+     * @param[in] ext The extent in each dimension of this array.
+     * @param[in] av An accelerator_view object which specifies the location of
+     *               this array.
+     * @param[in] access_type The type of CPU access desired for this array.
+     */
+    array(const extent<N>& ext, accelerator_view av, access_type cpu_access_type = access_type_auto)
+#if __KALMAR_ACCELERATOR__ == 1
+        : m_device(ext.size()), extent(ext) {}
+#else
+        : m_device(av.pQueue, av.pQueue, check(ext).size(), cpu_access_type), extent(ext) {}
+#endif
+
+    /** @{ */
+    /**
+     * Equivalent to construction using
+     * "array(extent<N>(e0 [, e1 [, e2 ]]), av, cpu_access_type)".   
+     *
+     * @param[in] e0,e1,e2 The component values that will form the extent of
+     *                     this array.
+     * @param[in] av An accelerator_view object which specifies the location of
+     *               this array.
+     * @param[in] access_type The type of CPU access desired for this array.
+     */
+    array(int e0, accelerator_view av, access_type cpu_access_type = access_type_auto)
+        : array(hc::extent<N>(e0), av, cpu_access_type) {}
+    array(int e0, int e1, accelerator_view av, access_type cpu_access_type = access_type_auto)
+        : array(hc::extent<N>(e0, e1), av, cpu_access_type) {}
+    array(int e0, int e1, int e2, accelerator_view av, access_type cpu_access_type = access_type_auto)
+        : array(hc::extent<N>(e0, e1, e2), av, cpu_access_type) {}
+
+    /** @} */
+
+    /**
+     * Constructs a new array with the supplied extent, located on the
+     * accelerator bound to the accelerator_view "av", initialized with the
+     * contents of the source container specified by a beginning and optional
+     * ending iterator. The data is copied by value into this array as if by
+     * calling "copy()".
+     *
+     * Users can optionally specify the type of CPU access desired for "this"
+     * array thus requesting creation of an array that is accessible both on
+     * the specified accelerator_view "av" as well as the CPU (with the
+     * specified CPU access_type). If a value other than access_type_auto or
+     * access_type_none is specified for the cpu_access_type parameter and the
+     * accelerator corresponding to the accelerator_view "av" does not support
+     * cpu_shared_memory, a runtime_exception is thrown. The cpu_access_type
+     * parameter has a default value of access_type_auto which leaves it upto
+     * the implementation to decide what type of allowed CPU access should the
+     * array be created with. The actual CPU access_type allowed for the
+     * created array can be queried using the get_cpu_access_type member
+     * method.
+     *
+     * @param[in] ext The extent in each dimension of this array.
+     * @param[in] srcBegin A beginning iterator into the source container.
+     * @param[in] srcEnd An ending iterator into the source container.
+     * @param[in] av An accelerator_view object which specifies the home
+     *               location of this array.
+     * @param[in] access_type The type of CPU access desired for this array.
+     */
+    template <typename InputIter>
+        array(const extent<N>& ext, InputIter srcBegin, accelerator_view av,
+              access_type cpu_access_type = access_type_auto)
+        : array(ext, av, cpu_access_type) { copy(srcBegin, *this); }
+    template <typename InputIter>
+        array(const extent<N>& ext, InputIter srcBegin, InputIter srcEnd,
+              accelerator_view av, access_type cpu_access_type = access_type_auto)
+        : array(ext, av, cpu_access_type) {
+            if (ext.size() < std::distance(srcBegin, srcEnd))
+                throw runtime_exception("errorMsg_throw", 0);
+            copy(srcBegin, srcEnd, *this);
+        }
+
+    /** @} */
+
+    /**
+     * Constructs a new array initialized with the contents of the array_view
+     * "src". The extent of this array is taken from the extent of the source
+     * array_view. The "src" is copied by value into this array as if by
+     * calling "copy(src, *this)". The new array is located on the accelerator
+     * bound to the accelerator_view "av".
+     *
+     * Users can optionally specify the type of CPU access desired for "this"
+     * array thus requesting creation of an array that is accessible both on
+     * the specified accelerator_view "av" as well as the CPU (with the 
+     * specified CPU access_type). If a value other than access_type_auto or
+     * access_type_none is specified for the cpu_access_type parameter and the
+     * accelerator corresponding to the accelerator_view “av” does not support
+     * cpu_shared_memory, a runtime_exception is thrown. The cpu_access_type
+     * parameter has a default value of access_type_auto which leaves it upto
+     * the implementation to decide what type of allowed CPU access should the
+     * array be created with. The actual CPU access_type allowed for the
+     * created array can be queried using the get_cpu_access_type member
+     * method.
+     *
+     * @param[in] src An array_view object from which to copy the data into
+     *                this array (and also to determine the extent of this array).
+     * @param[in] av An accelerator_view object which specifies the home
+     *               location of this array.
+     * @param[in] access_type The type of CPU access desired for this array.
+     */
+    array(const array_view<const T, N>& src, accelerator_view av, access_type cpu_access_type = access_type_auto)
+        : array(src.get_extent(), av, cpu_access_type) { copy(src, *this); }
+
+    /** @{ */
+    /**
+     * Equivalent to construction using
+     * "array(extent<N>(e0 [, e1 [, e2 ]]), srcBegin [, srcEnd], av, cpu_access_type)".
+     *
+     * @param[in] e0,e1,e2 The component values that will form the extent of
+     *                     this array.
+     * @param[in] srcBegin A beginning iterator into the source container.
+     * @param[in] srcEnd An ending iterator into the source container.
+     * @param[in] av An accelerator_view object which specifies the home
+     *               location of this array.
+     * @param[in] access_type The type of CPU access desired for this array.
+     */
+    template <typename InputIter>
+        array(int e0, InputIter srcBegin, accelerator_view av, access_type cpu_access_type = access_type_auto)
+            : array(extent<N>(e0), srcBegin, av, cpu_access_type) {}
+    template <typename InputIter>
+        array(int e0, InputIter srcBegin, InputIter srcEnd, accelerator_view av, access_type cpu_access_type = access_type_auto)
+            : array(extent<N>(e0), srcBegin, srcEnd, av, cpu_access_type) {}
+    template <typename InputIter>
+        array(int e0, int e1, InputIter srcBegin, accelerator_view av, access_type cpu_access_type = access_type_auto)
+            : array(hc::extent<N>(e0, e1), srcBegin, av, cpu_access_type) {}
+    template <typename InputIter>
+        array(int e0, int e1, InputIter srcBegin, InputIter srcEnd, accelerator_view av, access_type cpu_access_type = access_type_auto)
+            : array(hc::extent<N>(e0, e1), srcBegin, srcEnd, av, cpu_access_type) {}
+    template <typename InputIter>
+        array(int e0, int e1, int e2, InputIter srcBegin, accelerator_view av, access_type cpu_access_type = access_type_auto)
+            : array(hc::extent<N>(e0, e1, e2), srcBegin, av, cpu_access_type) {}
+    template <typename InputIter>
+        array(int e0, int e1, int e2, InputIter srcBegin, InputIter srcEnd, accelerator_view av, access_type cpu_access_type = access_type_auto)
+            : array(hc::extent<N>(e0, e1, e2), srcBegin, srcEnd, av, cpu_access_type) {}
+
+    /** @} */
+
+    /**
+     * Constructs a staging array with the given extent, which acts as a
+     * staging area between accelerator views "av" and "associated_av". If "av"
+     * is a cpu accelerator view, this will construct a staging array which is
+     * optimized for data transfers between the CPU and "associated_av".
+     *
+     * @param[in] ext The extent in each dimension of this array.
+     * @param[in] av An accelerator_view object which specifies the home
+     *               location of this array.
+     * @param[in] associated_av An accelerator_view object which specifies a
+     *                          target device accelerator.
+     */
+    array(const extent<N>& ext, accelerator_view av, accelerator_view associated_av)
+#if __KALMAR_ACCELERATOR__ == 1
+        : m_device(ext.size()), extent(ext) {}
+#else
+        : m_device(av.pQueue, associated_av.pQueue, check(ext).size(), access_type_auto), extent(ext) {}
+#endif
+
+    /** @{ */
+    /**
+     * Equivalent to construction using 
+     * "array(extent<N>(e0 [, e1 [, e2 ]]), av, associated_av)".
+     *
+     * @param[in] e0,e1,e2 The component values that will form the extent of
+     *                     this array.
+     * @param[in] av An accelerator_view object which specifies the home
+     *               location of this array.
+     * @param[in] associated_av An accelerator_view object which specifies a
+     *                          target device accelerator.
+     */
+    array(int e0, accelerator_view av, accelerator_view associated_av)
+        : array(hc::extent<N>(e0), av, associated_av) {}
+    array(int e0, int e1, accelerator_view av, accelerator_view associated_av)
+        : array(hc::extent<N>(e0, e1), av, associated_av) {}
+    array(int e0, int e1, int e2, accelerator_view av, accelerator_view associated_av)
+        : array(hc::extent<N>(e0, e1, e2), av, associated_av) {}
+
+    /** @} */
+
+    /** @{ */
+    /**
+     * Constructs a staging array with the given extent, which acts as a
+     * staging area between accelerator_views "av" (which must be the CPU
+     * accelerator) and "associated_av". The staging array will be initialized
+     * with the data specified by "src" as if by calling "copy(src, *this)".
+     *
+     * @param[in] ext The extent in each dimension of this array.
+     * @param[in] srcBegin A beginning iterator into the source container.
+     * @param[in] srcEnd An ending iterator into the source container.
+     * @param[in] av An accelerator_view object which specifies the home
+     *               location of this array.
+     * @param[in] associated_av An accelerator_view object which specifies a
+     *                          target device accelerator.
+     */
+    template <typename InputIter>
+        array(const extent<N>& ext, InputIter srcBegin, accelerator_view av, accelerator_view associated_av)
+            : array(ext, av, associated_av) { copy(srcBegin, *this); }
+    template <typename InputIter>
+        array(const extent<N>& ext, InputIter srcBegin, InputIter srcEnd, accelerator_view av, accelerator_view associated_av)
+            : array(ext, av, associated_av) {
+            if (ext.size() < std::distance(srcBegin, srcEnd))
+                throw runtime_exception("errorMsg_throw", 0);
+            copy(srcBegin, srcEnd, *this);
+        }
+
+    /** @} */
+
+    /**
+     * Constructs a staging array initialized with the array_view given by
+     * "src", which acts as a staging area between accelerator_views "av"
+     * (which must be the CPU accelerator) and "associated_av". The extent of
+     * this array is taken from the extent of the source array_view. The
+     * staging array will be initialized from "src" as if by calling
+     * "copy(src, *this)".
+     *
+     * @param[in] src An array_view object from which to copy the data into
+     *                this array (and also to determine the extent of this
+     *                array).
+     * @param[in] av An accelerator_view object which specifies the home
+     *               location of this array.
+     * @param[in] associated_av An accelerator_view object which specifies a
+     *                          target device accelerator.
+     */
+    array(const array_view<const T, N>& src, accelerator_view av, accelerator_view associated_av)
+        : array(src.get_extent(), av, associated_av)
+    { copy(src, *this); }
+
+    /** @{ */
+    /**
+     * Equivalent to construction using
+     * "array(extent<N>(e0 [, e1 [, e2 ]]), src, av, associated_av)".
+     *
+     * @param[in] e0,e1,e2 The component values that will form the extent of
+     *                     this array.
+     * @param[in] srcBegin A beginning iterator into the source container.
+     * @param[in] srcEnd An ending iterator into the source container.
+     * @param[in] av An accelerator_view object which specifies the home
+     *               location of this array.
+     * @param[in] associated_av An accelerator_view object which specifies a
+     *                          target device accelerator.
+     */
+    template <typename InputIter>
+        array(int e0, InputIter srcBegin, accelerator_view av, accelerator_view associated_av)
+            : array(extent<N>(e0), srcBegin, av, associated_av) {}
+    template <typename InputIter>
+        array(int e0, InputIter srcBegin, InputIter srcEnd, accelerator_view av, accelerator_view associated_av)
+            : array(extent<N>(e0), srcBegin, srcEnd, av, associated_av) {}
+    template <typename InputIter>
+        array(int e0, int e1, InputIter srcBegin, accelerator_view av, accelerator_view associated_av)
+            : array(hc::extent<N>(e0, e1), srcBegin, av, associated_av) {}
+    template <typename InputIter>
+        array(int e0, int e1, InputIter srcBegin, InputIter srcEnd, accelerator_view av, accelerator_view associated_av)
+            : array(hc::extent<N>(e0, e1), srcBegin, srcEnd, av, associated_av) {}
+    template <typename InputIter>
+        array(int e0, int e1, int e2, InputIter srcBegin, accelerator_view av, accelerator_view associated_av)
+            : array(hc::extent<N>(e0, e1, e2), srcBegin, av, associated_av) {}
+    template <typename InputIter>
+        array(int e0, int e1, int e2, InputIter srcBegin, InputIter srcEnd, accelerator_view av, accelerator_view associated_av)
+            : array(hc::extent<N>(e0, e1, e2), srcBegin, srcEnd, av, associated_av) {}
+
+    /** @} */
+
+    /**
+     * Access the extent that defines the shape of this array.
+     */
+    extent<N> get_extent() const restrict(amp,cpu) { return extent; }
+
+    /**
+     * This property returns the accelerator_view representing the location
+     * where this array has been allocated.
+     */
+    accelerator_view get_accelerator_view() const { return m_device.get_av(); }
+
+    /**
+     * This property returns the accelerator_view representing the preferred
+     * target where this array can be copied.
+     */
+    accelerator_view get_associated_accelerator_view() const { return m_device.get_stage(); }
+
+    /**
+     * This property returns the CPU "access_type" allowed for this array.
+     */
+    access_type get_cpu_access_type() const { return m_device.get_access(); }
+  
+    /**
+     * Assigns the contents of the array "other" to this array, using a deep
+     * copy.
+     *
+     * @param[in] other An object of type array<T,N> from which to copy into
+     *                  this array.
+     * @return Returns *this.
+     */
+    array& operator=(const array& other) {
+        if (this != &other) {
+            array arr(other);
+            *this = std::move(arr);
+        }
+        return *this;
+    }
+
+    /**
+     * Moves the contents of the array "other" to this array.
+     *
+     * @param[in] other An object of type array<T,N> from which to move into
+     *                  this array.
+     * @return Returns *this.
+     */
+    array& operator=(array&& other) {
+        if (this != &other) {
+            extent = other.extent;
+            m_device = other.m_device;
+            other.m_device.reset();
+        }
+        return *this;
+    }
+
+    /**
+     * Assigns the contents of the array_view "src", as if by calling
+     * "copy(src, *this)".
+     *
+     * @param[in] src An object of type array_view<T,N> from which to copy into
+     *                this array.
+     * @return Returns *this.
+     */
+    array& operator=(const array_view<T,N>& src) {
+        array arr(src);
         *this = std::move(arr);
+        return *this;
     }
-    return *this;
-  }
-  array& operator=(array&& other) {
-    if(this != &other) {
-      extent = other.extent;
-      m_device = other.m_device;
-      other.m_device.reset();
-    }
-    return *this;
-  }
-  array& operator=(const array_view<T,N>& src) {
-      array arr(src);
-      *this = std::move(arr);
-      return *this;
-  }
-
-  void copy_to(array& dest) const {
+  
+    /**
+     * Copies the contents of this array to the array given by "dest", as
+     * if by calling "copy(*this, dest)".
+     *
+     * @param[out] dest An object of type array<T,N> to which to copy data
+     *                  from this array.
+     */
+    void copy_to(array& dest) const {
 #if __KALMAR_ACCELERATOR__ != 1
-      for(int i = 0 ; i < N ; i++)
-      {
-        if(dest.extent[i] < this->extent[i] )
-          throw runtime_exception("errorMsg_throw", 0);
-      }
+        for(int i = 0 ; i < N ; i++)
+        {
+            if (dest.extent[i] < this->extent[i] )
+                throw runtime_exception("errorMsg_throw", 0);
+        }
 #endif
-      copy(*this, dest);
-  }
+        copy(*this, dest);
+    }
 
-  void copy_to(const array_view<T,N>& dest) const { copy(*this, dest); }
-  extent<N> get_extent() const restrict(amp,cpu) { return extent; }
+    /**
+     * Copies the contents of this array to the array_view given by "dest", as
+     * if by calling "copy(*this, dest)".
+     *
+     * @param[out] dest An object of type array_view<T,N> to which to copy data
+     *                  from this array.
+     */
+    void copy_to(const array_view<T,N>& dest) const { copy(*this, dest); }
 
-  accelerator_view get_accelerator_view() const { return m_device.get_av(); }
-  accelerator_view get_associated_accelerator_view() const { return m_device.get_stage(); }
-  access_type get_cpu_access_type() const { return m_device.get_access(); }
+    /**
+     * Returns a pointer to the raw data underlying this array.
+     *
+     * @return A (const) pointer to the first element in the linearized array.
+     */
+    T* data() const restrict(amp,cpu) {
+#if __KALMAR_ACCELERATOR__ != 1
+        if (!m_device.get())
+            return nullptr;
+        m_device.synchronize(true);
+#endif
+        return reinterpret_cast<T*>(m_device.get());
+    }
 
-  T& operator[](const index<N>& idx) restrict(amp,cpu) {
+    /**
+     * Implicitly converts an array to a std::vector, as if by
+     * "copy(*this, vector)".
+     *
+     * @return An object of type vector<T> which contains a copy of the data
+     *         contained on the array.
+     */
+    operator std::vector<T>() const {
+        std::vector<T> vec(extent.size());
+        copy(*this, vec.data());
+        return std::move(vec);
+    }
+
+    /** @{ */
+    /**
+     * Returns a reference to the element of this array that is at the location
+     * in N-dimensional space specified by "idx". Accessing array data on a
+     * location where it is not resident (e.g. from the CPU when it is resident
+     * on a GPU) results in an exception (in cpu-restricted context) or
+     * undefined behavior (in amp-restricted context).
+     *
+     * @param[in] idx An object of type index<N> from that specifies the
+     *                location of the element.
+     */
+    T& operator[](const index<N>& idx) restrict(amp,cpu) {
 #ifndef __KALMAR_ACCELERATOR__
-      if (!m_device.get())
-          throw runtime_exception("The array is not accessible on CPU.", 0);
-      m_device.synchronize(true);
+        if (!m_device.get())
+            throw runtime_exception("The array is not accessible on CPU.", 0);
+        m_device.synchronize(true);
 #endif
-      T *ptr = reinterpret_cast<T*>(m_device.get());
-      return ptr[Kalmar::amp_helper<N, index<N>, hc::extent<N>>::flatten(idx, extent)];
-  }
-  const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
+        T *ptr = reinterpret_cast<T*>(m_device.get());
+        return ptr[Kalmar::amp_helper<N, index<N>, hc::extent<N>>::flatten(idx, extent)];
+    }
+    T& operator()(const index<N>& idx) restrict(amp,cpu) {
+        return (*this)[idx];
+    }
+
+    /** @} */
+
+    /** @{ */
+    /**
+     * Returns a const reference to the element of this array that is at the
+     * location in N-dimensional space specified by "idx". Accessing array data
+     * on a location where it is not resident (e.g. from the CPU when it is
+     * resident on a GPU) results in an exception (in cpu-restricted context)
+     * or undefined behavior (in amp-restricted context).
+     *
+     * @param[in] idx An object of type index<N> from that specifies the
+     *                location of the element.
+     */
+    const T& operator[](const index<N>& idx) const restrict(amp,cpu) {
 #if __KALMAR_ACCELERATOR__ != 1
-      if (!m_device.get())
-          throw runtime_exception("The array is not accessible on CPU.", 0);
-      m_device.synchronize();
+        if (!m_device.get())
+            throw runtime_exception("The array is not accessible on CPU.", 0);
+        m_device.synchronize();
 #endif
-      T *ptr = reinterpret_cast<T*>(m_device.get());
-      return ptr[Kalmar::amp_helper<N, index<N>, hc::extent<N>>::flatten(idx, extent)];
-  }
+        T *ptr = reinterpret_cast<T*>(m_device.get());
+        return ptr[Kalmar::amp_helper<N, index<N>, hc::extent<N>>::flatten(idx, extent)];
+    }
+    const T& operator()(const index<N>& idx) const restrict(amp,cpu) {
+        return (*this)[idx];
+    }
 
-  typename array_projection_helper<T, N>::result_type
-      operator[] (int i) restrict(amp,cpu) {
-          return array_projection_helper<T, N>::project(*this, i);
-      }
-  typename array_projection_helper<T, N>::const_result_type
-      operator[] (int i) const restrict(amp,cpu) {
-          return array_projection_helper<T, N>::project(*this, i);
-      }
+    /** @} */
 
-  T& operator()(const index<N>& idx) restrict(amp,cpu) {
-    return (*this)[idx];
-  }
-  const T& operator()(const index<N>& idx) const restrict(amp,cpu) {
-    return (*this)[idx];
-  }
-  typename array_projection_helper<T, N>::result_type
-      operator()(int i0) restrict(amp,cpu) {
-          return (*this)[i0];
-  }
-  typename array_projection_helper<T, N>::const_result_type
-      operator()(int i0) const restrict(amp,cpu) {
-          return (*this)[i0];
-  }
-  T& operator()(int i0, int i1) restrict(amp,cpu) {
-      return (*this)[index<2>(i0, i1)];
-  }
-  const T& operator()(int i0, int i1) const restrict(amp,cpu) {
-      return (*this)[index<2>(i0, i1)];
-  }
-  T& operator()(int i0, int i1, int i2) restrict(amp,cpu) {
-      return (*this)[index<3>(i0, i1, i2)];
-  }
-  const T& operator()(int i0, int i1, int i2) const restrict(amp,cpu) {
-      return (*this)[index<3>(i0, i1, i2)];
-  }
+    /** @{ */
+    /**
+     * Equivalent to
+     * "array<T,N>::operator()(index<N>(i0 [, i1 [, i2 ]]))".
+     *
+     * @param[in] i0,i1,i2 The component values that will form the index into
+     *                     this array.
+     */
+    T& operator()(int i0, int i1) restrict(amp,cpu) {
+        return (*this)[index<2>(i0, i1)];
+    }
+    T& operator()(int i0, int i1, int i2) restrict(amp,cpu) {
+        return (*this)[index<3>(i0, i1, i2)];
+    }
 
-  array_view<T, N> section(const index<N>& idx, const extent<N>& ext) restrict(amp,cpu) {
+    /** @} */
+
+    /** @{ */
+    /**
+     * Equivalent to
+     * "array<T,N>::operator()(index<N>(i0 [, i1 [, i2 ]])) const".
+     *
+     * @param[in] i0,i1,i2 The component values that will form the index into
+     *                     this array.
+     */
+    const T& operator()(int i0, int i1) const restrict(amp,cpu) {
+        return (*this)[index<2>(i0, i1)];
+    }
+    const T& operator()(int i0, int i1, int i2) const restrict(amp,cpu) {
+        return (*this)[index<3>(i0, i1, i2)];
+    }
+
+    /** @{ */
+    /**
+     * This overload is defined for array<T,N> where @f$N \ge 2@f$.
+     * This mode of indexing is equivalent to projecting on the
+     * most-significant dimension. It allows C-style indexing. For example:
+     *
+     * @code{.cpp}
+     * array<float,4> myArray(myExtents, …);
+     * myArray[index<4>(5,4,3,2)] = 7;
+     * assert(myArray[5][4][3][2] == 7);
+     * @endcode
+     *
+     * @param i0 An integer that is the index into the most-significant
+     *           dimension of this array.
+     * @return Returns an array_view whose dimension is one lower than that of
+     *         this array.
+     */
+    typename array_projection_helper<T, N>::result_type
+        operator[] (int i) restrict(amp,cpu) {
+            return array_projection_helper<T, N>::project(*this, i);
+        }
+    typename array_projection_helper<T, N>::result_type
+        operator()(int i0) restrict(amp,cpu) {
+            return (*this)[i0];
+        }
+    typename array_projection_helper<T, N>::const_result_type
+        operator[] (int i) const restrict(amp,cpu) {
+            return array_projection_helper<T, N>::project(*this, i);
+        }
+    typename array_projection_helper<T, N>::const_result_type
+        operator()(int i0) const restrict(amp,cpu) {
+            return (*this)[i0];
+        }
+
+    /** @} */
+
+    /** @{ */
+    /**
+     * Returns a subsection of the source array view at the origin specified by
+     * "idx" and with the extent specified by "ext".
+     *
+     * Example:
+     * @code{.cpp}
+     * array<float,2> a(extent<2>(200,100));
+     * array_view<float,2> v1(a); // v1.extent = <200,100>
+     * array_view<float,2> v2 = v1.section(index<2>(15,25), extent<2>(40,50));
+     * assert(v2(0,0) == v1(15,25));
+     * @endcode
+     *
+     * @param[in] origin Provides the offset/origin of the resulting section.
+     * @param[in] ext Provides the extent of the resulting section.
+     * @return Returns a subsection of the source array at specified origin,
+     *         and with the specified extent.
+     */
+    array_view<T, N> section(const index<N>& origin, const extent<N>& ext) restrict(amp,cpu) {
 #if __KALMAR_ACCELERATOR__ != 1
-      if(  !Kalmar::amp_helper<N, index<N>, hc::extent<N>>::contains(idx,  ext ,this->extent) )
-        throw runtime_exception("errorMsg_throw", 0);
+        if ( !Kalmar::amp_helper<N, index<N>, hc::extent<N>>::contains(origin,  ext ,this->extent) )
+            throw runtime_exception("errorMsg_throw", 0);
 #endif
-      array_view<T, N> av(*this);
-      return av.section(idx, ext);
-  }
-  array_view<const T, N> section(const index<N>& idx, const extent<N>& ext) const restrict(amp,cpu) {
-      array_view<const T, N> av(*this);
-      return av.section(idx, ext);
-  }
-  array_view<T, N> section(const index<N>& idx) restrict(amp,cpu) {
+        array_view<T, N> av(*this);
+        return av.section(origin, ext);
+    }
+    array_view<const T, N> section(const index<N>& origin, const extent<N>& ext) const restrict(amp,cpu) {
+        array_view<const T, N> av(*this);
+        return av.section(origin, ext);
+    }
+
+    /** @} */
+
+    /** @{ */
+    /**
+     * Equivalent to "section(idx, this->extent – idx)".
+     */
+    array_view<T, N> section(const index<N>& idx) restrict(amp,cpu) {
 #if __KALMAR_ACCELERATOR__ != 1
-      if(  !Kalmar::amp_helper<N, index<N>, hc::extent<N>>::contains(idx, this->extent ) )
-        throw runtime_exception("errorMsg_throw", 0);
+        if ( !Kalmar::amp_helper<N, index<N>, hc::extent<N>>::contains(idx, this->extent ) )
+            throw runtime_exception("errorMsg_throw", 0);
 #endif
-      array_view<T, N> av(*this);
-      return av.section(idx);
-  }
-  array_view<const T, N> section(const index<N>& idx) const restrict(amp,cpu) {
-      array_view<const T, N> av(*this);
-      return av.section(idx);
-  }
-  array_view<T,N> section(const extent<N>& ext) restrict(amp,cpu) {
-      array_view<T, N> av(*this);
-      return av.section(ext);
-  }
-  array_view<const T,N> section(const extent<N>& ext) const restrict(amp,cpu) {
-      array_view<const T, N> av(*this);
-      return av.section(ext);
-  }
+        array_view<T, N> av(*this);
+        return av.section(idx);
+    }
+    array_view<const T, N> section(const index<N>& idx) const restrict(amp,cpu) {
+        array_view<const T, N> av(*this);
+        return av.section(idx);
+    }
 
-  array_view<T, 1> section(int i0, int e0) restrict(amp,cpu) {
-      static_assert(N == 1, "Rank must be 1");
-      return section(index<1>(i0), hc::extent<1>(e0));
-  }
-  array_view<const T, 1> section(int i0, int e0) const restrict(amp,cpu) {
-      static_assert(N == 1, "Rank must be 1");
-      return section(index<1>(i0), hc::extent<1>(e0));
-  }
-  array_view<T, 2> section(int i0, int i1, int e0, int e1) const restrict(amp,cpu) {
-      static_assert(N == 2, "Rank must be 2");
-      return section(index<2>(i0, i1), hc::extent<2>(e0, e1));
-  }
-  array_view<T, 2> section(int i0, int i1, int e0, int e1) restrict(amp,cpu) {
-      static_assert(N == 2, "Rank must be 2");
-      return section(index<2>(i0, i1), hc::extent<2>(e0, e1));
-  }
-  array_view<T, 3> section(int i0, int i1, int i2, int e0, int e1, int e2) restrict(amp,cpu) {
-      static_assert(N == 3, "Rank must be 3");
-      return section(index<3>(i0, i1, i2), hc::extent<3>(e0, e1, e2));
-  }
-  array_view<const T, 3> section(int i0, int i1, int i2, int e0, int e1, int e2) const restrict(amp,cpu) {
-      static_assert(N == 3, "Rank must be 3");
-      return section(index<3>(i0, i1, i2), hc::extent<3>(e0, e1, e2));
-  }
+    /** @} */
 
-  template <typename ElementType>
-      array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu) {
+    /** @{ */
+    /**
+     * Equivalent to "section(index<N>(), ext)".
+     */
+    array_view<T,N> section(const extent<N>& ext) restrict(amp,cpu) {
+        array_view<T, N> av(*this);
+        return av.section(ext);
+    }
+    array_view<const T,N> section(const extent<N>& ext) const restrict(amp,cpu) {
+        array_view<const T, N> av(*this);
+        return av.section(ext);
+    }
+
+    /** @} */
+
+    /** @{ */
+    /**
+     * Equivalent to
+     * "array<T,N>::section(index<N>(i0 [, i1 [, i2 ]]), extent<N>(e0 [, e1 [, e2 ]])) const".
+     *
+     * @param[in] i0,i1,i2 The component values that will form the origin of
+     *                     the section
+     * @param[in] e0,e1,e2 The component values that will form the extent of
+     *                     the section
+     */
+    array_view<T, 1> section(int i0, int e0) restrict(amp,cpu) {
+        static_assert(N == 1, "Rank must be 1");
+        return section(index<1>(i0), hc::extent<1>(e0));
+    }
+    array_view<const T, 1> section(int i0, int e0) const restrict(amp,cpu) {
+        static_assert(N == 1, "Rank must be 1");
+        return section(index<1>(i0), hc::extent<1>(e0));
+    }
+    array_view<T, 2> section(int i0, int i1, int e0, int e1) const restrict(amp,cpu) {
+        static_assert(N == 2, "Rank must be 2");
+        return section(index<2>(i0, i1), hc::extent<2>(e0, e1));
+    }
+    array_view<T, 2> section(int i0, int i1, int e0, int e1) restrict(amp,cpu) {
+        static_assert(N == 2, "Rank must be 2");
+        return section(index<2>(i0, i1), hc::extent<2>(e0, e1));
+    }
+    array_view<T, 3> section(int i0, int i1, int i2, int e0, int e1, int e2) restrict(amp,cpu) {
+        static_assert(N == 3, "Rank must be 3");
+        return section(index<3>(i0, i1, i2), hc::extent<3>(e0, e1, e2));
+    }
+    array_view<const T, 3> section(int i0, int i1, int i2, int e0, int e1, int e2) const restrict(amp,cpu) {
+        static_assert(N == 3, "Rank must be 3");
+        return section(index<3>(i0, i1, i2), hc::extent<3>(e0, e1, e2));
+    }
+
+    /** @} */
+
+    /** @{ */
+    /**
+     * Sometimes it is desirable to view the data of an N-dimensional array as
+     * a linear array, possibly with a (unsafe) reinterpretation of the element
+     * type. This can be achieved through the reinterpret_as member function.
+     * Example:
+     *
+     * @code{.cpp}
+     * struct RGB { float r; float g; float b; };
+     * array<RGB,3> a = ...;
+     * array_view<float,1> v = a.reinterpret_as<float>();
+     * assert(v.extent == 3*a.extent);
+     * @endcode
+     *
+     * The size of the reinterpreted ElementType must evenly divide into the
+     * total size of this array.
+     *
+     * @return Returns an array_view from this array<T,N> with the element type
+     *         reinterpreted from T to ElementType, and the rank reduced from N
+     *         to 1.
+     */
+    template <typename ElementType>
+        array_view<ElementType, 1> reinterpret_as() restrict(amp,cpu) {
 #if __KALMAR_ACCELERATOR__ != 1
-          static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
-          static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
-          if( (extent.size() * sizeof(T)) % sizeof(ElementType))
-              throw runtime_exception("errorMsg_throw", 0);
+            static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
+            static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
+            if( (extent.size() * sizeof(T)) % sizeof(ElementType))
+                throw runtime_exception("errorMsg_throw", 0);
 #endif
-          int size = extent.size() * sizeof(T) / sizeof(ElementType);
-          using buffer_type = typename array_view<ElementType, 1>::acc_buffer_t;
-          array_view<ElementType, 1> av(buffer_type(m_device), extent<1>(size), 0);
-          return av;
-      }
-  template <typename ElementType>
-      array_view<const ElementType, 1> reinterpret_as() const restrict(amp,cpu) {
+            int size = extent.size() * sizeof(T) / sizeof(ElementType);
+            using buffer_type = typename array_view<ElementType, 1>::acc_buffer_t;
+            array_view<ElementType, 1> av(buffer_type(m_device), extent<1>(size), 0);
+            return av;
+        }
+    template <typename ElementType>
+        array_view<const ElementType, 1> reinterpret_as() const restrict(amp,cpu) {
 #if __KALMAR_ACCELERATOR__ != 1
-          static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
-          static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
+            static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
+            static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
 #endif
-          int size = extent.size() * sizeof(T) / sizeof(ElementType);
-          using buffer_type = typename array_view<ElementType, 1>::acc_buffer_t;
-          array_view<const ElementType, 1> av(buffer_type(m_device), extent<1>(size), 0);
-          return av;
-      }
+            int size = extent.size() * sizeof(T) / sizeof(ElementType);
+            using buffer_type = typename array_view<ElementType, 1>::acc_buffer_t;
+            array_view<const ElementType, 1> av(buffer_type(m_device), extent<1>(size), 0);
+            return av;
+        }
 
-  template <int K> array_view<T, K>
-      view_as(const extent<K>& viewExtent) restrict(amp,cpu) {
+    /** @} */
+
+    /** @{ */
+    /**
+     * An array of higher rank can be reshaped into an array of lower rank, or
+     * vice versa, using the view_as member function. Example:
+     *
+     * @code{.cpp}
+     * array<float,1> a(100);
+     * array_view<float,2> av = a.view_as(extent<2>(2,50));
+     * @endcode
+     *
+     * @return Returns an array_view from this array<T,N> with the rank changed
+     *         to K from N.
+     */
+    template <int K> array_view<T, K>
+        view_as(const extent<K>& viewExtent) restrict(amp,cpu) {
 #if __KALMAR_ACCELERATOR__ != 1
-    if( viewExtent.size() > extent.size())
-      throw runtime_exception("errorMsg_throw", 0);
+            if( viewExtent.size() > extent.size())
+                throw runtime_exception("errorMsg_throw", 0);
 #endif
-          array_view<T, K> av(m_device, viewExtent, 0);
-          return av;
-      }
-  template <int K> array_view<const T, K>
-      view_as(const extent<K>& viewExtent) const restrict(amp,cpu) {
+            array_view<T, K> av(m_device, viewExtent, 0);
+            return av;
+        }
+    template <int K> array_view<const T, K>
+        view_as(const extent<K>& viewExtent) const restrict(amp,cpu) {
 #if __KALMAR_ACCELERATOR__ != 1
-    if( viewExtent.size() > extent.size())
-      throw runtime_exception("errorMsg_throw", 0);
+            if( viewExtent.size() > extent.size())
+                throw runtime_exception("errorMsg_throw", 0);
 #endif
-          const array_view<T, K> av(m_device, viewExtent, 0);
-          return av;
-      }
+            const array_view<T, K> av(m_device, viewExtent, 0);
+            return av;
+        }
 
-  operator std::vector<T>() const {
-      std::vector<T> vec(extent.size());
-      copy(*this, vec.data());
-      return std::move(vec);
-  }
+    /** @} */
 
-  T* data() const restrict(amp,cpu) {
-#if __KALMAR_ACCELERATOR__ != 1
-      if (!m_device.get())
-          return nullptr;
-    m_device.synchronize(true);
-#endif
-    return reinterpret_cast<T*>(m_device.get());
-  }
-  ~array() {}
+    ~array() {}
 
-
-  const acc_buffer_t& internal() const restrict(amp,cpu) { return m_device; }
-  int get_offset() const restrict(amp,cpu) { return 0; }
-  index<N> get_index_base() const restrict(amp,cpu) { return index<N>(); }
+    // FIXME: functions below may be considered to move to private
+    const acc_buffer_t& internal() const restrict(amp,cpu) { return m_device; }
+    int get_offset() const restrict(amp,cpu) { return 0; }
+    index<N> get_index_base() const restrict(amp,cpu) { return index<N>(); }
 private:
-  template <typename K, int Q> friend struct projection_helper;
-  template <typename K, int Q> friend struct array_projection_helper;
-  acc_buffer_t m_device;
-  extent<N> extent;
+    template <typename K, int Q> friend struct projection_helper;
+    template <typename K, int Q> friend struct array_projection_helper;
+    acc_buffer_t m_device;
+    extent<N> extent;
 };
 
 // ------------------------------------------------------------------------
