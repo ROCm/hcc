@@ -1569,77 +1569,134 @@ tiled_extent<3> extent<N>::tile(int t0, int t1, int t2) const restrict(amp,cpu) 
 // ts_allocator
 // ------------------------------------------------------------------------
 
-/// getLDS : C interface of HSA builtin function to fetch an address within group segment
+/**
+ * C interface of HSA builtin function to fetch an address within group segment
+ *
+ * @param[in] offset offset within group segment
+ * @return A pointer to the memory address space with the specified offset from
+ *         the beginning of group segment.
+ */
 extern "C" __attribute__((address_space(3))) void* getLDS(unsigned int offset) restrict(amp);
 
+/**
+ * Group segment dynamic memory allocator. The class could be used to
+ * dynamically allocate memory within group segment.
+ *
+ * To use it, first define an object in the host code, and specify the maximum
+ * number of group segment memory dynamically allocatable in the constructor.
+ * Next, pass it as an argument of parallel_for_each, and capture the object by
+ * reference in the kernel
+ * code. Here's an example:
+ *
+ * @code{.cpp}
+ * ts_allocator tsa(10240); // dynamic group segment has 10KB
+ * parallel_for_each(ex, tsa, [=, &tsa](index<1>& idx) { ... });
+ * @endcode
+ */
 class ts_allocator {
 private:
-  unsigned int static_group_segment_size;
-  unsigned int dynamic_group_segment_size;
-  int cursor;
+    /**
+     * Size of static group segment.
+     */
+    unsigned int static_group_segment_size;
 
-  void setStaticGroupSegmentSize(unsigned int size) restrict(cpu) {
-    static_group_segment_size = size;
-  } 
+    /**
+     * Size of dynamic group segment.
+     */
+    unsigned int dynamic_group_segment_size;
 
-  template <typename Kernel> friend
-    completion_future parallel_for_each(const accelerator_view&, const extent<1>&, ts_allocator&, const Kernel&);
-  template <typename Kernel> friend
-    completion_future parallel_for_each(const accelerator_view&, const extent<2>&, ts_allocator&, const Kernel&);
-  template <typename Kernel> friend
-    completion_future parallel_for_each(const accelerator_view&, const extent<3>&, ts_allocator&, const Kernel&);
+    /**
+     * Cursor points to the memory where next allocation would take place.
+     */
+    int cursor;
 
-  template <typename Kernel> friend
-    completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, ts_allocator&, const Kernel&);
-  template <typename Kernel> friend
-    completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, ts_allocator&, const Kernel&);
-  template <typename Kernel> friend
-    completion_future parallel_for_each(const accelerator_view&, const tiled_extent<3>&, ts_allocator&, const Kernel&);
+    /**
+     * Set the size of static group semgnet. The function is called by Kalmar
+     * runtime prior to kernel dispatching.
+     */
+    void setStaticGroupSegmentSize(unsigned int size) restrict(cpu) {
+      static_group_segment_size = size;
+    } 
+
+    template <typename Kernel> friend
+        completion_future parallel_for_each(const accelerator_view&, const extent<1>&, ts_allocator&, const Kernel&);
+    template <typename Kernel> friend
+        completion_future parallel_for_each(const accelerator_view&, const extent<2>&, ts_allocator&, const Kernel&);
+    template <typename Kernel> friend
+        completion_future parallel_for_each(const accelerator_view&, const extent<3>&, ts_allocator&, const Kernel&);
+
+    template <typename Kernel> friend
+        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, ts_allocator&, const Kernel&);
+    template <typename Kernel> friend
+        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, ts_allocator&, const Kernel&);
+    template <typename Kernel> friend
+        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<3>&, ts_allocator&, const Kernel&);
 
 public:
-  ts_allocator() :
-    static_group_segment_size(0), 
-    dynamic_group_segment_size(0),
-    cursor(0) {}
+    /**
+     * Default constructor.  Dynamic group segment size is set as zero.
+     */
+    ts_allocator() :
+        static_group_segment_size(0), 
+        dynamic_group_segment_size(0),
+        cursor(0) {}
 
-  ~ts_allocator() {}
+    ~ts_allocator() {}
 
-  unsigned int getStaticGroupSegmentSize() restrict(amp,cpu) {
-    return static_group_segment_size;
-  }
-
-  void setDynamicGroupSegmentSize(unsigned int size) restrict(cpu) {
-    dynamic_group_segment_size = size;
-  }
-
-  unsigned int getDynamicGroupSegmentSize() restrict(amp,cpu) {
-    return dynamic_group_segment_size;
-  }
-
-  void reset() restrict(amp,cpu) {
-    cursor = 0;
-  }
-
-  // Allocate the requested size in tile static memory and return its pointer
-  // returns NULL if the requested size can't be allocated
-  // It requires all threads in a tile to hit the same ts_alloc call site at the
-  // same time.
-  // Only one instance of the tile static memory will be allocated per call site
-  // and all threads within a tile will get the same tile static memory address.
-  __attribute__((address_space(3))) void* alloc(unsigned int size) restrict(amp) {
-    int offset = cursor;
-
-    // only the first workitem in the workgroup moves the cursor
-    if (amp_get_local_id(0) == 0 && amp_get_local_id(1) == 0 && amp_get_local_id(2) == 0) {
-      cursor += size;
+    /**
+     * Return the size of static group segment in bytes.
+     */
+    unsigned int getStaticGroupSegmentSize() restrict(amp,cpu) {
+        return static_group_segment_size;
     }
 
-    // fetch the beginning address of dynamic group segment
-    __attribute__((address_space(3))) unsigned char* lds = (__attribute__((address_space(3))) unsigned char*) getLDS(static_group_segment_size);
+    /**
+     * Set the size of dynamic group segment. The function should be called
+     * in host code, prior to a kernel is dispatched.
+     *
+     * @param[in] size The amount of dynamic group segment needed.
+     */
+    void setDynamicGroupSegmentSize(unsigned int size) restrict(cpu) {
+        dynamic_group_segment_size = size;
+    }
 
-    // return the address
-    return lds + offset;
-  }   
+    /**
+     * Return the size of dynamic group segment in bytes.
+     */
+    unsigned int getDynamicGroupSegmentSize() restrict(amp,cpu) {
+        return dynamic_group_segment_size;
+    }
+
+    /**
+     * Reset the cursor. Effectively it means free up all previous allocated
+     * dynamic group segment memory.
+     */
+    void reset() restrict(amp,cpu) {
+        cursor = 0;
+    }
+
+    /**
+     * Allocate the requested size in tile static memory and return its pointer
+     * returns NULL if the requested size can't be allocated
+     * It requires all threads in a tile to hit the same ts_alloc call site at the
+     * same time.
+     * Only one instance of the tile static memory will be allocated per call site
+     * and all threads within a tile will get the same tile static memory address.
+     */
+    __attribute__((address_space(3))) void* alloc(unsigned int size) restrict(amp) {
+        int offset = cursor;
+    
+        // only the first workitem in the workgroup moves the cursor
+        if (amp_get_local_id(0) == 0 && amp_get_local_id(1) == 0 && amp_get_local_id(2) == 0) {
+          cursor += size;
+        }
+    
+        // fetch the beginning address of dynamic group segment
+        __attribute__((address_space(3))) unsigned char* lds = (__attribute__((address_space(3))) unsigned char*) getLDS(static_group_segment_size);
+    
+        // return the address
+        return lds + offset;
+    }   
 };  
 
 // ------------------------------------------------------------------------
