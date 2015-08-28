@@ -362,15 +362,9 @@ bool
 lexicographical_compare(ExecutionPolicy&& exec,
                         InputIt1 first1, InputIt1 last1,
                         InputIt2 first2, InputIt2 last2) {
-  if (utils::isParallel(exec)) {
-    return details::lexicographical_compare_impl(first1, last1, first2, last2,
-             std::less<typename std::iterator_traits<InputIt1>::value_type>(),
-             typename std::iterator_traits<InputIt1>::iterator_category());
-  } else {
-    return details::lexicographical_compare_impl(first1, last1, first2, last2,
-             std::less<typename std::iterator_traits<InputIt1>::value_type>(),
-             std::input_iterator_tag{});
-  }
+  return lexicographical_compare(exec, first1, last1, first2, last2,
+           std::less<typename std::iterator_traits<InputIt1>::value_type>());
+
 }
 
 
