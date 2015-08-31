@@ -108,9 +108,17 @@ public:
   /// enqueue marker
   virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarker() { return nullptr; }
 
+  /// set AM index
+  virtual void setAMIndex(am_accelerator_view_t av_index) { am_index = av_index; }
+
+  /// get AM index
+  virtual am_accelerator_view_t getAMIndex() { return am_index; }
+
 private:
   KalmarDevice* pDev;
   queuing_mode mode;
+
+    am_accelerator_view_t am_index;
 };
 
 /// KalmarDevice
@@ -165,6 +173,9 @@ public:
 
     /// get max tile static area size
     virtual size_t GetMaxTileStaticSize() { return 0; }
+
+    /// get all queues associated with this device
+    virtual std::vector< std::shared_ptr<KalmarQueue> > get_all_queues() { return std::vector< std::shared_ptr<KalmarQueue> >(); }
 };
 
 class CPUQueue final : public KalmarQueue

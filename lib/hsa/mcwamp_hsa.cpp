@@ -16,6 +16,7 @@
 #include <future>
 #include <iostream>
 #include <map>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
@@ -33,9 +34,9 @@
 		exit(-1);\
 	}
 
-#define STATUS_CHECK_Q(s,line) if (s != HSA_STATUS_SUCCESS) {\
+#define STATUS_CHECK_Q(s,q,line) if (s != HSA_STATUS_SUCCESS) {\
 		printf("### Error: %d at line:%d\n", s, line);\
-                assert(HSA_STATUS_SUCCESS == hsa_queue_destroy(commandQueue));\
+                assert(HSA_STATUS_SUCCESS == hsa_queue_destroy(q));\
                 assert(HSA_STATUS_SUCCESS == hsa_shut_down());\
 		exit(-1);\
 	}
@@ -108,7 +109,7 @@ public:
         if (isDispatched) {
             hsa_status_t status = HSA_STATUS_SUCCESS;
             status = waitComplete();
-            STATUS_CHECK_Q(status, __LINE__);
+            STATUS_CHECK(status, __LINE__);
         }
         dispose();
     }
@@ -120,7 +121,7 @@ public:
         }
 
         status = hsa_signal_create(1, 0, NULL, &signal);
-        STATUS_CHECK_Q(status, __LINE__);
+        STATUS_CHECK_Q(status, queue, __LINE__);
 
         // Obtain the write index for the command queue
         uint64_t index = hsa_queue_load_write_index_relaxed(queue);
@@ -160,7 +161,7 @@ public:
     void dispose() {
         hsa_status_t status;
         status = hsa_signal_destroy(signal);
-        STATUS_CHECK_Q(status, __LINE__);
+        STATUS_CHECK(status, __LINE__);
 
         if (future != nullptr) {
           delete future;
@@ -209,7 +210,7 @@ public:
         if (isDispatched) {
             hsa_status_t status = HSA_STATUS_SUCCESS;
             status = waitComplete();
-            STATUS_CHECK_Q(status, __LINE__);
+            STATUS_CHECK(status, __LINE__);
         }
         dispose();
     }
@@ -241,6 +242,7 @@ public:
 
         /// Query the maximum number of work-items in each dimension of a workgroup
         status = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_DIM, &workgroup_max_dim);
+
         STATUS_CHECK(status, __LINE__);
     }
 
@@ -283,7 +285,8 @@ public:
         // reduce each dimension in case the overall workgroup limit is exceeded
         uint32_t workgroup_max_size = getWorkgroupMaxSize();
         int dim_iterator = 2;
-        while(workgroup_size[0] * workgroup_size[1] * workgroup_size[2] > workgroup_max_size) {
+        size_t workgroup_total_size = workgroup_size[0] * workgroup_size[1] * workgroup_size[2];
+        while(workgroup_total_size > workgroup_max_size) {
           // repeatedly cut each dimension into half until we are within the limit
           if (workgroup_size[dim_iterator] >= 2) {
             workgroup_size[dim_iterator] >>= 1;
@@ -291,6 +294,7 @@ public:
           if (--dim_iterator < 0) {
             dim_iterator = 2;
           }
+          workgroup_total_size = workgroup_size[0] * workgroup_size[1] * workgroup_size[2];
         }
   
         return HSA_STATUS_SUCCESS;
@@ -302,10 +306,10 @@ public:
             return HSA_STATUS_ERROR_INVALID_ARGUMENT;
         }
         status = dispatchKernel(_queue);
-        STATUS_CHECK_Q(status, __LINE__);
+        STATUS_CHECK_Q(status, _queue, __LINE__);
 
         status = waitComplete();
-        STATUS_CHECK_Q(status, __LINE__);
+        STATUS_CHECK_Q(status, _queue, __LINE__);
 
         return status;
     } 
@@ -338,7 +342,7 @@ public:
          * Create a signal to wait for the dispatch to finish.
          */
         status = hsa_signal_create(1, 0, NULL, &signal);
-        STATUS_CHECK_Q(status, __LINE__);
+        STATUS_CHECK_Q(status, commandQueue, __LINE__);
   
         /*
          * Initialize the dispatch packet.
@@ -380,7 +384,7 @@ public:
         status = hsa_executable_symbol_get_info(kernel->hsaExecutableSymbol,
                                                 HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE,
                                                 &group_segment_size);
-        STATUS_CHECK_Q(status, __LINE__);
+        STATUS_CHECK_Q(status, commandQueue, __LINE__);
 
         // add dynamic group segment size
         group_segment_size += this->dynamicGroupSize;
@@ -390,7 +394,7 @@ public:
         status = hsa_executable_symbol_get_info(kernel->hsaExecutableSymbol,
                                                 HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_PRIVATE_SEGMENT_SIZE,
                                                 &private_segment_size);
-        STATUS_CHECK_Q(status, __LINE__);
+        STATUS_CHECK_Q(status, commandQueue, __LINE__);
         aql.private_segment_size = private_segment_size;
   
         // write packet
@@ -459,29 +463,14 @@ private:
 
     void computeLaunchAttr(int level, int globalSize, int localSize, int recommendedSize) {
         // localSize of 0 means pick best
-        if (localSize == 0) localSize = recommendedSize;   // (globalSize > 16 ? 1 : globalSize);   
+        if (localSize == 0) localSize = recommendedSize;
         localSize = std::min(localSize, recommendedSize);
-  
-        // Check if globalSize is a multiple of localSize
-        // (this might be temporary until the runtime really does handle non-full last groups)
-        int legalGroupSize = findLargestFactor(globalSize, localSize);
-        //if (legalGroupSize != localSize) {
-        //  std::cout << "WARNING: groupSize[" << level << "] reduced to " << legalGroupSize << std::endl;
-        //}
+        localSize = std::min(localSize, globalSize); // workgroup size shall not exceed grid size
   
         global_size[level] = globalSize;
-        workgroup_size[level] = legalGroupSize;
+        workgroup_size[level] = localSize;
         //std::cout << "level " << level << ", grid=" << global_size[level] 
         //          << ", group=" << workgroup_size[level] << std::endl;
-    }
-
-    // find largest factor less than or equal to start
-    int findLargestFactor(int n, int start) {
-        if (start > n) return n;
-        for (int div = start; div >=1; div--) {
-            if (n % div == 0) return div;
-        }
-        return 1;
     }
 
 }; // end of HSADispatch
@@ -554,7 +543,7 @@ public:
 #if KALMAR_DEBUG
         std::cerr << "HSAQueue::HSAQueue(): created an HSA command queue: " << commandQueue << "\n";
 #endif
-        STATUS_CHECK_Q(status, __LINE__);
+        STATUS_CHECK_Q(status, commandQueue, __LINE__);
     }
 
     ~HSAQueue() {
@@ -796,6 +785,9 @@ private:
     hsa_agent_t agent;
     size_t max_tile_static_size;
 
+    std::mutex queues_mutex;
+    std::vector< std::weak_ptr<KalmarQueue> > queues;
+
 public:
     static hsa_status_t find_group_memory(hsa_region_t region, void* data) {
       hsa_region_segment_t segment;
@@ -827,7 +819,8 @@ public:
     }
 
     HSADevice(hsa_agent_t a) : KalmarDevice(access_type_read_write),
-                               agent(a), programs(), max_tile_static_size(0) {
+                               agent(a), programs(), max_tile_static_size(0),
+                               queues(), queues_mutex() {
 #if KALMAR_DEBUG
         std::cerr << "HSADevice::HSADevice()\n";
 #endif
@@ -842,6 +835,11 @@ public:
 #if KALMAR_DEBUG
         std::cerr << "HSADevice::~HSADevice()\n";
 #endif
+        // release all queues
+        queues_mutex.lock();
+        queues.clear();
+        queues_mutex.unlock();
+
         // release all data in programs
         for (auto kernel_iterator : programs) {
             delete kernel_iterator.second;
@@ -912,11 +910,27 @@ public:
     }
 
     std::shared_ptr<KalmarQueue> createQueue() override {
-        return std::shared_ptr<KalmarQueue>(new HSAQueue(this, agent));
+        std::shared_ptr<KalmarQueue> q =  std::shared_ptr<KalmarQueue>(new HSAQueue(this, agent));
+        queues_mutex.lock();
+        queues.push_back(q);
+        queues_mutex.unlock();
+        return q;
     }
 
     size_t GetMaxTileStaticSize() override {
         return max_tile_static_size;
+    }
+
+    std::vector< std::shared_ptr<KalmarQueue> > get_all_queues() override {
+        std::vector< std::shared_ptr<KalmarQueue> > result;
+        queues_mutex.lock();
+        for (auto queue : queues) {
+            if (!queue.expired()) {
+                result.push_back(queue.lock());
+            }
+        }
+        queues_mutex.unlock();
+        return result;
     }
 
 private:
@@ -1163,7 +1177,7 @@ HSADispatch::dispatchKernelAsync(Kalmar::HSAQueue* hsaQueue) {
 
     // dispatch kernel
     status = dispatchKernel(queue);
-    STATUS_CHECK_Q(status, __LINE__);
+    STATUS_CHECK_Q(status, queue, __LINE__);
 
     // dynamically allocate a std::shared_future<void> object
     future = new std::shared_future<void>(std::async(std::launch::deferred, [&] {
@@ -1216,7 +1230,7 @@ HSABarrier::enqueueAsync(Kalmar::HSAQueue* hsaQueue) {
 
     // enqueue barrier packet
     status = enqueueBarrier(queue);
-    STATUS_CHECK_Q(status, __LINE__);
+    STATUS_CHECK_Q(status, queue, __LINE__);
 
     // dynamically allocate a std::shared_future<void> object
     future = new std::shared_future<void>(std::async(std::launch::deferred, [&] {

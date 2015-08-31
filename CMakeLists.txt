@@ -1,6 +1,14 @@
 cmake_minimum_required( VERSION 2.8 )
-set(CMAKE_INSTALL_PREFIX "/opt/kalmar")
 project (Kalmar)
+
+# set default installation path
+if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND CMAKE_INSTALL_PREFIX MATCHES "/usr/local")
+  set(CMAKE_INSTALL_PREFIX "/opt/kalmar")
+else ()
+  set(CMAKE_INSTALL_PREFIX "/opt/kalmar")
+endif ()
+MESSAGE("Package installation path: ${CMAKE_INSTALL_PREFIX}")
+
 SET(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/scripts/cmake")
 MESSAGE("Module path: ${CMAKE_MODULE_PATH}")
 
@@ -27,6 +35,7 @@ include (SetupTileUniform)
 include (SetupUtils)
 include (MCWAMP)
 include (PatchAsmParser)
+include (SetupGridLaunch)
 
 ensure_llvm_is_present(${PROJECT_SOURCE_DIR} compiler)
 ensure_clang_is_present(${PROJECT_SOURCE_DIR} compiler ${CLANG_URL})
@@ -41,6 +50,7 @@ setup_CpuRename(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms CpuRename)
 setup_TileUniform(${PROJECT_SOURCE_DIR}/compiler/lib/Analysis TileUniform)
 setup_Utils(utils)
 patch_AsmParser(SPIRify)
+setup_GridLaunch(${PROJECT_SOURCE_DIR}/compiler GridLaunch)
 set(LLVM_TARGETS_TO_BUILD X86 CACHE STRING "LLVM host target")
 set(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD CBackend CACHE STRING "set this to 'CBackend' to enable generating OpenCL-C")
 set(LLVM_INCLUDE_EXAMPLES off)
@@ -264,6 +274,15 @@ add_custom_target(world
     DEPENDS clang libc++ ${DEPS}
 )
 
+# create documentation
+configure_file(
+  ${PROJECT_SOURCE_DIR}/lib/doxygen_config.in
+  ${PROJECT_BINARY_DIR}/lib/doxygen_config @ONLY)
+
+add_custom_target(docs
+    COMMAND doxygen "${PROJECT_BINARY_DIR}/lib/doxygen_config"
+)
+
 # Must build after 'world' target
 if(CXXAMP_ENABLE_BOLT)
   # TODO: add an independent repo. for Bolt ported on clamp
@@ -327,5 +346,6 @@ MESSAGE("")
 MESSAGE("** For the first time:")
 MESSAGE("   'make world' to build clang, libc++ and library for testing.")
 MESSAGE("   'make' to build the rest of LLVM tools")
+MESSAGE("   'make docs' to build the HTML API reference")
 MESSAGE("")
 
