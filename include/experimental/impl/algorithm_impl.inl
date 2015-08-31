@@ -19,6 +19,7 @@ inline namespace v1 {
 #include "kernel_launch.inl"
 #include "reduce.inl"
 #include "transform.inl"
+#include "transform_reduce.inl"
 
 namespace details {
 
@@ -256,30 +257,26 @@ bool lexicographical_compare_impl(InputIt1 first1, InputIt1 last1,
              std::input_iterator_tag{});
   }
 
-  const auto trans = [](const int &a, const int &b) {
-    return a == 1 ? b : a;
-  };
+  typedef typename std::iterator_traits<InputIt1>::value_type _Tp;
 
-  std::vector<int> tmp(N);
-  int *tmp_ = tmp.data();
+  auto first1_ = n1 <= n2 ? first1 : first2;
+  auto last1_  = n1 <= n2 ?  last1 :  last2;
+  auto first2_ = n1 <= n2 ? first2 : first1;
 
-  auto first1_ = utils::get_pointer(first1);
-  auto first2_ = utils::get_pointer(first2);
+  // transform_reduce assumes two vectors are the same size,
+  // use the smaller one as the first vector
+  auto ans = transform_reduce(par, first1_, last1_, first2_, 1,
+                              [](const int &a, const int &b) {
+                                return a == 1 ? b : a;
+                              },
+                              [comp](const _Tp &a, const _Tp &b) {
+                                return comp(a, b) ? 0 : a == b ? 1 : 2;
+                              });
 
-  kernel_launch(N, [tmp_, first1_, first2_, comp](hc::index<1> idx) __attribute((hc)) {
-    tmp_[idx[0]] = comp(first1_[idx[0]], first2_[idx[0]]) ? 0 :
-                   first1_[idx[0]] == first2_[idx[0]] ? 1 : 2;
-  });
-
-  tmp[0] = reduce(tmp.begin(), tmp.end(), 1, trans);
-
-  // If one range is a prefix of another, the shorter range is
-  // lexicographically less than the other.
-  bool ans = tmp[0] == 1 ? n1 < n2 : tmp[0] == 0;
-  return ans;
+  return ans == 1 ? n1 < n2 : ans == 0;
 }
 
-template <typename InputIt1, typename InputIt2, typename BinaryPredicate>
+template<typename InputIt1, typename InputIt2, typename BinaryPredicate>
 bool equal_impl(InputIt1 first1, InputIt1 last1,
                 InputIt2 first2,
                 BinaryPredicate p,
@@ -288,7 +285,7 @@ bool equal_impl(InputIt1 first1, InputIt1 last1,
 }
 
 
-template <typename InputIt1, typename InputIt2, typename BinaryPredicate>
+template<typename InputIt1, typename InputIt2, typename BinaryPredicate>
 bool equal_impl(InputIt1 first1, InputIt1 last1,
                 InputIt2 first2,
                 BinaryPredicate p,
@@ -298,11 +295,8 @@ bool equal_impl(InputIt1 first1, InputIt1 last1,
     return equal_impl(first1, last1, first2, p, std::input_iterator_tag{});
   }
 
-  std::unique_ptr<bool> tmp(new bool [N]);
-
-  // implement equal by transform & all_of
-  transform(first1, last1, first2, tmp.get(), p);
-  return all_of(tmp.get(), tmp.get() + N, [](bool &v){ return v; });
+  return transform_reduce(first1, last1, first1, true,
+                          std::logical_and<bool>(), p);
 }
 
 

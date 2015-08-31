@@ -22,14 +22,10 @@ count_if(InputIt first, InputIt last, UnaryPredicate p) {
     return std::count_if(first, last, p);
   }
 
-  std::unique_ptr<DT> tmp(new DT [N]);
-
-  // implement count_if by transform & reduce
-  // transform to a boolean array and sum them up
-  details::transform_impl(first, last, tmp.get(),
+  return transform_reduce(first, last,
                           [p](const T &v) -> DT { return DT(p(v)); },
-                          std::input_iterator_tag{});
-  return reduce(tmp.get(), tmp.get() + N, DT{}, std::plus<DT>());
+                          DT{},
+                          std::plus<DT>());
 }
 
 //
@@ -125,7 +121,7 @@ bool all_of(InputIt first, InputIt last, UnaryPredicate p) {
   typedef typename std::iterator_traits<InputIt>::value_type T;
 
   return transform_reduce(first, last, p, true,
-                          [](bool a, bool b) { return a && b; });
+                          std::logical_and<bool>());
 }
 
 
@@ -138,7 +134,7 @@ bool any_of(InputIt first, InputIt last, UnaryPredicate p) {
   typedef typename std::iterator_traits<InputIt>::value_type T;
 
   return transform_reduce(first, last, p, false,
-                          [](bool a, bool b) { return a || b; });
+                          std::logical_or<bool>());
 }
 
 
@@ -152,42 +148,3 @@ bool none_of( InputIt first, InputIt last, UnaryPredicate p ) {
 }
 
 
-// inner_product
-template<typename ExecutionPolicy,
-         typename InputIt1, typename InputIt2,
-         typename T,
-         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
-         utils::EnableIf<utils::isInputIt<InputIt1>> = nullptr>
-T inner_product(ExecutionPolicy&& exec,
-              InputIt1 first1, InputIt1 last1,
-              InputIt2 first2,
-              T value) {
-  typedef typename std::iterator_traits<InputIt1>::value_type _Tp;
-  return inner_product(first1, last1, first2, value,
-                       std::plus<_Tp>(), std::multiplies<_Tp>());
-}
-
-template<typename ExecutionPolicy,
-         typename InputIt1, typename InputIt2,
-         typename T,
-         typename BinaryOperation1, typename BinaryOperation2,
-         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
-         utils::EnableIf<utils::isInputIt<InputIt1>> = nullptr>
-T inner_product(ExecutionPolicy&& exec,
-              InputIt1 first1, InputIt1 last1,
-              InputIt2 first2,
-              T value,
-              BinaryOperation1 op1,
-              BinaryOperation2 op2) {
-  const size_t N = static_cast<size_t>(std::distance(first1, last1));
-  if (N <= details::PARALLELIZE_THRESHOLD) {
-    return std::inner_product(first1, last1, first2, value, op1, op2);
-  }
-
-  typedef typename std::iterator_traits<InputIt1>::value_type _Tp;
-  std::unique_ptr<_Tp> tmp(new _Tp [N]);
-
-  // implement inner_product by transform & reduce
-  transform(exec, first1, last1, first2, tmp.get(), op2);
-  return reduce(exec, tmp.get(), tmp.get() + N, value, op1);
-}
