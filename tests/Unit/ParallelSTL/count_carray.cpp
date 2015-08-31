@@ -28,7 +28,7 @@ bool test(void) {
   ret &= run<T, SIZE>([&eq](T (&input)[SIZE], T (&output1)[SIZE],
                                               T (&output2)[SIZE]) {
     auto expected = std::count(std::begin(input), std::end(input), 42);
-    auto result   = count(     std::begin(input), std::end(input), 42);
+    auto result   =      count(std::begin(input), std::end(input), 42);
 
     eq = EQ(expected, result);
   }, false);
@@ -41,7 +41,7 @@ bool test(void) {
   ret &= run<T, SIZE>([&eq, pred](T (&input)[SIZE], T (&output1)[SIZE],
                                                     T (&output2)[SIZE]) {
     auto expected = std::count_if(std::begin(input), std::end(input), pred);
-    auto result   = count_if(     std::begin(input), std::end(input), pred);
+    auto result   =      count_if(std::begin(input), std::end(input), pred);
 
     eq = EQ(expected, result);
   }, false);

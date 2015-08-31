@@ -6,48 +6,23 @@
 #include <experimental/algorithm>
 #include <experimental/execution_policy>
 
-// C++ headers
-#include <iostream>
-#include <iomanip>
-#include <algorithm>
-
-#define ROW (8)
-#define COL (16)
-#define TEST_SIZE (ROW * COL)
 
 #define _DEBUG (0)
+#include "test_base.h"
 
-template<typename _Tp, size_t SIZE>
-bool test() {
 
-  _Tp table[SIZE] { 0 };
-  _Tp table2[SIZE] { 0 };
-  _Tp n { 0 };
+template<typename T, size_t SIZE>
+bool test(void) {
 
-  // initialize test data
-  std::generate(std::begin(table), std::end(table), [&] { return n++; });
-
-  // launch kernel with parallel STL reverse_copy
   using namespace std::experimental::parallel;
-  reverse_copy(par, std::begin(table), std::end(table), std::begin(table2));
 
-  // verify data
   bool ret = true;
-  for (int i = 0; i < SIZE; ++i) {
-    if ((table2[i] != SIZE - 1 - i) && (table[i] != i))  {
-      ret = false;
-      break;
-    }
-  }
 
-#if _DEBUG 
-  for (int i = 0; i < ROW; ++i) {
-    for (int j = 0; j < COL; ++j) {
-      std::cout << std::setw(5) << table2[i * COL + j];
-    }
-    std::cout << "\n";
-  } 
-#endif
+  ret &= run<T, SIZE>([](T (&input)[SIZE], T (&output1)[SIZE],
+                                           T (&output2)[SIZE]) {
+    std::reverse_copy(std::begin(input), std::end(input), std::begin(output1));
+    reverse_copy(par, std::begin(input), std::end(input), std::begin(output2));
+  });
 
   return ret;
 }
