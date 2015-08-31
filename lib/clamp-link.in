@@ -105,8 +105,10 @@ do
       objcopy -R .kernel $ARG $HOST_FILE
 
       # strip all symbols specified in symbol.txt from $HOST_FILE
-      objcopy @$CXXAMP_SERIALIZE_SYMBOL_FILE $HOST_FILE $HOST_FILE.new
-      mv $HOST_FILE.new $HOST_FILE
+      objcopy @$CXXAMP_SERIALIZE_SYMBOL_FILE $HOST_FILE $HOST_FILE.new 2> /dev/null
+      if [ -f $HOST_FILE.new ]; then
+        mv $HOST_FILE.new $HOST_FILE
+      fi
 
       # find cxxamp_serialize symbols and save them into symbol.txt
       objdump -t $HOST_FILE -j .text 2> /dev/null | grep "g.*__cxxamp_serialize" | awk '{print "-L"$6}' >> $CXXAMP_SERIALIZE_SYMBOL_FILE
