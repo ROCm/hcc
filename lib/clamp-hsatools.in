@@ -29,22 +29,27 @@ if [ ! -f $1 ]; then
 fi
 
 # Path to AMD library builtins
-if [ -d @LLVM_TOOLS_DIR@ ]; then
+if [ -d @PROJECT_BINARY_DIR@ ]; then
+    HLC_LLVM_LINK=@PROJECT_BINARY_DIR@/hlc/bin/llvm-link
+    HLC_OPT=@PROJECT_BINARY_DIR@/hlc/bin/opt
+    HLC_LLC=@PROJECT_BINARY_DIR@/hlc/bin/llc
     NEWLIB=@CPPAMP_SOURCE_DIR@/lib
 else
+    HLC_LLVM_LINK=@CMAKE_INSTALL_PREFIX@/hlc/bin/llvm-link
+    HLC_OPT=@CMAKE_INSTALL_PREFIX@/hlc/bin/opt
+    HLC_LLC=@CMAKE_INSTALL_PREFIX@/hlc/bin/llc
     NEWLIB=@CMAKE_INSTALL_PREFIX@/lib
 fi
 # Path to HSAIL backend (LLVM-3.7-based)
 LLVM_BIN=@HSAIL_BIN@
 # Path to HSAILASM
-HSAIL_LLC=@HSAIL_COMPILER@
 HSAIL_ASM=@HSAIL_ASSEMBLER@
 
 if [ $KMDUMPLLVM == "1" ]; then
   cp $1 ./dump.fe.bc
 fi
 
-$LLVM_BIN/llvm-link -suppress-warnings -o $1.linked.bc $1 $NEWLIB/builtins-hsail.opt.bc
+$HLC_LLVM_LINK -suppress-warnings -o $1.linked.bc $1 $NEWLIB/builtins-hsail.opt.bc
 # error handling for HSAIL llvm-link
 RETVAL=$?
 if [ $RETVAL != 0 ]; then
@@ -58,7 +63,7 @@ fi
 
 # Optimization notes:
 #  -disable-simplify-libcalls:  prevents transforming loops into library calls such as memset, memcopy on GPU 
-$LLVM_BIN/opt -O3 -disable-simplify-libcalls -verify $1.linked.bc -o $1.opt.bc
+$HLC_OPT -O3 -disable-simplify-libcalls -verify $1.linked.bc -o $1.opt.bc
 # error handling for HSAIL opt
 RETVAL=$?
 if [ $RETVAL != 0 ]; then
@@ -69,7 +74,7 @@ if [ $KMDUMPLLVM == "1" ]; then
   cp $1.opt.bc ./dump.opt.bc
 fi
 
-$HSAIL_LLC -O2 -march=hsail64 -filetype=asm -o $1.hsail $1.opt.bc
+$HLC_LLC -O2 -march=hsail64 -filetype=asm -o $1.hsail $1.opt.bc
 # error handling for HSAIL llc
 RETVAL=$?
 if [ $RETVAL != 0 ]; then

@@ -11,11 +11,19 @@ if [ -d @LLVM_TOOLS_DIR@ ]; then
     OPT=@LLVM_TOOLS_DIR@/opt
     CLAMP_DEVICE=@PROJECT_BINARY_DIR@/lib/clamp-device
     CLAMP_EMBED=@PROJECT_BINARY_DIR@/lib/clamp-embed
+    HLC_DIR=@PROJECT_BINARY_DIR@/hlc
+    HLC_LLVM_LINK=@PROJECT_BINARY_DIR@/hlc/bin/llvm-link
+    HLC_OPT=@PROJECT_BINARY_DIR@/hlc/bin/opt
+    HLC_LLC=@PROJECT_BINARY_DIR@/hlc/bin/llc
 else
     LINK=@CMAKE_INSTALL_PREFIX@/bin/llvm-link
     OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
     CLAMP_DEVICE=@CMAKE_INSTALL_PREFIX@/bin/clamp-device
     CLAMP_EMBED=@CMAKE_INSTALL_PREFIX@/bin/clamp-embed
+    HLC_DIR=@CMAKE_INSTALL_PREFIX@/hlc
+    HLC_LLVM_LINK=@CMAKE_INSTALL_PREFIX@/hlc/bin/llvm-link
+    HLC_OPT=@CMAKE_INSTALL_PREFIX@/hlc/bin/opt
+    HLC_LLC=@CMAKE_INSTALL_PREFIX@/hlc/bin/llc
 fi
 
 ################
@@ -40,10 +48,9 @@ if [ $LOWER_HSA == 1 ]; then
   # Path to HSAIL backend (LLVM-3.7-based)
   LLVM_BIN=@HSAIL_BIN@
   # Path to HSAIL compiler and assembler
-  HSAIL_LLC=@HSAIL_COMPILER@
   HSAIL_ASM=@HSAIL_ASSEMBLER@
 
-  if [ -d $LLVM_BIN ] && [ -e $LLVM_BIN/llvm-link ] && [ -e $LLVM_BIN/opt ] && [ -e $HSAIL_LLC ] && [ -e $HSAIL_ASM ]; then
+  if [ -d $HLC_DIR ] && [ -e $HLC_LLVM_LINK ] && [ -e $HLC_OPT ] && [ -e $HLC_LLC ] && [ -e $HSAIL_ASM ]; then
     # all HSA tools are available
     LOWER_HSA=1
   else
