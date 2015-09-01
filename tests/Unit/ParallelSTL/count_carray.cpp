@@ -29,7 +29,7 @@ bool test(void) {
                                                           T (&output2)[SIZE]) {
     auto expected = std::count(std::begin(input), std::end(input), 42);
     auto result   = std::experimental::parallel::
-                         count(std::begin(input), std::end(input), 42);
+                    count(par, std::begin(input), std::end(input), 42);
 
     eq = EQ(expected, result);
   }, false);
@@ -43,7 +43,7 @@ bool test(void) {
                                                                 T (&output2)[SIZE]) {
     auto expected = std::count_if(std::begin(input), std::end(input), pred);
     auto result   = std::experimental::parallel::
-                         count_if(std::begin(input), std::end(input), pred);
+                    count_if(par, std::begin(input), std::end(input), pred);
 
     eq = EQ(expected, result);
   }, false);

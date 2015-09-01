@@ -32,7 +32,7 @@ bool test(void) {
                                   (T (&input1)[SIZE], T (&input2)[SIZE]) {
     auto expected = std::accumulate(std::begin(input1), std::end(input1), 10);
     auto result   = std::experimental::parallel::
-                     reduce(par, std::begin(input2), std::end(input2), 10);
+                    reduce(par, std::begin(input2), std::end(input2), 10);
 
     eq = EQ(expected, result);
   }, false);

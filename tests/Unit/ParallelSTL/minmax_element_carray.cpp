@@ -24,7 +24,7 @@ bool test(void) {
                                                      T (&output2)[SIZE]) {
     auto expected = std::minmax_element(std::begin(input), std::end(input));
     auto result   = std::experimental::parallel::
-                         minmax_element(std::begin(input), std::end(input));
+                    minmax_element(par, std::begin(input), std::end(input));
 
     eq = expected == result;
   }, false);

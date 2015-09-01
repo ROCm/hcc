@@ -23,7 +23,7 @@ bool test(void) {
                                                      T (&output2)[SIZE]) {
     auto expected = std::min_element(std::begin(input), std::end(input));
     auto result   = std::experimental::parallel::
-                         min_element(std::begin(input), std::end(input));
+                    min_element(par, std::begin(input), std::end(input));
 
     eq = EQ(expected, result);
   }, false);

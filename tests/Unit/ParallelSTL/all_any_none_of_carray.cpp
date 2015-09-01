@@ -26,7 +26,7 @@ bool test(void) {
                                                T (&input2)[SIZE]) {
     auto expected = std::any_of(std::begin(input1), std::end(input1), pred1);
     auto result   = std::experimental::parallel::
-                         any_of(std::begin(input2), std::end(input2), pred1);
+                    any_of(par, std::begin(input2), std::end(input2), pred1);
     eq = EQ(expected, result);
   }, false);
   ret &= eq;
@@ -37,7 +37,7 @@ bool test(void) {
                                                T (&input2)[SIZE]) {
     auto expected = std::none_of(std::begin(input1), std::end(input1), pred2);
     auto result   = std::experimental::parallel::
-                         none_of(std::begin(input2), std::end(input2), pred2);
+                    none_of(par, std::begin(input2), std::end(input2), pred2);
     eq = EQ(expected, result);
   }, false);
   ret &= eq;
@@ -48,7 +48,7 @@ bool test(void) {
                                                T (&input2)[SIZE]) {
     auto expected = std::all_of(std::begin(input1), std::end(input1), pred3);
     auto result   = std::experimental::parallel::
-                         all_of(std::begin(input2), std::end(input2), pred3);
+                    all_of(par, std::begin(input2), std::end(input2), pred3);
     eq = EQ(expected, result);
   }, false);
   ret &= eq;

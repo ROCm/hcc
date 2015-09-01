@@ -23,7 +23,7 @@ bool test(void) {
                                                      T (&output2)[SIZE]) {
     auto expected = std::max_element(std::begin(input), std::end(input));
     auto result   = std::experimental::parallel::
-                         max_element(std::begin(input), std::end(input));
+                    max_element(par, std::begin(input), std::end(input));
 
     eq = EQ(expected, result);
   }, false);
