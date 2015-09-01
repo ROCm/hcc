@@ -294,6 +294,13 @@ add_custom_target(hlc
   WORKING_DIRECTORY ${HLC_BIN_DIR}
 )
 
+# install HLC along with Kalmar
+# stored under hlc/
+install(DIRECTORY ${HLC_BIN_DIR}/bin
+        DESTINATION hlc
+        COMPONENT hlc
+        PATTERN * PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+
 # build HSAILasm
 set(HSAILASM_SRC_DIR "${PROJECT_SOURCE_DIR}/HSAILasm")
 set(HSAILASM_BIN_DIR "${PROJECT_BINARY_DIR}/HSAILasm")
@@ -303,6 +310,13 @@ add_custom_target(HSAILasm
   COMMAND ${MAKE}
   WORKING_DIRECTORY ${HSAILASM_BIN_DIR}
 )
+
+# install HSAILasm along with Kalmar
+# stored under HSAILasm/
+install(FILES ${HSAILASM_BIN_DIR}/HSAILAsm/HSAILasm
+        DESTINATION HSAILasm
+        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+        COMPONENT HSAILasm)
 
 add_custom_target(world
     DEPENDS clang libc++ hlc HSAILasm ${DEPS}
@@ -375,7 +389,7 @@ set(CPACK_PACKAGE_VERSION_PATCH ${KALMAR_VERSION_PATCH})
 set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_SYSTEM_NAME})
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "Kalmar: a Heterogeneous C++ to OpenCL/HSA compiler")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Jack Chung <jack@multicorewareinc.com>")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "libcxxamp (>= 0.6.0)")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libcxxamp (>= 0.7.0)")
 set(CPACK_GENERATOR "DEB;TGZ")
 set(CPACK_SOURCE_GENERATOR "TGZ")
 set(CPACK_BINARY_DEB "ON")
@@ -384,6 +398,10 @@ set(CPACK_SOURCE_TGZ "OFF")
 set(CPACK_SOURCE_TZ "OFF")
 set(CPACK_SOURCE_TBZ2 "OFF")
 set(CPACK_BINARY_TZ "OFF")
+
+# put HLC and HSAILasm in the package as well
+set(CPACK_COMPONENTS_ALL HSAILasm hlc)
+
 include (CPack)
 MESSAGE("")
 MESSAGE("** For the first time:")
