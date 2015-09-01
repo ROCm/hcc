@@ -354,10 +354,10 @@ adjacent_difference(ExecutionPolicy&& exec,
 
 
 // lexicographical_compare
-template <typename ExecutionPolicy, typename InputIt1, typename InputIt2,
-          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
-          utils::EnableIf<utils::isInputIt<InputIt1>> = nullptr,
-          utils::EnableIf<utils::isInputIt<InputIt2>> = nullptr>
+template<typename ExecutionPolicy, typename InputIt1, typename InputIt2,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIt1>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIt2>> = nullptr>
 bool
 lexicographical_compare(ExecutionPolicy&& exec,
                         InputIt1 first1, InputIt1 last1,
@@ -368,11 +368,11 @@ lexicographical_compare(ExecutionPolicy&& exec,
 }
 
 
-template <typename ExecutionPolicy, typename InputIt1, typename InputIt2,
-          typename Compare,
-          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
-          utils::EnableIf<utils::isInputIt<InputIt1>> = nullptr,
-          utils::EnableIf<utils::isInputIt<InputIt2>> = nullptr>
+template<typename ExecutionPolicy, typename InputIt1, typename InputIt2,
+         typename Compare,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIt1>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIt2>> = nullptr>
 bool
 lexicographical_compare(ExecutionPolicy&& exec,
                         InputIt1 first1, InputIt1 last1,
