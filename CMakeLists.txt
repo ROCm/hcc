@@ -28,6 +28,7 @@ include (EnsureCLANGisPresent)
 include (EnsureLIBCXXisPresent)
 include (EnsureLIBCXXRTisPresent)
 include (EnsureHLCisPresent)
+include (EnsureHSAILASMisPresent)
 include (SetupCBE)
 include (SetupSPIRify)
 include (SetupEraseNonkernel)
@@ -65,6 +66,9 @@ SET(LOCAL_LLVM_INCLUDE compiler/include)
 
 # setup HLC in Kalmar
 ensure_HLC_is_present(${PROJECT_SOURCE_DIR} hlc)
+
+# setup HSAILasm in Kalmar
+ensure_HSAILASM_is_present(${PROJECT_SOURCE_DIR} HSAILasm)
 
 # setup compilation environment
 if (UNIX)
