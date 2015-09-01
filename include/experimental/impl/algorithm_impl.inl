@@ -295,7 +295,7 @@ bool equal_impl(InputIt1 first1, InputIt1 last1,
     return equal_impl(first1, last1, first2, p, std::input_iterator_tag{});
   }
 
-  return transform_reduce(first1, last1, first1, true,
+  return transform_reduce(first1, last1, first2, true,
                           std::logical_and<bool>(), p);
 }
 
