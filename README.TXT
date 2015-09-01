@@ -122,6 +122,8 @@ are:
       -DHSA_HOF_DIR=/opt/amd/bin \
       -DCMAKE_BUILD_TYPE=Release \
       -DCXXAMP_ENABLE_BOLT=OFF
+      -DHSAIL_COMPILER_DIR=/opt/amd/bin \
+      -DHSAIL_ASSEMBLER_DIR=/opt/amd/bin \
 
    - CLANG_URL : URL of C++AMP clang implementation
 
@@ -138,6 +140,14 @@ are:
    - CMAKE_BUILD_TYPE : Release or Debug (default is Release )
 
    - CXXAMP_ENABLE_BOLT : ON / OFF AMD Bolt API (default is OFF )
+
+   - HSAIL_COMPILER_DIR : Place where HSAIL compiler (HLC) source code is placed.
+                          By default Kalmar compiler will checkout a fresh copy from
+                          github if this variable is not set.
+
+   - HSAIL_ASSEMBLER_DIR : Place where HSAIL-Tools (HSAILasm) source code is placed.
+                          By default Kalmar compiler will checkout a fresh copy from
+                          github if this variable is not set.
 
 4. Build the whole system. This will build clang and other libraries
    that require one time build.
