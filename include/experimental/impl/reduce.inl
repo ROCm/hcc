@@ -1,17 +1,5 @@
 #pragma once
 
-// FIXME, this is a SEQUENTIAL implementation of reduce!
-// a special version of reduce which does NOT dereference the iterator
-template<class InputIterator, class T, class BinaryOperation>
-T __reduce(InputIterator first, InputIterator last, T init,
-           BinaryOperation binary_op) {
-  T result = init;
-  for (; first != last; ++first) {
-    result = binary_op(init, first);
-  }
-  return result;
-}
-
 namespace details {
 template<class InputIterator, class T, class BinaryOperation>
 T reduce_impl(InputIterator first, InputIterator last,

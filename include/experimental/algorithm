@@ -484,15 +484,7 @@ ForwardIt
 max_element(ExecutionPolicy&& exec,
             ForwardIt first, ForwardIt last,
             Compare cmp) {
-  if (utils::isParallel(exec)) {
-    ForwardIt result = first;
-    result = __reduce(first, last, result, [&](const ForwardIt& a, const ForwardIt& b) {
-      return cmp(*a, *b) ? b : a;
-    });
-    return result;
-  } else {
-    return std::max_element(first, last, cmp);
-  }
+  return std::max_element(first, last, cmp);
 }
 
 
@@ -523,15 +515,7 @@ ForwardIt
 min_element(ExecutionPolicy&& exec,
             ForwardIt first, ForwardIt last,
             Compare cmp) {
-  if (utils::isParallel(exec)) {
-    ForwardIt result = first;
-    result = __reduce(first, last, result, [&](const ForwardIt& a, const ForwardIt& b) {
-      return cmp(*a, *b) ? a : b;
-    });
-    return result;
-  } else {
-    return std::min_element(first, last, cmp);
-  }
+  return std::min_element(first, last, cmp);
 }
 
 
