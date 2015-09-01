@@ -120,6 +120,7 @@ are:
       -DHSA_LIBRARY_DIR=/opt/hsa/lib \
       -DHSA_KMT_LIBRARY_DIR=/opt/hsa/lib \
       -DHSAIL_COMPILER_DIR=/opt/amd/bin \
+      -DHSAIL_ASSEMBLER_DIR=/opt/amd/bin \
       -DHSA_HOF_DIR=/opt/amd/bin \
       -DCMAKE_BUILD_TYPE=Release \
       -DCXXAMP_ENABLE_BOLT=OFF
@@ -135,6 +136,8 @@ are:
    - HSA_KMT_LIBRARY_DIR : HSA kernel library path (default is /opt/hsa/lib )
 
    - HSAIL_COMPILER_DIR : HSAIL compiler binary path (default is /opt/amd/bin )
+
+   - HSAIL_ASSEMBLER_DIR : HSAIL assembler binary path (default is /opt/amd/bin )
 
    - HSA_HOF_DIR : HSA offline finalizer binary path (default is /opt/amd/bin )
 

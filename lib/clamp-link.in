@@ -37,12 +37,13 @@ LOWER_HOF=@HAS_HSA_HOF@
 ################
 
 if [ $LOWER_HSA == 1 ]; then
-  # Path to HSAIL backend (LLVM-3.6-based)
+  # Path to HSAIL backend (LLVM-3.7-based)
   LLVM_BIN=@HSAIL_BIN@
-  # Path to HSAILASM
-  HSAIL_ASM=@HSAIL_COMPILER@
+  # Path to HSAIL compiler and assembler
+  HSAIL_LLC=@HSAIL_COMPILER@
+  HSAIL_ASM=@HSAIL_ASSEMBLER@
 
-  if [ -d $LLVM_BIN ] && [ -e $LLVM_BIN/llvm-link ] && [ -e $LLVM_BIN/opt ] && [ -e $LLVM_BIN/llc ] && [ -e $HSAIL_ASM ]; then
+  if [ -d $LLVM_BIN ] && [ -e $LLVM_BIN/llvm-link ] && [ -e $LLVM_BIN/opt ] && [ -e $HSAIL_LLC ] && [ -e $HSAIL_ASM ]; then
     # all HSA tools are available
     LOWER_HSA=1
   else

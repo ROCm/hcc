@@ -34,10 +34,11 @@ if [ -d @LLVM_TOOLS_DIR@ ]; then
 else
     NEWLIB=@CMAKE_INSTALL_PREFIX@/lib
 fi
-# Path to HSAIL backend (LLVM-3.6-based)
+# Path to HSAIL backend (LLVM-3.7-based)
 LLVM_BIN=@HSAIL_BIN@
 # Path to HSAILASM
-HSAIL_ASM=@HSAIL_COMPILER@
+HSAIL_LLC=@HSAIL_COMPILER@
+HSAIL_ASM=@HSAIL_ASSEMBLER@
 
 if [ $KMDUMPLLVM == "1" ]; then
   cp $1 ./dump.fe.bc
@@ -68,7 +69,7 @@ if [ $KMDUMPLLVM == "1" ]; then
   cp $1.opt.bc ./dump.opt.bc
 fi
 
-$LLVM_BIN/llc -O2 -march=hsail64 -filetype=asm -o $1.hsail $1.opt.bc
+$HSAIL_LLC -O2 -march=hsail64 -filetype=asm -o $1.hsail $1.opt.bc
 # error handling for HSAIL llc
 RETVAL=$?
 if [ $RETVAL != 0 ]; then
