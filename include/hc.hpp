@@ -23,8 +23,6 @@
 
 #include <hsa_atomic.h>
 
-#include <am.h>
-
 /**
  * @namespace hc
  * Heterogeneous  C++ (HC) namespace
