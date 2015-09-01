@@ -243,7 +243,7 @@ add_custom_target(libc++
       -DLIBCXX_CXX_ABI="libcxxabi" -DLIBCXX_LIBCXXABI_INCLUDE_PATHS="/usr/include/"
       -DCMAKE_CXX_COMPILER=${CLANG_CC1}
       -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
-  COMMAND ${MAKE}
+  COMMAND make -j4 # not portable, but we need it this way
   WORKING_DIRECTORY ${LIBCXX_BIN_DIR}
   DEPENDS clang
 )
@@ -251,7 +251,7 @@ else (APPLE)
 # use libcxxrt as ABI instead
 add_custom_target(libc++
   COMMAND ${CMAKE_COMMAND} ${LIBCXX_SRC_DIR} -DCMAKE_CXX_COMPILER=${CLANG_CC1} -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
-  COMMAND ${MAKE}
+  COMMAND make -j4 # not portable, but we need it this way
   WORKING_DIRECTORY ${LIBCXX_BIN_DIR}
   DEPENDS clang
 )
@@ -290,7 +290,7 @@ add_custom_target(hlc
           -DLLVM_ENABLE_RTTI=ON
           -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=HSAIL
           -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-  COMMAND ${MAKE}
+  COMMAND make -j4 # not portable, but we need it this way
   WORKING_DIRECTORY ${HLC_BIN_DIR}
 )
 
@@ -307,7 +307,7 @@ set(HSAILASM_BIN_DIR "${PROJECT_BINARY_DIR}/HSAILasm")
 file(MAKE_DIRECTORY ${HSAILASM_BIN_DIR})
 add_custom_target(HSAILasm
   COMMAND ${CMAKE_COMMAND} ${HSAILASM_SRC_DIR}/libHSAIL
-  COMMAND ${MAKE}
+  COMMAND make -j4 # not portable, but we need it this way
   WORKING_DIRECTORY ${HSAILASM_BIN_DIR}
 )
 
