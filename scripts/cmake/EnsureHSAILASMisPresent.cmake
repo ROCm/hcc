@@ -1,0 +1,15 @@
+macro(ensure_HSAILASM_is_present dest_dir name)
+
+if(EXISTS "${dest_dir}/${name}")
+    MESSAGE("HSAILasm already exists.")
+else(EXISTS "${dest_dir}/${name}")
+    MESSAGE("Downloading HSAILasm")
+    Find_Package(Git)
+    if(NOT ${GIT_FOUND})
+        message(FATAL_ERROR "upstream HSAILasm is not present at ${dest_dir}/${name} and git could not be found")
+    else()
+        # git clone
+        execute_process( COMMAND git clone https://github.com/HSAFoundation/HSAIL-Tools.git ${dest_dir}/${name} )
+    endif()
+endif()
+endmacro()
