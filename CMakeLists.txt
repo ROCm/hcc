@@ -292,8 +292,23 @@ add_subdirectory(include)
 add_subdirectory(amp-conformance)
 add_subdirectory(stl-test)
 
+# build HLC
+set(HLC_SRC_DIR "${PROJECT_SOURCE_DIR}/hlc")
+set(HLC_BIN_DIR "${PROJECT_BINARY_DIR}/hlc")
+file(MAKE_DIRECTORY ${HLC_BIN_DIR})
+add_custom_target(hlc
+  COMMAND ${CMAKE_COMMAND} ${HLC_SRC_DIR}
+          -DLLVM_ENABLE_EH=ON
+          -DLLVM_ENABLE_RTTI=ON
+          -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=HSAIL
+          -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+  COMMAND make # not portable, but this is what it is.
+  WORKING_DIRECTORY ${HLC_BIN_DIR}
+  DEPENDS clang
+)
+
 add_custom_target(world
-    DEPENDS clang libc++ ${DEPS}
+    DEPENDS clang libc++ hlc ${DEPS}
 )
 
 # create documentation
@@ -366,7 +381,7 @@ set(CPACK_BINARY_TZ "OFF")
 include (CPack)
 MESSAGE("")
 MESSAGE("** For the first time:")
-MESSAGE("   'make world' to build clang, libc++ and library for testing.")
+MESSAGE("   'make world' to build clang, libc++, HLC, and library for testing.")
 MESSAGE("   'make' to build the rest of LLVM tools")
 MESSAGE("   'make docs' to build the HTML API reference")
 MESSAGE("")
