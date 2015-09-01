@@ -1046,7 +1046,19 @@ void CollectChangedCalledFunctions (Function * F, InstUpdateWorkList * updatesNe
 void appendMemoryScopeMetadata(Instruction *I) {
   // set default memory scope as: _sys_ (5)
   ConstantInt *C = ConstantInt::get(Type::getInt32Ty(I->getContext()), 5); 
+#if LLVM_VERSION_MAJOR == 3
+  #if (LLVM_VERSION_MINOR >= 3) && (LLVM_VERSION_MINOR <= 5)
+  // logic which is compatible from LLVM 3.3 till LLVM 3.5
   MDNode *MD = MDNode::get(I->getContext(), C); 
+  #elif LLVM_VERSION_MINOR > 5
+  // support new MDTuple type introduced in LLVM 3.6+
+  MDTuple *MD = MDTuple::get(I->getContext(), ConstantAsMetadata::get(C));
+  #else
+    #error Unsupported LLVM MINOR VERSION
+  #endif
+#else
+  #error Unsupported LLVM MAJOR VERSION
+#endif
   I->setMetadata("mem.scope", MD);
 }
 
@@ -1164,6 +1176,11 @@ static bool usedInTheFunc(const User *U, const Function* F)
       return true;
   }
   #elif LLVM_VERSION_MINOR == 5
+  for (const User *u : U->users()) {
+    if (usedInTheFunc(u, F) == true)
+      return true;
+  }
+  #elif LLVM_VERSION_MINOR > 5
   for (const User *u : U->users()) {
     if (usedInTheFunc(u, F) == true)
       return true;
@@ -1558,12 +1575,28 @@ KernelNodeVisitor::KernelNodeVisitor(FunctionVect& FV)
 void KernelNodeVisitor::operator()(MDNode *N)
 {
         if ( N->getNumOperands() < 1) return;
+#if LLVM_VERSION_MAJOR == 3
+  #if (LLVM_VERSION_MINOR >= 3) && (LLVM_VERSION_MINOR <= 5)
+        // logic which is compatible from LLVM 3.3 till LLVM 3.5
         Value * Op = N->getOperand(0);
         if (!Op)
             return;
         if ( Function * F = dyn_cast<Function>(Op)) {
                 found_kernels.push_back(F);
         }
+  #elif LLVM_VERSION_MINOR > 5
+        // support new metadata data structure introduced in LLVM 3.6+
+        const MDOperand& Op = N->getOperand(0);
+        if ( Function * F = mdconst::dyn_extract<Function>(Op)) {
+                found_kernels.push_back(F);
+        }
+  #else
+    #error Unsupported LLVM MINOR VERSION
+  #endif
+#else
+  #error Unsupported LLVM MAJOR VERSION
+#endif
+
 }
 
 /* Call functor for each MDNode located within the Named MDNode */
@@ -1597,11 +1630,37 @@ void updateKernels(Module& M, const FunctionMap& new_kernels)
         for (unsigned i = 0; i < root->getNumOperands(); i++) {
             // for each metadata of the kernel..
             MDNode * kernel = root->getOperand(i);
+#if LLVM_VERSION_MAJOR == 3
+  #if (LLVM_VERSION_MINOR >= 3) && (LLVM_VERSION_MINOR <= 5)
+            // logic which is compatible from LLVM 3.3 till LLVM 3.5
             Function * f = dyn_cast<Function>(kernel->getOperand(0));
+  #elif LLVM_VERSION_MINOR > 5
+            // support new metadata data structure introduced in LLVM 3.6+
+            Function * f = mdconst::dyn_extract<Function>(kernel->getOperand(0));
+  #else
+    #error Unsupported LLVM MINOR VERSION
+  #endif
+#else
+  #error Unsupported LLVM MAJOR VERSION
+#endif
             assert(f != NULL);
             iterator I = new_kernels.find(f);
-            if (I != new_kernels.end())
+            if (I != new_kernels.end()) {
+#if LLVM_VERSION_MAJOR == 3
+  #if (LLVM_VERSION_MINOR >= 3) && (LLVM_VERSION_MINOR <= 5)
+                // logic which is compatible from LLVM 3.3 till LLVM 3.5
                 kernel->replaceOperandWith(0, I->second);
+  #elif LLVM_VERSION_MINOR > 5
+                // support new metadata data structure introduced in LLVM 3.6+
+                kernel->replaceOperandWith(0, ValueAsMetadata::get(I->second));
+  #else
+    #error Unsupported LLVM MINOR VERSION
+  #endif
+#else
+  #error Unsupported LLVM MAJOR VERSION
+#endif
+
+            }
         }
         for (iterator kern = new_kernels.begin(), end = new_kernels.end();
              kern != end; ++kern) {
