@@ -17,12 +17,12 @@ bool test(void) {
   auto binary_op = std::plus<T>();
   auto init = T{};
 
-  using namespace std::experimental::parallel;
+  using std::experimental::parallel::par;
 
   bool ret = true;
-  ret &= run<T, SIZE>([op, binary_op, init]
-                      (T (&input)[SIZE], T (&output1)[SIZE],
-                                         T (&output2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([op, binary_op, init]
+                                  (T (&input)[SIZE], T (&output1)[SIZE],
+                                                     T (&output2)[SIZE]) {
     // transform_exclusive_scan = transform + partial_sum (exclusive)
     std::transform(std::begin(input), std::end(input), std::begin(output1), op);
     std::partial_sum(std::begin(output1), std::end(output1), std::begin(output1), binary_op);
@@ -31,6 +31,7 @@ bool test(void) {
     output1[0] = init;
 
     // parallel::transform_exclusive_scan
+    std::experimental::parallel::
     transform_exclusive_scan(par, std::begin(input), std::end(input),
                                   std::begin(output2), op, init, binary_op);
   });

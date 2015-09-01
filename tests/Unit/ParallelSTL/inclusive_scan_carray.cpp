@@ -17,13 +17,14 @@ bool test(void) {
   auto binary_op = std::plus<T>();
   auto init = T{};
 
-  using namespace std::experimental::parallel;
+  using std::experimental::parallel::par;
 
   bool ret = true;
-  ret &= run<T, SIZE>([init, binary_op]
-                      (T (&input)[SIZE], T (&output1)[SIZE],
-                                         T (&output2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([init, binary_op]
+                                  (T (&input)[SIZE], T (&output1)[SIZE],
+                                                     T (&output2)[SIZE]) {
     std::partial_sum(std::begin(input), std::end(input), std::begin(output1), binary_op);
+    std::experimental::parallel::
     inclusive_scan(par, std::begin(input), std::end(input), std::begin(output2), binary_op, init);
   });
 

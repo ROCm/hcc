@@ -13,12 +13,13 @@
 template<typename T, size_t SIZE>
 bool test(void) {
 
-  using namespace std::experimental::parallel;
+  using std::experimental::parallel::par;
 
   bool ret = true;
-  ret &= run<T, SIZE>([](T (&input1)[SIZE],
-                         T (&input2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([](T (&input1)[SIZE],
+                                     T (&input2)[SIZE]) {
     std::replace(std::begin(input1), std::end(input1), 2, 3);
+    std::experimental::parallel::
     replace(par, std::begin(input2), std::end(input2), 2, 3);
   });
 

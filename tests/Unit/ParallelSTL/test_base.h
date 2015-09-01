@@ -12,12 +12,16 @@
 // for floating numbers
 #define EQ(a,b) ((((a) - (b)) > 0 ? ((a) - (b)) : ((b) - (a))) < 0.001)
 
-// check outputs
+
+// These functions will generate input data and accept different kinds of
+// lambda to run between std::STL and our PSTL implementation
+// callers are able to change the input data if needed
+//
 // PSTL(std::begin(first), std::end(first))
 template <typename T, size_t SIZE>
-bool run(std::function<void(T (&)[SIZE],
-                            T (&)[SIZE])> f,
-                       bool checkOutput=true) {
+bool run_and_compare(std::function<void(T (&)[SIZE],
+                                        T (&)[SIZE])> f,
+                     bool checkOutput=true) {
 
   // first
   T input1[SIZE] { 0 };
@@ -56,9 +60,9 @@ bool run(std::function<void(T (&)[SIZE],
 
 // PSTL(std::begin(first), std::end(first), std::begin(d_first))
 template <typename T, size_t SIZE>
-bool run(std::function<void(T (&)[SIZE], T (&)[SIZE],
-                                         T (&)[SIZE])> f,
-                       bool checkOutput=true) {
+bool run_and_compare(std::function<void(T (&)[SIZE], T (&)[SIZE],
+                                                     T (&)[SIZE])> f,
+                     bool checkOutput=true) {
 
   // first
   T input1[SIZE] { 0 };
@@ -100,9 +104,9 @@ bool run(std::function<void(T (&)[SIZE], T (&)[SIZE],
 
 // PSTL(std::begin(first1), std::end(first1), std::begin(first2), std::begin(d_first))
 template <typename T, size_t SIZE>
-bool run(std::function<void(T (&)[SIZE], T (&)[SIZE], T (&)[SIZE],
-                                                      T (&)[SIZE])> f,
-                       bool checkOutput=true) {
+bool run_and_compare(std::function<void(T (&)[SIZE], T (&)[SIZE], T (&)[SIZE],
+                                                                  T (&)[SIZE])> f,
+                     bool checkOutput=true) {
 
   // first1
   T input1[SIZE] { 0 };

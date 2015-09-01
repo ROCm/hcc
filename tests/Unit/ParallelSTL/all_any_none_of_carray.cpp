@@ -17,35 +17,38 @@ bool test(void) {
   auto pred2 = [](const T& v) { return static_cast<int>(v) == SIZE + 1; };
   auto pred3 = [](const T& v) { return v >= 0; };
 
-  using namespace std::experimental::parallel;
+  using std::experimental::parallel::par;
 
   bool ret = true;
   bool eq = true;
   // any_of
-  ret &= run<T, SIZE>([pred1, &eq](T (&input1)[SIZE],
-                                   T (&input2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([pred1, &eq](T (&input1)[SIZE],
+                                               T (&input2)[SIZE]) {
     auto expected = std::any_of(std::begin(input1), std::end(input1), pred1);
-    auto result = std::experimental::parallel::any_of(std::begin(input2), std::end(input2), pred1);
+    auto result   = std::experimental::parallel::
+                         any_of(std::begin(input2), std::end(input2), pred1);
     eq = EQ(expected, result);
   }, false);
   ret &= eq;
 
 
   // none_of
-  ret &= run<T, SIZE>([pred2, &eq](T (&input1)[SIZE],
-                                   T (&input2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([pred2, &eq](T (&input1)[SIZE],
+                                               T (&input2)[SIZE]) {
     auto expected = std::none_of(std::begin(input1), std::end(input1), pred2);
-    auto result = std::experimental::parallel::none_of(std::begin(input2), std::end(input2), pred2);
+    auto result   = std::experimental::parallel::
+                         none_of(std::begin(input2), std::end(input2), pred2);
     eq = EQ(expected, result);
   }, false);
   ret &= eq;
 
 
   // all_of
-  ret &= run<T, SIZE>([pred3, &eq](T (&input1)[SIZE],
-                                   T (&input2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([pred3, &eq](T (&input1)[SIZE],
+                                               T (&input2)[SIZE]) {
     auto expected = std::all_of(std::begin(input1), std::end(input1), pred3);
-    auto result = std::experimental::parallel::all_of(std::begin(input2), std::end(input2), pred3);
+    auto result   = std::experimental::parallel::
+                         all_of(std::begin(input2), std::end(input2), pred3);
     eq = EQ(expected, result);
   }, false);
   ret &= eq;

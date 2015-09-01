@@ -15,12 +15,13 @@ bool test(void) {
 
   auto op = [](const T& a, const T& b) { return a - b; };
 
-  using namespace std::experimental::parallel;
+  using std::experimental::parallel::par;
 
   bool ret = true;
-  ret &= run<T, SIZE>([op](T (&input)[SIZE], T (&output1)[SIZE],
-                                             T (&output2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([op](T (&input)[SIZE], T (&output1)[SIZE],
+                                                         T (&output2)[SIZE]) {
     std::adjacent_difference(std::begin(input), std::end(input), std::begin(output1), op);
+    std::experimental::parallel::
     adjacent_difference(par, std::begin(input), std::end(input), std::begin(output2), op);
   });
 

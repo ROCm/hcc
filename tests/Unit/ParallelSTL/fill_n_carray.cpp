@@ -15,12 +15,13 @@
 template<typename T, size_t SIZE, int FIRST_OFFSET, int LAST_OFFSET>
 bool test_negative(void) {
 
-  using namespace std::experimental::parallel;
+  using std::experimental::parallel::par;
 
   bool ret = true;
-  ret &= run<T, SIZE>([](T (&input1)[SIZE],
-                         T (&input2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([](T (&input1)[SIZE],
+                                     T (&input2)[SIZE]) {
     std::fill_n(std::begin(input1) + FIRST_OFFSET, (LAST_OFFSET - FIRST_OFFSET), SIZE + 1);
+    std::experimental::parallel::
     fill_n(par, std::begin(input2) + FIRST_OFFSET, (LAST_OFFSET - FIRST_OFFSET), SIZE + 1);
   });
 
@@ -32,12 +33,13 @@ bool test_negative(void) {
 template<typename T, size_t SIZE, size_t FIRST_OFFSET, size_t TEST_LENGTH>
 bool test(void) {
 
-  using namespace std::experimental::parallel;
+  using std::experimental::parallel::par;
 
   bool ret = true;
-  ret &= run<T, SIZE>([](T (&input1)[SIZE],
-                         T (&input2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([](T (&input1)[SIZE],
+                                     T (&input2)[SIZE]) {
     std::fill_n(std::begin(input1) + FIRST_OFFSET, TEST_LENGTH, SIZE + 1);
+    std::experimental::parallel::
     fill_n(par, std::begin(input2) + FIRST_OFFSET, TEST_LENGTH, SIZE + 1);
   });
 

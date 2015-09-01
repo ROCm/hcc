@@ -22,15 +22,16 @@ bool test(void) {
   auto binary_op = std::plus<T>();
   auto init = T{};
 
-  using namespace std::experimental::parallel;
+  using std::experimental::parallel::par;
 
   bool ret = true;
   bool eq = true;
-  ret &= run<T, SIZE>([init, binary_op, f, &eq]
-                      (T (&input1)[SIZE], T (&input2)[SIZE], T (&output1)[SIZE],
-                                                             T (&output2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([init, binary_op, f, &eq]
+                                  (T (&input1)[SIZE], T (&input2)[SIZE], T (&output1)[SIZE],
+                                                                         T (&output2)[SIZE]) {
     auto expected = std::inner_product(std::begin(input1), std::end(input1), std::begin(input2), init, binary_op, f);
-    auto result =   inner_product(par, std::begin(input1), std::end(input1), std::begin(input2), init, binary_op, f);
+    auto result   = std::experimental::parallel::
+                    inner_product(par, std::begin(input1), std::end(input1), std::begin(input2), init, binary_op, f);
 
     eq = EQ(expected, result);
 

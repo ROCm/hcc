@@ -16,11 +16,13 @@ template<typename T, size_t SIZE, int FIRST_OFFSET, int LAST_OFFSET>
 bool test_negative(void) {
 
   auto f = [](T& v) { v = 1; };
-  using namespace std::experimental::parallel;
+  using std::experimental::parallel::par;
 
   bool ret = true;
-  ret &= run<T, SIZE>([f](T (&input1)[SIZE],
-                          T (&input2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([f](T (&input1)[SIZE],
+                                      T (&input2)[SIZE]) {
+    // There's no for_each_n in STL
+    std::experimental::parallel::
     for_each_n(par, std::begin(input2) + FIRST_OFFSET, (LAST_OFFSET - FIRST_OFFSET), f);
   });
 
@@ -39,12 +41,13 @@ bool test(void) {
     v += 3;
   };
 
-  using namespace std::experimental::parallel;
+  using std::experimental::parallel::par;
 
   bool ret = true;
-  ret &= run<T, SIZE>([f](T (&input1)[SIZE],
-                          T (&input2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([f](T (&input1)[SIZE],
+                                      T (&input2)[SIZE]) {
     std::for_each(std::begin(input1)+ FIRST_OFFSET, std::begin(input1) + TEST_LENGTH, f);
+    std::experimental::parallel::
     for_each_n(par, std::begin(input2) + FIRST_OFFSET, TEST_LENGTH, f);
   });
 

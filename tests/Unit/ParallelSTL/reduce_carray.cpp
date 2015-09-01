@@ -14,25 +14,25 @@
 template<typename T, size_t SIZE>
 bool test(void) {
 
-  using namespace std::experimental::parallel;
+  using std::experimental::parallel::par;
 
   bool ret = true;
   bool eq = true;
-  ret &= run<T, SIZE>([&eq]
-                      (T (&input1)[SIZE],
-                       T (&input2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([&eq]
+                                  (T (&input1)[SIZE], T (&input2)[SIZE]) {
     auto expected = std::accumulate(std::begin(input1), std::end(input1), T{});
-    auto result   = reduce(par, std::begin(input2), std::end(input2), T{});
+    auto result   = std::experimental::parallel::
+                    reduce(par, std::begin(input2), std::end(input2), T{});
 
     eq = EQ(expected, result);
   }, false);
   ret &= eq;
 
-  ret &= run<T, SIZE>([&eq]
-                      (T (&input1)[SIZE],
-                       T (&input2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([&eq]
+                                  (T (&input1)[SIZE], T (&input2)[SIZE]) {
     auto expected = std::accumulate(std::begin(input1), std::end(input1), 10);
-    auto result   = reduce(par, std::begin(input2), std::end(input2), 10);
+    auto result   = std::experimental::parallel::
+                     reduce(par, std::begin(input2), std::end(input2), 10);
 
     eq = EQ(expected, result);
   }, false);

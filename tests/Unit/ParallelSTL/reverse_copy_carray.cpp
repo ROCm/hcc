@@ -14,13 +14,14 @@
 template<typename T, size_t SIZE>
 bool test(void) {
 
-  using namespace std::experimental::parallel;
+  using std::experimental::parallel::par;
 
   bool ret = true;
 
-  ret &= run<T, SIZE>([](T (&input)[SIZE], T (&output1)[SIZE],
-                                           T (&output2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([](T (&input)[SIZE], T (&output1)[SIZE],
+                                                       T (&output2)[SIZE]) {
     std::reverse_copy(std::begin(input), std::end(input), std::begin(output1));
+    std::experimental::parallel::
     reverse_copy(par, std::begin(input), std::end(input), std::begin(output2));
   });
 

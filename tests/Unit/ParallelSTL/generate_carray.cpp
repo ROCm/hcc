@@ -14,12 +14,13 @@ template<typename T, size_t SIZE>
 bool test(void) {
 
   auto f = [] { return SIZE + 1; };
-  using namespace std::experimental::parallel;
+  using std::experimental::parallel::par;
 
   bool ret = true;
-  ret &= run<T, SIZE>([f](T (&input1)[SIZE],
-                          T (&input2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([f](T (&input1)[SIZE],
+                                      T (&input2)[SIZE]) {
     std::generate(std::begin(input1), std::end(input1), f);
+    std::experimental::parallel::
     generate(par, std::begin(input2), std::end(input2), f);
   });
 

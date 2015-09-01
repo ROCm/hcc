@@ -14,27 +14,29 @@
 template<typename T, size_t SIZE>
 bool test(void) {
 
-  using namespace std::experimental::parallel;
+  using std::experimental::parallel::par;
 
   bool ret = true;
   bool eq = true;
-  ret &= run<T, SIZE>([&eq]
-                      (T (&input)[SIZE], T (&output1)[SIZE],
-                                         T (&output2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([&eq]
+                                  (T (&input)[SIZE], T (&output1)[SIZE],
+                                                     T (&output2)[SIZE]) {
     auto expected = std::adjacent_find(std::begin(input), std::end(input));
-    auto result   = adjacent_find(par, std::begin(input), std::end(input));
+    auto result   = std::experimental::parallel::
+                    adjacent_find(par, std::begin(input), std::end(input));
 
     eq = EQ(expected, result);
   }, false);
   ret &= eq;
 
-  ret &= run<T, SIZE>([&eq]
-                      (T (&input)[SIZE], T (&output1)[SIZE],
-                                         T (&output2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([&eq]
+                                  (T (&input)[SIZE], T (&output1)[SIZE],
+                                                     T (&output2)[SIZE]) {
     // make them equal
     input[2] = input[3];
     auto expected = std::adjacent_find(std::begin(input), std::end(input));
-    auto result   = adjacent_find(par, std::begin(input), std::end(input));
+    auto result   = std::experimental::parallel::
+                    adjacent_find(par, std::begin(input), std::end(input));
 
     eq = EQ(expected, result);
   }, false);
@@ -43,12 +45,13 @@ bool test(void) {
   // use custom predicate
   auto pred = [](const T& a, const T& b) { return a > b; };
 
-  ret &= run<T, SIZE>([&eq, pred]
-                      (T (&input)[SIZE], T (&output1)[SIZE],
-                                         T (&output2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([&eq, pred]
+                                  (T (&input)[SIZE], T (&output1)[SIZE],
+                                                     T (&output2)[SIZE]) {
     // test adjacent_find (predicated version)
     auto expected = std::adjacent_find(std::begin(input), std::end(input), pred);
-    auto result   = adjacent_find(par, std::begin(input), std::end(input), pred);
+    auto result   = std::experimental::parallel::
+                    adjacent_find(par, std::begin(input), std::end(input), pred);
 
     eq = EQ(expected, result);
   }, false);

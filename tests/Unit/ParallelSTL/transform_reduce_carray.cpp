@@ -17,17 +17,18 @@ bool test(void) {
   auto binary_op = std::plus<T>();
   auto init = T{};
 
-  using namespace std::experimental::parallel;
+  using std::experimental::parallel::par;
 
   bool ret = true;
   bool eq = true;
-  ret &= run<T, SIZE>([op, init, binary_op, &eq]
-                      (T (&input)[SIZE], T (&output1)[SIZE],
-                                         T (&output2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([op, init, binary_op, &eq]
+                                  (T (&input)[SIZE], T (&output1)[SIZE],
+                                                     T (&output2)[SIZE]) {
     std::transform(std::begin(input), std::end(input), std::begin(output1), op);
     auto expected = std::accumulate(std::begin(output1), std::end(output1), init, binary_op);
 
-    auto result = transform_reduce(par, std::begin(input), std::end(input), op, init, binary_op);
+    auto result = std::experimental::parallel::
+                  transform_reduce(par, std::begin(input), std::end(input), op, init, binary_op);
     eq = EQ(expected, result);
   }, false);
   ret &= eq;

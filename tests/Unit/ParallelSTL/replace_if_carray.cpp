@@ -15,12 +15,13 @@ bool test(void) {
 
   auto f = [](T& v) { return static_cast<int>(v) % 3 == 0; };
 
-  using namespace std::experimental::parallel;
+  using std::experimental::parallel::par;
 
   bool ret = true;
-  ret &= run<T, SIZE>([f](T (&input1)[SIZE],
-                          T (&input2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([f](T (&input1)[SIZE],
+                                      T (&input2)[SIZE]) {
     std::replace_if(std::begin(input1), std::end(input1), f, SIZE + 1);
+    std::experimental::parallel::
     replace_if(par, std::begin(input2), std::end(input2), f, SIZE + 1);
   });
 

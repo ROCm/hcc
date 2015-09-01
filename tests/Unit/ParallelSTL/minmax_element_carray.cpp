@@ -15,15 +15,16 @@
 template<typename T, size_t SIZE>
 bool test(void) {
 
-  using namespace std::experimental::parallel;
+  using std::experimental::parallel::par;
 
   bool ret = true;
   bool eq = true;
-  ret &= run<T, SIZE>([&eq]
-                      (T (&input)[SIZE], T (&output1)[SIZE],
-                                         T (&output2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([&eq]
+                                  (T (&input)[SIZE], T (&output1)[SIZE],
+                                                     T (&output2)[SIZE]) {
     auto expected = std::minmax_element(std::begin(input), std::end(input));
-    auto result   =      minmax_element(std::begin(input), std::end(input));
+    auto result   = std::experimental::parallel::
+                         minmax_element(std::begin(input), std::end(input));
 
     eq = expected == result;
   }, false);

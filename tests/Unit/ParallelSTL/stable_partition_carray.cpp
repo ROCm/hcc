@@ -15,13 +15,14 @@ bool test(void) {
 
 
   auto pred = [](const T& a) { return int(a) % 2 == 0; };
-  using namespace std::experimental::parallel;
+  using std::experimental::parallel::par;
 
   bool ret = true;
-  ret &= run<T, SIZE>([pred]
-                      (T (&input1)[SIZE],
-                       T (&input2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([pred]
+                                  (T (&input1)[SIZE],
+                                   T (&input2)[SIZE]) {
     std::stable_partition(std::begin(input1), std::end(input1), pred);
+    std::experimental::parallel::
     stable_partition(par, std::begin(input2), std::end(input2), pred);
 
   });

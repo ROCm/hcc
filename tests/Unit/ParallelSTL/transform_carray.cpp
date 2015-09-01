@@ -16,18 +16,20 @@ bool test(void) {
   auto f = [](T& v) { return v * 2; };
   auto g = [](T& v) { return v + 5566; };
 
-  using namespace std::experimental::parallel;
+  using std::experimental::parallel::par;
 
   bool ret = true;
-  ret &= run<T, SIZE>([f](T (&input)[SIZE], T (&output1)[SIZE],
-                                            T (&output2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([f](T (&input)[SIZE], T (&output1)[SIZE],
+                                                        T (&output2)[SIZE]) {
     std::transform(std::begin(input), std::end(input), std::begin(output1), f);
+    std::experimental::parallel::
     transform(par, std::begin(input), std::end(input), std::begin(output2), f);
   });
 
-  ret &= run<T, SIZE>([g](T (&input)[SIZE], T (&output1)[SIZE],
-                                            T (&output2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([g](T (&input)[SIZE], T (&output1)[SIZE],
+                                                        T (&output2)[SIZE]) {
     std::transform(std::begin(input), std::end(input), std::begin(output1), g);
+    std::experimental::parallel::
     transform(par, std::begin(input), std::end(input), std::begin(output2), g);
   });
 

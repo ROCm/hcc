@@ -13,16 +13,17 @@
 template<typename T, size_t SIZE>
 bool test(void) {
 
-  using namespace std::experimental::parallel;
+  using std::experimental::parallel::par;
 
   bool ret = true;
   bool eq = true;
   // find
-  ret &= run<T, SIZE>([&eq]
-                      (T (&input)[SIZE], T (&output1)[SIZE],
-                                         T (&output2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([&eq]
+                                  (T (&input)[SIZE], T (&output1)[SIZE],
+                                                     T (&output2)[SIZE]) {
     auto expected = std::find(std::begin(input), std::end(input), T{});
-    auto result   = find(par, std::begin(input), std::end(input), T{});
+    auto result   = std::experimental::parallel::
+                    find(par, std::begin(input), std::end(input), T{});
 
     eq = EQ(expected, result);
   }, false);
@@ -30,13 +31,14 @@ bool test(void) {
 
 
   // find_if
-  ret &= run<T, SIZE>([&eq]
-                      (T (&input)[SIZE], T (&output1)[SIZE],
-                                         T (&output2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([&eq]
+                                  (T (&input)[SIZE], T (&output1)[SIZE],
+                                                     T (&output2)[SIZE]) {
     auto pred = [=](const T& a) { return (a == input[12]); };
 
     auto expected = std::find_if(std::begin(input), std::end(input), pred);
-    auto result   = find_if(par, std::begin(input), std::end(input), pred);
+    auto result   = std::experimental::parallel::
+                    find_if(par, std::begin(input), std::end(input), pred);
 
     eq = EQ(expected, result);
   }, false);
@@ -44,14 +46,15 @@ bool test(void) {
 
 
   // find_if_not
-  ret &= run<T, SIZE>([&eq]
-                      (T (&input)[SIZE], T (&output1)[SIZE],
-                                         T (&output2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([&eq]
+                                  (T (&input)[SIZE], T (&output1)[SIZE],
+                                                     T (&output2)[SIZE]) {
 
     auto pred = [=](const T& a) { return (a != input[12]); };
 
     auto expected = std::find_if_not(std::begin(input), std::end(input), pred);
-    auto result   = find_if_not(par, std::begin(input), std::end(input), pred);
+    auto result   = std::experimental::parallel::
+                    find_if_not(par, std::begin(input), std::end(input), pred);
 
     eq = EQ(expected, result);
   }, false);

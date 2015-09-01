@@ -13,17 +13,18 @@
 template<typename T, size_t SIZE>
 bool test(void) {
 
-  using namespace std::experimental::parallel;
+  using std::experimental::parallel::par;
 
   bool ret = true;
   bool eq = true;
 
   // non-predicated equal
-  ret &= run<T, SIZE>([&eq]
-                      (T (&input1)[SIZE], T (&input2)[SIZE], T (&output1)[SIZE],
-                                                             T (&output2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([&eq]
+                                  (T (&input1)[SIZE], T (&input2)[SIZE], T (&output1)[SIZE],
+                                                                         T (&output2)[SIZE]) {
     auto expected = std::equal(std::begin(input1), std::end(input1), std::begin(input2));
-    auto result   = equal(par, std::begin(input1), std::end(input1), std::begin(input2));
+    auto result   = std::experimental::parallel::
+                    equal(par, std::begin(input1), std::end(input1), std::begin(input2));
 
     eq = EQ(expected, result);
   }, false);
@@ -33,11 +34,12 @@ bool test(void) {
 
   auto pred = [](const T& a, const T& b) { return ((a + 1) == b); };
 
-  ret &= run<T, SIZE>([&eq, pred]
-                      (T (&input1)[SIZE], T (&input2)[SIZE], T (&output1)[SIZE],
-                                                             T (&output2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([&eq, pred]
+                                  (T (&input1)[SIZE], T (&input2)[SIZE], T (&output1)[SIZE],
+                                                                         T (&output2)[SIZE]) {
     auto expected = std::equal(std::begin(input1), std::end(input1), std::begin(input2), pred);
-    auto result   = equal(par, std::begin(input1), std::end(input1), std::begin(input2), pred);
+    auto result   = std::experimental::parallel::
+                    equal(par, std::begin(input1), std::end(input1), std::begin(input2), pred);
 
     eq = EQ(expected, result);
   }, false);

@@ -21,15 +21,16 @@
 
 template<typename T, size_t SIZE>
 bool test(void) {
-  using namespace std::experimental::parallel;
+  using std::experimental::parallel::par;
 
   auto pred = [](const T& a) { return int(a) % 2 == 0; };
 
   bool ret = true;
   bool eq = true;
-  ret &= run<T, SIZE>([&eq, pred]
-                      (T (&input1)[SIZE], T (&input2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([&eq, pred]
+                                  (T (&input1)[SIZE], T (&input2)[SIZE]) {
     std::partition(std::begin(input1), std::end(input1), pred);
+    std::experimental::parallel::
     partition(par, std::begin(input2), std::end(input2), pred);
   });
 

@@ -15,12 +15,13 @@ bool test(void) {
 
   auto pred = [](const T& a) { return int(a) % 2 == 0; };
 
-  using namespace std::experimental::parallel;
+  using std::experimental::parallel::par;
 
   bool ret = true;
-  ret &= run<T, SIZE>([pred](T (&input)[SIZE], T (&output1)[SIZE],
-                                                T (&output2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([pred](T (&input)[SIZE], T (&output1)[SIZE],
+                                                           T (&output2)[SIZE]) {
     std::copy_if(std::begin(input), std::end(input), std::begin(output1), pred);
+    std::experimental::parallel::
     copy_if(par, std::begin(input), std::end(input), std::begin(output2), pred);
   });
 

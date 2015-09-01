@@ -15,11 +15,13 @@
 template<typename T, size_t SIZE, int FIRST_OFFSET, int LAST_OFFSET>
 bool test_negative(void) {
 
-  using namespace std::experimental::parallel;
+  using std::experimental::parallel::par;
 
   bool ret = true;
-  ret &= run<T, SIZE>([](T (&input)[SIZE], T (&output1)[SIZE],
-                                           T (&output2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([](T (&input)[SIZE], T (&output1)[SIZE],
+                                                       T (&output2)[SIZE]) {
+    // std::copy_n might cause a segmentfault when n is negative
+    std::experimental::parallel::
     copy_n(par, std::begin(input) + FIRST_OFFSET, (LAST_OFFSET - FIRST_OFFSET), std::begin(output2) + FIRST_OFFSET);
   });
 
@@ -31,12 +33,13 @@ bool test_negative(void) {
 template<typename T, size_t SIZE, size_t FIRST_OFFSET, size_t TEST_LENGTH>
 bool test(void) {
 
-  using namespace std::experimental::parallel;
+  using std::experimental::parallel::par;
 
   bool ret = true;
-  ret &= run<T, SIZE>([](T (&input)[SIZE], T (&output1)[SIZE],
-                                           T (&output2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([](T (&input)[SIZE], T (&output1)[SIZE],
+                                                       T (&output2)[SIZE]) {
     std::copy_n(std::begin(input) + FIRST_OFFSET, TEST_LENGTH, std::begin(output1) + FIRST_OFFSET);
+    std::experimental::parallel::
     copy_n(par, std::begin(input) + FIRST_OFFSET, TEST_LENGTH, std::begin(output2) + FIRST_OFFSET);
   });
 
