@@ -96,12 +96,7 @@ exclusive_scan(ExecutionPolicy&& exec,
                InputIterator first, InputIterator last,
                OutputIterator result,
                T init) {
-  if (utils::isParallel(exec)) {
-    return exclusive_scan(first, last, result, init);
-  } else {
-    return details::exclusive_scan_impl(first, last, result, init, std::plus<T>(),
-             std::input_iterator_tag{});
-  }
+  return exclusive_scan(exec, first, last, result, init, std::plus<T>());
 }
 
 

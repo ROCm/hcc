@@ -90,13 +90,8 @@ inclusive_scan(ExecutionPolicy&& exec,
                InputIterator first, InputIterator last,
                OutputIterator result,
                BinaryOperation binary_op) {
-  if (utils::isParallel(exec)) {
-    return inclusive_scan(first, last, result, binary_op);
-  } else {
-    typedef typename std::iterator_traits<OutputIterator>::value_type Type;
-    return details::inclusive_scan_impl(first, last, result, binary_op, Type{},
-             std::input_iterator_tag{});
-  }
+  typedef typename std::iterator_traits<OutputIterator>::value_type Type;
+  return inclusive_scan(exec, first, last, result, binary_op, Type{});
 }
 
 template<typename InputIterator, typename OutputIterator,
@@ -116,13 +111,8 @@ OutputIterator
 inclusive_scan(ExecutionPolicy&& exec,
                InputIterator first, InputIterator last,
                OutputIterator result) {
-  if (utils::isParallel(exec)) {
-    return inclusive_scan(first, last, result);
-  } else {
-    typedef typename std::iterator_traits<OutputIterator>::value_type Type;
-    return details::inclusive_scan_impl(first, last, result, std::plus<Type>(), Type{},
-             std::input_iterator_tag{});
-  }
+  typedef typename std::iterator_traits<OutputIterator>::value_type Type;
+  return inclusive_scan(exec, first, last, result, std::plus<Type>(), Type{});
 }
 
 

@@ -8,10 +8,9 @@ transform_exclusive_scan(InputIterator first, InputIterator last,
                          T init, BinaryOperation binary_op) {
   // invoke std::experimental::parallel::transform and
   //        std::experimental::parallel::exclusive_scan
-  details::transform_impl(first, last, result, unary_op,
-    typename std::iterator_traits<InputIterator>::iterator_category());
+  transform(par, first, last, result, unary_op);
   const size_t N = static_cast<size_t>(std::distance(first, last));
-  return exclusive_scan(result, result + N, result, init, binary_op);
+  return exclusive_scan(par, result, result + N, result, init, binary_op);
 }
 
 template<typename ExecutionPolicy,

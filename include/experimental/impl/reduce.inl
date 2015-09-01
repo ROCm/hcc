@@ -97,7 +97,8 @@ reduce(ExecutionPolicy&& exec,
 template<typename InputIterator, typename T,
          utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
 T reduce(InputIterator first, InputIterator last, T init) {
-  return reduce(first, last, init, std::plus<T>());
+  typedef typename std::iterator_traits<InputIterator>::value_type Type;
+  return reduce(first, last, init, std::plus<Type>());
 }
 
 template<typename ExecutionPolicy,
@@ -107,12 +108,8 @@ template<typename ExecutionPolicy,
 T
 reduce(ExecutionPolicy&& exec,
          InputIterator first, InputIterator last, T init) {
-  if (utils::isParallel(exec)) {
-    return reduce(first, last, init);
-  } else {
-    return details::reduce_impl(first, last, init, std::plus<T>(),
-             std::input_iterator_tag{});
-  }
+  typedef typename std::iterator_traits<InputIterator>::value_type Type;
+  return reduce(exec, first, last, init, std::plus<Type>());
 }
 
 template<typename InputIterator,
@@ -131,11 +128,6 @@ typename std::iterator_traits<InputIterator>::value_type
 reduce(ExecutionPolicy&& exec,
        InputIterator first, InputIterator last) {
   typedef typename std::iterator_traits<InputIterator>::value_type Type;
-  if (utils::isParallel(exec)) {
-    return reduce(first, last);
-  } else {
-    return details::reduce_impl(first, last, Type{}, std::plus<Type>(),
-             std::input_iterator_tag{});
-  }
+  return reduce(exec, first, last, Type{}, std::plus<Type>());
 }
 
