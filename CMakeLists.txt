@@ -92,8 +92,6 @@ LINK_DIRECTORIES( ${LLVM_LIB_DIR} )
 # Turn off Bolt by default for now.
 option(CXXAMP_ENABLE_BOLT "Enable Bolt as external dependency" OFF)
 
-SET(FOO_BUILD_SHARED OFF CACHE BOOL "Build libfoo shared library")
-
 #################
 # Detect OpenCL
 #################
