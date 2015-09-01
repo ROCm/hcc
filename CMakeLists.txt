@@ -134,11 +134,8 @@ endif ((NOT OPENCL_HEADER) OR (NOT OPENCL_LIBRARY))
 #################
 
 # HSA external dependencies
-set (HSAIL_ROOT "/opt/amd"
-        CACHE PATH "AMD HSAIL compiler path")
 set (HSA_ROOT "/opt/hsa"
         CACHE PATH "HSA runtime path")
-
 
 find_path(HSA_HEADER hsa.h PATHS ${HSA_HEADER_DIR} ${HSA_ROOT}/include NO_DEFAULT_PATH)
 find_path(HSA_HEADER hsa.h)
@@ -160,19 +157,7 @@ if (NOT HSA_KMT_LIBRARY)
   MESSAGE("HSA Kernel library not found. Use -DHSA_KMT_LIBRARY_DIR=<path_to_libhsakmt.so.1>.")
 endif (NOT HSA_KMT_LIBRARY)
 
-find_program(HSAIL_COMPILER llc PATHS ${HSAIL_COMPILER_DIR} ${HSAIL_ROOT}/bin NO_DEFAULT_PATH)
-find_program(HSAIL_COMPILER llc)
-if (NOT HSAIL_COMPILER)
-  MESSAGE("HSAIL compiler not found. Use -DHSAIL_COMPILER_DIR=<path_to_llc>.")
-endif (NOT HSAIL_COMPILER)
-
-find_program(HSAIL_ASSEMBLER HSAILasm PATHS ${HSAIL_ASSEMBLER_DIR} ${HSAIL_ROOT}/bin NO_DEFAULT_PATH)
-find_program(HSAIL_ASSEMBLER HSAILasm)
-if (NOT HSAIL_ASSEMBLER)
-  MESSAGE("HSAIL assembler not found. Use -DHSAIL_ASSEMBLER_DIR=<path_to_HSAILasm>.")
-endif (NOT HSAIL_ASSEMBLER)
-
-find_program(HSA_HOF hof PATHS ${HSA_HOF_DIR} ${HSAIL_ROOT}/bin NO_DEFAULT_PATH)
+find_program(HSA_HOF hof PATHS ${HSA_HOF_DIR} /opt/amd/bin NO_DEFAULT_PATH)
 find_program(HSA_HOF hof)
 if (NOT HSA_HOF)
   MESSAGE("HSA offline finalizer (HOF) not found.  Use -DHSA_HOF_DIR=<path_to_hof>.")
@@ -185,8 +170,6 @@ MESSAGE("HSA INFORMATION:")
 MESSAGE("HSA_HEADER_DIR = ${HSA_HEADER_DIR}, actually found at: ${HSA_HEADER}")
 MESSAGE("HSA_LIBRARY_DIR = ${HSA_LIBRARY_DIR}, actually found at: ${HSA_LIBRARY}")
 MESSAGE("HSA_KMT_LIBRARY_DIR = ${HSA_KMT_LIBRARY_DIR}, actually found at: ${HSA_KMT_LIBRARY}")
-MESSAGE("HSAIL_COMPILER_DIR = ${HSAIL_COMPILER_DIR}, actually found at: ${HSAIL_COMPILER}")
-MESSAGE("HSAIL_ASSEMBLER_DIR = ${HSAIL_ASSEMBLER_DIR}, actually found at: ${HSAIL_ASSEMBLER}")
 MESSAGE("HSA_HOF_DIR = ${HSA_HOF_DIR}, actually found at: ${HSA_HOF}")
 MESSAGE("")
 
@@ -196,14 +179,11 @@ MESSAGE("")
 # - HSA runtime libraries (installed by HSA runtime)
 # - HSA ext64 library (installed by HSA runtime)
 # - HSA KMT library (installed by HSA KFD driver)
-# - HSAIL compiler (installed by HLC)
-# - HSAIL assembler (installed by HSAIL-Tools)
-if ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT HSA_KMT_LIBRARY) OR (NOT HSAIL_COMPILER) OR (NOT HSAIL_ASSEMBLER))
+if ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT HSA_KMT_LIBRARY))
   set(HAS_HSA 0)
-else ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT HSA_KMT_LIBRARY) OR (NOT HSAIL_COMPILER) OR (NOT HSAIL_ASSEMBLER))
+else ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT HSA_KMT_LIBRARY))
   set(HAS_HSA 1)
-  get_filename_component(HSAIL_BIN ${HSAIL_COMPILER} DIRECTORY)
-endif ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT HSA_KMT_LIBRARY) OR (NOT HSAIL_COMPILER) OR (NOT HSAIL_ASSEMBLER))
+endif ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT HSA_KMT_LIBRARY))
 
 # determine if HSA offline finalization is possible
 # at least we need the followings:
@@ -394,7 +374,7 @@ set(CPACK_BINARY_TZ "OFF")
 include (CPack)
 MESSAGE("")
 MESSAGE("** For the first time:")
-MESSAGE("   'make world' to build clang, libc++, HLC, and library for testing.")
+MESSAGE("   'make world' to build clang, libc++, HLC, HSAILasm and library for testing.")
 MESSAGE("   'make' to build the rest of LLVM tools")
 MESSAGE("   'make docs' to build the HTML API reference")
 MESSAGE("")
