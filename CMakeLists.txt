@@ -308,11 +308,20 @@ add_custom_target(hlc
           -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
   COMMAND make # not portable, but this is what it is.
   WORKING_DIRECTORY ${HLC_BIN_DIR}
-  DEPENDS clang
+)
+
+# build HSAILasm
+set(HSAILASM_SRC_DIR "${PROJECT_SOURCE_DIR}/HSAILasm")
+set(HSAILASM_BIN_DIR "${PROJECT_BINARY_DIR}/HSAILasm")
+file(MAKE_DIRECTORY ${HSAILASM_BIN_DIR})
+add_custom_target(HSAILasm
+  COMMAND ${CMAKE_COMMAND} ${HSAILASM_SRC_DIR}/libHSAIL
+  COMMAND ${MAKE}
+  WORKING_DIRECTORY ${HSAILASM_BIN_DIR}
 )
 
 add_custom_target(world
-    DEPENDS clang libc++ hlc ${DEPS}
+    DEPENDS clang libc++ hlc HSAILasm ${DEPS}
 )
 
 # create documentation
