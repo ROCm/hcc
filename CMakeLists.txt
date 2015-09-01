@@ -64,12 +64,6 @@ set(LLVM_ROOT "${PROJECT_BINARY_DIR}/compiler")
 # obtain specific information about llvm setup
 SET(LOCAL_LLVM_INCLUDE compiler/include)
 
-# setup HLC in Kalmar
-ensure_HLC_is_present(${PROJECT_SOURCE_DIR} hlc)
-
-# setup HSAILasm in Kalmar
-ensure_HSAILASM_is_present(${PROJECT_SOURCE_DIR} HSAILasm)
-
 # setup compilation environment
 if (UNIX)
 SET(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/build/${CMAKE_CFG_INTDIR}/${CMAKE_BUILD_TYPE}/bin" )
@@ -276,6 +270,18 @@ add_subdirectory(include)
 add_subdirectory(amp-conformance)
 add_subdirectory(stl-test)
 
+#########################
+# build target: world
+# enable HLC and HSAILasm only if HSA stack is available
+#########################
+if (HAS_HSA)
+
+# setup HLC in Kalmar
+ensure_HLC_is_present(${PROJECT_SOURCE_DIR} hlc)
+
+# setup HSAILasm in Kalmar
+ensure_HSAILASM_is_present(${PROJECT_SOURCE_DIR} HSAILasm)
+
 # build HLC
 set(HLC_SRC_DIR "${PROJECT_SOURCE_DIR}/hlc")
 set(HLC_BIN_DIR "${PROJECT_BINARY_DIR}/hlc")
@@ -303,6 +309,15 @@ add_custom_target(HSAILasm
 add_custom_target(world
     DEPENDS clang libc++ hlc HSAILasm ${DEPS}
 )
+
+else (HAS_HSA)
+
+# do NOT depend on HLC or HSAILasm in case HSA is not present
+add_custom_target(world
+    DEPENDS clang libc++ ${DEPS}
+)
+
+endif (HAS_HSA)
 
 # create documentation
 configure_file(
