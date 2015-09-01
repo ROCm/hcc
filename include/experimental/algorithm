@@ -423,6 +423,232 @@ equal(ExecutionPolicy&& exec,
   }
 }
 
+
+//
+// count_if is implemented by reduce
+//
+template<typename ExecutionPolicy,
+         typename InputIt,
+         typename UnaryPredicate,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIt>> = nullptr>
+typename std::iterator_traits<InputIt>::difference_type
+count_if(ExecutionPolicy&& exec,
+         InputIt first, InputIt last,
+         UnaryPredicate p) {
+  if (utils::isParallel(exec)) {
+    typedef typename std::iterator_traits<InputIt>::value_type T;
+    typedef typename std::iterator_traits<InputIt>::difference_type DT;
+
+    const size_t N = static_cast<size_t>(std::distance(first, last));
+    if (N <= details::PARALLELIZE_THRESHOLD) {
+      return std::count_if(first, last, p);
+    }
+
+    return transform_reduce(first, last,
+                            [p](const T &v) -> DT { return DT(p(v)); },
+                            DT{},
+                            std::plus<DT>());
+  } else {
+    return std::count_if(first, last, p);
+  }
+}
+
+
+//
+// count is implemented by transform_reduce
+//
+template<typename ExecutionPolicy,
+         typename InputIt,
+         typename T,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIt>> = nullptr>
+typename std::iterator_traits<InputIt>::difference_type
+count(ExecutionPolicy&& exec,
+      InputIt first, InputIt last,
+      const T& value) {
+  return count_if(exec, first, last,
+                  [&value](const T &v) -> bool { return v == value; });
+}
+
+
+//
+// max_element is implemented by reduce
+//
+template<typename ExecutionPolicy,
+         typename ForwardIt,
+         typename Compare,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isForwardIt<ForwardIt>> = nullptr>
+ForwardIt
+max_element(ExecutionPolicy&& exec,
+            ForwardIt first, ForwardIt last,
+            Compare cmp) {
+  if (utils::isParallel(exec)) {
+    ForwardIt result = first;
+    result = __reduce(first, last, result, [&](const ForwardIt& a, const ForwardIt& b) {
+      return cmp(*a, *b) ? b : a;
+    });
+    return result;
+  } else {
+    return std::max_element(first, last, cmp);
+  }
+}
+
+
+//
+// max_element is implemented by reduce
+//
+template<typename ExecutionPolicy,
+         typename ForwardIt,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isForwardIt<ForwardIt>> = nullptr>
+ForwardIt
+max_element(ExecutionPolicy&& exec,
+            ForwardIt first, ForwardIt last) {
+  typedef typename std::iterator_traits<ForwardIt>::value_type T;
+  return max_element(exec, first, last, std::less<T>());
+}
+
+
+//
+// min_element is implemented by reduce
+//
+template<typename ExecutionPolicy,
+         typename ForwardIt,
+         typename Compare,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isForwardIt<ForwardIt>> = nullptr>
+ForwardIt
+min_element(ExecutionPolicy&& exec,
+            ForwardIt first, ForwardIt last,
+            Compare cmp) {
+  if (utils::isParallel(exec)) {
+    ForwardIt result = first;
+    result = __reduce(first, last, result, [&](const ForwardIt& a, const ForwardIt& b) {
+      return cmp(*a, *b) ? a : b;
+    });
+    return result;
+  } else {
+    return std::min_element(first, last, cmp);
+  }
+}
+
+
+//
+// min_element is implemented by reduce
+//
+template<typename ExecutionPolicy,
+         typename ForwardIt,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isForwardIt<ForwardIt>> = nullptr>
+ForwardIt
+min_element(ExecutionPolicy&& exec,
+            ForwardIt first, ForwardIt last) {
+  typedef typename std::iterator_traits<ForwardIt>::value_type T;
+  return min_element(exec, first, last, std::less<T>());
+}
+
+
+//
+// minmax_element is implemented by reduce
+//
+template<typename ExecutionPolicy,
+         typename ForwardIt,
+         typename Compare,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isForwardIt<ForwardIt>> = nullptr>
+std::pair<ForwardIt, ForwardIt>
+minmax_element(ExecutionPolicy&& exec,
+               ForwardIt first, ForwardIt last,
+               Compare cmp) {
+  if (utils::isParallel(exec)) {
+    return {
+      min_element(first, last, cmp),
+      max_element(first, last, cmp)
+    };
+  } else {
+    return std::minmax_element(first, last, cmp);
+  }
+}
+
+
+//
+// minmax_element is implemented by reduce
+//
+template<typename ExecutionPolicy,
+         typename ForwardIt,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isForwardIt<ForwardIt>> = nullptr>
+std::pair<ForwardIt, ForwardIt>
+minmax_element(ExecutionPolicy&& exec,
+               ForwardIt first, ForwardIt last) {
+  typedef typename std::iterator_traits<ForwardIt>::value_type T;
+  return minmax_element(exec, first, last, std::less<T>());
+}
+
+
+//
+// any_of is implemented by transform_reduce
+//
+template<typename ExecutionPolicy,
+         typename InputIt,
+         typename UnaryPredicate,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIt>> = nullptr>
+bool
+all_of(ExecutionPolicy&& exec,
+       InputIt first, InputIt last,
+       UnaryPredicate p) {
+  if (utils::isParallel(exec)) {
+    return transform_reduce(exec, first, last, p, true,
+                            std::logical_and<bool>());
+  } else {
+    return std::all_of(first, last, p);
+  }
+}
+
+
+//
+// any_of is implemented by transform_reduce
+//
+template<typename ExecutionPolicy,
+         typename InputIt, typename UnaryPredicate,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIt>> = nullptr>
+bool
+any_of(ExecutionPolicy&& exec,
+       InputIt first, InputIt last,
+       UnaryPredicate p) {
+  if (utils::isParallel(exec)) {
+    return transform_reduce(first, last, p, false,
+                            std::logical_or<bool>());
+  } else {
+    return std::any_of(first, last, p);
+  }
+}
+
+
+//
+// none_of is implemented by transform_reduce
+//
+template<typename ExecutionPolicy,
+         typename InputIt,
+         typename UnaryPredicate,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIt>> = nullptr>
+bool
+none_of(ExecutionPolicy&& exec,
+        InputIt first, InputIt last,
+        UnaryPredicate p ) {
+  if (utils::isParallel(exec)) {
+    return any_of(exec, first, last, p) == false;
+  } else {
+    return std::none_of(first, last, p);
+  }
+}
+
+
 } // inline namespace v1
 } // namespace parallel
 } // namespace experimental

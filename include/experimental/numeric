@@ -28,8 +28,6 @@ inline namespace v1 {
 #include "impl/transform_exclusive_scan.inl"
 #include "impl/transform_inclusive_scan.inl"
 
-#include "impl/numeric_impl.inl"
-
 } // inline namespace v1
 } // namespace parallel
 } // namespace experimental
