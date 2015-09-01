@@ -15,14 +15,15 @@ if [ -d @LLVM_TOOLS_DIR@ ]; then
     AS=@LLVM_TOOLS_DIR@/llvm-as
     OPT=@LLVM_TOOLS_DIR@/opt
     SPIRIFY=@PROJECT_BINARY_DIR@/lib/clamp-spirify
-    HSAIL_LLC=@PROJECT_BINARY_DIR@/hlc/bin/llc
+    HLC_LLC=@PROJECT_BINARY_DIR@/hlc/bin/llc
+    HLC_ASM=@PROJECT_BINARY_DIR@/HSAILasm/HSAILAsm/HSAILasm # notice the "A"
 else
     AS=@CMAKE_INSTALL_PREFIX@/bin/llvm-as
     OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
     SPIRIFY=@CMAKE_INSTALL_PREFIX@/bin/clamp-spirify
     HLC_LLC=@CMAKE_INSTALL_PREFIX@/hlc/bin/llc
+    HLC_ASM=@CMAKE_INSTALL_PREFIX@/HSAILasm/HSAILasm
 fi
-HSAIL_ASM=@HSAIL_ASSEMBLER@
 
 INPUT=$1
 SUFFIX=ll
@@ -33,7 +34,7 @@ $OPT -O3 -dce -S -o $FILENAME.opt.ll < $FILENAME.spir.ll
 $AS -o $FILENAME.bc $FILENAME.opt.ll
 
 $HLC_LLC -O2 -march=hsail64 -filetype=obj -o $FILENAME.brig $FILENAME.bc
-$HSAIL_ASM -disassemble -o /dev/stdout $FILENAME.brig
+$HLC_ASM -disassemble -o /dev/stdout $FILENAME.brig
 
 # remove artifacts
 rm $FILENAME.spir.ll $FILENAME.opt.ll $FILENAME.bc $FILENAME.brig

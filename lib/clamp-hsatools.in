@@ -33,17 +33,15 @@ if [ -d @PROJECT_BINARY_DIR@ ]; then
     HLC_LLVM_LINK=@PROJECT_BINARY_DIR@/hlc/bin/llvm-link
     HLC_OPT=@PROJECT_BINARY_DIR@/hlc/bin/opt
     HLC_LLC=@PROJECT_BINARY_DIR@/hlc/bin/llc
+    HLC_ASM=@PROJECT_BINARY_DIR@/HSAILasm/HSAILAsm/HSAILasm # notice the "A"
     NEWLIB=@CPPAMP_SOURCE_DIR@/lib
 else
     HLC_LLVM_LINK=@CMAKE_INSTALL_PREFIX@/hlc/bin/llvm-link
     HLC_OPT=@CMAKE_INSTALL_PREFIX@/hlc/bin/opt
     HLC_LLC=@CMAKE_INSTALL_PREFIX@/hlc/bin/llc
+    HLC_ASM=@CMAKE_INSTALL_PREFIX@/HSAILasm/HSAILasm
     NEWLIB=@CMAKE_INSTALL_PREFIX@/lib
 fi
-# Path to HSAIL backend (LLVM-3.7-based)
-LLVM_BIN=@HSAIL_BIN@
-# Path to HSAILASM
-HSAIL_ASM=@HSAIL_ASSEMBLER@
 
 if [ $KMDUMPLLVM == "1" ]; then
   cp $1 ./dump.fe.bc
@@ -86,7 +84,7 @@ if [ $KMDUMPBRIG == "1" ]; then
 fi
 
 cat $NEWLIB/hsa_builtins.hsail >> $1.hsail
-$HSAIL_ASM -assemble -o $1.brig $1.hsail
+$HLC_ASM -assemble -o $1.brig $1.hsail
 # error handling for HSAILasm
 RETVAL=$?
 if [ $RETVAL != 0 ]; then
