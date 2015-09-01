@@ -96,12 +96,14 @@ SET(FOO_BUILD_SHARED OFF CACHE BOOL "Build libfoo shared library")
 # Detect OpenCL
 #################
 
-find_path(OPENCL_HEADER cl.h PATHS ${OPENCL_HEADER_DIR} /usr/include/CL /opt/AMDAPP/include/CL /usr/local/cuda/include/CL )
+find_path(OPENCL_HEADER cl.h PATHS ${OPENCL_HEADER_DIR} /usr/include/CL /opt/AMDAPP/include/CL /usr/local/cuda/include/CL NO_DEFAULT_PATH)
+find_path(OPENCL_HEADER cl.h)
 if (NOT APPLE AND NOT OPENCL_HEADER)
   MESSAGE("OpenCL header not found. Use -DOPENCL_HEADER_DIR=<path_to_cl.h>.")
 endif(NOT APPLE AND NOT OPENCL_HEADER)
 
-find_library(OPENCL_LIBRARY OpenCL PATHS ${OPENCL_LIBRARY_DIR} /usr/lib /opt/AMDAPP/lib/x86_64 /usr/local/cuda/lib64 )
+find_library(OPENCL_LIBRARY OpenCL PATHS ${OPENCL_LIBRARY_DIR} /usr/lib /opt/AMDAPP/lib/x86_64 /usr/local/cuda/lib64 NO_DEFAULT_PATH)
+find_library(OPENCL_LIBRARY OpenCL)
 if (NOT APPLE AND NOT OPENCL_LIBRARY)
   MESSAGE("OpenCL library not found. Use -DOPENCL_LIBRARY_DIR=<path_to_libOpenCL.so>.")
 endif(NOT APPLE AND NOT OPENCL_LIBRARY)
@@ -129,27 +131,35 @@ set (HSAIL_ROOT "/opt/amd"
 set (HSA_ROOT "/opt/hsa"
         CACHE PATH "HSA runtime path")
 
-find_path(HSA_HEADER hsa.h PATHS ${HSA_HEADER_DIR} ${HSA_ROOT}/include)
+
+find_path(HSA_HEADER hsa.h PATHS ${HSA_HEADER_DIR} ${HSA_ROOT}/include NO_DEFAULT_PATH)
+find_path(HSA_HEADER hsa.h)
 if (NOT HSA_HEADER)
   MESSAGE("HSA header not found. Use -DHSA_HEADER_DIR=<path_to_hsa.h>.")
 endif (NOT HSA_HEADER)
 
-find_library(HSA_LIBRARY hsa-runtime64 PATHS ${HSA_LIBRARY_DIR} ${HSA_ROOT}/lib)
+
+find_library(HSA_LIBRARY hsa-runtime64 PATHS ${HSA_LIBRARY_DIR} ${HSA_ROOT}/lib NO_DEFAULT_PATH)
+find_library(HSA_LIBRARY hsa-runtime64)
 if (NOT HSA_LIBRARY)
   MESSAGE("HSA runtime library not found. Use -DHSA_LIBRARY_DIR=<path_to_libhsa-runtime64.so>.")
 endif (NOT HSA_LIBRARY)
 
-find_library(HSA_KMT_LIBRARY libhsakmt.so.1 PATHS ${HSA_KMT_LIBRARY_DIR} ${HSA_ROOT}/lib)
+
+find_library(HSA_KMT_LIBRARY libhsakmt.so.1 PATHS ${HSA_KMT_LIBRARY_DIR} ${HSA_ROOT}/lib NO_DEFAULT_PATH)
+find_library(HSA_KMT_LIBRARY libhsakmt.so.1)
 if (NOT HSA_KMT_LIBRARY)
   MESSAGE("HSA Kernel library not found. Use -DHSA_KMT_LIBRARY_DIR=<path_to_libhsakmt.so.1>.")
 endif (NOT HSA_KMT_LIBRARY)
 
-find_program(HSAIL_COMPILER HSAILasm PATHS ${HSAIL_COMPILER_DIR} ${HSAIL_ROOT}/bin)
+find_program(HSAIL_COMPILER HSAILasm PATHS ${HSAIL_COMPILER_DIR} ${HSAIL_ROOT}/bin NO_DEFAULT_PATH)
+find_program(HSAIL_COMPILER HSAILasm)
 if (NOT HSAIL_COMPILER)
   MESSAGE("HSAIL compiler not found. Use -DHSAIL_COMPILER_DIR=<path_to_hsailasm>.")
 endif (NOT HSAIL_COMPILER)
 
-find_program(HSA_HOF hof PATHS ${HSA_HOF_DIR} ${HSAIL_ROOT}/bin)
+find_program(HSA_HOF hof PATHS ${HSA_HOF_DIR} ${HSAIL_ROOT}/bin NO_DEFAULT_PATH)
+find_program(HSA_HOF hof)
 if (NOT HSA_HOF)
   MESSAGE("HSA offline finalizer (HOF) not found.  Use -DHSA_HOF_DIR=<path_to_hof>.")
 endif (NOT HSA_HOF)
