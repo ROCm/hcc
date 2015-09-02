@@ -33,6 +33,15 @@ bool test(void) {
 
   });
 
+  typedef std::vector<T> stdVector;
+  ret &= run_and_compare<T, SIZE, stdVector>([f](stdVector &input1,
+                                                 stdVector &input2) {
+    std::generate(std::begin(input1), std::end(input1), f);
+    std::experimental::parallel::
+    generate(par, std::begin(input2), std::end(input2), f);
+
+  });
+
 
   return ret;
 }
