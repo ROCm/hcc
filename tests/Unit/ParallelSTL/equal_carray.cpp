@@ -45,6 +45,17 @@ bool test(void) {
   }, false);
   ret &= eq;
 
+  typedef std::array<T, SIZE> stdArray;
+  ret &= run_and_compare<T, SIZE, stdArray>([&eq, pred]
+                                            (stdArray &input1,  stdArray &input2,
+                                             stdArray &output1, stdArray &output2) {
+    auto expected = std::equal(std::begin(input1), std::end(input1), std::begin(input2), pred);
+    auto result   = std::experimental::parallel::
+                    equal(par, std::begin(input1), std::end(input1), std::begin(input2), pred);
+
+    eq = EQ(expected, result);
+  }, false);
+  ret &= eq;
   return ret;
 }
 

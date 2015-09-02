@@ -24,6 +24,15 @@ bool test(void) {
     generate(par, std::begin(input2), std::end(input2), f);
   });
 
+  typedef std::array<T, SIZE> stdArray;
+  ret &= run_and_compare<T, SIZE, stdArray>([f](stdArray &input1,
+                                                stdArray &input2) {
+    std::generate(std::begin(input1), std::end(input1), f);
+    std::experimental::parallel::
+    generate(par, std::begin(input2), std::end(input2), f);
+
+  });
+
 
   return ret;
 }
