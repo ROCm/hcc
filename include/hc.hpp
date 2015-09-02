@@ -251,6 +251,27 @@ public:
     }
 
     /**
+     * Returns an opaque handle which points to the AM region on the HSA agent.
+     *
+     * @return An opaque handle of the region, if the accelerator view is based
+     *         on HSA.  NULL otherwise.
+     */
+    void* getHSAAMRegion() {
+        return pQueue->getHSAAMRegion();
+    }
+
+    /**
+     * Returns an opaque handle which points to the Kernarg region on the HSA
+     * agent.
+     *
+     * @return An opaque handle of the region, if the accelerator view is based
+     *         on HSA.  NULL otherwise.
+     */
+    void* getHSAKernargRegion() {
+        return pQueue->getHSAKernargRegion();
+    }
+
+    /**
      * Returns if the accelerator view is based on HSA.
      */
     bool hasHSAInterOp() {

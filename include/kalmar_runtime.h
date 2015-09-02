@@ -126,6 +126,12 @@ public:
   /// get underlying native agent handle
   virtual void* getHSAAgent() { return nullptr; }
 
+  /// get AM region handle
+  virtual void* getHSAAMRegion() { return nullptr; }
+
+  /// get kernarg region handle
+  virtual void* getHSAKernargRegion() { return nullptr; }
+
   /// check if the queue is an HSA queue
   virtual bool hasHSAInterOp() { return false; }
 
