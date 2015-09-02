@@ -241,33 +241,21 @@ public:
     }
 
     /**
+     * Returns an opaque handle which points to the underlying HSA agent.
+     *
+     * @return An opaque handle of the underlying HSA agent, if the accelerator
+     *         view is based on HSA.  NULL otherwise.
+     */
+    void* getHSAAgent() {
+        return pQueue->getHSAAgent();
+    }
+
+    /**
      * Returns if the accelerator view is based on HSA.
      */
     bool hasHSAInterOp() {
         return pQueue->hasHSAInterOp();
     }
-
-    /*
-     * Set AM index.
-     *
-     * @param[in] av_index index given by AM API for this accelerator_view
-     *                     instance.
-     */
-    void set_av_index(am_accelerator_view_t av_index) {
-        pQueue->setAMIndex(av_index);
-    }
-
-    /**
-     * Returns AM index.
-     */
-    am_accelerator_view_t get_av_index() {
-        return pQueue->getAMIndex();
-    }
-
-    /**
-     * Returns AM index via conversion.
-     */
-    operator am_accelerator_view_t() const { return pQueue->getAMIndex(); }
 
 private:
     accelerator_view(std::shared_ptr<Kalmar::KalmarQueue> pQueue) : pQueue(pQueue) {}

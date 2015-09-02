@@ -123,23 +123,18 @@ public:
   /// get underlying native queue handle
   virtual void* getHSAQueue() { return nullptr; }
 
+  /// get underlying native agent handle
+  virtual void* getHSAAgent() { return nullptr; }
+
   /// check if the queue is an HSA queue
   virtual bool hasHSAInterOp() { return false; }
 
   /// enqueue marker
   virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarker() { return nullptr; }
 
-  /// set AM index
-  virtual void setAMIndex(am_accelerator_view_t av_index) { am_index = av_index; }
-
-  /// get AM index
-  virtual am_accelerator_view_t getAMIndex() { return am_index; }
-
 private:
   KalmarDevice* pDev;
   queuing_mode mode;
-
-    am_accelerator_view_t am_index;
 };
 
 /// KalmarDevice

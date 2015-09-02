@@ -35,16 +35,6 @@ extern "C" __attribute__((pure)) int64_t amp_get_group_id(unsigned int n) restri
 extern "C" __attribute__((noduplicate)) void amp_barrier(unsigned int n) restrict(amp);
 extern "C" __attribute__((pure)) int64_t amp_get_local_size(unsigned int n) restrict(amp);
 
-//
-// AM-specific defines
-//
-// FIXME: they shall be moved to AM header file later on
-
-/**
- * Typedef for AM index.
- */
-typedef int am_accelerator_view_t;
-
 /**
  * @namespace Kalmar
  * namespace for internal classes of Kalmar compiler / runtime
