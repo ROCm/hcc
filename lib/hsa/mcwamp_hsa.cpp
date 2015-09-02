@@ -773,6 +773,8 @@ public:
         return static_cast<void*>(commandQueue);
     }
 
+    void* getHSAAgent() override;
+
     bool hasHSAInterOp() override {
         return true;
     }
@@ -840,7 +842,7 @@ public:
       return HSA_STATUS_SUCCESS;
     }
 
-    hsa_agent_t getAgent() {
+    hsa_agent_t& getAgent() {
         return agent;
     }
 
@@ -1154,6 +1156,18 @@ static HSAContext ctx;
 
 } // namespace Kalmar
 
+
+// ----------------------------------------------------------------------
+// member function implementation of HSAQueue
+// ----------------------------------------------------------------------
+namespace Kalmar {
+
+inline void*
+HSAQueue::getHSAAgent() override {
+    return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getAgent()));
+}
+
+} // namespace Kalmar
 
 // ----------------------------------------------------------------------
 // member function implementation of HSADispatch
