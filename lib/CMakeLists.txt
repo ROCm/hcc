@@ -24,6 +24,8 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-device
     ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-assemble
     ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-link
     ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-preprocess
+    ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/hip-kernel-assemble
+    ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/hip-host-assemble
     DESTINATION bin)
 
 ####################

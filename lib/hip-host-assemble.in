@@ -1,0 +1,45 @@
+#!/bin/bash
+
+# hip-host-assemble host-bitcode host-object
+if [ -d @LLVM_TOOLS_DIR@ ]; then
+  BINPATH=@LLVM_ROOT@/bin
+  CLANG=$BINPATH/clang
+  CLAMP_CONFIG=@EXECUTABLE_OUTPUT_PATH@/clamp-config
+  OPT=$BINPATH/opt
+  LLVM_AS=$BINPATH/llvm-as
+  LLVM_DIS=$BINPATH/llvm-dis
+  LIBPATH=@LLVM_ROOT@/lib
+else
+  INSTALL=@CMAKE_INSTALL_PREFIX@/bin
+  CLANG=$INSTALL/clang
+  CLAMP_CONFIG=$INSTALL/clamp-config
+  OPT=$INSTALL/opt
+  LLVM_AS=$INSTALL/llvm-as
+  LLVM_DIS=$INSTALL/llvm-dis
+  LIBPATH=$BINPATH/lib
+fi
+
+if [ "$#" -ne 2 ]; then
+  echo "Usage: $0 kernel-bitcode object" >&2
+  exit 1
+fi
+
+if [ ! -f $1 ]; then
+  echo "kernel-bitcode $1 is not valid" >&2
+  exit 1
+fi
+
+CXXFLAGS="`$CLAMP_CONFIG --build --cxxflags`"
+CO="-c -o"
+
+TEMP_DIR=`mktemp -d`
+BASENAME=`basename $2`
+TEMP_NAME="$TEMP_DIR/$BASENAME"
+
+$LLVM_DIS $1 -o $TEMP_NAME.bc
+$OPT -load $LIBPATH/LLVMDirectFuncCall.so -redirect < $TEMP_NAME.bc 2>$TEMP_NAME.host_redirect.ll >/dev/null
+$LLVM_AS $TEMP_NAME.host_redirect.ll -o $TEMP_NAME.host_redirect.bc
+$CLANG -std=c++amp $TEMP_NAME.host_redirect.bc -c -o $2
+
+rm -f $TEMP_NAME.*
+rmdir $TEMP_DIR
