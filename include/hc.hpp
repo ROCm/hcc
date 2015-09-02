@@ -826,6 +826,48 @@ public:
       }
     }
 
+    /**
+     * Get the timestamp when the underlying asynchronous operation begins.
+     *
+     * @return An implementation-defined timestamp in case the instance is
+     *         created by a kernel dispatch or a barrier packet. 0 otherwise.
+     */
+    uint64_t getBeginTimestamp() {
+      if (__asyncOp != nullptr) {
+        return __asyncOp->getBeginTimestamp();
+      } else {
+        return 0L;
+      }
+    }
+
+    /**
+     * Get the timestamp when the underlying asynchronous operation ends.
+     *
+     * @return An implementation-defined timestamp in case the instance is
+     *         created by a kernel dispatch or a barrier packet. 0 otherwise.
+     */
+    uint64_t getEndTimestamp() {
+      if (__asyncOp != nullptr) {
+        return __asyncOp->getEndTimestamp();
+      } else {
+        return 0L;
+      }
+    }
+
+    /**
+     * Get the frequency of timestamp for the underlying asynchrnous operation.
+     *
+     * @return An implementation-defined frequency in Hz in case the instance is
+     *         created by a kernel dispatch or a barrier packet. 0 otherwise.
+     */
+    uint64_t getTimestampFrequency() {
+      if (__asyncOp != nullptr) {
+        return __asyncOp->getTimestampFrequency();
+      } else {
+        return 0L;
+      }
+    }
+
     ~completion_future() {
       if (__thread_then != nullptr) {
         __thread_then->join();

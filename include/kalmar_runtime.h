@@ -41,8 +41,29 @@ struct rw_info;
 class KalmarAsyncOp {
 public:
   virtual ~KalmarAsyncOp() {} 
-  virtual std::shared_future<void>* getFuture() { return nullptr; };
-  virtual void* getNativeHandle() { return nullptr;};
+  virtual std::shared_future<void>* getFuture() { return nullptr; }
+  virtual void* getNativeHandle() { return nullptr;}
+
+  /**
+   * Get the timestamp when the asynchronous operation begins.
+   *
+   * @return An implementaion-defined timestamp.
+   */
+  virtual uint64_t getBeginTimestamp() { return 0L; }
+
+  /**
+   * Get the timestamp when the asynchronous operation completes.
+   *
+   * @return An implementation-defined timestamp.
+   */
+  virtual uint64_t getEndTimestamp() { return 0L; }
+
+  /**
+   * Get the frequency of timestamp.
+   *
+   * @return An implementation-defined frequency for the asynchronous operation.
+   */
+  virtual uint64_t getTimestampFrequency() { return 0L; }
 };
 
 /// KalmarQueue

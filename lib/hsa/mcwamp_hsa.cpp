@@ -23,6 +23,7 @@
 
 #include <hsa.h>
 #include <hsa_ext_finalize.h>
+#include <hsa_ext_amd.h>
 
 #include <kalmar_runtime.h>
 
@@ -168,6 +169,17 @@ public:
           future = nullptr;
         }
     }
+
+    uint64_t getTimestampFrequency() override {
+        // get system tick frequency
+        uint64_t timestamp_frequency_hz = 0L;
+        hsa_system_get_info(HSA_SYSTEM_INFO_TIMESTAMP_FREQUENCY, &timestamp_frequency_hz);
+        return timestamp_frequency_hz;
+    }
+
+    uint64_t getBeginTimestamp() override;
+
+    uint64_t getEndTimestamp() override;
 
 }; // end of HSABarrier
 
@@ -432,6 +444,17 @@ public:
         }
     }
 
+    uint64_t getTimestampFrequency() override {
+        // get system tick frequency
+        uint64_t timestamp_frequency_hz = 0L;
+        hsa_system_get_info(HSA_SYSTEM_INFO_TIMESTAMP_FREQUENCY, &timestamp_frequency_hz);
+        return timestamp_frequency_hz;
+    }
+
+    uint64_t getBeginTimestamp() override;
+
+    uint64_t getEndTimestamp() override;
+
 private:
     template <typename T>
     hsa_status_t pushArgPrivate(T val) {
@@ -544,6 +567,9 @@ public:
         std::cerr << "HSAQueue::HSAQueue(): created an HSA command queue: " << commandQueue << "\n";
 #endif
         STATUS_CHECK_Q(status, commandQueue, __LINE__);
+
+        /// Enable profiling support for the queue.
+        status = hsa_amd_profiling_set_profiler_enabled(commandQueue, 1);
     }
 
     ~HSAQueue() {
@@ -1187,6 +1213,22 @@ HSADispatch::dispatchKernelAsync(Kalmar::HSAQueue* hsaQueue) {
     return status;
 }
 
+inline uint64_t
+HSADispatch::getBeginTimestamp() override {
+    Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(hsaQueue->getDev());
+    hsa_amd_profiling_dispatch_time_t time;
+    hsa_amd_profiling_get_dispatch_time(device->getAgent(), signal, &time);
+    return time.start;
+}
+
+inline uint64_t
+HSADispatch::getEndTimestamp() override {
+    Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(hsaQueue->getDev());
+    hsa_amd_profiling_dispatch_time_t time;
+    hsa_amd_profiling_get_dispatch_time(device->getAgent(), signal, &time);
+    return time.end;
+}
+
 // ----------------------------------------------------------------------
 // member function implementation of HSABarrier
 // ----------------------------------------------------------------------
@@ -1216,6 +1258,7 @@ HSABarrier::waitComplete() {
     }
 
     isDispatched = false;
+
     return status;
 }
 
@@ -1240,6 +1283,21 @@ HSABarrier::enqueueAsync(Kalmar::HSAQueue* hsaQueue) {
     return status;
 }
 
+inline uint64_t
+HSABarrier::getBeginTimestamp() override {
+    Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(hsaQueue->getDev());
+    hsa_amd_profiling_dispatch_time_t time;
+    hsa_amd_profiling_get_dispatch_time(device->getAgent(), signal, &time);
+    return time.start;
+}
+
+inline uint64_t
+HSABarrier::getEndTimestamp() override {
+    Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(hsaQueue->getDev());
+    hsa_amd_profiling_dispatch_time_t time;
+    hsa_amd_profiling_get_dispatch_time(device->getAgent(), signal, &time);
+    return time.end;
+}
 
 // ----------------------------------------------------------------------
 // extern "C" functions
