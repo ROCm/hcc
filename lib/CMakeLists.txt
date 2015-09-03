@@ -1,7 +1,7 @@
 ####################
 # C++AMP runtime (mcwamp)
 ####################
-add_mcwamp_library(mcwamp mcwamp.cpp am_cpu.cpp)
+add_mcwamp_library(mcwamp mcwamp.cpp)
 add_mcwamp_library(mcwamp_atomic mcwamp_atomic.cpp)
 
 ####################

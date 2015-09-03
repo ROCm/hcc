@@ -26,16 +26,21 @@ execute_process(COMMAND git rev-parse --short HEAD
 # set Kalmar version string
 set(KALMAR_VERSION_STRING "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}.${KALMAR_VERSION_PATCH}-${KALMAR_DRIVER_COMMIT}-${LIBCXX_COMMIT}")
 
+add_subdirectory(libcxx)
+
+# add libcxxrt for non-OSX platforms
 if(NOT APPLE)
 include_directories(${PROJECT_SOURCE_DIR}/libcxxrt/src)
 set(CMAKE_CXX_FLAGS "-DLIBCXXRT")
 add_subdirectory(libcxxrt)
+INSTALL(DIRECTORY ${PROJECT_BINARY_DIR}/libcxxrt/lib
+        DESTINATION lib
+        COMPONENT libcxxrt
+        PATTERN "libcxxrt*"
+        PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
+                    GROUP_READ WORLD_READ) 
 endif(NOT APPLE)
-add_subdirectory(libcxx)
-FILE(GLOB libcxxrt_files "${PROJECT_BINARY_DIR}/libcxxrt/lib/lib*")
-INSTALL(FILES ${libcxxrt_files}
-  DESTINATION lib
-)
+
 set(CPACK_SET_DESTDIR TRUE)
 set(CPACK_INSTALL_PREFIX "/opt/kalmar")
 set(CPACK_PACKAGE_NAME "libcxxamp")

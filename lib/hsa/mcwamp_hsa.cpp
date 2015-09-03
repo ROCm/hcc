@@ -23,6 +23,7 @@
 
 #include <hsa.h>
 #include <hsa_ext_finalize.h>
+#include <hsa_ext_amd.h>
 
 #include <kalmar_runtime.h>
 
@@ -168,6 +169,17 @@ public:
           future = nullptr;
         }
     }
+
+    uint64_t getTimestampFrequency() override {
+        // get system tick frequency
+        uint64_t timestamp_frequency_hz = 0L;
+        hsa_system_get_info(HSA_SYSTEM_INFO_TIMESTAMP_FREQUENCY, &timestamp_frequency_hz);
+        return timestamp_frequency_hz;
+    }
+
+    uint64_t getBeginTimestamp() override;
+
+    uint64_t getEndTimestamp() override;
 
 }; // end of HSABarrier
 
@@ -432,6 +444,17 @@ public:
         }
     }
 
+    uint64_t getTimestampFrequency() override {
+        // get system tick frequency
+        uint64_t timestamp_frequency_hz = 0L;
+        hsa_system_get_info(HSA_SYSTEM_INFO_TIMESTAMP_FREQUENCY, &timestamp_frequency_hz);
+        return timestamp_frequency_hz;
+    }
+
+    uint64_t getBeginTimestamp() override;
+
+    uint64_t getEndTimestamp() override;
+
 private:
     template <typename T>
     hsa_status_t pushArgPrivate(T val) {
@@ -474,6 +497,37 @@ private:
     }
 
 }; // end of HSADispatch
+
+//-----
+//Structure used to extract information from regions
+struct region_iterator
+{
+    hsa_region_t _am_region;
+
+    hsa_region_t _kernarg_region;
+    hsa_region_t _finegrained_region;
+    hsa_region_t _coarsegrained_region;
+
+    bool        _found_kernarg_region;
+    bool        _found_finegrained_region;
+    bool        _found_coarsegrained_region;
+
+    region_iterator() ;
+};
+
+
+region_iterator::region_iterator()
+{
+    _kernarg_region.handle=(uint64_t)-1;
+    _finegrained_region.handle=(uint64_t)-1;
+    _coarsegrained_region.handle=(uint64_t)-1;
+
+    _found_kernarg_region = false;
+    _found_finegrained_region = false;
+    _found_coarsegrained_region = false;
+}
+//-----
+
 
 ///
 /// memory allocator
@@ -544,6 +598,9 @@ public:
         std::cerr << "HSAQueue::HSAQueue(): created an HSA command queue: " << commandQueue << "\n";
 #endif
         STATUS_CHECK_Q(status, commandQueue, __LINE__);
+
+        /// Enable profiling support for the queue.
+        status = hsa_amd_profiling_set_profiler_enabled(commandQueue, 1);
     }
 
     ~HSAQueue() {
@@ -747,6 +804,12 @@ public:
         return static_cast<void*>(commandQueue);
     }
 
+    void* getHSAAgent() override;
+
+    void* getHSAAMRegion() override;
+
+    void* getHSAKernargRegion() override;
+
     bool hasHSAInterOp() override {
         return true;
     }
@@ -788,7 +851,44 @@ private:
     std::mutex queues_mutex;
     std::vector< std::weak_ptr<KalmarQueue> > queues;
 
+    region_iterator ri;
+
 public:
+
+    // Callback for hsa_agent_iterate_regions.
+    // data is of type region_iterator,
+    // we save the regions we care about into this structure.
+    static hsa_status_t get_memory_regions(hsa_region_t region, void* data)
+    {
+    
+        hsa_region_segment_t segment;
+        hsa_region_get_info(region, HSA_REGION_INFO_SEGMENT, &segment);
+    
+        region_iterator *ri = (region_iterator*) (data);
+    
+        hsa_region_global_flag_t flags;
+        hsa_region_get_info(region, HSA_REGION_INFO_GLOBAL_FLAGS, &flags);
+    
+        if (segment == HSA_REGION_SEGMENT_GLOBAL) {
+            if (flags & HSA_REGION_GLOBAL_FLAG_KERNARG) {
+                ri->_kernarg_region = region;
+                ri->_found_kernarg_region = true;
+            }
+    
+            if (flags & HSA_REGION_GLOBAL_FLAG_FINE_GRAINED) {
+                ri->_finegrained_region = region;
+                ri->_found_finegrained_region = true;
+            }
+    
+            if (flags & HSA_REGION_GLOBAL_FLAG_COARSE_GRAINED) {
+                ri->_coarsegrained_region = region;
+                ri->_found_coarsegrained_region = true;
+            }
+        }
+    
+        return HSA_STATUS_SUCCESS;
+    }
+
     static hsa_status_t find_group_memory(hsa_region_t region, void* data) {
       hsa_region_segment_t segment;
       size_t size = 0;
@@ -814,13 +914,14 @@ public:
       return HSA_STATUS_SUCCESS;
     }
 
-    hsa_agent_t getAgent() {
+    hsa_agent_t& getAgent() {
         return agent;
     }
 
     HSADevice(hsa_agent_t a) : KalmarDevice(access_type_read_write),
                                agent(a), programs(), max_tile_static_size(0),
-                               queues(), queues_mutex() {
+                               queues(), queues_mutex(),
+                               ri() {
 #if KALMAR_DEBUG
         std::cerr << "HSADevice::HSADevice()\n";
 #endif
@@ -933,6 +1034,29 @@ public:
         return result;
     }
 
+    hsa_region_t& getHSAKernargRegion() {
+    
+        hsa_agent_iterate_regions(agent, &HSADevice::get_memory_regions, &ri);
+
+        return ri._kernarg_region;
+    }
+
+    hsa_region_t& getHSAAMRegion() {
+    
+        hsa_agent_iterate_regions(agent, &HSADevice::get_memory_regions, &ri);
+
+        // prefer coarse-grained over fine-grained
+        if (ri._found_coarsegrained_region) {
+            ri._am_region = ri._coarsegrained_region;
+        } else if (ri._found_finegrained_region) {
+            ri._am_region = ri._finegrained_region;
+        } else {
+            ri._am_region.handle = (uint64_t)(-1);
+        }
+    
+        return ri._am_region;
+    }
+
 private:
 
     HSAKernel* CreateOfflineFinalizedKernelImpl(void *kernelBuffer, int kernelSize, const char *entryName) {
@@ -1040,6 +1164,7 @@ private:
   
         return new HSAKernel(hsaExecutable, hsaCodeObject, kernelSymbol, kernelCodeHandle);
     }
+
 };
 
 class HSAContext final : public KalmarContext
@@ -1130,6 +1255,28 @@ static HSAContext ctx;
 
 
 // ----------------------------------------------------------------------
+// member function implementation of HSAQueue
+// ----------------------------------------------------------------------
+namespace Kalmar {
+
+inline void*
+HSAQueue::getHSAAgent() override {
+    return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getAgent()));
+}
+
+inline void*
+HSAQueue::getHSAAMRegion() override {
+    return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getHSAAMRegion()));
+}
+
+inline void*
+HSAQueue::getHSAKernargRegion() override {
+    return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getHSAKernargRegion()));
+}
+
+} // namespace Kalmar
+
+// ----------------------------------------------------------------------
 // member function implementation of HSADispatch
 // ----------------------------------------------------------------------
 
@@ -1187,6 +1334,22 @@ HSADispatch::dispatchKernelAsync(Kalmar::HSAQueue* hsaQueue) {
     return status;
 }
 
+inline uint64_t
+HSADispatch::getBeginTimestamp() override {
+    Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(hsaQueue->getDev());
+    hsa_amd_profiling_dispatch_time_t time;
+    hsa_amd_profiling_get_dispatch_time(device->getAgent(), signal, &time);
+    return time.start;
+}
+
+inline uint64_t
+HSADispatch::getEndTimestamp() override {
+    Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(hsaQueue->getDev());
+    hsa_amd_profiling_dispatch_time_t time;
+    hsa_amd_profiling_get_dispatch_time(device->getAgent(), signal, &time);
+    return time.end;
+}
+
 // ----------------------------------------------------------------------
 // member function implementation of HSABarrier
 // ----------------------------------------------------------------------
@@ -1216,6 +1379,7 @@ HSABarrier::waitComplete() {
     }
 
     isDispatched = false;
+
     return status;
 }
 
@@ -1240,6 +1404,21 @@ HSABarrier::enqueueAsync(Kalmar::HSAQueue* hsaQueue) {
     return status;
 }
 
+inline uint64_t
+HSABarrier::getBeginTimestamp() override {
+    Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(hsaQueue->getDev());
+    hsa_amd_profiling_dispatch_time_t time;
+    hsa_amd_profiling_get_dispatch_time(device->getAgent(), signal, &time);
+    return time.start;
+}
+
+inline uint64_t
+HSABarrier::getEndTimestamp() override {
+    Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(hsaQueue->getDev());
+    hsa_amd_profiling_dispatch_time_t time;
+    hsa_amd_profiling_get_dispatch_time(device->getAgent(), signal, &time);
+    return time.end;
+}
 
 // ----------------------------------------------------------------------
 // extern "C" functions
