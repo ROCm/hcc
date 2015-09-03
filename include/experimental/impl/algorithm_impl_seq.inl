@@ -16,7 +16,11 @@ namespace experimental {
 namespace parallel {
 inline namespace v1 {
 
-// mismatch
+/**
+ * Parallel version of std::mismatch in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename InputIt1, typename InputIt2>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, std::pair<InputIt1, InputIt2>>::type
 mismatch(ExecutionPolicy&& exec,
@@ -25,6 +29,12 @@ mismatch(ExecutionPolicy&& exec,
     return std::mismatch(first1, last1, first2);
 }
 
+
+/**
+ * Parallel version of std::mismatch in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename InputIt1, typename InputIt2, typename BinaryPredicate>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, std::pair<InputIt1, InputIt2>>::type
 mismatch(ExecutionPolicy&& exec,
@@ -35,7 +45,11 @@ mismatch(ExecutionPolicy&& exec,
 }
 
 
-// find
+/**
+ * Parallel version of std::find in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename InputIt, typename T>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, InputIt>::type
 find(ExecutionPolicy&& exec,
@@ -45,7 +59,11 @@ find(ExecutionPolicy&& exec,
 }
 
 
-// find_if
+/**
+ * Parallel version of std::find_if in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename InputIt, typename UnaryPredicate>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, InputIt>::type
 find_if(ExecutionPolicy&& exec,
@@ -55,7 +73,11 @@ find_if(ExecutionPolicy&& exec,
 }
 
 
-// find_if_not
+/**
+ * Parallel version of std::find_if_not in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename InputIt, typename UnaryPredicate>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, InputIt>::type
 find_if_not(ExecutionPolicy&& exec,
@@ -65,7 +87,11 @@ find_if_not(ExecutionPolicy&& exec,
 }
 
 
-// find_end
+/**
+ * Parallel version of std::find_end in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename ForwardIt1, typename ForwardIt2>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt1>::type
 find_end(ExecutionPolicy&& exec,
@@ -74,6 +100,12 @@ find_end(ExecutionPolicy&& exec,
     return std::find_end(first, last, s_first, s_last);
 }
 
+
+/**
+ * Parallel version of std::find_end in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename ForwardIt1, typename ForwardIt2, typename BinaryPredicate>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt1>::type
 find_end(ExecutionPolicy&& exec,
@@ -84,7 +116,11 @@ find_end(ExecutionPolicy&& exec,
 }
 
 
-// find_first_of
+/**
+ * Parallel version of std::find_first_of in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename InputIt, typename ForwardIt>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, InputIt>::type
 find_first_of(ExecutionPolicy&& exec,
@@ -93,6 +129,12 @@ find_first_of(ExecutionPolicy&& exec,
     return std::find_first_of(first, last, s_first, s_last);
 }
 
+
+/**
+ * Parallel version of std::find_first_of in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename InputIt, typename ForwardIt, typename BinaryPredicate>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, InputIt>::type
 find_first_of(ExecutionPolicy&& exec,
@@ -103,7 +145,11 @@ find_first_of(ExecutionPolicy&& exec,
 }
 
 
-// adjacent_find
+/**
+ * Parallel version of std::adjacent_find in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename ForwardIt>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt>::type
 adjacent_find(ExecutionPolicy&& exec,
@@ -111,6 +157,12 @@ adjacent_find(ExecutionPolicy&& exec,
     return std::adjacent_find(first, last);
 }
 
+
+/**
+ * Parallel version of std::adjacent_find in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename ForwardIt, typename BinaryPredicate>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt>::type
 adjacent_find(ExecutionPolicy&& exec,
@@ -120,7 +172,11 @@ adjacent_find(ExecutionPolicy&& exec,
 }
 
 
-// search
+/**
+ * Parallel version of std::search in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename ForwardIt1, typename ForwardIt2>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt1>::type
 search(ExecutionPolicy&& exec,
@@ -129,6 +185,12 @@ search(ExecutionPolicy&& exec,
     return std::search(first, last, s_first, s_last);
 }
 
+
+/**
+ * Parallel version of std::search in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename ForwardIt1, typename ForwardIt2, typename BinaryPredicate>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt1>::type
 search(ExecutionPolicy&& exec,
@@ -139,7 +201,11 @@ search(ExecutionPolicy&& exec,
 }
 
 
-// search_n
+/**
+ * Parallel version of std::search_n in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename ForwardIt, typename Size, typename T>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt>::type
 search_n(ExecutionPolicy&& exec,
@@ -147,6 +213,12 @@ search_n(ExecutionPolicy&& exec,
     return std::search_n(first, last, count, value);
 }
 
+
+/**
+ * Parallel version of std::search_n in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename ForwardIt, typename Size, typename T, typename BinaryPredicate>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt>::type
 search_n(ExecutionPolicy&& exec,
@@ -157,7 +229,11 @@ search_n(ExecutionPolicy&& exec,
 }
 
 
-// copy_if
+/**
+ * Parallel version of std::copy_if in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename InputIt, typename OutputIt, typename UnaryPredicate>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
 copy_if(ExecutionPolicy&& exec,
@@ -168,7 +244,11 @@ copy_if(ExecutionPolicy&& exec,
 }
 
 
-// move
+/**
+ * Parallel version of std::move in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename InputIt, typename OutputIt>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
 move(ExecutionPolicy&& exec,
@@ -178,7 +258,11 @@ move(ExecutionPolicy&& exec,
 }
 
 
-// remove
+/**
+ * Parallel version of std::remove in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename ForwardIt, typename T>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt>::type
 remove(ExecutionPolicy&& exec,
@@ -188,7 +272,11 @@ remove(ExecutionPolicy&& exec,
 }
 
 
-// remove_if
+/**
+ * Parallel version of std::remove_if in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename ForwardIt, typename UnaryPredicate>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt>::type
 remove_if(ExecutionPolicy&& exec,
@@ -198,7 +286,11 @@ remove_if(ExecutionPolicy&& exec,
 }
 
 
-// remove_copy
+/**
+ * Parallel version of std::remove_copy in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename InputIt, typename OutputIt, typename T>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
 remove_copy(ExecutionPolicy&& exec,
@@ -209,7 +301,11 @@ remove_copy(ExecutionPolicy&& exec,
 }
 
 
-// remove_copy_if
+/**
+ * Parallel version of std::remove_copy_if in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename InputIt, typename OutputIt, typename UnaryPredicate>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
 remove_copy_if(ExecutionPolicy&& exec,
@@ -220,7 +316,11 @@ remove_copy_if(ExecutionPolicy&& exec,
 }
 
 
-// reverse
+/**
+ * Parallel version of std::reverse in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename BidirIt>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, void>::type
 reverse(ExecutionPolicy&& exec,
@@ -229,7 +329,11 @@ reverse(ExecutionPolicy&& exec,
 }
 
 
-// reverse_copy
+/**
+ * Parallel version of std::reverse_copy in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename BidirIt, typename OutputIt>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
 reverse_copy(ExecutionPolicy&& exec,
@@ -239,7 +343,11 @@ reverse_copy(ExecutionPolicy&& exec,
 }
 
 
-// rotate
+/**
+ * Parallel version of std::rotate in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename ForwardIt>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt>::type
 rotate(ExecutionPolicy&& exec,
@@ -247,7 +355,12 @@ rotate(ExecutionPolicy&& exec,
     return std::rotate(first, n_first, last);
 }
 
-// rotate_copy
+
+/**
+ * Parallel version of std::rotate_copy in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename ForwardIt, typename OutputIt>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
 rotate_copy(ExecutionPolicy&& exec,
@@ -257,7 +370,11 @@ rotate_copy(ExecutionPolicy&& exec,
 }
 
 
-// unique
+/**
+ * Parallel version of std::unique in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename ForwardIt>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt>::type
 unique(ExecutionPolicy&& exec,
@@ -265,6 +382,12 @@ unique(ExecutionPolicy&& exec,
     return std::unique(first, last);
 }
 
+
+/**
+ * Parallel version of std::unique in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename ForwardIt, typename BinaryPredicate>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt>::type
 unique(ExecutionPolicy&& exec,
@@ -274,7 +397,11 @@ unique(ExecutionPolicy&& exec,
 }
 
 
-// unique_copy
+/**
+ * Parallel version of std::unique_copy in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename InputIt, typename OutputIt>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
 unique_copy(ExecutionPolicy&&,
@@ -283,6 +410,12 @@ unique_copy(ExecutionPolicy&&,
     return std::unique_copy(first, last, d_first);
 }
 
+
+/**
+ * Parallel version of std::unique_copy in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename InputIt, typename OutputIt, typename BinaryPredicate>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
 unique_copy(ExecutionPolicy&& exec,
@@ -293,7 +426,11 @@ unique_copy(ExecutionPolicy&& exec,
 }
 
 
-// is_partitioned
+/**
+ * Parallel version of std::unique_copy in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename InputIt, typename UnaryPredicate>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, bool>::type
 is_partitioned(ExecutionPolicy&& exec,
@@ -303,7 +440,11 @@ is_partitioned(ExecutionPolicy&& exec,
 }
 
 
-// partition
+/**
+ * Parallel version of std::partition in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename ForwardIt, typename UnaryPredicate>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt>::type
 partition(ExecutionPolicy&& exec,
@@ -313,7 +454,11 @@ partition(ExecutionPolicy&& exec,
 }
 
 
-// partition_copy
+/**
+ * Parallel version of std::partition_copy in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename InputIt, typename OutputIt1, typename OutputIt2, typename UnaryPredicate>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, std::pair<OutputIt1, OutputIt2>>::type
 partition_copy(ExecutionPolicy&& exec,
@@ -325,7 +470,11 @@ partition_copy(ExecutionPolicy&& exec,
 }
 
 
-// stable_partition
+/**
+ * Parallel version of std::stable_partition in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename BidirIt, typename UnaryPredicate>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, BidirIt>::type
 stable_partition(ExecutionPolicy&& exec,
@@ -335,7 +484,11 @@ stable_partition(ExecutionPolicy&& exec,
 }
 
 
-// is_sorted
+/**
+ * Parallel version of std::is_sorted in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename ForwardIt>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, bool>::type
 is_sorted(ExecutionPolicy&& exec,
@@ -343,6 +496,12 @@ is_sorted(ExecutionPolicy&& exec,
     return is_sorted(first, last);
 }
 
+
+/**
+ * Parallel version of std::is_sorted in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename ForwardIt, typename Compare>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, bool>::type
 is_sorted(ExecutionPolicy&& exec,
@@ -352,7 +511,11 @@ is_sorted(ExecutionPolicy&& exec,
 }
 
 
-// is_sorted_until
+/**
+ * Parallel version of std::is_sorted_until in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename ForwardIt>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt>::type
 is_sorted_until(ExecutionPolicy&& exec,
@@ -360,6 +523,11 @@ is_sorted_until(ExecutionPolicy&& exec,
     return std::is_sorted_until(first, last);
 }
 
+/**
+ * Parallel version of std::is_sorted_until in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename ForwardIt, typename Compare>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, ForwardIt>::type
 is_sorted_until(ExecutionPolicy&& exec,
@@ -369,7 +537,11 @@ is_sorted_until(ExecutionPolicy&& exec,
 }
 
 
-// sort
+/**
+ * Parallel version of std::sort in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename RandomIt>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, void>::type
 sort(ExecutionPolicy&& exec,
@@ -377,6 +549,12 @@ sort(ExecutionPolicy&& exec,
     return std::sort(first, last);
 }
 
+
+/**
+ * Parallel version of std::sort in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename RandomIt, typename Compare>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, void>::type
 sort(ExecutionPolicy&& exec,
@@ -386,7 +564,11 @@ sort(ExecutionPolicy&& exec,
 }
 
 
-// partial_sort
+/**
+ * Parallel version of std::partial_sort in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename RandomIt>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, void>::type
 partial_sort(ExecutionPolicy&& exec,
@@ -395,6 +577,11 @@ partial_sort(ExecutionPolicy&& exec,
 }
 
 
+/**
+ * Parallel version of std::partial_sort in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename RandomIt, typename Compare>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, void>::type
 partial_sort(ExecutionPolicy&& exec,
@@ -404,7 +591,11 @@ partial_sort(ExecutionPolicy&& exec,
 }
 
 
-// partial_sort_copy
+/**
+ * Parallel version of std::partial_sort_copy in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename InputIt, typename RandomIt>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, RandomIt>::type
 partial_sort_copy(ExecutionPolicy&& exec,
@@ -413,6 +604,12 @@ partial_sort_copy(ExecutionPolicy&& exec,
     return std::partial_sort_copy(first, last, d_first, d_last);
 }
 
+
+/**
+ * Parallel version of std::partial_sort_copy in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename InputIt, typename RandomIt, typename Compare>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, RandomIt>::type
 partial_sort_copy(ExecutionPolicy&& exec,
@@ -423,7 +620,11 @@ partial_sort_copy(ExecutionPolicy&& exec,
 }
 
 
-// stable_sort
+/**
+ * Parallel version of std::stable_sort in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename RandomIt>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, void>::type
 stable_sort(ExecutionPolicy&& exec,
@@ -431,6 +632,12 @@ stable_sort(ExecutionPolicy&& exec,
     return std::stable_sort(first, last);
 }
 
+
+/**
+ * Parallel version of std::stable_sort in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename RandomIt, typename Compare>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, void>::type
 stable_sort(ExecutionPolicy&& exec,
@@ -440,7 +647,11 @@ stable_sort(ExecutionPolicy&& exec,
 }
 
 
-// nth_element
+/**
+ * Parallel version of std::nth_element in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename RandomIt>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, void>::type
 nth_element(ExecutionPolicy&& exec,
@@ -448,6 +659,12 @@ nth_element(ExecutionPolicy&& exec,
     return std::nth_element(first, nth, last);
 }
 
+
+/**
+ * Parallel version of std::nth_element in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename RandomIt, typename Compare>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, void>::type
 nth_element(ExecutionPolicy&& exec,
@@ -457,7 +674,11 @@ nth_element(ExecutionPolicy&& exec,
 }
 
 
-// merge
+/**
+ * Parallel version of std::merge in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename InputIt1, typename InputIt2, typename OutputIt>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
 merge(ExecutionPolicy&& exec,
@@ -467,6 +688,12 @@ merge(ExecutionPolicy&& exec,
     return std::merge(first1, last1, first2, last2, d_first);
 }
 
+
+/**
+ * Parallel version of std::merge in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename InputIt1, typename InputIt2, typename OutputIt, typename Compare>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
 merge(ExecutionPolicy&& exec,
@@ -477,7 +704,11 @@ merge(ExecutionPolicy&& exec,
 }
 
 
-// inplace_merge
+/**
+ * Parallel version of std::inplace_merge in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename BidirIt>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, void>::type
 inplace_merge(ExecutionPolicy&& exec,
@@ -485,6 +716,12 @@ inplace_merge(ExecutionPolicy&& exec,
     return std::inplace_merge(first, middle, last);
 }
 
+
+/**
+ * Parallel version of std::inplace_merge in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename BidirIt, typename Compare>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, void>::type
 inplace_merge(ExecutionPolicy&& exec,
@@ -493,7 +730,11 @@ inplace_merge(ExecutionPolicy&& exec,
 }
 
 
-// includes
+/**
+ * Parallel version of std::includes in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename InputIt1, typename InputIt2>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, bool>::type
 includes(ExecutionPolicy&& exec,
@@ -502,6 +743,12 @@ includes(ExecutionPolicy&& exec,
     return std::includes(first1, last1, first2, last2);
 }
 
+
+/**
+ * Parallel version of std::includes in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename InputIt1, typename InputIt2, typename Compare>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, bool>::type
 includes(ExecutionPolicy&& exec,
@@ -512,7 +759,11 @@ includes(ExecutionPolicy&& exec,
 }
 
 
-// set_difference
+/**
+ * Parallel version of std::set_difference in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename InputIt1, typename InputIt2, typename OutputIt>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
 set_difference(ExecutionPolicy&& exec,
@@ -522,6 +773,12 @@ set_difference(ExecutionPolicy&& exec,
     return std::set_difference(first1, last1, first2, last2, d_first);
 }
 
+
+/**
+ * Parallel version of std::set_difference in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename InputIt1, typename InputIt2, typename OutputIt, typename Compare>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
 set_difference(ExecutionPolicy&& exec,
@@ -533,7 +790,11 @@ set_difference(ExecutionPolicy&& exec,
 }
 
 
-// set_intersection
+/**
+ * Parallel version of std::set_intersection in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename InputIt1, typename InputIt2, typename OutputIt>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
 set_intersection(ExecutionPolicy&& exec,
@@ -543,6 +804,12 @@ set_intersection(ExecutionPolicy&& exec,
     return std::set_intersection(first1, last1, first2, last2, d_first);
 }
 
+
+/**
+ * Parallel version of std::set_intersection in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename InputIt1, typename InputIt2, typename OutputIt, typename Compare>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
 set_intersection(ExecutionPolicy&& exec,
@@ -553,7 +820,11 @@ set_intersection(ExecutionPolicy&& exec,
 }
 
 
-// set_symmetric_difference
+/**
+ * Parallel version of std::set_symmetric_difference in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename InputIt1, typename InputIt2, typename OutputIt>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
 set_symmetric_difference(ExecutionPolicy&& exec,
@@ -563,6 +834,12 @@ set_symmetric_difference(ExecutionPolicy&& exec,
     return std::set_symmetric_difference(first1, last1, first2, last2, d_first);
 }
 
+
+/**
+ * Parallel version of std::set_symmetric_difference in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename InputIt1, typename InputIt2, typename OutputIt, typename Compare>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
 set_symmetric_difference(ExecutionPolicy&& exec,
@@ -574,7 +851,11 @@ set_symmetric_difference(ExecutionPolicy&& exec,
 }
 
 
-// set_union
+/**
+ * Parallel version of std::set_union in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename InputIt1, typename InputIt2, typename OutputIt>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
 set_union(ExecutionPolicy&& exec,
@@ -584,6 +865,12 @@ set_union(ExecutionPolicy&& exec,
     return std::set_union(first1, last1, first2, last2, d_first);
 }
 
+
+/**
+ * Parallel version of std::set_union in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename InputIt1, typename InputIt2, typename OutputIt, typename Compare>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, OutputIt>::type
 set_union(ExecutionPolicy&& exec,
@@ -595,7 +882,11 @@ set_union(ExecutionPolicy&& exec,
 }
 
 
-// is_heap
+/**
+ * Parallel version of std::is_heap in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename RandomIt>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, bool>::type
 is_heap(ExecutionPolicy&& exec,
@@ -603,6 +894,12 @@ is_heap(ExecutionPolicy&& exec,
     return std::is_heap(first, last);
 }
 
+
+/**
+ * Parallel version of std::is_heap in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename RandomIt, typename Compare>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, bool>::type
 is_heap(ExecutionPolicy&& exec,
@@ -612,7 +909,11 @@ is_heap(ExecutionPolicy&& exec,
 }
 
 
-// is_heap_until
+/**
+ * Parallel version of std::is_heap_until in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename RandomIt>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, RandomIt>::type
 is_heap_until(ExecutionPolicy&& exec,
@@ -620,6 +921,12 @@ is_heap_until(ExecutionPolicy&& exec,
     return std::is_heap_until(first, last);
 }
 
+
+/**
+ * Parallel version of std::is_heap_until in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
 template <typename ExecutionPolicy, typename RandomIt, typename Compare>
 typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, RandomIt>::type
 is_heap_until(ExecutionPolicy&& exec,
