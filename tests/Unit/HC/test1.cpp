@@ -14,12 +14,12 @@ bool test() {
   bool ret = true;
 
   // check if the queue is HSA
-  ret &= av.hasHSAInterOp();
+  ret &= av.get_hsa_interop();
 
   std::cout << ret << "\n";
 
   // checks if we can get underlying native HSA queue
-  void* native_queue = av.getHSAQueue();
+  void* native_queue = av.get_hsa_queue();
   ret &= (native_queue != nullptr);
 
   std::cout << ret << "\n";

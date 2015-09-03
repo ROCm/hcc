@@ -1,36 +1,44 @@
 // XFAIL: Linux
 // RUN: %hc %s -o %t.out && %t.out
 
-#include <cassert>
-#include <algorithm>
-#include <iostream>
 #include <hc.hpp>
 
-#define GRID_SIZE (1024)
+#include <iostream>
 
-/// test fetching the number of async operations associated with one accelerator_view
+// a test which checks accelerator_view::get_hsa_agent()
+bool test() {
+
+  hc::accelerator acc;
+  hc::accelerator_view av = acc.get_default_view();
+  hc::accelerator_view av2 = acc.create_view();
+
+  bool ret = true;
+
+  // check if the queue is HSA
+  ret &= av.get_hsa_interop();
+
+  std::cout << ret << "\n";
+
+  // checks if we can get underlying native HSA agent
+  void* native_agent = av.get_hsa_agent();
+  ret &= (native_agent != nullptr);
+
+  void* native_agent2 = av2.get_hsa_agent();
+  ret &= (native_agent2 != nullptr);
+
+  // native_agent and native_agent2 should point to the same agent
+  ret &= (native_agent == native_agent2);
+
+  std::cout << ret << "\n";
+
+  return ret;
+}
+
 int main() {
+  bool ret = true;
 
-  hc::am_status_t mem_status;
-  int* v1 = hc::am_alloc(GRID_SIZE * sizeof(int), AM_DEFAULT_FLAGS, &mem_status); 
-  assert(mem_status == AM_SUCCESS);
+  ret &= test();
 
-  int n(0);
-  std::generate(v1, v1+GRID_SIZE, [&n]{ return n++; });
- 
-  hc::completion_future fut = hc::parallel_for_each(
-    hc::extent<1>(GRID_SIZE), 
-    [=](hc::index<1>& idx) __attribute((hc)) {
-      v1[idx[0]]++;
-  });
-  fut.wait();
-
-  n = 1;
-  int errors = std::count_if(v1, v1+GRID_SIZE, [=,&n](int i) { return (i!=n++); });
-
-  mem_status = hc::am_free(v1);
-  assert(mem_status == AM_SUCCESS);
-
-  return errors;
+  return !(ret == true);
 }
 

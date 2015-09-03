@@ -27,6 +27,8 @@ include (EnsureLLVMisPresent)
 include (EnsureCLANGisPresent)
 include (EnsureLIBCXXisPresent)
 include (EnsureLIBCXXRTisPresent)
+include (EnsureHLCisPresent)
+include (EnsureHSAILASMisPresent)
 include (SetupCBE)
 include (SetupSPIRify)
 include (SetupEraseNonkernel)
@@ -90,18 +92,18 @@ LINK_DIRECTORIES( ${LLVM_LIB_DIR} )
 # Turn off Bolt by default for now.
 option(CXXAMP_ENABLE_BOLT "Enable Bolt as external dependency" OFF)
 
-SET(FOO_BUILD_SHARED OFF CACHE BOOL "Build libfoo shared library")
-
 #################
 # Detect OpenCL
 #################
 
-find_path(OPENCL_HEADER cl.h PATHS ${OPENCL_HEADER_DIR} /usr/include/CL /opt/AMDAPP/include/CL /usr/local/cuda/include/CL )
+find_path(OPENCL_HEADER cl.h PATHS ${OPENCL_HEADER_DIR} /usr/include/CL /opt/AMDAPP/include/CL /usr/local/cuda/include/CL NO_DEFAULT_PATH)
+find_path(OPENCL_HEADER cl.h)
 if (NOT APPLE AND NOT OPENCL_HEADER)
   MESSAGE("OpenCL header not found. Use -DOPENCL_HEADER_DIR=<path_to_cl.h>.")
 endif(NOT APPLE AND NOT OPENCL_HEADER)
 
-find_library(OPENCL_LIBRARY OpenCL PATHS ${OPENCL_LIBRARY_DIR} /usr/lib /opt/AMDAPP/lib/x86_64 /usr/local/cuda/lib64 )
+find_library(OPENCL_LIBRARY OpenCL PATHS ${OPENCL_LIBRARY_DIR} /usr/lib /opt/AMDAPP/lib/x86_64 /usr/local/cuda/lib64 NO_DEFAULT_PATH)
+find_library(OPENCL_LIBRARY OpenCL)
 if (NOT APPLE AND NOT OPENCL_LIBRARY)
   MESSAGE("OpenCL library not found. Use -DOPENCL_LIBRARY_DIR=<path_to_libOpenCL.so>.")
 endif(NOT APPLE AND NOT OPENCL_LIBRARY)
@@ -124,32 +126,31 @@ endif ((NOT OPENCL_HEADER) OR (NOT OPENCL_LIBRARY))
 #################
 
 # HSA external dependencies
-set (HSAIL_ROOT "/opt/amd"
-        CACHE PATH "AMD HSAIL compiler path")
 set (HSA_ROOT "/opt/hsa"
         CACHE PATH "HSA runtime path")
 
-find_path(HSA_HEADER hsa.h PATHS ${HSA_HEADER_DIR} ${HSA_ROOT}/include)
+find_path(HSA_HEADER hsa.h PATHS ${HSA_HEADER_DIR} ${HSA_ROOT}/include NO_DEFAULT_PATH)
+find_path(HSA_HEADER hsa.h)
 if (NOT HSA_HEADER)
   MESSAGE("HSA header not found. Use -DHSA_HEADER_DIR=<path_to_hsa.h>.")
 endif (NOT HSA_HEADER)
 
-find_library(HSA_LIBRARY hsa-runtime64 PATHS ${HSA_LIBRARY_DIR} ${HSA_ROOT}/lib)
+
+find_library(HSA_LIBRARY hsa-runtime64 PATHS ${HSA_LIBRARY_DIR} ${HSA_ROOT}/lib NO_DEFAULT_PATH)
+find_library(HSA_LIBRARY hsa-runtime64)
 if (NOT HSA_LIBRARY)
   MESSAGE("HSA runtime library not found. Use -DHSA_LIBRARY_DIR=<path_to_libhsa-runtime64.so>.")
 endif (NOT HSA_LIBRARY)
 
-find_library(HSA_KMT_LIBRARY libhsakmt.so.1 PATHS ${HSA_KMT_LIBRARY_DIR} ${HSA_ROOT}/lib)
+
+find_library(HSA_KMT_LIBRARY libhsakmt.so.1 PATHS ${HSA_KMT_LIBRARY_DIR} ${HSA_ROOT}/lib NO_DEFAULT_PATH)
+find_library(HSA_KMT_LIBRARY libhsakmt.so.1)
 if (NOT HSA_KMT_LIBRARY)
   MESSAGE("HSA Kernel library not found. Use -DHSA_KMT_LIBRARY_DIR=<path_to_libhsakmt.so.1>.")
 endif (NOT HSA_KMT_LIBRARY)
 
-find_program(HSAIL_COMPILER HSAILasm PATHS ${HSAIL_COMPILER_DIR} ${HSAIL_ROOT}/bin)
-if (NOT HSAIL_COMPILER)
-  MESSAGE("HSAIL compiler not found. Use -DHSAIL_COMPILER_DIR=<path_to_hsailasm>.")
-endif (NOT HSAIL_COMPILER)
-
-find_program(HSA_HOF hof PATHS ${HSA_HOF_DIR} ${HSAIL_ROOT}/bin)
+find_program(HSA_HOF hof PATHS ${HSA_HOF_DIR} /opt/amd/bin NO_DEFAULT_PATH)
+find_program(HSA_HOF hof)
 if (NOT HSA_HOF)
   MESSAGE("HSA offline finalizer (HOF) not found.  Use -DHSA_HOF_DIR=<path_to_hof>.")
 endif (NOT HSA_HOF)
@@ -161,7 +162,6 @@ MESSAGE("HSA INFORMATION:")
 MESSAGE("HSA_HEADER_DIR = ${HSA_HEADER_DIR}, actually found at: ${HSA_HEADER}")
 MESSAGE("HSA_LIBRARY_DIR = ${HSA_LIBRARY_DIR}, actually found at: ${HSA_LIBRARY}")
 MESSAGE("HSA_KMT_LIBRARY_DIR = ${HSA_KMT_LIBRARY_DIR}, actually found at: ${HSA_KMT_LIBRARY}")
-MESSAGE("HSAIL_COMPILER_DIR = ${HSAIL_COMPILER_DIR}, actually found at: ${HSAIL_COMPILER}")
 MESSAGE("HSA_HOF_DIR = ${HSA_HOF_DIR}, actually found at: ${HSA_HOF}")
 MESSAGE("")
 
@@ -171,13 +171,11 @@ MESSAGE("")
 # - HSA runtime libraries (installed by HSA runtime)
 # - HSA ext64 library (installed by HSA runtime)
 # - HSA KMT library (installed by HSA KFD driver)
-# - HSAIL compiler (installed by HLC)
-if ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT HSA_KMT_LIBRARY) OR (NOT HSAIL_COMPILER))
+if ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT HSA_KMT_LIBRARY))
   set(HAS_HSA 0)
-else ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT HSA_KMT_LIBRARY) OR (NOT HSAIL_COMPILER))
+else ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT HSA_KMT_LIBRARY))
   set(HAS_HSA 1)
-  get_filename_component(HSAIL_BIN ${HSAIL_COMPILER} DIRECTORY)
-endif ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT HSA_KMT_LIBRARY) OR (NOT HSAIL_COMPILER))
+endif ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT HSA_KMT_LIBRARY))
 
 # determine if HSA offline finalization is possible
 # at least we need the followings:
@@ -245,7 +243,7 @@ add_custom_target(libc++
       -DLIBCXX_CXX_ABI="libcxxabi" -DLIBCXX_LIBCXXABI_INCLUDE_PATHS="/usr/include/"
       -DCMAKE_CXX_COMPILER=${CLANG_CC1}
       -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
-  COMMAND make  # not portable, but this is what it is.
+  COMMAND make -j4 # not portable, but we need it this way
   WORKING_DIRECTORY ${LIBCXX_BIN_DIR}
   DEPENDS clang
 )
@@ -253,7 +251,7 @@ else (APPLE)
 # use libcxxrt as ABI instead
 add_custom_target(libc++
   COMMAND ${CMAKE_COMMAND} ${LIBCXX_SRC_DIR} -DCMAKE_CXX_COMPILER=${CLANG_CC1} -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
-  COMMAND make  # not portable, but this is what it is.
+  COMMAND make -j4 # not portable, but we need it this way
   WORKING_DIRECTORY ${LIBCXX_BIN_DIR}
   DEPENDS clang
 )
@@ -270,9 +268,68 @@ add_subdirectory(include)
 add_subdirectory(amp-conformance)
 add_subdirectory(stl-test)
 
+#########################
+# build target: world
+# enable HLC and HSAILasm only if HSA stack is available
+#########################
+if (HAS_HSA)
+
+# setup HLC in Kalmar
+ensure_HLC_is_present(${PROJECT_SOURCE_DIR} hlc)
+
+# setup HSAILasm in Kalmar
+ensure_HSAILASM_is_present(${PROJECT_SOURCE_DIR} HSAILasm)
+
+# build HLC
+set(HLC_SRC_DIR "${PROJECT_SOURCE_DIR}/hlc")
+set(HLC_BIN_DIR "${PROJECT_BINARY_DIR}/hlc")
+file(MAKE_DIRECTORY ${HLC_BIN_DIR})
+add_custom_target(hlc
+  COMMAND ${CMAKE_COMMAND} ${HLC_SRC_DIR}
+          -DLLVM_ENABLE_EH=ON
+          -DLLVM_ENABLE_RTTI=ON
+          -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=HSAIL
+          -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+  COMMAND make -j4 # not portable, but we need it this way
+  WORKING_DIRECTORY ${HLC_BIN_DIR}
+)
+
+# install HLC along with Kalmar
+# stored under hlc/
+install(DIRECTORY ${HLC_BIN_DIR}/bin
+        DESTINATION hlc
+        COMPONENT hlc
+        PATTERN * PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+
+# build HSAILasm
+set(HSAILASM_SRC_DIR "${PROJECT_SOURCE_DIR}/HSAILasm")
+set(HSAILASM_BIN_DIR "${PROJECT_BINARY_DIR}/HSAILasm")
+file(MAKE_DIRECTORY ${HSAILASM_BIN_DIR})
+add_custom_target(HSAILasm
+  COMMAND ${CMAKE_COMMAND} ${HSAILASM_SRC_DIR}/libHSAIL
+  COMMAND make -j4 # not portable, but we need it this way
+  WORKING_DIRECTORY ${HSAILASM_BIN_DIR}
+)
+
+# install HSAILasm along with Kalmar
+# stored under HSAILasm/
+install(FILES ${HSAILASM_BIN_DIR}/HSAILAsm/HSAILasm
+        DESTINATION HSAILasm
+        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+        COMPONENT HSAILasm)
+
+add_custom_target(world
+    DEPENDS clang libc++ hlc HSAILasm ${DEPS}
+)
+
+else (HAS_HSA)
+
+# do NOT depend on HLC or HSAILasm in case HSA is not present
 add_custom_target(world
     DEPENDS clang libc++ ${DEPS}
 )
+
+endif (HAS_HSA)
 
 # create documentation
 configure_file(
@@ -332,7 +389,7 @@ set(CPACK_PACKAGE_VERSION_PATCH ${KALMAR_VERSION_PATCH})
 set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_SYSTEM_NAME})
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "Kalmar: a Heterogeneous C++ to OpenCL/HSA compiler")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Jack Chung <jack@multicorewareinc.com>")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "libcxxamp (>= 0.6.0)")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libcxxamp (>= 0.7.0)")
 set(CPACK_GENERATOR "DEB;TGZ")
 set(CPACK_SOURCE_GENERATOR "TGZ")
 set(CPACK_BINARY_DEB "ON")
@@ -341,10 +398,14 @@ set(CPACK_SOURCE_TGZ "OFF")
 set(CPACK_SOURCE_TZ "OFF")
 set(CPACK_SOURCE_TBZ2 "OFF")
 set(CPACK_BINARY_TZ "OFF")
+
+# put HLC and HSAILasm in the package as well
+set(CPACK_COMPONENTS_ALL HSAILasm hlc)
+
 include (CPack)
 MESSAGE("")
 MESSAGE("** For the first time:")
-MESSAGE("   'make world' to build clang, libc++ and library for testing.")
+MESSAGE("   'make world' to build clang, libc++, HLC, HSAILasm and library for testing.")
 MESSAGE("   'make' to build the rest of LLVM tools")
 MESSAGE("   'make docs' to build the HTML API reference")
 MESSAGE("")
