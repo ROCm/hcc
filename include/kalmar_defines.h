@@ -11,13 +11,13 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <thread>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
 // CPU execution path
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-#include <thread>
 #include <ucontext.h>
 #endif
 

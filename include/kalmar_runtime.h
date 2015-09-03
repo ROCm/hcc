@@ -143,6 +143,9 @@ private:
   queuing_mode mode;
 };
 
+/// macro to set if we want default queue be thread-local or not
+#define TLS_QUEUE (1)
+
 /// KalmarDevice
 /// This is the base implementation of accelerator
 /// KalmarDevice is responsible for create/release memory on device
@@ -150,12 +153,28 @@ class KalmarDevice
 {
 private:
     access_type cpu_type;
+
+#if !TLS_QUEUE
     /// default KalmarQueue
     std::shared_ptr<KalmarQueue> def;
     /// make sure KalamrQueue is created only once
     std::once_flag flag;
+#else
+    /// default KalmarQueue for each calling thread
+    std::map< std::thread::id, std::shared_ptr<KalmarQueue> > tlsDefaultQueueMap;
+    /// mutex for tlsDefaultQueueMap
+    std::mutex tlsDefaultQueueMap_mutex;
+#endif
+
 protected:
-    KalmarDevice(access_type type = access_type_read_write) : cpu_type(type), def(), flag() {}
+    KalmarDevice(access_type type = access_type_read_write)
+        : cpu_type(type),
+#if !TLS_QUEUE
+          def(), flag()
+#else
+          tlsDefaultQueueMap(), tlsDefaultQueueMap_mutex()
+#endif
+          {}
 public:
     access_type get_access() const { return cpu_type; }
     void set_access(access_type type) { cpu_type = type; }
@@ -189,8 +208,21 @@ public:
     virtual ~KalmarDevice() {}
 
     std::shared_ptr<KalmarQueue> get_default_queue() {
-        std::call_once(flag, [&]() { def = createQueue(); });
+#if !TLS_QUEUE
+        std::call_once(flag, [&]() { 
+            def = createQueue();
+        });
         return def;
+#else
+        std::thread::id tid = std::this_thread::get_id();
+        tlsDefaultQueueMap_mutex.lock();
+        if (tlsDefaultQueueMap.find(tid) == tlsDefaultQueueMap.end()) {
+            tlsDefaultQueueMap[tid] = createQueue();
+        }
+        std::shared_ptr<KalmarQueue> result = tlsDefaultQueueMap[tid];
+        tlsDefaultQueueMap_mutex.unlock();
+        return result;
+#endif
     }
 
     /// get max tile static area size
