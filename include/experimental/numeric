@@ -8,6 +8,29 @@
 /**
  * @file algorithm
  * Numeric Parallel algorithms
+ *
+ *
+ * Definitions:
+ *
+ * Define GENERALIZED_SUM(op, a1, ..., aN) as follows:
+ *
+ *   - a1 when N is 1
+ *
+ *   - op(GENERALIZED_SUM(op, b1, ..., bK),
+ *     GENERALIZED_SUM(op, bM, ..., bN)) where
+ *
+ *       - b1, ..., bN may be any permutation of a1, ..., aN and
+ *       - 1 < K+1 = M ≤ N.
+ *
+ *
+ * Define GENERALIZED_NONCOMMUTATIVE_SUM(op, a1, ..., aN) as follows:
+ *
+ *   - a1 when N is 1
+ *
+ *   - op(GENERALIZED_NONCOMMUTATIVE_SUM(op, a1, ..., aK),
+ *     GENERALIZED_NONCOMMUTATIVE_SUM(op, aM, ..., aN) where
+ *
+ *       - 1 < K+1 = M ≤ N.
  */
 
 #pragma once
