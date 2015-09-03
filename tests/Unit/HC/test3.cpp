@@ -5,7 +5,7 @@
 
 #include <iostream>
 
-// a test which checks accelerator_view::getHSAAgent()
+// a test which checks accelerator_view::get_hsa_agent()
 bool test() {
 
   hc::accelerator acc;
@@ -15,15 +15,15 @@ bool test() {
   bool ret = true;
 
   // check if the queue is HSA
-  ret &= av.hasHSAInterOp();
+  ret &= av.get_hsa_interop();
 
   std::cout << ret << "\n";
 
   // checks if we can get underlying native HSA agent
-  void* native_agent = av.getHSAAgent();
+  void* native_agent = av.get_hsa_agent();
   ret &= (native_agent != nullptr);
 
-  void* native_agent2 = av2.getHSAAgent();
+  void* native_agent2 = av2.get_hsa_agent();
   ret &= (native_agent2 != nullptr);
 
   // native_agent and native_agent2 should point to the same agent

@@ -225,8 +225,11 @@ public:
     /**
      * Returns the number of pending asynchronous operations on this
      * accelerator view.
+     *
+     * The number returned would be immediately obsolete. This functions shall
+     * only be used for testing and debugging purpose.
      */
-    int getPendingAsyncOps() {
+    int get_pending_async_ops() {
         return pQueue->getPendingAsyncOps();
     }
 
@@ -236,7 +239,7 @@ public:
      * @return An opaque handle of the underlying HSA queue, if the accelerator
      *         view is based on HSA.  NULL if otherwise.
      */
-    void* getHSAQueue() {
+    void* get_hsa_queue() {
         return pQueue->getHSAQueue();
     }
 
@@ -246,7 +249,7 @@ public:
      * @return An opaque handle of the underlying HSA agent, if the accelerator
      *         view is based on HSA.  NULL otherwise.
      */
-    void* getHSAAgent() {
+    void* get_hsa_agent() {
         return pQueue->getHSAAgent();
     }
 
@@ -256,7 +259,7 @@ public:
      * @return An opaque handle of the region, if the accelerator view is based
      *         on HSA.  NULL otherwise.
      */
-    void* getHSAAMRegion() {
+    void* get_hsa_am_region() {
         return pQueue->getHSAAMRegion();
     }
 
@@ -267,14 +270,14 @@ public:
      * @return An opaque handle of the region, if the accelerator view is based
      *         on HSA.  NULL otherwise.
      */
-    void* getHSAKernargRegion() {
+    void* get_hsa_kernarg_region() {
         return pQueue->getHSAKernargRegion();
     }
 
     /**
      * Returns if the accelerator view is based on HSA.
      */
-    bool hasHSAInterOp() {
+    bool get_hsa_interop() {
         return pQueue->hasHSAInterOp();
     }
 

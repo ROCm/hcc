@@ -5,8 +5,8 @@
 
 #include <iostream>
 
-// a test which checks accelerator_view::getHSAAMRegion()
-// a test which checks accelerator_view::getHSAKernargRegion()
+// a test which checks accelerator_view::get_hsa_am_region()
+// a test which checks accelerator_view::get_hsa_kernarg_region()
 bool test() {
 
   hc::accelerator acc;
@@ -16,15 +16,15 @@ bool test() {
   bool ret = true;
 
   // check if the queue is HSA
-  ret &= av.hasHSAInterOp();
+  ret &= av.get_hsa_interop();
 
   std::cout << ret << "\n";
 
   // checks if we can get AM region
-  void* am_region = av.getHSAAMRegion();
+  void* am_region = av.get_hsa_am_region();
   ret &= (am_region != nullptr);
 
-  void* am_region2 = av2.getHSAAMRegion();
+  void* am_region2 = av2.get_hsa_am_region();
   ret &= (am_region2 != nullptr);
 
   // am_region and am_region2 should point to the same agent
@@ -33,10 +33,10 @@ bool test() {
   std::cout << ret << "\n";
 
   // checks if we can get Kernarg region
-  void* kernarg_region = av.getHSAKernargRegion();
+  void* kernarg_region = av.get_hsa_kernarg_region();
   ret &= (kernarg_region != nullptr);
 
-  void* kernarg_region2 = av2.getHSAKernargRegion();
+  void* kernarg_region2 = av2.get_hsa_kernarg_region();
   ret &= (kernarg_region2 != nullptr);
 
   // kernarg_region and kernarg_region2 should point to the same agent
