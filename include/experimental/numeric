@@ -5,6 +5,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+/**
+ * @file algorithm
+ * Numeric Parallel algorithms
+ */
+
 #pragma once
 
 #include <experimental/execution_policy>

@@ -5,12 +5,25 @@
 //
 //===----------------------------------------------------------------------===//
 
+/**
+ * @file algorithm
+ * Parallel algorithms
+ *
+ * A parallel algorithm is a function template described by n4507
+ * Specification declared in namespace std::experimental::parallel::v1 with
+ * a formal template parameter named ExecutionPolicy.
+ *
+ * Each corresponding algorithm has an additional template type parameter
+ * named ExecutionPolicy as the first function parameter of type
+ * ExecutionPolicy&&.
+ */
+
 #pragma once
 #include <hc.hpp>
 
 #include <experimental/execution_policy>
 
-// implimentation of SPMD algorithms (details:: namespace)
+// Implementation of SPMD algorithms (details:: namespace)
 #include "impl/algorithm_impl.inl"
 
 namespace std {
@@ -18,7 +31,9 @@ namespace experimental {
 namespace parallel {
 inline namespace v1 {
 
-// transform (unary version)
+/**
+ * Parallel version of std::transform (unary version) in <algorithm>
+ */
 template <class ExecutionPolicy,
           class InputIterator, class OutputIterator,
           class UnaryOperation,
@@ -38,7 +53,10 @@ transform(ExecutionPolicy&& exec,
   }
 }
 
-// transform (binary version)
+
+/**
+ * Parallel version of std::transform (binary version) in <algorithm>
+ */
 template<class ExecutionPolicy,
          class InputIterator, class OutputIterator,
          class BinaryOperation,
@@ -58,7 +76,10 @@ transform(ExecutionPolicy&& exec,
   }
 }
 
-// generate
+
+/**
+ * Parallel version of std::generate in <algorithm>
+ */
 template<typename ExecutionPolicy,
          typename ForwardIterator, typename Generator,
          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
@@ -76,7 +97,10 @@ generate(ExecutionPolicy&& exec,
   }
 }
 
-// generate_n
+
+/**
+ * Parallel version of std::generate_n in <algorithm>
+ */
 template<typename ExecutionPolicy,
          typename OutputIterator, typename Size, typename Generator,
          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr>
@@ -96,7 +120,32 @@ generate_n(ExecutionPolicy&& exec,
   return (count < Size()) ? first : first + count;
 }
 
-// for_each
+
+/**
+ * Parallel version of std::for_each in <algorithm>
+ *
+ *
+ * Effects: Applies f to the result of dereferencing every iterator in the
+ * range [first,last).
+ *
+ * Complexity: Applies f exactly last - first times.
+ *
+ * Remarks: If f returns a result, the result is ignored.
+ *
+ * Notes: Unlike its sequential form, the parallel overload of for_each does
+ * not return a copy of its Function parameter, since parallelization may
+ * not permit efficient state accumulation.
+ *
+ * Requires: Unlike its sequential form, the parallel overload of for_each
+ * requires Function to meet the requirements of CopyConstructible
+ *
+ * @param first The beginning of the range to apply the function to
+ * @param last The end of the range to apply the function to
+ * @param f function object to be applied to the range [first, last)
+ *
+ * @return None
+ *
+ */
 template<typename ExecutionPolicy,
          typename InputIterator, typename Function,
          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
@@ -114,7 +163,19 @@ for_each(ExecutionPolicy&& exec,
   }
 }
 
-// for_each_n
+
+/**
+ *  Requires: Function shall meet the requirements of MoveConstructible
+ *
+ *  Effects: Applies f to the result of dereferencing every iterator in the
+ *  range [first,first + n), *  starting from first and proceeding to
+ *  first + n - 1.
+ *
+ *  Remarks: If f returns a result, the result is ignored.
+ *
+ *  @return first + n for non-negative values of n and first for negative
+ *  values.
+ */
 template<typename InputIterator, typename Size, typename Function,
          utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
 InputIterator
@@ -127,7 +188,18 @@ for_each_n(InputIterator first, Size n,
   return (n < Size()) ? first : first + n;
 }
 
-// for_each_n
+
+/**
+ * Effects: Applies f to the result of dereferencing every iterator in the
+ * range [first,first + n), starting from first and proceeding to first + n - 1.
+ *
+ * Remarks: If f returns a result, the result is ignored.
+ *
+ * Notes: Unlike its sequential form, the parallel overload of for_each_n
+ * requires Function to meet the requirements of CopyConstructible.
+ *
+ * @return first + n for non-negative values of n and first for negative values.
+ */
 template<typename ExecutionPolicy,
          typename InputIterator, typename Size, typename Function,
          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
@@ -147,7 +219,10 @@ for_each_n(ExecutionPolicy&& exec,
   return (n < Size()) ? first : first + n;
 }
 
-// replace_if
+
+/**
+ * Parallel version of std::replace_if in <algorithm>
+ */
 template<typename ExecutionPolicy,
          typename ForwardIterator, typename Function, typename T,
          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
@@ -165,7 +240,10 @@ replace_if(ExecutionPolicy&& exec,
   }
 }
 
-// replace_copy_if
+
+/**
+ * Parallel version of std::replace_copy_if in <algorithm>
+ */
 template<typename ExecutionPolicy,
          typename InputIterator, typename OutputIterator,
          typename Function, typename T,
@@ -185,7 +263,10 @@ replace_copy_if(ExecutionPolicy&& exec,
   }
 }
 
-// adjacent_difference (with predicate version)
+
+/**
+ * Parallel version of std::adjacent_difference (with predicate version) in <algorithm>
+ */
 template<typename ExecutionPolicy,
          typename InputIterator, typename OutputIterator, typename Function,
          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
@@ -204,7 +285,10 @@ adjacent_difference(ExecutionPolicy&& exec,
   }
 }
 
-// swap_ranges
+
+/**
+ * Parallel version of std::swap_ranges in <algorithm>
+ */
 template<typename ExecutionPolicy,
          typename InputIterator, typename OutputIterator,
          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
@@ -222,7 +306,10 @@ swap_ranges(ExecutionPolicy&& exec,
   }
 }
 
-// fill
+
+/**
+ * Parallel version of std::fill in <algorithm>
+ */
 template<typename ExecutionPolicy,
          typename ForwardIterator, typename T,
          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
@@ -240,7 +327,10 @@ fill(ExecutionPolicy&& exec,
   for_each(exec, first, last, k);
 }
 
-// fill_n
+
+/**
+ * Parallel version of std::fill_n in <algorithm>
+ */
 template<typename ExecutionPolicy,
          typename OutputIterator, typename Size, typename T,
          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr>
@@ -260,7 +350,10 @@ fill_n(ExecutionPolicy&& exec,
   return (count < Size()) ? first : first + count;
 }
 
-// copy
+
+/**
+ * Parallel version of std::copy in <algorithm>
+ */
 template<typename ExecutionPolicy,
          typename InputIterator, typename OutputIterator,
          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
@@ -278,7 +371,10 @@ copy(ExecutionPolicy&& exec,
   return transform(exec, first, last, d_first, k);
 }
 
-// copy_n
+
+/**
+ * Parallel version of std::copy_n in <algorithm>
+ */
 template<typename ExecutionPolicy,
          typename InputIterator, typename Size, typename OutputIterator,
          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
@@ -296,7 +392,10 @@ copy_n(ExecutionPolicy&& exec,
   return result;
 }
 
-// replace
+
+/**
+ * Parallel version of std::replace in <algorithm>
+ */
 template<typename ExecutionPolicy,
          typename ForwardIterator, typename T,
          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
@@ -315,7 +414,10 @@ replace(ExecutionPolicy&& exec,
   for_each(exec, first, last, k);
 }
 
-// replace_copy
+
+/**
+ * Parallel version of std::replace_copy in <algorithm>
+ */
 template<typename ExecutionPolicy,
          typename InputIterator, typename OutputIterator, typename T,
          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
@@ -334,7 +436,10 @@ replace_copy(ExecutionPolicy&& exec,
   return transform(exec, first, last, d_first, k);
 }
 
-// adjacent_difference (without predicate version)
+
+/**
+ * Parallel version of std::adjacent_difference in <algorithm>
+ */
 template<typename ExecutionPolicy,
          typename InputIterator, typename OutputIterator,
          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
@@ -353,7 +458,9 @@ adjacent_difference(ExecutionPolicy&& exec,
 }
 
 
-// lexicographical_compare
+/**
+ * Parallel version of std::lexicographical_compare in <algorithm>
+ */
 template<typename ExecutionPolicy, typename InputIt1, typename InputIt2,
          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
          utils::EnableIf<utils::isInputIt<InputIt1>> = nullptr,
@@ -368,6 +475,9 @@ lexicographical_compare(ExecutionPolicy&& exec,
 }
 
 
+/**
+ * Parallel version of std::lexicographical_compare in <algorithm>
+ */
 template<typename ExecutionPolicy, typename InputIt1, typename InputIt2,
          typename Compare,
          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
@@ -389,7 +499,10 @@ lexicographical_compare(ExecutionPolicy&& exec,
   }
 }
 
-// equal
+
+/**
+ * Parallel version of std::equal in <algorithm>
+ */
 template<typename ExecutionPolicy,
          typename InputIt1, typename InputIt2,
          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
@@ -403,6 +516,9 @@ equal(ExecutionPolicy&& exec,
            std::equal_to<typename std::iterator_traits<InputIt1>::value_type>());
 }
 
+/**
+ * Parallel version of std::equal in <algorithm>
+ */
 template<typename ExecutionPolicy,
          typename InputIt1, typename InputIt2,
          typename BinaryPredicate,
@@ -424,9 +540,9 @@ equal(ExecutionPolicy&& exec,
 }
 
 
-//
-// count_if is implemented by reduce
-//
+/**
+ * Parallel version of std::count_if in <algorithm>
+ */
 template<typename ExecutionPolicy,
          typename InputIt,
          typename UnaryPredicate,
@@ -455,9 +571,9 @@ count_if(ExecutionPolicy&& exec,
 }
 
 
-//
-// count is implemented by transform_reduce
-//
+/**
+ * Parallel version of std::count in <algorithm>
+ */
 template<typename ExecutionPolicy,
          typename InputIt,
          typename T,
@@ -472,9 +588,9 @@ count(ExecutionPolicy&& exec,
 }
 
 
-//
-// max_element is implemented by reduce
-//
+/**
+ * Parallel version of std::max_element in <algorithm>
+ */
 template<typename ExecutionPolicy,
          typename ForwardIt,
          typename Compare,
@@ -488,9 +604,9 @@ max_element(ExecutionPolicy&& exec,
 }
 
 
-//
-// max_element is implemented by reduce
-//
+/**
+ * Parallel version of std::max_element in <algorithm>
+ */
 template<typename ExecutionPolicy,
          typename ForwardIt,
          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
@@ -503,9 +619,9 @@ max_element(ExecutionPolicy&& exec,
 }
 
 
-//
-// min_element is implemented by reduce
-//
+/**
+ * Parallel version of std::min_element in <algorithm>
+ */
 template<typename ExecutionPolicy,
          typename ForwardIt,
          typename Compare,
@@ -519,9 +635,9 @@ min_element(ExecutionPolicy&& exec,
 }
 
 
-//
-// min_element is implemented by reduce
-//
+/**
+ * Parallel version of std::min_element in <algorithm>
+ */
 template<typename ExecutionPolicy,
          typename ForwardIt,
          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
@@ -534,9 +650,9 @@ min_element(ExecutionPolicy&& exec,
 }
 
 
-//
-// minmax_element is implemented by reduce
-//
+/**
+ * Parallel version of std::minmax_element in <algorithm>
+ */
 template<typename ExecutionPolicy,
          typename ForwardIt,
          typename Compare,
@@ -557,9 +673,9 @@ minmax_element(ExecutionPolicy&& exec,
 }
 
 
-//
-// minmax_element is implemented by reduce
-//
+/**
+ * Parallel version of std::minmax_element in <algorithm>
+ */
 template<typename ExecutionPolicy,
          typename ForwardIt,
          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
@@ -572,9 +688,9 @@ minmax_element(ExecutionPolicy&& exec,
 }
 
 
-//
-// any_of is implemented by transform_reduce
-//
+/**
+ * Parallel version of std::all_of in <algorithm>
+ */
 template<typename ExecutionPolicy,
          typename InputIt,
          typename UnaryPredicate,
@@ -593,9 +709,9 @@ all_of(ExecutionPolicy&& exec,
 }
 
 
-//
-// any_of is implemented by transform_reduce
-//
+/**
+ * Parallel version of std::any_of in <algorithm>
+ */
 template<typename ExecutionPolicy,
          typename InputIt, typename UnaryPredicate,
          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
@@ -613,9 +729,9 @@ any_of(ExecutionPolicy&& exec,
 }
 
 
-//
-// none_of is implemented by transform_reduce
-//
+/**
+ * Parallel version of std::none_of in <algorithm>
+ */
 template<typename ExecutionPolicy,
          typename InputIt,
          typename UnaryPredicate,

@@ -40,6 +40,24 @@ inclusive_scan_impl(RandomAccessIterator first, RandomAccessIterator last,
 
 } // namespace details
 
+/**
+ * Effects: Assigns through each iterator i in [result,result + (last - first))
+ * the value of GENERALIZED_NONCOMMUTATIVE_SUM(binary_op, *first, ..., *(first + (i - result)))
+ * or GENERALIZED_NONCOMMUTATIVE_SUM(binary_op, init, *first, ..., *(first + (i - result)))
+ * if init is provided.
+ *
+ * @return The end of the resulting range beginning at result.
+ *
+ * Requires: binary_op shall not invalidate iterators or subranges, nor modify
+ * elements in the ranges [first,last) or [result,result + (last - first)).
+ *
+ * Complexity: O(last - first) applications of binary_op.
+ *
+ * Notes: The difference between exclusive_scan and inclusive_scan is that
+ * inclusive_scan includes the ith input element in the ith sum. If binary_op
+ * is not mathematically associative, the behavior of inclusive_scan may be
+ * non-deterministic.
+ */
 template<class InputIterator, class OutputIterator,
          class T, class BinaryOperation,
          utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
@@ -51,6 +69,24 @@ inclusive_scan(InputIterator first, InputIterator last,
            typename std::iterator_traits<InputIterator>::iterator_category());
 }
 
+/**
+ * Effects: Assigns through each iterator i in [result,result + (last - first))
+ * the value of GENERALIZED_NONCOMMUTATIVE_SUM(binary_op, *first, ..., *(first + (i - result)))
+ * or GENERALIZED_NONCOMMUTATIVE_SUM(binary_op, init, *first, ..., *(first + (i - result)))
+ * if init is provided.
+ *
+ * @return The end of the resulting range beginning at result.
+ *
+ * Requires: binary_op shall not invalidate iterators or subranges, nor modify
+ * elements in the ranges [first,last) or [result,result + (last - first)).
+ *
+ * Complexity: O(last - first) applications of binary_op.
+ *
+ * Notes: The difference between exclusive_scan and inclusive_scan is that
+ * inclusive_scan includes the ith input element in the ith sum. If binary_op
+ * is not mathematically associative, the behavior of inclusive_scan may be
+ * non-deterministic.
+ */
 template<typename ExecutionPolicy,
          typename InputIterator, typename OutputIterator,
          typename BinaryOperation, typename T,
@@ -69,6 +105,24 @@ inclusive_scan(ExecutionPolicy&& exec,
   }
 }
 
+/**
+ * Effects: Assigns through each iterator i in [result,result + (last - first))
+ * the value of GENERALIZED_NONCOMMUTATIVE_SUM(binary_op, *first, ..., *(first + (i - result)))
+ * or GENERALIZED_NONCOMMUTATIVE_SUM(binary_op, init, *first, ..., *(first + (i - result)))
+ * if init is provided.
+ *
+ * @return The end of the resulting range beginning at result.
+ *
+ * Requires: binary_op shall not invalidate iterators or subranges, nor modify
+ * elements in the ranges [first,last) or [result,result + (last - first)).
+ *
+ * Complexity: O(last - first) applications of binary_op.
+ *
+ * Notes: The difference between exclusive_scan and inclusive_scan is that
+ * inclusive_scan includes the ith input element in the ith sum. If binary_op
+ * is not mathematically associative, the behavior of inclusive_scan may be
+ * non-deterministic.
+ */
 template<typename InputIterator, typename OutputIterator,
          typename BinaryOperation,
          utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
@@ -80,6 +134,24 @@ inclusive_scan(InputIterator first, InputIterator last,
   return inclusive_scan(first, last, result, binary_op, Type{});
 }
 
+/**
+ * Effects: Assigns through each iterator i in [result,result + (last - first))
+ * the value of GENERALIZED_NONCOMMUTATIVE_SUM(binary_op, *first, ..., *(first + (i - result)))
+ * or GENERALIZED_NONCOMMUTATIVE_SUM(binary_op, init, *first, ..., *(first + (i - result)))
+ * if init is provided.
+ *
+ * @return The end of the resulting range beginning at result.
+ *
+ * Requires: binary_op shall not invalidate iterators or subranges, nor modify
+ * elements in the ranges [first,last) or [result,result + (last - first)).
+ *
+ * Complexity: O(last - first) applications of binary_op.
+ *
+ * Notes: The difference between exclusive_scan and inclusive_scan is that
+ * inclusive_scan includes the ith input element in the ith sum. If binary_op
+ * is not mathematically associative, the behavior of inclusive_scan may be
+ * non-deterministic.
+ */
 template<typename ExecutionPolicy,
          typename InputIterator, typename OutputIterator,
          typename BinaryOperation,
@@ -94,6 +166,9 @@ inclusive_scan(ExecutionPolicy&& exec,
   return inclusive_scan(exec, first, last, result, binary_op, Type{});
 }
 
+/**
+ * Effects: Same as inclusive_scan(first, last, result, plus<>()).
+ */
 template<typename InputIterator, typename OutputIterator,
          utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
 OutputIterator
@@ -103,6 +178,9 @@ inclusive_scan(InputIterator first, InputIterator last,
   return inclusive_scan(first, last, result, std::plus<Type>());
 }
 
+/**
+ * Effects: Same as inclusive_scan(first, last, result, plus<>()).
+ */
 template<typename ExecutionPolicy,
          typename InputIterator, typename OutputIterator,
          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,

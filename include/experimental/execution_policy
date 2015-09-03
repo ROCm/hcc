@@ -1,3 +1,19 @@
+//===----------------------------------------------------------------------===//
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+/**
+ * @file execution_policy
+ * execution_policy types
+ *
+ * An object of an execution policy type indicates the kinds of parallelism
+ * allowed in the execution of an algorithm and expresses the consequent
+ * requirements on the element access functions.
+ */
+
 #pragma once
 
 namespace std {
@@ -10,30 +26,98 @@ namespace details {
 const int PARALLELIZE_THRESHOLD = 10;
 }
 
-
-  // 2.4, Sequential execution policy
+  /**
+   * 2.4, Sequential execution policy
+   *
+   * The class sequential_execution_policy is an execution policy type used as
+   * a unique type to disambiguate parallel algorithm overloading and require
+   * that a parallel algorithm's execution may not be parallelized.
+   */
   class sequential_execution_policy {};
 
-  // 2.5, Parallel execution policy
+  /**
+   * 2.5, Parallel execution policy
+   *
+   * The class parallel_execution_policy is an execution policy type used as a
+   * unique type to disambiguate parallel algorithm overloading and indicate
+   * that a parallel algorithm's execution may be parallelized.
+   */
   class parallel_execution_policy {};
 
-  // 2.6, Parallel+Vector execution policy
+  /**
+   * 2.6, Parallel+Vector execution policy
+   *
+   * The class class parallel_vector_execution_policy is an execution policy
+   * type used as a unique type to disambiguate parallel algorithm overloading
+   * and indicate that a parallel algorithm's execution may be vectorized and
+   * parallelized.
+   */
   class parallel_vector_execution_policy {};
 
-  // 2.7, Dynamic execution policy
+  /**
+   * 2.7, Dynamic execution policy
+   *
+   * The class execution_policy is a container for execution policy objects.
+   * execution_policy allows dynamic control over standard algorithm execution.
+   *
+   * Objects of type execution_policy shall be constructible and assignable
+   * from objects of type T for which is_execution_policy<T>::value is true.
+   */
   class execution_policy {
     public:
-      // 2.7.1, execution_policy construct/assign
+      /**
+       * 2.7.1, execution_policy construct
+       *
+       * Effects: Constructs an execution_policy object with a copy of exec's state.
+       *
+       * Remarks: This constructor shall not participate in overload resolution
+       * unless is_execution_policy<T>::value is true.
+       */
       template<class T> execution_policy(const T& exec);
+
+      /**
+       * 2.7.1, execution_policy assign
+       *
+       * Effects: Assigns a copy of exec's state to *this.
+       * @return *this
+       */
       template<class T> execution_policy& operator=(const T& exec);
 
-      // 2.7.2, execution_policy object access
+      /**
+       * 2.7.2, execution_policy object access
+       *
+       * @return typeid(T), such that T is the type of the execution policy
+       * object contained by *this
+       */
       const type_info& type() const noexcept;
+
+
+      /**
+       * 2.7.2, execution_policy object access
+       *
+       * @return If target_type() == typeid(T), a pointer to the stored
+       * execution policy object; otherwise a null pointer.
+       *
+       * Requires: is_execution_policy<T>::value is true.
+       */
       template<class T> T* get() noexcept;
       template<class T> const T* get() const noexcept;
   };
 
-  // 2.3, Execution policy type trait
+  /**
+   * 2.3, Execution policy type trait
+   *
+   * is_execution_policy can be used to detect parallel execution policies
+   * for the purpose of excluding function signatures from otherwise ambiguous
+   * overload resolution participation.
+   *
+   * is_execution_policy<T> shall be a UnaryTypeTrait with a BaseCharacteristic
+   * of true_type if T is the type of a standard or implementation-defined
+   * execution policy, otherwise false_type.
+   *
+   * The behavior of a program that adds specializations for is_execution_policy
+   * is undefined.
+   */
   template<typename T> struct is_execution_policy : std::false_type{};
   template<> struct is_execution_policy<sequential_execution_policy> : std::true_type{};
   template<> struct is_execution_policy<parallel_execution_policy> : std::true_type{};
@@ -44,7 +128,12 @@ const int PARALLELIZE_THRESHOLD = 10;
   // FIXME this will cause clang to throw some warnings, disable it for now
   //template<class T> constexpr bool is_execution_policy_v = is_execution_policy<T>::value;
 
-  // 2.8, Execution policy objects
+  /**
+   * 2.8, Execution policy objects
+   *
+   * The header <experimental/execution_policy> declares a global object
+   * associated with each type of execution policy defined by n4507
+   */
   constexpr sequential_execution_policy      seq{};
   constexpr parallel_execution_policy        par{};
   constexpr parallel_vector_execution_policy par_vec{};

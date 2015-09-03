@@ -1,5 +1,16 @@
 #pragma once
 
+/**
+ *
+ * @return GENERALIZED_SUM(binary_op, init, unary_op(*first), ..., unary_op(*(first + (last - first) - * 1))).
+ *
+ * Requires: Neither unary_op nor binary_op shall invalidate subranges, or
+ * modify elements in the range [first,last).
+ *
+ * Complexity: O(last - first) applications each of unary_op and binary_op.
+ *
+ * Notes: transform_reduce does not apply unary_op to init.
+ */
 template<typename InputIterator, typename UnaryOperation,
          typename T, typename BinaryOperation,
          utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
@@ -44,6 +55,17 @@ T transform_reduce(InputIterator first, InputIterator last,
   return ans;
 }
 
+/**
+ *
+ * @return GENERALIZED_SUM(binary_op, init, unary_op(*first), ..., unary_op(*(first + (last - first) - * 1))).
+ *
+ * Requires: Neither unary_op nor binary_op shall invalidate subranges, or
+ * modify elements in the range [first,last).
+ *
+ * Complexity: O(last - first) applications each of unary_op and binary_op.
+ *
+ * Notes: transform_reduce does not apply unary_op to init.
+ */
 template<typename ExecutionPolicy,
          typename InputIterator, typename UnaryOperation,
          typename T, typename BinaryOperation,
@@ -74,7 +96,9 @@ auto transform_reduce(Args&&... args)
   return inner_product(std::forward<Args>(args)...);
 }
 
-// inner_product
+/**
+ * Parallel version of std::inner_product in <algorithm>
+ */
 template<typename ExecutionPolicy,
          typename InputIt1, typename InputIt2,
          typename T,
@@ -89,6 +113,9 @@ T inner_product(ExecutionPolicy&& exec,
                        std::plus<_Tp>(), std::multiplies<_Tp>());
 }
 
+/**
+ * Parallel version of std::inner_product in <algorithm>
+ */
 template<typename ExecutionPolicy,
          typename InputIt1, typename InputIt2,
          typename T,
