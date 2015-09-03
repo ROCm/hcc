@@ -839,12 +839,12 @@ public:
     }
 
     /**
-     * Get the timestamp when the underlying asynchronous operation begins.
+     * Get the tick number when the underlying asynchronous operation begins.
      *
-     * @return An implementation-defined timestamp in case the instance is
+     * @return An implementation-defined tick number in case the instance is
      *         created by a kernel dispatch or a barrier packet. 0 otherwise.
      */
-    uint64_t getBeginTimestamp() {
+    uint64_t get_begin_tick() {
       if (__asyncOp != nullptr) {
         return __asyncOp->getBeginTimestamp();
       } else {
@@ -853,12 +853,12 @@ public:
     }
 
     /**
-     * Get the timestamp when the underlying asynchronous operation ends.
+     * Get the tick number when the underlying asynchronous operation ends.
      *
-     * @return An implementation-defined timestamp in case the instance is
+     * @return An implementation-defined tick number in case the instance is
      *         created by a kernel dispatch or a barrier packet. 0 otherwise.
      */
-    uint64_t getEndTimestamp() {
+    uint64_t get_end_tick() {
       if (__asyncOp != nullptr) {
         return __asyncOp->getEndTimestamp();
       } else {
@@ -867,12 +867,12 @@ public:
     }
 
     /**
-     * Get the frequency of timestamp for the underlying asynchrnous operation.
+     * Get the frequency of ticks per second for the underlying asynchrnous operation.
      *
      * @return An implementation-defined frequency in Hz in case the instance is
      *         created by a kernel dispatch or a barrier packet. 0 otherwise.
      */
-    uint64_t getTimestampFrequency() {
+    uint64_t get_tick_frequency() {
       if (__asyncOp != nullptr) {
         return __asyncOp->getTimestampFrequency();
       } else {

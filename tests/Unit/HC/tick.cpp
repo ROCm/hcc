@@ -12,7 +12,7 @@
 #define TEST_DEBUG (0)
 
 // An example which shows how to use accelerator_view::create_marker()
-// and how to use timestamp function
+// and how to use tick function
 bool test() {
   bool ret = true;
 
@@ -49,9 +49,9 @@ bool test() {
   hc::completion_future fut2 = av.create_marker();
 
   // fut and fut2 should have the same timestamp frequency
-  ret &= (fut.getTimestampFrequency() > 0);
-  ret &= (fut2.getTimestampFrequency() > 0);
-  ret &= (fut.getTimestampFrequency() == fut2.getTimestampFrequency());
+  ret &= (fut.get_tick_frequency() > 0);
+  ret &= (fut2.get_tick_frequency() > 0);
+  ret &= (fut.get_tick_frequency() == fut2.get_tick_frequency());
 
   // wait on the barrier packet
   fut2.wait();
@@ -59,10 +59,10 @@ bool test() {
   // the barrier packet would ensure all previous packets were processed
 
   // by now the 1st future object should also ended as well
-  ret &= (fut.getEndTimestamp() > fut.getBeginTimestamp());
+  ret &= (fut.get_end_tick() > fut.get_begin_tick());
 
   // the 2nd future object must have ended, too
-  ret &= (fut2.getEndTimestamp() > fut2.getBeginTimestamp());
+  ret &= (fut2.get_end_tick() > fut2.get_begin_tick());
 
   // verify
   int error = 0;
