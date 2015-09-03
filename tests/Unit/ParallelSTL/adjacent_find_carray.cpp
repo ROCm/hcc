@@ -10,7 +10,6 @@
 #include "test_base.h"
 
 
-// test adjacent_find (non-predicated version)
 template<typename T, size_t SIZE>
 bool test(void) {
 
@@ -18,9 +17,11 @@ bool test(void) {
 
   bool ret = true;
   bool eq = true;
-  ret &= run_and_compare<T, SIZE>([&eq]
-                                  (T (&input)[SIZE], T (&output1)[SIZE],
-                                                     T (&output2)[SIZE]) {
+  // C array
+  typedef T cArray[SIZE];
+  ret &= run_and_compare<T, SIZE>([&eq](cArray &input, cArray &output1,
+                                                       cArray &output2) {
+    // test adjacent_find (non-predicated version)
     auto expected = std::adjacent_find(std::begin(input), std::end(input));
     auto result   = std::experimental::parallel::
                     adjacent_find(par, std::begin(input), std::end(input));
@@ -29,9 +30,9 @@ bool test(void) {
   }, false);
   ret &= eq;
 
-  ret &= run_and_compare<T, SIZE>([&eq]
-                                  (T (&input)[SIZE], T (&output1)[SIZE],
-                                                     T (&output2)[SIZE]) {
+  // C array
+  ret &= run_and_compare<T, SIZE>([&eq](cArray &input, cArray &output1,
+                                                       cArray &output2) {
     // make them equal
     input[2] = input[3];
     auto expected = std::adjacent_find(std::begin(input), std::end(input));
@@ -45,9 +46,8 @@ bool test(void) {
   // use custom predicate
   auto pred = [](const T& a, const T& b) { return a > b; };
 
-  ret &= run_and_compare<T, SIZE>([&eq, pred]
-                                  (T (&input)[SIZE], T (&output1)[SIZE],
-                                                     T (&output2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([&eq, pred](cArray &input, cArray &output1,
+                                                             cArray &output2) {
     // test adjacent_find (predicated version)
     auto expected = std::adjacent_find(std::begin(input), std::end(input), pred);
     auto result   = std::experimental::parallel::
@@ -63,7 +63,6 @@ bool test(void) {
 int main() {
   bool ret = true;
 
-  // adjacent_find (non-predicated version)
   ret &= test<int, TEST_SIZE>();
   ret &= test<unsigned, TEST_SIZE>();
   ret &= test<float, TEST_SIZE>();

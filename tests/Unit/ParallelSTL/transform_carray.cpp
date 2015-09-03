@@ -19,15 +19,18 @@ bool test(void) {
   using std::experimental::parallel::par;
 
   bool ret = true;
-  ret &= run_and_compare<T, SIZE>([f](T (&input)[SIZE], T (&output1)[SIZE],
-                                                        T (&output2)[SIZE]) {
+
+  // C array
+  typedef T cArray[SIZE];
+  ret &= run_and_compare<T, SIZE>([f](cArray &input, cArray &output1,
+                                                     cArray &output2) {
     std::transform(std::begin(input), std::end(input), std::begin(output1), f);
     std::experimental::parallel::
     transform(par, std::begin(input), std::end(input), std::begin(output2), f);
   });
 
-  ret &= run_and_compare<T, SIZE>([g](T (&input)[SIZE], T (&output1)[SIZE],
-                                                        T (&output2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([g](cArray &input, cArray &output1,
+                                                     cArray &output2) {
     std::transform(std::begin(input), std::end(input), std::begin(output1), g);
     std::experimental::parallel::
     transform(par, std::begin(input), std::end(input), std::begin(output2), g);

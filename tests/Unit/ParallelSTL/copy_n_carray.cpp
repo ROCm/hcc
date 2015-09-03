@@ -18,8 +18,10 @@ bool test_negative(void) {
   using std::experimental::parallel::par;
 
   bool ret = true;
-  ret &= run_and_compare<T, SIZE>([](T (&input)[SIZE], T (&output1)[SIZE],
-                                                       T (&output2)[SIZE]) {
+  // C array
+  typedef T cArray[SIZE];
+  ret &= run_and_compare<T, SIZE>([](cArray &input, cArray &output1,
+                                                    cArray &output2) {
     // std::copy_n might cause a segmentfault when n is negative
     std::experimental::parallel::
     copy_n(par, std::begin(input) + FIRST_OFFSET, (LAST_OFFSET - FIRST_OFFSET), std::begin(output2) + FIRST_OFFSET);
@@ -36,8 +38,10 @@ bool test(void) {
   using std::experimental::parallel::par;
 
   bool ret = true;
-  ret &= run_and_compare<T, SIZE>([](T (&input)[SIZE], T (&output1)[SIZE],
-                                                       T (&output2)[SIZE]) {
+  // C array
+  typedef T cArray[SIZE];
+  ret &= run_and_compare<T, SIZE>([](cArray &input, cArray &output1,
+                                                    cArray &output2) {
     std::copy_n(std::begin(input) + FIRST_OFFSET, TEST_LENGTH, std::begin(output1) + FIRST_OFFSET);
     std::experimental::parallel::
     copy_n(par, std::begin(input) + FIRST_OFFSET, TEST_LENGTH, std::begin(output2) + FIRST_OFFSET);

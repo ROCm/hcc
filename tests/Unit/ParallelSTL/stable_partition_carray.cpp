@@ -18,9 +18,11 @@ bool test(void) {
   using std::experimental::parallel::par;
 
   bool ret = true;
+  // C array
+  typedef T cArray[SIZE];
   ret &= run_and_compare<T, SIZE>([pred]
-                                  (T (&input1)[SIZE],
-                                   T (&input2)[SIZE]) {
+                                  (cArray &input1,
+                                   cArray &input2) {
     std::stable_partition(std::begin(input1), std::end(input1), pred);
     std::experimental::parallel::
     stable_partition(par, std::begin(input2), std::end(input2), pred);

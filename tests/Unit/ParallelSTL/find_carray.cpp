@@ -17,10 +17,12 @@ bool test(void) {
 
   bool ret = true;
   bool eq = true;
+  // C array
+  typedef T cArray[SIZE];
   // find
   ret &= run_and_compare<T, SIZE>([&eq]
-                                  (T (&input)[SIZE], T (&output1)[SIZE],
-                                                     T (&output2)[SIZE]) {
+                                  (cArray &input, cArray &output1,
+                                                  cArray &output2) {
     auto expected = std::find(std::begin(input), std::end(input), T{});
     auto result   = std::experimental::parallel::
                     find(par, std::begin(input), std::end(input), T{});
@@ -32,8 +34,8 @@ bool test(void) {
 
   // find_if
   ret &= run_and_compare<T, SIZE>([&eq]
-                                  (T (&input)[SIZE], T (&output1)[SIZE],
-                                                     T (&output2)[SIZE]) {
+                                  (cArray &input, cArray &output1,
+                                                  cArray &output2) {
     auto pred = [=](const T& a) { return (a == input[12]); };
 
     auto expected = std::find_if(std::begin(input), std::end(input), pred);
@@ -47,9 +49,8 @@ bool test(void) {
 
   // find_if_not
   ret &= run_and_compare<T, SIZE>([&eq]
-                                  (T (&input)[SIZE], T (&output1)[SIZE],
-                                                     T (&output2)[SIZE]) {
-
+                                  (cArray &input, cArray &output1,
+                                                  cArray &output2) {
     auto pred = [=](const T& a) { return (a != input[12]); };
 
     auto expected = std::find_if_not(std::begin(input), std::end(input), pred);

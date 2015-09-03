@@ -17,31 +17,15 @@ bool test(void) {
   using std::experimental::parallel::par;
 
   bool ret = true;
-  ret &= run_and_compare<T, SIZE>([f](T (&input1)[SIZE],
-                                      T (&input2)[SIZE]) {
+
+  // C array
+  typedef T cArray[SIZE];
+  ret &= run_and_compare<T, SIZE, cArray>([f](cArray &input1,
+                                              cArray &input2) {
     std::generate(std::begin(input1), std::end(input1), f);
     std::experimental::parallel::
     generate(par, std::begin(input2), std::end(input2), f);
   });
-
-  typedef std::array<T, SIZE> stdArray;
-  ret &= run_and_compare<T, SIZE, stdArray>([f](stdArray &input1,
-                                                stdArray &input2) {
-    std::generate(std::begin(input1), std::end(input1), f);
-    std::experimental::parallel::
-    generate(par, std::begin(input2), std::end(input2), f);
-
-  });
-
-  typedef std::vector<T> stdVector;
-  ret &= run_and_compare<T, SIZE, stdVector>([f](stdVector &input1,
-                                                 stdVector &input2) {
-    std::generate(std::begin(input1), std::end(input1), f);
-    std::experimental::parallel::
-    generate(par, std::begin(input2), std::end(input2), f);
-
-  });
-
 
   return ret;
 }

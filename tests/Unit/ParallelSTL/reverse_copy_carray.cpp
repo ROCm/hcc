@@ -18,8 +18,10 @@ bool test(void) {
 
   bool ret = true;
 
-  ret &= run_and_compare<T, SIZE>([](T (&input)[SIZE], T (&output1)[SIZE],
-                                                       T (&output2)[SIZE]) {
+  // C array
+  typedef T cArray[SIZE];
+  ret &= run_and_compare<T, SIZE>([](cArray &input, cArray &output1,
+                                                    cArray &output2) {
     std::reverse_copy(std::begin(input), std::end(input), std::begin(output1));
     std::experimental::parallel::
     reverse_copy(par, std::begin(input), std::end(input), std::begin(output2));

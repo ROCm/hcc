@@ -18,10 +18,12 @@ bool test(void) {
   bool ret = true;
   bool eq = true;
 
+  // C array
+  typedef T cArray[SIZE];
   // test mismatch (non-predicated version)
   ret &= run_and_compare<T, SIZE>([&eq]
-                                  (T (&input1)[SIZE], T (&input2)[SIZE], T (&output1)[SIZE],
-                                                                         T (&output2)[SIZE]) {
+                                  (cArray &input1, cArray &input2, cArray &output1,
+                                                                   cArray &output2) {
     auto expected = std::mismatch(std::begin(input1), std::end(input2), std::begin(input2));
     auto result   = std::experimental::parallel::
                     mismatch(par, std::begin(input1), std::end(input2), std::begin(input2));
@@ -33,8 +35,8 @@ bool test(void) {
   auto pred = [](const T &a, const T &b) { return ((a + 1) == b); };
 
   ret &= run_and_compare<T, SIZE>([&eq, pred]
-                                  (T (&input1)[SIZE], T (&input2)[SIZE], T (&output1)[SIZE],
-                                                                         T (&output2)[SIZE]) {
+                                  (cArray &input1, cArray &input2, cArray &output1,
+                                                                   cArray &output2) {
     auto expected = std::mismatch(std::begin(input1), std::end(input2), std::begin(input2), pred);
     auto result   = std::experimental::parallel::
                     mismatch(par, std::begin(input1), std::end(input2), std::begin(input2), pred);

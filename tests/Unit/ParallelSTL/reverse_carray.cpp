@@ -18,7 +18,9 @@ bool test(void) {
 
   bool ret = true;
 
-  ret &= run_and_compare<T, SIZE>([](T (&input1)[SIZE], T (&input2)[SIZE]) {
+  // C array
+  typedef T cArray[SIZE];
+  ret &= run_and_compare<T, SIZE>([](cArray &input1, cArray &input2) {
     std::reverse(std::begin(input1), std::end(input1));
     std::experimental::parallel::
     reverse(par, std::begin(input2), std::end(input2));

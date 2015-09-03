@@ -4,6 +4,8 @@
 #include <iostream>
 #include <iomanip>
 #include <array>
+#include <array_view>
+#include <vector>
 
 
 #define ROW (8)

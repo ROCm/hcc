@@ -18,10 +18,12 @@ bool test(void) {
   bool ret = true;
   bool eq = true;
 
+  // C array
+  typedef T cArray[SIZE];
   // non-predicated equal
   ret &= run_and_compare<T, SIZE>([&eq]
-                                  (T (&input1)[SIZE], T (&input2)[SIZE], T (&output1)[SIZE],
-                                                                         T (&output2)[SIZE]) {
+                                  (cArray &input1, cArray &input2, cArray &output1,
+                                                                   cArray &output2) {
     auto expected = std::equal(std::begin(input1), std::end(input1), std::begin(input2));
     auto result   = std::experimental::parallel::
                     equal(par, std::begin(input1), std::end(input1), std::begin(input2));
@@ -35,8 +37,8 @@ bool test(void) {
   auto pred = [](const T& a, const T& b) { return ((a + 1) == b); };
 
   ret &= run_and_compare<T, SIZE>([&eq, pred]
-                                  (T (&input1)[SIZE], T (&input2)[SIZE], T (&output1)[SIZE],
-                                                                         T (&output2)[SIZE]) {
+                                  (cArray &input1, cArray &input2, cArray &output1,
+                                                                   cArray &output2) {
     auto expected = std::equal(std::begin(input1), std::end(input1), std::begin(input2), pred);
     auto result   = std::experimental::parallel::
                     equal(par, std::begin(input1), std::end(input1), std::begin(input2), pred);
@@ -45,17 +47,6 @@ bool test(void) {
   }, false);
   ret &= eq;
 
-  typedef std::array<T, SIZE> stdArray;
-  ret &= run_and_compare<T, SIZE, stdArray>([&eq, pred]
-                                            (stdArray &input1,  stdArray &input2,
-                                             stdArray &output1, stdArray &output2) {
-    auto expected = std::equal(std::begin(input1), std::end(input1), std::begin(input2), pred);
-    auto result   = std::experimental::parallel::
-                    equal(par, std::begin(input1), std::end(input1), std::begin(input2), pred);
-
-    eq = EQ(expected, result);
-  }, false);
-  ret &= eq;
   return ret;
 }
 

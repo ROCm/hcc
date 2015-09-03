@@ -16,8 +16,10 @@ bool test(void) {
   using std::experimental::parallel::par;
 
   bool ret = true;
-  ret &= run_and_compare<T, SIZE>([](T (&input1)[SIZE],
-                                     T (&input2)[SIZE]) {
+  // C array
+  typedef T cArray[SIZE];
+  ret &= run_and_compare<T, SIZE>([](cArray &input1,
+                                     cArray &input2) {
     std::fill(std::begin(input1), std::end(input1), SIZE + 1);
     std::experimental::parallel::
     fill(par, std::begin(input2), std::end(input2), SIZE + 1);

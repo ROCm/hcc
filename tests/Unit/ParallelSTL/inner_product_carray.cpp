@@ -26,9 +26,11 @@ bool test(void) {
 
   bool ret = true;
   bool eq = true;
+  // C array
+  typedef T cArray[SIZE];
   ret &= run_and_compare<T, SIZE>([init, binary_op, f, &eq]
-                                  (T (&input1)[SIZE], T (&input2)[SIZE], T (&output1)[SIZE],
-                                                                         T (&output2)[SIZE]) {
+                                  (cArray &input1, cArray &input2, cArray &output1,
+                                                                   cArray &output2) {
     auto expected = std::inner_product(std::begin(input1), std::end(input1), std::begin(input2), init, binary_op, f);
     auto result   = std::experimental::parallel::
                     inner_product(par, std::begin(input1), std::end(input1), std::begin(input2), init, binary_op, f);

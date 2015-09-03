@@ -18,8 +18,10 @@ bool test_negative(void) {
   using std::experimental::parallel::par;
 
   bool ret = true;
-  ret &= run_and_compare<T, SIZE>([](T (&input1)[SIZE],
-                                     T (&input2)[SIZE]) {
+  // C array
+  typedef T cArray[SIZE];
+  ret &= run_and_compare<T, SIZE>([](cArray &input1,
+                                     cArray &input2) {
     std::fill_n(std::begin(input1) + FIRST_OFFSET, (LAST_OFFSET - FIRST_OFFSET), SIZE + 1);
     std::experimental::parallel::
     fill_n(par, std::begin(input2) + FIRST_OFFSET, (LAST_OFFSET - FIRST_OFFSET), SIZE + 1);
@@ -36,8 +38,10 @@ bool test(void) {
   using std::experimental::parallel::par;
 
   bool ret = true;
-  ret &= run_and_compare<T, SIZE>([](T (&input1)[SIZE],
-                                     T (&input2)[SIZE]) {
+  // C array
+  typedef T cArray[SIZE];
+  ret &= run_and_compare<T, SIZE>([](cArray &input1,
+                                     cArray &input2) {
     std::fill_n(std::begin(input1) + FIRST_OFFSET, TEST_LENGTH, SIZE + 1);
     std::experimental::parallel::
     fill_n(par, std::begin(input2) + FIRST_OFFSET, TEST_LENGTH, SIZE + 1);

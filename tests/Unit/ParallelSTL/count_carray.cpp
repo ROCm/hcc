@@ -25,8 +25,10 @@ bool test(void) {
 
   bool ret = true;
   bool eq = true;
-  ret &= run_and_compare<T, SIZE>([&eq](T (&input)[SIZE], T (&output1)[SIZE],
-                                                          T (&output2)[SIZE]) {
+  // C array
+  typedef T cArray[SIZE];
+  ret &= run_and_compare<T, SIZE>([&eq](cArray &input, cArray &output1,
+                                                       cArray &output2) {
     auto expected = std::count(std::begin(input), std::end(input), 42);
     auto result   = std::experimental::parallel::
                     count(par, std::begin(input), std::end(input), 42);
@@ -39,8 +41,8 @@ bool test(void) {
 
   auto pred = [](const T& v) { return static_cast<int>(v) % 3 == 0; };
 
-  ret &= run_and_compare<T, SIZE>([&eq, pred](T (&input)[SIZE], T (&output1)[SIZE],
-                                                                T (&output2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([&eq, pred](cArray &input, cArray &output1,
+                                                             cArray &output2) {
     auto expected = std::count_if(std::begin(input), std::end(input), pred);
     auto result   = std::experimental::parallel::
                     count_if(par, std::begin(input), std::end(input), pred);

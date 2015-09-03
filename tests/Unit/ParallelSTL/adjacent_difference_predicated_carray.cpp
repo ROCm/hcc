@@ -18,8 +18,11 @@ bool test(void) {
   using std::experimental::parallel::par;
 
   bool ret = true;
-  ret &= run_and_compare<T, SIZE>([op](T (&input)[SIZE], T (&output1)[SIZE],
-                                                         T (&output2)[SIZE]) {
+
+  // C array
+  typedef T cArray[SIZE];
+  ret &= run_and_compare<T, SIZE>([op](cArray &input, cArray &output1,
+                                                      cArray &output2) {
     std::adjacent_difference(std::begin(input), std::end(input), std::begin(output1), op);
     std::experimental::parallel::
     adjacent_difference(par, std::begin(input), std::end(input), std::begin(output2), op);

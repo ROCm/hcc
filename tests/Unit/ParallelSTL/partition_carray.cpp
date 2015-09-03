@@ -27,13 +27,15 @@ bool test(void) {
 
   bool ret = true;
   bool eq = true;
+
+  // C array
+  typedef T cArray[SIZE];
   ret &= run_and_compare<T, SIZE>([&eq, pred]
-                                  (T (&input1)[SIZE], T (&input2)[SIZE]) {
+                                  (cArray &input1, cArray &input2) {
     std::partition(std::begin(input1), std::end(input1), pred);
     std::experimental::parallel::
     partition(par, std::begin(input2), std::end(input2), pred);
   });
-
 
   return ret;
 }

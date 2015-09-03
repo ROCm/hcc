@@ -20,9 +20,12 @@ bool test(void) {
   using std::experimental::parallel::par;
 
   bool ret = true;
+
+  // C array
+  typedef T cArray[SIZE];
   ret &= run_and_compare<T, SIZE>([op, binary_op, init]
-                                  (T (&input)[SIZE], T (&output1)[SIZE],
-                                                     T (&output2)[SIZE]) {
+                                  (cArray &input, cArray &output1,
+                                                  cArray &output2) {
     // transform_inclusive_scan = transform + partial_sum (inclusive)
     std::transform(std::begin(input), std::end(input), std::begin(output1), op);
     std::partial_sum(std::begin(output1), std::end(output1), std::begin(output1), binary_op);

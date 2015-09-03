@@ -21,9 +21,11 @@ bool test(void) {
 
   bool ret = true;
   bool eq = true;
+  // C array
+  typedef T cArray[SIZE];
   // any_of
-  ret &= run_and_compare<T, SIZE>([pred1, &eq](T (&input1)[SIZE],
-                                               T (&input2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([pred1, &eq](cArray &input1,
+                                               cArray &input2) {
     auto expected = std::any_of(std::begin(input1), std::end(input1), pred1);
     auto result   = std::experimental::parallel::
                     any_of(par, std::begin(input2), std::end(input2), pred1);
@@ -33,8 +35,8 @@ bool test(void) {
 
 
   // none_of
-  ret &= run_and_compare<T, SIZE>([pred2, &eq](T (&input1)[SIZE],
-                                               T (&input2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([pred2, &eq](cArray &input1,
+                                               cArray &input2) {
     auto expected = std::none_of(std::begin(input1), std::end(input1), pred2);
     auto result   = std::experimental::parallel::
                     none_of(par, std::begin(input2), std::end(input2), pred2);
@@ -44,8 +46,8 @@ bool test(void) {
 
 
   // all_of
-  ret &= run_and_compare<T, SIZE>([pred3, &eq](T (&input1)[SIZE],
-                                               T (&input2)[SIZE]) {
+  ret &= run_and_compare<T, SIZE>([pred3, &eq](cArray &input1,
+                                               cArray &input2) {
     auto expected = std::all_of(std::begin(input1), std::end(input1), pred3);
     auto result   = std::experimental::parallel::
                     all_of(par, std::begin(input2), std::end(input2), pred3);

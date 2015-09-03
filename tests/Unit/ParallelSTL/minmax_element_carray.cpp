@@ -19,9 +19,11 @@ bool test(void) {
 
   bool ret = true;
   bool eq = true;
+  // C array
+  typedef T cArray[SIZE];
   ret &= run_and_compare<T, SIZE>([&eq]
-                                  (T (&input)[SIZE], T (&output1)[SIZE],
-                                                     T (&output2)[SIZE]) {
+                                  (cArray &input, cArray &output1,
+                                                  cArray &output2) {
     auto expected = std::minmax_element(std::begin(input), std::end(input));
     auto result   = std::experimental::parallel::
                     minmax_element(par, std::begin(input), std::end(input));

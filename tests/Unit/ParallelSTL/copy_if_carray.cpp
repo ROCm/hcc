@@ -18,8 +18,10 @@ bool test(void) {
   using std::experimental::parallel::par;
 
   bool ret = true;
-  ret &= run_and_compare<T, SIZE>([pred](T (&input)[SIZE], T (&output1)[SIZE],
-                                                           T (&output2)[SIZE]) {
+  // C array
+  typedef T cArray[SIZE];
+  ret &= run_and_compare<T, SIZE>([pred](cArray &input, cArray &output1,
+                                                        cArray &output2) {
     std::copy_if(std::begin(input), std::end(input), std::begin(output1), pred);
     std::experimental::parallel::
     copy_if(par, std::begin(input), std::end(input), std::begin(output2), pred);

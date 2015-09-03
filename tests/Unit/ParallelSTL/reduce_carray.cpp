@@ -18,8 +18,11 @@ bool test(void) {
 
   bool ret = true;
   bool eq = true;
+
+  // C array
+  typedef T cArray[SIZE];
   ret &= run_and_compare<T, SIZE>([&eq]
-                                  (T (&input1)[SIZE], T (&input2)[SIZE]) {
+                                  (cArray &input1, cArray &input2) {
     auto expected = std::accumulate(std::begin(input1), std::end(input1), T{});
     auto result   = std::experimental::parallel::
                     reduce(par, std::begin(input2), std::end(input2), T{});
@@ -29,7 +32,7 @@ bool test(void) {
   ret &= eq;
 
   ret &= run_and_compare<T, SIZE>([&eq]
-                                  (T (&input1)[SIZE], T (&input2)[SIZE]) {
+                                  (cArray &input1, cArray &input2) {
     auto expected = std::accumulate(std::begin(input1), std::end(input1), 10);
     auto result   = std::experimental::parallel::
                     reduce(par, std::begin(input2), std::end(input2), 10);
