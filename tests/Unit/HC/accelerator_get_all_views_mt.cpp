@@ -51,7 +51,14 @@ int main() {
   ret &= (v3.size() == (d3 + c3));
   ret &= (v4.size() == (d4 + c4));
 
+#if !TLS_QUEUE
   ret &= (v5.size() == (1 + c1 + c2 + c3 + c4));
+#else
+  // now default accelerator view is thread local, so the total number of views
+  // would the the number of threads (4), plus additional views created in each
+  // thread
+  ret &= (v5.size() == (4 + c1 + c2 + c3 + c4));
+#endif
 
   return !(ret == true);
 }
