@@ -2,7 +2,7 @@
 
 /**
  *
- * @return GENERALIZED_SUM(binary_op, init, unary_op(*first), ..., unary_op(*(first + (last - first) - * 1))).
+ * Return: GENERALIZED_SUM(binary_op, init, unary_op(*first), ..., unary_op(*(first + (last - first) - * 1))).
  *
  * Requires: Neither unary_op nor binary_op shall invalidate subranges, or
  * modify elements in the range [first,last).
@@ -57,7 +57,7 @@ T transform_reduce(InputIterator first, InputIterator last,
 
 /**
  *
- * @return GENERALIZED_SUM(binary_op, init, unary_op(*first), ..., unary_op(*(first + (last - first) - * 1))).
+ * Return: GENERALIZED_SUM(binary_op, init, unary_op(*first), ..., unary_op(*(first + (last - first) - * 1))).
  *
  * Requires: Neither unary_op nor binary_op shall invalidate subranges, or
  * modify elements in the range [first,last).

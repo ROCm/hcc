@@ -46,7 +46,7 @@ inclusive_scan_impl(RandomAccessIterator first, RandomAccessIterator last,
  * or GENERALIZED_NONCOMMUTATIVE_SUM(binary_op, init, *first, ..., *(first + (i - result)))
  * if init is provided.
  *
- * @return The end of the resulting range beginning at result.
+ * Return: The end of the resulting range beginning at result.
  *
  * Requires: binary_op shall not invalidate iterators or subranges, nor modify
  * elements in the ranges [first,last) or [result,result + (last - first)).
@@ -75,7 +75,7 @@ inclusive_scan(InputIterator first, InputIterator last,
  * or GENERALIZED_NONCOMMUTATIVE_SUM(binary_op, init, *first, ..., *(first + (i - result)))
  * if init is provided.
  *
- * @return The end of the resulting range beginning at result.
+ * Return: The end of the resulting range beginning at result.
  *
  * Requires: binary_op shall not invalidate iterators or subranges, nor modify
  * elements in the ranges [first,last) or [result,result + (last - first)).
@@ -111,7 +111,7 @@ inclusive_scan(ExecutionPolicy&& exec,
  * or GENERALIZED_NONCOMMUTATIVE_SUM(binary_op, init, *first, ..., *(first + (i - result)))
  * if init is provided.
  *
- * @return The end of the resulting range beginning at result.
+ * Return: The end of the resulting range beginning at result.
  *
  * Requires: binary_op shall not invalidate iterators or subranges, nor modify
  * elements in the ranges [first,last) or [result,result + (last - first)).
@@ -140,7 +140,7 @@ inclusive_scan(InputIterator first, InputIterator last,
  * or GENERALIZED_NONCOMMUTATIVE_SUM(binary_op, init, *first, ..., *(first + (i - result)))
  * if init is provided.
  *
- * @return The end of the resulting range beginning at result.
+ * Return: The end of the resulting range beginning at result.
  *
  * Requires: binary_op shall not invalidate iterators or subranges, nor modify
  * elements in the ranges [first,last) or [result,result + (last - first)).

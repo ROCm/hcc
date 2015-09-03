@@ -59,7 +59,7 @@ T reduce_impl(RandomAccessIterator first, RandomAccessIterator last,
 
 /**
  *
- * @return GENERALIZED_SUM(binary_op, init, *first, ..., *(first + (last - first) - 1)).
+ * Return: GENERALIZED_SUM(binary_op, init, *first, ..., *(first + (last - first) - 1)).
  *
  * Requires: binary_op shall not invalidate iterators or subranges, nor modify
  * elements in the range [first,last).
@@ -81,7 +81,7 @@ T reduce(InputIterator first, InputIterator last,
 
 /**
  *
- * @return GENERALIZED_SUM(binary_op, init, *first, ..., *(first + (last - first) - 1)).
+ * Return: GENERALIZED_SUM(binary_op, init, *first, ..., *(first + (last - first) - 1)).
  *
  * Requires: binary_op shall not invalidate iterators or subranges, nor modify
  * elements in the range [first,last).

@@ -143,7 +143,7 @@ generate_n(ExecutionPolicy&& exec,
  * @param last The end of the range to apply the function to
  * @param f function object to be applied to the range [first, last)
  *
- * @return None
+ * Return: None
  *
  */
 template<typename ExecutionPolicy,
@@ -173,7 +173,7 @@ for_each(ExecutionPolicy&& exec,
  *
  *  Remarks: If f returns a result, the result is ignored.
  *
- *  @return first + n for non-negative values of n and first for negative
+ *  Return: first + n for non-negative values of n and first for negative
  *  values.
  */
 template<typename InputIterator, typename Size, typename Function,
@@ -198,7 +198,7 @@ for_each_n(InputIterator first, Size n,
  * Notes: Unlike its sequential form, the parallel overload of for_each_n
  * requires Function to meet the requirements of CopyConstructible.
  *
- * @return first + n for non-negative values of n and first for negative values.
+ * Return: first + n for non-negative values of n and first for negative values.
  */
 template<typename ExecutionPolicy,
          typename InputIterator, typename Size, typename Function,

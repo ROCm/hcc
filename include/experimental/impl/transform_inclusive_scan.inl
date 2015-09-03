@@ -3,7 +3,7 @@
  * the value of GENERALIZED_NONCOMMUTATIVE_SUM(binary_op, unary_op(*first), ..., unary_op(*(first + (i - * result))))
  * or GENERALIZED_NONCOMMUTATIVE_SUM(binary_op, init, unary_op(*first), ..., unary_op(*(first + (i * - result)))) if init is provided.
  *
- * @return The end of the resulting range beginning at result.
+ * Return: The end of the resulting range beginning at result.
  *
  * Requires: Neither unary_op nor binary_op shall invalidate iterators or
  * subranges, or modify elements in the ranges [first,last) or
@@ -37,7 +37,7 @@ transform_inclusive_scan(InputIterator first, InputIterator last,
  * the value of GENERALIZED_NONCOMMUTATIVE_SUM(binary_op, unary_op(*first), ..., unary_op(*(first + (i - * result))))
  * or GENERALIZED_NONCOMMUTATIVE_SUM(binary_op, init, unary_op(*first), ..., unary_op(*(first + (i * - result)))) if init is provided.
  *
- * @return The end of the resulting range beginning at result.
+ * Return: The end of the resulting range beginning at result.
  *
  * Requires: Neither unary_op nor binary_op shall invalidate iterators or
  * subranges, or modify elements in the ranges [first,last) or
@@ -78,7 +78,7 @@ transform_inclusive_scan(ExecutionPolicy&& exec,
  * the value of GENERALIZED_NONCOMMUTATIVE_SUM(binary_op, unary_op(*first), ..., unary_op(*(first + (i - * result))))
  * or GENERALIZED_NONCOMMUTATIVE_SUM(binary_op, init, unary_op(*first), ..., unary_op(*(first + (i * - result)))) if init is provided.
  *
- * @return The end of the resulting range beginning at result.
+ * Return: The end of the resulting range beginning at result.
  *
  * Requires: Neither unary_op nor binary_op shall invalidate iterators or
  * subranges, or modify elements in the ranges [first,last) or
@@ -109,7 +109,7 @@ transform_inclusive_scan(InputIterator first, InputIterator last,
  * the value of GENERALIZED_NONCOMMUTATIVE_SUM(binary_op, unary_op(*first), ..., unary_op(*(first + (i - * result))))
  * or GENERALIZED_NONCOMMUTATIVE_SUM(binary_op, init, unary_op(*first), ..., unary_op(*(first + (i * - result)))) if init is provided.
  *
- * @return The end of the resulting range beginning at result.
+ * Return: The end of the resulting range beginning at result.
  *
  * Requires: Neither unary_op nor binary_op shall invalidate iterators or
  * subranges, or modify elements in the ranges [first,last) or

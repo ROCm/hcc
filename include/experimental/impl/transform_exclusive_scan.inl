@@ -2,7 +2,7 @@
  * Effects: Assigns through each iterator i in [result,result + (last - first))
  * the value of GENERALIZED_NONCOMMUTATIVE_SUM(binary_op, init, unary_op(*first), ..., unary_op(*(first + (i * - result) - 1))).
  *
- * @return The end of the resulting range beginning at result.
+ * Return: The end of the resulting range beginning at result.
  *
  * Requires: Neither unary_op nor binary_op shall invalidate iterators or
  * subranges, or modify elements in the ranges [first,last) or
@@ -34,7 +34,7 @@ transform_exclusive_scan(InputIterator first, InputIterator last,
  * Effects: Assigns through each iterator i in [result,result + (last - first))
  * the value of GENERALIZED_NONCOMMUTATIVE_SUM(binary_op, init, unary_op(*first), ..., unary_op(*(first + (i * - result) - 1))).
  *
- * @return The end of the resulting range beginning at result.
+ * Return: The end of the resulting range beginning at result.
  *
  * Requires: Neither unary_op nor binary_op shall invalidate iterators or
  * subranges, or modify elements in the ranges [first,last) or

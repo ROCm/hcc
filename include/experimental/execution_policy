@@ -79,14 +79,14 @@ const int PARALLELIZE_THRESHOLD = 10;
        * 2.7.1, execution_policy assign
        *
        * Effects: Assigns a copy of exec's state to *this.
-       * @return *this
+       * Return: *this
        */
       template<class T> execution_policy& operator=(const T& exec);
 
       /**
        * 2.7.2, execution_policy object access
        *
-       * @return typeid(T), such that T is the type of the execution policy
+       * Return: typeid(T), such that T is the type of the execution policy
        * object contained by *this
        */
       const type_info& type() const noexcept;
@@ -95,7 +95,7 @@ const int PARALLELIZE_THRESHOLD = 10;
       /**
        * 2.7.2, execution_policy object access
        *
-       * @return If target_type() == typeid(T), a pointer to the stored
+       * Return: If target_type() == typeid(T), a pointer to the stored
        * execution policy object; otherwise a null pointer.
        *
        * Requires: is_execution_policy<T>::value is true.
