@@ -31,8 +31,13 @@ bool test() {
   t2.join();
   t3.join();
 
+#if !TLS_QUEUE
+  // without TLS queue, av1, av2, av3 should still be the same
+  ret &= ((av1 == av2) && (av2 == av3) && (av1 == av3));
+#else
   // av1, av2, av3 are now created on different threads so they must NOT be equal
   ret &= ((av1 != av2) && (av2 != av3) && (av1 != av3));
+#endif
 
   std::cout << ret << "\n";
 
