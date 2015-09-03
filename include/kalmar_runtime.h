@@ -143,9 +143,6 @@ private:
   queuing_mode mode;
 };
 
-/// macro to set if we want default queue be thread-local or not
-#define TLS_QUEUE (1)
-
 /// KalmarDevice
 /// This is the base implementation of accelerator
 /// KalmarDevice is responsible for create/release memory on device
