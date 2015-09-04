@@ -61,6 +61,20 @@ using invalid_compute_domain = Kalmar::invalid_compute_domain;
 using accelerator_view_removed = Kalmar::accelerator_view_removed;
 
 // ------------------------------------------------------------------------
+// global functions
+// ------------------------------------------------------------------------
+
+/**
+ * Get the current tick count for the GPU platform.
+ *
+ * @return An implementation-defined tick count
+ */
+uint64_t get_system_ticks() {
+    return Kalmar::getContext()->getSystemTicks();
+}
+
+
+// ------------------------------------------------------------------------
 // accelerator_view
 // ------------------------------------------------------------------------
 

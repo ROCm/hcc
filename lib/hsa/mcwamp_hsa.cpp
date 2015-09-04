@@ -1247,6 +1247,13 @@ public:
         status = hsa_shut_down();
         STATUS_CHECK(status, __LINE__);
     }
+
+    uint64_t getSystemTicks() override {
+        // get system tick
+        uint64_t timestamp = 0L;
+        hsa_system_get_info(HSA_SYSTEM_INFO_TIMESTAMP, &timestamp);
+        return timestamp;
+    }
 };
 
 static HSAContext ctx;
