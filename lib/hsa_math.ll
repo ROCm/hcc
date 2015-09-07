@@ -6,6 +6,19 @@ target triple = "spir64-unknown-unknown"
 ; work-item related functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @amp_get_global_size(i32 %n) #0 {
+  %1 = alloca i32, align 4
+  store i32 %n, i32* %1, align 4
+  %2 = load i32* %1, align 4
+  %3 = call spir_func i64 @_Z15get_global_sizej(i32 %2) #1
+  ret i64 %3
+}
+
+; Function Attrs: nounwind readnone
+declare spir_func i64 @_Z15get_global_sizej(i32) #1
+
 ; Function Attrs: nounwind
 define linkonce_odr spir_func i64 @amp_get_global_id(i32 %n) #0 {
 entry:
@@ -19,6 +32,7 @@ entry:
 ; Function Attrs: nounwind readnone
 declare spir_func i64 @_Z13get_global_idj(i32) #1
 
+
 ; Function Attrs: nounwind
 define linkonce_odr spir_func i64 @amp_get_local_id(i32 %n) #0 {
 entry:
@@ -31,6 +45,18 @@ entry:
 
 ; Function Attrs: nounwind readnone
 declare spir_func i64 @_Z12get_local_idj(i32) #1
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @amp_get_num_groups(i32 %n) #0 {
+  %1 = alloca i32, align 4
+  store i32 %n, i32* %1, align 4
+  %2 = load i32* %1, align 4
+  %3 = call spir_func i64 @_Z14get_num_groupsj(i32 %2) #1
+  ret i64 %3
+}
+
+; Function Attrs: nounwind readnone
+declare spir_func i64 @_Z14get_num_groupsj(i32) #1
 
 ; Function Attrs: nounwind
 define linkonce_odr spir_func i64 @amp_get_group_id(i32 %n) #0 {
