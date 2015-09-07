@@ -33,7 +33,7 @@ void cxxflags(void) {
     }
 
     // Common options
-    std::cout << "-std=c++amp";
+    std::cout << "-std=c++amp -stdlib=libc++";
 
     // clamp
     if (build_mode) {
