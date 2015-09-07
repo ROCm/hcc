@@ -38,8 +38,6 @@ void cxxflags(void) {
     // clamp
     if (build_mode) {
         std::cout << " -I" CMAKE_CLAMP_INC_DIR;
-        // libcxx
-        std::cout << " -I" CMAKE_LIBCXX_INC;
 
         // bolt and boost
         if (bolt_rewrite_mode) {
@@ -49,7 +47,6 @@ void cxxflags(void) {
         }
     } else if (install_mode) {
         std::cout << " -I" CMAKE_INSTALL_INC;
-        std::cout << " -I" CMAKE_INSTALL_LIBCXX_INC;
 
         // bolt and boost
         if (bolt_rewrite_mode) {
@@ -68,8 +65,6 @@ void ldflags(void) {
     std::cout << "-std=c++amp";
     if (build_mode) {
         std::cout << " -L" CMAKE_AMPCL_LIB_DIR;
-        std::cout << " -L" CMAKE_LIBCXX_LIB_DIR;
-        std::cout << " -L" CMAKE_LIBCXXRT_LIB_DIR;
 
         if (bolt_rewrite_mode) {
             std::cout << " -L" CMAKE_BOLT_LIB_DIR;
@@ -77,9 +72,7 @@ void ldflags(void) {
         }
 
         std::cout << " -Wl,--rpath="
-            CMAKE_AMPCL_LIB_DIR ":"
-            CMAKE_LIBCXX_LIB_DIR ":"
-            CMAKE_LIBCXXRT_LIB_DIR ;
+            CMAKE_AMPCL_LIB_DIR;
 
         if (bolt_rewrite_mode) {
             std::cout << ":" CMAKE_BOLT_LIB_DIR ":"
@@ -90,7 +83,7 @@ void ldflags(void) {
         std::cout << " -Wl,--rpath=" CMAKE_INSTALL_LIB;
     }
 
-    std::cout << " -lc++ -lcxxrt -ldl -lpthread ";
+    std::cout << " -lc++ -ldl -lpthread ";
     if (bolt_rewrite_mode) {
         std::cout << "-lampBolt.runtime.clang ";
     }

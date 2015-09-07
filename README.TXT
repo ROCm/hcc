@@ -179,15 +179,11 @@ locatable at runtime:
 
 # If you install deb files:
 # C++AMP runtime libraries
-# libc++ & C++AMP runtime implementations
-/opt/clamp/lib
+# libc++ & Kalmar runtime implementations
+/opt/kalmar/lib
 
 # If you build from source:
-# C++AMP runtime libraries
-# libc++
-(path_of_your_build_directory)/libc++/libcxx/lib
-(path_of_your_build_directory)/libc++/libcxxrt/lib
-# C++AMP runtime implementations
+# Kalmar runtime implementations
 (path_of_your_build_directory)/build/Release/lib
 
 Remember to use: sudo ldconfig -v to reload ld.so cache.
