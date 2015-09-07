@@ -33,10 +33,10 @@ if(NOT APPLE)
 include_directories(${PROJECT_SOURCE_DIR}/libcxxrt/src)
 set(CMAKE_CXX_FLAGS "-DLIBCXXRT")
 add_subdirectory(libcxxrt)
-INSTALL(DIRECTORY ${PROJECT_BINARY_DIR}/libcxxrt/lib
+INSTALL(FILES ${PROJECT_BINARY_DIR}/libcxxrt/lib/libcxxrt.a
+              ${PROJECT_BINARY_DIR}/libcxxrt/lib/libcxxrt.so
         DESTINATION lib
         COMPONENT libcxxrt
-        PATTERN "libcxxrt*"
         PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
                     GROUP_READ WORLD_READ) 
 endif(NOT APPLE)
