@@ -1276,16 +1276,20 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
     if (device->hasHSAKernargRegion()) {
         hsa_region_t kernarg_region = device->getHSAKernargRegion();
 
-        status = hsa_memory_allocate(kernarg_region, arg_vec.size(),  &kernargMemory);
-        STATUS_CHECK_Q(status, commandQueue, __LINE__);
+        if (arg_vec.size() > 0) {
+            status = hsa_memory_allocate(kernarg_region, arg_vec.size(),  &kernargMemory);
+            STATUS_CHECK_Q(status, commandQueue, __LINE__);
 
-        status = hsa_memory_assign_agent(kernargMemory, agent, HSA_ACCESS_PERMISSION_RW);
-        STATUS_CHECK_Q(status, commandQueue, __LINE__);
+            status = hsa_memory_assign_agent(kernargMemory, agent, HSA_ACCESS_PERMISSION_RW);
+            STATUS_CHECK_Q(status, commandQueue, __LINE__);
 
-        status = hsa_memory_copy(kernargMemory, arg_vec.data(), arg_vec.size());
-        STATUS_CHECK_Q(status, commandQueue, __LINE__);
+            status = hsa_memory_copy(kernargMemory, arg_vec.data(), arg_vec.size());
+            STATUS_CHECK_Q(status, commandQueue, __LINE__);
 
-        aql.kernarg_address = kernargMemory;
+            aql.kernarg_address = kernargMemory;
+        } else {
+            aql.kernarg_address = nullptr;
+        }
     }
     else {
         aql.kernarg_address = arg_vec.data();
