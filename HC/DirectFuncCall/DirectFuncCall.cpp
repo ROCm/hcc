@@ -17,10 +17,12 @@ namespace {
     }
     bool runOnModule(Module &M) override {
 
+      const char* const HCGridLaunchAttr = "hc_grid_launch";
+
       // Find functions with attribute: grid_launch
       for(Module::iterator F = M.begin(), F_end = M.end(); F != F_end; ++F)
       {
-        if(F->hasFnAttribute(Attribute::HCGridLaunch))
+        if(F->hasFnAttribute(HCGridLaunchAttr))
         {
           // Attribute::NoInline is used to find the user of the function.
           // If inline is used, either forced or through optimziation, then this
@@ -38,7 +40,11 @@ namespace {
             Function* wrapperFunc = CloneFunction(F, VMap, true);
             wrapperFunc->setName(wrapperName);
             wrapperFunc->deleteBody();
-            wrapperFunc->removeFnAttr(Attribute::HCGridLaunch);
+            // AttributeSet does not have a direct way of removing string attributes
+            // Using AttrBuilder to do so
+            AttrBuilder B(wrapperFunc->getAttributes(), AttributeSet::FunctionIndex);
+            B.removeAttribute(HCGridLaunchAttr);
+            wrapperFunc->setAttributes(AttributeSet::get(F->getContext(), AttributeSet::FunctionIndex, B));
             M.getFunctionList().push_back(wrapperFunc);
 
             // find uses of kernel proper
@@ -48,7 +54,7 @@ namespace {
                 ci->setCalledFunction(wrapperFunc);
             }
           } // !F->hasNUses > 0
-        } // F->hasFnAttribute(HCGridLaunch)
+        } // F->hasFnAttribute(HCGridLaunchAttr)
       } // Module::iterator
 
       errs() << M;

@@ -149,7 +149,7 @@ namespace
       // Find functions with attribute: grid_launch
       for(Module::iterator F = M.begin(), F_end = M.end(); F != F_end; ++F)
       {
-        if(F->hasFnAttribute(Attribute::HCGridLaunch))
+        if(F->hasFnAttribute("hc_grid_launch"))
         {
           string funcName = F->getName().str();
           string wrapperStr = "__hcLaunchKernel_" + funcName;
