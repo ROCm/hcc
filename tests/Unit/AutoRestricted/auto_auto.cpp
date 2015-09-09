@@ -1,4 +1,4 @@
-// UNSUPPORTED: Linux
+// XFAIL: Linux
 // RUN: %hc -Xclang -fauto-auto %s -o %t.out && %t.out
 #include <vector>
 #include <amp.h>
