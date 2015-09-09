@@ -182,7 +182,7 @@ elseif( ( C_COMPILER_NAME STREQUAL "gcc" ) OR ( CMAKE_COMPILER_IS_GNUCXX GREATER
     endif( )
 elseif( C_COMPILER_NAME STREQUAL "clang" )
     message( STATUS "Detected clang compiler." )
-    set( CMAKE_CXX_FLAGS "-std=c++amp ${CMAKE_CXX_FLAGS}" )
+    set( CMAKE_CXX_FLAGS "-std=c++amp -stdlib=libc++ ${CMAKE_CXX_FLAGS}" )
 
     if( Bolt_BUILD64 )
         set( CMAKE_CXX_FLAGS "-m64 ${CMAKE_CXX_FLAGS}" )

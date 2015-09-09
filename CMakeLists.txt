@@ -315,12 +315,9 @@ if(CXXAMP_ENABLE_BOLT)
   SET( CLAMP_CXX_COMPILER "${PROJECT_BINARY_DIR}/compiler/bin/clang++"  )
 
   SET( CLAMP_LIBRARIES mcwamp c++ dl )
-  SET( CLAMP_INC_DIRS ${PROJECT_SOURCE_DIR}/include 
-     ${CLAMP_LIBCXX_INC_DIR} )
+  SET( CLAMP_INC_DIRS ${PROJECT_SOURCE_DIR}/include )
 
-  SET( CLAMP_LIB_DIRS ${PROJECT_BINARY_DIR}/build/${CMAKE_BUILD_TYPE}/lib
-     ${CLAMP_LIBCXX_LIB_DIR} 
-     ${CLAMP_LIBCXXRT_LIB_DIR} )
+  SET( CLAMP_LIB_DIRS ${PROJECT_BINARY_DIR}/build/${CMAKE_BUILD_TYPE}/lib )
 
   # This is the only source code folder we can build as a generator
   add_subdirectory( Bolt/superbuild )
