@@ -256,10 +256,9 @@ void updateBackGEP (GetElementPtrInst * GEP, Type* expected,
                                  ptrExpected->getAddressSpace());
           Instruction * ptrProducer =
                 dyn_cast<Instruction>(GEP->getPointerOperand());
-          assert(ptrProducer
-               && "Was expecting an instruction as source operand for GEP");
-          BackwardUpdate::setExpectedType (ptrProducer,
-                                         newUpstreamType, updater);
+          if (ptrProducer)
+              BackwardUpdate::setExpectedType (ptrProducer,
+                                             newUpstreamType, updater);
         } else {
           DEBUG(llvm::errs() << "newElementType is null\n";);
         }
@@ -270,6 +269,7 @@ void updateBackLoad (LoadInst * L, Type * expected,
 {
         Value * ptrOperand = L->getPointerOperand();
         Instruction * ptrSource = dyn_cast<Instruction>(ptrOperand);
+        if (!ptrSource) return;
 
         assert(ptrSource
                && "Was expecting an instruction for the source operand");
@@ -1178,6 +1178,77 @@ static bool usedInTheFunc(const User *U, const Function* F)
   return false;
 }
 
+bool isAddressCopiedToHost(const GlobalVariable &G, const Function &F) {
+    std::vector<const User*> pending;
+    std::set<const Value*> all_global_ptrs;
+
+    for (const Value &arg : F.args()) {
+        if (arg.getType()->isPointerTy()) {
+            pending.insert(pending.end(), arg.user_begin(), arg.user_end());
+            all_global_ptrs.insert(&arg);
+        }
+    }
+
+    while (!pending.empty()) {
+        const User *u = pending.back();
+        pending.pop_back();
+
+        if (isa<GetElementPtrInst>(u)) {
+            all_global_ptrs.insert(u);
+            pending.insert(pending.end(), u->user_begin(), u->user_end());
+        }
+        else if (const LoadInst *load = dyn_cast<LoadInst>(u)) {
+            all_global_ptrs.insert(u);
+            pending.insert(pending.end(), u->user_begin(), u->user_end());
+        }
+        else if (const ConstantExpr *cexp = dyn_cast<ConstantExpr>(u)) {
+            if (cexp->getOpcode() == Instruction::GetElementPtr) {
+                all_global_ptrs.insert(u);
+                pending.insert(pending.end(), u->user_begin(), u->user_end());
+            }
+        }
+    }
+
+    DEBUG(
+        errs() << "Possible pointers to global memory in " << F.getName() << ":\n";
+        for (auto &&p : all_global_ptrs) {
+            errs() << "  " << *p << "\n";
+        }
+        errs() << "\n";
+    );
+
+    DEBUG(errs() << "Possible pointers to GV(" << G << ") in " << F.getName() << ":\n";);
+
+    pending.insert(pending.end(), G.user_begin(), G.user_end());
+    while (!pending.empty()) {
+        const User *u = pending.back();
+        pending.pop_back();
+
+        if (const Instruction *inst = dyn_cast<Instruction>(u)) {
+           if (&F != inst->getParent()->getParent())
+               continue;
+        }
+
+        DEBUG(errs() << "user (" << u << "): " << *u << "\n";);
+        if (const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(u)) {
+            pending.insert(pending.end(), GEP->user_begin(), GEP->user_end());
+        }
+        else if (const ConstantExpr *cexp = dyn_cast<ConstantExpr>(u)) {
+            if (cexp->getOpcode() == Instruction::GetElementPtr)
+                pending.insert(pending.end(), cexp->user_begin(), cexp->user_end());
+        }
+        else if (const StoreInst *S = dyn_cast<StoreInst>(u)) {
+            if (all_global_ptrs.find(S->getPointerOperand()) != all_global_ptrs.end()) {
+                DEBUG(errs() << "target found, returns true\n";);
+                return true;
+            }
+        }
+    }
+
+    DEBUG(errs() << "returns false\n";);
+    return false;
+}
+
 // tile_static are declared as static variables in section("clamp_opencl_local")
 // for each tile_static, make a modified clone with address space 3 and update users
 void promoteTileStatic(Function *Func, InstUpdateWorkList * updateNeeded)
@@ -1212,8 +1283,13 @@ void promoteTileStatic(Function *Func, InstUpdateWorkList * updateNeeded)
             !I->hasName()) {
             continue;
         }
-        DEBUG(llvm::errs() << "Promoting variable\n";
-                I->dump(););
+
+        if (isAddressCopiedToHost(*I, *Func))
+            the_space = GlobalAddressSpace;
+        DEBUG(llvm::errs() << "Promoting variable: " << *I << "\n";
+                errs() << "  to addrspace(" << the_space << ")\n";
+                );
+
         std::set<Function *> users;
         typedef std::multimap<Function *, llvm::User *> Uses;
         Uses uses;
@@ -1254,6 +1330,14 @@ void promoteTileStatic(Function *Func, InstUpdateWorkList * updateNeeded)
                 new_GV->takeName(I);
             } else {
                 new_GV->setName(I->getName());
+            }
+            if (new_GV->getName().find('.') != StringRef::npos) {
+                // HSAIL does not accept dot in identifier
+                // (clang generates dot names for string literals)
+                std::string tmp = new_GV->getName();
+                for (char &c : tmp)
+                    if (c == '.') c = '_';
+                new_GV->setName(tmp);
             }
             std::pair<Uses::iterator, Uses::iterator> usesOfSameFunction;
             usesOfSameFunction = uses.equal_range(*F);

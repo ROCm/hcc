@@ -1,5 +1,5 @@
 // XFAIL: Linux
-// RUN: %hc %s -o %t.out && %t.out
+// RUN: %hc %s -o %t.out && %t.out | %FileCheck %s
 
 #include <amp.h>
 #include <hsa_printf.h>
@@ -14,23 +14,21 @@ int main() {
   
   using namespace concurrency;
 
-  const char* s1 = "Hello HSA from %s: %d\n";
-  const char* s2 = "thread";
-  const char* s3 = "work-item";
-  const char* s4 = "work item";
-  const char* s5 = "workitem";
-  const char* s6 = "Hello again from %s: %d\n";
 
   parallel_for_each(extent<1>(SIZE), [&](index<1> idx) restrict(amp) {
+    const char* s1 = "Hello HSA from %s: %d\n";
+    const char* s2 = "thread";
+    const char* s6 = "Hello again from %s: %d\n";
+
     if (idx[0] == 0) {
       hsa_printf(q, s1, s2, idx[0]);
       hsa_printf(q, s6, s2, idx[0]);
     } else if (idx[0] == 5) {
-      hsa_printf(q, s1, s3, idx[0]);
+      hsa_printf(q, s1, "work-item", idx[0]);
     } else if (idx[0] == 10) {
-      hsa_printf(q, s1, s4, idx[0]);
+      hsa_printf(q, s1, "work item", idx[0]);
     } else if (idx[0] == 15) {
-      hsa_printf(q, s1, s5, idx[0]);
+      hsa_printf(q, s1, "workitem", idx[0]);
       hsa_printf(q, s6, s2, idx[0]);
     }
   });
@@ -44,3 +42,9 @@ int main() {
   return 0;
 }
 
+// CHECK: Hello HSA from thread: 0
+// CHECK: Hello again from thread: 0
+// CHECK: Hello HSA from work-item: 5
+// CHECK: Hello HSA from work item: 10
+// CHECK: Hello HSA from workitem: 15
+// CHECK: Hello again from thread: 15
