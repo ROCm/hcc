@@ -334,6 +334,9 @@ public:
         else
             return get_default_dev();
     }
+
+    /// get system ticks
+    virtual uint64_t getSystemTicks() { return 0L; };
 };
 
 KalmarContext *getContext();

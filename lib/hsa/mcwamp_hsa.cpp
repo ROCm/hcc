@@ -48,6 +48,8 @@ extern "C" void PushArgPtrImpl(void *ker, int idx, size_t sz, const void *v);
 // forward declaration
 namespace Kalmar {
 class HSAQueue;
+class HSADevice;
+
 } // namespace Kalmar
 
 ///
@@ -185,6 +187,7 @@ public:
 
 class HSADispatch : public Kalmar::KalmarAsyncOp {
 private:
+    Kalmar::HSADevice* device;
     hsa_agent_t agent;
     const HSAKernel* kernel;
 
@@ -194,6 +197,8 @@ private:
     std::vector<uint8_t> arg_vec;
     uint32_t arg_count;
     size_t prevArgVecCapacity;
+    void* kernargMemory;
+
     int launchDimensions;
     uint32_t workgroup_size[3];
     uint32_t global_size[3];
@@ -232,31 +237,7 @@ public:
         return HSA_STATUS_SUCCESS;
     }
 
-    HSADispatch(hsa_agent_t _agent, const HSAKernel* _kernel) :
-        agent(_agent),
-        kernel(_kernel),
-        isDispatched(false),
-        dynamicGroupSize(0),
-        future(nullptr),
-        hsaQueue(nullptr) {
-
-        // allocate the initial argument vector capacity
-        arg_vec.reserve(ARGS_VEC_INITIAL_CAPACITY);
-        registerArgVecMemory();
-
-        clearArgs();
-
-        hsa_status_t status;
-
-        /// Query the maximum number of work-items in a workgroup
-        status = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_SIZE, &workgroup_max_size);
-        STATUS_CHECK(status, __LINE__);
-
-        /// Query the maximum number of work-items in each dimension of a workgroup
-        status = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_DIM, &workgroup_max_dim);
-
-        STATUS_CHECK(status, __LINE__);
-    }
+    HSADispatch(Kalmar::HSADevice* _device, const HSAKernel* _kernel);
 
     hsa_status_t pushFloatArg(float f) { return pushArgPrivate(f); }
     hsa_status_t pushIntArg(int i) { return pushArgPrivate(i); }
@@ -339,93 +320,7 @@ public:
     }
 
     // dispatch a kernel asynchronously
-    hsa_status_t dispatchKernel(hsa_queue_t* commandQueue) {
-        hsa_status_t status = HSA_STATUS_SUCCESS;
-        if (isDispatched) {
-            return HSA_STATUS_ERROR_INVALID_ARGUMENT;
-        }
-  
-        // check if underlying arg_vec data might have changed, if so re-register
-        if (arg_vec.capacity() > prevArgVecCapacity) {
-             registerArgVecMemory();
-        }
-  
-        /*
-         * Create a signal to wait for the dispatch to finish.
-         */
-        status = hsa_signal_create(1, 0, NULL, &signal);
-        STATUS_CHECK_Q(status, commandQueue, __LINE__);
-  
-        /*
-         * Initialize the dispatch packet.
-         */
-        memset(&aql, 0, sizeof(aql));
-  
-        /*
-         * Setup the dispatch information.
-         */
-        aql.completion_signal = signal;
-        aql.setup = launchDimensions << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
-        aql.workgroup_size_x = workgroup_size[0];
-        aql.workgroup_size_y = workgroup_size[1];
-        aql.workgroup_size_z = workgroup_size[2];
-        aql.grid_size_x = global_size[0];
-        aql.grid_size_y = global_size[1];
-        aql.grid_size_z = global_size[2];
-  
-        // set dispatch fences
-        aql.header = (HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE) |
-                     (1 << HSA_PACKET_HEADER_BARRIER) |
-                     (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
-                     (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
-  
-        // bind kernel code
-        aql.kernel_object = kernel->kernelCodeHandle;
-  
-        // bind kernel arguments
-        //printf("arg_vec size: %d in bytes: %d\n", arg_vec.size(), arg_vec.size());
-        aql.kernarg_address = arg_vec.data();
-        hsa_memory_register(arg_vec.data(), arg_vec.size());
-        //for (size_t i = 0; i < arg_vec.size(); ++i) {
-        //  printf("%02X ", *(((uint8_t*)aql.kernarg_address)+i));
-        //}
-        //printf("\n");
-  
-        // Initialize memory resources needed to execute
-        uint32_t group_segment_size;
-        status = hsa_executable_symbol_get_info(kernel->hsaExecutableSymbol,
-                                                HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE,
-                                                &group_segment_size);
-        STATUS_CHECK_Q(status, commandQueue, __LINE__);
-
-        // add dynamic group segment size
-        group_segment_size += this->dynamicGroupSize;
-        aql.group_segment_size = group_segment_size;
-  
-        uint32_t private_segment_size;
-        status = hsa_executable_symbol_get_info(kernel->hsaExecutableSymbol,
-                                                HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_PRIVATE_SEGMENT_SIZE,
-                                                &private_segment_size);
-        STATUS_CHECK_Q(status, commandQueue, __LINE__);
-        aql.private_segment_size = private_segment_size;
-  
-        // write packet
-        uint32_t queueMask = commandQueue->size - 1;
-        uint64_t index = hsa_queue_load_write_index_relaxed(commandQueue);
-        ((hsa_kernel_dispatch_packet_t*)(commandQueue->base_address))[index & queueMask] = aql;
-        hsa_queue_store_write_index_relaxed(commandQueue, index + 1);
-  
-#if KALMAR_DEBUG
-        std::cerr << "ring door bell to dispatch kernel\n";
-#endif
-  
-        // Ring door bell
-        hsa_signal_store_relaxed(commandQueue->doorbell_signal, index);
-  
-        isDispatched = true;
-
-        return status;
-    }
+    hsa_status_t dispatchKernel(hsa_queue_t* commandQueue);
 
     // wait for the kernel to finish execution
     hsa_status_t waitComplete();
@@ -434,6 +329,11 @@ public:
         hsa_status_t status;
         status = hsa_memory_deregister(arg_vec.data(), arg_vec.capacity() * sizeof(uint8_t));
         assert(status == HSA_STATUS_SUCCESS);
+        if (kernargMemory != nullptr) {
+          status = hsa_memory_free(kernargMemory);
+          assert(status == HSA_STATUS_SUCCESS);
+          kernargMemory = nullptr;
+        }
         hsa_signal_destroy(aql.completion_signal);
         clearArgs();
         std::vector<uint8_t>().swap(arg_vec);
@@ -930,6 +830,9 @@ public:
         hsa_status_t status = HSA_STATUS_SUCCESS;
         status = hsa_agent_iterate_regions(agent, HSADevice::find_group_memory, &max_tile_static_size);
         STATUS_CHECK(status, __LINE__);
+
+        status = hsa_agent_iterate_regions(agent, &HSADevice::get_memory_regions, &ri);
+        STATUS_CHECK(status, __LINE__);
     }
 
     ~HSADevice() {
@@ -996,7 +899,7 @@ public:
         // HSAQueue::LaunchKernel()
         // or it will be created as a shared_ptr<KalmarAsyncOp> in:
         // HSAQueue::LaunchKernelAsync()
-        HSADispatch *dispatch = new HSADispatch(agent, kernel);
+        HSADispatch *dispatch = new HSADispatch(this, kernel);
         dispatch->clearArgs();
 
         // HLC Stable would need 3 additional arguments
@@ -1035,16 +938,10 @@ public:
     }
 
     hsa_region_t& getHSAKernargRegion() {
-    
-        hsa_agent_iterate_regions(agent, &HSADevice::get_memory_regions, &ri);
-
         return ri._kernarg_region;
     }
 
     hsa_region_t& getHSAAMRegion() {
-    
-        hsa_agent_iterate_regions(agent, &HSADevice::get_memory_regions, &ri);
-
         // prefer coarse-grained over fine-grained
         if (ri._found_coarsegrained_region) {
             ri._am_region = ri._coarsegrained_region;
@@ -1055,6 +952,18 @@ public:
         }
     
         return ri._am_region;
+    }
+
+    bool hasHSAKernargRegion() { 
+      return ri._found_kernarg_region;
+    }
+
+    bool hasHSAFinegrainedRegion() {
+      return ri._found_finegrained_region;
+    }
+
+    bool hasHSACoarsegrainedRegion() {
+      return ri. _found_coarsegrained_region;
     }
 
 private:
@@ -1247,6 +1156,13 @@ public:
         status = hsa_shut_down();
         STATUS_CHECK(status, __LINE__);
     }
+
+    uint64_t getSystemTicks() override {
+        // get system tick
+        uint64_t timestamp = 0L;
+        hsa_system_get_info(HSA_SYSTEM_INFO_TIMESTAMP, &timestamp);
+        return timestamp;
+    }
 };
 
 static HSAContext ctx;
@@ -1280,6 +1196,150 @@ HSAQueue::getHSAKernargRegion() override {
 // member function implementation of HSADispatch
 // ----------------------------------------------------------------------
 
+HSADispatch::HSADispatch(Kalmar::HSADevice* _device, const HSAKernel* _kernel) :
+    device(_device),
+    agent(_device->getAgent()),
+    kernel(_kernel),
+    isDispatched(false),
+    dynamicGroupSize(0),
+    future(nullptr),
+    hsaQueue(nullptr),
+    kernargMemory(nullptr) {
+
+    // allocate the initial argument vector capacity
+    arg_vec.reserve(ARGS_VEC_INITIAL_CAPACITY);
+    registerArgVecMemory();
+
+    clearArgs();
+
+    hsa_status_t status;
+
+    /// Query the maximum number of work-items in a workgroup
+    status = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_SIZE, &workgroup_max_size);
+    STATUS_CHECK(status, __LINE__);
+
+    /// Query the maximum number of work-items in each dimension of a workgroup
+    status = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_DIM, &workgroup_max_dim);
+
+    STATUS_CHECK(status, __LINE__);
+}
+
+
+// dispatch a kernel asynchronously
+hsa_status_t 
+HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
+    hsa_status_t status = HSA_STATUS_SUCCESS;
+    if (isDispatched) {
+        return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+    }
+  
+    // check if underlying arg_vec data might have changed, if so re-register
+    if (arg_vec.capacity() > prevArgVecCapacity) {
+        registerArgVecMemory();
+    }
+  
+    /*
+     * Create a signal to wait for the dispatch to finish.
+     */
+    status = hsa_signal_create(1, 0, NULL, &signal);
+    STATUS_CHECK_Q(status, commandQueue, __LINE__);
+  
+    /*
+     * Initialize the dispatch packet.
+     */
+    memset(&aql, 0, sizeof(aql));
+  
+    /*
+     * Setup the dispatch information.
+     */
+    aql.completion_signal = signal;
+    aql.setup = launchDimensions << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
+    aql.workgroup_size_x = workgroup_size[0];
+    aql.workgroup_size_y = workgroup_size[1];
+    aql.workgroup_size_z = workgroup_size[2];
+    aql.grid_size_x = global_size[0];
+    aql.grid_size_y = global_size[1];
+    aql.grid_size_z = global_size[2];
+  
+    // set dispatch fences
+    aql.header = (HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE) |
+                 (1 << HSA_PACKET_HEADER_BARRIER) |
+                 (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
+                 (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
+  
+    // bind kernel code
+    aql.kernel_object = kernel->kernelCodeHandle;
+  
+    // bind kernel arguments
+    //printf("arg_vec size: %d in bytes: %d\n", arg_vec.size(), arg_vec.size());
+
+    if (device->hasHSAKernargRegion()) {
+        hsa_region_t kernarg_region = device->getHSAKernargRegion();
+
+        if (arg_vec.size() > 0) {
+            status = hsa_memory_allocate(kernarg_region, arg_vec.size(),  &kernargMemory);
+            STATUS_CHECK_Q(status, commandQueue, __LINE__);
+
+            status = hsa_memory_assign_agent(kernargMemory, agent, HSA_ACCESS_PERMISSION_RW);
+            STATUS_CHECK_Q(status, commandQueue, __LINE__);
+
+            status = hsa_memory_copy(kernargMemory, arg_vec.data(), arg_vec.size());
+            STATUS_CHECK_Q(status, commandQueue, __LINE__);
+
+            aql.kernarg_address = kernargMemory;
+        } else {
+            aql.kernarg_address = nullptr;
+        }
+    }
+    else {
+        aql.kernarg_address = arg_vec.data();
+        hsa_memory_register(arg_vec.data(), arg_vec.size());
+    }
+
+
+    //for (size_t i = 0; i < arg_vec.size(); ++i) {
+    //  printf("%02X ", *(((uint8_t*)aql.kernarg_address)+i));
+    //}
+    //printf("\n");
+ 
+    // Initialize memory resources needed to execute
+    uint32_t group_segment_size;
+    status = hsa_executable_symbol_get_info(kernel->hsaExecutableSymbol,
+                                            HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE,
+                                            &group_segment_size);
+    STATUS_CHECK_Q(status, commandQueue, __LINE__);
+
+    // add dynamic group segment size
+    group_segment_size += this->dynamicGroupSize;
+    aql.group_segment_size = group_segment_size;
+  
+    uint32_t private_segment_size;
+    status = hsa_executable_symbol_get_info(kernel->hsaExecutableSymbol,
+                                            HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_PRIVATE_SEGMENT_SIZE,
+                                            &private_segment_size);
+    STATUS_CHECK_Q(status, commandQueue, __LINE__);
+    aql.private_segment_size = private_segment_size;
+  
+    // write packet
+    uint32_t queueMask = commandQueue->size - 1;
+    uint64_t index = hsa_queue_load_write_index_relaxed(commandQueue);
+    ((hsa_kernel_dispatch_packet_t*)(commandQueue->base_address))[index & queueMask] = aql;
+    hsa_queue_store_write_index_relaxed(commandQueue, index + 1);
+  
+#if KALMAR_DEBUG
+    std::cerr << "ring door bell to dispatch kernel\n";
+#endif
+  
+    // Ring door bell
+    hsa_signal_store_relaxed(commandQueue->doorbell_signal, index);
+  
+    isDispatched = true;
+
+    return status;
+}
+
+
+
 // wait for the kernel to finish execution
 inline hsa_status_t
 HSADispatch::waitComplete() {
@@ -1302,7 +1362,12 @@ HSADispatch::waitComplete() {
     std::cerr << "complete!\n";
 #endif
 
-    hsa_memory_deregister((void*)aql.kernarg_address, arg_vec.size());
+    if (kernargMemory != nullptr) {
+      status = hsa_memory_free(kernargMemory);
+      assert(status == HSA_STATUS_SUCCESS);
+      kernargMemory = nullptr;
+    }
+    hsa_memory_deregister((void*)arg_vec.data(), arg_vec.size());
 
     // unregister this async operation from HSAQueue
     if (this->hsaQueue != nullptr) {

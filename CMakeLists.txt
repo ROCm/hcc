@@ -25,8 +25,6 @@ set(CMAKE_MACOSX_RPATH 1)
 
 include (EnsureLLVMisPresent)
 include (EnsureCLANGisPresent)
-include (EnsureLIBCXXisPresent)
-include (EnsureLIBCXXRTisPresent)
 include (EnsureHLCisPresent)
 include (EnsureHSAILASMisPresent)
 include (SetupCBE)
@@ -41,10 +39,6 @@ include (SetupGridLaunch)
 
 ensure_llvm_is_present(${PROJECT_SOURCE_DIR} compiler)
 ensure_clang_is_present(${PROJECT_SOURCE_DIR} compiler ${CLANG_URL})
-ensure_libcxx_is_present("${PROJECT_SOURCE_DIR}/libc++" libcxx)
-if (NOT APPLE)
-ensure_libcxxrt_is_present("${PROJECT_SOURCE_DIR}/libc++" libcxxrt)
-endif (NOT APPLE)
 setup_CBackend(${PROJECT_SOURCE_DIR}/compiler/lib/Target CBackend)
 setup_SPIRify(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms SPIRify)
 setup_EraseNonkernel(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms EraseNonkernel)
@@ -232,35 +226,6 @@ MESSAGE("========================================")
 
 
 add_subdirectory(compiler)
-# libc++
-set(CLANG_CC1 "${PROJECT_BINARY_DIR}/compiler/bin/clang++")
-set(LIBCXX_SRC_DIR "${PROJECT_SOURCE_DIR}/libc++")
-set(LIBCXX_BIN_DIR "${PROJECT_BINARY_DIR}/libc++")
-file(MAKE_DIRECTORY ${LIBCXX_BIN_DIR})
-if (APPLE)
-add_custom_target(libc++
-  COMMAND ${CMAKE_COMMAND} ${LIBCXX_SRC_DIR}
-      -DLIBCXX_CXX_ABI="libcxxabi" -DLIBCXX_LIBCXXABI_INCLUDE_PATHS="/usr/include/"
-      -DCMAKE_CXX_COMPILER=${CLANG_CC1}
-      -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
-  COMMAND make -j4 # not portable, but we need it this way
-  WORKING_DIRECTORY ${LIBCXX_BIN_DIR}
-  DEPENDS clang
-)
-else (APPLE)
-# use libcxxrt as ABI instead
-add_custom_target(libc++
-  COMMAND ${CMAKE_COMMAND} ${LIBCXX_SRC_DIR} -DCMAKE_CXX_COMPILER=${CLANG_CC1} -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
-  COMMAND make -j4 # not portable, but we need it this way
-  WORKING_DIRECTORY ${LIBCXX_BIN_DIR}
-  DEPENDS clang
-)
-add_custom_target(
-    libcpprt
-    DEPENDS ${CMAKE_BINARY_DIR}/libc++/libcxxrt/lib/libcxxrt.so
-    )
-endif (APPLE)
-
 add_subdirectory(lib)
 add_subdirectory(utils)
 add_subdirectory(tests)
@@ -319,14 +284,14 @@ install(FILES ${HSAILASM_BIN_DIR}/HSAILAsm/HSAILasm
         COMPONENT HSAILasm)
 
 add_custom_target(world
-    DEPENDS clang libc++ hlc HSAILasm ${DEPS}
+    DEPENDS clang hlc HSAILasm ${DEPS}
 )
 
 else (HAS_HSA)
 
 # do NOT depend on HLC or HSAILasm in case HSA is not present
 add_custom_target(world
-    DEPENDS clang libc++ ${DEPS}
+    DEPENDS clang ${DEPS}
 )
 
 endif (HAS_HSA)
@@ -348,17 +313,11 @@ if(CXXAMP_ENABLE_BOLT)
   # Note that with 'DIRS' suffix is for include/link directory and 'DIR' is for cxxflags/linkflags
   SET( CLAMP_C_COMPILER "${PROJECT_BINARY_DIR}/compiler/bin/clang"  )
   SET( CLAMP_CXX_COMPILER "${PROJECT_BINARY_DIR}/compiler/bin/clang++"  )
-  SET( CLAMP_LIBCXX_INC_DIR "${PROJECT_SOURCE_DIR}/libc++/libcxx/include" )
-  SET( CLAMP_LIBCXX_LIB_DIR "${PROJECT_BINARY_DIR}/libc++/lib" )
-  SET( CLAMP_LIBCXXRT_LIB_DIR "${PROJECT_BINARY_DIR}/libc++/libcxxrt/lib" )
 
-  SET( CLAMP_LIBRARIES mcwamp c++ cxxrt dl )
-  SET( CLAMP_INC_DIRS ${PROJECT_SOURCE_DIR}/include 
-     ${CLAMP_LIBCXX_INC_DIR} )
+  SET( CLAMP_LIBRARIES mcwamp c++ dl )
+  SET( CLAMP_INC_DIRS ${PROJECT_SOURCE_DIR}/include )
 
-  SET( CLAMP_LIB_DIRS ${PROJECT_BINARY_DIR}/build/${CMAKE_BUILD_TYPE}/lib
-     ${CLAMP_LIBCXX_LIB_DIR} 
-     ${CLAMP_LIBCXXRT_LIB_DIR} )
+  SET( CLAMP_LIB_DIRS ${PROJECT_BINARY_DIR}/build/${CMAKE_BUILD_TYPE}/lib )
 
   # This is the only source code folder we can build as a generator
   add_subdirectory( Bolt/superbuild )
@@ -389,7 +348,6 @@ set(CPACK_PACKAGE_VERSION_PATCH ${KALMAR_VERSION_PATCH})
 set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_SYSTEM_NAME})
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "Kalmar: a Heterogeneous C++ to OpenCL/HSA compiler")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Jack Chung <jack@multicorewareinc.com>")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "libcxxamp (>= 0.7.0)")
 set(CPACK_GENERATOR "DEB;TGZ")
 set(CPACK_SOURCE_GENERATOR "TGZ")
 set(CPACK_BINARY_DEB "ON")
@@ -405,7 +363,7 @@ set(CPACK_COMPONENTS_ALL HSAILasm hlc)
 include (CPack)
 MESSAGE("")
 MESSAGE("** For the first time:")
-MESSAGE("   'make world' to build clang, libc++, HLC, HSAILasm and library for testing.")
+MESSAGE("   'make world' to build clang, HLC, HSAILasm and library for testing.")
 MESSAGE("   'make' to build the rest of LLVM tools")
 MESSAGE("   'make docs' to build the HTML API reference")
 MESSAGE("")

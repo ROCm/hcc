@@ -182,7 +182,7 @@ elseif( ( C_COMPILER_NAME STREQUAL "gcc" ) OR ( CMAKE_COMPILER_IS_GNUCXX GREATER
     endif( )
 elseif( C_COMPILER_NAME STREQUAL "clang" )
     message( STATUS "Detected clang compiler." )
-    set( CMAKE_CXX_FLAGS "-std=c++amp ${CMAKE_CXX_FLAGS}" )
+    set( CMAKE_CXX_FLAGS "-std=c++amp -stdlib=libc++ ${CMAKE_CXX_FLAGS}" )
 
     if( Bolt_BUILD64 )
         set( CMAKE_CXX_FLAGS "-m64 ${CMAKE_CXX_FLAGS}" )
@@ -364,7 +364,6 @@ set(CPACK_PACKAGE_VERSION "${Bolt_VERSION_MAJOR}.${Bolt_VERSION_MINOR}.${Bolt_VE
 set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_SYSTEM_NAME})
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "Bolt for Clamp")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Jack Chung <jack@multicorewareinc.com>")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "libcxxamp (>= 0.4.0)")
 set(CPACK_GENERATOR "DEB;TGZ")
 set(CPACK_SOURCE_GENERATOR "TGZ")
 set(CPACK_BINARY_DEB "ON")

@@ -77,6 +77,7 @@ add_subdirectory(hsa)
 add_subdirectory(cpu)
 
 # Build plugins for clang
-if (CXXAMP_ENABLE_BOLT)
-  add_subdirectory(clang-plugins)
-endif (CXXAMP_ENABLE_BOLT)
+# FIXME: codes in this directory is obsolete, need to clean it up
+#if (CXXAMP_ENABLE_BOLT)
+#  add_subdirectory(clang-plugins)
+#endif (CXXAMP_ENABLE_BOLT)
