@@ -398,4 +398,17 @@ KalmarContext *getContext() {
   return static_cast<KalmarContext*>(CLAMP::GetOrInitRuntime()->m_GetContextImpl());
 }
 
+// Kalmar runtime bootstrap logic
+class KalmarBootstrap {
+private:
+  RuntimeImpl* runtime;
+public:
+  KalmarBootstrap() : runtime(nullptr) {
+    runtime = CLAMP::GetOrInitRuntime();
+  }
+};
+
+// this would initialize Kalmar runtime before main() in user program begins
+static KalmarBootstrap boot;
+
 } // namespace Kalmar
