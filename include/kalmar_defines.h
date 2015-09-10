@@ -5,6 +5,7 @@
 #include <cassert>
 #include <chrono>
 #include <cstdlib>
+#include <cstring>
 #include <exception>
 #include <future>
 #include <map>
