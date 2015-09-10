@@ -37,18 +37,23 @@ Build Instruction
 
 Please install the following packges beforehand:
 
-- g++
-- libstdc++-4.8-dev
-- libdwarf-dev
-- libelf-dev
-- libtinfo-dev
-- libc6-dev-i386
-- gcc-multilib
-- llvm
-- llvm-dev
-- llvm-runtime
-- libc++1
-- libc++-dev
+cmake
+git
+subversion
+g++
+libstdc++-4.8-dev
+libdwarf-dev
+libelf-dev
+libtinfo-dev
+libc6-dev-i386
+gcc-multilib
+llvm
+llvm-dev
+llvm-runtime
+libc++1
+libc++-dev
+re2c
+libncurses5-dev
 
 * Prerequisite/OpenCL
 
