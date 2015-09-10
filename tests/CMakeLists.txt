@@ -50,12 +50,12 @@ configure_file(
   ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-assemble @ONLY)
 
 configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/hip-kernel-assemble.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/hip-kernel-assemble @ONLY)
+  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/hc-kernel-assemble.in
+  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/hc-kernel-assemble @ONLY)
 
 configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/hip-host-assemble.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/hip-host-assemble @ONLY)
+  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/hc-host-assemble.in
+  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/hc-host-assemble @ONLY)
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-link.in

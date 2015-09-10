@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# hip-kernel-assemble kernel-bitcode kernel-object
+# hc-kernel-assemble kernel-bitcode kernel-object
 if [ -d @LLVM_TOOLS_DIR@ ]; then
   BINPATH=@LLVM_ROOT@/bin
   CLANG=$BINPATH/clang

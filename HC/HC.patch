@@ -1,2 +1,2 @@
 #/bin/bash
-echo "add_subdirectory(HIP)" >> compiler/lib/Transforms/CMakeLists.txt
+echo "add_subdirectory(HC)" >> compiler/lib/Transforms/CMakeLists.txt

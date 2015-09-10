@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# hip-host-assemble host-bitcode host-object
+# hc-host-assemble host-bitcode host-object
 if [ -d @LLVM_TOOLS_DIR@ ]; then
   BINPATH=@LLVM_ROOT@/bin
   CLANG=$BINPATH/clang
