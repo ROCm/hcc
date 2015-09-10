@@ -1,3 +1,7 @@
+/**
+ * @file numeric
+ * Numeric Parallel algorithms
+ */
 #pragma once
 
 /**
@@ -10,6 +14,7 @@
  * Complexity: O(last - first) applications each of unary_op and binary_op.
  *
  * Notes: transform_reduce does not apply unary_op to init.
+ * @{
  */
 template<typename InputIterator, typename UnaryOperation,
          typename T, typename BinaryOperation,
@@ -55,17 +60,6 @@ T transform_reduce(InputIterator first, InputIterator last,
   return ans;
 }
 
-/**
- *
- * Return: GENERALIZED_SUM(binary_op, init, unary_op(*first), ..., unary_op(*(first + (last - first) - * 1))).
- *
- * Requires: Neither unary_op nor binary_op shall invalidate subranges, or
- * modify elements in the range [first,last).
- *
- * Complexity: O(last - first) applications each of unary_op and binary_op.
- *
- * Notes: transform_reduce does not apply unary_op to init.
- */
 template<typename ExecutionPolicy,
          typename InputIterator, typename UnaryOperation,
          typename T, typename BinaryOperation,
@@ -86,6 +80,7 @@ transform_reduce(ExecutionPolicy&& exec,
     return std::accumulate(first, last, init, new_op);
   }
 }
+/**@}*/
 
 
 // inner_product is basically a transform_reduce (two vectors version)
@@ -113,9 +108,6 @@ T inner_product(ExecutionPolicy&& exec,
                        std::plus<_Tp>(), std::multiplies<_Tp>());
 }
 
-/**
- * Parallel version of std::inner_product in <algorithm>
- */
 template<typename ExecutionPolicy,
          typename InputIt1, typename InputIt2,
          typename T,
@@ -160,3 +152,4 @@ T inner_product(ExecutionPolicy&& exec,
 
   return ans;
 }
+/**@}*/

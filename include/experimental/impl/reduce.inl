@@ -1,3 +1,7 @@
+/**
+ * @file numeric
+ * Numeric Parallel algorithms
+ */
 #pragma once
 
 namespace details {
@@ -69,6 +73,7 @@ T reduce_impl(RandomAccessIterator first, RandomAccessIterator last,
  * Notes: The primary difference between reduce and accumulate is that the
  * behavior of reduce may be non-deterministic for non-associative or
  * non-commutative binary_op.
+ * @{
  */
 template<class InputIterator, class T, class BinaryOperation,
          utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
@@ -79,19 +84,6 @@ T reduce(InputIterator first, InputIterator last,
            typename std::iterator_traits<InputIterator>::iterator_category());
 }
 
-/**
- *
- * Return: GENERALIZED_SUM(binary_op, init, *first, ..., *(first + (last - first) - 1)).
- *
- * Requires: binary_op shall not invalidate iterators or subranges, nor modify
- * elements in the range [first,last).
- *
- * Complexity: O(last - first) applications of binary_op.
- *
- * Notes: The primary difference between reduce and accumulate is that the
- * behavior of reduce may be non-deterministic for non-associative or
- * non-commutative binary_op.
- */
 template<class ExecutionPolicy, class InputIterator, class T, class BinaryOperation,
          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
          utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
@@ -106,9 +98,11 @@ reduce(ExecutionPolicy&& exec,
              std::input_iterator_tag{});
   }
 }
+/**@}*/
 
 /**
  * Effects: Same as reduce(first, last, init, plus<>())
+ * @{
  */
 template<typename InputIterator, typename T,
          utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
@@ -117,9 +111,6 @@ T reduce(InputIterator first, InputIterator last, T init) {
   return reduce(first, last, init, std::plus<Type>());
 }
 
-/**
- * Effects: Same as reduce(first, last, init, plus<>())
- */
 template<typename ExecutionPolicy,
          typename InputIterator, typename T,
          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
@@ -130,9 +121,11 @@ reduce(ExecutionPolicy&& exec,
   typedef typename std::iterator_traits<InputIterator>::value_type Type;
   return reduce(exec, first, last, init, std::plus<Type>());
 }
+/**@}*/
 
 /**
  * Effects: Same as reduce(first, last, typename iterator_traits<InputIterator>::value_type{})
+ * @{
  */
 template<typename InputIterator,
          utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
@@ -142,9 +135,6 @@ reduce(InputIterator first, InputIterator last) {
   return reduce(first, last, Type{});
 }
 
-/**
- * Effects: Same as reduce(first, last, typename iterator_traits<InputIterator>::value_type{})
- */
 template<typename ExecutionPolicy,
          typename InputIterator,
          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
@@ -155,4 +145,5 @@ reduce(ExecutionPolicy&& exec,
   typedef typename std::iterator_traits<InputIterator>::value_type Type;
   return reduce(exec, first, last, Type{}, std::plus<Type>());
 }
+/**@}*/
 

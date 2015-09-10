@@ -460,6 +460,7 @@ adjacent_difference(ExecutionPolicy&& exec,
 
 /**
  * Parallel version of std::lexicographical_compare in <algorithm>
+ * @{
  */
 template<typename ExecutionPolicy, typename InputIt1, typename InputIt2,
          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
@@ -475,9 +476,6 @@ lexicographical_compare(ExecutionPolicy&& exec,
 }
 
 
-/**
- * Parallel version of std::lexicographical_compare in <algorithm>
- */
 template<typename ExecutionPolicy, typename InputIt1, typename InputIt2,
          typename Compare,
          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
@@ -498,10 +496,12 @@ lexicographical_compare(ExecutionPolicy&& exec,
              std::input_iterator_tag{});
   }
 }
+/**@}*/
 
 
 /**
  * Parallel version of std::equal in <algorithm>
+ * @{
  */
 template<typename ExecutionPolicy,
          typename InputIt1, typename InputIt2,
@@ -516,9 +516,6 @@ equal(ExecutionPolicy&& exec,
            std::equal_to<typename std::iterator_traits<InputIt1>::value_type>());
 }
 
-/**
- * Parallel version of std::equal in <algorithm>
- */
 template<typename ExecutionPolicy,
          typename InputIt1, typename InputIt2,
          typename BinaryPredicate,
@@ -538,6 +535,7 @@ equal(ExecutionPolicy&& exec,
              std::input_iterator_tag{});
   }
 }
+/**@}*/
 
 
 /**
@@ -590,6 +588,7 @@ count(ExecutionPolicy&& exec,
 
 /**
  * Parallel version of std::max_element in <algorithm>
+ * @{
  */
 template<typename ExecutionPolicy,
          typename ForwardIt,
@@ -604,9 +603,6 @@ max_element(ExecutionPolicy&& exec,
 }
 
 
-/**
- * Parallel version of std::max_element in <algorithm>
- */
 template<typename ExecutionPolicy,
          typename ForwardIt,
          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
@@ -617,10 +613,12 @@ max_element(ExecutionPolicy&& exec,
   typedef typename std::iterator_traits<ForwardIt>::value_type T;
   return max_element(exec, first, last, std::less<T>());
 }
+/**@}*/
 
 
 /**
  * Parallel version of std::min_element in <algorithm>
+ * @{
  */
 template<typename ExecutionPolicy,
          typename ForwardIt,
@@ -635,9 +633,6 @@ min_element(ExecutionPolicy&& exec,
 }
 
 
-/**
- * Parallel version of std::min_element in <algorithm>
- */
 template<typename ExecutionPolicy,
          typename ForwardIt,
          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
@@ -648,10 +643,12 @@ min_element(ExecutionPolicy&& exec,
   typedef typename std::iterator_traits<ForwardIt>::value_type T;
   return min_element(exec, first, last, std::less<T>());
 }
+/**@}*/
 
 
 /**
  * Parallel version of std::minmax_element in <algorithm>
+ * @{
  */
 template<typename ExecutionPolicy,
          typename ForwardIt,
@@ -673,9 +670,6 @@ minmax_element(ExecutionPolicy&& exec,
 }
 
 
-/**
- * Parallel version of std::minmax_element in <algorithm>
- */
 template<typename ExecutionPolicy,
          typename ForwardIt,
          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
@@ -686,6 +680,7 @@ minmax_element(ExecutionPolicy&& exec,
   typedef typename std::iterator_traits<ForwardIt>::value_type T;
   return minmax_element(exec, first, last, std::less<T>());
 }
+/**@}*/
 
 
 /**

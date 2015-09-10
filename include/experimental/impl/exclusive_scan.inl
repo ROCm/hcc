@@ -1,3 +1,7 @@
+/**
+ * @file numeric
+ * Numeric Parallel algorithms
+ */
 namespace details {
 template<class InputIterator, class OutputIterator,
          class T, class BinaryOperation>
@@ -62,6 +66,7 @@ exclusive_scan_impl(RandomAccessIterator first, RandomAccessIterator last,
  * exclusive_scan excludes the ith input element from the ith sum. If
  * binary_op is not mathematically associative, the behavior of exclusive_scan
  * may be non-deterministic.
+ * @{
  */
 template<class InputIterator, class OutputIterator,
          class T, class BinaryOperation,
@@ -74,22 +79,6 @@ exclusive_scan(InputIterator first, InputIterator last,
            typename std::iterator_traits<InputIterator>::iterator_category());
 }
 
-/**
- * Effects: Assigns through each iterator i in [result,result + (last - first))
- * the value of GENERALIZED_NONCOMMUTATIVE_SUM(binary_op, init, *first, ..., *(first + (i - result) - 1)).
- *
- * Return: The end of the resulting range beginning at result.
- *
- * Requires: binary_op shall not invalidate iterators or subranges, nor modify
- * elements in the ranges [first,last) or [result,result + (last - first)).
- *
- * Complexity: O(last - first) applications of binary_op.
- *
- * Notes: The difference between exclusive_scan and inclusive_scan is that
- * exclusive_scan excludes the ith input element from the ith sum. If
- * binary_op is not mathematically associative, the behavior of exclusive_scan
- * may be non-deterministic.
- */
 template<typename ExecutionPolicy,
          typename InputIterator, typename OutputIterator,
          typename T, typename BinaryOperation,
@@ -107,9 +96,12 @@ exclusive_scan(ExecutionPolicy&& exec,
              std::input_iterator_tag{});
   }
 }
+/**@}*/
+
 
 /**
  * Effects: Same as exclusive_scan(first, last, result, init, plus<>())
+ * @{
  */
 template<typename InputIterator, typename OutputIterator,
          typename T,
@@ -121,9 +113,6 @@ exclusive_scan(InputIterator first, InputIterator last,
   return exclusive_scan(first, last, result, init, std::plus<T>());
 }
 
-/**
- * Effects: Same as exclusive_scan(first, last, result, init, plus<>())
- */
 template<typename ExecutionPolicy,
          typename InputIterator, typename OutputIterator,
          typename T,
@@ -136,5 +125,6 @@ exclusive_scan(ExecutionPolicy&& exec,
                T init) {
   return exclusive_scan(exec, first, last, result, init, std::plus<T>());
 }
+/**@}*/
 
 
