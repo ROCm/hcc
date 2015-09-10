@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstring>
 #include <kalmar_defines.h>
 
 namespace Kalmar {
