@@ -256,6 +256,7 @@ void updateBackGEP (GetElementPtrInst * GEP, Type* expected,
                                  ptrExpected->getAddressSpace());
           Instruction * ptrProducer =
                 dyn_cast<Instruction>(GEP->getPointerOperand());
+          // sometimes the pointer operand is an argument and does not need update
           if (ptrProducer)
               BackwardUpdate::setExpectedType (ptrProducer,
                                              newUpstreamType, updater);
@@ -269,10 +270,9 @@ void updateBackLoad (LoadInst * L, Type * expected,
 {
         Value * ptrOperand = L->getPointerOperand();
         Instruction * ptrSource = dyn_cast<Instruction>(ptrOperand);
-        if (!ptrSource) return;
 
-        assert(ptrSource
-               && "Was expecting an instruction for the source operand");
+        // sometimes the pointer operand is an argument and does not need further processing
+        if (!ptrSource) return;
 
         PointerType * sourceType =
                 dyn_cast<PointerType> (ptrOperand->getType());
@@ -1178,6 +1178,8 @@ static bool usedInTheFunc(const User *U, const Function* F)
   return false;
 }
 
+// Tests if address of G is copied into global pointers, which are propageted
+// through arguments of F.
 bool isAddressCopiedToHost(const GlobalVariable &G, const Function &F) {
     std::vector<const User*> pending;
     std::set<const Value*> all_global_ptrs;
@@ -1249,9 +1251,14 @@ bool isAddressCopiedToHost(const GlobalVariable &G, const Function &F) {
     return false;
 }
 
+// Assign addr_space to global variables.
+//
+// Assign address space to global variables, and make one copy for each user function.
+// Processed global variable could be in global, local or constant address space.
+//
 // tile_static are declared as static variables in section("clamp_opencl_local")
 // for each tile_static, make a modified clone with address space 3 and update users
-void promoteTileStatic(Function *Func, InstUpdateWorkList * updateNeeded)
+void promoteGlobalVars(Function *Func, InstUpdateWorkList * updateNeeded)
 {
     Module *M = Func->getParent();
     Module::GlobalListType &globals = M->getGlobalList();
@@ -1284,6 +1291,8 @@ void promoteTileStatic(Function *Func, InstUpdateWorkList * updateNeeded)
             continue;
         }
 
+        // If the address of this global variable is available from host, it
+        // must stay in global address space.
         if (isAddressCopiedToHost(*I, *Func))
             the_space = GlobalAddressSpace;
         DEBUG(llvm::errs() << "Promoting variable: " << *I << "\n";
@@ -1331,12 +1340,11 @@ void promoteTileStatic(Function *Func, InstUpdateWorkList * updateNeeded)
             } else {
                 new_GV->setName(I->getName());
             }
-            if (new_GV->getName().find('.') != StringRef::npos) {
-                // HSAIL does not accept dot in identifier
+            if (new_GV->getName().find('.') == 0) {
+                // HSAIL does not accept dot at the front of identifier
                 // (clang generates dot names for string literals)
                 std::string tmp = new_GV->getName();
-                for (char &c : tmp)
-                    if (c == '.') c = '_';
+                tmp[0] = 'x';
                 new_GV->setName(tmp);
             }
             std::pair<Uses::iterator, Uses::iterator> usesOfSameFunction;
@@ -1586,7 +1594,7 @@ Function * createPromotedFunctionToType ( Function * F, FunctionType * promoteTy
         InstUpdateWorkList workList;
 //        promoteAllocas(newFunction, workList);
 //        promoteBitcasts(newFunction, workList);
-        promoteTileStatic(newFunction, &workList);
+        promoteGlobalVars(newFunction, &workList);
         updateArgUsers (newFunction, &workList);
         updateOperandType(F, newFunction, promoteType, &workList);
 

@@ -29,7 +29,7 @@ int main() {
       hsa_printf(q, s1, "work item", idx[0]);
     } else if (idx[0] == 15) {
       hsa_printf(q, s1, "workitem", idx[0]);
-      hsa_printf(q, s6, s2, idx[0]);
+      hsa_printf(q, "Hello again from %s: %d\n", "thread", idx[0]);
     }
   });
 
