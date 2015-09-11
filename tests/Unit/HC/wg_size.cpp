@@ -1,15 +1,15 @@
 // XFAIL: Linux
-// RUN: %cxxamp -Xclang -fhsa-ext %s -o %t.out && %t.out
+// RUN: %hc %s -o %t.out && %t.out
 
-#include <amp.h>
+#include <hc.hpp>
 
 #include <iostream>
 
-using namespace concurrency;
+using namespace hc;
 
 #define MAXSIZE (64) 
 
-// simple test of c++AMP to discover GPU workgroup sizes
+// simple test of HC to discover GPU workgroup sizes
 // 3D version
 
 //think of M as number of rows, N and number of columns, like fortran
@@ -17,14 +17,10 @@ template<int TM,int TN, int TL>
 void at(int *di1,int *di2,int *di3,int *di4,int *di5,int *di6,int nx,int ny,int nz)
 {
       extent<3> e(nx,ny,nz);
-//total number of threads in a tile can't exceed 1024
-// up to 1,32,32 supported
-//max local x extent is 2 for 3D case
-//max local y extent is 32
-//max local z extent is 32
-      parallel_for_each(e.tile<TM,TN,TL>(),
+      //total number of threads in a tile can't exceed 2048
+      completion_future fut = parallel_for_each(e.tile(TM,TN,TL),
       [=]
-      (tiled_index<TM,TN,TL> idx) restrict(amp)
+      (tiled_index<3>& idx) restrict(amp)
       {
       int lid0 = idx.local[0];
       int lid1 = idx.local[1];
@@ -41,6 +37,7 @@ void at(int *di1,int *di2,int *di3,int *di4,int *di5,int *di6,int nx,int ny,int 
          di5[gidx] = lid1;
          di6[gidx] = lid2;
       });
+      fut.wait();
 }
 #define MS  MAXSIZE
 #define SQ  MAXSIZE*MAXSIZE
@@ -107,10 +104,10 @@ bool test() {
 int main() {
   bool ret = true;
 
-  ret &= test<4, 8, 8, 256, 256, 256, 256>();   // no truncation would take place
-  ret &= test<8, 8, 8, 256, 256, 256, 256>();   // will be truncated to 4, 8, 8
-  ret &= test<64, 16, 1, 256, 256, 256, 256>(); // will be truncated to 32, 8, 1
-  ret &= test<64, 4, 4, 256, 256, 256, 256>();  // will be truncated to 32, 2, 4
+  ret &= test<4, 8, 8, 2048, 2048, 2048, 2048>();   // no truncation would take place
+  ret &= test<16, 16, 16, 2048, 2048, 2048, 2048>();   // will be truncated to 8, 16, 16 
+  ret &= test<64, 16, 4, 2048, 2048, 2048, 2048>(); // will be truncated to 32, 16, 4 
+  ret &= test<64, 64, 64, 2048, 2048, 2048, 2048>();  // will be truncated to 16, 16, 8 
 
   return !(ret == true);
 }

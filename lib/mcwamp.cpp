@@ -44,6 +44,12 @@ extern "C" char * hsa_kernel_end[] asm ("_binary_kernel_brig_end") __attribute__
 extern "C" char * hsa_offline_finalized_kernel_source[] asm ("_binary_kernel_isa_start") __attribute__((weak));
 extern "C" char * hsa_offline_finalized_kernel_end[] asm ("_binary_kernel_isa_end") __attribute__((weak));
 
+// tame TLS objects
+extern "C" int __cxa_thread_atexit(void (*func)(), void *obj,
+                                   void *dso_symbol) {
+  int __cxa_thread_atexit_impl(void (*)(), void *, void *);
+  return __cxa_thread_atexit_impl(func, obj, dso_symbol);
+}
 
 // interface of C++AMP runtime implementation
 struct RuntimeImpl {

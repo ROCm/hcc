@@ -2,11 +2,6 @@ config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
 config.project_src_dir = "@CPPAMP_SOURCE_DIR@"
 config.executable_output_path = "@EXECUTABLE_OUTPUT_PATH@"
 
-# libcxx
-config.libcxx_src_dir = "@LIBCXX_SRC_DIR@"
-config.libcxx_lib_dir = "@LIBCXX_LIB_DIR@"
-config.libcxxrt_lib_dir = "@LIBCXXRT_LIB_DIR@"
-
 # gtest
 config.gtest_src_dir = "@GTEST_SRC_DIR@"
 config.gtest_lib_dir = "@GTEST_LIB_DIR@"

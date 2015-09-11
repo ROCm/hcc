@@ -1,5 +1,5 @@
 // XFAIL: Linux
-// RUN: %cxxamp -Xclang -fhsa-ext %s -o %t.out && %t.out
+// RUN: %hc %s -o %t.out && %t.out
 
 #include <amp.h>
 
@@ -14,9 +14,7 @@ class prog {
   int (&input)[SIZE];
 
 public:
-  prog(int (&t)[SIZE]) : input(t) {
-    run();
-  }
+  prog(int (&t)[SIZE]) : input(t) {}
 
   void operator() (index<1>& idx) restrict(amp) {
     input[idx[0]] = idx[0];
@@ -45,8 +43,11 @@ int main() {
   // prepare test data
   int input[SIZE] { 0 };
 
-  // launch kernel
+  // create functor
   prog p(input);
+
+  // launch kernel
+  p.run();
 
   // check result
   ret &= p.test();
