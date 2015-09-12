@@ -41,8 +41,29 @@ struct rw_info;
 class KalmarAsyncOp {
 public:
   virtual ~KalmarAsyncOp() {} 
-  virtual std::shared_future<void>* getFuture() { return nullptr; };
-  virtual void* getNativeHandle() { return nullptr;};
+  virtual std::shared_future<void>* getFuture() { return nullptr; }
+  virtual void* getNativeHandle() { return nullptr;}
+
+  /**
+   * Get the timestamp when the asynchronous operation begins.
+   *
+   * @return An implementaion-defined timestamp.
+   */
+  virtual uint64_t getBeginTimestamp() { return 0L; }
+
+  /**
+   * Get the timestamp when the asynchronous operation completes.
+   *
+   * @return An implementation-defined timestamp.
+   */
+  virtual uint64_t getEndTimestamp() { return 0L; }
+
+  /**
+   * Get the frequency of timestamp.
+   *
+   * @return An implementation-defined frequency for the asynchronous operation.
+   */
+  virtual uint64_t getTimestampFrequency() { return 0L; }
 };
 
 /// KalmarQueue
@@ -102,23 +123,24 @@ public:
   /// get underlying native queue handle
   virtual void* getHSAQueue() { return nullptr; }
 
+  /// get underlying native agent handle
+  virtual void* getHSAAgent() { return nullptr; }
+
+  /// get AM region handle
+  virtual void* getHSAAMRegion() { return nullptr; }
+
+  /// get kernarg region handle
+  virtual void* getHSAKernargRegion() { return nullptr; }
+
   /// check if the queue is an HSA queue
   virtual bool hasHSAInterOp() { return false; }
 
   /// enqueue marker
   virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarker() { return nullptr; }
 
-  /// set AM index
-  virtual void setAMIndex(am_accelerator_view_t av_index) { am_index = av_index; }
-
-  /// get AM index
-  virtual am_accelerator_view_t getAMIndex() { return am_index; }
-
 private:
   KalmarDevice* pDev;
   queuing_mode mode;
-
-    am_accelerator_view_t am_index;
 };
 
 /// KalmarDevice
@@ -128,12 +150,28 @@ class KalmarDevice
 {
 private:
     access_type cpu_type;
+
+#if !TLS_QUEUE
     /// default KalmarQueue
     std::shared_ptr<KalmarQueue> def;
     /// make sure KalamrQueue is created only once
     std::once_flag flag;
+#else
+    /// default KalmarQueue for each calling thread
+    std::map< std::thread::id, std::shared_ptr<KalmarQueue> > tlsDefaultQueueMap;
+    /// mutex for tlsDefaultQueueMap
+    std::mutex tlsDefaultQueueMap_mutex;
+#endif
+
 protected:
-    KalmarDevice(access_type type = access_type_read_write) : cpu_type(type), def(), flag() {}
+    KalmarDevice(access_type type = access_type_read_write)
+        : cpu_type(type),
+#if !TLS_QUEUE
+          def(), flag()
+#else
+          tlsDefaultQueueMap(), tlsDefaultQueueMap_mutex()
+#endif
+          {}
 public:
     access_type get_access() const { return cpu_type; }
     void set_access(access_type type) { cpu_type = type; }
@@ -167,8 +205,21 @@ public:
     virtual ~KalmarDevice() {}
 
     std::shared_ptr<KalmarQueue> get_default_queue() {
-        std::call_once(flag, [&]() { def = createQueue(); });
+#if !TLS_QUEUE
+        std::call_once(flag, [&]() { 
+            def = createQueue();
+        });
         return def;
+#else
+        std::thread::id tid = std::this_thread::get_id();
+        tlsDefaultQueueMap_mutex.lock();
+        if (tlsDefaultQueueMap.find(tid) == tlsDefaultQueueMap.end()) {
+            tlsDefaultQueueMap[tid] = createQueue();
+        }
+        std::shared_ptr<KalmarQueue> result = tlsDefaultQueueMap[tid];
+        tlsDefaultQueueMap_mutex.unlock();
+        return result;
+#endif
     }
 
     /// get max tile static area size
@@ -283,6 +334,9 @@ public:
         else
             return get_default_dev();
     }
+
+    /// get system ticks
+    virtual uint64_t getSystemTicks() { return 0L; };
 };
 
 KalmarContext *getContext();

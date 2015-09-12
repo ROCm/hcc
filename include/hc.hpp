@@ -23,8 +23,6 @@
 
 #include <hsa_atomic.h>
 
-#include <am.h>
-
 /**
  * @namespace hc
  * Heterogeneous  C++ (HC) namespace
@@ -61,6 +59,20 @@ using index = Kalmar::index<N>;
 using runtime_exception = Kalmar::runtime_exception;
 using invalid_compute_domain = Kalmar::invalid_compute_domain;
 using accelerator_view_removed = Kalmar::accelerator_view_removed;
+
+// ------------------------------------------------------------------------
+// global functions
+// ------------------------------------------------------------------------
+
+/**
+ * Get the current tick count for the GPU platform.
+ *
+ * @return An implementation-defined tick count
+ */
+inline uint64_t get_system_ticks() {
+    return Kalmar::getContext()->getSystemTicks();
+}
+
 
 // ------------------------------------------------------------------------
 // accelerator_view
@@ -227,8 +239,11 @@ public:
     /**
      * Returns the number of pending asynchronous operations on this
      * accelerator view.
+     *
+     * The number returned would be immediately obsolete. This functions shall
+     * only be used for testing and debugging purpose.
      */
-    int getPendingAsyncOps() {
+    int get_pending_async_ops() {
         return pQueue->getPendingAsyncOps();
     }
 
@@ -238,38 +253,47 @@ public:
      * @return An opaque handle of the underlying HSA queue, if the accelerator
      *         view is based on HSA.  NULL if otherwise.
      */
-    void* getHSAQueue() {
+    void* get_hsa_queue() {
         return pQueue->getHSAQueue();
+    }
+
+    /**
+     * Returns an opaque handle which points to the underlying HSA agent.
+     *
+     * @return An opaque handle of the underlying HSA agent, if the accelerator
+     *         view is based on HSA.  NULL otherwise.
+     */
+    void* get_hsa_agent() {
+        return pQueue->getHSAAgent();
+    }
+
+    /**
+     * Returns an opaque handle which points to the AM region on the HSA agent.
+     *
+     * @return An opaque handle of the region, if the accelerator view is based
+     *         on HSA.  NULL otherwise.
+     */
+    void* get_hsa_am_region() {
+        return pQueue->getHSAAMRegion();
+    }
+
+    /**
+     * Returns an opaque handle which points to the Kernarg region on the HSA
+     * agent.
+     *
+     * @return An opaque handle of the region, if the accelerator view is based
+     *         on HSA.  NULL otherwise.
+     */
+    void* get_hsa_kernarg_region() {
+        return pQueue->getHSAKernargRegion();
     }
 
     /**
      * Returns if the accelerator view is based on HSA.
      */
-    bool hasHSAInterOp() {
+    bool get_hsa_interop() {
         return pQueue->hasHSAInterOp();
     }
-
-    /*
-     * Set AM index.
-     *
-     * @param[in] av_index index given by AM API for this accelerator_view
-     *                     instance.
-     */
-    void set_av_index(am_accelerator_view_t av_index) {
-        pQueue->setAMIndex(av_index);
-    }
-
-    /**
-     * Returns AM index.
-     */
-    am_accelerator_view_t get_av_index() {
-        return pQueue->getAMIndex();
-    }
-
-    /**
-     * Returns AM index via conversion.
-     */
-    operator am_accelerator_view_t() const { return pQueue->getAMIndex(); }
 
 private:
     accelerator_view(std::shared_ptr<Kalmar::KalmarQueue> pQueue) : pQueue(pQueue) {}
@@ -825,6 +849,48 @@ public:
         return __asyncOp->getNativeHandle();
       } else {
         return nullptr;
+      }
+    }
+
+    /**
+     * Get the tick number when the underlying asynchronous operation begins.
+     *
+     * @return An implementation-defined tick number in case the instance is
+     *         created by a kernel dispatch or a barrier packet. 0 otherwise.
+     */
+    uint64_t get_begin_tick() {
+      if (__asyncOp != nullptr) {
+        return __asyncOp->getBeginTimestamp();
+      } else {
+        return 0L;
+      }
+    }
+
+    /**
+     * Get the tick number when the underlying asynchronous operation ends.
+     *
+     * @return An implementation-defined tick number in case the instance is
+     *         created by a kernel dispatch or a barrier packet. 0 otherwise.
+     */
+    uint64_t get_end_tick() {
+      if (__asyncOp != nullptr) {
+        return __asyncOp->getEndTimestamp();
+      } else {
+        return 0L;
+      }
+    }
+
+    /**
+     * Get the frequency of ticks per second for the underlying asynchrnous operation.
+     *
+     * @return An implementation-defined frequency in Hz in case the instance is
+     *         created by a kernel dispatch or a barrier packet. 0 otherwise.
+     */
+    uint64_t get_tick_frequency() {
+      if (__asyncOp != nullptr) {
+        return __asyncOp->getTimestampFrequency();
+      } else {
+        return 0L;
       }
     }
 

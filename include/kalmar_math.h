@@ -430,6 +430,15 @@ namespace fast_math {
     #endif
   }
 
+  inline float host_max(float x, float y) restrict(cpu) { return ::fmaxf(x, y); }
+  inline float max(float x, float y) restrict(amp, cpu) {
+    #if __KALMAR_ACCELERATOR__ == 1
+      return opencl_fmax(x, y);
+    #else
+      return host_max(x, y);
+    #endif
+  }
+
   inline float host_fminf(float x, float y) restrict(cpu) { return ::fminf(x, y); }
   inline float fminf(float x, float y) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
@@ -445,6 +454,15 @@ namespace fast_math {
       return opencl_fmin(x, y);
     #else
       return host_fmin(x, y);
+    #endif
+  }
+
+  inline float host_min(float x, float y) restrict(cpu) { return ::fminf(x, y); }
+  inline float min(float x, float y) restrict(amp, cpu) {
+    #if __KALMAR_ACCELERATOR__ == 1
+      return opencl_fmin(x, y);
+    #else
+      return host_min(x, y);
     #endif
   }
 
@@ -1466,6 +1484,24 @@ namespace fast_math {
     #endif
   }
 
+  inline float host_max(float x, float y) restrict(cpu) { return ::fmaxf(x, y); }
+  inline float max(float x, float y) restrict(amp, cpu) {
+    #if __KALMAR_ACCELERATOR__ == 1
+      return opencl_fmax(x, y);
+    #else
+      return host_max(x, y);
+    #endif
+  }
+
+  inline double host_max(double x, double y) restrict(cpu) { return ::fmax(x, y); }
+  inline double max(double x, double y) restrict(amp, cpu) {
+    #if __KALMAR_ACCELERATOR__ == 1
+      return opencl_fmax_double(x, y);
+    #else
+      return host_max(x, y);
+    #endif
+  }
+
   inline float host_fminf(float x, float y) restrict(cpu) { return ::fminf(x, y); }
   inline float fminf(float x, float y) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
@@ -1490,6 +1526,24 @@ namespace fast_math {
       return opencl_fmin_double(x, y);
     #else
       return host_fmin(x, y);
+    #endif
+  }
+
+  inline float host_min(float x, float y) restrict(cpu) { return ::fminf(x, y); }
+  inline float min(float x, float y) restrict(amp, cpu) {
+    #if __KALMAR_ACCELERATOR__ == 1
+      return opencl_fmin(x, y);
+    #else
+      return host_min(x, y);
+    #endif
+  }
+
+  inline double host_min(double x, double y) restrict(cpu) { return ::fmin(x, y); }
+  inline double min(double x, double y) restrict(amp, cpu) {
+    #if __KALMAR_ACCELERATOR__ == 1
+      return opencl_fmin_double(x, y);
+    #else
+      return host_min(x, y);
     #endif
   }
 

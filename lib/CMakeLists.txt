@@ -1,7 +1,7 @@
 ####################
 # C++AMP runtime (mcwamp)
 ####################
-add_mcwamp_library(mcwamp mcwamp.cpp am_cpu.cpp)
+add_mcwamp_library(mcwamp mcwamp.cpp)
 add_mcwamp_library(mcwamp_atomic mcwamp_atomic.cpp)
 
 ####################
@@ -23,7 +23,7 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-device
     ${CMAKE_CURRENT_BINARY_DIR}/clamp-embed
     ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-assemble
     ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-link
-    ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-preprocess
+#    ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-preprocess
     DESTINATION bin)
 
 ####################
@@ -77,6 +77,7 @@ add_subdirectory(hsa)
 add_subdirectory(cpu)
 
 # Build plugins for clang
-if (CXXAMP_ENABLE_BOLT)
-  add_subdirectory(clang-plugins)
-endif (CXXAMP_ENABLE_BOLT)
+# FIXME: codes in this directory is obsolete, need to clean it up
+#if (CXXAMP_ENABLE_BOLT)
+#  add_subdirectory(clang-plugins)
+#endif (CXXAMP_ENABLE_BOLT)

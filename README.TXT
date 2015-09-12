@@ -1,8 +1,8 @@
-C++AMP Compiler Implementation for OpenCL/HSA
+Kalmar : An open source C++ compiler for heterogeneous devices
 
 Introduction
 --------------------------------------------------------------------------------
-This repository hosts C++AMP compiler implementation project. The goal is to
+This repository hosts Kalmar compiler implementation project. The goal is to
 implement a compiler that takes a program conforming C++AMP standard and
 transforms it into the following targets:
 
@@ -18,10 +18,10 @@ HSA-specific features are also gradually being added to the project.  For more H
 Repository Structure
 -------------------------------------------------------------------------------
 The current repository is composed of as following:
-1. cppamp-driver
-  - This repository. It contains all the C++AMP related implementations, tests,
+1. cppamp-driver-ng-35
+  - This repository. It contains all the related implementations, tests,
     scripts and build system.
-2. cppamp
+2. cppamp-ng-35
   - Modified Clang. It will be downloaded as part of the build procedure which
     will be described later. This repository is basically a clone of Clang
     repository. Default branch will be a placeholder for the cloned Clang
@@ -31,8 +31,30 @@ The current repository is composed of as following:
     Developers can also create their own branches for their own development.
 
 
-Build Instruction for HSA
+Build Instruction
 --------------------------------------------------------------------------------
+* Prerequisite
+
+Please install the following packges beforehand:
+
+cmake
+git
+subversion
+g++
+libstdc++-4.8-dev
+libdwarf-dev
+libelf-dev
+libtinfo-dev
+libc6-dev-i386
+gcc-multilib
+llvm
+llvm-dev
+llvm-runtime
+libc++1
+libc++-dev
+re2c
+libncurses5-dev
+
 * Prerequisite/OpenCL
 
 1. Linux distribution: Ubuntu 14.04 or higher
@@ -65,12 +87,7 @@ Build Instruction for HSA
 3. HSA Runtime:
   - https://github.com/HSAFoundation/HSA-Runtime-AMD
 
-4. HSAIL Compiler:
-   There are 2 versions available: HSAIL-HLC-Stable and HSAIL-HLC-Development.  It is suggested to use Stable version at this moment.  Debian packages are built to only support HSAIL-HLC-Stable.
-  - Stable: https://github.com/HSAFoundation/HSAIL-HLC-Stable
-  - Development: https://github.com/HSAFoundation/HSAIL-HLC-Development
-
-5. (optional) HSA HOF:
+4. (optional) HSA HOF:
    This is an optional tool to help you finalize HSA kernels at compile-time
    rather than runtime.  It can be found at:
    - https://github.com/HSAFoundation/HSA-HOF-AMD
@@ -119,10 +136,11 @@ are:
       -DHSA_HEADER_DIR=/opt/hsa/include \
       -DHSA_LIBRARY_DIR=/opt/hsa/lib \
       -DHSA_KMT_LIBRARY_DIR=/opt/hsa/lib \
-      -DHSAIL_COMPILER_DIR=/opt/amd/bin \
       -DHSA_HOF_DIR=/opt/amd/bin \
       -DCMAKE_BUILD_TYPE=Release \
       -DCXXAMP_ENABLE_BOLT=OFF
+      -DHSAIL_COMPILER_DIR=/opt/amd/bin \
+      -DHSAIL_ASSEMBLER_DIR=/opt/amd/bin \
 
    - CLANG_URL : URL of C++AMP clang implementation
 
@@ -134,13 +152,19 @@ are:
 
    - HSA_KMT_LIBRARY_DIR : HSA kernel library path (default is /opt/hsa/lib )
 
-   - HSAIL_COMPILER_DIR : HSAIL compiler binary path (default is /opt/amd/bin )
-
    - HSA_HOF_DIR : HSA offline finalizer binary path (default is /opt/amd/bin )
 
    - CMAKE_BUILD_TYPE : Release or Debug (default is Release )
 
    - CXXAMP_ENABLE_BOLT : ON / OFF AMD Bolt API (default is OFF )
+
+   - HSAIL_COMPILER_DIR : Place where HSAIL compiler (HLC) source code is placed.
+                          By default Kalmar compiler will checkout a fresh copy from
+                          github if this variable is not set.
+
+   - HSAIL_ASSEMBLER_DIR : Place where HSAIL-Tools (HSAILasm) source code is placed.
+                          By default Kalmar compiler will checkout a fresh copy from
+                          github if this variable is not set.
 
 4. Build the whole system. This will build clang and other libraries
    that require one time build.
@@ -172,15 +196,11 @@ locatable at runtime:
 
 # If you install deb files:
 # C++AMP runtime libraries
-# libc++ & C++AMP runtime implementations
-/opt/clamp/lib
+# libc++ & Kalmar runtime implementations
+/opt/kalmar/lib
 
 # If you build from source:
-# C++AMP runtime libraries
-# libc++
-(path_of_your_build_directory)/libc++/libcxx/lib
-(path_of_your_build_directory)/libc++/libcxxrt/lib
-# C++AMP runtime implementations
+# Kalmar runtime implementations
 (path_of_your_build_directory)/build/Release/lib
 
 Remember to use: sudo ldconfig -v to reload ld.so cache.
@@ -201,15 +221,13 @@ C++AMP programs will automatically pick C++AMP runtime to use in the following
 precedence:
 
 - HSA
-- OpenCL 1.2
-- OpenCL 1.1
+- OpenCL
 
 Set CLAMP_RUNTIME to different values to force pick different C++AMP runtime.
 Available options are:
 
 - HSA : HSA
-- CL12 : OpenCL 1.2 (with zero-copy performance optimizations)
-- CL11 : OpenCL 1.1
+- CL : OpenCL
 
 3. CLAMP_NOTILECHECK
 
@@ -229,82 +247,24 @@ How to make your repository synchronized by pulling from main repository
 -------------------------------------------------------------------------------
 Synchronization can be done via scripts:
 
-  # cppamp/src/scripts/pull_from_trunk.py
+  # kalmar/src/scripts/pull_from_trunk.py
 
-It will pull from both cppamp-driver and cppamp. Note that you still need to
+It will pull from both cppamp-driver-ng-35 and cppamp-ng-35. Note that you still need to
 update repositories. Again, when build system does not seem to work, you will
 need to redo step No. 6 from the build instruction.
 
 
 Directory Structure
 -------------------------------------------------------------------------------
-$cppamp                // top-level directory
+$kalmar                // top-level directory
   build/               // all outputs
   src/                 // llvm
     compiler/
       tools/
         clang/         // modified Clang frontend
-  libcxx/              // libc++ to help compile
   tests/               // tests including unit tests, TDD issues
-  include/             // C++AMP related headers
-  lib/                 // C++AMP related implementions
-
-
-Synchronization with Clang repository
--------------------------------------------------------------------------------
-C++AMP is an extension to C++11. Since support for C++11 is still very new and
-mostly in beta status from Clang, we will need to be periodically synchronized
-to the Clang development. For this, we create a repository which is a mirror of
-Clang repository, but in Mercurial format. Then, by pulling changes from the
-repository into the localized development Clang repository, synchronization can
-be done.
-
-We first need to be able to use hgsubversion, a tool converting a Subversion
-repository into Mercurial repository. Note that the selection of hgsubversion
-is not mendatory, but is one of such tools that we find useful so far. If you
-know better tool for this work, you may use that as well. Here goes procedure
-to make hgsubversion available:
-
-  1. Assuming Ubuntu Linux, we will need a package installed.
-    # apt-get install python-subversion
-
-  2. Download hgsubversion package.
-    # hg clone http://bitbucket.org/durin42/hgsubversion hgsubversion
-
-  3. Edit ~/.hgrc to use the package which is an extension to Mercurial:
-
-    [extensions]
-    hgsubversion = <the location where you downloaded hgsubversion>/hgsubversion
-
-    For instance, if you downloaded hgsubversion at /opt/hgsubversion, then
-
-    [extensions]
-    hgsubversion = /opt/hgsubversion/hgsubversion
-
-  4. Make sure you correctly install everything by:
-    # hg help subversion
-.
-
-Then, we need to create a Clang repository in Mercurial format using the tool
-we just installed:
-
-  # cd cppamp     <- your top level development directory
-  # hg clone http://llvm.org/svn/llvm-project/cfe/trunk clangsvn
-
-. Note that this is required for the first time and later you can just reuse it
-with hg pull/update command:
-
-  # cd clangsvn
-  # hg pull
-  # hg update
-
-. Now, you can synchronize by pulling changes from the repository:
-
-  # cd cppamp/src/compiler/tools/clang
-  # hg pull ../../../../clangsvn
-  # hg merge -r <the most recent changeset number from clangsvn>
-
-. Note that you will need to push to make the change visible to other people.
+  include/             // Kalmar related headers
+  lib/                 // Kalmar related implementions
 
 
 Test Driven Development

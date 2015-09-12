@@ -5,23 +5,44 @@
 
 #include <iostream>
 
-// test accelerator_view::set_av_index() and
-//      accelerator_view::get_av_index()
+// a test which checks accelerator_view::get_hsa_am_region()
+// a test which checks accelerator_view::get_hsa_kernarg_region()
 bool test() {
 
   hc::accelerator acc;
   hc::accelerator_view av = acc.get_default_view();
+  hc::accelerator_view av2 = acc.create_view();
 
   bool ret = true;
 
-  // test use set_av_index
-  av.set_av_index(999);
+  // check if the queue is HSA
+  ret &= av.get_hsa_interop();
 
-  // test use get_av_index;
-  ret &= (av.get_av_index() == 999);
+  std::cout << ret << "\n";
 
-  // test cast operator
-  ret &= (am_accelerator_view_t(av) == 999);
+  // checks if we can get AM region
+  void* am_region = av.get_hsa_am_region();
+  ret &= (am_region != nullptr);
+
+  void* am_region2 = av2.get_hsa_am_region();
+  ret &= (am_region2 != nullptr);
+
+  // am_region and am_region2 should point to the same agent
+  ret &= (am_region == am_region2);
+
+  std::cout << ret << "\n";
+
+  // checks if we can get Kernarg region
+  void* kernarg_region = av.get_hsa_kernarg_region();
+  ret &= (kernarg_region != nullptr);
+
+  void* kernarg_region2 = av2.get_hsa_kernarg_region();
+  ret &= (kernarg_region2 != nullptr);
+
+  // kernarg_region and kernarg_region2 should point to the same agent
+  ret &= (kernarg_region == kernarg_region2);
+
+  std::cout << ret << "\n";
 
   return ret;
 }

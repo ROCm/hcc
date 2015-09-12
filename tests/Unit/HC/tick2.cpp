@@ -5,7 +5,7 @@
 
 #include <iostream>
 
-// a test which checks if the queue is an HSA queue
+// a test which checks if hc::get_system_ticks() works
 bool test() {
 
   hc::accelerator acc;
@@ -18,9 +18,16 @@ bool test() {
 
   std::cout << ret << "\n";
 
-  // checks if we can get underlying native HSA queue
-  void* native_queue = av.get_hsa_queue();
-  ret &= (native_queue != nullptr);
+  // use get_system_ticks()
+  uint64_t tick1 = hc::get_system_ticks();
+
+  // sleep for 1 second
+  std::this_thread::sleep_for(std::chrono::seconds(1));
+
+  // use get_system_ticks()
+  uint64_t tick2 = hc::get_system_ticks();
+
+  ret &= (tick2 > tick1);
 
   std::cout << ret << "\n";
 

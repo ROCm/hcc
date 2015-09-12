@@ -73,7 +73,7 @@ bool test1D() {
 
   // now there must be 2 pending async operations for the accelerator_view
   // because pfe1 and pfe2 are independent
-  ret &= (hc::accelerator().get_default_view().getPendingAsyncOps() == 2);
+  ret &= (hc::accelerator().get_default_view().get_pending_async_ops() == 2);
 
 #if TEST_DEBUG
   std::cout << "launch pfe3\n";
@@ -93,7 +93,7 @@ bool test1D() {
 
   // now there must be 1 pending async operations for the accelerator_view
   // pfe1 and pfe2 must be completed by now
-  ret &= (hc::accelerator().get_default_view().getPendingAsyncOps() == 1);
+  ret &= (hc::accelerator().get_default_view().get_pending_async_ops() == 1);
 
   // for this test case we deliberately NOT wait on kernels
   // we want to check when array_view instances go to destruction
@@ -108,15 +108,15 @@ int main() {
   hc::accelerator_view av = hc::accelerator().get_default_view();
 
   ret &= test1D<32, 16>();
-  ret &= (av.getPendingAsyncOps() == 0);
+  ret &= (av.get_pending_async_ops() == 0);
   ret &= test1D<64, 8>();
-  ret &= (av.getPendingAsyncOps() == 0);
+  ret &= (av.get_pending_async_ops() == 0);
   ret &= test1D<128, 32>();
-  ret &= (av.getPendingAsyncOps() == 0);
+  ret &= (av.get_pending_async_ops() == 0);
   ret &= test1D<256, 64>();
-  ret &= (av.getPendingAsyncOps() == 0);
+  ret &= (av.get_pending_async_ops() == 0);
   ret &= test1D<1024, 256>();
-  ret &= (av.getPendingAsyncOps() == 0);
+  ret &= (av.get_pending_async_ops() == 0);
 
   return !(ret == true);
 }
