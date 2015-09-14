@@ -69,7 +69,7 @@ using accelerator_view_removed = Kalmar::accelerator_view_removed;
  *
  * @return An implementation-defined tick count
  */
-uint64_t get_system_ticks() {
+inline uint64_t get_system_ticks() {
     return Kalmar::getContext()->getSystemTicks();
 }
 

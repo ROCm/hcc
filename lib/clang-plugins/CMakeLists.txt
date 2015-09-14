@@ -7,14 +7,12 @@ set (CLANG_BUILD_DIR ${PROJECT_BINARY_DIR}/compiler/tools/clang)
 set (CLAMP_INC_DIR ${PROJECT_SOURCE_DIR}/include)
 
 set (INC_DIRS ${CLAMP_INC_DIR}
-    ${LIBCXX_INC_DIR}
     "${CLANG_SRC_DIR}/include"
     "${LLVM_INC_DIR}"
     "${CLANG_BUILD_DIR}/include"
     ${BOLT_INC_DIRS} )
 
-set (LIB_DIRS ${LIBCXX_LIB_DIR} 
-    ${LIBCXXRT_LIB_DIR}
+set (LIB_DIRS 
     "${COMPILER_BUILD_DIR}/lib" )
 if (CXXAMP_ENABLE_BOLT)
   list(APPEND LIB_DIRS ${BOLT_LIB_DIRS})
@@ -82,7 +80,7 @@ macro(add_clang_plugin name)
   CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
   set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
   set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-  set(CMAKE_CXX_FLAGS "-I${LIBCXX_INC_DIR} -I${CLAMP_INC_DIR} -stdlib=libc++ -std=c++11" )
+  set(CMAKE_CXX_FLAGS "-I${CLAMP_INC_DIR} -stdlib=libc++ -std=c++11" )
  
 endmacro(add_clang_plugin)
 
@@ -108,7 +106,6 @@ set ( CLANG_LIBS
 )
 set ( USER_LIBS
   mcwamp
-  cxxrt
   c++ 
 )
 
