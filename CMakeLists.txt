@@ -55,6 +55,7 @@ setup_RemoveSpecialSection(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms RemoveS
 patch_LLVM350(utils)
 patch_LLVM_for_ClangOMP(OpenMP)
 setup_DivisionPrecision(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms DivisionPrecision)
+
 set(LLVM_TARGETS_TO_BUILD X86 CACHE STRING "LLVM host target")
 set(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD CBackend CACHE STRING "set this to 'CBackend' to enable generating OpenCL-C")
 set(LLVM_INCLUDE_EXAMPLES off)
