@@ -182,15 +182,17 @@ bool EraseNonkernels::runOnModule(Module &M)
 
 		// keep certain intrinsics
 		// FIXME: switch to attribute-based check
-		if (I->getName().find("get_global_id") != StringRef::npos ||
-			I->getName().find("get_local_id") != StringRef::npos ||
-			I->getName().find("get_group_id") != StringRef::npos ||
-			I->getName().find("barrier") != StringRef::npos ||
-			I->getName().find("get_local_size") != StringRef::npos ||
-			I->getName().find("opencl_") != StringRef::npos ||
-			I->getName().find("atomic_") != StringRef::npos ||
-			I->getName().find("llvm.") != StringRef::npos || 
-			I->getName().find("getLDS") != StringRef::npos || 
+		if (I->getName().find("get_global_size") != StringRef::npos ||
+                        I->getName().find("get_global_id") != StringRef::npos ||
+                        I->getName().find("get_local_size") != StringRef::npos ||
+                        I->getName().find("get_local_id") != StringRef::npos ||
+                        I->getName().find("get_num_groups") != StringRef::npos ||
+                        I->getName().find("get_group_id") != StringRef::npos ||
+                        I->getName().find("barrier") != StringRef::npos ||
+                        I->getName().find("opencl_") != StringRef::npos ||
+                        I->getName().find("atomic_") != StringRef::npos ||
+                        I->getName().find("llvm.") != StringRef::npos || 
+                        I->getName().find("getLDS") != StringRef::npos || 
                         I->getName().find("_Znwm") != StringRef::npos ||
                         I->getName().find("_Znam") != StringRef::npos ||
                         I->getName().find("_ZdlPv") != StringRef::npos ||
