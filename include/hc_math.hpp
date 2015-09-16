@@ -3,6 +3,11 @@
 #include <hc.hpp>
 #include <cmath>
 
+
+// FIXME
+// Math functions with integer overloads will be converted to
+// this floating point type.
+// Should really use "double" for accuracy
 #define HC_IMPLICIT_FLOAT_CONV float
 
 #ifdef __KALMAR_ACCELERATOR__
@@ -16,7 +21,7 @@ inline T function(T arg1) __attribute__((hc,cpu)) { \
 #define HC_MATH_WRAPPER_FP_OVERLOAD_1(function, arg1) \
 template<typename T> \
 inline \
-typename std::enable_if<std::is_integral<T>::value,T>::type \
+typename std::enable_if<std::is_integral<T>::value,HC_IMPLICIT_FLOAT_CONV>::type \
  function(T arg1) __attribute__((hc,cpu)) { \
   return hc::precise_math::function(static_cast<HC_IMPLICIT_FLOAT_CONV>(arg1)); \
 } \
@@ -51,6 +56,18 @@ inline T function(Q arg1) __attribute__((hc,cpu)) { \
   return hc::precise_math::function(arg1); \
 }
 
+#define HC_MATH_WRAPPER_FP_OVERLOAD_TQ(function, arg1) \
+template<typename Q> \
+inline bool function(Q arg1, \
+                  std::enable_if<std::is_integral<Q>::value::type>* dummy = 0) __attribute__((hc,cpu)) { \
+  return hc::precise_math::function(static_cast<HC_IMPLICIT_FLOAT_CONV>(arg1)); \
+}\
+template<typename Q> \
+inline bool function(Q arg1, \
+                  std::enable_if<std::is_floating_point<Q>::value::type>* dummy = 0) __attribute__((hc,cpu)) { \
+  return hc::precise_math::function(arg1); \
+}
+
 #define HC_MATH_WRAPPER_TTQ(function, arg1, arg2) \
 template<typename T, typename Q> \
 inline T function(T arg1, Q arg2) __attribute__((hc,cpu)) { \
@@ -80,7 +97,7 @@ inline T function(T arg1) __attribute__((hc,cpu)) { \
 #define HC_MATH_WRAPPER_FP_OVERLOAD_1(function, arg1) \
 template<typename T> \
 inline \
-typename std::enable_if<std::is_integral<T>::value,T>::type \
+typename std::enable_if<std::is_integral<T>::value,HC_IMPLICIT_FLOAT_CONV>::type \
  function(T arg1) __attribute__((hc,cpu)) { \
   return ::function(static_cast<HC_IMPLICIT_FLOAT_CONV>(arg1)); \
 } \
@@ -112,6 +129,18 @@ inline T function(T arg1, T arg2, T arg3) __attribute__((hc,cpu)) { \
 #define HC_MATH_WRAPPER_TQ(function, arg1) \
 template<typename T, typename Q> \
 inline T function(Q arg1) __attribute__((hc,cpu)) { \
+  return ::function(arg1); \
+}
+
+#define HC_MATH_WRAPPER_FP_OVERLOAD_TQ(function, arg1) \
+template<typename Q> \
+inline bool function(Q arg1, \
+                  std::enable_if<std::is_integral<Q>::value::type>* dummy = 0) __attribute__((hc,cpu)) { \
+  return ::function(static_cast<HC_IMPLICIT_FLOAT_CONV>(arg1)); \
+}\
+template<typename Q> \
+inline bool function(Q arg1, \
+                  std::enable_if<std::is_floating_point<Q>::value::type>* dummy = 0) __attribute__((hc,cpu)) { \
   return ::function(arg1); \
 }
 
@@ -161,7 +190,7 @@ HC_MATH_WRAPPER_TQ(ilogb, x)
 HC_MATH_WRAPPER_TQ(isfinite, x)
 HC_MATH_WRAPPER_TQ(isinf, x)
 HC_MATH_WRAPPER_TQ(isnan, x)
-HC_MATH_WRAPPER_TQ(isnormal, x)
+HC_MATH_WRAPPER_FP_OVERLOAD_TQ(isnormal, x)
 HC_MATH_WRAPPER_TQ(nanf, tagp)
 HC_MATH_WRAPPER_TQ(nan, tagp)
 HC_MATH_WRAPPER_TQ(signbitf, x)
@@ -196,7 +225,7 @@ HC_MATH_WRAPPER_1(atanh, x)
 HC_MATH_WRAPPER_2(atan2f, x, y)
 HC_MATH_WRAPPER_2(atan2, x, y)
 HC_MATH_WRAPPER_1(cbrtf, x)
-HC_MATH_WRAPPER_1(cbrt, x)
+HC_MATH_WRAPPER_FP_OVERLOAD_1(cbrt, x)
 HC_MATH_WRAPPER_1(ceilf, x)
 HC_MATH_WRAPPER_1(ceil, x)
 HC_MATH_WRAPPER_2(copysignf, x, y)
@@ -218,7 +247,7 @@ HC_MATH_WRAPPER_1(exp10, x)
 HC_MATH_WRAPPER_1(expm1f, x)
 HC_MATH_WRAPPER_1(expm1, x)
 HC_MATH_WRAPPER_1(fabsf, x)
-HC_MATH_WRAPPER_1(fabs, x)
+HC_MATH_WRAPPER_FP_OVERLOAD_1(fabs, x)
 HC_MATH_WRAPPER_2(fdimf, x, y)
 HC_MATH_WRAPPER_2(fdim, x, y)
 HC_MATH_WRAPPER_1(floorf, x)
@@ -262,7 +291,7 @@ HC_MATH_WRAPPER_1(sin, x)
 HC_MATH_WRAPPER_1(sinhf, x)
 HC_MATH_WRAPPER_1(sinh, x)
 HC_MATH_WRAPPER_1(sqrtf, x)
-HC_MATH_WRAPPER_1(sqrt, x)
+HC_MATH_WRAPPER_FP_OVERLOAD_1(sqrt, x)
 HC_MATH_WRAPPER_1(tgammaf, x)
 HC_MATH_WRAPPER_1(tgamma, x)
 HC_MATH_WRAPPER_1(tanf, x)

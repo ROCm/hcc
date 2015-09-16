@@ -9,24 +9,24 @@
 #define ERROR_THRESHOLD (1E-4)
 
 // a test case which uses hc_math, which overrides math functions in the global namespace
-template<size_t GRID_SIZE>
+template<typename T, size_t GRID_SIZE>
 bool test() {
   using namespace hc;
   bool ret = true;
 
-  float table[GRID_SIZE];
+  T table[GRID_SIZE];
   extent<1> ex(GRID_SIZE);
 
 #define TEST(func) \
   { \
-    std::fill(std::begin(table), std::end(table), 0.0f); \
+    std::fill(std::begin(table), std::end(table), static_cast<T>(0)); \
     parallel_for_each(ex, [&](index<1>& idx) __attribute((hc)) { \
-      table[idx[0]] = func(float(idx[0])); \
+      table[idx[0]] = func(idx[0]); \
     }); \
     accelerator().get_default_view().wait(); \
     float error = 0.0f; \
     for (size_t i = 0; i < GRID_SIZE; ++i) { \
-      error += fabs(table[i] - func(float(i))); \
+      error += fabs(table[i] - func(i)); \
     } \
     ret &= (error <= ERROR_THRESHOLD); \
   } 
@@ -34,6 +34,8 @@ bool test() {
   TEST(sqrt)
   TEST(fabs)
   TEST(cbrt)
+  TEST(log)
+  TEST(isnormal)
 
   return ret;
 }
@@ -41,7 +43,10 @@ bool test() {
 int main() {
   bool ret = true;
 
-  ret &= test<16>();
+  ret &= test<int,16>();
+  ret &= test<unsigned int,16>();
+  ret &= test<float,16>();
+  ret &= test<double,16>();
 
   return !(ret == true);
 }
