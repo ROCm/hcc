@@ -140,11 +140,10 @@ namespace
       raw_ostream & out = errs();
 
       // headers and namespace uses
-      out << "#include \"amp.h\"" EOL;
-      out << "extern \"C\" {" EOL
-             << "#include \"hip.h\"" EOL
-             << "}" EOL;
-      out << "using namespace concurrency;" EOL;
+      out << "#include \"hc.hpp\"" EOL;
+      out << "#include \"hip.h\"" EOL;
+
+      out << "using namespace hc;" EOL;
 
       // Find functions with attribute: grid_launch
       for(Module::iterator F = M.begin(), F_end = M.end(); F != F_end; ++F)
@@ -204,7 +203,7 @@ namespace
           out << "lp.groupDim.y = _lp.groupDim.y;" EOL;
           out << "}" EOL;
 
-          out << "void operator()(index<1> i) restrict(amp)\n{" EOL;
+          out << "void operator()(index<1>& i) __attribute((hc))\n{" EOL;
           out << "lp.groupId.x = (i[0] / lp.groupDim.x) % lp.gridDim.x;" EOL;
           out << "lp.groupId.y = i[0] / (lp.gridDim.x*lp.groupDim.x * lp.groupDim.y);" EOL;
           out << "lp.threadId.x = i[0] % lp.groupDim.x;" EOL;
@@ -223,7 +222,7 @@ namespace
           out << ")\n{" EOL;
           out << "parallel_for_each(extent<1>(lp.gridDim.x*lp.groupDim.y * lp.gridDim.y*lp.groupDim.y), " << functorName << "(";
           printRange(out, argList, argList.begin(), argList.end(), ARGUMENTS);
-          out << "));\n}" EOL;
+          out << ")).wait();\n}" EOL;
         }
       }
         return false;

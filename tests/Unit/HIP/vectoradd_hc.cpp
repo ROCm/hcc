@@ -2,7 +2,7 @@
 
 #include <iostream>
 #include <cmath>
-#include <amp.h>
+#include <hc.hpp>
 #include <hip.h>
 
 #define WIDTH     1024
@@ -13,7 +13,7 @@
 #define THREADS_PER_BLOCK_X  16
 #define THREADS_PER_BLOCK_Y  16
 
-using namespace Concurrency;
+using namespace hc;
 
 __KERNEL void scalarMulAdd(grid_launch_parm lp, float* out, const float *in, const float scalar, int width, int height)
 {
@@ -48,17 +48,17 @@ int main() {
 
   // launch kernel
   parallel_for_each(
-    extent<2>(WIDTH, HEIGHT).tile<THREADS_PER_BLOCK_X, THREADS_PER_BLOCK_Y>(),
-    [=](tiled_index<THREADS_PER_BLOCK_X, THREADS_PER_BLOCK_Y> idx) restrict(amp)
+    extent<2>(WIDTH, HEIGHT).tile(THREADS_PER_BLOCK_X, THREADS_PER_BLOCK_Y),
+    [=](tiled_index<2>& idx) __attribute((hc))
     {
-      int x = idx.tile_dim0 * idx.tile[0] + idx.local[0];
-      int y = idx.tile_dim1 * idx.tile[1] + idx.local[1];
+      int x = idx.tile_dim[0] * idx.tile[0] + idx.local[0];
+      int y = idx.tile_dim[1] * idx.tile[1] + idx.local[1];
 
       int i = y * WIDTH + x;
       if (i < NUM) {
         A[i] = B[i] + C[i];
       }
-  });
+  }).wait();
 
   HC_ASSERT(hcMemcpy(deviceD, hostD, NUM*sizeof(float), hcMemcpyHostToAccelerator));
   const float scalar = 77;
