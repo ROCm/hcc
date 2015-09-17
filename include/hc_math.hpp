@@ -58,13 +58,15 @@ inline T function(Q arg1) __attribute__((hc,cpu)) { \
 
 #define HC_MATH_WRAPPER_FP_OVERLOAD_TQ(function, arg1) \
 template<typename Q> \
-inline bool function(Q arg1, \
-                  std::enable_if<std::is_integral<Q>::value::type>* dummy = 0) __attribute__((hc,cpu)) { \
+inline \
+typename std::enable_if<std::is_integral<Q>::value,bool>::type \
+function(Q arg1) __attribute__((hc,cpu)) { \
   return hc::precise_math::function(static_cast<HC_IMPLICIT_FLOAT_CONV>(arg1)); \
 }\
 template<typename Q> \
-inline bool function(Q arg1, \
-                  std::enable_if<std::is_floating_point<Q>::value::type>* dummy = 0) __attribute__((hc,cpu)) { \
+inline \
+typename std::enable_if<std::is_floating_point<Q>::value,bool>::type \
+function(Q arg1) __attribute__((hc,cpu)) { \
   return hc::precise_math::function(arg1); \
 }
 
@@ -134,13 +136,15 @@ inline T function(Q arg1) __attribute__((hc,cpu)) { \
 
 #define HC_MATH_WRAPPER_FP_OVERLOAD_TQ(function, arg1) \
 template<typename Q> \
-inline bool function(Q arg1, \
-                  std::enable_if<std::is_integral<Q>::value::type>* dummy = 0) __attribute__((hc,cpu)) { \
+inline \
+typename std::enable_if<std::is_integral<Q>::value,bool>::type \
+function(Q arg1) __attribute__((hc)) { \
   return ::function(static_cast<HC_IMPLICIT_FLOAT_CONV>(arg1)); \
 }\
 template<typename Q> \
-inline bool function(Q arg1, \
-                  std::enable_if<std::is_floating_point<Q>::value::type>* dummy = 0) __attribute__((hc,cpu)) { \
+inline \
+typename std::enable_if<std::is_floating_point<Q>::value,bool>::type \
+function(Q arg1) __attribute__((hc)) { \
   return ::function(arg1); \
 }
 
