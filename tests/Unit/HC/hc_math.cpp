@@ -9,7 +9,7 @@
 
 #define ERROR_THRESHOLD (1E-4)
 
-#define DEBUG 1
+//#define DEBUG 1
 
 // a test case which uses hc_math, which overrides math functions in the global namespace
 template<typename T, size_t GRID_SIZE>
