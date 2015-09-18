@@ -3,12 +3,9 @@
 #include <hc.hpp>
 #include <cmath>
 
-
-// FIXME
 // Math functions with integer overloads will be converted to
 // this floating point type.
-// Should really use "double" for accuracy
-#define HC_IMPLICIT_FLOAT_CONV float
+#define HC_IMPLICIT_FLOAT_CONV double
 
 #ifdef __KALMAR_ACCELERATOR__
 
