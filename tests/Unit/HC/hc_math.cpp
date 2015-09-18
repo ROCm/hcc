@@ -49,7 +49,7 @@ bool test() {
   TEST(fabs)
   TEST(cbrt)
   TEST(log)
-
+  TEST(ilogb)
   TEST(isnormal)
 
   return ret;
