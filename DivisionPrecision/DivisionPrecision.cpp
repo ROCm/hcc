@@ -83,7 +83,7 @@ namespace {
     }
 
     bool convertFDivFloatInstruction(Function& F) {
-      bool modified = false;
+      bool modifiedFunction = false;
 
       // for each basic block
       for (Function::iterator BI = F.begin(), BE = F.end(); BI != BE; ++BI) {
@@ -100,44 +100,19 @@ namespace {
             args.push_back(I.getOperand(1));
             CallInst* CI = CallInst::Create(NewFDiv, ArrayRef<Value*>(args), "", &I);
 
-            // replaces all users of I with CI
-            for (Value::user_iterator UI = I.user_begin(), UE = I.user_end(); UI != UE; ++UI) {
-              User* U = *UI;
-              for (unsigned operand = 0; operand < U->getNumOperands(); ++operand) {
-                if (U->getOperand(operand) == &I) {
-                  U->setOperand(operand, CI);
-                }
-              }
-            }
-
-            // remove old fdiv instructions shortly after
+            // replace instruction
+            ReplaceInstWithInst(I.getParent()->getInstList(), II, CI);
 
             // update statistic counter
             ++FDivFloatCounter;
-            modified = true;
-          }
-        }
 
-        // remove the old fdiv float instruction from the basic block
-        bool notExhausted = true;
-        while (notExhausted) {
-          for (BasicBlock::iterator II = B.begin(), IE = B.end(); II != IE; ++II) {
-            Instruction& I = *II;
-            if ((I.getOpcode() == Instruction::FDiv) && (I.getType()->isFloatTy())) {
-              I.eraseFromParent();
-              // notice: we have to break here, otherwise ++II in the loop will fail
-              // the while loop above will make sure we continue remove all fdiv float
-              // instructions in the basic block
-              break;
-            }
+            // mark the function has been changed
+            modifiedFunction = true;
           }
-          // once we've reached here, all fdiv float instructions in the basic block
-          // had been removed, so it's safe to leave the while loop
-          notExhausted = false;
-        }
-      }
+        } // for each instruciton
+      } // for each bb
 
-      return modified;
+      return modifiedFunction;
     }
 
     bool runOnFunction(Function &F) override {
