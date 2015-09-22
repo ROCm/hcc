@@ -725,14 +725,44 @@ public:
         waitForDependentAsyncOps(device);
 
         // do map
-        // FIXME: what shall be done in HSA dGPU scenario?
-        return (char*)device + offset;
+
+        // XXX: as HSA runtime doesn't have map/unmap facility at this moment,
+        // we explicitly allocate a host memory buffer in this case 
+        if (HSA_DGPU_FLAG && (hasHSAInterOp() && (getHSAAMRegion() != nullptr))) {
+#if KALMAR_DEBUG
+            std::cerr << "map(): use HSA memory map\n";
+#endif
+            hsa_status_t status = HSA_STATUS_SUCCESS;
+            void *data = aligned_alloc(0x1000, count);
+            status = hsa_memory_copy(data, (char*)device + offset, count);
+            STATUS_CHECK(status, __LINE__);
+            return data;
+            
+        } else {
+#if KALMAR_DEBUG
+            std::cerr << "map(): use host memory\n";
+#endif
+            // for host memory we simply return the pointer plus offset
+            return (char*)device + offset;
+        }
     }
 
     void unmap(void* device, void* addr) override {
         // do unmap
-        // for host memory there's nothing to be done
-        // FIXME: what shall be done in HSA dGPU scenario?
+
+        // XXX: as HSA runtime doesn't have map/unmap facility at this moment,
+        // we free the host memory buffer allocated in map()
+        if (HSA_DGPU_FLAG && (hasHSAInterOp() && (getHSAAMRegion() != nullptr))) {
+#if KALMAR_DEBUG
+            std::cerr << "unmap(): use HSA memory map\n";
+#endif
+            ::operator delete(addr);
+        } else {
+#if KALMAR_DEBUG
+            std::cerr << "unmap(): use host memory\n";
+#endif
+            // for host memory there's nothing to be done
+        }
     }
 
     void Push(void *kernel, int idx, void *device, bool modify) override {
