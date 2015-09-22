@@ -29,6 +29,7 @@
 
 #define KALMAR_DEBUG (0)
 
+// macro to turn on / off using HSA memory allocator to allocate device memory
 #define HSA_DGPU_FLAG (true)
 
 #define STATUS_CHECK(s,line) if (s != HSA_STATUS_SUCCESS) {\
