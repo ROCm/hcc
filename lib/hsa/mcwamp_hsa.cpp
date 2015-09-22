@@ -692,7 +692,7 @@ public:
                 STATUS_CHECK(status, __LINE__);
             } else {
 #if KALMAR_DEBUG
-                std::cerr << "use host memory copy\n";
+                std::cerr << "write(): use host memory copy\n";
 #endif
                 memmove((char*)device + offset, src, count);
             }
@@ -714,7 +714,7 @@ public:
                 STATUS_CHECK(status, __LINE__);
             } else {
 #if KALMAR_DEBUG
-                std::cerr << "use host memory copy\n";
+                std::cerr << "copy(): use host memory copy\n";
 #endif
                 memmove((char*)dst + dst_offset, (char*)src + src_offset, count);
             }
