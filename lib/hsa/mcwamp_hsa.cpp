@@ -29,6 +29,8 @@
 
 #define KALMAR_DEBUG (0)
 
+#define HSA_DGPU_FLAG (true)
+
 #define STATUS_CHECK(s,line) if (s != HSA_STATUS_SUCCESS) {\
 		printf("### Error: %d at line:%d\n", s, line);\
                 assert(HSA_STATUS_SUCCESS == hsa_shut_down());\
@@ -659,16 +661,42 @@ public:
         waitForDependentAsyncOps(device);
 
         // do read
-        if (dst != device)
-            memmove(dst, (char*)device + offset, count);
+        if (dst != device) {
+            if (HSA_DGPU_FLAG && (hasHSAInterOp() && (getHSAAMRegion() != nullptr))) {
+#if KALMAR_DEBUG
+                std::cerr << "read(): use HSA memory copy\n";
+#endif
+                hsa_status_t status = HSA_STATUS_SUCCESS;
+                status = hsa_memory_copy(dst, (char*)device + offset, count);
+                STATUS_CHECK(status, __LINE__);
+            } else {
+#if KALMAR_DEBUG
+                std::cerr << "read(): use host memory copy\n";
+#endif
+                memmove(dst, (char*)device + offset, count);
+            }
+        }
     }
 
     void write(void* device, const void* src, size_t count, size_t offset, bool blocking) override {
         waitForDependentAsyncOps(device);
 
         // do write
-        if (src != device)
-            memmove((char*)device + offset, src, count);
+        if (src != device) {
+            if (HSA_DGPU_FLAG && (hasHSAInterOp() && (getHSAAMRegion() != nullptr))) {
+#if KALMAR_DEBUG
+                std::cerr << "write(): use HSA memory copy\n";
+#endif
+                hsa_status_t status = HSA_STATUS_SUCCESS;
+                status = hsa_memory_copy((char*)device + offset, src, count);
+                STATUS_CHECK(status, __LINE__);
+            } else {
+#if KALMAR_DEBUG
+                std::cerr << "use host memory copy\n";
+#endif
+                memmove((char*)device + offset, src, count);
+            }
+        }
     }
 
     void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset, bool blocking) override {
@@ -676,18 +704,36 @@ public:
         waitForDependentAsyncOps(src);
 
         // do copy
-        if (src != dst)
-            memmove((char*)dst + dst_offset, (char*)src + src_offset, count);
+        if (src != dst) {
+            if (HSA_DGPU_FLAG && (hasHSAInterOp() && (getHSAAMRegion() != nullptr))) {
+#if KALMAR_DEBUG
+                std::cerr << "copy(): use HSA memory copy\n";
+#endif
+                hsa_status_t status = HSA_STATUS_SUCCESS;
+                status = hsa_memory_copy((char*)dst + dst_offset, (char*)src + src_offset, count);
+                STATUS_CHECK(status, __LINE__);
+            } else {
+#if KALMAR_DEBUG
+                std::cerr << "use host memory copy\n";
+#endif
+                memmove((char*)dst + dst_offset, (char*)src + src_offset, count);
+            }
+        }
     }
 
     void* map(void* device, size_t count, size_t offset, bool modify) override {
         waitForDependentAsyncOps(device);
 
         // do map
+        // FIXME: what shall be done in HSA dGPU scenario?
         return (char*)device + offset;
     }
 
-    void unmap(void* device, void* addr) override {}
+    void unmap(void* device, void* addr) override {
+        // do unmap
+        // for host memory there's nothing to be done
+        // FIXME: what shall be done in HSA dGPU scenario?
+    }
 
     void Push(void *kernel, int idx, void *device, bool modify) override {
         PushArgImpl(kernel, idx, sizeof(void*), &device);
@@ -860,14 +906,46 @@ public:
     bool is_emulated() const override { return false; }
 
     void* create(size_t count, struct rw_info* key) override {
-        void *data = aligned_alloc(0x1000, count);
-        hsa_memory_register(data, count);
+        void *data = nullptr;
+
+        if (HSA_DGPU_FLAG && (hasHSAFinegrainedRegion() || hasHSACoarsegrainedRegion())) {
+#if KALMAR_DEBUG
+            std::cerr << "create(): use HSA memory allocator\n";
+#endif
+            hsa_status_t status = HSA_STATUS_SUCCESS;
+            hsa_region_t am_region = getHSAAMRegion();
+    
+            status = hsa_memory_allocate(am_region, count, &data);
+            STATUS_CHECK(status, __LINE__);
+    
+            status = hsa_memory_assign_agent(data, agent, HSA_ACCESS_PERMISSION_RW);
+            STATUS_CHECK(status, __LINE__);
+        } else {
+#if KALMAR_DEBUG
+            std::cerr << "create(): use host memory allocator\n";
+#endif
+            data = aligned_alloc(0x1000, count);
+            hsa_memory_register(data, count);
+        }
+
         return data;
     }
     
     void release(void *ptr, struct rw_info* key ) override {
-        hsa_memory_deregister(ptr, key->count);
-        ::operator delete(ptr);
+        if (HSA_DGPU_FLAG && (hasHSAFinegrainedRegion() || hasHSACoarsegrainedRegion())) {
+#if KALMAR_DEBUG
+            std::cerr << "release(): use HSA memory deallocator\n";
+#endif
+            hsa_status_t status = HSA_STATUS_SUCCESS;
+            status = hsa_memory_free(ptr);
+            STATUS_CHECK(status, __LINE__);
+        } else {
+#if KALMAR_DEBUG
+            std::cerr << "release(): use host memory deallocator\n";
+#endif
+            hsa_memory_deregister(ptr, key->count);
+            ::operator delete(ptr);
+        }
     }
 
     void* CreateKernel(const char* fun, void* size, void* source, bool needsCompilation = true) override {
