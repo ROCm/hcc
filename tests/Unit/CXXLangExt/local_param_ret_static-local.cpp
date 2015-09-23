@@ -1,34 +1,34 @@
 // XFAIL: Linux, hsa
 
-// RUN: %cxxamp -DTYPE="char" -Xclang -fhsa-ext %s -o %t.out && %t.out
-// RUN: %cxxamp -DTYPE="signed char" -Xclang -fhsa-ext %s -o %t.out && %t.out
-// RUN: %cxxamp -DTYPE="unsigned char" -Xclang -fhsa-ext %s -o %t.out && %t.out
+// RUN: %hc -DTYPE="char"  %s -o %t.out && %t.out
+// RUN: %hc -DTYPE="signed char"  %s -o %t.out && %t.out
+// RUN: %hc -DTYPE="unsigned char"  %s -o %t.out && %t.out
 
-// RUN: %cxxamp -DTYPE="short" -Xclang -fhsa-ext %s -o %t.out && %t.out
-// RUN: %cxxamp -DTYPE="signed short" -Xclang -fhsa-ext %s -o %t.out && %t.out
-// RUN: %cxxamp -DTYPE="unsigned short" -Xclang -fhsa-ext %s -o %t.out && %t.out
+// RUN: %hc -DTYPE="short"  %s -o %t.out && %t.out
+// RUN: %hc -DTYPE="signed short"  %s -o %t.out && %t.out
+// RUN: %hc -DTYPE="unsigned short"  %s -o %t.out && %t.out
 
-// RUN: %cxxamp -DTYPE="int" -Xclang -fhsa-ext %s -o %t.out && %t.out
-// RUN: %cxxamp -DTYPE="signed int" -Xclang -fhsa-ext %s -o %t.out && %t.out
-// RUN: %cxxamp -DTYPE="unsigned int" -Xclang -fhsa-ext %s -o %t.out && %t.out
+// RUN: %hc -DTYPE="int"  %s -o %t.out && %t.out
+// RUN: %hc -DTYPE="signed int"  %s -o %t.out && %t.out
+// RUN: %hc -DTYPE="unsigned int"  %s -o %t.out && %t.out
 
-// RUN: %cxxamp -DTYPE="long" -Xclang -fhsa-ext %s -o %t.out && %t.out
-// RUN: %cxxamp -DTYPE="signed long" -Xclang -fhsa-ext %s -o %t.out && %t.out
-// RUN: %cxxamp -DTYPE="unsigned long" -Xclang -fhsa-ext %s -o %t.out && %t.out
+// RUN: %hc -DTYPE="long"  %s -o %t.out && %t.out
+// RUN: %hc -DTYPE="signed long"  %s -o %t.out && %t.out
+// RUN: %hc -DTYPE="unsigned long"  %s -o %t.out && %t.out
 
-// RUN: %cxxamp -DTYPE="long long" -Xclang -fhsa-ext %s -o %t.out && %t.out
-// RUN: %cxxamp -DTYPE="signed long long" -Xclang -fhsa-ext %s -o %t.out && %t.out
-// RUN: %cxxamp -DTYPE="unsigned long long" -Xclang -fhsa-ext %s -o %t.out && %t.out
+// RUN: %hc -DTYPE="long long"  %s -o %t.out && %t.out
+// RUN: %hc -DTYPE="signed long long"  %s -o %t.out && %t.out
+// RUN: %hc -DTYPE="unsigned long long"  %s -o %t.out && %t.out
 
-// RUN: %cxxamp -DTYPE="float" -Xclang -fhsa-ext %s -o %t.out && %t.out
+// RUN: %hc -DTYPE="float"  %s -o %t.out && %t.out
 
-// RUN: %cxxamp -DTYPE="double" -Xclang -fhsa-ext %s -o %t.out && %t.out
+// RUN: %hc -DTYPE="double"  %s -o %t.out && %t.out
 
-// RUN: %cxxamp -DTYPE="long double" -Xclang -fhsa-ext %s -o %t.out && %t.out
+// RUN: %hc -DTYPE="long double"  %s -o %t.out && %t.out
 
-// RUN: %cxxamp -DTYPE="bool" -Xclang -fhsa-ext %s -o %t.out && %t.out
+// RUN: %hc -DTYPE="bool"  %s -o %t.out && %t.out
 
-// RUN: %cxxamp -DTYPE="wchar_t" -Xclang -fhsa-ext %s -o %t.out && %t.out
+// RUN: %hc -DTYPE="wchar_t"  %s -o %t.out && %t.out
 
 #include <iostream>
 #include <amp.h>

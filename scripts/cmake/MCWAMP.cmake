@@ -1,14 +1,5 @@
 include (CMakeForceCompiler)
 
-# libc++
-set(LIBCXX_SRC_DIR "${PROJECT_SOURCE_DIR}/libc++/libcxx")
-set(LIBCXX_INC_DIR "${LIBCXX_SRC_DIR}/include")
-set(LIBCXX_LIB_DIR "${PROJECT_BINARY_DIR}/libc++/libcxx/lib")
-
-if (NOT APPLE)
-# libcxxrt
-set(LIBCXXRT_LIB_DIR "${PROJECT_BINARY_DIR}/libc++/libcxxrt/lib")
-endif (NOT APPLE)
 # gtest
 set(GTEST_SRC_DIR "${PROJECT_SOURCE_DIR}/utils")
 set(GTEST_INC_DIR "${PROJECT_SOURCE_DIR}/utils")
@@ -41,8 +32,6 @@ macro(add_mcwamp_library_cpu name )
   add_library( ${name} SHARED ${ARGN} )
   # LLVM and Clang shall be compiled beforehand
   add_dependencies(${name} llvm-link opt clang)
-  add_dependencies(${name} libcpprt)
-  target_link_libraries(${name} ${CMAKE_BINARY_DIR}/libc++/libcxxrt/lib/libcxxrt.so)
 endmacro(add_mcwamp_library_cpu name )
 
 ####################
@@ -56,10 +45,8 @@ macro(add_mcwamp_library_opencl name )
   add_library( ${name} SHARED ${ARGN} )
   # LLVM and Clang shall be compiled beforehand
   add_dependencies(${name} llvm-link opt clang)
-  add_dependencies(${name} libcpprt)
   # add OpenCL libraries
   target_link_libraries(${name} ${OPENCL_LIBRARY})
-  target_link_libraries(${name} ${CMAKE_BINARY_DIR}/libc++/libcxxrt/lib/libcxxrt.so)
 endmacro(add_mcwamp_library_opencl name )
 
 ####################
@@ -95,6 +82,6 @@ macro(add_mcwamp_executable name )
   if (APPLE)
     target_link_libraries( ${name} mcwamp c++abi)
   else (APPLE)
-    target_link_libraries( ${name} mcwamp cxxrt dl pthread)
+    target_link_libraries( ${name} mcwamp dl pthread)
   endif (APPLE)
 endmacro(add_mcwamp_executable name )

@@ -24,8 +24,8 @@ public:
         _data(const _data<U>& d) restrict(cpu, amp)
         : p_(reinterpret_cast<T *>(d.get())) {}
     __attribute__((annotate("user_deserialize")))
-        explicit _data(__global T* t) restrict(cpu, amp) { p_ = t; }
-    __global T* get(void) const restrict(cpu, amp) { return p_; }
+        explicit _data(T* t) restrict(cpu, amp) { p_ = t; }
+    T* get(void) const restrict(cpu, amp) { return p_; }
     std::shared_ptr<KalmarQueue> get_av() const { return nullptr; }
     void reset() const {}
 
@@ -42,7 +42,7 @@ public:
     std::shared_ptr<KalmarQueue> get_stage() const { return nullptr; }
 
 private:
-    __global T* p_;
+    T* p_;
 };
 
 template <typename T>
@@ -94,7 +94,7 @@ public:
             s.visit_buffer(mm.get(), !std::is_const<T>::value, isArray);
         }
     __attribute__((annotate("user_deserialize")))
-        explicit _data_host(__global typename std::remove_const<T>::type* t) {}
+        explicit _data_host(typename std::remove_const<T>::type* t) {}
 };
 
 } // namespace Kalmar

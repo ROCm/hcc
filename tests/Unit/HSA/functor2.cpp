@@ -1,5 +1,5 @@
 // XFAIL: Linux
-// RUN: %cxxamp -Xclang -fhsa-ext %s -o %t.out && %t.out
+// RUN: %hc %s -o %t.out && %t.out
 
 #include <amp.h>
 
@@ -24,7 +24,6 @@ class prog {
 
 public:
   prog(int (&t)[SIZE], user_functor& f) : input(t), kernel(f) {
-    run();
   }
 
   void operator() (index<1>& idx) restrict(amp) {
@@ -57,6 +56,7 @@ int main() {
   // launch kernel
   user_functor kernel;
   prog p(input, kernel);
+  p.run();
 
   // check result
   ret &= p.test();

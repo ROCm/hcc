@@ -1,5 +1,5 @@
 // XFAIL: Linux
-// RUN: %cxxamp -Xclang -fhsa-ext %s -o %t.out && %t.out
+// RUN: %hc %s -o %t.out && %t.out
 
 // Parallel STL headers
 #include <coordinate>
@@ -14,39 +14,42 @@
 #include <algorithm>
 #include <iterator>
 
-#define ROW (8)
-#define COL (12)
-#define TEST_SIZE (ROW * COL)
-
 #define _DEBUG (0)
+#include "test_base.h"
 
-template<typename _Tp, size_t SIZE>
-bool test() {
+
+template<typename T, size_t SIZE>
+bool test(void) {
+
+  using std::experimental::parallel::par;
+
   bool ret = true;
+  bool eq = true;
+  // C array
+  typedef T cArray[SIZE];
+  ret &= run_and_compare<T, SIZE>([&eq](cArray &input, cArray &output1,
+                                                       cArray &output2) {
+    auto expected = std::count(std::begin(input), std::end(input), 42);
+    auto result   = std::experimental::parallel::
+                    count(par, std::begin(input), std::end(input), 42);
 
-  _Tp table[SIZE] { 0 };
+    eq = EQ(expected, result);
+  }, false);
+  ret &= eq;
 
-  // initialize test data
-  std::iota(std::begin(table), std::end(table), 0);
 
-  // launch kernel with parallel STL count
-  auto expected = std::count(std::begin(table), std::end(table), 377);
 
-  ret &= (expected == std::experimental::parallel::count(std::begin(table), std::end(table), 377));
+  auto pred = [](const T& v) { return static_cast<int>(v) % 3 == 0; };
 
-  auto pred = [](const _Tp& v) { return static_cast<int>(v) % 3 == 0; };
+  ret &= run_and_compare<T, SIZE>([&eq, pred](cArray &input, cArray &output1,
+                                                             cArray &output2) {
+    auto expected = std::count_if(std::begin(input), std::end(input), pred);
+    auto result   = std::experimental::parallel::
+                    count_if(par, std::begin(input), std::end(input), pred);
 
-  expected = std::count_if(std::begin(table), std::end(table), pred);
-  ret &= (expected == std::experimental::parallel::count_if(std::begin(table), std::end(table), pred));
-
-#if _DEBUG 
-  for (int i = 0; i < ROW; ++i) {
-    for (int j = 0; j < COL; ++j) {
-      std::cout << std::setw(5) << table[i * COL + j];
-    }
-    std::cout << "\n";
-  } 
-#endif
+    eq = EQ(expected, result);
+  }, false);
+  ret &= eq;
 
   return ret;
 }

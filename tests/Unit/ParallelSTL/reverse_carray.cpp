@@ -1,52 +1,30 @@
 // XFAIL: Linux
-// RUN: %cxxamp -Xclang -fhsa-ext %s -o %t.out && %t.out
+// RUN: %hc %s -o %t.out && %t.out
 
 // Parallel STL headers
 #include <coordinate>
 #include <experimental/algorithm>
 #include <experimental/execution_policy>
 
-// C++ headers
-#include <iostream>
-#include <iomanip>
-#include <algorithm>
-
-#define ROW (8)
-#define COL (16)
-#define TEST_SIZE (ROW * COL)
 
 #define _DEBUG (0)
+#include "test_base.h"
 
-template<typename _Tp, size_t SIZE>
-bool test() {
 
-  _Tp table[SIZE] { 0 };
-  _Tp n { 0 };
+template<typename T, size_t SIZE>
+bool test(void) {
 
-  // initialize test data
-  std::generate(std::begin(table), std::end(table), [&] { return n++; });
+  using std::experimental::parallel::par;
 
-  // launch kernel with parallel STL reverse
-  using namespace std::experimental::parallel;
-  reverse(par, std::begin(table), std::end(table));
-
-  // verify data
   bool ret = true;
-  for (int i = 0; i < SIZE; ++i) {
-    if (table[i] != SIZE - 1 - i)  {
-      ret = false;
-      break;
-    }
-  }
 
-#if _DEBUG 
-  for (int i = 0; i < ROW; ++i) {
-    for (int j = 0; j < COL; ++j) {
-      std::cout << std::setw(5) << table[i * COL + j];
-    }
-    std::cout << "\n";
-  } 
-#endif
+  // C array
+  typedef T cArray[SIZE];
+  ret &= run_and_compare<T, SIZE>([](cArray &input1, cArray &input2) {
+    std::reverse(std::begin(input1), std::end(input1));
+    std::experimental::parallel::
+    reverse(par, std::begin(input2), std::end(input2));
+  });
 
   return ret;
 }
