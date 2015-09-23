@@ -61,7 +61,7 @@ mark_as_advanced( ext.gTest_URL )
 if ( UNIX AND BUILD_AMP )
    list (APPEND gTest.Cmake.Args -DCMAKE_C_COMPILER=${CLAMP_C_COMPILER} -DCMAKE_CXX_COMPILER=${CLAMP_CXX_COMPILER} )
    list (APPEND gTest.Cmake.Args -v -DGTEST_LINKED_AS_SHARED_LIBRARY=1 -DGTEST_HAS_TR1_TUPLE=0 -U__STRICT_ANSI__)
-   set (BUILD_BITNESS "${BUILD_BITNESS} -DCMAKE_CXX_FLAGS=-stdlib=libc++ -I${CLAMP_LIBCXX_INC_DIR} ")
+   set (BUILD_BITNESS "${BUILD_BITNESS} -stdlib=libc++ ")
 endif()
 
 # FindGTest.cmake assumes that debug gtest libraries end with a 'd' postfix.  The official gtest cmakelist files do not add this postfix, 

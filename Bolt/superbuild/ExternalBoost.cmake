@@ -55,8 +55,6 @@ if ( UNIX AND BUILD_AMP )
 OUTPUT_FILE $ENV{HOME}/user-config.jam )
 
   list ( APPEND Boost.Command --debug-configuration toolset=clang )
-  list ( APPEND Boost.Command linkflags="-L${CLAMP_LIBCXX_LIB_DIR}" linkflags="-L${CLAMP_LIBCXXRT_LIB_DIR}")
-  list ( APPEND Boost.Command include="${CLAMP_LIBCXX_INC_DIR}" )
 endif() 
 
 if( Bolt_BUILD64 )

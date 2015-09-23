@@ -1,7 +1,6 @@
 // XFAIL: Linux
-// RUN: %cxxamp %s -Xclang -fhsa-ext -o %t.out && %t.out
+// RUN: %hc %s -o %t.out && %t.out
 
-#include <amp.h>
 #include <hc.hpp>
 
 #include <iostream>
@@ -22,10 +21,10 @@ bool test() {
   ts_allocator tsa;
   tsa.setDynamicGroupSegmentSize(DYNAMIC_GROUP_SEGMENT_SIZE);
 
-  Concurrency::array_view<int, 1> av(GRID_SIZE);
+  array_view<int, 1> av(GRID_SIZE);
   tiled_extent<1> ex(GRID_SIZE, TILE_SIZE);
   
-  parallel_for_each(hc::accelerator().get_default_view(),
+  completion_future fut = parallel_for_each(hc::accelerator().get_default_view(),
                     ex,
                     tsa,
                     __KERNEL__ [=, &tsa](tiled_index<1>& tidx) {
@@ -84,6 +83,9 @@ bool test() {
     // write lds2 to global memory, plus static group segment size
     av(global) = tsa.getStaticGroupSegmentSize() + lds2[local[0]];
   });
+
+  // wait for kernel to complete
+  fut.wait();
 
   // overhead introduced in ts_allocator
   size_t overhead = tsa.getStaticGroupSegmentSize();

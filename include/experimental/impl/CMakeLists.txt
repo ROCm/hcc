@@ -1,0 +1,4 @@
+# PSTL headers
+FILE(GLOB PSTL ${CMAKE_CURRENT_SOURCE_DIR}/*.inl)
+INSTALL(FILES ${PSTL} DESTINATION include/experimental/impl)
+

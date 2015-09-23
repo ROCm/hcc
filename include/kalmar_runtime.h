@@ -35,6 +35,37 @@ using namespace Kalmar::enums;
 class KalmarDevice;
 struct rw_info;
 
+/// KalmarAsyncOp
+///
+/// This is an abstraction of all asynchronous operations within Kalmar
+class KalmarAsyncOp {
+public:
+  virtual ~KalmarAsyncOp() {} 
+  virtual std::shared_future<void>* getFuture() { return nullptr; }
+  virtual void* getNativeHandle() { return nullptr;}
+
+  /**
+   * Get the timestamp when the asynchronous operation begins.
+   *
+   * @return An implementaion-defined timestamp.
+   */
+  virtual uint64_t getBeginTimestamp() { return 0L; }
+
+  /**
+   * Get the timestamp when the asynchronous operation completes.
+   *
+   * @return An implementation-defined timestamp.
+   */
+  virtual uint64_t getEndTimestamp() { return 0L; }
+
+  /**
+   * Get the frequency of timestamp.
+   *
+   * @return An implementation-defined frequency for the asynchronous operation.
+   */
+  virtual uint64_t getTimestampFrequency() { return 0L; }
+};
+
 /// KalmarQueue
 /// This is the implementation of accelerator_view
 /// KalamrQueue is responsible for data operations and launch kernel
@@ -49,9 +80,18 @@ public:
 
   virtual void flush() {}
   virtual void wait() {}
+
+  // sync kernel launch with dynamic group memory
   virtual void LaunchKernelWithDynamicGroupMemory(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size, size_t dynamic_group_size) {}
+
+  // async kernel launch with dynamic group memory
+  virtual std::shared_ptr<KalmarAsyncOp> LaunchKernelWithDynamicGroupMemoryAsync(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size, size_t dynamic_group_size) { return nullptr; }
+
+  // sync kernel launch
   virtual void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {}
-  virtual void* LaunchKernelAsync(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) { return nullptr; }
+
+  // async kernel launch
+  virtual std::shared_ptr<KalmarAsyncOp> LaunchKernelAsync(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) { return LaunchKernelWithDynamicGroupMemoryAsync(kernel, dim_ext, ext, local_size, 0); }
 
   /// read data from device to host
   virtual void read(void* device, void* dst, size_t count, size_t offset) = 0;
@@ -69,13 +109,34 @@ public:
   virtual void unmap(void* device, void* addr) = 0;
 
   /// push device pointer to kernel argument list
-  virtual void Push(void *kernel, int idx, void* device, bool isConst) = 0;
+  virtual void Push(void *kernel, int idx, void* device, bool modify) = 0;
 
   virtual uint32_t GetGroupSegmentSize(void *kernel) { return 0; }
 
   KalmarDevice* getDev() { return pDev; }
   queuing_mode get_mode() const { return mode; }
   void set_mode(queuing_mode mod) { mode = mod; }
+
+  /// get number of pending async operations in the queue
+  virtual int getPendingAsyncOps() { return 0; }
+
+  /// get underlying native queue handle
+  virtual void* getHSAQueue() { return nullptr; }
+
+  /// get underlying native agent handle
+  virtual void* getHSAAgent() { return nullptr; }
+
+  /// get AM region handle
+  virtual void* getHSAAMRegion() { return nullptr; }
+
+  /// get kernarg region handle
+  virtual void* getHSAKernargRegion() { return nullptr; }
+
+  /// check if the queue is an HSA queue
+  virtual bool hasHSAInterOp() { return false; }
+
+  /// enqueue marker
+  virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarker() { return nullptr; }
 
 private:
   KalmarDevice* pDev;
@@ -89,12 +150,28 @@ class KalmarDevice
 {
 private:
     access_type cpu_type;
+
+#if !TLS_QUEUE
     /// default KalmarQueue
     std::shared_ptr<KalmarQueue> def;
     /// make sure KalamrQueue is created only once
     std::once_flag flag;
+#else
+    /// default KalmarQueue for each calling thread
+    std::map< std::thread::id, std::shared_ptr<KalmarQueue> > tlsDefaultQueueMap;
+    /// mutex for tlsDefaultQueueMap
+    std::mutex tlsDefaultQueueMap_mutex;
+#endif
+
 protected:
-    KalmarDevice(access_type type = access_type_read_write) : cpu_type(type), def(), flag() {}
+    KalmarDevice(access_type type = access_type_read_write)
+        : cpu_type(type),
+#if !TLS_QUEUE
+          def(), flag()
+#else
+          tlsDefaultQueueMap(), tlsDefaultQueueMap_mutex()
+#endif
+          {}
 public:
     access_type get_access() const { return cpu_type; }
     void set_access(access_type type) { cpu_type = type; }
@@ -128,12 +205,28 @@ public:
     virtual ~KalmarDevice() {}
 
     std::shared_ptr<KalmarQueue> get_default_queue() {
-        std::call_once(flag, [&]() { def = createQueue(); });
+#if !TLS_QUEUE
+        std::call_once(flag, [&]() { 
+            def = createQueue();
+        });
         return def;
+#else
+        std::thread::id tid = std::this_thread::get_id();
+        tlsDefaultQueueMap_mutex.lock();
+        if (tlsDefaultQueueMap.find(tid) == tlsDefaultQueueMap.end()) {
+            tlsDefaultQueueMap[tid] = createQueue();
+        }
+        std::shared_ptr<KalmarQueue> result = tlsDefaultQueueMap[tid];
+        tlsDefaultQueueMap_mutex.unlock();
+        return result;
+#endif
     }
 
     /// get max tile static area size
     virtual size_t GetMaxTileStaticSize() { return 0; }
+
+    /// get all queues associated with this device
+    virtual std::vector< std::shared_ptr<KalmarQueue> > get_all_queues() { return std::vector< std::shared_ptr<KalmarQueue> >(); }
 };
 
 class CPUQueue final : public KalmarQueue
@@ -163,7 +256,7 @@ public:
 
   void unmap(void* device, void* addr) override {}
 
-  void Push(void *kernel, int idx, void* device, bool isConst) override {}
+  void Push(void *kernel, int idx, void* device, bool modify) override {}
 };
 
 /// cpu accelerator
@@ -241,6 +334,9 @@ public:
         else
             return get_default_dev();
     }
+
+    /// get system ticks
+    virtual uint64_t getSystemTicks() { return 0L; };
 };
 
 KalmarContext *getContext();

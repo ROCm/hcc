@@ -1,6 +1,6 @@
 #pragma once
 
-#define HSAIL_BUILTIN_GPU __attribute__((amp)) 
+#define HSAIL_BUILTIN_GPU __attribute__((hc)) 
 #define HSAIL_BUILTIN_CPU __attribute__((cpu)) 
 
 #ifdef __KALMAR_ACCELERATOR__

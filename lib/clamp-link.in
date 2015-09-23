@@ -11,11 +11,23 @@ if [ -d @LLVM_TOOLS_DIR@ ]; then
     OPT=@LLVM_TOOLS_DIR@/opt
     CLAMP_DEVICE=@PROJECT_BINARY_DIR@/lib/clamp-device
     CLAMP_EMBED=@PROJECT_BINARY_DIR@/lib/clamp-embed
+    HLC_DIR=@PROJECT_BINARY_DIR@/hlc
+    HLC_LLVM_LINK=@PROJECT_BINARY_DIR@/hlc/bin/llvm-link
+    HLC_OPT=@PROJECT_BINARY_DIR@/hlc/bin/opt
+    HLC_LLC=@PROJECT_BINARY_DIR@/hlc/bin/llc
+    HLC_ASM_DIR=@PROJECT_BINARY_DIR@/HSAILasm
+    HLC_ASM=@PROJECT_BINARY_DIR@/HSAILasm/HSAILAsm/HSAILasm # notice the "A"
 else
     LINK=@CMAKE_INSTALL_PREFIX@/bin/llvm-link
     OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
     CLAMP_DEVICE=@CMAKE_INSTALL_PREFIX@/bin/clamp-device
     CLAMP_EMBED=@CMAKE_INSTALL_PREFIX@/bin/clamp-embed
+    HLC_DIR=@CMAKE_INSTALL_PREFIX@/hlc
+    HLC_LLVM_LINK=@CMAKE_INSTALL_PREFIX@/hlc/bin/llvm-link
+    HLC_OPT=@CMAKE_INSTALL_PREFIX@/hlc/bin/opt
+    HLC_LLC=@CMAKE_INSTALL_PREFIX@/hlc/bin/llc
+    HLC_ASM_DIR=@CMAKE_INSTALL_PREFIX@/HSAILasm
+    HLC_ASM=@CMAKE_INSTALL_PREFIX@/HSAILasm/HSAILasm
 fi
 
 ################
@@ -37,12 +49,7 @@ LOWER_HOF=@HAS_HSA_HOF@
 ################
 
 if [ $LOWER_HSA == 1 ]; then
-  # Path to HSAIL backend (LLVM-3.6-based)
-  LLVM_BIN=@HSAIL_BIN@
-  # Path to HSAILASM
-  HSAIL_ASM=@HSAIL_COMPILER@
-
-  if [ -d $LLVM_BIN ] && [ -e $LLVM_BIN/llvm-link ] && [ -e $LLVM_BIN/opt ] && [ -e $LLVM_BIN/llc ] && [ -e $HSAIL_ASM ]; then
+  if [ -d $HLC_DIR ] && [ -e $HLC_LLVM_LINK ] && [ -e $HLC_OPT ] && [ -e $HLC_LLC ] && [ -d $HLC_ASM_DIR ] && [ -e $HLC_ASM ]; then
     # all HSA tools are available
     LOWER_HSA=1
   else
@@ -105,8 +112,10 @@ do
       objcopy -R .kernel $ARG $HOST_FILE
 
       # strip all symbols specified in symbol.txt from $HOST_FILE
-      objcopy @$CXXAMP_SERIALIZE_SYMBOL_FILE $HOST_FILE $HOST_FILE.new
-      mv $HOST_FILE.new $HOST_FILE
+      objcopy @$CXXAMP_SERIALIZE_SYMBOL_FILE $HOST_FILE $HOST_FILE.new 2> /dev/null
+      if [ -f $HOST_FILE.new ]; then
+        mv $HOST_FILE.new $HOST_FILE
+      fi
 
       # find cxxamp_serialize symbols and save them into symbol.txt
       objdump -t $HOST_FILE -j .text 2> /dev/null | grep "g.*__cxxamp_serialize" | awk '{print "-L"$6}' >> $CXXAMP_SERIALIZE_SYMBOL_FILE

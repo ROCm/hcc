@@ -1,5 +1,5 @@
 // XFAIL: Linux
-// RUN: %cxxamp -Xclang -fhsa-ext %s -o %t.out && %t.out
+// RUN: %hc %s -o %t.out && %t.out
 #include <iostream>
 #include <random>
 #include <future>
@@ -33,7 +33,7 @@ int main ()
 
   // launch kernel
   hc::extent<3> e(dimSize, dimSize, dimSize);
-  hc::completion_future fut = hc::async_parallel_for_each(
+  hc::completion_future fut = hc::parallel_for_each(
     e,
     [=](hc::index<3> idx) restrict(amp) {
       int fidx = idx[0] * dimSize * dimSize + idx[1] * dimSize + idx[2];
