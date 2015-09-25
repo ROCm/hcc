@@ -1,5 +1,15 @@
 #pragma once
 
+//forward declaration
+namespace Concurrency {
+template <int N> class extent;
+} // namespace Concurrency
+
+//forward declaration
+namespace hc {
+template <int N> class extent;
+} // namespace hc
+
 namespace Kalmar {
 
 template <int...> struct __indices {};
@@ -432,7 +442,8 @@ public:
 private:
     typedef index_impl<typename __make_indices<N>::type> base;
     base base_;
-    template<int T> friend class extent;
+    template <int T> friend class Concurrency::extent;
+    template <int T> friend class hc::extent;
     template <int K, typename Q> friend struct index_helper;
     template <int K, typename Q1, typename Q2> friend struct amp_helper;
 
