@@ -363,17 +363,25 @@ private:
     hsa_status_t pushArgPrivate(T val) {
         /* add padding if necessary */
         int padding_size = (arg_vec.size() % sizeof(T)) ? (sizeof(T) - (arg_vec.size() % sizeof(T))) : 0;
-        //printf("push %lu bytes into kernarg: ", sizeof(T) + padding_size);
+#if KALMAR_DEBUG
+        printf("push %lu bytes into kernarg: ", sizeof(T) + padding_size);
+#endif
         for (size_t i = 0; i < padding_size; ++i) {
             arg_vec.push_back((uint8_t)0x00);
-            //printf("%02X ", (uint8_t)0x00);
+#if KALMAR_DEBUG
+            printf("%02X ", (uint8_t)0x00);
+#endif
         }
         uint8_t* ptr = static_cast<uint8_t*>(static_cast<void*>(&val));
         for (size_t i = 0; i < sizeof(T); ++i) {
             arg_vec.push_back(ptr[i]);
-            //printf("%02X ", ptr[i]);
+#if KALMAR_DEBUG
+            printf("%02X ", ptr[i]);
+#endif
         }
-        //printf("\n");
+#if KALMAR_DEBUG
+        printf("\n");
+#endif
         arg_count++;
         return HSA_STATUS_SUCCESS;
     }
@@ -665,14 +673,14 @@ public:
         if (dst != device) {
             if (HSA_DGPU_FLAG && (hasHSAInterOp() && (getHSAAMRegion() != nullptr))) {
 #if KALMAR_DEBUG
-                std::cerr << "read(): use HSA memory copy\n";
+                std::cerr << "read(" << device << "," << dst << "," << count << "," << offset << "): use HSA memory copy\n";
 #endif
                 hsa_status_t status = HSA_STATUS_SUCCESS;
                 status = hsa_memory_copy(dst, (char*)device + offset, count);
                 STATUS_CHECK(status, __LINE__);
             } else {
 #if KALMAR_DEBUG
-                std::cerr << "read(): use host memory copy\n";
+                std::cerr << "read(" << device << "," << dst << "," << count << "," << offset << "): use host memory copy\n";
 #endif
                 memmove(dst, (char*)device + offset, count);
             }
@@ -686,14 +694,14 @@ public:
         if (src != device) {
             if (HSA_DGPU_FLAG && (hasHSAInterOp() && (getHSAAMRegion() != nullptr))) {
 #if KALMAR_DEBUG
-                std::cerr << "write(): use HSA memory copy\n";
+                std::cerr << "write(" << device << "," << src << "," << count << "," << offset << "," << blocking << "): use HSA memory copy\n";
 #endif
                 hsa_status_t status = HSA_STATUS_SUCCESS;
                 status = hsa_memory_copy((char*)device + offset, src, count);
                 STATUS_CHECK(status, __LINE__);
             } else {
 #if KALMAR_DEBUG
-                std::cerr << "write(): use host memory copy\n";
+                std::cerr << "write(" << device << "," << src << "," << count << "," << offset << "," << blocking << "): use host memory copy\n";
 #endif
                 memmove((char*)device + offset, src, count);
             }
@@ -708,14 +716,14 @@ public:
         if (src != dst) {
             if (HSA_DGPU_FLAG && (hasHSAInterOp() && (getHSAAMRegion() != nullptr))) {
 #if KALMAR_DEBUG
-                std::cerr << "copy(): use HSA memory copy\n";
+                std::cerr << "copy(" << src << "," << dst << "," << count << "," << src_offset << "," << dst_offset << "," blocking << "): use HSA memory copy\n";
 #endif
                 hsa_status_t status = HSA_STATUS_SUCCESS;
                 status = hsa_memory_copy((char*)dst + dst_offset, (char*)src + src_offset, count);
                 STATUS_CHECK(status, __LINE__);
             } else {
 #if KALMAR_DEBUG
-                std::cerr << "copy(): use host memory copy\n";
+                std::cerr << "copy(" << src << "," << dst << "," << count << "," << src_offset << "," << dst_offset << "," blocking << "): use host memory copy\n";
 #endif
                 memmove((char*)dst + dst_offset, (char*)src + src_offset, count);
             }
@@ -957,7 +965,7 @@ public:
 
         if (HSA_DGPU_FLAG && (hasHSAFinegrainedRegion() || hasHSACoarsegrainedRegion())) {
 #if KALMAR_DEBUG
-            std::cerr << "create(): use HSA memory allocator\n";
+            std::cerr << "create(" << count << "," << key << "): use HSA memory allocator\n";
 #endif
             hsa_status_t status = HSA_STATUS_SUCCESS;
             hsa_region_t am_region = getHSAAMRegion();
@@ -969,11 +977,15 @@ public:
             STATUS_CHECK(status, __LINE__);
         } else {
 #if KALMAR_DEBUG
-            std::cerr << "create(): use host memory allocator\n";
+            std::cerr << "create(" << count << "," << key << "): use host memory allocator\n";
 #endif
             data = aligned_alloc(0x1000, count);
             hsa_memory_register(data, count);
         }
+
+#if KALMAR_DEBUG
+        std::cerr << "create(): " << data << "\n";
+#endif
 
         return data;
     }
@@ -981,14 +993,14 @@ public:
     void release(void *ptr, struct rw_info* key ) override {
         if (HSA_DGPU_FLAG && (hasHSAFinegrainedRegion() || hasHSACoarsegrainedRegion())) {
 #if KALMAR_DEBUG
-            std::cerr << "release(): use HSA memory deallocator\n";
+            std::cerr << "release(" << ptr << "," << key << "): use HSA memory deallocator\n";
 #endif
             hsa_status_t status = HSA_STATUS_SUCCESS;
             status = hsa_memory_free(ptr);
             STATUS_CHECK(status, __LINE__);
         } else {
 #if KALMAR_DEBUG
-            std::cerr << "release(): use host memory deallocator\n";
+            std::cerr << "release(" << ptr << "," << key << "): use host memory deallocator\n";
 #endif
             hsa_memory_deregister(ptr, key->count);
             ::operator delete(ptr);
