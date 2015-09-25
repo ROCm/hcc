@@ -727,40 +727,56 @@ public:
 
         // do map
 
-        // XXX: as HSA runtime doesn't have map/unmap facility at this moment,
+        // as HSA runtime doesn't have map/unmap facility at this moment,
         // we explicitly allocate a host memory buffer in this case 
         if (HSA_DGPU_FLAG && (hasHSAInterOp() && (getHSAAMRegion() != nullptr))) {
 #if KALMAR_DEBUG
-            std::cerr << "map(): use HSA memory map\n";
+            std::cerr << "map(" << device << "," << count << "," << offset << "," << modify << "): use HSA memory map\n";
 #endif
             hsa_status_t status = HSA_STATUS_SUCCESS;
+            // allocate a host buffer
             void *data = aligned_alloc(0x1000, count);
+            // copy data from device buffer to host buffer
             status = hsa_memory_copy(data, (char*)device + offset, count);
             STATUS_CHECK(status, __LINE__);
+#if KALMAR_DEBUG
+            std::cerr << "map(): " << data << "\n";
+#endif
             return data;
             
         } else {
 #if KALMAR_DEBUG
-            std::cerr << "map(): use host memory\n";
+            std::cerr << "map(" << device << "," << count << "," << offset << "," << modify << "): use host memory map\n";
 #endif
             // for host memory we simply return the pointer plus offset
+#if KALMAR_DEBUG
+            std::cerr << "map(): " << ((char*)device+offset) << "\n";
+#endif
             return (char*)device + offset;
         }
     }
 
-    void unmap(void* device, void* addr) override {
+    void unmap(void* device, void* addr, size_t count, size_t offset, bool modify) override {
         // do unmap
 
-        // XXX: as HSA runtime doesn't have map/unmap facility at this moment,
+        // as HSA runtime doesn't have map/unmap facility at this moment,
         // we free the host memory buffer allocated in map()
         if (HSA_DGPU_FLAG && (hasHSAInterOp() && (getHSAAMRegion() != nullptr))) {
 #if KALMAR_DEBUG
-            std::cerr << "unmap(): use HSA memory map\n";
+            std::cerr << "unmap(" << device << "," << addr << "," << count << "," << offset << "," << modify << "): use HSA memory map\n";
 #endif
+            if (modify) {
+                // copy data from host buffer to device buffer
+                hsa_status_t status = HSA_STATUS_SUCCESS;
+                status = hsa_memory_copy((char*)device + offset, addr, count);
+                STATUS_CHECK(status, __LINE__);
+            }
+
+            // deallocate the host buffer
             ::operator delete(addr);
         } else {
 #if KALMAR_DEBUG
-            std::cerr << "unmap(): use host memory\n";
+            std::cerr << "unmap(" << device << "," << addr << "," << count << "," << offset << "," << modify << "): use host memory map\n";
 #endif
             // for host memory there's nothing to be done
         }
