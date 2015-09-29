@@ -291,7 +291,7 @@ public:
     /**
      * Returns if the accelerator view is based on HSA.
      */
-    bool get_hsa_interop() {
+    bool is_hsa_accelerator() {
         return pQueue->hasHSAInterOp();
     }
 
