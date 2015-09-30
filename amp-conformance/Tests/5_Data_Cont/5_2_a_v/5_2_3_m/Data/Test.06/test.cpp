@@ -20,7 +20,7 @@
 /// <tags>P1</tags>
 /// <summary>Create and access the data pointer for a view with a struct</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 
 using namespace Concurrency;
@@ -34,18 +34,18 @@ struct Foo
 };
 
 int main()
-{    
+{
     const int size = 2;
     vector<Foo> vec(size);
     vec[0].i = 13;
     vec[0].f = 14.0;
     vec[1].i = 17;
     vec[1].f = 18.0;
-    
+
 
     extent<1> ex(size);
     array_view<Foo> original(ex, vec);
-    
+
     Foo *data = original.data();
     if (data[0].i == 13 && data[0].f == 14.0 && data[1].i == 17 && data[1].f == 18.0)
     {

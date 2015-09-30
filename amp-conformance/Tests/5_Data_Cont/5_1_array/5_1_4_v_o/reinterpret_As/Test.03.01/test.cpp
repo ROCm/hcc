@@ -8,7 +8,7 @@
 /// <tags>P1</tags>
 /// <summary>Reinterpret an Array of float as double (GPU)</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <amptest_main.h>
 
 using namespace Concurrency;
@@ -18,10 +18,10 @@ runall_result test_main()
 {
     std::vector<float> v(10);
     Fill(v);
-    
+
     array<float, 1> arr_float(static_cast<int>(v.size()), v.begin());
 	array_view<float,1> av_float(arr_float);  // Created for verification
-    
+
 	int expected_size = arr_float.get_extent().size() * sizeof(float) / sizeof(double);
 
     // reinterpret on the GPU and copy back
@@ -32,7 +32,7 @@ runall_result test_main()
         array_view<const double, 1> av_double = arr_float.reinterpret_as<double>();
         results[i] = av_double[i];
     });
-    
+
     return Verify<double>(reinterpret_cast<double *>(av_float.data()), results.data(), expected_size) ? runall_pass : runall_fail;
 }
 

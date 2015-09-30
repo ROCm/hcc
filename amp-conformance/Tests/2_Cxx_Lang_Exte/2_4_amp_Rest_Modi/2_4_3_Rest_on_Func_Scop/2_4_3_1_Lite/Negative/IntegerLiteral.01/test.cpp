@@ -7,15 +7,15 @@
 /// <summary>test integer literal out of supported range</summary>
 //#Expects: Error: error C3595
 
-#include <amptest.h> 
+#include <amptest.h>
 
 void foo() __GPU
 {
     int n = (int)0x2ffffffffLL;
 }
 
-int main(int argc, char **argv) 
-{ 
+int main(int argc, char **argv)
+{
     foo();
     return 1;
 }

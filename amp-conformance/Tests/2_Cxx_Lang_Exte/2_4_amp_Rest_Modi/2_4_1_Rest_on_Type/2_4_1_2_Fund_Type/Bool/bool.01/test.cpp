@@ -44,12 +44,12 @@ void kernel1( int & c,  int & d,  int & e,  int & f,  int & g,  int & h, int a, 
     bool mf = (a <= b);
 
     c = (mc == true) ? 1 : 0;
-    d = (md == true) ? 1 : 0;    
+    d = (md == true) ? 1 : 0;
     e = (me == true) ? 1 : 0;
     f = (mf == true) ? 1 : 0;
 
     bool mg = LessThan(a, b);
-    g = (mg == true) ? 1 : 0;    
+    g = (mg == true) ? 1 : 0;
     bool mh = (a != b);
     // implicit conversion
     h = mh;
@@ -65,7 +65,7 @@ int test1(accelerator_view &rv)
     vector<int> A(size);
     vector<int> B(size);
 
-    // Initialize input 
+    // Initialize input
     srand(25763);
     InitializeArray(A, size);
     InitializeArray(B, size);
@@ -76,7 +76,7 @@ int test1(accelerator_view &rv)
     // setup input arrays
     array<int, 1> aA(e, A.begin(), A.end(), rv), aB(e, B.begin(), B.end(), rv);
 
-    // setup output 
+    // setup output
     array<int, 1> aC(e, rv), aD(e, rv), aE(e, rv), aF(e, rv), aG(e, rv), aH(e, rv);
     vector<int> C(size);
     vector<int> D(size);
@@ -204,7 +204,7 @@ int test1(accelerator_view &rv)
         }
     }
 
-    if(numFail > 0) 
+    if(numFail > 0)
     {
         printf("\ntest1: %d test(s) failed\n", numFail);
     }
@@ -245,7 +245,7 @@ int test2(accelerator_view &rv)
     // Input datasets
     vector<int> A(size);
 
-    // Initialize input 
+    // Initialize input
     srand(2010);
     InitializeArray(A, size);
 
@@ -255,7 +255,7 @@ int test2(accelerator_view &rv)
     // setup input arrays
     array<int, 1> aA(e, A.begin(), A.end(), rv);
 
-    // setup output 
+    // setup output
     array<int, 1> aC(e, rv);
     vector<int> C(size);
 
@@ -275,14 +275,14 @@ int test2(accelerator_view &rv)
 
         if (C[i] != expectedPc)
         {
-            printf("\nEquality operator test failed\n");            
+            printf("\nEquality operator test failed\n");
             printf("-Actual C[%d]: %d, ExpectedPc: %d\n", i, C[i], expectedPc);
             passed = false;
             break;
         }
     }
 
-    if(passed == false) 
+    if(passed == false)
     {
         printf("\ntest2: test failed\n");
     }

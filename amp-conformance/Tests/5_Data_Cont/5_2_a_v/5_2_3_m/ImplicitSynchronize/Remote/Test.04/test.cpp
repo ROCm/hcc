@@ -38,7 +38,7 @@ runall_result test_main()
 
     std::vector<int> v(100);
     array_view<int, 1> av(extent<1>(100), v);
-    
+
     for (int i = 0; i < 10; i++)
     {
         if (i % 2 == 0)
@@ -46,7 +46,7 @@ runall_result test_main()
             // write locally first
             array_view<int, 1> section1 = av.section(extent<1>(20));
             section1[10] = 17;
-            
+
             parallel_for_each(extent<1>(1), [=](index<1>) __GPU {
                 array_view<int, 1> section2 = av.section(index<1>(10), extent<1>(10));
                 section2[0] = 19;
@@ -59,7 +59,7 @@ runall_result test_main()
                 array_view<int, 1> section2 = av.section(index<1>(10), extent<1>(10));
                 section2[0] = 19;
             });
-            
+
             array_view<int, 1> section1 = av.section(extent<1>(20));
             section1[10] = 17;
         }
@@ -67,4 +67,4 @@ runall_result test_main()
 
     // since the last iteration is i = 9, the result value should be 17
     return av[10] == 17 ? runall_pass : runall_fail;
-}                                                                                       
+}

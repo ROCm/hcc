@@ -35,7 +35,7 @@ bool test_feature()
 }
 
 runall_result test_main()
-{ 
+{
     test_feature<int, 1, 2>();
     test_feature<int, 5, 1>();
     test_feature<float, 1, 2>();

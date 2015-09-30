@@ -19,12 +19,12 @@ runall_result scalar_values()
 {
 	ArrayTest<int, 1> original(extent<1>(10));
     ArrayViewTest<int, 1> section = original.section(original.arr().section(2, 5), index<1>(2));
-    
+
     original.set_value(index<1>(2), 13);
-    
+
     section.view()(3) = 15;
     section.set_known_value(index<1>(3), 15);
-    
+
     return (gpu_read(original.arr(),index<1>(5)) == 15 && section.view()(0) == 13) ? original.pass() : original.fail();
 }
 
@@ -32,12 +32,12 @@ runall_result only_index()
 {
 	ArrayTest<int, 1> original(extent<1>(10));
     ArrayViewTest<int, 1> section = original.section(original.arr().section(index<1>(2)), index<1>(2));
-    
+
     original.set_value(index<1>(2), 13);
-    
+
     section.view()(3) = 15;
     section.set_known_value(index<1>(3), 15);
-    
+
     return (gpu_read(original.arr(),index<1>(5)) == 15 && section.view()(0) == 13) ? original.pass() : original.fail();
 }
 
@@ -45,12 +45,12 @@ runall_result only_extent()
 {
 	ArrayTest<int, 1> original(extent<1>(10));
     ArrayViewTest<int, 1> section = original.section(original.arr().section(extent<1>(5)), index<1>(0));
-    
+
     original.set_value(index<1>(2), 13);
-    
+
     section.view()(3) = 15;
     section.set_known_value(index<1>(3), 15);
-    
+
     return (gpu_read(original.arr(),index<1>(3)) == 15 && section.view()(2) == 13) ? original.pass() : original.fail();
 }
 

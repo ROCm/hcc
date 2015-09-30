@@ -26,17 +26,17 @@ class StaticClass
 
 
 // Main entry point
-int main(int argc, char **argv) 
+int main(int argc, char **argv)
 {
     bool passed = true;
 
     Concurrency::extent<1> ex(1);
-    Concurrency::array<int, 1> arr(ex);
+    array<int, 1> arr(ex);
 
     parallel_for_each(arr.get_extent(), [&](index<1> idx) __GPU_ONLY {
 
        arr[idx] = StaticClass::foo(1, 2);
-        
+
     });
 
     vector<int> v = arr;

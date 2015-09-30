@@ -8,7 +8,7 @@
 
 #include <amptest.h>
 
-void f(const int & i) 
+void f(const int & i)
 {
 }
 
@@ -17,7 +17,7 @@ void f(int & i) __GPU
     i = 1;
 }
 
-bool test() 
+bool test()
 {
     bool passed = true;
 

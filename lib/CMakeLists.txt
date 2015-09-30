@@ -23,7 +23,7 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-device
     ${CMAKE_CURRENT_BINARY_DIR}/clamp-embed
     ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-assemble
     ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-link
-    ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-preprocess
+#    ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-preprocess
     DESTINATION bin)
 
 ####################
@@ -67,7 +67,7 @@ install(FILES opencl_prefix.cl DESTINATION lib)
 ####################
 # Dynamic memory allocation HSAIL logic (HSA)
 ####################
-install(FILES new_delete.hsail DESTINATION lib)
+install(FILES hsa_builtins.hsail DESTINATION lib)
 
 ####################
 # add subdirectories
@@ -77,6 +77,7 @@ add_subdirectory(hsa)
 add_subdirectory(cpu)
 
 # Build plugins for clang
-if (CXXAMP_ENABLE_BOLT)
-  add_subdirectory(clang-plugins)
-endif (CXXAMP_ENABLE_BOLT)
+# FIXME: codes in this directory is obsolete, need to clean it up
+#if (CXXAMP_ENABLE_BOLT)
+#  add_subdirectory(clang-plugins)
+#endif (CXXAMP_ENABLE_BOLT)

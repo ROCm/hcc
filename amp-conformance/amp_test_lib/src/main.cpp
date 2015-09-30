@@ -3,6 +3,7 @@
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
 // THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 // See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
+#include <amp.h>
 #include <amptest/context.h>
 #include <amptest/logging.h>
 #include <amptest/runall.h>
@@ -72,6 +73,19 @@ namespace Concurrency {
 
 				try {
 					return invoke_test_main();
+				} catch(concurrency::accelerator_view_removed& ex) {
+					// If we catch a TDR, then lets be sure to print out the reason too
+					Log(LogType::Error) << "test_main() threw unhandled " << get_type_name(ex) << " exception "
+						<< "(error code: 0x" << std::hex << ex.get_error_code() << std::dec
+						<< ", reason code: 0x" << std::hex << ex.get_view_removed_reason() << std::dec
+						<< "): "
+						<< ex.what() << std::endl;
+					return runall_fail;
+				} catch(concurrency::runtime_exception& ex) {
+					Log(LogType::Error) << "test_main() threw unhandled " << get_type_name(ex) << " exception "
+						<< "(error code: 0x" << std::hex << ex.get_error_code() << std::dec << "): "
+						<< ex.what() << std::endl;
+					return runall_fail;
 				} catch(const std::exception& ex) {
 					Log(LogType::Error) << "test_main() threw unhandled " << get_type_name(ex) << " exception: " << ex.what() << std::endl;
 					return runall_fail;

@@ -20,7 +20,7 @@
 /// <tags>P1</tags>
 /// <summary>Reinterpret an AV of float as double (GPU)</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 
 using namespace Concurrency;
@@ -30,9 +30,9 @@ int main()
 {
     std::vector<float> v(10);
     Fill(v);
-    
+
     array_view<float, 1> av_float(static_cast<int>(v.size()), v);
-    
+
     int expected_size = av_float.reinterpret_as<double>().get_extent().size();
 
     // reinterpret on the GPU and copy back
@@ -42,7 +42,7 @@ int main()
         array_view<const double, 1> av_double = av_float.reinterpret_as<double>();
         results[i] = av_double[i];
     });
-    
+
     return Verify<double>(reinterpret_cast<double *>(av_float.data()), results.data(), expected_size) ? runall_pass : runall_fail;
 }
 

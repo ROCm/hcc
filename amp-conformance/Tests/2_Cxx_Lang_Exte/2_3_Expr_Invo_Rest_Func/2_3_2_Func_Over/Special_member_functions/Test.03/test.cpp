@@ -15,39 +15,39 @@ using namespace Concurrency::Test;
 struct S
 {
     S() : x(0), y(0) {}
-    
+
     S(int x) __GPU
     : x(x)
     {
         y = 2 * x;
     }
-    
+
     S(const S& other) __GPU_ONLY
     {
         this->x = other.x;
         this->y = other.y;
     }
-    
+
     S(const S& other) __CPU_ONLY
     {
         this->x = 0;
         this->y = 0;
     }
-    
+
     S& operator=(const S& other) __GPU_ONLY
     {
         this->x = other.x;
         this->y = other.y;
         return *this;
     }
-    
+
     S& operator=(const S& other) __CPU_ONLY
     {
         this->x = 0;
         this->y = 0;
         return *this;
     }
-    
+
     int x;
     int y;
 };
@@ -55,10 +55,10 @@ struct S
 int main()
 {
     require_device();
-    
+
     std::vector<S> v(1);
     array_view<S, 1> av(1, v);
-    
+
     Log() << "Constructing S(12) on the GPU" << std::endl;
     parallel_for_each(extent<1>(1), [=](index<1> i) __GPU {
         S s1(12);
@@ -66,12 +66,12 @@ int main()
         S s3(s2);
         av[0] = s3;
     });
-    
+
     if (av[0].x != 12 && av[0].y != 24)
     {
         Log() << "Expected: { 12, 24 } Was: {" << av[0].x << ", " << av[0].y << "}" << std::endl;
         return runall_fail;
     }
-    
+
     return runall_pass;
 }

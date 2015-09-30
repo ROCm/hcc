@@ -18,7 +18,7 @@
 //--------------------------------------------------------------------------------------
 //
 /// <tags>P1</tags>
-/// <summary>Cannot copy assign with a mismatch of rank</summary> 
+/// <summary>Cannot copy assign with a mismatch of rank</summary>
 //#Expects: Error: test.cpp\(34\) : error C2440
 
 #include <amptest.h>

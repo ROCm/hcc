@@ -17,15 +17,15 @@ public:
 class C2
 {
 public:
-    static void foo(int &flag)  
+    static void foo(int &flag)
     {
         C1 c;
-    
+
         c.foo(flag);
     }
 };
 
-static bool test() 
+static bool test()
 {
     int flag = 0;
 

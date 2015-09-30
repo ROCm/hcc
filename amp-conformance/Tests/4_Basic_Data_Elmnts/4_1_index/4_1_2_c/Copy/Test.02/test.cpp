@@ -26,7 +26,7 @@ bool CopyConstructWithIndexOnHost()
 {
     Log() << "Testing copy construct index as function parameter from another index on host" << std::endl;
 
-    index<RANK> idx(0, 1, 2);    
+    index<RANK> idx(0, 1, 2);
     return func(idx);
 }
 
@@ -59,7 +59,7 @@ void kernel(array<int, 1>& A, array<int, 1>& B, array<int, 1>& C, array<int, 1>&
 runall_result CopyConstructWithIndexOnDevice()
 {
 	runall_result result;
-    Log() << "Testing copy construct index as parallel_for_each parameter (from another index)" << std::endl;   
+    Log() << "Testing copy construct index as parallel_for_each parameter (from another index)" << std::endl;
 
     accelerator_view av = require_device().get_default_view();
 
@@ -81,12 +81,12 @@ runall_result CopyConstructWithIndexOnDevice()
     result &= REPORT_RESULT(IsIndexSetToSequence<RANK>(vA, vB[0]));
     result &= REPORT_RESULT(IsIndexSetToSequence<RANK>(vC, vD[0]));
     result &= REPORT_RESULT(vB[0] == vD[0]);
-   
+
     return result;
 }
 
 
-runall_result test_main() 
+runall_result test_main()
 {
 	runall_result result;
     result &= REPORT_RESULT(CopyConstructWithIndexOnHost());

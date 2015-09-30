@@ -17,9 +17,9 @@ const int XGroupSize = 8;
 const int YGroupSize = 8;
 const int ZGroupSize = 16;
 
-const int NumXGroups = 32;           
-const int NumYGroups = 32;           
-const int NumZGroups = 63;           
+const int NumXGroups = 32;
+const int NumYGroups = 32;
+const int NumZGroups = 63;
 const int NumGroups  =  NumXGroups * NumYGroups * NumZGroups;
 
 const int XSize      = XGroupSize * NumXGroups;
@@ -51,7 +51,7 @@ runall_result test()
     accelerator_view rv =  require_device(Device::ALL_DEVICES).get_default_view();
 
     Concurrency::extent<3> extentA(ZSize, YSize, XSize), extentB(NumZGroups, NumYGroups, NumXGroups);
-    Concurrency::array<ElementType, 3> fA(extentA, rv), fB(extentB, rv);
+    array<ElementType, 3> fA(extentA, rv), fB(extentB, rv);
 
     //forall where conditions are met
     copy(A, fA);
@@ -67,7 +67,7 @@ runall_result test()
     {
         passed = false;
         cout << "Test1: failed" << endl;
-    }    
+    }
     else
     {
         cout << "Test1: passed" << endl;

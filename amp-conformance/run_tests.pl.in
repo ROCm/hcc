@@ -4,15 +4,15 @@
 #
 # All rights reserved
 #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file 
-# except in compliance with the License. You may obtain a copy of the License at 
-# http://www.apache.org/licenses/LICENSE-2.0  
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
+# except in compliance with the License. You may obtain a copy of the License at
+# http://www.apache.org/licenses/LICENSE-2.0
 #
-# THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER 
-# EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF 
-# TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT. 
+# THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER
+# EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF
+# TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 #
-# See the Apache Version 2.0 License for specific language governing permissions and 
+# See the Apache Version 2.0 License for specific language governing permissions and
 # limitations under the License.
 ##############################################################################################
 
@@ -76,7 +76,7 @@ my @tests;
 my $has_test_list=0;
 
 sub match_tests
-{    
+{
     if(lc($_) eq 'test.cpp')
     {
         push @tests, cwd().'/'.$_;
@@ -107,7 +107,7 @@ chdir($tmpdir);
 foreach my $test (@tests)
 {
     log_message("Test: $test");
-    
+
     # Read test configuration
     undef %Test::config;
 	
@@ -118,17 +118,17 @@ foreach my $test (@tests)
         my $safe = new Safe('Test');
         $safe->rdo($conf_file) or &exit_message(1, "Cannot open $conf_file");
     }
-    
+
     if(not defined $Test::config{'definitions'})
     {
         $Test::config{'definitions'} = [{}];
     }
-    
+
     # Find "expects error" directives in cpp
     open(TEST_CPP, $test) or &exit_message(1, "Cannot open $test");
     $Test::config{'expected_success'} = (grep m@//#\s*Expects\s*(\d*)\s*:\s*(warning|error)@i, <TEST_CPP>) == 0;
     close(TEST_CPP);
-    
+
     log_message('Compile only: '.bool_str($Test::config{'compile_only'})."\n"
         .'Expected success: '.bool_str($Test::config{'expected_success'}));
 
@@ -143,7 +143,7 @@ foreach my $test (@tests)
     foreach my $def_set (@{$Test::config{'definitions'}})
     {
         print "$test : ";
-    
+
         # Build and execute test
         my $cflags_defs = '';
         while(my ($k, $v) = each(%{$def_set}))
@@ -161,14 +161,14 @@ foreach my $test (@tests)
             $command = "\\
                 $CLANG_AMP $SHARED_CXXFLAGS $include_main $test $AMPTESTLIB $cflags_defs $CLAMP_LDFLAGS -o $tmpdir/test.out -g 2>>$run_log 1>>$run_log";
         }
-        
+
         log_message("Command: $command\n"
             ."Build output:\n"
             ."<<<");
         my $build_exit_code = system($command) >> 8;
         log_message(">>>\n"
             ."Build exit code: $build_exit_code");
-    
+
         my $exec_exit_code;
         my $timeout=0;
         if((not $Test::config{'compile_only'}) && $build_exit_code == 0 && $Test::config{'expected_success'})
@@ -188,7 +188,7 @@ foreach my $test (@tests)
             log_message(">>>\n"
                 ."Execution exit code: $exec_exit_code");
         }
-    
+
         # Interpret result
         my $result;
         if($timeout == 1) {
@@ -235,7 +235,7 @@ foreach my $test (@tests)
                 $result = FAIL;
             }
         }
-        
+
         if($result == PASS)
         {
             $num_passed++;
@@ -314,7 +314,7 @@ sub get_files_by_extension($$)
 {
     my $dir = $_[0];
     my $ext = $_[1];
-    
+
 	my @files = `ls $dir`;
     my @ext_files;
 	
@@ -326,7 +326,7 @@ sub get_files_by_extension($$)
 			push(@ext_files, $file);
 		}
     }
-    
+
     return @ext_files;    	
 }
 
@@ -350,10 +350,10 @@ sub try_find_file_by_extension($$$)
 	{	
 		@files = get_files_by_extension($start_dir, $ext);
 		
-		if(@files > 1) 
+		if(@files > 1)
 		{
 			print "Error: More than one (*.$ext) files present in directory $start_dir\n";
-			return -1; 
+			return -1;
 		}
 		
 		if(@files != 0)
@@ -367,7 +367,7 @@ sub try_find_file_by_extension($$$)
 		}
 		
 		# Move to parent directory to continue search
-		$start_dir = dirname($start_dir); 
+		$start_dir = dirname($start_dir);
 	}
 	while(index($start_dir, $end_dir) != -1);
 	

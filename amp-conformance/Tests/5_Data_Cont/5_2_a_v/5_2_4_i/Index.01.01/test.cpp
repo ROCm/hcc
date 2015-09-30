@@ -30,28 +30,28 @@ using namespace Concurrency::Test;
 int main()
 {
     accelerator accel = require_device();
-    
+
     ArrayViewTest<int, 2> t(extent<2>(3, 3));
     array_view<int, 2> av = t.view();
-    
+
     Log() << "Setting known values on the GPU" << std::endl;
     // now set some values on the GPU
     parallel_for_each(accel.get_default_view(), extent<1>(1), [av](index<1>) __GPU {
         av[index<2>(0, 0)] = 1;
         av[index<2>(2, 2)] = 19;
     });
-    
+
     // use this to get the results
     std::vector<int> v_results(av.get_extent().size());
     array_view<int, 2> results(av.get_extent(), v_results);
     parallel_for_each(accel.get_default_view(), av.get_extent(), [av, results](index<2> i) __GPU {
         results[i] = av[i];
     });
-    
+
     // update the tracking structure with the known-values
     t.set_known_value(index<2>(0, 0), 1);
     t.set_known_value(index<2>(2, 2), 19);
-    
+
     return
         // verify the results av, calling pass() will verify the original view
         results[index<2>(0, 0)] == 1 &&

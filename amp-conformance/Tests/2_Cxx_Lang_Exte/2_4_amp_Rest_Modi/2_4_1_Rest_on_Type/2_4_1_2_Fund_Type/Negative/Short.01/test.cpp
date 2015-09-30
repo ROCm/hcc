@@ -7,15 +7,15 @@
 /// <summary>test char</summary>
 //#Expects: Error: error C3581
 
-#include <amptest.h> 
+#include <amptest.h>
 
 short foo(unsigned short s) __GPU
 {
     return (s + 2);
 }
 
-int main(int argc, char **argv) 
-{ 
+int main(int argc, char **argv)
+{
     foo(2);
     return 1;
 }

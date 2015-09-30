@@ -9,7 +9,7 @@
 /// <summary>Test an out of bounds section </summary>
 
 #include <amptest.h>
-#include <amptest_main.h> 
+#include <amptest_main.h>
 #include <vector>
 
 using namespace Concurrency;

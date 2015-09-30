@@ -8,6 +8,7 @@
 #include <iostream>
 #include <string>
 #include <cassert>
+#include <tuple>
 
 #include <amp.h>
 #include <mutex>
@@ -18,14 +19,8 @@
 
 namespace Concurrency {
 
-// initialize static class members
-const wchar_t accelerator::gpu_accelerator[] = L"gpu";
 const wchar_t accelerator::cpu_accelerator[] = L"cpu";
 const wchar_t accelerator::default_accelerator[] = L"default";
-
-std::shared_ptr<accelerator> accelerator::_gpu_accelerator = std::make_shared<accelerator>(accelerator::gpu_accelerator);
-std::shared_ptr<accelerator> accelerator::_cpu_accelerator = std::make_shared<accelerator>(accelerator::cpu_accelerator);
-std::shared_ptr<accelerator> accelerator::_default_accelerator = nullptr;
 
 } // namespace Concurrency
 
@@ -45,21 +40,25 @@ extern "C" char * spir_kernel_end[] asm ("_binary_kernel_spir_end") __attribute_
 extern "C" char * hsa_kernel_source[] asm ("_binary_kernel_brig_start") __attribute__((weak));
 extern "C" char * hsa_kernel_end[] asm ("_binary_kernel_brig_end") __attribute__((weak));
 
+// HSA offline finalized kernel codes
+extern "C" char * hsa_offline_finalized_kernel_source[] asm ("_binary_kernel_isa_start") __attribute__((weak));
+extern "C" char * hsa_offline_finalized_kernel_end[] asm ("_binary_kernel_isa_end") __attribute__((weak));
+
+// tame TLS objects
+extern "C" int __cxa_thread_atexit(void (*func)(), void *obj,
+                                   void *dso_symbol) {
+  int __cxa_thread_atexit_impl(void (*)(), void *, void *);
+  return __cxa_thread_atexit_impl(func, obj, dso_symbol);
+}
 
 // interface of C++AMP runtime implementation
 struct RuntimeImpl {
   RuntimeImpl(const char* libraryName) :
     m_ImplName(libraryName),
     m_RuntimeHandle(nullptr),
-    m_EnumerateDevicesImpl(nullptr),
-    m_QueryDeviceInfoImpl(nullptr),
-    m_CreateKernelImpl(nullptr),
-    m_LaunchKernelImpl(nullptr),
-    m_LaunchKernelAsyncImpl(nullptr),
-    m_MatchKernelNamesImpl(nullptr),
     m_PushArgImpl(nullptr),
     m_PushArgPtrImpl(nullptr),
-    m_GetAllocatorImpl(nullptr),
+    m_GetContextImpl(nullptr),
     isCPU(false) {
     //std::cout << "dlopen(" << libraryName << ")\n";
     m_RuntimeHandle = dlopen(libraryName, RTLD_LAZY);
@@ -78,17 +77,9 @@ struct RuntimeImpl {
 
   // load symbols from C++AMP runtime implementation
   void LoadSymbols() {
-
-    m_EnumerateDevicesImpl = (EnumerateDevicesImpl_t) dlsym(m_RuntimeHandle, "EnumerateDevicesImpl");
-    m_QueryDeviceInfoImpl = (QueryDeviceInfoImpl_t) dlsym(m_RuntimeHandle, "QueryDeviceInfoImpl");
-    m_CreateKernelImpl = (CreateKernelImpl_t) dlsym(m_RuntimeHandle, "CreateKernelImpl");
-    m_LaunchKernelImpl = (LaunchKernelImpl_t) dlsym(m_RuntimeHandle, "LaunchKernelImpl");
-    m_LaunchKernelAsyncImpl = (LaunchKernelAsyncImpl_t) dlsym(m_RuntimeHandle, "LaunchKernelAsyncImpl");
-    m_MatchKernelNamesImpl = (MatchKernelNamesImpl_t) dlsym(m_RuntimeHandle, "MatchKernelNamesImpl");
     m_PushArgImpl = (PushArgImpl_t) dlsym(m_RuntimeHandle, "PushArgImpl");
     m_PushArgPtrImpl = (PushArgPtrImpl_t) dlsym(m_RuntimeHandle, "PushArgPtrImpl");
-    m_GetAllocatorImpl = (GetAllocatorImpl_t) dlsym(m_RuntimeHandle, "GetAllocatorImpl");
-
+    m_GetContextImpl= (GetContextImpl_t) dlsym(m_RuntimeHandle, "GetContextImpl");
   }
 
   void set_cpu() { isCPU = true; }
@@ -96,19 +87,13 @@ struct RuntimeImpl {
 
   std::string m_ImplName;
   void* m_RuntimeHandle;
-  EnumerateDevicesImpl_t m_EnumerateDevicesImpl;
-  QueryDeviceInfoImpl_t m_QueryDeviceInfoImpl;
-  CreateKernelImpl_t m_CreateKernelImpl;
-  LaunchKernelImpl_t m_LaunchKernelImpl;
-  LaunchKernelAsyncImpl_t m_LaunchKernelAsyncImpl;
-  MatchKernelNamesImpl_t m_MatchKernelNamesImpl;
   PushArgImpl_t m_PushArgImpl;
   PushArgPtrImpl_t m_PushArgPtrImpl;
-  GetAllocatorImpl_t m_GetAllocatorImpl;
+  GetContextImpl_t m_GetContextImpl;
   bool isCPU;
 };
 
-namespace Concurrency {
+namespace Kalmar {
 namespace CLAMP {
 
 ////////////////////////////////////////////////////////////
@@ -314,27 +299,6 @@ RuntimeImpl* GetOrInitRuntime() {
   return runtimeImpl;
 }
 
-//
-// implementation of C++AMP runtime interfaces
-// declared in amp_runtime.h and amp_allocator.h
-//
-
-// used in amp.h
-std::vector<int> EnumerateDevices() {
-  int num = 0;
-  std::vector<int> ret;
-  int* devices = nullptr;
-  GetOrInitRuntime()->m_EnumerateDevicesImpl(NULL, &num);
-  assert(num > 0);
-  devices = new int[num];
-  GetOrInitRuntime()->m_EnumerateDevicesImpl(devices, NULL);
-  for (int i = 0; i < num; ++i) {
-    ret.push_back(devices[i]);
-  }
-  delete[] devices;
-  return ret;
-}
-
 bool is_cpu()
 {
     return GetOrInitRuntime()->is_cpu();
@@ -345,26 +309,20 @@ bool in_cpu_kernel() { return in_kernel; }
 void enter_kernel() { in_kernel = true; }
 void leave_kernel() { in_kernel = false; }
 
-// used in amp_impl.h
-void QueryDeviceInfo(const std::wstring& device_path,
-  bool& supports_cpu_shared_memory,
-  size_t& dedicated_memory,
-  bool& supports_limited_double_precision,
-  std::wstring& description) {
-  wchar_t des[128];
-  GetOrInitRuntime()->m_QueryDeviceInfoImpl(device_path.c_str(), &supports_cpu_shared_memory, &dedicated_memory, &supports_limited_double_precision, des);
-  description = std::wstring(des);
-}
-
 // used in parallel_for_each.h
-void *CreateKernel(std::string s) {
+void *CreateKernel(std::string s, KalmarQueue* pQueue) {
+  static bool firstTime = true;
+  static bool hasSPIR = false;
+  static bool hasFinalized = false;
+
+  char* kernel_env = nullptr;
+  size_t kernel_size = 0;
+
   // FIXME need a more elegant way
   if (GetOrInitRuntime()->m_ImplName.find("libmcwamp_opencl") != std::string::npos) {
-    static bool firstTime = true;
-    static bool hasSPIR = false;
     if (firstTime) {
       // force use OpenCL C kernel from CLAMP_NOSPIR environment variable
-      char* kernel_env = getenv("CLAMP_NOSPIR");
+      kernel_env = getenv("CLAMP_NOSPIR");
       if (kernel_env == nullptr) {
           OpenCLPlatformDetect opencl_rt;
         if (opencl_rt.hasSPIR()) {
@@ -383,45 +341,55 @@ void *CreateKernel(std::string s) {
     }
     if (hasSPIR) {
       // SPIR path
-        size_t kernel_size =
+      kernel_size =
         (ptrdiff_t)((void *)spir_kernel_end) -
         (ptrdiff_t)((void *)spir_kernel_source);
-      return GetOrInitRuntime()->m_CreateKernelImpl(s.c_str(), (void *)kernel_size, spir_kernel_source);
+      return pQueue->getDev()->CreateKernel(s.c_str(), (void *)kernel_size, spir_kernel_source, true);
     } else {
       // OpenCL path
-        size_t kernel_size =
+      kernel_size =
         (ptrdiff_t)((void *)cl_kernel_end) -
         (ptrdiff_t)((void *)cl_kernel_source);
-      return GetOrInitRuntime()->m_CreateKernelImpl(s.c_str(), (void *)kernel_size, cl_kernel_source);
+      return pQueue->getDev()->CreateKernel(s.c_str(), (void *)kernel_size, cl_kernel_source, true);
     }
   } else {
     // HSA path
-       size_t kernel_size =
+
+    if (firstTime) {
+      // force use HSA BRIG kernel from CLAMP_NOISA environment variable
+      kernel_env = getenv("CLAMP_NOISA");
+      if (kernel_env == nullptr) {
+        // check if offline finalized kernels are available
+        size_t kernel_finalized_size = 
+          (ptrdiff_t)((void *)hsa_offline_finalized_kernel_end) -
+          (ptrdiff_t)((void *)hsa_offline_finalized_kernel_source);
+        if (kernel_finalized_size > 0) {
+          if (mcwamp_verbose)
+            std::cout << "Use offline finalized HSA kernels\n";
+          hasFinalized = true;
+        } else {
+          if (mcwamp_verbose)
+            std::cout << "Use HSA BRIG kernel\n";
+        }
+      } else {
+        // force use BRIG kernel
+        if (mcwamp_verbose)
+          std::cout << "Use HSA BRIG kernel\n";
+      }
+      firstTime = false;
+    }
+    if (hasFinalized) {
+      kernel_size =
+        (ptrdiff_t)((void *)hsa_offline_finalized_kernel_end) -
+        (ptrdiff_t)((void *)hsa_offline_finalized_kernel_source);
+      return pQueue->getDev()->CreateKernel(s.c_str(), (void *)kernel_size, hsa_offline_finalized_kernel_source, false);
+    } else {
+      kernel_size = 
         (ptrdiff_t)((void *)hsa_kernel_end) -
         (ptrdiff_t)((void *)hsa_kernel_source);
-     return GetOrInitRuntime()->m_CreateKernelImpl(s.c_str(), (void *)kernel_size, hsa_kernel_source);
-   }
-}
-
-void LaunchKernel(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {
-  GetOrInitRuntime()->m_LaunchKernelImpl(kernel, dim_ext, ext, local_size);
-}
-
-std::shared_future<void>* LaunchKernelAsync(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size) {
-  void *ret = nullptr;
-  ret = GetOrInitRuntime()->m_LaunchKernelAsyncImpl(kernel, dim_ext, ext, local_size);
-  return static_cast<std::shared_future<void>*>(ret);
-}
-
-
-void MatchKernelNames(std::string& fixed_name) {
-  char* ret = new char[fixed_name.length() * 2];
-  assert(ret);
-  memset(ret, 0, fixed_name.length() * 2);
-  memcpy(ret, fixed_name.c_str(), fixed_name.length());
-  GetOrInitRuntime()->m_MatchKernelNamesImpl(ret);
-  fixed_name = ret;
-  delete[] ret;
+      return pQueue->getDev()->CreateKernel(s.c_str(), (void *)kernel_size, hsa_kernel_source, true);
+    }
+  }
 }
 
 void PushArg(void *k_, int idx, size_t sz, const void *s) {
@@ -433,8 +401,8 @@ void PushArgPtr(void *k_, int idx, size_t sz, const void *s) {
 
 } // namespace CLAMP
 
-AMPAllocator *getAllocator() {
-  return static_cast<AMPAllocator*>(CLAMP::GetOrInitRuntime()->m_GetAllocatorImpl());
+KalmarContext *getContext() {
+  return static_cast<KalmarContext*>(CLAMP::GetOrInitRuntime()->m_GetContextImpl());
 }
-} // namespace Concurrency
 
+} // namespace Kalmar

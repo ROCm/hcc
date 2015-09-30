@@ -4,24 +4,23 @@
 // THIS CODE IS PROVIDED *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 // See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
 /// <tags>P0</tags>
-/// <summary>Call group_barrier with meaningless statement. For example, group_barrier is used without 
+/// <summary>Call group_barrier with meaningless statement. For example, group_barrier is used without
 /// shared memory and called directly. The program can be compiled and run. 1d</summary>
 
 #include <iostream>
 #include <amptest.h>
 #include <amptest_main.h>
 
-using namespace std;
 using namespace Concurrency;
 using namespace Concurrency::Test;
 
 const int GroupSize = 10;
-const int NumGroups = 65;     
+const int NumGroups = 65;
 const int Size      = GroupSize * NumGroups;
 
 //Calculate sum of all elements in a group - GPU version
 template<typename ElementType>
-void CalculateGroupSum(tiled_index<GroupSize> idx, int flatLocalIndex, const Concurrency::array<ElementType, 1> & fA, Concurrency::array<ElementType, 1> & fB) __GPU_ONLY
+void CalculateGroupSum(tiled_index<GroupSize> idx, int flatLocalIndex, const array<ElementType, 1> & fA, array<ElementType, 1> & fB) __GPU_ONLY
 {
     // meaningless
     idx.barrier.wait();
@@ -32,7 +31,7 @@ void CalculateGroupSum(tiled_index<GroupSize> idx, int flatLocalIndex, const Con
 
 //Kernel
 template <typename ElementType>
-void kernel(tiled_index<GroupSize> idx, const Concurrency::array<ElementType, 1> & fA, Concurrency::array<ElementType, 1> & fB, int x, int only1stgrp = 0) __GPU_ONLY
+void kernel(tiled_index<GroupSize> idx, const array<ElementType, 1> & fA, array<ElementType, 1> & fB, int x, int only1stgrp = 0) __GPU_ONLY
 {
     if (only1stgrp == 0)
     {
@@ -42,25 +41,25 @@ void kernel(tiled_index<GroupSize> idx, const Concurrency::array<ElementType, 1>
         // Only first thread initializes
         if(flatLocalIndex == 0) fB[idx.tile] = 100;
 
-        do { if(x <= 1)  break; do { if(x <= 2)  break; do { if(x <= 3)  break; do { if(x <= 4)  break; do { if(x <= 5)  break; 
+        do { if(x <= 1)  break; do { if(x <= 2)  break; do { if(x <= 3)  break; do { if(x <= 4)  break; do { if(x <= 5)  break;
         for(;x > 6;)   { for(;x > 7;)  { for(;x > 8;)  { for(;x > 9;)  { for(;x > 10;) {
             if(x > 11) if(x > 12) if(x > 13) if(x > 14) if(x > 15)
             {
-                switch(x > 16? 1:0) { case 0: break; case 1: 
-                    switch(x > 17? 1:0) { case 0: break; case 1: switch(x > 18? 1:0) { case 0: break; case 1: 
-                    switch(x > 19? 1:0) { case 0: break; case 1: switch(x > 20? 1:0) { case 0: break; case 1: 
+                switch(x > 16? 1:0) { case 0: break; case 1:
+                    switch(x > 17? 1:0) { case 0: break; case 1: switch(x > 18? 1:0) { case 0: break; case 1:
+                    switch(x > 19? 1:0) { case 0: break; case 1: switch(x > 20? 1:0) { case 0: break; case 1:
                 {
-                    while(x > 21) { while(x > 22) { while(x > 23) { while(x > 24) { while(x > 25){ 
+                    while(x > 21) { while(x > 22) { while(x > 23) { while(x > 24) { while(x > 25){
 
                         CalculateGroupSum(idx, flatLocalIndex, fA, fB);
 
-                        break;} break;} break;} break;} break;}   
+                        break;} break;} break;} break;} break;}
 
                 }
                 }}}}}
             }
             break;} break;} break;} break;} break;}
-        break;} while(true); break;} while(true); break;} while(true); break;} while(true); break;} while(true);    
+        break;} while(true); break;} while(true); break;} while(true); break;} while(true); break;} while(true);
     } else
     {
         if (idx.tile[0] == 0)
@@ -71,25 +70,25 @@ void kernel(tiled_index<GroupSize> idx, const Concurrency::array<ElementType, 1>
             // Only first thread initializes
             if(flatLocalIndex == 0) fB[idx.tile] = 100;
 
-            do { if(x <= 1)  break; do { if(x <= 2)  break; do { if(x <= 3)  break; do { if(x <= 4)  break; do { if(x <= 5)  break; 
+            do { if(x <= 1)  break; do { if(x <= 2)  break; do { if(x <= 3)  break; do { if(x <= 4)  break; do { if(x <= 5)  break;
             for(;x > 6;)   { for(;x > 7;)  { for(;x > 8;)  { for(;x > 9;)  { for(;x > 10;) {
                 if(x > 11) if(x > 12) if(x > 13) if(x > 14) if(x > 15)
                 {
-                    switch(x > 16? 1:0) { case 0: break; case 1: 
-                        switch(x > 17? 1:0) { case 0: break; case 1: switch(x > 18? 1:0) { case 0: break; case 1: 
-                        switch(x > 19? 1:0) { case 0: break; case 1: switch(x > 20? 1:0) { case 0: break; case 1: 
+                    switch(x > 16? 1:0) { case 0: break; case 1:
+                        switch(x > 17? 1:0) { case 0: break; case 1: switch(x > 18? 1:0) { case 0: break; case 1:
+                        switch(x > 19? 1:0) { case 0: break; case 1: switch(x > 20? 1:0) { case 0: break; case 1:
                     {
-                        while(x > 21) { while(x > 22) { while(x > 23) { while(x > 24) { while(x > 25){ 
+                        while(x > 21) { while(x > 22) { while(x > 23) { while(x > 24) { while(x > 25){
 
                             CalculateGroupSum(idx, flatLocalIndex, fA, fB);
 
-                            break;} break;} break;} break;} break;}   
+                            break;} break;} break;} break;} break;}
 
                     }
                     }}}}}
                 }
                 break;} break;} break;} break;} break;}
-            break;} while(true); break;} while(true); break;} while(true); break;} while(true); break;} while(true);    
+            break;} while(true); break;} while(true); break;} while(true); break;} while(true); break;} while(true);
 
         }
     }
@@ -122,7 +121,7 @@ runall_result test()
     accelerator_view rv = device.get_default_view();
 
     Concurrency::extent<1> extentA(Size), extentB(NumGroups);
-    Concurrency::array<ElementType, 1> fA(extentA, rv), fB(extentB, rv);
+    array<ElementType, 1> fA(extentA, rv), fB(extentB, rv);
 
     //forall where conditions are met
     copy(A, fA);
@@ -137,11 +136,11 @@ runall_result test()
     if(!Verify<ElementType>(B, refB2, NumGroups))
     {
         passed = false;
-        cout << "Test1: failed" << endl;
-    }    
+        std::cout << "Test1: failed" << std::endl;
+    }
     else
     {
-        cout << "Test1: passed" << endl;
+        std::cout << "Test1: passed" << std::endl;
     }
 
     delete []A;
@@ -156,27 +155,27 @@ runall_result test_main()
 {
     runall_result result;
 
-    cout << "Test shared memory with \'int\'" << endl;
+    std::cout << "Test shared memory with \'int\'" << std::endl;
     result = test<int>();
     if(result != runall_pass) return result;
 
-    cout << "Test shared memory with \'unsigned int\'" << endl;
+    std::cout << "Test shared memory with \'unsigned int\'" << std::endl;
     result = test<unsigned int>();
     if(result != runall_pass) return result;
 
-    cout << "Test shared memory with \'long\'" << endl;
+    std::cout << "Test shared memory with \'long\'" << std::endl;
     result = test<long>();
     if(result != runall_pass) return result;
 
-    cout << "Test shared memory with \'unsigned long\'" << endl;
+    std::cout << "Test shared memory with \'unsigned long\'" << std::endl;
     result = test<unsigned long>();
     if(result != runall_pass) return result;
 
-    cout << "Test shared memory with \'float\'" << endl;
+    std::cout << "Test shared memory with \'float\'" << std::endl;
     result = test<float>();
     if(result != runall_pass) return result;
 
-    cout << "Test shared memory with \'double\'" << endl;
+    std::cout << "Test shared memory with \'double\'" << std::endl;
     result = test<double>();
     if(result != runall_pass) return result;
 

@@ -18,10 +18,10 @@ const int RANK = 3;
 bool TestOnHost()
 {
     Log() << "Testing index contructor with array on host" << std::endl;
-    
+
     const int arr[RANK] = {0, 1, 2};
 
-    index<RANK> idx(arr);    
+    index<RANK> idx(arr);
     return IsIndexSetToSequence<RANK>(idx);
 }
 
@@ -38,7 +38,7 @@ void kernel(array<int, 1>& A, array<int, 1>& B) __GPU
         A(i) = idx[i];
     }
 
-    B(0) = idx.rank;    
+    B(0) = idx.rank;
 }
 
 bool TestOnDevice()
@@ -46,7 +46,7 @@ bool TestOnDevice()
     Log() << "Testing index contructor with array on Device" << std::endl;
     accelerator_view av = require_device().get_default_view();
 
-    vector<int> vA(RANK), vB(1);   
+    vector<int> vA(RANK), vB(1);
     array<int, 1> A(extent<1>(RANK), av), B(extent<1>(1), av);
     extent<1> ex(1);
 
@@ -62,7 +62,7 @@ bool TestOnDevice()
 
 /*--------------------- Main -------------------- */
 
-runall_result test_main() 
+runall_result test_main()
 {
     runall_result result;
 	result &= REPORT_RESULT(TestOnHost());

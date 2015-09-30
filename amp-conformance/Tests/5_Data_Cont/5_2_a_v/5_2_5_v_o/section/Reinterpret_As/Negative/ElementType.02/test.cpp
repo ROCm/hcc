@@ -22,7 +22,7 @@
 //#Expects: Error: error C2338
 //#Expects: Error: test.cpp\(36\)
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 
 using namespace Concurrency;
@@ -35,7 +35,7 @@ int main()
     parallel_for_each(av.get_extent(), [=](index<1> i) __GPU {
         array_view<short, 1> r = av.reinterpret_as<short>();
     });
-    
+
     // this test should not compile
     return runall_fail;
 }

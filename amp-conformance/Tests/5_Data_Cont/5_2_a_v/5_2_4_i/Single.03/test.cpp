@@ -31,25 +31,25 @@ using namespace Concurrency::Test;
 int main()
 {
     ArrayViewTest<int, 2> original(extent<2>(5, 5));
-    
+
     // this section is from [2-5), 2-5) of the original
     ArrayViewTest<int, 2> section = original.section(original.view().section(index<2>(2, 2)), index<2>(2, 2));
-    
+
     // create a projection -- this is row 2 of the original (2, [2-5))
     ArrayViewTest<int, 1, 2> projection = section.projection(section.view()[0], 0);
-    
+
     // set some data in the original
     original.view()[index<2>(2, 3)] = 13;
     original.set_known_value(index<2>(2, 3), 13);
-    
+
     // set some data in the section -- (2, 4) in the original
     section.view()[index<2>(0, 2)] = 17;
     section.set_known_value(index<2>(0, 2), 17);
-    
+
     // set some data in the projection -- (2, 2) in the original
     projection.view()[index<1>(0)] = 11;
     projection.set_known_value(index<1>(0), 11);
-    
+
     // verify each data point through the array_view interface
     return
         original.view()(2, 2) == 11 &&

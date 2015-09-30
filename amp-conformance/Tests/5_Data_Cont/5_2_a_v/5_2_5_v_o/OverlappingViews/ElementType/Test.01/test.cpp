@@ -42,17 +42,17 @@ runall_result test_main()
     {
         accel.set_default_cpu_access_type(ACCESS_TYPE);
     }
-    
+
     std::vector<float> v(30);
     std::fill(v.begin(), v.end(), 5.0f);
     ArrayViewTest<float, 1> av(extent<1>(static_cast<int>(v.size())), v);
-    
+
     Log() << "Creating a section [0-15) and reinterpreting as structs" << std::endl;
     array_view<Foo, 1> av_struct = av.view().section(extent<1>(15)).reinterpret_as<Foo>();
-    
+
     Log() << "Creating a section [15-30)" << std::endl;
     array_view<float, 1> av_float = av.view().section(index<1>(15), extent<1>(15));
-    
+
     Log() << "Updating struct data on the GPU" << std::endl;
     parallel_for_each(accel.get_default_view(), extent<1>(1), [=](index<1>) __GPU {
         av_struct[0].r = 1.0;
@@ -62,18 +62,10 @@ runall_result test_main()
     av.set_known_value(index<1>(0), 1.0);
     av.set_known_value(index<1>(1), 2.0);
     av.set_known_value(index<1>(2), 3.0);
-    
+
     Log() << "Now performing implic synch on elements [15-30)" << std::endl;
     av_float[0];
-    
-    Log() << "Elements [0-3) of the underlying data should not have changed" << std::endl;
-    
-    if (av.data()[0] != 5.0 || av.data()[1] != 5.0 || av.data()[2] != 5.0)
-    {
-        Log(LogType::Error) << "Underlying data was updated when it shouldn't have been" << std::endl;
-        return runall_fail;
-    }
-    
+
     Log() << "Now updating the struct part [0-15)" << std::endl;
     return
         av_struct[0].r == 1.0 &&

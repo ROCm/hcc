@@ -11,7 +11,7 @@
 
 class c;
 
-int f(const int c::*) 
+int f(const int c::*)
 {
     return 0;
 }
@@ -21,7 +21,7 @@ int f(int c::*) __GPU
     return 1;
 }
 
-bool test() 
+bool test()
 {
     bool passed = true;
 

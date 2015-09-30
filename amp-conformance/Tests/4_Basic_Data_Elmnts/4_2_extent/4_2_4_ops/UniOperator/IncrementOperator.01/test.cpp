@@ -45,8 +45,8 @@ bool test_pre_increment() restrict(cpu,amp)
     return ((er == e1) && (e1 == e_inc));
 }
 
-runall_result test_main() 
-{ 
+runall_result test_main()
+{
     runall_result result;
 
 

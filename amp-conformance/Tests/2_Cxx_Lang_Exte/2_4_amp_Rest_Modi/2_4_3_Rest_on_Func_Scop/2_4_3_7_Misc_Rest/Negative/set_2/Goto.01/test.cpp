@@ -7,7 +7,7 @@
 /// <summary>test illegal usage of goto</summary>
 //#Expects: Error: error C3593
 
-#include <amptest.h> 
+#include <amptest.h>
 
 void foo() __GPU
 {
@@ -16,8 +16,8 @@ L:
     ;
 }
 
-int main(int argc, char **argv) 
-{ 
+int main(int argc, char **argv)
+{
     foo();
     return 1;
 }

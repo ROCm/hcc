@@ -8,7 +8,7 @@
 
 #include <amptest.h>
 
-void f(int &flag) __GPU 
+void f(int &flag) __GPU
 {
     [](int &flag) __GPU
     {
@@ -18,7 +18,7 @@ void f(int &flag) __GPU
 
 bool test()
 {
-    int flag = 0;    
+    int flag = 0;
 
     f(flag);
 

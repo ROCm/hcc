@@ -48,11 +48,11 @@ bool test_feature()
 	return true;
 }
 
-int main() 
-{ 
+int main()
+{
     int passed = test_feature<float, 5>() ? runall_pass : runall_fail;
 
-    printf("%s\n", (passed == runall_pass) ? "Passed!" : "Failed!"); 
+    printf("%s\n", (passed == runall_pass) ? "Passed!" : "Failed!");
 
     return passed;
 }

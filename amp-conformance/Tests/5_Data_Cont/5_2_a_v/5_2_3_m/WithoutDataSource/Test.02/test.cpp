@@ -156,7 +156,7 @@ bool Test2()
 
     // Now verify the results
     bool passed = true;
-    for (size_t i = 0; i < vecA.size(); ++i) 
+    for (size_t i = 0; i < vecA.size(); ++i)
     {
         if (arrViewSum(i / N, i % N) != (vecA[i] + vecB[i])) {
             Log(LogType::Error) << "Sum(" << i / N << ", " << i % N << ") = " << arrViewSum(i / N, i % N) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
@@ -204,7 +204,7 @@ bool Test3(const accelerator_view &av)
     });
 
     array_view<int, 2> arrViewOut(2 * M, 2 * N);
-    parallel_for_each(extent<2>(M, N), [=](const index<2> &idx) restrict(amp) 
+    parallel_for_each(extent<2>(M, N), [=](const index<2> &idx) restrict(amp)
     {
         array_view<int, 2> arrViewSum = arrViewOut.section(0, 0, M , N);
         array_view<int, 2> arrViewDiff = arrViewOut.section(0, N, M , N);
@@ -223,7 +223,7 @@ bool Test3(const accelerator_view &av)
     array_view<int, 2> arrViewMul = arrViewOut.section(M, 0, M , N);
     array_view<int, 2> arrViewDiv = arrViewOut.section(M, N, M , N);
     bool passed = true;
-    for (size_t i = 0; i < vecA.size(); ++i) 
+    for (size_t i = 0; i < vecA.size(); ++i)
     {
         if (arrViewSum(i / N, i % N) != (vecA[i] + vecB[i])) {
             Log(LogType::Error) << "Sum(" << i / N << ", " << i % N << ") = " << arrViewSum(i / N, i % N) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
@@ -277,7 +277,7 @@ bool Test4()
 
     // Now verify the results
     bool passed = true;
-    for (size_t i = 0; i < vecA.size(); ++i) 
+    for (size_t i = 0; i < vecA.size(); ++i)
     {
         if (arrViewSum(i) != (vecA[i] + vecB[i])) {
             Log(LogType::Error) << "Sum(" << i << ") = " << arrViewSum(i) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
@@ -325,7 +325,7 @@ bool Test5(const accelerator_view &av)
 
     array_view<int, 2> arrViewOut(4, size);
 
-    parallel_for_each(extent<1>(size), [=](const index<1> &idx) restrict(amp) 
+    parallel_for_each(extent<1>(size), [=](const index<1> &idx) restrict(amp)
     {
         array_view<int> arrViewSum = arrViewOut[0];
         array_view<int> arrViewDiff = arrViewOut[1];
@@ -344,7 +344,7 @@ bool Test5(const accelerator_view &av)
     array_view<int> arrViewMul = arrViewOut[2];
     array_view<int> arrViewDiv = arrViewOut[3];
     bool passed = true;
-    for (size_t i = 0; i < vecA.size(); ++i) 
+    for (size_t i = 0; i < vecA.size(); ++i)
     {
         if (arrViewSum(i) != (vecA[i] + vecB[i])) {
             Log(LogType::Error) << "Sum(" << i << ") = " << arrViewSum(i) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
@@ -389,7 +389,7 @@ bool Test6()
     array_view<int> tempArrViewOut(2 * size);
     array_view<int, 2> arrViewOut = tempArrViewOut.view_as(extent<2>(2 * M, N));
 
-    parallel_for_each(extent<2>(M, N), [=](const index<2> &idx) restrict(amp) 
+    parallel_for_each(extent<2>(M, N), [=](const index<2> &idx) restrict(amp)
     {
         array_view<int, 2> arrViewSum = arrViewOut.section(0, 0, M, N);
         array_view<int, 2> arrViewDiff = arrViewOut.section(M, 0, M, N);
@@ -402,7 +402,7 @@ bool Test6()
     array_view<int, 2> arrViewSum = arrViewOut.section(0, 0, M, N);
     array_view<int, 2> arrViewDiff = arrViewOut.section(M, 0, M, N);
     bool passed = true;
-    for (size_t i = 0; i < vecA.size(); ++i) 
+    for (size_t i = 0; i < vecA.size(); ++i)
     {
         if (arrViewSum(i / N, i % N) != (vecA[i] + vecB[i])) {
             Log(LogType::Error) << "Sum(" << i / N << ", " << i % N << ") = " << arrViewSum(i / N, i % N) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
@@ -438,7 +438,7 @@ bool Test7()
     array_view<int> tempArrViewSum = tempArrViewOut.section(0, size);
     array_view<int> tempArrViewDiff = tempArrViewOut.section(size, size);
 
-    parallel_for_each(extent<2>(M, N), [=](const index<2> &idx) restrict(amp) 
+    parallel_for_each(extent<2>(M, N), [=](const index<2> &idx) restrict(amp)
     {
         array_view<int, 2> arrViewSum = tempArrViewSum.view_as(extent<2>(M, N));
         array_view<int, 2> arrViewDiff = tempArrViewDiff.view_as(extent<2>(M, N));
@@ -451,7 +451,7 @@ bool Test7()
     array_view<int, 2> arrViewSum = tempArrViewOut.view_as(extent<2>(2 * M, N)).section(0, 0, M, N);
     array_view<int, 2> arrViewDiff = tempArrViewOut.view_as(extent<2>(2 * M, N)).section(M, 0, M, N);
     bool passed = true;
-    for (size_t i = 0; i < vecA.size(); ++i) 
+    for (size_t i = 0; i < vecA.size(); ++i)
     {
         if (arrViewSum(i / N, i % N) != (vecA[i] + vecB[i])) {
             Log(LogType::Error) << "Sum(" << i / N << ", " << i % N << ") = " << arrViewSum(i / N, i % N) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
@@ -468,7 +468,7 @@ bool Test7()
 }
 
 // Overloaded std::ostream::operator<< for graphics::int_4 type
-std::ostream& operator<<(std::ostream &outStream, const graphics::int_4 &val) 
+std::ostream& operator<<(std::ostream &outStream, const graphics::int_4 &val)
 {
     outStream << "(" << val.get_x() << ", " << val.get_y() << ", " << val.get_z() << ", " << val.get_w() << ")";
     return outStream;
@@ -493,7 +493,7 @@ bool Test8()
     array_view<int> tempArrViewOut(2 * size * (sizeof(graphics::int_4) / sizeof(int)));
     array_view<graphics::int_4, 2> arrViewOut = tempArrViewOut.reinterpret_as<graphics::int_4>().view_as(extent<2>(2 * M, N));
 
-    parallel_for_each(extent<2>(M, N), [=](const index<2> &idx) restrict(amp) 
+    parallel_for_each(extent<2>(M, N), [=](const index<2> &idx) restrict(amp)
     {
         array_view<graphics::int_4, 2> arrViewSum = arrViewOut.section(0, 0, M, N);
         array_view<graphics::int_4, 2> arrViewDiff = arrViewOut.section(M, 0, M, N);
@@ -506,7 +506,7 @@ bool Test8()
     array_view<graphics::int_4, 2> arrViewSum = arrViewOut.section(0, 0, M, N);
     array_view<graphics::int_4, 2> arrViewDiff = arrViewOut.section(M, 0, M, N);
     bool passed = true;
-    for (size_t i = 0; i < vecA.size(); ++i) 
+    for (size_t i = 0; i < vecA.size(); ++i)
     {
         if (arrViewSum(i / N, i % N) != (vecA[i] + vecB[i])) {
             Log(LogType::Error) << "Sum(" << i / N << ", " << i % N << ") = " << arrViewSum(i / N, i % N) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
@@ -533,13 +533,13 @@ runall_result Test9()
     // so that the require_device function can be used to find an
     // accelerator with the required double support and skip the test
     // if one is not found. It may not be a big deal though since the
-    // direct3d_ref accelerator would mostly be present in the test 
+    // direct3d_ref accelerator would mostly be present in the test
     // environment
 
     bool foundLimitedDoubleSupportAccl = false;
     accelerator_view av = accelerator().get_default_view();
     std::vector<accelerator> allAccls = accelerator::get_all();
-    for (size_t i = 0; i < allAccls.size(); ++i) 
+    for (size_t i = 0; i < allAccls.size(); ++i)
     {
         if (allAccls[i].get_device_path() == accelerator::cpu_accelerator) {
             continue;
@@ -568,9 +568,9 @@ runall_result Test9()
     array_view<const double, 2> arrViewA(M, N, vecA);
     array_view<const double, 2> arrViewB(M, N, vecB);
 
-    array_view<int> tempArrViewOut(2 * size * (sizeof(double) / sizeof(int)));   
+    array_view<int> tempArrViewOut(2 * size * (sizeof(double) / sizeof(int)));
 
-    parallel_for_each(av, extent<2>(M, N), [=](const index<2> &idx) restrict(amp) 
+    parallel_for_each(av, extent<2>(M, N), [=](const index<2> &idx) restrict(amp)
     {
         array_view<double, 2> arrViewOut = tempArrViewOut.reinterpret_as<double>().view_as(extent<2>(2 * M, N));
         array_view<double, 2> arrViewSum = arrViewOut.section(0, 0, M, N);
@@ -585,7 +585,7 @@ runall_result Test9()
     array_view<double, 2> arrViewSum = arrViewOut.section(0, 0, M, N);
     array_view<double, 2> arrViewDiff = arrViewOut.section(M, 0, M, N);
     runall_result passed = runall_pass;
-    for (size_t i = 0; i < vecA.size(); ++i) 
+    for (size_t i = 0; i < vecA.size(); ++i)
     {
         if (arrViewSum(i / N, i % N) != (vecA[i] + vecB[i])) {
             Log(LogType::Error) << "Sum(" << i / N << ", " << i % N << ") = " << arrViewSum(i / N, i % N) << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
@@ -786,7 +786,7 @@ bool Test14()
 
     array_view<int> tempArrViewOut(2 * size);
 
-    parallel_for_each(extent<2>(M, N), [=](const index<2> &idx) restrict(amp) 
+    parallel_for_each(extent<2>(M, N), [=](const index<2> &idx) restrict(amp)
     {
         array_view<int, 2> arrViewOut(2 * M, N, tempArrViewOut.data());
         array_view<int, 2> arrViewSum = arrViewOut.section(0, 0, M, N);
@@ -800,7 +800,7 @@ bool Test14()
     const int *pArrViewSum = tempArrViewOut.data();
     const int *pArrViewDiff = pArrViewSum + (M * N);
     bool passed = true;
-    for (size_t i = 0; i < vecA.size(); ++i) 
+    for (size_t i = 0; i < vecA.size(); ++i)
     {
         if (pArrViewSum[i] != (vecA[i] + vecB[i])) {
             Log(LogType::Error) << "Sum(" << i << ") = " << pArrViewSum[i] << ", Expected = " << (vecA[i] + vecB[i]) << std::endl;
@@ -867,7 +867,7 @@ bool Test15()
     pBufferB->Release();
 
     return passed;
-}   
+}
 
 runall_result test_main()
 {
@@ -903,7 +903,7 @@ runall_result test_main()
 	res &= REPORT_RESULT(Test14());
 	res &= REPORT_RESULT(Test15());
 #endif
-    
+
     return res;
 }
 

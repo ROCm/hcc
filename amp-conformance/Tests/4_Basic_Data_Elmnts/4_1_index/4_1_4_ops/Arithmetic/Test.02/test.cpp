@@ -393,7 +393,7 @@ int test() __GPU
 
 void kernel(index<1>& idx, array<int, 1>& result) __GPU
 {
-    result[idx] = test();    
+    result[idx] = test();
 }
 
 const int size = 10;
@@ -423,7 +423,7 @@ int test_device()
     return 0;
 }
 
-runall_result test_main() 
+runall_result test_main()
 {
     // Test on host
     int host_result = test();
@@ -447,8 +447,8 @@ runall_result test_main()
     {
         printf("Test failed on device. Failed test: %d\n", device_result);
 		return runall_fail;
-    }    
-    
+    }
+
     return runall_pass;
 }
 

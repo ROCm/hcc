@@ -42,16 +42,16 @@ runall_result test_main()
         array_view<long, 1> section1 = av.section(index<1>(10), extent<1>(30));
         section1[3] = 17;
     });
-    
+
     parallel_for_each(extent<1>(1), [=](index<1>) __GPU {
         array_view<long, 1> section2 = av.section(index<1>(0), extent<1>(25));
         section2[13] = 19;
     });
-    
+
     parallel_for_each(extent<1>(1), [=](index<1>) __GPU {
         array_view<long, 1> section2 = av.section(index<1>(0), extent<1>(25));
         section2[3] = 15;
     });
 
     return av[13] == 19 && av[3] == 15 ? runall_pass : runall_fail;
-}       
+}

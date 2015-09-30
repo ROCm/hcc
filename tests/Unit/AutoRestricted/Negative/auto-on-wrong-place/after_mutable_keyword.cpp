@@ -16,8 +16,6 @@ void f_wrong_order_of_trailing_return() {
 // CHECK: after_mutable_keyword.cpp:[[@LINE-3]]:25: error: expected body of lambda expression
 // CHECK-NEXT:   []() mutable -> void restrict(auto) {}();
 // CHECK-NEXT:                        ^
-// CHECK-NEXT:[DeclareAMPTrampoline] Deserialization constructor is invalid!
-// CHECK-NEXT:[DefineAMPTrampoline] Deserialization constructor is invalid!
 
 int main(void)
 {

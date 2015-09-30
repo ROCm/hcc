@@ -11,11 +11,23 @@ if [ -d @LLVM_TOOLS_DIR@ ]; then
     OPT=@LLVM_TOOLS_DIR@/opt
     CLAMP_DEVICE=@PROJECT_BINARY_DIR@/lib/clamp-device
     CLAMP_EMBED=@PROJECT_BINARY_DIR@/lib/clamp-embed
+    HLC_DIR=@PROJECT_BINARY_DIR@/hlc
+    HLC_LLVM_LINK=@PROJECT_BINARY_DIR@/hlc/bin/llvm-link
+    HLC_OPT=@PROJECT_BINARY_DIR@/hlc/bin/opt
+    HLC_LLC=@PROJECT_BINARY_DIR@/hlc/bin/llc
+    HLC_ASM_DIR=@PROJECT_BINARY_DIR@/HSAILasm
+    HLC_ASM=@PROJECT_BINARY_DIR@/HSAILasm/HSAILAsm/HSAILasm # notice the "A"
 else
     LINK=@CMAKE_INSTALL_PREFIX@/bin/llvm-link
     OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
     CLAMP_DEVICE=@CMAKE_INSTALL_PREFIX@/bin/clamp-device
     CLAMP_EMBED=@CMAKE_INSTALL_PREFIX@/bin/clamp-embed
+    HLC_DIR=@CMAKE_INSTALL_PREFIX@/hlc
+    HLC_LLVM_LINK=@CMAKE_INSTALL_PREFIX@/hlc/bin/llvm-link
+    HLC_OPT=@CMAKE_INSTALL_PREFIX@/hlc/bin/opt
+    HLC_LLC=@CMAKE_INSTALL_PREFIX@/hlc/bin/llc
+    HLC_ASM_DIR=@CMAKE_INSTALL_PREFIX@/HSAILasm
+    HLC_ASM=@CMAKE_INSTALL_PREFIX@/HSAILasm/HSAILasm
 fi
 
 ################
@@ -30,18 +42,14 @@ VERBOSE=0
 
 LOWER_OPENCL=@HAS_OPENCL@
 LOWER_HSA=@HAS_HSA@
+LOWER_HOF=@HAS_HSA_HOF@
 
 ################
 # Sanity check for HSAIL backend
 ################
 
 if [ $LOWER_HSA == 1 ]; then
-  # Path to HSAIL backend (LLVM-3.6-based)
-  LLVM_BIN=@HSAIL_BIN@
-  # Path to HSAILASM
-  HSAIL_ASM=@HSAIL_COMPILER@
-
-  if [ -d $LLVM_BIN ] && [ -e $LLVM_BIN/llvm-link ] && [ -e $LLVM_BIN/opt ] && [ -e $LLVM_BIN/llc ] && [ -e $HSAIL_ASM ]; then
+  if [ -d $HLC_DIR ] && [ -e $HLC_LLVM_LINK ] && [ -e $HLC_OPT ] && [ -e $HLC_LLC ] && [ -d $HLC_ASM_DIR ] && [ -e $HLC_ASM ]; then
     # all HSA tools are available
     LOWER_HSA=1
   else
@@ -51,7 +59,23 @@ if [ $LOWER_HSA == 1 ]; then
   fi
 fi
 
+################
+# Sanity check for HSA offline finalization
+################
 
+if [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 1 ]; then
+  # Path to HOF
+  HOF_BIN=@HOF_BIN@
+
+  if [ -d $HOF_BIN ] && [ -e $HOF_BIN/hof ]; then
+    # all HOF tools are available
+    LOWER_HOF=1
+  else
+    # disable HOF in case any of the required tools is missing
+    echo "WARNING: Missing HOF tools.  Disable HSA offline finalization."
+    LOWER_HOF=0
+  fi
+fi
 
 ################
 # link
@@ -88,8 +112,10 @@ do
       objcopy -R .kernel $ARG $HOST_FILE
 
       # strip all symbols specified in symbol.txt from $HOST_FILE
-      objcopy @$CXXAMP_SERIALIZE_SYMBOL_FILE $HOST_FILE $HOST_FILE.new
-      mv $HOST_FILE.new $HOST_FILE
+      objcopy @$CXXAMP_SERIALIZE_SYMBOL_FILE $HOST_FILE $HOST_FILE.new 2> /dev/null
+      if [ -f $HOST_FILE.new ]; then
+        mv $HOST_FILE.new $HOST_FILE
+      fi
 
       # find cxxamp_serialize symbols and save them into symbol.txt
       objdump -t $HOST_FILE -j .text 2> /dev/null | grep "g.*__cxxamp_serialize" | awk '{print "-L"$6}' >> $CXXAMP_SERIALIZE_SYMBOL_FILE
@@ -178,16 +204,41 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
       popd > /dev/null
     fi
   fi
+
+  # HSA offline finalization
+  if [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 1 ]; then
+    # conduct HSA offline finalization
+    $HOF_BIN/hof -output=$TEMP_DIR/kernel.isa -brig $TEMP_DIR/kernel.brig
+    ret=$?
+    if [ $ret == 0 ]; then
+      # build a new kernel object
+      pushd . > /dev/null
+      cd $TEMP_DIR
+      $CLAMP_EMBED kernel.isa kernel_hof.o
+      popd > /dev/null
+
+      # debug purpose
+      # dump the brig
+      KMDUMPBRIG="${KMDUMPBRIG:=0}"
+      if [ $KMDUMPBRIG == "1" ]; then
+        cp $TEMP_DIR/kernel.isa ./dump.isa
+      fi
+    fi
+  fi
   
   if [ $ret == 0 ]; then
     # link everything together
-    if [ $LOWER_OPENCL == 1 ] && [ $LOWER_HSA == 1 ]; then
+    if [ $LOWER_OPENCL == 1 ] && [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 1 ]; then
+      ld --allow-multiple-definition $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $TEMP_DIR/kernel_hsa.o $TEMP_DIR/kernel_hof.o $LINK_HOST_ARGS $LINK_CPU_ARG $LINK_OTHER_ARGS
+    elif [ $LOWER_OPENCL == 1 ] && [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 0 ]; then
       ld --allow-multiple-definition $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS  $LINK_CPU_ARG $LINK_OTHER_ARGS
       ret=$?
     elif [ $LOWER_OPENCL == 1 ] && [ $LOWER_HSA == 0 ]; then
       ld --allow-multiple-definition $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $LINK_HOST_ARGS $LINK_CPU_ARG $LINK_OTHER_ARGS
       ret=$?
-    elif [ $LOWER_OPENCL == 0 ] && [ $LOWER_HSA == 1 ]; then
+    elif [ $LOWER_OPENCL == 0 ] && [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 1 ]; then
+      ld --allow-multiple-definition $TEMP_DIR/kernel_hsa.o $TEMP_DIR/kernel_hof.o $LINK_HOST_ARGS $LINK_CPU_ARG $LINK_OTHER_ARGS
+    elif [ $LOWER_OPENCL == 0 ] && [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 0 ]; then
       ld --allow-multiple-definition $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS $LINK_CPU_ARG $LINK_OTHER_ARGS
       ret=$?
     else
@@ -207,6 +258,10 @@ if [ -e $TEMP_DIR/kernel_spir.o ]; then
   rm $TEMP_DIR/kernel_spir.o
 fi
 
+if [ -e $TEMP_DIR/kernel_hof.o ]; then
+  rm $TEMP_DIR/kernel_hof.o
+fi
+
 if [ -e $TEMP_DIR/kernel_hsa.o ]; then
   rm $TEMP_DIR/kernel_hsa.o
 fi
@@ -221,6 +276,10 @@ fi
 
 if [ -e $TEMP_DIR/kernel.spir ]; then
   rm $TEMP_DIR/kernel.spir
+fi
+
+if [ -e $TEMP_DIR/kernel.isa ]; then
+  rm $TEMP_DIR/kernel.isa
 fi
 
 if [ -e $TEMP_DIR/kernel.brig ]; then

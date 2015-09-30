@@ -76,7 +76,7 @@ int main(int argc, char **argv)
         return 2;
     }
     accelerator_view rv = device.get_default_view();
-    
+
     int ret = test(rv);
 
     printf("%s\n", (ret == 0)? "passed\n" : "failed");

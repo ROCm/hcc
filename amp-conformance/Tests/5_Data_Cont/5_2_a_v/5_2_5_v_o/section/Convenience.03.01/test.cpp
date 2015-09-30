@@ -29,10 +29,10 @@ using namespace Concurrency::Test;
 runall_result scalar_values()
 {
     ArrayViewTest<int, 3> original(extent<3>(2, 3, 4));
-    
+
     original.view()(1, 2, 2) = 13;
     original.set_known_value(index<3>(1, 2, 2), 13);
-    
+
     // create a section on the GPU, use it to read and write
     auto gpu_original = original.view();
     parallel_for_each(extent<1>(1), [=](index<1>) __GPU {
@@ -42,17 +42,17 @@ runall_result scalar_values()
 
     ArrayViewTest<int, 3> section = original.section(original.view().section(0, 1, 2, 2, 2, 2), index<3>(0, 1, 2));
     section.set_known_value(index<3>(0, 0, 0), 13);
-    
+
     return (original.view()(0, 1, 2) == 13 && section.view()(1, 1, 0) == 13) ? original.pass() : original.fail();
 }
 
 runall_result only_index()
 {
     ArrayViewTest<int, 3> original(extent<3>(2, 3, 4));
-    
+
     original.view()(1, 2, 2) = 13;
     original.set_known_value(index<3>(1, 2, 2), 13);
-    
+
     // create a section on the GPU, use it to read and write
     auto gpu_original = original.view();
     parallel_for_each(extent<1>(1), [=](index<1>) __GPU {
@@ -62,17 +62,17 @@ runall_result only_index()
 
     ArrayViewTest<int, 3> section = original.section(original.view().section(index<3>(0, 1, 2)), index<3>(0, 1, 2));
     section.set_known_value(index<3>(0, 0, 0), 13);
-    
+
     return (original.view()(0, 1, 2) == 13 && section.view()(1, 1, 0) == 13) ? original.pass() : original.fail();
 }
 
 runall_result only_extent()
 {
     ArrayViewTest<int, 3> original(extent<3>(2, 3, 4));
-    
+
     original.view()(1, 2, 2) = 13;
     original.set_known_value(index<3>(1, 2, 2), 13);
-    
+
     // create a section on the GPU, use it to read and write
     auto gpu_original = original.view();
     parallel_for_each(extent<1>(1), [=](index<1>) __GPU {
@@ -82,7 +82,7 @@ runall_result only_extent()
 
     ArrayViewTest<int, 3> section = original.section(original.view().section(extent<3>(2, 2, 2)), index<3>(0, 0, 0));
     section.set_known_value(index<3>(0, 0, 0), 13);
-    
+
     return (original.view()(0, 0, 0) == 13 && section.view()(1, 2, 2) == 13) ? original.pass() : original.fail();
 }
 

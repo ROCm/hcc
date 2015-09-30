@@ -16,7 +16,7 @@ static void foo(int &flag) __GPU
 class C1
 {
 public:
-    static void foo(int &flag) __GPU 
+    static void foo(int &flag) __GPU
     {
         ::foo(flag);
     }

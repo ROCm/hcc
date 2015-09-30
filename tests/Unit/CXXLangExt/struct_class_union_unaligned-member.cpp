@@ -9,8 +9,8 @@
 //#Expects: Error: test.cpp\(30\)
 //#Expects: Error: test.cpp\(33\)
 
-// XFAIL: Linux, hsa
-// RUN: %cxxamp -Xclang -fhsa-ext %s -o %t.out && %t.out
+// XFAIL: Linux
+// RUN: %hc %s -o %t.out && %t.out
 
 #include <iostream>
 #include <amp.h>

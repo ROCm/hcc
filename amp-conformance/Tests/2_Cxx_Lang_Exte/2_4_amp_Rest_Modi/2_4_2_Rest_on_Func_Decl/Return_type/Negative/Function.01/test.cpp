@@ -7,15 +7,15 @@
 /// <summary>test function with illegal return type</summary>
 //#Expects: Error: error C3581
 
-#include <amptest.h> 
+#include <amptest.h>
 
 char foo() __GPU
 {
     return 'A';
 }
 
-int main(int argc, char **argv) 
-{ 
+int main(int argc, char **argv)
+{
     foo();
     return 1;
 }

@@ -15,34 +15,34 @@ using namespace Concurrency;
 using namespace Concurrency::Test;
 using namespace Concurrency::graphics;
 runall_result test_main()
-{ 
+{
     const array<const texture<int, 1>, 1> a(16);
     const array<writeonly_texture_view<int, 2>, 1> b(16);
-    
+
     struct Type1
     {
        texture<float, 1> a;
     };
     const array<Type1, 1> c(16);
-    
+
     struct Type2
     {
        const texture<float, 3> &a;
     };
     array<Type2, 1> d(16);
-    
+
     struct Type3
     {
        const writeonly_texture_view<float, 2> a;
     };
     array<Type3, 1> e(16);
-    
+
     struct Type4
     {
        const writeonly_texture_view<float, 1> a;
        writeonly_texture_view<double, 2> b;
     };
-    const array<Type4, 1> f(16);    
+    const array<Type4, 1> f(16);
     return runall_fail;
 }
 

@@ -10,7 +10,7 @@
 //#Expects: Error: error C3581
 //#Expects: Error: test.cpp\(22\)
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <amptest_main.h>
 
 using namespace Concurrency;
@@ -20,7 +20,7 @@ runall_result test_main()
 {
     array<int, 1> arr(1);
     array_view<int *, 1> r = arr.reinterpret_as<int *>();
-    
+
     // this test should not compile
     return runall_fail;
 }

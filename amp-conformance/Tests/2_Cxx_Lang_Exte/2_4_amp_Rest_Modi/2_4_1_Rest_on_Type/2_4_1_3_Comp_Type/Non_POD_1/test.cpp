@@ -26,23 +26,23 @@ public:
     {
         var = i;
     }
-    
+
     int get_var() const __GPU_ONLY
-    { 
-        return var; 
+    {
+        return var;
     }
 };
 
 runall_result Test1() __GPU_ONLY
 {
     NonPodClass arr1[5];
-    
-    return (arr1[0].get_var() == 10) ? runall_pass : runall_fail;    
+
+    return (arr1[0].get_var() == 10) ? runall_pass : runall_fail;
 }
 
 int main()
 {
-    accelerator_view av = require_device(Device::ALL_DEVICES).get_default_view();    
+    accelerator_view av = require_device(Device::ALL_DEVICES).get_default_view();
 
     runall_result result = GPU_INVOKE(av, runall_result, Test1);
 

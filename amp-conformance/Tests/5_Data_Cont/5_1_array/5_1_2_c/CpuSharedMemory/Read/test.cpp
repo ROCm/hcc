@@ -22,7 +22,7 @@ runall_result test_main()
 		return runall_skip;
 	}
 	
-	extent<RANK> arr_extent = CreateRandomExtent<RANK>(256);            
+	extent<RANK> arr_extent = CreateRandomExtent<RANK>(256);
 		std::vector<DATA_TYPE> cont(arr_extent.size(), 100);
 	
 		array<DATA_TYPE, RANK> arr(arr_extent, cont.begin(), device.get_default_view(), access_type_read);

@@ -7,7 +7,7 @@
 /// <summary>test illegal usage of static data member</summary>
 //#Expects: Error: error C3586
 
-#include <amptest.h> 
+#include <amptest.h>
 
 struct A
 {
@@ -25,8 +25,8 @@ bool foo() __GPU
     return A::sm == 1;
 }
 
-int main(int argc, char **argv) 
-{ 
+int main(int argc, char **argv)
+{
     foo();
     return 1;
 }

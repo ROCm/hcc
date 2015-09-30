@@ -17,8 +17,8 @@ const int RANK = 9;
 bool TestOnHost()
 {
     Log() << "Testing Index-Default constructor on host" << std::endl;
-    
-    index<RANK> idx;    
+
+    index<RANK> idx;
     return IsIndexSetToZero<RANK>(idx);
 }
 
@@ -34,7 +34,7 @@ void kernel(array<int, 1>& A, array<int, 1>& B) __GPU
         A(i) = idx[i];
     }
 
-    B(0) = idx.rank;   
+    B(0) = idx.rank;
 }
 
 bool TestOnDevice()
@@ -57,7 +57,7 @@ bool TestOnDevice()
     return IsIndexSetToZero<RANK>(vA, vB[0]);
 }
 
-runall_result test_main() 
+runall_result test_main()
 {
     runall_result result;
 	result &= REPORT_RESULT(TestOnHost());

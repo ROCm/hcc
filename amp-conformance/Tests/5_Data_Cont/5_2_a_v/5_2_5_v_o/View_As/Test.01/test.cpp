@@ -22,7 +22,7 @@
 
 #include <amptest/array_view_test.h>
 #include <amptest/coordinates.h>
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 
 using namespace Concurrency;
@@ -32,19 +32,19 @@ int main()
 {
     extent<3> ex(4, 5, 3);
     ArrayViewTest<int, 1> original(extent<1>(ex.size()));
-    
+
     extent_coordinate_nest<3> coordinates(ex);
     array_view<int, 3> rank3 = original.view().view_as(ex);
-    
+
     // read and write between the original and higher rank view
     original.view()[coordinates.get_linear(index<3>(2, 3, 1))] = 17;
     original.set_known_value(index<1>(coordinates.get_linear(index<3>(2, 3, 1))), 17);
-    
+
     rank3[index<3>(2, 3, 2)] = rank3[index<3>(2, 3, 1)];
     original.set_known_value(index<1>(coordinates.get_linear(index<3>(2, 3, 2))), 17);
-    
-    
-    return 
+
+
+    return
         original.view()[coordinates.get_linear(index<3>(2, 3, 2))] == 17 &&
         rank3[index<3>(2, 3, 1)] == 17
         ? original.pass() : original.fail();

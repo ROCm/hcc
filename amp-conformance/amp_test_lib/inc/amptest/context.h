@@ -5,17 +5,17 @@
 // See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
 #pragma once
 /********************************************************************************************
-* amptest/context.h
+* amptest\context.h
 *
 * Provides an interface for determining the context in which a test is running.
-* 
+*
 * The context is controlled via environment variables. This allows the greatest flexability
 * when running multiple tests and for controlling the context via
 * env.lst lines.
-* 
+*
 * Environment variables may have the following types (and values):
 * 	bool - Accepted values: 1/true/TRUE=true; 0/false/FALSE=false
-* 
+*
 * The following are the supported environment variables:
 * AMPTEST_ENABLE_DEBUGGING (bool, default=false)
 *    When true, this setting will turn off all unhandled exception handling so as to enable
@@ -24,7 +24,6 @@
 
 
 // Attach the dpctest.lib
-#include <amptest/force_link.h>
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -57,7 +56,7 @@ namespace Concurrency {
 
 			bool is_buffer_aliasing_forced() const;
 
-			#pragma region log redirection to file 
+			#pragma region log redirection to file
 			/// Gets path to file used to redirect stderr or stdout.
 			const std::string& get_stderr_logfile_path() const;
 			const std::string& get_stdout_logfile_path() const;
@@ -67,18 +66,18 @@ namespace Concurrency {
 			/// if stdout_filename or stderr_filename are empty or are whitespace only, then
 			/// the configuration will be ignored for that stream.
 			///
-			/// Logging to the console can be restored by calling close_logfiles().  
+			/// Logging to the console can be restored by calling close_logfiles().
 			///</remarks>
-			void set_stdout_logfile_path(const std::string& stdout_filename); 
-			void set_stderr_logfile_path(const std::string& stderr_filename); 
+			void set_stdout_logfile_path(const std::string& stdout_filename);
+			void set_stderr_logfile_path(const std::string& stderr_filename);
 
 			/// Gets the STDERR or STDOUT logfile.  If logging output has not been redirected
 			/// to a file, nullptr will be returned.
-			std::ostream& get_raw_stderr_stream() const; 
-			std::ostream& get_raw_stdout_stream() const; 
+			std::ostream& get_raw_stderr_stream() const;
+			std::ostream& get_raw_stdout_stream() const;
 
 			// Close logfiles and restore logging to the console streams
-			void close_logfiles(); 
+			void close_logfiles();
 
 			#pragma endregion
 

@@ -10,9 +10,9 @@
 
 #include <amptest/array_test.h>
 #include <amptest/coordinates.h>
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
-#include <amptest_main.h> 
+#include <amptest_main.h>
 
 using namespace Concurrency;
 using namespace Concurrency::Test;
@@ -22,17 +22,17 @@ runall_result test_main()
     ArrayTest<int, 1> original(extent<1>(15));
     array<int, 1> &original_arr = original.arr();
     array_view<int, 1> shorter = original_arr.view_as(extent<1>(10));
-    
+
     // read and write between the original and higher rank view
     index<1> set_original(9);
 	gpu_write<int,1>(original_arr, set_original, 17);
     original.set_known_value(set_original, 17);
-    
+
 	index<1> set_view(8);
     shorter[set_view] = shorter[9];
     original.set_known_value(set_view, 17);
-    
-    return 
+
+    return
         gpu_read<int,1>(original_arr, set_view) == 17 &&
         shorter[set_original] == 17
         ? original.pass() : original.fail();

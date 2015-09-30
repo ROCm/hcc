@@ -13,7 +13,7 @@ const int func(int arg)
 {
     return f(arg);
 };
-    
+
 int main()
 {
     // if this compiles it passes

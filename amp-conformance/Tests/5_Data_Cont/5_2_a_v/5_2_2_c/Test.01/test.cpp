@@ -59,7 +59,7 @@ int main()
         printf("array_view data does not match original data. FAIL!\n");
         return runall_fail;
     }
-    
+
     // use in parallel_for_each
     parallel_for_each(arr.get_extent(), [=] (index<1> idx) __GPU
     {
@@ -85,7 +85,7 @@ int main()
             return runall_fail;
         }
     }
-    
+
     printf("PASS!\n");
     return runall_pass;
 }

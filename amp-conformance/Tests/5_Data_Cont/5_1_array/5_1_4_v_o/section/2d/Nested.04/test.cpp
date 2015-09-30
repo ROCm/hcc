@@ -20,9 +20,9 @@ runall_result test_main()
     ArrayTest<int, 2> original(extent<2>(10, 10));
     ArrayViewTest<int, 2> section1 = original.section(original.arr().section(index<2>(5, 5), extent<2>(4, 4)), index<2>(5, 5));
     ArrayViewTest<int, 2> section2 = section1.section(section1.view().section(index<2>(2, 2), extent<2>(2, 1)), index<2>(2, 2));
-    
+
     // the index<1> parameters here are of the offset (second - first)
-    return 
+    return
         TestSection(original, section1, index<2>(5, 5)) &&
         TestSection(original, section2, index<2>(7, 7)) &&
         TestSection(section1, section2, index<2>(2, 2))

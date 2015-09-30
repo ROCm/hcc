@@ -1,5 +1,5 @@
 // XFAIL: Linux
-// RUN: %cxxamp -Xclang -fhsa-ext %s -o %t.out && %t.outo
+// RUN: %hc %s -o %t.out && %t.out
 
 #include <amp.h>
 

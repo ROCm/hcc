@@ -10,8 +10,8 @@
 **********************************************************************************/
 
 // Attach the dpctest.lib
-//#include <amptest\dpctest_lib.h>
 #include <amp.h>
+#include <amptest/platform.h>
 
 namespace Concurrency {
     namespace Test {
@@ -170,7 +170,8 @@ namespace Concurrency {
 
 			return require_device(excluded_device, required_flags);
 		}
-    
+
+		/*** The following is provided for backwards compatibility only ***/
         enum class Device: int {
             D3D11_REF     = device_flags::D3D11_REF,
             D3D11_ATI     = device_flags::D3D11_ATI,
@@ -182,7 +183,7 @@ namespace Concurrency {
 		inline Device operator |(Device lhs, Device rhs) {
 			return static_cast<Device>(static_cast<int>(lhs) | static_cast<int>(rhs));
 		}
-        
+
 		inline accelerator require_device(Test::Device required_device) {
 			return require_device(static_cast<device_flags>(required_device));
 		}
@@ -194,7 +195,7 @@ namespace Concurrency {
         inline bool get_device(Test::Device required_device, accelerator &device) {
 			return get_device(device, static_cast<device_flags>(required_device));
 		}
-        
+
 		template <typename T>
 		inline accelerator require_device_for(Test::Device required_device) {
 			return require_device_for<T>(static_cast<device_flags>(required_device), false);

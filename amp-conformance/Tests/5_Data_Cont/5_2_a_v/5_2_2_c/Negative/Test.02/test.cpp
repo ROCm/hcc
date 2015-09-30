@@ -22,7 +22,7 @@
 //#Expects: Error: test.cpp\(35\) : error C2664
 
 
-#include <amptest.h> 
+#include <amptest.h>
 
 using namespace Concurrency;
 using namespace Concurrency::Test;
@@ -30,7 +30,7 @@ using std::vector;
 
 int main()
 {
-    int* a = new int[100];    
+    int* a = new int[100];
     array_view<const int, 1> av_ro(100, a);
     array_view<int, 1> av_rw(av_ro);
 

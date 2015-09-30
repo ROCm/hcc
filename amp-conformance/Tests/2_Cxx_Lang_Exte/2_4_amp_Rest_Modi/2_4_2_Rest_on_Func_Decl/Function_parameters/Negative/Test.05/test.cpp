@@ -15,7 +15,7 @@ int test(int a, int volatile b) __GPU
     return 0;
 }
 
-int main() 
+int main()
 {
     return runall_fail;
 }

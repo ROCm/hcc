@@ -20,7 +20,7 @@
 /// <tags>P1</tags>
 /// <summary>Reinterpret an AV of float as double (CPU)</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 
 using namespace Concurrency;
@@ -30,17 +30,17 @@ int main()
 {
     std::vector<float> v(10);
     Fill(v);
-    
+
     array_view<float, 1> av_float(static_cast<int>(v.size()), v);
     array_view<double, 1> av_double = av_float.reinterpret_as<double>();
-    
+
     int expected_size = av_float.get_extent().size() * sizeof(float) / sizeof(double);
     Log() << "Expected size: " << expected_size << " actual: " << av_double.get_extent()[0] << std::endl;
     if (av_double.get_extent()[0] != expected_size)
     {
         return runall_fail;
     }
-    
+
     return Verify<double>(reinterpret_cast<double *>(av_float.data()), av_double.data(), expected_size) ? runall_pass : runall_fail;
 }
 

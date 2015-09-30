@@ -33,7 +33,7 @@ int main()
 {
     ArrayViewTest<long, 1> av(extent<1>(50));
     ArrayViewTest<long, 2, 1> reshaped = av.section(index<1>(10), extent<1>(30)).view_as(extent<2>(3, 10));
-    
+
     reshaped.view()[index<2>(2, 2)] = 13;
     reshaped.set_known_value(index<2>(2, 2), 13);
     return av.view()[index<1>(32)] == 13 ? av.pass() : av.fail();

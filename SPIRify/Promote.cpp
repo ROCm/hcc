@@ -431,6 +431,9 @@ Type * mapTypeToGlobal ( Type *);
 
 namespace {
   std::map<StructType*, StructType*> structTypeMap;
+
+  // a mapping of old types to newly translated types
+  std::map<Type *, Type *> translatedTypeMap;
 }
 
 StructType* mapTypeToGlobal(StructType* T) {
@@ -462,6 +465,9 @@ StructType* mapTypeToGlobal(StructType* T) {
     // use normal type translation logic if otherwise
     if (translatedType == nullptr) {
       translatedType = mapTypeToGlobal(baseType);
+
+      // associate the newly created translated type with the old type
+      translatedTypeMap[baseType] = translatedType;
     }
 
     translatedTypes.push_back(translatedType);
@@ -523,42 +529,49 @@ FunctionType * createNewFunctionTypeWithPtrToGlobals (Function * F)
         FunctionType * baseType = F->getFunctionType();
 
         std::vector<Type *> translatedArgTypes;
-/*
-        for (unsigned arg = 0, arg_end = baseType->getNumParams();
-             arg != arg_end; ++arg) {
-                Type * argType = baseType->getParamType(arg);
-                Type * translatedType = mapTypeToGlobal (argType);
-                translatedArgTypes.push_back ( translatedType );
-        }*/
+
+        // keep track of mapping of the original type and translated type
+
         unsigned argIdx = 0;
         for (Function::arg_iterator A = F->arg_begin(), Ae = F->arg_end();
              A != Ae; ++A, ++argIdx) {
                 Type * argType = baseType->getParamType(argIdx);
                 Type * translatedType;
 
-                StringRef argName = A->getName();
-                if (argName.equals("scratch")
-                    || argName.equals("lds")
-                    || argName.equals("scratch_count")) {
-                        PointerType * Ptr = dyn_cast<PointerType>(argType);
-                        assert(Ptr && "Pointer type expected");
-                        translatedType = PointerType::get(Ptr->getElementType(),
-                                                          LocalAddressSpace);
-                } else {
-                        if (A->hasByValAttr()) {
-                                PointerType * ptrType =
-                                        cast<PointerType>(argType);
-                                Type * elementType =
-                                        ptrType->getElementType();
-                                Type * translatedElement =
-                                        mapTypeToGlobal(elementType);
-                                translatedType =
-                                        PointerType::get(translatedElement,
-                                                         0);
-                        } else {
-                                translatedType = mapTypeToGlobal (argType);
-                        }
+                // try use previously translated type
+                translatedType = translatedTypeMap[argType];
+
+                // create new translated type if there is none
+                if (translatedType == nullptr) {
+
+                    StringRef argName = A->getName();
+                    if (argName.equals("scratch")
+                        || argName.equals("lds")
+                        || argName.equals("scratch_count")) {
+                            PointerType * Ptr = dyn_cast<PointerType>(argType);
+                            assert(Ptr && "Pointer type expected");
+                            translatedType = PointerType::get(Ptr->getElementType(),
+                                                              LocalAddressSpace);
+                    } else {
+                            if (A->hasByValAttr()) {
+                                    PointerType * ptrType =
+                                            cast<PointerType>(argType);
+                                    Type * elementType =
+                                            ptrType->getElementType();
+                                    Type * translatedElement =
+                                            mapTypeToGlobal(elementType);
+                                    translatedType =
+                                            PointerType::get(translatedElement,
+                                                             0);
+                            } else {
+                                    translatedType = mapTypeToGlobal (argType);
+                            }
+                    }
+
+                    // associate the newly created translated type with the old type
+                    translatedTypeMap[argType] = translatedType;
                 }
+
                 translatedArgTypes.push_back ( translatedType );
         }
 
@@ -1033,7 +1046,19 @@ void CollectChangedCalledFunctions (Function * F, InstUpdateWorkList * updatesNe
 void appendMemoryScopeMetadata(Instruction *I) {
   // set default memory scope as: _sys_ (5)
   ConstantInt *C = ConstantInt::get(Type::getInt32Ty(I->getContext()), 5); 
+#if LLVM_VERSION_MAJOR == 3
+  #if (LLVM_VERSION_MINOR >= 3) && (LLVM_VERSION_MINOR <= 5)
+  // logic which is compatible from LLVM 3.3 till LLVM 3.5
   MDNode *MD = MDNode::get(I->getContext(), C); 
+  #elif LLVM_VERSION_MINOR > 5
+  // support new MDTuple type introduced in LLVM 3.6+
+  MDTuple *MD = MDTuple::get(I->getContext(), ConstantAsMetadata::get(C));
+  #else
+    #error Unsupported LLVM MINOR VERSION
+  #endif
+#else
+  #error Unsupported LLVM MAJOR VERSION
+#endif
   I->setMetadata("mem.scope", MD);
 }
 
@@ -1116,6 +1141,10 @@ void updateInstructionWithNewOperand(Instruction * I,
            return; 
        }
 
+       if (isa<ReturnInst>(I)) {
+           DEBUG(llvm::errs() << "No need to update ret\n";);
+           return;
+       }
 
        llvm::errs() << "DO NOT KNOW HOW TO UPDATE INSTRUCTION: ";
              I->print(llvm::errs()); llvm::errs() << "\n";
@@ -1147,6 +1176,11 @@ static bool usedInTheFunc(const User *U, const Function* F)
       return true;
   }
   #elif LLVM_VERSION_MINOR == 5
+  for (const User *u : U->users()) {
+    if (usedInTheFunc(u, F) == true)
+      return true;
+  }
+  #elif LLVM_VERSION_MINOR > 5
   for (const User *u : U->users()) {
     if (usedInTheFunc(u, F) == true)
       return true;
@@ -1541,12 +1575,28 @@ KernelNodeVisitor::KernelNodeVisitor(FunctionVect& FV)
 void KernelNodeVisitor::operator()(MDNode *N)
 {
         if ( N->getNumOperands() < 1) return;
+#if LLVM_VERSION_MAJOR == 3
+  #if (LLVM_VERSION_MINOR >= 3) && (LLVM_VERSION_MINOR <= 5)
+        // logic which is compatible from LLVM 3.3 till LLVM 3.5
         Value * Op = N->getOperand(0);
         if (!Op)
             return;
         if ( Function * F = dyn_cast<Function>(Op)) {
                 found_kernels.push_back(F);
         }
+  #elif LLVM_VERSION_MINOR > 5
+        // support new metadata data structure introduced in LLVM 3.6+
+        const MDOperand& Op = N->getOperand(0);
+        if ( Function * F = mdconst::dyn_extract<Function>(Op)) {
+                found_kernels.push_back(F);
+        }
+  #else
+    #error Unsupported LLVM MINOR VERSION
+  #endif
+#else
+  #error Unsupported LLVM MAJOR VERSION
+#endif
+
 }
 
 /* Call functor for each MDNode located within the Named MDNode */
@@ -1580,11 +1630,37 @@ void updateKernels(Module& M, const FunctionMap& new_kernels)
         for (unsigned i = 0; i < root->getNumOperands(); i++) {
             // for each metadata of the kernel..
             MDNode * kernel = root->getOperand(i);
+#if LLVM_VERSION_MAJOR == 3
+  #if (LLVM_VERSION_MINOR >= 3) && (LLVM_VERSION_MINOR <= 5)
+            // logic which is compatible from LLVM 3.3 till LLVM 3.5
             Function * f = dyn_cast<Function>(kernel->getOperand(0));
+  #elif LLVM_VERSION_MINOR > 5
+            // support new metadata data structure introduced in LLVM 3.6+
+            Function * f = mdconst::dyn_extract<Function>(kernel->getOperand(0));
+  #else
+    #error Unsupported LLVM MINOR VERSION
+  #endif
+#else
+  #error Unsupported LLVM MAJOR VERSION
+#endif
             assert(f != NULL);
             iterator I = new_kernels.find(f);
-            if (I != new_kernels.end())
+            if (I != new_kernels.end()) {
+#if LLVM_VERSION_MAJOR == 3
+  #if (LLVM_VERSION_MINOR >= 3) && (LLVM_VERSION_MINOR <= 5)
+                // logic which is compatible from LLVM 3.3 till LLVM 3.5
                 kernel->replaceOperandWith(0, I->second);
+  #elif LLVM_VERSION_MINOR > 5
+                // support new metadata data structure introduced in LLVM 3.6+
+                kernel->replaceOperandWith(0, ValueAsMetadata::get(I->second));
+  #else
+    #error Unsupported LLVM MINOR VERSION
+  #endif
+#else
+  #error Unsupported LLVM MAJOR VERSION
+#endif
+
+            }
         }
         for (iterator kern = new_kernels.begin(), end = new_kernels.end();
              kern != end; ++kern) {

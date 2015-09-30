@@ -18,7 +18,7 @@
 //--------------------------------------------------------------------------------------
 //
 /// <tags>P1</tags>
-/// <summary>Cannot copy construct with a mismatch of element-type</summary> 
+/// <summary>Cannot copy construct with a mismatch of element-type</summary>
 //#Expects: Error: test.cpp\(34\) : error C2664
 
 #include <amptest.h>

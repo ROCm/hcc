@@ -20,7 +20,7 @@ using std::vector;
 class A_base
 {
     int m1;
-    
+
     virtual int get() = 0;
 };
 
@@ -35,10 +35,10 @@ struct A: A_base
 runall_result test_main()
 {
     array<A, 1> arr(10);
-        
+
     vector<A> vec(10);
     array_view<A, 1> arr_view(10, vec);
-    
+
     return runall_fail;
 }
 

@@ -31,10 +31,10 @@ int main()
 {
     auto t = ArrayViewTest<int, 1>::sequential<0>(extent<1>(10));
     array_view<int, 1> av = t.view();
-    
+
     ArrayViewTest<int, 1> results(t.view().get_extent());
     array_view<int, 1> results_v = results.view();
-    
+
     // access values on the GPU
     parallel_for_each(extent<1>(1), [results_v, av] (index<1>) __GPU {
         results_v[0] = av[0];
@@ -42,7 +42,7 @@ int main()
     });
     results.set_known_value(index<1>(0), 0);
     results.set_known_value(index<1>(9), 9);
-    
+
     return results.view()[0] == 0 && results.view()[9] == 9 ? t.pass() : t.fail();
 }
 

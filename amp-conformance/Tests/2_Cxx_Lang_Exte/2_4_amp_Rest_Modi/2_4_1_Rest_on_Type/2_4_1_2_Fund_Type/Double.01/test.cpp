@@ -22,7 +22,7 @@ void kernel(double & c) __GPU
     c = RESULT;
 }
 
-runall_result test_rank_dbl() 
+runall_result test_rank_dbl()
 {
     int extent_data[] = {6, 5, 4, 3, 2, 1};
     const int _rank = 6;
@@ -39,7 +39,7 @@ runall_result test_rank_dbl()
 
     for (int i = 0; i < max_size; i++) {
         if (AreAlmostEqual(data_out[i], RESULT) == false) {
-            Log(LogType::Error) << "Expected: " << RESULT << "get: " << data_out[i] << std::endl;            
+            Log(LogType::Error) << "Expected: " << RESULT << "get: " << data_out[i] << std::endl;
             return runall_fail;
         }
     }
@@ -53,8 +53,8 @@ runall_result test()
 }
 
 runall_result test_main()
-{ 
-    // Test is using doubles therefore we have to make sure that it is not executed 
+{
+    // Test is using doubles therefore we have to make sure that it is not executed
     // on devices that does not support double types.
     // Test is relying on default device, therefore check below is also done on default device.
     accelerator device = require_device_for<double>();

@@ -88,14 +88,14 @@ bool test_feature()
     return test_feature_idx<_type, _rank, _D0, _D1, _D2>(data.begin());
 }
 
-int main() 
-{ 
+int main()
+{
     int passed = test_feature<int, 1, 1, 1>() /*&& test_feature<float, 11, 13, 2>() &&
                     test_feature<double, 2, 31, 31>() && test_feature<unsigned int, 91, 7, 5>() &&
                     test_feature<unsigned, 3, 3, 3>() && test_feature<signed, 111, 2, 3>()*/
             ? runall_pass : runall_fail;
 
-    printf("%s\n", (passed == runall_pass) ? "Passed!" : "Failed!"); 
+    printf("%s\n", (passed == runall_pass) ? "Passed!" : "Failed!");
 
     return passed;
 }

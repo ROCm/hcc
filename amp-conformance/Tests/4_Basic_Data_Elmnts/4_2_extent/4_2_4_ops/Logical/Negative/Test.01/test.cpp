@@ -10,7 +10,7 @@
 //#Expects: Error: test.cpp\(29\)
 //#Expects: Error: test.cpp\(47\)
 
-#include <amptest.h> 
+#include <amptest.h>
 
 using namespace Concurrency;
 using namespace Concurrency::Test;
@@ -96,11 +96,11 @@ bool test_device()
     return true;
 }
 
-int main(int argc, char **argv) 
-{ 
+int main(int argc, char **argv)
+{
     test();
     test_device();
-    
+
     //Always Fail if we run to completion. this test should fail to compile
     return 1;
 }

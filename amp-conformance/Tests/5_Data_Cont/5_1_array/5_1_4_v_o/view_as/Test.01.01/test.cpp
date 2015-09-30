@@ -10,9 +10,9 @@
 
 #include <amptest/array_test.h>
 #include <amptest/coordinates.h>
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
-#include <amptest_main.h> 
+#include <amptest_main.h>
 
 using namespace Concurrency;
 using namespace Concurrency::Test;
@@ -34,12 +34,12 @@ runall_result test_main()
         original_arr[set_original_linear] = 17;
         rank3[set_viewAs] = rank3[set_original];
     });
-    
+
     original.set_known_value(set_original_linear, 17);
     original.set_known_value(set_viewAs_linear, 17);
-    
-    
-    return 
+
+
+    return
         gpu_read<int,1>(original.arr(), set_viewAs_linear) == 17 &&
         gpu_read<int,1>(original.arr(), set_original_linear)  == 17
         ? original.pass() : original.fail();

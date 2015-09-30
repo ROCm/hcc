@@ -6,7 +6,7 @@
 // INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 // See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <amptest_main.h>
 #include <vector>
 
@@ -31,7 +31,7 @@ bool test_tile_1d() restrict(amp,cpu)
         int data1[] = {1};
         extent<rank> e1(data1);
         _type g1(e1);
-    
+
         tiled_extent<_tile_x> t1 = g1.template tile<_tile_x>();
 
         if ((t1.tile_dim0 != _tile_x) || (t1.size() != g1.size()))
@@ -54,10 +54,10 @@ bool test_tile_1d() restrict(amp,cpu)
 
     // tile 1D extent with extent set to 32
     {
-        int data4[] = {32}; 
+        int data4[] = {32};
         extent<rank> e4(data4);
         _type g4(e4);
-    
+
         tiled_extent<_tile_x> t4 = g4.template tile<_tile_x>();
         if ((t4.tile_dim0 != _tile_x) || (t4.size() != g4.size()))
         {
@@ -67,12 +67,12 @@ bool test_tile_1d() restrict(amp,cpu)
 
     // tile 1D extent with extent set to prime number
     {
-        int edata6[] = {91}; 
+        int edata6[] = {91};
         extent<rank> e6(edata6);
         _type g6(e6);
-    
+
         tiled_extent<_tile_x> t6 = g6.template tile<_tile_x>();
-    
+
         if ((t6.tile_dim0 != _tile_x) || (t6.size() != g6.size()))
         {
             return false;
@@ -92,7 +92,7 @@ bool test_tile_2d() restrict(amp,cpu)
         int data1[] = {1, 1};
         extent<rank> e1(data1);
         _type g1(e1);
-    
+
         tiled_extent<_tile_y, _tile_x> t1 = g1.template tile<_tile_y, _tile_x>();
 
         if ((t1.tile_dim1 != _tile_x) || (t1.tile_dim0 != _tile_y) || (t1.size() != g1.size()))
@@ -101,7 +101,7 @@ bool test_tile_2d() restrict(amp,cpu)
         }
     }
 
-    // tile 2D extent 
+    // tile 2D extent
     {
         _type g3;
 
@@ -115,12 +115,12 @@ bool test_tile_2d() restrict(amp,cpu)
 
     // tile 2D extent with extent set to 32
     {
-        int data4[] = {32, 32}; 
+        int data4[] = {32, 32};
         extent<rank> e4(data4);
         _type g4(e4);
-    
+
         tiled_extent<_tile_y, _tile_x> t4 = g4.template tile<_tile_y, _tile_x>();
-    
+
         if ((t4.tile_dim1 != _tile_x) || (t4.tile_dim0 != _tile_y) || (t4.size() != g4.size()))
         {
             return false;
@@ -129,12 +129,12 @@ bool test_tile_2d() restrict(amp,cpu)
 
     // tile 2D extent with extent set to prime number
     {
-        int edata6[] = {91, 91}; 
+        int edata6[] = {91, 91};
         extent<rank> e6(edata6);
         _type g6(e6);
-    
+
         tiled_extent<_tile_y, _tile_x> t6 = g6.template tile<_tile_y, _tile_x>();
-    
+
         if ((t6.tile_dim1 != _tile_x) || (t6.tile_dim0 != _tile_y) || (t6.size() != g6.size()))
         {
             return false;
@@ -155,10 +155,10 @@ bool test_tile_3d() restrict(amp,cpu)
         int data1[] = {1, 1, 1};
         extent<rank> e1(data1);
         _type g1(e1);
-    
+
         tiled_extent<_tile_z, _tile_y, _tile_x> t1 = g1.template tile<_tile_z, _tile_y, _tile_x>();
 
-        if ((t1.tile_dim2 != _tile_x) || (t1.tile_dim1 != _tile_y) || 
+        if ((t1.tile_dim2 != _tile_x) || (t1.tile_dim1 != _tile_y) ||
             (t1.tile_dim0 != _tile_z) || (t1.size() != g1.size()))
         {
             return false;
@@ -171,7 +171,7 @@ bool test_tile_3d() restrict(amp,cpu)
 
         tiled_extent<_tile_z, _tile_y, _tile_x> t3 = g3.template tile<_tile_z, _tile_y, _tile_x>();
 
-        if ((t3.tile_dim2 != _tile_x) || (t3.tile_dim1 != _tile_y) || 
+        if ((t3.tile_dim2 != _tile_x) || (t3.tile_dim1 != _tile_y) ||
             (t3.tile_dim0 != _tile_z) || (t3.size() != g3.size()))
         {
             return false;
@@ -180,13 +180,13 @@ bool test_tile_3d() restrict(amp,cpu)
 
     // tile 3D extent with extent set to 32
     {
-        int data4[] = {32, 32, 32}; 
+        int data4[] = {32, 32, 32};
         extent<rank> e4(data4);
         _type g4(e4);
-    
+
         tiled_extent<_tile_z, _tile_y, _tile_x> t4 = g4.template tile<_tile_z, _tile_y, _tile_x>();
-    
-        if ((t4.tile_dim2 != _tile_x) || (t4.tile_dim1 != _tile_y) || 
+
+        if ((t4.tile_dim2 != _tile_x) || (t4.tile_dim1 != _tile_y) ||
             (t4.tile_dim0 != _tile_z) || (t4.size() != g4.size()))
         {
             return false;
@@ -195,13 +195,13 @@ bool test_tile_3d() restrict(amp,cpu)
 
     // tile 3D extent with extent set to prime number
     {
-        int edata6[] = {91, 91, 91}; 
+        int edata6[] = {91, 91, 91};
         extent<rank> e6(edata6);
         _type g6(e6);
-    
+
         tiled_extent<_tile_z, _tile_y, _tile_x> t6 = g6.template tile<_tile_z, _tile_y, _tile_x>();
-    
-        if ((t6.tile_dim2 != _tile_x) || (t6.tile_dim1 != _tile_y) || 
+
+        if ((t6.tile_dim2 != _tile_x) || (t6.tile_dim1 != _tile_y) ||
             (t6.tile_dim0 != _tile_z) || (t6.size() != g6.size()))
         {
             return false;
@@ -219,7 +219,7 @@ bool test_tile_1d_negative_incorrect_template_param() restrict(amp,cpu)
         int data1[] = {1, 1};
         extent<rank> e1(data1);
         _type g1(e1);
-    
+
         tiled_extent<_tile_x> t1 = g1.template tile<_tile_x>();
     }
 
@@ -234,7 +234,7 @@ bool test_tile_2d_negative_incorrect_template_param() restrict(amp,cpu)
         int data1[] = {1, 1, 1};
         extent<rank> e1(data1);
         _type g1(e1);
-    
+
         tiled_extent<_tile_y, _tile_x> t1 = g1.template tile<_tile_y, _tile_x>();
     }
     return false;
@@ -249,7 +249,7 @@ bool test_tile_3d_negative_incorrect_template_param() restrict(amp,cpu)
         int data1[] = {1, 1, 1, 1};
         extent<rank> e1(data1);
         _type g1(e1);
-    
+
         tiled_extent<_tile_z, _tile_y, _tile_x> t1 = g1.template tile<_tile_z, _tile_y, _tile_x>();
     }
 

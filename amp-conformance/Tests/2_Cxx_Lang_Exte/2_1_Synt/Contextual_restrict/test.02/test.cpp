@@ -13,36 +13,36 @@ using namespace Concurrency;
 using namespace std;
 
 static int test1(int restrict)
-{ 
-    int expected = restrict * restrict;    
+{
+    int expected = restrict * restrict;
     restrict *= restrict;
     return ((restrict == expected) ? 0 : 1);
 }
 
 static int test2(int restrict) __GPU
-{    
-    int expected = restrict * restrict;    
+{
+    int expected = restrict * restrict;
     restrict *= restrict;
     return ((restrict == expected) ? 0 : 1);
 }
 
 static int test3(int restrict = 0)
-{ 
-    int expected = restrict * restrict;    
+{
+    int expected = restrict * restrict;
     restrict *= restrict;
     return ((restrict == expected) ? 0 : 1);
 }
 
 static int test4(const int restrict)
-{ 
-    int expected = restrict * restrict;    
+{
+    int expected = restrict * restrict;
     return ((restrict * restrict == expected) ? 0 : 1);
 }
 
 
 
 // Main entry point
-int main(int argc, char **argv) 
+int main(int argc, char **argv)
 {
     bool passed = true;
     int x = 10;
@@ -66,7 +66,7 @@ int main(int argc, char **argv)
     else
     {
         passed = false;
-        cout << "Failed!" << endl;        
+        cout << "Failed!" << endl;
     }
 
     cout << "Test: declare function modifier as function parameter with default value" << endl;
@@ -77,7 +77,7 @@ int main(int argc, char **argv)
     else
     {
         passed = false;
-        cout << "Failed!" << endl;        
+        cout << "Failed!" << endl;
     }
 
     cout << "Test: declare function modifier as const function parameter" << endl;
@@ -88,7 +88,7 @@ int main(int argc, char **argv)
     else
     {
         passed = false;
-        cout << "Failed!" << endl;        
+        cout << "Failed!" << endl;
     }
 
     return passed ? 0 : 1;

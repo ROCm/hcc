@@ -9,8 +9,8 @@
 
 #include <typeinfo>
 
-void boo() restrict(amp) 
-{ 
+void boo() restrict(amp)
+{
     int n;
     int & r = n;
     typeid(r);

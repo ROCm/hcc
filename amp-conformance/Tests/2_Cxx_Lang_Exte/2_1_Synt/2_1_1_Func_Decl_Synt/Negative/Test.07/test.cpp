@@ -14,7 +14,7 @@ __CPU_ONLY_EXPLICIT int test( )  {
     return 0;
 }
 
-int main() 
+int main()
 {
     return 1;
 }

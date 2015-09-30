@@ -82,14 +82,14 @@ bool test_pointer(type *start_address, type *end_address, int data_size) __GPU_O
     type *p3 = start_address + 1;
     type *&rp3 = p3;
 
-    if ((!(rp1 < rp3)) || (rp1 > rp3) || (rp1 == rp3) || !(rp1 != rp3) || (!(rp1 <= rp3)) || (rp1 >= rp3)) 
+    if ((!(rp1 < rp3)) || (rp1 > rp3) || (rp1 == rp3) || !(rp1 != rp3) || (!(rp1 <= rp3)) || (rp1 >= rp3))
     {
         return false;
     }
 
     rp1++;
 
-    if (!(rp1 <= rp3) || !(rp1 >= rp3)) 
+    if (!(rp1 <= rp3) || !(rp1 >= rp3))
     {
         return false;
     }
@@ -111,7 +111,7 @@ bool test_global(accelerator_view &alv)
     array_view<type, RANK> av(e, v);
     array_view<int> av_ret(eret, ret);
 
-    parallel_for_each(alv, av.get_extent(), [=](index<RANK>idx) __GPU_ONLY 
+    parallel_for_each(alv, av.get_extent(), [=](index<RANK>idx) __GPU_ONLY
     {
         if (!test_pointer(&av[0][0][0], &av[DATA_SIZE_1D - 1][DATA_SIZE_1D - 1][DATA_SIZE_1D - 1], DATA_SIZE_1D * DATA_SIZE_1D * DATA_SIZE_1D))
             av_ret[0] = WRONG_VALUE;

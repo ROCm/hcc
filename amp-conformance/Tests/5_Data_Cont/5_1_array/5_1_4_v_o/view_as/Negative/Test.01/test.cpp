@@ -8,7 +8,7 @@
 /// <tags>P1</tags>
 /// <summary>Attempt to use View_As with a longer size and shorter size than the original</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <amptest_main.h>
 
 using namespace Concurrency;

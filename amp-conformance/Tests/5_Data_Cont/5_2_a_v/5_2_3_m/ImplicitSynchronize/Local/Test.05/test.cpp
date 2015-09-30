@@ -34,10 +34,10 @@ int main()
     float expected = 17;
     ArrayViewTest<int, 1> av(extent<1>(100));
     ArrayViewTest<int, 1> section = av.section(index<1>(5), extent<1>(5));
-    
+
     section.view().reinterpret_as<float>()[index<1>(4)] = 17.0;
     section.set_known_value(index<1>(4), *reinterpret_cast<int *>(&expected));
-    
+
     int actual = av.view()[index<1>(9)];
     return *reinterpret_cast<float *>(&actual) == expected ? av.pass() : av.fail();
 }

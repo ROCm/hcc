@@ -21,7 +21,7 @@
 /// <summary>Modify array_view data in a parallel for each, and then use synchronize to
 /// see the updates</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <algorithm>
 #include <vector>
 
@@ -33,18 +33,18 @@ int main()
 {
     accelerator device = require_device(Device::ALL_DEVICES);
     accelerator_view acc_view = device.get_default_view();
-    
+
     int size = 30;
     std::vector<int> v(size);
     Fill<int>(v);
     array_view<int, 1> av(size, v);
-    
+
     parallel_for_each(av.get_extent(), [av](index<1> i) __GPU {
         av[i] = 3;
     });
-    
+
     av.synchronize();
-    
+
     // all elements should equal 3
     return std::count(v.begin(), v.end(), 3) == size ? runall_pass : runall_fail;
 }

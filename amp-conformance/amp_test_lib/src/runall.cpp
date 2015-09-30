@@ -45,6 +45,6 @@ std::string runall_result::get_name() const {
 
 void runall_result::verify_exit_code() restrict(cpu) {
 	if(!is_runall_exit_code(_exit_code)) {
-		throw std::exception();
+		throw std::invalid_argument("Invalid exit_code passed to runall_result(int) constructor.");
 	}
 }

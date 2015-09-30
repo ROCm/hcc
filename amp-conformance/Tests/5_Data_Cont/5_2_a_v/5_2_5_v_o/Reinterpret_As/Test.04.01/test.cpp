@@ -20,7 +20,7 @@
 /// <tags>P1</tags>
 /// <summary>Reinterpret an AV of 3 floats as float (GPU)</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 #include <vector>
 #include <algorithm>
 
@@ -34,14 +34,14 @@ int main()
     public:
         float r;
         float b;
-        float g;    
+        float g;
     };
 
     std::vector<float> v(10 * 3);
     Fill(v);
-    
+
     array_view<Foo, 1> av_rbg(10, reinterpret_cast<Foo *>(v.data()));
-    
+
     int expected_size = av_rbg.reinterpret_as<float>().get_extent().size();
 
     // reinterpret on the GPU and copy back
@@ -51,6 +51,6 @@ int main()
         array_view<const float, 1> av_float = av_rbg.reinterpret_as<float>();
         results[i] = av_float[i];
     });
-    
+
     return Verify<float>(reinterpret_cast<float *>(av_rbg.data()), results.data(), expected_size) ? runall_pass : runall_fail;
 }

@@ -21,7 +21,7 @@ public:
         r = a;
         return r;
     };
-    
+
 };
 ////////////////////////////////////////////
 
@@ -30,11 +30,11 @@ public:
 #define CHECK_RESULT(r,x) (r=x?r:1)
 
 // Main entry point
-int main(int argc, char **argv) 
+int main(int argc, char **argv)
 {
     int result = 0;
     testclass test = testclass();
-    
+
     CHECK_RESULT( result, test.callpublic(1) );
 
     printf("(Member functions 13) 	(P2)  "

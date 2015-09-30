@@ -7,7 +7,7 @@
 /// <summary>test char array</summary>
 //#Expects: Error: error C3581
 
-#include <amptest.h> 
+#include <amptest.h>
 
 void foo() __GPU
 {
@@ -15,8 +15,8 @@ void foo() __GPU
     ca[2] = 'c';
 }
 
-int main(int argc, char **argv) 
-{ 
+int main(int argc, char **argv)
+{
     foo();
     return 1;
 }

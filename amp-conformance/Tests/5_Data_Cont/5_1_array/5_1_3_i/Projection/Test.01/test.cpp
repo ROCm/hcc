@@ -53,7 +53,7 @@ runall_result test1(accelerator_view &acc_view)
 	{
 		
 		dst_av.discard_data();
-    
+
 		parallel_for_each(src_arr.get_extent(),[&src_arr,dst_av](index<1> idx)restrict(amp){
 			dst_av[idx] = src_arr[idx[0]];
 		});
@@ -63,7 +63,7 @@ runall_result test1(accelerator_view &acc_view)
 	
 	{		
 		dst_av.discard_data();
-    
+
 		parallel_for_each(src_arr.get_extent(),[&src_arr,dst_av](index<1> idx)restrict(amp){
 			dst_av[idx] = src_arr(idx[0]);
 		});
@@ -78,8 +78,8 @@ runall_result test1(accelerator_view &acc_view)
 runall_result test2(accelerator_view &acc_view)
 {
 	runall_result result;
-	int data[] = { 
-	1, 1 , 1, 1 , 1 ,  
+	int data[] = {
+	1, 1 , 1, 1 , 1 ,
 	2 , 2, 2, 2,  2 };
 	
     extent<2> ext(2,5);	
@@ -134,10 +134,10 @@ runall_result test2(accelerator_view &acc_view)
 runall_result test3(accelerator_view &acc_view)
 {
 	runall_result result;
-	int data[] = { 
-	1, 1 , 1, 1 , 1 ,  
+	int data[] = {
+	1, 1 , 1, 1 , 1 ,
 	2 , 2, 2, 2,  2 ,
-	3, 3 , 3, 3 , 3 ,  
+	3, 3 , 3, 3 , 3 ,
 	4 , 4, 4, 4,  4	,
 	5 , 5 , 5 ,5 , 5,
 	6 , 6 , 6 ,6 , 6 };
@@ -209,10 +209,10 @@ runall_result test3(accelerator_view &acc_view)
 runall_result test_main()
 {
     accelerator_view acc_view = require_device().get_default_view();
-    
+
     runall_result result;
     accelerator_view cpu_view = accelerator(accelerator::cpu_accelerator).get_default_view();
-    
+
     result &= REPORT_RESULT(test1(acc_view));
     result &= REPORT_RESULT(test1(cpu_view));
 	result &= REPORT_RESULT(test2(acc_view));

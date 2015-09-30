@@ -6,7 +6,7 @@
 /// <tags>P1</tags>
 /// <summary>Default argument expression</summary>
 
-void foo(int x = []() -> int { return 1;}()) restrict(amp) {} 
+void foo(int x = []() -> int { return 1;}()) restrict(amp) {}
 
 void hoo1() restrict(amp)
 {

@@ -1,14 +1,18 @@
 // XFAIL: Linux
-// RUN: %cxxamp -Xclang -fhsa-ext %s -o %t.out && %t.out
+// RUN: %hc %s -o %t.out && %t.out
 #include <iostream>
 #include <random>
 #include <future>
 #include <vector>
 #include <algorithm>
 #include <utility>
-#include <amp.h>
+#include <hc.hpp>
 
-// An HSA version of C++AMP program
+// FIXME: HSA runtime seems buggy in case LOOP_COUNT is very big
+// (ex: 1024 * 1024).
+#define LOOP_COUNT (1)
+
+// An example which shows how to launch a kernel asynchronously
 int main ()
 {
   // define inputs and output
@@ -30,18 +34,18 @@ int main ()
   }
 
   // the vector to store handles to each async pfe 
-  std::vector<Concurrency::completion_future> futures;
+  std::vector<hc::completion_future> futures;
 
   // divide the array into 4 quarters
-  Concurrency::extent<1> e(vecSize / 4);
+  hc::extent<1> e(vecSize / 4);
 
 #define ASYNC_KERNEL_DISPATCH(x, y) \
-  Concurrency::async_parallel_for_each( \
-    e.tile<256>(), \
-    [=](Concurrency::tiled_index<256> idx) restrict(amp) { \
+  hc::parallel_for_each( \
+    e.tile(256), \
+    [=](hc::tiled_index<1> idx) restrict(amp) { \
       const int offset = vecSize/(x)*(y); \
       const int fidx = idx.global[0]; \
-      for (int i = 0; i < 1024 * 1024; ++i) \
+      for (int i = 0; i < LOOP_COUNT; ++i) \
         p_c[fidx + offset] = p_a[fidx + offset] + p_b[fidx + offset]; \
   })
 
@@ -52,7 +56,7 @@ int main ()
   futures.push_back(std::move(ASYNC_KERNEL_DISPATCH(4, 3)));
 
   // wait for all kernels to finish execution
-  std::for_each(futures.cbegin(), futures.cend(), [](const Concurrency::completion_future& fut) { fut.wait(); });
+  std::for_each(futures.cbegin(), futures.cend(), [](const hc::completion_future& fut) { fut.wait(); });
 
   // verify
   int error = 0;

@@ -33,7 +33,7 @@ int main()
     std::vector<int> v1(20);
     Fill<int>(v1);
     array_view<int, 3> av1(5, 2, 2, v1);
-    
+
     // self-assign
     av1 = av1;
     return verify_extent(av1, av1.get_extent()) && VerifyDataOnCpu(av1, av1) ? runall_pass : runall_fail;

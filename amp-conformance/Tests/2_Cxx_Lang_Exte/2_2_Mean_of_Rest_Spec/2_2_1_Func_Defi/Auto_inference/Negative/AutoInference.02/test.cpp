@@ -12,7 +12,7 @@
 class B
 {
 public:
-    float f1(int &flag) 
+    float f1(int &flag)
     {
         flag = 1;
         return 0.0;
@@ -27,7 +27,7 @@ bool test() __GPU
     class D: public B
     {
     public:
-        float f2(int &flag) {return 0.0;}    
+        float f2(int &flag) {return 0.0;}
     };
 
     D o;

@@ -21,7 +21,7 @@ public:
     testclass() __GPU
         : r(0)
     {}
-            
+
     testclass& operator ()(int a, int b) __GPU  {
          r = a+b;
          return (*this);
@@ -35,7 +35,7 @@ runall_result kernel() __GPU
     testclass t;
 
     // this will be 7 if the call operator is invoked
-    return t(4, 3).r == 7; 
+    return t(4, 3).r == 7;
 }
 
 runall_result test_main()

@@ -12,7 +12,7 @@
 using namespace Concurrency;
 using namespace Concurrency::Test;
 
-struct A 
+struct A
 {
     static int s;
 };
@@ -21,14 +21,14 @@ struct B
 {
     static int s;
 };
- 
+
 
 void testEmptyStruct(A* a) __GPU
-{           
+{
 }
 
 void testEmptyClass(B* b) __GPU
-{           
+{
 }
 
 int test(accelerator_view &rv)

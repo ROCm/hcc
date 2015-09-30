@@ -22,7 +22,7 @@ void InitializeArray(vector<unsigned int> &vM, int size)
     for(int i=0; i<size; ++i)
     {
         // Shift range from [0, RAND_MAX] to [1, RAND_MAX + 1]
-        vM[i] = rand() + 1; 
+        vM[i] = rand() + 1;
     }
 }
 
@@ -53,7 +53,7 @@ int main(int argc, char **argv)
     vector<unsigned int> A(size);
     vector<unsigned int> B(size);
 
-    // Initialize input 
+    // Initialize input
     srand(31271);
     InitializeArray(A, size);
     InitializeArray(B, size);
@@ -65,7 +65,7 @@ int main(int argc, char **argv)
     // setup input arrays
     array<unsigned int, 2> aA(e, A.begin(), A.end(), rv), aB(e, B.begin(), B.end(), rv);
 
-    // setup output 
+    // setup output
     array<unsigned int, 2> aC(e, rv);
     vector<unsigned int> C(size);
 

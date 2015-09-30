@@ -8,7 +8,7 @@
 /// <tags>P1</tags>
 /// <summary>Create an extent using the default constructor. Ensure that indices for all dimensions are initialized to 0</summary>
 
-#include <amptest.h> 
+#include <amptest.h>
 
 using namespace Concurrency;
 using namespace Concurrency::Test;
@@ -77,7 +77,7 @@ int test_device()
     extent<1> e(size);
     array<int, 1> result(e, av);
     vector<int> presult(size, 0);
-    
+
     parallel_for_each(e, [&](index<1> idx) __GPU {
         kernel(idx, result);
     });
@@ -95,15 +95,15 @@ int test_device()
     return 0;
 }
 
-int main() 
-{ 
+int main()
+{
     int result = test();
-    
-    printf("Test %s on host\n", ((result == 0) ? "passed" : "failed")); 
+
+    printf("Test %s on host\n", ((result == 0) ? "passed" : "failed"));
     if(result != 0) return result;
-    
+
     result = test_device();
-    printf("Test %s on device\n", ((result == 0) ? "passed" : "failed")); 
+    printf("Test %s on device\n", ((result == 0) ? "passed" : "failed"));
     return result;
 }
 

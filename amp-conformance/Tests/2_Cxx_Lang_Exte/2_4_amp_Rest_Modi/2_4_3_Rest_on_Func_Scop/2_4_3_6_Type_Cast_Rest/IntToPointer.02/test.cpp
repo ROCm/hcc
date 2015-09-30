@@ -7,7 +7,7 @@
 /// <summary>test illegal reinterpret_cast from int to pointer</summary>
 //#Expects: Error: error C3588
 
-#include <amptest.h> 
+#include <amptest.h>
 
 void foo() __GPU
 {
@@ -15,8 +15,8 @@ void foo() __GPU
     int * p = reinterpret_cast<int*>(n);
 }
 
-int main(int argc, char **argv) 
-{ 
+int main(int argc, char **argv)
+{
     foo();
     return 1;
 }

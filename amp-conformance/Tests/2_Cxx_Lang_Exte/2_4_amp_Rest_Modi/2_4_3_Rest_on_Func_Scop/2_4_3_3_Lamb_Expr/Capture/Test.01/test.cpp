@@ -13,14 +13,14 @@ using namespace Concurrency;
 using namespace Concurrency::Test;
 
 
-int main() 
+int main()
 {
     array<int, 1> a(1);
-    
+
     std::vector<int> v(1);
     array_view<int, 1> av(1, v);
-    
+
     auto l = [&a, av] () __GPU {};
-        
+
     return runall_pass;
 }

@@ -29,11 +29,11 @@ bool test_feature()
     return false;
 }
 
-int main(int argc, char **argv) 
-{ 
+int main(int argc, char **argv)
+{
     int passed = test_feature<float, 5>() ? runall_pass : runall_fail;
 
-    printf("%s\n", (passed == runall_pass) ? "Passed!" : "Failed!"); 
+    printf("%s\n", (passed == runall_pass) ? "Passed!" : "Failed!");
 
     return passed;
 }
