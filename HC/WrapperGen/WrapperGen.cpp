@@ -220,7 +220,7 @@ namespace
           out << "void " << wrapperStr << "(";
           printRange(out, argList, argList.begin(), argList.end(), PARAMETERS);
           out << ")\n{" EOL;
-          out << "parallel_for_each(extent<1>(lp.gridDim.x*lp.groupDim.y * lp.gridDim.y*lp.groupDim.y), " << functorName << "(";
+          out << "parallel_for_each(extent<1>(lp.gridDim.x*lp.groupDim.x * lp.gridDim.y*lp.groupDim.y), " << functorName << "(";
           printRange(out, argList, argList.begin(), argList.end(), ARGUMENTS);
           out << ")).wait();\n}" EOL;
         }
