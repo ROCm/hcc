@@ -63,12 +63,12 @@ namespace
     }
   }
 
-  void pointerAsterix(string &str, Type* Ty, Type*& T)
+  void pointerAsterix(string &str, Type* Ty, Type*& T, bool isByVal=false)
   {
     if(Ty->isPointerTy())
     {
       Type* nextTy = Ty->getSequentialElementType();
-      if(!nextTy->isStructTy())
+      if(!isByVal)
       {
         str.append("*");
         pointerAsterix(str, nextTy, T);
@@ -80,12 +80,12 @@ namespace
 
    // Alternative to the hash table?
   //
-  string typeToString(Type* Ty)
+  string typeToString(Type* Ty, bool isByVal=false)
   {
     string str("");
     Type* T = NULL;
 
-    pointerAsterix(str, Ty, T);
+    pointerAsterix(str, Ty, T, isByVal);
     assert(T && "T is not NULL");
 
     if(IntegerType * intTy = dyn_cast<IntegerType>(T))
@@ -163,7 +163,7 @@ namespace
             string argType("");
 
             // Get type as string
-            string tyName = typeToString(Ty);
+            string tyName = typeToString(Ty, i->hasByValAttr());
             argType.append(tyName);
 
             // check if const
