@@ -732,8 +732,17 @@ private:
     completion_future(const std::shared_future<void> &__future)
         : __amp_future(__future) {}
 
-    template <typename InputIter, typename OutputIter> friend
-        completion_future __amp_copy_async_impl(InputIter& src, OutputIter& dst);
+    template <typename T, int N> friend
+        completion_future copy_async(const array_view<const T, N>& src, const array_view<T, N>& dest);
+    template <typename T, int N> friend
+        completion_future copy_async(const array<T, N>& src, array<T, N>& dest);
+    template <typename T, int N> friend
+        completion_future copy_async(const array<T, N>& src, const array_view<T, N>& dest);
+    template <typename T, int N> friend
+        completion_future copy_async(const array_view<T, N>& src, const array_view<T, N>& dest);
+    template <typename T, int N> friend
+        completion_future copy_async(const array_view<const T, N>& src, array<T, N>& dest);
+
     template <typename InputIter, typename T, int N> friend
         completion_future copy_async(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest);
     template <typename InputIter, typename T, int N> friend
@@ -4976,12 +4985,6 @@ void copy(const array_view<T, N> &src, OutputIter destBegin) {
 // utility function for copy_async
 // ------------------------------------------------------------------------
 
-template <typename InputIter, typename OutputIter>
-completion_future __amp_copy_async_impl(InputIter& src, OutputIter& dst) {
-    std::future<void> fut = std::async([&]() mutable { copy(src, dst); });
-    return completion_future(fut.share());
-}
-
 // ------------------------------------------------------------------------
 // copy_async
 // ------------------------------------------------------------------------
@@ -4996,7 +4999,8 @@ completion_future __amp_copy_async_impl(InputIter& src, OutputIter& dst) {
  */
 template <typename T, int N>
 completion_future copy_async(const array<T, N>& src, array<T, N>& dest) {
-    return __amp_copy_async_impl(src, dest);
+    std::future<void> fut = std::async([&]() mutable { copy(src, dest); });
+    return completion_future(fut.share());
 }
 
 /**
@@ -5008,7 +5012,8 @@ completion_future copy_async(const array<T, N>& src, array<T, N>& dest) {
  */
 template <typename T, int N>
 completion_future copy_async(const array<T, N>& src, const array_view<T, N>& dest) {
-    return __amp_copy_async_impl(src, dest);
+    std::future<void> fut = std::async([&]() mutable { copy(src, dest); });
+    return completion_future(fut.share());
 }
 
 /** @{ */
@@ -5022,12 +5027,14 @@ completion_future copy_async(const array<T, N>& src, const array_view<T, N>& des
  */
 template <typename T, int N>
 completion_future copy_async(const array_view<const T, N>& src, array<T, N>& dest) {
-    return __amp_copy_async_impl(src, dest);
+    std::future<void> fut = std::async([&]() mutable { copy(src, dest); });
+    return completion_future(fut.share());
 }
 
 template <typename T, int N>
 completion_future copy_async(const array_view<T, N>& src, array<T, N>& dest) {
-    return __amp_copy_async_impl(src, dest);
+    std::future<void> fut = std::async([&]() mutable { copy(src, dest); });
+    return completion_future(fut.share());
 }
 
 /** @} */
@@ -5043,12 +5050,14 @@ completion_future copy_async(const array_view<T, N>& src, array<T, N>& dest) {
  */
 template <typename T, int N>
 completion_future copy_async(const array_view<const T, N>& src, const array_view<T, N>& dest) {
-    return __amp_copy_async_impl(src, dest);
+    std::future<void> fut = std::async([&]() mutable { copy(src, dest); });
+    return completion_future(fut.share());
 }
 
 template <typename T, int N>
 completion_future copy_async(const array_view<T, N>& src, const array_view<T, N>& dest) {
-    return __amp_copy_async_impl(src, dest);
+    std::future<void> fut = std::async([&]() mutable { copy(src, dest); });
+    return completion_future(fut.share());
 }
 
 /** @} */
@@ -5069,13 +5078,13 @@ completion_future copy_async(const array_view<T, N>& src, const array_view<T, N>
  */
 template <typename InputIter, typename T, int N>
 completion_future copy_async(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest) {
-    std::future<void> fut = std::async([&]() mutable { copy(srcBegin, srcEnd, dest); });
+    std::future<void> fut = std::async([&, srcBegin, srcEnd]() mutable { copy(srcBegin, srcEnd, dest); });
     return completion_future(fut.share());
 }
 
 template <typename InputIter, typename T, int N>
 completion_future copy_async(InputIter srcBegin, array<T, N>& dest) {
-    std::future<void> fut = std::async([&]() mutable { copy(srcBegin, dest); });
+    std::future<void> fut = std::async([&, srcBegin]() mutable { copy(srcBegin, dest); });
     return completion_future(fut.share());
 }
 
@@ -5097,13 +5106,13 @@ completion_future copy_async(InputIter srcBegin, array<T, N>& dest) {
  */
 template <typename InputIter, typename T, int N>
 completion_future copy_async(InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest) {
-    std::future<void> fut = std::async([&]() mutable { copy(srcBegin, srcEnd, dest); });
+    std::future<void> fut = std::async([&, srcBegin, srcEnd]() mutable { copy(srcBegin, srcEnd, dest); });
     return completion_future(fut.share());
 }
 
 template <typename InputIter, typename T, int N>
 completion_future copy_async(InputIter srcBegin, const array_view<T, N>& dest) {
-    std::future<void> fut = std::async([&]() mutable { copy(srcBegin, dest); });
+    std::future<void> fut = std::async([&, srcBegin]() mutable { copy(srcBegin, dest); });
     return completion_future(fut.share());
 }
 
@@ -5121,7 +5130,7 @@ completion_future copy_async(InputIter srcBegin, const array_view<T, N>& dest) {
  */
 template <typename OutputIter, typename T, int N>
 completion_future copy_async(const array<T, N>& src, OutputIter destBegin) {
-    std::future<void> fut = std::async([&]() mutable { copy(src, destBegin); });
+    std::future<void> fut = std::async([&, destBegin]() mutable { copy(src, destBegin); });
     return completion_future(fut.share());
 }
 
@@ -5137,24 +5146,27 @@ completion_future copy_async(const array<T, N>& src, OutputIter destBegin) {
  */
 template <typename OutputIter, typename T, int N>
 completion_future copy_async(const array_view<T, N>& src, OutputIter destBegin) {
-    std::future<void> fut = std::async([&]() mutable { copy(src, destBegin); });
+    std::future<void> fut = std::async([&, destBegin]() mutable { copy(src, destBegin); });
     return completion_future(fut.share());
 }
 
 // FIXME: these functions are not defined in C++ AMP specification
 template <typename T, int N>
 completion_future copy_async(const array<T, N>& src, const array<T, N>& dest) {
-    return __amp_copy_async_impl(src, dest);
+    std::future<void> fut = std::async([&]() mutable { copy(src, dest); });
+    return completion_future(fut.share());
 }
 
 template <typename T, int N>
 completion_future copy_async(const array_view<const T, N>& src, const array<T, N>& dest) {
-    return __amp_copy_async_impl(src, dest);
+    std::future<void> fut = std::async([&]() mutable { copy(src, dest); });
+    return completion_future(fut.share());
 }
 
 template <typename T, int N>
 completion_future copy_async(const array_view<T, N>& src, const array<T, N>& dest) {
-    return __amp_copy_async_impl(src, dest);
+    std::future<void> fut = std::async([&]() mutable { copy(src, dest); });
+    return completion_future(fut.share());
 }
 
 // ------------------------------------------------------------------------
