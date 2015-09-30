@@ -957,7 +957,13 @@ public:
     size_t get_mem() const override { return 0; }
     bool is_double() const override { return true; }
     bool is_lim_double() const override { return true; }
-    bool is_unified() const override { return true; }
+    bool is_unified() const override {
+#if HSA_DGPU_FLAG
+        return false;
+#else
+        return true;
+#endif
+    }
     bool is_emulated() const override { return false; }
 
     void* create(size_t count, struct rw_info* key) override {
