@@ -199,15 +199,19 @@ namespace
           out << "{" EOL;
           out << "lp.gridDim.x = _lp.gridDim.x;" EOL;
           out << "lp.gridDim.y = _lp.gridDim.y;" EOL;
+          out << "lp.gridDim.z = _lp.gridDim.z;" EOL;
           out << "lp.groupDim.x = _lp.groupDim.x;" EOL;
           out << "lp.groupDim.y = _lp.groupDim.y;" EOL;
+          out << "lp.groupDim.z = _lp.groupDim.z;" EOL;
           out << "}" EOL;
 
-          out << "void operator()(index<1>& i) __attribute((hc))\n{" EOL;
-          out << "lp.groupId.x = (i[0] / lp.groupDim.x) % lp.gridDim.x;" EOL;
-          out << "lp.groupId.y = i[0] / (lp.gridDim.x*lp.groupDim.x * lp.groupDim.y);" EOL;
-          out << "lp.threadId.x = i[0] % lp.groupDim.x;" EOL;
-          out << "lp.threadId.y = (i[0] / (lp.gridDim.x*lp.groupDim.x)) % lp.groupDim.y;" EOL;
+          out << "void operator()(tiled_index<3>& i) __attribute((hc))\n{" EOL;
+          out << "lp.groupId.x = i.tile[0];" EOL;
+          out << "lp.groupId.y = i.tile[1];" EOL;
+          out << "lp.groupId.z = i.tile[2];" EOL;
+          out << "lp.threadId.x = i.local[0];" EOL;
+          out << "lp.threadId.y = i.local[1];" EOL;
+          out << "lp.threadId.z = i.local[2];" EOL;
           out << funcName << "(lp, ";
           printRange(out, argList, i2, argList.end(), ARGUMENTS);
           out << ");\n}" EOL;
@@ -220,7 +224,7 @@ namespace
           out << "void " << wrapperStr << "(";
           printRange(out, argList, argList.begin(), argList.end(), PARAMETERS);
           out << ")\n{" EOL;
-          out << "parallel_for_each(extent<1>(lp.gridDim.x*lp.groupDim.x * lp.gridDim.y*lp.groupDim.y), " << functorName << "(";
+          out << "parallel_for_each(extent<3>(lp.gridDim.x*lp.groupDim.x,lp.gridDim.y*lp.groupDim.y,lp.gridDim.z*lp.groupDim.z).tile(lp.groupDim.x, lp.groupDim.y, lp.groupDim.z), " << functorName << "(";
           printRange(out, argList, argList.begin(), argList.end(), ARGUMENTS);
           out << ")).wait();\n}" EOL;
         }

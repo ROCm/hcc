@@ -316,9 +316,11 @@ extern inline grid_launch_parm hcCreateLaunchParam2(hc_uint3 gridDim, hc_uint3 g
 
   lp.gridDim.x = gridDim.x;
   lp.gridDim.y = gridDim.y;
+  lp.gridDim.z = gridDim.z;
 
   lp.groupDim.x = groupDim.x;
   lp.groupDim.y = groupDim.y;
+  lp.groupDim.z = groupDim.z;
 
   return lp;
 }
