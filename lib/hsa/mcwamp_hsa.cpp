@@ -716,14 +716,14 @@ public:
         if (src != dst) {
             if (HSA_DGPU_FLAG && (hasHSAInterOp() && (getHSAAMRegion() != nullptr))) {
 #if KALMAR_DEBUG
-                std::cerr << "copy(" << src << "," << dst << "," << count << "," << src_offset << "," << dst_offset << "," blocking << "): use HSA memory copy\n";
+                std::cerr << "copy(" << src << "," << dst << "," << count << "," << src_offset << "," << dst_offset << "," << blocking << "): use HSA memory copy\n";
 #endif
                 hsa_status_t status = HSA_STATUS_SUCCESS;
                 status = hsa_memory_copy((char*)dst + dst_offset, (char*)src + src_offset, count);
                 STATUS_CHECK(status, __LINE__);
             } else {
 #if KALMAR_DEBUG
-                std::cerr << "copy(" << src << "," << dst << "," << count << "," << src_offset << "," << dst_offset << "," blocking << "): use host memory copy\n";
+                std::cerr << "copy(" << src << "," << dst << "," << count << "," << src_offset << "," << dst_offset << "," << blocking << "): use host memory copy\n";
 #endif
                 memmove((char*)dst + dst_offset, (char*)src + src_offset, count);
             }
@@ -744,12 +744,20 @@ public:
             hsa_status_t status = HSA_STATUS_SUCCESS;
             // allocate a host buffer
             void *data = aligned_alloc(0x1000, count);
-            // copy data from device buffer to host buffer
-            status = hsa_memory_copy(data, (char*)device + offset, count);
-            STATUS_CHECK(status, __LINE__);
+            if (data != nullptr) {
+              // copy data from device buffer to host buffer
+              status = hsa_memory_copy(data, (char*)device + offset, count);
+              STATUS_CHECK(status, __LINE__);
+            } else {
+#if KALMAR_DEBUG
+              std::cerr << "host buffer allocation failed!\n";
+#endif
+              abort();
+            }
 #if KALMAR_DEBUG
             std::cerr << "map(): " << data << "\n";
 #endif
+
             return data;
             
         } else {
@@ -771,9 +779,12 @@ public:
         // we free the host memory buffer allocated in map()
         if (HSA_DGPU_FLAG && (hasHSAInterOp() && (getHSAAMRegion() != nullptr))) {
 #if KALMAR_DEBUG
-            std::cerr << "unmap(" << device << "," << addr << "," << count << "," << offset << "," << modify << "): use HSA memory map\n";
+            std::cerr << "unmap(" << device << "," << addr << "," << count << "," << offset << "," << modify << "): use HSA memory unmap\n";
 #endif
             if (modify) {
+#if KALMAR_DEBUG
+                std::cerr << "copy host buffer to device buffer\n";
+#endif
                 // copy data from host buffer to device buffer
                 hsa_status_t status = HSA_STATUS_SUCCESS;
                 status = hsa_memory_copy((char*)device + offset, addr, count);
@@ -781,10 +792,10 @@ public:
             }
 
             // deallocate the host buffer
-            ::operator delete(addr);
+            free(addr);
         } else {
 #if KALMAR_DEBUG
-            std::cerr << "unmap(" << device << "," << addr << "," << count << "," << offset << "," << modify << "): use host memory map\n";
+            std::cerr << "unmap(" << device << "," << addr << "," << count << "," << offset << "," << modify << "): use host memory unmap\n";
 #endif
             // for host memory there's nothing to be done
         }
