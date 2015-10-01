@@ -71,6 +71,14 @@ typedef struct grid_launch_parm
 #else
 #define __KERNEL __attribute__((hc_grid_launch))
 
+// Prevent host-side compilation from compiler errors
+#ifndef __GPU__
+#define hc_barrier(n)
+#endif
+
+#define __GROUP static __attribute__((address_space(3)))
+#define __syncthreads() hc_barrier(CLK_LOCAL_MEM_FENCE)
+
 typedef hc_uint3 dim3;
 
 extern inline dim3 dim3_init(int x, int y, int z)

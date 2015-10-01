@@ -49,6 +49,7 @@ extern "C" __attribute__((pure)) int64_t amp_get_group_id(unsigned int n) restri
 extern "C" __attribute__((noduplicate,hc)) void hc_barrier(unsigned int n);
 
 extern "C" __attribute__((noduplicate)) void amp_barrier(unsigned int n) restrict(amp);
+extern "C" __attribute__((noduplicate)) void hc_barrier(unsigned int n);
 
 /// macro to set if we want default queue be thread-local or not
 #define TLS_QUEUE (1)
