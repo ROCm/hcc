@@ -67,6 +67,13 @@ int ipos_old,jpos_old,draw_solid_flag;
 
 size_t pitch;
 
+// FPS variables
+int frameCount = 0;
+float fps = 0;
+int currentTime = 0;
+int previousTime = 0;
+void calculateFPS();
+
 ////////////////////////////////////////////////////////////////////////////////
 
 //
@@ -736,6 +743,8 @@ void display(void)
     glTexCoord2f (0.0, 1.0);
     glVertex3f (0.0, nj, 0.0);
     glEnd();
+    calculateFPS();
+    printf("FPS: %4.2f\r", fps);
     glutSwapBuffers();
 
 }
@@ -853,3 +862,19 @@ void mouse_motion(int x, int y)
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
+
+void calculateFPS()
+{
+  frameCount++;
+  currentTime = glutGet(GLUT_ELAPSED_TIME);
+
+  int timeInterval = currentTime - previousTime;
+
+  if(timeInterval > 1000)
+  {
+    fps = frameCount / (timeInterval / 1000.0f);
+    previousTime = currentTime;
+    frameCount = 0;
+  }
+}
+
