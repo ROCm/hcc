@@ -27,10 +27,7 @@
 
 #include <kalmar_runtime.h>
 
-#define KALMAR_DEBUG (0)
-
-// macro to turn on / off using HSA memory allocator to allocate device memory
-#define HSA_DGPU_FLAG (true)
+#define KALMAR_DEBUG (1)
 
 #define STATUS_CHECK(s,line) if (s != HSA_STATUS_SUCCESS) {\
 		printf("### Error: %d at line:%d\n", s, line);\
@@ -671,7 +668,7 @@ public:
 
         // do read
         if (dst != device) {
-            if (HSA_DGPU_FLAG && (hasHSAInterOp() && (getHSAAMRegion() != nullptr))) {
+            if (!getDev()->is_unified()) {
 #if KALMAR_DEBUG
                 std::cerr << "read(" << device << "," << dst << "," << count << "," << offset << "): use HSA memory copy\n";
 #endif
@@ -692,7 +689,7 @@ public:
 
         // do write
         if (src != device) {
-            if (HSA_DGPU_FLAG && (hasHSAInterOp() && (getHSAAMRegion() != nullptr))) {
+            if (!getDev()->is_unified()) {
 #if KALMAR_DEBUG
                 std::cerr << "write(" << device << "," << src << "," << count << "," << offset << "," << blocking << "): use HSA memory copy\n";
 #endif
@@ -714,7 +711,7 @@ public:
 
         // do copy
         if (src != dst) {
-            if (HSA_DGPU_FLAG && (hasHSAInterOp() && (getHSAAMRegion() != nullptr))) {
+            if (!getDev()->is_unified()) {
 #if KALMAR_DEBUG
                 std::cerr << "copy(" << src << "," << dst << "," << count << "," << src_offset << "," << dst_offset << "," << blocking << "): use HSA memory copy\n";
 #endif
@@ -737,7 +734,7 @@ public:
 
         // as HSA runtime doesn't have map/unmap facility at this moment,
         // we explicitly allocate a host memory buffer in this case 
-        if (HSA_DGPU_FLAG && (hasHSAInterOp() && (getHSAAMRegion() != nullptr))) {
+        if (!getDev()->is_unified()) {
 #if KALMAR_DEBUG
             std::cerr << "map(" << device << "," << count << "," << offset << "," << modify << "): use HSA memory map\n";
 #endif
@@ -777,7 +774,7 @@ public:
 
         // as HSA runtime doesn't have map/unmap facility at this moment,
         // we free the host memory buffer allocated in map()
-        if (HSA_DGPU_FLAG && (hasHSAInterOp() && (getHSAAMRegion() != nullptr))) {
+        if (!getDev()->is_unified()) {
 #if KALMAR_DEBUG
             std::cerr << "unmap(" << device << "," << addr << "," << count << "," << offset << "," << modify << "): use HSA memory unmap\n";
 #endif
@@ -865,6 +862,8 @@ private:
 
     region_iterator ri;
 
+    bool useCoarseGrainedRegion;
+
 public:
 
     // Callback for hsa_agent_iterate_regions.
@@ -933,7 +932,8 @@ public:
     HSADevice(hsa_agent_t a) : KalmarDevice(access_type_read_write),
                                agent(a), programs(), max_tile_static_size(0),
                                queues(), queues_mutex(),
-                               ri() {
+                               ri(),
+                               useCoarseGrainedRegion(false) {
 #if KALMAR_DEBUG
         std::cerr << "HSADevice::HSADevice()\n";
 #endif
@@ -945,6 +945,20 @@ public:
 
         status = hsa_agent_iterate_regions(agent, &HSADevice::get_memory_regions, &ri);
         STATUS_CHECK(status, __LINE__);
+
+        /// after iterating memory regions, set if we can use coarse grained regions
+        bool result = false;
+        if (hasHSACoarsegrainedRegion()) {
+            result = true;
+            // environment variable CLAMP_HSA may be used to change the default behavior
+            char* hsa_behavior = getenv("CLAMP_HSA_USEHOSTMEMORY");
+            if (hsa_behavior != nullptr) {
+                if (std::string("ON") == hsa_behavior) {
+                    result = false;
+                }
+            }
+        }
+        useCoarseGrainedRegion = result; 
     }
 
     ~HSADevice() {
@@ -969,18 +983,14 @@ public:
     bool is_double() const override { return true; }
     bool is_lim_double() const override { return true; }
     bool is_unified() const override {
-#if HSA_DGPU_FLAG
-        return false;
-#else
-        return true;
-#endif
+        return (useCoarseGrainedRegion == false);
     }
     bool is_emulated() const override { return false; }
 
     void* create(size_t count, struct rw_info* key) override {
         void *data = nullptr;
 
-        if (HSA_DGPU_FLAG && (hasHSAFinegrainedRegion() || hasHSACoarsegrainedRegion())) {
+        if (!is_unified()) {
 #if KALMAR_DEBUG
             std::cerr << "create(" << count << "," << key << "): use HSA memory allocator\n";
 #endif
@@ -1008,7 +1018,7 @@ public:
     }
     
     void release(void *ptr, struct rw_info* key ) override {
-        if (HSA_DGPU_FLAG && (hasHSAFinegrainedRegion() || hasHSACoarsegrainedRegion())) {
+        if (!is_unified()) {
 #if KALMAR_DEBUG
             std::cerr << "release(" << ptr << "," << key << "): use HSA memory deallocator\n";
 #endif
@@ -1264,7 +1274,7 @@ class HSAContext final : public KalmarContext
         }
 #endif
 
-        if (device_type == HSA_DEVICE_TYPE_GPU) {
+        if (device_type == HSA_DEVICE_TYPE_GPU)  {
             pAgents->push_back(agent);
         }
 
