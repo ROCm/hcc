@@ -27,7 +27,7 @@
 
 #include <kalmar_runtime.h>
 
-#define KALMAR_DEBUG (1)
+#define KALMAR_DEBUG (0)
 
 #define STATUS_CHECK(s,line) if (s != HSA_STATUS_SUCCESS) {\
 		printf("### Error: %d at line:%d\n", s, line);\
