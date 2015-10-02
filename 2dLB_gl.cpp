@@ -82,9 +82,14 @@ void mouse_motion(int x, int y);
 //
 __KERNEL void stream_kernel (grid_launch_parm lp, int pitch, float *f1_data, float *f2_data,
                                float *f3_data, float *f4_data, float *f5_data, float *f6_data,
-                               float *f7_data, float *f8_data,
+                               float *f7_data, float *f8_data
+#ifdef USE_CUDA // CUDA does not support passing textures as paramters, but Kalmar requries it
+    );
+#else
+             ,
              texture f1_tex, texture f2_tex, texture f3_tex, texture f4_tex,
              texture f5_tex, texture f6_tex, texture f7_tex, texture f8_tex);
+#endif
 
 __KERNEL void collide_kernel (grid_launch_parm lp, int pitch, float tau, float faceq1, float faceq2, float faceq3,
                                 float *f0_data, float *f1_data, float *f2_data,
@@ -353,11 +358,17 @@ int main(int argc, char **argv)
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
+
 __KERNEL void stream_kernel (grid_launch_parm lp, int pitch, float *f1_data, float *f2_data,
                                float *f3_data, float *f4_data, float *f5_data,
-			       float *f6_data, float *f7_data, float *f8_data,
+			       float *f6_data, float *f7_data, float *f8_data
+#ifdef USE_CUDA
+    )
+#else
+             ,
              texture f1_tex, texture f2_tex, texture f3_tex, texture f4_tex,
              texture f5_tex, texture f6_tex, texture f7_tex, texture f8_tex)
+#endif
 // CUDA kernel
 
 {
@@ -445,9 +456,14 @@ void stream(void)
     dim3 block = DIM3(TILE_I, TILE_J);
 
     hcLaunchKernel(stream_kernel, grid, block, pitch, f1_data, f2_data, f3_data, f4_data,
-                                   f5_data, f6_data, f7_data, f8_data,
+                                   f5_data, f6_data, f7_data, f8_data
+#ifdef USE_CUDA
+        );
+#else
+             ,
              f1_tex, f2_tex, f3_tex, f4_tex,
              f5_tex, f6_tex, f7_tex, f8_tex);
+#endif
 
     CUT_CHECK_ERROR("stream failed.");
 
