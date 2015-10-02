@@ -73,9 +73,9 @@ extern inline dim3 dim3_eval(int x, ...)
 #define DIM3(x, ...) \
   dim3_eval(x, __VA_ARGS__, NULL)
 
-#define hcLaunchKernel(fn, lp, ...) \
-  void __hcLaunchKernel_##fn(grid_launch_parm lp_arg, ...); \
-  __hcLaunchKernel_##fn(lp, __VA_ARGS__)
+#define hcLaunchKernel(fn, grid, block, ...) \
+  grid_launch_parm lp = hcCreateLaunchParam2(grid, block); \
+  fn(lp, __VA_ARGS__)
 
 #define HC_ASSERT(x) \
   assert(!x)
@@ -297,6 +297,9 @@ extern inline grid_launch_parm hcCreateLaunchParam2(hc_uint3 gridDim, hc_uint3 g
 
   return lp;
 }
+
+// Math MACROS
+#define SQRTF(x) hc::precise_math::sqrtf(x)
 
 #define GRID_LAUNCH_INIT(lp)
 
