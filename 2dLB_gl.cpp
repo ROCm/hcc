@@ -23,9 +23,7 @@
 #include <stdlib.h>
 #include <GL/glew.h>
 #include <GL/glut.h>
-#include <cutil.h>
-#include <cuda_runtime_api.h>
-#include <cuda_gl_interop.h>
+#include <hip.h>
 
 #define TILE_I 16
 #define TILE_J 8
@@ -48,12 +46,14 @@ int *solid_data;
 unsigned int *cmap_rgba_data, *plot_rgba_data;
 
 // textures on device //
-texture<float, 2> f1_tex, f2_tex, f3_tex, f4_tex,
+// FIXME: templates
+// texture<float, 2>
+texture f1_tex, f2_tex, f3_tex, f4_tex,
                   f5_tex, f6_tex, f7_tex, f8_tex;
 
 // CUDA special format arrays on device //
-cudaArray *f1_array, *f2_array, *f3_array, *f4_array; 
-cudaArray *f5_array, *f6_array, *f7_array, *f8_array; 
+hcArray *f1_array, *f2_array, *f3_array, *f4_array; 
+hcArray *f5_array, *f6_array, *f7_array, *f8_array; 
 
 // scalars //
 float tau,faceq1,faceq2,faceq3;
@@ -80,26 +80,28 @@ void mouse_motion(int x, int y);
 //
 // CUDA kernel prototypes
 //
-__global__ void stream_kernel (int pitch, float *f1_data, float *f2_data,
+__KERNEL void stream_kernel (grid_launch_parm lp, int pitch, float *f1_data, float *f2_data,
                                float *f3_data, float *f4_data, float *f5_data, float *f6_data,
-                               float *f7_data, float *f8_data);
+                               float *f7_data, float *f8_data,
+             texture f1_tex, texture f2_tex, texture f3_tex, texture f4_tex,
+             texture f5_tex, texture f6_tex, texture f7_tex, texture f8_tex);
 
-__global__ void collide_kernel (int pitch, float tau, float faceq1, float faceq2, float faceq3,
+__KERNEL void collide_kernel (grid_launch_parm lp, int pitch, float tau, float faceq1, float faceq2, float faceq3,
                                 float *f0_data, float *f1_data, float *f2_data,
                                 float *f3_data, float *f4_data, float *f5_data, float *f6_data,
                                 float *f7_data, float *f8_data, float *plot_data);
 
-__global__ void apply_Periodic_BC_kernel (int ni, int nj, int pitch, 
+__KERNEL void apply_Periodic_BC_kernel (grid_launch_parm lp, int ni, int nj, int pitch, 
 					  float *f2_data, float *f4_data, float *f5_data, 
 					  float *f6_data, float *f7_data, float *f8_data);
 
-__global__ void apply_BCs_kernel (int ni, int nj, int pitch, float vxin, float roout,
+__KERNEL void apply_BCs_kernel (grid_launch_parm lp, int ni, int nj, int pitch, float vxin, float roout,
                                   float faceq2, float faceq3,
                                   float *f0_data, float *f1_data, float *f2_data,
                                   float *f3_data, float *f4_data, float *f5_data, 
                                   float *f6_data, float *f7_data, float *f8_data, int* solid_data);
 
-__global__ void get_rgba_kernel (int pitch, int ncol, float minvar, float maxvar,
+__KERNEL void get_rgba_kernel (grid_launch_parm lp, int pitch, int ncol, float minvar, float maxvar,
                                  float *plot_data,
                                  unsigned int *plot_rgba_data,
                                  unsigned int *cmap_rgba_data,
@@ -123,7 +125,7 @@ int main(int argc, char **argv)
     float rcol,gcol,bcol;
 
     FILE *fp_col;
-    cudaChannelFormatDesc desc;
+    hcChannelFormatDesc desc;
 
     // The following parameters are usually read from a file, but
     // hard code them for the demo:
@@ -164,40 +166,42 @@ int main(int argc, char **argv)
     //
     // allocate memory on device
     //
-    CUDA_SAFE_CALL(cudaMallocPitch((void **)&f0_data, &pitch, 
+    CUDA_SAFE_CALL(hcMallocPitch((void **)&f0_data, &pitch, 
                                    sizeof(float)*ni, nj));
-    CUDA_SAFE_CALL(cudaMallocPitch((void **)&f1_data, &pitch, 
+    CUDA_SAFE_CALL(hcMallocPitch((void **)&f1_data, &pitch, 
                                    sizeof(float)*ni, nj));
-    CUDA_SAFE_CALL(cudaMallocPitch((void **)&f2_data, &pitch, 
+    CUDA_SAFE_CALL(hcMallocPitch((void **)&f2_data, &pitch, 
                                    sizeof(float)*ni, nj));
-    CUDA_SAFE_CALL(cudaMallocPitch((void **)&f3_data, &pitch, 
+    CUDA_SAFE_CALL(hcMallocPitch((void **)&f3_data, &pitch, 
                                    sizeof(float)*ni, nj));
-    CUDA_SAFE_CALL(cudaMallocPitch((void **)&f4_data, &pitch, 
+    CUDA_SAFE_CALL(hcMallocPitch((void **)&f4_data, &pitch, 
                                    sizeof(float)*ni, nj));
-    CUDA_SAFE_CALL(cudaMallocPitch((void **)&f5_data, &pitch, 
+    CUDA_SAFE_CALL(hcMallocPitch((void **)&f5_data, &pitch, 
                                    sizeof(float)*ni, nj));
-    CUDA_SAFE_CALL(cudaMallocPitch((void **)&f6_data, &pitch, 
+    CUDA_SAFE_CALL(hcMallocPitch((void **)&f6_data, &pitch, 
                                    sizeof(float)*ni, nj));
-    CUDA_SAFE_CALL(cudaMallocPitch((void **)&f7_data, &pitch, 
+    CUDA_SAFE_CALL(hcMallocPitch((void **)&f7_data, &pitch, 
                                    sizeof(float)*ni, nj));
-    CUDA_SAFE_CALL(cudaMallocPitch((void **)&f8_data, &pitch, 
+    CUDA_SAFE_CALL(hcMallocPitch((void **)&f8_data, &pitch, 
                                    sizeof(float)*ni, nj));
-    CUDA_SAFE_CALL(cudaMallocPitch((void **)&plot_data, &pitch, 
+    CUDA_SAFE_CALL(hcMallocPitch((void **)&plot_data, &pitch, 
                                    sizeof(float)*ni, nj));
 
 
-    CUDA_SAFE_CALL(cudaMallocPitch((void **)&solid_data, &pitch, 
+    CUDA_SAFE_CALL(hcMallocPitch((void **)&solid_data, &pitch, 
                                    sizeof(int)*ni, nj));
 
-    desc = cudaCreateChannelDesc<float>();
-    CUDA_SAFE_CALL(cudaMallocArray(&f1_array, &desc, ni, nj));
-    CUDA_SAFE_CALL(cudaMallocArray(&f2_array, &desc, ni, nj));
-    CUDA_SAFE_CALL(cudaMallocArray(&f3_array, &desc, ni, nj));
-    CUDA_SAFE_CALL(cudaMallocArray(&f4_array, &desc, ni, nj));
-    CUDA_SAFE_CALL(cudaMallocArray(&f5_array, &desc, ni, nj));
-    CUDA_SAFE_CALL(cudaMallocArray(&f6_array, &desc, ni, nj));
-    CUDA_SAFE_CALL(cudaMallocArray(&f7_array, &desc, ni, nj));
-    CUDA_SAFE_CALL(cudaMallocArray(&f8_array, &desc, ni, nj));
+// FIXME: templatize this
+//    desc = hcCreateChannelDesc<float>();
+    desc = hcCreateChannelDesc();
+    CUDA_SAFE_CALL(hcMallocArray(&f1_array, &desc, ni, nj));
+    CUDA_SAFE_CALL(hcMallocArray(&f2_array, &desc, ni, nj));
+    CUDA_SAFE_CALL(hcMallocArray(&f3_array, &desc, ni, nj));
+    CUDA_SAFE_CALL(hcMallocArray(&f4_array, &desc, ni, nj));
+    CUDA_SAFE_CALL(hcMallocArray(&f5_array, &desc, ni, nj));
+    CUDA_SAFE_CALL(hcMallocArray(&f6_array, &desc, ni, nj));
+    CUDA_SAFE_CALL(hcMallocArray(&f7_array, &desc, ni, nj));
+    CUDA_SAFE_CALL(hcMallocArray(&f8_array, &desc, ni, nj));
 
     //
     // Some factors used in equilibrium f's 
@@ -234,7 +238,7 @@ int main(int argc, char **argv)
     
     fscanf (fp_col, "%d", &ncol);
     cmap_rgba = (unsigned int *)malloc(ncol*sizeof(unsigned int));
-    CUDA_SAFE_CALL(cudaMalloc((void **)&cmap_rgba_data, 
+    CUDA_SAFE_CALL(hcMalloc((void **)&cmap_rgba_data, 
                                    sizeof(unsigned int)*ncol));
     
     for (i=0;i<ncol;i++){
@@ -246,45 +250,47 @@ int main(int argc, char **argv)
     }
     fclose(fp_col);
 
+    CUDA_SAFE_CALL(hcMalloc((void**)&plot_rgba_data, ni*nj*sizeof(unsigned int)));
+
     //
     // Transfer initial data to device
     //
-    CUDA_SAFE_CALL(cudaMemcpy2D((void *)f0_data, pitch, (void *)f0,
+    CUDA_SAFE_CALL(hcMemcpy2D((void *)f0_data, pitch, (void *)f0,
                                 sizeof(float)*ni,sizeof(float)*ni, nj,
-                                cudaMemcpyHostToDevice));
-    CUDA_SAFE_CALL(cudaMemcpy2D((void *)f1_data, pitch, (void *)f1,
+                                hcMemcpyHostToAccelerator));
+    CUDA_SAFE_CALL(hcMemcpy2D((void *)f1_data, pitch, (void *)f1,
                                 sizeof(float)*ni,sizeof(float)*ni, nj,
-                                cudaMemcpyHostToDevice));
-    CUDA_SAFE_CALL(cudaMemcpy2D((void *)f2_data, pitch, (void *)f2,
+                                hcMemcpyHostToAccelerator));
+    CUDA_SAFE_CALL(hcMemcpy2D((void *)f2_data, pitch, (void *)f2,
                                 sizeof(float)*ni,sizeof(float)*ni, nj,
-                                cudaMemcpyHostToDevice));
-    CUDA_SAFE_CALL(cudaMemcpy2D((void *)f3_data, pitch, (void *)f3,
+                                hcMemcpyHostToAccelerator));
+    CUDA_SAFE_CALL(hcMemcpy2D((void *)f3_data, pitch, (void *)f3,
                                 sizeof(float)*ni,sizeof(float)*ni, nj,
-                                cudaMemcpyHostToDevice));
-    CUDA_SAFE_CALL(cudaMemcpy2D((void *)f4_data, pitch, (void *)f4,
+                                hcMemcpyHostToAccelerator));
+    CUDA_SAFE_CALL(hcMemcpy2D((void *)f4_data, pitch, (void *)f4,
                                 sizeof(float)*ni,sizeof(float)*ni, nj,
-                                cudaMemcpyHostToDevice));
-    CUDA_SAFE_CALL(cudaMemcpy2D((void *)f5_data, pitch, (void *)f5,
+                                hcMemcpyHostToAccelerator));
+    CUDA_SAFE_CALL(hcMemcpy2D((void *)f5_data, pitch, (void *)f5,
                                 sizeof(float)*ni,sizeof(float)*ni, nj,
-                                cudaMemcpyHostToDevice));
-    CUDA_SAFE_CALL(cudaMemcpy2D((void *)f6_data, pitch, (void *)f6,
+                                hcMemcpyHostToAccelerator));
+    CUDA_SAFE_CALL(hcMemcpy2D((void *)f6_data, pitch, (void *)f6,
                                 sizeof(float)*ni,sizeof(float)*ni, nj,
-                                cudaMemcpyHostToDevice));
-    CUDA_SAFE_CALL(cudaMemcpy2D((void *)f7_data, pitch, (void *)f7,
+                                hcMemcpyHostToAccelerator));
+    CUDA_SAFE_CALL(hcMemcpy2D((void *)f7_data, pitch, (void *)f7,
                                 sizeof(float)*ni,sizeof(float)*ni, nj,
-                                cudaMemcpyHostToDevice));
-    CUDA_SAFE_CALL(cudaMemcpy2D((void *)f8_data, pitch, (void *)f8,
+                                hcMemcpyHostToAccelerator));
+    CUDA_SAFE_CALL(hcMemcpy2D((void *)f8_data, pitch, (void *)f8,
                                 sizeof(float)*ni,sizeof(float)*ni, nj,
-                                cudaMemcpyHostToDevice));
-    CUDA_SAFE_CALL(cudaMemcpy2D((void *)plot_data, pitch, (void *)plot,
+                                hcMemcpyHostToAccelerator));
+    CUDA_SAFE_CALL(hcMemcpy2D((void *)plot_data, pitch, (void *)plot,
                                 sizeof(float)*ni,sizeof(float)*ni, nj,
-                                cudaMemcpyHostToDevice));
-    CUDA_SAFE_CALL(cudaMemcpy2D((void *)solid_data, pitch, (void *)solid,
+                                hcMemcpyHostToAccelerator));
+    CUDA_SAFE_CALL(hcMemcpy2D((void *)solid_data, pitch, (void *)solid,
                                 sizeof(int)*ni,sizeof(int)*ni, nj,
-                                cudaMemcpyHostToDevice));
-    CUDA_SAFE_CALL(cudaMemcpy((void *)cmap_rgba_data,
+                                hcMemcpyHostToAccelerator));
+    CUDA_SAFE_CALL(hcMemcpy((void *)cmap_rgba_data,
                               (void *)cmap_rgba, sizeof(unsigned int)*ncol,
-                              cudaMemcpyHostToDevice));
+                              hcMemcpyHostToAccelerator));
 
     //
     // Iinitialise OpenGL display - use glut
@@ -293,7 +299,7 @@ int main(int argc, char **argv)
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
     glutInitWindowSize(ni, nj);                   // Window of ni x nj pixels
     glutInitWindowPosition(50, 50);               // Window position
-    glutCreateWindow("CUDA 2D LB");               // Window title
+    glutCreateWindow("GridLaunch 2D LB");               // Window title
 
     printf("Loading extensions: %s\n", glewGetErrorString(glewInit()));
     if(!glewIsSupported(
@@ -323,13 +329,13 @@ int main(int argc, char **argv)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, ni, nj, 0, 
                  GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    printf("Texture created.\n");
+//    printf("Texture created.\n");
 
     // Create pixel buffer object and bind to gl_PBO
     glGenBuffers(1, &gl_PBO);
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER_ARB, gl_PBO);
-    glBufferData(GL_PIXEL_UNPACK_BUFFER_ARB, pitch*nj, NULL, GL_STREAM_COPY);
-    CUDA_SAFE_CALL( cudaGLRegisterBufferObject(gl_PBO) );
+//    glBufferData(GL_PIXEL_UNPACK_BUFFER_ARB, pitch*nj, NULL, GL_STREAM_COPY);
+//    CUDA_SAFE_CALL( cudaGLRegisterBufferObject(gl_PBO) );
     printf("Buffer created.\n");
     
     printf("Starting GLUT main loop...\n");
@@ -347,16 +353,20 @@ int main(int argc, char **argv)
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-__global__ void stream_kernel (int pitch, float *f1_data, float *f2_data,
+__KERNEL void stream_kernel (grid_launch_parm lp, int pitch, float *f1_data, float *f2_data,
                                float *f3_data, float *f4_data, float *f5_data,
-			       float *f6_data, float *f7_data, float *f8_data)
+			       float *f6_data, float *f7_data, float *f8_data,
+             texture f1_tex, texture f2_tex, texture f3_tex, texture f4_tex,
+             texture f5_tex, texture f6_tex, texture f7_tex, texture f8_tex)
 // CUDA kernel
 
 {
+    GRID_LAUNCH_INIT(lp);
+
     int i, j, i2d;
 
-    i = blockIdx.x*TILE_I + threadIdx.x;
-    j = blockIdx.y*TILE_J + threadIdx.y;
+    i = lp.groupId.x*TILE_I + lp.threadId.x;
+    j = lp.groupId.y*TILE_J + lp.threadId.y;
 
     i2d = i + j*pitch/sizeof(float);
 
@@ -379,94 +389,98 @@ void stream(void)
 {
     // Device-to-device mem-copies to transfer data from linear memory (f1_data)
     // to CUDA format memory (f1_array) so we can use these in textures
-    CUDA_SAFE_CALL(cudaMemcpy2DToArray(f1_array, 0, 0, (void *)f1_data, pitch,
+    CUDA_SAFE_CALL(hcMemcpy2DToArray(f1_array, 0, 0, (void *)f1_data, pitch,
                                        sizeof(float)*ni, nj,
-                                       cudaMemcpyDeviceToDevice));
-    CUDA_SAFE_CALL(cudaMemcpy2DToArray(f2_array, 0, 0, (void *)f2_data, pitch,
+                                       hcMemcpyAcceleratorToAccelerator));
+    CUDA_SAFE_CALL(hcMemcpy2DToArray(f2_array, 0, 0, (void *)f2_data, pitch,
                                        sizeof(float)*ni, nj,
-                                       cudaMemcpyDeviceToDevice));
-    CUDA_SAFE_CALL(cudaMemcpy2DToArray(f3_array, 0, 0, (void *)f3_data, pitch,
+                                       hcMemcpyAcceleratorToAccelerator));
+    CUDA_SAFE_CALL(hcMemcpy2DToArray(f3_array, 0, 0, (void *)f3_data, pitch,
                                        sizeof(float)*ni, nj,
-                                       cudaMemcpyDeviceToDevice));
-    CUDA_SAFE_CALL(cudaMemcpy2DToArray(f4_array, 0, 0, (void *)f4_data, pitch,
+                                       hcMemcpyAcceleratorToAccelerator));
+    CUDA_SAFE_CALL(hcMemcpy2DToArray(f4_array, 0, 0, (void *)f4_data, pitch,
                                        sizeof(float)*ni, nj,
-                                       cudaMemcpyDeviceToDevice));
-    CUDA_SAFE_CALL(cudaMemcpy2DToArray(f5_array, 0, 0, (void *)f5_data, pitch,
+                                       hcMemcpyAcceleratorToAccelerator));
+    CUDA_SAFE_CALL(hcMemcpy2DToArray(f5_array, 0, 0, (void *)f5_data, pitch,
                                        sizeof(float)*ni, nj,
-                                       cudaMemcpyDeviceToDevice));
-    CUDA_SAFE_CALL(cudaMemcpy2DToArray(f6_array, 0, 0, (void *)f6_data, pitch,
+                                       hcMemcpyAcceleratorToAccelerator));
+    CUDA_SAFE_CALL(hcMemcpy2DToArray(f6_array, 0, 0, (void *)f6_data, pitch,
                                        sizeof(float)*ni, nj,
-                                       cudaMemcpyDeviceToDevice));
-    CUDA_SAFE_CALL(cudaMemcpy2DToArray(f7_array, 0, 0, (void *)f7_data, pitch,
+                                       hcMemcpyAcceleratorToAccelerator));
+    CUDA_SAFE_CALL(hcMemcpy2DToArray(f7_array, 0, 0, (void *)f7_data, pitch,
                                        sizeof(float)*ni, nj,
-                                       cudaMemcpyDeviceToDevice));
-    CUDA_SAFE_CALL(cudaMemcpy2DToArray(f8_array, 0, 0, (void *)f8_data, pitch,
+                                       hcMemcpyAcceleratorToAccelerator));
+    CUDA_SAFE_CALL(hcMemcpy2DToArray(f8_array, 0, 0, (void *)f8_data, pitch,
                                        sizeof(float)*ni, nj,
-                                       cudaMemcpyDeviceToDevice));
+                                       hcMemcpyAcceleratorToAccelerator));
 
 
     // Tell CUDA that we want to use f1_array etc as textures. Also
     // define what type of interpolation we want (nearest point)
-    f1_tex.filterMode = cudaFilterModePoint;
-    CUDA_SAFE_CALL(cudaBindTextureToArray(f1_tex, f1_array));
+    f1_tex.filterMode = hcFilterModePoint;
+    CUDA_SAFE_CALL(hcBindTextureToArray(f1_tex, f1_array));
 
-    f2_tex.filterMode = cudaFilterModePoint;
-    CUDA_SAFE_CALL(cudaBindTextureToArray(f2_tex, f2_array));
+    f2_tex.filterMode = hcFilterModePoint;
+    CUDA_SAFE_CALL(hcBindTextureToArray(f2_tex, f2_array));
 
-    f3_tex.filterMode = cudaFilterModePoint;
-    CUDA_SAFE_CALL(cudaBindTextureToArray(f3_tex, f3_array));
+    f3_tex.filterMode = hcFilterModePoint;
+    CUDA_SAFE_CALL(hcBindTextureToArray(f3_tex, f3_array));
 
-    f4_tex.filterMode = cudaFilterModePoint;
-    CUDA_SAFE_CALL(cudaBindTextureToArray(f4_tex, f4_array));
+    f4_tex.filterMode = hcFilterModePoint;
+    CUDA_SAFE_CALL(hcBindTextureToArray(f4_tex, f4_array));
 
-    f5_tex.filterMode = cudaFilterModePoint;
-    CUDA_SAFE_CALL(cudaBindTextureToArray(f5_tex, f5_array));
+    f5_tex.filterMode = hcFilterModePoint;
+    CUDA_SAFE_CALL(hcBindTextureToArray(f5_tex, f5_array));
 
-    f6_tex.filterMode = cudaFilterModePoint;
-    CUDA_SAFE_CALL(cudaBindTextureToArray(f6_tex, f6_array));
+    f6_tex.filterMode = hcFilterModePoint;
+    CUDA_SAFE_CALL(hcBindTextureToArray(f6_tex, f6_array));
 
-    f7_tex.filterMode = cudaFilterModePoint;
-    CUDA_SAFE_CALL(cudaBindTextureToArray(f7_tex, f7_array));
+    f7_tex.filterMode = hcFilterModePoint;
+    CUDA_SAFE_CALL(hcBindTextureToArray(f7_tex, f7_array));
 
-    f8_tex.filterMode = cudaFilterModePoint;
-    CUDA_SAFE_CALL(cudaBindTextureToArray(f8_tex, f8_array));
+    f8_tex.filterMode = hcFilterModePoint;
+    CUDA_SAFE_CALL(hcBindTextureToArray(f8_tex, f8_array));
 
-    dim3 grid = dim3(ni/TILE_I, nj/TILE_J);
-    dim3 block = dim3(TILE_I, TILE_J);
+    dim3 grid = DIM3(ni/TILE_I, nj/TILE_J);
+    dim3 block = DIM3(TILE_I, TILE_J);
 
-    stream_kernel<<<grid, block>>>(pitch, f1_data, f2_data, f3_data, f4_data,
-                                   f5_data, f6_data, f7_data, f8_data);
-    
+    hcLaunchKernel(stream_kernel, grid, block, pitch, f1_data, f2_data, f3_data, f4_data,
+                                   f5_data, f6_data, f7_data, f8_data,
+             f1_tex, f2_tex, f3_tex, f4_tex,
+             f5_tex, f6_tex, f7_tex, f8_tex);
+
     CUT_CHECK_ERROR("stream failed.");
 
-    CUDA_SAFE_CALL(cudaUnbindTexture(f1_tex));
-    CUDA_SAFE_CALL(cudaUnbindTexture(f2_tex));
-    CUDA_SAFE_CALL(cudaUnbindTexture(f3_tex));
-    CUDA_SAFE_CALL(cudaUnbindTexture(f4_tex));
-    CUDA_SAFE_CALL(cudaUnbindTexture(f5_tex));
-    CUDA_SAFE_CALL(cudaUnbindTexture(f6_tex));
-    CUDA_SAFE_CALL(cudaUnbindTexture(f7_tex));
-    CUDA_SAFE_CALL(cudaUnbindTexture(f8_tex));
+    CUDA_SAFE_CALL(hcUnbindTexture(f1_tex));
+    CUDA_SAFE_CALL(hcUnbindTexture(f2_tex));
+    CUDA_SAFE_CALL(hcUnbindTexture(f3_tex));
+    CUDA_SAFE_CALL(hcUnbindTexture(f4_tex));
+    CUDA_SAFE_CALL(hcUnbindTexture(f5_tex));
+    CUDA_SAFE_CALL(hcUnbindTexture(f6_tex));
+    CUDA_SAFE_CALL(hcUnbindTexture(f7_tex));
+    CUDA_SAFE_CALL(hcUnbindTexture(f8_tex));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-__global__ void collide_kernel (int pitch, float tau, float faceq1, float faceq2, float faceq3,
+__KERNEL void collide_kernel (grid_launch_parm lp, int pitch, float tau, float faceq1, float faceq2, float faceq3,
                                 float *f0_data, float *f1_data, float *f2_data,
                                 float *f3_data, float *f4_data, float *f5_data, float *f6_data,
                                 float *f7_data, float *f8_data, float *plot_data)
 // CUDA kernel
 
 {
+    GRID_LAUNCH_INIT(lp);
+
     int i, j, i2d;
     float ro, vx, vy, v_sq_term, rtau, rtau1;
     float f0now, f1now, f2now, f3now, f4now, f5now, f6now, f7now, f8now;
     float f0eq, f1eq, f2eq, f3eq, f4eq, f5eq, f6eq, f7eq, f8eq;
     
     
-    i = blockIdx.x*TILE_I + threadIdx.x;
-    j = blockIdx.y*TILE_J + threadIdx.y;
+    i = lp.groupId.x*TILE_I + lp.threadId.x;
+    j = lp.groupId.y*TILE_J + lp.threadId.y;
 
     i2d = i + j*pitch/sizeof(float);
 
@@ -490,7 +504,7 @@ __global__ void collide_kernel (int pitch, float tau, float faceq1, float faceq2
     vy = (f2now - f4now + f5now + f6now - f7now - f8now)/ro;
 
     // Set plotting variable to velocity magnitude
-    plot_data[i2d] = sqrtf(vx*vx + vy*vy);
+    plot_data[i2d] = SQRTF(vx*vx + vy*vy);
     
     // Calculate equilibrium f's
     v_sq_term = 1.5f*(vx*vx + vy*vy);
@@ -521,10 +535,10 @@ void collide(void)
 // C wrapper
 
 {
-    dim3 grid = dim3(ni/TILE_I, nj/TILE_J);
-    dim3 block = dim3(TILE_I, TILE_J);
+    dim3 grid = DIM3(ni/TILE_I, nj/TILE_J);
+    dim3 block = DIM3(TILE_I, TILE_J);
 
-    collide_kernel<<<grid, block>>>(pitch, tau, faceq1, faceq2, faceq3,
+    hcLaunchKernel(collide_kernel, grid, block, pitch, tau, faceq1, faceq2, faceq3,
                                     f0_data, f1_data, f2_data, f3_data, f4_data,
                                     f5_data, f6_data, f7_data, f8_data, plot_data);
     
@@ -534,7 +548,7 @@ void collide(void)
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-__global__ void apply_BCs_kernel (int ni, int nj, int pitch, float vxin, float roout,
+__KERNEL void apply_BCs_kernel (grid_launch_parm lp, int ni, int nj, int pitch, float vxin, float roout,
                                   float faceq2, float faceq3,
                                   float *f0_data, float *f1_data, float *f2_data,
                                   float *f3_data, float *f4_data, float *f5_data, 
@@ -544,12 +558,14 @@ __global__ void apply_BCs_kernel (int ni, int nj, int pitch, float vxin, float r
 // CUDA kernel all BC's apart from periodic boundaries:
 
 {
+    GRID_LAUNCH_INIT(lp);
+
     int i, j, i2d, i2d2;
     float v_sq_term;
     float f1old, f2old, f3old, f4old, f5old, f6old, f7old, f8old;
     
-    i = blockIdx.x*TILE_I + threadIdx.x;
-    j = blockIdx.y*TILE_J + threadIdx.y;
+    i = lp.groupId.x*TILE_I + lp.threadId.x;
+    j = lp.groupId.y*TILE_J + lp.threadId.y;
 
     i2d = i + j*pitch/sizeof(float);
 
@@ -600,10 +616,10 @@ void apply_BCs(void)
 // C wrapper
 
 {
-    dim3 grid = dim3(ni/TILE_I, nj/TILE_J);
-    dim3 block = dim3(TILE_I, TILE_J);
+    dim3 grid = DIM3(ni/TILE_I, nj/TILE_J);
+    dim3 block = DIM3(TILE_I, TILE_J);
 
-    apply_BCs_kernel<<<grid, block>>>(ni, nj, pitch, vxin, roout, faceq2,faceq3,
+    hcLaunchKernel(apply_BCs_kernel, grid, block, ni, nj, pitch, vxin, roout, faceq2,faceq3,
                                       f0_data, f1_data, f2_data,
                                       f3_data, f4_data, f5_data, 
                                       f6_data, f7_data, f8_data, solid_data);
@@ -614,16 +630,18 @@ void apply_BCs(void)
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-__global__ void apply_Periodic_BC_kernel (int ni, int nj, int pitch, 
+__KERNEL void apply_Periodic_BC_kernel (grid_launch_parm lp, int ni, int nj, int pitch, 
 					  float *f2_data, float *f4_data, float *f5_data, 
 					  float *f6_data, float *f7_data, float *f8_data)
 // CUDA kernel
 
 {
+    GRID_LAUNCH_INIT(lp);
+
     int i, j, i2d, i2d2;
     
-    i = blockIdx.x*TILE_I + threadIdx.x;
-    j = blockIdx.y*TILE_J + threadIdx.y;
+    i = lp.groupId.x*TILE_I + lp.threadId.x;
+    j = lp.groupId.y*TILE_J + lp.threadId.y;
 
     i2d = i + j*pitch/sizeof(float);
 
@@ -645,10 +663,10 @@ __global__ void apply_Periodic_BC_kernel (int ni, int nj, int pitch,
 
 void apply_Periodic_BC(void)
 {
-    dim3 grid = dim3(ni/TILE_I, nj/TILE_J);
-    dim3 block = dim3(TILE_I, TILE_J);
+    dim3 grid = DIM3(ni/TILE_I, nj/TILE_J);
+    dim3 block = DIM3(TILE_I, TILE_J);
 
-    apply_Periodic_BC_kernel<<<grid, block>>>(ni, nj, pitch,
+    hcLaunchKernel(apply_Periodic_BC_kernel, grid, block, ni, nj, pitch,
 					      f2_data,f4_data, f5_data, 
 					      f6_data, f7_data, f8_data);
     
@@ -658,7 +676,7 @@ void apply_Periodic_BC(void)
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-__global__ void get_rgba_kernel (int pitch, int ncol, float minvar, float maxvar,
+__KERNEL void get_rgba_kernel (grid_launch_parm lp, int pitch, int ncol, float minvar, float maxvar,
                                  float *plot_data,
                                  unsigned int *plot_rgba_data,
                                  unsigned int *cmap_rgba_data,
@@ -667,11 +685,13 @@ __global__ void get_rgba_kernel (int pitch, int ncol, float minvar, float maxvar
 // CUDA kernel to fill plot_rgba_data array for plotting
 
 {
+    GRID_LAUNCH_INIT(lp);
+
     int i, j, i2d, icol;
     float frac;
     
-    i = blockIdx.x*TILE_I + threadIdx.x;
-    j = blockIdx.y*TILE_J + threadIdx.y;
+    i = lp.groupId.x*TILE_I + lp.threadId.x;
+    j = lp.groupId.y*TILE_J + lp.threadId.y;
 
     i2d = i + j*pitch/sizeof(float);
 
@@ -685,10 +705,10 @@ void get_rgba(void)
 // C wrapper
 
 {
-    dim3 grid = dim3(ni/TILE_I, nj/TILE_J);
-    dim3 block = dim3(TILE_I, TILE_J);
+    dim3 grid = DIM3(ni/TILE_I, nj/TILE_J);
+    dim3 block = DIM3(TILE_I, TILE_J);
 
-    get_rgba_kernel<<<grid, block>>>(pitch, ncol, minvar, maxvar,
+    hcLaunchKernel(get_rgba_kernel, grid, block, pitch, ncol, minvar, maxvar,
 				     plot_data, plot_rgba_data, cmap_rgba_data,
                                      solid_data);
     
@@ -714,11 +734,17 @@ void display(void)
 
     // For plotting, map the plot_rgba_data array to the
     // gl_PBO pixel buffer
-    CUDA_SAFE_CALL(cudaGLMapBufferObject((void**)&plot_rgba_data, gl_PBO));
+//    CUDA_SAFE_CALL(cudaGLMapBufferObject((void**)&plot_rgba_data, gl_PBO));
 
     // Fill the plot_rgba_data array (and the pixel buffer)
     get_rgba();
-    CUDA_SAFE_CALL(cudaGLUnmapBufferObject(gl_PBO));
+
+    // Fill the pixel buffer with the plot_rgba array
+    CUDA_SAFE_CALL(hcMemcpy(plot_rgba, plot_rgba_data, ni*nj*sizeof(unsigned int), hcMemcpyAcceleratorToHost));
+    glBufferData(GL_PIXEL_UNPACK_BUFFER_ARB,ni*nj*sizeof(unsigned int),
+		 (void **)plot_rgba,GL_STREAM_COPY);
+
+//    CUDA_SAFE_CALL(cudaGLUnmapBufferObject(gl_PBO));
 
     // Copy the pixel buffer to the texture, ready to display
     glTexSubImage2D(GL_TEXTURE_2D,0,0,0,ni,nj,GL_RGBA,GL_UNSIGNED_BYTE,0);
@@ -843,9 +869,9 @@ void mouse_motion(int x, int y)
 
 
     // Copy the solid array (host) to the solid_data array (device)
-    CUDA_SAFE_CALL(cudaMemcpy2D((void *)solid_data, pitch, (void *)solid,
+    CUDA_SAFE_CALL(hcMemcpy2D((void *)solid_data, pitch, (void *)solid,
                                 sizeof(int)*ni,sizeof(int)*ni, nj,
-                                cudaMemcpyHostToDevice));    
+                                hcMemcpyHostToAccelerator));    
     
     ipos_old=ipos;
     jpos_old=jpos;
