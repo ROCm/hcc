@@ -14,7 +14,7 @@ bool test() {
   bool ret = true;
 
   // check if the queue is HSA
-  ret &= av.get_hsa_interop();
+  ret &= av.is_hsa_accelerator();
 
   std::cout << ret << "\n";
 
