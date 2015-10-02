@@ -73,6 +73,8 @@ runall_result test_main()
 	result &= REPORT_RESULT(test(av, extent<3>(256, 2, 2) )); //1024
 	result &= REPORT_RESULT(test(av, extent<3>(5, 5, 41)  )); //1025
 
+// XXX bypass the test and make it fail directly
+#if 0
 	int dimSize[128];
 
 	std::fill(dimSize, dimSize + 128, 1);
@@ -88,6 +90,9 @@ runall_result test_main()
 	std::fill(dimSize, dimSize + 128, 1);
 	std::fill(dimSize + 33, dimSize + 43, 2);
 	result &= REPORT_RESULT(test(av, extent<128>(dimSize) )); // 1024
+#else
+        result &= false;
+#endif
 
 	return result;
 }

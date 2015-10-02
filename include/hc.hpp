@@ -977,11 +977,18 @@ private:
     template <typename Kernel> friend
         completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
 
-    // implementation of copy_async
-    template <typename InputIter, typename OutputIter> friend
-        completion_future __amp_copy_async_impl(InputIter& src, OutputIter& dst);
-
     // copy_async
+    template <typename T, int N> friend
+        completion_future copy_async(const array_view<const T, N>& src, const array_view<T, N>& dest);
+    template <typename T, int N> friend
+        completion_future copy_async(const array<T, N>& src, array<T, N>& dest);
+    template <typename T, int N> friend
+        completion_future copy_async(const array<T, N>& src, const array_view<T, N>& dest);
+    template <typename T, int N> friend
+        completion_future copy_async(const array_view<T, N>& src, const array_view<T, N>& dest);
+    template <typename T, int N> friend
+        completion_future copy_async(const array_view<const T, N>& src, array<T, N>& dest);
+
     template <typename InputIter, typename T, int N> friend
         completion_future copy_async(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest);
     template <typename InputIter, typename T, int N> friend
@@ -3408,6 +3415,11 @@ private:
     template <typename K, int Q> friend struct array_projection_helper;
     acc_buffer_t m_device;
     extent<N> extent;
+
+    template <typename Q, int K> friend
+        void copy(const array<Q, K>&, const array_view<Q, K>&);
+    template <typename Q, int K> friend
+        void copy(const array_view<const Q, K>&, array<Q, K>&);
 };
 
 // ------------------------------------------------------------------------
@@ -4717,15 +4729,23 @@ struct do_copy
 {
     template<template <typename, int> class _amp_container>
     void operator()(Iter srcBegin, Iter srcEnd, const _amp_container<T, N>& dest) {
-        T* ptr = dest.internal().map_ptr(true, dest.get_extent().size(), dest.get_offset());
-        std::copy(srcBegin, srcEnd, ptr);
-        dest.internal().unmap_ptr(ptr);
+        size_t size = dest.get_extent().size();
+        size_t offset = dest.get_offset();
+        bool modify = true;
+
+        T* ptr = dest.internal().map_ptr(modify, size, offset);
+         std::copy(srcBegin, srcEnd, ptr);
+        dest.internal().unmap_ptr(ptr, modify, size, offset);
     }
     template<template <typename, int> class _amp_container>
     void operator()(const _amp_container<T, N> &src, Iter destBegin) {
-        const T* ptr = src.internal().map_ptr(false, src.get_extent().size(), src.get_offset());
+        size_t size = src.get_extent().size();
+        size_t offset = src.get_offset();
+        bool modify = false;
+
+        const T* ptr = src.internal().map_ptr(modify, size, offset);
         std::copy(ptr, ptr + src.get_extent().size(), destBegin);
-        src.internal().unmap_ptr(ptr);
+        src.internal().unmap_ptr(ptr, modify, size, offset);
     }
 };
 
@@ -4734,17 +4754,23 @@ struct do_copy<Iter, T, 1>
 {
     template<template <typename, int> class _amp_container>
     void operator()(Iter srcBegin, Iter srcEnd, const _amp_container<T, 1>& dest) {
-        T* ptr = dest.internal().map_ptr(true, dest.get_extent().size(),
-                                         dest.get_offset() + dest.get_index_base()[0]);
-        std::copy(srcBegin, srcEnd, ptr);
-        dest.internal().unmap_ptr(ptr);
+        size_t size = dest.get_extent().size();
+        size_t offset = dest.get_offset() + dest.get_index_base()[0];
+        bool modify = true;
+
+        T* ptr = dest.internal().map_ptr(modify, size, offset);
+         std::copy(srcBegin, srcEnd, ptr);
+        dest.internal().unmap_ptr(ptr, modify, size, offset);
     }
     template<template <typename, int> class _amp_container>
     void operator()(const _amp_container<T, 1> &src, Iter destBegin) {
-        const T* ptr = src.internal().map_ptr(false, src.get_extent().size(),
-                                              src.get_offset() + src.get_index_base()[0]);
+        size_t size = src.get_extent().size();
+        size_t offset = src.get_offset() + src.get_index_base()[0];
+        bool modify = false;
+
+        const T* ptr = src.internal().map_ptr(modify, size, offset);
         std::copy(ptr, ptr + src.get_extent().size(), destBegin);
-        src.internal().unmap_ptr(ptr);
+        src.internal().unmap_ptr(ptr, modify, size, offset);
     }
 };
 
@@ -4807,12 +4833,20 @@ void copy(const array<T, N>& src, const array_view<T, N>& dest) {
         src.internal().copy(dest.internal(), src.get_offset(),
                             dest.get_offset(), dest.get_extent().size());
     else {
-        T* pSrc = src.internal().map_ptr();
+        // FIXME: logic here deserve to be reviewed
+        size_t srcSize = src.extent.size();
+        size_t srcOffset = 0;
+        bool srcModify = false;
+        size_t destSize = dest.extent_base.size();
+        size_t destOffset = dest.offset;
+        bool destModify = true;
+
+        T* pSrc = src.internal().map_ptr(srcModify, srcSize, srcOffset);
         T* p = pSrc;
-        T* pDst = dest.internal().map_ptr(true, dest.extent_base.size(), dest.offset);
+        T* pDst = dest.internal().map_ptr(destModify, destSize, destOffset);
         copy_input<T*, T, N, 1>()(pSrc, pDst, dest.extent, dest.extent_base, dest.index_base);
-        dest.internal().unmap_ptr(pDst);
-        src.internal().unmap_ptr(p);
+        dest.internal().unmap_ptr(pDst, destModify, destSize, destOffset);
+        src.internal().unmap_ptr(p, srcModify, srcSize, srcOffset);
     }
 }
 
@@ -4841,12 +4875,20 @@ void copy(const array_view<const T, N>& src, array<T, N>& dest) {
         src.internal().copy(dest.internal(), src.get_offset(),
                             dest.get_offset(), dest.get_extent().size());
     } else {
-        T* pDst = dest.internal().map_ptr(true);
+        // FIXME: logic here deserve to be reviewed
+        size_t srcSize = src.extent_base.size();
+        size_t srcOffset = src.offset;
+        bool srcModify = false;
+        size_t destSize = dest.extent.size();
+        size_t destOffset = 0;
+        bool destModify = true;
+
+        T* pDst = dest.internal().map_ptr(destModify, destSize, destOffset);
         T* p = pDst;
-        const T* pSrc = src.internal().map_ptr(false, src.extent_base.size(), src.offset);
+        const T* pSrc = src.internal().map_ptr(srcModify, srcSize, srcOffset);
         copy_output<T*, T, N, 1>()(pSrc, pDst, src.extent, src.extent_base, src.index_base);
-        src.internal().unmap_ptr(pSrc);
-        dest.internal().unmap_ptr(p);
+        src.internal().unmap_ptr(pSrc, srcModify, srcSize, srcOffset);
+        dest.internal().unmap_ptr(p, destModify, destSize, destOffset);
     }
 }
 
@@ -4882,29 +4924,52 @@ void copy(const array_view<const T, N>& src, const array_view<T, N>& dest) {
             src.internal().copy(dest.internal(), src.get_offset(),
                                 dest.get_offset(), dest.get_extent().size());
         else {
-            const T* pSrc = src.internal().map_ptr();
+            // FIXME: logic here deserve to be reviewed
+            size_t srcSize = src.extent.size();
+            size_t srcOffset = 0;
+            bool srcModify = false;
+            size_t destSize = dest.extent_base.size();
+            size_t destOffset = dest.offset;
+            bool destModify = true;
+
+            const T* pSrc = src.internal().map_ptr(srcModify, srcSize, srcOffset);
             const T* p = pSrc;
-            T* pDst = dest.internal().map_ptr(true, dest.extent_base.size(), dest.offset);
+            T* pDst = dest.internal().map_ptr(destModify, destSize, destOffset);
             copy_input<const T*, T, N, 1>()(pSrc, pDst, dest.extent, dest.extent_base, dest.index_base);
-            dest.internal().unmap_ptr(pDst);
-            src.internal().unmap_ptr(p);
+            dest.internal().unmap_ptr(pDst, destModify, destSize, destOffset);
+            src.internal().unmap_ptr(p, srcModify, srcSize, srcOffset);
         }
     } else {
         if (is_flat(dest)) {
-            T* pDst = dest.internal().map_ptr(true);
+            // FIXME: logic here deserve to be reviewed
+            size_t srcSize = src.extent_base.size();
+            size_t srcOffset = src.offset;
+            bool srcModify = false;
+            size_t destSize = dest.extent.size();
+            size_t destOffset = 0;
+            bool destModify = true;
+
+            T* pDst = dest.internal().map_ptr(destModify, destSize, destOffset);
             T* p = pDst;
-            const T* pSrc = src.internal().map_ptr(false, src.extent_base.size(), src.offset);
+            const T* pSrc = src.internal().map_ptr(srcModify, srcSize, srcOffset);
             copy_output<T*, T, N, 1>()(pSrc, pDst, src.extent, src.extent_base, src.index_base);
-            dest.internal().unmap_ptr(p);
-            src.internal().unmap_ptr(pSrc);
+            dest.internal().unmap_ptr(p, destModify, destSize, destOffset);
+            src.internal().unmap_ptr(pSrc, srcModify, srcSize, srcOffset);
         } else {
-            const T* pSrc = src.internal().map_ptr(false, src.extent_base.size(), src.offset);
-            T* pDst = dest.internal().map_ptr(true, dest.extent_base.size(), dest.offset);
+            // FIXME: logic here deserve to be reviewed
+            size_t srcSize = src.extent_base.size();
+            size_t srcOffset = src.offset;
+            bool srcModify = false;
+            size_t destSize = dest.extent_base.size();
+            size_t destOffset = dest.offset;
+            bool destModify = true;
+
+            const T* pSrc = src.internal().map_ptr(srcModify, srcSize, srcOffset);
+            T* pDst = dest.internal().map_ptr(destModify, destSize, destOffset);
             copy_bidir<T, N, 1>()(pSrc, pDst, src.extent, src.extent_base,
                                   src.index_base, dest.extent_base, dest.index_base);
-            dest.internal().unmap_ptr(pDst);
-            src.internal().unmap_ptr(pSrc);
-
+            dest.internal().unmap_ptr(pDst, destModify, destSize, destOffset);
+            src.internal().unmap_ptr(pSrc, srcModify, srcSize, srcOffset);
         }
     }
 }
@@ -4975,10 +5040,14 @@ template <typename InputIter, typename T, int N>
 void copy(InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest) {
     if (is_flat(dest))
         do_copy<InputIter, T, N>()(srcBegin, srcEnd, dest);
-   else {
-        T* ptr = dest.internal().map_ptr(true, dest.extent_base.size(), dest.offset);
+    else {
+        size_t size = dest.extent_base.size();
+        size_t offset = dest.offset;
+        bool modify = true;
+
+        T* ptr = dest.internal().map_ptr(modify, size, offset);
         copy_input<InputIter, T, N, 1>()(srcBegin, ptr, dest.extent, dest.extent_base, dest.index_base);
-        dest.internal().unmap_ptr(ptr);
+        dest.internal().unmap_ptr(ptr, modify, size, offset);
     }
 }
 
@@ -5021,9 +5090,13 @@ void copy(const array_view<T, N> &src, OutputIter destBegin) {
     if (is_flat(src))
         do_copy<OutputIter, T, N>()(src, destBegin);
     else {
-        T* ptr = src.internal().map_ptr(false, src.extent_base.size(), src.offset);
+        size_t size = src.extent_base.size();
+        size_t offset = src.offset;
+        bool modify = false;
+
+        T* ptr = src.internal().map_ptr(modify, size, offset);
         copy_output<OutputIter, T, N, 1>()(ptr, destBegin, src.extent, src.extent_base, src.index_base);
-        src.internal().unmap_ptr(ptr);
+        src.internal().unmap_ptr(ptr, modify, size, offset);
     }
 }
 
@@ -5031,11 +5104,6 @@ void copy(const array_view<T, N> &src, OutputIter destBegin) {
 // utility function for copy_async
 // ------------------------------------------------------------------------
 
-template <typename InputIter, typename OutputIter>
-completion_future __amp_copy_async_impl(InputIter& src, OutputIter& dst) {
-    std::future<void> fut = std::async([&]() mutable { copy(src, dst); });
-    return completion_future(fut.share());
-}
 
 // ------------------------------------------------------------------------
 // copy_async
@@ -5051,7 +5119,8 @@ completion_future __amp_copy_async_impl(InputIter& src, OutputIter& dst) {
  */
 template <typename T, int N>
 completion_future copy_async(const array<T, N>& src, array<T, N>& dest) {
-    return __amp_copy_async_impl(src, dest);
+    std::future<void> fut = std::async(std::launch::deferred, [&]() mutable { copy(src, dest); });
+    return completion_future(fut.share());
 }
 
 /**
@@ -5063,7 +5132,8 @@ completion_future copy_async(const array<T, N>& src, array<T, N>& dest) {
  */
 template <typename T, int N>
 completion_future copy_async(const array<T, N>& src, const array_view<T, N>& dest) {
-    return __amp_copy_async_impl(src, dest);
+    std::future<void> fut = std::async(std::launch::deferred, [&]() mutable { copy(src, dest); });
+    return completion_future(fut.share());
 }
 
 /** @{ */
@@ -5077,12 +5147,14 @@ completion_future copy_async(const array<T, N>& src, const array_view<T, N>& des
  */
 template <typename T, int N>
 completion_future copy_async(const array_view<const T, N>& src, array<T, N>& dest) {
-    return __amp_copy_async_impl(src, dest);
+    std::future<void> fut = std::async(std::launch::deferred, [&]() mutable { copy(src, dest); });
+    return completion_future(fut.share());
 }
 
 template <typename T, int N>
 completion_future copy_async(const array_view<T, N>& src, array<T, N>& dest) {
-    return __amp_copy_async_impl(src, dest);
+    std::future<void> fut = std::async(std::launch::deferred, [&]() mutable { copy(src, dest); });
+    return completion_future(fut.share());
 }
 
 /** @} */
@@ -5098,12 +5170,14 @@ completion_future copy_async(const array_view<T, N>& src, array<T, N>& dest) {
  */
 template <typename T, int N>
 completion_future copy_async(const array_view<const T, N>& src, const array_view<T, N>& dest) {
-    return __amp_copy_async_impl(src, dest);
+    std::future<void> fut = std::async(std::launch::deferred, [&]() mutable { copy(src, dest); });
+    return completion_future(fut.share());
 }
 
 template <typename T, int N>
 completion_future copy_async(const array_view<T, N>& src, const array_view<T, N>& dest) {
-    return __amp_copy_async_impl(src, dest);
+    std::future<void> fut = std::async(std::launch::deferred, [&]() mutable { copy(src, dest); });
+    return completion_future(fut.share());
 }
 
 /** @} */
@@ -5124,13 +5198,13 @@ completion_future copy_async(const array_view<T, N>& src, const array_view<T, N>
  */
 template <typename InputIter, typename T, int N>
 completion_future copy_async(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest) {
-    std::future<void> fut = std::async([&]() mutable { copy(srcBegin, srcEnd, dest); });
+    std::future<void> fut = std::async(std::launch::deferred, [&, srcBegin, srcEnd]() mutable { copy(srcBegin, srcEnd, dest); });
     return completion_future(fut.share());
 }
 
 template <typename InputIter, typename T, int N>
 completion_future copy_async(InputIter srcBegin, array<T, N>& dest) {
-    std::future<void> fut = std::async([&]() mutable { copy(srcBegin, dest); });
+    std::future<void> fut = std::async(std::launch::deferred, [&, srcBegin]() mutable { copy(srcBegin, dest); });
     return completion_future(fut.share());
 }
 
@@ -5152,13 +5226,13 @@ completion_future copy_async(InputIter srcBegin, array<T, N>& dest) {
  */
 template <typename InputIter, typename T, int N>
 completion_future copy_async(InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest) {
-    std::future<void> fut = std::async([&]() mutable { copy(srcBegin, srcEnd, dest); });
+    std::future<void> fut = std::async(std::launch::deferred, [&, srcBegin, srcEnd]() mutable { copy(srcBegin, srcEnd, dest); });
     return completion_future(fut.share());
 }
 
 template <typename InputIter, typename T, int N>
 completion_future copy_async(InputIter srcBegin, const array_view<T, N>& dest) {
-    std::future<void> fut = std::async([&]() mutable { copy(srcBegin, dest); });
+    std::future<void> fut = std::async(std::launch::deferred, [&, srcBegin]() mutable { copy(srcBegin, dest); });
     return completion_future(fut.share());
 }
 
@@ -5176,7 +5250,7 @@ completion_future copy_async(InputIter srcBegin, const array_view<T, N>& dest) {
  */
 template <typename OutputIter, typename T, int N>
 completion_future copy_async(const array<T, N>& src, OutputIter destBegin) {
-    std::future<void> fut = std::async([&]() mutable { copy(src, destBegin); });
+    std::future<void> fut = std::async(std::launch::deferred, [&, destBegin]() mutable { copy(src, destBegin); });
     return completion_future(fut.share());
 }
 
@@ -5192,7 +5266,7 @@ completion_future copy_async(const array<T, N>& src, OutputIter destBegin) {
  */
 template <typename OutputIter, typename T, int N>
 completion_future copy_async(const array_view<T, N>& src, OutputIter destBegin) {
-    std::future<void> fut = std::async([&]() mutable { copy(src, destBegin); });
+    std::future<void> fut = std::async(std::launch::deferred, [&, destBegin]() mutable { copy(src, destBegin); });
     return completion_future(fut.share());
 }
 
@@ -5200,17 +5274,20 @@ completion_future copy_async(const array_view<T, N>& src, OutputIter destBegin) 
 // FIXME: consider remove these functions
 template <typename T, int N>
 completion_future copy_async(const array<T, N>& src, const array<T, N>& dest) {
-    return __amp_copy_async_impl(src, dest);
+    std::future<void> fut = std::async(std::launch::deferred, [&]() mutable { copy(src, dest); });
+    return completion_future(fut.share());
 }
 
 template <typename T, int N>
 completion_future copy_async(const array_view<const T, N>& src, const array<T, N>& dest) {
-    return __amp_copy_async_impl(src, dest);
+    std::future<void> fut = std::async(std::launch::deferred, [&]() mutable { copy(src, dest); });
+    return completion_future(fut.share());
 }
 
 template <typename T, int N>
 completion_future copy_async(const array_view<T, N>& src, const array<T, N>& dest) {
-    return __amp_copy_async_impl(src, dest);
+    std::future<void> fut = std::async(std::launch::deferred, [&]() mutable { copy(src, dest); });
+    return completion_future(fut.share());
 }
 
 // ------------------------------------------------------------------------
