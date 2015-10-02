@@ -1,16 +1,31 @@
 #ifndef HIP_CUDA_H
 #define HIP_CUDA_H
 
-#include "cuda_runtime.h"
-#include <assert.h>
+#include <cuda_runtime.h>
+#include <helper_cuda.h>
+#include <cuda_runtime_api.h>
+#include <cuda_gl_interop.h>
 
-typedef uint3 hc_uint3;
 
 #define hcResetDefaultAccelerator() cudaDeviceReset()
 #define hcMalloc(...) cudaMalloc(__VA_ARGS__)
 #define hcMemcpy(...) cudaMemcpy(__VA_ARGS__)
 #define hcFree(...) cudaFree(__VA_ARGS__)
 #define hcMemset(...) cudaMemset(__VA_ARGS__)
+#define hcCreateChannelDesc() cudaCreateChannelDesc<float>() // TODO: Implement templates
+#define hcMallocPitch(...) cudaMallocPitch(__VA_ARGS__)
+#define hcMallocArray(...) cudaMallocArray(__VA_ARGS__)
+#define hcMemcpy2D(...) cudaMemcpy2D(__VA_ARGS__)
+#define hcMemcpy2DToArray(...) cudaMemcpy2DToArray(__VA_ARGS__)
+#define hcBindTextureToArray(...) cudaBindTextureToArray(__VA_ARGS__)
+#define hcUnbindTexture(...) cudaUnbindTexture(__VA_ARGS__)
+#define hcArray cudaArray
+#define hcChannelFormatDesc cudaChannelFormatDesc
+#define texture texture<float,2> // TODO: Implement templates
+#define hcFilterModePoint cudaFilterModePoint
+
+#define CUDA_SAFE_CALL(x) checkCudaErrors(x)
+#define CUT_CHECK_ERROR(x) getLastCudaError(x)
 
 #define __KERNEL __global__
 
@@ -22,10 +37,17 @@ typedef uint3 hc_uint3;
 
 #define hcMemcpyHostToAccelerator cudaMemcpyHostToDevice
 #define hcMemcpyAcceleratorToHost cudaMemcpyDeviceToHost
+#define hcMemcpyAcceleratorToAccelerator cudaMemcpyDeviceToDevice
 
-#define hcLaunchKernel(kernel, dim, ...) \
+#define hcLaunchKernel(kernel, grid, block, ...) \
   grid_launch_parm lp; \
-  kernel<<<dim>>>(lp, __VA_ARGS__)
+  lp.gridDim.x = grid.x; \
+  lp.gridDim.y = grid.y; \
+  lp.gridDim.z = grid.z; \
+  lp.groupDim.x = block.x; \
+  lp.groupDim.y = block.y; \
+  lp.groupDim.z = block.z; \
+  kernel<<<grid, block>>>(lp, __VA_ARGS__)
 
 #define DIM3(...) dim3(__VA_ARGS__)
 
@@ -42,5 +64,7 @@ typedef uint3 hc_uint3;
     lp.threadId.x = threadIdx.x; \
     lp.threadId.y = threadIdx.y; \
     lp.threadId.z = threadIdx.z
+
+#define SQRTF(x) sqrtf(x)
 
 #endif
