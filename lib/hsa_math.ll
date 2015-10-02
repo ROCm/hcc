@@ -2,18 +2,14 @@
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024"
 target triple = "spir64-unknown-unknown"
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; work-item related functions
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
 ; Function Attrs: nounwind
 define linkonce_odr spir_func i64 @amp_get_global_size(i32 %n) #0 {
-  %1 = alloca i32, align 4
-  store i32 %n, i32* %1, align 4
-  %2 = load i32* %1, align 4
-  %3 = call spir_func i64 @_Z15get_global_sizej(i32 %2) #1
-  ret i64 %3
+entry:
+  %0 = alloca i32, align 4
+  store i32 %n, i32* %0, align 4
+  %1 = load i32* %0, align 4
+  %2 = call spir_func i64 @_Z15get_global_sizej(i32 %1) #1
+  ret i64 %2
 }
 
 ; Function Attrs: nounwind readnone
@@ -31,7 +27,6 @@ entry:
 
 ; Function Attrs: nounwind readnone
 declare spir_func i64 @_Z13get_global_idj(i32) #1
-
 
 ; Function Attrs: nounwind
 define linkonce_odr spir_func i64 @amp_get_local_id(i32 %n) #0 {
@@ -96,9 +91,74 @@ entry:
 ; Function Attrs: nounwind readnone
 declare spir_func i64 @_Z14get_local_sizej(i32) #1
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; math functions
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @hc_get_grid_size(i32 %n) #0 {
+entry:
+  %0 = alloca i32, align 4
+  store i32 %n, i32* %0, align 4
+  %1 = load i32* %0, align 4
+  %2 = call spir_func i64 @_Z15get_global_sizej(i32 %1) #1
+  ret i64 %2
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @hc_get_workitem_absolute_id(i32 %n) #0 {
+entry:
+  %n.addr = alloca i32, align 4
+  store i32 %n, i32* %n.addr, align 4
+  %0 = load i32* %n.addr, align 4
+  %call = call spir_func i64 @_Z13get_global_idj(i32 %0) #1
+  ret i64 %call
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @hc_get_workitem_id(i32 %n) #0 {
+entry:
+  %n.addr = alloca i32, align 4
+  store i32 %n, i32* %n.addr, align 4
+  %0 = load i32* %n.addr, align 4
+  %call = call spir_func i64 @_Z12get_local_idj(i32 %0) #1
+  ret i64 %call
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @hc_get_num_groups(i32 %n) #0 {
+  %1 = alloca i32, align 4
+  store i32 %n, i32* %1, align 4
+  %2 = load i32* %1, align 4
+  %3 = call spir_func i64 @_Z14get_num_groupsj(i32 %2) #1
+  ret i64 %3
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @hc_get_group_id(i32 %n) #0 {
+entry:
+  %n.addr = alloca i32, align 4
+  store i32 %n, i32* %n.addr, align 4
+  %0 = load i32* %n.addr, align 4
+  %call = call spir_func i64 @_Z12get_group_idj(i32 %0) #1
+  ret i64 %call
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func void @hc_barrier(i32 %n) #0 {
+entry:
+  %n.addr = alloca i32, align 4
+  store i32 %n, i32* %n.addr, align 4
+  %0 = load i32* %n.addr, align 4
+  call spir_func void @_Z7barrierj(i32 %0)
+  ret void
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @hc_get_group_size(i32 %n) #0 {
+entry:
+  %n.addr = alloca i32, align 4
+  store i32 %n, i32* %n.addr, align 4
+  %0 = load i32* %n.addr, align 4
+  %call = call spir_func i64 @_Z14get_local_sizej(i32 %0) #1
+  ret i64 %call
+}
 
 ; Function Attrs: nounwind
 define linkonce_odr spir_func float @opencl_acos(float %x) #0 {
@@ -824,10 +884,6 @@ entry:
 ; Function Attrs: nounwind readnone
 declare spir_func double @_Z4fmoddd(double, double) #1
 
-;
-; FIXME: missing fpclassify
-;
-
 ; Function Attrs: nounwind
 define linkonce_odr spir_func float @opencl_frexpf_global(float %x, i32 addrspace(1)* %exp) #0 {
 entry:
@@ -1545,124 +1601,45 @@ entry:
 ; Function Attrs: nounwind readnone
 declare spir_func double @_Z9remainderdd(double, double) #1
 
-; FIXME: bug in HSAIL backend so call to @_Z6remquoffPU3AS4i can not be made as of now
 ; Function Attrs: nounwind
 define linkonce_odr spir_func float @opencl_remquof_global(float %x, float %y, i32 addrspace(1)* %quo) #0 {
 entry:
-;  %x.addr = alloca float, align 4
-;  %y.addr = alloca float, align 4
-;  %quo.addr = alloca i32 addrspace(1)*, align 8
-;  store float %x, float* %x.addr, align 4
-;  store float %y, float* %y.addr, align 4
-;  store i32 addrspace(1)* %quo, i32 addrspace(1)** %quo.addr, align 8
-;  %0 = load float* %x.addr, align 4
-;  %1 = load float* %y.addr, align 4
-;  %2 = load i32 addrspace(1)** %quo.addr, align 8
-;  %3 = addrspacecast i32 addrspace(1)* %2 to i32 addrspace(4)*
-;  %call = call spir_func float @_Z6remquoffPU3AS4i(float %0, float %1, i32 addrspace(4)* %3)
-;  ret float %call
-   ret float 0.0
+  ret float 0.000000e+00
 }
 
-; FIXME: bug in HSAIL backend so call to @_Z6remquoffPU3AS4i can not be made as of now
-; Function Attrs: nounwind readnone
-declare spir_func float @_Z6remquoffPU3AS4i(float, float, i32 addrspace(4)*) 
+declare spir_func float @_Z6remquoffPU3AS4i(float, float, i32 addrspace(4)*)
 
-; FIXME: bug in HSAIL backend so call to @_Z6remquoffPU3AS4i can not be made as of now
 ; Function Attrs: nounwind
 define linkonce_odr spir_func float @opencl_remquof_local(float %x, float %y, i32 addrspace(3)* %quo) #0 {
 entry:
-;  %x.addr = alloca float, align 4
-;  %y.addr = alloca float, align 4
-;  %quo.addr = alloca i32 addrspace(3)*, align 8
-;  store float %x, float* %x.addr, align 4
-;  store float %y, float* %y.addr, align 4
-;  store i32 addrspace(3)* %quo, i32 addrspace(3)** %quo.addr, align 8
-;  %0 = load float* %x.addr, align 4
-;  %1 = load float* %y.addr, align 4
-;  %2 = load i32 addrspace(3)** %quo.addr, align 8
-;  %3 = addrspacecast i32 addrspace(3)* %2 to i32 addrspace(4)*
-;  %call = call spir_func float @_Z6remquoffPU3AS4i(float %0, float %1, i32 addrspace(4)* %3) #1
-;  ret float %call
-   ret float 0.0
+  ret float 0.000000e+00
 }
 
-; FIXME: bug in HSAIL backend so call to @_Z6remquoffPU3AS4i can not be made as of now
 ; Function Attrs: nounwind
 define linkonce_odr spir_func float @opencl_remquof(float %x, float %y, i32 addrspace(4)* %quo) #0 {
 entry:
-;  %x.addr = alloca float, align 4
-;  %y.addr = alloca float, align 4
-;  %quo.addr = alloca i32 addrspace(4)*, align 8
-;  store float %x, float* %x.addr, align 4
-;  store float %y, float* %y.addr, align 4
-;  store i32 addrspace(4)* %quo, i32 addrspace(4)** %quo.addr, align 8
-;  %0 = load float* %x.addr, align 4
-;  %1 = load float* %y.addr, align 4
-;  %2 = load i32 addrspace(4)** %quo.addr, align 8
-;  %call = call spir_func float @_Z6remquoffPU3AS4i(float %0, float %1, i32 addrspace(4)* %2) #1
-;  ret float %call
-   ret float 0.0
+  ret float 0.000000e+00
 }
 
-; FIXME: bug in HSAIL backend so call to @_Z6remquoddPU3AS4i can not be made as of now
 ; Function Attrs: nounwind
 define linkonce_odr spir_func double @opencl_remquo_global(double %x, double %y, i32 addrspace(1)* %quo) #0 {
 entry:
-;  %x.addr = alloca double, align 8
-;  %y.addr = alloca double, align 8
-;  %quo.addr = alloca i32 addrspace(1)*, align 8
-;  store double %x, double* %x.addr, align 8
-;  store double %y, double* %y.addr, align 8
-;  store i32 addrspace(1)* %quo, i32 addrspace(1)** %quo.addr, align 8
-;  %0 = load double* %x.addr, align 8
-;  %1 = load double* %y.addr, align 8
-;  %2 = load i32 addrspace(1)** %quo.addr, align 8
-;  %3 = addrspacecast i32 addrspace(1)* %2 to i32 addrspace(4)*
-;  %call = call spir_func double @_Z6remquoddPU3AS4i(double %0, double %1, i32 addrspace(4)* %3) #1
-;  ret double %call
-   ret double 0.0
+  ret double 0.000000e+00
 }
 
-; FIXME: bug in HSAIL backend so call to @_Z6remquoddPU3AS4i can not be made as of now
 ; Function Attrs: nounwind readnone
 declare spir_func double @_Z6remquoddPU3AS4i(double, double, i32 addrspace(4)*) #1
 
-; FIXME: bug in HSAIL backend so call to @_Z6remquoddPU3AS4i can not be made as of now
 ; Function Attrs: nounwind
 define linkonce_odr spir_func double @opencl_remquo_local(double %x, double %y, i32 addrspace(3)* %quo) #0 {
 entry:
-;  %x.addr = alloca double, align 8
-;  %y.addr = alloca double, align 8
-;  %quo.addr = alloca i32 addrspace(3)*, align 8
-;  store double %x, double* %x.addr, align 8
-;  store double %y, double* %y.addr, align 8
-;  store i32 addrspace(3)* %quo, i32 addrspace(3)** %quo.addr, align 8
-;  %0 = load double* %x.addr, align 8
-;  %1 = load double* %y.addr, align 8
-;  %2 = load i32 addrspace(3)** %quo.addr, align 8
-;  %3 = addrspacecast i32 addrspace(3)* %2 to i32 addrspace(4)*
-;  %call = call spir_func double @_Z6remquoddPU3AS4i(double %0, double %1, i32 addrspace(4)* %3) #1
-;  ret double %call
-   ret double 0.0
+  ret double 0.000000e+00
 }
 
-; FIXME: bug in HSAIL backend so call to @_Z6remquoddPU3AS4i can not be made as of now
 ; Function Attrs: nounwind
 define linkonce_odr spir_func double @opencl_remquo(double %x, double %y, i32 addrspace(4)* %quo) #0 {
 entry:
-;  %x.addr = alloca double, align 8
-;  %y.addr = alloca double, align 8
-;  %quo.addr = alloca i32 addrspace(4)*, align 8
-;  store double %x, double* %x.addr, align 8
-;  store double %y, double* %y.addr, align 8
-;  store i32 addrspace(4)* %quo, i32 addrspace(4)** %quo.addr, align 8
-;  %0 = load double* %x.addr, align 8
-;  %1 = load double* %y.addr, align 8
-;  %2 = load i32 addrspace(4)** %quo.addr, align 8
-;  %call = call spir_func double @_Z6remquoddPU3AS4i(double %0, double %1, i32 addrspace(4)* %2) #1
-;  ret double %call
-   ret double 0.0
+  ret double 0.000000e+00
 }
 
 ; Function Attrs: nounwind
@@ -1743,9 +1720,6 @@ entry:
 ; Function Attrs: nounwind readnone
 declare spir_func double @_Z5sinpid(double) #1
 
-;
-; used by scalb and scalbn
-;
 ; Function Attrs: nounwind
 define linkonce_odr spir_func float @opencl_ldexp(float %x, i32 %exp) #0 {
 entry:
@@ -1762,9 +1736,6 @@ entry:
 ; Function Attrs: nounwind readnone
 declare spir_func float @_Z5ldexpfi(float, i32) #1
 
-;
-; used by scalb and scalbn
-;
 ; Function Attrs: nounwind
 define linkonce_odr spir_func double @opencl_ldexp_double(double %x, i32 %exp) #0 {
 entry:
@@ -2127,267 +2098,273 @@ entry:
 ; Function Attrs: nounwind readnone
 declare spir_func double @_Z5truncd(double) #1
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; atomic functions
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 ; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @atomic_add_unsigned_global(i32 addrspace(1)* %x, i32 %y) #0 {
 entry:
-  %ret = atomicrmw add i32 addrspace(1)* %x, i32 %y seq_cst, !mem.scope !4
+  %ret = atomicrmw add i32 addrspace(1)* %x, i32 %y seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
 ; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @atomic_add_unsigned_local(i32 addrspace(3)* %x, i32 %y) #0 {
 entry:
-  %ret = atomicrmw add i32 addrspace(3)* %x, i32 %y seq_cst, !mem.scope !4
+  %ret = atomicrmw add i32 addrspace(3)* %x, i32 %y seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
 ; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @atomic_add_unsigned(i32 addrspace(4)* %x, i32 %y) #0 {
 entry:
-  %ret = atomicrmw add i32 addrspace(4)* %x, i32 %y seq_cst, !mem.scope !4
+  %ret = atomicrmw add i32 addrspace(4)* %x, i32 %y seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
 ; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @atomic_add_int_global(i32 addrspace(1)* %x, i32 %y) #0 {
 entry:
-  %ret = atomicrmw add i32 addrspace(1)* %x, i32 %y seq_cst, !mem.scope !4
+  %ret = atomicrmw add i32 addrspace(1)* %x, i32 %y seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
 ; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @atomic_add_int_local(i32 addrspace(3)* %x, i32 %y) #0 {
 entry:
-  %ret = atomicrmw add i32 addrspace(3)* %x, i32 %y seq_cst, !mem.scope !4
+  %ret = atomicrmw add i32 addrspace(3)* %x, i32 %y seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
 ; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @atomic_add_int(i32 addrspace(4)* %x, i32 %y) #0 {
 entry:
-  %ret = atomicrmw add i32 addrspace(4)* %x, i32 %y seq_cst, !mem.scope !4
+  %ret = atomicrmw add i32 addrspace(4)* %x, i32 %y seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
 ; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @atomic_max_unsigned_global(i32 addrspace(1)* %x, i32 %y) #0 {
 entry:
-  %ret = atomicrmw max i32 addrspace(1)* %x, i32 %y seq_cst, !mem.scope !4
+  %ret = atomicrmw max i32 addrspace(1)* %x, i32 %y seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
 ; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @atomic_max_unsigned_local(i32 addrspace(3)* %x, i32 %y) #0 {
 entry:
-  %ret = atomicrmw max i32 addrspace(3)* %x, i32 %y seq_cst, !mem.scope !4
+  %ret = atomicrmw max i32 addrspace(3)* %x, i32 %y seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
 ; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @atomic_max_unsigned(i32 addrspace(4)* %x, i32 %y) #0 {
 entry:
-  %ret = atomicrmw max i32 addrspace(4)* %x, i32 %y seq_cst, !mem.scope !4
+  %ret = atomicrmw max i32 addrspace(4)* %x, i32 %y seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
 ; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @atomic_max_int_global(i32 addrspace(1)* %x, i32 %y) #0 {
 entry:
-  %ret = atomicrmw max i32 addrspace(1)* %x, i32 %y seq_cst, !mem.scope !4
+  %ret = atomicrmw max i32 addrspace(1)* %x, i32 %y seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
 ; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @atomic_max_int_local(i32 addrspace(3)* %x, i32 %y) #0 {
 entry:
-  %ret = atomicrmw max i32 addrspace(3)* %x, i32 %y seq_cst, !mem.scope !4
+  %ret = atomicrmw max i32 addrspace(3)* %x, i32 %y seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
 ; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @atomic_max_int(i32 addrspace(4)* %x, i32 %y) #0 {
 entry:
-  %ret = atomicrmw max i32 addrspace(4)* %x, i32 %y seq_cst, !mem.scope !4
+  %ret = atomicrmw max i32 addrspace(4)* %x, i32 %y seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
 ; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @atomic_inc_unsigned_global(i32 addrspace(1)* %x) #0 {
 entry:
-  %ret = atomicrmw add i32 addrspace(1)* %x, i32 1 seq_cst, !mem.scope !4
+  %ret = atomicrmw add i32 addrspace(1)* %x, i32 1 seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
 ; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @atomic_inc_unsigned_local(i32 addrspace(3)* %x) #0 {
 entry:
-  %ret = atomicrmw add i32 addrspace(3)* %x, i32 1 seq_cst, !mem.scope !4
+  %ret = atomicrmw add i32 addrspace(3)* %x, i32 1 seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
 ; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @atomic_inc_unsigned(i32 addrspace(4)* %x) #0 {
 entry:
-  %ret = atomicrmw add i32 addrspace(4)* %x, i32 1 seq_cst, !mem.scope !4
+  %ret = atomicrmw add i32 addrspace(4)* %x, i32 1 seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
 ; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @atomic_inc_int_global(i32 addrspace(1)* %x) #0 {
 entry:
-  %ret = atomicrmw add i32 addrspace(1)* %x, i32 1 seq_cst, !mem.scope !4
+  %ret = atomicrmw add i32 addrspace(1)* %x, i32 1 seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
 ; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @atomic_inc_int_local(i32 addrspace(3)* %x) #0 {
 entry:
-  %ret = atomicrmw add i32 addrspace(3)* %x, i32 1 seq_cst, !mem.scope !4
+  %ret = atomicrmw add i32 addrspace(3)* %x, i32 1 seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
 ; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @atomic_inc_int(i32 addrspace(4)* %x) #0 {
 entry:
-  %ret = atomicrmw add i32 addrspace(4)* %x, i32 1 seq_cst, !mem.scope !4
+  %ret = atomicrmw add i32 addrspace(4)* %x, i32 1 seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; atomic builtins which directly exposes HSAIL instructions
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
+; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @__hsail_atomic_fetch_add_int_local(i32 addrspace(3)* %x, i32 %y) #0 {
 entry:
-  %ret = atomicrmw add i32 addrspace(3)* %x, i32 %y seq_cst, !mem.scope !4
+  %ret = atomicrmw add i32 addrspace(3)* %x, i32 %y seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
+; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @__hsail_atomic_fetch_add_unsigned_local(i32 addrspace(3)* %x, i32 %y) #0 {
 entry:
-  %ret = atomicrmw add i32 addrspace(3)* %x, i32 %y seq_cst, !mem.scope !4
+  %ret = atomicrmw add i32 addrspace(3)* %x, i32 %y seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
+; Function Attrs: nounwind
 define linkonce_odr spir_func i64 @__hsail_atomic_fetch_add_int64_local(i64 addrspace(3)* %x, i64 %y) #0 {
 entry:
-  %ret = atomicrmw add i64 addrspace(3)* %x, i64 %y seq_cst, !mem.scope !4
+  %ret = atomicrmw add i64 addrspace(3)* %x, i64 %y seq_cst, !mem.scope !1
   ret i64 %ret
 }
 
+; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @__hsail_atomic_fetch_add_int_global(i32 addrspace(1)* %x, i32 %y) #0 {
 entry:
-  %ret = atomicrmw add i32 addrspace(1)* %x, i32 %y seq_cst, !mem.scope !4
+  %ret = atomicrmw add i32 addrspace(1)* %x, i32 %y seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
+; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @__hsail_atomic_fetch_add_unsigned_global(i32 addrspace(1)* %x, i32 %y) #0 {
 entry:
-  %ret = atomicrmw add i32 addrspace(1)* %x, i32 %y seq_cst, !mem.scope !4
+  %ret = atomicrmw add i32 addrspace(1)* %x, i32 %y seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
+; Function Attrs: nounwind
 define linkonce_odr spir_func i64 @__hsail_atomic_fetch_add_int64_global(i64 addrspace(1)* %x, i64 %y) #0 {
 entry:
-  %ret = atomicrmw add i64 addrspace(1)* %x, i64 %y seq_cst, !mem.scope !4
+  %ret = atomicrmw add i64 addrspace(1)* %x, i64 %y seq_cst, !mem.scope !1
   ret i64 %ret
 }
 
+; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @__hsail_atomic_exchange_int_local(i32 addrspace(3)* %x, i32 %y) #0 {
 entry:
-  %ret = atomicrmw xchg i32 addrspace(3)* %x, i32 %y seq_cst, !mem.scope !4
+  %ret = atomicrmw xchg i32 addrspace(3)* %x, i32 %y seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
+; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @__hsail_atomic_exchange_unsigned_local(i32 addrspace(3)* %x, i32 %y) #0 {
 entry:
-  %ret = atomicrmw xchg i32 addrspace(3)* %x, i32 %y seq_cst, !mem.scope !4
+  %ret = atomicrmw xchg i32 addrspace(3)* %x, i32 %y seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
+; Function Attrs: nounwind
 define linkonce_odr spir_func i64 @__hsail_atomic_exchange_int64_local(i64 addrspace(3)* %x, i64 %y) #0 {
 entry:
-  %ret = atomicrmw xchg i64 addrspace(3)* %x, i64 %y seq_cst, !mem.scope !4
+  %ret = atomicrmw xchg i64 addrspace(3)* %x, i64 %y seq_cst, !mem.scope !1
   ret i64 %ret
 }
 
+; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @__hsail_atomic_exchange_int_global(i32 addrspace(1)* %x, i32 %y) #0 {
 entry:
-  %ret = atomicrmw xchg i32 addrspace(1)* %x, i32 %y seq_cst, !mem.scope !4
+  %ret = atomicrmw xchg i32 addrspace(1)* %x, i32 %y seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
+; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @__hsail_atomic_exchange_unsigned_global(i32 addrspace(1)* %x, i32 %y) #0 {
 entry:
-  %ret = atomicrmw xchg i32 addrspace(1)* %x, i32 %y seq_cst, !mem.scope !4
+  %ret = atomicrmw xchg i32 addrspace(1)* %x, i32 %y seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
+; Function Attrs: nounwind
 define linkonce_odr spir_func i64 @__hsail_atomic_exchange_int64_global(i64 addrspace(1)* %x, i64 %y) #0 {
 entry:
-  %ret = atomicrmw xchg i64 addrspace(1)* %x, i64 %y seq_cst, !mem.scope !4
+  %ret = atomicrmw xchg i64 addrspace(1)* %x, i64 %y seq_cst, !mem.scope !1
   ret i64 %ret
 }
 
+; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @__hsail_atomic_compare_exchange_int_local(i32 addrspace(3)* %x, i32 %y, i32 %z) #0 {
 entry:
-  %val_success = cmpxchg i32 addrspace(3)* %x, i32 %y, i32 %z seq_cst seq_cst, !mem.scope !4
+  %val_success = cmpxchg i32 addrspace(3)* %x, i32 %y, i32 %z seq_cst seq_cst, !mem.scope !1
   %value_loaded = extractvalue { i32, i1 } %val_success, 0
   ret i32 %value_loaded
 }
 
+; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @__hsail_atomic_compare_exchange_unsigned_local(i32 addrspace(3)* %x, i32 %y, i32 %z) #0 {
 entry:
-  %val_success = cmpxchg i32 addrspace(3)* %x, i32 %y, i32 %z seq_cst seq_cst, !mem.scope !4
+  %val_success = cmpxchg i32 addrspace(3)* %x, i32 %y, i32 %z seq_cst seq_cst, !mem.scope !1
   %value_loaded = extractvalue { i32, i1 } %val_success, 0
   ret i32 %value_loaded
 }
 
+; Function Attrs: nounwind
 define linkonce_odr spir_func i64 @__hsail_atomic_compare_exchange_int64_local(i64 addrspace(3)* %x, i64 %y, i64 %z) #0 {
 entry:
-  %val_success = cmpxchg i64 addrspace(3)* %x, i64 %y, i64 %z seq_cst seq_cst, !mem.scope !4
+  %val_success = cmpxchg i64 addrspace(3)* %x, i64 %y, i64 %z seq_cst seq_cst, !mem.scope !1
   %value_loaded = extractvalue { i64, i1 } %val_success, 0
   ret i64 %value_loaded
 }
 
+; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @__hsail_atomic_compare_exchange_int_global(i32 addrspace(1)* %x, i32 %y, i32 %z) #0 {
 entry:
-  %val_success = cmpxchg i32 addrspace(1)* %x, i32 %y, i32 %z seq_cst seq_cst, !mem.scope !4
+  %val_success = cmpxchg i32 addrspace(1)* %x, i32 %y, i32 %z seq_cst seq_cst, !mem.scope !1
   %value_loaded = extractvalue { i32, i1 } %val_success, 0
   ret i32 %value_loaded
 }
 
+; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @__hsail_atomic_compare_exchange_unsigned_global(i32 addrspace(1)* %x, i32 %y, i32 %z) #0 {
 entry:
-  %val_success = cmpxchg i32 addrspace(1)* %x, i32 %y, i32 %z seq_cst seq_cst, !mem.scope !4
+  %val_success = cmpxchg i32 addrspace(1)* %x, i32 %y, i32 %z seq_cst seq_cst, !mem.scope !1
   %value_loaded = extractvalue { i32, i1 } %val_success, 0
   ret i32 %value_loaded
 }
 
+; Function Attrs: nounwind
 define linkonce_odr spir_func i64 @__hsail_atomic_compare_exchange_int64_global(i64 addrspace(1)* %x, i64 %y, i64 %z) #0 {
 entry:
-  %val_success = cmpxchg i64 addrspace(1)* %x, i64 %y, i64 %z seq_cst seq_cst, !mem.scope !4
+  %val_success = cmpxchg i64 addrspace(1)* %x, i64 %y, i64 %z seq_cst seq_cst, !mem.scope !1
   %value_loaded = extractvalue { i64, i1 } %val_success, 0
   ret i64 %value_loaded
 }
-
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 
 !opencl.enable.FP_CONTRACT = !{}
 !opencl.spir.version = !{!0}
-!opencl.ocl.version = !{!1}
-!opencl.used.extensions = !{!2}
-!opencl.used.optional.core.features = !{!3}
-!opencl.compiler.options = !{!2}
+!opencl.ocl.version = !{!0}
+!opencl.used.extensions = !{!0}
+!opencl.used.optional.core.features = !{!0}
+!opencl.compiler.options = !{!0}
 
 !0 = metadata !{}
-!1 = metadata !{}
-!2 = metadata !{}
-!3 = metadata !{}
-!4 = metadata !{i32 5}
+!1 = metadata !{i32 5}

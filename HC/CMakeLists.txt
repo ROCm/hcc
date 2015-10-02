@@ -1,0 +1,2 @@
+add_subdirectory(WrapperGen)
+add_subdirectory(DirectFuncCall)
