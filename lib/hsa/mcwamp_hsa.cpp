@@ -360,17 +360,25 @@ private:
     hsa_status_t pushArgPrivate(T val) {
         /* add padding if necessary */
         int padding_size = (arg_vec.size() % sizeof(T)) ? (sizeof(T) - (arg_vec.size() % sizeof(T))) : 0;
-        //printf("push %lu bytes into kernarg: ", sizeof(T) + padding_size);
+#if KALMAR_DEBUG
+        printf("push %lu bytes into kernarg: ", sizeof(T) + padding_size);
+#endif
         for (size_t i = 0; i < padding_size; ++i) {
             arg_vec.push_back((uint8_t)0x00);
-            //printf("%02X ", (uint8_t)0x00);
+#if KALMAR_DEBUG
+            printf("%02X ", (uint8_t)0x00);
+#endif
         }
         uint8_t* ptr = static_cast<uint8_t*>(static_cast<void*>(&val));
         for (size_t i = 0; i < sizeof(T); ++i) {
             arg_vec.push_back(ptr[i]);
-            //printf("%02X ", ptr[i]);
+#if KALMAR_DEBUG
+            printf("%02X ", ptr[i]);
+#endif
         }
-        //printf("\n");
+#if KALMAR_DEBUG
+        printf("\n");
+#endif
         arg_count++;
         return HSA_STATUS_SUCCESS;
     }
@@ -659,16 +667,42 @@ public:
         waitForDependentAsyncOps(device);
 
         // do read
-        if (dst != device)
-            memmove(dst, (char*)device + offset, count);
+        if (dst != device) {
+            if (!getDev()->is_unified()) {
+#if KALMAR_DEBUG
+                std::cerr << "read(" << device << "," << dst << "," << count << "," << offset << "): use HSA memory copy\n";
+#endif
+                hsa_status_t status = HSA_STATUS_SUCCESS;
+                status = hsa_memory_copy(dst, (char*)device + offset, count);
+                STATUS_CHECK(status, __LINE__);
+            } else {
+#if KALMAR_DEBUG
+                std::cerr << "read(" << device << "," << dst << "," << count << "," << offset << "): use host memory copy\n";
+#endif
+                memmove(dst, (char*)device + offset, count);
+            }
+        }
     }
 
     void write(void* device, const void* src, size_t count, size_t offset, bool blocking) override {
         waitForDependentAsyncOps(device);
 
         // do write
-        if (src != device)
-            memmove((char*)device + offset, src, count);
+        if (src != device) {
+            if (!getDev()->is_unified()) {
+#if KALMAR_DEBUG
+                std::cerr << "write(" << device << "," << src << "," << count << "," << offset << "," << blocking << "): use HSA memory copy\n";
+#endif
+                hsa_status_t status = HSA_STATUS_SUCCESS;
+                status = hsa_memory_copy((char*)device + offset, src, count);
+                STATUS_CHECK(status, __LINE__);
+            } else {
+#if KALMAR_DEBUG
+                std::cerr << "write(" << device << "," << src << "," << count << "," << offset << "," << blocking << "): use host memory copy\n";
+#endif
+                memmove((char*)device + offset, src, count);
+            }
+        }
     }
 
     void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset, bool blocking) override {
@@ -676,18 +710,93 @@ public:
         waitForDependentAsyncOps(src);
 
         // do copy
-        if (src != dst)
-            memmove((char*)dst + dst_offset, (char*)src + src_offset, count);
+        if (src != dst) {
+            if (!getDev()->is_unified()) {
+#if KALMAR_DEBUG
+                std::cerr << "copy(" << src << "," << dst << "," << count << "," << src_offset << "," << dst_offset << "," << blocking << "): use HSA memory copy\n";
+#endif
+                hsa_status_t status = HSA_STATUS_SUCCESS;
+                status = hsa_memory_copy((char*)dst + dst_offset, (char*)src + src_offset, count);
+                STATUS_CHECK(status, __LINE__);
+            } else {
+#if KALMAR_DEBUG
+                std::cerr << "copy(" << src << "," << dst << "," << count << "," << src_offset << "," << dst_offset << "," << blocking << "): use host memory copy\n";
+#endif
+                memmove((char*)dst + dst_offset, (char*)src + src_offset, count);
+            }
+        }
     }
 
     void* map(void* device, size_t count, size_t offset, bool modify) override {
         waitForDependentAsyncOps(device);
 
         // do map
-        return (char*)device + offset;
+
+        // as HSA runtime doesn't have map/unmap facility at this moment,
+        // we explicitly allocate a host memory buffer in this case 
+        if (!getDev()->is_unified()) {
+#if KALMAR_DEBUG
+            std::cerr << "map(" << device << "," << count << "," << offset << "," << modify << "): use HSA memory map\n";
+#endif
+            hsa_status_t status = HSA_STATUS_SUCCESS;
+            // allocate a host buffer
+            void *data = aligned_alloc(0x1000, count);
+            if (data != nullptr) {
+              // copy data from device buffer to host buffer
+              status = hsa_memory_copy(data, (char*)device + offset, count);
+              STATUS_CHECK(status, __LINE__);
+            } else {
+#if KALMAR_DEBUG
+              std::cerr << "host buffer allocation failed!\n";
+#endif
+              abort();
+            }
+#if KALMAR_DEBUG
+            std::cerr << "map(): " << data << "\n";
+#endif
+
+            return data;
+            
+        } else {
+#if KALMAR_DEBUG
+            std::cerr << "map(" << device << "," << count << "," << offset << "," << modify << "): use host memory map\n";
+#endif
+            // for host memory we simply return the pointer plus offset
+#if KALMAR_DEBUG
+            std::cerr << "map(): " << ((char*)device+offset) << "\n";
+#endif
+            return (char*)device + offset;
+        }
     }
 
-    void unmap(void* device, void* addr) override {}
+    void unmap(void* device, void* addr, size_t count, size_t offset, bool modify) override {
+        // do unmap
+
+        // as HSA runtime doesn't have map/unmap facility at this moment,
+        // we free the host memory buffer allocated in map()
+        if (!getDev()->is_unified()) {
+#if KALMAR_DEBUG
+            std::cerr << "unmap(" << device << "," << addr << "," << count << "," << offset << "," << modify << "): use HSA memory unmap\n";
+#endif
+            if (modify) {
+#if KALMAR_DEBUG
+                std::cerr << "copy host buffer to device buffer\n";
+#endif
+                // copy data from host buffer to device buffer
+                hsa_status_t status = HSA_STATUS_SUCCESS;
+                status = hsa_memory_copy((char*)device + offset, addr, count);
+                STATUS_CHECK(status, __LINE__);
+            }
+
+            // deallocate the host buffer
+            free(addr);
+        } else {
+#if KALMAR_DEBUG
+            std::cerr << "unmap(" << device << "," << addr << "," << count << "," << offset << "," << modify << "): use host memory unmap\n";
+#endif
+            // for host memory there's nothing to be done
+        }
+    }
 
     void Push(void *kernel, int idx, void *device, bool modify) override {
         PushArgImpl(kernel, idx, sizeof(void*), &device);
@@ -752,6 +861,8 @@ private:
     std::vector< std::weak_ptr<KalmarQueue> > queues;
 
     region_iterator ri;
+
+    bool useCoarseGrainedRegion;
 
 public:
 
@@ -821,7 +932,8 @@ public:
     HSADevice(hsa_agent_t a) : KalmarDevice(access_type_read_write),
                                agent(a), programs(), max_tile_static_size(0),
                                queues(), queues_mutex(),
-                               ri() {
+                               ri(),
+                               useCoarseGrainedRegion(false) {
 #if KALMAR_DEBUG
         std::cerr << "HSADevice::HSADevice()\n";
 #endif
@@ -833,6 +945,20 @@ public:
 
         status = hsa_agent_iterate_regions(agent, &HSADevice::get_memory_regions, &ri);
         STATUS_CHECK(status, __LINE__);
+
+        /// after iterating memory regions, set if we can use coarse grained regions
+        bool result = false;
+        if (hasHSACoarsegrainedRegion()) {
+            result = true;
+            // environment variable CLAMP_HSA may be used to change the default behavior
+            char* hsa_behavior = getenv("CLAMP_HSA_USEHOSTMEMORY");
+            if (hsa_behavior != nullptr) {
+                if (std::string("ON") == hsa_behavior) {
+                    result = false;
+                }
+            }
+        }
+        useCoarseGrainedRegion = result; 
     }
 
     ~HSADevice() {
@@ -856,18 +982,56 @@ public:
     size_t get_mem() const override { return 0; }
     bool is_double() const override { return true; }
     bool is_lim_double() const override { return true; }
-    bool is_unified() const override { return true; }
+    bool is_unified() const override {
+        return (useCoarseGrainedRegion == false);
+    }
     bool is_emulated() const override { return false; }
 
     void* create(size_t count, struct rw_info* key) override {
-        void *data = aligned_alloc(0x1000, count);
-        hsa_memory_register(data, count);
+        void *data = nullptr;
+
+        if (!is_unified()) {
+#if KALMAR_DEBUG
+            std::cerr << "create(" << count << "," << key << "): use HSA memory allocator\n";
+#endif
+            hsa_status_t status = HSA_STATUS_SUCCESS;
+            hsa_region_t am_region = getHSAAMRegion();
+    
+            status = hsa_memory_allocate(am_region, count, &data);
+            STATUS_CHECK(status, __LINE__);
+    
+            status = hsa_memory_assign_agent(data, agent, HSA_ACCESS_PERMISSION_RW);
+            STATUS_CHECK(status, __LINE__);
+        } else {
+#if KALMAR_DEBUG
+            std::cerr << "create(" << count << "," << key << "): use host memory allocator\n";
+#endif
+            data = aligned_alloc(0x1000, count);
+            hsa_memory_register(data, count);
+        }
+
+#if KALMAR_DEBUG
+        std::cerr << "create(): " << data << "\n";
+#endif
+
         return data;
     }
     
     void release(void *ptr, struct rw_info* key ) override {
-        hsa_memory_deregister(ptr, key->count);
-        ::operator delete(ptr);
+        if (!is_unified()) {
+#if KALMAR_DEBUG
+            std::cerr << "release(" << ptr << "," << key << "): use HSA memory deallocator\n";
+#endif
+            hsa_status_t status = HSA_STATUS_SUCCESS;
+            status = hsa_memory_free(ptr);
+            STATUS_CHECK(status, __LINE__);
+        } else {
+#if KALMAR_DEBUG
+            std::cerr << "release(" << ptr << "," << key << "): use host memory deallocator\n";
+#endif
+            hsa_memory_deregister(ptr, key->count);
+            ::operator delete(ptr);
+        }
     }
 
     void* CreateKernel(const char* fun, void* size, void* source, bool needsCompilation = true) override {
@@ -1110,7 +1274,7 @@ class HSAContext final : public KalmarContext
         }
 #endif
 
-        if (device_type == HSA_DEVICE_TYPE_GPU) {
+        if (device_type == HSA_DEVICE_TYPE_GPU)  {
             pAgents->push_back(agent);
         }
 

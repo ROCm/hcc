@@ -59,11 +59,13 @@ bool test_feature()
 
 runall_result test_main()
 {
-	runall_result result;
+	runall_result result = false;
 
-
+// XXX bypass the test and make it fail directly
+#if 0
     result &= REPORT_RESULT((test_feature<int, 128>()));
 	result &= REPORT_RESULT((test_feature<float, 128>()));
+#endif
 
     return result;
 }
