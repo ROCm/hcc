@@ -1261,10 +1261,19 @@ void promoteTileStatic(Function *Func, InstUpdateWorkList * updateNeeded)
         for (std::set<Function*>::reverse_iterator
                 F = users.rbegin(), Fe = users.rend();
                 F != Fe; F++, i--) {
+
+            // tile static variables cannot have an initializer
+            llvm::Constant *Init = nullptr;
+            if (I->hasSection() && (I->getSection() == std::string(TILE_STATIC_NAME))) {
+                Init = llvm::UndefValue::get(I->getType()->getElementType());
+            } else {
+                Init = I->hasInitializer() ? I->getInitializer() : 0;
+            }
+
             GlobalVariable *new_GV = new GlobalVariable(*M,
                     I->getType()->getElementType(),
                     I->isConstant(), I->getLinkage(),
-                    I->hasInitializer()?I->getInitializer():0,
+                    Init,
                     "", (GlobalVariable *)0, I->getThreadLocalMode(), the_space);
             new_GV->copyAttributesFrom(I);
             if (i == 0) {
@@ -1272,6 +1281,7 @@ void promoteTileStatic(Function *Func, InstUpdateWorkList * updateNeeded)
             } else {
                 new_GV->setName(I->getName());
             }
+
             std::pair<Uses::iterator, Uses::iterator> usesOfSameFunction;
             usesOfSameFunction = uses.equal_range(*F);
             for ( Uses::iterator U = usesOfSameFunction.first, Ue =
