@@ -3935,11 +3935,11 @@ public:
      *                to. If the number of elements pointed to is less than
      *                the size of extent, the behavior is undefined.
      */
-    array_view(int e0, value_type *src) restrict(amp,cpu)
+    array_view(int e0, const value_type *src) restrict(amp,cpu)
         : array_view(Concurrency::extent<1>(e0), src) {}
-    array_view(int e0, int e1, value_type *src) restrict(amp,cpu)
+    array_view(int e0, int e1, const value_type *src) restrict(amp,cpu)
         : array_view(Concurrency::extent<2>(e0, e1), src) {}
-    array_view(int e0, int e1, int e2, value_type *src) restrict(amp,cpu)
+    array_view(int e0, int e1, int e2, const value_type *src) restrict(amp,cpu)
         : array_view(Concurrency::extent<3>(e0, e1, e2), src) {}
 
     /**
