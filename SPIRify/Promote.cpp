@@ -627,25 +627,80 @@ void updateListWithUsers ( User *U, Value * oldOperand, Value * newOperand,
         updates->addUpdate (
                 new ForwardUpdate(Insn,
                     oldOperand, newOperand ) );
-    } else if (ConstantExpr * GEPCE =
+    } else if (ConstantExpr * CE =
             dyn_cast<ConstantExpr>(U)) {
-        DEBUG(llvm::errs()<<"GEPCE:";
-                GEPCE->dump(););
-        // patch all the users of the constexpr by
-        // first producing an equivalent instruction that
-        // computes the constantexpr
-        for(Value::user_iterator CU = GEPCE->user_begin(),
-                CE = GEPCE->user_end(); CU!=CE;) {
+        DEBUG(llvm::errs()<<"CE:";
+                CE->dump(););
+        for(Value::user_iterator CU = CE->user_begin(),
+                CUE = CE->user_end(); CU!=CUE;) {
             if (Instruction *I2 = dyn_cast<Instruction>(*CU)) {
-                Insn = GEPCE->getAsInstruction();
+                // patch all the users of the constexpr by
+                // first producing an equivalent instruction that
+                // computes the constantexpr
+                Insn = CE->getAsInstruction();
                 Insn->insertBefore(I2);
                 updateInstructionWithNewOperand(Insn,
                         oldOperand, newOperand, updates);
                 updateInstructionWithNewOperand(I2,
-                        GEPCE, Insn, updates);
+                        CE, Insn, updates);
                 // CU is invalidated
-                CU = GEPCE->user_begin();
+                CU = CE->user_begin();
                 continue;
+            } else if (ConstantExpr *CE2 = dyn_cast<ConstantExpr>(*CU)) {
+                // there are cases where a ConstantExpr is used by another ConstantExpr
+                // in the current implementation, we assume there would be at most
+                // 2 ConstantExpr used in an Instruction
+                //
+                // assuming the original Instruction is:
+                // I3(CE2(CE))
+                //
+                // we would rewrite it to:
+                // Insn (built from CE)
+                // I2 (built from CE2, with Insn as operand)
+                // I3 (replace CE2 with I2)
+                //
+                // notice that I2 can NOT be built from CE2->getAsInstruction() as it would
+                // increase user count of CE2 and CE, and would cause infinite loop
+                
+                for (Value::user_iterator CU2 = CE2->user_begin(), CUE2 = CE2->user_end(); CU2 != CUE2;) {
+                    if (Instruction *I3 = dyn_cast<Instruction>(*CU2)) {
+                        Insn = CE->getAsInstruction();
+                        Instruction *I2 = nullptr;
+                        switch (CE2->getOpcode()) {
+                            case Instruction::BitCast:
+                                // notice that I2 can NOT be built from CE2->getAsInstruction() as it would
+                                // increase user count of CE2 and CE, and would cause infinite loop
+                                I2 = new BitCastInst(Insn, CE2->getType(), "", I3);
+                            break;
+                            default:
+                                llvm::errs() << "BUG: DO NOT KNOW HOW TO UPDATE ConstantExpr: ";
+                                CE2->print(llvm::errs()); llvm::errs() << "\n";
+                            break;
+                        }
+                        if (I2) {
+                            // properly order Insn, I2, I3
+                            Insn->insertBefore(I2);
+
+                            // update operands to correctly set user count for CE and CE2
+                            updateInstructionWithNewOperand(Insn, oldOperand, newOperand, updates);
+                            updateInstructionWithNewOperand(I3, CE2, I2, updates);
+
+                            // CU2 is invalidated
+                            CU2 = CE2->user_begin();
+                            continue;
+                        }
+                    }
+                    CU2++;
+                }
+
+                if (CE2->getNumUses() == 0) {
+                  // Only non-zero ref can be destroyed, otherwise deadlock occurs
+                  CE2->destroyConstant();
+
+                  // CU is invalidated
+                  CU = CE->user_begin();
+                  continue;
+                }
             }
             CU++;
         }
@@ -1240,10 +1295,8 @@ void promoteTileStatic(Function *Func, InstUpdateWorkList * updateNeeded)
                 users.insert(Ins->getParent()->getParent());
                 uses.insert(std::make_pair(Ins->getParent()->getParent(), *U));
             } else if (ConstantExpr *C = dyn_cast<ConstantExpr>(*U)) {
-                // Replace GEPCE uses so that we have an instruction to track
+                // Replace ConstantExpr with Instruction so we can track it
                 updateListWithUsers (*U, I, I, updateNeeded);
-                // FIXME: updateListWithUsers takes no effect if use of (*U) does not represent
-                // an instruction and can't be replaceable
                 if (C->getNumUses() == 0) {
                   // Only non-zero ref can be destroyed, otherwise deadlock occurs
                   C->destroyConstant();
@@ -1883,6 +1936,7 @@ bool PromoteGlobals::runOnModule(Module& M)
             if (I->hasSection() &&
                     I->getSection() == std::string(TILE_STATIC_NAME) &&
                     I->getType()->getPointerAddressSpace() != 0) {
+
                 std::string oldName = escapeName(I->getName().str());
                 // Prepend the name of the function which contains the user
                 std::set<std::string> userNames;
