@@ -5,417 +5,319 @@
 //
 //===----------------------------------------------------------------------===//
 
+/**
+ * @file algorithm
+ * Parallel algorithms
+ *
+ * A parallel algorithm is a function template described by n4507
+ * Specification declared in namespace std::experimental::parallel::v1 with
+ * a formal template parameter named ExecutionPolicy.
+ *
+ * Each corresponding algorithm has an additional template type parameter
+ * named ExecutionPolicy as the first function parameter of type
+ * ExecutionPolicy&&.
+ */
+
 #pragma once
-// FIXME: remove amp.h dependency from this header file
-#include <amp.h>
+#include <hc.hpp>
 
 #include <experimental/execution_policy>
 
-#include <cassert>
-#include <future>
-#include <utility>
-#include <coordinate>
-#include <iostream>
-
-#include <kalmar_launch.h>
-#include <kalmar_runtime.h>
+// Implementation of SPMD algorithms (details:: namespace)
+#include "impl/algorithm_impl.inl"
 
 namespace std {
 namespace experimental {
 namespace parallel {
 inline namespace v1 {
 
-template<typename Kernel, typename InputIterator>
-class fe_wrapper
-{
-public:
-  explicit fe_wrapper(size_t ext, const Kernel f, const InputIterator& first) restrict(amp,cpu)
-      : _ext(ext), k(f), _first(first) {}
-  void operator() (std::offset<1> idx) restrict(amp,cpu) {
-#ifdef __KALMAR_ACCELERATOR__
-      k(*(_first + idx[0]));
-#endif
+/**
+ * Parallel version of std::transform (unary version) in <algorithm>
+ */
+template <class ExecutionPolicy,
+          class InputIterator, class OutputIterator,
+          class UnaryOperation,
+          utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+          utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
+OutputIterator
+transform(ExecutionPolicy&& exec,
+          InputIterator first, InputIterator last,
+          OutputIterator d_first,
+          UnaryOperation unary_op) {
+  if (utils::isParallel(exec)) {
+    return details::transform_impl(first, last, d_first, unary_op,
+             typename std::iterator_traits<InputIterator>::iterator_category());
+  } else {
+    return details::transform_impl(first, last, d_first, unary_op,
+             std::input_iterator_tag{});
   }
-private:
-  const size_t _ext;
-  const Kernel k;
-  const InputIterator& _first;
-};
-
-template<typename Kernel, typename InputIterator>
-class generate_wrapper
-{
-public:
-  explicit generate_wrapper(size_t ext, const Kernel f, const InputIterator& first) restrict(amp,cpu)
-      : _ext(ext), k(f), _first(first) {}
-  void operator() (std::offset<1> idx) restrict(amp,cpu) {
-#ifdef __KALMAR_ACCELERATOR__
-      *(_first + idx[0]) = k();
-#endif
-  }
-private:
-  const size_t _ext;
-  const Kernel k;
-  const InputIterator& _first;
-};
-
-template<typename Kernel, typename InputIterator, typename OutputIterator>
-class transform_wrapper
-{
-public:
-  explicit transform_wrapper(size_t ext, const Kernel f, const InputIterator& first, const OutputIterator& d_first) restrict(amp,cpu)
-      : _ext(ext), k(f), _first(first), _d_first(d_first) {}
-  void operator() (std::offset<1> idx) restrict(amp,cpu) {
-#ifdef __KALMAR_ACCELERATOR__
-      *(_d_first + idx[0]) = k(*(_first + idx[0]));
-#endif
-  }
-private:
-  const size_t _ext;
-  const Kernel k;
-  const InputIterator& _first;
-  const OutputIterator& _d_first;
-};
-
-template<typename Kernel, typename InputIterator, typename OutputIterator>
-class binary_transform_wrapper
-{
-public:
-  explicit binary_transform_wrapper(size_t ext, const Kernel f, const InputIterator& first, const InputIterator& first2, const OutputIterator& d_first) restrict(amp,cpu)
-      : _ext(ext), k(f), _first(first), _first2(first2), _d_first(d_first) {}
-  void operator() (std::offset<1> idx) restrict(amp,cpu) {
-#ifdef __KALMAR_ACCELERATOR__
-      *(_d_first + idx[0]) = k(*(_first + idx[0]), *(_first2 + idx[0]));
-#endif
-  }
-private:
-  const size_t _ext;
-  const Kernel k;
-  const InputIterator& _first;
-  const InputIterator& _first2;
-  const OutputIterator& _d_first;
-};
-
-template<typename Kernel, typename InputIterator, typename T>
-class replace_if_wrapper
-{
-public:
-  explicit replace_if_wrapper(size_t ext, const Kernel f, const InputIterator& first, const T& new_value) restrict(amp,cpu)
-      : _ext(ext), k(f), _first(first), _new_value(new_value) {}
-  void operator() (std::offset<1> idx) restrict(amp,cpu) {
-#ifdef __KALMAR_ACCELERATOR__
-      if (k(*(_first + idx[0])))
-        *(_first + idx[0]) = _new_value;
-#endif
-  }
-private:
-  const size_t _ext;
-  const Kernel k;
-  const InputIterator& _first;
-  const T& _new_value;
-};
-
-template<typename Kernel, typename InputIterator, typename OutputIterator, typename T>
-class replace_copy_if_wrapper
-{
-public:
-  explicit replace_copy_if_wrapper(size_t ext, const Kernel f, const InputIterator& first, const OutputIterator& d_first, const T& new_value) restrict(amp,cpu)
-      : _ext(ext), k(f), _first(first), _d_first(d_first), _new_value(new_value) {}
-  void operator() (std::offset<1> idx) restrict(amp,cpu) {
-#ifdef __KALMAR_ACCELERATOR__
-      if (k(*(_first + idx[0])))
-        *(_d_first + idx[0]) = _new_value;
-      else
-        *(_d_first + idx[0]) = *(_first + idx[0]);
-#endif
-  }
-private:
-  const size_t _ext;
-  const Kernel k;
-  const InputIterator& _first;
-  const OutputIterator& _d_first;
-  const T& _new_value;
-};
-
-template<typename Kernel, typename InputIterator, typename OutputIterator>
-class adjdiff_wrapper
-{
-public:
-  explicit adjdiff_wrapper(size_t ext, const Kernel f, const InputIterator& first, const OutputIterator& d_first) restrict(amp,cpu)
-      : _ext(ext), k(f), _first(first), _d_first(d_first) {}
-  void operator() (std::offset<1> idx) restrict(amp,cpu) {
-#ifdef __KALMAR_ACCELERATOR__
-      if (idx[0] == 0)
-        *(_d_first + idx[0]) = *(_first + idx[0]);
-      else
-        *(_d_first + idx[0]) = k(*(_first + idx[0]), *(_first + (idx[0] - 1)));
-#endif
-  }
-private:
-  const size_t _ext;
-  const Kernel k;
-  const InputIterator& _first;
-  const OutputIterator& _d_first;
-};
-
-template<typename InputIterator, typename OutputIterator>
-class swap_ranges_wrapper
-{
-public:
-  explicit swap_ranges_wrapper(size_t ext, const InputIterator& first, const OutputIterator& d_first) restrict(amp,cpu)
-      : _ext(ext), _first(first), _d_first(d_first) {}
-  void operator() (std::offset<1> idx) restrict(amp,cpu) {
-#ifdef __KALMAR_ACCELERATOR__
-      std::iter_swap(_first + idx[0], _d_first + idx[0]);
-#endif
-  }
-private:
-  const size_t _ext;
-  const InputIterator& _first;
-  const OutputIterator& _d_first;
-};
-
-// transform (unary version)
-template <typename ExecutionPolicy,
-          typename InputIterator, typename OutputIterator, typename Function>
-__attribute__((noinline,used))
-OutputIterator transform(ExecutionPolicy&& exec,
-              InputIterator first, InputIterator last,
-              OutputIterator d_first,
-              Function f) restrict(cpu,amp) {
-  auto distance = std::distance(first, last);
-  if (distance >= 0) {
-#ifndef __KALMAR_ACCELERATOR__
-  size_t ext = std::distance(first, last);
-  transform_wrapper<Function, InputIterator, OutputIterator> _pf(ext, f, first, d_first);
-  Kalmar::mcw_cxxamp_launch_kernel<transform_wrapper<Function, InputIterator, OutputIterator>, 1>(Kalmar::getContext()->getDevice(L"default")->get_default_queue(), &ext, NULL, _pf);
-#else //ifndef __KALMAR_ACCELERATOR__
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  auto bar = &transform_wrapper<Function, InputIterator, OutputIterator>::operator();
-  auto qq = &std::offset<1>::__cxxamp_opencl_index;
-  int* foo = reinterpret_cast<int*>(&transform_wrapper<Function, InputIterator, OutputIterator>::__cxxamp_trampoline);
-#endif
-  }
-  return (distance < 0) ? d_first : d_first + distance;
 }
 
-// transform (binary version)
-template <typename ExecutionPolicy,
-          typename InputIterator, typename OutputIterator, typename Function>
-__attribute__((noinline,used))
-OutputIterator transform(ExecutionPolicy&& exec,
-              InputIterator first, InputIterator last,
-              InputIterator first2,
-              OutputIterator d_first,
-              Function f) restrict(cpu,amp) {
-  auto distance = std::distance(first, last);
-  if (distance >= 0) {
-#ifndef __KALMAR_ACCELERATOR__
-  size_t ext = std::distance(first, last);
-  binary_transform_wrapper<Function, InputIterator, OutputIterator> _pf(ext, f, first, first2, d_first);
-  Kalmar::mcw_cxxamp_launch_kernel<binary_transform_wrapper<Function, InputIterator, OutputIterator>, 1>(Kalmar::getContext()->getDevice(L"default")->get_default_queue(), &ext, NULL, _pf);
-#else //ifndef __KALMAR_ACCELERATOR__
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  auto bar = &binary_transform_wrapper<Function, InputIterator, OutputIterator>::operator();
-  auto qq = &std::offset<1>::__cxxamp_opencl_index;
-  int* foo = reinterpret_cast<int*>(&binary_transform_wrapper<Function, InputIterator, OutputIterator>::__cxxamp_trampoline);
-#endif
+
+/**
+ * Parallel version of std::transform (binary version) in <algorithm>
+ */
+template<class ExecutionPolicy,
+         class InputIterator, class OutputIterator,
+         class BinaryOperation,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
+OutputIterator
+transform(ExecutionPolicy&& exec,
+          InputIterator first1, InputIterator last1,
+          InputIterator first2, OutputIterator d_first,
+          BinaryOperation binary_op) {
+  if (utils::isParallel(exec)) {
+    return details::transform_impl(first1, last1, first2, d_first, binary_op,
+             typename std::iterator_traits<InputIterator>::iterator_category());
+  } else {
+    return details::transform_impl(first1, last1, first2, d_first, binary_op,
+             std::input_iterator_tag{});
   }
-  return (distance < 0) ? d_first : d_first + distance;
 }
 
-// generate
-template <typename ExecutionPolicy,
-          typename ForwardIterator, typename Generator>
-__attribute__((noinline,used))
-void generate(ExecutionPolicy&& exec,
-              ForwardIterator first, ForwardIterator last,
-              Generator g) restrict(cpu,amp) {
-#ifndef __KALMAR_ACCELERATOR__
-  size_t ext = std::distance(first, last);
-  generate_wrapper<Generator, ForwardIterator> _pf(ext, g, first);
-  Kalmar::mcw_cxxamp_launch_kernel<generate_wrapper<Generator, ForwardIterator>, 1>(Kalmar::getContext()->getDevice(L"default")->get_default_queue(), &ext, NULL, _pf);
-#else //ifndef __KALMAR_ACCELERATOR__
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  auto bar = &generate_wrapper<Generator, ForwardIterator>::operator();
-  auto qq = &std::offset<1>::__cxxamp_opencl_index;
-  int* foo = reinterpret_cast<int*>(&generate_wrapper<Generator, ForwardIterator>::__cxxamp_trampoline);
-#endif
+
+/**
+ * Parallel version of std::generate in <algorithm>
+ */
+template<typename ExecutionPolicy,
+         typename ForwardIterator, typename Generator,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isForwardIt<ForwardIterator>> = nullptr>
+void
+generate(ExecutionPolicy&& exec,
+         ForwardIterator first, ForwardIterator last,
+         Generator g) {
+  if (utils::isParallel(exec)) {
+    details::generate_impl(first, last, g,
+      typename std::iterator_traits<ForwardIterator>::iterator_category());
+  } else {
+    details::generate_impl(first, last, g,
+      std::input_iterator_tag{});
+  }
 }
 
-// generate_n
-template <typename ExecutionPolicy,
-          typename OutputIterator, typename Size, typename Generator>
-__attribute__((noinline,used))
-OutputIterator generate_n(ExecutionPolicy&& exec,
-              OutputIterator first, Size count,
-              Generator g) restrict(cpu,amp) {
+
+/**
+ * Parallel version of std::generate_n in <algorithm>
+ */
+template<typename ExecutionPolicy,
+         typename OutputIterator, typename Size, typename Generator,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr>
+OutputIterator
+generate_n(ExecutionPolicy&& exec,
+           OutputIterator first, Size count,
+           Generator g) {
   if (count >= Size()) {
-#ifndef __KALMAR_ACCELERATOR__
-  size_t ext = std::distance(first, first + count);
-  generate_wrapper<Generator, OutputIterator> _pf(ext, g, first);
-  Kalmar::mcw_cxxamp_launch_kernel<generate_wrapper<Generator, OutputIterator>, 1>(Kalmar::getContext()->getDevice(L"default")->get_default_queue(), &ext, NULL, _pf);
-#else //ifndef __KALMAR_ACCELERATOR__
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  auto bar = &generate_wrapper<Generator, OutputIterator>::operator();
-  auto qq = &std::offset<1>::__cxxamp_opencl_index;
-  int* foo = reinterpret_cast<int*>(&generate_wrapper<Generator, OutputIterator>::__cxxamp_trampoline);
-#endif
+    if (utils::isParallel(exec)) {
+      details::generate_impl(first, first + count, g,
+        typename std::iterator_traits<OutputIterator>::iterator_category());
+    } else {
+      details::generate_impl(first, first + count, g,
+        std::input_iterator_tag{});
+    }
   }
   return (count < Size()) ? first : first + count;
 }
 
-// for_each
-template <typename ExecutionPolicy,
-          typename InputIterator, typename Function>
-__attribute__((noinline,used))
-void for_each(ExecutionPolicy&& exec,
-              InputIterator first, InputIterator last,
-              Function f) restrict(cpu,amp) {
-#ifndef __KALMAR_ACCELERATOR__
-  size_t ext = std::distance(first, last);
-  fe_wrapper<Function, InputIterator> _pf(ext, f, first);
-  Kalmar::mcw_cxxamp_launch_kernel<fe_wrapper<Function, InputIterator>, 1>(Kalmar::getContext()->getDevice(L"default")->get_default_queue(), &ext, NULL, _pf);
-#else //ifndef __KALMAR_ACCELERATOR__
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  auto bar = &fe_wrapper<Function, InputIterator>::operator();
-  auto qq = &std::offset<1>::__cxxamp_opencl_index;
-  int* foo = reinterpret_cast<int*>(&fe_wrapper<Function, InputIterator>::__cxxamp_trampoline);
-#endif
+
+/**
+ * Parallel version of std::for_each in <algorithm>
+ *
+ *
+ * Effects: Applies f to the result of dereferencing every iterator in the
+ * range [first,last).
+ *
+ * Complexity: Applies f exactly last - first times.
+ *
+ * Remarks: If f returns a result, the result is ignored.
+ *
+ * Notes: Unlike its sequential form, the parallel overload of for_each does
+ * not return a copy of its Function parameter, since parallelization may
+ * not permit efficient state accumulation.
+ *
+ * Requires: Unlike its sequential form, the parallel overload of for_each
+ * requires Function to meet the requirements of CopyConstructible
+ *
+ * @param first The beginning of the range to apply the function to
+ * @param last The end of the range to apply the function to
+ * @param f function object to be applied to the range [first, last)
+ *
+ * Return: None
+ *
+ */
+template<typename ExecutionPolicy,
+         typename InputIterator, typename Function,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
+void
+for_each(ExecutionPolicy&& exec,
+         InputIterator first, InputIterator last,
+         Function f) {
+  if (utils::isParallel(exec)) {
+    details::for_each_impl(first, last, f,
+      typename std::iterator_traits<InputIterator>::iterator_category());
+  } else {
+    details::for_each_impl(first, last, f,
+      std::input_iterator_tag{});
+  }
 }
 
-// for_each_n
-template <typename ExecutionPolicy,
-          typename InputIterator, typename Size, typename Function>
-__attribute__((noinline,used))
-typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, InputIterator>::type
-for_each_n(ExecutionPolicy&& exec,
-           InputIterator first, Size n,
-           Function f) restrict(cpu,amp) {
+
+/**
+ *  Requires: Function shall meet the requirements of MoveConstructible
+ *
+ *  Effects: Applies f to the result of dereferencing every iterator in the
+ *  range [first,first + n), *  starting from first and proceeding to
+ *  first + n - 1.
+ *
+ *  Remarks: If f returns a result, the result is ignored.
+ *
+ *  Return: first + n for non-negative values of n and first for negative
+ *  values.
+ */
+template<typename InputIterator, typename Size, typename Function,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
+InputIterator
+for_each_n(InputIterator first, Size n,
+           Function f) {
   if (n >= Size()) {
-#ifndef __KALMAR_ACCELERATOR__
-  size_t ext = std::distance(first, first + n);
-  fe_wrapper<Function, InputIterator> _pf(ext, f, first);
-  Kalmar::mcw_cxxamp_launch_kernel<fe_wrapper<Function, InputIterator>, 1>(Kalmar::getContext()->getDevice(L"default")->get_default_queue(), &ext, NULL, _pf);
-#else //ifndef __KALMAR_ACCELERATOR__
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  auto bar = &fe_wrapper<Function, InputIterator>::operator();
-  auto qq = &std::offset<1>::__cxxamp_opencl_index;
-  int* foo = reinterpret_cast<int*>(&fe_wrapper<Function, InputIterator>::__cxxamp_trampoline);
-#endif
+    details::for_each_impl(first, first + n, f,
+      typename std::iterator_traits<InputIterator>::iterator_category());
   }
   return (n < Size()) ? first : first + n;
 }
 
-// replace_if
-template <typename ExecutionPolicy,
-          typename ForwardIterator, typename Function, typename T>
-__attribute__((noinline,used))
-void replace_if(ExecutionPolicy&& exec,
-              ForwardIterator first, ForwardIterator last,
-              Function f, const T& new_value) restrict(cpu,amp) {
-#ifndef __KALMAR_ACCELERATOR__
-  size_t ext = std::distance(first, last);
-  replace_if_wrapper<Function, ForwardIterator, T> _pf(ext, f, first, new_value);
-  Kalmar::mcw_cxxamp_launch_kernel<replace_if_wrapper<Function, ForwardIterator, T>, 1>(Kalmar::getContext()->getDevice(L"default")->get_default_queue(), &ext, NULL, _pf);
-#else //ifndef __KALMAR_ACCELERATOR__
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  auto bar = &replace_if_wrapper<Function, ForwardIterator, T>::operator();
-  auto qq = &std::offset<1>::__cxxamp_opencl_index;
-  int* foo = reinterpret_cast<int*>(&replace_if_wrapper<Function, ForwardIterator, T>::__cxxamp_trampoline);
-#endif
-}
 
-// replace_copy_if
-template <typename ExecutionPolicy,
-          typename InputIterator, typename OutputIterator,
-          typename Function, typename T>
-__attribute__((noinline,used))
-OutputIterator replace_copy_if(ExecutionPolicy&& exec,
-              InputIterator first, InputIterator last,
-              OutputIterator d_first,
-              Function f, const T& new_value) restrict(cpu,amp) {
-  auto distance = std::distance(first, last);
-  if (distance >= 0) {
-#ifndef __KALMAR_ACCELERATOR__
-  size_t ext = std::distance(first, last);
-  replace_copy_if_wrapper<Function, InputIterator, OutputIterator, T> _pf(ext, f, first, d_first, new_value);
-  Kalmar::mcw_cxxamp_launch_kernel<replace_copy_if_wrapper<Function, InputIterator, OutputIterator, T>, 1>(Kalmar::getContext()->getDevice(L"default")->get_default_queue(), &ext, NULL, _pf);
-#else //ifndef __KALMAR_ACCELERATOR__
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  auto bar = &replace_copy_if_wrapper<Function, InputIterator, OutputIterator, T>::operator();
-  auto qq = &std::offset<1>::__cxxamp_opencl_index;
-  int* foo = reinterpret_cast<int*>(&replace_copy_if_wrapper<Function, InputIterator, OutputIterator, T>::__cxxamp_trampoline);
-#endif
+/**
+ * Effects: Applies f to the result of dereferencing every iterator in the
+ * range [first,first + n), starting from first and proceeding to first + n - 1.
+ *
+ * Remarks: If f returns a result, the result is ignored.
+ *
+ * Notes: Unlike its sequential form, the parallel overload of for_each_n
+ * requires Function to meet the requirements of CopyConstructible.
+ *
+ * Return: first + n for non-negative values of n and first for negative values.
+ */
+template<typename ExecutionPolicy,
+         typename InputIterator, typename Size, typename Function,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
+InputIterator
+for_each_n(ExecutionPolicy&& exec,
+           InputIterator first, Size n,
+           Function f) {
+  if (n >= Size()) {
+    if (utils::isParallel(exec)) {
+      for_each_n(first, n, f);
+    } else {
+      details::for_each_impl(first, first + n, f,
+        std::input_iterator_tag{});
+    }
   }
-  return (distance < 0) ? d_first : d_first + distance;
+  return (n < Size()) ? first : first + n;
 }
 
-// adjacent_difference (with predicate version)
-template <typename ExecutionPolicy,
-          typename InputIterator, typename OutputIterator, typename Function>
-__attribute__((noinline,used))
-OutputIterator adjacent_difference(ExecutionPolicy&& exec,
-              InputIterator first, InputIterator last,
-              OutputIterator d_first,
-              Function f) restrict(cpu,amp) {
-  auto distance = std::distance(first, last);
-  if (distance >= 0) {
-#ifndef __KALMAR_ACCELERATOR__
-  size_t ext = std::distance(first, last);
-  adjdiff_wrapper<Function, InputIterator, OutputIterator> _pf(ext, f, first, d_first);
-  Kalmar::mcw_cxxamp_launch_kernel<adjdiff_wrapper<Function, InputIterator, OutputIterator>, 1>(Kalmar::getContext()->getDevice(L"default")->get_default_queue(), &ext, NULL, _pf);
-#else //ifndef __KALMAR_ACCELERATOR__
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  auto bar = &adjdiff_wrapper<Function, InputIterator, OutputIterator>::operator();
-  auto qq = &std::offset<1>::__cxxamp_opencl_index;
-  int* foo = reinterpret_cast<int*>(&adjdiff_wrapper<Function, InputIterator, OutputIterator>::__cxxamp_trampoline);
-#endif
+
+/**
+ * Parallel version of std::replace_if in <algorithm>
+ */
+template<typename ExecutionPolicy,
+         typename ForwardIterator, typename Function, typename T,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isForwardIt<ForwardIterator>> = nullptr>
+void
+replace_if(ExecutionPolicy&& exec,
+           ForwardIterator first, ForwardIterator last,
+           Function f, const T& new_value) {
+  if (utils::isParallel(exec)) {
+    details::replace_if_impl(first, last, f, new_value,
+      typename std::iterator_traits<ForwardIterator>::iterator_category());
+  } else {
+    details::replace_if_impl(first, last, f, new_value,
+      std::input_iterator_tag{});
   }
-  return (distance < 0) ? d_first : d_first + distance;
 }
 
-// swap_ranges
-template <typename ExecutionPolicy,
-          typename InputIterator, typename OutputIterator>
-__attribute__((noinline,used))
-OutputIterator swap_ranges(ExecutionPolicy&& exec,
-              InputIterator first, InputIterator last,
-              OutputIterator d_first) restrict(cpu,amp) {
-  auto distance = std::distance(first, last);
-  if (distance >= 0) {
-#ifndef __KALMAR_ACCELERATOR__
-  size_t ext = std::distance(first, last);
-  swap_ranges_wrapper<InputIterator, OutputIterator> _pf(ext, first, d_first);
-  Kalmar::mcw_cxxamp_launch_kernel<swap_ranges_wrapper<InputIterator, OutputIterator>, 1>(Kalmar::getContext()->getDevice(L"default")->get_default_queue(), &ext, NULL, _pf);
-#else //ifndef __KALMAR_ACCELERATOR__
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  auto bar = &swap_ranges_wrapper<InputIterator, OutputIterator>::operator();
-  auto qq = &std::offset<1>::__cxxamp_opencl_index;
-  int* foo = reinterpret_cast<int*>(&swap_ranges_wrapper<InputIterator, OutputIterator>::__cxxamp_trampoline);
-#endif
+
+/**
+ * Parallel version of std::replace_copy_if in <algorithm>
+ */
+template<typename ExecutionPolicy,
+         typename InputIterator, typename OutputIterator,
+         typename Function, typename T,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
+OutputIterator
+replace_copy_if(ExecutionPolicy&& exec,
+                InputIterator first, InputIterator last,
+                OutputIterator d_first,
+                Function f, const T& new_value) {
+  if (utils::isParallel(exec)) {
+    return details::replace_copy_if_impl(first, last, d_first, f, new_value,
+             typename std::iterator_traits<InputIterator>::iterator_category());
+  } else {
+    return details::replace_copy_if_impl(first, last, d_first, f, new_value,
+             std::input_iterator_tag{});
   }
-  return (distance < 0) ? d_first : d_first + distance;
 }
 
 
-// fill
-template <typename ExecutionPolicy,
-          typename ForwardIterator, typename T>
-__attribute__((noinline,used))
-void fill(ExecutionPolicy&& exec,
-            ForwardIterator first, ForwardIterator last,
-            const T& value) {
+/**
+ * Parallel version of std::adjacent_difference (with predicate version) in <algorithm>
+ */
+template<typename ExecutionPolicy,
+         typename InputIterator, typename OutputIterator, typename Function,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
+OutputIterator
+adjacent_difference(ExecutionPolicy&& exec,
+                    InputIterator first, InputIterator last,
+                    OutputIterator d_first,
+                    Function f) {
+  if (utils::isParallel(exec)) {
+    return details::adjacent_difference_impl(first, last, d_first, f,
+             typename std::iterator_traits<InputIterator>::iterator_category());
+  } else {
+    return details::adjacent_difference_impl(first, last, d_first, f,
+             std::input_iterator_tag{});
+  }
+}
+
+
+/**
+ * Parallel version of std::swap_ranges in <algorithm>
+ */
+template<typename ExecutionPolicy,
+         typename InputIterator, typename OutputIterator,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
+OutputIterator
+swap_ranges(ExecutionPolicy&& exec,
+            InputIterator first, InputIterator last,
+            OutputIterator d_first) {
+  if (utils::isParallel(exec)) {
+    return details::swap_ranges_impl(first, last, d_first,
+             typename std::iterator_traits<InputIterator>::iterator_category());
+  } else {
+    return details::swap_ranges_impl(first, last, d_first,
+             std::input_iterator_tag{});
+  }
+}
+
+
+/**
+ * Parallel version of std::fill in <algorithm>
+ */
+template<typename ExecutionPolicy,
+         typename ForwardIterator, typename T,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isForwardIt<ForwardIterator>> = nullptr>
+void
+fill(ExecutionPolicy&& exec,
+     ForwardIterator first, ForwardIterator last,
+     const T& value) {
   // fill kernel
   auto k = [&](typename std::iterator_traits<ForwardIterator>::value_type& v) {
     v = value;
@@ -425,13 +327,17 @@ void fill(ExecutionPolicy&& exec,
   for_each(exec, first, last, k);
 }
 
-// fill_n
-template <typename ExecutionPolicy,
-          typename OutputIterator, typename Size, typename T>
-__attribute__((noinline,used))
-OutputIterator fill_n(ExecutionPolicy&& exec,
-            OutputIterator first, Size count,
-            const T& value) {
+
+/**
+ * Parallel version of std::fill_n in <algorithm>
+ */
+template<typename ExecutionPolicy,
+         typename OutputIterator, typename Size, typename T,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr>
+OutputIterator
+fill_n(ExecutionPolicy&& exec,
+       OutputIterator first, Size count,
+       const T& value) {
   if (count >= Size()) {
     // fill_n kernel
     auto k = [&](typename std::iterator_traits<OutputIterator>::value_type& v) {
@@ -444,13 +350,18 @@ OutputIterator fill_n(ExecutionPolicy&& exec,
   return (count < Size()) ? first : first + count;
 }
 
-// copy
-template <typename ExecutionPolicy,
-          typename InputIterator, typename OutputIterator>
-__attribute__((noinline,used))
-OutputIterator copy(ExecutionPolicy&& exec,
-              InputIterator first, InputIterator last,
-              OutputIterator d_first) {
+
+/**
+ * Parallel version of std::copy in <algorithm>
+ */
+template<typename ExecutionPolicy,
+         typename InputIterator, typename OutputIterator,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
+OutputIterator
+copy(ExecutionPolicy&& exec,
+     InputIterator first, InputIterator last,
+     OutputIterator d_first) {
   // copy kernel
   auto k = [](typename std::iterator_traits<InputIterator>::value_type& v) {
     return v;
@@ -460,13 +371,18 @@ OutputIterator copy(ExecutionPolicy&& exec,
   return transform(exec, first, last, d_first, k);
 }
 
-// copy_n
-template <typename ExecutionPolicy,
-          typename InputIterator, typename Size, typename OutputIterator>
-__attribute__((noinline,used))
-OutputIterator copy_n(ExecutionPolicy&& exec,
-              InputIterator first, Size count,
-              OutputIterator result) {
+
+/**
+ * Parallel version of std::copy_n in <algorithm>
+ */
+template<typename ExecutionPolicy,
+         typename InputIterator, typename Size, typename OutputIterator,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
+OutputIterator
+copy_n(ExecutionPolicy&& exec,
+       InputIterator first, Size count,
+       OutputIterator result) {
   if (count >= Size()) {
     // use copy to implement copy_n
     auto last = std::next(first, count);
@@ -476,13 +392,18 @@ OutputIterator copy_n(ExecutionPolicy&& exec,
   return result;
 }
 
-// replace
-template <typename ExecutionPolicy,
-          typename ForwardIterator, typename T>
-__attribute__((noinline,used))
-void replace(ExecutionPolicy&& exec,
-            ForwardIterator first, ForwardIterator last,
-            const T& old_value, const T& new_value) {
+
+/**
+ * Parallel version of std::replace in <algorithm>
+ */
+template<typename ExecutionPolicy,
+         typename ForwardIterator, typename T,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isForwardIt<ForwardIterator>> = nullptr>
+void
+replace(ExecutionPolicy&& exec,
+        ForwardIterator first, ForwardIterator last,
+        const T& old_value, const T& new_value) {
   // replace kernel
   auto k = [&](typename std::iterator_traits<ForwardIterator>::value_type& v) {
     if (v == old_value)
@@ -493,14 +414,19 @@ void replace(ExecutionPolicy&& exec,
   for_each(exec, first, last, k);
 }
 
-// replace_copy
-template <typename ExecutionPolicy,
-          typename InputIterator, typename OutputIterator, typename T>
-__attribute__((noinline,used))
-OutputIterator replace_copy(ExecutionPolicy&& exec,
-                            InputIterator first, InputIterator last,
-                            OutputIterator d_first,
-                            const T& old_value, const T& new_value) {
+
+/**
+ * Parallel version of std::replace_copy in <algorithm>
+ */
+template<typename ExecutionPolicy,
+         typename InputIterator, typename OutputIterator, typename T,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
+OutputIterator
+replace_copy(ExecutionPolicy&& exec,
+             InputIterator first, InputIterator last,
+             OutputIterator d_first,
+             const T& old_value, const T& new_value) {
   // replace_copy kernel
   auto k = [&](typename std::iterator_traits<InputIterator>::value_type& v) {
     return (v == old_value) ? new_value : v;
@@ -510,26 +436,317 @@ OutputIterator replace_copy(ExecutionPolicy&& exec,
   return transform(exec, first, last, d_first, k);
 }
 
-// adjacent_difference (without predicate version)
-template <typename ExecutionPolicy,
-          typename InputIterator, typename OutputIterator>
-__attribute__((noinline,used))
-OutputIterator adjacent_difference(ExecutionPolicy&& exec,
-              InputIterator first, InputIterator last,
-              OutputIterator d_first) restrict(cpu,amp) {
+
+/**
+ * Parallel version of std::adjacent_difference in <algorithm>
+ */
+template<typename ExecutionPolicy,
+         typename InputIterator, typename OutputIterator,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
+OutputIterator
+adjacent_difference(ExecutionPolicy&& exec,
+                    InputIterator first, InputIterator last,
+                    OutputIterator d_first) {
   typedef typename std::iterator_traits<InputIterator>::value_type Type;
   // adjacent_difference kernel
   auto k = [](const Type& a, const Type& b) {
-      return a - b;
+    return a - b;
   };
 
   return adjacent_difference(exec, first, last, d_first, k);
 }
 
 
+/**
+ * Parallel version of std::lexicographical_compare in <algorithm>
+ * @{
+ */
+template<typename ExecutionPolicy, typename InputIt1, typename InputIt2,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIt1>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIt2>> = nullptr>
+bool
+lexicographical_compare(ExecutionPolicy&& exec,
+                        InputIt1 first1, InputIt1 last1,
+                        InputIt2 first2, InputIt2 last2) {
+  return lexicographical_compare(exec, first1, last1, first2, last2,
+           std::less<typename std::iterator_traits<InputIt1>::value_type>());
+
+}
+
+
+template<typename ExecutionPolicy, typename InputIt1, typename InputIt2,
+         typename Compare,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIt1>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIt2>> = nullptr>
+bool
+lexicographical_compare(ExecutionPolicy&& exec,
+                        InputIt1 first1, InputIt1 last1,
+                        InputIt2 first2, InputIt2 last2,
+                        Compare comp) {
+  if (utils::isParallel(exec)) {
+    return details::lexicographical_compare_impl(first1, last1, first2, last2,
+             comp,
+             typename std::iterator_traits<InputIt1>::iterator_category());
+  } else {
+    return details::lexicographical_compare_impl(first1, last1, first2, last2,
+             comp,
+             std::input_iterator_tag{});
+  }
+}
+/**@}*/
+
+
+/**
+ * Parallel version of std::equal in <algorithm>
+ * @{
+ */
+template<typename ExecutionPolicy,
+         typename InputIt1, typename InputIt2,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIt1>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIt2>> = nullptr>
+bool
+equal(ExecutionPolicy&& exec,
+      InputIt1 first1, InputIt1 last1,
+      InputIt2 first2) {
+  return equal(exec, first1, last1, first2,
+           std::equal_to<typename std::iterator_traits<InputIt1>::value_type>());
+}
+
+template<typename ExecutionPolicy,
+         typename InputIt1, typename InputIt2,
+         typename BinaryPredicate,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIt1>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIt2>> = nullptr>
+bool
+equal(ExecutionPolicy&& exec,
+      InputIt1 first1, InputIt1 last1,
+      InputIt2 first2,
+      BinaryPredicate p) {
+  if (utils::isParallel(exec)) {
+    return details::equal_impl(first1, last1, first2, p,
+             typename std::iterator_traits<InputIt1>::iterator_category());
+  } else {
+    return details::equal_impl(first1, last1, first2, p,
+             std::input_iterator_tag{});
+  }
+}
+/**@}*/
+
+
+/**
+ * Parallel version of std::count_if in <algorithm>
+ */
+template<typename ExecutionPolicy,
+         typename InputIt,
+         typename UnaryPredicate,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIt>> = nullptr>
+typename std::iterator_traits<InputIt>::difference_type
+count_if(ExecutionPolicy&& exec,
+         InputIt first, InputIt last,
+         UnaryPredicate p) {
+  if (utils::isParallel(exec)) {
+    typedef typename std::iterator_traits<InputIt>::value_type T;
+    typedef typename std::iterator_traits<InputIt>::difference_type DT;
+
+    const size_t N = static_cast<size_t>(std::distance(first, last));
+    if (N <= details::PARALLELIZE_THRESHOLD) {
+      return std::count_if(first, last, p);
+    }
+
+    return transform_reduce(first, last,
+                            [p](const T &v) -> DT { return DT(p(v)); },
+                            DT{},
+                            std::plus<DT>());
+  } else {
+    return std::count_if(first, last, p);
+  }
+}
+
+
+/**
+ * Parallel version of std::count in <algorithm>
+ */
+template<typename ExecutionPolicy,
+         typename InputIt,
+         typename T,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIt>> = nullptr>
+typename std::iterator_traits<InputIt>::difference_type
+count(ExecutionPolicy&& exec,
+      InputIt first, InputIt last,
+      const T& value) {
+  return count_if(exec, first, last,
+                  [&value](const T &v) -> bool { return v == value; });
+}
+
+
+/**
+ * Parallel version of std::max_element in <algorithm>
+ * @{
+ */
+template<typename ExecutionPolicy,
+         typename ForwardIt,
+         typename Compare,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isForwardIt<ForwardIt>> = nullptr>
+ForwardIt
+max_element(ExecutionPolicy&& exec,
+            ForwardIt first, ForwardIt last,
+            Compare cmp) {
+  return std::max_element(first, last, cmp);
+}
+
+
+template<typename ExecutionPolicy,
+         typename ForwardIt,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isForwardIt<ForwardIt>> = nullptr>
+ForwardIt
+max_element(ExecutionPolicy&& exec,
+            ForwardIt first, ForwardIt last) {
+  typedef typename std::iterator_traits<ForwardIt>::value_type T;
+  return max_element(exec, first, last, std::less<T>());
+}
+/**@}*/
+
+
+/**
+ * Parallel version of std::min_element in <algorithm>
+ * @{
+ */
+template<typename ExecutionPolicy,
+         typename ForwardIt,
+         typename Compare,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isForwardIt<ForwardIt>> = nullptr>
+ForwardIt
+min_element(ExecutionPolicy&& exec,
+            ForwardIt first, ForwardIt last,
+            Compare cmp) {
+  return std::min_element(first, last, cmp);
+}
+
+
+template<typename ExecutionPolicy,
+         typename ForwardIt,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isForwardIt<ForwardIt>> = nullptr>
+ForwardIt
+min_element(ExecutionPolicy&& exec,
+            ForwardIt first, ForwardIt last) {
+  typedef typename std::iterator_traits<ForwardIt>::value_type T;
+  return min_element(exec, first, last, std::less<T>());
+}
+/**@}*/
+
+
+/**
+ * Parallel version of std::minmax_element in <algorithm>
+ * @{
+ */
+template<typename ExecutionPolicy,
+         typename ForwardIt,
+         typename Compare,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isForwardIt<ForwardIt>> = nullptr>
+std::pair<ForwardIt, ForwardIt>
+minmax_element(ExecutionPolicy&& exec,
+               ForwardIt first, ForwardIt last,
+               Compare cmp) {
+  if (utils::isParallel(exec)) {
+    return {
+      min_element(first, last, cmp),
+      max_element(first, last, cmp)
+    };
+  } else {
+    return std::minmax_element(first, last, cmp);
+  }
+}
+
+
+template<typename ExecutionPolicy,
+         typename ForwardIt,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isForwardIt<ForwardIt>> = nullptr>
+std::pair<ForwardIt, ForwardIt>
+minmax_element(ExecutionPolicy&& exec,
+               ForwardIt first, ForwardIt last) {
+  typedef typename std::iterator_traits<ForwardIt>::value_type T;
+  return minmax_element(exec, first, last, std::less<T>());
+}
+/**@}*/
+
+
+/**
+ * Parallel version of std::all_of in <algorithm>
+ */
+template<typename ExecutionPolicy,
+         typename InputIt,
+         typename UnaryPredicate,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIt>> = nullptr>
+bool
+all_of(ExecutionPolicy&& exec,
+       InputIt first, InputIt last,
+       UnaryPredicate p) {
+  if (utils::isParallel(exec)) {
+    return transform_reduce(exec, first, last, p, true,
+                            std::logical_and<bool>());
+  } else {
+    return std::all_of(first, last, p);
+  }
+}
+
+
+/**
+ * Parallel version of std::any_of in <algorithm>
+ */
+template<typename ExecutionPolicy,
+         typename InputIt, typename UnaryPredicate,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIt>> = nullptr>
+bool
+any_of(ExecutionPolicy&& exec,
+       InputIt first, InputIt last,
+       UnaryPredicate p) {
+  if (utils::isParallel(exec)) {
+    return transform_reduce(first, last, p, false,
+                            std::logical_or<bool>());
+  } else {
+    return std::any_of(first, last, p);
+  }
+}
+
+
+/**
+ * Parallel version of std::none_of in <algorithm>
+ */
+template<typename ExecutionPolicy,
+         typename InputIt,
+         typename UnaryPredicate,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIt>> = nullptr>
+bool
+none_of(ExecutionPolicy&& exec,
+        InputIt first, InputIt last,
+        UnaryPredicate p ) {
+  if (utils::isParallel(exec)) {
+    return any_of(exec, first, last, p) == false;
+  } else {
+    return std::none_of(first, last, p);
+  }
+}
+
+
 } // inline namespace v1
 } // namespace parallel
-} // namespace experimental 
+} // namespace experimental
 } // namespace std
 
 // sequential versions of algorithms are implemented inside this  file

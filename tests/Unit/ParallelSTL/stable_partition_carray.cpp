@@ -1,64 +1,33 @@
 // XFAIL: Linux
-// RUN: %cxxamp -Xclang -fhsa-ext %s -o %t.out && %t.out
+// RUN: %hc %s -o %t.out && %t.out
 
 // Parallel STL headers
 #include <coordinate>
 #include <experimental/algorithm>
 #include <experimental/execution_policy>
 
-// C++ headers
-#include <iostream>
-#include <iomanip>
-#include <algorithm>
-
-#define ROW (8)
-#define COL (16)
-#define TEST_SIZE (ROW * COL)
-
 #define _DEBUG (0)
+#include "test_base.h"
 
-template<typename _Tp, size_t SIZE>
-bool test() {
 
-  _Tp table[SIZE] { 0 };
-  _Tp n { 0 };
+template<typename T, size_t SIZE>
+bool test(void) {
 
-  // initialize test data
-  std::generate(std::begin(table), std::end(table), [&] { return n++; });
 
-  // launch kernel with parallel STL stable_partition
-  using namespace std::experimental::parallel;
-  auto iter = stable_partition(par, std::begin(table), std::end(table), [](const _Tp& a) { return int(a) % 2 == 0; });
+  auto pred = [](const T& a) { return int(a) % 2 == 0; };
+  using std::experimental::parallel::par;
 
-  // verify data
   bool ret = true;
-  ret = (std::distance(std::begin(table), iter) == SIZE/ 2);
-  for (int i = 0; i < SIZE / 2; ++i) {
-    if (int(table[i]) % 2 != 0) {
-      ret = false;
-      break;
-    }
-  }
-  for (int i = SIZE / 2; i < SIZE; ++i) {
-    if (int(table[i]) % 2 == 0) {
-      ret = false;
-      break;
-    }
-  }
-  // check the stableness of stable_partition
-  if (!std::is_sorted(std::begin(table), std::begin(table) + SIZE / 2))
-    ret = false;
-  if (!std::is_sorted(std::begin(table) + SIZE / 2, std::end(table)))
-    ret = false;
+  // C array
+  typedef T cArray[SIZE];
+  ret &= run_and_compare<T, SIZE>([pred]
+                                  (cArray &input1,
+                                   cArray &input2) {
+    std::stable_partition(std::begin(input1), std::end(input1), pred);
+    std::experimental::parallel::
+    stable_partition(par, std::begin(input2), std::end(input2), pred);
 
-#if _DEBUG 
-  for (int i = 0; i < ROW; ++i) {
-    for (int j = 0; j < COL; ++j) {
-      std::cout << std::setw(5) << table[i * COL + j];
-    }
-    std::cout << "\n";
-  } 
-#endif
+  });
 
   return ret;
 }
