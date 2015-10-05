@@ -29,17 +29,22 @@ if [ ! -f $1 ]; then
   exit 1
 fi
 
-CXXFLAGS="`$CLAMP_CONFIG --build --cxxflags`"
 CO="-c -o"
 
 TEMP_DIR=`mktemp -d`
 BASENAME=`basename $2`
 TEMP_NAME="$TEMP_DIR/$BASENAME"
 
-$LLVM_DIS $1 -o $TEMP_NAME.bc
-$OPT -load $LIBPATH/LLVMDirectFuncCall.so -redirect < $TEMP_NAME.bc 2>$TEMP_NAME.host_redirect.ll >/dev/null
-$LLVM_AS $TEMP_NAME.host_redirect.ll -o $TEMP_NAME.host_redirect.bc
-$CLANG -std=c++amp $TEMP_NAME.host_redirect.bc -c -o $2
+$LLVM_DIS $1 -o $TEMP_NAME.ll
+$OPT -load $LIBPATH/LLVMDirectFuncCall.so -redirect < $TEMP_NAME.ll 2>$TEMP_NAME.host_redirect.ll >/dev/null
+if [[ -s $TEMP_NAME.host_redirect.ll ]]; then
+  $LLVM_AS $TEMP_NAME.host_redirect.ll -o $TEMP_NAME.host_redirect.bc
+  $CLANG -std=c++amp $TEMP_NAME.host_redirect.bc $CO $2
+else
+  ln -s $1 $1.bc
+  $CLANG -std=c++amp $1.bc $CO $2
+fi
 
+rm $1.bc
 rm -f $TEMP_NAME.*
 rmdir $TEMP_DIR
