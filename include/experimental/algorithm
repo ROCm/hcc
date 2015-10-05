@@ -531,3 +531,8 @@ OutputIterator adjacent_difference(ExecutionPolicy&& exec,
 } // namespace parallel
 } // namespace experimental 
 } // namespace std
+
+// sequential versions of algorithms are implemented inside this  file
+// FIXME: gradually move them to SPMD-version of algorithms
+#include "impl/algorithm_impl_seq.inl"
+
