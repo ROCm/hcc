@@ -37,6 +37,7 @@ class accelerator_view;
 class completion_future;
 template <int N> class extent;
 template <int N> class tiled_extent;
+// FIXME: remove this forward declaration in future commits
 class ts_allocator;
 template <typename T, int N> class array_view;
 template <typename T, int N> class array;
@@ -320,6 +321,7 @@ private:
         void Kalmar::launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>&, Kernel const&, extent<N> const&);
 #endif
 
+    // FIXME: remove this friend clause in future commits
     // non-tiled parallel_for_each with dynamic group segment
     template<typename Kernel> friend
         completion_future parallel_for_each(const accelerator_view&, const extent<1>&, ts_allocator&, const Kernel&);
@@ -328,6 +330,7 @@ private:
     template<typename Kernel> friend
         completion_future parallel_for_each(const accelerator_view&, const extent<3>&, ts_allocator&, const Kernel&);
   
+    // FIXME: remove this friend clause in future commits
     // non-tiled parallel_for_each with dynamic group segment
     template <typename Kernel> friend
         completion_future parallel_for_each(const extent<1>&, ts_allocator&, const Kernel&);
@@ -336,6 +339,7 @@ private:
     template <typename Kernel> friend
         completion_future parallel_for_each(const extent<3>&, ts_allocator&, const Kernel&);
   
+    // FIXME: remove this friend clause in future commits
     // tiled parallel_for_each with dynamic group segment
     template<typename Kernel> friend
         completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, ts_allocator&, const Kernel&);
@@ -344,6 +348,7 @@ private:
     template<typename Kernel> friend
         completion_future parallel_for_each(const accelerator_view&, const tiled_extent<3>&, ts_allocator&, const Kernel&);
   
+    // FIXME: remove this friend clause in future commits
     // tiled parallel_for_each with dynamic group segment
     template <typename Kernel> friend
         completion_future parallel_for_each(const tiled_extent<1>&, ts_allocator&, const Kernel&);
@@ -945,6 +950,7 @@ private:
     completion_future(const std::shared_future<void> &__future)
         : __amp_future(__future), __thread_then(nullptr), __asyncOp(nullptr) {}
 
+    // FIXME: remove this friend clause in future commits
     // non-tiled parallel_for_each with dynamic group segment
     template<typename Kernel> friend
         completion_future parallel_for_each(const accelerator_view&, const extent<1>&, ts_allocator&, const Kernel&);
@@ -953,6 +959,7 @@ private:
     template<typename Kernel> friend
         completion_future parallel_for_each(const accelerator_view&, const extent<3>&, ts_allocator&, const Kernel&);
   
+    // FIXME: remove this friend clause in future commits
     // non-tiled parallel_for_each with dynamic group segment
     template <typename Kernel> friend
         completion_future parallel_for_each(const extent<1>&, ts_allocator&, const Kernel&);
@@ -961,6 +968,7 @@ private:
     template <typename Kernel> friend
         completion_future parallel_for_each(const extent<3>&, ts_allocator&, const Kernel&);
   
+    // FIXME: remove this friend clause in future commits
     // tiled parallel_for_each with dynamic group segment
     template<typename Kernel> friend
         completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, ts_allocator&, const Kernel&);
@@ -969,6 +977,7 @@ private:
     template<typename Kernel> friend
         completion_future parallel_for_each(const accelerator_view&, const tiled_extent<3>&, ts_allocator&, const Kernel&);
   
+    // FIXME: remove this friend clause in future commits
     // tiled parallel_for_each with dynamic group segment
     template <typename Kernel> friend
         completion_future parallel_for_each(const tiled_extent<1>&, ts_allocator&, const Kernel&);
@@ -1503,6 +1512,12 @@ public:
  */
 template <>
 class tiled_extent<1> : public extent<1> {
+private:
+    /**
+     * Size of dynamic group segment.
+     */
+    unsigned int dynamic_group_segment_size;
+
 public:
     static const int rank = 1;
 
@@ -1515,7 +1530,7 @@ public:
      * Default constructor. The origin and extent is default-constructed and
      * thus zero.
      */
-    tiled_extent() __attribute__((hc,cpu)) : extent(0), tile_dim{0} {}
+    tiled_extent() __attribute__((hc,cpu)) : extent(0), tile_dim{0}, dynamic_group_segment_size(0) {}
 
     /**
      * Construct an tiled extent with the size of extent and the size of tile
@@ -1524,7 +1539,7 @@ public:
      * @param[in] e0 Size of extent.
      * @param[in] t0 Size of tile.
      */
-    tiled_extent(int e0, int t0) __attribute__((hc,cpu)) : extent(e0), tile_dim{t0} {}
+    tiled_extent(int e0, int t0) __attribute__((hc,cpu)) : extent(e0), tile_dim{t0}, dynamic_group_segment_size(0) {}
 
     /**
      * Copy constructor. Constructs a new tiled_extent from the supplied
@@ -1533,7 +1548,7 @@ public:
      * @param[in] other An object of type tiled_extent from which to initialize
      *                  this new extent.
      */
-    tiled_extent(const tiled_extent<1>& other) __attribute__((hc,cpu)) : extent(other[0]), tile_dim{other.tile_dim[0]} {}
+    tiled_extent(const tiled_extent<1>& other) __attribute__((hc,cpu)) : extent(other[0]), tile_dim{other.tile_dim[0]}, dynamic_group_segment_size(other.dynamic_group_segment_size) {}
 
 
     /**
@@ -1542,7 +1557,24 @@ public:
      * @param[in] ext The extent of this tiled_extent
      * @param[in] t0 Size of tile.
      */
-    tiled_extent(const extent<1>& ext, int t0) __attribute__((hc,cpu)) : extent(ext), tile_dim{t0} {} 
+    tiled_extent(const extent<1>& ext, int t0) __attribute__((hc,cpu)) : extent(ext), tile_dim{t0}, dynamic_group_segment_size(0) {} 
+
+    /**
+     * Set the size of dynamic group segment. The function should be called
+     * in host code, prior to a kernel is dispatched.
+     *
+     * @param[in] size The amount of dynamic group segment needed.
+     */
+    void setDynamicGroupSegmentSize(unsigned int size) __attribute__((cpu)) {
+        dynamic_group_segment_size = size;
+    }
+
+    /**
+     * Return the size of dynamic group segment in bytes.
+     */
+    unsigned int getDynamicGroupSegmentSize() const __attribute__((cpu)) {
+        return dynamic_group_segment_size;
+    }
 };
 
 /**
@@ -1552,6 +1584,12 @@ public:
  */
 template <>
 class tiled_extent<2> : public extent<2> {
+private:
+    /**
+     * Size of dynamic group segment.
+     */
+    unsigned int dynamic_group_segment_size;
+
 public:
     static const int rank = 2;
 
@@ -1564,7 +1602,7 @@ public:
      * Default constructor. The origin and extent is default-constructed and
      * thus zero.
      */
-    tiled_extent() __attribute__((hc,cpu)) : extent(0, 0), tile_dim{0, 0} {}
+    tiled_extent() __attribute__((hc,cpu)) : extent(0, 0), tile_dim{0, 0}, dynamic_group_segment_size(0) {}
 
     /**
      * Construct an tiled extent with the size of extent and the size of tile
@@ -1575,7 +1613,7 @@ public:
      * @param[in] t0 Size of tile in the 1st dimension.
      * @param[in] t1 Size of tile in the 2nd dimension.
      */
-    tiled_extent(int e0, int e1, int t0, int t1) __attribute__((hc,cpu)) : extent(e0, e1), tile_dim{t0, t1} {}
+    tiled_extent(int e0, int e1, int t0, int t1) __attribute__((hc,cpu)) : extent(e0, e1), tile_dim{t0, t1}, dynamic_group_segment_size(0) {}
 
     /**
      * Copy constructor. Constructs a new tiled_extent from the supplied
@@ -1584,7 +1622,7 @@ public:
      * @param[in] other An object of type tiled_extent from which to initialize
      *                  this new extent.
      */
-    tiled_extent(const tiled_extent<2>& other) __attribute__((hc,cpu)) : extent(other[0], other[1]), tile_dim{other.tile_dim[0], other.tile_dim[1]} {}
+    tiled_extent(const tiled_extent<2>& other) __attribute__((hc,cpu)) : extent(other[0], other[1]), tile_dim{other.tile_dim[0], other.tile_dim[1]}, dynamic_group_segment_size(other.dynamic_group_segment_size) {}
 
     /**
      * Constructs a tiled_extent<N> with the extent "ext".
@@ -1593,7 +1631,24 @@ public:
      * @param[in] t0 Size of tile in the 1st dimension.
      * @param[in] t1 Size of tile in the 2nd dimension.
      */
-    tiled_extent(const extent<2>& ext, int t0, int t1) __attribute__((hc,cpu)) : extent(ext), tile_dim{t0, t1} {}
+    tiled_extent(const extent<2>& ext, int t0, int t1) __attribute__((hc,cpu)) : extent(ext), tile_dim{t0, t1}, dynamic_group_segment_size(0) {}
+
+    /**
+     * Set the size of dynamic group segment. The function should be called
+     * in host code, prior to a kernel is dispatched.
+     *
+     * @param[in] size The amount of dynamic group segment needed.
+     */
+    void setDynamicGroupSegmentSize(unsigned int size) __attribute__((cpu)) {
+        dynamic_group_segment_size = size;
+    }
+
+    /**
+     * Return the size of dynamic group segment in bytes.
+     */
+    unsigned int getDynamicGroupSegmentSize() const __attribute__((cpu)) {
+        return dynamic_group_segment_size;
+    }
 };
 
 /**
@@ -1603,6 +1658,12 @@ public:
  */
 template <>
 class tiled_extent<3> : public extent<3> {
+private:
+    /**
+     * Size of dynamic group segment.
+     */
+    unsigned int dynamic_group_segment_size;
+
 public:
     static const int rank = 3;
 
@@ -1615,7 +1676,7 @@ public:
      * Default constructor. The origin and extent is default-constructed and
      * thus zero.
      */
-    tiled_extent() __attribute__((hc,cpu)) : extent(0, 0, 0), tile_dim{0, 0, 0} {}
+    tiled_extent() __attribute__((hc,cpu)) : extent(0, 0, 0), tile_dim{0, 0, 0}, dynamic_group_segment_size(0) {}
 
     /**
      * Construct an tiled extent with the size of extent and the size of tile
@@ -1628,7 +1689,7 @@ public:
      * @param[in] t1 Size of tile in the 2nd dimension.
      * @param[in] t2 Size of tile in the 3rd dimension.
      */
-    tiled_extent(int e0, int e1, int e2, int t0, int t1, int t2) __attribute__((hc,cpu)) : extent(e0, e1, e2), tile_dim{t0, t1, t2} {}
+    tiled_extent(int e0, int e1, int e2, int t0, int t1, int t2) __attribute__((hc,cpu)) : extent(e0, e1, e2), tile_dim{t0, t1, t2}, dynamic_group_segment_size(0) {}
 
     /**
      * Copy constructor. Constructs a new tiled_extent from the supplied
@@ -1637,7 +1698,7 @@ public:
      * @param[in] other An object of type tiled_extent from which to initialize
      *                  this new extent.
      */
-    tiled_extent(const tiled_extent<3>& other) __attribute__((hc,cpu)) : extent(other[0], other[1], other[2]), tile_dim{other.tile_dim[0], other.tile_dim[1], other.tile_dim[2]} {}
+    tiled_extent(const tiled_extent<3>& other) __attribute__((hc,cpu)) : extent(other[0], other[1], other[2]), tile_dim{other.tile_dim[0], other.tile_dim[1], other.tile_dim[2]}, dynamic_group_segment_size(other.dynamic_group_segment_size) {}
 
     /**
      * Constructs a tiled_extent<N> with the extent "ext".
@@ -1647,7 +1708,24 @@ public:
      * @param[in] t1 Size of tile in the 2nd dimension.
      * @param[in] t2 Size of tile in the 3rd dimension.
      */
-    tiled_extent(const extent<3>& ext, int t0, int t1, int t2) __attribute__((hc,cpu)) : extent(ext), tile_dim{t0, t1, t2} {}
+    tiled_extent(const extent<3>& ext, int t0, int t1, int t2) __attribute__((hc,cpu)) : extent(ext), tile_dim{t0, t1, t2}, dynamic_group_segment_size(0) {}
+
+    /**
+     * Set the size of dynamic group segment. The function should be called
+     * in host code, prior to a kernel is dispatched.
+     *
+     * @param[in] size The amount of dynamic group segment needed.
+     */
+    void setDynamicGroupSegmentSize(unsigned int size) __attribute__((cpu)) {
+        dynamic_group_segment_size = size;
+    }
+
+    /**
+     * Return the size of dynamic group segment in bytes.
+     */
+    unsigned int getDynamicGroupSegmentSize() const __attribute__((cpu)) {
+        return dynamic_group_segment_size;
+    }
 };
 
 // ------------------------------------------------------------------------
@@ -1702,6 +1780,7 @@ extern "C" unsigned long get_static_group_segment_size() __attribute__((hc));
  */
 extern "C" unsigned long get_dynamic_group_segment_size() __attribute__((hc));
 
+// FIXME: remove this class in future commits
 /**
  * Group segment dynamic memory allocator. The class could be used to
  * dynamically allocate memory within group segment.
@@ -5568,7 +5647,8 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   if (av.get_accelerator().get_device_path() == L"cpu") {
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
   }
-  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 1>(av.pQueue, &ext, &tile, f));
+  void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
+  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 1>(av.pQueue, &ext, &tile, f, kernel, compute_domain.getDynamicGroupSegmentSize()));
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index<1> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -5602,7 +5682,8 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   if (av.get_accelerator().get_device_path() == L"cpu") {
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
   }
-  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 2>(av.pQueue, ext, tile, f));
+  void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
+  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 2>(av.pQueue, ext, tile, f, kernel, compute_domain.getDynamicGroupSegmentSize()));
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index<2> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -5644,7 +5725,8 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   if (av.get_accelerator().get_device_path() == L"cpu") {
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
   }
-  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 3>(av.pQueue, ext, tile, f));
+  void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
+  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 2>(av.pQueue, ext, tile, f, kernel, compute_domain.getDynamicGroupSegmentSize()));
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index<3> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -5655,6 +5737,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
 }
 #pragma clang diagnostic pop
 
+// FIXME: remove this PFE interface in future commits
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
 #pragma clang diagnostic ignored "-Wunused-variable"
@@ -5698,6 +5781,7 @@ completion_future parallel_for_each(const accelerator_view& av,
 #pragma clang diagnostic pop
 
 
+// FIXME: remove this PFE interface in future commits
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
 #pragma clang diagnostic ignored "-Wunused-variable"
@@ -5742,6 +5826,7 @@ completion_future parallel_for_each(const accelerator_view& av,
 #pragma clang diagnostic pop
 
 
+// FIXME: remove this PFE interface in future commits
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
 #pragma clang diagnostic ignored "-Wunused-variable"
@@ -5793,6 +5878,7 @@ completion_future parallel_for_each(const accelerator_view& av,
 #pragma clang diagnostic pop
 
 
+// FIXME: remove this PFE interface in future commits
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
 #pragma clang diagnostic ignored "-Wunused-variable"
@@ -5839,6 +5925,7 @@ completion_future parallel_for_each(const accelerator_view& av,
 #pragma clang diagnostic pop
 
 
+// FIXME: remove this PFE interface in future commits
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
 #pragma clang diagnostic ignored "-Wunused-variable"
@@ -5885,6 +5972,7 @@ completion_future parallel_for_each(const accelerator_view& av,
 #pragma clang diagnostic pop
 
 
+// FIXME: remove this PFE interface in future commits
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreturn-type"
 #pragma clang diagnostic ignored "-Wunused-variable"
@@ -5938,6 +6026,7 @@ completion_future parallel_for_each(const accelerator_view& av,
 }
 #pragma clang diagnostic pop
 
+// FIXME: remove this PFE interface in future commits
 template <typename Kernel>
 completion_future parallel_for_each(const extent<1>& compute_domain,
                        ts_allocator& allocator,
@@ -5947,6 +6036,7 @@ completion_future parallel_for_each(const extent<1>& compute_domain,
   return parallel_for_each(av, compute_domain, allocator, f);
 }
 
+// FIXME: remove this PFE interface in future commits
 template <typename Kernel>
 completion_future parallel_for_each(const extent<2>& compute_domain,
                        ts_allocator& allocator,
@@ -5956,6 +6046,7 @@ completion_future parallel_for_each(const extent<2>& compute_domain,
   return parallel_for_each(av, compute_domain, allocator, f);
 }
 
+// FIXME: remove this PFE interface in future commits
 template <typename Kernel>
 completion_future parallel_for_each(const extent<3>& compute_domain,
                        ts_allocator& allocator,
@@ -5965,6 +6056,7 @@ completion_future parallel_for_each(const extent<3>& compute_domain,
   return parallel_for_each(av, compute_domain, allocator, f);
 }
 
+// FIXME: remove this PFE interface in future commits
 template <typename Kernel>
 completion_future parallel_for_each(const tiled_extent<1>& compute_domain,
                        ts_allocator& allocator,
@@ -5974,6 +6066,7 @@ completion_future parallel_for_each(const tiled_extent<1>& compute_domain,
   return parallel_for_each(av, compute_domain, allocator, f);
 }
 
+// FIXME: remove this PFE interface in future commits
 template<typename Kernel>
 completion_future parallel_for_each(const tiled_extent<2>& compute_domain,
                        ts_allocator& allocator,
@@ -5983,6 +6076,7 @@ completion_future parallel_for_each(const tiled_extent<2>& compute_domain,
   return parallel_for_each(av, compute_domain, allocator, f);
 }
 
+// FIXME: remove this PFE interface in future commits
 template<typename Kernel>
 completion_future parallel_for_each(const tiled_extent<3>& compute_domain,
                        ts_allocator& allocator,
