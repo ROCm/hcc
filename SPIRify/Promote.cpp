@@ -438,7 +438,12 @@ namespace {
 
 StructType* mapTypeToGlobal(StructType* T) {
   // create a new, empty StructType
-  StructType* newST = StructType::create(T->getContext(), T->getName());
+  StructType* newST = nullptr;
+  if (T->hasName()) {
+      newST = StructType::create(T->getContext(), T->getName());
+  } else {
+      newST = StructType::create(T->getContext(), "");
+  }
 
   // mark the original StructType as translated to the new StructType
   structTypeMap[T] = newST;
