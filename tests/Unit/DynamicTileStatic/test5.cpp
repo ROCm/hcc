@@ -85,7 +85,8 @@ bool test() {
   fut.wait();
 
   // overhead introduced in the kernel
-  size_t overhead = sizeof(int) * TILE_SIZE * 2; 
+  size_t overhead = sizeof(int) * TILE_SIZE * 2 + // lds1, lds2
+                    sizeof(int);                  // hcc_dynamic_group_segment_cursor
 
   bool ret = true;
   // for each item within each group
