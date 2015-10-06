@@ -6,6 +6,8 @@ prog global_u32 &hcc_static_group_segment_size = 0;
 /// the value would be set by Kalmar runtime prior to kernel dispatch
 prog global_u32 &hcc_dynamic_group_segment_size = 0;
 
+/// global variable to store the cursor to the available byte in dynamic group
+/// segment.
 prog global_u32 &hcc_dynamic_group_segment_cursor = 0;
 
 /// get_static_group_segment_size : return the size of static group segment
@@ -24,6 +26,8 @@ prog function &get_dynamic_group_segment_size(arg_u32 %ret)()
   ret;
 };
 
+/// get_dynamic_group_segment_cursor : return the cursor to the next available
+/// memory in dynamic group segment
 prog function &get_dynamic_group_segment_cursor(arg_u32 %ret)()
 {
   atomic_ld_global_scacq_wg_b32 $s0, [&hcc_dynamic_group_segment_cursor];
@@ -31,6 +35,8 @@ prog function &get_dynamic_group_segment_cursor(arg_u32 %ret)()
   ret;
 };
 
+/// set_dynamic_group_segment_cursor : set the cursor to the next available
+/// memory in dynamic group segment
 prog function &set_dynamic_group_segment_cursor()(arg_u32 %offset)
 {
   ld_arg_u32 $s0, [%offset];
@@ -38,6 +44,8 @@ prog function &set_dynamic_group_segment_cursor()(arg_u32 %offset)
   ret;
 };
 
+/// reset_dynamic_group_segment_cursor : set the cursor to the next available
+/// memory in dynamic group segment to 0
 prog function &reset_dynamic_group_segment_cursor()()
 {
   atomicnoret_st_global_screl_wg_b32 [&hcc_dynamic_group_segment_cursor], 0;

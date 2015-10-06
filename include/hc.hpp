@@ -1706,8 +1706,18 @@ extern "C" unsigned int get_static_group_segment_size() __attribute__((hc));
  */
 extern "C" unsigned int get_dynamic_group_segment_size() __attribute__((hc));
 
+/**
+ * Get the cursor of dynamic group segment memory.
+ *
+ * @return The offset of the next available memory in dynamic group segment
+ */
 extern "C" int get_dynamic_group_segment_cursor() __attribute__((hc));
 
+/**
+ * Set the cursor of dynamic group segment memory.
+ *
+ * @param offset The offset of the next available memory in dynamic group segment
+ */
 extern "C" void set_dynamic_group_segment_cursor(int) __attribute__((hc));
 
 /**
