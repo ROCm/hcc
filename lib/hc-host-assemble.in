@@ -45,6 +45,5 @@ else
   $CLANG -std=c++amp $1.bc $CO $2
 fi
 
-rm $1.bc
-rm -f $TEMP_NAME.*
+rm -f $TEMP_NAME.* $1.bc
 rmdir $TEMP_DIR

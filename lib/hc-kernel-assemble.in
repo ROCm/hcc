@@ -66,6 +66,5 @@ else
   mv $TEMP_NAME.camp.o $2
 fi
 
-rm $1.bc
-rm -f $TEMP_NAME.*
+rm -f $TEMP_NAME.* $1.bc
 rmdir $TEMP_DIR
