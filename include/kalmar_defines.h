@@ -25,19 +25,19 @@
 //
 // work-item related builtin functions
 //
-extern "C" __attribute__((pure,hc)) int64_t hc_get_grid_size(unsigned int n);
-extern "C" __attribute__((pure,hc)) int64_t hc_get_workitem_absolute_id(unsigned int n);
-extern "C" __attribute__((pure,hc)) int64_t hc_get_group_size(unsigned int n);
-extern "C" __attribute__((pure,hc)) int64_t hc_get_workitem_id(unsigned int n);
-extern "C" __attribute__((pure,hc)) int64_t hc_get_num_groups(unsigned int n);
-extern "C" __attribute__((pure,hc)) int64_t hc_get_group_id(unsigned int n);
+extern "C" __attribute__((const,hc)) int64_t hc_get_grid_size(unsigned int n);
+extern "C" __attribute__((const,hc)) int64_t hc_get_workitem_absolute_id(unsigned int n);
+extern "C" __attribute__((const,hc)) int64_t hc_get_group_size(unsigned int n);
+extern "C" __attribute__((const,hc)) int64_t hc_get_workitem_id(unsigned int n);
+extern "C" __attribute__((const,hc)) int64_t hc_get_num_groups(unsigned int n);
+extern "C" __attribute__((const,hc)) int64_t hc_get_group_id(unsigned int n);
 
-extern "C" __attribute__((pure)) int64_t amp_get_global_size(unsigned int n) restrict(amp);
-extern "C" __attribute__((pure)) int64_t amp_get_global_id(unsigned int n) restrict(amp);
-extern "C" __attribute__((pure)) int64_t amp_get_local_size(unsigned int n) restrict(amp);
-extern "C" __attribute__((pure)) int64_t amp_get_local_id(unsigned int n) restrict(amp);
-extern "C" __attribute__((pure)) int64_t amp_get_num_groups(unsigned int n) restrict(amp);
-extern "C" __attribute__((pure)) int64_t amp_get_group_id(unsigned int n) restrict(amp);
+extern "C" __attribute__((const)) int64_t amp_get_global_size(unsigned int n) restrict(amp);
+extern "C" __attribute__((const)) int64_t amp_get_global_id(unsigned int n) restrict(amp);
+extern "C" __attribute__((const)) int64_t amp_get_local_size(unsigned int n) restrict(amp);
+extern "C" __attribute__((const)) int64_t amp_get_local_id(unsigned int n) restrict(amp);
+extern "C" __attribute__((const)) int64_t amp_get_num_groups(unsigned int n) restrict(amp);
+extern "C" __attribute__((const)) int64_t amp_get_group_id(unsigned int n) restrict(amp);
 
 
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
