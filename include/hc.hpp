@@ -1689,6 +1689,20 @@ tiled_extent<3> extent<N>::tile(int t0, int t1, int t2) const __attribute__((hc,
 extern "C" __attribute__((address_space(3))) void* getLDS(unsigned int offset) __attribute__((hc));
 
 /**
+ * C interface of HSA builtin function to fetch the size of static group segment
+ *
+ * @return The size of static group segment used by the kernel in bytes.
+ */
+extern "C" unsigned long get_static_group_segment_size() __attribute__((hc));
+
+/**
+ * C interface of HSA builtin function to fetch the size of dynamic group segment
+ *
+ * @return The size of dynamic group segment used by the kernel in bytes.
+ */
+extern "C" unsigned long get_dynamic_group_segment_size() __attribute__((hc));
+
+/**
  * Group segment dynamic memory allocator. The class could be used to
  * dynamically allocate memory within group segment.
  *
