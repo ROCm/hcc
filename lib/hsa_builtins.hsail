@@ -1,24 +1,46 @@
 /// global variable to store the size of static group segment
 /// the value would be set by Kalmar runtime prior to kernel dispatch
-prog global_u64 &hcc_static_group_segment_size = 0;
+prog global_u32 &hcc_static_group_segment_size = 0;
 
 /// global variable to store the size of dynamic group segment
 /// the value would be set by Kalmar runtime prior to kernel dispatch
-prog global_u64 &hcc_dynamic_group_segment_size = 0;
+prog global_u32 &hcc_dynamic_group_segment_size = 0;
+
+prog global_u32 &hcc_dynamic_group_segment_cursor = 0;
 
 /// get_static_group_segment_size : return the size of static group segment
-prog function &get_static_group_segment_size(arg_u64 %ret)()
+prog function &get_static_group_segment_size(arg_u32 %ret)()
 {
-  ld_global_u64 $d0, [&hcc_static_group_segment_size];
-  st_arg_u64 $d0, [%ret];
+  ld_global_u32 $s0, [&hcc_static_group_segment_size];
+  st_arg_u32 $s0, [%ret];
   ret;
 };
 
 /// get_dynamic_group_segment_size : return the size of dynamic group segment
-prog function &get_dynamic_group_segment_size(arg_u64 %ret)()
+prog function &get_dynamic_group_segment_size(arg_u32 %ret)()
 {
-  ld_global_u64 $d0, [&hcc_dynamic_group_segment_size];
-  st_arg_u64 $d0, [%ret];
+  ld_global_u32 $s0, [&hcc_dynamic_group_segment_size];
+  st_arg_u32 $s0, [%ret];
+  ret;
+};
+
+prog function &get_dynamic_group_segment_cursor(arg_u32 %ret)()
+{
+  atomic_ld_global_scacq_wg_b32 $s0, [&hcc_dynamic_group_segment_cursor];
+  st_arg_u32 $s0, [%ret];
+  ret;
+};
+
+prog function &set_dynamic_group_segment_cursor()(arg_u32 %offset)
+{
+  ld_arg_u32 $s0, [%offset];
+  atomicnoret_st_global_screl_wg_b32 [&hcc_dynamic_group_segment_cursor], $s0;
+  ret;
+};
+
+prog function &reset_dynamic_group_segment_cursor()()
+{
+  atomicnoret_st_global_screl_wg_b32 [&hcc_dynamic_group_segment_cursor], 0;
   ret;
 };
 

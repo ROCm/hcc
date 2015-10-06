@@ -195,6 +195,9 @@ bool EraseNonkernels::runOnModule(Module &M)
                         I->getName().find("getLDS") != StringRef::npos || 
                         I->getName().find("get_static_group_segment_size") != StringRef::npos || 
                         I->getName().find("get_dynamic_group_segment_size") != StringRef::npos || 
+                        I->getName().find("get_dynamic_group_segment_cursor") != StringRef::npos || 
+                        I->getName().find("set_dynamic_group_segment_cursor") != StringRef::npos || 
+                        I->getName().find("reset_dynamic_group_segment_cursor") != StringRef::npos || 
                         I->getName().find("_Znwm") != StringRef::npos ||
                         I->getName().find("_Znam") != StringRef::npos ||
                         I->getName().find("_ZdlPv") != StringRef::npos ||
