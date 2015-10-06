@@ -5726,7 +5726,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
   }
   void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
-  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 2>(av.pQueue, ext, tile, f, kernel, compute_domain.getDynamicGroupSegmentSize()));
+  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 3>(av.pQueue, ext, tile, f, kernel, compute_domain.getDynamicGroupSegmentSize()));
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index<3> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
