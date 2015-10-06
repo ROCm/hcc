@@ -66,8 +66,10 @@ void KernelNodeVisitor::operator()(MDNode *N)
   #if (LLVM_VERSION_MINOR >= 3) && (LLVM_VERSION_MINOR <= 5)
         // logic which is compatible from LLVM 3.3 till LLVM 3.5
         Value * Op = N->getOperand(0);
-        if ( Function * F = dyn_cast<Function>(Op)) {
+        if (Op != nullptr) {
+           if ( Function * F = dyn_cast<Function>(Op)) {
                 found_kernels.push_back(F); 
+           }
         }
   #elif LLVM_VERSION_MINOR > 5
         // support new metadata data structure introduced in LLVM 3.6+
