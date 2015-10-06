@@ -18,16 +18,13 @@ template<size_t GRID_SIZE, size_t TILE_SIZE>
 bool test() {
   using namespace hc;
 
-  ts_allocator tsa;
-  tsa.setDynamicGroupSegmentSize(DYNAMIC_GROUP_SEGMENT_SIZE);
-
   array_view<int, 1> av(GRID_SIZE);
   tiled_extent<1> ex(GRID_SIZE, TILE_SIZE);
+  ex.setDynamicGroupSegmentSize(DYNAMIC_GROUP_SEGMENT_SIZE);
   
   completion_future fut = parallel_for_each(hc::accelerator().get_default_view(),
                     ex,
-                    tsa,
-                    __KERNEL__ [=, &tsa](tiled_index<1>& tidx) {
+                    __KERNEL__ [=](tiled_index<1>& tidx) {
     tile_static int lds1[TILE_SIZE];
     tile_static int lds2[TILE_SIZE];
 
@@ -35,12 +32,12 @@ bool test() {
     index<1> global = tidx.global;
     index<1> local = tidx.local;
 
-    // reset allocator
-    tsa.reset();
+    // reset dynamic group segment allocator
+    hc::reset_dynamic_group_segment_cursor();
 
     // allocate dynamic group memory
     // each work item will allocate 1 plus its workgroup index
-    __GROUP__ int* p = (__GROUP__ int*) tsa.alloc(DYNAMIC_GROUP_SEGMENT_SIZE);
+    __GROUP__ int* p = (__GROUP__ int*) hc::alloc_dynamic_group_segment(DYNAMIC_GROUP_SEGMENT_SIZE);
 
     // move the allocated pointer to workitem-specific location
     p += (local[0] * (local[0] + 1)) / 2;
@@ -81,19 +78,19 @@ bool test() {
     tidx.barrier.wait_with_tile_static_memory_fence();
 
     // write lds2 to global memory, plus static group segment size
-    av(global) = tsa.getStaticGroupSegmentSize() + lds2[local[0]];
+    av(global) = hc::get_static_group_segment_size() + lds2[local[0]];
   });
 
   // wait for kernel to complete
   fut.wait();
 
-  // overhead introduced in ts_allocator
-  size_t overhead = tsa.getStaticGroupSegmentSize();
+  // overhead introduced in the kernel
+  size_t overhead = sizeof(int) * TILE_SIZE * 2; 
 
   bool ret = true;
   // for each item within each group
   // the value will be the sum of following:
-  // - static group segment (lds1, lds2, ts_allocator)
+  // - static group segment (lds1, lds2)
   // - 1^2 + 2^2 + ... + (workgroup_id+1)^2 : value calculated
   for (int i = 0; i < GRID_SIZE; ++i) {
 #if 0

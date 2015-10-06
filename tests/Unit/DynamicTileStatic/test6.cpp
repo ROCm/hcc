@@ -12,15 +12,14 @@ template<size_t GRID_SIZE, size_t TILE_SIZE>
 bool test() {
   using namespace hc;
 
-  ts_allocator tsa;
-  tsa.setDynamicGroupSegmentSize(0);
 
   array_view<int, 1> av(GRID_SIZE);
   tiled_extent<1> ex(GRID_SIZE, TILE_SIZE);
+  ex.setDynamicGroupSegmentSize(0);
   
   completion_future fut = parallel_for_each(hc::accelerator().get_default_view(),
-                    ex, tsa,
-                    __KERNEL__ [=, &tsa](tiled_index<1>& tidx) {
+                    ex,
+                    __KERNEL__ [=](tiled_index<1>& tidx) {
     tile_static int lds1[TILE_SIZE];
 
     // obtain workitem absolute index and workgroup index
