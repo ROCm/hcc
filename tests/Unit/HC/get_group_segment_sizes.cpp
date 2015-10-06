@@ -29,15 +29,12 @@ bool test() {
   hc::array_view<int, 1> av_a(vecSize, table_a);
   hc::array_view<int, 1> av_b(vecSize, table_b);
 
-  // set ts_allocator
-  // FIXME: in the later commits we will move this member function to tiled_extent
-  hc::ts_allocator tsa;
-  tsa.setDynamicGroupSegmentSize(DYNAMIC_GROUP_SEGMENT_SIZE);
-
   // launch kernel
   hc::tiled_extent<1> e(vecSize, groupSize);
+  e.setDynamicGroupSegmentSize(DYNAMIC_GROUP_SEGMENT_SIZE);
+
   hc::completion_future fut = hc::parallel_for_each(
-    e, tsa,
+    e, 
     [=](hc::index<1> idx) __attribute__((hc)) {
       // create a tile_static array
       tile_static int group[groupSize];
