@@ -56,23 +56,6 @@ class HSADevice;
 /// kernel compilation / kernel launching
 ///
 
-hsa_status_t symbolCallback(hsa_executable_t executable, hsa_executable_symbol_t symbol, void* data) {
-#if 0
-    hsa_status_t status;
-    uint32_t name_length = 0;
-    status = hsa_executable_symbol_get_info(symbol, HSA_EXECUTABLE_SYMBOL_INFO_NAME_LENGTH, &name_length);
-    if (name_length > 0) {
-        char* name = new char[name_length+1];
-        status = hsa_executable_symbol_get_info(symbol, HSA_EXECUTABLE_SYMBOL_INFO_NAME, name);
-        STATUS_CHECK(status, __LINE__);
-        name[name_length] = '\0';
-        printf("symbol name: %s\n", name);
-        delete[] name;
-    }
-#endif
-    return HSA_STATUS_SUCCESS;
-}
-
 class HSAKernel {
 private:
     hsa_code_object_t hsaCodeObject;
@@ -93,10 +76,6 @@ public:
 
     void setSymbolToValue(const char* symbolName, unsigned long value) {
         hsa_status_t status;
-
-        // iterate symbols
-        status = hsa_executable_iterate_symbols(hsaExecutable, symbolCallback, NULL);
-        STATUS_CHECK(status, __LINE__);
 
         // get symbol
         hsa_executable_symbol_t symbol;
