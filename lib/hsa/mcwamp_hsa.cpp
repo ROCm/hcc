@@ -56,6 +56,23 @@ class HSADevice;
 /// kernel compilation / kernel launching
 ///
 
+hsa_status_t symbolCallback(hsa_executable_t executable, hsa_executable_symbol_t symbol, void* data) {
+#if 0
+    hsa_status_t status;
+    uint32_t name_length = 0;
+    status = hsa_executable_symbol_get_info(symbol, HSA_EXECUTABLE_SYMBOL_INFO_NAME_LENGTH, &name_length);
+    if (name_length > 0) {
+        char* name = new char[name_length+1];
+        status = hsa_executable_symbol_get_info(symbol, HSA_EXECUTABLE_SYMBOL_INFO_NAME, name);
+        STATUS_CHECK(status, __LINE__);
+        name[name_length] = '\0';
+        printf("symbol name: %s\n", name);
+        delete[] name;
+    }
+#endif
+    return HSA_STATUS_SUCCESS;
+}
+
 class HSAKernel {
 private:
     hsa_code_object_t hsaCodeObject;
@@ -73,6 +90,31 @@ public:
       hsaCodeObject(_hsaCodeObject),
       hsaExecutableSymbol(_hsaExecutableSymbol),
       kernelCodeHandle(_kernelCodeHandle) {}
+
+    void setSymbolToValue(const char* symbolName, unsigned long value) {
+        hsa_status_t status;
+
+        // iterate symbols
+        status = hsa_executable_iterate_symbols(hsaExecutable, symbolCallback, NULL);
+        STATUS_CHECK(status, __LINE__);
+
+        // get symbol
+        hsa_executable_symbol_t symbol;
+        hsa_agent_t agent;
+        status = hsa_executable_get_symbol(hsaExecutable, NULL, symbolName, agent, 0, &symbol);
+        STATUS_CHECK(status, __LINE__);
+    
+        // get address of symbol
+        uint64_t symbol_address;
+        status = hsa_executable_symbol_get_info(symbol,
+                                                HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ADDRESS,
+                                                &symbol_address);
+        STATUS_CHECK(status, __LINE__);
+    
+        // set the value of symbol
+        unsigned long* symbol_ptr = (unsigned long*)symbol_address;
+        *symbol_ptr = value;
+    }
 
     ~HSAKernel() {
       hsa_status_t status;
@@ -189,7 +231,7 @@ class HSADispatch : public Kalmar::KalmarAsyncOp {
 private:
     Kalmar::HSADevice* device;
     hsa_agent_t agent;
-    const HSAKernel* kernel;
+    HSAKernel* kernel;
 
     uint32_t workgroup_max_size;
     uint16_t workgroup_max_dim[3];
@@ -237,7 +279,7 @@ public:
         return HSA_STATUS_SUCCESS;
     }
 
-    HSADispatch(Kalmar::HSADevice* _device, const HSAKernel* _kernel);
+    HSADispatch(Kalmar::HSADevice* _device, HSAKernel* _kernel);
 
     hsa_status_t pushFloatArg(float f) { return pushArgPrivate(f); }
     hsa_status_t pushIntArg(int i) { return pushArgPrivate(i); }
@@ -1361,7 +1403,7 @@ HSAQueue::getHSAKernargRegion() override {
 // member function implementation of HSADispatch
 // ----------------------------------------------------------------------
 
-HSADispatch::HSADispatch(Kalmar::HSADevice* _device, const HSAKernel* _kernel) :
+HSADispatch::HSADispatch(Kalmar::HSADevice* _device, HSAKernel* _kernel) :
     device(_device),
     agent(_device->getAgent()),
     kernel(_kernel),
@@ -1474,17 +1516,23 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
                                             &group_segment_size);
     STATUS_CHECK_Q(status, commandQueue, __LINE__);
 
+    // let kernel know static group segment size
+    kernel->setSymbolToValue("&hcc_static_group_segment_size", group_segment_size);
+
+    // let kernel know dynamic group segment size
+    kernel->setSymbolToValue("&hcc_dynamic_group_segment_size", this->dynamicGroupSize);
+
     // add dynamic group segment size
     group_segment_size += this->dynamicGroupSize;
     aql.group_segment_size = group_segment_size;
-  
+
     uint32_t private_segment_size;
     status = hsa_executable_symbol_get_info(kernel->hsaExecutableSymbol,
                                             HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_PRIVATE_SEGMENT_SIZE,
                                             &private_segment_size);
     STATUS_CHECK_Q(status, commandQueue, __LINE__);
     aql.private_segment_size = private_segment_size;
-  
+
     // write packet
     uint32_t queueMask = commandQueue->size - 1;
     uint64_t index = hsa_queue_load_write_index_relaxed(commandQueue);

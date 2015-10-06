@@ -46,9 +46,8 @@ bool test1D() {
   // nothing shall be changed the kernel
   ret &= (std::count(std::begin(table), std::end(table), 0) == TABLE_X);
 
-  // 1D non-tiled with ts_allocator
-  ts_allocator tsa;
-  completion_future fut3 = parallel_for_each(ex1d, tsa, [&](index<1>& idx) __attribute((hc)) {
+  // 1D non-tiled
+  completion_future fut3 = parallel_for_each(ex1d, [&](index<1>& idx) __attribute((hc)) {
     table[idx[0]] = 1;
   });
 
@@ -59,8 +58,8 @@ bool test1D() {
   // nothing shall be changed the kernel
   ret &= (std::count(std::begin(table), std::end(table), 0) == TABLE_X);
 
-  // 1D tiled with ts_allocator
-  completion_future fut4 = parallel_for_each(tiled_ex1d, tsa, [&](tiled_index<1>& idx) __attribute((hc)) {
+  // 1D tiled
+  completion_future fut4 = parallel_for_each(tiled_ex1d, [&](tiled_index<1>& idx) __attribute((hc)) {
     table[idx.global[0]] = 1;
   });
 
@@ -108,9 +107,8 @@ bool test2D() {
   // nothing shall be changed the kernel
   ret &= (std::count(std::begin(table), std::end(table), 0) == TABLE_X * TABLE_Y);
 
-  // 2D non-tiled with ts_allocator
-  ts_allocator tsa;
-  completion_future fut3 = parallel_for_each(ex2d, tsa, [&](index<2>& idx) __attribute((hc)) {
+  // 2D non-tiled
+  completion_future fut3 = parallel_for_each(ex2d, [&](index<2>& idx) __attribute((hc)) {
     table[idx[0] * TABLE_Y + idx[1]] = 1;
   });
 
@@ -121,8 +119,8 @@ bool test2D() {
   // nothing shall be changed the kernel
   ret &= (std::count(std::begin(table), std::end(table), 0) == TABLE_X * TABLE_Y);
 
-  // 2D tiled with ts_allocator
-  completion_future fut4 = parallel_for_each(tiled_ex2d, tsa, [&](tiled_index<2>& idx) __attribute((hc)) {
+  // 2D tiled
+  completion_future fut4 = parallel_for_each(tiled_ex2d, [&](tiled_index<2>& idx) __attribute((hc)) {
     table[idx.global[0] * TABLE_Y + idx.global[1]] = 1;
   });
 
@@ -170,9 +168,8 @@ bool test3D() {
   // nothing shall be changed the kernel
   ret &= (std::count(std::begin(table), std::end(table), 0) == TABLE_X * TABLE_Y * TABLE_Z);
 
-  // 2D non-tiled with ts_allocator
-  ts_allocator tsa;
-  completion_future fut3 = parallel_for_each(ex3d, tsa, [&](index<3>& idx) __attribute((hc)) {
+  // 2D non-tiled
+  completion_future fut3 = parallel_for_each(ex3d, [&](index<3>& idx) __attribute((hc)) {
     table[idx[0] * TABLE_X * TABLE_Y + idx[1] * TABLE_Y + idx[2]] = 1;
   });
 
@@ -183,8 +180,8 @@ bool test3D() {
   // nothing shall be changed the kernel
   ret &= (std::count(std::begin(table), std::end(table), 0) == TABLE_X * TABLE_Y * TABLE_Z);
 
-  // 2D tiled with ts_allocator
-  completion_future fut4 = parallel_for_each(tiled_ex3d, tsa, [&](tiled_index<3>& idx) __attribute((hc)) {
+  // 2D tiled
+  completion_future fut4 = parallel_for_each(tiled_ex3d, [&](tiled_index<3>& idx) __attribute((hc)) {
     table[idx.global[0] * TABLE_X * TABLE_Y + idx.global[1] * TABLE_Y + idx.global[2]] = 1;
   });
 

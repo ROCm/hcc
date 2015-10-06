@@ -16,25 +16,21 @@ bool test1D(size_t grid_size, size_t tile_size) {
   // work item, relative to the beginning of group segment
   array_view<T, 1> avOffset(grid_size);
 
-  // initialize ts_allocator
-  ts_allocator tsa;
-  tsa.setDynamicGroupSegmentSize(tile_size * sizeof(T));
-
   // launch kernel in tiled fashion
   tiled_extent<1> ex(grid_size, tile_size);
-  completion_future fut = parallel_for_each(ex, tsa, [&, avOffset](tiled_index<1>& idx) restrict(amp) {
+  ex.setDynamicGroupSegmentSize(tile_size * sizeof(T));
+  completion_future fut = parallel_for_each(ex, [&, avOffset](tiled_index<1>& idx) restrict(amp) {
 
-    // reset allocator
-    tsa.reset();
+    // reset dynamic group segment allocator
+    hc::reset_dynamic_group_segment_cursor();
 
-    // call ts_allocator
     // allocate 1 element for each work item
-    __GROUP__ T* p = (__GROUP__ T*) tsa.alloc(sizeof(T) * 1);
+    __GROUP__ T* p = (__GROUP__ T*) hc::alloc_dynamic_group_segment(sizeof(T) * 1);
 
     p += idx.local[0];
 
     // get the beginning of dynamic group memory
-    __GROUP__ T* lds = (__GROUP__ T*) getLDS(tsa.getStaticGroupSegmentSize());
+    __GROUP__ T* lds = (__GROUP__ T*) getLDS(hc::get_static_group_segment_size());
 
     // write allocated offset to avOffset
     avOffset(idx) = (p - lds) * sizeof(T);
