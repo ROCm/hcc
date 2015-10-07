@@ -1,11 +1,11 @@
 cmake_minimum_required( VERSION 2.8 )
-project (Kalmar)
+project (HCC)
 
 # set default installation path
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND CMAKE_INSTALL_PREFIX MATCHES "/usr/local")
-  set(CMAKE_INSTALL_PREFIX "/opt/kalmar")
+  set(CMAKE_INSTALL_PREFIX "/opt/hcc")
 else ()
-  set(CMAKE_INSTALL_PREFIX "/opt/kalmar")
+  set(CMAKE_INSTALL_PREFIX "/opt/hcc")
 endif ()
 MESSAGE("Package installation path: ${CMAKE_INSTALL_PREFIX}")
 
@@ -195,9 +195,9 @@ endif ((HAS_OPENCL EQUAL 0) AND (HAS_HSA EQUAL 0))
 # Set up version information
 #################
 
-# define Kalmar version information
+# define HCC version information
 SET(KALMAR_VERSION_MAJOR "0")
-SET(KALMAR_VERSION_MINOR "7")
+SET(KALMAR_VERSION_MINOR "8")
 
 # get date information
 # use the last two digits of year + week number as KALMAR_VERSION_PATCH
@@ -216,12 +216,12 @@ execute_process(COMMAND git rev-parse --short HEAD
                 OUTPUT_VARIABLE KALMAR_COMPILER_COMMIT
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-# set Kalmar version string
+# set HCC version string
 set(KALMAR_VERSION_STRING "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}.${KALMAR_VERSION_PATCH}-${KALMAR_DRIVER_COMMIT}-${KALMAR_COMPILER_COMMIT}")
 
-# show Kalmar version string
+# show HCC version string
 MESSAGE("========================================")
-MESSAGE("Kalmar version: ${KALMAR_VERSION_STRING}")
+MESSAGE("HCC version: ${KALMAR_VERSION_STRING}")
 MESSAGE("========================================")
 
 
@@ -239,10 +239,10 @@ add_subdirectory(stl-test)
 #########################
 if (HAS_HSA)
 
-# setup HLC in Kalmar
+# setup HLC in HCC
 ensure_HLC_is_present(${PROJECT_SOURCE_DIR} hlc)
 
-# setup HSAILasm in Kalmar
+# setup HSAILasm in HCC
 ensure_HSAILASM_is_present(${PROJECT_SOURCE_DIR} HSAILasm)
 
 # build HLC
@@ -259,7 +259,7 @@ add_custom_target(hlc
   WORKING_DIRECTORY ${HLC_BIN_DIR}
 )
 
-# install HLC along with Kalmar
+# install HLC along with HCC
 # stored under hlc/
 install(DIRECTORY ${HLC_BIN_DIR}/bin
         DESTINATION hlc
@@ -276,7 +276,7 @@ add_custom_target(HSAILasm
   WORKING_DIRECTORY ${HSAILASM_BIN_DIR}
 )
 
-# install HSAILasm along with Kalmar
+# install HSAILasm along with HCC
 # stored under HSAILasm/
 install(FILES ${HSAILASM_BIN_DIR}/HSAILAsm/HSAILasm
         DESTINATION HSAILasm
@@ -338,15 +338,15 @@ if(CXXAMP_ENABLE_BOLT)
 endif(CXXAMP_ENABLE_BOLT)
 
 set(CPACK_SET_DESTDIR TRUE)
-set(CPACK_INSTALL_PREFIX "/opt/kalmar")
-set(CPACK_PACKAGE_NAME "kalmar")
+set(CPACK_INSTALL_PREFIX "/opt/hcc")
+set(CPACK_PACKAGE_NAME "hcc")
 set(CPACK_PACKAGE_VENDOR "MulticoreWare, Inc")
 set(CPACK_PACKAGE_VERSION ${KALMAR_VERSION_STRING})
 set(CPACK_PACKAGE_VERSION_MAJOR ${KALMAR_VERSION_MAJOR})
 set(CPACK_PACKAGE_VERSION_MINOR ${KALMAR_VERSION_MINOR})
 set(CPACK_PACKAGE_VERSION_PATCH ${KALMAR_VERSION_PATCH})
 set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_SYSTEM_NAME})
-set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "Kalmar: a Heterogeneous C++ to OpenCL/HSA compiler")
+set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "HCC: a Heterogeneous C++ to OpenCL/HSA compiler")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Jack Chung <jack@multicorewareinc.com>")
 set(CPACK_GENERATOR "DEB;TGZ")
 set(CPACK_SOURCE_GENERATOR "TGZ")

@@ -52,7 +52,7 @@ execute_process(COMMAND git describe --abbrev=4 --dirty --always --tags
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 # set installation directory
-set(CMAKE_INSTALL_PREFIX "/opt/kalmar")
+set(CMAKE_INSTALL_PREFIX "/opt/hcc")
 
 list( APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR} )
 set( BOLT_LIBRARY_DIR ${PROJECT_SOURCE_DIR}/bolt )
@@ -358,11 +358,11 @@ set( CPACK_PACKAGE_VENDOR "AMD")
 set( CPACK_SOURCE_IGNORE_FILES "/\\\\.hg/;/\\\\.svn/;" )
 
 set(CPACK_SET_DESTDIR TRUE)
-set(CPACK_INSTALL_PREFIX "/opt/kalmar")
-set(CPACK_PACKAGE_NAME "clamp-bolt")
+set(CPACK_INSTALL_PREFIX "/opt/hcc")
+set(CPACK_PACKAGE_NAME "hcc-bolt")
 set(CPACK_PACKAGE_VERSION "${Bolt_VERSION_MAJOR}.${Bolt_VERSION_MINOR}.${Bolt_VERSION_PATCH}-${GIT_VERSION}")
 set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_SYSTEM_NAME})
-set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "Bolt for Clamp")
+set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "Bolt for HCC")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Jack Chung <jack@multicorewareinc.com>")
 set(CPACK_GENERATOR "DEB;TGZ")
 set(CPACK_SOURCE_GENERATOR "TGZ")
