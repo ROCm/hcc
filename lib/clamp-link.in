@@ -6,7 +6,34 @@ if [ "$#" -eq 0 ]; then
   exit 1
 fi
 
-if [ -d @LLVM_TOOLS_DIR@ ]; then
+# tools search priority:
+# 1) $HCC_HOME
+# 2) @CMAKE_INSTALL_PREFIX@ : default install directory
+# 3) @PROJECT_BINARY_DIR@ : build directory
+
+if [ -z "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
+    LINK=$HCC_HOME/bin/llvm-link
+    OPT=$HCC_HOME/bin/opt
+    CLAMP_DEVICE=$HCC_HOME/bin/clamp-device
+    CLAMP_EMBED=$HCC_HOME/bin/clamp-embed
+    HLC_DIR=$HCC_HOME/hlc
+    HLC_LLVM_LINK=$HCC_HOME/hlc/bin/llvm-link
+    HLC_OPT=$HCC_HOME/hlc/bin/opt
+    HLC_LLC=$HCC_HOME/hlc/bin/llc
+    HLC_ASM_DIR=$HCC_HOME/HSAILasm
+    HLC_ASM=$HCC_HOME/HSAILasm/HSAILasm
+elif [ -e @CMAKE_INSTALL_PREFIX@ ]; then
+    LINK=@CMAKE_INSTALL_PREFIX@/bin/llvm-link
+    OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
+    CLAMP_DEVICE=@CMAKE_INSTALL_PREFIX@/bin/clamp-device
+    CLAMP_EMBED=@CMAKE_INSTALL_PREFIX@/bin/clamp-embed
+    HLC_DIR=@CMAKE_INSTALL_PREFIX@/hlc
+    HLC_LLVM_LINK=@CMAKE_INSTALL_PREFIX@/hlc/bin/llvm-link
+    HLC_OPT=@CMAKE_INSTALL_PREFIX@/hlc/bin/opt
+    HLC_LLC=@CMAKE_INSTALL_PREFIX@/hlc/bin/llc
+    HLC_ASM_DIR=@CMAKE_INSTALL_PREFIX@/HSAILasm
+    HLC_ASM=@CMAKE_INSTALL_PREFIX@/HSAILasm/HSAILasm
+elif [ -d @PROJECT_BINARY_DIR@ ]; then
     LINK=@LLVM_TOOLS_DIR@/llvm-link
     OPT=@LLVM_TOOLS_DIR@/opt
     CLAMP_DEVICE=@PROJECT_BINARY_DIR@/lib/clamp-device
@@ -18,16 +45,8 @@ if [ -d @LLVM_TOOLS_DIR@ ]; then
     HLC_ASM_DIR=@PROJECT_BINARY_DIR@/HSAILasm
     HLC_ASM=@PROJECT_BINARY_DIR@/HSAILasm/HSAILAsm/HSAILasm # notice the "A"
 else
-    LINK=@CMAKE_INSTALL_PREFIX@/bin/llvm-link
-    OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
-    CLAMP_DEVICE=@CMAKE_INSTALL_PREFIX@/bin/clamp-device
-    CLAMP_EMBED=@CMAKE_INSTALL_PREFIX@/bin/clamp-embed
-    HLC_DIR=@CMAKE_INSTALL_PREFIX@/hlc
-    HLC_LLVM_LINK=@CMAKE_INSTALL_PREFIX@/hlc/bin/llvm-link
-    HLC_OPT=@CMAKE_INSTALL_PREFIX@/hlc/bin/opt
-    HLC_LLC=@CMAKE_INSTALL_PREFIX@/hlc/bin/llc
-    HLC_ASM_DIR=@CMAKE_INSTALL_PREFIX@/HSAILasm
-    HLC_ASM=@CMAKE_INSTALL_PREFIX@/HSAILasm/HSAILasm
+    echo "ERROR: Can NOT locate HCC tools! Please specify with $HCC_HOME environmental variable." >&2
+    exit 1
 fi
 
 ################

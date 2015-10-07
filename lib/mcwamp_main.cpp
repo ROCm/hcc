@@ -46,12 +46,22 @@ void cxxflags(void) {
             std::cout << " -I" CMAKE_BOOST_INC_DIR;
         }
     } else if (install_mode) {
-        std::cout << " -I" CMAKE_INSTALL_INC;
+        if (const char *p = getenv("HCC_HOME")) {
+            std::cout << " -I" << p << "/include";
 
-        // bolt and boost
-        if (bolt_rewrite_mode) {
-            std::cout << " -I" CMAKE_INSTALL_BOLT_INC;
-            std::cout << " -I" CMAKE_INSTALL_BOOST_INC;
+            // bolt and boost
+            if (bolt_rewrite_mode) {
+                std::cout << " -I" << p << "/include/Bolt";
+                std::cout << " -I" << p << "/include/Boost";
+            }
+        } else {
+            std::cout << " -I" CMAKE_INSTALL_INC;
+    
+            // bolt and boost
+            if (bolt_rewrite_mode) {
+                std::cout << " -I" CMAKE_INSTALL_BOLT_INC;
+                std::cout << " -I" CMAKE_INSTALL_BOOST_INC;
+            }
         }
     } else {
         assert(0 && "Unreacheable!");
@@ -79,8 +89,13 @@ void ldflags(void) {
                          CMAKE_BOOST_LIB_DIR ;
         }
     } else if (install_mode) {
-        std::cout << " -L" CMAKE_INSTALL_LIB;
-        std::cout << " -Wl,--rpath=" CMAKE_INSTALL_LIB;
+        if (const char *p = getenv("HCC_HOME")) {
+            std::cout << " -L" << p;
+            std::cout << " -Wl,--rpath=" << p << "/lib";
+        } else {
+            std::cout << " -L" CMAKE_INSTALL_LIB;
+            std::cout << " -Wl,--rpath=" CMAKE_INSTALL_LIB;
+        }
     }
 
     std::cout << " -lc++ -ldl -lpthread ";
@@ -94,7 +109,11 @@ void ldflags(void) {
 }
 
 void prefix(void) {
-    std::cout << CMAKE_INSTALL_PREFIX;
+    if (const char *p = getenv("HCC_HOME")) {
+        std::cout << p;
+    } else {
+        std::cout << CMAKE_INSTALL_PREFIX;
+    }
 }
 
 // Compiling as a shared library
