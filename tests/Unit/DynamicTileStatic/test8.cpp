@@ -23,9 +23,7 @@ bool test1D() {
   array_view<int, 1> av3(grid_size, table3);
   array_view<int, 1> av4(grid_size, table4);
 
-  // set dynamic tile size as 0 for now as we don't test this feature in this test yet
-  ts_allocator tsa1;
-  completion_future fut1 = parallel_for_each(extent<1>(grid_size).tile(tile_size), tsa1, [=](tiled_index<1>& idx) restrict(amp) {
+  completion_future fut1 = parallel_for_each(extent<1>(grid_size).tile(tile_size), [=](tiled_index<1>& idx) restrict(amp) {
     av1(idx) = idx.global[0];
     av2(idx) = idx.local[0];
     av3(idx) = idx.tile[0];
@@ -42,9 +40,7 @@ bool test1D() {
   array_view<int, 1> av7(grid_size, table7);
   array_view<int, 1> av8(grid_size, table8);
 
-  // set dynamic tile size as 0 for now as we don't test this feature in this test yet
-  ts_allocator tsa2;
-  completion_future fut2 = parallel_for_each(tiled_extent<1>(grid_size, tile_size), tsa2, [=](tiled_index<1>& idx) restrict(amp) {
+  completion_future fut2 = parallel_for_each(tiled_extent<1>(grid_size, tile_size), [=](tiled_index<1>& idx) restrict(amp) {
     av5(idx) = idx.global[0];
     av6(idx) = idx.local[0];
     av7(idx) = idx.tile[0];
@@ -125,9 +121,7 @@ bool test2D() {
   array_view<int, 2> av7(grid_size_0, grid_size_1, table7);
   array_view<int, 2> av8(grid_size_0, grid_size_1, table8);
 
-  // set dynamic tile size as 0 for now as we don't test this feature in this test yet
-  ts_allocator tsa1;
-  completion_future fut1 = parallel_for_each(extent<2>(grid_size_0, grid_size_1).tile(tile_size_0, tile_size_1), tsa1, [=](tiled_index<2>& idx) restrict(amp) {
+  completion_future fut1 = parallel_for_each(extent<2>(grid_size_0, grid_size_1).tile(tile_size_0, tile_size_1), [=](tiled_index<2>& idx) restrict(amp) {
     av1(idx) = idx.global[0];
     av2(idx) = idx.global[1];
     av3(idx) = idx.local[0];
@@ -156,9 +150,7 @@ bool test2D() {
   array_view<int, 2> av15(grid_size_0, grid_size_1, table15);
   array_view<int, 2> av16(grid_size_0, grid_size_1, table16);
 
-  // set dynamic tile size as 0 for now as we don't test this feature in this test yet
-  ts_allocator tsa2;
-  completion_future fut2 = parallel_for_each(tiled_extent<2>(grid_size_0, grid_size_1, tile_size_0, tile_size_1), tsa2, [=](tiled_index<2>& idx) restrict(amp) {
+  completion_future fut2 = parallel_for_each(tiled_extent<2>(grid_size_0, grid_size_1, tile_size_0, tile_size_1), [=](tiled_index<2>& idx) restrict(amp) {
     av9(idx) = idx.global[0];
     av10(idx) = idx.global[1];
     av11(idx) = idx.local[0];
@@ -260,9 +252,7 @@ bool test3D() {
   array_view<int, 3> av11(grid_size_0, grid_size_1, grid_size_2, table11);
   array_view<int, 3> av12(grid_size_0, grid_size_1, grid_size_2, table12);
 
-  // set dynamic tile size as 0 for now as we don't test this feature in this test yet
-  ts_allocator tsa1;
-  completion_future fut1 = parallel_for_each(extent<3>(grid_size_0, grid_size_1, grid_size_2).tile(tile_size_0, tile_size_1, tile_size_2), tsa1, [=](tiled_index<3>& idx) restrict(amp) {
+  completion_future fut1 = parallel_for_each(extent<3>(grid_size_0, grid_size_1, grid_size_2).tile(tile_size_0, tile_size_1, tile_size_2), [=](tiled_index<3>& idx) restrict(amp) {
     av1(idx) = idx.global[0];
     av2(idx) = idx.global[1];
     av3(idx) = idx.global[2];
@@ -304,9 +294,7 @@ bool test3D() {
   array_view<int, 3> av23(grid_size_0, grid_size_1, grid_size_2, table23);
   array_view<int, 3> av24(grid_size_0, grid_size_1, grid_size_2, table24);
 
-  // set dynamic tile size as 0 for now as we don't test this feature in this test yet
-  ts_allocator tsa2;
-  completion_future fut2 = parallel_for_each(tiled_extent<3>(grid_size_0, grid_size_1, grid_size_2, tile_size_0, tile_size_1, tile_size_2), tsa2, [=](tiled_index<3>& idx) restrict(amp) {
+  completion_future fut2 = parallel_for_each(tiled_extent<3>(grid_size_0, grid_size_1, grid_size_2, tile_size_0, tile_size_1, tile_size_2), [=](tiled_index<3>& idx) restrict(amp) {
     av13(idx) = idx.global[0];
     av14(idx) = idx.global[1];
     av15(idx) = idx.global[2];

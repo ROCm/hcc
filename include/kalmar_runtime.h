@@ -106,7 +106,7 @@ public:
   virtual void* map(void* device, size_t count, size_t offset, bool modify) = 0;
 
   /// unmap host accessible pointer
-  virtual void unmap(void* device, void* addr) = 0;
+  virtual void unmap(void* device, void* addr, size_t count, size_t offset, bool modify) = 0;
 
   /// push device pointer to kernel argument list
   virtual void Push(void *kernel, int idx, void* device, bool modify) = 0;
@@ -254,7 +254,7 @@ public:
       return (char*)device + offset;
   }
 
-  void unmap(void* device, void* addr) override {}
+  void unmap(void* device, void* addr, size_t count, size_t offset, bool modify) override {}
 
   void Push(void *kernel, int idx, void* device, bool modify) override {}
 };
@@ -610,7 +610,7 @@ struct rw_info
         return curr->map(info.data, cnt, offset, modify);
     }
 
-    void unmap(void* addr) { curr->unmap(devs[curr->getDev()].data, addr); }
+    void unmap(void* addr, size_t cnt, size_t offset, bool modify) { curr->unmap(devs[curr->getDev()].data, addr, cnt, offset, modify); }
 
     /// synchronize data to master accelerator
     /// used in array

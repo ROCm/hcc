@@ -25,9 +25,7 @@ bool test1D() {
   std::vector<int> table5(grid_size);
   hc::array_view<int, 1> av5(grid_size, table5);
 
-  // set dynamic tile size as 0 for now as we don't test this feature in this test yet
-  hc::ts_allocator tsa;
-  hc::completion_future fut = hc::parallel_for_each(hc::extent<1>(grid_size), tsa, [=](hc::index<1>& idx) restrict(amp) {
+  hc::completion_future fut = hc::parallel_for_each(hc::extent<1>(grid_size), [=](hc::index<1>& idx) restrict(amp) {
     av5(idx) = idx[0];
   });
 
@@ -93,9 +91,7 @@ bool test2D() {
   hc::array_view<int, 2> av9(grid_size_0, grid_size_1, table9);
   hc::array_view<int, 2> av10(grid_size_0, grid_size_1, table10);
 
-  // set dynamic tile size as 0 for now as we don't test this feature in this test yet
-  hc::ts_allocator tsa;
-  hc::completion_future fut = hc::parallel_for_each(hc::extent<2>(grid_size_0, grid_size_1), tsa, [=](hc::index<2>& idx) restrict(amp) {
+  hc::completion_future fut = hc::parallel_for_each(hc::extent<2>(grid_size_0, grid_size_1), [=](hc::index<2>& idx) restrict(amp) {
     av9(idx) = idx[0];
     av10(idx) = idx[1];
   });
@@ -170,9 +166,7 @@ bool test3D() {
   hc::array_view<int, 3> av14(grid_size_0, grid_size_1, grid_size_2, table14);
   hc::array_view<int, 3> av15(grid_size_0, grid_size_1, grid_size_2, table15);
 
-  // set dynamic tile size as 0 for now as we don't test this feature in this test yet
-  hc::ts_allocator tsa;
-  hc::completion_future fut = hc::parallel_for_each(hc::extent<3>(grid_size_0, grid_size_1, grid_size_2), tsa, [=](hc::index<3>& idx) restrict(amp) {
+  hc::completion_future fut = hc::parallel_for_each(hc::extent<3>(grid_size_0, grid_size_1, grid_size_2), [=](hc::index<3>& idx) restrict(amp) {
     av13(idx) = idx[0];
     av14(idx) = idx[1];
     av15(idx) = idx[2];
