@@ -1680,7 +1680,7 @@ tiled_extent<3> extent<N>::tile(int t0, int t1, int t2) const __attribute__((hc,
 }
 
 // ------------------------------------------------------------------------
-// dynamic group segment allocator
+// dynamic group segment
 // ------------------------------------------------------------------------
 
 /**
@@ -1705,49 +1705,6 @@ extern "C" unsigned int get_static_group_segment_size() __attribute__((hc));
  * @return The size of dynamic group segment used by the kernel in bytes.
  */
 extern "C" unsigned int get_dynamic_group_segment_size() __attribute__((hc));
-
-/**
- * Get the cursor of dynamic group segment memory.
- *
- * @return The offset of the next available memory in dynamic group segment
- */
-extern "C" int get_dynamic_group_segment_cursor() __attribute__((hc));
-
-/**
- * Set the cursor of dynamic group segment memory.
- *
- * @param offset The offset of the next available memory in dynamic group segment
- */
-extern "C" void set_dynamic_group_segment_cursor(int) __attribute__((hc));
-
-/**
- * Reset the cursor. Effectively it means free up all previous allocated
- * dynamic group segment memory.
- */
-extern "C" void reset_dynamic_group_segment_cursor() __attribute__((hc));
-
-/**
- * Allocate the requested size in tile static memory and return its pointer
- * returns NULL if the requested size can't be allocated
- * It requires all threads in a tile to hit the same ts_alloc call site at the
- * same time.
- * Only one instance of the tile static memory will be allocated per call site
- * and all threads within a tile will get the same tile static memory address.
- */
-__attribute__((address_space(3))) void* alloc_dynamic_group_segment(unsigned int size) __attribute__((hc)) {
-    int offset = get_dynamic_group_segment_cursor();
-
-    // only the first workitem in the workgroup moves the cursor
-    if (amp_get_local_id(0) == 0 && amp_get_local_id(1) == 0 && amp_get_local_id(2) == 0) {
-      set_dynamic_group_segment_cursor(offset + size);
-    }
-
-    // fetch the beginning address of dynamic group segment
-    __attribute__((address_space(3))) unsigned char* lds = (__attribute__((address_space(3))) unsigned char*) getLDS(get_static_group_segment_size());
-
-    // return the address
-    return lds + offset;
-}
 
 // ------------------------------------------------------------------------
 // utility class for tiled_barrier
