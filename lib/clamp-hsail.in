@@ -39,6 +39,10 @@ else
     exit 1
 fi
 
+if [ -n "@HSA_LLVM_BIN_DIR@" ]; then
+    HLC_LLC=@HSA_LLVM_BIN_DIR@/llc
+fi
+
 INPUT=$1
 SUFFIX=ll
 FILENAME=${INPUT%.$SUFFIX}

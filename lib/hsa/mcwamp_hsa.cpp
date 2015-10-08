@@ -1039,13 +1039,23 @@ public:
         std::string str(fun);
         HSAKernel *kernel = programs[str];
         if (!kernel) {
+            bool use_amdgpu = false;
+#ifdef HSA_USE_AMDGPU_BACKEND
+            const char *km_use_amdgpu = getenv("KM_USE_AMDGPU");
+            use_amdgpu = !km_use_amdgpu || km_use_amdgpu[0] != '0';
+#endif
             size_t kernel_size = (size_t)((void *)size);
             char *kernel_source = (char*)malloc(kernel_size+1);
             memcpy(kernel_source, source, kernel_size);
             kernel_source[kernel_size] = '\0';
-            std::string kname = std::string("&")+fun;
+            std::string kname;
+            if (use_amdgpu) {
+              kname = fun;
+            } else {
+              kname = std::string("&")+fun;
+            }
             //std::cerr << "HSADevice::CreateKernel(): Creating kernel: " << kname << "\n";
-            if (needsCompilation) {
+            if (needsCompilation && !use_amdgpu) {
               kernel = CreateKernelImpl(kernel_source, kernel_size, kname.c_str());
             } else {
               kernel = CreateOfflineFinalizedKernelImpl(kernel_source, kernel_size, kname.c_str());

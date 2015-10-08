@@ -123,8 +123,11 @@ endif ((NOT OPENCL_HEADER) OR (NOT OPENCL_LIBRARY))
 set (HSA_ROOT "/opt/hsa"
         CACHE PATH "HSA runtime path")
 
+set (HSA_LLVM_BIN_DIR CACHE PATH "Path to llvm tools with hsail/amdgpu support")
+
 find_path(HSA_HEADER hsa.h PATHS ${HSA_HEADER_DIR} ${HSA_ROOT}/include NO_DEFAULT_PATH)
 find_path(HSA_HEADER hsa.h)
+
 if (NOT HSA_HEADER)
   MESSAGE("HSA header not found. Use -DHSA_HEADER_DIR=<path_to_hsa.h>.")
 endif (NOT HSA_HEADER)
@@ -192,6 +195,20 @@ if ((HAS_OPENCL EQUAL 0) AND (HAS_HSA EQUAL 0))
 endif ((HAS_OPENCL EQUAL 0) AND (HAS_HSA EQUAL 0))
 
 #################
+# Detect AMDGPU backend for native codegen
+#################
+option(HSA_USE_AMDGPU_BACKEND "Use AMDGPU LLVM backend as compiler for HSA" OFF)
+set(HSA_AMDGPU_BUILTIN_LIBRARY_WRAPPER CACHE STRING "Path to LLVM bitcode library which replaces hasil intrinsics with AMDGPU intrinsics")
+
+if (HSA_USE_AMDGPU_BACKEND AND NOT HSA_AMDGPU_BUILTIN_LIBRARY_WRAPPER)
+  MESSAGE(FATAL_ERROR "You must specify a value for HSA_AMDGPU_BUILTIN_LIBRARY_WRAPPER to use the AMDGPU backend")
+endif ()
+
+if (HSA_USE_AMDGPU_BACKEND)
+  add_definitions(-DHSA_USE_AMDGPU_BACKEND)
+endif ()
+
+#################
 # Set up version information
 #################
 
@@ -246,6 +263,9 @@ ensure_HLC_is_present(${PROJECT_SOURCE_DIR} hlc)
 ensure_HSAILASM_is_present(${PROJECT_SOURCE_DIR} HSAILasm)
 
 # build HLC
+
+if (NOT HSA_LLVM_BIN_DIR)
+
 set(HLC_SRC_DIR "${PROJECT_SOURCE_DIR}/hlc")
 set(HLC_BIN_DIR "${PROJECT_BINARY_DIR}/hlc")
 file(MAKE_DIRECTORY ${HLC_BIN_DIR})
@@ -266,6 +286,9 @@ install(DIRECTORY ${HLC_BIN_DIR}/bin
         COMPONENT hlc
         PATTERN * PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
+endif(NOT HSA_LLVM_BIN_DIR)
+
+
 # build HSAILasm
 set(HSAILASM_SRC_DIR "${PROJECT_SOURCE_DIR}/HSAILasm")
 set(HSAILASM_BIN_DIR "${PROJECT_BINARY_DIR}/HSAILasm")
@@ -277,14 +300,23 @@ add_custom_target(HSAILasm
 )
 
 # install HSAILasm along with HCC
+if (NOT HSA_USE_AMDGPU_BACKEND)
+  set (DEPS "HSAILasm ${DEPS}")
+endif()
+
 # stored under HSAILasm/
 install(FILES ${HSAILASM_BIN_DIR}/HSAILAsm/HSAILasm
         DESTINATION HSAILasm
         PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
         COMPONENT HSAILasm)
 
+
+if (NOT HSA_LLVM_BIN_DIR)
+  set(DEPS "hlc ${DEPS}")
+endif()
+
 add_custom_target(world
-    DEPENDS clang hlc HSAILasm ${DEPS}
+    DEPENDS clang ${DEPS}
 )
 
 else (HAS_HSA)
