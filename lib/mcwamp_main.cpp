@@ -101,7 +101,7 @@ void ldflags(void) {
         }
     } else if (install_mode) {
         if (const char *p = getenv("HCC_HOME")) {
-            std::cout << " -L" << p;
+            std::cout << " -L" << p << "/lib";
             std::cout << " -Wl,--rpath=" << p << "/lib";
         } else {
             std::cout << " -L" CMAKE_INSTALL_LIB;
