@@ -15,6 +15,8 @@
 static int verbose_flag;
 static bool build_mode = false, install_mode = true; // use install mode by default
 
+static bool amp_mode = true, hcc_mode = false;
+
 static bool bolt_rewrite_mode = false;
 
 void replace(std::string& str,
@@ -32,8 +34,12 @@ void cxxflags(void) {
         abort();
     }
 
+    if (hcc_mode) {
+        std::cout << " -hc";
+    }
+
     // Common options
-    std::cout << "-std=c++amp -stdlib=libc++";
+    std::cout << " -std=c++amp -stdlib=libc++";
 
     // clamp
     if (build_mode) {
@@ -71,8 +77,13 @@ void cxxflags(void) {
 }
 
 void ldflags(void) {
+    if (hcc_mode) {
+        std::cout << " -hc";
+    }
+
     // Common options
-    std::cout << "-std=c++amp";
+    std::cout << " -std=c++amp";
+
     if (build_mode) {
         std::cout << " -L" CMAKE_AMPCL_LIB_DIR;
 
@@ -126,6 +137,12 @@ void shared(void) {
 }
 
 int main (int argc, char **argv) {
+    if (std::string(argv[0]).find("hcc-config") != std::string::npos) {
+        hcc_mode = true; amp_mode = false;
+    } else {
+        hcc_mode = false; amp_mode = true;
+    }
+
     int c;
     while (1)
     {
