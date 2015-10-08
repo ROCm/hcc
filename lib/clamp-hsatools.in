@@ -34,11 +34,11 @@ fi
 # 3) @PROJECT_BINARY_DIR@ : build directory
 
 if [ -z "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
-    HLC_LLVM_LINK=@CMAKE_INSTALL_PREFIX@/hlc/bin/llvm-link
-    HLC_OPT=@CMAKE_INSTALL_PREFIX@/hlc/bin/opt
-    HLC_LLC=@CMAKE_INSTALL_PREFIX@/hlc/bin/llc
-    HLC_ASM=@CMAKE_INSTALL_PREFIX@/HSAILasm/HSAILasm
-    NEWLIB=@CMAKE_INSTALL_PREFIX@/lib
+    HLC_LLVM_LINK=$HCC_HOME/hlc/bin/llvm-link
+    HLC_OPT=$HCC_HOME/hlc/bin/opt
+    HLC_LLC=$HCC_HOME/hlc/bin/llc
+    HLC_ASM=$HCC_HOME/HSAILasm/HSAILasm
+    NEWLIB=$HCC_HOME/lib
 elif [ -e @CMAKE_INSTALL_PREFIX@ ]; then
     HLC_LLVM_LINK=@CMAKE_INSTALL_PREFIX@/hlc/bin/llvm-link
     HLC_OPT=@CMAKE_INSTALL_PREFIX@/hlc/bin/opt
