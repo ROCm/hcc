@@ -1,7 +1,33 @@
 #!/bin/bash
 
 # hc-kernel-assemble kernel-bitcode kernel-object
-if [ -d @LLVM_TOOLS_DIR@ ]; then
+
+# tools search priority:
+# 1) $HCC_HOME
+# 2) @CMAKE_INSTALL_PREFIX@ : default install directory
+# 3) @LLVM_TOOLS_DIR@ : build directory
+
+if [ -z "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
+  BINPATH=$HCC_HOME/bin
+  CLANG=$BINPATH/clang
+  CLAMP_CONFIG=$BINPATH/clamp-config
+  LLVM_LINK=$BINPATH/llvm-link
+  CLAMP_ASM=$BINPATH/clamp-assemble
+  OPT=$BINPATH/opt
+  LLVM_AS=$BINPATH/llvm-as
+  LLVM_DIS=$BINPATH/llvm-dis
+  LIBPATH=$HCC_HOME/lib
+elif [ -e @CMAKE_INSTALL_PREFIX@ ]; then
+  BINPATH=@CMAKE_INSTALL_PREFIX@/bin
+  CLANG=$BINPATH/clang
+  CLAMP_CONFIG=$BINPATH/clamp-config
+  LLVM_LINK=$BINPATH/llvm-link
+  CLAMP_ASM=$BINPATH/clamp-assemble
+  OPT=$BINPATH/opt
+  LLVM_AS=$BINPATH/llvm-as
+  LLVM_DIS=$BINPATH/llvm-dis
+  LIBPATH=@CMAKE_INSTALL_PREFIX@/lib
+elif [ -d @LLVM_TOOLS_DIR@ ]; then
   BINPATH=@LLVM_ROOT@/bin
   CLANG=$BINPATH/clang
   CLAMP_CONFIG=@EXECUTABLE_OUTPUT_PATH@/clamp-config
@@ -12,15 +38,8 @@ if [ -d @LLVM_TOOLS_DIR@ ]; then
   LLVM_DIS=$BINPATH/llvm-dis
   LIBPATH=@LLVM_ROOT@/lib
 else
-  BINPATH=@CMAKE_INSTALL_PREFIX@/bin
-  CLANG=$BINPATH/clang
-  CLAMP_CONFIG=$BINPATH/clamp-config
-  LLVM_LINK=$BINPATH/llvm-link
-  CLAMP_ASM=$BINPATH/clamp-assemble
-  OPT=$BINPATH/opt
-  LLVM_AS=$BINPATH/llvm-as
-  LLVM_DIS=$BINPATH/llvm-dis
-  LIBPATH=$BINPATH/lib
+    echo "ERROR: Can NOT locate HCC tools! Please specify with $HCC_HOME environmental variable." >&2
+    exit 1
 fi
 
 if [ "$#" -ne 2 ]; then

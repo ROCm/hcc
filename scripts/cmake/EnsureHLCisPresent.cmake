@@ -8,6 +8,8 @@ else(EXISTS "${dest_dir}/${name}")
       execute_process(COMMAND ln -fs ${HSAIL_COMPILER_DIR} ${dest_dir}/${name}
                       WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
 
+    elseif(EXISTS ${HSA_LLVM_BIN_DIR})
+        MESSAGE("Using LLVM tools from ${HSA_LLVM_BIN_DIR}")
     else(EXISTS ${HSAIL_COMPILER_DIR})
 
       MESSAGE("Downloading HLC")
