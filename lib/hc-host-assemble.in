@@ -14,7 +14,7 @@ if [ -z "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
   OPT=$INSTALL/opt
   LLVM_AS=$INSTALL/llvm-as
   LLVM_DIS=$INSTALL/llvm-dis
-  LIBPATH=$INSTALL/lib
+  LIBPATH=$HCC_HOME/lib
 elif [ -e @CMAKE_INSTALL_PREFIX@ ]; then
   INSTALL=@CMAKE_INSTALL_PREFIX@/bin
   CLANG=$INSTALL/clang
@@ -22,7 +22,7 @@ elif [ -e @CMAKE_INSTALL_PREFIX@ ]; then
   OPT=$INSTALL/opt
   LLVM_AS=$INSTALL/llvm-as
   LLVM_DIS=$INSTALL/llvm-dis
-  LIBPATH=$INSTALL/lib
+  LIBPATH=@CMAKE_INSTALL_PREFIX@/lib
 elif [ -d @LLVM_TOOLS_DIR@ ]; then
   BINPATH=@LLVM_ROOT@/bin
   CLANG=$BINPATH/clang
