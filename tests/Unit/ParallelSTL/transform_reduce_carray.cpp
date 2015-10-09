@@ -7,45 +7,31 @@
 #include <experimental/numeric>
 #include <experimental/execution_policy>
 
-// C++ headers
-#include <iostream>
-#include <iomanip>
-#include <numeric>
-#include <algorithm>
-#include <iterator>
-
-#define ROW (2)
-#define COL (8)
-#define TEST_SIZE (ROW * COL)
-
 #define _DEBUG (0)
+#include "test_base.h"
 
-template<typename _Tp, size_t SIZE>
-bool test() {
+template<typename T, size_t SIZE>
+bool test(void) {
+
+  auto op = [](const T &x) { return x+5566; };
+  auto binary_op = std::plus<T>();
+  auto init = T{};
+
+  using std::experimental::parallel::par;
+
   bool ret = true;
+  bool eq = true;
+  ret &= run_and_compare<T, SIZE>([op, init, binary_op, &eq]
+                                  (T (&input)[SIZE], T (&output1)[SIZE],
+                                                     T (&output2)[SIZE]) {
+    std::transform(std::begin(input), std::end(input), std::begin(output1), op);
+    auto expected = std::accumulate(std::begin(output1), std::end(output1), init, binary_op);
 
-  _Tp table[SIZE] { _Tp{} };
-
-  // initialize test data
-  std::iota(std::begin(table), std::end(table), 1);
-  _Tp buffer[SIZE] { _Tp{} };
-  std::transform(std::begin(table), std::end(table), std::begin(buffer), std::negate<_Tp>());
-  _Tp expected = std::accumulate(std::begin(buffer), std::end(buffer), _Tp{}, std::plus<_Tp>());
-
-  // launch kernel with parallel STL transform reduce
-  using namespace std::experimental::parallel;
-
-  ret &= (expected == transform_reduce(std::begin(table), std::end(table), std::negate<_Tp>(), _Tp{}, std::plus<_Tp>()));
-  ret &= (expected == transform_reduce(par, std::begin(table), std::end(table), std::negate<_Tp>(), _Tp{}, std::plus<_Tp>()));
-
-#if _DEBUG 
-  for (int i = 0; i < ROW; ++i) {
-    for (int j = 0; j < COL; ++j) {
-      std::cout << std::setw(5) << table[i * COL + j];
-    }
-    std::cout << "\n";
-  } 
-#endif
+    auto result = std::experimental::parallel::
+                  transform_reduce(par, std::begin(input), std::end(input), op, init, binary_op);
+    eq = EQ(expected, result);
+  }, false);
+  ret &= eq;
 
   return ret;
 }

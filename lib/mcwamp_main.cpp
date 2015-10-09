@@ -15,6 +15,8 @@
 static int verbose_flag;
 static bool build_mode = false, install_mode = true; // use install mode by default
 
+static bool amp_mode = true, hcc_mode = false;
+
 static bool bolt_rewrite_mode = false;
 
 void replace(std::string& str,
@@ -32,8 +34,12 @@ void cxxflags(void) {
         abort();
     }
 
+    if (hcc_mode) {
+        std::cout << " -hc";
+    }
+
     // Common options
-    std::cout << "-std=c++amp -stdlib=libc++";
+    std::cout << " -std=c++amp -stdlib=libc++";
 
     // clamp
     if (build_mode) {
@@ -46,12 +52,22 @@ void cxxflags(void) {
             std::cout << " -I" CMAKE_BOOST_INC_DIR;
         }
     } else if (install_mode) {
-        std::cout << " -I" CMAKE_INSTALL_INC;
+        if (const char *p = getenv("HCC_HOME")) {
+            std::cout << " -I" << p << "/include";
 
-        // bolt and boost
-        if (bolt_rewrite_mode) {
-            std::cout << " -I" CMAKE_INSTALL_BOLT_INC;
-            std::cout << " -I" CMAKE_INSTALL_BOOST_INC;
+            // bolt and boost
+            if (bolt_rewrite_mode) {
+                std::cout << " -I" << p << "/include/Bolt";
+                std::cout << " -I" << p << "/include/Boost";
+            }
+        } else {
+            std::cout << " -I" CMAKE_INSTALL_INC;
+    
+            // bolt and boost
+            if (bolt_rewrite_mode) {
+                std::cout << " -I" CMAKE_INSTALL_BOLT_INC;
+                std::cout << " -I" CMAKE_INSTALL_BOOST_INC;
+            }
         }
     } else {
         assert(0 && "Unreacheable!");
@@ -61,8 +77,13 @@ void cxxflags(void) {
 }
 
 void ldflags(void) {
+    if (hcc_mode) {
+        std::cout << " -hc";
+    }
+
     // Common options
-    std::cout << "-std=c++amp";
+    std::cout << " -std=c++amp";
+
     if (build_mode) {
         std::cout << " -L" CMAKE_AMPCL_LIB_DIR;
 
@@ -79,8 +100,13 @@ void ldflags(void) {
                          CMAKE_BOOST_LIB_DIR ;
         }
     } else if (install_mode) {
-        std::cout << " -L" CMAKE_INSTALL_LIB;
-        std::cout << " -Wl,--rpath=" CMAKE_INSTALL_LIB;
+        if (const char *p = getenv("HCC_HOME")) {
+            std::cout << " -L" << p << "/lib";
+            std::cout << " -Wl,--rpath=" << p << "/lib";
+        } else {
+            std::cout << " -L" CMAKE_INSTALL_LIB;
+            std::cout << " -Wl,--rpath=" CMAKE_INSTALL_LIB;
+        }
     }
 
     std::cout << " -lc++ -ldl -lpthread ";
@@ -94,7 +120,11 @@ void ldflags(void) {
 }
 
 void prefix(void) {
-    std::cout << CMAKE_INSTALL_PREFIX;
+    if (const char *p = getenv("HCC_HOME")) {
+        std::cout << p;
+    } else {
+        std::cout << CMAKE_INSTALL_PREFIX;
+    }
 }
 
 // Compiling as a shared library
@@ -107,6 +137,12 @@ void shared(void) {
 }
 
 int main (int argc, char **argv) {
+    if (std::string(argv[0]).find("hcc-config") != std::string::npos) {
+        hcc_mode = true; amp_mode = false;
+    } else {
+        hcc_mode = false; amp_mode = true;
+    }
+
     int c;
     while (1)
     {

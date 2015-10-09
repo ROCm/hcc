@@ -1,3 +1,15 @@
+//===----------------------------------------------------------------------===//
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+/**
+ * @file exception_list
+ * exceptions raised during parallel executions
+ */
+
 #pragma once
 
 namespace std {

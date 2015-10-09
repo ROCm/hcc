@@ -2,6 +2,8 @@ macro(ensure_HSAILASM_is_present dest_dir name)
 
 if(EXISTS "${dest_dir}/${name}")
     MESSAGE("HSAILasm already exists.")
+elseif(HSA_USE_AMDGPU_BACKEND)
+    MESSAGE("AMDGPU backend enable, not using HSAILasm")
 else(EXISTS "${dest_dir}/${name}")
     if(EXISTS ${HSAIL_ASSEMBLER_DIR})
       MESSAGE("Symbolic link with specified HSAILasm")
