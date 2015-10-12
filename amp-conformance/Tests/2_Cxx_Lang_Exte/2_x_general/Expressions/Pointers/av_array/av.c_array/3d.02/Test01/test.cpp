@@ -23,7 +23,7 @@ void init(vector<type> &a, vector<type> &b, vector<type> &c, vector<type> &fa, v
     {
         fa[i] = a[i] - 1;
         fb[i] = b[i] - 1;
-        ref_c[i] = max(a[i], b[i] + 4) * LOCAL_SIZE * LOCAL_SIZE * LOCAL_SIZE; // Because in kernel_local, the results have been added up. So here it needs multiplication.
+        ref_c[i] = std::max(a[i], b[i] + 4) * LOCAL_SIZE * LOCAL_SIZE * LOCAL_SIZE; // Because in kernel_local, the results have been added up. So here it needs multiplication.
     }
 
     flag[0] = 10;
