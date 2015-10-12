@@ -41,9 +41,7 @@ bool test1D() {
   hc::array_view<int, 1> av7(grid_size, table7);
   hc::array_view<int, 1> av8(grid_size, table8);
 
-  // set dynamic tile size as 0 for now as we don't test this feature in this test yet
-  hc::ts_allocator tsa;
-  hc::completion_future fut = hc::parallel_for_each(hc::tiled_extent<1>(grid_size, tile_size), tsa, [=](hc::tiled_index<1>& idx) restrict(amp) {
+  hc::completion_future fut = hc::parallel_for_each(hc::tiled_extent<1>(grid_size, tile_size), [=](hc::tiled_index<1>& idx) restrict(amp) {
     av5(idx) = idx.global[0];
     av6(idx) = idx.local[0];
     av7(idx) = idx.tile[0];
@@ -154,9 +152,7 @@ bool test2D() {
   hc::array_view<int, 2> av15(grid_size_0, grid_size_1, table15);
   hc::array_view<int, 2> av16(grid_size_0, grid_size_1, table16);
 
-  // set dynamic tile size as 0 for now as we don't test this feature in this test yet
-  hc::ts_allocator tsa;
-  hc::completion_future fut = hc::parallel_for_each(hc::tiled_extent<2>(grid_size_0, grid_size_1, tile_size_0, tile_size_1), tsa, [=](hc::tiled_index<2>& idx) restrict(amp) {
+  hc::completion_future fut = hc::parallel_for_each(hc::tiled_extent<2>(grid_size_0, grid_size_1, tile_size_0, tile_size_1), [=](hc::tiled_index<2>& idx) restrict(amp) {
     av9(idx) = idx.global[0];
     av10(idx) = idx.global[1];
     av11(idx) = idx.local[0];
@@ -300,9 +296,7 @@ bool test3D() {
   hc::array_view<int, 3> av23(grid_size_0, grid_size_1, grid_size_2, table23);
   hc::array_view<int, 3> av24(grid_size_0, grid_size_1, grid_size_2, table24);
 
-  // set dynamic tile size as 0 for now as we don't test this feature in this test yet
-  hc::ts_allocator tsa;
-  hc::completion_future fut = hc::parallel_for_each(hc::tiled_extent<3>(grid_size_0, grid_size_1, grid_size_2, tile_size_0, tile_size_1, tile_size_2), tsa, [=](hc::tiled_index<3>& idx) restrict(amp) {
+  hc::completion_future fut = hc::parallel_for_each(hc::tiled_extent<3>(grid_size_0, grid_size_1, grid_size_2, tile_size_0, tile_size_1, tile_size_2), [=](hc::tiled_index<3>& idx) restrict(amp) {
     av13(idx) = idx.global[0];
     av14(idx) = idx.global[1];
     av15(idx) = idx.global[2];

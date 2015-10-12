@@ -9,7 +9,8 @@ add_mcwamp_library(mcwamp_atomic mcwamp_atomic.cpp)
 ####################
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 add_mcwamp_executable(clamp-config mcwamp_main.cpp)
-install(TARGETS mcwamp clamp-config mcwamp_atomic
+add_mcwamp_executable(hcc-config mcwamp_main.cpp)
+install(TARGETS mcwamp clamp-config hcc-config mcwamp_atomic
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
@@ -23,6 +24,8 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-device
     ${CMAKE_CURRENT_BINARY_DIR}/clamp-embed
     ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-assemble
     ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-link
+    ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/hc-kernel-assemble
+    ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/hc-host-assemble
 #    ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-preprocess
     DESTINATION bin)
 

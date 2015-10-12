@@ -1,0 +1,66 @@
+#!/bin/bash
+
+# hc-host-assemble host-bitcode host-object
+
+# tools search priority:
+# 1) $HCC_HOME
+# 2) @CMAKE_INSTALL_PREFIX@ : default install directory
+# 3) @LLVM_TOOLS_DIR@ : build directory
+
+if [ -z "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
+  INSTALL=$HCC_HOME/bin
+  CLANG=$INSTALL/clang
+  CLAMP_CONFIG=$INSTALL/clamp-config
+  OPT=$INSTALL/opt
+  LLVM_AS=$INSTALL/llvm-as
+  LLVM_DIS=$INSTALL/llvm-dis
+  LIBPATH=$HCC_HOME/lib
+elif [ -e @CMAKE_INSTALL_PREFIX@ ]; then
+  INSTALL=@CMAKE_INSTALL_PREFIX@/bin
+  CLANG=$INSTALL/clang
+  CLAMP_CONFIG=$INSTALL/clamp-config
+  OPT=$INSTALL/opt
+  LLVM_AS=$INSTALL/llvm-as
+  LLVM_DIS=$INSTALL/llvm-dis
+  LIBPATH=@CMAKE_INSTALL_PREFIX@/lib
+elif [ -d @LLVM_TOOLS_DIR@ ]; then
+  BINPATH=@LLVM_ROOT@/bin
+  CLANG=$BINPATH/clang
+  CLAMP_CONFIG=@EXECUTABLE_OUTPUT_PATH@/clamp-config
+  OPT=$BINPATH/opt
+  LLVM_AS=$BINPATH/llvm-as
+  LLVM_DIS=$BINPATH/llvm-dis
+  LIBPATH=@LLVM_ROOT@/lib
+else
+    echo "ERROR: Can NOT locate HCC tools! Please specify with $HCC_HOME environmental variable." >&2
+    exit 1
+fi
+
+if [ "$#" -ne 2 ]; then
+  echo "Usage: $0 kernel-bitcode object" >&2
+  exit 1
+fi
+
+if [ ! -f $1 ]; then
+  echo "kernel-bitcode $1 is not valid" >&2
+  exit 1
+fi
+
+CO="-c -o"
+
+TEMP_DIR=`mktemp -d`
+BASENAME=`basename $2`
+TEMP_NAME="$TEMP_DIR/$BASENAME"
+
+$LLVM_DIS $1 -o $TEMP_NAME.ll
+$OPT -load $LIBPATH/LLVMDirectFuncCall.so -redirect < $TEMP_NAME.ll 2>$TEMP_NAME.host_redirect.ll >/dev/null
+if [[ -s $TEMP_NAME.host_redirect.ll ]]; then
+  $LLVM_AS $TEMP_NAME.host_redirect.ll -o $TEMP_NAME.host_redirect.bc
+  $CLANG -std=c++amp $TEMP_NAME.host_redirect.bc $CO $2
+else
+  ln -s $1 $1.bc
+  $CLANG -std=c++amp $1.bc $CO $2
+fi
+
+rm -f $TEMP_NAME.* $1.bc
+rmdir $TEMP_DIR

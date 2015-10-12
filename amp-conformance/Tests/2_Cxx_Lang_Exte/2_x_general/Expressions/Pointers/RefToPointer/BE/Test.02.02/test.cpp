@@ -59,7 +59,7 @@ void init(vector<type> &a, vector<type> &b,  vector<type> &c, vector<type> &fa1,
     for (size_t i = 0; i < size; i++)
     {
         fa1[i] = fa2[i] = fa3[i] = fa4[i] = a[i] - 1;
-        refc[i] = (max(a[i], b[i])) * LOCAL_SIZE_1D * LOCAL_SIZE_1D * LOCAL_SIZE_1D; // Because in kernel_local, the results have been added up. So here it needs multiplication.
+        refc[i] = (std::max(a[i], b[i])) * LOCAL_SIZE_1D * LOCAL_SIZE_1D * LOCAL_SIZE_1D; // Because in kernel_local, the results have been added up. So here it needs multiplication.
         refb[i] = (b[i]) * LOCAL_SIZE_1D * LOCAL_SIZE_1D * LOCAL_SIZE_1D;
     }
 
