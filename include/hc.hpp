@@ -670,6 +670,35 @@ public:
         }
         return result;
     }
+
+    /**
+     * Returns an opaque handle which points to the AM region on the HSA agent.
+     *
+     * @return An opaque handle of the region, if the accelerator is based
+     *         on HSA.  NULL otherwise.
+     */
+    void* get_hsa_am_region() {
+        return get_default_view().get_hsa_am_region();
+    }
+
+    /**
+     * Returns an opaque handle which points to the Kernarg region on the HSA
+     * agent.
+     *
+     * @return An opaque handle of the region, if the accelerator is based
+     *         on HSA.  NULL otherwise.
+     */
+    void* get_hsa_kernarg_region() {
+        return get_default_view().get_hsa_kernarg_region();
+    }
+
+    /**
+     * Returns if the accelerator is based on HSA.
+     */
+    bool is_hsa_accelerator() {
+        return get_default_view().is_hsa_accelerator();
+    }
+
 private:
     accelerator(Kalmar::KalmarDevice* pDev) : pDev(pDev) {}
     friend class accelerator_view;
@@ -4163,11 +4192,11 @@ public:
      *                to. If the number of elements pointed to is less than
      *                the size of extent, the behavior is undefined.
      */
-    array_view(int e0, value_type *src) __attribute__((hc,cpu))
+    array_view(int e0, const value_type *src) __attribute__((hc,cpu))
         : array_view(hc::extent<1>(e0), src) {}
-    array_view(int e0, int e1, value_type *src) __attribute__((hc,cpu))
+    array_view(int e0, int e1, const value_type *src) __attribute__((hc,cpu))
         : array_view(hc::extent<2>(e0, e1), src) {}
-    array_view(int e0, int e1, int e2, value_type *src) __attribute__((hc,cpu))
+    array_view(int e0, int e1, int e2, const value_type *src) __attribute__((hc,cpu))
         : array_view(hc::extent<3>(e0, e1, e2), src) {}
 
     /**

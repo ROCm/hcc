@@ -27,7 +27,7 @@
 
 #include <kalmar_runtime.h>
 
-#define KALMAR_DEBUG (1)
+#define KALMAR_DEBUG (0)
 
 #define STATUS_CHECK(s,line) if (s != HSA_STATUS_SUCCESS) {\
 		printf("### Error: %d at line:%d\n", s, line);\
@@ -950,8 +950,9 @@ public:
         bool result = false;
         if (hasHSACoarsegrainedRegion()) {
             result = true;
-            // environment variable CLAMP_HSA may be used to change the default behavior
-            char* hsa_behavior = getenv("CLAMP_HSA_USEHOSTMEMORY");
+            // environment variable HCC_HSA_USEHOSTMEMORY may be used to change
+            // the default behavior
+            char* hsa_behavior = getenv("HCC_HSA_USEHOSTMEMORY");
             if (hsa_behavior != nullptr) {
                 if (std::string("ON") == hsa_behavior) {
                     result = false;

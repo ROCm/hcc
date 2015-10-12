@@ -1,95 +1,134 @@
+/**
+ * @file numeric
+ * Numeric Parallel algorithms
+ */
+#pragma once
 
-#include <vector>
-
-// FIXME, this is a SEQUENTIAL implementation of reduce!
-// a special version of reduce which does NOT dereference the iterator
+namespace details {
 template<class InputIterator, class T, class BinaryOperation>
-T __reduce(InputIterator first, InputIterator last, T init,
-           BinaryOperation binary_op) {
-  T result = init;
-  for (; first != last; ++first) {
-    result = binary_op(init, first);
-  }
-  return result;
+T reduce_impl(InputIterator first, InputIterator last,
+         T init,
+         BinaryOperation binary_op,
+         std::input_iterator_tag) {
+  return std::accumulate(first, last, init, binary_op);
 }
 
-// FIXME, this is a implementation of reduce based on C++AMP
-// ideally we want to drop all C++AMP stuffs in parallel STL
-template<class InputIterator, class T, class BinaryOperation>
-T reduce(InputIterator first, InputIterator last, T init,
-               BinaryOperation binary_op) {
-  typedef typename std::iterator_traits<InputIterator>::value_type _Tp;
-
-#define TILE_SIZE (64)
-  size_t elementCount = static_cast<size_t>(std::distance(first, last));
-  int numTiles = (elementCount / TILE_SIZE) ? (elementCount / TILE_SIZE) : 1;
-
-  std::vector<_Tp> av_src(elementCount);
-  std::copy(first, last, av_src.data());  // FIXME: how can we get rid of this copy?
-  std::vector<_Tp> av_dst(numTiles);
-
-  while((elementCount % TILE_SIZE) == 0) {
-    concurrency::parallel_for_each(concurrency::extent<1>(elementCount).tile<TILE_SIZE>(), [&](concurrency::tiled_index<TILE_SIZE> tidx) restrict(amp) {
-      tile_static _Tp scratch[TILE_SIZE];
-
-      unsigned tileIndex = tidx.local[0];
-      unsigned globalIndex = tidx.global[0];
-      scratch[tileIndex] = av_src[globalIndex];
-      tidx.barrier.wait();
-
-      for (unsigned stride = TILE_SIZE / 2; stride > 0; stride >>= 1) {
-        if (tileIndex < stride) {
-          scratch[tileIndex] = binary_op(scratch[tileIndex], scratch[tileIndex + stride]);
-        }
-        tidx.barrier.wait();
-      }
-
-      if (tileIndex == 0) {
-        av_dst[tidx.tile[0]] = scratch[0];
-      }
-    });
-
-
-    elementCount /= TILE_SIZE;
-    std::swap(av_src, av_dst);
-
-#if 0
-    for (int i = 0; i < elementCount; ++i) {
-      std::cout << av_src[i] << " ";
-    }
-    std::cout << "\n";
-#endif
+template<class T, class U, class BinaryOperation>
+inline void round(const unsigned &i, const unsigned &N,
+                  T *tmp, U *src,
+                  BinaryOperation binary_op) {
+  if (2*i+1 < N) {
+    tmp[i] = binary_op(src[2*i], src[2*i+1]);
+  } else {
+    tmp[i] = src[2*i];
   }
-
-  std::vector<_Tp> resultVector(elementCount);
-  std::copy(av_src.data(), av_src.data() + elementCount, std::begin(resultVector));
-  _Tp resultValue = std::accumulate(std::begin(resultVector), std::end(resultVector), init, binary_op);
-
-  return resultValue;
 }
 
-template<class ExecutionPolicy, class InputIterator, class T, class BinaryOperation>
-typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, T>::type
+template<class RandomAccessIterator, class T, class BinaryOperation>
+T reduce_impl(RandomAccessIterator first, RandomAccessIterator last,
+              T init,
+              BinaryOperation binary_op,
+              std::random_access_iterator_tag) {
+
+  size_t N = static_cast<size_t>(std::distance(first, last));
+
+  // call to std::accumulate when small data size
+  if (N <= details::PARALLELIZE_THRESHOLD) {
+    return reduce_impl(first, last, init, binary_op, std::input_iterator_tag{});
+  }
+
+  unsigned s = (N + 1) / 2;
+  T *tmp = new T [s];
+  auto first_ = utils::get_pointer(first);
+
+  kernel_launch(s, [tmp, first_, N, &s, binary_op](hc::index<1> idx) __attribute((hc)) {
+    // first round
+    round(idx[0], N, tmp, first_, binary_op);
+
+    // Reduction kernel: apply logN - 1 times
+    do {
+      round(idx[0], s, tmp, tmp, binary_op);
+      s = (s + 1) / 2;
+    } while (s > 1);
+  });
+
+  // apply initial value
+  T ans  = binary_op(init, tmp[0]);
+
+  delete [] tmp;
+  return ans;
+}
+} // namespace details
+
+
+/**
+ *
+ * Return: GENERALIZED_SUM(binary_op, init, *first, ..., *(first + (last - first) - 1)).
+ *
+ * Requires: binary_op shall not invalidate iterators or subranges, nor modify
+ * elements in the range [first,last).
+ *
+ * Complexity: O(last - first) applications of binary_op.
+ *
+ * Notes: The primary difference between reduce and accumulate is that the
+ * behavior of reduce may be non-deterministic for non-associative or
+ * non-commutative binary_op.
+ * @{
+ */
+template<class InputIterator, class T, class BinaryOperation,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
+T reduce(InputIterator first, InputIterator last,
+         T init,
+         BinaryOperation binary_op) {
+  return details::reduce_impl(first, last, init, binary_op,
+           typename std::iterator_traits<InputIterator>::iterator_category());
+}
+
+template<class ExecutionPolicy, class InputIterator, class T, class BinaryOperation,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
+T
 reduce(ExecutionPolicy&& exec,
                InputIterator first, InputIterator last, T init,
                BinaryOperation binary_op) {
-  return reduce(first, last, init, binary_op);
+  if (utils::isParallel(exec)) {
+    return reduce(first, last, init, binary_op);
+  } else {
+    return details::reduce_impl(first, last, init, binary_op,
+             std::input_iterator_tag{});
+  }
 }
+/**@}*/
 
-template<typename InputIterator, typename T>
+/**
+ * Effects: Same as reduce(first, last, init, plus<>())
+ * @{
+ */
+template<typename InputIterator, typename T,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
 T reduce(InputIterator first, InputIterator last, T init) {
-  return reduce(first, last, init, std::plus<T>());
+  typedef typename std::iterator_traits<InputIterator>::value_type Type;
+  return reduce(first, last, init, std::plus<Type>());
 }
 
 template<typename ExecutionPolicy,
-         typename InputIterator, typename T>
-typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, T>::type
+         typename InputIterator, typename T,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
+T
 reduce(ExecutionPolicy&& exec,
          InputIterator first, InputIterator last, T init) {
-  return reduce(first, last, init);
+  typedef typename std::iterator_traits<InputIterator>::value_type Type;
+  return reduce(exec, first, last, init, std::plus<Type>());
 }
+/**@}*/
 
-template<typename InputIterator>
+/**
+ * Effects: Same as reduce(first, last, typename iterator_traits<InputIterator>::value_type{})
+ * @{
+ */
+template<typename InputIterator,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
 typename std::iterator_traits<InputIterator>::value_type
 reduce(InputIterator first, InputIterator last) {
   typedef typename std::iterator_traits<InputIterator>::value_type Type;
@@ -97,10 +136,14 @@ reduce(InputIterator first, InputIterator last) {
 }
 
 template<typename ExecutionPolicy,
-         typename InputIterator>
-typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, typename std::iterator_traits<InputIterator>::value_type>::type
+         typename InputIterator,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
+typename std::iterator_traits<InputIterator>::value_type
 reduce(ExecutionPolicy&& exec,
        InputIterator first, InputIterator last) {
-  return reduce(first, last);
+  typedef typename std::iterator_traits<InputIterator>::value_type Type;
+  return reduce(exec, first, last, Type{}, std::plus<Type>());
 }
+/**@}*/
 

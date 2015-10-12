@@ -46,14 +46,19 @@ if [ -f $2 ]; then
 fi
 
 $LLVM_DIS $1 -o $TEMP_NAME.ll
-$OPT -load $LIBPATH/LLVMWrapperGen.so -gensrc < $TEMP_NAME.ll 2>$TEMP_NAME.camp.cpp >/dev/null
 $OPT -load $LIBPATH/LLVMDirectFuncCall.so -redirect < $TEMP_NAME.ll 2>$TEMP_NAME.kernel_redirect.ll >/dev/null
-$LLVM_AS $TEMP_NAME.kernel_redirect.ll -o $TEMP_NAME.kernel_redirect.bc
-$CLANG $CXXFLAGS $TEMP_NAME.camp.cpp $CO $TEMP_NAME.camp.s -emit-llvm
-$CLANG $CXXFLAGS $TEMP_NAME.camp.cpp $CO $TEMP_NAME.camp.o
-objcopy -R .kernel $TEMP_NAME.camp.o
-$LLVM_LINK $TEMP_NAME.kernel_redirect.bc $TEMP_NAME.camp.s -o $TEMP_NAME.link.bc
-$CLAMP_ASM $TEMP_NAME.link.bc $TEMP_NAME.camp.o
+if [[ -s $TEMP_NAME.kernel_redirect.ll ]]; then
+  $OPT -load $LIBPATH/LLVMWrapperGen.so -gensrc < $TEMP_NAME.ll 2>$TEMP_NAME.camp.cpp >/dev/null
+  $LLVM_AS $TEMP_NAME.kernel_redirect.ll -o $TEMP_NAME.kernel_redirect.bc
+  $CLANG $CXXFLAGS $TEMP_NAME.camp.cpp $CO $TEMP_NAME.camp.s -emit-llvm
+  $CLANG $CXXFLAGS $TEMP_NAME.camp.cpp $CO $TEMP_NAME.camp.o
+  objcopy -R .kernel $TEMP_NAME.camp.o
+  $LLVM_LINK $TEMP_NAME.kernel_redirect.bc $TEMP_NAME.camp.s -o $TEMP_NAME.link.bc
+  $CLAMP_ASM $TEMP_NAME.link.bc $TEMP_NAME.camp.o
+else
+  ln -s $1 $1.bc
+  $CLAMP_ASM $1.bc $TEMP_NAME.camp.o
+fi
 
 if [ -f $TEMP_DIR/$2.tmp.o ]; then
   ld -r $TEMP_DIR/$2.tmp.o $TEMP_NAME.camp.o -o $2
@@ -61,5 +66,5 @@ else
   mv $TEMP_NAME.camp.o $2
 fi
 
-rm -f $TEMP_NAME.*
+rm -f $TEMP_NAME.* $1.bc
 rmdir $TEMP_DIR

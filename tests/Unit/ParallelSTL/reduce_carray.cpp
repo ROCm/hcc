@@ -7,50 +7,40 @@
 #include <experimental/numeric>
 #include <experimental/execution_policy>
 
-// C++ headers
-#include <iostream>
-#include <iomanip>
-#include <numeric>
-#include <algorithm>
-#include <iterator>
-
-#define ROW (2)
-#define COL (8)
-#define TEST_SIZE (ROW * COL)
-
 #define _DEBUG (0)
+#include "test_base.h"
 
-template<typename _Tp, size_t SIZE>
-bool test() {
+
+template<typename T, size_t SIZE>
+bool test(void) {
+
+  using std::experimental::parallel::par;
+
   bool ret = true;
+  bool eq = true;
 
-  _Tp table[SIZE] { 0 };
+  // C array
+  typedef T cArray[SIZE];
+  ret &= run_and_compare<T, SIZE>([&eq]
+                                  (cArray &input1, cArray &input2) {
+    auto expected = std::accumulate(std::begin(input1), std::end(input1), T{});
+    auto result   = std::experimental::parallel::
+                    reduce(par, std::begin(input2), std::end(input2), T{});
 
-  // initialize test data
-  std::iota(std::begin(table), std::end(table), 0);
+    eq = EQ(expected, result);
+  }, false);
+  ret &= eq;
 
-  // launch kernel with parallel STL reduce
-  using namespace std::experimental::parallel;
-  _Tp expected = std::accumulate(std::begin(table), std::end(table), _Tp{});
-  ret &= (expected == reduce(std::begin(table), std::end(table)));
-  ret &= (expected == reduce(par, std::begin(table), std::end(table)));
+  ret &= run_and_compare<T, SIZE>([&eq]
+                                  (cArray &input1, cArray &input2) {
+    auto expected = std::accumulate(std::begin(input1), std::end(input1), 10);
+    auto result   = std::experimental::parallel::
+                    reduce(par, std::begin(input2), std::end(input2), 10);
 
-  expected = std::accumulate(std::begin(table), std::end(table), 10);
-  ret &= (expected == reduce(std::begin(table), std::end(table), 10));
-  ret &= (expected == reduce(par, std::begin(table), std::end(table), 10));
+    eq = EQ(expected, result);
+  }, false);
+  ret &= eq;
 
-  expected = std::accumulate(std::begin(table), std::end(table), -10, std::minus<_Tp>());
-  ret &= (expected == reduce(std::begin(table), std::end(table), -10, std::minus<_Tp>()));
-  ret &= (expected == reduce(par, std::begin(table), std::end(table), -10, std::minus<_Tp>()));
-
-#if _DEBUG 
-  for (int i = 0; i < ROW; ++i) {
-    for (int j = 0; j < COL; ++j) {
-      std::cout << std::setw(5) << table[i * COL + j];
-    }
-    std::cout << "\n";
-  } 
-#endif
 
   return ret;
 }

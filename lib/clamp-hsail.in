@@ -30,7 +30,7 @@ SUFFIX=ll
 FILENAME=${INPUT%.$SUFFIX}
 
 $SPIRIFY $INPUT > $FILENAME.spir.ll
-$OPT -O3 -dce -S -o $FILENAME.opt.ll < $FILENAME.spir.ll
+$OPT -O3 -dce -globaldce -S -o $FILENAME.opt.ll < $FILENAME.spir.ll
 $AS -o $FILENAME.bc $FILENAME.opt.ll
 
 $HLC_LLC -O2 -march=hsail64 -filetype=obj -o $FILENAME.brig $FILENAME.bc
