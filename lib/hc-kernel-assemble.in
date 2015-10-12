@@ -61,7 +61,7 @@ TEMP_NAME="$TEMP_DIR/$BASENAME"
 
 # hip-kernel-assemble goes after hip-host-assemble, so attempt to link object from host
 if [ -f $2 ]; then
-  mv $2 $TEMP_DIR/$2.tmp.o
+  mv $2 $TEMP_DIR/$BASENAME.tmp.o
 fi
 
 $LLVM_DIS $1 -o $TEMP_NAME.ll
@@ -79,8 +79,8 @@ else
   $CLAMP_ASM $1.bc $TEMP_NAME.camp.o
 fi
 
-if [ -f $TEMP_DIR/$2.tmp.o ]; then
-  ld -r $TEMP_DIR/$2.tmp.o $TEMP_NAME.camp.o -o $2
+if [ -f $TEMP_DIR/$BASENAME.tmp.o ]; then
+  ld -r $TEMP_DIR/$BASENAME.tmp.o $TEMP_NAME.camp.o -o $2
 else
   mv $TEMP_NAME.camp.o $2
 fi
