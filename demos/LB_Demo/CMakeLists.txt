@@ -1,9 +1,14 @@
 SET(LB_DEMO_PATH "${DEMO_BIN_PATH}/LB_Demo")
 file(MAKE_DIRECTORY ${LB_DEMO_PATH})
 
-add_custom_target(2dLB_gl
-  COMMAND ${LLVM_ROOT}/bin/clang++ `${EXECUTABLE_OUTPUT_PATH}/clamp-config --build --cxxflags --ldflags` -hc -o ${LB_DEMO_PATH}/2dLB_gl ${CMAKE_CURRENT_SOURCE_DIR}/2dLB_gl.cpp -lGLEW -lglut -lGL
-  COMMENT "Building 2dLB GridLaunch")
+if(CLAMP_BIN_PATH)
+  add_custom_target(2dLB_gl
+    COMMAND ${LLVM_ROOT}/bin/clang++ `${EXECUTABLE_OUTPUT_PATH}/clamp-config --build --cxxflags --ldflags` -hc -o ${LB_DEMO_PATH}/2dLB_gl ${CMAKE_CURRENT_SOURCE_DIR}/2dLB_gl.cpp -lGLEW -lglut -lGL
+    COMMENT "Building 2dLB GridLaunch")
+else()
+  add_custom_target(2dLB_gl
+    COMMENT WARNING "clamp-config NOT found, skipping 2dLB GridLaunch")
+endif()
 
 if(CUDA_BIN_PATH)
   add_custom_target(2dLB_gl_CU
@@ -15,8 +20,14 @@ else()
     COMMENT WARNING "nvcc NOT found, skipping 2dLB GridLaunch to CUDA")
 endif()
 
+# Nvidia machines might not have glew.h in the standard /usr/include directory
+# This path search supports only CUDA 5.0 and above.
+find_path(GLEW_INCLUDE_DIR NAMES "GL/glew.h" PATHS ${CUDA_PATH}/samples/common/inc)
+find_path(GLEW_LIB_DIR NAMES libGLEW.a PATHS ${CUDA_PATH}/samples/common/lib/linux/x86_64)
+
+message(${GLEW_INCLUDE_DIR})
 add_custom_target(2dLB_C
-  COMMAND ${CMAKE_C_COMPILER} -o ${LB_DEMO_PATH}/2dLB_C ${CMAKE_CURRENT_SOURCE_DIR}/2dLB_C.c -lGLEW -lglut -lGL -lm
+  COMMAND ${CMAKE_C_COMPILER} -o ${LB_DEMO_PATH}/2dLB_C -I${GLEW_INCLUDE_DIR} -L${GLEW_LIB_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/2dLB_C.c -lGLEW -lglut -lGL -lm
   COMMENT "Building 2dLB C")
 
 if(CUDA_BIN_PATH)
