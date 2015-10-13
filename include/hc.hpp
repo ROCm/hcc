@@ -1690,7 +1690,7 @@ tiled_extent<3> extent<N>::tile(int t0, int t1, int t2) const __attribute__((hc,
  * @return A pointer to the memory address space with the specified offset from
  *         the beginning of group segment.
  */
-extern "C" __attribute__((address_space(3))) void* getLDS(unsigned int offset) __attribute__((hc));
+extern "C" __attribute__((address_space(3))) void* get_group_segment_addr(unsigned int offset) __attribute__((hc));
 
 /**
  * C interface of HSA builtin function to fetch the size of static group segment

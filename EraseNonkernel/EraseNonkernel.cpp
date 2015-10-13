@@ -194,7 +194,7 @@ bool EraseNonkernels::runOnModule(Module &M)
                         I->getName().find("opencl_") != StringRef::npos ||
                         I->getName().find("atomic_") != StringRef::npos ||
                         I->getName().find("llvm.") != StringRef::npos || 
-                        I->getName().find("getLDS") != StringRef::npos || 
+                        I->getName().find("get_group_segment_addr") != StringRef::npos || 
                         I->getName().find("get_static_group_segment_size") != StringRef::npos || 
                         I->getName().find("get_dynamic_group_segment_size") != StringRef::npos || 
                         I->getName().find("get_dynamic_group_segment_cursor") != StringRef::npos || 
