@@ -18,6 +18,7 @@
 #define COL (16)
 
 #define _DEBUG (0)
+#include "test_base.h"
 
 template<typename _Tp, size_t SIZE>
 bool test_carray() {
@@ -59,8 +60,24 @@ bool test_carray() {
       std::cout << std::setw(5) << table[i * COL + j];
     }
     std::cout << "\n";
-  } 
+  }
 #endif
+
+  ret &= run_and_compare<_Tp, SIZE>([](_Tp (&input1)[SIZE],
+                                       _Tp (&input2)[SIZE]) {
+    // create array_view along the C array
+    std::array_view<_Tp, 1> av(input2, std::bounds<1>(SIZE));
+
+    std::for_each(std::begin(input1), std::end(input1), [&](_Tp &x) {
+      x = x * 8 + 3;
+    });
+
+    std::experimental::parallel::
+    for_each(par, std::begin(av.bounds()), std::end(av.bounds()),
+                             [&](const std::offset<1>& idx) {
+      av[idx] = av[idx] * 8 + 3;
+    });
+  });
 
   return ret;
 }
@@ -105,8 +122,26 @@ bool test_stdarray() {
       std::cout << std::setw(5) << table[i * COL + j];
     }
     std::cout << "\n";
-  } 
+  }
 #endif
+
+  // std::array
+  typedef std::array<_Tp, SIZE> stdArray;
+  ret &= run_and_compare<_Tp, SIZE, stdArray>([](stdArray &input1,
+                                                 stdArray &input2) {
+    // create array_view along the std::array
+    std::array_view<_Tp, 1> av(input2.data(), std::bounds<1>(SIZE));
+
+    std::for_each(std::begin(input1), std::end(input1), [&](_Tp &x) {
+      x = x * 8 + 3;
+    });
+
+    std::experimental::parallel::
+    for_each(par, std::begin(av.bounds()), std::end(av.bounds()),
+                             [&](const std::offset<1>& idx) {
+      av[idx] = av[idx] * 8 + 3;
+    });
+  });
 
   return ret;
 }
@@ -151,8 +186,26 @@ bool test_vector() {
       std::cout << std::setw(5) << table[i * COL + j];
     }
     std::cout << "\n";
-  } 
+  }
 #endif
+
+  // std::vector
+  typedef std::vector<_Tp> stdVector;
+  ret &= run_and_compare<_Tp, SIZE, stdVector>([](stdVector &input1,
+                                                  stdVector &input2) {
+    // create array_view along the std::vector
+    std::array_view<_Tp, 1> av(input2.data(), std::bounds<1>(SIZE));
+
+    std::for_each(std::begin(input1), std::end(input1), [&](_Tp &x) {
+      x = x * 8 + 3;
+    });
+
+    std::experimental::parallel::
+    for_each(par, std::begin(av.bounds()), std::end(av.bounds()),
+                             [&](const std::offset<1>& idx) {
+      av[idx] = av[idx] * 8 + 3;
+    });
+  });
 
   return ret;
 }

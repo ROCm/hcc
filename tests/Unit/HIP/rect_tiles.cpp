@@ -26,14 +26,14 @@ int main()
   int *a_d;
 
   int pitch = sizeof(int)*width;
-  hcMalloc((void**)&a_d, sizeof(int)*width*height);
+  hipMalloc((void**)&a_d, sizeof(int)*width*height);
 
   dim3 grid = DIM3(width/TILE_I, height/TILE_J);
   dim3 block = DIM3(TILE_I, TILE_J);
 
-  hcLaunchKernel(kernel_call, grid, block, a_d, pitch);
+  hipLaunchKernel(kernel_call, grid, block, a_d, pitch);
 
-  hcMemcpy((void *)a, (void *)a_d, width*sizeof(int)*height, hcMemcpyAcceleratorToHost);
+  hipMemcpy((void *)a, (void *)a_d, width*sizeof(int)*height, hipMemcpyDeviceToHost);
 
   int ret = 0;
   for(int i = 0; i < width*height; ++i)

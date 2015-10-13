@@ -7,39 +7,39 @@
 #include <cuda_gl_interop.h>
 
 
-#define hcResetDefaultAccelerator() cudaDeviceReset()
-#define hcMalloc(...) cudaMalloc(__VA_ARGS__)
-#define hcMemcpy(...) cudaMemcpy(__VA_ARGS__)
-#define hcFree(...) cudaFree(__VA_ARGS__)
-#define hcMemset(...) cudaMemset(__VA_ARGS__)
-#define hcCreateChannelDesc() cudaCreateChannelDesc<float>() // TODO: Implement templates
-#define hcMallocPitch(...) cudaMallocPitch(__VA_ARGS__)
-#define hcMallocArray(...) cudaMallocArray(__VA_ARGS__)
-#define hcMemcpy2D(...) cudaMemcpy2D(__VA_ARGS__)
-#define hcMemcpy2DToArray(...) cudaMemcpy2DToArray(__VA_ARGS__)
-#define hcBindTextureToArray(...) cudaBindTextureToArray(__VA_ARGS__)
-#define hcUnbindTexture(...) cudaUnbindTexture(__VA_ARGS__)
-#define hcArray cudaArray
-#define hcChannelFormatDesc cudaChannelFormatDesc
+#define hipResetDefaultDevice() cudaDeviceReset()
+#define hipMalloc(...) cudaMalloc(__VA_ARGS__)
+#define hipMemcpy(...) cudaMemcpy(__VA_ARGS__)
+#define hipFree(...) cudaFree(__VA_ARGS__)
+#define hipMemset(...) cudaMemset(__VA_ARGS__)
+#define hipCreateChannelDesc() cudaCreateChannelDesc<float>() // TODO: Implement templates
+#define hipMallocPitch(...) cudaMallocPitch(__VA_ARGS__)
+#define hipMallocArray(...) cudaMallocArray(__VA_ARGS__)
+#define hipMemcpy2D(...) cudaMemcpy2D(__VA_ARGS__)
+#define hipMemcpy2DToArray(...) cudaMemcpy2DToArray(__VA_ARGS__)
+#define hipBindTextureToArray(...) cudaBindTextureToArray(__VA_ARGS__)
+#define hipUnbindTexture(...) cudaUnbindTexture(__VA_ARGS__)
+#define hipArray cudaArray
+#define hipChannelFormatDesc cudaChannelFormatDesc
 #define texture texture<float,2> // TODO: Implement templates
-#define hcFilterModePoint cudaFilterModePoint
+#define hipFilterModePoint cudaFilterModePoint
 
 #define CUDA_SAFE_CALL(x) checkCudaErrors(x)
 #define CUT_CHECK_ERROR(x) getLastCudaError(x)
 
 #define __KERNEL __global__
 
-#define HC_ASSERT(x) \
+#define HIP_ASSERT(x) \
   assert(!x)
 
-#define hcCreateLaunchParam2(blocks, threads) \
+#define hipCreateLaunchParam2(blocks, threads) \
   blocks, threads
 
-#define hcMemcpyHostToAccelerator cudaMemcpyHostToDevice
-#define hcMemcpyAcceleratorToHost cudaMemcpyDeviceToHost
-#define hcMemcpyAcceleratorToAccelerator cudaMemcpyDeviceToDevice
+#define hipMemcpyHostToDevice cudaMemcpyHostToDevice
+#define hipMemcpyDeviceToHost cudaMemcpyDeviceToHost
+#define hipMemcpyDeviceToDevice cudaMemcpyDeviceToDevice
 
-#define hcLaunchKernel(kernel, grid, block, ...) \
+#define hipLaunchKernel(kernel, grid, block, ...) \
   grid_launch_parm lp; \
   lp.gridDim.x = grid.x; \
   lp.gridDim.y = grid.y; \

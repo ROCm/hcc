@@ -1,5 +1,5 @@
-#ifndef hc_h
-#define hc_h
+#ifndef hip_h
+#define hip_h
 
 #ifdef USE_CUDA
 #include "cuda_runtime.h"
@@ -73,24 +73,24 @@ extern inline dim3 dim3_eval(int x, ...)
 #define DIM3(x, ...) \
   dim3_eval(x, __VA_ARGS__, NULL)
 
-#define hcLaunchKernel(fn, grid, block, ...) \
-  grid_launch_parm lp = hcCreateLaunchParam2(grid, block); \
+#define hipLaunchKernel(fn, grid, block, ...) \
+  grid_launch_parm lp = hipCreateLaunchParam2(grid, block); \
   fn(lp, __VA_ARGS__)
 
-#define HC_ASSERT(x) \
+#define HIP_ASSERT(x) \
   assert(!x)
 
-#define hcResetDefaultAccelerator()
+#define hipResetDefaultDevice()
 
 #define CUDA_SAFE_CALL(fn) if(fn) fprintf(stderr, "Error in %s:%d\n", __FILE__, __LINE__)
 
-extern inline int hcDeviceSynchronize()
+extern inline int hipDeviceSynchronize()
 {
   hc::accelerator().get_default_view().wait();
   return 0;
 }
 
-extern inline int hcMalloc(void** ptr, size_t buf_size)
+extern inline int hipMalloc(void** ptr, size_t buf_size)
 {
   *ptr = malloc(buf_size);
   return *ptr ? 0 : 1;
@@ -98,37 +98,37 @@ extern inline int hcMalloc(void** ptr, size_t buf_size)
 
 typedef enum
 {
-  hcChannelFormatKindSigned = 0,
-  hcChannelFormatKindUnsigned,
-  hcChannelFormatKindFloat,
-  hcChannelFormatKindNone
+  hipChannelFormatKindSigned = 0,
+  hipChannelFormatKindUnsigned,
+  hipChannelFormatKindFloat,
+  hipChannelFormatKindNone
 
-} hcChannelFormatKind;
+} hipChannelFormatKind;
 
-typedef struct hcChannelFormatDesc_s
+typedef struct hipChannelFormatDesc_s
 {
   int x;
   int y;
   int z;
   int w;
-  hcChannelFormatKind f;
-} hcChannelFormatDesc;
+  hipChannelFormatKind f;
+} hipChannelFormatDesc;
 
-extern inline hcChannelFormatDesc hcCreateChannelDesc(int x, int y, int z, int w, hcChannelFormatKind f)
+extern inline hipChannelFormatDesc hipCreateChannelDesc(int x, int y, int z, int w, hipChannelFormatKind f)
 {
-  hcChannelFormatDesc cd;
+  hipChannelFormatDesc cd;
   cd.x = x; cd.y = y; cd.z = z; cd.w = w;
   cd.f = f;
   return cd;
 }
 
-extern inline hcChannelFormatDesc hcCreateChannelDesc()
+extern inline hipChannelFormatDesc hipCreateChannelDesc()
 {
-  return hcCreateChannelDesc(0, 0, 0, 0, hcChannelFormatKindFloat);
+  return hipCreateChannelDesc(0, 0, 0, 0, hipChannelFormatKindFloat);
 }
 
 // width in bytes
-extern inline int hcMallocPitch(void** ptr, size_t* pitch, size_t width, size_t height)
+extern inline int hipMallocPitch(void** ptr, size_t* pitch, size_t width, size_t height)
 {
   if(width == 0 || height == 0) return 1;
   *pitch = ((((int)width-1)/128) + 1)*128;
@@ -136,19 +136,19 @@ extern inline int hcMallocPitch(void** ptr, size_t* pitch, size_t width, size_t 
   return *ptr ? 0 : 1;
 }
 
-typedef struct hcArray_s
+typedef struct hipArray_s
 {
   unsigned int width;
   unsigned int height;
   float* data; //FIXME: generalize this
-} hcArray;
+} hipArray;
 
 // TODO: Improve this to include other things from desc
-extern inline int hcMallocArray(hcArray** array, const hcChannelFormatDesc* desc,
+extern inline int hipMallocArray(hipArray** array, const hipChannelFormatDesc* desc,
                                   size_t width, size_t height = 0, unsigned int flags = 0)
 {
-  *array = (hcArray*)malloc(sizeof(hcArray));
-  if(desc->f == hcChannelFormatKindFloat)
+  *array = (hipArray*)malloc(sizeof(hipArray));
+  if(desc->f == hipChannelFormatKindFloat)
   {
     array[0]->data = (float*)malloc(width*height*sizeof(float));
   }
@@ -159,13 +159,13 @@ extern inline int hcMallocArray(hcArray** array, const hcChannelFormatDesc* desc
 
 typedef enum
 {
-  hcMemcpyHostToAccelerator,
-  hcMemcpyAcceleratorToHost,
-  hcMemcpyAcceleratorToAccelerator
-} hcMemcpyKind;
+  hipMemcpyHostToDevice,
+  hipMemcpyDeviceToHost,
+  hipMemcpyDeviceToDevice
+} hipMemcpyKind;
 
 // dpitch, spitch, and width in bytes
-extern inline int hcMemcpy2D(void* dst, size_t dpitch, const void* src, size_t spitch, size_t width, size_t height, hcMemcpyKind kind)
+extern inline int hipMemcpy2D(void* dst, size_t dpitch, const void* src, size_t spitch, size_t width, size_t height, hipMemcpyKind kind)
 {
   if(width > dpitch || width > spitch)
     return 1;
@@ -180,8 +180,8 @@ extern inline int hcMemcpy2D(void* dst, size_t dpitch, const void* src, size_t s
 }
 
 // wOffset, width, and spitch in bytes
-extern inline int hcMemcpy2DToArray(hcArray* dst, size_t wOffset, size_t hOffset, const void* src,
-                                    size_t spitch, size_t width, size_t height, hcMemcpyKind kind)
+extern inline int hipMemcpy2DToArray(hipArray* dst, size_t wOffset, size_t hOffset, const void* src,
+                                    size_t spitch, size_t width, size_t height, hipMemcpyKind kind)
 {
   if((wOffset + width > (dst->width * sizeof(float))) || width > spitch)
   {
@@ -202,28 +202,28 @@ extern inline int hcMemcpy2DToArray(hcArray* dst, size_t wOffset, size_t hOffset
 
 typedef enum
 {
-  hcAddressModeWrap,
-  hcAddressModeClamp,
-  hcAddressModeMirror,
-  hcAddressModeBorder
-} hcTextureAddressMode;
+  hipAddressModeWrap,
+  hipAddressModeClamp,
+  hipAddressModeMirror,
+  hipAddressModeBorder
+} hipTextureAddressMode;
 
 typedef enum
 {
-  hcFilterModePoint,
-  hcFilterModeLinear
-} hcTextureFilterMode;
+  hipFilterModePoint,
+  hipFilterModeLinear
+} hipTextureFilterMode;
 
 // TODO: Templatize
 //template <typename T, int const dim>
 typedef struct textureReference
 {
-  hcTextureAddressMode addressMode[3];
-  hcChannelFormatDesc channelDesc;
-  hcTextureFilterMode filterMode;
+  hipTextureAddressMode addressMode[3];
+  hipChannelFormatDesc channelDesc;
+  hipTextureFilterMode filterMode;
   int normalized;
   int sRGB;
-  hcArray* data;
+  hipArray* data;
 
   textureReference() {}
   textureReference(const textureReference &tex)
@@ -241,14 +241,14 @@ typedef struct textureReference
 } texture;
 
 //template <typename T, const int dim>
-extern inline int hcBindTextureToArray(texture& tex, hcArray* array)
+extern inline int hipBindTextureToArray(texture& tex, hipArray* array)
 {
   tex.data = array;
   return 0;
 }
 
 //template <typename T, const int dim>
-extern inline int hcUnbindTexture(texture & tex)
+extern inline int hipUnbindTexture(texture & tex)
 {
   tex.data = NULL;
   return 0;
@@ -258,7 +258,7 @@ extern inline int hcUnbindTexture(texture & tex)
 #define tex2D(tex, dx, dy) \
   tex.data->data[(unsigned int)dx + (unsigned int)dy*(tex.data->width)]
 
-extern inline int hcMemcpy(void* dest, void* src, size_t buf_size, hcMemcpyKind kind)
+extern inline int hipMemcpy(void* dest, void* src, size_t buf_size, hipMemcpyKind kind)
 {
   // TODO: Does direction matter?
   memcpy(dest, src, buf_size);
@@ -267,7 +267,7 @@ extern inline int hcMemcpy(void* dest, void* src, size_t buf_size, hcMemcpyKind 
   else return 1;
 }
 
-extern inline int hcFree(void* ptr)
+extern inline int hipFree(void* ptr)
 {
   free(ptr);
   ptr = NULL;
@@ -275,7 +275,7 @@ extern inline int hcFree(void* ptr)
   return 0;
 }
 
-extern inline int hcMemset(void* ptr, int value, size_t count)
+extern inline int hipMemset(void* ptr, int value, size_t count)
 {
   void * tmp = memset(ptr, value, count);
   if(tmp)
@@ -283,7 +283,7 @@ extern inline int hcMemset(void* ptr, int value, size_t count)
   else return 1;
 }
 
-extern inline grid_launch_parm hcCreateLaunchParam2(hc_uint3 gridDim, hc_uint3 groupDim)
+extern inline grid_launch_parm hipCreateLaunchParam2(hc_uint3 gridDim, hc_uint3 groupDim)
 {
   grid_launch_parm lp;
 

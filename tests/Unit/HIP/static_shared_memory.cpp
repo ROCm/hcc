@@ -33,13 +33,13 @@ int main()
     in[i] = i;
   }
   int* in_data;
-  hcMalloc((void**)&in_data, array_size*sizeof(int));
-  hcMemcpy(in_data, in, array_size*sizeof(int), hcMemcpyHostToAccelerator);
+  hipMalloc((void**)&in_data, array_size*sizeof(int));
+  hipMemcpy(in_data, in, array_size*sizeof(int), hipMemcpyHostToDevice);
 
-  grid_launch_parm lp = hcCreateLaunchParam2(DIM3(GRID_SIZE,1), DIM3(TILE_SIZE,1));
+  grid_launch_parm lp = hipCreateLaunchParam2(DIM3(GRID_SIZE,1), DIM3(TILE_SIZE,1));
   staticSharedMemory(lp, in_data);
 
-  hcMemcpy(in, in_data, array_size*sizeof(int), hcMemcpyAcceleratorToHost);
+  hipMemcpy(in, in_data, array_size*sizeof(int), hipMemcpyDeviceToHost);
 
   int ret = 0;
   for(int i = 0; i < array_size; ++i)
