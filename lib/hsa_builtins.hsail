@@ -22,13 +22,13 @@ prog function &get_dynamic_group_segment_size(arg_u32 %ret)()
   ret;
 };
 
-/// getLDS : get arbitrary address location within group segment
+/// get_group_segment_addr : get arbitrary address location within group segment
 ///
 /// This function would return an arbitrary location within group segment.
 /// It takes an u32 offset argument and returns the given address in the
 /// group segment.  The base of group segment is fetched with groupbaseptr_u32.
 ///
-prog function &getLDS(arg_u32 %ret)(arg_u32 %offset)
+prog function &get_group_segment_addr(arg_u32 %ret)(arg_u32 %offset)
 {
   ld_arg_u32 $s1, [%offset];
 

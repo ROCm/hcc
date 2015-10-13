@@ -72,6 +72,16 @@ inline uint64_t get_system_ticks() {
     return Kalmar::getContext()->getSystemTicks();
 }
 
+/**
+ * Get the frequency of ticks per second for the underlying asynchrnous operation.
+ *
+ * @return An implementation-defined frequency in Hz in case the instance is
+ *         created by a kernel dispatch or a barrier packet. 0 otherwise.
+ */
+inline uint64_t get_tick_frequency() {
+    return Kalmar::getContext()->getSystemTickFrequency();
+}
+
 
 // ------------------------------------------------------------------------
 // accelerator_view
@@ -840,7 +850,7 @@ public:
      * this completion_future object. The method is mostly used for debugging
      * purpose.
      */
-    void* getNativeHandle() {
+    void* get_native_handle() {
       if (__asyncOp != nullptr) {
         return __asyncOp->getNativeHandle();
       } else {
@@ -1491,14 +1501,14 @@ public:
      *
      * @param[in] size The amount of dynamic group segment needed.
      */
-    void setDynamicGroupSegmentSize(unsigned int size) __attribute__((cpu)) {
+    void set_dynamic_group_segment_size(unsigned int size) __attribute__((cpu)) {
         dynamic_group_segment_size = size;
     }
 
     /**
      * Return the size of dynamic group segment in bytes.
      */
-    unsigned int getDynamicGroupSegmentSize() const __attribute__((cpu)) {
+    unsigned int get_dynamic_group_segment_size() const __attribute__((cpu)) {
         return dynamic_group_segment_size;
     }
 };
@@ -1565,14 +1575,14 @@ public:
      *
      * @param[in] size The amount of dynamic group segment needed.
      */
-    void setDynamicGroupSegmentSize(unsigned int size) __attribute__((cpu)) {
+    void set_dynamic_group_segment_size(unsigned int size) __attribute__((cpu)) {
         dynamic_group_segment_size = size;
     }
 
     /**
      * Return the size of dynamic group segment in bytes.
      */
-    unsigned int getDynamicGroupSegmentSize() const __attribute__((cpu)) {
+    unsigned int get_dynamic_group_segment_size() const __attribute__((cpu)) {
         return dynamic_group_segment_size;
     }
 };
@@ -1642,14 +1652,14 @@ public:
      *
      * @param[in] size The amount of dynamic group segment needed.
      */
-    void setDynamicGroupSegmentSize(unsigned int size) __attribute__((cpu)) {
+    void set_dynamic_group_segment_size(unsigned int size) __attribute__((cpu)) {
         dynamic_group_segment_size = size;
     }
 
     /**
      * Return the size of dynamic group segment in bytes.
      */
-    unsigned int getDynamicGroupSegmentSize() const __attribute__((cpu)) {
+    unsigned int get_dynamic_group_segment_size() const __attribute__((cpu)) {
         return dynamic_group_segment_size;
     }
 };
@@ -1690,7 +1700,7 @@ tiled_extent<3> extent<N>::tile(int t0, int t1, int t2) const __attribute__((hc,
  * @return A pointer to the memory address space with the specified offset from
  *         the beginning of group segment.
  */
-extern "C" __attribute__((address_space(3))) void* getLDS(unsigned int offset) __attribute__((hc));
+extern "C" __attribute__((address_space(3))) void* get_group_segment_addr(unsigned int offset) __attribute__((hc));
 
 /**
  * C interface of HSA builtin function to fetch the size of static group segment
@@ -5443,7 +5453,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
   }
   void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
-  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 1>(av.pQueue, &ext, &tile, f, kernel, compute_domain.getDynamicGroupSegmentSize()));
+  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 1>(av.pQueue, &ext, &tile, f, kernel, compute_domain.get_dynamic_group_segment_size()));
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index<1> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -5478,7 +5488,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
   }
   void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
-  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 2>(av.pQueue, ext, tile, f, kernel, compute_domain.getDynamicGroupSegmentSize()));
+  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 2>(av.pQueue, ext, tile, f, kernel, compute_domain.get_dynamic_group_segment_size()));
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index<2> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -5521,7 +5531,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
   }
   void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
-  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 3>(av.pQueue, ext, tile, f, kernel, compute_domain.getDynamicGroupSegmentSize()));
+  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 3>(av.pQueue, ext, tile, f, kernel, compute_domain.get_dynamic_group_segment_size()));
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index<3> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
