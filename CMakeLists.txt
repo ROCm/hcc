@@ -299,25 +299,25 @@ add_custom_target(HSAILasm
   WORKING_DIRECTORY ${HSAILASM_BIN_DIR}
 )
 
-# install HSAILasm along with HCC
-if (NOT HSA_USE_AMDGPU_BACKEND)
-  set (DEPS "HSAILasm ${DEPS}")
-endif()
-
 # stored under HSAILasm/
 install(FILES ${HSAILASM_BIN_DIR}/HSAILAsm/HSAILasm
         DESTINATION HSAILasm
         PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
         COMPONENT HSAILasm)
 
-
-if (NOT HSA_LLVM_BIN_DIR)
-  set(DEPS "hlc ${DEPS}")
-endif()
-
-add_custom_target(world
-    DEPENDS clang ${DEPS}
-)
+if (NOT HSA_USE_AMDGPU_BACKEND AND NOT HSA_LLVM_BIN_DIR)
+  # build hlc in case HSA_LLVM_BIN_DIR is not set
+  # build HSAILasm in case HSA_USE_AMDGPU_BACKEND is not set
+  add_custom_target(world DEPENDS clang hlc HSAILasm)
+elseif (NOT HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
+  # build HSAILasm in case HSA_USE_AMDGPU_BACKEND is not set
+  add_custom_target(world DEPENDS clang HSAILasm)
+elseif (HSA_USE_AMDGPU_BACKEND AND NOT HSA_LLVM_BIN_DIR)
+  # build hlc in case HSA_LLVM_BIN_DIR is not set
+  add_custom_target(world DEPENDS clang hlc)
+elseif (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
+  add_custom_target(world DEPENDS clang)
+endif (NOT HSA_USE_AMDGPU_BACKEND AND NOT HSA_LLVM_BIN_DIR)
 
 else (HAS_HSA)
 
