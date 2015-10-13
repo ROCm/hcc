@@ -168,6 +168,12 @@ int main(int argc, char **argv)
     
     plot_rgba = (unsigned int*)malloc(ni*nj*sizeof(unsigned int));
 
+    // pitch is used incorrectly which result in scanline issues
+    // workaround is to avoid using pitch
+    pitch = ni*sizeof(float);
+    #define cudaMallocPitch(devPtr,pitch,width,height) \
+    cudaMalloc(devPtr,width*height)
+
     //
     // allocate memory on device
     //
