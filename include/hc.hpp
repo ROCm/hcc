@@ -840,7 +840,7 @@ public:
      * this completion_future object. The method is mostly used for debugging
      * purpose.
      */
-    void* getNativeHandle() {
+    void* get_native_handle() {
       if (__asyncOp != nullptr) {
         return __asyncOp->getNativeHandle();
       } else {

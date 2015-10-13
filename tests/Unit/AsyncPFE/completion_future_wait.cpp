@@ -16,7 +16,7 @@
 /// completion_future::wait()
 ///
 /// The test case only works on HSA because it directly uses HSA runtime API
-/// It would use completion_future::getNativeHandle() to retrieve the
+/// It would use completion_future::get_native_handle() to retrieve the
 /// underlying hsa_signal_t data structure to query if the kernel has really
 /// finished execution after completion_future::wait()
 ///
@@ -66,7 +66,7 @@ int main() {
   hc::completion_future fut = execute<1024, 16>(av1, av2, av3);
 
   // obtain native handle
-  void* handle = fut.getNativeHandle();
+  void* handle = fut.get_native_handle();
 
   // retrieve HSA signal value
   hsa_signal_value_t signal_value;
