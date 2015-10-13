@@ -15,7 +15,7 @@ bool test() {
 
   array_view<int, 1> av(GRID_SIZE);
   tiled_extent<1> ex(GRID_SIZE, TILE_SIZE);
-  ex.setDynamicGroupSegmentSize(0);
+  ex.set_dynamic_group_segment_size(0);
   
   completion_future fut = parallel_for_each(hc::accelerator().get_default_view(),
                     ex,

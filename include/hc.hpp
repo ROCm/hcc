@@ -1491,14 +1491,14 @@ public:
      *
      * @param[in] size The amount of dynamic group segment needed.
      */
-    void setDynamicGroupSegmentSize(unsigned int size) __attribute__((cpu)) {
+    void set_dynamic_group_segment_size(unsigned int size) __attribute__((cpu)) {
         dynamic_group_segment_size = size;
     }
 
     /**
      * Return the size of dynamic group segment in bytes.
      */
-    unsigned int getDynamicGroupSegmentSize() const __attribute__((cpu)) {
+    unsigned int get_dynamic_group_segment_size() const __attribute__((cpu)) {
         return dynamic_group_segment_size;
     }
 };
@@ -1565,14 +1565,14 @@ public:
      *
      * @param[in] size The amount of dynamic group segment needed.
      */
-    void setDynamicGroupSegmentSize(unsigned int size) __attribute__((cpu)) {
+    void set_dynamic_group_segment_size(unsigned int size) __attribute__((cpu)) {
         dynamic_group_segment_size = size;
     }
 
     /**
      * Return the size of dynamic group segment in bytes.
      */
-    unsigned int getDynamicGroupSegmentSize() const __attribute__((cpu)) {
+    unsigned int get_dynamic_group_segment_size() const __attribute__((cpu)) {
         return dynamic_group_segment_size;
     }
 };
@@ -1642,14 +1642,14 @@ public:
      *
      * @param[in] size The amount of dynamic group segment needed.
      */
-    void setDynamicGroupSegmentSize(unsigned int size) __attribute__((cpu)) {
+    void set_dynamic_group_segment_size(unsigned int size) __attribute__((cpu)) {
         dynamic_group_segment_size = size;
     }
 
     /**
      * Return the size of dynamic group segment in bytes.
      */
-    unsigned int getDynamicGroupSegmentSize() const __attribute__((cpu)) {
+    unsigned int get_dynamic_group_segment_size() const __attribute__((cpu)) {
         return dynamic_group_segment_size;
     }
 };
@@ -5443,7 +5443,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
   }
   void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
-  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 1>(av.pQueue, &ext, &tile, f, kernel, compute_domain.getDynamicGroupSegmentSize()));
+  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 1>(av.pQueue, &ext, &tile, f, kernel, compute_domain.get_dynamic_group_segment_size()));
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index<1> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -5478,7 +5478,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
   }
   void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
-  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 2>(av.pQueue, ext, tile, f, kernel, compute_domain.getDynamicGroupSegmentSize()));
+  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 2>(av.pQueue, ext, tile, f, kernel, compute_domain.get_dynamic_group_segment_size()));
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index<2> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -5521,7 +5521,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
   }
   void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
-  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 3>(av.pQueue, ext, tile, f, kernel, compute_domain.getDynamicGroupSegmentSize()));
+  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 3>(av.pQueue, ext, tile, f, kernel, compute_domain.get_dynamic_group_segment_size()));
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index<3> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
