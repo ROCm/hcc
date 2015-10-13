@@ -1359,6 +1359,13 @@ public:
         hsa_system_get_info(HSA_SYSTEM_INFO_TIMESTAMP, &timestamp);
         return timestamp;
     }
+
+    uint64_t getSystemTickFrequency() override {
+        // get system tick frequency
+        uint64_t timestamp_frequency_hz = 0L;
+        hsa_system_get_info(HSA_SYSTEM_INFO_TIMESTAMP_FREQUENCY, &timestamp_frequency_hz);
+        return timestamp_frequency_hz;
+    }
 };
 
 static HSAContext ctx;

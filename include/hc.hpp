@@ -72,6 +72,16 @@ inline uint64_t get_system_ticks() {
     return Kalmar::getContext()->getSystemTicks();
 }
 
+/**
+ * Get the frequency of ticks per second for the underlying asynchrnous operation.
+ *
+ * @return An implementation-defined frequency in Hz in case the instance is
+ *         created by a kernel dispatch or a barrier packet. 0 otherwise.
+ */
+inline uint64_t get_tick_frequency() {
+    return Kalmar::getContext()->getSystemTickFrequency();
+}
+
 
 // ------------------------------------------------------------------------
 // accelerator_view
