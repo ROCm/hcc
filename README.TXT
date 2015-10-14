@@ -168,7 +168,7 @@ are:
 
 4. Build the whole system. This will build clang and other libraries
    that require one time build.
-  # make [-j #] world           // # is the number of parallel builds
+  # make -j$(getconf _NPROCESSORS_ONLN) world
   # CLAMP_NOTILECHECK=ON make   // this builds llvm utilities
 
    For recurring builds for llvm and clang:
