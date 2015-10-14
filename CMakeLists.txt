@@ -389,6 +389,11 @@ set(CPACK_SOURCE_TZ "OFF")
 set(CPACK_SOURCE_TBZ2 "OFF")
 set(CPACK_BINARY_TZ "OFF")
 
+# autogenerate dependency information
+set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "hsa-runtime (>= 1.0)")
+
 # put HLC and HSAILasm in the package as well
 set(CPACK_COMPONENTS_ALL HSAILasm hlc)
 
