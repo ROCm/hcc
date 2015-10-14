@@ -277,7 +277,7 @@ extern inline int hipUnbindTexture(texture & tex)
 #define tex2D(tex, dx, dy) \
   tex.data->data[(unsigned int)dx + (unsigned int)dy*(tex.data->width)]
 
-extern inline int hipMemcpy(void* dest, void* src, size_t buf_size, hipMemcpyKind kind)
+extern inline int hipMemcpy(void* dest, const void* src, size_t buf_size, hipMemcpyKind kind)
 {
   // TODO: Does direction matter?
   memcpy(dest, src, buf_size);
