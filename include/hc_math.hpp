@@ -73,6 +73,20 @@ inline T function(T arg1, Q arg2) __attribute__((hc,cpu)) { \
   return hc::precise_math::function(arg1, arg2); \
 }
 
+#define HC_MATH_WRAPPER_FP_OVERLOAD_TTQ(function, arg1, arg2) \
+template<typename T, typename Q> \
+inline \
+typename std::enable_if<std::is_integral<T>::value||std::is_integral<Q>::value,HC_IMPLICIT_FLOAT_CONV>::type \
+function(T arg1, Q arg2) __attribute__((hc,cpu)) { \
+  return hc::precise_math::function(static_cast<HC_IMPLICIT_FLOAT_CONV>(arg1),static_cast<HC_IMPLICIT_FLOAT_CONV>(arg2)); \
+}\
+template<typename T, typename Q> \
+inline \
+typename std::enable_if<std::is_floating_point<T>::value&&std::is_floating_point<Q>::value,HC_IMPLICIT_FLOAT_CONV>::type \
+function(T arg1, Q arg2) __attribute__((hc,cpu)) { \
+  return hc::precise_math::function(arg1,arg2); \
+}
+
 #define HC_MATH_WRAPPER_TTTQ(function, arg1, arg2, arg3) \
 template<typename T, typename Q> \
 inline T function(T arg1, T arg2, Q arg3) __attribute__((hc,cpu)) { \
@@ -149,6 +163,20 @@ function(Q arg1) __attribute__((hc)) { \
 template<typename T, typename Q> \
 inline T function(T arg1, Q arg2) __attribute__((hc,cpu)) { \
   return ::function(arg1, arg2); \
+}
+
+#define HC_MATH_WRAPPER_FP_OVERLOAD_TTQ(function, arg1, arg2) \
+template<typename T, typename Q> \
+inline \
+typename std::enable_if<std::is_integral<T>::value||std::is_integral<Q>::value,HC_IMPLICIT_FLOAT_CONV>::type \
+function(T arg1, Q arg2) __attribute__((hc,cpu)) { \
+  return ::function(static_cast<HC_IMPLICIT_FLOAT_CONV>(arg1),static_cast<HC_IMPLICIT_FLOAT_CONV>(arg2)); \
+}\
+template<typename T, typename Q> \
+inline \
+typename std::enable_if<std::is_floating_point<T>::value&&std::is_floating_point<Q>::value,HC_IMPLICIT_FLOAT_CONV>::type \
+function(T arg1, Q arg2) __attribute__((hc,cpu)) { \
+  return ::function(arg1,arg2); \
 }
 
 #define HC_MATH_WRAPPER_TTTQ(function, arg1, arg2, arg3) \
@@ -278,7 +306,7 @@ HC_MATH_WRAPPER_FP_OVERLOAD_1(nearbyint, x)
 HC_MATH_WRAPPER_2(nextafterf, x, y)
 HC_MATH_WRAPPER_2(nextafter, x, y)
 HC_MATH_WRAPPER_2(powf, x, y)
-HC_MATH_WRAPPER_2(pow, x, y)
+HC_MATH_WRAPPER_FP_OVERLOAD_TTQ(pow,x,y)
 HC_MATH_WRAPPER_1(rcbrtf, x)
 HC_MATH_WRAPPER_1(rcbrt, x)
 HC_MATH_WRAPPER_2(remainderf, x, y)
