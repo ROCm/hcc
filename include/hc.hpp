@@ -1716,6 +1716,14 @@ extern "C" unsigned int get_static_group_segment_size() __attribute__((hc));
  */
 extern "C" unsigned int get_dynamic_group_segment_size() __attribute__((hc));
 
+/**
+ * C interface of HSA builtin function to fetch the address of the beginning
+ * of dynamic group segment.
+ */
+__attribute__((address_space(3))) void* get_dynamic_group_segment() __attribute__((hc)) {
+    return get_group_segment_addr(get_static_group_segment_size());
+}
+
 // ------------------------------------------------------------------------
 // utility class for tiled_barrier
 // ------------------------------------------------------------------------
