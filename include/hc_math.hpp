@@ -82,7 +82,7 @@ function(T arg1, Q arg2) __attribute__((hc,cpu)) { \
 }\
 template<typename T, typename Q> \
 inline \
-typename std::enable_if<std::is_floating_point<T>::value&&std::is_floating_point<Q>::value,HC_IMPLICIT_FLOAT_CONV>::type \
+typename std::enable_if<std::is_floating_point<T>::value&&std::is_floating_point<Q>::value,T>::type \
 function(T arg1, Q arg2) __attribute__((hc,cpu)) { \
   return hc::precise_math::function(arg1,arg2); \
 }
@@ -174,7 +174,7 @@ function(T arg1, Q arg2) __attribute__((hc,cpu)) { \
 }\
 template<typename T, typename Q> \
 inline \
-typename std::enable_if<std::is_floating_point<T>::value&&std::is_floating_point<Q>::value,HC_IMPLICIT_FLOAT_CONV>::type \
+typename std::enable_if<std::is_floating_point<T>::value&&std::is_floating_point<Q>::value,T>::type \
 function(T arg1, Q arg2) __attribute__((hc,cpu)) { \
   return ::function(arg1,arg2); \
 }
