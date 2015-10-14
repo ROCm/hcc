@@ -31,7 +31,7 @@ bool test() {
 
   // launch kernel
   hc::tiled_extent<1> e(vecSize, groupSize);
-  e.setDynamicGroupSegmentSize(DYNAMIC_GROUP_SEGMENT_SIZE);
+  e.set_dynamic_group_segment_size(DYNAMIC_GROUP_SEGMENT_SIZE);
 
   hc::completion_future fut = hc::parallel_for_each(
     e, 

@@ -337,6 +337,9 @@ public:
 
     /// get system ticks
     virtual uint64_t getSystemTicks() { return 0L; };
+
+    /// get tick frequency
+    virtual uint64_t getSystemTickFrequency() { return 0L; };
 };
 
 KalmarContext *getContext();
