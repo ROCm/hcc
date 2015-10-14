@@ -72,8 +72,6 @@ bool test1D() {
 #if TEST_DEBUG
   std::cout << "signal value #1: " << signal_value1 << "\n";
 #endif
-  // signal_value1 MUST be 1 because the kernel is just dispatched
-  ret &= (signal_value1 == 1);
 
 #if TEST_DEBUG
   std::cout << "launch pfe2\n";
@@ -90,19 +88,6 @@ bool test1D() {
 #if TEST_DEBUG
   std::cout << "after pfe2\n";
 #endif
-
-  void* handle2 = fut2.get_native_handle();
-  hsa_signal_value_t signal_value2;
-  signal_value1 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(handle1));
-  signal_value2 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(handle2));
-#if TEST_DEBUG
-  std::cout << "signal value #1: " << signal_value1 << "\n";
-  std::cout << "signal value #2: " << signal_value2 << "\n";
-#endif
-  // signal_value1 MUST be 1 because the new kernel has no dependency to it so it's still running
-  ret &= (signal_value1 == 1);
-  // signal_value2 MUST be 1 because the kernel is just dispatched
-  ret &= (signal_value2 == 1);
 
 #if TEST_DEBUG
   std::cout << "launch pfe3\n";
@@ -130,9 +115,9 @@ bool test1D() {
   std::cout << "signal value #2: " << signal_value2 << "\n";
   std::cout << "signal value #3: " << signal_value3 << "\n";
 #endif
-  // signal_value1 MUST be 1 because the new kernel has no dependency to it so it's still running
+  // signal_value1 MUST be 1 because the kernel is just dispatched
   ret &= (signal_value1 == 1);
-  // signal_value2 MUST be 1 because the new kernel has no dependency to it so it's still running
+  // signal_value2 MUST be 1 because the kernel is just dispatched
   ret &= (signal_value2 == 1);
   // signal_value3 MUST be 1 because the kernel is just dispatched
   ret &= (signal_value3 == 1);

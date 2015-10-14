@@ -68,8 +68,6 @@ bool test1D() {
 #if TEST_DEBUG
   std::cout << "signal value #1: " << signal_value1 << "\n";
 #endif
-  // signal_value1 MUST be 1 because the kernel is just dispatched
-  ret &= (signal_value1 == 1);
 
 #if TEST_DEBUG
   std::cout << "launch pfe2\n";
@@ -95,10 +93,6 @@ bool test1D() {
   std::cout << "signal value #1: " << signal_value1 << "\n";
   std::cout << "signal value #2: " << signal_value2 << "\n";
 #endif
-  // signal_value1 MUST be 1 because the kernel is just dispatched
-  ret &= (signal_value1 == 1);
-  // signal_value2 MUST be 1 because the kernel is just dispatched
-  ret &= (signal_value2 == 1);
 
 #if TEST_DEBUG
   std::cout << "launch pfe3\n";
