@@ -15,6 +15,8 @@ typedef struct uint3
 } hc_uint3;
 #endif
 
+// for uintptr_t
+#include <stdint.h>
 typedef struct grid_launch_parm
 {
   hc_uint3      gridDim;
@@ -22,7 +24,7 @@ typedef struct grid_launch_parm
   hc_uint3      groupId;
   hc_uint3      threadId;
   unsigned int  groupMemBytes;
-  //accelerator_view av;
+  uintptr_t  av;
 } grid_launch_parm;
 
 #ifdef USE_CUDA
@@ -33,6 +35,14 @@ typedef struct grid_launch_parm
 #include <string.h>
 #include <assert.h>
 #include <hc.hpp>
+
+
+// XXX(Yan-Ming): borrow from AMD's hip repo
+typedef struct ihipStream_t *hipStream_t;
+struct ihipStream_t {
+    hc::accelerator_view av;
+    ihipStream_t(hc::accelerator_view av) : av(av) { };
+};
 
 #define __KERNEL __attribute__((hc_grid_launch))
 
@@ -73,8 +83,17 @@ extern inline dim3 dim3_eval(int x, ...)
 #define DIM3(x, ...) \
   dim3_eval(x, __VA_ARGS__, NULL)
 
+
 #define hipLaunchKernel(fn, grid, block, ...) \
   grid_launch_parm lp = hipCreateLaunchParam2(grid, block); \
+  fn(lp, __VA_ARGS__)
+
+#define hipLaunchKernel3(fn, grid, block, groupMemBytes, ...) \
+  grid_launch_parm lp = hipCreateLaunchParam3(grid, block, groupMemBytes); \
+  fn(lp, __VA_ARGS__)
+
+#define hipLaunchKernel4(fn, grid, block, groupMemBytes, av, ...) \
+  grid_launch_parm lp = hipCreateLaunchParam4(grid, block, groupMemBytes, av); \
   fn(lp, __VA_ARGS__)
 
 #define HIP_ASSERT(x) \
@@ -294,6 +313,52 @@ extern inline grid_launch_parm hipCreateLaunchParam2(hc_uint3 gridDim, hc_uint3 
   lp.groupDim.x = groupDim.x;
   lp.groupDim.y = groupDim.y;
   lp.groupDim.z = groupDim.z;
+
+  lp.groupMemBytes = 0;
+  static hc::accelerator_view av = hc::accelerator().get_default_view();
+  lp.av = (uintptr_t)&av;
+
+  return lp;
+}
+
+extern inline grid_launch_parm hipCreateLaunchParam3(hc_uint3 gridDim,
+                                                     hc_uint3 groupDim,
+                                                     int groupMemBytes)
+{
+  grid_launch_parm lp;
+
+  lp.gridDim.x = gridDim.x;
+  lp.gridDim.y = gridDim.y;
+  lp.gridDim.z = gridDim.z;
+
+  lp.groupDim.x = groupDim.x;
+  lp.groupDim.y = groupDim.y;
+  lp.groupDim.z = groupDim.z;
+
+  lp.groupMemBytes = groupMemBytes;
+  static hc::accelerator_view av = hc::accelerator().get_default_view();
+  lp.av = (uintptr_t)&av;
+
+  return lp;
+}
+
+extern inline grid_launch_parm hipCreateLaunchParam4(hc_uint3 gridDim,
+                                                     hc_uint3 groupDim,
+                                                     int groupMemBytes,
+                                                     hipStream_t stream)
+{
+  grid_launch_parm lp;
+
+  lp.gridDim.x = gridDim.x;
+  lp.gridDim.y = gridDim.y;
+  lp.gridDim.z = gridDim.z;
+
+  lp.groupDim.x = groupDim.x;
+  lp.groupDim.y = groupDim.y;
+  lp.groupDim.z = groupDim.z;
+
+  lp.groupMemBytes = groupMemBytes;
+  lp.av = (uintptr_t)&(stream->av);
 
   return lp;
 }
