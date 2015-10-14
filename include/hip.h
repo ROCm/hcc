@@ -85,16 +85,16 @@ extern inline dim3 dim3_eval(int x, ...)
 
 
 #define hipLaunchKernel(fn, grid, block, ...) \
-  grid_launch_parm lp = hipCreateLaunchParam2(grid, block); \
-  fn(lp, __VA_ARGS__)
+  {grid_launch_parm lp = hipCreateLaunchParam2(grid, block); \
+  fn(lp, __VA_ARGS__);}
 
 #define hipLaunchKernel3(fn, grid, block, groupMemBytes, ...) \
-  grid_launch_parm lp = hipCreateLaunchParam3(grid, block, groupMemBytes); \
-  fn(lp, __VA_ARGS__)
+  {grid_launch_parm lp = hipCreateLaunchParam3(grid, block, groupMemBytes); \
+  fn(lp, __VA_ARGS__);}
 
 #define hipLaunchKernel4(fn, grid, block, groupMemBytes, av, ...) \
-  grid_launch_parm lp = hipCreateLaunchParam4(grid, block, groupMemBytes, av); \
-  fn(lp, __VA_ARGS__)
+  {grid_launch_parm lp = hipCreateLaunchParam4(grid, block, groupMemBytes, av); \
+  fn(lp, __VA_ARGS__);}
 
 #define HIP_ASSERT(x) \
   assert(!x)
