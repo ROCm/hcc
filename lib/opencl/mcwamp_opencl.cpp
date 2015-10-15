@@ -492,6 +492,13 @@ cl_program CLCompileKernels(cl_device_id& device, void* kernel_size_, void* kern
     cl_program program = nullptr;
     const char* source = static_cast<const char*>(kernel_source_);
     size_t size = reinterpret_cast<size_t>(kernel_size_);
+    std::string build_options;
+    cl_device_fp_config fpc = 0x0;
+    err = clGetDeviceInfo(device, CL_DEVICE_SINGLE_FP_CONFIG, sizeof(fpc), &fpc, NULL);
+    assert(err == CL_SUCCESS);
+    if (fpc & CL_FP_CORRECTLY_ROUNDED_DIVIDE_SQRT) {
+      build_options = "-cl-fp32-correctly-rounded-divide-sqrt";
+    }
 
     char name[64];
     err = clGetDeviceInfo(device, CL_DEVICE_NAME, sizeof(name), name, NULL);
@@ -533,7 +540,7 @@ cl_program CLCompileKernels(cl_device_id& device, void* kernel_size_, void* kern
         const unsigned char *ks = (const unsigned char *)compiled_kernel;
         program = clCreateProgramWithBinary(Kalmar::context, 1, &device, &len, &ks, NULL, &err);
         if (err == CL_SUCCESS)
-            err = clBuildProgram(program, 1, &device, NULL, NULL, NULL);
+            err = clBuildProgram(program, 1, &device, build_options.c_str(), NULL, NULL);
         if (err != CL_SUCCESS) {
             size_t len;
             err = clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &len);
@@ -556,13 +563,15 @@ cl_program CLCompileKernels(cl_device_id& device, void* kernel_size_, void* kern
             auto str = (const unsigned char*)source;
             program = clCreateProgramWithBinary(Kalmar::context, 1, &device, &size, &str, NULL, &err);
             if (err == CL_SUCCESS)
-                err = clBuildProgram(program, 1, &device, NULL, NULL, NULL);
+                err = clBuildProgram(program, 1, &device, build_options.c_str(), NULL, NULL);
         } else {
             // in OpenCL-C
             auto str = source;
             program = clCreateProgramWithSource(Kalmar::context, 1, &str, &size, &err);
-            if (err == CL_SUCCESS)
-                err = clBuildProgram(program, 1, &device, "-D__ATTRIBUTE_WEAK__=", NULL, NULL);
+            if (err == CL_SUCCESS) {
+                build_options += " -D__ATTRIBUTE_WEAK__=";
+                err = clBuildProgram(program, 1, &device, build_options.c_str(), NULL, NULL);
+            }
         }
         if (err != CL_SUCCESS) {
             size_t len;
