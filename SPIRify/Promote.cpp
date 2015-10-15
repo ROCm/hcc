@@ -1206,8 +1206,8 @@ void updateInstructionWithNewOperand(Instruction * I,
            return;
        }
 
-       llvm::errs() << "DO NOT KNOW HOW TO UPDATE INSTRUCTION: ";
-             I->print(llvm::errs()); llvm::errs() << "\n";
+       DEBUG(llvm::errs() << "DO NOT KNOW HOW TO UPDATE INSTRUCTION: ";
+             I->print(llvm::errs()); llvm::errs() << "\n";);
 
        // Don't crash the program
        return;
