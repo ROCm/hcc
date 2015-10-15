@@ -37,7 +37,6 @@ class accelerator_view;
 class completion_future;
 template <int N> class extent;
 template <int N> class tiled_extent;
-class ts_allocator;
 template <typename T, int N> class array_view;
 template <typename T, int N> class array;
 
@@ -71,6 +70,16 @@ using accelerator_view_removed = Kalmar::accelerator_view_removed;
  */
 inline uint64_t get_system_ticks() {
     return Kalmar::getContext()->getSystemTicks();
+}
+
+/**
+ * Get the frequency of ticks per second for the underlying asynchrnous operation.
+ *
+ * @return An implementation-defined frequency in Hz in case the instance is
+ *         created by a kernel dispatch or a barrier packet. 0 otherwise.
+ */
+inline uint64_t get_tick_frequency() {
+    return Kalmar::getContext()->getSystemTickFrequency();
 }
 
 
@@ -320,38 +329,6 @@ private:
         void Kalmar::launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>&, Kernel const&, extent<N> const&);
 #endif
 
-    // non-tiled parallel_for_each with dynamic group segment
-    template<typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const extent<1>&, ts_allocator&, const Kernel&);
-    template<typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const extent<2>&, ts_allocator&, const Kernel&);
-    template<typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const extent<3>&, ts_allocator&, const Kernel&);
-  
-    // non-tiled parallel_for_each with dynamic group segment
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const extent<1>&, ts_allocator&, const Kernel&);
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const extent<2>&, ts_allocator&, const Kernel&);
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const extent<3>&, ts_allocator&, const Kernel&);
-  
-    // tiled parallel_for_each with dynamic group segment
-    template<typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, ts_allocator&, const Kernel&);
-    template<typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, ts_allocator&, const Kernel&);
-    template<typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<3>&, ts_allocator&, const Kernel&);
-  
-    // tiled parallel_for_each with dynamic group segment
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const tiled_extent<1>&, ts_allocator&, const Kernel&);
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const tiled_extent<2>&, ts_allocator&, const Kernel&);
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const tiled_extent<3>&, ts_allocator&, const Kernel&);
-  
     // non-tiled parallel_for_each
     // generic version
     template <int N, typename Kernel> friend
@@ -873,7 +850,7 @@ public:
      * this completion_future object. The method is mostly used for debugging
      * purpose.
      */
-    void* getNativeHandle() {
+    void* get_native_handle() {
       if (__asyncOp != nullptr) {
         return __asyncOp->getNativeHandle();
       } else {
@@ -944,38 +921,6 @@ private:
 
     completion_future(const std::shared_future<void> &__future)
         : __amp_future(__future), __thread_then(nullptr), __asyncOp(nullptr) {}
-
-    // non-tiled parallel_for_each with dynamic group segment
-    template<typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const extent<1>&, ts_allocator&, const Kernel&);
-    template<typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const extent<2>&, ts_allocator&, const Kernel&);
-    template<typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const extent<3>&, ts_allocator&, const Kernel&);
-  
-    // non-tiled parallel_for_each with dynamic group segment
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const extent<1>&, ts_allocator&, const Kernel&);
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const extent<2>&, ts_allocator&, const Kernel&);
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const extent<3>&, ts_allocator&, const Kernel&);
-  
-    // tiled parallel_for_each with dynamic group segment
-    template<typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, ts_allocator&, const Kernel&);
-    template<typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, ts_allocator&, const Kernel&);
-    template<typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<3>&, ts_allocator&, const Kernel&);
-  
-    // tiled parallel_for_each with dynamic group segment
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const tiled_extent<1>&, ts_allocator&, const Kernel&);
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const tiled_extent<2>&, ts_allocator&, const Kernel&);
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const tiled_extent<3>&, ts_allocator&, const Kernel&);
 
     // non-tiled parallel_for_each
     // generic version
@@ -1503,6 +1448,12 @@ public:
  */
 template <>
 class tiled_extent<1> : public extent<1> {
+private:
+    /**
+     * Size of dynamic group segment.
+     */
+    unsigned int dynamic_group_segment_size;
+
 public:
     static const int rank = 1;
 
@@ -1515,7 +1466,7 @@ public:
      * Default constructor. The origin and extent is default-constructed and
      * thus zero.
      */
-    tiled_extent() __attribute__((hc,cpu)) : extent(0), tile_dim{0} {}
+    tiled_extent() __attribute__((hc,cpu)) : extent(0), tile_dim{0}, dynamic_group_segment_size(0) {}
 
     /**
      * Construct an tiled extent with the size of extent and the size of tile
@@ -1524,7 +1475,7 @@ public:
      * @param[in] e0 Size of extent.
      * @param[in] t0 Size of tile.
      */
-    tiled_extent(int e0, int t0) __attribute__((hc,cpu)) : extent(e0), tile_dim{t0} {}
+    tiled_extent(int e0, int t0) __attribute__((hc,cpu)) : extent(e0), tile_dim{t0}, dynamic_group_segment_size(0) {}
 
     /**
      * Copy constructor. Constructs a new tiled_extent from the supplied
@@ -1533,7 +1484,7 @@ public:
      * @param[in] other An object of type tiled_extent from which to initialize
      *                  this new extent.
      */
-    tiled_extent(const tiled_extent<1>& other) __attribute__((hc,cpu)) : extent(other[0]), tile_dim{other.tile_dim[0]} {}
+    tiled_extent(const tiled_extent<1>& other) __attribute__((hc,cpu)) : extent(other[0]), tile_dim{other.tile_dim[0]}, dynamic_group_segment_size(other.dynamic_group_segment_size) {}
 
 
     /**
@@ -1542,7 +1493,24 @@ public:
      * @param[in] ext The extent of this tiled_extent
      * @param[in] t0 Size of tile.
      */
-    tiled_extent(const extent<1>& ext, int t0) __attribute__((hc,cpu)) : extent(ext), tile_dim{t0} {} 
+    tiled_extent(const extent<1>& ext, int t0) __attribute__((hc,cpu)) : extent(ext), tile_dim{t0}, dynamic_group_segment_size(0) {} 
+
+    /**
+     * Set the size of dynamic group segment. The function should be called
+     * in host code, prior to a kernel is dispatched.
+     *
+     * @param[in] size The amount of dynamic group segment needed.
+     */
+    void set_dynamic_group_segment_size(unsigned int size) __attribute__((cpu)) {
+        dynamic_group_segment_size = size;
+    }
+
+    /**
+     * Return the size of dynamic group segment in bytes.
+     */
+    unsigned int get_dynamic_group_segment_size() const __attribute__((cpu)) {
+        return dynamic_group_segment_size;
+    }
 };
 
 /**
@@ -1552,6 +1520,12 @@ public:
  */
 template <>
 class tiled_extent<2> : public extent<2> {
+private:
+    /**
+     * Size of dynamic group segment.
+     */
+    unsigned int dynamic_group_segment_size;
+
 public:
     static const int rank = 2;
 
@@ -1564,7 +1538,7 @@ public:
      * Default constructor. The origin and extent is default-constructed and
      * thus zero.
      */
-    tiled_extent() __attribute__((hc,cpu)) : extent(0, 0), tile_dim{0, 0} {}
+    tiled_extent() __attribute__((hc,cpu)) : extent(0, 0), tile_dim{0, 0}, dynamic_group_segment_size(0) {}
 
     /**
      * Construct an tiled extent with the size of extent and the size of tile
@@ -1575,7 +1549,7 @@ public:
      * @param[in] t0 Size of tile in the 1st dimension.
      * @param[in] t1 Size of tile in the 2nd dimension.
      */
-    tiled_extent(int e0, int e1, int t0, int t1) __attribute__((hc,cpu)) : extent(e0, e1), tile_dim{t0, t1} {}
+    tiled_extent(int e0, int e1, int t0, int t1) __attribute__((hc,cpu)) : extent(e0, e1), tile_dim{t0, t1}, dynamic_group_segment_size(0) {}
 
     /**
      * Copy constructor. Constructs a new tiled_extent from the supplied
@@ -1584,7 +1558,7 @@ public:
      * @param[in] other An object of type tiled_extent from which to initialize
      *                  this new extent.
      */
-    tiled_extent(const tiled_extent<2>& other) __attribute__((hc,cpu)) : extent(other[0], other[1]), tile_dim{other.tile_dim[0], other.tile_dim[1]} {}
+    tiled_extent(const tiled_extent<2>& other) __attribute__((hc,cpu)) : extent(other[0], other[1]), tile_dim{other.tile_dim[0], other.tile_dim[1]}, dynamic_group_segment_size(other.dynamic_group_segment_size) {}
 
     /**
      * Constructs a tiled_extent<N> with the extent "ext".
@@ -1593,7 +1567,24 @@ public:
      * @param[in] t0 Size of tile in the 1st dimension.
      * @param[in] t1 Size of tile in the 2nd dimension.
      */
-    tiled_extent(const extent<2>& ext, int t0, int t1) __attribute__((hc,cpu)) : extent(ext), tile_dim{t0, t1} {}
+    tiled_extent(const extent<2>& ext, int t0, int t1) __attribute__((hc,cpu)) : extent(ext), tile_dim{t0, t1}, dynamic_group_segment_size(0) {}
+
+    /**
+     * Set the size of dynamic group segment. The function should be called
+     * in host code, prior to a kernel is dispatched.
+     *
+     * @param[in] size The amount of dynamic group segment needed.
+     */
+    void set_dynamic_group_segment_size(unsigned int size) __attribute__((cpu)) {
+        dynamic_group_segment_size = size;
+    }
+
+    /**
+     * Return the size of dynamic group segment in bytes.
+     */
+    unsigned int get_dynamic_group_segment_size() const __attribute__((cpu)) {
+        return dynamic_group_segment_size;
+    }
 };
 
 /**
@@ -1603,6 +1594,12 @@ public:
  */
 template <>
 class tiled_extent<3> : public extent<3> {
+private:
+    /**
+     * Size of dynamic group segment.
+     */
+    unsigned int dynamic_group_segment_size;
+
 public:
     static const int rank = 3;
 
@@ -1615,7 +1612,7 @@ public:
      * Default constructor. The origin and extent is default-constructed and
      * thus zero.
      */
-    tiled_extent() __attribute__((hc,cpu)) : extent(0, 0, 0), tile_dim{0, 0, 0} {}
+    tiled_extent() __attribute__((hc,cpu)) : extent(0, 0, 0), tile_dim{0, 0, 0}, dynamic_group_segment_size(0) {}
 
     /**
      * Construct an tiled extent with the size of extent and the size of tile
@@ -1628,7 +1625,7 @@ public:
      * @param[in] t1 Size of tile in the 2nd dimension.
      * @param[in] t2 Size of tile in the 3rd dimension.
      */
-    tiled_extent(int e0, int e1, int e2, int t0, int t1, int t2) __attribute__((hc,cpu)) : extent(e0, e1, e2), tile_dim{t0, t1, t2} {}
+    tiled_extent(int e0, int e1, int e2, int t0, int t1, int t2) __attribute__((hc,cpu)) : extent(e0, e1, e2), tile_dim{t0, t1, t2}, dynamic_group_segment_size(0) {}
 
     /**
      * Copy constructor. Constructs a new tiled_extent from the supplied
@@ -1637,7 +1634,7 @@ public:
      * @param[in] other An object of type tiled_extent from which to initialize
      *                  this new extent.
      */
-    tiled_extent(const tiled_extent<3>& other) __attribute__((hc,cpu)) : extent(other[0], other[1], other[2]), tile_dim{other.tile_dim[0], other.tile_dim[1], other.tile_dim[2]} {}
+    tiled_extent(const tiled_extent<3>& other) __attribute__((hc,cpu)) : extent(other[0], other[1], other[2]), tile_dim{other.tile_dim[0], other.tile_dim[1], other.tile_dim[2]}, dynamic_group_segment_size(other.dynamic_group_segment_size) {}
 
     /**
      * Constructs a tiled_extent<N> with the extent "ext".
@@ -1647,7 +1644,24 @@ public:
      * @param[in] t1 Size of tile in the 2nd dimension.
      * @param[in] t2 Size of tile in the 3rd dimension.
      */
-    tiled_extent(const extent<3>& ext, int t0, int t1, int t2) __attribute__((hc,cpu)) : extent(ext), tile_dim{t0, t1, t2} {}
+    tiled_extent(const extent<3>& ext, int t0, int t1, int t2) __attribute__((hc,cpu)) : extent(ext), tile_dim{t0, t1, t2}, dynamic_group_segment_size(0) {}
+
+    /**
+     * Set the size of dynamic group segment. The function should be called
+     * in host code, prior to a kernel is dispatched.
+     *
+     * @param[in] size The amount of dynamic group segment needed.
+     */
+    void set_dynamic_group_segment_size(unsigned int size) __attribute__((cpu)) {
+        dynamic_group_segment_size = size;
+    }
+
+    /**
+     * Return the size of dynamic group segment in bytes.
+     */
+    unsigned int get_dynamic_group_segment_size() const __attribute__((cpu)) {
+        return dynamic_group_segment_size;
+    }
 };
 
 // ------------------------------------------------------------------------
@@ -1676,7 +1690,7 @@ tiled_extent<3> extent<N>::tile(int t0, int t1, int t2) const __attribute__((hc,
 }
 
 // ------------------------------------------------------------------------
-// ts_allocator
+// dynamic group segment
 // ------------------------------------------------------------------------
 
 /**
@@ -1686,128 +1700,27 @@ tiled_extent<3> extent<N>::tile(int t0, int t1, int t2) const __attribute__((hc,
  * @return A pointer to the memory address space with the specified offset from
  *         the beginning of group segment.
  */
-extern "C" __attribute__((address_space(3))) void* getLDS(unsigned int offset) __attribute__((hc));
+extern "C" __attribute__((address_space(3))) void* get_group_segment_addr(unsigned int offset) __attribute__((hc));
 
 /**
- * Group segment dynamic memory allocator. The class could be used to
- * dynamically allocate memory within group segment.
+ * C interface of HSA builtin function to fetch the size of static group segment
  *
- * To use it, first define an object in the host code, and specify the maximum
- * number of group segment memory dynamically allocatable in the constructor.
- * Next, pass it as an argument of parallel_for_each, and capture the object by
- * reference in the kernel
- * code. Here's an example:
- *
- * @code{.cpp}
- * ts_allocator tsa(10240); // dynamic group segment has 10KB
- * parallel_for_each(ex, tsa, [=, &tsa](index<1>& idx) { ... });
- * @endcode
+ * @return The size of static group segment used by the kernel in bytes.
  */
-class ts_allocator {
-private:
-    /**
-     * Size of static group segment.
-     */
-    unsigned int static_group_segment_size;
+extern "C" unsigned int get_static_group_segment_size() __attribute__((hc));
 
-    /**
-     * Size of dynamic group segment.
-     */
-    unsigned int dynamic_group_segment_size;
+/**
+ * C interface of HSA builtin function to fetch the size of dynamic group segment
+ *
+ * @return The size of dynamic group segment used by the kernel in bytes.
+ */
+extern "C" unsigned int get_dynamic_group_segment_size() __attribute__((hc));
 
-    /**
-     * Cursor points to the memory where next allocation would take place.
-     */
-    int cursor;
-
-    /**
-     * Set the size of static group semgnet. The function is called by Kalmar
-     * runtime prior to kernel dispatching.
-     */
-    void setStaticGroupSegmentSize(unsigned int size) __attribute__((cpu)) {
-      static_group_segment_size = size;
-    } 
-
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const extent<1>&, ts_allocator&, const Kernel&);
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const extent<2>&, ts_allocator&, const Kernel&);
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const extent<3>&, ts_allocator&, const Kernel&);
-
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, ts_allocator&, const Kernel&);
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, ts_allocator&, const Kernel&);
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<3>&, ts_allocator&, const Kernel&);
-
-public:
-    /**
-     * Default constructor.  Dynamic group segment size is set as zero.
-     */
-    ts_allocator() :
-        static_group_segment_size(0), 
-        dynamic_group_segment_size(0),
-        cursor(0) {}
-
-    ~ts_allocator() {}
-
-    /**
-     * Return the size of static group segment in bytes.
-     */
-    unsigned int getStaticGroupSegmentSize() __attribute__((hc,cpu)) {
-        return static_group_segment_size;
-    }
-
-    /**
-     * Set the size of dynamic group segment. The function should be called
-     * in host code, prior to a kernel is dispatched.
-     *
-     * @param[in] size The amount of dynamic group segment needed.
-     */
-    void setDynamicGroupSegmentSize(unsigned int size) __attribute__((cpu)) {
-        dynamic_group_segment_size = size;
-    }
-
-    /**
-     * Return the size of dynamic group segment in bytes.
-     */
-    unsigned int getDynamicGroupSegmentSize() __attribute__((hc,cpu)) {
-        return dynamic_group_segment_size;
-    }
-
-    /**
-     * Reset the cursor. Effectively it means free up all previous allocated
-     * dynamic group segment memory.
-     */
-    void reset() __attribute__((hc,cpu)) {
-        cursor = 0;
-    }
-
-    /**
-     * Allocate the requested size in tile static memory and return its pointer
-     * returns NULL if the requested size can't be allocated
-     * It requires all threads in a tile to hit the same ts_alloc call site at the
-     * same time.
-     * Only one instance of the tile static memory will be allocated per call site
-     * and all threads within a tile will get the same tile static memory address.
-     */
-    __attribute__((address_space(3))) void* alloc(unsigned int size) __attribute__((hc)) {
-        int offset = cursor;
-    
-        // only the first workitem in the workgroup moves the cursor
-        if (amp_get_local_id(0) == 0 && amp_get_local_id(1) == 0 && amp_get_local_id(2) == 0) {
-          cursor += size;
-        }
-    
-        // fetch the beginning address of dynamic group segment
-        __attribute__((address_space(3))) unsigned char* lds = (__attribute__((address_space(3))) unsigned char*) getLDS(static_group_segment_size);
-    
-        // return the address
-        return lds + offset;
-    }   
-};  
+/**
+ * C interface of HSA builtin function to fetch the address of the beginning
+ * of dynamic group segment.
+ */
+extern "C" __attribute__((address_space(3))) void* get_dynamic_group_segment() __attribute__((hc));
 
 // ------------------------------------------------------------------------
 // utility class for tiled_barrier
@@ -2099,9 +2012,6 @@ private:
     {}
 
     template<typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<N>&, ts_allocator&, const Kernel&);
-
-    template<typename Kernel> friend
         completion_future parallel_for_each(const accelerator_view&, const tiled_extent<N>&, const Kernel&);
 };
 
@@ -2196,9 +2106,6 @@ private:
     {}
 
     template<typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, ts_allocator&, const Kernel&);
-
-    template<typename Kernel> friend
         completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
 };
 
@@ -2291,9 +2198,6 @@ private:
     __attribute__((always_inline)) tiled_index() __attribute__((hc))
 #endif // __KALMAR_ACCELERATOR__
     {}
-
-    template<typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, ts_allocator&, const Kernel&);
 
     template<typename Kernel> friend
         completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, const Kernel&);
@@ -5554,7 +5458,8 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   if (av.get_accelerator().get_device_path() == L"cpu") {
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
   }
-  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 1>(av.pQueue, &ext, &tile, f));
+  void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
+  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 1>(av.pQueue, &ext, &tile, f, kernel, compute_domain.get_dynamic_group_segment_size()));
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index<1> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -5588,7 +5493,8 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   if (av.get_accelerator().get_device_path() == L"cpu") {
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
   }
-  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 2>(av.pQueue, ext, tile, f));
+  void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
+  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 2>(av.pQueue, ext, tile, f, kernel, compute_domain.get_dynamic_group_segment_size()));
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index<2> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -5630,7 +5536,8 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   if (av.get_accelerator().get_device_path() == L"cpu") {
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
   }
-  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 3>(av.pQueue, ext, tile, f));
+  void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
+  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 3>(av.pQueue, ext, tile, f, kernel, compute_domain.get_dynamic_group_segment_size()));
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index<3> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -5640,342 +5547,5 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
 #endif
 }
 #pragma clang diagnostic pop
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wreturn-type"
-#pragma clang diagnostic ignored "-Wunused-variable"
-// variants of parallel_for_each that supports runtime allocation of tile static
-//1D parallel_for_each, nontiled
-template <typename Kernel>
-__attribute__((noinline,used))
-completion_future parallel_for_each(const accelerator_view& av,
-                       const extent<1>& compute_domain,
-                       ts_allocator& allocator,
-                       const Kernel& f) __attribute__((hc,cpu)) {
-#if __KALMAR_ACCELERATOR__ != 1
-  // silently return in case the any dimension of the extent is 0
-  if (compute_domain[0] == 0)
-    return completion_future();
-  if (compute_domain[0] < 0) {
-    throw invalid_compute_domain("Extent is less than 0.");
-  }
-  if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (CLAMP::is_cpu()) {
-      launch_cpu_task(av.pQueue, f, compute_domain);
-      return;
-  }
-#endif
-  size_t ext = compute_domain[0];
-  if (av.get_accelerator().get_device_path() == L"cpu") {
-    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
-  }
-  void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
-  allocator.setStaticGroupSegmentSize(av.pQueue->GetGroupSegmentSize(kernel));
-  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 1>(av.pQueue, &ext, NULL, f, kernel, allocator.getDynamicGroupSegmentSize()));
-#else //if __KALMAR_ACCELERATOR__ != 1
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  auto foo = &Kernel::__cxxamp_trampoline;
-  auto bar = &Kernel::operator();
-#endif
-}
-#pragma clang diagnostic pop
-
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wreturn-type"
-#pragma clang diagnostic ignored "-Wunused-variable"
-// variants of parallel_for_each that supports runtime allocation of tile static
-//2D parallel_for_each, nontiled
-template <typename Kernel>
-__attribute__((noinline,used))
-completion_future parallel_for_each(const accelerator_view& av,
-                       const extent<2>& compute_domain,
-                       ts_allocator& allocator,
-                       const Kernel& f) __attribute__((hc,cpu)) {
-#if __KALMAR_ACCELERATOR__ != 1
-  // silently return in case the any dimension of the extent is 0
-  if (compute_domain[0] == 0 || compute_domain[1] == 0)
-    return completion_future();
-  if (compute_domain[0] < 0 || compute_domain[1] < 0) {
-    throw invalid_compute_domain("Extent is less than 0.");
-  }
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (CLAMP::is_cpu()) {
-      launch_cpu_task(av.pQueue, f, compute_domain);
-      return;
-  }
-#endif
-  size_t ext[2] = {static_cast<size_t>(compute_domain[1]),
-      static_cast<size_t>(compute_domain[0])};
-  if (av.get_accelerator().get_device_path() == L"cpu") {
-    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
-  }
-  void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
-  allocator.setStaticGroupSegmentSize(av.pQueue->GetGroupSegmentSize(kernel));
-  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 2>(av.pQueue, ext, NULL, f, kernel, allocator.getDynamicGroupSegmentSize()));
-#else //if __KALMAR_ACCELERATOR__ != 1
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  auto foo = &Kernel::__cxxamp_trampoline;
-  auto bar = &Kernel::operator();
-#endif
-}
-#pragma clang diagnostic pop
-
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wreturn-type"
-#pragma clang diagnostic ignored "-Wunused-variable"
-// variants of parallel_for_each that supports runtime allocation of tile static
-//3D parallel_for_each, nontiled
-template <typename Kernel>
-__attribute__((noinline,used))
-completion_future parallel_for_each(const accelerator_view& av,
-                       const extent<3>& compute_domain,
-                       ts_allocator& allocator,
-                       const Kernel& f) __attribute__((hc,cpu)) {
-#if __KALMAR_ACCELERATOR__ != 1
-  // silently return in case the any dimension of the extent is 0
-  if (compute_domain[0] == 0 || compute_domain[1] == 0 || compute_domain[2] == 0)
-    return completion_future();
-  if (compute_domain[0] < 0 || compute_domain[1] < 0 || compute_domain[2] < 0) {
-    throw invalid_compute_domain("Extent is less than 0.");
-  }
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-  if (static_cast<size_t>(compute_domain[1]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (CLAMP::is_cpu()) {
-      launch_cpu_task(av.pQueue, f, compute_domain);
-      return;
-  }
-#endif
-  size_t ext[3] = {static_cast<size_t>(compute_domain[2]),
-      static_cast<size_t>(compute_domain[1]),
-      static_cast<size_t>(compute_domain[0])};
-  if (av.get_accelerator().get_device_path() == L"cpu") {
-    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
-  }
-  void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
-  allocator.setStaticGroupSegmentSize(av.pQueue->GetGroupSegmentSize(kernel));
-  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 3>(av.pQueue, ext, NULL, f, kernel, allocator.getDynamicGroupSegmentSize()));
-#else //if __KALMAR_ACCELERATOR__ != 1
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  auto foo = &Kernel::__cxxamp_trampoline;
-  auto bar = &Kernel::operator();
-#endif
-}
-#pragma clang diagnostic pop
-
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wreturn-type"
-#pragma clang diagnostic ignored "-Wunused-variable"
-// variants of parallel_for_each that supports runtime allocation of tile static
-//1D parallel_for_each, tiled
-template <typename Kernel>
-__attribute__((noinline,used))
-completion_future parallel_for_each(const accelerator_view& av,
-                       const tiled_extent<1>& compute_domain,
-                       ts_allocator& allocator,
-                       const Kernel& f) __attribute__((hc,cpu)) {
-#if __KALMAR_ACCELERATOR__ != 1
-  // silently return in case the any dimension of the extent is 0
-  if (compute_domain[0] == 0)
-    return completion_future();
-  if (compute_domain[0] < 0) {
-    throw invalid_compute_domain("Extent is less than 0.");
-  }
-  if (static_cast<size_t>(compute_domain[0]) > 4294967295L) {
-    throw invalid_compute_domain("Extent size too large.");
-  }
-  size_t ext = compute_domain[0];
-  size_t tile = compute_domain.tile_dim[0];
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (CLAMP::is_cpu()) {
-      launch_cpu_task(av.pQueue, f, compute_domain);
-      return;
-  }
-#endif
-  if (av.get_accelerator().get_device_path() == L"cpu") {
-    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
-  }
-  void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
-  allocator.setStaticGroupSegmentSize(av.pQueue->GetGroupSegmentSize(kernel));
-  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 1>(av.pQueue, &ext, &tile, f, kernel, allocator.getDynamicGroupSegmentSize()));
-#else //if __KALMAR_ACCELERATOR__ != 1
-  tiled_index<1> this_is_used_to_instantiate_the_right_index;
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  auto foo = &Kernel::__cxxamp_trampoline;
-  auto bar = &Kernel::operator();
-#endif
-}
-#pragma clang diagnostic pop
-
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wreturn-type"
-#pragma clang diagnostic ignored "-Wunused-variable"
-// variants of parallel_for_each that supports runtime allocation of tile static
-//2D parallel_for_each, tiled
-template <typename Kernel>
-__attribute__((noinline,used))
-completion_future parallel_for_each(const accelerator_view& av,
-                       const tiled_extent<2>& compute_domain,
-                       ts_allocator& allocator,
-                       const Kernel& f) __attribute__((hc,cpu)) {
-#if __KALMAR_ACCELERATOR__ != 1
-  // silently return in case the any dimension of the extent is 0
-  if (compute_domain[0] == 0 || compute_domain[1] == 0)
-    return completion_future();
-  if (compute_domain[0] < 0 || compute_domain[1] < 0) {
-    throw invalid_compute_domain("Extent is less than 0.");
-  }
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-  size_t ext[2] = { static_cast<size_t>(compute_domain[1]),
-                    static_cast<size_t>(compute_domain[0])};
-  size_t tile[2] = { static_cast<size_t>(compute_domain.tile_dim[1]),
-                     static_cast<size_t>(compute_domain.tile_dim[0]) };
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (CLAMP::is_cpu()) {
-      launch_cpu_task(av.pQueue, f, compute_domain);
-  } else
-#endif
-  if (av.get_accelerator().get_device_path() == L"cpu") {
-    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
-  }
-  void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
-  allocator.setStaticGroupSegmentSize(av.pQueue->GetGroupSegmentSize(kernel));
-  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 2>(av.pQueue, ext, tile, f, kernel, allocator.getDynamicGroupSegmentSize()));
-#else //if __KALMAR_ACCELERATOR__ != 1
-  tiled_index<2> this_is_used_to_instantiate_the_right_index;
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  auto foo = &Kernel::__cxxamp_trampoline;
-  auto bar = &Kernel::operator();
-#endif
-}
-#pragma clang diagnostic pop
-
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wreturn-type"
-#pragma clang diagnostic ignored "-Wunused-variable"
-// variants of parallel_for_each that supports runtime allocation of tile static
-//3D parallel_for_each, tiled
-template <typename Kernel>
-__attribute__((noinline,used))
-completion_future parallel_for_each(const accelerator_view& av,
-                       const tiled_extent<3>& compute_domain,
-                       ts_allocator& allocator,
-                       const Kernel& f) __attribute__((hc,cpu)) {
-#if __KALMAR_ACCELERATOR__ != 1
-  // silently return in case the any dimension of the extent is 0
-  if (compute_domain[0] == 0 || compute_domain[1] == 0 || compute_domain[2] == 0)
-    return completion_future();
-  if (compute_domain[0] < 0 || compute_domain[1] < 0 || compute_domain[2] < 0) {
-    throw invalid_compute_domain("Extent is less than 0.");
-  }
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-  if (static_cast<size_t>(compute_domain[1]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-  size_t ext[3] = { static_cast<size_t>(compute_domain[2]),
-                    static_cast<size_t>(compute_domain[1]),
-                    static_cast<size_t>(compute_domain[0])};
-  size_t tile[3] = { static_cast<size_t>(compute_domain.tile_dim[2]),
-                     static_cast<size_t>(compute_domain.tile_dim[1]),
-                     static_cast<size_t>(compute_domain.tile_dim[0]) };
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (CLAMP::is_cpu()) {
-      launch_cpu_task(av.pQueue, f, compute_domain);
-  } else
-#endif
-  if (av.get_accelerator().get_device_path() == L"cpu") {
-    throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
-  }
-  void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
-  allocator.setStaticGroupSegmentSize(av.pQueue->GetGroupSegmentSize(kernel));
-  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 3>(av.pQueue, ext, tile, f, kernel, allocator.getDynamicGroupSegmentSize()));
-#else //if __KALMAR_ACCELERATOR__ != 1
-  tiled_index<3> this_is_used_to_instantiate_the_right_index;
-  //to ensure functor has right operator() defined
-  //this triggers the trampoline code being emitted
-  auto foo = &Kernel::__cxxamp_trampoline;
-  auto bar = &Kernel::operator();
-#endif
-}
-#pragma clang diagnostic pop
-
-template <typename Kernel>
-completion_future parallel_for_each(const extent<1>& compute_domain,
-                       ts_allocator& allocator,
-                       const Kernel& f) {
-  auto que = Kalmar::get_availabe_que(f);
-  const accelerator_view av(que);
-  return parallel_for_each(av, compute_domain, allocator, f);
-}
-
-template <typename Kernel>
-completion_future parallel_for_each(const extent<2>& compute_domain,
-                       ts_allocator& allocator,
-                       const Kernel& f) {
-  auto que = Kalmar::get_availabe_que(f);
-  const accelerator_view av(que);
-  return parallel_for_each(av, compute_domain, allocator, f);
-}
-
-template <typename Kernel>
-completion_future parallel_for_each(const extent<3>& compute_domain,
-                       ts_allocator& allocator,
-                       const Kernel& f) {
-  auto que = Kalmar::get_availabe_que(f);
-  const accelerator_view av(que);
-  return parallel_for_each(av, compute_domain, allocator, f);
-}
-
-template <typename Kernel>
-completion_future parallel_for_each(const tiled_extent<1>& compute_domain,
-                       ts_allocator& allocator,
-                       const Kernel& f) {
-  auto que = Kalmar::get_availabe_que(f);
-  const accelerator_view av(que);
-  return parallel_for_each(av, compute_domain, allocator, f);
-}
-
-template<typename Kernel>
-completion_future parallel_for_each(const tiled_extent<2>& compute_domain,
-                       ts_allocator& allocator,
-                       const Kernel& f) {
-  auto que = Kalmar::get_availabe_que(f);
-  const accelerator_view av(que);
-  return parallel_for_each(av, compute_domain, allocator, f);
-}
-
-template<typename Kernel>
-completion_future parallel_for_each(const tiled_extent<3>& compute_domain,
-                       ts_allocator& allocator,
-                       const Kernel& f) {
-  auto que = Kalmar::get_availabe_que(f);
-  const accelerator_view av(que);
-  return parallel_for_each(av, compute_domain, allocator, f);
-}
 
 } // namespace hc

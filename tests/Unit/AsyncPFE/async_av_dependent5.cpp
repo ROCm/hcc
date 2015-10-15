@@ -15,7 +15,7 @@
 /// test implicit synchronization of array_view and kernel dispatches
 ///
 /// The test case only works on HSA because it directly uses HSA runtime API
-/// It would use completion_future::getNativeHandle() to retrieve the
+/// It would use completion_future::get_native_handle() to retrieve the
 /// underlying hsa_signal_t data structure to query if dependent kernels have
 /// really finished execution before the new kernel is executed.
 ///
@@ -62,14 +62,12 @@ bool test1D() {
   std::cout << "after pfe1\n";
 #endif
 
-  void* handle1 = fut1.getNativeHandle();
+  void* handle1 = fut1.get_native_handle();
   hsa_signal_value_t signal_value1;
-  signal_value1 = hsa_signal_load_relaxed(*static_cast<hsa_signal_t*>(handle1));
+  signal_value1 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(handle1));
 #if TEST_DEBUG
   std::cout << "signal value #1: " << signal_value1 << "\n";
 #endif
-  // signal_value1 MUST be 1 because the kernel is just dispatched
-  ret &= (signal_value1 == 1);
 
 #if TEST_DEBUG
   std::cout << "launch pfe2\n";
@@ -87,18 +85,14 @@ bool test1D() {
   std::cout << "after pfe2\n";
 #endif
 
-  void* handle2 = fut2.getNativeHandle();
+  void* handle2 = fut2.get_native_handle();
   hsa_signal_value_t signal_value2;
-  signal_value1 = hsa_signal_load_relaxed(*static_cast<hsa_signal_t*>(handle1));
-  signal_value2 = hsa_signal_load_relaxed(*static_cast<hsa_signal_t*>(handle2));
+  signal_value1 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(handle1));
+  signal_value2 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(handle2));
 #if TEST_DEBUG
   std::cout << "signal value #1: " << signal_value1 << "\n";
   std::cout << "signal value #2: " << signal_value2 << "\n";
 #endif
-  // signal_value1 MUST be 1 because the kernel is just dispatched
-  ret &= (signal_value1 == 1);
-  // signal_value2 MUST be 1 because the kernel is just dispatched
-  ret &= (signal_value2 == 1);
 
 #if TEST_DEBUG
   std::cout << "launch pfe3\n";
@@ -116,11 +110,11 @@ bool test1D() {
   std::cout << "after pfe3\n";
 #endif
 
-  void* handle3 = fut3.getNativeHandle();
+  void* handle3 = fut3.get_native_handle();
   hsa_signal_value_t signal_value3;
-  signal_value1 = hsa_signal_load_relaxed(*static_cast<hsa_signal_t*>(handle1));
-  signal_value2 = hsa_signal_load_relaxed(*static_cast<hsa_signal_t*>(handle2));
-  signal_value3 = hsa_signal_load_relaxed(*static_cast<hsa_signal_t*>(handle3));
+  signal_value1 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(handle1));
+  signal_value2 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(handle2));
+  signal_value3 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(handle3));
 #if TEST_DEBUG
   std::cout << "signal value #1: " << signal_value1 << "\n";
   std::cout << "signal value #2: " << signal_value2 << "\n";
@@ -130,15 +124,13 @@ bool test1D() {
   ret &= (signal_value1 == 0);
   // signal_value2 MUST be 0 because the new kernel must wait on the previous one be completed
   ret &= (signal_value2 == 0);
-  // signal_value3 MUST be 1 because the kernel is just dispatched
-  ret &= (signal_value3 == 1);
 
   // wait on the last future object
   fut3.wait();
 
-  signal_value1 = hsa_signal_load_relaxed(*static_cast<hsa_signal_t*>(handle1));
-  signal_value2 = hsa_signal_load_relaxed(*static_cast<hsa_signal_t*>(handle2));
-  signal_value3 = hsa_signal_load_relaxed(*static_cast<hsa_signal_t*>(handle3));
+  signal_value1 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(handle1));
+  signal_value2 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(handle2));
+  signal_value3 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(handle3));
 #if TEST_DEBUG
   std::cout << "signal value #1: " << signal_value1 << "\n";
   std::cout << "signal value #2: " << signal_value2 << "\n";

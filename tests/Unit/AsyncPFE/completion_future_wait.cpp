@@ -16,7 +16,7 @@
 /// completion_future::wait()
 ///
 /// The test case only works on HSA because it directly uses HSA runtime API
-/// It would use completion_future::getNativeHandle() to retrieve the
+/// It would use completion_future::get_native_handle() to retrieve the
 /// underlying hsa_signal_t data structure to query if the kernel has really
 /// finished execution after completion_future::wait()
 ///
@@ -66,11 +66,11 @@ int main() {
   hc::completion_future fut = execute<1024, 16>(av1, av2, av3);
 
   // obtain native handle
-  void* handle = fut.getNativeHandle();
+  void* handle = fut.get_native_handle();
 
   // retrieve HSA signal value
   hsa_signal_value_t signal_value;
-  signal_value = hsa_signal_load_relaxed(*static_cast<hsa_signal_t*>(handle));
+  signal_value = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(handle));
 #if TEST_DEBUG
   std::cout << "signal value: " << signal_value << "\n";
 #endif
@@ -83,7 +83,7 @@ int main() {
 
   // after completion_future::wait(), the signal shall become 0 because the
   // kernel is completed
-  signal_value = hsa_signal_load_relaxed(*static_cast<hsa_signal_t*>(handle));
+  signal_value = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(handle));
 #if TEST_DEBUG
   std::cout << "signal value: " << signal_value << "\n";
 #endif
@@ -94,7 +94,7 @@ int main() {
   // the signal values should still be 0
   fut.wait();
 
-  signal_value = hsa_signal_load_relaxed(*static_cast<hsa_signal_t*>(handle));
+  signal_value = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(handle));
 #if TEST_DEBUG
   std::cout << "signal value: " << signal_value << "\n";
 #endif

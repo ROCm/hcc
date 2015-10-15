@@ -108,14 +108,14 @@ grid_launch_parm_s::grid_launch_parm_s()
 #define THREADS_PER_BLOCK_Y  16
 #define THREADS_PER_BLOCK_Z  1
 
-void vectoradd_float(const grid_launch_parm &lp, float* a, const float* b, const float* c, int width, int height, hc::extent<3>& ext, hc::tiled_extent<3>& ext_tile, hc::ts_allocator& tsa)
+void vectoradd_float(const grid_launch_parm &lp, float* a, const float* b, const float* c, int width, int height, hc::extent<3>& ext, hc::tiled_extent<3>& ext_tile)
 {
-      tsa.setDynamicGroupSegmentSize(lp.groupMemBytes);
+      ext_tile.set_dynamic_group_segment_size(lp.groupMemBytes);
     
       hc::completion_future cf = hc::parallel_for_each (
               tls_accelerator_view,
-              ext_tile, tsa, 
-              [=, &ext_tile, &tsa, &lp] (hc::tiled_index<3> idx) 
+              ext_tile,
+              [=, &ext_tile, &lp] (hc::tiled_index<3> idx) 
               __attribute__((hc))
   {
 
@@ -156,14 +156,13 @@ int main() {
 
   hc::extent<3> ext(WIDTH, HEIGHT, 1);
   auto ext_tile = ext.tile(THREADS_PER_BLOCK_X, THREADS_PER_BLOCK_Y, 1);
-  hc::ts_allocator tsa;
 
   hipLaunchKernel(vectoradd_float,
                   //dim3(WIDTH, HEIGHT),
                   dim3(WIDTH/THREADS_PER_BLOCK_X, HEIGHT/THREADS_PER_BLOCK_Y),
                   dim3(THREADS_PER_BLOCK_X, THREADS_PER_BLOCK_Y),
                   0, 0,
-                  hostA ,hostB ,hostC ,WIDTH ,HEIGHT, ext, ext_tile, tsa);
+                  hostA ,hostB ,hostC ,WIDTH ,HEIGHT, ext, ext_tile);
 
   tls_accelerator_view.wait(); //this does work now
 

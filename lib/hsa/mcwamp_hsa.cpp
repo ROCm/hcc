@@ -74,6 +74,27 @@ public:
       hsaExecutableSymbol(_hsaExecutableSymbol),
       kernelCodeHandle(_kernelCodeHandle) {}
 
+    void setSymbolToValue(const char* symbolName, unsigned long value) {
+        hsa_status_t status;
+
+        // get symbol
+        hsa_executable_symbol_t symbol;
+        hsa_agent_t agent;
+        status = hsa_executable_get_symbol(hsaExecutable, NULL, symbolName, agent, 0, &symbol);
+        STATUS_CHECK(status, __LINE__);
+    
+        // get address of symbol
+        uint64_t symbol_address;
+        status = hsa_executable_symbol_get_info(symbol,
+                                                HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ADDRESS,
+                                                &symbol_address);
+        STATUS_CHECK(status, __LINE__);
+    
+        // set the value of symbol
+        unsigned long* symbol_ptr = (unsigned long*)symbol_address;
+        *symbol_ptr = value;
+    }
+
     ~HSAKernel() {
       hsa_status_t status;
 
@@ -189,7 +210,7 @@ class HSADispatch : public Kalmar::KalmarAsyncOp {
 private:
     Kalmar::HSADevice* device;
     hsa_agent_t agent;
-    const HSAKernel* kernel;
+    HSAKernel* kernel;
 
     uint32_t workgroup_max_size;
     uint16_t workgroup_max_dim[3];
@@ -237,7 +258,7 @@ public:
         return HSA_STATUS_SUCCESS;
     }
 
-    HSADispatch(Kalmar::HSADevice* _device, const HSAKernel* _kernel);
+    HSADispatch(Kalmar::HSADevice* _device, HSAKernel* _kernel);
 
     hsa_status_t pushFloatArg(float f) { return pushArgPrivate(f); }
     hsa_status_t pushIntArg(int i) { return pushArgPrivate(i); }
@@ -1039,13 +1060,23 @@ public:
         std::string str(fun);
         HSAKernel *kernel = programs[str];
         if (!kernel) {
+            bool use_amdgpu = false;
+#ifdef HSA_USE_AMDGPU_BACKEND
+            const char *km_use_amdgpu = getenv("KM_USE_AMDGPU");
+            use_amdgpu = !km_use_amdgpu || km_use_amdgpu[0] != '0';
+#endif
             size_t kernel_size = (size_t)((void *)size);
             char *kernel_source = (char*)malloc(kernel_size+1);
             memcpy(kernel_source, source, kernel_size);
             kernel_source[kernel_size] = '\0';
-            std::string kname = std::string("&")+fun;
+            std::string kname;
+            if (use_amdgpu) {
+              kname = fun;
+            } else {
+              kname = std::string("&")+fun;
+            }
             //std::cerr << "HSADevice::CreateKernel(): Creating kernel: " << kname << "\n";
-            if (needsCompilation) {
+            if (needsCompilation && !use_amdgpu) {
               kernel = CreateKernelImpl(kernel_source, kernel_size, kname.c_str());
             } else {
               kernel = CreateOfflineFinalizedKernelImpl(kernel_source, kernel_size, kname.c_str());
@@ -1328,6 +1359,13 @@ public:
         hsa_system_get_info(HSA_SYSTEM_INFO_TIMESTAMP, &timestamp);
         return timestamp;
     }
+
+    uint64_t getSystemTickFrequency() override {
+        // get system tick frequency
+        uint64_t timestamp_frequency_hz = 0L;
+        hsa_system_get_info(HSA_SYSTEM_INFO_TIMESTAMP_FREQUENCY, &timestamp_frequency_hz);
+        return timestamp_frequency_hz;
+    }
 };
 
 static HSAContext ctx;
@@ -1361,7 +1399,7 @@ HSAQueue::getHSAKernargRegion() override {
 // member function implementation of HSADispatch
 // ----------------------------------------------------------------------
 
-HSADispatch::HSADispatch(Kalmar::HSADevice* _device, const HSAKernel* _kernel) :
+HSADispatch::HSADispatch(Kalmar::HSADevice* _device, HSAKernel* _kernel) :
     device(_device),
     agent(_device->getAgent()),
     kernel(_kernel),
@@ -1474,17 +1512,23 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
                                             &group_segment_size);
     STATUS_CHECK_Q(status, commandQueue, __LINE__);
 
+    // let kernel know static group segment size
+    kernel->setSymbolToValue("&hcc_static_group_segment_size", group_segment_size);
+
+    // let kernel know dynamic group segment size
+    kernel->setSymbolToValue("&hcc_dynamic_group_segment_size", this->dynamicGroupSize);
+
     // add dynamic group segment size
     group_segment_size += this->dynamicGroupSize;
     aql.group_segment_size = group_segment_size;
-  
+
     uint32_t private_segment_size;
     status = hsa_executable_symbol_get_info(kernel->hsaExecutableSymbol,
                                             HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_PRIVATE_SEGMENT_SIZE,
                                             &private_segment_size);
     STATUS_CHECK_Q(status, commandQueue, __LINE__);
     aql.private_segment_size = private_segment_size;
-  
+
     // write packet
     uint32_t queueMask = commandQueue->size - 1;
     uint64_t index = hsa_queue_load_write_index_relaxed(commandQueue);

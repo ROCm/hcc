@@ -15,7 +15,7 @@ bool test() {
 
   array_view<int, 1> av(GRID_SIZE);
   tiled_extent<1> ex(GRID_SIZE, TILE_SIZE);
-  ex.set_dynamic_group_segment_size(0);
+  ex.set_dynamic_group_segment_size(1024);
   
   completion_future fut = parallel_for_each(hc::accelerator().get_default_view(),
                     ex,
@@ -29,11 +29,11 @@ bool test() {
     // fetch the address of a variable in group segment
     __GROUP__ unsigned char* ptr = (__GROUP__ unsigned char*)&lds1[local[0]];
 
-    // fetch the address of the beginning of group segment
-    __GROUP__ unsigned char* lds = (__GROUP__ unsigned char*)get_group_segment_addr(0);
+    // fetch the address of the beginning of dynamic group segment
+    __GROUP__ unsigned char* dynamic_lds = (__GROUP__ unsigned char*)get_dynamic_group_segment();
 
     // calculate the offset and set to the result global array_view
-    av(global) = (ptr - lds);
+    av(global) = (dynamic_lds - ptr);
   });
 
   // wait for kernel to complete
@@ -46,7 +46,7 @@ bool test() {
     std::cout << av[i] << " ";
 #endif
 
-    if (av[i] != sizeof(int) * (i % TILE_SIZE)) {
+    if (av[i] != sizeof(int) * (TILE_SIZE - (i % TILE_SIZE))) {
       ret = false;
       break;
     }
