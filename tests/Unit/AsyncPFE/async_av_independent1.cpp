@@ -68,7 +68,6 @@ bool test1D() {
 
   void* handle1 = fut1.get_native_handle();
   hsa_signal_value_t signal_value1;
-  signal_value1 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(handle1));
 #if TEST_DEBUG
   std::cout << "signal value #1: " << signal_value1 << "\n";
 #endif
@@ -89,6 +88,8 @@ bool test1D() {
   std::cout << "after pfe2\n";
 #endif
 
+  void* handle2 = fut2.get_native_handle();
+  hsa_signal_value_t signal_value2;
 #if TEST_DEBUG
   std::cout << "launch pfe3\n";
 #endif

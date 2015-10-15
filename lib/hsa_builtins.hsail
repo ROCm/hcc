@@ -40,6 +40,30 @@ prog function &get_group_segment_addr(arg_u32 %ret)(arg_u32 %offset)
   ret;
 };
 
+/// get_dynamic_group_segment : get the pointer to the beginning of dynamic
+/// group segment
+///
+prog function &get_dynamic_group_segment(arg_u32 %ret)()
+{
+  // call get_static_group_segment_size
+  {
+    arg_u32 %res1;
+    call &get_static_group_segment_size(%res1)();
+    ld_arg_u32 $s0, [%res1];
+  }
+  // call get_group_segment_addr
+  {
+    arg_u32 %offset;
+    arg_u32 %res2;
+    // fill in the argument
+    st_arg_u32 $s0, [%offset];
+    call &get_group_segment_addr(%res2)(%offset);
+    ld_arg_u32 $s1, [%res2];
+  }
+  st_arg_u32 $s1, [%ret];
+  ret;
+};
+
 prog global_u64 &signal_Xmalloc = 0;
 prog global_u64 &signal_malloc = 0;
 prog global_u64 &ptr_a_address = 0;

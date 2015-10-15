@@ -36,6 +36,7 @@ include (SetupHC)
 include (SetupUtils)
 include (MCWAMP)
 include (PatchAsmParser)
+include (PatchPassManagerBuilder)
 
 ensure_llvm_is_present(${PROJECT_SOURCE_DIR} compiler)
 ensure_clang_is_present(${PROJECT_SOURCE_DIR} compiler ${CLANG_URL})
@@ -47,6 +48,7 @@ setup_TileUniform(${PROJECT_SOURCE_DIR}/compiler/lib/Analysis TileUniform)
 setup_HC(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms HC)
 setup_Utils(utils)
 patch_AsmParser(SPIRify)
+patch_PassManagerBuilder(TileUniform)
 set(LLVM_TARGETS_TO_BUILD X86 CACHE STRING "LLVM host target")
 set(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD CBackend CACHE STRING "set this to 'CBackend' to enable generating OpenCL-C")
 set(LLVM_INCLUDE_EXAMPLES off)
@@ -336,6 +338,16 @@ configure_file(
 add_custom_target(docs
     COMMAND doxygen "${PROJECT_BINARY_DIR}/lib/doxygen_config"
 )
+
+# install documentation
+# optionally stored under doc/
+install(DIRECTORY ${PROJECT_BINARY_DIR}/docs/html
+        DESTINATION doc
+        FILE_PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+        DIRECTORY_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+        COMPONENT doc
+        OPTIONAL)
+
 
 # Must build after 'world' target
 if(CXXAMP_ENABLE_BOLT)
