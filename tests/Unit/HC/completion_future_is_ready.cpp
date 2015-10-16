@@ -6,8 +6,6 @@
 #include <iostream>
 #include <random>
 
-#include <hsa.h>
-
 // loop to deliberately slow down kernel execution
 #define LOOP_COUNT (1024)
 
