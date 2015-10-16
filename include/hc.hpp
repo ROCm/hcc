@@ -900,6 +900,19 @@ public:
       }
     }
 
+    /**
+     * Get if the async operations has been completed.
+     *
+     * @return True if the async operation has been completed, false if not.
+     */
+    bool is_ready() {
+      if (__asyncOp != nullptr) {
+        return __asyncOp->isReady();
+      } else {
+        return false;
+      }
+    }
+
     ~completion_future() {
       if (__thread_then != nullptr) {
         __thread_then->join();
