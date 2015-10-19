@@ -1,8 +1,8 @@
-Kalmar : An open source C++ compiler for heterogeneous devices
+HCC : An open source C++ compiler for heterogeneous devices
 
 Introduction
 --------------------------------------------------------------------------------
-This repository hosts Kalmar compiler implementation project. The goal is to
+This repository hosts HCC compiler implementation project. The goal is to
 implement a compiler that takes a program conforming C++AMP standard and
 transforms it into the following targets:
 
@@ -159,16 +159,16 @@ are:
    - CXXAMP_ENABLE_BOLT : ON / OFF AMD Bolt API (default is OFF )
 
    - HSAIL_COMPILER_DIR : Place where HSAIL compiler (HLC) source code is placed.
-                          By default Kalmar compiler will checkout a fresh copy from
+                          By default HCC compiler will checkout a fresh copy from
                           github if this variable is not set.
 
    - HSAIL_ASSEMBLER_DIR : Place where HSAIL-Tools (HSAILasm) source code is placed.
-                          By default Kalmar compiler will checkout a fresh copy from
+                          By default HCC compiler will checkout a fresh copy from
                           github if this variable is not set.
 
 4. Build the whole system. This will build clang and other libraries
    that require one time build.
-  # make [-j #] world           // # is the number of parallel builds
+  # make -j$(getconf _NPROCESSORS_ONLN) world
   # CLAMP_NOTILECHECK=ON make   // this builds llvm utilities
 
    For recurring builds for llvm and clang:
@@ -195,12 +195,11 @@ After building, please change /etc/ld.so.conf to let dynamic libraries be
 locatable at runtime:
 
 # If you install deb files:
-# C++AMP runtime libraries
-# libc++ & Kalmar runtime implementations
-/opt/kalmar/lib
+# HCC runtime implementations
+/opt/hcc/lib
 
 # If you build from source:
-# Kalmar runtime implementations
+# HCC runtime implementations
 (path_of_your_build_directory)/build/Release/lib
 
 Remember to use: sudo ldconfig -v to reload ld.so cache.
@@ -247,7 +246,7 @@ How to make your repository synchronized by pulling from main repository
 -------------------------------------------------------------------------------
 Synchronization can be done via scripts:
 
-  # kalmar/src/scripts/pull_from_trunk.py
+  # hcc/src/scripts/pull_from_trunk.py
 
 It will pull from both cppamp-driver-ng-35 and cppamp-ng-35. Note that you still need to
 update repositories. Again, when build system does not seem to work, you will
@@ -256,15 +255,15 @@ need to redo step No. 6 from the build instruction.
 
 Directory Structure
 -------------------------------------------------------------------------------
-$kalmar                // top-level directory
+$hcc                // top-level directory
   build/               // all outputs
   src/                 // llvm
     compiler/
       tools/
         clang/         // modified Clang frontend
   tests/               // tests including unit tests, TDD issues
-  include/             // Kalmar related headers
-  lib/                 // Kalmar related implementions
+  include/             // HCC related headers
+  lib/                 // HCC related implementions
 
 
 Test Driven Development

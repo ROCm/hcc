@@ -1,10 +1,34 @@
-/// getLDS : get arbitrary address location within group segment
+/// global variable to store the size of static group segment
+/// the value would be set by Kalmar runtime prior to kernel dispatch
+prog global_u32 &hcc_static_group_segment_size = 0;
+
+/// global variable to store the size of dynamic group segment
+/// the value would be set by Kalmar runtime prior to kernel dispatch
+prog global_u32 &hcc_dynamic_group_segment_size = 0;
+
+/// get_static_group_segment_size : return the size of static group segment
+prog function &get_static_group_segment_size(arg_u32 %ret)()
+{
+  ld_global_u32 $s0, [&hcc_static_group_segment_size];
+  st_arg_u32 $s0, [%ret];
+  ret;
+};
+
+/// get_dynamic_group_segment_size : return the size of dynamic group segment
+prog function &get_dynamic_group_segment_size(arg_u32 %ret)()
+{
+  ld_global_u32 $s0, [&hcc_dynamic_group_segment_size];
+  st_arg_u32 $s0, [%ret];
+  ret;
+};
+
+/// get_group_segment_addr : get arbitrary address location within group segment
 ///
 /// This function would return an arbitrary location within group segment.
 /// It takes an u32 offset argument and returns the given address in the
 /// group segment.  The base of group segment is fetched with groupbaseptr_u32.
 ///
-prog function &getLDS(arg_u32 %ret)(arg_u32 %offset)
+prog function &get_group_segment_addr(arg_u32 %ret)(arg_u32 %offset)
 {
   ld_arg_u32 $s1, [%offset];
 
@@ -13,6 +37,30 @@ prog function &getLDS(arg_u32 %ret)(arg_u32 %offset)
   add_u32 $s0, $s0, $s1;
 
   st_arg_u32 $s0, [%ret];
+  ret;
+};
+
+/// get_dynamic_group_segment : get the pointer to the beginning of dynamic
+/// group segment
+///
+prog function &get_dynamic_group_segment(arg_u32 %ret)()
+{
+  // call get_static_group_segment_size
+  {
+    arg_u32 %res1;
+    call &get_static_group_segment_size(%res1)();
+    ld_arg_u32 $s0, [%res1];
+  }
+  // call get_group_segment_addr
+  {
+    arg_u32 %offset;
+    arg_u32 %res2;
+    // fill in the argument
+    st_arg_u32 $s0, [%offset];
+    call &get_group_segment_addr(%res2)(%offset);
+    ld_arg_u32 $s1, [%res2];
+  }
+  st_arg_u32 $s1, [%ret];
   ret;
 };
 

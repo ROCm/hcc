@@ -438,7 +438,12 @@ namespace {
 
 StructType* mapTypeToGlobal(StructType* T) {
   // create a new, empty StructType
-  StructType* newST = StructType::create(T->getContext(), T->getName());
+  StructType* newST = nullptr;
+  if (T->hasName()) {
+      newST = StructType::create(T->getContext(), T->getName());
+  } else {
+      newST = StructType::create(T->getContext(), "");
+  }
 
   // mark the original StructType as translated to the new StructType
   structTypeMap[T] = newST;
@@ -851,9 +856,6 @@ void updateBitCastInstWithNewOperand(BitCastInst * BI, Value *oldOperand, Value 
         PointerType * sourcePtrType = dyn_cast<PointerType>(sourceType);
         if (!sourcePtrType) return;
 
-        if ( sourcePtrType->getAddressSpace()
-             == currentPtrType->getAddressSpace() ) return;
-
         PointerType * newDestType =
                 PointerType::get(currentPtrType->getElementType(),
                                  sourcePtrType->getAddressSpace());
@@ -1201,8 +1203,8 @@ void updateInstructionWithNewOperand(Instruction * I,
            return;
        }
 
-       llvm::errs() << "DO NOT KNOW HOW TO UPDATE INSTRUCTION: ";
-             I->print(llvm::errs()); llvm::errs() << "\n";
+       DEBUG(llvm::errs() << "DO NOT KNOW HOW TO UPDATE INSTRUCTION: ";
+             I->print(llvm::errs()); llvm::errs() << "\n";);
 
        // Don't crash the program
        return;
@@ -2012,6 +2014,10 @@ bool PromoteGlobals::runOnModule(Module& M)
         }
         updateKernels (M, promotedKernels);
 
+        /// FIXME: The following code can be removed. It is too late to add
+        ///        NoDuplicate attribute on barrier in SPIRify pass. We already
+        //         add NoDuplicate attribute in clang
+#if 0
         // If the barrier present is used, we need to ensure it cannot be duplicated.
         for (Module::iterator F = M.begin(), Fe = M.end(); F != Fe; ++F) {
                 StringRef name = F->getName();
@@ -2019,6 +2025,7 @@ bool PromoteGlobals::runOnModule(Module& M)
                         F->addFnAttr (Attribute::NoDuplicate);
                 }
         }
+#endif
 
         // Rename local variables per SPIR naming rule
         Module::GlobalListType &globals = M.getGlobalList();

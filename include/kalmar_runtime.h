@@ -64,6 +64,13 @@ public:
    * @return An implementation-defined frequency for the asynchronous operation.
    */
   virtual uint64_t getTimestampFrequency() { return 0L; }
+
+  /**
+   * Get if the async operations has been completed.
+   *
+   * @return True if the async operation has been completed, false if not.
+   */
+  virtual bool isReady() { return false; }
 };
 
 /// KalmarQueue
@@ -337,6 +344,9 @@ public:
 
     /// get system ticks
     virtual uint64_t getSystemTicks() { return 0L; };
+
+    /// get tick frequency
+    virtual uint64_t getSystemTickFrequency() { return 0L; };
 };
 
 KalmarContext *getContext();
