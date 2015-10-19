@@ -124,6 +124,10 @@ public:
 
     void* getNativeHandle() override { return &signal; }
 
+    bool isReady() override {
+        return (hsa_signal_load_acquire(signal) == 0);
+    }
+
     HSABarrier() : isDispatched(false), future(nullptr), hsaQueue(nullptr) {}
 
     ~HSABarrier() {
@@ -239,6 +243,10 @@ public:
     std::shared_future<void>* getFuture() override { return future; }
 
     void* getNativeHandle() override { return &signal; }
+
+    bool isReady() override {
+        return (hsa_signal_load_acquire(signal) == 0);
+    }
 
     ~HSADispatch() {
 #if KALMAR_DEBUG

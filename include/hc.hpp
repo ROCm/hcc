@@ -900,6 +900,19 @@ public:
       }
     }
 
+    /**
+     * Get if the async operations has been completed.
+     *
+     * @return True if the async operation has been completed, false if not.
+     */
+    bool is_ready() {
+      if (__asyncOp != nullptr) {
+        return __asyncOp->isReady();
+      } else {
+        return false;
+      }
+    }
+
     ~completion_future() {
       if (__thread_then != nullptr) {
         __thread_then->join();
@@ -1720,9 +1733,7 @@ extern "C" unsigned int get_dynamic_group_segment_size() __attribute__((hc));
  * C interface of HSA builtin function to fetch the address of the beginning
  * of dynamic group segment.
  */
-__attribute__((address_space(3))) void* get_dynamic_group_segment() __attribute__((hc)) {
-    return get_group_segment_addr(get_static_group_segment_size());
-}
+extern "C" __attribute__((address_space(3))) void* get_dynamic_group_segment() __attribute__((hc));
 
 // ------------------------------------------------------------------------
 // utility class for tiled_barrier
