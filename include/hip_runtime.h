@@ -187,7 +187,17 @@ hipError_t hipMemset2DAsync(void *devPtr, size_t pitch, int value,
 }
 
 
-hipError_t hipMemsetAsync (void *evPtr, int value, size_t count,
-                           hipStream_t stream=nullptr) {
-  assert(0 && "hipMemset unimplemented yet.");
+hipError_t hipMemsetAsync(void *dst, int value, size_t count,
+                          hipStream_t stream=nullptr) {
+  char *d = (char *)dst;
+
+  // byte by byte assignment
+  hc::parallel_for_each(stream ? stream->av :
+                                 hc::accelerator().get_default_view(),
+                        hc::extent<1>(count),
+                        [d, value](hc::index<1> idx) __attribute((hc)) {
+    d[idx[0]] = value;
+  });
+
+  return hipSuccess;
 }
