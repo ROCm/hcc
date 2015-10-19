@@ -856,9 +856,6 @@ void updateBitCastInstWithNewOperand(BitCastInst * BI, Value *oldOperand, Value 
         PointerType * sourcePtrType = dyn_cast<PointerType>(sourceType);
         if (!sourcePtrType) return;
 
-        if ( sourcePtrType->getAddressSpace()
-             == currentPtrType->getAddressSpace() ) return;
-
         PointerType * newDestType =
                 PointerType::get(currentPtrType->getElementType(),
                                  sourcePtrType->getAddressSpace());
