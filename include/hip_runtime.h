@@ -42,8 +42,11 @@ inline hipError_t hipStreamCreate(hipStream_t *stream) {
 }
 
 
-hipError_t hipStreamSynchronize(hipStream_t stream) {
-  stream->av.wait();
+hipError_t hipStreamSynchronize(hipStream_t stream=nullptr) {
+  if (stream == nullptr)
+    hc::accelerator().get_default_view().wait();
+  else
+    stream->av.wait();
   return hipSuccess;
 };
 
@@ -110,7 +113,19 @@ hipError_t hipMemcpyAsync(void *dst, const void *src,
                           size_t  count,
                           hipMemcpyKind kind,
                           hipStream_t stream=nullptr) {
+  // XXX(Yan-Ming): Does kind matter?
+  char *d = (char *)dst;
+  char *s = (char *)src;
 
+  // byte by byte copy
+  hc::parallel_for_each(stream ? stream->av :
+                                 hc::accelerator().get_default_view(),
+                        hc::extent<1>(count),
+                        [s, d](hc::index<1> idx) __attribute((hc)) {
+    d[idx[0]] = s[idx[0]];
+  });
+
+  return hipSuccess;
 }
 
 
