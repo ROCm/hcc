@@ -20,7 +20,6 @@ endif()
 find_path(GLEW_INCLUDE_DIR NAMES "GL/glew.h" PATHS ${CUDA_PATH}/samples/common/inc)
 find_path(GLEW_LIB_DIR NAMES libGLEW.a PATHS ${CUDA_PATH}/samples/common/lib/linux/x86_64)
 
-message(${GLEW_INCLUDE_DIR})
 add_custom_target(2dLB_C
   COMMAND ${CMAKE_C_COMPILER} -o ${LB_DEMO_PATH}/2dLB_C -I${GLEW_INCLUDE_DIR} -L${GLEW_LIB_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/2dLB_C.c -lGLEW -lglut -lGL -lm
   COMMENT "Building 2dLB C")
