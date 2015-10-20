@@ -32,6 +32,22 @@
 
 #define KALMAR_DEBUG (0)
 
+/////////////////////////////////////////////////
+// kernel dispatch speed optimization flags
+/////////////////////////////////////////////////
+
+// number of pre-allocated HSA signals in HSAContext
+// default set as 0 (not pre-allocating)
+#define SIGNAL_POOL_SIZE (0)
+
+// whether to set barrier bit in AQL packet in kernel dispatches
+// default set as 1 (barrier bit set in AQL packet)
+#define DISPATCH_PACKET_BARRIER_BIT (1)
+
+// whether to use kernarg region found on the HSA agent
+// default set as 1 (use karnarg region)
+#define USE_KERNARG_REGION (1)
+
 #define STATUS_CHECK(s,line) if (s != HSA_STATUS_SUCCESS) {\
 		printf("### Error: %d at line:%d\n", s, line);\
                 assert(HSA_STATUS_SUCCESS == hsa_shut_down());\
@@ -1352,7 +1368,6 @@ public:
             Devices.push_back(Dev);
         }
 
-#define SIGNAL_POOL_SIZE (0)
 
 #if SIGNAL_POOL_SIZE > 0
         // pre-allocate signals
@@ -1523,9 +1538,12 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
     aql.grid_size_y = global_size[1];
     aql.grid_size_z = global_size[2];
   
+
     // set dispatch fences
     aql.header = (HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE) |
+#if DISPATCH_PACKET_BARRIER_BIT
                  (1 << HSA_PACKET_HEADER_BARRIER) |
+#endif
                  (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
                  (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
   
@@ -1535,7 +1553,8 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
     // bind kernel arguments
     //printf("arg_vec size: %d in bytes: %d\n", arg_vec.size(), arg_vec.size());
 
-    if (device->hasHSAKernargRegion()) {
+
+    if (device->hasHSAKernargRegion() && USE_KERNARG_REGION) {
         hsa_region_t kernarg_region = device->getHSAKernargRegion();
 
         if (arg_vec.size() > 0) {
