@@ -178,9 +178,15 @@ public:
             err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, 0, NULL, &ent);
             assert(err == CL_SUCCESS);
         } else {
-            cl_event evt = events[sdm];
+            std::vector<cl_event> list;
+            if (events.find(sdm) != std::end(events))
+              list.push_back(events[sdm]);
+            if (events.find(ddm) != std::end(events))
+              list.push_back(events[ddm]);
+            std::sort(std::begin(list), std::end(list));
+            list.erase(std::unique(std::begin(list), std::end(list)), std::end(list));
             cl_command_queue queue;
-            clGetEventInfo(evt, CL_EVENT_COMMAND_QUEUE, sizeof(cl_command_queue), &queue, NULL);
+            clGetEventInfo(events[sdm], CL_EVENT_COMMAND_QUEUE, sizeof(cl_command_queue), &queue, NULL);
 
             cl_device_id dev1, dev2;
             clGetCommandQueueInfo(getQueue(), CL_QUEUE_DEVICE, sizeof(cl_device_id), &dev1, NULL);
@@ -191,27 +197,34 @@ public:
             /// of the queue used to write data is the same as the device of the
             /// queue used to copy data
             if (dev1 == dev2) {
-                err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, 1, &evt, &ent);
+                err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, list.size(), list.size()?list.data():NULL, &ent);
                 assert(err == CL_SUCCESS);
             } else {
                 void* stage = aligned_alloc(0x1000, count);
                 cl_event stage_evt;
-                err = clEnqueueReadBuffer(queue, sdm, CL_FALSE, src_offset, count, stage, 1, &evt, &stage_evt);
+                err = clEnqueueReadBuffer(queue, sdm, CL_FALSE, src_offset, count, stage, list.size(), list.size()?list.data():NULL, &stage_evt);
                 assert(err == CL_SUCCESS);
                 err = clEnqueueWriteBuffer(getQueue(), ddm, CL_FALSE, dst_offset, count, stage, 1, &stage_evt, &ent);
                 assert(err == CL_SUCCESS);
                 err = clSetEventCallback(ent, CL_COMPLETE, &free_memory, stage);
                 assert(err == CL_SUCCESS);
             }
-            err = clReleaseEvent(evt);
-            assert(err == CL_SUCCESS);
-            events.erase(sdm);
+            if(events[sdm]) {
+              err = clReleaseEvent(events[sdm]);
+              assert(err == CL_SUCCESS);
+              events.erase(sdm);
+            }
         }
         if (blocking) {
             err = clWaitForEvents(1, &ent);
             assert(err == CL_SUCCESS);
             err = clReleaseEvent(ent);
             assert(err == CL_SUCCESS);
+            if(events[ddm]) {
+              err = clReleaseEvent(events[sdm]);
+              assert(err == CL_SUCCESS);
+              events.erase(ddm);
+            }
         } else {
             if (events.find(ddm) != std::end(events)) {
                 err = clReleaseEvent(events[ddm]);
