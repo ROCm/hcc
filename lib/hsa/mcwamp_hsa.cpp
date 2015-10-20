@@ -1282,6 +1282,11 @@ private:
 
 class HSAContext final : public KalmarContext
 {
+    /// memory pool for signals
+    std::vector<hsa_signal_t> signalPool;
+    int signalCursor;
+    std::mutex signalPoolMutex;
+
     /// Determines if the given agent is of type HSA_DEVICE_TYPE_GPU
     static hsa_status_t find_gpu(hsa_agent_t agent, void *data) {
         hsa_status_t status;
@@ -1322,7 +1327,7 @@ class HSAContext final : public KalmarContext
     }
 
 public:
-    HSAContext() : KalmarContext() {
+    HSAContext() : KalmarContext(), signalPool(), signalCursor(0), signalPoolMutex() {
         // initialize HSA runtime
 #if KALMAR_DEBUG
         std::cerr << "HSAContext::HSAContext(): init HSA runtime\n";
@@ -1343,6 +1348,53 @@ public:
                 def = Dev;
             Devices.push_back(Dev);
         }
+
+#define SIGNAL_POOL_SIZE (16)
+
+        // pre-allocate signals
+        for (int i = 0; i < SIGNAL_POOL_SIZE; ++i) {
+          hsa_signal_t signal;
+          status = hsa_signal_create(1, 0, NULL, &signal);
+          STATUS_CHECK(status, __LINE__);
+          signalPool.push_back(signal);
+        }
+#if 0
+        std::cout << "pool size: " << signalPool.size() << "\n";
+        std::cout << "pool capacity: " << signalPool.capacity() << "\n";
+#endif
+    }
+
+    hsa_signal_t getSignal() {
+        hsa_status_t status = HSA_STATUS_SUCCESS;
+
+#if 1
+        signalPoolMutex.lock();
+        int cursor = signalCursor;
+#if 0
+        std::cout << "signal cursor: " << cursor << " pool size: " << signalPool.size() << "\n";
+#endif
+        if (((cursor + 1) % SIGNAL_POOL_SIZE) == 0) {
+            // pre-allocate signals
+            for (int i = 0; i < SIGNAL_POOL_SIZE; ++i) {
+                hsa_signal_t signal;
+                status = hsa_signal_create(1, 0, NULL, &signal);
+                STATUS_CHECK(status, __LINE__);
+                signalPool.push_back(signal);
+            }
+#if 0
+            std::cout << "pool size: " << signalPool.size() << "\n";
+            std::cout << "pool capacity: " << signalPool.capacity() << "\n";
+#endif
+        }
+
+        hsa_signal_t ret = signalPool[cursor];
+        ++signalCursor;
+        signalPoolMutex.unlock();
+#else
+        hsa_signal_t ret;
+        hsa_signal_create(1, 0, NULL, &ret);
+#endif
+        return ret;
     }
 
     ~HSAContext() {
@@ -1452,8 +1504,9 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
     /*
      * Create a signal to wait for the dispatch to finish.
      */
-    status = hsa_signal_create(1, 0, NULL, &signal);
-    STATUS_CHECK_Q(status, commandQueue, __LINE__);
+//    status = hsa_signal_create(1, 0, NULL, &signal);
+//    STATUS_CHECK_Q(status, commandQueue, __LINE__);
+    signal = Kalmar::ctx.getSignal();
   
     /*
      * Initialize the dispatch packet.
