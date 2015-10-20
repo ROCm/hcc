@@ -1391,8 +1391,9 @@ public:
             Devices.push_back(Dev);
         }
 
-#define SIGNAL_POOL_SIZE (16)
+#define SIGNAL_POOL_SIZE (0)
 
+#if SIGNAL_POOL_SIZE > 0
         // pre-allocate signals
         for (int i = 0; i < SIGNAL_POOL_SIZE; ++i) {
           hsa_signal_t signal;
@@ -1400,21 +1401,15 @@ public:
           STATUS_CHECK(status, __LINE__);
           signalPool.push_back(signal);
         }
-#if 0
-        std::cout << "pool size: " << signalPool.size() << "\n";
-        std::cout << "pool capacity: " << signalPool.capacity() << "\n";
 #endif
     }
 
     hsa_signal_t getSignal() {
         hsa_status_t status = HSA_STATUS_SUCCESS;
 
-#if 1
+#if SIGNAL_POOL_SIZE > 0
         signalPoolMutex.lock();
         int cursor = signalCursor;
-#if 0
-        std::cout << "signal cursor: " << cursor << " pool size: " << signalPool.size() << "\n";
-#endif
         if (((cursor + 1) % SIGNAL_POOL_SIZE) == 0) {
             // pre-allocate signals
             for (int i = 0; i < SIGNAL_POOL_SIZE; ++i) {
@@ -1423,10 +1418,6 @@ public:
                 STATUS_CHECK(status, __LINE__);
                 signalPool.push_back(signal);
             }
-#if 0
-            std::cout << "pool size: " << signalPool.size() << "\n";
-            std::cout << "pool capacity: " << signalPool.capacity() << "\n";
-#endif
         }
 
         hsa_signal_t ret = signalPool[cursor];
