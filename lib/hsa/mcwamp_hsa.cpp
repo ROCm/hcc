@@ -27,6 +27,9 @@
 
 #include <kalmar_runtime.h>
 
+#include <time.h>
+#include <iomanip>
+
 #define KALMAR_DEBUG (0)
 
 #define STATUS_CHECK(s,line) if (s != HSA_STATUS_SUCCESS) {\
@@ -1530,6 +1533,10 @@ HSADispatch::HSADispatch(Kalmar::HSADevice* _device, HSAKernel* _kernel) :
 // dispatch a kernel asynchronously
 hsa_status_t 
 HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
+    struct timespec begin;
+    struct timespec end;
+    clock_gettime(CLOCK_REALTIME, &begin);
+
     hsa_status_t status = HSA_STATUS_SUCCESS;
     if (isDispatched) {
         return HSA_STATUS_ERROR_INVALID_ARGUMENT;
@@ -1643,6 +1650,12 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
     hsa_signal_store_relaxed(commandQueue->doorbell_signal, index);
   
     isDispatched = true;
+
+    clock_gettime(CLOCK_REALTIME, &end);
+
+    //std::cerr << begin.tv_sec << " " << begin.tv_nsec << "\n";
+    //std::cerr << end.tv_sec << " " << end.tv_nsec << "\n";
+    std::cerr << std::setprecision(6) << ((float)(end.tv_sec - begin.tv_sec) * 1000 * 1000 + (float)(end.tv_nsec - begin.tv_nsec) / 1000) << "\n";
 
     return status;
 }
