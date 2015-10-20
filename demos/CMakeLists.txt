@@ -16,3 +16,8 @@ add_subdirectory(LB_Demo)
 add_custom_target(demos
   DEPENDS LB_Demo
   COMMENT "Demos in ${DEMO_BIN_PATH}")
+
+install(DIRECTORY "${DEMO_BIN_PATH}/"
+  USE_SOURCE_PERMISSIONS
+  DESTINATION demos
+  )
