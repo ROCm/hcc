@@ -130,8 +130,9 @@ _find_object() {
   local ret=${FILE%.o}
 
   if [ -e $FILE ]; then
-    local relocatable=`readelf -h $FILE | grep 'Relocatable file'`
-    local notELF=`readelf -h $FILE | grep 'Not an ELF'`
+    local readelf_output=`readelf -h $FILE`
+    local relocatable=`echo $readelf_output | grep 'Relocatable file'`
+    local notELF=`echo $readelf_output | grep 'Not an ELF'`
 
     if [ ! -z "$relocatable" ] && [ -z "$notELF" ]; then
       # remove postfix
