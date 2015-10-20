@@ -11,6 +11,7 @@
 #include <kalmar_runtime.h>
 #include <kalmar_serialize.h>
 
+/** \cond HIDDEN_SYMBOLS */
 namespace Kalmar {
 
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
@@ -344,4 +345,4 @@ mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async(
 }
 
 } // namespace Kalmar
-
+/** \endcond */

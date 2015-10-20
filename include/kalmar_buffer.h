@@ -10,6 +10,7 @@
 #include <kalmar_runtime.h>
 #include <kalmar_serialize.h>
 
+/** \cond HIDDEN_SYMBOLS */
 namespace Kalmar {
 
 // Dummy interface that looks somewhat like std::shared_ptr<T>
@@ -98,4 +99,4 @@ public:
 };
 
 } // namespace Kalmar
-
+/** \endcond */
