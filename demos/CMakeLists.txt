@@ -6,10 +6,7 @@ else()
   message("-- nvcc is NOT found, skipping 2dLB_CU target")
 endif()
 
-find_path(CLAMP_BIN_PATH clamp-config PATHS ${EXECUTABLE_OUTPUT_PATH} NO_DEFAULT_PATH)
-if(CLAMP_BIN_PATH)
-  message("-- clamp-config is NOT found, skipping 2dLB_gl target")
-endif()
+SET(CLAMPCONFIG_BIN "${EXECUTABLE_OUTPUT_PATH}/clamp-config")
 
 SET(DEMO_BIN_PATH "${CMAKE_CURRENT_BINARY_DIR}/bin")
 file(MAKE_DIRECTORY ${DEMO_BIN_PATH})
