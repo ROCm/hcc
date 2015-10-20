@@ -124,12 +124,30 @@ TEMP_DIR=`mktemp -d`
 CXXAMP_SERIALIZE_SYMBOL_FILE=$TEMP_DIR/symbol.txt
 touch $CXXAMP_SERIALIZE_SYMBOL_FILE
 
+# find object file
+_find_object() {
+  local FILE=$1
+  local ret=${FILE%.o}
+
+  if [ -e $FILE ]; then
+    local relocatable=`readelf -h $FILE | grep 'Relocatable file'`
+    local notELF=`readelf -h $FILE | grep 'Not an ELF'`
+
+    if [ ! -z "$relocatable" ] && [ -z "$notELF" ]; then
+      # remove postfix
+      ret=${FILE%.*}
+    fi
+  fi
+
+  echo $ret
+}
+
 ARGS="$@"
 for ARG in $ARGS
 do
   if [ -f $ARG ]; then
     FILE=`basename $ARG` # remove path
-    FILENAME=${FILE%.o}  # check if it's an object file
+    FILENAME=$(_find_object $FILE)  # check if it's an object file
     CPUFILE=${FILE%.cpu}
     ISCRT=${ARG#/usr}    # exception for objects under /usr
     ISLIB=${ARG#/lib}    # exception for objects under /lib
