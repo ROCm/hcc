@@ -48,6 +48,10 @@
 // default set as 1 (use karnarg region)
 #define USE_KERNARG_REGION (1)
 
+// whether to print out kernel dispatch time
+// default set as 0 (NOT print out kernel dispatch time)
+#define KALMAR_DISPATCH_TIME_PRINTOUT (0)
+
 #define STATUS_CHECK(s,line) if (s != HSA_STATUS_SUCCESS) {\
 		printf("### Error: %d at line:%d\n", s, line);\
                 assert(HSA_STATUS_SUCCESS == hsa_shut_down());\
@@ -1663,9 +1667,9 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
 
     clock_gettime(CLOCK_REALTIME, &end);
 
-    //std::cerr << begin.tv_sec << " " << begin.tv_nsec << "\n";
-    //std::cerr << end.tv_sec << " " << end.tv_nsec << "\n";
+#if KALMAR_DISPATCH_TIME_PRINTOUT
     std::cerr << std::setprecision(6) << ((float)(end.tv_sec - begin.tv_sec) * 1000 * 1000 + (float)(end.tv_nsec - begin.tv_nsec) / 1000) << "\n";
+#endif
 
     return status;
 }
