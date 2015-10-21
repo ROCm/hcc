@@ -86,6 +86,12 @@ do
   fi
 done
 
+HSA_USE_AMDGPU_BACKEND=@HSA_USE_AMDGPU_BACKEND@
+
+if [ $HSA_USE_AMDGPU_BACKEND == "ON" ]; then
+  KM_USE_AMDGPU="${KM_USE_AMDGPU:=1}"
+fi
+
 # emit HSAIL/BRIG kernel
 if [ "$3" == "--hsa" ]; then
     if [ "$CLAMP_NOTILECHECK" == "ON" ]; then
@@ -110,14 +116,19 @@ if [ "$3" == "--hsa" ]; then
              -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
              -promote-globals -promote-privates -erase-nonkernels -tile-uniform -malloc-select -dce -globaldce -S < $1 -o $2.promote.ll.orig
 
-        # remove special sections
-        $OPT -load $LIB/LLVMRemoveSpecialSection@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-             -remove-special-section -S < $2.promote.ll.orig -o $2.promote.ll.orig.new
-        if [ $? == 0 ]; then
-          mv -f $2.promote.ll.orig.new $2.promote.ll.orig
-        fi
       fi
     fi
+
+    # remove special section information for AMDGPU backend
+    if [ $KM_USE_AMDGPU ] ; then
+      echo "remove special section"
+      $OPT -load $LIB/LLVMRemoveSpecialSection@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+           -remove-special-section -S < $2.promote.ll.orig -o $2.promote.ll.orig.new
+      if [ $? == 0 ]; then
+        mv -f $2.promote.ll.orig.new $2.promote.ll.orig
+      fi
+    fi
+
     if [ $? == 1 ]; then
       echo "Generating HSAIL BRIG kernel failed"
       exit 1
