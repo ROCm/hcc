@@ -1362,7 +1362,12 @@ void promoteGlobalVars(Function *Func, InstUpdateWorkList * updateNeeded)
             I->getSection() != std::string(TILE_STATIC_NAME) ||
             I->getType()->getPointerAddressSpace() != 0 ||
             !I->hasName()) {
-            continue;
+            // promote to global address space if the variable is used in a kernel
+            if (usedInTheFunc(I, Func)) {
+              the_space = GlobalAddressSpace;
+            } else {
+              continue;
+            }
         }
 
         // If the address of this global variable is available from host, it
