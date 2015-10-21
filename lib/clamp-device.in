@@ -125,7 +125,6 @@ if [ "$3" == "--hsa" ]; then
 
     # remove special section information for AMDGPU backend
     if [ $KM_USE_AMDGPU ] ; then
-      echo "remove special section"
       $OPT -load $LIB/LLVMRemoveSpecialSection@CMAKE_SHARED_LIBRARY_SUFFIX@ \
            -remove-special-section -S < $2.promote.ll.orig -o $2.promote.ll.orig.new
       if [ $? == 0 ]; then
