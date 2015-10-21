@@ -88,6 +88,10 @@ done
 
 # emit HSAIL/BRIG kernel
 if [ "$3" == "--hsa" ]; then
+    if [ $KMDUMPLLVM == "1" ]; then
+      cp $1 ./dump.input.bc
+    fi
+
     if [ "$CLAMP_NOTILECHECK" == "ON" ]; then
       if [ "$ALWAYS_MALLOC" == "ON" ]; then
         $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
