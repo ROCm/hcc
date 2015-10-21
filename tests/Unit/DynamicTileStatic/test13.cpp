@@ -65,11 +65,15 @@ bool test() {
 int main() {
   bool ret = true;
 
+  // FIXME: uncomment these line back when we have an updated dynamic group
+  // segment allocation routine
+#if 0
   ret &= test<1, 1>();
   ret &= test<4, 2>();
   ret &= test<8, 4>();
   ret &= test<64, 16>();
   ret &= test<256, 32>();
+#endif
   ret &= test<4096, 64>();
 
   return !(ret == true);
