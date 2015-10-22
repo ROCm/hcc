@@ -26,7 +26,8 @@ enum queuing_mode
 } // namespace enums
 } // namespace Kalmar
 
-
+ 
+/** \cond HIDDEN_SYMBOLS */
 namespace Kalmar {
 
 using namespace Kalmar::enums;
@@ -709,3 +710,4 @@ struct rw_info
 
 } // namespace Kalmar
 
+/** \endcond */

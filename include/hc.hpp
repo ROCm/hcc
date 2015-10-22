@@ -1491,6 +1491,16 @@ public:
     tiled_extent(int e0, int t0) __attribute__((hc,cpu)) : extent(e0), tile_dim{t0}, dynamic_group_segment_size(0) {}
 
     /**
+     * Construct an tiled extent with the size of extent and the size of tile
+     * specified.
+     *
+     * @param[in] e0 Size of extent.
+     * @param[in] t0 Size of tile.
+     * @param[in] size Size of dynamic group segment.
+     */
+    tiled_extent(int e0, int t0, int size) __attribute__((hc,cpu)) : extent(e0), tile_dim{t0}, dynamic_group_segment_size(size) {}
+
+    /**
      * Copy constructor. Constructs a new tiled_extent from the supplied
      * argument "other".
      *
@@ -1507,6 +1517,15 @@ public:
      * @param[in] t0 Size of tile.
      */
     tiled_extent(const extent<1>& ext, int t0) __attribute__((hc,cpu)) : extent(ext), tile_dim{t0}, dynamic_group_segment_size(0) {} 
+
+    /**
+     * Constructs a tiled_extent<N> with the extent "ext".
+     *
+     * @param[in] ext The extent of this tiled_extent
+     * @param[in] t0 Size of tile.
+     * @param[in] size Size of dynamic group segment
+     */
+    tiled_extent(const extent<1>& ext, int t0, int size) __attribute__((hc,cpu)) : extent(ext), tile_dim{t0}, dynamic_group_segment_size(size) {}
 
     /**
      * Set the size of dynamic group segment. The function should be called
@@ -1565,6 +1584,18 @@ public:
     tiled_extent(int e0, int e1, int t0, int t1) __attribute__((hc,cpu)) : extent(e0, e1), tile_dim{t0, t1}, dynamic_group_segment_size(0) {}
 
     /**
+     * Construct an tiled extent with the size of extent and the size of tile
+     * specified.
+     *
+     * @param[in] e0 Size of extent in the 1st dimension.
+     * @param[in] e1 Size of extent in the 2nd dimension.
+     * @param[in] t0 Size of tile in the 1st dimension.
+     * @param[in] t1 Size of tile in the 2nd dimension.
+     * @param[in] size Size of dynamic group segment.
+     */
+    tiled_extent(int e0, int e1, int t0, int t1, int size) __attribute__((hc,cpu)) : extent(e0, e1), tile_dim{t0, t1}, dynamic_group_segment_size(size) {}
+
+    /**
      * Copy constructor. Constructs a new tiled_extent from the supplied
      * argument "other".
      *
@@ -1581,6 +1612,16 @@ public:
      * @param[in] t1 Size of tile in the 2nd dimension.
      */
     tiled_extent(const extent<2>& ext, int t0, int t1) __attribute__((hc,cpu)) : extent(ext), tile_dim{t0, t1}, dynamic_group_segment_size(0) {}
+
+    /**
+     * Constructs a tiled_extent<N> with the extent "ext".
+     *
+     * @param[in] ext The extent of this tiled_extent
+     * @param[in] t0 Size of tile in the 1st dimension.
+     * @param[in] t1 Size of tile in the 2nd dimension.
+     * @param[in] size Size of dynamic group segment.
+     */
+    tiled_extent(const extent<2>& ext, int t0, int t1, int size) __attribute__((hc,cpu)) : extent(ext), tile_dim{t0, t1}, dynamic_group_segment_size(size) {}
 
     /**
      * Set the size of dynamic group segment. The function should be called
@@ -1641,6 +1682,20 @@ public:
     tiled_extent(int e0, int e1, int e2, int t0, int t1, int t2) __attribute__((hc,cpu)) : extent(e0, e1, e2), tile_dim{t0, t1, t2}, dynamic_group_segment_size(0) {}
 
     /**
+     * Construct an tiled extent with the size of extent and the size of tile
+     * specified.
+     *
+     * @param[in] e0 Size of extent in the 1st dimension.
+     * @param[in] e1 Size of extent in the 2nd dimension.
+     * @param[in] e2 Size of extent in the 3rd dimension.
+     * @param[in] t0 Size of tile in the 1st dimension.
+     * @param[in] t1 Size of tile in the 2nd dimension.
+     * @param[in] t2 Size of tile in the 3rd dimension.
+     * @param[in] size Size of dynamic group segment.
+     */
+    tiled_extent(int e0, int e1, int e2, int t0, int t1, int t2, int size) __attribute__((hc,cpu)) : extent(e0, e1, e2), tile_dim{t0, t1, t2}, dynamic_group_segment_size(size) {}
+
+    /**
      * Copy constructor. Constructs a new tiled_extent from the supplied
      * argument "other".
      *
@@ -1658,6 +1713,17 @@ public:
      * @param[in] t2 Size of tile in the 3rd dimension.
      */
     tiled_extent(const extent<3>& ext, int t0, int t1, int t2) __attribute__((hc,cpu)) : extent(ext), tile_dim{t0, t1, t2}, dynamic_group_segment_size(0) {}
+
+    /**
+     * Constructs a tiled_extent<N> with the extent "ext".
+     *
+     * @param[in] ext The extent of this tiled_extent
+     * @param[in] t0 Size of tile in the 1st dimension.
+     * @param[in] t1 Size of tile in the 2nd dimension.
+     * @param[in] t2 Size of tile in the 3rd dimension.
+     * @param[in] size Size of dynamic group segment.
+     */
+    tiled_extent(const extent<3>& ext, int t0, int t1, int t2, int size) __attribute__((hc,cpu)) : extent(ext), tile_dim{t0, t1, t2}, dynamic_group_segment_size(size) {}
 
     /**
      * Set the size of dynamic group segment. The function should be called
