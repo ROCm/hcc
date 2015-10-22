@@ -2,6 +2,9 @@
 #pragma once
 
 #include <hip.h>
+
+
+#ifndef USE_CUDA
 #include <iostream>
 #include <vector>
 
@@ -71,3 +74,4 @@ hipError_t hipGetDeviceCount(int *count) {
   *count = g_device->size();
   return hipSuccess;
 }
+#endif // #ifndef USE_CUDA
