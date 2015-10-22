@@ -1362,7 +1362,8 @@ void promoteGlobalVars(Function *Func, InstUpdateWorkList * updateNeeded)
             I->getSection() != std::string(TILE_STATIC_NAME) ||
             !I->hasName()) {
             // promote to global address space if the variable is used in a kernel
-            if (usedInTheFunc(I, Func)) {
+            // and does not come with predefined address space
+            if (usedInTheFunc(I, Func) && I->getType()->getPointerAddressSpace() == 0) {
               the_space = GlobalAddressSpace;
             } else {
               continue;
