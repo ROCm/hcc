@@ -16,18 +16,28 @@ target triple = "x86_64-unknown-linux-gnu"
 %"struct.Kalmar::index_impl.4" = type { %"class.Kalmar::__index_leaf", %"class.Kalmar::__index_leaf.2", %"class.Kalmar::__index_leaf.5" }
 %"class.Kalmar::__index_leaf.5" = type { i32, i32 }
 
-; CHECK-NOT: @t_img = global %struct.texture zeroinitializer, align 8
-; CHECK: @t_img{{[0-9]}} = addrspace(1) global %struct.texture zeroinitializer, align 8
-@t_grad_x = global %struct.texture zeroinitializer, align 8
-; CHECK-NOT: @t_grad_x = global %struct.texture zeroinitializer, align 8
-; CHECK: @t_grad_x{{[0-9]}} = addrspace(1) global %struct.texture zeroinitializer, align 8
-@t_grad_y = global %struct.texture zeroinitializer, align 8
-; CHECK-NOT: @t_grad_y = global %struct.texture zeroinitializer, align 8
-; CHECK: @t_grad_y{{[0-9]}} = addrspace(1) global %struct.texture zeroinitializer, align 8
 @t_img = global %struct.texture zeroinitializer, align 8
+; CHECK: @t_img = addrspace(1) global %struct.texture zeroinitializer, align 8
+; CHECK-NOT: @t_img = global %struct.texture zeroinitializer, align 8
+@t_grad_x = global %struct.texture zeroinitializer, align 8
+; CHECK: @t_grad_x = addrspace(1) global %struct.texture zeroinitializer, align 8
+; CHECK-NOT: @t_grad_x = global %struct.texture zeroinitializer, align 8
+@t_grad_y = global %struct.texture zeroinitializer, align 8
+; CHECK: @t_grad_y = addrspace(1) global %struct.texture zeroinitializer, align 8
+; CHECK-NOT: @t_grad_y = global %struct.texture zeroinitializer, align 8
+
 @"_ZZZ12IMGVF_kernelRK18grid_launch_parm_sPPfS3_PiS4_fffifENK3$_0clEN2hc11tiled_indexILi3EEEE5IMGVF" = internal unnamed_addr global [3321 x float] zeroinitializer, section "clamp_opencl_local", align 16
+; CHECK-NOT: @"_ZZZ12IMGVF_kernelRK18grid_launch_parm_sPPfS3_PiS4_fffifENK3$_0clEN2hc11tiled_indexILi3EEEE5IMGVF" = internal unnamed_addr global [3321 x float] zeroinitializer, section "clamp_opencl_local", align 16
+; CHECK-NOT: @"_ZZZ12IMGVF_kernelRK18grid_launch_parm_sPPfS3_PiS4_fffifENK3$_0clEN2hc11tiled_indexILi3EEEE5IMGVF" = internal unnamed_addr addrspace(1) global [3321 x float] undef, section "clamp_opencl_local", align 16
+; CHECK: @"_ZZZ12IMGVF_kernelRK18grid_launch_parm_sPPfS3_PiS4_fffifENK3$_0clEN2hc11tiled_indexILi3EEEE5IMGVF" = internal unnamed_addr addrspace(3) global [3321 x float] undef, section "clamp_opencl_local", align 16
 @"_ZZZ12IMGVF_kernelRK18grid_launch_parm_sPPfS3_PiS4_fffifENK3$_0clEN2hc11tiled_indexILi3EEEE6buffer" = internal unnamed_addr global [320 x float] zeroinitializer, section "clamp_opencl_local", align 16
+; CHECK-NOT: @"_ZZZ12IMGVF_kernelRK18grid_launch_parm_sPPfS3_PiS4_fffifENK3$_0clEN2hc11tiled_indexILi3EEEE6buffer" = internal unnamed_addr global [320 x float] zeroinitializer, section "clamp_opencl_local", align 16
+; CHECK-NOT: @"_ZZZ12IMGVF_kernelRK18grid_launch_parm_sPPfS3_PiS4_fffifENK3$_0clEN2hc11tiled_indexILi3EEEE6buffer" = internal unnamed_addr addrspace(1) global [320 x float] undef, section "clamp_opencl_local", align 16
+; CHECK: @"_ZZZ12IMGVF_kernelRK18grid_launch_parm_sPPfS3_PiS4_fffifENK3$_0clEN2hc11tiled_indexILi3EEEE6buffer" = internal unnamed_addr addrspace(3) global [320 x float] undef, section "clamp_opencl_local", align 16
 @"_ZZZ12IMGVF_kernelRK18grid_launch_parm_sPPfS3_PiS4_fffifENK3$_0clEN2hc11tiled_indexILi3EEEE14cell_converged" = internal unnamed_addr global i1 false, section "clamp_opencl_local", align 4
+; CHECK-NOT: @"_ZZZ12IMGVF_kernelRK18grid_launch_parm_sPPfS3_PiS4_fffifENK3$_0clEN2hc11tiled_indexILi3EEEE14cell_converged" = internal unnamed_addr global i1 false, section "clamp_opencl_local", align 4
+; CHECK-NOT: @"_ZZZ12IMGVF_kernelRK18grid_launch_parm_sPPfS3_PiS4_fffifENK3$_0clEN2hc11tiled_indexILi3EEEE14cell_converged" = internal unnamed_addr addrspace(1) global i1 undef, section "clamp_opencl_local", align 4
+; CHECK: @"_ZZZ12IMGVF_kernelRK18grid_launch_parm_sPPfS3_PiS4_fffifENK3$_0clEN2hc11tiled_indexILi3EEEE14cell_converged" = internal unnamed_addr addrspace(3) global i1 undef, section "clamp_opencl_local", align 4
 
 ; Function Attrs: alwaysinline nounwind uwtable
 declare void @_ZN6Kalmar5indexILi1EE21__cxxamp_opencl_indexEv(%"class.Kalmar::index"* nocapture) #0 align 2
@@ -107,8 +117,9 @@ define internal spir_kernel void @"_ZZ13dilate_kernelRK18grid_launch_parm_siiiiP
 
 .lr.ph7.i:                                        ; preds = %6
   %16 = load float** getelementptr inbounds (%struct.texture* @t_img, i64 0, i32 1), align 8, !tbaa !24
-; CHECK: %16 = getelementptr inbounds %struct.texture addrspace(1)* @t_img{{[0-9]}}, i64 0, i32 1
 ; CHECK-NOT: %16 = load float** getelementptr inbounds (%struct.texture* @t_img, i64 0, i32 1), align 8, !tbaa !24
+; CHECK: %16 = getelementptr inbounds %struct.texture addrspace(1)* @t_img{{[0-9]}}, i64 0, i32 1
+; CHECK-NEXT: %17 = load float* addrspace(1)* %16, align 8, !tbaa !24
 
   %17 = icmp sgt i32 %1, 0
   br i1 %17, label %.lr.ph7.i.split.us, label %.loopexit.i.preheader
@@ -426,12 +437,15 @@ define internal spir_kernel void @"_ZZ12GICOV_kernelRK18grid_launch_parm_siPfS2_
   %10 = trunc i64 %9 to i32
   %11 = add nsw i64 %7, 22
   %12 = trunc i64 %11 to i32
+; CHECK: %12 = trunc i64 %11 to i32
   %13 = load float** getelementptr inbounds (%struct.texture* @t_grad_x, i64 0, i32 1), align 8, !tbaa !24
 ; CHECK: %13 = getelementptr inbounds %struct.texture addrspace(1)* @t_grad_x{{[0-9]}}, i64 0, i32 1
 ; CHECK-NOT: %13 = load float** getelementptr inbounds (%struct.texture* @t_grad_x, i64 0, i32 1), align 8, !tbaa !24
+; CHECK-NEXT: %14 = load float* addrspace(1)* %13, align 8, !tbaa !24
   %14 = load float** getelementptr inbounds (%struct.texture* @t_grad_y, i64 0, i32 1), align 8, !tbaa !24
 ; CHECK: %15 = getelementptr inbounds %struct.texture addrspace(1)* @t_grad_y{{[0-9]}}, i64 0, i32 1
 ; CHECK-NOT: %14 = load float** getelementptr inbounds (%struct.texture* @t_grad_y, i64 0, i32 1), align 8, !tbaa !24
+; CHECK-NEXT: %16 = load float* addrspace(1)* %15, align 8, !tbaa !24
   br label %.preheader.i
 
 .preheader.i:                                     ; preds = %47, %6
