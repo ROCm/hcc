@@ -430,5 +430,6 @@ MESSAGE("** For the first time:")
 MESSAGE("   'make world' to build clang, HLC, HSAILasm and library for testing.")
 MESSAGE("   'make' to build the rest of LLVM tools")
 MESSAGE("   'make docs' to build the HTML API reference")
+MESSAGE("   'make demos' to build sample demos")
 MESSAGE("")
 
