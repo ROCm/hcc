@@ -260,8 +260,14 @@ public:
     void unmap(void* device, void* addr, size_t count, size_t offset, bool modify) override {
         cl_mem dm = static_cast<cl_mem>(device);
         cl_event evt;
-        cl_int err = clEnqueueUnmapMemObject(getQueue(), dm, addr, 0, NULL, &evt);
-        assert(err == CL_SUCCESS);
+        cl_int err;
+        if (events.find(dm) != std::end(events)) {
+          err = clEnqueueUnmapMemObject(getQueue(), dm, addr, 1, &events[dm], &evt);
+          assert(err == CL_SUCCESS);
+        } else {
+          err = clEnqueueUnmapMemObject(getQueue(), dm, addr, 0, NULL, &evt);
+          assert(err == CL_SUCCESS);
+        }
         if (events.find(dm) != std::end(events)) {
             err = clReleaseEvent(events[dm]);
             assert(err == CL_SUCCESS);
