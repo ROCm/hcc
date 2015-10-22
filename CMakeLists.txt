@@ -344,6 +344,7 @@ add_subdirectory(tests)
 add_subdirectory(include)
 add_subdirectory(amp-conformance)
 add_subdirectory(stl-test)
+add_subdirectory(demos)
 
 # create documentation
 configure_file(
