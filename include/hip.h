@@ -13,6 +13,9 @@ typedef struct uint3
 {
   int x,y,z;
 } hc_uint3;
+
+#include <hc.hpp>
+
 #endif
 
 // for uintptr_t
@@ -24,7 +27,10 @@ typedef struct grid_launch_parm
   hc_uint3      groupId;
   hc_uint3      threadId;
   unsigned int  groupMemBytes;
-  uintptr_t  av;
+#ifndef USE_CUDA
+  // use acc_view for PFE in WrapperGen
+  hc::accelerator_view  *av;
+#endif
 } grid_launch_parm;
 
 #ifdef USE_CUDA
@@ -34,7 +40,6 @@ typedef struct grid_launch_parm
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include <hc.hpp>
 
 
 // XXX(Yan-Ming): borrow from AMD's hip repo
@@ -316,7 +321,7 @@ extern inline grid_launch_parm hipCreateLaunchParam2(hc_uint3 gridDim, hc_uint3 
 
   lp.groupMemBytes = 0;
   static hc::accelerator_view av = hc::accelerator().get_default_view();
-  lp.av = (uintptr_t)&av;
+  lp.av = &av;
 
   return lp;
 }
@@ -337,7 +342,7 @@ extern inline grid_launch_parm hipCreateLaunchParam3(hc_uint3 gridDim,
 
   lp.groupMemBytes = groupMemBytes;
   static hc::accelerator_view av = hc::accelerator().get_default_view();
-  lp.av = (uintptr_t)&av;
+  lp.av = &av;
 
   return lp;
 }
@@ -358,7 +363,7 @@ extern inline grid_launch_parm hipCreateLaunchParam4(hc_uint3 gridDim,
   lp.groupDim.z = groupDim.z;
 
   lp.groupMemBytes = groupMemBytes;
-  lp.av = (uintptr_t)&(stream->av);
+  lp.av = &(stream->av);
 
   return lp;
 }
