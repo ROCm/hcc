@@ -1360,7 +1360,6 @@ void promoteGlobalVars(Function *Func, InstUpdateWorkList * updateNeeded)
                
         } else if (!I->hasSection() ||
             I->getSection() != std::string(TILE_STATIC_NAME) ||
-            I->getType()->getPointerAddressSpace() != 0 ||
             !I->hasName()) {
             // promote to global address space if the variable is used in a kernel
             if (usedInTheFunc(I, Func)) {
@@ -1375,8 +1374,7 @@ void promoteGlobalVars(Function *Func, InstUpdateWorkList * updateNeeded)
         if (isAddressCopiedToHost(*I, *Func))
             the_space = GlobalAddressSpace;
         DEBUG(llvm::errs() << "Promoting variable: " << *I << "\n";
-                errs() << "  to addrspace(" << the_space << ")\n";
-                );
+                errs() << "  to addrspace(" << the_space << ")\n";);
 
         std::set<Function *> users;
         typedef std::multimap<Function *, llvm::User *> Uses;
