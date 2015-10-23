@@ -130,7 +130,7 @@ _find_object() {
   local ret=${FILE%.o}
 
   if [ -e $FILE ]; then
-    local file_output=`file $FILE | grep 'ELF 64-bit LSB relocatable, x86-64'`
+    local file_output=`file $FILE | grep 'ELF 64-bit LSB  relocatable, x86-64'`
     local readelf_output=`readelf -h $FILE | grep 'Relocatable file'`
 
     if [ ! -z "$file_output" ] && [ ! -z "$readelf_output" ]; then
