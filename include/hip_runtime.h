@@ -2,6 +2,9 @@
 #pragma once
 
 #include <hip.h>
+
+
+#ifndef USE_CUDA
 #include <iostream>
 #include <vector>
 
@@ -201,3 +204,4 @@ hipError_t hipMemsetAsync(void *dst, int value, size_t count,
 
   return hipSuccess;
 }
+#endif // #ifndef USE_CUDA

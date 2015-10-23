@@ -2,6 +2,7 @@
 
 #include <kalmar_exception.h>
 
+/** \cond HIDDEN_SYMBOLS */
 namespace Kalmar
 {
 
@@ -106,3 +107,4 @@ public:
 };
 
 } // namespace Kalmar
+/** \endcond */

@@ -52,7 +52,7 @@ if [ ! -f $1 ]; then
   exit 1
 fi
 
-CXXFLAGS="`$CLAMP_CONFIG --build --cxxflags` -Xclang -fhsa-ext"
+CXXFLAGS="`$CLAMP_CONFIG --build --cxxflags`"
 CO="-c -o"
 
 TEMP_DIR=`mktemp -d`
@@ -80,7 +80,7 @@ else
 fi
 
 if [ -f $TEMP_DIR/$BASENAME.tmp.o ]; then
-  ld -r $TEMP_DIR/$BASENAME.tmp.o $TEMP_NAME.camp.o -o $2
+  ld -r --allow-multiple-definition $TEMP_DIR/$BASENAME.tmp.o $TEMP_NAME.camp.o -o $2
 else
   mv $TEMP_NAME.camp.o $2
 fi

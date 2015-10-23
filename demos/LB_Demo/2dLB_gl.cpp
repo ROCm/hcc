@@ -178,6 +178,16 @@ int main(int argc, char **argv)
     //
     // allocate memory on device
     //
+
+    #ifdef USE_CUDA
+    // pitch is used incorrectly which result in scanline issues
+    // workaround is to avoid using pitch
+    pitch = ni*sizeof(float);
+    #undef cudaMallocPitch
+    #define cudaMallocPitch(devPtr,pitch,width,height) \
+      cudaMalloc(devPtr,width*height)
+    #endif
+
     CUDA_SAFE_CALL(hipMallocPitch((void **)&f0_data, &pitch, 
                                    sizeof(float)*ni, nj));
     CUDA_SAFE_CALL(hipMallocPitch((void **)&f1_data, &pitch, 

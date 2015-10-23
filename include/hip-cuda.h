@@ -24,10 +24,33 @@
 #define texture texture<float,2> // TODO: Implement templates
 #define hipFilterModePoint cudaFilterModePoint
 
+#define hipStream_t cudaStream_t
+#define hipStreamCreate(...) cudaStreamCreate(__VA_ARGS__)
+#define hipStreamCreateWithFlags(...) cudaStreamCreateWithFlags(__VA_ARGS__)
+#define hipStreamDestroy(...) cudaStreamDestroy(__VA_ARGS__)
+#define hipStreamSynchronize(...) cudaStreamSynchronize(__VA_ARGS__)
+
 #define CUDA_SAFE_CALL(x) checkCudaErrors(x)
 #define CUT_CHECK_ERROR(x) getLastCudaError(x)
 
 #define __KERNEL __global__
+#define __GROUP __shared__
+
+#define hipThreadIdx_x (threadIdx.x)
+#define hipThreadIdx_y (threadIdx.y)
+#define hipThreadIdx_z (threadIdx.z)
+
+#define hipBlockIdx_x  (blockIdx.x)
+#define hipBlockIdx_y  (blockIdx.y)
+#define hipBlockIdx_z  (blockIdx.z)
+
+#define hipBlockDim_x  (blockDim.x)
+#define hipBlockDim_y  (blockDim.y)
+#define hipBlockDim_z  (blockDim.z)
+
+#define hipGridDim_x  (gridDim.x)
+#define hipGridDim_y  (gridDim.y)
+#define hipGridDim_z  (gridDim.z)
 
 #define HIP_ASSERT(x) \
   assert(!x)
@@ -40,14 +63,34 @@
 #define hipMemcpyDeviceToDevice cudaMemcpyDeviceToDevice
 
 #define hipLaunchKernel(kernel, grid, block, ...) \
-  grid_launch_parm lp; \
+  { grid_launch_parm lp; \
   lp.gridDim.x = grid.x; \
   lp.gridDim.y = grid.y; \
   lp.gridDim.z = grid.z; \
   lp.groupDim.x = block.x; \
   lp.groupDim.y = block.y; \
   lp.groupDim.z = block.z; \
-  kernel<<<grid, block>>>(lp, __VA_ARGS__)
+  kernel<<<grid, block>>>(lp, __VA_ARGS__);}
+
+#define hipLaunchKernel3(kernel, grid, block, shared, ...) \
+  { grid_launch_parm lp; \
+  lp.gridDim.x = grid.x; \
+  lp.gridDim.y = grid.y; \
+  lp.gridDim.z = grid.z; \
+  lp.groupDim.x = block.x; \
+  lp.groupDim.y = block.y; \
+  lp.groupDim.z = block.z; \
+  kernel<<<grid, block, shared>>>(lp, __VA_ARGS__);}
+
+#define hipLaunchKernel4(kernel, grid, block, shared, stream,...) \
+  { grid_launch_parm lp; \
+  lp.gridDim.x = grid.x; \
+  lp.gridDim.y = grid.y; \
+  lp.gridDim.z = grid.z; \
+  lp.groupDim.x = block.x; \
+  lp.groupDim.y = block.y; \
+  lp.groupDim.z = block.z; \
+  kernel<<<grid, block, shared, stream>>>(lp, __VA_ARGS__);}
 
 #define DIM3(...) dim3(__VA_ARGS__)
 

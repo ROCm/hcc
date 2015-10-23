@@ -1,7 +1,7 @@
 // XFAIL: Linux
 // RUN: %hc %s -o %t.out && %t.out
 
-// Test passing a custom type by pointer
+// Test launching three kernels via two different streams
 
 #include "hip.h"
 #include "hip_runtime.h"
