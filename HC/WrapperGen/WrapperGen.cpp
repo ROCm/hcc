@@ -132,7 +132,7 @@ namespace
   {
     string::size_type strSzTy = srcStr.find(str);
     if(strSzTy != string::npos)
-    srcStr.erase(strSzTy, str.size());
+      srcStr.erase(strSzTy, str.size());
   }
 
   struct WrapperGen : public ModulePass
@@ -199,11 +199,11 @@ namespace
 
           // print forward declaration of custom types
           // only support pointers for now
-          for(auto i = customTypes.begin(), e = customTypes.end(); i != e; ++i)
+          for(auto i : customTypes)
           {
-            removeString(*i, "*");
-            removeString(*i, "const ");
-            out << "struct " << *i << ";" EOL;
+            removeString(i, "*");
+            removeString(i, "const ");
+            out << "struct " << i << ";" EOL;
           }
 
           // extern kernel definition
