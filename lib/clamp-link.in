@@ -11,7 +11,7 @@ fi
 # 2) @CMAKE_INSTALL_PREFIX@ : default install directory
 # 3) @PROJECT_BINARY_DIR@ : build directory
 
-if [ -z "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
+if [ -n "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
     LINK=$HCC_HOME/bin/llvm-link
     OPT=$HCC_HOME/bin/opt
     CLAMP_DEVICE=$HCC_HOME/bin/clamp-device
