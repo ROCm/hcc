@@ -202,7 +202,7 @@ namespace
           for(auto i = customTypes.begin(), e = customTypes.end(); i != e; ++i)
           {
             removeString(*i, "*");
-            removeString(*i, "const");
+            removeString(*i, "const ");
             out << "struct " << *i << ";" EOL;
           }
 
