@@ -16,7 +16,7 @@
 // An example which shows how to use accelerator_view::create_marker()
 ///
 /// The test case only works on HSA because it directly uses HSA runtime API
-/// It would use completion_future::getNativeHandle() to retrieve the
+/// It would use completion_future::get_native_handle() to retrieve the
 /// underlying hsa_signal_t data structure to query if dependent kernels have
 /// really finished execution before the new kernel is executed.
 bool test() {
@@ -54,8 +54,8 @@ bool test() {
   hc::accelerator_view av = hc::accelerator().get_default_view();
   hc::completion_future fut2 = av.create_marker();
 
-  void* nativeHandle = fut.getNativeHandle();
-  void* nativeHandle2 = fut2.getNativeHandle();
+  void* nativeHandle = fut.get_native_handle();
+  void* nativeHandle2 = fut2.get_native_handle();
 
 #if TEST_DEBUG
   std::cout << nativeHandle << "\n";
@@ -65,13 +65,13 @@ bool test() {
   hsa_signal_value_t signal_value;
   hsa_signal_value_t signal_value2;
 
-  signal_value = hsa_signal_load_relaxed(*static_cast<hsa_signal_t*>(nativeHandle));
+  signal_value = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(nativeHandle));
 #if TEST_DEBUG
   std::cout << "kernel signal value: " << signal_value << "\n";
 #endif
   ret &= (signal_value == 1);
 
-  signal_value2 = hsa_signal_load_relaxed(*static_cast<hsa_signal_t*>(nativeHandle2));
+  signal_value2 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(nativeHandle2));
 #if TEST_DEBUG
   std::cout << "barrier signal value: " << signal_value << "\n";
 #endif
@@ -82,13 +82,13 @@ bool test() {
 
   // the barrier packet would ensure all previous packets were processed
 
-  signal_value = hsa_signal_load_relaxed(*static_cast<hsa_signal_t*>(nativeHandle));
+  signal_value = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(nativeHandle));
 #if TEST_DEBUG
   std::cout << "kernel signal value: " << signal_value << "\n";
 #endif
   ret &= (signal_value == 0);
 
-  signal_value2 = hsa_signal_load_relaxed(*static_cast<hsa_signal_t*>(nativeHandle2));
+  signal_value2 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(nativeHandle2));
 #if TEST_DEBUG
   std::cout << "barrier signal value: " << signal_value << "\n";
 #endif

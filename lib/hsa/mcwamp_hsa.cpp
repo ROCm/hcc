@@ -124,6 +124,10 @@ public:
 
     void* getNativeHandle() override { return &signal; }
 
+    bool isReady() override {
+        return (hsa_signal_load_acquire(signal) == 0);
+    }
+
     HSABarrier() : isDispatched(false), future(nullptr), hsaQueue(nullptr) {}
 
     ~HSABarrier() {
@@ -239,6 +243,10 @@ public:
     std::shared_future<void>* getFuture() override { return future; }
 
     void* getNativeHandle() override { return &signal; }
+
+    bool isReady() override {
+        return (hsa_signal_load_acquire(signal) == 0);
+    }
 
     ~HSADispatch() {
 #if KALMAR_DEBUG
@@ -1358,6 +1366,13 @@ public:
         uint64_t timestamp = 0L;
         hsa_system_get_info(HSA_SYSTEM_INFO_TIMESTAMP, &timestamp);
         return timestamp;
+    }
+
+    uint64_t getSystemTickFrequency() override {
+        // get system tick frequency
+        uint64_t timestamp_frequency_hz = 0L;
+        hsa_system_get_info(HSA_SYSTEM_INFO_TIMESTAMP_FREQUENCY, &timestamp_frequency_hz);
+        return timestamp_frequency_hz;
     }
 };
 

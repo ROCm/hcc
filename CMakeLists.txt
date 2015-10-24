@@ -36,6 +36,8 @@ include (SetupHC)
 include (SetupUtils)
 include (MCWAMP)
 include (PatchAsmParser)
+include (PatchPassManagerBuilder)
+include (SetupRemoveSpecialSection)
 
 ensure_llvm_is_present(${PROJECT_SOURCE_DIR} compiler)
 ensure_clang_is_present(${PROJECT_SOURCE_DIR} compiler ${CLANG_URL})
@@ -47,6 +49,8 @@ setup_TileUniform(${PROJECT_SOURCE_DIR}/compiler/lib/Analysis TileUniform)
 setup_HC(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms HC)
 setup_Utils(utils)
 patch_AsmParser(SPIRify)
+patch_PassManagerBuilder(TileUniform)
+setup_RemoveSpecialSection(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms RemoveSpecialSection)
 set(LLVM_TARGETS_TO_BUILD X86 CACHE STRING "LLVM host target")
 set(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD CBackend CACHE STRING "set this to 'CBackend' to enable generating OpenCL-C")
 set(LLVM_INCLUDE_EXAMPLES off)
@@ -208,48 +212,6 @@ if (HSA_USE_AMDGPU_BACKEND)
   add_definitions(-DHSA_USE_AMDGPU_BACKEND)
 endif ()
 
-#################
-# Set up version information
-#################
-
-# define HCC version information
-SET(KALMAR_VERSION_MAJOR "0")
-SET(KALMAR_VERSION_MINOR "8")
-
-# get date information
-# use the last two digits of year + week number as KALMAR_VERSION_PATCH
-execute_process(COMMAND date +%y%W
-                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-                OUTPUT_VARIABLE KALMAR_VERSION_PATCH
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-# get commit information
-execute_process(COMMAND git rev-parse --short HEAD
-                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-                OUTPUT_VARIABLE KALMAR_DRIVER_COMMIT
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
-execute_process(COMMAND git rev-parse --short HEAD
-                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/compiler/tools/clang
-                OUTPUT_VARIABLE KALMAR_COMPILER_COMMIT
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-# set HCC version string
-set(KALMAR_VERSION_STRING "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}.${KALMAR_VERSION_PATCH}-${KALMAR_DRIVER_COMMIT}-${KALMAR_COMPILER_COMMIT}")
-
-# show HCC version string
-MESSAGE("========================================")
-MESSAGE("HCC version: ${KALMAR_VERSION_STRING}")
-MESSAGE("========================================")
-
-
-add_subdirectory(compiler)
-add_subdirectory(lib)
-add_subdirectory(utils)
-add_subdirectory(tests)
-add_subdirectory(include)
-add_subdirectory(amp-conformance)
-add_subdirectory(stl-test)
-
 #########################
 # build target: world
 # enable HLC and HSAILasm only if HSA stack is available
@@ -258,6 +220,12 @@ if (HAS_HSA)
 
 # setup HLC in HCC
 ensure_HLC_is_present(${PROJECT_SOURCE_DIR} hlc)
+
+# get HLC commit information
+execute_process(COMMAND git rev-parse --short HEAD
+                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/hlc
+                OUTPUT_VARIABLE KALMAR_HLC_COMMIT
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 # setup HSAILasm in HCC
 ensure_HSAILASM_is_present(${PROJECT_SOURCE_DIR} HSAILasm)
@@ -299,25 +267,25 @@ add_custom_target(HSAILasm
   WORKING_DIRECTORY ${HSAILASM_BIN_DIR}
 )
 
-# install HSAILasm along with HCC
-if (NOT HSA_USE_AMDGPU_BACKEND)
-  set (DEPS "HSAILasm ${DEPS}")
-endif()
-
 # stored under HSAILasm/
 install(FILES ${HSAILASM_BIN_DIR}/HSAILAsm/HSAILasm
         DESTINATION HSAILasm
         PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
         COMPONENT HSAILasm)
 
-
-if (NOT HSA_LLVM_BIN_DIR)
-  set(DEPS "hlc ${DEPS}")
-endif()
-
-add_custom_target(world
-    DEPENDS clang ${DEPS}
-)
+if (NOT HSA_USE_AMDGPU_BACKEND AND NOT HSA_LLVM_BIN_DIR)
+  # build hlc in case HSA_LLVM_BIN_DIR is not set
+  # build HSAILasm in case HSA_USE_AMDGPU_BACKEND is not set
+  add_custom_target(world DEPENDS clang hlc HSAILasm)
+elseif (NOT HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
+  # build HSAILasm in case HSA_USE_AMDGPU_BACKEND is not set
+  add_custom_target(world DEPENDS clang HSAILasm)
+elseif (HSA_USE_AMDGPU_BACKEND AND NOT HSA_LLVM_BIN_DIR)
+  # build hlc in case HSA_LLVM_BIN_DIR is not set
+  add_custom_target(world DEPENDS clang hlc)
+elseif (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
+  add_custom_target(world DEPENDS clang)
+endif (NOT HSA_USE_AMDGPU_BACKEND AND NOT HSA_LLVM_BIN_DIR)
 
 else (HAS_HSA)
 
@@ -328,6 +296,56 @@ add_custom_target(world
 
 endif (HAS_HSA)
 
+#################
+# Set up version information
+#################
+
+# define HCC version information
+SET(KALMAR_VERSION_MAJOR "0")
+SET(KALMAR_VERSION_MINOR "8")
+
+# get date information
+# use the last two digits of year + week number as KALMAR_VERSION_PATCH
+execute_process(COMMAND date +%y%W
+                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+                OUTPUT_VARIABLE KALMAR_VERSION_PATCH
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+# get commit information
+execute_process(COMMAND git rev-parse --short HEAD
+                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+                OUTPUT_VARIABLE KALMAR_DRIVER_COMMIT
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process(COMMAND git rev-parse --short HEAD
+                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/compiler/tools/clang
+                OUTPUT_VARIABLE KALMAR_COMPILER_COMMIT
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+# set HCC version string
+if (HAS_HSA)
+  # For HSA build, the rule for version string is:
+  # KALMAR_VERSION_MAJOR . KALMAR_VERSION_MINOR . KALMAR_VERSION_PATCH-KALMAR_DRIVER_COMIT-KALMAR_COMPILER_COMMIT-KALMAR_HLC_COMMIT
+  set(KALMAR_VERSION_STRING "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}.${KALMAR_VERSION_PATCH}-${KALMAR_DRIVER_COMMIT}-${KALMAR_COMPILER_COMMIT}-${KALMAR_HLC_COMMIT}")
+else (HAS_HSA)
+  # For non-HSA build, the rule for version string is:
+  # KALMAR_VERSION_MAJOR . KALMAR_VERSION_MINOR . KALMAR_VERSION_PATCH-KALMAR_DRIVER_COMIT-KALMAR_COMPILER_COMMIT
+  set(KALMAR_VERSION_STRING "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}.${KALMAR_VERSION_PATCH}-${KALMAR_DRIVER_COMMIT}-${KALMAR_COMPILER_COMMIT}")
+endif (HAS_HSA)
+
+# show HCC version string
+MESSAGE("=============================================")
+MESSAGE("HCC version: ${KALMAR_VERSION_STRING}")
+MESSAGE("=============================================")
+
+add_subdirectory(compiler)
+add_subdirectory(lib)
+add_subdirectory(utils)
+add_subdirectory(tests)
+add_subdirectory(include)
+add_subdirectory(amp-conformance)
+add_subdirectory(stl-test)
+add_subdirectory(demos)
+
 # create documentation
 configure_file(
   ${PROJECT_SOURCE_DIR}/lib/doxygen_config.in
@@ -336,6 +354,16 @@ configure_file(
 add_custom_target(docs
     COMMAND doxygen "${PROJECT_BINARY_DIR}/lib/doxygen_config"
 )
+
+# install documentation
+# optionally stored under doc/
+install(DIRECTORY ${PROJECT_BINARY_DIR}/docs/html
+        DESTINATION doc
+        FILE_PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+        DIRECTORY_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+        COMPONENT doc
+        OPTIONAL)
+
 
 # Must build after 'world' target
 if(CXXAMP_ENABLE_BOLT)
@@ -389,6 +417,11 @@ set(CPACK_SOURCE_TZ "OFF")
 set(CPACK_SOURCE_TBZ2 "OFF")
 set(CPACK_BINARY_TZ "OFF")
 
+# autogenerate dependency information
+#set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+
+#set(CPACK_DEBIAN_PACKAGE_DEPENDS "hsa-runtime (>= 1.0)")
+
 # put HLC and HSAILasm in the package as well
 set(CPACK_COMPONENTS_ALL HSAILasm hlc)
 
@@ -398,5 +431,6 @@ MESSAGE("** For the first time:")
 MESSAGE("   'make world' to build clang, HLC, HSAILasm and library for testing.")
 MESSAGE("   'make' to build the rest of LLVM tools")
 MESSAGE("   'make docs' to build the HTML API reference")
+MESSAGE("   'make demos' to build sample demos")
 MESSAGE("")
 

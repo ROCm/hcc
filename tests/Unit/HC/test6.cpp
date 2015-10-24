@@ -110,7 +110,7 @@ grid_launch_parm_s::grid_launch_parm_s()
 
 void vectoradd_float(const grid_launch_parm &lp, float* a, const float* b, const float* c, int width, int height, hc::extent<3>& ext, hc::tiled_extent<3>& ext_tile)
 {
-      ext_tile.setDynamicGroupSegmentSize(lp.groupMemBytes);
+      ext_tile.set_dynamic_group_segment_size(lp.groupMemBytes);
     
       hc::completion_future cf = hc::parallel_for_each (
               tls_accelerator_view,

@@ -23,7 +23,7 @@ fi
 # 2) @CMAKE_INSTALL_PREFIX@ : default install directory
 # 3) @LLVM_TOOLS_DIR@ : build directory
 
-if [ -z "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
+if [ -n "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
   CLANG=$HCC_HOME/bin/clang++
   CLAMP_CONFIG=$HCC_HOME/bin/clamp-config
   CLAMP_CONFIG_FLAGS="--bolt --cxxflags"
