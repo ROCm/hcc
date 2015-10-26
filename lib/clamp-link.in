@@ -11,7 +11,7 @@ fi
 # 2) @CMAKE_INSTALL_PREFIX@ : default install directory
 # 3) @PROJECT_BINARY_DIR@ : build directory
 
-if [ -z "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
+if [ -n "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
     LINK=$HCC_HOME/bin/llvm-link
     OPT=$HCC_HOME/bin/opt
     CLAMP_DEVICE=$HCC_HOME/bin/clamp-device
@@ -130,7 +130,7 @@ _find_object() {
   local ret=${FILE%.o}
 
   if [ -e $FILE ]; then
-    local file_output=`file $FILE | grep 'ELF 64-bit LSB relocatable, x86-64'`
+    local file_output=`file $FILE | grep 'ELF 64-bit LSB  relocatable, x86-64'`
     local readelf_output=`readelf -h $FILE | grep 'Relocatable file'`
 
     if [ ! -z "$file_output" ] && [ ! -z "$readelf_output" ]; then

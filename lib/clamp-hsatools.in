@@ -33,7 +33,7 @@ fi
 # 2) @CMAKE_INSTALL_PREFIX@ : default install directory
 # 3) @PROJECT_BINARY_DIR@ : build directory
 
-if [ -z "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
+if [ -n "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
     HLC_LLVM_LINK=$HCC_HOME/hlc/bin/llvm-link
     HLC_OPT=$HCC_HOME/hlc/bin/opt
     HLC_LLC=$HCC_HOME/hlc/bin/llc

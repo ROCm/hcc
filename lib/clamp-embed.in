@@ -16,7 +16,7 @@ fi
 # 2) @CMAKE_INSTALL_PREFIX@ : default install directory
 # 3) @LLVM_TOOLS_DIR@ : build directory
 
-if [ -z "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
+if [ -n "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
     OPT=$HCC_HOME/bin/opt
     LLC=$HCC_HOME/bin/llc
     LIB=$HCC_HOME/lib
