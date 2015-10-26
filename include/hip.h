@@ -363,7 +363,8 @@ extern inline grid_launch_parm hipCreateLaunchParam4(hc_uint3 gridDim,
   lp.groupDim.z = groupDim.z;
 
   lp.groupMemBytes = groupMemBytes;
-  lp.av = &(stream->av);
+  static hc::accelerator_view av = hc::accelerator().get_default_view();
+  lp.av = stream ? &(stream->av) : &av;
 
   return lp;
 }
