@@ -35,7 +35,29 @@ if [ ! -f $1 ]; then
   exit 1
 fi
 
-if [ -d @LLVM_TOOLS_DIR@ ]; then
+# tools search priority:
+# 1) $HCC_HOME
+# 2) @CMAKE_INSTALL_PREFIX@ : default install directory
+# 3) @LLVM_TOOLS_DIR@ : build directory
+
+if [ -n "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
+    EMBED=$HCC_HOME/bin/clamp-embed
+    AS=$HCC_HOME/bin/llvm-as
+    OPT=$HCC_HOME/bin/opt
+    LLC=$HCC_HOME/bin/llc
+    LINK=$HCC_HOME/bin/llvm-link
+    MATHLIB=$HCC_HOME/lib
+    LIB=$HCC_HOME/lib
+    HSATOOLS=$HCC_HOME/bin/clamp-hsatools
+elif [ -e @CMAKE_INSTALL_PREFIX@ ]; then
+    AS=@CMAKE_INSTALL_PREFIX@/bin/llvm-as
+    OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
+    LLC=@CMAKE_INSTALL_PREFIX@/bin/llc
+    LINK=@CMAKE_INSTALL_PREFIX@/bin/llvm-link
+    MATHLIB=@CMAKE_INSTALL_PREFIX@/lib
+    LIB=@CMAKE_INSTALL_PREFIX@/lib
+    HSATOOLS=@CMAKE_INSTALL_PREFIX@/bin/clamp-hsatools
+elif [ -d @LLVM_TOOLS_DIR@ ]; then
     AS=@LLVM_TOOLS_DIR@/llvm-as
     OPT=@LLVM_TOOLS_DIR@/opt
     LLC=@LLVM_TOOLS_DIR@/llc
@@ -44,13 +66,9 @@ if [ -d @LLVM_TOOLS_DIR@ ]; then
     LIB=@LLVM_LIBS_DIR@
     HSATOOLS=@PROJECT_BINARY_DIR@/lib/clamp-hsatools
 else
-    AS=@CMAKE_INSTALL_PREFIX@/bin/llvm-as
-    OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
-    LLC=@CMAKE_INSTALL_PREFIX@/bin/llc
-    LINK=@CMAKE_INSTALL_PREFIX@/bin/llvm-link
-    MATHLIB=@CMAKE_INSTALL_PREFIX@/lib
-    LIB=@CMAKE_INSTALL_PREFIX@/lib
-    HSATOOLS=@CMAKE_INSTALL_PREFIX@/bin/clamp-hsatools
+    echo "ERROR: Can NOT locate HCC tools! Please specify with $HCC_HOME environ
+mental variable." >&2
+    exit 1
 fi
 
 ################
@@ -68,31 +86,52 @@ do
   fi
 done
 
+HSA_USE_AMDGPU_BACKEND=@HSA_USE_AMDGPU_BACKEND@
+
+if [ $HSA_USE_AMDGPU_BACKEND == "ON" ]; then
+  KM_USE_AMDGPU="${KM_USE_AMDGPU:=1}"
+fi
+
 # emit HSAIL/BRIG kernel
 if [ "$3" == "--hsa" ]; then
+    if [ $KMDUMPLLVM == "1" ]; then
+      cp $1 ./dump.input.bc
+    fi
+
     if [ "$CLAMP_NOTILECHECK" == "ON" ]; then
       if [ "$ALWAYS_MALLOC" == "ON" ]; then
         $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
              -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-             -promote-globals -promote-privates -erase-nonkernels -malloc-select -alwasy-malloc -dce -S < $1 -o $2.promote.ll.orig
+             -promote-globals -promote-privates -erase-nonkernels -malloc-select -alwasy-malloc -dce -globaldce -S < $1 -o $2.promote.ll.orig
       else
         $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
              -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-             -promote-globals -promote-privates -erase-nonkernels -malloc-select -dce -S < $1 -o $2.promote.ll.orig
+             -promote-globals -promote-privates -erase-nonkernels -malloc-select -dce -globaldce -S < $1 -o $2.promote.ll.orig
       fi
     else
       if [ "$ALWAYS_MALLOC" == "ON" ]; then
         $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
              -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
              -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-             -promote-globals -promote-privates -erase-nonkernels -tile-uniform -malloc-select -alwasy-malloc -dce -S < $1 -o $2.promote.ll.orig
+             -promote-globals -promote-privates -erase-nonkernels -tile-uniform -malloc-select -alwasy-malloc -dce -globaldce -S < $1 -o $2.promote.ll.orig
       else
         $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
              -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
              -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-             -promote-globals -promote-privates -erase-nonkernels -tile-uniform -malloc-select -dce -S < $1 -o $2.promote.ll.orig
+             -promote-globals -promote-privates -erase-nonkernels -tile-uniform -malloc-select -dce -globaldce -S < $1 -o $2.promote.ll.orig
+
       fi
     fi
+
+    # remove special section information for AMDGPU backend
+    if [ $KM_USE_AMDGPU ] ; then
+      $OPT -load $LIB/LLVMRemoveSpecialSection@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+           -remove-special-section -S < $2.promote.ll.orig -o $2.promote.ll.orig.new
+      if [ $? == 0 ]; then
+        mv -f $2.promote.ll.orig.new $2.promote.ll.orig
+      fi
+    fi
+
     if [ $? == 1 ]; then
       echo "Generating HSAIL BRIG kernel failed"
       exit 1
@@ -130,12 +169,12 @@ if [ "$3" == "--spir" ]; then
     if [ "$CLAMP_NOTILECHECK" == "ON" ]; then
       $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
            -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-           -promote-globals -erase-nonkernels -dce < $1 -o $2.promote.bc
+           -promote-globals -erase-nonkernels -dce -globaldce < $1 -o $2.promote.bc
     else
       $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
            -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
            -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-           -promote-globals -erase-nonkernels -tile-uniform -dce < $1 -o $2.promote.bc
+           -promote-globals -erase-nonkernels -tile-uniform -dce -globaldce < $1 -o $2.promote.bc
     fi
     if [ $? == 1 ]; then
       echo "Generating OpenCL SPIR kernel failed"
@@ -155,12 +194,12 @@ if [ "$3" == "--opencl" ]; then
     if [ "$CLAMP_NOTILECHECK" == "ON" ]; then
       $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
            -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-           -promote-globals -erase-nonkernels -dce < $1 -o $2.promote.bc
+           -promote-globals -erase-nonkernels -dce -globaldce < $1 -o $2.promote.bc
     else
       $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
            -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
            -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-           -promote-globals -erase-nonkernels -tile-uniform -dce < $1 -o $2.promote.bc
+           -promote-globals -erase-nonkernels -tile-uniform -dce -globaldce < $1 -o $2.promote.bc
     fi
     if [ $? == 1 ]; then
       echo "Generating OpenCL C kernel failed"
@@ -189,12 +228,12 @@ hasSPIR() {
 if [ "$CLAMP_NOTILECHECK" == "ON" ]; then
   $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
        -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-       -promote-globals -erase-nonkernels -dce < $1 -o $2.promote.bc
+       -promote-globals -erase-nonkernels -dce -globaldce < $1 -o $2.promote.bc
 else
   $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
        -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
        -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-       -promote-globals -erase-nonkernels -tile-uniform -dce < $1 -o $2.promote.bc
+       -promote-globals -erase-nonkernels -tile-uniform -dce -globaldce < $1 -o $2.promote.bc
 fi
 if [ $? == 1 ]; then
   echo "Generating OpenCL kernel failed"

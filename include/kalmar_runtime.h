@@ -26,7 +26,8 @@ enum queuing_mode
 } // namespace enums
 } // namespace Kalmar
 
-
+ 
+/** \cond HIDDEN_SYMBOLS */
 namespace Kalmar {
 
 using namespace Kalmar::enums;
@@ -64,6 +65,13 @@ public:
    * @return An implementation-defined frequency for the asynchronous operation.
    */
   virtual uint64_t getTimestampFrequency() { return 0L; }
+
+  /**
+   * Get if the async operations has been completed.
+   *
+   * @return True if the async operation has been completed, false if not.
+   */
+  virtual bool isReady() { return false; }
 };
 
 /// KalmarQueue
@@ -106,7 +114,7 @@ public:
   virtual void* map(void* device, size_t count, size_t offset, bool modify) = 0;
 
   /// unmap host accessible pointer
-  virtual void unmap(void* device, void* addr) = 0;
+  virtual void unmap(void* device, void* addr, size_t count, size_t offset, bool modify) = 0;
 
   /// push device pointer to kernel argument list
   virtual void Push(void *kernel, int idx, void* device, bool modify) = 0;
@@ -254,7 +262,7 @@ public:
       return (char*)device + offset;
   }
 
-  void unmap(void* device, void* addr) override {}
+  void unmap(void* device, void* addr, size_t count, size_t offset, bool modify) override {}
 
   void Push(void *kernel, int idx, void* device, bool modify) override {}
 };
@@ -337,6 +345,9 @@ public:
 
     /// get system ticks
     virtual uint64_t getSystemTicks() { return 0L; };
+
+    /// get tick frequency
+    virtual uint64_t getSystemTickFrequency() { return 0L; };
 };
 
 KalmarContext *getContext();
@@ -610,7 +621,7 @@ struct rw_info
         return curr->map(info.data, cnt, offset, modify);
     }
 
-    void unmap(void* addr) { curr->unmap(devs[curr->getDev()].data, addr); }
+    void unmap(void* addr, size_t cnt, size_t offset, bool modify) { curr->unmap(devs[curr->getDev()].data, addr, cnt, offset, modify); }
 
     /// synchronize data to master accelerator
     /// used in array
@@ -699,3 +710,4 @@ struct rw_info
 
 } // namespace Kalmar
 
+/** \endcond */

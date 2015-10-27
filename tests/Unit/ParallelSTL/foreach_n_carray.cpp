@@ -6,97 +6,51 @@
 #include <experimental/algorithm>
 #include <experimental/execution_policy>
 
-// C++ headers
-#include <iostream>
-#include <iomanip>
-#include <algorithm>
-
-#define ROW (8)
-#define COL (16)
-#define TEST_SIZE (ROW * COL)
-
 #define _DEBUG (0)
+#include "test_base.h"
+
 
 // negative test
 // no for_each_n shall commence
-template<typename _Tp, size_t SIZE, int FIRST_OFFSET, int LAST_OFFSET>
-bool test_negative() {
+template<typename T, size_t SIZE, int FIRST_OFFSET, int LAST_OFFSET>
+bool test_negative(void) {
 
-  // LAST_OFFSET is expected to be less than FIRST_OFFSET
-  static_assert(LAST_OFFSET < FIRST_OFFSET, "test case is invalid!");
+  auto f = [](T& v) { v = 1; };
+  using std::experimental::parallel::par;
 
-  _Tp table[SIZE] { 0 };
-
-  // launch kernel with parallel STL for_each_n
-  using namespace std::experimental::parallel;
-  auto iter = for_each_n(par, std::begin(table) + FIRST_OFFSET, (LAST_OFFSET - FIRST_OFFSET), [](_Tp& v) { v = 1; });
-
-  // verify data
   bool ret = true;
-  if (iter != std::begin(table) + FIRST_OFFSET) {
-    ret = false;
-  }
-  for (int i = 0; i < SIZE; ++i) {
-    // no for_each_n shall commence
-    if (table[i] != 0) {
-      ret = false;
-      break;
-    }
-  }
+  ret &= run_and_compare<T, SIZE>([f](T (&input1)[SIZE],
+                                      T (&input2)[SIZE]) {
+    // There's no for_each_n in STL
+    std::experimental::parallel::
+    for_each_n(par, std::begin(input2) + FIRST_OFFSET, (LAST_OFFSET - FIRST_OFFSET), f);
+  });
+
   return ret;
 }
 
 // positive test
 // for_each_n shall commence
-template<typename _Tp, size_t SIZE, size_t FIRST_OFFSET, size_t TEST_LENGTH>
-bool test() {
-
-  _Tp table[SIZE] { 0 };
-  _Tp n { 0 };
-
-  // initialize test data
-  std::generate(std::begin(table), std::end(table), [&] { return n++; });
+template<typename T, size_t SIZE, size_t FIRST_OFFSET, size_t TEST_LENGTH>
+bool test(void) {
 
   // test kernel
-  auto f = [&](_Tp& v)
+  auto f = [&](T& v)
   {
     v *= 8;
     v += 3;
   };
 
-  // launch kernel with parallel STL for_each
-  using namespace std::experimental::parallel;
-  auto iter = for_each_n(par, std::begin(table) + FIRST_OFFSET, TEST_LENGTH, f);
+  using std::experimental::parallel::par;
 
-  // verify data
   bool ret = true;
-  if (std::distance(std::begin(table) + FIRST_OFFSET, iter) != TEST_LENGTH) {
-    ret = false;
-  }
-  for (int i = 0; i < SIZE; ++i) {
-    if ((i >= FIRST_OFFSET) && i < (FIRST_OFFSET + TEST_LENGTH)) {
-      // for items within for_each_n, the result value shall agree with the kernel
-      if (table[i] != i * 8 + 3)  {
-        ret = false;
-        break;
-      }
-    } else {
-      // for items outside for_each_n, the result value shall be the initial value
-      if (table[i] != i) {
-        ret = false;
-        break;
-      }
-    }
-  }
+  ret &= run_and_compare<T, SIZE>([f](T (&input1)[SIZE],
+                                      T (&input2)[SIZE]) {
+    std::for_each(std::begin(input1)+ FIRST_OFFSET, std::begin(input1) + TEST_LENGTH, f);
+    std::experimental::parallel::
+    for_each_n(par, std::begin(input2) + FIRST_OFFSET, TEST_LENGTH, f);
+  });
 
-#if _DEBUG 
-  for (int i = 0; i < ROW; ++i) {
-    for (int j = 0; j < COL; ++j) {
-      std::cout << std::setw(5) << table[i * COL + j];
-    }
-    std::cout << "\n";
-  } 
-#endif
 
   return ret;
 }
@@ -109,16 +63,6 @@ int main() {
   ret &= test<unsigned, TEST_SIZE, 0, 2>();
   ret &= test<float, TEST_SIZE, 0, 2>();
   ret &= test<double, TEST_SIZE, 0, 2>();
-
-  ret &= test<int, TEST_SIZE, COL, COL * 2>();
-  ret &= test<unsigned, TEST_SIZE, COL, COL * 2>();
-  ret &= test<float, TEST_SIZE, COL, COL * 2>();
-  ret &= test<double, TEST_SIZE, COL, COL * 2>();
-
-  ret &= test<int, ROW * COL, COL * 2 + COL / 2, COL / 2>();
-  ret &= test<unsigned, ROW * COL, COL * 2 + COL / 2, COL / 2>();
-  ret &= test<float, ROW * COL, COL * 2 + COL / 2, COL / 2>();
-  ret &= test<double, ROW * COL, COL * 2 + COL / 2, COL / 2>();
 
   // negative tests
   ret &= test_negative<int, TEST_SIZE, 2, 0>();

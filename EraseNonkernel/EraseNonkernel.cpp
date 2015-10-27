@@ -66,8 +66,10 @@ void KernelNodeVisitor::operator()(MDNode *N)
   #if (LLVM_VERSION_MINOR >= 3) && (LLVM_VERSION_MINOR <= 5)
         // logic which is compatible from LLVM 3.3 till LLVM 3.5
         Value * Op = N->getOperand(0);
-        if ( Function * F = dyn_cast<Function>(Op)) {
+        if (Op != nullptr) {
+           if ( Function * F = dyn_cast<Function>(Op)) {
                 found_kernels.push_back(F); 
+           }
         }
   #elif LLVM_VERSION_MINOR > 5
         // support new metadata data structure introduced in LLVM 3.6+
@@ -192,7 +194,17 @@ bool EraseNonkernels::runOnModule(Module &M)
                         I->getName().find("opencl_") != StringRef::npos ||
                         I->getName().find("atomic_") != StringRef::npos ||
                         I->getName().find("llvm.") != StringRef::npos || 
-                        I->getName().find("getLDS") != StringRef::npos || 
+                        I->getName().find("hc_get_grid_size") != StringRef::npos || 
+                        I->getName().find("hc_get_workitem_absolute_id") != StringRef::npos ||
+                        I->getName().find("hc_get_workitem_id") != StringRef::npos ||
+                        I->getName().find("hc_get_group_size") != StringRef::npos ||
+                        I->getName().find("hc_get_num_groups") != StringRef::npos ||
+                        I->getName().find("hc_get_group_id") != StringRef::npos ||
+                        I->getName().find("hc_barrier") != StringRef::npos ||
+                        I->getName().find("get_group_segment_addr") != StringRef::npos || 
+                        I->getName().find("get_static_group_segment_size") != StringRef::npos || 
+                        I->getName().find("get_dynamic_group_segment_size") != StringRef::npos || 
+                        I->getName().find("get_dynamic_group_segment") != StringRef::npos || 
                         I->getName().find("_Znwm") != StringRef::npos ||
                         I->getName().find("_Znam") != StringRef::npos ||
                         I->getName().find("_ZdlPv") != StringRef::npos ||

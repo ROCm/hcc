@@ -6,6 +6,8 @@
 #include <iostream>
 
 // a test which checks if hc::get_system_ticks() works
+// also checks hc::get_tick_frequency()
+
 bool test() {
 
   hc::accelerator acc;
@@ -17,6 +19,13 @@ bool test() {
   ret &= av.is_hsa_accelerator();
 
   std::cout << ret << "\n";
+
+  // use get_tick_frequency()
+  uint64_t freq = hc::get_tick_frequency();
+
+  std::cout << freq << "\n";
+
+  ret &= (freq > 0);
 
   // use get_system_ticks()
   uint64_t tick1 = hc::get_system_ticks();

@@ -42,7 +42,7 @@ public:
       return (char*)device + offset;
   }
 
-  void unmap(void* device, void* addr) override {}
+  void unmap(void* device, void* addr, size_t count, size_t offset, bool modify) override {}
 
   void Push(void *kernel, int idx, void* device, bool isConst) override {}
 };

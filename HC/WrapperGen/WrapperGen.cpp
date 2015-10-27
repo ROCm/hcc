@@ -63,12 +63,12 @@ namespace
     }
   }
 
-  void pointerAsterix(string &str, Type* Ty, Type*& T)
+  void pointerAsterix(string &str, Type* Ty, Type*& T, bool isByVal=false)
   {
     if(Ty->isPointerTy())
     {
       Type* nextTy = Ty->getSequentialElementType();
-      if(!nextTy->isStructTy())
+      if(!isByVal)
       {
         str.append("*");
         pointerAsterix(str, nextTy, T);
@@ -78,14 +78,13 @@ namespace
     else T = Ty;
   }
 
-   // Alternative to the hash table?
-  //
-  string typeToString(Type* Ty)
+  // Returns string converted from type. Also returns bool if type is a struct pointer
+  string typeToString(Type* Ty, bool& isStruct, bool isByVal=false)
   {
     string str("");
     Type* T = NULL;
 
-    pointerAsterix(str, Ty, T);
+    pointerAsterix(str, Ty, T, isByVal);
     assert(T && "T is not NULL");
 
     if(IntegerType * intTy = dyn_cast<IntegerType>(T))
@@ -121,9 +120,19 @@ namespace
     }
 
     if(StructType * sTy = dyn_cast<StructType>(T))
+    {
       str.insert(0, sTy->getName().substr(7));
+      isStruct = true;
+    }
 
     return str;
+  }
+
+  void removeString(string& srcStr, const string str)
+  {
+    string::size_type strSzTy = srcStr.find(str);
+    if(strSzTy != string::npos)
+      srcStr.erase(strSzTy, str.size());
   }
 
   struct WrapperGen : public ModulePass
@@ -140,11 +149,10 @@ namespace
       raw_ostream & out = errs();
 
       // headers and namespace uses
-      out << "#include \"amp.h\"" EOL;
-      out << "extern \"C\" {" EOL
-             << "#include \"hip.h\"" EOL
-             << "}" EOL;
-      out << "using namespace concurrency;" EOL;
+      out << "#include \"hc.hpp\"" EOL;
+      out << "#include \"hip.h\"" EOL;
+
+      out << "using namespace hc;" EOL;
 
       // Find functions with attribute: grid_launch
       for(Module::iterator F = M.begin(), F_end = M.end(); F != F_end; ++F)
@@ -155,16 +163,20 @@ namespace
           string wrapperStr = "__hcLaunchKernel_" + funcName;
           string functorName = F->getName().str() + "_functor";
 
+          vector<string> customTypes;
           // get arguments from kernel
           vector<pair<string,string>> argList;
           const Function::ArgumentListType &Args(F->getArgumentList());
           for (Function::ArgumentListType::const_iterator i = Args.begin(), e = Args.end(); i != e; ++i)
           {
+            bool isStruct = false;
+
             Type* Ty = i->getType();
             string argType("");
 
-            // Get type as string
-            string tyName = typeToString(Ty);
+            // Get type as string and check if type is a struct pointer
+            bool hasByVal = i->hasByValAttr();
+            string tyName = typeToString(Ty, isStruct, hasByVal);
             argType.append(tyName);
 
             // check if const
@@ -173,6 +185,10 @@ namespace
 
             pair<string,string> arg = make_pair(argType, i->getName());
             argList.push_back(arg);
+
+            // Only support struct pointers for now
+            if(isStruct && !hasByVal)
+              customTypes.push_back(argType);
           }
 
           // Let's assume first argument has to be a grid_launch_parm Type
@@ -180,6 +196,15 @@ namespace
                  "First argument of kernel must be of grid_launch_parm type");
           vector<pair<string,string>>::const_iterator i2 = argList.begin();
           ++i2;
+
+          // print forward declaration of custom types
+          // only support pointers for now
+          for(auto i : customTypes)
+          {
+            removeString(i, "*");
+            removeString(i, "const ");
+            out << "struct " << i << ";" EOL;
+          }
 
           // extern kernel definition
           out << "extern \"C\"" EOL
@@ -200,15 +225,19 @@ namespace
           out << "{" EOL;
           out << "lp.gridDim.x = _lp.gridDim.x;" EOL;
           out << "lp.gridDim.y = _lp.gridDim.y;" EOL;
+          out << "lp.gridDim.z = _lp.gridDim.z;" EOL;
           out << "lp.groupDim.x = _lp.groupDim.x;" EOL;
           out << "lp.groupDim.y = _lp.groupDim.y;" EOL;
+          out << "lp.groupDim.z = _lp.groupDim.z;" EOL;
           out << "}" EOL;
 
-          out << "void operator()(index<1> i) restrict(amp)\n{" EOL;
-          out << "lp.groupId.x = (i[0] / lp.groupDim.x) % lp.gridDim.x;" EOL;
-          out << "lp.groupId.y = i[0] / (lp.gridDim.x*lp.groupDim.x * lp.groupDim.y);" EOL;
-          out << "lp.threadId.x = i[0] % lp.groupDim.x;" EOL;
-          out << "lp.threadId.y = (i[0] / (lp.gridDim.x*lp.groupDim.x)) % lp.groupDim.y;" EOL;
+          out << "void operator()(tiled_index<3>& i) __attribute((hc))\n{" EOL;
+          out << "lp.groupId.x = i.tile[0];" EOL;
+          out << "lp.groupId.y = i.tile[1];" EOL;
+          out << "lp.groupId.z = i.tile[2];" EOL;
+          out << "lp.threadId.x = i.local[0];" EOL;
+          out << "lp.threadId.y = i.local[1];" EOL;
+          out << "lp.threadId.z = i.local[2];" EOL;
           out << funcName << "(lp, ";
           printRange(out, argList, i2, argList.end(), ARGUMENTS);
           out << ");\n}" EOL;
@@ -221,9 +250,9 @@ namespace
           out << "void " << wrapperStr << "(";
           printRange(out, argList, argList.begin(), argList.end(), PARAMETERS);
           out << ")\n{" EOL;
-          out << "parallel_for_each(extent<1>(lp.gridDim.x*lp.groupDim.y * lp.gridDim.y*lp.groupDim.y), " << functorName << "(";
+          out << "parallel_for_each(extent<3>(lp.gridDim.x*lp.groupDim.x,lp.gridDim.y*lp.groupDim.y,lp.gridDim.z*lp.groupDim.z).tile(lp.groupDim.x, lp.groupDim.y, lp.groupDim.z), " << functorName << "(";
           printRange(out, argList, argList.begin(), argList.end(), ARGUMENTS);
-          out << "));\n}" EOL;
+          out << ")).wait();\n}" EOL;
         }
       }
         return false;

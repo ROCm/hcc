@@ -17,6 +17,8 @@ namespace {
     }
     bool runOnModule(Module &M) override {
 
+      bool hasHCGridLaunchAttr = false;
+
       const char* const HCGridLaunchAttr = "hc_grid_launch";
 
       // Find functions with attribute: grid_launch
@@ -24,6 +26,8 @@ namespace {
       {
         if(F->hasFnAttribute(HCGridLaunchAttr))
         {
+          hasHCGridLaunchAttr = true;
+
           // Attribute::NoInline is used to find the user of the function.
           // If inline is used, either forced or through optimziation, then this
           // pass will not be able to find a user to replace.
@@ -57,7 +61,8 @@ namespace {
         } // F->hasFnAttribute(HCGridLaunchAttr)
       } // Module::iterator
 
-      errs() << M;
+      if(hasHCGridLaunchAttr)
+        errs() << M;
       return false;
     }
   };
