@@ -7,6 +7,17 @@
 # 2) @CMAKE_INSTALL_PREFIX@ : default install directory
 # 3) @LLVM_TOOLS_DIR@ : build directory
 
+# enable bash debugging
+KMDBSCRIPT="${KMDBSCRIPT:=0}"
+
+# dump the LLVM bitcode
+KMDUMPLLVM="${KMDUMPLLVM:=0}"
+
+if [ $KMDBSCRIPT == "1" ]
+then
+  set -x
+fi
+
 if [ -n "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
   INSTALL=$HCC_HOME/bin
   CLANG=$INSTALL/clang
@@ -53,7 +64,13 @@ BASENAME=`basename $2`
 TEMP_NAME="$TEMP_DIR/$BASENAME"
 
 $LLVM_DIS $1 -o $TEMP_NAME.ll
+if [ $KMDUMPLLVM == "1" ]; then
+  cp $TEMP_NAME.ll ./dump.host_input.ll
+fi
 $OPT -load $LIBPATH/LLVMDirectFuncCall.so -redirect < $TEMP_NAME.ll 2>$TEMP_NAME.host_redirect.ll >/dev/null
+if [ $KMDUMPLLVM == "1" ]; then
+  cp $TEMP_NAME.host_redirect.ll ./dump.host_redirect.ll
+fi
 if [[ -s $TEMP_NAME.host_redirect.ll ]]; then
   $LLVM_AS $TEMP_NAME.host_redirect.ll -o $TEMP_NAME.host_redirect.bc
   $CLANG -std=c++amp $TEMP_NAME.host_redirect.bc $CO $2
