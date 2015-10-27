@@ -23,6 +23,11 @@ enum queuing_mode
     queuing_mode_automatic
 };
 
+enum hcMemcpyKind {
+    hcMemcpyHostToDevice = 0,
+    hcMemcpyDeviceToHost = 1
+};
+
 } // namespace enums
 } // namespace Kalmar
 
@@ -235,6 +240,12 @@ public:
 
     /// get all queues associated with this device
     virtual std::vector< std::shared_ptr<KalmarQueue> > get_all_queues() { return std::vector< std::shared_ptr<KalmarQueue> >(); }
+
+    virtual void memcpySymbol(const char* symbolName, void* hostptr, size_t count, size_t offset = 0, hcMemcpyKind kind = hcMemcpyHostToDevice) {}
+
+    virtual void memcpySymbol(void* symbolAddr, void* hostptr, size_t count, size_t offset = 0, hcMemcpyKind kind = hcMemcpyHostToDevice) {}
+
+    virtual void* getSymbolAddress(const char* symbolName) { return nullptr; }
 };
 
 class CPUQueue final : public KalmarQueue

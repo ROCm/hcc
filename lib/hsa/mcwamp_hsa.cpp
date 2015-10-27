@@ -49,30 +49,39 @@ extern "C" void PushArgPtrImpl(void *ker, int idx, size_t sz, const void *v);
 namespace Kalmar {
 class HSAQueue;
 class HSADevice;
-
 } // namespace Kalmar
 
 ///
 /// kernel compilation / kernel launching
 ///
 
-class HSAKernel {
+/// modeling of HSA executable
+class HSAExecutable {
 private:
     hsa_code_object_t hsaCodeObject;
     hsa_executable_t hsaExecutable;
-    uint64_t kernelCodeHandle;
-    hsa_executable_symbol_t hsaExecutableSymbol;
-    friend class HSADispatch;
+    friend class HSAKernel;
+    friend class Kalmar::HSADevice;
 
 public:
-    HSAKernel(hsa_executable_t _hsaExecutable,
-              hsa_code_object_t _hsaCodeObject,
-              hsa_executable_symbol_t _hsaExecutableSymbol,
-              uint64_t _kernelCodeHandle) :
-      hsaExecutable(_hsaExecutable),
-      hsaCodeObject(_hsaCodeObject),
-      hsaExecutableSymbol(_hsaExecutableSymbol),
-      kernelCodeHandle(_kernelCodeHandle) {}
+    HSAExecutable(hsa_executable_t _hsaExecutable,
+                  hsa_code_object_t _hsaCodeObject) :
+        hsaExecutable(_hsaExecutable),
+        hsaCodeObject(_hsaCodeObject) {}
+
+    ~HSAExecutable() {
+      hsa_status_t status;
+
+#if KALMAR_DEBUG
+      std::cerr << "HSAExecutable::~HSAExecutable\n";
+#endif
+
+      status = hsa_executable_destroy(hsaExecutable);
+      STATUS_CHECK(status, __LINE__);
+
+      status = hsa_code_object_destroy(hsaCodeObject);
+      STATUS_CHECK(status, __LINE__);
+    }
 
     void setSymbolToValue(const char* symbolName, unsigned long value) {
         hsa_status_t status;
@@ -82,31 +91,39 @@ public:
         hsa_agent_t agent;
         status = hsa_executable_get_symbol(hsaExecutable, NULL, symbolName, agent, 0, &symbol);
         STATUS_CHECK(status, __LINE__);
-    
+
         // get address of symbol
         uint64_t symbol_address;
         status = hsa_executable_symbol_get_info(symbol,
                                                 HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ADDRESS,
                                                 &symbol_address);
         STATUS_CHECK(status, __LINE__);
-    
+
         // set the value of symbol
         unsigned long* symbol_ptr = (unsigned long*)symbol_address;
         *symbol_ptr = value;
     }
+};
+
+class HSAKernel {
+private:
+    HSAExecutable* executable;
+    uint64_t kernelCodeHandle;
+    hsa_executable_symbol_t hsaExecutableSymbol;
+    friend class HSADispatch;
+
+public:
+    HSAKernel(HSAExecutable* _executable,
+              hsa_executable_symbol_t _hsaExecutableSymbol,
+              uint64_t _kernelCodeHandle) :
+      executable(_executable),
+      hsaExecutableSymbol(_hsaExecutableSymbol),
+      kernelCodeHandle(_kernelCodeHandle) {}
 
     ~HSAKernel() {
-      hsa_status_t status;
-
 #if KALMAR_DEBUG
       std::cerr << "HSAKernel::~HSAKernel\n";
 #endif
-
-      status = hsa_executable_destroy(hsaExecutable);
-      STATUS_CHECK(status, __LINE__);
-
-      status = hsa_code_object_destroy(hsaCodeObject);
-      STATUS_CHECK(status, __LINE__);
     }
 }; // end of HSAKernel
 
@@ -893,6 +910,8 @@ private:
 
     bool useCoarseGrainedRegion;
 
+    HSAExecutable* executable;
+
 public:
 
     // Callback for hsa_agent_iterate_regions.
@@ -962,7 +981,8 @@ public:
                                agent(a), programs(), max_tile_static_size(0),
                                queues(), queues_mutex(),
                                ri(),
-                               useCoarseGrainedRegion(false) {
+                               useCoarseGrainedRegion(false),
+                               executable(nullptr) {
 #if KALMAR_DEBUG
         std::cerr << "HSADevice::HSADevice()\n";
 #endif
@@ -1005,6 +1025,11 @@ public:
             delete kernel_iterator.second;
         }
         programs.clear();
+
+        // release executable
+        if (executable != nullptr) {
+            delete executable;
+        }
     }
 
     std::wstring get_path() const override { return L"hsa"; }
@@ -1170,34 +1195,108 @@ public:
       return ri. _found_coarsegrained_region;
     }
 
+    void* getSymbolAddress(const char* symbolName) override {
+        hsa_status_t status;
+
+        unsigned long* symbol_ptr = nullptr;
+        if (executable != nullptr) {
+            // fix symbol name to match HSA rule
+            std::string symbolString("&");
+            symbolString += symbolName;
+
+            // get symbol
+            hsa_executable_symbol_t symbol;
+            status = hsa_executable_get_symbol(executable->hsaExecutable, NULL, symbolString.c_str(), agent, 0, &symbol);
+            STATUS_CHECK(status, __LINE__);
+        
+            // get address of symbol
+            uint64_t symbol_address;
+            status = hsa_executable_symbol_get_info(symbol,
+                                                    HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ADDRESS,
+                                                    &symbol_address);
+            STATUS_CHECK(status, __LINE__);
+        
+            symbol_ptr = (unsigned long*)symbol_address;
+        } else {
+#if KALMAR_DEBUG
+            std::cerr << "HSA executable NOT built yet!\n";
+#endif
+        }
+
+        return symbol_ptr;
+    }
+
+   // FIXME: return values
+    void memcpySymbol(void* symbolAddr, void* hostptr, size_t count, size_t offset = 0, enum hcMemcpyKind kind = hcMemcpyHostToDevice) override {
+        hsa_status_t status;
+
+        if (executable != nullptr) {
+            // copy data
+            if (kind == hcMemcpyHostToDevice) {
+                // host -> device
+                status = hsa_memory_copy(symbolAddr, (char*)hostptr + offset, count);
+                STATUS_CHECK(status, __LINE__);
+            } else if (kind == hcMemcpyDeviceToHost) {
+                // device -> host
+                status = hsa_memory_copy(hostptr, (char*)symbolAddr + offset, count);
+                STATUS_CHECK(status, __LINE__);
+            }
+        } else {
+#if KALMAR_DEBUG
+            std::cerr << "HSA executable NOT built yet!\n";
+#endif
+        }
+    }
+
+    // FIXME: return values
+    void memcpySymbol(const char* symbolName, void* hostptr, size_t count, size_t offset = 0, enum hcMemcpyKind kind = hcMemcpyHostToDevice) override {
+        hsa_status_t status;
+    
+        if (executable != nullptr) {
+            unsigned long* symbol_ptr = (unsigned long*)getSymbolAddress(symbolName);
+            memcpySymbol(symbol_ptr, hostptr, count, offset, kind);
+        } else {
+#if KALMAR_DEBUG
+            std::cout << "HSA executable NOT built yet!\n";
+#endif
+        }
+    }
+
+
 private:
 
     HSAKernel* CreateOfflineFinalizedKernelImpl(void *kernelBuffer, int kernelSize, const char *entryName) {
         hsa_status_t status;
 
-        // Deserialize code object.
-        hsa_code_object_t code_object = {0};
-        status = hsa_code_object_deserialize(kernelBuffer, kernelSize, NULL, &code_object);
-        STATUS_CHECK(status, __LINE__);
-        assert(0 != code_object.handle);
+        // load HSA program if we haven't done so
+        if (this->executable == nullptr) {
+            // Deserialize code object.
+            hsa_code_object_t code_object = {0};
+            status = hsa_code_object_deserialize(kernelBuffer, kernelSize, NULL, &code_object);
+            STATUS_CHECK(status, __LINE__);
+            assert(0 != code_object.handle);
+    
+            // Create the executable.
+            hsa_executable_t hsaExecutable;
+            status = hsa_executable_create(HSA_PROFILE_FULL, HSA_EXECUTABLE_STATE_UNFROZEN,
+                                           NULL, &hsaExecutable);
+            STATUS_CHECK(status, __LINE__);
+    
+            // Load the code object.
+            status = hsa_executable_load_code_object(hsaExecutable, agent, code_object, NULL);
+            STATUS_CHECK(status, __LINE__);
+    
+            // Freeze the executable.
+            status = hsa_executable_freeze(hsaExecutable, NULL);
+            STATUS_CHECK(status, __LINE__);
 
-        // Create the executable.
-        hsa_executable_t hsaExecutable;
-        status = hsa_executable_create(HSA_PROFILE_FULL, HSA_EXECUTABLE_STATE_UNFROZEN,
-                                       NULL, &hsaExecutable);
-        STATUS_CHECK(status, __LINE__);
-
-        // Load the code object.
-        status = hsa_executable_load_code_object(hsaExecutable, agent, code_object, NULL);
-        STATUS_CHECK(status, __LINE__);
-
-        // Freeze the executable.
-        status = hsa_executable_freeze(hsaExecutable, NULL);
-        STATUS_CHECK(status, __LINE__);
+            // save everything as an HSAExecutable instance
+            executable = new HSAExecutable(hsaExecutable, code_object);
+        }
 
         // Get symbol handle.
         hsa_executable_symbol_t kernelSymbol;
-        status = hsa_executable_get_symbol(hsaExecutable, NULL, entryName, agent, 0, &kernelSymbol);
+        status = hsa_executable_get_symbol(executable->hsaExecutable, NULL, entryName, agent, 0, &kernelSymbol);
         STATUS_CHECK(status, __LINE__);
 
         // Get code handle.
@@ -1205,69 +1304,75 @@ private:
         status = hsa_executable_symbol_get_info(kernelSymbol, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT, &kernelCodeHandle);
         STATUS_CHECK(status, __LINE__);
 
-        return new HSAKernel(hsaExecutable, code_object, kernelSymbol, kernelCodeHandle);
+        return new HSAKernel(executable, kernelSymbol, kernelCodeHandle);
     }
 
     HSAKernel* CreateKernelImpl(const char *hsailBuffer, int hsailSize, const char *entryName) {
         hsa_status_t status;
   
-        /*
-         * Load BRIG, encapsulated in an ELF container, into a BRIG module.
-         */
-        hsa_ext_module_t hsaModule = 0;
-        hsaModule = (hsa_ext_module_t)hsailBuffer;
-  
-        /*
-         * Create hsa program.
-         */
-        hsa_ext_program_t hsaProgram = {0};
-        status = hsa_ext_program_create(HSA_MACHINE_MODEL_LARGE, HSA_PROFILE_FULL,
-                                        HSA_DEFAULT_FLOAT_ROUNDING_MODE_ZERO, NULL, &hsaProgram);
-        STATUS_CHECK(status, __LINE__);
-  
-        /*
-         * Add the BRIG module to hsa program.
-         */
-        status = hsa_ext_program_add_module(hsaProgram, hsaModule);
-        STATUS_CHECK(status, __LINE__);
-  
-        /*
-         * Finalize the hsa program.
-         */
-        hsa_isa_t isa = {0};
-        status = hsa_agent_get_info(agent, HSA_AGENT_INFO_ISA, &isa);
-        STATUS_CHECK(status, __LINE__);
-  
-        hsa_ext_control_directives_t control_directives;
-        memset(&control_directives, 0, sizeof(hsa_ext_control_directives_t));
-  
-        hsa_code_object_t hsaCodeObject = {0};
-        status = hsa_ext_program_finalize(hsaProgram, isa, 0, control_directives,
-                                          NULL, HSA_CODE_OBJECT_TYPE_PROGRAM, &hsaCodeObject);
-        STATUS_CHECK(status, __LINE__);
-  
-        if (hsaProgram.handle != 0) {
-            status = hsa_ext_program_destroy(hsaProgram);
+        // finalize HSA program if we haven't done so
+        if (this->executable == nullptr) {
+            /*
+             * Load BRIG, encapsulated in an ELF container, into a BRIG module.
+             */
+            hsa_ext_module_t hsaModule = 0;
+            hsaModule = (hsa_ext_module_t)hsailBuffer;
+      
+            /*
+             * Create hsa program.
+             */
+            hsa_ext_program_t hsaProgram = {0};
+            status = hsa_ext_program_create(HSA_MACHINE_MODEL_LARGE, HSA_PROFILE_FULL,
+                                            HSA_DEFAULT_FLOAT_ROUNDING_MODE_ZERO, NULL, &hsaProgram);
             STATUS_CHECK(status, __LINE__);
+      
+            /*
+             * Add the BRIG module to hsa program.
+             */
+            status = hsa_ext_program_add_module(hsaProgram, hsaModule);
+            STATUS_CHECK(status, __LINE__);
+      
+            /*
+             * Finalize the hsa program.
+             */
+            hsa_isa_t isa = {0};
+            status = hsa_agent_get_info(agent, HSA_AGENT_INFO_ISA, &isa);
+            STATUS_CHECK(status, __LINE__);
+      
+            hsa_ext_control_directives_t control_directives;
+            memset(&control_directives, 0, sizeof(hsa_ext_control_directives_t));
+      
+            hsa_code_object_t hsaCodeObject = {0};
+            status = hsa_ext_program_finalize(hsaProgram, isa, 0, control_directives,
+                                              NULL, HSA_CODE_OBJECT_TYPE_PROGRAM, &hsaCodeObject);
+            STATUS_CHECK(status, __LINE__);
+      
+            if (hsaProgram.handle != 0) {
+                status = hsa_ext_program_destroy(hsaProgram);
+                STATUS_CHECK(status, __LINE__);
+            }
+      
+            // Create the executable.
+            hsa_executable_t hsaExecutable;
+            status = hsa_executable_create(HSA_PROFILE_FULL, HSA_EXECUTABLE_STATE_UNFROZEN,
+                                           NULL, &hsaExecutable);
+            STATUS_CHECK(status, __LINE__);
+      
+            // Load the code object.
+            status = hsa_executable_load_code_object(hsaExecutable, agent, hsaCodeObject, NULL);
+            STATUS_CHECK(status, __LINE__);
+      
+            // Freeze the executable.
+            status = hsa_executable_freeze(hsaExecutable, NULL);
+            STATUS_CHECK(status, __LINE__);
+
+            // save everything as an HSAExecutable instance
+            executable = new HSAExecutable(hsaExecutable, hsaCodeObject);
         }
-  
-        // Create the executable.
-        hsa_executable_t hsaExecutable;
-        status = hsa_executable_create(HSA_PROFILE_FULL, HSA_EXECUTABLE_STATE_UNFROZEN,
-                                       NULL, &hsaExecutable);
-        STATUS_CHECK(status, __LINE__);
-  
-        // Load the code object.
-        status = hsa_executable_load_code_object(hsaExecutable, agent, hsaCodeObject, NULL);
-        STATUS_CHECK(status, __LINE__);
-  
-        // Freeze the executable.
-        status = hsa_executable_freeze(hsaExecutable, NULL);
-        STATUS_CHECK(status, __LINE__);
   
         // Get symbol handle.
         hsa_executable_symbol_t kernelSymbol;
-        status = hsa_executable_get_symbol(hsaExecutable, NULL, entryName, agent, 0, &kernelSymbol);
+        status = hsa_executable_get_symbol(executable->hsaExecutable, NULL, entryName, agent, 0, &kernelSymbol);
         STATUS_CHECK(status, __LINE__);
   
         // Get code handle.
@@ -1275,7 +1380,7 @@ private:
         status = hsa_executable_symbol_get_info(kernelSymbol, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT, &kernelCodeHandle);
         STATUS_CHECK(status, __LINE__);
   
-        return new HSAKernel(hsaExecutable, hsaCodeObject, kernelSymbol, kernelCodeHandle);
+        return new HSAKernel(executable, kernelSymbol, kernelCodeHandle);
     }
 
 };
@@ -1521,10 +1626,10 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
     STATUS_CHECK_Q(status, commandQueue, __LINE__);
 
     // let kernel know static group segment size
-    kernel->setSymbolToValue("&hcc_static_group_segment_size", group_segment_size);
+    kernel->executable->setSymbolToValue("&hcc_static_group_segment_size", group_segment_size);
 
     // let kernel know dynamic group segment size
-    kernel->setSymbolToValue("&hcc_dynamic_group_segment_size", this->dynamicGroupSize);
+    kernel->executable->setSymbolToValue("&hcc_dynamic_group_segment_size", this->dynamicGroupSize);
 
     // add dynamic group segment size
     group_segment_size += this->dynamicGroupSize;

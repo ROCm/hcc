@@ -82,6 +82,9 @@ inline uint64_t get_tick_frequency() {
     return Kalmar::getContext()->getSystemTickFrequency();
 }
 
+#define GET_SYMBOL_ADDRESS(acc, symbol) \
+    acc.get_symbol_address( #symbol );
+
 
 // ------------------------------------------------------------------------
 // accelerator_view
@@ -674,6 +677,18 @@ public:
      */
     bool is_hsa_accelerator() {
         return get_default_view().is_hsa_accelerator();
+    }
+
+    void memcpy_symbol(const char* symbolName, void* hostptr, size_t count, size_t offset = 0, hcMemcpyKind kind = hcMemcpyHostToDevice) {
+        pDev->memcpySymbol(symbolName, hostptr, count, offset, kind);
+    }
+
+    void memcpy_symbol(void* symbolAddr, void* hostptr, size_t count, size_t offset = 0, hcMemcpyKind kind = hcMemcpyHostToDevice) {
+        pDev->memcpySymbol(symbolAddr, hostptr, count, offset, kind);
+    }
+
+    void* get_symbol_address(const char* symbolName) {
+        return pDev->getSymbolAddress(symbolName);
     }
 
 private:
