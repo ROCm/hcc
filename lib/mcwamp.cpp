@@ -394,6 +394,15 @@ void DetermineAndGetProgram(size_t* kernel_size, void** kernel_source, bool* nee
   }
 }
 
+void BuildProgram(KalmarQueue* pQueue) {
+  size_t kernel_size = 0;
+  void* kernel_source = nullptr;
+  bool needs_compilation = true;
+
+  DetermineAndGetProgram(&kernel_size, &kernel_source, &needs_compilation);
+  pQueue->getDev()->BuildProgram((void*)kernel_size, kernel_source, needs_compilation);
+}
+
 // used in parallel_for_each.h
 void *CreateKernel(std::string s, KalmarQueue* pQueue) {
   size_t kernel_size = 0;
@@ -424,7 +433,17 @@ private:
   RuntimeImpl* runtime;
 public:
   KalmarBootstrap() : runtime(nullptr) {
+    // initialize runtime
     runtime = CLAMP::GetOrInitRuntime();
+
+    // get context
+    KalmarContext* context = static_cast<KalmarContext*>(runtime->m_GetContextImpl());
+
+    // get default queue on the default device
+    std::shared_ptr<KalmarQueue> queue = context->auto_select();
+
+    // build kernels on the default queue on the default device
+    CLAMP::BuildProgram(queue.get());
   }
 };
 
