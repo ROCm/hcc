@@ -214,6 +214,9 @@ public:
     /// @key: used to avoid duplicate release
     virtual void release(void* ptr, struct rw_info* key) = 0;
 
+    /// build program
+    virtual void BuildProgram(void* size, void* source, bool needsCompilation = true) {}
+
     /// create kernel
     virtual void* CreateKernel(const char* fun, void* size, void* source, bool needsCompilation = true) { return nullptr; }
 
