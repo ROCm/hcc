@@ -27,12 +27,6 @@ bool test2() {
   // array to store the result copied from device memory
   int tableOutput2[GRID_SIZE] { 0 };
 
-  extent<1> ex(GRID_SIZE);
-
-  // launch an empty kernel first to ensure HSA executable get loaded
-  // FIXME: remove this
-  completion_future fut2 = parallel_for_each(ex, [](index<1>& idx) __attribute__((hc)) {});
-
   // use get_symbol_address() and hc::accelerator::memcpySymbol() to copy testValue to globalVar
   // get the default accelerator
   accelerator acc = accelerator();
@@ -40,6 +34,7 @@ bool test2() {
   acc.memcpy_symbol(tableGlobalDevicePtr, tableInput, sizeof(int) * GRID_SIZE);
 
   // dispatch a kernel which reads from globalVar and stores result to table1
+  extent<1> ex(GRID_SIZE);
   completion_future fut = parallel_for_each(ex, [=, &tableOutput1](index<1>& idx) __attribute__((hc)) {
     tableOutput1[idx[0]] = tableGlobal[idx[0]];
   });
