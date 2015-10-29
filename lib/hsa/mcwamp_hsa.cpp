@@ -910,19 +910,58 @@ public:
         hsa_region_get_info(region, HSA_REGION_INFO_GLOBAL_FLAGS, &flags);
     
         if (segment == HSA_REGION_SEGMENT_GLOBAL) {
-            if (flags & HSA_REGION_GLOBAL_FLAG_KERNARG) {
-                ri->_kernarg_region = region;
-                ri->_found_kernarg_region = true;
-            }
+            bool is_system_memory_region = false;
+            hsa_region_get_info(region, (hsa_region_info_t)HSA_AMD_REGION_INFO_HOST_ACCESSIBLE, &is_system_memory_region);
+
+            // prefer GPU memory over system memory
+            if (!is_system_memory_region) {
+                if (flags & HSA_REGION_GLOBAL_FLAG_KERNARG) {
+#if KALMAR_DEBUG
+                    std::cerr << "found kernarg region on GPU memory\n";
+#endif 
+                    ri->_kernarg_region = region;
+                    ri->_found_kernarg_region = true;
+                }
     
-            if (flags & HSA_REGION_GLOBAL_FLAG_FINE_GRAINED) {
-                ri->_finegrained_region = region;
-                ri->_found_finegrained_region = true;
-            }
+                if (flags & HSA_REGION_GLOBAL_FLAG_FINE_GRAINED) {
+#if KALMAR_DEBUG
+                    std::cerr << "found fine grained region on GPU memory\n";
+#endif 
+                    ri->_finegrained_region = region;
+                    ri->_found_finegrained_region = true;
+                }
     
-            if (flags & HSA_REGION_GLOBAL_FLAG_COARSE_GRAINED) {
-                ri->_coarsegrained_region = region;
-                ri->_found_coarsegrained_region = true;
+                if (flags & HSA_REGION_GLOBAL_FLAG_COARSE_GRAINED) {
+#if KALMAR_DEBUG
+                    std::cerr << "found coarse grained region on GPU memory\n";
+#endif 
+                    ri->_coarsegrained_region = region;
+                    ri->_found_coarsegrained_region = true;
+                }
+            } else {
+                if ((flags & HSA_REGION_GLOBAL_FLAG_KERNARG) && (!ri->_found_kernarg_region)) {
+#if KALMAR_DEBUG
+                    std::cerr << "found kernarg region on host memory\n";
+#endif 
+                    ri->_kernarg_region = region;
+                    ri->_found_kernarg_region = true;
+                }
+        
+                if ((flags & HSA_REGION_GLOBAL_FLAG_FINE_GRAINED) && (!ri->_found_finegrained_region)) {
+#if KALMAR_DEBUG
+                    std::cerr << "found fine grained region on host memory\n";
+#endif 
+                    ri->_finegrained_region = region;
+                    ri->_found_finegrained_region = true;
+                }
+        
+                if ((flags & HSA_REGION_GLOBAL_FLAG_COARSE_GRAINED) && (!ri->_found_coarsegrained_region)) {
+#if KALMAR_DEBUG
+                    std::cerr << "found coarse grained region on host memory\n";
+#endif 
+                    ri->_coarsegrained_region = region;
+                    ri->_found_coarsegrained_region = true;
+                }
             }
         }
     
