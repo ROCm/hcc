@@ -38,12 +38,12 @@
 /////////////////////////////////////////////////
 
 // number of pre-allocated HSA signals in HSAContext
-// default set as 0 (not pre-allocating)
-#define SIGNAL_POOL_SIZE (0)
+// default set as 16(pre-allocating 16 HSA signals)
+#define SIGNAL_POOL_SIZE (16)
 
 // whether to set barrier bit in AQL packet in kernel dispatches
-// default set as 1 (barrier bit set in AQL packet)
-#define DISPATCH_PACKET_BARRIER_BIT (1)
+// default set as 0 (barrier bit NOT set in AQL packet)
+#define DISPATCH_PACKET_BARRIER_BIT (0)
 
 // whether to use kernarg region found on the HSA agent
 // default set as 1 (use karnarg region)
