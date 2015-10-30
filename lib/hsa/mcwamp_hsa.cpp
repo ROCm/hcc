@@ -19,6 +19,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include <hsa.h>
@@ -136,6 +137,7 @@ public:
 class HSABarrier : public Kalmar::KalmarAsyncOp {
 private:
     hsa_signal_t signal;
+    int signalIndex;
     bool isDispatched;
 
     std::shared_future<void>* future;
@@ -165,60 +167,14 @@ public:
         dispose();
     }
 
-    hsa_status_t enqueueBarrier(hsa_queue_t* queue) {
-        hsa_status_t status = HSA_STATUS_SUCCESS;
-        if (isDispatched) {
-            return HSA_STATUS_ERROR_INVALID_ARGUMENT;
-        }
-
-        status = hsa_signal_create(1, 0, NULL, &signal);
-        STATUS_CHECK_Q(status, queue, __LINE__);
-
-        // Obtain the write index for the command queue
-        uint64_t index = hsa_queue_load_write_index_relaxed(queue);
-        const uint32_t queueMask = queue->size - 1;
-
-        // Define the barrier packet to be at the calculated queue index address
-        hsa_barrier_and_packet_t* barrier = &(((hsa_barrier_and_packet_t*)(queue->base_address))[index&queueMask]);
-        memset(barrier, 0, sizeof(hsa_barrier_and_packet_t));
-
-        // setup header
-        uint16_t header = HSA_PACKET_TYPE_BARRIER_AND << HSA_PACKET_HEADER_TYPE;
-        header |= 1 << HSA_PACKET_HEADER_BARRIER;
-        header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE;
-        header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE;
-        barrier->header = header;
-
-        barrier->completion_signal = signal;
-
-#if KALMAR_DEBUG
-        std::cerr << "ring door bell to dispatch barrier\n";
-#endif
-
-        // Increment write index and ring doorbell to dispatch the kernel
-        hsa_queue_store_write_index_relaxed(queue, index+1);
-        hsa_signal_store_relaxed(queue->doorbell_signal, index);
-
-        isDispatched = true;
-
-        return status;
-    }
+    hsa_status_t enqueueBarrier(hsa_queue_t* queue);
 
     hsa_status_t enqueueAsync(Kalmar::HSAQueue*);
 
     // wait for the barrier to complete
     hsa_status_t waitComplete();
 
-    void dispose() {
-        hsa_status_t status;
-        status = hsa_signal_destroy(signal);
-        STATUS_CHECK(status, __LINE__);
-
-        if (future != nullptr) {
-          delete future;
-          future = nullptr;
-        }
-    }
+    void dispose();
 
     uint64_t getTimestampFrequency() override {
         // get system tick frequency
@@ -253,6 +209,7 @@ private:
     static const int ARGS_VEC_INITIAL_CAPACITY = 256 * 8;   
 
     hsa_signal_t signal;
+    int signalIndex;
     hsa_kernel_dispatch_packet_t aql;
     bool isDispatched;
 
@@ -377,24 +334,7 @@ public:
     // wait for the kernel to finish execution
     hsa_status_t waitComplete();
 
-    void dispose() {
-        hsa_status_t status;
-        status = hsa_memory_deregister(arg_vec.data(), arg_vec.capacity() * sizeof(uint8_t));
-        assert(status == HSA_STATUS_SUCCESS);
-        if (kernargMemory != nullptr) {
-          status = hsa_memory_free(kernargMemory);
-          assert(status == HSA_STATUS_SUCCESS);
-          kernargMemory = nullptr;
-        }
-        hsa_signal_destroy(aql.completion_signal);
-        clearArgs();
-        std::vector<uint8_t>().swap(arg_vec);
-
-        if (future != nullptr) {
-          delete future;
-          future = nullptr;
-        }
-    }
+    void dispose();
 
     uint64_t getTimestampFrequency() override {
         // get system tick frequency
@@ -1346,6 +1286,7 @@ class HSAContext final : public KalmarContext
 {
     /// memory pool for signals
     std::vector<hsa_signal_t> signalPool;
+    std::vector<bool> signalPoolFlag;
     int signalCursor;
     std::mutex signalPoolMutex;
 
@@ -1389,7 +1330,7 @@ class HSAContext final : public KalmarContext
     }
 
 public:
-    HSAContext() : KalmarContext(), signalPool(), signalCursor(0), signalPoolMutex() {
+    HSAContext() : KalmarContext(), signalPool(), signalPoolFlag(), signalCursor(0), signalPoolMutex() {
         // initialize HSA runtime
 #if KALMAR_DEBUG
         std::cerr << "HSAContext::HSAContext(): init HSA runtime\n";
@@ -1411,7 +1352,6 @@ public:
             Devices.push_back(Dev);
         }
 
-
 #if SIGNAL_POOL_SIZE > 0
         // pre-allocate signals
         for (int i = 0; i < SIGNAL_POOL_SIZE; ++i) {
@@ -1419,37 +1359,103 @@ public:
           status = hsa_signal_create(1, 0, NULL, &signal);
           STATUS_CHECK(status, __LINE__);
           signalPool.push_back(signal);
+          signalPoolFlag.push_back(false);
         }
 #endif
     }
 
-    hsa_signal_t getSignal() {
+    void releaseSignal(hsa_signal_t signal, int signalIndex) {
         hsa_status_t status = HSA_STATUS_SUCCESS;
+#if SIGNAL_POOL_SIZE > 0
+        signalPoolMutex.lock();
+
+        // restore signal to the initial value 1
+        hsa_signal_store_release(signal, 1);
+
+        // mark the signal pointed by signalIndex as available
+        signalPoolFlag[signalIndex] = false;
+
+        signalPoolMutex.unlock();
+#else
+        status = hsa_signal_destroy(signal);
+        STATUS_CHECK(status, __LINE__);
+#endif
+    }
+
+    std::pair<hsa_signal_t, int> getSignal() {
+        hsa_status_t status = HSA_STATUS_SUCCESS;
+        hsa_signal_t ret;
 
 #if SIGNAL_POOL_SIZE > 0
         signalPoolMutex.lock();
         int cursor = signalCursor;
-        if (((cursor + 1) % SIGNAL_POOL_SIZE) == 0) {
-            // pre-allocate signals
-            for (int i = 0; i < SIGNAL_POOL_SIZE; ++i) {
-                hsa_signal_t signal;
-                status = hsa_signal_create(1, 0, NULL, &signal);
-                STATUS_CHECK(status, __LINE__);
-                signalPool.push_back(signal);
-            }
+
+        if (signalPoolFlag[cursor] == false) {
+            // the cursor is valid, use it
+            ret = signalPool[cursor];
+
+            // set the signal as used
+            signalPoolFlag[cursor] = true;
+
+            // simply move the cursor to the next index
+            ++signalCursor;
+            if (signalCursor == SIGNAL_POOL_SIZE) signalCursor = 0;
+        } else {
+            // the cursor is not valid, sequentially find the next available slot
+            bool found = false;
+            int startingCursor = cursor;
+            do {
+                ++cursor;
+                if (signalCursor == SIGNAL_POOL_SIZE) cursor = 0;
+
+                if (signalPoolFlag[cursor] == false) {
+                    // the cursor is valid, use it
+                    ret = signalPool[cursor];
+
+                    // set the signal as used
+                    signalPoolFlag[cursor] = true;
+
+                    // simply move the cursor to the next index
+                    ++signalCursor;
+                    if (signalCursor == SIGNAL_POOL_SIZE) signalCursor = 0;
+
+                    // break from the loop
+                    found = true;
+                    break;
+                }
+            } while(cursor != startingCursor); // ensure we at most scan the vector once
+
+            if (found == false) {
+                // can't find any available slot, show error
+                // FIXME, grow signals on demand
+                std::cerr << "ERROR: signal vector full!\n";
+                abort();
+            } 
         }
 
-        hsa_signal_t ret = signalPool[cursor];
-        ++signalCursor;
         signalPoolMutex.unlock();
 #else
-        hsa_signal_t ret;
         hsa_signal_create(1, 0, NULL, &ret);
+        int cursor = 0;
 #endif
-        return ret;
+        return std::make_pair(ret, cursor);
     }
 
     ~HSAContext() {
+        hsa_status_t status = HSA_STATUS_SUCCESS;
+
+#if SIGNAL_POOL_SIZE > 0
+        // deallocate signals in the pool
+        for (int i = 0; i < SIGNAL_POOL_SIZE; ++i) {
+            hsa_signal_t signal;
+            status = hsa_signal_destroy(signalPool[i]);
+            STATUS_CHECK(status, __LINE__);
+        }
+
+        signalPool.clear();
+        signalPoolFlag.clear();
+#endif
+
         // destroy all KalmarDevices associated with this context
         for (auto dev : Devices)
             delete dev;
@@ -1460,7 +1466,6 @@ public:
 #if KALMAR_DEBUG
         std::cerr << "HSAContext::~HSAContext(): shut down HSA runtime\n";
 #endif
-        hsa_status_t status;
         status = hsa_shut_down();
         STATUS_CHECK(status, __LINE__);
     }
@@ -1560,9 +1565,9 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
     /*
      * Create a signal to wait for the dispatch to finish.
      */
-//    status = hsa_signal_create(1, 0, NULL, &signal);
-//    STATUS_CHECK_Q(status, commandQueue, __LINE__);
-    signal = Kalmar::ctx.getSignal();
+    std::pair<hsa_signal_t, int> ret = Kalmar::ctx.getSignal();
+    signal = ret.first;
+    signalIndex = ret.second;
   
     /*
      * Initialize the dispatch packet.
@@ -1735,6 +1740,27 @@ HSADispatch::dispatchKernelAsync(Kalmar::HSAQueue* hsaQueue) {
     return status;
 }
 
+inline void
+HSADispatch::dispose() {
+    hsa_status_t status;
+    status = hsa_memory_deregister(arg_vec.data(), arg_vec.capacity() * sizeof(uint8_t));
+    assert(status == HSA_STATUS_SUCCESS);
+    if (kernargMemory != nullptr) {
+      status = hsa_memory_free(kernargMemory);
+      assert(status == HSA_STATUS_SUCCESS);
+      kernargMemory = nullptr;
+    }
+    clearArgs();
+    std::vector<uint8_t>().swap(arg_vec);
+
+    Kalmar::ctx.releaseSignal(signal, signalIndex);
+
+    if (future != nullptr) {
+      delete future;
+      future = nullptr;
+    }
+}
+
 inline uint64_t
 HSADispatch::getBeginTimestamp() override {
     Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(hsaQueue->getDev());
@@ -1803,6 +1829,58 @@ HSABarrier::enqueueAsync(Kalmar::HSAQueue* hsaQueue) {
     }).share());
 
     return status;
+}
+
+inline hsa_status_t
+HSABarrier::enqueueBarrier(hsa_queue_t* queue) {
+    hsa_status_t status = HSA_STATUS_SUCCESS;
+    if (isDispatched) {
+        return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+    }
+
+    // Create a signal to wait for the barrier to finish.
+    std::pair<hsa_signal_t, int> ret = Kalmar::ctx.getSignal();
+    signal = ret.first;
+    signalIndex = ret.second;
+
+    // Obtain the write index for the command queue
+    uint64_t index = hsa_queue_load_write_index_relaxed(queue);
+    const uint32_t queueMask = queue->size - 1;
+
+    // Define the barrier packet to be at the calculated queue index address
+    hsa_barrier_and_packet_t* barrier = &(((hsa_barrier_and_packet_t*)(queue->base_address))[index&queueMask]);
+    memset(barrier, 0, sizeof(hsa_barrier_and_packet_t));
+
+    // setup header
+    uint16_t header = HSA_PACKET_TYPE_BARRIER_AND << HSA_PACKET_HEADER_TYPE;
+    header |= 1 << HSA_PACKET_HEADER_BARRIER;
+    header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE;
+    header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE;
+    barrier->header = header;
+
+    barrier->completion_signal = signal;
+
+#if KALMAR_DEBUG
+    std::cerr << "ring door bell to dispatch barrier\n";
+#endif
+
+    // Increment write index and ring doorbell to dispatch the kernel
+    hsa_queue_store_write_index_relaxed(queue, index+1);
+    hsa_signal_store_relaxed(queue->doorbell_signal, index);
+
+    isDispatched = true;
+
+    return status;
+}
+
+inline void
+HSABarrier::dispose() {
+    Kalmar::ctx.releaseSignal(signal, signalIndex);
+
+    if (future != nullptr) {
+      delete future;
+      future = nullptr;
+    }
 }
 
 inline uint64_t
