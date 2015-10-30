@@ -38,8 +38,8 @@
 /////////////////////////////////////////////////
 
 // number of pre-allocated HSA signals in HSAContext
-// default set as 16(pre-allocating 16 HSA signals)
-#define SIGNAL_POOL_SIZE (16)
+// default set as 64 (pre-allocating 64 HSA signals)
+#define SIGNAL_POOL_SIZE (64)
 
 // whether to set barrier bit in AQL packet in kernel dispatches
 // default set as 0 (barrier bit NOT set in AQL packet)
