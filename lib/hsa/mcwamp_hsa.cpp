@@ -37,6 +37,14 @@
 // kernel dispatch speed optimization flags
 /////////////////////////////////////////////////
 
+// size of default kernarg buffer in the kernarg pool in HSAContext
+// default set as 128
+#define KERNARG_BUFFER_SIZE (128)
+
+// number of pre-allocated kernarg buffers in HSAContext
+// default set as 64 (pre-allocating 64 of kernarg buffers in the pool)
+#define KERNARG_POOL_SIZE (64)
+
 // number of pre-allocated HSA signals in HSAContext
 // default set as 64 (pre-allocating 64 HSA signals)
 #define SIGNAL_POOL_SIZE (64)
@@ -202,6 +210,7 @@ private:
     uint32_t arg_count;
     size_t prevArgVecCapacity;
     void* kernargMemory;
+    int kernargMemoryIndex;
 
     int launchDimensions;
     uint32_t workgroup_size[3];
@@ -845,6 +854,13 @@ public:
 class HSADevice final : public KalmarDevice
 {
 private:
+    /// memory pool for kernargs
+    std::vector<void*> kernargPool;
+    std::vector<bool> kernargPoolFlag;
+    int kernargCursor;
+    std::mutex kernargPoolMutex;
+
+
     std::map<std::string, HSAKernel *> programs;
     hsa_agent_t agent;
     size_t max_tile_static_size;
@@ -964,7 +980,8 @@ public:
                                agent(a), programs(), max_tile_static_size(0),
                                queues(), queues_mutex(),
                                ri(),
-                               useCoarseGrainedRegion(false) {
+                               useCoarseGrainedRegion(false),
+                               kernargPool(), kernargPoolFlag(), kernargCursor(0), kernargPoolMutex() {
 #if KALMAR_DEBUG
         std::cerr << "HSADevice::HSADevice()\n";
 #endif
@@ -991,12 +1008,51 @@ public:
             }
         }
         useCoarseGrainedRegion = result; 
+
+        /// pre-allocate a pool of kernarg buffers in case:
+        /// - kernarg region is available
+        /// - compile-time macro USE_KERNARG_REGION is set
+        /// - compile-time macro KERNARG_POOL_SIZE is larger than 0
+        if (hasHSAKernargRegion() && USE_KERNARG_REGION) {
+#if KERNARG_POOL_SIZE > 0
+            hsa_region_t kernarg_region = getHSAKernargRegion();
+
+            // pre-allocate kernarg buffers
+            void* kernargMemory = nullptr;
+            for (int i = 0; i < KERNARG_POOL_SIZE; ++i) {
+                status = hsa_memory_allocate(kernarg_region, KERNARG_BUFFER_SIZE,  &kernargMemory);
+                STATUS_CHECK(status, __LINE__);
+
+                status = hsa_memory_assign_agent(kernargMemory, agent, HSA_ACCESS_PERMISSION_RW);
+                STATUS_CHECK(status,  __LINE__);
+
+                kernargPool.push_back(kernargMemory);
+                kernargPoolFlag.push_back(false);
+            }
+#endif
+        }
     }
 
     ~HSADevice() {
 #if KALMAR_DEBUG
         std::cerr << "HSADevice::~HSADevice()\n";
 #endif
+
+        // deallocate kernarg buffers in the pool
+        if (hasHSAKernargRegion() && USE_KERNARG_REGION) {
+#if KERNARG_POOL_SIZE > 0
+            hsa_status_t status = HSA_STATUS_SUCCESS;
+
+            for (int i = 0; i < KERNARG_POOL_SIZE; ++i) {
+                hsa_memory_free(kernargPool[i]);
+                STATUS_CHECK(status, __LINE__);
+            }
+
+            kernargPool.clear();
+            kernargPoolFlag.clear();
+#endif
+        }
+
         // release all queues
         queues_mutex.lock();
         queues.clear();
@@ -1170,6 +1226,109 @@ public:
 
     bool hasHSACoarsegrainedRegion() {
       return ri. _found_coarsegrained_region;
+    }
+
+    void releaseKernargBuffer(void* kernargBuffer, int kernargBufferIndex) {
+        if (hasHSAKernargRegion() && USE_KERNARG_REGION) {
+            if ( (KERNARG_POOL_SIZE > 0) && (kernargBufferIndex >= 0) ) {
+                kernargPoolMutex.lock();
+
+                // mark the kernarg buffer pointed by kernelBufferIndex as available
+                kernargPoolFlag[kernargBufferIndex] = false;
+
+                kernargPoolMutex.unlock();
+             } else {
+                if (kernargBuffer != nullptr) {
+                    hsa_memory_free(kernargBuffer);
+                }
+             }
+        }
+    }
+
+    std::pair<void*, int> getKernargBuffer(int size) {
+        void* ret = nullptr;
+        int cursor = 0;
+
+        if (hasHSAKernargRegion() && USE_KERNARG_REGION) {
+
+            // find an available buffer in the pool in case
+            // - kernarg pool is available
+            // - requested size is smaller than KERNARG_BUFFER_SIZE
+            if ( (KERNARG_POOL_SIZE > 0) && (size <= KERNARG_BUFFER_SIZE) ) {
+                kernargPoolMutex.lock();
+                cursor = kernargCursor;
+        
+                if (kernargPoolFlag[cursor] == false) {
+                    // the cursor is valid, use it
+                    ret = kernargPool[cursor];
+        
+                    // set the kernarg buffer as used
+                    kernargPoolFlag[cursor] = true;
+        
+                    // simply move the cursor to the next index
+                    ++kernargCursor;
+                    if (kernargCursor == KERNARG_POOL_SIZE) kernargCursor = 0;          
+                } else {
+                    // the cursor is not valid, sequentially find the next available slot
+                    bool found = false;
+        
+                    int startingCursor = cursor;
+                    do {
+                        ++cursor;
+                        if (kernargCursor == KERNARG_POOL_SIZE) cursor = 0;
+        
+                        if (kernargPoolFlag[cursor] == false) {
+                            // the cursor is valid, use it
+                            ret = kernargPool[cursor];
+        
+                            // set the kernarg buffer as used
+                            kernargPoolFlag[cursor] = true;
+        
+                            // simply move the cursor to the next index
+                            ++kernargCursor;
+                            if (kernargCursor == KERNARG_POOL_SIZE) kernargCursor = 0;
+        
+                            // break from the loop
+                            found = true;
+                            break;
+                        }
+                    } while(cursor != startingCursor); // ensure we at most scan the vector once
+        
+                    if (found == false) {
+                        // can't find any available slot, show error
+                        // FIXME, grow kernarg pool on demand
+                        std::cerr << "ERROR: kernarg buffer vector full!\n";
+                        abort();
+                    }
+        
+                }
+        
+                kernargPoolMutex.unlock();
+            } else {
+                // allocate new buffers in case:
+                // - the kernarg pool is set at compile-time
+                // - requested kernarg buffer size is larger than KERNARG_BUFFER_SIZE
+
+                hsa_status_t status = HSA_STATUS_SUCCESS;
+                hsa_region_t kernarg_region = getHSAKernargRegion();
+    
+                status = hsa_memory_allocate(kernarg_region, size,  &ret);
+                STATUS_CHECK(status, __LINE__);
+    
+                status = hsa_memory_assign_agent(ret, agent, HSA_ACCESS_PERMISSION_RW);
+                STATUS_CHECK(status, __LINE__);
+
+                // set cursor value as -1 to notice the buffer would be deallocated
+                // instead of recycled back into the pool
+                cursor = -1;
+            }
+        } else {
+            // this function does nothing in case:
+            // - kernarg region is not available on the agent
+            // - or we choose not to use kernarg region by setting USE_KERNARG_REGION to 0
+        }
+
+        return std::make_pair(ret, cursor);
     }
 
 private:
@@ -1601,16 +1760,13 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
     // bind kernel arguments
     //printf("arg_vec size: %d in bytes: %d\n", arg_vec.size(), arg_vec.size());
 
-
     if (device->hasHSAKernargRegion() && USE_KERNARG_REGION) {
         hsa_region_t kernarg_region = device->getHSAKernargRegion();
 
         if (arg_vec.size() > 0) {
-            status = hsa_memory_allocate(kernarg_region, arg_vec.size(),  &kernargMemory);
-            STATUS_CHECK_Q(status, commandQueue, __LINE__);
-
-            status = hsa_memory_assign_agent(kernargMemory, agent, HSA_ACCESS_PERMISSION_RW);
-            STATUS_CHECK_Q(status, commandQueue, __LINE__);
+            std::pair<void*, int> ret = device->getKernargBuffer(arg_vec.size());
+            kernargMemory = ret.first;
+            kernargMemoryIndex = ret.second;
 
             status = hsa_memory_copy(kernargMemory, arg_vec.data(), arg_vec.size());
             STATUS_CHECK_Q(status, commandQueue, __LINE__);
@@ -1704,8 +1860,7 @@ HSADispatch::waitComplete() {
 #endif
 
     if (kernargMemory != nullptr) {
-      status = hsa_memory_free(kernargMemory);
-      assert(status == HSA_STATUS_SUCCESS);
+      device->releaseKernargBuffer(kernargMemory, kernargMemoryIndex);
       kernargMemory = nullptr;
     }
     hsa_memory_deregister((void*)arg_vec.data(), arg_vec.size());
@@ -1746,8 +1901,7 @@ HSADispatch::dispose() {
     status = hsa_memory_deregister(arg_vec.data(), arg_vec.capacity() * sizeof(uint8_t));
     assert(status == HSA_STATUS_SUCCESS);
     if (kernargMemory != nullptr) {
-      status = hsa_memory_free(kernargMemory);
-      assert(status == HSA_STATUS_SUCCESS);
+      device->releaseKernargBuffer(kernargMemory, kernargMemoryIndex);
       kernargMemory = nullptr;
     }
     clearArgs();
