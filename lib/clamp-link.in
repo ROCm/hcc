@@ -145,6 +145,16 @@ _find_object() {
 ARGS="$@"
 for ARG in $ARGS
 do
+  # XXX(Yan-Ming): take hip_runtime library as a special case for now,
+  # need to refactor for accepting general (user-specified) -l flags
+  if [ "$ARG" == "-lhip_runtime" ]; then
+    HIP_RUNTIME_HOME=@PROJECT_BINARY_DIR@/build/Release/lib
+    cp $HIP_RUNTIME_HOME/libhip_runtime.a $TEMP_DIR/libhip_runtime.a
+    ar x $TEMP_DIR/libhip_runtime.a
+    mv hip_runtime.cpp.o $TEMP_DIR/
+    ARG=$TEMP_DIR/hip_runtime.cpp.o
+  fi
+
   if [ -f $ARG ]; then
     FILE=`basename $ARG` # remove path
     FILENAME=$(_find_object $FILE)  # check if it's an object file

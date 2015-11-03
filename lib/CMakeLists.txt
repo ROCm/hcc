@@ -78,6 +78,7 @@ install(FILES hsa_builtins.hsail DESTINATION lib)
 add_subdirectory(opencl)
 add_subdirectory(hsa)
 add_subdirectory(cpu)
+add_subdirectory(hip)
 
 # Build plugins for clang
 # FIXME: codes in this directory is obsolete, need to clean it up
