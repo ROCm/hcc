@@ -856,9 +856,6 @@ void updateBitCastInstWithNewOperand(BitCastInst * BI, Value *oldOperand, Value 
         PointerType * sourcePtrType = dyn_cast<PointerType>(sourceType);
         if (!sourcePtrType) return;
 
-        if ( sourcePtrType->getAddressSpace()
-             == currentPtrType->getAddressSpace() ) return;
-
         PointerType * newDestType =
                 PointerType::get(currentPtrType->getElementType(),
                                  sourcePtrType->getAddressSpace());
@@ -1363,9 +1360,14 @@ void promoteGlobalVars(Function *Func, InstUpdateWorkList * updateNeeded)
                
         } else if (!I->hasSection() ||
             I->getSection() != std::string(TILE_STATIC_NAME) ||
-            I->getType()->getPointerAddressSpace() != 0 ||
             !I->hasName()) {
-            continue;
+            // promote to global address space if the variable is used in a kernel
+            // and does not come with predefined address space
+            if (usedInTheFunc(I, Func) && I->getType()->getPointerAddressSpace() == 0) {
+              the_space = GlobalAddressSpace;
+            } else {
+              continue;
+            }
         }
 
         // If the address of this global variable is available from host, it
@@ -1373,8 +1375,7 @@ void promoteGlobalVars(Function *Func, InstUpdateWorkList * updateNeeded)
         if (isAddressCopiedToHost(*I, *Func))
             the_space = GlobalAddressSpace;
         DEBUG(llvm::errs() << "Promoting variable: " << *I << "\n";
-                errs() << "  to addrspace(" << the_space << ")\n";
-                );
+                errs() << "  to addrspace(" << the_space << ")\n";);
 
         std::set<Function *> users;
         typedef std::multimap<Function *, llvm::User *> Uses;

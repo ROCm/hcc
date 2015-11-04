@@ -11,7 +11,7 @@ fi
 # 2) @CMAKE_INSTALL_PREFIX@ : default install directory
 # 3) @PROJECT_BINARY_DIR@ : build directory
 
-if [ -z "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
+if [ -n "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
     LINK=$HCC_HOME/bin/llvm-link
     OPT=$HCC_HOME/bin/opt
     CLAMP_DEVICE=$HCC_HOME/bin/clamp-device
@@ -22,7 +22,7 @@ if [ -z "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
     HLC_LLC=$HCC_HOME/hlc/bin/llc
     HLC_ASM_DIR=$HCC_HOME/HSAILasm
     HLC_ASM=$HCC_HOME/HSAILasm/HSAILasm
-elif [ -e @CMAKE_INSTALL_PREFIX@ ]; then
+elif [ -e @CMAKE_INSTALL_PREFIX@/bin/opt ]; then
     LINK=@CMAKE_INSTALL_PREFIX@/bin/llvm-link
     OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
     CLAMP_DEVICE=@CMAKE_INSTALL_PREFIX@/bin/clamp-device
@@ -124,12 +124,30 @@ TEMP_DIR=`mktemp -d`
 CXXAMP_SERIALIZE_SYMBOL_FILE=$TEMP_DIR/symbol.txt
 touch $CXXAMP_SERIALIZE_SYMBOL_FILE
 
+# find object file
+_find_object() {
+  local FILE=$1
+  local ret=${FILE%.o}
+
+  if [ -e $FILE ]; then
+    local file_output=`file $FILE | grep 'ELF 64-bit LSB  relocatable, x86-64'`
+    local readelf_output=`readelf -h $FILE | grep 'Relocatable file'`
+
+    if [ ! -z "$file_output" ] && [ ! -z "$readelf_output" ]; then
+      # remove postfix
+      ret=${FILE%.*}
+    fi
+  fi
+
+  echo $ret
+}
+
 ARGS="$@"
 for ARG in $ARGS
 do
   if [ -f $ARG ]; then
     FILE=`basename $ARG` # remove path
-    FILENAME=${FILE%.o}  # check if it's an object file
+    FILENAME=$(_find_object $FILE)  # check if it's an object file
     CPUFILE=${FILE%.cpu}
     ISCRT=${ARG#/usr}    # exception for objects under /usr
     ISLIB=${ARG#/lib}    # exception for objects under /lib

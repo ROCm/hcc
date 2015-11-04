@@ -12,6 +12,7 @@ template <int N> class extent;
 
 namespace Kalmar {
 
+/** \cond HIDDEN_SYMBOLS */
 template <int...> struct __indices {};
 
 template <int _Sp, class _IntTuple, int _Ep>
@@ -212,6 +213,7 @@ struct amp_helper<1, _Tp1, _Tp2>
         ext.base_ -= idx.base_;
     }
 };
+/** \endcond */
 
 /**
  * Represents a unique position in N-dimensional space.

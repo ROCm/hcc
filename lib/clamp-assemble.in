@@ -6,9 +6,9 @@
 # 2) @CMAKE_INSTALL_PREFIX@ : default install directory
 # 3) @LLVM_TOOLS_DIR@ : build directory
 
-if [ -z "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
+if [ -n "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
     EMBED=$HCC_HOME/bin/clamp-embed
-elif [ -e @CMAKE_INSTALL_PREFIX@ ]; then
+elif [ -e @CMAKE_INSTALL_PREFIX@/bin/clamp-embed ]; then
     EMBED=@CMAKE_INSTALL_PREFIX@/bin/clamp-embed
 elif [ -d @LLVM_TOOLS_DIR@ ]; then
     EMBED=@PROJECT_BINARY_DIR@/lib/clamp-embed
