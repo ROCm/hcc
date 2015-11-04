@@ -1,48 +1,31 @@
 // XFAIL: Linux
-// RUN: %cxxamp -Xclang -fhsa-ext %s -o %t.out && %t.out
+// RUN: %hc %s -o %t.out && %t.out
 
 // Parallel STL headers
 #include <coordinate>
 #include <experimental/algorithm>
 #include <experimental/execution_policy>
 
-// C++ headers
-#include <iostream>
-#include <iomanip>
-#include <algorithm>
-
-#define ROW (8)
-#define COL (16)
-#define TEST_SIZE (ROW * COL)
-
 #define _DEBUG (0)
+#include "test_base.h"
 
-template<typename _Tp, size_t SIZE>
-bool test() {
 
-  _Tp table[SIZE] { 0 };
+template<typename T, size_t SIZE>
+bool test(void) {
 
-  // launch kernel with parallel STL generate
-  using namespace std::experimental::parallel;
-  generate(par, std::begin(table), std::end(table), [] { return SIZE + 1; });
+  auto f = [] { return SIZE + 1; };
+  using std::experimental::parallel::par;
 
-  // verify data
   bool ret = true;
-  for (int i = 0; i < SIZE; ++i) {
-    if (table[i] != SIZE + 1)  {
-      ret = false;
-      break;
-    }
-  }
 
-#if _DEBUG 
-  for (int i = 0; i < ROW; ++i) {
-    for (int j = 0; j < COL; ++j) {
-      std::cout << std::setw(5) << table[i * COL + j];
-    }
-    std::cout << "\n";
-  } 
-#endif
+  // C array
+  typedef T cArray[SIZE];
+  ret &= run_and_compare<T, SIZE, cArray>([f](cArray &input1,
+                                              cArray &input2) {
+    std::generate(std::begin(input1), std::end(input1), f);
+    std::experimental::parallel::
+    generate(par, std::begin(input2), std::end(input2), f);
+  });
 
   return ret;
 }

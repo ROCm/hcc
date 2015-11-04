@@ -1,7 +1,6 @@
 // XFAIL: Linux
-// RUN: %cxxamp %s -Xclang -fhsa-ext -o %t.out && %t.out
+// RUN: %hc %s -o %t.out && %t.out
 
-#include <amp.h>
 #include <hc.hpp>
 
 #include <iostream>
@@ -13,15 +12,14 @@ template<size_t GRID_SIZE, size_t TILE_SIZE>
 bool test() {
   using namespace hc;
 
-  ts_allocator tsa;
-  tsa.setDynamicGroupSegmentSize(0);
 
-  Concurrency::array_view<int, 1> av(GRID_SIZE);
+  array_view<int, 1> av(GRID_SIZE);
   tiled_extent<1> ex(GRID_SIZE, TILE_SIZE);
+  ex.set_dynamic_group_segment_size(0);
   
-  parallel_for_each(hc::accelerator().get_default_view(),
-                    ex, tsa,
-                    __KERNEL__ [=, &tsa](tiled_index<1>& tidx) {
+  completion_future fut = parallel_for_each(hc::accelerator().get_default_view(),
+                    ex,
+                    __KERNEL__ [=](tiled_index<1>& tidx) {
     tile_static int lds1[TILE_SIZE];
 
     // obtain workitem absolute index and workgroup index
@@ -32,11 +30,14 @@ bool test() {
     __GROUP__ unsigned char* ptr = (__GROUP__ unsigned char*)&lds1[local[0]];
 
     // fetch the address of the beginning of group segment
-    __GROUP__ unsigned char* lds = (__GROUP__ unsigned char*)getLDS(0);
+    __GROUP__ unsigned char* lds = (__GROUP__ unsigned char*)get_group_segment_addr(0);
 
     // calculate the offset and set to the result global array_view
     av(global) = (ptr - lds);
   });
+
+  // wait for kernel to complete
+  fut.wait();
 
   // verify data
   bool ret = true;

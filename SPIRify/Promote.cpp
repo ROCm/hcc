@@ -256,10 +256,10 @@ void updateBackGEP (GetElementPtrInst * GEP, Type* expected,
                                  ptrExpected->getAddressSpace());
           Instruction * ptrProducer =
                 dyn_cast<Instruction>(GEP->getPointerOperand());
-          assert(ptrProducer
-               && "Was expecting an instruction as source operand for GEP");
-          BackwardUpdate::setExpectedType (ptrProducer,
-                                         newUpstreamType, updater);
+          // sometimes the pointer operand is an argument and does not need update
+          if (ptrProducer)
+              BackwardUpdate::setExpectedType (ptrProducer,
+                                             newUpstreamType, updater);
         } else {
           DEBUG(llvm::errs() << "newElementType is null\n";);
         }
@@ -271,8 +271,8 @@ void updateBackLoad (LoadInst * L, Type * expected,
         Value * ptrOperand = L->getPointerOperand();
         Instruction * ptrSource = dyn_cast<Instruction>(ptrOperand);
 
-        assert(ptrSource
-               && "Was expecting an instruction for the source operand");
+        // sometimes the pointer operand is an argument and does not need further processing
+        if (!ptrSource) return;
 
         PointerType * sourceType =
                 dyn_cast<PointerType> (ptrOperand->getType());
@@ -431,11 +431,19 @@ Type * mapTypeToGlobal ( Type *);
 
 namespace {
   std::map<StructType*, StructType*> structTypeMap;
+
+  // a mapping of old types to newly translated types
+  std::map<Type *, Type *> translatedTypeMap;
 }
 
 StructType* mapTypeToGlobal(StructType* T) {
   // create a new, empty StructType
-  StructType* newST = StructType::create(T->getContext(), T->getName());
+  StructType* newST = nullptr;
+  if (T->hasName()) {
+      newST = StructType::create(T->getContext(), T->getName());
+  } else {
+      newST = StructType::create(T->getContext(), "");
+  }
 
   // mark the original StructType as translated to the new StructType
   structTypeMap[T] = newST;
@@ -462,6 +470,9 @@ StructType* mapTypeToGlobal(StructType* T) {
     // use normal type translation logic if otherwise
     if (translatedType == nullptr) {
       translatedType = mapTypeToGlobal(baseType);
+
+      // associate the newly created translated type with the old type
+      translatedTypeMap[baseType] = translatedType;
     }
 
     translatedTypes.push_back(translatedType);
@@ -523,42 +534,49 @@ FunctionType * createNewFunctionTypeWithPtrToGlobals (Function * F)
         FunctionType * baseType = F->getFunctionType();
 
         std::vector<Type *> translatedArgTypes;
-/*
-        for (unsigned arg = 0, arg_end = baseType->getNumParams();
-             arg != arg_end; ++arg) {
-                Type * argType = baseType->getParamType(arg);
-                Type * translatedType = mapTypeToGlobal (argType);
-                translatedArgTypes.push_back ( translatedType );
-        }*/
+
+        // keep track of mapping of the original type and translated type
+
         unsigned argIdx = 0;
         for (Function::arg_iterator A = F->arg_begin(), Ae = F->arg_end();
              A != Ae; ++A, ++argIdx) {
                 Type * argType = baseType->getParamType(argIdx);
                 Type * translatedType;
 
-                StringRef argName = A->getName();
-                if (argName.equals("scratch")
-                    || argName.equals("lds")
-                    || argName.equals("scratch_count")) {
-                        PointerType * Ptr = dyn_cast<PointerType>(argType);
-                        assert(Ptr && "Pointer type expected");
-                        translatedType = PointerType::get(Ptr->getElementType(),
-                                                          LocalAddressSpace);
-                } else {
-                        if (A->hasByValAttr()) {
-                                PointerType * ptrType =
-                                        cast<PointerType>(argType);
-                                Type * elementType =
-                                        ptrType->getElementType();
-                                Type * translatedElement =
-                                        mapTypeToGlobal(elementType);
-                                translatedType =
-                                        PointerType::get(translatedElement,
-                                                         0);
-                        } else {
-                                translatedType = mapTypeToGlobal (argType);
-                        }
+                // try use previously translated type
+                translatedType = translatedTypeMap[argType];
+
+                // create new translated type if there is none
+                if (translatedType == nullptr) {
+
+                    StringRef argName = A->getName();
+                    if (argName.equals("scratch")
+                        || argName.equals("lds")
+                        || argName.equals("scratch_count")) {
+                            PointerType * Ptr = dyn_cast<PointerType>(argType);
+                            assert(Ptr && "Pointer type expected");
+                            translatedType = PointerType::get(Ptr->getElementType(),
+                                                              LocalAddressSpace);
+                    } else {
+                            if (A->hasByValAttr()) {
+                                    PointerType * ptrType =
+                                            cast<PointerType>(argType);
+                                    Type * elementType =
+                                            ptrType->getElementType();
+                                    Type * translatedElement =
+                                            mapTypeToGlobal(elementType);
+                                    translatedType =
+                                            PointerType::get(translatedElement,
+                                                             0);
+                            } else {
+                                    translatedType = mapTypeToGlobal (argType);
+                            }
+                    }
+
+                    // associate the newly created translated type with the old type
+                    translatedTypeMap[argType] = translatedType;
                 }
+
                 translatedArgTypes.push_back ( translatedType );
         }
 
@@ -614,25 +632,80 @@ void updateListWithUsers ( User *U, Value * oldOperand, Value * newOperand,
         updates->addUpdate (
                 new ForwardUpdate(Insn,
                     oldOperand, newOperand ) );
-    } else if (ConstantExpr * GEPCE =
+    } else if (ConstantExpr * CE =
             dyn_cast<ConstantExpr>(U)) {
-        DEBUG(llvm::errs()<<"GEPCE:";
-                GEPCE->dump(););
-        // patch all the users of the constexpr by
-        // first producing an equivalent instruction that
-        // computes the constantexpr
-        for(Value::user_iterator CU = GEPCE->user_begin(),
-                CE = GEPCE->user_end(); CU!=CE;) {
+        DEBUG(llvm::errs()<<"CE:";
+                CE->dump(););
+        for(Value::user_iterator CU = CE->user_begin(),
+                CUE = CE->user_end(); CU!=CUE;) {
             if (Instruction *I2 = dyn_cast<Instruction>(*CU)) {
-                Insn = GEPCE->getAsInstruction();
+                // patch all the users of the constexpr by
+                // first producing an equivalent instruction that
+                // computes the constantexpr
+                Insn = CE->getAsInstruction();
                 Insn->insertBefore(I2);
                 updateInstructionWithNewOperand(Insn,
                         oldOperand, newOperand, updates);
                 updateInstructionWithNewOperand(I2,
-                        GEPCE, Insn, updates);
+                        CE, Insn, updates);
                 // CU is invalidated
-                CU = GEPCE->user_begin();
+                CU = CE->user_begin();
                 continue;
+            } else if (ConstantExpr *CE2 = dyn_cast<ConstantExpr>(*CU)) {
+                // there are cases where a ConstantExpr is used by another ConstantExpr
+                // in the current implementation, we assume there would be at most
+                // 2 ConstantExpr used in an Instruction
+                //
+                // assuming the original Instruction is:
+                // I3(CE2(CE))
+                //
+                // we would rewrite it to:
+                // Insn (built from CE)
+                // I2 (built from CE2, with Insn as operand)
+                // I3 (replace CE2 with I2)
+                //
+                // notice that I2 can NOT be built from CE2->getAsInstruction() as it would
+                // increase user count of CE2 and CE, and would cause infinite loop
+                
+                for (Value::user_iterator CU2 = CE2->user_begin(), CUE2 = CE2->user_end(); CU2 != CUE2;) {
+                    if (Instruction *I3 = dyn_cast<Instruction>(*CU2)) {
+                        Insn = CE->getAsInstruction();
+                        Instruction *I2 = nullptr;
+                        switch (CE2->getOpcode()) {
+                            case Instruction::BitCast:
+                                // notice that I2 can NOT be built from CE2->getAsInstruction() as it would
+                                // increase user count of CE2 and CE, and would cause infinite loop
+                                I2 = new BitCastInst(Insn, CE2->getType(), "", I3);
+                            break;
+                            default:
+                                llvm::errs() << "BUG: DO NOT KNOW HOW TO UPDATE ConstantExpr: ";
+                                CE2->print(llvm::errs()); llvm::errs() << "\n";
+                            break;
+                        }
+                        if (I2) {
+                            // properly order Insn, I2, I3
+                            Insn->insertBefore(I2);
+
+                            // update operands to correctly set user count for CE and CE2
+                            updateInstructionWithNewOperand(Insn, oldOperand, newOperand, updates);
+                            updateInstructionWithNewOperand(I3, CE2, I2, updates);
+
+                            // CU2 is invalidated
+                            CU2 = CE2->user_begin();
+                            continue;
+                        }
+                    }
+                    CU2++;
+                }
+
+                if (CE2->getNumUses() == 0) {
+                  // Only non-zero ref can be destroyed, otherwise deadlock occurs
+                  CE2->destroyConstant();
+
+                  // CU is invalidated
+                  CU = CE->user_begin();
+                  continue;
+                }
             }
             CU++;
         }
@@ -782,9 +855,6 @@ void updateBitCastInstWithNewOperand(BitCastInst * BI, Value *oldOperand, Value 
         Type * sourceType = newOperand->getType();
         PointerType * sourcePtrType = dyn_cast<PointerType>(sourceType);
         if (!sourcePtrType) return;
-
-        if ( sourcePtrType->getAddressSpace()
-             == currentPtrType->getAddressSpace() ) return;
 
         PointerType * newDestType =
                 PointerType::get(currentPtrType->getElementType(),
@@ -1033,7 +1103,19 @@ void CollectChangedCalledFunctions (Function * F, InstUpdateWorkList * updatesNe
 void appendMemoryScopeMetadata(Instruction *I) {
   // set default memory scope as: _sys_ (5)
   ConstantInt *C = ConstantInt::get(Type::getInt32Ty(I->getContext()), 5); 
+#if LLVM_VERSION_MAJOR == 3
+  #if (LLVM_VERSION_MINOR >= 3) && (LLVM_VERSION_MINOR <= 5)
+  // logic which is compatible from LLVM 3.3 till LLVM 3.5
   MDNode *MD = MDNode::get(I->getContext(), C); 
+  #elif LLVM_VERSION_MINOR > 5
+  // support new MDTuple type introduced in LLVM 3.6+
+  MDTuple *MD = MDTuple::get(I->getContext(), ConstantAsMetadata::get(C));
+  #else
+    #error Unsupported LLVM MINOR VERSION
+  #endif
+#else
+  #error Unsupported LLVM MAJOR VERSION
+#endif
   I->setMetadata("mem.scope", MD);
 }
 
@@ -1116,9 +1198,13 @@ void updateInstructionWithNewOperand(Instruction * I,
            return; 
        }
 
+       if (isa<ReturnInst>(I)) {
+           DEBUG(llvm::errs() << "No need to update ret\n";);
+           return;
+       }
 
-       llvm::errs() << "DO NOT KNOW HOW TO UPDATE INSTRUCTION: ";
-             I->print(llvm::errs()); llvm::errs() << "\n";
+       DEBUG(llvm::errs() << "DO NOT KNOW HOW TO UPDATE INSTRUCTION: ";
+             I->print(llvm::errs()); llvm::errs() << "\n";);
 
        // Don't crash the program
        return;
@@ -1151,6 +1237,11 @@ static bool usedInTheFunc(const User *U, const Function* F)
     if (usedInTheFunc(u, F) == true)
       return true;
   }
+  #elif LLVM_VERSION_MINOR > 5
+  for (const User *u : U->users()) {
+    if (usedInTheFunc(u, F) == true)
+      return true;
+  }
   #else
     #error Unsupported LLVM MINOR VERSION
   #endif
@@ -1161,9 +1252,87 @@ static bool usedInTheFunc(const User *U, const Function* F)
   return false;
 }
 
+// Tests if address of G is copied into global pointers, which are propageted
+// through arguments of F.
+bool isAddressCopiedToHost(const GlobalVariable &G, const Function &F) {
+    std::vector<const User*> pending;
+    std::set<const Value*> all_global_ptrs;
+
+    for (const Value &arg : F.args()) {
+        if (arg.getType()->isPointerTy()) {
+            pending.insert(pending.end(), arg.user_begin(), arg.user_end());
+            all_global_ptrs.insert(&arg);
+        }
+    }
+
+    while (!pending.empty()) {
+        const User *u = pending.back();
+        pending.pop_back();
+
+        if (isa<GetElementPtrInst>(u)) {
+            all_global_ptrs.insert(u);
+            pending.insert(pending.end(), u->user_begin(), u->user_end());
+        }
+        else if (const LoadInst *load = dyn_cast<LoadInst>(u)) {
+            all_global_ptrs.insert(u);
+            pending.insert(pending.end(), u->user_begin(), u->user_end());
+        }
+        else if (const ConstantExpr *cexp = dyn_cast<ConstantExpr>(u)) {
+            if (cexp->getOpcode() == Instruction::GetElementPtr) {
+                all_global_ptrs.insert(u);
+                pending.insert(pending.end(), u->user_begin(), u->user_end());
+            }
+        }
+    }
+
+    DEBUG(
+        errs() << "Possible pointers to global memory in " << F.getName() << ":\n";
+        for (auto &&p : all_global_ptrs) {
+            errs() << "  " << *p << "\n";
+        }
+        errs() << "\n";
+    );
+
+    DEBUG(errs() << "Possible pointers to GV(" << G << ") in " << F.getName() << ":\n";);
+
+    pending.insert(pending.end(), G.user_begin(), G.user_end());
+    while (!pending.empty()) {
+        const User *u = pending.back();
+        pending.pop_back();
+
+        if (const Instruction *inst = dyn_cast<Instruction>(u)) {
+           if (&F != inst->getParent()->getParent())
+               continue;
+        }
+
+        DEBUG(errs() << "user (" << u << "): " << *u << "\n";);
+        if (const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(u)) {
+            pending.insert(pending.end(), GEP->user_begin(), GEP->user_end());
+        }
+        else if (const ConstantExpr *cexp = dyn_cast<ConstantExpr>(u)) {
+            if (cexp->getOpcode() == Instruction::GetElementPtr)
+                pending.insert(pending.end(), cexp->user_begin(), cexp->user_end());
+        }
+        else if (const StoreInst *S = dyn_cast<StoreInst>(u)) {
+            if (all_global_ptrs.find(S->getPointerOperand()) != all_global_ptrs.end()) {
+                DEBUG(errs() << "target found, returns true\n";);
+                return true;
+            }
+        }
+    }
+
+    DEBUG(errs() << "returns false\n";);
+    return false;
+}
+
+// Assign addr_space to global variables.
+//
+// Assign address space to global variables, and make one copy for each user function.
+// Processed global variable could be in global, local or constant address space.
+//
 // tile_static are declared as static variables in section("clamp_opencl_local")
 // for each tile_static, make a modified clone with address space 3 and update users
-void promoteTileStatic(Function *Func, InstUpdateWorkList * updateNeeded)
+void promoteGlobalVars(Function *Func, InstUpdateWorkList * updateNeeded)
 {
     Module *M = Func->getParent();
     Module::GlobalListType &globals = M->getGlobalList();
@@ -1191,12 +1360,23 @@ void promoteTileStatic(Function *Func, InstUpdateWorkList * updateNeeded)
                
         } else if (!I->hasSection() ||
             I->getSection() != std::string(TILE_STATIC_NAME) ||
-            I->getType()->getPointerAddressSpace() != 0 ||
             !I->hasName()) {
-            continue;
+            // promote to global address space if the variable is used in a kernel
+            // and does not come with predefined address space
+            if (usedInTheFunc(I, Func) && I->getType()->getPointerAddressSpace() == 0) {
+              the_space = GlobalAddressSpace;
+            } else {
+              continue;
+            }
         }
-        DEBUG(llvm::errs() << "Promoting variable\n";
-                I->dump(););
+
+        // If the address of this global variable is available from host, it
+        // must stay in global address space.
+        if (isAddressCopiedToHost(*I, *Func))
+            the_space = GlobalAddressSpace;
+        DEBUG(llvm::errs() << "Promoting variable: " << *I << "\n";
+                errs() << "  to addrspace(" << the_space << ")\n";);
+
         std::set<Function *> users;
         typedef std::multimap<Function *, llvm::User *> Uses;
         Uses uses;
@@ -1206,10 +1386,8 @@ void promoteTileStatic(Function *Func, InstUpdateWorkList * updateNeeded)
                 users.insert(Ins->getParent()->getParent());
                 uses.insert(std::make_pair(Ins->getParent()->getParent(), *U));
             } else if (ConstantExpr *C = dyn_cast<ConstantExpr>(*U)) {
-                // Replace GEPCE uses so that we have an instruction to track
+                // Replace ConstantExpr with Instruction so we can track it
                 updateListWithUsers (*U, I, I, updateNeeded);
-                // FIXME: updateListWithUsers takes no effect if use of (*U) does not represent
-                // an instruction and can't be replaceable
                 if (C->getNumUses() == 0) {
                   // Only non-zero ref can be destroyed, otherwise deadlock occurs
                   C->destroyConstant();
@@ -1227,16 +1405,32 @@ void promoteTileStatic(Function *Func, InstUpdateWorkList * updateNeeded)
         for (std::set<Function*>::reverse_iterator
                 F = users.rbegin(), Fe = users.rend();
                 F != Fe; F++, i--) {
+
+            // tile static variables cannot have an initializer
+            llvm::Constant *Init = nullptr;
+            if (I->hasSection() && (I->getSection() == std::string(TILE_STATIC_NAME))) {
+                Init = llvm::UndefValue::get(I->getType()->getElementType());
+            } else {
+                Init = I->hasInitializer() ? I->getInitializer() : 0;
+            }
+
             GlobalVariable *new_GV = new GlobalVariable(*M,
                     I->getType()->getElementType(),
                     I->isConstant(), I->getLinkage(),
-                    I->hasInitializer()?I->getInitializer():0,
+                    Init,
                     "", (GlobalVariable *)0, I->getThreadLocalMode(), the_space);
             new_GV->copyAttributesFrom(I);
             if (i == 0) {
                 new_GV->takeName(I);
             } else {
                 new_GV->setName(I->getName());
+            }
+            if (new_GV->getName().find('.') == 0) {
+                // HSAIL does not accept dot at the front of identifier
+                // (clang generates dot names for string literals)
+                std::string tmp = new_GV->getName();
+                tmp[0] = 'x';
+                new_GV->setName(tmp);
             }
             std::pair<Uses::iterator, Uses::iterator> usesOfSameFunction;
             usesOfSameFunction = uses.equal_range(*F);
@@ -1485,7 +1679,7 @@ Function * createPromotedFunctionToType ( Function * F, FunctionType * promoteTy
         InstUpdateWorkList workList;
 //        promoteAllocas(newFunction, workList);
 //        promoteBitcasts(newFunction, workList);
-        promoteTileStatic(newFunction, &workList);
+        promoteGlobalVars(newFunction, &workList);
         updateArgUsers (newFunction, &workList);
         updateOperandType(F, newFunction, promoteType, &workList);
 
@@ -1541,12 +1735,28 @@ KernelNodeVisitor::KernelNodeVisitor(FunctionVect& FV)
 void KernelNodeVisitor::operator()(MDNode *N)
 {
         if ( N->getNumOperands() < 1) return;
+#if LLVM_VERSION_MAJOR == 3
+  #if (LLVM_VERSION_MINOR >= 3) && (LLVM_VERSION_MINOR <= 5)
+        // logic which is compatible from LLVM 3.3 till LLVM 3.5
         Value * Op = N->getOperand(0);
         if (!Op)
             return;
         if ( Function * F = dyn_cast<Function>(Op)) {
                 found_kernels.push_back(F);
         }
+  #elif LLVM_VERSION_MINOR > 5
+        // support new metadata data structure introduced in LLVM 3.6+
+        const MDOperand& Op = N->getOperand(0);
+        if ( Function * F = mdconst::dyn_extract<Function>(Op)) {
+                found_kernels.push_back(F);
+        }
+  #else
+    #error Unsupported LLVM MINOR VERSION
+  #endif
+#else
+  #error Unsupported LLVM MAJOR VERSION
+#endif
+
 }
 
 /* Call functor for each MDNode located within the Named MDNode */
@@ -1580,11 +1790,37 @@ void updateKernels(Module& M, const FunctionMap& new_kernels)
         for (unsigned i = 0; i < root->getNumOperands(); i++) {
             // for each metadata of the kernel..
             MDNode * kernel = root->getOperand(i);
+#if LLVM_VERSION_MAJOR == 3
+  #if (LLVM_VERSION_MINOR >= 3) && (LLVM_VERSION_MINOR <= 5)
+            // logic which is compatible from LLVM 3.3 till LLVM 3.5
             Function * f = dyn_cast<Function>(kernel->getOperand(0));
+  #elif LLVM_VERSION_MINOR > 5
+            // support new metadata data structure introduced in LLVM 3.6+
+            Function * f = mdconst::dyn_extract<Function>(kernel->getOperand(0));
+  #else
+    #error Unsupported LLVM MINOR VERSION
+  #endif
+#else
+  #error Unsupported LLVM MAJOR VERSION
+#endif
             assert(f != NULL);
             iterator I = new_kernels.find(f);
-            if (I != new_kernels.end())
+            if (I != new_kernels.end()) {
+#if LLVM_VERSION_MAJOR == 3
+  #if (LLVM_VERSION_MINOR >= 3) && (LLVM_VERSION_MINOR <= 5)
+                // logic which is compatible from LLVM 3.3 till LLVM 3.5
                 kernel->replaceOperandWith(0, I->second);
+  #elif LLVM_VERSION_MINOR > 5
+                // support new metadata data structure introduced in LLVM 3.6+
+                kernel->replaceOperandWith(0, ValueAsMetadata::get(I->second));
+  #else
+    #error Unsupported LLVM MINOR VERSION
+  #endif
+#else
+  #error Unsupported LLVM MAJOR VERSION
+#endif
+
+            }
         }
         for (iterator kern = new_kernels.begin(), end = new_kernels.end();
              kern != end; ++kern) {
@@ -1782,6 +2018,10 @@ bool PromoteGlobals::runOnModule(Module& M)
         }
         updateKernels (M, promotedKernels);
 
+        /// FIXME: The following code can be removed. It is too late to add
+        ///        NoDuplicate attribute on barrier in SPIRify pass. We already
+        //         add NoDuplicate attribute in clang
+#if 0
         // If the barrier present is used, we need to ensure it cannot be duplicated.
         for (Module::iterator F = M.begin(), Fe = M.end(); F != Fe; ++F) {
                 StringRef name = F->getName();
@@ -1789,6 +2029,7 @@ bool PromoteGlobals::runOnModule(Module& M)
                         F->addFnAttr (Attribute::NoDuplicate);
                 }
         }
+#endif
 
         // Rename local variables per SPIR naming rule
         Module::GlobalListType &globals = M.getGlobalList();
@@ -1797,6 +2038,7 @@ bool PromoteGlobals::runOnModule(Module& M)
             if (I->hasSection() &&
                     I->getSection() == std::string(TILE_STATIC_NAME) &&
                     I->getType()->getPointerAddressSpace() != 0) {
+
                 std::string oldName = escapeName(I->getName().str());
                 // Prepend the name of the function which contains the user
                 std::set<std::string> userNames;

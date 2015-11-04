@@ -9,10 +9,8 @@ int main(void) {
   const int vecSize = 100;
 
   // Alloc & init input data
-  array<int, 1> count(vecSize);
-  for(unsigned i = 0; i < vecSize; i++) {
-    count[i] = 0;
-  }
+  int init[vecSize] { 0 };
+  array<int, 1> count(vecSize, std::begin(init));
 
   parallel_for_each(count.get_extent(), [=, &count](index<1> idx) restrict(amp) {
     for(unsigned i = 0; i < vecSize; i++) {

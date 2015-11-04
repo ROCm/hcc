@@ -6,11 +6,6 @@ set(CPPAMP_SOURCE_DIR "${PROJECT_SOURCE_DIR}")
 set(CPPAMP_TEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(CPPAMP_OBJ_DIR "${CMAKE_BINARY_DIR}")
 
-# libcxx
-set(LIBCXX_SRC_DIR "${PROJECT_SOURCE_DIR}/libc++/libcxx")
-set(LIBCXX_LIB_DIR "${PROJECT_BINARY_DIR}/libc++/lib")
-set(LIBCXXRT_LIB_DIR "${PROJECT_BINARY_DIR}/libc++/libcxxrt/lib")
-
 # gtest
 set(GTEST_SRC_DIR "${PROJECT_SOURCE_DIR}/utils")
 set(GTEST_LIB_DIR "${PROJECT_BINARY_DIR}/utils/gtest")
@@ -50,12 +45,21 @@ configure_file(
   ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-assemble @ONLY)
 
 configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/hc-kernel-assemble.in
+  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/hc-kernel-assemble @ONLY)
+
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/hc-host-assemble.in
+  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/hc-host-assemble @ONLY)
+
+configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-link.in
   ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-link @ONLY)
 
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-preprocess.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-preprocess @ONLY)
+# FIXME: rewriter plugin is obsolete, need to clean it up
+#configure_file(
+#  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-preprocess.in
+#  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-preprocess @ONLY)
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-hsatools.in

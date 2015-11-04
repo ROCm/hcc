@@ -1,104 +1,51 @@
 // XFAIL: Linux
-// RUN: %cxxamp -Xclang -fhsa-ext %s -o %t.out && %t.out
+// RUN: %hc %s -o %t.out && %t.out
 
 // Parallel STL headers
 #include <coordinate>
 #include <experimental/algorithm>
 #include <experimental/execution_policy>
 
-// C++ headers
-#include <iostream>
-#include <iomanip>
-#include <algorithm>
-#include <numeric>
-
-#define ROW (8)
-#define COL (16)
-#define TEST_SIZE (ROW * COL)
-
 #define _DEBUG (0)
+#include "test_base.h"
+
 
 // negative test
 // no copy_n shall commence
-template<typename _Tp, size_t SIZE, int FIRST_OFFSET, int LAST_OFFSET>
-bool test_negative() {
+template<typename T, size_t SIZE, int FIRST_OFFSET, int LAST_OFFSET>
+bool test_negative(void) {
 
-  // LAST_OFFSET is expected to be less than FIRST_OFFSET
-  static_assert(LAST_OFFSET < FIRST_OFFSET, "test case is invalid!");
+  using std::experimental::parallel::par;
 
-  _Tp input[SIZE] { 0 };
-  _Tp output[SIZE] { 0 };
-
-  // initialize test data
-  std::iota(std::begin(input), std::end(input), 1);
-
-  // launch kernel with parallel STL copy_n
-  using namespace std::experimental::parallel;
-  auto iter = copy_n(par, std::begin(input) + FIRST_OFFSET,
-                          (LAST_OFFSET - FIRST_OFFSET),
-                          std::begin(output) + FIRST_OFFSET);
-
-  // verify data
   bool ret = true;
-  if (iter != std::begin(output) + FIRST_OFFSET) {
-    ret = false;
-  }
-  for (int i = 0; i < SIZE; ++i) {
-    // no copy_n shall commence
-    if (output[i] != 0) {
-      ret = false;
-      break;
-    }
-  }
+  // C array
+  typedef T cArray[SIZE];
+  ret &= run_and_compare<T, SIZE>([](cArray &input, cArray &output1,
+                                                    cArray &output2) {
+    // std::copy_n might cause a segmentfault when n is negative
+    std::experimental::parallel::
+    copy_n(par, std::begin(input) + FIRST_OFFSET, (LAST_OFFSET - FIRST_OFFSET), std::begin(output2) + FIRST_OFFSET);
+  });
+
   return ret;
 }
 
 // postive test
 // copy_n shall commence
-template<typename _Tp, size_t SIZE, size_t FIRST_OFFSET, size_t TEST_LENGTH>
-bool test() {
+template<typename T, size_t SIZE, size_t FIRST_OFFSET, size_t TEST_LENGTH>
+bool test(void) {
 
-  _Tp input[SIZE] { 0 };
-  _Tp output[SIZE] { 0 };
+  using std::experimental::parallel::par;
 
-  // initialize test data
-  std::iota(std::begin(input), std::end(input), 1);
-
-  // launch kernel with parallel STL copy_n
-  using namespace std::experimental::parallel;
-  auto iter = copy_n(par, std::begin(input) + FIRST_OFFSET,
-                          TEST_LENGTH,
-                          std::begin(output) + FIRST_OFFSET);
-
-  // verify data
   bool ret = true;
-  if (iter != std::begin(output) + FIRST_OFFSET + TEST_LENGTH) {
-    ret = false;
-  }
-  for (int i = 0; i < TEST_LENGTH; ++i) {
-    if ((i >= FIRST_OFFSET) && i < (FIRST_OFFSET + TEST_LENGTH)) {
-      // for items within copy_n, the result value shall agree with the kernel
-      if (output[i] != input[i])  {
-        ret = false;
-        break;
-      }
-    } else {
-      // for items outside copy_n, the result value shall be the initial value
-      if (output[i] != 0) {
-        ret = false;
-        break;
-      }
-    }
-  }
-
-#if _DEBUG 
-  for (int i = 0; i < ROW; ++i) {
-    for (int j = 0; j < COL; ++j) {
-      std::cout << std::setw(5) << output[i * COL + j];
-    }
-    std::cout << "\n";
-  } 
-#endif
+  // C array
+  typedef T cArray[SIZE];
+  ret &= run_and_compare<T, SIZE>([](cArray &input, cArray &output1,
+                                                    cArray &output2) {
+    std::copy_n(std::begin(input) + FIRST_OFFSET, TEST_LENGTH, std::begin(output1) + FIRST_OFFSET);
+    std::experimental::parallel::
+    copy_n(par, std::begin(input) + FIRST_OFFSET, TEST_LENGTH, std::begin(output2) + FIRST_OFFSET);
+  });
 
   return ret;
 }

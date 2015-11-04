@@ -10,6 +10,7 @@
 #include <kalmar_runtime.h>
 #include <kalmar_serialize.h>
 
+/** \cond HIDDEN_SYMBOLS */
 namespace Kalmar {
 
 // Dummy interface that looks somewhat like std::shared_ptr<T>
@@ -24,13 +25,13 @@ public:
         _data(const _data<U>& d) restrict(cpu, amp)
         : p_(reinterpret_cast<T *>(d.get())) {}
     __attribute__((annotate("user_deserialize")))
-        explicit _data(__global T* t) restrict(cpu, amp) { p_ = t; }
-    __global T* get(void) const restrict(cpu, amp) { return p_; }
+        explicit _data(T* t) restrict(cpu, amp) { p_ = t; }
+    T* get(void) const restrict(cpu, amp) { return p_; }
     std::shared_ptr<KalmarQueue> get_av() const { return nullptr; }
     void reset() const {}
 
-    T* map_ptr(bool modify = false, size_t count = 0, size_t offset = 0) const { return nullptr; }
-    void unmap_ptr(const void* addr) const {}
+    T* map_ptr(bool modify, size_t count, size_t offset) const { return nullptr; }
+    void unmap_ptr(const void* addr, bool modify, size_t count, size_t offset) const {}
     void synchronize(bool modify = false) const {}
     void get_cpu_access(bool modify = false) const {}
     void copy(_data<T> other, int, int, int) const {}
@@ -42,7 +43,7 @@ public:
     std::shared_ptr<KalmarQueue> get_stage() const { return nullptr; }
 
 private:
-    __global T* p_;
+    T* p_;
 };
 
 template <typename T>
@@ -83,10 +84,10 @@ public:
     void read(T* dst, int size, int offset = 0) const {
         mm->read(dst, size * sizeof(T), offset * sizeof(T));
     }
-    T* map_ptr(bool modify = false, size_t count = 0, size_t offset = 0) const {
+    T* map_ptr(bool modify, size_t count, size_t offset) const {
         return (T*)mm->map(count * sizeof(T), offset * sizeof(T), modify);
     }
-    void unmap_ptr(const void* addr) const { return mm->unmap(const_cast<void*>(addr)); }
+    void unmap_ptr(const void* addr, bool modify, size_t count, size_t offset) const { return mm->unmap(const_cast<void*>(addr), count * sizeof(T), offset * sizeof(T), modify); }
     void sync_to(std::shared_ptr<KalmarQueue> pQueue) const { mm->sync(pQueue, false); }
 
     __attribute__((annotate("serialize")))
@@ -94,8 +95,8 @@ public:
             s.visit_buffer(mm.get(), !std::is_const<T>::value, isArray);
         }
     __attribute__((annotate("user_deserialize")))
-        explicit _data_host(__global typename std::remove_const<T>::type* t) {}
+        explicit _data_host(typename std::remove_const<T>::type* t) {}
 };
 
 } // namespace Kalmar
-
+/** \endcond */

@@ -2,12 +2,58 @@
 /**
  * work-item related functions
  */
+
+
+ulong hc_get_grid_size(uint n) {
+  return (long)get_global_size(n);
+}
+
+ulong hc_get_workitem_absolute_id(uint n) {
+  return (long)get_global_id(n);
+}
+
+ulong hc_get_workitem_id(uint n) {
+  return (long)get_local_id(n);
+}
+
+
+ulong hc_get_group_size(uint n) {
+  return (long)get_local_size(n);
+}
+
+
+ulong hc_get_num_groups(uint n) {
+  return (long)get_num_groups(n);
+}
+
+ulong hc_get_group_id(uint n) {
+  return (long)get_group_id(n);
+}
+
+void hc_barrier(uint n) {
+  return barrier((int)n);
+}
+
+ulong amp_get_global_size(uint n) {
+  return (long)get_global_size(n);
+}
+
 ulong amp_get_global_id(uint n) {
   return (long)get_global_id(n);
 }
 
+
+ulong amp_get_local_size(uint n) {
+  return (long)get_local_size(n);
+}
+
 ulong amp_get_local_id(uint n) {
   return (long)get_local_id(n);
+}
+
+
+ulong amp_get_num_groups(uint n) {
+  return (long)get_num_groups(n);
 }
 
 ulong amp_get_group_id(uint n) {
