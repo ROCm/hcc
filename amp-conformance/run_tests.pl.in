@@ -278,11 +278,13 @@ test_done:
         }
         else
         {
+            flush_log();
             exit_message(1, "Unexpected result!");
         }
     }
     #chdir($tests_root);
     log_message("=====================================================");
+    flush_log();
 }
 
 ### Print summary
@@ -310,12 +312,19 @@ sub exit_message
     exit($_[0]);
 }
 
+my $log_buffer='';
 # Use: log_message(msg, ...)
 sub log_message
 {
+    $log_buffer.="@_\n";
+}
+
+sub flush_log
+{
     open(FH, ">>", $run_log) or &exit_message(1, "Cannot open $run_log");
-    print FH "@_\n";
+    print FH $log_buffer;
     close(FH);
+    $log_buffer='';
 }
 
 # Use: bool_str(val)
