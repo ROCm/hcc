@@ -22,7 +22,7 @@ if [ -n "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
     HLC_LLC=$HCC_HOME/hlc/bin/llc
     HLC_ASM_DIR=$HCC_HOME/HSAILasm
     HLC_ASM=$HCC_HOME/HSAILasm/HSAILasm
-elif [ -e @CMAKE_INSTALL_PREFIX@ ]; then
+elif [ -e @CMAKE_INSTALL_PREFIX@/bin/opt ]; then
     LINK=@CMAKE_INSTALL_PREFIX@/bin/llvm-link
     OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
     CLAMP_DEVICE=@CMAKE_INSTALL_PREFIX@/bin/clamp-device
