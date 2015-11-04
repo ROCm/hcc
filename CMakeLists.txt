@@ -3,7 +3,7 @@ project (HCC)
 
 # set default installation path
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND CMAKE_INSTALL_PREFIX MATCHES "/usr/local")
-  set(CMAKE_INSTALL_PREFIX CACHE STRING "/opt/hcc")
+  set(CMAKE_INSTALL_PREFIX "/opt/hcc" CACHE PATH "Default installation path of hcc" FORCE)
 endif ()
 MESSAGE("Package installation path: ${CMAKE_INSTALL_PREFIX}")
 
