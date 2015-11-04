@@ -1,4 +1,5 @@
 config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
+config.llvm_libs_dir = "@LLVM_LIBS_DIR@"
 config.project_src_dir = "@CPPAMP_SOURCE_DIR@"
 config.executable_output_path = "@EXECUTABLE_OUTPUT_PATH@"
 
