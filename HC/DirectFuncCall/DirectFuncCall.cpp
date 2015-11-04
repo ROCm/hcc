@@ -56,6 +56,8 @@ namespace {
             {
               if(CallInst* ci = dyn_cast<CallInst>(*U))
                 ci->setCalledFunction(wrapperFunc);
+              if(InvokeInst* ii = dyn_cast<InvokeInst>(*U))
+                ii->setCalledFunction(wrapperFunc);
             }
           } // !F->hasNUses > 0
         } // F->hasFnAttribute(HCGridLaunchAttr)
