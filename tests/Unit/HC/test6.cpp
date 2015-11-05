@@ -116,7 +116,7 @@ void vectoradd_float(const grid_launch_parm &lp, float* a, const float* b, const
               tls_accelerator_view,
               ext_tile,
               [=, &ext_tile, &lp] (hc::tiled_index<3> idx) 
-              __attribute__((hc))
+              __HC__
   {
 
       int x = hipBlockDim_x * hipBlockIdx_x + hipThreadIdx_x;
