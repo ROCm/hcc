@@ -8,7 +8,7 @@
 
 if [ -n "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
     EMBED=$HCC_HOME/bin/clamp-embed
-elif [ -e @CMAKE_INSTALL_PREFIX@ ]; then
+elif [ -e @CMAKE_INSTALL_PREFIX@/bin/clamp-embed ]; then
     EMBED=@CMAKE_INSTALL_PREFIX@/bin/clamp-embed
 elif [ -d @LLVM_TOOLS_DIR@ ]; then
     EMBED=@PROJECT_BINARY_DIR@/lib/clamp-embed
