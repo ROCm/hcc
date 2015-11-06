@@ -42,12 +42,6 @@ typedef struct grid_launch_parm
 #include <assert.h>
 
 
-// XXX(Yan-Ming): borrow from AMD's hip repo
-typedef struct ihipStream_t *hipStream_t;
-struct ihipStream_t {
-    hc::accelerator_view av;
-    ihipStream_t(hc::accelerator_view av) : av(av) { };
-};
 
 #define __KERNEL __attribute__((hc_grid_launch))
 
@@ -108,11 +102,6 @@ extern inline dim3 dim3_eval(int x, ...)
 
 #define CUDA_SAFE_CALL(fn) if(fn) fprintf(stderr, "Error in %s:%d\n", __FILE__, __LINE__)
 
-extern inline int hipDeviceSynchronize()
-{
-  hc::accelerator().get_default_view().wait();
-  return 0;
-}
 
 extern inline int hipMalloc(void** ptr, size_t buf_size)
 {
@@ -307,67 +296,6 @@ extern inline int hipMemset(void* ptr, int value, size_t count)
   else return 1;
 }
 
-extern inline grid_launch_parm hipCreateLaunchParam2(hc_uint3 gridDim, hc_uint3 groupDim)
-{
-  grid_launch_parm lp;
-
-  lp.gridDim.x = gridDim.x;
-  lp.gridDim.y = gridDim.y;
-  lp.gridDim.z = gridDim.z;
-
-  lp.groupDim.x = groupDim.x;
-  lp.groupDim.y = groupDim.y;
-  lp.groupDim.z = groupDim.z;
-
-  lp.groupMemBytes = 0;
-  static hc::accelerator_view av = hc::accelerator().get_default_view();
-  lp.av = &av;
-
-  return lp;
-}
-
-extern inline grid_launch_parm hipCreateLaunchParam3(hc_uint3 gridDim,
-                                                     hc_uint3 groupDim,
-                                                     int groupMemBytes)
-{
-  grid_launch_parm lp;
-
-  lp.gridDim.x = gridDim.x;
-  lp.gridDim.y = gridDim.y;
-  lp.gridDim.z = gridDim.z;
-
-  lp.groupDim.x = groupDim.x;
-  lp.groupDim.y = groupDim.y;
-  lp.groupDim.z = groupDim.z;
-
-  lp.groupMemBytes = groupMemBytes;
-  static hc::accelerator_view av = hc::accelerator().get_default_view();
-  lp.av = &av;
-
-  return lp;
-}
-
-extern inline grid_launch_parm hipCreateLaunchParam4(hc_uint3 gridDim,
-                                                     hc_uint3 groupDim,
-                                                     int groupMemBytes,
-                                                     hipStream_t stream)
-{
-  grid_launch_parm lp;
-
-  lp.gridDim.x = gridDim.x;
-  lp.gridDim.y = gridDim.y;
-  lp.gridDim.z = gridDim.z;
-
-  lp.groupDim.x = groupDim.x;
-  lp.groupDim.y = groupDim.y;
-  lp.groupDim.z = groupDim.z;
-
-  lp.groupMemBytes = groupMemBytes;
-  static hc::accelerator_view av = hc::accelerator().get_default_view();
-  lp.av = stream ? &(stream->av) : &av;
-
-  return lp;
-}
 
 // Math MACROS
 #define SQRTF(x) hc::precise_math::sqrtf(x)
