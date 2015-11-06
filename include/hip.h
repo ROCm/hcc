@@ -120,6 +120,10 @@ extern inline int hipMalloc(void** ptr, size_t buf_size)
   return *ptr ? 0 : 1;
 }
 
+extern inline int hipMallocHost(void** ptr, size_t buf_size) {
+  return hipMalloc(ptr, buf_size);
+}
+
 typedef enum
 {
   hipChannelFormatKindSigned = 0,
@@ -298,6 +302,11 @@ extern inline int hipFree(void* ptr)
   // TODO: How to handle errors?
   return 0;
 }
+
+extern inline int hipFreeHost(void* ptr) {
+  return hipFree(ptr);
+}
+
 
 extern inline int hipMemset(void* ptr, int value, size_t count)
 {
