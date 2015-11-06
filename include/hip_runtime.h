@@ -29,9 +29,6 @@ typedef enum hipError_t {
 } hipError_t;
 
 
-static std::vector<hc::accelerator> *g_device = nullptr;
-static int _the_device = 1;
-
 extern "C" {
 
 hipError_t hipStreamCreate(hipStream_t *stream);
