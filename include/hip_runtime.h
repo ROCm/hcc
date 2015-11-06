@@ -8,6 +8,9 @@
 #include <iostream>
 #include <vector>
 
+#define __global__
+#define __host__
+
 #define hipThreadIdx_x (lp.threadId.x)
 #define hipThreadIdx_y (lp.threadId.y)
 #define hipThreadIdx_z (lp.threadId.z)
