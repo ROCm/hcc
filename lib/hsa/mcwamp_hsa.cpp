@@ -512,11 +512,11 @@ public:
         status = hsa_amd_profiling_set_profiler_enabled(commandQueue, 1);
     }
 
-    ~HSAQueue() {
+    void dispose() override {
         hsa_status_t status;
 
 #if KALMAR_DEBUG
-        std::cerr << "HSAQueue::~HSAQueue()\n";
+        std::cerr << "HSAQueue::dispose() in\n";
 #endif
 
         // wait on all existing kernel dispatches and barriers to complete
@@ -535,10 +535,29 @@ public:
         kernelBufferMap.clear();
 
 #if KALMAR_DEBUG
-        std::cerr << "HSAQueue::~HSAQueue(): destroy an HSA command queue: " << commandQueue << "\n";
+        std::cerr << "HSAQueue::dispose(): destroy an HSA command queue: " << commandQueue << "\n";
 #endif
         status = hsa_queue_destroy(commandQueue);
         STATUS_CHECK(status, __LINE__);
+        commandQueue = nullptr;
+
+#if KALMAR_DEBUG
+        std::cerr << "HSAQueue::dispose() out\n";
+#endif
+    }
+
+    ~HSAQueue() {
+#if KALMAR_DEBUG
+        std::cerr << "HSAQueue::~HSAQueue() in\n";
+#endif
+
+        if (commandQueue != nullptr) {
+            dispose();
+        }
+
+#if KALMAR_DEBUG
+        std::cerr << "HSAQueue::~HSAQueue() out\n";
+#endif
     }
 
     // FIXME: implement flush
@@ -1035,12 +1054,25 @@ public:
 
     ~HSADevice() {
 #if KALMAR_DEBUG
-        std::cerr << "HSADevice::~HSADevice()\n";
+        std::cerr << "HSADevice::~HSADevice() in\n";
 #endif
+
+        // release all queues
+        queues_mutex.lock();
+        for (auto queue_iterator : queues) {
+            if (!queue_iterator.expired()) {
+                auto queue = queue_iterator.lock();
+                queue->dispose();
+            }
+        }
+        queues.clear();
+        queues_mutex.unlock();
 
         // deallocate kernarg buffers in the pool
         if (hasHSAKernargRegion() && USE_KERNARG_REGION) {
 #if KERNARG_POOL_SIZE > 0
+            kernargPoolMutex.lock();
+
             hsa_status_t status = HSA_STATUS_SUCCESS;
 
             for (int i = 0; i < KERNARG_POOL_SIZE; ++i) {
@@ -1050,19 +1082,20 @@ public:
 
             kernargPool.clear();
             kernargPoolFlag.clear();
+
+            kernargPoolMutex.unlock();
 #endif
         }
-
-        // release all queues
-        queues_mutex.lock();
-        queues.clear();
-        queues_mutex.unlock();
 
         // release all data in programs
         for (auto kernel_iterator : programs) {
             delete kernel_iterator.second;
         }
         programs.clear();
+
+#if KALMAR_DEBUG
+        std::cerr << "HSADevice::~HSADevice() out\n";
+#endif
     }
 
     std::wstring get_path() const override { return L"hsa"; }
@@ -1512,6 +1545,8 @@ public:
         }
 
 #if SIGNAL_POOL_SIZE > 0
+        signalPoolMutex.lock();
+
         // pre-allocate signals
         for (int i = 0; i < SIGNAL_POOL_SIZE; ++i) {
           hsa_signal_t signal;
@@ -1520,6 +1555,8 @@ public:
           signalPool.push_back(signal);
           signalPoolFlag.push_back(false);
         }
+
+        signalPoolMutex.unlock();
 #endif
     }
 
@@ -1602,8 +1639,19 @@ public:
 
     ~HSAContext() {
         hsa_status_t status = HSA_STATUS_SUCCESS;
+#if KALMAR_DEBUG
+        std::cerr << "HSAContext::~HSAContext() in\n";
+#endif
+
+        // destroy all KalmarDevices associated with this context
+        for (auto dev : Devices)
+            delete dev;
+        Devices.clear();
+        def = nullptr;
 
 #if SIGNAL_POOL_SIZE > 0
+        signalPoolMutex.lock();
+
         // deallocate signals in the pool
         for (int i = 0; i < SIGNAL_POOL_SIZE; ++i) {
             hsa_signal_t signal;
@@ -1613,13 +1661,9 @@ public:
 
         signalPool.clear();
         signalPoolFlag.clear();
-#endif
 
-        // destroy all KalmarDevices associated with this context
-        for (auto dev : Devices)
-            delete dev;
-        Devices.clear();
-        def = nullptr;
+        signalPoolMutex.unlock();
+#endif
 
         // shutdown HSA runtime
 #if KALMAR_DEBUG
@@ -1627,6 +1671,10 @@ public:
 #endif
         status = hsa_shut_down();
         STATUS_CHECK(status, __LINE__);
+
+#if KALMAR_DEBUG
+        std::cerr << "HSAContext::~HSAContext() out\n";
+#endif
     }
 
     uint64_t getSystemTicks() override {
