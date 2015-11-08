@@ -144,7 +144,7 @@ if (NOT HSA_LIBRARY)
 endif (NOT HSA_LIBRARY)
 
 
-find_library(HSA_KMT_LIBRARY libhsakmt.so.1 PATHS ${HSA_KMT_LIBRARY_DIR} ${HSA_ROOT}/lib /usr/lib/x86_64-linux-gnu NO_DEFAULT_PATH)
+find_library(HSA_KMT_LIBRARY libhsakmt.so.1 PATHS ${HSA_KMT_LIBRARY_DIR} /usr/lib/x86_64-linux-gnu ${HSA_ROOT}/lib NO_DEFAULT_PATH)
 find_library(HSA_KMT_LIBRARY libhsakmt.so.1)
 if (NOT HSA_KMT_LIBRARY)
   MESSAGE("HSA Kernel library not found. Use -DHSA_KMT_LIBRARY_DIR=<path_to_libhsakmt.so.1>.")
