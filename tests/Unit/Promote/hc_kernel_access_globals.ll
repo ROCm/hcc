@@ -118,7 +118,7 @@ define internal spir_kernel void @"_ZZ13dilate_kernelRK18grid_launch_parm_siiiiP
 .lr.ph7.i:                                        ; preds = %6
   %16 = load float** getelementptr inbounds (%struct.texture* @t_img, i64 0, i32 1), align 8, !tbaa !24
 ; CHECK-NOT: %16 = load float** getelementptr inbounds (%struct.texture* @t_img, i64 0, i32 1), align 8, !tbaa !24
-; CHECK: %16 = getelementptr inbounds %struct.texture addrspace(1)* @t_img{{[0-9]}}, i64 0, i32 1
+; CHECK: %16 = getelementptr inbounds %struct.texture addrspace(1)* @t_img{{[0-9]*}}, i64 0, i32 1
 ; CHECK-NEXT: %17 = load float* addrspace(1)* %16, align 8, !tbaa !24
 
   %17 = icmp sgt i32 %1, 0
