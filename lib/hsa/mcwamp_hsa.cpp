@@ -215,7 +215,6 @@ private:
     int launchDimensions;
     uint32_t workgroup_size[3];
     uint32_t global_size[3];
-    static const int ARGS_VEC_INITIAL_CAPACITY = 256 * 8;   
 
     hsa_signal_t signal;
     int signalIndex;
@@ -382,15 +381,6 @@ private:
 #endif
         arg_count++;
         return HSA_STATUS_SUCCESS;
-    }
-
-    void registerArgVecMemory() {
-        // record current capacity to compare for changes
-        prevArgVecCapacity = arg_vec.capacity();
-
-        // register the memory behind the arg_vec
-        hsa_status_t status = hsa_memory_register(arg_vec.data(), arg_vec.capacity() * sizeof(uint8_t));
-        assert(status == HSA_STATUS_SUCCESS);
     }
 
     void computeLaunchAttr(int level, int globalSize, int localSize, int recommendedSize) {
@@ -1139,18 +1129,19 @@ public:
     }
     
     void release(void *ptr, struct rw_info* key ) override {
+        hsa_status_t status = HSA_STATUS_SUCCESS;
         if (!is_unified()) {
 #if KALMAR_DEBUG
             std::cerr << "release(" << ptr << "," << key << "): use HSA memory deallocator\n";
 #endif
-            hsa_status_t status = HSA_STATUS_SUCCESS;
             status = hsa_memory_free(ptr);
             STATUS_CHECK(status, __LINE__);
         } else {
 #if KALMAR_DEBUG
             std::cerr << "release(" << ptr << "," << key << "): use host memory deallocator\n";
 #endif
-            hsa_memory_deregister(ptr, key->count);
+            status = hsa_memory_deregister(ptr, key->count);
+            STATUS_CHECK(status, __LINE__);
             ::operator delete(ptr);
         }
     }
@@ -1733,10 +1724,6 @@ HSADispatch::HSADispatch(Kalmar::HSADevice* _device, HSAKernel* _kernel) :
     hsaQueue(nullptr),
     kernargMemory(nullptr) {
 
-    // allocate the initial argument vector capacity
-    arg_vec.reserve(ARGS_VEC_INITIAL_CAPACITY);
-    registerArgVecMemory();
-
     clearArgs();
 
     hsa_status_t status;
@@ -1762,11 +1749,6 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
     hsa_status_t status = HSA_STATUS_SUCCESS;
     if (isDispatched) {
         return HSA_STATUS_ERROR_INVALID_ARGUMENT;
-    }
-  
-    // check if underlying arg_vec data might have changed, if so re-register
-    if (arg_vec.capacity() > prevArgVecCapacity) {
-        registerArgVecMemory();
     }
   
     /*
@@ -1910,8 +1892,10 @@ HSADispatch::waitComplete() {
     if (kernargMemory != nullptr) {
       device->releaseKernargBuffer(kernargMemory, kernargMemoryIndex);
       kernargMemory = nullptr;
+    } else {
+      status = hsa_memory_deregister((void*)arg_vec.data(), arg_vec.size());
+      STATUS_CHECK(status, __LINE__);
     }
-    hsa_memory_deregister((void*)arg_vec.data(), arg_vec.size());
 
     // unregister this async operation from HSAQueue
     if (this->hsaQueue != nullptr) {
@@ -1946,11 +1930,12 @@ HSADispatch::dispatchKernelAsync(Kalmar::HSAQueue* hsaQueue) {
 inline void
 HSADispatch::dispose() {
     hsa_status_t status;
-    status = hsa_memory_deregister(arg_vec.data(), arg_vec.capacity() * sizeof(uint8_t));
-    assert(status == HSA_STATUS_SUCCESS);
     if (kernargMemory != nullptr) {
       device->releaseKernargBuffer(kernargMemory, kernargMemoryIndex);
       kernargMemory = nullptr;
+    } else {
+      status = hsa_memory_deregister((void*)arg_vec.data(), arg_vec.size());
+      STATUS_CHECK(status, __LINE__);
     }
     clearArgs();
     std::vector<uint8_t>().swap(arg_vec);
