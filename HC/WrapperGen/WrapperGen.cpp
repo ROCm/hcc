@@ -5,56 +5,275 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 
-using namespace llvm;
-using namespace std;
-#define EOL << "\n"
-
 namespace
 {
-  enum RangeOptions
-  {
-    PARAMETERS,
-    INITIALIZE,
-    ARGUMENTS,
-    DECLARE
+
+  class WrapperType {
+    public:
+      WrapperType(llvm::Type *Ty, bool isConst=false, bool isByVal=false) {
+        // ConvertTypeToString may change these values
+        mIsConst = isConst;
+        mIsByVal = isByVal;
+        mPointerCount = 0;
+        mIsCustomType = false;
+
+        mTypeName = ConvertTypeToString(Ty);
+      }
+
+      // WrapperType is the same if the name is the same
+      bool operator==(const WrapperType *rhs) {
+        return this->mTypeName == rhs->mTypeName;
+      }
+
+      std::string getTypeName() const {
+        return mTypeName;
+      }
+
+      std::string getTypeNameWithQual() const {
+        std::string str(mTypeName);
+        // FIXME: Fix const correctness
+        if(mIsConst && (mTypeName != "grid_launch_parm"))
+          str.insert(0, "const ");
+        if(mPointerCount && !mIsByVal) {
+          for(unsigned int i = 0; i < mPointerCount; i++)
+            str.append(" * ");
+        }
+        return str;
+      }
+
+      bool isCustomType() {
+        return mIsCustomType;
+      }
+
+      std::vector<WrapperType* > getStructContainerList() {
+        return mStructContainer;
+      }
+
+    private:
+      void FindUnderlyingPointerType(llvm::Type *Ty, llvm::Type *&T);
+      void GetCustomTypeElements(llvm::StructType *sTy);
+      std::string ConvertTypeToString(llvm::Type *Ty);
+      std::string mTypeName;
+      bool mIsConst;
+      bool mIsByVal;
+      unsigned int mPointerCount;
+      bool mIsCustomType;
+
+      std::vector<WrapperType* > mStructContainer;
   };
 
-  void printRange(raw_ostream &out,
-                  vector<pair<string,string>> v,
-                  vector<pair<string,string>>::const_iterator begin,
-                  vector<pair<string,string>>::const_iterator end,
-                  RangeOptions rop=PARAMETERS)
-  {
-    string delim("");
+  class WrapperArgument {
+    public:
+      WrapperArgument(const llvm::Argument &A) {
+        mType = new WrapperType(A.getType(), A.onlyReadsMemory(), A.hasByValAttr());
+
+        mArgName = A.getName();
+        auto st = mArgName.find(".coerce");
+        if(st != std::string::npos)
+          mArgName.erase(st, std::strlen(".coerce"));
+
+      }
+
+      std::string getArgName() const {
+        return mArgName;
+      }
+
+      WrapperType *getType() const {
+        return mType;
+      }
+
+      std::string getTypeName() const {
+        return mType->getTypeName();
+      }
+
+      std::string getTypeNameWithQual() const {
+        return mType->getTypeNameWithQual();
+      }
+
+      bool isCustomType() {
+        return mType->isCustomType();
+      }
+
+      std::vector<WrapperType* > getStructContainerList() {
+        return mType->getStructContainerList();
+      }
+
+    private:
+      WrapperType *mType;
+      std::string mArgName;
+
+  };
+
+  class WrapperFunction {
+    public:
+      WrapperFunction(llvm::Function *F) {
+        mFunctionName = F->getName().str();
+        mFunctorName = mFunctionName + "_functor";
+        mWrapperName = "__hcLaunchKernel_" + mFunctionName;
+      }
+
+      void insertArgument(WrapperArgument* A) {
+        mArgs.push_back(A);
+      }
+
+      void printArgsAsParameters(llvm::raw_ostream &out) {
+        printRange(out, PARAMETERS);
+      }
+
+      void printArgsAsParametersInConstructor(llvm::raw_ostream &out) {
+        printRange(out, PARAMETERSCONSTR);
+      }
+
+      void printArgsAsInitializers(llvm::raw_ostream &out) {
+        printRange(out, INITIALIZE);
+      }
+
+      void printArgsAsArguments(llvm::raw_ostream &out) {
+        printRange(out, ARGUMENTS);
+      }
+
+      void printArgsAsDeclarations(llvm::raw_ostream &out) {
+        printRange(out, DECLARE);
+      }
+
+      void getUnderlyingStructDefs(std::vector<WrapperType* > structList) {
+        for(auto sTy: structList){
+
+          if(sTy->isCustomType())
+          {
+            getUnderlyingStructDefs(sTy->getStructContainerList());
+            mCustomTypes.push_back(sTy);
+          }
+        }
+      }
+
+      std::vector<WrapperType* > getListUniqueTypesInFunction() {
+        for(auto i: mArgs) {
+          if(i->isCustomType()) {
+            auto structList = i->getStructContainerList();
+            getUnderlyingStructDefs(structList);
+            mCustomTypes.push_back(i->getType());
+          }
+        }
+        return mCustomTypes;
+      }
+
+      std::string getFunctionName() const {
+        return mFunctionName;
+      }
+
+      std::string getFunctorName() const {
+        return mFunctorName;
+      }
+
+      std::string getWrapperName() const {
+        return mWrapperName;
+      }
+
+   private:
+      enum RangeOptions {
+        PARAMETERS,
+        PARAMETERSCONSTR,
+        INITIALIZE,
+        ARGUMENTS,
+        DECLARE
+      };
+
+      void printRange(llvm::raw_ostream &out, RangeOptions rop);
+
+      std::vector<WrapperArgument* > mArgs;
+      std::vector<WrapperType* > mCustomTypes;
+      std::string mFunctionName;
+      std::string mFunctorName;
+      std::string mWrapperName;
+  };
+
+  class WrapperModule {
+    public:
+      void insertFuntion(WrapperFunction* F) {
+        locateUniqueTypes(F);
+        mFuncs.push_back(F);
+      }
+      std::vector<WrapperFunction* > getFunctionList() {
+        return mFuncs;
+      }
+      void printCustomTypeDefinition(llvm::raw_ostream &out) {
+        for(auto t: mCustomTypes) {
+          auto structList = t->getStructContainerList();
+          out << "struct " << t->getTypeName() << " { ";
+          unsigned int membCount = 0;
+          for(auto sTy: structList) {
+            out << sTy->getTypeNameWithQual() << " m" << membCount << "; ";
+            membCount++;
+          }
+          out << "};\n";
+        }
+      }
+    private:
+      void locateUniqueTypes(WrapperFunction* F);
+      std::vector<WrapperFunction* > mFuncs;
+      std::vector<WrapperType* > mCustomTypes;
+
+  };
+
+// Class member function definitions ======================================== //
+
+  void WrapperModule::locateUniqueTypes(WrapperFunction* F) {
+    auto wt = F->getListUniqueTypesInFunction();
+    for(auto t: wt) {
+      if(std::find(mCustomTypes.begin(), mCustomTypes.end(), t) == mCustomTypes.end())
+        mCustomTypes.push_back(t);
+    }
+  }
+
+  void WrapperFunction::printRange(llvm::raw_ostream &out, RangeOptions rop) {
+    auto firstArg = mArgs.begin();
+    auto lastArg = mArgs.end();
+
+    std::string delim("");
     if(rop == DECLARE)
       delim.append("; ");
     else delim.append(", ");
 
-    // DECLARE checks for the last element on the list to print a delimiter
-    vector<pair<string,string>>::const_iterator last = end;
-    last--;
+    // Used for DECLARE only. Checks for last element on the list to print a delimiter
+    auto secondLastArg = lastArg;
+    secondLastArg--;
 
-    for(vector<pair<string,string>>::const_iterator i = begin, e = end; i != e; ++i)
-    {
-      if(i != begin)
+    // Used for INITIALIZE only. Omits printing delimiter for first and second arg
+    auto secondArg = firstArg;
+    secondArg++;
+
+    for(auto i: mArgs) {
+      if(rop == INITIALIZE && i != *firstArg && i != *secondArg)
         out << delim;
-      switch(rop)
-      {
+      else if(rop != INITIALIZE && i != *firstArg)
+        out << delim;
+
+      switch(rop) {
+        // type function(type1 arg1, type1 arg2, type2 arg3)
         case PARAMETERS:
-          out << get<0>(*i) << " " << get<1>(*i);
+          out << i->getTypeNameWithQual() << " " << i->getArgName();
           break;
+        // Class::Class(grid_launch_parm _lp, type1 arg2, type2 arg3)
+        case PARAMETERSCONSTR:
+          out << i->getTypeNameWithQual() << " ";
+          if(i->getTypeName() == "grid_launch_parm")
+            out << "_";
+          out << i->getArgName();
+          break;
+        // : arg2(arg2), arg3(arg3) {}
         case INITIALIZE:
-        {
-          string arg(get<1>(*i));
-          out << arg << "(" << arg << ")";
+          if(i->getTypeName() != "grid_launch_parm")
+            out << i->getArgName() << "(" << i->getArgName() << ")";
           break;
-        }
+        // function(arg1, arg2, arg3);
         case ARGUMENTS:
-          out << get<1>(*i);
+          out << i->getArgName();
           break;
+        // type1 arg1; type2 arg2; type1 arg3;
         case DECLARE:
-          out << get<0>(*i) << " " << get<1>(*i);
-          if(i == last)
+          out << i->getTypeNameWithQual() << " " << i->getArgName();
+          if(i == *secondLastArg)
             out << delim;
           break;
         default:
@@ -63,35 +282,28 @@ namespace
     }
   }
 
-  void pointerAsterix(string &str, Type* Ty, Type*& T, bool isByVal=false)
-  {
-    if(Ty->isPointerTy())
-    {
-      Type* nextTy = Ty->getSequentialElementType();
-      if(!isByVal)
-      {
-        str.append("*");
-        pointerAsterix(str, nextTy, T);
+  void WrapperType::FindUnderlyingPointerType(llvm::Type *Ty, llvm::Type *&T) {
+    if(Ty->isPointerTy()) {
+      mPointerCount++;
+      llvm::Type *nextTy = Ty->getSequentialElementType();
+      if(!mIsByVal) {
+        FindUnderlyingPointerType(nextTy, T);
       }
       else T = nextTy;
     }
     else T = Ty;
   }
 
-  // Returns string converted from type. Also returns bool if type is a struct pointer
-  string typeToString(Type* Ty, bool& isStruct, bool isByVal=false)
-  {
-    string str("");
-    Type* T = NULL;
+  std::string WrapperType::ConvertTypeToString(llvm::Type *Ty) {
 
-    pointerAsterix(str, Ty, T, isByVal);
-    assert(T && "T is not NULL");
+    std::string str("");
+    llvm::Type *T = NULL;
 
-    if(IntegerType * intTy = dyn_cast<IntegerType>(T))
-    {
+    FindUnderlyingPointerType(Ty, T);
+
+    if(llvm::IntegerType *intTy = llvm::dyn_cast<llvm::IntegerType>(T)) {
       unsigned bitwidth = intTy->getBitWidth();
-      switch(bitwidth)
-      {
+      switch(bitwidth) {
         case 1:
           str.insert(0, "bool");
           break;
@@ -106,159 +318,148 @@ namespace
           break;
         case 64:
           str.insert(0, "long");
+          break;
         default:
           break;
       };
     }
 
-    if(T->isFloatingPointTy())
-    {
+    if(T->isFloatingPointTy()) {
       if(T->isFloatTy())
         str.insert(0, "float");
-      if (T->isDoubleTy())
+      if(T->isDoubleTy())
         str.insert(0, "double");
     }
 
-    if(StructType * sTy = dyn_cast<StructType>(T))
-    {
-      str.insert(0, sTy->getName().substr(7));
-      isStruct = true;
+    if(llvm::StructType *sTy = llvm::dyn_cast<llvm::StructType>(T)) {
+      str.insert(0, sTy->getName());
+
+      auto st = sTy->getName().find("class.");
+      if(st != std::string::npos)
+        str.erase(st, std::strlen("class."));
+      else {
+        st = sTy->getName().find("struct.");
+        if(st != std::string::npos)
+          str.erase(st, std::strlen("struct."));
+      }
+
+      // Rename struct so there won't be name conflicts during compilation
+      // Linking should still resolve correctly as long as struct has POD members
+      if(str != "grid_launch_parm") {
+        str.append("_gl");
+
+        mIsCustomType = true;
+        GetCustomTypeElements(sTy);
+      }
     }
 
     return str;
+
   }
 
-  void removeString(string& srcStr, const string str)
-  {
-    string::size_type strSzTy = srcStr.find(str);
-    if(strSzTy != string::npos)
-      srcStr.erase(strSzTy, str.size());
+  void WrapperType::GetCustomTypeElements(llvm::StructType *sTy) {
+
+    if(mIsCustomType) {
+
+      for(auto e = sTy->element_begin(), e_end = sTy->element_end(); e != e_end; ++e) {
+        llvm::Type *T = *e;
+
+        mStructContainer.push_back(new WrapperType(T));
+      }
+    }
   }
 
-  struct WrapperGen : public ModulePass
+  struct WrapperGen : public llvm::ModulePass
   {
     static char ID;
-    WrapperGen() : ModulePass(ID) {
+    WrapperGen() : llvm::ModulePass(ID) {
     }
 
-    bool runOnModule(Module &M) override
+    bool runOnModule(llvm::Module &M) override
     {
       // Write to stderr
       // To save to a file, redirect to stdout, discard old stdout and write with tee
       // 2>&1 >/dev/null | tee output.cpp
-      raw_ostream & out = errs();
+      llvm::raw_ostream & out = llvm::errs();
 
       // headers and namespace uses
-      out << "#include \"hc.hpp\"" EOL;
-      out << "#include \"grid_launch.h\"" EOL;
+      out << "#include \"hc.hpp\"\n";
+      out << "#include \"grid_launch.h\"\n";
 
-      out << "using namespace hc;" EOL;
+      out << "using namespace hc;\n";
+
+      WrapperModule *Mod = new WrapperModule;
 
       // Find functions with attribute: grid_launch
-      for(Module::iterator F = M.begin(), F_end = M.end(); F != F_end; ++F)
-      {
-        if(F->hasFnAttribute("hc_grid_launch"))
-        {
-          string funcName = F->getName().str();
-          string wrapperStr = "__hcLaunchKernel_" + funcName;
-          string functorName = F->getName().str() + "_functor";
+      // Collect information
+      for(auto F = M.begin(), F_end = M.end(); F != F_end; ++F) {
+        if(F->hasFnAttribute("hc_grid_launch")) {
+          WrapperFunction* func = new WrapperFunction(F);
 
-          vector<string> customTypes;
-          // get arguments from kernel
-          vector<pair<string,string>> argList;
-          const Function::ArgumentListType &Args(F->getArgumentList());
-          for (Function::ArgumentListType::const_iterator i = Args.begin(), e = Args.end(); i != e; ++i)
-          {
-            bool isStruct = false;
-
-            Type* Ty = i->getType();
-            string argType("");
-
-            // Get type as string and check if type is a struct pointer
-            bool hasByVal = i->hasByValAttr();
-            string tyName = typeToString(Ty, isStruct, hasByVal);
-            argType.append(tyName);
-
-            // check if const
-            if(i->onlyReadsMemory() && (tyName != "grid_launch_parm"))
-              argType.insert(0, "const ");
-
-            pair<string,string> arg = make_pair(argType, i->getName());
-            argList.push_back(arg);
-
-            // Only support struct pointers for now
-            if(isStruct && !hasByVal)
-              customTypes.push_back(argType);
+          const llvm::Function::ArgumentListType &Args(F->getArgumentList());
+          for (auto i = Args.begin(), e = Args.end(); i != e; ++i) {
+            func->insertArgument(new WrapperArgument(*i));
           }
 
-          // Let's assume first argument has to be a grid_launch_parm Type
-          assert(get<0>(argList[0]).compare("%struct.grid_launch_parm*") &&
-                 "First argument of kernel must be of grid_launch_parm type");
-          vector<pair<string,string>>::const_iterator i2 = argList.begin();
-          ++i2;
+          Mod->insertFuntion(func);
+        }
+      }
 
-          // print forward declaration of custom types
-          // only support pointers for now
-          for(auto i : customTypes)
-          {
-            removeString(i, "*");
-            removeString(i, "const ");
-            out << "struct " << i << ";" EOL;
-          }
+      Mod->printCustomTypeDefinition(out);
 
+      for(auto func: Mod->getFunctionList()) {
           // extern kernel definition
-          out << "extern \"C\"" EOL
-                 << "__attribute__((always_inline)) void "
-                 << funcName
-                 << "(";
-                    printRange(out, argList, argList.begin(), argList.end());
-          out << ");"
-                 EOL;
+          out << "\nextern \"C\"" << "\n"
+              << "__attribute__((always_inline)) void "
+              << func->getFunctionName()
+              << "(";
+          func->printArgsAsParameters(out);
+          out << ");\n";
 
           // functor
-          out << "namespace\n{\nstruct " << functorName << "\n{" EOL;
-          out << functorName << "(";
-          out << "grid_launch_parm _lp, ";
-          printRange(out, argList, i2, argList.end());
-          out << ") :" EOL;
-          printRange(out, argList, i2, argList.end(), INITIALIZE);
-          out << "{" EOL;
-          out << "lp.gridDim.x = _lp.gridDim.x;" EOL;
-          out << "lp.gridDim.y = _lp.gridDim.y;" EOL;
-          out << "lp.gridDim.z = _lp.gridDim.z;" EOL;
-          out << "lp.groupDim.x = _lp.groupDim.x;" EOL;
-          out << "lp.groupDim.y = _lp.groupDim.y;" EOL;
-          out << "lp.groupDim.z = _lp.groupDim.z;" EOL;
-          out << "}" EOL;
+          out << "namespace\n{\nstruct " << func->getFunctorName() << "\n{\n";
+          out << func->getFunctorName() << "(";
+          func->printArgsAsParametersInConstructor(out);
+          out << ") :\n";
+          func->printArgsAsInitializers(out);
+          out << "{\n";
+          out << "lp.gridDim.x = _lp.gridDim.x;\n";
+          out << "lp.gridDim.y = _lp.gridDim.y;\n";
+          out << "lp.gridDim.z = _lp.gridDim.z;\n";
+          out << "lp.groupDim.x = _lp.groupDim.x;\n";
+          out << "lp.groupDim.y = _lp.groupDim.y;\n";
+          out << "lp.groupDim.z = _lp.groupDim.z;\n";
+          out << "}\n";
 
-          out << "void operator()(tiled_index<3>& i) __attribute((hc))\n{" EOL;
-          out << "lp.groupId.x = i.tile[0];" EOL;
-          out << "lp.groupId.y = i.tile[1];" EOL;
-          out << "lp.groupId.z = i.tile[2];" EOL;
-          out << "lp.threadId.x = i.local[0];" EOL;
-          out << "lp.threadId.y = i.local[1];" EOL;
-          out << "lp.threadId.z = i.local[2];" EOL;
-          out << funcName << "(lp, ";
-          printRange(out, argList, i2, argList.end(), ARGUMENTS);
-          out << ");\n}" EOL;
+          out << "void operator()(tiled_index<3>& i) __attribute((hc))\n{\n";
+          out << "lp.groupId.x = i.tile[0];\n";
+          out << "lp.groupId.y = i.tile[1];\n";
+          out << "lp.groupId.z = i.tile[2];\n";
+          out << "lp.threadId.x = i.local[0];\n";
+          out << "lp.threadId.y = i.local[1];\n";
+          out << "lp.threadId.z = i.local[2];\n";
+          out << func->getFunctionName() << "(";
+          func->printArgsAsArguments(out);
+          out << ");\n}\n";
 
-          printRange(out, argList, argList.begin(), argList.end(), DECLARE);
-          out << "\n};\n}" EOL;
+          func->printArgsAsDeclarations(out);
+          out << "\n};\n}\n";
 
           // wrapper
-          out << "extern \"C\"" EOL;
-          out << "void " << wrapperStr << "(";
-          printRange(out, argList, argList.begin(), argList.end(), PARAMETERS);
-          out << ")\n{" EOL;
-          out << "completion_future cf = parallel_for_each(*(lp.av),extent<3>(lp.gridDim.x*lp.groupDim.x,lp.gridDim.y*lp.groupDim.y,lp.gridDim.z*lp.groupDim.z).tile(lp.groupDim.x, lp.groupDim.y, lp.groupDim.z), " << functorName << "(";
-          printRange(out, argList, argList.begin(), argList.end(), ARGUMENTS);
-          out << "));\n" EOL;
-          out << "if(lp.cf)" EOL;
-          out << "  *(lp.cf) = cf;" EOL;
-          out << "else" EOL;
-          out << "  cf.wait();\n" EOL;
-          out << "}" EOL;
-        }
+          out << "extern \"C\"\n";
+          out << "void " << func->getWrapperName() << "(";
+          func->printArgsAsParameters(out);
+          out << ")\n{\n";
+          out << "completion_future cf = parallel_for_each(*(lp.av),extent<3>(lp.gridDim.x*lp.groupDim.x,lp.gridDim.y*lp.groupDim.y,lp.gridDim.z*lp.groupDim.z).tile(lp.groupDim.x, lp.groupDim.y, lp.groupDim.z), "
+              << func->getFunctorName()
+              << "(";
+          func->printArgsAsArguments(out);
+          out << "));\n\n"
+              << "if(lp.cf)\n"
+              << "  *(lp.cf) = cf;\n"
+              << "else\n"
+              << "  cf.wait();\n"
+              << "}\n";
       }
         return false;
     }
@@ -266,5 +467,5 @@ namespace
 }
 
 char WrapperGen::ID = 0;
-static RegisterPass<WrapperGen> X("gensrc", "Generate a wrapper and functor source file from input source.", false, false);
+static llvm::RegisterPass<WrapperGen> X("gensrc", "Generate a wrapper and functor source file from input source.", false, false);
 
