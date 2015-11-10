@@ -203,9 +203,6 @@ private:
     hsa_agent_t agent;
     HSAKernel* kernel;
 
-    uint32_t workgroup_max_size;
-    uint16_t workgroup_max_dim[3];
-
     std::vector<uint8_t> arg_vec;
     uint32_t arg_count;
     size_t prevArgVecCapacity;
@@ -270,45 +267,7 @@ public:
         return HSA_STATUS_SUCCESS;
     }
 
-    uint32_t getWorkgroupMaxSize() {
-        return workgroup_max_size;
-    }
-
-    const uint16_t* getWorkgroupMaxDim() {
-        return &workgroup_max_dim[0];
-    }
-
-    hsa_status_t setLaunchAttributes(int dims, size_t *globalDims, size_t *localDims) {
-        assert((0 < dims) && (dims <= 3));
-  
-        // defaults
-        launchDimensions = dims;
-        workgroup_size[0] = workgroup_size[1] = workgroup_size[2] = 1;
-        global_size[0] = global_size[1] = global_size[2] = 1;
-  
-        // for each workgroup dimension, make sure it does not exceed the maximum allowable limit
-        const uint16_t* workgroup_max_dim = getWorkgroupMaxDim();
-        for (int i = 0; i < dims; ++i) {
-            computeLaunchAttr(i, globalDims[i], localDims[i], workgroup_max_dim[i]);
-        }
-  
-        // reduce each dimension in case the overall workgroup limit is exceeded
-        uint32_t workgroup_max_size = getWorkgroupMaxSize();
-        int dim_iterator = 2;
-        size_t workgroup_total_size = workgroup_size[0] * workgroup_size[1] * workgroup_size[2];
-        while(workgroup_total_size > workgroup_max_size) {
-          // repeatedly cut each dimension into half until we are within the limit
-          if (workgroup_size[dim_iterator] >= 2) {
-            workgroup_size[dim_iterator] >>= 1;
-          }
-          if (--dim_iterator < 0) {
-            dim_iterator = 2;
-          }
-          workgroup_total_size = workgroup_size[0] * workgroup_size[1] * workgroup_size[2];
-        }
-  
-        return HSA_STATUS_SUCCESS;
-    }
+    hsa_status_t setLaunchAttributes(int dims, size_t *globalDims, size_t *localDims);
 
     hsa_status_t dispatchKernelWaitComplete(hsa_queue_t* _queue) {
         hsa_status_t status = HSA_STATUS_SUCCESS;
@@ -881,7 +840,18 @@ private:
 
     bool useCoarseGrainedRegion;
 
+    uint32_t workgroup_max_size;
+    uint16_t workgroup_max_dim[3];
+
 public:
+ 
+    uint32_t getWorkgroupMaxSize() {
+        return workgroup_max_size;
+    }
+
+    const uint16_t* getWorkgroupMaxDim() {
+        return &workgroup_max_dim[0];
+    }
 
     // Callback for hsa_agent_iterate_regions.
     // data is of type region_iterator,
@@ -1040,6 +1010,15 @@ public:
             }
 #endif
         }
+
+        /// Query the maximum number of work-items in a workgroup
+        status = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_SIZE, &workgroup_max_size);
+        STATUS_CHECK(status, __LINE__);
+
+        /// Query the maximum number of work-items in each dimension of a workgroup
+        status = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_DIM, &workgroup_max_dim);
+
+        STATUS_CHECK(status, __LINE__);
     }
 
     ~HSADevice() {
@@ -1725,17 +1704,6 @@ HSADispatch::HSADispatch(Kalmar::HSADevice* _device, HSAKernel* _kernel) :
     kernargMemory(nullptr) {
 
     clearArgs();
-
-    hsa_status_t status;
-
-    /// Query the maximum number of work-items in a workgroup
-    status = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_SIZE, &workgroup_max_size);
-    STATUS_CHECK(status, __LINE__);
-
-    /// Query the maximum number of work-items in each dimension of a workgroup
-    status = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_DIM, &workgroup_max_dim);
-
-    STATUS_CHECK(status, __LINE__);
 }
 
 
@@ -1963,6 +1931,40 @@ HSADispatch::getEndTimestamp() override {
     hsa_amd_profiling_get_dispatch_time(device->getAgent(), signal, &time);
     return time.end;
 }
+
+inline hsa_status_t
+HSADispatch::setLaunchAttributes(int dims, size_t *globalDims, size_t *localDims) {
+    assert((0 < dims) && (dims <= 3));
+
+    // defaults
+    launchDimensions = dims;
+    workgroup_size[0] = workgroup_size[1] = workgroup_size[2] = 1;
+    global_size[0] = global_size[1] = global_size[2] = 1;
+
+    // for each workgroup dimension, make sure it does not exceed the maximum allowable limit
+    const uint16_t* workgroup_max_dim = device->getWorkgroupMaxDim();
+    for (int i = 0; i < dims; ++i) {
+        computeLaunchAttr(i, globalDims[i], localDims[i], workgroup_max_dim[i]);
+    }
+
+    // reduce each dimension in case the overall workgroup limit is exceeded
+    uint32_t workgroup_max_size = device->getWorkgroupMaxSize();
+    int dim_iterator = 2;
+    size_t workgroup_total_size = workgroup_size[0] * workgroup_size[1] * workgroup_size[2];
+    while(workgroup_total_size > workgroup_max_size) {
+      // repeatedly cut each dimension into half until we are within the limit
+      if (workgroup_size[dim_iterator] >= 2) {
+        workgroup_size[dim_iterator] >>= 1;
+      }
+      if (--dim_iterator < 0) {
+        dim_iterator = 2;
+      }
+      workgroup_total_size = workgroup_size[0] * workgroup_size[1] * workgroup_size[2];
+    }
+
+    return HSA_STATUS_SUCCESS;
+}
+
 
 // ----------------------------------------------------------------------
 // member function implementation of HSABarrier
