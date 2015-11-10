@@ -258,7 +258,15 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
   # HSA offline finalization
   if [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 1 ]; then
     # conduct HSA offline finalization
-    $HOF_BIN/hof -output=$TEMP_DIR/kernel.isa -brig $TEMP_DIR/kernel.brig
+
+    # Kaveri
+    HOF_ARCH="AMD:AMDGPU:7:0:0"
+     
+    # Fiji 
+    HOF_ARCH="AMD:AMDGPU:8:0:3"
+
+    $HOF_BIN/hof  -target $HOF_ARCH -output $TEMP_DIR/kernel.isa -brig $TEMP_DIR/kernel.brig
+
     ret=$?
     if [ $ret == 0 ]; then
       # build a new kernel object
