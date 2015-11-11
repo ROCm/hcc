@@ -146,6 +146,12 @@ public:
   /// enqueue marker
   virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarker() { return nullptr; }
 
+  /// cleanup internal resource
+  /// this function is usually called by dtor of the implementation classes
+  /// in rare occasions it may be called by other functions to ensure proper
+  /// resource clean up sequence
+  virtual void dispose() {}
+
 private:
   KalmarDevice* pDev;
   queuing_mode mode;

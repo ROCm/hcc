@@ -19,6 +19,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include <hsa.h>
@@ -27,7 +28,38 @@
 
 #include <kalmar_runtime.h>
 
+#include <time.h>
+#include <iomanip>
+
 #define KALMAR_DEBUG (0)
+
+/////////////////////////////////////////////////
+// kernel dispatch speed optimization flags
+/////////////////////////////////////////////////
+
+// size of default kernarg buffer in the kernarg pool in HSAContext
+// default set as 128
+#define KERNARG_BUFFER_SIZE (128)
+
+// number of pre-allocated kernarg buffers in HSAContext
+// default set as 64 (pre-allocating 64 of kernarg buffers in the pool)
+#define KERNARG_POOL_SIZE (64)
+
+// number of pre-allocated HSA signals in HSAContext
+// default set as 64 (pre-allocating 64 HSA signals)
+#define SIGNAL_POOL_SIZE (64)
+
+// whether to set barrier bit in AQL packet in kernel dispatches
+// default set as 0 (barrier bit NOT set in AQL packet)
+#define DISPATCH_PACKET_BARRIER_BIT (0)
+
+// whether to use kernarg region found on the HSA agent
+// default set as 1 (use karnarg region)
+#define USE_KERNARG_REGION (1)
+
+// whether to print out kernel dispatch time
+// default set as 0 (NOT print out kernel dispatch time)
+#define KALMAR_DISPATCH_TIME_PRINTOUT (0)
 
 #define STATUS_CHECK(s,line) if (s != HSA_STATUS_SUCCESS) {\
 		printf("### Error: %d at line:%d\n", s, line);\
@@ -113,6 +145,7 @@ public:
 class HSABarrier : public Kalmar::KalmarAsyncOp {
 private:
     hsa_signal_t signal;
+    int signalIndex;
     bool isDispatched;
 
     std::shared_future<void>* future;
@@ -142,60 +175,14 @@ public:
         dispose();
     }
 
-    hsa_status_t enqueueBarrier(hsa_queue_t* queue) {
-        hsa_status_t status = HSA_STATUS_SUCCESS;
-        if (isDispatched) {
-            return HSA_STATUS_ERROR_INVALID_ARGUMENT;
-        }
-
-        status = hsa_signal_create(1, 0, NULL, &signal);
-        STATUS_CHECK_Q(status, queue, __LINE__);
-
-        // Obtain the write index for the command queue
-        uint64_t index = hsa_queue_load_write_index_relaxed(queue);
-        const uint32_t queueMask = queue->size - 1;
-
-        // Define the barrier packet to be at the calculated queue index address
-        hsa_barrier_and_packet_t* barrier = &(((hsa_barrier_and_packet_t*)(queue->base_address))[index&queueMask]);
-        memset(barrier, 0, sizeof(hsa_barrier_and_packet_t));
-
-        // setup header
-        uint16_t header = HSA_PACKET_TYPE_BARRIER_AND << HSA_PACKET_HEADER_TYPE;
-        header |= 1 << HSA_PACKET_HEADER_BARRIER;
-        header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE;
-        header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE;
-        barrier->header = header;
-
-        barrier->completion_signal = signal;
-
-#if KALMAR_DEBUG
-        std::cerr << "ring door bell to dispatch barrier\n";
-#endif
-
-        // Increment write index and ring doorbell to dispatch the kernel
-        hsa_queue_store_write_index_relaxed(queue, index+1);
-        hsa_signal_store_relaxed(queue->doorbell_signal, index);
-
-        isDispatched = true;
-
-        return status;
-    }
+    hsa_status_t enqueueBarrier(hsa_queue_t* queue);
 
     hsa_status_t enqueueAsync(Kalmar::HSAQueue*);
 
     // wait for the barrier to complete
     hsa_status_t waitComplete();
 
-    void dispose() {
-        hsa_status_t status;
-        status = hsa_signal_destroy(signal);
-        STATUS_CHECK(status, __LINE__);
-
-        if (future != nullptr) {
-          delete future;
-          future = nullptr;
-        }
-    }
+    void dispose();
 
     uint64_t getTimestampFrequency() override {
         // get system tick frequency
@@ -216,20 +203,18 @@ private:
     hsa_agent_t agent;
     HSAKernel* kernel;
 
-    uint32_t workgroup_max_size;
-    uint16_t workgroup_max_dim[3];
-
     std::vector<uint8_t> arg_vec;
     uint32_t arg_count;
     size_t prevArgVecCapacity;
     void* kernargMemory;
+    int kernargMemoryIndex;
 
     int launchDimensions;
     uint32_t workgroup_size[3];
     uint32_t global_size[3];
-    static const int ARGS_VEC_INITIAL_CAPACITY = 256 * 8;   
 
     hsa_signal_t signal;
+    int signalIndex;
     hsa_kernel_dispatch_packet_t aql;
     bool isDispatched;
 
@@ -282,45 +267,7 @@ public:
         return HSA_STATUS_SUCCESS;
     }
 
-    uint32_t getWorkgroupMaxSize() {
-        return workgroup_max_size;
-    }
-
-    const uint16_t* getWorkgroupMaxDim() {
-        return &workgroup_max_dim[0];
-    }
-
-    hsa_status_t setLaunchAttributes(int dims, size_t *globalDims, size_t *localDims) {
-        assert((0 < dims) && (dims <= 3));
-  
-        // defaults
-        launchDimensions = dims;
-        workgroup_size[0] = workgroup_size[1] = workgroup_size[2] = 1;
-        global_size[0] = global_size[1] = global_size[2] = 1;
-  
-        // for each workgroup dimension, make sure it does not exceed the maximum allowable limit
-        const uint16_t* workgroup_max_dim = getWorkgroupMaxDim();
-        for (int i = 0; i < dims; ++i) {
-            computeLaunchAttr(i, globalDims[i], localDims[i], workgroup_max_dim[i]);
-        }
-  
-        // reduce each dimension in case the overall workgroup limit is exceeded
-        uint32_t workgroup_max_size = getWorkgroupMaxSize();
-        int dim_iterator = 2;
-        size_t workgroup_total_size = workgroup_size[0] * workgroup_size[1] * workgroup_size[2];
-        while(workgroup_total_size > workgroup_max_size) {
-          // repeatedly cut each dimension into half until we are within the limit
-          if (workgroup_size[dim_iterator] >= 2) {
-            workgroup_size[dim_iterator] >>= 1;
-          }
-          if (--dim_iterator < 0) {
-            dim_iterator = 2;
-          }
-          workgroup_total_size = workgroup_size[0] * workgroup_size[1] * workgroup_size[2];
-        }
-  
-        return HSA_STATUS_SUCCESS;
-    }
+    hsa_status_t setLaunchAttributes(int dims, size_t *globalDims, size_t *localDims);
 
     hsa_status_t dispatchKernelWaitComplete(hsa_queue_t* _queue) {
         hsa_status_t status = HSA_STATUS_SUCCESS;
@@ -354,24 +301,7 @@ public:
     // wait for the kernel to finish execution
     hsa_status_t waitComplete();
 
-    void dispose() {
-        hsa_status_t status;
-        status = hsa_memory_deregister(arg_vec.data(), arg_vec.capacity() * sizeof(uint8_t));
-        assert(status == HSA_STATUS_SUCCESS);
-        if (kernargMemory != nullptr) {
-          status = hsa_memory_free(kernargMemory);
-          assert(status == HSA_STATUS_SUCCESS);
-          kernargMemory = nullptr;
-        }
-        hsa_signal_destroy(aql.completion_signal);
-        clearArgs();
-        std::vector<uint8_t>().swap(arg_vec);
-
-        if (future != nullptr) {
-          delete future;
-          future = nullptr;
-        }
-    }
+    void dispose();
 
     uint64_t getTimestampFrequency() override {
         // get system tick frequency
@@ -410,15 +340,6 @@ private:
 #endif
         arg_count++;
         return HSA_STATUS_SUCCESS;
-    }
-
-    void registerArgVecMemory() {
-        // record current capacity to compare for changes
-        prevArgVecCapacity = arg_vec.capacity();
-
-        // register the memory behind the arg_vec
-        hsa_status_t status = hsa_memory_register(arg_vec.data(), arg_vec.capacity() * sizeof(uint8_t));
-        assert(status == HSA_STATUS_SUCCESS);
     }
 
     void computeLaunchAttr(int level, int globalSize, int localSize, int recommendedSize) {
@@ -540,11 +461,11 @@ public:
         status = hsa_amd_profiling_set_profiler_enabled(commandQueue, 1);
     }
 
-    ~HSAQueue() {
+    void dispose() override {
         hsa_status_t status;
 
 #if KALMAR_DEBUG
-        std::cerr << "HSAQueue::~HSAQueue()\n";
+        std::cerr << "HSAQueue::dispose() in\n";
 #endif
 
         // wait on all existing kernel dispatches and barriers to complete
@@ -563,10 +484,29 @@ public:
         kernelBufferMap.clear();
 
 #if KALMAR_DEBUG
-        std::cerr << "HSAQueue::~HSAQueue(): destroy an HSA command queue: " << commandQueue << "\n";
+        std::cerr << "HSAQueue::dispose(): destroy an HSA command queue: " << commandQueue << "\n";
 #endif
         status = hsa_queue_destroy(commandQueue);
         STATUS_CHECK(status, __LINE__);
+        commandQueue = nullptr;
+
+#if KALMAR_DEBUG
+        std::cerr << "HSAQueue::dispose() out\n";
+#endif
+    }
+
+    ~HSAQueue() {
+#if KALMAR_DEBUG
+        std::cerr << "HSAQueue::~HSAQueue() in\n";
+#endif
+
+        if (commandQueue != nullptr) {
+            dispose();
+        }
+
+#if KALMAR_DEBUG
+        std::cerr << "HSAQueue::~HSAQueue() out\n";
+#endif
     }
 
     // FIXME: implement flush
@@ -882,6 +822,13 @@ public:
 class HSADevice final : public KalmarDevice
 {
 private:
+    /// memory pool for kernargs
+    std::vector<void*> kernargPool;
+    std::vector<bool> kernargPoolFlag;
+    int kernargCursor;
+    std::mutex kernargPoolMutex;
+
+
     std::map<std::string, HSAKernel *> programs;
     hsa_agent_t agent;
     size_t max_tile_static_size;
@@ -893,7 +840,18 @@ private:
 
     bool useCoarseGrainedRegion;
 
+    uint32_t workgroup_max_size;
+    uint16_t workgroup_max_dim[3];
+
 public:
+ 
+    uint32_t getWorkgroupMaxSize() {
+        return workgroup_max_size;
+    }
+
+    const uint16_t* getWorkgroupMaxDim() {
+        return &workgroup_max_dim[0];
+    }
 
     // Callback for hsa_agent_iterate_regions.
     // data is of type region_iterator,
@@ -1001,7 +959,8 @@ public:
                                agent(a), programs(), max_tile_static_size(0),
                                queues(), queues_mutex(),
                                ri(),
-                               useCoarseGrainedRegion(false) {
+                               useCoarseGrainedRegion(false),
+                               kernargPool(), kernargPoolFlag(), kernargCursor(0), kernargPoolMutex() {
 #if KALMAR_DEBUG
         std::cerr << "HSADevice::HSADevice()\n";
 #endif
@@ -1028,22 +987,84 @@ public:
             }
         }
         useCoarseGrainedRegion = result; 
+
+        /// pre-allocate a pool of kernarg buffers in case:
+        /// - kernarg region is available
+        /// - compile-time macro USE_KERNARG_REGION is set
+        /// - compile-time macro KERNARG_POOL_SIZE is larger than 0
+        if (hasHSAKernargRegion() && USE_KERNARG_REGION) {
+#if KERNARG_POOL_SIZE > 0
+            hsa_region_t kernarg_region = getHSAKernargRegion();
+
+            // pre-allocate kernarg buffers
+            void* kernargMemory = nullptr;
+            for (int i = 0; i < KERNARG_POOL_SIZE; ++i) {
+                status = hsa_memory_allocate(kernarg_region, KERNARG_BUFFER_SIZE,  &kernargMemory);
+                STATUS_CHECK(status, __LINE__);
+
+                status = hsa_memory_assign_agent(kernargMemory, agent, HSA_ACCESS_PERMISSION_RW);
+                STATUS_CHECK(status,  __LINE__);
+
+                kernargPool.push_back(kernargMemory);
+                kernargPoolFlag.push_back(false);
+            }
+#endif
+        }
+
+        /// Query the maximum number of work-items in a workgroup
+        status = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_SIZE, &workgroup_max_size);
+        STATUS_CHECK(status, __LINE__);
+
+        /// Query the maximum number of work-items in each dimension of a workgroup
+        status = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_DIM, &workgroup_max_dim);
+
+        STATUS_CHECK(status, __LINE__);
     }
 
     ~HSADevice() {
 #if KALMAR_DEBUG
-        std::cerr << "HSADevice::~HSADevice()\n";
+        std::cerr << "HSADevice::~HSADevice() in\n";
 #endif
+
         // release all queues
         queues_mutex.lock();
+        for (auto queue_iterator : queues) {
+            if (!queue_iterator.expired()) {
+                auto queue = queue_iterator.lock();
+                queue->dispose();
+            }
+        }
         queues.clear();
         queues_mutex.unlock();
+
+        // deallocate kernarg buffers in the pool
+        if (hasHSAKernargRegion() && USE_KERNARG_REGION) {
+#if KERNARG_POOL_SIZE > 0
+            kernargPoolMutex.lock();
+
+            hsa_status_t status = HSA_STATUS_SUCCESS;
+
+            for (int i = 0; i < KERNARG_POOL_SIZE; ++i) {
+                hsa_memory_free(kernargPool[i]);
+                STATUS_CHECK(status, __LINE__);
+            }
+
+            kernargPool.clear();
+            kernargPoolFlag.clear();
+
+            kernargPoolMutex.unlock();
+#endif
+        }
 
         // release all data in programs
         for (auto kernel_iterator : programs) {
             delete kernel_iterator.second;
         }
         programs.clear();
+
+#if KALMAR_DEBUG
+        std::cerr << "HSADevice::~HSADevice() out\n";
+#endif
     }
 
     std::wstring get_path() const override { return L"hsa"; }
@@ -1087,18 +1108,19 @@ public:
     }
     
     void release(void *ptr, struct rw_info* key ) override {
+        hsa_status_t status = HSA_STATUS_SUCCESS;
         if (!is_unified()) {
 #if KALMAR_DEBUG
             std::cerr << "release(" << ptr << "," << key << "): use HSA memory deallocator\n";
 #endif
-            hsa_status_t status = HSA_STATUS_SUCCESS;
             status = hsa_memory_free(ptr);
             STATUS_CHECK(status, __LINE__);
         } else {
 #if KALMAR_DEBUG
             std::cerr << "release(" << ptr << "," << key << "): use host memory deallocator\n";
 #endif
-            hsa_memory_deregister(ptr, key->count);
+            status = hsa_memory_deregister(ptr, key->count);
+            STATUS_CHECK(status, __LINE__);
             ::operator delete(ptr);
         }
     }
@@ -1207,6 +1229,109 @@ public:
 
     bool hasHSACoarsegrainedRegion() {
       return ri. _found_coarsegrained_region;
+    }
+
+    void releaseKernargBuffer(void* kernargBuffer, int kernargBufferIndex) {
+        if (hasHSAKernargRegion() && USE_KERNARG_REGION) {
+            if ( (KERNARG_POOL_SIZE > 0) && (kernargBufferIndex >= 0) ) {
+                kernargPoolMutex.lock();
+
+                // mark the kernarg buffer pointed by kernelBufferIndex as available
+                kernargPoolFlag[kernargBufferIndex] = false;
+
+                kernargPoolMutex.unlock();
+             } else {
+                if (kernargBuffer != nullptr) {
+                    hsa_memory_free(kernargBuffer);
+                }
+             }
+        }
+    }
+
+    std::pair<void*, int> getKernargBuffer(int size) {
+        void* ret = nullptr;
+        int cursor = 0;
+
+        if (hasHSAKernargRegion() && USE_KERNARG_REGION) {
+
+            // find an available buffer in the pool in case
+            // - kernarg pool is available
+            // - requested size is smaller than KERNARG_BUFFER_SIZE
+            if ( (KERNARG_POOL_SIZE > 0) && (size <= KERNARG_BUFFER_SIZE) ) {
+                kernargPoolMutex.lock();
+                cursor = kernargCursor;
+        
+                if (kernargPoolFlag[cursor] == false) {
+                    // the cursor is valid, use it
+                    ret = kernargPool[cursor];
+        
+                    // set the kernarg buffer as used
+                    kernargPoolFlag[cursor] = true;
+        
+                    // simply move the cursor to the next index
+                    ++kernargCursor;
+                    if (kernargCursor == KERNARG_POOL_SIZE) kernargCursor = 0;          
+                } else {
+                    // the cursor is not valid, sequentially find the next available slot
+                    bool found = false;
+        
+                    int startingCursor = cursor;
+                    do {
+                        ++cursor;
+                        if (kernargCursor == KERNARG_POOL_SIZE) cursor = 0;
+        
+                        if (kernargPoolFlag[cursor] == false) {
+                            // the cursor is valid, use it
+                            ret = kernargPool[cursor];
+        
+                            // set the kernarg buffer as used
+                            kernargPoolFlag[cursor] = true;
+        
+                            // simply move the cursor to the next index
+                            ++kernargCursor;
+                            if (kernargCursor == KERNARG_POOL_SIZE) kernargCursor = 0;
+        
+                            // break from the loop
+                            found = true;
+                            break;
+                        }
+                    } while(cursor != startingCursor); // ensure we at most scan the vector once
+        
+                    if (found == false) {
+                        // can't find any available slot, show error
+                        // FIXME, grow kernarg pool on demand
+                        std::cerr << "ERROR: kernarg buffer vector full!\n";
+                        abort();
+                    }
+        
+                }
+        
+                kernargPoolMutex.unlock();
+            } else {
+                // allocate new buffers in case:
+                // - the kernarg pool is set at compile-time
+                // - requested kernarg buffer size is larger than KERNARG_BUFFER_SIZE
+
+                hsa_status_t status = HSA_STATUS_SUCCESS;
+                hsa_region_t kernarg_region = getHSAKernargRegion();
+    
+                status = hsa_memory_allocate(kernarg_region, size,  &ret);
+                STATUS_CHECK(status, __LINE__);
+    
+                status = hsa_memory_assign_agent(ret, agent, HSA_ACCESS_PERMISSION_RW);
+                STATUS_CHECK(status, __LINE__);
+
+                // set cursor value as -1 to notice the buffer would be deallocated
+                // instead of recycled back into the pool
+                cursor = -1;
+            }
+        } else {
+            // this function does nothing in case:
+            // - kernarg region is not available on the agent
+            // - or we choose not to use kernarg region by setting USE_KERNARG_REGION to 0
+        }
+
+        return std::make_pair(ret, cursor);
     }
 
 private:
@@ -1321,6 +1446,12 @@ private:
 
 class HSAContext final : public KalmarContext
 {
+    /// memory pool for signals
+    std::vector<hsa_signal_t> signalPool;
+    std::vector<bool> signalPoolFlag;
+    int signalCursor;
+    std::mutex signalPoolMutex;
+
     /// Determines if the given agent is of type HSA_DEVICE_TYPE_GPU
     static hsa_status_t find_gpu(hsa_agent_t agent, void *data) {
         hsa_status_t status;
@@ -1361,7 +1492,7 @@ class HSAContext final : public KalmarContext
     }
 
 public:
-    HSAContext() : KalmarContext() {
+    HSAContext() : KalmarContext(), signalPool(), signalPoolFlag(), signalCursor(0), signalPoolMutex() {
         // initialize HSA runtime
 #if KALMAR_DEBUG
         std::cerr << "HSAContext::HSAContext(): init HSA runtime\n";
@@ -1382,22 +1513,138 @@ public:
                 def = Dev;
             Devices.push_back(Dev);
         }
+
+#if SIGNAL_POOL_SIZE > 0
+        signalPoolMutex.lock();
+
+        // pre-allocate signals
+        for (int i = 0; i < SIGNAL_POOL_SIZE; ++i) {
+          hsa_signal_t signal;
+          status = hsa_signal_create(1, 0, NULL, &signal);
+          STATUS_CHECK(status, __LINE__);
+          signalPool.push_back(signal);
+          signalPoolFlag.push_back(false);
+        }
+
+        signalPoolMutex.unlock();
+#endif
+    }
+
+    void releaseSignal(hsa_signal_t signal, int signalIndex) {
+        hsa_status_t status = HSA_STATUS_SUCCESS;
+#if SIGNAL_POOL_SIZE > 0
+        signalPoolMutex.lock();
+
+        // restore signal to the initial value 1
+        hsa_signal_store_release(signal, 1);
+
+        // mark the signal pointed by signalIndex as available
+        signalPoolFlag[signalIndex] = false;
+
+        signalPoolMutex.unlock();
+#else
+        status = hsa_signal_destroy(signal);
+        STATUS_CHECK(status, __LINE__);
+#endif
+    }
+
+    std::pair<hsa_signal_t, int> getSignal() {
+        hsa_status_t status = HSA_STATUS_SUCCESS;
+        hsa_signal_t ret;
+
+#if SIGNAL_POOL_SIZE > 0
+        signalPoolMutex.lock();
+        int cursor = signalCursor;
+
+        if (signalPoolFlag[cursor] == false) {
+            // the cursor is valid, use it
+            ret = signalPool[cursor];
+
+            // set the signal as used
+            signalPoolFlag[cursor] = true;
+
+            // simply move the cursor to the next index
+            ++signalCursor;
+            if (signalCursor == SIGNAL_POOL_SIZE) signalCursor = 0;
+        } else {
+            // the cursor is not valid, sequentially find the next available slot
+            bool found = false;
+            int startingCursor = cursor;
+            do {
+                ++cursor;
+                if (signalCursor == SIGNAL_POOL_SIZE) cursor = 0;
+
+                if (signalPoolFlag[cursor] == false) {
+                    // the cursor is valid, use it
+                    ret = signalPool[cursor];
+
+                    // set the signal as used
+                    signalPoolFlag[cursor] = true;
+
+                    // simply move the cursor to the next index
+                    ++signalCursor;
+                    if (signalCursor == SIGNAL_POOL_SIZE) signalCursor = 0;
+
+                    // break from the loop
+                    found = true;
+                    break;
+                }
+            } while(cursor != startingCursor); // ensure we at most scan the vector once
+
+            if (found == false) {
+                // can't find any available slot, show error
+                // FIXME, grow signals on demand
+                std::cerr << "ERROR: signal vector full!\n";
+                abort();
+            } 
+        }
+
+        signalPoolMutex.unlock();
+#else
+        hsa_signal_create(1, 0, NULL, &ret);
+        int cursor = 0;
+#endif
+        return std::make_pair(ret, cursor);
     }
 
     ~HSAContext() {
+        hsa_status_t status = HSA_STATUS_SUCCESS;
+#if KALMAR_DEBUG
+        std::cerr << "HSAContext::~HSAContext() in\n";
+#endif
+
         // destroy all KalmarDevices associated with this context
         for (auto dev : Devices)
             delete dev;
         Devices.clear();
         def = nullptr;
 
+#if SIGNAL_POOL_SIZE > 0
+        signalPoolMutex.lock();
+
+        // deallocate signals in the pool
+        for (int i = 0; i < SIGNAL_POOL_SIZE; ++i) {
+            hsa_signal_t signal;
+            status = hsa_signal_destroy(signalPool[i]);
+            STATUS_CHECK(status, __LINE__);
+        }
+
+        signalPool.clear();
+        signalPoolFlag.clear();
+
+        signalPoolMutex.unlock();
+#endif
+
         // shutdown HSA runtime
 #if KALMAR_DEBUG
         std::cerr << "HSAContext::~HSAContext(): shut down HSA runtime\n";
 #endif
-        hsa_status_t status;
         status = hsa_shut_down();
         STATUS_CHECK(status, __LINE__);
+
+#if KALMAR_DEBUG
+        std::cerr << "HSAContext::~HSAContext() out\n";
+#endif
     }
 
     uint64_t getSystemTicks() override {
@@ -1456,43 +1703,28 @@ HSADispatch::HSADispatch(Kalmar::HSADevice* _device, HSAKernel* _kernel) :
     hsaQueue(nullptr),
     kernargMemory(nullptr) {
 
-    // allocate the initial argument vector capacity
-    arg_vec.reserve(ARGS_VEC_INITIAL_CAPACITY);
-    registerArgVecMemory();
-
     clearArgs();
-
-    hsa_status_t status;
-
-    /// Query the maximum number of work-items in a workgroup
-    status = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_SIZE, &workgroup_max_size);
-    STATUS_CHECK(status, __LINE__);
-
-    /// Query the maximum number of work-items in each dimension of a workgroup
-    status = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_DIM, &workgroup_max_dim);
-
-    STATUS_CHECK(status, __LINE__);
 }
 
 
 // dispatch a kernel asynchronously
 hsa_status_t 
 HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
+    struct timespec begin;
+    struct timespec end;
+    clock_gettime(CLOCK_REALTIME, &begin);
+
     hsa_status_t status = HSA_STATUS_SUCCESS;
     if (isDispatched) {
         return HSA_STATUS_ERROR_INVALID_ARGUMENT;
     }
   
-    // check if underlying arg_vec data might have changed, if so re-register
-    if (arg_vec.capacity() > prevArgVecCapacity) {
-        registerArgVecMemory();
-    }
-  
     /*
      * Create a signal to wait for the dispatch to finish.
      */
-    status = hsa_signal_create(1, 0, NULL, &signal);
-    STATUS_CHECK_Q(status, commandQueue, __LINE__);
+    std::pair<hsa_signal_t, int> ret = Kalmar::ctx.getSignal();
+    signal = ret.first;
+    signalIndex = ret.second;
   
     /*
      * Initialize the dispatch packet.
@@ -1511,9 +1743,12 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
     aql.grid_size_y = global_size[1];
     aql.grid_size_z = global_size[2];
   
+
     // set dispatch fences
     aql.header = (HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE) |
+#if DISPATCH_PACKET_BARRIER_BIT
                  (1 << HSA_PACKET_HEADER_BARRIER) |
+#endif
                  (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
                  (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
   
@@ -1523,15 +1758,13 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
     // bind kernel arguments
     //printf("arg_vec size: %d in bytes: %d\n", arg_vec.size(), arg_vec.size());
 
-    if (device->hasHSAKernargRegion()) {
+    if (device->hasHSAKernargRegion() && USE_KERNARG_REGION) {
         hsa_region_t kernarg_region = device->getHSAKernargRegion();
 
         if (arg_vec.size() > 0) {
-            status = hsa_memory_allocate(kernarg_region, arg_vec.size(),  &kernargMemory);
-            STATUS_CHECK_Q(status, commandQueue, __LINE__);
-
-            status = hsa_memory_assign_agent(kernargMemory, agent, HSA_ACCESS_PERMISSION_RW);
-            STATUS_CHECK_Q(status, commandQueue, __LINE__);
+            std::pair<void*, int> ret = device->getKernargBuffer(arg_vec.size());
+            kernargMemory = ret.first;
+            kernargMemoryIndex = ret.second;
 
             status = hsa_memory_copy(kernargMemory, arg_vec.data(), arg_vec.size());
             STATUS_CHECK_Q(status, commandQueue, __LINE__);
@@ -1591,6 +1824,12 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
   
     isDispatched = true;
 
+    clock_gettime(CLOCK_REALTIME, &end);
+
+#if KALMAR_DISPATCH_TIME_PRINTOUT
+    std::cerr << std::setprecision(6) << ((float)(end.tv_sec - begin.tv_sec) * 1000 * 1000 + (float)(end.tv_nsec - begin.tv_nsec) / 1000) << "\n";
+#endif
+
     return status;
 }
 
@@ -1619,11 +1858,12 @@ HSADispatch::waitComplete() {
 #endif
 
     if (kernargMemory != nullptr) {
-      status = hsa_memory_free(kernargMemory);
-      assert(status == HSA_STATUS_SUCCESS);
+      device->releaseKernargBuffer(kernargMemory, kernargMemoryIndex);
       kernargMemory = nullptr;
+    } else {
+      status = hsa_memory_deregister((void*)arg_vec.data(), arg_vec.size());
+      STATUS_CHECK(status, __LINE__);
     }
-    hsa_memory_deregister((void*)arg_vec.data(), arg_vec.size());
 
     // unregister this async operation from HSAQueue
     if (this->hsaQueue != nullptr) {
@@ -1655,6 +1895,27 @@ HSADispatch::dispatchKernelAsync(Kalmar::HSAQueue* hsaQueue) {
     return status;
 }
 
+inline void
+HSADispatch::dispose() {
+    hsa_status_t status;
+    if (kernargMemory != nullptr) {
+      device->releaseKernargBuffer(kernargMemory, kernargMemoryIndex);
+      kernargMemory = nullptr;
+    } else {
+      status = hsa_memory_deregister((void*)arg_vec.data(), arg_vec.size());
+      STATUS_CHECK(status, __LINE__);
+    }
+    clearArgs();
+    std::vector<uint8_t>().swap(arg_vec);
+
+    Kalmar::ctx.releaseSignal(signal, signalIndex);
+
+    if (future != nullptr) {
+      delete future;
+      future = nullptr;
+    }
+}
+
 inline uint64_t
 HSADispatch::getBeginTimestamp() override {
     Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(hsaQueue->getDev());
@@ -1670,6 +1931,40 @@ HSADispatch::getEndTimestamp() override {
     hsa_amd_profiling_get_dispatch_time(device->getAgent(), signal, &time);
     return time.end;
 }
+
+inline hsa_status_t
+HSADispatch::setLaunchAttributes(int dims, size_t *globalDims, size_t *localDims) {
+    assert((0 < dims) && (dims <= 3));
+
+    // defaults
+    launchDimensions = dims;
+    workgroup_size[0] = workgroup_size[1] = workgroup_size[2] = 1;
+    global_size[0] = global_size[1] = global_size[2] = 1;
+
+    // for each workgroup dimension, make sure it does not exceed the maximum allowable limit
+    const uint16_t* workgroup_max_dim = device->getWorkgroupMaxDim();
+    for (int i = 0; i < dims; ++i) {
+        computeLaunchAttr(i, globalDims[i], localDims[i], workgroup_max_dim[i]);
+    }
+
+    // reduce each dimension in case the overall workgroup limit is exceeded
+    uint32_t workgroup_max_size = device->getWorkgroupMaxSize();
+    int dim_iterator = 2;
+    size_t workgroup_total_size = workgroup_size[0] * workgroup_size[1] * workgroup_size[2];
+    while(workgroup_total_size > workgroup_max_size) {
+      // repeatedly cut each dimension into half until we are within the limit
+      if (workgroup_size[dim_iterator] >= 2) {
+        workgroup_size[dim_iterator] >>= 1;
+      }
+      if (--dim_iterator < 0) {
+        dim_iterator = 2;
+      }
+      workgroup_total_size = workgroup_size[0] * workgroup_size[1] * workgroup_size[2];
+    }
+
+    return HSA_STATUS_SUCCESS;
+}
+
 
 // ----------------------------------------------------------------------
 // member function implementation of HSABarrier
@@ -1723,6 +2018,58 @@ HSABarrier::enqueueAsync(Kalmar::HSAQueue* hsaQueue) {
     }).share());
 
     return status;
+}
+
+inline hsa_status_t
+HSABarrier::enqueueBarrier(hsa_queue_t* queue) {
+    hsa_status_t status = HSA_STATUS_SUCCESS;
+    if (isDispatched) {
+        return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+    }
+
+    // Create a signal to wait for the barrier to finish.
+    std::pair<hsa_signal_t, int> ret = Kalmar::ctx.getSignal();
+    signal = ret.first;
+    signalIndex = ret.second;
+
+    // Obtain the write index for the command queue
+    uint64_t index = hsa_queue_load_write_index_relaxed(queue);
+    const uint32_t queueMask = queue->size - 1;
+
+    // Define the barrier packet to be at the calculated queue index address
+    hsa_barrier_and_packet_t* barrier = &(((hsa_barrier_and_packet_t*)(queue->base_address))[index&queueMask]);
+    memset(barrier, 0, sizeof(hsa_barrier_and_packet_t));
+
+    // setup header
+    uint16_t header = HSA_PACKET_TYPE_BARRIER_AND << HSA_PACKET_HEADER_TYPE;
+    header |= 1 << HSA_PACKET_HEADER_BARRIER;
+    header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE;
+    header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE;
+    barrier->header = header;
+
+    barrier->completion_signal = signal;
+
+#if KALMAR_DEBUG
+    std::cerr << "ring door bell to dispatch barrier\n";
+#endif
+
+    // Increment write index and ring doorbell to dispatch the kernel
+    hsa_queue_store_write_index_relaxed(queue, index+1);
+    hsa_signal_store_relaxed(queue->doorbell_signal, index);
+
+    isDispatched = true;
+
+    return status;
+}
+
+inline void
+HSABarrier::dispose() {
+    Kalmar::ctx.releaseSignal(signal, signalIndex);
+
+    if (future != nullptr) {
+      delete future;
+      future = nullptr;
+    }
 }
 
 inline uint64_t
