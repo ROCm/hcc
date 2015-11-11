@@ -16,6 +16,9 @@ configure_file(
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/test_one.pl.in
   ${CMAKE_CURRENT_BINARY_DIR}/test_one.pl @ONLY)
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/output-to-junit.pl
+  ${CMAKE_CURRENT_BINARY_DIR}/output-to-junit.pl COPYONLY)
 
 add_custom_target(conformance-all
   COMMAND perl ${CMAKE_CURRENT_BINARY_DIR}/run_tests.pl ${CMAKE_CURRENT_SOURCE_DIR}/Tests
