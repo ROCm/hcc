@@ -27,15 +27,25 @@
 #define hipGridDim_y  (lp.gridDim.y)
 #define hipGridDim_z  (lp.gridDim.z)
 
+
+struct ihipStream_t;
+typedef struct ihipStream_t *hipStream_t;
+
+
 typedef enum hipError_t {
    hipSuccess = 0
 } hipError_t;
 
 
-static std::vector<hc::accelerator> *g_device = nullptr;
-static int _the_device = 1;
-
 extern "C" {
+
+grid_launch_parm hipCreateLaunchParam2(hc_uint3 gridDim, hc_uint3 groupDim);
+
+grid_launch_parm hipCreateLaunchParam3(hc_uint3 gridDim, hc_uint3 groupDim,
+                                       int groupMemBytes);
+
+grid_launch_parm hipCreateLaunchParam4(hc_uint3 gridDim, hc_uint3 groupDim,
+                                       int groupMemBytes, hipStream_t stream);
 
 hipError_t hipStreamCreate(hipStream_t *stream);
 
@@ -48,6 +58,8 @@ hipError_t hipSetDevice(int device);
 hipError_t hipGetDevice(int *device);
 
 hipError_t hipGetDeviceCount(int *count);
+
+int hipDeviceSynchronize(void);
 
 hipError_t hipMemcpyAsync(void *dst, const void *src,
                           size_t  count,

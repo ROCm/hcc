@@ -1,15 +1,86 @@
 #include <hip_runtime.h>
 #ifndef USE_CUDA
 
+namespace hip_runtime {
+  static std::vector<hc::accelerator> *g_device = nullptr;
+  static int _the_device = 1;
+}
+
+
+struct ihipStream_t {
+  hc::accelerator_view av;
+  ihipStream_t(hc::accelerator_view av) : av(av) { };
+};
+
+
 void __attribute__ ((constructor)) hip_init() {
-  g_device = new std::vector<hc::accelerator>(hc::accelerator().get_all());
+  hip_runtime::g_device = new std::vector<hc::accelerator>(hc::accelerator().get_all());
   // use HSA device by default
-  _the_device = 1;
+  hip_runtime::_the_device = 1;
+}
+
+
+grid_launch_parm hipCreateLaunchParam2(hc_uint3 gridDim, hc_uint3 groupDim) {
+  grid_launch_parm lp;
+
+  lp.gridDim.x = gridDim.x;
+  lp.gridDim.y = gridDim.y;
+  lp.gridDim.z = gridDim.z;
+
+  lp.groupDim.x = groupDim.x;
+  lp.groupDim.y = groupDim.y;
+  lp.groupDim.z = groupDim.z;
+
+  lp.groupMemBytes = 0;
+  static hc::accelerator_view av = hc::accelerator().get_default_view();
+  lp.av = &av;
+
+  return lp;
+}
+
+
+grid_launch_parm hipCreateLaunchParam3(hc_uint3 gridDim, hc_uint3 groupDim,
+                                       int groupMemBytes) {
+  grid_launch_parm lp;
+
+  lp.gridDim.x = gridDim.x;
+  lp.gridDim.y = gridDim.y;
+  lp.gridDim.z = gridDim.z;
+
+  lp.groupDim.x = groupDim.x;
+  lp.groupDim.y = groupDim.y;
+  lp.groupDim.z = groupDim.z;
+
+  lp.groupMemBytes = groupMemBytes;
+  static hc::accelerator_view av = hc::accelerator().get_default_view();
+  lp.av = &av;
+
+  return lp;
+}
+
+
+grid_launch_parm hipCreateLaunchParam4(hc_uint3 gridDim, hc_uint3 groupDim,
+                                      int groupMemBytes, hipStream_t stream) {
+  grid_launch_parm lp;
+
+  lp.gridDim.x = gridDim.x;
+  lp.gridDim.y = gridDim.y;
+  lp.gridDim.z = gridDim.z;
+
+  lp.groupDim.x = groupDim.x;
+  lp.groupDim.y = groupDim.y;
+  lp.groupDim.z = groupDim.z;
+
+  lp.groupMemBytes = groupMemBytes;
+  static hc::accelerator_view av = hc::accelerator().get_default_view();
+  lp.av = stream ? &(stream->av) : &av;
+
+  return lp;
 }
 
 
 hipError_t hipStreamCreate(hipStream_t *stream) {
-  *stream = new ihipStream_t((*g_device)[_the_device].create_view());
+  *stream = new ihipStream_t((*hip_runtime::g_device)[hip_runtime::_the_device].create_view());
   // XXX(Yan-Ming): Error handling
   return hipSuccess;
 }
@@ -31,21 +102,27 @@ hipError_t hipStreamDestroy(hipStream_t stream) {
 
 
 hipError_t hipSetDevice(int device) {
-  if (0 <= device && device < g_device->size())
-    _the_device = device;
+  if (0 <= device && device < hip_runtime::g_device->size())
+    hip_runtime::_the_device = device;
   return hipSuccess;
 }
 
 
 hipError_t hipGetDevice(int *device) {
-  *device = _the_device;
+  *device = hip_runtime::_the_device;
   return hipSuccess;
 }
 
 
 hipError_t hipGetDeviceCount(int *count) {
-  *count = g_device->size();
+  *count = hip_runtime::g_device->size();
   return hipSuccess;
+}
+
+
+int hipDeviceSynchronize(void) {
+  hc::accelerator().get_default_view().wait();
+  return 0;
 }
 
 

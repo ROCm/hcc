@@ -1,7 +1,9 @@
 // XFAIL:
-// RUN: %hc %s -o %t.out && %t.out
+// RUN: %hc %s -lhip_runtime -o %t.out && %t.out
 
 #include "hip.h"
+#include "hip_runtime.h"
+
 typedef struct {
   int x;
 } Foo;

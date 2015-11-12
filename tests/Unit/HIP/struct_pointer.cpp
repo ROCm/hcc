@@ -1,9 +1,10 @@
 // XFAIL: Linux
-// RUN: %hc %s -o %t.out && %t.out
+// RUN: %hc %s -lhip_runtime -o %t.out && %t.out
 
 // Test passing a custom type by pointer
 
 #include "hip.h"
+#include "hip_runtime.h"
 
 #define WIDTH 64
 #define HEIGHT 64

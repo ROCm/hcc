@@ -1,7 +1,8 @@
 // XFAIL: Linux
-// RUN: %hc %s -c -o %t_file1.out && %hc %s %t_file1.out -o %t.out && %t.out
+// RUN: %hc %s -c -o %t_file1.out && %hc -lhip_runtime %s %t_file1.out -o %t.out && %t.out
 
 #include <hip.h>
+#include <hip_runtime.h>
 
 __KERNEL void foo(grid_launch_parm lp, int* a)
 {
@@ -24,7 +25,7 @@ int main()
     {
       ret = 1;
       if(i < 64)
-        printf("%d %d\n", a[i], i); 
+        printf("%d %d\n", a[i], i);
       break;
     }
   }

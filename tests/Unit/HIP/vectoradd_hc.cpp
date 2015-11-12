@@ -1,9 +1,10 @@
-// RUN: %hc %s -o %t.out && %t.out
+// RUN: %hc %s -lhip_runtime -o %t.out && %t.out
 
 #include <iostream>
 #include <cmath>
 #include <hc.hpp>
 #include <hip.h>
+#include <hip_runtime.h>
 
 #define WIDTH     1024
 #define HEIGHT    1024
