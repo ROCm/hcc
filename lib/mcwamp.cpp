@@ -252,34 +252,34 @@ RuntimeImpl* GetOrInitRuntime() {
     HSAPlatformDetect hsa_rt;
     OpenCLPlatformDetect opencl_rt;
 
-    char* verbose_env = getenv("CLAMP_VERBOSE");
+    char* verbose_env = getenv("HCC_VERBOSE");
     if (verbose_env != nullptr) {
       if (std::string("ON") == verbose_env) {
         mcwamp_verbose = true;
       }
     }
 
-    // force use certain C++AMP runtime from CLAMP_RUNTIME environment variable
-    char* runtime_env = getenv("CLAMP_RUNTIME");
+    // force use certain C++AMP runtime from HCC_RUNTIME environment variable
+    char* runtime_env = getenv("HCC_RUNTIME");
     if (runtime_env != nullptr) {
       if (std::string("HSA") == runtime_env) {
         if (hsa_rt.detect()) {
           runtimeImpl = LoadHSARuntime();
         } else {
-          std::cerr << "Ignore unsupported CLAMP_RUNTIME environment variable: " << runtime_env << std::endl;
+          std::cerr << "Ignore unsupported HCC_RUNTIME environment variable: " << runtime_env << std::endl;
         }
       } else if (runtime_env[0] == 'C' && runtime_env[1] == 'L') {
           if (opencl_rt.detect()) {
               runtimeImpl = LoadOpenCLRuntime();
           } else {
-              std::cerr << "Ignore unsupported CLAMP_RUNTIME environment variable: " << runtime_env << std::endl;
+              std::cerr << "Ignore unsupported HCC_RUNTIME environment variable: " << runtime_env << std::endl;
           }
       } else if(std::string("CPU") == runtime_env) {
           // CPU runtime should be available
           runtimeImpl = LoadCPURuntime();
           runtimeImpl->set_cpu();
       } else {
-        std::cerr << "Ignore unknown CLAMP_RUNTIME environment variable:" << runtime_env << std::endl;
+        std::cerr << "Ignore unknown HCC_RUNTIME environment variable:" << runtime_env << std::endl;
       }
     }
 
@@ -321,8 +321,8 @@ void *CreateKernel(std::string s, KalmarQueue* pQueue) {
   // FIXME need a more elegant way
   if (GetOrInitRuntime()->m_ImplName.find("libmcwamp_opencl") != std::string::npos) {
     if (firstTime) {
-      // force use OpenCL C kernel from CLAMP_NOSPIR environment variable
-      kernel_env = getenv("CLAMP_NOSPIR");
+      // force use OpenCL C kernel from HCC_NOSPIR environment variable
+      kernel_env = getenv("HCC_NOSPIR");
       if (kernel_env == nullptr) {
           OpenCLPlatformDetect opencl_rt;
         if (opencl_rt.hasSPIR()) {
@@ -356,8 +356,8 @@ void *CreateKernel(std::string s, KalmarQueue* pQueue) {
     // HSA path
 
     if (firstTime) {
-      // force use HSA BRIG kernel from CLAMP_NOISA environment variable
-      kernel_env = getenv("CLAMP_NOISA");
+      // force use HSA BRIG kernel from HCC_NOISA environment variable
+      kernel_env = getenv("HCC_NOISA");
       if (kernel_env == nullptr) {
         // check if offline finalized kernels are available
         size_t kernel_finalized_size = 
