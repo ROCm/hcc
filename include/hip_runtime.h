@@ -1,4 +1,4 @@
-// XXX(Yan-Ming): borrow from AMS's hip repo
+// XXX(Yan-Ming): borrow from AMD's hip repo
 #pragma once
 
 #include <hip.h>
