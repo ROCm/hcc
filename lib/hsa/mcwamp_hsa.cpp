@@ -1044,7 +1044,7 @@ public:
 
             hsa_status_t status = HSA_STATUS_SUCCESS;
 
-            for (int i = 0; i < KERNARG_POOL_SIZE; ++i) {
+            for (int i = 0; i < kernargPool.size(); ++i) {
                 hsa_memory_free(kernargPool[i]);
                 STATUS_CHECK(status, __LINE__);
             }
@@ -1270,7 +1270,7 @@ public:
         
                     // simply move the cursor to the next index
                     ++kernargCursor;
-                    if (kernargCursor == KERNARG_POOL_SIZE) kernargCursor = 0;          
+                    if (kernargCursor == kernargPool.size()) kernargCursor = 0;          
                 } else {
                     // the cursor is not valid, sequentially find the next available slot
                     bool found = false;
@@ -1278,7 +1278,7 @@ public:
                     int startingCursor = cursor;
                     do {
                         ++cursor;
-                        if (kernargCursor == KERNARG_POOL_SIZE) cursor = 0;
+                        if (cursor == kernargPool.size()) cursor = 0;
         
                         if (kernargPoolFlag[cursor] == false) {
                             // the cursor is valid, use it
@@ -1288,8 +1288,8 @@ public:
                             kernargPoolFlag[cursor] = true;
         
                             // simply move the cursor to the next index
-                            ++kernargCursor;
-                            if (kernargCursor == KERNARG_POOL_SIZE) kernargCursor = 0;
+                            kernargCursor = cursor + 1;
+                            if (kernargCursor == kernargPool.size()) kernargCursor = 0;
         
                             // break from the loop
                             found = true;
@@ -1298,10 +1298,48 @@ public:
                     } while(cursor != startingCursor); // ensure we at most scan the vector once
         
                     if (found == false) {
-                        // can't find any available slot, show error
-                        // FIXME, grow kernarg pool on demand
-                        std::cerr << "ERROR: kernarg buffer vector full!\n";
-                        abort();
+                        hsa_status_t status = HSA_STATUS_SUCCESS;
+
+                        // increase kernarg pool on demand by KERNARG_POOL_SIZE
+                        hsa_region_t kernarg_region = getHSAKernargRegion();
+                       
+                        // keep track of the size of kernarg pool before increasing it
+                        int oldKernargPoolSize = kernargPool.size();
+                        int oldKernargPoolFlagSize = kernargPoolFlag.size();
+                        assert(oldKernargPoolSize == oldKernargPoolFlagSize);
+            
+                        // pre-allocate kernarg buffers
+                        void* kernargMemory = nullptr;
+                        for (int i = 0; i < KERNARG_POOL_SIZE; ++i) {
+                            status = hsa_memory_allocate(kernarg_region, KERNARG_BUFFER_SIZE,  &kernargMemory);
+                            STATUS_CHECK(status, __LINE__);
+            
+                            status = hsa_memory_assign_agent(kernargMemory, agent, HSA_ACCESS_PERMISSION_RW);
+                            STATUS_CHECK(status,  __LINE__);
+            
+                            kernargPool.push_back(kernargMemory);
+                            kernargPoolFlag.push_back(false);
+                        }
+
+                        assert(kernargPool.size() == oldKernargPoolSize + KERNARG_POOL_SIZE);
+                        assert(kernargPoolFlag.size() == oldKernargPoolFlagSize + KERNARG_POOL_SIZE);
+
+                        // set return values, after the pool has been increased
+
+                        // use the first item in the newly allocated pool
+                        cursor = oldKernargPoolSize;
+
+                        // access the new item through the newly assigned cursor
+                        ret = kernargPool[cursor];
+
+                        // mark the item as used
+                        kernargPoolFlag[cursor] = true;
+
+                        // simply move the cursor to the next index
+                        kernargCursor = cursor + 1;
+                        if (kernargCursor == kernargPool.size()) kernargCursor = 0;
+
+                        found = true;
                     }
         
                 }
@@ -1549,7 +1587,6 @@ public:
     }
 
     std::pair<hsa_signal_t, int> getSignal() {
-        hsa_status_t status = HSA_STATUS_SUCCESS;
         hsa_signal_t ret;
 
 #if SIGNAL_POOL_SIZE > 0
@@ -1565,14 +1602,14 @@ public:
 
             // simply move the cursor to the next index
             ++signalCursor;
-            if (signalCursor == SIGNAL_POOL_SIZE) signalCursor = 0;
+            if (signalCursor == signalPool.size()) signalCursor = 0;
         } else {
             // the cursor is not valid, sequentially find the next available slot
             bool found = false;
             int startingCursor = cursor;
             do {
                 ++cursor;
-                if (signalCursor == SIGNAL_POOL_SIZE) cursor = 0;
+                if (cursor == signalPool.size()) cursor = 0;
 
                 if (signalPoolFlag[cursor] == false) {
                     // the cursor is valid, use it
@@ -1582,8 +1619,8 @@ public:
                     signalPoolFlag[cursor] = true;
 
                     // simply move the cursor to the next index
-                    ++signalCursor;
-                    if (signalCursor == SIGNAL_POOL_SIZE) signalCursor = 0;
+                    signalCursor = cursor + 1;
+                    if (signalCursor == signalPool.size()) signalCursor = 0;
 
                     // break from the loop
                     found = true;
@@ -1592,10 +1629,43 @@ public:
             } while(cursor != startingCursor); // ensure we at most scan the vector once
 
             if (found == false) {
-                // can't find any available slot, show error
-                // FIXME, grow signals on demand
-                std::cerr << "ERROR: signal vector full!\n";
-                abort();
+                hsa_status_t status = HSA_STATUS_SUCCESS;
+
+                // increase signal pool on demand by SIGNAL_POOL_SIZE
+
+                // keep track of the size of signal pool before increasing it
+                int oldSignalPoolSize = signalPool.size();
+                int oldSignalPoolFlagSize = signalPoolFlag.size();
+                assert(oldSignalPoolSize == oldSignalPoolFlagSize);
+
+                // increase signal pool on demand for another SIGNAL_POOL_SIZE
+                for (int i = 0; i < SIGNAL_POOL_SIZE; ++i) {
+                    hsa_signal_t signal;
+                    status = hsa_signal_create(1, 0, NULL, &signal);
+                    STATUS_CHECK(status, __LINE__);
+                    signalPool.push_back(signal);
+                    signalPoolFlag.push_back(false);
+                }
+
+                assert(signalPool.size() == oldSignalPoolSize + SIGNAL_POOL_SIZE);
+                assert(signalPoolFlag.size() == oldSignalPoolFlagSize + SIGNAL_POOL_SIZE);
+
+                // set return values, after the pool has been increased
+
+                // use the first item in the newly allocated pool
+                cursor = oldSignalPoolSize;
+
+                // access the new item through the newly assigned cursor
+                ret = signalPool[cursor];
+
+                // mark the item as used
+                signalPoolFlag[cursor] = true;
+
+                // simply move the cursor to the next index
+                signalCursor = cursor + 1;
+                if (signalCursor == signalPool.size()) signalCursor = 0;
+
+                found = true;
             } 
         }
 
@@ -1623,7 +1693,7 @@ public:
         signalPoolMutex.lock();
 
         // deallocate signals in the pool
-        for (int i = 0; i < SIGNAL_POOL_SIZE; ++i) {
+        for (int i = 0; i < signalPool.size(); ++i) {
             hsa_signal_t signal;
             status = hsa_signal_destroy(signalPool[i]);
             STATUS_CHECK(status, __LINE__);
