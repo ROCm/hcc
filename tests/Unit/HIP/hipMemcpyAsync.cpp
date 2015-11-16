@@ -1,7 +1,6 @@
 // XFAIL: Linux
 // RUN: %hc %s -lhip_runtime -o %t.out && %t.out
 
-#include "hip.h"
 #include "hip_runtime.h"
 
 struct Foo {
@@ -31,8 +30,8 @@ bool test() {
   T* data1;
   T* data2;
 
-  hipMalloc((void**)&data1, SIZE*sizeof(T));
-  hipMalloc((void**)&data2, SIZE*sizeof(T));
+  hipMallocHost((void**)&data1, SIZE*sizeof(T));
+  hipMallocHost((void**)&data2, SIZE*sizeof(T));
 
   for(int i = 0; i < SIZE; ++i) {
     data1[i] = i;
