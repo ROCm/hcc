@@ -146,6 +146,7 @@ _find_object() {
 }
 
 ARGS="$@"
+_hip_flags=" -lhsa-runtime64 -L/opt/hsa/lib "
 for ARG in $ARGS
 do
   # XXX(Yan-Ming): take hip_runtime library as a special case for now,
@@ -153,10 +154,16 @@ do
   if [ "$ARG" == "-lhip_runtime" ]; then
     cp $HIP_RUNTIME_HOME/libhip_runtime.a $TEMP_DIR/libhip_runtime.a
     ar x $TEMP_DIR/libhip_runtime.a
-    mv hip_runtime.cpp.o $TEMP_DIR/
-    ARG=$TEMP_DIR/hip_runtime.cpp.o
+    for obj in `ar t $TEMP_DIR/libhip_runtime.a | xargs`; do
+      mv $obj $TEMP_DIR/
+      _hip_flags="$TEMP_DIR/$obj $_hip_flags"
+    done
   fi
+done
+ARGS="${ARGS/-lhip_runtime/$_hip_flags}"
 
+for ARG in $ARGS
+do
   if [ -f $ARG ]; then
     FILE=`basename $ARG` # remove path
     FILENAME=$(_find_object $FILE)  # check if it's an object file
