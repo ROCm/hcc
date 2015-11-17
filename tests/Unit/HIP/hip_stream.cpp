@@ -3,7 +3,6 @@
 
 // Test launching three kernels via two different streams
 
-#include "hip.h"
 #include "hip_runtime.h"
 
 #define GRID_SIZE 256
@@ -51,9 +50,9 @@ int main(void) {
   dim3 grid = DIM3(GRID_SIZE, 1);
   dim3 block = DIM3(TILE_SIZE, 1);
 
-  hipLaunchKernel4(kernel1, grid, block, 0, stream1, data1);
-  hipLaunchKernel4(kernel2, grid, block, 0, stream2, data2);
-  hipLaunchKernel4(kernel3, grid, block, 0, stream1, data3);
+  hipLaunchKernel(kernel1, grid, block, 0, stream1, data1);
+  hipLaunchKernel(kernel2, grid, block, 0, stream2, data2);
+  hipLaunchKernel(kernel3, grid, block, 0, stream1, data3);
 
   hipStreamSynchronize(stream1);
   hipStreamSynchronize(stream2);
