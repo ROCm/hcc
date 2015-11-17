@@ -27,8 +27,13 @@ use Cwd;
 use Cwd 'abs_path';
 use File::Basename;
 use File::Find;
+use Getopt::Long;
 use Safe;
 use strict;
+
+my $skip_build_only = 0;
+GetOptions ("skip-build-only" => \$skip_build_only)
+      or die("Error in command line arguments\n");
 
 my $cflag_define = '"-D%s=%s"'; # to be used as sprintf($cflag_define, "NAME", "VALUE");
 my $run_log = abs_path('run.log');
@@ -143,6 +148,7 @@ foreach my $test (@tests)
     foreach my $def_set (@{$Test::config{'definitions'}})
     {
         print "$test : ";
+        my $result;
 
         # Build and execute test
         my $cflags_defs = '';
@@ -165,6 +171,12 @@ foreach my $test (@tests)
         log_message("Command: $command\n"
             ."Build output:\n"
             ."<<<");
+
+	if ($skip_build_only && ($Test::config{'compile_only'} || not $Test::config{'expected_success'})) {
+		$result = SKIP;
+		goto test_done;
+	}
+
         my $build_exit_code = system($command) >> 8;
         log_message(">>>\n"
             ."Build exit code: $build_exit_code");
@@ -190,7 +202,6 @@ foreach my $test (@tests)
         }
 
         # Interpret result
-        my $result;
         if($timeout == 1) {
             $result = FAIL;
         }
@@ -235,6 +246,8 @@ foreach my $test (@tests)
                 $result = FAIL;
             }
         }
+
+test_done:
 
         if($result == PASS)
         {
