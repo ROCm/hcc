@@ -29,6 +29,7 @@ typedef struct grid_launch_parm
 #ifndef USE_CUDA
   // use acc_view for PFE in WrapperGen
   hc::accelerator_view  *av;
+  hc::completion_future *cf;
 #endif
 } grid_launch_parm;
 
@@ -41,4 +42,5 @@ extern inline void grid_launch_init(grid_launch_parm *lp) {
   lp->groupMemBytes = 0;
   static hc::accelerator_view av = hc::accelerator().get_default_view();
   lp->av = &av;
+  lp->cf = NULL;
 }

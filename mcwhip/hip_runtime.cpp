@@ -34,6 +34,7 @@ grid_launch_parm hipCreateLaunchParam(uint3 gridDim, uint3 groupDim,
   lp.groupMemBytes = groupMemBytes;
   static hc::accelerator_view av = hc::accelerator().get_default_view();
   lp.av = stream ? &(stream->av) : &av;
+  lp.cf = NULL;
 
   return lp;
 }

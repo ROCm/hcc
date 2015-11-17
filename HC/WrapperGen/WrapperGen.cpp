@@ -250,9 +250,11 @@ namespace
           out << "void " << wrapperStr << "(";
           printRange(out, argList, argList.begin(), argList.end(), PARAMETERS);
           out << ")\n{" EOL;
-          out << "parallel_for_each(*(lp.av),extent<3>(lp.gridDim.x*lp.groupDim.x,lp.gridDim.y*lp.groupDim.y,lp.gridDim.z*lp.groupDim.z).tile(lp.groupDim.x, lp.groupDim.y, lp.groupDim.z), " << functorName << "(";
+          out << "completion_future cf = parallel_for_each(*(lp.av),extent<3>(lp.gridDim.x*lp.groupDim.x,lp.gridDim.y*lp.groupDim.y,lp.gridDim.z*lp.groupDim.z).tile(lp.groupDim.x, lp.groupDim.y, lp.groupDim.z), " << functorName << "(";
           printRange(out, argList, argList.begin(), argList.end(), ARGUMENTS);
-          out << ")).wait();\n}" EOL;
+          out << "));\n" EOL;
+          out << "if(lp.cf) *(lp.cf) = cf; else cf.wait();\n" EOL;
+          out << "}" EOL;
         }
       }
         return false;

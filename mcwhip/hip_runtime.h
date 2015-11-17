@@ -111,7 +111,10 @@ grid_launch_parm hipCreateLaunchParam(uint3 gridDim, uint3 groupDim,
 
 #define hipLaunchKernel(fn, grid, block, groupMemBytes, av, ...) \
   {grid_launch_parm lp = hipCreateLaunchParam(grid, block, groupMemBytes, av); \
-  fn(lp, __VA_ARGS__);}
+  hc::completion_future cf; \
+  lp.cf = &cf; \
+  fn(lp, __VA_ARGS__); \
+  lp.cf->wait(); }
 
 hipError_t hipMalloc(void** ptr, size_t size);
 
