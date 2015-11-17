@@ -40,7 +40,7 @@ fi
 # 2) @CMAKE_INSTALL_PREFIX@ : default install directory
 # 3) @LLVM_TOOLS_DIR@ : build directory
 
-if [ -z "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
+if [ -n "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
     EMBED=$HCC_HOME/bin/clamp-embed
     AS=$HCC_HOME/bin/llvm-as
     OPT=$HCC_HOME/bin/opt
@@ -49,7 +49,7 @@ if [ -z "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
     MATHLIB=$HCC_HOME/lib
     LIB=$HCC_HOME/lib
     HSATOOLS=$HCC_HOME/bin/clamp-hsatools
-elif [ -e @CMAKE_INSTALL_PREFIX@ ]; then
+elif [ -e @CMAKE_INSTALL_PREFIX@/bin/opt ]; then
     AS=@CMAKE_INSTALL_PREFIX@/bin/llvm-as
     OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
     LLC=@CMAKE_INSTALL_PREFIX@/bin/llc

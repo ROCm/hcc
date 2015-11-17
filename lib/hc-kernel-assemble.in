@@ -7,7 +7,18 @@
 # 2) @CMAKE_INSTALL_PREFIX@ : default install directory
 # 3) @LLVM_TOOLS_DIR@ : build directory
 
-if [ -z "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
+# enable bash debugging
+KMDBSCRIPT="${KMDBSCRIPT:=0}"
+
+# dump the LLVM bitcode
+KMDUMPLLVM="${KMDUMPLLVM:=0}"
+
+if [ $KMDBSCRIPT == "1" ]
+then
+  set -x
+fi
+
+if [ -n "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
   BINPATH=$HCC_HOME/bin
   CLANG=$BINPATH/clang
   CLAMP_CONFIG=$BINPATH/clamp-config
@@ -17,7 +28,7 @@ if [ -z "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
   LLVM_AS=$BINPATH/llvm-as
   LLVM_DIS=$BINPATH/llvm-dis
   LIBPATH=$HCC_HOME/lib
-elif [ -e @CMAKE_INSTALL_PREFIX@ ]; then
+elif [ -e @CMAKE_INSTALL_PREFIX@/bin/clamp-config ]; then
   BINPATH=@CMAKE_INSTALL_PREFIX@/bin
   CLANG=$BINPATH/clang
   CLAMP_CONFIG=$BINPATH/clamp-config
@@ -65,9 +76,18 @@ if [ -f $2 ]; then
 fi
 
 $LLVM_DIS $1 -o $TEMP_NAME.ll
+if [ $KMDUMPLLVM == "1" ]; then
+  cp $TEMP_NAME.ll ./dump.kernel_input.ll
+fi
 $OPT -load $LIBPATH/LLVMDirectFuncCall.so -redirect < $TEMP_NAME.ll 2>$TEMP_NAME.kernel_redirect.ll >/dev/null
+if [ $KMDUMPLLVM == "1" ]; then
+  cp $TEMP_NAME.kernel_redirect.ll ./dump.kernel_redirect.ll
+fi
 if [[ -s $TEMP_NAME.kernel_redirect.ll ]]; then
   $OPT -load $LIBPATH/LLVMWrapperGen.so -gensrc < $TEMP_NAME.ll 2>$TEMP_NAME.camp.cpp >/dev/null
+  if [ $KMDUMPLLVM == "1" ]; then
+    cp $TEMP_NAME.camp.cpp ./dump.kernel_camp.cpp
+  fi
   $LLVM_AS $TEMP_NAME.kernel_redirect.ll -o $TEMP_NAME.kernel_redirect.bc
   $CLANG $CXXFLAGS $TEMP_NAME.camp.cpp $CO $TEMP_NAME.camp.s -emit-llvm
   $CLANG $CXXFLAGS $TEMP_NAME.camp.cpp $CO $TEMP_NAME.camp.o

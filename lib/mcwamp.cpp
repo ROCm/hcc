@@ -61,7 +61,7 @@ struct RuntimeImpl {
     m_GetContextImpl(nullptr),
     isCPU(false) {
     //std::cout << "dlopen(" << libraryName << ")\n";
-    m_RuntimeHandle = dlopen(libraryName, RTLD_LAZY);
+    m_RuntimeHandle = dlopen(libraryName, RTLD_LAZY|RTLD_NODELETE);
     if (!m_RuntimeHandle) {
       std::cerr << "C++AMP runtime load error: " << dlerror() << std::endl;
       return;
@@ -126,7 +126,7 @@ public:
 
     // detect if system runtime is available
     //std::cout << "dlopen(" << m_systemRuntimeLibrary << ")\n";
-    handle = dlopen(m_systemRuntimeLibrary.c_str(), RTLD_LAZY);
+    handle = dlopen(m_systemRuntimeLibrary.c_str(), RTLD_LAZY|RTLD_NODELETE);
     if (!handle) {
         //std::cout << " system runtime not found" << std::endl;
         //std::cout << dlerror() << std::endl;
@@ -138,7 +138,7 @@ public:
 
     // detect if C++AMP runtime is available
     //std::cout << "dlopen(" << m_ampRuntimeLibrary << ")\n";
-    handle = dlopen(m_ampRuntimeLibrary.c_str(), RTLD_LAZY);
+    handle = dlopen(m_ampRuntimeLibrary.c_str(), RTLD_LAZY|RTLD_NODELETE);
     if (!handle) {
       //std::cout << " C++AMP runtime not found" << std::endl;
       //std::cout << dlerror() << std::endl;
@@ -169,7 +169,7 @@ public:
     spir_test_t test_func = nullptr;
     bool result = false;
 
-    ocl_version_test_handle = dlopen("libmcwamp_opencl_version.so", RTLD_LAZY);
+    ocl_version_test_handle = dlopen("libmcwamp_opencl_version.so", RTLD_LAZY|RTLD_NODELETE);
     if (!ocl_version_test_handle) {
       result = false;
     } else {

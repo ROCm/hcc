@@ -3,9 +3,7 @@ project (HCC)
 
 # set default installation path
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND CMAKE_INSTALL_PREFIX MATCHES "/usr/local")
-  set(CMAKE_INSTALL_PREFIX "/opt/hcc")
-else ()
-  set(CMAKE_INSTALL_PREFIX "/opt/hcc")
+  set(CMAKE_INSTALL_PREFIX "/opt/hcc" CACHE PATH "Default installation path of hcc" FORCE)
 endif ()
 MESSAGE("Package installation path: ${CMAKE_INSTALL_PREFIX}")
 
@@ -344,6 +342,7 @@ add_subdirectory(tests)
 add_subdirectory(include)
 add_subdirectory(amp-conformance)
 add_subdirectory(stl-test)
+add_subdirectory(demos)
 
 # create documentation
 configure_file(

@@ -7,10 +7,10 @@
 # 2) @CMAKE_INSTALL_PREFIX@ : default install directory
 # 3) @LLVM_TOOLS_DIR@ : build directory
 
-if [ -z "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
+if [ -n "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
     OPT=$HCC_HOME/bin/opt
     DIS=$HCC_HOME/bin/llvm-dis
-elif [ -e @CMAKE_INSTALL_PREFIX@ ]; then
+elif [ -e @CMAKE_INSTALL_PREFIX@/bin/opt ]; then
     OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
     DIS=@CMAKE_INSTALL_PREFIX@/bin/llvm-dis
 elif [ -d @LLVM_TOOLS_DIR@ ]; then

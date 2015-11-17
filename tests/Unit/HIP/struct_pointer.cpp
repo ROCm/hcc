@@ -1,9 +1,10 @@
 // XFAIL: Linux
-// RUN: %hc %s -o %t.out && %t.out
+// RUN: %hc %s -lhip_runtime -o %t.out && %t.out
 
 // Test passing a custom type by pointer
 
 #include "hip.h"
+#include "hip_runtime.h"
 
 #define WIDTH 64
 #define HEIGHT 64
@@ -13,7 +14,9 @@
 
 __KERNEL void kernel_call(grid_launch_parm lp, float* data1, hipArray* array1)
 {
-  int idx = lp.threadId.x + lp.threadId.y*WIDTH;
+  int x = lp.threadId.x + lp.groupId.x*lp.groupDim.x;
+  int y = lp.threadId.y + lp.groupId.y*lp.groupDim.y;
+  int idx = x + y*WIDTH;
 
   data1[idx] = array1->data[idx];
 
@@ -26,7 +29,7 @@ int main()
 
   float* data1;
 
-  hipMalloc((void**)&data1, WIDTH*HEIGHT*sizeof(float));
+  hipMalloc((void**)&data1, SIZE*sizeof(float));
 
   hipChannelFormatDesc desc = hipCreateChannelDesc();
 
@@ -39,5 +42,14 @@ int main()
 
   hipLaunchKernel(kernel_call, grid, block, data1, array1);
 
-  return 0;
+  int ret = 0;
+  for(int i = 0; i < SIZE; ++i)
+  {
+    if(data1[i] != array1->data[i])
+    {
+      ret = 1;
+      break;
+    }
+  }
+  return ret;
 }

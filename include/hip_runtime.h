@@ -1,4 +1,3 @@
-// XXX(Yan-Ming): borrow from AMS's hip repo
 #pragma once
 
 #include <hip.h>
@@ -7,6 +6,9 @@
 #ifndef USE_CUDA
 #include <iostream>
 #include <vector>
+
+#define __global__
+#define __host__
 
 #define hipThreadIdx_x (lp.threadId.x)
 #define hipThreadIdx_y (lp.threadId.y)
@@ -24,54 +26,46 @@
 #define hipGridDim_y  (lp.gridDim.y)
 #define hipGridDim_z  (lp.gridDim.z)
 
+
+struct ihipStream_t;
+typedef struct ihipStream_t *hipStream_t;
+
+
 typedef enum hipError_t {
    hipSuccess = 0
 } hipError_t;
 
 
-static std::vector<hc::accelerator> *g_device = nullptr;
-static int _the_device = 1;
-void __attribute__ ((constructor)) hip_init() {
-  g_device = new std::vector<hc::accelerator>(hc::accelerator().get_all());
-  // use HSA device by default
-  _the_device = 1;
-}
+extern "C" {
 
+grid_launch_parm hipCreateLaunchParam2(hc_uint3 gridDim, hc_uint3 groupDim);
 
-inline hipError_t hipStreamCreate(hipStream_t *stream) {
-  *stream = new ihipStream_t((*g_device)[_the_device].create_view());
-  // XXX(Yan-Ming): Error handling
-  return hipSuccess;
-}
+grid_launch_parm hipCreateLaunchParam3(hc_uint3 gridDim, hc_uint3 groupDim,
+                                       int groupMemBytes);
 
+grid_launch_parm hipCreateLaunchParam4(hc_uint3 gridDim, hc_uint3 groupDim,
+                                       int groupMemBytes, hipStream_t stream);
 
-hipError_t hipStreamSynchronize(hipStream_t stream) {
-  stream->av.wait();
-  return hipSuccess;
-};
+hipError_t hipStreamCreate(hipStream_t *stream);
 
+hipError_t hipStreamSynchronize(hipStream_t stream=nullptr);
 
-hipError_t hipStreamDestroy(hipStream_t stream) {
-  delete stream;
-  return hipSuccess;
-}
+hipError_t hipStreamDestroy(hipStream_t stream);
 
+hipError_t hipSetDevice(int device);
 
-hipError_t hipSetDevice(int device) {
-  if (0 <= device && device < g_device->size())
-    _the_device = device;
-  return hipSuccess;
-}
+hipError_t hipGetDevice(int *device);
 
+hipError_t hipGetDeviceCount(int *count);
 
-hipError_t hipGetDevice(int *device) {
-  *device = _the_device;
-  return hipSuccess;
-}
+int hipDeviceSynchronize(void);
 
+hipError_t hipMemcpyAsync(void *dst, const void *src,
+                          size_t  count,
+                          hipMemcpyKind kind,
+                          hipStream_t stream=nullptr);
 
-hipError_t hipGetDeviceCount(int *count) {
-  *count = g_device->size();
-  return hipSuccess;
-}
+hipError_t hipMemsetAsync(void *dst, int value, size_t count,
+                          hipStream_t stream=nullptr);
+} // extern "C"
 #endif // #ifndef USE_CUDA

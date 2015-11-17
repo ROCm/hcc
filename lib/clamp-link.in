@@ -11,7 +11,7 @@ fi
 # 2) @CMAKE_INSTALL_PREFIX@ : default install directory
 # 3) @PROJECT_BINARY_DIR@ : build directory
 
-if [ -z "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
+if [ -n "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
     LINK=$HCC_HOME/bin/llvm-link
     OPT=$HCC_HOME/bin/opt
     CLAMP_DEVICE=$HCC_HOME/bin/clamp-device
@@ -22,7 +22,8 @@ if [ -z "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
     HLC_LLC=$HCC_HOME/hlc/bin/llc
     HLC_ASM_DIR=$HCC_HOME/HSAILasm
     HLC_ASM=$HCC_HOME/HSAILasm/HSAILasm
-elif [ -e @CMAKE_INSTALL_PREFIX@ ]; then
+    HIP_RUNTIME_HOME=$HCC_HOME/lib
+elif [ -e @CMAKE_INSTALL_PREFIX@/bin/opt ]; then
     LINK=@CMAKE_INSTALL_PREFIX@/bin/llvm-link
     OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
     CLAMP_DEVICE=@CMAKE_INSTALL_PREFIX@/bin/clamp-device
@@ -33,6 +34,7 @@ elif [ -e @CMAKE_INSTALL_PREFIX@ ]; then
     HLC_LLC=@CMAKE_INSTALL_PREFIX@/hlc/bin/llc
     HLC_ASM_DIR=@CMAKE_INSTALL_PREFIX@/HSAILasm
     HLC_ASM=@CMAKE_INSTALL_PREFIX@/HSAILasm/HSAILasm
+    HIP_RUNTIME_HOME=@CMAKE_INSTALL_PREFIX@/lib
 elif [ -d @PROJECT_BINARY_DIR@ ]; then
     LINK=@LLVM_TOOLS_DIR@/llvm-link
     OPT=@LLVM_TOOLS_DIR@/opt
@@ -44,6 +46,7 @@ elif [ -d @PROJECT_BINARY_DIR@ ]; then
     HLC_LLC=@PROJECT_BINARY_DIR@/hlc/bin/llc
     HLC_ASM_DIR=@PROJECT_BINARY_DIR@/HSAILasm
     HLC_ASM=@PROJECT_BINARY_DIR@/HSAILasm/HSAILAsm/HSAILasm # notice the "A"
+    HIP_RUNTIME_HOME=@PROJECT_BINARY_DIR@/build/Release/lib
 else
     echo "ERROR: Can NOT locate HCC tools! Please specify with $HCC_HOME environmental variable." >&2
     exit 1
@@ -130,11 +133,10 @@ _find_object() {
   local ret=${FILE%.o}
 
   if [ -e $FILE ]; then
-    local readelf_output=`readelf -h $FILE`
-    local relocatable=`echo $readelf_output | grep 'Relocatable file'`
-    local notELF=`echo $readelf_output | grep 'Not an ELF'`
+    local file_output=`file $FILE | grep 'ELF 64-bit LSB  relocatable, x86-64'`
+    local readelf_output=`readelf -h $FILE | grep 'Relocatable file'`
 
-    if [ ! -z "$relocatable" ] && [ -z "$notELF" ]; then
+    if [ ! -z "$file_output" ] && [ ! -z "$readelf_output" ]; then
       # remove postfix
       ret=${FILE%.*}
     fi
@@ -146,6 +148,15 @@ _find_object() {
 ARGS="$@"
 for ARG in $ARGS
 do
+  # XXX(Yan-Ming): take hip_runtime library as a special case for now,
+  # need to refactor for accepting general (user-specified) -l flags
+  if [ "$ARG" == "-lhip_runtime" ]; then
+    cp $HIP_RUNTIME_HOME/libhip_runtime.a $TEMP_DIR/libhip_runtime.a
+    ar x $TEMP_DIR/libhip_runtime.a
+    mv hip_runtime.cpp.o $TEMP_DIR/
+    ARG=$TEMP_DIR/hip_runtime.cpp.o
+  fi
+
   if [ -f $ARG ]; then
     FILE=`basename $ARG` # remove path
     FILENAME=$(_find_object $FILE)  # check if it's an object file

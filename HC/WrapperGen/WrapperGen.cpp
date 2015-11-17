@@ -78,9 +78,8 @@ namespace
     else T = Ty;
   }
 
-   // Alternative to the hash table?
-  //
-  string typeToString(Type* Ty, bool isByVal=false)
+  // Returns string converted from type. Also returns bool if type is a struct pointer
+  string typeToString(Type* Ty, bool& isStruct, bool isByVal=false)
   {
     string str("");
     Type* T = NULL;
@@ -121,9 +120,19 @@ namespace
     }
 
     if(StructType * sTy = dyn_cast<StructType>(T))
+    {
       str.insert(0, sTy->getName().substr(7));
+      isStruct = true;
+    }
 
     return str;
+  }
+
+  void removeString(string& srcStr, const string str)
+  {
+    string::size_type strSzTy = srcStr.find(str);
+    if(strSzTy != string::npos)
+      srcStr.erase(strSzTy, str.size());
   }
 
   struct WrapperGen : public ModulePass
@@ -154,16 +163,20 @@ namespace
           string wrapperStr = "__hcLaunchKernel_" + funcName;
           string functorName = F->getName().str() + "_functor";
 
+          vector<string> customTypes;
           // get arguments from kernel
           vector<pair<string,string>> argList;
           const Function::ArgumentListType &Args(F->getArgumentList());
           for (Function::ArgumentListType::const_iterator i = Args.begin(), e = Args.end(); i != e; ++i)
           {
+            bool isStruct = false;
+
             Type* Ty = i->getType();
             string argType("");
 
-            // Get type as string
-            string tyName = typeToString(Ty, i->hasByValAttr());
+            // Get type as string and check if type is a struct pointer
+            bool hasByVal = i->hasByValAttr();
+            string tyName = typeToString(Ty, isStruct, hasByVal);
             argType.append(tyName);
 
             // check if const
@@ -172,6 +185,10 @@ namespace
 
             pair<string,string> arg = make_pair(argType, i->getName());
             argList.push_back(arg);
+
+            // Only support struct pointers for now
+            if(isStruct && !hasByVal)
+              customTypes.push_back(argType);
           }
 
           // Let's assume first argument has to be a grid_launch_parm Type
@@ -179,6 +196,15 @@ namespace
                  "First argument of kernel must be of grid_launch_parm type");
           vector<pair<string,string>>::const_iterator i2 = argList.begin();
           ++i2;
+
+          // print forward declaration of custom types
+          // only support pointers for now
+          for(auto i : customTypes)
+          {
+            removeString(i, "*");
+            removeString(i, "const ");
+            out << "struct " << i << ";" EOL;
+          }
 
           // extern kernel definition
           out << "extern \"C\"" EOL
