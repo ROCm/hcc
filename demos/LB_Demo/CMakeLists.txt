@@ -2,7 +2,7 @@ SET(LB_DEMO_PATH "${DEMO_BIN_PATH}/LB_Demo")
 file(MAKE_DIRECTORY ${LB_DEMO_PATH})
 
 add_custom_target(2dLB_gl
-  COMMAND test -f ${CLAMPCONFIG_BIN} && ${LLVM_ROOT}/bin/clang++ `${CLAMPCONFIG_BIN} --build --cxxflags --ldflags` -hc -o ${LB_DEMO_PATH}/2dLB_gl ${CMAKE_CURRENT_SOURCE_DIR}/2dLB_gl.cpp -lGLEW -lglut -lGL  || echo "clamp-config NOT found, skipping 2dLB GridLaunch"
+  COMMAND test -f ${CLAMPCONFIG_BIN} && ${LLVM_ROOT}/bin/clang++ `${CLAMPCONFIG_BIN} --build --cxxflags --ldflags` -hc -lhip_runtime -o ${LB_DEMO_PATH}/2dLB_gl ${CMAKE_CURRENT_SOURCE_DIR}/2dLB_gl.cpp -lGLEW -lglut -lGL  || echo "clamp-config NOT found, skipping 2dLB GridLaunch"
   COMMENT "Building 2dLB GridLaunch")
 
 if(CUDA_BIN_PATH)

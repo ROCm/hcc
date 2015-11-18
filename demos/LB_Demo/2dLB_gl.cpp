@@ -23,7 +23,7 @@
 #include <stdlib.h>
 #include <GL/glew.h>
 #include <GL/glut.h>
-#include <hip.h>
+#include <hip_runtime.h>
 
 #define TILE_I 16
 #define TILE_J 8
@@ -472,7 +472,7 @@ void stream(void)
     dim3 grid = DIM3(ni/TILE_I, nj/TILE_J);
     dim3 block = DIM3(TILE_I, TILE_J);
 
-    hipLaunchKernel(stream_kernel, grid, block, pitch, f1_data, f2_data, f3_data, f4_data,
+    hipLaunchKernel(stream_kernel, grid, block, 0, 0, pitch, f1_data, f2_data, f3_data, f4_data,
                                    f5_data, f6_data, f7_data, f8_data
 #ifdef USE_CUDA
         );
@@ -571,7 +571,7 @@ void collide(void)
     dim3 grid = DIM3(ni/TILE_I, nj/TILE_J);
     dim3 block = DIM3(TILE_I, TILE_J);
 
-    hipLaunchKernel(collide_kernel, grid, block, pitch, tau, faceq1, faceq2, faceq3,
+    hipLaunchKernel(collide_kernel, grid, block, 0, 0, pitch, tau, faceq1, faceq2, faceq3,
                                     f0_data, f1_data, f2_data, f3_data, f4_data,
                                     f5_data, f6_data, f7_data, f8_data, plot_data);
     
@@ -652,7 +652,7 @@ void apply_BCs(void)
     dim3 grid = DIM3(ni/TILE_I, nj/TILE_J);
     dim3 block = DIM3(TILE_I, TILE_J);
 
-    hipLaunchKernel(apply_BCs_kernel, grid, block, ni, nj, pitch, vxin, roout, faceq2,faceq3,
+    hipLaunchKernel(apply_BCs_kernel, grid, block, 0, 0, ni, nj, pitch, vxin, roout, faceq2,faceq3,
                                       f0_data, f1_data, f2_data,
                                       f3_data, f4_data, f5_data, 
                                       f6_data, f7_data, f8_data, solid_data);
@@ -699,7 +699,7 @@ void apply_Periodic_BC(void)
     dim3 grid = DIM3(ni/TILE_I, nj/TILE_J);
     dim3 block = DIM3(TILE_I, TILE_J);
 
-    hipLaunchKernel(apply_Periodic_BC_kernel, grid, block, ni, nj, pitch,
+    hipLaunchKernel(apply_Periodic_BC_kernel, grid, block, 0, 0, ni, nj, pitch,
 					      f2_data,f4_data, f5_data, 
 					      f6_data, f7_data, f8_data);
     
@@ -741,7 +741,7 @@ void get_rgba(void)
     dim3 grid = DIM3(ni/TILE_I, nj/TILE_J);
     dim3 block = DIM3(TILE_I, TILE_J);
 
-    hipLaunchKernel(get_rgba_kernel, grid, block, pitch, ncol, minvar, maxvar,
+    hipLaunchKernel(get_rgba_kernel, grid, block, 0, 0, pitch, ncol, minvar, maxvar,
 				     plot_data, plot_rgba_data, cmap_rgba_data,
                                      solid_data);
     

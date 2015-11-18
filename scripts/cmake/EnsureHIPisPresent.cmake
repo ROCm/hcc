@@ -49,7 +49,6 @@ macro(ensure_hip_is_present dest_dir name)
       MESSAGE("Going to use local HIP implementation")
 
       # XXX(Yan-Ming): fix filenames
-      create_link("${LOCAL_HIP_DIR}/hip.h" "${HIP_HEADER_DIR}")
       create_link("${LOCAL_HIP_DIR}/hip_runtime.h" "${HIP_HEADER_DIR}")
       create_link("${LOCAL_HIP_DIR}/hip-cuda.h" "${HIP_HEADER_DIR}")
       create_link("${LOCAL_HIP_DIR}/hip_runtime.cpp" "${HIP_LIB_DIR}")

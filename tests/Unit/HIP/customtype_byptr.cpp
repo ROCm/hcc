@@ -1,7 +1,6 @@
 // XFAIL: Linux
 // RUN: %hc %s -lhip_runtime -o %t.out && %t.out
 
-#include "hip.h"
 #include "hip_runtime.h"
 
 typedef struct {
@@ -45,7 +44,7 @@ int main(void) {
   dim3 grid = DIM3(GRID_SIZE, 1);
   dim3 block = DIM3(TILE_SIZE, 1);
 
-  hipLaunchKernel(kernel1, grid, block, data1, data2, data3);
+  hipLaunchKernel(kernel1, grid, block, 0, 0, data1, data2, data3);
 
   bool ret = 0;
   for(int i = 0; i < SIZE; ++i) {
