@@ -1,6 +1,8 @@
 #pragma once
 
 #include <stdint.h>
+
+#ifndef USE_CUDA
 #include <hc.hpp>
 
 // Grid launch attributes for clang
@@ -19,6 +21,8 @@ typedef struct
   int x,y,z;
 } uint3;
 
+#endif // not USE_CUDA
+
 typedef struct grid_launch_parm
 {
   uint3      gridDim;
@@ -33,6 +37,7 @@ typedef struct grid_launch_parm
 #endif
 } grid_launch_parm;
 
+#ifndef USE_CUDA
 // TODO: Will move to separate source file in the future
 extern inline void grid_launch_init(grid_launch_parm *lp) {
   lp->gridDim.x = lp->gridDim.y = lp->gridDim.z = 1;
@@ -44,3 +49,4 @@ extern inline void grid_launch_init(grid_launch_parm *lp) {
   lp->av = &av;
   lp->cf = NULL;
 }
+#endif

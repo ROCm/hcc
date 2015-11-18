@@ -62,27 +62,7 @@
 #define hipMemcpyDeviceToHost cudaMemcpyDeviceToHost
 #define hipMemcpyDeviceToDevice cudaMemcpyDeviceToDevice
 
-#define hipLaunchKernel(kernel, grid, block, ...) \
-  { grid_launch_parm lp; \
-  lp.gridDim.x = grid.x; \
-  lp.gridDim.y = grid.y; \
-  lp.gridDim.z = grid.z; \
-  lp.groupDim.x = block.x; \
-  lp.groupDim.y = block.y; \
-  lp.groupDim.z = block.z; \
-  kernel<<<grid, block>>>(lp, __VA_ARGS__);}
-
-#define hipLaunchKernel3(kernel, grid, block, shared, ...) \
-  { grid_launch_parm lp; \
-  lp.gridDim.x = grid.x; \
-  lp.gridDim.y = grid.y; \
-  lp.gridDim.z = grid.z; \
-  lp.groupDim.x = block.x; \
-  lp.groupDim.y = block.y; \
-  lp.groupDim.z = block.z; \
-  kernel<<<grid, block, shared>>>(lp, __VA_ARGS__);}
-
-#define hipLaunchKernel4(kernel, grid, block, shared, stream,...) \
+#define hipLaunchKernel(kernel, grid, block, shared, stream,...) \
   { grid_launch_parm lp; \
   lp.gridDim.x = grid.x; \
   lp.gridDim.y = grid.y; \

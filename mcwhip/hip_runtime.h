@@ -1,6 +1,8 @@
 // XXX(Yan-Ming): borrow from AMD's hip repo
 #pragma once
 
+#include <grid_launch.h>
+
 #ifndef USE_CUDA
 #include <iostream>
 #include <vector>
@@ -8,8 +10,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-
-#include <grid_launch.h>
 
 #define __global__
 #define __host__
@@ -201,4 +201,6 @@ dim3 DIM3(int x, int y, int z);
 
 #define CUDA_SAFE_CALL(fn) if(fn) fprintf(stderr, "Error in %s:%d\n", __FILE__, __LINE__)
 
+#else
+#include <hip-cuda.h>
 #endif // #ifndef USE_CUDA
