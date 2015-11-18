@@ -9,6 +9,7 @@
 
 #define hipResetDefaultDevice() cudaDeviceReset()
 #define hipMalloc(...) cudaMalloc(__VA_ARGS__)
+#define hipMallocHost(...) cudaMallocHost(__VA_ARGS__)
 #define hipMemcpy(...) cudaMemcpy(__VA_ARGS__)
 #define hipFree(...) cudaFree(__VA_ARGS__)
 #define hipMemset(...) cudaMemset(__VA_ARGS__)
