@@ -40,9 +40,9 @@ int main(void) {
   int* data2;
   int* data3;
 
-  hipMalloc((void**)&data1, SIZE*sizeof(int));
-  hipMalloc((void**)&data2, SIZE*sizeof(int));
-  hipMalloc((void**)&data3, SIZE*sizeof(int));
+  hipMallocHost((void**)&data1, SIZE*sizeof(int));
+  hipMallocHost((void**)&data2, SIZE*sizeof(int));
+  hipMallocHost((void**)&data3, SIZE*sizeof(int));
 
   for(int i = 0; i < SIZE; ++i)
     data3[i] = data2[i] = data1[i] = i;

@@ -34,9 +34,9 @@ int main(void) {
   Bar* data2;
   constStructconst* data3;
 
-  hipMalloc((void**)&data1, SIZE*sizeof(Foo));
-  hipMalloc((void**)&data2, SIZE*sizeof(Bar));
-  hipMalloc((void**)&data3, SIZE*sizeof(constStructconst));
+  hipMallocHost((void**)&data1, SIZE*sizeof(Foo));
+  hipMallocHost((void**)&data2, SIZE*sizeof(Bar));
+  hipMallocHost((void**)&data3, SIZE*sizeof(constStructconst));
   for(int i = 0; i < SIZE; ++i) {
     data3[i].x = i;
   }

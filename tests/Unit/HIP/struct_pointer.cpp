@@ -28,7 +28,7 @@ int main()
 
   float* data1;
 
-  hipMalloc((void**)&data1, SIZE*sizeof(float));
+  hipMallocHost((void**)&data1, SIZE*sizeof(float));
 
   hipChannelFormatDesc desc = hipCreateChannelDesc();
 
