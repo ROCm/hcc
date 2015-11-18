@@ -12,7 +12,7 @@ if (HAS_HSA EQUAL 1)
   endmacro(add_hip_runtime_library name)
 
   if(EXISTS "${PROJECT_SOURCE_DIR}/lib/hip/hip_hcc.cpp")
-    add_hip_runtime_library(hip_runtime hip_hcc.cpp hc_am.cpp grid_launch.cpp)
+    add_hip_runtime_library(hip_runtime hip_hcc.cpp hc_am.cpp)
   else()
     add_hip_runtime_library(hip_runtime hip_runtime.cpp)
   endif()
