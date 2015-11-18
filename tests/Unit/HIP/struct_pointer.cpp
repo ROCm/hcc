@@ -3,7 +3,6 @@
 
 // Test passing a custom type by pointer
 
-#include "hip.h"
 #include "hip_runtime.h"
 
 #define WIDTH 64
@@ -40,7 +39,7 @@ int main()
   dim3 grid = DIM3(WIDTH/GRID_SZ, HEIGHT/GRID_SZ);
   dim3 block = DIM3(GRID_SZ, GRID_SZ);
 
-  hipLaunchKernel(kernel_call, grid, block, data1, array1);
+  hipLaunchKernel(kernel_call, grid, block, 0, 0, data1, array1);
 
   int ret = 0;
   for(int i = 0; i < SIZE; ++i)

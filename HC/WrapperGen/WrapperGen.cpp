@@ -150,7 +150,7 @@ namespace
 
       // headers and namespace uses
       out << "#include \"hc.hpp\"" EOL;
-      out << "#include \"hip.h\"" EOL;
+      out << "#include \"hip_runtime.h\"" EOL;
 
       out << "using namespace hc;" EOL;
 
@@ -250,9 +250,14 @@ namespace
           out << "void " << wrapperStr << "(";
           printRange(out, argList, argList.begin(), argList.end(), PARAMETERS);
           out << ")\n{" EOL;
-          out << "parallel_for_each(*(lp.av),extent<3>(lp.gridDim.x*lp.groupDim.x,lp.gridDim.y*lp.groupDim.y,lp.gridDim.z*lp.groupDim.z).tile(lp.groupDim.x, lp.groupDim.y, lp.groupDim.z), " << functorName << "(";
+          out << "completion_future cf = parallel_for_each(*(lp.av),extent<3>(lp.gridDim.x*lp.groupDim.x,lp.gridDim.y*lp.groupDim.y,lp.gridDim.z*lp.groupDim.z).tile(lp.groupDim.x, lp.groupDim.y, lp.groupDim.z), " << functorName << "(";
           printRange(out, argList, argList.begin(), argList.end(), ARGUMENTS);
-          out << ")).wait();\n}" EOL;
+          out << "));\n" EOL;
+          out << "if(lp.cf)" EOL;
+          out << "  *(lp.cf) = cf;" EOL;
+          out << "else" EOL;
+          out << "  cf.wait();\n" EOL;
+          out << "}" EOL;
         }
       }
         return false;

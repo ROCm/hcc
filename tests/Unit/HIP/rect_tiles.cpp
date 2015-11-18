@@ -1,7 +1,6 @@
 // XFAIL: Linux
 // RUN: %hc %s -lhip_runtime -o %t.out && %t.out
 
-#include <hip.h>
 #include <hip_runtime.h>
 
 // Test for non-square tiles
@@ -32,7 +31,7 @@ int main()
   dim3 grid = DIM3(width/TILE_I, height/TILE_J);
   dim3 block = DIM3(TILE_I, TILE_J);
 
-  hipLaunchKernel(kernel_call, grid, block, a_d, pitch);
+  hipLaunchKernel(kernel_call, grid, block, 0, 0, a_d, pitch);
 
   hipMemcpy((void *)a, (void *)a_d, width*sizeof(int)*height, hipMemcpyDeviceToHost);
 
