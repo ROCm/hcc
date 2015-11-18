@@ -191,7 +191,7 @@ dim3 DIM3(int x);
 dim3 DIM3(int x, int y);
 dim3 DIM3(int x, int y, int z);
 
-// Compatibility Macros
+// Compatibility Macros for nvcc
 #define GRID_LAUNCH_INIT(lp)
 #define CUT_CHECK_ERROR(x)
 

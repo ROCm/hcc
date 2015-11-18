@@ -253,7 +253,10 @@ namespace
           out << "completion_future cf = parallel_for_each(*(lp.av),extent<3>(lp.gridDim.x*lp.groupDim.x,lp.gridDim.y*lp.groupDim.y,lp.gridDim.z*lp.groupDim.z).tile(lp.groupDim.x, lp.groupDim.y, lp.groupDim.z), " << functorName << "(";
           printRange(out, argList, argList.begin(), argList.end(), ARGUMENTS);
           out << "));\n" EOL;
-          out << "if(lp.cf) *(lp.cf) = cf; else cf.wait();\n" EOL;
+          out << "if(lp.cf)" EOL;
+          out << "  *(lp.cf) = cf;" EOL;
+          out << "else" EOL;
+          out << "  cf.wait();\n" EOL;
           out << "}" EOL;
         }
       }

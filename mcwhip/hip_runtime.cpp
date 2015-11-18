@@ -20,7 +20,7 @@ void __attribute__ ((constructor)) hip_init() {
 }
 
 grid_launch_parm hipCreateLaunchParam(uint3 gridDim, uint3 groupDim,
-                                     int groupMemBytes, hipStream_t stream) {
+                                      int groupMemBytes, hipStream_t stream) {
   grid_launch_parm lp;
 
   lp.gridDim.x = gridDim.x;
