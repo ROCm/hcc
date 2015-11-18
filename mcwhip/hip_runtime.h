@@ -196,7 +196,7 @@ dim3 DIM3(int x, int y, int z);
 
 // Debug
 #define HIP_ASSERT(x) \
-  assert(!x)
+  assert((x) == hipSuccess)
 
 #define CUDA_SAFE_CALL(fn) if(fn) fprintf(stderr, "Error in %s:%d\n", __FILE__, __LINE__)
 
