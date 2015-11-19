@@ -36,8 +36,8 @@ int main()
   for(int i = 0; i < SIZE; ++i)
     array1->data[i] = (float)i;
 
-  dim3 grid = DIM3(WIDTH/GRID_SZ, HEIGHT/GRID_SZ);
-  dim3 block = DIM3(GRID_SZ, GRID_SZ);
+  dim3 grid = dim3(WIDTH/GRID_SZ, HEIGHT/GRID_SZ);
+  dim3 block = dim3(GRID_SZ, GRID_SZ);
 
   hipLaunchKernel(kernel_call, grid, block, 0, 0, data1, array1);
 

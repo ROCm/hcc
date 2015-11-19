@@ -186,9 +186,6 @@ hipChannelFormatDesc hipCreateChannelDesc();
 
 typedef uint3 dim3;
 
-dim3 DIM3(int x);
-dim3 DIM3(int x, int y);
-dim3 DIM3(int x, int y, int z);
 
 // Compatibility Macros for nvcc
 #define GRID_LAUNCH_INIT(lp)

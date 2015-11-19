@@ -16,9 +16,10 @@
 #define hc_barrier(n)
 #endif
 
-typedef struct
+typedef struct uint3
 {
   int x,y,z;
+  uint3(uint32_t _x=1, uint32_t _y=1, uint32_t _z=1) : x(_x), y(_y), z(_z) {};
 } uint3;
 
 #endif // not USE_CUDA

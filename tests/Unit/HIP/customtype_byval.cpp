@@ -31,8 +31,8 @@ int main(void) {
   data1.x = 5;
   hipMalloc((void**)&data2, SIZE*sizeof(Foo));
 
-  dim3 grid = DIM3(GRID_SIZE, 1);
-  dim3 block = DIM3(TILE_SIZE, 1);
+  dim3 grid = dim3(GRID_SIZE, 1);
+  dim3 block = dim3(TILE_SIZE, 1);
 
   hipLaunchKernel(kernel1, grid, block, 0, 0, data1, data2);
 

@@ -47,8 +47,8 @@ int main(void) {
   for(int i = 0; i < SIZE; ++i)
     data3[i] = data2[i] = data1[i] = i;
 
-  dim3 grid = DIM3(GRID_SIZE, 1);
-  dim3 block = DIM3(TILE_SIZE, 1);
+  dim3 grid = dim3(GRID_SIZE, 1);
+  dim3 block = dim3(TILE_SIZE, 1);
 
   hipLaunchKernel(kernel1, grid, block, 0, stream1, data1);
   hipLaunchKernel(kernel2, grid, block, 0, stream2, data2);

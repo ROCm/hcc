@@ -64,8 +64,8 @@ int main() {
   const float scalar = 77;
 
   grid_launch_parm lp = hipCreateLaunchParam(
-    DIM3(WIDTH/THREADS_PER_BLOCK_X, HEIGHT/THREADS_PER_BLOCK_Y),
-    DIM3(THREADS_PER_BLOCK_X, THREADS_PER_BLOCK_Y), 0, 0);
+    dim3(WIDTH/THREADS_PER_BLOCK_X, HEIGHT/THREADS_PER_BLOCK_Y),
+    dim3(THREADS_PER_BLOCK_X, THREADS_PER_BLOCK_Y), 0, 0);
   scalarMulAdd(lp, A, deviceD, scalar, WIDTH, HEIGHT);
 
   HIP_ASSERT(hipMemcpy(hostD, deviceD, NUM*sizeof(float), hipMemcpyDeviceToHost));

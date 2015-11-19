@@ -28,8 +28,8 @@ int main()
   int pitch = sizeof(int)*width;
   hipMalloc((void**)&a_d, sizeof(int)*width*height);
 
-  dim3 grid = DIM3(width/TILE_I, height/TILE_J);
-  dim3 block = DIM3(TILE_I, TILE_J);
+  dim3 grid = dim3(width/TILE_I, height/TILE_J);
+  dim3 block = dim3(TILE_I, TILE_J);
 
   hipLaunchKernel(kernel_call, grid, block, 0, 0, a_d, pitch);
 

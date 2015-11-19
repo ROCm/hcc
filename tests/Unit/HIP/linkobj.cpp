@@ -15,7 +15,7 @@ int main()
 
   int* a = (int*)malloc(sizeof(int)*size);
 
-  hipLaunchKernel(foo, DIM3(1,1), DIM3(size, 1), 0, 0, a);
+  hipLaunchKernel(foo, dim3(1,1), dim3(size, 1), 0, 0, a);
 
   int ret = 0;
   for(int i = 0; i < size; ++i)

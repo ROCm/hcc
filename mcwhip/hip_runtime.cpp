@@ -227,21 +227,6 @@ hipChannelFormatDesc hipCreateChannelDesc() {
   return hipCreateChannelDesc(0, 0, 0, 0, hipChannelFormatKindFloat);
 }
 
-uint3 DIM3(int x, int y, int z) {
-  uint3 ret;
-  ret.x = x;
-  ret.y = y;
-  ret.z = z;
-  return ret;
-}
-
-uint3 DIM3(int x, int y) {
-  return DIM3(x, y, 1);
-}
-
-uint3 DIM3(int x) {
-  return DIM3(x, 1, 1);
-}
 
 
 #endif // #ifndef USE_CUDA
