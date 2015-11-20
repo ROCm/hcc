@@ -469,8 +469,8 @@ void stream(void)
     f8_tex.filterMode = hipFilterModePoint;
     CUDA_SAFE_CALL(hipBindTextureToArray(f8_tex, f8_array));
 
-    dim3 grid = DIM3(ni/TILE_I, nj/TILE_J);
-    dim3 block = DIM3(TILE_I, TILE_J);
+    dim3 grid = dim3(ni/TILE_I, nj/TILE_J);
+    dim3 block = dim3(TILE_I, TILE_J);
 
     hipLaunchKernel(stream_kernel, grid, block, 0, 0, pitch, f1_data, f2_data, f3_data, f4_data,
                                    f5_data, f6_data, f7_data, f8_data
@@ -568,8 +568,8 @@ void collide(void)
 // C wrapper
 
 {
-    dim3 grid = DIM3(ni/TILE_I, nj/TILE_J);
-    dim3 block = DIM3(TILE_I, TILE_J);
+    dim3 grid = dim3(ni/TILE_I, nj/TILE_J);
+    dim3 block = dim3(TILE_I, TILE_J);
 
     hipLaunchKernel(collide_kernel, grid, block, 0, 0, pitch, tau, faceq1, faceq2, faceq3,
                                     f0_data, f1_data, f2_data, f3_data, f4_data,
@@ -649,8 +649,8 @@ void apply_BCs(void)
 // C wrapper
 
 {
-    dim3 grid = DIM3(ni/TILE_I, nj/TILE_J);
-    dim3 block = DIM3(TILE_I, TILE_J);
+    dim3 grid = dim3(ni/TILE_I, nj/TILE_J);
+    dim3 block = dim3(TILE_I, TILE_J);
 
     hipLaunchKernel(apply_BCs_kernel, grid, block, 0, 0, ni, nj, pitch, vxin, roout, faceq2,faceq3,
                                       f0_data, f1_data, f2_data,
@@ -696,8 +696,8 @@ __KERNEL void apply_Periodic_BC_kernel (grid_launch_parm lp, int ni, int nj, int
 
 void apply_Periodic_BC(void)
 {
-    dim3 grid = DIM3(ni/TILE_I, nj/TILE_J);
-    dim3 block = DIM3(TILE_I, TILE_J);
+    dim3 grid = dim3(ni/TILE_I, nj/TILE_J);
+    dim3 block = dim3(TILE_I, TILE_J);
 
     hipLaunchKernel(apply_Periodic_BC_kernel, grid, block, 0, 0, ni, nj, pitch,
 					      f2_data,f4_data, f5_data, 
@@ -738,8 +738,8 @@ void get_rgba(void)
 // C wrapper
 
 {
-    dim3 grid = DIM3(ni/TILE_I, nj/TILE_J);
-    dim3 block = DIM3(TILE_I, TILE_J);
+    dim3 grid = dim3(ni/TILE_I, nj/TILE_J);
+    dim3 block = dim3(TILE_I, TILE_J);
 
     hipLaunchKernel(get_rgba_kernel, grid, block, 0, 0, pitch, ncol, minvar, maxvar,
 				     plot_data, plot_rgba_data, cmap_rgba_data,
