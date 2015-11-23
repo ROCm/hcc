@@ -55,7 +55,7 @@ int main ()
           switch (syscall) {
             case 1: // malloc
               std::cout << "tid: " << i << ", malloc(" << param << ")\n";
-              result = (long)aligned_alloc(0x1000, param);
+              result = (long)malloc(param);
             break;
             case 2: // free
               std::cout << "tid: " << i << ", free(" << param << ")\n";

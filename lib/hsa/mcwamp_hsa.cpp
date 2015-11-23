@@ -27,6 +27,7 @@
 #include <hsa_ext_amd.h>
 
 #include <kalmar_runtime.h>
+#include <kalmar_aligned_alloc.h>
 
 #include <time.h>
 #include <iomanip>
@@ -714,7 +715,7 @@ public:
 #endif
             hsa_status_t status = HSA_STATUS_SUCCESS;
             // allocate a host buffer
-            void *data = aligned_alloc(0x1000, count);
+            void *data = kalmar_aligned_alloc(0x1000, count);
             if (data != nullptr) {
               // copy data from device buffer to host buffer
               status = hsa_memory_copy(data, (char*)device + offset, count);
@@ -763,7 +764,7 @@ public:
             }
 
             // deallocate the host buffer
-            free(addr);
+            kalmar_aligned_free(addr);
         } else {
 #if KALMAR_DEBUG
             std::cerr << "unmap(" << device << "," << addr << "," << count << "," << offset << "," << modify << "): use host memory unmap\n";
@@ -1101,7 +1102,7 @@ public:
 #if KALMAR_DEBUG
             std::cerr << "create(" << count << "," << key << "): use host memory allocator\n";
 #endif
-            data = aligned_alloc(0x1000, count);
+            data = kalmar_aligned_alloc(0x1000, count);
             hsa_memory_register(data, count);
         }
 
@@ -1126,7 +1127,7 @@ public:
 #endif
             status = hsa_memory_deregister(ptr, key->count);
             STATUS_CHECK(status, __LINE__);
-            ::operator delete(ptr);
+            kalmar_aligned_free(ptr);
         }
     }
 
