@@ -2677,10 +2677,10 @@ public:
      */
     template <typename InputIter>
         array(int e0, InputIter srcBegin)
-            : array(extent<N>(e0), srcBegin) {}
+            : array(hc::extent<N>(e0), srcBegin) {}
     template <typename InputIter>
         array(int e0, InputIter srcBegin, InputIter srcEnd)
-            : array(extent<N>(e0), srcBegin, srcEnd) {}
+            : array(hc::extent<N>(e0), srcBegin, srcEnd) {}
     template <typename InputIter>
         array(int e0, int e1, InputIter srcBegin)
             : array(hc::extent<N>(e0, e1), srcBegin) {}
@@ -3950,7 +3950,7 @@ public:
      */
     array_view<T, 1> section(int i0, int e0) const __attribute__((hc,cpu)) {
         static_assert(N == 1, "Rank must be 1");
-        return section(index<1>(i0), extent<1>(e0));
+        return section(index<1>(i0), hc::extent<1>(e0));
     }
 
     array_view<T, 2> section(int i0, int i1, int e0, int e1) const __attribute__((hc,cpu)) {

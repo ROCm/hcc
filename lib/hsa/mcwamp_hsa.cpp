@@ -27,6 +27,7 @@
 #include <hsa_ext_amd.h>
 
 #include <kalmar_runtime.h>
+#include <kalmar_aligned_alloc.h>
 
 #include <time.h>
 #include <iomanip>
@@ -56,6 +57,11 @@
 // whether to use kernarg region found on the HSA agent
 // default set as 1 (use karnarg region)
 #define USE_KERNARG_REGION (1)
+
+// whether to use hsa_memory_copy to copy prepared kernel arguments
+// from host memory to kernarg region
+// default set as 0 (NOT use hsa_memory_copy)
+#define USE_HSA_MEMORY_COPY_FOR_KERNARG (0)
 
 // whether to print out kernel dispatch time
 // default set as 0 (NOT print out kernel dispatch time)
@@ -709,7 +715,7 @@ public:
 #endif
             hsa_status_t status = HSA_STATUS_SUCCESS;
             // allocate a host buffer
-            void *data = aligned_alloc(0x1000, count);
+            void *data = kalmar_aligned_alloc(0x1000, count);
             if (data != nullptr) {
               // copy data from device buffer to host buffer
               status = hsa_memory_copy(data, (char*)device + offset, count);
@@ -758,7 +764,7 @@ public:
             }
 
             // deallocate the host buffer
-            free(addr);
+            kalmar_aligned_free(addr);
         } else {
 #if KALMAR_DEBUG
             std::cerr << "unmap(" << device << "," << addr << "," << count << "," << offset << "," << modify << "): use host memory unmap\n";
@@ -1096,7 +1102,7 @@ public:
 #if KALMAR_DEBUG
             std::cerr << "create(" << count << "," << key << "): use host memory allocator\n";
 #endif
-            data = aligned_alloc(0x1000, count);
+            data = kalmar_aligned_alloc(0x1000, count);
             hsa_memory_register(data, count);
         }
 
@@ -1121,7 +1127,7 @@ public:
 #endif
             status = hsa_memory_deregister(ptr, key->count);
             STATUS_CHECK(status, __LINE__);
-            ::operator delete(ptr);
+            kalmar_aligned_free(ptr);
         }
     }
 
@@ -1836,8 +1842,14 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
             kernargMemory = ret.first;
             kernargMemoryIndex = ret.second;
 
+#if USE_HSA_MEMORY_COPY_FOR_KERNARG
+            // use hsa_memory_copy to copy kernel arguments from host to kernarg region
             status = hsa_memory_copy(kernargMemory, arg_vec.data(), arg_vec.size());
             STATUS_CHECK_Q(status, commandQueue, __LINE__);
+#else
+            // as kernarg buffers are fine-grained, we can directly use memcpy
+            memcpy(kernargMemory, arg_vec.data(), arg_vec.size());
+#endif
 
             aql.kernarg_address = kernargMemory;
         } else {
