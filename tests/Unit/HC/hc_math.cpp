@@ -29,7 +29,7 @@ bool test() {
 #define TEST(func) \
   { \
     std::fill(std::begin(table), std::end(table), (T)(0)); \
-    parallel_for_each(ex, [&](index<1>& idx) __attribute((hc)) { \
+    parallel_for_each(ex, [&](index<1>& idx) __HC__ { \
       table[idx[0]] = func((T)(idx[0]+1)); \
     }); \
     accelerator().get_default_view().wait(); \
