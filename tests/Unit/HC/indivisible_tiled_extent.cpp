@@ -19,7 +19,7 @@ bool test1D() {
 
   int table[GRID_SIZE] { 0 };
 
-  completion_future fut = parallel_for_each(tiled_ex, [&](tiled_index<1>& idx) __HC__ {
+  completion_future fut = parallel_for_each(tiled_ex, [&](tiled_index<1>& idx) __attribute((hc)) {
     table[idx.global[0]] = idx.global[0];
   });
 
@@ -46,7 +46,7 @@ bool test2D() {
 
   int table[GRID_SIZE_Y * GRID_SIZE_X] { 0 };
 
-  completion_future fut = parallel_for_each(tiled_ex, [&](tiled_index<2>& idx) __HC__ {
+  completion_future fut = parallel_for_each(tiled_ex, [&](tiled_index<2>& idx) __attribute((hc)) {
     size_t index = idx.global[0] * GRID_SIZE_X + idx.global[1];
     table[index] = index;
   });
@@ -75,7 +75,7 @@ bool test3D() {
 
   int table[GRID_SIZE_Z * GRID_SIZE_Y * GRID_SIZE_X] { 0 };
 
-  completion_future fut = parallel_for_each(tiled_ex, [&](tiled_index<3>& idx) __HC__ {
+  completion_future fut = parallel_for_each(tiled_ex, [&](tiled_index<3>& idx) __attribute((hc)) {
     size_t index = idx.global[0] * GRID_SIZE_X * GRID_SIZE_Y + idx.global[1] * GRID_SIZE_X + idx.global[2];
     table[index] = index;
   });

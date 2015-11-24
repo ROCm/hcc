@@ -33,7 +33,7 @@ bool test() {
 
 #define TEST(func) \
   { \
-    parallel_for_each(ex, [&](index<1>& idx) __HC__ { \
+    parallel_for_each(ex, [&](index<1>& idx) __attribute((hc)) { \
       table3[idx[0]] = func(table1[idx[0]], table2[idx[0]]); \
     }); \
     accelerator().get_default_view().wait(); \
