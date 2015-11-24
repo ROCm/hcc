@@ -244,7 +244,7 @@ add_custom_target(hlc
           -DLLVM_ENABLE_RTTI=ON
           -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=HSAIL
           -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-  COMMAND make -j4 # not portable, but we need it this way
+  COMMAND make -j8 # not portable, but we need it this way
   WORKING_DIRECTORY ${HLC_BIN_DIR}
 )
 
