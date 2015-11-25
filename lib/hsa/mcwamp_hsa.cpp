@@ -112,7 +112,8 @@ public:
       hsaExecutableSymbol(_hsaExecutableSymbol),
       kernelCodeHandle(_kernelCodeHandle) {}
 
-    void setSymbolToValue(const char* symbolName, unsigned long value) {
+    template<typename T>
+    void setSymbolToValue(const char* symbolName, T value) {
         hsa_status_t status;
 
         // get symbol
@@ -129,7 +130,7 @@ public:
         STATUS_CHECK(status, __LINE__);
     
         // set the value of symbol
-        unsigned long* symbol_ptr = (unsigned long*)symbol_address;
+        T* symbol_ptr = (T*)symbol_address;
         *symbol_ptr = value;
     }
 
