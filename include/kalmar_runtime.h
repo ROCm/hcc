@@ -1,6 +1,7 @@
 #pragma once
 
 #include <kalmar_defines.h>
+#include <kalmar_aligned_alloc.h>
 
 namespace Kalmar {
 namespace enums {
@@ -146,6 +147,12 @@ public:
   /// enqueue marker
   virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarker() { return nullptr; }
 
+  /// cleanup internal resource
+  /// this function is usually called by dtor of the implementation classes
+  /// in rare occasions it may be called by other functions to ensure proper
+  /// resource clean up sequence
+  virtual void dispose() {}
+
 private:
   KalmarDevice* pDev;
   queuing_mode mode;
@@ -281,8 +288,8 @@ public:
 
 
     std::shared_ptr<KalmarQueue> createQueue() { return std::shared_ptr<KalmarQueue>(new CPUQueue(this)); }
-    void* create(size_t count, struct rw_info* /* not used */ ) override { return aligned_alloc(0x1000, count); }
-    void release(void* ptr, struct rw_info* /* nout used */) override { ::operator delete(ptr); }
+    void* create(size_t count, struct rw_info* /* not used */ ) override { return kalmar_aligned_alloc(0x1000, count); }
+    void release(void* ptr, struct rw_info* /* nout used */) override { kalmar_aligned_free(ptr); }
     void* CreateKernel(const char* fun, void* size, void* source, bool needsCompilation = true) { return nullptr; }
 };
 
@@ -467,7 +474,7 @@ struct rw_info
             /// if array_view is constructed in cpu path kernel
             /// allocate memory for it and do nothing
             if (CLAMP::in_cpu_kernel() && ptr == nullptr) {
-                data = aligned_alloc(0x1000, count);
+                data = kalmar_aligned_alloc(0x1000, count);
                 return;
             }
 #endif
@@ -489,7 +496,7 @@ struct rw_info
     curr(Queue), master(Queue), stage(nullptr), devs(), mode(mode_), HostPtr(false) {
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
         if (CLAMP::in_cpu_kernel() && data == nullptr) {
-            data = aligned_alloc(0x1000, count);
+            data = kalmar_aligned_alloc(0x1000, count);
             return;
         }
 #endif
@@ -669,10 +676,10 @@ struct rw_info
             if (is_cpu_queue(curr))
                 memset((char*)src.data + src_offset, 0, cnt);
             else {
-                void *ptr = aligned_alloc(0x1000, cnt);
+                void *ptr = kalmar_aligned_alloc(0x1000, cnt);
                 memset(ptr, 0, cnt);
                 curr->write(src.data, ptr, cnt, src_offset, true);
-                ::operator delete(ptr);
+                kalmar_aligned_free(ptr);
             }
         }
         copy_helper(curr, src.data, other->curr, dst.data, cnt, true, src_offset, dst_offset);
@@ -684,7 +691,7 @@ struct rw_info
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
         if (CLAMP::in_cpu_kernel()) {
             if (data && !HostPtr)
-                ::operator delete(data);
+                kalmar_aligned_free(ptr);
             return;
         }
 #endif

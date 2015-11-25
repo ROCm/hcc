@@ -26,7 +26,7 @@ if [ -n "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
   LLVM_AS=$INSTALL/llvm-as
   LLVM_DIS=$INSTALL/llvm-dis
   LIBPATH=$HCC_HOME/lib
-elif [ -e @CMAKE_INSTALL_PREFIX@ ]; then
+elif [ -e @CMAKE_INSTALL_PREFIX@/bin/llvm-as ]; then
   INSTALL=@CMAKE_INSTALL_PREFIX@/bin
   CLANG=$INSTALL/clang
   CLAMP_CONFIG=$INSTALL/clamp-config
