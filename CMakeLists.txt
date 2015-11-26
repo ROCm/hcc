@@ -151,7 +151,7 @@ if (NOT HSA_KMT_LIBRARY)
   MESSAGE("HSA Kernel library not found. Use -DHSA_KMT_LIBRARY_DIR=<path_to_libhsakmt.so.1>.")
 endif (NOT HSA_KMT_LIBRARY)
 
-find_program(HSA_HOF hof PATHS ${HSA_HOF_DIR} /opt/hsa/bin /opt/amd/bin NO_DEFAULT_PATH)
+find_program(HSA_HOF hof PATHS ${HSA_HOF_DIR} /opt/amd/bin NO_DEFAULT_PATH)
 find_program(HSA_HOF hof)
 if (NOT HSA_HOF)
   MESSAGE("HSA offline finalizer (HOF) not found.  Use -DHSA_HOF_DIR=<path_to_hof>.")
@@ -244,7 +244,7 @@ add_custom_target(hlc
           -DLLVM_ENABLE_RTTI=ON
           -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=HSAIL
           -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-  COMMAND make -j4 # not portable, but we need it this way
+  COMMAND make -j8 # not portable, but we need it this way
   WORKING_DIRECTORY ${HLC_BIN_DIR}
 )
 
