@@ -548,6 +548,7 @@ bool fp_equal(float a, float b, float max_rel_diff)
 //----------------------------------------------------------------------------
 int main()
 {
+    int ret = 0;
     accelerator default_device;
     std::wcout << "Using device : " << default_device.get_description() << std::endl;
 //    if (default_device == accelerator(accelerator::direct3d_ref))
@@ -577,13 +578,13 @@ int main()
     typedef std::pair<ReductionFunction, std::string> user_pair;
     std::vector<user_pair> functions;
     functions.push_back(user_pair(sequential_reduction, "sequential_reduction"));
-    //functions.push_back(user_pair(reduction_simple_1, "reduction_simple_1"));
-    //functions.push_back(user_pair(reduction_simple_2, "reduction_simple_2"));
+    functions.push_back(user_pair(reduction_simple_1, "reduction_simple_1"));
+    functions.push_back(user_pair(reduction_simple_2, "reduction_simple_2"));
     functions.push_back(user_pair(reduction_tiled_1<tile_size>, "reduction_tiled_1"));
     functions.push_back(user_pair(reduction_tiled_2<tile_size>, "reduction_tiled_2"));
     functions.push_back(user_pair(reduction_tiled_3<tile_size>, "reduction_tiled_3"));
     functions.push_back(user_pair(reduction_tiled_4<tile_size>, "reduction_tiled_4"));
-    //functions.push_back(user_pair(reduction_cascade<tile_size, 128>, "reduction_cascade"));
+    functions.push_back(user_pair(reduction_cascade<tile_size, 128>, "reduction_cascade"));
     for(const auto& func : functions)
     {
         float result = func.first(source);
@@ -595,6 +596,8 @@ int main()
         else
         {
             std::cout << "FAILED: " << func.second << " expected " << expected_result << " but found " << result << "!" << std::endl;
+            ret = 1;
         }
     }
+    return ret;
 }
