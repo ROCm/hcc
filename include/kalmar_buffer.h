@@ -27,6 +27,7 @@ public:
     __attribute__((annotate("user_deserialize")))
         explicit _data(T* t) restrict(cpu, amp) { p_ = t; }
     T* get(void) const restrict(cpu, amp) { return p_; }
+    T* get_device_pointer() const restrict(cpu, amp) { return p_; }
     std::shared_ptr<KalmarQueue> get_av() const { return nullptr; }
     void reset() const {}
 
@@ -66,6 +67,7 @@ public:
         _data_host(const _data_host<U>& other) : mm(other.mm), isArray(false) {}
 
     T *get() const { return static_cast<T*>(mm->data); }
+    T* get_device_pointer() const { return static_cast<T*>(mm->get_device_pointer()); }
     void synchronize(bool modify = false) const { mm->synchronize(modify); }
     void discard() const { mm->disc(); }
     void refresh() const {}

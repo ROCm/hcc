@@ -516,6 +516,10 @@ struct rw_info
             stage = curr;
     }
 
+    void* get_device_pointer() {
+        return devs[curr->getDev()].data;
+    }
+
     void construct(std::shared_ptr<KalmarQueue> pQueue) {
         curr = pQueue;
         devs[pQueue->getDev()] = {pQueue->getDev()->create(count, this), invalid};

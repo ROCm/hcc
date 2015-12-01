@@ -3106,6 +3106,16 @@ public:
     }
 
     /**
+     * Returns a pointer to the device memory underlying this array.
+     *
+     * @return A (const) pointer to the first element in the array on the
+     *         device memory.
+     */
+    T* device_pointer() const __CPU__ __HC__ {
+        return reinterpret_cast<T*>(m_device.get_device_pointer());
+    }
+
+    /**
      * Implicitly converts an array to a std::vector, as if by
      * "copy(*this, vector)".
      *
