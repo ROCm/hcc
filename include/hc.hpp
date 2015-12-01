@@ -2749,8 +2749,19 @@ public:
 #endif
 
     /** @{ */
+    /**
+     * Constructs an array instance based on the given pointer on the device memory.
+     */
     explicit array(int e0, void* accelerator_pointer)
         : array(hc::extent<N>(e0), accelerator(L"default").get_default_view(), accelerator_pointer) {}
+    explicit array(int e0, int e1, void* accelerator_pointer)
+        : array(hc::extent<N>(e0, e1), accelerator(L"default").get_default_view(), accelerator_pointer) {}
+    explicit array(int e0, int e1, int e2, void* accelerator_pointer)
+        : array(hc::extent<N>(e0, e1, e2), accelerator(L"default").get_default_view(), accelerator_pointer) {}
+
+    explicit array(const extent<N>& ext, void* accelerator_pointer)
+        : array(ext, accelerator(L"default").get_default_view(), accelerator_pointer) {}
+    /** @} */
 
     /**
      * Constructs an array instance based on the given pointer on the device memory.
@@ -2767,7 +2778,6 @@ public:
 #else
         : m_device(av.pQueue, av.pQueue, check(ext).size(), accelerator_pointer, cpu_access_type), extent(ext) {}
 #endif
-    /** @} */
 
     /** @{ */
     /**
