@@ -2749,6 +2749,27 @@ public:
 #endif
 
     /** @{ */
+    explicit array(int e0, void* accelerator_pointer)
+        : array(hc::extent<N>(e0), accelerator(L"default").get_default_view(), accelerator_pointer) {}
+
+    /**
+     * Constructs an array instance based on the given pointer on the device memory.
+     *
+     * @param[in] ext The extent in each dimension of this array.
+     * @param[in] av An accelerator_view object which specifies the location of
+     *               this array.
+     * @param[in] accelerator_pointer The pointer to the device memory.
+     * @param[in] access_type The type of CPU access desired for this array.
+     */
+    explicit array(const extent<N>& ext, accelerator_view av, void* accelerator_pointer, access_type cpu_access_type = access_type_auto)
+#if __KALMAR_ACCELERATOR__ == 1
+        : m_device(ext.size(), accelerator_pointer), extent(ext) {}
+#else
+        : m_device(av.pQueue, av.pQueue, check(ext).size(), accelerator_pointer, cpu_access_type), extent(ext) {}
+#endif
+    /** @} */
+
+    /** @{ */
     /**
      * Equivalent to construction using
      * "array(extent<N>(e0 [, e1 [, e2 ]]), av, cpu_access_type)".   

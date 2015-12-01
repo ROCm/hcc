@@ -21,6 +21,8 @@ public:
     _data(int count) : p_(nullptr) {}
     _data(const _data& d) restrict(cpu, amp)
         : p_(d.p_) {}
+    _data(int count, void* d) restrict(cpu, amp)
+        : p_(static_cast<T*>(d)) {}
     template <typename U>
         _data(const _data<U>& d) restrict(cpu, amp)
         : p_(reinterpret_cast<T *>(d.get())) {}
@@ -60,6 +62,10 @@ public:
     _data_host(std::shared_ptr<KalmarQueue> av, std::shared_ptr<KalmarQueue> stage, int count,
                access_type mode)
         : mm(std::make_shared<rw_info>(av, stage, count*sizeof(T), mode)), isArray(true) {}
+
+    _data_host(std::shared_ptr<KalmarQueue> av, std::shared_ptr<KalmarQueue> stage, int count,
+               void* device_pointer, access_type mode)
+        : mm(std::make_shared<rw_info>(av, stage, count*sizeof(T), device_pointer, mode)), isArray(true) {}
 
     _data_host(const _data_host& other) : mm(other.mm), isArray(false) {}
 
