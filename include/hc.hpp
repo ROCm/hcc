@@ -3699,6 +3699,16 @@ public:
     }
 
     /**
+     * Returns a pointer to the device memory underlying this array_view.
+     *
+     * @return A (const) pointer to the first element in the array_view on the
+     *         device memory.
+     */
+    T* accelerator_pointer() const __CPU__ __HC__ {
+        return reinterpret_cast<T*>(cache.get_device_pointer() + offset + index_base[0]);
+    }
+
+    /**
      * Calling this member function informs the array_view that its bound
      * memory has been modified outside the array_view interface. This will
      * render all cached information stale.
@@ -4307,6 +4317,16 @@ public:
 #endif
         static_assert(N == 1, "data() is only permissible on array views of rank 1");
         return reinterpret_cast<const T*>(cache.get() + offset + index_base[0]);
+    }
+
+    /**
+     * Returns a pointer to the device memory underlying this array_view.
+     *
+     * @return A (const) pointer to the first element in the array_view on the
+     *         device memory.
+     */
+    T* accelerator_pointer() const __CPU__ __HC__ {
+        return reinterpret_cast<const T*>(cache.get_device_pointer() + offset + index_base[0]);
     }
 
     /**
