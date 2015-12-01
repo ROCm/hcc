@@ -159,13 +159,13 @@ foreach my $test (@tests)
         my $command;
         if ($Test::config{'compile_only'}) {
             $command = "\\
-                $CLANG_AMP -cc1 -fcxx-exceptions -fsyntax-only -D__CPU__=1 $SHARED_CXXFLAGS $include_main $test $cflags_defs 2>>$run_log 1>>$run_log";
+                $CLANG_AMP -cc1 -fcxx-exceptions -fsyntax-only -D__CPU__=1 $SHARED_CXXFLAGS $include_main $test $cflags_defs 2>&1";
        } elsif ($ENV{TEST_CPU} eq "ON") {
            $command = "\\
-           $CLANG_AMP -std=c++amp -cpu $SHARED_CXXFLAGS $include_main $test $AMPTESTLIB $cflags_defs $CLAMP_LDFLAGS -o $tmpdir/test.out -g 2>>$run_log 1>>$run_log";
+           $CLANG_AMP -std=c++amp -cpu $SHARED_CXXFLAGS $include_main $test $AMPTESTLIB $cflags_defs $CLAMP_LDFLAGS -o $tmpdir/test.out -g 2>&1";
         } else {
             $command = "\\
-                $CLANG_AMP $SHARED_CXXFLAGS $include_main $test $AMPTESTLIB $cflags_defs $CLAMP_LDFLAGS -o $tmpdir/test.out -g 2>>$run_log 1>>$run_log";
+                $CLANG_AMP $SHARED_CXXFLAGS $include_main $test $AMPTESTLIB $cflags_defs $CLAMP_LDFLAGS -o $tmpdir/test.out -g 2>&1";
         }
 
         log_message("Command: $command\n"
@@ -177,7 +177,9 @@ foreach my $test (@tests)
 		goto test_done;
 	}
 
-        my $build_exit_code = system($command) >> 8;
+        my $cmd_output = `$command`;
+        my $build_exit_code = $? >> 8;
+        log_message($cmd_output);
         log_message(">>>\n"
             ."Build exit code: $build_exit_code");
 
@@ -190,7 +192,9 @@ foreach my $test (@tests)
             eval {
                 local $SIG{ALRM} = sub { die "alarm\n" }; # NB: \n required
                 alarm 60;
-                $exec_exit_code = system("$test_exec 2>>$run_log 1>>$run_log") >> 8;
+                $cmd_output = `$test_exec 2>&1`;
+                $exec_exit_code = $? >> 8;
+                log_message($cmd_output);
                 alarm 0;
             };
             if ($@) {
