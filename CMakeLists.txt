@@ -17,7 +17,7 @@ ENDIF(NOT CMAKE_BUILD_TYPE)
 
 # set default cppamp-ng URL
 IF (NOT CLANG_URL)
-  SET(CLANG_URL "https://bitbucket.org/multicoreware/cppamp-ng-35.git" CACHE STRING "CLANG URL" FORCE)
+  SET(CLANG_URL "https://bitbucket.org/multicoreware/hcc-clang.git" CACHE STRING "CLANG URL" FORCE)
 ENDIF (NOT CLANG_URL)
 set(CMAKE_MACOSX_RPATH 1)
 
@@ -37,6 +37,7 @@ include (PatchAsmParser)
 include (PatchPassManagerBuilder)
 include (SetupRemoveSpecialSection)
 include (PatchLLVM350)
+include (PatchLLVMforClangOMP)
 
 ensure_llvm_is_present(${PROJECT_SOURCE_DIR} compiler)
 ensure_clang_is_present(${PROJECT_SOURCE_DIR} compiler ${CLANG_URL})
@@ -51,7 +52,7 @@ patch_AsmParser(SPIRify)
 patch_PassManagerBuilder(TileUniform)
 setup_RemoveSpecialSection(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms RemoveSpecialSection)
 patch_LLVM350(utils)
-
+patch_LLVM_for_ClangOMP(OpenMP)
 set(LLVM_TARGETS_TO_BUILD X86 CACHE STRING "LLVM host target")
 set(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD CBackend CACHE STRING "set this to 'CBackend' to enable generating OpenCL-C")
 set(LLVM_INCLUDE_EXAMPLES off)
