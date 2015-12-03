@@ -109,7 +109,7 @@ void ldflags(void) {
         }
     }
 
-    std::cout << " -lc++ -ldl -lpthread ";
+    std::cout << " -lc++ -lc++abi -ldl -lpthread ";
     if (bolt_rewrite_mode) {
         std::cout << "-lampBolt.runtime.clang ";
     }

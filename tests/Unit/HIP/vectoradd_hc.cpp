@@ -1,4 +1,5 @@
-// RUN: %hc %s -lhip_runtime -o %t.out && %t.out
+// XFAIL: Linux
+// RUN: %hc %s -o %t.out && %t.out
 
 #include <iostream>
 #include <cmath>

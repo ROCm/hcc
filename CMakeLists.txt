@@ -17,7 +17,7 @@ ENDIF(NOT CMAKE_BUILD_TYPE)
 
 # set default cppamp-ng URL
 IF (NOT CLANG_URL)
-  SET(CLANG_URL "https://bitbucket.org/multicoreware/cppamp-ng-35.git" CACHE STRING "CLANG URL" FORCE)
+  SET(CLANG_URL "https://bitbucket.org/multicoreware/hcc-clang.git" CACHE STRING "CLANG URL" FORCE)
 ENDIF (NOT CLANG_URL)
 set(CMAKE_MACOSX_RPATH 1)
 
@@ -37,6 +37,8 @@ include (MCWAMP)
 include (PatchAsmParser)
 include (PatchPassManagerBuilder)
 include (SetupRemoveSpecialSection)
+include (PatchLLVM350)
+include (PatchLLVMforClangOMP)
 
 ensure_llvm_is_present(${PROJECT_SOURCE_DIR} compiler)
 ensure_clang_is_present(${PROJECT_SOURCE_DIR} compiler ${CLANG_URL})
@@ -51,6 +53,8 @@ setup_Utils(utils)
 patch_AsmParser(SPIRify)
 patch_PassManagerBuilder(TileUniform)
 setup_RemoveSpecialSection(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms RemoveSpecialSection)
+patch_LLVM350(utils)
+patch_LLVM_for_ClangOMP(OpenMP)
 set(LLVM_TARGETS_TO_BUILD X86 CACHE STRING "LLVM host target")
 set(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD CBackend CACHE STRING "set this to 'CBackend' to enable generating OpenCL-C")
 set(LLVM_INCLUDE_EXAMPLES off)
@@ -144,7 +148,7 @@ if (NOT HSA_LIBRARY)
 endif (NOT HSA_LIBRARY)
 
 
-find_library(HSA_KMT_LIBRARY libhsakmt.so.1 PATHS ${HSA_KMT_LIBRARY_DIR} ${HSA_ROOT}/lib /usr/lib/x86_64-linux-gnu NO_DEFAULT_PATH)
+find_library(HSA_KMT_LIBRARY libhsakmt.so.1 PATHS ${HSA_KMT_LIBRARY_DIR} /usr/lib/x86_64-linux-gnu ${HSA_ROOT}/lib NO_DEFAULT_PATH)
 find_library(HSA_KMT_LIBRARY libhsakmt.so.1)
 if (NOT HSA_KMT_LIBRARY)
   MESSAGE("HSA Kernel library not found. Use -DHSA_KMT_LIBRARY_DIR=<path_to_libhsakmt.so.1>.")
@@ -243,7 +247,7 @@ add_custom_target(hlc
           -DLLVM_ENABLE_RTTI=ON
           -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=HSAIL
           -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-  COMMAND make -j4 # not portable, but we need it this way
+  COMMAND make -j8 # not portable, but we need it this way
   WORKING_DIRECTORY ${HLC_BIN_DIR}
 )
 

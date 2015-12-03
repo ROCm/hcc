@@ -104,7 +104,13 @@ if [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 1 ]; then
 
   if [ -d $HOF_BIN ] && [ -e $HOF_BIN/hof ]; then
     # all HOF tools are available
-    LOWER_HOF=1
+    HCC_NOISA="${HCC_NOISA:=0}"
+    if [ $HCC_NOISA == "1" ]; then
+      echo "WARNING: HSA offline finalization explicitely disabled."
+      LOWER_HOF=0
+    else
+      LOWER_HOF=1
+    fi
   else
     # disable HOF in case any of the required tools is missing
     echo "WARNING: Missing HOF tools.  Disable HSA offline finalization."
@@ -278,6 +284,19 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
   if [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 1 ]; then
     # conduct HSA offline finalization
     $HOF_BIN/hof -output=$TEMP_DIR/kernel.isa -brig $TEMP_DIR/kernel.brig
+
+    ##
+    # Lines below are not yet applicable for hof posted on Github
+    ##
+
+    # Kaveri
+    #HOF_ARCH="AMD:AMDGPU:7:0:0"
+     
+    # Fiji 
+    #HOF_ARCH="AMD:AMDGPU:8:0:3"
+
+    #$HOF_BIN/hof  -target $HOF_ARCH -output $TEMP_DIR/kernel.isa -brig $TEMP_DIR/kernel.brig
+
     ret=$?
     if [ $ret == 0 ]; then
       # build a new kernel object
