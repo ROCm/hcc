@@ -215,12 +215,15 @@ sub run_test {
 	}
 
         my $cmd_output = `$command`;
-        my $build_exit_code = $? >> 8;
+        my $build_exit_code = $?;
+        my $build_exit_signal = $build_exit_code & 127;
         log_message($cmd_output);
         log_message(">>>\n"
             ."Build exit code: $build_exit_code");
+        $build_exit_code >>= 8;
 
-        my $exec_exit_code;
+        my $exec_exit_code = 0;
+        my $exec_exit_signal = 0;
         my $timeout=0;
         if((not $Test::config{'compile_only'}) && $build_exit_code == 0 && $Test::config{'expected_success'})
         {
@@ -244,7 +247,8 @@ sub run_test {
                     lock($device_lock);
                     $cmd_output = `$test_exec 2>&1`;
                 }
-                $exec_exit_code = $? >> 8;
+                $exec_exit_code = $?;
+                $exec_exit_signal = $exec_exit_code & 127;
                 log_message($cmd_output);
                 alarm 0;
             };
@@ -254,10 +258,15 @@ sub run_test {
             }
             log_message(">>>\n"
                 ."Execution exit code: $exec_exit_code");
+            $exec_exit_code >>= 8;
         }
 
         # Interpret result
         if($timeout == 1) {
+            $result = FAIL;
+        }
+        elsif ($build_exit_signal || $exec_exit_signal)
+        {
             $result = FAIL;
         }
         elsif(not $Test::config{'expected_success'}) # Negative test
