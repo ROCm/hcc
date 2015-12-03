@@ -1,7 +1,7 @@
 // XFAIL: Linux
-// RUN: %hc %s -lhip_runtime -o %t.out && %t.out
+// RUN: %hc %s -o %t.out && %t.out
 
-#include "hip_runtime.h"
+#include "grid_launch.h"
 
 typedef struct {
   int x;
@@ -30,21 +30,23 @@ __KERNEL void kernel1(grid_launch_parm lp, Foo *x, Bar *y, const constStructcons
 
 int main(void) {
 
-  Foo* data1;
-  Bar* data2;
-  constStructconst* data3;
-
-  hipMallocHost((void**)&data1, SIZE*sizeof(Foo));
-  hipMallocHost((void**)&data2, SIZE*sizeof(Bar));
-  hipMallocHost((void**)&data3, SIZE*sizeof(constStructconst));
+  Foo* data1 = (Foo*)malloc(SIZE*sizeof(Foo));
+  Bar* data2 = (Bar*)malloc(SIZE*sizeof(Bar));
+  constStructconst* data3 = (constStructconst*)malloc(SIZE*sizeof(constStructconst));
   for(int i = 0; i < SIZE; ++i) {
     data3[i].x = i;
   }
 
-  dim3 grid = dim3(GRID_SIZE, 1);
-  dim3 block = dim3(TILE_SIZE, 1);
+  grid_launch_parm lp;
+  grid_launch_init(&lp);
 
-  hipLaunchKernel(kernel1, grid, block, 0, 0, data1, data2, data3);
+  lp.gridDim = uint3(GRID_SIZE, 1);
+  lp.groupDim = uint3(TILE_SIZE, 1);
+
+  hc::completion_future cf;
+  lp.cf = &cf;
+  kernel1(lp, data1, data2, data3);
+  lp.cf->wait();
 
   bool ret = 0;
   for(int i = 0; i < SIZE; ++i) {

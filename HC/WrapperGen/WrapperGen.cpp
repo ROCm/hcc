@@ -150,7 +150,7 @@ namespace
 
       // headers and namespace uses
       out << "#include \"hc.hpp\"" EOL;
-      out << "#include \"hip_runtime.h\"" EOL;
+      out << "#include \"grid_launch.h\"" EOL;
 
       out << "using namespace hc;" EOL;
 
