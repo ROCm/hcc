@@ -20,6 +20,7 @@
 
 #include <md5.h>
 #include <kalmar_runtime.h>
+#include <kalmar_aligned_alloc.h>
 
 extern "C" void PushArgImpl(void *k_, int idx, size_t sz, const void *s);
 extern "C" void PushArgPtrImpl(void *k_, int idx, size_t sz, const void *s);
@@ -48,7 +49,7 @@ static inline void callback_release_kernel(cl_event event, cl_int event_command_
 
 static inline void free_memory(cl_event event, cl_int event_command_exec_status, void *user_data) {
     if (user_data)
-        ::operator delete(user_data);
+        kalmar_aligned_free(user_data);
 }
 
 struct cl_info
@@ -200,7 +201,7 @@ public:
                 err = clEnqueueCopyBuffer(getQueue(), sdm, ddm, src_offset, dst_offset, count, list.size(), list.size()?list.data():NULL, &ent);
                 assert(err == CL_SUCCESS);
             } else {
-                void* stage = aligned_alloc(0x1000, count);
+                void* stage = kalmar_aligned_alloc(0x1000, count);
                 cl_event stage_evt;
                 err = clEnqueueReadBuffer(queue, sdm, CL_FALSE, src_offset, count, stage, list.size(), list.size()?list.data():NULL, &stage_evt);
                 assert(err == CL_SUCCESS);

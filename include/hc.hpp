@@ -23,6 +23,14 @@
 
 #include <hsa_atomic.h>
 
+#ifndef __HC__
+#   define __HC__ [[hc]]
+#endif
+
+#ifndef __CPU__
+#   define __CPU__ [[cpu]]
+#endif
+
 /**
  * @namespace hc
  * Heterogeneous  C++ (HC) namespace
@@ -362,7 +370,7 @@ private:
 public:
 #endif
     __attribute__((annotate("user_deserialize")))
-    accelerator_view() __attribute__((hc,cpu)) {
+    accelerator_view() __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
         throw runtime_exception("errorMsg_throw", 0);
 #endif
@@ -836,7 +844,7 @@ public:
       // could only assign once
       if (__thread_then == nullptr) {
         // spawn a new thread to wait on the future and then execute the callback functor
-        __thread_then = new std::thread([&]() __attribute__((cpu)) {
+        __thread_then = new std::thread([&]() __CPU__ {
           this->wait();
           if(this->valid())
             func();
@@ -1034,7 +1042,7 @@ public:
      * Default constructor. The value at each dimension is initialized to zero.
      * Thus, "extent<3> ix;" initializes the variable to the position (0,0,0).
      */
-    extent() __attribute__((hc,cpu)) : base_() {
+    extent() __CPU__ __HC__ : base_() {
       static_assert(N > 0, "Dimensionality must be positive");
     };
 
@@ -1044,7 +1052,7 @@ public:
      * @param other An object of type extent<N> from which to initialize this
      *              new extent.
      */
-    extent(const extent& other) __attribute__((hc,cpu))
+    extent(const extent& other) __CPU__ __HC__
         : base_(other.base_) {}
 
     /** @{ */
@@ -1056,11 +1064,11 @@ public:
      *
      * @param[in] e0 The component values of the extent vector.
      */
-    explicit extent(int e0) __attribute__((hc,cpu))
+    explicit extent(int e0) __CPU__ __HC__
         : base_(e0) {}
 
     template <typename ..._Tp>
-        explicit extent(_Tp ... __t) __attribute__((hc,cpu))
+        explicit extent(_Tp ... __t) __CPU__ __HC__
         : base_(__t...) {
       static_assert(sizeof...(__t) <= 3, "Can only supply at most 3 individual coordinates in the constructor");
       static_assert(sizeof...(__t) == N, "rank should be consistency");
@@ -1076,7 +1084,7 @@ public:
      *
      * @param[in] components An array of N int values.
      */
-    explicit extent(const int components[]) __attribute__((hc,cpu))
+    explicit extent(const int components[]) __CPU__ __HC__
         : base_(components) {}
 
     /**
@@ -1087,7 +1095,7 @@ public:
      *
      * @param[in] components An array of N int values.
      */
-    explicit extent(int components[]) __attribute__((hc,cpu))
+    explicit extent(int components[]) __CPU__ __HC__
         : base_(components) {}
 
     /**
@@ -1097,7 +1105,7 @@ public:
      *                  this extent.
      * @return Returns *this.
      */
-    extent& operator=(const extent& other) __attribute__((hc,cpu)) {
+    extent& operator=(const extent& other) __CPU__ __HC__ {
         base_.operator=(other.base_);
         return *this;
     }
@@ -1109,10 +1117,10 @@ public:
      * @param[in] c The dimension axis whose coordinate is to be accessed.
      * @return A the component value at position c.
      */
-    int operator[] (unsigned int c) const __attribute__((hc,cpu)) {
+    int operator[] (unsigned int c) const __CPU__ __HC__ {
         return base_[c];
     }
-    int& operator[] (unsigned int c) __attribute__((hc,cpu)) {
+    int& operator[] (unsigned int c) __CPU__ __HC__ {
         return base_[c];
     }
 
@@ -1126,7 +1134,7 @@ public:
      * @return Returns true if the "idx" is contained within the space defined
      *         by this extent (with an assumed origin of zero).
      */
-    bool contains(const index<N>& idx) const __attribute__((hc,cpu)) {
+    bool contains(const index<N>& idx) const __CPU__ __HC__ {
         return Kalmar::amp_helper<N, index<N>, extent<N>>::contains(idx, *this);
     }
 
@@ -1135,7 +1143,7 @@ public:
      * units of elements), which is computed as:
      * extent[0] * extent[1] ... * extent[N-1]
      */
-    unsigned int size() const __attribute__((hc,cpu)) {
+    unsigned int size() const __CPU__ __HC__ {
         return Kalmar::index_helper<N, extent<N>>::count_size(*this);
     }
 
@@ -1167,10 +1175,10 @@ public:
      *
      * @param[in] other The right-hand extent<N> to be compared.
      */
-    bool operator==(const extent& other) const __attribute__((hc,cpu)) {
+    bool operator==(const extent& other) const __CPU__ __HC__ {
         return Kalmar::index_helper<N, extent<N> >::equal(*this, other);
     }
-    bool operator!=(const extent& other) const __attribute__((hc,cpu)) {
+    bool operator!=(const extent& other) const __CPU__ __HC__ {
         return !(*this == other);
     }
 
@@ -1184,23 +1192,23 @@ public:
      *
      * @param[in] ext The right-hand extent<N> to be added or subtracted.
      */
-    extent& operator+=(const extent& __r) __attribute__((hc,cpu)) {
+    extent& operator+=(const extent& __r) __CPU__ __HC__ {
         base_.operator+=(__r.base_);
         return *this;
     }
-    extent& operator-=(const extent& __r) __attribute__((hc,cpu)) {
+    extent& operator-=(const extent& __r) __CPU__ __HC__ {
         base_.operator-=(__r.base_);
         return *this;
     }
-    extent& operator*=(const extent& __r) __attribute__((hc,cpu)) {
+    extent& operator*=(const extent& __r) __CPU__ __HC__ {
         base_.operator*=(__r.base_);
         return *this;
     }
-    extent& operator/=(const extent& __r) __attribute__((hc,cpu)) {
+    extent& operator/=(const extent& __r) __CPU__ __HC__ {
         base_.operator/=(__r.base_);
         return *this;
     }
-    extent& operator%=(const extent& __r) __attribute__((hc,cpu)) {
+    extent& operator%=(const extent& __r) __CPU__ __HC__ {
         base_.operator%=(__r.base_);
         return *this;
     }
@@ -1215,21 +1223,21 @@ public:
      *
      * @param[in] idx The right-hand index<N> to be added or subtracted.
      */
-    extent operator+(const index<N>& idx) __attribute__((hc,cpu)) {
+    extent operator+(const index<N>& idx) __CPU__ __HC__ {
         extent __r = *this;
         __r += idx;
         return __r;
     }
-    extent operator-(const index<N>& idx) __attribute__((hc,cpu)) {
+    extent operator-(const index<N>& idx) __CPU__ __HC__ {
         extent __r = *this;
         __r -= idx;
         return __r;
     }
-    extent& operator+=(const index<N>& idx) __attribute__((hc,cpu)) {
+    extent& operator+=(const index<N>& idx) __CPU__ __HC__ {
         base_.operator+=(idx.base_);
         return *this;
     }
-    extent& operator-=(const index<N>& idx) __attribute__((hc,cpu)) {
+    extent& operator-=(const index<N>& idx) __CPU__ __HC__ {
         base_.operator-=(idx.base_);
         return *this;
     }
@@ -1245,23 +1253,23 @@ public:
      *
      * @param[in] value The right-hand int of the arithmetic operation.
      */
-    extent& operator+=(int value) __attribute__((hc,cpu)) {
+    extent& operator+=(int value) __CPU__ __HC__ {
         base_.operator+=(value);
         return *this;
     }
-    extent& operator-=(int value) __attribute__((hc,cpu)) {
+    extent& operator-=(int value) __CPU__ __HC__ {
         base_.operator-=(value);
         return *this;
     }
-    extent& operator*=(int value) __attribute__((hc,cpu)) {
+    extent& operator*=(int value) __CPU__ __HC__ {
         base_.operator*=(value);
         return *this;
     }
-    extent& operator/=(int value) __attribute__((hc,cpu)) {
+    extent& operator/=(int value) __CPU__ __HC__ {
         base_.operator/=(value);
         return *this;
     }
-    extent& operator%=(int value) __attribute__((hc,cpu)) {
+    extent& operator%=(int value) __CPU__ __HC__ {
         base_.operator%=(value);
         return *this;
     }
@@ -1276,20 +1284,20 @@ public:
      * For prefix increment and decrement, the return value is "*this".
      * Otherwise a new extent<N> is returned.
      */
-    extent& operator++() __attribute__((hc,cpu)) {
+    extent& operator++() __CPU__ __HC__ {
         base_.operator+=(1);
         return *this;
     }
-    extent operator++(int) __attribute__((hc,cpu)) {
+    extent operator++(int) __CPU__ __HC__ {
         extent ret = *this;
         base_.operator+=(1);
         return ret;
     }
-    extent& operator--() __attribute__((hc,cpu)) {
+    extent& operator--() __CPU__ __HC__ {
         base_.operator-=(1);
         return *this;
     }
-    extent operator--(int) __attribute__((hc,cpu)) {
+    extent operator--(int) __CPU__ __HC__ {
         extent ret = *this;
         base_.operator-=(1);
         return ret;
@@ -1321,13 +1329,13 @@ private:
 // FIXME: the signature is not entirely the same as defined in:
 //        C++AMP spec v1.2 #1253
 template <int N>
-extent<N> operator+(const extent<N>& lhs, const extent<N>& rhs) __attribute__((hc,cpu)) {
+extent<N> operator+(const extent<N>& lhs, const extent<N>& rhs) __CPU__ __HC__ {
     extent<N> __r = lhs;
     __r += rhs;
     return __r;
 }
 template <int N>
-extent<N> operator-(const extent<N>& lhs, const extent<N>& rhs) __attribute__((hc,cpu)) {
+extent<N> operator-(const extent<N>& lhs, const extent<N>& rhs) __CPU__ __HC__ {
     extent<N> __r = lhs;
     __r -= rhs;
     return __r;
@@ -1352,61 +1360,61 @@ extent<N> operator-(const extent<N>& lhs, const extent<N>& rhs) __attribute__((h
 // FIXME: the signature is not entirely the same as defined in:
 //        C++AMP spec v1.2 #1259
 template <int N>
-extent<N> operator+(const extent<N>& ext, int value) __attribute__((hc,cpu)) {
+extent<N> operator+(const extent<N>& ext, int value) __CPU__ __HC__ {
     extent<N> __r = ext;
     __r += value;
     return __r;
 }
 template <int N>
-extent<N> operator+(int value, const extent<N>& ext) __attribute__((hc,cpu)) {
+extent<N> operator+(int value, const extent<N>& ext) __CPU__ __HC__ {
     extent<N> __r = ext;
     __r += value;
     return __r;
 }
 template <int N>
-extent<N> operator-(const extent<N>& ext, int value) __attribute__((hc,cpu)) {
+extent<N> operator-(const extent<N>& ext, int value) __CPU__ __HC__ {
     extent<N> __r = ext;
     __r -= value;
     return __r;
 }
 template <int N>
-extent<N> operator-(int value, const extent<N>& ext) __attribute__((hc,cpu)) {
+extent<N> operator-(int value, const extent<N>& ext) __CPU__ __HC__ {
     extent<N> __r(value);
     __r -= ext;
     return __r;
 }
 template <int N>
-extent<N> operator*(const extent<N>& ext, int value) __attribute__((hc,cpu)) {
+extent<N> operator*(const extent<N>& ext, int value) __CPU__ __HC__ {
     extent<N> __r = ext;
     __r *= value;
     return __r;
 }
 template <int N>
-extent<N> operator*(int value, const extent<N>& ext) __attribute__((hc,cpu)) {
+extent<N> operator*(int value, const extent<N>& ext) __CPU__ __HC__ {
     extent<N> __r = ext;
     __r *= value;
     return __r;
 }
 template <int N>
-extent<N> operator/(const extent<N>& ext, int value) __attribute__((hc,cpu)) {
+extent<N> operator/(const extent<N>& ext, int value) __CPU__ __HC__ {
     extent<N> __r = ext;
     __r /= value;
     return __r;
 }
 template <int N>
-extent<N> operator/(int value, const extent<N>& ext) __attribute__((hc,cpu)) {
+extent<N> operator/(int value, const extent<N>& ext) __CPU__ __HC__ {
     extent<N> __r(value);
     __r /= ext;
     return __r;
 }
 template <int N>
-extent<N> operator%(const extent<N>& ext, int value) __attribute__((hc,cpu)) {
+extent<N> operator%(const extent<N>& ext, int value) __CPU__ __HC__ {
     extent<N> __r = ext;
     __r %= value;
     return __r;
 }
 template <int N>
-extent<N> operator%(int value, const extent<N>& ext) __attribute__((hc,cpu)) {
+extent<N> operator%(int value, const extent<N>& ext) __CPU__ __HC__ {
     extent<N> __r(value);
     __r %= ext;
     return __r;
@@ -1438,7 +1446,7 @@ public:
      * Default constructor. The origin and extent is default-constructed and
      * thus zero.
      */
-    tiled_extent() __attribute__((hc,cpu)) : extent<N>(), tile_dim{0} {}
+    tiled_extent() __CPU__ __HC__ : extent<N>(), tile_dim{0} {}
 
     /**
      * Copy constructor. Constructs a new tiled_extent from the supplied
@@ -1447,7 +1455,7 @@ public:
      * @param[in] other An object of type tiled_extent from which to initialize
      *                  this new extent.
      */
-    tiled_extent(const tiled_extent& other) __attribute__((hc,cpu)) : extent<N>(other) {
+    tiled_extent(const tiled_extent& other) __CPU__ __HC__ : extent<N>(other) {
       for (int i = 0; i < N; ++i) {
         tile_dim[i] = other.tile_dim[i];
       }
@@ -1479,7 +1487,7 @@ public:
      * Default constructor. The origin and extent is default-constructed and
      * thus zero.
      */
-    tiled_extent() __attribute__((hc,cpu)) : extent(0), tile_dim{0}, dynamic_group_segment_size(0) {}
+    tiled_extent() __CPU__ __HC__ : extent(0), tile_dim{0}, dynamic_group_segment_size(0) {}
 
     /**
      * Construct an tiled extent with the size of extent and the size of tile
@@ -1488,7 +1496,7 @@ public:
      * @param[in] e0 Size of extent.
      * @param[in] t0 Size of tile.
      */
-    tiled_extent(int e0, int t0) __attribute__((hc,cpu)) : extent(e0), tile_dim{t0}, dynamic_group_segment_size(0) {}
+    tiled_extent(int e0, int t0) __CPU__ __HC__ : extent(e0), tile_dim{t0}, dynamic_group_segment_size(0) {}
 
     /**
      * Construct an tiled extent with the size of extent and the size of tile
@@ -1498,7 +1506,7 @@ public:
      * @param[in] t0 Size of tile.
      * @param[in] size Size of dynamic group segment.
      */
-    tiled_extent(int e0, int t0, int size) __attribute__((hc,cpu)) : extent(e0), tile_dim{t0}, dynamic_group_segment_size(size) {}
+    tiled_extent(int e0, int t0, int size) __CPU__ __HC__ : extent(e0), tile_dim{t0}, dynamic_group_segment_size(size) {}
 
     /**
      * Copy constructor. Constructs a new tiled_extent from the supplied
@@ -1507,7 +1515,7 @@ public:
      * @param[in] other An object of type tiled_extent from which to initialize
      *                  this new extent.
      */
-    tiled_extent(const tiled_extent<1>& other) __attribute__((hc,cpu)) : extent(other[0]), tile_dim{other.tile_dim[0]}, dynamic_group_segment_size(other.dynamic_group_segment_size) {}
+    tiled_extent(const tiled_extent<1>& other) __CPU__ __HC__ : extent(other[0]), tile_dim{other.tile_dim[0]}, dynamic_group_segment_size(other.dynamic_group_segment_size) {}
 
 
     /**
@@ -1516,7 +1524,7 @@ public:
      * @param[in] ext The extent of this tiled_extent
      * @param[in] t0 Size of tile.
      */
-    tiled_extent(const extent<1>& ext, int t0) __attribute__((hc,cpu)) : extent(ext), tile_dim{t0}, dynamic_group_segment_size(0) {} 
+    tiled_extent(const extent<1>& ext, int t0) __CPU__ __HC__ : extent(ext), tile_dim{t0}, dynamic_group_segment_size(0) {} 
 
     /**
      * Constructs a tiled_extent<N> with the extent "ext".
@@ -1525,7 +1533,7 @@ public:
      * @param[in] t0 Size of tile.
      * @param[in] size Size of dynamic group segment
      */
-    tiled_extent(const extent<1>& ext, int t0, int size) __attribute__((hc,cpu)) : extent(ext), tile_dim{t0}, dynamic_group_segment_size(size) {}
+    tiled_extent(const extent<1>& ext, int t0, int size) __CPU__ __HC__ : extent(ext), tile_dim{t0}, dynamic_group_segment_size(size) {}
 
     /**
      * Set the size of dynamic group segment. The function should be called
@@ -1533,14 +1541,14 @@ public:
      *
      * @param[in] size The amount of dynamic group segment needed.
      */
-    void set_dynamic_group_segment_size(unsigned int size) __attribute__((cpu)) {
+    void set_dynamic_group_segment_size(unsigned int size) __CPU__ {
         dynamic_group_segment_size = size;
     }
 
     /**
      * Return the size of dynamic group segment in bytes.
      */
-    unsigned int get_dynamic_group_segment_size() const __attribute__((cpu)) {
+    unsigned int get_dynamic_group_segment_size() const __CPU__ {
         return dynamic_group_segment_size;
     }
 };
@@ -1570,7 +1578,7 @@ public:
      * Default constructor. The origin and extent is default-constructed and
      * thus zero.
      */
-    tiled_extent() __attribute__((hc,cpu)) : extent(0, 0), tile_dim{0, 0}, dynamic_group_segment_size(0) {}
+    tiled_extent() __CPU__ __HC__ : extent(0, 0), tile_dim{0, 0}, dynamic_group_segment_size(0) {}
 
     /**
      * Construct an tiled extent with the size of extent and the size of tile
@@ -1581,7 +1589,7 @@ public:
      * @param[in] t0 Size of tile in the 1st dimension.
      * @param[in] t1 Size of tile in the 2nd dimension.
      */
-    tiled_extent(int e0, int e1, int t0, int t1) __attribute__((hc,cpu)) : extent(e0, e1), tile_dim{t0, t1}, dynamic_group_segment_size(0) {}
+    tiled_extent(int e0, int e1, int t0, int t1) __CPU__ __HC__ : extent(e0, e1), tile_dim{t0, t1}, dynamic_group_segment_size(0) {}
 
     /**
      * Construct an tiled extent with the size of extent and the size of tile
@@ -1593,7 +1601,7 @@ public:
      * @param[in] t1 Size of tile in the 2nd dimension.
      * @param[in] size Size of dynamic group segment.
      */
-    tiled_extent(int e0, int e1, int t0, int t1, int size) __attribute__((hc,cpu)) : extent(e0, e1), tile_dim{t0, t1}, dynamic_group_segment_size(size) {}
+    tiled_extent(int e0, int e1, int t0, int t1, int size) __CPU__ __HC__ : extent(e0, e1), tile_dim{t0, t1}, dynamic_group_segment_size(size) {}
 
     /**
      * Copy constructor. Constructs a new tiled_extent from the supplied
@@ -1602,7 +1610,7 @@ public:
      * @param[in] other An object of type tiled_extent from which to initialize
      *                  this new extent.
      */
-    tiled_extent(const tiled_extent<2>& other) __attribute__((hc,cpu)) : extent(other[0], other[1]), tile_dim{other.tile_dim[0], other.tile_dim[1]}, dynamic_group_segment_size(other.dynamic_group_segment_size) {}
+    tiled_extent(const tiled_extent<2>& other) __CPU__ __HC__ : extent(other[0], other[1]), tile_dim{other.tile_dim[0], other.tile_dim[1]}, dynamic_group_segment_size(other.dynamic_group_segment_size) {}
 
     /**
      * Constructs a tiled_extent<N> with the extent "ext".
@@ -1611,7 +1619,7 @@ public:
      * @param[in] t0 Size of tile in the 1st dimension.
      * @param[in] t1 Size of tile in the 2nd dimension.
      */
-    tiled_extent(const extent<2>& ext, int t0, int t1) __attribute__((hc,cpu)) : extent(ext), tile_dim{t0, t1}, dynamic_group_segment_size(0) {}
+    tiled_extent(const extent<2>& ext, int t0, int t1) __CPU__ __HC__ : extent(ext), tile_dim{t0, t1}, dynamic_group_segment_size(0) {}
 
     /**
      * Constructs a tiled_extent<N> with the extent "ext".
@@ -1621,7 +1629,7 @@ public:
      * @param[in] t1 Size of tile in the 2nd dimension.
      * @param[in] size Size of dynamic group segment.
      */
-    tiled_extent(const extent<2>& ext, int t0, int t1, int size) __attribute__((hc,cpu)) : extent(ext), tile_dim{t0, t1}, dynamic_group_segment_size(size) {}
+    tiled_extent(const extent<2>& ext, int t0, int t1, int size) __CPU__ __HC__ : extent(ext), tile_dim{t0, t1}, dynamic_group_segment_size(size) {}
 
     /**
      * Set the size of dynamic group segment. The function should be called
@@ -1629,14 +1637,14 @@ public:
      *
      * @param[in] size The amount of dynamic group segment needed.
      */
-    void set_dynamic_group_segment_size(unsigned int size) __attribute__((cpu)) {
+    void set_dynamic_group_segment_size(unsigned int size) __CPU__ {
         dynamic_group_segment_size = size;
     }
 
     /**
      * Return the size of dynamic group segment in bytes.
      */
-    unsigned int get_dynamic_group_segment_size() const __attribute__((cpu)) {
+    unsigned int get_dynamic_group_segment_size() const __CPU__ {
         return dynamic_group_segment_size;
     }
 };
@@ -1666,7 +1674,7 @@ public:
      * Default constructor. The origin and extent is default-constructed and
      * thus zero.
      */
-    tiled_extent() __attribute__((hc,cpu)) : extent(0, 0, 0), tile_dim{0, 0, 0}, dynamic_group_segment_size(0) {}
+    tiled_extent() __CPU__ __HC__ : extent(0, 0, 0), tile_dim{0, 0, 0}, dynamic_group_segment_size(0) {}
 
     /**
      * Construct an tiled extent with the size of extent and the size of tile
@@ -1679,7 +1687,7 @@ public:
      * @param[in] t1 Size of tile in the 2nd dimension.
      * @param[in] t2 Size of tile in the 3rd dimension.
      */
-    tiled_extent(int e0, int e1, int e2, int t0, int t1, int t2) __attribute__((hc,cpu)) : extent(e0, e1, e2), tile_dim{t0, t1, t2}, dynamic_group_segment_size(0) {}
+    tiled_extent(int e0, int e1, int e2, int t0, int t1, int t2) __CPU__ __HC__ : extent(e0, e1, e2), tile_dim{t0, t1, t2}, dynamic_group_segment_size(0) {}
 
     /**
      * Construct an tiled extent with the size of extent and the size of tile
@@ -1693,7 +1701,7 @@ public:
      * @param[in] t2 Size of tile in the 3rd dimension.
      * @param[in] size Size of dynamic group segment.
      */
-    tiled_extent(int e0, int e1, int e2, int t0, int t1, int t2, int size) __attribute__((hc,cpu)) : extent(e0, e1, e2), tile_dim{t0, t1, t2}, dynamic_group_segment_size(size) {}
+    tiled_extent(int e0, int e1, int e2, int t0, int t1, int t2, int size) __CPU__ __HC__ : extent(e0, e1, e2), tile_dim{t0, t1, t2}, dynamic_group_segment_size(size) {}
 
     /**
      * Copy constructor. Constructs a new tiled_extent from the supplied
@@ -1702,7 +1710,7 @@ public:
      * @param[in] other An object of type tiled_extent from which to initialize
      *                  this new extent.
      */
-    tiled_extent(const tiled_extent<3>& other) __attribute__((hc,cpu)) : extent(other[0], other[1], other[2]), tile_dim{other.tile_dim[0], other.tile_dim[1], other.tile_dim[2]}, dynamic_group_segment_size(other.dynamic_group_segment_size) {}
+    tiled_extent(const tiled_extent<3>& other) __CPU__ __HC__ : extent(other[0], other[1], other[2]), tile_dim{other.tile_dim[0], other.tile_dim[1], other.tile_dim[2]}, dynamic_group_segment_size(other.dynamic_group_segment_size) {}
 
     /**
      * Constructs a tiled_extent<N> with the extent "ext".
@@ -1712,7 +1720,7 @@ public:
      * @param[in] t1 Size of tile in the 2nd dimension.
      * @param[in] t2 Size of tile in the 3rd dimension.
      */
-    tiled_extent(const extent<3>& ext, int t0, int t1, int t2) __attribute__((hc,cpu)) : extent(ext), tile_dim{t0, t1, t2}, dynamic_group_segment_size(0) {}
+    tiled_extent(const extent<3>& ext, int t0, int t1, int t2) __CPU__ __HC__ : extent(ext), tile_dim{t0, t1, t2}, dynamic_group_segment_size(0) {}
 
     /**
      * Constructs a tiled_extent<N> with the extent "ext".
@@ -1723,7 +1731,7 @@ public:
      * @param[in] t2 Size of tile in the 3rd dimension.
      * @param[in] size Size of dynamic group segment.
      */
-    tiled_extent(const extent<3>& ext, int t0, int t1, int t2, int size) __attribute__((hc,cpu)) : extent(ext), tile_dim{t0, t1, t2}, dynamic_group_segment_size(size) {}
+    tiled_extent(const extent<3>& ext, int t0, int t1, int t2, int size) __CPU__ __HC__ : extent(ext), tile_dim{t0, t1, t2}, dynamic_group_segment_size(size) {}
 
     /**
      * Set the size of dynamic group segment. The function should be called
@@ -1731,14 +1739,14 @@ public:
      *
      * @param[in] size The amount of dynamic group segment needed.
      */
-    void set_dynamic_group_segment_size(unsigned int size) __attribute__((cpu)) {
+    void set_dynamic_group_segment_size(unsigned int size) __CPU__ {
         dynamic_group_segment_size = size;
     }
 
     /**
      * Return the size of dynamic group segment in bytes.
      */
-    unsigned int get_dynamic_group_segment_size() const __attribute__((cpu)) {
+    unsigned int get_dynamic_group_segment_size() const __CPU__ {
         return dynamic_group_segment_size;
     }
 };
@@ -1749,21 +1757,21 @@ public:
 
 template <int N>
 inline
-tiled_extent<1> extent<N>::tile(int t0) const __attribute__((hc,cpu)) {
+tiled_extent<1> extent<N>::tile(int t0) const __CPU__ __HC__ {
   static_assert(N == 1, "One-dimensional tile() method only available on extent<1>");
   return tiled_extent<1>(*this, t0);
 }
 
 template <int N>
 inline
-tiled_extent<2> extent<N>::tile(int t0, int t1) const __attribute__((hc,cpu)) {
+tiled_extent<2> extent<N>::tile(int t0, int t1) const __CPU__ __HC__ {
   static_assert(N == 2, "Two-dimensional tile() method only available on extent<2>");
   return tiled_extent<2>(*this, t0, t1);
 }
 
 template <int N>
 inline
-tiled_extent<3> extent<N>::tile(int t0, int t1, int t2) const __attribute__((hc,cpu)) {
+tiled_extent<3> extent<N>::tile(int t0, int t1, int t2) const __CPU__ __HC__ {
   static_assert(N == 3, "Three-dimensional tile() method only available on extent<3>");
   return tiled_extent<3>(*this, t0, t1, t2);
 }
@@ -1779,27 +1787,27 @@ tiled_extent<3> extent<N>::tile(int t0, int t1, int t2) const __attribute__((hc,
  * @return A pointer to the memory address space with the specified offset from
  *         the beginning of group segment.
  */
-extern "C" __attribute__((address_space(3))) void* get_group_segment_addr(unsigned int offset) __attribute__((hc));
+extern "C" __attribute__((address_space(3))) void* get_group_segment_addr(unsigned int offset) __HC__;
 
 /**
  * C interface of HSA builtin function to fetch the size of static group segment
  *
  * @return The size of static group segment used by the kernel in bytes.
  */
-extern "C" unsigned int get_static_group_segment_size() __attribute__((hc));
+extern "C" unsigned int get_static_group_segment_size() __HC__;
 
 /**
  * C interface of HSA builtin function to fetch the size of dynamic group segment
  *
  * @return The size of dynamic group segment used by the kernel in bytes.
  */
-extern "C" unsigned int get_dynamic_group_segment_size() __attribute__((hc));
+extern "C" unsigned int get_dynamic_group_segment_size() __HC__;
 
 /**
  * C interface of HSA builtin function to fetch the address of the beginning
  * of dynamic group segment.
  */
-extern "C" __attribute__((address_space(3))) void* get_dynamic_group_segment() __attribute__((hc));
+extern "C" __attribute__((address_space(3))) void* get_dynamic_group_segment() __HC__;
 
 // ------------------------------------------------------------------------
 // utility class for tiled_barrier
@@ -1867,7 +1875,7 @@ public:
      * @param[in] other An object of type tile_barrier from which to initialize
      *                  this.
      */
-    tile_barrier(const tile_barrier& other) __attribute__((hc,cpu)) : pbar(other.pbar) {}
+    tile_barrier(const tile_barrier& other) __CPU__ __HC__ : pbar(other.pbar) {}
 #else
 
     /**
@@ -1877,7 +1885,7 @@ public:
      * @param[in] other An object of type tile_barrier from which to initialize
      *                  this.
      */
-    tile_barrier(const tile_barrier& other) __attribute__((hc,cpu)) {}
+    tile_barrier(const tile_barrier& other) __CPU__ __HC__ {}
 #endif
 
     /**
@@ -1890,7 +1898,7 @@ public:
      * before hitting the barrier. This is identical to
      * wait_with_all_memory_fence().
      */
-    void wait() const __attribute__((hc)) {
+    void wait() const __HC__ {
 #if __KALMAR_ACCELERATOR__ == 1
         wait_with_all_memory_fence();
 #elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
@@ -1907,7 +1915,7 @@ public:
      * none of the memory operations occurring after the barrier are executed
      * before hitting the barrier. This is identical to wait().
      */
-    void wait_with_all_memory_fence() const __attribute__((hc)) {
+    void wait_with_all_memory_fence() const __HC__ {
 #if __KALMAR_ACCELERATOR__ == 1
         amp_barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
 #elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
@@ -1924,7 +1932,7 @@ public:
      * barrier has completed and none of the global memory operations occurring
      * after the barrier are executed before hitting the barrier.
      */
-    void wait_with_global_memory_fence() const __attribute__((hc)) {
+    void wait_with_global_memory_fence() const __HC__ {
 #if __KALMAR_ACCELERATOR__ == 1
         amp_barrier(CLK_GLOBAL_MEM_FENCE);
 #elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
@@ -1942,7 +1950,7 @@ public:
      * memory operations occurring after the barrier are executed before
      * hitting the barrier.
      */
-    void wait_with_tile_static_memory_fence() const __attribute__((hc)) {
+    void wait_with_tile_static_memory_fence() const __HC__ {
 #if __KALMAR_ACCELERATOR__ == 1
         amp_barrier(CLK_LOCAL_MEM_FENCE);
 #elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
@@ -1952,10 +1960,10 @@ public:
 
 private:
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    tile_barrier() __attribute__((hc,cpu)) = default;
+    tile_barrier() __CPU__ __HC__ = default;
     pb_t pbar;
 #else
-    tile_barrier() __attribute__((hc)) {}
+    tile_barrier() __HC__ {}
 #endif
 
     template <int N> friend
@@ -1976,7 +1984,7 @@ private:
  * is therefore permitted in divergent code.
  */
 // FIXME: this functions has not been implemented.
-void all_memory_fence(const tile_barrier&) __attribute__((hc));
+void all_memory_fence(const tile_barrier&) __HC__;
 
 /**
  * Establishes a thread-tile scoped memory fence for global (but not
@@ -1984,7 +1992,7 @@ void all_memory_fence(const tile_barrier&) __attribute__((hc));
  * is therefore permitted in divergent code.
  */
 // FIXME: this functions has not been implemented.
-void global_memory_fence(const tile_barrier&) __attribute__((hc));
+void global_memory_fence(const tile_barrier&) __HC__;
 
 /**
  * Establishes a thread-tile scoped memory fence for tile-static (but not
@@ -1992,7 +2000,7 @@ void global_memory_fence(const tile_barrier&) __attribute__((hc));
  * therefore permitted in divergent code.
  */
 // FIXME: this functions has not been implemented.
-void tile_static_memory_fence(const tile_barrier&) __attribute__((hc));
+void tile_static_memory_fence(const tile_barrier&) __HC__;
 
 // ------------------------------------------------------------------------
 // tiled_index
@@ -2020,7 +2028,7 @@ public:
      * @param[in] other An object of type tiled_index from which to initialize
      *                  this.
      */
-    tiled_index(const tiled_index& other) __attribute__((hc,cpu)) : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin), barrier(other.barrier), tile_dim(other.dim) {}
+    tiled_index(const tiled_index& other) __CPU__ __HC__ : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin), barrier(other.barrier), tile_dim(other.dim) {}
 
     /**
      * An index of rank 1, 2, or 3 that represents the global index within an
@@ -2061,21 +2069,21 @@ public:
      * an index<N>. The implicit conversion converts to the .global index
      * member.
      */
-    operator const index<3>() const __attribute__((hc,cpu)) {
+    operator const index<3>() const __CPU__ __HC__ {
         return global;
     }
 
-    tiled_index(const index<3>& g) __attribute__((hc,cpu)) : global(g) {}
+    tiled_index(const index<3>& g) __CPU__ __HC__ : global(g) {}
 
 private:
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    __attribute__((always_inline)) tiled_index(int a0, int a1, int a2, int b0, int b1, int b2, int c0, int c1, int c2, tile_barrier& pb) __attribute__((hc,cpu))
+    __attribute__((always_inline)) tiled_index(int a0, int a1, int a2, int b0, int b1, int b2, int c0, int c1, int c2, tile_barrier& pb) __CPU__ __HC__
         : global(a2, a1, a0), local(b2, b1, b0), tile(c2, c1, c0), tile_origin(a2 - b2, a1 - b1, a0 - b0), barrier(pb) {}
 #endif
 
     __attribute__((annotate("__cxxamp_opencl_index")))
 #if __KALMAR_ACCELERATOR__ == 1
-    __attribute__((always_inline)) tiled_index() __attribute__((hc))
+    __attribute__((always_inline)) tiled_index() __HC__
         : global(index<3>(amp_get_global_id(2), amp_get_global_id(1), amp_get_global_id(0))),
           local(index<3>(amp_get_local_id(2), amp_get_local_id(1), amp_get_local_id(0))),
           tile(index<3>(amp_get_group_id(2), amp_get_group_id(1), amp_get_group_id(0))),
@@ -2084,9 +2092,9 @@ private:
                                amp_get_global_id(0) - amp_get_local_id(0))),
           tile_dim(index<3>(amp_get_local_size(2), amp_get_local_size(1), amp_get_local_size(0)))
 #elif __KALMAR__ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    __attribute__((always_inline)) tiled_index() __attribute__((hc,cpu))
+    __attribute__((always_inline)) tiled_index() __CPU__ __HC__
 #else
-    __attribute__((always_inline)) tiled_index() __attribute__((hc))
+    __attribute__((always_inline)) tiled_index() __HC__
 #endif // __KALMAR_ACCELERATOR__
     {}
 
@@ -2116,7 +2124,7 @@ public:
      * @param[in] other An object of type tiled_index from which to initialize
      *                  this.
      */
-    tiled_index(const tiled_index& other) __attribute__((hc,cpu)) : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin), barrier(other.barrier), tile_dim(other.tile_dim) {}
+    tiled_index(const tiled_index& other) __CPU__ __HC__ : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin), barrier(other.barrier), tile_dim(other.tile_dim) {}
 
     /**
      * An index of rank 1, 2, or 3 that represents the global index within an
@@ -2157,30 +2165,30 @@ public:
      * an index<N>. The implicit conversion converts to the .global index
      * member.
      */
-    operator const index<1>() const __attribute__((hc,cpu)) {
+    operator const index<1>() const __CPU__ __HC__ {
         return global;
     }
 
-    tiled_index(const index<1>& g) __attribute__((hc,cpu)) : global(g) {}
+    tiled_index(const index<1>& g) __CPU__ __HC__ : global(g) {}
 
 private:
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    __attribute__((always_inline)) tiled_index(int a, int b, int c, tile_barrier& pb) __attribute__((hc,cpu))
+    __attribute__((always_inline)) tiled_index(int a, int b, int c, tile_barrier& pb) __CPU__ __HC__
         : global(a), local(b), tile(c), tile_origin(a - b), barrier(pb) {}
 #endif
 
     __attribute__((annotate("__cxxamp_opencl_index")))
 #if __KALMAR_ACCELERATOR__ == 1
-    __attribute__((always_inline)) tiled_index() __attribute__((hc))
+    __attribute__((always_inline)) tiled_index() __HC__
         : global(index<1>(amp_get_global_id(0))),
           local(index<1>(amp_get_local_id(0))),
           tile(index<1>(amp_get_group_id(0))),
           tile_origin(index<1>(amp_get_global_id(0) - amp_get_local_id(0))),
           tile_dim(index<1>(amp_get_local_size(0)))
 #elif __KALMAR__ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    __attribute__((always_inline)) tiled_index() __attribute__((hc,cpu))
+    __attribute__((always_inline)) tiled_index() __CPU__ __HC__
 #else
-    __attribute__((always_inline)) tiled_index() __attribute__((hc))
+    __attribute__((always_inline)) tiled_index() __HC__
 #endif // __KALMAR_ACCELERATOR__
     {}
 
@@ -2209,7 +2217,7 @@ public:
      * @param[in] other An object of type tiled_index from which to initialize
      *                  this.
      */
-    tiled_index(const tiled_index& other) __attribute__((hc,cpu)) : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin), barrier(other.barrier), tile_dim(other.tile_dim) {}
+    tiled_index(const tiled_index& other) __CPU__ __HC__ : global(other.global), local(other.local), tile(other.tile), tile_origin(other.tile_origin), barrier(other.barrier), tile_dim(other.tile_dim) {}
 
     /**
      * An index of rank 1, 2, or 3 that represents the global index within an
@@ -2250,21 +2258,21 @@ public:
      * an index<N>. The implicit conversion converts to the .global index
      * member.
      */
-    operator const index<2>() const __attribute__((hc,cpu)) {
+    operator const index<2>() const __CPU__ __HC__ {
       return global;
     }
 
-    tiled_index(const index<2>& g) __attribute__((hc,cpu)) : global(g) {}
+    tiled_index(const index<2>& g) __CPU__ __HC__ : global(g) {}
 
 private:
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    __attribute__((always_inline)) tiled_index(int a0, int a1, int b0, int b1, int c0, int c1, tile_barrier& pb) __attribute__((hc,cpu))
+    __attribute__((always_inline)) tiled_index(int a0, int a1, int b0, int b1, int c0, int c1, tile_barrier& pb) __CPU__ __HC__
         : global(a1, a0), local(b1, b0), tile(c1, c0), tile_origin(a1 - b1, a0 - b0), barrier(pb) {}
 #endif
 
     __attribute__((annotate("__cxxamp_opencl_index")))
 #if __KALMAR_ACCELERATOR__ == 1
-    __attribute__((always_inline)) tiled_index() __attribute__((hc))
+    __attribute__((always_inline)) tiled_index() __HC__
         : global(index<2>(amp_get_global_id(1), amp_get_global_id(0))),
           local(index<2>(amp_get_local_id(1), amp_get_local_id(0))),
           tile(index<2>(amp_get_group_id(1), amp_get_group_id(0))),
@@ -2272,9 +2280,9 @@ private:
                                amp_get_global_id(0) - amp_get_local_id(0))),
           tile_dim(index<2>(amp_get_local_size(1), amp_get_local_size(0)))
 #elif __KALMAR__ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    __attribute__((always_inline)) tiled_index() __attribute__((hc,cpu))
+    __attribute__((always_inline)) tiled_index() __CPU__ __HC__
 #else
-    __attribute__((always_inline)) tiled_index() __attribute__((hc))
+    __attribute__((always_inline)) tiled_index() __HC__
 #endif // __KALMAR_ACCELERATOR__
     {}
 
@@ -2290,10 +2298,10 @@ template <typename T, int N>
 struct projection_helper
 {
     // array_view<T,N>, where N>1
-    //    array_view<T,N-1> operator[](int i) const __attribute__((hc,cpu))
+    //    array_view<T,N-1> operator[](int i) const __CPU__ __HC__
     static_assert(N > 1, "projection_helper is only supported on array_view with a rank of 2 or higher");
     typedef array_view<T, N - 1> result_type;
-    static result_type project(array_view<T, N>& now, int stride) __attribute__((hc,cpu)) {
+    static result_type project(array_view<T, N>& now, int stride) __CPU__ __HC__ {
         int ext[N - 1], i, idx[N - 1], ext_o[N - 1];
         for (i = N - 1; i > 0; --i) {
             ext_o[i - 1] = now.extent[i];
@@ -2307,7 +2315,7 @@ struct projection_helper
         return result_type (now.cache, ext_now, ext_base, idx_base,
                             now.offset + ext_base.size() * stride);
     }
-    static result_type project(const array_view<T, N>& now, int stride) __attribute__((hc,cpu)) {
+    static result_type project(const array_view<T, N>& now, int stride) __CPU__ __HC__ {
         int ext[N - 1], i, idx[N - 1], ext_o[N - 1];
         for (i = N - 1; i > 0; --i) {
             ext_o[i - 1] = now.extent[i];
@@ -2327,16 +2335,16 @@ template <typename T>
 struct projection_helper<T, 1>
 {
     // array_view<T,1>
-    //      T& operator[](int i) const __attribute__((hc,cpu));
+    //      T& operator[](int i) const __CPU__ __HC__;
     typedef T& result_type;
-    static result_type project(array_view<T, 1>& now, int i) __attribute__((hc,cpu)) {
+    static result_type project(array_view<T, 1>& now, int i) __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
         now.cache.get_cpu_access(true);
 #endif
         T *ptr = reinterpret_cast<T *>(now.cache.get() + i + now.offset + now.index_base[0]);
         return *ptr;
     }
-    static result_type project(const array_view<T, 1>& now, int i) __attribute__((hc,cpu)) {
+    static result_type project(const array_view<T, 1>& now, int i) __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
         now.cache.get_cpu_access(true);
 #endif
@@ -2349,10 +2357,10 @@ template <typename T, int N>
 struct projection_helper<const T, N>
 {
     // array_view<T,N>, where N>1
-    //    array_view<const T,N-1> operator[](int i) const __attribute__((hc,cpu));
+    //    array_view<const T,N-1> operator[](int i) const __CPU__ __HC__;
     static_assert(N > 1, "projection_helper is only supported on array_view with a rank of 2 or higher");
     typedef array_view<const T, N - 1> const_result_type;
-    static const_result_type project(array_view<const T, N>& now, int stride) __attribute__((hc,cpu)) {
+    static const_result_type project(array_view<const T, N>& now, int stride) __CPU__ __HC__ {
         int ext[N - 1], i, idx[N - 1], ext_o[N - 1];
         for (i = N - 1; i > 0; --i) {
             ext_o[i - 1] = now.extent[i];
@@ -2367,7 +2375,7 @@ struct projection_helper<const T, N>
                                       now.offset + ext_base.size() * stride);
         return ret;
     }
-    static const_result_type project(const array_view<const T, N>& now, int stride) __attribute__((hc,cpu)) {
+    static const_result_type project(const array_view<const T, N>& now, int stride) __CPU__ __HC__ {
         int ext[N - 1], i, idx[N - 1], ext_o[N - 1];
         for (i = N - 1; i > 0; --i) {
             ext_o[i - 1] = now.extent[i];
@@ -2388,16 +2396,16 @@ template <typename T>
 struct projection_helper<const T, 1>
 {
     // array_view<const T,1>
-    //      const T& operator[](int i) const __attribute__((hc,cpu));
+    //      const T& operator[](int i) const __CPU__ __HC__;
     typedef const T& const_result_type;
-    static const_result_type project(array_view<const T, 1>& now, int i) __attribute__((hc,cpu)) {
+    static const_result_type project(array_view<const T, 1>& now, int i) __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
         now.cache.get_cpu_access();
 #endif
         const T *ptr = reinterpret_cast<const T *>(now.cache.get() + i + now.offset + now.index_base[0]);
         return *ptr;
     }
-    static const_result_type project(const array_view<const T, 1>& now, int i) __attribute__((hc,cpu)) {
+    static const_result_type project(const array_view<const T, 1>& now, int i) __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
         now.cache.get_cpu_access();
 #endif
@@ -2448,12 +2456,12 @@ template <typename T, int N>
 struct array_projection_helper
 {
     // array<T,N>, where N>1
-    //     array_view<T,N-1> operator[](int i0) __attribute__((hc,cpu));
-    //     array_view<const T,N-1> operator[](int i0) const __attribute__((hc,cpu));
+    //     array_view<T,N-1> operator[](int i0) __CPU__ __HC__;
+    //     array_view<const T,N-1> operator[](int i0) const __CPU__ __HC__;
     static_assert(N > 1, "projection_helper is only supported on array with a rank of 2 or higher");
     typedef array_view<T, N - 1> result_type;
     typedef array_view<const T, N - 1> const_result_type;
-    static result_type project(array<T, N>& now, int stride) __attribute__((hc,cpu)) {
+    static result_type project(array<T, N>& now, int stride) __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
         if( stride < 0)
           throw runtime_exception("errorMsg_throw", 0);
@@ -2469,7 +2477,7 @@ struct array_projection_helper
 #endif
         return result_type(now.m_device, ext, ext, index<N - 1>(), offset);
     }
-    static const_result_type project(const array<T, N>& now, int stride) __attribute__((hc,cpu)) {
+    static const_result_type project(const array<T, N>& now, int stride) __CPU__ __HC__ {
         int comp[N - 1], i;
         for (i = N - 1; i > 0; --i)
             comp[i - 1] = now.extent[i];
@@ -2483,18 +2491,18 @@ template <typename T>
 struct array_projection_helper<T, 1>
 {
     // array<T,1>
-    //    T& operator[](int i0) __attribute__((hc,cpu));
-    //    const T& operator[](int i0) const __attribute__((hc,cpu));
+    //    T& operator[](int i0) __CPU__ __HC__;
+    //    const T& operator[](int i0) const __CPU__ __HC__;
     typedef T& result_type;
     typedef const T& const_result_type;
-    static result_type project(array<T, 1>& now, int i) __attribute__((hc,cpu)) {
+    static result_type project(array<T, 1>& now, int i) __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
         now.m_device.synchronize(true);
 #endif
         T *ptr = reinterpret_cast<T *>(now.m_device.get() + i);
         return *ptr;
     }
-    static const_result_type project(const array<T, 1>& now, int i) __attribute__((hc,cpu)) {
+    static const_result_type project(const array<T, 1>& now, int i) __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
         now.m_device.synchronize();
 #endif
@@ -2677,10 +2685,10 @@ public:
      */
     template <typename InputIter>
         array(int e0, InputIter srcBegin)
-            : array(extent<N>(e0), srcBegin) {}
+            : array(hc::extent<N>(e0), srcBegin) {}
     template <typename InputIter>
         array(int e0, InputIter srcBegin, InputIter srcEnd)
-            : array(extent<N>(e0), srcBegin, srcEnd) {}
+            : array(hc::extent<N>(e0), srcBegin, srcEnd) {}
     template <typename InputIter>
         array(int e0, int e1, InputIter srcBegin)
             : array(hc::extent<N>(e0, e1), srcBegin) {}
@@ -2991,7 +2999,7 @@ public:
     /**
      * Access the extent that defines the shape of this array.
      */
-    extent<N> get_extent() const __attribute__((hc,cpu)) { return extent; }
+    extent<N> get_extent() const __CPU__ __HC__ { return extent; }
 
     /**
      * This property returns the accelerator_view representing the location
@@ -3088,7 +3096,7 @@ public:
      *
      * @return A (const) pointer to the first element in the linearized array.
      */
-    T* data() const __attribute__((hc,cpu)) {
+    T* data() const __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
         if (!m_device.get())
             return nullptr;
@@ -3121,7 +3129,7 @@ public:
      * @param[in] idx An object of type index<N> from that specifies the
      *                location of the element.
      */
-    T& operator[](const index<N>& idx) __attribute__((hc,cpu)) {
+    T& operator[](const index<N>& idx) __CPU__ __HC__ {
 #ifndef __KALMAR_ACCELERATOR__
         if (!m_device.get())
             throw runtime_exception("The array is not accessible on CPU.", 0);
@@ -3130,7 +3138,7 @@ public:
         T *ptr = reinterpret_cast<T*>(m_device.get());
         return ptr[Kalmar::amp_helper<N, index<N>, hc::extent<N>>::flatten(idx, extent)];
     }
-    T& operator()(const index<N>& idx) __attribute__((hc,cpu)) {
+    T& operator()(const index<N>& idx) __CPU__ __HC__ {
         return (*this)[idx];
     }
 
@@ -3147,7 +3155,7 @@ public:
      * @param[in] idx An object of type index<N> from that specifies the
      *                location of the element.
      */
-    const T& operator[](const index<N>& idx) const __attribute__((hc,cpu)) {
+    const T& operator[](const index<N>& idx) const __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
         if (!m_device.get())
             throw runtime_exception("The array is not accessible on CPU.", 0);
@@ -3156,7 +3164,7 @@ public:
         T *ptr = reinterpret_cast<T*>(m_device.get());
         return ptr[Kalmar::amp_helper<N, index<N>, hc::extent<N>>::flatten(idx, extent)];
     }
-    const T& operator()(const index<N>& idx) const __attribute__((hc,cpu)) {
+    const T& operator()(const index<N>& idx) const __CPU__ __HC__ {
         return (*this)[idx];
     }
 
@@ -3170,10 +3178,10 @@ public:
      * @param[in] i0,i1,i2 The component values that will form the index into
      *                     this array.
      */
-    T& operator()(int i0, int i1) __attribute__((hc,cpu)) {
+    T& operator()(int i0, int i1) __CPU__ __HC__ {
         return (*this)[index<2>(i0, i1)];
     }
-    T& operator()(int i0, int i1, int i2) __attribute__((hc,cpu)) {
+    T& operator()(int i0, int i1, int i2) __CPU__ __HC__ {
         return (*this)[index<3>(i0, i1, i2)];
     }
 
@@ -3187,10 +3195,10 @@ public:
      * @param[in] i0,i1,i2 The component values that will form the index into
      *                     this array.
      */
-    const T& operator()(int i0, int i1) const __attribute__((hc,cpu)) {
+    const T& operator()(int i0, int i1) const __CPU__ __HC__ {
         return (*this)[index<2>(i0, i1)];
     }
-    const T& operator()(int i0, int i1, int i2) const __attribute__((hc,cpu)) {
+    const T& operator()(int i0, int i1, int i2) const __CPU__ __HC__ {
         return (*this)[index<3>(i0, i1, i2)];
     }
 
@@ -3212,19 +3220,19 @@ public:
      *         this array.
      */
     typename array_projection_helper<T, N>::result_type
-        operator[] (int i) __attribute__((hc,cpu)) {
+        operator[] (int i) __CPU__ __HC__ {
             return array_projection_helper<T, N>::project(*this, i);
         }
     typename array_projection_helper<T, N>::result_type
-        operator()(int i0) __attribute__((hc,cpu)) {
+        operator()(int i0) __CPU__ __HC__ {
             return (*this)[i0];
         }
     typename array_projection_helper<T, N>::const_result_type
-        operator[] (int i) const __attribute__((hc,cpu)) {
+        operator[] (int i) const __CPU__ __HC__ {
             return array_projection_helper<T, N>::project(*this, i);
         }
     typename array_projection_helper<T, N>::const_result_type
-        operator()(int i0) const __attribute__((hc,cpu)) {
+        operator()(int i0) const __CPU__ __HC__ {
             return (*this)[i0];
         }
 
@@ -3248,7 +3256,7 @@ public:
      * @return Returns a subsection of the source array at specified origin,
      *         and with the specified extent.
      */
-    array_view<T, N> section(const index<N>& origin, const extent<N>& ext) __attribute__((hc,cpu)) {
+    array_view<T, N> section(const index<N>& origin, const extent<N>& ext) __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
         if ( !Kalmar::amp_helper<N, index<N>, hc::extent<N>>::contains(origin,  ext ,this->extent) )
             throw runtime_exception("errorMsg_throw", 0);
@@ -3256,7 +3264,7 @@ public:
         array_view<T, N> av(*this);
         return av.section(origin, ext);
     }
-    array_view<const T, N> section(const index<N>& origin, const extent<N>& ext) const __attribute__((hc,cpu)) {
+    array_view<const T, N> section(const index<N>& origin, const extent<N>& ext) const __CPU__ __HC__ {
         array_view<const T, N> av(*this);
         return av.section(origin, ext);
     }
@@ -3267,7 +3275,7 @@ public:
     /**
      * Equivalent to "section(idx, this->extent – idx)".
      */
-    array_view<T, N> section(const index<N>& idx) __attribute__((hc,cpu)) {
+    array_view<T, N> section(const index<N>& idx) __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
         if ( !Kalmar::amp_helper<N, index<N>, hc::extent<N>>::contains(idx, this->extent ) )
             throw runtime_exception("errorMsg_throw", 0);
@@ -3275,7 +3283,7 @@ public:
         array_view<T, N> av(*this);
         return av.section(idx);
     }
-    array_view<const T, N> section(const index<N>& idx) const __attribute__((hc,cpu)) {
+    array_view<const T, N> section(const index<N>& idx) const __CPU__ __HC__ {
         array_view<const T, N> av(*this);
         return av.section(idx);
     }
@@ -3286,11 +3294,11 @@ public:
     /**
      * Equivalent to "section(index<N>(), ext)".
      */
-    array_view<T,N> section(const extent<N>& ext) __attribute__((hc,cpu)) {
+    array_view<T,N> section(const extent<N>& ext) __CPU__ __HC__ {
         array_view<T, N> av(*this);
         return av.section(ext);
     }
-    array_view<const T,N> section(const extent<N>& ext) const __attribute__((hc,cpu)) {
+    array_view<const T,N> section(const extent<N>& ext) const __CPU__ __HC__ {
         array_view<const T, N> av(*this);
         return av.section(ext);
     }
@@ -3307,27 +3315,27 @@ public:
      * @param[in] e0,e1,e2 The component values that will form the extent of
      *                     the section
      */
-    array_view<T, 1> section(int i0, int e0) __attribute__((hc,cpu)) {
+    array_view<T, 1> section(int i0, int e0) __CPU__ __HC__ {
         static_assert(N == 1, "Rank must be 1");
         return section(index<1>(i0), hc::extent<1>(e0));
     }
-    array_view<const T, 1> section(int i0, int e0) const __attribute__((hc,cpu)) {
+    array_view<const T, 1> section(int i0, int e0) const __CPU__ __HC__ {
         static_assert(N == 1, "Rank must be 1");
         return section(index<1>(i0), hc::extent<1>(e0));
     }
-    array_view<T, 2> section(int i0, int i1, int e0, int e1) const __attribute__((hc,cpu)) {
+    array_view<T, 2> section(int i0, int i1, int e0, int e1) const __CPU__ __HC__ {
         static_assert(N == 2, "Rank must be 2");
         return section(index<2>(i0, i1), hc::extent<2>(e0, e1));
     }
-    array_view<T, 2> section(int i0, int i1, int e0, int e1) __attribute__((hc,cpu)) {
+    array_view<T, 2> section(int i0, int i1, int e0, int e1) __CPU__ __HC__ {
         static_assert(N == 2, "Rank must be 2");
         return section(index<2>(i0, i1), hc::extent<2>(e0, e1));
     }
-    array_view<T, 3> section(int i0, int i1, int i2, int e0, int e1, int e2) __attribute__((hc,cpu)) {
+    array_view<T, 3> section(int i0, int i1, int i2, int e0, int e1, int e2) __CPU__ __HC__ {
         static_assert(N == 3, "Rank must be 3");
         return section(index<3>(i0, i1, i2), hc::extent<3>(e0, e1, e2));
     }
-    array_view<const T, 3> section(int i0, int i1, int i2, int e0, int e1, int e2) const __attribute__((hc,cpu)) {
+    array_view<const T, 3> section(int i0, int i1, int i2, int e0, int e1, int e2) const __CPU__ __HC__ {
         static_assert(N == 3, "Rank must be 3");
         return section(index<3>(i0, i1, i2), hc::extent<3>(e0, e1, e2));
     }
@@ -3356,7 +3364,7 @@ public:
      *         to 1.
      */
     template <typename ElementType>
-        array_view<ElementType, 1> reinterpret_as() __attribute__((hc,cpu)) {
+        array_view<ElementType, 1> reinterpret_as() __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
             static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
             static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
@@ -3369,7 +3377,7 @@ public:
             return av;
         }
     template <typename ElementType>
-        array_view<const ElementType, 1> reinterpret_as() const __attribute__((hc,cpu)) {
+        array_view<const ElementType, 1> reinterpret_as() const __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
             static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
             static_assert( ! (std::is_same<ElementType,short>::value ),"can't use short in the kernel");
@@ -3396,7 +3404,7 @@ public:
      *         to K from N.
      */
     template <int K> array_view<T, K>
-        view_as(const extent<K>& viewExtent) __attribute__((hc,cpu)) {
+        view_as(const extent<K>& viewExtent) __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
             if( viewExtent.size() > extent.size())
                 throw runtime_exception("errorMsg_throw", 0);
@@ -3405,7 +3413,7 @@ public:
             return av;
         }
     template <int K> array_view<const T, K>
-        view_as(const extent<K>& viewExtent) const __attribute__((hc,cpu)) {
+        view_as(const extent<K>& viewExtent) const __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
             if( viewExtent.size() > extent.size())
                 throw runtime_exception("errorMsg_throw", 0);
@@ -3419,9 +3427,9 @@ public:
     ~array() {}
 
     // FIXME: functions below may be considered to move to private
-    const acc_buffer_t& internal() const __attribute__((hc,cpu)) { return m_device; }
-    int get_offset() const __attribute__((hc,cpu)) { return 0; }
-    index<N> get_index_base() const __attribute__((hc,cpu)) { return index<N>(); }
+    const acc_buffer_t& internal() const __CPU__ __HC__ { return m_device; }
+    int get_offset() const __CPU__ __HC__ { return 0; }
+    index<N> get_index_base() const __CPU__ __HC__ { return index<N>(); }
 private:
     template <typename K, int Q> friend struct projection_helper;
     template <typename K, int Q> friend struct array_projection_helper;
@@ -3479,14 +3487,14 @@ public:
      * @param[in] src An array which contains the data that this array_view is
      *                bound to.
      */
-    array_view(array<T, N>& src) __attribute__((hc,cpu))
+    array_view(array<T, N>& src) __CPU__ __HC__
         : cache(src.internal()), extent(src.get_extent()), extent_base(extent), index_base(), offset(0) {}
 
     // FIXME: following interfaces were not implemented yet
     // template <typename Container>
     //     explicit array_view<T, 1>::array_view(Container& src);
     // template <typename value_type, int Size>
-    //     explicit array_view<T, 1>::array_view(value_type (&src) [Size]) __attribute__((hc,cpu));
+    //     explicit array_view<T, 1>::array_view(value_type (&src) [Size]) __CPU__ __HC__;
 
     /**
      * Constructs an array_view which is bound to the data contained in the
@@ -3513,7 +3521,7 @@ public:
      *                size of extent, the behavior is undefined.
      * @param[in] ext The extent of this array_view.
      */
-    array_view(const extent<N>& ext, value_type* src) __attribute__((hc,cpu))
+    array_view(const extent<N>& ext, value_type* src) __CPU__ __HC__
 #if __KALMAR_ACCELERATOR__ == 1
         : cache((T *)(src)), extent(ext), extent_base(ext), offset(0) {}
 #else
@@ -3563,11 +3571,11 @@ public:
      *                to. If the number of elements pointed to is less than
      *                the size of extent, the behavior is undefined.
      */
-    array_view(int e0, value_type *src) __attribute__((hc,cpu))
+    array_view(int e0, value_type *src) __CPU__ __HC__
         : array_view(hc::extent<N>(e0), src) {}
-    array_view(int e0, int e1, value_type *src) __attribute__((hc,cpu))
+    array_view(int e0, int e1, value_type *src) __CPU__ __HC__
         : array_view(hc::extent<N>(e0, e1), src) {}
-    array_view(int e0, int e1, int e2, value_type *src) __attribute__((hc,cpu))
+    array_view(int e0, int e1, int e2, value_type *src) __CPU__ __HC__
         : array_view(hc::extent<N>(e0, e1, e2), src) {}
 
     /**
@@ -3591,13 +3599,13 @@ public:
      *                  array_view<const T,N> from which to initialize this
      *                  new array_view.
      */
-    array_view(const array_view& other) __attribute__((hc,cpu))
+    array_view(const array_view& other) __CPU__ __HC__
         : cache(other.cache), extent(other.extent), extent_base(other.extent_base), index_base(other.index_base), offset(other.offset) {}
 
     /**
      * Access the extent that defines the shape of this array_view.
      */
-    extent<N> get_extent() const __attribute__((hc,cpu)) { return extent; }
+    extent<N> get_extent() const __CPU__ __HC__ { return extent; }
 
     /**
      * Access the accelerator_view where the data source of the array_view is
@@ -3618,7 +3626,7 @@ public:
      *                  into this array.
      * @return Returns *this.
      */
-    array_view& operator=(const array_view& other) __attribute__((hc,cpu)) {
+    array_view& operator=(const array_view& other) __CPU__ __HC__ {
         if (this != &other) {
             cache = other.cache;
             extent = other.extent;
@@ -3671,7 +3679,7 @@ public:
      *
      * @return A pointer to the first element in the linearized array.
      */
-    T* data() const __attribute__((hc,cpu)) {
+    T* data() const __CPU__ __HC__ {
 
 #if __KALMAR_ACCELERATOR__ != 1
         cache.get_cpu_access(true);
@@ -3818,7 +3826,7 @@ public:
      * @param[in] idx An object of type index<N> that specifies the location of
      *                the element.
      */
-    T& operator[] (const index<N>& idx) const __attribute__((hc,cpu)) {
+    T& operator[] (const index<N>& idx) const __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
         cache.get_cpu_access(true);
 #endif
@@ -3826,7 +3834,7 @@ public:
         return ptr[Kalmar::amp_helper<N, index<N>, hc::extent<N>>::flatten(idx + index_base, extent_base)];
     }
 
-    T& operator()(const index<N>& idx) const __attribute__((hc,cpu)) {
+    T& operator()(const index<N>& idx) const __CPU__ __HC__ {
         return (*this)[idx];
     }
 
@@ -3844,7 +3852,7 @@ public:
      * calling this method. Failure to do so results in undefined behavior.
      */
     // FIXME: this method is not implemented
-    T& get_ref(const index<N>& idx) const __attribute__((hc,cpu));
+    T& get_ref(const index<N>& idx) const __CPU__ __HC__;
 
     /** @{ */
     /**
@@ -3854,11 +3862,11 @@ public:
      * @param[in] i0,i1,i2 The component values that will form the index into
      *                     this array.
      */
-    T& operator() (int i0, int i1) const __attribute__((hc,cpu)) {
+    T& operator() (int i0, int i1) const __CPU__ __HC__ {
         static_assert(N == 2, "T& array_view::operator()(int,int) is only permissible on array_view<T, 2>");
         return (*this)[index<2>(i0, i1)];
     }
-    T& operator() (int i0, int i1, int i2) const __attribute__((hc,cpu)) {
+    T& operator() (int i0, int i1, int i2) const __CPU__ __HC__ {
         static_assert(N == 3, "T& array_view::operator()(int,int, int) is only permissible on array_view<T, 3>");
         return (*this)[index<3>(i0, i1, i2)];
     }
@@ -3885,11 +3893,11 @@ public:
      *         this array_view.
      */
     typename projection_helper<T, N>::result_type
-        operator[] (int i) const __attribute__((hc,cpu)) {
+        operator[] (int i) const __CPU__ __HC__ {
             return projection_helper<T, N>::project(*this, i);
         }
     typename projection_helper<T, N>::result_type
-        operator() (int i0) const __attribute__((hc,cpu)) { return (*this)[i0]; }
+        operator() (int i0) const __CPU__ __HC__ { return (*this)[i0]; }
 
     /** @} */
 
@@ -3912,7 +3920,7 @@ public:
      *         and with the specified extent.
      */
     array_view<T, N> section(const index<N>& idx,
-                             const extent<N>& ext) const __attribute__((hc,cpu)) {
+                             const extent<N>& ext) const __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
         if ( !Kalmar::amp_helper<N, index<N>, hc::extent<N>>::contains(idx, ext,this->extent ) )
             throw runtime_exception("errorMsg_throw", 0);
@@ -3924,7 +3932,7 @@ public:
     /**
      * Equivalent to "section(idx, this->extent – idx)".
      */
-    array_view<T, N> section(const index<N>& idx) const __attribute__((hc,cpu)) {
+    array_view<T, N> section(const index<N>& idx) const __CPU__ __HC__ {
         hc::extent<N> ext(extent);
         Kalmar::amp_helper<N, index<N>, hc::extent<N>>::minus(idx, ext);
         return section(idx, ext);
@@ -3933,7 +3941,7 @@ public:
     /**
      * Equivalent to "section(index<N>(), ext)".
      */
-    array_view<T, N> section(const extent<N>& ext) const __attribute__((hc,cpu)) {
+    array_view<T, N> section(const extent<N>& ext) const __CPU__ __HC__ {
         index<N> idx;
         return section(idx, ext);
     }
@@ -3948,17 +3956,17 @@ public:
      * @param[in] e0,e1,e2 The component values that will form the extent of
      *                     the section
      */
-    array_view<T, 1> section(int i0, int e0) const __attribute__((hc,cpu)) {
+    array_view<T, 1> section(int i0, int e0) const __CPU__ __HC__ {
         static_assert(N == 1, "Rank must be 1");
-        return section(index<1>(i0), extent<1>(e0));
+        return section(index<1>(i0), hc::extent<1>(e0));
     }
 
-    array_view<T, 2> section(int i0, int i1, int e0, int e1) const __attribute__((hc,cpu)) {
+    array_view<T, 2> section(int i0, int i1, int e0, int e1) const __CPU__ __HC__ {
         static_assert(N == 2, "Rank must be 2");
         return section(index<2>(i0, i1), hc::extent<2>(e0, e1));
     }
 
-    array_view<T, 3> section(int i0, int i1, int i2, int e0, int e1, int e2) const __attribute__((hc,cpu)) {
+    array_view<T, 3> section(int i0, int i1, int i2, int e0, int e1, int e2) const __CPU__ __HC__ {
         static_assert(N == 3, "Rank must be 3");
         return section(index<3>(i0, i1, i2), hc::extent<3>(e0, e1, e2));
     }
@@ -3977,7 +3985,7 @@ public:
      *         type reinterpreted from T to ElementType.
      */
     template <typename ElementType>
-        array_view<ElementType, N> reinterpret_as() const __attribute__((hc,cpu)) {
+        array_view<ElementType, N> reinterpret_as() const __CPU__ __HC__ {
             static_assert(N == 1, "reinterpret_as is only permissible on array views of rank 1");
 #if __KALMAR_ACCELERATOR__ != 1
             static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
@@ -4002,7 +4010,7 @@ public:
      * changed to K from 1.
      */
     template <int K>
-        array_view<T, K> view_as(extent<K> viewExtent) const __attribute__((hc,cpu)) {
+        array_view<T, K> view_as(extent<K> viewExtent) const __CPU__ __HC__ {
             static_assert(N == 1, "view_as is only permissible on array views of rank 1");
 #if __KALMAR_ACCELERATOR__ != 1
             if ( viewExtent.size() > extent.size())
@@ -4012,14 +4020,14 @@ public:
             return av;
         }
 
-    ~array_view() __attribute__((hc,cpu)) {}
+    ~array_view() __CPU__ __HC__ {}
 
     // FIXME: the following functions could be considered to move to private
-    const acc_buffer_t& internal() const __attribute__((hc,cpu)) { return cache; }
+    const acc_buffer_t& internal() const __CPU__ __HC__ { return cache; }
 
-    int get_offset() const __attribute__((hc,cpu)) { return offset; }
+    int get_offset() const __CPU__ __HC__ { return offset; }
 
-    index<N> get_index_base() const __attribute__((hc,cpu)) { return index_base; }
+    index<N> get_index_base() const __CPU__ __HC__ { return index_base; }
 
 private:
     template <typename K, int Q> friend struct projection_helper;
@@ -4042,13 +4050,13 @@ private:
   
     // used by view_as and reinterpret_as
     array_view(const acc_buffer_t& cache, const hc::extent<N>& ext,
-               int offset) __attribute__((hc,cpu))
+               int offset) __CPU__ __HC__
         : cache(cache), extent(ext), extent_base(ext), offset(offset) {}
 
     // used by section and projection
     array_view(const acc_buffer_t& cache, const hc::extent<N>& ext_now,
                const hc::extent<N>& ext_b,
-               const index<N>& idx_b, int off) __attribute__((hc,cpu))
+               const index<N>& idx_b, int off) __CPU__ __HC__
         : cache(cache), extent(ext_now), extent_base(ext_b), index_base(idx_b),
         offset(off) {}
   
@@ -4105,14 +4113,14 @@ public:
      * @param[in] src An array which contains the data that this array_view is
      *                bound to.
      */
-    array_view(const array<T,N>& src) __attribute__((hc,cpu))
+    array_view(const array<T,N>& src) __CPU__ __HC__
         : cache(src.internal()), extent(src.get_extent()), extent_base(extent), index_base(), offset(0) {}
 
     // FIXME: following interfaces were not implemented yet
     // template <typename Container>
     //     explicit array_view<const T, 1>::array_view(const Container& src);
     // template <typename value_type, int Size>
-    //     explicit array_view<const T, 1>::array_view(const value_type (&src) [Size]) __attribute__((hc,cpu));
+    //     explicit array_view<const T, 1>::array_view(const value_type (&src) [Size]) __CPU__ __HC__;
 
     /**
      * Constructs an array_view which is bound to the data contained in the
@@ -4139,7 +4147,7 @@ public:
      *                size of extent, the behavior is undefined.
      * @param[in] ext The extent of this array_view.
      */
-    array_view(const extent<N>& ext, const value_type* src) __attribute__((hc,cpu))
+    array_view(const extent<N>& ext, const value_type* src) __CPU__ __HC__
 #if __KALMAR_ACCELERATOR__ == 1
         : cache((nc_T*)(src)), extent(ext), extent_base(ext), offset(0) {}
 #else
@@ -4175,11 +4183,11 @@ public:
      *                to. If the number of elements pointed to is less than
      *                the size of extent, the behavior is undefined.
      */
-    array_view(int e0, const value_type *src) __attribute__((hc,cpu))
+    array_view(int e0, const value_type *src) __CPU__ __HC__
         : array_view(hc::extent<1>(e0), src) {}
-    array_view(int e0, int e1, const value_type *src) __attribute__((hc,cpu))
+    array_view(int e0, int e1, const value_type *src) __CPU__ __HC__
         : array_view(hc::extent<2>(e0, e1), src) {}
-    array_view(int e0, int e1, int e2, const value_type *src) __attribute__((hc,cpu))
+    array_view(int e0, int e1, int e2, const value_type *src) __CPU__ __HC__
         : array_view(hc::extent<3>(e0, e1, e2), src) {}
 
     /**
@@ -4190,7 +4198,7 @@ public:
      *                  array_view<const T,N> from which to initialize this
      *                  new array_view.
      */
-    array_view(const array_view<nc_T, N>& other) __attribute__((hc,cpu))
+    array_view(const array_view<nc_T, N>& other) __CPU__ __HC__
         : cache(other.cache), extent(other.extent), extent_base(other.extent_base), index_base(other.index_base), offset(other.offset) {}
 
     /**
@@ -4200,13 +4208,13 @@ public:
      * @param[in] other An object of type array_view<T,N> from which to
      *                  initialize this new array_view.
      */
-    array_view(const array_view& other) __attribute__((hc,cpu))
+    array_view(const array_view& other) __CPU__ __HC__
         : cache(other.cache), extent(other.extent), extent_base(other.extent_base), index_base(other.index_base), offset(other.offset) {}
 
     /**
      * Access the extent that defines the shape of this array_view.
      */
-    extent<N> get_extent() const __attribute__((hc,cpu)) { return extent; }
+    extent<N> get_extent() const __CPU__ __HC__ { return extent; }
 
     /**
      * Access the accelerator_view where the data source of the array_view is
@@ -4228,7 +4236,7 @@ public:
      *                  into this array.
      * @return Returns *this.
      */
-    array_view& operator=(const array_view<T,N>& other) __attribute__((hc,cpu)) {
+    array_view& operator=(const array_view<T,N>& other) __CPU__ __HC__ {
         cache = other.cache;
         extent = other.extent;
         index_base = other.index_base;
@@ -4237,7 +4245,7 @@ public:
         return *this;
     }
   
-    array_view& operator=(const array_view& other) __attribute__((hc,cpu)) {
+    array_view& operator=(const array_view& other) __CPU__ __HC__ {
         if (this != &other) {
             cache = other.cache;
             extent = other.extent;
@@ -4283,7 +4291,7 @@ public:
      *
      * @return A const pointer to the first element in the linearized array.
      */
-    const T* data() const __attribute__((hc,cpu)) {
+    const T* data() const __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
         cache.get_cpu_access();
 #endif
@@ -4387,14 +4395,14 @@ public:
      * @param[in] idx An object of type index<N> that specifies the location of
      *                the element.
      */
-    const T& operator[](const index<N>& idx) const __attribute__((hc,cpu)) {
+    const T& operator[](const index<N>& idx) const __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
         cache.get_cpu_access();
 #endif
         const T *ptr = reinterpret_cast<const T*>(cache.get() + offset);
         return ptr[Kalmar::amp_helper<N, index<N>, hc::extent<N>>::flatten(idx + index_base, extent_base)];
     }
-    const T& operator()(const index<N>& idx) const __attribute__((hc,cpu)) {
+    const T& operator()(const index<N>& idx) const __CPU__ __HC__ {
         return (*this)[idx];
     }
 
@@ -4412,7 +4420,7 @@ public:
      * calling this method. Failure to do so results in undefined behavior.
      */
     // FIXME: this method is not implemented
-    const T& get_ref(const index<N>& idx) const __attribute__((hc,cpu));
+    const T& get_ref(const index<N>& idx) const __CPU__ __HC__;
 
     /** @{ */
     /**
@@ -4422,16 +4430,16 @@ public:
      * @param[in] i0,i1,i2 The component values that will form the index into
      *                     this array.
      */
-    const T& operator()(int i0) const __attribute__((hc,cpu)) {
+    const T& operator()(int i0) const __CPU__ __HC__ {
         static_assert(N == 1, "const T& array_view::operator()(int) is only permissible on array_view<T, 1>");
         return (*this)[index<1>(i0)];
     }
   
-    const T& operator()(int i0, int i1) const __attribute__((hc,cpu)) {
+    const T& operator()(int i0, int i1) const __CPU__ __HC__ {
         static_assert(N == 2, "const T& array_view::operator()(int,int) is only permissible on array_view<T, 2>");
         return (*this)[index<2>(i0, i1)];
     }
-    const T& operator()(int i0, int i1, int i2) const __attribute__((hc,cpu)) {
+    const T& operator()(int i0, int i1, int i2) const __CPU__ __HC__ {
         static_assert(N == 3, "const T& array_view::operator()(int,int, int) is only permissible on array_view<T, 3>");
         return (*this)[index<3>(i0, i1, i2)];
     }
@@ -4458,12 +4466,12 @@ public:
      *         this array_view.
      */
     typename projection_helper<const T, N>::const_result_type
-        operator[] (int i) const __attribute__((hc,cpu)) {
+        operator[] (int i) const __CPU__ __HC__ {
         return projection_helper<const T, N>::project(*this, i);
     }
 
     // FIXME: typename projection_helper<const T, N>::const_result_type
-    //            operator() (int i0) const __attribute__((hc,cpu))
+    //            operator() (int i0) const __CPU__ __HC__
     // is not implemented
 
     /** @} */
@@ -4487,7 +4495,7 @@ public:
      *         and with the specified extent.
      */
     array_view<const T, N> section(const index<N>& idx,
-                                   const extent<N>& ext) const __attribute__((hc,cpu)) {
+                                   const extent<N>& ext) const __CPU__ __HC__ {
         array_view<const T, N> av(cache, ext, extent_base, idx + index_base, offset);
         return av;
     }
@@ -4495,7 +4503,7 @@ public:
     /**
      * Equivalent to "section(idx, this->extent – idx)".
      */
-    array_view<const T, N> section(const index<N>& idx) const __attribute__((hc,cpu)) {
+    array_view<const T, N> section(const index<N>& idx) const __CPU__ __HC__ {
         hc::extent<N> ext(extent);
         Kalmar::amp_helper<N, index<N>, hc::extent<N>>::minus(idx, ext);
         return section(idx, ext);
@@ -4504,7 +4512,7 @@ public:
     /**
      * Equivalent to "section(index<N>(), ext)".
      */
-    array_view<const T, N> section(const extent<N>& ext) const __attribute__((hc,cpu)) {
+    array_view<const T, N> section(const extent<N>& ext) const __CPU__ __HC__ {
         index<N> idx;
         return section(idx, ext);
     }
@@ -4519,17 +4527,17 @@ public:
      * @param[in] e0,e1,e2 The component values that will form the extent of
      *                     the section
      */
-    array_view<const T, 1> section(int i0, int e0) const __attribute__((hc,cpu)) {
+    array_view<const T, 1> section(int i0, int e0) const __CPU__ __HC__ {
         static_assert(N == 1, "Rank must be 1");
         return section(index<1>(i0), hc::extent<1>(e0));
     }
 
-    array_view<const T, 2> section(int i0, int i1, int e0, int e1) const __attribute__((hc,cpu)) {
+    array_view<const T, 2> section(int i0, int i1, int e0, int e1) const __CPU__ __HC__ {
         static_assert(N == 2, "Rank must be 2");
         return section(index<2>(i0, i1), hc::extent<2>(e0, e1));
     }
 
-    array_view<const T, 3> section(int i0, int i1, int i2, int e0, int e1, int e2) const __attribute__((hc,cpu)) {
+    array_view<const T, 3> section(int i0, int i1, int i2, int e0, int e1, int e2) const __CPU__ __HC__ {
         static_assert(N == 3, "Rank must be 3");
         return section(index<3>(i0, i1, i2), hc::extent<3>(e0, e1, e2));
     }
@@ -4548,7 +4556,7 @@ public:
      *         type reinterpreted from T to ElementType.
      */
     template <typename ElementType>
-        array_view<const ElementType, N> reinterpret_as() const __attribute__((hc,cpu)) {
+        array_view<const ElementType, N> reinterpret_as() const __CPU__ __HC__ {
             static_assert(N == 1, "reinterpret_as is only permissible on array views of rank 1");
 #if __KALMAR_ACCELERATOR__ != 1
             static_assert( ! (std::is_pointer<ElementType>::value ),"can't use pointer in the kernel");
@@ -4571,7 +4579,7 @@ public:
      * changed to K from 1.
      */
     template <int K>
-        array_view<const T, K> view_as(extent<K> viewExtent) const __attribute__((hc,cpu)) {
+        array_view<const T, K> view_as(extent<K> viewExtent) const __CPU__ __HC__ {
             static_assert(N == 1, "view_as is only permissible on array views of rank 1");
 #if __KALMAR_ACCELERATOR__ != 1
             if ( viewExtent.size() > extent.size())
@@ -4581,14 +4589,14 @@ public:
             return av;
         }
 
-    ~array_view() __attribute__((hc,cpu)) {}
+    ~array_view() __CPU__ __HC__ {}
 
     // FIXME: the following functions may be considered to move to private
-    const acc_buffer_t& internal() const __attribute__((hc,cpu)) { return cache; }
+    const acc_buffer_t& internal() const __CPU__ __HC__ { return cache; }
 
-    int get_offset() const __attribute__((hc,cpu)) { return offset; }
+    int get_offset() const __CPU__ __HC__ { return offset; }
 
-    index<N> get_index_base() const __attribute__((hc,cpu)) { return index_base; }
+    index<N> get_index_base() const __CPU__ __HC__ { return index_base; }
 
 private:
     template <typename K, int Q> friend struct projection_helper;
@@ -4611,13 +4619,13 @@ private:
   
     // used by view_as and reinterpret_as
     array_view(const acc_buffer_t& cache, const hc::extent<N>& ext,
-               int offset) __attribute__((hc,cpu))
+               int offset) __CPU__ __HC__
         : cache(cache), extent(ext), extent_base(ext), offset(offset) {}
   
     // used by section and projection
     array_view(const acc_buffer_t& cache, const hc::extent<N>& ext_now,
                const extent<N>& ext_b,
-               const index<N>& idx_b, int off) __attribute__((hc,cpu))
+               const index<N>& idx_b, int off) __CPU__ __HC__
         : cache(cache), extent(ext_now), extent_base(ext_b), index_base(idx_b),
         offset(off) {}
   
@@ -5341,7 +5349,7 @@ completion_future parallel_for_each(const tiled_extent<1>& compute_domain, const
 template <int N, typename Kernel, typename _Tp>
 struct pfe_helper
 {
-    static inline void call(Kernel& k, _Tp& idx) __attribute__((hc,cpu)) {
+    static inline void call(Kernel& k, _Tp& idx) __CPU__ __HC__ {
         int i;
         for (i = 0; i < k.ext[N - 1]; ++i) {
             idx[N - 1] = i;
@@ -5352,7 +5360,7 @@ struct pfe_helper
 template <typename Kernel, typename _Tp>
 struct pfe_helper<0, Kernel, _Tp>
 {
-    static inline void call(Kernel& k, _Tp& idx) __attribute__((hc,cpu)) {
+    static inline void call(Kernel& k, _Tp& idx) __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ == 1
         k.k(idx);
 #endif
@@ -5363,9 +5371,9 @@ template <int N, typename Kernel>
 class pfe_wrapper
 {
 public:
-    explicit pfe_wrapper(const extent<N>& other, const Kernel& f) __attribute__((hc,cpu))
+    explicit pfe_wrapper(const extent<N>& other, const Kernel& f) __CPU__ __HC__
         : ext(other), k(f) {}
-    void operator() (index<N> idx) __attribute__((hc,cpu)) {
+    void operator() (index<N> idx) __CPU__ __HC__ {
         pfe_helper<N - 3, pfe_wrapper<N, Kernel>, index<N>>::call(*this, idx);
     }
 private:
@@ -5382,7 +5390,7 @@ private:
 template <int N, typename Kernel>
 __attribute__((noinline,used)) completion_future parallel_for_each(
     const accelerator_view& av,
-    const extent<N>& compute_domain, const Kernel& f) __attribute__((hc,cpu)) {
+    const extent<N>& compute_domain, const Kernel& f) __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
     size_t compute_domain_size = 1;
     for(int i = 0 ; i < N ; i++)
@@ -5423,7 +5431,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
 //1D parallel_for_each, nontiled
 template <typename Kernel>
 __attribute__((noinline,used)) completion_future parallel_for_each(
-    const accelerator_view& av, const extent<1>& compute_domain, const Kernel& f) __attribute__((hc,cpu)) {
+    const accelerator_view& av, const extent<1>& compute_domain, const Kernel& f) __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
   // silently return in case the any dimension of the extent is 0
   if (compute_domain[0] == 0)
@@ -5453,7 +5461,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
 //2D parallel_for_each, nontiled
 template <typename Kernel>
 __attribute__((noinline,used)) completion_future parallel_for_each(
-    const accelerator_view& av, const extent<2>& compute_domain, const Kernel& f) __attribute__((hc,cpu)) {
+    const accelerator_view& av, const extent<2>& compute_domain, const Kernel& f) __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
   // silently return in case the any dimension of the extent is 0
   if (compute_domain[0] == 0 || compute_domain[1] == 0)
@@ -5484,7 +5492,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
 //3D parallel_for_each, nontiled
 template <typename Kernel>
 __attribute__((noinline,used)) completion_future parallel_for_each(
-    const accelerator_view& av, const extent<3>& compute_domain, const Kernel& f) __attribute__((hc,cpu)) {
+    const accelerator_view& av, const extent<3>& compute_domain, const Kernel& f) __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
   // silently return in case the any dimension of the extent is 0
   if (compute_domain[0] == 0 || compute_domain[1] == 0 || compute_domain[2] == 0)
@@ -5522,7 +5530,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
 //1D parallel_for_each, tiled
 template <typename Kernel>
 __attribute__((noinline,used)) completion_future parallel_for_each(
-    const accelerator_view& av, const tiled_extent<1>& compute_domain, const Kernel& f) __attribute__((hc,cpu)) {
+    const accelerator_view& av, const tiled_extent<1>& compute_domain, const Kernel& f) __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
   // silently return in case the any dimension of the extent is 0
   if (compute_domain[0] == 0)
@@ -5555,7 +5563,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
 //2D parallel_for_each, tiled
 template <typename Kernel>
 __attribute__((noinline,used)) completion_future parallel_for_each(
-    const accelerator_view& av, const tiled_extent<2>& compute_domain, const Kernel& f) __attribute__((hc,cpu)) {
+    const accelerator_view& av, const tiled_extent<2>& compute_domain, const Kernel& f) __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
   // silently return in case the any dimension of the extent is 0
   if (compute_domain[0] == 0 || compute_domain[1] == 0)
@@ -5590,7 +5598,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
 //3D parallel_for_each, tiled
 template <typename Kernel>
 __attribute__((noinline,used)) completion_future parallel_for_each(
-    const accelerator_view& av, const tiled_extent<3>& compute_domain, const Kernel& f) __attribute__((hc,cpu)) {
+    const accelerator_view& av, const tiled_extent<3>& compute_domain, const Kernel& f) __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
   // silently return in case the any dimension of the extent is 0
   if (compute_domain[0] == 0 || compute_domain[1] == 0 || compute_domain[2] == 0)

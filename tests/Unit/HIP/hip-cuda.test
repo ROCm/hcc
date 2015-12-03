@@ -1,3 +1,4 @@
+// XFAIL:
 // RUN: ln -sf %S/rect_tiles.cpp %t.cu
 // RUN: %hip-cuda %t.cu
 

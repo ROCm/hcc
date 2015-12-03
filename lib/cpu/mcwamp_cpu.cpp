@@ -12,6 +12,7 @@
 #include <vector>
 
 #include <kalmar_runtime.h>
+#include <kalmar_aligned_alloc.h>
 
 extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v) {}
 
@@ -61,10 +62,10 @@ public:
     bool is_emulated() const override { return true; }
 
     void* create(size_t count, struct rw_info* /* not used */) override {
-        return aligned_alloc(0x1000, count);
+        return kalmar_aligned_alloc(0x1000, count);
     }
     void release(void *device, struct rw_info* /* not used */ ) override { 
-        ::operator delete(device);
+        kalmar_aligned_free(device);
     }
     std::shared_ptr<KalmarQueue> createQueue() override {
         return std::shared_ptr<KalmarQueue>(new CPUFallbackQueue(this));

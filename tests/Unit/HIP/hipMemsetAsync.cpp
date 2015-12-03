@@ -1,7 +1,6 @@
-// XFAIL: Linux
+// XFAIL:
 // RUN: %hc %s -lhip_runtime -o %t.out && %t.out
 
-#include "hip.h"
 #include "hip_runtime.h"
 
 
@@ -13,7 +12,7 @@ bool test() {
 
   T* data1;
 
-  hipMalloc((void**)&data1, SIZE*sizeof(T));
+  hipMallocHost((void**)&data1, SIZE*sizeof(T));
 
   for(int i = 0; i < SIZE; ++i) {
     data1[i] = i;

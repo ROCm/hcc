@@ -1,8 +1,7 @@
 // XFAIL: Linux
-// RUN: %hc %s -lhip_runtime -o %t.out && %t.out
+// RUN: %hc %s -o %t.out && %t.out
 
-#include <hip.h>
-#include <hip_runtime.h>
+#include "grid_launch.h"
 
 // Test for non-square tiles
 #define TILE_I 16
@@ -24,17 +23,19 @@ int main()
   int height = 112;
 
   int *a = (int*)malloc(width*height*sizeof(int));
-  int *a_d;
 
   int pitch = sizeof(int)*width;
-  hipMalloc((void**)&a_d, sizeof(int)*width*height);
 
-  dim3 grid = DIM3(width/TILE_I, height/TILE_J);
-  dim3 block = DIM3(TILE_I, TILE_J);
+  grid_launch_parm lp;
+  grid_launch_init(&lp);
 
-  hipLaunchKernel(kernel_call, grid, block, a_d, pitch);
+  lp.gridDim = uint3(width/TILE_I, height/TILE_J);
+  lp.groupDim = uint3(TILE_I, TILE_J);
 
-  hipMemcpy((void *)a, (void *)a_d, width*sizeof(int)*height, hipMemcpyDeviceToHost);
+  hc::completion_future cf;
+  lp.cf = &cf;
+  kernel_call(lp, a, pitch);
+  lp.cf->wait();
 
   int ret = 0;
   for(int i = 0; i < width*height; ++i)
