@@ -29,7 +29,7 @@ bool test() {
 
   //check accelerator results
   for (int i=0; i<vecSize; ++i) {
-    if (std::isfinite(6.5/in[i]) != (out[i] ? true : false))
+    if (std::isfinite(6.5/in[i]) != out[i] ? true : false)
       return false;
   }
 
