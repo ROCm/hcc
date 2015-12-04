@@ -1,8 +1,7 @@
 // XFAIL: Linux
-// RUN: %hc %s -c -o %t_file1.out && %hc -lhip_runtime %s %t_file1.out -o %t.out && %t.out
+// RUN: %hc %s -c -o %t_file1.out && %hc %s %t_file1.out -o %t.out && %t.out
 
-#include <hip.h>
-#include <hip_runtime.h>
+#include "grid_launch.h"
 
 __KERNEL void foo(grid_launch_parm lp, int* a)
 {
@@ -16,7 +15,15 @@ int main()
 
   int* a = (int*)malloc(sizeof(int)*size);
 
-  hipLaunchKernel(foo, DIM3(1,1), DIM3(size, 1), a);
+  grid_launch_parm lp;
+  grid_launch_init(&lp);
+
+  lp.groupDim = uint3(size);
+
+  hc::completion_future cf;
+  lp.cf = &cf;
+  foo(lp, a);
+  lp.cf->wait();
 
   int ret = 0;
   for(int i = 0; i < size; ++i)

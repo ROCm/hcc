@@ -1,8 +1,7 @@
 // XFAIL:
-// RUN: %hc %s -lhip_runtime -o %t.out && %t.out
+// RUN: %hc %s -o %t.out && %t.out
 
-#include "hip.h"
-#include "hip_runtime.h"
+#include "grid_launch.h"
 
 typedef struct {
   int x;
@@ -27,15 +26,20 @@ __KERNEL void kernel1(grid_launch_parm lp, Foo x, Bar *y) {
 int main(void) {
 
   Foo data1;
-  Bar* data2;
+  Bar* data2 = (Bar*)malloc(SIZE*sizeof(Foo));
 
   data1.x = 5;
-  hipMalloc((void**)&data2, SIZE*sizeof(Foo));
 
-  dim3 grid = DIM3(GRID_SIZE, 1);
-  dim3 block = DIM3(TILE_SIZE, 1);
+  grid_launch_parm lp;
+  grid_launch_init(&lp);
 
-  hipLaunchKernel(kernel1, grid, block, data1, data2);
+  lp.gridDim = uint3(GRID_SIZE, 1);
+  lp.groupDim = uint3(TILE_SIZE, 1);
+
+  hc::completion_future cf;
+  lp.cf = &cf;
+  kernel1(lp, data1, data2);
+  lp.cf->wait();
 
   bool ret = 0;
   for(int i = 0; i < SIZE; ++i) {

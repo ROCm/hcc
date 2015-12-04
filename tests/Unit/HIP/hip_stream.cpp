@@ -1,9 +1,8 @@
-// XFAIL: Linux
+// XFAIL:
 // RUN: %hc %s -lhip_runtime -o %t.out && %t.out
 
 // Test launching three kernels via two different streams
 
-#include "hip.h"
 #include "hip_runtime.h"
 
 #define GRID_SIZE 256
@@ -41,19 +40,19 @@ int main(void) {
   int* data2;
   int* data3;
 
-  hipMalloc((void**)&data1, SIZE*sizeof(int));
-  hipMalloc((void**)&data2, SIZE*sizeof(int));
-  hipMalloc((void**)&data3, SIZE*sizeof(int));
+  hipMallocHost((void**)&data1, SIZE*sizeof(int));
+  hipMallocHost((void**)&data2, SIZE*sizeof(int));
+  hipMallocHost((void**)&data3, SIZE*sizeof(int));
 
   for(int i = 0; i < SIZE; ++i)
     data3[i] = data2[i] = data1[i] = i;
 
-  dim3 grid = DIM3(GRID_SIZE, 1);
-  dim3 block = DIM3(TILE_SIZE, 1);
+  dim3 grid = dim3(GRID_SIZE, 1);
+  dim3 block = dim3(TILE_SIZE, 1);
 
-  hipLaunchKernel4(kernel1, grid, block, 0, stream1, data1);
-  hipLaunchKernel4(kernel2, grid, block, 0, stream2, data2);
-  hipLaunchKernel4(kernel3, grid, block, 0, stream1, data3);
+  hipLaunchKernel(kernel1, grid, block, 0, stream1, data1);
+  hipLaunchKernel(kernel2, grid, block, 0, stream2, data2);
+  hipLaunchKernel(kernel3, grid, block, 0, stream1, data3);
 
   hipStreamSynchronize(stream1);
   hipStreamSynchronize(stream2);
