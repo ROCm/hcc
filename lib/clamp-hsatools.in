@@ -92,7 +92,13 @@ fi
 
 # Optimization notes:
 #  -disable-simplify-libcalls:  prevents transforming loops into library calls such as memset, memcopy on GPU 
-$HLC_OPT -O3 -disable-simplify-libcalls -verify $1.linked.bc -o $1.opt.bc
+
+if [ $KM_USE_AMDGPU ]; then
+  $HLC_OPT -O3 -mtriple amdgcn--amdhsa -mcpu=kaveri -disable-simplify-libcalls -verify $1.linked.bc -o $1.opt.bc
+else
+  $HLC_OPT -O3 -disable-simplify-libcalls -verify $1.linked.bc -o $1.opt.bc
+fi
+
 # error handling for HSAIL opt
 RETVAL=$?
 if [ $RETVAL != 0 ]; then
