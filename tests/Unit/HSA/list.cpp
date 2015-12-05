@@ -1,4 +1,4 @@
-// XFAIL: Linux
+// XFAIL: boltzmann
 // RUN: %hc %s -o %t.out && %t.out
 #include <vector>
 #include <iostream>
