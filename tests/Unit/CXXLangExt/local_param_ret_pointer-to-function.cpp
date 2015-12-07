@@ -7,7 +7,7 @@
 /// <summary>C6706 : function pointer, function reference, or pointer to member function is not supported in amp restricted code</summary>
 //#Expects: Error: error C3581
 
-// XFAIL: Linux
+// XFAIL: Linux,boltzmann
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <iostream>
