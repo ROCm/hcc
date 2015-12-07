@@ -4,6 +4,16 @@
  */
 #pragma once
 
+#define _T_REDUCE_WAVEFRONT_SIZE 512
+
+#define _T_REDUCE_STEP(_LENGTH, _IDX, _W) \
+    if ((_IDX < _W) && ((_IDX + _W) < _LENGTH)) {\
+      T mine = scratch[_IDX];\
+      T other = scratch[_IDX + _W];\
+      scratch[_IDX] = binary_op(mine, other); \
+    }\
+    t_idx.barrier.wait();
+
 /**
  *
  * Return: GENERALIZED_SUM(binary_op, init, unary_op(*first), ..., unary_op(*(first + (last - first) - * 1))).
@@ -31,32 +41,71 @@ T transform_reduce(InputIterator first, InputIterator last,
     return std::accumulate(first, last, init, new_op);
   }
 
-  std::unique_ptr<T> tmp(new T [N]);
+  int max_ComputeUnits = 32;
+  int numTiles = max_ComputeUnits*32;
+  int length = (_T_REDUCE_WAVEFRONT_SIZE * numTiles);
+  length = N < length ? N : length;
+  unsigned int residual = length % _T_REDUCE_WAVEFRONT_SIZE;
+  length = residual ? (length + _T_REDUCE_WAVEFRONT_SIZE - residual): length ;
+  numTiles = static_cast< int >((N/_T_REDUCE_WAVEFRONT_SIZE)>= numTiles?(numTiles):
+                                (std::ceil( static_cast< float >( N ) / _T_REDUCE_WAVEFRONT_SIZE) ));
 
-  // implement by transform & reduce
-  // Note: because reduce may apply the binary_op in any order, so
-  // we can't just apply the unary_op inside that.
-  transform(par, first, last, tmp.get(), unary_op);
+  auto result = new T[numTiles];
+  auto transform_op = unary_op;
+  auto first_ = utils::get_pointer(first);
+  details::kernel_launch(length, [first_, N, length, transform_op, &result, binary_op] (hc::tiled_index<1> t_idx) __attribute((hc))
+                {
+                int gx = t_idx.global[0];
+                int gloId = gx;
+                tile_static T scratch[_T_REDUCE_WAVEFRONT_SIZE];
+                //  Initialize local data store
+                unsigned int tileIndex = t_idx.local[0];
 
-  // inline the reduction kernel from reduce.inl
-  // save the cost of creating another stride for internal usage
-  auto tmp_ = tmp.get();
-  unsigned s = (N + 1) / 2;
+                T accumulator;
+                if (gloId < N)
+                {
+                accumulator = transform_op(first_[gx]);
+                gx += length;
+                }
 
-  details::kernel_launch(s, [tmp_, N, &s, binary_op](hc::index<1> idx) __attribute((hc)) {
-    // first round
-    details::round(idx[0], N, tmp_, tmp_, binary_op);
 
-    // Reduction kernel: apply logN - 1 times
-    do {
-      details::round(idx[0], s, tmp_, tmp_, binary_op);
-      s = (s + 1) / 2;
-    } while (s > 1);
-  });
+                // Loop sequentially over chunks of input vector, reducing an arbitrary size input
+                // length into a length related to the number of workgroups
+                while (gx < N)
+                {
+                T element = transform_op(first_[gx]);
+                accumulator = binary_op(accumulator, element);
+                gx += length;
+                }
 
-  // apply initial value
-  T ans  = binary_op(init, tmp_[0]);
+                scratch[tileIndex] = accumulator;
+                t_idx.barrier.wait();
 
+                unsigned int tail = N - (t_idx.tile[0] * _T_REDUCE_WAVEFRONT_SIZE);
+
+                _T_REDUCE_STEP(tail, tileIndex, 256);
+                _T_REDUCE_STEP(tail, tileIndex, 128);
+                _T_REDUCE_STEP(tail, tileIndex, 64);
+                _T_REDUCE_STEP(tail, tileIndex, 32);
+                _T_REDUCE_STEP(tail, tileIndex, 16);
+                _T_REDUCE_STEP(tail, tileIndex, 8);
+                _T_REDUCE_STEP(tail, tileIndex, 4);
+                _T_REDUCE_STEP(tail, tileIndex, 2);
+                _T_REDUCE_STEP(tail, tileIndex, 1);
+
+
+                //  Abort threads that are passed the end of the input vector
+                if (gloId >= N)
+                    return;
+
+                //  Write only the single reduced value for the entire workgroup
+                if (tileIndex == 0)
+                {
+                    result[t_idx.tile[ 0 ]] = scratch[0];
+                }
+                }, _T_REDUCE_WAVEFRONT_SIZE);
+  auto ans = std::accumulate(result, result + numTiles, init, binary_op);
+  delete result;
   return ans;
 }
 
