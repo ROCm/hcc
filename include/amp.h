@@ -5229,24 +5229,33 @@ completion_future copy_async(const array_view<T, N>& src, const array<T, N>& des
 #if __KALMAR_ACCELERATOR__ == 1
 extern "C" unsigned atomic_add_unsigned(unsigned *p, unsigned val) restrict(amp);
 extern "C" int atomic_add_int(int *p, int val) restrict(amp);
+extern "C" float atomic_add_float(float *p, float val) restrict(amp);
 static inline unsigned atomic_fetch_add(unsigned *x, unsigned y) restrict(amp,cpu) {
   return atomic_add_unsigned(x, y);
 }
 static inline int atomic_fetch_add(int *x, int y) restrict(amp,cpu) {
   return atomic_add_int(x, y);
+}
+static inline float atomic_fetch_add(float *x, float y) restrict(amp,cpu) {
+  return atomic_add_float(x, y);
 }
 #elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
 unsigned atomic_add_unsigned(unsigned *p, unsigned val);
 int atomic_add_int(int *p, int val);
+float atomic_add_float(float *p, float val);
 static inline unsigned atomic_fetch_add(unsigned *x, unsigned y) restrict(amp,cpu) {
   return atomic_add_unsigned(x, y);
 }
 static inline int atomic_fetch_add(int *x, int y) restrict(amp,cpu) {
   return atomic_add_int(x, y);
 }
+static inline float atomic_fetch_add(float *x, float y) restrict(amp,cpu) {
+  return atomic_add_float(x, y);
+}
 #else
 extern unsigned atomic_fetch_add(unsigned *x, unsigned y) restrict(amp,cpu);
 extern int atomic_fetch_add(int *x, int y) restrict(amp, cpu);
+extern float atomic_fetch_add(float *x, float y) restrict(amp, cpu);
 #endif
 
 #if __KALMAR_ACCELERATOR__ == 1
