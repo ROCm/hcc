@@ -178,9 +178,12 @@ if [ "$3" == "--spir" ]; then
     fi
 
     # convert fdiv float instructions to builtin calls
-    $OPT -load $LIB/LLVMDivisionPrecision.so \
-         -divprecise < $2.promote.bc -o $2.promote.bc.new
-    mv $2.promote.bc.new $2.promote.bc
+    # only apply this patch when HCC_DIVPRECISE_PATCH environment variable set to ON
+    if [ "$HCC_DIVPRECISE_PATCH" == "ON" ]; then
+      $OPT -load $LIB/LLVMDivisionPrecision.so \
+           -divprecise < $2.promote.bc -o $2.promote.bc.new
+      mv $2.promote.bc.new $2.promote.bc
+    fi
 
     if [ $? == 1 ]; then
       echo "Generating OpenCL SPIR kernel failed"
