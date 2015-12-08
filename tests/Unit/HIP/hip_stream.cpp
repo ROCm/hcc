@@ -1,4 +1,4 @@
-// XFAIL:
+// XFAIL: Linux
 // RUN: %hc %s -lhip_runtime -o %t.out && %t.out
 
 // Test launching three kernels via two different streams

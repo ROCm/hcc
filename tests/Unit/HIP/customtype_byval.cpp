@@ -1,4 +1,4 @@
-// XFAIL:
+// XFAIL: Linux
 // RUN: %hc %s -o %t.out && %t.out
 
 #include "grid_launch.h"
