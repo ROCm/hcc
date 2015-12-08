@@ -175,30 +175,10 @@ T inner_product(ExecutionPolicy&& exec,
   }
 
   typedef typename std::iterator_traits<InputIt1>::value_type _Tp;
-  std::unique_ptr<_Tp> tmp(new _Tp [N]);
+  std::vector<_Tp> dist(N, _Tp());
 
   // implement inner_product by transform & reduce
-  transform(exec, first1, last1, first2, tmp.get(), op2);
-
-  // inline the reduction kernel from reduce.inl
-  // save the cost of creating another stride for internal usage
-  auto tmp_ = tmp.get();
-  unsigned s = (N + 1) / 2;
-
-  details::kernel_launch(s, [tmp_, N, &s, op1](hc::index<1> idx) __attribute((hc)) {
-    // first round
-    details::round(idx[0], N, tmp_, tmp_, op1);
-
-    // Reduction kernel: apply logN - 1 times
-    do {
-      details::round(idx[0], s, tmp_, tmp_, op1);
-      s = (s + 1) / 2;
-    } while (s > 1);
-  });
-
-  // apply initial value
-  T ans  = op1(value, tmp_[0]);
-
-  return ans;
+  transform(exec, first1, last1, first2, std::begin(dist), op2);
+  return reduce(exec, std::begin(dist), std::end(dist), value, op1);
 }
 /**@}*/
