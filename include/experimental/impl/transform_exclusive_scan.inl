@@ -20,20 +20,6 @@
  * input element from the ith sum. If binary_op is not mathematically
  * associative, the behavior of transform_exclusive_scan may
  */
-template<typename InputIterator, typename OutputIterator,
-         typename UnaryOperation, typename T, typename BinaryOperation,
-         utils::EnableIf<utils::isInputIt<InputIterator>> = nullptr>
-OutputIterator
-transform_exclusive_scan(InputIterator first, InputIterator last,
-                         OutputIterator result,
-                         UnaryOperation unary_op,
-                         T init, BinaryOperation binary_op) {
-  // invoke std::experimental::parallel::transform and
-  //        std::experimental::parallel::exclusive_scan
-  transform(par, first, last, result, unary_op);
-  const size_t N = static_cast<size_t>(std::distance(first, last));
-  return exclusive_scan(par, result, result + N, result, init, binary_op);
-}
 
 template<typename ExecutionPolicy,
          typename InputIterator, typename OutputIterator,
@@ -47,7 +33,9 @@ transform_exclusive_scan(ExecutionPolicy&& exec,
                          UnaryOperation unary_op,
                          T init, BinaryOperation binary_op) {
   if (utils::isParallel(exec)) {
-    return transform_exclusive_scan(first, last, result, unary_op, init, binary_op);
+    int numElements = static_cast< int >( std::distance( first, last ) );
+    details::transform_scan_impl(first, last, result, unary_op, init, binary_op, false);
+    return result + numElements;
   } else {
     details::transform_impl(first, last, result, unary_op,
       std::input_iterator_tag{});
