@@ -1,23 +1,23 @@
 hsa_math.bc is compiled from lib/hsa_math.ll, using llvm-as from
 https://github.com/HSAFoundation/HLC-HSAIL-Development-LLVM/tree/hsail-1.0f
 
-(1) Ensure it is hsail-1.0f branch
-(2) Before run the build instruction, 
+(1) clone hlc compiler
+    git clone https://github.com/HSAFoundation/HLC-HSAIL-Development-LLVM
+
+(2) checkout to hsail-1.0f branch
+    git checkout hsail-1.0f
+
+(3) build hlc
+    cd (path-to-hlc-build)
+    cmake (path-to-hlc-source)
+
+(4) Before building hsa_math.bc,
     ensure llvm-as is the one you newly build and not from pre-built
     or other installation package
 
     It is safe to run with a full path instead of a headless command, e.g.
     (path-to-your-build)/bin/llvm-as --version
       - LLVM version 3.6svn
-    
-    llvm-as --version
-      - LLVM version 3.4
-   
-(3) To avoid the following message, ensure llvm is 3.5 or later
 
-   llvm-as: hsa_math.ll:2347:71: error: expected instruction opcode
-   %val_success = cmpxchg i32 addrspace(3)* %x, i32 %y, i32 %z seq_cst seq_cst, !mem.scope !1 
-
-
-Build instruction:
-llvm-as hsa_math.ll
+(5) Use the generated llvm-as to generate hsa_math.bc
+    (path-to-hlc-build)/bin/llvm-as (path-to-hcc-source)/lib/hsa_math.ll

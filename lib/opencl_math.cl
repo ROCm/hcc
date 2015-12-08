@@ -664,6 +664,35 @@ int atomic_add_int(volatile int *x, int y) {
   return old;
 }
 
+float atomic_add_float_global(volatile global float *x, const float y) {
+  union {
+    unsigned int i;
+    float f;
+  } now, old;
+  do {
+    old.f = *x;
+    now.f = old.f + y;
+  } while (atomic_cmpxchg((volatile global unsigned int *)x, old.i, now.i) != old.i);
+  return now.f;
+}
+float atomic_add_float_local(volatile local float *x, const float y) {
+  union {
+    unsigned int i;
+    float f;
+  } now, old;
+
+  do {
+    old.f = *x;
+    now.f = old.f + y;
+  } while (atomic_cmpxchg((volatile local unsigned int *)x, old.i, now.i) != old.i);
+  return now.f;
+}
+float atomic_add_float(volatile float *x, float y) {
+  float old = *x;
+  *x = old + y;
+  return *x;
+}
+
 unsigned atomic_max_unsigned_global(volatile __global unsigned *x, unsigned y) {
   return atomic_max(x, y);
 }
