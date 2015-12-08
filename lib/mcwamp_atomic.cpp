@@ -25,7 +25,7 @@ int atomic_max_int(int *p, int val) {
     *p = std::max(*p, val);
     return *p;
 }
-std::mutex afi_u, afi_i;
+std::mutex afi_u, afi_i, afi_f;
 unsigned int atomic_inc_unsigned(unsigned int *p) {
     std::lock_guard<std::mutex> guard(afi_u);
     *p += 1;
@@ -34,6 +34,11 @@ unsigned int atomic_inc_unsigned(unsigned int *p) {
 int atomic_inc_int(int *p) {
     std::lock_guard<std::mutex> guard(afi_i);
     *p += 1;
+    return *p;
+}
+float atomic_inc_float(float* p, float val) {
+    std::lock_guard<std::mutex> guard(afi_f);
+    *p += val;
     return *p;
 }
 

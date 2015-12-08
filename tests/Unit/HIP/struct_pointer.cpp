@@ -1,9 +1,9 @@
 // XFAIL: Linux
-// RUN: %hc %s -o %t.out && %t.out
+// RUN: %hc %s -lhip_runtime -o %t.out && %t.out
 
 // Test passing a custom type by pointer
 
-#include "hip.h"
+#include "hip_runtime.h"
 
 #define WIDTH 64
 #define HEIGHT 64
@@ -28,7 +28,7 @@ int main()
 
   float* data1;
 
-  hipMalloc((void**)&data1, SIZE*sizeof(float));
+  hipMallocHost((void**)&data1, SIZE*sizeof(float));
 
   hipChannelFormatDesc desc = hipCreateChannelDesc();
 
@@ -36,10 +36,10 @@ int main()
   for(int i = 0; i < SIZE; ++i)
     array1->data[i] = (float)i;
 
-  dim3 grid = DIM3(WIDTH/GRID_SZ, HEIGHT/GRID_SZ);
-  dim3 block = DIM3(GRID_SZ, GRID_SZ);
+  dim3 grid = dim3(WIDTH/GRID_SZ, HEIGHT/GRID_SZ);
+  dim3 block = dim3(GRID_SZ, GRID_SZ);
 
-  hipLaunchKernel(kernel_call, grid, block, data1, array1);
+  hipLaunchKernel(kernel_call, grid, block, 0, 0, data1, array1);
 
   int ret = 0;
   for(int i = 0; i < SIZE; ++i)
