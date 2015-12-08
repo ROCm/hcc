@@ -1176,26 +1176,6 @@ public:
         }
     }
 
-    void BuildProgram(void* size, void* source, bool needsCompilation = true) override {
-        if (!executable) {
-            bool use_amdgpu = false;
-#ifdef HSA_USE_AMDGPU_BACKEND
-            const char *km_use_amdgpu = getenv("KM_USE_AMDGPU");
-            use_amdgpu = !km_use_amdgpu || km_use_amdgpu[0] != '0';
-#endif
-            size_t kernel_size = (size_t)((void *)size);
-            char *kernel_source = (char*)malloc(kernel_size+1);
-            memcpy(kernel_source, source, kernel_size);
-            kernel_source[kernel_size] = '\0';
-            if (needsCompilation && !use_amdgpu) {
-              BuildProgramImpl(kernel_source, kernel_size);
-            } else {
-              BuildOfflineFinalizedProgramImpl(kernel_source, kernel_size);
-            }
-            free(kernel_source);
-        }
-    }
-
     void* CreateKernel(const char* fun, void* size, void* source, bool needsCompilation = true) override {
         std::string str(fun);
         HSAKernel *kernel = programs[str];
