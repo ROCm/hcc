@@ -69,11 +69,7 @@ void scan_impl(
 
 	const unsigned int tile_limit = SCAN_TILE_MAX;
 	const unsigned int max_ext = (tile_limit*kernel0_WgSize);
-	#ifdef _WIN32
-	unsigned int	   tempBuffsize = (sizeInputBuff/2); 
-	#else
 	unsigned int	   tempBuffsize = (sizeInputBuff); 
-	#endif
 	unsigned int	   iteration = (tempBuffsize-1)/max_ext; 
 
     for(unsigned int i=0; i<=iteration; i++)
@@ -287,20 +283,7 @@ void scan_impl(
                     if(locId == 0 && gloId < numElements)
                     {
                         if(groId > 0) {
-#ifdef _WIN32
-                            // Problematic codes to handle prescan results of different tiles
-                            if(groId % 2 == 0)
-                                postBlockSum = preSumArray[ groId/2 -1 ];
-                            else if(groId == 1)
-                                postBlockSum = preSumArray1[0];
-                            else {
-                                y = preSumArray[ groId/2 -1 ];
-                                y1 = preSumArray1[groId/2];
-                                postBlockSum = binary_op(y, y1);
-                            }
-#else
                             postBlockSum = preSumArray[ groId-1 ];
-#endif	
                             if (!exclusive)
                                 newResult = binary_op( scanResult, postBlockSum );
                             else 
