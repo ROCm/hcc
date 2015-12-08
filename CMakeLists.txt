@@ -38,6 +38,7 @@ include (PatchPassManagerBuilder)
 include (SetupRemoveSpecialSection)
 include (PatchLLVM350)
 include (PatchLLVMforClangOMP)
+include (SetupDivisionPrecision)
 
 ensure_llvm_is_present(${PROJECT_SOURCE_DIR} compiler)
 ensure_clang_is_present(${PROJECT_SOURCE_DIR} compiler ${CLANG_URL})
@@ -53,6 +54,8 @@ patch_PassManagerBuilder(TileUniform)
 setup_RemoveSpecialSection(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms RemoveSpecialSection)
 patch_LLVM350(utils)
 patch_LLVM_for_ClangOMP(OpenMP)
+setup_DivisionPrecision(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms DivisionPrecision)
+
 set(LLVM_TARGETS_TO_BUILD X86 CACHE STRING "LLVM host target")
 set(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD CBackend CACHE STRING "set this to 'CBackend' to enable generating OpenCL-C")
 set(LLVM_INCLUDE_EXAMPLES off)
@@ -346,7 +349,6 @@ add_subdirectory(tests)
 add_subdirectory(include)
 add_subdirectory(amp-conformance)
 add_subdirectory(stl-test)
-add_subdirectory(demos)
 
 # create documentation
 configure_file(
@@ -433,6 +435,5 @@ MESSAGE("** For the first time:")
 MESSAGE("   'make world' to build clang, HLC, HSAILasm and library for testing.")
 MESSAGE("   'make' to build the rest of LLVM tools")
 MESSAGE("   'make docs' to build the HTML API reference")
-MESSAGE("   'make demos' to build sample demos")
 MESSAGE("")
 
