@@ -6,6 +6,8 @@ amp_test_lib/src/context.cpp amp_test_lib/src/device.cpp amp_test_lib/src/loggin
 amp_test_lib/src/main.cpp amp_test_lib/src/runall.cpp amp_test_lib/src/string_utils.cpp
 )
 
+set(AMP_CONFORMANCE_NUM_THREADS 1 CACHE INT "The number of threads to use when running amp conformance")
+
 set(AMPTESTINC ${CMAKE_CURRENT_SOURCE_DIR}/amp_test_lib/inc)
 get_property(AMPTESTLIB TARGET amptest PROPERTY LOCATION)
 set(RUNTESTSDIR ${CMAKE_CURRENT_SOURCE_DIR})
