@@ -1,14 +1,12 @@
-// XFAIL: Linux
-// RUN: %hc %s -o %t.out && %t.out
+// XFAIL:
+// RUN: %hc %s -lhip_runtime -o %t.out && %t.out
 
-#include <hip.h>
+#include <hip_runtime.h>
 
 // Test static shared memory in kernel
 
 #define GRID_SIZE 256
 #define TILE_SIZE 16
-
-using namespace hc;
 
 // Simple rotate inside tiles only
 __KERNEL void staticSharedMemory(grid_launch_parm lp, int* in_data)
@@ -36,8 +34,7 @@ int main()
   hipMalloc((void**)&in_data, array_size*sizeof(int));
   hipMemcpy(in_data, in, array_size*sizeof(int), hipMemcpyHostToDevice);
 
-  grid_launch_parm lp = hipCreateLaunchParam2(DIM3(GRID_SIZE,1), DIM3(TILE_SIZE,1));
-  staticSharedMemory(lp, in_data);
+  hipLaunchKernel(staticSharedMemory, dim3(GRID_SIZE,1), dim3(TILE_SIZE,1), 0, 0, in_data);
 
   hipMemcpy(in, in_data, array_size*sizeof(int), hipMemcpyDeviceToHost);
 
