@@ -3,8 +3,9 @@ HCC : An open source C++ compiler for heterogeneous devices
 Introduction
 --------------------------------------------------------------------------------
 This repository hosts HCC compiler implementation project. The goal is to
-implement a compiler that takes a program conforming C++AMP standard and
-transforms it into the following targets:
+implement a compiler that takes a program conforming parallel programming
+standards such as C++AMP, HC, C++17 ParallelSTL, or OpenMP and transforms it
+into the following targets:
 
 1. OpenCL SPIR
 2. OpenCL C
@@ -12,23 +13,22 @@ transforms it into the following targets:
 
 The project is based on LLVM+CLANG.
 
-HSA-specific features are also gradually being added to the project.  For more HSA-related information please visit: https://bitbucket.org/multicoreware/cppamp-driver-ng/wiki/HSA%20Support%20Status
+HSA-specific features are also gradually being added to the project.  For more
+HSA-related information please visit:
+
+https://bitbucket.org/multicoreware/hcc/wiki/HSA%20Support%20Status
 
 
 Repository Structure
 -------------------------------------------------------------------------------
 The current repository is composed of as following:
-1. cppamp-driver-ng-35
+1. hcc
   - This repository. It contains all the related implementations, tests,
     scripts and build system.
-2. cppamp-ng-35
+2. hcc-clang
   - Modified Clang. It will be downloaded as part of the build procedure which
     will be described later. This repository is basically a clone of Clang
-    repository. Default branch will be a placeholder for the cloned Clang
-    repository. C++AMP specific changes will be made to cppamp branch, which is
-    the main branch for the C++AMP development. Note that one should NOT commit
-    to the default trunk(admin should reject it even if such case happens).
-    Developers can also create their own branches for their own development.
+    repository.
 
 
 Build Instruction
@@ -99,8 +99,8 @@ repository for development. This build procedure assumes that you will
 work on your own repository. As such, the following repositories should
 be available:
 
-  https://${username}@bitbucket.org/${username}/cppamp-driver-ng-35
-  https://${username}@bitbucket.org/${username}/cppamp-ng-35
+  https://${username}@bitbucket.org/${username}/hcc
+  https://${username}@bitbucket.org/${username}/hcc-clang
 
 , where ${username} is a placeholder for your ID for bitbucket.org.
 
@@ -130,7 +130,7 @@ are:
 
   The default options can be overridden on the command line:
   # cmake ../src \
-      -DCLANG_URL=https://bitbucket.org/multicoreware/cppamp-ng-35.git \
+      -DCLANG_URL=https://bitbucket.org/multicoreware/hcc-clang.git \
       -DOPENCL_HEADER_DIR=/opt/AMDAPP/include \
       -DOPENCL_LIBRARY_DIR=/opt/AMDAPP/lib/x86_64 \
       -DHSA_HEADER_DIR=/opt/hsa/include \
@@ -142,7 +142,7 @@ are:
       -DHSAIL_COMPILER_DIR=/opt/amd/bin \
       -DHSAIL_ASSEMBLER_DIR=/opt/amd/bin \
 
-   - CLANG_URL : URL of C++AMP clang implementation
+   - CLANG_URL : URL of HCC clang implementation
 
    - OPENCL_HEADER_DIR : OpenCL header include path
    - OPENCL_LIBRARY_DIR : OpenCL runtime library path
@@ -178,7 +178,7 @@ are:
   # make test
 
    Please notice HSA-specific tests shall be executed in the following way:
-  # CLAMP_RUNTIME=HSA make test
+  # HCC_RUNTIME=HSA make test
 
 6. Rebuild build system from CMake. When you bring changes to build system by
    modifying CMakeFiles.txt for example, the build system could be messed up.
@@ -207,22 +207,22 @@ Remember to use: sudo ldconfig -v to reload ld.so cache.
 
 Environment varialbes
 -------------------------------------------------------------------------------
-The following environment variables can change the behavior of Clamp.
+The following environment variables can change the behavior of HCC.
 
-1. CLAMP_NOSPIR
+1. HCC_NOSPIR
 
-export CLAMP_NOSPIR=1 could force Clamp emit OpenCL C instead of SPIR at
+export HCC_NOSPIR=1 could force HCC emit OpenCL C instead of SPIR at
 compile time.
 
-2. CLAMP_RUNTIME
+2. HCC_RUNTIME
 
-C++AMP programs will automatically pick C++AMP runtime to use in the following
+HCC programs will automatically pick HCC runtime to use in the following
 precedence:
 
 - HSA
 - OpenCL
 
-Set CLAMP_RUNTIME to different values to force pick different C++AMP runtime.
+Set HCC_RUNTIME to different values to force pick different HCC runtime.
 Available options are:
 
 - HSA : HSA
@@ -230,7 +230,7 @@ Available options are:
 
 3. CLAMP_NOTILECHECK
 
-export CLAMP_NOTILECHECK=1 could suppress tile uniformity check in C++AMP at
+export CLAMP_NOTILECHECK=1 could suppress tile uniformity check in HCC at
 compile time.
 
 If you compile AMD Bolt API along with C++AMP, this environment variable must
@@ -268,7 +268,7 @@ $hcc                // top-level directory
 
 Test Driven Development
 -------------------------------------------------------------------------------
-C++AMP development project adapts TDD(Test Driven Development). It helps keep
+HCC development project adapts TDD(Test Driven Development). It helps keep
 track of development status by working tests intact. Check out src/tests for
 actual implementation.
 
