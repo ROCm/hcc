@@ -79,53 +79,53 @@ void scan_impl(
 		unsigned int tile_index = i*tile_limit;
         auto first_ = utils::get_pointer(first);
 
-        auto kernel = [
-					&result, first_, init, numElements, &preSumArray,
-					exclusive, index, tile_index, kernel0_WgSize, binary_op
-				] ( hc::tiled_index< 1 > t_idx ) __attribute((hc))
-		  {
-				unsigned int gloId = t_idx.global[ 0 ] + index;
-				unsigned int groId = t_idx.tile[ 0 ] + tile_index;
-				unsigned int locId = t_idx.local[ 0 ];
-				int wgSize = kernel0_WgSize;
-				tile_static iType lds[ SCAN_WAVESIZE*SCAN_KERNELWAVES ];
+        auto kernel =
+            [&result, first_, init, numElements, &preSumArray,
+            exclusive, index, tile_index, kernel0_WgSize, binary_op]
+                ( hc::tiled_index< 1 > t_idx ) __attribute((hc))
+                {
+                    unsigned int gloId = t_idx.global[ 0 ] + index;
+                    unsigned int groId = t_idx.tile[ 0 ] + tile_index;
+                    unsigned int locId = t_idx.local[ 0 ];
+                    int wgSize = kernel0_WgSize;
+                    tile_static iType lds[ SCAN_WAVESIZE*SCAN_KERNELWAVES ];
 
-				int input_offset = (groId*wgSize)+locId;
-				// if exclusive, load gloId=0 w/ identity, and all others shifted-1
-				if(input_offset < numElements)
-					lds[locId] = first_[input_offset];
-				if(input_offset+(wgSize/2) < numElements)
-					lds[locId+(wgSize/2)] = first_[ input_offset+(wgSize/2)];
+                    int input_offset = (groId*wgSize)+locId;
+                    // if exclusive, load gloId=0 w/ identity, and all others shifted-1
+                    if(input_offset < numElements)
+                        lds[locId] = first_[input_offset];
+                    if(input_offset+(wgSize/2) < numElements)
+                        lds[locId+(wgSize/2)] = first_[ input_offset+(wgSize/2)];
 
-	    			// Exclusive case
-				if(exclusive && gloId == 0)
-				{
-					iType start_val = first_[0];
-					lds[locId] = binary_op(init, start_val);
-				}
-				unsigned int  offset = 1;
-				//  Computes a scan within a workgroup with two data per element
+                    // Exclusive case
+                    if(exclusive && gloId == 0)
+                    {
+                        iType start_val = first_[0];
+                        lds[locId] = binary_op(init, start_val);
+                    }
+                    unsigned int  offset = 1;
+                    //  Computes a scan within a workgroup with two data per element
 
-				 for (unsigned int start = wgSize>>1; start > 0; start >>= 1) 
-				 {
-				   t_idx.barrier.wait();
-				   if (locId < start)
-				   {
-					  unsigned int temp1 = offset*(2*locId+1)-1;
-					  unsigned int temp2 = offset*(2*locId+2)-1;
-					  iType y = lds[temp2];
-					  iType y1 =lds[temp1];
+                    for (unsigned int start = wgSize>>1; start > 0; start >>= 1) 
+                    {
+                        t_idx.barrier.wait();
+                        if (locId < start)
+                        {
+                            unsigned int temp1 = offset*(2*locId+1)-1;
+                            unsigned int temp2 = offset*(2*locId+2)-1;
+                            iType y = lds[temp2];
+                            iType y1 =lds[temp1];
 
-					  lds[temp2] = binary_op(y, y1);
-				   }
-				   offset *= 2;
-				 }
-				 t_idx.barrier.wait();
-				 if (locId == 0)
-				 {
-					preSumArray[ groId  ] = lds[wgSize -1];
-				 }
-		  };
+                            lds[temp2] = binary_op(y, y1);
+                        }
+                        offset *= 2;
+                    }
+                    t_idx.barrier.wait();
+                    if (locId == 0)
+                    {
+                        preSumArray[ groId  ] = lds[wgSize -1];
+                    }
+                };
 
         details::kernel_launch(extent_sz, kernel, kernel0_WgSize);
         tempBuffsize = tempBuffsize - max_ext;
@@ -138,84 +138,85 @@ void scan_impl(
     int workPerThread = static_cast< int >( sizeScanBuff / kernel1_WgSize );
     workPerThread = workPerThread ? workPerThread : 1;
 
-    auto kernel1 = [&preSumArray, numWorkGroupsK0,
-            workPerThread, binary_op, kernel1_WgSize
-        ] ( hc::tiled_index< 1 > t_idx ) __attribute((hc))
-  {
-        unsigned int gloId = t_idx.global[ 0 ];
-        int locId = t_idx.local[ 0 ];
-        int wgSize = kernel1_WgSize;
-        int mapId  = gloId * workPerThread;
-
-        tile_static iType lds[ SCAN_WAVESIZE*SCAN_KERNELWAVES ];
-
-        // do offset of zero manually
-        int offset;
-        iType workSum;
-        if (mapId < numWorkGroupsK0)
-        {
-            // accumulate zeroth value manually
-            offset = 0;
-            workSum = preSumArray[mapId+offset];
-            //  Serial accumulation
-            for( offset = offset+1; offset < workPerThread; offset += 1 )
+    auto kernel1 =
+        [&preSumArray, numWorkGroupsK0,
+        workPerThread, binary_op, kernel1_WgSize]
+            ( hc::tiled_index< 1 > t_idx ) __attribute((hc))
             {
-                if (mapId+offset<numWorkGroupsK0)
+                unsigned int gloId = t_idx.global[ 0 ];
+                int locId = t_idx.local[ 0 ];
+                int wgSize = kernel1_WgSize;
+                int mapId  = gloId * workPerThread;
+
+                tile_static iType lds[ SCAN_WAVESIZE*SCAN_KERNELWAVES ];
+
+                // do offset of zero manually
+                int offset;
+                iType workSum;
+                if (mapId < numWorkGroupsK0)
                 {
-                    iType y = preSumArray[mapId+offset];
-                    workSum = binary_op( workSum, y );
+                    // accumulate zeroth value manually
+                    offset = 0;
+                    workSum = preSumArray[mapId+offset];
+                    //  Serial accumulation
+                    for( offset = offset+1; offset < workPerThread; offset += 1 )
+                    {
+                        if (mapId+offset<numWorkGroupsK0)
+                        {
+                            iType y = preSumArray[mapId+offset];
+                            workSum = binary_op( workSum, y );
+                        }
+                    }
                 }
-            }
-        }
-        t_idx.barrier.wait();
-        iType scanSum = workSum;
-        offset = 1;
-        // load LDS with register sums
-        lds[ locId ] = workSum;
+                t_idx.barrier.wait();
+                iType scanSum = workSum;
+                offset = 1;
+                // load LDS with register sums
+                lds[ locId ] = workSum;
 
-        // scan in lds
-        for( offset = offset*1; offset < wgSize; offset *= 2 )
-        {
-            t_idx.barrier.wait();
-            if (mapId < numWorkGroupsK0)
-            {
-                if (locId >= offset)
+                // scan in lds
+                for( offset = offset*1; offset < wgSize; offset *= 2 )
                 {
-                    iType y = lds[ locId - offset ];
-                    scanSum = binary_op( scanSum, y );
+                    t_idx.barrier.wait();
+                    if (mapId < numWorkGroupsK0)
+                    {
+                        if (locId >= offset)
+                        {
+                            iType y = lds[ locId - offset ];
+                            scanSum = binary_op( scanSum, y );
+                        }
+                    }
+                    t_idx.barrier.wait();
+                    lds[ locId ] = scanSum;
+                } // for offset
+                t_idx.barrier.wait();
+                workSum = preSumArray[mapId];
+                if(locId > 0){
+                    iType y = lds[locId-1];
+                    workSum = binary_op(workSum, y);
+                    preSumArray[ mapId] = workSum;
                 }
-            }
-            t_idx.barrier.wait();
-            lds[ locId ] = scanSum;
-        } // for offset
-        t_idx.barrier.wait();
-		workSum = preSumArray[mapId];
-		if(locId > 0){
-			iType y = lds[locId-1];
-			workSum = binary_op(workSum, y);
-			preSumArray[ mapId] = workSum;
-		 }
-		 
-        // write final scan from pre-scan and lds scan
-        for( offset = 1; offset < workPerThread; offset += 1 )
-        {
-             t_idx.barrier.wait_with_global_memory_fence();
-             if (mapId+offset < numWorkGroupsK0 && locId > 0)
-             {
-                iType y  = preSumArray[ mapId + offset ] ;
-                iType y1 = binary_op(y, workSum);
-                preSumArray[ mapId + offset ] = y1;
-                workSum = y1;
 
-             } // thread in bounds
-             else if(mapId+offset < numWorkGroupsK0 ){
-               iType y  = preSumArray[ mapId + offset ] ;
-               preSumArray[ mapId + offset ] = binary_op(y, workSum);
-               workSum = preSumArray[ mapId + offset ];
-            }
+                // write final scan from pre-scan and lds scan
+                for( offset = 1; offset < workPerThread; offset += 1 )
+                {
+                    t_idx.barrier.wait_with_global_memory_fence();
+                    if (mapId+offset < numWorkGroupsK0 && locId > 0)
+                    {
+                        iType y  = preSumArray[ mapId + offset ] ;
+                        iType y1 = binary_op(y, workSum);
+                        preSumArray[ mapId + offset ] = y1;
+                        workSum = y1;
 
-        } // for
-    };
+                    } // thread in bounds
+                    else if(mapId+offset < numWorkGroupsK0 ){
+                        iType y  = preSumArray[ mapId + offset ] ;
+                        preSumArray[ mapId + offset ] = binary_op(y, workSum);
+                        workSum = preSumArray[ mapId + offset ];
+                    }
+
+                } // for
+            };
 
     details::kernel_launch(kernel1_WgSize, kernel1, kernel1_WgSize);
 
@@ -233,18 +234,10 @@ void scan_impl(
         auto first_ = utils::get_pointer(first);
 
 
-        auto kernel = [
-            first_,
-            &result,
-            &preSumArray,
-            numElements,
-            binary_op,
-            init,
-            exclusive,
-            index,
-            tile_index,
-            kernel2_WgSize
-                ] ( hc::tiled_index< 1 > t_idx ) __attribute((hc))
+        auto kernel =
+            [ first_, &result, &preSumArray, numElements, binary_op,
+            init, exclusive, index, tile_index, kernel2_WgSize]
+                ( hc::tiled_index< 1 > t_idx ) __attribute((hc))
                 {
                     int gloId = t_idx.global[ 0 ] + index;
                     unsigned int groId = t_idx.tile[ 0 ] + tile_index;
