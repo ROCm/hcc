@@ -56,7 +56,6 @@ if (!$tests_root) {
 $tests_root = abs_path($tests_root);
 chdir($tests_root);
 
-
 my $CLANG_AMP_HOME="@PROJECT_SOURCE_DIR@";
 my $CLANG_AMP_BUILD_DIR="@PROJECT_BINARY_DIR@";
 
@@ -114,6 +113,7 @@ use constant FAIL => 2;
 my $num_passed : shared = 0;
 my $num_skipped : shared = 0;
 my $num_failed : shared = 0;
+my $num_others: shared = 0;
 
 chdir($tmpdir);
 
@@ -138,6 +138,10 @@ sub run_test {
 
     log_message("Test: $test");
 
+    if (not $test)
+    {
+       goto continue_ite;
+    }
     my $test_exec = "$tmpdir/test.out";
     if ($use_threads) {
         {lock($test_id); $test_exec.=$test_id; $test_id++;}
@@ -148,7 +152,7 @@ sub run_test {
 	
 	my $conf_file = try_find_file_by_extension(abs_path(dirname(($test))), $tests_root, "conf");
 	
-	if(-e $conf_file)
+     if(-e $conf_file)
     {
         my $safe = new Safe('Test');
         $safe->rdo($conf_file) or &exit_message(1, "Cannot open $conf_file");
@@ -160,7 +164,7 @@ sub run_test {
     }
 
     # Find "expects error" directives in cpp
-    open(TEST_CPP, $test) or &exit_message(1, "Cannot open $test");
+    open(TEST_CPP, $test) or goto continue_ite;
     $Test::config{'expected_success'} = (grep m@//#\s*Expects\s*(\d*)\s*:\s*(warning|error)@i, <TEST_CPP>) == 0;
     close(TEST_CPP);
 
@@ -350,6 +354,14 @@ test_done:
     }
 
     }
+    goto next_ite;
+
+continue_ite:
+    $num_others++;
+    print "$test: invalid\n";
+    log_message('Result: invalid or cannot open');
+
+next_ite:
     #chdir($tests_root);
     log_message("=====================================================");
     flush_log();
@@ -361,13 +373,14 @@ test_done:
 }
 
 ### Print summary
-my $num_total = $num_passed + $num_skipped + $num_failed;
+my $num_total = $num_passed + $num_skipped + $num_failed + $num_others;
 print "==========================\n";
 if($num_total != 0)
 {
     printf(" Passed:  %d (%.3f%%)\n", $num_passed,  $num_passed / $num_total * 100);
     printf(" Skipped: %d (%.3f%%)\n", $num_skipped, $num_skipped / $num_total * 100);
     printf(" Failed:  %d (%.3f%%)\n", $num_failed,  $num_failed / $num_total * 100);
+    printf(" Others(Invalid/Cannot Open): %d (%.3f%%)\n", $num_others, $num_others / $num_total * 100);
 }
 print " Total:  $num_total\n";
 print "==========================\n";
