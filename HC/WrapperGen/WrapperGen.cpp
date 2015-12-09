@@ -20,11 +20,6 @@ namespace
         mTypeName = ConvertTypeToString(Ty);
       }
 
-      // WrapperType is the same if the name is the same
-      bool operator==(const WrapperType *rhs) {
-        return this->mTypeName == rhs->mTypeName;
-      }
-
       std::string getTypeName() const {
         return mTypeName;
       }
@@ -216,12 +211,25 @@ namespace
 
   };
 
+// Helper classes =========================================================== //
+
+struct StringFinder
+{
+  StringFinder(const std::string &st) : s(st) { }
+  bool operator()(const WrapperType *lhs) const {
+    return lhs->getTypeName() == s;
+  }
+
+  std::string s;
+
+};
+
 // Class member function definitions ======================================== //
 
   void WrapperModule::locateUniqueTypes(WrapperFunction* F) {
     auto wt = F->getListUniqueTypesInFunction();
     for(auto t: wt) {
-      if(std::find(mCustomTypes.begin(), mCustomTypes.end(), t) == mCustomTypes.end())
+      if(std::find_if(mCustomTypes.begin(), mCustomTypes.end(), StringFinder(t->getTypeName())) == mCustomTypes.end())
         mCustomTypes.push_back(t);
     }
   }
