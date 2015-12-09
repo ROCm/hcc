@@ -22,17 +22,6 @@ if ((_IDX < _W) && ((_IDX + _W) < _LENGTH)) {\
 }\
     t_idx.barrier.wait();
 
-template<class T, class U, class BinaryOperation>
-inline void round(const unsigned &i, const unsigned &N,
-                  T *tmp, U *src,
-                  BinaryOperation binary_op) {
-  if (2*i+1 < N) {
-    tmp[i] = binary_op(src[2*i], src[2*i+1]);
-  } else {
-    tmp[i] = src[2*i];
-  }
-}
-
 template<class RandomAccessIterator, class T, class BinaryOperation>
 T reduce_impl(RandomAccessIterator first, RandomAccessIterator last,
               T init,
