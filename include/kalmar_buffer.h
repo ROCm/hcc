@@ -21,12 +21,15 @@ public:
     _data(int count) : p_(nullptr) {}
     _data(const _data& d) restrict(cpu, amp)
         : p_(d.p_) {}
+    _data(int count, void* d) restrict(cpu, amp)
+        : p_(static_cast<T*>(d)) {}
     template <typename U>
         _data(const _data<U>& d) restrict(cpu, amp)
         : p_(reinterpret_cast<T *>(d.get())) {}
     __attribute__((annotate("user_deserialize")))
         explicit _data(T* t) restrict(cpu, amp) { p_ = t; }
     T* get(void) const restrict(cpu, amp) { return p_; }
+    T* get_device_pointer() const restrict(cpu, amp) { return p_; }
     std::shared_ptr<KalmarQueue> get_av() const { return nullptr; }
     void reset() const {}
 
@@ -60,12 +63,17 @@ public:
                access_type mode)
         : mm(std::make_shared<rw_info>(av, stage, count*sizeof(T), mode)), isArray(true) {}
 
+    _data_host(std::shared_ptr<KalmarQueue> av, std::shared_ptr<KalmarQueue> stage, int count,
+               void* device_pointer, access_type mode)
+        : mm(std::make_shared<rw_info>(av, stage, count*sizeof(T), device_pointer, mode)), isArray(true) {}
+
     _data_host(const _data_host& other) : mm(other.mm), isArray(false) {}
 
     template <typename U>
         _data_host(const _data_host<U>& other) : mm(other.mm), isArray(false) {}
 
     T *get() const { return static_cast<T*>(mm->data); }
+    T* get_device_pointer() const { return static_cast<T*>(mm->get_device_pointer()); }
     void synchronize(bool modify = false) const { mm->synchronize(modify); }
     void discard() const { mm->disc(); }
     void refresh() const {}

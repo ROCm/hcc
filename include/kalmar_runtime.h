@@ -212,6 +212,9 @@ public:
     /// create kernel
     virtual void* CreateKernel(const char* fun, void* size, void* source, bool needsCompilation = true) { return nullptr; }
 
+    /// check if a given kernel is compatible with the device
+    virtual bool IsCompatibleKernel(void* size, void* source) { return true; }
+
     /// check the dimension information is correct
     virtual bool check(size_t* size, size_t dim_ext) { return true; }
 
@@ -461,6 +464,11 @@ struct rw_info
     /// because rw_info cannot free host pointer
     unsigned int HostPtr : 1;
 
+    /// A flag to mark whether to call release() to explicitly deallocate
+    /// device memory.  The flag should be set as false when rw_info is
+    /// constructed with a given device pointer.
+    bool toReleaseDevPointer;
+
 
     /// consruct array_view
     /// According to standard, array_view will be constructed by size, or size with
@@ -469,7 +477,7 @@ struct rw_info
     /// device, set the HostPtr flag to prevent destructor to release it
     rw_info(const size_t count, void* ptr)
         : data(ptr), count(count), curr(nullptr), master(nullptr), stage(nullptr),
-        devs(), mode(access_type_none), HostPtr(ptr != nullptr) {
+        devs(), mode(access_type_none), HostPtr(ptr != nullptr), toReleaseDevPointer(true) {
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
             /// if array_view is constructed in cpu path kernel
             /// allocate memory for it and do nothing
@@ -493,7 +501,7 @@ struct rw_info
     ///    If it is not, ignore the stage one, fallback to case 1.
     rw_info(const std::shared_ptr<KalmarQueue>& Queue, const std::shared_ptr<KalmarQueue>& Stage,
             const size_t count, access_type mode_) : data(nullptr), count(count),
-    curr(Queue), master(Queue), stage(nullptr), devs(), mode(mode_), HostPtr(false) {
+    curr(Queue), master(Queue), stage(nullptr), devs(), mode(mode_), HostPtr(false), toReleaseDevPointer(true) {
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
         if (CLAMP::in_cpu_kernel() && data == nullptr) {
             data = kalmar_aligned_alloc(0x1000, count);
@@ -514,6 +522,35 @@ struct rw_info
         } else
             /// if curr is not cpu, ignore the stage one
             stage = curr;
+    }
+
+    /// construct array with given device pointer
+    /// most of the logic are the same as the constructor above, except that
+    /// toReleaseDevPointer is now set as false, so when this instance goes
+    /// into destruction, device memory associated with it will NOT be
+    /// released
+    rw_info(const std::shared_ptr<KalmarQueue>& Queue, const std::shared_ptr<KalmarQueue>& Stage,
+            const size_t count,
+            void* device_pointer,
+            access_type mode_) : data(nullptr), count(count), curr(Queue), master(Queue), stage(nullptr), devs(), mode(mode_), HostPtr(false), toReleaseDevPointer(false) {
+         if (mode == access_type_auto)
+             mode = curr->getDev()->get_access();
+         devs[curr->getDev()] = { device_pointer, modified };
+
+         /// set data pointer, if it is accessible from cpu
+         if (is_cpu_queue(curr) || (curr->getDev()->is_unified() && mode != access_type_none))
+             data = devs[curr->getDev()].data;
+         if (is_cpu_queue(curr)) {
+             stage = Stage;
+             if (Stage != curr)
+                 devs[stage->getDev()] = {stage->getDev()->create(count, this), invalid};
+         } else
+             /// if curr is not cpu, ignore the stage one
+             stage = curr;
+    }
+
+    void* get_device_pointer() {
+        return devs[curr->getDev()].data;
     }
 
     void construct(std::shared_ptr<KalmarQueue> pQueue) {
@@ -710,7 +747,8 @@ struct rw_info
         dev_info info;
         for (const auto it : devs) {
             std::tie(pDev, info) = it;
-            pDev->release(info.data, this);
+            if (toReleaseDevPointer)
+                pDev->release(info.data, this);
         }
     }
 };

@@ -2750,6 +2750,37 @@ public:
 
     /** @{ */
     /**
+     * Constructs an array instance based on the given pointer on the device memory.
+     */
+    explicit array(int e0, void* accelerator_pointer)
+        : array(hc::extent<N>(e0), accelerator(L"default").get_default_view(), accelerator_pointer) {}
+    explicit array(int e0, int e1, void* accelerator_pointer)
+        : array(hc::extent<N>(e0, e1), accelerator(L"default").get_default_view(), accelerator_pointer) {}
+    explicit array(int e0, int e1, int e2, void* accelerator_pointer)
+        : array(hc::extent<N>(e0, e1, e2), accelerator(L"default").get_default_view(), accelerator_pointer) {}
+
+    explicit array(const extent<N>& ext, void* accelerator_pointer)
+        : array(ext, accelerator(L"default").get_default_view(), accelerator_pointer) {}
+    /** @} */
+
+    /**
+     * Constructs an array instance based on the given pointer on the device memory.
+     *
+     * @param[in] ext The extent in each dimension of this array.
+     * @param[in] av An accelerator_view object which specifies the location of
+     *               this array.
+     * @param[in] accelerator_pointer The pointer to the device memory.
+     * @param[in] access_type The type of CPU access desired for this array.
+     */
+    explicit array(const extent<N>& ext, accelerator_view av, void* accelerator_pointer, access_type cpu_access_type = access_type_auto)
+#if __KALMAR_ACCELERATOR__ == 1
+        : m_device(ext.size(), accelerator_pointer), extent(ext) {}
+#else
+        : m_device(av.pQueue, av.pQueue, check(ext).size(), accelerator_pointer, cpu_access_type), extent(ext) {}
+#endif
+
+    /** @{ */
+    /**
      * Equivalent to construction using
      * "array(extent<N>(e0 [, e1 [, e2 ]]), av, cpu_access_type)".   
      *
@@ -3103,6 +3134,16 @@ public:
         m_device.synchronize(true);
 #endif
         return reinterpret_cast<T*>(m_device.get());
+    }
+
+    /**
+     * Returns a pointer to the device memory underlying this array.
+     *
+     * @return A (const) pointer to the first element in the array on the
+     *         device memory.
+     */
+    T* accelerator_pointer() const __CPU__ __HC__ {
+        return reinterpret_cast<T*>(m_device.get_device_pointer());
     }
 
     /**
@@ -3686,6 +3727,16 @@ public:
 #endif
         static_assert(N == 1, "data() is only permissible on array views of rank 1");
         return reinterpret_cast<T*>(cache.get() + offset + index_base[0]);
+    }
+
+    /**
+     * Returns a pointer to the device memory underlying this array_view.
+     *
+     * @return A (const) pointer to the first element in the array_view on the
+     *         device memory.
+     */
+    T* accelerator_pointer() const __CPU__ __HC__ {
+        return reinterpret_cast<T*>(cache.get_device_pointer() + offset + index_base[0]);
     }
 
     /**
@@ -4297,6 +4348,16 @@ public:
 #endif
         static_assert(N == 1, "data() is only permissible on array views of rank 1");
         return reinterpret_cast<const T*>(cache.get() + offset + index_base[0]);
+    }
+
+    /**
+     * Returns a pointer to the device memory underlying this array_view.
+     *
+     * @return A (const) pointer to the first element in the array_view on the
+     *         device memory.
+     */
+    T* accelerator_pointer() const __CPU__ __HC__ {
+        return reinterpret_cast<const T*>(cache.get_device_pointer() + offset + index_base[0]);
     }
 
     /**
