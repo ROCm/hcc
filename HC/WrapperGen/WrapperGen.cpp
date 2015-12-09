@@ -353,6 +353,9 @@ namespace
       }
     }
 
+    if(str == "")
+      str.append("!UNKNOWN_TYPE_PLEASE_FIX!");
+
     return str;
 
   }
