@@ -16,6 +16,7 @@ namespace
         mIsByVal = isByVal;
         mPointerCount = 0;
         mIsCustomType = false;
+        mArraySize = 0;
 
         mTypeName = ConvertTypeToString(Ty);
       }
@@ -40,6 +41,10 @@ namespace
         return mIsCustomType;
       }
 
+      unsigned int getArraySize() {
+        return mArraySize;
+      }
+
       std::vector<WrapperType* > getStructContainerList() {
         return mStructContainer;
       }
@@ -53,6 +58,7 @@ namespace
       bool mIsByVal;
       unsigned int mPointerCount;
       bool mIsCustomType;
+      unsigned int mArraySize;
 
       std::vector<WrapperType* > mStructContainer;
   };
@@ -202,7 +208,13 @@ namespace
           out << "struct " << t->getTypeName() << " { ";
           unsigned int membCount = 0;
           for(auto sTy: structList) {
-            out << sTy->getTypeNameWithQual() << " m" << membCount << "; ";
+            std::string strArray("");
+            if(sTy->getArraySize() > 0) {
+              strArray.append("[");
+              strArray.append(std::to_string(sTy->getArraySize()));
+              strArray.append("]");
+            }
+            out << sTy->getTypeNameWithQual() << " m" << membCount << strArray << "; ";
             membCount++;
           }
           out << "};\n";
@@ -366,6 +378,11 @@ struct StringFinder
         mIsCustomType = true;
         GetCustomTypeElements(sTy);
       }
+    }
+
+    if(T->isArrayTy()) {
+      str.append(ConvertTypeToString(T->getArrayElementType()));
+      mArraySize = T->getArrayNumElements();
     }
 
     if(str == "")
