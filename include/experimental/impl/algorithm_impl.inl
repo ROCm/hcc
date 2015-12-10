@@ -132,9 +132,9 @@ OutputIterator replace_copy_if_impl(InputIterator first, InputIterator last,
   }
 
   if (N >= 0) {
+    // FIXME: raw pointer won't work in dGPU
     auto first_ = utils::get_pointer(first);
     auto d_first_ = utils::get_pointer(d_first);
-  // FIXME: raw pointer won't work in dGPU
     kernel_launch(N, [first_, d_first_, f, new_value](hc::index<1> idx) [[hc]] {
       if (f(*(first_ + idx[0])))
         *(d_first_ + idx[0]) = new_value;
