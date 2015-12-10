@@ -43,6 +43,7 @@ T reduce_impl(RandomAccessIterator first, RandomAccessIterator last,
     numTiles = static_cast< int >((N/REDUCE_WAVEFRONT_SIZE)>= numTiles?(numTiles):
                                   (std::ceil( static_cast< float >( N ) / REDUCE_WAVEFRONT_SIZE) ));
 
+    /// FIXME: not work in dGPU
     auto result = new T[numTiles];
     auto first_ = utils::get_pointer(first);
     kernel_launch(length,
