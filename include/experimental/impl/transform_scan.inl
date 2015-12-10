@@ -55,6 +55,7 @@ transform_scan_impl(
         sizeScanBuff += (kernel0_WgSize*2);
     }
 
+    /// FIXME: not work in dGPU
     std::unique_ptr< oType > p_preSumArray(new oType[sizeScanBuff]); 
     std::unique_ptr< oType > p_preSumArray1(new oType[sizeScanBuff]); 
     auto preSumArray = p_preSumArray.get();
