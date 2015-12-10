@@ -75,6 +75,7 @@ transform_scan_impl(
         unsigned int extent_sz =  (tempBuffsize > max_ext) ? max_ext : tempBuffsize; 
 		unsigned int tile_index = i*tile_limit;
         unsigned int index = i*(tile_limit*kernel0_WgSize);
+        /// FIXME: not work in dGPU
         auto first_ = utils::get_pointer(first);
         auto kernel = [first_, init_T, numElements, &preSumArray, &preSumArray1,
              binary_op, exclusive, index, tile_index, kernel0_WgSize, unary_op]
@@ -241,6 +242,7 @@ transform_scan_impl(
 	    unsigned int extent_sz =  (tempBuffsize > max_ext) ? max_ext : tempBuffsize; 
 		unsigned int index = a*(tile_limit*kernel2_WgSize);
 		unsigned int tile_index = a*tile_limit;
+        /// FIXME: not work in dGPU
         auto first_ = utils::get_pointer(first);
         auto kernel2 = [first_, init_T, numElements, &preSumArray, &preSumArray1,
              binary_op, exclusive, index, tile_index, kernel2_WgSize, unary_op, &result]

@@ -78,6 +78,7 @@ void scan_impl(
 	    unsigned int extent_sz =  (tempBuffsize > max_ext) ? max_ext : tempBuffsize; 
 		unsigned int index = i*(tile_limit*kernel0_WgSize);
 		unsigned int tile_index = i*tile_limit;
+        /// FIXME: raw pointer won't work in dGPU
         auto first_ = utils::get_pointer(first);
 
         auto kernel =
@@ -232,8 +233,8 @@ void scan_impl(
         unsigned int extent_sz =  (tempBuffsize > max_ext) ? max_ext : tempBuffsize; 
         unsigned int index = a*(tile_limit*kernel2_WgSize);
         unsigned int tile_index = a*tile_limit;
+        /// FIXME: raw pointer won't work in dGPU
         auto first_ = utils::get_pointer(first);
-
 
         auto kernel =
             [ first_, &result, &preSumArray, numElements, binary_op,

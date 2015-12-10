@@ -41,6 +41,7 @@ OutputIterator transform_impl(RandomAccessIterator first,
              std::input_iterator_tag{});
   }
 
+  /// FIXME: raw pointer won't work in dGPU
   auto first_ = utils::get_pointer(first);
   auto d_first_ = utils::get_pointer(d_first);
 
@@ -66,6 +67,7 @@ OutputIterator transform_impl(RandomAccessIterator first1,
              std::input_iterator_tag{});
   }
 
+  /// FIXME: raw pointer won't work in dGPU
   auto first1_ = utils::get_pointer(first1);
   auto first2_ = utils::get_pointer(first2);
   auto d_first_ = utils::get_pointer(d_first);

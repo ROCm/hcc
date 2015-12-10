@@ -45,6 +45,7 @@ void generate_impl(ForwardIterator first, ForwardIterator last,
 
   // FIXME: [[hc]] will cause g() having ambient context,
   //        use restrict(amp) temporarily
+  // FIXME: raw pointer won't work in dGPU
   auto first_ = utils::get_pointer(first);
   kernel_launch(N, [first_, g](hc::index<1> idx) restrict(amp) {
     *(first_ + idx[0]) = g();
@@ -71,6 +72,7 @@ void for_each_impl(InputIterator first, InputIterator last,
     return;
   }
 
+  // FIXME: raw pointer won't work in dGPU
   auto first_ = utils::get_pointer(first);
   kernel_launch(N, [first_, f](hc::index<1> idx) [[hc]] {
     f(*(first_ + idx[0]));
@@ -97,6 +99,7 @@ void replace_if_impl(ForwardIterator first, ForwardIterator last,
     return;
   }
 
+  // FIXME: raw pointer won't work in dGPU
   auto first_ = utils::get_pointer(first);
   kernel_launch(N, [first_, f, new_value](hc::index<1> idx) [[hc]] {
     if (f(*(first_ + idx[0])))
@@ -131,6 +134,7 @@ OutputIterator replace_copy_if_impl(InputIterator first, InputIterator last,
   if (N >= 0) {
     auto first_ = utils::get_pointer(first);
     auto d_first_ = utils::get_pointer(d_first);
+  // FIXME: raw pointer won't work in dGPU
     kernel_launch(N, [first_, d_first_, f, new_value](hc::index<1> idx) [[hc]] {
       if (f(*(first_ + idx[0])))
         *(d_first_ + idx[0]) = new_value;
@@ -164,6 +168,7 @@ OutputIterator adjacent_difference_impl(InputIterator first, InputIterator last,
   }
 
   if (N >= 0) {
+    // FIXME: raw pointer won't work in dGPU
     auto first_ = utils::get_pointer(first);
     auto d_first_ = utils::get_pointer(d_first);
     kernel_launch(N, [first_, d_first_, f](hc::index<1> idx) [[hc]] {
@@ -196,6 +201,7 @@ OutputIterator swap_ranges_impl(InputIterator first, InputIterator last,
   }
 
   if (N >= 0) {
+    // FIXME: raw pointer won't work in dGPU
     auto first_ = utils::get_pointer(first);
     auto d_first_ = utils::get_pointer(d_first);
     kernel_launch(N, [first_, d_first_](hc::index<1> idx) [[hc]] {

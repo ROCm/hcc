@@ -51,6 +51,7 @@ T transform_reduce(InputIterator first, InputIterator last,
                                 (std::ceil( static_cast< float >( N ) / _T_REDUCE_WAVEFRONT_SIZE) ));
 
   /// FIXME: not work in dGPU
+  /// FIXME: raw pointer won't work in dGPU
   auto result = new T[numTiles];
   auto transform_op = unary_op;
   auto first_ = utils::get_pointer(first);
