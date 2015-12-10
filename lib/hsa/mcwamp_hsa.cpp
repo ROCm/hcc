@@ -850,6 +850,8 @@ private:
     uint32_t workgroup_max_size;
     uint16_t workgroup_max_dim[3];
 
+    hsa_isa_t agentISA;
+
 public:
  
     uint32_t getWorkgroupMaxSize() {
@@ -1026,6 +1028,10 @@ public:
         status = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_DIM, &workgroup_max_dim);
 
         STATUS_CHECK(status, __LINE__);
+
+        /// Get ISA associated with the agent
+        status = hsa_agent_get_info(agent, HSA_AGENT_INFO_ISA, &agentISA);
+        STATUS_CHECK(status, __LINE__);
     }
 
     ~HSADevice() {
@@ -1130,6 +1136,41 @@ public:
             STATUS_CHECK(status, __LINE__);
             kalmar_aligned_free(ptr);
         }
+    }
+
+    bool IsCompatibleKernel(void* size, void* source) override {
+        hsa_status_t status;
+
+        // Allocate memory for kernel source
+        size_t kernel_size = (size_t)((void *)size);
+        char *kernel_source = (char*)malloc(kernel_size+1);
+        memcpy(kernel_source, source, kernel_size);
+        kernel_source[kernel_size] = '\0';
+
+        // Deserialize code object.
+        hsa_code_object_t code_object = {0};
+        status = hsa_code_object_deserialize(kernel_source, kernel_size, NULL, &code_object);
+        STATUS_CHECK(status, __LINE__);
+        assert(0 != code_object.handle);
+
+        // Get ISA of the code object
+        hsa_isa_t code_object_isa;
+        status = hsa_code_object_get_info(code_object, HSA_CODE_OBJECT_INFO_ISA, &code_object_isa);
+        STATUS_CHECK(status, __LINE__);
+
+        // Check if the code object is compatible with ISA of the agent
+        bool isCompatible = false;
+        status = hsa_isa_compatible(code_object_isa, agentISA, &isCompatible);
+        STATUS_CHECK(status, __LINE__);
+
+        // Destroy code object
+        status = hsa_code_object_destroy(code_object);
+        STATUS_CHECK(status, __LINE__);
+
+        // release allocated memory
+        free(kernel_source);
+
+        return isCompatible;
     }
 
     void* CreateKernel(const char* fun, void* size, void* source, bool needsCompilation = true) override {

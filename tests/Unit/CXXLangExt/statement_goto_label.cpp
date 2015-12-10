@@ -7,7 +7,7 @@
 /// <summary>test illegal usage of goto</summary>
 //#Expects: Error: error C3593
 
-// XFAIL: Linux
+// XFAIL: Linux,boltzmann
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <iostream>
