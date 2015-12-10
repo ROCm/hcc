@@ -130,7 +130,7 @@ foreach my $test (@tests)
     { lock($active_threads); cond_wait($active_threads) until $active_threads < $max_num_threads; }
     $active_threads++;
     my $thr = threads->create(\&run_test, $test);
-    $thr->detach();
+    ## DO NOT join or detach the thread. This line is intentionally left blank
 }
 
 sub run_test {
@@ -370,6 +370,20 @@ next_ite:
         $active_threads--;
         cond_signal($active_threads);
     }
+
+   ## Detach itself
+   threads->detach();
+}
+
+### Wait for all self-detached threads to complete.
+while (threads->list()) {
+  # yield CPU cycle
+  sleep 1;
+
+  # For debug purpose
+  # my $n = threads->list();
+  # print "running threads num = $n\n"
+
 }
 
 ### Print summary
