@@ -10,7 +10,8 @@ endif (HAS_HSA EQUAL 1)
 ####################
 if (HAS_HSA EQUAL 1)
 add_mcwamp_library_hsa(mcwamp_hsa mcwamp_hsa.cpp)
-install(TARGETS mcwamp_hsa
+add_mcwamp_library_hsa(hc_am hc_am.cpp)
+install(TARGETS mcwamp_hsa hc_am
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib)
 MESSAGE(STATUS "HSA available, going to build HSA HCC Runtime")
