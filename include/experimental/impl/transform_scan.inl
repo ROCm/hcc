@@ -78,7 +78,7 @@ transform_scan_impl(
         auto first_ = utils::get_pointer(first);
         auto kernel = [first_, init_T, numElements, &preSumArray, &preSumArray1,
              binary_op, exclusive, index, tile_index, kernel0_WgSize, unary_op]
-                 (hc::tiled_index<1> t_idx) __attribute((hc))
+                 (hc::tiled_index<1> t_idx) [[hc]]
                  {
                      unsigned int gloId = t_idx.global[ 0 ];
                      unsigned int groId = t_idx.tile[ 0 ];
@@ -147,7 +147,7 @@ transform_scan_impl(
     auto kernel1 =
         [ &preSumArray, numWorkGroupsK0, workPerThread,
         binary_op, kernel1_WgSize]
-            ( hc::tiled_index< 1 > t_idx ) __attribute((hc))
+            ( hc::tiled_index< 1 > t_idx ) [[hc]]
             {
                 unsigned int gloId = t_idx.global[ 0 ];
                 unsigned int groId = t_idx.tile[ 0 ];
@@ -244,7 +244,7 @@ transform_scan_impl(
         auto first_ = utils::get_pointer(first);
         auto kernel2 = [first_, init_T, numElements, &preSumArray, &preSumArray1,
              binary_op, exclusive, index, tile_index, kernel2_WgSize, unary_op, &result]
-                (hc::tiled_index<1> t_idx) __attribute((hc))
+                (hc::tiled_index<1> t_idx) [[hc]]
                 {
                     int gloId = t_idx.global[ 0 ] + index;
                     unsigned int groId = t_idx.tile[ 0 ] + tile_index;

@@ -48,7 +48,7 @@ T reduce_impl(RandomAccessIterator first, RandomAccessIterator last,
     auto first_ = utils::get_pointer(first);
     kernel_launch(length,
                   [ first_, N, length, &result, binary_op ]
-                  ( hc::tiled_index<1> t_idx ) __attribute((hc))
+                  ( hc::tiled_index<1> t_idx ) [[hc]]
                   {
                   int gx = t_idx.global[0];
                   int gloId = gx;

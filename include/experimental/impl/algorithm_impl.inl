@@ -43,7 +43,7 @@ void generate_impl(ForwardIterator first, ForwardIterator last,
     return;
   }
 
-  // FIXME: __attribute((hc)) will cause g() having ambient context,
+  // FIXME: [[hc]] will cause g() having ambient context,
   //        use restrict(amp) temporarily
   auto first_ = utils::get_pointer(first);
   kernel_launch(N, [first_, g](hc::index<1> idx) restrict(amp) {
@@ -72,7 +72,7 @@ void for_each_impl(InputIterator first, InputIterator last,
   }
 
   auto first_ = utils::get_pointer(first);
-  kernel_launch(N, [first_, f](hc::index<1> idx) __attribute((hc)) {
+  kernel_launch(N, [first_, f](hc::index<1> idx) [[hc]] {
     f(*(first_ + idx[0]));
   });
 }
@@ -98,7 +98,7 @@ void replace_if_impl(ForwardIterator first, ForwardIterator last,
   }
 
   auto first_ = utils::get_pointer(first);
-  kernel_launch(N, [first_, f, new_value](hc::index<1> idx) __attribute((hc)) {
+  kernel_launch(N, [first_, f, new_value](hc::index<1> idx) [[hc]] {
     if (f(*(first_ + idx[0])))
       *(first_ + idx[0]) = new_value;
   });
@@ -131,7 +131,7 @@ OutputIterator replace_copy_if_impl(InputIterator first, InputIterator last,
   if (N >= 0) {
     auto first_ = utils::get_pointer(first);
     auto d_first_ = utils::get_pointer(d_first);
-    kernel_launch(N, [first_, d_first_, f, new_value](hc::index<1> idx) __attribute((hc)) {
+    kernel_launch(N, [first_, d_first_, f, new_value](hc::index<1> idx) [[hc]] {
       if (f(*(first_ + idx[0])))
         *(d_first_ + idx[0]) = new_value;
       else
@@ -166,7 +166,7 @@ OutputIterator adjacent_difference_impl(InputIterator first, InputIterator last,
   if (N >= 0) {
     auto first_ = utils::get_pointer(first);
     auto d_first_ = utils::get_pointer(d_first);
-    kernel_launch(N, [first_, d_first_, f](hc::index<1> idx) __attribute((hc)) {
+    kernel_launch(N, [first_, d_first_, f](hc::index<1> idx) [[hc]] {
       if (idx[0] == 0)
         *(d_first_ + idx[0]) = *(first_ + idx[0]);
       else
@@ -198,7 +198,7 @@ OutputIterator swap_ranges_impl(InputIterator first, InputIterator last,
   if (N >= 0) {
     auto first_ = utils::get_pointer(first);
     auto d_first_ = utils::get_pointer(d_first);
-    kernel_launch(N, [first_, d_first_](hc::index<1> idx) __attribute((hc)) {
+    kernel_launch(N, [first_, d_first_](hc::index<1> idx) [[hc]] {
       std::iter_swap(first_ + idx[0], d_first_ + idx[0]);
     });
   }
@@ -235,7 +235,7 @@ bool lexicographical_compare_impl(InputIt1 first1, InputIt1 last1,
 //
 
 // Note: 1. the comparison needs both operator== and operator< (or a functor),
-//       both of them should be __attribute((hc))
+//       both of them should be [[hc]]
 template<class InputIt1, class InputIt2, class Compare>
 bool lexicographical_compare_impl(InputIt1 first1, InputIt1 last1,
                                   InputIt2 first2, InputIt2 last2,

@@ -83,7 +83,7 @@ void scan_impl(
         auto kernel =
             [&result, first_, init, numElements, &preSumArray,
             exclusive, index, tile_index, kernel0_WgSize, binary_op]
-                ( hc::tiled_index< 1 > t_idx ) __attribute((hc))
+                ( hc::tiled_index< 1 > t_idx ) [[hc]]
                 {
                     unsigned int gloId = t_idx.global[ 0 ] + index;
                     unsigned int groId = t_idx.tile[ 0 ] + tile_index;
@@ -142,7 +142,7 @@ void scan_impl(
     auto kernel1 =
         [&preSumArray, numWorkGroupsK0,
         workPerThread, binary_op, kernel1_WgSize]
-            ( hc::tiled_index< 1 > t_idx ) __attribute((hc))
+            ( hc::tiled_index< 1 > t_idx ) [[hc]]
             {
                 unsigned int gloId = t_idx.global[ 0 ];
                 int locId = t_idx.local[ 0 ];
@@ -238,7 +238,7 @@ void scan_impl(
         auto kernel =
             [ first_, &result, &preSumArray, numElements, binary_op,
             init, exclusive, index, tile_index, kernel2_WgSize]
-                ( hc::tiled_index< 1 > t_idx ) __attribute((hc))
+                ( hc::tiled_index< 1 > t_idx ) [[hc]]
                 {
                     int gloId = t_idx.global[ 0 ] + index;
                     unsigned int groId = t_idx.tile[ 0 ] + tile_index;

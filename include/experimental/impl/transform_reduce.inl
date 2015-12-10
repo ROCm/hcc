@@ -54,7 +54,7 @@ T transform_reduce(InputIterator first, InputIterator last,
   auto result = new T[numTiles];
   auto transform_op = unary_op;
   auto first_ = utils::get_pointer(first);
-  details::kernel_launch(length, [first_, N, length, transform_op, &result, binary_op] (hc::tiled_index<1> t_idx) __attribute((hc))
+  details::kernel_launch(length, [first_, N, length, transform_op, &result, binary_op] (hc::tiled_index<1> t_idx) [[hc]]
                 {
                 int gx = t_idx.global[0];
                 int gloId = gx;
