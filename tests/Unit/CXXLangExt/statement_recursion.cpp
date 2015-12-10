@@ -9,7 +9,7 @@
 //#Expects: Error: test.cpp\(30\)
 //#Expects: Error: test.cpp\(33\)
 
-// XFAIL: Linux, hsa
+// XFAIL: Linux, hsa, boltzmann
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <iostream>

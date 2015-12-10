@@ -356,7 +356,9 @@ void *CreateKernel(std::string s, KalmarQueue* pQueue) {
         size_t kernel_finalized_size = 
           (ptrdiff_t)((void *)hsa_offline_finalized_kernel_end) -
           (ptrdiff_t)((void *)hsa_offline_finalized_kernel_source);
-        if (kernel_finalized_size > 0) {
+        // check if offline finalized kernel is compatible with ISA of the HSA agent
+        if ((kernel_finalized_size > 0) &&
+            (pQueue->getDev()->IsCompatibleKernel((void*)kernel_finalized_size, hsa_offline_finalized_kernel_source))) {
           if (mcwamp_verbose)
             std::cout << "Use offline finalized HSA kernels\n";
           hasFinalized = true;
