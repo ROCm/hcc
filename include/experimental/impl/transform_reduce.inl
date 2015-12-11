@@ -176,6 +176,7 @@ T inner_product(ExecutionPolicy&& exec,
     return std::inner_product(first1, last1, first2, value, op1, op2);
   }
 
+  /// OPTIMIZE: remove the unnecessary buffer on cpu
   typedef typename std::iterator_traits<InputIt1>::value_type _Tp;
   std::vector<_Tp> dist(N, _Tp());
 
