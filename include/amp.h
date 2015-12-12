@@ -19,6 +19,7 @@
 #include <kalmar_buffer.h>
 #include <kalmar_serialize.h>
 #include <kalmar_launch.h>
+#include <amp_cpu_launch.h>
 
 // forward declaration
 namespace Concurrency {
@@ -2031,6 +2032,145 @@ public:
 
     /** @} */
 };
+
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+#define SSIZE 1024 * 10
+static const unsigned int NTHREAD = std::thread::hardware_concurrency();
+
+template <int N, typename Kernel,  int K>
+struct cpu_helper
+{
+    static inline void call(const Kernel& k, index<K>& idx, const extent<K>& ext) restrict(amp,cpu) {
+        int i;
+        for (i = 0; i < ext[N]; ++i) {
+            idx[N] = i;
+            cpu_helper<N + 1, Kernel, K>::call(k, idx, ext);
+        }
+    }
+};
+template <typename Kernel, int K>
+struct cpu_helper<K, Kernel, K>
+{
+    static inline void call(const Kernel& k, const index<K>& idx, const extent<K>& ext) restrict(amp,cpu) {
+        (const_cast<Kernel&>(k))(idx);
+    }
+};
+
+template <typename Kernel, int N>
+void partitioned_task(const Kernel& ker, const extent<N>& ext, int part) {
+    index<N> idx;
+    int start = ext[0] * part / NTHREAD;
+    int end = ext[0] * (part + 1) / NTHREAD;
+    for (int i = start; i < end; i++) {
+        idx[0] = i;
+        cpu_helper<1, Kernel, N>::call(ker, idx, ext);
+    }
+}
+
+template <typename Kernel, int D0>
+void partitioned_task_tile(Kernel const& f, tiled_extent<D0> const& ext, int part) {
+    int start = (ext[0] / D0) * part / NTHREAD;
+    int end = (ext[0] / D0) * (part + 1) / NTHREAD;
+    int stride = end - start;
+    if (stride == 0)
+        return;
+    char *stk = new char[D0 * SSIZE];
+    tiled_index<D0> *tidx = new tiled_index<D0>[D0];
+    tile_barrier::pb_t amp_bar = std::make_shared<barrier_t>(D0);
+    tile_barrier tbar(amp_bar);
+    for (int tx = start; tx < end; tx++) {
+        int id = 0;
+        char *sp = stk;
+        tiled_index<D0> *tip = tidx;
+        for (int x = 0; x < D0; x++) {
+            new (tip) tiled_index<D0>(tx * D0 + x, x, tx, tbar);
+            amp_bar->setctx(++id, sp, f, tip, SSIZE);
+            sp += SSIZE;
+            ++tip;
+        }
+        amp_bar->idx = 0;
+        while (amp_bar->idx == 0) {
+            amp_bar->idx = id;
+            amp_bar->swap(0, id);
+        }
+    }
+    delete [] stk;
+    delete [] tidx;
+}
+template <typename Kernel, int D0, int D1>
+void partitioned_task_tile(Kernel const& f, tiled_extent<D0, D1> const& ext, int part) {
+    int start = (ext[0] / D0) * part / NTHREAD;
+    int end = (ext[0] / D0) * (part + 1) / NTHREAD;
+    int stride = end - start;
+    if (stride == 0)
+        return;
+    char *stk = new char[D1 * D0 * SSIZE];
+    tiled_index<D0, D1> *tidx = new tiled_index<D0, D1>[D0 * D1];
+    tile_barrier::pb_t amp_bar = std::make_shared<barrier_t>(D0 * D1);
+    tile_barrier tbar(amp_bar);
+
+    for (int tx = 0; tx < ext[1] / D1; tx++)
+        for (int ty = start; ty < end; ty++) {
+            int id = 0;
+            char *sp = stk;
+            tiled_index<D0, D1> *tip = tidx;
+            for (int x = 0; x < D1; x++)
+                for (int y = 0; y < D0; y++) {
+                    new (tip) tiled_index<D0, D1>(D1 * tx + x, D0 * ty + y, x, y, tx, ty, tbar);
+                    amp_bar->setctx(++id, sp, f, tip, SSIZE);
+                    ++tip;
+                    sp += SSIZE;
+                }
+            amp_bar->idx = 0;
+            while (amp_bar->idx == 0) {
+                amp_bar->idx = id;
+                amp_bar->swap(0, id);
+            }
+        }
+    delete [] stk;
+    delete [] tidx;
+}
+
+template <typename Kernel, int D0, int D1, int D2>
+void partitioned_task_tile(Kernel const& f, tiled_extent<D0, D1, D2> const& ext, int part) {
+    int start = (ext[0] / D0) * part / NTHREAD;
+    int end = (ext[0] / D0) * (part + 1) / NTHREAD;
+    int stride = end - start;
+    if (stride == 0)
+        return;
+    char *stk = new char[D2 * D1 * D0 * SSIZE];
+    tiled_index<D0, D1, D2> *tidx = new tiled_index<D0, D1, D2>[D0 * D1 * D2];
+    tile_barrier::pb_t amp_bar = std::make_shared<barrier_t>(D0 * D1 * D2);
+    tile_barrier tbar(amp_bar);
+
+    for (int i = 0; i < ext[2] / D2; i++)
+        for (int j = 0; j < ext[1] / D1; j++)
+            for(int k = start; k < end; k++) {
+                int id = 0;
+                char *sp = stk;
+                tiled_index<D0, D1, D2> *tip = tidx;
+                for (int x = 0; x < D2; x++)
+                    for (int y = 0; y < D1; y++)
+                        for (int z = 0; z < D0; z++) {
+                            new (tip) tiled_index<D0, D1, D2>(D2 * i + x,
+                                                              D1 * j + y,
+                                                              D0 * k + z,
+                                                              x, y, z, i, j, k, tbar);
+                            amp_bar->setctx(++id, sp, f, tip, SSIZE);
+                            ++tip;
+                            sp += SSIZE;
+                        }
+                amp_bar->idx = 0;
+                while (amp_bar->idx == 0) {
+                    amp_bar->idx = id;
+                    amp_bar->swap(0, id);
+                }
+            }
+    delete [] stk;
+    delete [] tidx;
+}
+
+#endif
 
 // ------------------------------------------------------------------------
 // utility helper classes for array_view
@@ -5331,6 +5471,15 @@ extern unsigned atomic_fetch_inc(unsigned * _Dest) restrict(amp, cpu);
 template <int N, typename Kernel>
 void parallel_for_each(const accelerator_view&, extent<N> compute_domain, const Kernel& f);
 
+template <typename Kernel>
+void parallel_for_each(const accelerator_view&, extent<1> compute_domain, const Kernel& f);
+
+template <typename Kernel>
+void parallel_for_each(const accelerator_view&, extent<2> compute_domain, const Kernel& f);
+
+template <typename Kernel>
+void parallel_for_each(const accelerator_view&, extent<3> compute_domain, const Kernel& f);
+
 template <int D0, int D1, int D2, typename Kernel>
 void parallel_for_each(const accelerator_view& accl_view,
                        tiled_extent<D0,D1,D2> compute_domain, const Kernel& f);
@@ -5345,6 +5494,27 @@ void parallel_for_each(const accelerator_view& accl_view,
 
 template <int N, typename Kernel>
 void parallel_for_each(extent<N> compute_domain, const Kernel& f){
+    auto que = Kalmar::get_availabe_que(f);
+    const accelerator_view av(que);
+    parallel_for_each(av, compute_domain, f);
+}
+
+template <typename Kernel>
+void parallel_for_each(extent<1> compute_domain, const Kernel& f) {
+    auto que = Kalmar::get_availabe_que(f);
+    const accelerator_view av(que);
+    parallel_for_each(av, compute_domain, f);
+}
+
+template <typename Kernel>
+void parallel_for_each(extent<2> compute_domain, const Kernel& f) {
+    auto que = Kalmar::get_availabe_que(f);
+    const accelerator_view av(que);
+    parallel_for_each(av, compute_domain, f);
+}
+
+template <typename Kernel>
+void parallel_for_each(extent<3> compute_domain, const Kernel& f) {
     auto que = Kalmar::get_availabe_que(f);
     const accelerator_view av(que);
     parallel_for_each(av, compute_domain, f);

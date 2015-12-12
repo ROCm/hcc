@@ -728,7 +728,7 @@ struct rw_info
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
         if (CLAMP::in_cpu_kernel()) {
             if (data && !HostPtr)
-                kalmar_aligned_free(ptr);
+                kalmar_aligned_free(data);
             return;
         }
 #endif
