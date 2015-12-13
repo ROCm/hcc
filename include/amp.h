@@ -29,7 +29,6 @@ class accelerator_view;
 template <typename T, int N> class array_view;
 template <typename T, int N> class array;
 template <int N> class extent;
-template <int D0, int D1=0, int D2=0> class tiled_extent;
 } // namespace Concurrency
 
 // namespace alias
@@ -228,6 +227,7 @@ private:
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
     template <typename Kernel, int N> friend
       void Kalmar::launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>&, Kernel const&, extent<N> const&);
+    friend struct accelerator_view_helper;
 #endif
 
     template <typename Q, int K> friend class array;
@@ -235,6 +235,13 @@ private:
   
     template <int N, typename Kernel> friend
         void parallel_for_each(Concurrency::extent<N>, const Kernel&);
+    template <typename Kernel> friend
+        void parallel_for_each(Concurrency::extent<1>, const Kernel&);
+    template <typename Kernel> friend
+        void parallel_for_each(Concurrency::extent<2>, const Kernel&);
+    template <typename Kernel> friend
+        void parallel_for_each(Concurrency::extent<3>, const Kernel&);
+
     template <int N, typename Kernel> friend
         void parallel_for_each(const accelerator_view&, Concurrency::extent<N>, const Kernel&);
     template <typename Kernel> friend
@@ -269,6 +276,19 @@ public:
 #endif
     }
 };
+
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+//struct accelerator_view_helper
+//{
+  const accelerator_view accelerator_view_helper::create_view(std::shared_ptr<Kalmar::KalmarQueue> pQueue){
+        return accelerator_view(pQueue);
+    }
+  std::shared_ptr<Kalmar::KalmarQueue> accelerator_view_helper::getPQueue(const std::shared_ptr<Kalmar::KalmarQueue> & av) {
+  //    static inline std::shared_ptr<Kalmar::KalmarQueue> getPQueue(const accelerator_view & av) {
+      return create_view(av).pQueue;
+    }
+  //};
+#endif
 
 // ------------------------------------------------------------------------
 // accelerator
@@ -5607,7 +5627,7 @@ void parallel_for_each(const accelerator_view& av, extent<N> compute_domain,
         static_cast<size_t>(compute_domain[N - 2]),
         static_cast<size_t>(compute_domain[N - 3])};
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    if (CLAMP::is_cpu()) {
+    if (Kalmar::CLAMP::is_cpu()) {
         launch_cpu_task(av.pQueue, f, compute_domain);
         return;
     }
@@ -5641,7 +5661,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
   if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (CLAMP::is_cpu()) {
+  if (Kalmar::CLAMP::is_cpu()) {
       launch_cpu_task(av.pQueue, f, compute_domain);
       return;
   }
@@ -5673,7 +5693,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
   if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (CLAMP::is_cpu()) {
+  if (Kalmar::CLAMP::is_cpu()) {
       launch_cpu_task(av.pQueue, f, compute_domain);
       return;
   }
@@ -5712,7 +5732,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
   if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (CLAMP::is_cpu()) {
+  if (Kalmar::CLAMP::is_cpu()) {
       launch_cpu_task(av.pQueue, f, compute_domain);
       return;
   }
@@ -5752,7 +5772,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
     throw invalid_compute_domain("Extent can't be evenly divisible by tile size.");
   }
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (CLAMP::is_cpu()) {
+  if (Kalmar::CLAMP::is_cpu()) {
       launch_cpu_task(av.pQueue, f, compute_domain);
   } else
 #endif
@@ -5791,7 +5811,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
     throw invalid_compute_domain("Extent can't be evenly divisible by tile size.");
   }
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (CLAMP::is_cpu()) {
+  if (Kalmar::CLAMP::is_cpu()) {
       launch_cpu_task(av.pQueue, f, compute_domain);
   } else
 #endif
@@ -5838,7 +5858,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
     throw invalid_compute_domain("Extent can't be evenly divisible by tile size.");
   }
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (CLAMP::is_cpu()) {
+  if (Kalmar::CLAMP::is_cpu()) {
       launch_cpu_task(av.pQueue, f, compute_domain);
   } else
 #endif
