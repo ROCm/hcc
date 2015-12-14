@@ -45,7 +45,7 @@ T reduce_impl(RandomAccessIterator first, RandomAccessIterator last,
 
     /// FIXME: not work in dGPU
     // FIXME: raw pointer won't work in dGPU
-    auto result = new T[numTiles];
+    auto result = new T[numTiles]();
     auto first_ = utils::get_pointer(first);
     kernel_launch(length,
                   [ first_, N, length, &result, binary_op ]

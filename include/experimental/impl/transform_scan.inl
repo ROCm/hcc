@@ -56,8 +56,8 @@ transform_scan_impl(
     }
 
     /// FIXME: not work in dGPU
-    std::unique_ptr< oType[] > p_preSumArray(new oType[sizeScanBuff]);
-    std::unique_ptr< oType[] > p_preSumArray1(new oType[sizeScanBuff]);
+    std::unique_ptr< oType[] > p_preSumArray(new oType[sizeScanBuff]());
+    std::unique_ptr< oType[] > p_preSumArray1(new oType[sizeScanBuff]());
     auto preSumArray = p_preSumArray.get();
     auto preSumArray1 = p_preSumArray1.get();
 
