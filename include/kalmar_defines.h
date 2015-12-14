@@ -59,3 +59,12 @@ extern "C" __attribute__((noduplicate)) void amp_barrier(unsigned int n) restric
  */
 namespace Kalmar {
 } // namespace Kalmar
+
+// Provide automatic type conversion for void*.
+class auto_voidp {
+    void *_ptr;
+    public:
+        auto_voidp (void *ptr) : _ptr (ptr) {}
+        template<class T> operator T *() { return (T *) _ptr; }
+};
+

@@ -27,12 +27,12 @@ bool test1() {
       e,
       [=](hc::index<1> idx) restrict(amp) {
     });
+    fut.wait();
+    ret &= (fut.is_ready() == true);
+
     clock_gettime(CLOCK_REALTIME, &end);
     time_spent_once = ((end.tv_sec - begin.tv_sec) * 1000 * 1000) + ((end.tv_nsec - begin.tv_nsec) / 1000);
     time_spent += time_spent_once;
-
-    fut.wait();
-    ret &= (fut.is_ready() == true);
   }
 
   std::cout << "Dispatched " << DISPATCH_COUNT << " empty kernels\n";
@@ -76,12 +76,12 @@ bool test2() {
         p_c[idx[0]] = p_a[idx[0]] + p_b[idx[0]];
   
     });
+    fut.wait();
+    ret &= (fut.is_ready() == true);
+
     clock_gettime(CLOCK_REALTIME, &end);
     time_spent_once = ((end.tv_sec - begin.tv_sec) * 1000 * 1000) + ((end.tv_nsec - begin.tv_nsec) / 1000);
     time_spent += time_spent_once;
-
-    fut.wait();
-    ret &= (fut.is_ready() == true);
   }
 
   std::cout << "Dispatched " << DISPATCH_COUNT << " vector addition kernels\n";
