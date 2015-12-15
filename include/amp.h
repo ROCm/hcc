@@ -59,6 +59,10 @@ namespace Concurrency {
 
 using namespace Kalmar::enums;
 
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+using namespace Kalmar::CLAMP;
+#endif
+
 // ------------------------------------------------------------------------
 // accelerator_view
 // ------------------------------------------------------------------------
@@ -225,8 +229,6 @@ private:
         std::shared_future<void>* Kalmar::mcw_cxxamp_launch_kernel_async(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&);
 
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    template <typename Kernel, int N> friend
-      void Kalmar::launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>&, Kernel const&, extent<N> const&);
     friend struct accelerator_view_helper;
 #endif
 
@@ -235,12 +237,6 @@ private:
   
     template <int N, typename Kernel> friend
         void parallel_for_each(Concurrency::extent<N>, const Kernel&);
-    template <typename Kernel> friend
-        void parallel_for_each(Concurrency::extent<1>, const Kernel&);
-    template <typename Kernel> friend
-        void parallel_for_each(Concurrency::extent<2>, const Kernel&);
-    template <typename Kernel> friend
-        void parallel_for_each(Concurrency::extent<3>, const Kernel&);
 
     template <int N, typename Kernel> friend
         void parallel_for_each(const accelerator_view&, Concurrency::extent<N>, const Kernel&);
@@ -278,16 +274,14 @@ public:
 };
 
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-//struct accelerator_view_helper
-//{
-  const accelerator_view accelerator_view_helper::create_view(std::shared_ptr<Kalmar::KalmarQueue> pQueue){
-        return accelerator_view(pQueue);
-    }
-  std::shared_ptr<Kalmar::KalmarQueue> accelerator_view_helper::getPQueue(const std::shared_ptr<Kalmar::KalmarQueue> & av) {
-  //    static inline std::shared_ptr<Kalmar::KalmarQueue> getPQueue(const accelerator_view & av) {
-      return create_view(av).pQueue;
-    }
-  //};
+const accelerator_view
+  accelerator_view_helper::create_view(std::shared_ptr<Kalmar::KalmarQueue> pQueue) {
+  return accelerator_view(pQueue);
+}
+std::shared_ptr<Kalmar::KalmarQueue>
+  accelerator_view_helper::getPQueue(const std::shared_ptr<Kalmar::KalmarQueue> & av) {
+  return create_view(av).pQueue;
+ }
 #endif
 
 // ------------------------------------------------------------------------
@@ -5519,27 +5513,6 @@ void parallel_for_each(extent<N> compute_domain, const Kernel& f){
     parallel_for_each(av, compute_domain, f);
 }
 
-template <typename Kernel>
-void parallel_for_each(extent<1> compute_domain, const Kernel& f) {
-    auto que = Kalmar::get_availabe_que(f);
-    const accelerator_view av(que);
-    parallel_for_each(av, compute_domain, f);
-}
-
-template <typename Kernel>
-void parallel_for_each(extent<2> compute_domain, const Kernel& f) {
-    auto que = Kalmar::get_availabe_que(f);
-    const accelerator_view av(que);
-    parallel_for_each(av, compute_domain, f);
-}
-
-template <typename Kernel>
-void parallel_for_each(extent<3> compute_domain, const Kernel& f) {
-    auto que = Kalmar::get_availabe_que(f);
-    const accelerator_view av(que);
-    parallel_for_each(av, compute_domain, f);
-}
-
 template <int D0, int D1, int D2, typename Kernel>
 void parallel_for_each(tiled_extent<D0,D1,D2> compute_domain, const Kernel& f) {
     auto que = Kalmar::get_availabe_que(f);
@@ -5627,7 +5600,7 @@ void parallel_for_each(const accelerator_view& av, extent<N> compute_domain,
         static_cast<size_t>(compute_domain[N - 2]),
         static_cast<size_t>(compute_domain[N - 3])};
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    if (Kalmar::CLAMP::is_cpu()) {
+    if (is_cpu()) {
         launch_cpu_task(av.pQueue, f, compute_domain);
         return;
     }
@@ -5661,7 +5634,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
   if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (Kalmar::CLAMP::is_cpu()) {
+  if (is_cpu()) {
       launch_cpu_task(av.pQueue, f, compute_domain);
       return;
   }
@@ -5693,7 +5666,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
   if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (Kalmar::CLAMP::is_cpu()) {
+  if (is_cpu()) {
       launch_cpu_task(av.pQueue, f, compute_domain);
       return;
   }
@@ -5732,7 +5705,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
   if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (Kalmar::CLAMP::is_cpu()) {
+  if (is_cpu()) {
       launch_cpu_task(av.pQueue, f, compute_domain);
       return;
   }
@@ -5772,7 +5745,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
     throw invalid_compute_domain("Extent can't be evenly divisible by tile size.");
   }
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (Kalmar::CLAMP::is_cpu()) {
+  if (is_cpu()) {
       launch_cpu_task(av.pQueue, f, compute_domain);
   } else
 #endif
@@ -5811,7 +5784,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
     throw invalid_compute_domain("Extent can't be evenly divisible by tile size.");
   }
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (Kalmar::CLAMP::is_cpu()) {
+  if (is_cpu()) {
       launch_cpu_task(av.pQueue, f, compute_domain);
   } else
 #endif
@@ -5858,7 +5831,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
     throw invalid_compute_domain("Extent can't be evenly divisible by tile size.");
   }
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (Kalmar::CLAMP::is_cpu()) {
+  if (is_cpu()) {
       launch_cpu_task(av.pQueue, f, compute_domain);
   } else
 #endif
