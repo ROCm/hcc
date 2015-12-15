@@ -59,7 +59,7 @@ void scan_impl(
     }
 
     /// FIXME: not work in dGPU
-    std::unique_ptr<iType[]> p_preSumArray(new iType[sizeScanBuff]);
+    std::unique_ptr<iType[]> p_preSumArray(new iType[sizeScanBuff]());
     iType* preSumArray = p_preSumArray.get();
 
     /**********************************************************************************
