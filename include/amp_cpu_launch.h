@@ -19,13 +19,6 @@ using namespace Kalmar::CLAMP;
 #define SSIZE 1024 * 10
 static const unsigned int NTHREAD = std::thread::hardware_concurrency();
 
-class accelerator_view;
-struct accelerator_view_helper
-{
-  static inline const accelerator_view create_view(std::shared_ptr<Kalmar::KalmarQueue> pQueue);
-  static inline std::shared_ptr<Kalmar::KalmarQueue> getPQueue(const std::shared_ptr<Kalmar::KalmarQueue> & av);
-};
-
 template <typename Kernel, int N>
   void partitioned_task(const Kernel& ker, const extent<N>& ext, int part);
 
@@ -66,41 +59,41 @@ public:
 
 // FIXME: need to resolve the dependency to extent
 template <typename Kernel, int N>
-void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>& av, Kernel const& f,
+void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
                      extent<N> const& compute_domain)
 {
-    CPUKernelRAII<Kernel> obj(Concurrency::accelerator_view_helper::getPQueue(av), f);
+    CPUKernelRAII<Kernel> obj(pQueue, f);
     for (int i = 0; i < NTHREAD; ++i)
-        obj[i] = std::thread(Concurrency::partitioned_task<Kernel, N>, std::cref(f), std::cref(compute_domain), i);
+        obj[i] = std::thread(partitioned_task<Kernel, N>, std::cref(f), std::cref(compute_domain), i);
 }
 
 template <typename Kernel, int D0>
 void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
-                     Concurrency::tiled_extent<D0> const& compute_domain)
+                     tiled_extent<D0> const& compute_domain)
 {
     CPUKernelRAII<Kernel> obj(pQueue, f);
     for (int i = 0; i < NTHREAD; ++i)
-        obj[i] = std::thread(Concurrency::partitioned_task_tile<Kernel, D0>,
+        obj[i] = std::thread(partitioned_task_tile<Kernel, D0>,
                              std::cref(f), std::cref(compute_domain), i);
 }
 
 template <typename Kernel, int D0, int D1>
 void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
-                     Concurrency::tiled_extent<D0, D1> const& compute_domain)
+                     tiled_extent<D0, D1> const& compute_domain)
 {
     CPUKernelRAII<Kernel> obj(pQueue, f);
     for (int i = 0; i < NTHREAD; ++i)
-        obj[i] = std::thread(Concurrency::partitioned_task_tile<Kernel, D0, D1>,
+        obj[i] = std::thread(partitioned_task_tile<Kernel, D0, D1>,
                              std::cref(f), std::cref(compute_domain), i);
 }
 
 template <typename Kernel, int D0, int D1, int D2>
 void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
-                     Concurrency::tiled_extent<D0, D1, D2> const& compute_domain)
+                     tiled_extent<D0, D1, D2> const& compute_domain)
 {
     CPUKernelRAII<Kernel> obj(pQueue, f);
     for (int i = 0; i < NTHREAD; ++i)
-        obj[i] = std::thread(Concurrency::partitioned_task_tile<Kernel, D0, D1, D2>,
+        obj[i] = std::thread(partitioned_task_tile<Kernel, D0, D1, D2>,
                              std::cref(f), std::cref(compute_domain), i);
 }
 #endif

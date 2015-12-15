@@ -225,7 +225,8 @@ private:
         std::shared_future<void>* Kalmar::mcw_cxxamp_launch_kernel_async(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&);
 
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    friend struct accelerator_view_helper;
+    template <typename Kernel, int N> friend
+      void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>&, Kernel const&, extent<N> const&);
 #endif
 
     template <typename Q, int K> friend class array;
@@ -267,17 +268,6 @@ public:
 #endif
     }
 };
-
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-const accelerator_view
-  accelerator_view_helper::create_view(std::shared_ptr<Kalmar::KalmarQueue> pQueue) {
-  return accelerator_view(pQueue);
-}
-std::shared_ptr<Kalmar::KalmarQueue>
-  accelerator_view_helper::getPQueue(const std::shared_ptr<Kalmar::KalmarQueue> & av) {
-  return create_view(av).pQueue;
- }
-#endif
 
 // ------------------------------------------------------------------------
 // accelerator
