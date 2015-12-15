@@ -17,7 +17,7 @@ bool test(void) {
   // test kernel
   auto f = [](const T& v1, const T& v2)
   {
-    return v1 * v2+1;
+    return 5 * v1 + 6 * v2;
   };
   auto binary_op = std::plus<T>();
   auto init = T{};
