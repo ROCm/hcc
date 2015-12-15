@@ -271,13 +271,9 @@ bool lexicographical_compare_impl(InputIt1 first1, InputIt1 last1,
 
   // transform_reduce assumes two vectors are the same size,
   // use the smaller one as the first vector
-  auto ans = transform_reduce(par, first1_, last1_, first2_, 1,
-                              [](const int &a, const int &b) {
-                                return a == 1 ? b : a;
-                              },
-                              [comp](const _Tp &a, const _Tp &b) {
-                                return comp(a, b) ? 0 : a == b ? 1 : 2;
-                              });
+  std::vector<int> tmp(N);
+  transform(first1_, last1_, first2_, std::begin(tmp), [comp](const _Tp& a, const _Tp& b) { return comp(a, b) ? 0 : a == b ? 1 : 2;});
+  auto ans = details::reduce_lexi(tmp.data(), tmp.data() + N);
 
   return ans == 1 ? n1 < n2 : ans == 0;
 }

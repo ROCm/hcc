@@ -22,6 +22,90 @@ if ((_IDX < _W) && ((_IDX + _W) < _LENGTH)) {\
 }\
     t_idx.barrier.wait();
 
+int reduce_lexi(int* first, int* last) {
+
+    const int N = static_cast<int>(std::distance(first, last));
+    auto binary_op = [](const int& a, const int& b) { return a == 1 ? b : a; };
+    // call to std::accumulate when small data size
+    if (N <= details::PARALLELIZE_THRESHOLD) {
+        return reduce_impl(first, last, 1, binary_op, std::input_iterator_tag{});
+    }
+
+    int max_ComputeUnits = 32;
+    int numTiles = max_ComputeUnits*32;
+    int length = (REDUCE_WAVEFRONT_SIZE*numTiles);
+    length = N < length ? N : length;
+    unsigned int residual = length % REDUCE_WAVEFRONT_SIZE;
+    length = residual ? (length + REDUCE_WAVEFRONT_SIZE - residual): length ;
+    numTiles = static_cast< int >((N/REDUCE_WAVEFRONT_SIZE)>= numTiles?(numTiles):
+                                  (std::ceil( static_cast< float >( N ) / REDUCE_WAVEFRONT_SIZE) ));
+
+    /// FIXME: not work in dGPU
+    // FIXME: raw pointer won't work in dGPU
+    auto result = new int[numTiles]();
+    auto first_ = first;
+    kernel_launch(length,
+                  [ first_, N, length, &result, binary_op ]
+                  ( hc::tiled_index<1> t_idx ) [[hc]]
+                  {
+                  using T = int;
+                  int gx = t_idx.global[0];
+                  int gloId = gx;
+                  tile_static int scratch[REDUCE_WAVEFRONT_SIZE];
+                  //  Initialize local data store
+                  unsigned int tileIndex = t_idx.local[0];
+
+                  int accumulator;
+                  if (gloId < N)
+                  {
+                  accumulator = first_[gx];
+                  gx += length;
+                  }
+
+
+                  // Loop sequentially over chunks of input vector, reducing an arbitrary size input
+                  // length into a length related to the number of workgroups
+                  while (gx < N)
+                  {
+                      T element = first_[gx];
+                      accumulator = binary_op(accumulator, element);
+                      gx += length;
+                  }
+
+                  scratch[tileIndex] = accumulator;
+                  t_idx.barrier.wait();
+
+                  unsigned int tail = N - (t_idx.tile[0] * REDUCE_WAVEFRONT_SIZE);
+
+                  _REDUCE_STEP(tail, tileIndex, 1);
+                  _REDUCE_STEP(tail, tileIndex, 2);
+                  _REDUCE_STEP(tail, tileIndex, 4);
+                  _REDUCE_STEP(tail, tileIndex, 8);
+                  _REDUCE_STEP(tail, tileIndex, 16);
+                  _REDUCE_STEP(tail, tileIndex, 32);
+                  _REDUCE_STEP(tail, tileIndex, 64);
+                  _REDUCE_STEP(tail, tileIndex, 128);
+                  _REDUCE_STEP(tail, tileIndex, 256);
+
+
+                  //  Abort threads that are passed the end of the input vector
+                  if (gloId >= N)
+                      return;
+
+                  //  Write only the single reduced value for the entire workgroup
+                  if (tileIndex == 0)
+                  {
+                      result[t_idx.tile[ 0 ]] = scratch[0];
+                  }
+
+                  }, REDUCE_WAVEFRONT_SIZE);
+
+
+    auto ans = std::accumulate(result, result + numTiles, 1, binary_op);
+    delete result;
+    return ans;
+}
+
 template<class RandomAccessIterator, class T, class BinaryOperation>
 T reduce_impl(RandomAccessIterator first, RandomAccessIterator last,
               T init,
