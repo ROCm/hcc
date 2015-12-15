@@ -237,7 +237,6 @@ private:
   
     template <int N, typename Kernel> friend
         void parallel_for_each(Concurrency::extent<N>, const Kernel&);
-
     template <int N, typename Kernel> friend
         void parallel_for_each(const accelerator_view&, Concurrency::extent<N>, const Kernel&);
     template <typename Kernel> friend
@@ -5484,15 +5483,6 @@ extern unsigned atomic_fetch_inc(unsigned * _Dest) restrict(amp, cpu);
 
 template <int N, typename Kernel>
 void parallel_for_each(const accelerator_view&, extent<N> compute_domain, const Kernel& f);
-
-template <typename Kernel>
-void parallel_for_each(const accelerator_view&, extent<1> compute_domain, const Kernel& f);
-
-template <typename Kernel>
-void parallel_for_each(const accelerator_view&, extent<2> compute_domain, const Kernel& f);
-
-template <typename Kernel>
-void parallel_for_each(const accelerator_view&, extent<3> compute_domain, const Kernel& f);
 
 template <int D0, int D1, int D2, typename Kernel>
 void parallel_for_each(const accelerator_view& accl_view,
