@@ -15,6 +15,10 @@ namespace Concurrency {
 template <int D0, int D1=0, int D2=0> class tiled_extent;
 
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+using namespace Kalmar::CLAMP;
+#define SSIZE 1024 * 10
+static const unsigned int NTHREAD = std::thread::hardware_concurrency();
+
 class accelerator_view;
 struct accelerator_view_helper
 {
@@ -34,31 +38,19 @@ template <typename Kernel, int D0, int D1>
 template <typename Kernel, int D0, int D1, int D2>
   void partitioned_task_tile(Kernel const& f, tiled_extent<D0, D1, D2> const& ext, int part);
 
-#endif
-}
-
-/** \cond HIDDEN_SYMBOLS */
-namespace Kalmar {
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-#define SSIZE 1024 * 10
-static const unsigned int NTHREAD = std::thread::hardware_concurrency();
-
-template <int N>
-  using extent = Concurrency::extent<N>;
-
 template <typename Kernel>
 class CPUKernelRAII
 {
-    const std::shared_ptr<KalmarQueue> pQueue;
+    const std::shared_ptr<Kalmar::KalmarQueue> pQueue;
     const Kernel& f;
     std::vector<std::thread> th;
 public:
-    CPUKernelRAII(const std::shared_ptr<KalmarQueue> pQueue, const Kernel& f)
+    CPUKernelRAII(const std::shared_ptr<Kalmar::KalmarQueue> pQueue, const Kernel& f)
         : pQueue(pQueue), f(f), th(NTHREAD) {
         Kalmar::CPUVisitor vis(pQueue);
         Kalmar::Serialize s(&vis);
         f.__cxxamp_serialize(s);
-        CLAMP::enter_kernel();
+        enter_kernel();
     }
     std::thread& operator[](int i) { return th[i]; }
     ~CPUKernelRAII() {
@@ -68,13 +60,13 @@ public:
         Kalmar::CPUVisitor vis(pQueue);
         Kalmar::Serialize ss(&vis);
         f.__cxxamp_serialize(ss);
-        CLAMP::leave_kernel();
+        leave_kernel();
     }
 };
 
 // FIXME: need to resolve the dependency to extent
 template <typename Kernel, int N>
-void launch_cpu_task(const std::shared_ptr<KalmarQueue>& av, Kernel const& f,
+void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>& av, Kernel const& f,
                      extent<N> const& compute_domain)
 {
     CPUKernelRAII<Kernel> obj(Concurrency::accelerator_view_helper::getPQueue(av), f);
@@ -83,7 +75,7 @@ void launch_cpu_task(const std::shared_ptr<KalmarQueue>& av, Kernel const& f,
 }
 
 template <typename Kernel, int D0>
-void launch_cpu_task(const std::shared_ptr<KalmarQueue>& pQueue, Kernel const& f,
+void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
                      Concurrency::tiled_extent<D0> const& compute_domain)
 {
     CPUKernelRAII<Kernel> obj(pQueue, f);
@@ -93,7 +85,7 @@ void launch_cpu_task(const std::shared_ptr<KalmarQueue>& pQueue, Kernel const& f
 }
 
 template <typename Kernel, int D0, int D1>
-void launch_cpu_task(const std::shared_ptr<KalmarQueue>& pQueue, Kernel const& f,
+void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
                      Concurrency::tiled_extent<D0, D1> const& compute_domain)
 {
     CPUKernelRAII<Kernel> obj(pQueue, f);
@@ -103,7 +95,7 @@ void launch_cpu_task(const std::shared_ptr<KalmarQueue>& pQueue, Kernel const& f
 }
 
 template <typename Kernel, int D0, int D1, int D2>
-void launch_cpu_task(const std::shared_ptr<KalmarQueue>& pQueue, Kernel const& f,
+void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
                      Concurrency::tiled_extent<D0, D1, D2> const& compute_domain)
 {
     CPUKernelRAII<Kernel> obj(pQueue, f);

@@ -59,10 +59,6 @@ namespace Concurrency {
 
 using namespace Kalmar::enums;
 
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-using namespace Kalmar::CLAMP;
-#endif
-
 // ------------------------------------------------------------------------
 // accelerator_view
 // ------------------------------------------------------------------------
@@ -2047,8 +2043,6 @@ public:
 };
 
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-#define SSIZE 1024 * 10
-static const unsigned int NTHREAD = std::thread::hardware_concurrency();
 
 template <int N, typename Kernel,  int K>
 struct cpu_helper
