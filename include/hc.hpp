@@ -1487,7 +1487,7 @@ public:
      * Default constructor. The origin and extent is default-constructed and
      * thus zero.
      */
-    tiled_extent() __CPU__ __HC__ : extent(0), tile_dim{0}, dynamic_group_segment_size(0) {}
+    tiled_extent() __CPU__ __HC__ : extent(0), dynamic_group_segment_size(0), tile_dim{0} {}
 
     /**
      * Construct an tiled extent with the size of extent and the size of tile
@@ -1496,7 +1496,7 @@ public:
      * @param[in] e0 Size of extent.
      * @param[in] t0 Size of tile.
      */
-    tiled_extent(int e0, int t0) __CPU__ __HC__ : extent(e0), tile_dim{t0}, dynamic_group_segment_size(0) {}
+    tiled_extent(int e0, int t0) __CPU__ __HC__ : extent(e0), dynamic_group_segment_size(0), tile_dim{t0} {}
 
     /**
      * Construct an tiled extent with the size of extent and the size of tile
@@ -1506,7 +1506,7 @@ public:
      * @param[in] t0 Size of tile.
      * @param[in] size Size of dynamic group segment.
      */
-    tiled_extent(int e0, int t0, int size) __CPU__ __HC__ : extent(e0), tile_dim{t0}, dynamic_group_segment_size(size) {}
+    tiled_extent(int e0, int t0, int size) __CPU__ __HC__ : extent(e0), dynamic_group_segment_size(size), tile_dim{t0} {}
 
     /**
      * Copy constructor. Constructs a new tiled_extent from the supplied
@@ -1515,7 +1515,7 @@ public:
      * @param[in] other An object of type tiled_extent from which to initialize
      *                  this new extent.
      */
-    tiled_extent(const tiled_extent<1>& other) __CPU__ __HC__ : extent(other[0]), tile_dim{other.tile_dim[0]}, dynamic_group_segment_size(other.dynamic_group_segment_size) {}
+    tiled_extent(const tiled_extent<1>& other) __CPU__ __HC__ : extent(other[0]), dynamic_group_segment_size(other.dynamic_group_segment_size), tile_dim{other.tile_dim[0]} {}
 
 
     /**
@@ -1524,7 +1524,7 @@ public:
      * @param[in] ext The extent of this tiled_extent
      * @param[in] t0 Size of tile.
      */
-    tiled_extent(const extent<1>& ext, int t0) __CPU__ __HC__ : extent(ext), tile_dim{t0}, dynamic_group_segment_size(0) {} 
+    tiled_extent(const extent<1>& ext, int t0) __CPU__ __HC__ : extent(ext), dynamic_group_segment_size(0), tile_dim{t0} {} 
 
     /**
      * Constructs a tiled_extent<N> with the extent "ext".
@@ -1533,7 +1533,7 @@ public:
      * @param[in] t0 Size of tile.
      * @param[in] size Size of dynamic group segment
      */
-    tiled_extent(const extent<1>& ext, int t0, int size) __CPU__ __HC__ : extent(ext), tile_dim{t0}, dynamic_group_segment_size(size) {}
+    tiled_extent(const extent<1>& ext, int t0, int size) __CPU__ __HC__ : extent(ext), dynamic_group_segment_size(size), tile_dim{t0} {}
 
     /**
      * Set the size of dynamic group segment. The function should be called
@@ -1578,7 +1578,7 @@ public:
      * Default constructor. The origin and extent is default-constructed and
      * thus zero.
      */
-    tiled_extent() __CPU__ __HC__ : extent(0, 0), tile_dim{0, 0}, dynamic_group_segment_size(0) {}
+    tiled_extent() __CPU__ __HC__ : extent(0, 0), dynamic_group_segment_size(0), tile_dim{0, 0} {}
 
     /**
      * Construct an tiled extent with the size of extent and the size of tile
@@ -1589,7 +1589,7 @@ public:
      * @param[in] t0 Size of tile in the 1st dimension.
      * @param[in] t1 Size of tile in the 2nd dimension.
      */
-    tiled_extent(int e0, int e1, int t0, int t1) __CPU__ __HC__ : extent(e0, e1), tile_dim{t0, t1}, dynamic_group_segment_size(0) {}
+    tiled_extent(int e0, int e1, int t0, int t1) __CPU__ __HC__ : extent(e0, e1), dynamic_group_segment_size(0), tile_dim{t0, t1} {}
 
     /**
      * Construct an tiled extent with the size of extent and the size of tile
@@ -1601,7 +1601,7 @@ public:
      * @param[in] t1 Size of tile in the 2nd dimension.
      * @param[in] size Size of dynamic group segment.
      */
-    tiled_extent(int e0, int e1, int t0, int t1, int size) __CPU__ __HC__ : extent(e0, e1), tile_dim{t0, t1}, dynamic_group_segment_size(size) {}
+    tiled_extent(int e0, int e1, int t0, int t1, int size) __CPU__ __HC__ : extent(e0, e1), dynamic_group_segment_size(size), tile_dim{t0, t1} {}
 
     /**
      * Copy constructor. Constructs a new tiled_extent from the supplied
@@ -1610,7 +1610,7 @@ public:
      * @param[in] other An object of type tiled_extent from which to initialize
      *                  this new extent.
      */
-    tiled_extent(const tiled_extent<2>& other) __CPU__ __HC__ : extent(other[0], other[1]), tile_dim{other.tile_dim[0], other.tile_dim[1]}, dynamic_group_segment_size(other.dynamic_group_segment_size) {}
+    tiled_extent(const tiled_extent<2>& other) __CPU__ __HC__ : extent(other[0], other[1]), dynamic_group_segment_size(other.dynamic_group_segment_size), tile_dim{other.tile_dim[0], other.tile_dim[1]} {}
 
     /**
      * Constructs a tiled_extent<N> with the extent "ext".
@@ -1619,7 +1619,7 @@ public:
      * @param[in] t0 Size of tile in the 1st dimension.
      * @param[in] t1 Size of tile in the 2nd dimension.
      */
-    tiled_extent(const extent<2>& ext, int t0, int t1) __CPU__ __HC__ : extent(ext), tile_dim{t0, t1}, dynamic_group_segment_size(0) {}
+    tiled_extent(const extent<2>& ext, int t0, int t1) __CPU__ __HC__ : extent(ext), dynamic_group_segment_size(0), tile_dim{t0, t1} {}
 
     /**
      * Constructs a tiled_extent<N> with the extent "ext".
@@ -1629,7 +1629,7 @@ public:
      * @param[in] t1 Size of tile in the 2nd dimension.
      * @param[in] size Size of dynamic group segment.
      */
-    tiled_extent(const extent<2>& ext, int t0, int t1, int size) __CPU__ __HC__ : extent(ext), tile_dim{t0, t1}, dynamic_group_segment_size(size) {}
+    tiled_extent(const extent<2>& ext, int t0, int t1, int size) __CPU__ __HC__ : extent(ext), dynamic_group_segment_size(size), tile_dim{t0, t1} {}
 
     /**
      * Set the size of dynamic group segment. The function should be called
@@ -1674,7 +1674,7 @@ public:
      * Default constructor. The origin and extent is default-constructed and
      * thus zero.
      */
-    tiled_extent() __CPU__ __HC__ : extent(0, 0, 0), tile_dim{0, 0, 0}, dynamic_group_segment_size(0) {}
+    tiled_extent() __CPU__ __HC__ : extent(0, 0, 0), dynamic_group_segment_size(0), tile_dim{0, 0, 0} {}
 
     /**
      * Construct an tiled extent with the size of extent and the size of tile
@@ -1687,7 +1687,7 @@ public:
      * @param[in] t1 Size of tile in the 2nd dimension.
      * @param[in] t2 Size of tile in the 3rd dimension.
      */
-    tiled_extent(int e0, int e1, int e2, int t0, int t1, int t2) __CPU__ __HC__ : extent(e0, e1, e2), tile_dim{t0, t1, t2}, dynamic_group_segment_size(0) {}
+    tiled_extent(int e0, int e1, int e2, int t0, int t1, int t2) __CPU__ __HC__ : extent(e0, e1, e2), dynamic_group_segment_size(0), tile_dim{t0, t1, t2} {}
 
     /**
      * Construct an tiled extent with the size of extent and the size of tile
@@ -1701,7 +1701,7 @@ public:
      * @param[in] t2 Size of tile in the 3rd dimension.
      * @param[in] size Size of dynamic group segment.
      */
-    tiled_extent(int e0, int e1, int e2, int t0, int t1, int t2, int size) __CPU__ __HC__ : extent(e0, e1, e2), tile_dim{t0, t1, t2}, dynamic_group_segment_size(size) {}
+    tiled_extent(int e0, int e1, int e2, int t0, int t1, int t2, int size) __CPU__ __HC__ : extent(e0, e1, e2), dynamic_group_segment_size(size), tile_dim{t0, t1, t2} {}
 
     /**
      * Copy constructor. Constructs a new tiled_extent from the supplied
@@ -1710,7 +1710,7 @@ public:
      * @param[in] other An object of type tiled_extent from which to initialize
      *                  this new extent.
      */
-    tiled_extent(const tiled_extent<3>& other) __CPU__ __HC__ : extent(other[0], other[1], other[2]), tile_dim{other.tile_dim[0], other.tile_dim[1], other.tile_dim[2]}, dynamic_group_segment_size(other.dynamic_group_segment_size) {}
+    tiled_extent(const tiled_extent<3>& other) __CPU__ __HC__ : extent(other[0], other[1], other[2]), dynamic_group_segment_size(other.dynamic_group_segment_size), tile_dim{other.tile_dim[0], other.tile_dim[1], other.tile_dim[2]} {}
 
     /**
      * Constructs a tiled_extent<N> with the extent "ext".
@@ -1720,7 +1720,7 @@ public:
      * @param[in] t1 Size of tile in the 2nd dimension.
      * @param[in] t2 Size of tile in the 3rd dimension.
      */
-    tiled_extent(const extent<3>& ext, int t0, int t1, int t2) __CPU__ __HC__ : extent(ext), tile_dim{t0, t1, t2}, dynamic_group_segment_size(0) {}
+    tiled_extent(const extent<3>& ext, int t0, int t1, int t2) __CPU__ __HC__ : extent(ext), dynamic_group_segment_size(0), tile_dim{t0, t1, t2} {}
 
     /**
      * Constructs a tiled_extent<N> with the extent "ext".
@@ -1731,7 +1731,7 @@ public:
      * @param[in] t2 Size of tile in the 3rd dimension.
      * @param[in] size Size of dynamic group segment.
      */
-    tiled_extent(const extent<3>& ext, int t0, int t1, int t2, int size) __CPU__ __HC__ : extent(ext), tile_dim{t0, t1, t2}, dynamic_group_segment_size(size) {}
+    tiled_extent(const extent<3>& ext, int t0, int t1, int t2, int size) __CPU__ __HC__ : extent(ext), dynamic_group_segment_size(size), tile_dim{t0, t1, t2} {}
 
     /**
      * Set the size of dynamic group segment. The function should be called
