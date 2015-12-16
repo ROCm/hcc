@@ -2033,7 +2033,7 @@ public:
 };
 
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-
+#define SSIZE 1024 * 10
 template <int N, typename Kernel,  int K>
 struct cpu_helper
 {
@@ -2165,6 +2165,46 @@ void partitioned_task_tile(Kernel const& f, tiled_extent<D0, D1, D2> const& ext,
             }
     delete [] stk;
     delete [] tidx;
+}
+
+// FIXME: need to resolve the dependency to extent
+template <typename Kernel, int N>
+void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
+                     extent<N> const& compute_domain)
+{
+    CPUKernelRAII<Kernel> obj(pQueue, f);
+    for (int i = 0; i < NTHREAD; ++i)
+        obj[i] = std::thread(partitioned_task<Kernel, N>, std::cref(f), std::cref(compute_domain), i);
+}
+
+template <typename Kernel, int D0>
+void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
+                     tiled_extent<D0> const& compute_domain)
+{
+    CPUKernelRAII<Kernel> obj(pQueue, f);
+    for (int i = 0; i < NTHREAD; ++i)
+        obj[i] = std::thread(partitioned_task_tile<Kernel, D0>,
+                             std::cref(f), std::cref(compute_domain), i);
+}
+
+template <typename Kernel, int D0, int D1>
+void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
+                     tiled_extent<D0, D1> const& compute_domain)
+{
+    CPUKernelRAII<Kernel> obj(pQueue, f);
+    for (int i = 0; i < NTHREAD; ++i)
+        obj[i] = std::thread(partitioned_task_tile<Kernel, D0, D1>,
+                             std::cref(f), std::cref(compute_domain), i);
+}
+
+template <typename Kernel, int D0, int D1, int D2>
+void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
+                     tiled_extent<D0, D1, D2> const& compute_domain)
+{
+    CPUKernelRAII<Kernel> obj(pQueue, f);
+    for (int i = 0; i < NTHREAD; ++i)
+        obj[i] = std::thread(partitioned_task_tile<Kernel, D0, D1, D2>,
+                             std::cref(f), std::cref(compute_domain), i);
 }
 
 #endif
