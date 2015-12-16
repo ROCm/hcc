@@ -1121,3 +1121,4 @@
 2_Cxx_Lang_Exte/2_x_general/Statements/ControlFlow/Test.03/While/DoWhile/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Statements/ControlFlow/Test.03/While/Switch/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Statements/ControlFlow/Test.03/While/If/test.cpp
+5_Data_Cont/5_2_a_v/5_2_3_m/Assignment/Test.02.01/test.cpp
