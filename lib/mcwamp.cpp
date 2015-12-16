@@ -302,7 +302,7 @@ bool in_cpu_kernel() { return in_kernel; }
 void enter_kernel() { in_kernel = true; }
 void leave_kernel() { in_kernel = false; }
 
-void DetermineAndGetProgram(size_t* kernel_size, void** kernel_source, bool* needs_compilation) {
+void DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, void** kernel_source, bool* needs_compilation) {
   static bool firstTime = true;
   static bool hasSPIR = false;
   static bool hasFinalized = false;
@@ -356,7 +356,9 @@ void DetermineAndGetProgram(size_t* kernel_size, void** kernel_source, bool* nee
         size_t kernel_finalized_size = 
           (ptrdiff_t)((void *)hsa_offline_finalized_kernel_end) -
           (ptrdiff_t)((void *)hsa_offline_finalized_kernel_source);
-        if (kernel_finalized_size > 0) {
+        // check if offline finalized kernel is compatible with ISA of the HSA agent
+        if ((kernel_finalized_size > 0) &&
+            (pQueue->getDev()->IsCompatibleKernel((void*)kernel_finalized_size, hsa_offline_finalized_kernel_source))) {
           if (mcwamp_verbose)
             std::cout << "Use offline finalized HSA kernels\n";
           hasFinalized = true;
@@ -392,7 +394,7 @@ void BuildProgram(KalmarQueue* pQueue) {
   void* kernel_source = nullptr;
   bool needs_compilation = true;
 
-  DetermineAndGetProgram(&kernel_size, &kernel_source, &needs_compilation);
+  DetermineAndGetProgram(pQueue, &kernel_size, &kernel_source, &needs_compilation);
   pQueue->getDev()->BuildProgram((void*)kernel_size, kernel_source, needs_compilation);
 }
 
@@ -402,7 +404,7 @@ void *CreateKernel(std::string s, KalmarQueue* pQueue) {
   void* kernel_source = nullptr;
   bool needs_compilation = true;
 
-  DetermineAndGetProgram(&kernel_size, &kernel_source, &needs_compilation);
+  DetermineAndGetProgram(pQueue, &kernel_size, &kernel_source, &needs_compilation);
 
   return pQueue->getDev()->CreateKernel(s.c_str(), (void *)kernel_size, kernel_source, needs_compilation);
 }

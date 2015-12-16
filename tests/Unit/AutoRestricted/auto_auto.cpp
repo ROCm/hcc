@@ -1,4 +1,4 @@
-// XFAIL: Linux
+// XFAIL: Linux,boltzmann
 // RUN: %hc -Xclang -fauto-auto %s -o %t.out && %t.out
 #include <vector>
 #include <amp.h>

@@ -120,7 +120,7 @@ if [ $KMDUMPBRIG == "1" ]; then
 fi
 
 if [ $KM_USE_AMDGPU ]; then
-  $LLD -flavor gnu -target amdgcn--amdhsa $1.hsail -o $1.brig
+  $LLD -flavor old-gnu -target amdgcn--amdhsa $1.hsail -o $1.brig
 else
   cat $NEWLIB/hsa_builtins.hsail >> $1.hsail
   $HLC_ASM -assemble -o $1.brig $1.hsail

@@ -220,6 +220,9 @@ public:
     /// create kernel
     virtual void* CreateKernel(const char* fun, void* size, void* source, bool needsCompilation = true) { return nullptr; }
 
+    /// check if a given kernel is compatible with the device
+    virtual bool IsCompatibleKernel(void* size, void* source) { return true; }
+
     /// check the dimension information is correct
     virtual bool check(size_t* size, size_t dim_ext) { return true; }
 

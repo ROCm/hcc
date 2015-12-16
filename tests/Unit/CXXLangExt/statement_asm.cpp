@@ -1,4 +1,4 @@
-// XFAIL: Linux, hsa
+// XFAIL: Linux, hsa, boltzmann
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <iostream>
