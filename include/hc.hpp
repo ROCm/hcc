@@ -5372,6 +5372,160 @@ completion_future copy_async(const array_view<T, N>& src, const array<T, N>& des
 }
 
 // ------------------------------------------------------------------------
+// atomic functions
+// ------------------------------------------------------------------------
+
+// FIXME: following functions are not implemented
+// int atomic_exchange(int * dest, int val) __HC__;
+// unsigned int atomic_exchange(unsigned int * dest, unsigned int val) __HC__;
+// float atomic_exchange(float * dest, float val) __HC__;
+
+// FIXME: following functions are not implemented
+// bool atomic_compare_exchange(int * dest, int * expected_val, int val) __HC__;
+// bool atomic_compare_exchange(unsigned int * dest, unsigned int * expected_val, unsigned int val) __HC__;
+
+/** @{ */
+/**
+ * Atomically read the value stored in dest, apply the binary numerical
+ * operation specific to the function with the read value and val serving as
+ * input operands, and store the result back to the location pointed by dest.
+ *
+ * In terms of sequential semantics, the operation performed by any of the
+ * above function is described by the following piece of pseudo-code:
+ *
+ * *dest = *dest @f$\otimes@f$ val;
+ *
+ * Where the operation denoted by @f$\otimes@f$ is one of: addition
+ * (atomic_fetch_add), subtraction (atomic_fetch_sub), find maximum
+ * (atomic_fetch_max), find minimum (atomic_fetch_min), bit-wise AND
+ * (atomic_fetch_and), bit-wise OR (atomic_fetch_or), bit-wise XOR
+ * (atomic_fetch_xor).
+ *
+ * @param[out] dest An pointer to the location which needs to be atomically
+ *                  modified. The location may reside within a
+ *                  concurrency::array or concurrency::array_view or within a
+ *                  tile_static variable.
+ * @param[in] val The second operand which participates in the calculation of
+ *                the binary operation whose result is stored into the
+ *                location pointed to be dest.
+ * @return These functions return the old value which was previously stored at
+ *         dest, and that was atomically replaced. These functions always
+ *         succeed.
+ */
+// FIXME: following funtions are not implemented:
+// int atomic_fetch_sub(int * dest, int val) __HC__;
+// unsigned int atomic_fetch_sub(unsigned int * dest, unsigned int val) __HC__;
+//
+// int atomic_fetch_min(int * dest, int val) __HC__;
+// unsigned int atomic_fetch_min(unsigned int * dest, unsigned int val) __HC__;
+//
+// int atomic_fetch_and(int * dest, int val) __HC__;
+// unsigned int atomic_fetch_and(unsigned int * dest, unsigned int val) __HC__;
+//
+// int atomic_fetch_or(int * dest, int val) __HC__;
+// unsigned int atomic_fetch_or(unsigned int * dest, unsigned int val) __HC__;
+//
+// int atomic_fetch_xor(int * dest, int val) __HC__;
+// unsigned int atomic_fetch_xor(unsigned int * dest, unsigned int val) __HC__;
+#if __KALMAR_ACCELERATOR__ == 1
+extern "C" unsigned atomic_add_unsigned(unsigned *p, unsigned val) __HC__;
+extern "C" int atomic_add_int(int *p, int val) __HC__;
+extern "C" float atomic_add_float(float *p, float val) __HC__;
+static inline unsigned atomic_fetch_add(unsigned *x, unsigned y) __CPU__ __HC__ {
+  return atomic_add_unsigned(x, y);
+}
+static inline int atomic_fetch_add(int *x, int y) __CPU__ __HC__ {
+  return atomic_add_int(x, y);
+}
+static inline float atomic_fetch_add(float *x, float y) __CPU__ __HC__ {
+  return atomic_add_float(x, y);
+}
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+unsigned atomic_add_unsigned(unsigned *p, unsigned val);
+int atomic_add_int(int *p, int val);
+float atomic_add_float(float *p, float val);
+static inline unsigned atomic_fetch_add(unsigned *x, unsigned y) __CPU__ __HC__ {
+  return atomic_add_unsigned(x, y);
+}
+static inline int atomic_fetch_add(int *x, int y) __CPU__ __HC__ {
+  return atomic_add_int(x, y);
+}
+static inline float atomic_fetch_add(float *x, float y) __CPU__ __HC__ {
+  return atomic_add_float(x, y);
+}
+#else
+extern unsigned atomic_fetch_add(unsigned *x, unsigned y) __CPU__ __HC__;
+extern int atomic_fetch_add(int *x, int y) __CPU__ __HC__;
+extern float atomic_fetch_add(float *x, float y) __CPU__ __HC__;
+#endif
+
+#if __KALMAR_ACCELERATOR__ == 1
+extern "C" unsigned atomic_max_unsigned(unsigned *p, unsigned val) __HC__;
+extern "C" int atomic_max_int(int *p, int val) __HC__;
+static inline unsigned atomic_fetch_max(unsigned *x, unsigned y) __HC__ {
+  return atomic_max_unsigned(x, y);
+}
+static inline int atomic_fetch_max(int *x, int y) __HC__ {
+  return atomic_max_int(x, y);
+}
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+unsigned atomic_max_unsigned(unsigned *p, unsigned val);
+int atomic_max_int(int *p, int val);
+static inline unsigned atomic_fetch_max(unsigned *x, unsigned y) __HC__ {
+  return atomic_max_unsigned(x, y);
+}
+static inline int atomic_fetch_max(int *x, int y) __HC__ {
+  return atomic_max_int(x, y);
+}
+#else
+extern int atomic_fetch_max(int * dest, int val) __CPU__ __HC__;
+extern unsigned int atomic_fetch_max(unsigned int * dest, unsigned int val) __CPU__ __HC__;
+#endif
+
+/** @} */
+
+/** @{ */
+/**
+ * Atomically increment or decrement the value stored at the location point to
+ * by dest.
+ *
+ * @param[inout] dest An pointer to the location which needs to be atomically
+ *                    modified. The location may reside within a
+ *                    concurrency::array or concurrency::array_view or within a
+ *                    tile_static variable.
+ * @return These functions return the old value which was previously stored at
+ *         dest, and that was atomically replaced. These functions always
+ *         succeed.
+ */
+// FIXME: following funtions are not implemented:
+// int atomic_fetch_dec(int * dest) __HC__;
+// unsigned int atomic_fetch_dec(unsigned int * dest) __HC__;
+#if __KALMAR_ACCELERATOR__ == 1
+extern "C" unsigned atomic_inc_unsigned(unsigned *p) __HC__;
+extern "C" int atomic_inc_int(int *p) __HC__;
+static inline unsigned atomic_fetch_inc(unsigned *x) __CPU__ __HC__ {
+  return atomic_inc_unsigned(x);
+}
+static inline int atomic_fetch_inc(int *x) __CPU__ __HC__ {
+  return atomic_inc_int(x);
+}
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+unsigned atomic_inc_unsigned(unsigned *p);
+int atomic_inc_int(int *p);
+static inline unsigned atomic_fetch_inc(unsigned *x) __CPU__ __HC__ {
+  return atomic_inc_unsigned(x);
+}
+static inline int atomic_fetch_inc(int *x) __CPU__ __HC__ {
+  return atomic_inc_int(x);
+}
+#else
+extern int atomic_fetch_inc(int * _Dest) __CPU__ __HC__;
+extern unsigned atomic_fetch_inc(unsigned * _Dest) __CPU__ __HC__;
+#endif
+
+/** @} */
+
+// ------------------------------------------------------------------------
 // parallel_for_each
 // ------------------------------------------------------------------------
 
