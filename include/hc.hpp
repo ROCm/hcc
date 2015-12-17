@@ -1487,7 +1487,7 @@ public:
      * Default constructor. The origin and extent is default-constructed and
      * thus zero.
      */
-    tiled_extent() __CPU__ __HC__ : extent(0), tile_dim{0}, dynamic_group_segment_size(0) {}
+    tiled_extent() __CPU__ __HC__ : extent(0), dynamic_group_segment_size(0), tile_dim{0} {}
 
     /**
      * Construct an tiled extent with the size of extent and the size of tile
@@ -1496,7 +1496,7 @@ public:
      * @param[in] e0 Size of extent.
      * @param[in] t0 Size of tile.
      */
-    tiled_extent(int e0, int t0) __CPU__ __HC__ : extent(e0), tile_dim{t0}, dynamic_group_segment_size(0) {}
+    tiled_extent(int e0, int t0) __CPU__ __HC__ : extent(e0), dynamic_group_segment_size(0), tile_dim{t0} {}
 
     /**
      * Construct an tiled extent with the size of extent and the size of tile
@@ -1506,7 +1506,7 @@ public:
      * @param[in] t0 Size of tile.
      * @param[in] size Size of dynamic group segment.
      */
-    tiled_extent(int e0, int t0, int size) __CPU__ __HC__ : extent(e0), tile_dim{t0}, dynamic_group_segment_size(size) {}
+    tiled_extent(int e0, int t0, int size) __CPU__ __HC__ : extent(e0), dynamic_group_segment_size(size), tile_dim{t0} {}
 
     /**
      * Copy constructor. Constructs a new tiled_extent from the supplied
@@ -1515,7 +1515,7 @@ public:
      * @param[in] other An object of type tiled_extent from which to initialize
      *                  this new extent.
      */
-    tiled_extent(const tiled_extent<1>& other) __CPU__ __HC__ : extent(other[0]), tile_dim{other.tile_dim[0]}, dynamic_group_segment_size(other.dynamic_group_segment_size) {}
+    tiled_extent(const tiled_extent<1>& other) __CPU__ __HC__ : extent(other[0]), dynamic_group_segment_size(other.dynamic_group_segment_size), tile_dim{other.tile_dim[0]} {}
 
 
     /**
@@ -1524,7 +1524,7 @@ public:
      * @param[in] ext The extent of this tiled_extent
      * @param[in] t0 Size of tile.
      */
-    tiled_extent(const extent<1>& ext, int t0) __CPU__ __HC__ : extent(ext), tile_dim{t0}, dynamic_group_segment_size(0) {} 
+    tiled_extent(const extent<1>& ext, int t0) __CPU__ __HC__ : extent(ext), dynamic_group_segment_size(0), tile_dim{t0} {} 
 
     /**
      * Constructs a tiled_extent<N> with the extent "ext".
@@ -1533,7 +1533,7 @@ public:
      * @param[in] t0 Size of tile.
      * @param[in] size Size of dynamic group segment
      */
-    tiled_extent(const extent<1>& ext, int t0, int size) __CPU__ __HC__ : extent(ext), tile_dim{t0}, dynamic_group_segment_size(size) {}
+    tiled_extent(const extent<1>& ext, int t0, int size) __CPU__ __HC__ : extent(ext), dynamic_group_segment_size(size), tile_dim{t0} {}
 
     /**
      * Set the size of dynamic group segment. The function should be called
@@ -1578,7 +1578,7 @@ public:
      * Default constructor. The origin and extent is default-constructed and
      * thus zero.
      */
-    tiled_extent() __CPU__ __HC__ : extent(0, 0), tile_dim{0, 0}, dynamic_group_segment_size(0) {}
+    tiled_extent() __CPU__ __HC__ : extent(0, 0), dynamic_group_segment_size(0), tile_dim{0, 0} {}
 
     /**
      * Construct an tiled extent with the size of extent and the size of tile
@@ -1589,7 +1589,7 @@ public:
      * @param[in] t0 Size of tile in the 1st dimension.
      * @param[in] t1 Size of tile in the 2nd dimension.
      */
-    tiled_extent(int e0, int e1, int t0, int t1) __CPU__ __HC__ : extent(e0, e1), tile_dim{t0, t1}, dynamic_group_segment_size(0) {}
+    tiled_extent(int e0, int e1, int t0, int t1) __CPU__ __HC__ : extent(e0, e1), dynamic_group_segment_size(0), tile_dim{t0, t1} {}
 
     /**
      * Construct an tiled extent with the size of extent and the size of tile
@@ -1601,7 +1601,7 @@ public:
      * @param[in] t1 Size of tile in the 2nd dimension.
      * @param[in] size Size of dynamic group segment.
      */
-    tiled_extent(int e0, int e1, int t0, int t1, int size) __CPU__ __HC__ : extent(e0, e1), tile_dim{t0, t1}, dynamic_group_segment_size(size) {}
+    tiled_extent(int e0, int e1, int t0, int t1, int size) __CPU__ __HC__ : extent(e0, e1), dynamic_group_segment_size(size), tile_dim{t0, t1} {}
 
     /**
      * Copy constructor. Constructs a new tiled_extent from the supplied
@@ -1610,7 +1610,7 @@ public:
      * @param[in] other An object of type tiled_extent from which to initialize
      *                  this new extent.
      */
-    tiled_extent(const tiled_extent<2>& other) __CPU__ __HC__ : extent(other[0], other[1]), tile_dim{other.tile_dim[0], other.tile_dim[1]}, dynamic_group_segment_size(other.dynamic_group_segment_size) {}
+    tiled_extent(const tiled_extent<2>& other) __CPU__ __HC__ : extent(other[0], other[1]), dynamic_group_segment_size(other.dynamic_group_segment_size), tile_dim{other.tile_dim[0], other.tile_dim[1]} {}
 
     /**
      * Constructs a tiled_extent<N> with the extent "ext".
@@ -1619,7 +1619,7 @@ public:
      * @param[in] t0 Size of tile in the 1st dimension.
      * @param[in] t1 Size of tile in the 2nd dimension.
      */
-    tiled_extent(const extent<2>& ext, int t0, int t1) __CPU__ __HC__ : extent(ext), tile_dim{t0, t1}, dynamic_group_segment_size(0) {}
+    tiled_extent(const extent<2>& ext, int t0, int t1) __CPU__ __HC__ : extent(ext), dynamic_group_segment_size(0), tile_dim{t0, t1} {}
 
     /**
      * Constructs a tiled_extent<N> with the extent "ext".
@@ -1629,7 +1629,7 @@ public:
      * @param[in] t1 Size of tile in the 2nd dimension.
      * @param[in] size Size of dynamic group segment.
      */
-    tiled_extent(const extent<2>& ext, int t0, int t1, int size) __CPU__ __HC__ : extent(ext), tile_dim{t0, t1}, dynamic_group_segment_size(size) {}
+    tiled_extent(const extent<2>& ext, int t0, int t1, int size) __CPU__ __HC__ : extent(ext), dynamic_group_segment_size(size), tile_dim{t0, t1} {}
 
     /**
      * Set the size of dynamic group segment. The function should be called
@@ -1674,7 +1674,7 @@ public:
      * Default constructor. The origin and extent is default-constructed and
      * thus zero.
      */
-    tiled_extent() __CPU__ __HC__ : extent(0, 0, 0), tile_dim{0, 0, 0}, dynamic_group_segment_size(0) {}
+    tiled_extent() __CPU__ __HC__ : extent(0, 0, 0), dynamic_group_segment_size(0), tile_dim{0, 0, 0} {}
 
     /**
      * Construct an tiled extent with the size of extent and the size of tile
@@ -1687,7 +1687,7 @@ public:
      * @param[in] t1 Size of tile in the 2nd dimension.
      * @param[in] t2 Size of tile in the 3rd dimension.
      */
-    tiled_extent(int e0, int e1, int e2, int t0, int t1, int t2) __CPU__ __HC__ : extent(e0, e1, e2), tile_dim{t0, t1, t2}, dynamic_group_segment_size(0) {}
+    tiled_extent(int e0, int e1, int e2, int t0, int t1, int t2) __CPU__ __HC__ : extent(e0, e1, e2), dynamic_group_segment_size(0), tile_dim{t0, t1, t2} {}
 
     /**
      * Construct an tiled extent with the size of extent and the size of tile
@@ -1701,7 +1701,7 @@ public:
      * @param[in] t2 Size of tile in the 3rd dimension.
      * @param[in] size Size of dynamic group segment.
      */
-    tiled_extent(int e0, int e1, int e2, int t0, int t1, int t2, int size) __CPU__ __HC__ : extent(e0, e1, e2), tile_dim{t0, t1, t2}, dynamic_group_segment_size(size) {}
+    tiled_extent(int e0, int e1, int e2, int t0, int t1, int t2, int size) __CPU__ __HC__ : extent(e0, e1, e2), dynamic_group_segment_size(size), tile_dim{t0, t1, t2} {}
 
     /**
      * Copy constructor. Constructs a new tiled_extent from the supplied
@@ -1710,7 +1710,7 @@ public:
      * @param[in] other An object of type tiled_extent from which to initialize
      *                  this new extent.
      */
-    tiled_extent(const tiled_extent<3>& other) __CPU__ __HC__ : extent(other[0], other[1], other[2]), tile_dim{other.tile_dim[0], other.tile_dim[1], other.tile_dim[2]}, dynamic_group_segment_size(other.dynamic_group_segment_size) {}
+    tiled_extent(const tiled_extent<3>& other) __CPU__ __HC__ : extent(other[0], other[1], other[2]), dynamic_group_segment_size(other.dynamic_group_segment_size), tile_dim{other.tile_dim[0], other.tile_dim[1], other.tile_dim[2]} {}
 
     /**
      * Constructs a tiled_extent<N> with the extent "ext".
@@ -1720,7 +1720,7 @@ public:
      * @param[in] t1 Size of tile in the 2nd dimension.
      * @param[in] t2 Size of tile in the 3rd dimension.
      */
-    tiled_extent(const extent<3>& ext, int t0, int t1, int t2) __CPU__ __HC__ : extent(ext), tile_dim{t0, t1, t2}, dynamic_group_segment_size(0) {}
+    tiled_extent(const extent<3>& ext, int t0, int t1, int t2) __CPU__ __HC__ : extent(ext), dynamic_group_segment_size(0), tile_dim{t0, t1, t2} {}
 
     /**
      * Constructs a tiled_extent<N> with the extent "ext".
@@ -1731,7 +1731,7 @@ public:
      * @param[in] t2 Size of tile in the 3rd dimension.
      * @param[in] size Size of dynamic group segment.
      */
-    tiled_extent(const extent<3>& ext, int t0, int t1, int t2, int size) __CPU__ __HC__ : extent(ext), tile_dim{t0, t1, t2}, dynamic_group_segment_size(size) {}
+    tiled_extent(const extent<3>& ext, int t0, int t1, int t2, int size) __CPU__ __HC__ : extent(ext), dynamic_group_segment_size(size), tile_dim{t0, t1, t2} {}
 
     /**
      * Set the size of dynamic group segment. The function should be called
@@ -5370,6 +5370,160 @@ completion_future copy_async(const array_view<T, N>& src, const array<T, N>& des
     std::future<void> fut = std::async(std::launch::deferred, [&]() mutable { copy(src, dest); });
     return completion_future(fut.share());
 }
+
+// ------------------------------------------------------------------------
+// atomic functions
+// ------------------------------------------------------------------------
+
+// FIXME: following functions are not implemented
+// int atomic_exchange(int * dest, int val) __HC__;
+// unsigned int atomic_exchange(unsigned int * dest, unsigned int val) __HC__;
+// float atomic_exchange(float * dest, float val) __HC__;
+
+// FIXME: following functions are not implemented
+// bool atomic_compare_exchange(int * dest, int * expected_val, int val) __HC__;
+// bool atomic_compare_exchange(unsigned int * dest, unsigned int * expected_val, unsigned int val) __HC__;
+
+/** @{ */
+/**
+ * Atomically read the value stored in dest, apply the binary numerical
+ * operation specific to the function with the read value and val serving as
+ * input operands, and store the result back to the location pointed by dest.
+ *
+ * In terms of sequential semantics, the operation performed by any of the
+ * above function is described by the following piece of pseudo-code:
+ *
+ * *dest = *dest @f$\otimes@f$ val;
+ *
+ * Where the operation denoted by @f$\otimes@f$ is one of: addition
+ * (atomic_fetch_add), subtraction (atomic_fetch_sub), find maximum
+ * (atomic_fetch_max), find minimum (atomic_fetch_min), bit-wise AND
+ * (atomic_fetch_and), bit-wise OR (atomic_fetch_or), bit-wise XOR
+ * (atomic_fetch_xor).
+ *
+ * @param[out] dest An pointer to the location which needs to be atomically
+ *                  modified. The location may reside within a
+ *                  concurrency::array or concurrency::array_view or within a
+ *                  tile_static variable.
+ * @param[in] val The second operand which participates in the calculation of
+ *                the binary operation whose result is stored into the
+ *                location pointed to be dest.
+ * @return These functions return the old value which was previously stored at
+ *         dest, and that was atomically replaced. These functions always
+ *         succeed.
+ */
+// FIXME: following funtions are not implemented:
+// int atomic_fetch_sub(int * dest, int val) __HC__;
+// unsigned int atomic_fetch_sub(unsigned int * dest, unsigned int val) __HC__;
+//
+// int atomic_fetch_min(int * dest, int val) __HC__;
+// unsigned int atomic_fetch_min(unsigned int * dest, unsigned int val) __HC__;
+//
+// int atomic_fetch_and(int * dest, int val) __HC__;
+// unsigned int atomic_fetch_and(unsigned int * dest, unsigned int val) __HC__;
+//
+// int atomic_fetch_or(int * dest, int val) __HC__;
+// unsigned int atomic_fetch_or(unsigned int * dest, unsigned int val) __HC__;
+//
+// int atomic_fetch_xor(int * dest, int val) __HC__;
+// unsigned int atomic_fetch_xor(unsigned int * dest, unsigned int val) __HC__;
+#if __KALMAR_ACCELERATOR__ == 1
+extern "C" unsigned atomic_add_unsigned(unsigned *p, unsigned val) __HC__;
+extern "C" int atomic_add_int(int *p, int val) __HC__;
+extern "C" float atomic_add_float(float *p, float val) __HC__;
+static inline unsigned atomic_fetch_add(unsigned *x, unsigned y) __CPU__ __HC__ {
+  return atomic_add_unsigned(x, y);
+}
+static inline int atomic_fetch_add(int *x, int y) __CPU__ __HC__ {
+  return atomic_add_int(x, y);
+}
+static inline float atomic_fetch_add(float *x, float y) __CPU__ __HC__ {
+  return atomic_add_float(x, y);
+}
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+unsigned atomic_add_unsigned(unsigned *p, unsigned val);
+int atomic_add_int(int *p, int val);
+float atomic_add_float(float *p, float val);
+static inline unsigned atomic_fetch_add(unsigned *x, unsigned y) __CPU__ __HC__ {
+  return atomic_add_unsigned(x, y);
+}
+static inline int atomic_fetch_add(int *x, int y) __CPU__ __HC__ {
+  return atomic_add_int(x, y);
+}
+static inline float atomic_fetch_add(float *x, float y) __CPU__ __HC__ {
+  return atomic_add_float(x, y);
+}
+#else
+extern unsigned atomic_fetch_add(unsigned *x, unsigned y) __CPU__ __HC__;
+extern int atomic_fetch_add(int *x, int y) __CPU__ __HC__;
+extern float atomic_fetch_add(float *x, float y) __CPU__ __HC__;
+#endif
+
+#if __KALMAR_ACCELERATOR__ == 1
+extern "C" unsigned atomic_max_unsigned(unsigned *p, unsigned val) __HC__;
+extern "C" int atomic_max_int(int *p, int val) __HC__;
+static inline unsigned atomic_fetch_max(unsigned *x, unsigned y) __HC__ {
+  return atomic_max_unsigned(x, y);
+}
+static inline int atomic_fetch_max(int *x, int y) __HC__ {
+  return atomic_max_int(x, y);
+}
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+unsigned atomic_max_unsigned(unsigned *p, unsigned val);
+int atomic_max_int(int *p, int val);
+static inline unsigned atomic_fetch_max(unsigned *x, unsigned y) __HC__ {
+  return atomic_max_unsigned(x, y);
+}
+static inline int atomic_fetch_max(int *x, int y) __HC__ {
+  return atomic_max_int(x, y);
+}
+#else
+extern int atomic_fetch_max(int * dest, int val) __CPU__ __HC__;
+extern unsigned int atomic_fetch_max(unsigned int * dest, unsigned int val) __CPU__ __HC__;
+#endif
+
+/** @} */
+
+/** @{ */
+/**
+ * Atomically increment or decrement the value stored at the location point to
+ * by dest.
+ *
+ * @param[inout] dest An pointer to the location which needs to be atomically
+ *                    modified. The location may reside within a
+ *                    concurrency::array or concurrency::array_view or within a
+ *                    tile_static variable.
+ * @return These functions return the old value which was previously stored at
+ *         dest, and that was atomically replaced. These functions always
+ *         succeed.
+ */
+// FIXME: following funtions are not implemented:
+// int atomic_fetch_dec(int * dest) __HC__;
+// unsigned int atomic_fetch_dec(unsigned int * dest) __HC__;
+#if __KALMAR_ACCELERATOR__ == 1
+extern "C" unsigned atomic_inc_unsigned(unsigned *p) __HC__;
+extern "C" int atomic_inc_int(int *p) __HC__;
+static inline unsigned atomic_fetch_inc(unsigned *x) __CPU__ __HC__ {
+  return atomic_inc_unsigned(x);
+}
+static inline int atomic_fetch_inc(int *x) __CPU__ __HC__ {
+  return atomic_inc_int(x);
+}
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+unsigned atomic_inc_unsigned(unsigned *p);
+int atomic_inc_int(int *p);
+static inline unsigned atomic_fetch_inc(unsigned *x) __CPU__ __HC__ {
+  return atomic_inc_unsigned(x);
+}
+static inline int atomic_fetch_inc(int *x) __CPU__ __HC__ {
+  return atomic_inc_int(x);
+}
+#else
+extern int atomic_fetch_inc(int * _Dest) __CPU__ __HC__;
+extern unsigned atomic_fetch_inc(unsigned * _Dest) __CPU__ __HC__;
+#endif
+
+/** @} */
 
 // ------------------------------------------------------------------------
 // parallel_for_each
