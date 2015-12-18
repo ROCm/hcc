@@ -62,7 +62,7 @@ namespace
       WrapperArgument(const llvm::Argument &A) {
         mType = new WrapperType(A.getType(), A.onlyReadsMemory(), A.hasByValAttr());
 
-        mArgName = A.getName();
+        mArgName = "_" + A.getName().str();
         auto st = mArgName.find(".coerce");
         if(st != std::string::npos)
           mArgName.erase(st, std::strlen(".coerce"));
@@ -434,21 +434,21 @@ struct StringFinder
           out << ") :\n";
           func->printArgsAsInitializers(out);
           out << "{\n";
-          out << "lp.gridDim.x = _lp.gridDim.x;\n";
-          out << "lp.gridDim.y = _lp.gridDim.y;\n";
-          out << "lp.gridDim.z = _lp.gridDim.z;\n";
-          out << "lp.groupDim.x = _lp.groupDim.x;\n";
-          out << "lp.groupDim.y = _lp.groupDim.y;\n";
-          out << "lp.groupDim.z = _lp.groupDim.z;\n";
+          out << "_lp.gridDim.x = __lp.gridDim.x;\n";
+          out << "_lp.gridDim.y = __lp.gridDim.y;\n";
+          out << "_lp.gridDim.z = __lp.gridDim.z;\n";
+          out << "_lp.groupDim.x = __lp.groupDim.x;\n";
+          out << "_lp.groupDim.y = __lp.groupDim.y;\n";
+          out << "_lp.groupDim.z = __lp.groupDim.z;\n";
           out << "}\n";
 
           out << "void operator()(tiled_index<3>& i) __attribute((hc))\n{\n";
-          out << "lp.groupId.x = i.tile[0];\n";
-          out << "lp.groupId.y = i.tile[1];\n";
-          out << "lp.groupId.z = i.tile[2];\n";
-          out << "lp.threadId.x = i.local[0];\n";
-          out << "lp.threadId.y = i.local[1];\n";
-          out << "lp.threadId.z = i.local[2];\n";
+          out << "_lp.groupId.x = i.tile[0];\n";
+          out << "_lp.groupId.y = i.tile[1];\n";
+          out << "_lp.groupId.z = i.tile[2];\n";
+          out << "_lp.threadId.x = i.local[0];\n";
+          out << "_lp.threadId.y = i.local[1];\n";
+          out << "_lp.threadId.z = i.local[2];\n";
           out << func->getFunctionName() << "(";
           func->printArgsAsArguments(out);
           out << ");\n}\n";
@@ -461,13 +461,13 @@ struct StringFinder
           out << "void " << func->getWrapperName() << "(";
           func->printArgsAsParameters(out);
           out << ")\n{\n";
-          out << "completion_future cf = parallel_for_each(*(lp.av),extent<3>(lp.gridDim.x*lp.groupDim.x,lp.gridDim.y*lp.groupDim.y,lp.gridDim.z*lp.groupDim.z).tile(lp.groupDim.x, lp.groupDim.y, lp.groupDim.z), "
+          out << "completion_future cf = parallel_for_each(*(_lp.av),extent<3>(_lp.gridDim.x*_lp.groupDim.x,_lp.gridDim.y*_lp.groupDim.y,_lp.gridDim.z*_lp.groupDim.z).tile(_lp.groupDim.x, _lp.groupDim.y, _lp.groupDim.z), \n"
               << func->getFunctorName()
               << "(";
           func->printArgsAsArguments(out);
           out << "));\n\n"
-              << "if(lp.cf)\n"
-              << "  *(lp.cf) = cf;\n"
+              << "if(_lp.cf)\n"
+              << "  *(_lp.cf) = cf;\n"
               << "else\n"
               << "  cf.wait();\n"
               << "}\n";
