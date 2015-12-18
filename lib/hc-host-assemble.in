@@ -73,10 +73,12 @@ if [ $KMDUMPLLVM == "1" ]; then
 fi
 if [[ -s $TEMP_NAME.host_redirect.ll ]]; then
   $LLVM_AS $TEMP_NAME.host_redirect.ll -o $TEMP_NAME.host_redirect.bc
-  $CLANG -std=c++amp $TEMP_NAME.host_redirect.bc $CO $2
+  # Hot-fix to pass additional CXXFLAGS to clang
+  $CLANG -std=c++amp $CXXFLAGS $TEMP_NAME.host_redirect.bc $CO $2
 else
   ln -s $1 $1.bc
-  $CLANG -std=c++amp $1.bc $CO $2
+  # Hot-fix to pass additional CXXFLAGS to clang
+  $CLANG -std=c++amp $CXXFLAGS $1.bc $CO $2
 fi
 
 rm -f $TEMP_NAME.* $1.bc
