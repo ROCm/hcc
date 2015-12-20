@@ -43,8 +43,9 @@ void generate_impl(ForwardIterator first, ForwardIterator last,
     return;
   }
 
-  // FIXME: __attribute((hc)) will cause g() having ambient context,
+  // FIXME: [[hc]] will cause g() having ambient context,
   //        use restrict(amp) temporarily
+  // FIXME: raw pointer won't work in dGPU
   auto first_ = utils::get_pointer(first);
   kernel_launch(N, [first_, g](hc::index<1> idx) restrict(amp) {
     *(first_ + idx[0]) = g();
@@ -71,8 +72,9 @@ void for_each_impl(InputIterator first, InputIterator last,
     return;
   }
 
+  // FIXME: raw pointer won't work in dGPU
   auto first_ = utils::get_pointer(first);
-  kernel_launch(N, [first_, f](hc::index<1> idx) __attribute((hc)) {
+  kernel_launch(N, [first_, f](hc::index<1> idx) [[hc]] {
     f(*(first_ + idx[0]));
   });
 }
@@ -97,8 +99,9 @@ void replace_if_impl(ForwardIterator first, ForwardIterator last,
     return;
   }
 
+  // FIXME: raw pointer won't work in dGPU
   auto first_ = utils::get_pointer(first);
-  kernel_launch(N, [first_, f, new_value](hc::index<1> idx) __attribute((hc)) {
+  kernel_launch(N, [first_, f, new_value](hc::index<1> idx) [[hc]] {
     if (f(*(first_ + idx[0])))
       *(first_ + idx[0]) = new_value;
   });
@@ -129,9 +132,10 @@ OutputIterator replace_copy_if_impl(InputIterator first, InputIterator last,
   }
 
   if (N >= 0) {
+    // FIXME: raw pointer won't work in dGPU
     auto first_ = utils::get_pointer(first);
     auto d_first_ = utils::get_pointer(d_first);
-    kernel_launch(N, [first_, d_first_, f, new_value](hc::index<1> idx) __attribute((hc)) {
+    kernel_launch(N, [first_, d_first_, f, new_value](hc::index<1> idx) [[hc]] {
       if (f(*(first_ + idx[0])))
         *(d_first_ + idx[0]) = new_value;
       else
@@ -164,9 +168,10 @@ OutputIterator adjacent_difference_impl(InputIterator first, InputIterator last,
   }
 
   if (N >= 0) {
+    // FIXME: raw pointer won't work in dGPU
     auto first_ = utils::get_pointer(first);
     auto d_first_ = utils::get_pointer(d_first);
-    kernel_launch(N, [first_, d_first_, f](hc::index<1> idx) __attribute((hc)) {
+    kernel_launch(N, [first_, d_first_, f](hc::index<1> idx) [[hc]] {
       if (idx[0] == 0)
         *(d_first_ + idx[0]) = *(first_ + idx[0]);
       else
@@ -196,9 +201,10 @@ OutputIterator swap_ranges_impl(InputIterator first, InputIterator last,
   }
 
   if (N >= 0) {
+    // FIXME: raw pointer won't work in dGPU
     auto first_ = utils::get_pointer(first);
     auto d_first_ = utils::get_pointer(d_first);
-    kernel_launch(N, [first_, d_first_](hc::index<1> idx) __attribute((hc)) {
+    kernel_launch(N, [first_, d_first_](hc::index<1> idx) [[hc]] {
       std::iter_swap(first_ + idx[0], d_first_ + idx[0]);
     });
   }
@@ -235,7 +241,7 @@ bool lexicographical_compare_impl(InputIt1 first1, InputIt1 last1,
 //
 
 // Note: 1. the comparison needs both operator== and operator< (or a functor),
-//       both of them should be __attribute((hc))
+//       both of them should be [[hc]]
 template<class InputIt1, class InputIt2, class Compare>
 bool lexicographical_compare_impl(InputIt1 first1, InputIt1 last1,
                                   InputIt2 first2, InputIt2 last2,
@@ -265,13 +271,9 @@ bool lexicographical_compare_impl(InputIt1 first1, InputIt1 last1,
 
   // transform_reduce assumes two vectors are the same size,
   // use the smaller one as the first vector
-  auto ans = transform_reduce(par, first1_, last1_, first2_, 1,
-                              [](const int &a, const int &b) {
-                                return a == 1 ? b : a;
-                              },
-                              [comp](const _Tp &a, const _Tp &b) {
-                                return comp(a, b) ? 0 : a == b ? 1 : 2;
-                              });
+  std::vector<int> tmp(N);
+  transform(first1_, last1_, first2_, std::begin(tmp), [comp](const _Tp& a, const _Tp& b) { return comp(a, b) ? 0 : a == b ? 1 : 2;});
+  auto ans = details::reduce_lexi(tmp.data(), tmp.data() + N);
 
   return ans == 1 ? n1 < n2 : ans == 0;
 }

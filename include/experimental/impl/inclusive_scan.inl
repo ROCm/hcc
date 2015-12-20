@@ -28,17 +28,7 @@ inclusive_scan_impl(RandomAccessIterator first, RandomAccessIterator last,
              std::input_iterator_tag{});
   }
 
-  typedef typename std::iterator_traits<RandomAccessIterator>::value_type _Tp;
-  auto result_ = utils::get_pointer(result);
-  std::unique_ptr<_Tp> stride(new _Tp [N]);
-  details::scan_impl(first, last, binary_op, stride.get());
-  auto stride_ = stride.get();
-
-  // copy back the result
-  kernel_launch(N, [stride_, result_, init, binary_op](hc::index<1> idx) __attribute((hc)) {
-    result_[idx[0]] = binary_op(init, stride_[idx[0]]);
-  });
-
+  scan_impl(first, last, result, init, binary_op);
   return result + N;
 }
 

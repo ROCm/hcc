@@ -53,6 +53,7 @@ inline namespace v1 {
 #include "impl/exclusive_scan.inl"
 #include "impl/inclusive_scan.inl"
 #include "impl/transform_reduce.inl"
+#include "impl/transform_scan.inl"
 #include "impl/transform_exclusive_scan.inl"
 #include "impl/transform_inclusive_scan.inl"
 

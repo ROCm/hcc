@@ -8,8 +8,8 @@
 #include <vector>
 
 
-#define ROW (8)
-#define COL (16)
+#define ROW (32)
+#define COL (32)
 #define TEST_SIZE (ROW * COL)
 
 // for floating numbers
@@ -43,7 +43,7 @@ bool run_exec(T &input1, T &input2,
               F &f, bool checkOutput) {
 
   // initialize test data
-  std::iota(std::begin(input1), std::end(input1), 0);
+  std::iota(std::begin(input1), std::end(input1), 1);
   std::copy(std::begin(input1), std::end(input1), std::begin(input2));
 
   bool ret = true;
