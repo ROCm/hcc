@@ -165,6 +165,10 @@ namespace
         return mWrapperName;
       }
 
+      unsigned int getNumArgs() const {
+        return mArgs.size();
+      }
+
    private:
       enum RangeOptions {
         PARAMETERS,
@@ -431,8 +435,11 @@ struct StringFinder
           out << "namespace\n{\nstruct " << func->getFunctorName() << "\n{\n";
           out << func->getFunctorName() << "(";
           func->printArgsAsParametersInConstructor(out);
-          out << ") :\n";
-          func->printArgsAsInitializers(out);
+          out << ") ";
+          if(func->getNumArgs() > 1) {
+            out << ":\n";
+            func->printArgsAsInitializers(out);
+          }
           out << "{\n";
           out << "_lp.gridDim.x = __lp.gridDim.x;\n";
           out << "_lp.gridDim.y = __lp.gridDim.y;\n";
