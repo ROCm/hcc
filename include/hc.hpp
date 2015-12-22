@@ -5607,7 +5607,6 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
     const accelerator_view& av,
     const extent<N>& compute_domain, const Kernel& f) __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
-    size_t compute_domain_size = 1;
     for(int i = 0 ; i < N ; i++)
     {
       // silently return in case the any dimension of the extent is 0
@@ -5615,15 +5614,8 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
         return completion_future();
       if (compute_domain[i] < 0)
         throw invalid_compute_domain("Extent is less than 0.");
-#if 0
       if (static_cast<size_t>(compute_domain[i]) > 4294967295L)
         throw invalid_compute_domain("Extent size too large.");
-#endif
-      compute_domain_size *= static_cast<size_t>(compute_domain[i]);
-#if 0
-      if (compute_domain_size > 4294967295L)
-        throw invalid_compute_domain("Extent size too large.");
-#endif
     }
     size_t ext[3] = {static_cast<size_t>(compute_domain[N - 1]),
         static_cast<size_t>(compute_domain[N - 2]),
@@ -5658,10 +5650,8 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   if (compute_domain[0] < 0) {
     throw invalid_compute_domain("Extent is less than 0.");
   }
-#if 0
   if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
-#endif
   size_t ext = compute_domain[0];
   if (av.get_accelerator().get_device_path() == L"cpu") {
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
@@ -5690,10 +5680,10 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   if (compute_domain[0] < 0 || compute_domain[1] < 0) {
     throw invalid_compute_domain("Extent is less than 0.");
   }
-#if 0
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
+  if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
-#endif
+  if (static_cast<size_t>(compute_domain[1]) > 4294967295L)
+    throw invalid_compute_domain("Extent size too large.");
   size_t ext[2] = {static_cast<size_t>(compute_domain[1]),
                    static_cast<size_t>(compute_domain[0])};
   if (av.get_accelerator().get_device_path() == L"cpu") {
@@ -5723,16 +5713,12 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   if (compute_domain[0] < 0 || compute_domain[1] < 0 || compute_domain[2] < 0) {
     throw invalid_compute_domain("Extent is less than 0.");
   }
-#if 0
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
+  if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
-  if (static_cast<size_t>(compute_domain[1]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
+  if (static_cast<size_t>(compute_domain[1]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
+  if (static_cast<size_t>(compute_domain[2]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-#endif
   size_t ext[3] = {static_cast<size_t>(compute_domain[2]),
                    static_cast<size_t>(compute_domain[1]),
                    static_cast<size_t>(compute_domain[0])};
@@ -5763,10 +5749,8 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   if (compute_domain[0] < 0) {
     throw invalid_compute_domain("Extent is less than 0.");
   }
-#if 0
   if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
-#endif
   size_t ext = compute_domain[0];
   size_t tile = compute_domain.tile_dim[0];
   if (av.get_accelerator().get_device_path() == L"cpu") {
@@ -5798,10 +5782,10 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   if (compute_domain[0] < 0 || compute_domain[1] < 0) {
     throw invalid_compute_domain("Extent is less than 0.");
   }
-#if 0
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
+  if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
-#endif
+  if (static_cast<size_t>(compute_domain[1]) > 4294967295L)
+    throw invalid_compute_domain("Extent size too large.");
   size_t ext[2] = { static_cast<size_t>(compute_domain[1]),
                     static_cast<size_t>(compute_domain[0])};
   size_t tile[2] = { static_cast<size_t>(compute_domain.tile_dim[1]),
@@ -5835,16 +5819,12 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   if (compute_domain[0] < 0 || compute_domain[1] < 0 || compute_domain[2] < 0) {
     throw invalid_compute_domain("Extent is less than 0.");
   }
-#if 0
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
+  if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
-  if (static_cast<size_t>(compute_domain[1]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
+  if (static_cast<size_t>(compute_domain[1]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
+  if (static_cast<size_t>(compute_domain[2]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-#endif
   size_t ext[3] = { static_cast<size_t>(compute_domain[2]),
                     static_cast<size_t>(compute_domain[1]),
                     static_cast<size_t>(compute_domain[0])};
