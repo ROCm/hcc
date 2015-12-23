@@ -296,6 +296,8 @@ prog function &hsail_lastbit_u32_s64(arg_u32 %dest)(arg_s64 %src0)
 /// shuffle
 ////////////////////
 
+/// NOTE: shuffle can not be implemented as of now because src2 operand must be a constant value
+/// and it's not possible to do so as a library function.
 /// shuffle_u8x4
 /// shuffle_u8x8
 /// shuffle_u16x2
@@ -311,16 +313,214 @@ prog function &hsail_lastbit_u32_s64(arg_u32 %dest)(arg_s64 %src0)
 /// shuffle_f16x2
 /// shuffle_f16x4
 /// shuffle_f32x2
-/// NOTE: shuffle can not be implemented as of now because src2 operand must be a constant value
-/// and it's not possible to do so as a library function.
 
 ////////////////////
 /// unpacklo
 ////////////////////
 
+// unpacklo_u8x4
+prog function &unpacklo_u8x4(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1)
+{
+  ld_arg_u32 $s0, [%src0];
+  ld_arg_u32 $s1, [%src1];
+  unpacklo_u8x4 $s2, $s0, $s1;
+  st_arg_u32 $s2, [%dest];
+  ret;
+};
+
+// unpacklo_u8x8
+prog function &unpacklo_u8x8(arg_u64 %dest)(arg_u64 %src0, arg_u64 %src1)
+{
+  ld_arg_u64 $d0, [%src0];
+  ld_arg_u64 $d1, [%src1];
+  unpacklo_u8x8 $d2, $d0, $d1;
+  st_arg_u64 $d2, [%dest];
+  ret;
+};
+
+// unpacklo_u16x2
+prog function &unpacklo_u16x2(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1)
+{
+  ld_arg_u32 $s0, [%src0];
+  ld_arg_u32 $s1, [%src1];
+  unpacklo_u16x2 $s2, $s0, $s1;
+  st_arg_u32 $s2, [%dest];
+  ret;
+};
+
+// unpacklo_u16x4
+prog function &unpacklo_u16x4(arg_u64 %dest)(arg_u64 %src0, arg_u64 %src1)
+{
+  ld_arg_u64 $d0, [%src0];
+  ld_arg_u64 $d1, [%src1];
+  unpacklo_u16x4 $d2, $d0, $d1;
+  st_arg_u64 $d2, [%dest];
+  ret;
+};
+
+// unpacklo_u32x2
+prog function &unpacklo_u32x2(arg_u64 %dest)(arg_u64 %src0, arg_u64 %src1)
+{
+  ld_arg_u64 $d0, [%src0];
+  ld_arg_u64 $d1, [%src1];
+  unpacklo_u32x2 $d2, $d0, $d1;
+  st_arg_u64 $d2, [%dest];
+  ret;
+};
+
+// unpacklo_s8x4
+prog function &unpacklo_s8x4(arg_s32 %dest)(arg_s32 %src0, arg_s32 %src1)
+{
+  ld_arg_s32 $s0, [%src0];
+  ld_arg_s32 $s1, [%src1];
+  unpacklo_s8x4 $s2, $s0, $s1;
+  st_arg_s32 $s2, [%dest];
+  ret;
+};
+
+// unpacklo_s8x8
+prog function &unpacklo_s8x8(arg_s64 %dest)(arg_s64 %src0, arg_s64 %src1)
+{
+  ld_arg_s64 $d0, [%src0];
+  ld_arg_s64 $d1, [%src1];
+  unpacklo_s8x8 $d2, $d0, $d1;
+  st_arg_s64 $d2, [%dest];
+  ret;
+};
+
+// unpacklo_s16x2
+prog function &unpacklo_s16x2(arg_s32 %dest)(arg_s32 %src0, arg_s32 %src1)
+{
+  ld_arg_s32 $s0, [%src0];
+  ld_arg_s32 $s1, [%src1];
+  unpacklo_s16x2 $s2, $s0, $s1;
+  st_arg_s32 $s2, [%dest];
+  ret;
+};
+
+// unpacklo_s16x4
+prog function &unpacklo_s16x4(arg_s64 %dest)(arg_s64 %src0, arg_s64 %src1)
+{
+  ld_arg_s64 $d0, [%src0];
+  ld_arg_s64 $d1, [%src1];
+  unpacklo_s16x4 $d2, $d0, $d1;
+  st_arg_s64 $d2, [%dest];
+  ret;
+};
+
+// unpacklo_s32x2
+prog function &unpacklo_s32x2(arg_s64 %dest)(arg_s64 %src0, arg_s64 %src1)
+{
+  ld_arg_s64 $d0, [%src0];
+  ld_arg_s64 $d1, [%src1];
+  unpacklo_s32x2 $d2, $d0, $d1;
+  st_arg_s64 $d2, [%dest];
+  ret;
+};
+
 ////////////////////
 /// unpackhi
 ////////////////////
+
+// unpackhi_u8x4
+prog function &unpackhi_u8x4(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1)
+{
+  ld_arg_u32 $s0, [%src0];
+  ld_arg_u32 $s1, [%src1];
+  unpackhi_u8x4 $s2, $s0, $s1;
+  st_arg_u32 $s2, [%dest];
+  ret;
+};
+
+// unpackhi_u8x8
+prog function &unpackhi_u8x8(arg_u64 %dest)(arg_u64 %src0, arg_u64 %src1)
+{
+  ld_arg_u64 $d0, [%src0];
+  ld_arg_u64 $d1, [%src1];
+  unpackhi_u8x8 $d2, $d0, $d1;
+  st_arg_u64 $d2, [%dest];
+  ret;
+};
+
+// unpackhi_u16x2
+prog function &unpackhi_u16x2(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1)
+{
+  ld_arg_u32 $s0, [%src0];
+  ld_arg_u32 $s1, [%src1];
+  unpackhi_u16x2 $s2, $s0, $s1;
+  st_arg_u32 $s2, [%dest];
+  ret;
+};
+
+// unpackhi_u16x4
+prog function &unpackhi_u16x4(arg_u64 %dest)(arg_u64 %src0, arg_u64 %src1)
+{
+  ld_arg_u64 $d0, [%src0];
+  ld_arg_u64 $d1, [%src1];
+  unpackhi_u16x4 $d2, $d0, $d1;
+  st_arg_u64 $d2, [%dest];
+  ret;
+};
+
+// unpackhi_u32x2
+prog function &unpackhi_u32x2(arg_u64 %dest)(arg_u64 %src0, arg_u64 %src1)
+{
+  ld_arg_u64 $d0, [%src0];
+  ld_arg_u64 $d1, [%src1];
+  unpackhi_u32x2 $d2, $d0, $d1;
+  st_arg_u64 $d2, [%dest];
+  ret;
+};
+
+// unpackhi_s8x4
+prog function &unpackhi_s8x4(arg_s32 %dest)(arg_s32 %src0, arg_s32 %src1)
+{
+  ld_arg_s32 $s0, [%src0];
+  ld_arg_s32 $s1, [%src1];
+  unpackhi_s8x4 $s2, $s0, $s1;
+  st_arg_s32 $s2, [%dest];
+  ret;
+};
+
+// unpackhi_s8x8
+prog function &unpackhi_s8x8(arg_s64 %dest)(arg_s64 %src0, arg_s64 %src1)
+{
+  ld_arg_s64 $d0, [%src0];
+  ld_arg_s64 $d1, [%src1];
+  unpackhi_s8x8 $d2, $d0, $d1;
+  st_arg_s64 $d2, [%dest];
+  ret;
+};
+
+// unpackhi_s16x2
+prog function &unpackhi_s16x2(arg_s32 %dest)(arg_s32 %src0, arg_s32 %src1)
+{
+  ld_arg_s32 $s0, [%src0];
+  ld_arg_s32 $s1, [%src1];
+  unpackhi_s16x2 $s2, $s0, $s1;
+  st_arg_s32 $s2, [%dest];
+  ret;
+};
+
+// unpackhi_s16x4
+prog function &unpackhi_s16x4(arg_s64 %dest)(arg_s64 %src0, arg_s64 %src1)
+{
+  ld_arg_s64 $d0, [%src0];
+  ld_arg_s64 $d1, [%src1];
+  unpackhi_s16x4 $d2, $d0, $d1;
+  st_arg_s64 $d2, [%dest];
+  ret;
+};
+
+// unpackhi_s32x2
+prog function &unpackhi_s32x2(arg_s64 %dest)(arg_s64 %src0, arg_s64 %src1)
+{
+  ld_arg_s64 $d0, [%src0];
+  ld_arg_s64 $d1, [%src1];
+  unpackhi_s32x2 $d2, $d0, $d1;
+  st_arg_s64 $d2, [%dest];
+  ret;
+};
 
 ////////////////////
 /// pack
