@@ -3,12 +3,15 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 using namespace llvm;
 using namespace std;
 
 namespace {
+
+  cl::opt<bool> HostSpecific("host", cl::desc("Mark the operation as host specific"));
 
   struct DirectFuncCall : public ModulePass
   {
@@ -60,6 +63,11 @@ namespace {
                 ii->setCalledFunction(wrapperFunc);
             }
           } // !F->hasNUses > 0
+
+          // host side does not need the function definition of a grid_launch kernel
+          // deleting the function body can help resolve linking errors
+          if(HostSpecific)
+            F->deleteBody();
         } // F->hasFnAttribute(HCGridLaunchAttr)
       } // Module::iterator
 
@@ -73,3 +81,9 @@ namespace {
 
 char DirectFuncCall::ID = 0;
 static RegisterPass<DirectFuncCall> X("redirect", "Redirect kernel function call to wrapper.", false, false);
+
+int main(int argc, char **argv) {
+  cl::ParseCommandLineOptions(argc, argv);
+
+  return 0;
+}
