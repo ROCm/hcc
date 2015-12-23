@@ -1791,6 +1791,18 @@ tiled_extent<3> extent<N>::tile(int t0, int t1, int t2) const __CPU__ __HC__ {
   return tiled_extent<3>(*this, t0, t1, t2);
 }
 
+
+// ------------------------------------------------------------------------
+// HSAIL builtins
+// ------------------------------------------------------------------------
+
+/**
+ * C interface of HSAIL builtin function to fetch the size of a wavefront
+ *
+ * @return The size of a wavefront.
+ */
+extern "C" unsigned int hsail_wavesize() __HC__;
+
 // ------------------------------------------------------------------------
 // dynamic group segment
 // ------------------------------------------------------------------------

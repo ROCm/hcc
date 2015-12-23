@@ -1,3 +1,10 @@
+/// get wavefront size
+prog function &hsail_wavesize(arg_u32 %ret)()
+{
+  st_arg_u32 WAVESIZE, [%ret];
+  ret;
+};
+
 /// global variable to store the size of static group segment
 /// the value would be set by Kalmar runtime prior to kernel dispatch
 prog global_u32 &hcc_static_group_segment_size = 0;
