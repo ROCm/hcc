@@ -11,6 +11,29 @@ prog function &hsail_wavesize(arg_u32 %dest)()
 };
 
 ////////////////////////////////////////////////////////////
+/// PRM 5.6 : Individual Bit Instructions
+////////////////////////////////////////////////////////////
+
+/// popcount_u32_b32
+prog function &hsail_popcount_u32_b32(arg_u32 %dest)(arg_u32 %src)
+{
+  ld_arg_u32 $s0, [%src];
+  popcount_u32_b32 $s1, $s0;
+  st_arg_u32 $s1, [%dest];
+  ret;
+};
+
+/// popcount_u32_b64
+prog function &hsail_popcount_u32_b64(arg_u32 %dest)(arg_u64 %src)
+{
+  ld_arg_u64 $d0, [%src];
+  popcount_u32_b64 $s0, $d0;
+  st_arg_u32 $s0, [%dest];
+  ret;
+};
+
+
+////////////////////////////////////////////////////////////
 /// PRM 5.15 : Multimedia Instructions
 ////////////////////////////////////////////////////////////
 
