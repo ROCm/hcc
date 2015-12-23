@@ -127,6 +127,20 @@ void prefix(void) {
     }
 }
 
+// Support to perform google unit testing
+void gtest(void) {
+    if (build_mode) {
+       std::cout << " -I" CMAKE_GTEST_INC_DIR;
+       std::cout << " -L" CMAKE_AMPCL_LIB_DIR;
+       std::cout << " -lmcwamp_gtest ";
+    }
+    else if (install_mode) {
+       //Flags set using cxxflags and ldflsgs suffice
+       std::cout << " -lmcwamp_gtest ";
+    }
+          
+}
+
 // Compiling as a shared library
 void shared(void) {
 #ifndef __APPLE__
@@ -160,6 +174,7 @@ int main (int argc, char **argv) {
             {"prefix",  no_argument,       0, 'p'},
             {"bolt",  no_argument,       0, 'o'},
             {"shared",  no_argument,       0, 's'},
+            {"gtest",  no_argument,       0, 't'},
             {0, 0, 0, 0}
         };
         /* getopt_long stores the option index here. */
@@ -206,6 +221,9 @@ int main (int argc, char **argv) {
                 break;
             case 'o':   // --bolt
                 bolt_rewrite_mode = true;
+                break;
+            case 't':   // --gtest
+                gtest();
                 break;
             case '?':
                 /* getopt_long already printed an error message. */
