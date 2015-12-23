@@ -1,9 +1,91 @@
+
+////////////////////////////////////////////////////////////
+/// HSAIL builtin functions
+////////////////////////////////////////////////////////////
+
 /// get wavefront size
-prog function &hsail_wavesize(arg_u32 %ret)()
+prog function &hsail_wavesize(arg_u32 %dest)()
 {
-  st_arg_u32 WAVESIZE, [%ret];
+  st_arg_u32 WAVESIZE, [%dest];
   ret;
 };
+
+/// activelanecount_width_u32_b1
+/// NOTE:
+/// - width is not in use as of now
+/// - src is of type u32, and will be converted to b1
+prog function &hsail_activelanecount_u32_b1(arg_u32 %dest)(arg_u32 %src)
+{
+  ld_arg_u32 $s0, [%src];
+  cmp_ne_b1_u32 $c0, $s0, 0;
+  activelanecount_u32_b1 $s0, $c0;
+  st_arg_u32 $s0, [%dest];
+  ret;
+};
+
+/// activelaneid_width_u32
+/// NOTE:
+/// - width is not in use as of now
+prog function &hsail_activelaneid_u32(arg_u32 %dest)()
+{
+  activelaneid_u32 $s0;
+  st_arg_u32 $s0, [%dest];
+  ret;
+};
+
+/// activelanemask_v4_width_b64_b1
+/// NOTE:
+/// - width is not in use as of now
+/// - only dest0 is returned as of now
+/// - dest1, dest2, dest3 are not returned as of now
+/// - input is of type u32, and will be converted to b1
+prog function &hsail_activelanemask_v4_b64_b1(arg_u64 %dest0)(arg_u32 %src)
+{
+  ld_arg_u32 $s0, [%src];
+  cmp_ne_b1_u32 $c0, $s0, 0;
+  activelanemask_v4_b64_b1 ($d0, $d1, $d2, $d3), $c0;
+  st_arg_u64 $d0, [%dest0];
+  ret;
+};
+
+/// activelanepermute_width_b1 is not implemented as of now
+/// activelanepermute_width_b128 is not implemented as of now
+
+/// activelanepermute_width_b32
+/// NOTE:
+/// - width is not in use as of now
+/// - useIdentity is of type u32, and will be converted to b1
+prog function &hsail_activelanepermute_b32(arg_u32 %dest)(arg_u32 %src, arg_u32 %laneId, arg_u32 %identity, arg_u32 %useIdentity)
+{
+  ld_arg_u32 $s0, [%src];
+  ld_arg_u32 $s1, [%laneId];
+  ld_arg_u32 $s2, [%identity];
+  ld_arg_u32 $s3, [%useIdentity];
+  cmp_ne_b1_u32 $c0, $s3, 0;
+  activelanepermute_b32 $s3, $s0, $s1, $s2, $c0;
+  st_arg_u32 $s3, [%dest];
+  ret;
+};
+
+/// activelanepermute_width_b64
+/// NOTE:
+/// - width is not in use as of now
+/// - useIdentity is of type b32, and will be converted to b1
+prog function &hsail_activelanepermute_b64(arg_u64 %dest)(arg_u64 %src, arg_u32 %laneId, arg_u64 %identity, arg_u32 %useIdentity)
+{
+  ld_arg_u64 $d0, [%src];
+  ld_arg_u32 $s0, [%laneId];
+  ld_arg_u64 $d1, [%identity];
+  ld_arg_u32 $s1, [%useIdentity];
+  cmp_ne_b1_u32 $c0, $s1, 0;
+  activelanepermute_b64 $d2, $d0, $s0, $d1, $c0;
+  st_arg_u64 $d2, [%dest];
+  ret;
+};
+
+////////////////////////////////////////////////////////////
+/// Dynamic group segment
+////////////////////////////////////////////////////////////
 
 /// global variable to store the size of static group segment
 /// the value would be set by Kalmar runtime prior to kernel dispatch
@@ -70,6 +152,10 @@ prog function &get_dynamic_group_segment(arg_u32 %ret)()
   st_arg_u32 $s1, [%ret];
   ret;
 };
+
+////////////////////////////////////////////////////////////
+/// New / delete within kernels
+////////////////////////////////////////////////////////////
 
 prog global_u64 &signal_Xmalloc = 0;
 prog global_u64 &signal_malloc = 0;
