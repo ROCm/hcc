@@ -677,12 +677,141 @@ prog function &hsail_pack_f32x2_f32(arg_f64 %dest)(arg_f64 %src0, arg_f32 %src1,
 /// unpack
 ////////////////////
 
-////////////////////////////////////////////////////////////
-/// PRM 5.15 : Multimedia Instructions
+// unpack_u32_u8x4
+prog function &hsail_unpack_u32_u8x4(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1)
+{
+  ld_arg_u32 $s0, [%src0];
+  ld_arg_u32 $s1, [%src1];
+  unpack_u32_u8x4 $s2, $s0, $s1;
+  st_arg_u32 $s2, [%dest];
+  ret;
+};
 
-////////////////////
-/// unpack
-////////////////////
+// unpack_u32_u8x8
+prog function &hsail_unpack_u32_u8x8(arg_u32 %dest)(arg_u64 %src0, arg_u32 %src1)
+{
+  ld_arg_u64 $d0, [%src0];
+  ld_arg_u32 $s0, [%src1];
+  unpack_u32_u8x8 $s1, $d0, $s0;
+  st_arg_u32 $s1, [%dest];
+  ret;
+};
+
+// unpack_u32_u8x16 is not implemented as of now
+
+// unpack_u32_u16x2
+prog function &hsail_unpack_u32_u16x2(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1)
+{
+  ld_arg_u32 $s0, [%src0];
+  ld_arg_u32 $s1, [%src1];
+  unpack_u32_u16x2 $s2, $s0, $s1;
+  st_arg_u32 $s2, [%dest];
+  ret;
+};
+
+// unpack_u32_u16x4
+prog function &hsail_unpack_u32_u16x4(arg_u32 %dest)(arg_u64 %src0, arg_u32 %src1)
+{
+  ld_arg_u64 $d0, [%src0];
+  ld_arg_u32 $s0, [%src1];
+  unpack_u32_u16x4 $s1, $d0, $s0;
+  st_arg_u32 $s1, [%dest];
+  ret;
+};
+
+// unpack_u32_u16x8 is not implemented as of now
+
+// unpack_u32_u32x2
+prog function &hsail_unpack_u32_u32x2(arg_u32 %dest)(arg_u64 %src0, arg_u32 %src1)
+{
+  ld_arg_u64 $d0, [%src0];
+  ld_arg_u32 $s0, [%src1];
+  unpack_u32_u32x2 $s1, $d0, $s0;
+  st_arg_u32 $s1, [%dest];
+  ret;
+};
+
+// unpack_u32_u32x4 is not implemented as of now
+
+// unpack_u32_u64x2 is not implemented as of now
+
+// unpack_s32_s8x4
+prog function &hsail_unpack_s32_s8x4(arg_s32 %dest)(arg_s32 %src0, arg_u32 %src1)
+{
+  ld_arg_s32 $s0, [%src0];
+  ld_arg_u32 $s1, [%src1];
+  unpack_s32_s8x4 $s2, $s0, $s1;
+  st_arg_s32 $s2, [%dest];
+  ret;
+};
+
+// unpack_s32_s8x8
+prog function &hsail_unpack_s32_s8x8(arg_s32 %dest)(arg_s64 %src0, arg_u32 %src1)
+{
+  ld_arg_s64 $d0, [%src0];
+  ld_arg_u32 $s0, [%src1];
+  unpack_s32_s8x8 $s1, $d0, $s0;
+  st_arg_s32 $s1, [%dest];
+  ret;
+};
+
+// unpack_s32_s8x16 is not implemented as of now
+
+// unpack_s32_s16x2
+prog function &hsail_unpack_s32_s16x2(arg_s32 %dest)(arg_s32 %src0, arg_u32 %src1)
+{
+  ld_arg_s32 $s0, [%src0];
+  ld_arg_u32 $s1, [%src1];
+  unpack_s32_s16x2 $s2, $s0, $s1;
+  st_arg_s32 $s2, [%dest];
+  ret;
+};
+
+// unpack_s32_s16x4
+prog function &hsail_unpack_s32_s16x4(arg_s32 %dest)(arg_s64 %src0, arg_u32 %src1)
+{
+  ld_arg_s64 $d0, [%src0];
+  ld_arg_u32 $s0, [%src1];
+  unpack_s32_s16x4 $s1, $d0, $s0;
+  st_arg_s32 $s1, [%dest];
+  ret;
+};
+
+// unpack_s32_s16x8 is not implemented as of now
+
+// unpack_s32_s32x2
+prog function &hsail_unpack_s32_s32x2(arg_s32 %dest)(arg_s64 %src0, arg_u32 %src1)
+{
+  ld_arg_s64 $d0, [%src0];
+  ld_arg_u32 $s0, [%src1];
+  unpack_s32_s32x2 $s1, $d0, $s0;
+  st_arg_s32 $s1, [%dest];
+  ret;
+};
+
+// unpack_s32_s32x4 is not implemented as of now
+
+// unpack_s32_s64x2 is not implemented as of now
+
+// unpack_f32_f32x2
+prog function &hsail_unpack_f32_f32x2(arg_f32 %dest)(arg_f64 %src0, arg_u32 %src1)
+{
+  ld_arg_f64 $d0, [%src0];
+  ld_arg_u32 $s0, [%src1];
+  unpack_f32_f32x2 $s1, $d0, $s0;
+  st_arg_f32 $s1, [%dest];
+  ret;
+};
+
+// unpack_f32_f32x4 is not implemented as of now
+
+// unpack_f32_f64x2 is not implemented as of now
+
+// unpack_f16_f16x2 is not implemented as of now
+
+// unpack_f16_f16x4 is not implemented as of now
+
+// unpack_f16_f16x8 is not implemented as of now
 
 ////////////////////////////////////////////////////////////
 /// PRM 5.15 : Multimedia Instructions
