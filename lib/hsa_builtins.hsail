@@ -41,57 +41,252 @@ prog function &hsail_popcount_u32_b64(arg_u32 %dest)(arg_u64 %src)
 ////////////////////
 
 /// bitextract_u32
+prog function &hsail_bitextract_u32(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1, arg_u32 %src2)
+{
+  ld_arg_u32 $s0, [%src0];
+  ld_arg_u32 $s1, [%src1];
+  ld_arg_u32 $s2, [%src2];
+  bitextract_u32 $s3, $s0, $s1, $s2;
+  st_arg_u32 $s3, [%dest];
+  ret;
+};
+
 /// bitextract_u64
+prog function &hsail_bitextract_u64(arg_u64 %dest)(arg_u64 %src0, arg_u32 %src1, arg_u32 %src2)
+{
+  ld_arg_u64 $d0, [%src0];
+  ld_arg_u32 $s0, [%src1];
+  ld_arg_u32 $s1, [%src2];
+  bitextract_u64 $d1, $d0, $s0, $s1;
+  st_arg_u64 $d1, [%dest];
+  ret;
+};
+
 /// bitextract_s32
+prog function &hsail_bitextract_s32(arg_s32 %dest)(arg_s32 %src0, arg_u32 %src1, arg_u32 %src2)
+{
+  ld_arg_s32 $s0, [%src0];
+  ld_arg_u32 $s1, [%src1];
+  ld_arg_u32 $s2, [%src2];
+  bitextract_s32 $s3, $s0, $s1, $s2;
+  st_arg_s32 $s3, [%dest];
+  ret;
+};
+
 /// bitextract_s64
+prog function &hsail_bitextract_s64(arg_s64 %dest)(arg_s64 %src0, arg_u32 %src1, arg_u32 %src2)
+{
+  ld_arg_s64 $d0, [%src0];
+  ld_arg_u32 $s0, [%src1];
+  ld_arg_u32 $s1, [%src2];
+  bitextract_s64 $d1, $d0, $s0, $s1;
+  st_arg_s64 $d1, [%dest];
+  ret;
+};
 
 ////////////////////
 /// bitinsert
 ////////////////////
 
 /// bitinsert_u32
+prog function &hsail_bitinsert_u32(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1, arg_u32 %src2, arg_u32 %src3)
+{
+  ld_arg_u32 $s0, [%src0];
+  ld_arg_u32 $s1, [%src1];
+  ld_arg_u32 $s2, [%src2];
+  ld_arg_u32 $s3, [%src3];
+  bitinsert_u32 $s4, $s0, $s1, $s2, $s3;
+  st_arg_u32 $s4, [%dest];
+  ret;
+};
+
 /// bitinsert_u64
+prog function &hsail_bitinsert_u64(arg_u64 %dest)(arg_u64 %src0, arg_u64 %src1, arg_u32 %src2, arg_u32 %src3)
+{
+  ld_arg_u64 $d0, [%src0];
+  ld_arg_u64 $d1, [%src1];
+  ld_arg_u32 $s0, [%src2];
+  ld_arg_u32 $s1, [%src3];
+  bitinsert_u64 $d2, $d0, $d1, $s0, $s1;
+  st_arg_u64 $d2, [%dest];
+  ret;
+};
+
 /// bitinsert_s32
+prog function &hsail_bitinsert_s32(arg_s32 %dest)(arg_s32 %src0, arg_s32 %src1, arg_u32 %src2, arg_u32 %src3)
+{
+  ld_arg_s32 $s0, [%src0];
+  ld_arg_s32 $s1, [%src1];
+  ld_arg_u32 $s2, [%src2];
+  ld_arg_u32 $s3, [%src3];
+  bitinsert_u32 $s4, $s0, $s1, $s2, $s3;
+  st_arg_s32 $s4, [%dest];
+  ret;
+};
+
 /// bitinsert_s64
+prog function &hsail_bitinsert_s64(arg_s64 %dest)(arg_s64 %src0, arg_s64 %src1, arg_u32 %src2, arg_u32 %src3)
+{
+  ld_arg_s64 $d0, [%src0];
+  ld_arg_s64 $d1, [%src1];
+  ld_arg_u32 $s0, [%src2];
+  ld_arg_u32 $s1, [%src3];
+  bitinsert_s64 $d2, $d0, $d1, $s0, $s1;
+  st_arg_s64 $d2, [%dest];
+  ret;
+};
 
 ////////////////////
 /// bitmask
 ////////////////////
 
 /// bitmask_b32
+prog function &hsail_bitmask_b32(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1)
+{
+  ld_arg_u32 $s0, [%src0];
+  ld_arg_u32 $s1, [%src1];
+  bitmask_b32 $s2, $s0, $s1;
+  st_arg_u32 $s2, [%dest];
+  ret;
+};
+
 /// bitmask_b64
+prog function &hsail_bitmask_b64(arg_u64 %dest)(arg_u32 %src0, arg_u32 %src1)
+{
+  ld_arg_u32 $s0, [%src0];
+  ld_arg_u32 $s1, [%src1];
+  bitmask_b64 $d0, $s0, $s1;
+  st_arg_u64 $d0, [%dest];
+  ret;
+};
 
 ////////////////////
 /// bitrev
 ////////////////////
 
 /// bitrev_b32
+prog function &hsail_bitrev_b32(arg_u32 %dest)(arg_u32 %src0)
+{
+  ld_arg_u32 $s0, [%src0];
+  bitrev_b32 $s1, $s0;
+  st_arg_u32 $s1, [%dest];
+  ret;
+};
+
 /// bitrev_b64
+prog function &hsail_bitrev_b64(arg_u64 %dest)(arg_u64 %src0)
+{
+  ld_arg_u64 $d0, [%src0];
+  bitrev_b64 $d1, $d0;
+  st_arg_u64 $d1, [%dest];
+  ret;
+};
 
 ////////////////////
 /// bitselect
 ////////////////////
 
 /// bitselect_b32
+prog function &hsail_bitselect_b32(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1, arg_u32 %src2)
+{
+  ld_arg_u32 $s0, [%src0];
+  ld_arg_u32 $s1, [%src1];
+  ld_arg_u32 $s2, [%src2];
+  bitselect_b32 $s3, $s0, $s1, $s2;
+  st_arg_u32 $s3, [%dest];
+  ret;
+};
+
 /// bitselect_b64
+prog function &hsail_bitselect_b64(arg_u64 %dest)(arg_u64 %src0, arg_u64 %src1, arg_u64 %src2)
+{
+  ld_arg_u64 $d0, [%src0];
+  ld_arg_u64 $d1, [%src1];
+  ld_arg_u64 $d2, [%src2];
+  bitselect_b64 $d3, $d0, $d1, $d2;
+  st_arg_u64 $d3, [%dest];
+  ret;
+};
 
 ////////////////////
 /// firstbit
 ////////////////////
 
-/// firstbit_u32
-/// firstbit_u64
-/// firstbit_s32
-/// firstbit_s64
+/// firstbit_u32_u32
+prog function &hsail_firstbit_u32_u32(arg_u32 %dest)(arg_u32 %src0)
+{
+  ld_arg_u32 $s0, [%src0];
+  firstbit_u32_u32 $s1, $s0;
+  st_arg_u32 $s1, [%dest];
+  ret;
+};
+
+/// firstbit_u32_u64
+prog function &hsail_firstbit_u32_u64(arg_u32 %dest)(arg_u64 %src0)
+{
+  ld_arg_u64 $d0, [%src0];
+  firstbit_u32_u64 $s0, $d0;
+  st_arg_u32 $s0, [%dest];
+  ret;
+};
+
+/// firstbit_u32_s32
+prog function &hsail_firstbit_u32_s32(arg_u32 %dest)(arg_s32 %src0)
+{
+  ld_arg_s32 $s0, [%src0];
+  firstbit_u32_s32 $s1, $s0;
+  st_arg_u32 $s1, [%dest];
+  ret;
+};
+
+/// firstbit_u32_s64
+prog function &hsail_firstbit_u32_s64(arg_u32 %dest)(arg_s64 %src0)
+{
+  ld_arg_s64 $d0, [%src0];
+  firstbit_u32_s64 $s0, $d0;
+  st_arg_u32 $s0, [%dest];
+  ret;
+};
 
 ////////////////////
 /// lastbit
 ////////////////////
 
-/// lastbit_u32
-/// lastbit_u64
-/// lastbit_s32
-/// lastbit_s64
+/// lastbit_u32_u32
+prog function &hsail_lastbit_u32_u32(arg_u32 %dest)(arg_u32 %src0)
+{
+  ld_arg_u32 $s0, [%src0];
+  lastbit_u32_u32 $s1, $s0;
+  st_arg_u32 $s1, [%dest];
+  ret;
+};
+
+/// lastbit_u32_u64
+prog function &hsail_lastbit_u32_u64(arg_u32 %dest)(arg_u64 %src0)
+{
+  ld_arg_u64 $d0, [%src0];
+  lastbit_u32_u64 $s0, $d0;
+  st_arg_u32 $s0, [%dest];
+  ret;
+};
+
+/// lastbit_u32_s32
+prog function &hsail_lastbit_u32_s32(arg_u32 %dest)(arg_s32 %src0)
+{
+  ld_arg_s32 $s0, [%src0];
+  lastbit_u32_s32 $s1, $s0;
+  st_arg_u32 $s1, [%dest];
+  ret;
+};
+
+/// lastbit_u32_s64
+prog function &hsail_lastbit_u32_s64(arg_u32 %dest)(arg_s64 %src0)
+{
+  ld_arg_s64 $d0, [%src0];
+  lastbit_u32_s64 $s0, $d0;
+  st_arg_u32 $s0, [%dest];
+  ret;
+};
 
 ////////////////////////////////////////////////////////////
 /// PRM 5.9 : Packed Data Instructions
