@@ -699,6 +699,16 @@ public:
         return pDev->getSymbolAddress(symbolName);
     }
 
+    /**
+     * Returns an opaque handle which points to the underlying HSA agent.
+     *
+     * @return An opaque handle of the underlying HSA agent, if the accelerator
+     *         is based on HSA.  NULL otherwise.
+     */
+    void* get_hsa_agent() {
+        return pDev->getHSAAgent();
+    }
+
 private:
     accelerator(Kalmar::KalmarDevice* pDev) : pDev(pDev) {}
     friend class accelerator_view;
@@ -1790,6 +1800,18 @@ tiled_extent<3> extent<N>::tile(int t0, int t1, int t2) const __CPU__ __HC__ {
   static_assert(N == 3, "Three-dimensional tile() method only available on extent<3>");
   return tiled_extent<3>(*this, t0, t1, t2);
 }
+
+
+// ------------------------------------------------------------------------
+// HSAIL builtins
+// ------------------------------------------------------------------------
+
+/**
+ * C interface of HSAIL builtin function to fetch the size of a wavefront
+ *
+ * @return The size of a wavefront.
+ */
+extern "C" unsigned int hsail_wavesize() __HC__;
 
 // ------------------------------------------------------------------------
 // dynamic group segment

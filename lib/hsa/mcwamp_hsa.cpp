@@ -1531,6 +1531,7 @@ public:
         }
     }
 
+    void* getHSAAgent() override;
 
 private:
 
@@ -1926,6 +1927,17 @@ static HSAContext ctx;
 
 } // namespace Kalmar
 
+// ----------------------------------------------------------------------
+// member function implementation of HSADevice
+// ----------------------------------------------------------------------
+namespace Kalmar {
+
+inline void*
+HSADevice::getHSAAgent() override {
+    return static_cast<void*>(&getAgent());
+}
+
+} // namespace Kalmar
 
 // ----------------------------------------------------------------------
 // member function implementation of HSAQueue

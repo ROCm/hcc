@@ -259,6 +259,10 @@ public:
     virtual void memcpySymbol(void* symbolAddr, void* hostptr, size_t count, size_t offset = 0, hcMemcpyKind kind = hcMemcpyHostToDevice) {}
 
     virtual void* getSymbolAddress(const char* symbolName) { return nullptr; }
+
+    /// get underlying native agent handle
+    virtual void* getHSAAgent() { return nullptr; }
+
 };
 
 class CPUQueue final : public KalmarQueue
