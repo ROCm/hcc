@@ -699,6 +699,16 @@ public:
         return pDev->getSymbolAddress(symbolName);
     }
 
+    /**
+     * Returns an opaque handle which points to the underlying HSA agent.
+     *
+     * @return An opaque handle of the underlying HSA agent, if the accelerator
+     *         is based on HSA.  NULL otherwise.
+     */
+    void* get_hsa_agent() {
+        return pDev->getHSAAgent();
+    }
+
 private:
     accelerator(Kalmar::KalmarDevice* pDev) : pDev(pDev) {}
     friend class accelerator_view;
