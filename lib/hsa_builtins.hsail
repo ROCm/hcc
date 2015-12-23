@@ -10,6 +10,138 @@ prog function &hsail_wavesize(arg_u32 %dest)()
   ret;
 };
 
+////////////////////////////////////////////////////////////
+/// PRM 5.15 : Multimedia Instructions
+////////////////////////////////////////////////////////////
+
+/// bitalign_b32
+prog function &hsail_bitalign_b32(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1, arg_u32 %src2)
+{
+  ld_arg_u32 $s0, [%src0];
+  ld_arg_u32 $s1, [%src1];
+  ld_arg_u32 $s2, [%src2];
+  bitalign_b32 $s3, $s0, $s1, $s2;
+  st_arg_u32 $s3, [%dest];
+  ret;
+};
+
+/// bytealign_b32
+prog function &hsail_bytealign_b32(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1, arg_u32 %src2)
+{
+  ld_arg_u32 $s0, [%src0];
+  ld_arg_u32 $s1, [%src1];
+  ld_arg_u32 $s2, [%src2];
+  bytealign_b32 $s3, $s0, $s1, $s2;
+  st_arg_u32 $s3, [%dest];
+  ret;
+};
+
+/// lerp_u8x4
+prog function &hsail_lep_u8x4(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1, arg_u32 %src2)
+{
+  ld_arg_u32 $s0, [%src0];
+  ld_arg_u32 $s1, [%src1];
+  ld_arg_u32 $s2, [%src2];
+  lerp_u8x4 $s3, $s0, $s1, $s2;
+  st_arg_u32 $s3, [%dest];
+  ret;
+};
+
+/// packcvt_u8x4_f32
+prog function &hsail_packcvt_u8x4_f32(arg_u32 %dest)(arg_f32 %src0, arg_f32 %src1, arg_f32 %src2, arg_f32 %src3)
+{
+  ld_arg_f32 $s0, [%src0];
+  ld_arg_f32 $s1, [%src1];
+  ld_arg_f32 $s2, [%src2];
+  ld_arg_f32 $s3, [%src3];
+  packcvt_u8x4_f32 $s4, $s0, $s1, $s2, $s3;
+  st_arg_u32 $s4, [%dest];
+  ret;
+};
+
+/// unpackcvt_f32_u8x4
+/// NOTE:
+/// - if src1 is larger or equal to 3, than unpackcvt with src1 as 3 would be used
+prog function &hsail_unpackcvt_f32_u8x4(arg_f32 %dest)(arg_f32 %src0, arg_u32 %src1)
+{
+  ld_arg_f32 $s0, [%src0];
+  ld_arg_u32 $s1, [%src1];
+  cmp_eq_b1_u32 $c0, $s1, 0;
+  cbr_b1 $c0, @unpackcvt_0;
+  cmp_eq_b1_u32 $c0, $s1, 1;
+  cbr_b1 $c0, @unpackcvt_1;
+  cmp_eq_b1_u32 $c0, $s1, 2;
+  cbr_b1 $c0, @unpackcvt_2;
+
+@unpackcvt_3:
+  unpackcvt_f32_u8x4 $s2, $s0, 3;
+  br @return;
+
+@unpackcvt_0:
+  unpackcvt_f32_u8x4 $s2, $s0, 0;
+  br @return;
+
+@unpackcvt_1:
+  unpackcvt_f32_u8x4 $s2, $s0, 1;
+  br @return;
+
+@unpackcvt_2:
+  unpackcvt_f32_u8x4 $s2, $s0, 2;
+
+@return:
+  st_arg_f32 $s2, [%dest];
+  ret;
+};
+
+
+/// sad_u32_u32
+prog function &hsail_sad_u32_u32(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1, arg_u32 %src2)
+{
+  ld_arg_u32 $s0, [%src0];
+  ld_arg_u32 $s1, [%src1];
+  ld_arg_u32 $s2, [%src2];
+  sad_u32_u32 $s3, $s0, $s1, $s2;
+  st_arg_u32 $s3, [%dest];
+  ret;
+};
+
+/// sad_u32_u16x2
+prog function &hsail_sad_u32_u16x2(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1, arg_u32 %src2)
+{
+  ld_arg_u32 $s0, [%src0];
+  ld_arg_u32 $s1, [%src1];
+  ld_arg_u32 $s2, [%src2];
+  sad_u32_u16x2 $s3, $s0, $s1, $s2;
+  st_arg_u32 $s3, [%dest];
+  ret;
+};
+
+/// sad_u32_u8x4
+prog function &hsail_sad_u32_u8x4(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1, arg_u32 %src2)
+{
+  ld_arg_u32 $s0, [%src0];
+  ld_arg_u32 $s1, [%src1];
+  ld_arg_u32 $s2, [%src2];
+  sad_u32_u8x4 $s3, $s0, $s1, $s2;
+  st_arg_u32 $s3, [%dest];
+  ret;
+};
+
+/// sadhi_u16x2_u8x4
+prog function &hsail_sadhi_u16x2_u8x4(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1, arg_u32 %src2)
+{
+  ld_arg_u32 $s0, [%src0];
+  ld_arg_u32 $s1, [%src1];
+  ld_arg_u32 $s2, [%src2];
+  sadhi_u16x2_u8x4 $s3, $s0, $s1, $s2;
+  st_arg_u32 $s3, [%dest];
+  ret;
+};
+
+////////////////////////////////////////////////////////////
+/// PRM 9.4 : Cross-Lane Instructions
+////////////////////////////////////////////////////////////
+
 /// activelanecount_width_u32_b1
 /// NOTE:
 /// - width is not in use as of now
