@@ -526,6 +526,160 @@ prog function &unpackhi_s32x2(arg_s64 %dest)(arg_s64 %src0, arg_s64 %src1)
 /// pack
 ////////////////////
 
+// pack_u8x4_u32
+prog function &hsail_pack_u8x4_u32(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1, arg_u32 %src2)
+{
+  ld_arg_u32 $s0, [%src0];
+  ld_arg_u32 $s1, [%src1];
+  ld_arg_u32 $s2, [%src2];
+  pack_u8x4_u32 $s3, $s0, $s1, $s2;
+  st_arg_u32 $s3, [%dest];
+  ret;
+};
+
+// pack_u8x8_u32
+prog function &hsail_pack_u8x8_u32(arg_u64 %dest)(arg_u64 %src0, arg_u32 %src1, arg_u32 %src2)
+{
+  ld_arg_u64 $d0, [%src0];
+  ld_arg_u32 $s0, [%src1];
+  ld_arg_u32 $s1, [%src2];
+  pack_u8x8_u32 $d1, $d0, $s0, $s1;
+  st_arg_u64 $d1, [%dest];
+  ret;
+};
+
+// pack_u8x16_u32 is not implemented as of now
+
+// pack_u16x2_u32
+prog function &hsail_pack_u16x2_u32(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1, arg_u32 %src2)
+{
+  ld_arg_u32 $s0, [%src0];
+  ld_arg_u32 $s1, [%src1];
+  ld_arg_u32 $s2, [%src2];
+  pack_u16x2_u32 $s3, $s0, $s1, $s2;
+  st_arg_u32 $s3, [%dest];
+  ret;
+};
+
+// pack_u16x4_u32
+prog function &hsail_pack_u16x4_u32(arg_u64 %dest)(arg_u64 %src0, arg_u32 %src1, arg_u32 %src2)
+{
+  ld_arg_u64 $d0, [%src0];
+  ld_arg_u32 $s0, [%src1];
+  ld_arg_u32 $s1, [%src2];
+  pack_u16x4_u32 $d1, $d0, $s0, $s1;
+  st_arg_u64 $d1, [%dest];
+  ret;
+};
+
+// pack_u16x8_u32 is not implemented as of now
+
+// pack_u32x2_u32
+prog function &hsail_pack_u32x2_u32(arg_u64 %dest)(arg_u64 %src0, arg_u32 %src1, arg_u32 %src2)
+{
+  ld_arg_u64 $d0, [%src0];
+  ld_arg_u32 $s0, [%src1];
+  ld_arg_u32 $s1, [%src2];
+  pack_u32x2_u32 $d1, $d0, $s0, $s1;
+  st_arg_u64 $d1, [%dest];
+  ret;
+};
+
+// pack_u32x4_u32 is not implemented as of now
+
+// pack_u64x2_u32 is not implemented as of now
+
+// pack_s8x4_s32
+prog function &hsail_pack_s8x4_s32(arg_s32 %dest)(arg_s32 %src0, arg_s32 %src1, arg_u32 %src2)
+{
+  ld_arg_s32 $s0, [%src0];
+  ld_arg_s32 $s1, [%src1];
+  ld_arg_u32 $s2, [%src2];
+  pack_s8x4_s32 $s3, $s0, $s1, $s2;
+  st_arg_s32 $s3, [%dest];
+  ret;
+};
+
+// pack_s8x8_s32
+prog function &hsail_pack_s8x8_s32(arg_s64 %dest)(arg_s64 %src0, arg_s32 %src1, arg_u32 %src2)
+{
+  ld_arg_s64 $d0, [%src0];
+  ld_arg_s32 $s0, [%src1];
+  ld_arg_u32 $s1, [%src2];
+  pack_s8x8_s32 $d1, $d0, $s0, $s1;
+  st_arg_s64 $d1, [%dest];
+  ret;
+};
+
+// pack_s8x16_s32 is not implemented as of now
+
+// pack_s16x2_s32
+prog function &hsail_pack_s16x2_s32(arg_s32 %dest)(arg_s32 %src0, arg_s32 %src1, arg_u32 %src2)
+{
+  ld_arg_s32 $s0, [%src0];
+  ld_arg_s32 $s1, [%src1];
+  ld_arg_u32 $s2, [%src2];
+  pack_s16x2_s32 $s3, $s0, $s1, $s2;
+  st_arg_s32 $s3, [%dest];
+  ret;
+};
+
+// pack_s16x4_s32
+prog function &hsail_pack_s16x4_s32(arg_u64 %dest)(arg_s64 %src0, arg_s32 %src1, arg_u32 %src2)
+{
+  ld_arg_s64 $d0, [%src0];
+  ld_arg_s32 $s0, [%src1];
+  ld_arg_u32 $s1, [%src2];
+  pack_s16x4_s32 $d1, $d0, $s0, $s1;
+  st_arg_s64 $d1, [%dest];
+  ret;
+};
+
+// pack_s16x8_s32 is not implemented as of now
+
+// pack_s32x2_s32
+prog function &hsail_pack_s32x2_s32(arg_s64 %dest)(arg_s64 %src0, arg_s32 %src1, arg_u32 %src2)
+{
+  ld_arg_s64 $d0, [%src0];
+  ld_arg_s32 $s0, [%src1];
+  ld_arg_u32 $s1, [%src2];
+  pack_s32x2_s32 $d1, $d0, $s0, $s1;
+  st_arg_s64 $d1, [%dest];
+  ret;
+};
+
+// pack_s32x4_s32 is not implemented as of now
+
+// pack_s64x2_s32 is not implemented as of now
+
+// pack_f32x2_f32
+prog function &hsail_pack_f32x2_f32(arg_f64 %dest)(arg_f64 %src0, arg_f32 %src1, arg_u32 %src2)
+{
+  ld_arg_f64 $d0, [%src0];
+  ld_arg_f32 $s0, [%src1];
+  ld_arg_u32 $s1, [%src2];
+  pack_f32x2_f32 $d1, $d0, $s0, $s1;
+  st_arg_f64 $d1, [%dest];
+  ret;
+};
+
+// pack_f32x4_f32 is not implemented as of now
+
+// pack_f64x2_f32 is not implemented as of now
+
+// pack_f16x2_f16 is not implemented as of now
+
+// pack_f16x4_f16 is not implemented as of now
+
+// pack_f16x8_f16 is not implemented as of now
+
+////////////////////
+/// unpack
+////////////////////
+
+////////////////////////////////////////////////////////////
+/// PRM 5.15 : Multimedia Instructions
+
 ////////////////////
 /// unpack
 ////////////////////
