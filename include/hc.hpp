@@ -1884,6 +1884,14 @@ extern "C" uint64_t hsail_clock_u64() __HC__;
  */
 extern "C" unsigned int hsail_activelanecount_u32_b1(unsigned int input) __HC__;
 
+/**
+ * HSAIL builtin to get the count of the number of earlier (in flattened
+ * work-item order) active work-items within the same wavefront.
+ *
+ * @return The result will be in the range 0 to WAVESIZE - 1.
+ */
+extern "C" unsigned int hsail_activelaneid_u32() __HC__;
+
 // ------------------------------------------------------------------------
 // dynamic group segment
 // ------------------------------------------------------------------------
