@@ -1874,6 +1874,16 @@ extern "C" unsigned int hsail_firstbit_u32_s64(long long int input) __HC__;
  */
 extern "C" uint64_t hsail_clock_u64() __HC__;
 
+/**
+ * HSAIL builtin to count the number of active work-items in the current
+ * wavefront that have a non-zero input.
+ *
+ * @param[in] input An unsigned 32-bit integer.
+ * @return The number of active work-items in the current wavefront that have
+ *         a non-zero input.
+ */
+extern "C" unsigned int hsail_activelanecount_u32_b1(unsigned int input) __HC__;
+
 // ------------------------------------------------------------------------
 // dynamic group segment
 // ------------------------------------------------------------------------
