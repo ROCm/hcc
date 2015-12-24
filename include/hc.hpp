@@ -1807,14 +1807,14 @@ tiled_extent<3> extent<N>::tile(int t0, int t1, int t2) const __CPU__ __HC__ {
 // ------------------------------------------------------------------------
 
 /**
- * C interface of HSAIL builtin function to fetch the size of a wavefront
+ * HSAIL builtin function to fetch the size of a wavefront
  *
  * @return The size of a wavefront.
  */
 extern "C" unsigned int hsail_wavesize() __HC__;
 
 /**
- * C interface of HSAIL builtin function to count number of 1 bits in the input
+ * HSAIL builtin function to count number of 1 bits in the input
  *
  * @param[in] input An unsinged 32-bit integer.
  * @return Number of 1 bits in the input.
@@ -1822,12 +1822,52 @@ extern "C" unsigned int hsail_wavesize() __HC__;
 extern "C" unsigned int hsail_popcount_u32_b32(unsigned int input) __HC__;
 
 /**
- * C interface of HSAIL builtin function to count number of 1 bits in the input
+ * HSAIL builtin function to count number of 1 bits in the input
  *
  * @param[in] input An unsinged 64-bit integer.
  * @return Number of 1 bits in the input.
  */
 extern "C" unsigned int hsail_popcount_u32_b64(unsigned long long int input) __HC__;
+
+/**
+ * HSAIL builtin function to count leading zero bits in the input
+ *
+ * @param[in] input An unsigned 32-bit integer.
+ * @return Number of 0 bits until a 1 bit is found, counting start from the
+ *         most significant bit. -1 if there is no 0 bit.
+ */
+extern "C" unsigned int hsail_firstbit_u32_u32(unsigned int input) __HC__;
+
+/**
+ * HSAIL builtin function to count leading zero bits in the input
+ *
+ * @param[in] input An unsigned 64-bit integer.
+ * @return Number of 0 bits until a 1 bit is found, counting start from the
+ *         most significant bit. -1 if there is no 0 bit.
+ */
+extern "C" unsigned int hsail_firstbit_u32_u64(unsigned long long int input) __HC__;
+
+/**
+ * HSAIL builtin function to count leading zero bits in the input
+ *
+ * @param[in] input An signed 32-bit integer.
+ * @return Finds the first bit set in a positive integer starting from the
+ *         most significant bit, or finds the first bit clear in a negative
+ *         integer from the most significant bit.
+ *         If no bits in the input are set, then dest is set to -1.
+ */
+extern "C" unsigned int hsail_firstbit_u32_s32(int input) __HC__;
+
+/**
+ * HSAIL builtin function to count leading zero bits in the input
+ *
+ * @param[in] input An signed 64-bit integer.
+ * @return Finds the first bit set in a positive integer starting from the
+ *         most significant bit, or finds the first bit clear in a negative
+ *         integer from the most significant bit.
+ *         If no bits in the input are set, then dest is set to -1.
+ */
+extern "C" unsigned int hsail_firstbit_u32_s64(long long int input) __HC__;
 
 // ------------------------------------------------------------------------
 // dynamic group segment

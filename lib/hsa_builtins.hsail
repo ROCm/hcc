@@ -231,7 +231,7 @@ prog function &hsail_firstbit_u32_u64(arg_u32 %dest)(arg_u64 %src0)
 };
 
 /// firstbit_u32_s32
-prog function &hsail_firstbit_u32_s32(arg_u32 %dest)(arg_s32 %src0)
+prog function &hsail_firstbit_u32_s32(arg_u32 %dest)(arg_u32 %src0)
 {
   ld_arg_s32 $s0, [%src0];
   firstbit_u32_s32 $s1, $s0;
@@ -240,7 +240,7 @@ prog function &hsail_firstbit_u32_s32(arg_u32 %dest)(arg_s32 %src0)
 };
 
 /// firstbit_u32_s64
-prog function &hsail_firstbit_u32_s64(arg_u32 %dest)(arg_s64 %src0)
+prog function &hsail_firstbit_u32_s64(arg_u32 %dest)(arg_u64 %src0)
 {
   ld_arg_s64 $d0, [%src0];
   firstbit_u32_s64 $s0, $d0;
