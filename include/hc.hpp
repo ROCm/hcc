@@ -1892,6 +1892,20 @@ extern "C" unsigned int hsail_activelanecount_u32_b1(unsigned int input) __HC__;
  */
 extern "C" unsigned int hsail_activelaneid_u32() __HC__;
 
+/**
+ * HSAIL builtin to return a bit mask shows which active work-items in the
+ * wavefront have a non-zero input. The affected bit position within the
+ * registers of dest corresponds to each work-item's lane ID.
+ *
+ * The HSAIL instruction would return 4 64-bit registers but the current
+ * implementation would only return the 1st one and ignore the other 3 as
+ * right now all HSA agents have wavefront of size 64.
+ *
+ * @param[in] input An unsigned 32-bit integer.
+ * @return The bitmask calculated.
+ */
+extern "C" uint64_t hsail_activelanemask_v4_b64_b1(unsigned int input) __HC__;
+
 // ------------------------------------------------------------------------
 // dynamic group segment
 // ------------------------------------------------------------------------
