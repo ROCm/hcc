@@ -1813,6 +1813,22 @@ tiled_extent<3> extent<N>::tile(int t0, int t1, int t2) const __CPU__ __HC__ {
  */
 extern "C" unsigned int hsail_wavesize() __HC__;
 
+/**
+ * C interface of HSAIL builtin function to count number of 1 bits in the input
+ *
+ * @param[in] input An unsinged 32-bit integer.
+ * @return Number of 1 bits in the input.
+ */
+extern "C" unsigned int hsail_popcount_u32_b32(unsigned int input) __HC__;
+
+/**
+ * C interface of HSAIL builtin function to count number of 1 bits in the input
+ *
+ * @param[in] input An unsinged 64-bit integer.
+ * @return Number of 1 bits in the input.
+ */
+extern "C" unsigned int hsail_popcount_u32_b64(unsigned long long int input) __HC__;
+
 // ------------------------------------------------------------------------
 // dynamic group segment
 // ------------------------------------------------------------------------
