@@ -1869,6 +1869,11 @@ extern "C" unsigned int hsail_firstbit_u32_s32(int input) __HC__;
  */
 extern "C" unsigned int hsail_firstbit_u32_s64(long long int input) __HC__;
 
+/**
+ * HSAIL builtin to get system timestamp
+ */
+extern "C" uint64_t hsail_clock_u64() __HC__;
+
 // ------------------------------------------------------------------------
 // dynamic group segment
 // ------------------------------------------------------------------------
