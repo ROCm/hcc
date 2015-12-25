@@ -2332,22 +2332,22 @@ void partitioned_task_tile(Kernel const& f, tiled_extent<D0> const& ext, int par
         return;
     char *stk = new char[D0 * SSIZE];
     tiled_index<D0> *tidx = new tiled_index<D0>[D0];
-    tile_barrier::pb_t amp_bar = std::make_shared<barrier_t>(D0);
-    tile_barrier tbar(amp_bar);
+    tile_barrier::pb_t hc_bar = std::make_shared<barrier_t>(D0);
+    tile_barrier tbar(hc_bar);
     for (int tx = start; tx < end; tx++) {
         int id = 0;
         char *sp = stk;
         tiled_index<D0> *tip = tidx;
         for (int x = 0; x < D0; x++) {
             new (tip) tiled_index<D0>(tx * D0 + x, x, tx, tbar);
-            amp_bar->setctx(++id, sp, f, tip, SSIZE);
+            hc_bar->setctx(++id, sp, f, tip, SSIZE);
             sp += SSIZE;
             ++tip;
         }
-        amp_bar->idx = 0;
-        while (amp_bar->idx == 0) {
-            amp_bar->idx = id;
-            amp_bar->swap(0, id);
+        hc_bar->idx = 0;
+        while (hc_bar->idx == 0) {
+            hc_bar->idx = id;
+            hc_bar->swap(0, id);
         }
     }
     delete [] stk;
