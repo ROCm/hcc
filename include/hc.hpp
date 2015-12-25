@@ -22,6 +22,7 @@
 #include <kalmar_math.h>
 
 #include <hsa_atomic.h>
+#include <kalmar_cpu_launch.h>
 
 #ifndef __HC__
 #   define __HC__ [[hc]]
@@ -334,7 +335,7 @@ private:
     // FIXME: enable CPU execution path for HC
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
     template <typename Kernel, int N> friend
-        void Kalmar::launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>&, Kernel const&, extent<N> const&);
+        void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>&, Kernel const&, extent<N> const&);
 #endif
 
     // non-tiled parallel_for_each
@@ -1836,7 +1837,7 @@ struct barrier_t {
     void swap(int a, int b) {
         swapcontext(&ctx[a], &ctx[b]);
     }
-    void wait() {
+    void wait() __HC__ {
         --idx;
         swapcontext(&ctx[idx + 1], &ctx[idx]);
     }
@@ -2289,6 +2290,91 @@ private:
     template<typename Kernel> friend
         completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, const Kernel&);
 };
+
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+#define SSIZE 1024 * 10
+template <int N, typename Kernel,  int K>
+struct cpu_helper
+{
+    static inline void call(const Kernel& k, index<K>& idx, const extent<K>& ext) __CPU__ __HC__ {
+        int i;
+        for (i = 0; i < ext[N]; ++i) {
+            idx[N] = i;
+            cpu_helper<N + 1, Kernel, K>::call(k, idx, ext);
+        }
+    }
+};
+template <typename Kernel, int K>
+struct cpu_helper<K, Kernel, K>
+{
+    static inline void call(const Kernel& k, const index<K>& idx, const extent<K>& ext) __CPU__ __HC__ {
+        (const_cast<Kernel&>(k))(idx);
+    }
+};
+
+template <typename Kernel, int N>
+void partitioned_task(const Kernel& ker, const extent<N>& ext, int part) {
+    index<N> idx;
+    int start = ext[0] * part / Kalmar::NTHREAD;
+    int end = ext[0] * (part + 1) / Kalmar::NTHREAD;
+    for (int i = start; i < end; i++) {
+        idx[0] = i;
+        cpu_helper<1, Kernel, N>::call(ker, idx, ext);
+    }
+}
+
+template <typename Kernel, int D0>
+void partitioned_task_tile(Kernel const& f, tiled_extent<D0> const& ext, int part) {
+    int start = (ext[0] / D0) * part / Kalmar::NTHREAD;
+    int end = (ext[0] / D0) * (part + 1) / Kalmar::NTHREAD;
+    int stride = end - start;
+    if (stride == 0)
+        return;
+    char *stk = new char[D0 * SSIZE];
+    tiled_index<D0> *tidx = new tiled_index<D0>[D0];
+    tile_barrier::pb_t amp_bar = std::make_shared<barrier_t>(D0);
+    tile_barrier tbar(amp_bar);
+    for (int tx = start; tx < end; tx++) {
+        int id = 0;
+        char *sp = stk;
+        tiled_index<D0> *tip = tidx;
+        for (int x = 0; x < D0; x++) {
+            new (tip) tiled_index<D0>(tx * D0 + x, x, tx, tbar);
+            amp_bar->setctx(++id, sp, f, tip, SSIZE);
+            sp += SSIZE;
+            ++tip;
+        }
+        amp_bar->idx = 0;
+        while (amp_bar->idx == 0) {
+            amp_bar->idx = id;
+            amp_bar->swap(0, id);
+        }
+    }
+    delete [] stk;
+    delete [] tidx;
+}
+
+// FIXME: need to resolve the dependency to extent
+template <typename Kernel, int N>
+void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
+                     extent<N> const& compute_domain)
+{
+    Kalmar::CPUKernelRAII<Kernel> obj(pQueue, f);
+    for (int i = 0; i < Kalmar::NTHREAD; ++i)
+        obj[i] = std::thread(partitioned_task<Kernel, N>, std::cref(f), std::cref(compute_domain), i);
+}
+
+template <typename Kernel, int D0>
+void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
+                     tiled_extent<D0> const& compute_domain)
+{
+    Kalmar::CPUKernelRAII<Kernel> obj(pQueue, f);
+    for (int i = 0; i < Kalmar::NTHREAD; ++i)
+        obj[i] = std::thread(partitioned_task_tile<Kernel, D0>,
+                             std::cref(f), std::cref(compute_domain), i);
+}
+
+#endif
 
 // ------------------------------------------------------------------------
 // utility helper classes for array_view

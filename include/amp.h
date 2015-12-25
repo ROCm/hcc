@@ -19,7 +19,7 @@
 #include <kalmar_buffer.h>
 #include <kalmar_serialize.h>
 #include <kalmar_launch.h>
-#include <amp_cpu_launch.h>
+#include <kalmar_cpu_launch.h>
 
 // forward declaration
 namespace Concurrency {
@@ -29,6 +29,7 @@ class accelerator_view;
 template <typename T, int N> class array_view;
 template <typename T, int N> class array;
 template <int N> class extent;
+template <int D0, int D1=0, int D2=0> class tiled_extent;
 } // namespace Concurrency
 
 // namespace alias
@@ -58,6 +59,7 @@ using accelerator_view_removed = Kalmar::accelerator_view_removed;
 namespace Concurrency {
 
 using namespace Kalmar::enums;
+using namespace Kalmar::CLAMP;
 
 // ------------------------------------------------------------------------
 // accelerator_view
@@ -2056,8 +2058,8 @@ struct cpu_helper<K, Kernel, K>
 template <typename Kernel, int N>
 void partitioned_task(const Kernel& ker, const extent<N>& ext, int part) {
     index<N> idx;
-    int start = ext[0] * part / NTHREAD;
-    int end = ext[0] * (part + 1) / NTHREAD;
+    int start = ext[0] * part / Kalmar::NTHREAD;
+    int end = ext[0] * (part + 1) / Kalmar::NTHREAD;
     for (int i = start; i < end; i++) {
         idx[0] = i;
         cpu_helper<1, Kernel, N>::call(ker, idx, ext);
@@ -2066,8 +2068,8 @@ void partitioned_task(const Kernel& ker, const extent<N>& ext, int part) {
 
 template <typename Kernel, int D0>
 void partitioned_task_tile(Kernel const& f, tiled_extent<D0> const& ext, int part) {
-    int start = (ext[0] / D0) * part / NTHREAD;
-    int end = (ext[0] / D0) * (part + 1) / NTHREAD;
+    int start = (ext[0] / D0) * part / Kalmar::NTHREAD;
+    int end = (ext[0] / D0) * (part + 1) / Kalmar::NTHREAD;
     int stride = end - start;
     if (stride == 0)
         return;
@@ -2096,8 +2098,8 @@ void partitioned_task_tile(Kernel const& f, tiled_extent<D0> const& ext, int par
 }
 template <typename Kernel, int D0, int D1>
 void partitioned_task_tile(Kernel const& f, tiled_extent<D0, D1> const& ext, int part) {
-    int start = (ext[0] / D0) * part / NTHREAD;
-    int end = (ext[0] / D0) * (part + 1) / NTHREAD;
+    int start = (ext[0] / D0) * part / Kalmar::NTHREAD;
+    int end = (ext[0] / D0) * (part + 1) / Kalmar::NTHREAD;
     int stride = end - start;
     if (stride == 0)
         return;
@@ -2130,8 +2132,8 @@ void partitioned_task_tile(Kernel const& f, tiled_extent<D0, D1> const& ext, int
 
 template <typename Kernel, int D0, int D1, int D2>
 void partitioned_task_tile(Kernel const& f, tiled_extent<D0, D1, D2> const& ext, int part) {
-    int start = (ext[0] / D0) * part / NTHREAD;
-    int end = (ext[0] / D0) * (part + 1) / NTHREAD;
+    int start = (ext[0] / D0) * part / Kalmar::NTHREAD;
+    int end = (ext[0] / D0) * (part + 1) / Kalmar::NTHREAD;
     int stride = end - start;
     if (stride == 0)
         return;
@@ -2172,8 +2174,8 @@ template <typename Kernel, int N>
 void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
                      extent<N> const& compute_domain)
 {
-    CPUKernelRAII<Kernel> obj(pQueue, f);
-    for (int i = 0; i < NTHREAD; ++i)
+    Kalmar::CPUKernelRAII<Kernel> obj(pQueue, f);
+    for (int i = 0; i < Kalmar::NTHREAD; ++i)
         obj[i] = std::thread(partitioned_task<Kernel, N>, std::cref(f), std::cref(compute_domain), i);
 }
 
@@ -2181,8 +2183,8 @@ template <typename Kernel, int D0>
 void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
                      tiled_extent<D0> const& compute_domain)
 {
-    CPUKernelRAII<Kernel> obj(pQueue, f);
-    for (int i = 0; i < NTHREAD; ++i)
+    Kalmar::CPUKernelRAII<Kernel> obj(pQueue, f);
+    for (int i = 0; i < Kalmar::NTHREAD; ++i)
         obj[i] = std::thread(partitioned_task_tile<Kernel, D0>,
                              std::cref(f), std::cref(compute_domain), i);
 }
@@ -2191,8 +2193,8 @@ template <typename Kernel, int D0, int D1>
 void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
                      tiled_extent<D0, D1> const& compute_domain)
 {
-    CPUKernelRAII<Kernel> obj(pQueue, f);
-    for (int i = 0; i < NTHREAD; ++i)
+    Kalmar::CPUKernelRAII<Kernel> obj(pQueue, f);
+    for (int i = 0; i < Kalmar::NTHREAD; ++i)
         obj[i] = std::thread(partitioned_task_tile<Kernel, D0, D1>,
                              std::cref(f), std::cref(compute_domain), i);
 }
@@ -2201,8 +2203,8 @@ template <typename Kernel, int D0, int D1, int D2>
 void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
                      tiled_extent<D0, D1, D2> const& compute_domain)
 {
-    CPUKernelRAII<Kernel> obj(pQueue, f);
-    for (int i = 0; i < NTHREAD; ++i)
+    Kalmar::CPUKernelRAII<Kernel> obj(pQueue, f);
+    for (int i = 0; i < Kalmar::NTHREAD; ++i)
         obj[i] = std::thread(partitioned_task_tile<Kernel, D0, D1, D2>,
                              std::cref(f), std::cref(compute_domain), i);
 }
