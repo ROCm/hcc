@@ -90,6 +90,9 @@ inline uint64_t get_tick_frequency() {
     return Kalmar::getContext()->getSystemTickFrequency();
 }
 
+#define GET_SYMBOL_ADDRESS(acc, symbol) \
+    acc.get_symbol_address( #symbol );
+
 
 // ------------------------------------------------------------------------
 // accelerator_view
@@ -682,6 +685,28 @@ public:
      */
     bool is_hsa_accelerator() {
         return get_default_view().is_hsa_accelerator();
+    }
+
+    void memcpy_symbol(const char* symbolName, void* hostptr, size_t count, size_t offset = 0, hcMemcpyKind kind = hcMemcpyHostToDevice) {
+        pDev->memcpySymbol(symbolName, hostptr, count, offset, kind);
+    }
+
+    void memcpy_symbol(void* symbolAddr, void* hostptr, size_t count, size_t offset = 0, hcMemcpyKind kind = hcMemcpyHostToDevice) {
+        pDev->memcpySymbol(symbolAddr, hostptr, count, offset, kind);
+    }
+
+    void* get_symbol_address(const char* symbolName) {
+        return pDev->getSymbolAddress(symbolName);
+    }
+
+    /**
+     * Returns an opaque handle which points to the underlying HSA agent.
+     *
+     * @return An opaque handle of the underlying HSA agent, if the accelerator
+     *         is based on HSA.  NULL otherwise.
+     */
+    void* get_hsa_agent() {
+        return pDev->getHSAAgent();
     }
 
 private:
@@ -1775,6 +1800,79 @@ tiled_extent<3> extent<N>::tile(int t0, int t1, int t2) const __CPU__ __HC__ {
   static_assert(N == 3, "Three-dimensional tile() method only available on extent<3>");
   return tiled_extent<3>(*this, t0, t1, t2);
 }
+
+
+// ------------------------------------------------------------------------
+// HSAIL builtins
+// ------------------------------------------------------------------------
+
+/**
+ * HSAIL builtin function to fetch the size of a wavefront
+ *
+ * @return The size of a wavefront.
+ */
+extern "C" unsigned int hsail_wavesize() __HC__;
+
+/**
+ * HSAIL builtin function to count number of 1 bits in the input
+ *
+ * @param[in] input An unsinged 32-bit integer.
+ * @return Number of 1 bits in the input.
+ */
+extern "C" unsigned int hsail_popcount_u32_b32(unsigned int input) __HC__;
+
+/**
+ * HSAIL builtin function to count number of 1 bits in the input
+ *
+ * @param[in] input An unsinged 64-bit integer.
+ * @return Number of 1 bits in the input.
+ */
+extern "C" unsigned int hsail_popcount_u32_b64(unsigned long long int input) __HC__;
+
+/**
+ * HSAIL builtin function to count leading zero bits in the input
+ *
+ * @param[in] input An unsigned 32-bit integer.
+ * @return Number of 0 bits until a 1 bit is found, counting start from the
+ *         most significant bit. -1 if there is no 0 bit.
+ */
+extern "C" unsigned int hsail_firstbit_u32_u32(unsigned int input) __HC__;
+
+/**
+ * HSAIL builtin function to count leading zero bits in the input
+ *
+ * @param[in] input An unsigned 64-bit integer.
+ * @return Number of 0 bits until a 1 bit is found, counting start from the
+ *         most significant bit. -1 if there is no 0 bit.
+ */
+extern "C" unsigned int hsail_firstbit_u32_u64(unsigned long long int input) __HC__;
+
+/**
+ * HSAIL builtin function to count leading zero bits in the input
+ *
+ * @param[in] input An signed 32-bit integer.
+ * @return Finds the first bit set in a positive integer starting from the
+ *         most significant bit, or finds the first bit clear in a negative
+ *         integer from the most significant bit.
+ *         If no bits in the input are set, then dest is set to -1.
+ */
+extern "C" unsigned int hsail_firstbit_u32_s32(int input) __HC__;
+
+/**
+ * HSAIL builtin function to count leading zero bits in the input
+ *
+ * @param[in] input An signed 64-bit integer.
+ * @return Finds the first bit set in a positive integer starting from the
+ *         most significant bit, or finds the first bit clear in a negative
+ *         integer from the most significant bit.
+ *         If no bits in the input are set, then dest is set to -1.
+ */
+extern "C" unsigned int hsail_firstbit_u32_s64(long long int input) __HC__;
+
+/**
+ * HSAIL builtin to get system timestamp
+ */
+extern "C" uint64_t hsail_clock_u64() __HC__;
 
 // ------------------------------------------------------------------------
 // dynamic group segment
@@ -5607,7 +5705,6 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
     const accelerator_view& av,
     const extent<N>& compute_domain, const Kernel& f) __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
-    size_t compute_domain_size = 1;
     for(int i = 0 ; i < N ; i++)
     {
       // silently return in case the any dimension of the extent is 0
@@ -5616,9 +5713,6 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
       if (compute_domain[i] < 0)
         throw invalid_compute_domain("Extent is less than 0.");
       if (static_cast<size_t>(compute_domain[i]) > 4294967295L)
-        throw invalid_compute_domain("Extent size too large.");
-      compute_domain_size *= static_cast<size_t>(compute_domain[i]);
-      if (compute_domain_size > 4294967295L)
         throw invalid_compute_domain("Extent size too large.");
     }
     size_t ext[3] = {static_cast<size_t>(compute_domain[N - 1]),
@@ -5684,7 +5778,9 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   if (compute_domain[0] < 0 || compute_domain[1] < 0) {
     throw invalid_compute_domain("Extent is less than 0.");
   }
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
+  if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
+    throw invalid_compute_domain("Extent size too large.");
+  if (static_cast<size_t>(compute_domain[1]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
   size_t ext[2] = {static_cast<size_t>(compute_domain[1]),
                    static_cast<size_t>(compute_domain[0])};
@@ -5715,13 +5811,11 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   if (compute_domain[0] < 0 || compute_domain[1] < 0 || compute_domain[2] < 0) {
     throw invalid_compute_domain("Extent is less than 0.");
   }
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
+  if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
-  if (static_cast<size_t>(compute_domain[1]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
+  if (static_cast<size_t>(compute_domain[1]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
+  if (static_cast<size_t>(compute_domain[2]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
   size_t ext[3] = {static_cast<size_t>(compute_domain[2]),
                    static_cast<size_t>(compute_domain[1]),
@@ -5786,7 +5880,9 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   if (compute_domain[0] < 0 || compute_domain[1] < 0) {
     throw invalid_compute_domain("Extent is less than 0.");
   }
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
+  if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
+    throw invalid_compute_domain("Extent size too large.");
+  if (static_cast<size_t>(compute_domain[1]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
   size_t ext[2] = { static_cast<size_t>(compute_domain[1]),
                     static_cast<size_t>(compute_domain[0])};
@@ -5821,13 +5917,11 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   if (compute_domain[0] < 0 || compute_domain[1] < 0 || compute_domain[2] < 0) {
     throw invalid_compute_domain("Extent is less than 0.");
   }
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
+  if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
-  if (static_cast<size_t>(compute_domain[1]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
+  if (static_cast<size_t>(compute_domain[1]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
-    throw invalid_compute_domain("Extent size too large.");
-  if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
+  if (static_cast<size_t>(compute_domain[2]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
   size_t ext[3] = { static_cast<size_t>(compute_domain[2]),
                     static_cast<size_t>(compute_domain[1]),

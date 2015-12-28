@@ -228,8 +228,6 @@ runall_result test_main()
 {
     srand(2010);
 
-// XXX bypass the test and directly make it fail for now
-#if 0
     accelerator_view av = require_device_for<AMP_ELEMENT_TYPE>(Device::ALL_DEVICES).get_default_view();
 
     Log() << "test in local memory: \n";
@@ -245,9 +243,5 @@ runall_result test_main()
     Log() << "pass\n";
     
     return runall_pass;
-#else
-    return runall_fail;
-#endif
-
 }
 

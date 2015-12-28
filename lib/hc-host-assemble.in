@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# hc-host-assemble host-bitcode host-object
+# hc-host-assemble host-bitcode host-object (-fPIC)
 
 # tools search priority:
 # 1) $HCC_HOME
@@ -47,14 +47,19 @@ else
     exit 1
 fi
 
-if [ "$#" -ne 2 ]; then
-  echo "Usage: $0 kernel-bitcode object" >&2
+if [ "$#" -ne 2 ] && [ "$#" -ne 3 ]; then
+  echo "Usage: $0 kernel-bitcode object (-fPIC)" >&2
   exit 1
 fi
 
 if [ ! -f $1 ]; then
   echo "kernel-bitcode $1 is not valid" >&2
   exit 1
+fi
+
+CXXFLAGS=
+if [ "$#" -eq 3 ]; then
+CXXFLAGS=$3
 fi
 
 CO="-c -o"
@@ -73,10 +78,10 @@ if [ $KMDUMPLLVM == "1" ]; then
 fi
 if [[ -s $TEMP_NAME.host_redirect.ll ]]; then
   $LLVM_AS $TEMP_NAME.host_redirect.ll -o $TEMP_NAME.host_redirect.bc
-  $CLANG -std=c++amp $TEMP_NAME.host_redirect.bc $CO $2
+  $CLANG -std=c++amp $CXXFLAGS $TEMP_NAME.host_redirect.bc $CO $2
 else
   ln -s $1 $1.bc
-  $CLANG -std=c++amp $1.bc $CO $2
+  $CLANG -std=c++amp $CXXFLAGS $1.bc $CO $2
 fi
 
 rm -f $TEMP_NAME.* $1.bc

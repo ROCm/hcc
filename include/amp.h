@@ -3850,7 +3850,7 @@ public:
     /**
      * The element type of this array.
      */
-    typedef T value_type;
+    typedef const T value_type;
 
     /**
      * There is no default constructor for array_view<T,N>.

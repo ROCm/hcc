@@ -22,11 +22,16 @@
 #error __hcc_version__ is not defined!
 #endif
 
+#ifndef __hcc_workweek__
+#error __hcc_workweek__ is not defined!
+#endif
+
 int main() {
   std::cout << __hcc_major__ << "\n"
             << __hcc_minor__ << "\n"
             << __hcc_patchlevel__ << "\n"
-            << __hcc_version__ << "\n";
+            << __hcc_version__ << "\n"
+            << __hcc_workweek__ << "\n";
 
   return 0;
 }
