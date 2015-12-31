@@ -347,13 +347,16 @@ struct StringFinder
       str.insert(0, sTy->getName());
 
       auto st = sTy->getName().find("class.");
-      if(st != std::string::npos)
+      if(st != std::string::npos) {
         str.erase(st, std::strlen("class."));
+        std::replace(str.begin(), str.end(), ':', '_');
+      }
       else {
         st = sTy->getName().find("struct.");
         if(st != std::string::npos)
           str.erase(st, std::strlen("struct."));
       }
+
 
       // Rename struct so there won't be name conflicts during compilation
       // Linking should still resolve correctly as long as struct has POD members
