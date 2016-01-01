@@ -54,14 +54,8 @@ namespace {
             wrapperFunc->setAttributes(AttributeSet::get(F->getContext(), AttributeSet::FunctionIndex, B));
             M.getFunctionList().push_back(wrapperFunc);
 
-            // find uses of kernel proper
-            for(Value::user_iterator U = F->user_begin(), U_end = F->user_end(); U != U_end; ++U)
-            {
-              if(CallInst* ci = dyn_cast<CallInst>(*U))
-                ci->setCalledFunction(wrapperFunc);
-              if(InvokeInst* ii = dyn_cast<InvokeInst>(*U))
-                ii->setCalledFunction(wrapperFunc);
-            }
+            // Simply replace all uses with new wrapper function
+            F->replaceAllUsesWith(wrapperFunc);
           } // !F->hasNUses > 0
 
           // host side does not need the function definition of a grid_launch kernel
