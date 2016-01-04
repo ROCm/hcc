@@ -1907,6 +1907,38 @@ extern "C" unsigned int hsail_activelaneid_u32() __HC__;
 extern "C" uint64_t hsail_activelanemask_v4_b64_b1(unsigned int input) __HC__;
 
 // ------------------------------------------------------------------------
+// Wavefront Vote Functions
+// ------------------------------------------------------------------------
+
+/**
+ * HSAIL builtin to evaluate predicate for all active work-items in the
+ * wavefront and return non-zero if and only if predicate evaluates to non-zero
+ * for all of them.
+ */
+extern "C" inline int __any(int predicate) __HC__ {
+    return hsail_popcount_u32_b64(hsail_activelanemask_v4_b64_b1(predicate));
+}
+
+/**
+ * HSAIL builtin to evaluate predicate for all active work-items in the
+ * wavefront and return non-zero if and only if predicate evaluates to non-zero
+ * for any of them.
+ */
+extern "C" inline int __all(int predicate) __HC__ {
+    return hsail_popcount_u32_b64(hsail_activelanemask_v4_b64_b1(predicate)) == hsail_activelanecount_u32_b1(1);
+}
+
+/**
+ * HSAIL builtin to evaluate predicate for all active work-items in the
+ * wavefront and return an integer whose Nth bit is set if and only if
+ * predicate evaluates to non-zero for the Nth work-item of the wavefront and
+ * the Nth work-item is active.
+ */
+extern "C" inline uint64_t __ballot(int predicate) __HC__ {
+    return hsail_activelanemask_v4_b64_b1(predicate);
+}
+
+// ------------------------------------------------------------------------
 // dynamic group segment
 // ------------------------------------------------------------------------
 
