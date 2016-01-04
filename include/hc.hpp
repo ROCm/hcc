@@ -1906,6 +1906,13 @@ extern "C" unsigned int hsail_activelaneid_u32() __HC__;
  */
 extern "C" uint64_t hsail_activelanemask_v4_b64_b1(unsigned int input) __HC__;
 
+/**
+ * HSAIL builtin to permute active work-items in the wavefront.
+ *
+ * Please refer to: <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/09_Parallel/cross_lane.htm">HSA PRM</a> for more detailed information of this instruction.
+ */
+extern "C" unsigned int hsail_activelanepermute_b32(unsigned int src, unsigned int laneId, unsigned int identity, unsigned int useIdentity) __HC__;
+
 // ------------------------------------------------------------------------
 // Wavefront Vote Functions
 // ------------------------------------------------------------------------
