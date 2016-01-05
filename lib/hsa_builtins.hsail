@@ -319,7 +319,7 @@ prog function &hsail_lastbit_u32_s64(arg_u32 %dest)(arg_s64 %src0)
 ////////////////////
 
 // unpacklo_u8x4
-prog function &unpacklo_u8x4(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1)
+prog function &hsail_unpacklo_u8x4(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1)
 {
   ld_arg_u32 $s0, [%src0];
   ld_arg_u32 $s1, [%src1];
@@ -329,7 +329,7 @@ prog function &unpacklo_u8x4(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1)
 };
 
 // unpacklo_u8x8
-prog function &unpacklo_u8x8(arg_u64 %dest)(arg_u64 %src0, arg_u64 %src1)
+prog function &hsail_unpacklo_u8x8(arg_u64 %dest)(arg_u64 %src0, arg_u64 %src1)
 {
   ld_arg_u64 $d0, [%src0];
   ld_arg_u64 $d1, [%src1];
@@ -339,7 +339,7 @@ prog function &unpacklo_u8x8(arg_u64 %dest)(arg_u64 %src0, arg_u64 %src1)
 };
 
 // unpacklo_u16x2
-prog function &unpacklo_u16x2(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1)
+prog function &hsail_unpacklo_u16x2(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1)
 {
   ld_arg_u32 $s0, [%src0];
   ld_arg_u32 $s1, [%src1];
@@ -349,7 +349,7 @@ prog function &unpacklo_u16x2(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1)
 };
 
 // unpacklo_u16x4
-prog function &unpacklo_u16x4(arg_u64 %dest)(arg_u64 %src0, arg_u64 %src1)
+prog function &hsail_unpacklo_u16x4(arg_u64 %dest)(arg_u64 %src0, arg_u64 %src1)
 {
   ld_arg_u64 $d0, [%src0];
   ld_arg_u64 $d1, [%src1];
@@ -359,7 +359,7 @@ prog function &unpacklo_u16x4(arg_u64 %dest)(arg_u64 %src0, arg_u64 %src1)
 };
 
 // unpacklo_u32x2
-prog function &unpacklo_u32x2(arg_u64 %dest)(arg_u64 %src0, arg_u64 %src1)
+prog function &hsail_unpacklo_u32x2(arg_u64 %dest)(arg_u64 %src0, arg_u64 %src1)
 {
   ld_arg_u64 $d0, [%src0];
   ld_arg_u64 $d1, [%src1];
@@ -369,7 +369,7 @@ prog function &unpacklo_u32x2(arg_u64 %dest)(arg_u64 %src0, arg_u64 %src1)
 };
 
 // unpacklo_s8x4
-prog function &unpacklo_s8x4(arg_s32 %dest)(arg_s32 %src0, arg_s32 %src1)
+prog function &hsail_unpacklo_s8x4(arg_s32 %dest)(arg_s32 %src0, arg_s32 %src1)
 {
   ld_arg_s32 $s0, [%src0];
   ld_arg_s32 $s1, [%src1];
@@ -379,7 +379,7 @@ prog function &unpacklo_s8x4(arg_s32 %dest)(arg_s32 %src0, arg_s32 %src1)
 };
 
 // unpacklo_s8x8
-prog function &unpacklo_s8x8(arg_s64 %dest)(arg_s64 %src0, arg_s64 %src1)
+prog function &hsail_unpacklo_s8x8(arg_s64 %dest)(arg_s64 %src0, arg_s64 %src1)
 {
   ld_arg_s64 $d0, [%src0];
   ld_arg_s64 $d1, [%src1];
@@ -389,7 +389,7 @@ prog function &unpacklo_s8x8(arg_s64 %dest)(arg_s64 %src0, arg_s64 %src1)
 };
 
 // unpacklo_s16x2
-prog function &unpacklo_s16x2(arg_s32 %dest)(arg_s32 %src0, arg_s32 %src1)
+prog function &hsail_unpacklo_s16x2(arg_s32 %dest)(arg_s32 %src0, arg_s32 %src1)
 {
   ld_arg_s32 $s0, [%src0];
   ld_arg_s32 $s1, [%src1];
@@ -399,7 +399,7 @@ prog function &unpacklo_s16x2(arg_s32 %dest)(arg_s32 %src0, arg_s32 %src1)
 };
 
 // unpacklo_s16x4
-prog function &unpacklo_s16x4(arg_s64 %dest)(arg_s64 %src0, arg_s64 %src1)
+prog function &hsail_unpacklo_s16x4(arg_s64 %dest)(arg_s64 %src0, arg_s64 %src1)
 {
   ld_arg_s64 $d0, [%src0];
   ld_arg_s64 $d1, [%src1];
@@ -409,7 +409,7 @@ prog function &unpacklo_s16x4(arg_s64 %dest)(arg_s64 %src0, arg_s64 %src1)
 };
 
 // unpacklo_s32x2
-prog function &unpacklo_s32x2(arg_s64 %dest)(arg_s64 %src0, arg_s64 %src1)
+prog function &hsail_unpacklo_s32x2(arg_s64 %dest)(arg_s64 %src0, arg_s64 %src1)
 {
   ld_arg_s64 $d0, [%src0];
   ld_arg_s64 $d1, [%src1];
@@ -423,7 +423,7 @@ prog function &unpacklo_s32x2(arg_s64 %dest)(arg_s64 %src0, arg_s64 %src1)
 ////////////////////
 
 // unpackhi_u8x4
-prog function &unpackhi_u8x4(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1)
+prog function &hsail_unpackhi_u8x4(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1)
 {
   ld_arg_u32 $s0, [%src0];
   ld_arg_u32 $s1, [%src1];
@@ -433,7 +433,7 @@ prog function &unpackhi_u8x4(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1)
 };
 
 // unpackhi_u8x8
-prog function &unpackhi_u8x8(arg_u64 %dest)(arg_u64 %src0, arg_u64 %src1)
+prog function &hsail_unpackhi_u8x8(arg_u64 %dest)(arg_u64 %src0, arg_u64 %src1)
 {
   ld_arg_u64 $d0, [%src0];
   ld_arg_u64 $d1, [%src1];
@@ -443,7 +443,7 @@ prog function &unpackhi_u8x8(arg_u64 %dest)(arg_u64 %src0, arg_u64 %src1)
 };
 
 // unpackhi_u16x2
-prog function &unpackhi_u16x2(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1)
+prog function &hsail_unpackhi_u16x2(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1)
 {
   ld_arg_u32 $s0, [%src0];
   ld_arg_u32 $s1, [%src1];
@@ -453,7 +453,7 @@ prog function &unpackhi_u16x2(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1)
 };
 
 // unpackhi_u16x4
-prog function &unpackhi_u16x4(arg_u64 %dest)(arg_u64 %src0, arg_u64 %src1)
+prog function &hsail_unpackhi_u16x4(arg_u64 %dest)(arg_u64 %src0, arg_u64 %src1)
 {
   ld_arg_u64 $d0, [%src0];
   ld_arg_u64 $d1, [%src1];
@@ -463,7 +463,7 @@ prog function &unpackhi_u16x4(arg_u64 %dest)(arg_u64 %src0, arg_u64 %src1)
 };
 
 // unpackhi_u32x2
-prog function &unpackhi_u32x2(arg_u64 %dest)(arg_u64 %src0, arg_u64 %src1)
+prog function &hsail_unpackhi_u32x2(arg_u64 %dest)(arg_u64 %src0, arg_u64 %src1)
 {
   ld_arg_u64 $d0, [%src0];
   ld_arg_u64 $d1, [%src1];
@@ -473,7 +473,7 @@ prog function &unpackhi_u32x2(arg_u64 %dest)(arg_u64 %src0, arg_u64 %src1)
 };
 
 // unpackhi_s8x4
-prog function &unpackhi_s8x4(arg_s32 %dest)(arg_s32 %src0, arg_s32 %src1)
+prog function &hsail_unpackhi_s8x4(arg_s32 %dest)(arg_s32 %src0, arg_s32 %src1)
 {
   ld_arg_s32 $s0, [%src0];
   ld_arg_s32 $s1, [%src1];
@@ -483,7 +483,7 @@ prog function &unpackhi_s8x4(arg_s32 %dest)(arg_s32 %src0, arg_s32 %src1)
 };
 
 // unpackhi_s8x8
-prog function &unpackhi_s8x8(arg_s64 %dest)(arg_s64 %src0, arg_s64 %src1)
+prog function &hsail_unpackhi_s8x8(arg_s64 %dest)(arg_s64 %src0, arg_s64 %src1)
 {
   ld_arg_s64 $d0, [%src0];
   ld_arg_s64 $d1, [%src1];
@@ -493,7 +493,7 @@ prog function &unpackhi_s8x8(arg_s64 %dest)(arg_s64 %src0, arg_s64 %src1)
 };
 
 // unpackhi_s16x2
-prog function &unpackhi_s16x2(arg_s32 %dest)(arg_s32 %src0, arg_s32 %src1)
+prog function &hsail_unpackhi_s16x2(arg_s32 %dest)(arg_s32 %src0, arg_s32 %src1)
 {
   ld_arg_s32 $s0, [%src0];
   ld_arg_s32 $s1, [%src1];
@@ -503,7 +503,7 @@ prog function &unpackhi_s16x2(arg_s32 %dest)(arg_s32 %src0, arg_s32 %src1)
 };
 
 // unpackhi_s16x4
-prog function &unpackhi_s16x4(arg_s64 %dest)(arg_s64 %src0, arg_s64 %src1)
+prog function &hsail_unpackhi_s16x4(arg_s64 %dest)(arg_s64 %src0, arg_s64 %src1)
 {
   ld_arg_s64 $d0, [%src0];
   ld_arg_s64 $d1, [%src1];
@@ -513,7 +513,7 @@ prog function &unpackhi_s16x4(arg_s64 %dest)(arg_s64 %src0, arg_s64 %src1)
 };
 
 // unpackhi_s32x2
-prog function &unpackhi_s32x2(arg_s64 %dest)(arg_s64 %src0, arg_s64 %src1)
+prog function &hsail_unpackhi_s32x2(arg_s64 %dest)(arg_s64 %src0, arg_s64 %src1)
 {
   ld_arg_s64 $d0, [%src0];
   ld_arg_s64 $d1, [%src1];
@@ -840,7 +840,7 @@ prog function &hsail_bytealign_b32(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1, 
 };
 
 /// lerp_u8x4
-prog function &hsail_lep_u8x4(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1, arg_u32 %src2)
+prog function &hsail_lerp_u8x4(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1, arg_u32 %src2)
 {
   ld_arg_u32 $s0, [%src0];
   ld_arg_u32 $s1, [%src1];
