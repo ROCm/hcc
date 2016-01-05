@@ -2089,6 +2089,22 @@ extern "C" unsigned int hsail_bytealign_b32(unsigned int src0, unsigned int src1
 extern "C" unsigned int hsail_lerp_u8x4(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
 
 /**
+ * HSAIL builtin which takes four floating-point number, convers them to
+ * unsigned integer values, and packs them into a packed u8x4 value
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
+ */
+extern "C" unsigned int hsail_packcvt_u8x4_f32(float src0, float src1, float src2, float src3) __HC__;
+
+/**
+ * HSAIL builtin which unpacks a single element from a packed u8x4 value and
+ * converts it to an f32.
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
+ */
+extern "C" float hsail_unpackcvt_f32_u8x4(unsigned int src0, unsigned int src1) __HC__;
+
+/**
  * HSAIL builtin to get system timestamp
  */
 extern "C" uint64_t hsail_clock_u64() __HC__;
