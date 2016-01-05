@@ -1881,6 +1881,17 @@ extern "C" unsigned int hsail_bitrev_b32(unsigned int src0) __HC__;
 extern "C" uint64_t hsail_bitrev_b64(uint64_t src0) __HC__;
 /** @} */
 
+/** @{ */
+/**
+ * HSAIL builtin to do bit field selection
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these builtin functions.
+ */
+extern "C" unsigned int hsail_bitselect_b32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+
+extern "C" uint64_t hsail_bitselect_b64(uint64_t src0, uint64_t src1, uint64_t src2) __HC__;
+/** @} */
+
 /**
  * HSAIL builtin function to count leading zero bits in the input
  *
