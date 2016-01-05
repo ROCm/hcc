@@ -2092,6 +2092,16 @@ inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) _
     return hsail_activelanepermute_b32(var, newSrcLane, 0, 0);
 }
 
+inline float __shfl_xor(float var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+    __u tmp; tmp.f = var;
+    tmp.i = __shfl_xor(tmp.i, laneMask, width);
+    return tmp.f;
+}
+
+// FIXME: support half type
+/** @} */
+
+
 // ------------------------------------------------------------------------
 // dynamic group segment
 // ------------------------------------------------------------------------
