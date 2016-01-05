@@ -1951,6 +1951,24 @@ extern "C" inline uint64_t __ballot(int predicate) __HC__ {
 
 #define __HSA_WAVEFRONT_SIZE__ (64)
 
+/**
+ * HSAIL builtin to direct copy from indexed active work-item within a wavefront.
+ *
+ * Work-items may only read data from another work-item which is active in the
+ * current wavefront. If the target work-item is inactive, the retrieved value
+ * is fixed as 0.
+ *
+ * The function returns the value of var held by the work-item whose ID is given
+ * by srcLane. If width is less than __HSA_WAVEFRONT_SIZE__ then each
+ * subsection of the wavefront behaves as a separate entity with a starting
+ * logical work-item ID of 0. If srcLane is outside the range [0:width-1], the
+ * value returned corresponds to the value of var held by:
+ * srcLane modulo width (i.e. within the same subsection).
+ *
+ * The optional width parameter must have a value which is a power of 2;
+ * results are undefined if it is not a power of 2, or is number greater than
+ * __HSA_WAVEFRONT_SIZE__.
+ */
 extern "C" inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     unsigned int laneId = hsail_activelaneid_u32();
     unsigned int shift = hsail_popcount_u32_b32(width - 1);
@@ -1958,6 +1976,26 @@ extern "C" inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZ
     return hsail_activelanepermute_b32(var, newSrcLane, 0, 0);
 }
 
+/**
+ * HSAIL builtin to copy from an active work-item with lower ID relative to
+ * caller within a wavefront.
+ *
+ * Work-items may only read data from another work-item which is active in the
+ * current wavefront. If the target work-item is inactive, the retrieved value
+ * is fixed as 0.
+ *
+ * The function calculates a source work-item ID by subtracting delta from the
+ * caller's work-item ID within the wavefront. The value of var held by the
+ * resulting lane ID is returned: in effect, var is shifted up the wavefront by
+ * delta work-items. If width is less than __HSA_WAVEFRONT_SIZE__ then each
+ * subsection of the wavefront behaves as a separate entity with a starting
+ * logical work-item ID of 0. The source work-item index will not wrap around
+ * the value of width, so effectively the lower delta work-items will be unchanged.
+ *
+ * The optional width parameter must have a value which is a power of 2;
+ * results are undefined if it is not a power of 2, or is number greater than
+ * __HSA_WAVEFRONT_SIZE__.
+ */
 extern "C" inline int __shfl_up(int var, unsigned int delta, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     unsigned int laneId = hsail_activelaneid_u32();
     unsigned int shift = hsail_popcount_u32_b32(width - 1);
@@ -1966,6 +2004,27 @@ extern "C" inline int __shfl_up(int var, unsigned int delta, int width=__HSA_WAV
     return hsail_activelanepermute_b32(var, newSrcLane, 0, 0);
 }
 
+/**
+ * HSAIL builtin to copy from an active work-item with higher ID relative to
+ * caller within a wavefront.
+ *
+ * Work-items may only read data from another work-item which is active in the
+ * current wavefront. If the target work-item is inactive, the retrieved value
+ * is fixed as 0.
+ *
+ * The function calculates a source work-item ID by adding delta from the
+ * caller's work-item ID within the wavefront. The value of var held by the
+ * resulting lane ID is returned: this has the effect of shifting var up the
+ * wavefront by delta work-items. If width is less than __HSA_WAVEFRONT_SIZE__
+ * then each subsection of the wavefront behaves as a separate entity with a
+ * starting logical work-item ID of 0. The ID number of the source work-item
+ * index will not wrap around the value of width, so the upper delta work-items
+ * will remain unchanged.
+ *
+ * The optional width parameter must have a value which is a power of 2;
+ * results are undefined if it is not a power of 2, or is number greater than
+ * __HSA_WAVEFRONT_SIZE__.
+ */
 extern "C" inline int __shfl_down(int var, unsigned int delta, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     unsigned int laneId = hsail_activelaneid_u32();
     unsigned int shift = hsail_popcount_u32_b32(width - 1);
@@ -1974,6 +2033,22 @@ extern "C" inline int __shfl_down(int var, unsigned int delta, int width=__HSA_W
     return hsail_activelanepermute_b32(var, newSrcLane, 0, 0);
 }
 
+/**
+ * HSAIL builtin to copy from an active work-item based on bitwise XOR of caller
+ * work-item ID within a wavefront.
+ *
+ * Work-items may only read data from another work-item which is active in the
+ * current wavefront. If the target work-item is inactive, the retrieved value
+ * is fixed as 0.
+ *
+ * THe function calculates a source work-item ID by performing a bitwise XOR of
+ * the caller's work-item ID with laneMask: the value of var held by the
+ * resulting work-item ID is returned.
+ *
+ * The optional width parameter must have a value which is a power of 2;
+ * results are undefined if it is not a power of 2, or is number greater than
+ * __HSA_WAVEFRONT_SIZE__.
+ */
 extern "C" inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     unsigned int laneId = hsail_activelaneid_u32();
     unsigned int shift = hsail_popcount_u32_b32(width - 1);
