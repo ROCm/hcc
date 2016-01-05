@@ -1946,6 +1946,31 @@ extern "C" inline uint64_t __ballot(int predicate) __HC__ {
 }
 
 // ------------------------------------------------------------------------
+// Wavefront Shuffle Functions
+// ------------------------------------------------------------------------
+
+#define __HSA_WAVEFRONT_SIZE__ (64)
+
+extern "C" inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+    return hsail_activelanepermute_b32(var, srcLane, 0, 0);
+}
+
+extern "C" inline int __shfl_up(int var, unsigned int delta, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+    unsigned int laneId = hsail_activelaneid_u32();
+    return (laneId < delta) ? var : hsail_activelanepermute_b32(var, laneId - delta, 0, 0);
+}
+
+extern "C" inline int __shfl_down(int var, unsigned int delta, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+    unsigned int laneId = hsail_activelaneid_u32();
+    return ((laneId + delta) < hsail_activelanecount_u32_b1(1)) ? var : hsail_activelanepermute_b32(var, laneId + delta, 0, 0);
+}
+
+extern "C" inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+    unsigned int laneId = hsail_activelaneid_u32();
+    return hsail_activelanepermute_b32(var, laneId ^ laneMask, 0, 0);
+}
+
+// ------------------------------------------------------------------------
 // dynamic group segment
 // ------------------------------------------------------------------------
 
