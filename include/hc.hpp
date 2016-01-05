@@ -2059,6 +2059,15 @@ inline int __shfl_down(int var, unsigned int delta, int width=__HSA_WAVEFRONT_SI
     return hsail_activelanepermute_b32(var, newSrcLane, 0, 0);
 }
 
+inline float __shfl_down(float var, unsigned int delta, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+    __u tmp; tmp.f = var;
+    tmp.i = __shfl_down(tmp.i, delta, width);
+    return tmp.f;
+}
+
+// FIXME: support half type
+/** @} */
+
 /**
  * HSAIL builtin to copy from an active work-item based on bitwise XOR of caller
  * work-item ID within a wavefront.
