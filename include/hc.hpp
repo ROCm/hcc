@@ -1988,8 +1988,11 @@ inline float __shfl(float var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __
     tmp.i = __shfl(tmp.i, srcLane, width);
     return tmp.f;
 }
+
+// FIXME: support half type
 /** @} */
 
+/** @{ */
 /**
  * HSAIL builtin to copy from an active work-item with lower ID relative to
  * caller within a wavefront.
@@ -2017,6 +2020,15 @@ inline int __shfl_up(int var, unsigned int delta, int width=__HSA_WAVEFRONT_SIZE
     unsigned int newSrcLane = (logicalLaneId < delta) ? laneId : ((laneId >> shift) << shift) + (logicalLaneId - delta);
     return hsail_activelanepermute_b32(var, newSrcLane, 0, 0);
 }
+
+inline float __shfl_up(float var, unsigned int delta, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+    __u tmp; tmp.f = var;
+    tmp.i = __shfl_up(tmp.i, delta, width);
+    return tmp.f;
+}
+
+// FIXME: support half type
+/** @} */
 
 /**
  * HSAIL builtin to copy from an active work-item with higher ID relative to
