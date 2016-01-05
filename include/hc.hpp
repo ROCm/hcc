@@ -2104,6 +2104,28 @@ extern "C" unsigned int hsail_packcvt_u8x4_f32(float src0, float src1, float src
  */
 extern "C" float hsail_unpackcvt_f32_u8x4(unsigned int src0, unsigned int src1) __HC__;
 
+/** @{ */
+/**
+ * HSAIL builtin which computes the sum of the absolute differences of src0 and
+ * src1 and then adds src2 to the result
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
+ */
+extern "C" unsigned int hsail_sad_u32_u32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+
+extern "C" unsigned int hsail_sad_u32_u16x2(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+
+extern "C" unsigned int hsail_sad_u32_u8x4(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+/** @} */
+
+/**
+ * HSAIL builtin which is mostly the same as sad except the sum of absolute
+ * differences is added to the most significant 16 bits of the result
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
+ */
+extern "C" unsigned int hsail_sadhi_u16x2_u8x4(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+
 /**
  * HSAIL builtin to get system timestamp
  */
