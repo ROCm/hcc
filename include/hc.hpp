@@ -2004,6 +2004,36 @@ extern "C" int64_t hsail_unpackhi_s16x4(int64_t src0, int64_t src1) __HC__;
 extern "C" int64_t hsail_unpackhi_s32x2(int64_t src0, int64_t src1) __HC__;
 /** @} */
 
+/** @{ */
+/**
+ * HSAIL builtin to assign the elements of the packed value in src0, replacing
+ * the element specified by src2 with the value from src1
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/packed_data.htm">HSA PRM 5.9</a> for more detailed specification of these builtin functions.
+ */
+extern "C" unsigned int hsail_pack_u8x4_u32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+
+extern "C" uint64_t hsail_pack_u8x8_u32(uint64_t src0, unsigned int src1, unsigned int src2) __HC__;
+
+extern "C" unsigned hsail_pack_u16x2_u32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+
+extern "C" uint64_t hsail_pack_u16x4_u32(uint64_t src0, unsigned int src1, unsigned int src2) __HC__;
+
+extern "C" uint64_t hsail_pack_u32x2_u32(uint64_t src0, unsigned int src1, unsigned int src2) __HC__;
+
+extern "C" int hsail_pack_s8x4_s32(int src0, int src1, unsigned int src2) __HC__;
+
+extern "C" int64_t hsail_pack_s8x8_s32(int64_t src0, int src1, unsigned int src2) __HC__;
+
+extern "C" int hsail_pack_s16x2_s32(int src0, int src1, unsigned int src2) __HC__;
+
+extern "C" int64_t hsail_pack_s16x4_s32(int64_t src0, int src1, unsigned int src2) __HC__;
+
+extern "C" int64_t hsail_pack_s32x2_s32(int64_t src0, int src1, unsigned int src2) __HC__;
+
+extern "C" double hsail_pack_f32x2_f32(double src0, float src1, unsigned int src2) __HC__;
+/** @} */
+
 /**
  * HSAIL builtin to get system timestamp
  */
