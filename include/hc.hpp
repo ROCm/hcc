@@ -1829,6 +1829,24 @@ extern "C" unsigned int hsail_popcount_u32_b32(unsigned int input) __HC__;
  */
 extern "C" unsigned int hsail_popcount_u32_b64(unsigned long long int input) __HC__;
 
+/** @{ */
+/**
+ * HSAIL builtin to extract a range of bits
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these builtin functions.
+ */
+extern "C" unsigned int hsail_bitextract_u32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+
+extern "C" uint64_t hsail_bitextract_u64(uint64_t src0, unsigned int src1, unsigned int src2) __HC__;
+
+extern "C" int hsail_bitextract_s32(int src0, unsigned int src1, unsigned int src2) __HC__;
+
+extern "C" int64_t hsail_bitextract_s64(int64_t src0, unsigned int src1, unsigned int src2) __HC__;
+/** @} */
+
+/** @{ */
+/** @} */
+
 /**
  * HSAIL builtin function to count leading zero bits in the input
  *
