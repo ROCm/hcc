@@ -2081,6 +2081,14 @@ extern "C" unsigned int hsail_bitalign_b32(unsigned int src0, unsigned int src1,
 extern "C" unsigned int hsail_bytealign_b32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
 
 /**
+ * HSAIL builtin which does linear interpolation and computes the unsigned
+ * 8-bit average of packed data
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
+ */
+extern "C" unsigned int hsail_lerp_u8x4(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+
+/**
  * HSAIL builtin to get system timestamp
  */
 extern "C" uint64_t hsail_clock_u64() __HC__;

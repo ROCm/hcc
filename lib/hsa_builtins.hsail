@@ -840,7 +840,7 @@ prog function &hsail_bytealign_b32(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1, 
 };
 
 /// lerp_u8x4
-prog function &hsail_lep_u8x4(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1, arg_u32 %src2)
+prog function &hsail_lerp_u8x4(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1, arg_u32 %src2)
 {
   ld_arg_u32 $s0, [%src0];
   ld_arg_u32 $s1, [%src1];
