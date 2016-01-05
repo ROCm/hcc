@@ -1932,6 +1932,22 @@ extern "C" unsigned int hsail_firstbit_u32_s32(int input) __HC__;
  */
 extern "C" unsigned int hsail_firstbit_u32_s64(long long int input) __HC__;
 
+/** @{ */
+/**
+ * HSAIL builtin to find the first bit set to 1 in a number starting from the
+ * least significant bit
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these builtin functions.
+ */
+extern "C" unsigned int hsail_lastbit_u32_u32(unsigned int input) __HC__;
+
+extern "C" unsigned int hsail_lastbit_u32_u64(unsigned long long int input) __HC__;
+
+extern "C" unsigned int hsail_lastbit_u32_s32(int input) __HC__;
+
+extern "C" unsigned int hsail_lastbit_u32_s64(unsigned long long input) __HC__;
+/** @} */
+
 /**
  * HSAIL builtin to get system timestamp
  */
