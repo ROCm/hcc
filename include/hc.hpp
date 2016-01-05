@@ -1951,6 +1951,13 @@ extern "C" inline uint64_t __ballot(int predicate) __HC__ {
 
 #define __HSA_WAVEFRONT_SIZE__ (64)
 
+// utility union type
+union __u {
+    int i;
+    float f;
+};
+
+/** @{ */
 /**
  * HSAIL builtin to direct copy from indexed active work-item within a wavefront.
  *
@@ -1969,12 +1976,19 @@ extern "C" inline uint64_t __ballot(int predicate) __HC__ {
  * results are undefined if it is not a power of 2, or is number greater than
  * __HSA_WAVEFRONT_SIZE__.
  */
-extern "C" inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     unsigned int laneId = hsail_activelaneid_u32();
     unsigned int shift = hsail_popcount_u32_b32(width - 1);
     unsigned int newSrcLane = ((laneId >> shift) << shift) + (srcLane % width);
     return hsail_activelanepermute_b32(var, newSrcLane, 0, 0);
 }
+
+inline float __shfl(float var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+    __u tmp; tmp.f = var;
+    tmp.i = __shfl(tmp.i, srcLane, width);
+    return tmp.f;
+}
+/** @} */
 
 /**
  * HSAIL builtin to copy from an active work-item with lower ID relative to
@@ -1996,7 +2010,7 @@ extern "C" inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZ
  * results are undefined if it is not a power of 2, or is number greater than
  * __HSA_WAVEFRONT_SIZE__.
  */
-extern "C" inline int __shfl_up(int var, unsigned int delta, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+inline int __shfl_up(int var, unsigned int delta, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     unsigned int laneId = hsail_activelaneid_u32();
     unsigned int shift = hsail_popcount_u32_b32(width - 1);
     unsigned int logicalLaneId = laneId % width;
@@ -2025,7 +2039,7 @@ extern "C" inline int __shfl_up(int var, unsigned int delta, int width=__HSA_WAV
  * results are undefined if it is not a power of 2, or is number greater than
  * __HSA_WAVEFRONT_SIZE__.
  */
-extern "C" inline int __shfl_down(int var, unsigned int delta, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+inline int __shfl_down(int var, unsigned int delta, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     unsigned int laneId = hsail_activelaneid_u32();
     unsigned int shift = hsail_popcount_u32_b32(width - 1);
     unsigned int logicalLaneId = laneId % width;
@@ -2049,7 +2063,7 @@ extern "C" inline int __shfl_down(int var, unsigned int delta, int width=__HSA_W
  * results are undefined if it is not a power of 2, or is number greater than
  * __HSA_WAVEFRONT_SIZE__.
  */
-extern "C" inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     unsigned int laneId = hsail_activelaneid_u32();
     unsigned int shift = hsail_popcount_u32_b32(width - 1);
     unsigned int logicalLaneId = laneId % width;
