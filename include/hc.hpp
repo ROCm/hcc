@@ -1859,6 +1859,16 @@ extern "C" int hsail_bitinsert_s32(int src0, int src1, unsigned int src2, unsign
 extern "C" int64_t hsail_bitinsert_s64(int64_t src0, int64_t src1, unsigned int src2, unsigned int src3) __HC__;
 /** @} */
 
+/** @{ */
+/**
+ * HSAIL builtin to create a bit mask that can be used with bitselect
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these builtin functions.
+ */
+extern "C" unsigned int hsail_bitmask_b32(unsigned int src0, unsigned int src1) __HC__;
+
+extern "C" uint64_t hsail_bitmask_b64(unsigned int src0, unsigned int src1) __HC__;
+/** @} */
 
 /**
  * HSAIL builtin function to count leading zero bits in the input
