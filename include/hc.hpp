@@ -1948,6 +1948,62 @@ extern "C" unsigned int hsail_lastbit_u32_s32(int input) __HC__;
 extern "C" unsigned int hsail_lastbit_u32_s64(unsigned long long input) __HC__;
 /** @} */
 
+/** @{ */
+/**
+ * HSAIL builtin to copy and interleave the lower half of the elements from
+ * each source into the desitionation
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/packed_data.htm">HSA PRM 5.9</a> for more detailed specification of these builtin functions.
+ */
+extern "C" unsigned int hsail_unpacklo_u8x4(unsigned int src0, unsigned int src1) __HC__;
+
+extern "C" uint64_t hsail_unpacklo_u8x8(uint64_t src0, uint64_t src1) __HC__;
+
+extern "C" unsigned int hsail_unpacklo_u16x2(unsigned int src0, unsigned int src1) __HC__;
+
+extern "C" uint64_t hsail_unpacklo_u16x4(uint64_t src0, uint64_t src1) __HC__;
+
+extern "C" uint64_t hsail_unpacklo_u32x2(uint64_t src0, uint64_t src1) __HC__;
+
+extern "C" int hsail_unpacklo_s8x4(int src0, int src1) __HC__;
+
+extern "C" int64_t hsail_unpacklo_s8x8(int64_t src0, int64_t src1) __HC__;
+
+extern "C" int hsail_unpacklo_s16x2(int src0, int src1) __HC__;
+
+extern "C" int64_t hsail_unpacklo_s16x4(int64_t src0, int64_t src1) __HC__;
+
+extern "C" int64_t hsail_unpacklo_s32x2(int64_t src0, int64_t src1) __HC__;
+/** @} */
+
+/** @{ */
+/**
+ * HSAIL builtin to copy and interleave the upper half of the elements from
+ * each source into the desitionation
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/packed_data.htm">HSA PRM 5.9</a> for more detailed specification of these builtin functions.
+ */
+extern "C" unsigned int hsail_unpackhi_u8x4(unsigned int src0, unsigned int src1) __HC__;
+
+extern "C" uint64_t hsail_unpackhi_u8x8(uint64_t src0, uint64_t src1) __HC__;
+
+extern "C" unsigned int hsail_unpackhi_u16x2(unsigned int src0, unsigned int src1) __HC__;
+
+extern "C" uint64_t hsail_unpackhi_u16x4(uint64_t src0, uint64_t src1) __HC__;
+
+extern "C" uint64_t hsail_unpackhi_u32x2(uint64_t src0, uint64_t src1) __HC__;
+
+extern "C" int hsail_unpackhi_s8x4(int src0, int src1) __HC__;
+
+extern "C" int64_t hsail_unpackhi_s8x8(int64_t src0, int64_t src1) __HC__;
+
+extern "C" int hsail_unpackhi_s16x2(int src0, int src1) __HC__;
+
+extern "C" int64_t hsail_unpackhi_s16x4(int64_t src0, int64_t src1) __HC__;
+
+extern "C" int64_t hsail_unpackhi_s32x2(int64_t src0, int64_t src1) __HC__;
+/** @} */
+
 /**
  * HSAIL builtin to get system timestamp
  */
