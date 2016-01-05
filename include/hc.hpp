@@ -1870,6 +1870,17 @@ extern "C" unsigned int hsail_bitmask_b32(unsigned int src0, unsigned int src1) 
 extern "C" uint64_t hsail_bitmask_b64(unsigned int src0, unsigned int src1) __HC__;
 /** @} */
 
+/** @{ */
+/**
+ * HSAIL builtin to reverse the bits
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these builtin functions.
+ */
+extern "C" unsigned int hsail_bitrev_b32(unsigned int src0) __HC__;
+
+extern "C" uint64_t hsail_bitrev_b64(uint64_t src0) __HC__;
+/** @} */
+
 /**
  * HSAIL builtin function to count leading zero bits in the input
  *
