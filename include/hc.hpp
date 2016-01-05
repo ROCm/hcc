@@ -1874,6 +1874,77 @@ extern "C" unsigned int hsail_firstbit_u32_s64(long long int input) __HC__;
  */
 extern "C" uint64_t hsail_clock_u64() __HC__;
 
+/**
+ * HSAIL builtin to count the number of active work-items in the current
+ * wavefront that have a non-zero input.
+ *
+ * @param[in] input An unsigned 32-bit integer.
+ * @return The number of active work-items in the current wavefront that have
+ *         a non-zero input.
+ */
+extern "C" unsigned int hsail_activelanecount_u32_b1(unsigned int input) __HC__;
+
+/**
+ * HSAIL builtin to get the count of the number of earlier (in flattened
+ * work-item order) active work-items within the same wavefront.
+ *
+ * @return The result will be in the range 0 to WAVESIZE - 1.
+ */
+extern "C" unsigned int hsail_activelaneid_u32() __HC__;
+
+/**
+ * HSAIL builtin to return a bit mask shows which active work-items in the
+ * wavefront have a non-zero input. The affected bit position within the
+ * registers of dest corresponds to each work-item's lane ID.
+ *
+ * The HSAIL instruction would return 4 64-bit registers but the current
+ * implementation would only return the 1st one and ignore the other 3 as
+ * right now all HSA agents have wavefront of size 64.
+ *
+ * @param[in] input An unsigned 32-bit integer.
+ * @return The bitmask calculated.
+ */
+extern "C" uint64_t hsail_activelanemask_v4_b64_b1(unsigned int input) __HC__;
+
+/**
+ * HSAIL builtin to permute active work-items in the wavefront.
+ *
+ * Please refer to: <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/09_Parallel/cross_lane.htm">HSA PRM</a> for more detailed information of this instruction.
+ */
+extern "C" unsigned int hsail_activelanepermute_b32(unsigned int src, unsigned int laneId, unsigned int identity, unsigned int useIdentity) __HC__;
+
+// ------------------------------------------------------------------------
+// Wavefront Vote Functions
+// ------------------------------------------------------------------------
+
+/**
+ * HSAIL builtin to evaluate predicate for all active work-items in the
+ * wavefront and return non-zero if and only if predicate evaluates to non-zero
+ * for all of them.
+ */
+extern "C" inline int __any(int predicate) __HC__ {
+    return hsail_popcount_u32_b64(hsail_activelanemask_v4_b64_b1(predicate));
+}
+
+/**
+ * HSAIL builtin to evaluate predicate for all active work-items in the
+ * wavefront and return non-zero if and only if predicate evaluates to non-zero
+ * for any of them.
+ */
+extern "C" inline int __all(int predicate) __HC__ {
+    return hsail_popcount_u32_b64(hsail_activelanemask_v4_b64_b1(predicate)) == hsail_activelanecount_u32_b1(1);
+}
+
+/**
+ * HSAIL builtin to evaluate predicate for all active work-items in the
+ * wavefront and return an integer whose Nth bit is set if and only if
+ * predicate evaluates to non-zero for the Nth work-item of the wavefront and
+ * the Nth work-item is active.
+ */
+extern "C" inline uint64_t __ballot(int predicate) __HC__ {
+    return hsail_activelanemask_v4_b64_b1(predicate);
+}
+
 // ------------------------------------------------------------------------
 // dynamic group segment
 // ------------------------------------------------------------------------
