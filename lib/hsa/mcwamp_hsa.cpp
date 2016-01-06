@@ -385,14 +385,17 @@ private:
 struct region_iterator
 {
     hsa_region_t _am_region;
+    hsa_region_t _am_host_region;
 
     hsa_region_t _kernarg_region;
-    hsa_region_t _finegrained_region;
+    hsa_region_t _finegrained_system_region;
     hsa_region_t _coarsegrained_region;
+    hsa_region_t _coarsegrained_system_region;
 
     bool        _found_kernarg_region;
-    bool        _found_finegrained_region;
+    bool        _found_finegrained_system_region;
     bool        _found_coarsegrained_region;
+    bool        _found_coarsegrained_system_region;
 
     region_iterator() ;
 };
@@ -401,12 +404,14 @@ struct region_iterator
 region_iterator::region_iterator()
 {
     _kernarg_region.handle=(uint64_t)-1;
-    _finegrained_region.handle=(uint64_t)-1;
+    _finegrained_system_region.handle=(uint64_t)-1;
     _coarsegrained_region.handle=(uint64_t)-1;
+    _coarsegrained_system_region.handle=(uint64_t)-1;
 
     _found_kernarg_region = false;
-    _found_finegrained_region = false;
+    _found_finegrained_system_region = false;
     _found_coarsegrained_region = false;
+    _found_coarsegrained_system_region = false;
 }
 //-----
 
@@ -810,6 +815,8 @@ public:
 
     void* getHSAAMRegion() override;
 
+    void* getHSAAMHostRegion() override;
+
     void* getHSAKernargRegion() override;
 
     bool hasHSAInterOp() override {
@@ -912,8 +919,8 @@ public:
 #if KALMAR_DEBUG
                     std::cerr << "found fine grained region on GPU memory\n";
 #endif 
-                    ri->_finegrained_region = region;
-                    ri->_found_finegrained_region = true;
+                    ri->_finegrained_system_region = region;
+                    ri->_found_finegrained_system_region = true;
                 }
     
                 if (flags & HSA_REGION_GLOBAL_FLAG_COARSE_GRAINED) {
@@ -932,12 +939,19 @@ public:
                     ri->_found_kernarg_region = true;
                 }
         
-                if ((flags & HSA_REGION_GLOBAL_FLAG_FINE_GRAINED) && (!ri->_found_finegrained_region)) {
+                if ((flags & HSA_REGION_GLOBAL_FLAG_FINE_GRAINED) && (!ri->_found_finegrained_system_region)) {
 #if KALMAR_DEBUG
                     std::cerr << "found fine grained region on host memory\n";
 #endif 
-                    ri->_finegrained_region = region;
-                    ri->_found_finegrained_region = true;
+                    ri->_finegrained_system_region = region;
+                    ri->_found_finegrained_system_region = true;
+                }
+                if ((flags & HSA_REGION_GLOBAL_FLAG_COARSE_GRAINED) && (!ri->_found_coarsegrained_system_region)) {
+#if KALMAR_DEBUG
+                    std::cerr << "found coarse-grain systemm region\n";
+#endif 
+                    ri->_coarsegrained_system_region = region;
+                    ri->_found_coarsegrained_system_region = true;
                 }
         
                 if ((flags & HSA_REGION_GLOBAL_FLAG_COARSE_GRAINED) && (!ri->_found_coarsegrained_region)) {
@@ -1298,12 +1312,24 @@ public:
         return ri._kernarg_region;
     }
 
+    hsa_region_t& getHSAAMHostRegion() {
+        if (ri._found_coarsegrained_system_region) {
+            ri._am_host_region =  ri._coarsegrained_system_region;
+        } else if (ri._found_finegrained_system_region) {
+            ri._am_host_region =  ri._finegrained_system_region;
+        } else {
+            ri._am_region.handle = (uint64_t)(-1);
+        }
+
+        return ri._am_host_region;
+    }
+
     hsa_region_t& getHSAAMRegion() {
         // prefer coarse-grained over fine-grained
         if (ri._found_coarsegrained_region) {
             ri._am_region = ri._coarsegrained_region;
-        } else if (ri._found_finegrained_region) {
-            ri._am_region = ri._finegrained_region;
+        } else if (ri._found_finegrained_system_region) {
+            ri._am_region = ri._finegrained_system_region;
         } else {
             ri._am_region.handle = (uint64_t)(-1);
         }
@@ -1316,7 +1342,7 @@ public:
     }
 
     bool hasHSAFinegrainedRegion() {
-      return ri._found_finegrained_region;
+      return ri._found_finegrained_system_region;
     }
 
     bool hasHSACoarsegrainedRegion() {
@@ -1953,6 +1979,12 @@ inline void*
 HSAQueue::getHSAAMRegion() override {
     return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getHSAAMRegion()));
 }
+
+inline void*
+HSAQueue::getHSAAMHostRegion() override {
+    return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getHSAAMHostRegion()));
+}
+
 
 inline void*
 HSAQueue::getHSAKernargRegion() override {
