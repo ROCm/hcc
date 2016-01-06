@@ -1,4 +1,4 @@
-// XFAIL: Linux,boltzmann
+// XFAIL: Linux
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <hc.hpp>
@@ -18,12 +18,9 @@ bool test() {
   // define inputs and output
   const int vecSize = 2048;
 
-  int table_a[vecSize];
-  int table_b[vecSize];
-  int table_c[vecSize];
-  int *p_a = &table_a[0];
-  int *p_b = &table_b[0];
-  int *p_c = &table_c[0];
+  hc::array_view<int, 1> table_a(vecSize);
+  hc::array_view<int, 1> table_b(vecSize);
+  hc::array_view<int, 1> table_c(vecSize);
 
   // initialize test data
   std::random_device rd;
@@ -39,8 +36,7 @@ bool test() {
     e,
     [=](hc::index<1> idx) __HC__ {
       for (int i = 0; i < LOOP_COUNT; ++i) 
-        p_c[idx[0]] = p_a[idx[0]] + p_b[idx[0]];
-
+        table_c(idx) = table_a(idx) + table_b(idx);
   });
 
   // create a barrier packet
