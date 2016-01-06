@@ -1,4 +1,4 @@
-// XFAIL: Linux,boltzmann
+// XFAIL: Linux
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <hc.hpp>
@@ -15,9 +15,9 @@ bool test() {
   using namespace hc;
   bool ret = true;
 
-  T table1[GRID_SIZE]; // input vector 1
-  Q table2[GRID_SIZE]; // input vector 2
-  R table3[GRID_SIZE]; // output vector calculated by GPU
+  array_view<T, 1> table1(GRID_SIZE); // input vector 1
+  array_view<Q, 1> table2(GRID_SIZE); // input vector 2
+  array_view<R, 1> table3(GRID_SIZE); // output vector calculated by GPU
   extent<1> ex(GRID_SIZE);
 
   // setup RNG
@@ -26,15 +26,15 @@ bool test() {
 
   // randomly produce input data
   std::uniform_real_distribution<T> dis1(1, 10);
-  std::for_each(std::begin(table1), std::end(table1), [&](T& v) { v = dis1(gen); });
+  for (int i = 0; i < GRID_SIZE; ++i) table1[i] = dis1(gen);
 
   std::uniform_real_distribution<Q> dis2(1, 10);
-  std::for_each(std::begin(table2), std::end(table2), [&](Q& v) { v = dis2(gen); });
+  for (int i = 0; i < GRID_SIZE; ++i) table2[i] = dis2(gen);
 
 #define TEST(func) \
   { \
-    parallel_for_each(ex, [&](index<1>& idx) __HC__ { \
-      table3[idx[0]] = func(table1[idx[0]], table2[idx[0]]); \
+    parallel_for_each(ex, [=](index<1>& idx) __HC__ { \
+      table3(idx) = func(table1(idx), table2(idx)); \
     }); \
     accelerator().get_default_view().wait(); \
     int error = 0; \
