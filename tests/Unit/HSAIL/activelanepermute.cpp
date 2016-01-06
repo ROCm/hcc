@@ -12,9 +12,9 @@
 #define TEST_DEBUG (0)
 
 // A test case to verify HSAIL builtin function
-// - hsail_activelanepermute_b32
+// - __activelanepermute_b32
 
-// test hsail_activelanepermute_b32
+// test __activelanepermute_b32
 template<size_t GRID_SIZE>
 bool test() {
   using namespace hc;
@@ -66,10 +66,10 @@ bool test() {
   array<uint32_t, 1> output2_GPU(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
   parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
-    // test hsail_activelanepermute_b32 without useIdentity
-    output_GPU(idx) = hsail_activelanepermute_b32(test_GPU(idx), laneID_GPU(idx), 0, 0);
-    // test hsail_activelanepermute_b32 with useIdentity
-    output2_GPU(idx) = hsail_activelanepermute_b32(test_GPU(idx), laneID_GPU(idx), 1, 1);
+    // test __activelanepermute_b32 without useIdentity
+    output_GPU(idx) = __activelanepermute_b32(test_GPU(idx), laneID_GPU(idx), 0, 0);
+    // test __activelanepermute_b32 with useIdentity
+    output2_GPU(idx) = __activelanepermute_b32(test_GPU(idx), laneID_GPU(idx), 1, 1);
   });
 
   // verify result

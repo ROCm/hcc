@@ -14,9 +14,9 @@
 #define TEST_DEBUG (0)
 
 // A test case to verify HSAIL builtin function
-// - hsail_activelaneid_u32
+// - __activelaneid_u32
 
-// test hsail_activelaneid_u32
+// test __activelaneid_u32
 bool test() {
   using namespace hc;
   bool ret = true;
@@ -24,7 +24,7 @@ bool test() {
   array<uint32_t, 1> output_GPU(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
   parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
-    output_GPU(idx) = hsail_activelaneid_u32();
+    output_GPU(idx) = __activelaneid_u32();
   });
 
   // verify result

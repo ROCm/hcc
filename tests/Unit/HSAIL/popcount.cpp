@@ -12,8 +12,8 @@
 #define TEST_DEBUG (0)
 
 // A test case to verify HSAIL builtin function
-// - hsail_popcount_u32_b32
-// - hsail_popcount_u32_b64
+// - __popcount_u32_b32
+// - __popcount_u32_b64
 
 // CPU implementation of popcount
 template<typename T>
@@ -26,7 +26,7 @@ uint32_t popcount_cpu(T value) {
   return ret;
 }
 
-// test hsail_popcount_u32_b32
+// test __popcount_u32_b32
 bool test32() {
   using namespace hc;
   bool ret = true;
@@ -44,7 +44,7 @@ bool test32() {
   array<uint32_t, 1> output_GPU(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
   parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
-    output_GPU(idx) = hsail_popcount_u32_b32(test_GPU(idx));
+    output_GPU(idx) = __popcount_u32_b32(test_GPU(idx));
   });
 
   // verify result
@@ -59,7 +59,7 @@ bool test32() {
   return ret;
 }
 
-// test hsail_popcount_u32_b64
+// test __popcount_u32_b64
 bool test64() {
   using namespace hc;
   bool ret = true;
@@ -76,7 +76,7 @@ bool test64() {
   array<uint32_t, 1> output_GPU(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
   parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
-    output_GPU(idx) = hsail_popcount_u32_b64(test_GPU(idx));
+    output_GPU(idx) = __popcount_u32_b64(test_GPU(idx));
   });
 
   // verify result

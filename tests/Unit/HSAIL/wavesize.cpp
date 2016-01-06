@@ -15,7 +15,7 @@ int main() {
   array<unsigned int, 1> table(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
   parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
-    table(idx) = hsail_wavesize();
+    table(idx) = __wavesize();
   });
 
   // verify result

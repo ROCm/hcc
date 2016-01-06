@@ -24,7 +24,7 @@ bool test__shfl_down(int grid_size, int arg) {
 
   // shift values down in a wavefront
   parallel_for_each(ex, [&, arg](index<1>& idx) [[hc]] {
-    int value = hsail_activelaneid_u32();
+    int value = __activelaneid_u32();
     value = __shfl_down(value, arg);
     table(idx) = value;
   }).wait();
@@ -56,7 +56,7 @@ bool test__shfl_down2(int grid_size, int sub_wavefront_width, int arg) {
 
   // shift values down in a wavefront, divided into subsections
   parallel_for_each(ex, [&, arg, sub_wavefront_width](index<1>& idx) [[hc]] {
-    int value = hsail_activelaneid_u32() % sub_wavefront_width;
+    int value = __activelaneid_u32() % sub_wavefront_width;
     value = __shfl_down(value, arg, sub_wavefront_width);
     table(idx) = value;
   }).wait();

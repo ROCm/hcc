@@ -24,7 +24,7 @@ bool test__shfl_up(int grid_size, int arg) {
 
   // shift values up in a wavefront
   parallel_for_each(ex, [&, arg](index<1>& idx) [[hc]] {
-    int value = hsail_activelaneid_u32();
+    int value = __activelaneid_u32();
     value = __shfl_up(value, arg);
     table(idx) = value;
   }).wait();
@@ -54,7 +54,7 @@ bool test__shfl_up2(int grid_size, int sub_wavefront_width, int arg) {
 
   // shift values up in a wavefront, divided into subsections
   parallel_for_each(ex, [&, arg, sub_wavefront_width](index<1>& idx) [[hc]] {
-    int value = hsail_activelaneid_u32() % sub_wavefront_width;
+    int value = __activelaneid_u32() % sub_wavefront_width;
     value = __shfl_up(value, arg, sub_wavefront_width);
     table(idx) = value;
   }).wait();
@@ -82,7 +82,7 @@ bool test_scan(int grid_size, int sub_wavefront_width) {
   array<int, 1> table(grid_size);
 
   parallel_for_each(ex, [&, sub_wavefront_width](index<1>& idx) [[hc]] {
-    int laneId = hsail_activelaneid_u32();
+    int laneId = __activelaneid_u32();
     int logicalLaneId = laneId % sub_wavefront_width;
     int value = (WAVEFRONT_SIZE - 1) - laneId;
 
