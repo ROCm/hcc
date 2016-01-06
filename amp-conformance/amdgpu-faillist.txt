@@ -20,7 +20,6 @@
 5_Data_Cont/5_1_array/5_1_3_m/value_type/Test.01/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/WithoutDataSource/Test.02/test.cpp
 5_Data_Cont/5_2_a_v/5_2_3_m/value_type/test.cpp
-5_Data_Cont/5_2_a_v/5_2_3_m/EndToEnd/MatrixMult4/test.cpp
 5_Data_Cont/5_3_c_d/Continuation/Misc/Test.01/test.cpp
 4_Basic_Data_Elmnts/4_2_extent/4_2_2_c/Test.05/test.cpp
 4_Basic_Data_Elmnts/4_2_extent/4_2_2_c/Test.03/test.cpp
