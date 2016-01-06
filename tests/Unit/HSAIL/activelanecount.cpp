@@ -14,9 +14,9 @@
 #define TEST_DEBUG (0)
 
 // A test case to verify HSAIL builtin function
-// - hsail_activelanecount_u32_b1
+// - __activelanecount_u32_b1
 
-// test hsail_activelanecount_u32_b1
+// test __activelanecount_u32_b1
 bool test() {
   using namespace hc;
   bool ret = true;
@@ -67,7 +67,7 @@ bool test() {
   array<uint32_t, 1> output_GPU(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
   parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
-    output_GPU(idx) = hsail_activelanecount_u32_b1(test_GPU(idx));
+    output_GPU(idx) = __activelanecount_u32_b1(test_GPU(idx));
   });
 
   // verify result

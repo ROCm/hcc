@@ -1803,115 +1803,115 @@ tiled_extent<3> extent<N>::tile(int t0, int t1, int t2) const __CPU__ __HC__ {
 
 
 // ------------------------------------------------------------------------
-// HSAIL builtins
+// Intrinsic functions for HSAIL instructions
 // ------------------------------------------------------------------------
 
 /**
- * HSAIL builtin function to fetch the size of a wavefront
+ * Fetch the size of a wavefront
  *
  * @return The size of a wavefront.
  */
-extern "C" unsigned int hsail_wavesize() __HC__;
+extern "C" unsigned int __wavesize() __HC__;
 
 /**
- * HSAIL builtin function to count number of 1 bits in the input
+ * Count number of 1 bits in the input
  *
  * @param[in] input An unsinged 32-bit integer.
  * @return Number of 1 bits in the input.
  */
-extern "C" unsigned int hsail_popcount_u32_b32(unsigned int input) __HC__;
+extern "C" unsigned int __popcount_u32_b32(unsigned int input) __HC__;
 
 /**
- * HSAIL builtin function to count number of 1 bits in the input
+ * Count number of 1 bits in the input
  *
  * @param[in] input An unsinged 64-bit integer.
  * @return Number of 1 bits in the input.
  */
-extern "C" unsigned int hsail_popcount_u32_b64(unsigned long long int input) __HC__;
+extern "C" unsigned int __popcount_u32_b64(unsigned long long int input) __HC__;
 
 /** @{ */
 /**
- * HSAIL builtin to extract a range of bits
+ * Extract a range of bits
  *
- * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these builtin functions.
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these functions.
  */
-extern "C" unsigned int hsail_bitextract_u32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" unsigned int __bitextract_u32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
 
-extern "C" uint64_t hsail_bitextract_u64(uint64_t src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" uint64_t __bitextract_u64(uint64_t src0, unsigned int src1, unsigned int src2) __HC__;
 
-extern "C" int hsail_bitextract_s32(int src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" int __bitextract_s32(int src0, unsigned int src1, unsigned int src2) __HC__;
 
-extern "C" int64_t hsail_bitextract_s64(int64_t src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" int64_t __bitextract_s64(int64_t src0, unsigned int src1, unsigned int src2) __HC__;
 /** @} */
 
 /** @{ */
 /**
- * HSAIL builtin to replace a range of bits
+ * Replace a range of bits
  *
- * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these builtin functions.
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these functions.
  */
-extern "C" unsigned int hsail_bitinsert_u32(unsigned int src0, unsigned int src1, unsigned int src2, unsigned int src3) __HC__;
+extern "C" unsigned int __bitinsert_u32(unsigned int src0, unsigned int src1, unsigned int src2, unsigned int src3) __HC__;
 
-extern "C" uint64_t hsail_bitinsert_u64(uint64_t src0, uint64_t src1, unsigned int src2, unsigned int src3) __HC__;
+extern "C" uint64_t __bitinsert_u64(uint64_t src0, uint64_t src1, unsigned int src2, unsigned int src3) __HC__;
 
-extern "C" int hsail_bitinsert_s32(int src0, int src1, unsigned int src2, unsigned int src3) __HC__;
+extern "C" int __bitinsert_s32(int src0, int src1, unsigned int src2, unsigned int src3) __HC__;
 
-extern "C" int64_t hsail_bitinsert_s64(int64_t src0, int64_t src1, unsigned int src2, unsigned int src3) __HC__;
+extern "C" int64_t __bitinsert_s64(int64_t src0, int64_t src1, unsigned int src2, unsigned int src3) __HC__;
 /** @} */
 
 /** @{ */
 /**
- * HSAIL builtin to create a bit mask that can be used with bitselect
+ * Create a bit mask that can be used with bitselect
  *
- * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these builtin functions.
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these functions.
  */
-extern "C" unsigned int hsail_bitmask_b32(unsigned int src0, unsigned int src1) __HC__;
+extern "C" unsigned int __bitmask_b32(unsigned int src0, unsigned int src1) __HC__;
 
-extern "C" uint64_t hsail_bitmask_b64(unsigned int src0, unsigned int src1) __HC__;
+extern "C" uint64_t __bitmask_b64(unsigned int src0, unsigned int src1) __HC__;
 /** @} */
 
 /** @{ */
 /**
- * HSAIL builtin to reverse the bits
+ * Reverse the bits
  *
- * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these builtin functions.
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these functions.
  */
-extern "C" unsigned int hsail_bitrev_b32(unsigned int src0) __HC__;
+extern "C" unsigned int __bitrev_b32(unsigned int src0) __HC__;
 
-extern "C" uint64_t hsail_bitrev_b64(uint64_t src0) __HC__;
+extern "C" uint64_t __bitrev_b64(uint64_t src0) __HC__;
 /** @} */
 
 /** @{ */
 /**
- * HSAIL builtin to do bit field selection
+ * Do bit field selection
  *
- * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these builtin functions.
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these functions.
  */
-extern "C" unsigned int hsail_bitselect_b32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" unsigned int __bitselect_b32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
 
-extern "C" uint64_t hsail_bitselect_b64(uint64_t src0, uint64_t src1, uint64_t src2) __HC__;
+extern "C" uint64_t __bitselect_b64(uint64_t src0, uint64_t src1, uint64_t src2) __HC__;
 /** @} */
 
 /**
- * HSAIL builtin function to count leading zero bits in the input
+ * Count leading zero bits in the input
  *
  * @param[in] input An unsigned 32-bit integer.
  * @return Number of 0 bits until a 1 bit is found, counting start from the
  *         most significant bit. -1 if there is no 0 bit.
  */
-extern "C" unsigned int hsail_firstbit_u32_u32(unsigned int input) __HC__;
+extern "C" unsigned int __firstbit_u32_u32(unsigned int input) __HC__;
 
 /**
- * HSAIL builtin function to count leading zero bits in the input
+ * Count leading zero bits in the input
  *
  * @param[in] input An unsigned 64-bit integer.
  * @return Number of 0 bits until a 1 bit is found, counting start from the
  *         most significant bit. -1 if there is no 0 bit.
  */
-extern "C" unsigned int hsail_firstbit_u32_u64(unsigned long long int input) __HC__;
+extern "C" unsigned int __firstbit_u32_u64(unsigned long long int input) __HC__;
 
 /**
- * HSAIL builtin function to count leading zero bits in the input
+ * Count leading zero bits in the input
  *
  * @param[in] input An signed 32-bit integer.
  * @return Finds the first bit set in a positive integer starting from the
@@ -1919,10 +1919,10 @@ extern "C" unsigned int hsail_firstbit_u32_u64(unsigned long long int input) __H
  *         integer from the most significant bit.
  *         If no bits in the input are set, then dest is set to -1.
  */
-extern "C" unsigned int hsail_firstbit_u32_s32(int input) __HC__;
+extern "C" unsigned int __firstbit_u32_s32(int input) __HC__;
 
 /**
- * HSAIL builtin function to count leading zero bits in the input
+ * Count leading zero bits in the input
  *
  * @param[in] input An signed 64-bit integer.
  * @return Finds the first bit set in a positive integer starting from the
@@ -1930,227 +1930,223 @@ extern "C" unsigned int hsail_firstbit_u32_s32(int input) __HC__;
  *         integer from the most significant bit.
  *         If no bits in the input are set, then dest is set to -1.
  */
-extern "C" unsigned int hsail_firstbit_u32_s64(long long int input) __HC__;
+extern "C" unsigned int __firstbit_u32_s64(long long int input) __HC__;
 
 /** @{ */
 /**
- * HSAIL builtin to find the first bit set to 1 in a number starting from the
+ * Find the first bit set to 1 in a number starting from the
  * least significant bit
  *
- * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these builtin functions.
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these functions.
  */
-extern "C" unsigned int hsail_lastbit_u32_u32(unsigned int input) __HC__;
+extern "C" unsigned int __lastbit_u32_u32(unsigned int input) __HC__;
 
-extern "C" unsigned int hsail_lastbit_u32_u64(unsigned long long int input) __HC__;
+extern "C" unsigned int __lastbit_u32_u64(unsigned long long int input) __HC__;
 
-extern "C" unsigned int hsail_lastbit_u32_s32(int input) __HC__;
+extern "C" unsigned int __lastbit_u32_s32(int input) __HC__;
 
-extern "C" unsigned int hsail_lastbit_u32_s64(unsigned long long input) __HC__;
+extern "C" unsigned int __lastbit_u32_s64(unsigned long long input) __HC__;
 /** @} */
 
 /** @{ */
 /**
- * HSAIL builtin to copy and interleave the lower half of the elements from
+ * Copy and interleave the lower half of the elements from
  * each source into the desitionation
  *
- * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/packed_data.htm">HSA PRM 5.9</a> for more detailed specification of these builtin functions.
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/packed_data.htm">HSA PRM 5.9</a> for more detailed specification of these functions.
  */
-extern "C" unsigned int hsail_unpacklo_u8x4(unsigned int src0, unsigned int src1) __HC__;
+extern "C" unsigned int __unpacklo_u8x4(unsigned int src0, unsigned int src1) __HC__;
 
-extern "C" uint64_t hsail_unpacklo_u8x8(uint64_t src0, uint64_t src1) __HC__;
+extern "C" uint64_t __unpacklo_u8x8(uint64_t src0, uint64_t src1) __HC__;
 
-extern "C" unsigned int hsail_unpacklo_u16x2(unsigned int src0, unsigned int src1) __HC__;
+extern "C" unsigned int __unpacklo_u16x2(unsigned int src0, unsigned int src1) __HC__;
 
-extern "C" uint64_t hsail_unpacklo_u16x4(uint64_t src0, uint64_t src1) __HC__;
+extern "C" uint64_t __unpacklo_u16x4(uint64_t src0, uint64_t src1) __HC__;
 
-extern "C" uint64_t hsail_unpacklo_u32x2(uint64_t src0, uint64_t src1) __HC__;
+extern "C" uint64_t __unpacklo_u32x2(uint64_t src0, uint64_t src1) __HC__;
 
-extern "C" int hsail_unpacklo_s8x4(int src0, int src1) __HC__;
+extern "C" int __unpacklo_s8x4(int src0, int src1) __HC__;
 
-extern "C" int64_t hsail_unpacklo_s8x8(int64_t src0, int64_t src1) __HC__;
+extern "C" int64_t __unpacklo_s8x8(int64_t src0, int64_t src1) __HC__;
 
-extern "C" int hsail_unpacklo_s16x2(int src0, int src1) __HC__;
+extern "C" int __unpacklo_s16x2(int src0, int src1) __HC__;
 
-extern "C" int64_t hsail_unpacklo_s16x4(int64_t src0, int64_t src1) __HC__;
+extern "C" int64_t __unpacklo_s16x4(int64_t src0, int64_t src1) __HC__;
 
-extern "C" int64_t hsail_unpacklo_s32x2(int64_t src0, int64_t src1) __HC__;
+extern "C" int64_t __unpacklo_s32x2(int64_t src0, int64_t src1) __HC__;
 /** @} */
 
 /** @{ */
 /**
- * HSAIL builtin to copy and interleave the upper half of the elements from
+ * Copy and interleave the upper half of the elements from
  * each source into the desitionation
  *
- * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/packed_data.htm">HSA PRM 5.9</a> for more detailed specification of these builtin functions.
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/packed_data.htm">HSA PRM 5.9</a> for more detailed specification of these functions.
  */
-extern "C" unsigned int hsail_unpackhi_u8x4(unsigned int src0, unsigned int src1) __HC__;
+extern "C" unsigned int __unpackhi_u8x4(unsigned int src0, unsigned int src1) __HC__;
 
-extern "C" uint64_t hsail_unpackhi_u8x8(uint64_t src0, uint64_t src1) __HC__;
+extern "C" uint64_t __unpackhi_u8x8(uint64_t src0, uint64_t src1) __HC__;
 
-extern "C" unsigned int hsail_unpackhi_u16x2(unsigned int src0, unsigned int src1) __HC__;
+extern "C" unsigned int __unpackhi_u16x2(unsigned int src0, unsigned int src1) __HC__;
 
-extern "C" uint64_t hsail_unpackhi_u16x4(uint64_t src0, uint64_t src1) __HC__;
+extern "C" uint64_t __unpackhi_u16x4(uint64_t src0, uint64_t src1) __HC__;
 
-extern "C" uint64_t hsail_unpackhi_u32x2(uint64_t src0, uint64_t src1) __HC__;
+extern "C" uint64_t __unpackhi_u32x2(uint64_t src0, uint64_t src1) __HC__;
 
-extern "C" int hsail_unpackhi_s8x4(int src0, int src1) __HC__;
+extern "C" int __unpackhi_s8x4(int src0, int src1) __HC__;
 
-extern "C" int64_t hsail_unpackhi_s8x8(int64_t src0, int64_t src1) __HC__;
+extern "C" int64_t __unpackhi_s8x8(int64_t src0, int64_t src1) __HC__;
 
-extern "C" int hsail_unpackhi_s16x2(int src0, int src1) __HC__;
+extern "C" int __unpackhi_s16x2(int src0, int src1) __HC__;
 
-extern "C" int64_t hsail_unpackhi_s16x4(int64_t src0, int64_t src1) __HC__;
+extern "C" int64_t __unpackhi_s16x4(int64_t src0, int64_t src1) __HC__;
 
-extern "C" int64_t hsail_unpackhi_s32x2(int64_t src0, int64_t src1) __HC__;
+extern "C" int64_t __unpackhi_s32x2(int64_t src0, int64_t src1) __HC__;
 /** @} */
 
 /** @{ */
 /**
- * HSAIL builtin to assign the elements of the packed value in src0, replacing
+ * Assign the elements of the packed value in src0, replacing
  * the element specified by src2 with the value from src1
  *
- * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/packed_data.htm">HSA PRM 5.9</a> for more detailed specification of these builtin functions.
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/packed_data.htm">HSA PRM 5.9</a> for more detailed specification of these functions.
  */
-extern "C" unsigned int hsail_pack_u8x4_u32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" unsigned int __pack_u8x4_u32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
 
-extern "C" uint64_t hsail_pack_u8x8_u32(uint64_t src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" uint64_t __pack_u8x8_u32(uint64_t src0, unsigned int src1, unsigned int src2) __HC__;
 
-extern "C" unsigned hsail_pack_u16x2_u32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" unsigned __pack_u16x2_u32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
 
-extern "C" uint64_t hsail_pack_u16x4_u32(uint64_t src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" uint64_t __pack_u16x4_u32(uint64_t src0, unsigned int src1, unsigned int src2) __HC__;
 
-extern "C" uint64_t hsail_pack_u32x2_u32(uint64_t src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" uint64_t __pack_u32x2_u32(uint64_t src0, unsigned int src1, unsigned int src2) __HC__;
 
-extern "C" int hsail_pack_s8x4_s32(int src0, int src1, unsigned int src2) __HC__;
+extern "C" int __pack_s8x4_s32(int src0, int src1, unsigned int src2) __HC__;
 
-extern "C" int64_t hsail_pack_s8x8_s32(int64_t src0, int src1, unsigned int src2) __HC__;
+extern "C" int64_t __pack_s8x8_s32(int64_t src0, int src1, unsigned int src2) __HC__;
 
-extern "C" int hsail_pack_s16x2_s32(int src0, int src1, unsigned int src2) __HC__;
+extern "C" int __pack_s16x2_s32(int src0, int src1, unsigned int src2) __HC__;
 
-extern "C" int64_t hsail_pack_s16x4_s32(int64_t src0, int src1, unsigned int src2) __HC__;
+extern "C" int64_t __pack_s16x4_s32(int64_t src0, int src1, unsigned int src2) __HC__;
 
-extern "C" int64_t hsail_pack_s32x2_s32(int64_t src0, int src1, unsigned int src2) __HC__;
+extern "C" int64_t __pack_s32x2_s32(int64_t src0, int src1, unsigned int src2) __HC__;
 
-extern "C" double hsail_pack_f32x2_f32(double src0, float src1, unsigned int src2) __HC__;
+extern "C" double __pack_f32x2_f32(double src0, float src1, unsigned int src2) __HC__;
 /** @} */
 
 /** @{ */
 /**
- * HSAIL builtin to assign the elements specified by src1 from the packed value
- * in src0
+ * Assign the elements specified by src1 from the packed value in src0
  *
- * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/packed_data.htm">HSA PRM 5.9</a> for more detailed specification of these builtin functions.
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/packed_data.htm">HSA PRM 5.9</a> for more detailed specification of these functions.
  */
-extern "C" unsigned int hsail_unpack_u32_u8x4(unsigned int src0, unsigned int src1) __HC__;
+extern "C" unsigned int __unpack_u32_u8x4(unsigned int src0, unsigned int src1) __HC__;
 
-extern "C" unsigned int hsail_unpack_u32_u8x8(uint64_t src0, unsigned int src1) __HC__;
+extern "C" unsigned int __unpack_u32_u8x8(uint64_t src0, unsigned int src1) __HC__;
 
-extern "C" unsigned int hsail_unpack_u32_u16x2(unsigned int src0, unsigned int src1) __HC__;
+extern "C" unsigned int __unpack_u32_u16x2(unsigned int src0, unsigned int src1) __HC__;
 
-extern "C" unsigned int hsail_unpack_u32_u16x4(uint64_t src0, unsigned int src1) __HC__;
+extern "C" unsigned int __unpack_u32_u16x4(uint64_t src0, unsigned int src1) __HC__;
 
-extern "C" unsigned int hsail_unpack_u32_u32x2(uint64_t src0, unsigned int src1) __HC__;
+extern "C" unsigned int __unpack_u32_u32x2(uint64_t src0, unsigned int src1) __HC__;
 
-extern "C" int hsail_unpack_s32_s8x4(int src0, unsigned int src1) __HC__;
+extern "C" int __unpack_s32_s8x4(int src0, unsigned int src1) __HC__;
 
-extern "C" int hsail_unpack_s32_s8x8(int64_t src0, unsigned int src1) __HC__;
+extern "C" int __unpack_s32_s8x8(int64_t src0, unsigned int src1) __HC__;
 
-extern "C" int hsail_unpack_s32_s16x2(int src0, unsigned int src1) __HC__;
+extern "C" int __unpack_s32_s16x2(int src0, unsigned int src1) __HC__;
 
-extern "C" int hsail_unpack_s32_s16x4(int64_t src0, unsigned int src1) __HC__;
+extern "C" int __unpack_s32_s16x4(int64_t src0, unsigned int src1) __HC__;
 
-extern "C" int hsail_unpack_s32_s3x2(int64_t src0, unsigned int src1) __HC__;
+extern "C" int __unpack_s32_s3x2(int64_t src0, unsigned int src1) __HC__;
 
-extern "C" float hsail_unpack_f32_f32x2(double src0, unsigned int src1) __HC__;
+extern "C" float __unpack_f32_f32x2(double src0, unsigned int src1) __HC__;
 /** @} */
 
 /**
- * HSAIL builtin to align 32 bits within 64 bits of data on an arbitrary bit
- * boundary
+ * Align 32 bits within 64 bits of data on an arbitrary bit boundary
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
  */
-extern "C" unsigned int hsail_bitalign_b32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" unsigned int __bitalign_b32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
 
 /**
- * HSAIL builtin to align 32 bits within 64 bis of data on an arbitrary byte
- * boundary
+ * Align 32 bits within 64 bis of data on an arbitrary byte boundary
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
  */
-extern "C" unsigned int hsail_bytealign_b32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" unsigned int __bytealign_b32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
 
 /**
- * HSAIL builtin which does linear interpolation and computes the unsigned
- * 8-bit average of packed data
+ * Do linear interpolation and computes the unsigned 8-bit average of packed
+ * data
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
  */
-extern "C" unsigned int hsail_lerp_u8x4(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" unsigned int __lerp_u8x4(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
 
 /**
- * HSAIL builtin which takes four floating-point number, convers them to
+ * Takes four floating-point number, convers them to
  * unsigned integer values, and packs them into a packed u8x4 value
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
  */
-extern "C" unsigned int hsail_packcvt_u8x4_f32(float src0, float src1, float src2, float src3) __HC__;
+extern "C" unsigned int __packcvt_u8x4_f32(float src0, float src1, float src2, float src3) __HC__;
 
 /**
- * HSAIL builtin which unpacks a single element from a packed u8x4 value and
- * converts it to an f32.
+ * Unpacks a single element from a packed u8x4 value and converts it to an f32.
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
  */
-extern "C" float hsail_unpackcvt_f32_u8x4(unsigned int src0, unsigned int src1) __HC__;
+extern "C" float __unpackcvt_f32_u8x4(unsigned int src0, unsigned int src1) __HC__;
 
 /** @{ */
 /**
- * HSAIL builtin which computes the sum of the absolute differences of src0 and
+ * Computes the sum of the absolute differences of src0 and
  * src1 and then adds src2 to the result
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
  */
-extern "C" unsigned int hsail_sad_u32_u32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" unsigned int __sad_u32_u32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
 
-extern "C" unsigned int hsail_sad_u32_u16x2(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" unsigned int __sad_u32_u16x2(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
 
-extern "C" unsigned int hsail_sad_u32_u8x4(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" unsigned int __sad_u32_u8x4(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
 /** @} */
 
 /**
- * HSAIL builtin which is mostly the same as sad except the sum of absolute
+ * This function is mostly the same as sad except the sum of absolute
  * differences is added to the most significant 16 bits of the result
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
  */
-extern "C" unsigned int hsail_sadhi_u16x2_u8x4(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" unsigned int __sadhi_u16x2_u8x4(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
 
 /**
- * HSAIL builtin to get system timestamp
+ * Get system timestamp
  */
-extern "C" uint64_t hsail_clock_u64() __HC__;
+extern "C" uint64_t __clock_u64() __HC__;
 
 /**
- * HSAIL builtin to count the number of active work-items in the current
+ * Count the number of active work-items in the current
  * wavefront that have a non-zero input.
  *
  * @param[in] input An unsigned 32-bit integer.
  * @return The number of active work-items in the current wavefront that have
  *         a non-zero input.
  */
-extern "C" unsigned int hsail_activelanecount_u32_b1(unsigned int input) __HC__;
+extern "C" unsigned int __activelanecount_u32_b1(unsigned int input) __HC__;
 
 /**
- * HSAIL builtin to get the count of the number of earlier (in flattened
+ * Get the count of the number of earlier (in flattened
  * work-item order) active work-items within the same wavefront.
  *
  * @return The result will be in the range 0 to WAVESIZE - 1.
  */
-extern "C" unsigned int hsail_activelaneid_u32() __HC__;
+extern "C" unsigned int __activelaneid_u32() __HC__;
 
 /**
- * HSAIL builtin to return a bit mask shows which active work-items in the
+ * Return a bit mask shows which active work-items in the
  * wavefront have a non-zero input. The affected bit position within the
  * registers of dest corresponds to each work-item's lane ID.
  *
@@ -2161,45 +2157,45 @@ extern "C" unsigned int hsail_activelaneid_u32() __HC__;
  * @param[in] input An unsigned 32-bit integer.
  * @return The bitmask calculated.
  */
-extern "C" uint64_t hsail_activelanemask_v4_b64_b1(unsigned int input) __HC__;
+extern "C" uint64_t __activelanemask_v4_b64_b1(unsigned int input) __HC__;
 
 /**
- * HSAIL builtin to permute active work-items in the wavefront.
+ * Permute active work-items in the wavefront.
  *
  * Please refer to: <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/09_Parallel/cross_lane.htm">HSA PRM</a> for more detailed information of this instruction.
  */
-extern "C" unsigned int hsail_activelanepermute_b32(unsigned int src, unsigned int laneId, unsigned int identity, unsigned int useIdentity) __HC__;
+extern "C" unsigned int __activelanepermute_b32(unsigned int src, unsigned int laneId, unsigned int identity, unsigned int useIdentity) __HC__;
 
 // ------------------------------------------------------------------------
 // Wavefront Vote Functions
 // ------------------------------------------------------------------------
 
 /**
- * HSAIL builtin to evaluate predicate for all active work-items in the
+ * Evaluate predicate for all active work-items in the
  * wavefront and return non-zero if and only if predicate evaluates to non-zero
  * for all of them.
  */
 extern "C" inline int __any(int predicate) __HC__ {
-    return hsail_popcount_u32_b64(hsail_activelanemask_v4_b64_b1(predicate));
+    return __popcount_u32_b64(__activelanemask_v4_b64_b1(predicate));
 }
 
 /**
- * HSAIL builtin to evaluate predicate for all active work-items in the
+ * Evaluate predicate for all active work-items in the
  * wavefront and return non-zero if and only if predicate evaluates to non-zero
  * for any of them.
  */
 extern "C" inline int __all(int predicate) __HC__ {
-    return hsail_popcount_u32_b64(hsail_activelanemask_v4_b64_b1(predicate)) == hsail_activelanecount_u32_b1(1);
+    return __popcount_u32_b64(__activelanemask_v4_b64_b1(predicate)) == __activelanecount_u32_b1(1);
 }
 
 /**
- * HSAIL builtin to evaluate predicate for all active work-items in the
+ * Evaluate predicate for all active work-items in the
  * wavefront and return an integer whose Nth bit is set if and only if
  * predicate evaluates to non-zero for the Nth work-item of the wavefront and
  * the Nth work-item is active.
  */
 extern "C" inline uint64_t __ballot(int predicate) __HC__ {
-    return hsail_activelanemask_v4_b64_b1(predicate);
+    return __activelanemask_v4_b64_b1(predicate);
 }
 
 // ------------------------------------------------------------------------
@@ -2216,7 +2212,7 @@ union __u {
 
 /** @{ */
 /**
- * HSAIL builtin to direct copy from indexed active work-item within a wavefront.
+ * Direct copy from indexed active work-item within a wavefront.
  *
  * Work-items may only read data from another work-item which is active in the
  * current wavefront. If the target work-item is inactive, the retrieved value
@@ -2234,10 +2230,10 @@ union __u {
  * __HSA_WAVEFRONT_SIZE__.
  */
 inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-    unsigned int laneId = hsail_activelaneid_u32();
-    unsigned int shift = hsail_popcount_u32_b32(width - 1);
+    unsigned int laneId = __activelaneid_u32();
+    unsigned int shift = __popcount_u32_b32(width - 1);
     unsigned int newSrcLane = ((laneId >> shift) << shift) + (srcLane % width);
-    return hsail_activelanepermute_b32(var, newSrcLane, 0, 0);
+    return __activelanepermute_b32(var, newSrcLane, 0, 0);
 }
 
 inline float __shfl(float var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
@@ -2251,7 +2247,7 @@ inline float __shfl(float var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __
 
 /** @{ */
 /**
- * HSAIL builtin to copy from an active work-item with lower ID relative to
+ * Copy from an active work-item with lower ID relative to
  * caller within a wavefront.
  *
  * Work-items may only read data from another work-item which is active in the
@@ -2271,11 +2267,11 @@ inline float __shfl(float var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __
  * __HSA_WAVEFRONT_SIZE__.
  */
 inline int __shfl_up(int var, unsigned int delta, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-    unsigned int laneId = hsail_activelaneid_u32();
-    unsigned int shift = hsail_popcount_u32_b32(width - 1);
+    unsigned int laneId = __activelaneid_u32();
+    unsigned int shift = __popcount_u32_b32(width - 1);
     unsigned int logicalLaneId = laneId % width;
     unsigned int newSrcLane = (logicalLaneId < delta) ? laneId : ((laneId >> shift) << shift) + (logicalLaneId - delta);
-    return hsail_activelanepermute_b32(var, newSrcLane, 0, 0);
+    return __activelanepermute_b32(var, newSrcLane, 0, 0);
 }
 
 inline float __shfl_up(float var, unsigned int delta, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
@@ -2288,7 +2284,7 @@ inline float __shfl_up(float var, unsigned int delta, int width=__HSA_WAVEFRONT_
 /** @} */
 
 /**
- * HSAIL builtin to copy from an active work-item with higher ID relative to
+ * Copy from an active work-item with higher ID relative to
  * caller within a wavefront.
  *
  * Work-items may only read data from another work-item which is active in the
@@ -2309,11 +2305,11 @@ inline float __shfl_up(float var, unsigned int delta, int width=__HSA_WAVEFRONT_
  * __HSA_WAVEFRONT_SIZE__.
  */
 inline int __shfl_down(int var, unsigned int delta, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-    unsigned int laneId = hsail_activelaneid_u32();
-    unsigned int shift = hsail_popcount_u32_b32(width - 1);
+    unsigned int laneId = __activelaneid_u32();
+    unsigned int shift = __popcount_u32_b32(width - 1);
     unsigned int logicalLaneId = laneId % width;
     unsigned int newSrcLane = ((logicalLaneId + delta) >= width) ? laneId : ((laneId >> shift) << shift) + (logicalLaneId + delta);
-    return hsail_activelanepermute_b32(var, newSrcLane, 0, 0);
+    return __activelanepermute_b32(var, newSrcLane, 0, 0);
 }
 
 inline float __shfl_down(float var, unsigned int delta, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
@@ -2326,7 +2322,7 @@ inline float __shfl_down(float var, unsigned int delta, int width=__HSA_WAVEFRON
 /** @} */
 
 /**
- * HSAIL builtin to copy from an active work-item based on bitwise XOR of caller
+ * Copy from an active work-item based on bitwise XOR of caller
  * work-item ID within a wavefront.
  *
  * Work-items may only read data from another work-item which is active in the
@@ -2342,11 +2338,11 @@ inline float __shfl_down(float var, unsigned int delta, int width=__HSA_WAVEFRON
  * __HSA_WAVEFRONT_SIZE__.
  */
 inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-    unsigned int laneId = hsail_activelaneid_u32();
-    unsigned int shift = hsail_popcount_u32_b32(width - 1);
+    unsigned int laneId = __activelaneid_u32();
+    unsigned int shift = __popcount_u32_b32(width - 1);
     unsigned int logicalLaneId = laneId % width;
     unsigned int newSrcLane = ((laneId >> shift) << shift) + (logicalLaneId ^ laneMask);
-    return hsail_activelanepermute_b32(var, newSrcLane, 0, 0);
+    return __activelanepermute_b32(var, newSrcLane, 0, 0);
 }
 
 inline float __shfl_xor(float var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
@@ -2364,7 +2360,7 @@ inline float __shfl_xor(float var, int laneMask, int width=__HSA_WAVEFRONT_SIZE_
 // ------------------------------------------------------------------------
 
 /**
- * C interface of HSA builtin function to fetch an address within group segment
+ * Fetch an address within group segment
  *
  * @param[in] offset offset within group segment
  * @return A pointer to the memory address space with the specified offset from
@@ -2373,22 +2369,21 @@ inline float __shfl_xor(float var, int laneMask, int width=__HSA_WAVEFRONT_SIZE_
 extern "C" __attribute__((address_space(3))) void* get_group_segment_addr(unsigned int offset) __HC__;
 
 /**
- * C interface of HSA builtin function to fetch the size of static group segment
+ * Fetch the size of static group segment
  *
  * @return The size of static group segment used by the kernel in bytes.
  */
 extern "C" unsigned int get_static_group_segment_size() __HC__;
 
 /**
- * C interface of HSA builtin function to fetch the size of dynamic group segment
+ * Fetch the size of dynamic group segment
  *
  * @return The size of dynamic group segment used by the kernel in bytes.
  */
 extern "C" unsigned int get_dynamic_group_segment_size() __HC__;
 
 /**
- * C interface of HSA builtin function to fetch the address of the beginning
- * of dynamic group segment.
+ * Fetch the address of the beginning of dynamic group segment.
  */
 extern "C" __attribute__((address_space(3))) void* get_dynamic_group_segment() __HC__;
 

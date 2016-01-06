@@ -9,7 +9,7 @@
 
 #define WAVEFRONT_SIZE (64) // as of now, all HSA agents have wavefront size of 64
 
-#define TEST_DEBUG (1)
+#define TEST_DEBUG (0)
 
 // A test case to verify HSAIL builtin function
 // - __shfl_xor
@@ -22,7 +22,7 @@ bool test_reduce(int grid_size) {
   array<int, 1> table(grid_size);
 
   parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
-    int laneId = hsail_activelaneid_u32();
+    int laneId = __activelaneid_u32();
     int value = (WAVEFRONT_SIZE - 1) - laneId;
 
     // use xor mode to perform butterfly reduction
