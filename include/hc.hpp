@@ -6024,15 +6024,6 @@ completion_future copy_async(const array_view<T, N>& src, const array<T, N>& des
  *         dest, and that was atomically replaced. These functions always
  *         succeed.
  */
-// FIXME: following funtions are not implemented:
-// int atomic_fetch_and(int * dest, int val) __HC__;
-// unsigned int atomic_fetch_and(unsigned int * dest, unsigned int val) __HC__;
-//
-// int atomic_fetch_or(int * dest, int val) __HC__;
-// unsigned int atomic_fetch_or(unsigned int * dest, unsigned int val) __HC__;
-//
-// int atomic_fetch_xor(int * dest, int val) __HC__;
-// unsigned int atomic_fetch_xor(unsigned int * dest, unsigned int val) __HC__;
 #if __KALMAR_ACCELERATOR__ == 1
 extern "C" unsigned int atomic_add_unsigned(unsigned int *p, unsigned int val) __HC__;
 extern "C" int atomic_add_int(int *p, int val) __HC__;
@@ -6060,6 +6051,36 @@ static inline int atomic_fetch_sub(int *x, int y) __CPU__ __HC__ {
 }
 static inline int atomic_fetch_sub(float *x, float y) __CPU__ __HC__ {
   return atomic_sub_float(x, y);
+}
+
+extern "C" unsigned int atomic_and_unsigned(unsigned int *p, unsigned int val) __HC__;
+extern "C" int atomic_and_int(int *p, int val) __HC__;
+
+static inline unsigned int atomic_fetch_and(unsigned int *x, unsigned int y) __CPU__ __HC__ {
+  return atomic_and_unsigned(x, y);
+}
+static inline int atomic_fetch_and(int *x, int y) __CPU__ __HC__ {
+  return atomic_and_int(x, y);
+}
+
+extern "C" unsigned int atomic_or_unsigned(unsigned int *p, unsigned int val) __HC__;
+extern "C" int atomic_or_int(int *p, int val) __HC__;
+
+static inline unsigned int atomic_fetch_or(unsigned int *x, unsigned int y) __CPU__ __HC__ {
+  return atomic_or_unsigned(x, y);
+}
+static inline int atomic_fetch_or(int *x, int y) __CPU__ __HC__ {
+  return atomic_or_int(x, y);
+}
+
+extern "C" unsigned int atomic_xor_unsigned(unsigned int *p, unsigned int val) __HC__;
+extern "C" int atomic_xor_int(int *p, int val) __HC__;
+
+static inline unsigned int atomic_fetch_xor(unsigned int *x, unsigned int y) __CPU__ __HC__ {
+  return atomic_xor_unsigned(x, y);
+}
+static inline int atomic_fetch_xor(int *x, int y) __CPU__ __HC__ {
+  return atomic_xor_int(x, y);
 }
 #elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
 unsigned int atomic_add_unsigned(unsigned int *p, unsigned int val);
@@ -6089,6 +6110,36 @@ static inline int atomic_fetch_sub(int *x, int y) __CPU__ __HC__ {
 static inline float atomic_fetch_sub(float *x, float y) __CPU__ __HC__ {
   return atomic_sub_float(x, y);
 }
+
+unsigned int atomic_and_unsigned(unsigned int *p, unsigned int val);
+int atomic_and_int(int *p, int val);
+
+static inline unsigned int atomic_fetch_and(unsigned int *x, unsigned int y) __CPU__ __HC__ {
+  return atomic_and_unsigned(x, y);
+}
+static inline int atomic_fetch_and(int *x, int y) __CPU__ __HC__ {
+  return atomic_and_int(x, y);
+}
+
+unsigned int atomic_or_unsigned(unsigned int *p, unsigned int val);
+int atomic_or_int(int *p, int val);
+
+static inline unsigned int atomic_fetch_or(unsigned int *x, unsigned int y) __CPU__ __HC__ {
+  return atomic_or_unsigned(x, y);
+}
+static inline int atomic_fetch_or(int *x, int y) __CPU__ __HC__ {
+  return atomic_or_int(x, y);
+}
+
+unsigned int atomic_xor_unsigned(unsigned int *p, unsigned int val);
+int atomic_xor_int(int *p, int val);
+
+static inline unsigned int atomic_fetch_xor(unsigned int *x, unsigned int y) __CPU__ __HC__ {
+  return atomic_xor_unsigned(x, y);
+}
+static inline int atomic_fetch_xor(int *x, int y) __CPU__ __HC__ {
+  return atomic_xor_int(x, y);
+}
 #else
 extern unsigned atomic_fetch_add(unsigned *x, unsigned y) __CPU__ __HC__;
 extern int atomic_fetch_add(int *x, int y) __CPU__ __HC__;
@@ -6097,6 +6148,15 @@ extern float atomic_fetch_add(float *x, float y) __CPU__ __HC__;
 extern unsigned atomic_fetch_sub(unsigned *x, unsigned y) __CPU__ __HC__;
 extern int atomic_fetch_sub(int *x, int y) __CPU__ __HC__;
 extern float atomic_fetch_sub(float *x, float y) __CPU__ __HC__;
+
+extern unsigned atomic_fetch_and(unsigned *x, unsigned y) __CPU__ __HC__;
+extern int atomic_fetch_and(int *x, int y) __CPU__ __HC__;
+
+extern unsigned atomic_fetch_or(unsigned *x, unsigned y) __CPU__ __HC__;
+extern int atomic_fetch_or(int *x, int y) __CPU__ __HC__;
+
+extern unsigned atomic_fetch_xor(unsigned *x, unsigned y) __CPU__ __HC__;
+extern int atomic_fetch_xor(int *x, int y) __CPU__ __HC__;
 #endif
 
 #if __KALMAR_ACCELERATOR__ == 1
