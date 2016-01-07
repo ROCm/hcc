@@ -10,6 +10,11 @@ extern "C" HSAIL_BUILTIN_GPU int __hsail_atomic_fetch_add_int(int* dest, int val
 extern "C" HSAIL_BUILTIN_GPU unsigned int __hsail_atomic_fetch_add_unsigned(unsigned int* dest, unsigned int val);
 extern "C" HSAIL_BUILTIN_GPU int64_t __hsail_atomic_fetch_add_int64(int64_t* dest, int64_t val);
 
+// fetch_sub
+extern "C" HSAIL_BUILTIN_GPU int __hsail_atomic_fetch_sub_int(int* dest, int val);
+extern "C" HSAIL_BUILTIN_GPU unsigned int __hsail_atomic_fetch_sub_unsigned(unsigned int* dest, unsigned int val);
+extern "C" HSAIL_BUILTIN_GPU int64_t __hsail_atomic_fetch_sub_int64(int64_t* dest, int64_t val);
+
 // exchange
 extern "C" HSAIL_BUILTIN_GPU int __hsail_atomic_exchange_int(int* dest, int val);
 extern "C" HSAIL_BUILTIN_GPU unsigned int __hsail_atomic_exchange_unsigned(unsigned int* dest, unsigned int val);
@@ -31,6 +36,16 @@ extern "C" HSAIL_BUILTIN_CPU unsigned int __hsail_atomic_fetch_add_unsigned(unsi
 
 extern "C" HSAIL_BUILTIN_CPU int64_t __hsail_atomic_fetch_add_int64(int64_t* dest, int64_t val)
 { return __sync_fetch_and_add(dest, val); }
+
+// fetch_sub
+extern "C" HSAIL_BUILTIN_CPU int __hsail_atomic_fetch_sub_int(int* dest, int val)
+{ return __sync_fetch_and_sub(dest, val); }
+
+extern "C" HSAIL_BUILTIN_CPU unsigned int __hsail_atomic_fetch_sub_unsigned(unsigned int* dest, unsigned int val)
+{ return __sync_fetch_and_sub(dest, val); }
+
+extern "C" HSAIL_BUILTIN_CPU int64_t __hsail_atomic_fetch_sub_int64(int64_t* dest, int64_t val)
+{ return __sync_fetch_and_sub(dest, val); }
 
 // exchange
 extern "C" HSAIL_BUILTIN_CPU int __hsail_atomic_exchange_int(int* dest, int val)

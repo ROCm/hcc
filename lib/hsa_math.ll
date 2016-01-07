@@ -2388,9 +2388,23 @@ entry:
 }
 
 ; Function Attrs: nounwind
+define linkonce_odr spir_func i32 @__hsail_atomic_fetch_sub_int_local(i32 addrspace(3)* %x, i32 %y) #0 {
+entry:
+  %ret = atomicrmw sub i32 addrspace(3)* %x, i32 %y seq_cst, !mem.scope !1
+  ret i32 %ret
+}
+
+; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @__hsail_atomic_fetch_add_unsigned_local(i32 addrspace(3)* %x, i32 %y) #0 {
 entry:
   %ret = atomicrmw add i32 addrspace(3)* %x, i32 %y seq_cst, !mem.scope !1
+  ret i32 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i32 @__hsail_atomic_fetch_sub_unsigned_local(i32 addrspace(3)* %x, i32 %y) #0 {
+entry:
+  %ret = atomicrmw sub i32 addrspace(3)* %x, i32 %y seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
@@ -2402,9 +2416,23 @@ entry:
 }
 
 ; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @__hsail_atomic_fetch_sub_int64_local(i64 addrspace(3)* %x, i64 %y) #0 {
+entry:
+  %ret = atomicrmw sub i64 addrspace(3)* %x, i64 %y seq_cst, !mem.scope !1
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @__hsail_atomic_fetch_add_int_global(i32 addrspace(1)* %x, i32 %y) #0 {
 entry:
   %ret = atomicrmw add i32 addrspace(1)* %x, i32 %y seq_cst, !mem.scope !1
+  ret i32 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i32 @__hsail_atomic_fetch_sub_int_global(i32 addrspace(1)* %x, i32 %y) #0 {
+entry:
+  %ret = atomicrmw sub i32 addrspace(1)* %x, i32 %y seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
@@ -2416,9 +2444,23 @@ entry:
 }
 
 ; Function Attrs: nounwind
+define linkonce_odr spir_func i32 @__hsail_atomic_fetch_sub_unsigned_global(i32 addrspace(1)* %x, i32 %y) #0 {
+entry:
+  %ret = atomicrmw sub i32 addrspace(1)* %x, i32 %y seq_cst, !mem.scope !1
+  ret i32 %ret
+}
+
+; Function Attrs: nounwind
 define linkonce_odr spir_func i64 @__hsail_atomic_fetch_add_int64_global(i64 addrspace(1)* %x, i64 %y) #0 {
 entry:
   %ret = atomicrmw add i64 addrspace(1)* %x, i64 %y seq_cst, !mem.scope !1
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @__hsail_atomic_fetch_sub_int64_global(i64 addrspace(1)* %x, i64 %y) #0 {
+entry:
+  %ret = atomicrmw sub i64 addrspace(1)* %x, i64 %y seq_cst, !mem.scope !1
   ret i64 %ret
 }
 
