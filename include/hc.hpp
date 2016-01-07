@@ -289,12 +289,27 @@ public:
 
     /**
      * Returns an opaque handle which points to the AM region on the HSA agent.
+     * This region can be used to allocate accelerator memory which is accessible from the 
+     * specified accelerator.
      *
-     * @return An opaque handle of the region, if the accelerator view is based
+     * @return An opaque handle of the region, if the accelerator is based
      *         on HSA.  NULL otherwise.
      */
     void* get_hsa_am_region() {
         return pQueue->getHSAAMRegion();
+    }
+
+
+    /**
+     * Returns an opaque handle which points to the AM system region on the HSA agent.
+     * This region can be used to allocate system memory which is accessible from the 
+     * specified accelerator.
+     *
+     * @return An opaque handle of the region, if the accelerator is based
+     *         on HSA.  NULL otherwise.
+     */
+    void* get_hsa_am_system_region() {
+        return pQueue->getHSAAMHostRegion();
     }
 
     /**
@@ -661,12 +676,26 @@ public:
 
     /**
      * Returns an opaque handle which points to the AM region on the HSA agent.
+     * This region can be used to allocate accelerator memory which is accessible from the 
+     * specified accelerator.
      *
      * @return An opaque handle of the region, if the accelerator is based
      *         on HSA.  NULL otherwise.
      */
     void* get_hsa_am_region() {
         return get_default_view().get_hsa_am_region();
+    }
+
+    /**
+     * Returns an opaque handle which points to the AM system region on the HSA agent.
+     * This region can be used to allocate system memory which is accessible from the 
+     * specified accelerator.
+     *
+     * @return An opaque handle of the region, if the accelerator is based
+     *         on HSA.  NULL otherwise.
+     */
+    void* get_hsa_am_system_region() {
+        return get_default_view().get_hsa_am_system_region();
     }
 
     /**

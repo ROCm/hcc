@@ -7,6 +7,9 @@ typedef int am_status_t;
 // TODO - provide better mapping of HSA error conditions to HC error codes.
 #define AM_ERROR_MISC                       -1 /** Misellaneous error */
 
+// Flags for am_alloc API:
+#define amHostPinned 0x1
+
 
 namespace hc {
 

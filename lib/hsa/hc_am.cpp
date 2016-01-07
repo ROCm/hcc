@@ -17,33 +17,29 @@ namespace hc {
 // Allocate accelerator memory, return NULL if memory could not be allocated:
 auto_voidp am_alloc(size_t size, hc::accelerator acc, unsigned flags) 
 {
-    assert(flags == 0); // TODO - support other flags.
 
     void *ptr = NULL;
 
     if (size != 0 ) {
         if (acc.is_hsa_accelerator()) {
             hsa_agent_t *hsa_agent = static_cast<hsa_agent_t*> (acc.get_default_view().get_hsa_agent());
-            hsa_region_t *am_region = static_cast<hsa_region_t*>(acc.get_hsa_am_region());
-
-            //TODO - how does AMP return errors?
-
-
-            hsa_status_t s1 = HSA_STATUS_SUCCESS;
-            hsa_status_t s2 = HSA_STATUS_SUCCESS;
-
-            s1 = hsa_memory_allocate(*am_region, size, &ptr);
-            s2 = hsa_memory_assign_agent(ptr, *hsa_agent, HSA_ACCESS_PERMISSION_RW);
-
-
-
-            if ((s1 != HSA_STATUS_SUCCESS) || (s2 != HSA_STATUS_SUCCESS)) {
-                ptr = NULL;
+            hsa_region_t *alloc_region;
+            if (flags & amHostPinned) {
+               alloc_region = static_cast<hsa_region_t*>(acc.get_hsa_am_system_region());
+            } else {
+               alloc_region = static_cast<hsa_region_t*>(acc.get_hsa_am_region());
             }
 
-        } else if (acc.get_is_emulated()) {
-            // TODO - handle host memory allocation here?
-            assert(0);
+            if (alloc_region->handle != -1) {
+
+                hsa_status_t s1 = hsa_memory_allocate(*alloc_region, size, &ptr);
+                hsa_status_t s2 = hsa_memory_assign_agent(ptr, *hsa_agent, HSA_ACCESS_PERMISSION_RW);
+
+                if ((s1 != HSA_STATUS_SUCCESS) || (s2 != HSA_STATUS_SUCCESS)) {
+                    ptr = NULL;
+                }
+            }
+
         }
     }
 
