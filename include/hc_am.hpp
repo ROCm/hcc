@@ -8,7 +8,7 @@ typedef int am_status_t;
 #define AM_ERROR_MISC                       -1 /** Misellaneous error */
 
 // Flags for am_alloc API:
-static const unsigned amHostPinned = 0x1;
+#define amHostPinned 0x1
 
 
 namespace hc {
