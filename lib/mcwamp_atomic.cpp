@@ -62,4 +62,16 @@ int atomic_inc_int(int *p) {
     return *p;
 }
 
+std::mutex afd_u, afd_i;
+unsigned int atomic_dec_unsigned(unsigned int *p) {
+    std::lock_guard<std::mutex> guard(afd_u);
+    *p -= 1;
+    return *p;
+}
+int atomic_dec_int(int *p) {
+    std::lock_guard<std::mutex> guard(afd_i);
+    *p -= 1;
+    return *p;
+}
+
 }

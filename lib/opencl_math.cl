@@ -780,6 +780,18 @@ unsigned atomic_inc_unsigned(volatile unsigned *x) {
   return old;
 }
 
+unsigned atomic_dec_unsigned_global(volatile __global unsigned *x) {
+  return atomic_dec(x);
+}
+unsigned atomic_dec_unsigned_local(volatile __local unsigned *x) {
+  return atomic_dec(x);
+}
+unsigned atomic_dec_unsigned(volatile unsigned *x) {
+  unsigned old = *x;
+  *x = old - 1;
+  return old;
+}
+
 int atomic_inc_int_global(volatile __global int *x) {
   return atomic_inc(x);
 }
@@ -792,6 +804,17 @@ int atomic_inc_int(volatile int *x) {
   return old;
 }
 
+int atomic_dec_int_global(volatile __global int *x) {
+  return atomic_dec(x);
+}
+int atomic_dec_int_local(volatile __local int *x) {
+  return atomic_dec(x);
+}
+int atomic_dec_int(volatile int *x) {
+  int old = *x;
+  *x = old - 1;
+  return old;
+}
 
 /**
  * memory functions

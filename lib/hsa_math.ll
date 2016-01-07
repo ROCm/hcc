@@ -2346,9 +2346,23 @@ entry:
 }
 
 ; Function Attrs: nounwind
+define linkonce_odr spir_func i32 @atomic_dec_unsigned_global(i32 addrspace(1)* %x) #0 {
+entry:
+  %ret = atomicrmw sub i32 addrspace(1)* %x, i32 1 seq_cst, !mem.scope !1
+  ret i32 %ret
+}
+
+; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @atomic_inc_unsigned_local(i32 addrspace(3)* %x) #0 {
 entry:
   %ret = atomicrmw add i32 addrspace(3)* %x, i32 1 seq_cst, !mem.scope !1
+  ret i32 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i32 @atomic_dec_unsigned_local(i32 addrspace(3)* %x) #0 {
+entry:
+  %ret = atomicrmw sub i32 addrspace(3)* %x, i32 1 seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
@@ -2360,9 +2374,23 @@ entry:
 }
 
 ; Function Attrs: nounwind
+define linkonce_odr spir_func i32 @atomic_dec_unsigned(i32 addrspace(4)* %x) #0 {
+entry:
+  %ret = atomicrmw sub i32 addrspace(4)* %x, i32 1 seq_cst, !mem.scope !1
+  ret i32 %ret
+}
+
+; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @atomic_inc_int_global(i32 addrspace(1)* %x) #0 {
 entry:
   %ret = atomicrmw add i32 addrspace(1)* %x, i32 1 seq_cst, !mem.scope !1
+  ret i32 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i32 @atomic_dec_int_global(i32 addrspace(1)* %x) #0 {
+entry:
+  %ret = atomicrmw sub i32 addrspace(1)* %x, i32 1 seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
@@ -2374,9 +2402,23 @@ entry:
 }
 
 ; Function Attrs: nounwind
+define linkonce_odr spir_func i32 @atomic_dec_int_local(i32 addrspace(3)* %x) #0 {
+entry:
+  %ret = atomicrmw sub i32 addrspace(3)* %x, i32 1 seq_cst, !mem.scope !1
+  ret i32 %ret
+}
+
+; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @atomic_inc_int(i32 addrspace(4)* %x) #0 {
 entry:
   %ret = atomicrmw add i32 addrspace(4)* %x, i32 1 seq_cst, !mem.scope !1
+  ret i32 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i32 @atomic_dec_int(i32 addrspace(4)* %x) #0 {
+entry:
+  %ret = atomicrmw sub i32 addrspace(4)* %x, i32 1 seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
