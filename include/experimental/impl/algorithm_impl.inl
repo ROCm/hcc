@@ -20,6 +20,7 @@ inline namespace v1 {
 #include "reduce.inl"
 #include "transform.inl"
 #include "transform_reduce.inl"
+#include "sort.inl"
 
 namespace details {
 

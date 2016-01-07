@@ -503,29 +503,6 @@ is_sorted_until(ExecutionPolicy&& exec,
 /**@}*/
 
 
-/**
- * Parallel version of std::sort in <algorithm>
- *
- * FIXME: this algorithm is implemented sequentially currently
- * @{
- */
-template <typename ExecutionPolicy, typename RandomIt>
-typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, void>::type
-sort(ExecutionPolicy&& exec,
-     RandomIt first, RandomIt last) {
-    return std::sort(first, last);
-}
-
-
-template <typename ExecutionPolicy, typename RandomIt, typename Compare>
-typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, void>::type
-sort(ExecutionPolicy&& exec,
-     RandomIt first, RandomIt last,
-     Compare comp) {
-    return std::sort(first, last, comp);
-}
-/**@}*/
-
 
 /**
  * Parallel version of std::partial_sort in <algorithm>
