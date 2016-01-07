@@ -138,6 +138,11 @@ public:
     queuing_mode get_queuing_mode() const { return pQueue->get_mode(); }
 
     /**
+     * Returns the execution order of this accelerator_view.
+     */
+    execute_order get_execute_order() const { return pQueue->get_execute_order(); }
+
+    /**
      * Returns a boolean value indicating whether the accelerator view when
      * passed to a parallel_for_each would result in automatic selection of an
      * appropriate execution target by the runtime. In other words, this is the
@@ -289,12 +294,27 @@ public:
 
     /**
      * Returns an opaque handle which points to the AM region on the HSA agent.
+     * This region can be used to allocate accelerator memory which is accessible from the 
+     * specified accelerator.
      *
-     * @return An opaque handle of the region, if the accelerator view is based
+     * @return An opaque handle of the region, if the accelerator is based
      *         on HSA.  NULL otherwise.
      */
     void* get_hsa_am_region() {
         return pQueue->getHSAAMRegion();
+    }
+
+
+    /**
+     * Returns an opaque handle which points to the AM system region on the HSA agent.
+     * This region can be used to allocate system memory which is accessible from the 
+     * specified accelerator.
+     *
+     * @return An opaque handle of the region, if the accelerator is based
+     *         on HSA.  NULL otherwise.
+     */
+    void* get_hsa_am_system_region() {
+        return pQueue->getHSAAMHostRegion();
     }
 
     /**
@@ -512,8 +532,8 @@ public:
      *                  See "Queuing Mode". The default value would be
      *                  queueing_mdoe_automatic if not specified.
      */
-    accelerator_view create_view(queuing_mode mode = queuing_mode_automatic) {
-        auto pQueue = pDev->createQueue();
+    accelerator_view create_view(execute_order order = execute_in_order, queuing_mode mode = queuing_mode_automatic) {
+        auto pQueue = pDev->createQueue(order);
         pQueue->set_mode(mode);
         return pQueue;
     }
@@ -661,12 +681,26 @@ public:
 
     /**
      * Returns an opaque handle which points to the AM region on the HSA agent.
+     * This region can be used to allocate accelerator memory which is accessible from the 
+     * specified accelerator.
      *
      * @return An opaque handle of the region, if the accelerator is based
      *         on HSA.  NULL otherwise.
      */
     void* get_hsa_am_region() {
         return get_default_view().get_hsa_am_region();
+    }
+
+    /**
+     * Returns an opaque handle which points to the AM system region on the HSA agent.
+     * This region can be used to allocate system memory which is accessible from the 
+     * specified accelerator.
+     *
+     * @return An opaque handle of the region, if the accelerator is based
+     *         on HSA.  NULL otherwise.
+     */
+    void* get_hsa_am_system_region() {
+        return get_default_view().get_hsa_am_system_region();
     }
 
     /**
@@ -1803,52 +1837,115 @@ tiled_extent<3> extent<N>::tile(int t0, int t1, int t2) const __CPU__ __HC__ {
 
 
 // ------------------------------------------------------------------------
-// HSAIL builtins
+// Intrinsic functions for HSAIL instructions
 // ------------------------------------------------------------------------
 
 /**
- * HSAIL builtin function to fetch the size of a wavefront
+ * Fetch the size of a wavefront
  *
  * @return The size of a wavefront.
  */
-extern "C" unsigned int hsail_wavesize() __HC__;
+extern "C" unsigned int __wavesize() __HC__;
 
 /**
- * HSAIL builtin function to count number of 1 bits in the input
+ * Count number of 1 bits in the input
  *
  * @param[in] input An unsinged 32-bit integer.
  * @return Number of 1 bits in the input.
  */
-extern "C" unsigned int hsail_popcount_u32_b32(unsigned int input) __HC__;
+extern "C" unsigned int __popcount_u32_b32(unsigned int input) __HC__;
 
 /**
- * HSAIL builtin function to count number of 1 bits in the input
+ * Count number of 1 bits in the input
  *
  * @param[in] input An unsinged 64-bit integer.
  * @return Number of 1 bits in the input.
  */
-extern "C" unsigned int hsail_popcount_u32_b64(unsigned long long int input) __HC__;
+extern "C" unsigned int __popcount_u32_b64(unsigned long long int input) __HC__;
+
+/** @{ */
+/**
+ * Extract a range of bits
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these functions.
+ */
+extern "C" unsigned int __bitextract_u32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+
+extern "C" uint64_t __bitextract_u64(uint64_t src0, unsigned int src1, unsigned int src2) __HC__;
+
+extern "C" int __bitextract_s32(int src0, unsigned int src1, unsigned int src2) __HC__;
+
+extern "C" int64_t __bitextract_s64(int64_t src0, unsigned int src1, unsigned int src2) __HC__;
+/** @} */
+
+/** @{ */
+/**
+ * Replace a range of bits
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these functions.
+ */
+extern "C" unsigned int __bitinsert_u32(unsigned int src0, unsigned int src1, unsigned int src2, unsigned int src3) __HC__;
+
+extern "C" uint64_t __bitinsert_u64(uint64_t src0, uint64_t src1, unsigned int src2, unsigned int src3) __HC__;
+
+extern "C" int __bitinsert_s32(int src0, int src1, unsigned int src2, unsigned int src3) __HC__;
+
+extern "C" int64_t __bitinsert_s64(int64_t src0, int64_t src1, unsigned int src2, unsigned int src3) __HC__;
+/** @} */
+
+/** @{ */
+/**
+ * Create a bit mask that can be used with bitselect
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these functions.
+ */
+extern "C" unsigned int __bitmask_b32(unsigned int src0, unsigned int src1) __HC__;
+
+extern "C" uint64_t __bitmask_b64(unsigned int src0, unsigned int src1) __HC__;
+/** @} */
+
+/** @{ */
+/**
+ * Reverse the bits
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these functions.
+ */
+extern "C" unsigned int __bitrev_b32(unsigned int src0) __HC__;
+
+extern "C" uint64_t __bitrev_b64(uint64_t src0) __HC__;
+/** @} */
+
+/** @{ */
+/**
+ * Do bit field selection
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these functions.
+ */
+extern "C" unsigned int __bitselect_b32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+
+extern "C" uint64_t __bitselect_b64(uint64_t src0, uint64_t src1, uint64_t src2) __HC__;
+/** @} */
 
 /**
- * HSAIL builtin function to count leading zero bits in the input
+ * Count leading zero bits in the input
  *
  * @param[in] input An unsigned 32-bit integer.
  * @return Number of 0 bits until a 1 bit is found, counting start from the
  *         most significant bit. -1 if there is no 0 bit.
  */
-extern "C" unsigned int hsail_firstbit_u32_u32(unsigned int input) __HC__;
+extern "C" unsigned int __firstbit_u32_u32(unsigned int input) __HC__;
 
 /**
- * HSAIL builtin function to count leading zero bits in the input
+ * Count leading zero bits in the input
  *
  * @param[in] input An unsigned 64-bit integer.
  * @return Number of 0 bits until a 1 bit is found, counting start from the
  *         most significant bit. -1 if there is no 0 bit.
  */
-extern "C" unsigned int hsail_firstbit_u32_u64(unsigned long long int input) __HC__;
+extern "C" unsigned int __firstbit_u32_u64(unsigned long long int input) __HC__;
 
 /**
- * HSAIL builtin function to count leading zero bits in the input
+ * Count leading zero bits in the input
  *
  * @param[in] input An signed 32-bit integer.
  * @return Finds the first bit set in a positive integer starting from the
@@ -1856,10 +1953,10 @@ extern "C" unsigned int hsail_firstbit_u32_u64(unsigned long long int input) __H
  *         integer from the most significant bit.
  *         If no bits in the input are set, then dest is set to -1.
  */
-extern "C" unsigned int hsail_firstbit_u32_s32(int input) __HC__;
+extern "C" unsigned int __firstbit_u32_s32(int input) __HC__;
 
 /**
- * HSAIL builtin function to count leading zero bits in the input
+ * Count leading zero bits in the input
  *
  * @param[in] input An signed 64-bit integer.
  * @return Finds the first bit set in a positive integer starting from the
@@ -1867,19 +1964,437 @@ extern "C" unsigned int hsail_firstbit_u32_s32(int input) __HC__;
  *         integer from the most significant bit.
  *         If no bits in the input are set, then dest is set to -1.
  */
-extern "C" unsigned int hsail_firstbit_u32_s64(long long int input) __HC__;
+extern "C" unsigned int __firstbit_u32_s64(long long int input) __HC__;
+
+/** @{ */
+/**
+ * Find the first bit set to 1 in a number starting from the
+ * least significant bit
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these functions.
+ */
+extern "C" unsigned int __lastbit_u32_u32(unsigned int input) __HC__;
+
+extern "C" unsigned int __lastbit_u32_u64(unsigned long long int input) __HC__;
+
+extern "C" unsigned int __lastbit_u32_s32(int input) __HC__;
+
+extern "C" unsigned int __lastbit_u32_s64(unsigned long long input) __HC__;
+/** @} */
+
+/** @{ */
+/**
+ * Copy and interleave the lower half of the elements from
+ * each source into the desitionation
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/packed_data.htm">HSA PRM 5.9</a> for more detailed specification of these functions.
+ */
+extern "C" unsigned int __unpacklo_u8x4(unsigned int src0, unsigned int src1) __HC__;
+
+extern "C" uint64_t __unpacklo_u8x8(uint64_t src0, uint64_t src1) __HC__;
+
+extern "C" unsigned int __unpacklo_u16x2(unsigned int src0, unsigned int src1) __HC__;
+
+extern "C" uint64_t __unpacklo_u16x4(uint64_t src0, uint64_t src1) __HC__;
+
+extern "C" uint64_t __unpacklo_u32x2(uint64_t src0, uint64_t src1) __HC__;
+
+extern "C" int __unpacklo_s8x4(int src0, int src1) __HC__;
+
+extern "C" int64_t __unpacklo_s8x8(int64_t src0, int64_t src1) __HC__;
+
+extern "C" int __unpacklo_s16x2(int src0, int src1) __HC__;
+
+extern "C" int64_t __unpacklo_s16x4(int64_t src0, int64_t src1) __HC__;
+
+extern "C" int64_t __unpacklo_s32x2(int64_t src0, int64_t src1) __HC__;
+/** @} */
+
+/** @{ */
+/**
+ * Copy and interleave the upper half of the elements from
+ * each source into the desitionation
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/packed_data.htm">HSA PRM 5.9</a> for more detailed specification of these functions.
+ */
+extern "C" unsigned int __unpackhi_u8x4(unsigned int src0, unsigned int src1) __HC__;
+
+extern "C" uint64_t __unpackhi_u8x8(uint64_t src0, uint64_t src1) __HC__;
+
+extern "C" unsigned int __unpackhi_u16x2(unsigned int src0, unsigned int src1) __HC__;
+
+extern "C" uint64_t __unpackhi_u16x4(uint64_t src0, uint64_t src1) __HC__;
+
+extern "C" uint64_t __unpackhi_u32x2(uint64_t src0, uint64_t src1) __HC__;
+
+extern "C" int __unpackhi_s8x4(int src0, int src1) __HC__;
+
+extern "C" int64_t __unpackhi_s8x8(int64_t src0, int64_t src1) __HC__;
+
+extern "C" int __unpackhi_s16x2(int src0, int src1) __HC__;
+
+extern "C" int64_t __unpackhi_s16x4(int64_t src0, int64_t src1) __HC__;
+
+extern "C" int64_t __unpackhi_s32x2(int64_t src0, int64_t src1) __HC__;
+/** @} */
+
+/** @{ */
+/**
+ * Assign the elements of the packed value in src0, replacing
+ * the element specified by src2 with the value from src1
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/packed_data.htm">HSA PRM 5.9</a> for more detailed specification of these functions.
+ */
+extern "C" unsigned int __pack_u8x4_u32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+
+extern "C" uint64_t __pack_u8x8_u32(uint64_t src0, unsigned int src1, unsigned int src2) __HC__;
+
+extern "C" unsigned __pack_u16x2_u32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+
+extern "C" uint64_t __pack_u16x4_u32(uint64_t src0, unsigned int src1, unsigned int src2) __HC__;
+
+extern "C" uint64_t __pack_u32x2_u32(uint64_t src0, unsigned int src1, unsigned int src2) __HC__;
+
+extern "C" int __pack_s8x4_s32(int src0, int src1, unsigned int src2) __HC__;
+
+extern "C" int64_t __pack_s8x8_s32(int64_t src0, int src1, unsigned int src2) __HC__;
+
+extern "C" int __pack_s16x2_s32(int src0, int src1, unsigned int src2) __HC__;
+
+extern "C" int64_t __pack_s16x4_s32(int64_t src0, int src1, unsigned int src2) __HC__;
+
+extern "C" int64_t __pack_s32x2_s32(int64_t src0, int src1, unsigned int src2) __HC__;
+
+extern "C" double __pack_f32x2_f32(double src0, float src1, unsigned int src2) __HC__;
+/** @} */
+
+/** @{ */
+/**
+ * Assign the elements specified by src1 from the packed value in src0
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/packed_data.htm">HSA PRM 5.9</a> for more detailed specification of these functions.
+ */
+extern "C" unsigned int __unpack_u32_u8x4(unsigned int src0, unsigned int src1) __HC__;
+
+extern "C" unsigned int __unpack_u32_u8x8(uint64_t src0, unsigned int src1) __HC__;
+
+extern "C" unsigned int __unpack_u32_u16x2(unsigned int src0, unsigned int src1) __HC__;
+
+extern "C" unsigned int __unpack_u32_u16x4(uint64_t src0, unsigned int src1) __HC__;
+
+extern "C" unsigned int __unpack_u32_u32x2(uint64_t src0, unsigned int src1) __HC__;
+
+extern "C" int __unpack_s32_s8x4(int src0, unsigned int src1) __HC__;
+
+extern "C" int __unpack_s32_s8x8(int64_t src0, unsigned int src1) __HC__;
+
+extern "C" int __unpack_s32_s16x2(int src0, unsigned int src1) __HC__;
+
+extern "C" int __unpack_s32_s16x4(int64_t src0, unsigned int src1) __HC__;
+
+extern "C" int __unpack_s32_s3x2(int64_t src0, unsigned int src1) __HC__;
+
+extern "C" float __unpack_f32_f32x2(double src0, unsigned int src1) __HC__;
+/** @} */
 
 /**
- * HSAIL builtin to get system timestamp
+ * Align 32 bits within 64 bits of data on an arbitrary bit boundary
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
  */
-extern "C" uint64_t hsail_clock_u64() __HC__;
+extern "C" unsigned int __bitalign_b32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+
+/**
+ * Align 32 bits within 64 bis of data on an arbitrary byte boundary
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
+ */
+extern "C" unsigned int __bytealign_b32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+
+/**
+ * Do linear interpolation and computes the unsigned 8-bit average of packed
+ * data
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
+ */
+extern "C" unsigned int __lerp_u8x4(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+
+/**
+ * Takes four floating-point number, convers them to
+ * unsigned integer values, and packs them into a packed u8x4 value
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
+ */
+extern "C" unsigned int __packcvt_u8x4_f32(float src0, float src1, float src2, float src3) __HC__;
+
+/**
+ * Unpacks a single element from a packed u8x4 value and converts it to an f32.
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
+ */
+extern "C" float __unpackcvt_f32_u8x4(unsigned int src0, unsigned int src1) __HC__;
+
+/** @{ */
+/**
+ * Computes the sum of the absolute differences of src0 and
+ * src1 and then adds src2 to the result
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
+ */
+extern "C" unsigned int __sad_u32_u32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+
+extern "C" unsigned int __sad_u32_u16x2(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+
+extern "C" unsigned int __sad_u32_u8x4(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+/** @} */
+
+/**
+ * This function is mostly the same as sad except the sum of absolute
+ * differences is added to the most significant 16 bits of the result
+ *
+ * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/multimedia.htm">HSA PRM 5.15</a> for more detailed specification.
+ */
+extern "C" unsigned int __sadhi_u16x2_u8x4(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+
+/**
+ * Get system timestamp
+ */
+extern "C" uint64_t __clock_u64() __HC__;
+
+/**
+ * Count the number of active work-items in the current
+ * wavefront that have a non-zero input.
+ *
+ * @param[in] input An unsigned 32-bit integer.
+ * @return The number of active work-items in the current wavefront that have
+ *         a non-zero input.
+ */
+extern "C" unsigned int __activelanecount_u32_b1(unsigned int input) __HC__;
+
+/**
+ * Get the count of the number of earlier (in flattened
+ * work-item order) active work-items within the same wavefront.
+ *
+ * @return The result will be in the range 0 to WAVESIZE - 1.
+ */
+extern "C" unsigned int __activelaneid_u32() __HC__;
+
+/**
+ * Return a bit mask shows which active work-items in the
+ * wavefront have a non-zero input. The affected bit position within the
+ * registers of dest corresponds to each work-item's lane ID.
+ *
+ * The HSAIL instruction would return 4 64-bit registers but the current
+ * implementation would only return the 1st one and ignore the other 3 as
+ * right now all HSA agents have wavefront of size 64.
+ *
+ * @param[in] input An unsigned 32-bit integer.
+ * @return The bitmask calculated.
+ */
+extern "C" uint64_t __activelanemask_v4_b64_b1(unsigned int input) __HC__;
+
+/**
+ * Permute active work-items in the wavefront.
+ *
+ * Please refer to: <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/09_Parallel/cross_lane.htm">HSA PRM</a> for more detailed information of this instruction.
+ */
+extern "C" unsigned int __activelanepermute_b32(unsigned int src, unsigned int laneId, unsigned int identity, unsigned int useIdentity) __HC__;
+
+// ------------------------------------------------------------------------
+// Wavefront Vote Functions
+// ------------------------------------------------------------------------
+
+/**
+ * Evaluate predicate for all active work-items in the
+ * wavefront and return non-zero if and only if predicate evaluates to non-zero
+ * for all of them.
+ */
+extern "C" inline int __any(int predicate) __HC__ {
+    return __popcount_u32_b64(__activelanemask_v4_b64_b1(predicate));
+}
+
+/**
+ * Evaluate predicate for all active work-items in the
+ * wavefront and return non-zero if and only if predicate evaluates to non-zero
+ * for any of them.
+ */
+extern "C" inline int __all(int predicate) __HC__ {
+    return __popcount_u32_b64(__activelanemask_v4_b64_b1(predicate)) == __activelanecount_u32_b1(1);
+}
+
+/**
+ * Evaluate predicate for all active work-items in the
+ * wavefront and return an integer whose Nth bit is set if and only if
+ * predicate evaluates to non-zero for the Nth work-item of the wavefront and
+ * the Nth work-item is active.
+ */
+extern "C" inline uint64_t __ballot(int predicate) __HC__ {
+    return __activelanemask_v4_b64_b1(predicate);
+}
+
+// ------------------------------------------------------------------------
+// Wavefront Shuffle Functions
+// ------------------------------------------------------------------------
+
+#define __HSA_WAVEFRONT_SIZE__ (64)
+
+// utility union type
+union __u {
+    int i;
+    float f;
+};
+
+/** @{ */
+/**
+ * Direct copy from indexed active work-item within a wavefront.
+ *
+ * Work-items may only read data from another work-item which is active in the
+ * current wavefront. If the target work-item is inactive, the retrieved value
+ * is fixed as 0.
+ *
+ * The function returns the value of var held by the work-item whose ID is given
+ * by srcLane. If width is less than __HSA_WAVEFRONT_SIZE__ then each
+ * subsection of the wavefront behaves as a separate entity with a starting
+ * logical work-item ID of 0. If srcLane is outside the range [0:width-1], the
+ * value returned corresponds to the value of var held by:
+ * srcLane modulo width (i.e. within the same subsection).
+ *
+ * The optional width parameter must have a value which is a power of 2;
+ * results are undefined if it is not a power of 2, or is number greater than
+ * __HSA_WAVEFRONT_SIZE__.
+ */
+inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+    unsigned int laneId = __activelaneid_u32();
+    unsigned int shift = __popcount_u32_b32(width - 1);
+    unsigned int newSrcLane = ((laneId >> shift) << shift) + (srcLane % width);
+    return __activelanepermute_b32(var, newSrcLane, 0, 0);
+}
+
+inline float __shfl(float var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+    __u tmp; tmp.f = var;
+    tmp.i = __shfl(tmp.i, srcLane, width);
+    return tmp.f;
+}
+
+// FIXME: support half type
+/** @} */
+
+/** @{ */
+/**
+ * Copy from an active work-item with lower ID relative to
+ * caller within a wavefront.
+ *
+ * Work-items may only read data from another work-item which is active in the
+ * current wavefront. If the target work-item is inactive, the retrieved value
+ * is fixed as 0.
+ *
+ * The function calculates a source work-item ID by subtracting delta from the
+ * caller's work-item ID within the wavefront. The value of var held by the
+ * resulting lane ID is returned: in effect, var is shifted up the wavefront by
+ * delta work-items. If width is less than __HSA_WAVEFRONT_SIZE__ then each
+ * subsection of the wavefront behaves as a separate entity with a starting
+ * logical work-item ID of 0. The source work-item index will not wrap around
+ * the value of width, so effectively the lower delta work-items will be unchanged.
+ *
+ * The optional width parameter must have a value which is a power of 2;
+ * results are undefined if it is not a power of 2, or is number greater than
+ * __HSA_WAVEFRONT_SIZE__.
+ */
+inline int __shfl_up(int var, unsigned int delta, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+    unsigned int laneId = __activelaneid_u32();
+    unsigned int shift = __popcount_u32_b32(width - 1);
+    unsigned int logicalLaneId = laneId % width;
+    unsigned int newSrcLane = (logicalLaneId < delta) ? laneId : ((laneId >> shift) << shift) + (logicalLaneId - delta);
+    return __activelanepermute_b32(var, newSrcLane, 0, 0);
+}
+
+inline float __shfl_up(float var, unsigned int delta, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+    __u tmp; tmp.f = var;
+    tmp.i = __shfl_up(tmp.i, delta, width);
+    return tmp.f;
+}
+
+// FIXME: support half type
+/** @} */
+
+/**
+ * Copy from an active work-item with higher ID relative to
+ * caller within a wavefront.
+ *
+ * Work-items may only read data from another work-item which is active in the
+ * current wavefront. If the target work-item is inactive, the retrieved value
+ * is fixed as 0.
+ *
+ * The function calculates a source work-item ID by adding delta from the
+ * caller's work-item ID within the wavefront. The value of var held by the
+ * resulting lane ID is returned: this has the effect of shifting var up the
+ * wavefront by delta work-items. If width is less than __HSA_WAVEFRONT_SIZE__
+ * then each subsection of the wavefront behaves as a separate entity with a
+ * starting logical work-item ID of 0. The ID number of the source work-item
+ * index will not wrap around the value of width, so the upper delta work-items
+ * will remain unchanged.
+ *
+ * The optional width parameter must have a value which is a power of 2;
+ * results are undefined if it is not a power of 2, or is number greater than
+ * __HSA_WAVEFRONT_SIZE__.
+ */
+inline int __shfl_down(int var, unsigned int delta, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+    unsigned int laneId = __activelaneid_u32();
+    unsigned int shift = __popcount_u32_b32(width - 1);
+    unsigned int logicalLaneId = laneId % width;
+    unsigned int newSrcLane = ((logicalLaneId + delta) >= width) ? laneId : ((laneId >> shift) << shift) + (logicalLaneId + delta);
+    return __activelanepermute_b32(var, newSrcLane, 0, 0);
+}
+
+inline float __shfl_down(float var, unsigned int delta, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+    __u tmp; tmp.f = var;
+    tmp.i = __shfl_down(tmp.i, delta, width);
+    return tmp.f;
+}
+
+// FIXME: support half type
+/** @} */
+
+/**
+ * Copy from an active work-item based on bitwise XOR of caller
+ * work-item ID within a wavefront.
+ *
+ * Work-items may only read data from another work-item which is active in the
+ * current wavefront. If the target work-item is inactive, the retrieved value
+ * is fixed as 0.
+ *
+ * THe function calculates a source work-item ID by performing a bitwise XOR of
+ * the caller's work-item ID with laneMask: the value of var held by the
+ * resulting work-item ID is returned.
+ *
+ * The optional width parameter must have a value which is a power of 2;
+ * results are undefined if it is not a power of 2, or is number greater than
+ * __HSA_WAVEFRONT_SIZE__.
+ */
+inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+    unsigned int laneId = __activelaneid_u32();
+    unsigned int shift = __popcount_u32_b32(width - 1);
+    unsigned int logicalLaneId = laneId % width;
+    unsigned int newSrcLane = ((laneId >> shift) << shift) + (logicalLaneId ^ laneMask);
+    return __activelanepermute_b32(var, newSrcLane, 0, 0);
+}
+
+inline float __shfl_xor(float var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+    __u tmp; tmp.f = var;
+    tmp.i = __shfl_xor(tmp.i, laneMask, width);
+    return tmp.f;
+}
+
+// FIXME: support half type
+/** @} */
+
 
 // ------------------------------------------------------------------------
 // dynamic group segment
 // ------------------------------------------------------------------------
 
 /**
- * C interface of HSA builtin function to fetch an address within group segment
+ * Fetch an address within group segment
  *
  * @param[in] offset offset within group segment
  * @return A pointer to the memory address space with the specified offset from
@@ -1888,22 +2403,21 @@ extern "C" uint64_t hsail_clock_u64() __HC__;
 extern "C" __attribute__((address_space(3))) void* get_group_segment_addr(unsigned int offset) __HC__;
 
 /**
- * C interface of HSA builtin function to fetch the size of static group segment
+ * Fetch the size of static group segment
  *
  * @return The size of static group segment used by the kernel in bytes.
  */
 extern "C" unsigned int get_static_group_segment_size() __HC__;
 
 /**
- * C interface of HSA builtin function to fetch the size of dynamic group segment
+ * Fetch the size of dynamic group segment
  *
  * @return The size of dynamic group segment used by the kernel in bytes.
  */
 extern "C" unsigned int get_dynamic_group_segment_size() __HC__;
 
 /**
- * C interface of HSA builtin function to fetch the address of the beginning
- * of dynamic group segment.
+ * Fetch the address of the beginning of dynamic group segment.
  */
 extern "C" __attribute__((address_space(3))) void* get_dynamic_group_segment() __HC__;
 
@@ -5510,26 +6024,12 @@ completion_future copy_async(const array_view<T, N>& src, const array<T, N>& des
  *         dest, and that was atomically replaced. These functions always
  *         succeed.
  */
-// FIXME: following funtions are not implemented:
-// int atomic_fetch_sub(int * dest, int val) __HC__;
-// unsigned int atomic_fetch_sub(unsigned int * dest, unsigned int val) __HC__;
-//
-// int atomic_fetch_min(int * dest, int val) __HC__;
-// unsigned int atomic_fetch_min(unsigned int * dest, unsigned int val) __HC__;
-//
-// int atomic_fetch_and(int * dest, int val) __HC__;
-// unsigned int atomic_fetch_and(unsigned int * dest, unsigned int val) __HC__;
-//
-// int atomic_fetch_or(int * dest, int val) __HC__;
-// unsigned int atomic_fetch_or(unsigned int * dest, unsigned int val) __HC__;
-//
-// int atomic_fetch_xor(int * dest, int val) __HC__;
-// unsigned int atomic_fetch_xor(unsigned int * dest, unsigned int val) __HC__;
 #if __KALMAR_ACCELERATOR__ == 1
-extern "C" unsigned atomic_add_unsigned(unsigned *p, unsigned val) __HC__;
+extern "C" unsigned int atomic_add_unsigned(unsigned int *p, unsigned int val) __HC__;
 extern "C" int atomic_add_int(int *p, int val) __HC__;
 extern "C" float atomic_add_float(float *p, float val) __HC__;
-static inline unsigned atomic_fetch_add(unsigned *x, unsigned y) __CPU__ __HC__ {
+
+static inline unsigned int atomic_fetch_add(unsigned int *x, unsigned int y) __CPU__ __HC__ {
   return atomic_add_unsigned(x, y);
 }
 static inline int atomic_fetch_add(int *x, int y) __CPU__ __HC__ {
@@ -5537,12 +6037,57 @@ static inline int atomic_fetch_add(int *x, int y) __CPU__ __HC__ {
 }
 static inline float atomic_fetch_add(float *x, float y) __CPU__ __HC__ {
   return atomic_add_float(x, y);
+}
+
+extern "C" unsigned int atomic_sub_unsigned(unsigned int *p, unsigned int val) __HC__;
+extern "C" int atomic_sub_int(int *p, int val) __HC__;
+extern "C" float atomic_sub_float(float *p, float val) __HC__;
+
+static inline unsigned int atomic_fetch_sub(unsigned int *x, unsigned int y) __CPU__ __HC__ {
+  return atomic_add_unsigned(x, y);
+}
+static inline int atomic_fetch_sub(int *x, int y) __CPU__ __HC__ {
+  return atomic_sub_int(x, y);
+}
+static inline int atomic_fetch_sub(float *x, float y) __CPU__ __HC__ {
+  return atomic_sub_float(x, y);
+}
+
+extern "C" unsigned int atomic_and_unsigned(unsigned int *p, unsigned int val) __HC__;
+extern "C" int atomic_and_int(int *p, int val) __HC__;
+
+static inline unsigned int atomic_fetch_and(unsigned int *x, unsigned int y) __CPU__ __HC__ {
+  return atomic_and_unsigned(x, y);
+}
+static inline int atomic_fetch_and(int *x, int y) __CPU__ __HC__ {
+  return atomic_and_int(x, y);
+}
+
+extern "C" unsigned int atomic_or_unsigned(unsigned int *p, unsigned int val) __HC__;
+extern "C" int atomic_or_int(int *p, int val) __HC__;
+
+static inline unsigned int atomic_fetch_or(unsigned int *x, unsigned int y) __CPU__ __HC__ {
+  return atomic_or_unsigned(x, y);
+}
+static inline int atomic_fetch_or(int *x, int y) __CPU__ __HC__ {
+  return atomic_or_int(x, y);
+}
+
+extern "C" unsigned int atomic_xor_unsigned(unsigned int *p, unsigned int val) __HC__;
+extern "C" int atomic_xor_int(int *p, int val) __HC__;
+
+static inline unsigned int atomic_fetch_xor(unsigned int *x, unsigned int y) __CPU__ __HC__ {
+  return atomic_xor_unsigned(x, y);
+}
+static inline int atomic_fetch_xor(int *x, int y) __CPU__ __HC__ {
+  return atomic_xor_int(x, y);
 }
 #elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-unsigned atomic_add_unsigned(unsigned *p, unsigned val);
+unsigned int atomic_add_unsigned(unsigned int *p, unsigned int val);
 int atomic_add_int(int *p, int val);
 float atomic_add_float(float *p, float val);
-static inline unsigned atomic_fetch_add(unsigned *x, unsigned y) __CPU__ __HC__ {
+
+static inline unsigned int atomic_fetch_add(unsigned int *x, unsigned int y) __CPU__ __HC__ {
   return atomic_add_unsigned(x, y);
 }
 static inline int atomic_fetch_add(int *x, int y) __CPU__ __HC__ {
@@ -5550,34 +6095,116 @@ static inline int atomic_fetch_add(int *x, int y) __CPU__ __HC__ {
 }
 static inline float atomic_fetch_add(float *x, float y) __CPU__ __HC__ {
   return atomic_add_float(x, y);
+}
+
+unsigned int atomic_sub_unsigned(unsigned int *p, unsigned int val);
+int atomic_sub_int(int *p, int val);
+float atomic_sub_float(float *p, float val);
+
+static inline unsigned int atomic_fetch_sub(unsigned int *x, unsigned int y) __CPU__ __HC__ {
+  return atomic_sub_unsigned(x, y);
+}
+static inline int atomic_fetch_sub(int *x, int y) __CPU__ __HC__ {
+  return atomic_sub_int(x, y);
+}
+static inline float atomic_fetch_sub(float *x, float y) __CPU__ __HC__ {
+  return atomic_sub_float(x, y);
+}
+
+unsigned int atomic_and_unsigned(unsigned int *p, unsigned int val);
+int atomic_and_int(int *p, int val);
+
+static inline unsigned int atomic_fetch_and(unsigned int *x, unsigned int y) __CPU__ __HC__ {
+  return atomic_and_unsigned(x, y);
+}
+static inline int atomic_fetch_and(int *x, int y) __CPU__ __HC__ {
+  return atomic_and_int(x, y);
+}
+
+unsigned int atomic_or_unsigned(unsigned int *p, unsigned int val);
+int atomic_or_int(int *p, int val);
+
+static inline unsigned int atomic_fetch_or(unsigned int *x, unsigned int y) __CPU__ __HC__ {
+  return atomic_or_unsigned(x, y);
+}
+static inline int atomic_fetch_or(int *x, int y) __CPU__ __HC__ {
+  return atomic_or_int(x, y);
+}
+
+unsigned int atomic_xor_unsigned(unsigned int *p, unsigned int val);
+int atomic_xor_int(int *p, int val);
+
+static inline unsigned int atomic_fetch_xor(unsigned int *x, unsigned int y) __CPU__ __HC__ {
+  return atomic_xor_unsigned(x, y);
+}
+static inline int atomic_fetch_xor(int *x, int y) __CPU__ __HC__ {
+  return atomic_xor_int(x, y);
 }
 #else
 extern unsigned atomic_fetch_add(unsigned *x, unsigned y) __CPU__ __HC__;
 extern int atomic_fetch_add(int *x, int y) __CPU__ __HC__;
 extern float atomic_fetch_add(float *x, float y) __CPU__ __HC__;
+
+extern unsigned atomic_fetch_sub(unsigned *x, unsigned y) __CPU__ __HC__;
+extern int atomic_fetch_sub(int *x, int y) __CPU__ __HC__;
+extern float atomic_fetch_sub(float *x, float y) __CPU__ __HC__;
+
+extern unsigned atomic_fetch_and(unsigned *x, unsigned y) __CPU__ __HC__;
+extern int atomic_fetch_and(int *x, int y) __CPU__ __HC__;
+
+extern unsigned atomic_fetch_or(unsigned *x, unsigned y) __CPU__ __HC__;
+extern int atomic_fetch_or(int *x, int y) __CPU__ __HC__;
+
+extern unsigned atomic_fetch_xor(unsigned *x, unsigned y) __CPU__ __HC__;
+extern int atomic_fetch_xor(int *x, int y) __CPU__ __HC__;
 #endif
 
 #if __KALMAR_ACCELERATOR__ == 1
-extern "C" unsigned atomic_max_unsigned(unsigned *p, unsigned val) __HC__;
+extern "C" unsigned int atomic_max_unsigned(unsigned int *p, unsigned int val) __HC__;
 extern "C" int atomic_max_int(int *p, int val) __HC__;
-static inline unsigned atomic_fetch_max(unsigned *x, unsigned y) __HC__ {
+
+static inline unsigned int atomic_fetch_max(unsigned int *x, unsigned int y) __HC__ {
   return atomic_max_unsigned(x, y);
 }
 static inline int atomic_fetch_max(int *x, int y) __HC__ {
   return atomic_max_int(x, y);
+}
+
+extern "C" unsigned int atomic_min_unsigned(unsigned int *p, unsigned int val) __HC__;
+extern "C" int atomic_min_int(int *p, int val) __HC__;
+
+static inline unsigned int atomic_fetch_min(unsigned int *x, unsigned int y) __HC__ {
+  return atomic_min_unsigned(x, y);
+}
+static inline int atomic_fetch_min(int *x, int y) __HC__ {
+  return atomic_min_int(x, y);
 }
 #elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-unsigned atomic_max_unsigned(unsigned *p, unsigned val);
+unsigned int atomic_max_unsigned(unsigned int *p, unsigned int val);
 int atomic_max_int(int *p, int val);
-static inline unsigned atomic_fetch_max(unsigned *x, unsigned y) __HC__ {
+
+static inline unsigned int atomic_fetch_max(unsigned int *x, unsigned int y) __HC__ {
   return atomic_max_unsigned(x, y);
 }
 static inline int atomic_fetch_max(int *x, int y) __HC__ {
   return atomic_max_int(x, y);
+}
+
+unsigned int atomic_min_unsigned(unsigned int *p, unsigned int val);
+int atomic_min_int(int *p, int val);
+
+static inline unsigned int atomic_fetch_min(unsigned int *x, unsigned int y) __HC__ {
+  return atomic_min_unsigned(x, y);
+}
+static inline int atomic_fetch_min(int *x, int y) __HC__ {
+  return atomic_min_int(x, y);
 }
 #else
 extern int atomic_fetch_max(int * dest, int val) __CPU__ __HC__;
 extern unsigned int atomic_fetch_max(unsigned int * dest, unsigned int val) __CPU__ __HC__;
+
+extern int atomic_fetch_min(int * dest, int val) __CPU__ __HC__;
+extern unsigned int atomic_fetch_min(unsigned int * dest, unsigned int val) __CPU__ __HC__;
 #endif
 
 /** @} */
@@ -5595,30 +6222,52 @@ extern unsigned int atomic_fetch_max(unsigned int * dest, unsigned int val) __CP
  *         dest, and that was atomically replaced. These functions always
  *         succeed.
  */
-// FIXME: following funtions are not implemented:
-// int atomic_fetch_dec(int * dest) __HC__;
-// unsigned int atomic_fetch_dec(unsigned int * dest) __HC__;
 #if __KALMAR_ACCELERATOR__ == 1
-extern "C" unsigned atomic_inc_unsigned(unsigned *p) __HC__;
+extern "C" unsigned int atomic_inc_unsigned(unsigned int *p) __HC__;
 extern "C" int atomic_inc_int(int *p) __HC__;
-static inline unsigned atomic_fetch_inc(unsigned *x) __CPU__ __HC__ {
+
+static inline unsigned int atomic_fetch_inc(unsigned int *x) __CPU__ __HC__ {
   return atomic_inc_unsigned(x);
 }
 static inline int atomic_fetch_inc(int *x) __CPU__ __HC__ {
   return atomic_inc_int(x);
+}
+
+extern "C" unsigned int atomic_dec_unsigned(unsigned int *p) __HC__;
+extern "C" int atomic_dec_int(int *p) __HC__;
+
+static inline unsigned int atomic_fetch_dec(unsigned int *x) __CPU__ __HC__ {
+  return atomic_dec_unsigned(x);
+}
+static inline int atomic_fetch_dec(int *x) __CPU__ __HC__ {
+  return atomic_dec_int(x);
 }
 #elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-unsigned atomic_inc_unsigned(unsigned *p);
+unsigned int atomic_inc_unsigned(unsigned int *p);
 int atomic_inc_int(int *p);
-static inline unsigned atomic_fetch_inc(unsigned *x) __CPU__ __HC__ {
+
+static inline unsigned int atomic_fetch_inc(unsigned int *x) __CPU__ __HC__ {
   return atomic_inc_unsigned(x);
 }
 static inline int atomic_fetch_inc(int *x) __CPU__ __HC__ {
   return atomic_inc_int(x);
+}
+
+unsigned int atomic_dec_unsigned(unsigned int *p);
+int atomic_dec_int(int *p);
+
+static inline unsigned int atomic_fetch_dec(unsigned int *x) __CPU__ __HC__ {
+  return atomic_dec_unsigned(x);
+}
+static inline int atomic_fetch_dec(int *x) __CPU__ __HC__ {
+  return atomic_dec_int(x);
 }
 #else
 extern int atomic_fetch_inc(int * _Dest) __CPU__ __HC__;
-extern unsigned atomic_fetch_inc(unsigned * _Dest) __CPU__ __HC__;
+extern unsigned int atomic_fetch_inc(unsigned int * _Dest) __CPU__ __HC__;
+
+extern int atomic_fetch_dec(int * _Dest) __CPU__ __HC__;
+extern unsigned int atomic_fetch_dec(unsigned int * _Dest) __CPU__ __HC__;
 #endif
 
 /** @} */

@@ -1,4 +1,4 @@
-// XFAIL: Linux,boltzmann
+// XFAIL: Linux
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <hc.hpp>
@@ -17,7 +17,7 @@ bool test() {
   using namespace hc;
   bool ret = true;
 
-  T table[GRID_SIZE];
+  array_view<T, 1> table(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
 
 #ifdef DEBUG
@@ -28,9 +28,9 @@ bool test() {
 
 #define TEST(func) \
   { \
-    std::fill(std::begin(table), std::end(table), (T)(0)); \
-    parallel_for_each(ex, [&](index<1>& idx) __HC__ { \
-      table[idx[0]] = func((T)(idx[0]+1)); \
+    for (int i = 0; i < GRID_SIZE; ++i) table[i] = T(); \
+    parallel_for_each(ex, [=](index<1>& idx) __HC__ { \
+      table(idx) = func((T)(idx[0]+1)); \
     }); \
     accelerator().get_default_view().wait(); \
     float error = 0.0f; \

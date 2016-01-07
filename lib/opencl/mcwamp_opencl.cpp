@@ -418,7 +418,7 @@ public:
         clReleaseMemObject(dm);
     }
 
-    std::shared_ptr<KalmarQueue> createQueue() override {
+    std::shared_ptr<KalmarQueue> createQueue(execute_order order = execute_in_order) override {
         return std::shared_ptr<KalmarQueue>(new OpenCLQueue(this, device, isAMD));
     }
 

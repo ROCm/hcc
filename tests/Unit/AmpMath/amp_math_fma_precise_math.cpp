@@ -34,6 +34,7 @@ bool test() {
   for (index<1> i(0); i[0] < vecSize; i++) {
     ga[i] = dis(gen);
     gb[i] = dis(gen);
+    gc[i] = dis(gen);
   }
 
   parallel_for_each(

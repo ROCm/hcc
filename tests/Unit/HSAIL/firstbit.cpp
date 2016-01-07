@@ -12,10 +12,10 @@
 #define TEST_DEBUG (0)
 
 // A test case to verify HSAIL builtin function
-// - hsail_firstbit_u32_u32
-// - hsail_firstbit_u32_u64
-// - hsail_firstbit_u32_s32
-// - hsail_firstbit_u32_s64
+// - __firstbit_u32_u32
+// - __firstbit_u32_u64
+// - __firstbit_u32_s32
+// - __firstbit_u32_s64
 
 // CPU implementation of firstbit
 // adopted from HSA PRM 5.9
@@ -141,7 +141,7 @@ bool test_cpu_s64() {
   return ret;
 }
 
-// test hsail_firstbit_u32_u32
+// test __firstbit_u32_u32
 bool test_gpu_u32() {
   using namespace hc;
   bool ret = true;
@@ -159,7 +159,7 @@ bool test_gpu_u32() {
   array<uint32_t, 1> output_GPU(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
   parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
-    output_GPU(idx) = hsail_firstbit_u32_u32(test_GPU(idx));
+    output_GPU(idx) = __firstbit_u32_u32(test_GPU(idx));
   });
 
   // verify result
@@ -174,7 +174,7 @@ bool test_gpu_u32() {
   return ret;
 }
 
-// test hsail_firstbit_u32_u64
+// test __firstbit_u32_u64
 bool test_gpu_u64() {
   using namespace hc;
   bool ret = true;
@@ -191,7 +191,7 @@ bool test_gpu_u64() {
   array<uint32_t, 1> output_GPU(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
   parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
-    output_GPU(idx) = hsail_firstbit_u32_u64(test_GPU(idx));
+    output_GPU(idx) = __firstbit_u32_u64(test_GPU(idx));
   });
 
   // verify result
@@ -206,7 +206,7 @@ bool test_gpu_u64() {
   return ret;
 }
 
-// test hsail_firstbit_u32_s32
+// test __firstbit_u32_s32
 bool test_gpu_s32() {
   using namespace hc;
   bool ret = true;
@@ -224,7 +224,7 @@ bool test_gpu_s32() {
   array<uint32_t, 1> output_GPU(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
   parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
-    output_GPU(idx) = hsail_firstbit_u32_s32(test_GPU(idx));
+    output_GPU(idx) = __firstbit_u32_s32(test_GPU(idx));
   });
 
   // verify result
@@ -239,7 +239,7 @@ bool test_gpu_s32() {
   return ret;
 }
 
-// test hsail_firstbit_u32_s64
+// test __firstbit_u32_s64
 bool test_gpu_s64() {
   using namespace hc;
   bool ret = true;
@@ -256,7 +256,7 @@ bool test_gpu_s64() {
   array<uint32_t, 1> output_GPU(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
   parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
-    output_GPU(idx) = hsail_firstbit_u32_s64(test_GPU(idx));
+    output_GPU(idx) = __firstbit_u32_s64(test_GPU(idx));
   });
 
   // verify result

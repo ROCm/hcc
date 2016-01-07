@@ -67,7 +67,7 @@ public:
     void release(void *device, struct rw_info* /* not used */ ) override { 
         kalmar_aligned_free(device);
     }
-    std::shared_ptr<KalmarQueue> createQueue() override {
+    std::shared_ptr<KalmarQueue> createQueue(execute_order order = execute_in_order) override {
         return std::shared_ptr<KalmarQueue>(new CPUFallbackQueue(this));
     }
 };

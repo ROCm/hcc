@@ -50,10 +50,6 @@
 // default set as 64 (pre-allocating 64 HSA signals)
 #define SIGNAL_POOL_SIZE (64)
 
-// whether to set barrier bit in AQL packet in kernel dispatches
-// default set as 0 (barrier bit NOT set in AQL packet)
-#define DISPATCH_PACKET_BARRIER_BIT (0)
-
 // whether to use kernarg region found on the HSA agent
 // default set as 1 (use karnarg region)
 #define USE_KERNARG_REGION (1)
@@ -293,19 +289,7 @@ public:
 
     hsa_status_t setLaunchAttributes(int dims, size_t *globalDims, size_t *localDims);
 
-    hsa_status_t dispatchKernelWaitComplete(hsa_queue_t* _queue) {
-        hsa_status_t status = HSA_STATUS_SUCCESS;
-        if (isDispatched) {
-            return HSA_STATUS_ERROR_INVALID_ARGUMENT;
-        }
-        status = dispatchKernel(_queue);
-        STATUS_CHECK_Q(status, _queue, __LINE__);
-
-        status = waitComplete();
-        STATUS_CHECK_Q(status, _queue, __LINE__);
-
-        return status;
-    } 
+    hsa_status_t dispatchKernelWaitComplete(Kalmar::HSAQueue*);
 
     hsa_status_t dispatchKernelAsync(Kalmar::HSAQueue*);
 
@@ -385,14 +369,17 @@ private:
 struct region_iterator
 {
     hsa_region_t _am_region;
+    hsa_region_t _am_host_region;
 
     hsa_region_t _kernarg_region;
-    hsa_region_t _finegrained_region;
+    hsa_region_t _finegrained_system_region;
     hsa_region_t _coarsegrained_region;
+    hsa_region_t _coarsegrained_system_region;
 
     bool        _found_kernarg_region;
-    bool        _found_finegrained_region;
+    bool        _found_finegrained_system_region;
     bool        _found_coarsegrained_region;
+    bool        _found_coarsegrained_system_region;
 
     region_iterator() ;
 };
@@ -401,12 +388,14 @@ struct region_iterator
 region_iterator::region_iterator()
 {
     _kernarg_region.handle=(uint64_t)-1;
-    _finegrained_region.handle=(uint64_t)-1;
+    _finegrained_system_region.handle=(uint64_t)-1;
     _coarsegrained_region.handle=(uint64_t)-1;
+    _coarsegrained_system_region.handle=(uint64_t)-1;
 
     _found_kernarg_region = false;
-    _found_finegrained_region = false;
+    _found_finegrained_system_region = false;
     _found_coarsegrained_region = false;
+    _found_coarsegrained_system_region = false;
 }
 //-----
 
@@ -465,7 +454,7 @@ private:
     std::map<void*, std::vector<void*> > kernelBufferMap;
 
 public:
-    HSAQueue(KalmarDevice* pDev, hsa_agent_t agent) : KalmarQueue(pDev), commandQueue(nullptr), asyncOps(), bufferKernelMap(), kernelBufferMap() {
+    HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order) : KalmarQueue(pDev, queuing_mode_automatic, order), commandQueue(nullptr), asyncOps(), bufferKernelMap(), kernelBufferMap() {
         hsa_status_t status;
 
         /// Query the maximum size of the queue.
@@ -582,7 +571,7 @@ public:
 
         // dispatch the kernel
         // and wait for its completion
-        dispatch->dispatchKernelWaitComplete(commandQueue);
+        dispatch->dispatchKernelWaitComplete(this);
 
         // clear data in kernelBufferMap
         kernelBufferMap[ker].clear();
@@ -810,6 +799,8 @@ public:
 
     void* getHSAAMRegion() override;
 
+    void* getHSAAMHostRegion() override;
+
     void* getHSAKernargRegion() override;
 
     bool hasHSAInterOp() override {
@@ -912,8 +903,8 @@ public:
 #if KALMAR_DEBUG
                     std::cerr << "found fine grained region on GPU memory\n";
 #endif 
-                    ri->_finegrained_region = region;
-                    ri->_found_finegrained_region = true;
+                    ri->_finegrained_system_region = region;
+                    ri->_found_finegrained_system_region = true;
                 }
     
                 if (flags & HSA_REGION_GLOBAL_FLAG_COARSE_GRAINED) {
@@ -932,12 +923,19 @@ public:
                     ri->_found_kernarg_region = true;
                 }
         
-                if ((flags & HSA_REGION_GLOBAL_FLAG_FINE_GRAINED) && (!ri->_found_finegrained_region)) {
+                if ((flags & HSA_REGION_GLOBAL_FLAG_FINE_GRAINED) && (!ri->_found_finegrained_system_region)) {
 #if KALMAR_DEBUG
                     std::cerr << "found fine grained region on host memory\n";
 #endif 
-                    ri->_finegrained_region = region;
-                    ri->_found_finegrained_region = true;
+                    ri->_finegrained_system_region = region;
+                    ri->_found_finegrained_system_region = true;
+                }
+                if ((flags & HSA_REGION_GLOBAL_FLAG_COARSE_GRAINED) && (!ri->_found_coarsegrained_system_region)) {
+#if KALMAR_DEBUG
+                    std::cerr << "found coarse-grain system region\n";
+#endif 
+                    ri->_coarsegrained_system_region = region;
+                    ri->_found_coarsegrained_system_region = true;
                 }
         
                 if ((flags & HSA_REGION_GLOBAL_FLAG_COARSE_GRAINED) && (!ri->_found_coarsegrained_region)) {
@@ -1270,8 +1268,8 @@ public:
         return dispatch;
     }
 
-    std::shared_ptr<KalmarQueue> createQueue() override {
-        std::shared_ptr<KalmarQueue> q =  std::shared_ptr<KalmarQueue>(new HSAQueue(this, agent));
+    std::shared_ptr<KalmarQueue> createQueue(execute_order order = execute_in_order) override {
+        std::shared_ptr<KalmarQueue> q =  std::shared_ptr<KalmarQueue>(new HSAQueue(this, agent, order));
         queues_mutex.lock();
         queues.push_back(q);
         queues_mutex.unlock();
@@ -1298,12 +1296,24 @@ public:
         return ri._kernarg_region;
     }
 
+    hsa_region_t& getHSAAMHostRegion() {
+        if (ri._found_coarsegrained_system_region) {
+            ri._am_host_region =  ri._coarsegrained_system_region;
+        } else if (ri._found_finegrained_system_region) {
+            ri._am_host_region =  ri._finegrained_system_region;
+        } else {
+            ri._am_region.handle = (uint64_t)(-1);
+        }
+
+        return ri._am_host_region;
+    }
+
     hsa_region_t& getHSAAMRegion() {
         // prefer coarse-grained over fine-grained
         if (ri._found_coarsegrained_region) {
             ri._am_region = ri._coarsegrained_region;
-        } else if (ri._found_finegrained_region) {
-            ri._am_region = ri._finegrained_region;
+        } else if (ri._found_finegrained_system_region) {
+            ri._am_region = ri._finegrained_system_region;
         } else {
             ri._am_region.handle = (uint64_t)(-1);
         }
@@ -1316,7 +1326,7 @@ public:
     }
 
     bool hasHSAFinegrainedRegion() {
-      return ri._found_finegrained_region;
+      return ri._found_finegrained_system_region;
     }
 
     bool hasHSACoarsegrainedRegion() {
@@ -1955,6 +1965,12 @@ HSAQueue::getHSAAMRegion() override {
 }
 
 inline void*
+HSAQueue::getHSAAMHostRegion() override {
+    return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getHSAAMHostRegion()));
+}
+
+
+inline void*
 HSAQueue::getHSAKernargRegion() override {
     return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getHSAKernargRegion()));
 }
@@ -2017,12 +2033,20 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
   
 
     // set dispatch fences
-    aql.header = (HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE) |
-#if DISPATCH_PACKET_BARRIER_BIT
-                 (1 << HSA_PACKET_HEADER_BARRIER) |
-#endif
-                 (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
-                 (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
+    if (hsaQueue->get_execute_order() == Kalmar::execute_in_order) {
+        //std::cout << "barrier bit on\n";
+        // set AQL header with barrier bit on if execute in order
+        aql.header = (HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE) |
+                     (1 << HSA_PACKET_HEADER_BARRIER) |
+                     (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
+                     (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
+    } else {
+        //std::cout << "barrier bit off\n";
+        // set AQL header with barrier bit off if execute in any order
+        aql.header = (HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE) |
+                     (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
+                     (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
+    }
   
     // bind kernel code
     aql.kernel_object = kernel->kernelCodeHandle;
@@ -2151,6 +2175,30 @@ HSADispatch::waitComplete() {
     isDispatched = false;
     return status;
 }
+
+inline hsa_status_t
+HSADispatch::dispatchKernelWaitComplete(Kalmar::HSAQueue* hsaQueue) {
+    hsa_status_t status = HSA_STATUS_SUCCESS;
+
+    if (isDispatched) {
+        return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+    }
+
+    // record HSAQueue association
+    this->hsaQueue = hsaQueue;
+    // extract hsa_queue_t from HSAQueue
+    hsa_queue_t* queue = static_cast<hsa_queue_t*>(hsaQueue->getHSAQueue());
+
+    // dispatch kernel
+    status = dispatchKernel(queue);
+    STATUS_CHECK_Q(status, queue, __LINE__);
+
+    // wait for completion
+    status = waitComplete();
+    STATUS_CHECK_Q(status, queue, __LINE__);
+
+    return status;
+} 
 
 inline hsa_status_t
 HSADispatch::dispatchKernelAsync(Kalmar::HSAQueue* hsaQueue) {
