@@ -38,6 +38,42 @@ float atomic_sub_float(float* x, float y) {
     return *x;
 }
 
+std::mutex afand_u, afand_i;
+unsigned int atomic_and_unsigned(unsigned int *x, unsigned int y) {
+    std::lock_guard<std::mutex> guard(afand_u);
+    *x &= y;
+    return *x;
+}
+int atomic_and_int(int *x, int y) {
+    std::lock_guard<std::mutex> guard(afand_i);
+    *x &= y;
+    return *x;
+}
+
+std::mutex afor_u, afor_i;
+unsigned int atomic_or_unsigned(unsigned int *x, unsigned int y) {
+    std::lock_guard<std::mutex> guard(afor_u);
+    *x |= y;
+    return *x;
+}
+int atomic_or_int(int *x, int y) {
+    std::lock_guard<std::mutex> guard(afor_i);
+    *x |= y;
+    return *x;
+}
+
+std::mutex afxor_u, afxor_i;
+unsigned int atomic_xor_unsigned(unsigned int *x, unsigned int y) {
+    std::lock_guard<std::mutex> guard(afxor_u);
+    *x ^= y;
+    return *x;
+}
+int atomic_xor_int(int *x, int y) {
+    std::lock_guard<std::mutex> guard(afxor_i);
+    *x ^= y;
+    return *x;
+}
+
 std::mutex afmax_u, afmax_i;
 unsigned int atomic_max_unsigned(unsigned int *p, unsigned int val) {
     std::lock_guard<std::mutex> guard(afmax_u);

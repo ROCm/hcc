@@ -746,6 +746,39 @@ float atomic_sub_float(volatile float *x, float y) {
   return *x;
 }
 
+unsigned atomic_and_unsigned_global(volatile __global unsigned *x, unsigned y) {
+  return atomic_and(x, y);
+}
+unsigned atomic_and_unsigned_local(volatile __local unsigned *x, unsigned y) {
+  return atomic_and(x, y);
+}
+unsigned atomic_and_unsigned(volatile unsigned *x, unsigned y) {
+  *x = *x & y;
+  return *x;
+}
+
+unsigned atomic_or_unsigned_global(volatile __global unsigned *x, unsigned y) {
+  return atomic_or(x, y);
+}
+unsigned atomic_or_unsigned_local(volatile __local unsigned *x, unsigned y) {
+  return atomic_or(x, y);
+}
+unsigned atomic_or_unsigned(volatile unsigned *x, unsigned y) {
+  *x = *x | y;
+  return *x;
+}
+
+unsigned atomic_xor_unsigned_global(volatile __global unsigned *x, unsigned y) {
+  return atomic_xor(x, y);
+}
+unsigned atomic_xor_unsigned_local(volatile __local unsigned *x, unsigned y) {
+  return atomic_xor(x, y);
+}
+unsigned atomic_xor_unsigned(volatile unsigned *x, unsigned y) {
+  *x = *x ^ y;
+  return *x;
+}
+
 unsigned atomic_max_unsigned_global(volatile __global unsigned *x, unsigned y) {
   return atomic_max(x, y);
 }
