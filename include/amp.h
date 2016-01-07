@@ -5211,15 +5211,6 @@ completion_future copy_async(const array_view<T, N>& src, const array<T, N>& des
  *         dest, and that was atomically replaced. These functions always
  *         succeed.
  */
-// FIXME: following funtions are not implemented:
-// int atomic_fetch_and(int * dest, int val) restrict(amp);
-// unsigned int atomic_fetch_and(unsigned int * dest, unsigned int val) restrict(amp);
-//
-// int atomic_fetch_or(int * dest, int val) restrict(amp);
-// unsigned int atomic_fetch_or(unsigned int * dest, unsigned int val) restrict(amp);
-//
-// int atomic_fetch_xor(int * dest, int val) restrict(amp);
-// unsigned int atomic_fetch_xor(unsigned int * dest, unsigned int val) restrict(amp);
 #if __KALMAR_ACCELERATOR__ == 1
 extern "C" unsigned int atomic_add_unsigned(unsigned int *p, unsigned int val) restrict(amp);
 extern "C" int atomic_add_int(int *p, int val) restrict(amp);
@@ -5247,6 +5238,36 @@ static inline int atomic_fetch_sub(int *x, int y) restrict(amp,cpu) {
 }
 static inline int atomic_fetch_sub(float *x, float y) restrict(amp,cpu) {
   return atomic_sub_float(x, y);
+}
+
+extern "C" unsigned int atomic_and_unsigned(unsigned int *p, unsigned int val) restrict(amp);
+extern "C" int atomic_and_int(int *p, int val) restrict(amp);
+
+static inline unsigned int atomic_fetch_and(unsigned int *x, unsigned int y) restrict(amp,cpu) {
+  return atomic_and_unsigned(x, y);
+}
+static inline int atomic_fetch_and(int *x, int y) restrict(amp,cpu) {
+  return atomic_and_int(x, y);
+}
+
+extern "C" unsigned int atomic_or_unsigned(unsigned int *p, unsigned int val) restrict(amp);
+extern "C" int atomic_or_int(int *p, int val) restrict(amp);
+
+static inline unsigned int atomic_fetch_or(unsigned int *x, unsigned int y) restrict(amp,cpu) {
+  return atomic_or_unsigned(x, y);
+}
+static inline int atomic_fetch_or(int *x, int y) restrict(amp,cpu) {
+  return atomic_or_int(x, y);
+}
+
+extern "C" unsigned int atomic_xor_unsigned(unsigned int *p, unsigned int val) restrict(amp);
+extern "C" int atomic_xor_int(int *p, int val) restrict(amp);
+
+static inline unsigned int atomic_fetch_xor(unsigned int *x, unsigned int y) restrict(amp,cpu) {
+  return atomic_xor_unsigned(x, y);
+}
+static inline int atomic_fetch_xor(int *x, int y) restrict(amp,cpu) {
+  return atomic_xor_int(x, y);
 }
 #elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
 unsigned int atomic_add_unsigned(unsigned int *p, unsigned int val);
@@ -5276,6 +5297,36 @@ static inline int atomic_fetch_sub(int *x, int y) restrict(amp,hpcu) {
 static inline float atomic_fetch_sub(float *x, float y) restrict(amp,cpu) {
   return atomic_sub_float(x, y);
 }
+
+unsigned int atomic_and_unsigned(unsigned int *p, unsigned int val);
+int atomic_and_int(int *p, int val);
+
+static inline unsigned int atomic_fetch_and(unsigned int *x, unsigned int y) restrict(amp,cpu) {
+  return atomic_and_unsigned(x, y);
+}
+static inline int atomic_fetch_and(int *x, int y) restrict(amp,cpu) {
+  return atomic_and_int(x, y);
+}
+
+unsigned int atomic_or_unsigned(unsigned int *p, unsigned int val);
+int atomic_or_int(int *p, int val);
+
+static inline unsigned int atomic_fetch_or(unsigned int *x, unsigned int y) restrict(amp,cpu) {
+  return atomic_or_unsigned(x, y);
+}
+static inline int atomic_fetch_or(int *x, int y) restrict(amp,cpu) {
+  return atomic_or_int(x, y);
+}
+
+unsigned int atomic_xor_unsigned(unsigned int *p, unsigned int val);
+int atomic_xor_int(int *p, int val);
+
+static inline unsigned int atomic_fetch_xor(unsigned int *x, unsigned int y) restrict(amp,cpu) {
+  return atomic_xor_unsigned(x, y);
+}
+static inline int atomic_fetch_xor(int *x, int y) restrict(amp,cpu) {
+  return atomic_xor_int(x, y);
+}
 #else
 extern unsigned atomic_fetch_add(unsigned *x, unsigned y) restrict(amp,cpu);
 extern int atomic_fetch_add(int *x, int y) restrict(amp, cpu);
@@ -5284,6 +5335,15 @@ extern float atomic_fetch_add(float *x, float y) restrict(amp, cpu);
 extern unsigned atomic_fetch_sub(unsigned *x, unsigned y) restrict(amp,cpu);
 extern int atomic_fetch_sub(int *x, int y) restrict(amp, cpu);
 extern float atomic_fetch_sub(float *x, float y) restrict(amp, cpu);
+
+extern unsigned atomic_fetch_and(unsigned *x, unsigned y) restrict(amp,cpu);
+extern int atomic_fetch_and(int *x, int y) restrict(amp, cpu);
+
+extern unsigned atomic_fetch_or(unsigned *x, unsigned y) restrict(amp,cpu);
+extern int atomic_fetch_or(int *x, int y) restrict(amp, cpu);
+
+extern unsigned atomic_fetch_xor(unsigned *x, unsigned y) restrict(amp,cpu);
+extern int atomic_fetch_xor(int *x, int y) restrict(amp, cpu);
 #endif
 
 #if __KALMAR_ACCELERATOR__ == 1
