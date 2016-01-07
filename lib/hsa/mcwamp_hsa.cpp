@@ -948,7 +948,7 @@ public:
                 }
                 if ((flags & HSA_REGION_GLOBAL_FLAG_COARSE_GRAINED) && (!ri->_found_coarsegrained_system_region)) {
 #if KALMAR_DEBUG
-                    std::cerr << "found coarse-grain systemm region\n";
+                    std::cerr << "found coarse-grain system region\n";
 #endif 
                     ri->_coarsegrained_system_region = region;
                     ri->_found_coarsegrained_system_region = true;
