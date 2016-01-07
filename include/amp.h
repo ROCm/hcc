@@ -5286,31 +5286,52 @@ extern int atomic_fetch_sub(int *x, int y) restrict(amp, cpu);
 extern float atomic_fetch_sub(float *x, float y) restrict(amp, cpu);
 #endif
 
-// FIXME: following funtions are not implemented:
-// int atomic_fetch_min(int * dest, int val) restrict(amp);
-// unsigned int atomic_fetch_min(unsigned int * dest, unsigned int val) restrict(amp);
-//
 #if __KALMAR_ACCELERATOR__ == 1
-extern "C" unsigned atomic_max_unsigned(unsigned *p, unsigned val) restrict(amp);
+extern "C" unsigned int atomic_max_unsigned(unsigned int *p, unsigned int val) restrict(amp);
 extern "C" int atomic_max_int(int *p, int val) restrict(amp);
-static inline unsigned atomic_fetch_max(unsigned *x, unsigned y) restrict(amp) {
+
+static inline unsigned int atomic_fetch_max(unsigned int *x, unsigned int y) restrict(amp) {
   return atomic_max_unsigned(x, y);
 }
 static inline int atomic_fetch_max(int *x, int y) restrict(amp) {
   return atomic_max_int(x, y);
+}
+
+extern "C" unsigned int atomic_min_unsigned(unsigned int *p, unsigned int val) restrict(amp);
+extern "C" int atomic_min_int(int *p, int val) restrict(amp);
+
+static inline unsigned int atomic_fetch_min(unsigned int *x, unsigned int y) restrict(amp) {
+  return atomic_min_unsigned(x, y);
+}
+static inline int atomic_fetch_min(int *x, int y) restrict(amp) {
+  return atomic_min_int(x, y);
 }
 #elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-unsigned atomic_max_unsigned(unsigned *p, unsigned val);
+unsigned int atomic_max_unsigned(unsigned int *p, unsigned int val);
 int atomic_max_int(int *p, int val);
-static inline unsigned atomic_fetch_max(unsigned *x, unsigned y) restrict(amp) {
+
+static inline unsigned int atomic_fetch_max(unsigned int *x, unsigned int y) restrict(amp) {
   return atomic_max_unsigned(x, y);
 }
 static inline int atomic_fetch_max(int *x, int y) restrict(amp) {
   return atomic_max_int(x, y);
+}
+
+unsigned int atomic_min_unsigned(unsigned int *p, unsigned int val);
+int atomic_min_int(int *p, int val);
+
+static inline unsigned int atomic_fetch_min(unsigned int *x, unsigned int y) restrict(amp) {
+  return atomic_min_unsigned(x, y);
+}
+static inline int atomic_fetch_min(int *x, int y) restrict(amp) {
+  return atomic_min_int(x, y);
 }
 #else
 extern int atomic_fetch_max(int * dest, int val) restrict(amp, cpu);
 extern unsigned int atomic_fetch_max(unsigned int * dest, unsigned int val) restrict(amp, cpu);
+
+extern int atomic_fetch_min(int * dest, int val) restrict(amp, cpu);
+extern unsigned int atomic_fetch_min(unsigned int * dest, unsigned int val) restrict(amp, cpu);
 #endif
 
 /** @} */
