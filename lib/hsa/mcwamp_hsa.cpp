@@ -50,10 +50,6 @@
 // default set as 64 (pre-allocating 64 HSA signals)
 #define SIGNAL_POOL_SIZE (64)
 
-// whether to set barrier bit in AQL packet in kernel dispatches
-// default set as 0 (barrier bit NOT set in AQL packet)
-#define DISPATCH_PACKET_BARRIER_BIT (0)
-
 // whether to use kernarg region found on the HSA agent
 // default set as 1 (use karnarg region)
 #define USE_KERNARG_REGION (1)
@@ -293,19 +289,7 @@ public:
 
     hsa_status_t setLaunchAttributes(int dims, size_t *globalDims, size_t *localDims);
 
-    hsa_status_t dispatchKernelWaitComplete(hsa_queue_t* _queue) {
-        hsa_status_t status = HSA_STATUS_SUCCESS;
-        if (isDispatched) {
-            return HSA_STATUS_ERROR_INVALID_ARGUMENT;
-        }
-        status = dispatchKernel(_queue);
-        STATUS_CHECK_Q(status, _queue, __LINE__);
-
-        status = waitComplete();
-        STATUS_CHECK_Q(status, _queue, __LINE__);
-
-        return status;
-    } 
+    hsa_status_t dispatchKernelWaitComplete(Kalmar::HSAQueue*);
 
     hsa_status_t dispatchKernelAsync(Kalmar::HSAQueue*);
 
@@ -470,7 +454,7 @@ private:
     std::map<void*, std::vector<void*> > kernelBufferMap;
 
 public:
-    HSAQueue(KalmarDevice* pDev, hsa_agent_t agent) : KalmarQueue(pDev), commandQueue(nullptr), asyncOps(), bufferKernelMap(), kernelBufferMap() {
+    HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order) : KalmarQueue(pDev, queuing_mode_automatic, order), commandQueue(nullptr), asyncOps(), bufferKernelMap(), kernelBufferMap() {
         hsa_status_t status;
 
         /// Query the maximum size of the queue.
@@ -587,7 +571,7 @@ public:
 
         // dispatch the kernel
         // and wait for its completion
-        dispatch->dispatchKernelWaitComplete(commandQueue);
+        dispatch->dispatchKernelWaitComplete(this);
 
         // clear data in kernelBufferMap
         kernelBufferMap[ker].clear();
@@ -1284,8 +1268,8 @@ public:
         return dispatch;
     }
 
-    std::shared_ptr<KalmarQueue> createQueue() override {
-        std::shared_ptr<KalmarQueue> q =  std::shared_ptr<KalmarQueue>(new HSAQueue(this, agent));
+    std::shared_ptr<KalmarQueue> createQueue(execute_order order = execute_in_order) override {
+        std::shared_ptr<KalmarQueue> q =  std::shared_ptr<KalmarQueue>(new HSAQueue(this, agent, order));
         queues_mutex.lock();
         queues.push_back(q);
         queues_mutex.unlock();
@@ -2049,12 +2033,20 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
   
 
     // set dispatch fences
-    aql.header = (HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE) |
-#if DISPATCH_PACKET_BARRIER_BIT
-                 (1 << HSA_PACKET_HEADER_BARRIER) |
-#endif
-                 (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
-                 (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
+    if (hsaQueue->get_execute_order() == Kalmar::execute_in_order) {
+        //std::cout << "barrier bit on\n";
+        // set AQL header with barrier bit on if execute in order
+        aql.header = (HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE) |
+                     (1 << HSA_PACKET_HEADER_BARRIER) |
+                     (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
+                     (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
+    } else {
+        //std::cout << "barrier bit off\n";
+        // set AQL header with barrier bit off if execute in any order
+        aql.header = (HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE) |
+                     (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
+                     (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
+    }
   
     // bind kernel code
     aql.kernel_object = kernel->kernelCodeHandle;
@@ -2183,6 +2175,30 @@ HSADispatch::waitComplete() {
     isDispatched = false;
     return status;
 }
+
+inline hsa_status_t
+HSADispatch::dispatchKernelWaitComplete(Kalmar::HSAQueue* hsaQueue) {
+    hsa_status_t status = HSA_STATUS_SUCCESS;
+
+    if (isDispatched) {
+        return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+    }
+
+    // record HSAQueue association
+    this->hsaQueue = hsaQueue;
+    // extract hsa_queue_t from HSAQueue
+    hsa_queue_t* queue = static_cast<hsa_queue_t*>(hsaQueue->getHSAQueue());
+
+    // dispatch kernel
+    status = dispatchKernel(queue);
+    STATUS_CHECK_Q(status, queue, __LINE__);
+
+    // wait for completion
+    status = waitComplete();
+    STATUS_CHECK_Q(status, queue, __LINE__);
+
+    return status;
+} 
 
 inline hsa_status_t
 HSADispatch::dispatchKernelAsync(Kalmar::HSAQueue* hsaQueue) {
