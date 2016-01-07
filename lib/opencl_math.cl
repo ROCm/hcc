@@ -652,6 +652,18 @@ unsigned atomic_add_unsigned(volatile unsigned *x, unsigned y) {
   return old;
 }
 
+unsigned atomic_sub_unsigned_global(volatile __global unsigned *x, unsigned y) {
+  return atomic_sub(x, y);
+}
+unsigned atomic_sub_unsigned_local(volatile __local unsigned *x, unsigned y) {
+  return atomic_sub(x, y);
+}
+unsigned atomic_sub_unsigned(volatile unsigned *x, unsigned y) {
+  unsigned old = *x;
+  *x = old - y;
+  return old;
+}
+
 int atomic_add_int_global(volatile __global int *x, int y) {
   return atomic_add(x, y);
 }
@@ -661,6 +673,18 @@ int atomic_add_int_local(volatile __local int *x, int y) {
 int atomic_add_int(volatile int *x, int y) {
   int old = *x;
   *x = old + y;
+  return old;
+}
+
+int atomic_sub_int_global(volatile __global int *x, int y) {
+  return atomic_sub(x, y);
+}
+int atomic_sub_int_local(volatile __local int *x, int y) {
+  return atomic_sub(x, y);
+}
+int atomic_sub_int(volatile int *x, int y) {
+  int old = *x;
+  *x = old - y;
   return old;
 }
 
@@ -688,6 +712,35 @@ float atomic_add_float_local(volatile local float *x, const float y) {
   return now.f;
 }
 float atomic_add_float(volatile float *x, float y) {
+  float old = *x;
+  *x = old + y;
+  return *x;
+}
+
+float atomic_sub_float_global(volatile global float *x, const float y) {
+  union {
+    unsigned int i;
+    float f;
+  } now, old;
+  do {
+    old.f = *x;
+    now.f = old.f - y;
+  } while (atomic_cmpxchg((volatile global unsigned int *)x, old.i, now.i) != old.i);
+  return now.f;
+}
+float atomic_sub_float_local(volatile local float *x, const float y) {
+  union {
+    unsigned int i;
+    float f;
+  } now, old;
+
+  do {
+    old.f = *x;
+    now.f = old.f - y;
+  } while (atomic_cmpxchg((volatile local unsigned int *)x, old.i, now.i) != old.i);
+  return now.f;
+}
+float atomic_sub_float(volatile float *x, float y) {
   float old = *x;
   *x = old + y;
   return *x;
