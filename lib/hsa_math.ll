@@ -2696,6 +2696,41 @@ entry:
 }
 
 ; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @__hsail_atomic_fetch_add_uint64_local(i64 addrspace(3)* %x, i64 %y) #0 {
+entry:
+  %ret = atomicrmw add i64 addrspace(3)* %x, i64 %y seq_cst, !mem.scope !1
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @__hsail_atomic_fetch_sub_uint64_local(i64 addrspace(3)* %x, i64 %y) #0 {
+entry:
+  %ret = atomicrmw sub i64 addrspace(3)* %x, i64 %y seq_cst, !mem.scope !1
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @__hsail_atomic_fetch_and_uint64_local(i64 addrspace(3)* %x, i64 %y) #0 {
+entry:
+  %ret = atomicrmw and i64 addrspace(3)* %x, i64 %y seq_cst, !mem.scope !1
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @__hsail_atomic_fetch_or_uint64_local(i64 addrspace(3)* %x, i64 %y) #0 {
+entry:
+  %ret = atomicrmw or i64 addrspace(3)* %x, i64 %y seq_cst, !mem.scope !1
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @__hsail_atomic_fetch_xor_uint64_local(i64 addrspace(3)* %x, i64 %y) #0 {
+entry:
+  %ret = atomicrmw xor i64 addrspace(3)* %x, i64 %y seq_cst, !mem.scope !1
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @__hsail_atomic_fetch_add_int_global(i32 addrspace(1)* %x, i32 %y) #0 {
 entry:
   %ret = atomicrmw add i32 addrspace(1)* %x, i32 %y seq_cst, !mem.scope !1
@@ -2801,6 +2836,41 @@ entry:
 }
 
 ; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @__hsail_atomic_fetch_add_uint64_global(i64 addrspace(1)* %x, i64 %y) #0 {
+entry:
+  %ret = atomicrmw add i64 addrspace(1)* %x, i64 %y seq_cst, !mem.scope !1
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @__hsail_atomic_fetch_sub_uint64_global(i64 addrspace(1)* %x, i64 %y) #0 {
+entry:
+  %ret = atomicrmw sub i64 addrspace(1)* %x, i64 %y seq_cst, !mem.scope !1
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @__hsail_atomic_fetch_and_uint64_global(i64 addrspace(1)* %x, i64 %y) #0 {
+entry:
+  %ret = atomicrmw and i64 addrspace(1)* %x, i64 %y seq_cst, !mem.scope !1
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @__hsail_atomic_fetch_or_uint64_global(i64 addrspace(1)* %x, i64 %y) #0 {
+entry:
+  %ret = atomicrmw or i64 addrspace(1)* %x, i64 %y seq_cst, !mem.scope !1
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @__hsail_atomic_fetch_xor_uint64_global(i64 addrspace(1)* %x, i64 %y) #0 {
+entry:
+  %ret = atomicrmw xor i64 addrspace(1)* %x, i64 %y seq_cst, !mem.scope !1
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @__hsail_atomic_exchange_int_local(i32 addrspace(3)* %x, i32 %y) #0 {
 entry:
   %ret = atomicrmw xchg i32 addrspace(3)* %x, i32 %y seq_cst, !mem.scope !1
@@ -2822,6 +2892,13 @@ entry:
 }
 
 ; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @__hsail_atomic_exchange_uint64_local(i64 addrspace(3)* %x, i64 %y) #0 {
+entry:
+  %ret = atomicrmw xchg i64 addrspace(3)* %x, i64 %y seq_cst, !mem.scope !1
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @__hsail_atomic_exchange_int_global(i32 addrspace(1)* %x, i32 %y) #0 {
 entry:
   %ret = atomicrmw xchg i32 addrspace(1)* %x, i32 %y seq_cst, !mem.scope !1
@@ -2837,6 +2914,13 @@ entry:
 
 ; Function Attrs: nounwind
 define linkonce_odr spir_func i64 @__hsail_atomic_exchange_int64_global(i64 addrspace(1)* %x, i64 %y) #0 {
+entry:
+  %ret = atomicrmw xchg i64 addrspace(1)* %x, i64 %y seq_cst, !mem.scope !1
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @__hsail_atomic_exchange_uint64_global(i64 addrspace(1)* %x, i64 %y) #0 {
 entry:
   %ret = atomicrmw xchg i64 addrspace(1)* %x, i64 %y seq_cst, !mem.scope !1
   ret i64 %ret
@@ -2867,6 +2951,14 @@ entry:
 }
 
 ; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @__hsail_atomic_compare_exchange_uint64_local(i64 addrspace(3)* %x, i64 %y, i64 %z) #0 {
+entry:
+  %val_success = cmpxchg i64 addrspace(3)* %x, i64 %y, i64 %z seq_cst seq_cst, !mem.scope !1
+  %value_loaded = extractvalue { i64, i1 } %val_success, 0
+  ret i64 %value_loaded
+}
+
+; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @__hsail_atomic_compare_exchange_int_global(i32 addrspace(1)* %x, i32 %y, i32 %z) #0 {
 entry:
   %val_success = cmpxchg i32 addrspace(1)* %x, i32 %y, i32 %z seq_cst seq_cst, !mem.scope !1
@@ -2884,6 +2976,14 @@ entry:
 
 ; Function Attrs: nounwind
 define linkonce_odr spir_func i64 @__hsail_atomic_compare_exchange_int64_global(i64 addrspace(1)* %x, i64 %y, i64 %z) #0 {
+entry:
+  %val_success = cmpxchg i64 addrspace(1)* %x, i64 %y, i64 %z seq_cst seq_cst, !mem.scope !1
+  %value_loaded = extractvalue { i64, i1 } %val_success, 0
+  ret i64 %value_loaded
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @__hsail_atomic_compare_exchange_uint64_global(i64 addrspace(1)* %x, i64 %y, i64 %z) #0 {
 entry:
   %val_success = cmpxchg i64 addrspace(1)* %x, i64 %y, i64 %z seq_cst seq_cst, !mem.scope !1
   %value_loaded = extractvalue { i64, i1 } %val_success, 0
