@@ -2304,9 +2304,23 @@ entry:
 }
 
 ; Function Attrs: nounwind
+define linkonce_odr spir_func i32 @atomic_min_unsigned_global(i32 addrspace(1)* %x, i32 %y) #0 {
+entry:
+  %ret = atomicrmw min i32 addrspace(1)* %x, i32 %y seq_cst, !mem.scope !1
+  ret i32 %ret
+}
+
+; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @atomic_max_unsigned_local(i32 addrspace(3)* %x, i32 %y) #0 {
 entry:
   %ret = atomicrmw max i32 addrspace(3)* %x, i32 %y seq_cst, !mem.scope !1
+  ret i32 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i32 @atomic_min_unsigned_local(i32 addrspace(3)* %x, i32 %y) #0 {
+entry:
+  %ret = atomicrmw min i32 addrspace(3)* %x, i32 %y seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
@@ -2318,9 +2332,23 @@ entry:
 }
 
 ; Function Attrs: nounwind
+define linkonce_odr spir_func i32 @atomic_min_unsigned(i32 addrspace(4)* %x, i32 %y) #0 {
+entry:
+  %ret = atomicrmw min i32 addrspace(4)* %x, i32 %y seq_cst, !mem.scope !1
+  ret i32 %ret
+}
+
+; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @atomic_max_int_global(i32 addrspace(1)* %x, i32 %y) #0 {
 entry:
   %ret = atomicrmw max i32 addrspace(1)* %x, i32 %y seq_cst, !mem.scope !1
+  ret i32 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i32 @atomic_min_int_global(i32 addrspace(1)* %x, i32 %y) #0 {
+entry:
+  %ret = atomicrmw min i32 addrspace(1)* %x, i32 %y seq_cst, !mem.scope !1
   ret i32 %ret
 }
 
@@ -2332,9 +2360,23 @@ entry:
 }
 
 ; Function Attrs: nounwind
+define linkonce_odr spir_func i32 @atomic_min_int_local(i32 addrspace(3)* %x, i32 %y) #0 {
+entry:
+  %ret = atomicrmw min i32 addrspace(3)* %x, i32 %y seq_cst, !mem.scope !1
+  ret i32 %ret
+}
+
+; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @atomic_max_int(i32 addrspace(4)* %x, i32 %y) #0 {
 entry:
   %ret = atomicrmw max i32 addrspace(4)* %x, i32 %y seq_cst, !mem.scope !1
+  ret i32 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i32 @atomic_min_int(i32 addrspace(4)* %x, i32 %y) #0 {
+entry:
+  %ret = atomicrmw min i32 addrspace(4)* %x, i32 %y seq_cst, !mem.scope !1
   ret i32 %ret
 }
 

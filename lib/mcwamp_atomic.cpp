@@ -38,15 +38,27 @@ float atomic_sub_float(float* x, float y) {
     return *x;
 }
 
-std::mutex afm_u, afm_i;
+std::mutex afmax_u, afmax_i;
 unsigned int atomic_max_unsigned(unsigned int *p, unsigned int val) {
-    std::lock_guard<std::mutex> guard(afm_u);
+    std::lock_guard<std::mutex> guard(afmax_u);
     *p = std::max(*p, val);
     return *p;
 }
 int atomic_max_int(int *p, int val) {
-    std::lock_guard<std::mutex> guard(afm_i);
+    std::lock_guard<std::mutex> guard(afmax_i);
     *p = std::max(*p, val);
+    return *p;
+}
+
+std::mutex afmin_u, afmin_i;
+unsigned int atomic_min_unsigned(unsigned int *p, unsigned int val) {
+    std::lock_guard<std::mutex> guard(afmin_u);
+    *p = std::min(*p, val);
+    return *p;
+}
+int atomic_min_int(int *p, int val) {
+    std::lock_guard<std::mutex> guard(afmin_i);
+    *p = std::min(*p, val);
     return *p;
 }
 

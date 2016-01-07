@@ -757,6 +757,17 @@ unsigned atomic_max_unsigned(volatile unsigned *x, unsigned y) {
   return *x;
 }
 
+unsigned atomic_min_unsigned_global(volatile __global unsigned *x, unsigned y) {
+  return atomic_min(x, y);
+}
+unsigned atomic_min_unsigned_local(volatile __local unsigned *x, unsigned y) {
+  return atomic_min(x, y);
+}
+unsigned atomic_min_unsigned(volatile unsigned *x, unsigned y) {
+  *x = min(*x, y);
+  return *x;
+}
+
 int atomic_max_int_global(volatile __global int *x, int y) {
   return atomic_max(x, y);
 }
@@ -765,6 +776,17 @@ int atomic_max_int_local(volatile __local int *x, int y) {
 }
 int atomic_max_int(volatile int *x, int y) {
   *x = max(*x, y);
+  return *x;
+}
+
+int atomic_min_int_global(volatile __global int *x, int y) {
+  return atomic_min(x, y);
+}
+int atomic_min_int_local(volatile __local int *x, int y) {
+  return atomic_min(x, y);
+}
+int atomic_min_int(volatile int *x, int y) {
+  *x = min(*x, y);
   return *x;
 }
 
