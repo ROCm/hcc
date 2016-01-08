@@ -6044,7 +6044,7 @@ extern "C" int atomic_sub_int(int *p, int val) __HC__;
 extern "C" float atomic_sub_float(float *p, float val) __HC__;
 
 static inline unsigned int atomic_fetch_sub(unsigned int *x, unsigned int y) __CPU__ __HC__ {
-  return atomic_add_unsigned(x, y);
+  return atomic_sub_unsigned(x, y);
 }
 static inline int atomic_fetch_sub(int *x, int y) __CPU__ __HC__ {
   return atomic_sub_int(x, y);
