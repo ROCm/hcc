@@ -5173,14 +5173,112 @@ completion_future copy_async(const array_view<T, N>& src, const array<T, N>& des
 // atomic functions
 // ------------------------------------------------------------------------
 
-// FIXME: following functions are not implemented
-// int atomic_exchange(int * dest, int val) restrict(amp);
-// unsigned int atomic_exchange(unsigned int * dest, unsigned int val) restrict(amp);
-// float atomic_exchange(float * dest, float val) restrict(amp);
+/** @{ */
+/**
+ * Atomically read the value stored in dest , replace it with the value given
+ * in val and return the old value to the caller. This function provides
+ * overloads for int , unsigned int and float parameters.
+ *
+ * @param[out] dest A pointer to the location which needs to be atomically
+ *                  modified. The location may reside within a
+ *                  concurrency::array or concurrency::array_view or within a
+ *                  tile_static variable.
+ * @param[in] val The new value to be stored in the location pointed to be dest
+ * @return These functions return the old value which was previously stored at
+ *         dest, and that was atomically replaced. These functions always
+ *         succeed.
+ */
+#if __KALMAR_ACCELERATOR__ == 1
+extern "C" unsigned int atomic_exchange_unsigned(unsigned int *p, unsigned int val) restrict(amp);
+extern "C" int atomic_exchange_int(int *p, int val) restrict(amp);
+extern "C" float atomic_exchange_float(float *p, float val) restrict(amp);
 
-// FIXME: following functions are not implemented
-// bool atomic_compare_exchange(int * dest, int * expected_val, int val) restrict(amp);
-// bool atomic_compare_exchange(unsigned int * dest, unsigned int * expected_val, unsigned int val) restrict(amp);
+static inline unsigned int atomic_exchange(unsigned int * dest, unsigned int val) restrict(amp,cpu) {
+  return atomic_exchange_unsigned(dest, val);
+}
+static inline int atomic_exchange(int * dest, int val) restrict(amp,cpu) {
+  return atomic_exchange_int(dest, val);
+}
+static inline float atomic_exchange(float * dest, float val) restrict(amp,cpu) {
+  return atomic_exchange_float(dest, val);
+}
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+unsigned int atomic_exchange_unsigned(unsigned int *p, unsigned int val);
+int atomic_exchange_int(int *p, int val);
+float atomic_exchange_float(float *p, float val);
+
+static inline unsigned int atomic_exchange(unsigned int *dest, unsigned int val) restrict(amp,cpu) {
+  return atomic_exchange_unsigned(dest, val);
+}
+static inline int atomic_exchange(int *dest, int val) restrict(amp,cpu) {
+  return atomic_exchange_int(dest, val);
+}
+static inline float atomic_exchange(float *dest, float val) restrict(amp,cpu) {
+  return atomic_exchange_float(dest, val);
+}
+#else
+extern unsigned int atomic_exchange(unsigned int *dest, unsigned int val) restrict(amp,cpu);
+extern int atomic_exchange(int *dest, int val) restrict(amp, cpu);
+extern float atomic_exchange(float *dest, float val) restrict(amp, cpu);
+#endif
+/** @} */
+
+/** @{ */
+/**
+ * These functions attempt to perform these three steps atomically:
+ * 1. Read the value stored in the location pointed to by dest
+ * 2. Compare the value read in the previous step with the value contained in
+ *    the location pointed by expected_val
+ * 3. Carry the following operations depending on the result of the comparison
+ *    of the previous step:
+ *    a. If the values are identical, then the function tries to atomically
+ *       change the value pointed by dest to the value in val. The function
+ *       indicates by its return value whether this transformation has been
+ *       successful or not.
+ *    b. If the values are not identical, then the function stores the value
+ *       read in step (1) into the location pointed to by expected_val, and
+ *       returns false.
+ *
+ * @param[out] dest An pointer to the location which needs to be atomically
+ *                  modified. The location may reside within a
+ *                  concurrency::array or concurrency::array_view or within a
+ *                  tile_static variable.
+ * @param[out] expected_val A pointer to a local variable or function
+ *                          parameter. Upon calling the function, the location
+ *                          pointed by expected_val contains the value the
+ *                          caller expects dest to contain. Upon return from
+ *                          the function, expected_val will contain the most
+ *                          recent value read from dest.
+ * @param[in] val The new value to be stored in the location pointed to be dest
+ * @return The return value indicates whether the function has been successful
+ *         in atomically reading, comparing and modifying the contents of the
+ *         memory location.
+ */
+#if __KALMAR_ACCELERATOR__ == 1
+extern "C" bool atomic_compare_exchange_unsigned(unsigned int *dest, unsigned int *expected_val, unsigned int val) restrict(amp);
+extern "C" bool atomic_compare_exchange_int(int *dest, int *expected_val, int val) restrict(amp);
+
+static inline bool atomic_compare_exchange(unsigned int *dest, unsigned int *expected_val, unsigned int val) restrict(amp,cpu) {
+  return atomic_compare_exchange_unsigned(dest, expected_val, val);
+}
+static inline bool atomic_compare_exchange(int *dest, int *expected_val, int val) restrict(amp,cpu) {
+  return atomic_compare_exchange_int(dest, expected_val, val);
+}
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+bool atomic_compare_exchange_unsigned(unsigned int *dest, unsigned int *expected_val, unsigned int val);
+bool atomic_compare_exchange_int(int *dest, int *expected_val, int val);
+
+static inline bool atomic_compare_exchange(unsigned int *dest, unsigned int *expected_val, unsigned int val) restrict(amp,cpu) {
+  return atomic_exchange_unsigned(dest, val);
+}
+static inline bool atomic_compare_exchange(int *dest, int *expected_val, int val) restrict(amp,cpu) {
+  return atomic_exchange_int(dest, val);
+}
+#else
+extern bool atomic_compare_exchange(unsigned int *dest, unsigned int *expected_val, unsigned int val) restrict(amp,cpu);
+extern bool atomic_compare_exchange(int *dest, int *expected_val, int val) restrict(amp, cpu);
+#endif
+/** @} */
 
 
 /** @{ */
