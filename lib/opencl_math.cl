@@ -652,6 +652,20 @@ unsigned atomic_exchange_unsigned(volatile unsigned *x, unsigned y) {
   return old;
 }
 
+unsigned atomic_compare_exchange_unsigned_global(volatile __global unsigned *x, unsigned y, unsigned z) {
+  return atomic_cmpxchg(x, y, z);
+}
+unsigned atomic_compare_exchange_unsigned_local(volatile __local unsigned *x, unsigned y, unsigned z) {
+  return atomic_cmpxchg(x, y, z);
+}
+unsigned atomic_compare_exchange_unsigned(volatile unsigned *x, unsigned y, unsigned z) {
+  unsigned old = *x;
+  if (old == y) {
+    *x = z;
+  }
+  return old;
+}
+
 unsigned atomic_add_unsigned_global(volatile __global unsigned *x, unsigned y) {
   return atomic_add(x, y);
 }
@@ -685,6 +699,20 @@ int atomic_exchange_int_local(volatile __local int *x, int y) {
 int atomic_exchange_int(volatile int *x, int y) {
   int old = *x;
   *x = y;
+  return old;
+}
+
+int atomic_compare_exchange_int_global(volatile __global int *x, int y, int z) {
+  return atomic_cmpxchg(x, y, z);
+}
+unsigned atomic_compare_exchange_int_local(volatile __local int *x, int y, int z) {
+  return atomic_cmpxchg(x, y, z);
+}
+int atomic_compare_exchange_int(volatile unsigned *x, int y, int z) {
+  int old = *x;
+  if (old == y) {
+    *x = z;
+  }
   return old;
 }
 
