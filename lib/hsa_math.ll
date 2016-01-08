@@ -2297,6 +2297,27 @@ do.end:
 }
 
 ; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @atomic_add_uint64_global(i64 addrspace(1)* %x, i64 %y) #0 {
+entry:
+  %ret = atomicrmw add i64 addrspace(1)* %x, i64 %y seq_cst, !mem.scope !1
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @atomic_add_uint64_local(i64 addrspace(3)* %x, i64 %y) #0 {
+entry:
+  %ret = atomicrmw add i64 addrspace(3)* %x, i64 %y seq_cst, !mem.scope !1
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @atomic_add_uint64(i64 addrspace(4)* %x, i64 %y) #0 {
+entry:
+  %ret = atomicrmw add i64 addrspace(4)* %x, i64 %y seq_cst, !mem.scope !1
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind
 define linkonce_odr spir_func i32 @atomic_and_unsigned_global(i32 addrspace(1)* %x, i32 %y) #0 {
 entry:
   %ret = atomicrmw and i32 addrspace(1)* %x, i32 %y seq_cst, !mem.scope !1
@@ -2504,6 +2525,111 @@ define linkonce_odr spir_func i32 @atomic_min_int(i32 addrspace(4)* %x, i32 %y) 
 entry:
   %ret = atomicrmw min i32 addrspace(4)* %x, i32 %y seq_cst, !mem.scope !1
   ret i32 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @atomic_and_uint64_global(i64 addrspace(1)* %x, i64 %y) #0 {
+entry:
+  %ret = atomicrmw and i64 addrspace(1)* %x, i64 %y seq_cst, !mem.scope !1
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @atomic_or_uint64_global(i64 addrspace(1)* %x, i64 %y) #0 {
+entry:
+  %ret = atomicrmw or i64 addrspace(1)* %x, i64 %y seq_cst, !mem.scope !1
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @atomic_xor_uint64_global(i64 addrspace(1)* %x, i64 %y) #0 {
+entry:
+  %ret = atomicrmw xor i64 addrspace(1)* %x, i64 %y seq_cst, !mem.scope !1
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @atomic_max_uint64_global(i64 addrspace(1)* %x, i64 %y) #0 {
+entry:
+  %ret = atomicrmw max i64 addrspace(1)* %x, i64 %y seq_cst, !mem.scope !1
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @atomic_min_uint64_global(i64 addrspace(1)* %x, i64 %y) #0 {
+entry:
+  %ret = atomicrmw min i64 addrspace(1)* %x, i64 %y seq_cst, !mem.scope !1
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @atomic_and_uint64_local(i64 addrspace(3)* %x, i64 %y) #0 {
+entry:
+  %ret = atomicrmw and i64 addrspace(3)* %x, i64 %y seq_cst, !mem.scope !1
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @atomic_or_uint64_local(i64 addrspace(3)* %x, i64 %y) #0 {
+entry:
+  %ret = atomicrmw or i64 addrspace(3)* %x, i64 %y seq_cst, !mem.scope !1
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @atomic_xor_uint64_local(i64 addrspace(3)* %x, i64 %y) #0 {
+entry:
+  %ret = atomicrmw xor i64 addrspace(3)* %x, i64 %y seq_cst, !mem.scope !1
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @atomic_max_uint64_local(i64 addrspace(3)* %x, i64 %y) #0 {
+entry:
+  %ret = atomicrmw max i64 addrspace(3)* %x, i64 %y seq_cst, !mem.scope !1
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @atomic_min_uint64_local(i64 addrspace(3)* %x, i64 %y) #0 {
+entry:
+  %ret = atomicrmw min i64 addrspace(3)* %x, i64 %y seq_cst, !mem.scope !1
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @atomic_and_uint64(i64 addrspace(4)* %x, i64 %y) #0 {
+entry:
+  %ret = atomicrmw and i64 addrspace(4)* %x, i64 %y seq_cst, !mem.scope !1
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @atomic_or_uint64(i64 addrspace(4)* %x, i64 %y) #0 {
+entry:
+  %ret = atomicrmw or i64 addrspace(4)* %x, i64 %y seq_cst, !mem.scope !1
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @atomic_xor_uint64(i64 addrspace(4)* %x, i64 %y) #0 {
+entry:
+  %ret = atomicrmw xor i64 addrspace(4)* %x, i64 %y seq_cst, !mem.scope !1
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @atomic_max_uint64(i64 addrspace(4)* %x, i64 %y) #0 {
+entry:
+  %ret = atomicrmw max i64 addrspace(4)* %x, i64 %y seq_cst, !mem.scope !1
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind
+define linkonce_odr spir_func i64 @atomic_min_uint64(i64 addrspace(4)* %x, i64 %y) #0 {
+entry:
+  %ret = atomicrmw min i64 addrspace(4)* %x, i64 %y seq_cst, !mem.scope !1
+  ret i64 %ret
 }
 
 ; Function Attrs: nounwind
