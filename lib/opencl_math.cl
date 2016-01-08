@@ -640,6 +640,18 @@ double opencl_trunc_double(double x) {
 /**
  * atomic functions
  */
+unsigned atomic_exchange_unsigned_global(volatile __global unsigned *x, unsigned y) {
+  return atomic_xchg(x, y);
+}
+unsigned atomic_exchange_unsigned_local(volatile __local unsigned *x, unsigned y) {
+  return atomic_xchg(x, y);
+}
+unsigned atomic_exchange_unsigned(volatile unsigned *x, unsigned y) {
+  unsigned old = *x;
+  *x = y;
+  return old;
+}
+
 unsigned atomic_add_unsigned_global(volatile __global unsigned *x, unsigned y) {
   return atomic_add(x, y);
 }
@@ -664,6 +676,18 @@ unsigned atomic_sub_unsigned(volatile unsigned *x, unsigned y) {
   return old;
 }
 
+int atomic_exchange_int_global(volatile __global int *x, int y) {
+  return atomic_xchg(x, y);
+}
+int atomic_exchange_int_local(volatile __local int *x, int y) {
+  return atomic_xchg(x, y);
+}
+int atomic_exchange_int(volatile int *x, int y) {
+  int old = *x;
+  *x = y;
+  return old;
+}
+
 int atomic_add_int_global(volatile __global int *x, int y) {
   return atomic_add(x, y);
 }
@@ -685,6 +709,18 @@ int atomic_sub_int_local(volatile __local int *x, int y) {
 int atomic_sub_int(volatile int *x, int y) {
   int old = *x;
   *x = old - y;
+  return old;
+}
+
+float atomic_exchange_float_global(volatile __global float *x, float y) {
+  return atomic_xchg(x, y);
+}
+float atomic_exchange_float_local(volatile __local float *x, float y) {
+  return atomic_xchg(x, y);
+}
+float atomic_exchange_float(volatile float *x, float y) {
+  float old = *x;
+  *x = y;
   return old;
 }
 
