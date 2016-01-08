@@ -5231,7 +5231,7 @@ extern "C" int atomic_sub_int(int *p, int val) restrict(amp);
 extern "C" float atomic_sub_float(float *p, float val) restrict(amp);
 
 static inline unsigned int atomic_fetch_sub(unsigned int *x, unsigned int y) restrict(amp,cpu) {
-  return atomic_add_unsigned(x, y);
+  return atomic_sub_unsigned(x, y);
 }
 static inline int atomic_fetch_sub(int *x, int y) restrict(amp,cpu) {
   return atomic_sub_int(x, y);
