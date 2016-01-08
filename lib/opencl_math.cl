@@ -652,6 +652,18 @@ unsigned atomic_add_unsigned(volatile unsigned *x, unsigned y) {
   return old;
 }
 
+unsigned atomic_sub_unsigned_global(volatile __global unsigned *x, unsigned y) {
+  return atomic_sub(x, y);
+}
+unsigned atomic_sub_unsigned_local(volatile __local unsigned *x, unsigned y) {
+  return atomic_sub(x, y);
+}
+unsigned atomic_sub_unsigned(volatile unsigned *x, unsigned y) {
+  unsigned old = *x;
+  *x = old - y;
+  return old;
+}
+
 int atomic_add_int_global(volatile __global int *x, int y) {
   return atomic_add(x, y);
 }
@@ -661,6 +673,18 @@ int atomic_add_int_local(volatile __local int *x, int y) {
 int atomic_add_int(volatile int *x, int y) {
   int old = *x;
   *x = old + y;
+  return old;
+}
+
+int atomic_sub_int_global(volatile __global int *x, int y) {
+  return atomic_sub(x, y);
+}
+int atomic_sub_int_local(volatile __local int *x, int y) {
+  return atomic_sub(x, y);
+}
+int atomic_sub_int(volatile int *x, int y) {
+  int old = *x;
+  *x = old - y;
   return old;
 }
 
@@ -693,6 +717,68 @@ float atomic_add_float(volatile float *x, float y) {
   return *x;
 }
 
+float atomic_sub_float_global(volatile global float *x, const float y) {
+  union {
+    unsigned int i;
+    float f;
+  } now, old;
+  do {
+    old.f = *x;
+    now.f = old.f - y;
+  } while (atomic_cmpxchg((volatile global unsigned int *)x, old.i, now.i) != old.i);
+  return now.f;
+}
+float atomic_sub_float_local(volatile local float *x, const float y) {
+  union {
+    unsigned int i;
+    float f;
+  } now, old;
+
+  do {
+    old.f = *x;
+    now.f = old.f - y;
+  } while (atomic_cmpxchg((volatile local unsigned int *)x, old.i, now.i) != old.i);
+  return now.f;
+}
+float atomic_sub_float(volatile float *x, float y) {
+  float old = *x;
+  *x = old + y;
+  return *x;
+}
+
+unsigned atomic_and_unsigned_global(volatile __global unsigned *x, unsigned y) {
+  return atomic_and(x, y);
+}
+unsigned atomic_and_unsigned_local(volatile __local unsigned *x, unsigned y) {
+  return atomic_and(x, y);
+}
+unsigned atomic_and_unsigned(volatile unsigned *x, unsigned y) {
+  *x = *x & y;
+  return *x;
+}
+
+unsigned atomic_or_unsigned_global(volatile __global unsigned *x, unsigned y) {
+  return atomic_or(x, y);
+}
+unsigned atomic_or_unsigned_local(volatile __local unsigned *x, unsigned y) {
+  return atomic_or(x, y);
+}
+unsigned atomic_or_unsigned(volatile unsigned *x, unsigned y) {
+  *x = *x | y;
+  return *x;
+}
+
+unsigned atomic_xor_unsigned_global(volatile __global unsigned *x, unsigned y) {
+  return atomic_xor(x, y);
+}
+unsigned atomic_xor_unsigned_local(volatile __local unsigned *x, unsigned y) {
+  return atomic_xor(x, y);
+}
+unsigned atomic_xor_unsigned(volatile unsigned *x, unsigned y) {
+  *x = *x ^ y;
+  return *x;
+}
+
 unsigned atomic_max_unsigned_global(volatile __global unsigned *x, unsigned y) {
   return atomic_max(x, y);
 }
@@ -704,6 +790,17 @@ unsigned atomic_max_unsigned(volatile unsigned *x, unsigned y) {
   return *x;
 }
 
+unsigned atomic_min_unsigned_global(volatile __global unsigned *x, unsigned y) {
+  return atomic_min(x, y);
+}
+unsigned atomic_min_unsigned_local(volatile __local unsigned *x, unsigned y) {
+  return atomic_min(x, y);
+}
+unsigned atomic_min_unsigned(volatile unsigned *x, unsigned y) {
+  *x = min(*x, y);
+  return *x;
+}
+
 int atomic_max_int_global(volatile __global int *x, int y) {
   return atomic_max(x, y);
 }
@@ -712,6 +809,17 @@ int atomic_max_int_local(volatile __local int *x, int y) {
 }
 int atomic_max_int(volatile int *x, int y) {
   *x = max(*x, y);
+  return *x;
+}
+
+int atomic_min_int_global(volatile __global int *x, int y) {
+  return atomic_min(x, y);
+}
+int atomic_min_int_local(volatile __local int *x, int y) {
+  return atomic_min(x, y);
+}
+int atomic_min_int(volatile int *x, int y) {
+  *x = min(*x, y);
   return *x;
 }
 
@@ -727,6 +835,18 @@ unsigned atomic_inc_unsigned(volatile unsigned *x) {
   return old;
 }
 
+unsigned atomic_dec_unsigned_global(volatile __global unsigned *x) {
+  return atomic_dec(x);
+}
+unsigned atomic_dec_unsigned_local(volatile __local unsigned *x) {
+  return atomic_dec(x);
+}
+unsigned atomic_dec_unsigned(volatile unsigned *x) {
+  unsigned old = *x;
+  *x = old - 1;
+  return old;
+}
+
 int atomic_inc_int_global(volatile __global int *x) {
   return atomic_inc(x);
 }
@@ -739,6 +859,17 @@ int atomic_inc_int(volatile int *x) {
   return old;
 }
 
+int atomic_dec_int_global(volatile __global int *x) {
+  return atomic_dec(x);
+}
+int atomic_dec_int_local(volatile __local int *x) {
+  return atomic_dec(x);
+}
+int atomic_dec_int(volatile int *x) {
+  int old = *x;
+  *x = old - 1;
+  return old;
+}
 
 /**
  * memory functions

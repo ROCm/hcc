@@ -17,7 +17,7 @@ int main() {
 
   // launch a kernel, log current timestamp
   parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
-    table(idx) = hsail_clock_u64();
+    table(idx) = __clock_u64();
   }).wait();
 
   // sleep for 1 second
@@ -26,7 +26,7 @@ int main() {
   // launch a kernel again, log current timestamp
   array<uint64_t, 1> table2(GRID_SIZE);
   parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
-    table2(idx) = hsail_clock_u64();
+    table2(idx) = __clock_u64();
   }).wait();
 
   // verify result

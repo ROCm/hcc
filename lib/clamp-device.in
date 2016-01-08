@@ -123,6 +123,11 @@ if [ "$3" == "--hsa" ]; then
       fi
     fi
 
+    if [ $? == 1 ]; then
+      echo "Generating HSAIL BRIG kernel failed"
+      exit 1
+    fi
+
     # remove special section information for AMDGPU backend
     if [ $KM_USE_AMDGPU ] ; then
       $OPT -load $LIB/LLVMRemoveSpecialSection@CMAKE_SHARED_LIBRARY_SUFFIX@ \
@@ -132,10 +137,6 @@ if [ "$3" == "--hsa" ]; then
       fi
     fi
 
-    if [ $? == 1 ]; then
-      echo "Generating HSAIL BRIG kernel failed"
-      exit 1
-    fi
     sed "s/call /call spir_func /g" < $2.promote.ll.orig | sed "s/addrspacecast /bitcast /g" > $2.promote.ll
 
     if [ $KMDUMPLLVM == "1" ]; then

@@ -1,4 +1,4 @@
-// XFAIL: Linux,boltzmann
+// XFAIL: Linux
 // RUN: %hc %s -o %t.out && %t.out
 #include <hc.hpp>                                                               
                                                                                 
@@ -8,20 +8,18 @@
 // kernels could still be successfully dispatched
 
 bool test(int N) {                                                                
-  int a[10] = {1,2,3,4,5,6,7,8,9,10};                                           
-  int b[10];                                                                    
-  int *s = a;                                                                   
-  int *d = b;                                                                   
+  hc::array_view<int, 1> a(10);
+  hc::array_view<int, 1> b(10);                                                                    
+  for (int i = 0; i < 10; ++i) a[i] = (i + 1);
                                                                                 
   while (N--) {                                                                 
     hc::parallel_for_each(hc::accelerator().get_default_view(),                 
                           hc::extent<1>(10),                                    
-                          [s, d](hc::index<1> idx) __attribute((hc)) {          
-      d[idx[0]] = s[idx[0]];                                                    
+                          [=](hc::index<1> idx) __attribute((hc)) {          
+      b(idx) = a(idx);                                                    
     });                                                                         
   }                                                                             
   hc::accelerator().get_default_view().wait();                                  
-                                                                                
                                                                                 
   bool ret = true;                                                              
   for (int i = 0; i < 10; i++) {                                                

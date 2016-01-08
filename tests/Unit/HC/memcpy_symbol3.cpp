@@ -10,7 +10,8 @@
 #define __DEVICE __attribute__((address_space(1)))
 
 // globalVar would be agent-allocated global variable with program linkage
-__DEVICE float tableGlobal[GRID_SIZE];
+// add one initial value to prevent a bug in HLC
+__DEVICE float tableGlobal[GRID_SIZE] = { 0.1 };
 
 using namespace hc;
 
@@ -22,7 +23,7 @@ bool test1() {
   float tableInput[GRID_SIZE] { 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1 };
 
   // array to store the outputs from the kernel
-  float tableOutput1[GRID_SIZE] { 0 };
+  array_view<float, 1> tableOutput1(GRID_SIZE);
 
   // array to store the result copied from device memory
   float tableOutput2[GRID_SIZE] { 0 };
@@ -34,8 +35,8 @@ bool test1() {
 
   // dispatch a kernel which reads from globalVar and stores result to table1
   extent<1> ex(GRID_SIZE);
-  completion_future fut = parallel_for_each(ex, [=, &tableOutput1](index<1>& idx) __attribute__((hc)) {
-    tableOutput1[idx[0]] = tableGlobal[idx[0]];
+  completion_future fut = parallel_for_each(ex, [=](index<1>& idx) __attribute__((hc)) {
+    tableOutput1(idx) = tableGlobal[idx[0]];
   });
 
   // wait for the kernel to be completed

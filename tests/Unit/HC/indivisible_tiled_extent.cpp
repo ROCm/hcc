@@ -1,4 +1,4 @@
-// XFAIL: Linux,boltzmann
+// XFAIL: Linux
 // RUN: %hc %s -o %t.out && %t.out
 
 #include<hc.hpp>
@@ -17,10 +17,10 @@ bool test1D() {
   extent<1> ex(GRID_SIZE);
   tiled_extent<1> tiled_ex = ex.tile(TILE_SIZE);
 
-  int table[GRID_SIZE] { 0 };
+  array_view<int, 1> table(GRID_SIZE);
 
-  completion_future fut = parallel_for_each(tiled_ex, [&](tiled_index<1>& idx) __HC__ {
-    table[idx.global[0]] = idx.global[0];
+  completion_future fut = parallel_for_each(tiled_ex, [=](tiled_index<1>& idx) __HC__ {
+    table(idx) = idx.global[0];
   });
 
   fut.wait();
@@ -44,11 +44,11 @@ bool test2D() {
   extent<2> ex(GRID_SIZE_Y, GRID_SIZE_X);
   tiled_extent<2> tiled_ex = ex.tile(TILE_SIZE_Y, TILE_SIZE_X);
 
-  int table[GRID_SIZE_Y * GRID_SIZE_X] { 0 };
+  array_view<int, 1> table(GRID_SIZE_Y * GRID_SIZE_X);
 
-  completion_future fut = parallel_for_each(tiled_ex, [&](tiled_index<2>& idx) __HC__ {
+  completion_future fut = parallel_for_each(tiled_ex, [=](tiled_index<2>& idx) __HC__ {
     size_t index = idx.global[0] * GRID_SIZE_X + idx.global[1];
-    table[index] = index;
+    table(index) = index;
   });
 
   fut.wait();
@@ -73,11 +73,11 @@ bool test3D() {
   extent<3> ex(GRID_SIZE_Z, GRID_SIZE_Y, GRID_SIZE_X);
   tiled_extent<3> tiled_ex = ex.tile(TILE_SIZE_Z, TILE_SIZE_Y, TILE_SIZE_X);
 
-  int table[GRID_SIZE_Z * GRID_SIZE_Y * GRID_SIZE_X] { 0 };
+  array_view<int, 1> table(GRID_SIZE_Z * GRID_SIZE_Y * GRID_SIZE_X);
 
-  completion_future fut = parallel_for_each(tiled_ex, [&](tiled_index<3>& idx) __HC__ {
+  completion_future fut = parallel_for_each(tiled_ex, [=](tiled_index<3>& idx) __HC__ {
     size_t index = idx.global[0] * GRID_SIZE_X * GRID_SIZE_Y + idx.global[1] * GRID_SIZE_X + idx.global[2];
-    table[index] = index;
+    table(index) = index;
   });
 
   fut.wait();

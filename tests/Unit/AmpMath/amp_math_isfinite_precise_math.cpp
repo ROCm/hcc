@@ -9,7 +9,7 @@ using namespace concurrency;
 
 template<typename _Tp>
 bool test() {
-  const int vecSize = 3;
+  const int vecSize = 2;
 
   // Alloc & init input data
   extent<1> e(vecSize);

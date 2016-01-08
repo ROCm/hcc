@@ -8,7 +8,7 @@
 using namespace concurrency;
 
 int main(void) {
-  const int vecSize = 3;
+  const int vecSize = 2;
 
   // Alloc & init input data
   extent<1> e(vecSize);
