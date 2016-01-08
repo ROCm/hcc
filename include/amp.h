@@ -5255,28 +5255,32 @@ extern float atomic_exchange(float *dest, float val) restrict(amp, cpu);
  *         memory location.
  */
 #if __KALMAR_ACCELERATOR__ == 1
-extern "C" bool atomic_compare_exchange_unsigned(unsigned int *dest, unsigned int *expected_val, unsigned int val) restrict(amp);
-extern "C" bool atomic_compare_exchange_int(int *dest, int *expected_val, int val) restrict(amp);
+extern "C" unsigned int atomic_compare_exchange_unsigned(unsigned int *dest, unsigned int expected_val, unsigned int val) restrict(amp);
+extern "C" int atomic_compare_exchange_int(int *dest, int expected_val, int val) restrict(amp);
 
 static inline bool atomic_compare_exchange(unsigned int *dest, unsigned int *expected_val, unsigned int val) restrict(amp,cpu) {
-  return atomic_compare_exchange_unsigned(dest, expected_val, val);
+  *expected_val = atomic_compare_exchange_unsigned(dest, *expected_val, val);
+  return (*dest == val);
 }
 static inline bool atomic_compare_exchange(int *dest, int *expected_val, int val) restrict(amp,cpu) {
-  return atomic_compare_exchange_int(dest, expected_val, val);
+  *expected_val = atomic_compare_exchange_int(dest, *expected_val, val);
+  return (*dest == val);
 }
 #elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-bool atomic_compare_exchange_unsigned(unsigned int *dest, unsigned int *expected_val, unsigned int val);
-bool atomic_compare_exchange_int(int *dest, int *expected_val, int val);
+unsigned int atomic_compare_exchange_unsigned(unsigned int *dest, unsigned int expected_val, unsigned int val);
+int atomic_compare_exchange_int(int *dest, int expected_val, int val);
 
 static inline bool atomic_compare_exchange(unsigned int *dest, unsigned int *expected_val, unsigned int val) restrict(amp,cpu) {
-  return atomic_exchange_unsigned(dest, val);
+  *expected_val = atomic_compare_exchange_unsigned(dest, *expected_val, val);
+  return (*dest == val);
 }
 static inline bool atomic_compare_exchange(int *dest, int *expected_val, int val) restrict(amp,cpu) {
-  return atomic_exchange_int(dest, val);
+  *expected_val = atomic_compare_exchange_int(dest, *expected_val, val);
+  return (*dest == val);
 }
 #else
-extern bool atomic_compare_exchange(unsigned int *dest, unsigned int *expected_val, unsigned int val) restrict(amp,cpu);
-extern bool atomic_compare_exchange(int *dest, int *expected_val, int val) restrict(amp, cpu);
+extern unsigned int atomic_compare_exchange(unsigned int *dest, unsigned int *expected_val, unsigned int val) restrict(amp,cpu);
+extern int atomic_compare_exchange(int *dest, int *expected_val, int val) restrict(amp, cpu);
 #endif
 /** @} */
 
