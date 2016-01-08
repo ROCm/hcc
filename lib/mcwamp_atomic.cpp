@@ -4,6 +4,23 @@
 // FIXME : need to consider how to let hc namespace could also use functions here
 namespace Concurrency {
 
+std::mutex afx_u, afx_i, afx_f;
+unsigned int atomic_exchange_unsigned(unsigned int *x, unsigned int y) {
+    std::lock_guard<std::mutex> guard(afx_u);
+    *x = y;
+    return *x;
+}
+int atomic_exchange_int(int *x, int y) {
+    std::lock_guard<std::mutex> guard(afx_i);
+    *x = y;
+    return *x;
+}
+float atomic_exchange_float(float* x, float y) {
+    std::lock_guard<std::mutex> guard(afx_f);
+    *x = y;
+    return *x;
+}
+
 std::mutex afa_u, afa_i, afa_f;
 unsigned int atomic_add_unsigned(unsigned int *x, unsigned int y) {
     std::lock_guard<std::mutex> guard(afa_u);
