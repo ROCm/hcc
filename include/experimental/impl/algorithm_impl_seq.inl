@@ -444,6 +444,21 @@ partition_copy(ExecutionPolicy&& exec,
 
 
 /**
+ * Parallel version of std::stable_partition in <algorithm>
+ *
+ * FIXME: this algorithm is implemented sequentially currently
+ */
+template <typename ExecutionPolicy, typename BidirIt, typename UnaryPredicate>
+typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, BidirIt>::type
+stable_partition(ExecutionPolicy&& exec,
+                 BidirIt first, BidirIt last,
+                 UnaryPredicate p) {
+    return std::stable_partition(first, last, p);
+}
+
+
+
+/**
  * Parallel version of std::is_sorted in <algorithm>
  *
  * FIXME: this algorithm is implemented sequentially currently
