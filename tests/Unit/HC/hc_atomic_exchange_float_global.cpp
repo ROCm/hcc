@@ -4,41 +4,34 @@
 #include <stdlib.h>
 #include <iostream>
 #include <vector>
+#include <numeric>
+#include <math.h>
+
 using namespace hc;
 
-template<typename T>
-bool test() {
+#define T float
+#define INIT 0.5f
+#define NEW_VALUE 99.5f
+
+int main(void) {
   const int vecSize = 100;
 
   // Alloc & init input data
-  T init[vecSize];
-  for (int i = 0; i < vecSize; ++i) { init[i] = T(vecSize); }
-  array<T, 1> count(vecSize, std::begin(init));
+  std::vector<T> init(vecSize, INIT);
+  array<T, 1> count(vecSize, init.begin());
 
   parallel_for_each(count.get_extent(), [=, &count](index<1> idx) [[hc]] {
-    for(int i = 0; i < vecSize; ++i) {
-      atomic_fetch_sub(&count[i], T(1));
-    }
+    atomic_exchange(&count(idx), NEW_VALUE);
   });
 
   array_view<T, 1> av(count);
 
   bool ret = true;
   for(int i = 0; i < vecSize; ++i) {
-      if(av[i] != T(0)) {
+      if(av[i] != NEW_VALUE) {
         ret = false;
       }
   }
 
-  return ret;
-}
-
-int main() {
-  bool ret = true;
-
-  ret &= test<unsigned int>();
-  ret &= test<int>();
-
   return !(ret == true);
 }
-

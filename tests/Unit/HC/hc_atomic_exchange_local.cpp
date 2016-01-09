@@ -30,17 +30,17 @@ bool test() {
 
     for(int i = 0; i < tile_size; i++) {
       for(int j = 0; j < tile_size; j++) {
-        atomic_fetch_add(&(localA[i][j]), T(1));
+        atomic_exchange(&(localA[i][j]), T(1));
       }
     }
-  tidx.barrier.wait();
-  av_a[globalIdx[0]][globalIdx[1]] = localA[localIdx[0]][localIdx[1]];
+    tidx.barrier.wait();
+    av_a[globalIdx[0]][globalIdx[1]] = localA[localIdx[0]][localIdx[1]];
   });
 
   bool ret = true;
   for(int i = 0; i < vecSize; i++) {
     for(int j = 0; j < vecSize; j++) {
-      if(av_a(i, j) != T(tile_size * tile_size)) {
+      if(av_a(i, j) != T(1)) {
         ret = false;
       }
     }

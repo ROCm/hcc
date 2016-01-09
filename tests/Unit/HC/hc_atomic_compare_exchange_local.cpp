@@ -15,7 +15,7 @@ bool test() {
   extent<2> e_a(vecSize, vecSize);
   std::vector<T> va(vecSize * vecSize);
   for(int i = 0; i < vecSize * vecSize; i++) {
-    va[i] = T(0);
+    va[i] = 0;
   }
   array_view<T, 2> av_a(e_a, va); 
 
@@ -23,6 +23,7 @@ bool test() {
   parallel_for_each(compute_domain.tile(tile_size, tile_size), [=] (tiled_index<2> tidx) [[hc]] {
     index<2> localIdx = tidx.local;
     index<2> globalIdx = tidx.global;
+    T v = T(0);
 
     tile_static T localA[tile_size][tile_size];
     localA[localIdx[0]][localIdx[1]] = T(0);
@@ -30,17 +31,17 @@ bool test() {
 
     for(int i = 0; i < tile_size; i++) {
       for(int j = 0; j < tile_size; j++) {
-        atomic_fetch_add(&(localA[i][j]), T(1));
+        atomic_compare_exchange(&(localA[i][j]), &v, T(2));
       }
     }
-  tidx.barrier.wait();
-  av_a[globalIdx[0]][globalIdx[1]] = localA[localIdx[0]][localIdx[1]];
+    tidx.barrier.wait();
+    av_a[globalIdx[0]][globalIdx[1]] = localA[localIdx[0]][localIdx[1]];
   });
 
   bool ret = true;
-  for(int i = 0; i < vecSize; i++) {
-    for(int j = 0; j < vecSize; j++) {
-      if(av_a(i, j) != T(tile_size * tile_size)) {
+  for(int i = 0; i < vecSize; ++i) {
+    for(int j = 0; j < vecSize; ++j) {
+      if(av_a(i, j) != T(2)) {
         ret = false;
       }
     }

@@ -6,37 +6,49 @@
 #include <vector>
 using namespace hc;
 
-int main(void) {
+template<typename T>
+bool test() {
   const int vecSize = 100;
 
   // Alloc & init input data
-  int init[vecSize] { 0 };
+  T init[vecSize];
   for (int i = 0; i < vecSize; ++i) {
-    init[i] = i;
+    init[i] = T(i);
   }
-  array<int, 1> count(vecSize, std::begin(init));
+  array<T, 1> count(vecSize, std::begin(init));
 
   parallel_for_each(count.get_extent(), [=, &count](index<1> idx) [[hc]] {
-    for(int i = 0; i < vecSize; i++) {
-      atomic_fetch_min(&count[i], vecSize / 2);
+    for(int i = 0; i < vecSize; ++i) {
+      atomic_fetch_min(&count[i], T(vecSize / 2));
     }
   });
 
-  array_view<int, 1> av(count);
+  array_view<T, 1> av(count);
 
   bool ret = true;
   // half of the output would be i
   for(int i = 0; i < vecSize / 2; ++i) {
-    if (av[i] != i) {
+    if (av[i] != T(i)) {
       ret = false;
     }
   }
   // half of the output would be vecSize / 2
   for(int i = vecSize / 2; i < vecSize; ++i) {
-    if (av[i] != vecSize / 2) {
+    if (av[i] != T(vecSize / 2)) {
       ret = false;
     }
   }
 
+  return ret;
+}
+
+int main() {
+  bool ret = true;
+
+  ret &= test<unsigned int>();
+  ret &= test<int>();
+  ret &= test<uint64_t>();
+
   return !(ret == true);
 }
+
