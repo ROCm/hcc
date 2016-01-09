@@ -214,6 +214,7 @@ stablesort_dispatch(const InputIt& first, const InputIt& last, const Compare& co
     unsigned int vecPow2 = (vecSize & (vecSize-1));
     numMerges += vecPow2? 1: 0;
 
+    /// FIXME: raw pointer won't work on dGPU
     iType* tmpBuffer = new iType[vecSize];
 
 
