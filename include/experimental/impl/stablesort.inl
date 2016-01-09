@@ -299,6 +299,7 @@ stablesort_dispatch(const InputIt& first, const InputIt& last, const Compare& co
     {
        std::copy(tmpBuffer, tmpBuffer + vecSize, first);
     }
+    delete tmpBuffer;
 
     return;
 }

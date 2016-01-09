@@ -314,6 +314,7 @@ void sort_enqueue_int_uint(InputIt &first, InputIt &last, Compare comp, bool int
 
     /// FIXME: raw pointers don't work on dGPU
     Values* dvSwapInputValues = new Values[orig_szElements];
+    int* dvHistogramBins = new int[numGroups * RADICES];
 
 	bool Asc_sort = 0;
 	if(comp(2,3))
@@ -331,7 +332,6 @@ void sort_enqueue_int_uint(InputIt &first, InputIt &last, Compare comp, bool int
 		numGroups = nBlocks;
         cdata.m_nWGs = numGroups;
 	}
-    int* dvHistogramBins = new int[numGroups * RADICES];
 
 	int bits;
     auto first_ = utils::get_pointer(first);
@@ -789,6 +789,8 @@ void sort_enqueue_int_uint(InputIt &first, InputIt &last, Compare comp, bool int
 			}
 		 }, localSize);
 	}
+    delete dvSwapInputValues;
+    delete dvHistogramBins;
     return;
 }
 
