@@ -5987,14 +5987,136 @@ completion_future copy_async(const array_view<T, N>& src, const array<T, N>& des
 // atomic functions
 // ------------------------------------------------------------------------
 
-// FIXME: following functions are not implemented
-// int atomic_exchange(int * dest, int val) __HC__;
-// unsigned int atomic_exchange(unsigned int * dest, unsigned int val) __HC__;
-// float atomic_exchange(float * dest, float val) __HC__;
+/** @{ */
+/**
+ * Atomically read the value stored in dest , replace it with the value given
+ * in val and return the old value to the caller. This function provides
+ * overloads for int , unsigned int and float parameters.
+ *
+ * @param[out] dest A pointer to the location which needs to be atomically
+ *                  modified. The location may reside within a
+ *                  hc::array or hc::array_view or within a
+ *                  tile_static variable.
+ * @param[in] val The new value to be stored in the location pointed to be dest
+ * @return These functions return the old value which was previously stored at
+ *         dest, and that was atomically replaced. These functions always
+ *         succeed.
+ */
+#if __KALMAR_ACCELERATOR__ == 1
+extern "C" unsigned int atomic_exchange_unsigned(unsigned int *p, unsigned int val) __HC__;
+extern "C" int atomic_exchange_int(int *p, int val) __HC__;
+extern "C" float atomic_exchange_float(float *p, float val) __HC__;
+extern "C" uint64_t atomic_exchange_uint64(uint64_t *p, uint64_t val) __HC__;
 
-// FIXME: following functions are not implemented
-// bool atomic_compare_exchange(int * dest, int * expected_val, int val) __HC__;
-// bool atomic_compare_exchange(unsigned int * dest, unsigned int * expected_val, unsigned int val) __HC__;
+static inline unsigned int atomic_exchange(unsigned int * dest, unsigned int val) __CPU__ __HC__ {
+  return atomic_exchange_unsigned(dest, val);
+}
+static inline int atomic_exchange(int * dest, int val) __CPU__ __HC__ {
+  return atomic_exchange_int(dest, val);
+}
+static inline float atomic_exchange(float * dest, float val) __CPU__ __HC__ {
+  return atomic_exchange_float(dest, val);
+}
+static inline uint64_t atomic_exchange(uint64_t * dest, uint64_t val) __CPU__ __HC__ {
+  return atomic_exchange_uint64(dest, val);
+}
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+unsigned int atomic_exchange_unsigned(unsigned int *p, unsigned int val);
+int atomic_exchange_int(int *p, int val);
+float atomic_exchange_float(float *p, float val);
+uint64_t atomic_exchange_uint64(uint64_t *p, uint64_t val);
+
+static inline unsigned int atomic_exchange(unsigned int *dest, unsigned int val) __CPU__ __HC__ {
+  return atomic_exchange_unsigned(dest, val);
+}
+static inline int atomic_exchange(int *dest, int val) __CPU__ __HC__ {
+  return atomic_exchange_int(dest, val);
+}
+static inline float atomic_exchange(float *dest, float val) __CPU__ __HC__ {
+  return atomic_exchange_float(dest, val);
+}
+static inline uint64_t atomic_exchange(uint64_t *dest, uint64_t val) __CPU__ __HC__ {
+  return atomic_exchange_uint64(dest, val);
+}
+#else
+extern unsigned int atomic_exchange(unsigned int *dest, unsigned int val) __CPU__ __HC__;
+extern int atomic_exchange(int *dest, int val) __CPU__ __HC__;
+extern float atomic_exchange(float *dest, float val) __CPU__ __HC__;
+extern uint64_t atomic_exchange(uint64_t *dest, uint64_t val) __CPU__ __HC__;
+#endif
+/** @} */
+
+/** @{ */
+/**
+ * These functions attempt to perform these three steps atomically:
+ * 1. Read the value stored in the location pointed to by dest
+ * 2. Compare the value read in the previous step with the value contained in
+ *    the location pointed by expected_val
+ * 3. Carry the following operations depending on the result of the comparison
+ *    of the previous step:
+ *    a. If the values are identical, then the function tries to atomically
+ *       change the value pointed by dest to the value in val. The function
+ *       indicates by its return value whether this transformation has been
+ *       successful or not.
+ *    b. If the values are not identical, then the function stores the value
+ *       read in step (1) into the location pointed to by expected_val, and
+ *       returns false.
+ *
+ * @param[out] dest An pointer to the location which needs to be atomically
+ *                  modified. The location may reside within a
+ *                  concurrency::array or concurrency::array_view or within a
+ *                  tile_static variable.
+ * @param[out] expected_val A pointer to a local variable or function
+ *                          parameter. Upon calling the function, the location
+ *                          pointed by expected_val contains the value the
+ *                          caller expects dest to contain. Upon return from
+ *                          the function, expected_val will contain the most
+ *                          recent value read from dest.
+ * @param[in] val The new value to be stored in the location pointed to be dest
+ * @return The return value indicates whether the function has been successful
+ *         in atomically reading, comparing and modifying the contents of the
+ *         memory location.
+ */
+#if __KALMAR_ACCELERATOR__ == 1
+extern "C" unsigned int atomic_compare_exchange_unsigned(unsigned int *dest, unsigned int expected_val, unsigned int val) __HC__;
+extern "C" int atomic_compare_exchange_int(int *dest, int expected_val, int val) __HC__;
+extern "C" uint64_t atomic_compare_exchange_uint64(uint64_t *dest, uint64_t expected_val, uint64_t val) __HC__;
+
+static inline bool atomic_compare_exchange(unsigned int *dest, unsigned int *expected_val, unsigned int val) __CPU__ __HC__ {
+  *expected_val = atomic_compare_exchange_unsigned(dest, *expected_val, val);
+  return (*dest == val);
+}
+static inline bool atomic_compare_exchange(int *dest, int *expected_val, int val) __CPU__ __HC__ {
+  *expected_val = atomic_compare_exchange_int(dest, *expected_val, val);
+  return (*dest == val);
+}
+static inline bool atomic_compare_exchange(uint64_t *dest, uint64_t *expected_val, uint64_t val) __CPU__ __HC__ {
+  *expected_val = atomic_compare_exchange_uint64(dest, *expected_val, val);
+  return (*dest == val);
+}
+#elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+unsigned int atomic_compare_exchange_unsigned(unsigned int *dest, unsigned int *expected_val, unsigned int val);
+int atomic_compare_exchange_int(int *dest, int *expected_val, int val);
+uint64_t atomic_compare_exchange_uint64(uint64_t *dest, uint64_t *expected_val, uint64_t val);
+
+static inline bool atomic_compare_exchange(unsigned int *dest, unsigned int *expected_val, unsigned int val) __CPU__ __HC__ {
+  *expected_val = atomic_compare_exchange_unsigned(dest, *expected_val, val);
+  return (*dest == val);
+}
+static inline bool atomic_compare_exchange(int *dest, int *expected_val, int val) __CPU__ __HC__ {
+  *expected_val = atomic_compare_exchange_int(dest, *expected_val, val);
+  return (*dest == val);
+}
+static inline bool atomic_compare_exchange(uint64_t *dest, uint64_t *expected_val, uint64_t val) __CPU__ __HC__ {
+  *expected_val = atomic_compare_exchange_uint64(dest, *expected_val, val);
+  return (*dest == val);
+}
+#else
+extern bool atomic_compare_exchange(unsigned int *dest, unsigned int *expected_val, unsigned int val) __CPU__ __HC__;
+extern bool atomic_compare_exchange(int *dest, int *expected_val, int val) __CPU__ __HC__;
+extern bool atomic_compare_exchange(uint64_t *dest, uint64_t *expected_val, uint64_t val) __CPU__ __HC__;
+#endif
+/** @} */
 
 /** @{ */
 /**
@@ -6028,6 +6150,7 @@ completion_future copy_async(const array_view<T, N>& src, const array<T, N>& des
 extern "C" unsigned int atomic_add_unsigned(unsigned int *p, unsigned int val) __HC__;
 extern "C" int atomic_add_int(int *p, int val) __HC__;
 extern "C" float atomic_add_float(float *p, float val) __HC__;
+extern "C" uint64_t atomic_add_uint64(uint64_t *p, uint64_t val) __HC__;
 
 static inline unsigned int atomic_fetch_add(unsigned int *x, unsigned int y) __CPU__ __HC__ {
   return atomic_add_unsigned(x, y);
@@ -6038,13 +6161,16 @@ static inline int atomic_fetch_add(int *x, int y) __CPU__ __HC__ {
 static inline float atomic_fetch_add(float *x, float y) __CPU__ __HC__ {
   return atomic_add_float(x, y);
 }
+static inline uint64_t atomic_fetch_add(uint64_t *x, uint64_t y) __CPU__ __HC__ {
+  return atomic_add_uint64(x, y);
+}
 
 extern "C" unsigned int atomic_sub_unsigned(unsigned int *p, unsigned int val) __HC__;
 extern "C" int atomic_sub_int(int *p, int val) __HC__;
 extern "C" float atomic_sub_float(float *p, float val) __HC__;
 
 static inline unsigned int atomic_fetch_sub(unsigned int *x, unsigned int y) __CPU__ __HC__ {
-  return atomic_add_unsigned(x, y);
+  return atomic_sub_unsigned(x, y);
 }
 static inline int atomic_fetch_sub(int *x, int y) __CPU__ __HC__ {
   return atomic_sub_int(x, y);
@@ -6055,6 +6181,7 @@ static inline int atomic_fetch_sub(float *x, float y) __CPU__ __HC__ {
 
 extern "C" unsigned int atomic_and_unsigned(unsigned int *p, unsigned int val) __HC__;
 extern "C" int atomic_and_int(int *p, int val) __HC__;
+extern "C" uint64_t atomic_and_uint64(uint64_t *p, uint64_t val) __HC__;
 
 static inline unsigned int atomic_fetch_and(unsigned int *x, unsigned int y) __CPU__ __HC__ {
   return atomic_and_unsigned(x, y);
@@ -6062,9 +6189,13 @@ static inline unsigned int atomic_fetch_and(unsigned int *x, unsigned int y) __C
 static inline int atomic_fetch_and(int *x, int y) __CPU__ __HC__ {
   return atomic_and_int(x, y);
 }
+static inline uint64_t atomic_fetch_and(uint64_t *x, uint64_t y) __CPU__ __HC__ {
+  return atomic_and_uint64(x, y);
+}
 
 extern "C" unsigned int atomic_or_unsigned(unsigned int *p, unsigned int val) __HC__;
 extern "C" int atomic_or_int(int *p, int val) __HC__;
+extern "C" uint64_t atomic_or_uint64(uint64_t *p, uint64_t val) __HC__;
 
 static inline unsigned int atomic_fetch_or(unsigned int *x, unsigned int y) __CPU__ __HC__ {
   return atomic_or_unsigned(x, y);
@@ -6072,9 +6203,13 @@ static inline unsigned int atomic_fetch_or(unsigned int *x, unsigned int y) __CP
 static inline int atomic_fetch_or(int *x, int y) __CPU__ __HC__ {
   return atomic_or_int(x, y);
 }
+static inline uint64_t atomic_fetch_or(uint64_t *x, uint64_t y) __CPU__ __HC__ {
+  return atomic_or_uint64(x, y);
+}
 
 extern "C" unsigned int atomic_xor_unsigned(unsigned int *p, unsigned int val) __HC__;
 extern "C" int atomic_xor_int(int *p, int val) __HC__;
+extern "C" uint64_t atomic_xor_uint64(uint64_t *p, uint64_t val) __HC__;
 
 static inline unsigned int atomic_fetch_xor(unsigned int *x, unsigned int y) __CPU__ __HC__ {
   return atomic_xor_unsigned(x, y);
@@ -6082,10 +6217,14 @@ static inline unsigned int atomic_fetch_xor(unsigned int *x, unsigned int y) __C
 static inline int atomic_fetch_xor(int *x, int y) __CPU__ __HC__ {
   return atomic_xor_int(x, y);
 }
+static inline uint64_t atomic_fetch_xor(uint64_t *x, uint64_t y) __CPU__ __HC__ {
+  return atomic_xor_uint64(x, y);
+}
 #elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
 unsigned int atomic_add_unsigned(unsigned int *p, unsigned int val);
 int atomic_add_int(int *p, int val);
 float atomic_add_float(float *p, float val);
+uint64_t atomic_add_uint64(uint64_t *p, uint64_t val);
 
 static inline unsigned int atomic_fetch_add(unsigned int *x, unsigned int y) __CPU__ __HC__ {
   return atomic_add_unsigned(x, y);
@@ -6095,6 +6234,9 @@ static inline int atomic_fetch_add(int *x, int y) __CPU__ __HC__ {
 }
 static inline float atomic_fetch_add(float *x, float y) __CPU__ __HC__ {
   return atomic_add_float(x, y);
+}
+static inline uint64_t atomic_fetch_add(uint64_t *x, uint64_t y) __CPU__ __HC__ {
+  return atomic_add_uint64(x, y);
 }
 
 unsigned int atomic_sub_unsigned(unsigned int *p, unsigned int val);
@@ -6113,6 +6255,7 @@ static inline float atomic_fetch_sub(float *x, float y) __CPU__ __HC__ {
 
 unsigned int atomic_and_unsigned(unsigned int *p, unsigned int val);
 int atomic_and_int(int *p, int val);
+uint64_t atomic_and_uint64(uint64_t *p, uint64_t val);
 
 static inline unsigned int atomic_fetch_and(unsigned int *x, unsigned int y) __CPU__ __HC__ {
   return atomic_and_unsigned(x, y);
@@ -6120,9 +6263,13 @@ static inline unsigned int atomic_fetch_and(unsigned int *x, unsigned int y) __C
 static inline int atomic_fetch_and(int *x, int y) __CPU__ __HC__ {
   return atomic_and_int(x, y);
 }
+static inline uint64_t atomic_fetch_and(uint64_t *x, uint64_t y) __CPU__ __HC__ {
+  return atomic_and_uint64(x, y);
+}
 
 unsigned int atomic_or_unsigned(unsigned int *p, unsigned int val);
 int atomic_or_int(int *p, int val);
+uint64_t atomic_or_uint64(uint64_t *p, uint64_t val);
 
 static inline unsigned int atomic_fetch_or(unsigned int *x, unsigned int y) __CPU__ __HC__ {
   return atomic_or_unsigned(x, y);
@@ -6130,9 +6277,13 @@ static inline unsigned int atomic_fetch_or(unsigned int *x, unsigned int y) __CP
 static inline int atomic_fetch_or(int *x, int y) __CPU__ __HC__ {
   return atomic_or_int(x, y);
 }
+static inline uint64_t atomic_fetch_or(uint64_t *x, uint64_t y) __CPU__ __HC__ {
+  return atomic_or_uint64(x, y);
+}
 
 unsigned int atomic_xor_unsigned(unsigned int *p, unsigned int val);
 int atomic_xor_int(int *p, int val);
+uint64_t atomic_xor_uint64(uint64_t *p, uint64_t val);
 
 static inline unsigned int atomic_fetch_xor(unsigned int *x, unsigned int y) __CPU__ __HC__ {
   return atomic_xor_unsigned(x, y);
@@ -6140,10 +6291,14 @@ static inline unsigned int atomic_fetch_xor(unsigned int *x, unsigned int y) __C
 static inline int atomic_fetch_xor(int *x, int y) __CPU__ __HC__ {
   return atomic_xor_int(x, y);
 }
+static inline uint64_t atomic_fetch_xor(uint64_t *x, uint64_t y) __CPU__ __HC__ {
+  return atomic_xor_uint64(x, y);
+}
 #else
 extern unsigned atomic_fetch_add(unsigned *x, unsigned y) __CPU__ __HC__;
 extern int atomic_fetch_add(int *x, int y) __CPU__ __HC__;
 extern float atomic_fetch_add(float *x, float y) __CPU__ __HC__;
+extern uint64_t atomic_fetch_add(uint64_t *x, uint64_t y) __CPU__ __HC__;
 
 extern unsigned atomic_fetch_sub(unsigned *x, unsigned y) __CPU__ __HC__;
 extern int atomic_fetch_sub(int *x, int y) __CPU__ __HC__;
@@ -6151,27 +6306,35 @@ extern float atomic_fetch_sub(float *x, float y) __CPU__ __HC__;
 
 extern unsigned atomic_fetch_and(unsigned *x, unsigned y) __CPU__ __HC__;
 extern int atomic_fetch_and(int *x, int y) __CPU__ __HC__;
+extern uint64_t atomic_fetch_and(uint64_t *x, uint64_t y) __CPU__ __HC__;
 
 extern unsigned atomic_fetch_or(unsigned *x, unsigned y) __CPU__ __HC__;
 extern int atomic_fetch_or(int *x, int y) __CPU__ __HC__;
+extern uint64_t atomic_fetch_or(uint64_t *x, uint64_t y) __CPU__ __HC__;
 
 extern unsigned atomic_fetch_xor(unsigned *x, unsigned y) __CPU__ __HC__;
 extern int atomic_fetch_xor(int *x, int y) __CPU__ __HC__;
+extern uint64_t atomic_fetch_xor(uint64_t *x, uint64_t y) __CPU__ __HC__;
 #endif
 
 #if __KALMAR_ACCELERATOR__ == 1
 extern "C" unsigned int atomic_max_unsigned(unsigned int *p, unsigned int val) __HC__;
 extern "C" int atomic_max_int(int *p, int val) __HC__;
+extern "C" uint64_t atomic_max_uint64(uint64_t *p, uint64_t val) __HC__;
 
 static inline unsigned int atomic_fetch_max(unsigned int *x, unsigned int y) __HC__ {
   return atomic_max_unsigned(x, y);
 }
 static inline int atomic_fetch_max(int *x, int y) __HC__ {
   return atomic_max_int(x, y);
+}
+static inline uint64_t atomic_fetch_max(uint64_t *x, uint64_t y) __HC__ {
+  return atomic_max_uint64(x, y);
 }
 
 extern "C" unsigned int atomic_min_unsigned(unsigned int *p, unsigned int val) __HC__;
 extern "C" int atomic_min_int(int *p, int val) __HC__;
+extern "C" uint64_t atomic_min_uint64(uint64_t *p, uint64_t val) __HC__;
 
 static inline unsigned int atomic_fetch_min(unsigned int *x, unsigned int y) __HC__ {
   return atomic_min_unsigned(x, y);
@@ -6179,9 +6342,13 @@ static inline unsigned int atomic_fetch_min(unsigned int *x, unsigned int y) __H
 static inline int atomic_fetch_min(int *x, int y) __HC__ {
   return atomic_min_int(x, y);
 }
+static uint64_t atomic_fetch_min(uint64_t *x, uint64_t y) __HC__ {
+  return atomic_min_uint64(x, y);
+}
 #elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
 unsigned int atomic_max_unsigned(unsigned int *p, unsigned int val);
 int atomic_max_int(int *p, int val);
+uint64_t atomic_max_uint64(uint64 *p, uint64_t val);
 
 static inline unsigned int atomic_fetch_max(unsigned int *x, unsigned int y) __HC__ {
   return atomic_max_unsigned(x, y);
@@ -6189,9 +6356,13 @@ static inline unsigned int atomic_fetch_max(unsigned int *x, unsigned int y) __H
 static inline int atomic_fetch_max(int *x, int y) __HC__ {
   return atomic_max_int(x, y);
 }
+static inline uint64_t atomic_fetch_max(uint64_t *x, uint64_t y) __HC__ {
+  return atomic_max_uint64(x, y);
+}
 
 unsigned int atomic_min_unsigned(unsigned int *p, unsigned int val);
 int atomic_min_int(int *p, int val);
+uint64_t atomic_min_uint64(uint64_t *p, uint64_t val);
 
 static inline unsigned int atomic_fetch_min(unsigned int *x, unsigned int y) __HC__ {
   return atomic_min_unsigned(x, y);
@@ -6199,12 +6370,17 @@ static inline unsigned int atomic_fetch_min(unsigned int *x, unsigned int y) __H
 static inline int atomic_fetch_min(int *x, int y) __HC__ {
   return atomic_min_int(x, y);
 }
+static inline uint64_t atomic_fetch_min(uint64_t *x, uint64_t y) __HC__ {
+  return atomic_min_uint64(x, y);
+}
 #else
 extern int atomic_fetch_max(int * dest, int val) __CPU__ __HC__;
 extern unsigned int atomic_fetch_max(unsigned int * dest, unsigned int val) __CPU__ __HC__;
+extern uint64_t atomic_fetch_max(uint64_t * dest, uint64_t val) __CPU__ __HC__;
 
 extern int atomic_fetch_min(int * dest, int val) __CPU__ __HC__;
 extern unsigned int atomic_fetch_min(unsigned int * dest, unsigned int val) __CPU__ __HC__;
+extern uint64_t atomic_fetch_min(uint64_t * dest, uint64_t val) __CPU__ __HC__;
 #endif
 
 /** @} */

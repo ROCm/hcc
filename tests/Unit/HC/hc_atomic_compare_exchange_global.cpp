@@ -11,28 +11,31 @@ bool test() {
   const int vecSize = 100;
 
   // Alloc & init input data
-  T init[vecSize];
+  int init[vecSize];
   for (int i = 0; i < vecSize; ++i) {
-    init[i] = T(i);
+    init[i] = (i % 2 == 0) ? T(0) : T(1);
   }
   array<T, 1> count(vecSize, std::begin(init));
 
   parallel_for_each(count.get_extent(), [=, &count](index<1> idx) [[hc]] {
-    for(int i = 0; i < vecSize; ++i) {
-      atomic_fetch_or(&count[i], T(1));
-    }
+    // 0 -> 2
+    // 1 -> 1
+    T v = T(0);
+    atomic_compare_exchange(&count(idx), &v, T(2));
   });
 
   array_view<T, 1> av(count);
 
   bool ret = true;
   for(int i = 0; i < vecSize; ++i) {
-    if ( (i % 2) == 0) {
-      if (av[i] != T(i + 1)) {
+    if (i % 2 == 0) {
+      // 0 -> 2
+      if (av[i] != T(2)) {
         ret = false;
       }
     } else {
-      if (av[i] != T(i)) {
+      // 1 -> 1
+      if (av[i] != T(1)) {
         ret = false;
       }
     }

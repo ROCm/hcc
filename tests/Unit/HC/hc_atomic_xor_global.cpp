@@ -6,34 +6,46 @@
 #include <vector>
 using namespace hc;
 
-int main(void) {
+template<typename T>
+bool test() {
   const int vecSize = 100;
 
   // Alloc & init input data
-  int init[vecSize] { 0 };
+  T init[vecSize];
   for (int i = 0; i < vecSize; ++i) {
-    init[i] = i;
+    init[i] = T(i);
   }
-  array<int, 1> count(vecSize, std::begin(init));
+  array<T, 1> count(vecSize, std::begin(init));
 
   parallel_for_each(count.get_extent(), [=, &count](index<1> idx) [[hc]] {
-    atomic_fetch_xor(&count(idx), 1);
+    atomic_fetch_xor(&count(idx), T(1));
   });
 
-  array_view<int, 1> av(count);
+  array_view<T, 1> av(count);
 
   bool ret = true;
   for(int i = 0; i < vecSize; ++i) {
     if ( (i % 2) == 0) {
-      if (av[i] != (i + 1)) {
+      if (av[i] != T(i + 1)) {
         ret = false;
       }
     } else {
-      if (av[i] != (i - 1)) {
+      if (av[i] != T(i - 1)) {
         ret = false;
       }
     }
   }
 
+  return ret;
+}
+
+int main() {
+  bool ret = true;
+
+  ret &= test<unsigned int>();
+  ret &= test<int>();
+  ret &= test<uint64_t>();
+
   return !(ret == true);
 }
+
