@@ -21,6 +21,7 @@ inline namespace v1 {
 #include "transform.inl"
 #include "transform_reduce.inl"
 #include "sort.inl"
+#include "stablesort.inl"
 
 namespace details {
 

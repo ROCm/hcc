@@ -9,6 +9,7 @@ namespace details {
 #define BITS_PER_PASS			4
 #define NUM_BUCKET				(1<<BITS_PER_PASS)
 
+
 #define AtomInc(x) hc::atomic_fetch_inc(&(x))
 #define AtomAdd(x, value) hc::atomic_fetch_add(&(x), value)
 #define USE_2LEVEL_REDUCE 
@@ -885,5 +886,6 @@ void sort_impl(InputIt first, InputIt last, Compare comp,
   }
   sort_dispatch(first, last, comp);
 }
+
 
 } // namespace details

@@ -444,20 +444,6 @@ partition_copy(ExecutionPolicy&& exec,
 
 
 /**
- * Parallel version of std::stable_partition in <algorithm>
- *
- * FIXME: this algorithm is implemented sequentially currently
- */
-template <typename ExecutionPolicy, typename BidirIt, typename UnaryPredicate>
-typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, BidirIt>::type
-stable_partition(ExecutionPolicy&& exec,
-                 BidirIt first, BidirIt last,
-                 UnaryPredicate p) {
-    return std::stable_partition(first, last, p);
-}
-
-
-/**
  * Parallel version of std::is_sorted in <algorithm>
  *
  * FIXME: this algorithm is implemented sequentially currently
@@ -548,29 +534,6 @@ partial_sort_copy(ExecutionPolicy&& exec,
                   RandomIt d_first, RandomIt d_last,
                   Compare comp) {
     return std::partial_sort_copy(first, last, d_first, d_last, comp);
-}
-/**@}*/
-
-
-/**
- * Parallel version of std::stable_sort in <algorithm>
- *
- * FIXME: this algorithm is implemented sequentially currently
- * @{
- */
-template <typename ExecutionPolicy, typename RandomIt>
-typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, void>::type
-stable_sort(ExecutionPolicy&& exec,
-            RandomIt first, RandomIt last) {
-    return std::stable_sort(first, last);
-}
-
-template <typename ExecutionPolicy, typename RandomIt, typename Compare>
-typename std::enable_if<is_execution_policy<typename std::decay<ExecutionPolicy>::type>::value, void>::type
-stable_sort(ExecutionPolicy&& exec,
-            RandomIt first, RandomIt last,
-            Compare comp) {
-    return std::stable_sort(first, last, comp);
 }
 /**@}*/
 

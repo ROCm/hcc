@@ -524,6 +524,33 @@ void sort(ExecutionPolicy&& exec, InputIt first, InputIt last, Compare comp) {
 }
 /**@}*/
 
+
+/**
+ * Parallel version of std::stable_sort in <algorithm>
+ * @{
+ */
+template<typename ExecutionPolicy, typename InputIt,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIt>> = nullptr>
+void stable_sort(ExecutionPolicy&& exec, InputIt first, InputIt last) {
+    stable_sort(exec, first, last,
+         std::less<typename std::iterator_traits<InputIt>::value_type>());
+}
+
+
+template<typename ExecutionPolicy, typename InputIt, typename Compare,
+         utils::EnableIf<utils::isExecutionPolicy<ExecutionPolicy>> = nullptr,
+         utils::EnableIf<utils::isInputIt<InputIt>> = nullptr>
+void stable_sort(ExecutionPolicy&& exec, InputIt first, InputIt last, Compare comp) {
+  if (utils::isParallel(exec)) {
+      details::stablesort_impl(first, last, comp,
+                         typename std::iterator_traits<InputIt>::iterator_category());
+  } else {
+      details::stablesort_impl(first, last, comp, std::input_iterator_tag{});
+  }
+}
+/**@}*/
+
 /**
  * Parallel version of std::equal in <algorithm>
  * @{
