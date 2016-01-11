@@ -1,4 +1,4 @@
-// XFAIL: Linux
+// XFAIL: Linux,boltzmann
 // RUN: %hc %s -o %t.out && %t.out
 
 #include "hip.h"
@@ -9,7 +9,7 @@
 
 #define SIZE WIDTH*HEIGHT;
 
-__KERNEL void kernel1(grid_launch_parm lp, int **data2d) {
+__attribute__((hc_grid_launch)) void kernel1(grid_launch_parm lp, int **data2d) {
   int x = lp.threadId.x + lp.groupId.x*lp.groupDim.x;
   int y = lp.threadId.y + lp.groupId.y*lp.groupDim.y;
 

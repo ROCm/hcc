@@ -1,9 +1,9 @@
-// XFAIL: Linux
+// XFAIL: Linux,boltzmann
 // RUN: %hc %s -c -o %t_file1.out && %hc %s %t_file1.out -o %t.out && %t.out
 
 #include "grid_launch.h"
 
-__KERNEL void foo(grid_launch_parm lp, int* a)
+__attribute__((hc_grid_launch)) void foo(grid_launch_parm lp, int* a)
 {
   int x = lp.threadId.x + lp.groupDim.x*lp.groupId.x;
   a[x] = x;
