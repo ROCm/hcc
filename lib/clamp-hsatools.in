@@ -74,7 +74,7 @@ if [ $KMDUMPLLVM == "1" ]; then
 fi
 
 if [ $KM_USE_AMDGPU ]; then
-  EXTRA_LIBRARY=@HSA_AMDGPU_BUILTIN_LIBRARY_WRAPPER@
+  EXTRA_LIBRARY=$NEWLIB/hsail-amdgpu-wrapper.ll
 fi
 
 $HLC_LLVM_LINK -suppress-warnings -o $1.linked.bc $1 $NEWLIB/builtins-hsail.opt.bc $EXTRA_LIBRARY
