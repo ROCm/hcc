@@ -13,31 +13,31 @@ class unorm;
 friend class F; \
 float Value; 
 
-// FIXME: C() restrict(cpu, amp)'s behavior is not specified in Specification
-/// C& operator=(const C& other) restrict(cpu, amp) do not need to check self-
+// FIXME: C() __CPU_GPU__'s behavior is not specified in Specification
+/// C& operator=(const C& other) __CPU_GPU__ do not need to check self-
 /// assignment for accerlation on modern CPU
 #define NORM_COMMON_PUBLIC_MEMBER(C) \
-C() restrict(cpu, amp) { set(Value); } \
+C() __CPU_GPU__ { set(Value); } \
 \
-explicit C(float v) restrict(cpu, amp) { set(v); } \
+explicit C(float v) __CPU_GPU__ { set(v); } \
 \
-explicit C(unsigned int v) restrict(cpu, amp) { set(static_cast<float>(v)); } \
+explicit C(unsigned int v) __CPU_GPU__ { set(static_cast<float>(v)); } \
 \
-explicit C(int v) restrict(cpu, amp) { set(static_cast<float>(v)); } \
+explicit C(int v) __CPU_GPU__ { set(static_cast<float>(v)); } \
 \
-explicit C(double v) restrict(cpu, amp) { set(static_cast<float>(v)); } \
+explicit C(double v) __CPU_GPU__ { set(static_cast<float>(v)); } \
 \
-C(const C& other) restrict(cpu, amp) { Value = other.Value; } \
+C(const C& other) __CPU_GPU__ { Value = other.Value; } \
 \
-C& operator=(const C& other) restrict(cpu, amp) \
+C& operator=(const C& other) __CPU_GPU__ \
 { \
   Value = other.Value; \
   return *this; \
 } \
 \
-operator float(void) const restrict(cpu, amp) { return Value; } \
+operator float(void) const __CPU_GPU__ { return Value; } \
 \
-C& operator+=(const C& other) restrict(cpu, amp) \
+C& operator+=(const C& other) __CPU_GPU__ \
 { \
   float Res = Value; \
   Res += other.Value; \
@@ -45,7 +45,7 @@ C& operator+=(const C& other) restrict(cpu, amp) \
   return *this; \
 } \
 \
-C& operator-=(const C& other) restrict(cpu, amp) \
+C& operator-=(const C& other) __CPU_GPU__ \
 { \
   float Res = Value; \
   Res -= other.Value; \
@@ -53,7 +53,7 @@ C& operator-=(const C& other) restrict(cpu, amp) \
   return *this; \
 } \
 \
-C& operator*=(const C& other) restrict(cpu, amp) \
+C& operator*=(const C& other) __CPU_GPU__ \
 { \
   float Res = Value; \
   Res *= other.Value; \
@@ -61,7 +61,7 @@ C& operator*=(const C& other) restrict(cpu, amp) \
   return *this; \
 } \
 \
-C& operator/=(const C& other) restrict(cpu, amp) \
+C& operator/=(const C& other) __CPU_GPU__ \
 { \
   float Res = Value; \
   Res /= other.Value; \
@@ -69,7 +69,7 @@ C& operator/=(const C& other) restrict(cpu, amp) \
   return *this; \
 } \
 \
-C& operator++() restrict(cpu, amp) \
+C& operator++() __CPU_GPU__ \
 { \
   float Res = Value; \
   ++Res; \
@@ -77,14 +77,14 @@ C& operator++() restrict(cpu, amp) \
   return *this; \
 } \
 \
-C operator++(int) restrict(cpu, amp) \
+C operator++(int) __CPU_GPU__ \
 { \
   C Ret(*this); \
   operator++(); \
   return Ret; \
 } \
 \
-C& operator--() restrict(cpu, amp) \
+C& operator--() __CPU_GPU__ \
 { \
   float Res = Value; \
   --Res; \
@@ -92,7 +92,7 @@ C& operator--() restrict(cpu, amp) \
   return *this; \
 } \
 \
-C operator--(int) restrict(cpu, amp) \
+C operator--(int) __CPU_GPU__ \
 { \
   C Ret(*this); \
   operator--(); \
@@ -103,7 +103,7 @@ C operator--(int) restrict(cpu, amp) \
 class norm
 {
 private:
-  void set(float v) restrict(cpu, amp)
+  void set(float v) __CPU_GPU__
   {
     v = v < -1.0f ? -1.0f : v;
     v = v > 1.0f ? 1.0f : v;
@@ -114,9 +114,9 @@ public:
   NORM_COMMON_PRIVATE_MEMBER(unorm)
 
 public:
-  norm(const unorm& other) restrict(cpu, amp);
+  norm(const unorm& other) __CPU_GPU__;
 
-  norm operator-() restrict(cpu, amp)
+  norm operator-() __CPU_GPU__
   {
     norm Ret;
     Ret.Value = -Value;
@@ -130,7 +130,7 @@ public:
 class unorm
 {
 private:
-  void set(float v) restrict(cpu, amp)
+  void set(float v) __CPU_GPU__
   {
     v = v < 0.0f ? 0.0f : v;
     v = v > 1.0f ? 1.0f : v;
@@ -140,12 +140,12 @@ public:
   NORM_COMMON_PRIVATE_MEMBER(norm)
 
 public:
-  explicit unorm(const norm& other) restrict(cpu, amp) { set(other.Value); }
+  explicit unorm(const norm& other) __CPU_GPU__ { set(other.Value); }
 
   NORM_COMMON_PUBLIC_MEMBER(unorm)
 };
 
-inline norm::norm(const unorm& other) restrict(cpu, amp)
+inline norm::norm(const unorm& other) __CPU_GPU__
 {
   set(other.Value);
 }
@@ -154,52 +154,52 @@ inline norm::norm(const unorm& other) restrict(cpu, amp)
 #undef NORM_COMMON_PUBLIC_MEMBER
 
 #define NORM_OPERATOR(C) \
-inline C operator+(const C& lhs, const C& rhs) restrict(cpu, amp) \
+inline C operator+(const C& lhs, const C& rhs) __CPU_GPU__ \
 { \
   return C(static_cast<float>(lhs) + static_cast<float>(rhs)); \
 } \
 \
-inline C operator-(const C& lhs, const C& rhs) restrict(cpu, amp) \
+inline C operator-(const C& lhs, const C& rhs) __CPU_GPU__ \
 { \
   return C(static_cast<float>(lhs) - static_cast<float>(rhs)); \
 } \
 \
-inline C operator*(const C& lhs, const C& rhs) restrict(cpu, amp) \
+inline C operator*(const C& lhs, const C& rhs) __CPU_GPU__ \
 { \
   return C(static_cast<float>(lhs) * static_cast<float>(rhs)); \
 } \
 \
-inline C operator/(const C& lhs, const C& rhs) restrict(cpu, amp) \
+inline C operator/(const C& lhs, const C& rhs) __CPU_GPU__ \
 { \
   return C(static_cast<float>(lhs) / static_cast<float>(rhs)); \
 } \
 \
-inline bool operator==(const C& lhs, const C& rhs) restrict(cpu, amp) \
+inline bool operator==(const C& lhs, const C& rhs) __CPU_GPU__ \
 { \
   return static_cast<float>(lhs) == static_cast<float>(rhs); \
 } \
 \
-inline bool operator!=(const C& lhs, const C& rhs) restrict(cpu, amp) \
+inline bool operator!=(const C& lhs, const C& rhs) __CPU_GPU__ \
 { \
   return static_cast<float>(lhs) != static_cast<float>(rhs); \
 } \
 \
-inline bool operator>(const C& lhs, const C& rhs) restrict(cpu, amp) \
+inline bool operator>(const C& lhs, const C& rhs) __CPU_GPU__ \
 { \
   return static_cast<float>(lhs) > static_cast<float>(rhs); \
 } \
 \
-inline bool operator<(const C& lhs, const C& rhs) restrict(cpu, amp) \
+inline bool operator<(const C& lhs, const C& rhs) __CPU_GPU__ \
 { \
   return static_cast<float>(lhs) < static_cast<float>(rhs); \
 } \
 \
-inline bool operator>=(const C& lhs, const C& rhs) restrict(cpu, amp) \
+inline bool operator>=(const C& lhs, const C& rhs) __CPU_GPU__ \
 { \
   return static_cast<float>(lhs) >= static_cast<float>(rhs); \
 } \
 \
-inline bool operator<=(const C& lhs, const C& rhs) restrict(cpu, amp) \
+inline bool operator<=(const C& lhs, const C& rhs) __CPU_GPU__ \
 { \
   return static_cast<float>(lhs) <= static_cast<float>(rhs); \
 }
@@ -287,99 +287,99 @@ typedef unorm_4 unorm4;
 //   Class Declaration (10.8.1 Synopsis)
 
 #define SINGLE_COMPONENT_ACCESS(ST, Dim) \
-ST get ## _ ## Dim() const restrict(cpu, amp) { return Dim; } \
+ST get ## _ ## Dim() const __CPU_GPU__ { return Dim; } \
 \
-void set ## _ ## Dim(ST v) restrict(cpu, amp) { Dim = v; }
+void set ## _ ## Dim(ST v) __CPU_GPU__ { Dim = v; }
 
 #define TWO_COMPONENT_ACCESS(ST_2, Dim1, Dim2) \
-ST_2 get_ ## Dim1 ## Dim2() const restrict(cpu, amp) \
+ST_2 get_ ## Dim1 ## Dim2() const __CPU_GPU__ \
 { \
   return ST_2(Dim1, Dim2); \
 } \
 \
-ST_2 get_ ## Dim2 ## Dim1() const restrict(cpu, amp) \
+ST_2 get_ ## Dim2 ## Dim1() const __CPU_GPU__ \
 { \
   return ST_2(Dim2, Dim1); \
 } \
 \
-void set_ ## Dim1 ## Dim2(ST_2 v) restrict(cpu, amp) \
+void set_ ## Dim1 ## Dim2(ST_2 v) __CPU_GPU__ \
 { \
   Dim1 = v.get_x(); \
   Dim2 = v.get_y(); \
 } \
-void set_ ## Dim2 ## Dim1(ST_2 v) restrict(cpu, amp) \
+void set_ ## Dim2 ## Dim1(ST_2 v) __CPU_GPU__ \
 { \
   Dim2 = v.get_x(); \
   Dim1 = v.get_y(); \
 }
 
 #define THREE_COMPONENT_ACCESS(ST_3, Dim1, Dim2, Dim3) \
-ST_3 get_ ## Dim1 ## Dim2 ## Dim3() const restrict(cpu, amp) \
+ST_3 get_ ## Dim1 ## Dim2 ## Dim3() const __CPU_GPU__ \
 { \
   return ST_3(Dim1, Dim2, Dim3); \
 } \
 \
-ST_3 get_ ## Dim1 ## Dim3 ## Dim2() const restrict(cpu, amp) \
+ST_3 get_ ## Dim1 ## Dim3 ## Dim2() const __CPU_GPU__ \
 { \
   return ST_3(Dim1, Dim3, Dim2); \
 } \
 \
-ST_3 get_ ## Dim2 ## Dim1 ## Dim3() const restrict(cpu, amp) \
+ST_3 get_ ## Dim2 ## Dim1 ## Dim3() const __CPU_GPU__ \
 { \
   return ST_3(Dim2, Dim1, Dim3); \
 } \
 \
-ST_3 get_ ## Dim2 ## Dim3 ## Dim1() const restrict(cpu, amp) \
+ST_3 get_ ## Dim2 ## Dim3 ## Dim1() const __CPU_GPU__ \
 { \
   return ST_3(Dim2, Dim3, Dim1); \
 } \
 \
-ST_3 get_ ## Dim3 ## Dim1 ## Dim2() const restrict(cpu, amp) \
+ST_3 get_ ## Dim3 ## Dim1 ## Dim2() const __CPU_GPU__ \
 { \
   return ST_3(Dim3, Dim1, Dim2); \
 } \
 \
-ST_3 get_ ## Dim3 ## Dim2 ## Dim1() const restrict(cpu, amp) \
+ST_3 get_ ## Dim3 ## Dim2 ## Dim1() const __CPU_GPU__ \
 { \
   return ST_3(Dim3, Dim2, Dim1); \
 } \
 \
-void set_ ## Dim1 ## Dim2 ## Dim3(ST_3 v) restrict(cpu, amp) \
+void set_ ## Dim1 ## Dim2 ## Dim3(ST_3 v) __CPU_GPU__ \
 { \
   Dim1 = v.get_x(); \
   Dim2 = v.get_y(); \
   Dim3 = v.get_z(); \
 } \
 \
-void set_ ## Dim1 ## Dim3 ## Dim2(ST_3 v) restrict(cpu, amp) \
+void set_ ## Dim1 ## Dim3 ## Dim2(ST_3 v) __CPU_GPU__ \
 { \
   Dim1 = v.get_x(); \
   Dim3 = v.get_y(); \
   Dim2 = v.get_z(); \
 } \
 \
-void set_ ## Dim2 ## Dim1 ## Dim3(ST_3 v) restrict(cpu, amp) \
+void set_ ## Dim2 ## Dim1 ## Dim3(ST_3 v) __CPU_GPU__ \
 { \
   Dim2 = v.get_x(); \
   Dim1 = v.get_y(); \
   Dim3 = v.get_z(); \
 } \
 \
-void set_ ## Dim2 ## Dim3 ## Dim1(ST_3 v) restrict(cpu, amp) \
+void set_ ## Dim2 ## Dim3 ## Dim1(ST_3 v) __CPU_GPU__ \
 { \
   Dim2 = v.get_x(); \
   Dim3 = v.get_y(); \
   Dim1 = v.get_z(); \
 } \
 \
-void set_ ## Dim3 ## Dim1 ## Dim2(ST_3 v) restrict(cpu, amp) \
+void set_ ## Dim3 ## Dim1 ## Dim2(ST_3 v) __CPU_GPU__ \
 { \
   Dim3 = v.get_x(); \
   Dim1 = v.get_y(); \
   Dim2 = v.get_z(); \
 } \
 \
-void set_ ## Dim3 ## Dim2 ## Dim1(ST_3 v) restrict(cpu, amp) \
+void set_ ## Dim3 ## Dim2 ## Dim1(ST_3 v) __CPU_GPU__ \
 { \
   Dim3 = v.get_x(); \
   Dim2 = v.get_y(); \
@@ -387,127 +387,127 @@ void set_ ## Dim3 ## Dim2 ## Dim1(ST_3 v) restrict(cpu, amp) \
 }
 
 #define FOUR_COMPONENT_ACCESS(ST_4, Dim1, Dim2, Dim3, Dim4) \
-ST_4 get_ ## Dim1 ## Dim2 ## Dim3 ## Dim4() const restrict(cpu, amp) \
+ST_4 get_ ## Dim1 ## Dim2 ## Dim3 ## Dim4() const __CPU_GPU__ \
 { \
   return ST_4(Dim1, Dim2, Dim3, Dim4); \
 } \
 \
-ST_4 get_ ## Dim1 ## Dim2 ## Dim4 ## Dim3() const restrict(cpu, amp) \
+ST_4 get_ ## Dim1 ## Dim2 ## Dim4 ## Dim3() const __CPU_GPU__ \
 { \
   return ST_4(Dim1, Dim2, Dim4, Dim3); \
 } \
 \
-ST_4 get_ ## Dim1 ## Dim3 ## Dim2 ## Dim4() const restrict(cpu, amp) \
+ST_4 get_ ## Dim1 ## Dim3 ## Dim2 ## Dim4() const __CPU_GPU__ \
 { \
   return ST_4(Dim1, Dim3, Dim2, Dim4); \
 } \
 \
-ST_4 get_ ## Dim1 ## Dim3 ## Dim4 ## Dim2() const restrict(cpu, amp) \
+ST_4 get_ ## Dim1 ## Dim3 ## Dim4 ## Dim2() const __CPU_GPU__ \
 { \
   return ST_4(Dim1, Dim3, Dim4, Dim2); \
 } \
 \
-ST_4 get_ ## Dim1 ## Dim4 ## Dim2 ## Dim3() const restrict(cpu, amp) \
+ST_4 get_ ## Dim1 ## Dim4 ## Dim2 ## Dim3() const __CPU_GPU__ \
 { \
   return ST_4(Dim1, Dim4, Dim2, Dim3); \
 } \
 \
-ST_4 get_ ## Dim1 ## Dim4 ## Dim3 ## Dim2() const restrict(cpu, amp) \
+ST_4 get_ ## Dim1 ## Dim4 ## Dim3 ## Dim2() const __CPU_GPU__ \
 { \
   return ST_4(Dim1, Dim4, Dim3, Dim2); \
 } \
 \
-ST_4 get_ ## Dim2 ## Dim1 ## Dim3 ## Dim4() const restrict(cpu, amp) \
+ST_4 get_ ## Dim2 ## Dim1 ## Dim3 ## Dim4() const __CPU_GPU__ \
 { \
   return ST_4(Dim2, Dim1, Dim3, Dim4); \
 } \
 \
-ST_4 get_ ## Dim2 ## Dim1 ## Dim4 ## Dim3() const restrict(cpu, amp) \
+ST_4 get_ ## Dim2 ## Dim1 ## Dim4 ## Dim3() const __CPU_GPU__ \
 { \
   return ST_4(Dim2, Dim1, Dim4, Dim3); \
 } \
 \
-ST_4 get_ ## Dim2 ## Dim3 ## Dim1 ## Dim4() const restrict(cpu, amp) \
+ST_4 get_ ## Dim2 ## Dim3 ## Dim1 ## Dim4() const __CPU_GPU__ \
 { \
   return ST_4(Dim2, Dim3, Dim1, Dim4); \
 } \
 \
-ST_4 get_ ## Dim2 ## Dim3 ## Dim4 ## Dim1() const restrict(cpu, amp) \
+ST_4 get_ ## Dim2 ## Dim3 ## Dim4 ## Dim1() const __CPU_GPU__ \
 { \
   return ST_4(Dim2, Dim3, Dim4, Dim1); \
 } \
 \
-ST_4 get_ ## Dim2 ## Dim4 ## Dim1 ## Dim3() const restrict(cpu, amp) \
+ST_4 get_ ## Dim2 ## Dim4 ## Dim1 ## Dim3() const __CPU_GPU__ \
 { \
   return ST_4(Dim2, Dim4, Dim1, Dim3); \
 } \
 \
-ST_4 get_ ## Dim2 ## Dim4 ## Dim3 ## Dim1() const restrict(cpu, amp) \
+ST_4 get_ ## Dim2 ## Dim4 ## Dim3 ## Dim1() const __CPU_GPU__ \
 { \
   return ST_4(Dim2, Dim4, Dim3, Dim1); \
 } \
 \
-ST_4 get_ ## Dim3 ## Dim1 ## Dim2 ## Dim4() const restrict(cpu, amp) \
+ST_4 get_ ## Dim3 ## Dim1 ## Dim2 ## Dim4() const __CPU_GPU__ \
 { \
   return ST_4(Dim3, Dim1, Dim2, Dim4); \
 } \
 \
-ST_4 get_ ## Dim3 ## Dim1 ## Dim4 ## Dim2() const restrict(cpu, amp) \
+ST_4 get_ ## Dim3 ## Dim1 ## Dim4 ## Dim2() const __CPU_GPU__ \
 { \
   return ST_4(Dim3, Dim1, Dim4, Dim2); \
 } \
 \
-ST_4 get_ ## Dim3 ## Dim2 ## Dim1 ## Dim4() const restrict(cpu, amp) \
+ST_4 get_ ## Dim3 ## Dim2 ## Dim1 ## Dim4() const __CPU_GPU__ \
 { \
   return ST_4(Dim3, Dim2, Dim1, Dim4); \
 } \
 \
-ST_4 get_ ## Dim3 ## Dim2 ## Dim4 ## Dim1() const restrict(cpu, amp) \
+ST_4 get_ ## Dim3 ## Dim2 ## Dim4 ## Dim1() const __CPU_GPU__ \
 { \
   return ST_4(Dim3, Dim2, Dim4, Dim1); \
 } \
 \
-ST_4 get_ ## Dim3 ## Dim4 ## Dim1 ## Dim2() const restrict(cpu, amp) \
+ST_4 get_ ## Dim3 ## Dim4 ## Dim1 ## Dim2() const __CPU_GPU__ \
 { \
   return ST_4(Dim3, Dim4, Dim1, Dim2); \
 } \
 \
-ST_4 get_ ## Dim3 ## Dim4 ## Dim2 ## Dim1() const restrict(cpu, amp) \
+ST_4 get_ ## Dim3 ## Dim4 ## Dim2 ## Dim1() const __CPU_GPU__ \
 { \
   return ST_4(Dim3, Dim4, Dim2, Dim1); \
 } \
 \
-ST_4 get_ ## Dim4 ## Dim1 ## Dim2 ## Dim3() const restrict(cpu, amp) \
+ST_4 get_ ## Dim4 ## Dim1 ## Dim2 ## Dim3() const __CPU_GPU__ \
 { \
   return ST_4(Dim4, Dim1, Dim2, Dim3); \
 } \
 \
-ST_4 get_ ## Dim4 ## Dim1 ## Dim3 ## Dim2() const restrict(cpu, amp) \
+ST_4 get_ ## Dim4 ## Dim1 ## Dim3 ## Dim2() const __CPU_GPU__ \
 { \
   return ST_4(Dim4, Dim1, Dim3, Dim2); \
 } \
 \
-ST_4 get_ ## Dim4 ## Dim2 ## Dim1 ## Dim3() const restrict(cpu, amp) \
+ST_4 get_ ## Dim4 ## Dim2 ## Dim1 ## Dim3() const __CPU_GPU__ \
 { \
   return ST_4(Dim4, Dim2, Dim1, Dim3); \
 } \
 \
-ST_4 get_ ## Dim4 ## Dim2 ## Dim3 ## Dim1() const restrict(cpu, amp) \
+ST_4 get_ ## Dim4 ## Dim2 ## Dim3 ## Dim1() const __CPU_GPU__ \
 { \
   return ST_4(Dim4, Dim2, Dim3, Dim1); \
 } \
 \
-ST_4 get_ ## Dim4 ## Dim3 ## Dim1 ## Dim2() const restrict(cpu, amp) \
+ST_4 get_ ## Dim4 ## Dim3 ## Dim1 ## Dim2() const __CPU_GPU__ \
 { \
   return ST_4(Dim4, Dim3, Dim1, Dim2); \
 } \
 \
-ST_4 get_ ## Dim4 ## Dim3 ## Dim2 ## Dim1() const restrict(cpu, amp) \
+ST_4 get_ ## Dim4 ## Dim3 ## Dim2 ## Dim1() const __CPU_GPU__ \
 { \
   return ST_4(Dim4, Dim3, Dim2, Dim1); \
 } \
 \
-void set_ ## Dim1 ## Dim2 ## Dim3 ## Dim4(ST_4 v) restrict(cpu, amp) \
+void set_ ## Dim1 ## Dim2 ## Dim3 ## Dim4(ST_4 v) __CPU_GPU__ \
 { \
   Dim1 = v.get_x(); \
   Dim2 = v.get_y(); \
@@ -515,7 +515,7 @@ void set_ ## Dim1 ## Dim2 ## Dim3 ## Dim4(ST_4 v) restrict(cpu, amp) \
   Dim4 = v.get_w(); \
 } \
 \
-void set_ ## Dim1 ## Dim2 ## Dim4 ## Dim3(ST_4 v) restrict(cpu, amp) \
+void set_ ## Dim1 ## Dim2 ## Dim4 ## Dim3(ST_4 v) __CPU_GPU__ \
 { \
   Dim1 = v.get_x(); \
   Dim2 = v.get_y(); \
@@ -523,7 +523,7 @@ void set_ ## Dim1 ## Dim2 ## Dim4 ## Dim3(ST_4 v) restrict(cpu, amp) \
   Dim3 = v.get_w(); \
 } \
 \
-void set_ ## Dim1 ## Dim3 ## Dim2 ## Dim4(ST_4 v) restrict(cpu, amp) \
+void set_ ## Dim1 ## Dim3 ## Dim2 ## Dim4(ST_4 v) __CPU_GPU__ \
 { \
   Dim1 = v.get_x(); \
   Dim3 = v.get_y(); \
@@ -531,7 +531,7 @@ void set_ ## Dim1 ## Dim3 ## Dim2 ## Dim4(ST_4 v) restrict(cpu, amp) \
   Dim4 = v.get_w(); \
 } \
 \
-void set_ ## Dim1 ## Dim3 ## Dim4 ## Dim2(ST_4 v) restrict(cpu, amp) \
+void set_ ## Dim1 ## Dim3 ## Dim4 ## Dim2(ST_4 v) __CPU_GPU__ \
 { \
   Dim1 = v.get_x(); \
   Dim3 = v.get_y(); \
@@ -539,7 +539,7 @@ void set_ ## Dim1 ## Dim3 ## Dim4 ## Dim2(ST_4 v) restrict(cpu, amp) \
   Dim2 = v.get_w(); \
 } \
 \
-void set_ ## Dim1 ## Dim4 ## Dim2 ## Dim3(ST_4 v) restrict(cpu, amp) \
+void set_ ## Dim1 ## Dim4 ## Dim2 ## Dim3(ST_4 v) __CPU_GPU__ \
 { \
   Dim1 = v.get_x(); \
   Dim4 = v.get_y(); \
@@ -547,7 +547,7 @@ void set_ ## Dim1 ## Dim4 ## Dim2 ## Dim3(ST_4 v) restrict(cpu, amp) \
   Dim3 = v.get_w(); \
 } \
 \
-void set_ ## Dim1 ## Dim4 ## Dim3 ## Dim2(ST_4 v) restrict(cpu, amp) \
+void set_ ## Dim1 ## Dim4 ## Dim3 ## Dim2(ST_4 v) __CPU_GPU__ \
 { \
   Dim1 = v.get_x(); \
   Dim4 = v.get_y(); \
@@ -555,7 +555,7 @@ void set_ ## Dim1 ## Dim4 ## Dim3 ## Dim2(ST_4 v) restrict(cpu, amp) \
   Dim2 = v.get_w(); \
 } \
 \
-void set_ ## Dim2 ## Dim1 ## Dim3 ## Dim4(ST_4 v) restrict(cpu, amp) \
+void set_ ## Dim2 ## Dim1 ## Dim3 ## Dim4(ST_4 v) __CPU_GPU__ \
 { \
   Dim2 = v.get_x(); \
   Dim1 = v.get_y(); \
@@ -563,7 +563,7 @@ void set_ ## Dim2 ## Dim1 ## Dim3 ## Dim4(ST_4 v) restrict(cpu, amp) \
   Dim4 = v.get_w(); \
 } \
 \
-void set_ ## Dim2 ## Dim1 ## Dim4 ## Dim3(ST_4 v) restrict(cpu, amp) \
+void set_ ## Dim2 ## Dim1 ## Dim4 ## Dim3(ST_4 v) __CPU_GPU__ \
 { \
   Dim2 = v.get_x(); \
   Dim1 = v.get_y(); \
@@ -571,7 +571,7 @@ void set_ ## Dim2 ## Dim1 ## Dim4 ## Dim3(ST_4 v) restrict(cpu, amp) \
   Dim3 = v.get_w(); \
 } \
 \
-void set_ ## Dim2 ## Dim3 ## Dim1 ## Dim4(ST_4 v) restrict(cpu, amp) \
+void set_ ## Dim2 ## Dim3 ## Dim1 ## Dim4(ST_4 v) __CPU_GPU__ \
 { \
   Dim2 = v.get_x(); \
   Dim3 = v.get_y(); \
@@ -579,7 +579,7 @@ void set_ ## Dim2 ## Dim3 ## Dim1 ## Dim4(ST_4 v) restrict(cpu, amp) \
   Dim4 = v.get_w(); \
 } \
 \
-void set_ ## Dim2 ## Dim3 ## Dim4 ## Dim1(ST_4 v) restrict(cpu, amp) \
+void set_ ## Dim2 ## Dim3 ## Dim4 ## Dim1(ST_4 v) __CPU_GPU__ \
 { \
   Dim2 = v.get_x(); \
   Dim3 = v.get_y(); \
@@ -587,7 +587,7 @@ void set_ ## Dim2 ## Dim3 ## Dim4 ## Dim1(ST_4 v) restrict(cpu, amp) \
   Dim1 = v.get_w(); \
 } \
 \
-void set_ ## Dim2 ## Dim4 ## Dim1 ## Dim3(ST_4 v) restrict(cpu, amp) \
+void set_ ## Dim2 ## Dim4 ## Dim1 ## Dim3(ST_4 v) __CPU_GPU__ \
 { \
   Dim2 = v.get_x(); \
   Dim4 = v.get_y(); \
@@ -595,7 +595,7 @@ void set_ ## Dim2 ## Dim4 ## Dim1 ## Dim3(ST_4 v) restrict(cpu, amp) \
   Dim3 = v.get_w(); \
 } \
 \
-void set_ ## Dim2 ## Dim4 ## Dim3 ## Dim1(ST_4 v) restrict(cpu, amp) \
+void set_ ## Dim2 ## Dim4 ## Dim3 ## Dim1(ST_4 v) __CPU_GPU__ \
 { \
   Dim2 = v.get_x(); \
   Dim4 = v.get_y(); \
@@ -603,7 +603,7 @@ void set_ ## Dim2 ## Dim4 ## Dim3 ## Dim1(ST_4 v) restrict(cpu, amp) \
   Dim1 = v.get_w(); \
 } \
 \
-void set_ ## Dim3 ## Dim1 ## Dim2 ## Dim4(ST_4 v) restrict(cpu, amp) \
+void set_ ## Dim3 ## Dim1 ## Dim2 ## Dim4(ST_4 v) __CPU_GPU__ \
 { \
   Dim3 = v.get_x(); \
   Dim1 = v.get_y(); \
@@ -611,7 +611,7 @@ void set_ ## Dim3 ## Dim1 ## Dim2 ## Dim4(ST_4 v) restrict(cpu, amp) \
   Dim4 = v.get_w(); \
 } \
 \
-void set_ ## Dim3 ## Dim1 ## Dim4 ## Dim2(ST_4 v) restrict(cpu, amp) \
+void set_ ## Dim3 ## Dim1 ## Dim4 ## Dim2(ST_4 v) __CPU_GPU__ \
 { \
   Dim3 = v.get_x(); \
   Dim1 = v.get_y(); \
@@ -619,7 +619,7 @@ void set_ ## Dim3 ## Dim1 ## Dim4 ## Dim2(ST_4 v) restrict(cpu, amp) \
   Dim2 = v.get_w(); \
 } \
 \
-void set_ ## Dim3 ## Dim2 ## Dim1 ## Dim4(ST_4 v) restrict(cpu, amp) \
+void set_ ## Dim3 ## Dim2 ## Dim1 ## Dim4(ST_4 v) __CPU_GPU__ \
 { \
   Dim3 = v.get_x(); \
   Dim2 = v.get_y(); \
@@ -627,7 +627,7 @@ void set_ ## Dim3 ## Dim2 ## Dim1 ## Dim4(ST_4 v) restrict(cpu, amp) \
   Dim4 = v.get_w(); \
 } \
 \
-void set_ ## Dim3 ## Dim2 ## Dim4 ## Dim1(ST_4 v) restrict(cpu, amp) \
+void set_ ## Dim3 ## Dim2 ## Dim4 ## Dim1(ST_4 v) __CPU_GPU__ \
 { \
   Dim3 = v.get_x(); \
   Dim2 = v.get_y(); \
@@ -635,7 +635,7 @@ void set_ ## Dim3 ## Dim2 ## Dim4 ## Dim1(ST_4 v) restrict(cpu, amp) \
   Dim1 = v.get_w(); \
 } \
 \
-void set_ ## Dim3 ## Dim4 ## Dim1 ## Dim2(ST_4 v) restrict(cpu, amp) \
+void set_ ## Dim3 ## Dim4 ## Dim1 ## Dim2(ST_4 v) __CPU_GPU__ \
 { \
   Dim3 = v.get_x(); \
   Dim4 = v.get_y(); \
@@ -643,7 +643,7 @@ void set_ ## Dim3 ## Dim4 ## Dim1 ## Dim2(ST_4 v) restrict(cpu, amp) \
   Dim2 = v.get_w(); \
 } \
 \
-void set_ ## Dim3 ## Dim4 ## Dim2 ## Dim1(ST_4 v) restrict(cpu, amp) \
+void set_ ## Dim3 ## Dim4 ## Dim2 ## Dim1(ST_4 v) __CPU_GPU__ \
 { \
   Dim3 = v.get_x(); \
   Dim4 = v.get_y(); \
@@ -651,7 +651,7 @@ void set_ ## Dim3 ## Dim4 ## Dim2 ## Dim1(ST_4 v) restrict(cpu, amp) \
   Dim1 = v.get_w(); \
 } \
 \
-void set_ ## Dim4 ## Dim1 ## Dim2 ## Dim3(ST_4 v) restrict(cpu, amp) \
+void set_ ## Dim4 ## Dim1 ## Dim2 ## Dim3(ST_4 v) __CPU_GPU__ \
 { \
   Dim4 = v.get_x(); \
   Dim1 = v.get_y(); \
@@ -659,7 +659,7 @@ void set_ ## Dim4 ## Dim1 ## Dim2 ## Dim3(ST_4 v) restrict(cpu, amp) \
   Dim3 = v.get_w(); \
 } \
 \
-void set_ ## Dim4 ## Dim1 ## Dim3 ## Dim2(ST_4 v) restrict(cpu, amp) \
+void set_ ## Dim4 ## Dim1 ## Dim3 ## Dim2(ST_4 v) __CPU_GPU__ \
 { \
   Dim4 = v.get_x(); \
   Dim1 = v.get_y(); \
@@ -667,7 +667,7 @@ void set_ ## Dim4 ## Dim1 ## Dim3 ## Dim2(ST_4 v) restrict(cpu, amp) \
   Dim2 = v.get_w(); \
 } \
 \
-void set_ ## Dim4 ## Dim2 ## Dim1 ## Dim3(ST_4 v) restrict(cpu, amp) \
+void set_ ## Dim4 ## Dim2 ## Dim1 ## Dim3(ST_4 v) __CPU_GPU__ \
 { \
   Dim4 = v.get_x(); \
   Dim2 = v.get_y(); \
@@ -675,7 +675,7 @@ void set_ ## Dim4 ## Dim2 ## Dim1 ## Dim3(ST_4 v) restrict(cpu, amp) \
   Dim3 = v.get_w(); \
 } \
 \
-void set_ ## Dim4 ## Dim2 ## Dim3 ## Dim1(ST_4 v) restrict(cpu, amp) \
+void set_ ## Dim4 ## Dim2 ## Dim3 ## Dim1(ST_4 v) __CPU_GPU__ \
 { \
   Dim4 = v.get_x(); \
   Dim2 = v.get_y(); \
@@ -683,7 +683,7 @@ void set_ ## Dim4 ## Dim2 ## Dim3 ## Dim1(ST_4 v) restrict(cpu, amp) \
   Dim1 = v.get_w(); \
 } \
 \
-void set_ ## Dim4 ## Dim3 ## Dim1 ## Dim2(ST_4 v) restrict(cpu, amp) \
+void set_ ## Dim4 ## Dim3 ## Dim1 ## Dim2(ST_4 v) __CPU_GPU__ \
 { \
   Dim4 = v.get_x(); \
   Dim3 = v.get_y(); \
@@ -691,7 +691,7 @@ void set_ ## Dim4 ## Dim3 ## Dim1 ## Dim2(ST_4 v) restrict(cpu, amp) \
   Dim2 = v.get_w(); \
 } \
 \
-void set_ ## Dim4 ## Dim3 ## Dim2 ## Dim1(ST_4 v) restrict(cpu, amp) \
+void set_ ## Dim4 ## Dim3 ## Dim2 ## Dim1(ST_4 v) __CPU_GPU__ \
 { \
   Dim4 = v.get_x(); \
   Dim3 = v.get_y(); \
@@ -700,13 +700,13 @@ void set_ ## Dim4 ## Dim3 ## Dim2 ## Dim1(ST_4 v) restrict(cpu, amp) \
 }
 
 #define SCALARTYPE_2_REFERENCE_SINGLE_COMPONENT_ACCESS(ST) \
-ST& ref_x() restrict(cpu, amp) { return x; } \
+ST& ref_x() __CPU_GPU__ { return x; } \
 \
-ST& ref_y() restrict(cpu, amp) { return y; } \
+ST& ref_y() __CPU_GPU__ { return y; } \
 \
-ST& ref_r() restrict(cpu, amp) { return x; } \
+ST& ref_r() __CPU_GPU__ { return x; } \
 \
-ST& ref_g() restrict(cpu, amp) { return y; }
+ST& ref_g() __CPU_GPU__ { return y; }
 
 
 #define SCALARTYPE_2_COMMON_PUBLIC_MEMBER(ST, ST_2, \
@@ -716,93 +716,93 @@ ST y; \
 typedef ST value_type; \
 static const int size = 2; \
 \
-ST_2() restrict(cpu, amp) {} \
+ST_2() __CPU_GPU__ {} \
 \
-ST_2(ST value) restrict(cpu, amp) \
+ST_2(ST value) __CPU_GPU__ \
 { \
   x = value; \
   y = value; \
 } \
 \
-ST_2(const ST_2&  other) restrict(cpu, amp) \
+ST_2(const ST_2&  other) __CPU_GPU__ \
 { \
   x = other.x; \
   y = other.y; \
 } \
 \
-ST_2(ST v1, ST v2) restrict (cpu, amp) \
+ST_2(ST v1, ST v2) __CPU_GPU__ \
 { \
   x = v1; \
   y = v2; \
 } \
 \
-explicit ST_2(const ST_2_o1& other) restrict(cpu, amp); \
+explicit ST_2(const ST_2_o1& other) __CPU_GPU__; \
 \
-explicit ST_2(const ST_2_o2& other) restrict(cpu, amp); \
+explicit ST_2(const ST_2_o2& other) __CPU_GPU__; \
 \
-explicit ST_2(const ST_2_o3& other) restrict(cpu, amp); \
+explicit ST_2(const ST_2_o3& other) __CPU_GPU__; \
 \
-explicit ST_2(const ST_2_o4& other) restrict(cpu, amp); \
+explicit ST_2(const ST_2_o4& other) __CPU_GPU__; \
 \
-explicit ST_2(const ST_2_o5& other) restrict(cpu, amp); \
+explicit ST_2(const ST_2_o5& other) __CPU_GPU__; \
 \
-ST_2& operator=(const ST_2& other) restrict(cpu, amp) \
+ST_2& operator=(const ST_2& other) __CPU_GPU__ \
 { \
   x = other.x; \
   y = other.y; \
   return *this; \
 } \
 \
-ST_2& operator++() restrict(cpu, amp) \
+ST_2& operator++() __CPU_GPU__ \
 { \
   ++x; \
   ++y; \
   return *this; \
 } \
 \
-ST_2 operator++(int) restrict(cpu, amp) \
+ST_2 operator++(int) __CPU_GPU__ \
 { \
   ST_2 Ret(*this); \
   operator++(); \
   return Ret; \
 } \
 \
-ST_2& operator--() restrict(cpu, amp) \
+ST_2& operator--() __CPU_GPU__ \
 { \
   --x; \
   --y; \
   return *this; \
 } \
 \
-ST_2 operator--(int) restrict(cpu, amp) \
+ST_2 operator--(int) __CPU_GPU__ \
 { \
   ST_2 Ret(*this); \
   operator--(); \
   return Ret; \
 } \
 \
-ST_2& operator+=(const ST_2& rhs) restrict(cpu, amp) \
+ST_2& operator+=(const ST_2& rhs) __CPU_GPU__ \
 { \
   x += rhs.x; \
   y += rhs.y; \
   return *this; \
 } \
 \
-ST_2& operator-=(const ST_2& rhs) restrict(cpu, amp) \
+ST_2& operator-=(const ST_2& rhs) __CPU_GPU__ \
 { \
   x -= rhs.x; \
   y -= rhs.y; \
   return *this; \
 } \
 \
-ST_2& operator*=(const ST_2& rhs) restrict(cpu, amp) \
+ST_2& operator*=(const ST_2& rhs) __CPU_GPU__ \
 { \
   x *= rhs.x; \
   y *= rhs.y; \
   return *this; \
 } \
 \
-ST_2& operator/=(const ST_2& rhs) restrict(cpu, amp) \
+ST_2& operator/=(const ST_2& rhs) __CPU_GPU__ \
 { \
   x /= rhs.x; \
   y /= rhs.y; \
@@ -815,46 +815,46 @@ public:
   SCALARTYPE_2_COMMON_PUBLIC_MEMBER(int, int_2, 
     uint_2, float_2, double_2, norm_2, unorm_2) 
 
-  int_2 operator-() const restrict(cpu, amp) { return int_2(-x, -y); }
+  int_2 operator-() const __CPU_GPU__ { return int_2(-x, -y); }
 
-  int_2 operator~() const restrict(cpu, amp) { return int_2(~x, ~y); }
+  int_2 operator~() const __CPU_GPU__ { return int_2(~x, ~y); }
 
-  int_2& operator%=(const int_2& rhs) restrict(cpu, amp)
+  int_2& operator%=(const int_2& rhs) __CPU_GPU__
   {
     x %= rhs.x;
     y %= rhs.y;
     return *this;
   }
 
-  int_2& operator^=(const int_2& rhs) restrict(cpu, amp)
+  int_2& operator^=(const int_2& rhs) __CPU_GPU__
   {
     x ^= rhs.x;
     y ^= rhs.y;
     return *this;
   }
 
-  int_2& operator|=(const int_2& rhs) restrict(cpu, amp)
+  int_2& operator|=(const int_2& rhs) __CPU_GPU__
   {
     x |= rhs.x;
     y |= rhs.y;
     return *this;
   }
 
-  int_2& operator&=(const int_2& rhs) restrict(cpu, amp)
+  int_2& operator&=(const int_2& rhs) __CPU_GPU__
   {
     x &= rhs.x;
     y &= rhs.y;
     return *this;
   }
 
-  int_2& operator>>=(const int_2& rhs) restrict(cpu, amp)
+  int_2& operator>>=(const int_2& rhs) __CPU_GPU__
   {
     x >>= rhs.x;
     y >>= rhs.y;
     return *this;
   }
 
-  int_2& operator<<=(const int_2& rhs) restrict(cpu, amp)
+  int_2& operator<<=(const int_2& rhs) __CPU_GPU__
   {
     x <<= rhs.x;
     y <<= rhs.y;
@@ -875,44 +875,44 @@ public:
   SCALARTYPE_2_COMMON_PUBLIC_MEMBER(unsigned int, uint_2, 
     int_2, float_2, double_2, norm_2, unorm_2) 
  
-  uint_2 operator~() const restrict(cpu, amp) { return uint_2(~x, ~y); }
+  uint_2 operator~() const __CPU_GPU__ { return uint_2(~x, ~y); }
 
-  uint_2& operator%=(const uint_2& rhs) restrict(cpu, amp)
+  uint_2& operator%=(const uint_2& rhs) __CPU_GPU__
   {
     x %= rhs.x;
     y %= rhs.y;
     return *this;
   }
 
-  uint_2& operator^=(const uint_2& rhs) restrict(cpu, amp)
+  uint_2& operator^=(const uint_2& rhs) __CPU_GPU__
   {
     x ^= rhs.x;
     y ^= rhs.y;
     return *this;
   }
 
-  uint_2& operator|=(const uint_2& rhs) restrict(cpu, amp)
+  uint_2& operator|=(const uint_2& rhs) __CPU_GPU__
   {
     x |= rhs.x;
     y |= rhs.y;
     return *this;
   }
 
-  uint_2& operator&=(const uint_2& rhs) restrict(cpu, amp)
+  uint_2& operator&=(const uint_2& rhs) __CPU_GPU__
   {
     x &= rhs.x;
     y &= rhs.y;
     return *this;
   }
 
-  uint_2& operator>>=(const uint_2& rhs) restrict(cpu, amp)
+  uint_2& operator>>=(const uint_2& rhs) __CPU_GPU__
   {
     x >>= rhs.x;
     y >>= rhs.y;
     return *this;
   }
 
-  uint_2& operator<<=(const uint_2& rhs) restrict(cpu, amp)
+  uint_2& operator<<=(const uint_2& rhs) __CPU_GPU__
   {
     x <<= rhs.x;
     y <<= rhs.y;
@@ -933,7 +933,7 @@ public:
   SCALARTYPE_2_COMMON_PUBLIC_MEMBER(float, float_2, 
     int_2, uint_2, double_2, norm_2, unorm_2) 
   
-  float_2 operator-() const restrict(cpu, amp) { return float_2(-x, -y); }
+  float_2 operator-() const __CPU_GPU__ { return float_2(-x, -y); }
 
   SINGLE_COMPONENT_ACCESS(float, x)
   SINGLE_COMPONENT_ACCESS(float, y)
@@ -949,7 +949,7 @@ public:
   SCALARTYPE_2_COMMON_PUBLIC_MEMBER(double, double_2, 
     int_2, uint_2, float_2, norm_2, unorm_2) 
   
-  double_2 operator-() const restrict(cpu, amp) { return double_2(-x, -y); }
+  double_2 operator-() const __CPU_GPU__ { return double_2(-x, -y); }
 
   SINGLE_COMPONENT_ACCESS(double, x)
   SINGLE_COMPONENT_ACCESS(double, y)
@@ -965,7 +965,7 @@ public:
   SCALARTYPE_2_COMMON_PUBLIC_MEMBER(norm, norm_2, 
     int_2, uint_2, float_2, double_2, unorm_2) 
 
-  norm_2 operator-() const restrict(cpu, amp) { return norm_2(-x, -y); }
+  norm_2 operator-() const __CPU_GPU__ { return norm_2(-x, -y); }
   
   SINGLE_COMPONENT_ACCESS(norm, x)
   SINGLE_COMPONENT_ACCESS(norm, y)
@@ -993,17 +993,17 @@ public:
 #undef SCALARTYPE_2_COMMON_PUBLIC_MEMBER
 
 #define SCALARTYPE_3_REFERENCE_SINGLE_COMPONENT_ACCESS(ST) \
-ST& ref_x() restrict(cpu, amp) { return x; } \
+ST& ref_x() __CPU_GPU__ { return x; } \
 \
-ST& ref_y() restrict(cpu, amp) { return y; } \
+ST& ref_y() __CPU_GPU__ { return y; } \
 \
-ST& ref_z() restrict(cpu, amp) { return z; } \
+ST& ref_z() __CPU_GPU__ { return z; } \
 \
-ST& ref_r() restrict(cpu, amp) { return x; } \
+ST& ref_r() __CPU_GPU__ { return x; } \
 \
-ST& ref_g() restrict(cpu, amp) { return y; } \
+ST& ref_g() __CPU_GPU__ { return y; } \
 \
-ST& ref_b() restrict(cpu, amp) { return z; }
+ST& ref_b() __CPU_GPU__ { return z; }
 
 #define SCALARTYPE_3_COMMON_PUBLIC_MEMBER(ST, ST_3, \
 ST_3_o1, ST_3_o2, ST_3_o3, ST_3_o4, ST_3_o5) \
@@ -1013,40 +1013,40 @@ ST z; \
 typedef ST value_type; \
 static const int size = 3; \
 \
-ST_3() restrict(cpu, amp) {} \
+ST_3() __CPU_GPU__ {} \
 \
-ST_3(ST value) restrict(cpu, amp) \
+ST_3(ST value) __CPU_GPU__ \
 { \
   x = value; \
   y = value; \
   z = value; \
 } \
 \
-ST_3(const ST_3&  other) restrict(cpu, amp) \
+ST_3(const ST_3&  other) __CPU_GPU__ \
 { \
   x = other.x; \
   y = other.y; \
   z = other.z; \
 } \
 \
-ST_3(ST v1, ST v2, ST v3) restrict (cpu, amp) \
+ST_3(ST v1, ST v2, ST v3) __CPU_GPU__ \
 { \
   x = v1; \
   y = v2; \
   z = v3; \
 } \
 \
-explicit ST_3(const ST_3_o1& other) restrict(cpu, amp); \
+explicit ST_3(const ST_3_o1& other) __CPU_GPU__; \
 \
-explicit ST_3(const ST_3_o2& other) restrict(cpu, amp); \
+explicit ST_3(const ST_3_o2& other) __CPU_GPU__; \
 \
-explicit ST_3(const ST_3_o3& other) restrict(cpu, amp); \
+explicit ST_3(const ST_3_o3& other) __CPU_GPU__; \
 \
-explicit ST_3(const ST_3_o4& other) restrict(cpu, amp); \
+explicit ST_3(const ST_3_o4& other) __CPU_GPU__; \
 \
-explicit ST_3(const ST_3_o5& other) restrict(cpu, amp); \
+explicit ST_3(const ST_3_o5& other) __CPU_GPU__; \
 \
-ST_3& operator=(const ST_3& other) restrict(cpu, amp) \
+ST_3& operator=(const ST_3& other) __CPU_GPU__ \
 { \
   x = other.x; \
   y = other.y; \
@@ -1054,7 +1054,7 @@ ST_3& operator=(const ST_3& other) restrict(cpu, amp) \
   return *this; \
 } \
 \
-ST_3& operator++() restrict(cpu, amp) \
+ST_3& operator++() __CPU_GPU__ \
 { \
   ++x; \
   ++y; \
@@ -1062,14 +1062,14 @@ ST_3& operator++() restrict(cpu, amp) \
   return *this; \
 } \
 \
-ST_3 operator++(int) restrict(cpu, amp) \
+ST_3 operator++(int) __CPU_GPU__ \
 { \
   ST_3 Ret(*this); \
   operator++(); \
   return Ret; \
 } \
 \
-ST_3& operator--() restrict(cpu, amp) \
+ST_3& operator--() __CPU_GPU__ \
 { \
   --x; \
   --y; \
@@ -1077,14 +1077,14 @@ ST_3& operator--() restrict(cpu, amp) \
   return *this; \
 } \
 \
-ST_3 operator--(int) restrict(cpu, amp) \
+ST_3 operator--(int) __CPU_GPU__ \
 { \
   ST_3 Ret(*this); \
   operator--(); \
   return Ret; \
 } \
 \
-ST_3& operator+=(const ST_3& rhs) restrict(cpu, amp) \
+ST_3& operator+=(const ST_3& rhs) __CPU_GPU__ \
 { \
   x += rhs.x; \
   y += rhs.y; \
@@ -1092,7 +1092,7 @@ ST_3& operator+=(const ST_3& rhs) restrict(cpu, amp) \
   return *this; \
 } \
 \
-ST_3& operator-=(const ST_3& rhs) restrict(cpu, amp) \
+ST_3& operator-=(const ST_3& rhs) __CPU_GPU__ \
 { \
   x -= rhs.x; \
   y -= rhs.y; \
@@ -1100,7 +1100,7 @@ ST_3& operator-=(const ST_3& rhs) restrict(cpu, amp) \
   return *this; \
 } \
 \
-ST_3& operator*=(const ST_3& rhs) restrict(cpu, amp) \
+ST_3& operator*=(const ST_3& rhs) __CPU_GPU__ \
 { \
   x *= rhs.x; \
   y *= rhs.y; \
@@ -1108,7 +1108,7 @@ ST_3& operator*=(const ST_3& rhs) restrict(cpu, amp) \
   return *this; \
 } \
 \
-ST_3& operator/=(const ST_3& rhs) restrict(cpu, amp) \
+ST_3& operator/=(const ST_3& rhs) __CPU_GPU__ \
 { \
   x /= rhs.x; \
   y /= rhs.y; \
@@ -1122,11 +1122,11 @@ public:
   SCALARTYPE_3_COMMON_PUBLIC_MEMBER(int, int_3, 
     uint_3, float_3, double_3, norm_3, unorm_3) 
 
-  int_3 operator-() const restrict(cpu, amp) { return int_3(-x, -y, -z); }
+  int_3 operator-() const __CPU_GPU__ { return int_3(-x, -y, -z); }
 
-  int_3 operator~() const restrict(cpu, amp) { return int_3(~x, ~y, -z); }
+  int_3 operator~() const __CPU_GPU__ { return int_3(~x, ~y, -z); }
 
-  int_3& operator%=(const int_3& rhs) restrict(cpu, amp)
+  int_3& operator%=(const int_3& rhs) __CPU_GPU__
   {
     x %= rhs.x;
     y %= rhs.y;
@@ -1134,7 +1134,7 @@ public:
     return *this;
   }
 
-  int_3& operator^=(const int_3& rhs) restrict(cpu, amp)
+  int_3& operator^=(const int_3& rhs) __CPU_GPU__
   {
     x ^= rhs.x;
     y ^= rhs.y;
@@ -1142,7 +1142,7 @@ public:
     return *this;
   }
 
-  int_3& operator|=(const int_3& rhs) restrict(cpu, amp)
+  int_3& operator|=(const int_3& rhs) __CPU_GPU__
   {
     x |= rhs.x;
     y |= rhs.y;
@@ -1150,7 +1150,7 @@ public:
     return *this;
   }
 
-  int_3& operator&=(const int_3& rhs) restrict(cpu, amp)
+  int_3& operator&=(const int_3& rhs) __CPU_GPU__
   {
     x &= rhs.x;
     y &= rhs.y;
@@ -1158,7 +1158,7 @@ public:
     return *this;
   }
 
-  int_3& operator>>=(const int_3& rhs) restrict(cpu, amp)
+  int_3& operator>>=(const int_3& rhs) __CPU_GPU__
   {
     x >>= rhs.x;
     y >>= rhs.y;
@@ -1166,7 +1166,7 @@ public:
     return *this;
   }
 
-  int_3& operator<<=(const int_3& rhs) restrict(cpu, amp)
+  int_3& operator<<=(const int_3& rhs) __CPU_GPU__
   {
     x <<= rhs.x;
     y <<= rhs.y;
@@ -1193,9 +1193,9 @@ public:
   SCALARTYPE_3_COMMON_PUBLIC_MEMBER(unsigned int, uint_3, 
     int_3, float_3, double_3, norm_3, unorm_3) 
  
-  uint_3 operator~() const restrict(cpu, amp) { return uint_3(~x, ~y, ~z); }
+  uint_3 operator~() const __CPU_GPU__ { return uint_3(~x, ~y, ~z); }
 
-  uint_3& operator%=(const uint_3& rhs) restrict(cpu, amp)
+  uint_3& operator%=(const uint_3& rhs) __CPU_GPU__
   {
     x %= rhs.x;
     y %= rhs.y;
@@ -1203,7 +1203,7 @@ public:
     return *this;
   }
 
-  uint_3& operator^=(const uint_3& rhs) restrict(cpu, amp)
+  uint_3& operator^=(const uint_3& rhs) __CPU_GPU__
   {
     x ^= rhs.x;
     y ^= rhs.y;
@@ -1211,7 +1211,7 @@ public:
     return *this;
   }
 
-  uint_3& operator|=(const uint_3& rhs) restrict(cpu, amp)
+  uint_3& operator|=(const uint_3& rhs) __CPU_GPU__
   {
     x |= rhs.x;
     y |= rhs.y;
@@ -1219,7 +1219,7 @@ public:
     return *this;
   }
 
-  uint_3& operator&=(const uint_3& rhs) restrict(cpu, amp)
+  uint_3& operator&=(const uint_3& rhs) __CPU_GPU__
   {
     x &= rhs.x;
     y &= rhs.y;
@@ -1227,7 +1227,7 @@ public:
     return *this;
   }
 
-  uint_3& operator>>=(const uint_3& rhs) restrict(cpu, amp)
+  uint_3& operator>>=(const uint_3& rhs) __CPU_GPU__
   {
     x >>= rhs.x;
     y >>= rhs.y;
@@ -1235,7 +1235,7 @@ public:
     return *this;
   }
 
-  uint_3& operator<<=(const uint_3& rhs) restrict(cpu, amp)
+  uint_3& operator<<=(const uint_3& rhs) __CPU_GPU__
   {
     x <<= rhs.x;
     y <<= rhs.y;
@@ -1262,7 +1262,7 @@ public:
   SCALARTYPE_3_COMMON_PUBLIC_MEMBER(float, float_3, 
     int_3, uint_3, double_3, norm_3, unorm_3) 
   
-  float_3 operator-() const restrict(cpu, amp) { return float_3(-x, -y, -z); }
+  float_3 operator-() const __CPU_GPU__ { return float_3(-x, -y, -z); }
 
   SINGLE_COMPONENT_ACCESS(float, x)
   SINGLE_COMPONENT_ACCESS(float, y)
@@ -1283,7 +1283,7 @@ public:
   SCALARTYPE_3_COMMON_PUBLIC_MEMBER(double, double_3, 
     int_3, uint_3, float_3, norm_3, unorm_3) 
   
-  double_3 operator-() const restrict(cpu, amp) { return double_3(-x, -y, -z); }
+  double_3 operator-() const __CPU_GPU__ { return double_3(-x, -y, -z); }
 
   SINGLE_COMPONENT_ACCESS(double, x)
   SINGLE_COMPONENT_ACCESS(double, y)
@@ -1304,7 +1304,7 @@ public:
   SCALARTYPE_3_COMMON_PUBLIC_MEMBER(norm, norm_3, 
     int_3, uint_3, float_3, double_3, unorm_3) 
 
-  norm_3 operator-() const restrict(cpu, amp) { return norm_3(-x, -y, -z); }
+  norm_3 operator-() const __CPU_GPU__ { return norm_3(-x, -y, -z); }
   
   SINGLE_COMPONENT_ACCESS(norm, x)
   SINGLE_COMPONENT_ACCESS(norm, y)
@@ -1342,21 +1342,21 @@ public:
 #undef SCALARTYPE_3_COMMON_PUBLIC_MEMBER
 
 #define SCALARTYPE_4_REFERENCE_SINGLE_COMPONENT_ACCESS(ST) \
-ST& ref_x() restrict(cpu, amp) { return x; } \
+ST& ref_x() __CPU_GPU__ { return x; } \
 \
-ST& ref_y() restrict(cpu, amp) { return y; } \
+ST& ref_y() __CPU_GPU__ { return y; } \
 \
-ST& ref_z() restrict(cpu, amp) { return z; } \
+ST& ref_z() __CPU_GPU__ { return z; } \
 \
-ST& ref_w() restrict(cpu, amp) { return w; } \
+ST& ref_w() __CPU_GPU__ { return w; } \
 \
-ST& ref_r() restrict(cpu, amp) { return x; } \
+ST& ref_r() __CPU_GPU__ { return x; } \
 \
-ST& ref_g() restrict(cpu, amp) { return y; } \
+ST& ref_g() __CPU_GPU__ { return y; } \
 \
-ST& ref_b() restrict(cpu, amp) { return z; } \
+ST& ref_b() __CPU_GPU__ { return z; } \
 \
-ST& ref_a() restrict(cpu, amp) { return w; }
+ST& ref_a() __CPU_GPU__ { return w; }
 
 #define SCALARTYPE_4_COMMON_PUBLIC_MEMBER(ST, ST_4, \
 ST_4_o1, ST_4_o2, ST_4_o3, ST_4_o4, ST_4_o5) \
@@ -1367,9 +1367,9 @@ ST w; \
 typedef ST value_type; \
 static const int size = 4; \
 \
-ST_4() restrict(cpu, amp) {} \
+ST_4() __CPU_GPU__ {} \
 \
-ST_4(ST value) restrict(cpu, amp) \
+ST_4(ST value) __CPU_GPU__ \
 { \
   x = value; \
   y = value; \
@@ -1377,7 +1377,7 @@ ST_4(ST value) restrict(cpu, amp) \
   w = value; \
 } \
 \
-ST_4(const ST_4&  other) restrict(cpu, amp) \
+ST_4(const ST_4&  other) __CPU_GPU__ \
 { \
   x = other.x; \
   y = other.y; \
@@ -1385,7 +1385,7 @@ ST_4(const ST_4&  other) restrict(cpu, amp) \
   w = other.w; \
 } \
 \
-ST_4(ST v1, ST v2, ST v3, ST v4) restrict (cpu, amp) \
+ST_4(ST v1, ST v2, ST v3, ST v4) __CPU_GPU__ \
 { \
   x = v1; \
   y = v2; \
@@ -1393,17 +1393,17 @@ ST_4(ST v1, ST v2, ST v3, ST v4) restrict (cpu, amp) \
   w = v4; \
 } \
 \
-explicit ST_4(const ST_4_o1& other) restrict(cpu, amp); \
+explicit ST_4(const ST_4_o1& other) __CPU_GPU__; \
 \
-explicit ST_4(const ST_4_o2& other) restrict(cpu, amp); \
+explicit ST_4(const ST_4_o2& other) __CPU_GPU__; \
 \
-explicit ST_4(const ST_4_o3& other) restrict(cpu, amp); \
+explicit ST_4(const ST_4_o3& other) __CPU_GPU__; \
 \
-explicit ST_4(const ST_4_o4& other) restrict(cpu, amp); \
+explicit ST_4(const ST_4_o4& other) __CPU_GPU__; \
 \
-explicit ST_4(const ST_4_o5& other) restrict(cpu, amp); \
+explicit ST_4(const ST_4_o5& other) __CPU_GPU__; \
 \
-ST_4& operator=(const ST_4& other) restrict(cpu, amp) \
+ST_4& operator=(const ST_4& other) __CPU_GPU__ \
 { \
   x = other.x; \
   y = other.y; \
@@ -1412,7 +1412,7 @@ ST_4& operator=(const ST_4& other) restrict(cpu, amp) \
   return *this; \
 } \
 \
-ST_4& operator++() restrict(cpu, amp) \
+ST_4& operator++() __CPU_GPU__ \
 { \
   ++x; \
   ++y; \
@@ -1421,14 +1421,14 @@ ST_4& operator++() restrict(cpu, amp) \
   return *this; \
 } \
 \
-ST_4 operator++(int) restrict(cpu, amp) \
+ST_4 operator++(int) __CPU_GPU__ \
 { \
   ST_4 Ret(*this); \
   operator++(); \
   return Ret; \
 } \
 \
-ST_4& operator--() restrict(cpu, amp) \
+ST_4& operator--() __CPU_GPU__ \
 { \
   --x; \
   --y; \
@@ -1437,14 +1437,14 @@ ST_4& operator--() restrict(cpu, amp) \
   return *this; \
 } \
 \
-ST_4 operator--(int) restrict(cpu, amp) \
+ST_4 operator--(int) __CPU_GPU__ \
 { \
   ST_4 Ret(*this); \
   operator--(); \
   return Ret; \
 } \
 \
-ST_4& operator+=(const ST_4& rhs) restrict(cpu, amp) \
+ST_4& operator+=(const ST_4& rhs) __CPU_GPU__ \
 { \
   x += rhs.x; \
   y += rhs.y; \
@@ -1453,7 +1453,7 @@ ST_4& operator+=(const ST_4& rhs) restrict(cpu, amp) \
   return *this; \
 } \
 \
-ST_4& operator-=(const ST_4& rhs) restrict(cpu, amp) \
+ST_4& operator-=(const ST_4& rhs) __CPU_GPU__ \
 { \
   x -= rhs.x; \
   y -= rhs.y; \
@@ -1462,7 +1462,7 @@ ST_4& operator-=(const ST_4& rhs) restrict(cpu, amp) \
   return *this; \
 } \
 \
-ST_4& operator*=(const ST_4& rhs) restrict(cpu, amp) \
+ST_4& operator*=(const ST_4& rhs) __CPU_GPU__ \
 { \
   x *= rhs.x; \
   y *= rhs.y; \
@@ -1471,7 +1471,7 @@ ST_4& operator*=(const ST_4& rhs) restrict(cpu, amp) \
   return *this; \
 } \
 \
-ST_4& operator/=(const ST_4& rhs) restrict(cpu, amp) \
+ST_4& operator/=(const ST_4& rhs) __CPU_GPU__ \
 { \
   x /= rhs.x; \
   y /= rhs.y; \
@@ -1486,11 +1486,11 @@ public:
   SCALARTYPE_4_COMMON_PUBLIC_MEMBER(int, int_4, 
     uint_4, float_4, double_4, norm_4, unorm_4) 
 
-  int_4 operator-() const restrict(cpu, amp) { return int_4(-x, -y, -z, -w); }
+  int_4 operator-() const __CPU_GPU__ { return int_4(-x, -y, -z, -w); }
 
-  int_4 operator~() const restrict(cpu, amp) { return int_4(~x, ~y, -z, -w); }
+  int_4 operator~() const __CPU_GPU__ { return int_4(~x, ~y, -z, -w); }
 
-  int_4& operator%=(const int_4& rhs) restrict(cpu, amp)
+  int_4& operator%=(const int_4& rhs) __CPU_GPU__
   {
     x %= rhs.x;
     y %= rhs.y;
@@ -1499,7 +1499,7 @@ public:
     return *this;
   }
 
-  int_4& operator^=(const int_4& rhs) restrict(cpu, amp)
+  int_4& operator^=(const int_4& rhs) __CPU_GPU__
   {
     x ^= rhs.x;
     y ^= rhs.y;
@@ -1508,7 +1508,7 @@ public:
     return *this;
   }
 
-  int_4& operator|=(const int_4& rhs) restrict(cpu, amp)
+  int_4& operator|=(const int_4& rhs) __CPU_GPU__
   {
     x |= rhs.x;
     y |= rhs.y;
@@ -1517,7 +1517,7 @@ public:
     return *this;
   }
 
-  int_4& operator&=(const int_4& rhs) restrict(cpu, amp)
+  int_4& operator&=(const int_4& rhs) __CPU_GPU__
   {
     x &= rhs.x;
     y &= rhs.y;
@@ -1526,7 +1526,7 @@ public:
     return *this;
   }
 
-  int_4& operator>>=(const int_4& rhs) restrict(cpu, amp)
+  int_4& operator>>=(const int_4& rhs) __CPU_GPU__
   {
     x >>= rhs.x;
     y >>= rhs.y;
@@ -1535,7 +1535,7 @@ public:
     return *this;
   }
 
-  int_4& operator<<=(const int_4& rhs) restrict(cpu, amp)
+  int_4& operator<<=(const int_4& rhs) __CPU_GPU__
   {
     x <<= rhs.x;
     y <<= rhs.y;
@@ -1572,9 +1572,9 @@ public:
   SCALARTYPE_4_COMMON_PUBLIC_MEMBER(unsigned int, uint_4, 
     int_4, float_4, double_4, norm_4, unorm_4) 
  
-  uint_4 operator~() const restrict(cpu, amp) { return uint_4(~x, ~y, ~z, -w); }
+  uint_4 operator~() const __CPU_GPU__ { return uint_4(~x, ~y, ~z, -w); }
 
-  uint_4& operator%=(const uint_4& rhs) restrict(cpu, amp)
+  uint_4& operator%=(const uint_4& rhs) __CPU_GPU__
   {
     x %= rhs.x;
     y %= rhs.y;
@@ -1583,7 +1583,7 @@ public:
     return *this;
   }
 
-  uint_4& operator^=(const uint_4& rhs) restrict(cpu, amp)
+  uint_4& operator^=(const uint_4& rhs) __CPU_GPU__
   {
     x ^= rhs.x;
     y ^= rhs.y;
@@ -1592,7 +1592,7 @@ public:
     return *this;
   }
 
-  uint_4& operator|=(const uint_4& rhs) restrict(cpu, amp)
+  uint_4& operator|=(const uint_4& rhs) __CPU_GPU__
   {
     x |= rhs.x;
     y |= rhs.y;
@@ -1601,7 +1601,7 @@ public:
     return *this;
   }
 
-  uint_4& operator&=(const uint_4& rhs) restrict(cpu, amp)
+  uint_4& operator&=(const uint_4& rhs) __CPU_GPU__
   {
     x &= rhs.x;
     y &= rhs.y;
@@ -1610,7 +1610,7 @@ public:
     return *this;
   }
 
-  uint_4& operator>>=(const uint_4& rhs) restrict(cpu, amp)
+  uint_4& operator>>=(const uint_4& rhs) __CPU_GPU__
   {
     x >>= rhs.x;
     y >>= rhs.y;
@@ -1619,7 +1619,7 @@ public:
     return *this;
   }
 
-  uint_4& operator<<=(const uint_4& rhs) restrict(cpu, amp)
+  uint_4& operator<<=(const uint_4& rhs) __CPU_GPU__
   {
     x <<= rhs.x;
     y <<= rhs.y;
@@ -1656,7 +1656,7 @@ public:
   SCALARTYPE_4_COMMON_PUBLIC_MEMBER(float, float_4, 
     int_4, uint_4, double_4, norm_4, unorm_4) 
   
-  float_4 operator-() const restrict(cpu, amp) { return float_4(-x, -y, -z, -w); }
+  float_4 operator-() const __CPU_GPU__ { return float_4(-x, -y, -z, -w); }
 
   SINGLE_COMPONENT_ACCESS(float, x)
   SINGLE_COMPONENT_ACCESS(float, y)
@@ -1686,7 +1686,7 @@ public:
   SCALARTYPE_4_COMMON_PUBLIC_MEMBER(double, double_4, 
     int_4, uint_4, float_4, norm_4, unorm_4) 
   
-  double_4 operator-() const restrict(cpu, amp) { return double_4(-x, -y, -z, -w); }
+  double_4 operator-() const __CPU_GPU__ { return double_4(-x, -y, -z, -w); }
 
   SINGLE_COMPONENT_ACCESS(double, x)
   SINGLE_COMPONENT_ACCESS(double, y)
@@ -1716,7 +1716,7 @@ public:
   SCALARTYPE_4_COMMON_PUBLIC_MEMBER(norm, norm_4, 
     int_4, uint_4, float_4, double_4, unorm_4) 
 
-  norm_4 operator-() const restrict(cpu, amp) { return norm_4(-x, -y, -z, -w); }
+  norm_4 operator-() const __CPU_GPU__ { return norm_4(-x, -y, -z, -w); }
   
   SINGLE_COMPONENT_ACCESS(norm, x)
   SINGLE_COMPONENT_ACCESS(norm, y)
@@ -1780,31 +1780,31 @@ public:
 
 #define SCALARTYPE_2_EXPLICIT_CONVERSION_CONSTRUCTORS(ST, ST_2, \
 ST_2_o1, ST_2_o2, ST_2_o3, ST_2_o4, ST_2_o5) \
-inline ST_2::ST_2(const ST_2_o1& other) restrict(cpu, amp) \
+inline ST_2::ST_2(const ST_2_o1& other) __CPU_GPU__ \
 { \
   x = static_cast<ST>(other.get_x()); \
   y = static_cast<ST>(other.get_y()); \
 } \
 \
-inline ST_2::ST_2(const ST_2_o2& other) restrict(cpu, amp) \
+inline ST_2::ST_2(const ST_2_o2& other) __CPU_GPU__ \
 { \
   x = static_cast<ST>(other.get_x()); \
   y = static_cast<ST>(other.get_y()); \
 } \
 \
-inline ST_2::ST_2(const ST_2_o3& other) restrict(cpu, amp) \
+inline ST_2::ST_2(const ST_2_o3& other) __CPU_GPU__ \
 { \
   x = static_cast<ST>(other.get_x()); \
   y = static_cast<ST>(other.get_y()); \
 } \
 \
-inline ST_2::ST_2(const ST_2_o4& other) restrict(cpu, amp) \
+inline ST_2::ST_2(const ST_2_o4& other) __CPU_GPU__ \
 { \
   x = static_cast<ST>(other.get_x()); \
   y = static_cast<ST>(other.get_y()); \
 } \
 \
-inline ST_2::ST_2(const ST_2_o5& other) restrict(cpu, amp) \
+inline ST_2::ST_2(const ST_2_o5& other) __CPU_GPU__ \
 { \
   x = static_cast<ST>(other.get_x()); \
   y = static_cast<ST>(other.get_y()); \
@@ -1832,35 +1832,35 @@ SCALARTYPE_2_EXPLICIT_CONVERSION_CONSTRUCTORS(unorm, unorm_2,
 
 #define SCALARTYPE_3_EXPLICIT_CONVERSION_CONSTRUCTORS(ST, ST_3, \
 ST_3_o1, ST_3_o2, ST_3_o3, ST_3_o4, ST_3_o5) \
-inline ST_3::ST_3(const ST_3_o1& other) restrict(cpu, amp) \
+inline ST_3::ST_3(const ST_3_o1& other) __CPU_GPU__ \
 { \
   x = static_cast<ST>(other.get_x()); \
   y = static_cast<ST>(other.get_y()); \
   z = static_cast<ST>(other.get_z()); \
 } \
 \
-inline ST_3::ST_3(const ST_3_o2& other) restrict(cpu, amp) \
+inline ST_3::ST_3(const ST_3_o2& other) __CPU_GPU__ \
 { \
   x = static_cast<ST>(other.get_x()); \
   y = static_cast<ST>(other.get_y()); \
   z = static_cast<ST>(other.get_z()); \
 } \
 \
-inline ST_3::ST_3(const ST_3_o3& other) restrict(cpu, amp) \
+inline ST_3::ST_3(const ST_3_o3& other) __CPU_GPU__ \
 { \
   x = static_cast<ST>(other.get_x()); \
   y = static_cast<ST>(other.get_y()); \
   z = static_cast<ST>(other.get_z()); \
 } \
 \
-inline ST_3::ST_3(const ST_3_o4& other) restrict(cpu, amp) \
+inline ST_3::ST_3(const ST_3_o4& other) __CPU_GPU__ \
 { \
   x = static_cast<ST>(other.get_x()); \
   y = static_cast<ST>(other.get_y()); \
   z = static_cast<ST>(other.get_z()); \
 } \
 \
-inline ST_3::ST_3(const ST_3_o5& other) restrict(cpu, amp) \
+inline ST_3::ST_3(const ST_3_o5& other) __CPU_GPU__ \
 { \
   x = static_cast<ST>(other.get_x()); \
   y = static_cast<ST>(other.get_y()); \
@@ -1889,7 +1889,7 @@ SCALARTYPE_3_EXPLICIT_CONVERSION_CONSTRUCTORS(unorm, unorm_3,
 
 #define SCALARTYPE_4_EXPLICIT_CONVERSION_CONSTRUCTORS(ST, ST_4, \
 ST_4_o1, ST_4_o2, ST_4_o3, ST_4_o4, ST_4_o5) \
-inline ST_4::ST_4(const ST_4_o1& other) restrict(cpu, amp) \
+inline ST_4::ST_4(const ST_4_o1& other) __CPU_GPU__ \
 { \
   x = static_cast<ST>(other.get_x()); \
   y = static_cast<ST>(other.get_y()); \
@@ -1897,7 +1897,7 @@ inline ST_4::ST_4(const ST_4_o1& other) restrict(cpu, amp) \
   w = static_cast<ST>(other.get_w()); \
 } \
 \
-inline ST_4::ST_4(const ST_4_o2& other) restrict(cpu, amp) \
+inline ST_4::ST_4(const ST_4_o2& other) __CPU_GPU__ \
 { \
   x = static_cast<ST>(other.get_x()); \
   y = static_cast<ST>(other.get_y()); \
@@ -1905,7 +1905,7 @@ inline ST_4::ST_4(const ST_4_o2& other) restrict(cpu, amp) \
   w = static_cast<ST>(other.get_w()); \
 } \
 \
-inline ST_4::ST_4(const ST_4_o3& other) restrict(cpu, amp) \
+inline ST_4::ST_4(const ST_4_o3& other) __CPU_GPU__ \
 { \
   x = static_cast<ST>(other.get_x()); \
   y = static_cast<ST>(other.get_y()); \
@@ -1913,7 +1913,7 @@ inline ST_4::ST_4(const ST_4_o3& other) restrict(cpu, amp) \
   w = static_cast<ST>(other.get_w()); \
 } \
 \
-inline ST_4::ST_4(const ST_4_o4& other) restrict(cpu, amp) \
+inline ST_4::ST_4(const ST_4_o4& other) __CPU_GPU__ \
 { \
   x = static_cast<ST>(other.get_x()); \
   y = static_cast<ST>(other.get_y()); \
@@ -1921,7 +1921,7 @@ inline ST_4::ST_4(const ST_4_o4& other) restrict(cpu, amp) \
   w = static_cast<ST>(other.get_w()); \
 } \
 \
-inline ST_4::ST_4(const ST_4_o5& other) restrict(cpu, amp) \
+inline ST_4::ST_4(const ST_4_o5& other) __CPU_GPU__ \
 { \
   x = static_cast<ST>(other.get_x()); \
   y = static_cast<ST>(other.get_y()); \
@@ -1952,32 +1952,32 @@ SCALARTYPE_4_EXPLICIT_CONVERSION_CONSTRUCTORS(unorm, unorm_4,
 //   Operators between Two References (10.8.1 Synopsis)
 
 #define SCALARTYPE_2_OPERATOR(ST_2) \
-inline ST_2 operator+(const ST_2& lhs, const ST_2& rhs) restrict(cpu, amp) \
+inline ST_2 operator+(const ST_2& lhs, const ST_2& rhs) __CPU_GPU__ \
 { \
   return ST_2(lhs.get_x() + rhs.get_x(), lhs.get_y() + rhs.get_y()); \
 } \
 \
-inline ST_2 operator-(const ST_2& lhs, const ST_2& rhs) restrict(cpu, amp) \
+inline ST_2 operator-(const ST_2& lhs, const ST_2& rhs) __CPU_GPU__ \
 { \
   return ST_2(lhs.get_x() - rhs.get_x(), lhs.get_y() - rhs.get_y()); \
 } \
 \
-inline ST_2 operator*(const ST_2& lhs, const ST_2& rhs) restrict(cpu, amp) \
+inline ST_2 operator*(const ST_2& lhs, const ST_2& rhs) __CPU_GPU__ \
 { \
   return ST_2(lhs.get_x() * rhs.get_x(), lhs.get_y() * rhs.get_y()); \
 } \
 \
-inline ST_2 operator/(const ST_2& lhs, const ST_2& rhs) restrict(cpu, amp) \
+inline ST_2 operator/(const ST_2& lhs, const ST_2& rhs) __CPU_GPU__ \
 { \
   return ST_2(lhs.get_x() / rhs.get_x(), lhs.get_y() / rhs.get_y()); \
 } \
 \
-inline bool operator==(const ST_2& lhs, const ST_2& rhs) restrict(cpu, amp) \
+inline bool operator==(const ST_2& lhs, const ST_2& rhs) __CPU_GPU__ \
 { \
   return (lhs.get_x() == rhs.get_x()) && (lhs.get_y() == rhs.get_y()); \
 } \
 \
-inline bool operator!=(const ST_2& lhs, const ST_2& rhs) restrict(cpu, amp) \
+inline bool operator!=(const ST_2& lhs, const ST_2& rhs) __CPU_GPU__ \
 { \
   return (lhs.get_x() != rhs.get_x()) || (lhs.get_y() != rhs.get_y()); \
 }
@@ -1996,98 +1996,98 @@ SCALARTYPE_2_OPERATOR(unorm_2)
 
 #undef SCALARTYPE_2_OPERATOR
 
-inline int_2 operator%(const int_2& lhs, const int_2& rhs) restrict(cpu, amp)
+inline int_2 operator%(const int_2& lhs, const int_2& rhs) __CPU_GPU__
 {
   return int_2(lhs.get_x() % rhs.get_x(), lhs.get_y() % rhs.get_y());
 }
 
-inline int_2 operator^(const int_2& lhs, const int_2& rhs) restrict(cpu, amp)
+inline int_2 operator^(const int_2& lhs, const int_2& rhs) __CPU_GPU__
 {
   return int_2(lhs.get_x() ^ rhs.get_x(), lhs.get_y() ^ rhs.get_y());
 }
 
-inline int_2 operator|(const int_2& lhs, const int_2& rhs) restrict(cpu, amp)
+inline int_2 operator|(const int_2& lhs, const int_2& rhs) __CPU_GPU__
 {
   return int_2(lhs.get_x() | rhs.get_x(), lhs.get_y() | rhs.get_y());
 }
 
-inline int_2 operator&(const int_2& lhs, const int_2& rhs) restrict(cpu, amp)
+inline int_2 operator&(const int_2& lhs, const int_2& rhs) __CPU_GPU__
 {
   return int_2(lhs.get_x() & rhs.get_x(), lhs.get_y() & rhs.get_y());
 }
 
-inline int_2 operator<<(const int_2& lhs, const int_2& rhs) restrict(cpu, amp)
+inline int_2 operator<<(const int_2& lhs, const int_2& rhs) __CPU_GPU__
 {
   return int_2(lhs.get_x() << rhs.get_x(), lhs.get_y() << rhs.get_y());
 }
 
-inline int_2 operator>>(const int_2& lhs, const int_2& rhs) restrict(cpu, amp)
+inline int_2 operator>>(const int_2& lhs, const int_2& rhs) __CPU_GPU__
 {
   return int_2(lhs.get_x() >> rhs.get_x(), lhs.get_y() >> rhs.get_y());
 }
 
-inline uint_2 operator%(const uint_2& lhs, const uint_2& rhs) restrict(cpu, amp)
+inline uint_2 operator%(const uint_2& lhs, const uint_2& rhs) __CPU_GPU__
 {
   return uint_2(lhs.get_x() % rhs.get_x(), lhs.get_y() % rhs.get_y());
 }
 
-inline uint_2 operator^(const uint_2& lhs, const uint_2& rhs) restrict(cpu, amp)
+inline uint_2 operator^(const uint_2& lhs, const uint_2& rhs) __CPU_GPU__
 {
   return uint_2(lhs.get_x() ^ rhs.get_x(), lhs.get_y() ^ rhs.get_y());
 }
 
-inline uint_2 operator|(const uint_2& lhs, const uint_2& rhs) restrict(cpu, amp)
+inline uint_2 operator|(const uint_2& lhs, const uint_2& rhs) __CPU_GPU__
 {
   return uint_2(lhs.get_x() | rhs.get_x(), lhs.get_y() | rhs.get_y());
 }
 
-inline uint_2 operator&(const uint_2& lhs, const uint_2& rhs) restrict(cpu, amp)
+inline uint_2 operator&(const uint_2& lhs, const uint_2& rhs) __CPU_GPU__
 {
   return uint_2(lhs.get_x() & rhs.get_x(), lhs.get_y() & rhs.get_y());
 }
 
-inline uint_2 operator<<(const uint_2& lhs, const uint_2& rhs) restrict(cpu, amp)
+inline uint_2 operator<<(const uint_2& lhs, const uint_2& rhs) __CPU_GPU__
 {
   return uint_2(lhs.get_x() << rhs.get_x(), lhs.get_y() << rhs.get_y());
 }
 
-inline uint_2 operator>>(const uint_2& lhs, const uint_2& rhs) restrict(cpu, amp)
+inline uint_2 operator>>(const uint_2& lhs, const uint_2& rhs) __CPU_GPU__
 {
   return uint_2(lhs.get_x() >> rhs.get_x(), lhs.get_y() >> rhs.get_y());
 }
 
 #define SCALARTYPE_3_OPERATOR(ST_3) \
-inline ST_3 operator+(const ST_3& lhs, const ST_3& rhs) restrict(cpu, amp) \
+inline ST_3 operator+(const ST_3& lhs, const ST_3& rhs) __CPU_GPU__ \
 { \
   return ST_3(lhs.get_x() + rhs.get_x(), lhs.get_y() + rhs.get_y(), \
                lhs.get_z() + rhs.get_z()); \
 } \
 \
-inline ST_3 operator-(const ST_3& lhs, const ST_3& rhs) restrict(cpu, amp) \
+inline ST_3 operator-(const ST_3& lhs, const ST_3& rhs) __CPU_GPU__ \
 { \
   return ST_3(lhs.get_x() - rhs.get_x(), lhs.get_y() - rhs.get_y(), \
                lhs.get_z() - rhs.get_z()); \
 } \
 \
-inline ST_3 operator*(const ST_3& lhs, const ST_3& rhs) restrict(cpu, amp) \
+inline ST_3 operator*(const ST_3& lhs, const ST_3& rhs) __CPU_GPU__ \
 { \
   return ST_3(lhs.get_x() * rhs.get_x(), lhs.get_y() * rhs.get_y(), \
                lhs.get_z() * rhs.get_z()); \
 } \
 \
-inline ST_3 operator/(const ST_3& lhs, const ST_3& rhs) restrict(cpu, amp) \
+inline ST_3 operator/(const ST_3& lhs, const ST_3& rhs) __CPU_GPU__ \
 { \
   return ST_3(lhs.get_x() / rhs.get_x(), lhs.get_y() / rhs.get_y(), \
                lhs.get_z() / rhs.get_z()); \
 } \
 \
-inline bool operator==(const ST_3& lhs, const ST_3& rhs) restrict(cpu, amp) \
+inline bool operator==(const ST_3& lhs, const ST_3& rhs) __CPU_GPU__ \
 { \
   return (lhs.get_x() == rhs.get_x()) && (lhs.get_y() == rhs.get_y()) \
            && (lhs.get_z() == rhs.get_z()); \
 } \
 \
-inline bool operator!=(const ST_3& lhs, const ST_3& rhs) restrict(cpu, amp) \
+inline bool operator!=(const ST_3& lhs, const ST_3& rhs) __CPU_GPU__ \
 { \
   return (lhs.get_x() != rhs.get_x()) || (lhs.get_y() != rhs.get_y()) \
            || (lhs.get_z() != rhs.get_z()); \
@@ -2107,110 +2107,110 @@ SCALARTYPE_3_OPERATOR(unorm_3)
 
 #undef SCALARTYPE_3_OPERATOR
 
-inline int_3 operator%(const int_3& lhs, const int_3& rhs) restrict(cpu, amp)
+inline int_3 operator%(const int_3& lhs, const int_3& rhs) __CPU_GPU__
 {
   return int_3(lhs.get_x() % rhs.get_x(), lhs.get_y() % rhs.get_y(),
                 lhs.get_z() % rhs.get_z());
 }
 
-inline int_3 operator^(const int_3& lhs, const int_3& rhs) restrict(cpu, amp)
+inline int_3 operator^(const int_3& lhs, const int_3& rhs) __CPU_GPU__
 {
   return int_3(lhs.get_x() ^ rhs.get_x(), lhs.get_y() ^ rhs.get_y(),
                 lhs.get_z() ^ rhs.get_z());
 }
 
-inline int_3 operator|(const int_3& lhs, const int_3& rhs) restrict(cpu, amp)
+inline int_3 operator|(const int_3& lhs, const int_3& rhs) __CPU_GPU__
 {
   return int_3(lhs.get_x() | rhs.get_x(), lhs.get_y() | rhs.get_y(),
                 lhs.get_z() | rhs.get_z());
 }
 
-inline int_3 operator&(const int_3& lhs, const int_3& rhs) restrict(cpu, amp)
+inline int_3 operator&(const int_3& lhs, const int_3& rhs) __CPU_GPU__
 {
   return int_3(lhs.get_x() & rhs.get_x(), lhs.get_y() & rhs.get_y(),
                 lhs.get_z() & rhs.get_z());
 }
 
-inline int_3 operator<<(const int_3& lhs, const int_3& rhs) restrict(cpu, amp)
+inline int_3 operator<<(const int_3& lhs, const int_3& rhs) __CPU_GPU__
 {
   return int_3(lhs.get_x() << rhs.get_x(), lhs.get_y() << rhs.get_y(),
                 lhs.get_z() << rhs.get_z());
 }
 
-inline int_3 operator>>(const int_3& lhs, const int_3& rhs) restrict(cpu, amp)
+inline int_3 operator>>(const int_3& lhs, const int_3& rhs) __CPU_GPU__
 {
   return int_3(lhs.get_x() >> rhs.get_x(), lhs.get_y() >> rhs.get_y(),
                 lhs.get_z() >> rhs.get_z());
 }
 
-inline uint_3 operator%(const uint_3& lhs, const uint_3& rhs) restrict(cpu, amp)
+inline uint_3 operator%(const uint_3& lhs, const uint_3& rhs) __CPU_GPU__
 {
   return uint_3(lhs.get_x() % rhs.get_x(), lhs.get_y() % rhs.get_y(),
                  lhs.get_z() % rhs.get_z());
 }
 
-inline uint_3 operator^(const uint_3& lhs, const uint_3& rhs) restrict(cpu, amp)
+inline uint_3 operator^(const uint_3& lhs, const uint_3& rhs) __CPU_GPU__
 {
   return uint_3(lhs.get_x() ^ rhs.get_x(), lhs.get_y() ^ rhs.get_y(),
                  lhs.get_z() ^ rhs.get_z());
 }
 
-inline uint_3 operator|(const uint_3& lhs, const uint_3& rhs) restrict(cpu, amp)
+inline uint_3 operator|(const uint_3& lhs, const uint_3& rhs) __CPU_GPU__
 {
   return uint_3(lhs.get_x() | rhs.get_x(), lhs.get_y() | rhs.get_y(),
                  lhs.get_z() | rhs.get_z());
 }
 
-inline uint_3 operator&(const uint_3& lhs, const uint_3& rhs) restrict(cpu, amp)
+inline uint_3 operator&(const uint_3& lhs, const uint_3& rhs) __CPU_GPU__
 {
   return uint_3(lhs.get_x() & rhs.get_x(), lhs.get_y() & rhs.get_y(),
                  lhs.get_z() & rhs.get_z());
 }
 
-inline uint_3 operator<<(const uint_3& lhs, const uint_3& rhs) restrict(cpu, amp)
+inline uint_3 operator<<(const uint_3& lhs, const uint_3& rhs) __CPU_GPU__
 {
   return uint_3(lhs.get_x() << rhs.get_x(), lhs.get_y() << rhs.get_y(),
                  lhs.get_z() << rhs.get_z());
 }
 
-inline uint_3 operator>>(const uint_3& lhs, const uint_3& rhs) restrict(cpu, amp)
+inline uint_3 operator>>(const uint_3& lhs, const uint_3& rhs) __CPU_GPU__
 {
   return uint_3(lhs.get_x() >> rhs.get_x(), lhs.get_y() >> rhs.get_y(),
                  lhs.get_z() >> rhs.get_z());
 }
 
 #define SCALARTYPE_4_OPERATOR(ST_4) \
-inline ST_4 operator+(const ST_4& lhs, const ST_4& rhs) restrict(cpu, amp) \
+inline ST_4 operator+(const ST_4& lhs, const ST_4& rhs) __CPU_GPU__ \
 { \
   return ST_4(lhs.get_x() + rhs.get_x(), lhs.get_y() + rhs.get_y(), \
                lhs.get_z() + rhs.get_z(), lhs.get_w() + rhs.get_w()); \
 } \
 \
-inline ST_4 operator-(const ST_4& lhs, const ST_4& rhs) restrict(cpu, amp) \
+inline ST_4 operator-(const ST_4& lhs, const ST_4& rhs) __CPU_GPU__ \
 { \
   return ST_4(lhs.get_x() - rhs.get_x(), lhs.get_y() - rhs.get_y(), \
                lhs.get_z() - rhs.get_z(), lhs.get_w() - rhs.get_w()); \
 } \
 \
-inline ST_4 operator*(const ST_4& lhs, const ST_4& rhs) restrict(cpu, amp) \
+inline ST_4 operator*(const ST_4& lhs, const ST_4& rhs) __CPU_GPU__ \
 { \
   return ST_4(lhs.get_x() * rhs.get_x(), lhs.get_y() * rhs.get_y(), \
                lhs.get_z() * rhs.get_z(), lhs.get_w() * rhs.get_w()); \
 } \
 \
-inline ST_4 operator/(const ST_4& lhs, const ST_4& rhs) restrict(cpu, amp) \
+inline ST_4 operator/(const ST_4& lhs, const ST_4& rhs) __CPU_GPU__ \
 { \
   return ST_4(lhs.get_x() / rhs.get_x(), lhs.get_y() / rhs.get_y(), \
                lhs.get_z() / rhs.get_z(), lhs.get_w() / rhs.get_w()); \
 } \
 \
-inline bool operator==(const ST_4& lhs, const ST_4& rhs) restrict(cpu, amp) \
+inline bool operator==(const ST_4& lhs, const ST_4& rhs) __CPU_GPU__ \
 { \
   return (lhs.get_x() == rhs.get_x()) && (lhs.get_y() == rhs.get_y()) \
            && (lhs.get_z() == rhs.get_z()) && (lhs.get_w() == rhs.get_w()); \
 } \
 \
-inline bool operator!=(const ST_4& lhs, const ST_4& rhs) restrict(cpu, amp) \
+inline bool operator!=(const ST_4& lhs, const ST_4& rhs) __CPU_GPU__ \
 { \
   return (lhs.get_x() != rhs.get_x()) || (lhs.get_y() != rhs.get_y()) \
            || (lhs.get_z() != rhs.get_z()) || (lhs.get_w() != rhs.get_w()); \
@@ -2230,73 +2230,73 @@ SCALARTYPE_4_OPERATOR(unorm_4)
 
 #undef SCALARTYPE_4_OPERATOR
 
-inline int_4 operator%(const int_4& lhs, const int_4& rhs) restrict(cpu, amp)
+inline int_4 operator%(const int_4& lhs, const int_4& rhs) __CPU_GPU__
 {
   return int_4(lhs.get_x() % rhs.get_x(), lhs.get_y() % rhs.get_y(),
                 lhs.get_z() % rhs.get_z(), lhs.get_w() % rhs.get_w());
 }
 
-inline int_4 operator^(const int_4& lhs, const int_4& rhs) restrict(cpu, amp)
+inline int_4 operator^(const int_4& lhs, const int_4& rhs) __CPU_GPU__
 {
   return int_4(lhs.get_x() ^ rhs.get_x(), lhs.get_y() ^ rhs.get_y(),
                 lhs.get_z() ^ rhs.get_z(), lhs.get_w() ^ rhs.get_w());
 }
 
-inline int_4 operator|(const int_4& lhs, const int_4& rhs) restrict(cpu, amp)
+inline int_4 operator|(const int_4& lhs, const int_4& rhs) __CPU_GPU__
 {
   return int_4(lhs.get_x() | rhs.get_x(), lhs.get_y() | rhs.get_y(),
                 lhs.get_z() | rhs.get_z(), lhs.get_w() | rhs.get_w());
 }
 
-inline int_4 operator&(const int_4& lhs, const int_4& rhs) restrict(cpu, amp)
+inline int_4 operator&(const int_4& lhs, const int_4& rhs) __CPU_GPU__
 {
   return int_4(lhs.get_x() & rhs.get_x(), lhs.get_y() & rhs.get_y(),
                 lhs.get_z() & rhs.get_z(), lhs.get_w() & rhs.get_w());
 }
 
-inline int_4 operator<<(const int_4& lhs, const int_4& rhs) restrict(cpu, amp)
+inline int_4 operator<<(const int_4& lhs, const int_4& rhs) __CPU_GPU__
 {
   return int_4(lhs.get_x() << rhs.get_x(), lhs.get_y() << rhs.get_y(),
                 lhs.get_z() << rhs.get_z(), lhs.get_w() << rhs.get_w());
 }
 
-inline int_4 operator>>(const int_4& lhs, const int_4& rhs) restrict(cpu, amp)
+inline int_4 operator>>(const int_4& lhs, const int_4& rhs) __CPU_GPU__
 {
   return int_4(lhs.get_x() >> rhs.get_x(), lhs.get_y() >> rhs.get_y(),
                 lhs.get_z() >> rhs.get_z(), lhs.get_w() >> rhs.get_w());
 }
 
-inline uint_4 operator%(const uint_4& lhs, const uint_4& rhs) restrict(cpu, amp)
+inline uint_4 operator%(const uint_4& lhs, const uint_4& rhs) __CPU_GPU__
 {
   return uint_4(lhs.get_x() % rhs.get_x(), lhs.get_y() % rhs.get_y(),
                  lhs.get_z() % rhs.get_z(), lhs.get_w() % rhs.get_w());
 }
 
-inline uint_4 operator^(const uint_4& lhs, const uint_4& rhs) restrict(cpu, amp)
+inline uint_4 operator^(const uint_4& lhs, const uint_4& rhs) __CPU_GPU__
 {
   return uint_4(lhs.get_x() ^ rhs.get_x(), lhs.get_y() ^ rhs.get_y(),
                  lhs.get_z() ^ rhs.get_z(), lhs.get_w() ^ rhs.get_w());
 }
 
-inline uint_4 operator|(const uint_4& lhs, const uint_4& rhs) restrict(cpu, amp)
+inline uint_4 operator|(const uint_4& lhs, const uint_4& rhs) __CPU_GPU__
 {
   return uint_4(lhs.get_x() | rhs.get_x(), lhs.get_y() | rhs.get_y(),
                  lhs.get_z() | rhs.get_z(), lhs.get_w() | rhs.get_w());
 }
 
-inline uint_4 operator&(const uint_4& lhs, const uint_4& rhs) restrict(cpu, amp)
+inline uint_4 operator&(const uint_4& lhs, const uint_4& rhs) __CPU_GPU__
 {
   return uint_4(lhs.get_x() & rhs.get_x(), lhs.get_y() & rhs.get_y(),
                  lhs.get_z() & rhs.get_z(), lhs.get_w() & rhs.get_w());
 }
 
-inline uint_4 operator<<(const uint_4& lhs, const uint_4& rhs) restrict(cpu, amp)
+inline uint_4 operator<<(const uint_4& lhs, const uint_4& rhs) __CPU_GPU__
 {
   return uint_4(lhs.get_x() << rhs.get_x(), lhs.get_y() << rhs.get_y(),
                  lhs.get_z() << rhs.get_z(), lhs.get_w() << rhs.get_w());
 }
 
-inline uint_4 operator>>(const uint_4& lhs, const uint_4& rhs) restrict(cpu, amp)
+inline uint_4 operator>>(const uint_4& lhs, const uint_4& rhs) __CPU_GPU__
 {
   return uint_4(lhs.get_x() >> rhs.get_x(), lhs.get_y() >> rhs.get_y(),
                  lhs.get_z() >> rhs.get_z(), lhs.get_w() >> rhs.get_w());
