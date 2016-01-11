@@ -965,7 +965,13 @@ public:
   SCALARTYPE_2_COMMON_PUBLIC_MEMBER(norm, norm_2, 
     int_2, uint_2, float_2, double_2, unorm_2) 
 
+#if __GNUG__
+  // for some reason g++ will mistakenly treat x, y as type float
+  // so we need to explicitly cast them to norm type here
+  norm_2 operator-() const __CPU_GPU__ { return norm2(-(norm)x, -(norm)y); }
+#else
   norm_2 operator-() const __CPU_GPU__ { return norm_2(-x, -y); }
+#endif
   
   SINGLE_COMPONENT_ACCESS(norm, x)
   SINGLE_COMPONENT_ACCESS(norm, y)
@@ -1304,7 +1310,13 @@ public:
   SCALARTYPE_3_COMMON_PUBLIC_MEMBER(norm, norm_3, 
     int_3, uint_3, float_3, double_3, unorm_3) 
 
+#if __GNUG__
+  // for some reason g++ will mistakenly treat x, y, z as type float
+  // so we need to explicitly cast them to norm type here
+  norm_3 operator-() const __CPU_GPU__ { return norm_3(-(norm)x, -(norm)y, -(norm)z); }
+#else
   norm_3 operator-() const __CPU_GPU__ { return norm_3(-x, -y, -z); }
+#endif
   
   SINGLE_COMPONENT_ACCESS(norm, x)
   SINGLE_COMPONENT_ACCESS(norm, y)
@@ -1716,7 +1728,13 @@ public:
   SCALARTYPE_4_COMMON_PUBLIC_MEMBER(norm, norm_4, 
     int_4, uint_4, float_4, double_4, unorm_4) 
 
+#if __GNUG__
+  // for some reason g++ will mistakenly treat x, y, z, w as type float
+  // so we need to explicitly cast them to norm type here
+  norm_4 operator-() const __CPU_GPU__ { return norm_4(-(norm)x, -(norm)y, -(norm)z, -(norm)w); }
+#else
   norm_4 operator-() const __CPU_GPU__ { return norm_4(-x, -y, -z, -w); }
+#endif
   
   SINGLE_COMPONENT_ACCESS(norm, x)
   SINGLE_COMPONENT_ACCESS(norm, y)

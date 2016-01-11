@@ -6,7 +6,11 @@
 namespace hc
 {
 
+#ifdef __HCC__
 #define __CPU_GPU__ [[cpu]] [[hc]]
+#else
+#define __CPU_GPU__
+#endif
 
 #include "kalmar_short_vectors.inl"
 
