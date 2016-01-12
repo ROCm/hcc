@@ -72,7 +72,7 @@ $LLVM_DIS $1 -o $TEMP_NAME.ll
 if [ $KMDUMPLLVM == "1" ]; then
   cp $TEMP_NAME.ll ./dump.host_input.ll
 fi
-$OPT -load $LIBPATH/LLVMDirectFuncCall.so -redirect < $TEMP_NAME.ll 2>$TEMP_NAME.host_redirect.ll >/dev/null
+$OPT -load $LIBPATH/LLVMDirectFuncCall.so -redirect -host < $TEMP_NAME.ll 2>$TEMP_NAME.host_redirect.ll >/dev/null
 if [ $KMDUMPLLVM == "1" ]; then
   cp $TEMP_NAME.host_redirect.ll ./dump.host_redirect.ll
 fi

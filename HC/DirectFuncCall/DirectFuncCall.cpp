@@ -3,12 +3,15 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 using namespace llvm;
 using namespace std;
 
 namespace {
+
+  cl::opt<bool> HostSpecific("host", cl::desc("Mark the operation as host specific"));
 
   struct DirectFuncCall : public ModulePass
   {
@@ -51,15 +54,14 @@ namespace {
             wrapperFunc->setAttributes(AttributeSet::get(F->getContext(), AttributeSet::FunctionIndex, B));
             M.getFunctionList().push_back(wrapperFunc);
 
-            // find uses of kernel proper
-            for(Value::user_iterator U = F->user_begin(), U_end = F->user_end(); U != U_end; ++U)
-            {
-              if(CallInst* ci = dyn_cast<CallInst>(*U))
-                ci->setCalledFunction(wrapperFunc);
-              if(InvokeInst* ii = dyn_cast<InvokeInst>(*U))
-                ii->setCalledFunction(wrapperFunc);
-            }
+            // Simply replace all uses with new wrapper function
+            F->replaceAllUsesWith(wrapperFunc);
           } // !F->hasNUses > 0
+
+          // host side does not need the function definition of a grid_launch kernel
+          // deleting the function body can help resolve linking errors
+          if(HostSpecific)
+            F->deleteBody();
         } // F->hasFnAttribute(HCGridLaunchAttr)
       } // Module::iterator
 
@@ -73,3 +75,9 @@ namespace {
 
 char DirectFuncCall::ID = 0;
 static RegisterPass<DirectFuncCall> X("redirect", "Redirect kernel function call to wrapper.", false, false);
+
+int main(int argc, char **argv) {
+  cl::ParseCommandLineOptions(argc, argv);
+
+  return 0;
+}

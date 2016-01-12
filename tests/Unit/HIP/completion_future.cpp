@@ -1,4 +1,4 @@
-// XFAIL: Linux
+// XFAIL: Linux,boltzmann
 // RUN: %hc %s -o %t.out && %t.out
 
 #include "grid_launch.h"
@@ -8,7 +8,7 @@
 
 const int SIZE = GRID_SIZE*TILE_SIZE;
 
-__KERNEL void kernel1(grid_launch_parm lp, int *x) {
+__attribute__((hc_grid_launch)) void kernel1(grid_launch_parm lp, int *x) {
   int i = lp.threadId.x + lp.groupId.x*lp.groupDim.x;
 
   x[i] = i;

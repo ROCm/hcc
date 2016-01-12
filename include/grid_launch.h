@@ -2,7 +2,6 @@
 
 #include <stdint.h>
 
-#ifndef USE_CUDA
 #include <hc.hpp>
 
 typedef struct uint3
@@ -11,8 +10,6 @@ typedef struct uint3
   uint3(uint32_t _x=1, uint32_t _y=1, uint32_t _z=1) : x(_x), y(_y), z(_z) {};
 } uint3;
 
-#endif // not USE_CUDA
-
 typedef struct grid_launch_parm
 {
   uint3      gridDim;
@@ -20,14 +17,11 @@ typedef struct grid_launch_parm
   uint3      groupId;
   uint3      threadId;
   unsigned int  groupMemBytes;
-#ifndef USE_CUDA
   // use acc_view for PFE in WrapperGen
   hc::accelerator_view  *av;
   hc::completion_future *cf;
-#endif
 } grid_launch_parm;
 
-#ifndef USE_CUDA
 // TODO: Will move to separate source file in the future
 extern inline void grid_launch_init(grid_launch_parm *lp) {
   lp->gridDim.x = lp->gridDim.y = lp->gridDim.z = 1;
@@ -39,4 +33,3 @@ extern inline void grid_launch_init(grid_launch_parm *lp) {
   lp->av = &av;
   lp->cf = NULL;
 }
-#endif

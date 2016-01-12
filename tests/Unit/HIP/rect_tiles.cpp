@@ -1,4 +1,4 @@
-// XFAIL: Linux
+// XFAIL: Linux,boltzmann
 // RUN: %hc %s -o %t.out && %t.out
 
 #include "grid_launch.h"
@@ -7,7 +7,7 @@
 #define TILE_I 16
 #define TILE_J 8
 
-__KERNEL void kernel_call(grid_launch_parm lp, int *a_d, int pitch)
+__attribute__((hc_grid_launch)) void kernel_call(grid_launch_parm lp, int *a_d, int pitch)
 {
   int i = lp.groupId.x*TILE_I + lp.threadId.x;
   int j = lp.groupId.y*TILE_J + lp.threadId.y;
