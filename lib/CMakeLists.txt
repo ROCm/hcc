@@ -51,6 +51,7 @@ install(FILES opencl_math.bc DESTINATION lib)
 ####################
 install(FILES hsa_math.bc DESTINATION lib)
 install(FILES builtins-hsail.opt.bc DESTINATION lib)
+install(FILES hsail-amdgpu-wrapper.ll DESTINATION lib)
 
 ####################
 # OpenCL runtime version detection

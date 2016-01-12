@@ -207,11 +207,6 @@ endif ((HAS_OPENCL EQUAL 0) AND (HAS_HSA EQUAL 0))
 # Detect AMDGPU backend for native codegen
 #################
 option(HSA_USE_AMDGPU_BACKEND "Use AMDGPU LLVM backend as compiler for HSA" OFF)
-set(HSA_AMDGPU_BUILTIN_LIBRARY_WRAPPER CACHE STRING "Path to LLVM bitcode library which replaces hasil intrinsics with AMDGPU intrinsics")
-
-if (HSA_USE_AMDGPU_BACKEND AND NOT HSA_AMDGPU_BUILTIN_LIBRARY_WRAPPER)
-  MESSAGE(FATAL_ERROR "You must specify a value for HSA_AMDGPU_BUILTIN_LIBRARY_WRAPPER to use the AMDGPU backend")
-endif ()
 
 if (HSA_USE_AMDGPU_BACKEND)
   add_definitions(-DHSA_USE_AMDGPU_BACKEND)
