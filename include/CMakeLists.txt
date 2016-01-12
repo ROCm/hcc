@@ -2,6 +2,10 @@
 FILE(GLOB files ${CMAKE_CURRENT_SOURCE_DIR}/*.h*)
 INSTALL(FILES ${files} DESTINATION include)
 
+# short vector files
+FILE(GLOB sv_files ${CMAKE_CURRENT_SOURCE_DIR}/*_short_vectors*)
+INSTALL(FILES ${sv_files} DESTINATION include)
+
 # N4494 headers
 FILE(GLOB N4494 ${CMAKE_CURRENT_SOURCE_DIR}/coordinate
                 ${CMAKE_CURRENT_SOURCE_DIR}/array_view)

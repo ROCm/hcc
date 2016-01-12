@@ -3190,7 +3190,6 @@ void copy(const array<T, N> &src, OutputIter destBegin);
 template <typename T, int N = 1>
 class array {
     static_assert(!std::is_const<T>::value, "array<const T> is not supported");
-    static_assert(0 == (sizeof(T) % sizeof(int)), "only value types whose size is a multiple of the size of an integer are allowed in array");
 public:
 #if __KALMAR_ACCELERATOR__ == 1
     typedef Kalmar::_data<T> acc_buffer_t;
@@ -4108,7 +4107,6 @@ private:
 template <typename T, int N = 1>
 class array_view
 {
-    static_assert(0 == (sizeof(T) % sizeof(int)), "only value types whose size is a multiple of the size of an integer are allowed in array views");
 public:
     typedef typename std::remove_const<T>::type nc_T;
 #if __KALMAR_ACCELERATOR__ == 1

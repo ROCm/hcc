@@ -10,7 +10,7 @@ int main() {
   array_view<int, 1> av(1, test);
 
   parallel_for_each(extent<1>(1), [=](index<1> idx) restrict(amp) {
-#ifdef __KALMAR_ACCELERATOR__
+#ifdef __HCC_ACCELERATOR__
     av[idx] = 1;
 #else
     av[idx] = 0;
