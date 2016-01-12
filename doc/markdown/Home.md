@@ -91,3 +91,63 @@ HCC is a single-source compiler where kernel codes and host codes can reside in 
 - dynamic group segment memory allocation
 - true asynchronous kernel launching behavior
 - additional HSA-specific APIs
+
+
+# Differences between HC API and C++ AMP
+
+Despite HC and C++ AMP share a lot of similarities in terms of programming constructs (e.g. parallel_for_each, array, array_view, etc.), there are several significant differences between the two APIs.
+
+## Support for explicit asynchronous ```parallel_for_each```
+
+In C++ AMP, the  ```parallel_for_each``` appears as a synchronous function call in a program (i.e. the host waits for the kernel to complete); howevever, the compiler may optimize it to execute the kernel asynchronously and the host would synchronize with the device on the first access of the data modified by the kernel.  For example, if a ```parallel_for_each``` writes the an array_view, then the first access to this array_view on the host after the ```parallel_for_each``` would block until the ```parallel_for_each``` completes. 
+
+HC supports the automatic synchronization behavior as in C++ AMP.  In addition, HC's ```parallel_for_each``` supports explicit asynchronous execution.  It returns a ```completion_future``` (similar to C++ std::future) object that other asynchronous operations could synchronize with, which provides better flexibility on task graph construction and enables more precise control on optimization.        
+
+## Annotation of device functions
+
+C++ AMP uses the ```restrict(amp)``` keyword to annotatate functions that runs on the device.
+
+```
+void foo() restrict(amp) {
+..
+}
+...
+parallel_for_each(...,[=] () restrict(amp) {
+ foo();
+});
+
+```
+
+HC uses a function attribute (```[[hc]]``` or ``` __attribute__((hc))``` ) to annotate a device function. 
+
+```
+void foo()  [[hc]] {
+..
+}
+...
+parallel_for_each(...,[=] () [[hc]] {
+ foo();
+});
+```
+
+The [[hc]] annotation for the kernel function called by ```parallel_for_each``` is optional as it is automatically annotated as a device function by the hcc compiler.  The compiler also supports partial automatic [[hc]] annotation for functions that are called by other device functions within the same source file:
+
+```
+// Since bar is called by foo, which is a device function, the hcc compiler
+// will automatically annotate bar as a device function
+void bar() {
+...
+}
+
+void foo() [[hc]] {
+  bar();
+}
+```
+
+## tiled_extent and tiled_index
+
+## Support for memory pointer
+
+## Dynamic group memory allocation
+
+
