@@ -313,8 +313,8 @@ SET(KALMAR_VERSION_MAJOR "0")
 SET(KALMAR_VERSION_MINOR "8")
 
 # get date information
-# use the last two digits of year + week number as KALMAR_VERSION_PATCH
-execute_process(COMMAND date +%y%W
+# use the last two digits of year + week number + day in the week as KALMAR_VERSION_PATCH
+execute_process(COMMAND date +%y%W%w
                 WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
                 OUTPUT_VARIABLE KALMAR_VERSION_PATCH
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
