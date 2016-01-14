@@ -6340,7 +6340,7 @@ static inline unsigned int atomic_fetch_min(unsigned int *x, unsigned int y) __H
 static inline int atomic_fetch_min(int *x, int y) __HC__ {
   return atomic_min_int(x, y);
 }
-static uint64_t atomic_fetch_min(uint64_t *x, uint64_t y) __HC__ {
+static inline uint64_t atomic_fetch_min(uint64_t *x, uint64_t y) __HC__ {
   return atomic_min_uint64(x, y);
 }
 #elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
