@@ -26,14 +26,6 @@ if [ -n "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
   LLVM_AS=$INSTALL/llvm-as
   LLVM_DIS=$INSTALL/llvm-dis
   LIBPATH=$HCC_HOME/lib
-elif [ -e @CMAKE_INSTALL_PREFIX@/bin/llvm-as ]; then
-  INSTALL=@CMAKE_INSTALL_PREFIX@/bin
-  CLANG=$INSTALL/clang
-  CLAMP_CONFIG=$INSTALL/clamp-config
-  OPT=$INSTALL/opt
-  LLVM_AS=$INSTALL/llvm-as
-  LLVM_DIS=$INSTALL/llvm-dis
-  LIBPATH=@CMAKE_INSTALL_PREFIX@/lib
 elif [ -d @LLVM_TOOLS_DIR@ ]; then
   BINPATH=@LLVM_ROOT@/bin
   CLANG=$BINPATH/clang
@@ -42,6 +34,14 @@ elif [ -d @LLVM_TOOLS_DIR@ ]; then
   LLVM_AS=$BINPATH/llvm-as
   LLVM_DIS=$BINPATH/llvm-dis
   LIBPATH=@LLVM_ROOT@/lib
+elif [ -e @CMAKE_INSTALL_PREFIX@/bin/llvm-as ]; then
+  INSTALL=@CMAKE_INSTALL_PREFIX@/bin
+  CLANG=$INSTALL/clang
+  CLAMP_CONFIG=$INSTALL/clamp-config
+  OPT=$INSTALL/opt
+  LLVM_AS=$INSTALL/llvm-as
+  LLVM_DIS=$INSTALL/llvm-dis
+  LIBPATH=@CMAKE_INSTALL_PREFIX@/lib
 else
     echo "ERROR: Can NOT locate HCC tools! Please specify with $HCC_HOME environmental variable." >&2
     exit 1
