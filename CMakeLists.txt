@@ -270,7 +270,7 @@ set(HSAILASM_SRC_DIR "${PROJECT_SOURCE_DIR}/HSAILasm")
 set(HSAILASM_BIN_DIR "${PROJECT_BINARY_DIR}/HSAILasm")
 file(MAKE_DIRECTORY ${HSAILASM_BIN_DIR})
 add_custom_target(HSAILasm
-  COMMAND ${CMAKE_COMMAND} ${HSAILASM_SRC_DIR}/libHSAIL
+  COMMAND ${CMAKE_COMMAND} ${HSAILASM_SRC_DIR}
   COMMAND make -j4 # not portable, but we need it this way
   WORKING_DIRECTORY ${HSAILASM_BIN_DIR}
 )
@@ -312,9 +312,9 @@ endif (HAS_HSA)
 SET(KALMAR_VERSION_MAJOR "0")
 SET(KALMAR_VERSION_MINOR "8")
 
-# get date information
-# use the last two digits of year + week number as KALMAR_VERSION_PATCH
-execute_process(COMMAND date +%y%W
+# get date information based on UTC
+# use the last two digits of year + week number + day in the week as KALMAR_VERSION_PATCH
+execute_process(COMMAND date --utc +%y%W%w
                 WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
                 OUTPUT_VARIABLE KALMAR_VERSION_PATCH
                 OUTPUT_STRIP_TRAILING_WHITESPACE)

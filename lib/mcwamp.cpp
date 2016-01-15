@@ -446,3 +446,11 @@ public:
 static KalmarBootstrap boot;
 
 } // namespace Kalmar
+
+extern "C" void __attribute__((constructor)) __hcc_shared_library_init() {
+  // this would initialize kernels when the shared library get loaded
+  static Kalmar::KalmarBootstrap boot;
+}
+
+extern "C" void __attribute__((destructor)) __hcc_shared_library_fini() {
+}
