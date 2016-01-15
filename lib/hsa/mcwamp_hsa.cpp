@@ -1179,19 +1179,10 @@ public:
             checksum << static_cast<unsigned int>(md5_hash[i]);
         }
 
-#if KALMAR_DEBUG
-        std::cerr << "MD5#: " << checksum.str() << "\n";
-        std::cerr << "Length: " << size << "\n";
-#endif
-
         return checksum.str();
     }
 
     void BuildProgram(void* size, void* source, bool needsCompilation = true) override {
-#if KALMAR_DEBUG
-        std::cerr << "BuildProgram(" << source << ", " << (size_t)size << ")\n";
-#endif
-
         if (executables.find(MD5Sum((size_t)size, source)) == executables.end()) {
             bool use_amdgpu = false;
 #ifdef HSA_USE_AMDGPU_BACKEND
@@ -1203,9 +1194,6 @@ public:
             memcpy(kernel_source, source, kernel_size);
             kernel_source[kernel_size] = '\0';
             if (needsCompilation && !use_amdgpu) {
-#if KALMAR_DEBUG
-              std::cerr << "Call BuildProgramImpl(" << (const void*)kernel_source << ", " << kernel_size << ")\n";
-#endif
               BuildProgramImpl(kernel_source, kernel_size);
             } else {
               BuildOfflineFinalizedProgramImpl(kernel_source, kernel_size);
@@ -1577,7 +1565,7 @@ public:
             memcpySymbol(symbol_ptr, hostptr, count, offset, kind);
         } else {
 #if KALMAR_DEBUG
-            std::cout << "HSA executable NOT built yet!\n";
+            std::cerr << "HSA executable NOT built yet!\n";
 #endif
         }
     }
@@ -1711,18 +1699,12 @@ private:
     }
 
     HSAKernel* CreateKernelImpl(const char *hsailBuffer, int hsailSize, const char *entryName) {
-#if KALMAR_DEBUG
-        std::cerr << "CreateKernelImpl(" << (void*)hsailBuffer << ", " << hsailSize << ") in\n";
-#endif
         hsa_status_t status;
   
         std::string index = MD5Sum((size_t)hsailSize, (void*)hsailBuffer);
 
         // finalize HSA program if we haven't done so
         if (executables.find(index) == executables.end()) {
-#if KALMAR_DEBUG
-            std::cerr << "Call BuildProgramImpl(" << (const void*)hsailBuffer << ", " << hsailSize << ")\n";
-#endif
             BuildProgramImpl(hsailBuffer, hsailSize);
         }
   
@@ -1733,19 +1715,12 @@ private:
         hsa_executable_symbol_t kernelSymbol;
         status = hsa_executable_get_symbol(executable->hsaExecutable, NULL, entryName, agent, 0, &kernelSymbol);
         STATUS_CHECK(status, __LINE__);
-
-#if KALMAR_DEBUG
-        std::cerr << "get kernel symbol complete\n";
-#endif
   
         // Get code handle.
         uint64_t kernelCodeHandle;
         status = hsa_executable_symbol_get_info(kernelSymbol, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT, &kernelCodeHandle);
         STATUS_CHECK(status, __LINE__);
   
-#if KALMAR_DEBUG
-        std::cerr << "CreateKernelImpl() out, create new HSAKernel instance\n";
-#endif
         return new HSAKernel(executable, kernelSymbol, kernelCodeHandle);
     }
 
