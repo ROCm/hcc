@@ -1505,22 +1505,25 @@ public:
             std::string symbolString("&");
             symbolString += symbolName;
 
-            // FIXME: iterate through all HSA executables
-#if 0
-            // get symbol
-            hsa_executable_symbol_t symbol;
-            status = hsa_executable_get_symbol(executable->hsaExecutable, NULL, symbolString.c_str(), agent, 0, &symbol);
-            STATUS_CHECK(status, __LINE__);
+            // iterate through all HSA executables
+            for (auto executable_iterator : executables) {
+                HSAExecutable *executable = executable_iterator.second;
+
+                // get symbol
+                hsa_executable_symbol_t symbol;
+                status = hsa_executable_get_symbol(executable->hsaExecutable, NULL, symbolString.c_str(), agent, 0, &symbol);
+                if (status == HSA_STATUS_SUCCESS) {
+                    // get address of symbol
+                    uint64_t symbol_address;
+                    status = hsa_executable_symbol_get_info(symbol,
+                                                            HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ADDRESS,
+                                                            &symbol_address);
+                    STATUS_CHECK(status, __LINE__);
         
-            // get address of symbol
-            uint64_t symbol_address;
-            status = hsa_executable_symbol_get_info(symbol,
-                                                    HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ADDRESS,
-                                                    &symbol_address);
-            STATUS_CHECK(status, __LINE__);
-        
-            symbol_ptr = (unsigned long*)symbol_address;
-#endif
+                    symbol_ptr = (unsigned long*)symbol_address;
+                    break;
+                }
+            }
         } else {
 #if KALMAR_DEBUG
             std::cerr << "HSA executable NOT built yet!\n";
@@ -1535,9 +1538,6 @@ public:
         hsa_status_t status;
 
         if (executables.size() != 0) {
-
-            // FIXME: iterate through all HSA executables
-#if 0
             // copy data
             if (kind == hcMemcpyHostToDevice) {
                 // host -> device
@@ -1548,7 +1548,6 @@ public:
                 status = hsa_memory_copy(hostptr, (char*)symbolAddr + offset, count);
                 STATUS_CHECK(status, __LINE__);
             }
-#endif
         } else {
 #if KALMAR_DEBUG
             std::cerr << "HSA executable NOT built yet!\n";
