@@ -130,7 +130,7 @@ parallel_for_each(...,[=] () [[hc]] {
 });
 ```
 
-The [[hc]] annotation for the kernel function called by ```parallel_for_each``` is optional as it is automatically annotated as a device function by the hcc compiler.  The compiler also supports partial automatic [[hc]] annotation for functions that are called by other device functions within the same source file:
+The \[\[hc\]\] annotation for the kernel function called by ```parallel_for_each``` is optional as it is automatically annotated as a device function by the hcc compiler.  The compiler also supports partial automatic \[\[hc\]\] annotation for functions that are called by other device functions within the same source file:
 
 ```
 // Since bar is called by foo, which is a device function, the hcc compiler
@@ -144,7 +144,37 @@ void foo() [[hc]] {
 }
 ```
 
-## tiled_extent and tiled_index
+## Dynamic tile size
+
+C++ AMP doesn't support dynamic tile size.  The size of each tile dimensions has to be a compile-time constant specified as template arguments to the tile_extent object:
+
+```
+extent<2> ex(x, y);
+
+// create a tile extent of 8x8 from the extent object
+// note that the tile dimensions have to be constant values
+tiled_extent<8,8> t_ex(ex);
+
+parallel_for_each(t_ex, [=](tiled_index<8,8> t_id) restrict(amp) {
+...
+}
+```
+HC supports both static and dynamic tile size:
+```
+extent<2> ex(x,y)
+
+// create a tile extent from dynamically calculated values
+// note that the the tiled_extent template takes the rank instead of dimensions
+tx = test_x ? tx_a : tx_b;
+ty = test_y ? ty_a : ty_b;
+tiled_extent<2> t_ex(ex, tx, ty);
+
+parallel_for_each(t_ex, [=](tiled_index<2> t_id) [[hc]] {
+...
+}
+
+```
+
 
 ## Support for memory pointer
 
