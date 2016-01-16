@@ -157,7 +157,7 @@ tiled_extent<8,8> t_ex(ex);
 
 parallel_for_each(t_ex, [=](tiled_index<8,8> t_id) restrict(amp) {
 ...
-}
+});
 ```
 HC supports both static and dynamic tile size:
 ```
@@ -171,13 +171,34 @@ tiled_extent<2> t_ex(ex, tx, ty);
 
 parallel_for_each(t_ex, [=](tiled_index<2> t_id) [[hc]] {
 ...
-}
+});
 
 ```
 
-
 ## Support for memory pointer
 
-## Dynamic group memory allocation
+C++ AMP doens't support lambda capture of memory pointer into a GPU kernel.
+
+HC supports capturing memory pointer by a GPU kernel.
+
+```
+// allocate GPU memory through the HSA API
+int* gpu_pointer;
+hsa_memory_allocate(..., &gpu_pointer);
+...
+parallel_for_each(ext, [=](index i) [[hc]] {
+  gpu_pointer[i[0]]++;
+}
+
+```
+For HSA APUs that supports system wide shared virtual memory, a GPU kernel can directly access system memory allocated by the host:
+```
+int* cpu_memory = (int*) malloc(...);
+...
+parallel_for_each(ext, [=](index i) {
+  cpu_memory[i[0]]++;
+});
+```
+
 
 
