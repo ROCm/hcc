@@ -17,6 +17,7 @@
 #include <iostream>
 #include <map>
 #include <mutex>
+#include <sstream>
 #include <string>
 #include <thread>
 #include <utility>
@@ -26,6 +27,7 @@
 #include <hsa_ext_finalize.h>
 #include <hsa_ext_amd.h>
 
+#include <md5.h>
 #include <kalmar_runtime.h>
 #include <kalmar_aligned_alloc.h>
 
@@ -857,7 +859,8 @@ private:
 
     uint32_t workgroup_max_size;
     uint16_t workgroup_max_dim[3];
-    HSAExecutable* executable;
+
+    std::map<std::string, HSAExecutable*> executables;
 
     hsa_isa_t agentISA;
 
@@ -986,7 +989,7 @@ public:
                                ri(),
                                useCoarseGrainedRegion(false),
                                kernargPool(), kernargPoolFlag(), kernargCursor(0), kernargPoolMutex(),
-                               executable(nullptr) {
+                               executables() {
 #if KALMAR_DEBUG
         std::cerr << "HSADevice::HSADevice()\n";
 #endif
@@ -1093,9 +1096,10 @@ public:
         programs.clear();
 
         // release executable
-        if (executable != nullptr) {
-            delete executable;
+        for (auto executable_iterator : executables) {
+            delete executable_iterator.second;
         }
+        executables.clear();
 
 #if KALMAR_DEBUG
         std::cerr << "HSADevice::~HSADevice() out\n";
@@ -1160,8 +1164,26 @@ public:
         }
     }
 
+    // calculate MD5 checksum
+    std::string MD5Sum(size_t size, void* source) {
+        unsigned char md5_hash[16];
+        memset(md5_hash, 0, sizeof(unsigned char) * 16);
+        MD5_CTX md5ctx;
+        MD5_Init(&md5ctx);
+        MD5_Update(&md5ctx, source, size);
+        MD5_Final(md5_hash, &md5ctx);
+
+        std::stringstream checksum;
+        checksum << std::setbase(16);
+        for (int i = 0; i < 16; ++i) {
+            checksum << static_cast<unsigned int>(md5_hash[i]);
+        }
+
+        return checksum.str();
+    }
+
     void BuildProgram(void* size, void* source, bool needsCompilation = true) override {
-        if (!executable) {
+        if (executables.find(MD5Sum((size_t)size, source)) == executables.end()) {
             bool use_amdgpu = false;
 #ifdef HSA_USE_AMDGPU_BACKEND
             const char *km_use_amdgpu = getenv("KM_USE_AMDGPU");
@@ -1478,24 +1500,30 @@ public:
         hsa_status_t status;
 
         unsigned long* symbol_ptr = nullptr;
-        if (executable != nullptr) {
+        if (executables.size() != 0) {
             // fix symbol name to match HSA rule
             std::string symbolString("&");
             symbolString += symbolName;
 
-            // get symbol
-            hsa_executable_symbol_t symbol;
-            status = hsa_executable_get_symbol(executable->hsaExecutable, NULL, symbolString.c_str(), agent, 0, &symbol);
-            STATUS_CHECK(status, __LINE__);
+            // iterate through all HSA executables
+            for (auto executable_iterator : executables) {
+                HSAExecutable *executable = executable_iterator.second;
+
+                // get symbol
+                hsa_executable_symbol_t symbol;
+                status = hsa_executable_get_symbol(executable->hsaExecutable, NULL, symbolString.c_str(), agent, 0, &symbol);
+                if (status == HSA_STATUS_SUCCESS) {
+                    // get address of symbol
+                    uint64_t symbol_address;
+                    status = hsa_executable_symbol_get_info(symbol,
+                                                            HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ADDRESS,
+                                                            &symbol_address);
+                    STATUS_CHECK(status, __LINE__);
         
-            // get address of symbol
-            uint64_t symbol_address;
-            status = hsa_executable_symbol_get_info(symbol,
-                                                    HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ADDRESS,
-                                                    &symbol_address);
-            STATUS_CHECK(status, __LINE__);
-        
-            symbol_ptr = (unsigned long*)symbol_address;
+                    symbol_ptr = (unsigned long*)symbol_address;
+                    break;
+                }
+            }
         } else {
 #if KALMAR_DEBUG
             std::cerr << "HSA executable NOT built yet!\n";
@@ -1509,7 +1537,7 @@ public:
     void memcpySymbol(void* symbolAddr, void* hostptr, size_t count, size_t offset = 0, enum hcMemcpyKind kind = hcMemcpyHostToDevice) override {
         hsa_status_t status;
 
-        if (executable != nullptr) {
+        if (executables.size() != 0) {
             // copy data
             if (kind == hcMemcpyHostToDevice) {
                 // host -> device
@@ -1531,12 +1559,12 @@ public:
     void memcpySymbol(const char* symbolName, void* hostptr, size_t count, size_t offset = 0, enum hcMemcpyKind kind = hcMemcpyHostToDevice) override {
         hsa_status_t status;
     
-        if (executable != nullptr) {
+        if (executables.size() != 0) {
             unsigned long* symbol_ptr = (unsigned long*)getSymbolAddress(symbolName);
             memcpySymbol(symbol_ptr, hostptr, count, offset, kind);
         } else {
 #if KALMAR_DEBUG
-            std::cout << "HSA executable NOT built yet!\n";
+            std::cerr << "HSA executable NOT built yet!\n";
 #endif
         }
     }
@@ -1548,8 +1576,10 @@ private:
     void BuildOfflineFinalizedProgramImpl(void* kernelBuffer, int kernelSize) {
         hsa_status_t status;
 
+        std::string index = MD5Sum((size_t)kernelSize, kernelBuffer);
+
         // load HSA program if we haven't done so
-        if (this->executable == nullptr) {
+        if (executables.find(index) == executables.end()) {
             // Deserialize code object.
             hsa_code_object_t code_object = {0};
             status = hsa_code_object_deserialize(kernelBuffer, kernelSize, NULL, &code_object);
@@ -1571,17 +1601,22 @@ private:
             STATUS_CHECK(status, __LINE__);
 
             // save everything as an HSAExecutable instance
-            executable = new HSAExecutable(hsaExecutable, code_object);
+            executables[index] = new HSAExecutable(hsaExecutable, code_object);
         }
     }
 
     HSAKernel* CreateOfflineFinalizedKernelImpl(void *kernelBuffer, int kernelSize, const char *entryName) {
         hsa_status_t status;
 
+        std::string index = MD5Sum((size_t)kernelSize, kernelBuffer);
+
         // load HSA program if we haven't done so
-        if (this->executable == nullptr) {
+        if (executables.find(index) == executables.end()) {
             BuildOfflineFinalizedProgramImpl(kernelBuffer, kernelSize);
         }
+
+        // fetch HSAExecutable*
+        HSAExecutable* executable = executables[index];
 
         // Get symbol handle.
         hsa_executable_symbol_t kernelSymbol;
@@ -1599,8 +1634,10 @@ private:
     void BuildProgramImpl(const char* hsailBuffer, int hsailSize) {
         hsa_status_t status;
 
+        std::string index = MD5Sum((size_t)hsailSize, (void*)hsailBuffer);
+
         // finalize HSA program if we haven't done so
-        if (this->executable == nullptr) {
+        if (executables.find(index) == executables.end()) {
             /*
              * Load BRIG, encapsulated in an ELF container, into a BRIG module.
              */
@@ -1656,18 +1693,23 @@ private:
             STATUS_CHECK(status, __LINE__);
 
             // save everything as an HSAExecutable instance
-            executable = new HSAExecutable(hsaExecutable, hsaCodeObject);
+            executables[index] = new HSAExecutable(hsaExecutable, hsaCodeObject);
         }
     }
 
     HSAKernel* CreateKernelImpl(const char *hsailBuffer, int hsailSize, const char *entryName) {
         hsa_status_t status;
   
+        std::string index = MD5Sum((size_t)hsailSize, (void*)hsailBuffer);
+
         // finalize HSA program if we haven't done so
-        if (this->executable == nullptr) {
+        if (executables.find(index) == executables.end()) {
             BuildProgramImpl(hsailBuffer, hsailSize);
         }
   
+        // fetch HSAExecutable*
+        HSAExecutable* executable = executables[index];
+
         // Get symbol handle.
         hsa_executable_symbol_t kernelSymbol;
         status = hsa_executable_get_symbol(executable->hsaExecutable, NULL, entryName, agent, 0, &kernelSymbol);
