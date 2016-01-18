@@ -852,12 +852,20 @@ void updateBitCastInstWithNewOperand(BitCastInst * BI, Value *oldOperand, Value 
         PointerType * currentPtrType = dyn_cast<PointerType>(currentType);
         if (!currentPtrType) return;
 
+        // make sure pointers inside the casted type are also promoted
+        // this fixes an issue when a class has a vtbl gets captured in the kernel,
+        // the size of vtbl would not be correctly calculated
+        Type *elementType = currentPtrType->getElementType();
+        if (StructType *ST = dyn_cast<StructType>(elementType)) {
+          elementType = mapTypeToGlobal(ST);
+        }
+
         Type * sourceType = newOperand->getType();
         PointerType * sourcePtrType = dyn_cast<PointerType>(sourceType);
         if (!sourcePtrType) return;
 
         PointerType * newDestType =
-                PointerType::get(currentPtrType->getElementType(),
+                PointerType::get(elementType,
                                  sourcePtrType->getAddressSpace());
 
         BitCastInst * newBCI = new BitCastInst (newOperand, newDestType,
