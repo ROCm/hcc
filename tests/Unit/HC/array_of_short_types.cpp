@@ -5,7 +5,7 @@
 #include <hc.hpp>
 
 #define NUM_ARRAY 512
-#define ARRAY_SIZE (1 * 1048576)
+#define ARRAY_SIZE (1 * 1024)
 
 // test whether array of char or short could be created in hc mode
 template<typename T>
