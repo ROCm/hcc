@@ -5569,10 +5569,10 @@ unsigned int atomic_sub_unsigned(unsigned int *p, unsigned int val);
 int atomic_sub_int(int *p, int val);
 float atomic_sub_float(float *p, float val);
 
-static inline unsigned int atomic_fetch_sub(unsigned int *x, unsigned int y) restict(amp,cpu) {
+static inline unsigned int atomic_fetch_sub(unsigned int *x, unsigned int y) restrict(amp,cpu) {
   return atomic_sub_unsigned(x, y);
 }
-static inline int atomic_fetch_sub(int *x, int y) restrict(amp,hpcu) {
+static inline int atomic_fetch_sub(int *x, int y) restrict(amp,cpu) {
   return atomic_sub_int(x, y);
 }
 static inline float atomic_fetch_sub(float *x, float y) restrict(amp,cpu) {
