@@ -186,8 +186,13 @@ public:
     /**
      * Performs a blocking wait for completion of all commands submitted to the
      * accelerator view prior to calling wait().
+     *
+     * @param waitMode[in] An optional parameter to specify the wait mode. By
+     *                     default it would be hcWaitModeBlocked.
+     *                     hcWaitModeActive would be used to reduce latency with
+     *                     the expense of using one CPU core for active waiting.
      */
-    void wait() { pQueue->wait(); }
+    void wait(hcWaitMode waitMode = hcWaitModeBlocked) { pQueue->wait(waitMode); }
 
     /**
      * Sends the queued up commands in the accelerator_view to the device for
@@ -860,10 +865,19 @@ public:
      *
      * The other variants are functionally identical to the
      * std::shared_future<void> member methods with same names.
+     *
+     * @param waitMode[in] An optional parameter to specify the wait mode. By
+     *                     default it would be hcWaitModeBlocked.
+     *                     hcWaitModeActive would be used to reduce latency with
+     *                     the expense of using one CPU core for active waiting.
      */
-    void wait() const {
-        if(this->valid())
-          __amp_future.wait();
+    void wait(hcWaitMode mode = hcWaitModeBlocked) const {
+        if (this->valid()) {
+            if (__asyncOp != nullptr) {
+                __asyncOp->setWaitMode(mode);
+            }   
+            __amp_future.wait();
+        }
     }
 
     template <class _Rep, class _Period>
