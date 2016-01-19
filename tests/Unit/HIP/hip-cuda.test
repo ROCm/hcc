@@ -1,9 +1,0 @@
-// XFAIL:
-// RUN: ln -sf %S/rect_tiles.cpp %t.cu
-// RUN: %hip-cuda %t.cu
-
-// RUN: ln -sf %S/static_shared_memory.cpp %t.cu
-// RUN: %hip-cuda %t.cu
-
-// RUN: ln -sf %S/hip_stream.cpp %t.cu
-// RUN: %hip-cuda %t.cu
