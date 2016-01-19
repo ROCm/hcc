@@ -35,6 +35,11 @@ enum hcMemcpyKind {
     hcMemcpyDeviceToHost = 1
 };
 
+enum hcWaitMode {
+    hcWaitModeBlocked = 0,
+    hcWaitModeActive = 1
+};
+
 } // namespace enums
 } // namespace Kalmar
 
@@ -84,6 +89,13 @@ public:
    * @return True if the async operation has been completed, false if not.
    */
   virtual bool isReady() { return false; }
+
+  /**
+   * Set the wait mode of the async operation.
+   *
+   * @param mode[in] wait mode, must be one of the value in hcWaitMode enum.
+   */
+  virtual void setWaitMode(hcWaitMode mode) {}
 };
 
 /// KalmarQueue
@@ -99,7 +111,7 @@ public:
   virtual ~KalmarQueue() {}
 
   virtual void flush() {}
-  virtual void wait() {}
+  virtual void wait(hcWaitMode mode = hcWaitModeBlocked) {}
 
   // sync kernel launch with dynamic group memory
   virtual void LaunchKernelWithDynamicGroupMemory(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size, size_t dynamic_group_size) {}
