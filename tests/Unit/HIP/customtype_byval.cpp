@@ -46,8 +46,8 @@ int main(void) {
   grid_launch_parm lp;
   grid_launch_init(&lp);
 
-  lp.gridDim = uint3(GRID_SIZE, 1);
-  lp.groupDim = uint3(TILE_SIZE, 1);
+  lp.gridDim = gl_dim3(GRID_SIZE, 1);
+  lp.groupDim = gl_dim3(TILE_SIZE, 1);
 
   hc::completion_future cf;
   lp.cf = &cf;

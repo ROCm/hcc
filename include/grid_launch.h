@@ -4,18 +4,18 @@
 
 #include <hc.hpp>
 
-typedef struct uint3
+typedef struct gl_dim3
 {
   int x,y,z;
-  uint3(uint32_t _x=1, uint32_t _y=1, uint32_t _z=1) : x(_x), y(_y), z(_z) {};
-} uint3;
+  gl_dim3(uint32_t _x=1, uint32_t _y=1, uint32_t _z=1) : x(_x), y(_y), z(_z) {};
+} gl_dim3;
 
 typedef struct grid_launch_parm
 {
-  uint3      gridDim;
-  uint3      groupDim;
-  uint3      groupId;
-  uint3      threadId;
+  gl_dim3      gridDim;
+  gl_dim3      groupDim;
+  gl_dim3      groupId;
+  gl_dim3      threadId;
   unsigned int  groupMemBytes;
   // use acc_view for PFE in WrapperGen
   hc::accelerator_view  *av;

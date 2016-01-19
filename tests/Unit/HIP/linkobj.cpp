@@ -18,7 +18,7 @@ int main()
   grid_launch_parm lp;
   grid_launch_init(&lp);
 
-  lp.groupDim = uint3(size);
+  lp.groupDim = gl_dim3(size);
 
   hc::completion_future cf;
   lp.cf = &cf;
