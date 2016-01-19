@@ -303,27 +303,39 @@ class unorm_4;
 
 #if !__HCC_AMP__
 // additional short vector types not specified in C++AMP
+class int_1;
+class uint_1;
+class float_1;
+class double_1;
+class char_1;
 class char_2;
 class char_3;
 class char_4;
+class uchar_1;
 class uchar_2;
 class uchar_3;
 class uchar_4;
+class short_1;
 class short_2;
 class short_3;
 class short_4;
+class ushort_1;
 class ushort_2;
 class ushort_3;
 class ushort_4;
+class long_1;
 class long_2;
 class long_3;
 class long_4;
+class ulong_1;
 class ulong_2;
 class ulong_3;
 class ulong_4;
+class longlong_1;
 class longlong_2;
 class longlong_3;
 class longlong_4;
+class ulonglong_1;
 class ulonglong_2;
 class ulonglong_3;
 class ulonglong_4;
@@ -350,27 +362,39 @@ typedef unorm_4 unorm4;
 
 #if !__HCC_AMP__
 // additional short vector types not specified in C++AMP
+typedef int_1 int1;
+typedef uint_1 uint1;
+typedef float_1 float1;
+typedef double_1 double1;
+typedef char_1 char1;
 typedef char_2 char2;
 typedef char_3 char3;
 typedef char_4 char4;
+typedef uchar_1 uchar1;
 typedef uchar_2 uchar2;
 typedef uchar_3 uchar3;
 typedef uchar_4 uchar4;
+typedef short_1 short1;
 typedef short_2 short2;
 typedef short_3 short3;
 typedef short_4 short4;
+typedef ushort_1 ushort1;
 typedef ushort_2 ushort2;
 typedef ushort_3 ushort3;
 typedef ushort_4 ushort4;
+typedef long_1 long1;
 typedef long_2 long2;
 typedef long_3 long3;
 typedef long_4 long4;
+typedef ulong_1 ulong1;
 typedef ulong_2 ulong2;
 typedef ulong_3 ulong3;
 typedef ulong_4 ulong4;
+typedef longlong_1 longlong1;
 typedef longlong_2 longlong2;
 typedef longlong_3 longlong3;
 typedef longlong_4 longlong4;
+typedef ulonglong_1 ulonglong1;
 typedef ulonglong_2 ulonglong2;
 typedef ulonglong_3 ulonglong3;
 typedef ulonglong_4 ulonglong4;
@@ -791,6 +815,381 @@ void set_ ## Dim4 ## Dim3 ## Dim2 ## Dim1(ST_4 v) __CPU_GPU__ \
   Dim1 = v.get_w(); \
 }
 
+#define SCALARTYPE_1_REFERENCE_SINGLE_COMPONENT_ACCESS(ST) \
+ST& ref_x() __CPU_GPU__ { return x; } \
+\
+ST& ref_r() __CPU_GPU__ { return x; }
+
+#define SCALARTYPE_1_COMMON_PUBLIC_MEMBER(ST, ST_1) \
+ST x; \
+typedef ST value_type; \
+static const int size = 1; \
+\
+ST_1() __CPU_GPU__ {} \
+\
+ST_1(ST value) __CPU_GPU__ \
+{ \
+  x = value; \
+} \
+\
+ST_1(const ST_1&  other) __CPU_GPU__ \
+{ \
+  x = other.x; \
+} \
+\
+ST_1& operator=(const ST_1& other) __CPU_GPU__ \
+{ \
+  x = other.x; \
+  return *this; \
+} \
+\
+ST_1& operator++() __CPU_GPU__ \
+{ \
+  ++x; \
+  return *this; \
+} \
+\
+ST_1 operator++(int) __CPU_GPU__ \
+{ \
+  ST_1 Ret(*this); \
+  operator++(); \
+  return Ret; \
+} \
+\
+ST_1& operator--() __CPU_GPU__ \
+{ \
+  --x; \
+  return *this; \
+} \
+\
+ST_1 operator--(int) __CPU_GPU__ \
+{ \
+  ST_1 Ret(*this); \
+  operator--(); \
+  return Ret; \
+} \
+\
+ST_1& operator+=(const ST_1& rhs) __CPU_GPU__ \
+{ \
+  x += rhs.x; \
+  return *this; \
+} \
+\
+ST_1& operator-=(const ST_1& rhs) __CPU_GPU__ \
+{ \
+  x -= rhs.x; \
+  return *this; \
+} \
+\
+ST_1& operator*=(const ST_1& rhs) __CPU_GPU__ \
+{ \
+  x *= rhs.x; \
+  return *this; \
+} \
+\
+ST_1& operator/=(const ST_1& rhs) __CPU_GPU__ \
+{ \
+  x /= rhs.x; \
+  return *this; \
+}
+
+#if !__HCC_AMP__
+
+#define SCALARTYPE_1_CONVERSION_CTOR(ST_1, \
+ST_1_o1, ST_1_o2, ST_1_o3, ST_1_o4, ST_1_o5, \
+ST_1_o6, ST_1_o7, ST_1_o8, ST_1_o9, ST_1_o10, ST_1_o11) \
+\
+explicit ST_1(const ST_1_o1& other) __CPU_GPU__; \
+\
+explicit ST_1(const ST_1_o2& other) __CPU_GPU__; \
+\
+explicit ST_1(const ST_1_o3& other) __CPU_GPU__; \
+\
+explicit ST_1(const ST_1_o4& other) __CPU_GPU__; \
+\
+explicit ST_1(const ST_1_o5& other) __CPU_GPU__; \
+\
+explicit ST_1(const ST_1_o6& other) __CPU_GPU__; \
+\
+explicit ST_1(const ST_1_o7& other) __CPU_GPU__; \
+\
+explicit ST_1(const ST_1_o8& other) __CPU_GPU__; \
+\
+explicit ST_1(const ST_1_o9& other) __CPU_GPU__; \
+\
+explicit ST_1(const ST_1_o10& other) __CPU_GPU__; \
+\
+explicit ST_1(const ST_1_o11& other) __CPU_GPU__;
+
+#endif // if !__HCC_AMP__
+
+#if !__HCC_AMP__
+class int_1
+{
+public:
+  SCALARTYPE_1_COMMON_PUBLIC_MEMBER(int, int_1)
+
+  SCALARTYPE_1_CONVERSION_CTOR(int_1,
+    uint_1, float_1, double_1,
+    char_1, uchar_1, short_1, ushort_1, long_1, ulong_1, longlong_1, ulonglong_1)
+
+  int_1 operator-() const __CPU_GPU__ { return int_1(-x); }
+
+  int_1 operator~() const __CPU_GPU__ { return int_1(~x); }
+
+  int_1& operator%=(const int_1& rhs) __CPU_GPU__
+  {
+    x %= rhs.x;
+    return *this;
+  }
+
+  int_1& operator^=(const int_1& rhs) __CPU_GPU__
+  {
+    x ^= rhs.x;
+    return *this;
+  }
+
+  int_1& operator|=(const int_1& rhs) __CPU_GPU__
+  {
+    x |= rhs.x;
+    return *this;
+  }
+
+  int_1& operator&=(const int_1& rhs) __CPU_GPU__
+  {
+    x &= rhs.x;
+    return *this;
+  }
+
+  int_1& operator>>=(const int_1& rhs) __CPU_GPU__
+  {
+    x >>= rhs.x;
+    return *this;
+  }
+
+  int_1& operator<<=(const int_1& rhs) __CPU_GPU__
+  {
+    x <<= rhs.x;
+    return *this;
+  }
+  
+  SINGLE_COMPONENT_ACCESS(int, x)
+
+  SCALARTYPE_1_REFERENCE_SINGLE_COMPONENT_ACCESS(int)
+
+};
+
+class uint_1
+{
+public:
+  SCALARTYPE_1_COMMON_PUBLIC_MEMBER(unsigned int, uint_1)
+
+  SCALARTYPE_1_CONVERSION_CTOR(uint_1,
+    int_1, float_1, double_1,
+    char_1, uchar_1, short_1, ushort_1, long_1, ulong_1, longlong_1, ulonglong_1)
+
+  uint_1 operator~() const __CPU_GPU__ { return uint_1(~x); }
+
+  uint_1& operator%=(const uint_1& rhs) __CPU_GPU__
+  {
+    x %= rhs.x;
+    return *this;
+  }
+
+  uint_1& operator^=(const uint_1& rhs) __CPU_GPU__
+  {
+    x ^= rhs.x;
+    return *this;
+  }
+
+  uint_1& operator|=(const uint_1& rhs) __CPU_GPU__
+  {
+    x |= rhs.x;
+    return *this;
+  }
+
+  uint_1& operator&=(const uint_1& rhs) __CPU_GPU__
+  {
+    x &= rhs.x;
+    return *this;
+  }
+
+  uint_1& operator>>=(const uint_1& rhs) __CPU_GPU__
+  {
+    x >>= rhs.x;
+    return *this;
+  }
+
+  uint_1& operator<<=(const uint_1& rhs) __CPU_GPU__
+  {
+    x <<= rhs.x;
+    return *this;
+  }
+ 
+  SINGLE_COMPONENT_ACCESS(unsigned int, x)
+
+  SCALARTYPE_1_REFERENCE_SINGLE_COMPONENT_ACCESS(unsigned int)
+
+};
+
+class float_1
+{
+public:
+  SCALARTYPE_1_COMMON_PUBLIC_MEMBER(float, float_1)
+
+  SCALARTYPE_1_CONVERSION_CTOR(float_1,
+    int_1, uint_1, double_1,
+    char_1, uchar_1, short_1, ushort_1, long_1, ulong_1, longlong_1, ulonglong_1)
+
+  float_1 operator-() const __CPU_GPU__ { return float_1(-x); }
+
+  SINGLE_COMPONENT_ACCESS(float, x)
+
+  SCALARTYPE_1_REFERENCE_SINGLE_COMPONENT_ACCESS(float)
+
+};
+
+class double_1
+{
+public:
+  SCALARTYPE_1_COMMON_PUBLIC_MEMBER(double, double_1)
+
+  SCALARTYPE_1_CONVERSION_CTOR(double_1,
+    int_1, uint_1, float_1,
+    char_1, uchar_1, short_1, ushort_1, long_1, ulong_1, longlong_1, ulonglong_1)
+
+  double_1 operator-() const __CPU_GPU__ { return double_1(-x); }
+
+  SINGLE_COMPONENT_ACCESS(double, x)
+
+  SCALARTYPE_1_REFERENCE_SINGLE_COMPONENT_ACCESS(double)
+};
+
+class char_1
+{
+public:
+  SCALARTYPE_1_COMMON_PUBLIC_MEMBER(char, char_1)
+
+  SCALARTYPE_1_CONVERSION_CTOR(char_1,
+    int_1, uint_1, float_1,
+    double_1, uchar_1, short_1, ushort_1, long_1, ulong_1, longlong_1, ulonglong_1)
+
+  char_1 operator-() const __CPU_GPU__ { return char_1(-x); }
+
+  SINGLE_COMPONENT_ACCESS(char, x)
+
+  SCALARTYPE_1_REFERENCE_SINGLE_COMPONENT_ACCESS(char)
+};
+
+class uchar_1
+{
+public:
+  SCALARTYPE_1_COMMON_PUBLIC_MEMBER(unsigned char, uchar_1)
+
+  SCALARTYPE_1_CONVERSION_CTOR(uchar_1,
+    int_1, uint_1, float_1,
+    double_1, char_1, short_1, ushort_1, long_1, ulong_1, longlong_1, ulonglong_1)
+
+  SINGLE_COMPONENT_ACCESS(unsigned char, x)
+
+  SCALARTYPE_1_REFERENCE_SINGLE_COMPONENT_ACCESS(unsigned char)
+};
+
+class short_1
+{
+public:
+  SCALARTYPE_1_COMMON_PUBLIC_MEMBER(short, short_1)
+
+  SCALARTYPE_1_CONVERSION_CTOR(short_1,
+    int_1, uint_1, float_1,
+    double_1, char_1, uchar_1, ushort_1, long_1, ulong_1, longlong_1, ulonglong_1)
+
+  short_1 operator-() const __CPU_GPU__ { return short_1(-x); }
+
+  SINGLE_COMPONENT_ACCESS(short, x)
+
+  SCALARTYPE_1_REFERENCE_SINGLE_COMPONENT_ACCESS(short)
+};
+
+class ushort_1
+{
+public:
+  SCALARTYPE_1_COMMON_PUBLIC_MEMBER(unsigned short, ushort_1)
+
+  SCALARTYPE_1_CONVERSION_CTOR(ushort_1,
+    int_1, uint_1, float_1,
+    double_1, char_1, uchar_1, short_1, long_1, ulong_1, longlong_1, ulonglong_1)
+    
+  SINGLE_COMPONENT_ACCESS(unsigned short, x)
+
+  SCALARTYPE_1_REFERENCE_SINGLE_COMPONENT_ACCESS(unsigned short)
+};
+
+class long_1
+{
+public:
+  SCALARTYPE_1_COMMON_PUBLIC_MEMBER(long, long_1)
+
+  SCALARTYPE_1_CONVERSION_CTOR(long_1,
+    int_1, uint_1, float_1,
+    double_1, char_1, uchar_1, short_1, ushort_1, ulong_1, longlong_1, ulonglong_1)
+    
+  long_1 operator-() const __CPU_GPU__ { return long_1(-x); }
+
+  SINGLE_COMPONENT_ACCESS(long, x)
+
+  SCALARTYPE_1_REFERENCE_SINGLE_COMPONENT_ACCESS(long)
+};
+
+class ulong_1
+{
+public:
+  SCALARTYPE_1_COMMON_PUBLIC_MEMBER(unsigned long, ulong_1)
+
+  SCALARTYPE_1_CONVERSION_CTOR(ulong_1,
+    int_1, uint_1, float_1,
+    double_1, char_1, uchar_1, short_1, ushort_1, long_1, longlong_1, ulonglong_1)
+    
+  SINGLE_COMPONENT_ACCESS(unsigned long, x)
+
+  SCALARTYPE_1_REFERENCE_SINGLE_COMPONENT_ACCESS(unsigned long)
+};
+
+class longlong_1
+{
+public:
+  SCALARTYPE_1_COMMON_PUBLIC_MEMBER(long long int, longlong_1)
+
+  SCALARTYPE_1_CONVERSION_CTOR(longlong_1,
+    int_1, uint_1, float_1,
+    double_1, char_1, uchar_1, short_1, ushort_1, long_1, ulong_1, ulonglong_1)
+    
+  longlong_1 operator-() const __CPU_GPU__ { return longlong_1(-x); }
+
+  SINGLE_COMPONENT_ACCESS(long long int, x)
+
+  SCALARTYPE_1_REFERENCE_SINGLE_COMPONENT_ACCESS(long long int)
+};
+
+class ulonglong_1
+{
+public:
+  SCALARTYPE_1_COMMON_PUBLIC_MEMBER(unsigned long long int, ulonglong_1)
+
+  SCALARTYPE_1_CONVERSION_CTOR(ulonglong_1,
+    int_1, uint_1, float_1,
+    double_1, char_1, uchar_1, short_1, ushort_1, long_1, ulong_1, longlong_1)
+    
+  SINGLE_COMPONENT_ACCESS(unsigned long long int, x)
+
+  SCALARTYPE_1_REFERENCE_SINGLE_COMPONENT_ACCESS(unsigned long long int)
+};
+
+#endif // if !__HCC_AMP__
+
+#undef SCALARTYPE_1_REFERENCE_SINGLE_COMPONENT_ACCESS
+#undef SCALARTYPE_1_COMMON_PUBLIC_MEMBER
+
 #define SCALARTYPE_2_REFERENCE_SINGLE_COMPONENT_ACCESS(ST) \
 ST& ref_x() __CPU_GPU__ { return x; } \
 \
@@ -799,7 +1198,6 @@ ST& ref_y() __CPU_GPU__ { return y; } \
 ST& ref_r() __CPU_GPU__ { return x; } \
 \
 ST& ref_g() __CPU_GPU__ { return y; }
-
 
 #define SCALARTYPE_2_COMMON_PUBLIC_MEMBER(ST, ST_2) \
 ST x; \
@@ -937,7 +1335,7 @@ explicit ST_2(const ST_2_o4& other) __CPU_GPU__; \
 \
 explicit ST_2(const ST_2_o5& other) __CPU_GPU__;
 
-#endif
+#endif // if !__HCC_AMP__
 
 class int_2
 {
@@ -1484,7 +1882,7 @@ explicit ST_3(const ST_3_o4& other) __CPU_GPU__; \
 \
 explicit ST_3(const ST_3_o5& other) __CPU_GPU__;
 
-#endif
+#endif // if !__HCC_AMP__
 
 
 class int_3
@@ -2745,6 +3143,112 @@ public:
 
 #if !__HCC_AMP__
 
+#define SCALARTYPE_1_EXPLICIT_CONVERSION_CONSTRUCTORS(ST, ST_1, \
+ST_1_o1, ST_1_o2, ST_1_o3, ST_1_o4, ST_1_o5, \
+ST_1_o6, ST_1_o7, ST_1_o8, ST_1_o9, ST_1_o10, ST_1_o11) \
+inline ST_1::ST_1(const ST_1_o1& other) __CPU_GPU__ \
+{ \
+  x = static_cast<ST>(other.get_x()); \
+} \
+\
+inline ST_1::ST_1(const ST_1_o2& other) __CPU_GPU__ \
+{ \
+  x = static_cast<ST>(other.get_x()); \
+} \
+\
+inline ST_1::ST_1(const ST_1_o3& other) __CPU_GPU__ \
+{ \
+  x = static_cast<ST>(other.get_x()); \
+} \
+\
+inline ST_1::ST_1(const ST_1_o4& other) __CPU_GPU__ \
+{ \
+  x = static_cast<ST>(other.get_x()); \
+} \
+\
+inline ST_1::ST_1(const ST_1_o5& other) __CPU_GPU__ \
+{ \
+  x = static_cast<ST>(other.get_x()); \
+} \
+inline ST_1::ST_1(const ST_1_o6& other) __CPU_GPU__ \
+{ \
+  x = static_cast<ST>(other.get_x()); \
+} \
+inline ST_1::ST_1(const ST_1_o7& other) __CPU_GPU__ \
+{ \
+  x = static_cast<ST>(other.get_x()); \
+} \
+inline ST_1::ST_1(const ST_1_o8& other) __CPU_GPU__ \
+{ \
+  x = static_cast<ST>(other.get_x()); \
+} \
+inline ST_1::ST_1(const ST_1_o9& other) __CPU_GPU__ \
+{ \
+  x = static_cast<ST>(other.get_x()); \
+} \
+inline ST_1::ST_1(const ST_1_o10& other) __CPU_GPU__ \
+{ \
+  x = static_cast<ST>(other.get_x()); \
+} \
+inline ST_1::ST_1(const ST_1_o11& other) __CPU_GPU__ \
+{ \
+  x = static_cast<ST>(other.get_x()); \
+}
+
+SCALARTYPE_1_EXPLICIT_CONVERSION_CONSTRUCTORS(int, int_1, 
+    uint_1, float_1, double_1,
+    char_1, uchar_1, short_1, ushort_1, long_1, ulong_1, longlong_1, ulonglong_1)
+
+SCALARTYPE_1_EXPLICIT_CONVERSION_CONSTRUCTORS(unsigned int, uint_1, 
+    int_1, float_1, double_1,
+    char_1, uchar_1, short_1, ushort_1, long_1, ulong_1, longlong_1, ulonglong_1)
+
+SCALARTYPE_1_EXPLICIT_CONVERSION_CONSTRUCTORS(float, float_1, 
+    int_1, uint_1, double_1,
+    char_1, uchar_1, short_1, ushort_1, long_1, ulong_1, longlong_1, ulonglong_1)
+
+SCALARTYPE_1_EXPLICIT_CONVERSION_CONSTRUCTORS(double, double_1, 
+    int_1, uint_1, float_1,
+    char_1, uchar_1, short_1, ushort_1, long_1, ulong_1, longlong_1, ulonglong_1)
+
+SCALARTYPE_1_EXPLICIT_CONVERSION_CONSTRUCTORS(char, char_1, 
+    int_1, uint_1, float_1,
+    double_1, uchar_1, short_1, ushort_1, long_1, ulong_1, longlong_1, ulonglong_1)
+
+SCALARTYPE_1_EXPLICIT_CONVERSION_CONSTRUCTORS(unsigned char, uchar_1, 
+    int_1, uint_1, float_1,
+     double_1, char_1, short_1, ushort_1, long_1, ulong_1, longlong_1, ulonglong_1)
+
+SCALARTYPE_1_EXPLICIT_CONVERSION_CONSTRUCTORS(short, short_1, 
+    int_1, uint_1, float_1,
+    double_1, char_1, uchar_1, ushort_1, long_1, ulong_1, longlong_1, ulonglong_1)
+
+SCALARTYPE_1_EXPLICIT_CONVERSION_CONSTRUCTORS(unsigned short, ushort_1, 
+    int_1, uint_1, float_1,
+    double_1, char_1, uchar_1, short_1, long_1, ulong_1, longlong_1, ulonglong_1)
+
+SCALARTYPE_1_EXPLICIT_CONVERSION_CONSTRUCTORS(long, long_1, 
+    int_1, uint_1, float_1,
+    double_1, char_1, uchar_1, short_1, ushort_1, ulong_1, longlong_1, ulonglong_1)
+
+SCALARTYPE_1_EXPLICIT_CONVERSION_CONSTRUCTORS(unsigned long, ulong_1, 
+    int_1, uint_1, float_1,
+    double_1, char_1, uchar_1, short_1, ushort_1, long_1, longlong_1, ulonglong_1)
+
+SCALARTYPE_1_EXPLICIT_CONVERSION_CONSTRUCTORS(long long int, longlong_1, 
+    int_1, uint_1, float_1,
+    double_1, char_1, uchar_1, short_1, ushort_1, long_1, ulong_1, ulonglong_1)
+
+SCALARTYPE_1_EXPLICIT_CONVERSION_CONSTRUCTORS(unsigned long long int, ulonglong_1, 
+    int_1, uint_1, float_1,
+    double_1, char_1, uchar_1, short_1, ushort_1, long_1, ulong_1, longlong_1)
+
+#undef SCALARTYPE_1_EXPLICIT_CONVERSION_CONSTRUCTORS
+
+#endif // if !__HCC_AMP__
+
+#if !__HCC_AMP__
+
 #define SCALARTYPE_2_EXPLICIT_CONVERSION_CONSTRUCTORS(ST, ST_2, \
 ST_2_o1, ST_2_o2, ST_2_o3, ST_2_o4, ST_2_o5, \
 ST_2_o6, ST_2_o7, ST_2_o8, ST_2_o9, ST_2_o10, ST_2_o11, ST_2_o12, ST_2_o13) \
@@ -3366,6 +3870,127 @@ SCALARTYPE_4_EXPLICIT_CONVERSION_CONSTRUCTORS(unorm, unorm_4,
 
 //   Operators between Two References (10.8.1 Synopsis)
 
+#if !__HCC_AMP__
+
+#define SCALARTYPE_1_OPERATOR(ST_1) \
+inline ST_1 operator+(const ST_1& lhs, const ST_1& rhs) __CPU_GPU__ \
+{ \
+  return ST_1(lhs.get_x() + rhs.get_x()); \
+} \
+\
+inline ST_1 operator-(const ST_1& lhs, const ST_1& rhs) __CPU_GPU__ \
+{ \
+  return ST_1(lhs.get_x() - rhs.get_x()); \
+} \
+\
+inline ST_1 operator*(const ST_1& lhs, const ST_1& rhs) __CPU_GPU__ \
+{ \
+  return ST_1(lhs.get_x() * rhs.get_x()); \
+} \
+\
+inline ST_1 operator/(const ST_1& lhs, const ST_1& rhs) __CPU_GPU__ \
+{ \
+  return ST_1(lhs.get_x() / rhs.get_x()); \
+} \
+\
+inline bool operator==(const ST_1& lhs, const ST_1& rhs) __CPU_GPU__ \
+{ \
+  return (lhs.get_x() == rhs.get_x()); \
+} \
+\
+inline bool operator!=(const ST_1& lhs, const ST_1& rhs) __CPU_GPU__ \
+{ \
+  return (lhs.get_x() != rhs.get_x()); \
+}
+
+SCALARTYPE_1_OPERATOR(int_1)
+
+SCALARTYPE_1_OPERATOR(uint_1)
+
+SCALARTYPE_1_OPERATOR(float_1)
+
+SCALARTYPE_1_OPERATOR(double_1)
+
+SCALARTYPE_1_OPERATOR(char_1)
+
+SCALARTYPE_1_OPERATOR(uchar_1)
+
+SCALARTYPE_1_OPERATOR(short_1)
+
+SCALARTYPE_1_OPERATOR(ushort_1)
+
+SCALARTYPE_1_OPERATOR(long_1)
+
+SCALARTYPE_1_OPERATOR(ulong_1)
+
+SCALARTYPE_1_OPERATOR(longlong_1)
+
+SCALARTYPE_1_OPERATOR(ulonglong_1)
+
+#undef SCALARTYPE_1_OPERATOR
+
+inline int_1 operator%(const int_1& lhs, const int_1& rhs) __CPU_GPU__
+{
+  return int_1(lhs.get_x() % rhs.get_x());
+}
+
+inline int_1 operator^(const int_1& lhs, const int_1& rhs) __CPU_GPU__
+{
+  return int_1(lhs.get_x() ^ rhs.get_x());
+}
+
+inline int_1 operator|(const int_1& lhs, const int_1& rhs) __CPU_GPU__
+{
+  return int_1(lhs.get_x() | rhs.get_x());
+}
+
+inline int_1 operator&(const int_1& lhs, const int_1& rhs) __CPU_GPU__
+{
+  return int_1(lhs.get_x() & rhs.get_x());
+}
+
+inline int_1 operator<<(const int_1& lhs, const int_1& rhs) __CPU_GPU__
+{
+  return int_1(lhs.get_x() << rhs.get_x());
+}
+
+inline int_1 operator>>(const int_1& lhs, const int_1& rhs) __CPU_GPU__
+{
+  return int_1(lhs.get_x() >> rhs.get_x());
+}
+
+inline uint_1 operator%(const uint_1& lhs, const uint_1& rhs) __CPU_GPU__
+{
+  return uint_1(lhs.get_x() % rhs.get_x());
+}
+
+inline uint_1 operator^(const uint_1& lhs, const uint_1& rhs) __CPU_GPU__
+{
+  return uint_1(lhs.get_x() ^ rhs.get_x());
+}
+
+inline uint_1 operator|(const uint_1& lhs, const uint_1& rhs) __CPU_GPU__
+{
+  return uint_1(lhs.get_x() | rhs.get_x());
+}
+
+inline uint_1 operator&(const uint_1& lhs, const uint_1& rhs) __CPU_GPU__
+{
+  return uint_1(lhs.get_x() & rhs.get_x());
+}
+
+inline uint_1 operator<<(const uint_1& lhs, const uint_1& rhs) __CPU_GPU__
+{
+  return uint_1(lhs.get_x() << rhs.get_x());
+}
+
+inline uint_1 operator>>(const uint_1& lhs, const uint_1& rhs) __CPU_GPU__
+{
+  return uint_1(lhs.get_x() >> rhs.get_x());
+}
+
+#endif // if !__HCC_AMP__
+
 #define SCALARTYPE_2_OPERATOR(ST_2) \
 inline ST_2 operator+(const ST_2& lhs, const ST_2& rhs) __CPU_GPU__ \
 { \
@@ -3794,7 +4419,11 @@ struct short_vector<ST, S> \
   typedef ST_S type; \
 };
 
+#if !__HCC_AMP__
+SHORT_VECTOR(unsigned int, 1, uint_1)
+#else
 SHORT_VECTOR(unsigned int, 1, unsigned int)
+#endif
 
 SHORT_VECTOR(unsigned int, 2, uint_2)
 
@@ -3802,7 +4431,11 @@ SHORT_VECTOR(unsigned int, 3, uint_3)
 
 SHORT_VECTOR(unsigned int, 4, uint_4)
 
+#if !__HCC_AMP__
+SHORT_VECTOR(int, 1, int_1)
+#else
 SHORT_VECTOR(int, 1, int)
+#endif
 
 SHORT_VECTOR(int, 2, int_2)
 
@@ -3810,7 +4443,11 @@ SHORT_VECTOR(int, 3, int_3)
 
 SHORT_VECTOR(int, 4, int_4)
 
+#if !__HCC_AMP__
+SHORT_VECTOR(float, 1, float_1)
+#else
 SHORT_VECTOR(float, 1, float)
+#endif
 
 SHORT_VECTOR(float, 2, float_2)
 
@@ -3834,7 +4471,11 @@ SHORT_VECTOR(norm, 3, norm_3)
 
 SHORT_VECTOR(norm, 4, norm_4)
 
+#if !__HCC_AMP__
+SHORT_VECTOR(double, 1, double_1)
+#else
 SHORT_VECTOR(double, 1, double)
+#endif
 
 SHORT_VECTOR(double, 2, double_2)
 
@@ -3844,7 +4485,7 @@ SHORT_VECTOR(double, 4, double_4)
 
 #if !__HCC_AMP__
 
-SHORT_VECTOR(char, 1, char)
+SHORT_VECTOR(char, 1, char_1)
 
 SHORT_VECTOR(char, 2, char_2)
 
@@ -3852,7 +4493,7 @@ SHORT_VECTOR(char, 3, char_3)
 
 SHORT_VECTOR(char, 4, char_4)
 
-SHORT_VECTOR(unsigned char, 1, unsigned char)
+SHORT_VECTOR(unsigned char, 1, uchar_1)
 
 SHORT_VECTOR(unsigned char, 2, uchar_2)
 
@@ -3860,7 +4501,7 @@ SHORT_VECTOR(unsigned char, 3, uchar_3)
 
 SHORT_VECTOR(unsigned char, 4, uchar_4)
 
-SHORT_VECTOR(short, 1, short)
+SHORT_VECTOR(short, 1, short_1)
 
 SHORT_VECTOR(short, 2, short_2)
 
@@ -3868,7 +4509,7 @@ SHORT_VECTOR(short, 3, short_3)
 
 SHORT_VECTOR(short, 4, short_4)
 
-SHORT_VECTOR(unsigned short, 1, unsigned short)
+SHORT_VECTOR(unsigned short, 1, ushort_1)
 
 SHORT_VECTOR(unsigned short, 2, ushort_2)
 
@@ -3876,7 +4517,7 @@ SHORT_VECTOR(unsigned short, 3, ushort_3)
 
 SHORT_VECTOR(unsigned short, 4, ushort_4)
 
-SHORT_VECTOR(long, 1, long)
+SHORT_VECTOR(long, 1, long_1)
 
 SHORT_VECTOR(long, 2, long_2)
 
@@ -3884,7 +4525,7 @@ SHORT_VECTOR(long, 3, long_3)
 
 SHORT_VECTOR(long, 4, long_4)
 
-SHORT_VECTOR(unsigned long, 1, unsigned long)
+SHORT_VECTOR(unsigned long, 1, ulong_1)
 
 SHORT_VECTOR(unsigned long, 2, ulong_2)
 
@@ -3892,7 +4533,7 @@ SHORT_VECTOR(unsigned long, 3, ulong_3)
 
 SHORT_VECTOR(unsigned long, 4, ulong_4)
 
-SHORT_VECTOR(long long int, 1, long long int)
+SHORT_VECTOR(long long int, 1, longlong_1)
 
 SHORT_VECTOR(long long int, 2, longlong_2)
 
@@ -3900,7 +4541,7 @@ SHORT_VECTOR(long long int, 3, longlong_3)
 
 SHORT_VECTOR(long long int, 4, longlong_4)
 
-SHORT_VECTOR(unsigned long long int, 1, unsigned long long int)
+SHORT_VECTOR(unsigned long long int, 1, ulonglong_1)
 
 SHORT_VECTOR(unsigned long long int, 2, ulonglong_2)
 
@@ -3930,7 +4571,11 @@ struct short_vector_traits<ST_S> \
   static int const size = S; \
 };
 
+#if !__HCC_AMP__
+SHORT_VECTOR_TRAITS(unsigned int, 1, uint_1)
+#else
 SHORT_VECTOR_TRAITS(unsigned int, 1, unsigned int)
+#endif
 
 SHORT_VECTOR_TRAITS(unsigned int, 2, uint_2)
 
@@ -3938,7 +4583,11 @@ SHORT_VECTOR_TRAITS(unsigned int, 3, uint_3)
 
 SHORT_VECTOR_TRAITS(unsigned int, 4, uint_4)
 
+#if !__HCC_AMP__
+SHORT_VECTOR_TRAITS(int, 1, int_1)
+#else
 SHORT_VECTOR_TRAITS(int, 1, int)
+#endif
 
 SHORT_VECTOR_TRAITS(int, 2, int_2)
 
@@ -3946,7 +4595,11 @@ SHORT_VECTOR_TRAITS(int, 3, int_3)
 
 SHORT_VECTOR_TRAITS(int, 4, int_4)
 
+#if !__HCC_AMP__
+SHORT_VECTOR_TRAITS(float, 1, float_1)
+#else
 SHORT_VECTOR_TRAITS(float, 1, float)
+#endif
 
 SHORT_VECTOR_TRAITS(float, 2, float_2)
 
@@ -3970,7 +4623,11 @@ SHORT_VECTOR_TRAITS(norm, 3, norm_3)
 
 SHORT_VECTOR_TRAITS(norm, 4, norm_4)
 
+#if !__HCC_AMP__
+SHORT_VECTOR_TRAITS(double, 1, double_1)
+#else
 SHORT_VECTOR_TRAITS(double, 1, double)
+#endif
 
 SHORT_VECTOR_TRAITS(double, 2, double_2)
 
@@ -3980,7 +4637,7 @@ SHORT_VECTOR_TRAITS(double, 4, double_4)
 
 #if !__HCC_AMP__
 
-SHORT_VECTOR_TRAITS(char, 1, char)
+SHORT_VECTOR_TRAITS(char, 1, char_1)
 
 SHORT_VECTOR_TRAITS(char, 2, char_2)
 
@@ -3988,7 +4645,7 @@ SHORT_VECTOR_TRAITS(char, 3, char_3)
 
 SHORT_VECTOR_TRAITS(char, 4, char_4)
 
-SHORT_VECTOR_TRAITS(unsigned char, 1, unsigned char)
+SHORT_VECTOR_TRAITS(unsigned char, 1, uchar_1)
 
 SHORT_VECTOR_TRAITS(unsigned char, 2, uchar_2)
 
@@ -3996,7 +4653,7 @@ SHORT_VECTOR_TRAITS(unsigned char, 3, uchar_3)
 
 SHORT_VECTOR_TRAITS(unsigned char, 4, uchar_4)
 
-SHORT_VECTOR_TRAITS(short, 1, short)
+SHORT_VECTOR_TRAITS(short, 1, short_1)
 
 SHORT_VECTOR_TRAITS(short, 2, short_2)
 
@@ -4004,7 +4661,7 @@ SHORT_VECTOR_TRAITS(short, 3, short_3)
 
 SHORT_VECTOR_TRAITS(short, 4, short_4)
 
-SHORT_VECTOR_TRAITS(unsigned short, 1, unsigned short)
+SHORT_VECTOR_TRAITS(unsigned short, 1, ushort_1)
 
 SHORT_VECTOR_TRAITS(unsigned short, 2, ushort_2)
 
@@ -4012,7 +4669,7 @@ SHORT_VECTOR_TRAITS(unsigned short, 3, ushort_3)
 
 SHORT_VECTOR_TRAITS(unsigned short, 4, ushort_4)
 
-SHORT_VECTOR_TRAITS(long, 1, long)
+SHORT_VECTOR_TRAITS(long, 1, long_1)
 
 SHORT_VECTOR_TRAITS(long, 2, long_2)
 
@@ -4020,7 +4677,7 @@ SHORT_VECTOR_TRAITS(long, 3, long_3)
 
 SHORT_VECTOR_TRAITS(long, 4, long_4)
 
-SHORT_VECTOR_TRAITS(unsigned long, 1, unsigned long)
+SHORT_VECTOR_TRAITS(unsigned long, 1, ulong_1)
 
 SHORT_VECTOR_TRAITS(unsigned long, 2, ulong_2)
 
@@ -4028,7 +4685,7 @@ SHORT_VECTOR_TRAITS(unsigned long, 3, ulong_3)
 
 SHORT_VECTOR_TRAITS(unsigned long, 4, ulong_4)
 
-SHORT_VECTOR_TRAITS(long long int, 1, long long int)
+SHORT_VECTOR_TRAITS(long long int, 1, longlong_1)
 
 SHORT_VECTOR_TRAITS(long long int, 2, longlong_2)
 
@@ -4036,7 +4693,7 @@ SHORT_VECTOR_TRAITS(long long int, 3, longlong_3)
 
 SHORT_VECTOR_TRAITS(long long int, 4, longlong_4)
 
-SHORT_VECTOR_TRAITS(unsigned long long int, 1, unsigned long long int)
+SHORT_VECTOR_TRAITS(unsigned long long int, 1, ulonglong_1)
 
 SHORT_VECTOR_TRAITS(unsigned long long int, 2, ulonglong_2)
 
