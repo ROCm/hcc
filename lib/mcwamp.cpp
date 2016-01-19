@@ -428,17 +428,27 @@ private:
   RuntimeImpl* runtime;
 public:
   KalmarBootstrap() : runtime(nullptr) {
-    // initialize runtime
-    runtime = CLAMP::GetOrInitRuntime();
+    bool to_init = true;
+    char* lazyinit_env = getenv("HCC_LAZYINIT");
+    if (lazyinit_env != nullptr) {
+      if (std::string("ON") == lazyinit_env) {
+        to_init = false;
+      }
+    }
 
-    // get context
-    KalmarContext* context = static_cast<KalmarContext*>(runtime->m_GetContextImpl());
-
-    // get default queue on the default device
-    std::shared_ptr<KalmarQueue> queue = context->auto_select();
-
-    // build kernels on the default queue on the default device
-    CLAMP::BuildProgram(queue.get());
+    if (to_init) {
+      // initialize runtime
+      runtime = CLAMP::GetOrInitRuntime();
+  
+      // get context
+      KalmarContext* context = static_cast<KalmarContext*>(runtime->m_GetContextImpl());
+  
+      // get default queue on the default device
+      std::shared_ptr<KalmarQueue> queue = context->auto_select();
+  
+      // build kernels on the default queue on the default device
+      CLAMP::BuildProgram(queue.get());
+    }
   }
 };
 
