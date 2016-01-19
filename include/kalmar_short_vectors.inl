@@ -322,7 +322,11 @@ class ulong_2;
 class ulong_3;
 class ulong_4;
 class longlong_2;
+class longlong_3;
+class longlong_4;
 class ulonglong_2;
+class ulonglong_3;
+class ulonglong_4;
 #endif
 
 typedef int_2 int2;
@@ -365,7 +369,11 @@ typedef ulong_2 ulong2;
 typedef ulong_3 ulong3;
 typedef ulong_4 ulong4;
 typedef longlong_2 longlong2;
+typedef longlong_3 longlong3;
+typedef longlong_4 longlong4;
 typedef ulonglong_2 ulonglong2;
+typedef ulonglong_3 ulonglong3;
+typedef ulonglong_4 ulonglong4;
 #endif
 
 //   Class Declaration (10.8.1 Synopsis)
@@ -1433,7 +1441,7 @@ ST_3& operator/=(const ST_3& rhs) __CPU_GPU__ \
 
 #define SCALARTYPE_3_CONVERSION_CTOR(ST_3, \
 ST_3_o1, ST_3_o2, ST_3_o3, ST_3_o4, ST_3_o5, \
-ST_3_o6, ST_3_o7, ST_3_o8, ST_3_o9, ST_3_o10, ST_3_o11) \
+ST_3_o6, ST_3_o7, ST_3_o8, ST_3_o9, ST_3_o10, ST_3_o11, ST_3_o12, ST_3_o13) \
 \
 explicit ST_3(const ST_3_o1& other) __CPU_GPU__; \
 \
@@ -1455,7 +1463,11 @@ explicit ST_3(const ST_3_o9& other) __CPU_GPU__; \
 \
 explicit ST_3(const ST_3_o10& other) __CPU_GPU__; \
 \
-explicit ST_3(const ST_3_o11& other) __CPU_GPU__;
+explicit ST_3(const ST_3_o11& other) __CPU_GPU__; \
+\
+explicit ST_3(const ST_3_o12& other) __CPU_GPU__; \
+\
+explicit ST_3(const ST_3_o13& other) __CPU_GPU__;
 
 #else
 
@@ -1483,7 +1495,7 @@ public:
 #if !__HCC_AMP__
   SCALARTYPE_3_CONVERSION_CTOR(int_3,
     uint_3, float_3, double_3, norm_3, unorm_3,
-    char_3, uchar_3, short_3, ushort_3, long_3, ulong_3)
+    char_3, uchar_3, short_3, ushort_3, long_3, ulong_3, longlong_3, ulonglong_3)
 #else
   SCALARTYPE_3_CONVERSION_CTOR(int_3,
     uint_3, float_3, double_3, norm_3, unorm_3)
@@ -1562,7 +1574,7 @@ public:
 #if !__HCC_AMP__
   SCALARTYPE_3_CONVERSION_CTOR(uint_3,
     int_3, float_3, double_3, norm_3, unorm_3,
-    char_3, uchar_3, short_3, ushort_3, long_3, ulong_3)
+    char_3, uchar_3, short_3, ushort_3, long_3, ulong_3, longlong_3, ulonglong_3)
 #else
   SCALARTYPE_3_CONVERSION_CTOR(uint_3,
     int_3, float_3, double_3, norm_3, unorm_3)
@@ -1639,7 +1651,7 @@ public:
 #if !__HCC_AMP__
   SCALARTYPE_3_CONVERSION_CTOR(float_3,
     int_3, uint_3, double_3, norm_3, unorm_3,
-    char_3, uchar_3, short_3, ushort_3, long_3, ulong_3)
+    char_3, uchar_3, short_3, ushort_3, long_3, ulong_3, longlong_3, ulonglong_3)
 #else
   SCALARTYPE_3_CONVERSION_CTOR(float_3,
     int_3, uint_3, double_3, norm_3, unorm_3)
@@ -1668,7 +1680,7 @@ public:
 #if !__HCC_AMP__
   SCALARTYPE_3_CONVERSION_CTOR(double_3,
     int_3, uint_3, float_3, norm_3, unorm_3,
-    char_3, uchar_3, short_3, ushort_3, long_3, ulong_3)
+    char_3, uchar_3, short_3, ushort_3, long_3, ulong_3, longlong_3, ulonglong_3)
 #else
   SCALARTYPE_3_CONVERSION_CTOR(double_3,
     int_3, uint_3, float_3, norm_3, unorm_3)
@@ -1697,7 +1709,7 @@ public:
 #if !__HCC_AMP__
   SCALARTYPE_3_CONVERSION_CTOR(norm_3,
     int_3, uint_3, float_3, double_3, unorm_3,
-    char_3, uchar_3, short_3, ushort_3, long_3, ulong_3)
+    char_3, uchar_3, short_3, ushort_3, long_3, ulong_3, longlong_3, ulonglong_3)
 #else
   SCALARTYPE_3_CONVERSION_CTOR(norm_3,
     int_3, uint_3, float_3, double_3, unorm_3)
@@ -1732,7 +1744,7 @@ public:
 #if !__HCC_AMP__
   SCALARTYPE_3_CONVERSION_CTOR(unorm_3,
     int_3, uint_3, float_3, double_3, norm_3,
-    char_3, uchar_3, short_3, ushort_3, long_3, ulong_3)
+    char_3, uchar_3, short_3, ushort_3, long_3, ulong_3, longlong_3, ulonglong_3)
 #else
   SCALARTYPE_3_CONVERSION_CTOR(unorm_3,
     int_3, uint_3, float_3, double_3, norm_3)
@@ -1760,7 +1772,7 @@ public:
 
   SCALARTYPE_3_CONVERSION_CTOR(char_3,
     int_3, uint_3, float_3, double_3, unorm_3,
-    norm_3, uchar_3, short_3, ushort_3, long_3, ulong_3)
+    norm_3, uchar_3, short_3, ushort_3, long_3, ulong_3, longlong_3, ulonglong_3)
 
   char_3 operator-() const __CPU_GPU__ { return char_3(-x, -y, -z); }
   
@@ -1784,7 +1796,7 @@ public:
 
   SCALARTYPE_3_CONVERSION_CTOR(uchar_3,
     int_3, uint_3, float_3, double_3, norm_3,
-    char_3, unorm_3, short_3, ushort_3, long_3, ulong_3)
+    char_3, unorm_3, short_3, ushort_3, long_3, ulong_3, longlong_3, ulonglong_3)
 
   SINGLE_COMPONENT_ACCESS(unsigned char, x)
   SINGLE_COMPONENT_ACCESS(unsigned char, y)
@@ -1806,7 +1818,7 @@ public:
 
   SCALARTYPE_3_CONVERSION_CTOR(short_3,
     int_3, uint_3, float_3, double_3, unorm_3,
-    norm_3, uchar_3, char_3, ushort_3, long_3, ulong_3)
+    norm_3, uchar_3, char_3, ushort_3, long_3, ulong_3, longlong_3, ulonglong_3)
 
   short_3 operator-() const __CPU_GPU__ { return short_3(-x, -y, -z); }
   
@@ -1830,7 +1842,7 @@ public:
 
   SCALARTYPE_3_CONVERSION_CTOR(ushort_3,
     int_3, uint_3, float_3, double_3, norm_3,
-    char_3, unorm_3, short_3, uchar_3, long_3, ulong_3)
+    char_3, unorm_3, short_3, uchar_3, long_3, ulong_3, longlong_3, ulonglong_3)
 
   SINGLE_COMPONENT_ACCESS(unsigned short, x)
   SINGLE_COMPONENT_ACCESS(unsigned short, y)
@@ -1852,7 +1864,7 @@ public:
 
   SCALARTYPE_3_CONVERSION_CTOR(long_3,
     int_3, uint_3, float_3, double_3, unorm_3,
-    norm_3, uchar_3, short_3, ushort_3, char_3, ulong_3)
+    norm_3, uchar_3, short_3, ushort_3, char_3, ulong_3, longlong_3, ulonglong_3)
 
   long_3 operator-() const __CPU_GPU__ { return long_3(-x, -y, -z); }
   
@@ -1876,7 +1888,7 @@ public:
 
   SCALARTYPE_3_CONVERSION_CTOR(ulong_3,
     int_3, uint_3, float_3, double_3, norm_3,
-    char_3, unorm_3, short_3, ushort_3, long_3, uchar_3)
+    char_3, unorm_3, short_3, ushort_3, long_3, uchar_3, longlong_3, ulonglong_3)
 
   SINGLE_COMPONENT_ACCESS(unsigned long, x)
   SINGLE_COMPONENT_ACCESS(unsigned long, y)
@@ -1889,6 +1901,52 @@ public:
   TWO_COMPONENT_ACCESS(ulong_2, y, z)
 
   THREE_COMPONENT_ACCESS(ulong_3, x, y, z)
+};
+
+class longlong_3
+{
+public:
+  SCALARTYPE_3_COMMON_PUBLIC_MEMBER(long long int, longlong_3)
+
+  SCALARTYPE_3_CONVERSION_CTOR(longlong_3,
+    int_3, uint_3, float_3, double_3, unorm_3,
+    norm_3, uchar_3, short_3, ushort_3, char_3, ulong_3, long_3, ulonglong_3)
+
+  longlong_3 operator-() const __CPU_GPU__ { return longlong_3(-x, -y, -z); }
+  
+  SINGLE_COMPONENT_ACCESS(long long int, x)
+  SINGLE_COMPONENT_ACCESS(long long int, y)
+  SINGLE_COMPONENT_ACCESS(long long int, z)
+
+  SCALARTYPE_3_REFERENCE_SINGLE_COMPONENT_ACCESS(long long int)
+
+  TWO_COMPONENT_ACCESS(longlong_2, x, y)
+  TWO_COMPONENT_ACCESS(longlong_2, x, z)
+  TWO_COMPONENT_ACCESS(longlong_2, y, z)
+
+  THREE_COMPONENT_ACCESS(longlong_3, x, y, z)
+};
+
+class ulonglong_3
+{
+public:
+  SCALARTYPE_3_COMMON_PUBLIC_MEMBER(unsigned long long int, ulonglong_3)
+
+  SCALARTYPE_3_CONVERSION_CTOR(ulonglong_3,
+    int_3, uint_3, float_3, double_3, norm_3,
+    char_3, unorm_3, short_3, ushort_3, long_3, uchar_3, longlong_3, ulong_3)
+
+  SINGLE_COMPONENT_ACCESS(unsigned long long int, x)
+  SINGLE_COMPONENT_ACCESS(unsigned long long int, y)
+  SINGLE_COMPONENT_ACCESS(unsigned long long int, z)
+
+  SCALARTYPE_3_REFERENCE_SINGLE_COMPONENT_ACCESS(unsigned long long int)
+
+  TWO_COMPONENT_ACCESS(ulonglong_2, x, y)
+  TWO_COMPONENT_ACCESS(ulonglong_2, x, z)
+  TWO_COMPONENT_ACCESS(ulonglong_2, y, z)
+
+  THREE_COMPONENT_ACCESS(ulonglong_3, x, y, z)
 };
 
 #endif // if !__HCC_AMP__
@@ -2028,7 +2086,7 @@ ST_4& operator/=(const ST_4& rhs) __CPU_GPU__ \
 
 #define SCALARTYPE_4_CONVERSION_CTOR(ST_4, \
 ST_4_o1, ST_4_o2, ST_4_o3, ST_4_o4, ST_4_o5, \
-ST_4_o6, ST_4_o7, ST_4_o8, ST_4_o9, ST_4_o10, ST_4_o11) \
+ST_4_o6, ST_4_o7, ST_4_o8, ST_4_o9, ST_4_o10, ST_4_o11, ST_4_o12, ST_4_o13) \
 \
 explicit ST_4(const ST_4_o1& other) __CPU_GPU__; \
 \
@@ -2051,6 +2109,10 @@ explicit ST_4(const ST_4_o9& other) __CPU_GPU__; \
 explicit ST_4(const ST_4_o10& other) __CPU_GPU__; \
 \
 explicit ST_4(const ST_4_o11& other) __CPU_GPU__; \
+\
+explicit ST_4(const ST_4_o12& other) __CPU_GPU__; \
+\
+explicit ST_4(const ST_4_o13& other) __CPU_GPU__;
 
 #else
 
@@ -2077,7 +2139,7 @@ public:
 #if !__HCC_AMP__
   SCALARTYPE_4_CONVERSION_CTOR(int_4,
     uint_4, float_4, double_4, norm_4, unorm_4,
-    char_4, uchar_4, short_4, ushort_4, long_4, ulong_4)
+    char_4, uchar_4, short_4, ushort_4, long_4, ulong_4, longlong_4, ulonglong_4)
 #else
   SCALARTYPE_4_CONVERSION_CTOR(int_4,
     uint_4, float_4, double_4, norm_4, unorm_4) 
@@ -2171,7 +2233,7 @@ public:
 #if !__HCC_AMP__
   SCALARTYPE_4_CONVERSION_CTOR(uint_4,
     int_4, float_4, double_4, norm_4, unorm_4,
-    char_4, uchar_4, short_4, ushort_4, long_4, ulong_4)
+    char_4, uchar_4, short_4, ushort_4, long_4, ulong_4, longlong_4, ulonglong_4)
 #else
   SCALARTYPE_4_CONVERSION_CTOR(uint_4,
     int_4, float_4, double_4, norm_4, unorm_4) 
@@ -2263,7 +2325,7 @@ public:
 #if !__HCC_AMP__
   SCALARTYPE_4_CONVERSION_CTOR(float_4,
     int_4, uint_4, double_4, norm_4, unorm_4,
-    char_4, uchar_4, short_4, ushort_4, long_4, ulong_4)
+    char_4, uchar_4, short_4, ushort_4, long_4, ulong_4, longlong_4, ulonglong_4)
 #else
   SCALARTYPE_4_CONVERSION_CTOR(float_4,
     int_4, uint_4, double_4, norm_4, unorm_4) 
@@ -2301,7 +2363,7 @@ public:
 #if !__HCC_AMP__
   SCALARTYPE_4_CONVERSION_CTOR(double_4,
     int_4, uint_4, float_4, norm_4, unorm_4,
-    char_4, uchar_4, short_4, ushort_4, long_4, ulong_4)
+    char_4, uchar_4, short_4, ushort_4, long_4, ulong_4, longlong_4, ulonglong_4)
 #else
   SCALARTYPE_4_CONVERSION_CTOR(double_4,
     int_4, uint_4, float_4, norm_4, unorm_4) 
@@ -2339,7 +2401,7 @@ public:
 #if !__HCC_AMP__
   SCALARTYPE_4_CONVERSION_CTOR(norm_4,
     int_4, uint_4, float_4, double_4, unorm_4,
-    char_4, uchar_4, short_4, ushort_4, long_4, ulong_4)
+    char_4, uchar_4, short_4, ushort_4, long_4, ulong_4, longlong_4, ulonglong_4)
 #else
   SCALARTYPE_4_CONVERSION_CTOR(norm_4,
     int_4, uint_4, float_4, double_4, unorm_4) 
@@ -2383,7 +2445,7 @@ public:
 #if !__HCC_AMP__
   SCALARTYPE_4_CONVERSION_CTOR(unorm_4,
     int_4, uint_4, float_4, double_4, norm_4,
-    char_4, uchar_4, short_4, ushort_4, long_4, ulong_4)
+    char_4, uchar_4, short_4, ushort_4, long_4, ulong_4, longlong_4, ulonglong_4)
 #else
   SCALARTYPE_4_CONVERSION_CTOR(unorm_4,
     int_4, uint_4, float_4, double_4, norm_4) 
@@ -2420,7 +2482,7 @@ public:
 
   SCALARTYPE_4_CONVERSION_CTOR(char_4,
     int_4, uint_4, float_4, double_4, unorm_4,
-    norm_4, uchar_4, short_4, ushort_4, long_4, ulong_4)
+    norm_4, uchar_4, short_4, ushort_4, long_4, ulong_4, longlong_4, ulonglong_4)
 
   char_4 operator-() const __CPU_GPU__ { return char_4(-x, -y, -z, -w); }
   
@@ -2453,7 +2515,7 @@ public:
 
   SCALARTYPE_4_CONVERSION_CTOR(uchar_4,
     int_4, uint_4, float_4, double_4, norm_4,
-    char_4, unorm_4, short_4, ushort_4, long_4, ulong_4)
+    char_4, unorm_4, short_4, ushort_4, long_4, ulong_4, longlong_4, ulonglong_4)
 
   SINGLE_COMPONENT_ACCESS(unsigned char, x)
   SINGLE_COMPONENT_ACCESS(unsigned char, y)
@@ -2484,7 +2546,7 @@ public:
 
   SCALARTYPE_4_CONVERSION_CTOR(short_4,
     int_4, uint_4, float_4, double_4, unorm_4,
-    norm_4, uchar_4, char_4, ushort_4, long_4, ulong_4)
+    norm_4, uchar_4, char_4, ushort_4, long_4, ulong_4, longlong_4, ulonglong_4)
 
   short_4 operator-() const __CPU_GPU__ { return short_4(-x, -y, -z, -w); }
   
@@ -2517,7 +2579,7 @@ public:
 
   SCALARTYPE_4_CONVERSION_CTOR(ushort_4,
     int_4, uint_4, float_4, double_4, norm_4,
-    char_4, unorm_4, short_4, uchar_4, long_4, ulong_4)
+    char_4, unorm_4, short_4, uchar_4, long_4, ulong_4, longlong_4, ulonglong_4)
 
   SINGLE_COMPONENT_ACCESS(unsigned short, x)
   SINGLE_COMPONENT_ACCESS(unsigned short, y)
@@ -2548,7 +2610,7 @@ public:
 
   SCALARTYPE_4_CONVERSION_CTOR(long_4,
     int_4, uint_4, float_4, double_4, unorm_4,
-    norm_4, uchar_4, short_4, ushort_4, char_4, ulong_4)
+    norm_4, uchar_4, short_4, ushort_4, char_4, ulong_4, longlong_4, ulonglong_4)
 
   long_4 operator-() const __CPU_GPU__ { return long_4(-x, -y, -z, -w); }
   
@@ -2581,7 +2643,7 @@ public:
 
   SCALARTYPE_4_CONVERSION_CTOR(ulong_4,
     int_4, uint_4, float_4, double_4, norm_4,
-    char_4, unorm_4, short_4, ushort_4, long_4, uchar_4)
+    char_4, unorm_4, short_4, ushort_4, long_4, uchar_4, longlong_4, ulonglong_4)
 
   SINGLE_COMPONENT_ACCESS(unsigned long, x)
   SINGLE_COMPONENT_ACCESS(unsigned long, y)
@@ -2603,6 +2665,70 @@ public:
   THREE_COMPONENT_ACCESS(ulong_3, y, z, w)
 
   FOUR_COMPONENT_ACCESS(ulong_4, x, y, z, w)
+};
+
+class longlong_4
+{
+public:
+  SCALARTYPE_4_COMMON_PUBLIC_MEMBER(long long int, longlong_4)
+
+  SCALARTYPE_4_CONVERSION_CTOR(longlong_4,
+    int_4, uint_4, float_4, double_4, unorm_4,
+    norm_4, uchar_4, short_4, ushort_4, char_4, ulong_4, long_4, ulonglong_4)
+
+  longlong_4 operator-() const __CPU_GPU__ { return longlong_4(-x, -y, -z, -w); }
+  
+  SINGLE_COMPONENT_ACCESS(long long int, x)
+  SINGLE_COMPONENT_ACCESS(long long int, y)
+  SINGLE_COMPONENT_ACCESS(long long int, z)
+  SINGLE_COMPONENT_ACCESS(long long int, w)
+
+  SCALARTYPE_4_REFERENCE_SINGLE_COMPONENT_ACCESS(long long int)
+
+  TWO_COMPONENT_ACCESS(longlong_2, x, y)
+  TWO_COMPONENT_ACCESS(longlong_2, x, z)
+  TWO_COMPONENT_ACCESS(longlong_2, x, w)
+  TWO_COMPONENT_ACCESS(longlong_2, y, z)
+  TWO_COMPONENT_ACCESS(longlong_2, y, w)
+  TWO_COMPONENT_ACCESS(longlong_2, z, w)
+
+  THREE_COMPONENT_ACCESS(longlong_3, x, y, z)
+  THREE_COMPONENT_ACCESS(longlong_3, x, y, w)
+  THREE_COMPONENT_ACCESS(longlong_3, x, z, w)
+  THREE_COMPONENT_ACCESS(longlong_3, y, z, w)
+
+  FOUR_COMPONENT_ACCESS(longlong_4, x, y, z, w)
+};
+
+class ulonglong_4
+{
+public:
+  SCALARTYPE_4_COMMON_PUBLIC_MEMBER(unsigned long long int, ulonglong_4)
+
+  SCALARTYPE_4_CONVERSION_CTOR(ulonglong_4,
+    int_4, uint_4, float_4, double_4, norm_4,
+    char_4, unorm_4, short_4, ushort_4, long_4, uchar_4, longlong_4, ulong_4)
+
+  SINGLE_COMPONENT_ACCESS(unsigned long long int, x)
+  SINGLE_COMPONENT_ACCESS(unsigned long long int, y)
+  SINGLE_COMPONENT_ACCESS(unsigned long long int, z)
+  SINGLE_COMPONENT_ACCESS(unsigned long long int, w)
+
+  SCALARTYPE_4_REFERENCE_SINGLE_COMPONENT_ACCESS(unsigned long long int)
+
+  TWO_COMPONENT_ACCESS(ulonglong_2, x, y)
+  TWO_COMPONENT_ACCESS(ulonglong_2, x, z)
+  TWO_COMPONENT_ACCESS(ulonglong_2, x, w)
+  TWO_COMPONENT_ACCESS(ulonglong_2, y, z)
+  TWO_COMPONENT_ACCESS(ulonglong_2, y, w)
+  TWO_COMPONENT_ACCESS(ulonglong_2, z, w)
+
+  THREE_COMPONENT_ACCESS(ulonglong_3, x, y, z)
+  THREE_COMPONENT_ACCESS(ulonglong_3, x, y, w)
+  THREE_COMPONENT_ACCESS(ulonglong_3, x, z, w)
+  THREE_COMPONENT_ACCESS(ulonglong_3, y, z, w)
+
+  FOUR_COMPONENT_ACCESS(ulonglong_4, x, y, z, w)
 };
 
 #endif // if !__HCC_AMP__
@@ -2810,7 +2936,7 @@ SCALARTYPE_2_EXPLICIT_CONVERSION_CONSTRUCTORS(unorm, unorm_2,
 
 #define SCALARTYPE_3_EXPLICIT_CONVERSION_CONSTRUCTORS(ST, ST_3, \
 ST_3_o1, ST_3_o2, ST_3_o3, ST_3_o4, ST_3_o5, \
-ST_3_o6, ST_3_o7, ST_3_o8, ST_3_o9, ST_3_o10, ST_3_o11) \
+ST_3_o6, ST_3_o7, ST_3_o8, ST_3_o9, ST_3_o10, ST_3_o11, ST_3_o12, ST_3_o13) \
 inline ST_3::ST_3(const ST_3_o1& other) __CPU_GPU__ \
 { \
   x = static_cast<ST>(other.get_x()); \
@@ -2880,55 +3006,75 @@ inline ST_3::ST_3(const ST_3_o11& other) __CPU_GPU__ \
   x = static_cast<ST>(other.get_x()); \
   y = static_cast<ST>(other.get_y()); \
   z = static_cast<ST>(other.get_z()); \
+} \
+inline ST_3::ST_3(const ST_3_o12& other) __CPU_GPU__ \
+{ \
+  x = static_cast<ST>(other.get_x()); \
+  y = static_cast<ST>(other.get_y()); \
+  z = static_cast<ST>(other.get_z()); \
+} \
+inline ST_3::ST_3(const ST_3_o13& other) __CPU_GPU__ \
+{ \
+  x = static_cast<ST>(other.get_x()); \
+  y = static_cast<ST>(other.get_y()); \
+  z = static_cast<ST>(other.get_z()); \
 }
 
 SCALARTYPE_3_EXPLICIT_CONVERSION_CONSTRUCTORS(int, int_3, 
     uint_3, float_3, double_3, norm_3, unorm_3,
-    char_3, uchar_3, short_3, ushort_3, long_3, ulong_3)
+    char_3, uchar_3, short_3, ushort_3, long_3, ulong_3, longlong_3, ulonglong_3)
 
 SCALARTYPE_3_EXPLICIT_CONVERSION_CONSTRUCTORS(unsigned int, uint_3, 
     int_3, float_3, double_3, norm_3, unorm_3,
-    char_3, uchar_3, short_3, ushort_3, long_3, ulong_3)
+    char_3, uchar_3, short_3, ushort_3, long_3, ulong_3, longlong_3, ulonglong_3)
 
 SCALARTYPE_3_EXPLICIT_CONVERSION_CONSTRUCTORS(float, float_3, 
     int_3, uint_3, double_3, norm_3, unorm_3,
-    char_3, uchar_3, short_3, ushort_3, long_3, ulong_3)
+    char_3, uchar_3, short_3, ushort_3, long_3, ulong_3, longlong_3, ulonglong_3)
 
 SCALARTYPE_3_EXPLICIT_CONVERSION_CONSTRUCTORS(double, double_3, 
     int_3, uint_3, float_3, norm_3, unorm_3,
-    char_3, uchar_3, short_3, ushort_3, long_3, ulong_3)
+    char_3, uchar_3, short_3, ushort_3, long_3, ulong_3, longlong_3, ulonglong_3)
 
 SCALARTYPE_3_EXPLICIT_CONVERSION_CONSTRUCTORS(norm, norm_3, 
     int_3, uint_3, float_3, double_3, unorm_3,
-    char_3, uchar_3, short_3, ushort_3, long_3, ulong_3)
+    char_3, uchar_3, short_3, ushort_3, long_3, ulong_3, longlong_3, ulonglong_3)
 
 SCALARTYPE_3_EXPLICIT_CONVERSION_CONSTRUCTORS(unorm, unorm_3, 
     int_3, uint_3, float_3, double_3, norm_3,
-    char_3, uchar_3, short_3, ushort_3, long_3, ulong_3)
+    char_3, uchar_3, short_3, ushort_3, long_3, ulong_3, longlong_3, ulonglong_3)
 
 SCALARTYPE_3_EXPLICIT_CONVERSION_CONSTRUCTORS(char, char_3, 
     int_3, uint_3, float_3, double_3, norm_3,
-    unorm_3, uchar_3, short_3, ushort_3, long_3, ulong_3)
+    unorm_3, uchar_3, short_3, ushort_3, long_3, ulong_3, longlong_3, ulonglong_3)
 
 SCALARTYPE_3_EXPLICIT_CONVERSION_CONSTRUCTORS(unsigned char, uchar_3, 
     int_3, uint_3, float_3, double_3, norm_3,
-    char_3, unorm_3, short_3, ushort_3, long_3, ulong_3)
+    char_3, unorm_3, short_3, ushort_3, long_3, ulong_3, longlong_3, ulonglong_3)
 
 SCALARTYPE_3_EXPLICIT_CONVERSION_CONSTRUCTORS(short, short_3, 
     int_3, uint_3, float_3, double_3, norm_3,
-    char_3, uchar_3, unorm_3, ushort_3, long_3, ulong_3)
+    char_3, uchar_3, unorm_3, ushort_3, long_3, ulong_3, longlong_3, ulonglong_3)
 
 SCALARTYPE_3_EXPLICIT_CONVERSION_CONSTRUCTORS(unsigned short, ushort_3, 
     int_3, uint_3, float_3, double_3, norm_3,
-    char_3, uchar_3, short_3, unorm_3, long_3, ulong_3)
+    char_3, uchar_3, short_3, unorm_3, long_3, ulong_3, longlong_3, ulonglong_3)
 
 SCALARTYPE_3_EXPLICIT_CONVERSION_CONSTRUCTORS(long, long_3, 
     int_3, uint_3, float_3, double_3, norm_3,
-    char_3, uchar_3, short_3, ushort_3, unorm_3, ulong_3)
+    char_3, uchar_3, short_3, ushort_3, unorm_3, ulong_3, longlong_3, ulonglong_3)
 
 SCALARTYPE_3_EXPLICIT_CONVERSION_CONSTRUCTORS(unsigned long, ulong_3, 
     int_3, uint_3, float_3, double_3, norm_3,
-    char_3, uchar_3, short_3, ushort_3, long_3, unorm_3)
+    char_3, uchar_3, short_3, ushort_3, long_3, unorm_3, longlong_3, ulonglong_3)
+
+SCALARTYPE_3_EXPLICIT_CONVERSION_CONSTRUCTORS(long long int, longlong_3, 
+    int_3, uint_3, float_3, double_3, norm_3,
+    char_3, uchar_3, short_3, ushort_3, unorm_3, ulong_3, long_3, ulonglong_3)
+
+SCALARTYPE_3_EXPLICIT_CONVERSION_CONSTRUCTORS(unsigned long long int, ulonglong_3, 
+    int_3, uint_3, float_3, double_3, norm_3,
+    char_3, uchar_3, short_3, ushort_3, long_3, unorm_3, longlong_3, ulong_3)
 
 #undef SCALARTYPE_3_EXPLICIT_CONVERSION_CONSTRUCTORS
 
@@ -2997,7 +3143,7 @@ SCALARTYPE_3_EXPLICIT_CONVERSION_CONSTRUCTORS(unorm, unorm_3,
 
 #define SCALARTYPE_4_EXPLICIT_CONVERSION_CONSTRUCTORS(ST, ST_4, \
 ST_4_o1, ST_4_o2, ST_4_o3, ST_4_o4, ST_4_o5, \
-ST_4_o6, ST_4_o7, ST_4_o8, ST_4_o9, ST_4_o10, ST_4_o11) \
+ST_4_o6, ST_4_o7, ST_4_o8, ST_4_o9, ST_4_o10, ST_4_o11, ST_4_o12, ST_4_o13) \
 inline ST_4::ST_4(const ST_4_o1& other) __CPU_GPU__ \
 { \
   x = static_cast<ST>(other.get_x()); \
@@ -3078,55 +3224,77 @@ inline ST_4::ST_4(const ST_4_o11& other) __CPU_GPU__ \
   y = static_cast<ST>(other.get_y()); \
   z = static_cast<ST>(other.get_z()); \
   w = static_cast<ST>(other.get_w()); \
+} \
+inline ST_4::ST_4(const ST_4_o12& other) __CPU_GPU__ \
+{ \
+  x = static_cast<ST>(other.get_x()); \
+  y = static_cast<ST>(other.get_y()); \
+  z = static_cast<ST>(other.get_z()); \
+  w = static_cast<ST>(other.get_w()); \
+} \
+inline ST_4::ST_4(const ST_4_o13& other) __CPU_GPU__ \
+{ \
+  x = static_cast<ST>(other.get_x()); \
+  y = static_cast<ST>(other.get_y()); \
+  z = static_cast<ST>(other.get_z()); \
+  w = static_cast<ST>(other.get_w()); \
 }
 
 SCALARTYPE_4_EXPLICIT_CONVERSION_CONSTRUCTORS(int, int_4, 
     uint_4, float_4, double_4, norm_4, unorm_4,
-    char_4, uchar_4, short_4, ushort_4, long_4, ulong_4)
+    char_4, uchar_4, short_4, ushort_4, long_4, ulong_4, longlong_4, ulonglong_4)
 
 SCALARTYPE_4_EXPLICIT_CONVERSION_CONSTRUCTORS(unsigned int, uint_4, 
     int_4, float_4, double_4, norm_4, unorm_4,
-    char_4, uchar_4, short_4, ushort_4, long_4, ulong_4)
+    char_4, uchar_4, short_4, ushort_4, long_4, ulong_4, longlong_4, ulonglong_4)
 
 SCALARTYPE_4_EXPLICIT_CONVERSION_CONSTRUCTORS(float, float_4, 
     int_4, uint_4, double_4, norm_4, unorm_4,
-    char_4, uchar_4, short_4, ushort_4, long_4, ulong_4)
+    char_4, uchar_4, short_4, ushort_4, long_4, ulong_4, longlong_4, ulonglong_4)
 
 SCALARTYPE_4_EXPLICIT_CONVERSION_CONSTRUCTORS(double, double_4, 
     int_4, uint_4, float_4, norm_4, unorm_4,
-    char_4, uchar_4, short_4, ushort_4, long_4, ulong_4)
+    char_4, uchar_4, short_4, ushort_4, long_4, ulong_4, longlong_4, ulonglong_4)
 
 SCALARTYPE_4_EXPLICIT_CONVERSION_CONSTRUCTORS(norm, norm_4, 
     int_4, uint_4, float_4, double_4, unorm_4, 
-    char_4, uchar_4, short_4, ushort_4, long_4, ulong_4)
+    char_4, uchar_4, short_4, ushort_4, long_4, ulong_4, longlong_4, ulonglong_4)
 
 SCALARTYPE_4_EXPLICIT_CONVERSION_CONSTRUCTORS(unorm, unorm_4, 
     int_4, uint_4, float_4, double_4, norm_4,
-    char_4, uchar_4, short_4, ushort_4, long_4, ulong_4)
+    char_4, uchar_4, short_4, ushort_4, long_4, ulong_4, longlong_4, ulonglong_4)
 
 SCALARTYPE_4_EXPLICIT_CONVERSION_CONSTRUCTORS(char, char_4, 
     int_4, uint_4, float_4, double_4, norm_4,
-    unorm_4, uchar_4, short_4, ushort_4, long_4, ulong_4)
+    unorm_4, uchar_4, short_4, ushort_4, long_4, ulong_4, longlong_4, ulonglong_4)
 
 SCALARTYPE_4_EXPLICIT_CONVERSION_CONSTRUCTORS(unsigned char, uchar_4, 
     int_4, uint_4, float_4, double_4, norm_4,
-    char_4, unorm_4, short_4, ushort_4, long_4, ulong_4)
+    char_4, unorm_4, short_4, ushort_4, long_4, ulong_4, longlong_4, ulonglong_4)
 
 SCALARTYPE_4_EXPLICIT_CONVERSION_CONSTRUCTORS(short, short_4, 
     int_4, uint_4, float_4, double_4, norm_4,
-    char_4, uchar_4, unorm_4, ushort_4, long_4, ulong_4)
+    char_4, uchar_4, unorm_4, ushort_4, long_4, ulong_4, longlong_4, ulonglong_4)
 
 SCALARTYPE_4_EXPLICIT_CONVERSION_CONSTRUCTORS(unsigned short, ushort_4, 
     int_4, uint_4, float_4, double_4, norm_4,
-    char_4, uchar_4, short_4, unorm_4, long_4, ulong_4)
+    char_4, uchar_4, short_4, unorm_4, long_4, ulong_4, longlong_4, ulonglong_4)
 
 SCALARTYPE_4_EXPLICIT_CONVERSION_CONSTRUCTORS(long, long_4, 
     int_4, uint_4, float_4, double_4, norm_4,
-    char_4, uchar_4, short_4, ushort_4, unorm_4, ulong_4)
+    char_4, uchar_4, short_4, ushort_4, unorm_4, ulong_4, longlong_4, ulonglong_4)
 
 SCALARTYPE_4_EXPLICIT_CONVERSION_CONSTRUCTORS(unsigned long, ulong_4, 
     int_4, uint_4, float_4, double_4, norm_4,
-    char_4, uchar_4, short_4, ushort_4, long_4, unorm_4)
+    char_4, uchar_4, short_4, ushort_4, long_4, unorm_4, longlong_4, ulonglong_4)
+
+SCALARTYPE_4_EXPLICIT_CONVERSION_CONSTRUCTORS(long long int, longlong_4, 
+    int_4, uint_4, float_4, double_4, norm_4,
+    char_4, uchar_4, short_4, ushort_4, unorm_4, ulong_4, long_4, ulonglong_4)
+
+SCALARTYPE_4_EXPLICIT_CONVERSION_CONSTRUCTORS(unsigned long long int, ulonglong_4, 
+    int_4, uint_4, float_4, double_4, norm_4,
+    char_4, uchar_4, short_4, ushort_4, long_4, unorm_4, longlong_4, ulong_4)
 
 #undef SCALARTYPE_4_EXPLICIT_CONVERSION_CONSTRUCTORS
 
@@ -3386,6 +3554,10 @@ SCALARTYPE_3_OPERATOR(long_3)
 
 SCALARTYPE_3_OPERATOR(ulong_3)
 
+SCALARTYPE_3_OPERATOR(longlong_3)
+
+SCALARTYPE_3_OPERATOR(ulonglong_3)
+
 #endif // if !__HCC_AMP__
 
 #undef SCALARTYPE_3_OPERATOR
@@ -3524,6 +3696,10 @@ SCALARTYPE_4_OPERATOR(ushort_4)
 SCALARTYPE_4_OPERATOR(long_4)
 
 SCALARTYPE_4_OPERATOR(ulong_4)
+
+SCALARTYPE_4_OPERATOR(longlong_4)
+
+SCALARTYPE_4_OPERATOR(ulonglong_4)
 
 #endif // if !__HCC_AMP__
 
@@ -3720,9 +3896,17 @@ SHORT_VECTOR(long long int, 1, long long int)
 
 SHORT_VECTOR(long long int, 2, longlong_2)
 
+SHORT_VECTOR(long long int, 3, longlong_3)
+
+SHORT_VECTOR(long long int, 4, longlong_4)
+
 SHORT_VECTOR(unsigned long long int, 1, unsigned long long int)
 
 SHORT_VECTOR(unsigned long long int, 2, ulonglong_2)
+
+SHORT_VECTOR(unsigned long long int, 3, ulonglong_3)
+
+SHORT_VECTOR(unsigned long long int, 4, ulonglong_4)
 
 #endif // if !__HCC_AMP__
 
@@ -3848,9 +4032,17 @@ SHORT_VECTOR_TRAITS(long long int, 1, long long int)
 
 SHORT_VECTOR_TRAITS(long long int, 2, longlong_2)
 
+SHORT_VECTOR_TRAITS(long long int, 3, longlong_3)
+
+SHORT_VECTOR_TRAITS(long long int, 4, longlong_4)
+
 SHORT_VECTOR_TRAITS(unsigned long long int, 1, unsigned long long int)
 
 SHORT_VECTOR_TRAITS(unsigned long long int, 2, ulonglong_2)
+
+SHORT_VECTOR_TRAITS(unsigned long long int, 3, ulonglong_3)
+
+SHORT_VECTOR_TRAITS(unsigned long long int, 4, ulonglong_4)
 
 #endif // if !__HCC_AMP__
 
