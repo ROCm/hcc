@@ -6193,9 +6193,9 @@ static inline bool atomic_compare_exchange(uint64_t *dest, uint64_t *expected_va
   return (*dest == val);
 }
 #elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-unsigned int atomic_compare_exchange_unsigned(unsigned int *dest, unsigned int *expected_val, unsigned int val);
-int atomic_compare_exchange_int(int *dest, int *expected_val, int val);
-uint64_t atomic_compare_exchange_uint64(uint64_t *dest, uint64_t *expected_val, uint64_t val);
+unsigned int atomic_compare_exchange_unsigned(unsigned int *dest, unsigned int expected_val, unsigned int val);
+int atomic_compare_exchange_int(int *dest, int expected_val, int val);
+uint64_t atomic_compare_exchange_uint64(uint64_t *dest, uint64_t expected_val, uint64_t val);
 
 static inline bool atomic_compare_exchange(unsigned int *dest, unsigned int *expected_val, unsigned int val) __CPU__ __HC__ {
   *expected_val = atomic_compare_exchange_unsigned(dest, *expected_val, val);
@@ -6446,7 +6446,7 @@ static inline uint64_t atomic_fetch_min(uint64_t *x, uint64_t y) __HC__ {
 #elif __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
 unsigned int atomic_max_unsigned(unsigned int *p, unsigned int val);
 int atomic_max_int(int *p, int val);
-uint64_t atomic_max_uint64(uint64 *p, uint64_t val);
+uint64_t atomic_max_uint64(uint64_t *p, uint64_t val);
 
 static inline unsigned int atomic_fetch_max(unsigned int *x, unsigned int y) __HC__ {
   return atomic_max_unsigned(x, y);
