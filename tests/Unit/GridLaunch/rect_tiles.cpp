@@ -1,7 +1,9 @@
-// XFAIL: Linux,boltzmann
-// RUN: %hc %s -o %t.out && %t.out
+// XFAIL: Linux
+// RUN: %hc -lhc_am %s -o %t.out && %t.out
 
 #include "grid_launch.h"
+#include "hc_am.hpp"
+#include <iostream>
 
 // Test for non-square tiles
 #define TILE_I 16
@@ -26,16 +28,20 @@ int main()
 
   int pitch = sizeof(int)*width;
 
+  int* a_d = (int*)hc::am_alloc(width*height*sizeof(int), hc::accelerator(), 0);
+
   grid_launch_parm lp;
   grid_launch_init(&lp);
 
-  lp.gridDim = uint3(width/TILE_I, height/TILE_J);
-  lp.groupDim = uint3(TILE_I, TILE_J);
+  lp.gridDim = gl_dim3(width/TILE_I, height/TILE_J);
+  lp.groupDim = gl_dim3(TILE_I, TILE_J);
 
   hc::completion_future cf;
   lp.cf = &cf;
-  kernel_call(lp, a, pitch);
+  kernel_call(lp, a_d, pitch);
   lp.cf->wait();
+
+  hc::am_copy(a, a_d, width*height*sizeof(int));
 
   int ret = 0;
   for(int i = 0; i < width*height; ++i)
