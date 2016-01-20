@@ -125,12 +125,13 @@ T reduce_impl(RandomAccessIterator first, RandomAccessIterator last,
     numTiles = static_cast< int >((N/REDUCE_WAVEFRONT_SIZE)>= numTiles?(numTiles):
                                   (std::ceil( static_cast< float >( N ) / REDUCE_WAVEFRONT_SIZE) ));
 
-    /// FIXME: not work in dGPU
-    // FIXME: raw pointer won't work in dGPU
-    auto result = new T[numTiles]();
-    auto first_ = utils::get_pointer(first);
+    auto f_ = utils::get_pointer(first);
+    using _Ty = typename std::iterator_traits<RandomAccessIterator>::value_type;
+    std::vector<T> r(numTiles);
+    hc::array_view<T> result(hc::extent<1>(numTiles), r);
+    hc::array_view<const _Ty> first_(hc::extent<1>(N), f_);
     kernel_launch(length,
-                  [ first_, N, length, &result, binary_op ]
+                  [ first_, N, length, result, binary_op ]
                   ( hc::tiled_index<1> t_idx ) [[hc]]
                   {
                   int gx = t_idx.global[0];
@@ -184,9 +185,8 @@ T reduce_impl(RandomAccessIterator first, RandomAccessIterator last,
 
                   }, REDUCE_WAVEFRONT_SIZE);
 
-
-    auto ans = std::accumulate(result, result + numTiles, init, binary_op);
-    delete result;
+    result.synchronize();
+    auto ans = std::accumulate(std::begin(r), std::end(r), init, binary_op);
     return ans;
 }
 } // namespace details
