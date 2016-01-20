@@ -39,6 +39,7 @@
 namespace hc {
 
 using namespace Kalmar::enums;
+using namespace Kalmar::CLAMP;
 
 // forward declaration
 class accelerator;
@@ -360,10 +361,9 @@ private:
     template<typename Kernel, int dim_ext> friend
         std::shared_ptr<Kalmar::KalmarAsyncOp> Kalmar::mcw_cxxamp_launch_kernel_async(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&);
   
-    // FIXME: enable CPU execution path for HC
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
     template <typename Kernel, int N> friend
-        void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>&, Kernel const&, extent<N> const&);
+        completion_future launch_cpu_task_async(const std::shared_ptr<Kalmar::KalmarQueue>&, Kernel const&, extent<N> const&);
 #endif
 
     // non-tiled parallel_for_each
@@ -2595,10 +2595,6 @@ private:
 
     template <int N> friend
         class tiled_index;
-
-    friend class tiled_index_1D;
-    friend class tiled_index_2D;
-    friend class tiled_index_3D;
 };
 
 // ------------------------------------------------------------------------
@@ -2704,8 +2700,8 @@ public:
 
 private:
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    __attribute__((always_inline)) tiled_index(int a0, int a1, int a2, int b0, int b1, int b2, int c0, int c1, int c2, tile_barrier& pb) __CPU__ __HC__
-        : global(a2, a1, a0), local(b2, b1, b0), tile(c2, c1, c0), tile_origin(a2 - b2, a1 - b1, a0 - b0), barrier(pb) {}
+    __attribute__((always_inline)) tiled_index(int a0, int a1, int a2, int b0, int b1, int b2, int c0, int c1, int c2, tile_barrier& pb, int D0, int D1, int D2) __CPU__ __HC__
+        : global(a2, a1, a0), local(b2, b1, b0), tile(c2, c1, c0), tile_origin(a2 - b2, a1 - b1, a0 - b0), barrier(pb), tile_dim(D0, D1, D2) {}
 #endif
 
     __attribute__((annotate("__cxxamp_opencl_index")))
@@ -2727,6 +2723,11 @@ private:
 
     template<typename Kernel> friend
         completion_future parallel_for_each(const accelerator_view&, const tiled_extent<N>&, const Kernel&);
+
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+    template<typename K> friend
+        void partitioned_task_tile_3D(K const&, tiled_extent<3> const&, int);
+#endif
 };
 
 
@@ -2800,8 +2801,8 @@ public:
 
 private:
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    __attribute__((always_inline)) tiled_index(int a, int b, int c, tile_barrier& pb) __CPU__ __HC__
-        : global(a), local(b), tile(c), tile_origin(a - b), barrier(pb) {}
+    __attribute__((always_inline)) tiled_index(int a, int b, int c, tile_barrier& pb, int D0) __CPU__ __HC__
+        : global(a), local(b), tile(c), tile_origin(a - b), barrier(pb), tile_dim(D0) {}
 #endif
 
     __attribute__((annotate("__cxxamp_opencl_index")))
@@ -2821,6 +2822,11 @@ private:
 
     template<typename Kernel> friend
         completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
+
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+    template<typename K> friend
+        void partitioned_task_tile_1D(K const&, tiled_extent<1> const&, int);
+#endif
 };
 
 /**
@@ -2893,8 +2899,8 @@ public:
 
 private:
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    __attribute__((always_inline)) tiled_index(int a0, int a1, int b0, int b1, int c0, int c1, tile_barrier& pb) __CPU__ __HC__
-        : global(a1, a0), local(b1, b0), tile(c1, c0), tile_origin(a1 - b1, a0 - b0), barrier(pb) {}
+    __attribute__((always_inline)) tiled_index(int a0, int a1, int b0, int b1, int c0, int c1, tile_barrier& pb, int D0, int D1) __CPU__ __HC__
+        : global(a1, a0), local(b1, b0), tile(c1, c0), tile_origin(a1 - b1, a0 - b0), barrier(pb), tile_dim(D0, D1) {}
 #endif
 
     __attribute__((annotate("__cxxamp_opencl_index")))
@@ -2915,6 +2921,11 @@ private:
 
     template<typename Kernel> friend
         completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, const Kernel&);
+
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+    template<typename K> friend
+        void partitioned_task_tile_2D(K const&, tiled_extent<2> const&, int);
+#endif
 };
 
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
@@ -2949,23 +2960,24 @@ void partitioned_task(const Kernel& ker, const extent<N>& ext, int part) {
     }
 }
 
-template <typename Kernel, int D0>
-void partitioned_task_tile(Kernel const& f, tiled_extent<D0> const& ext, int part) {
+template <typename Kernel>
+void partitioned_task_tile_1D(Kernel const& f, tiled_extent<1> const& ext, int part) {
+    int D0 = ext.tile_dim[0];
     int start = (ext[0] / D0) * part / Kalmar::NTHREAD;
     int end = (ext[0] / D0) * (part + 1) / Kalmar::NTHREAD;
     int stride = end - start;
     if (stride == 0)
         return;
     char *stk = new char[D0 * SSIZE];
-    tiled_index<D0> *tidx = new tiled_index<D0>[D0];
+    tiled_index<1> *tidx = new tiled_index<1>[D0];
     tile_barrier::pb_t hc_bar = std::make_shared<barrier_t>(D0);
     tile_barrier tbar(hc_bar);
     for (int tx = start; tx < end; tx++) {
         int id = 0;
         char *sp = stk;
-        tiled_index<D0> *tip = tidx;
+        tiled_index<1> *tip = tidx;
         for (int x = 0; x < D0; x++) {
-            new (tip) tiled_index<D0>(tx * D0 + x, x, tx, tbar);
+            new (tip) tiled_index<1>(tx * D0 + x, x, tx, tbar, D0);
             hc_bar->setctx(++id, sp, f, tip, SSIZE);
             sp += SSIZE;
             ++tip;
@@ -2980,24 +2992,129 @@ void partitioned_task_tile(Kernel const& f, tiled_extent<D0> const& ext, int par
     delete [] tidx;
 }
 
-// FIXME: need to resolve the dependency to extent
+template <typename Kernel>
+void partitioned_task_tile_2D(Kernel const& f, tiled_extent<2> const& ext, int part) {
+    int D0 = ext.tile_dim[0];
+    int D1 = ext.tile_dim[1];
+    int start = (ext[0] / D0) * part / Kalmar::NTHREAD;
+    int end = (ext[0] / D0) * (part + 1) / Kalmar::NTHREAD;
+    int stride = end - start;
+    if (stride == 0)
+        return;
+    char *stk = new char[D1 * D0 * SSIZE];
+    tiled_index<2> *tidx = new tiled_index<2>[D0 * D1];
+    tile_barrier::pb_t hc_bar = std::make_shared<barrier_t>(D0 * D1);
+    tile_barrier tbar(hc_bar);
+
+    for (int tx = 0; tx < ext[1] / D1; tx++)
+        for (int ty = start; ty < end; ty++) {
+            int id = 0;
+            char *sp = stk;
+            tiled_index<2> *tip = tidx;
+            for (int x = 0; x < D1; x++)
+                for (int y = 0; y < D0; y++) {
+                    new (tip) tiled_index<2>(D1 * tx + x, D0 * ty + y, x, y, tx, ty, tbar, D0, D1);
+                    hc_bar->setctx(++id, sp, f, tip, SSIZE);
+                    ++tip;
+                    sp += SSIZE;
+                }
+            hc_bar->idx = 0;
+            while (hc_bar->idx == 0) {
+                hc_bar->idx = id;
+                hc_bar->swap(0, id);
+            }
+        }
+    delete [] stk;
+    delete [] tidx;
+}
+
+template <typename Kernel>
+void partitioned_task_tile_3D(Kernel const& f, tiled_extent<3> const& ext, int part) {
+    int D0 = ext.tile_dim[0];
+    int D1 = ext.tile_dim[1];
+    int D2 = ext.tile_dim[2];
+    int start = (ext[0] / D0) * part / Kalmar::NTHREAD;
+    int end = (ext[0] / D0) * (part + 1) / Kalmar::NTHREAD;
+    int stride = end - start;
+    if (stride == 0)
+        return;
+    char *stk = new char[D2 * D1 * D0 * SSIZE];
+    tiled_index<3> *tidx = new tiled_index<3>[D0 * D1 * D2];
+    tile_barrier::pb_t hc_bar = std::make_shared<barrier_t>(D0 * D1 * D2);
+    tile_barrier tbar(hc_bar);
+
+    for (int i = 0; i < ext[2] / D2; i++)
+        for (int j = 0; j < ext[1] / D1; j++)
+            for(int k = start; k < end; k++) {
+                int id = 0;
+                char *sp = stk;
+                tiled_index<3> *tip = tidx;
+                for (int x = 0; x < D2; x++)
+                    for (int y = 0; y < D1; y++)
+                        for (int z = 0; z < D0; z++) {
+                            new (tip) tiled_index<3>(D2 * i + x,
+                                                              D1 * j + y,
+                                                              D0 * k + z,
+                                                              x, y, z, i, j, k, tbar, D0, D1, D2);
+                            hc_bar->setctx(++id, sp, f, tip, SSIZE);
+                            ++tip;
+                            sp += SSIZE;
+                        }
+                hc_bar->idx = 0;
+                while (hc_bar->idx == 0) {
+                    hc_bar->idx = id;
+                    hc_bar->swap(0, id);
+                }
+            }
+    delete [] stk;
+    delete [] tidx;
+}
+
 template <typename Kernel, int N>
-void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
+completion_future launch_cpu_task_async(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
                      extent<N> const& compute_domain)
 {
     Kalmar::CPUKernelRAII<Kernel> obj(pQueue, f);
     for (int i = 0; i < Kalmar::NTHREAD; ++i)
         obj[i] = std::thread(partitioned_task<Kernel, N>, std::cref(f), std::cref(compute_domain), i);
+    // FIXME wrap the above operation into the completion_future object
+    return completion_future();
 }
 
-template <typename Kernel, int D0>
-void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
-                     tiled_extent<D0> const& compute_domain)
+template <typename Kernel>
+completion_future launch_cpu_task_async(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
+                     tiled_extent<1> const& compute_domain)
 {
     Kalmar::CPUKernelRAII<Kernel> obj(pQueue, f);
     for (int i = 0; i < Kalmar::NTHREAD; ++i)
-        obj[i] = std::thread(partitioned_task_tile<Kernel, D0>,
+        obj[i] = std::thread(partitioned_task_tile_1D<Kernel>,
                              std::cref(f), std::cref(compute_domain), i);
+    // FIXME wrap the above operation into the completion_future object
+    return completion_future();
+}
+
+template <typename Kernel>
+completion_future launch_cpu_task_async(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
+                     tiled_extent<2> const& compute_domain)
+{
+    Kalmar::CPUKernelRAII<Kernel> obj(pQueue, f);
+    for (int i = 0; i < Kalmar::NTHREAD; ++i)
+        obj[i] = std::thread(partitioned_task_tile_2D<Kernel>,
+                             std::cref(f), std::cref(compute_domain), i);
+    // FIXME wrap the above operation into the completion_future object
+    return completion_future();
+}
+
+template <typename Kernel>
+completion_future launch_cpu_task_async(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
+                     tiled_extent<3> const& compute_domain)
+{
+    Kalmar::CPUKernelRAII<Kernel> obj(pQueue, f);
+    for (int i = 0; i < Kalmar::NTHREAD; ++i)
+        obj[i] = std::thread(partitioned_task_tile_3D<Kernel>,
+                             std::cref(f), std::cref(compute_domain), i);
+    // FIXME wrap the above operation into the completion_future object
+    return completion_future();
 }
 
 #endif
@@ -6641,6 +6758,11 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
     size_t ext[3] = {static_cast<size_t>(compute_domain[N - 1]),
         static_cast<size_t>(compute_domain[N - 2]),
         static_cast<size_t>(compute_domain[N - 3])};
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+    if (is_cpu()) {
+        return launch_cpu_task_async(av.pQueue, f, compute_domain);
+    }
+#endif
     if (av.get_accelerator().get_device_path() == L"cpu") {
       throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
     }
@@ -6648,7 +6770,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
     return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<pfe_wrapper<N, Kernel>, 3>(av.pQueue, ext, NULL, _pf));
 #else
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  int* foo1 = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
+    int* foo1 = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
 #endif
     auto bar = &pfe_wrapper<N, Kernel>::operator();
     auto qq = &index<N>::__cxxamp_opencl_index;
@@ -6673,6 +6795,11 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   }
   if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+    if (is_cpu()) {
+        return launch_cpu_task_async(av.pQueue, f, compute_domain);
+    }
+#endif
   size_t ext = compute_domain[0];
   if (av.get_accelerator().get_device_path() == L"cpu") {
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
@@ -6705,6 +6832,11 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
     throw invalid_compute_domain("Extent size too large.");
   if (static_cast<size_t>(compute_domain[1]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+    if (is_cpu()) {
+        return launch_cpu_task_async(av.pQueue, f, compute_domain);
+    }
+#endif
   size_t ext[2] = {static_cast<size_t>(compute_domain[1]),
                    static_cast<size_t>(compute_domain[0])};
   if (av.get_accelerator().get_device_path() == L"cpu") {
@@ -6740,6 +6872,11 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
     throw invalid_compute_domain("Extent size too large.");
   if (static_cast<size_t>(compute_domain[2]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+    if (is_cpu()) {
+        return launch_cpu_task_async(av.pQueue, f, compute_domain);
+    }
+#endif
   size_t ext[3] = {static_cast<size_t>(compute_domain[2]),
                    static_cast<size_t>(compute_domain[1]),
                    static_cast<size_t>(compute_domain[0])};
@@ -6774,6 +6911,11 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
     throw invalid_compute_domain("Extent size too large.");
   size_t ext = compute_domain[0];
   size_t tile = compute_domain.tile_dim[0];
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+  if (is_cpu()) {
+      return launch_cpu_task_async(av.pQueue, f, compute_domain);
+  } else
+#endif
   if (av.get_accelerator().get_device_path() == L"cpu") {
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
   }
@@ -6811,6 +6953,11 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
                     static_cast<size_t>(compute_domain[0])};
   size_t tile[2] = { static_cast<size_t>(compute_domain.tile_dim[1]),
                      static_cast<size_t>(compute_domain.tile_dim[0]) };
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+  if (is_cpu()) {
+      return launch_cpu_task_async(av.pQueue, f, compute_domain);
+  } else
+#endif
   if (av.get_accelerator().get_device_path() == L"cpu") {
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
   }
@@ -6852,6 +6999,11 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   size_t tile[3] = { static_cast<size_t>(compute_domain.tile_dim[2]),
                      static_cast<size_t>(compute_domain.tile_dim[1]),
                      static_cast<size_t>(compute_domain.tile_dim[0]) };
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+  if (is_cpu()) {
+      return launch_cpu_task_async(av.pQueue, f, compute_domain);
+  } else
+#endif
   if (av.get_accelerator().get_device_path() == L"cpu") {
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
   }
