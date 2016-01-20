@@ -69,6 +69,7 @@ void for_each_impl(InputIterator first, InputIterator last,
                    Function f,
                    std::random_access_iterator_tag) {
   const size_t N = static_cast<size_t>(std::distance(first, last));
+  using _Ty = typename std::iterator_traits<InputIterator>::value_type;
   if (N <= details::PARALLELIZE_THRESHOLD) {
     for_each_impl(first, last, f, std::input_iterator_tag{});
     return;
@@ -76,8 +77,9 @@ void for_each_impl(InputIterator first, InputIterator last,
 
   // FIXME: raw pointer won't work in dGPU
   auto first_ = utils::get_pointer(first);
-  kernel_launch(N, [first_, f](hc::index<1> idx) [[hc]] {
-    f(*(first_ + idx[0]));
+  hc::array_view<_Ty> av(hc::extent<1>(N), first_);
+  kernel_launch(N, [av, f](hc::index<1> idx) [[hc]] {
+    f(av(idx));
   });
 }
 
