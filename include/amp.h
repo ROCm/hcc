@@ -2169,7 +2169,6 @@ void partitioned_task_tile(Kernel const& f, tiled_extent<D0, D1, D2> const& ext,
     delete [] tidx;
 }
 
-// FIXME: need to resolve the dependency to extent
 template <typename Kernel, int N>
 void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
                      extent<N> const& compute_domain)
