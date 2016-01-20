@@ -1,7 +1,8 @@
-// XFAIL: Linux,boltzmann
-// RUN: %hc %s -c -o %t_file1.out && %hc %s %t_file1.out -o %t.out && %t.out
+// XFAIL: Linux
+// RUN: %hc %s -c -o %t_file1.out && %hc %s %t_file1.out -lhc_am -o %t.out && %t.out
 
 #include "grid_launch.h"
+#include "hc_am.hpp"
 
 __attribute__((hc_grid_launch)) void foo(grid_launch_parm lp, int* a)
 {
@@ -15,6 +16,8 @@ int main()
 
   int* a = (int*)malloc(sizeof(int)*size);
 
+  int* a_d = (int*)hc::am_alloc(size*sizeof(int), hc::accelerator(), 0);
+
   grid_launch_parm lp;
   grid_launch_init(&lp);
 
@@ -22,8 +25,10 @@ int main()
 
   hc::completion_future cf;
   lp.cf = &cf;
-  foo(lp, a);
+  foo(lp, a_d);
   lp.cf->wait();
+
+  hc::am_copy(a, a_d, size*sizeof(int));
 
   int ret = 0;
   for(int i = 0; i < size; ++i)
