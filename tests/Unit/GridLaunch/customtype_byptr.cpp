@@ -1,7 +1,9 @@
-// XFAIL: Linux,boltzmann
-// RUN: %hc %s -o %t.out && %t.out
+// XFAIL: Linux
+// RUN: %hc -lhc_am %s -o %t.out && %t.out
 
 #include "grid_launch.h"
+#include "hc_am.hpp"
+#include <iostream>
 
 typedef struct {
   int x;
@@ -37,6 +39,11 @@ int main(void) {
     data3[i].x = i;
   }
 
+  Foo* data1_d = (Foo*)hc::am_alloc(SIZE*sizeof(Foo), hc::accelerator(), 0);
+  Bar* data2_d = (Bar*)hc::am_alloc(SIZE*sizeof(Bar), hc::accelerator(), 0);
+  constStructconst* data3_d = (constStructconst*)hc::am_alloc(SIZE*sizeof(constStructconst), hc::accelerator(), 0);
+  hc::am_copy(data3_d, data3, SIZE*sizeof(constStructconst));
+
   grid_launch_parm lp;
   grid_launch_init(&lp);
 
@@ -45,8 +52,11 @@ int main(void) {
 
   hc::completion_future cf;
   lp.cf = &cf;
-  kernel1(lp, data1, data2, data3);
+  kernel1(lp, data1_d, data2_d, data3_d);
   lp.cf->wait();
+
+  hc::am_copy(data1, data1_d, SIZE*sizeof(Foo));
+  hc::am_copy(data2, data2_d, SIZE*sizeof(Bar));
 
   bool ret = 0;
   for(int i = 0; i < SIZE; ++i) {

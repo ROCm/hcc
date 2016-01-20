@@ -1,4 +1,4 @@
-// RUN: %hc -lhc_am %s -o %t.out 2>&1 | %FileCheck %s
+// RUN: %hc %s -c -o %t.out 2>&1 | %FileCheck %s
 
 #include "hc.hpp"
 #include "grid_launch.h"
