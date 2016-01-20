@@ -47,10 +47,11 @@ void generate_impl(ForwardIterator first, ForwardIterator last,
 
   // FIXME: [[hc]] will cause g() having ambient context,
   //        use restrict(amp) temporarily
-  // FIXME: raw pointer won't work in dGPU
+  using _Ty = typename std::iterator_traits<ForwardIterator>::value_type;
   auto first_ = utils::get_pointer(first);
-  kernel_launch(N, [first_, g](hc::index<1> idx) restrict(amp) {
-    *(first_ + idx[0]) = g();
+  hc::array_view<_Ty> av(hc::extent<1>(N), first_);
+  kernel_launch(N, [av, g](hc::index<1> idx) restrict(amp) {
+    av(idx) = g();
   });
 }
 
@@ -69,13 +70,12 @@ void for_each_impl(InputIterator first, InputIterator last,
                    Function f,
                    std::random_access_iterator_tag) {
   const size_t N = static_cast<size_t>(std::distance(first, last));
-  using _Ty = typename std::iterator_traits<InputIterator>::value_type;
   if (N <= details::PARALLELIZE_THRESHOLD) {
     for_each_impl(first, last, f, std::input_iterator_tag{});
     return;
   }
 
-  // FIXME: raw pointer won't work in dGPU
+  using _Ty = typename std::iterator_traits<InputIterator>::value_type;
   auto first_ = utils::get_pointer(first);
   hc::array_view<_Ty> av(hc::extent<1>(N), first_);
   kernel_launch(N, [av, f](hc::index<1> idx) [[hc]] {
@@ -103,11 +103,12 @@ void replace_if_impl(ForwardIterator first, ForwardIterator last,
     return;
   }
 
-  // FIXME: raw pointer won't work in dGPU
+  using _Ty = typename std::iterator_traits<ForwardIterator>::value_type;
   auto first_ = utils::get_pointer(first);
-  kernel_launch(N, [first_, f, new_value](hc::index<1> idx) [[hc]] {
-    if (f(*(first_ + idx[0])))
-      *(first_ + idx[0]) = new_value;
+  hc::array_view<_Ty> av(hc::extent<1>(N), first_);
+  kernel_launch(N, [av, f, new_value](hc::index<1> idx) [[hc]] {
+    if (f(av(idx)))
+      av(idx) = new_value;
   });
 }
 
@@ -136,14 +137,15 @@ OutputIterator replace_copy_if_impl(InputIterator first, InputIterator last,
   }
 
   if (N >= 0) {
-    // FIXME: raw pointer won't work in dGPU
+    using _Ty = typename std::iterator_traits<InputIterator>::value_type;
+    using _Td = typename std::iterator_traits<OutputIterator>::value_type;
     auto first_ = utils::get_pointer(first);
     auto d_first_ = utils::get_pointer(d_first);
-    kernel_launch(N, [first_, d_first_, f, new_value](hc::index<1> idx) [[hc]] {
-      if (f(*(first_ + idx[0])))
-        *(d_first_ + idx[0]) = new_value;
-      else
-        *(d_first_ + idx[0]) = *(first_ + idx[0]);
+    hc::array_view<_Ty> av(hc::extent<1>(N), first_);
+    hc::array_view<_Td> dv(hc::extent<1>(N), d_first_);
+    kernel_launch(N, [av, dv, f, new_value](hc::index<1> idx) [[hc]] {
+      _Ty p = av(idx);
+      dv(idx) = f(p) ? new_value : p;
     });
   }
   return (N < 0) ? d_first : d_first + N;
@@ -172,14 +174,14 @@ OutputIterator adjacent_difference_impl(InputIterator first, InputIterator last,
   }
 
   if (N >= 0) {
-    // FIXME: raw pointer won't work in dGPU
+    using _Ty = typename std::iterator_traits<InputIterator>::value_type;
+    using _Td = typename std::iterator_traits<OutputIterator>::value_type;
     auto first_ = utils::get_pointer(first);
     auto d_first_ = utils::get_pointer(d_first);
-    kernel_launch(N, [first_, d_first_, f](hc::index<1> idx) [[hc]] {
-      if (idx[0] == 0)
-        *(d_first_ + idx[0]) = *(first_ + idx[0]);
-      else
-        *(d_first_ + idx[0]) = f(*(first_ + idx[0]), *(first_ + (idx[0] - 1)));
+    hc::array_view<_Ty> av(hc::extent<1>(N), first_);
+    hc::array_view<_Td> dv(hc::extent<1>(N), d_first_);
+    kernel_launch(N, [av, dv, f](hc::index<1> idx) [[hc]] {
+      dv(idx) = idx[0] != 0 ? f(av(idx), av(idx[0] - 1)) : av(idx);
     });
   }
   return (N < 0) ? d_first : d_first + N;
@@ -205,11 +207,14 @@ OutputIterator swap_ranges_impl(InputIterator first, InputIterator last,
   }
 
   if (N >= 0) {
-    // FIXME: raw pointer won't work in dGPU
+    using _Ty = typename std::iterator_traits<InputIterator>::value_type;
+    using _Td = typename std::iterator_traits<OutputIterator>::value_type;
     auto first_ = utils::get_pointer(first);
     auto d_first_ = utils::get_pointer(d_first);
-    kernel_launch(N, [first_, d_first_](hc::index<1> idx) [[hc]] {
-      std::iter_swap(first_ + idx[0], d_first_ + idx[0]);
+    hc::array_view<_Ty> av(hc::extent<1>(N), first_);
+    hc::array_view<_Td> dv(hc::extent<1>(N), d_first_);
+    kernel_launch(N, [av, dv](hc::index<1> idx) [[hc]] {
+      std::swap(av(idx), dv(idx));
     });
   }
   return (N < 0) ? d_first : d_first + N;
