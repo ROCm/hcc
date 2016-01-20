@@ -169,6 +169,7 @@ private:
     hsa_signal_t signal;
     int signalIndex;
     bool isDispatched;
+    hsa_wait_state_t waitMode;
 
     std::shared_future<void>* future;
 
@@ -179,11 +180,22 @@ public:
 
     void* getNativeHandle() override { return &signal; }
 
+    void setWaitMode(Kalmar::hcWaitMode mode) override {
+        switch (mode) {
+            case Kalmar::hcWaitModeBlocked:
+                waitMode = HSA_WAIT_STATE_BLOCKED;
+            break;
+            case Kalmar::hcWaitModeActive:
+                waitMode = HSA_WAIT_STATE_ACTIVE;
+            break;
+        }
+    }
+
     bool isReady() override {
         return (hsa_signal_load_acquire(signal) == 0);
     }
 
-    HSABarrier() : isDispatched(false), future(nullptr), hsaQueue(nullptr) {}
+    HSABarrier() : isDispatched(false), future(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_BLOCKED) {}
 
     ~HSABarrier() {
 #if KALMAR_DEBUG
@@ -239,6 +251,7 @@ private:
     int signalIndex;
     hsa_kernel_dispatch_packet_t aql;
     bool isDispatched;
+    hsa_wait_state_t waitMode;
 
     size_t dynamicGroupSize;
 
@@ -250,6 +263,17 @@ public:
     std::shared_future<void>* getFuture() override { return future; }
 
     void* getNativeHandle() override { return &signal; }
+
+    void setWaitMode(Kalmar::hcWaitMode mode) override {
+        switch (mode) {
+            case Kalmar::hcWaitModeBlocked:
+                waitMode = HSA_WAIT_STATE_BLOCKED;
+            break;
+            case Kalmar::hcWaitModeActive:
+                waitMode = HSA_WAIT_STATE_ACTIVE;
+            break;
+        }
+    }
 
     bool isReady() override {
         return (hsa_signal_load_acquire(signal) == 0);
@@ -536,7 +560,7 @@ public:
         return count;
     }
 
-    void wait() override {
+    void wait(hcWaitMode mode = hcWaitModeBlocked) override {
       // wait on all previous async operations to complete
       for (int i = 0; i < asyncOps.size(); ++i) {
         if (asyncOps[i] != nullptr) {
@@ -2028,6 +2052,7 @@ HSADispatch::HSADispatch(Kalmar::HSADevice* _device, HSAKernel* _kernel) :
     agent(_device->getAgent()),
     kernel(_kernel),
     isDispatched(false),
+    waitMode(HSA_WAIT_STATE_BLOCKED),
     dynamicGroupSize(0),
     future(nullptr),
     hsaQueue(nullptr),
@@ -2188,11 +2213,11 @@ HSADispatch::waitComplete() {
     }
 
 #if KALMAR_DEBUG
-    std::cerr << "wait for kernel dispatch completion...\n";
+    std::cerr << "wait for kernel dispatch completion with wait flag: " << waitMode << "\n";
 #endif
 
     // wait for completion
-    if (hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_LT, 1, uint64_t(-1), HSA_WAIT_STATE_ACTIVE)!=0) {
+    if (hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_LT, 1, uint64_t(-1), waitMode)!=0) {
         printf("Signal wait returned unexpected value\n");
         exit(0);
     }
@@ -2347,11 +2372,11 @@ HSABarrier::waitComplete() {
     }
 
 #if KALMAR_DEBUG
-    std::cerr << "wait for barrier completion...\n";
+    std::cerr << "wait for barrier completion with wait flag: " << waitMode << "\n";
 #endif
 
     // Wait on completion signal until the barrier is finished
-    hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_STATE_BLOCKED);
+    hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, waitMode);
 
 #if KALMAR_DEBUG
     std::cerr << "complete!\n";

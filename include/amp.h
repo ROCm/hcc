@@ -19,6 +19,7 @@
 #include <kalmar_buffer.h>
 #include <kalmar_serialize.h>
 #include <kalmar_launch.h>
+#include <kalmar_cpu_launch.h>
 
 // forward declaration
 namespace Concurrency {
@@ -58,6 +59,7 @@ using accelerator_view_removed = Kalmar::accelerator_view_removed;
 namespace Concurrency {
 
 using namespace Kalmar::enums;
+using namespace Kalmar::CLAMP;
 
 // ------------------------------------------------------------------------
 // accelerator_view
@@ -226,7 +228,7 @@ private:
 
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
     template <typename Kernel, int N> friend
-      void Kalmar::launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>&, Kernel const&, extent<N> const&);
+      void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>&, Kernel const&, extent<N> const&);
 #endif
 
     template <typename Q, int K> friend class array;
@@ -2031,6 +2033,182 @@ public:
 
     /** @} */
 };
+
+#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+#define SSIZE 1024 * 10
+template <int N, typename Kernel,  int K>
+struct cpu_helper
+{
+    static inline void call(const Kernel& k, index<K>& idx, const extent<K>& ext) restrict(amp,cpu) {
+        int i;
+        for (i = 0; i < ext[N]; ++i) {
+            idx[N] = i;
+            cpu_helper<N + 1, Kernel, K>::call(k, idx, ext);
+        }
+    }
+};
+template <typename Kernel, int K>
+struct cpu_helper<K, Kernel, K>
+{
+    static inline void call(const Kernel& k, const index<K>& idx, const extent<K>& ext) restrict(amp,cpu) {
+        (const_cast<Kernel&>(k))(idx);
+    }
+};
+
+template <typename Kernel, int N>
+void partitioned_task(const Kernel& ker, const extent<N>& ext, int part) {
+    index<N> idx;
+    int start = ext[0] * part / Kalmar::NTHREAD;
+    int end = ext[0] * (part + 1) / Kalmar::NTHREAD;
+    for (int i = start; i < end; i++) {
+        idx[0] = i;
+        cpu_helper<1, Kernel, N>::call(ker, idx, ext);
+    }
+}
+
+template <typename Kernel, int D0>
+void partitioned_task_tile(Kernel const& f, tiled_extent<D0> const& ext, int part) {
+    int start = (ext[0] / D0) * part / Kalmar::NTHREAD;
+    int end = (ext[0] / D0) * (part + 1) / Kalmar::NTHREAD;
+    int stride = end - start;
+    if (stride == 0)
+        return;
+    char *stk = new char[D0 * SSIZE];
+    tiled_index<D0> *tidx = new tiled_index<D0>[D0];
+    tile_barrier::pb_t amp_bar = std::make_shared<barrier_t>(D0);
+    tile_barrier tbar(amp_bar);
+    for (int tx = start; tx < end; tx++) {
+        int id = 0;
+        char *sp = stk;
+        tiled_index<D0> *tip = tidx;
+        for (int x = 0; x < D0; x++) {
+            new (tip) tiled_index<D0>(tx * D0 + x, x, tx, tbar);
+            amp_bar->setctx(++id, sp, f, tip, SSIZE);
+            sp += SSIZE;
+            ++tip;
+        }
+        amp_bar->idx = 0;
+        while (amp_bar->idx == 0) {
+            amp_bar->idx = id;
+            amp_bar->swap(0, id);
+        }
+    }
+    delete [] stk;
+    delete [] tidx;
+}
+template <typename Kernel, int D0, int D1>
+void partitioned_task_tile(Kernel const& f, tiled_extent<D0, D1> const& ext, int part) {
+    int start = (ext[0] / D0) * part / Kalmar::NTHREAD;
+    int end = (ext[0] / D0) * (part + 1) / Kalmar::NTHREAD;
+    int stride = end - start;
+    if (stride == 0)
+        return;
+    char *stk = new char[D1 * D0 * SSIZE];
+    tiled_index<D0, D1> *tidx = new tiled_index<D0, D1>[D0 * D1];
+    tile_barrier::pb_t amp_bar = std::make_shared<barrier_t>(D0 * D1);
+    tile_barrier tbar(amp_bar);
+
+    for (int tx = 0; tx < ext[1] / D1; tx++)
+        for (int ty = start; ty < end; ty++) {
+            int id = 0;
+            char *sp = stk;
+            tiled_index<D0, D1> *tip = tidx;
+            for (int x = 0; x < D1; x++)
+                for (int y = 0; y < D0; y++) {
+                    new (tip) tiled_index<D0, D1>(D1 * tx + x, D0 * ty + y, x, y, tx, ty, tbar);
+                    amp_bar->setctx(++id, sp, f, tip, SSIZE);
+                    ++tip;
+                    sp += SSIZE;
+                }
+            amp_bar->idx = 0;
+            while (amp_bar->idx == 0) {
+                amp_bar->idx = id;
+                amp_bar->swap(0, id);
+            }
+        }
+    delete [] stk;
+    delete [] tidx;
+}
+
+template <typename Kernel, int D0, int D1, int D2>
+void partitioned_task_tile(Kernel const& f, tiled_extent<D0, D1, D2> const& ext, int part) {
+    int start = (ext[0] / D0) * part / Kalmar::NTHREAD;
+    int end = (ext[0] / D0) * (part + 1) / Kalmar::NTHREAD;
+    int stride = end - start;
+    if (stride == 0)
+        return;
+    char *stk = new char[D2 * D1 * D0 * SSIZE];
+    tiled_index<D0, D1, D2> *tidx = new tiled_index<D0, D1, D2>[D0 * D1 * D2];
+    tile_barrier::pb_t amp_bar = std::make_shared<barrier_t>(D0 * D1 * D2);
+    tile_barrier tbar(amp_bar);
+
+    for (int i = 0; i < ext[2] / D2; i++)
+        for (int j = 0; j < ext[1] / D1; j++)
+            for(int k = start; k < end; k++) {
+                int id = 0;
+                char *sp = stk;
+                tiled_index<D0, D1, D2> *tip = tidx;
+                for (int x = 0; x < D2; x++)
+                    for (int y = 0; y < D1; y++)
+                        for (int z = 0; z < D0; z++) {
+                            new (tip) tiled_index<D0, D1, D2>(D2 * i + x,
+                                                              D1 * j + y,
+                                                              D0 * k + z,
+                                                              x, y, z, i, j, k, tbar);
+                            amp_bar->setctx(++id, sp, f, tip, SSIZE);
+                            ++tip;
+                            sp += SSIZE;
+                        }
+                amp_bar->idx = 0;
+                while (amp_bar->idx == 0) {
+                    amp_bar->idx = id;
+                    amp_bar->swap(0, id);
+                }
+            }
+    delete [] stk;
+    delete [] tidx;
+}
+
+template <typename Kernel, int N>
+void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
+                     extent<N> const& compute_domain)
+{
+    Kalmar::CPUKernelRAII<Kernel> obj(pQueue, f);
+    for (int i = 0; i < Kalmar::NTHREAD; ++i)
+        obj[i] = std::thread(partitioned_task<Kernel, N>, std::cref(f), std::cref(compute_domain), i);
+}
+
+template <typename Kernel, int D0>
+void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
+                     tiled_extent<D0> const& compute_domain)
+{
+    Kalmar::CPUKernelRAII<Kernel> obj(pQueue, f);
+    for (int i = 0; i < Kalmar::NTHREAD; ++i)
+        obj[i] = std::thread(partitioned_task_tile<Kernel, D0>,
+                             std::cref(f), std::cref(compute_domain), i);
+}
+
+template <typename Kernel, int D0, int D1>
+void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
+                     tiled_extent<D0, D1> const& compute_domain)
+{
+    Kalmar::CPUKernelRAII<Kernel> obj(pQueue, f);
+    for (int i = 0; i < Kalmar::NTHREAD; ++i)
+        obj[i] = std::thread(partitioned_task_tile<Kernel, D0, D1>,
+                             std::cref(f), std::cref(compute_domain), i);
+}
+
+template <typename Kernel, int D0, int D1, int D2>
+void launch_cpu_task(const std::shared_ptr<Kalmar::KalmarQueue>& pQueue, Kernel const& f,
+                     tiled_extent<D0, D1, D2> const& compute_domain)
+{
+    Kalmar::CPUKernelRAII<Kernel> obj(pQueue, f);
+    for (int i = 0; i < Kalmar::NTHREAD; ++i)
+        obj[i] = std::thread(partitioned_task_tile<Kernel, D0, D1, D2>,
+                             std::cref(f), std::cref(compute_domain), i);
+}
+
+#endif
 
 // ------------------------------------------------------------------------
 // utility helper classes for array_view
@@ -5390,10 +5568,10 @@ unsigned int atomic_sub_unsigned(unsigned int *p, unsigned int val);
 int atomic_sub_int(int *p, int val);
 float atomic_sub_float(float *p, float val);
 
-static inline unsigned int atomic_fetch_sub(unsigned int *x, unsigned int y) restict(amp,cpu) {
+static inline unsigned int atomic_fetch_sub(unsigned int *x, unsigned int y) restrict(amp,cpu) {
   return atomic_sub_unsigned(x, y);
 }
-static inline int atomic_fetch_sub(int *x, int y) restrict(amp,hpcu) {
+static inline int atomic_fetch_sub(int *x, int y) restrict(amp,cpu) {
   return atomic_sub_int(x, y);
 }
 static inline float atomic_fetch_sub(float *x, float y) restrict(amp,cpu) {
@@ -5674,7 +5852,7 @@ void parallel_for_each(const accelerator_view& av, extent<N> compute_domain,
         static_cast<size_t>(compute_domain[N - 2]),
         static_cast<size_t>(compute_domain[N - 3])};
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    if (CLAMP::is_cpu()) {
+    if (is_cpu()) {
         launch_cpu_task(av.pQueue, f, compute_domain);
         return;
     }
@@ -5708,7 +5886,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
   if (static_cast<size_t>(compute_domain[0]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (CLAMP::is_cpu()) {
+  if (is_cpu()) {
       launch_cpu_task(av.pQueue, f, compute_domain);
       return;
   }
@@ -5740,7 +5918,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
   if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (CLAMP::is_cpu()) {
+  if (is_cpu()) {
       launch_cpu_task(av.pQueue, f, compute_domain);
       return;
   }
@@ -5779,7 +5957,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
   if (static_cast<size_t>(compute_domain[0]) * static_cast<size_t>(compute_domain[1]) * static_cast<size_t>(compute_domain[2]) > 4294967295L)
     throw invalid_compute_domain("Extent size too large.");
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (CLAMP::is_cpu()) {
+  if (is_cpu()) {
       launch_cpu_task(av.pQueue, f, compute_domain);
       return;
   }
@@ -5819,7 +5997,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
     throw invalid_compute_domain("Extent can't be evenly divisible by tile size.");
   }
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (CLAMP::is_cpu()) {
+  if (is_cpu()) {
       launch_cpu_task(av.pQueue, f, compute_domain);
   } else
 #endif
@@ -5858,7 +6036,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
     throw invalid_compute_domain("Extent can't be evenly divisible by tile size.");
   }
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (CLAMP::is_cpu()) {
+  if (is_cpu()) {
       launch_cpu_task(av.pQueue, f, compute_domain);
   } else
 #endif
@@ -5905,7 +6083,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
     throw invalid_compute_domain("Extent can't be evenly divisible by tile size.");
   }
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-  if (CLAMP::is_cpu()) {
+  if (is_cpu()) {
       launch_cpu_task(av.pQueue, f, compute_domain);
   } else
 #endif
