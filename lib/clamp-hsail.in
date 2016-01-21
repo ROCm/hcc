@@ -22,18 +22,18 @@ if [ -n "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
     SPIRIFY=$HCC_HOME/bin/clamp-spirify
     HLC_LLC=$HCC_HOME/hlc/bin/llc
     HLC_ASM=$HCC_HOME/HSAILasm/HSAILasm
-elif [ -e @CMAKE_INSTALL_PREFIX@ ]; then
-    AS=@CMAKE_INSTALL_PREFIX@/bin/llvm-as
-    OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
-    SPIRIFY=@CMAKE_INSTALL_PREFIX@/bin/clamp-spirify
-    HLC_LLC=@CMAKE_INSTALL_PREFIX@/hlc/bin/llc
-    HLC_ASM=@CMAKE_INSTALL_PREFIX@/HSAILasm/HSAILasm
 elif [ -d @LLVM_TOOLS_DIR@ ]; then
     AS=@LLVM_TOOLS_DIR@/llvm-as
     OPT=@LLVM_TOOLS_DIR@/opt
     SPIRIFY=@PROJECT_BINARY_DIR@/lib/clamp-spirify
     HLC_LLC=@PROJECT_BINARY_DIR@/hlc/bin/llc
     HLC_ASM=@PROJECT_BINARY_DIR@/HSAILasm/HSAILAsm/HSAILasm # notice the "A"
+elif [ -e @CMAKE_INSTALL_PREFIX@ ]; then
+    AS=@CMAKE_INSTALL_PREFIX@/bin/llvm-as
+    OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
+    SPIRIFY=@CMAKE_INSTALL_PREFIX@/bin/clamp-spirify
+    HLC_LLC=@CMAKE_INSTALL_PREFIX@/hlc/bin/llc
+    HLC_ASM=@CMAKE_INSTALL_PREFIX@/HSAILasm/HSAILasm
 else
     echo "ERROR: Can NOT locate HCC tools! Please specify with $HCC_HOME environmental variable." >&2
     exit 1

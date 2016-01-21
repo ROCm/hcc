@@ -20,14 +20,14 @@ if [ -n "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
     OPT=$HCC_HOME/bin/opt
     LLC=$HCC_HOME/bin/llc
     LIB=$HCC_HOME/lib
-elif [ -e @CMAKE_INSTALL_PREFIX@ ]; then
-    OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
-    LLC=@CMAKE_INSTALL_PREFIX@/bin/llc
-    LIB=@CMAKE_INSTALL_PREFIX@/lib
 elif [ -d @LLVM_TOOLS_DIR@ ]; then
     OPT=@LLVM_TOOLS_DIR@/opt
     LLC=@LLVM_TOOLS_DIR@/llc
     LIB=@LLVM_LIBS_DIR@
+elif [ -e @CMAKE_INSTALL_PREFIX@ ]; then
+    OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
+    LLC=@CMAKE_INSTALL_PREFIX@/bin/llc
+    LIB=@CMAKE_INSTALL_PREFIX@/lib
 else
     echo "ERROR: Can NOT locate HCC tools! Please specify with $HCC_HOME environmental variable." >&2
     exit 1

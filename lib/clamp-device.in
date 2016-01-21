@@ -49,14 +49,6 @@ if [ -n "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
     MATHLIB=$HCC_HOME/lib
     LIB=$HCC_HOME/lib
     HSATOOLS=$HCC_HOME/bin/clamp-hsatools
-elif [ -e @CMAKE_INSTALL_PREFIX@/bin/opt ]; then
-    AS=@CMAKE_INSTALL_PREFIX@/bin/llvm-as
-    OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
-    LLC=@CMAKE_INSTALL_PREFIX@/bin/llc
-    LINK=@CMAKE_INSTALL_PREFIX@/bin/llvm-link
-    MATHLIB=@CMAKE_INSTALL_PREFIX@/lib
-    LIB=@CMAKE_INSTALL_PREFIX@/lib
-    HSATOOLS=@CMAKE_INSTALL_PREFIX@/bin/clamp-hsatools
 elif [ -d @LLVM_TOOLS_DIR@ ]; then
     AS=@LLVM_TOOLS_DIR@/llvm-as
     OPT=@LLVM_TOOLS_DIR@/opt
@@ -65,6 +57,14 @@ elif [ -d @LLVM_TOOLS_DIR@ ]; then
     MATHLIB=@CPPAMP_SOURCE_DIR@/lib
     LIB=@LLVM_LIBS_DIR@
     HSATOOLS=@PROJECT_BINARY_DIR@/lib/clamp-hsatools
+elif [ -e @CMAKE_INSTALL_PREFIX@/bin/opt ]; then
+    AS=@CMAKE_INSTALL_PREFIX@/bin/llvm-as
+    OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
+    LLC=@CMAKE_INSTALL_PREFIX@/bin/llc
+    LINK=@CMAKE_INSTALL_PREFIX@/bin/llvm-link
+    MATHLIB=@CMAKE_INSTALL_PREFIX@/lib
+    LIB=@CMAKE_INSTALL_PREFIX@/lib
+    HSATOOLS=@CMAKE_INSTALL_PREFIX@/bin/clamp-hsatools
 else
     echo "ERROR: Can NOT locate HCC tools! Please specify with $HCC_HOME environ
 mental variable." >&2
