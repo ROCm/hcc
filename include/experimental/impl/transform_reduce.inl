@@ -50,9 +50,9 @@ T transform_reduce(InputIterator first, InputIterator last,
   numTiles = static_cast< int >((N/_T_REDUCE_WAVEFRONT_SIZE)>= numTiles?(numTiles):
                                 (std::ceil( static_cast< float >( N ) / _T_REDUCE_WAVEFRONT_SIZE) ));
 
-  std::vector<T> r(numTiles);
+  std::unique_ptr<T[]> r(new T[numTiles]);
   auto f_ = utils::get_pointer(first);
-  hc::array_view<T> result(hc::extent<1>(numTiles), r);
+  hc::array_view<T> result(hc::extent<1>(numTiles), r.get());
   hc::array_view<_Tp> first_(hc::extent<1>(N), f_);
   result.discard_data();
   auto transform_op = unary_op;
@@ -108,7 +108,7 @@ T transform_reduce(InputIterator first, InputIterator last,
                 }
                 }, _T_REDUCE_WAVEFRONT_SIZE);
   result.synchronize();
-  auto ans = std::accumulate(std::begin(r), std::end(r), init, binary_op);
+  auto ans = std::accumulate(r.get(), r.get() + numTiles, init, binary_op);
   return ans;
 }
 
