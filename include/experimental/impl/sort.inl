@@ -312,9 +312,8 @@ void sort_enqueue_int_uint(InputIt &first, InputIt &last, Compare comp, bool int
     }
 	unsigned int numGroups = (szElements/localSize)>= 32?(32*8):(szElements/localSize);
 
-    /// FIXME: raw pointers don't work on dGPU
-    Values* dvSwapInputValues = new Values[orig_szElements];
-    int* dvHistogramBins = new int[numGroups * RADICES];
+    hc::array_view<Values> dvSwapInputValues((hc::extent<1>(orig_szElements)));
+    hc::array_view<int> dvHistogramBins(hc::extent<1>(numGroups * RADICES));
 
 	bool Asc_sort = 0;
 	if(comp(2,3))
@@ -334,15 +333,16 @@ void sort_enqueue_int_uint(InputIt &first, InputIt &last, Compare comp, bool int
 	}
 
 	int bits;
-    auto first_ = utils::get_pointer(first);
+    auto f_ = utils::get_pointer(first);
+    hc::array_view<Values> first_(hc::extent<1>(orig_szElements), f_);
 	for(bits = 0; bits < (sizeof(Values) * 8); bits += RADIX)
     {
           cdata.m_startBit = bits;
 		  kernel_launch( numGroups * localSize, 
 				[
 					first_,
-					&dvSwapInputValues,
-					&dvHistogramBins,
+					dvSwapInputValues,
+					dvHistogramBins,
 					cdata,
 					swap,
 					Asc_sort,
@@ -419,7 +419,7 @@ void sort_enqueue_int_uint(InputIt &first, InputIt &last, Compare comp, bool int
 	
 		kernel_launch( numGroups * localSize, 
 				[
-					&dvHistogramBins,
+					dvHistogramBins,
 					numGroups
 				] ( hc::tiled_index< 1 > t_idx ) [[hc]]
 		  {
@@ -453,8 +453,8 @@ void sort_enqueue_int_uint(InputIt &first, InputIt &last, Compare comp, bool int
 		kernel_launch( localSize, 
 				[
 					first_,
-					&dvSwapInputValues,
-					&dvHistogramBins,
+					dvSwapInputValues,
+					dvHistogramBins,
 					cdata,
 					swap,
 					Asc_sort
@@ -636,8 +636,8 @@ void sort_enqueue_int_uint(InputIt &first, InputIt &last, Compare comp, bool int
 		kernel_launch( numGroups * localSize, 
 				[
 					first_,
-					&dvSwapInputValues,
-					&dvHistogramBins,
+					dvSwapInputValues,
+					dvHistogramBins,
 					cdata,
 					swap,
 					Asc_sort
@@ -789,8 +789,6 @@ void sort_enqueue_int_uint(InputIt &first, InputIt &last, Compare comp, bool int
 			}
 		 }, localSize);
 	}
-    delete dvSwapInputValues;
-    delete dvHistogramBins;
     return;
 }
 
@@ -831,7 +829,8 @@ sort_dispatch(const InputIt& first, const InputIt& last, const Compare& comp)
     for(size_t temp = szElements; temp > 1; temp >>= 1)
         ++numStages;
 
-    auto first_ = utils::get_pointer(first);
+    auto f_ = utils::get_pointer(first);
+    hc::array_view<T> first_(hc::extent<1>(szElements), f_);
     for(stage = 0; stage < numStages; ++stage)
     {
         for(passOfStage = 0; passOfStage < stage + 1; ++passOfStage) {
