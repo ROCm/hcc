@@ -43,6 +43,7 @@ int reduce_lexi(std::vector<int>& v) {
     std::vector<int> r(numTiles);
     hc::array_view<int> result(numTiles, r);
     hc::array_view<const int> first_(N, v);
+    result.discard_data();
     kernel_launch(length,
                   [ first_, N, length, result, binary_op ]
                   ( hc::tiled_index<1> t_idx ) [[hc]]
@@ -130,6 +131,7 @@ T reduce_impl(RandomAccessIterator first, RandomAccessIterator last,
     std::vector<T> r(numTiles);
     hc::array_view<T> result(hc::extent<1>(numTiles), r);
     hc::array_view<const _Ty> first_(hc::extent<1>(N), f_);
+    result.discard_data();
     kernel_launch(length,
                   [ first_, N, length, result, binary_op ]
                   ( hc::tiled_index<1> t_idx ) [[hc]]

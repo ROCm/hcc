@@ -47,6 +47,7 @@ OutputIterator transform_impl(RandomAccessIterator first,
   auto d_ = utils::get_pointer(d_first);
   hc::array_view<_Ti> first_(hc::extent<1>(N), f_);
   hc::array_view<_To> d_first_(hc::extent<1>(N), d_);
+  d_first_.discard_data();
 
   kernel_launch(N, [d_first_, first_, unary_op](hc::index<1> idx) [[hc]] {
     d_first_[idx[0]] = unary_op(first_[idx[0]]);
@@ -78,6 +79,7 @@ OutputIterator transform_impl(RandomAccessIterator first1,
   hc::array_view<_Ti> first1_(hc::extent<1>(N), f1);
   hc::array_view<_Ti> first2_(hc::extent<1>(N), f2);
   hc::array_view<_To> d_first_(hc::extent<1>(N), d_);
+  d_first_.discard_data();
 
   kernel_launch(N, [d_first_, first1_, first2_, binary_op](hc::index<1> idx) [[hc]] {
     d_first_[idx[0]] = binary_op(first1_[idx[0]], first2_[idx[0]]);

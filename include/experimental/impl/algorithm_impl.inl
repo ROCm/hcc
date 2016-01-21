@@ -50,6 +50,7 @@ void generate_impl(ForwardIterator first, ForwardIterator last,
   using _Ty = typename std::iterator_traits<ForwardIterator>::value_type;
   auto first_ = utils::get_pointer(first);
   hc::array_view<_Ty> av(hc::extent<1>(N), first_);
+  av.discard_data();
   kernel_launch(N, [av, g](hc::index<1> idx) restrict(amp) {
     av(idx) = g();
   });
@@ -143,6 +144,7 @@ OutputIterator replace_copy_if_impl(InputIterator first, InputIterator last,
     auto d_first_ = utils::get_pointer(d_first);
     hc::array_view<const _Ty> av(hc::extent<1>(N), first_);
     hc::array_view<_Td> dv(hc::extent<1>(N), d_first_);
+    dv.discard_data();
     kernel_launch(N, [av, dv, f, new_value](hc::index<1> idx) [[hc]] {
       _Ty p = av(idx);
       dv(idx) = f(p) ? new_value : p;
@@ -180,6 +182,7 @@ OutputIterator adjacent_difference_impl(InputIterator first, InputIterator last,
     auto d_first_ = utils::get_pointer(d_first);
     hc::array_view<const _Ty> av(hc::extent<1>(N), first_);
     hc::array_view<_Td> dv(hc::extent<1>(N), d_first_);
+    dv.discard_data();
     kernel_launch(N, [av, dv, f](hc::index<1> idx) [[hc]] {
       dv(idx) = idx[0] != 0 ? f(av(idx), av(idx[0] - 1)) : av(idx);
     });
