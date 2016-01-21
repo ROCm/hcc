@@ -110,7 +110,6 @@ stablesort_dispatch(const InputIt& first, const InputIt& last, const Compare& co
 	unsigned int	   tempBuffsize = globalRange; 
 	unsigned int	   iteration = (globalRange-1)/max_ext; 
 
-    /// FIXME: raw pointer not work in dGPU
     auto f_ = utils::get_pointer(first);
     hc::array_view<iType> first_(hc::extent<1>(vecSize), f_);
     for(unsigned int i=0; i<=iteration; i++)
