@@ -1,7 +1,9 @@
-// XFAIL: Linux,boltzmann
-// RUN: %hc %s -o %t.out && %t.out
+// XFAIL: Linux
+// RUN: %hc -lhc_am %s -o %t.out && %t.out
 
 #include "grid_launch.h"
+#include "hc_am.hpp"
+#include <iostream>
 
 class Foo2 {
   int x;
@@ -41,18 +43,22 @@ __attribute__((hc_grid_launch)) void kernel1(grid_launch_parm lp, Foo x, Bar *y)
 int main(void) {
 
   Foo data1(5);
-  Bar* data2 = (Bar*)malloc(SIZE*sizeof(Foo));
+  Bar* data2 = (Bar*)malloc(SIZE*sizeof(Bar));
+
+  Bar* data2_d = (Bar*)hc::am_alloc(SIZE*sizeof(Bar), hc::accelerator(), 0);
 
   grid_launch_parm lp;
   grid_launch_init(&lp);
 
-  lp.gridDim = uint3(GRID_SIZE, 1);
-  lp.groupDim = uint3(TILE_SIZE, 1);
+  lp.gridDim = gl_dim3(GRID_SIZE, 1);
+  lp.groupDim = gl_dim3(TILE_SIZE, 1);
 
   hc::completion_future cf;
   lp.cf = &cf;
-  kernel1(lp, data1, data2);
+  kernel1(lp, data1, data2_d);
   lp.cf->wait();
+
+  hc::am_copy(data2, data2_d, SIZE*sizeof(Bar));
 
   bool ret = 0;
   for(int i = 0; i < SIZE; ++i) {

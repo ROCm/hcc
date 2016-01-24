@@ -1,20 +1,40 @@
 macro(ensure_clang_is_present dest_dir name url)
 
-#TODO: why is CLANG_URL set to "." in CMakeLists.txt:13
 string(COMPARE EQUAL "${url}" "." default_clang)
 if(default_clang)
- set(REPO https://bitbucket.org/multicoreware/cppamp-ng.git)
+ set(REPO https://bitbucket.org/multicoreware/hcc-clang.git)
 else()
  set(REPO "${url}")
 endif()
 
 if(EXISTS "${dest_dir}/${name}/tools/clang")
-  MESSAGE("clang is present.")
+  MESSAGE("hcc-clang is present.")
 else(EXISTS "${dest_dir}/${name}/tools/clang")
-  MESSAGE("Cloning clang from ${REPO}...")
   Find_Package(Git)
   Find_Program(GITL_EXECUTABLE git)
-  execute_process( COMMAND ${GIT_EXECUTABLE} clone ${REPO} ${dest_dir}/${name}/tools/clang )
+
+  # determine current branch of hcc
+  execute_process(COMMAND ${GIT_EXECUTABLE} symbolic-ref --short HEAD
+                  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+                  OUTPUT_VARIABLE KALMAR_BRANCH_NAME
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+  # query if the branch exist
+  execute_process(COMMAND ${GIT_EXECUTABLE} ls-remote --heads ${REPO} ${KALMAR_BRANCH_NAME} 
+                  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+                  OUTPUT_VARIABLE KALMAR_CLANG_HAS_SAME_BRANCH
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+  if(KALMAR_CLANG_HAS_SAME_BRANCH)
+    # use the same branch as hcc
+    MESSAGE("Cloning hcc-clang from branch ${KALMAR_BRANCH_NAME} of ${REPO}...")
+    execute_process( COMMAND ${GIT_EXECUTABLE} clone -b ${KALMAR_BRANCH_NAME} ${REPO} ${dest_dir}/${name}/tools/clang )
+  else(KALMAR_CLANG_HAS_SAME_BRANCH)
+    # branch not found, use default one
+    MESSAGE("Cloning hcc-clang from default branch of ${REPO}...")
+    execute_process( COMMAND ${GIT_EXECUTABLE} clone ${REPO} ${dest_dir}/${name}/tools/clang )
+  endif()
+
 endif(EXISTS "${dest_dir}/${name}/tools/clang")
 
 endmacro()

@@ -40,7 +40,7 @@ extern "C" __attribute__((const)) int64_t amp_get_num_groups(unsigned int n) res
 extern "C" __attribute__((const)) int64_t amp_get_group_id(unsigned int n) restrict(amp);
 
 
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+#if __KALMAR_ACCELERATOR__ == 2
 #define tile_static thread_local
 #else
 #define tile_static static __attribute__((section("clamp_opencl_local")))

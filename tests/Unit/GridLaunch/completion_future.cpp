@@ -1,7 +1,9 @@
-// XFAIL: Linux,boltzmann
-// RUN: %hc %s -o %t.out && %t.out
+// XFAIL: Linux
+// RUN: %hc -lhc_am %s -o %t.out && %t.out
 
 #include "grid_launch.h"
+#include "hc_am.hpp"
+#include <iostream>
 
 #define GRID_SIZE 256
 #define TILE_SIZE 16
@@ -18,6 +20,8 @@ int main(void) {
 
   int *data1 = (int *)malloc(SIZE*sizeof(int));
 
+  int* data1_d = (int*)hc::am_alloc(SIZE*sizeof(int), hc::accelerator(), 0);
+
   grid_launch_parm lp;
   grid_launch_init(&lp);
 
@@ -26,8 +30,10 @@ int main(void) {
 
   hc::completion_future cf;
   lp.cf = &cf;
-  kernel1(lp, data1);
+  kernel1(lp, data1_d);
   lp.cf->wait();
+
+  hc::am_copy(data1, data1_d, SIZE*sizeof(int));
 
   bool ret = 0;
   for(int i = 0; i < SIZE; ++i) {
