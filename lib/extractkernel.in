@@ -1,0 +1,73 @@
+#!/usr/bin/perl
+use strict;
+use File::Copy;
+use Getopt::Std;
+
+sub usage {
+  print("Usage: $0 [OPTION]... -i <input>\n");
+  print("Extract the device kernels from an hcc executable.\n\n");
+  print("-h          \t\t\t\tshow this help message\n");
+  print("-i <input>  \t\t\t\tinput file\n");
+  print("-t <target> \t\t\t\ttarget architecture (optional)\n");
+  print("            \t\t\t\t 7:0:0 for CI (Kaveri)\n");
+  print("            \t\t\t\t 8:0:1 for subset of VI (Carizzo)\n");
+  print("            \t\t\t\t 8:0:3 for subset of VI (Fiji) (default)\n");
+  exit;
+}
+
+
+my %options=();
+getopts('hi:t:', \%options);
+
+if (!%options || defined $options{h}) {
+  usage();
+}
+
+my $input_file;
+defined $options{i} || die("input not specified");
+$input_file = $options{i};
+(-f $input_file) || die("can't find $input_file");
+
+# Set default target architecture to Fiji
+my $target = "8:0:3";
+if (defined $options{t}) {
+  $target = $options{t};
+}
+
+my $brig_start_tag = "_binary_kernel_brig_start";
+my $brig_size_tag  = "_binary_kernel_brig_size";
+my $brig_start = hex(`objdump -t $input_file | grep $brig_start_tag | awk '{print \$1}'`);
+my $brig_size  = hex(`objdump -t $input_file | grep $brig_size_tag | awk '{print \$1}'`);
+
+if ($brig_start == 0 || $brig_size == 0) {
+  print("can't find any hsail kernel in $input_file\n");
+}  
+else {
+
+  # extract the hsail brig file from the binary
+  my $data_lma         = hex(`objdump -h $input_file | grep ".data.rel.ro" | awk '{print \$5}'`);
+  my $data_file_offset = hex(`objdump -h $input_file | grep ".data.rel.ro" | awk '{print \$6}'`);
+  my $brig_file_offset = $data_file_offset + ($brig_start - $data_lma);
+  my $brig_file_name = "$input_file.brig";
+  system("dd if=$input_file of=$brig_file_name skip=$brig_file_offset count=$brig_size bs=1 status=none");
+
+  my $hsa_path;
+  if (defined $ENV{'HSA_HOME'}) {
+    $hsa_path = $ENV{'HSA_HOME'};
+  }
+  else {
+    $hsa_path = @HSA_ROOT@;
+  }
+  my $hsafin = "$hsa_path/bin/amdhsafin";
+  if (-f $hsafin) {
+
+    # use the offline finalizer to dump out the hsail and isa
+    system("$hsafin -target=$target -brig $brig_file_name -output=$input_file.gpu.o -O2 -dump-isa -dump-hsail");
+    move("./amdhsa001.hsail","./$input_file.hsail");
+    move("./amdhsa001.isa","./$input_file.isa");
+  }
+  else {
+    print("can't find HSAIL offline finalizer\n");
+  }
+  
+}
