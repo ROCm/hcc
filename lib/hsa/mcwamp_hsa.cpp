@@ -1609,6 +1609,8 @@ public:
 
     void* getHSAAgent() override;
 
+    hcAgentProfile getProfile() override { return profile; }
+
 private:
 
     void BuildOfflineFinalizedProgramImpl(void* kernelBuffer, int kernelSize) {
