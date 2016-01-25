@@ -69,7 +69,7 @@ bool test__any() {
   extent<1> ex(GRID_SIZE);
   parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
     output_GPU(idx) = __any(test_GPU(idx));
-  });
+  }).wait();
 
   // verify result
   std::vector<uint32_t> output = output_GPU;

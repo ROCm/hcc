@@ -16,7 +16,7 @@ int main() {
   extent<1> ex(GRID_SIZE);
   parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
     table(idx) = __wavesize();
-  });
+  }).wait();
 
   // verify result
   bool ret = true;

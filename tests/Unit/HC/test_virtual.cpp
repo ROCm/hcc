@@ -5,6 +5,9 @@
 #include <hc.hpp>
 #include <cassert>
 
+// test HC with fine-grained SVM
+// requires HSA Full Profile to operate successfully
+
 struct base {
   int dummy;
   virtual ~base() {};
@@ -56,8 +59,14 @@ bool test2() {
 int main() {
   bool ret = true;
 
-  ret &= test1();
-  ret &= test2();
+  // only conduct the test in case we are running on a HSA full profile stack
+  hc::accelerator acc;
+  if (acc.is_hsa_accelerator() &&
+      acc.get_profile() == hc::hcAgentProfileFull) {
+
+    ret &= test1();
+    ret &= test2();
+  }
 
   return !(ret == true);
 }

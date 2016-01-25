@@ -5,6 +5,12 @@
 
 #include <iostream>
 
+// added for checking HSA profile
+#include <hc.hpp>
+
+// test C++AMP with fine-grained SVM
+// requires HSA Full Profile to operate successfully
+
 #define SIZE (16)
 
 using namespace concurrency;
@@ -40,17 +46,24 @@ public:
 int main() {
   bool ret = true;
  
-  // prepare test data
-  int input[SIZE] { 0 };
+  // only conduct the test in case we are running on a HSA full profile stack
+  hc::accelerator acc;
+  if (acc.is_hsa_accelerator() &&
+      acc.get_profile() == hc::hcAgentProfileFull) {
 
-  // create functor
-  prog p(input);
+    // prepare test data
+    int input[SIZE] { 0 };
+  
+    // create functor
+    prog p(input);
+  
+    // launch kernel
+    p.run();
+  
+    // check result
+    ret &= p.test();
 
-  // launch kernel
-  p.run();
-
-  // check result
-  ret &= p.test();
+  }
 
   return !(ret == true);
 }

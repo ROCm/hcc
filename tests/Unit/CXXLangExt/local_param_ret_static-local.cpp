@@ -1,4 +1,4 @@
-// XFAIL: Linux, hsa, boltzmann
+// XFAIL: *
 
 // RUN: %hc -DTYPE="char"  %s -o %t.out && %t.out
 // RUN: %hc -DTYPE="signed char"  %s -o %t.out && %t.out
@@ -33,6 +33,12 @@
 #include <iostream>
 #include <amp.h>
 
+// added for checking HSA profile
+#include <hc.hpp>
+
+// test C++AMP with fine-grained SVM
+// requires HSA Full Profile to operate successfully
+
 TYPE func(TYPE arg) restrict(amp)
 {
   static TYPE local = 0;
@@ -40,9 +46,7 @@ TYPE func(TYPE arg) restrict(amp)
   return local;
 }
 
-// An HSA version of C++AMP program
-int main ()
-{
+bool test() {
 
   const int vecSize = 16;
 
@@ -60,12 +64,26 @@ int main ()
   // Verify
   int error = 0;
   for(int i = 0; i < vecSize; i++) {
-    error += abs((TYPE)ans[i] - (TYPE)(2 * i));
+    error += std::abs((TYPE)ans[i] - (TYPE)(2 * i));
   }
   if (error == 0) {
     std::cout << "Verify success!\n";
   } else {
     std::cout << "Verify failed!\n";
   }
-  return (error != 0);
+  return (error == 0);
 }
+
+int main() {
+  bool ret = true;
+
+  // only conduct the test in case we are running on a HSA full profile stack
+  hc::accelerator acc;
+  if (acc.is_hsa_accelerator() &&
+      acc.get_profile() == hc::hcAgentProfileFull) {
+    ret &= test();
+  }
+
+  return !(ret == true);
+}
+

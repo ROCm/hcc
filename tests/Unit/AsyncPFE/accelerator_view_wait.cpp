@@ -74,8 +74,6 @@ int main() {
 #if TEST_DEBUG
   std::cout << "signal value #1: " << signal_value1 << "\n";
 #endif
-  // signal value shall be 1 before the kernel is completed
-  ret &= (signal_value1 == 1);
 
 
   // initialize test data
@@ -102,8 +100,6 @@ int main() {
 #if TEST_DEBUG
   std::cout << "signal value #2: " << signal_value2 << "\n";
 #endif
-  // signal value shall be 1 before the kernel is completed
-  ret &= (signal_value2 == 1);
 
 
   // initialize test data
@@ -130,9 +126,6 @@ int main() {
 #if TEST_DEBUG
   std::cout << "signal value #3: " << signal_value3 << "\n";
 #endif
-  // signal value shall be 1 before the kernel is completed
-  ret &= (signal_value3 == 1);
-
 
   // wait on all commands on the default queue to finish
   hc::accelerator().get_default_view().wait();
