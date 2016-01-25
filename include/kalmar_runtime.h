@@ -40,6 +40,12 @@ enum hcWaitMode {
     hcWaitModeActive = 1
 };
 
+enum hcAgentProfile {
+    hcAgentProfileNone = 0,
+    hcAgentProfileBase = 1,
+    hcAgentProfileFull = 2
+};
+
 } // namespace enums
 } // namespace Kalmar
 
@@ -285,6 +291,9 @@ public:
 
     /// get underlying native agent handle
     virtual void* getHSAAgent() { return nullptr; }
+
+    /// get the profile of the agent
+    virtual hcAgentProfile getProfile() { return hcAgentProfileNone; }
 
 };
 

@@ -160,7 +160,7 @@ bool test_gpu_u32() {
   extent<1> ex(GRID_SIZE);
   parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
     output_GPU(idx) = __firstbit_u32_u32(test_GPU(idx));
-  });
+  }).wait();
 
   // verify result
   std::vector<uint32_t> output = output_GPU;
@@ -192,7 +192,7 @@ bool test_gpu_u64() {
   extent<1> ex(GRID_SIZE);
   parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
     output_GPU(idx) = __firstbit_u32_u64(test_GPU(idx));
-  });
+  }).wait();
 
   // verify result
   std::vector<uint32_t> output = output_GPU;
@@ -225,7 +225,7 @@ bool test_gpu_s32() {
   extent<1> ex(GRID_SIZE);
   parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
     output_GPU(idx) = __firstbit_u32_s32(test_GPU(idx));
-  });
+  }).wait();
 
   // verify result
   std::vector<uint32_t> output = output_GPU;
@@ -257,7 +257,7 @@ bool test_gpu_s64() {
   extent<1> ex(GRID_SIZE);
   parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
     output_GPU(idx) = __firstbit_u32_s64(test_GPU(idx));
-  });
+  }).wait();
 
   // verify result
   std::vector<uint32_t> output = output_GPU;

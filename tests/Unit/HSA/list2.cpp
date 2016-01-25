@@ -1,10 +1,17 @@
-// XFAIL: Linux,boltzmann
+// XFAIL: Linux
 // RUN: %hc %s -o %t.out && %t.out
+
 #include <vector>
 #include <iostream>
 #include <amp.h>
 #include <malloc.h>
 #include <string.h>
+
+// added for checking HSA profile
+#include <hc.hpp>
+
+// test C++AMP with fine-grained SVM
+// requires HSA Full Profile to operate successfully
 
 typedef signed short ee_s16;
 typedef unsigned short ee_u16;
@@ -58,7 +65,7 @@ list_head *list_insert_new(list_head *llist_head, list_head *newitem, list_data 
 	return llist_head;
 }
 
-int main() {
+bool test() {
   list_head *llist = (list_head *) malloc(NUM_LIST_NODES * sizeof(list_head));
   list_data *ldata = (list_data *) malloc(NUM_LIST_NODES * sizeof(list_data));
   memset(ldata, 0, NUM_LIST_NODES * sizeof(list_data));
@@ -111,5 +118,19 @@ int main() {
   free(newitem);
   free(newdata);
 
-  return error_struct != 0;
+  return (error_struct == 0);
 }
+
+int main() {
+  bool ret = true;
+
+  // only conduct the test in case we are running on a HSA full profile stack
+  hc::accelerator acc;
+  if (acc.is_hsa_accelerator() &&
+      acc.get_profile() == hc::hcAgentProfileFull) {
+    ret &= test();
+  }
+
+  return !(ret == true);
+}
+

@@ -1,13 +1,15 @@
-// XFAIL: Linux,boltzmann
+// XFAIL: Linux
 // RUN: %hc %s -o %t.out && %t.out
+
 #include <iostream>
 #include <random>
 #include <future>
 #include <hc.hpp>
 
+// test HC with fine-grained SVM
+// requires HSA Full Profile to operate successfully
 // An example which shows how to launch a kernel asynchronously
-int main ()
-{
+bool test() {
   // define inputs and output
   const int vecSize = 2048;
 
@@ -71,6 +73,19 @@ int main ()
     std::cout << "Verify failed!\n";
   }
 
-  return error != 0;
+  return (error == 0);
+}
+
+int main() {
+  bool ret = true;
+
+  // only conduct the test in case we are running on a HSA full profile stack
+  hc::accelerator acc;
+  if (acc.is_hsa_accelerator() &&
+      acc.get_profile() == hc::hcAgentProfileFull) {
+    ret &= test();
+  }
+
+  return !(ret == true);
 }
 

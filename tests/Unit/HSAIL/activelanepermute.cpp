@@ -70,7 +70,7 @@ bool test() {
     output_GPU(idx) = __activelanepermute_b32(test_GPU(idx), laneID_GPU(idx), 0, 0);
     // test __activelanepermute_b32 with useIdentity
     output2_GPU(idx) = __activelanepermute_b32(test_GPU(idx), laneID_GPU(idx), 1, 1);
-  });
+  }).wait();
 
   // verify result
   std::vector<uint32_t> output = output_GPU;

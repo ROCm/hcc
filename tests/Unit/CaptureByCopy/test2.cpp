@@ -1,4 +1,4 @@
-// XFAIL: Linux,boltzmann
+// XFAIL: Linux
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <amp.h>
@@ -6,6 +6,11 @@
 #include <atomic>
 #include <iostream>
 
+// added for checking HSA profile
+#include <hc.hpp>
+
+// test C++AMP with fine-grained SVM
+// requires HSA Full Profile to operate successfully
 // test capture a user functor by copy
 // test funtions and user functor are now constructed from templates
 
@@ -144,20 +149,27 @@ bool test3(const user_functor<_Tp>& functor) {
 int main() {
   bool ret = true;
 
-  ret &= test1<int, SIZE>(user_functor<int>());
-  ret &= test1<unsigned, SIZE>(user_functor<unsigned>());
-  ret &= test1<long, SIZE>(user_functor<long>());
-  ret &= test1<unsigned long, SIZE>(user_functor<unsigned long>());
+  // only conduct the test in case we are running on a HSA full profile stack
+  hc::accelerator acc;
+  if (acc.is_hsa_accelerator() &&
+      acc.get_profile() == hc::hcAgentProfileFull) {
 
-  ret &= test2<int, SIZE>(user_functor<int>());
-  ret &= test2<unsigned, SIZE>(user_functor<unsigned>());
-  ret &= test2<long, SIZE>(user_functor<long>());
-  ret &= test2<unsigned long, SIZE>(user_functor<unsigned long>());
+    ret &= test1<int, SIZE>(user_functor<int>());
+    ret &= test1<unsigned, SIZE>(user_functor<unsigned>());
+    ret &= test1<long, SIZE>(user_functor<long>());
+    ret &= test1<unsigned long, SIZE>(user_functor<unsigned long>());
+  
+    ret &= test2<int, SIZE>(user_functor<int>());
+    ret &= test2<unsigned, SIZE>(user_functor<unsigned>());
+    ret &= test2<long, SIZE>(user_functor<long>());
+    ret &= test2<unsigned long, SIZE>(user_functor<unsigned long>());
+  
+    ret &= test3<int, SIZE>(user_functor<int>());
+    ret &= test3<unsigned, SIZE>(user_functor<unsigned>());
+    ret &= test3<long, SIZE>(user_functor<long>());
+    ret &= test3<unsigned long, SIZE>(user_functor<unsigned long>());
 
-  ret &= test3<int, SIZE>(user_functor<int>());
-  ret &= test3<unsigned, SIZE>(user_functor<unsigned>());
-  ret &= test3<long, SIZE>(user_functor<long>());
-  ret &= test3<unsigned long, SIZE>(user_functor<unsigned long>());
+  }
 
   return !(ret == true);
 }

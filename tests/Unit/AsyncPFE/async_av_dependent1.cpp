@@ -64,8 +64,6 @@ bool test1D() {
 #if TEST_DEBUG
   std::cout << "signal value #1: " << signal_value1 << "\n";
 #endif
-  // signal_value1 MUST be 1 because the kernel is just dispatched
-  ret &= (signal_value1 == 1);
 
 #if TEST_DEBUG
   std::cout << "launch pfe2\n";
@@ -93,8 +91,6 @@ bool test1D() {
 #endif
   // signal_value1 MUST be 0 because the new kernel must wait on the previous one be completed
   ret &= (signal_value1 == 0);
-  // signal_value2 MUST be 1 because the kernel is just dispatched
-  ret &= (signal_value2 == 1);
 
 #if TEST_DEBUG
   std::cout << "launch pfe3\n";
@@ -124,8 +120,6 @@ bool test1D() {
 #endif
   // signal_value2 MUST be 0 because the new kernel must wait on the previous one be completed
   ret &= (signal_value2 == 0);
-  // signal_value3 MUST be 1 because the kernel is just dispatched
-  ret &= (signal_value3 == 1);
 
   // wait on all kernels to be finished
   hc::accelerator().get_default_view().wait();

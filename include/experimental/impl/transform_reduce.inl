@@ -50,12 +50,13 @@ T transform_reduce(InputIterator first, InputIterator last,
   numTiles = static_cast< int >((N/_T_REDUCE_WAVEFRONT_SIZE)>= numTiles?(numTiles):
                                 (std::ceil( static_cast< float >( N ) / _T_REDUCE_WAVEFRONT_SIZE) ));
 
-  /// FIXME: not work in dGPU
-  /// FIXME: raw pointer won't work in dGPU
-  auto result = new T[numTiles]();
+  std::unique_ptr<T[]> r(new T[numTiles]);
+  auto f_ = utils::get_pointer(first);
+  hc::array_view<T> result(hc::extent<1>(numTiles), r.get());
+  hc::array_view<_Tp> first_(hc::extent<1>(N), f_);
+  result.discard_data();
   auto transform_op = unary_op;
-  auto first_ = utils::get_pointer(first);
-  details::kernel_launch(length, [first_, N, length, transform_op, &result, binary_op] (hc::tiled_index<1> t_idx) [[hc]]
+  details::kernel_launch(length, [first_, N, length, transform_op, result, binary_op] (hc::tiled_index<1> t_idx) [[hc]]
                 {
                 int gx = t_idx.global[0];
                 int gloId = gx;
@@ -106,8 +107,8 @@ T transform_reduce(InputIterator first, InputIterator last,
                     result[t_idx.tile[ 0 ]] = scratch[0];
                 }
                 }, _T_REDUCE_WAVEFRONT_SIZE);
-  auto ans = std::accumulate(result, result + numTiles, init, binary_op);
-  delete result;
+  result.synchronize();
+  auto ans = std::accumulate(r.get(), r.get() + numTiles, init, binary_op);
   return ans;
 }
 

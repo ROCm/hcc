@@ -116,12 +116,6 @@ bool test1D() {
   std::cout << "signal value #2: " << signal_value2 << "\n";
   std::cout << "signal value #3: " << signal_value3 << "\n";
 #endif
-  // signal_value1 MUST be 1 because the kernel is just dispatched
-  ret &= (signal_value1 == 1);
-  // signal_value2 MUST be 1 because the kernel is just dispatched
-  ret &= (signal_value2 == 1);
-  // signal_value3 MUST be 1 because the kernel is just dispatched
-  ret &= (signal_value3 == 1);
 
   // wait on all kernels to be completed
   hc::accelerator().get_default_view().wait();

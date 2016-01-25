@@ -1,4 +1,4 @@
-// XFAIL: Linux,boltzmann
+// XFAIL: Linux
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <amp.h>
@@ -7,6 +7,11 @@
 #include <iostream>
 #include <random>
 
+// added for checking HSA profile
+#include <hc.hpp>
+
+// test C++AMP with fine-grained SVM
+// requires HSA Full Profile to operate successfully
 // test capture a user functor with customized ctor by copy
 
 #define SIZE (128)
@@ -143,16 +148,23 @@ bool test3(const user_functor& functor, long val) {
 int main() {
   bool ret = true;
 
-  // setup RNG
-  std::random_device rd;
-  std::default_random_engine gen(rd());
-  std::uniform_int_distribution<long> dis(1, 16);
+  // only conduct the test in case we are running on a HSA full profile stack
+  hc::accelerator acc;
+  if (acc.is_hsa_accelerator() &&
+      acc.get_profile() == hc::hcAgentProfileFull) {
 
-  long val = dis(gen);
-  ret &= test1(user_functor(val), val);
-  ret &= test2(user_functor(val), val);
-  ret &= test3(user_functor(val), val);
+    // setup RNG
+    std::random_device rd;
+    std::default_random_engine gen(rd());
+    std::uniform_int_distribution<long> dis(1, 16);
+  
+    long val = dis(gen);
+    ret &= test1(user_functor(val), val);
+    ret &= test2(user_functor(val), val);
+    ret &= test3(user_functor(val), val);
 
-  return 0;
+  }
+
+  return !(ret == true);
 }
 

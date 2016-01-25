@@ -22,13 +22,13 @@ if ((_IDX < _W) && ((_IDX + _W) < _LENGTH)) {\
 }\
     t_idx.barrier.wait();
 
-int reduce_lexi(int* first, int* last) {
+int reduce_lexi(std::vector<int>& v) {
 
-    const int N = static_cast<int>(std::distance(first, last));
+    const int N = static_cast<int>(v.size());
     auto binary_op = [](const int& a, const int& b) { return a == 1 ? b : a; };
     // call to std::accumulate when small data size
     if (N <= details::PARALLELIZE_THRESHOLD) {
-        return reduce_impl(first, last, 1, binary_op, std::input_iterator_tag{});
+        return reduce_impl(std::begin(v), std::end(v), 1, binary_op, std::input_iterator_tag{});
     }
 
     int max_ComputeUnits = 32;
@@ -40,12 +40,12 @@ int reduce_lexi(int* first, int* last) {
     numTiles = static_cast< int >((N/REDUCE_WAVEFRONT_SIZE)>= numTiles?(numTiles):
                                   (std::ceil( static_cast< float >( N ) / REDUCE_WAVEFRONT_SIZE) ));
 
-    /// FIXME: not work in dGPU
-    // FIXME: raw pointer won't work in dGPU
-    auto result = new int[numTiles]();
-    auto first_ = first;
+    std::vector<int> r(numTiles);
+    hc::array_view<int> result(numTiles, r);
+    hc::array_view<const int> first_(N, v);
+    result.discard_data();
     kernel_launch(length,
-                  [ first_, N, length, &result, binary_op ]
+                  [ first_, N, length, result, binary_op ]
                   ( hc::tiled_index<1> t_idx ) [[hc]]
                   {
                   using T = int;
@@ -100,9 +100,8 @@ int reduce_lexi(int* first, int* last) {
 
                   }, REDUCE_WAVEFRONT_SIZE);
 
-
-    auto ans = std::accumulate(result, result + numTiles, 1, binary_op);
-    delete result;
+    result.synchronize();
+    auto ans = std::accumulate(std::begin(r), std::end(r), 1, binary_op);
     return ans;
 }
 
@@ -127,12 +126,14 @@ T reduce_impl(RandomAccessIterator first, RandomAccessIterator last,
     numTiles = static_cast< int >((N/REDUCE_WAVEFRONT_SIZE)>= numTiles?(numTiles):
                                   (std::ceil( static_cast< float >( N ) / REDUCE_WAVEFRONT_SIZE) ));
 
-    /// FIXME: not work in dGPU
-    // FIXME: raw pointer won't work in dGPU
-    auto result = new T[numTiles]();
-    auto first_ = utils::get_pointer(first);
+    auto f_ = utils::get_pointer(first);
+    using _Ty = typename std::iterator_traits<RandomAccessIterator>::value_type;
+    std::vector<T> r(numTiles);
+    hc::array_view<T> result(hc::extent<1>(numTiles), r);
+    hc::array_view<const _Ty> first_(hc::extent<1>(N), f_);
+    result.discard_data();
     kernel_launch(length,
-                  [ first_, N, length, &result, binary_op ]
+                  [ first_, N, length, result, binary_op ]
                   ( hc::tiled_index<1> t_idx ) [[hc]]
                   {
                   int gx = t_idx.global[0];
@@ -186,9 +187,8 @@ T reduce_impl(RandomAccessIterator first, RandomAccessIterator last,
 
                   }, REDUCE_WAVEFRONT_SIZE);
 
-
-    auto ans = std::accumulate(result, result + numTiles, init, binary_op);
-    delete result;
+    result.synchronize();
+    auto ans = std::accumulate(std::begin(r), std::end(r), init, binary_op);
     return ans;
 }
 } // namespace details

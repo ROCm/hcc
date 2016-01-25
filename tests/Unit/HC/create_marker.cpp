@@ -65,13 +65,11 @@ bool test() {
 #if TEST_DEBUG
   std::cout << "kernel signal value: " << signal_value << "\n";
 #endif
-  ret &= (signal_value == 1);
 
   signal_value2 = hsa_signal_load_acquire(*static_cast<hsa_signal_t*>(nativeHandle2));
 #if TEST_DEBUG
   std::cout << "barrier signal value: " << signal_value << "\n";
 #endif
-  ret &= (signal_value2 == 1);
 
   // wait on the barrier packet
   fut2.wait();
