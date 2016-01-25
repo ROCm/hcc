@@ -74,9 +74,6 @@ int main() {
 #if TEST_DEBUG
   std::cout << "signal value: " << signal_value << "\n";
 #endif
-  // signal value shall be 1 before the kernel is completed
-  ret &= (signal_value == 1);
-
 
   // wait on the future
   fut.wait();

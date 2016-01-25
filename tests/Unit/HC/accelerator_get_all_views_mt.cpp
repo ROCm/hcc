@@ -56,8 +56,8 @@ int main() {
 #else
   // now default accelerator view is thread local, so the total number of views
   // would the the number of threads (4), plus additional views created in each
-  // thread
-  ret &= (v5.size() == (4 + c1 + c2 + c3 + c4));
+  // thread, plus another one inside HCC runtime
+  ret &= (v5.size() == (4 + c1 + c2 + c3 + c4 + 1));
 #endif
 
   return !(ret == true);

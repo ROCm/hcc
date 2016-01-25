@@ -1,5 +1,7 @@
-// XFAIL: Linux
+// XFAIL: *
 // RUN: %hc %s -o %t.out && %t.out
+
+// FIXME: PSTL on std::array_view remains TBD
 
 // Parallel STL headers
 #include <array_view>
