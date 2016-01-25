@@ -727,6 +727,16 @@ public:
         return get_default_view().is_hsa_accelerator();
     }
 
+    /**
+     * Returns the profile the accelerator.
+     * - hcAgentProfileNone in case the accelerator is not based on HSA.
+     * - hcAgentProfileBase in case the accelerator is of HSA Base Profile.
+     * - hcAgentProfileFull in case the accelerator is of HSA Full Profile.
+     */
+    hcAgentProfile get_profile() {
+        return pDev->getProfile();
+    }
+
     void memcpy_symbol(const char* symbolName, void* hostptr, size_t count, size_t offset = 0, hcMemcpyKind kind = hcMemcpyHostToDevice) {
         pDev->memcpySymbol(symbolName, hostptr, count, offset, kind);
     }

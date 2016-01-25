@@ -34,6 +34,7 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-device
 ####################
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-hsatools
     ${CMAKE_CURRENT_BINARY_DIR}/clamp-hsail
+    ${CMAKE_CURRENT_BINARY_DIR}/extractkernel
     DESTINATION bin)
 
 ####################

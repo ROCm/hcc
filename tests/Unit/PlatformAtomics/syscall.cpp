@@ -1,5 +1,6 @@
 // XFAIL: Linux
 // RUN: %hc %s -o %t.out && %t.out
+
 #include <cstdlib>
 #include <iostream>
 #include <iomanip>
@@ -7,9 +8,13 @@
 #include <thread>
 #include <amp.h>
 
-// An HSA version of C++AMP program
-int main ()
-{
+// added for checking HSA profile
+#include <hc.hpp>
+
+// test C++AMP with platform atomics functions
+// requires HSA Full Profile to operate successfully
+
+bool test() {
   // define inputs and output
   const int vecSize = 16;
   const int cpuSleepMsec = 25;
@@ -158,6 +163,19 @@ int main ()
   } else {
     std::cout << "Verify failed!\n";
   }
-  return (error != 0);
+  return (error == 0);
+}
+
+int main() {
+  bool ret = true;
+
+  // only conduct the test in case we are running on a HSA full profile stack
+  hc::accelerator acc;
+  if (acc.is_hsa_accelerator() &&
+      acc.get_profile() == hc::hcAgentProfileFull) {
+    ret &= test();
+  }
+
+  return !(ret == true);
 }
 

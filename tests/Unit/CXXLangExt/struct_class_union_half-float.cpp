@@ -1,4 +1,4 @@
-// XFAIL: Linux, hsa, boltzmann
+// XFAIL: *
 // RUN: %hc -DTYPE="half float" %s -o %t.out && %t.out
 
 #include <iostream>

@@ -1,7 +1,13 @@
-// XFAIL: Linux,boltzmann
+// XFAIL: Linux
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <amp.h>
+
+// added for checking HSA profile
+#include <hc.hpp>
+
+// test C++AMP with fine-grained SVM
+// requires HSA Full Profile to operate successfully
 
 // test if we allow volatile qualifier in HSA extension mode
 // test if we allow union of volatile types in HSA extension mode
@@ -40,7 +46,7 @@ __attribute__((amp,cpu)) float foo2(float a) {
   return *fp;
 }
 
-int main() {
+bool test() {
   bool ret = true;
 
   using namespace concurrency;
@@ -73,6 +79,19 @@ int main() {
       ret = false;
       break;
     }
+  }
+
+  return ret;
+}
+
+int main() {
+  bool ret = true;
+
+  // only conduct the test in case we are running on a HSA full profile stack
+  hc::accelerator acc;
+  if (acc.is_hsa_accelerator() &&
+      acc.get_profile() == hc::hcAgentProfileFull) {
+    ret &= test();
   }
 
   return !(ret == true);

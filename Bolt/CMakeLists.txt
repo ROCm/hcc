@@ -46,7 +46,7 @@ message( STATUS "Bolt_VERSION_MINOR=${Bolt_VERSION_MINOR}" )
 message( STATUS "Bolt_VERSION_PATCH=${Bolt_VERSION_PATCH}" )
 
 # set git version
-execute_process(COMMAND git describe --abbrev=4 --dirty --always --tags
+execute_process(COMMAND git rev-parse --short HEAD
                 WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
                 OUTPUT_VARIABLE GIT_VERSION
                 OUTPUT_STRIP_TRAILING_WHITESPACE)

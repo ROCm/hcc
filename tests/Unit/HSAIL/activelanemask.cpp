@@ -70,7 +70,7 @@ bool test() {
   parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
     output_GPU(idx) = __activelanemask_v4_b64_b1(test_GPU(idx));
     output_GPU2(idx) = __popcount_u32_b64(output_GPU(idx));
-  });
+  }).wait();
 
   // verify result
   std::vector<uint64_t> output = output_GPU;

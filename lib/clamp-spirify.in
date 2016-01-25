@@ -4,18 +4,18 @@
 
 # tools search priority:
 # 1) $HCC_HOME
-# 2) @CMAKE_INSTALL_PREFIX@ : default install directory
-# 3) @LLVM_TOOLS_DIR@ : build directory
+# 2) @LLVM_TOOLS_DIR@ : build directory
+# 3) @CMAKE_INSTALL_PREFIX@ : default install directory
 
 if [ -n "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
     OPT=$HCC_HOME/bin/opt
     DIS=$HCC_HOME/bin/llvm-dis
-elif [ -e @CMAKE_INSTALL_PREFIX@/bin/opt ]; then
-    OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
-    DIS=@CMAKE_INSTALL_PREFIX@/bin/llvm-dis
 elif [ -d @LLVM_TOOLS_DIR@ ]; then
     OPT=@LLVM_TOOLS_DIR@/opt
     DIS=@LLVM_TOOLS_DIR@/llvm-dis
+elif [ -e @CMAKE_INSTALL_PREFIX@/bin/opt ]; then
+    OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
+    DIS=@CMAKE_INSTALL_PREFIX@/bin/llvm-dis
 else
     echo "ERROR: Can NOT locate HCC tools! Please specify with $HCC_HOME environmental variable." >&2
     exit 1

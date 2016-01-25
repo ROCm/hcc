@@ -55,11 +55,8 @@ transform_scan_impl(
         sizeScanBuff += (kernel0_WgSize*2);
     }
 
-    /// FIXME: not work in dGPU
-    std::unique_ptr< oType[] > p_preSumArray(new oType[sizeScanBuff]());
-    std::unique_ptr< oType[] > p_preSumArray1(new oType[sizeScanBuff]());
-    auto preSumArray = p_preSumArray.get();
-    auto preSumArray1 = p_preSumArray1.get();
+    hc::array_view<oType> preSumArray((hc::extent<1>(sizeScanBuff)));
+    hc::array_view<oType> preSumArray1((hc::extent<1>(sizeScanBuff)));
 
     /**********************************************************************************
      *  Kernel 0
@@ -69,15 +66,16 @@ transform_scan_impl(
 	const unsigned int max_ext = (tile_limit*kernel0_WgSize);
 	unsigned int	   tempBuffsize = (sizeInputBuff/2); 
 	unsigned int	   iteration = (tempBuffsize-1)/max_ext; 
+    auto f_ = utils::get_pointer(first);
+    hc::array_view<iType> first_(hc::extent<1>(numElements), f_);
+ 
 
     for(unsigned int i=0; i<=iteration; i++)
     {
         unsigned int extent_sz =  (tempBuffsize > max_ext) ? max_ext : tempBuffsize; 
 		unsigned int tile_index = i*tile_limit;
         unsigned int index = i*(tile_limit*kernel0_WgSize);
-        /// FIXME: not work in dGPU
-        auto first_ = utils::get_pointer(first);
-        auto kernel = [first_, init_T, numElements, &preSumArray, &preSumArray1,
+        auto kernel = [first_, init_T, numElements, preSumArray, preSumArray1,
              binary_op, exclusive, index, tile_index, kernel0_WgSize, unary_op]
                  (hc::tiled_index<1> t_idx) [[hc]]
                  {
@@ -146,7 +144,7 @@ transform_scan_impl(
     int workPerThread = static_cast< int >( sizeScanBuff / kernel1_WgSize );
     workPerThread = workPerThread ? workPerThread : 1;
     auto kernel1 =
-        [ &preSumArray, numWorkGroupsK0, workPerThread,
+        [ preSumArray, numWorkGroupsK0, workPerThread,
         binary_op, kernel1_WgSize]
             ( hc::tiled_index< 1 > t_idx ) [[hc]]
             {
@@ -237,15 +235,16 @@ transform_scan_impl(
 	tempBuffsize = (sizeInputBuff); 
 	iteration = (tempBuffsize-1)/max_ext; 
 
+    auto r_ = utils::get_pointer(result);
+    hc::array_view<oType> re(hc::extent<1>(numElements), r_);
+    re.discard_data();
     for(unsigned int a=0; a<=iteration ; a++)
 	{
 	    unsigned int extent_sz =  (tempBuffsize > max_ext) ? max_ext : tempBuffsize; 
 		unsigned int index = a*(tile_limit*kernel2_WgSize);
 		unsigned int tile_index = a*tile_limit;
-        /// FIXME: not work in dGPU
-        auto first_ = utils::get_pointer(first);
-        auto kernel2 = [first_, init_T, numElements, &preSumArray, &preSumArray1,
-             binary_op, exclusive, index, tile_index, kernel2_WgSize, unary_op, &result]
+        auto kernel2 = [first_, init_T, numElements, preSumArray, preSumArray1,
+             binary_op, exclusive, index, tile_index, kernel2_WgSize, unary_op, re]
                 (hc::tiled_index<1> t_idx) [[hc]]
                 {
                     int gloId = t_idx.global[ 0 ] + index;
@@ -325,7 +324,7 @@ transform_scan_impl(
                     //  Abort threads that are passed the end of the input vector
                     if (gloId >= numElements) return; 
 
-                    result[ gloId ] = sum;
+                    re[ gloId ] = sum;
 
                 };
         details::kernel_launch(extent_sz, kernel2, kernel2_WgSize);

@@ -25,7 +25,7 @@ bool test() {
   extent<1> ex(GRID_SIZE);
   parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
     output_GPU(idx) = __activelaneid_u32();
-  });
+  }).wait();
 
   // verify result
   std::vector<uint32_t> output = output_GPU;

@@ -6,7 +6,6 @@ using namespace concurrency;
 using namespace concurrency::graphics;
 
 int main(void) {
-  // Bug of Microsoft's Implementation
   
   // float_2 operator=(const float_2& other) restrict(cpu, amp);
   {

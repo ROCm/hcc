@@ -1,4 +1,4 @@
-// XFAIL: Linux,boltzmann
+// XFAIL: Linux
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <amp.h>
@@ -6,6 +6,11 @@
 #include <atomic>
 #include <iostream>
 
+// added for checking HSA profile
+#include <hc.hpp>
+
+// test C++AMP with fine-grained SVM
+// requires HSA Full Profile to operate successfully
 // test capture a user functor by copy
 
 #define SIZE (128)
@@ -139,9 +144,16 @@ bool test3(const user_functor& functor) {
 int main() {
   bool ret = true;
 
-  ret &= test1(user_functor());
-  ret &= test2(user_functor());
-  ret &= test3(user_functor());
+  // only conduct the test in case we are running on a HSA full profile stack
+  hc::accelerator acc;
+  if (acc.is_hsa_accelerator() &&
+      acc.get_profile() == hc::hcAgentProfileFull) {
+
+    ret &= test1(user_functor());
+    ret &= test2(user_functor());
+    ret &= test3(user_functor());
+
+  }
 
   return !(ret == true);
 }

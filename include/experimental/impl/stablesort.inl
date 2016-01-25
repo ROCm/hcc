@@ -110,8 +110,8 @@ stablesort_dispatch(const InputIt& first, const InputIt& last, const Compare& co
 	unsigned int	   tempBuffsize = globalRange; 
 	unsigned int	   iteration = (globalRange-1)/max_ext; 
 
-    /// FIXME: raw pointer not work in dGPU
-    auto first_ = utils::get_pointer(first);
+    auto f_ = utils::get_pointer(first);
+    hc::array_view<iType> first_(hc::extent<1>(vecSize), f_);
     for(unsigned int i=0; i<=iteration; i++)
 	{
 	    unsigned int extent_sz =  (tempBuffsize > max_ext) ? max_ext : tempBuffsize; 
@@ -214,8 +214,9 @@ stablesort_dispatch(const InputIt& first, const InputIt& last, const Compare& co
     unsigned int vecPow2 = (vecSize & (vecSize-1));
     numMerges += vecPow2? 1: 0;
 
-    /// FIXME: raw pointer won't work on dGPU
-    iType* tmpBuffer = new iType[vecSize];
+    std::vector<iType> tmp(vecSize);
+    hc::array_view<iType> tmpBuffer(hc::extent<1>(vecSize), tmp);
+    tmpBuffer.discard_data();
 
 
     hc::extent< 1 > globalSizeK1( globalRange );
@@ -228,7 +229,7 @@ stablesort_dispatch(const InputIt& first, const InputIt& last, const Compare& co
         kernel_launch( globalRange,
         [
             first_,
-            &tmpBuffer,
+            tmpBuffer,
             vecSize,
             comp,
             localRange,
@@ -298,9 +299,9 @@ stablesort_dispatch(const InputIt& first, const InputIt& last, const Compare& co
     }
     if( numMerges & 1 )
     {
-       std::copy(tmpBuffer, tmpBuffer + vecSize, first);
+       tmpBuffer.synchronize();
+       std::copy(std::begin(tmp), std::end(tmp), first);
     }
-    delete tmpBuffer;
 
     return;
 }

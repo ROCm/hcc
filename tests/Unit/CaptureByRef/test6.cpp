@@ -1,12 +1,19 @@
-// XFAIL: Linux,boltzmann
+// XFAIL: Linux
 // RUN: %hc %s -o %t.out && %t.out
+
 #include <amp.h>
 #include <iostream>
 #include <cstdlib>
 
+// added for checking HSA profile
+#include <hc.hpp>
+
+// test C++AMP with fine-grained SVM
+// requires HSA Full Profile to operate successfully
+
 #define VECTOR_SIZE (1024)
 
-int main() {
+bool test() {
   using namespace Concurrency;
 
   int p1 = rand() % 15 + 1;
@@ -30,11 +37,24 @@ int main() {
   for (int i = 0; i < VECTOR_SIZE; ++i) {
     if (table3[i] != (p1 * table1[i]) + (p2 * table2[i])) {
       std::cout << "Failed at " << i << std::endl;
-      return 1;
+      return false;
     }
   }
 
   std::cout << "Passed" << std::endl;
-  return 0;
+  return true;
+}
+
+int main() {
+  bool ret = true;
+
+  // only conduct the test in case we are running on a HSA full profile stack
+  hc::accelerator acc;
+  if (acc.is_hsa_accelerator() &&
+      acc.get_profile() == hc::hcAgentProfileFull) {
+    ret &= test();
+  }
+
+  return !(ret == true);
 }
 

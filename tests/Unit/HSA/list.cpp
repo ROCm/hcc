@@ -1,8 +1,15 @@
-// XFAIL: Linux,boltzmann
+// XFAIL: Linux
 // RUN: %hc %s -o %t.out && %t.out
+
 #include <vector>
 #include <iostream>
 #include <amp.h>
+
+// added for checking HSA profile
+#include <hc.hpp>
+
+// test C++AMP with fine-grained SVM
+// requires HSA Full Profile to operate successfully
 
 using namespace concurrency;
 
@@ -13,7 +20,7 @@ public:
 };
 
 
-int main() {
+bool test() {
 
   std::vector<List> nodes(10);
   for(int i = 0; i < nodes.size(); i++) {
@@ -52,5 +59,19 @@ int main() {
     std::cout << "Verify failed!\n";
   }
 
-  return error != 0;
+  return (error == 0);
 }
+
+int main() {
+  bool ret = true;
+
+  // only conduct the test in case we are running on a HSA full profile stack
+  hc::accelerator acc;
+  if (acc.is_hsa_accelerator() &&
+      acc.get_profile() == hc::hcAgentProfileFull) {
+    ret &= test();
+  }
+
+  return !(ret == true);
+}
+

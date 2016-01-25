@@ -1,4 +1,4 @@
-// XFAIL: Linux,boltzmann
+// XFAIL: Linux
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <amp.h>
@@ -7,6 +7,11 @@
 #include <iostream>
 #include <random>
 
+// added for checking HSA profile
+#include <hc.hpp>
+
+// test C++AMP with fine-grained SVM
+// requires HSA Full Profile to operate successfully
 // test capture a user functor with customized ctor by copy
 // test funtions and user functor are now constructed from templates
 
@@ -148,33 +153,40 @@ bool test3(const user_functor<_Tp>& functor, _Tp val) {
 int main() {
   bool ret = true;
 
-  // setup RNG
-  std::random_device rd;
-  std::default_random_engine gen(rd());
-  std::uniform_int_distribution<int> dis_int(1, 16);
-  std::uniform_int_distribution<unsigned> dis_unsigned(1, 16);
-  std::uniform_int_distribution<long> dis_long(1, 16);
-  std::uniform_int_distribution<unsigned long> dis_ulong(1, 16);
+  // only conduct the test in case we are running on a HSA full profile stack
+  hc::accelerator acc;
+  if (acc.is_hsa_accelerator() &&
+      acc.get_profile() == hc::hcAgentProfileFull) {
 
-  int val_int = dis_int(gen);
-  unsigned val_unsigned = dis_unsigned(gen);
-  long val_long = dis_long(gen);
-  unsigned long val_ulong = dis_ulong(gen);
+    // setup RNG
+    std::random_device rd;
+    std::default_random_engine gen(rd());
+    std::uniform_int_distribution<int> dis_int(1, 16);
+    std::uniform_int_distribution<unsigned> dis_unsigned(1, 16);
+    std::uniform_int_distribution<long> dis_long(1, 16);
+    std::uniform_int_distribution<unsigned long> dis_ulong(1, 16);
+  
+    int val_int = dis_int(gen);
+    unsigned val_unsigned = dis_unsigned(gen);
+    long val_long = dis_long(gen);
+    unsigned long val_ulong = dis_ulong(gen);
+  
+    ret &= test1<int, SIZE>(user_functor<int>(val_int), val_int);
+    ret &= test1<unsigned, SIZE>(user_functor<unsigned>(val_unsigned), val_unsigned);
+    ret &= test1<long, SIZE>(user_functor<long>(val_long), val_long);
+    ret &= test1<unsigned long, SIZE>(user_functor<unsigned long>(val_ulong), val_ulong);
+  
+    ret &= test2<int, SIZE>(user_functor<int>(val_int), val_int);
+    ret &= test2<unsigned, SIZE>(user_functor<unsigned>(val_unsigned), val_unsigned);
+    ret &= test2<long, SIZE>(user_functor<long>(val_long), val_long);
+    ret &= test2<unsigned long, SIZE>(user_functor<unsigned long>(val_ulong), val_ulong);
+  
+    ret &= test3<int, SIZE>(user_functor<int>(val_int), val_int);
+    ret &= test3<unsigned, SIZE>(user_functor<unsigned>(val_unsigned), val_unsigned);
+    ret &= test3<long, SIZE>(user_functor<long>(val_long), val_long);
+    ret &= test3<unsigned long, SIZE>(user_functor<unsigned long>(val_ulong), val_ulong);
 
-  ret &= test1<int, SIZE>(user_functor<int>(val_int), val_int);
-  ret &= test1<unsigned, SIZE>(user_functor<unsigned>(val_unsigned), val_unsigned);
-  ret &= test1<long, SIZE>(user_functor<long>(val_long), val_long);
-  ret &= test1<unsigned long, SIZE>(user_functor<unsigned long>(val_ulong), val_ulong);
-
-  ret &= test2<int, SIZE>(user_functor<int>(val_int), val_int);
-  ret &= test2<unsigned, SIZE>(user_functor<unsigned>(val_unsigned), val_unsigned);
-  ret &= test2<long, SIZE>(user_functor<long>(val_long), val_long);
-  ret &= test2<unsigned long, SIZE>(user_functor<unsigned long>(val_ulong), val_ulong);
-
-  ret &= test3<int, SIZE>(user_functor<int>(val_int), val_int);
-  ret &= test3<unsigned, SIZE>(user_functor<unsigned>(val_unsigned), val_unsigned);
-  ret &= test3<long, SIZE>(user_functor<long>(val_long), val_long);
-  ret &= test3<unsigned long, SIZE>(user_functor<unsigned long>(val_ulong), val_ulong);
+  }
 
   return !(ret == true);
 }
