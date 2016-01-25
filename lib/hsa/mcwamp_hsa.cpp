@@ -888,6 +888,8 @@ private:
 
     hsa_isa_t agentISA;
 
+    hcAgentProfile profile;
+
 public:
  
     uint32_t getWorkgroupMaxSize() {
@@ -1013,7 +1015,8 @@ public:
                                ri(),
                                useCoarseGrainedRegion(false),
                                kernargPool(), kernargPoolFlag(), kernargCursor(0), kernargPoolMutex(),
-                               executables() {
+                               executables(),
+                               profile(hcAgentProfileNone) {
 #if KALMAR_DEBUG
         std::cerr << "HSADevice::HSADevice()\n";
 #endif
@@ -1076,6 +1079,17 @@ public:
         /// Get ISA associated with the agent
         status = hsa_agent_get_info(agent, HSA_AGENT_INFO_ISA, &agentISA);
         STATUS_CHECK(status, __LINE__);
+
+        /// Get the profile of the agent
+        hsa_profile_t agentProfile;
+        status = hsa_agent_get_info(agent, HSA_AGENT_INFO_PROFILE, &agentProfile);
+        STATUS_CHECK(status, __LINE__);
+
+        if (agentProfile == HSA_PROFILE_BASE) {
+            profile = hcAgentProfileBase;
+        } else if (agentProfile == HSA_PROFILE_FULL) {
+            profile = hcAgentProfileFull;
+        }
     }
 
     ~HSADevice() {
