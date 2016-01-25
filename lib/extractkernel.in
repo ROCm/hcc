@@ -56,7 +56,7 @@ else {
     $hsa_path = $ENV{'HSA_HOME'};
   }
   else {
-    $hsa_path = @HSA_ROOT@;
+    $hsa_path = "@HSA_ROOT@";
   }
   my $hsafin = "$hsa_path/bin/amdhsafin";
   if (-f $hsafin) {
