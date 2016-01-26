@@ -1,20 +1,6 @@
 # HC API : An HSA-extension to C++AMP
 
-HC is a C++ API derived from C++AMP. It has nearly identical features with C++AMP in:
-
-- abstract modeling of GPU devices: accelerator / acclerator_view
-- multi-dimensional array / array_view
-- multi-dimensional index / extent
-- parallel_for_each kernel launching interface
-- math & atomic functions
-
-And it comes with a few HSA-specific features:
-
-- relaxed rules in operations allowed in kernels
-- new syntax of tiled_extent and tiled_index
-- dynamic group segment memory allocation
-- true asynchronous kernel launching behavior
-- additional HSA-specific APIs
+HC is a C++ API for accelerated computing provided by the HCC compiler.  It has some similarities to C++ AMP and therefore, reference materials (blogs, articles, books) that describe C++ AMP also proivide an excellent way to become familiar with HC.  For example, both APIs use a parallel_for_each construct to specify a parallel execution region that runs on accelerator.  However, HC has several important differences from C++ AMP, including the removal of the "restrict" keyword to annotate device code, an explicit asynchronous launch behavior for parallel_for_each, the support for non-constant tile size, the support for memory pointer, etc..
 
 ---
 
@@ -27,7 +13,7 @@ HC comes with two header files as of now:
 
 Most HC APIs are stored under "hc" namespace, and the class name is the same as their counterpart in C++AMP "Concurrency" namespace.  Users of C++AMP should find it easy to switch from C++AMP to HC.
 
-| HC | C++AMP |
+| C++AMP | HC |
 |----|--------|
 | Concurrency::accelerator | hc::accelerator |
 | Concurrency::accelerator_view | hc::accelerator_view |
@@ -195,7 +181,7 @@ For HSA APUs that supports system wide shared virtual memory, a GPU kernel can d
 ```
 int* cpu_memory = (int*) malloc(...);
 ...
-parallel_for_each(ext, [=](index i) {
+parallel_for_each(ext, [=](index i) [[hc]] {
   cpu_memory[i[0]]++;
 });
 ```
