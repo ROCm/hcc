@@ -328,11 +328,11 @@ struct StringFinder
     if(llvm::IntegerType *intTy = llvm::dyn_cast<llvm::IntegerType>(T)) {
       unsigned bitwidth = intTy->getBitWidth();
       switch(bitwidth) {
-        case 1:
-          str.insert(0, "bool");
-          break;
         case 8:
-          str.insert(0, "char");
+          // FIXME: Currently there seems to be a bug with char
+          // Current workaround is to use bool since they both have the same size
+          // https://bitbucket.org/snippets/wukevin/L8nbK
+          str.insert(0, "bool");
           break;
         case 16:
           str.insert(0, "short");
