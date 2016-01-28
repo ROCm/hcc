@@ -1,10 +1,9 @@
-// XFAIL: *
+// XFAIL: Linux
 // RUN: %hc -lhc_am %s -o %t.out && %t.out
 
 // FIXME: GridLaunch tests would hang HSA dGPU if executed in multi-thread
 // environment. Need further invetigation
 
-#error FIXME
 
 #include "hc.hpp"
 #include "grid_launch.h"
@@ -22,7 +21,7 @@ __attribute__((hc_grid_launch)) void kernel(const grid_launch_parm lp, int* x) {
 
 int main() {
 
-  const int sz = 10;
+  const int sz = GRID_SIZE*TILE_SIZE;
 
   int* data1 = (int* )malloc(sz*sizeof(int));
 
@@ -46,6 +45,9 @@ int main() {
   for(int i = 0; i < sz; ++i) {
     ret &= (data1[i] == i);
   }
+
+  hc::am_free(data1_d);
+  free(data1);
 
   return !ret;
 
