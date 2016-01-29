@@ -38,7 +38,7 @@ define linkonce_odr spir_func i32 @__hsail_get_global_id(i32) #0 {
   ret i32 %19
 
 ; <label>:20                                      ; preds = %1
-  ret i32 0
+  unreachable
 }
 
 ; Function Attrs: nounwind readnone
