@@ -102,7 +102,7 @@ if [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 1 ]; then
   # Path to HOF
   HOF_BIN=@HOF_BIN@
 
-  if [ -d $HOF_BIN ] && [ -e $HOF_BIN/hof ]; then
+  if [ -d $HOF_BIN ] && ( [ -e $HOF_BIN/hof ] || [ -e $HOF_BIN/amdhsafin ] ); then
     # all HOF tools are available
     HCC_NOISA="${HCC_NOISA:=0}"
     if [ $HCC_NOISA == "1" ]; then
@@ -267,20 +267,18 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
 
   # HSA offline finalization
   if [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 1 ]; then
-    # conduct HSA offline finalization
-    $HOF_BIN/hof -output=$TEMP_DIR/kernel.isa -brig $TEMP_DIR/kernel.brig
+    if [ -e $HOF_BIN/hof ]; then
+      # conduct HSA offline finalization for APU
+      $HOF_BIN/hof -output=$TEMP_DIR/kernel.isa -brig $TEMP_DIR/kernel.brig
+    else
+      if [ -e $HOF_BIN/amdhsafin ]; then
+        # Fiji 
+        HOF_ARCH="8:0:3"
 
-    ##
-    # Lines below are not yet applicable for hof posted on Github
-    ##
-
-    # Kaveri
-    #HOF_ARCH="AMD:AMDGPU:7:0:0"
-     
-    # Fiji 
-    #HOF_ARCH="AMD:AMDGPU:8:0:3"
-
-    #$HOF_BIN/hof  -target $HOF_ARCH -output $TEMP_DIR/kernel.isa -brig $TEMP_DIR/kernel.brig
+        # conduct HSA offline finalization for DGPU
+        $HOF_BIN/amdhsafin -target=$HOF_ARCH -output=$TEMP_DIR/kernel.isa -brig $TEMP_DIR/kernel.brig -O2
+      fi
+    fi
 
     ret=$?
     if [ $ret == 0 ]; then
