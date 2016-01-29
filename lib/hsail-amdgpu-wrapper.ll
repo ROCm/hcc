@@ -4,7 +4,7 @@
 define linkonce_odr spir_func i32 @__hsail_get_global_id(i32) #0 {
   %dispatch_ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr()
   %dispatch_ptr_i32 = bitcast i8 addrspace(2)* %dispatch_ptr to i32 addrspace(2)*
-  %size_xy_ptr = getelementptr i32, i32 addrspace(2)* %dispatch_ptr_i32, i32 1
+  %size_xy_ptr = getelementptr inbounds i32, i32 addrspace(2)* %dispatch_ptr_i32, i32 1
   %size_xy = load i32, i32 addrspace(2)* %size_xy_ptr, align 4, !invariant.load !0
   switch i32 %0, label %20 [
     i32 0, label %2
@@ -29,7 +29,7 @@ define linkonce_odr spir_func i32 @__hsail_get_global_id(i32) #0 {
   ret i32 %13
 
 ; <label>:14                                      ; preds = %1
-  %size_z_ptr = getelementptr i32 ,i32 addrspace(2)* %dispatch_ptr_i32, i32 2
+  %size_z_ptr = getelementptr inbounds i32, i32 addrspace(2)* %dispatch_ptr_i32, i32 2
   %15 = load i32, i32 addrspace(2)* %size_z_ptr, align 4, !invariant.load !0, !range !1
   %16 = call i32 @llvm.r600.read.tgid.z()
   %17 = call i32 @llvm.r600.read.tidig.z()
