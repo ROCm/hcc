@@ -344,7 +344,7 @@ define linkonce_odr spir_func i32 @__hsail_mad_u32(i32, i32, i32) #0 {
 
 ; Function Attrs: alwaysinline
 define linkonce_odr spir_func i32 @__hsail_firstbit_u32(i32) #0 {
-  %2 = call i32 @llvm.ctlz.i32(i32 %0, i1 false)
+  %2 = call i32 @llvm.ctlz.i32(i32 %0, i1 true)
   %3 = icmp eq i32 %0, 0
   %4 = select i1 %3, i32 -1, i32 %2
   ret i32 %4
