@@ -2,7 +2,7 @@
 
 ; Function Attrs: alwaysinline
 define linkonce_odr spir_func i32 @__hsail_get_global_id(i32) #0 {
-  %dispatch_ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr()
+  %dispatch_ptr = call noalias nonnull dereferenceable(64) i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr()
   %dispatch_ptr_i32 = bitcast i8 addrspace(2)* %dispatch_ptr to i32 addrspace(2)*
   %size_xy_ptr = getelementptr inbounds i32, i32 addrspace(2)* %dispatch_ptr_i32, i32 1
   %size_xy = load i32, i32 addrspace(2)* %size_xy_ptr, align 4, !invariant.load !0
@@ -68,7 +68,7 @@ declare i32 @llvm.r600.read.tgid.z() #1
 ; Function Attrs: nounwind readnone
 declare i32 @llvm.r600.read.tidig.z() #1
 
-declare noalias i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr() #1
+declare i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr() #1
 
 ; Function Attrs: alwaysinline
 define linkonce_odr spir_func float @__hsail_abs_f32(float) #0 {
