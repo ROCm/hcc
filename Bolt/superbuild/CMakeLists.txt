@@ -104,7 +104,11 @@ set (BUILD_Bolt ON)
 set (BUILD_Doxygen OFF)
 set (BUILD_gTest ON)
 set (BUILD_benchmarks OFF)
-set (BUILD_tests ON)
+
+# turn off Bolt test build in case of debug build
+if (NOT ${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+  set (BUILD_tests ON)
+endif()
 
 # Comment this out because this does not work yet
 # option( BUILD_Examples "Generate example projects to demonstrate Bolt usage" OFF )
@@ -140,7 +144,12 @@ if( BUILD_gTest )
 #   set( GTEST_ROOT ${binary_dir} )
     message( STATUS "GTEST_ROOT configured as: " ${GTEST_ROOT} )
     list( APPEND Bolt.Dependencies gTestDebug gTestRelease )
-    list( APPEND Bolt.Cmake.Args -DBUILD_tests=TRUE -DGTEST_ROOT=${GTEST_ROOT} )
+    # turn off Bolt test build in case of debug build
+    if (NOT ${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+      list( APPEND Bolt.Cmake.Args -DBUILD_tests=TRUE -DGTEST_ROOT=${GTEST_ROOT} )
+    else()
+      list( APPEND Bolt.Cmake.Args -DGTEST_ROOT=${GTEST_ROOT} )
+    endif()
     if( MSVC )
         list( APPEND Bolt.Cmake.Args -DGTEST_MSVC_SEARCH=MT )
     endif( )
