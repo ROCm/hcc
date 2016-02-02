@@ -92,6 +92,9 @@ libncurses5-dev
    rather than runtime.  It can be found at:
    - https://github.com/HSAFoundation/HSA-HOF-AMD
 
+   Please notice the tools only supports Kaveri APU as of now. If you use dGPU
+   such as Fiji please do NOT install this tool.
+
 * Prerequisite/Repository
 
 For any development work, you should fork from them and create your own
@@ -136,7 +139,7 @@ are:
       -DHSA_HEADER_DIR=/opt/hsa/include \
       -DHSA_LIBRARY_DIR=/opt/hsa/lib \
       -DHSA_KMT_LIBRARY_DIR=/opt/hsa/lib \
-      -DHSA_HOF_DIR=/opt/amd/bin \
+      -DHSA_HOF_DIR=/opt/hsa/bin \
       -DCMAKE_BUILD_TYPE=Release \
       -DCXXAMP_ENABLE_BOLT=OFF
       -DHSAIL_COMPILER_DIR=/opt/amd/bin \
@@ -152,7 +155,7 @@ are:
 
    - HSA_KMT_LIBRARY_DIR : HSA kernel library path (default is /opt/hsa/lib )
 
-   - HSA_HOF_DIR : HSA offline finalizer binary path (default is /opt/amd/bin )
+   - HSA_HOF_DIR : HSA offline finalizer binary path (default is /opt/hsa/bin )
 
    - CMAKE_BUILD_TYPE : Release or Debug (default is Release )
 
