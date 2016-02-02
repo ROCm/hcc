@@ -224,6 +224,7 @@ option(HSA_USE_AMDGPU_BACKEND "Use AMDGPU LLVM backend as compiler for HSA" OFF)
 
 if (HSA_USE_AMDGPU_BACKEND)
   add_definitions(-DHSA_USE_AMDGPU_BACKEND)
+  set(HAS_HSA_HOF 0)
 endif ()
 
 set(HSA_AMDGPU_GPU_TARGET "kaveri" CACHE STRING "Target GPU device (kaveri,carrizo,fiji)")
