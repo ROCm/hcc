@@ -228,7 +228,7 @@ define linkonce_odr spir_func float @__hsail_nrcp_f32(float) #0 {
 declare float @llvm.amdgcn.rcp.f32(float) #1
 
 ; Function Attrs: alwaysinline
-define linkonce_odr spir_func float @__hsail_nrsqrt_f32(float) #0 {
+define linkonce_odr spir_func float @__hsail_nrsqrt_f32(float) #1 {
   %2 = call float @llvm.amdgcn.rsq.f32(float %0)
   ret float %2
 }
@@ -237,7 +237,7 @@ define linkonce_odr spir_func float @__hsail_nrsqrt_f32(float) #0 {
 declare float @llvm.amdgcn.rsq.f32(float) #1
 
 ; Function Attrs: alwaysinline
-define linkonce_odr spir_func double @__hsail_nrsqrt_f64(double) #0 {
+define linkonce_odr spir_func double @__hsail_nrsqrt_f64(double) #1 {
   %2 = call double @llvm.amdgcn.rsq.f64(double %0)
   ret double %2
 }
@@ -246,7 +246,7 @@ define linkonce_odr spir_func double @__hsail_nrsqrt_f64(double) #0 {
 declare double @llvm.amdgcn.rsq.f64(double) #1
 
 ; Function Attrs: alwaysinline
-define linkonce_odr spir_func float @__hsail_nsqrt_f32(float) #0 {
+define linkonce_odr spir_func float @__hsail_nsqrt_f32(float) #1 {
   %2 = call float @llvm.sqrt.f32(float %0)
   ret float %2
 }
@@ -264,7 +264,7 @@ define linkonce_odr spir_func float @__hsail_round_f32(float) #0 {
 declare float @llvm.round.f32(float) #1
 
 ; Function Attrs: alwaysinline
-define linkonce_odr spir_func double @__hsail_round_f64(double) #0 {
+define linkonce_odr spir_func double @__hsail_round_f64(double) #1 {
   %2 = call double @llvm.round.f64(double %0)
   ret double %2
 }
@@ -273,13 +273,13 @@ define linkonce_odr spir_func double @__hsail_round_f64(double) #0 {
 declare double @llvm.round.f64(double) #1
 
 ; Function Attrs: alwaysinline
-define linkonce_odr spir_func float @__hsail_sqrt_f32(float) #0 {
+define linkonce_odr spir_func float @__hsail_sqrt_f32(float) #1 {
   %2 = call float @llvm.sqrt.f32(float %0)
   ret float %2
 }
 
 ; Function Attrs: alwaysinline
-define linkonce_odr spir_func double @__hsail_sqrt_f64(double) #0 {
+define linkonce_odr spir_func double @__hsail_sqrt_f64(double) #1 {
   %2 = call double @llvm.sqrt.f64(double %0)
   ret double %2
 }
@@ -288,7 +288,7 @@ define linkonce_odr spir_func double @__hsail_sqrt_f64(double) #0 {
 declare double @llvm.sqrt.f64(double) #1
 
 ; Function Attrs: alwaysinline
-define linkonce_odr spir_func float @__hsail_trunc_f32(float) #0 {
+define linkonce_odr spir_func float @__hsail_trunc_f32(float) #1 {
   %2 = call float @llvm.trunc.f32(float %0)
   ret float %2
 }
@@ -297,7 +297,7 @@ define linkonce_odr spir_func float @__hsail_trunc_f32(float) #0 {
 declare float @llvm.trunc.f32(float) #1
 
 ; Function Attrs: alwaysinline
-define linkonce_odr spir_func double @__hsail_trunc_f64(double) #0 {
+define linkonce_odr spir_func double @__hsail_trunc_f64(double) #1 {
   %2 = call double @llvm.trunc.f64(double %0)
   ret double %2
 }
@@ -306,7 +306,7 @@ define linkonce_odr spir_func double @__hsail_trunc_f64(double) #0 {
 declare double @llvm.trunc.f64(double) #1
 
 ; Function Attrs: alwaysinline
-define linkonce_odr spir_func i32 @__hsail_class_f32(float, i32) #0 {
+define linkonce_odr spir_func i32 @__hsail_class_f32(float, i32) #1 {
   %3 = call i1 @llvm.amdgcn.class.f32(float %0, i32 %1)
   %4 = sext i1 %3 to i32
   ret i32 %4
@@ -316,7 +316,7 @@ define linkonce_odr spir_func i32 @__hsail_class_f32(float, i32) #0 {
 declare i1 @llvm.amdgcn.class.f32(float, i32) #1
 
 ; Function Attrs: alwaysinline
-define linkonce_odr spir_func i32 @__hsail_class_f64(double, i32) #0 {
+define linkonce_odr spir_func i32 @__hsail_class_f64(double, i32) #1 {
   %3 = call i1 @llvm.amdgcn.class.f64(double %0, i32 %1)
   %4 = sext i1 %3 to i32
   ret i32 %4
@@ -326,7 +326,7 @@ define linkonce_odr spir_func i32 @__hsail_class_f64(double, i32) #0 {
 declare i1 @llvm.amdgcn.class.f64(double, i32) #1
 
 ; Function Attrs: alwaysinline
-define linkonce_odr spir_func i32 @__hsail_mulhi_u32(i32, i32) #0 {
+define linkonce_odr spir_func i32 @__hsail_mulhi_u32(i32, i32) #1 {
   %3 = zext i32 %0 to i64
   %4 = zext i32 %1 to i64
   %5 = mul i64 %3, %4
@@ -336,14 +336,14 @@ define linkonce_odr spir_func i32 @__hsail_mulhi_u32(i32, i32) #0 {
 }
 
 ; Function Attrs: alwaysinline
-define linkonce_odr spir_func i32 @__hsail_mad_u32(i32, i32, i32) #0 {
+define linkonce_odr spir_func i32 @__hsail_mad_u32(i32, i32, i32) #1 {
   %4 = mul i32 %0, %1
   %5 = add i32 %4, %2
   ret i32 %5
 }
 
 ; Function Attrs: alwaysinline
-define linkonce_odr spir_func i32 @__hsail_firstbit_u32(i32) #0 {
+define linkonce_odr spir_func i32 @__hsail_firstbit_u32(i32) #1 {
   %2 = call i32 @llvm.ctlz.i32(i32 %0, i1 true)
   %3 = icmp eq i32 %0, 0
   %4 = select i1 %3, i32 -1, i32 %2
@@ -354,21 +354,21 @@ define linkonce_odr spir_func i32 @__hsail_firstbit_u32(i32) #0 {
 declare i32 @llvm.ctlz.i32(i32, i1) #1
 
 ; Function Attrs: alwaysinline
-define linkonce_odr spir_func i32 @__hsail_max_s32(i32, i32) #0 {
+define linkonce_odr spir_func i32 @__hsail_max_s32(i32, i32) #1 {
   %3 = icmp sgt i32 %0, %1
   %4 = select i1 %3, i32 %0, i32 %1
   ret i32 %4
 }
 
 ; Function Attrs: alwaysinline
-define linkonce_odr spir_func i32 @__hsail_min_s32(i32, i32) #0 {
+define linkonce_odr spir_func i32 @__hsail_min_s32(i32, i32) #1 {
   %3 = icmp slt i32 %0, %1
   %4 = select i1 %3, i32 %0, i32 %1
   ret i32 %4
 }
 
 ; Function Attrs: alwaysinline
-define linkonce_odr spir_func i32 @__hsail_bytealign_b32(i32, i32, i32) #0 {
+define linkonce_odr spir_func i32 @__hsail_bytealign_b32(i32, i32, i32) #1 {
   %4 = and i32 %2, 3
   %5 = mul i32 %4, 8
   %6 = zext i32 %5 to i64
@@ -382,7 +382,7 @@ define linkonce_odr spir_func i32 @__hsail_bytealign_b32(i32, i32, i32) #0 {
 }
 
 ; Function Attrs: alwaysinline
-define linkonce_odr spir_func float @__hsail_ftz_f32(float) #0 {
+define linkonce_odr spir_func float @__hsail_ftz_f32(float) #1 {
   %2 = bitcast float %0 to i32
   %3 = and i32 %2, 2139095040
   %4 = and i32 %2, 8388607
@@ -394,7 +394,7 @@ define linkonce_odr spir_func float @__hsail_ftz_f32(float) #0 {
 }
 
 ; Function Attrs: alwaysinline
-define linkonce_odr spir_func double @__hsail_fraction_f64(double) #0 {
+define linkonce_odr spir_func double @__hsail_fraction_f64(double) #1 {
   %2 = call double @llvm.floor.f64(double %0)
   %3 = fsub double -0.000000e+00, %2
   %4 = fadd double %0, %3
@@ -402,7 +402,7 @@ define linkonce_odr spir_func double @__hsail_fraction_f64(double) #0 {
 }
 
 ; Function Attrs: alwaysinline
-define linkonce_odr spir_func i32 @__hsail_get_local_id(i32) #0 {
+define linkonce_odr spir_func i32 @__hsail_get_local_id(i32) #1 {
   %2 = call i32 @llvm.r600.read.tidig.x()
   %3 = call i32 @llvm.r600.read.tidig.y()
   %4 = call i32 @llvm.r600.read.tidig.z()
@@ -414,7 +414,7 @@ define linkonce_odr spir_func i32 @__hsail_get_local_id(i32) #0 {
 }
 
 ; Function Attrs: alwaysinline
-define linkonce_odr spir_func i32 @__hsail_get_group_id(i32) #0 {
+define linkonce_odr spir_func i32 @__hsail_get_group_id(i32) #1 {
   %2 = call i32 @llvm.r600.read.tgid.x()
   %3 = call i32 @llvm.r600.read.tgid.y()
   %4 = call i32 @llvm.r600.read.tgid.z()
