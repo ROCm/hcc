@@ -307,23 +307,23 @@ declare double @llvm.trunc.f64(double) #1
 
 ; Function Attrs: alwaysinline
 define linkonce_odr spir_func i32 @__hsail_class_f32(float, i32) #0 {
-  %3 = call i1 @llvm.AMDGPU.class.f32(float %0, i32 %1)
+  %3 = call i1 @llvm.amdgcn.class.f32(float %0, i32 %1)
   %4 = sext i1 %3 to i32
   ret i32 %4
 }
 
 ; Function Attrs: nounwind readnone
-declare i1 @llvm.AMDGPU.class.f32(float, i32) #1
+declare i1 @llvm.amdgcn.class.f32(float, i32) #1
 
 ; Function Attrs: alwaysinline
 define linkonce_odr spir_func i32 @__hsail_class_f64(double, i32) #0 {
-  %3 = call i1 @llvm.AMDGPU.class.f64(double %0, i32 %1)
+  %3 = call i1 @llvm.amdgcn.class.f64(double %0, i32 %1)
   %4 = sext i1 %3 to i32
   ret i32 %4
 }
 
 ; Function Attrs: nounwind readnone
-declare i1 @llvm.AMDGPU.class.f64(double, i32) #1
+declare i1 @llvm.amdgcn.class.f64(double, i32) #1
 
 ; Function Attrs: alwaysinline
 define linkonce_odr spir_func i32 @__hsail_mulhi_u32(i32, i32) #0 {

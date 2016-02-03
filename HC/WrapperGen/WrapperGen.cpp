@@ -252,25 +252,19 @@ struct StringFinder
 
   void WrapperFunction::printRange(llvm::raw_ostream &out, RangeOptions rop) {
     auto firstArg = mArgs.begin();
-    auto lastArg = mArgs.end();
+    auto pastEnd = mArgs.end();
 
     std::string delim("");
     if(rop == DECLARE)
       delim.append("; ");
     else delim.append(", ");
 
-    // Used for DECLARE only. Checks for last element on the list to print a delimiter
-    auto secondLastArg = lastArg;
-    secondLastArg--;
-
-    // Used for INITIALIZE only. Omits printing delimiter for first and second arg
-    auto secondArg = firstArg;
-    secondArg++;
+    // Checks for last element on the list to print a delimiter
+    auto lastArg = pastEnd;
+    lastArg--;
 
     for(auto i: mArgs) {
-      if(rop == INITIALIZE && i != *firstArg && i != *secondArg)
-        out << delim;
-      else if(rop != INITIALIZE && i != *firstArg)
+      if(rop != INITIALIZE && i != *firstArg)
         out << delim;
 
       switch(rop) {
@@ -287,8 +281,11 @@ struct StringFinder
           break;
         // : arg2(arg2), arg3(arg3) {}
         case INITIALIZE:
-          if(i->getTypeName() != "grid_launch_parm")
+          if(i->getTypeName() != "grid_launch_parm") {
             out << i->getArgName() << "(" << i->getArgName() << ")";
+            if (i != *lastArg)
+              out << delim;
+          }
           break;
         // function(arg1, arg2, arg3);
         case ARGUMENTS:
@@ -297,7 +294,7 @@ struct StringFinder
         // type1 arg1; type2 arg2; type1 arg3;
         case DECLARE:
           out << i->getTypeNameWithQual() << " " << i->getArgName();
-          if(i == *secondLastArg)
+          if(i == *lastArg)
             out << delim;
           break;
         default:
@@ -328,11 +325,11 @@ struct StringFinder
     if(llvm::IntegerType *intTy = llvm::dyn_cast<llvm::IntegerType>(T)) {
       unsigned bitwidth = intTy->getBitWidth();
       switch(bitwidth) {
-        case 1:
-          str.insert(0, "bool");
-          break;
         case 8:
-          str.insert(0, "char");
+          // FIXME: Currently there seems to be a bug with char
+          // Current workaround is to use bool since they both have the same size
+          // https://bitbucket.org/snippets/wukevin/L8nbK
+          str.insert(0, "bool");
           break;
         case 16:
           str.insert(0, "short");
