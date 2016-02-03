@@ -2289,10 +2289,11 @@ union __u {
  * __HSA_WAVEFRONT_SIZE__.
  */
 inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+    unsigned int ulane = (unsigned int)srcLane;
+    unsigned int uwidth = (unsigned int)width;
     unsigned int laneId = __activelaneid_u32();
-    unsigned int shift = __popcount_u32_b32(width - 1);
-    unsigned int newSrcLane = ((laneId >> shift) << shift) + (srcLane & (width - 1));
-    return __activelanepermute_b32(var, newSrcLane, 0, 0);
+    unsigned int newSrcLane = (laneId&((unsigned int)0xFFFFFFFF-(uwidth-1))) + (ulane&(uwidth-1));
+    return __activelanepermute_b32(var,newSrcLane, 0, 0);
 }
 
 inline float __shfl(float var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
