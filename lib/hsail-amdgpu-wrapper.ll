@@ -81,12 +81,12 @@ declare float @llvm.fabs.f32(float) #1
 
 ; Function Attrs: alwaysinline nounwind convergent
 define linkonce_odr spir_func void @__hsail_barrier() #3 {
-  tail call void @llvm.AMDGPU.barrier.local() #2
+  tail call void @llvm.amdgcn.s.barrier() #2
   ret void
 }
 
 ; Function Attrs: nounwind convergent
-declare void @llvm.AMDGPU.barrier.local() #2
+declare void @llvm.amdgcn.s.barrier() #2
 
 
 ; Function Attrs: alwaysinline
@@ -220,30 +220,30 @@ define linkonce_odr spir_func double @__hsail_nfma_f64(double, double, double) #
 
 ; Function Attrs: alwaysinline
 define linkonce_odr spir_func float @__hsail_nrcp_f32(float) #0 {
-  %2 = call float @llvm.AMDGPU.rcp.f32(float %0)
+  %2 = call float @llvm.amdgcn.rcp.f32(float %0)
   ret float %2
 }
 
 ; Function Attrs: nounwind readnone
-declare float @llvm.AMDGPU.rcp.f32(float) #1
+declare float @llvm.amdgcn.rcp.f32(float) #1
 
 ; Function Attrs: alwaysinline
 define linkonce_odr spir_func float @__hsail_nrsqrt_f32(float) #0 {
-  %2 = call float @llvm.AMDGPU.rsq.f32(float %0)
+  %2 = call float @llvm.amdgcn.rsq.f32(float %0)
   ret float %2
 }
 
 ; Function Attrs: nounwind readnone
-declare float @llvm.AMDGPU.rsq.f32(float) #1
+declare float @llvm.amdgcn.rsq.f32(float) #1
 
 ; Function Attrs: alwaysinline
 define linkonce_odr spir_func double @__hsail_nrsqrt_f64(double) #0 {
-  %2 = call double @llvm.AMDGPU.rsq.f64(double %0)
+  %2 = call double @llvm.amdgcn.rsq.f64(double %0)
   ret double %2
 }
 
 ; Function Attrs: nounwind readnone
-declare double @llvm.AMDGPU.rsq.f64(double) #1
+declare double @llvm.amdgcn.rsq.f64(double) #1
 
 ; Function Attrs: alwaysinline
 define linkonce_odr spir_func float @__hsail_nsqrt_f32(float) #0 {
