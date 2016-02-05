@@ -377,6 +377,7 @@ add_custom_target(hlc
   COMMAND ${CMAKE_COMMAND} ${HLC_SRC_DIR}
           -DLLVM_ENABLE_EH=ON
           -DLLVM_ENABLE_RTTI=ON
+          -DLLVM_TARGETS_TO_BUILD=
           -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=HSAIL
           -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
   COMMAND make -j8 # not portable, but we need it this way
