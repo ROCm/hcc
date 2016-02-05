@@ -2288,12 +2288,23 @@ union __u {
  * results are undefined if it is not a power of 2, or is number greater than
  * __HSA_WAVEFRONT_SIZE__.
  */
+
+extern "C" __attribute__((const)) unsigned int __hsail_get_lane_id(void) __HC__;
+extern "C" unsigned int __hsail_activelanepermute_b32(unsigned int src, unsigned int lid, unsigned int ival, bool useival) __HC__;
+
+
 inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-    unsigned int ulane = (unsigned int)srcLane;
-    unsigned int uwidth = (unsigned int)width;
-    unsigned int laneId = __activelaneid_u32();
-    unsigned int newSrcLane = (laneId&((unsigned int)0xFFFFFFFF-(uwidth-1))) + (ulane&(uwidth-1));
-    return __activelanepermute_b32(var,newSrcLane, 0, 0);
+    switch (width) {
+      case 64:
+        return __hsail_activelanepermute_b32(var,srcLane&63, 0, 0);
+      default: {
+        unsigned int ulane = (unsigned int)srcLane;
+        unsigned int uwidth = (unsigned int)width;
+        unsigned int laneId = __hsail_get_lane_id();
+        unsigned int newSrcLane = (laneId&((unsigned int)0xFFFFFFFF-(uwidth-1))) + (ulane&(uwidth-1));
+        return __hsail_activelanepermute_b32(var,newSrcLane, 0, 0);
+      }
+   };
 }
 
 inline float __shfl(float var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
@@ -2327,11 +2338,9 @@ inline float __shfl(float var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __
  * __HSA_WAVEFRONT_SIZE__.
  */
 inline int __shfl_up(int var, unsigned int delta, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-    unsigned int laneId = __activelaneid_u32();
-    unsigned int shift = __popcount_u32_b32(width - 1);
-    unsigned int logicalLaneId = laneId & (width - 1);
-    unsigned int newSrcLane = (logicalLaneId < delta) ? laneId : ((laneId >> shift) << shift) + (logicalLaneId - delta);
-    return __activelanepermute_b32(var, newSrcLane, 0, 0);
+    int laneId = __hsail_get_lane_id();
+    int newSrcLane = laneId - delta;
+    return __hsail_activelanepermute_b32(var, newSrcLane, var, newSrcLane < (laneId&(~(width-1))));
 }
 
 inline float __shfl_up(float var, unsigned int delta, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
@@ -2365,11 +2374,9 @@ inline float __shfl_up(float var, unsigned int delta, int width=__HSA_WAVEFRONT_
  * __HSA_WAVEFRONT_SIZE__.
  */
 inline int __shfl_down(int var, unsigned int delta, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-    unsigned int laneId = __activelaneid_u32();
-    unsigned int shift = __popcount_u32_b32(width - 1);
-    unsigned int logicalLaneId = laneId & (width - 1);
-    unsigned int newSrcLane = ((logicalLaneId + delta) >= width) ? laneId : ((laneId >> shift) << shift) + (logicalLaneId + delta);
-    return __activelanepermute_b32(var, newSrcLane, 0, 0);
+    unsigned int laneId = __hsail_get_lane_id();
+    unsigned int newSrcLane = laneId + delta;
+    return __hsail_activelanepermute_b32(var, newSrcLane, var, newSrcLane >= ((laneId&(~(width-1))) + width ));
 }
 
 inline float __shfl_down(float var, unsigned int delta, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
