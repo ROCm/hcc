@@ -12,7 +12,7 @@ set(GTEST_LIB_DIR "${PROJECT_BINARY_DIR}/utils/gtest")
 set(CPPAMP_GTEST_LIB "${GTEST_LIB_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}gtest_main_amp${CMAKE_STATIC_LIBRARY_SUFFIX}")
 file(MAKE_DIRECTORY ${GTEST_LIB_DIR})
 
-set(AMPCL_LIB_DIR "${PROJECT_BINARY_DIR}/build/${CMAKE_BUILD_TYPE}/lib")
+set(AMPCL_LIB_DIR "${PROJECT_BINARY_DIR}/lib")
 
 # opencl_math
 set(OPENCL_MATH_DIR "${PROJECT_SOURCE_DIR}/include")
@@ -30,15 +30,15 @@ configure_file(
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-spirify.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../lib/clamp-spirify @ONLY)
+  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-spirify @ONLY)
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-device.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../lib/clamp-device @ONLY)
+  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-device @ONLY)
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-embed.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../lib/clamp-embed @ONLY)
+  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-embed @ONLY)
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-assemble.in
@@ -63,15 +63,15 @@ configure_file(
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-hsatools.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../lib/clamp-hsatools @ONLY)
+  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-hsatools @ONLY)
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-hsail.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../lib/clamp-hsail @ONLY)
+  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-hsail @ONLY)
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/extractkernel.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../lib/extractkernel @ONLY)
+  ${CMAKE_CURRENT_BINARY_DIR}/../bin/extractkernel @ONLY)
 
 add_custom_target(test
   COMMAND python ${LLVM_ROOT}/bin/llvm-lit -j 2 --path ${LLVM_TOOLS_DIR} ${LLVM_LIT_ARGS} ${CMAKE_CURRENT_BINARY_DIR}
