@@ -56,10 +56,6 @@ patch_LLVM350(utils)
 patch_LLVM_for_ClangOMP(OpenMP)
 setup_DivisionPrecision(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms DivisionPrecision)
 
-set(LLVM_TARGETS_TO_BUILD X86 CACHE STRING "LLVM host target")
-set(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD CBackend CACHE STRING "set this to 'CBackend' to enable generating OpenCL-C")
-set(LLVM_INCLUDE_EXAMPLES off)
-
 # Regression test
 set(LLVM_SRC "${PROJECT_SOURCE_DIR}/compiler")
 set(LLVM_ROOT "${PROJECT_BINARY_DIR}/compiler")
@@ -313,6 +309,9 @@ add_custom_target(clang
           -DKALMAR_DRIVER_COMMIT=${KALMAR_DRIVER_COMMIT}
           -DKALMAR_COMPILER_COMMIT=${KALMAR_COMPILER_COMMIT}
           -DKALMAR_HLC_COMMIT=${KALMAR_HLC_COMMIT}
+          -DLLVM_TARGETS_TO_BUILD=X86
+          -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CBackend
+          -DLLVM_INCLUDE_EXAMPLES=off
   COMMAND make -j8 # not portable, but we need it this way
   WORKING_DIRECTORY ${CLANG_BIN_DIR}
 )
@@ -327,6 +326,9 @@ add_custom_target(clang
           -DKALMAR_VERSION_PATCH=${KALMAR_VERSION_PATCH}
           -DKALMAR_DRIVER_COMMIT=${KALMAR_DRIVER_COMMIT}
           -DKALMAR_COMPILER_COMMIT=${KALMAR_COMPILER_COMMIT}
+          -DLLVM_TARGETS_TO_BUILD=X86
+          -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CBackend
+          -DLLVM_INCLUDE_EXAMPLES=off
   COMMAND make -j8 # not portable, but we need it this way
   WORKING_DIRECTORY ${CLANG_BIN_DIR}
 )
