@@ -185,6 +185,47 @@ MESSAGE("HSA_KMT_LIBRARY_DIR = ${HSA_KMT_LIBRARY_DIR}, actually found at: ${HSA_
 MESSAGE("HSA_HOF_DIR = ${HSA_HOF_DIR}, actually found at: ${HSA_HOF}")
 MESSAGE("")
 
+#################
+# Set up version information
+#################
+
+# define HCC version information
+SET(KALMAR_VERSION_MAJOR "0")
+SET(KALMAR_VERSION_MINOR "10")
+
+# get date information based on UTC
+# use the last two digits of year + week number + day in the week as KALMAR_VERSION_PATCH
+execute_process(COMMAND date --utc +%y%W%w
+                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+                OUTPUT_VARIABLE KALMAR_VERSION_PATCH
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+# get commit information
+execute_process(COMMAND git rev-parse --short HEAD
+                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+                OUTPUT_VARIABLE KALMAR_DRIVER_COMMIT
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process(COMMAND git rev-parse --short HEAD
+                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/compiler/tools/clang
+                OUTPUT_VARIABLE KALMAR_COMPILER_COMMIT
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+# set HCC version string
+if (HAS_HSA)
+  # For HSA build, the rule for version string is:
+  # KALMAR_VERSION_MAJOR . KALMAR_VERSION_MINOR . KALMAR_VERSION_PATCH-KALMAR_DRIVER_COMIT-KALMAR_COMPILER_COMMIT-KALMAR_HLC_COMMIT
+  set(KALMAR_VERSION_STRING "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}.${KALMAR_VERSION_PATCH}-${KALMAR_DRIVER_COMMIT}-${KALMAR_COMPILER_COMMIT}-${KALMAR_HLC_COMMIT}")
+else (HAS_HSA)
+  # For non-HSA build, the rule for version string is:
+  # KALMAR_VERSION_MAJOR . KALMAR_VERSION_MINOR . KALMAR_VERSION_PATCH-KALMAR_DRIVER_COMIT-KALMAR_COMPILER_COMMIT
+  set(KALMAR_VERSION_STRING "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}.${KALMAR_VERSION_PATCH}-${KALMAR_DRIVER_COMMIT}-${KALMAR_COMPILER_COMMIT}")
+endif (HAS_HSA)
+
+# show HCC version string
+MESSAGE("=============================================")
+MESSAGE("HCC version: ${KALMAR_VERSION_STRING}")
+MESSAGE("=============================================")
+
 # determine if we have HSA stack available
 # at least we need the followings:
 # - HSA headers (installed by HSA runtime)
@@ -239,6 +280,7 @@ endif()
 # build target: world
 # enable HLC and HSAILasm only if HSA stack is available
 #########################
+
 if (HAS_HSA)
 
 # setup HLC in HCC
@@ -252,6 +294,75 @@ execute_process(COMMAND git rev-parse --short HEAD
 
 # setup HSAILasm in HCC
 ensure_HSAILASM_is_present(${PROJECT_SOURCE_DIR} HSAILasm)
+
+endif (HAS_HSA)
+
+# build Clang front-end
+set(CLANG_SRC_DIR "${PROJECT_SOURCE_DIR}/compiler")
+set(CLANG_BIN_DIR "${PROJECT_BINARY_DIR}/compiler")
+file(MAKE_DIRECTORY ${CLANG_BIN_DIR})
+if (HAS_HSA)
+add_custom_target(clang
+  COMMAND ${CMAKE_COMMAND} ${CLANG_SRC_DIR}
+          -DHAS_HSA=${HAS_HSA}
+          -DCMAKE_BUILD_TYPE=${CMAKE_BUID_TYPE}
+          -DKALMAR_VERSION_STRING=${KALMAR_VERSION_STRING}
+          -DKALMAR_VERSION_MAJOR=${KALMAR_VERSION_MAJOR}
+          -DKALMAR_VERSION_MINOR=${KALMAR_VERSION_MINOR}
+          -DKALMAR_VERSION_PATCH=${KALMAR_VERSION_PATCH}
+          -DKALMAR_DRIVER_COMMIT=${KALMAR_DRIVER_COMMIT}
+          -DKALMAR_COMPILER_COMMIT=${KALMAR_COMPILER_COMMIT}
+          -DKALMAR_HLC_COMMIT=${KALMAR_HLC_COMMIT}
+  COMMAND make -j8 # not portable, but we need it this way
+  WORKING_DIRECTORY ${CLANG_BIN_DIR}
+)
+else (HAS_HSA)
+add_custom_target(clang
+  COMMAND ${CMAKE_COMMAND} ${CLANG_SRC_DIR}
+          -DHAS_HSA=${HAS_HSA}
+          -DCMAKE_BUILD_TYPE=${CMAKE_BUID_TYPE}
+          -DKALMAR_VERSION_STRING=${KALMAR_VERSION_STRING}
+          -DKALMAR_VERSION_MAJOR=${KALMAR_VERSION_MAJOR}
+          -DKALMAR_VERSION_MINOR=${KALMAR_VERSION_MINOR}
+          -DKALMAR_VERSION_PATCH=${KALMAR_VERSION_PATCH}
+          -DKALMAR_DRIVER_COMMIT=${KALMAR_DRIVER_COMMIT}
+          -DKALMAR_COMPILER_COMMIT=${KALMAR_COMPILER_COMMIT}
+  COMMAND make -j8 # not portable, but we need it this way
+  WORKING_DIRECTORY ${CLANG_BIN_DIR}
+)
+endif (HAS_HSA)
+
+# create symlink of mostly used commands in clang to bin/
+# - hcc
+# - clang++
+# - clang
+add_custom_command(TARGET clang POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/hcc ${PROJECT_BINARY_DIR}/bin/hcc
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/clang++ ${PROJECT_BINARY_DIR}/bin/clang++
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/clang ${PROJECT_BINARY_DIR}/bin/clang
+  WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/bin
+)
+install(FILES ${PROJECT_BINARY_DIR}/bin/hcc
+              ${PROJECT_BINARY_DIR}/bin/clang++
+              ${PROJECT_BINARY_DIR}/bin/clang
+        DESTINATION bin)
+
+# install clang along with HCC
+# stored under compiler/
+install(DIRECTORY ${CLANG_BIN_DIR}/bin
+        DESTINATION compiler
+        COMPONENT compiler
+        PATTERN * PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+
+install(DIRECTORY ${CLANG_BIN_DIR}/lib
+        DESTINATION compiler
+        COMPONENT compiler
+        PATTERN CMakeFiles EXCLUDE
+        PATTERN lib*
+        PATTERN LLVM*
+        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+
+if (HAS_HSA)
 
 # build HLC
 
@@ -268,6 +379,7 @@ add_custom_target(hlc
           -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
   COMMAND make -j8 # not portable, but we need it this way
   WORKING_DIRECTORY ${HLC_BIN_DIR}
+  DEPENDS clang
 )
 
 # install HLC along with HCC
@@ -288,6 +400,7 @@ add_custom_target(HSAILasm
   COMMAND ${CMAKE_COMMAND} ${HSAILASM_SRC_DIR}
   COMMAND make -j4 # not portable, but we need it this way
   WORKING_DIRECTORY ${HSAILASM_BIN_DIR}
+  DEPENDS hlc
 )
 
 # stored under HSAILasm/
@@ -296,10 +409,16 @@ install(FILES ${HSAILASM_BIN_DIR}/HSAILAsm/HSAILasm
         PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
         COMPONENT HSAILasm)
 
+# Copy binary file to directory matching the install directory
+add_custom_target(HSAILasm_setup
+    COMMAND ${CMAKE_COMMAND} -E copy
+    "${HSAILASM_BIN_DIR}/HSAILAsm/HSAILasm" "${HSAILASM_BIN_DIR}"
+    DEPENDS HSAILasm)
+
 if (NOT HSA_USE_AMDGPU_BACKEND AND NOT HSA_LLVM_BIN_DIR)
   # build hlc in case HSA_LLVM_BIN_DIR is not set
   # build HSAILasm in case HSA_USE_AMDGPU_BACKEND is not set
-  add_custom_target(world DEPENDS clang hlc HSAILasm)
+  add_custom_target(world DEPENDS clang hlc HSAILasm_setup)
 elseif (NOT HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
   # build HSAILasm in case HSA_USE_AMDGPU_BACKEND is not set
   add_custom_target(world DEPENDS clang HSAILasm)
@@ -319,48 +438,6 @@ add_custom_target(world
 
 endif (HAS_HSA)
 
-#################
-# Set up version information
-#################
-
-# define HCC version information
-SET(KALMAR_VERSION_MAJOR "0")
-SET(KALMAR_VERSION_MINOR "10")
-
-# get date information based on UTC
-# use the last two digits of year + week number + day in the week as KALMAR_VERSION_PATCH
-execute_process(COMMAND date --utc +%y%W%w
-                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-                OUTPUT_VARIABLE KALMAR_VERSION_PATCH
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-# get commit information
-execute_process(COMMAND git rev-parse --short HEAD
-                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-                OUTPUT_VARIABLE KALMAR_DRIVER_COMMIT
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
-execute_process(COMMAND git rev-parse --short HEAD
-                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/compiler/tools/clang
-                OUTPUT_VARIABLE KALMAR_COMPILER_COMMIT
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-# set HCC version string
-if (HAS_HSA)
-  # For HSA build, the rule for version string is:
-  # KALMAR_VERSION_MAJOR . KALMAR_VERSION_MINOR . KALMAR_VERSION_PATCH-KALMAR_DRIVER_COMIT-KALMAR_COMPILER_COMMIT-KALMAR_HLC_COMMIT
-  set(KALMAR_VERSION_STRING "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}.${KALMAR_VERSION_PATCH}-${KALMAR_DRIVER_COMMIT}-${KALMAR_COMPILER_COMMIT}-${KALMAR_HLC_COMMIT}")
-else (HAS_HSA)
-  # For non-HSA build, the rule for version string is:
-  # KALMAR_VERSION_MAJOR . KALMAR_VERSION_MINOR . KALMAR_VERSION_PATCH-KALMAR_DRIVER_COMIT-KALMAR_COMPILER_COMMIT
-  set(KALMAR_VERSION_STRING "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}.${KALMAR_VERSION_PATCH}-${KALMAR_DRIVER_COMMIT}-${KALMAR_COMPILER_COMMIT}")
-endif (HAS_HSA)
-
-# show HCC version string
-MESSAGE("=============================================")
-MESSAGE("HCC version: ${KALMAR_VERSION_STRING}")
-MESSAGE("=============================================")
-
-add_subdirectory(compiler)
 add_subdirectory(lib)
 add_subdirectory(utils)
 add_subdirectory(tests)
@@ -444,8 +521,8 @@ set(CPACK_BINARY_TZ "OFF")
 
 #set(CPACK_DEBIAN_PACKAGE_DEPENDS "hsa-runtime (>= 1.0)")
 
-# put HLC and HSAILasm in the package as well
-set(CPACK_COMPONENTS_ALL HSAILasm hlc)
+# put Clang front-end, HLC and HSAILasm in the package as well
+set(CPACK_COMPONENTS_ALL HSAILasm hlc compiler)
 
 include (CPack)
 MESSAGE("")
