@@ -19,7 +19,7 @@ set(OPENCL_MATH_DIR "${PROJECT_SOURCE_DIR}/include")
 
 # MCWAMP
 set(MCWAMP_LIB_DIR "${LIBRARY_OUTPUT_PATH}")
-set(MCWAMP_TOOL_DIR "${PROJECT_BINARY_DIR}/lib")
+set(MCWAMP_TOOL_DIR "${PROJECT_BINARY_DIR}/compiler/bin")
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg)
