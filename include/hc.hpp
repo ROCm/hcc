@@ -2405,11 +2405,10 @@ inline float __shfl_down(float var, unsigned int delta, int width=__HSA_WAVEFRON
  * __HSA_WAVEFRONT_SIZE__.
  */
 inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-    unsigned int laneId = __activelaneid_u32();
-    unsigned int shift = __popcount_u32_b32(width - 1);
-    unsigned int logicalLaneId = laneId & (width - 1);
-    unsigned int newSrcLane = ((laneId >> shift) << shift) + (logicalLaneId ^ laneMask);
-    return __activelanepermute_b32(var, newSrcLane, 0, 0);
+    unsigned int laneId = __hsail_get_lane_id();
+    unsigned int target = laneId ^ laneMask;
+    unsigned int w = width;
+    return __hsail_activelanepermute_b32(var, target, var, target>=((laneId+w)&~(w-1)));
 }
 
 inline float __shfl_xor(float var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
