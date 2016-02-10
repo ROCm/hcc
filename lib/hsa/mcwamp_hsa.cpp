@@ -65,14 +65,52 @@
 // default set as 0 (NOT print out kernel dispatch time)
 #define KALMAR_DISPATCH_TIME_PRINTOUT (0)
 
+
+
+static const char* getHSAErrorString(hsa_status_t s) {
+
+#define CASE_ERROR_STRING(X)  case X: error_string = #X ;break;
+
+    const char* error_string;
+    switch(s) {
+        CASE_ERROR_STRING(HSA_STATUS_ERROR_INVALID_ARGUMENT);
+        CASE_ERROR_STRING(HSA_STATUS_ERROR_INVALID_QUEUE_CREATION);
+        CASE_ERROR_STRING(HSA_STATUS_ERROR_INVALID_ALLOCATION);
+        CASE_ERROR_STRING(HSA_STATUS_ERROR_INVALID_AGENT);
+        CASE_ERROR_STRING(HSA_STATUS_ERROR_INVALID_REGION);
+        CASE_ERROR_STRING(HSA_STATUS_ERROR_INVALID_SIGNAL);
+        CASE_ERROR_STRING(HSA_STATUS_ERROR_INVALID_QUEUE);
+        CASE_ERROR_STRING(HSA_STATUS_ERROR_OUT_OF_RESOURCES);
+        CASE_ERROR_STRING(HSA_STATUS_ERROR_INVALID_PACKET_FORMAT);
+        CASE_ERROR_STRING(HSA_STATUS_ERROR_RESOURCE_FREE);
+        CASE_ERROR_STRING(HSA_STATUS_ERROR_NOT_INITIALIZED);
+        CASE_ERROR_STRING(HSA_STATUS_ERROR_REFCOUNT_OVERFLOW);
+        CASE_ERROR_STRING(HSA_STATUS_ERROR_INCOMPATIBLE_ARGUMENTS);
+        CASE_ERROR_STRING(HSA_STATUS_ERROR_INVALID_INDEX);
+        CASE_ERROR_STRING(HSA_STATUS_ERROR_INVALID_ISA);
+        CASE_ERROR_STRING(HSA_STATUS_ERROR_INVALID_ISA_NAME);
+        CASE_ERROR_STRING(HSA_STATUS_ERROR_INVALID_CODE_OBJECT);
+        CASE_ERROR_STRING(HSA_STATUS_ERROR_INVALID_EXECUTABLE);
+        CASE_ERROR_STRING(HSA_STATUS_ERROR_FROZEN_EXECUTABLE);
+        CASE_ERROR_STRING(HSA_STATUS_ERROR_INVALID_SYMBOL_NAME);
+        CASE_ERROR_STRING(HSA_STATUS_ERROR_VARIABLE_ALREADY_DEFINED);
+        CASE_ERROR_STRING(HSA_STATUS_ERROR_VARIABLE_UNDEFINED);
+        CASE_ERROR_STRING(HSA_STATUS_ERROR_EXCEPTION);
+        default: error_string = "Unknown Error Code";
+    };
+    return error_string;
+}
+
 #define STATUS_CHECK(s,line) if (s != HSA_STATUS_SUCCESS) {\
-		printf("### Error: %d at line:%d\n", s, line);\
+    const char* error_string = getHSAErrorString(s);\
+		printf("### Error: %s (%d) at line:%d\n", error_string, s, line);\
                 assert(HSA_STATUS_SUCCESS == hsa_shut_down());\
 		exit(-1);\
 	}
 
 #define STATUS_CHECK_Q(s,q,line) if (s != HSA_STATUS_SUCCESS) {\
-		printf("### Error: %d at line:%d\n", s, line);\
+    const char* error_string = getHSAErrorString(s);\
+		printf("### Error: %s (%d) at line:%d\n", error_string, s, line);\
                 assert(HSA_STATUS_SUCCESS == hsa_queue_destroy(q));\
                 assert(HSA_STATUS_SUCCESS == hsa_shut_down());\
 		exit(-1);\
@@ -913,7 +951,17 @@ public:
     
         hsa_region_global_flag_t flags;
         hsa_region_get_info(region, HSA_REGION_INFO_GLOBAL_FLAGS, &flags);
-    
+
+#if KALMAR_DEBUG
+        size_t size = 0;
+        hsa_region_get_info(region, HSA_REGION_INFO_SIZE, &size);
+        size = size/(1024*1024);
+
+        size_t alloc_max_size = 0;
+        hsa_region_get_info(region, HSA_REGION_INFO_ALLOC_MAX_SIZE, &alloc_max_size);
+        alloc_max_size = alloc_max_size/(1024*1024);
+#endif
+
         if (segment == HSA_REGION_SEGMENT_GLOBAL) {
             bool is_system_memory_region = false;
             hsa_region_get_info(region, (hsa_region_info_t)HSA_AMD_REGION_INFO_HOST_ACCESSIBLE, &is_system_memory_region);
@@ -922,7 +970,7 @@ public:
             if (!is_system_memory_region) {
                 if (flags & HSA_REGION_GLOBAL_FLAG_KERNARG) {
 #if KALMAR_DEBUG
-                    std::cerr << "found kernarg region on GPU memory\n";
+                    std::cerr << "found kernarg region on GPU memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
 #endif 
                     ri->_kernarg_region = region;
                     ri->_found_kernarg_region = true;
@@ -930,7 +978,7 @@ public:
     
                 if (flags & HSA_REGION_GLOBAL_FLAG_FINE_GRAINED) {
 #if KALMAR_DEBUG
-                    std::cerr << "found fine grained region on GPU memory\n";
+                    std::cerr << "found fine grained region on GPU memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
 #endif 
                     ri->_finegrained_system_region = region;
                     ri->_found_finegrained_system_region = true;
@@ -938,7 +986,7 @@ public:
     
                 if (flags & HSA_REGION_GLOBAL_FLAG_COARSE_GRAINED) {
 #if KALMAR_DEBUG
-                    std::cerr << "found coarse grained region on GPU memory\n";
+                    std::cerr << "found coarse grained region on GPU memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
 #endif 
                     ri->_coarsegrained_region = region;
                     ri->_found_coarsegrained_region = true;
@@ -946,7 +994,7 @@ public:
             } else {
                 if ((flags & HSA_REGION_GLOBAL_FLAG_KERNARG) && (!ri->_found_kernarg_region)) {
 #if KALMAR_DEBUG
-                    std::cerr << "found kernarg region on host memory\n";
+                    std::cerr << "found kernarg region on host memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
 #endif 
                     ri->_kernarg_region = region;
                     ri->_found_kernarg_region = true;
@@ -954,14 +1002,14 @@ public:
         
                 if ((flags & HSA_REGION_GLOBAL_FLAG_FINE_GRAINED) && (!ri->_found_finegrained_system_region)) {
 #if KALMAR_DEBUG
-                    std::cerr << "found fine grained region on host memory\n";
+                    std::cerr << "found fine grained region on host memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
 #endif 
                     ri->_finegrained_system_region = region;
                     ri->_found_finegrained_system_region = true;
                 }
                 if ((flags & HSA_REGION_GLOBAL_FLAG_COARSE_GRAINED) && (!ri->_found_coarsegrained_system_region)) {
 #if KALMAR_DEBUG
-                    std::cerr << "found coarse-grain system region\n";
+                    std::cerr << "found coarse-grain system region, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
 #endif 
                     ri->_coarsegrained_system_region = region;
                     ri->_found_coarsegrained_system_region = true;
@@ -969,7 +1017,7 @@ public:
         
                 if ((flags & HSA_REGION_GLOBAL_FLAG_COARSE_GRAINED) && (!ri->_found_coarsegrained_region)) {
 #if KALMAR_DEBUG
-                    std::cerr << "found coarse grained region on host memory\n";
+                    std::cerr << "found coarse grained region on host memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
 #endif 
                     ri->_coarsegrained_region = region;
                     ri->_found_coarsegrained_region = true;
