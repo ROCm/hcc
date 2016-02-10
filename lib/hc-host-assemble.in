@@ -62,7 +62,11 @@ if [ "$#" -eq 3 ]; then
 CXXFLAGS=$3
 fi
 
-CO="-c -o"
+### FIXME ###
+# We are hardcoding the opt level here as a workaround because
+# this script is not passing down all the compiler options
+# down the compilation flow, we should fix that properly
+CO="-O3 -c -o"
 
 TEMP_DIR=`mktemp -d`
 BASENAME=`basename $2`
