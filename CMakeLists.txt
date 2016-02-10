@@ -155,8 +155,22 @@ if (NOT HSA_KMT_LIBRARY)
   MESSAGE("HSA Kernel library not found. Use -DHSA_KMT_LIBRARY_DIR=<path_to_libhsakmt.so.1>.")
 endif (NOT HSA_KMT_LIBRARY)
 
-find_program(HSA_HOF hof PATHS ${HSA_HOF_DIR} /opt/amd/bin NO_DEFAULT_PATH)
-find_program(HSA_HOF hof)
+# find offline finalization tool for APU
+find_program(HSA_HOF_APU hof PATHS ${HSA_HOF_DIR} ${HSA_ROOT}/bin NO_DEFAULT_PATH)
+find_program(HSA_HOF_APU hof)
+
+# find offline finalization tool for DGPU
+find_program(HSA_HOF_DGPU amdhsafin PATHS ${HSA_HOF_DIR} ${HSA_ROOT}/bin NO_DEFAULT_PATH)
+find_program(HSA_HOF_DGPU amdhasfin)
+
+if (HSA_HOF_APU)
+  set(HSA_HOF ${HSA_HOF_APU})
+else (HSA_HOF_APU)
+  if (HSA_HOF_DGPU)
+    set(HSA_HOF ${HSA_HOF_DGPU})
+  endif (HSA_HOF_DGPU)
+endif (HSA_HOF_APU)
+
 if (NOT HSA_HOF)
   MESSAGE("HSA offline finalizer (HOF) not found.  Use -DHSA_HOF_DIR=<path_to_hof>.")
 endif (NOT HSA_HOF)
@@ -210,6 +224,7 @@ option(HSA_USE_AMDGPU_BACKEND "Use AMDGPU LLVM backend as compiler for HSA" OFF)
 
 if (HSA_USE_AMDGPU_BACKEND)
   add_definitions(-DHSA_USE_AMDGPU_BACKEND)
+  set(HAS_HSA_HOF 0)
 endif ()
 
 set(HSA_AMDGPU_GPU_TARGET "kaveri" CACHE STRING "Target GPU device (kaveri,carrizo,fiji)")
