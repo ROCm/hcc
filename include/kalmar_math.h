@@ -1147,7 +1147,7 @@ namespace fast_math {
     #endif
   }
 
-  inline float host_cospif(float x) restrict(cpu) { return ::cosf(M_PI * x); }
+  inline float host_cospif(float x) restrict(cpu) { return ::cosf((float)M_PI * x); }
   inline float cospif(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return opencl_cospi(x);
@@ -1156,7 +1156,7 @@ namespace fast_math {
     #endif
   }
 
-  inline float host_cospi(float x) restrict(cpu) { return ::cosf(M_PI * x); }
+  inline float host_cospi(float x) restrict(cpu) { return ::cosf((float)M_PI * x); }
   inline float cospi(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return opencl_cospi(x);
@@ -2191,7 +2191,7 @@ namespace fast_math {
     #endif
   }
 
-  inline float host_sinpif(float x) restrict(cpu) { return ::sin(M_PI * x); }
+  inline float host_sinpif(float x) restrict(cpu) { return ::sinf((float)M_PI * x); }
   inline float sinpif(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return opencl_sinpi(x);
@@ -2200,7 +2200,7 @@ namespace fast_math {
     #endif
   }
 
-  inline float host_sinpi(float x) restrict(cpu) { return ::sin(M_PI * x); }
+  inline float host_sinpi(float x) restrict(cpu) { return ::sinf((float)M_PI * x); }
   inline float sinpi(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return opencl_sinpi(x);
