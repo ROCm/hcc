@@ -25,7 +25,7 @@ else(EXISTS "${dest_dir}/${name}/tools/clang")
                   OUTPUT_VARIABLE KALMAR_CLANG_HAS_SAME_BRANCH
                   OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-  if(KALMAR_CLANG_HAS_SAME_BRANCH)
+  if(KALMAR_BRANCH_NAME AND KALMAR_CLANG_HAS_SAME_BRANCH)
     # use the same branch as hcc
     MESSAGE("Cloning hcc-clang from branch ${KALMAR_BRANCH_NAME} of ${REPO}...")
     execute_process( COMMAND ${GIT_EXECUTABLE} clone -b ${KALMAR_BRANCH_NAME} ${REPO} ${dest_dir}/${name}/tools/clang )
