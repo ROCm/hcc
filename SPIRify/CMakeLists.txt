@@ -3,3 +3,5 @@ add_llvm_loadable_module( LLVMPromote
   PromotePrivate.cpp
   MallocSelect.cpp  
   )
+
+add_dependencies(LLVMPromote intrinsics_gen)
