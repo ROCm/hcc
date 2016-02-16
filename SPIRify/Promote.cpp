@@ -1281,7 +1281,7 @@ bool isAddressCopiedToHost(const GlobalVariable &G, const Function &F) {
             all_global_ptrs.insert(u);
             pending.insert(pending.end(), u->user_begin(), u->user_end());
         }
-        else if (const LoadInst *load = dyn_cast<LoadInst>(u)) {
+        else if (isa<LoadInst>(u)) {
             all_global_ptrs.insert(u);
             pending.insert(pending.end(), u->user_begin(), u->user_end());
         }
