@@ -214,7 +214,16 @@ namespace
               strArray.append(std::to_string(sTy->getArraySize()));
               strArray.append("]");
             }
-            out << sTy->getTypeNameWithQual() << " m" << membCount << strArray << "; ";
+            // FIXME: Currently there seems to be a bug with char
+            // Current workaround is to use bool since they both have the same size
+            // https://bitbucket.org/snippets/wukevin/L8nbK
+            std::string typeNameWithQual(sTy->getTypeNameWithQual());
+            size_t start_pos = typeNameWithQual.find("char");
+            if(start_pos != std::string::npos) {
+              typeNameWithQual.replace(start_pos, strlen("char"), "bool");
+            }
+
+            out << typeNameWithQual << " m" << membCount << strArray << "; ";
             membCount++;
           }
           out << "};\n";
