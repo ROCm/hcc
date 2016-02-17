@@ -214,7 +214,16 @@ namespace
               strArray.append(std::to_string(sTy->getArraySize()));
               strArray.append("]");
             }
-            out << sTy->getTypeNameWithQual() << " m" << membCount << strArray << "; ";
+            // FIXME: Currently there seems to be a bug with char
+            // Current workaround is to use bool since they both have the same size
+            // https://bitbucket.org/snippets/wukevin/L8nbK
+            std::string typeNameWithQual(sTy->getTypeNameWithQual());
+            size_t start_pos = typeNameWithQual.find("char");
+            if(start_pos != std::string::npos) {
+              typeNameWithQual.replace(start_pos, strlen("char"), "bool");
+            }
+
+            out << typeNameWithQual << " m" << membCount << strArray << "; ";
             membCount++;
           }
           out << "};\n";
@@ -325,11 +334,11 @@ struct StringFinder
     if(llvm::IntegerType *intTy = llvm::dyn_cast<llvm::IntegerType>(T)) {
       unsigned bitwidth = intTy->getBitWidth();
       switch(bitwidth) {
-        case 8:
-          // FIXME: Currently there seems to be a bug with char
-          // Current workaround is to use bool since they both have the same size
-          // https://bitbucket.org/snippets/wukevin/L8nbK
+        case 1:
           str.insert(0, "bool");
+          break;
+        case 8:
+          str.insert(0, "char");
           break;
         case 16:
           str.insert(0, "short");
