@@ -28,33 +28,12 @@ if [ ! -f $1 ]; then
   exit 1
 fi
 
-# tools search priority:
-# 1) $HCC_HOME
-# 2) @PROJECT_BINARY_DIR@ : build directory
-# 3) @CMAKE_INSTALL_PREFIX@ : default install directory
-
-if [ -n "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
-    HLC_LLVM_LINK=$HCC_HOME/hlc/bin/llvm-link
-    HLC_OPT=$HCC_HOME/hlc/bin/opt
-    HLC_LLC=$HCC_HOME/hlc/bin/llc
-    HLC_ASM=$HCC_HOME/HSAILasm/HSAILasm
-    NEWLIB=$HCC_HOME/lib
-elif [ -d @PROJECT_BINARY_DIR@ ]; then
-    HLC_LLVM_LINK=@PROJECT_BINARY_DIR@/hlc/bin/llvm-link
-    HLC_OPT=@PROJECT_BINARY_DIR@/hlc/bin/opt
-    HLC_LLC=@PROJECT_BINARY_DIR@/hlc/bin/llc
-    HLC_ASM=@PROJECT_BINARY_DIR@/HSAILasm/HSAILAsm/HSAILasm # notice the "A"
-    NEWLIB=@CPPAMP_SOURCE_DIR@/lib
-elif [ -e @CMAKE_INSTALL_PREFIX@ ]; then
-    HLC_LLVM_LINK=@CMAKE_INSTALL_PREFIX@/hlc/bin/llvm-link
-    HLC_OPT=@CMAKE_INSTALL_PREFIX@/hlc/bin/opt
-    HLC_LLC=@CMAKE_INSTALL_PREFIX@/hlc/bin/llc
-    HLC_ASM=@CMAKE_INSTALL_PREFIX@/HSAILasm/HSAILasm
-    NEWLIB=@CMAKE_INSTALL_PREFIX@/lib
-else
-    echo "ERROR: Can NOT locate HCC tools! Please specify with $HCC_HOME environmental variable." >&2
-    exit 1
-fi
+BINDIR=$(dirname $0)
+HLC_LLVM_LINK=$BINDIR/../../hlc/bin/llvm-link
+HLC_OPT=$BINDIR/../../hlc/bin/opt
+HLC_LLC=$BINDIR/../../hlc/bin/llc
+HLC_ASM=$BINDIR/../../HSAILasm/HSAILasm
+NEWLIB=$BINDIR/../../lib
 
 if [ -n "@HSA_LLVM_BIN_DIR@" ]; then
     HLC_LLVM_LINK=@HSA_LLVM_BIN_DIR@/llvm-link

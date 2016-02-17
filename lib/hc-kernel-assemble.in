@@ -2,11 +2,6 @@
 
 # hc-kernel-assemble kernel-bitcode kernel-object
 
-# tools search priority:
-# 1) $HCC_HOME
-# 2) @LLVM_TOOLS_DIR@ : build directory
-# 3) @CMAKE_INSTALL_PREFIX@ : default install directory
-
 # enable bash debugging
 KMDBSCRIPT="${KMDBSCRIPT:=0}"
 
@@ -18,43 +13,15 @@ then
   set -x
 fi
 
-if [ -n "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
-  BINPATH=$HCC_HOME/bin
-  CLANG=$BINPATH/clang
-  CLAMP_CONFIG=$BINPATH/clamp-config
-  LLVM_LINK=$BINPATH/llvm-link
-  CLAMP_ASM=$BINPATH/clamp-assemble
-  OPT=$BINPATH/opt
-  LLVM_AS=$BINPATH/llvm-as
-  LLVM_DIS=$BINPATH/llvm-dis
-  LIBPATH=$HCC_HOME/lib
-  CXXFLAGS="`$CLAMP_CONFIG --cxxflags`"
-elif [ -d @LLVM_TOOLS_DIR@ ]; then
-  BINPATH=@LLVM_ROOT@/bin
-  CLANG=$BINPATH/clang
-  CLAMP_CONFIG=@EXECUTABLE_OUTPUT_PATH@/clamp-config
-  LLVM_LINK=$BINPATH/llvm-link
-  CLAMP_ASM=$BINPATH/clamp-assemble
-  OPT=$BINPATH/opt
-  LLVM_AS=$BINPATH/llvm-as
-  LLVM_DIS=$BINPATH/llvm-dis
-  LIBPATH=@LLVM_ROOT@/lib
-  CXXFLAGS="`$CLAMP_CONFIG --build --cxxflags`"
-elif [ -e @CMAKE_INSTALL_PREFIX@/bin/clamp-config ]; then
-  BINPATH=@CMAKE_INSTALL_PREFIX@/bin
-  CLANG=$BINPATH/clang
-  CLAMP_CONFIG=$BINPATH/clamp-config
-  LLVM_LINK=$BINPATH/llvm-link
-  CLAMP_ASM=$BINPATH/clamp-assemble
-  OPT=$BINPATH/opt
-  LLVM_AS=$BINPATH/llvm-as
-  LLVM_DIS=$BINPATH/llvm-dis
-  LIBPATH=@CMAKE_INSTALL_PREFIX@/lib
-  CXXFLAGS="`$CLAMP_CONFIG --cxxflags`"
-else
-    echo "ERROR: Can NOT locate HCC tools! Please specify with $HCC_HOME environmental variable." >&2
-    exit 1
-fi
+BINDIR=$(dirname $0)
+CLANG=$BINDIR/clang
+LLVM_LINK=$BINDIR/llvm-link
+OPT=$BINDIR/opt
+LLVM_AS=$BINDIR/llvm-as
+LLVM_DIS=$BINDIR/llvm-dis
+CLAMP_ASM=$BINDIR/clamp-assemble
+LIBPATH=$BINDIR/../lib
+CXXFLAGS="-std=c++amp -stdlib=libc++ -I$BINDIR/../../include"
 
 if [ "$#" -ne 2 ]; then
   echo "Usage: $0 kernel-bitcode object" >&2
