@@ -21,9 +21,11 @@ bool test() {
   extent<1> ex(GRID_SIZE);
 
 #ifdef DEBUG
-#define REPORT_ERROR_IF(COND,F) if (COND) { std::cout << #F << " test failed!" << std::endl; }
+#define REPORT_ERROR_IF(COND,F,E) if (COND) { std::cout << #F <<  " cumulative error=" << E << ", test failed!" << std::endl; }
+#define REPORT_DELTA_IF(COND,F,ARG,EXP,ACT) if (COND) { std::cout << #F << "(" << ARG << ") expected="<< EXP << ", actual=" << ACT << std::endl; }
 #else
-#define REPORT_ERROR_IF(COND,F)
+#define REPORT_ERROR_IF(COND,F,E)
+#define REPORT_DELTA_IF(COND,F,ARG,EXP,ACT) 
 #endif
 
 #define TEST(func) \
@@ -37,10 +39,11 @@ bool test() {
     for (size_t i = 0; i < GRID_SIZE; ++i) { \
       T actual = table[i];\
       T expected = (T)func((T)(i+1));\
-      float delta = fabs(actual - expected); \
+      double delta = fabs((double)actual - (double)expected); \
+      REPORT_DELTA_IF(delta>=ERROR_THRESHOLD, func, (i+1), expected, actual);\
       error+=delta;\
     } \
-    REPORT_ERROR_IF(!(error<=ERROR_THRESHOLD),func);\
+    REPORT_ERROR_IF(!(error<=ERROR_THRESHOLD),func,error);\
     ret &= (error <= ERROR_THRESHOLD); \
   } 
 
@@ -51,6 +54,9 @@ bool test() {
   TEST(log)
   TEST(ilogb)
   TEST(isnormal)
+  TEST(cospi)
+  TEST(sinpi)
+  TEST(rsqrt)
 
   return ret;
 }
@@ -59,7 +65,6 @@ int main() {
   bool ret = true;
 
   ret &= test<int,16>();
-  ret &= test<unsigned int,16>();
   ret &= test<float,16>();
   ret &= test<double,16>();
 

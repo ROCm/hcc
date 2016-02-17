@@ -15,6 +15,8 @@ inline T function(T arg1) __attribute__((hc,cpu)) { \
   return hc::precise_math::function(arg1); \
 }
 
+#define KALMAR_MATH_WRAPPER_1(function, arg1) HC_MATH_WRAPPER_1(function, arg1)
+
 #define HC_MATH_WRAPPER_FP_OVERLOAD_1(function, arg1) \
 template<typename T> \
 inline \
@@ -27,7 +29,9 @@ inline \
 typename std::enable_if<std::is_floating_point <T>::value,T>::type \
  function(T arg1) __attribute__((hc,cpu)) { \
   return hc::precise_math::function(arg1); \
-} 
+}
+
+#define KALMAR_MATH_WRAPPER_FP_OVERLOAD_1(function, arg1) HC_MATH_WRAPPER_FP_OVERLOAD_1(function, arg1) 
 
 #define HC_MATH_WRAPPER_2(function, arg1, arg2) \
 template<typename T> \
@@ -107,6 +111,12 @@ inline T function(T arg1) __attribute__((hc,cpu)) { \
   return ::function(arg1); \
 }
 
+#define KALMAR_MATH_WRAPPER_1(function, arg1) \
+template<typename T> \
+inline T function(T arg1) __attribute__((hc,cpu)) { \
+  return hc::precise_math::function(arg1); \
+}
+
 #define HC_MATH_WRAPPER_FP_OVERLOAD_1(function, arg1) \
 template<typename T> \
 inline \
@@ -120,6 +130,20 @@ typename std::enable_if<std::is_floating_point <T>::value,T>::type \
  function(T arg1) __attribute__((hc,cpu)) { \
   return ::function(arg1); \
 } 
+
+#define KALMAR_MATH_WRAPPER_FP_OVERLOAD_1(function, arg1) \
+template<typename T> \
+inline \
+typename std::enable_if<std::is_integral<T>::value,HC_IMPLICIT_FLOAT_CONV>::type \
+ function(T arg1) __attribute__((hc,cpu)) { \
+  return hc::precise_math::function(static_cast<HC_IMPLICIT_FLOAT_CONV>(arg1)); \
+} \
+template<typename T> \
+inline \
+typename std::enable_if<std::is_floating_point <T>::value,T>::type \
+ function(T arg1) __attribute__((hc,cpu)) { \
+  return hc::precise_math::function(arg1); \
+}
 
 #define HC_MATH_WRAPPER_2(function, arg1, arg2) \
 template<typename T> \
@@ -263,6 +287,8 @@ HC_MATH_WRAPPER_1(cosf, x)
 HC_MATH_WRAPPER_FP_OVERLOAD_1(cos, x)
 HC_MATH_WRAPPER_1(coshf, x)
 HC_MATH_WRAPPER_FP_OVERLOAD_1(cosh, x)
+KALMAR_MATH_WRAPPER_1(cospif, x)
+KALMAR_MATH_WRAPPER_FP_OVERLOAD_1(cospi, x)
 HC_MATH_WRAPPER_1(erff, x)
 HC_MATH_WRAPPER_FP_OVERLOAD_1(erf, x)
 HC_MATH_WRAPPER_1(erfcf, x)
@@ -313,12 +339,16 @@ HC_MATH_WRAPPER_2(remainderf, x, y)
 HC_MATH_WRAPPER_2(remainder, x, y)
 HC_MATH_WRAPPER_1(roundf, x)
 HC_MATH_WRAPPER_FP_OVERLOAD_1(round, x)
+KALMAR_MATH_WRAPPER_1(rsqrtf, x)
+KALMAR_MATH_WRAPPER_FP_OVERLOAD_1(rsqrt, x)
 HC_MATH_WRAPPER_2(scalbf, x, exp)
 HC_MATH_WRAPPER_2(scalb, x, exp)
 HC_MATH_WRAPPER_1(sinf, x)
 HC_MATH_WRAPPER_FP_OVERLOAD_1(sin, x)
 HC_MATH_WRAPPER_1(sinhf, x)
 HC_MATH_WRAPPER_FP_OVERLOAD_1(sinh, x)
+KALMAR_MATH_WRAPPER_1(sinpif, x)
+KALMAR_MATH_WRAPPER_FP_OVERLOAD_1(sinpi, x)
 HC_MATH_WRAPPER_1(sqrtf, x)
 HC_MATH_WRAPPER_FP_OVERLOAD_1(sqrt, x)
 HC_MATH_WRAPPER_1(tgammaf, x)
