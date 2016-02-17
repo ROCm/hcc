@@ -1,6 +1,5 @@
 #pragma once
 
-#include <hc_am.hpp>
 #include <hc.hpp>
 
 typedef int am_status_t;
@@ -19,16 +18,15 @@ struct AmPointerInfo {
     void *      _hostPointer;   ///< Host pointer.  If host access is not allowed, NULL.
     void *      _devicePointer; ///< Device pointer.  
     size_t      _sizeBytes;     ///< Size of allocation.
-    hc::accelerator _acc;       ///< Device / Accelerator to use.
+    hc::accelerator &_acc;       ///< Device / Accelerator to use.
     bool        _isInDeviceMem;    ///< Memory is physically resident on a device (if false, memory is located on host)
     bool        _isAmManaged;   ///< Memory was allocated by AM and should be freed when am_reset is called.
 
     int         _appId;              ///< App-specific storage.  (Used by HIP to store deviceID.)
     unsigned    _appAllocationFlags; ///< App-specific allocation flags.  (Used by HIP to store allocation flags.)
 
-    AmPointerInfo() {};
 
-    AmPointerInfo(void *hostPointer, void *devicePointer, size_t sizeBytes, hc::accelerator acc, bool isInDeviceMem, bool isAmManaged) :
+    AmPointerInfo(void *hostPointer, void *devicePointer, size_t sizeBytes, hc::accelerator &acc, bool isInDeviceMem, bool isAmManaged) :
         _hostPointer(hostPointer),
         _devicePointer(devicePointer),
         _sizeBytes(sizeBytes),
@@ -37,6 +35,9 @@ struct AmPointerInfo {
         _isAmManaged(isAmManaged),
         _appId(-1),
         _appAllocationFlags(0)  {};
+
+    AmPointerInfo & operator= (const AmPointerInfo &other);
+
 };
 }
 
@@ -61,7 +62,7 @@ namespace hc {
  *
  * @see am_free, am_copy
  */
-auto_voidp am_alloc(size_t size, hc::accelerator acc, unsigned flags);
+auto_voidp am_alloc(size_t size, hc::accelerator &acc, unsigned flags);
 
 /**
  * Free a block of memory previously allocated with am_alloc.
@@ -103,7 +104,7 @@ am_status_t am_memtracker_getinfo(hc::AmPointerInfo *info, const void *ptr);
  * @return AM_SUCCESS
  * @see am_memtracker_getinfo
  */
-am_status_t am_memtracker_add(void* ptr, size_t sizeBytes, hc::accelerator acc, bool isDeviceMem=false);
+am_status_t am_memtracker_add(void* ptr, size_t sizeBytes, hc::accelerator &acc, bool isDeviceMem=false);
 
 
 /*
@@ -135,7 +136,7 @@ am_status_t am_memtracker_remove(void* ptr);
  * @returns Number of entries reset.
  * @see am_memtracker_getinfo
  */
-size_t am_memtracker_reset(hc::accelerator acc);
+size_t am_memtracker_reset(const hc::accelerator &acc);
 
 /**
  * Print the entries in the memory tracker table.
@@ -151,7 +152,7 @@ void am_memtracker_print();
  *
  * User memory is registered with am_tracker_add.
  **/
-void am_memtracker_sizeinfo(hc::accelerator acc, size_t *deviceMemSize, size_t *hostMemSize, size_t *userMemSize);
+void am_memtracker_sizeinfo(const hc::accelerator &acc, size_t *deviceMemSize, size_t *hostMemSize, size_t *userMemSize);
 
 
 }; // namespace hc
