@@ -1,21 +1,8 @@
 #!/bin/bash
 # clamp-assemble kernel-bitcode kernel-object
 
-# tools search priority:
-# 1) $HCC_HOME
-# 2) @LLVM_TOOLS_DIR@ : build directory
-# 3) @CMAKE_INSTALL_PREFIX@ : default install directory
-
-if [ -n "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
-    EMBED=$HCC_HOME/bin/clamp-embed
-elif [ -d @LLVM_TOOLS_DIR@ ]; then
-    EMBED=@PROJECT_BINARY_DIR@/lib/clamp-embed
-elif [ -e @CMAKE_INSTALL_PREFIX@/bin/clamp-embed ]; then
-    EMBED=@CMAKE_INSTALL_PREFIX@/bin/clamp-embed
-else
-    echo "ERROR: Can NOT locate HCC tools! Please specify with $HCC_HOME environmental variable." >&2
-    exit 1
-fi
+BINDIR=$(dirname $0)
+EMBED=$BINDIR/clamp-embed
 
 if [ "$#" -ne 2 ]; then
   echo "Usage: $0 kernel-bitcode object" >&2

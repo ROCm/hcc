@@ -65,7 +65,7 @@ my $RUNTESTSDIR="@RUNTESTSDIR@";
 
 
 my $CLANG_AMP="$CLANG_AMP_BUILD_DIR/compiler/bin/clang++";
-my $CLAMP_CONFIG=`find $CLANG_AMP_BUILD_DIR/build -name clamp-config -print`;
+my $CLAMP_CONFIG=`find $CLANG_AMP_BUILD_DIR/bin -name clamp-config -print`;
 $CLAMP_CONFIG =~ s/^\s+//;
 $CLAMP_CONFIG =~ s/\s+$//;
 my $CLAMP_CXXFLAGS=`$CLAMP_CONFIG --build --cxxflags`;

@@ -35,41 +35,15 @@ if [ ! -f $1 ]; then
   exit 1
 fi
 
-# tools search priority:
-# 1) $HCC_HOME
-# 2) @LLVM_TOOLS_DIR@ : build directory
-# 3) @CMAKE_INSTALL_PREFIX@ : default install directory
-
-if [ -n "$HCC_HOME" ] && [ -e "$HCC_HOME" ]; then
-    EMBED=$HCC_HOME/bin/clamp-embed
-    AS=$HCC_HOME/bin/llvm-as
-    OPT=$HCC_HOME/bin/opt
-    LLC=$HCC_HOME/bin/llc
-    LINK=$HCC_HOME/bin/llvm-link
-    MATHLIB=$HCC_HOME/lib
-    LIB=$HCC_HOME/lib
-    HSATOOLS=$HCC_HOME/bin/clamp-hsatools
-elif [ -d @LLVM_TOOLS_DIR@ ]; then
-    AS=@LLVM_TOOLS_DIR@/llvm-as
-    OPT=@LLVM_TOOLS_DIR@/opt
-    LLC=@LLVM_TOOLS_DIR@/llc
-    LINK=@LLVM_TOOLS_DIR@/llvm-link
-    MATHLIB=@CPPAMP_SOURCE_DIR@/lib
-    LIB=@LLVM_LIBS_DIR@
-    HSATOOLS=@PROJECT_BINARY_DIR@/lib/clamp-hsatools
-elif [ -e @CMAKE_INSTALL_PREFIX@/bin/opt ]; then
-    AS=@CMAKE_INSTALL_PREFIX@/bin/llvm-as
-    OPT=@CMAKE_INSTALL_PREFIX@/bin/opt
-    LLC=@CMAKE_INSTALL_PREFIX@/bin/llc
-    LINK=@CMAKE_INSTALL_PREFIX@/bin/llvm-link
-    MATHLIB=@CMAKE_INSTALL_PREFIX@/lib
-    LIB=@CMAKE_INSTALL_PREFIX@/lib
-    HSATOOLS=@CMAKE_INSTALL_PREFIX@/bin/clamp-hsatools
-else
-    echo "ERROR: Can NOT locate HCC tools! Please specify with $HCC_HOME environ
-mental variable." >&2
-    exit 1
-fi
+BINDIR=$(dirname $0)
+EMBED=$BINDIR/clamp-embed
+AS=$BINDIR/llvm-as
+OPT=$BINDIR/opt
+LLC=$BINDIR/llc
+LINK=$BINDIR/llvm-link
+MATHLIB=$BINDIR/../../lib
+LIB=$BINDIR/../lib
+HSATOOLS=$BINDIR/clamp-hsatools
 
 ################
 # Verbose flag
