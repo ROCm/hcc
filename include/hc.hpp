@@ -2339,12 +2339,19 @@ inline float __shfl(float var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __
  */
 
 
-inline int __shift_wave_up(int var) __HC__ {
+extern "C" int amdgcn_wavefront_shift_right(int) __HC__;
+
+inline int __wavefront_shift_right(int var) __HC__ {
+
+/*
     return  __hsail_activelanepermute_b32(var, __hsail_get_lane_id()-1
                                         , var, __hsail_get_lane_id()==0);
+*/
+    return amdgcn_wavefront_shift_right(var);
+
 }
 
-inline int __shift_wave_down(int var) __HC__ {
+inline int __wavefront_shift_left(int var) __HC__ {
     return  __hsail_activelanepermute_b32(var, __hsail_get_lane_id()+1
                                         , var, __hsail_get_lane_id()==63);
 }
@@ -2353,7 +2360,7 @@ inline int __shift_wave_down(int var) __HC__ {
 inline int __shfl_up(int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     if (delta == 1 
         && width == __HSA_WAVEFRONT_SIZE__) {
-        return __shift_wave_up(var);
+        return __wavefront_shift_right(var);
     }
     else {
         int laneId = __hsail_get_lane_id();
@@ -2395,7 +2402,7 @@ inline float __shfl_up(float var, const unsigned int delta, const int width=__HS
 inline int __shfl_down(int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     if (delta == 1
         && width == __HSA_WAVEFRONT_SIZE__) {
-        return __shift_wave_down(var);
+        return __wavefront_shift_left(var);
     }
     else {
         unsigned int laneId = __hsail_get_lane_id();
