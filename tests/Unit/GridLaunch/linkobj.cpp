@@ -20,7 +20,8 @@ int main()
 
   int* a = (int*)malloc(sizeof(int)*size);
 
-  int* a_d = (int*)hc::am_alloc(size*sizeof(int), hc::accelerator(), 0);
+  auto acc = hc::accelerator();
+  int* a_d = (int*)hc::am_alloc(size*sizeof(int), acc, 0);
 
   grid_launch_parm lp;
   grid_launch_init(&lp);

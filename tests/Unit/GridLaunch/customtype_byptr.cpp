@@ -43,9 +43,10 @@ int main(void) {
     data3[i].x = i;
   }
 
-  Foo* data1_d = (Foo*)hc::am_alloc(SIZE*sizeof(Foo), hc::accelerator(), 0);
-  Bar* data2_d = (Bar*)hc::am_alloc(SIZE*sizeof(Bar), hc::accelerator(), 0);
-  constStructconst* data3_d = (constStructconst*)hc::am_alloc(SIZE*sizeof(constStructconst), hc::accelerator(), 0);
+  auto acc = hc::accelerator();
+  Foo* data1_d = (Foo*)hc::am_alloc(SIZE*sizeof(Foo), acc, 0);
+  Bar* data2_d = (Bar*)hc::am_alloc(SIZE*sizeof(Bar), acc, 0);
+  constStructconst* data3_d = (constStructconst*)hc::am_alloc(SIZE*sizeof(constStructconst), acc, 0);
   hc::am_copy(data3_d, data3, SIZE*sizeof(constStructconst));
 
   grid_launch_parm lp;
