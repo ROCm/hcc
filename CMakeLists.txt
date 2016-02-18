@@ -518,8 +518,13 @@ set(CPACK_BINARY_TZ "OFF")
 
 #set(CPACK_DEBIAN_PACKAGE_DEPENDS "hsa-runtime (>= 1.0)")
 
-# put Clang front-end, HLC and HSAILasm in the package as well
-set(CPACK_COMPONENTS_ALL HSAILasm hlc compiler)
+if (HSA_USE_AMDGPU_BACKEND)
+  # don't include HSAILasm and hlc if using AMDGPU backend
+  set(CPACK_COMPONENTS_ALL compiler)
+else (HSA_USE_AMDGPU_BACKEND)
+  # put Clang front-end, HLC and HSAILasm in the package as well
+  set(CPACK_COMPONENTS_ALL HSAILasm hlc compiler)
+endif (HSA_USE_AMDGPU_BACKEND)
 
 include (CPack)
 MESSAGE("")
