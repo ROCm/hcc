@@ -19,33 +19,39 @@ install(TARGETS mcwamp clamp-config hcc-config mcwamp_atomic
 ####################
 # C++AMP tools
 ####################
-install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-device
-    ${CMAKE_CURRENT_BINARY_DIR}/clamp-spirify
-    ${CMAKE_CURRENT_BINARY_DIR}/clamp-embed
-    ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-assemble
-    ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-link
-    ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/hc-kernel-assemble
-    ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/hc-host-assemble
-#    ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-preprocess
-    DESTINATION bin)
+install(PROGRAMS ${PROJECT_BINARY_DIR}/compiler/bin/clamp-device
+    ${PROJECT_BINARY_DIR}/compiler/bin/clamp-spirify
+    ${PROJECT_BINARY_DIR}/compiler/bin/clamp-embed
+    ${PROJECT_BINARY_DIR}/compiler/bin/clamp-assemble
+    ${PROJECT_BINARY_DIR}/compiler/bin/clamp-link
+    ${PROJECT_BINARY_DIR}/compiler/bin/hc-kernel-assemble
+    ${PROJECT_BINARY_DIR}/compiler/bin/hc-host-assemble
+#    ${PROJECT_BINARY_DIR}/compiler/bin/clamp-preprocess
+    DESTINATION compiler/bin)
 
 ####################
 # C++AMP tools (HSA-specific)
 ####################
-install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/clamp-hsatools
-    ${CMAKE_CURRENT_BINARY_DIR}/clamp-hsail
-    ${CMAKE_CURRENT_BINARY_DIR}/extractkernel
+install(PROGRAMS ${PROJECT_BINARY_DIR}/compiler/bin/clamp-hsatools
+    ${PROJECT_BINARY_DIR}/compiler/bin/clamp-hsail
+    DESTINATION compiler/bin)
+
+install(PROGRAMS ${PROJECT_BINARY_DIR}/bin/extractkernel
     DESTINATION bin)
 
 ####################
 # builtin functions CL kernel (OpenCL C)
 ####################
 INSTALL(FILES opencl_math.cl DESTINATION lib)
+# Copy the file to directory matching the install directory
+file(COPY opencl_math.cl DESTINATION "${PROJECT_BINARY_DIR}/lib")
 
 ####################
 # builtin functions bitcode (SPIR)
 ####################
 install(FILES opencl_math.bc DESTINATION lib)
+# Copy the file to directory matching the install directory
+file(COPY opencl_math.bc DESTINATION "${PROJECT_BINARY_DIR}/lib")
 
 ####################
 # builtin functions bitcode (HSA)
@@ -53,6 +59,10 @@ install(FILES opencl_math.bc DESTINATION lib)
 install(FILES hsa_math.bc DESTINATION lib)
 install(FILES builtins-hsail.opt.bc DESTINATION lib)
 install(FILES hsail-amdgpu-wrapper.ll DESTINATION lib)
+# Copy the file to directory matching the install directory
+file(COPY hsa_math.bc DESTINATION "${PROJECT_BINARY_DIR}/lib")
+file(COPY builtins-hsail.opt.bc DESTINATION "${PROJECT_BINARY_DIR}/lib")
+file(COPY hsail-amdgpu-wrapper.ll DESTINATION "${PROJECT_BINARY_DIR}/lib")
 
 ####################
 # builtin functions bitcode (Lightning)
@@ -73,11 +83,15 @@ endif (HAS_OPENCL EQUAL 1)
 # OpenCL C double type detection
 ####################
 install(FILES opencl_prefix.cl DESTINATION lib)
+# Copy the file to directory matching the install directory
+file(COPY opencl_prefix.cl DESTINATION "${PROJECT_BINARY_DIR}/lib")
 
 ####################
 # Dynamic memory allocation HSAIL logic (HSA)
 ####################
 install(FILES hsa_builtins.hsail DESTINATION lib)
+# Copy the file to directory matching the install directory
+file(COPY hsa_builtins.hsail DESTINATION "${PROJECT_BINARY_DIR}/lib")
 
 ####################
 # add subdirectories
