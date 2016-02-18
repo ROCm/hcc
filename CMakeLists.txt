@@ -442,11 +442,26 @@ add_custom_target(HSAILasm
   DEPENDS hlc
 )
 
-# stored under HSAILasm/
-install(FILES ${HSAILASM_BIN_DIR}/HSAILAsm/HSAILasm
-        DESTINATION HSAILasm
-        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
-        COMPONENT HSAILasm)
+# don't install HSAILasm if usign AMDGPU backend
+if (NOT HSA_USE_AMDGPU_BACKEND)
+  # build HSAILasm
+  set(HSAILASM_SRC_DIR "${PROJECT_SOURCE_DIR}/HSAILasm")
+  set(HSAILASM_BIN_DIR "${PROJECT_BINARY_DIR}/HSAILasm")
+  file(MAKE_DIRECTORY ${HSAILASM_BIN_DIR})
+  add_custom_target(HSAILasm
+    COMMAND ${CMAKE_COMMAND} ${HSAILASM_SRC_DIR}
+    COMMAND make -j4 # not portable, but we need it this way
+    WORKING_DIRECTORY ${HSAILASM_BIN_DIR}
+  )
+
+  # stored under HSAILasm/
+  install(FILES ${HSAILASM_BIN_DIR}/HSAILAsm/HSAILasm
+          DESTINATION HSAILasm
+          PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+          COMPONENT HSAILasm)
+endif (NOT HSA_USE_AMDGPU_BACKEND)
+
+
 
 # Copy binary file to directory matching the install directory
 add_custom_target(HSAILasm_setup
