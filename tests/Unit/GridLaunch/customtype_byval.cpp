@@ -49,7 +49,8 @@ int main(void) {
   Foo data1(5);
   Bar* data2 = (Bar*)malloc(SIZE*sizeof(Bar));
 
-  Bar* data2_d = (Bar*)hc::am_alloc(SIZE*sizeof(Bar), hc::accelerator(), 0);
+  auto acc = hc::accelerator();
+  Bar* data2_d = (Bar*)hc::am_alloc(SIZE*sizeof(Bar), acc, 0);
 
   grid_launch_parm lp;
   grid_launch_init(&lp);
