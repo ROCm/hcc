@@ -425,6 +425,106 @@ define linkonce_odr spir_func i32 @__hsail_get_group_id(i32) #1 {
   ret i32 %8
 }
 
+; Function Attrs: alwaysinline
+define linkonce_odr spir_func i32 @__hsail_currentworkgroup_size(i32) #0 {
+  %dispatch_ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr()
+  %dispatch_ptr_i32 = bitcast i8 addrspace(2)* %dispatch_ptr to i32 addrspace(2)*
+  %size_xy_ptr = getelementptr i32, i32 addrspace(2)* %dispatch_ptr_i32, i32 1
+  %size_xy = load i32, i32 addrspace(2)* %size_xy_ptr, align 4, !invariant.load !0
+  switch i32 %0, label %8 [
+    i32 0, label %2
+    i32 1, label %4
+    i32 2, label %6
+  ]
+
+; <label>:2                                       ; preds = %1
+  %3 = and i32 %size_xy, 65535 ; 0xffff
+  ret i32 %3
+
+; <label>:4                                      ; preds = %1
+  %5 = lshr i32 %size_xy, 16
+  ret i32 %5
+
+; <label>:6                                      ; preds = %1
+  %size_z_ptr = getelementptr i32 ,i32 addrspace(2)* %dispatch_ptr_i32, i32 2
+  %7 = load i32, i32 addrspace(2)* %size_z_ptr, align 4, !invariant.load !0, !range !1
+  ret i32 %7
+
+; <label>:8                                      ; preds = %1
+  ret i32 1
+}
+
+
+
+; Function Attrs: alwaysinline
+define linkonce_odr spir_func i32 @__hsail_get_global_size(i32) #0 {
+  %dispatch_ptr = call noalias nonnull dereferenceable(64) i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr()
+  %dispatch_ptr_i32 = bitcast i8 addrspace(2)* %dispatch_ptr to i32 addrspace(2)*
+  switch i32 %0, label %11 [
+    i32 0, label %2
+    i32 1, label %5
+    i32 2, label %8
+  ]
+
+; <label>:2                                       ; preds = %1
+  %3 = getelementptr inbounds i32, i32 addrspace(2)* %dispatch_ptr_i32, i64 3
+  %4 = load i32, i32 addrspace(2)* %3, align 4, !invariant.load !0
+  ret i32 %4
+
+; <label>:5                                       ; preds = %1
+  %6 = getelementptr inbounds i32, i32 addrspace(2)* %dispatch_ptr_i32, i64 4
+  %7 = load i32, i32 addrspace(2)* %6, align 4, !invariant.load !0
+  ret i32 %7
+
+; <label>:8                                       ; preds = %1
+  %9 = getelementptr inbounds i32, i32 addrspace(2)* %dispatch_ptr_i32, i64 5
+  %10 = load i32, i32 addrspace(2)* %9, align 4, !invariant.load !0
+  ret i32 %10
+
+; <label>:11                                      ; preds = %1
+  ret i32 1
+}
+
+
+; Function Attrs: alwaysinline
+define linkonce_odr spir_func i32 @__hsail_get_num_groups(i32 %i) #0 {
+  %1 = alloca i32, align 4
+  %global_size = alloca i32, align 4
+  %group_size = alloca i32, align 4
+  %num_group = alloca i32, align 4
+  store i32 %i, i32* %1, align 4
+  %2 = load i32, i32* %1, align 4
+  %3 = call i32 @__hsail_get_global_size(i32 %2)
+  store i32 %3, i32* %global_size, align 4
+  %4 = load i32, i32* %1, align 4
+  %5 = call i32 @__hsail_currentworkgroup_size(i32 %4)
+  store i32 %5, i32* %group_size, align 4
+  %6 = load i32, i32* %global_size, align 4
+  %7 = load i32, i32* %group_size, align 4
+  %8 = sdiv i32 %6, %7
+  store i32 %8, i32* %num_group, align 4
+  %9 = load i32, i32* %global_size, align 4
+  %10 = load i32, i32* %group_size, align 4
+  %11 = srem i32 %9, %10
+  %12 = icmp eq i32 %11, 0
+  %13 = select i1 %12, i32 0, i32 1
+  %14 = load i32, i32* %num_group, align 4
+  %15 = add nsw i32 %14, %13
+  store i32 %15, i32* %num_group, align 4
+  %16 = load i32, i32* %num_group, align 4
+  ret i32 %16
+}
+
+
+; Function Attrs: alwaysinline
+define linkonce_odr spir_func i32 @__hsail_get_lane_id() #0  {
+  %1 = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %2 = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %1)
+  ret i32 %2
+}
+declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
+declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32) #1
+
 ; global variable to store the size of static group segment
 ; the value would be set by Kalmar runtime prior to kernel dispatch
 ; define @hcc_static_group_segment_size as a module-level global variable

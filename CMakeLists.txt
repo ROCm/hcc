@@ -392,27 +392,16 @@ install(DIRECTORY ${HLC_BIN_DIR}/bin
         COMPONENT hlc
         PATTERN * PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
-endif(NOT HSA_LLVM_BIN_DIR)
-
-
-if (NOT HSA_USE_AMDGPU_BACKEND)
-  # build HSAILasm
-  set(HSAILASM_SRC_DIR "${PROJECT_SOURCE_DIR}/HSAILasm")
-  set(HSAILASM_BIN_DIR "${PROJECT_BINARY_DIR}/HSAILasm")
-  file(MAKE_DIRECTORY ${HSAILASM_BIN_DIR})
-  add_custom_target(HSAILasm
-    COMMAND ${CMAKE_COMMAND} ${HSAILASM_SRC_DIR}
-    COMMAND make -j4 # not portable, but we need it this way
-    WORKING_DIRECTORY ${HSAILASM_BIN_DIR}
-  )
-
-  # stored under HSAILasm/
-  install(FILES ${HSAILASM_BIN_DIR}/HSAILAsm/HSAILasm
-          DESTINATION HSAILasm
-          PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
-          COMPONENT HSAILasm)
-endif (NOT HSA_USE_AMDGPU_BACKEND)
-
+# build HSAILasm
+set(HSAILASM_SRC_DIR "${PROJECT_SOURCE_DIR}/HSAILasm")
+set(HSAILASM_BIN_DIR "${PROJECT_BINARY_DIR}/HSAILasm")
+file(MAKE_DIRECTORY ${HSAILASM_BIN_DIR})
+add_custom_target(HSAILasm
+  COMMAND ${CMAKE_COMMAND} ${HSAILASM_SRC_DIR}
+  COMMAND make -j4 # not portable, but we need it this way
+  WORKING_DIRECTORY ${HSAILASM_BIN_DIR}
+  DEPENDS hlc
+)
 
 
 # Copy binary file to directory matching the install directory
@@ -421,19 +410,16 @@ add_custom_target(HSAILasm_setup
     "${HSAILASM_BIN_DIR}/HSAILAsm/HSAILasm" "${HSAILASM_BIN_DIR}"
     DEPENDS HSAILasm)
 
-if (NOT HSA_USE_AMDGPU_BACKEND AND NOT HSA_LLVM_BIN_DIR)
-  # build hlc in case HSA_LLVM_BIN_DIR is not set
-  # build HSAILasm in case HSA_USE_AMDGPU_BACKEND is not set
-  add_custom_target(world DEPENDS clang hlc HSAILasm_setup)
-elseif (NOT HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
-  # build HSAILasm in case HSA_USE_AMDGPU_BACKEND is not set
-  add_custom_target(world DEPENDS clang HSAILasm)
-elseif (HSA_USE_AMDGPU_BACKEND AND NOT HSA_LLVM_BIN_DIR)
-  # build hlc in case HSA_LLVM_BIN_DIR is not set
-  add_custom_target(world DEPENDS clang hlc)
-elseif (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
+endif(NOT HSA_LLVM_BIN_DIR)
+
+if (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
+  # do NOT depend on HLC or HSAILasm in case we use AMDGPU backend
   add_custom_target(world DEPENDS clang)
-endif (NOT HSA_USE_AMDGPU_BACKEND AND NOT HSA_LLVM_BIN_DIR)
+else (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
+  # build hlc and HSAILasm in case HSA_USE_AMDGPU_BACKEND 
+  # or HSA_LLVM_BIN_DIR is not set
+  add_custom_target(world DEPENDS clang hlc HSAILasm_setup)
+endif (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
 
 else (HAS_HSA)
 
@@ -527,11 +513,13 @@ set(CPACK_BINARY_TZ "OFF")
 
 #set(CPACK_DEBIAN_PACKAGE_DEPENDS "hsa-runtime (>= 1.0)")
 
-# don't include HSAILasm and hlc if using AMDGPU backend
-if (NOT HSA_USE_AMDGPU_BACKEND)
-  # put HLC and HSAILasm in the package as well
-  set(CPACK_COMPONENTS_ALL HSAILasm hlc)
-endif(NOT HSA_USE_AMDGPU_BACKEND)
+if (HSA_USE_AMDGPU_BACKEND)
+  # don't include HSAILasm and hlc if using AMDGPU backend
+  set(CPACK_COMPONENTS_ALL compiler)
+else (HSA_USE_AMDGPU_BACKEND)
+  # put Clang front-end, HLC and HSAILasm in the package as well
+  set(CPACK_COMPONENTS_ALL HSAILasm hlc compiler)
+endif (HSA_USE_AMDGPU_BACKEND)
 
 include (CPack)
 MESSAGE("")

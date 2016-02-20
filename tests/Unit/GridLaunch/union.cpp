@@ -40,7 +40,8 @@ int main(void) {
   F.b[1] = 2;
 
   int* data1 = (int*)malloc(SIZE*sizeof(int));
-  int* data1_d = (int*)hc::am_alloc(SIZE*sizeof(int), hc::accelerator(), 0);
+  auto acc = hc::accelerator();
+  int* data1_d = (int*)hc::am_alloc(SIZE*sizeof(int), acc, 0);
 
   grid_launch_parm lp;
   grid_launch_init(&lp);
