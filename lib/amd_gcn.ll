@@ -1,6 +1,6 @@
 
 
-define i32 @amdgcn_wavefront_shift_right(i32 %v) #1  {
+define linkonce_odr spir_func i32 @amdgcn_wavefront_shift_right(i32 %v) #1  {
   %call = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %v, i32 312, i1 0, i32 15, i32 15)
   ret i32 %call
 }
