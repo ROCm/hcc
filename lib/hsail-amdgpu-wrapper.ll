@@ -494,10 +494,10 @@ define linkonce_odr spir_func i32 @__hsail_get_num_groups(i32 %i) #0 {
   %num_group = alloca i32, align 4
   store i32 %i, i32* %1, align 4
   %2 = load i32, i32* %1, align 4
-  %3 = call i32 @__hsail_get_global_size(i32 %2)
+  %3 = call spir_func i32 @__hsail_get_global_size(i32 %2)
   store i32 %3, i32* %global_size, align 4
   %4 = load i32, i32* %1, align 4
-  %5 = call i32 @__hsail_currentworkgroup_size(i32 %4)
+  %5 = call spir_func i32 @__hsail_currentworkgroup_size(i32 %4)
   store i32 %5, i32* %group_size, align 4
   %6 = load i32, i32* %global_size, align 4
   %7 = load i32, i32* %group_size, align 4
