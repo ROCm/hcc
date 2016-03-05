@@ -21,6 +21,10 @@ IF (NOT CLANG_URL)
 ENDIF (NOT CLANG_URL)
 set(CMAKE_MACOSX_RPATH 1)
 
+IF (NOT NUM_BUILD_THREADS)
+  SET(NUM_BUILD_THREADS 8)
+ENDIF(NOT NUM_BUILD_THREADS)
+
 include (EnsureLLVMisPresent)
 include (EnsureCLANGisPresent)
 include (EnsureHLCisPresent)
@@ -312,7 +316,7 @@ add_custom_target(clang
           -DLLVM_TARGETS_TO_BUILD=X86
           -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CBackend
           -DLLVM_INCLUDE_EXAMPLES=off
-  COMMAND make -j8 # not portable, but we need it this way
+  COMMAND make -j ${NUM_BUILD_THREADS} # not portable, but we need it this way
   WORKING_DIRECTORY ${CLANG_BIN_DIR}
 )
 else (HAS_HSA)
@@ -329,7 +333,7 @@ add_custom_target(clang
           -DLLVM_TARGETS_TO_BUILD=X86
           -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CBackend
           -DLLVM_INCLUDE_EXAMPLES=off
-  COMMAND make -j8 # not portable, but we need it this way
+  COMMAND make -j ${NUM_BUILD_THREADS} # not portable, but we need it this way
   WORKING_DIRECTORY ${CLANG_BIN_DIR}
 )
 endif (HAS_HSA)
@@ -380,7 +384,7 @@ add_custom_target(hlc
           -DLLVM_TARGETS_TO_BUILD=
           -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=HSAIL
           -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-  COMMAND make -j8 # not portable, but we need it this way
+  COMMAND make -j ${NUM_BUILD_THREADS} # not portable, but we need it this way
   WORKING_DIRECTORY ${HLC_BIN_DIR}
   DEPENDS clang
 )
