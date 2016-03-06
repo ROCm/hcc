@@ -1064,13 +1064,38 @@ public:
                                useCoarseGrainedRegion(false),
                                kernargPool(), kernargPoolFlag(), kernargCursor(0), kernargPoolMutex(),
                                executables(),
-                               profile(hcAgentProfileNone) {
+                               profile(hcAgentProfileNone),
+                               path(), description() {
 #if KALMAR_DEBUG
         std::cerr << "HSADevice::HSADevice()\n";
 #endif
 
-        /// iterate over memory regions of the agent
         hsa_status_t status = HSA_STATUS_SUCCESS;
+
+        /// set up path and description
+        {
+            char name[64] {0};
+            uint32_t node = 0;
+            status = hsa_agent_get_info(agent, HSA_AGENT_INFO_NAME, name);
+            STATUS_CHECK(status, __LINE__);
+            status = hsa_agent_get_info(agent, HSA_AGENT_INFO_NODE, &node);
+            STATUS_CHECK(status, __LINE__);
+    
+            wchar_t path_wchar[128] {0};
+            wchar_t description_wchar[128] {0};
+            swprintf(path_wchar, 128, L"%s%u", name, node);
+            swprintf(description_wchar, 128, L"AMD HSA Agent %s%u", name, node);
+    
+            path = std::wstring(path_wchar);
+            description = std::wstring(description_wchar);
+
+#if KALMAR_DEBUG
+            std::wcerr << L"Path: " << path << L"\n";
+            std::wcerr << L"Description: " << description << L"\n";
+#endif
+        }
+
+        /// iterate over memory regions of the agent
         status = hsa_agent_iterate_regions(agent, HSADevice::find_group_memory, &max_tile_static_size);
         STATUS_CHECK(status, __LINE__);
 
@@ -1192,8 +1217,11 @@ public:
 #endif
     }
 
-    std::wstring get_path() const override { return L"hsa"; }
-    std::wstring get_description() const override { return L"AMD HSA Agent"; }
+    std::wstring path;
+    std::wstring description;
+
+    std::wstring get_path() const override { return path; }
+    std::wstring get_description() const override { return description; }
     size_t get_mem() const override { return 0; }
     bool is_double() const override { return true; }
     bool is_lim_double() const override { return true; }
@@ -1838,17 +1866,20 @@ class HSAContext final : public KalmarContext
             return stat;
         }
 
-#if KALMAR_DEBUG 
+#if KALMAR_DEBUG
         {
             char name[64];
+            uint32_t node = 0;
             status = hsa_agent_get_info(agent, HSA_AGENT_INFO_NAME, name);
             STATUS_CHECK(status, __LINE__);
+            status = hsa_agent_get_info(agent, HSA_AGENT_INFO_NODE, &node);
+            STATUS_CHECK(status, __LINE__);
             if (device_type == HSA_DEVICE_TYPE_GPU) {
-                printf("GPU HSA agent: %s\n", name);
+                printf("GPU HSA agent: %s, Node ID: %u\n", name, node);
             } else if (device_type == HSA_DEVICE_TYPE_CPU) {
-                printf("CPU HSA agent: %s\n", name);
+                printf("CPU HSA agent: %s, Node ID: %u\n", name, node);
             } else {
-                printf("DSP HSA agent: %s\n", name);
+                printf("DSP HSA agent: %s, Node ID: %u\n", name, node);
             }
         }
 #endif
