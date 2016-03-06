@@ -7,34 +7,41 @@
 #include <string>
 #include <regex>
 #include <iostream>
+#include <algorithm>
+
+#include <hc_am.hpp>
+#include <hsa_atomic.h>
 
 #define HSA_PRINTF_DEBUG  (0)
 
 union HSAPrintfPacketData {
-  unsigned int ui;
-  int i;
-  float f;
-  void* ptr;
-  const void* cptr;
+  unsigned int    ui;
+  int             i;
+  float           f;
+  void*           ptr;
+  const void*     cptr;
+  std::atomic_int ai;
 };
 
 enum HSAPrintfPacketDataType {
-  HSA_PRINTF_UNUSED       // 0
-  ,HSA_PRINTF_UNSIGNED_INT // 1
-  ,HSA_PRINTF_SIGNED_INT  // 2
-  ,HSA_PRINTF_FLOAT       // 3
-  ,HSA_PRINTF_VOID_PTR    // 4
-  ,HSA_PRINTF_CONST_VOID_PTR  // 5
+  HSA_PRINTF_UNUSED       
+  ,HSA_PRINTF_UNSIGNED_INT 
+  ,HSA_PRINTF_SIGNED_INT  
+  ,HSA_PRINTF_FLOAT       
+  ,HSA_PRINTF_VOID_PTR    
+  ,HSA_PRINTF_CONST_VOID_PTR
+  ,HSA_PRINTF_BUFFER_CURSOR
+  ,HSA_PRINTF_BUFFER_SIZE
 };
 
 class HSAPrintfPacket {
 public:
-  __attribute__((amp,cpu)) void clear() { type = HSA_PRINTF_UNUSED; }
-  __attribute__((amp,cpu)) void set(unsigned int d)  { type = HSA_PRINTF_UNSIGNED_INT;   data.ui = d; }
-  __attribute__((amp,cpu)) void set(int d)           { type = HSA_PRINTF_SIGNED_INT;     data.i = d; }
-  __attribute__((amp,cpu)) void set(float d)         { type = HSA_PRINTF_FLOAT;          data.f = d; }
-  __attribute__((amp,cpu)) void set(void* d)         { type = HSA_PRINTF_VOID_PTR;       data.ptr = d; }
-  __attribute__((amp,cpu)) void set(const void* d)   { type = HSA_PRINTF_CONST_VOID_PTR; data.cptr = d; }
+  void clear()             [[hc,cpu]] { type = HSA_PRINTF_UNUSED; }
+  void set(unsigned int d) [[hc,cpu]] { type = HSA_PRINTF_UNSIGNED_INT;   data.ui = d; }
+  void set(int d)          [[hc,cpu]] { type = HSA_PRINTF_SIGNED_INT;     data.i = d; }
+  void set(float d)        [[hc,cpu]] { type = HSA_PRINTF_FLOAT;          data.f = d; }
+  void set(void* d)        [[hc,cpu]] { type = HSA_PRINTF_VOID_PTR;       data.ptr = d; }
+  void set(const void* d)  [[hc,cpu]] { type = HSA_PRINTF_CONST_VOID_PTR; data.cptr = d; }
   HSAPrintfPacketDataType type;
   HSAPrintfPacketData data;
 };
@@ -44,76 +51,69 @@ enum HSAPrintfError {
   ,HSA_PRINTF_BUFFER_OVERFLOW = 1
 };
 
-class HSAPrintfPacketQueue {
-public:
-  HSAPrintfPacketQueue(HSAPrintfPacket* buffer, unsigned int num)
-        :queue(buffer),num(num),overflow(false),cursor(0) {}
-  HSAPrintfPacket* queue;
-  unsigned int num;
-  bool overflow;
-  std::atomic_int cursor;
-};
+static inline HSAPrintfPacket* createPrintfBuffer(hc::accelerator& a, const unsigned int numElements) {
+  HSAPrintfPacket* printfBuffer = NULL;
+  if (numElements > 3) {
+    printfBuffer = hc::am_alloc(sizeof(HSAPrintfPacket) * numElements, a, 0);
 
-static inline HSAPrintfPacketQueue* createHSAPrintfPacketQueue(unsigned int num) {
-  HSAPrintfPacket* buffer = new HSAPrintfPacket[num];
-  HSAPrintfPacketQueue* queue = new HSAPrintfPacketQueue(buffer, num);
-  return queue;
-}
-
-static inline HSAPrintfPacketQueue* destroyHSAPrintfPacketQueue(HSAPrintfPacketQueue* queue) {
-  delete[]  queue->queue;
-  delete queue;
-  return NULL;
-}
-
-static inline void dumpHSAPrintfPacketQueue(const HSAPrintfPacketQueue* q) {
-  std::cout << "buffer size: " << q->num << " "
-            << "cursor: " << q->cursor.load() << " "
-            << "overflow: " << q->overflow << "\n";
-
-#if HSA_PRINTF_DEBUG 
-  for (int i = 0; i < q->num / 16; ++i) {
-    for (int j = 0; j < 16; ++j) {
-      std::cout << q->queue[i * 16 + j].type << " ";
-    }
-    std::cout << "\n";
+    // initialize the printf buffer header
+    HSAPrintfPacket header[2];
+    header[0].type = HSA_PRINTF_BUFFER_SIZE;
+    header[0].data.ui = numElements;
+    header[1].type = HSA_PRINTF_BUFFER_CURSOR;
+    header[1].data.ui = 2;
+    hc::am_copy(printfBuffer,header,sizeof(HSAPrintfPacket) * 2);
   }
-#endif
+  return printfBuffer;
+}
+
+void deletePrintfBuffer(HSAPrintfPacket* buffer) {
+  hc::am_free(buffer);
 }
 
 // get the argument count
-static inline __attribute__((amp,cpu)) void countArg(unsigned int& count) {}
+static inline void countArg(unsigned int& count) [[hc,cpu]] {}
 template <typename T> 
-static inline __attribute__((amp,cpu)) void countArg(unsigned int& count, const T& t) { ++count; }
+static inline void countArg(unsigned int& count, const T& t) [[hc,cpu]] { ++count; }
 template <typename T, typename... Rest> 
-static inline __attribute__((amp,cpu)) void countArg(unsigned int& count, const T& t, const Rest&... rest) {
+static inline void countArg(unsigned int& count, const T& t, const Rest&... rest) [[hc,cpu]] {
   ++count;
   countArg(count,rest...);
 }
 
 template <typename T>
-static inline void set_batch(HSAPrintfPacketQueue* queue, int offset, const T t) {
-  queue->queue[offset].set(t);
+static inline void set_batch(HSAPrintfPacket* queue, int offset, const T t) [[hc,cpu]] {
+  queue[offset].set(t);
 }
 template <typename T, typename... Rest>
-static inline void set_batch(HSAPrintfPacketQueue* queue, int offset, const T t, Rest... rest) {
-  queue->queue[offset].set(t);
+static inline void set_batch(HSAPrintfPacket* queue, int offset, const T t, Rest... rest) [[hc,cpu]] {
+  queue[offset].set(t);
   set_batch(queue, offset + 1, rest...);
 }
 
 template <typename... All>
-static inline HSAPrintfError hsa_printf(HSAPrintfPacketQueue* queue, All... all) restrict(amp,cpu) {
+static inline HSAPrintfError hsa_printf(HSAPrintfPacket* queue, All... all) [[hc,cpu]] {
   unsigned int count = 0;      
   countArg(count, all...);
 
   HSAPrintfError error = HSA_PRINTF_SUCCESS;
 
-  if (count + 1 + queue->cursor.load() > queue->num) {
-    queue->overflow = true;
+  if (count + 1 + queue[1].data.ai.load() > queue[0].data.ui) {
     error = HSA_PRINTF_BUFFER_OVERFLOW;
   } else {
-    unsigned int offset = queue->cursor.fetch_add(count + 1);
-    set_batch(queue, offset, count, all...);
+
+#if 0
+    /*** FIXME: hcc didn't promote the address of the atomic type into global address space ***/
+    unsigned int offset = queue[1].data.ai.fetch_add(count + 1);
+#endif
+    unsigned int offset = __hsail_atomic_fetch_add_unsigned(&(queue[1].data.ui),count + 1);
+
+    if (offset + count + 1 < queue[0].data.ui) { 
+      set_batch(queue, offset, count, all...);
+    }
+    else {
+      error = HSA_PRINTF_BUFFER_OVERFLOW;
+    }
   }
 
   return error;
@@ -127,18 +127,19 @@ static std::regex floatPattern("(%){1}[-+#0]*[0-9]*((.)[0-9]+){0,1}([fFeEgGaA]){
 static std::regex pointerPattern("(%){1}[ps]");
 static std::regex doubleAmpersandPattern("(%){2}");
 
-static inline void processHSAPrintfPacketQueue(HSAPrintfPacketQueue* queue) {
-  unsigned int numPackets = 0;
-  for (unsigned int i = 0; i < queue->cursor.load(); ) {
-    numPackets = queue->queue[i++].data.ui;
-    if (numPackets == 0)
+static inline void processPrintfPackets(HSAPrintfPacket* packets, const unsigned int numPackets) {
+
+  for (unsigned int i = 0; i < numPackets; ) {
+
+    unsigned int numPrintfArgs = packets[i++].data.ui;
+    if (numPrintfArgs == 0)
       continue;
 
     // get the format
     unsigned int formatStringIndex = i++;
-    assert(queue->queue[formatStringIndex].type == HSA_PRINTF_VOID_PTR
-           || queue->queue[formatStringIndex].type == HSA_PRINTF_CONST_VOID_PTR);
-    std::string formatString((const char*)queue->queue[formatStringIndex].data.cptr);
+    assert(packets[formatStringIndex].type == HSA_PRINTF_VOID_PTR
+           || packets[formatStringIndex].type == HSA_PRINTF_CONST_VOID_PTR);
+    std::string formatString((const char*)packets[formatStringIndex].data.cptr);
 
     unsigned int formatStringCursor = 0;
     std::smatch specifierMatches;
@@ -147,7 +148,7 @@ static inline void processHSAPrintfPacketQueue(HSAPrintfPacketQueue* queue) {
     printf("%s:%d \t number of matches = %d\n", __FUNCTION__, __LINE__, (int)specifierMatches.size());
 #endif
     
-    for (unsigned int j = 1; j < numPackets; ++j, ++i) {
+    for (unsigned int j = 1; j < numPrintfArgs; ++j, ++i) {
 
       if (!std::regex_search(formatString, specifierMatches, specifierPattern)) {
         // More printf argument than format specifier??
@@ -168,13 +169,13 @@ static inline void processHSAPrintfPacketQueue(HSAPrintfPacketQueue* queue) {
       
       std::smatch specifierTypeMatch;
       if (std::regex_search(specifier, specifierTypeMatch, unsignedIntegerPattern)) {
-        printf(specifier.c_str(), queue->queue[i].data.ui);
+        printf(specifier.c_str(), packets[i].data.ui);
       } else if (std::regex_search(specifier, specifierTypeMatch, signedIntegerPattern)) {
-        printf(specifier.c_str(), queue->queue[i].data.i);
+        printf(specifier.c_str(), packets[i].data.i);
       } else if (std::regex_search(specifier, specifierTypeMatch, floatPattern)) {
-        printf(specifier.c_str(), queue->queue[i].data.f);
+        printf(specifier.c_str(), packets[i].data.f);
       } else if (std::regex_search(specifier, specifierTypeMatch, pointerPattern)) {
-        printf(specifier.c_str(), queue->queue[i].data.cptr);
+        printf(specifier.c_str(), packets[i].data.cptr);
       }
       else {
         assert(false);
@@ -186,17 +187,26 @@ static inline void processHSAPrintfPacketQueue(HSAPrintfPacketQueue* queue) {
     formatString = std::regex_replace(formatString,doubleAmpersandPattern,"%");
     printf("%s",formatString.c_str());
   }
+}
 
-#if HSA_PRINTF_DEBUG
-  if (queue->overflow) {
-    printf("Overflow detected!\n");
-  }
-#endif
+static inline void processPrintfBuffer(HSAPrintfPacket* gpuBuffer) {
 
-  // reset internal data
-  for (int i = 0; i < queue->cursor.load(); ++i) {
-    queue->queue[i].clear();
+  if (gpuBuffer == NULL) return;
+
+  HSAPrintfPacket header[2];
+  hc::am_copy(header, gpuBuffer, sizeof(HSAPrintfPacket)*2);
+  unsigned int bufferSize = header[0].data.ui;
+  unsigned int cursor = header[1].data.ui;
+  unsigned int numPackets = ((bufferSize<cursor)?bufferSize:cursor) - 2;
+  if (numPackets > 0) {
+    HSAPrintfPacket* hostBuffer = (HSAPrintfPacket*)malloc(sizeof(HSAPrintfPacket) * numPackets);
+    if (hostBuffer) {
+      hc::am_copy(hostBuffer, gpuBuffer+2, sizeof(HSAPrintfPacket) * numPackets);
+      processPrintfPackets(hostBuffer, numPackets);
+      free(hostBuffer);
+    }
   }
-  queue->overflow = false;
-  queue->cursor.store(0);
+  // reset the printf buffer
+  header[1].data.ui = 2;
+  hc::am_copy(gpuBuffer,header,sizeof(HSAPrintfPacket) * 2);
 }
