@@ -121,10 +121,25 @@ define linkonce_odr spir_func i32 @amdgcn_row_rshift(i32 %data, i32 %delta) #1 {
   ret i32 %data
 }
 
+define linkonce_odr spir_func i32 @amdgcn_ds_permute(i32 %index, i32 %src) #1  {
+  %call = call i32 @llvm.amdgcn.ds.permute(i32 %index, i32 %src)
+  ret i32 %call
+}
+
+define linkonce_odr spir_func i32 @amdgcn_ds_bpermute(i32 %index, i32 %src) #1  {
+  %call = call i32 @llvm.amdgcn.ds.bpermute(i32 %index, i32 %src)
+  ret i32 %call
+}
 
 
 ;llvm.amdgcn.mov.dpp.i32 <src> <dpp_ctrl> <bound_ctrl> <bank_mask> <row_mask>
 declare i32 @llvm.amdgcn.mov.dpp.i32(i32, i32, i1, i32, i32) #0
+
+;llvm.amdgcn.ds.permute <index> <src>
+declare i32 @llvm.amdgcn.ds.permute(i32, i32) #0
+
+;llvm.amdgcn.ds.bpermute <index> <src>
+declare i32 @llvm.amdgcn.ds.bpermute(i32, i32) #0
 
 attributes #0 = { nounwind readnone convergent }
 attributes #1 = { alwaysinline nounwind readnone convergent }
