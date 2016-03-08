@@ -51,8 +51,10 @@ namespace {
 
           // host side does not need the function definition of a grid_launch kernel
           // deleting the function body can help resolve linking errors
-          if(HostSpecific)
-            F->deleteBody();
+          if(HostSpecific) {
+            if(F->size() > 0)
+              F->deleteBody();
+          }
         } // F->hasFnAttribute(HCGridLaunchAttr)
       } // Module::iterator
 
