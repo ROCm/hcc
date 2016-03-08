@@ -2218,16 +2218,6 @@ extern "C" unsigned int __sadhi_u16x2_u8x4(unsigned int src0, unsigned int src1,
 extern "C" uint64_t __clock_u64() __HC__;
 
 /**
- * Count the number of active work-items in the current
- * wavefront that have a non-zero input.
- *
- * @param[in] input An unsigned 32-bit integer.
- * @return The number of active work-items in the current wavefront that have
- *         a non-zero input.
- */
-extern "C" unsigned int __activelanecount_u32_b1(unsigned int input) __HC__;
-
-/**
  * Get the count of the number of earlier (in flattened
  * work-item order) active work-items within the same wavefront.
  *
@@ -2248,6 +2238,18 @@ extern "C" unsigned int __activelaneid_u32() __HC__;
  * @return The bitmask calculated.
  */
 extern "C" uint64_t __activelanemask_v4_b64_b1(unsigned int input) __HC__;
+
+/**
+ * Count the number of active work-items in the current
+ * wavefront that have a non-zero input.
+ *
+ * @param[in] input An unsigned 32-bit integer.
+ * @return The number of active work-items in the current wavefront that have
+ *         a non-zero input.
+ */
+extern "C" inline unsigned int __activelanecount_u32_b1(unsigned int input) __HC__ {
+ return  __popcount_u32_b64(__activelanemask_v4_b64_b1(input));
+}
 
 /**
  * Permute active work-items in the wavefront.
