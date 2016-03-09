@@ -2532,11 +2532,20 @@ inline float __shfl_down(float var, const unsigned int delta, const int width=__
  * results are undefined if it is not a power of 2, or is number greater than
  * __HSA_WAVEFRONT_SIZE__.
  */
+
+#if 0
 inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     unsigned int laneId = __hsail_get_lane_id();
     unsigned int target = laneId ^ laneMask;
     unsigned int w = width;
     return __hsail_activelanepermute_b32(var, target, var, target>=((laneId+w)&~(w-1)));
+}
+#endif
+inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+  int self = __hsail_get_lane_id();
+  int index = self^laneMask;
+  index = index >= ((self+width)&~(width-1))?self:index;
+  return amdgcn_ds_bpermute(index<<2, var);
 }
 
 inline float __shfl_xor(float var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
