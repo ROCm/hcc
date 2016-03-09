@@ -6964,7 +6964,7 @@ define internal void @_GLOBAL__sub_I_directfunction_handle.cpp() section ".text.
   ret void
 }
 
-; CHECK: declare void @__hcLaunchKernel__Z6kernel16grid_launch_parmP3fooPi(%struct.grid_launch_parm*, %struct.foo*, i32*) #11
+; CHECK: declare void @__hcLaunchKernel__Z6kernel16grid_launch_parmP3fooPi(%struct.grid_launch_parm*, %struct.foo*, i32*)
 
 attributes #0 = { alwaysinline uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { inlinehint nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
