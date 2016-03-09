@@ -2485,6 +2485,8 @@ inline float __shfl_up(float var, const unsigned int delta, const int width=__HS
  * results are undefined if it is not a power of 2, or is number greater than
  * __HSA_WAVEFRONT_SIZE__.
  */
+
+#if 0
 inline int __shfl_down(int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     if (delta == 1
         && width == __HSA_WAVEFRONT_SIZE__) {
@@ -2495,6 +2497,14 @@ inline int __shfl_down(int var, const unsigned int delta, const int width=__HSA_
         unsigned int newSrcLane = laneId + delta;
         return __hsail_activelanepermute_b32(var, newSrcLane, var, newSrcLane >= ((laneId&(~(width-1))) + width ));
     }
+}
+#endif
+
+inline int __shfl_down(int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+  int self = __hsail_get_lane_id();
+  int index = self + delta;
+  index = ((self&(width-1))+delta) >= width?self:index;
+  return amdgcn_ds_bpermute(index<<2, var);
 }
 
 inline float __shfl_down(float var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
