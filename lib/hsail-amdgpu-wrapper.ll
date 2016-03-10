@@ -525,6 +525,24 @@ define linkonce_odr spir_func i32 @__hsail_get_lane_id() #0  {
 declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
 declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32) #1
 
+define linkonce_odr spir_func i32 @__bitrev_b32(i32 %input) #0 {
+  %rev = call i32 @llvm.bitreverse.i32(i32 %input)
+  ret i32 %rev
+}
+
+define linkonce_odr spir_func i64 @__bitrev_b64(i64 %input) #0 {
+  %rev = call i64 @llvm.bitreverse.i64(i64 %input)
+  ret i64 %rev
+}
+
+declare i32 @llvm.bitreverse.i32(i32) #0
+declare i64 @llvm.bitreverse.i64(i64) #0
+
+define linkonce_odr spir_func i64 @__activelanemask_v4_b64_b1(i32 %input) #0 {
+  %a = tail call i64 asm "v_cmp_ne_i32_e64 $0, 0, $1", "=s,v"(i32 %input)
+  ret i64 %a
+}
+
 ; global variable to store the size of static group segment
 ; the value would be set by Kalmar runtime prior to kernel dispatch
 ; define @hcc_static_group_segment_size as a module-level global variable

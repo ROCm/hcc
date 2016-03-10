@@ -2,16 +2,13 @@
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToLocal/Test02.03/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToLocal/Test04/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/RefToPointer/Normal/Test05/test.cpp
-2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/RefToPointer/Normal/Test10/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/RefToPointer/BE/Test.02.02/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/RefToPointer/BE/Test.03.01/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/RefToPointer/BE/Test.01.02/test.cpp
-2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/av_array/av.diff.struct.multiple/ref/1d/Test01/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/av_array/array.struct/2d/Test01/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/av_array/av.struct.multiple/struct_ptr/1d/Test01/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/av_array/av.c_array/3d.02/Test01/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Functions/Overloaded_operators/Test.01/test.cpp
-2_Cxx_Lang_Exte/2_x_general/Statements/ControlFlow/Test.21/test.cpp
 2_Cxx_Lang_Exte/2_x_general/decltype_specifier/evaluation_context.01/test.cpp
 2_Cxx_Lang_Exte/2_x_general/decltype_specifier/expression.01/test.cpp
 2_Cxx_Lang_Exte/2_3_Expr_Invo_Rest_Func/2_3_2_Func_Over/Calling_context/Negative/CallingContext.04/test.cpp
@@ -25,3 +22,4 @@
 4_Basic_Data_Elmnts/4_2_extent/4_2_2_c/Test.03/test.cpp
 5_Data_Cont/5_1_array/5_1_2_c/Extent_Acclvw/General/Test.03/test.cpp
 7_para_for_each/ComputeDomain/ComputeDomain.01/test.cpp
+2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/RefToPointer/Normal/Test10/test.cpp

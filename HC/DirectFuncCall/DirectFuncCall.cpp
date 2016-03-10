@@ -43,16 +43,7 @@ namespace {
             string funcName = F->getName().str();
             string wrapperName = "__hcLaunchKernel_" + funcName;
 
-            ValueToValueMapTy VMap; // unused
-            Function* wrapperFunc = CloneFunction(F, VMap, true);
-            wrapperFunc->setName(wrapperName);
-            wrapperFunc->deleteBody();
-            // AttributeSet does not have a direct way of removing string attributes
-            // Using AttrBuilder to do so
-            AttrBuilder B(wrapperFunc->getAttributes(), AttributeSet::FunctionIndex);
-            B.removeAttribute(HCGridLaunchAttr);
-            wrapperFunc->setAttributes(AttributeSet::get(F->getContext(), AttributeSet::FunctionIndex, B));
-            M.getFunctionList().push_back(wrapperFunc);
+            Function* wrapperFunc = Function::Create(F->getFunctionType(), GlobalValue::ExternalLinkage, wrapperName, &M);
 
             // Simply replace all uses with new wrapper function
             F->replaceAllUsesWith(wrapperFunc);
@@ -60,8 +51,10 @@ namespace {
 
           // host side does not need the function definition of a grid_launch kernel
           // deleting the function body can help resolve linking errors
-          if(HostSpecific)
-            F->deleteBody();
+          if(HostSpecific) {
+            if(F->size() > 0)
+              F->deleteBody();
+          }
         } // F->hasFnAttribute(HCGridLaunchAttr)
       } // Module::iterator
 
