@@ -433,7 +433,7 @@ struct StringFinder
       // Find functions with attribute: grid_launch
       // Collect information
       for(auto F = M.begin(), F_end = M.end(); F != F_end; ++F) {
-        if(F->hasFnAttribute("hc_grid_launch")) {
+        if(F->hasFnAttribute("hc_grid_launch") && (F->size() > 0)) {
           WrapperFunction* func = new WrapperFunction(F);
 
           const llvm::Function::ArgumentListType &Args(F->getArgumentList());
