@@ -1784,9 +1784,10 @@ private:
             hsa_ext_control_directives_t control_directives;
             memset(&control_directives, 0, sizeof(hsa_ext_control_directives_t));
 
+            const char* extra_finalizer_opt = getenv("HCC_FINALIZE_OPT");
             hsa_code_object_t hsaCodeObject = {0};
             status = hsa_ext_program_finalize(hsaProgram, isa, 0, control_directives,
-                                              NULL, HSA_CODE_OBJECT_TYPE_PROGRAM, &hsaCodeObject);
+                                              extra_finalizer_opt, HSA_CODE_OBJECT_TYPE_PROGRAM, &hsaCodeObject);
             STATUS_CHECK(status, __LINE__);
 
             if (hsaProgram.handle != 0) {
