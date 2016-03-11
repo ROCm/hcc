@@ -122,9 +122,10 @@ public:
         for (auto queue : queues)
             clFlush(queue);
     }
-    void wait() override {
-        for (auto queue : queues)
+    void wait(hcWaitMode mode = hcWaitModeBlocked) override {
+        for (auto queue : queues) {
             clFinish(queue);
+        }
     }
 
     void Push(void *kernel, int idx, void* device, bool modify) override {
