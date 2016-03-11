@@ -10,6 +10,9 @@ KMDUMPLLVM="${KMDUMPLLVM:=0}"
 # dump the brig
 KMDUMPBRIG="${KMDUMPBRIG:=0}"
 
+# dump the isa
+KMDUMPISA="${KMDUMPISA:=0}"
+
 # pass extra options to llc
 KMLLOPT="${KMLLOPT:=""}"
 
@@ -90,6 +93,10 @@ fi
 
 if [ $KM_USE_AMDGPU  ]; then
   $HLC_LLC -O2 -mtriple amdgcn--amdhsa -mcpu=@HSA_AMDGPU_GPU_TARGET@ -filetype=obj -o $1.hsail $1.opt.bc
+  if [ $KMDUMPISA == "1" ]; then
+    $HLC_LLC -O2 -mtriple amdgcn--amdhsa -mcpu=@HSA_AMDGPU_GPU_TARGET@ -filetype=asm -o $1.isa $1.opt.bc
+    mv $1.isa ./dump.isa
+  fi
 else
   $HLC_LLC -O2 -march=hsail64 -filetype=asm -o $1.hsail $1.opt.bc
 fi

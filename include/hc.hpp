@@ -1878,7 +1878,9 @@ extern "C" unsigned int __wavesize() __HC__;
  * @param[in] input An unsinged 32-bit integer.
  * @return Number of 1 bits in the input.
  */
-extern "C" unsigned int __popcount_u32_b32(unsigned int input) __HC__;
+extern "C" inline unsigned int __popcount_u32_b32(unsigned int input) __HC__ {
+  return __builtin_popcount(input);
+}
 
 /**
  * Count number of 1 bits in the input
@@ -1886,7 +1888,9 @@ extern "C" unsigned int __popcount_u32_b32(unsigned int input) __HC__;
  * @param[in] input An unsinged 64-bit integer.
  * @return Number of 1 bits in the input.
  */
-extern "C" unsigned int __popcount_u32_b64(unsigned long long int input) __HC__;
+extern "C" inline unsigned int __popcount_u32_b64(unsigned long long int input) __HC__ {
+  return __builtin_popcountl(input);
+}
 
 /** @{ */
 /**
@@ -1934,6 +1938,7 @@ extern "C" uint64_t __bitmask_b64(unsigned int src0, unsigned int src1) __HC__;
  * Reverse the bits
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these functions.
+ * TODO: Use __builtin_bitreverse when we upgrade clang to 3.9.
  */
 extern "C" unsigned int __bitrev_b32(unsigned int src0) __HC__;
 
@@ -1958,7 +1963,10 @@ extern "C" uint64_t __bitselect_b64(uint64_t src0, uint64_t src1, uint64_t src2)
  * @return Number of 0 bits until a 1 bit is found, counting start from the
  *         most significant bit. -1 if there is no 0 bit.
  */
-extern "C" unsigned int __firstbit_u32_u32(unsigned int input) __HC__;
+extern "C" inline unsigned int __firstbit_u32_u32(unsigned int input) __HC__ {
+  return input == 0 ? -1 : __builtin_clz(input);
+}
+
 
 /**
  * Count leading zero bits in the input
@@ -1967,7 +1975,9 @@ extern "C" unsigned int __firstbit_u32_u32(unsigned int input) __HC__;
  * @return Number of 0 bits until a 1 bit is found, counting start from the
  *         most significant bit. -1 if there is no 0 bit.
  */
-extern "C" unsigned int __firstbit_u32_u64(unsigned long long int input) __HC__;
+extern "C" inline unsigned int __firstbit_u32_u64(unsigned long long int input) __HC__ {
+  return input == 0 ? -1 : __builtin_clzl(input);
+}
 
 /**
  * Count leading zero bits in the input
@@ -1978,7 +1988,14 @@ extern "C" unsigned int __firstbit_u32_u64(unsigned long long int input) __HC__;
  *         integer from the most significant bit.
  *         If no bits in the input are set, then dest is set to -1.
  */
-extern "C" unsigned int __firstbit_u32_s32(int input) __HC__;
+extern "C" inline unsigned int __firstbit_u32_s32(int input) __HC__ {
+  if (input == 0) {
+    return -1;
+  }
+
+  return input > 0 ? __firstbit_u32_u32(input) : __firstbit_u32_u32(~input);
+}
+
 
 /**
  * Count leading zero bits in the input
@@ -1989,7 +2006,13 @@ extern "C" unsigned int __firstbit_u32_s32(int input) __HC__;
  *         integer from the most significant bit.
  *         If no bits in the input are set, then dest is set to -1.
  */
-extern "C" unsigned int __firstbit_u32_s64(long long int input) __HC__;
+extern "C" inline unsigned int __firstbit_u32_s64(long long int input) __HC__ {
+  if (input == 0) {
+    return -1;
+  }
+
+  return input > 0 ? __firstbit_u32_u64(input) : __firstbit_u32_u64(~input);
+}
 
 /** @{ */
 /**
@@ -1998,13 +2021,21 @@ extern "C" unsigned int __firstbit_u32_s64(long long int input) __HC__;
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these functions.
  */
-extern "C" unsigned int __lastbit_u32_u32(unsigned int input) __HC__;
+extern "C" inline unsigned int __lastbit_u32_u32(unsigned int input) __HC__ {
+  return input == 0 ? -1 : __builtin_ctz(input);
+}
 
-extern "C" unsigned int __lastbit_u32_u64(unsigned long long int input) __HC__;
+extern "C" inline unsigned int __lastbit_u32_u64(unsigned long long int input) __HC__ {
+  return input == 0 ? -1 : __builtin_ctzl(input);
+}
 
-extern "C" unsigned int __lastbit_u32_s32(int input) __HC__;
+extern "C" inline unsigned int __lastbit_u32_s32(int input) __HC__ {
+  return __lastbit_u32_u32(input);
+}
 
-extern "C" unsigned int __lastbit_u32_s64(unsigned long long input) __HC__;
+extern "C" inline unsigned int __lastbit_u32_s64(unsigned long long input) __HC__ {
+  return __lastbit_u32_u64(input);
+}
 /** @} */
 
 /** @{ */
@@ -2187,16 +2218,6 @@ extern "C" unsigned int __sadhi_u16x2_u8x4(unsigned int src0, unsigned int src1,
 extern "C" uint64_t __clock_u64() __HC__;
 
 /**
- * Count the number of active work-items in the current
- * wavefront that have a non-zero input.
- *
- * @param[in] input An unsigned 32-bit integer.
- * @return The number of active work-items in the current wavefront that have
- *         a non-zero input.
- */
-extern "C" unsigned int __activelanecount_u32_b1(unsigned int input) __HC__;
-
-/**
  * Get the count of the number of earlier (in flattened
  * work-item order) active work-items within the same wavefront.
  *
@@ -2217,6 +2238,18 @@ extern "C" unsigned int __activelaneid_u32() __HC__;
  * @return The bitmask calculated.
  */
 extern "C" uint64_t __activelanemask_v4_b64_b1(unsigned int input) __HC__;
+
+/**
+ * Count the number of active work-items in the current
+ * wavefront that have a non-zero input.
+ *
+ * @param[in] input An unsigned 32-bit integer.
+ * @return The number of active work-items in the current wavefront that have
+ *         a non-zero input.
+ */
+extern "C" inline unsigned int __activelanecount_u32_b1(unsigned int input) __HC__ {
+ return  __popcount_u32_b64(__activelanemask_v4_b64_b1(input));
+}
 
 /**
  * Permute active work-items in the wavefront.
