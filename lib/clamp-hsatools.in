@@ -47,7 +47,7 @@ fi
 HSA_USE_AMDGPU_BACKEND=@HSA_USE_AMDGPU_BACKEND@
 
 if [ $HSA_USE_AMDGPU_BACKEND == "ON" ]; then
-  LLD=@HSA_LLVM_BIN_DIR@/ld.lld
+  LLD=amdphdrs
   KM_USE_AMDGPU="${KM_USE_AMDGPU:=1}"
 fi
 
@@ -112,7 +112,7 @@ if [ $KMDUMPBRIG == "1" ]; then
 fi
 
 if [ $KM_USE_AMDGPU ]; then
-  $LLD  $1.hsail -o $1.brig
+  $LLD  $1.hsail $1.brig
 else
   cat $NEWLIB/hsa_builtins.hsail >> $1.hsail
   $HLC_ASM -assemble -o $1.brig $1.hsail
