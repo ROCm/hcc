@@ -247,120 +247,32 @@ am_status_t am_free(void* ptr)
     return status;
 }
 
-#if 0
-enum memcpyKind {
-   hipMemcpyHostToHost = 0    
-  ,hipMemcpyHostToDevice = 1  
-  ,hipMemcpyDeviceToHost = 2  
-  ,hipMemcpyDeviceToDevice =3 
-  ,hipMemcpyDefault =4 
-} ;
-
-void hc::accelerator::syncCopy(void* dst, const void* src, size_t sizeBytes, memcpyKind kind)
-{
-
-
-    hc::AmPointerInfo dstPtrInfo(NULL, NULL, 0, this, 0, 0);
-    hc::AmPointerInfo srcPtrInfo(NULL, NULL, 0, this, 0, 0);
-
-    bool dstNotTracked = (hc::am_memtracker_getinfo(&dstPtrInfo, dst) != AM_SUCCESS);
-    bool srcNotTracked = (hc::am_memtracker_getinfo(&srcPtrInfo, src) != AM_SUCCESS);
-
-
-    // Resolve default to a specific Kind so we know which algorithm to use:
-    if (kind == hipMemcpyDefault) {
-        bool dstIsHost = (dstNotTracked || !dstPtrInfo._isInDeviceMem);
-        bool srcIsHost = (srcNotTracked || !srcPtrInfo._isInDeviceMem);
-        if (srcIsHost && !dstIsHost) {
-            kind = hipMemcpyHostToDevice;
-        } else if (!srcIsHost && dstIsHost) {
-            kind = hipMemcpyDeviceToHost;
-        } else if (srcIsHost && dstIsHost) {
-            kind = hipMemcpyHostToHost;
-        } else if (!srcIsHost && !dstIsHost) {
-            kind = hipMemcpyDeviceToDevice;
-        } else {
-            throw ihipException(hipErrorInvalidMemcpyDirection);
-        }
-    }
-
-    hsa_signal_t depSignal;
-#ifdef STREAM_DEP
-    int depSignalCnt = this->preCopyCommand(NULL, &depSignal, ihipCommandCopyH2D);
-#else
-    int depSignalCnt = 0;
-#endif
-
-
-    if ((kind == hipMemcpyHostToDevice) && (srcNotTracked)) {
-        if (HIP_STAGING_BUFFERS) {
-            std::lock_guard<std::mutex> l (device->_copy_lock[0]);
-
-            if (HIP_PININPLACE) {
-                device->_staging_buffer[0]->CopyHostToDevicePinInPlace(dst, src, sizeBytes, depSignalCnt ? &depSignal : NULL);
-            } else  {
-                device->_staging_buffer[0]->CopyHostToDevice(dst, src, sizeBytes, depSignalCnt ? &depSignal : NULL);
-            }
-#ifdef STREAM_DEP
-            // The copy waits for inputs and then completes before returning so can reset queue to empty:
-            this->resetToEmpty();
-#endif
-        } 
-    } else if ((kind == hipMemcpyDeviceToHost) && (dstNotTracked)) {
-        if (HIP_STAGING_BUFFERS) {
-            std::lock_guard<std::mutex> l (device->_copy_lock[HIP_DISABLE_BIDIR_MEMCPY ? 0:1]);
-            //printf ("staged-copy- read dep signals\n");
-            device->_staging_buffer[1]->CopyDeviceToHost(dst, src, sizeBytes, depSignalCnt ? &depSignal : NULL);
-        } 
-    } else if (kind == hipMemcpyHostToHost)  { 
-
-        if (depSignalCnt) {
-            // host waits before doing host memory copy.
-            hsa_signal_wait_acquire(depSignal, HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, HSA_WAIT_STATE_ACTIVE);
-        }
-        memcpy(dst, src, sizeBytes);
-
-    } else {
-        ihipCommand_t copyType;
-        if ((kind == hipMemcpyHostToDevice) || (kind == hipMemcpyDeviceToDevice)) {
-            copyType = ihipCommandCopyH2D;
-        } else if (kind == hipMemcpyDeviceToHost) {
-            copyType = ihipCommandCopyD2H;
-        } else {
-            throw ihipException(hipErrorInvalidMemcpyDirection);
-        }
-
-        device->_copy_lock[HIP_DISABLE_BIDIR_MEMCPY? 0:1].lock();
-
-        hsa_signal_store_relaxed(device->_copy_signal, 1);
-
-        hsa_status_t hsa_status = hsa_amd_memory_async_copy(dst, device->_hsa_agent, src, device->_hsa_agent, sizeBytes, depSignalCnt, depSignalCnt ? &depSignal:0x0, device->_copy_signal);
-
-        if (hsa_status == HSA_STATUS_SUCCESS) {
-            hsa_signal_wait_relaxed(device->_copy_signal, HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, HSA_WAIT_STATE_ACTIVE);
-        } else {
-            throw ihipException(hipErrorInvalidValue);
-        }
-
-        device->_copy_lock[HIP_DISABLE_BIDIR_MEMCPY ? 0:1].unlock();
-
-    }
-}
-#endif
-
 
 am_status_t am_copy(void*  dst, const void*  src, size_t sizeBytes)
 {
     am_status_t am_status = AM_ERROR_MISC;
-    hsa_status_t err = hsa_memory_copy(dst, src, sizeBytes);
 
-    if (err == HSA_STATUS_SUCCESS) {
-        am_status = AM_SUCCESS;
-    } else {
-        am_status = AM_ERROR_MISC;
+    hc::accelerator acc;
+    hc::AmPointerInfo srcPtrInfo(NULL,NULL,0, acc);
+    hc::AmPointerInfo dstPtrInfo(NULL,NULL,0, acc);
+
+    bool srcTracked = ! (hc::am_memtracker_getinfo(&srcPtrInfo, src) != AM_SUCCESS);
+    bool dstTracked = true;
+    if (! srcTracked) {
+        dstTracked = ! (hc::am_memtracker_getinfo(&dstPtrInfo, dst) != AM_SUCCESS);
     }
 
-    return am_status;
+    if (srcTracked) {
+        // prefer src if avail:
+        srcPtrInfo._acc.get_default_view().copy(src, dst, sizeBytes);
+    } else if (dstTracked) {
+        dstPtrInfo._acc.get_default_view().copy(src, dst, sizeBytes);
+    } else {
+        // host-to-host copy of two untracked pointers- use memcpy.
+        memcpy(dst, src, sizeBytes);
+    }
+
+    return HSA_STATUS_SUCCESS;
 }
 
 
@@ -368,7 +280,9 @@ am_status_t am_memtracker_getinfo(hc::AmPointerInfo *info, const void *ptr)
 {
     auto infoI = g_amPointerTracker.find(ptr);
     if (infoI != g_amPointerTracker.end()) {
-        *info = infoI->second;
+        if (info) {
+            *info = infoI->second;
+        }
         return AM_SUCCESS;
     } else {
         return AM_ERROR_MISC;

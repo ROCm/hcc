@@ -160,6 +160,9 @@ public:
   /// get number of pending async operations in the queue
   virtual int getPendingAsyncOps() { return 0; }
 
+  // Copy src to dst.
+  virtual void copy(const void *src, void *dst, size_t size_bytes) { };
+
   /// get underlying native queue handle
   virtual void* getHSAQueue() { return nullptr; }
 
