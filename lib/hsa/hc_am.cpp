@@ -275,13 +275,10 @@ am_status_t am_memtracker_getinfo(hc::AmPointerInfo *info, const void *ptr)
     }
 }
 
-am_status_t am_memtracker_add(void* ptr, size_t sizeBytes, hc::accelerator &acc, bool isDeviceMem)
+
+am_status_t am_memtracker_add(void* ptr, hc::AmPointerInfo &info)
 {
-    if (isDeviceMem) {
-        g_amPointerTracker.insert(ptr, hc::AmPointerInfo(ptr/*hostPointer*/,  ptr /*devicePointer*/, sizeBytes, acc, true/*isDevice*/, false /*isAMManaged*/));
-    } else {
-        g_amPointerTracker.insert(ptr, hc::AmPointerInfo(NULL/*hostPointer*/,  ptr /*devicePointer*/, sizeBytes, acc, false/*isDevice*/, false /*isAMManaged*/));
-    }
+    g_amPointerTracker.insert(ptr, info);
 
     return AM_SUCCESS;
 }

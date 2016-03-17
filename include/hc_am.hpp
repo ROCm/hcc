@@ -107,7 +107,7 @@ am_status_t am_memtracker_getinfo(hc::AmPointerInfo *info, const void *ptr);
  * @return AM_SUCCESS
  * @see am_memtracker_getinfo
  */
-am_status_t am_memtracker_add(void* ptr, size_t sizeBytes, hc::accelerator &acc, bool isDeviceMem=false);
+am_status_t am_memtracker_add(void* ptr, hc::AmPointerInfo &info);
 
 
 /*
