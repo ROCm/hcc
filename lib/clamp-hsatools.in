@@ -76,7 +76,8 @@ fi
 #  -disable-simplify-libcalls:  prevents transforming loops into library calls such as memset, memcopy on GPU 
 
 if [ $KM_USE_AMDGPU ]; then
-  $HLC_OPT -O3 -mtriple amdgcn--amdhsa -mcpu=@HSA_AMDGPU_GPU_TARGET@ -disable-simplify-libcalls -verify $1.linked.bc -o $1.opt.bc
+  # KMOPTOPT can be used to pass last-minute options to opt in LC backend
+  $HLC_OPT $KMOPTOPT -O3 -mtriple amdgcn--amdhsa -mcpu=@HSA_AMDGPU_GPU_TARGET@ -disable-simplify-libcalls -verify $1.linked.bc -o $1.opt.bc
 else
   $HLC_OPT -O3 -disable-simplify-libcalls -verify $1.linked.bc -o $1.opt.bc
 fi
