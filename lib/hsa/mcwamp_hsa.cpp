@@ -536,11 +536,11 @@ pool_iterator::pool_iterator()
 namespace Kalmar {
 
 enum memcpyKind {
-   hipMemcpyHostToHost = 0    
-  ,hipMemcpyHostToDevice = 1  
-  ,hipMemcpyDeviceToHost = 2  
-  ,hipMemcpyDeviceToDevice =3 
-  ,hipMemcpyDefault =4 
+   memcpyHostToHost = 0    
+  ,memcpyHostToDevice = 1  
+  ,memcpyDeviceToHost = 2  
+  ,memcpyDeviceToDevice =3 
+  ,memcpyAutoDetect =4 
 } ;
 
 class HSAQueue final : public KalmarQueue
@@ -979,7 +979,11 @@ public:
     }
 
     void copy(const void *src, void *dst, size_t size_bytes) override {
-        syncCopy(src, dst, size_bytes, hipMemcpyDefault);
+        copySync(src, false, false, dst, false, false, size_bytes, memcpyAutoDetect);
+    }
+
+    void copy_async(const void *src, void *dst, size_t size_bytes) override {
+        copyAsync(src, dst, size_bytes, memcpyAutoDetect);
     }
 
     void* getHSAQueue() override {
@@ -1066,7 +1070,9 @@ public:
     }
 
 
-    void syncCopy(const void* src, void *dst, size_t sizeBytes, memcpyKind kind) ;
+    void copySync(const void* src, bool srcIsMapped, bool srcInDeviceMem, void *dst, bool dstIsMapped, bool dstInDeviceMem, size_t sizeBytes, memcpyKind kind) ;
+    void copyAsyncMappedPtrs(const void* src, void *dst, size_t sizeBytes) ;
+    void copyAsync(const void* src, void *dst, size_t sizeBytes, memcpyKind kind) ;
 };
 
 
@@ -1113,9 +1119,8 @@ private:
 
 public:
     // Structures to manage staging buffers and copies:
-    hsa_signal_t             copy_signal;       // signal to use for synchronous memcopies
+    hsa_signal_t             copy_signal;       // signal to use for synchronous memcopies  // TODO - remove me.
     class StagingBuffer      *staging_buffer[2]; // one buffer for each direction.
-    std::mutex               copy_lock[2];      // mutex for each direction.
 
 public:
  
@@ -1936,7 +1941,6 @@ public:
     hcAgentProfile getProfile() override { return profile; }
 
 private:
-    void syncCopy(void* dst, const void* src, size_t sizeBytes, memcpyKind kind);
 
     void BuildOfflineFinalizedProgramImpl(void* kernelBuffer, int kernelSize) {
         hsa_status_t status;
@@ -2419,31 +2423,51 @@ HSAQueue::getHSAKernargRegion() override {
 }
 
 
-void 
-HSAQueue::syncCopy(const void* src, void *dst, size_t sizeBytes, memcpyKind kind) 
-{
-    printf ("===> syncCopy!\n");
-    // TODOD - add parms to {srcMapped, dstMapped}  = {Yes, No, Unknown}
-    hc::accelerator acc;
-    hc::AmPointerInfo dstPtrInfo(NULL, NULL, 0, acc, 0, 0);
-    hc::AmPointerInfo srcPtrInfo(NULL, NULL, 0, acc, 0, 0);
 
-    bool dstNotTracked = (hc::am_memtracker_getinfo(&dstPtrInfo, dst) != AM_SUCCESS);
-    bool srcNotTracked = (hc::am_memtracker_getinfo(&srcPtrInfo, src) != AM_SUCCESS);
+// Performs a copy, potentially through a staging buffer .
+// This routine can take mapped or unmapped src and dst pointers. 
+//    "Mapped" means the pointers are mapped into the address space of the device associated with this HSAQueue.
+//     Mapped memory may be physically located on this device, or pinned in the CPU, or on another device (for P2P access).
+//     If the memory is not mapped, it can still be copied usign an intermediate staging buffer approach.
+//
+//     In some cases (ie for array or array_view) we already know the src or dst are mapped, and the *IsMapped parameters
+//     allow communicating that information to this function.  *IsMapped=False indicates the map state is unknown, 
+//     so the functions uses the memory tracker to determine mapped or unmapped and *IsInDeviceMem
+//
+// The copies are performed synchronously - the routine waits until the copy completes before returning.
+void 
+HSAQueue::copySync(const void* src, bool srcIsMapped, bool srcInDeviceMem, void *dst, bool dstIsMapped, bool dstInDeviceMem, size_t sizeBytes, memcpyKind kind) 
+{
+    hc::accelerator acc;
+    hc::AmPointerInfo srcPtrInfo(NULL, NULL, 0, acc, 0, 0);
+    hc::AmPointerInfo dstPtrInfo(NULL, NULL, 0, acc, 0, 0);
+
+    if (!srcIsMapped) {
+        if (hc::am_memtracker_getinfo(&srcPtrInfo, src) == AM_SUCCESS) {
+            srcIsMapped = true;
+            srcInDeviceMem = (srcPtrInfo._isInDeviceMem);
+        }  // Else - srcNotMapped=srcInDeviceMem=false 
+    }
+
+
+    if (!dstIsMapped) {
+        if (hc::am_memtracker_getinfo(&dstPtrInfo, dst) == AM_SUCCESS) {
+            dstIsMapped = true;
+            dstInDeviceMem = (dstPtrInfo._isInDeviceMem);
+        } // Else - dstNotMapped=dstInDeviceMem=false 
+    }  
 
 
     // Resolve default to a specific Kind so we know which algorithm to use:
-    if (kind == hipMemcpyDefault) {
-        bool dstIsHost = (dstNotTracked || !dstPtrInfo._isInDeviceMem);
-        bool srcIsHost = (srcNotTracked || !srcPtrInfo._isInDeviceMem);
-        if (srcIsHost && !dstIsHost) {
-            kind = hipMemcpyHostToDevice;
-        } else if (!srcIsHost && dstIsHost) {
-            kind = hipMemcpyDeviceToHost;
-        } else if (srcIsHost && dstIsHost) {
-            kind = hipMemcpyHostToHost;
-        } else if (!srcIsHost && !dstIsHost) {
-            kind = hipMemcpyDeviceToDevice;
+    if (kind == memcpyAutoDetect) {
+        if (!srcInDeviceMem && !dstInDeviceMem) {
+            kind = memcpyHostToHost;
+        } else if (!srcInDeviceMem && dstInDeviceMem) {
+            kind = memcpyHostToDevice;
+        } else if (srcInDeviceMem && !dstInDeviceMem) {
+            kind = memcpyDeviceToHost;
+        } else if (srcInDeviceMem &&  dstInDeviceMem) {
+            kind = memcpyDeviceToDevice;
         } else {
             // Invalid copy direction:
             throw Kalmar::runtime_exception("invalid copy direction", 0);
@@ -2457,23 +2481,27 @@ HSAQueue::syncCopy(const void* src, void *dst, size_t sizeBytes, memcpyKind kind
     int depSignalCnt = 0;
 #endif
 
-    HSADevice *device = static_cast<HSADevice*> (getDev()); // seems this should work..
-    //HSADevice *device = reinterpret_cast<HSADevice*> (getDev());
+    HSADevice *device = static_cast<HSADevice*> (getDev()); 
 
 
-    if ((kind == hipMemcpyHostToDevice) && (srcNotTracked)) {
-        std::lock_guard<std::mutex> l (device->copy_lock[0]);
+    // Need to use staging buffer if copying to or from unmapped host memory:
+
+
+    if ((kind == memcpyHostToDevice) && (! srcIsMapped)) {
 
         device->staging_buffer[0]->CopyHostToDevice(dst, src, sizeBytes, depSignalCnt ? &depSignal : NULL);
 #ifdef STREAM_DEP
         // The copy waits for inputs and then completes before returning so can reset queue to empty:
         this->resetToEmpty();
 #endif
-    } else if ((kind == hipMemcpyDeviceToHost) && (dstNotTracked)) {
-        std::lock_guard<std::mutex> l (device->copy_lock[1]);
+    } else if ((kind == memcpyDeviceToHost) && (!dstIsMapped)) {
         //printf ("staged-copy- read dep signals\n");
         device->staging_buffer[1]->CopyDeviceToHost(dst, src, sizeBytes, depSignalCnt ? &depSignal : NULL);
-    } else if (kind == hipMemcpyHostToHost)  { 
+#ifdef STREAM_DEP
+        // The copy waits for inputs and then completes before returning so can reset queue to empty:
+        this->resetToEmpty();
+#endif
+    } else if (kind == memcpyHostToHost)  { 
 
 #ifdef STREAM_DEP
         if (depSignalCnt) {
@@ -2481,27 +2509,74 @@ HSAQueue::syncCopy(const void* src, void *dst, size_t sizeBytes, memcpyKind kind
             hsa_signal_wait_acquire(depSignal, HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, HSA_WAIT_STATE_ACTIVE);
         }
 #endif
+        // This works for both mapped and unmapped memory:
         memcpy(dst, src, sizeBytes);
 
     } else {
-        // Remaining commands - these can all be handled by the hsa async copy:
+        // If not special case - these can all be handled by the hsa async copy:
+        
+        std::pair<hsa_signal_t, int> ret = Kalmar::ctx.getSignal();
+        hsa_signal_t signal = ret.first;
+        int signalIndex = ret.second;
 
-       
-        // Lock since we share a signal: 
-        device->copy_lock[1].lock();
+        hsa_signal_store_relaxed(signal, 1);
 
-        hsa_signal_store_relaxed(device->copy_signal, 1);
-
-        hsa_status_t hsa_status = hsa_amd_memory_async_copy(dst, device->getAgent(), src, device->getAgent(), sizeBytes, depSignalCnt, depSignalCnt ? &depSignal:0x0, device->copy_signal);
+        hsa_status_t hsa_status = hsa_amd_memory_async_copy(dst, device->getAgent(), src, device->getAgent(), sizeBytes, depSignalCnt, depSignalCnt ? &depSignal:0x0, signal);
 
         if (hsa_status == HSA_STATUS_SUCCESS) {
-            hsa_signal_wait_relaxed(device->copy_signal, HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, HSA_WAIT_STATE_ACTIVE);
+            hsa_signal_wait_relaxed(signal, HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, HSA_WAIT_STATE_ACTIVE);
         } else {
             throw Kalmar::runtime_exception("hsa_amd_memory_async_copy error", hsa_status);
         }
-
-        device->copy_lock[1].unlock();
+        Kalmar::ctx.releaseSignal(signal, signalIndex);
     }
+}
+
+
+// Performs an async copy.  
+// This routine deals only with "mapped" pointers - see copySync for an explanation.
+void 
+HSAQueue::copyAsyncMappedPtrs(const void* src, void *dst, size_t sizeBytes) 
+{
+    int depSignalCnt = 0;
+    hsa_signal_t depSignal;
+#ifdef STREAM_DEP
+    int depSignalCnt = preCopyCommand(ihip_signal, &depSignal, commandType);
+#endif
+
+    std::pair<hsa_signal_t, int> ret = Kalmar::ctx.getSignal();
+    hsa_signal_t signal = ret.first;
+    int signalIndex = ret.second;
+
+    HSADevice *device = static_cast<HSADevice*> (getDev()); 
+
+    hsa_status_t hsa_status = hsa_amd_memory_async_copy(dst, device->getAgent(), src, device->getAgent(), sizeBytes, depSignalCnt, depSignalCnt ? &depSignal:0x0, signal);
+
+    if (hsa_status != HSA_STATUS_SUCCESS) {
+        throw Kalmar::runtime_exception("hsa_amd_memory_async_copy error", hsa_status);
+    }
+}
+
+void
+HSAQueue::copyAsync(const void* src, void *dst, size_t sizeBytes, memcpyKind kind) 
+{
+    hc::accelerator acc;
+    hc::AmPointerInfo srcPtrInfo(NULL, NULL, 0, acc, 0, 0);
+    hc::AmPointerInfo dstPtrInfo(NULL, NULL, 0, acc, 0, 0);
+
+    bool srcIsMapped = (hc::am_memtracker_getinfo(&srcPtrInfo, src) == AM_SUCCESS);
+    bool dstIsMapped = (hc::am_memtracker_getinfo(&dstPtrInfo, dst) == AM_SUCCESS);
+
+
+    if (!srcIsMapped || !dstIsMapped) {
+        // Fall back to synchronous copy:
+        copySync(src, srcIsMapped, srcPtrInfo._isInDeviceMem, 
+                 dst, dstIsMapped, dstPtrInfo._isInDeviceMem, 
+                 sizeBytes, kind);
+    } else {
+        copyAsyncMappedPtrs(src, dst, sizeBytes);
+    }
+
 }
 
 } // namespace Kalmar

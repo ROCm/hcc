@@ -140,6 +140,7 @@ public:
   /// copy data between two device pointers
   virtual void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset, bool blocking) = 0;
 
+
   /// map host accessible pointer from device
   virtual void* map(void* device, size_t count, size_t offset, bool modify) = 0;
 
@@ -162,6 +163,8 @@ public:
 
   // Copy src to dst.
   virtual void copy(const void *src, void *dst, size_t size_bytes) { };
+  /// copy src to dst async
+  virtual void copy_async(const void* src, void* dst, size_t size_bytes) { };
 
   /// get underlying native queue handle
   virtual void* getHSAQueue() { return nullptr; }

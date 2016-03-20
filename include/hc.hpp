@@ -242,11 +242,22 @@ public:
      * Src and dst must not overlap.  
      * Note the src is the first parameter and dst is second, following C++ convention.
      * The copy command will execute after any commands already inserted into the accelerator_view.
-     * This is a synchronous copy command - the copy operation will complete before the call returns.
+     * This is a synchronous copy command, and the copy operation complete before this call returns.
      */
     void copy(const void *src, void *dst, size_t size_bytes) {
-        printf ("AV copy\n");
         pQueue->copy(src, dst, size_bytes);
+    }
+
+
+    /**
+     * Copies size_bytes bytes from src to dst.  
+     * Src and dst must not overlap.  
+     * Note the src is the first parameter and dst is second, following C++ convention.
+     * The copy command will execute after any commands already inserted into the accelerator_view.
+     * This is an asynchronous copy command, and this call may return before the copy operation completes.
+     */
+    void copy_async(const void *src, void *dst, size_t size_bytes) {
+        pQueue->copy_async(src, dst, size_bytes);
     }
 
     /**

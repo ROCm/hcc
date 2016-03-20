@@ -2,16 +2,14 @@
 
 #include "hsa_ext_amd.h"
 
-#include "staging_buffer.h"
-
-#ifndef tprintf
-#define tprintf(trace_level, ...) 
-#endif
 
 #ifdef HIP_HCC
+#include "hcc_detail/staging_buffer.h"
 #define THROW_ERROR(e) throw ihipException(e)
 #else
+#include "staging_buffer.h"
 #define THROW_ERROR(e) throw 
+#define tprintf(trace_level, ...) 
 #endif
 
 //-------------------------------------------------------------------------------------------------
@@ -53,6 +51,8 @@ StagingBuffer::~StagingBuffer()
 //IN: waitFor - hsaSignal to wait for - the copy will begin only when the specified dependency is resolved.  May be NULL indicating no dependency.
 void StagingBuffer::CopyHostToDevicePinInPlace(void* dst, const void* src, size_t sizeBytes, hsa_signal_t *waitFor)
 {
+    std::lock_guard<std::mutex> l (_copy_lock);
+
     const char *srcp = static_cast<const char*> (src);
     char *dstp = static_cast<char*> (dst);
 
@@ -120,6 +120,8 @@ void StagingBuffer::CopyHostToDevicePinInPlace(void* dst, const void* src, size_
 //IN: waitFor - hsaSignal to wait for - the copy will begin only when the specified dependency is resolved.  May be NULL indicating no dependency.
 void StagingBuffer::CopyHostToDevice(void* dst, const void* src, size_t sizeBytes, hsa_signal_t *waitFor)
 {
+    std::lock_guard<std::mutex> l (_copy_lock);
+
     const char *srcp = static_cast<const char*> (src);
     char *dstp = static_cast<char*> (dst);
 
@@ -175,6 +177,8 @@ void StagingBuffer::CopyHostToDevice(void* dst, const void* src, size_t sizeByte
 //IN: waitFor - hsaSignal to wait for - the copy will begin only when the specified dependency is resolved.  May be NULL indicating no dependency.
 void StagingBuffer::CopyDeviceToHost(void* dst, const void* src, size_t sizeBytes, hsa_signal_t *waitFor)
 {
+    std::lock_guard<std::mutex> l (_copy_lock);
+
     const char *srcp0 = static_cast<const char*> (src);
     char *dstp1 = static_cast<char*> (dst);
 
