@@ -804,7 +804,7 @@ public:
               hsa_agent_t* agent = static_cast<hsa_agent_t*>(getHSAAgent()); 
               status = hsa_amd_agents_allow_access(1, agent, NULL, data);
               STATUS_CHECK(status, __LINE__);
-              status = hsa_memory_copy(va, (char*)device + offset, count);
+              status = hsa_memory_copy(data, (char*)device + offset, count);
               STATUS_CHECK(status, __LINE__);
             } else {
 #if KALMAR_DEBUG
@@ -1380,9 +1380,6 @@ public:
     
             status = hsa_amd_memory_pool_allocate(am_region, count, &data);
             STATUS_CHECK(status, __LINE__);
-    
-            status = hsa_memory_assign_agent(data, agent, HSA_ACCESS_PERMISSION_RW);
-            STATUS_CHECK(status, __LINE__);
         } else {
 #if KALMAR_DEBUG
             std::cerr << "create(" << count << "," << key << "): use host memory allocator\n";
@@ -1739,9 +1736,6 @@ public:
                 status = hsa_amd_agents_allow_access(1, &agent, NULL, ret);
                 STATUS_CHECK(status, __LINE__);
     
-                status = hsa_memory_assign_agent(ret, agent, HSA_ACCESS_PERMISSION_RW);
-                STATUS_CHECK(status, __LINE__);
-
                 // set cursor value as -1 to notice the buffer would be deallocated
                 // instead of recycled back into the pool
                 cursor = -1;
