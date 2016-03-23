@@ -2430,12 +2430,6 @@ HSAQueue::getHSAKernargRegion() override {
 void 
 HSAQueue::copySync(const void* src, bool srcIsMapped, bool srcInDeviceMem, void *dst, bool dstIsMapped, bool dstInDeviceMem, size_t sizeBytes) 
 {
-enum memcpyKind {
-   memcpyHostToHost = 0    
-  ,memcpyHostToDevice = 1  
-  ,memcpyDeviceToHost = 2  
-  ,memcpyDeviceToDevice =3 
-} ;
     hc::accelerator acc;
     hc::AmPointerInfo srcPtrInfo(NULL, NULL, 0, acc, 0, 0);
     hc::AmPointerInfo dstPtrInfo(NULL, NULL, 0, acc, 0, 0);
@@ -2457,15 +2451,15 @@ enum memcpyKind {
 
 
     // Resolve default to a specific Kind so we know which algorithm to use:
-    memcpyKind kind;
+    hcMemcpyKind direction;
     if (!srcInDeviceMem && !dstInDeviceMem) {
-        kind = memcpyHostToHost;
+        direction = hcMemcpyHostToHost;
     } else if (!srcInDeviceMem && dstInDeviceMem) {
-        kind = memcpyHostToDevice;
+        direction = hcMemcpyHostToDevice;
     } else if (srcInDeviceMem && !dstInDeviceMem) {
-        kind = memcpyDeviceToHost;
+        direction = hcMemcpyDeviceToHost;
     } else if (srcInDeviceMem &&  dstInDeviceMem) {
-        kind = memcpyDeviceToDevice;
+        direction = hcMemcpyDeviceToDevice;
     } else {
         // Invalid copy direction - should never reach here since we cover all 4 possible options above.
         Kalmar::runtime_exception("invalid copy direction", 0);
@@ -2484,21 +2478,21 @@ enum memcpyKind {
     // Need to use staging buffer if copying to or from unmapped host memory:
 
 
-    if ((kind == memcpyHostToDevice) && (! srcIsMapped)) {
+    if ((direction == hcMemcpyHostToDevice) && (! srcIsMapped)) {
 
         device->staging_buffer[0]->CopyHostToDevice(dst, src, sizeBytes, depSignalCnt ? &depSignal : NULL);
 #ifdef STREAM_DEP
         // The copy waits for inputs and then completes before returning so can reset queue to empty:
         this->resetToEmpty();
 #endif
-    } else if ((kind == memcpyDeviceToHost) && (!dstIsMapped)) {
+    } else if ((direction == hcMemcpyDeviceToHost) && (!dstIsMapped)) {
         //printf ("staged-copy- read dep signals\n");
         device->staging_buffer[1]->CopyDeviceToHost(dst, src, sizeBytes, depSignalCnt ? &depSignal : NULL);
 #ifdef STREAM_DEP
         // The copy waits for inputs and then completes before returning so can reset queue to empty:
         this->resetToEmpty();
 #endif
-    } else if (kind == memcpyHostToHost)  { 
+    } else if (direction == hcMemcpyHostToHost)  { 
 
 #ifdef STREAM_DEP
         if (depSignalCnt) {

@@ -31,8 +31,10 @@ enum execute_order
 };
 
 enum hcMemcpyKind {
-    hcMemcpyHostToDevice = 0,
-    hcMemcpyDeviceToHost = 1
+    hcMemcpyHostToHost = 0,
+    hcMemcpyHostToDevice = 1,
+    hcMemcpyDeviceToHost = 2,
+    hcMemcpyDeviceToDevice = 3
 };
 
 enum hcWaitMode {
