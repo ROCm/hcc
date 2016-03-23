@@ -1,6 +1,7 @@
 
 #include "hc_am.hpp"
 #include "hsa.h"
+#include "hsa_ext_amd.h"
 
 #define DB_TRACKER 0
 
