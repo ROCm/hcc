@@ -181,6 +181,9 @@ inline static void checkHCCRuntimeStatus(const HCCRuntimeStatus status, const un
 extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v);
 extern "C" void PushArgPtrImpl(void *ker, int idx, size_t sz, const void *v);
 
+// Need to use the CPU agent to identify host allocations for hsa copy routines:
+static hsa_agent_t g_cpu_agent;
+
 // forward declaration
 namespace Kalmar {
 class HSAQueue;
@@ -974,6 +977,7 @@ public:
         copySync(src, false, false, dst, false, false, size_bytes);
     }
 
+    // TODO - this needs to return a completion future.
     void copy_async(const void *src, void *dst, size_t size_bytes) override {
         copyAsync(src, dst, size_bytes);
     }
@@ -1062,9 +1066,12 @@ public:
     }
 
 
+private:
     void copySync(const void* src, bool srcIsMapped, bool srcInDeviceMem, void *dst, bool dstIsMapped, bool dstInDeviceMem, size_t sizeBytes) ;
-    void copyAsyncMappedPtrs(const void* src, void *dst, size_t sizeBytes) ;
+    void copyAsyncMappedPtrs(const void* src, hsa_agent_t srcAgent, void *dst, hsa_agent_t dstAgent, size_t sizeBytes) ;
     void copyAsync(const void* src, void *dst, size_t sizeBytes) ;
+
+    void setCopyAgents(hcMemcpyKind copyDir, hsa_agent_t *srcAgent, hsa_agent_t *dstAgent);
 };
 
 
@@ -2146,21 +2153,6 @@ class HSAContext final : public KalmarContext
         return HSA_STATUS_SUCCESS;
     }
 
-    static hsa_status_t find_host(hsa_agent_t agent, void* data) {
-        hsa_status_t status;
-        hsa_device_type_t device_type;
-        if(data == nullptr)
-            return HSA_STATUS_ERROR_INVALID_ARGUMENT;
-        status = hsa_agent_get_info(agent, HSA_AGENT_INFO_DEVICE, &device_type);
-        STATUS_CHECK(status, __LINE__);
-
-        if(HSA_DEVICE_TYPE_CPU == device_type) {
-            *(hsa_agent_t*)data = agent;
-            return HSA_STATUS_INFO_BREAK;
-        }
-        return HSA_STATUS_SUCCESS;
-    }
-
 
 public:
     HSAContext() : KalmarContext(), signalPool(), signalPoolFlag(), signalCursor(0), signalPoolMutex() {
@@ -2178,10 +2170,6 @@ public:
         status = hsa_iterate_agents(&HSAContext::find_gpu, &agents);
         STATUS_CHECK(status, __LINE__);
 
-        // Iterate over agents to find out the first cpu device as host
-        status = hsa_iterate_agents(&HSAContext::find_host, &host);
-        STATUS_CHECK(status, __LINE__);
-
         for (int i = 0; i < agents.size(); ++i) {
             hsa_agent_t agent = agents[i];
             auto Dev = new HSADevice(agent, host);
@@ -2190,7 +2178,6 @@ public:
                 def = Dev;
             Devices.push_back(Dev);
         }
-
         
 #if SIGNAL_POOL_SIZE > 0
         signalPoolMutex.lock();
@@ -2415,6 +2402,23 @@ HSAQueue::getHSAKernargRegion() override {
 }
 
 
+// Helper function for copy routines - determines agents based on direction:
+inline void
+HSAQueue::setCopyAgents(hcMemcpyKind copyDir, hsa_agent_t *srcAgent, hsa_agent_t *dstAgent)
+{
+    HSADevice *device = static_cast<HSADevice*> (getDev()); 
+    hsa_agent_t deviceAgent = device->getAgent();
+
+    switch (copyDir) {
+        case hcMemcpyHostToHost     : *srcAgent=g_cpu_agent; *dstAgent=g_cpu_agent; break;
+        case hcMemcpyHostToDevice   : *srcAgent=g_cpu_agent; *dstAgent=deviceAgent; break;
+        case hcMemcpyDeviceToHost   : *srcAgent=deviceAgent; *dstAgent=g_cpu_agent; break;
+        case hcMemcpyDeviceToDevice : *srcAgent=deviceAgent; *dstAgent=deviceAgent; break;
+        default: throw Kalmar::runtime_exception("invalid memcpy direction", copyDir);
+    };
+};
+
+
 
 // Performs a copy, potentially through a staging buffer .
 // This routine can take mapped or unmapped src and dst pointers. 
@@ -2451,18 +2455,18 @@ HSAQueue::copySync(const void* src, bool srcIsMapped, bool srcInDeviceMem, void 
 
 
     // Resolve default to a specific Kind so we know which algorithm to use:
-    hcMemcpyKind direction;
+    hcMemcpyKind copyDir;
     if (!srcInDeviceMem && !dstInDeviceMem) {
-        direction = hcMemcpyHostToHost;
+        copyDir = hcMemcpyHostToHost;
     } else if (!srcInDeviceMem && dstInDeviceMem) {
-        direction = hcMemcpyHostToDevice;
+        copyDir = hcMemcpyHostToDevice;
     } else if (srcInDeviceMem && !dstInDeviceMem) {
-        direction = hcMemcpyDeviceToHost;
+        copyDir = hcMemcpyDeviceToHost;
     } else if (srcInDeviceMem &&  dstInDeviceMem) {
-        direction = hcMemcpyDeviceToDevice;
+        copyDir = hcMemcpyDeviceToDevice;
     } else {
-        // Invalid copy direction - should never reach here since we cover all 4 possible options above.
-        Kalmar::runtime_exception("invalid copy direction", 0);
+        // Invalid copy copyDir - should never reach here since we cover all 4 possible options above.
+        Kalmar::runtime_exception("invalid copy copyDir", 0);
     }
 
     hsa_signal_t depSignal;
@@ -2478,21 +2482,21 @@ HSAQueue::copySync(const void* src, bool srcIsMapped, bool srcInDeviceMem, void 
     // Need to use staging buffer if copying to or from unmapped host memory:
 
 
-    if ((direction == hcMemcpyHostToDevice) && (! srcIsMapped)) {
+    if ((copyDir == hcMemcpyHostToDevice) && (! srcIsMapped)) {
 
         device->staging_buffer[0]->CopyHostToDevice(dst, src, sizeBytes, depSignalCnt ? &depSignal : NULL);
 #ifdef STREAM_DEP
         // The copy waits for inputs and then completes before returning so can reset queue to empty:
         this->resetToEmpty();
 #endif
-    } else if ((direction == hcMemcpyDeviceToHost) && (!dstIsMapped)) {
+    } else if ((copyDir == hcMemcpyDeviceToHost) && (!dstIsMapped)) {
         //printf ("staged-copy- read dep signals\n");
         device->staging_buffer[1]->CopyDeviceToHost(dst, src, sizeBytes, depSignalCnt ? &depSignal : NULL);
 #ifdef STREAM_DEP
         // The copy waits for inputs and then completes before returning so can reset queue to empty:
         this->resetToEmpty();
 #endif
-    } else if (direction == hcMemcpyHostToHost)  { 
+    } else if (copyDir == hcMemcpyHostToHost)  { 
 
 #ifdef STREAM_DEP
         if (depSignalCnt) {
@@ -2506,13 +2510,19 @@ HSAQueue::copySync(const void* src, bool srcIsMapped, bool srcInDeviceMem, void 
     } else {
         // If not special case - these can all be handled by the hsa async copy:
         
+        // 
+        hsa_agent_t srcAgent, dstAgent;
+        setCopyAgents(copyDir, &srcAgent, &dstAgent);
+        
+        // Get a signal and initialize it:
         std::pair<hsa_signal_t, int> ret = Kalmar::ctx.getSignal();
         hsa_signal_t signal = ret.first;
         int signalIndex = ret.second;
 
         hsa_signal_store_relaxed(signal, 1);
 
-        hsa_status_t hsa_status = hsa_amd_memory_async_copy(dst, device->getAgent(), src, device->getAgent(), sizeBytes, depSignalCnt, depSignalCnt ? &depSignal:0x0, signal);
+
+        hsa_status_t hsa_status = hsa_amd_memory_async_copy(dst, dstAgent, src, srcAgent, sizeBytes, depSignalCnt, depSignalCnt ? &depSignal:0x0, signal);
 
         if (hsa_status == HSA_STATUS_SUCCESS) {
             hsa_signal_wait_relaxed(signal, HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, HSA_WAIT_STATE_ACTIVE);
@@ -2527,7 +2537,7 @@ HSAQueue::copySync(const void* src, bool srcIsMapped, bool srcInDeviceMem, void 
 // Performs an async copy.  
 // This routine deals only with "mapped" pointers - see copySync for an explanation.
 void 
-HSAQueue::copyAsyncMappedPtrs(const void* src, void *dst, size_t sizeBytes) 
+HSAQueue::copyAsyncMappedPtrs(const void* src, hsa_agent_t srcAgent, void *dst, hsa_agent_t dstAgent, size_t sizeBytes) 
 {
     int depSignalCnt = 0;
     hsa_signal_t depSignal;
@@ -2565,7 +2575,15 @@ HSAQueue::copyAsync(const void* src, void *dst, size_t sizeBytes)
                  dst, dstIsMapped, dstPtrInfo._isInDeviceMem, 
                  sizeBytes);
     } else {
-        copyAsyncMappedPtrs(src, dst, sizeBytes);
+        // both mapped - pick device or host memory:
+        HSADevice *device = static_cast<HSADevice*> (getDev()); 
+        hsa_agent_t deviceAgent = device->getAgent();
+
+        hsa_agent_t srcAgent, dstAgent;
+        srcAgent = srcPtrInfo._isInDeviceMem ? deviceAgent : g_cpu_agent;
+        dstAgent = dstPtrInfo._isInDeviceMem ? deviceAgent : g_cpu_agent;
+
+        copyAsyncMappedPtrs(src, srcAgent, dst, dstAgent, sizeBytes);
     }
 
 }
