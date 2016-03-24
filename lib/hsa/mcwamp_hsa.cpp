@@ -437,12 +437,12 @@ struct pool_iterator
 
     hsa_amd_memory_pool_t _kernarg_memory_pool;
     hsa_amd_memory_pool_t _finegrained_system_memory_pool;
-    hsa_amd_memory_pool_t _coarsegrained_memory_pool;
     hsa_amd_memory_pool_t _coarsegrained_system_memory_pool;
+    hsa_amd_memory_pool_t _local_memory_pool;
 
     bool        _found_kernarg_memory_pool;
     bool        _found_finegrained_system_memory_pool;
-    bool        _found_coarsegrained_memory_pool;
+    bool        _found_local_memory_pool;
     bool        _found_coarsegrained_system_memory_pool;
 
     pool_iterator() ;
@@ -453,12 +453,12 @@ pool_iterator::pool_iterator()
 {
     _kernarg_memory_pool.handle=(uint64_t)-1;
     _finegrained_system_memory_pool.handle=(uint64_t)-1;
-    _coarsegrained_memory_pool.handle=(uint64_t)-1;
+    _local_memory_pool.handle=(uint64_t)-1;
     _coarsegrained_system_memory_pool.handle=(uint64_t)-1;
 
     _found_kernarg_memory_pool = false;
     _found_finegrained_system_memory_pool = false;
-    _found_coarsegrained_memory_pool = false;
+    _found_local_memory_pool = false;
     _found_coarsegrained_system_memory_pool = false;
 }
 //-----
@@ -960,119 +960,27 @@ public:
         return &workgroup_max_dim[0];
     }
 
-    // Callback for hsa_agent_iterate_regions.
-    // data is of type region_iterator,
-    // we save the regions we care about into this structure.
+    // Callback for hsa_amd_agent_iterate_memory_pools.
+    // data is of type pool_iterator,
+    // we save the pools we care about into this structure.
     static hsa_status_t get_memory_pools(hsa_amd_memory_pool_t region, void* data)
     {
     
         hsa_amd_segment_t segment;
         hsa_amd_memory_pool_get_info(region, HSA_AMD_MEMORY_POOL_INFO_SEGMENT, &segment);
     
-        pool_iterator *ri = (pool_iterator*) (data);
-    
-        hsa_amd_memory_pool_global_flag_t flags;
-        hsa_amd_memory_pool_get_info(region, HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS, &flags);
-
-#if KALMAR_DEBUG
-        size_t size = 0;
-        hsa_amd_memory_pool_get_info(region, HSA_AMD_MEMORY_POOL_INFO_SIZE, &size);
-        size = size/(1024*1024);
-
-        size_t alloc_max_size = 0;
-        hsa_amd_memory_pool_get_info(region, HSA_AMD_MEMORY_POOL_INFO_ALLOC_MAX_SIZE, &alloc_max_size);
-        alloc_max_size = alloc_max_size/(1024*1024);
-#endif
-
         if (segment == HSA_AMD_SEGMENT_GLOBAL) {
-        // For memory pool, it will only report agent's own memory pool. e.g. dGPU won't report CPU's(host's) memory pool.
-        // So, if it is coarsed grain memory, then, it is local memory for dGPU.
-            //bool is_system_memory_region = false;
-            //hsa_region_get_info(region, (hsa_region_info_t)HSA_AMD_REGION_INFO_HOST_ACCESSIBLE, &is_system_memory_region);
+#if KALMAR_DEBUG
+          size_t size = 0;
+          hsa_amd_memory_pool_get_info(region, HSA_AMD_MEMORY_POOL_INFO_SIZE, &size);
+          size = size/(1024*1024);
+          std::cerr << "found memory pool of GPU local memory, size(MB) = " << size << std::endl;
+#endif 
+          pool_iterator *ri = (pool_iterator*) (data);
+          ri->_local_memory_pool = region;
+          ri->_found_local_memory_pool = true;
 
-            // prefer GPU memory over system memory
-            // TODO: Unlikely to find fine grained memory pool on dGPU, neither on APU's gpu agent. Only the last if statement
-            // has meaning, leave for review and change if needed.
-            if (flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT) {
-#if KALMAR_DEBUG
-                std::cerr << "found kernarg memory pool on GPU memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
-#endif 
-                ri->_kernarg_memory_pool = region;
-                ri->_found_kernarg_memory_pool = true;
-            }
-    
-            if (flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED) {
-#if KALMAR_DEBUG
-                std::cerr << "found fine grained memory pool on GPU memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
-#endif 
-                ri->_finegrained_system_memory_pool = region;
-                ri->_found_finegrained_system_memory_pool = true;
-            }
-    
-            if (flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_COARSE_GRAINED) {
-#if KALMAR_DEBUG
-                std::cerr << "found coarse grained memory pool on GPU memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
-#endif 
-                ri->_coarsegrained_memory_pool = region;
-                ri->_found_coarsegrained_memory_pool = true;
-            }
-
-            /*if (!is_system_memory_region) {
-                if (flags & HSA_REGION_GLOBAL_FLAG_KERNARG) {
-#if KALMAR_DEBUG
-                    std::cerr << "found kernarg region on GPU memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
-#endif 
-                    ri->_kernarg_region = region;
-                    ri->_found_kernarg_region = true;
-                }
-    
-                if (flags & HSA_REGION_GLOBAL_FLAG_FINE_GRAINED) {
-#if KALMAR_DEBUG
-                    std::cerr << "found fine grained region on GPU memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
-#endif 
-                    ri->_finegrained_system_region = region;
-                    ri->_found_finegrained_system_region = true;
-                }
-    
-                if (flags & HSA_REGION_GLOBAL_FLAG_COARSE_GRAINED) {
-#if KALMAR_DEBUG
-                    std::cerr << "found coarse grained region on GPU memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
-#endif 
-                    ri->_coarsegrained_region = region;
-                    ri->_found_coarsegrained_region = true;
-                }
-            } else {
-                if ((flags & HSA_REGION_GLOBAL_FLAG_KERNARG) && (!ri->_found_kernarg_region)) {
-#if KALMAR_DEBUG
-                    std::cerr << "found kernarg region on host memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
-#endif 
-                    ri->_kernarg_region = region;
-                    ri->_found_kernarg_region = true;
-                }
-        
-                if ((flags & HSA_REGION_GLOBAL_FLAG_FINE_GRAINED) && (!ri->_found_finegrained_system_region)) {
-#if KALMAR_DEBUG
-                    std::cerr << "found fine grained region on host memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
-#endif 
-                    ri->_finegrained_system_region = region;
-                    ri->_found_finegrained_system_region = true;
-                }
-                if ((flags & HSA_REGION_GLOBAL_FLAG_COARSE_GRAINED) && (!ri->_found_coarsegrained_system_region)) {
-#if KALMAR_DEBUG
-                    std::cerr << "found coarse-grain system region, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
-#endif 
-                    ri->_coarsegrained_system_region = region;
-                    ri->_found_coarsegrained_system_region = true;
-                }
-        
-                if ((flags & HSA_REGION_GLOBAL_FLAG_COARSE_GRAINED) && (!ri->_found_coarsegrained_region)) {
-#if KALMAR_DEBUG
-                    std::cerr << "found coarse grained region on host memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
-#endif 
-                    ri->_coarsegrained_region = region;
-                    ri->_found_coarsegrained_region = true;
-                }
-            } */
+          return HSA_STATUS_INFO_BREAK;
         }
     
         return HSA_STATUS_SUCCESS;
@@ -1096,14 +1004,10 @@ public:
         STATUS_CHECK(status, __LINE__);
         size = size/(1024*1024);
 
-        size_t alloc_max_size = 0;
-        status = hsa_amd_memory_pool_get_info(region, HSA_AMD_MEMORY_POOL_INFO_ALLOC_MAX_SIZE, &alloc_max_size);
-        STATUS_CHECK(status, __LINE__);
-        alloc_max_size = alloc_max_size/(1024*1024);
 #endif
         if ((flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT) && (!ri->_found_kernarg_memory_pool)) {
 #if KALMAR_DEBUG
-            std::cerr << "found kernarg memory pool on host memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
+            std::cerr << "found kernarg memory pool on host memory, size(MB) = " << size << std::endl;
 #endif 
             ri->_kernarg_memory_pool = region;
             ri->_found_kernarg_memory_pool = true;
@@ -1111,7 +1015,7 @@ public:
         
         if ((flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED) && (!ri->_found_finegrained_system_memory_pool)) {
 #if KALMAR_DEBUG
-            std::cerr << "found fine grained memory pool on host memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
+            std::cerr << "found fine grained memory pool on host memory, size(MB) = " << size << std::endl;
 #endif 
             ri->_finegrained_system_memory_pool = region;
             ri->_found_finegrained_system_memory_pool = true;
@@ -1119,7 +1023,7 @@ public:
 
         if ((flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_COARSE_GRAINED) && (!ri->_found_coarsegrained_system_memory_pool)) {
 #if KALMAR_DEBUG
-            std::cerr << "found coarse-grain system memory pool, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
+            std::cerr << "found coarse-grain system memory pool, size(MB) = " << size << std::endl;
 #endif 
             ri->_coarsegrained_system_memory_pool = region;
             ri->_found_coarsegrained_system_memory_pool = true;
@@ -1146,6 +1050,8 @@ public:
         // save the result to data
         size_t* result = (size_t*)data;
         *result = size;
+
+        return HSA_STATUS_INFO_BREAK;
       }
 
       // continue iteration
@@ -1194,7 +1100,7 @@ public:
 #endif
         }
 
-        /// iterate over memory pool of the device and its host
+        /// Iterate over memory pool of the device and its host
         status = hsa_amd_agent_iterate_memory_pools(agent, HSADevice::find_group_memory, &max_tile_static_size);
         STATUS_CHECK(status, __LINE__);
 
@@ -1203,41 +1109,6 @@ public:
 
         status = hsa_amd_agent_iterate_memory_pools(host_, HSADevice::get_host_pools, &ri);
         STATUS_CHECK(status, __LINE__);
-
-        // Check if the device has ability to access the system memory pool directly, if not, modify ri.
-        {
-            hsa_amd_memory_pool_access_t pool_access;
-            hsa_amd_memory_pool_t pool = ri._kernarg_memory_pool;
-            status = hsa_amd_agent_memory_pool_get_info(agent, pool, HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &pool_access);
-            STATUS_CHECK(status, __LINE__);
-
-            if(HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED == pool_access) {
-                // Not possible to access the memory pool by this device, clean ri feild.
-                ri._kernarg_memory_pool.handle = (uint64_t)-1;
-                ri._found_kernarg_memory_pool = false;
-            }
-
-            pool = ri._finegrained_system_memory_pool;
-            status = hsa_amd_agent_memory_pool_get_info(agent, pool, HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &pool_access);
-            STATUS_CHECK(status, __LINE__);
-  
-            if(HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED == pool_access) {
-                // Not possible to access the memory pool by this device, clean ri feild.
-                ri._finegrained_system_memory_pool.handle = (uint64_t)-1;
-                ri._found_finegrained_system_memory_pool = false;
-            }
-
-            pool = ri._coarsegrained_system_memory_pool;
-            status = hsa_amd_agent_memory_pool_get_info(agent, pool, HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &pool_access);
-            STATUS_CHECK(status, __LINE__);
-  
-            if(HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED == pool_access) {
-                // Not possible to access the memory pool by this device, clean ri feild.
-                ri._coarsegrained_system_memory_pool.handle = (uint64_t)-1;
-                ri._found_coarsegrained_system_memory_pool = false;
-            }
-
-        }
 
         /// after iterating memory regions, set if we can use coarse grained regions
         bool result = false;
@@ -1278,6 +1149,15 @@ public:
 #endif
         }
 
+        // Setup AM pool.
+        ri._am_memory_pool = (ri._found_local_memory_pool)
+                                 ? ri._local_memory_pool
+                                 : ri._finegrained_system_memory_pool;
+
+        ri._am_host_memory_pool = (ri._found_coarsegrained_system_memory_pool)
+                                      ? ri._coarsegrained_system_memory_pool
+                                      : ri._finegrained_system_memory_pool;
+        
         /// Query the maximum number of work-items in a workgroup
         status = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_SIZE, &workgroup_max_size);
         STATUS_CHECK(status, __LINE__);
@@ -1385,10 +1265,6 @@ public:
             std::cerr << "create(" << count << "," << key << "): use host memory allocator\n";
 #endif
             data = kalmar_aligned_alloc(0x1000, count);
-            // Memory register api does not make scense for dGPU. hsa_amd_memory_lock will replace 
-            // such functionality, but device needs to use the returned ptr to access the buffer.
-            // TODO: Modify properly
-            hsa_memory_register(data, count);
         }
 
 #if KALMAR_DEBUG
@@ -1410,9 +1286,6 @@ public:
 #if KALMAR_DEBUG
             std::cerr << "release(" << ptr << "," << key << "): use host memory deallocator\n";
 #endif
-            //TODO: Same as memory register api call
-            status = hsa_memory_deregister(ptr, key->count);
-            STATUS_CHECK(status, __LINE__);
             kalmar_aligned_free(ptr);
         }
     }
@@ -1572,27 +1445,10 @@ public:
     }
 
     hsa_amd_memory_pool_t& getHSAAMHostRegion() {
-        if (ri._found_coarsegrained_system_memory_pool) {
-            ri._am_host_memory_pool =  ri._coarsegrained_system_memory_pool;
-        } else if (ri._found_finegrained_system_memory_pool) {
-            ri._am_host_memory_pool =  ri._finegrained_system_memory_pool;
-        } else {
-            ri._am_host_memory_pool.handle = (uint64_t)(-1);
-        }
-
         return ri._am_host_memory_pool;
     }
 
     hsa_amd_memory_pool_t& getHSAAMRegion() {
-        // prefer coarse-grained over fine-grained
-        if (ri._found_coarsegrained_memory_pool) {
-            ri._am_memory_pool = ri._coarsegrained_memory_pool;
-        } else if (ri._found_finegrained_system_memory_pool) {
-            ri._am_memory_pool = ri._finegrained_system_memory_pool;
-        } else {
-            ri._am_memory_pool.handle = (uint64_t)(-1);
-        }
-    
         return ri._am_memory_pool;
     }
 
@@ -1605,7 +1461,7 @@ public:
     }
 
     bool hasHSACoarsegrainedRegion() {
-      return ri. _found_coarsegrained_memory_pool;
+      return ri. _found_local_memory_pool;
     }
 
     void releaseKernargBuffer(void* kernargBuffer, int kernargBufferIndex) {
@@ -2417,7 +2273,6 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
     }
     else {
         aql.kernarg_address = arg_vec.data();
-        hsa_memory_register(arg_vec.data(), arg_vec.size());
     }
 
 
@@ -2504,9 +2359,6 @@ HSADispatch::waitComplete() {
     if (kernargMemory != nullptr) {
       device->releaseKernargBuffer(kernargMemory, kernargMemoryIndex);
       kernargMemory = nullptr;
-    } else {
-      status = hsa_memory_deregister((void*)arg_vec.data(), arg_vec.size());
-      STATUS_CHECK(status, __LINE__);
     }
 
     // unregister this async operation from HSAQueue
@@ -2569,10 +2421,8 @@ HSADispatch::dispose() {
     if (kernargMemory != nullptr) {
       device->releaseKernargBuffer(kernargMemory, kernargMemoryIndex);
       kernargMemory = nullptr;
-    } else {
-      status = hsa_memory_deregister((void*)arg_vec.data(), arg_vec.size());
-      STATUS_CHECK(status, __LINE__);
     }
+
     clearArgs();
     std::vector<uint8_t>().swap(arg_vec);
 
