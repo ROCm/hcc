@@ -188,11 +188,19 @@ auto_voidp am_alloc(size_t sizeBytes, hc::accelerator &acc, unsigned flags)
                     ptr = NULL;
                 } else {
                     if (flags & amHostPinned) {
-                        g_amPointerTracker.insert(ptr, 
-                                hc::AmPointerInfo(ptr/*hostPointer*/,  ptr /*devicePointer*/, sizeBytes, acc, false/*isDevice*/, true /*isAMManaged*/));
-                    } else {
-                        g_amPointerTracker.insert(ptr, 
-                                hc::AmPointerInfo(NULL/*hostPointer*/,  ptr /*devicePointer*/, sizeBytes, acc, true/*isDevice*/, true /*isAMManaged*/));
+                      s1 = hsa_amd_agents_allow_access(1, hsa_agent, NULL, ptr);
+                      if (s1 != HSA_STATUS_SUCCESS) {
+                        hsa_amd_memory_pool_free(ptr);
+                        ptr = NULL;
+                      }
+                      else {
+                        g_amPointerTracker.insert(ptr,
+                          hc::AmPointerInfo(ptr/*hostPointer*/, ptr /*devicePointer*/, sizeBytes, acc, false/*isDevice*/, true /*isAMManaged*/));
+                      }
+                    }
+                    else {
+                      g_amPointerTracker.insert(ptr,
+                        hc::AmPointerInfo(NULL/*hostPointer*/, ptr /*devicePointer*/, sizeBytes, acc, true/*isDevice*/, true /*isAMManaged*/));
                     }
                 }
             }
