@@ -979,9 +979,6 @@ public:
         hsa_amd_memory_pool_get_info(region, HSA_AMD_MEMORY_POOL_INFO_SIZE, &size);
         size = size/(1024*1024);
 
-        size_t alloc_max_size = 0;
-        hsa_amd_memory_pool_get_info(region, HSA_AMD_MEMORY_POOL_INFO_ALLOC_MAX_SIZE, &alloc_max_size);
-        alloc_max_size = alloc_max_size/(1024*1024);
 #endif
 
         if (segment == HSA_AMD_SEGMENT_GLOBAL) {
@@ -995,7 +992,7 @@ public:
             // has meaning, leave for review and change if needed.
             if (flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT) {
 #if KALMAR_DEBUG
-                std::cerr << "found kernarg memory pool on GPU memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
+                std::cerr << "found kernarg memory pool on GPU memory, size(MB) = " << size << std::endl;
 #endif 
                 ri->_kernarg_memory_pool = region;
                 ri->_found_kernarg_memory_pool = true;
@@ -1003,7 +1000,7 @@ public:
     
             if (flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED) {
 #if KALMAR_DEBUG
-                std::cerr << "found fine grained memory pool on GPU memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
+                std::cerr << "found fine grained memory pool on GPU memory, size(MB) = " << size << std::endl;
 #endif 
                 ri->_finegrained_system_memory_pool = region;
                 ri->_found_finegrained_system_memory_pool = true;
@@ -1011,68 +1008,11 @@ public:
     
             if (flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_COARSE_GRAINED) {
 #if KALMAR_DEBUG
-                std::cerr << "found coarse grained memory pool on GPU memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
+                std::cerr << "found coarse grained memory pool on GPU memory, size(MB) = " << size << std::endl;
 #endif 
                 ri->_coarsegrained_memory_pool = region;
                 ri->_found_coarsegrained_memory_pool = true;
             }
-
-            /*if (!is_system_memory_region) {
-                if (flags & HSA_REGION_GLOBAL_FLAG_KERNARG) {
-#if KALMAR_DEBUG
-                    std::cerr << "found kernarg region on GPU memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
-#endif 
-                    ri->_kernarg_region = region;
-                    ri->_found_kernarg_region = true;
-                }
-    
-                if (flags & HSA_REGION_GLOBAL_FLAG_FINE_GRAINED) {
-#if KALMAR_DEBUG
-                    std::cerr << "found fine grained region on GPU memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
-#endif 
-                    ri->_finegrained_system_region = region;
-                    ri->_found_finegrained_system_region = true;
-                }
-    
-                if (flags & HSA_REGION_GLOBAL_FLAG_COARSE_GRAINED) {
-#if KALMAR_DEBUG
-                    std::cerr << "found coarse grained region on GPU memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
-#endif 
-                    ri->_coarsegrained_region = region;
-                    ri->_found_coarsegrained_region = true;
-                }
-            } else {
-                if ((flags & HSA_REGION_GLOBAL_FLAG_KERNARG) && (!ri->_found_kernarg_region)) {
-#if KALMAR_DEBUG
-                    std::cerr << "found kernarg region on host memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
-#endif 
-                    ri->_kernarg_region = region;
-                    ri->_found_kernarg_region = true;
-                }
-        
-                if ((flags & HSA_REGION_GLOBAL_FLAG_FINE_GRAINED) && (!ri->_found_finegrained_system_region)) {
-#if KALMAR_DEBUG
-                    std::cerr << "found fine grained region on host memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
-#endif 
-                    ri->_finegrained_system_region = region;
-                    ri->_found_finegrained_system_region = true;
-                }
-                if ((flags & HSA_REGION_GLOBAL_FLAG_COARSE_GRAINED) && (!ri->_found_coarsegrained_system_region)) {
-#if KALMAR_DEBUG
-                    std::cerr << "found coarse-grain system region, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
-#endif 
-                    ri->_coarsegrained_system_region = region;
-                    ri->_found_coarsegrained_system_region = true;
-                }
-        
-                if ((flags & HSA_REGION_GLOBAL_FLAG_COARSE_GRAINED) && (!ri->_found_coarsegrained_region)) {
-#if KALMAR_DEBUG
-                    std::cerr << "found coarse grained region on host memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
-#endif 
-                    ri->_coarsegrained_region = region;
-                    ri->_found_coarsegrained_region = true;
-                }
-            } */
         }
     
         return HSA_STATUS_SUCCESS;
@@ -1096,14 +1036,10 @@ public:
         STATUS_CHECK(status, __LINE__);
         size = size/(1024*1024);
 
-        size_t alloc_max_size = 0;
-        status = hsa_amd_memory_pool_get_info(region, HSA_AMD_MEMORY_POOL_INFO_ALLOC_MAX_SIZE, &alloc_max_size);
-        STATUS_CHECK(status, __LINE__);
-        alloc_max_size = alloc_max_size/(1024*1024);
 #endif
         if ((flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT) && (!ri->_found_kernarg_memory_pool)) {
 #if KALMAR_DEBUG
-            std::cerr << "found kernarg memory pool on host memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
+            std::cerr << "found kernarg memory pool on host memory, size(MB) = " << size << std::endl;
 #endif 
             ri->_kernarg_memory_pool = region;
             ri->_found_kernarg_memory_pool = true;
@@ -1111,7 +1047,7 @@ public:
         
         if ((flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED) && (!ri->_found_finegrained_system_memory_pool)) {
 #if KALMAR_DEBUG
-            std::cerr << "found fine grained memory pool on host memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
+            std::cerr << "found fine grained memory pool on host memory, size(MB) = " << size << std::endl;
 #endif 
             ri->_finegrained_system_memory_pool = region;
             ri->_found_finegrained_system_memory_pool = true;
@@ -1119,7 +1055,7 @@ public:
 
         if ((flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_COARSE_GRAINED) && (!ri->_found_coarsegrained_system_memory_pool)) {
 #if KALMAR_DEBUG
-            std::cerr << "found coarse-grain system memory pool, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
+            std::cerr << "found coarse-grain system memory pool, size(MB) = " << size << std::endl;
 #endif 
             ri->_coarsegrained_system_memory_pool = region;
             ri->_found_coarsegrained_system_memory_pool = true;
