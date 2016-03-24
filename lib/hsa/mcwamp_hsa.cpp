@@ -1201,7 +1201,7 @@ public:
         status = hsa_amd_agent_iterate_memory_pools(agent, &HSADevice::get_memory_pools, &ri);
         STATUS_CHECK(status, __LINE__);
 
-        status = hsa_amd_agent_iterate_memory_pools(agent, HSADevice::get_host_pools, &ri);
+        status = hsa_amd_agent_iterate_memory_pools(host_, HSADevice::get_host_pools, &ri);
         STATUS_CHECK(status, __LINE__);
 
         // Check if the device has ability to access the system memory pool directly, if not, modify ri.
