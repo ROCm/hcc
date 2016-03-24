@@ -182,7 +182,7 @@ auto_voidp am_alloc(size_t sizeBytes, hc::accelerator &acc, unsigned flags)
 
             if (alloc_region->handle != -1) {
 
-                hsa_status_t s1 = hsa_amd_memory_pool_allocate(*alloc_region, sizeBytes, &ptr);
+                hsa_status_t s1 = hsa_amd_memory_pool_allocate(*alloc_region, sizeBytes, 0, &ptr);
 
                 if (s1 != HSA_STATUS_SUCCESS) {
                     ptr = NULL;

@@ -432,13 +432,13 @@ private:
 //Structure used to extract information from memory pool
 struct pool_iterator
 {
-    hsa_amd_memory_pool_t _am_region;
-    hsa_amd_memory_pool_t _am_host_region;
+    hsa_amd_memory_pool_t _am_memory_pool;
+    hsa_amd_memory_pool_t _am_host_memory_pool;
 
-    hsa_amd_memory_pool_t _kernarg_region;
-    hsa_amd_memory_pool_t _finegrained_system_region;
-    hsa_amd_memory_pool_t _coarsegrained_region;
-    hsa_amd_memory_pool_t _coarsegrained_system_region;
+    hsa_amd_memory_pool_t _kernarg_memory_pool;
+    hsa_amd_memory_pool_t _finegrained_system_memory_pool;
+    hsa_amd_memory_pool_t _coarsegrained_memory_pool;
+    hsa_amd_memory_pool_t _coarsegrained_system_memory_pool;
 
     bool        _found_kernarg_memory_pool;
     bool        _found_finegrained_system_memory_pool;
@@ -796,7 +796,7 @@ public:
             hsa_status_t status = HSA_STATUS_SUCCESS;
             // allocate a host buffer
             void* data = nullptr;
-            hsa_amd_memory_pool_t* am_host_region = static_cast<hsa_amd_memory_pool*>(getHSAAMHostRegion);
+            hsa_amd_memory_pool_t* am_host_region = static_cast<hsa_amd_memory_pool_t*>(getHSAAMHostRegion());
             status = hsa_amd_memory_pool_allocate(*am_host_region, count, 0, &data);
             STATUS_CHECK(status, __LINE__);
             if (data != nullptr) {
@@ -984,7 +984,7 @@ public:
         alloc_max_size = alloc_max_size/(1024*1024);
 #endif
 
-        if (segment == HSA_AMD_MEMORY_POOL_SEGMENT_GLOBAL) {
+        if (segment == HSA_AMD_SEGMENT_GLOBAL) {
         // For memory pool, it will only report agent's own memory pool. e.g. dGPU won't report CPU's(host's) memory pool.
         // So, if it is coarsed grain memory, then, it is local memory for dGPU.
             //bool is_system_memory_region = false;
@@ -993,7 +993,7 @@ public:
             // prefer GPU memory over system memory
             // TODO: Unlikely to find fine grained memory pool on dGPU, neither on APU's gpu agent. Only the last if statement
             // has meaning, leave for review and change if needed.
-            if (flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG) {
+            if (flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT) {
 #if KALMAR_DEBUG
                 std::cerr << "found kernarg memory pool on GPU memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
 #endif 
@@ -1078,7 +1078,7 @@ public:
         return HSA_STATUS_SUCCESS;
     }
 
-    static hsa_status_t get_host_pools(hsa_mad_memory_pool_t region, void* data) {
+    static hsa_status_t get_host_pools(hsa_amd_memory_pool_t region, void* data) {
         hsa_status_t status;
         hsa_amd_segment_t segment;
         status = hsa_amd_memory_pool_get_info(region, HSA_AMD_MEMORY_POOL_INFO_SEGMENT, &segment);
@@ -1101,7 +1101,7 @@ public:
         STATUS_CHECK(status, __LINE__);
         alloc_max_size = alloc_max_size/(1024*1024);
 #endif
-        if ((flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG) && (!ri->_found_kernarg_memory_pool)) {
+        if ((flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT) && (!ri->_found_kernarg_memory_pool)) {
 #if KALMAR_DEBUG
             std::cerr << "found kernarg memory pool on host memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
 #endif 
@@ -1124,7 +1124,7 @@ public:
             ri->_coarsegrained_system_memory_pool = region;
             ri->_found_coarsegrained_system_memory_pool = true;
         }
-        
+        return HSA_STATUS_SUCCESS;
     } 
 
     static hsa_status_t find_group_memory(hsa_amd_memory_pool_t region, void* data) {
@@ -1195,25 +1195,25 @@ public:
         }
 
         /// iterate over memory pool of the device and its host
-        status = hsa_agent_iterate_memory_pools(agent, HSADevice::find_group_memory, &max_tile_static_size);
+        status = hsa_amd_agent_iterate_memory_pools(agent, HSADevice::find_group_memory, &max_tile_static_size);
         STATUS_CHECK(status, __LINE__);
 
-        status = hsa_agent_iterate_memory_pools(agent, &HSADevice::get_memory_pools, &ri);
+        status = hsa_amd_agent_iterate_memory_pools(agent, &HSADevice::get_memory_pools, &ri);
         STATUS_CHECK(status, __LINE__);
 
-        status = hsa_agent_iterate_memory_pools(agent, HSADevice::get_host_pools, &ri);
+        status = hsa_amd_agent_iterate_memory_pools(agent, HSADevice::get_host_pools, &ri);
         STATUS_CHECK(status, __LINE__);
 
         // Check if the device has ability to access the system memory pool directly, if not, modify ri.
         {
             hsa_amd_memory_pool_access_t pool_access;
-            hsa_amd_memory_pool_t pool = ri._kernarg_region;
+            hsa_amd_memory_pool_t pool = ri._kernarg_memory_pool;
             status = hsa_amd_agent_memory_pool_get_info(agent, pool, HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &pool_access);
             STATUS_CHECK(status, __LINE__);
 
             if(HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED == pool_access) {
                 // Not possible to access the memory pool by this device, clean ri feild.
-                ri._kernarg_memory_pool = (uint64_t)-1;
+                ri._kernarg_memory_pool.handle = (uint64_t)-1;
                 ri._found_kernarg_memory_pool = false;
             }
 
@@ -1223,7 +1223,7 @@ public:
   
             if(HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED == pool_access) {
                 // Not possible to access the memory pool by this device, clean ri feild.
-                ri._finegrained_system_memory_pool = (uint64_t)-1;
+                ri._finegrained_system_memory_pool.handle = (uint64_t)-1;
                 ri._found_finegrained_system_memory_pool = false;
             }
 
@@ -1233,7 +1233,7 @@ public:
   
             if(HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED == pool_access) {
                 // Not possible to access the memory pool by this device, clean ri feild.
-                ri._coarsegrained_system_memory_pool = (uint64_t)-1;
+                ri._coarsegrained_system_memory_pool.handle = (uint64_t)-1;
                 ri._found_coarsegrained_system_memory_pool = false;
             }
 
@@ -1260,12 +1260,12 @@ public:
         /// - compile-time macro KERNARG_POOL_SIZE is larger than 0
         if (hasHSAKernargRegion() && USE_KERNARG_REGION) {
 #if KERNARG_POOL_SIZE > 0
-            hsa_region_t kernarg_region = getHSAKernargRegion();
+            hsa_amd_memory_pool_t kernarg_region = getHSAKernargRegion();
 
             // pre-allocate kernarg buffers
             void* kernargMemory = nullptr;
             for (int i = 0; i < KERNARG_POOL_SIZE; ++i) {
-                status = hsa_amd_memory_pool_allocate(kernarg_region, KERNARG_BUFFER_SIZE,  &kernargMemory);
+                status = hsa_amd_memory_pool_allocate(kernarg_region, KERNARG_BUFFER_SIZE, 0, &kernargMemory);
                 STATUS_CHECK(status, __LINE__);
 
                 // Allow device to access to it once it is allocated. Normally, this memory pool is on system memory.
@@ -1378,7 +1378,7 @@ public:
             hsa_status_t status = HSA_STATUS_SUCCESS;
             auto am_region = getHSAAMRegion();
     
-            status = hsa_amd_memory_pool_allocate(am_region, count, &data);
+            status = hsa_amd_memory_pool_allocate(am_region, count, 0, &data);
             STATUS_CHECK(status, __LINE__);
         } else {
 #if KALMAR_DEBUG
@@ -1688,7 +1688,7 @@ public:
                         // pre-allocate kernarg buffers
                         void* kernargMemory = nullptr;
                         for (int i = 0; i < KERNARG_POOL_SIZE; ++i) {
-                            status = hsa_amd_memory_pool_allocate(kernarg_region, KERNARG_BUFFER_SIZE,  &kernargMemory);
+                            status = hsa_amd_memory_pool_allocate(kernarg_region, KERNARG_BUFFER_SIZE, 0, &kernargMemory);
                             STATUS_CHECK(status, __LINE__);
 
                             status = hsa_amd_agents_allow_access(1, &agent, NULL, kernargMemory);
@@ -1730,7 +1730,7 @@ public:
                 hsa_status_t status = HSA_STATUS_SUCCESS;
                 hsa_amd_memory_pool_t kernarg_region = getHSAKernargRegion();
     
-                status = hsa_amd_memory_pool_allocate(kernarg_region, size,  &ret);
+                status = hsa_amd_memory_pool_allocate(kernarg_region, size, 0, &ret);
                 STATUS_CHECK(status, __LINE__);
 
                 status = hsa_amd_agents_allow_access(1, &agent, NULL, ret);
@@ -1815,7 +1815,7 @@ public:
     void memcpySymbol(const char* symbolName, void* hostptr, size_t count, size_t offset = 0, enum hcMemcpyKind kind = hcMemcpyHostToDevice) override {
         hsa_status_t status;
     
-        stauts = hsa_amd_agents_allow_access(1, &agent, NULL, hostptr);
+        status = hsa_amd_agents_allow_access(1, &agent, NULL, hostptr);
         STATUS_CHECK(status, __LINE__);
         if (executables.size() != 0) {
             unsigned long* symbol_ptr = (unsigned long*)getSymbolAddress(symbolName);
@@ -2394,7 +2394,7 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
     //printf("arg_vec size: %d in bytes: %d\n", arg_vec.size(), arg_vec.size());
 
     if (device->hasHSAKernargRegion() && USE_KERNARG_REGION) {
-        hsa_region_t kernarg_region = device->getHSAKernargRegion();
+        hsa_amd_memory_pool_t kernarg_region = device->getHSAKernargRegion();
 
         if (arg_vec.size() > 0) {
             std::pair<void*, int> ret = device->getKernargBuffer(arg_vec.size());
