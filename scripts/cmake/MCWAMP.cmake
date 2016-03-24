@@ -5,19 +5,23 @@ set(GTEST_SRC_DIR "${PROJECT_SOURCE_DIR}/utils")
 set(GTEST_INC_DIR "${PROJECT_SOURCE_DIR}/utils")
 
 # MCWAMP
-seT(MCWAMP_INC_DIR "${PROJECT_SOURCE_DIR}/include")
+set(MCWAMP_INC_DIR "${PROJECT_SOURCE_DIR}/include")
 
 # CXXAMPFLAGS
 set(CXXAMP_FLAGS "-I${GTEST_INC_DIR} -I${LIBCXX_INC_DIR} -I${MCWAMP_INC_DIR} -stdlib=libc++ -std=c++amp -DGTEST_HAS_TR1_TUPLE=0 -fPIC")
 
-# STATIC ONLY FOR NOW.
+# Additional compile-time options for HCC runtime could be set via:
+# - HCC_RUNTIME_CFLAGS
+#
+# For example: cmake -DHCC_RUNTIME_CFLAGS=-g would configure HCC runtime be built
+# with debug information while other parts are not.
 
 ####################
 # C++AMP runtime interface (mcwamp) 
 ####################
 macro(add_mcwamp_library name )
   CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXXAMP_FLAGS}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXXAMP_FLAGS} ${HCC_RUNTIME_CFLAGS}")
   add_library( ${name} ${ARGN} )
   # LLVM and Clang shall be compiled beforehand
   add_dependencies(${name} llvm-link opt clang)
@@ -28,7 +32,7 @@ endmacro(add_mcwamp_library name )
 ####################
 macro(add_mcwamp_library_cpu name )
   CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXXAMP_FLAGS}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXXAMP_FLAGS} ${HCC_RUNTIME_CFLAGS}")
   add_library( ${name} SHARED ${ARGN} )
   # LLVM and Clang shall be compiled beforehand
   add_dependencies(${name} llvm-link opt clang)
@@ -39,7 +43,7 @@ endmacro(add_mcwamp_library_cpu name )
 ####################
 macro(add_mcwamp_library_opencl name )
   CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXXAMP_FLAGS}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXXAMP_FLAGS} ${HCC_RUNTIME_CFLAGS}")
   # add OpenCL headers
   include_directories("${OPENCL_HEADER}/..")
   add_library( ${name} SHARED ${ARGN} )
@@ -54,7 +58,7 @@ endmacro(add_mcwamp_library_opencl name )
 ####################
 macro(add_mcwamp_library_hsa name )
   CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXXAMP_FLAGS}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXXAMP_FLAGS} ${HCC_RUNTIME_CFLAGS}")
   # add HSA headers
   include_directories(${HSA_HEADER})
   add_library( ${name} SHARED ${ARGN} )
