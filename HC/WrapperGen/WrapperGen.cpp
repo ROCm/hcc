@@ -475,12 +475,12 @@ struct StringFinder
           out << "}\n";
 
           out << "void operator()(tiled_index<3>& i) __attribute((hc))\n{\n";
-          out << "_lp.groupId.x = i.tile[0];\n";
+          out << "_lp.groupId.x = i.tile[2];\n";
           out << "_lp.groupId.y = i.tile[1];\n";
-          out << "_lp.groupId.z = i.tile[2];\n";
-          out << "_lp.threadId.x = i.local[0];\n";
+          out << "_lp.groupId.z = i.tile[0];\n";
+          out << "_lp.threadId.x = i.local[2];\n";
           out << "_lp.threadId.y = i.local[1];\n";
-          out << "_lp.threadId.z = i.local[2];\n";
+          out << "_lp.threadId.z = i.local[0];\n";
           out << func->getFunctionName() << "(";
           func->printArgsAsArguments(out);
           out << ");\n}\n";
@@ -493,7 +493,7 @@ struct StringFinder
           out << "void " << func->getWrapperName() << "(";
           func->printArgsAsParameters(out);
           out << ")\n{\n";
-          out << "completion_future cf = parallel_for_each(*(_lp.av),extent<3>(_lp.gridDim.x*_lp.groupDim.x,_lp.gridDim.y*_lp.groupDim.y,_lp.gridDim.z*_lp.groupDim.z).tile(_lp.groupDim.x, _lp.groupDim.y, _lp.groupDim.z), \n"
+          out << "completion_future cf = parallel_for_each(*(_lp.av),extent<3>(_lp.gridDim.z*_lp.groupDim.z,_lp.gridDim.y*_lp.groupDim.y,_lp.gridDim.x*_lp.groupDim.x).tile(_lp.groupDim.z, _lp.groupDim.y, _lp.groupDim.x), \n"
               << func->getFunctorName()
               << "(";
           func->printArgsAsArguments(out);
