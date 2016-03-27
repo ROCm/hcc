@@ -119,9 +119,8 @@ _find_object() {
 
 ARGS="$@"
 
-
+# flag to switch to the new arg parsing algorithm
 USE_NEW_LINK=1
-
 
 NEW_LINK_KERNEL_ARGS=""
 NEW_LINK_HOST_ARGS=""
@@ -132,6 +131,15 @@ TEMP_AR_DIRS=()
 
 if [ $USE_NEW_LINK == 1 ]; then
 
+# detect the verbose flags before doing anything
+if [[ "$ARGS" =~ --verbose ]]; then
+  VERBOSE=1
+fi
+#very verbose
+#VERBOSE=2
+
+
+
 # gather a list of library search paths
 LIB_SEARCH_PATHS=()
 for ARG in $ARGS
@@ -139,7 +147,7 @@ do
   # matches -L<path>
   if [[ "$ARG" =~ ^-L[^[:space:]]+$ ]]; then
 
-    if [ $VERBOSE == 1 ]; then
+    if [ $VERBOSE == 2 ]; then
       echo "adding library search path: ${ARG:2}"
     fi
 
@@ -161,11 +169,6 @@ do
   ####################################
   #  parse the simple switches first...
   ####################################
-  
-  if [ $ARG == "--verbose" ]; then
-    VERBOSE=1
-    continue
-  fi
 
   if [ $ARG == "--disable-opencl" ]; then
     LOWER_OPENCL=0
@@ -193,7 +196,7 @@ do
  
   elif [[ "$ARG" =~ [^[:space:]]+\.o$ ]]; then
     # detected a .o file
-    if [ $VERBOSE == 1 ]; then
+    if [ $VERBOSE == 2 ]; then
       echo "detect object file to process further: $ARG"
     fi
 
@@ -210,7 +213,7 @@ do
       # expand the option into a library name
       STATIC_LIB_NAME="lib${ARG:2}.a"
 
-      if [ $VERBOSE == 1 ]; then
+      if [ $VERBOSE == 2 ]; then
         echo "looking for static library $STATIC_LIB_NAME"
       fi
 
@@ -219,7 +222,7 @@ do
       do
         FULL_LIB_PATH=$LIB_PATH"/"$STATIC_LIB_NAME
         if [ -f $FULL_LIB_PATH ]; then
-          if [ $VERBOSE == 1 ]; then
+          if [ $VERBOSE == 2 ]; then
             echo "$FULL_LIB_PATH detected"
           fi
           DETECTED_STATIC_LIBRARY=$FULL_LIB_PATH;
@@ -238,7 +241,7 @@ do
     if [[ $DETECTED_STATIC_LIBRARY != "" ]]; then
       
       # we found a static library library
-      if [ $VERBOSE == 1 ]; then
+      if [ $VERBOSE == 2 ]; then
         echo "processing static library $DETECTED_STATIC_LIBRARY"
       fi
 
@@ -248,7 +251,7 @@ do
 
         # .kernel section detected, extract the objects from the archieve
 
-        if [ $VERBOSE == 1 ]; then
+        if [ $VERBOSE == 2 ]; then
           echo "kernel detected in $DETECTED_STATIC_LIBRARY"
         fi
 
@@ -257,7 +260,7 @@ do
         FILE=`basename $DETECTED_STATIC_LIBRARY`
         AR_TEMP_DIR=$TEMP_DIR"/"$FILE
 
-        if [ $VERBOSE == 1 ]; then
+        if [ $VERBOSE == 2 ]; then
           echo "creating temp dir: $AR_TEMP_DIR"
         fi
  
@@ -286,7 +289,7 @@ do
   # no objects to further process, pass the original args down to the host linker
   if [ ${#OBJS_TO_PROCESS[@]} == 0 ]; then
     # no objects to further process, pass the original args down to the host linker
-    if [ $VERBOSE == 1 ]; then
+    if [ $VERBOSE == 2 ]; then
       echo "passing down link args: $ARG"
     fi
     NEW_LINK_OTHER_ARGS=$NEW_LINK_OTHER_ARGS" "$ARG
@@ -296,7 +299,7 @@ do
   # processs the objects we put aside
   for OBJ in "${OBJS_TO_PROCESS[@]}"
   do
-    if [ $VERBOSE == 1 ]; then
+    if [ $VERBOSE == 2 ]; then
       echo "processing $OBJ"
     fi
 
