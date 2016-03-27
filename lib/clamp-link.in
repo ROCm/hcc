@@ -142,7 +142,13 @@ do
     if [ $VERBOSE == 1 ]; then
       echo "adding library search path: ${ARG:2}"
     fi
-    LIB_SEARCH_PATHS+=( ${ARG:2} )
+
+    if [[ "$ARG" =~ ^-L\/[^[:space:]]+$ ]]; then
+      # this is an absolute path
+      LIB_SEARCH_PATHS+=( ${ARG:2} )
+    else
+      LIB_SEARCH_PATHS+=( $PWD"/"${ARG:2} )
+    fi
   fi
 done
 
