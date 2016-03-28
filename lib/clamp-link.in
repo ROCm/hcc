@@ -237,7 +237,7 @@ do
     fi  # if [[ "$ARG" =~ ^-l[^[:space:]]+$ ]]; then
 
     
-    KERNEL_DETECTED="1"  # 1 means NO .kernel detected in a static library!
+    KERNEL_UNDETECTED="1" 
     if [[ $DETECTED_STATIC_LIBRARY != "" ]]; then
       
       # we found a static library library
@@ -246,8 +246,8 @@ do
       fi
 
       # detect whether the objects in the static library contain a .kernel section
-      KERNEL_DETECTED=`objdump -t $DETECTED_STATIC_LIBRARY | grep -q "\.kernel"; echo $?`
-      if [[ $KERNEL_DETECTED == "0" ]]; then
+      KERNEL_UNDETECTED=`objdump -t $DETECTED_STATIC_LIBRARY | grep -q "\.kernel"; echo $?`
+      if [[ $KERNEL_UNDETECTED == "0" ]]; then
 
         # .kernel section detected, extract the objects from the archieve
 
@@ -274,7 +274,7 @@ do
         # store all the extract objects to process further
         OBJS_TO_PROCESS=($(ls $AR_TEMP_DIR/*.o))
 
-      fi  # if [[ $KERNEL_DETECTED == "0" ]]; then
+      fi  # if [[ $KERNEL_UNDETECTED == "0" ]]; then
     fi  # if [[ $DETECTED_STATIC_LIBRARY != "" ]]; then
   elif [ -f $ARG ]; then
     # an object file but doesn't have an .o extension??
@@ -304,8 +304,8 @@ do
     fi
 
     # detect whether the objects in the static library contain a .kernel section
-    KERNEL_DETECTED=`objdump -t $OBJ | grep -q "\.kernel"; echo $?`
-    if [[ $KERNEL_DETECTED == "0" ]]; then
+    KERNEL_UNDETECTED=`objdump -t $OBJ | grep -q "\.kernel"; echo $?`
+    if [[ $KERNEL_UNDETECTED == "0" ]]; then
 
       FILE=`basename $OBJ` # remove path
       FILENAME=${FILE%.*}
