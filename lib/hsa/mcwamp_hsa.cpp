@@ -720,16 +720,12 @@ public:
                 std::cerr << "read(" << device << "," << dst << "," << count << "," << offset << "): use HSA memory copy\n";
 #endif
                 hsa_status_t status = HSA_STATUS_SUCCESS;
-                // Make sure host memory is accessible to gpu
-                // FIXME: host memory is allocated through OS allocator, if not, correct it.
+                // Make sure host memory is accessible to gpu, and Jack confirm that, both device and dst allocated using 
+                // hsa allocator.
                 hsa_agent_t* agent = static_cast<hsa_agent_t*>(getHSAAgent()); 
-                void* va = nullptr;
-                status = hsa_amd_memory_lock(dst, count, agent, 1, &va);
+                status = hsa_amd_agents_allow_access(1, agent, NULL, dst);
                 STATUS_CHECK(status, __LINE__);
                 status = hsa_memory_copy(dst, (char*)device + offset, count);
-                STATUS_CHECK(status, __LINE__);
-                // Unlock the host memory
-                status = hsa_amd_memory_unlock(dst);
                 STATUS_CHECK(status, __LINE__);
             } else {
 #if KALMAR_DEBUG
@@ -751,15 +747,10 @@ public:
 #endif
                 hsa_status_t status = HSA_STATUS_SUCCESS;
                 // Make sure host memory is accessible to gpu
-                // FIXME: host memory is allocated through OS allocator, if not, correct it.
                 hsa_agent_t* agent = static_cast<hsa_agent_t*>(getHSAAgent()); 
-                void* va = nullptr;
-                status = hsa_amd_memory_lock(src, count, agent, 1, &va);
+                status = hsa_amd_agents_allow_access(1, agent, NULL, src);
                 STATUS_CHECK(status, __LINE__);
                 status = hsa_memory_copy((char*)device + offset, src, count);
-                STATUS_CHECK(status, __LINE__);
-                // Unlock the host memory
-                status = hsa_amd_memory_unlock(src);
                 STATUS_CHECK(status, __LINE__);
             } else {
 #if KALMAR_DEBUG
