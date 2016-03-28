@@ -127,6 +127,7 @@ NEW_LINK_HOST_ARGS=""
 NEW_LINK_OTHER_ARGS=""
 NEW_LINK_CPU_ARG=""
 
+STATIC_LIB_LIST=()
 TEMP_AR_DIRS=()
 
 if [ $USE_NEW_LINK == 1 ]; then
@@ -152,10 +153,8 @@ do
     fi
 
     if [[ "$ARG" =~ ^-L\/[^[:space:]]+$ ]]; then
-      # this is an absolute path
-      LIB_SEARCH_PATHS+=( ${ARG:2} )
-    else
-      LIB_SEARCH_PATHS+=( $PWD"/"${ARG:2} )
+      REAL_PATH=$(realpath ${ARG:2})
+      LIB_SEARCH_PATHS+=( $REAL_PATH )
     fi
   fi
 done
@@ -236,6 +235,22 @@ do
       fi
     fi  # if [[ "$ARG" =~ ^-l[^[:space:]]+$ ]]; then
 
+
+    # check for duplicated static library options
+    if [[ $DETECTED_STATIC_LIBRARY != "" ]]; then
+      for LIB in "${STATIC_LIB_LIST[@]}"
+      do
+        if [[ $LIB == $DETECTED_STATIC_LIBRARY ]]; then
+          # this library has already been looked at, skip it
+          DETECTED_STATIC_LIBRARY=""
+          break;
+        fi
+      done
+      if [[ $DETECTED_STATIC_LIBRARY != "" ]]; then
+        STATIC_LIB_LIST+=( $DETECTED_STATIC_LIBRARY )
+      fi
+    fi
+ 
     
     KERNEL_UNDETECTED="1" 
     if [[ $DETECTED_STATIC_LIBRARY != "" ]]; then
