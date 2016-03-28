@@ -352,14 +352,6 @@ do
     ISCRT=${ARG#/usr}    # exception for objects under /usr
     ISLIB=${ARG#/lib}    # exception for objects under /lib
 
-    echo "file: $FILE"
-    echo "filename: $FILENAME"
-    echo "cpufile:  $CPUFILE"
-    echo "iscrt: $ISCRT"
-    echo "islib: $ISLIB"
-    echo ""
-
-
     if [ $FILENAME != $FILE ] && [ $ISCRT == $ARG ] && [ $ISLIB == $ARG ]; then
       KERNEL_FILE=$TEMP_DIR/$FILENAME.kernel.bc
       HOST_FILE=$TEMP_DIR/$FILENAME.host.o
