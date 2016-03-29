@@ -147,15 +147,11 @@ for ARG in $ARGS
 do
   # matches -L<path>
   if [[ "$ARG" =~ ^-L[^[:space:]]+$ ]]; then
-
+    REAL_PATH=$(readlink -f ${ARG:2})
     if [ $VERBOSE == 2 ]; then
-      echo "adding library search path: ${ARG:2}"
+      echo "add library path: ${ARG:2}, canonical path: $REAL_PATH"
     fi
-
-    if [[ "$ARG" =~ ^-L\/[^[:space:]]+$ ]]; then
-      REAL_PATH=$(readlink -f ${ARG:2})
-      LIB_SEARCH_PATHS+=( $REAL_PATH )
-    fi
+    LIB_SEARCH_PATHS+=( $REAL_PATH )
   fi
 done
 
@@ -220,6 +216,10 @@ do
       for LIB_PATH in "${LIB_SEARCH_PATHS[@]}"
       do
         FULL_LIB_PATH=$LIB_PATH"/"$STATIC_LIB_NAME
+        FULL_LIB_PATH=$(readlink -f $FULL_LIB_PATH)
+        if [ $VERBOSE == 2 ]; then
+          echo "trying to detect $FULL_LIB_PATH"
+        fi
         if [ -f $FULL_LIB_PATH ]; then
           if [ $VERBOSE == 2 ]; then
             echo "$FULL_LIB_PATH detected"
