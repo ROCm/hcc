@@ -48,7 +48,8 @@ StagingBuffer::~StagingBuffer()
 }
 
 
-
+// FIXME: this function still needs more works
+#if 0
 //---
 //Copies sizeBytes from src to dst, using either a copy to a staging buffer or a staged pin-in-place strategy
 //IN: dst - dest pointer - must be accessible from host CPU.
@@ -114,6 +115,7 @@ void StagingBuffer::CopyHostToDevicePinInPlace(void* dst, const void* src, size_
         hsa_signal_wait_acquire(_completion_signal[i], HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, HSA_WAIT_STATE_ACTIVE);
     }
 }
+#endif
 
 
 
