@@ -1,6 +1,11 @@
+// HC AM API
 #include <hc_am.hpp>
 
-#include "hsa_ext_amd.h"
+// AMD-specific HSA API
+#include <hsa_ext_amd.h>
+
+// mutex and lock_guard
+#include <mutex>
 
 
 #ifdef HIP_HCC

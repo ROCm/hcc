@@ -1,7 +1,8 @@
 #pragma once
 
-#include "hsa.h"
+#include <hsa.h>
 
+#include <mutex>
 
 //-------------------------------------------------------------------------------------------------
 // An optimized "staging buffer" used to implement Host-To-Device and Device-To-Host copies.

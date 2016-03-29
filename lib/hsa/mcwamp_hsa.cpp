@@ -34,7 +34,9 @@
 #include <hcc/kalmar_aligned_alloc.h>
 
 #include <hc_am.hpp>
-#include <staging_buffer.h>
+
+// staging buffer header
+#include "staging_buffer.h"
 
 #include <time.h>
 #include <iomanip>
