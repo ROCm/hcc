@@ -231,7 +231,7 @@ do
     else
       # this is .a static library file specified at the commad line
       if [ -f $ARG ]; then
-        DETECTED_STATIC_LIBRARY=$ARG
+        DETECTED_STATIC_LIBRARY=$(readlink -f $ARG)
       fi
     fi  # if [[ "$ARG" =~ ^-l[^[:space:]]+$ ]]; then
 
