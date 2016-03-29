@@ -352,6 +352,9 @@ public:
 class KalmarContext
 {
 private:
+    //TODO: Think about a system which has multiple CPU socket, e.g. server. In this case,
+    //We might be able to assume that only the first device is CPU, or we only mimic one cpu
+    //device when constructing KalmarContext.
     KalmarDevice* get_default_dev() {
         if (!def) {
             if (Devices.size() <= 1) {
