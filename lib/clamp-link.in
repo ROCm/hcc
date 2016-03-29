@@ -153,7 +153,7 @@ do
     fi
 
     if [[ "$ARG" =~ ^-L\/[^[:space:]]+$ ]]; then
-      REAL_PATH=$(realpath ${ARG:2})
+      REAL_PATH=$(readlink -f ${ARG:2})
       LIB_SEARCH_PATHS+=( $REAL_PATH )
     fi
   fi
