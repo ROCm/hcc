@@ -231,7 +231,11 @@ do
     else
       # this is .a static library file specified at the commad line
       if [ -f $ARG ]; then
-        DETECTED_STATIC_LIBRARY=$ARG
+        FULL_LIB_PATH=$(readlink -f $ARG)
+        if [ $VERBOSE == 2 ]; then
+          echo "use .a specified at: $FULL_LIB_PATH"
+        fi
+        DETECTED_STATIC_LIBRARY=$FULL_LIB_PATH
       fi
     fi  # if [[ "$ARG" =~ ^-l[^[:space:]]+$ ]]; then
 
