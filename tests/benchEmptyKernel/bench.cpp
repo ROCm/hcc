@@ -1,6 +1,9 @@
 // benchmark for empty PFE/grid_launch kernel
 //
 // Authors: Kevin Wu, Yan-Ming Li
+//
+// For best results set GPU performance level to high, where N in cardN is a number
+// echo high | sudo tee /sys/class/drm/cardX/device/power_dpm_force_performance_level
 
 // hcc `hcc-config --build --cxxflags --ldflags` bench.cpp -o bench
 // ./bench 10000 && gnuplot plot.plt
@@ -139,7 +142,7 @@ int main(int argc, char* argv[]) {
   }
   remove_outliers(elapsed_pfe, outliers_pfe);
   plot("pfe", elapsed_pfe);
-  std::cout << average(elapsed_pfe) << "\n";
+  std::cout << "pfe time (s):                  " << average(elapsed_pfe) << "\n";
 
   // Timing null grid_launch call
   for(int i = 0; i < dispatch_count; ++i) {
@@ -151,7 +154,7 @@ int main(int argc, char* argv[]) {
   }
   remove_outliers(elapsed_grid_launch, outliers_gl);
   plot("grid_launch", elapsed_grid_launch);
-  std::cout << average(elapsed_grid_launch) << "\n";
+  std::cout << "grid_launch time (s):          " << average(elapsed_grid_launch) << "\n";
 
   return 0;
 }
