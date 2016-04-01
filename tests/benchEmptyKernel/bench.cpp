@@ -126,7 +126,6 @@ int main(int argc, char* argv[]) {
   std::cout << "Iterations per test:           " << dispatch_count << "\n";
   auto wait_time_us = std::chrono::milliseconds(10);
 
-#if 1
   // Timing null pfe
   for(int i = 0; i < dispatch_count; ++i) {
     start = std::chrono::high_resolution_clock::now();
@@ -142,7 +141,6 @@ int main(int argc, char* argv[]) {
   plot("pfe", elapsed_pfe);
   std::cout << average(elapsed_pfe) << "\n";
 
-#else
   // Timing null grid_launch call
   for(int i = 0; i < dispatch_count; ++i) {
     start = std::chrono::high_resolution_clock::now();
@@ -154,7 +152,6 @@ int main(int argc, char* argv[]) {
   remove_outliers(elapsed_grid_launch, outliers_gl);
   plot("grid_launch", elapsed_grid_launch);
   std::cout << average(elapsed_grid_launch) << "\n";
-#endif
 
   return 0;
 }

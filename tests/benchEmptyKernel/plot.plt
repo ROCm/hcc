@@ -10,8 +10,7 @@ set title "PFE plot"
 stats "./pfe.dat" using 2 prefix "A"
 plot "./pfe.dat" using 1:2 title "", A_mean title gprintf("Mean = %.5te%+03T", A_mean)
 
-
-#set output "grid_launch.svg"
-#set title "Grid Launch plot"
-#stats "./grid_launch.dat" using 2 prefix "A"
-#plot "./grid_launch.dat" using 1:2 title "", A_mean title gprintf("Mean = %.5te%+03T", A_mean)
+set output "grid_launch.svg"
+set title "Grid Launch plot"
+stats "./grid_launch.dat" using 2 prefix "A"
+plot "./grid_launch.dat" using 1:2 title "", A_mean title gprintf("Mean = %.5te%+03T", A_mean)
