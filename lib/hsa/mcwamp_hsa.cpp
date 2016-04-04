@@ -726,7 +726,7 @@ public:
                 void* va = nullptr;
                 status = hsa_amd_memory_lock(dst, count, agent, 1, &va);
                 STATUS_CHECK(status, __LINE__);
-                status = hsa_memory_copy(dst, (char*)device + offset, count);
+                status = hsa_memory_copy(va, (char*)device + offset, count);
                 STATUS_CHECK(status, __LINE__);
                 // Unlock the host memory
                 status = hsa_amd_memory_unlock(dst);
@@ -756,7 +756,7 @@ public:
                 void* va = nullptr;
                 status = hsa_amd_memory_lock(const_cast<void*>(src), count, agent, 1, &va);
                 STATUS_CHECK(status, __LINE__);
-                status = hsa_memory_copy((char*)device + offset, src, count);
+                status = hsa_memory_copy((char*)device + offset, va, count);
                 STATUS_CHECK(status, __LINE__);
                 // Unlock the host memory
                 status = hsa_amd_memory_unlock(const_cast<void*>(src));
