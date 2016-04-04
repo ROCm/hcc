@@ -1,3 +1,4 @@
+// XFAIL: *
 // RUN: %hc -DSTATIC_LIB %s -c -o %T/static_library2.o
 // RUN: ar rcs %T/libstatic_library2.a %T/static_library2.o
 // RUN: %hc %s -L./Output -lstatic_library2 -o %t.out && %t.out
