@@ -1,3 +1,8 @@
+// RUN: %hc %s -o %t.out
+// RUN: %t.out 10000
+// RUN: test -e pfe.dat && mv pfe.dat %T/pfe.dat
+// RUN: test -e grid_launch.dat && mv grid_launch.dat %T/grid_launch.dat
+
 // benchmark for empty PFE/grid_launch kernel
 //
 // Authors: Kevin Wu, Yan-Ming Li
@@ -5,7 +10,7 @@
 // For best results set GPU performance level to high, where N in cardN is a number
 // echo high | sudo tee /sys/class/drm/cardX/device/power_dpm_force_performance_level
 
-// hcc `hcc-config --build --cxxflags --ldflags` bench.cpp -o bench
+// hcc `hcc-config --cxxflags --ldflags` bench.cpp -o bench
 // ./bench 10000 && gnuplot plot.plt
 
 
@@ -39,7 +44,7 @@ T average(const std::vector<std::chrono::duration<T>> &data) {
 }
 
 void plot(const std::string &filename, const std::vector<std::chrono::duration<double>> &data) {
-  std::ofstream file(filename + ".dat");
+  std::ofstream file(filename + ".dat", std::ios_base::out | std::ios_base::trunc);
   file << "#x y\n";
   for(auto i = data.begin(); i != data.end(); i++)
     file << i - data.begin() << ' ' << i->count() << '\n';
