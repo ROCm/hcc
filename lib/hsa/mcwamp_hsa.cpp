@@ -1123,7 +1123,6 @@ private:
 
 public:
     // Structures to manage staging buffers and copies:
-    hsa_signal_t             copy_signal;       // signal to use for synchronous memcopies  // TODO - remove me.
     class StagingBuffer      *staging_buffer[2]; // one buffer for each direction.
 
 public:
@@ -1369,9 +1368,6 @@ public:
             profile = hcAgentProfileFull;
         }
 
-        // Setup for synchronous copies:
-        hsa_signal_create(0, 0, NULL, &copy_signal);
-
         static const size_t stagingSize = 64*1024;
         hsa_region_t systemRegion = getHSAAMHostRegion();
         staging_buffer[0] = new StagingBuffer(agent, systemRegion, stagingSize, 2/*staging buffers*/);
@@ -1432,7 +1428,6 @@ public:
                 staging_buffer[i] = NULL;
             }
         }
-        hsa_signal_destroy(copy_signal);
 
 
 #if KALMAR_DEBUG
