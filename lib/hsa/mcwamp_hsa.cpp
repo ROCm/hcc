@@ -1148,10 +1148,13 @@ public:
     // synchronous copy
     // the implementation is based on asynchronus HSACopy
     void copy(const void *src, void *dst, size_t size_bytes) override {
+        // wait for all previous async commands in this queue to finish
+        this->wait();
+
         // create a HSACopy instance
         HSACopy* copyCommand = new HSACopy(src, dst, size_bytes);
 
-        // synch
+        // synchronously do copy
         copyCommand->syncCopy(this);
 
         delete(copyCommand);
