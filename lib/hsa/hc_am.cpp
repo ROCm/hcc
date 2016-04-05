@@ -78,7 +78,7 @@ public:
     int remove(void *pointer);
 
     MapTrackerType::iterator find(const void *hostPtr) ;
-
+    
     MapTrackerType::iterator readerLockBegin() { _mutex.lock(); return _tracker.begin(); } ;
     MapTrackerType::iterator end() { return _tracker.end(); } ;
     void readerUnlock() { _mutex.unlock(); };
