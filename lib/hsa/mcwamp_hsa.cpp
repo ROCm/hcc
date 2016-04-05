@@ -2475,11 +2475,8 @@ HSAQueue::copySync(const void* src, bool srcIsMapped, bool srcInDeviceMem, void 
     }
 
     hsa_signal_t depSignal;
-#ifdef STREAM_DEP
-    int depSignalCnt = this->preCopyCommand(NULL, &depSignal, ihipCommandCopyH2D);
-#else
+    // do not mark any dependent signals as of now
     int depSignalCnt = 0;
-#endif
 
     HSADevice *device = static_cast<HSADevice*> (getDev());
 
@@ -2490,25 +2487,10 @@ HSAQueue::copySync(const void* src, bool srcIsMapped, bool srcInDeviceMem, void 
     if ((copyDir == hcMemcpyHostToDevice) && (! srcIsMapped)) {
 
         device->staging_buffer[0]->CopyHostToDevice(dst, src, sizeBytes, depSignalCnt ? &depSignal : NULL);
-#ifdef STREAM_DEP
-        // The copy waits for inputs and then completes before returning so can reset queue to empty:
-        this->resetToEmpty();
-#endif
     } else if ((copyDir == hcMemcpyDeviceToHost) && (!dstIsMapped)) {
         //printf ("staged-copy- read dep signals\n");
         device->staging_buffer[1]->CopyDeviceToHost(dst, src, sizeBytes, depSignalCnt ? &depSignal : NULL);
-#ifdef STREAM_DEP
-        // The copy waits for inputs and then completes before returning so can reset queue to empty:
-        this->resetToEmpty();
-#endif
-    } else if (copyDir == hcMemcpyHostToHost)  { 
-
-#ifdef STREAM_DEP
-        if (depSignalCnt) {
-            // host waits before doing host memory copy.
-            hsa_signal_wait_acquire(depSignal, HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, HSA_WAIT_STATE_ACTIVE);
-        }
-#endif
+    } else if (copyDir == hcMemcpyHostToHost)  {
         // This works for both mapped and unmapped memory:
         memcpy(dst, src, sizeBytes);
     } else {
@@ -2545,9 +2527,6 @@ HSAQueue::copyAsyncMappedPtrs(const void* src, hsa_agent_t srcAgent, void *dst, 
 {
     int depSignalCnt = 0;
     hsa_signal_t depSignal;
-#ifdef STREAM_DEP
-    int depSignalCnt = preCopyCommand(ihip_signal, &depSignal, commandType);
-#endif
 
     std::pair<hsa_signal_t, int> ret = Kalmar::ctx.getSignal();
     hsa_signal_t signal = ret.first;
