@@ -163,11 +163,6 @@ public:
   /// get number of pending async operations in the queue
   virtual int getPendingAsyncOps() { return 0; }
 
-  // Copy src to dst.
-  virtual void copy(const void *src, void *dst, size_t size_bytes) { };
-  /// copy src to dst async
-  virtual void copy_async(const void* src, void* dst, size_t size_bytes) { };
-
   /// get underlying native queue handle
   virtual void* getHSAQueue() { return nullptr; }
 
@@ -187,6 +182,12 @@ public:
 
   /// enqueue marker
   virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarker() { return nullptr; }
+
+  /// copy src to dst asynchronously
+  virtual std::shared_ptr<KalmarAsyncOp> EnqueueAsyncCopy(const void* src, void* dst, size_t size_bytes) { return nullptr; }
+
+  // Copy src to dst synchronously
+  virtual void copy(const void *src, void *dst, size_t size_bytes) { }
 
   /// cleanup internal resource
   /// this function is usually called by dtor of the implementation classes
