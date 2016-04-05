@@ -1070,10 +1070,13 @@ public:
 
 private:
     void copySync(const void* src, bool srcIsMapped, bool srcInDeviceMem, void *dst, bool dstIsMapped, bool dstInDeviceMem, size_t sizeBytes) ;
-    void copyAsyncMappedPtrs(const void* src, hsa_agent_t srcAgent, void *dst, hsa_agent_t dstAgent, size_t sizeBytes) ;
     void copyAsync(const void* src, void *dst, size_t sizeBytes) ;
 
+    // helper function used by copySync
     void setCopyAgents(hcMemcpyKind copyDir, hsa_agent_t *srcAgent, hsa_agent_t *dstAgent);
+
+    // helper function used by copyAsync
+    void copyAsyncMappedPtrs(const void* src, hsa_agent_t srcAgent, void *dst, hsa_agent_t dstAgent, size_t sizeBytes) ;
 };
 
 
@@ -2408,7 +2411,7 @@ HSAQueue::getHSAKernargRegion() override {
 inline void
 HSAQueue::setCopyAgents(hcMemcpyKind copyDir, hsa_agent_t *srcAgent, hsa_agent_t *dstAgent)
 {
-    HSADevice *device = static_cast<HSADevice*> (getDev()); 
+    HSADevice *device = static_cast<HSADevice*> (getDev());
     hsa_agent_t deviceAgent = device->getAgent();
 
     switch (copyDir) {
@@ -2423,18 +2426,18 @@ HSAQueue::setCopyAgents(hcMemcpyKind copyDir, hsa_agent_t *srcAgent, hsa_agent_t
 
 
 // Performs a copy, potentially through a staging buffer .
-// This routine can take mapped or unmapped src and dst pointers. 
+// This routine can take mapped or unmapped src and dst pointers.
 //    "Mapped" means the pointers are mapped into the address space of the device associated with this HSAQueue.
 //     Mapped memory may be physically located on this device, or pinned in the CPU, or on another device (for P2P access).
 //     If the memory is not mapped, it can still be copied usign an intermediate staging buffer approach.
 //
 //     In some cases (ie for array or array_view) we already know the src or dst are mapped, and the *IsMapped parameters
-//     allow communicating that information to this function.  *IsMapped=False indicates the map state is unknown, 
+//     allow communicating that information to this function.  *IsMapped=False indicates the map state is unknown,
 //     so the functions uses the memory tracker to determine mapped or unmapped and *IsInDeviceMem
 //
 // The copies are performed synchronously - the routine waits until the copy completes before returning.
-void 
-HSAQueue::copySync(const void* src, bool srcIsMapped, bool srcInDeviceMem, void *dst, bool dstIsMapped, bool dstInDeviceMem, size_t sizeBytes) 
+void
+HSAQueue::copySync(const void* src, bool srcIsMapped, bool srcInDeviceMem, void *dst, bool dstIsMapped, bool dstInDeviceMem, size_t sizeBytes)
 {
     hc::accelerator acc;
     hc::AmPointerInfo srcPtrInfo(NULL, NULL, 0, acc, 0, 0);
@@ -2444,7 +2447,7 @@ HSAQueue::copySync(const void* src, bool srcIsMapped, bool srcInDeviceMem, void 
         if (hc::am_memtracker_getinfo(&srcPtrInfo, src) == AM_SUCCESS) {
             srcIsMapped = true;
             srcInDeviceMem = (srcPtrInfo._isInDeviceMem);
-        }  // Else - srcNotMapped=srcInDeviceMem=false 
+        }  // Else - srcNotMapped=srcInDeviceMem=false
     }
 
 
@@ -2452,8 +2455,8 @@ HSAQueue::copySync(const void* src, bool srcIsMapped, bool srcInDeviceMem, void 
         if (hc::am_memtracker_getinfo(&dstPtrInfo, dst) == AM_SUCCESS) {
             dstIsMapped = true;
             dstInDeviceMem = (dstPtrInfo._isInDeviceMem);
-        } // Else - dstNotMapped=dstInDeviceMem=false 
-    }  
+        } // Else - dstNotMapped=dstInDeviceMem=false
+    }
 
 
     // Resolve default to a specific Kind so we know which algorithm to use:
@@ -2478,7 +2481,7 @@ HSAQueue::copySync(const void* src, bool srcIsMapped, bool srcInDeviceMem, void 
     int depSignalCnt = 0;
 #endif
 
-    HSADevice *device = static_cast<HSADevice*> (getDev()); 
+    HSADevice *device = static_cast<HSADevice*> (getDev());
 
 
     // Need to use staging buffer if copying to or from unmapped host memory:
@@ -2508,14 +2511,13 @@ HSAQueue::copySync(const void* src, bool srcIsMapped, bool srcInDeviceMem, void 
 #endif
         // This works for both mapped and unmapped memory:
         memcpy(dst, src, sizeBytes);
-
     } else {
         // If not special case - these can all be handled by the hsa async copy:
-        
-        // 
+
+        //
         hsa_agent_t srcAgent, dstAgent;
         setCopyAgents(copyDir, &srcAgent, &dstAgent);
-        
+
         // Get a signal and initialize it:
         std::pair<hsa_signal_t, int> ret = Kalmar::ctx.getSignal();
         hsa_signal_t signal = ret.first;
@@ -2536,10 +2538,10 @@ HSAQueue::copySync(const void* src, bool srcIsMapped, bool srcInDeviceMem, void 
 }
 
 
-// Performs an async copy.  
+// Performs an async copy.
 // This routine deals only with "mapped" pointers - see copySync for an explanation.
-void 
-HSAQueue::copyAsyncMappedPtrs(const void* src, hsa_agent_t srcAgent, void *dst, hsa_agent_t dstAgent, size_t sizeBytes) 
+void
+HSAQueue::copyAsyncMappedPtrs(const void* src, hsa_agent_t srcAgent, void *dst, hsa_agent_t dstAgent, size_t sizeBytes)
 {
     int depSignalCnt = 0;
     hsa_signal_t depSignal;
@@ -2551,7 +2553,7 @@ HSAQueue::copyAsyncMappedPtrs(const void* src, hsa_agent_t srcAgent, void *dst, 
     hsa_signal_t signal = ret.first;
     int signalIndex = ret.second;
 
-    HSADevice *device = static_cast<HSADevice*> (getDev()); 
+    HSADevice *device = static_cast<HSADevice*> (getDev());
 
     hsa_status_t hsa_status = hsa_amd_memory_async_copy(dst, device->getAgent(), src, device->getAgent(), sizeBytes, depSignalCnt, depSignalCnt ? &depSignal:0x0, signal);
 
@@ -2561,7 +2563,7 @@ HSAQueue::copyAsyncMappedPtrs(const void* src, hsa_agent_t srcAgent, void *dst, 
 }
 
 void
-HSAQueue::copyAsync(const void* src, void *dst, size_t sizeBytes) 
+HSAQueue::copyAsync(const void* src, void *dst, size_t sizeBytes)
 {
     hc::accelerator acc;
     hc::AmPointerInfo srcPtrInfo(NULL, NULL, 0, acc, 0, 0);
@@ -2573,12 +2575,12 @@ HSAQueue::copyAsync(const void* src, void *dst, size_t sizeBytes)
 
     if (!srcIsMapped || !dstIsMapped) {
         // Fall back to synchronous copy:
-        copySync(src, srcIsMapped, srcPtrInfo._isInDeviceMem, 
-                 dst, dstIsMapped, dstPtrInfo._isInDeviceMem, 
+        copySync(src, srcIsMapped, srcPtrInfo._isInDeviceMem,
+                 dst, dstIsMapped, dstPtrInfo._isInDeviceMem,
                  sizeBytes);
     } else {
         // both mapped - pick device or host memory:
-        HSADevice *device = static_cast<HSADevice*> (getDev()); 
+        HSADevice *device = static_cast<HSADevice*> (getDev());
         hsa_agent_t deviceAgent = device->getAgent();
 
         hsa_agent_t srcAgent, dstAgent;
@@ -2612,7 +2614,7 @@ HSADispatch::HSADispatch(Kalmar::HSADevice* _device, HSAKernel* _kernel) :
 
 
 // dispatch a kernel asynchronously
-hsa_status_t 
+hsa_status_t
 HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
     struct timespec begin;
     struct timespec end;
@@ -2622,19 +2624,19 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
     if (isDispatched) {
         return HSA_STATUS_ERROR_INVALID_ARGUMENT;
     }
-  
+
     /*
      * Create a signal to wait for the dispatch to finish.
      */
     std::pair<hsa_signal_t, int> ret = Kalmar::ctx.getSignal();
     signal = ret.first;
     signalIndex = ret.second;
-  
+
     /*
      * Initialize the dispatch packet.
      */
     memset(&aql, 0, sizeof(aql));
-  
+
     /*
      * Setup the dispatch information.
      */
@@ -2646,7 +2648,7 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
     aql.grid_size_x = global_size[0];
     aql.grid_size_y = global_size[1];
     aql.grid_size_z = global_size[2];
-  
+
 
     // set dispatch fences
     if (hsaQueue->get_execute_order() == Kalmar::execute_in_order) {
@@ -2663,10 +2665,10 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
                      (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
                      (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
     }
-  
+
     // bind kernel code
     aql.kernel_object = kernel->kernelCodeHandle;
-  
+
     // bind kernel arguments
     //printf("arg_vec size: %d in bytes: %d\n", arg_vec.size(), arg_vec.size());
 
@@ -2701,7 +2703,7 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
     //  printf("%02X ", *(((uint8_t*)aql.kernarg_address)+i));
     //}
     //printf("\n");
- 
+
     // Initialize memory resources needed to execute
     uint32_t group_segment_size;
     status = hsa_executable_symbol_get_info(kernel->hsaExecutableSymbol,
@@ -2734,15 +2736,15 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
       checkHCCRuntimeStatus(Kalmar::HCCRuntimeStatus::HCCRT_STATUS_ERROR_COMMAND_QUEUE_OVERFLOW, __LINE__, commandQueue);
     }
     ((hsa_kernel_dispatch_packet_t*)(commandQueue->base_address))[index & queueMask] = aql;
-    hsa_queue_store_write_index_relaxed(commandQueue, nextIndex);
+    hsa_queue_store_write_index_relaxed(commandQueue, index + 1);
   
 #if KALMAR_DEBUG
     std::cerr << "ring door bell to dispatch kernel\n";
 #endif
-  
+
     // Ring door bell
     hsa_signal_store_relaxed(commandQueue->doorbell_signal, index);
-  
+
     isDispatched = true;
 
     clock_gettime(CLOCK_REALTIME, &end);
@@ -2814,7 +2816,7 @@ HSADispatch::dispatchKernelWaitComplete(Kalmar::HSAQueue* hsaQueue) {
     STATUS_CHECK_Q(status, queue, __LINE__);
 
     return status;
-} 
+}
 
 inline hsa_status_t
 HSADispatch::dispatchKernelAsync(Kalmar::HSAQueue* hsaQueue) {
