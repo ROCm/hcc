@@ -1,9 +1,17 @@
 cmake_minimum_required( VERSION 2.8 )
 project (HCC)
 
+option(HSA_USE_AMDGPU_BACKEND "Use AMDGPU LLVM backend as compiler for HSA" OFF)
+
+
+
 # set default installation path
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND CMAKE_INSTALL_PREFIX MATCHES "/usr/local")
-  set(CMAKE_INSTALL_PREFIX "/opt/hcc" CACHE PATH "Default installation path of hcc" FORCE)
+  if (HSA_USE_AMDGPU_BACKEND)
+    set(CMAKE_INSTALL_PREFIX "/opt/hcc" CACHE PATH "Default installation path of hcc" FORCE)
+  else  (HSA_USE_AMDGPU_BACKEND)
+    set(CMAKE_INSTALL_PREFIX "/opt/hcc-hlc" CACHE PATH "Default installation path of hcc" FORCE)
+  endif()
 endif ()
 MESSAGE("Package installation path: ${CMAKE_INSTALL_PREFIX}")
 
@@ -261,7 +269,6 @@ endif ((HAS_OPENCL EQUAL 0) AND (HAS_HSA EQUAL 0))
 #################
 # Detect AMDGPU backend for native codegen
 #################
-option(HSA_USE_AMDGPU_BACKEND "Use AMDGPU LLVM backend as compiler for HSA" OFF)
 
 if (HSA_USE_AMDGPU_BACKEND)
   add_definitions(-DHSA_USE_AMDGPU_BACKEND)
@@ -504,16 +511,22 @@ if(CXXAMP_ENABLE_BOLT)
 endif(CXXAMP_ENABLE_BOLT)
 
 set(CPACK_SET_DESTDIR TRUE)
-set(CPACK_INSTALL_PREFIX "/opt/hcc")
-set(CPACK_PACKAGE_NAME "hcc")
-set(CPACK_PACKAGE_VENDOR "MulticoreWare, Inc")
+set(CPACK_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
+
+if (HSA_USE_AMDGPU_BACKEND)
+  set(CPACK_PACKAGE_NAME "hcc")
+else (HSA_USE_AMDGPU_BACKEND)
+  set(CPACK_PACKAGE_NAME "hcc_hlc")
+endif(HSA_USE_AMDGPU_BACKEND)
+
+set(CPACK_PACKAGE_VENDOR "Advanced Micro Devices, Inc")
 set(CPACK_PACKAGE_VERSION ${KALMAR_VERSION_STRING})
 set(CPACK_PACKAGE_VERSION_MAJOR ${KALMAR_VERSION_MAJOR})
 set(CPACK_PACKAGE_VERSION_MINOR ${KALMAR_VERSION_MINOR})
 set(CPACK_PACKAGE_VERSION_PATCH ${KALMAR_VERSION_PATCH})
 set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_SYSTEM_NAME})
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "HCC: a Heterogeneous C++ to OpenCL/HSA compiler")
-set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Jack Chung <jack@multicorewareinc.com>")
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Siu Chi Chan <siuchi.chan@amd.com>")
 set(CPACK_GENERATOR "DEB;TGZ")
 set(CPACK_SOURCE_GENERATOR "TGZ")
 set(CPACK_BINARY_DEB "ON")
