@@ -82,7 +82,7 @@ void StagingBuffer::CopyHostToDevicePinInPlace(void* dst, const void* src, size_
         hsa_status_t hsa_status = hsa_amd_memory_lock(masked_srcp, theseBytes, &_hsa_agent, 1, &locked_srcp);
         //hsa_status_t hsa_status = hsa_amd_memory_lock(const_cast<char*> (srcp), theseBytes, &_hsa_agent, 1, &locked_srcp);
         tprintf (DB_COPY2, "H2D: bytesRemaining=%zu: pin-in-place:%p+%zu bufferIndex[%d]\n", bytesRemaining, srcp, theseBytes, bufferIndex);
-        printf ("status=%x srcp=%p, masked_srcp=%p, locked_srcp=%p\n", hsa_status, srcp, masked_srcp, locked_srcp);
+        tprintf ("status=%x srcp=%p, masked_srcp=%p, locked_srcp=%p\n", hsa_status, srcp, masked_srcp, locked_srcp);
 
         if (hsa_status != HSA_STATUS_SUCCESS) {
             THROW_ERROR (hipErrorRuntimeMemory);
@@ -108,7 +108,7 @@ void StagingBuffer::CopyHostToDevicePinInPlace(void* dst, const void* src, size_
     }
 
     // TODO -
-    printf ("unpin the memory\n");
+    tprintf ("unpin the memory\n");
 
 
     for (int i=0; i<_numBuffers; i++) {
@@ -234,9 +234,4 @@ void StagingBuffer::CopyDeviceToHost(void* dst, const void* src, size_t sizeByte
             dstp1 += theseBytes;
         }
     }
-
-
-    //for (int i=0; i<_numBuffers; i++) {
-    //    hsa_signal_wait_acquire(_completion_signal[i], HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, HSA_WAIT_STATE_ACTIVE);
-    //}
 }
