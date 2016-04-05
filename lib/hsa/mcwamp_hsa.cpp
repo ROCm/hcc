@@ -2957,7 +2957,7 @@ HSACopy::waitComplete() {
 #endif
 
     // Wait on completion signal until the async copy is finished
-    hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, waitMode);
+    hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, waitMode);
 
 #if KALMAR_DEBUG
     std::cerr << "complete!\n";
@@ -3176,7 +3176,7 @@ HSACopy::syncCopy(Kalmar::HSAQueue* hsaQueue) {
         hsa_status_t hsa_status = hsa_amd_memory_async_copy(dst, dstAgent, src, srcAgent, sizeBytes, depSignalCnt, depSignalCnt ? &depSignal:NULL, signal);
 
         if (hsa_status == HSA_STATUS_SUCCESS) {
-            hsa_signal_wait_relaxed(signal, HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, HSA_WAIT_STATE_ACTIVE);
+            hsa_signal_wait_relaxed(signal, HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, waitMode);
         } else {
             throw Kalmar::runtime_exception("hsa_amd_memory_async_copy error", hsa_status);
         }
