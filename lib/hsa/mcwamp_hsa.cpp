@@ -22,6 +22,7 @@
 #include <thread>
 #include <utility>
 #include <vector>
+#include <algorithm>
 
 #include <hsa.h>
 #include <hsa_ext_finalize.h>
@@ -64,6 +65,10 @@
 // whether to print out kernel dispatch time
 // default set as 0 (NOT print out kernel dispatch time)
 #define KALMAR_DISPATCH_TIME_PRINTOUT (0)
+
+// threshold to clean up finished kernel in HSAQueue.asyncOps
+// default set as 1024
+#define ASYNCOPS_VECTOR_GC_SIZE (1024)
 
 
 
@@ -894,6 +899,12 @@ public:
             if (asyncOps[i].get() == asyncOp) {
                 asyncOps[i] = nullptr;
             }
+        }
+
+        // GC for finished kernels
+        if (asyncOps.size() > ASYNCOPS_VECTOR_GC_SIZE) {
+          asyncOps.erase(std::remove(asyncOps.begin(), asyncOps.end(), nullptr),
+                         asyncOps.end());
         }
     }
 };

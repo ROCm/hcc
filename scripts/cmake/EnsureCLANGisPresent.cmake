@@ -2,7 +2,7 @@ macro(ensure_clang_is_present dest_dir name url)
 
 string(COMPARE EQUAL "${url}" "." default_clang)
 if(default_clang)
- set(REPO https://bitbucket.org/multicoreware/hcc-clang.git)
+ set(REPO https://github.com/RadeonOpenCompute/hcc-clang.git)
 else()
  set(REPO "${url}")
 endif()

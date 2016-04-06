@@ -1,9 +1,17 @@
 cmake_minimum_required( VERSION 2.8 )
 project (HCC)
 
+option(HSA_USE_AMDGPU_BACKEND "Use AMDGPU LLVM backend as compiler for HSA" OFF)
+
+
+
 # set default installation path
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND CMAKE_INSTALL_PREFIX MATCHES "/usr/local")
-  set(CMAKE_INSTALL_PREFIX "/opt/hcc" CACHE PATH "Default installation path of hcc" FORCE)
+  if (HSA_USE_AMDGPU_BACKEND)
+    set(CMAKE_INSTALL_PREFIX "/opt/rocm/hcc" CACHE PATH "Default installation path of hcc" FORCE)
+  else  (HSA_USE_AMDGPU_BACKEND)
+    set(CMAKE_INSTALL_PREFIX "/opt/rocm/hcc-hlc" CACHE PATH "Default installation path of hcc" FORCE)
+  endif()
 endif ()
 MESSAGE("Package installation path: ${CMAKE_INSTALL_PREFIX}")
 
@@ -17,7 +25,7 @@ ENDIF(NOT CMAKE_BUILD_TYPE)
 
 # set default cppamp-ng URL
 IF (NOT CLANG_URL)
-  SET(CLANG_URL "https://bitbucket.org/multicoreware/hcc-clang.git" CACHE STRING "CLANG URL" FORCE)
+  SET(CLANG_URL "https://github.com/RadeonOpenCompute/hcc-clang.git" CACHE STRING "CLANG URL" FORCE)
 ENDIF (NOT CLANG_URL)
 set(CMAKE_MACOSX_RPATH 1)
 
@@ -261,11 +269,16 @@ endif ((HAS_OPENCL EQUAL 0) AND (HAS_HSA EQUAL 0))
 #################
 # Detect AMDGPU backend for native codegen
 #################
-option(HSA_USE_AMDGPU_BACKEND "Use AMDGPU LLVM backend as compiler for HSA" OFF)
 
 if (HSA_USE_AMDGPU_BACKEND)
   add_definitions(-DHSA_USE_AMDGPU_BACKEND)
   set(HAS_HSA_HOF 0)
+  find_program(AMDPHDRS amdphdrs PATHS /opt/rocm/bin ${AMDPHDRS_DIR} NO_DEFAULT_PATH)
+  find_program(AMDPHDRS amdphdrs)
+  MESSAGE("AMDPHDRS_DIR = ${AMDPHDRS_DIR}, actually found at: ${AMDPHDRS}")
+  if (NOT AMDPHDRS)
+    MESSAGE("amdphdrs not found.  Use -DAMDPHDRS_DIR=<amdphdrs path>.")
+  endif (NOT AMDPHDRS)
 endif ()
 
 set(HSA_AMDGPU_GPU_TARGET "kaveri" CACHE STRING "Target GPU device (kaveri,carrizo,fiji)")
@@ -493,16 +506,30 @@ if(CXXAMP_ENABLE_BOLT)
 endif(CXXAMP_ENABLE_BOLT)
 
 set(CPACK_SET_DESTDIR TRUE)
-set(CPACK_INSTALL_PREFIX "/opt/hcc")
-set(CPACK_PACKAGE_NAME "hcc")
-set(CPACK_PACKAGE_VENDOR "MulticoreWare, Inc")
+set(CPACK_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
+
+if (HSA_USE_AMDGPU_BACKEND)
+  set(CPACK_PACKAGE_NAME "hcc")
+else (HSA_USE_AMDGPU_BACKEND)
+  set(CPACK_PACKAGE_NAME "hcc_hlc")
+endif(HSA_USE_AMDGPU_BACKEND)
+
+set(CPACK_PACKAGE_VENDOR "Advanced Micro Devices, Inc")
 set(CPACK_PACKAGE_VERSION ${KALMAR_VERSION_STRING})
 set(CPACK_PACKAGE_VERSION_MAJOR ${KALMAR_VERSION_MAJOR})
 set(CPACK_PACKAGE_VERSION_MINOR ${KALMAR_VERSION_MINOR})
 set(CPACK_PACKAGE_VERSION_PATCH ${KALMAR_VERSION_PATCH})
 set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_SYSTEM_NAME})
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "HCC: a Heterogeneous C++ to OpenCL/HSA compiler")
-set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Jack Chung <jack@multicorewareinc.com>")
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Siu Chi Chan <siuchi.chan@amd.com>")
+
+set(HCC_DEBIAN_DEP "hsa-runtime-dev (>=1.0.0), libstdc++-4.8-dev, llvm, llvm-dev, llvm-runtime, libc++1, libc++-dev, libc++abi1, libc++abi-dev")
+if (HSA_USE_AMDGPU_BACKEND)
+  set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_DEBIAN_DEP}, amdphdrs (>=1.0), llvm-amdgpu (>=3.9)" )
+else (HSA_USE_AMDGPU_BACKEND)
+  set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_DEBIAN_DEP}" )
+endif (HSA_USE_AMDGPU_BACKEND)
+
 set(CPACK_GENERATOR "DEB;TGZ")
 set(CPACK_SOURCE_GENERATOR "TGZ")
 set(CPACK_BINARY_DEB "ON")
