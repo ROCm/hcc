@@ -765,25 +765,10 @@ public:
      *
      * @return true if other can access this accelerator's device memory pool or false if not
      */
-    bool is_peer(const accelerator& other) const {
-      hsa_amd_memory_pool_t* self_pool = static_cast<hsa_amd_memory_pool_t*>(get_hsa_am_region());  
-      // If pool handle is set during initialization, then it means, no local pool, return false.
-      if(self_pool->handle == uint64_t(-1))
-          return false;
-
-      hsa_agent_t* other_agent = static_cast<hsa_agent_t*>(other.get_hsa_agent());
-      hsa_amd_memory_pool_access_t access;
-
-      hsa_status_t status = hsa_amd_agent_memory_pool_get_info(*other_agent, *self_pool, HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access);
-      if(HSA_STATUS_SUCCESS != status)
-          return false;
-
-      if(HSA_AMD_MEMORY_POOL_ACCESS_ALLOWED_BY_DEFAULT || HSA_AMD_MEMORY_POOL_ACCESS_DISALLOWED_BY_DEFAULT)
-          return true;
-
-      return false;
+    bool get_is_peer(const accelerator& other) const {
+        return pDev->is_peer(other.pDev);
     }
-
+      
     /**
      * Return a std::vector of this accelerator's peers. peer is other accelerator which can access this 
      * accelerator's device memory using map_to_peer family of APIs.
@@ -793,10 +778,10 @@ public:
         std::vector<accelerator> peers;
 
         const auto &accs = get_all();
-        
+
         for(auto iter = accs.begin(); iter != accs.end(); iter++)
         {
-            if(this->is_peer(*iter))
+            if(this->get_is_peer(*iter))
                 peers.push_back(*iter);
         }
         return peers;

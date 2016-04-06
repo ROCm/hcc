@@ -1472,16 +1472,35 @@ public:
         return ri._am_memory_pool;
     }
 
-    bool hasHSAKernargRegion() { 
+    bool hasHSAKernargRegion() const { 
       return ri._found_kernarg_memory_pool;
     }
 
-    bool hasHSAFinegrainedRegion() {
+    bool hasHSAFinegrainedRegion() const {
       return ri._found_finegrained_system_memory_pool;
     }
 
-    bool hasHSACoarsegrainedRegion() {
+    bool hasHSACoarsegrainedRegion() const {
       return ri. _found_local_memory_pool;
+    }
+
+    bool is_peer(Kalmar::KalmarDevice* other) override {
+      if(!hasHSACoarsegrainedRegion())
+          return false;
+
+      auto self_pool = getHSAAMRegion();
+      hsa_amd_memory_pool_access_t access;
+
+      hsa_agent_t* agent = static_cast<hsa_agent_t*>(other->getHSAAgent());
+
+      hsa_status_t status = hsa_amd_agent_memory_pool_get_info(*agent, self_pool, HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access);
+      if(HSA_STATUS_SUCCESS != status)
+          return false; 
+    
+      if(HSA_AMD_MEMORY_POOL_ACCESS_ALLOWED_BY_DEFAULT || HSA_AMD_MEMORY_POOL_ACCESS_DISALLOWED_BY_DEFAULT)
+          return true;
+  
+      return false;
     }
 
     void releaseKernargBuffer(void* kernargBuffer, int kernargBufferIndex) {
