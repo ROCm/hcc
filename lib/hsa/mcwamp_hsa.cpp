@@ -63,11 +63,6 @@
 // default set as 1 (use karnarg region)
 #define USE_KERNARG_REGION (1)
 
-// whether to use hsa_memory_copy to copy prepared kernel arguments
-// from host memory to kernarg region
-// default set as 0 (NOT use hsa_memory_copy)
-#define USE_HSA_MEMORY_COPY_FOR_KERNARG (0)
-
 // whether to print out kernel dispatch time
 // default set as 0 (NOT print out kernel dispatch time)
 #define KALMAR_DISPATCH_TIME_PRINTOUT (0)
@@ -2615,14 +2610,8 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
             kernargMemory = ret.first;
             kernargMemoryIndex = ret.second;
 
-#if USE_HSA_MEMORY_COPY_FOR_KERNARG
-            // use hsa_memory_copy to copy kernel arguments from host to kernarg region
-            status = hsa_memory_copy(kernargMemory, arg_vec.data(), arg_vec.size());
-            STATUS_CHECK_Q(status, commandQueue, __LINE__);
-#else
             // as kernarg buffers are fine-grained, we can directly use memcpy
             memcpy(kernargMemory, arg_vec.data(), arg_vec.size());
-#endif
 
             aql.kernarg_address = kernargMemory;
         } else {
