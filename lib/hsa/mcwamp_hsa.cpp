@@ -2267,20 +2267,36 @@ public:
         status = hsa_init();
         STATUS_CHECK(status, __LINE__);
 
+<<<<<<< HEAD
         // Iterate over the agents to find out gpu device
+=======
+        // Iterate over GPU agents
+>>>>>>> [HSA] fix CPU agent finding logic
         std::vector<hsa_agent_t> agents;
         status = hsa_iterate_agents(&HSAContext::find_gpu, &agents);
         STATUS_CHECK(status, __LINE__);
 
         for (int i = 0; i < agents.size(); ++i) {
             hsa_agent_t agent = agents[i];
+<<<<<<< HEAD
             auto Dev = new HSADevice(agent, host);
             // choose the first GPU device as the default device
+=======
+            auto Dev = new HSADevice(agent);
+>>>>>>> [HSA] fix CPU agent finding logic
             if (i == 0)
                 def = Dev;
             Devices.push_back(Dev);
         }
+<<<<<<< HEAD
         
+=======
+
+        // Iterate over CPU agents
+        status = hsa_iterate_agents(&HSAContext::find_cpu, &g_cpu_agent);
+        STATUS_CHECK(status, __LINE__);
+
+>>>>>>> [HSA] fix CPU agent finding logic
 #if SIGNAL_POOL_SIZE > 0
         signalPoolMutex.lock();
 
