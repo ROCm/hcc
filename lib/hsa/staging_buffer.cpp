@@ -1,21 +1,12 @@
-// HC AM API
-#include <hc_am.hpp>
-
 // AMD-specific HSA API
 #include <hsa_ext_amd.h>
 
 // mutex and lock_guard
 #include <mutex>
 
-
-#ifdef HIP_HCC
-#include "hcc_detail/staging_buffer.h"
-#define THROW_ERROR(e) throw ihipException(e)
-#else
 #include "staging_buffer.h"
 #define THROW_ERROR(e) throw 
 #define tprintf(trace_level, ...) 
-#endif
 
 //-------------------------------------------------------------------------------------------------
 StagingBuffer::StagingBuffer(hsa_agent_t hsaAgent, hsa_region_t systemRegion, size_t bufferSize, int numBuffers) :
@@ -40,7 +31,7 @@ StagingBuffer::~StagingBuffer()
 {
     for (int i=0; i<_numBuffers; i++) {
         if (_pinnedStagingBuffer[i]) {
-            hc::am_free(_pinnedStagingBuffer[i]);
+            hsa_memory_free(_pinnedStagingBuffer[i]);
             _pinnedStagingBuffer[i] = NULL;
         }
         hsa_signal_destroy(_completion_signal[i]);
