@@ -3061,7 +3061,7 @@ HSACopy::enqueueAsyncCopy(hsa_queue_t* queue) {
 
         // Create a signal to wait for the async copy command to finish.
         std::pair<hsa_signal_t, int> ret = Kalmar::ctx.getSignal();
-        hsa_signal_t signal = ret.first;
+        signal = ret.first;
         signalIndex = ret.second;
 
         hsa_status_t hsa_status = hsa_amd_memory_async_copy(dst, device->getAgent(), src, device->getAgent(), sizeBytes, depSignalCnt, depSignalCnt ? &depSignal:NULL, signal);
@@ -3228,7 +3228,7 @@ HSACopy::syncCopy(Kalmar::HSAQueue* hsaQueue) {
 
         // Get a signal and initialize it:
         std::pair<hsa_signal_t, int> ret = Kalmar::ctx.getSignal();
-        hsa_signal_t signal = ret.first;
+        signal = ret.first;
         signalIndex = ret.second;
 
         hsa_signal_store_relaxed(signal, 1);
