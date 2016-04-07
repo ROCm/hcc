@@ -315,8 +315,9 @@ public:
         return (hsa_signal_load_acquire(signal) == 0);
     }
 
+    // HSA signals would be waited in HSA_WAIT_STATE_ACTIVE by default for HSACopy instances
     HSACopy(const void* src_, void* dst_, size_t sizeBytes_) :
-        isSubmitted(false), future(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_BLOCKED), 
+        isSubmitted(false), future(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_ACTIVE), 
         src(src_), dst(dst_), sizeBytes(sizeBytes_),
         signalIndex(-1) {
 #if KALMAR_DEBUG
