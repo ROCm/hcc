@@ -9,8 +9,8 @@ endif (HAS_HSA EQUAL 1)
 # C++AMP runtime (HSA implementation)
 ####################
 if (HAS_HSA EQUAL 1)
-add_mcwamp_library_hsa(mcwamp_hsa mcwamp_hsa.cpp ../md5.cpp)
-add_mcwamp_library_hsa(hc_am hc_am.cpp staging_buffer.cpp)
+add_mcwamp_library_hsa(mcwamp_hsa mcwamp_hsa.cpp staging_buffer.cpp ../md5.cpp)
+add_mcwamp_library_hsa(hc_am hc_am.cpp)
 install(TARGETS mcwamp_hsa hc_am
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib)
