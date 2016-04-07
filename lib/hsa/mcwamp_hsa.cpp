@@ -317,7 +317,12 @@ public:
 
     HSACopy(const void* src_, void* dst_, size_t sizeBytes_) :
         isSubmitted(false), future(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_BLOCKED), 
-        src(src_), dst(dst_), sizeBytes(sizeBytes_) {}
+        src(src_), dst(dst_), sizeBytes(sizeBytes_),
+        signalIndex(-1) {
+#if KALMAR_DEBUG
+        std::cerr << "HSACopy::HSACopy(" << src_ << ", " << dst_ << ", " << sizeBytes_ << ")\n";
+#endif
+    }
 
     ~HSACopy() {
 #if KALMAR_DEBUG
@@ -3033,7 +3038,7 @@ HSACopy::enqueueAsyncCopy(hsa_queue_t* queue) {
         // Create a signal to wait for the async copy command to finish.
         std::pair<hsa_signal_t, int> ret = Kalmar::ctx.getSignal();
         hsa_signal_t signal = ret.first;
-        int signalIndex = ret.second;
+        signalIndex = ret.second;
 
         hsa_status_t hsa_status = hsa_amd_memory_async_copy(dst, device->getAgent(), src, device->getAgent(), sizeBytes, depSignalCnt, depSignalCnt ? &depSignal:NULL, signal);
 
@@ -3049,11 +3054,15 @@ HSACopy::enqueueAsyncCopy(hsa_queue_t* queue) {
 
 inline void
 HSACopy::dispose() {
-    Kalmar::ctx.releaseSignal(signal, signalIndex);
+    // HSA signal may not necessarily be allocated by HSACopy instance
+    // only release the signal if it was really allocated (signalIndex >= 0)
+    if (signalIndex >= 0) {
+        Kalmar::ctx.releaseSignal(signal, signalIndex);
+    }
 
     if (future != nullptr) {
-      delete future;
-      future = nullptr;
+        delete future;
+        future = nullptr;
     }
 }
 
@@ -3169,7 +3178,7 @@ HSACopy::syncCopy(Kalmar::HSAQueue* hsaQueue) {
         // Get a signal and initialize it:
         std::pair<hsa_signal_t, int> ret = Kalmar::ctx.getSignal();
         hsa_signal_t signal = ret.first;
-        int signalIndex = ret.second;
+        signalIndex = ret.second;
 
         hsa_signal_store_relaxed(signal, 1);
 
@@ -3181,6 +3190,7 @@ HSACopy::syncCopy(Kalmar::HSAQueue* hsaQueue) {
             throw Kalmar::runtime_exception("hsa_amd_memory_async_copy error", hsa_status);
         }
         Kalmar::ctx.releaseSignal(signal, signalIndex);
+        signalIndex = -1;
     }
 }
 
