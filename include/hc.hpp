@@ -23,7 +23,6 @@
 
 #include <hsa_atomic.h>
 #include <kalmar_cpu_launch.h>
-#include <hsa_ext_amd.h>
 
 #ifndef __HC__
 #   define __HC__ [[hc]]
