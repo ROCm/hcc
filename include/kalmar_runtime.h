@@ -295,6 +295,9 @@ public:
     /// get the profile of the agent
     virtual hcAgentProfile getProfile() { return hcAgentProfileNone; }
 
+    /// check if @p other can access to this device's device memory, return true if so, false otherwise
+    virtual bool is_peer(const KalmarDevice* other) {return false;}
+
 };
 
 class CPUQueue final : public KalmarQueue

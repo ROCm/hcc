@@ -23,6 +23,7 @@
 
 #include <hsa_atomic.h>
 #include <kalmar_cpu_launch.h>
+#include <hsa_ext_amd.h>
 
 #ifndef __HC__
 #   define __HC__ [[hc]]
@@ -693,7 +694,7 @@ public:
      * @return An opaque handle of the region, if the accelerator is based
      *         on HSA.  NULL otherwise.
      */
-    void* get_hsa_am_region() {
+    void* get_hsa_am_region() const {
         return get_default_view().get_hsa_am_region();
     }
 
@@ -705,7 +706,7 @@ public:
      * @return An opaque handle of the region, if the accelerator is based
      *         on HSA.  NULL otherwise.
      */
-    void* get_hsa_am_system_region() {
+    void* get_hsa_am_system_region() const {
         return get_default_view().get_hsa_am_system_region();
     }
 
@@ -716,14 +717,14 @@ public:
      * @return An opaque handle of the region, if the accelerator is based
      *         on HSA.  NULL otherwise.
      */
-    void* get_hsa_kernarg_region() {
+    void* get_hsa_kernarg_region() const {
         return get_default_view().get_hsa_kernarg_region();
     }
 
     /**
      * Returns if the accelerator is based on HSA.
      */
-    bool is_hsa_accelerator() {
+    bool is_hsa_accelerator() const {
         return get_default_view().is_hsa_accelerator();
     }
 
@@ -733,7 +734,7 @@ public:
      * - hcAgentProfileBase in case the accelerator is of HSA Base Profile.
      * - hcAgentProfileFull in case the accelerator is of HSA Full Profile.
      */
-    hcAgentProfile get_profile() {
+    hcAgentProfile get_profile() const {
         return pDev->getProfile();
     }
 
@@ -755,8 +756,35 @@ public:
      * @return An opaque handle of the underlying HSA agent, if the accelerator
      *         is based on HSA.  NULL otherwise.
      */
-    void* get_hsa_agent() {
+    void* get_hsa_agent() const {
         return pDev->getHSAAgent();
+    }
+
+    /**
+     * Check if @p other is peer of this accelerator.
+     *
+     * @return true if other can access this accelerator's device memory pool or false if not
+     */
+    bool get_is_peer(const accelerator& other) const {
+        return pDev->is_peer(other.pDev);
+    }
+      
+    /**
+     * Return a std::vector of this accelerator's peers. peer is other accelerator which can access this 
+     * accelerator's device memory using map_to_peer family of APIs.
+     *
+     */
+    std::vector<accelerator> get_peers() const {
+        std::vector<accelerator> peers;
+
+        const auto &accs = get_all();
+
+        for(auto iter = accs.begin(); iter != accs.end(); iter++)
+        {
+            if(this->get_is_peer(*iter))
+                peers.push_back(*iter);
+        }
+        return peers;
     }
 
 private:
