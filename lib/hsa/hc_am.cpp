@@ -346,12 +346,28 @@ am_status_t am_map_to_peers(void* ptr, std::initializer_list<hc::accelerator> li
     if(iter == g_amPointerTracker.end())
         return AM_ERROR_MISC;
     
-    if(!iter->second._isInDeviceMem)
-        return AM_ERROR_MISC;
 
-    // get accelerator and pool
-    auto& acc = iter->second._acc;
-    auto pool = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_region());
+    hc::accelerator acc;
+    hsa_amd_memory_pool_t* pool = nullptr;
+    if(iter->second._isInDeviceMem)
+    {
+        // get accelerator and pool of device memory
+        acc = iter->second._acc;
+        pool = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_region());
+    }
+    else
+    {
+        //TODO: the ptr is host pointer, it might be allocated through am_alloc, 
+        // or allocated by others, but add it to the tracker.
+        // right now, only support host pointer which is allocated through am_alloc.
+        if(iter->second._isAmManaged)
+        {
+            acc = iter->second._acc;
+            pool = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_system_region()); 
+        }
+        else
+            return AM_ERROR_MISC;
+    }
 
     const size_t max_agent = hc::accelerator::get_all().size();
     hsa_agent_t agents[max_agent];
