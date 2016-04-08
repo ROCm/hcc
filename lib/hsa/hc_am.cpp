@@ -362,6 +362,7 @@ am_status_t am_map_to_peers(void* ptr, std::initializer_list<hc::accelerator> li
         // right now, only support host pointer which is allocated through am_alloc.
         if(iter->second._isAmManaged)
         {
+            // here, accelerator is the device, but used to query system memory pool
             acc = iter->second._acc;
             pool = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_system_region()); 
         }
@@ -376,10 +377,13 @@ am_status_t am_map_to_peers(void* ptr, std::initializer_list<hc::accelerator> li
 
     for(auto i = list.begin(); i != list.end(); i++)
     {
-        // if the accelerator itself is included in the list, ignore it
+        // if pointer is device pointer, the accelerator itself is included in the list, ignore it
         auto& a = *i;
-        if(a == acc)
-            continue;
+        if(iter->second._isInDeviceMem)
+        {
+            if(a == acc)
+                continue;
+        }
 
         hsa_agent_t* agent = static_cast<hsa_agent_t*>(acc.get_hsa_agent());
 
