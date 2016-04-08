@@ -163,7 +163,7 @@ void am_memtracker_sizeinfo(const hc::accelerator &acc, size_t *deviceMemSize, s
  * @p list a initialization list which includes the peer accelerator to map
  * @return AM_SUCCESS if mapped successfully.
  * @return AM_ERROR_MISC if @p ptr is nullptr or @p list is empty.
- * @return AM_ERROR_MISC if @p ptr is not device memory pointer.
+ * @return AM_ERROR_MISC if @p ptr is not am managed.
  * @return AM_ERROR_MISC if @p is not found in the pointer tracker.
  * @return AM_ERROR_MISC if @p list incudes a bad peer.
  */
