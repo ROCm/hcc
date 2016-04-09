@@ -289,6 +289,26 @@ if (NOT (HSA_AMDGPU_GPU_TARGET STREQUAL "kaveri" OR
   MESSAGE(FATAL_ERROR "${HSA_AMDGPU_GPU_TARGET} is not a valid GPU")
 endif()
 
+#################
+# Setup HCC backend macro string
+# Possible values:
+# - CL : for non-HSA systems
+# - HSAIL : for HSA systems configured with HLC backend
+# - AMDGPU : for HSA systems configured with Lightning backend
+#################
+
+if (HSA_USE_AMDGPU_BACKEND)
+  set(KALMAR_BACKEND "AMDGPU")
+else(HSA_USE_AMDGPU_BACKEND)
+  if (HAS_HSA)
+    set(KALMAR_BACKEND "HSAIL")
+  else (HAS_HSA)
+    set(KALMAR_BACKEND "CL")
+  endif (HAS_HSA)
+endif(HSA_USE_AMDGPU_BACKEND)
+
+message(STATUS "HCC configured with default backend: ${KALMAR_BACKEND}")
+
 #########################
 # build target: world
 # enable HLC and HSAILasm only if HSA stack is available
@@ -326,6 +346,7 @@ add_custom_target(clang
           -DKALMAR_DRIVER_COMMIT=${KALMAR_DRIVER_COMMIT}
           -DKALMAR_COMPILER_COMMIT=${KALMAR_COMPILER_COMMIT}
           -DKALMAR_HLC_COMMIT=${KALMAR_HLC_COMMIT}
+          -DKALMAR_BACKEND=${KALMAR_BACKEND}
           -DLLVM_TARGETS_TO_BUILD=X86
           -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CBackend
           -DLLVM_INCLUDE_EXAMPLES=off
@@ -343,6 +364,7 @@ add_custom_target(clang
           -DKALMAR_VERSION_PATCH=${KALMAR_VERSION_PATCH}
           -DKALMAR_DRIVER_COMMIT=${KALMAR_DRIVER_COMMIT}
           -DKALMAR_COMPILER_COMMIT=${KALMAR_COMPILER_COMMIT}
+          -DKALMAR_BACKEND=${KALMAR_BACKEND}
           -DLLVM_TARGETS_TO_BUILD=X86
           -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CBackend
           -DLLVM_INCLUDE_EXAMPLES=off
