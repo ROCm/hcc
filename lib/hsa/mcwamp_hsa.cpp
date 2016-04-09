@@ -1485,7 +1485,6 @@ public:
     }
 
     bool is_peer(const Kalmar::KalmarDevice* other) override {
-        printf ("is_peer\n");
       if(!hasHSACoarsegrainedRegion())
           return false;
 
@@ -1495,7 +1494,6 @@ public:
       hsa_agent_t* agent = static_cast<hsa_agent_t*>( const_cast<KalmarDevice *> (other)->getHSAAgent());
 
       hsa_status_t status = hsa_amd_agent_memory_pool_get_info(*agent, self_pool, HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access);
-    printf ("  hsa_amd_agent_memory_pool_get_info status=%d access=%d\n", status, access);
 
       if(HSA_STATUS_SUCCESS != status)
           return false; 
