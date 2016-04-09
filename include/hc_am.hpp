@@ -1,6 +1,7 @@
 #pragma once
 
 #include <hc.hpp>
+#include <initializer_list>
 
 typedef int am_status_t;
 #define AM_SUCCESS                           0
@@ -154,6 +155,19 @@ void am_memtracker_print();
  **/
 void am_memtracker_sizeinfo(const hc::accelerator &acc, size_t *deviceMemSize, size_t *hostMemSize, size_t *userMemSize);
 
+
+/*
+ * Map device memory pointed to by @p ptr to the device's peers.
+ * 
+ * @p ptr pointer which points to device memory
+ * @p list a initialization list which includes the peer accelerator to map
+ * @return AM_SUCCESS if mapped successfully.
+ * @return AM_ERROR_MISC if @p ptr is nullptr or @p list is empty.
+ * @return AM_ERROR_MISC if @p ptr is not am managed.
+ * @return AM_ERROR_MISC if @p is not found in the pointer tracker.
+ * @return AM_ERROR_MISC if @p list incudes a bad peer.
+ */
+ am_status_t am_map_to_peers(void* ptr, std::initializer_list<hc::accelerator> list);
 
 }; // namespace hc
 

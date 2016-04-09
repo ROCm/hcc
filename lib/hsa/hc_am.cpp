@@ -336,5 +336,89 @@ size_t am_memtracker_reset(const hc::accelerator &acc)
     return g_amPointerTracker.reset(acc);
 }
 
+am_status_t am_map_to_peers(void* ptr, std::initializer_list<hc::accelerator> list)
+{
+    // check input
+    if(nullptr == ptr || 0 == list.size())
+        return AM_ERROR_MISC;
+    auto iter = g_amPointerTracker.find(ptr);
+
+    if(iter == g_amPointerTracker.end())
+        return AM_ERROR_MISC;
+    
+
+    hc::accelerator acc;
+    hsa_amd_memory_pool_t* pool = nullptr;
+    if(iter->second._isInDeviceMem)
+    {
+        // get accelerator and pool of device memory
+        acc = iter->second._acc;
+        pool = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_region());
+    }
+    else
+    {
+        //TODO: the ptr is host pointer, it might be allocated through am_alloc, 
+        // or allocated by others, but add it to the tracker.
+        // right now, only support host pointer which is allocated through am_alloc.
+        if(iter->second._isAmManaged)
+        {
+            // here, accelerator is the device, but used to query system memory pool
+            acc = iter->second._acc;
+            pool = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_system_region()); 
+        }
+        else
+            return AM_ERROR_MISC;
+    }
+
+    const size_t max_agent = hc::accelerator::get_all().size();
+    hsa_agent_t agents[max_agent];
+  
+    int peer_count = 0;
+
+    for(auto i = list.begin(); i != list.end(); i++)
+    {
+        // if pointer is device pointer, the accelerator itself is included in the list, ignore it
+        auto& a = *i;
+        if(iter->second._isInDeviceMem)
+        {
+            if(a == acc)
+                continue;
+        }
+
+        hsa_agent_t* agent = static_cast<hsa_agent_t*>(acc.get_hsa_agent());
+
+        hsa_amd_memory_pool_access_t access;
+        hsa_status_t  status = hsa_amd_agent_memory_pool_get_info(*agent, *pool, HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access);
+        if(HSA_STATUS_SUCCESS != status)
+            return AM_ERROR_MISC;
+
+        // check access
+        if(HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED == access)
+            return AM_ERROR_MISC;
+
+        bool add_agent = true;
+
+        for(int ii = 0; ii < peer_count; ii++)
+        {
+            if(agent->handle == agents[ii].handle)
+                add_agent = false;
+        } 
+
+        if(add_agent)
+        {
+             agents[peer_count] = *agent;
+             peer_count++;
+        }    
+    }
+
+    // allow access to the agents
+    if(peer_count)
+    {
+        hsa_status_t status = hsa_amd_agents_allow_access(peer_count, agents, NULL, ptr);
+        return status == HSA_STATUS_SUCCESS ? AM_SUCCESS : AM_ERROR_MISC;
+    }
+   
+    return AM_SUCCESS;
+}
 
 } // end namespace hc.
