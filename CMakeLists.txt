@@ -140,9 +140,13 @@ endif ((NOT OPENCL_HEADER) OR (NOT OPENCL_LIBRARY))
 set (HSA_ROOT "/opt/hsa"
         CACHE PATH "HSA runtime path")
 
+set (ROCM_ROOT "/opt/rocm"
+        CACHE PATH "ROCM runtime path")
+
+
 set (HSA_LLVM_BIN_DIR CACHE PATH "Path to llvm tools with hsail/amdgpu support")
 
-find_path(HSA_HEADER hsa.h PATHS ${HSA_HEADER_DIR} ${HSA_ROOT}/include NO_DEFAULT_PATH)
+find_path(HSA_HEADER hsa.h PATHS ${HSA_HEADER_DIR} ${ROCM_ROOT}/include ${HSA_ROOT}/include NO_DEFAULT_PATH)
 find_path(HSA_HEADER hsa.h)
 
 if (NOT HSA_HEADER)
@@ -150,25 +154,25 @@ if (NOT HSA_HEADER)
 endif (NOT HSA_HEADER)
 
 
-find_library(HSA_LIBRARY hsa-runtime64 PATHS ${HSA_LIBRARY_DIR} ${HSA_ROOT}/lib NO_DEFAULT_PATH)
+find_library(HSA_LIBRARY hsa-runtime64 PATHS ${HSA_LIBRARY_DIR} ${ROCM_ROOT}/lib ${HSA_ROOT}/lib NO_DEFAULT_PATH)
 find_library(HSA_LIBRARY hsa-runtime64)
 if (NOT HSA_LIBRARY)
   MESSAGE("HSA runtime library not found. Use -DHSA_LIBRARY_DIR=<path_to_libhsa-runtime64.so>.")
 endif (NOT HSA_LIBRARY)
 
 
-find_library(HSA_KMT_LIBRARY libhsakmt.so.1 PATHS ${HSA_KMT_LIBRARY_DIR} /usr/lib/x86_64-linux-gnu ${HSA_ROOT}/lib NO_DEFAULT_PATH)
+find_library(HSA_KMT_LIBRARY libhsakmt.so.1 PATHS ${HSA_KMT_LIBRARY_DIR} /usr/lib/x86_64-linux-gnu ${ROCM_ROOT}/lib ${HSA_ROOT}/lib NO_DEFAULT_PATH)
 find_library(HSA_KMT_LIBRARY libhsakmt.so.1)
 if (NOT HSA_KMT_LIBRARY)
   MESSAGE("HSA Kernel library not found. Use -DHSA_KMT_LIBRARY_DIR=<path_to_libhsakmt.so.1>.")
 endif (NOT HSA_KMT_LIBRARY)
 
 # find offline finalization tool for APU
-find_program(HSA_HOF_APU hof PATHS ${HSA_HOF_DIR} ${HSA_ROOT}/bin NO_DEFAULT_PATH)
+find_program(HSA_HOF_APU hof PATHS ${HSA_HOF_DIR} ${ROCM_ROOT}/bin ${HSA_ROOT}/bin NO_DEFAULT_PATH)
 find_program(HSA_HOF_APU hof)
 
 # find offline finalization tool for DGPU
-find_program(HSA_HOF_DGPU amdhsafin PATHS ${HSA_HOF_DIR} ${HSA_ROOT}/bin NO_DEFAULT_PATH)
+find_program(HSA_HOF_DGPU amdhsafin PATHS ${HSA_HOF_DIR} ${ROCM_ROOT}/bin ${HSA_ROOT}/bin NO_DEFAULT_PATH)
 find_program(HSA_HOF_DGPU amdhasfin)
 
 if (HSA_HOF_APU)
