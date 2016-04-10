@@ -1,0 +1,50 @@
+#!/bin/bash
+
+set -e
+
+ROCM_PATH="/opt/rocm"
+HCC_DIR="hcc-lc"
+
+
+SOFTLINKS=(
+  "bin" "clamp-config"
+  "bin" "clang"
+  "bin" "clang++"
+  "bin" "extractkernel"
+  "bin" "hcc"
+  "bin" "hcc-config"
+)
+
+
+do_softlinks() {
+
+  mkdir -p /opt/rocm/lib
+  mkdir -p /opt/rocm/bin
+
+  ln -sf $ROCM_PATH/$HCC_DIR $ROCM_PATH/hcc
+
+  for (( i=0; i<${#SOFTLINKS[@]}; i+=2 ))
+  do
+    DIR=${SOFTLINKS[i]}
+    FILE=${SOFTLINKS[i+1]}
+    ln -sf $ROCM_PATH/hcc/$DIR/$FILE $ROCM_PATH/$DIR
+  done
+}
+
+
+case "$1" in
+   configure)
+   do_softlinks
+   ;;
+
+   abort-upgrade|abort-remove|abort-deconfigure)
+      echo "$1"
+    ;;
+
+   *)
+      echo "postinst called with unknown argument: $1" >&2
+      exit 0
+   ;;
+
+esac
+

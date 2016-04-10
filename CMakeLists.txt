@@ -554,6 +554,19 @@ set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMA
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "HCC: a Heterogeneous C++ to OpenCL/HSA compiler")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Siu Chi Chan <siuchi.chan@amd.com>")
 
+file(MAKE_DIRECTORY ${PROJECT_BINARY_DIR}/packaging/debian)
+file(COPY ${PROJECT_SOURCE_DIR}/packaging/debian/postinst DESTINATION
+ ${PROJECT_BINARY_DIR}/packaging/debian
+ FILE_PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+ NO_SOURCE_PERMISSIONS)
+file(COPY ${PROJECT_SOURCE_DIR}/packaging/debian/postrm DESTINATION
+ ${PROJECT_BINARY_DIR}/packaging/debian
+ FILE_PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+ NO_SOURCE_PERMISSIONS)
+
+set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
+  "${PROJECT_BINARY_DIR}/packaging/debian/postinst;${PROJECT_BINARY_DIR}/packaging/debian/postrm")
+
 set(HCC_DEBIAN_DEP "libhsakmt (>=2.0.0), hsa-rocm-dev (>=1.0.0), libstdc++-4.8-dev, llvm, llvm-dev, llvm-runtime, libc++1, libc++-dev, libc++abi1, libc++abi-dev")
 if (HSA_USE_AMDGPU_BACKEND)
   set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_DEBIAN_DEP}, amdphdrs (>=1.0), llvm-amdgpu (>=3.9)" )

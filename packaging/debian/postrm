@@ -1,0 +1,47 @@
+#!/bin/bash
+
+set -e
+
+ROCM_PATH="/opt/rocm"
+HCC_DIR="hcc-lc"
+
+SOFTLINKS=(
+  "bin" "clamp-config"
+  "bin" "clang"
+  "bin" "clang++"
+  "bin" "extractkernel"
+  "bin" "hcc"
+  "bin" "hcc-config"
+)
+
+
+do_softlinks() {
+
+  for (( i=0; i<${#SOFTLINKS[@]}; i+=2 ))
+  do
+    DIR=${SOFTLINKS[i]}
+    FILE=${SOFTLINKS[i+1]}
+    rm -f  $ROCM_PATH/$DIR/$FILE
+  done
+
+  rm -f $ROCM_PATH/hcc
+
+  rmdir --ignore-fail-on-non-empty /opt/rocm/lib 
+  rmdir --ignore-fail-on-non-empty /opt/rocm/bin 
+  rmdir --ignore-fail-on-non-empty /opt/rocm     
+}
+
+
+case "$1" in
+   remove|purge)
+   do_softlinks
+   ;;
+
+   *)
+      echo "postrm called with unknown argument: $1" >&2
+      exit 0
+   ;;
+
+esac
+
+
