@@ -6,7 +6,4 @@ install(TARGETS mcwamp_gtest
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
     )
-install(FILES gtest.h DESTINATION include/gtest)
-
-
 
