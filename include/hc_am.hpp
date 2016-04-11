@@ -155,5 +155,9 @@ void am_memtracker_print();
 void am_memtracker_sizeinfo(const hc::accelerator &acc, size_t *deviceMemSize, size_t *hostMemSize, size_t *userMemSize);
 
 
+am_status_t am_memtracker_host_memory_lock(hc::accelerator &acc, void *ptr, size_t size);
+
+am_status_t am_memtracker_host_memory_unlock(const hc::accelerator &acc, void *ptr);
+
 }; // namespace hc
 

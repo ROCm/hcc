@@ -1,6 +1,7 @@
 
 #include "hc_am.hpp"
 #include "hsa.h"
+#include "hsa_ext_amd.h"
 
 #define DB_TRACKER 0
 
@@ -321,6 +322,41 @@ void am_memtracker_sizeinfo(const hc::accelerator &acc, size_t *deviceMemSize, s
     g_amPointerTracker.readerUnlock();
 }
 
+am_status_t am_memtracker_host_memory_lock(hc::accelerator &acc, void *hostPtr, size_t size)
+{
+    am_status_t am_status;
+        void *devPtr;
+        hsa_status_t status = hsa_amd_memory_lock(hostPtr, size, static_cast<hsa_agent_t*>(acc.get_default_view().get_hsa_agent()), 1, &devPtr);
+    if(status == HSA_STATUS_SUCCESS)
+    {
+//        hc::AmPointerInfo amPointerInfo(hostPtr, devPtr, size, acc, true, false);
+        g_amPointerTracker.insert(devPtr, hc::AmPointerInfo(hostPtr/*hostPointer*/,  devPtr /*devicePointer*/, size, acc, true/*isDevice*/, false /*isAMManaged*/));
+       
+        am_status = AM_SUCCESS;
+    }        
+    return am_status;
+}
+
+am_status_t am_memtracker_host_memory_unlock(const hc::accelerator &acc, void *hostPtr)
+{
+    am_status_t am_status = AM_ERROR_MISC;
+    if(hostPtr != NULL)
+    {
+        hsa_status_t status = hsa_amd_memory_unlock(hostPtr);
+        if(status == HSA_STATUS_SUCCESS){
+            int numRemoved = g_amPointerTracker.remove(hostPtr) ;
+            if (numRemoved == 0) {
+                am_status = AM_ERROR_MISC;
+            }
+        }else{
+            am_status = AM_ERROR_MISC;
+        }
+    }else
+    {
+        am_status = AM_ERROR_MISC;
+    }
+    return am_status;
+}
 
 //---
 size_t am_memtracker_reset(const hc::accelerator &acc)
