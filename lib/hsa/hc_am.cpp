@@ -85,6 +85,7 @@ public:
 
 
     size_t reset (const hc::accelerator &acc);
+    void update_peers (const hc::accelerator &acc, int peerCnt, hsa_agent_t *peerAgents) ;
 
 private:
     MapTrackerType  _tracker;
@@ -147,6 +148,26 @@ size_t AmPointerTracker::reset (const hc::accelerator &acc)
     }
 
     return count;
+}
+
+
+//---
+// Remove all tracked locations, and free the associated memory (if the range was originally allocated by AM).
+// Returns count of ranges removed.
+void AmPointerTracker::update_peers (const hc::accelerator &acc, int peerCnt, hsa_agent_t *peerAgents) 
+{
+    std::lock_guard<std::mutex> l (_mutex);
+
+    // relies on C++11 (erase returns iterator)
+    for (auto iter = _tracker.begin() ; iter != _tracker.end(); ) {
+        if (iter->second._acc == acc) {
+            if (iter->second._isInDeviceMem) {
+                printf ("update peers\n");
+                hsa_amd_agents_allow_access(peerCnt, peerAgents, NULL, const_cast<void*> (iter->first._basePointer));
+            }
+        } 
+        iter++;
+    }
 }
 
 
@@ -334,6 +355,12 @@ void am_memtracker_sizeinfo(const hc::accelerator &acc, size_t *deviceMemSize, s
 size_t am_memtracker_reset(const hc::accelerator &acc)
 {
     return g_amPointerTracker.reset(acc);
+}
+
+
+void am_memtracker_update_peers (const hc::accelerator &acc, int peerCnt, hsa_agent_t *peerAgents) 
+{
+    return g_amPointerTracker.update_peers(acc, peerCnt, peerAgents);
 }
 
 am_status_t am_map_to_peers(void* ptr, std::initializer_list<hc::accelerator> list)

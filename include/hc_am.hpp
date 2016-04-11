@@ -44,6 +44,8 @@ struct AmPointerInfo {
 
 
 
+struct hsa_agent_s;
+
 namespace hc {
 
 
@@ -155,6 +157,8 @@ void am_memtracker_print();
  **/
 void am_memtracker_sizeinfo(const hc::accelerator &acc, size_t *deviceMemSize, size_t *hostMemSize, size_t *userMemSize);
 
+
+void am_memtracker_update_peers(const hc::accelerator &acc, int peerCnt, hsa_agent_s *agents);
 
 /*
  * Map device memory pointed to by @p ptr to the device's peers.
