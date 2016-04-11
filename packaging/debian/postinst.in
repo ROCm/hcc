@@ -2,10 +2,14 @@
 
 set -e
 
-ROCM_PATH="/opt/rocm"
-HCC_DIR="hcc-lc"
+PACKAGE_NAME=@PACKAGE_NAME@
+INSTALL_PATH=@INSTALL_PATH@
 
+ROCM_PATH="/opt/rocm"
+
+# NOTE: if you modify this table, also update the same table in postrm
 SOFTLINKS=(
+# <DIRECTORY>  <FILE>
   "bin" "clamp-config"
   "bin" "clang"
   "bin" "clang++"
@@ -47,31 +51,37 @@ SOFTLINKS=(
 
 do_softlinks() {
 
+  if [ $PACKAGE_NAME == "hcc_hsail" ] && [ -L "$ROCM_PATH/hcc" ] && [ $(readlink -f $ROCM_PATH/hcc) == "$ROCM_PATH/hcc-lc" ] ; then
+      return
+  fi
+
+  mkdir -p /opt/rocm/lib
+  mkdir -p /opt/rocm/bin
+
+  ln -sf $INSTALL_PATH $ROCM_PATH/hcc
+
   for (( i=0; i<${#SOFTLINKS[@]}; i+=2 ))
   do
     DIR=${SOFTLINKS[i]}
     FILE=${SOFTLINKS[i+1]}
-    rm -f  $ROCM_PATH/$DIR/$FILE
+    ln -sf $ROCM_PATH/hcc/$DIR/$FILE $ROCM_PATH/$DIR
   done
-
-  rm -f $ROCM_PATH/hcc
-
-  rmdir --ignore-fail-on-non-empty /opt/rocm/lib 
-  rmdir --ignore-fail-on-non-empty /opt/rocm/bin 
-  rmdir --ignore-fail-on-non-empty /opt/rocm     
 }
 
 
 case "$1" in
-   remove|purge)
+   configure)
    do_softlinks
    ;;
 
+   abort-upgrade|abort-remove|abort-deconfigure)
+      echo "$1"
+    ;;
+
    *)
-      echo "postrm called with unknown argument: $1" >&2
+      echo "postinst called with unknown argument: $1" >&2
       exit 0
    ;;
 
 esac
-
 

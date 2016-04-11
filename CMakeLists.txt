@@ -462,11 +462,11 @@ endif(NOT HSA_LLVM_BIN_DIR)
 
 if (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
   # do NOT depend on HLC or HSAILasm in case we use AMDGPU backend
-  add_custom_target(world DEPENDS clang)
+  add_custom_target(world DEPENDS clang postinst postrm)
 else (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
   # build hlc and HSAILasm in case HSA_USE_AMDGPU_BACKEND 
   # or HSA_LLVM_BIN_DIR is not set
-  add_custom_target(world DEPENDS clang hlc HSAILasm_setup)
+  add_custom_target(world DEPENDS clang hlc HSAILasm_setup postinst postrm)
 endif (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
 
 else (HAS_HSA)
@@ -554,15 +554,17 @@ set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMA
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "HCC: a Heterogeneous C++ to OpenCL/HSA compiler")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Siu Chi Chan <siuchi.chan@amd.com>")
 
-file(MAKE_DIRECTORY ${PROJECT_BINARY_DIR}/packaging/debian)
-file(COPY ${PROJECT_SOURCE_DIR}/packaging/debian/postinst DESTINATION
- ${PROJECT_BINARY_DIR}/packaging/debian
- FILE_PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
- NO_SOURCE_PERMISSIONS)
-file(COPY ${PROJECT_SOURCE_DIR}/packaging/debian/postrm DESTINATION
- ${PROJECT_BINARY_DIR}/packaging/debian
- FILE_PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
- NO_SOURCE_PERMISSIONS)
+set(DEBIAN_EXTRA_SCRIPT_SOURCE_DIR "${PROJECT_SOURCE_DIR}/packaging/debian")
+set(DEBIAN_EXTRA_SCRIPT_DEST_DIR "${PROJECT_BINARY_DIR}/packaging/debian")
+file(MAKE_DIRECTORY ${DEBIAN_EXTRA_SCRIPT_DEST_DIR})
+add_custom_command(
+  OUTPUT  postinst
+  COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_script.bsh ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/postinst.in  ${DEBIAN_EXTRA_SCRIPT_DEST_DIR}/postinst ${CPACK_PACKAGE_NAME} ${CMAKE_INSTALL_PREFIX}
+)
+add_custom_command(
+  OUTPUT  postrm
+  COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_script.bsh ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/postrm.in  ${DEBIAN_EXTRA_SCRIPT_DEST_DIR}/postrm ${CPACK_PACKAGE_NAME} ${CMAKE_INSTALL_PREFIX}
+)
 
 set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
   "${PROJECT_BINARY_DIR}/packaging/debian/postinst;${PROJECT_BINARY_DIR}/packaging/debian/postrm")
@@ -582,11 +584,6 @@ set(CPACK_SOURCE_TGZ "OFF")
 set(CPACK_SOURCE_TZ "OFF")
 set(CPACK_SOURCE_TBZ2 "OFF")
 set(CPACK_BINARY_TZ "OFF")
-
-# autogenerate dependency information
-#set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
-
-#set(CPACK_DEBIAN_PACKAGE_DEPENDS "hsa-runtime (>= 1.0)")
 
 if (HSA_USE_AMDGPU_BACKEND)
   # don't include HSAILasm and hlc if using AMDGPU backend
