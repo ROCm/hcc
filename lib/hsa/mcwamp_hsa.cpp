@@ -1497,7 +1497,7 @@ public:
       if(HSA_STATUS_SUCCESS != status)
           return false; 
     
-      if(HSA_AMD_MEMORY_POOL_ACCESS_ALLOWED_BY_DEFAULT || HSA_AMD_MEMORY_POOL_ACCESS_DISALLOWED_BY_DEFAULT)
+      if(HSA_AMD_MEMORY_POOL_ACCESS_ALLOWED_BY_DEFAULT == access  || HSA_AMD_MEMORY_POOL_ACCESS_DISALLOWED_BY_DEFAULT == access)
           return true;
   
       return false;
