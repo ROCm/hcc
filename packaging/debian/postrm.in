@@ -7,60 +7,13 @@ INSTALL_PATH=@INSTALL_PATH@
 
 ROCM_PATH="/opt/rocm"
 
-# NOTE: if you modify this table, also update the same table in postinst
-SOFTLINKS=(
-  "bin" "clamp-config"
-  "bin" "clang"
-  "bin" "clang++"
-  "bin" "extractkernel"
-  "bin" "hcc"
-  "bin" "hcc-config"
-  "include" "amp.h"
-  "include" "amp_math.h"
-  "include" "amp_short_vectors.h"
-  "include" "array_view"
-  "include" "coordinate"
-  "include" "experimental"
-  "include" "grid_launch.h"
-  "include" "hc.hpp"
-  "include" "hc_am.hpp"
-  "include" "hc_math.hpp"
-  "include" "hc_printf.hpp"
-  "include" "hc_short_vector.hpp"
-  "include" "hsa_atomic.h"
-  "include" "hsa_new.h"
-  "include" "kalmar_aligned_alloc.h"
-  "include" "kalmar_buffer.h"
-  "include" "kalmar_cpu_launch.h"
-  "include" "kalmar_defines.h"
-  "include" "kalmar_exception.h"
-  "include" "kalmar_index.h"
-  "include" "kalmar_launch.h"
-  "include" "kalmar_math.h"
-  "include" "kalmar_runtime.h"
-  "include" "kalmar_serialize.h"
-  "include" "kalmar_short_vectors.inl"
-  "include" "md5.h"
-  "lib" "libhc_am.so"
-  "lib" "libmcwamp.a"
-  "lib" "libmcwamp_atomic.a"
-  "lib" "libmcwamp_cpu.so"
-  "lib" "libmcwamp_hsa.so"
-)
-
 do_softlinks() {
 
   if [ $PACKAGE_NAME == "hcc_hsail" ] && [ -L "$ROCM_PATH/hcc" ] && [ $(readlink -f $ROCM_PATH/hcc) == "$ROCM_PATH/hcc-lc" ] ; then
       return
   fi
 
-  for (( i=0; i<${#SOFTLINKS[@]}; i+=2 ))
-  do
-    DIR=${SOFTLINKS[i]}
-    FILE=${SOFTLINKS[i+1]}
-    rm -f  $ROCM_PATH/$DIR/$FILE
-  done
-
+  rm -r $ROCM_PATH/include/hcc
   rm -f $ROCM_PATH/hcc
 
   rmdir --ignore-fail-on-non-empty /opt/rocm/lib 
