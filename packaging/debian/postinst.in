@@ -31,6 +31,10 @@ do_softlinks() {
 
   mkdir -p /opt/rocm/lib
   mkdir -p /opt/rocm/bin
+
+  if [ -L "$ROCM_PATH/hcc" ] ; then
+    rm -f "$ROCM_PATH/hcc" 
+  fi
   ln -sf $INSTALL_PATH $ROCM_PATH/hcc
   ln -sf $INSTALL_PATH/include $INSTALL_PATH/include/hcc
   ln -sf $ROCM_PATH/hcc/include $ROCM_PATH/include/hcc
