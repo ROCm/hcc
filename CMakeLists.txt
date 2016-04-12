@@ -579,7 +579,7 @@ set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
 
 set(HCC_DEBIAN_DEP "hsa-rocm-dev (=1.0.0), libstdc++-4.8-dev, libc++1, libc++-dev, libc++abi1, libc++abi-dev")
 if (HSA_USE_AMDGPU_BACKEND)
-  set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_DEBIAN_DEP}, amdphdrs (=1.0), llvm-amdgpu (=3.9)" )
+  set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_DEBIAN_DEP}, amdphdrs (=1.0), llvm-amdgpu (>=3.9)" )
 else (HSA_USE_AMDGPU_BACKEND)
   set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_DEBIAN_DEP}" )
 endif (HSA_USE_AMDGPU_BACKEND)
