@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#include <hc.hpp>
+#include "hc.hpp"
 
 typedef struct gl_dim3
 {

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <kalmar_defines.h>
-#include <kalmar_aligned_alloc.h>
+#include "kalmar_defines.h"
+#include "kalmar_aligned_alloc.h"
 
 namespace Kalmar {
 namespace enums {

@@ -12,14 +12,14 @@
 
 #pragma once
 
-#include <kalmar_defines.h>
-#include <kalmar_exception.h>
-#include <kalmar_index.h>
-#include <kalmar_runtime.h>
-#include <kalmar_buffer.h>
-#include <kalmar_serialize.h>
-#include <kalmar_launch.h>
-#include <kalmar_cpu_launch.h>
+#include "kalmar_defines.h"
+#include "kalmar_exception.h"
+#include "kalmar_index.h"
+#include "kalmar_runtime.h"
+#include "kalmar_buffer.h"
+#include "kalmar_serialize.h"
+#include "kalmar_launch.h"
+#include "kalmar_cpu_launch.h"
 
 // forward declaration
 namespace Concurrency {

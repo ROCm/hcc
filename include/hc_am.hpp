@@ -1,6 +1,6 @@
 #pragma once
 
-#include <hc.hpp>
+#include "hc.hpp"
 
 typedef int am_status_t;
 #define AM_SUCCESS                           0
