@@ -1,6 +1,6 @@
 
-#include "hc_am.hpp"
-#include "hsa.h"
+#include <hcc/hc_am.hpp>
+#include <hsa/hsa.h>
 
 #define DB_TRACKER 0
 

@@ -146,8 +146,8 @@ set (ROCM_ROOT "/opt/rocm"
 
 set (HSA_LLVM_BIN_DIR CACHE PATH "Path to llvm tools with hsail/amdgpu support")
 
-find_path(HSA_HEADER hsa.h PATHS ${HSA_HEADER_DIR} ${ROCM_ROOT}/include ${HSA_ROOT}/include NO_DEFAULT_PATH)
-find_path(HSA_HEADER hsa.h)
+find_path(HSA_HEADER hsa/hsa.h PATHS ${HSA_HEADER_DIR} ${ROCM_ROOT}/include ${HSA_ROOT}/include NO_DEFAULT_PATH)
+find_path(HSA_HEADER hsa/hsa.h)
 
 if (NOT HSA_HEADER)
   MESSAGE("HSA header not found. Use -DHSA_HEADER_DIR=<path_to_hsa.h>.")

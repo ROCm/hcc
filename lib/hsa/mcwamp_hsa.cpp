@@ -24,13 +24,13 @@
 #include <vector>
 #include <algorithm>
 
-#include <hsa.h>
-#include <hsa_ext_finalize.h>
-#include <hsa_ext_amd.h>
+#include <hsa/hsa.h>
+#include <hsa/hsa_ext_finalize.h>
+#include <hsa/hsa_ext_amd.h>
 
-#include <md5.h>
-#include <kalmar_runtime.h>
-#include <kalmar_aligned_alloc.h>
+#include <hcc/md5.h>
+#include <hcc/kalmar_runtime.h>
+#include <hcc/kalmar_aligned_alloc.h>
 
 #include <time.h>
 #include <iomanip>
