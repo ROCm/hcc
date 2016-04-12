@@ -2179,8 +2179,8 @@ static HSAContext ctx;
 // ----------------------------------------------------------------------
 namespace Kalmar {
 
-void*
-HSADevice::getHSAAgent() {
+inline void*
+HSADevice::getHSAAgent() override {
     return static_cast<void*>(&getAgent());
 }
 
