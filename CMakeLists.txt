@@ -462,11 +462,11 @@ endif(NOT HSA_LLVM_BIN_DIR)
 
 if (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
   # do NOT depend on HLC or HSAILasm in case we use AMDGPU backend
-  add_custom_target(world DEPENDS clang postinst postrm)
+  add_custom_target(world DEPENDS clang postinst postrm hcc_include_link)
 else (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
   # build hlc and HSAILasm in case HSA_USE_AMDGPU_BACKEND 
   # or HSA_LLVM_BIN_DIR is not set
-  add_custom_target(world DEPENDS clang hlc HSAILasm_setup postinst postrm)
+  add_custom_target(world DEPENDS clang hlc HSAILasm_setup postinst postrm hcc_include_link)
 endif (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
 
 else (HAS_HSA)
@@ -484,6 +484,14 @@ add_subdirectory(tests)
 add_subdirectory(include)
 add_subdirectory(amp-conformance)
 add_subdirectory(stl-test)
+
+# create a "hcc" symlink in the include directory
+# that points to itself so we could support
+# include <hcc.hpp> and include<hcc/hcc.hpp>
+add_custom_command(
+  OUTPUT hcc_include_link
+  COMMAND  ln -sf  ${PROJECT_BINARY_DIR}/include ${PROJECT_BINARY_DIR}/include/hcc
+)
 
 # create documentation
 configure_file(
