@@ -1,6 +1,7 @@
 
 #include "hc_am.hpp"
 #include "hsa.h"
+#include "hsa_ext_amd.h"
 
 #define DB_TRACKER 0
 
@@ -77,7 +78,7 @@ public:
     int remove(void *pointer);
 
     MapTrackerType::iterator find(const void *hostPtr) ;
-
+    
     MapTrackerType::iterator readerLockBegin() { _mutex.lock(); return _tracker.begin(); } ;
     MapTrackerType::iterator end() { return _tracker.end(); } ;
     void readerUnlock() { _mutex.unlock(); };
@@ -135,7 +136,7 @@ size_t AmPointerTracker::reset (const hc::accelerator &acc)
     for (auto iter = _tracker.begin() ; iter != _tracker.end(); ) {
         if (iter->second._acc == acc) {
             if (iter->second._isAmManaged) {
-                hsa_memory_free(const_cast<void*> (iter->first._basePointer));
+                hsa_amd_memory_pool_free(const_cast<void*> (iter->first._basePointer));
             }
             count++;
 
@@ -172,27 +173,34 @@ auto_voidp am_alloc(size_t sizeBytes, hc::accelerator &acc, unsigned flags)
     if (sizeBytes != 0 ) {
         if (acc.is_hsa_accelerator()) {
             hsa_agent_t *hsa_agent = static_cast<hsa_agent_t*> (acc.get_default_view().get_hsa_agent());
-            hsa_region_t *alloc_region;
+            hsa_amd_memory_pool_t *alloc_region;
             if (flags & amHostPinned) {
-               alloc_region = static_cast<hsa_region_t*>(acc.get_hsa_am_system_region());
+               alloc_region = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_system_region());
             } else {
-               alloc_region = static_cast<hsa_region_t*>(acc.get_hsa_am_region());
+               alloc_region = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_region());
             }
 
             if (alloc_region->handle != -1) {
 
-                hsa_status_t s1 = hsa_memory_allocate(*alloc_region, sizeBytes, &ptr);
-                hsa_status_t s2 = hsa_memory_assign_agent(ptr, *hsa_agent, HSA_ACCESS_PERMISSION_RW);
+                hsa_status_t s1 = hsa_amd_memory_pool_allocate(*alloc_region, sizeBytes, 0, &ptr);
 
-                if ((s1 != HSA_STATUS_SUCCESS) || (s2 != HSA_STATUS_SUCCESS)) {
+                if (s1 != HSA_STATUS_SUCCESS) {
                     ptr = NULL;
                 } else {
                     if (flags & amHostPinned) {
-                        g_amPointerTracker.insert(ptr, 
-                                hc::AmPointerInfo(ptr/*hostPointer*/,  ptr /*devicePointer*/, sizeBytes, acc, false/*isDevice*/, true /*isAMManaged*/));
-                    } else {
-                        g_amPointerTracker.insert(ptr, 
-                                hc::AmPointerInfo(NULL/*hostPointer*/,  ptr /*devicePointer*/, sizeBytes, acc, true/*isDevice*/, true /*isAMManaged*/));
+                      s1 = hsa_amd_agents_allow_access(1, hsa_agent, NULL, ptr);
+                      if (s1 != HSA_STATUS_SUCCESS) {
+                        hsa_amd_memory_pool_free(ptr);
+                        ptr = NULL;
+                      }
+                      else {
+                        g_amPointerTracker.insert(ptr,
+                          hc::AmPointerInfo(ptr/*hostPointer*/, ptr /*devicePointer*/, sizeBytes, acc, false/*isDevice*/, true /*isAMManaged*/));
+                      }
+                    }
+                    else {
+                      g_amPointerTracker.insert(ptr,
+                        hc::AmPointerInfo(NULL/*hostPointer*/, ptr /*devicePointer*/, sizeBytes, acc, true/*isDevice*/, true /*isAMManaged*/));
                     }
                 }
             }
@@ -209,7 +217,7 @@ am_status_t am_free(void* ptr)
 
     if (ptr != NULL) {
         // See also tracker::reset which can free memory.
-        hsa_memory_free(ptr);
+        hsa_amd_memory_pool_free(ptr);
 
         int numRemoved = g_amPointerTracker.remove(ptr) ;
         if (numRemoved == 0) {
