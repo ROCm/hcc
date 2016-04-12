@@ -1491,7 +1491,6 @@ public:
       auto self_pool = getHSAAMRegion();
       hsa_amd_memory_pool_access_t access;
 
-      //hsa_agent_t* agent = static_cast<hsa_agent_t*>(other->getHSAAgent());
       hsa_agent_t* agent = static_cast<hsa_agent_t*>( const_cast<KalmarDevice *> (other)->getHSAAgent());
 
       //TODO: CPU acclerator will return NULL currently, return false.
@@ -1727,8 +1726,7 @@ public:
         }
     }
 
-    void* getHSAAgent() override {return static_cast<void*>(&getAgent());
-}
+    void* getHSAAgent() override; 
 
     hcAgentProfile getProfile() override { return profile; }
 
@@ -2179,14 +2177,14 @@ static HSAContext ctx;
 // ----------------------------------------------------------------------
 // member function implementation of HSADevice
 // ----------------------------------------------------------------------
-/*namespace Kalmar {
+namespace Kalmar {
 
 void*
 HSADevice::getHSAAgent() {
     return static_cast<void*>(&getAgent());
 }
 
-}*/ // namespace Kalmar
+} // namespace Kalmar
 
 // ----------------------------------------------------------------------
 // member function implementation of HSAQueue
