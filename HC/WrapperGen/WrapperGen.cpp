@@ -493,6 +493,10 @@ struct StringFinder
           out << "void " << func->getWrapperName() << "(";
           func->printArgsAsParameters(out);
           out << ")\n{\n";
+          out << "if(!_lp.av) {\n";
+          out << "  static accelerator_view av = accelerator().get_default_view();\n";
+          out << "  _lp.av = &av;\n";
+          out << "}\n\n";
           out << "completion_future cf = parallel_for_each(*(_lp.av),extent<3>(_lp.gridDim.z*_lp.groupDim.z,_lp.gridDim.y*_lp.groupDim.y,_lp.gridDim.x*_lp.groupDim.x).tile(_lp.groupDim.z, _lp.groupDim.y, _lp.groupDim.x), \n"
               << func->getFunctorName()
               << "(";
