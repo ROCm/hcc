@@ -157,102 +157,18 @@ void am_memtracker_sizeinfo(const hc::accelerator &acc, size_t *deviceMemSize, s
 
 
 /*
- * Map device memory pointed to by @p ptr to the device's peers.
+ * Map device memory or hsa allocated host memory pointed to by @p ptr to the peers.
  * 
- * @p ptr pointer which points to device memory
- * @p begin iterator of the first accelerator
- * @p end iterator of the last accelerator
+ * @p ptr pointer which points to device memory or host memory
+ * @p num_peer number of peers to map
+ * @p peers pointer to peer accelerator list.
  * @return AM_SUCCESS if mapped successfully.
- * @return AM_ERROR_MISC if @p ptr is nullptr or @p list is empty.
+ * @return AM_ERROR_MISC if @p ptr is nullptr or @p num_peer is 0 or @p peers is nullptr.
  * @return AM_ERROR_MISC if @p ptr is not am managed.
- * @return AM_ERROR_MISC if @p is not found in the pointer tracker.
- * @return AM_ERROR_MISC if @p list incudes a bad peer.
+ * @return AM_ERROR_MISC if @p ptr is not found in the pointer tracker.
+ * @return AM_ERROR_MISC if @p peers incudes a non peer accelerator.
  */
-template<class Iterator>
-am_status_t am_map_to_peers(void* ptr, Iterator begin, Iterator end) 
-{
-    // check input
-    if(nullptr == ptr || begin == end)
-        return AM_ERROR_MISC;
-
-    hc::accelerator acc;
-    AmPointerInfo info(nullptr, nullptr, 0, acc, false, false);
-    auto status = am_memtracker_getinfo(&info, ptr);
-    if(AM_SUCCESS != status)
-        return status;
-
-        hsa_amd_memory_pool_t* pool = nullptr;
-    if(info._isInDeviceMem)
-    {
-        // get accelerator and pool of device memory
-        acc = info._acc;
-        pool = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_region());
-    }
-    else
-    {
-        //TODO: the ptr is host pointer, it might be allocated through am_alloc, 
-        // or allocated by others, but add it to the tracker.
-        // right now, only support host pointer which is allocated through am_alloc.
-        if(info._isAmManaged)
-        {
-            // here, accelerator is the device, but used to query system memory pool
-            acc = info._acc;
-            pool = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_system_region()); 
-        }
-        else
-            return AM_ERROR_MISC;
-    }
-
-    const size_t max_agent = hc::accelerator::get_all().size();
-    hsa_agent_t agents[max_agent];
-  
-    int peer_count = 0;
-
-    for(auto i = begin; i != end; i++)
-    {
-        // if pointer is device pointer, the accelerator itself is included in the list, ignore it
-        auto& a = *i;
-        if(info._isInDeviceMem)
-        {
-            if(a == acc)
-                continue;
-        }
-
-        hsa_agent_t* agent = static_cast<hsa_agent_t*>(acc.get_hsa_agent());
-
-        hsa_amd_memory_pool_access_t access;
-        hsa_status_t  status = hsa_amd_agent_memory_pool_get_info(*agent, *pool, HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access);
-        if(HSA_STATUS_SUCCESS != status)
-            return AM_ERROR_MISC;
-
-        // check access
-        if(HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED == access)
-            return AM_ERROR_MISC;
-
-        bool add_agent = true;
-
-        for(int ii = 0; ii < peer_count; ii++)
-        {
-            if(agent->handle == agents[ii].handle)
-                add_agent = false;
-        } 
-
-        if(add_agent)
-        {
-             agents[peer_count] = *agent;
-             peer_count++;
-        }    
-    }
-
-    // allow access to the agents
-    if(peer_count)
-    {
-        hsa_status_t status = hsa_amd_agents_allow_access(peer_count, agents, NULL, ptr);
-        return status == HSA_STATUS_SUCCESS ? AM_SUCCESS : AM_ERROR_MISC;
-    }
-   
-    return AM_SUCCESS;
-}
+am_status_t am_map_to_peers(void* ptr, size_t num_peer, const hc::accelerator* peers); 
 
 
 }; // namespace hc
