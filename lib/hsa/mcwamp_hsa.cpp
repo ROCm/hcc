@@ -366,6 +366,12 @@ private:
 
     Kalmar::HSAQueue* hsaQueue;
 
+    // prior dependencies
+    // maximum up to 5 prior dependencies could be associated with one
+    // HSABarrier instance
+    int depCount;
+    hsa_signal_t depSignal[5];
+
 public:
     std::shared_future<void>* getFuture() override { return future; }
 
@@ -386,7 +392,16 @@ public:
         return (hsa_signal_load_acquire(signal) == 0);
     }
 
-    HSABarrier() : isDispatched(false), future(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_BLOCKED) {}
+    // default constructor
+    // 0 prior dependency
+    HSABarrier() : isDispatched(false), future(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_BLOCKED), depCount(0) {}
+
+    // constructor with 1 prior depedency
+    HSABarrier(hsa_signal_t dependent_signal) : isDispatched(false), future(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_BLOCKED), depCount(1) {
+        depSignal[0] = dependent_signal;
+    }
+
+    // TBD constructor with more prior depedencies
 
     ~HSABarrier() {
 #if KALMAR_DEBUG
@@ -1118,6 +1133,26 @@ public:
 
         // create shared_ptr instance
         std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>();
+
+        // enqueue the barrier
+        status = barrier.get()->enqueueAsync(this);
+        STATUS_CHECK(status, __LINE__);
+
+        // associate the barrier with this queue
+        asyncOps.push_back(barrier);
+
+        return barrier;
+    }
+
+    // enqueue a barrier packet with one prior dependency
+    std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(void* dependency_native_handle) override {
+        hsa_status_t status = HSA_STATUS_SUCCESS;
+
+        // convert void* to hsa_signal_t
+        hsa_signal_t dep_signal = *(static_cast<hsa_signal_t*>(dependency_native_handle));
+
+        // create shared_ptr instance
+        std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>(dep_signal);
 
         // enqueue the barrier
         status = barrier.get()->enqueueAsync(this);
@@ -2916,6 +2951,13 @@ HSABarrier::enqueueBarrier(hsa_queue_t* queue) {
     header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE;
     header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE;
     barrier->header = header;
+
+    // setup dependent signals
+    if ((depCount > 0) && (depCount <= 5)) {
+        for (int i = 0; i < depCount; ++i) {
+            barrier->dep_signal[i] = depSignal[i];
+        }
+    }
 
     barrier->completion_signal = signal;
 
