@@ -357,29 +357,28 @@ size_t am_memtracker_reset(const hc::accelerator &acc)
     return g_amPointerTracker.reset(acc);
 }
 
-
 void am_memtracker_update_peers (const hc::accelerator &acc, int peerCnt, hsa_agent_t *peerAgents) 
 {
     return g_amPointerTracker.update_peers(acc, peerCnt, peerAgents);
 }
 
-am_status_t am_map_to_peers(void* ptr, std::initializer_list<hc::accelerator> list)
+am_status_t am_map_to_peers(void* ptr, size_t num_peer, const hc::accelerator* peers) 
 {
     // check input
-    if(nullptr == ptr || 0 == list.size())
+    if(nullptr == ptr || 0 == num_peer || nullptr == peers)
         return AM_ERROR_MISC;
-    auto iter = g_amPointerTracker.find(ptr);
-
-    if(iter == g_amPointerTracker.end())
-        return AM_ERROR_MISC;
-    
 
     hc::accelerator acc;
-    hsa_amd_memory_pool_t* pool = nullptr;
-    if(iter->second._isInDeviceMem)
+    AmPointerInfo info(nullptr, nullptr, 0, acc, false, false);
+    auto status = am_memtracker_getinfo(&info, ptr);
+    if(AM_SUCCESS != status)
+        return status;
+
+        hsa_amd_memory_pool_t* pool = nullptr;
+    if(info._isInDeviceMem)
     {
         // get accelerator and pool of device memory
-        acc = iter->second._acc;
+        acc = info._acc;
         pool = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_region());
     }
     else
@@ -387,10 +386,10 @@ am_status_t am_map_to_peers(void* ptr, std::initializer_list<hc::accelerator> li
         //TODO: the ptr is host pointer, it might be allocated through am_alloc, 
         // or allocated by others, but add it to the tracker.
         // right now, only support host pointer which is allocated through am_alloc.
-        if(iter->second._isAmManaged)
+        if(info._isAmManaged)
         {
             // here, accelerator is the device, but used to query system memory pool
-            acc = iter->second._acc;
+            acc = info._acc;
             pool = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_system_region()); 
         }
         else
@@ -402,11 +401,11 @@ am_status_t am_map_to_peers(void* ptr, std::initializer_list<hc::accelerator> li
   
     int peer_count = 0;
 
-    for(auto i = list.begin(); i != list.end(); i++)
+    for(auto i = 0; i < num_peer; i++)
     {
-        // if pointer is device pointer, the accelerator itself is included in the list, ignore it
-        auto& a = *i;
-        if(iter->second._isInDeviceMem)
+        // if pointer is device pointer, and the accelerator itself is included in the list, ignore it
+        auto& a = peers[i];
+        if(info._isInDeviceMem)
         {
             if(a == acc)
                 continue;
@@ -447,5 +446,7 @@ am_status_t am_map_to_peers(void* ptr, std::initializer_list<hc::accelerator> li
    
     return AM_SUCCESS;
 }
+
+
 
 } // end namespace hc.
