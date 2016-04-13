@@ -138,7 +138,6 @@ are:
       -DOPENCL_LIBRARY_DIR=/opt/AMDAPP/lib/x86_64 \
       -DHSA_HEADER_DIR=/opt/hsa/include \
       -DHSA_LIBRARY_DIR=/opt/hsa/lib \
-      -DHSA_KMT_LIBRARY_DIR=/opt/hsa/lib \
       -DHSA_HOF_DIR=/opt/hsa/bin \
       -DCMAKE_BUILD_TYPE=Release \
       -DCXXAMP_ENABLE_BOLT=OFF
@@ -152,8 +151,6 @@ are:
 
    - HSA_HEADER_DIR : HSA runtime header include path (default is /opt/hsa/include )
    - HSA_LIBRARY_DIR : HSA runtime library path (default is /opt/hsa/lib )
-
-   - HSA_KMT_LIBRARY_DIR : HSA kernel library path (default is /opt/hsa/lib )
 
    - HSA_HOF_DIR : HSA offline finalizer binary path (default is /opt/hsa/bin )
 
