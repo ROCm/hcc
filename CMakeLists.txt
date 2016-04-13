@@ -454,11 +454,11 @@ endif(NOT HSA_LLVM_BIN_DIR)
 
 if (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
   # do NOT depend on HLC or HSAILasm in case we use AMDGPU backend
-  add_custom_target(world DEPENDS clang postinst postrm)
+  add_custom_target(world DEPENDS clang)
 else (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
   # build hlc and HSAILasm in case HSA_USE_AMDGPU_BACKEND 
   # or HSA_LLVM_BIN_DIR is not set
-  add_custom_target(world DEPENDS clang hlc HSAILasm_setup postinst postrm)
+  add_custom_target(world DEPENDS clang hlc HSAILasm_setup)
 endif (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
 
 else (HAS_HSA)
@@ -501,6 +501,22 @@ install(DIRECTORY ${PROJECT_BINARY_DIR}/docs/html
         COMPONENT doc
         OPTIONAL)
 
+# generate Debian control scripts postinst and postrm
+if (HSA_USE_AMDGPU_BACKEND)
+  set(CPACK_PACKAGE_NAME "hcc_lc")
+else (HSA_USE_AMDGPU_BACKEND)
+  set(CPACK_PACKAGE_NAME "hcc_hsail")
+endif(HSA_USE_AMDGPU_BACKEND)
+
+set(DEBIAN_EXTRA_SCRIPT_SOURCE_DIR "${PROJECT_SOURCE_DIR}/packaging/debian")
+set(DEBIAN_EXTRA_SCRIPT_DEST_DIR "${PROJECT_BINARY_DIR}/packaging/debian")
+file(MAKE_DIRECTORY ${DEBIAN_EXTRA_SCRIPT_DEST_DIR})
+
+execute_process(COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_script.bsh ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/postinst.in  ${DEBIAN_EXTRA_SCRIPT_DEST_DIR}/postinst ${CPACK_PACKAGE_NAME} ${CMAKE_INSTALL_PREFIX}
+                WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
+
+execute_process(COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_script.bsh ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/postrm.in  ${DEBIAN_EXTRA_SCRIPT_DEST_DIR}/postrm ${CPACK_PACKAGE_NAME} ${CMAKE_INSTALL_PREFIX}
+                WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
 
 # Must build after 'world' target
 if(CXXAMP_ENABLE_BOLT)
@@ -536,13 +552,6 @@ endif(CXXAMP_ENABLE_BOLT)
 
 set(CPACK_SET_DESTDIR TRUE)
 set(CPACK_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
-
-if (HSA_USE_AMDGPU_BACKEND)
-  set(CPACK_PACKAGE_NAME "hcc_lc")
-else (HSA_USE_AMDGPU_BACKEND)
-  set(CPACK_PACKAGE_NAME "hcc_hsail")
-endif(HSA_USE_AMDGPU_BACKEND)
-
 set(CPACK_PACKAGE_VENDOR "Advanced Micro Devices, Inc")
 set(CPACK_PACKAGE_VERSION ${KALMAR_VERSION_STRING})
 set(CPACK_PACKAGE_VERSION_MAJOR ${KALMAR_VERSION_MAJOR})
@@ -551,18 +560,6 @@ set(CPACK_PACKAGE_VERSION_PATCH ${KALMAR_VERSION_PATCH})
 set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_SYSTEM_NAME})
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "HCC: a Heterogeneous C++ to OpenCL/HSA compiler")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Siu Chi Chan <siuchi.chan@amd.com>")
-
-set(DEBIAN_EXTRA_SCRIPT_SOURCE_DIR "${PROJECT_SOURCE_DIR}/packaging/debian")
-set(DEBIAN_EXTRA_SCRIPT_DEST_DIR "${PROJECT_BINARY_DIR}/packaging/debian")
-file(MAKE_DIRECTORY ${DEBIAN_EXTRA_SCRIPT_DEST_DIR})
-add_custom_command(
-  OUTPUT  postinst
-  COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_script.bsh ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/postinst.in  ${DEBIAN_EXTRA_SCRIPT_DEST_DIR}/postinst ${CPACK_PACKAGE_NAME} ${CMAKE_INSTALL_PREFIX}
-)
-add_custom_command(
-  OUTPUT  postrm
-  COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_script.bsh ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/postrm.in  ${DEBIAN_EXTRA_SCRIPT_DEST_DIR}/postrm ${CPACK_PACKAGE_NAME} ${CMAKE_INSTALL_PREFIX}
-)
 
 set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
   "${PROJECT_BINARY_DIR}/packaging/debian/postinst;${PROJECT_BINARY_DIR}/packaging/debian/postrm")
