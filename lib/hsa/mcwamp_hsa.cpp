@@ -1493,6 +1493,10 @@ public:
 
       hsa_agent_t* agent = static_cast<hsa_agent_t*>( const_cast<KalmarDevice *> (other)->getHSAAgent());
 
+      //TODO: CPU acclerator will return NULL currently, return false.
+      if(nullptr == agent)
+          return false;
+
       hsa_status_t status = hsa_amd_agent_memory_pool_get_info(*agent, self_pool, HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access);
 
       if(HSA_STATUS_SUCCESS != status)
@@ -1723,7 +1727,7 @@ public:
         }
     }
 
-    void* getHSAAgent() override;
+    void* getHSAAgent() override; 
 
     hcAgentProfile getProfile() override { return profile; }
 

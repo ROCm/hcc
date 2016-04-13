@@ -19,7 +19,7 @@ struct AmPointerInfo {
     void *      _hostPointer;   ///< Host pointer.  If host access is not allowed, NULL.
     void *      _devicePointer; ///< Device pointer.  
     size_t      _sizeBytes;     ///< Size of allocation.
-    hc::accelerator &_acc;       ///< Device / Accelerator to use.
+    hc::accelerator _acc;       ///< Device / Accelerator to use.
     bool        _isInDeviceMem;    ///< Memory is physically resident on a device (if false, memory is located on host)
     bool        _isAmManaged;   ///< Memory was allocated by AM and should be freed when am_reset is called.
 
@@ -161,17 +161,19 @@ void am_memtracker_sizeinfo(const hc::accelerator &acc, size_t *deviceMemSize, s
 void am_memtracker_update_peers(const hc::accelerator &acc, int peerCnt, hsa_agent_s *agents);
 
 /*
- * Map device memory pointed to by @p ptr to the device's peers.
+ * Map device memory or hsa allocated host memory pointed to by @p ptr to the peers.
  * 
- * @p ptr pointer which points to device memory
- * @p list a initialization list which includes the peer accelerator to map
+ * @p ptr pointer which points to device memory or host memory
+ * @p num_peer number of peers to map
+ * @p peers pointer to peer accelerator list.
  * @return AM_SUCCESS if mapped successfully.
- * @return AM_ERROR_MISC if @p ptr is nullptr or @p list is empty.
+ * @return AM_ERROR_MISC if @p ptr is nullptr or @p num_peer is 0 or @p peers is nullptr.
  * @return AM_ERROR_MISC if @p ptr is not am managed.
- * @return AM_ERROR_MISC if @p is not found in the pointer tracker.
- * @return AM_ERROR_MISC if @p list incudes a bad peer.
+ * @return AM_ERROR_MISC if @p ptr is not found in the pointer tracker.
+ * @return AM_ERROR_MISC if @p peers incudes a non peer accelerator.
  */
- am_status_t am_map_to_peers(void* ptr, std::initializer_list<hc::accelerator> list);
+am_status_t am_map_to_peers(void* ptr, size_t num_peer, const hc::accelerator* peers); 
+
 
 }; // namespace hc
 
