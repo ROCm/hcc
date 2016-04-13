@@ -25,6 +25,8 @@ SOFTLINKS=(
 
 do_softlinks() {
 
+  rm -f $INSTALL_PATH/include/hcc
+
   if [ $PACKAGE_NAME == "hcc_hsail" ] && [ -L "$ROCM_PATH/hcc" ] && [ $(readlink -f $ROCM_PATH/hcc) == "$ROCM_PATH/hcc-lc" ] ; then
       return
   fi
@@ -35,8 +37,6 @@ do_softlinks() {
     FILE=${SOFTLINKS[i+1]}
     rm -f  $ROCM_PATH/$DIR/$FILE
   done
-
-  rm -f $INSTALL_PATH/include/hcc
   rm -f $ROCM_PATH/include/hcc
   rm -f $ROCM_PATH/hcc
 
