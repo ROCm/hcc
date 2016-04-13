@@ -295,6 +295,9 @@ public:
     /// get the profile of the agent
     virtual hcAgentProfile getProfile() { return hcAgentProfileNone; }
 
+    /// check if @p other can access to this device's device memory, return true if so, false otherwise
+    virtual bool is_peer(const KalmarDevice* other) {return false;}
+
 };
 
 class CPUQueue final : public KalmarQueue
@@ -352,6 +355,9 @@ public:
 class KalmarContext
 {
 private:
+    //TODO: Think about a system which has multiple CPU socket, e.g. server. In this case,
+    //We might be able to assume that only the first device is CPU, or we only mimic one cpu
+    //device when constructing KalmarContext.
     KalmarDevice* get_default_dev() {
         if (!def) {
             if (Devices.size() <= 1) {

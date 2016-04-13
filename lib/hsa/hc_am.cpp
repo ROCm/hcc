@@ -1,6 +1,6 @@
-
-#include <hcc/hc_am.hpp>
+#include "hc_am.hpp"
 #include <hsa/hsa.h>
+#include <hsa/hsa_ext_amd.h>
 
 #define DB_TRACKER 0
 
@@ -77,13 +77,14 @@ public:
     int remove(void *pointer);
 
     MapTrackerType::iterator find(const void *hostPtr) ;
-
+    
     MapTrackerType::iterator readerLockBegin() { _mutex.lock(); return _tracker.begin(); } ;
     MapTrackerType::iterator end() { return _tracker.end(); } ;
     void readerUnlock() { _mutex.unlock(); };
 
 
     size_t reset (const hc::accelerator &acc);
+    void update_peers (const hc::accelerator &acc, int peerCnt, hsa_agent_t *peerAgents) ;
 
 private:
     MapTrackerType  _tracker;
@@ -135,7 +136,7 @@ size_t AmPointerTracker::reset (const hc::accelerator &acc)
     for (auto iter = _tracker.begin() ; iter != _tracker.end(); ) {
         if (iter->second._acc == acc) {
             if (iter->second._isAmManaged) {
-                hsa_memory_free(const_cast<void*> (iter->first._basePointer));
+                hsa_amd_memory_pool_free(const_cast<void*> (iter->first._basePointer));
             }
             count++;
 
@@ -146,6 +147,26 @@ size_t AmPointerTracker::reset (const hc::accelerator &acc)
     }
 
     return count;
+}
+
+
+//---
+// Remove all tracked locations, and free the associated memory (if the range was originally allocated by AM).
+// Returns count of ranges removed.
+void AmPointerTracker::update_peers (const hc::accelerator &acc, int peerCnt, hsa_agent_t *peerAgents) 
+{
+    std::lock_guard<std::mutex> l (_mutex);
+
+    // relies on C++11 (erase returns iterator)
+    for (auto iter = _tracker.begin() ; iter != _tracker.end(); ) {
+        if (iter->second._acc == acc) {
+            if (iter->second._isInDeviceMem) {
+                printf ("update peers\n");
+                hsa_amd_agents_allow_access(peerCnt, peerAgents, NULL, const_cast<void*> (iter->first._basePointer));
+            }
+        } 
+        iter++;
+    }
 }
 
 
@@ -172,27 +193,34 @@ auto_voidp am_alloc(size_t sizeBytes, hc::accelerator &acc, unsigned flags)
     if (sizeBytes != 0 ) {
         if (acc.is_hsa_accelerator()) {
             hsa_agent_t *hsa_agent = static_cast<hsa_agent_t*> (acc.get_default_view().get_hsa_agent());
-            hsa_region_t *alloc_region;
+            hsa_amd_memory_pool_t *alloc_region;
             if (flags & amHostPinned) {
-               alloc_region = static_cast<hsa_region_t*>(acc.get_hsa_am_system_region());
+               alloc_region = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_system_region());
             } else {
-               alloc_region = static_cast<hsa_region_t*>(acc.get_hsa_am_region());
+               alloc_region = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_region());
             }
 
             if (alloc_region->handle != -1) {
 
-                hsa_status_t s1 = hsa_memory_allocate(*alloc_region, sizeBytes, &ptr);
-                hsa_status_t s2 = hsa_memory_assign_agent(ptr, *hsa_agent, HSA_ACCESS_PERMISSION_RW);
+                hsa_status_t s1 = hsa_amd_memory_pool_allocate(*alloc_region, sizeBytes, 0, &ptr);
 
-                if ((s1 != HSA_STATUS_SUCCESS) || (s2 != HSA_STATUS_SUCCESS)) {
+                if (s1 != HSA_STATUS_SUCCESS) {
                     ptr = NULL;
                 } else {
                     if (flags & amHostPinned) {
-                        g_amPointerTracker.insert(ptr, 
-                                hc::AmPointerInfo(ptr/*hostPointer*/,  ptr /*devicePointer*/, sizeBytes, acc, false/*isDevice*/, true /*isAMManaged*/));
-                    } else {
-                        g_amPointerTracker.insert(ptr, 
-                                hc::AmPointerInfo(NULL/*hostPointer*/,  ptr /*devicePointer*/, sizeBytes, acc, true/*isDevice*/, true /*isAMManaged*/));
+                      s1 = hsa_amd_agents_allow_access(1, hsa_agent, NULL, ptr);
+                      if (s1 != HSA_STATUS_SUCCESS) {
+                        hsa_amd_memory_pool_free(ptr);
+                        ptr = NULL;
+                      }
+                      else {
+                        g_amPointerTracker.insert(ptr,
+                          hc::AmPointerInfo(ptr/*hostPointer*/, ptr /*devicePointer*/, sizeBytes, acc, false/*isDevice*/, true /*isAMManaged*/));
+                      }
+                    }
+                    else {
+                      g_amPointerTracker.insert(ptr,
+                        hc::AmPointerInfo(NULL/*hostPointer*/, ptr /*devicePointer*/, sizeBytes, acc, true/*isDevice*/, true /*isAMManaged*/));
                     }
                 }
             }
@@ -209,7 +237,7 @@ am_status_t am_free(void* ptr)
 
     if (ptr != NULL) {
         // See also tracker::reset which can free memory.
-        hsa_memory_free(ptr);
+        hsa_amd_memory_pool_free(ptr);
 
         int numRemoved = g_amPointerTracker.remove(ptr) ;
         if (numRemoved == 0) {
@@ -327,6 +355,97 @@ size_t am_memtracker_reset(const hc::accelerator &acc)
 {
     return g_amPointerTracker.reset(acc);
 }
+
+void am_memtracker_update_peers (const hc::accelerator &acc, int peerCnt, hsa_agent_t *peerAgents) 
+{
+    return g_amPointerTracker.update_peers(acc, peerCnt, peerAgents);
+}
+
+am_status_t am_map_to_peers(void* ptr, size_t num_peer, const hc::accelerator* peers) 
+{
+    // check input
+    if(nullptr == ptr || 0 == num_peer || nullptr == peers)
+        return AM_ERROR_MISC;
+
+    hc::accelerator acc;
+    AmPointerInfo info(nullptr, nullptr, 0, acc, false, false);
+    auto status = am_memtracker_getinfo(&info, ptr);
+    if(AM_SUCCESS != status)
+        return status;
+
+        hsa_amd_memory_pool_t* pool = nullptr;
+    if(info._isInDeviceMem)
+    {
+        // get accelerator and pool of device memory
+        acc = info._acc;
+        pool = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_region());
+    }
+    else
+    {
+        //TODO: the ptr is host pointer, it might be allocated through am_alloc, 
+        // or allocated by others, but add it to the tracker.
+        // right now, only support host pointer which is allocated through am_alloc.
+        if(info._isAmManaged)
+        {
+            // here, accelerator is the device, but used to query system memory pool
+            acc = info._acc;
+            pool = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_system_region()); 
+        }
+        else
+            return AM_ERROR_MISC;
+    }
+
+    const size_t max_agent = hc::accelerator::get_all().size();
+    hsa_agent_t agents[max_agent];
+  
+    int peer_count = 0;
+
+    for(auto i = 0; i < num_peer; i++)
+    {
+        // if pointer is device pointer, and the accelerator itself is included in the list, ignore it
+        auto& a = peers[i];
+        if(info._isInDeviceMem)
+        {
+            if(a == acc)
+                continue;
+        }
+
+        hsa_agent_t* agent = static_cast<hsa_agent_t*>(acc.get_hsa_agent());
+
+        hsa_amd_memory_pool_access_t access;
+        hsa_status_t  status = hsa_amd_agent_memory_pool_get_info(*agent, *pool, HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access);
+        if(HSA_STATUS_SUCCESS != status)
+            return AM_ERROR_MISC;
+
+        // check access
+        if(HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED == access)
+            return AM_ERROR_MISC;
+
+        bool add_agent = true;
+
+        for(int ii = 0; ii < peer_count; ii++)
+        {
+            if(agent->handle == agents[ii].handle)
+                add_agent = false;
+        } 
+
+        if(add_agent)
+        {
+             agents[peer_count] = *agent;
+             peer_count++;
+        }    
+    }
+
+    // allow access to the agents
+    if(peer_count)
+    {
+        hsa_status_t status = hsa_amd_agents_allow_access(peer_count, agents, NULL, ptr);
+        return status == HSA_STATUS_SUCCESS ? AM_SUCCESS : AM_ERROR_MISC;
+    }
+   
+    return AM_SUCCESS;
+}
+
 
 
 } // end namespace hc.
