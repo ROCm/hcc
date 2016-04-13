@@ -66,7 +66,6 @@ macro(add_mcwamp_library_hsa name )
   add_dependencies(${name} llvm-link opt clang)
   # add HSA libraries
   target_link_libraries(${name} ${HSA_LIBRARY})
-  target_link_libraries(${name} ${HSA_KMT_LIBRARY})
   target_link_libraries(${name} pthread)
   target_link_libraries(${name} elf)
 endmacro(add_mcwamp_library_hsa name )
