@@ -196,8 +196,7 @@ SET(KALMAR_VERSION_MINOR "10")
 # get date information based on UTC
 # use the last two digits of year + week number + day in the week as KALMAR_VERSION_PATCH
 # use the commit date, instead of build date
-execute_process(COMMAND git show -s --format=@%ct
-                COMMAND date -f - --utc +%y%W%w
+execute_process(COMMAND git show -s --format=%ct
                 WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
                 OUTPUT_VARIABLE KALMAR_VERSION_PATCH
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
