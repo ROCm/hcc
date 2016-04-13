@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
@@ -22,7 +23,6 @@
 #include <thread>
 #include <utility>
 #include <vector>
-#include <algorithm>
 
 #include <hsa.h>
 #include <hsa_ext_finalize.h>
@@ -66,10 +66,6 @@
 // default set as 0 (NOT print out kernel dispatch time)
 #define KALMAR_DISPATCH_TIME_PRINTOUT (0)
 
-// threshold to clean up finished kernel in HSAQueue.asyncOps
-// default set as 1024
-#define ASYNCOPS_VECTOR_GC_SIZE (1024)
-
 
 
 static const char* getHSAErrorString(hsa_status_t s) {
@@ -106,7 +102,7 @@ static const char* getHSAErrorString(hsa_status_t s) {
     return error_string;
 }
 
-#define STATUS_CHECK(s,line) if (s != HSA_STATUS_SUCCESS) {\
+#define STATUS_CHECK(s,line) if (s != HSA_STATUS_SUCCESS && s != HSA_STATUS_INFO_BREAK) {\
     const char* error_string = getHSAErrorString(s);\
 		printf("### Error: %s (%d) at line:%d\n", error_string, s, line);\
                 assert(HSA_STATUS_SUCCESS == hsa_shut_down());\
@@ -434,37 +430,37 @@ private:
 }; // end of HSADispatch
 
 //-----
-//Structure used to extract information from regions
-struct region_iterator
+//Structure used to extract information from memory pool
+struct pool_iterator
 {
-    hsa_region_t _am_region;
-    hsa_region_t _am_host_region;
+    hsa_amd_memory_pool_t _am_memory_pool;
+    hsa_amd_memory_pool_t _am_host_memory_pool;
 
-    hsa_region_t _kernarg_region;
-    hsa_region_t _finegrained_system_region;
-    hsa_region_t _coarsegrained_region;
-    hsa_region_t _coarsegrained_system_region;
+    hsa_amd_memory_pool_t _kernarg_memory_pool;
+    hsa_amd_memory_pool_t _finegrained_system_memory_pool;
+    hsa_amd_memory_pool_t _coarsegrained_system_memory_pool;
+    hsa_amd_memory_pool_t _local_memory_pool;
 
-    bool        _found_kernarg_region;
-    bool        _found_finegrained_system_region;
-    bool        _found_coarsegrained_region;
-    bool        _found_coarsegrained_system_region;
+    bool        _found_kernarg_memory_pool;
+    bool        _found_finegrained_system_memory_pool;
+    bool        _found_local_memory_pool;
+    bool        _found_coarsegrained_system_memory_pool;
 
-    region_iterator() ;
+    pool_iterator() ;
 };
 
 
-region_iterator::region_iterator()
+pool_iterator::pool_iterator()
 {
-    _kernarg_region.handle=(uint64_t)-1;
-    _finegrained_system_region.handle=(uint64_t)-1;
-    _coarsegrained_region.handle=(uint64_t)-1;
-    _coarsegrained_system_region.handle=(uint64_t)-1;
+    _kernarg_memory_pool.handle=(uint64_t)-1;
+    _finegrained_system_memory_pool.handle=(uint64_t)-1;
+    _local_memory_pool.handle=(uint64_t)-1;
+    _coarsegrained_system_memory_pool.handle=(uint64_t)-1;
 
-    _found_kernarg_region = false;
-    _found_finegrained_system_region = false;
-    _found_coarsegrained_region = false;
-    _found_coarsegrained_system_region = false;
+    _found_kernarg_memory_pool = false;
+    _found_finegrained_system_memory_pool = false;
+    _found_local_memory_pool = false;
+    _found_coarsegrained_system_memory_pool = false;
 }
 //-----
 
@@ -724,7 +720,16 @@ public:
                 std::cerr << "read(" << device << "," << dst << "," << count << "," << offset << "): use HSA memory copy\n";
 #endif
                 hsa_status_t status = HSA_STATUS_SUCCESS;
-                status = hsa_memory_copy(dst, (char*)device + offset, count);
+                // Make sure host memory is accessible to gpu
+                // FIXME: host memory is allocated through OS allocator, if not, correct it.
+                hsa_agent_t* agent = static_cast<hsa_agent_t*>(getHSAAgent()); 
+                void* va = nullptr;
+                status = hsa_amd_memory_lock(dst, count, agent, 1, &va);
+                STATUS_CHECK(status, __LINE__);
+                status = hsa_memory_copy(va, (char*)device + offset, count);
+                STATUS_CHECK(status, __LINE__);
+                // Unlock the host memory
+                status = hsa_amd_memory_unlock(dst);
                 STATUS_CHECK(status, __LINE__);
             } else {
 #if KALMAR_DEBUG
@@ -745,7 +750,16 @@ public:
                 std::cerr << "write(" << device << "," << src << "," << count << "," << offset << "," << blocking << "): use HSA memory copy\n";
 #endif
                 hsa_status_t status = HSA_STATUS_SUCCESS;
-                status = hsa_memory_copy((char*)device + offset, src, count);
+                // Make sure host memory is accessible to gpu
+                // FIXME: host memory is allocated through OS allocator, if not, correct it.
+                hsa_agent_t* agent = static_cast<hsa_agent_t*>(getHSAAgent()); 
+                void* va = nullptr;
+                status = hsa_amd_memory_lock(const_cast<void*>(src), count, agent, 1, &va);
+                STATUS_CHECK(status, __LINE__);
+                status = hsa_memory_copy((char*)device + offset, va, count);
+                STATUS_CHECK(status, __LINE__);
+                // Unlock the host memory
+                status = hsa_amd_memory_unlock(const_cast<void*>(src));
                 STATUS_CHECK(status, __LINE__);
             } else {
 #if KALMAR_DEBUG
@@ -767,6 +781,10 @@ public:
                 std::cerr << "copy(" << src << "," << dst << "," << count << "," << src_offset << "," << dst_offset << "," << blocking << "): use HSA memory copy\n";
 #endif
                 hsa_status_t status = HSA_STATUS_SUCCESS;
+                // FIXME: aftre p2p enabled, if this function is not expected to copy between two buffers from different device, then, delete allow_access API call.
+                hsa_agent_t* agent = static_cast<hsa_agent_t*>(getHSAAgent());
+                status = hsa_amd_agents_allow_access(1, agent, NULL, src);
+                STATUS_CHECK(status, __LINE__); 
                 status = hsa_memory_copy((char*)dst + dst_offset, (char*)src + src_offset, count);
                 STATUS_CHECK(status, __LINE__);
             } else {
@@ -791,9 +809,17 @@ public:
 #endif
             hsa_status_t status = HSA_STATUS_SUCCESS;
             // allocate a host buffer
-            void *data = kalmar_aligned_alloc(0x1000, count);
+            // TODO: for safety, we copy to host, but we can map device memory to host through hsa_amd_agents_allow_access
+            // withouth copying data.
+            void* data = nullptr;
+            hsa_amd_memory_pool_t* am_host_region = static_cast<hsa_amd_memory_pool_t*>(getHSAAMHostRegion());
+            status = hsa_amd_memory_pool_allocate(*am_host_region, count, 0, &data);
+            STATUS_CHECK(status, __LINE__);
             if (data != nullptr) {
               // copy data from device buffer to host buffer
+              hsa_agent_t* agent = static_cast<hsa_agent_t*>(getHSAAgent()); 
+              status = hsa_amd_agents_allow_access(1, agent, NULL, data);
+              STATUS_CHECK(status, __LINE__);
               status = hsa_memory_copy(data, (char*)device + offset, count);
               STATUS_CHECK(status, __LINE__);
             } else {
@@ -840,7 +866,7 @@ public:
             }
 
             // deallocate the host buffer
-            kalmar_aligned_free(addr);
+            hsa_amd_memory_pool_free(addr);
         } else {
 #if KALMAR_DEBUG
             std::cerr << "unmap(" << device << "," << addr << "," << count << "," << offset << "," << modify << "): use host memory unmap\n";
@@ -900,12 +926,6 @@ public:
                 asyncOps[i] = nullptr;
             }
         }
-
-        // GC for finished kernels
-        if (asyncOps.size() > ASYNCOPS_VECTOR_GC_SIZE) {
-          asyncOps.erase(std::remove(asyncOps.begin(), asyncOps.end(), nullptr),
-                         asyncOps.end());
-        }
     }
 };
 
@@ -926,7 +946,7 @@ private:
     std::mutex queues_mutex;
     std::vector< std::weak_ptr<KalmarQueue> > queues;
 
-    region_iterator ri;
+    pool_iterator ri;
 
     bool useCoarseGrainedRegion;
 
@@ -939,6 +959,13 @@ private:
 
     hcAgentProfile profile;
 
+    /*TODO: This is the first CPU which will provide system memory pool
+    We might need to modify again in multiple CPU socket scenario. Because
+    we must make sure there is pyshycial link between device and host. Currently,
+    agent iterate function will push back all of the dGPU on the system, which might
+    not be linked directly to the first cpu node, host */
+    hsa_agent_t host_;
+
 public:
  
     uint32_t getWorkgroupMaxSize() {
@@ -949,115 +976,98 @@ public:
         return &workgroup_max_dim[0];
     }
 
-    // Callback for hsa_agent_iterate_regions.
-    // data is of type region_iterator,
-    // we save the regions we care about into this structure.
-    static hsa_status_t get_memory_regions(hsa_region_t region, void* data)
+    // Callback for hsa_amd_agent_iterate_memory_pools.
+    // data is of type pool_iterator,
+    // we save the pools we care about into this structure.
+    static hsa_status_t get_memory_pools(hsa_amd_memory_pool_t region, void* data)
     {
     
-        hsa_region_segment_t segment;
-        hsa_region_get_info(region, HSA_REGION_INFO_SEGMENT, &segment);
+        hsa_amd_segment_t segment;
+        hsa_amd_memory_pool_get_info(region, HSA_AMD_MEMORY_POOL_INFO_SEGMENT, &segment);
     
-        region_iterator *ri = (region_iterator*) (data);
-    
-        hsa_region_global_flag_t flags;
-        hsa_region_get_info(region, HSA_REGION_INFO_GLOBAL_FLAGS, &flags);
+        if (segment == HSA_AMD_SEGMENT_GLOBAL) {
+#if KALMAR_DEBUG
+          size_t size = 0;
+          hsa_amd_memory_pool_get_info(region, HSA_AMD_MEMORY_POOL_INFO_SIZE, &size);
+          size = size/(1024*1024);
+          std::cerr << "found memory pool of GPU local memory, size(MB) = " << size << std::endl;
+#endif 
+          pool_iterator *ri = (pool_iterator*) (data);
+          ri->_local_memory_pool = region;
+          ri->_found_local_memory_pool = true;
 
-#if KALMAR_DEBUG
-        size_t size = 0;
-        hsa_region_get_info(region, HSA_REGION_INFO_SIZE, &size);
-        size = size/(1024*1024);
-
-        size_t alloc_max_size = 0;
-        hsa_region_get_info(region, HSA_REGION_INFO_ALLOC_MAX_SIZE, &alloc_max_size);
-        alloc_max_size = alloc_max_size/(1024*1024);
-#endif
-
-        if (segment == HSA_REGION_SEGMENT_GLOBAL) {
-            bool is_system_memory_region = false;
-            hsa_region_get_info(region, (hsa_region_info_t)HSA_AMD_REGION_INFO_HOST_ACCESSIBLE, &is_system_memory_region);
-
-            // prefer GPU memory over system memory
-            if (!is_system_memory_region) {
-                if (flags & HSA_REGION_GLOBAL_FLAG_KERNARG) {
-#if KALMAR_DEBUG
-                    std::cerr << "found kernarg region on GPU memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
-#endif 
-                    ri->_kernarg_region = region;
-                    ri->_found_kernarg_region = true;
-                }
-    
-                if (flags & HSA_REGION_GLOBAL_FLAG_FINE_GRAINED) {
-#if KALMAR_DEBUG
-                    std::cerr << "found fine grained region on GPU memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
-#endif 
-                    ri->_finegrained_system_region = region;
-                    ri->_found_finegrained_system_region = true;
-                }
-    
-                if (flags & HSA_REGION_GLOBAL_FLAG_COARSE_GRAINED) {
-#if KALMAR_DEBUG
-                    std::cerr << "found coarse grained region on GPU memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
-#endif 
-                    ri->_coarsegrained_region = region;
-                    ri->_found_coarsegrained_region = true;
-                }
-            } else {
-                if ((flags & HSA_REGION_GLOBAL_FLAG_KERNARG) && (!ri->_found_kernarg_region)) {
-#if KALMAR_DEBUG
-                    std::cerr << "found kernarg region on host memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
-#endif 
-                    ri->_kernarg_region = region;
-                    ri->_found_kernarg_region = true;
-                }
-        
-                if ((flags & HSA_REGION_GLOBAL_FLAG_FINE_GRAINED) && (!ri->_found_finegrained_system_region)) {
-#if KALMAR_DEBUG
-                    std::cerr << "found fine grained region on host memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
-#endif 
-                    ri->_finegrained_system_region = region;
-                    ri->_found_finegrained_system_region = true;
-                }
-                if ((flags & HSA_REGION_GLOBAL_FLAG_COARSE_GRAINED) && (!ri->_found_coarsegrained_system_region)) {
-#if KALMAR_DEBUG
-                    std::cerr << "found coarse-grain system region, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
-#endif 
-                    ri->_coarsegrained_system_region = region;
-                    ri->_found_coarsegrained_system_region = true;
-                }
-        
-                if ((flags & HSA_REGION_GLOBAL_FLAG_COARSE_GRAINED) && (!ri->_found_coarsegrained_region)) {
-#if KALMAR_DEBUG
-                    std::cerr << "found coarse grained region on host memory, size(MB) = " << size << " alloc_max_size(MB) = " << alloc_max_size << std::endl;
-#endif 
-                    ri->_coarsegrained_region = region;
-                    ri->_found_coarsegrained_region = true;
-                }
-            }
+          return HSA_STATUS_INFO_BREAK;
         }
     
         return HSA_STATUS_SUCCESS;
     }
 
-    static hsa_status_t find_group_memory(hsa_region_t region, void* data) {
-      hsa_region_segment_t segment;
+    static hsa_status_t get_host_pools(hsa_amd_memory_pool_t region, void* data) {
+        hsa_status_t status;
+        hsa_amd_segment_t segment;
+        status = hsa_amd_memory_pool_get_info(region, HSA_AMD_MEMORY_POOL_INFO_SEGMENT, &segment);
+        STATUS_CHECK(status, __LINE__);
+
+        pool_iterator *ri = (pool_iterator*) (data);
+
+        hsa_amd_memory_pool_global_flag_t flags;
+        status = hsa_amd_memory_pool_get_info(region, HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS, &flags);
+        STATUS_CHECK(status, __LINE__);
+
+#if KALMAR_DEBUG
+        size_t size = 0;
+        status = hsa_amd_memory_pool_get_info(region, HSA_AMD_MEMORY_POOL_INFO_SIZE, &size);
+        STATUS_CHECK(status, __LINE__);
+        size = size/(1024*1024);
+
+#endif
+        if ((flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT) && (!ri->_found_kernarg_memory_pool)) {
+#if KALMAR_DEBUG
+            std::cerr << "found kernarg memory pool on host memory, size(MB) = " << size << std::endl;
+#endif 
+            ri->_kernarg_memory_pool = region;
+            ri->_found_kernarg_memory_pool = true;
+        }
+        
+        if ((flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED) && (!ri->_found_finegrained_system_memory_pool)) {
+#if KALMAR_DEBUG
+            std::cerr << "found fine grained memory pool on host memory, size(MB) = " << size << std::endl;
+#endif 
+            ri->_finegrained_system_memory_pool = region;
+            ri->_found_finegrained_system_memory_pool = true;
+        }
+
+        if ((flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_COARSE_GRAINED) && (!ri->_found_coarsegrained_system_memory_pool)) {
+#if KALMAR_DEBUG
+            std::cerr << "found coarse-grain system memory pool, size(MB) = " << size << std::endl;
+#endif 
+            ri->_coarsegrained_system_memory_pool = region;
+            ri->_found_coarsegrained_system_memory_pool = true;
+        }
+        return HSA_STATUS_SUCCESS;
+    } 
+
+    static hsa_status_t find_group_memory(hsa_amd_memory_pool_t region, void* data) {
+      hsa_amd_segment_t segment;
       size_t size = 0;
       bool flag = false;
 
       hsa_status_t status = HSA_STATUS_SUCCESS;
 
       // get segment information
-      status = hsa_region_get_info(region, HSA_REGION_INFO_SEGMENT, &segment);
+      status = hsa_amd_memory_pool_get_info(region, HSA_AMD_MEMORY_POOL_INFO_SEGMENT, &segment);
       STATUS_CHECK(status, __LINE__);
 
-      if (segment == HSA_REGION_SEGMENT_GROUP) {
+      if (segment == HSA_AMD_SEGMENT_GROUP) {
         // found group segment, get its size
-        status = hsa_region_get_info(region, HSA_REGION_INFO_SIZE, &size);
+        status = hsa_amd_memory_pool_get_info(region, HSA_AMD_MEMORY_POOL_INFO_SIZE, &size);
         STATUS_CHECK(status, __LINE__);
 
         // save the result to data
         size_t* result = (size_t*)data;
         *result = size;
+
+        return HSA_STATUS_INFO_BREAK;
       }
 
       // continue iteration
@@ -1068,7 +1078,7 @@ public:
         return agent;
     }
 
-    HSADevice(hsa_agent_t a) : KalmarDevice(access_type_read_write),
+    HSADevice(hsa_agent_t a, hsa_agent_t host) : KalmarDevice(access_type_read_write),
                                agent(a), programs(), max_tile_static_size(0),
                                queues(), queues_mutex(),
                                ri(),
@@ -1076,7 +1086,7 @@ public:
                                kernargPool(), kernargPoolFlag(), kernargCursor(0), kernargPoolMutex(),
                                executables(),
                                profile(hcAgentProfileNone),
-                               path(), description() {
+                               path(), description(), host_(host) {
 #if KALMAR_DEBUG
         std::cerr << "HSADevice::HSADevice()\n";
 #endif
@@ -1106,11 +1116,14 @@ public:
 #endif
         }
 
-        /// iterate over memory regions of the agent
-        status = hsa_agent_iterate_regions(agent, HSADevice::find_group_memory, &max_tile_static_size);
+        /// Iterate over memory pool of the device and its host
+        status = hsa_amd_agent_iterate_memory_pools(agent, HSADevice::find_group_memory, &max_tile_static_size);
         STATUS_CHECK(status, __LINE__);
 
-        status = hsa_agent_iterate_regions(agent, &HSADevice::get_memory_regions, &ri);
+        status = hsa_amd_agent_iterate_memory_pools(agent, &HSADevice::get_memory_pools, &ri);
+        STATUS_CHECK(status, __LINE__);
+
+        status = hsa_amd_agent_iterate_memory_pools(host_, HSADevice::get_host_pools, &ri);
         STATUS_CHECK(status, __LINE__);
 
         /// after iterating memory regions, set if we can use coarse grained regions
@@ -1134,16 +1147,17 @@ public:
         /// - compile-time macro KERNARG_POOL_SIZE is larger than 0
         if (hasHSAKernargRegion() && USE_KERNARG_REGION) {
 #if KERNARG_POOL_SIZE > 0
-            hsa_region_t kernarg_region = getHSAKernargRegion();
+            hsa_amd_memory_pool_t kernarg_region = getHSAKernargRegion();
 
             // pre-allocate kernarg buffers
             void* kernargMemory = nullptr;
             for (int i = 0; i < KERNARG_POOL_SIZE; ++i) {
-                status = hsa_memory_allocate(kernarg_region, KERNARG_BUFFER_SIZE,  &kernargMemory);
+                status = hsa_amd_memory_pool_allocate(kernarg_region, KERNARG_BUFFER_SIZE, 0, &kernargMemory);
                 STATUS_CHECK(status, __LINE__);
 
-                status = hsa_memory_assign_agent(kernargMemory, agent, HSA_ACCESS_PERMISSION_RW);
-                STATUS_CHECK(status,  __LINE__);
+                // Allow device to access to it once it is allocated. Normally, this memory pool is on system memory.
+                status = hsa_amd_agents_allow_access(1, &agent, NULL, kernargMemory);
+                STATUS_CHECK(status, __LINE__);
 
                 kernargPool.push_back(kernargMemory);
                 kernargPoolFlag.push_back(false);
@@ -1151,6 +1165,15 @@ public:
 #endif
         }
 
+        // Setup AM pool.
+        ri._am_memory_pool = (ri._found_local_memory_pool)
+                                 ? ri._local_memory_pool
+                                 : ri._finegrained_system_memory_pool;
+
+        ri._am_host_memory_pool = (ri._found_coarsegrained_system_memory_pool)
+                                      ? ri._coarsegrained_system_memory_pool
+                                      : ri._finegrained_system_memory_pool;
+        
         /// Query the maximum number of work-items in a workgroup
         status = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_SIZE, &workgroup_max_size);
         STATUS_CHECK(status, __LINE__);
@@ -1200,7 +1223,7 @@ public:
             hsa_status_t status = HSA_STATUS_SUCCESS;
 
             for (int i = 0; i < kernargPool.size(); ++i) {
-                hsa_memory_free(kernargPool[i]);
+                hsa_amd_memory_pool_free(kernargPool[i]);
                 STATUS_CHECK(status, __LINE__);
             }
 
@@ -1249,19 +1272,19 @@ public:
             std::cerr << "create(" << count << "," << key << "): use HSA memory allocator\n";
 #endif
             hsa_status_t status = HSA_STATUS_SUCCESS;
-            hsa_region_t am_region = getHSAAMRegion();
+            auto am_region = getHSAAMRegion();
     
-            status = hsa_memory_allocate(am_region, count, &data);
+            status = hsa_amd_memory_pool_allocate(am_region, count, 0, &data);
             STATUS_CHECK(status, __LINE__);
-    
-            status = hsa_memory_assign_agent(data, agent, HSA_ACCESS_PERMISSION_RW);
-            STATUS_CHECK(status, __LINE__);
+
+            hsa_agent_t* agent = static_cast<hsa_agent_t*>(getHSAAgent());
+            status = hsa_amd_agents_allow_access(1, agent, NULL, data);
+            STATUS_CHECK(status, __LINE__); 
         } else {
 #if KALMAR_DEBUG
             std::cerr << "create(" << count << "," << key << "): use host memory allocator\n";
 #endif
             data = kalmar_aligned_alloc(0x1000, count);
-            hsa_memory_register(data, count);
         }
 
 #if KALMAR_DEBUG
@@ -1277,14 +1300,12 @@ public:
 #if KALMAR_DEBUG
             std::cerr << "release(" << ptr << "," << key << "): use HSA memory deallocator\n";
 #endif
-            status = hsa_memory_free(ptr);
+            status = hsa_amd_memory_pool_free(ptr);
             STATUS_CHECK(status, __LINE__);
         } else {
 #if KALMAR_DEBUG
             std::cerr << "release(" << ptr << "," << key << "): use host memory deallocator\n";
 #endif
-            status = hsa_memory_deregister(ptr, key->count);
-            STATUS_CHECK(status, __LINE__);
             kalmar_aligned_free(ptr);
         }
     }
@@ -1439,45 +1460,52 @@ public:
         return result;
     }
 
-    hsa_region_t& getHSAKernargRegion() {
-        return ri._kernarg_region;
+    hsa_amd_memory_pool_t& getHSAKernargRegion() {
+        return ri._kernarg_memory_pool;
     }
 
-    hsa_region_t& getHSAAMHostRegion() {
-        if (ri._found_coarsegrained_system_region) {
-            ri._am_host_region =  ri._coarsegrained_system_region;
-        } else if (ri._found_finegrained_system_region) {
-            ri._am_host_region =  ri._finegrained_system_region;
-        } else {
-            ri._am_region.handle = (uint64_t)(-1);
-        }
-
-        return ri._am_host_region;
+    hsa_amd_memory_pool_t& getHSAAMHostRegion() {
+        return ri._am_host_memory_pool;
     }
 
-    hsa_region_t& getHSAAMRegion() {
-        // prefer coarse-grained over fine-grained
-        if (ri._found_coarsegrained_region) {
-            ri._am_region = ri._coarsegrained_region;
-        } else if (ri._found_finegrained_system_region) {
-            ri._am_region = ri._finegrained_system_region;
-        } else {
-            ri._am_region.handle = (uint64_t)(-1);
-        }
+    hsa_amd_memory_pool_t& getHSAAMRegion() {
+        return ri._am_memory_pool;
+    }
+
+    bool hasHSAKernargRegion() const { 
+      return ri._found_kernarg_memory_pool;
+    }
+
+    bool hasHSAFinegrainedRegion() const {
+      return ri._found_finegrained_system_memory_pool;
+    }
+
+    bool hasHSACoarsegrainedRegion() const {
+      return ri. _found_local_memory_pool;
+    }
+
+    bool is_peer(const Kalmar::KalmarDevice* other) override {
+      if(!hasHSACoarsegrainedRegion())
+          return false;
+
+      auto self_pool = getHSAAMRegion();
+      hsa_amd_memory_pool_access_t access;
+
+      hsa_agent_t* agent = static_cast<hsa_agent_t*>( const_cast<KalmarDevice *> (other)->getHSAAgent());
+
+      //TODO: CPU acclerator will return NULL currently, return false.
+      if(nullptr == agent)
+          return false;
+
+      hsa_status_t status = hsa_amd_agent_memory_pool_get_info(*agent, self_pool, HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access);
+
+      if(HSA_STATUS_SUCCESS != status)
+          return false; 
     
-        return ri._am_region;
-    }
-
-    bool hasHSAKernargRegion() { 
-      return ri._found_kernarg_region;
-    }
-
-    bool hasHSAFinegrainedRegion() {
-      return ri._found_finegrained_system_region;
-    }
-
-    bool hasHSACoarsegrainedRegion() {
-      return ri. _found_coarsegrained_region;
+      if ((HSA_AMD_MEMORY_POOL_ACCESS_ALLOWED_BY_DEFAULT == access) || (HSA_AMD_MEMORY_POOL_ACCESS_DISALLOWED_BY_DEFAULT == access))
+          return true;
+  
+      return false;
     }
 
     void releaseKernargBuffer(void* kernargBuffer, int kernargBufferIndex) {
@@ -1491,7 +1519,7 @@ public:
                 kernargPoolMutex.unlock();
              } else {
                 if (kernargBuffer != nullptr) {
-                    hsa_memory_free(kernargBuffer);
+                    hsa_amd_memory_pool_free(kernargBuffer);
                 }
              }
         }
@@ -1550,7 +1578,7 @@ public:
                         hsa_status_t status = HSA_STATUS_SUCCESS;
 
                         // increase kernarg pool on demand by KERNARG_POOL_SIZE
-                        hsa_region_t kernarg_region = getHSAKernargRegion();
+                        hsa_amd_memory_pool_t kernarg_region = getHSAKernargRegion();
                        
                         // keep track of the size of kernarg pool before increasing it
                         int oldKernargPoolSize = kernargPool.size();
@@ -1560,11 +1588,11 @@ public:
                         // pre-allocate kernarg buffers
                         void* kernargMemory = nullptr;
                         for (int i = 0; i < KERNARG_POOL_SIZE; ++i) {
-                            status = hsa_memory_allocate(kernarg_region, KERNARG_BUFFER_SIZE,  &kernargMemory);
+                            status = hsa_amd_memory_pool_allocate(kernarg_region, KERNARG_BUFFER_SIZE, 0, &kernargMemory);
                             STATUS_CHECK(status, __LINE__);
-            
-                            status = hsa_memory_assign_agent(kernargMemory, agent, HSA_ACCESS_PERMISSION_RW);
-                            STATUS_CHECK(status,  __LINE__);
+
+                            status = hsa_amd_agents_allow_access(1, &agent, NULL, kernargMemory);
+                            STATUS_CHECK(status, __LINE__);
             
                             kernargPool.push_back(kernargMemory);
                             kernargPoolFlag.push_back(false);
@@ -1600,14 +1628,14 @@ public:
                 // - requested kernarg buffer size is larger than KERNARG_BUFFER_SIZE
 
                 hsa_status_t status = HSA_STATUS_SUCCESS;
-                hsa_region_t kernarg_region = getHSAKernargRegion();
+                hsa_amd_memory_pool_t kernarg_region = getHSAKernargRegion();
     
-                status = hsa_memory_allocate(kernarg_region, size,  &ret);
-                STATUS_CHECK(status, __LINE__);
-    
-                status = hsa_memory_assign_agent(ret, agent, HSA_ACCESS_PERMISSION_RW);
+                status = hsa_amd_memory_pool_allocate(kernarg_region, size, 0, &ret);
                 STATUS_CHECK(status, __LINE__);
 
+                status = hsa_amd_agents_allow_access(1, &agent, NULL, ret);
+                STATUS_CHECK(status, __LINE__);
+    
                 // set cursor value as -1 to notice the buffer would be deallocated
                 // instead of recycled back into the pool
                 cursor = -1;
@@ -1659,6 +1687,9 @@ public:
     }
 
     // FIXME: return values
+    // TODO: Need more info about hostptr, is it OS allocated buffer or HSA allocator allocated buffer.
+    // Or it might be the responsibility of caller? Because for OS allocated buffer, we need to call hsa_amd_memory_lock, otherwise, need to call
+    // hsa_amd_agents_allow_access. Assume it is HSA allocated buffer.
     void memcpySymbol(void* symbolAddr, void* hostptr, size_t count, size_t offset = 0, enum hcMemcpyKind kind = hcMemcpyHostToDevice) override {
         hsa_status_t status;
 
@@ -1684,6 +1715,8 @@ public:
     void memcpySymbol(const char* symbolName, void* hostptr, size_t count, size_t offset = 0, enum hcMemcpyKind kind = hcMemcpyHostToDevice) override {
         hsa_status_t status;
     
+        status = hsa_amd_agents_allow_access(1, &agent, NULL, hostptr);
+        STATUS_CHECK(status, __LINE__);
         if (executables.size() != 0) {
             unsigned long* symbol_ptr = (unsigned long*)getSymbolAddress(symbolName);
             memcpySymbol(symbol_ptr, hostptr, count, offset, kind);
@@ -1694,7 +1727,7 @@ public:
         }
     }
 
-    void* getHSAAgent() override;
+    void* getHSAAgent() override; 
 
     hcAgentProfile getProfile() override { return profile; }
 
@@ -1860,8 +1893,17 @@ class HSAContext final : public KalmarContext
     std::vector<bool> signalPoolFlag;
     int signalCursor;
     std::mutex signalPoolMutex;
-
+    /* TODO: Modify properly when supporing multi-gpu.
+    When using memory pool api, each agent will only report memory pool
+    which is attached with the agent itself physically, eg, GPU won't
+    report system memory pool anymore. In order to change as little
+    as possbile, will choose the first CPU as default host and hack the 
+    HSADevice class to assign it the host memory pool to GPU agent. 
+    */
+    hsa_agent_t host;
+    
     /// Determines if the given agent is of type HSA_DEVICE_TYPE_GPU
+    /// If so, cache to input data
     static hsa_status_t find_gpu(hsa_agent_t agent, void *data) {
         hsa_status_t status;
         hsa_device_type_t device_type;
@@ -1903,8 +1945,25 @@ class HSAContext final : public KalmarContext
         return HSA_STATUS_SUCCESS;
     }
 
+    static hsa_status_t find_host(hsa_agent_t agent, void* data) {
+        hsa_status_t status;
+        hsa_device_type_t device_type;
+        if(data == nullptr)
+            return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+        status = hsa_agent_get_info(agent, HSA_AGENT_INFO_DEVICE, &device_type);
+        STATUS_CHECK(status, __LINE__);
+
+        if(HSA_DEVICE_TYPE_CPU == device_type) {
+            *(hsa_agent_t*)data = agent;
+            return HSA_STATUS_INFO_BREAK;
+        }
+        return HSA_STATUS_SUCCESS;
+    }
+
+
 public:
     HSAContext() : KalmarContext(), signalPool(), signalPoolFlag(), signalCursor(0), signalPoolMutex() {
+        host.handle = (uint64_t)-1;
         // initialize HSA runtime
 #if KALMAR_DEBUG
         std::cerr << "HSAContext::HSAContext(): init HSA runtime\n";
@@ -1913,19 +1972,25 @@ public:
         status = hsa_init();
         STATUS_CHECK(status, __LINE__);
 
-        // Iterate over the agents
+        // Iterate over the agents to find out gpu device
         std::vector<hsa_agent_t> agents;
         status = hsa_iterate_agents(&HSAContext::find_gpu, &agents);
         STATUS_CHECK(status, __LINE__);
 
+        // Iterate over agents to find out the first cpu device as host
+        status = hsa_iterate_agents(&HSAContext::find_host, &host);
+        STATUS_CHECK(status, __LINE__);
+
         for (int i = 0; i < agents.size(); ++i) {
             hsa_agent_t agent = agents[i];
-            auto Dev = new HSADevice(agent);
+            auto Dev = new HSADevice(agent, host);
+            // choose the first GPU device as the default device
             if (i == 0)
                 def = Dev;
             Devices.push_back(Dev);
         }
 
+        
 #if SIGNAL_POOL_SIZE > 0
         signalPoolMutex.lock();
 
@@ -2229,7 +2294,7 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
     //printf("arg_vec size: %d in bytes: %d\n", arg_vec.size(), arg_vec.size());
 
     if (device->hasHSAKernargRegion() && USE_KERNARG_REGION) {
-        hsa_region_t kernarg_region = device->getHSAKernargRegion();
+        hsa_amd_memory_pool_t kernarg_region = device->getHSAKernargRegion();
 
         if (arg_vec.size() > 0) {
             std::pair<void*, int> ret = device->getKernargBuffer(arg_vec.size());
@@ -2252,7 +2317,6 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
     }
     else {
         aql.kernarg_address = arg_vec.data();
-        hsa_memory_register(arg_vec.data(), arg_vec.size());
     }
 
 
@@ -2289,6 +2353,7 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
 
     // write packet
     uint32_t queueMask = commandQueue->size - 1;
+    // TODO: Need to check if package write is correct.
     uint64_t index = hsa_queue_load_write_index_relaxed(commandQueue);
     ((hsa_kernel_dispatch_packet_t*)(commandQueue->base_address))[index & queueMask] = aql;
     hsa_queue_store_write_index_relaxed(commandQueue, index + 1);
@@ -2338,9 +2403,6 @@ HSADispatch::waitComplete() {
     if (kernargMemory != nullptr) {
       device->releaseKernargBuffer(kernargMemory, kernargMemoryIndex);
       kernargMemory = nullptr;
-    } else {
-      status = hsa_memory_deregister((void*)arg_vec.data(), arg_vec.size());
-      STATUS_CHECK(status, __LINE__);
     }
 
     // unregister this async operation from HSAQueue
@@ -2403,10 +2465,8 @@ HSADispatch::dispose() {
     if (kernargMemory != nullptr) {
       device->releaseKernargBuffer(kernargMemory, kernargMemoryIndex);
       kernargMemory = nullptr;
-    } else {
-      status = hsa_memory_deregister((void*)arg_vec.data(), arg_vec.size());
-      STATUS_CHECK(status, __LINE__);
     }
+
     clearArgs();
     std::vector<uint8_t>().swap(arg_vec);
 
@@ -2626,4 +2686,3 @@ extern "C" void PushArgPtrImpl(void *ker, int idx, size_t sz, const void *v) {
   void *val = const_cast<void*>(v);
   dispatch->pushPointerArg(val);
 }
-

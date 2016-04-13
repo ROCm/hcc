@@ -8,9 +8,9 @@ option(HSA_USE_AMDGPU_BACKEND "Use AMDGPU LLVM backend as compiler for HSA" OFF)
 # set default installation path
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND CMAKE_INSTALL_PREFIX MATCHES "/usr/local")
   if (HSA_USE_AMDGPU_BACKEND)
-    set(CMAKE_INSTALL_PREFIX "/opt/hcc" CACHE PATH "Default installation path of hcc" FORCE)
+    set(CMAKE_INSTALL_PREFIX "/opt/rocm/hcc-lc" CACHE PATH "Default installation path of hcc" FORCE)
   else  (HSA_USE_AMDGPU_BACKEND)
-    set(CMAKE_INSTALL_PREFIX "/opt/hcc-hlc" CACHE PATH "Default installation path of hcc" FORCE)
+    set(CMAKE_INSTALL_PREFIX "/opt/rocm/hcc-hsail" CACHE PATH "Default installation path of hcc" FORCE)
   endif()
 endif ()
 MESSAGE("Package installation path: ${CMAKE_INSTALL_PREFIX}")
@@ -156,13 +156,6 @@ if (NOT HSA_LIBRARY)
   MESSAGE("HSA runtime library not found. Use -DHSA_LIBRARY_DIR=<path_to_libhsa-runtime64.so>.")
 endif (NOT HSA_LIBRARY)
 
-
-find_library(HSA_KMT_LIBRARY libhsakmt.so.1 PATHS ${HSA_KMT_LIBRARY_DIR} /usr/lib/x86_64-linux-gnu ${HSA_ROOT}/lib NO_DEFAULT_PATH)
-find_library(HSA_KMT_LIBRARY libhsakmt.so.1)
-if (NOT HSA_KMT_LIBRARY)
-  MESSAGE("HSA Kernel library not found. Use -DHSA_KMT_LIBRARY_DIR=<path_to_libhsakmt.so.1>.")
-endif (NOT HSA_KMT_LIBRARY)
-
 # find offline finalization tool for APU
 find_program(HSA_HOF_APU hof PATHS ${HSA_HOF_DIR} ${HSA_ROOT}/bin NO_DEFAULT_PATH)
 find_program(HSA_HOF_APU hof)
@@ -189,7 +182,6 @@ MESSAGE("")
 MESSAGE("HSA INFORMATION:")
 MESSAGE("HSA_HEADER_DIR = ${HSA_HEADER_DIR}, actually found at: ${HSA_HEADER}")
 MESSAGE("HSA_LIBRARY_DIR = ${HSA_LIBRARY_DIR}, actually found at: ${HSA_LIBRARY}")
-MESSAGE("HSA_KMT_LIBRARY_DIR = ${HSA_KMT_LIBRARY_DIR}, actually found at: ${HSA_KMT_LIBRARY}")
 MESSAGE("HSA_HOF_DIR = ${HSA_HOF_DIR}, actually found at: ${HSA_HOF}")
 MESSAGE("")
 
@@ -239,12 +231,11 @@ MESSAGE("=============================================")
 # - HSA headers (installed by HSA runtime)
 # - HSA runtime libraries (installed by HSA runtime)
 # - HSA ext64 library (installed by HSA runtime)
-# - HSA KMT library (installed by HSA KFD driver)
-if ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT HSA_KMT_LIBRARY))
+if ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY))
   set(HAS_HSA 0)
-else ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT HSA_KMT_LIBRARY))
+else ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY))
   set(HAS_HSA 1)
-endif ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT HSA_KMT_LIBRARY))
+endif ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY))
 
 # determine if HSA offline finalization is possible
 # at least we need the followings:
@@ -273,7 +264,7 @@ endif ((HAS_OPENCL EQUAL 0) AND (HAS_HSA EQUAL 0))
 if (HSA_USE_AMDGPU_BACKEND)
   add_definitions(-DHSA_USE_AMDGPU_BACKEND)
   set(HAS_HSA_HOF 0)
-  find_program(AMDPHDRS amdphdrs PATHS /opt/amdphdrs/bin ${AMDPHDRS_DIR} NO_DEFAULT_PATH)
+  find_program(AMDPHDRS amdphdrs PATHS /opt/rocm/bin ${AMDPHDRS_DIR} NO_DEFAULT_PATH)
   find_program(AMDPHDRS amdphdrs)
   MESSAGE("AMDPHDRS_DIR = ${AMDPHDRS_DIR}, actually found at: ${AMDPHDRS}")
   if (NOT AMDPHDRS)
@@ -288,6 +279,26 @@ if (NOT (HSA_AMDGPU_GPU_TARGET STREQUAL "kaveri" OR
          HSA_AMDGPU_GPU_TARGET STREQUAL "fiji"))
   MESSAGE(FATAL_ERROR "${HSA_AMDGPU_GPU_TARGET} is not a valid GPU")
 endif()
+
+#################
+# Setup HCC backend macro string
+# Possible values:
+# - CL : for non-HSA systems
+# - HSAIL : for HSA systems configured with HLC backend
+# - AMDGPU : for HSA systems configured with Lightning backend
+#################
+
+if (HSA_USE_AMDGPU_BACKEND)
+  set(KALMAR_BACKEND "AMDGPU")
+else(HSA_USE_AMDGPU_BACKEND)
+  if (HAS_HSA)
+    set(KALMAR_BACKEND "HSAIL")
+  else (HAS_HSA)
+    set(KALMAR_BACKEND "CL")
+  endif (HAS_HSA)
+endif(HSA_USE_AMDGPU_BACKEND)
+
+message(STATUS "HCC configured with default backend: ${KALMAR_BACKEND}")
 
 #########################
 # build target: world
@@ -326,6 +337,7 @@ add_custom_target(clang
           -DKALMAR_DRIVER_COMMIT=${KALMAR_DRIVER_COMMIT}
           -DKALMAR_COMPILER_COMMIT=${KALMAR_COMPILER_COMMIT}
           -DKALMAR_HLC_COMMIT=${KALMAR_HLC_COMMIT}
+          -DKALMAR_BACKEND=${KALMAR_BACKEND}
           -DLLVM_TARGETS_TO_BUILD=X86
           -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CBackend
           -DLLVM_INCLUDE_EXAMPLES=off
@@ -343,6 +355,7 @@ add_custom_target(clang
           -DKALMAR_VERSION_PATCH=${KALMAR_VERSION_PATCH}
           -DKALMAR_DRIVER_COMMIT=${KALMAR_DRIVER_COMMIT}
           -DKALMAR_COMPILER_COMMIT=${KALMAR_COMPILER_COMMIT}
+          -DKALMAR_BACKEND=${KALMAR_BACKEND}
           -DLLVM_TARGETS_TO_BUILD=X86
           -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CBackend
           -DLLVM_INCLUDE_EXAMPLES=off
@@ -527,6 +540,14 @@ set(CPACK_PACKAGE_VERSION_PATCH ${KALMAR_VERSION_PATCH})
 set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_SYSTEM_NAME})
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "HCC: a Heterogeneous C++ to OpenCL/HSA compiler")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Siu Chi Chan <siuchi.chan@amd.com>")
+
+set(HCC_DEBIAN_DEP "hsa-runtime-dev (>=1.0.0), libstdc++-4.8-dev, llvm, llvm-dev, llvm-runtime, libc++1, libc++-dev, libc++abi1, libc++abi-dev")
+if (HSA_USE_AMDGPU_BACKEND)
+  set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_DEBIAN_DEP}, amdphdrs (>=1.0), llvm-amdgpu (>=3.9)" )
+else (HSA_USE_AMDGPU_BACKEND)
+  set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_DEBIAN_DEP}" )
+endif (HSA_USE_AMDGPU_BACKEND)
+
 set(CPACK_GENERATOR "DEB;TGZ")
 set(CPACK_SOURCE_GENERATOR "TGZ")
 set(CPACK_BINARY_DEB "ON")

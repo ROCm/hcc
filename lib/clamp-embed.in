@@ -14,7 +14,7 @@ fi
 BINDIR=$(dirname $0)
 OPT=$BINDIR/opt
 LLC=$BINDIR/llc
-LIB=$BINDIR/../../lib
+LIB=$BINDIR/../lib
 
 if [[ $OSTYPE == linux-gnu ]]; then
     FILE=`basename $1`
