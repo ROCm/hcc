@@ -447,6 +447,29 @@ am_status_t am_map_to_peers(void* ptr, size_t num_peer, const hc::accelerator* p
     return AM_SUCCESS;
 }
 
+am_status_t am_memory_host_lock(hc::accelerator &ac, void *hostPtr, size_t size, std::vector<hsa_agent_t> &agentVec)
+{
+    am_status_t am_status = AM_ERROR_MISC;
+    void *devPtr;
+    hsa_status_t hsa_status = hsa_amd_memory_lock(hostPtr, size, &agentVec[0], agentVec.size(), &devPtr);
+    if(hsa_status == HSA_STATUS_SUCCESS)
+    {
+       g_amPointerTracker.insert(hostPtr, hc::AmPointerInfo(hostPtr, devPtr, size, ac, false, false));
+       am_status = AM_SUCCESS;
+    }
+    return am_status;
+}
 
+am_status_t am_memory_host_unlock(hc::accelerator &ac, void *hostPtr)
+{
+    am_status_t am_status = AM_ERROR_MISC;
+    hc::AmPointerInfo amPointerInfo(NULL, NULL, 0, ac, 0, 0);
+    am_status = am_memtracker_getinfo(&amPointerInfo, hostPtr);
+    if(am_status == AM_SUCCESS)
+    {
+        hsa_status_t hsa_status = hsa_amd_memory_unlock(hostPtr);
+    }
+    return am_status;
+}
 
 } // end namespace hc.
