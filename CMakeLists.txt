@@ -156,13 +156,6 @@ if (NOT HSA_LIBRARY)
   MESSAGE("HSA runtime library not found. Use -DHSA_LIBRARY_DIR=<path_to_libhsa-runtime64.so>.")
 endif (NOT HSA_LIBRARY)
 
-
-find_library(HSA_KMT_LIBRARY libhsakmt.so.1 PATHS ${HSA_KMT_LIBRARY_DIR} /opt/rocm/libhsakmt/lib /usr/lib/x86_64-linux-gnu ${HSA_ROOT}/lib NO_DEFAULT_PATH)
-find_library(HSA_KMT_LIBRARY libhsakmt.so.1)
-if (NOT HSA_KMT_LIBRARY)
-  MESSAGE("HSA Kernel library not found. Use -DHSA_KMT_LIBRARY_DIR=<path_to_libhsakmt.so.1>.")
-endif (NOT HSA_KMT_LIBRARY)
-
 # find offline finalization tool for APU
 find_program(HSA_HOF_APU hof PATHS ${HSA_HOF_DIR} ${HSA_ROOT}/bin NO_DEFAULT_PATH)
 find_program(HSA_HOF_APU hof)
@@ -189,7 +182,6 @@ MESSAGE("")
 MESSAGE("HSA INFORMATION:")
 MESSAGE("HSA_HEADER_DIR = ${HSA_HEADER_DIR}, actually found at: ${HSA_HEADER}")
 MESSAGE("HSA_LIBRARY_DIR = ${HSA_LIBRARY_DIR}, actually found at: ${HSA_LIBRARY}")
-MESSAGE("HSA_KMT_LIBRARY_DIR = ${HSA_KMT_LIBRARY_DIR}, actually found at: ${HSA_KMT_LIBRARY}")
 MESSAGE("HSA_HOF_DIR = ${HSA_HOF_DIR}, actually found at: ${HSA_HOF}")
 MESSAGE("")
 
@@ -239,12 +231,11 @@ MESSAGE("=============================================")
 # - HSA headers (installed by HSA runtime)
 # - HSA runtime libraries (installed by HSA runtime)
 # - HSA ext64 library (installed by HSA runtime)
-# - HSA KMT library (installed by HSA KFD driver)
-if ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT HSA_KMT_LIBRARY))
+if ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY))
   set(HAS_HSA 0)
-else ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT HSA_KMT_LIBRARY))
+else ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY))
   set(HAS_HSA 1)
-endif ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT HSA_KMT_LIBRARY))
+endif ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY))
 
 # determine if HSA offline finalization is possible
 # at least we need the followings:
