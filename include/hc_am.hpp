@@ -180,11 +180,12 @@ am_status_t am_map_to_peers(void* ptr, size_t num_peer, const hc::accelerator* p
  * @p ac acclerator corresponding to current device
  * @p hostPtr pointer to host memory which should be page-locked
  * @p size size of hostPtr to be page-locked
- * @p accVec vector to hsa agents to which the hostPtr should be visible
+ * @p visibleAc pointer to hcc accelerators to which the hostPtr should be visible
+ * @p numVisibleAc number of elements in visibleAc
  * @return AM_SUCCESS if lock is successfully.
  * @return AM_ERROR_MISC if lock is unsuccessful.
  */
-am_status_t am_memory_host_lock(hc::accelerator &ac, void *hostPtr, size_t size, std::vector<hsa_agent_s> &accVec);
+am_status_t am_memory_host_lock(hc::accelerator &ac, void *hostPtr, size_t size, hc::accelerator *visibleAc, size_t numVisibleAc);
 
 /*
  * Unlock page locked host memory
