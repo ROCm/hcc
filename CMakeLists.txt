@@ -196,7 +196,9 @@ SET(KALMAR_VERSION_MINOR "10")
 # get date information based on UTC
 # use the last two digits of year + week number + day in the week as KALMAR_VERSION_PATCH
 # use the commit date, instead of build date
+# add xargs to remove strange trailing newline character
 execute_process(COMMAND git show -s --format=@%ct
+                COMMAND xargs
                 COMMAND date -f - --utc +%y%W%w
                 WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
                 OUTPUT_VARIABLE KALMAR_VERSION_PATCH
