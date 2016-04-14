@@ -1,7 +1,8 @@
 // XFAIL: Linux
-// RUN: %hc %s -o %t.out %t.out
+// RUN: %hc %s -lhc_am -o %t.out %t.out
 
 #include <hc.hpp>
+#include <hc_am.hpp>
 
 int main()
 {
@@ -10,13 +11,16 @@ int main()
     if(all.size() == 0){
         return -1;
     }
-    std::vector<hsa_agent_t> agentVec;
+    std::vector<hc::accelerator> accVec;
     for(int i=0;i<all.size();i++)
     {
-        agentVec.push_back(*static_cast<hsa_agent_t*>all[i].get_hsa_agent());
+        if(all[i].get_hsa_agent() != NULL){
+        accVec.push_back(all[i]);
+	}
     }
     float *ptr = new float[1024*1024];
-    if(AM_SUCCESS != hc::am_memory_host_lock(all[0], (void*)ptr, sizeof(float)*1024*1024, agentVec))
+    acc = all[0];
+    if(AM_SUCCESS != hc::am_memory_host_lock(acc, (void*)ptr, sizeof(float)*1024*1024, &accVec[0], all.size()))
     {
         return 0;
     }
