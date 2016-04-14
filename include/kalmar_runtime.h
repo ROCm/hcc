@@ -186,6 +186,9 @@ public:
   /// enqueue marker with prior dependency
   virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(void* native_dependency) { return nullptr; }
 
+  /// enqueue marker with at max 5 prior dependencies
+  virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(int count, void** native_dependency_array) { return nullptr; }
+
   /// copy src to dst asynchronously
   virtual std::shared_ptr<KalmarAsyncOp> EnqueueAsyncCopy(const void* src, void* dst, size_t size_bytes) { return nullptr; }
 

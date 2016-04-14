@@ -235,7 +235,7 @@ public:
      * @return A future which can be waited on, and will block until the
      *         current batch of commands has completed.
      */
-    completion_future create_marker();
+    completion_future create_marker() const;
 
     /**
      * This command inserts a marker event into the accelerator_view's command
@@ -249,7 +249,21 @@ public:
      *         current batch of commands, plus the dependent event have
      *         been completed.
      */
-    completion_future create_blocking_marker(completion_future& dependent_future);
+    completion_future create_blocking_marker(completion_future& dependent_future) const;
+
+    /**
+     * This command inserts a marker event into the accelerator_view's command
+     * queue with arbitrary number of dependent asynchronous events.
+     *
+     * This marker is returned as a completion_future object. When its
+     * dependent event and all commands submitted prior to the marker event
+     * creation have been completed, the future is ready.
+     *
+     * @return A future which can be waited on, and will block until the
+     *         current batch of commands, plus the dependent event have
+     *         been completed.
+     */
+    completion_future create_blocking_marker(std::initializer_list<completion_future> dependent_future_list) const;
 
     /**
      * Copies size_bytes bytes from src to dst.  
@@ -449,6 +463,10 @@ private:
     // tiled parallel_for_each, 1D version
     template <typename Kernel> friend
         completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
+
+    // private member function template to create a marker from iterators
+    template<typename InputIterator>
+    completion_future create_blocking_marker(InputIterator first, InputIterator last) const;
 
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
 public:
@@ -1032,7 +1050,7 @@ public:
      * this completion_future object. The method is mostly used for debugging
      * purpose.
      */
-    void* get_native_handle() {
+    void* get_native_handle() const {
       if (__asyncOp != nullptr) {
         return __asyncOp->getNativeHandle();
       } else {
@@ -1182,19 +1200,55 @@ private:
 // member function implementations
 // ------------------------------------------------------------------------
 
-inline accelerator accelerator_view::get_accelerator() const { return pQueue->getDev(); }
+inline accelerator
+accelerator_view::get_accelerator() const { return pQueue->getDev(); }
 
-inline completion_future accelerator_view::create_marker() {
+inline completion_future
+accelerator_view::create_marker() const {
     return completion_future(pQueue->EnqueueMarker());
 }
 
 inline unsigned int accelerator_view::get_version() const { return get_accelerator().get_version(); }
 
-inline completion_future accelerator_view::create_blocking_marker(completion_future& dependent_future) {
+inline completion_future accelerator_view::create_blocking_marker(completion_future& dependent_future) const {
     return completion_future(pQueue->EnqueueMarkerWithDependency(dependent_future.get_native_handle()));
 }
 
-inline completion_future accelerator_view::copy_async(const void *src, void *dst, size_t size_bytes) {
+template<typename InputIterator>
+inline completion_future
+accelerator_view::create_blocking_marker(InputIterator first, InputIterator last) const {
+    bool atLeastOne = false; // have we sent at least one marker
+    int cnt = 0;
+    void* deps[5]; // array of 5 pointers to the native handle of async ops. 5 is the max supported by barrier packet
+    hc::completion_future lastMarker;
+
+    // loop through signals and group into sections of 5
+    // every 5 signals goes into one barrier packet
+    // since HC sets the barrier bit in each AND barrier packet, we know
+    // the barriers will execute in-order
+    for (auto iter = first; iter != last; ++iter) {
+        deps[cnt++] = iter->get_native_handle(); // retrieve native handle of async op associated with completion_future
+        if (cnt == 5) {
+            atLeastOne = true;
+            lastMarker = completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps));
+            cnt = 0;
+        }
+    }
+
+    if (cnt || !atLeastOne) {
+        lastMarker = completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps));
+    }
+
+    return lastMarker;
+}
+
+inline completion_future
+accelerator_view::create_blocking_marker(std::initializer_list<completion_future> dependent_future_list) const {
+    return create_blocking_marker(dependent_future_list.begin(), dependent_future_list.end());
+}
+
+inline completion_future
+accelerator_view::copy_async(const void *src, void *dst, size_t size_bytes) {
     return completion_future(pQueue->EnqueueAsyncCopy(src, dst, size_bytes));
 }
 
