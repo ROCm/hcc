@@ -401,7 +401,17 @@ public:
         depSignal[0] = dependent_signal;
     }
 
-    // TBD constructor with more prior depedencies
+    // constructor with at most 5 prior dependencies
+    HSABarrier(int count, hsa_signal_t* dependent_signal_array) : isDispatched(false), future(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_BLOCKED), depCount(count) {
+        if ((count > 0) && (count <= 5)) {
+            for (int i = 0; i < count; ++i) {
+                depSignal[i] = dependent_signal_array[i];
+            }
+        } else {
+            // throw an exception
+            throw Kalmar::runtime_exception("Incorrect number of dependent signals passed to HSABarrier constructor", count);
+        }
+    } 
 
     ~HSABarrier() {
 #if KALMAR_DEBUG
@@ -1145,11 +1155,11 @@ public:
     }
 
     // enqueue a barrier packet with one prior dependency
-    std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(void* dependency_native_handle) override {
+    std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(void* native_dependency) override {
         hsa_status_t status = HSA_STATUS_SUCCESS;
 
         // convert void* to hsa_signal_t
-        hsa_signal_t dep_signal = *(static_cast<hsa_signal_t*>(dependency_native_handle));
+        hsa_signal_t dep_signal = *(static_cast<hsa_signal_t*>(native_dependency));
 
         // create shared_ptr instance
         std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>(dep_signal);
@@ -1162,6 +1172,35 @@ public:
         asyncOps.push_back(barrier);
 
         return barrier;
+    }
+
+    // enqueue a barrier packet with multiple prior dependencies
+    std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(int count, void** native_dependency_array) override {
+        hsa_status_t status = HSA_STATUS_SUCCESS;
+
+        hsa_signal_t dep_signal_array[5];
+
+        if ((count > 0) && (count <= 5)) {
+            // convert void* to hsa_signal_t
+            for (int i = 0; i < count; ++i) {
+                dep_signal_array[i] = *(static_cast<hsa_signal_t*>(native_dependency_array[i]));
+            }
+
+            // create shared_ptr instance
+            std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>(count, dep_signal_array);
+
+            // enqueue the barrier
+            status = barrier.get()->enqueueAsync(this);
+            STATUS_CHECK(status, __LINE__);
+
+            // associate the barrier with this queue
+            asyncOps.push_back(barrier);
+
+            return barrier;
+        } else {
+            // throw an exception
+            throw Kalmar::runtime_exception("Incorrect number of dependent signals passed to HSABarrier constructor", count);
+        }
     }
 
     // enqueue an async copy command 
@@ -2951,6 +2990,10 @@ HSABarrier::enqueueBarrier(hsa_queue_t* queue) {
     header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE;
     header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE;
     barrier->header = header;
+
+#if KALMAR_DEBUG
+    std::cerr << "barrier dependency count: " << depCount << "\n";
+#endif
 
     // setup dependent signals
     if ((depCount > 0) && (depCount <= 5)) {
