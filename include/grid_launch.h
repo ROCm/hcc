@@ -2,7 +2,12 @@
 
 #include <stdint.h>
 
-#include <hc.hpp>
+//#include <hc.hpp>
+namespace hc{
+class completion_future;
+class accelerator_view;
+}
+
 
 typedef struct gl_dim3
 {
@@ -24,7 +29,7 @@ typedef struct grid_launch_parm
   grid_launch_parm() = default;
 
   // customized serialization: don't need av and cf in kernel
-  __attribute__((annotate("serialize")))
+/*  __attribute__((annotate("serialize")))
   void __cxxamp_serialize(Kalmar::Serialize& s) const {
     s.Append(sizeof(int), &gridDim.x);
     s.Append(sizeof(int), &gridDim.y);
@@ -40,7 +45,7 @@ typedef struct grid_launch_parm
     s.Append(sizeof(int), &threadId.z);
     s.Append(sizeof(unsigned), &groupMemBytes);
   }
-
+*/
   __attribute__((annotate("user_deserialize")))
   grid_launch_parm(int gridDim_x,  int gridDim_y,  int gridDim_z,
                    int groupDim_x, int groupDim_y, int groupDim_z,
@@ -63,7 +68,7 @@ typedef struct grid_launch_parm
   }
 
 } grid_launch_parm;
-
+/*
 // TODO: Will move to separate source file in the future
 extern inline void grid_launch_init(grid_launch_parm *lp) {
   lp->gridDim.x = lp->gridDim.y = lp->gridDim.z = 1;
@@ -75,3 +80,4 @@ extern inline void grid_launch_init(grid_launch_parm *lp) {
   lp->av = &av;
   lp->cf = NULL;
 }
+*/
