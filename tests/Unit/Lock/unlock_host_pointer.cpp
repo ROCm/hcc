@@ -1,5 +1,5 @@
 // XFAIL: Linux
-// RUN: %hc %s -lhc_am -o %t.out %t.out
+// RUN: %hc %s -lhc_am -o %t.out; %t.out
 
 #include <hc.hpp>
 #include <hc_am.hpp>
@@ -20,9 +20,10 @@ int main()
     }
     float *ptr = new float[1024*1024];
     acc = all[0];
-    if(AM_SUCCESS != hc::am_memory_host_lock(acc, (void*)ptr, sizeof(float)*1024*1024, &accVec[0], all.size()))
+    if(AM_SUCCESS == hc::am_memory_host_lock(acc, (void*)ptr, sizeof(float)*1024*1024, &accVec[0], all.size()))
     {
         hc::am_memory_host_unlock(acc, (void*)ptr);
+	return 0;
     }
     return -1;
 }

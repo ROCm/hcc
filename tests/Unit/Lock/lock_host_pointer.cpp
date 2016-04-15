@@ -1,5 +1,5 @@
 // XFAIL: Linux
-// RUN: %hc %s -lhc_am -o %t.out %t.out
+// RUN: %hc %s -lhc_am -o %t.out; %t.out
 
 #include <hc.hpp>
 #include <hc_am.hpp>
@@ -22,7 +22,7 @@ int main()
     acc = all[0];
     if(AM_SUCCESS != hc::am_memory_host_lock(acc, (void*)ptr, sizeof(float)*1024*1024, &accVec[0], all.size()))
     {
-        return 0;
+        return -1;
     }
-    return -1;
+    return 0;
 }
