@@ -390,8 +390,13 @@ struct StringFinder
       mArraySize = T->getArrayNumElements();
     }
 
-    if(str == "")
-      str.append("!UNKNOWN_TYPE_PLEASE_FIX!");
+    if(str == "") {
+      str.append("\'!UNKNOWN_TYPE: ");
+      llvm::raw_string_ostream rso(str);
+      T->print(rso);
+      rso.flush();
+      str.append("\'");
+    }
 
     return str;
 
