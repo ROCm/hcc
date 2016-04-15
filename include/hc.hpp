@@ -1925,7 +1925,9 @@ extern "C" inline unsigned int __popcount_u32_b64(unsigned long long int input) 
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these functions.
  */
-extern "C" unsigned int __bitextract_u32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__;
+extern "C" inline unsigned int __bitextract_u32(unsigned int src0, unsigned int src1, unsigned int src2) __HC__ {
+  return (src0 << (32 - src1 - src2)) >> (32 - src2);
+}
 
 extern "C" uint64_t __bitextract_u64(uint64_t src0, unsigned int src1, unsigned int src2) __HC__;
 
