@@ -518,7 +518,7 @@ file(MAKE_DIRECTORY ${DEBIAN_EXTRA_SCRIPT_DEST_DIR})
 execute_process(COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_script.bsh ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/postinst.in  ${DEBIAN_EXTRA_SCRIPT_DEST_DIR}/postinst ${CPACK_PACKAGE_NAME} ${CMAKE_INSTALL_PREFIX}
                 WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
 
-execute_process(COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_script.bsh ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/postrm.in  ${DEBIAN_EXTRA_SCRIPT_DEST_DIR}/postrm ${CPACK_PACKAGE_NAME} ${CMAKE_INSTALL_PREFIX}
+execute_process(COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_script.bsh ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/prerm.in  ${DEBIAN_EXTRA_SCRIPT_DEST_DIR}/prerm ${CPACK_PACKAGE_NAME} ${CMAKE_INSTALL_PREFIX}
                 WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
 
 # Must build after 'world' target
@@ -565,7 +565,7 @@ set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "HCC: a Heterogeneous C++ to OpenCL/HSA com
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Siu Chi Chan <siuchi.chan@amd.com>")
 
 set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
-  "${PROJECT_BINARY_DIR}/packaging/debian/postinst;${PROJECT_BINARY_DIR}/packaging/debian/postrm")
+  "${PROJECT_BINARY_DIR}/packaging/debian/postinst;${PROJECT_BINARY_DIR}/packaging/debian/prerm")
 
 set(HCC_DEBIAN_DEP "hsa-rocm-dev (=1.0.0), libstdc++-4.8-dev, libc++1, libc++-dev, libc++abi1, libc++abi-dev")
 if (HSA_USE_AMDGPU_BACKEND)
