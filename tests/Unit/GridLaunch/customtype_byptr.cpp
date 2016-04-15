@@ -17,9 +17,11 @@ struct Bar {
   int x;
 };
 
-struct constStructconst {
-  int x;
-};
+namespace {
+  struct constStructconst {
+    int x;
+  };
+}
 
 #define GRID_SIZE 256
 #define TILE_SIZE 16
