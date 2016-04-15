@@ -9,12 +9,8 @@
  * is peer of it.
  * accelerator is peer of itself.
  * FIXME: on current system, dGPU is peer of any each  
-<<<<<<< HEAD
  * other, we should expect is_get_peer() return true
  * always.
-=======
- * other, we should expect is_get_peer() return true.
->>>>>>> hsa_pool_api
  */
 
 int main()
