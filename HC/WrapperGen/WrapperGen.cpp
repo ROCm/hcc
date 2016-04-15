@@ -374,6 +374,9 @@ struct StringFinder
       // Remove other periods in the type name.
       std::replace(str.begin(), str.end(), '.', '_');
       std::replace(str.begin(), str.end(), ':', '_');
+      std::replace(str.begin(), str.end(), '(', '_');
+      std::replace(str.begin(), str.end(), ')', '_');
+      std::replace(str.begin(), str.end(), ' ', '_');
 
       // Rename struct so there won't be name conflicts during compilation
       // Linking should still resolve correctly as long as struct has POD members
