@@ -763,7 +763,8 @@ public:
     /**
      * Check if @p other is peer of this accelerator.
      *
-     * @return true if other can access this accelerator's device memory pool or false if not
+     * @return true if other can access this accelerator's device memory pool or false if not.
+     * the acceleratos is its own peer.
      */
     bool get_is_peer(const accelerator& other) const {
         return pDev->is_peer(other.pDev);
