@@ -46,7 +46,7 @@ typedef struct grid_launch_parm
     s.Append(sizeof(unsigned), &groupMemBytes);
   }
 */
-  __attribute__((annotate("user_deserialize")))
+/*  __attribute__((annotate("user_deserialize")))
   grid_launch_parm(int gridDim_x,  int gridDim_y,  int gridDim_z,
                    int groupDim_x, int groupDim_y, int groupDim_z,
                    int groupId_x,  int groupId_y,  int groupId_z,
@@ -66,7 +66,7 @@ typedef struct grid_launch_parm
     threadId.z = threadId_z;
     groupMemBytes = groupMemBytes_;
   }
-
+*/
 } grid_launch_parm;
 /*
 // TODO: Will move to separate source file in the future
