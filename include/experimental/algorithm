@@ -19,9 +19,9 @@
  */
 
 #pragma once
-#include <hc.hpp>
+#include "../hc.hpp"
 
-#include <experimental/execution_policy>
+#include "execution_policy"
 
 // Implementation of SPMD algorithms (details:: namespace)
 #include "impl/algorithm_impl.inl"

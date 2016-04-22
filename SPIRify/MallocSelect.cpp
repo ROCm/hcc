@@ -26,8 +26,8 @@
 using namespace llvm;
 
 static cl::opt<bool>
-AlwaysMalloc("alwasy-malloc", cl::init(false), cl::Hidden,
-  cl::desc("Alwasy transform Xmalloc to malloc"));
+AlwaysMalloc("always-malloc", cl::init(false), cl::Hidden,
+  cl::desc("always transform Xmalloc to malloc"));
 
 namespace {
 

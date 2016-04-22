@@ -1,6 +1,6 @@
 #pragma once
 
-#include <hc.hpp>
+#include "hc.hpp"
 #include <initializer_list>
 
 typedef int am_status_t;
@@ -173,6 +173,29 @@ void am_memtracker_update_peers(const hc::accelerator &acc, int peerCnt, hsa_age
  * @return AM_ERROR_MISC if @p peers incudes a non peer accelerator.
  */
 am_status_t am_map_to_peers(void* ptr, size_t num_peer, const hc::accelerator* peers); 
+
+/*
+ * Locks a host pointer to a vector of agents
+ * 
+ * @p ac acclerator corresponding to current device
+ * @p hostPtr pointer to host memory which should be page-locked
+ * @p size size of hostPtr to be page-locked
+ * @p visibleAc pointer to hcc accelerators to which the hostPtr should be visible
+ * @p numVisibleAc number of elements in visibleAc
+ * @return AM_SUCCESS if lock is successfully.
+ * @return AM_ERROR_MISC if lock is unsuccessful.
+ */
+am_status_t am_memory_host_lock(hc::accelerator &ac, void *hostPtr, size_t size, hc::accelerator *visibleAc, size_t numVisibleAc);
+
+/*
+ * Unlock page locked host memory
+ * 
+ * @p ac current device accelerator
+ * @p hostPtr host pointer 
+ * @return AM_SUCCESS if unlocked successfully.
+ * @return AM_ERROR_MISC if @p hostPtr unlock is un-successful.
+ */
+am_status_t am_memory_host_unlock(hc::accelerator &ac, void *hostPtr);
 
 
 }; // namespace hc

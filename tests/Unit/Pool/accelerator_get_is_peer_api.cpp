@@ -1,7 +1,9 @@
 // XFAIL: Linux
-// RUN: %hc %s -o %t.out && %t.out
+// RUN: %hc %s -I/opt/hsa/include -L/opt/hsa/lib -lhsa-runtime64 -o %t.out && %t.out
 
 #include <hc.hpp>
+#include <hsa.h>
+#include <hsa_ext_amd.h>
 
 /**
  * Test if hc::accelerator::get_is_peer() works fine.
@@ -9,13 +11,9 @@
  * is peer of it.
  * accelerator is peer of itself.
  * FIXME: on current system, dGPU is peer of any each  
-<<<<<<< HEAD
- * other, we should expect is_get_peer() return true
- * always.
-=======
- * other, we should expect is_get_peer() return true.
->>>>>>> hsa_pool_api
+ * other, we should expect get_is_peer() return true.
  */
+ 
 
 int main()
 {
@@ -31,7 +29,15 @@ int main()
         // Ignore CPU
         if(iter->get_is_emulated())
             continue;
-        if(!acc.get_is_peer(*iter))
+
+        hsa_agent_t* s = static_cast<hsa_agent_t*>(iter->get_hsa_agent());
+        hsa_amd_memory_pool_t* pool = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_region());
+
+        hsa_amd_memory_pool_access_t access;
+        hsa_status_t status = hsa_amd_agent_memory_pool_get_info(*s, *pool, HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access);
+        
+        bool can_access = (access == HSA_AMD_MEMORY_POOL_ACCESS_ALLOWED_BY_DEFAULT) || (access == HSA_AMD_MEMORY_POOL_ACCESS_DISALLOWED_BY_DEFAULT);
+        if(can_access && !acc.get_is_peer(*iter))
             return -1;
     }
 

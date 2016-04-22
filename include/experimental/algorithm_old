@@ -7,10 +7,10 @@
 
 #pragma once
 // FIXME: remove amp.h dependency from this header file
-#include <amp.h>
-#include <hc.hpp>
+#include "../amp.h"
+#include "../hc.hpp"
 
-#include <experimental/execution_policy>
+#include "execution_policy"
 
 #include <cassert>
 #include <future>
@@ -18,8 +18,8 @@
 #include <coordinate>
 #include <iostream>
 
-#include <kalmar_launch.h>
-#include <kalmar_runtime.h>
+#include "../kalmar_launch.h"
+#include "../kalmar_runtime.h"
 
 // implimentation of SPMD algorithms
 #include "impl/algorithm_impl.inl"
