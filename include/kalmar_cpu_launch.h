@@ -7,9 +7,9 @@
 
 #pragma once
 
-#include <kalmar_defines.h>
-#include <kalmar_runtime.h>
-#include <kalmar_serialize.h>
+#include "kalmar_defines.h"
+#include "kalmar_runtime.h"
+#include "kalmar_serialize.h"
 
 namespace Kalmar {
 template <int D0, int D1=0, int D2=0> class tiled_extent;

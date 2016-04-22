@@ -1,0 +1,73 @@
+#!/bin/bash
+
+set -e
+
+PACKAGE_NAME=@PACKAGE_NAME@
+INSTALL_PATH=@INSTALL_PATH@
+
+ROCM_PATH="/opt/rocm"
+
+# NOTE: if you modify this table, also update the same table in postrm
+SOFTLINKS=(
+# <DIRECTORY>  <FILE>
+  "bin" "clamp-config"
+  "bin" "clang"
+  "bin" "clang++"
+  "bin" "extractkernel"
+  "bin" "hcc"
+  "bin" "hcc-config"
+  "lib" "libhc_am.so"
+  "lib" "libmcwamp.a"
+  "lib" "libmcwamp_atomic.a"
+  "lib" "libmcwamp_cpu.so"
+  "lib" "libmcwamp_hsa.so"
+)
+
+do_softlinks() {
+
+  if [ ! -e $INSTALL_PATH/include/hcc ] ; then
+    ln -sf $INSTALL_PATH/include $INSTALL_PATH/include/hcc
+  fi
+
+  if [ $PACKAGE_NAME == "hcc_hsail" ] && [ -L "$ROCM_PATH/hcc" ] && [ $(readlink -f $ROCM_PATH/hcc) == "$ROCM_PATH/hcc-lc" ] ; then
+      return
+  fi
+
+  mkdir -p /opt/rocm/lib
+  mkdir -p /opt/rocm/bin
+
+  if [ -L "$ROCM_PATH/hcc" ] ; then
+    rm -f "$ROCM_PATH/hcc" 
+  fi
+  ln -sf $INSTALL_PATH $ROCM_PATH/hcc
+
+  if [ ! -e $ROCM_PATH/include/hcc ] ; then
+    ln -sf $ROCM_PATH/hcc/include $ROCM_PATH/include/hcc
+  fi
+
+  for (( i=0; i<${#SOFTLINKS[@]}; i+=2 ))
+  do
+    DIR=${SOFTLINKS[i]}
+    FILE=${SOFTLINKS[i+1]}
+    if [ ! -e $ROCM_PATH/$DIR/$FILE ] ; then
+      ln -sf $ROCM_PATH/hcc/$DIR/$FILE $ROCM_PATH/$DIR/$FILE
+    fi
+  done
+}
+
+case "$1" in
+   configure|upgrade)
+   do_softlinks
+   ;;
+
+   abort-upgrade|abort-remove|abort-deconfigure)
+      echo "$1"
+    ;;
+
+   *)
+      echo "postinst called with unknown argument: $1" >&2
+      exit 0
+   ;;
+
+esac
+

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <hc.hpp>
+#include "hc.hpp"
 #include <initializer_list>
 
 typedef int am_status_t;

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <kalmar_exception.h>
+#include "kalmar_exception.h"
 
 /** \cond HIDDEN_SYMBOLS */
 namespace Kalmar

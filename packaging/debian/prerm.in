@@ -1,0 +1,62 @@
+#!/bin/bash
+
+set -e
+
+PACKAGE_NAME=@PACKAGE_NAME@
+INSTALL_PATH=@INSTALL_PATH@
+
+ROCM_PATH="/opt/rocm"
+
+# NOTE: if you modify this table, also update the same table in postinst
+SOFTLINKS=(
+# <DIRECTORY>  <FILE>
+  "bin" "clamp-config"
+  "bin" "clang"
+  "bin" "clang++"
+  "bin" "extractkernel"
+  "bin" "hcc"
+  "bin" "hcc-config"
+  "lib" "libhc_am.so"
+  "lib" "libmcwamp.a"
+  "lib" "libmcwamp_atomic.a"
+  "lib" "libmcwamp_cpu.so"
+  "lib" "libmcwamp_hsa.so"
+)
+
+do_softlinks() {
+
+  rm -f $INSTALL_PATH/include/hcc
+
+  if [ $PACKAGE_NAME == "hcc_hsail" ] && [ -L "$ROCM_PATH/hcc" ] && [ $(readlink -f $ROCM_PATH/hcc) == "$ROCM_PATH/hcc-lc" ] ; then
+      return
+  fi
+
+  for (( i=0; i<${#SOFTLINKS[@]}; i+=2 ))
+  do
+    DIR=${SOFTLINKS[i]}
+    FILE=${SOFTLINKS[i+1]}
+    rm -f  $ROCM_PATH/$DIR/$FILE
+  done
+  rm -f $ROCM_PATH/include/hcc
+  rm -f $ROCM_PATH/hcc
+
+  rmdir --ignore-fail-on-non-empty /opt/rocm/lib 
+  rmdir --ignore-fail-on-non-empty /opt/rocm/include
+  rmdir --ignore-fail-on-non-empty /opt/rocm/bin 
+  rmdir --ignore-fail-on-non-empty /opt/rocm     
+}
+
+
+case "$1" in
+   remove|purge|upgrade)
+   do_softlinks
+   ;;
+
+   *)
+      echo "postrm called with unknown argument: $1" >&2
+      exit 0
+   ;;
+
+esac
+
+

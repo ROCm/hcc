@@ -94,7 +94,7 @@ MESSAGE("(DEBUG|RELEASE) output changed to path:" "${EXECUTABLE_OUTPUT_PATH}")
 
 endif (UNIX)
 
-SET(PROJ_SEARCH_PATH "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/${LOCAL_LLVM_INCLUDE}" "${PROJECT_BINARY_DIR}/${LOCAL_LLVM_INCLUDE}") #  "${PROJECT_SOURCE_DIR}/compiler/utils/unittest/googletest/include")
+SET(PROJ_SEARCH_PATH "${PROJECT_BINARY_DIR}/include" "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/${LOCAL_LLVM_INCLUDE}" "${PROJECT_BINARY_DIR}/${LOCAL_LLVM_INCLUDE}") #  "${PROJECT_SOURCE_DIR}/compiler/utils/unittest/googletest/include")
 include_directories( ${PROJ_SEARCH_PATH} )
 
 LINK_DIRECTORIES( ${LLVM_LIB_DIR} )
@@ -140,28 +140,32 @@ endif ((NOT OPENCL_HEADER) OR (NOT OPENCL_LIBRARY))
 set (HSA_ROOT "/opt/hsa"
         CACHE PATH "HSA runtime path")
 
+set (ROCM_ROOT "/opt/rocm"
+        CACHE PATH "ROCM runtime path")
+
+
 set (HSA_LLVM_BIN_DIR CACHE PATH "Path to llvm tools with hsail/amdgpu support")
 
-find_path(HSA_HEADER hsa.h PATHS ${HSA_HEADER_DIR} ${HSA_ROOT}/include NO_DEFAULT_PATH)
-find_path(HSA_HEADER hsa.h)
+find_path(HSA_HEADER hsa/hsa.h PATHS ${HSA_HEADER_DIR} ${ROCM_ROOT}/include ${HSA_ROOT}/include NO_DEFAULT_PATH)
+find_path(HSA_HEADER hsa/hsa.h)
 
 if (NOT HSA_HEADER)
   MESSAGE("HSA header not found. Use -DHSA_HEADER_DIR=<path_to_hsa.h>.")
 endif (NOT HSA_HEADER)
 
 
-find_library(HSA_LIBRARY hsa-runtime64 PATHS ${HSA_LIBRARY_DIR} ${HSA_ROOT}/lib NO_DEFAULT_PATH)
+find_library(HSA_LIBRARY hsa-runtime64 PATHS ${HSA_LIBRARY_DIR} ${ROCM_ROOT}/lib ${HSA_ROOT}/lib NO_DEFAULT_PATH)
 find_library(HSA_LIBRARY hsa-runtime64)
 if (NOT HSA_LIBRARY)
   MESSAGE("HSA runtime library not found. Use -DHSA_LIBRARY_DIR=<path_to_libhsa-runtime64.so>.")
 endif (NOT HSA_LIBRARY)
 
 # find offline finalization tool for APU
-find_program(HSA_HOF_APU hof PATHS ${HSA_HOF_DIR} ${HSA_ROOT}/bin NO_DEFAULT_PATH)
+find_program(HSA_HOF_APU hof PATHS ${HSA_HOF_DIR} ${ROCM_ROOT}/bin ${HSA_ROOT}/bin NO_DEFAULT_PATH)
 find_program(HSA_HOF_APU hof)
 
 # find offline finalization tool for DGPU
-find_program(HSA_HOF_DGPU amdhsafin PATHS ${HSA_HOF_DIR} ${HSA_ROOT}/bin NO_DEFAULT_PATH)
+find_program(HSA_HOF_DGPU amdhsafin PATHS ${HSA_HOF_DIR} ${ROCM_ROOT}/bin ${HSA_ROOT}/bin NO_DEFAULT_PATH)
 find_program(HSA_HOF_DGPU amdhasfin)
 
 if (HSA_HOF_APU)
@@ -476,6 +480,12 @@ add_subdirectory(include)
 add_subdirectory(amp-conformance)
 add_subdirectory(stl-test)
 
+# create a "hcc" symlink in the include directory
+# that points to itself so we could support
+# include <hcc.hpp> and include<hcc/hcc.hpp>
+execute_process(COMMAND ln -sf ../include hcc
+                WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/include)
+
 # create documentation
 configure_file(
   ${PROJECT_SOURCE_DIR}/lib/doxygen_config.in
@@ -494,6 +504,22 @@ install(DIRECTORY ${PROJECT_BINARY_DIR}/docs/html
         COMPONENT doc
         OPTIONAL)
 
+# generate Debian control scripts postinst and postrm
+if (HSA_USE_AMDGPU_BACKEND)
+  set(CPACK_PACKAGE_NAME "hcc_lc")
+else (HSA_USE_AMDGPU_BACKEND)
+  set(CPACK_PACKAGE_NAME "hcc_hsail")
+endif(HSA_USE_AMDGPU_BACKEND)
+
+set(DEBIAN_EXTRA_SCRIPT_SOURCE_DIR "${PROJECT_SOURCE_DIR}/packaging/debian")
+set(DEBIAN_EXTRA_SCRIPT_DEST_DIR "${PROJECT_BINARY_DIR}/packaging/debian")
+file(MAKE_DIRECTORY ${DEBIAN_EXTRA_SCRIPT_DEST_DIR})
+
+execute_process(COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_script.bsh ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/postinst.in  ${DEBIAN_EXTRA_SCRIPT_DEST_DIR}/postinst ${CPACK_PACKAGE_NAME} ${CMAKE_INSTALL_PREFIX}
+                WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
+
+execute_process(COMMAND ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/process_packaging_script.bsh ${DEBIAN_EXTRA_SCRIPT_SOURCE_DIR}/prerm.in  ${DEBIAN_EXTRA_SCRIPT_DEST_DIR}/prerm ${CPACK_PACKAGE_NAME} ${CMAKE_INSTALL_PREFIX}
+                WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
 
 # Must build after 'world' target
 if(CXXAMP_ENABLE_BOLT)
@@ -505,7 +531,7 @@ if(CXXAMP_ENABLE_BOLT)
   SET( CLAMP_CXX_COMPILER "${PROJECT_BINARY_DIR}/compiler/bin/clang++"  )
 
   SET( CLAMP_LIBRARIES mcwamp c++ dl )
-  SET( CLAMP_INC_DIRS ${PROJECT_SOURCE_DIR}/include )
+  SET( CLAMP_INC_DIRS ${PROJECT_BINARY_DIR}/include ${PROJECT_SOURCE_DIR}/include )
 
   SET( CLAMP_LIB_DIRS ${PROJECT_BINARY_DIR}/lib )
 
@@ -529,13 +555,6 @@ endif(CXXAMP_ENABLE_BOLT)
 
 set(CPACK_SET_DESTDIR TRUE)
 set(CPACK_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
-
-if (HSA_USE_AMDGPU_BACKEND)
-  set(CPACK_PACKAGE_NAME "hcc")
-else (HSA_USE_AMDGPU_BACKEND)
-  set(CPACK_PACKAGE_NAME "hcc_hlc")
-endif(HSA_USE_AMDGPU_BACKEND)
-
 set(CPACK_PACKAGE_VENDOR "Advanced Micro Devices, Inc")
 set(CPACK_PACKAGE_VERSION ${KALMAR_VERSION_STRING})
 set(CPACK_PACKAGE_VERSION_MAJOR ${KALMAR_VERSION_MAJOR})
@@ -545,9 +564,12 @@ set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMA
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "HCC: a Heterogeneous C++ to OpenCL/HSA compiler")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Siu Chi Chan <siuchi.chan@amd.com>")
 
-set(HCC_DEBIAN_DEP "hsa-runtime-dev (>=1.0.0), libstdc++-4.8-dev, llvm, llvm-dev, llvm-runtime, libc++1, libc++-dev, libc++abi1, libc++abi-dev")
+set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
+  "${PROJECT_BINARY_DIR}/packaging/debian/postinst;${PROJECT_BINARY_DIR}/packaging/debian/prerm")
+
+set(HCC_DEBIAN_DEP "hsa-rocm-dev (=1.0.0), libstdc++-4.8-dev, libc++1, libc++-dev, libc++abi1, libc++abi-dev")
 if (HSA_USE_AMDGPU_BACKEND)
-  set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_DEBIAN_DEP}, amdphdrs (>=1.0), llvm-amdgpu (>=3.9)" )
+  set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_DEBIAN_DEP}, amdphdrs (=1.0), llvm-amdgpu (>=3.9)" )
 else (HSA_USE_AMDGPU_BACKEND)
   set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_DEBIAN_DEP}" )
 endif (HSA_USE_AMDGPU_BACKEND)
@@ -560,11 +582,6 @@ set(CPACK_SOURCE_TGZ "OFF")
 set(CPACK_SOURCE_TZ "OFF")
 set(CPACK_SOURCE_TBZ2 "OFF")
 set(CPACK_BINARY_TZ "OFF")
-
-# autogenerate dependency information
-#set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
-
-#set(CPACK_DEBIAN_PACKAGE_DEPENDS "hsa-runtime (>= 1.0)")
 
 if (HSA_USE_AMDGPU_BACKEND)
   # don't include HSAILasm and hlc if using AMDGPU backend

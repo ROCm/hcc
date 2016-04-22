@@ -12,17 +12,17 @@
 
 #pragma once
 
-#include <kalmar_defines.h>
-#include <kalmar_exception.h>
-#include <kalmar_index.h>
-#include <kalmar_runtime.h>
-#include <kalmar_serialize.h>
-#include <kalmar_launch.h>
-#include <kalmar_buffer.h>
-#include <kalmar_math.h>
+#include "kalmar_defines.h"
+#include "kalmar_exception.h"
+#include "kalmar_index.h"
+#include "kalmar_runtime.h"
+#include "kalmar_serialize.h"
+#include "kalmar_launch.h"
+#include "kalmar_buffer.h"
+#include "kalmar_math.h"
 
-#include <hsa_atomic.h>
-#include <kalmar_cpu_launch.h>
+#include "hsa_atomic.h"
+#include "kalmar_cpu_launch.h"
 
 #ifndef __HC__
 #   define __HC__ [[hc]]

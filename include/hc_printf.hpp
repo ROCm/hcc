@@ -9,8 +9,8 @@
 #include <iostream>
 #include <algorithm>
 
-#include <hc_am.hpp>
-#include <hsa_atomic.h>
+#include "hc_am.hpp"
+#include "hsa_atomic.h"
 
 #define HC_PRINTF_DEBUG  (0)
 
