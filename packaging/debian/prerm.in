@@ -11,8 +11,6 @@ ROCM_PATH="/opt/rocm"
 SOFTLINKS=(
 # <DIRECTORY>  <FILE>
   "bin" "clamp-config"
-  "bin" "clang"
-  "bin" "clang++"
   "bin" "extractkernel"
   "bin" "hcc"
   "bin" "hcc-config"
