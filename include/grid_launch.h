@@ -7,6 +7,7 @@ class completion_future;
 class accelerator_view;
 }
 
+
 typedef struct gl_dim3
 {
   int x,y,z;
