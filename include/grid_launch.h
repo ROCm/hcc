@@ -7,6 +7,10 @@ class completion_future;
 class accelerator_view;
 }
 
+namespace Kalmar {
+class Serialize;
+};
+
 
 typedef struct gl_dim3
 {
@@ -27,9 +31,36 @@ typedef struct grid_launch_parm
 
   grid_launch_parm() = default;
 
+#if USE_SERIALIZE 
+  __attribute__((annotate("serialize")))
+  void __cxxamp_serialize(Kalmar::Serialize& s) const;
+
+  __attribute__((annotate("user_deserialize")))
+  grid_launch_parm(int gridDim_x,  int gridDim_y,  int gridDim_z,
+                   int groupDim_x, int groupDim_y, int groupDim_z,
+                   int groupId_x,  int groupId_y,  int groupId_z,
+                   int threadId_x, int threadId_y, int threadId_z,
+                   unsigned groupMemBytes_);
+#endif
+
+} grid_launch_parm;
+/*
+// TODO: Will move to separate source file in the future
+extern inline void grid_launch_init(grid_launch_parm *lp) {
+  lp->gridDim.x = lp->gridDim.y = lp->gridDim.z = 1;
+
+  lp->groupDim.x = lp->groupDim.y = lp->groupDim.z = 1;
+
+  lp->groupMemBytes = 0;
+  static hc::accelerator_view av = hc::accelerator().get_default_view();
+  lp->av = &av;
+  lp->cf = NULL;
+}
+*/
+#if USE_SERIALIZE 
   // customized serialization: don't need av and cf in kernel
-/*  __attribute__((annotate("serialize")))
-  void __cxxamp_serialize(Kalmar::Serialize& s) const {
+  __attribute__((annotate("serialize")))
+  void grid_launch_parm::__cxxamp_serialize(Kalmar::Serialize& s) const {
     s.Append(sizeof(int), &gridDim.x);
     s.Append(sizeof(int), &gridDim.y);
     s.Append(sizeof(int), &gridDim.z);
@@ -44,9 +75,9 @@ typedef struct grid_launch_parm
     s.Append(sizeof(int), &threadId.z);
     s.Append(sizeof(unsigned), &groupMemBytes);
   }
-*/
-/*  __attribute__((annotate("user_deserialize")))
-  grid_launch_parm(int gridDim_x,  int gridDim_y,  int gridDim_z,
+
+  __attribute__((annotate("user_deserialize")))
+  grid_launch_parm::grid_launch_parm(int gridDim_x,  int gridDim_y,  int gridDim_z,
                    int groupDim_x, int groupDim_y, int groupDim_z,
                    int groupId_x,  int groupId_y,  int groupId_z,
                    int threadId_x, int threadId_y, int threadId_z,
@@ -65,18 +96,4 @@ typedef struct grid_launch_parm
     threadId.z = threadId_z;
     groupMemBytes = groupMemBytes_;
   }
-*/
-} grid_launch_parm;
-/*
-// TODO: Will move to separate source file in the future
-extern inline void grid_launch_init(grid_launch_parm *lp) {
-  lp->gridDim.x = lp->gridDim.y = lp->gridDim.z = 1;
-
-  lp->groupDim.x = lp->groupDim.y = lp->groupDim.z = 1;
-
-  lp->groupMemBytes = 0;
-  static hc::accelerator_view av = hc::accelerator().get_default_view();
-  lp->av = &av;
-  lp->cf = NULL;
-}
-*/
+#endif
