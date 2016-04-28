@@ -7,7 +7,7 @@
 #include <thread>
 
 // Use HSA's API
-#include "hsa.h"
+#include <hsa/hsa.h>
 
 #define DEBUG 1
 #define USE_SIGNAL 1

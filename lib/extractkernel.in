@@ -51,14 +51,20 @@ else {
   my $brig_file_name = "$input_file.brig";
   system("dd if=$input_file of=$brig_file_name skip=$brig_file_offset count=$brig_size bs=1 status=none");
 
-  my $hsa_path;
+  my $hsa_path = "@HSA_ROOT@";
+  my $rocm_path = "@ROCM_ROOT@";
+
+  # set the default to rocm path
+  my $hsafin = "$rocm_path/bin/amdhsafin";
+
   if (defined $ENV{'HSA_HOME'}) {
-    $hsa_path = $ENV{'HSA_HOME'};
+    $hsafin = "$ENV{'HSA_HOME'}/bin/amdhsafin";
   }
-  else {
-    $hsa_path = "@HSA_ROOT@";
+  elsif (!(-f $hsafin)) {
+    # can't find amdhsafin in rocm, let's try with hsa root
+    $hsafin = "$hsa_path/bin/amdhsafin";
   }
-  my $hsafin = "$hsa_path/bin/amdhsafin";
+
   if (-f $hsafin) {
 
     # use the offline finalizer to dump out the hsail and isa

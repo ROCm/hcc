@@ -7,8 +7,8 @@
 
 #pragma once
 
-#include <kalmar_runtime.h>
-#include <kalmar_serialize.h>
+#include "kalmar_runtime.h"
+#include "kalmar_serialize.h"
 
 /** \cond HIDDEN_SYMBOLS */
 namespace Kalmar {
