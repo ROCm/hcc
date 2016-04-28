@@ -7,12 +7,10 @@ INSTALL_PATH=@INSTALL_PATH@
 
 ROCM_PATH="/opt/rocm"
 
-# NOTE: if you modify this table, also update the same table in postrm
+# NOTE: if you modify this table, also update the same table in prerm
 SOFTLINKS=(
 # <DIRECTORY>  <FILE>
   "bin" "clamp-config"
-  "bin" "clang"
-  "bin" "clang++"
   "bin" "extractkernel"
   "bin" "hcc"
   "bin" "hcc-config"
