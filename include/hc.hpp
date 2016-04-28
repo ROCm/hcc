@@ -2550,13 +2550,6 @@ struct barrier_t {
 };
 #endif
 
-#ifndef CLK_LOCAL_MEM_FENCE
-#define CLK_LOCAL_MEM_FENCE (1)
-#endif
-
-#ifndef CLK_GLOBAL_MEM_FENCE
-#define CLK_GLOBAL_MEM_FENCE (2)
-#endif
 
 // ------------------------------------------------------------------------
 // tiled_barrier

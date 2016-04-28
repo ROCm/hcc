@@ -53,6 +53,15 @@ extern "C" __attribute__((noduplicate,amp)) void amp_barrier(unsigned int n) ;
 /// macro to set if we want default queue be thread-local or not
 #define TLS_QUEUE (1)
 
+
+#ifndef CLK_LOCAL_MEM_FENCE
+#define CLK_LOCAL_MEM_FENCE (1)
+#endif
+
+#ifndef CLK_GLOBAL_MEM_FENCE
+#define CLK_GLOBAL_MEM_FENCE (2)
+#endif
+
 /**
  * @namespace Kalmar
  * namespace for internal classes of Kalmar compiler / runtime
