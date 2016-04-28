@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#include <hc_defines.h>
+
 namespace hc{
 class completion_future;
 class accelerator_view;

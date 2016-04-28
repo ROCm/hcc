@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include "kalmar_defines.h"
+#include "hc_defines.h"
 #include "kalmar_exception.h"
 #include "kalmar_index.h"
 #include "kalmar_runtime.h"
