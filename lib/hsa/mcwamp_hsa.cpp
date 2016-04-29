@@ -1349,8 +1349,8 @@ public:
 
         const char *str = static_cast<const char *>(source);
 
-        // 104 is the proper size from Jack's research
-        const int N = 104;
+        // 140 is the proper size from Jack's research
+        const int N = 140;
         size = size > N ? N : size;
         for (auto i = 0; i < size; ++i) {
             hash ^= *str++;
