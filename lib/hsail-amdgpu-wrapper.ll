@@ -442,7 +442,7 @@ define linkonce_odr spir_func i32 @__hsail_currentworkgroup_size(i32) #0 {
 ; <label>:7:                                      ; preds = %1
   %size_z_ptr = getelementptr i8, i8 addrspace(2)* %dispatch_ptr, i64 8
   %8 = bitcast i8 addrspace(2)* %size_z_ptr to i32 addrspace(2)*
-  %9 = load i32, i32 addrspace(2)* %8, align 4, !range !2, !invariant.load !0
+  %9 = load i32, i32 addrspace(2)* %8, align 4, !range !1, !invariant.load !0
   ret i32 %9
 
 ; <label>:10:                                     ; preds = %1
