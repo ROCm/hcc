@@ -28,7 +28,7 @@ namespace
       std::string getTypeNameWithQual() const {
         std::string str(mTypeName);
         // FIXME: Fix const correctness
-        if(mIsConst && (mTypeName != "grid_launch_parm"))
+        if(mIsConst && (mTypeName != "grid_launch_parm_cxx"))
           str.insert(0, "const ");
         if(mPointerCount && !mIsByVal) {
           for(unsigned int i = 0; i < mPointerCount; i++)
@@ -121,6 +121,10 @@ namespace
         printRange(out, PARAMETERS);
       }
 
+      void printArgsAsParametersKernel(llvm::raw_ostream &out) {
+        printRange(out, PARAMETERSKERNEL);
+      }
+
       void printArgsAsParametersInConstructor(llvm::raw_ostream &out) {
         printRange(out, PARAMETERSCONSTR);
       }
@@ -178,6 +182,7 @@ namespace
    private:
       enum RangeOptions {
         PARAMETERS,
+        PARAMETERSKERNEL,
         PARAMETERSCONSTR,
         INITIALIZE,
         ARGUMENTS,
@@ -281,16 +286,24 @@ struct StringFinder
         case PARAMETERS:
           out << i->getTypeNameWithQual() << " " << i->getArgName();
           break;
+        // type function(grid_launch_parm lp, type1 arg2, type2 arg3)
+        // retain grid_launch_parm for compatibility
+        case PARAMETERSKERNEL:
+          if(i->getTypeName() == "grid_launch_parm_cxx")
+            out << "grid_launch_parm" << " " << i->getArgName();
+          else
+            out << i->getTypeNameWithQual() << " " << i->getArgName();
+          break;
         // Class::Class(grid_launch_parm _lp, type1 arg2, type2 arg3)
         case PARAMETERSCONSTR:
           out << i->getTypeNameWithQual() << " ";
-          if(i->getTypeName() == "grid_launch_parm")
+          if(i->getTypeName() == "grid_launch_parm_cxx")
             out << "_";
           out << i->getArgName();
           break;
         // : arg2(arg2), arg3(arg3) {}
         case INITIALIZE:
-          if(i->getTypeName() != "grid_launch_parm") {
+          if(i->getTypeName() != "grid_launch_parm_cxx") {
             out << i->getArgName() << "(" << i->getArgName() << ")";
             if (i != *lastArg)
               out << delim;
@@ -369,6 +382,8 @@ struct StringFinder
         auto st = sTy->getName().find("struct.");
         if(st != std::string::npos)
           str.erase(st, std::strlen("struct."));
+        // use subclass which contains custom serializer
+        str.append("_cxx");
       }
 
       // Remove other periods in the type name.
@@ -380,7 +395,7 @@ struct StringFinder
 
       // Rename struct so there won't be name conflicts during compilation
       // Linking should still resolve correctly as long as struct has POD members
-      if(str != "grid_launch_parm") {
+      if(str != "grid_launch_parm_cxx") {
         str.append("_gl");
 
         mIsCustomType = true;
@@ -432,7 +447,7 @@ struct StringFinder
 
       // headers and namespace uses
       out << "#include \"hc.hpp\"\n";
-      out << "#include \"grid_launch.h\"\n";
+      out << "#include \"grid_launch.hpp\"\n";
 
       out << "using namespace hc;\n";
 
@@ -461,7 +476,7 @@ struct StringFinder
               << "__attribute__((always_inline)) void "
               << func->getFunctionName()
               << "(";
-          func->printArgsAsParameters(out);
+          func->printArgsAsParametersKernel(out);
           out << ");\n";
 
           // functor
