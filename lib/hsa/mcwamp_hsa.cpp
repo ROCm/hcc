@@ -72,6 +72,14 @@
 #define ASYNCOPS_VECTOR_GC_SIZE (1024)
 
 
+// whether to use MD5 as kernel indexing hash function
+// default set as 0 (use faster FNV-1a hash instead)
+#define USE_MD5_HASH (0)
+
+// cutoff size used in FNV-1a hash function
+// default set as 104, which is the larger value between HSA BrigModuleHeader
+// and AMD GCN ISA header (Elf64_Ehdr) from Jack's research
+#define FNV1A_CUTOFF_SIZE (104)
 
 static const char* getHSAErrorString(hsa_status_t s) {
 
@@ -1322,7 +1330,8 @@ public:
     }
 
     // calculate MD5 checksum
-    std::string MD5Sum(size_t size, void* source) {
+    std::string kernel_checksum(size_t size, void* source) {
+#if USE_MD5_HASH
         unsigned char md5_hash[16];
         memset(md5_hash, 0, sizeof(unsigned char) * 16);
         MD5_CTX md5ctx;
@@ -1337,10 +1346,25 @@ public:
         }
 
         return checksum.str();
+#else
+        // FNV-1a hashing, 64-bit version
+        const uint64_t FNV_prime = 0x100000001b3;
+        const uint64_t FNV_basis = 0xcbf29ce484222325;
+        uint64_t hash = FNV_basis;
+
+        const char *str = static_cast<const char *>(source);
+
+        size = size > FNV1A_CUTOFF_SIZE ? FNV1A_CUTOFF_SIZE : size;
+        for (auto i = 0; i < size; ++i) {
+            hash ^= *str++;
+            hash *= FNV_prime;
+        }
+        return std::to_string(hash);
+#endif
     }
 
     void BuildProgram(void* size, void* source, bool needsCompilation = true) override {
-        if (executables.find(MD5Sum((size_t)size, source)) == executables.end()) {
+        if (executables.find(kernel_checksum((size_t)size, source)) == executables.end()) {
             bool use_amdgpu = false;
 #ifdef HSA_USE_AMDGPU_BACKEND
             const char *km_use_amdgpu = getenv("KM_USE_AMDGPU");
@@ -1747,7 +1771,7 @@ private:
     void BuildOfflineFinalizedProgramImpl(void* kernelBuffer, int kernelSize) {
         hsa_status_t status;
 
-        std::string index = MD5Sum((size_t)kernelSize, kernelBuffer);
+        std::string index = kernel_checksum((size_t)kernelSize, kernelBuffer);
 
         // load HSA program if we haven't done so
         if (executables.find(index) == executables.end()) {
@@ -1779,7 +1803,7 @@ private:
     HSAKernel* CreateOfflineFinalizedKernelImpl(void *kernelBuffer, int kernelSize, const char *entryName) {
         hsa_status_t status;
 
-        std::string index = MD5Sum((size_t)kernelSize, kernelBuffer);
+        std::string index = kernel_checksum((size_t)kernelSize, kernelBuffer);
 
         // load HSA program if we haven't done so
         if (executables.find(index) == executables.end()) {
@@ -1805,7 +1829,7 @@ private:
     void BuildProgramImpl(const char* hsailBuffer, int hsailSize) {
         hsa_status_t status;
 
-        std::string index = MD5Sum((size_t)hsailSize, (void*)hsailBuffer);
+        std::string index = kernel_checksum((size_t)hsailSize, (void*)hsailBuffer);
 
         // finalize HSA program if we haven't done so
         if (executables.find(index) == executables.end()) {
@@ -1872,7 +1896,7 @@ private:
     HSAKernel* CreateKernelImpl(const char *hsailBuffer, int hsailSize, const char *entryName) {
         hsa_status_t status;
   
-        std::string index = MD5Sum((size_t)hsailSize, (void*)hsailBuffer);
+        std::string index = kernel_checksum((size_t)hsailSize, (void*)hsailBuffer);
 
         // finalize HSA program if we haven't done so
         if (executables.find(index) == executables.end()) {
