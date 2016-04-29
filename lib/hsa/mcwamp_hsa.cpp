@@ -1325,7 +1325,7 @@ public:
     }
 
     // calculate MD5 checksum
-    std::string MD5Sum(size_t size, void* source) {
+    std::string kernel_checksum(size_t size, void* source) {
 #if USE_MD5_HASH
         unsigned char md5_hash[16];
         memset(md5_hash, 0, sizeof(unsigned char) * 16);
@@ -1361,7 +1361,7 @@ public:
     }
 
     void BuildProgram(void* size, void* source, bool needsCompilation = true) override {
-        if (executables.find(MD5Sum((size_t)size, source)) == executables.end()) {
+        if (executables.find(kernel_checksum((size_t)size, source)) == executables.end()) {
             bool use_amdgpu = false;
 #ifdef HSA_USE_AMDGPU_BACKEND
             const char *km_use_amdgpu = getenv("KM_USE_AMDGPU");
@@ -1768,7 +1768,7 @@ private:
     void BuildOfflineFinalizedProgramImpl(void* kernelBuffer, int kernelSize) {
         hsa_status_t status;
 
-        std::string index = MD5Sum((size_t)kernelSize, kernelBuffer);
+        std::string index = kernel_checksum((size_t)kernelSize, kernelBuffer);
 
         // load HSA program if we haven't done so
         if (executables.find(index) == executables.end()) {
@@ -1800,7 +1800,7 @@ private:
     HSAKernel* CreateOfflineFinalizedKernelImpl(void *kernelBuffer, int kernelSize, const char *entryName) {
         hsa_status_t status;
 
-        std::string index = MD5Sum((size_t)kernelSize, kernelBuffer);
+        std::string index = kernel_checksum((size_t)kernelSize, kernelBuffer);
 
         // load HSA program if we haven't done so
         if (executables.find(index) == executables.end()) {
@@ -1826,7 +1826,7 @@ private:
     void BuildProgramImpl(const char* hsailBuffer, int hsailSize) {
         hsa_status_t status;
 
-        std::string index = MD5Sum((size_t)hsailSize, (void*)hsailBuffer);
+        std::string index = kernel_checksum((size_t)hsailSize, (void*)hsailBuffer);
 
         // finalize HSA program if we haven't done so
         if (executables.find(index) == executables.end()) {
@@ -1893,7 +1893,7 @@ private:
     HSAKernel* CreateKernelImpl(const char *hsailBuffer, int hsailSize, const char *entryName) {
         hsa_status_t status;
   
-        std::string index = MD5Sum((size_t)hsailSize, (void*)hsailBuffer);
+        std::string index = kernel_checksum((size_t)hsailSize, (void*)hsailBuffer);
 
         // finalize HSA program if we haven't done so
         if (executables.find(index) == executables.end()) {
