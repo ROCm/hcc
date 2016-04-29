@@ -5,7 +5,7 @@
 // environment. Need further invetigation
 
 
-#include "grid_launch.h"
+#include "grid_launch.hpp"
 #include "hc_am.hpp"
 #include <iostream>
 
