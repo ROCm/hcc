@@ -1345,10 +1345,11 @@ public:
         // FNV-1a hashing, 64-bit version
         const uint64_t FNV_prime = 0x100000001b3;
         const uint64_t FNV_basis = 0xcbf29ce484222325;
-        uint64_t hash = FNV_prime;
+        uint64_t hash = FNV_basis;
 
         const char *str = static_cast<const char *>(source);
 
+        // 104 is the proper size from Jack's research
         const int N = 104;
         size = size > N ? N : size;
         for (auto i = 0; i < size; ++i) {
