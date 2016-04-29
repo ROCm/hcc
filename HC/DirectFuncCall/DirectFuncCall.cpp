@@ -31,6 +31,11 @@ namespace {
         {
           hasHCGridLaunchAttr = true;
 
+          // Anonymous arguments may cause clang to set the linkage to internal.
+          // This will interfere with clamp-link, causing a broken function.
+          // Force all GridLaunch kernels to use the default ExternalLinkage
+          F->setLinkage(GlobalValue::ExternalLinkage);
+
           // Attribute::NoInline is used to find the user of the function.
           // If inline is used, either forced or through optimziation, then this
           // pass will not be able to find a user to replace.

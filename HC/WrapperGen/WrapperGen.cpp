@@ -374,6 +374,9 @@ struct StringFinder
       // Remove other periods in the type name.
       std::replace(str.begin(), str.end(), '.', '_');
       std::replace(str.begin(), str.end(), ':', '_');
+      std::replace(str.begin(), str.end(), '(', '_');
+      std::replace(str.begin(), str.end(), ')', '_');
+      std::replace(str.begin(), str.end(), ' ', '_');
 
       // Rename struct so there won't be name conflicts during compilation
       // Linking should still resolve correctly as long as struct has POD members
@@ -390,8 +393,13 @@ struct StringFinder
       mArraySize = T->getArrayNumElements();
     }
 
-    if(str == "")
-      str.append("!UNKNOWN_TYPE_PLEASE_FIX!");
+    if(str == "") {
+      str.append("\'!UNKNOWN_TYPE: ");
+      llvm::raw_string_ostream rso(str);
+      T->print(rso);
+      rso.flush();
+      str.append("\'");
+    }
 
     return str;
 

@@ -19,6 +19,8 @@ float Value;
 #define NORM_COMMON_PUBLIC_MEMBER(C) \
 C() __CPU_GPU__ { set(Value); } \
 \
+~C() __CPU_GPU__ {} \
+\
 C(const C& other) __CPU_GPU__ { Value = other.Value; } \
 \
 C& operator=(const C& other) __CPU_GPU__ \
@@ -827,6 +829,8 @@ static const int size = 1; \
 \
 ST_1() __CPU_GPU__ {} \
 \
+~ST_1() __CPU_GPU__ {} \
+\
 ST_1(ST value) __CPU_GPU__ \
 { \
   x = value; \
@@ -1206,6 +1210,8 @@ typedef ST value_type; \
 static const int size = 2; \
 \
 ST_2() __CPU_GPU__ {} \
+\
+~ST_2() __CPU_GPU__ {} \
 \
 ST_2(ST value) __CPU_GPU__ \
 { \
@@ -1743,6 +1749,8 @@ typedef ST value_type; \
 static const int size = 3; \
 \
 ST_3() __CPU_GPU__ {} \
+\
+~ST_3() __CPU_GPU__ {} \
 \
 ST_3(ST value) __CPU_GPU__ \
 { \
@@ -2378,6 +2386,8 @@ typedef ST value_type; \
 static const int size = 4; \
 \
 ST_4() __CPU_GPU__ {} \
+\
+~ST_4() __CPU_GPU__ {} \
 \
 ST_4(ST value) __CPU_GPU__ \
 { \
