@@ -16,7 +16,7 @@
 
 #include "hc.hpp"
 #include "hc_am.hpp"
-#include "grid_launch.h"
+#include "grid_launch.hpp"
 #include <iostream>
 #include <fstream>
 
