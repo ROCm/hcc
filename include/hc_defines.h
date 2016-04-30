@@ -32,12 +32,12 @@ extern "C" __attribute__((const,hc)) int64_t hc_get_workitem_id(unsigned int n);
 extern "C" __attribute__((const,hc)) int64_t hc_get_num_groups(unsigned int n);
 extern "C" __attribute__((const,hc)) int64_t hc_get_group_id(unsigned int n);
 
-extern "C" __attribute__((const)) int64_t amp_get_global_size(unsigned int n) restrict(amp);
-extern "C" __attribute__((const)) int64_t amp_get_global_id(unsigned int n) restrict(amp);
-extern "C" __attribute__((const)) int64_t amp_get_local_size(unsigned int n) restrict(amp);
-extern "C" __attribute__((const)) int64_t amp_get_local_id(unsigned int n) restrict(amp);
-extern "C" __attribute__((const)) int64_t amp_get_num_groups(unsigned int n) restrict(amp);
-extern "C" __attribute__((const)) int64_t amp_get_group_id(unsigned int n) restrict(amp);
+extern "C" __attribute__((const,amp)) int64_t amp_get_global_size(unsigned int n);
+extern "C" __attribute__((const,amp)) int64_t amp_get_global_id(unsigned int n); 
+extern "C" __attribute__((const,amp)) int64_t amp_get_local_size(unsigned int n);
+extern "C" __attribute__((const,amp)) int64_t amp_get_local_id(unsigned int n);
+extern "C" __attribute__((const,amp)) int64_t amp_get_num_groups(unsigned int n);
+extern "C" __attribute__((const,amp)) int64_t amp_get_group_id(unsigned int n);
 
 
 #if __KALMAR_ACCELERATOR__ == 2
@@ -48,10 +48,19 @@ extern "C" __attribute__((const)) int64_t amp_get_group_id(unsigned int n) restr
 
 extern "C" __attribute__((noduplicate,hc)) void hc_barrier(unsigned int n);
 
-extern "C" __attribute__((noduplicate)) void amp_barrier(unsigned int n) restrict(amp);
+extern "C" __attribute__((noduplicate,amp)) void amp_barrier(unsigned int n) ;
 
 /// macro to set if we want default queue be thread-local or not
 #define TLS_QUEUE (1)
+
+
+#ifndef CLK_LOCAL_MEM_FENCE
+#define CLK_LOCAL_MEM_FENCE (1)
+#endif
+
+#ifndef CLK_GLOBAL_MEM_FENCE
+#define CLK_GLOBAL_MEM_FENCE (2)
+#endif
 
 /**
  * @namespace Kalmar

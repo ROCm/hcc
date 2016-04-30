@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include "kalmar_defines.h"
+#include "hc_defines.h"
 #include "kalmar_exception.h"
 #include "kalmar_index.h"
 #include "kalmar_runtime.h"
@@ -2550,13 +2550,6 @@ struct barrier_t {
 };
 #endif
 
-#ifndef CLK_LOCAL_MEM_FENCE
-#define CLK_LOCAL_MEM_FENCE (1)
-#endif
-
-#ifndef CLK_GLOBAL_MEM_FENCE
-#define CLK_GLOBAL_MEM_FENCE (2)
-#endif
 
 // ------------------------------------------------------------------------
 // tiled_barrier
