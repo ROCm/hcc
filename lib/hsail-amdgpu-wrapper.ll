@@ -574,6 +574,15 @@ define linkonce_odr spir_func i64 @__clock_u64() #1 {
 ; Function Attrs: nounwind readnone
 declare i64 @llvm.amdgcn.s.memrealtime() #1
 
+; Function Attrs: nounwind readnone
+define linkonce_odr spir_func i64 @__cycle_u64() #1 {
+  %ret = tail call i64 @llvm.amdgcn.s.memtime()
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind readnone
+declare i64 @llvm.amdgcn.s.memtime() #1
+
 attributes #0 = { alwaysinline nounwind readonly }
 attributes #1 = { nounwind readnone }
 attributes #2 = { alwaysinline nounwind readnone }
