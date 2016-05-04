@@ -6736,6 +6736,31 @@ extern unsigned int atomic_fetch_dec(unsigned int * _Dest) __CPU__ __HC__;
 
 /** @} */
 
+/**
+ * Atomically do the following operations:
+ * - reads the 32-bit value (original) from address pointer in global or group segment
+ * - computes ((original >= val) ? 0 : (original + 1))
+ * - stores the result back to the address
+ *
+ * @return The original value retrieved from address pointer.
+ * 
+ * Please refer to <a href="http://www.hsafoundation.com/html/HSA_Library.htm#PRM/Topics/06_Memory/atomic.htm">atomic_wrapinc in HSA PRM 6.6</a> for more detailed specification of the function.
+ */
+extern "C" unsigned int __atomic_wrapinc(unsigned int* address, unsigned int val) __HC__;
+
+/**
+ * Atomically do the following operations:
+ * - reads the 32-bit value (original) from address pointer in global or group segment
+ * - computes ((original == 0) || (original > val)) ? val : (original - 1)
+ * - stores the result back to the address
+ *
+ * @return The original value retrieved from address pointer.
+ * 
+ * Please refer to <a href="http://www.hsafoundation.com/html/HSA_Library.htm#PRM/Topics/06_Memory/atomic.htm">atomic_wrapdec in HSA PRM 6.6</a> for more detailed specification of the function.
+ */
+extern "C" unsigned int __atomic_wrapdec(unsigned int* address, unsigned int val) __HC__;
+
+
 // ------------------------------------------------------------------------
 // parallel_for_each
 // ------------------------------------------------------------------------
