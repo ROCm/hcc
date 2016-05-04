@@ -2248,6 +2248,13 @@ extern "C" unsigned int __sadhi_u16x2_u8x4(unsigned int src0, unsigned int src1,
 extern "C" uint64_t __clock_u64() __HC__;
 
 /**
+ * Get hardware cycle count
+ *
+ * Notice the return value of this function is implementation defined.
+ */
+extern "C" uint64_t __cycle_u64() __HC__;
+
+/**
  * Get the count of the number of earlier (in flattened
  * work-item order) active work-items within the same wavefront.
  *
