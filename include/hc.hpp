@@ -2353,10 +2353,10 @@ union __u {
  */
 
 extern "C" __attribute__((const)) unsigned int __hsail_get_lane_id(void) __HC__;
-extern "C" unsigned int __hsail_activelanepermute_b32(unsigned int src, unsigned int lid, unsigned int ival, bool useival) __HC__;
-
 
 #if 0
+
+extern "C" unsigned int __hsail_activelanepermute_b32(unsigned int src, unsigned int lid, unsigned int ival, bool useival) __HC__;
 
 inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     switch (width) {
@@ -2370,24 +2370,6 @@ inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__
         return __hsail_activelanepermute_b32(var,newSrcLane, 0, 0);
       }
    };
-}
-
-
-#endif
-
-
-extern "C" int amdgcn_ds_bpermute(int index, int src) [[hc]];
-
-inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-  int self = __hsail_get_lane_id();
-  int index = srcLane + (self & ~(width-1));
-  return amdgcn_ds_bpermute(index<<2, var);
-}
-
-inline float __shfl(float var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-    __u tmp; tmp.f = var;
-    tmp.i = __shfl(tmp.i, srcLane, width);
-    return tmp.f;
 }
 
 
@@ -2416,17 +2398,9 @@ inline float __shfl(float var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __
  * __HSA_WAVEFRONT_SIZE__.
  */
 
-
-extern "C" int amdgcn_wavefront_shift_right(int) __HC__;
-
 inline int __wavefront_shift_right(int var) __HC__ {
-
-/*
     return  __hsail_activelanepermute_b32(var, __hsail_get_lane_id()-1
                                         , var, __hsail_get_lane_id()==0);
-*/
-    return amdgcn_wavefront_shift_right(var);
-
 }
 
 inline int __wavefront_shift_left(int var) __HC__ {
@@ -2434,7 +2408,6 @@ inline int __wavefront_shift_left(int var) __HC__ {
                                         , var, __hsail_get_lane_id()==63);
 }
 
-#if 0
 inline int __shfl_up(int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     if (delta == 1 
         && width == __HSA_WAVEFRONT_SIZE__) {
@@ -2446,24 +2419,11 @@ inline int __shfl_up(int var, const unsigned int delta, const int width=__HSA_WA
         return __hsail_activelanepermute_b32(var, newSrcLane, var, newSrcLane < (laneId&(~(width-1))));
     }
 }
-#endif
-
-inline int __shfl_up(int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-  int self = __hsail_get_lane_id();
-  int index = self - delta;
-  index = (index < (self & ~(width-1)))?self:index;
-  return amdgcn_ds_bpermute(index<<2, var);
-}
-
-inline float __shfl_up(float var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-    __u tmp; tmp.f = var;
-    tmp.i = __shfl_up(tmp.i, delta, width);
-    return tmp.f;
-}
 
 // FIXME: support half type
 /** @} */
 
+/** @{ */
 /**
  * Copy from an active work-item with higher ID relative to
  * caller within a wavefront.
@@ -2486,7 +2446,6 @@ inline float __shfl_up(float var, const unsigned int delta, const int width=__HS
  * __HSA_WAVEFRONT_SIZE__.
  */
 
-#if 0
 inline int __shfl_down(int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     if (delta == 1
         && width == __HSA_WAVEFRONT_SIZE__) {
@@ -2498,24 +2457,11 @@ inline int __shfl_down(int var, const unsigned int delta, const int width=__HSA_
         return __hsail_activelanepermute_b32(var, newSrcLane, var, newSrcLane >= ((laneId&(~(width-1))) + width ));
     }
 }
-#endif
-
-inline int __shfl_down(int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-  int self = __hsail_get_lane_id();
-  int index = self + delta;
-  index = ((self&(width-1))+delta) >= width?self:index;
-  return amdgcn_ds_bpermute(index<<2, var);
-}
-
-inline float __shfl_down(float var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-    __u tmp; tmp.f = var;
-    tmp.i = __shfl_down(tmp.i, delta, width);
-    return tmp.f;
-}
 
 // FIXME: support half type
 /** @} */
 
+/** @{ */
 /**
  * Copy from an active work-item based on bitwise XOR of caller
  * work-item ID within a wavefront.
@@ -2533,14 +2479,57 @@ inline float __shfl_down(float var, const unsigned int delta, const int width=__
  * __HSA_WAVEFRONT_SIZE__.
  */
 
-#if 0
 inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     unsigned int laneId = __hsail_get_lane_id();
     unsigned int target = laneId ^ laneMask;
     unsigned int w = width;
     return __hsail_activelanepermute_b32(var, target, var, target>=((laneId+w)&~(w-1)));
 }
+
+// FIXME: support half type
+/** @} */
+
 #endif
+
+extern "C" int amdgcn_ds_bpermute(int index, int src) [[hc]];
+
+inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+  int self = __hsail_get_lane_id();
+  int index = srcLane + (self & ~(width-1));
+  return amdgcn_ds_bpermute(index<<2, var);
+}
+
+inline float __shfl(float var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+    __u tmp; tmp.f = var;
+    tmp.i = __shfl(tmp.i, srcLane, width);
+    return tmp.f;
+}
+
+inline int __shfl_up(int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+  int self = __hsail_get_lane_id();
+  int index = self - delta;
+  index = (index < (self & ~(width-1)))?self:index;
+  return amdgcn_ds_bpermute(index<<2, var);
+}
+
+inline float __shfl_up(float var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+    __u tmp; tmp.f = var;
+    tmp.i = __shfl_up(tmp.i, delta, width);
+    return tmp.f;
+}
+inline int __shfl_down(int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+  int self = __hsail_get_lane_id();
+  int index = self + delta;
+  index = ((self&(width-1))+delta) >= width?self:index;
+  return amdgcn_ds_bpermute(index<<2, var);
+}
+
+inline float __shfl_down(float var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+    __u tmp; tmp.f = var;
+    tmp.i = __shfl_down(tmp.i, delta, width);
+    return tmp.f;
+}
+
 inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
   int self = __hsail_get_lane_id();
   int index = self^laneMask;
@@ -2553,10 +2542,6 @@ inline float __shfl_xor(float var, int laneMask, int width=__HSA_WAVEFRONT_SIZE_
     tmp.i = __shfl_xor(tmp.i, laneMask, width);
     return tmp.f;
 }
-
-// FIXME: support half type
-/** @} */
-
 
 // ------------------------------------------------------------------------
 // dynamic group segment
