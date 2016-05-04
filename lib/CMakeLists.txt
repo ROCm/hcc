@@ -65,11 +65,6 @@ file(COPY builtins-hsail.opt.bc DESTINATION "${PROJECT_BINARY_DIR}/lib")
 file(COPY hsail-amdgpu-wrapper.ll DESTINATION "${PROJECT_BINARY_DIR}/lib")
 
 ####################
-# builtin functions bitcode (Lightning)
-####################
-install(FILES amd_gcn.bc DESTINATION lib)
-
-####################
 # OpenCL runtime version detection
 ####################
 if (HAS_OPENCL EQUAL 1)
