@@ -65,7 +65,7 @@ struct rw_info;
 class KalmarAsyncOp {
 public:
   virtual ~KalmarAsyncOp() {} 
-  virtual std::shared_future<void>* getFuture() { return nullptr; }
+  virtual std::shared_future<void>* getFuture() const { return nullptr; }
   virtual void* getNativeHandle() { return nullptr;}
 
   /**
@@ -87,7 +87,7 @@ public:
    *
    * @return An implementation-defined frequency for the asynchronous operation.
    */
-  virtual uint64_t getTimestampFrequency() { return 0L; }
+  virtual uint64_t getTimestampFrequency() const { return 0L; }
 
   /**
    * Get if the async operations has been completed.
@@ -149,9 +149,9 @@ public:
   /// push device pointer to kernel argument list
   virtual void Push(void *kernel, int idx, void* device, bool modify) = 0;
 
-  virtual uint32_t GetGroupSegmentSize(void *kernel) { return 0; }
+  virtual uint32_t GetGroupSegmentSize(void *kernel) const { return 0; }
 
-  KalmarDevice* getDev() { return pDev; }
+  KalmarDevice* getDev() const { return pDev; }
   queuing_mode get_mode() const { return mode; }
   void set_mode(queuing_mode mod) { mode = mod; }
 
@@ -175,7 +175,7 @@ public:
   virtual void* getHSAKernargRegion() { return nullptr; }
 
   /// check if the queue is an HSA queue
-  virtual bool hasHSAInterOp() { return false; }
+  virtual bool hasHSAInterOp() const { return false; }
 
   /// enqueue marker
   virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarker() { return nullptr; }
@@ -278,7 +278,7 @@ public:
     }
 
     /// get max tile static area size
-    virtual size_t GetMaxTileStaticSize() { return 0; }
+    virtual size_t GetMaxTileStaticSize() const { return 0; }
 
     /// get all queues associated with this device
     virtual std::vector< std::shared_ptr<KalmarQueue> > get_all_queues() { return std::vector< std::shared_ptr<KalmarQueue> >(); }
@@ -287,13 +287,13 @@ public:
 
     virtual void memcpySymbol(void* symbolAddr, void* hostptr, size_t count, size_t offset = 0, hcMemcpyKind kind = hcMemcpyHostToDevice) {}
 
-    virtual void* getSymbolAddress(const char* symbolName) { return nullptr; }
+    virtual void* getSymbolAddress(const char* symbolName) const { return nullptr; }
 
     /// get underlying native agent handle
     virtual void* getHSAAgent() { return nullptr; }
 
     /// get the profile of the agent
-    virtual hcAgentProfile getProfile() { return hcAgentProfileNone; }
+    virtual hcAgentProfile getProfile() const { return hcAgentProfileNone; }
 
     /// check if @p other can access to this device's device memory, return true if so, false otherwise
     virtual bool is_peer(const KalmarDevice* other) {return false;}
@@ -376,7 +376,7 @@ protected:
 public:
     virtual ~KalmarContext() {}
 
-    std::vector<KalmarDevice*> getDevices() { return Devices; }
+    std::vector<KalmarDevice*> getDevices() const { return Devices; }
 
     /// set default device by path
     bool set_default(const std::wstring& path) {
@@ -410,10 +410,10 @@ public:
     }
 
     /// get system ticks
-    virtual uint64_t getSystemTicks() { return 0L; };
+    virtual uint64_t getSystemTicks() const { return 0L; };
 
     /// get tick frequency
-    virtual uint64_t getSystemTickFrequency() { return 0L; };
+    virtual uint64_t getSystemTickFrequency() const { return 0L; };
 };
 
 KalmarContext *getContext();
@@ -552,7 +552,7 @@ struct rw_info
     /// construct array
     /// According to AMP standard, array should be constructed with
     /// 1. one accelerator_view
-    /// 2. one acceleratir_view, with another staged one
+    /// 2. one accelerator_view, with another staged one
     ///    In this case, master should be cpu device
     ///    If it is not, ignore the stage one, fallback to case 1.
     rw_info(const std::shared_ptr<KalmarQueue>& Queue, const std::shared_ptr<KalmarQueue>& Stage,
