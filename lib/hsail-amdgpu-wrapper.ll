@@ -529,6 +529,42 @@ define linkonce_odr spir_func i64 @__activelanemask_v4_b64_b1(i32 %input) #5 {
   ret i64 %a
 }
 
+; Function Attrs: nounwind argmemonly
+define linkonce_odr spir_func i32 @__atomic_wrapinc_global(i32 addrspace(1)* nocapture %addr, i32 %val) #8 {
+  %ret = tail call i32 @llvm.amdgcn.atomic.inc.i32.p1i32(i32 addrspace(1)* nocapture %addr, i32 %val) 
+  ret i32 %ret
+}
+
+; Function Attrs: nounwind argmemonly
+declare i32 @llvm.amdgcn.atomic.inc.i32.p1i32(i32 addrspace(1)* nocapture, i32) #8
+
+; Function Attrs: nounwind argmemonly
+define linkonce_odr spir_func i32 @__atomic_wrapinc_local(i32 addrspace(3)* nocapture %addr, i32 %val) #8 {
+  %ret = tail call i32 @llvm.amdgcn.atomic.inc.i32.p3i32(i32 addrspace(3)* nocapture %addr, i32 %val) 
+  ret i32 %ret
+}
+
+; Function Attrs: nounwind argmemonly
+declare i32 @llvm.amdgcn.atomic.inc.i32.p3i32(i32 addrspace(3)* nocapture, i32) #8
+
+; Function Attrs: nounwind argmemonly
+define linkonce_odr spir_func i32 @__atomic_wrapdec_global(i32 addrspace(1)* nocapture %addr, i32 %val) #8 {
+  %ret = tail call i32 @llvm.amdgcn.atomic.dec.i32.p1i32(i32 addrspace(1)* nocapture %addr, i32 %val) 
+  ret i32 %ret
+}
+
+; Function Attrs: nounwind argmemonly
+declare i32 @llvm.amdgcn.atomic.dec.i32.p1i32(i32 addrspace(1)* nocapture, i32) #8
+
+; Function Attrs: nounwind argmemonly
+define linkonce_odr spir_func i32 @__atomic_wrapdec_local(i32 addrspace(3)* nocapture %addr, i32 %val) #8 {
+  %ret = tail call i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* nocapture %addr, i32 %val) 
+  ret i32 %ret
+}
+
+; Function Attrs: nounwind argmemonly
+declare i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* nocapture, i32) #8
+
 attributes #0 = { alwaysinline nounwind readonly }
 attributes #1 = { nounwind readnone }
 attributes #2 = { alwaysinline nounwind readnone }
@@ -537,6 +573,7 @@ attributes #4 = { convergent nounwind }
 attributes #5 = { alwaysinline nounwind }
 attributes #6 = { alwaysinline norecurse nounwind readnone }
 attributes #7 = { norecurse nounwind readnone }
+attributes #8 = { nounwind argmemonly }
 
 !0 = !{}
 !1 = !{i32 0, i32 2048}
