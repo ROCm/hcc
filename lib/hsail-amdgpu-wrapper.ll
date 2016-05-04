@@ -565,6 +565,15 @@ define linkonce_odr spir_func i32 @__atomic_wrapdec_local(i32 addrspace(3)* noca
 ; Function Attrs: nounwind argmemonly
 declare i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* nocapture, i32) #8
 
+; Function Attrs: nounwind readnone
+define linkonce_odr spir_func i64 @__clock_u64() #1 {
+  %ret = tail call i64 @llvm.readcyclecounter()
+  ret i64 %ret
+}
+
+; Function Attrs: nounwind readnone
+declare i64 @llvm.readcyclecounter() #1
+
 attributes #0 = { alwaysinline nounwind readonly }
 attributes #1 = { nounwind readnone }
 attributes #2 = { alwaysinline nounwind readnone }
