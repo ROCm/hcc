@@ -735,15 +735,25 @@ public:
                 hsa_status_t status = HSA_STATUS_SUCCESS;
                 // Make sure host memory is accessible to gpu
                 // FIXME: host memory is allocated through OS allocator, if not, correct it.
+                // dst--host buffer might be allocated through either OS allocator or hsa allocator.
+                // Things become complicated, we may need some query API to query the pointer info, i.e.
+                // allocator info. Same as write.
                 hsa_agent_t* agent = static_cast<hsa_agent_t*>(getHSAAgent()); 
                 void* va = nullptr;
                 status = hsa_amd_memory_lock(dst, count, agent, 1, &va);
-                STATUS_CHECK(status, __LINE__);
+                // TODO: If host buffer is not allocated through OS allocator, so far, lock 
+                // API will return nullptr to va, this is not specified in the spec, but will use it 
+                // check if host buffer is has allocator allocated. 
+                if(va == NULL || status != HSA_STATUS_SUCCESS)
+                {
+                    status = hsa_amd_agents_allow_access(1, agent, NULL, dst);
+                    STATUS_CHECK(status, __LINE__);
+                    va = dst;
+                }
                 status = hsa_memory_copy(va, (char*)device + offset, count);
                 STATUS_CHECK(status, __LINE__);
                 // Unlock the host memory
                 status = hsa_amd_memory_unlock(dst);
-                STATUS_CHECK(status, __LINE__);
             } else {
 #if KALMAR_DEBUG
                 std::cerr << "read(" << device << "," << dst << "," << count << "," << offset << "): use host memory copy\n";
@@ -768,12 +778,20 @@ public:
                 hsa_agent_t* agent = static_cast<hsa_agent_t*>(getHSAAgent()); 
                 void* va = nullptr;
                 status = hsa_amd_memory_lock(const_cast<void*>(src), count, agent, 1, &va);
-                STATUS_CHECK(status, __LINE__);
+                  
+                if(va == NULL || status != HSA_STATUS_SUCCESS)
+                {
+                    status = hsa_amd_agents_allow_access(1, agent, NULL, src);
+                    STATUS_CHECK(status, __LINE__);
+                    status = hsa_memory_copy((char*)device + offset, src, count);
+                    STATUS_CHECK(status, __LINE__);
+                    return;
+                }
+
                 status = hsa_memory_copy((char*)device + offset, va, count);
                 STATUS_CHECK(status, __LINE__);
                 // Unlock the host memory
                 status = hsa_amd_memory_unlock(const_cast<void*>(src));
-                STATUS_CHECK(status, __LINE__);
             } else {
 #if KALMAR_DEBUG
                 std::cerr << "write(" << device << "," << src << "," << count << "," << offset << "," << blocking << "): use host memory copy\n";
