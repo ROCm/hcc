@@ -215,7 +215,7 @@ private:
     Kalmar::HSAQueue* hsaQueue;
 
 public:
-    std::shared_future<void>* getFuture() override { return future; }
+    std::shared_future<void>* getFuture() const override { return future; }
 
     void* getNativeHandle() override { return &signal; }
 
@@ -257,7 +257,7 @@ public:
 
     void dispose();
 
-    uint64_t getTimestampFrequency() override {
+    uint64_t getTimestampFrequency() const override {
         // get system tick frequency
         uint64_t timestamp_frequency_hz = 0L;
         hsa_system_get_info(HSA_SYSTEM_INFO_TIMESTAMP_FREQUENCY, &timestamp_frequency_hz);
@@ -299,7 +299,7 @@ private:
     Kalmar::HSAQueue* hsaQueue;
 
 public:
-    std::shared_future<void>* getFuture() override { return future; }
+    std::shared_future<void>* getFuture() const override { return future; }
 
     void* getNativeHandle() override { return &signal; }
 
@@ -358,7 +358,7 @@ public:
 
     hsa_status_t dispatchKernelAsync(Kalmar::HSAQueue*);
 
-    uint32_t getGroupSegmentSize() {
+    uint32_t getGroupSegmentSize() const {
         hsa_status_t status = HSA_STATUS_SUCCESS;
         uint32_t group_segment_size = 0;
         status = hsa_executable_symbol_get_info(kernel->hsaExecutableSymbol,
@@ -376,7 +376,7 @@ public:
 
     void dispose();
 
-    uint64_t getTimestampFrequency() override {
+    uint64_t getTimestampFrequency() const override {
         // get system tick frequency
         uint64_t timestamp_frequency_hz = 0L;
         hsa_system_get_info(HSA_SYSTEM_INFO_TIMESTAMP_FREQUENCY, &timestamp_frequency_hz);
@@ -688,7 +688,7 @@ public:
         return sp_dispatch;
     }
 
-    uint32_t GetGroupSegmentSize(void *ker) override {
+    uint32_t GetGroupSegmentSize(void *ker) const override {
         HSADispatch *dispatch = reinterpret_cast<HSADispatch*>(ker);
         return dispatch->getGroupSegmentSize();
     }
@@ -886,7 +886,7 @@ public:
         }
     }
 
-    void* getHSAQueue() override {
+    void* getHSAQueue() const override {
         return static_cast<void*>(commandQueue);
     }
 
@@ -968,11 +968,11 @@ private:
 
 public:
  
-    uint32_t getWorkgroupMaxSize() {
+    uint32_t getWorkgroupMaxSize() const {
         return workgroup_max_size;
     }
 
-    const uint16_t* getWorkgroupMaxDim() {
+    const uint16_t* getWorkgroupMaxDim() const {
         return &workgroup_max_dim[0];
     }
 
@@ -1444,7 +1444,7 @@ public:
         return q;
     }
 
-    size_t GetMaxTileStaticSize() override {
+    size_t GetMaxTileStaticSize() const override {
         return max_tile_static_size;
     }
 
@@ -1491,7 +1491,7 @@ public:
       auto self_pool = getHSAAMRegion();
       hsa_amd_memory_pool_access_t access;
 
-      hsa_agent_t* agent = static_cast<hsa_agent_t*>( const_cast<KalmarDevice *> (other)->getHSAAgent());
+      hsa_agent_t* agent = static_cast<hsa_agent_t*>(const_cast<KalmarDevice*>(other)->getHSAAgent());
 
       //TODO: CPU acclerator will return NULL currently, return false.
       if(nullptr == agent)
@@ -1649,7 +1649,7 @@ public:
         return std::make_pair(ret, cursor);
     }
 
-    void* getSymbolAddress(const char* symbolName) override {
+    void* getSymbolAddress(const char* symbolName) const override {
         hsa_status_t status;
 
         unsigned long* symbol_ptr = nullptr;
@@ -2156,14 +2156,14 @@ public:
 #endif
     }
 
-    uint64_t getSystemTicks() override {
+    uint64_t getSystemTicks() const override {
         // get system tick
         uint64_t timestamp = 0L;
         hsa_system_get_info(HSA_SYSTEM_INFO_TIMESTAMP, &timestamp);
         return timestamp;
     }
 
-    uint64_t getSystemTickFrequency() override {
+    uint64_t getSystemTickFrequency() const override {
         // get system tick frequency
         uint64_t timestamp_frequency_hz = 0L;
         hsa_system_get_info(HSA_SYSTEM_INFO_TIMESTAMP_FREQUENCY, &timestamp_frequency_hz);
