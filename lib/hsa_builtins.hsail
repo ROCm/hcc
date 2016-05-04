@@ -1073,6 +1073,14 @@ prog function &__clock_u64(arg_u64 %dest)() {
   ret;
 };
 
+/// get hardware cycle count
+/// NOTE:
+/// - There is no corresponding HSAIL instruction so we always return 0 here
+prog function &__cycle_u64(arg_u64 %dest)() {
+  st_arg_u64 0, [%dest];
+  ret;
+};
+
 ////////////////////////////////////////////////////////////
 /// Dynamic group segment
 ////////////////////////////////////////////////////////////
