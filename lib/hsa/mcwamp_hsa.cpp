@@ -653,6 +653,7 @@ public:
 
         // clear data in kernelBufferMap
         kernelBufferMap[ker].clear();
+        kernelBufferMap.erase(ker);
 
         delete(dispatch);
     }
@@ -697,6 +698,7 @@ public:
 
         // clear data in kernelBufferMap
         kernelBufferMap[ker].clear();
+        kernelBufferMap.erase(ker);
 
         return sp_dispatch;
     }
