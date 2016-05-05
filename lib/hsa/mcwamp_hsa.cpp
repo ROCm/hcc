@@ -1768,10 +1768,6 @@ public:
 
     // FIXME: return values
     void memcpySymbol(const char* symbolName, void* hostptr, size_t count, size_t offset = 0, enum hcMemcpyKind kind = hcMemcpyHostToDevice) override {
-        hsa_status_t status;
-    
-        status = hsa_amd_agents_allow_access(1, &agent, NULL, hostptr);
-        STATUS_CHECK(status, __LINE__);
         if (executables.size() != 0) {
             unsigned long* symbol_ptr = (unsigned long*)getSymbolAddress(symbolName);
             memcpySymbol(symbol_ptr, hostptr, count, offset, kind);
