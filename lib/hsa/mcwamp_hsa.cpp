@@ -77,9 +77,9 @@
 #define USE_MD5_HASH (0)
 
 // cutoff size used in FNV-1a hash function
-// default set as 104, which is the larger value between HSA BrigModuleHeader
-// and AMD GCN ISA header (Elf64_Ehdr) from Jack's research
-#define FNV1A_CUTOFF_SIZE (104)
+// default set as 512, this is a heuristic value
+// which is larger than HSA BrigModuleHeader and AMD GCN ISA header (Elf64_Ehdr)
+#define FNV1A_CUTOFF_SIZE (512)
 
 static const char* getHSAErrorString(hsa_status_t s) {
 
