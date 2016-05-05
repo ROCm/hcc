@@ -2360,8 +2360,40 @@ union __u {
  */
 
 extern "C" __attribute__((const)) unsigned int __hsail_get_lane_id(void) __HC__;
-extern "C" unsigned int __hsail_activelanepermute_b32(unsigned int src, unsigned int lid, unsigned int ival, bool useival) __HC__;
 
+#if __hcc_backend__==HCC_BACKEND_AMDGPU
+
+extern "C" int amdgcn_ds_bpermute(int index, int src) [[hc]];
+
+#elif __hcc_backend__==HCC_BACKEND_HSAIL
+
+extern "C" unsigned int __hsail_activelanepermute_b32(unsigned int src, unsigned int lid, unsigned int ival, bool useival) __HC__;
+inline int __wavefront_shift_right(int var) __HC__ {
+    return  __hsail_activelanepermute_b32(var, __hsail_get_lane_id()-1
+                                        , var, __hsail_get_lane_id()==0);
+}
+inline int __wavefront_shift_left(int var) __HC__ {
+    return  __hsail_activelanepermute_b32(var, __hsail_get_lane_id()+1
+                                        , var, __hsail_get_lane_id()==63);
+}
+#endif
+
+/* definition to expand macro then apply to pragma message 
+#define VALUE_TO_STRING(x) #x
+#define VALUE(x) VALUE_TO_STRING(x)
+#define VAR_NAME_VALUE(var) #var "="  VALUE(var)
+#pragma message(VAR_NAME_VALUE(__hcc_backend__))
+*/
+
+#if __hcc_backend__==HCC_BACKEND_AMDGPU
+
+inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+  int self = __hsail_get_lane_id();
+  int index = srcLane + (self & ~(width-1));
+  return amdgcn_ds_bpermute(index<<2, var);
+}
+
+#elif __hcc_backend__==HCC_BACKEND_HSAIL
 
 inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     switch (width) {
@@ -2376,6 +2408,8 @@ inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__
       }
    };
 }
+
+#endif
 
 inline float __shfl(float var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     __u tmp; tmp.f = var;
@@ -2407,13 +2441,32 @@ inline float __shfl(float var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __
  * results are undefined if it is not a power of 2, or is number greater than
  * __HSA_WAVEFRONT_SIZE__.
  */
-inline int __shfl_up(int var, unsigned int delta, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-    int laneId = __hsail_get_lane_id();
-    int newSrcLane = laneId - delta;
-    return __hsail_activelanepermute_b32(var, newSrcLane, var, newSrcLane < (laneId&(~(width-1))));
+
+#if __hcc_backend__==HCC_BACKEND_AMDGPU
+
+inline int __shfl_up(int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+  int self = __hsail_get_lane_id();
+  int index = self - delta;
+  index = (index < (self & ~(width-1)))?self:index;
+  return amdgcn_ds_bpermute(index<<2, var);
 }
 
-inline float __shfl_up(float var, unsigned int delta, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+#elif __hcc_backend__==HCC_BACKEND_HSAIL
+
+inline int __shfl_up(int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+    if (delta == 1 
+        && width == __HSA_WAVEFRONT_SIZE__) {
+        return __wavefront_shift_right(var);
+    }
+    else {
+        int laneId = __hsail_get_lane_id();
+        int newSrcLane = laneId - delta;
+        return __hsail_activelanepermute_b32(var, newSrcLane, var, newSrcLane < (laneId&(~(width-1))));
+    }
+}
+#endif
+
+inline float __shfl_up(float var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     __u tmp; tmp.f = var;
     tmp.i = __shfl_up(tmp.i, delta, width);
     return tmp.f;
@@ -2422,6 +2475,7 @@ inline float __shfl_up(float var, unsigned int delta, int width=__HSA_WAVEFRONT_
 // FIXME: support half type
 /** @} */
 
+/** @{ */
 /**
  * Copy from an active work-item with higher ID relative to
  * caller within a wavefront.
@@ -2443,21 +2497,44 @@ inline float __shfl_up(float var, unsigned int delta, int width=__HSA_WAVEFRONT_
  * results are undefined if it is not a power of 2, or is number greater than
  * __HSA_WAVEFRONT_SIZE__.
  */
-inline int __shfl_down(int var, unsigned int delta, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-    unsigned int laneId = __hsail_get_lane_id();
-    unsigned int newSrcLane = laneId + delta;
-    return __hsail_activelanepermute_b32(var, newSrcLane, var, newSrcLane >= ((laneId&(~(width-1))) + width ));
+
+#if __hcc_backend__==HCC_BACKEND_AMDGPU
+
+inline int __shfl_down(int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+  int self = __hsail_get_lane_id();
+  int index = self + delta;
+  index = ((self&(width-1))+delta) >= width?self:index;
+  return amdgcn_ds_bpermute(index<<2, var);
 }
 
-inline float __shfl_down(float var, unsigned int delta, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+#elif __hcc_backend__==HCC_BACKEND_HSAIL
+
+inline int __shfl_down(int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+    if (delta == 1
+        && width == __HSA_WAVEFRONT_SIZE__) {
+        return __wavefront_shift_left(var);
+    }
+    else {
+        unsigned int laneId = __hsail_get_lane_id();
+        unsigned int newSrcLane = laneId + delta;
+        return __hsail_activelanepermute_b32(var, newSrcLane, var, newSrcLane >= ((laneId&(~(width-1))) + width ));
+    }
+}
+
+#endif
+
+
+inline float __shfl_down(float var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     __u tmp; tmp.f = var;
     tmp.i = __shfl_down(tmp.i, delta, width);
     return tmp.f;
 }
 
+
 // FIXME: support half type
 /** @} */
 
+/** @{ */
 /**
  * Copy from an active work-item based on bitwise XOR of caller
  * work-item ID within a wavefront.
@@ -2474,6 +2551,21 @@ inline float __shfl_down(float var, unsigned int delta, int width=__HSA_WAVEFRON
  * results are undefined if it is not a power of 2, or is number greater than
  * __HSA_WAVEFRONT_SIZE__.
  */
+
+#if __hcc_backend__==HCC_BACKEND_AMDGPU
+
+
+inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+  int self = __hsail_get_lane_id();
+  int index = self^laneMask;
+  index = index >= ((self+width)&~(width-1))?self:index;
+  return amdgcn_ds_bpermute(index<<2, var);
+}
+
+
+#elif __hcc_backend__==HCC_BACKEND_HSAIL
+
+
 inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     unsigned int laneId = __hsail_get_lane_id();
     unsigned int target = laneId ^ laneMask;
@@ -2481,14 +2573,16 @@ inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) _
     return __hsail_activelanepermute_b32(var, target, var, target>=((laneId+w)&~(w-1)));
 }
 
+#endif
+
+// FIXME: support half type
+/** @} */
+
 inline float __shfl_xor(float var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     __u tmp; tmp.f = var;
     tmp.i = __shfl_xor(tmp.i, laneMask, width);
     return tmp.f;
 }
-
-// FIXME: support half type
-/** @} */
 
 
 // ------------------------------------------------------------------------
