@@ -264,7 +264,7 @@ public:
      * Returns the maximum size of tile static area available on this
      * accelerator view.
      */
-    size_t get_max_tile_static_size() const {
+    size_t get_max_tile_static_size() {
         return pQueue.get()->getDev()->GetMaxTileStaticSize();
     }
 
@@ -275,7 +275,7 @@ public:
      * The number returned would be immediately obsolete. This functions shall
      * only be used for testing and debugging purpose.
      */
-    int get_pending_async_ops() const {
+    int get_pending_async_ops() {
         return pQueue->getPendingAsyncOps();
     }
 
@@ -285,7 +285,7 @@ public:
      * @return An opaque handle of the underlying HSA queue, if the accelerator
      *         view is based on HSA.  NULL if otherwise.
      */
-    void* get_hsa_queue() const {
+    void* get_hsa_queue() {
         return pQueue->getHSAQueue();
     }
 
@@ -295,7 +295,7 @@ public:
      * @return An opaque handle of the underlying HSA agent, if the accelerator
      *         view is based on HSA.  NULL otherwise.
      */
-    void* get_hsa_agent() const {
+    void* get_hsa_agent() {
         return pQueue->getHSAAgent();
     }
 
@@ -307,7 +307,7 @@ public:
      * @return An opaque handle of the region, if the accelerator is based
      *         on HSA.  NULL otherwise.
      */
-    void* get_hsa_am_region() const {
+    void* get_hsa_am_region() {
         return pQueue->getHSAAMRegion();
     }
 
@@ -320,7 +320,7 @@ public:
      * @return An opaque handle of the region, if the accelerator is based
      *         on HSA.  NULL otherwise.
      */
-    void* get_hsa_am_system_region() const {
+    void* get_hsa_am_system_region() {
         return pQueue->getHSAAMHostRegion();
     }
 
@@ -331,14 +331,14 @@ public:
      * @return An opaque handle of the region, if the accelerator view is based
      *         on HSA.  NULL otherwise.
      */
-    void* get_hsa_kernarg_region() const {
+    void* get_hsa_kernarg_region() {
         return pQueue->getHSAKernargRegion();
     }
 
     /**
      * Returns if the accelerator view is based on HSA.
      */
-    bool is_hsa_accelerator() const {
+    bool is_hsa_accelerator() {
         return pQueue->hasHSAInterOp();
     }
 
@@ -669,14 +669,14 @@ public:
      * Returns the maximum size of tile static area available on this
      * accelerator.
      */
-    size_t get_max_tile_static_size() const {
+    size_t get_max_tile_static_size() {
       return get_default_view().get_max_tile_static_size();
     }
   
     /**
      * Returns a vector of all accelerator_view associated with this accelerator.
      */
-    std::vector<accelerator_view> get_all_views() const {
+    std::vector<accelerator_view> get_all_views() {
         std::vector<accelerator_view> result;
         std::vector< std::shared_ptr<Kalmar::KalmarQueue> > queues = pDev->get_all_queues();
         for (auto q : queues) {
@@ -763,7 +763,7 @@ public:
      * Check if @p other is peer of this accelerator.
      *
      * @return true if other can access this accelerator's device memory pool or false if not.
-     * the accelerator is its own peer.
+     * the acceleratos is its own peer.
      */
     bool get_is_peer(const accelerator& other) const {
         return pDev->is_peer(other.pDev);
@@ -970,7 +970,7 @@ public:
      * this completion_future object. The method is mostly used for debugging
      * purpose.
      */
-    void* get_native_handle() const {
+    void* get_native_handle() {
       if (__asyncOp != nullptr) {
         return __asyncOp->getNativeHandle();
       } else {
@@ -1012,7 +1012,7 @@ public:
      * @return An implementation-defined frequency in Hz in case the instance is
      *         created by a kernel dispatch or a barrier packet. 0 otherwise.
      */
-    uint64_t get_tick_frequency() const {
+    uint64_t get_tick_frequency() {
       if (__asyncOp != nullptr) {
         return __asyncOp->getTimestampFrequency();
       } else {
