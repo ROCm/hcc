@@ -1898,7 +1898,10 @@ tiled_extent<3> extent<N>::tile(int t0, int t1, int t2) const __CPU__ __HC__ {
  *
  * @return The size of a wavefront.
  */
-extern "C" unsigned int __wavesize() __HC__;
+#define __HSA_WAVEFRONT_SIZE__ (64)
+unsigned int __wavesize() __HC__ {
+  return __HSA_WAVEFRONT_SIZE__;
+}
 
 /**
  * Count number of 1 bits in the input
@@ -2330,8 +2333,6 @@ extern "C" inline uint64_t __ballot(int predicate) __HC__ {
 // ------------------------------------------------------------------------
 // Wavefront Shuffle Functions
 // ------------------------------------------------------------------------
-
-#define __HSA_WAVEFRONT_SIZE__ (64)
 
 // utility union type
 union __u {
