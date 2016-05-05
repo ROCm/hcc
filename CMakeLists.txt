@@ -280,11 +280,12 @@ if (HSA_USE_AMDGPU_BACKEND)
   endif (NOT AMDPHDRS)
 endif ()
 
-set(HSA_AMDGPU_GPU_TARGET "kaveri" CACHE STRING "Target GPU device (kaveri,carrizo,fiji)")
+set(HSA_AMDGPU_GPU_TARGET "auto" CACHE STRING "Target GPU device (kaveri,carrizo,fiji)")
 
 if (NOT (HSA_AMDGPU_GPU_TARGET STREQUAL "kaveri" OR
          HSA_AMDGPU_GPU_TARGET STREQUAL "carrizo" OR
-         HSA_AMDGPU_GPU_TARGET STREQUAL "fiji"))
+         HSA_AMDGPU_GPU_TARGET STREQUAL "fiji" OR
+         HSA_AMDGPU_GPU_TARGET STREQUAL "auto"))
   MESSAGE(FATAL_ERROR "${HSA_AMDGPU_GPU_TARGET} is not a valid GPU")
 endif()
 
@@ -297,12 +298,12 @@ endif()
 #################
 
 if (HSA_USE_AMDGPU_BACKEND)
-  set(KALMAR_BACKEND "AMDGPU")
+  set(KALMAR_BACKEND "HCC_BACKEND_AMDGPU")
 else(HSA_USE_AMDGPU_BACKEND)
   if (HAS_HSA)
-    set(KALMAR_BACKEND "HSAIL")
+    set(KALMAR_BACKEND "HCC_BACKEND_HSAIL")
   else (HAS_HSA)
-    set(KALMAR_BACKEND "CL")
+    set(KALMAR_BACKEND "HCC_BACKEND_CL")
   endif (HAS_HSA)
 endif(HSA_USE_AMDGPU_BACKEND)
 

@@ -14,13 +14,13 @@ using namespace hc;
 
 //think of M as number of rows, N and number of columns, like fortran
 template<int TM,int TN, int TL>
-void at(int *di1,int *di2,int *di3,int *di4,int *di5,int *di6,int nx,int ny,int nz)
+void at(array_view<int, 1>& di1, array_view<int, 1>& di2, array_view<int, 1>& di3, array_view<int, 1>& di4, array_view<int, 1>& di5, array_view<int, 1>& di6,int nx,int ny,int nz)
 {
       extent<3> e(nx,ny,nz);
       //total number of threads in a tile can't exceed 2048
       completion_future fut = parallel_for_each(e.tile(TM,TN,TL),
       [=]
-      (tiled_index<3>& idx) restrict(amp)
+      (tiled_index<3>& idx) [[hc]]
       {
       int lid0 = idx.local[0];
       int lid1 = idx.local[1];
@@ -43,13 +43,12 @@ void at(int *di1,int *di2,int *di3,int *di4,int *di5,int *di6,int nx,int ny,int 
 #define SQ  MAXSIZE*MAXSIZE
 #define CB  MAXSIZE*MAXSIZE*MAXSIZE
 
-int di1[CB],di2[CB];
-int di3[CB],di4[CB];
-int di5[CB],di6[CB];
 
 template<size_t Z, size_t Y, size_t X, size_t MAX_Z, size_t MAX_Y, size_t MAX_X, size_t MAX_ALL>
 bool test() {
   bool ret = true;
+
+  array_view<int, 1> di1(CB), di2(CB), di3(CB), di4(CB), di5(CB), di6(CB);
 
   // launch kernel to keep track of all global IDs and tile IDs
   at<Z,Y,X>(di1,di2,di3,di4,di5,di6,MS,MS,MS);
@@ -64,6 +63,7 @@ bool test() {
            di1[i+j*MS+k*SQ],di2[i+j*MS+k*SQ],
            di3[i+j*MS+k*SQ],di4[i+j*MS+k*SQ],
            di5[i+j*MS+k*SQ],di6[i+j*MS+k*SQ]);
+     }
 #endif
 
   int maxX = 0;

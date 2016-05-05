@@ -942,6 +942,50 @@ prog function &__sadhi_u16x2_u8x4(arg_u32 %dest)(arg_u32 %src0, arg_u32 %src1, a
 };
 
 ////////////////////////////////////////////////////////////
+/// PRM 6.6 : Atomic Instructions
+////////////////////////////////////////////////////////////
+
+/// atomic_wrapinc (global)
+prog function &__atomic_wrapinc_global(arg_u32 %old)(arg_u64 %addr, arg_u32 %val)
+{
+  ld_arg_u64 $d0, [%addr];
+  ld_arg_u32 $s0, [%val];
+  atomic_wrapinc_global_scar_system_u32 $s1, [$d0], $s0;
+  st_arg_u32 $s1, [%old];
+  ret;
+};
+
+/// atomic_wrapinc (local)
+prog function &__atomic_wrapinc_local(arg_u32 %old)(arg_u32 %addr, arg_u32 %val)
+{
+  ld_arg_u32 $s0, [%addr];
+  ld_arg_u32 $s1, [%val];
+  atomic_wrapinc_group_scar_wg_u32 $s2, [$s0], $s1;
+  st_arg_u32 $s2, [%old];
+  ret;
+};
+
+/// atomic_wrapdec (global)
+prog function &__atomic_wrapdec_global(arg_u32 %old)(arg_u64 %addr, arg_u32 %val)
+{
+  ld_arg_u64 $d0, [%addr];
+  ld_arg_u32 $s0, [%val];
+  atomic_wrapdec_global_scar_system_u32 $s1, [$d0], $s0;
+  st_arg_u32 $s1, [%old];
+  ret;
+};
+
+/// atomic_wrapdec (local)
+prog function &__atomic_wrapdec_local(arg_u32 %old)(arg_u32 %addr, arg_u32 %val)
+{
+  ld_arg_u32 $s0, [%addr];
+  ld_arg_u32 $s1, [%val];
+  atomic_wrapdec_group_scar_wg_u32 $s2, [$s0], $s1;
+  st_arg_u32 $s2, [%old];
+  ret;
+};
+
+////////////////////////////////////////////////////////////
 /// PRM 9.4 : Cross-Lane Instructions
 ////////////////////////////////////////////////////////////
 
@@ -1026,6 +1070,14 @@ prog function &__activelanepermute_b64(arg_u64 %dest)(arg_u64 %src, arg_u32 %lan
 prog function &__clock_u64(arg_u64 %dest)() {
   clock_u64 $d0;
   st_arg_u64 $d0, [%dest];
+  ret;
+};
+
+/// get hardware cycle count
+/// NOTE:
+/// - There is no corresponding HSAIL instruction so we always return 0 here
+prog function &__cycle_u64(arg_u64 %dest)() {
+  st_arg_u64 0, [%dest];
   ret;
 };
 

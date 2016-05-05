@@ -21,3 +21,6 @@ config.mcwamp_tool_dir = "@MCWAMP_TOOL_DIR@"
 # Let the main config do the real work.
 lit_config.load_config(config, "@CPPAMP_TEST_DIR@/lit.cfg")
 
+# HSA header files path
+config.substitutions.append( ('%hsa_header_path', '@ROCM_ROOT@/hsa/include') )
+config.substitutions.append( ('%hsa_library_path', '@ROCM_ROOT@/hsa/lib') )
