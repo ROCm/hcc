@@ -12,17 +12,21 @@ int main()
         return -1;
     }
     std::vector<hc::accelerator> accVec;
+    int hsaAgentCount = 0;
     for(int i=0;i<all.size();i++)
     {
         if(all[i].get_hsa_agent() != NULL){
-        accVec.push_back(all[i]);
+            accVec.push_back(all[i]);
+            hsaAgentCount++;
 	}
     }
     float *ptr = new float[1024*1024];
     acc = all[0];
-    if(AM_SUCCESS != hc::am_memory_host_lock(acc, (void*)ptr, sizeof(float)*1024*1024, &accVec[0], all.size()))
+    int ret = 0;
+    if(AM_SUCCESS != hc::am_memory_host_lock(acc, (void*)ptr, sizeof(float)*1024*1024, &accVec[0], hsaAgentCount))
     {
-        return -1;
+        ret = -1;
     }
-    return 0;
+    delete[] ptr;
+    return ret;
 }
