@@ -2361,6 +2361,11 @@ union __u {
 
 extern "C" __attribute__((const)) unsigned int __hsail_get_lane_id(void) __HC__;
 
+// returns the lane ID within a wavefront
+inline int __lane_id(void) [[hc]] {
+  return __hsail_get_lane_id();
+}
+
 #if __hcc_backend__==HCC_BACKEND_AMDGPU
 
 extern "C" int amdgcn_ds_bpermute(int index, int src) [[hc]];
@@ -2369,12 +2374,12 @@ extern "C" int amdgcn_ds_bpermute(int index, int src) [[hc]];
 
 extern "C" unsigned int __hsail_activelanepermute_b32(unsigned int src, unsigned int lid, unsigned int ival, bool useival) __HC__;
 inline int __wavefront_shift_right(int var) __HC__ {
-    return  __hsail_activelanepermute_b32(var, __hsail_get_lane_id()-1
-                                        , var, __hsail_get_lane_id()==0);
+    return  __hsail_activelanepermute_b32(var, __lane_id()-1
+                                        , var, __lane_id()==0);
 }
 inline int __wavefront_shift_left(int var) __HC__ {
-    return  __hsail_activelanepermute_b32(var, __hsail_get_lane_id()+1
-                                        , var, __hsail_get_lane_id()==63);
+    return  __hsail_activelanepermute_b32(var, __lane_id()+1
+                                        , var, __lane_id()==63);
 }
 #endif
 
@@ -2388,7 +2393,7 @@ inline int __wavefront_shift_left(int var) __HC__ {
 #if __hcc_backend__==HCC_BACKEND_AMDGPU
 
 inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-  int self = __hsail_get_lane_id();
+  int self = __lane_id();
   int index = srcLane + (self & ~(width-1));
   return amdgcn_ds_bpermute(index<<2, var);
 }
@@ -2402,7 +2407,7 @@ inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__
       default: {
         unsigned int ulane = (unsigned int)srcLane;
         unsigned int uwidth = (unsigned int)width;
-        unsigned int laneId = __hsail_get_lane_id();
+        unsigned int laneId = __lane_id();
         unsigned int newSrcLane = (laneId&((unsigned int)0xFFFFFFFF-(uwidth-1))) + (ulane&(uwidth-1));
         return __hsail_activelanepermute_b32(var,newSrcLane, 0, 0);
       }
@@ -2445,7 +2450,7 @@ inline float __shfl(float var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __
 #if __hcc_backend__==HCC_BACKEND_AMDGPU
 
 inline int __shfl_up(int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-  int self = __hsail_get_lane_id();
+  int self = __lane_id();
   int index = self - delta;
   index = (index < (self & ~(width-1)))?self:index;
   return amdgcn_ds_bpermute(index<<2, var);
@@ -2459,7 +2464,7 @@ inline int __shfl_up(int var, const unsigned int delta, const int width=__HSA_WA
         return __wavefront_shift_right(var);
     }
     else {
-        int laneId = __hsail_get_lane_id();
+        int laneId = __lane_id();
         int newSrcLane = laneId - delta;
         return __hsail_activelanepermute_b32(var, newSrcLane, var, newSrcLane < (laneId&(~(width-1))));
     }
@@ -2501,7 +2506,7 @@ inline float __shfl_up(float var, const unsigned int delta, const int width=__HS
 #if __hcc_backend__==HCC_BACKEND_AMDGPU
 
 inline int __shfl_down(int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-  int self = __hsail_get_lane_id();
+  int self = __lane_id();
   int index = self + delta;
   index = ((self&(width-1))+delta) >= width?self:index;
   return amdgcn_ds_bpermute(index<<2, var);
@@ -2515,7 +2520,7 @@ inline int __shfl_down(int var, const unsigned int delta, const int width=__HSA_
         return __wavefront_shift_left(var);
     }
     else {
-        unsigned int laneId = __hsail_get_lane_id();
+        unsigned int laneId = __lane_id();
         unsigned int newSrcLane = laneId + delta;
         return __hsail_activelanepermute_b32(var, newSrcLane, var, newSrcLane >= ((laneId&(~(width-1))) + width ));
     }
@@ -2556,7 +2561,7 @@ inline float __shfl_down(float var, const unsigned int delta, const int width=__
 
 
 inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-  int self = __hsail_get_lane_id();
+  int self = __lane_id();
   int index = self^laneMask;
   index = index >= ((self+width)&~(width-1))?self:index;
   return amdgcn_ds_bpermute(index<<2, var);
@@ -2567,7 +2572,7 @@ inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) _
 
 
 inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-    unsigned int laneId = __hsail_get_lane_id();
+    unsigned int laneId = __lane_id();
     unsigned int target = laneId ^ laneMask;
     unsigned int w = width;
     return __hsail_activelanepermute_b32(var, target, var, target>=((laneId+w)&~(w-1)));
