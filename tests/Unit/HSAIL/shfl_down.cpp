@@ -25,7 +25,7 @@ bool test__shfl_down(int grid_size, int offset, T init_value) {
 
   // shift values down in a wavefront
   parallel_for_each(ex, [&, offset, init_value](index<1>& idx) [[hc]] {
-    T value = init_value + __activelaneid_u32();
+    T value = init_value + __lane_id();
     value = __shfl_down(value, offset);
     table(idx) = value;
   }).wait();
@@ -58,7 +58,7 @@ bool test__shfl_down2(int grid_size, int sub_wavefront_width, int offset, T init
 
   // shift values down in a wavefront, divided into subsections
   parallel_for_each(ex, [&, offset, sub_wavefront_width, init_value](index<1>& idx) [[hc]] {
-    T value = init_value + (__activelaneid_u32() % sub_wavefront_width);
+    T value = init_value + (__lane_id() % sub_wavefront_width);
     value = __shfl_down(value, offset, sub_wavefront_width);
     table(idx) = value;
   }).wait();
