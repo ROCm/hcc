@@ -194,7 +194,8 @@ bool EraseNonkernels::runOnModule(Module &M)
                         I->getName().find("opencl_") != StringRef::npos ||
                         I->getName().find("atomic_") != StringRef::npos ||
                         I->getName().find("llvm.") != StringRef::npos || 
-                        I->getName().find("__") == 0 || 
+                        I->getName().find("__") == 0 ||
+                        I->getName().find("amdgcn_") == 0 ||
                         I->getName().find("hc_get_grid_size") != StringRef::npos || 
                         I->getName().find("hc_get_workitem_absolute_id") != StringRef::npos ||
                         I->getName().find("hc_get_workitem_id") != StringRef::npos ||

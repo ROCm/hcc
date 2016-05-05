@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include "kalmar_defines.h"
+#include "hc_defines.h"
 #include "kalmar_runtime.h"
 #include "kalmar_serialize.h"
 

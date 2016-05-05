@@ -56,10 +56,10 @@ if [ $KMDUMPLLVM == "1" ]; then
 fi
 
 if [ $KM_USE_AMDGPU ]; then
-  EXTRA_LIBRARY=$NEWLIB/hsail-amdgpu-wrapper.ll
+  HCC_EXTRA_LIBRARIES="$HCC_EXTRA_LIBRARIES $NEWLIB/hsail-amdgpu-wrapper.ll"
 fi
 
-$HLC_LLVM_LINK -suppress-warnings -o $1.linked.bc $1 $NEWLIB/builtins-hsail.opt.bc $EXTRA_LIBRARY
+$HLC_LLVM_LINK -suppress-warnings -o $1.linked.bc $1 $NEWLIB/builtins-hsail.opt.bc $HCC_EXTRA_LIBRARIES
 
 # error handling for HSAIL llvm-link
 RETVAL=$?

@@ -1,7 +1,7 @@
 // XFAIL: Linux
 // RUN: %hc -lhc_am %s -o %t.out && %t.out
 
-#include "grid_launch.h"
+#include "grid_launch.hpp"
 #include "hc_am.hpp"
 #include <iostream>
 
