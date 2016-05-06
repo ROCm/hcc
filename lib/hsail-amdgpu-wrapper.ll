@@ -495,7 +495,7 @@ define linkonce_odr spir_func i32 @__hsail_get_num_groups(i32 %i) #5 {
 ; Function Attrs: alwaysinline nounwind readnone
 define linkonce_odr spir_func i32 @__hsail_get_lane_id() #2 {
   %1 = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-  %2 = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %1)
+  %2 = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %1), !range !2
   ret i32 %2
 }
 
@@ -729,3 +729,4 @@ attributes #8 = { nounwind argmemonly }
 
 !0 = !{}
 !1 = !{i32 0, i32 2048}
+!2 = !{i32 0, i32 64}
