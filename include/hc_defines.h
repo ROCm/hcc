@@ -79,7 +79,7 @@ class auto_voidp {
 
 // Valid values for__hcc_backend__ to indicate the
 // compiler backend
-#define HCC_BACKEND_AMDGPU 1
-#define HCC_BACKEND_HSAIL  2
-#define HCC_BACKEND_CL     3
+#define HCC_BACKEND_AMDGPU (1)
+#define HCC_BACKEND_HSAIL  (2)
+#define HCC_BACKEND_CL     (3)
 
