@@ -72,6 +72,14 @@
 #define ASYNCOPS_VECTOR_GC_SIZE (1024)
 
 
+// whether to use MD5 as kernel indexing hash function
+// default set as 0 (use faster FNV-1a hash instead)
+#define USE_MD5_HASH (0)
+
+// cutoff size used in FNV-1a hash function
+// default set as 512, this is a heuristic value
+// which is larger than HSA BrigModuleHeader and AMD GCN ISA header (Elf64_Ehdr)
+#define FNV1A_CUTOFF_SIZE (512)
 
 static const char* getHSAErrorString(hsa_status_t s) {
 
@@ -645,6 +653,7 @@ public:
 
         // clear data in kernelBufferMap
         kernelBufferMap[ker].clear();
+        kernelBufferMap.erase(ker);
 
         delete(dispatch);
     }
@@ -689,6 +698,7 @@ public:
 
         // clear data in kernelBufferMap
         kernelBufferMap[ker].clear();
+        kernelBufferMap.erase(ker);
 
         return sp_dispatch;
     }
@@ -727,15 +737,25 @@ public:
                 hsa_status_t status = HSA_STATUS_SUCCESS;
                 // Make sure host memory is accessible to gpu
                 // FIXME: host memory is allocated through OS allocator, if not, correct it.
+                // dst--host buffer might be allocated through either OS allocator or hsa allocator.
+                // Things become complicated, we may need some query API to query the pointer info, i.e.
+                // allocator info. Same as write.
                 hsa_agent_t* agent = static_cast<hsa_agent_t*>(getHSAAgent()); 
                 void* va = nullptr;
                 status = hsa_amd_memory_lock(dst, count, agent, 1, &va);
-                STATUS_CHECK(status, __LINE__);
+                // TODO: If host buffer is not allocated through OS allocator, so far, lock 
+                // API will return nullptr to va, this is not specified in the spec, but will use it 
+                // check if host buffer is has allocator allocated. 
+                if(va == NULL || status != HSA_STATUS_SUCCESS)
+                {
+                    status = hsa_amd_agents_allow_access(1, agent, NULL, dst);
+                    STATUS_CHECK(status, __LINE__);
+                    va = dst;
+                }
                 status = hsa_memory_copy(va, (char*)device + offset, count);
                 STATUS_CHECK(status, __LINE__);
                 // Unlock the host memory
                 status = hsa_amd_memory_unlock(dst);
-                STATUS_CHECK(status, __LINE__);
             } else {
 #if KALMAR_DEBUG
                 std::cerr << "read(" << device << "," << dst << "," << count << "," << offset << "): use host memory copy\n";
@@ -760,12 +780,20 @@ public:
                 hsa_agent_t* agent = static_cast<hsa_agent_t*>(getHSAAgent()); 
                 void* va = nullptr;
                 status = hsa_amd_memory_lock(const_cast<void*>(src), count, agent, 1, &va);
-                STATUS_CHECK(status, __LINE__);
+                  
+                if(va == NULL || status != HSA_STATUS_SUCCESS)
+                {
+                    status = hsa_amd_agents_allow_access(1, agent, NULL, src);
+                    STATUS_CHECK(status, __LINE__);
+                    status = hsa_memory_copy((char*)device + offset, src, count);
+                    STATUS_CHECK(status, __LINE__);
+                    return;
+                }
+
                 status = hsa_memory_copy((char*)device + offset, va, count);
                 STATUS_CHECK(status, __LINE__);
                 // Unlock the host memory
                 status = hsa_amd_memory_unlock(const_cast<void*>(src));
-                STATUS_CHECK(status, __LINE__);
             } else {
 #if KALMAR_DEBUG
                 std::cerr << "write(" << device << "," << src << "," << count << "," << offset << "," << blocking << "): use host memory copy\n";
@@ -1322,7 +1350,8 @@ public:
     }
 
     // calculate MD5 checksum
-    std::string MD5Sum(size_t size, void* source) {
+    std::string kernel_checksum(size_t size, void* source) {
+#if USE_MD5_HASH
         unsigned char md5_hash[16];
         memset(md5_hash, 0, sizeof(unsigned char) * 16);
         MD5_CTX md5ctx;
@@ -1337,10 +1366,25 @@ public:
         }
 
         return checksum.str();
+#else
+        // FNV-1a hashing, 64-bit version
+        const uint64_t FNV_prime = 0x100000001b3;
+        const uint64_t FNV_basis = 0xcbf29ce484222325;
+        uint64_t hash = FNV_basis;
+
+        const char *str = static_cast<const char *>(source);
+
+        size = size > FNV1A_CUTOFF_SIZE ? FNV1A_CUTOFF_SIZE : size;
+        for (auto i = 0; i < size; ++i) {
+            hash ^= *str++;
+            hash *= FNV_prime;
+        }
+        return std::to_string(hash);
+#endif
     }
 
     void BuildProgram(void* size, void* source, bool needsCompilation = true) override {
-        if (executables.find(MD5Sum((size_t)size, source)) == executables.end()) {
+        if (executables.find(kernel_checksum((size_t)size, source)) == executables.end()) {
             bool use_amdgpu = false;
 #ifdef HSA_USE_AMDGPU_BACKEND
             const char *km_use_amdgpu = getenv("KM_USE_AMDGPU");
@@ -1724,10 +1768,6 @@ public:
 
     // FIXME: return values
     void memcpySymbol(const char* symbolName, void* hostptr, size_t count, size_t offset = 0, enum hcMemcpyKind kind = hcMemcpyHostToDevice) override {
-        hsa_status_t status;
-    
-        status = hsa_amd_agents_allow_access(1, &agent, NULL, hostptr);
-        STATUS_CHECK(status, __LINE__);
         if (executables.size() != 0) {
             unsigned long* symbol_ptr = (unsigned long*)getSymbolAddress(symbolName);
             memcpySymbol(symbol_ptr, hostptr, count, offset, kind);
@@ -1747,7 +1787,7 @@ private:
     void BuildOfflineFinalizedProgramImpl(void* kernelBuffer, int kernelSize) {
         hsa_status_t status;
 
-        std::string index = MD5Sum((size_t)kernelSize, kernelBuffer);
+        std::string index = kernel_checksum((size_t)kernelSize, kernelBuffer);
 
         // load HSA program if we haven't done so
         if (executables.find(index) == executables.end()) {
@@ -1779,7 +1819,7 @@ private:
     HSAKernel* CreateOfflineFinalizedKernelImpl(void *kernelBuffer, int kernelSize, const char *entryName) {
         hsa_status_t status;
 
-        std::string index = MD5Sum((size_t)kernelSize, kernelBuffer);
+        std::string index = kernel_checksum((size_t)kernelSize, kernelBuffer);
 
         // load HSA program if we haven't done so
         if (executables.find(index) == executables.end()) {
@@ -1805,7 +1845,7 @@ private:
     void BuildProgramImpl(const char* hsailBuffer, int hsailSize) {
         hsa_status_t status;
 
-        std::string index = MD5Sum((size_t)hsailSize, (void*)hsailBuffer);
+        std::string index = kernel_checksum((size_t)hsailSize, (void*)hsailBuffer);
 
         // finalize HSA program if we haven't done so
         if (executables.find(index) == executables.end()) {
@@ -1872,7 +1912,7 @@ private:
     HSAKernel* CreateKernelImpl(const char *hsailBuffer, int hsailSize, const char *entryName) {
         hsa_status_t status;
   
-        std::string index = MD5Sum((size_t)hsailSize, (void*)hsailBuffer);
+        std::string index = kernel_checksum((size_t)hsailSize, (void*)hsailBuffer);
 
         // finalize HSA program if we haven't done so
         if (executables.find(index) == executables.end()) {

@@ -77,3 +77,9 @@ class auto_voidp {
         template<class T> operator T *() { return (T *) _ptr; }
 };
 
+// Valid values for__hcc_backend__ to indicate the
+// compiler backend
+#define HCC_BACKEND_AMDGPU 1
+#define HCC_BACKEND_HSAIL  2
+#define HCC_BACKEND_CL     3
+

@@ -1,7 +1,7 @@
 // RUN: %hc %s -c -o %t.out 2>&1 | %FileCheck %s
 
 #include "hc.hpp"
-#include "grid_launch.h"
+#include "grid_launch.hpp"
 
 __attribute__((hc_grid_launch)) void kernel(int* x) {
 }

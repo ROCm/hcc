@@ -3,7 +3,7 @@
 // RUN: %hc -lhc_am %s -DFILE_1 -DFILE_2 -o %t2.out && %t2.out
 
 
-#include "grid_launch.h"
+#include "grid_launch.hpp"
 #include "hc_am.hpp"
 
 #ifdef FILE_1
