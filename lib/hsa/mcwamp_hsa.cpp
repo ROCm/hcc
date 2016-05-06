@@ -672,6 +672,7 @@ public:
         if (!local)
             local = tmp_local;
         dispatch->setLaunchAttributes(nr_dim, global, local);
+std::cout << "runtime: dynamic group size: " << dynamic_group_size << "\n";
         dispatch->setDynamicGroupSegment(dynamic_group_size);
 
         // wait for previous kernel dispatches be completed
@@ -2394,6 +2395,7 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
     // add dynamic group segment size
     group_segment_size += this->dynamicGroupSize;
     aql.group_segment_size = group_segment_size;
+std::cerr << "runtime: group segment size set in AQL: " << aql.group_segment_size << "\n";
 
     uint32_t private_segment_size;
     status = hsa_executable_symbol_get_info(kernel->hsaExecutableSymbol,
