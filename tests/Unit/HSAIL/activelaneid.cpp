@@ -1,4 +1,4 @@
-// XFAIL: *
+// XFAIL: Linux
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <hc.hpp>
@@ -49,7 +49,12 @@ bool test() {
 int main() {
   bool ret = true;
 
+#if __hcc_backend__ == HCC_BACKEND_AMDGPU
+  // XXX activelaneid is not yet implemented on LC backend. let this case fail directly.
+  ret = false;
+#else
   ret &= test();
+#endif
 
   return !(ret == true);
 }
