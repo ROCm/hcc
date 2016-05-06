@@ -1903,7 +1903,7 @@ extern "C" unsigned int __wavesize() __HC__;
 
 
 #if __hcc_backend__==HCC_BACKEND_AMDGPU
-extern "C" unsigned int __wavesize() __HC__ {
+extern "C" inline unsigned int __wavesize() __HC__ {
   return __HSA_WAVEFRONT_SIZE__;
 }
 #endif
