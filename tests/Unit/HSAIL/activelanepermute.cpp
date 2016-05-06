@@ -1,4 +1,4 @@
-// XFAIL: *
+// XFAIL: Linux
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <hc.hpp>
@@ -94,9 +94,14 @@ bool test() {
 int main() {
   bool ret = true;
 
+#if __hcc_backend__ == HCC_BACKEND_AMDGPU
+  // XXX activelanepermute is not yet implemented on LC backend. let this case fail directly.
+  ret = false;
+#else
   ret &= test<64>();
   ret &= test<256>();
   ret &= test<1024>();
+#endif
 
   return !(ret == true);
 }
