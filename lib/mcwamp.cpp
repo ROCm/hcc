@@ -99,11 +99,9 @@ class PlatformDetect {
 public:
   PlatformDetect(const std::string& name,
                  const std::string& ampRuntimeLibrary,
-                 const std::string& systemRuntimeLibrary,
                  void* const kernel_source)
     : m_name(name),
       m_ampRuntimeLibrary(ampRuntimeLibrary),
-      m_systemRuntimeLibrary(systemRuntimeLibrary),
       m_kernel_source(kernel_source) {}
 
   virtual bool detect() {
@@ -117,19 +115,8 @@ public:
 
     void* handle = nullptr;
 
-    // detect if system runtime is available
-    //std::cout << "dlopen(" << m_systemRuntimeLibrary << ")\n";
-    handle = dlopen(m_systemRuntimeLibrary.c_str(), RTLD_LAZY|RTLD_NODELETE);
-    if (!handle) {
-        //std::cout << " system runtime not found" << std::endl;
-        //std::cout << dlerror() << std::endl;
-        return false;
-    }
-    dlerror();  // clear any existing error
-    //std::cout << " system runtime found...";
-    dlclose(handle);
-
-    // detect if C++AMP runtime is available
+    // detect if C++AMP runtime is available and 
+    // whether all platform library dependencies are satisfied
     //std::cout << "dlopen(" << m_ampRuntimeLibrary << ")\n";
     handle = dlopen(m_ampRuntimeLibrary.c_str(), RTLD_LAZY|RTLD_NODELETE);
     if (!handle) {
@@ -145,7 +132,6 @@ public:
   }
 
 private:
-  std::string m_systemRuntimeLibrary;
   std::string m_ampRuntimeLibrary;
   std::string m_name;
   void* m_kernel_source;
@@ -154,7 +140,7 @@ private:
 class OpenCLPlatformDetect : public PlatformDetect {
 public:
     OpenCLPlatformDetect()
-      : PlatformDetect("OpenCL", "libmcwamp_opencl.so", "libOpenCL.so", cl_kernel_source) {}
+      : PlatformDetect("OpenCL", "libmcwamp_opencl.so",  cl_kernel_source) {}
 
   bool hasSPIR() {
     void* ocl_version_test_handle = nullptr;
@@ -184,7 +170,7 @@ public:
  */
 class HSAPlatformDetect : public PlatformDetect {
 public:
-  HSAPlatformDetect() : PlatformDetect("HSA", "libmcwamp_hsa.so", "libhsa-runtime64.so", hsa_kernel_source) {}
+  HSAPlatformDetect() : PlatformDetect("HSA", "libmcwamp_hsa.so",  hsa_kernel_source) {}
 };
 
 
