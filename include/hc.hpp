@@ -1899,9 +1899,14 @@ tiled_extent<3> extent<N>::tile(int t0, int t1, int t2) const __CPU__ __HC__ {
  * @return The size of a wavefront.
  */
 #define __HSA_WAVEFRONT_SIZE__ (64)
-unsigned int __wavesize() __HC__ {
+extern "C" unsigned int __wavesize() __HC__; 
+
+
+#if __hcc_backend__==HCC_BACKEND_AMDGPU
+extern "C" unsigned int __wavesize() __HC__ {
   return __HSA_WAVEFRONT_SIZE__;
 }
+#endif
 
 /**
  * Count number of 1 bits in the input
@@ -2573,10 +2578,10 @@ inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) _
 
 
 inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-    unsigned int laneId = __lane_id();
-    unsigned int target = laneId ^ laneMask;
-    unsigned int w = width;
-    return __hsail_activelanepermute_b32(var, target, var, target>=((laneId+w)&~(w-1)));
+    int self = __lane_id();
+    int index = self^laneMask;
+    index = index >= ((self+width)&~(width-1))?self:index;
+    return __hsail_activelanepermute_b32(var, index, 0, 0);
 }
 
 #endif
