@@ -2628,6 +2628,12 @@ extern "C" unsigned int get_dynamic_group_segment_size() __HC__;
  */
 extern "C" __attribute__((address_space(3))) void* get_dynamic_group_segment() __HC__;
 
+
+// XXX temporary builtins for dynamic group segment in Lightning backend
+extern "C" unsigned int __hsail_get_grouptotalsize() __HC__;
+extern "C" __attribute__((address_space(3))) void* __hsail_get_groupbaseptr() __HC__;
+extern "C" unsigned int __hsail_get_groupstaticsize() __HC__;
+
 // ------------------------------------------------------------------------
 // utility class for tiled_barrier
 // ------------------------------------------------------------------------
