@@ -719,14 +719,14 @@ declare i64 @llvm.amdgcn.s.memtime() #1
 
 ; Function Attrs: alwaysinline nounwind readonly
 define linkonce_odr spir_func i32 @__hsail_get_grouptotalsize() #0 {
-  %1 = call i32 @llvm.amdgcn.s.getreg(i32 45574) #0
-  %2 = shl nuw nsw i32 %1, 4 ; from 128 dwords to bytes
+  %1 = call i32 @llvm.amdgcn.s.getreg(i32 17158) #0
+  %2 = shl nuw nsw i32 %1, 8 ; from 128 dwords to bytes
   ret i32 %2
 }
 
 ; Function Attrs: alwaysinline nounwind readonly
 define linkonce_odr spir_func i8 addrspace(3)* @__hsail_get_groupbaseptr() #0 {
-  %1 = call i32 @llvm.amdgcn.s.getreg(i32 28678) #0
+  %1 = call i32 @llvm.amdgcn.s.getreg(i32 14342) #0
   %2 = shl nuw nsw i32 %1, 8 ; from 64 dwords to bytes
   %3 = inttoptr i32 %2 to i8 addrspace(3)*
   ret i8 addrspace(3)* %3
