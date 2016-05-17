@@ -574,12 +574,12 @@ set(HCC_GENERAL_DEBIAN_DEP "libstdc++-4.8-dev, libc++1, libc++-dev, libc++abi1, 
 
 # control the list of package dependency depending on whether this is an official release build.
 # for non-official release build, we want to relax the dependency on rocr runtime
-set(OFFICIAL_RELEASE_BUILD 0)
+set(OFFICIAL_RELEASE_BUILD 1)
 if (OFFICIAL_RELEASE_BUILD)
   set(HCC_ROCR_DEBIAN_DEP "hsa-rocr-dev, hsa-ext-rocr-dev")
   if (HSA_USE_AMDGPU_BACKEND)
     # dependencies for official release build with lightning backend
-    set(HCC_BACKEND_DEBIAN_DEP "amdphdrs (=1.0), llvm-amdgpu (>=3.9)")
+    set(HCC_BACKEND_DEBIAN_DEP "llvm-amdgpu (=3.9-r269660)")
     set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_ROCR_DEBIAN_DEP}, ${HCC_GENERAL_DEBIAN_DEP}, ${HCC_BACKEND_DEBIAN_DEP}")
   else (HSA_USE_AMDGPU_BACKEND)
     # dependencies for official releasebuild with non-lightning backend
