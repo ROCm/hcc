@@ -1279,6 +1279,17 @@ public:
 
     /** @{ */
     /**
+     * Produces a tiled_extent object with the tile extents given by t0, t1,
+     * and t2, plus a certain amount of dynamic group segment.
+     */
+    tiled_extent<1> tile_with_dynamic(int t0, int dynamic_size) const;
+    tiled_extent<2> tile_with_dynamic(int t0, int t1, int dynamic_size) const;
+    tiled_extent<3> tile_with_dynamic(int t0, int t1, int t2, int dynamic_size) const;
+
+    /** @} */
+
+    /** @{ */
+    /**
      * Compares two objects of extent<N>.
      *
      * The expression
@@ -1888,6 +1899,30 @@ tiled_extent<3> extent<N>::tile(int t0, int t1, int t2) const __CPU__ __HC__ {
   return tiled_extent<3>(*this, t0, t1, t2);
 }
 
+// ------------------------------------------------------------------------
+// implementation of extent<N>::tile_with_dynamic()
+// ------------------------------------------------------------------------
+
+template <int N>
+inline
+tiled_extent<1> extent<N>::tile_with_dynamic(int t0, int dynamic_size) const __CPU__ __HC__ {
+  static_assert(N == 1, "One-dimensional tile() method only available on extent<1>");
+  return tiled_extent<1>(*this, t0, dynamic_size);
+}
+
+template <int N>
+inline
+tiled_extent<2> extent<N>::tile_with_dynamic(int t0, int t1, int dynamic_size) const __CPU__ __HC__ {
+  static_assert(N == 2, "Two-dimensional tile() method only available on extent<2>");
+  return tiled_extent<2>(*this, t0, t1, dynamic_size);
+}
+
+template <int N>
+inline
+tiled_extent<3> extent<N>::tile_with_dynamic(int t0, int t1, int t2, int dynamic_size) const __CPU__ __HC__ {
+  static_assert(N == 3, "Three-dimensional tile() method only available on extent<3>");
+  return tiled_extent<3>(*this, t0, t1, t2, dynamic_size);
+}
 
 // ------------------------------------------------------------------------
 // Intrinsic functions for HSAIL instructions
@@ -2600,6 +2635,8 @@ inline float __shfl_xor(float var, int laneMask, int width=__HSA_WAVEFRONT_SIZE_
 // dynamic group segment
 // ------------------------------------------------------------------------
 
+// XXX functions here are obsolete, need to remove them in later commits
+
 /**
  * Fetch an address within group segment
  *
@@ -2629,10 +2666,11 @@ extern "C" unsigned int get_dynamic_group_segment_size() __HC__;
 extern "C" __attribute__((address_space(3))) void* get_dynamic_group_segment() __HC__;
 
 
-// XXX temporary builtins for dynamic group segment in Lightning backend
+// temporary builtins for dynamic group segment in Lightning backend
 extern "C" unsigned int __hsail_get_grouptotalsize() __HC__;
 extern "C" __attribute__((address_space(3))) void* __hsail_get_groupbaseptr() __HC__;
 extern "C" unsigned int __hsail_get_groupstaticsize() __HC__;
+extern "C" __attribute__((address_space(3))) void* __hsail_get_dynamicgroupbaseptr() __HC__;
 
 // ------------------------------------------------------------------------
 // utility class for tiled_barrier
