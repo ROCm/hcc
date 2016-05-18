@@ -726,10 +726,16 @@ define linkonce_odr spir_func i32 @__hsail_get_grouptotalsize() #0 {
 
 ; Function Attrs: alwaysinline nounwind readonly
 define linkonce_odr spir_func i8 addrspace(3)* @__hsail_get_groupbaseptr() #0 {
-  %1 = call i32 @llvm.amdgcn.s.getreg(i32 14342) #0
-  %2 = shl nuw nsw i32 %1, 8 ; from 64 dwords to bytes
-  %3 = inttoptr i32 %2 to i8 addrspace(3)*
-  ret i8 addrspace(3)* %3
+  ; XXX For some reason getreg may return strange values for LDS_BASE
+  ; temporary fix as 0 for now
+
+  ;%1 = call i32 @llvm.amdgcn.s.getreg(i32 14342) #0
+  ;%2 = shl nuw nsw i32 %1, 8 ; from 64 dwords to bytes
+  ;%3 = inttoptr i32 %2 to i8 addrspace(3)*
+  ;ret i8 addrspace(3)* %3
+
+  %1 = inttoptr i32 0 to i8 addrspace(3)*
+  ret i8 addrspace(3)* %1
 }
 
 ; Function Attrs: nounwind readnone
