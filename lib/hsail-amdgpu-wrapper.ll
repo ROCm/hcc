@@ -745,6 +745,15 @@ define linkonce_odr spir_func i32 @__hsail_get_groupstaticsize() #1 {
 }
 
 ; Function Attrs: alwaysinline nounwind readonly
+define linkonce_odr spir_func i8 addrspace(3)* @__hsail_get_dynamicgroupbaseptr() #0 {
+  %1 = tail call spir_func i8 addrspace(3)* @__hsail_get_groupbaseptr() #0
+  %2 = tail call spir_func i32 @__hsail_get_groupstaticsize() #1
+  %3 = zext i32 %2 to i64
+  %4 = getelementptr inbounds i8, i8 addrspace(3)* %1, i64 %3
+  ret i8 addrspace(3)* %4
+}
+
+; Function Attrs: alwaysinline nounwind readonly
 declare i32 @llvm.amdgcn.s.getreg(i32) #0
 
 ; Function Attrs: nounwind readnone
