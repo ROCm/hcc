@@ -1085,27 +1085,19 @@ prog function &__cycle_u64(arg_u64 %dest)() {
 /// Dynamic group segment
 ////////////////////////////////////////////////////////////
 
-/// global variable to store the size of static group segment
-/// the value would be set by Kalmar runtime prior to kernel dispatch
-prog global_u32 &hcc_static_group_segment_size = 0;
-
-/// global variable to store the size of dynamic group segment
-/// the value would be set by Kalmar runtime prior to kernel dispatch
-prog global_u32 &hcc_dynamic_group_segment_size = 0;
-
 /// get_static_group_segment_size : return the size of static group segment
+/// XXX this function has been disabled in HSAIL path so it always return 0
 prog function &get_static_group_segment_size(arg_u32 %ret)()
 {
-  ld_global_u32 $s0, [&hcc_static_group_segment_size];
-  st_arg_u32 $s0, [%ret];
+  st_arg_u32 0, [%ret];
   ret;
 };
 
 /// get_dynamic_group_segment_size : return the size of dynamic group segment
+/// XXX this function has been disabled in HSAIL path so it always return 0
 prog function &get_dynamic_group_segment_size(arg_u32 %ret)()
 {
-  ld_global_u32 $s0, [&hcc_dynamic_group_segment_size];
-  st_arg_u32 $s0, [%ret];
+  st_arg_u32 0, [%ret];
   ret;
 };
 
