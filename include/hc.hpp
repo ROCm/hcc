@@ -2632,19 +2632,17 @@ inline float __shfl_xor(float var, int laneMask, int width=__HSA_WAVEFRONT_SIZE_
 
 
 // ------------------------------------------------------------------------
-// dynamic group segment
+// group segment
 // ------------------------------------------------------------------------
 
-// XXX functions here are obsolete, need to remove them in later commits
-
 /**
- * Fetch an address within group segment
+ * Fetch the size of group segment. This includes both static group segment
+ * and dynamic group segment.
  *
- * @param[in] offset offset within group segment
- * @return A pointer to the memory address space with the specified offset from
- *         the beginning of group segment.
+ * @return The size of group segment used by the kernel in bytes. The value
+ *         includes both static group segment and dynamic group segment.
  */
-extern "C" __attribute__((address_space(3))) void* get_group_segment_addr(unsigned int offset) __HC__;
+extern "C" unsigned int get_group_segment_size() __HC__;
 
 /**
  * Fetch the size of static group segment
@@ -2654,23 +2652,14 @@ extern "C" __attribute__((address_space(3))) void* get_group_segment_addr(unsign
 extern "C" unsigned int get_static_group_segment_size() __HC__;
 
 /**
- * Fetch the size of dynamic group segment
- *
- * @return The size of dynamic group segment used by the kernel in bytes.
+ * Fetch the address of the beginning of group segment.
  */
-extern "C" unsigned int get_dynamic_group_segment_size() __HC__;
+extern "C" __attribute__((address_space(3))) void* get_group_segment_base_pointer() __HC__;
 
 /**
  * Fetch the address of the beginning of dynamic group segment.
  */
-extern "C" __attribute__((address_space(3))) void* get_dynamic_group_segment() __HC__;
-
-
-// temporary builtins for dynamic group segment in Lightning backend
-extern "C" unsigned int __hsail_get_grouptotalsize() __HC__;
-extern "C" __attribute__((address_space(3))) void* __hsail_get_groupbaseptr() __HC__;
-extern "C" unsigned int __hsail_get_groupstaticsize() __HC__;
-extern "C" __attribute__((address_space(3))) void* __hsail_get_dynamicgroupbaseptr() __HC__;
+extern "C" __attribute__((address_space(3))) void* get_dynamic_group_segment_base_pointer() __HC__;
 
 // ------------------------------------------------------------------------
 // utility class for tiled_barrier

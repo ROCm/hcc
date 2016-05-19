@@ -715,14 +715,14 @@ define linkonce_odr spir_func i64 @__cycle_u64() #1 {
 declare i64 @llvm.amdgcn.s.memtime() #1
 
 ; Function Attrs: alwaysinline nounwind readonly
-define linkonce_odr spir_func i32 @__hsail_get_grouptotalsize() #0 {
+define linkonce_odr spir_func i32 @get_group_segment_size() #0 {
   %1 = call i32 @llvm.amdgcn.s.getreg(i32 17158) #0
   %2 = shl nuw nsw i32 %1, 8 ; from 64 dwords to bytes
   ret i32 %2
 }
 
 ; Function Attrs: alwaysinline nounwind readonly
-define linkonce_odr spir_func i8 addrspace(3)* @__hsail_get_groupbaseptr() #0 {
+define linkonce_odr spir_func i8 addrspace(3)* @get_group_segment_base_pointer() #0 {
   ; XXX For some reason getreg may return strange values for LDS_BASE
   ; temporary fix as 0 for now
 
@@ -736,15 +736,15 @@ define linkonce_odr spir_func i8 addrspace(3)* @__hsail_get_groupbaseptr() #0 {
 }
 
 ; Function Attrs: nounwind readnone
-define linkonce_odr spir_func i32 @__hsail_get_groupstaticsize() #1 {
+define linkonce_odr spir_func i32 @get_static_group_segment_size() #1 {
   %ret = call i32 @llvm.amdgcn.groupstaticsize() #1
   ret i32 %ret
 }
 
 ; Function Attrs: alwaysinline nounwind readonly
-define linkonce_odr spir_func i8 addrspace(3)* @__hsail_get_dynamicgroupbaseptr() #0 {
-  %1 = tail call spir_func i8 addrspace(3)* @__hsail_get_groupbaseptr() #0
-  %2 = tail call spir_func i32 @__hsail_get_groupstaticsize() #1
+define linkonce_odr spir_func i8 addrspace(3)* @get_dynamic_group_segment_base_pointer() #0 {
+  %1 = tail call spir_func i8 addrspace(3)* @get_group_segment_base_pointer() #0
+  %2 = tail call spir_func i32 @get_static_group_segment_size() #1
   %3 = zext i32 %2 to i64
   %4 = getelementptr inbounds i8, i8 addrspace(3)* %1, i64 %3
   ret i8 addrspace(3)* %4
