@@ -98,7 +98,9 @@ if (@ARGV[1]) {
     open(TESTLIST, @ARGV[1]) or &exit_message(1, "Cannot open test list: @ARGV[1]");
     while(<TESTLIST>) {
         chomp;
-        push @tests, abs_path($tests_root."/".$_);
+        if (-e $tests_root."/".$_) {
+            push @tests, abs_path($tests_root."/".$_);
+        }
     }
     close(TESTLIST);
     $has_test_list=1;
@@ -136,12 +138,13 @@ foreach my $test (@tests)
 sub run_test {
     my ($test) = @_;
 
-    log_message("Test: $test");
-
     if (not $test)
     {
+       log_message("Test: N/A");
        goto continue_ite;
     }
+
+    log_message("Test: $test");
     my $test_exec = "$tmpdir/test.out";
     if ($use_threads) {
         {lock($test_id); $test_exec.=$test_id; $test_id++;}
