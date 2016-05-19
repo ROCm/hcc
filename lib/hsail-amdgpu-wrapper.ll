@@ -1,8 +1,5 @@
 ; ModuleID = 'hsail-amdgpu'
 
-@"&hcc_static_group_segment_size" = addrspace(1) global i32 0, align 4
-@"&hcc_dynamic_group_segment_size" = addrspace(1) global i32 0, align 4
-
 ; Function Attrs: alwaysinline nounwind readonly
 define linkonce_odr spir_func i32 @__hsail_get_global_id(i32) #0 {
   %dispatch_ptr = call noalias nonnull dereferenceable(64) i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr()
