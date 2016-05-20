@@ -1279,6 +1279,17 @@ public:
 
     /** @{ */
     /**
+     * Produces a tiled_extent object with the tile extents given by t0, t1,
+     * and t2, plus a certain amount of dynamic group segment.
+     */
+    tiled_extent<1> tile_with_dynamic(int t0, int dynamic_size) const;
+    tiled_extent<2> tile_with_dynamic(int t0, int t1, int dynamic_size) const;
+    tiled_extent<3> tile_with_dynamic(int t0, int t1, int t2, int dynamic_size) const;
+
+    /** @} */
+
+    /** @{ */
+    /**
      * Compares two objects of extent<N>.
      *
      * The expression
@@ -1888,6 +1899,30 @@ tiled_extent<3> extent<N>::tile(int t0, int t1, int t2) const __CPU__ __HC__ {
   return tiled_extent<3>(*this, t0, t1, t2);
 }
 
+// ------------------------------------------------------------------------
+// implementation of extent<N>::tile_with_dynamic()
+// ------------------------------------------------------------------------
+
+template <int N>
+inline
+tiled_extent<1> extent<N>::tile_with_dynamic(int t0, int dynamic_size) const __CPU__ __HC__ {
+  static_assert(N == 1, "One-dimensional tile() method only available on extent<1>");
+  return tiled_extent<1>(*this, t0, dynamic_size);
+}
+
+template <int N>
+inline
+tiled_extent<2> extent<N>::tile_with_dynamic(int t0, int t1, int dynamic_size) const __CPU__ __HC__ {
+  static_assert(N == 2, "Two-dimensional tile() method only available on extent<2>");
+  return tiled_extent<2>(*this, t0, t1, dynamic_size);
+}
+
+template <int N>
+inline
+tiled_extent<3> extent<N>::tile_with_dynamic(int t0, int t1, int t2, int dynamic_size) const __CPU__ __HC__ {
+  static_assert(N == 3, "Three-dimensional tile() method only available on extent<3>");
+  return tiled_extent<3>(*this, t0, t1, t2, dynamic_size);
+}
 
 // ------------------------------------------------------------------------
 // Intrinsic functions for HSAIL instructions
@@ -2597,17 +2632,17 @@ inline float __shfl_xor(float var, int laneMask, int width=__HSA_WAVEFRONT_SIZE_
 
 
 // ------------------------------------------------------------------------
-// dynamic group segment
+// group segment
 // ------------------------------------------------------------------------
 
 /**
- * Fetch an address within group segment
+ * Fetch the size of group segment. This includes both static group segment
+ * and dynamic group segment.
  *
- * @param[in] offset offset within group segment
- * @return A pointer to the memory address space with the specified offset from
- *         the beginning of group segment.
+ * @return The size of group segment used by the kernel in bytes. The value
+ *         includes both static group segment and dynamic group segment.
  */
-extern "C" __attribute__((address_space(3))) void* get_group_segment_addr(unsigned int offset) __HC__;
+extern "C" unsigned int get_group_segment_size() __HC__;
 
 /**
  * Fetch the size of static group segment
@@ -2617,16 +2652,14 @@ extern "C" __attribute__((address_space(3))) void* get_group_segment_addr(unsign
 extern "C" unsigned int get_static_group_segment_size() __HC__;
 
 /**
- * Fetch the size of dynamic group segment
- *
- * @return The size of dynamic group segment used by the kernel in bytes.
+ * Fetch the address of the beginning of group segment.
  */
-extern "C" unsigned int get_dynamic_group_segment_size() __HC__;
+extern "C" __attribute__((address_space(3))) void* get_group_segment_base_pointer() __HC__;
 
 /**
  * Fetch the address of the beginning of dynamic group segment.
  */
-extern "C" __attribute__((address_space(3))) void* get_dynamic_group_segment() __HC__;
+extern "C" __attribute__((address_space(3))) void* get_dynamic_group_segment_base_pointer() __HC__;
 
 // ------------------------------------------------------------------------
 // utility class for tiled_barrier
