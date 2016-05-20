@@ -149,8 +149,12 @@ declare double @llvm.floor.f64(double) #1
 
 ; Function Attrs: alwaysinline nounwind readnone
 define linkonce_odr spir_func float @__hsail_fma_f32(float, float, float) #2 {
-  %4 = call float @llvm.fma.f32(float %0, float %1, float %2)
-  ret float %4
+  ; Use inline assembly to leverage v_mad_f32 which offers better precision than @llvm.fma.f32()
+  %ret = tail call float asm "v_mad_f32 $0, $1, $2, $3", "=v,v,v,v"(float %0, float %1, float %2) #
+  ret float %ret
+
+  ;%4 = call float @llvm.fma.f32(float %0, float %1, float %2)
+  ;ret float %4
 }
 
 ; Function Attrs: nounwind readnone
