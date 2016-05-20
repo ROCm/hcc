@@ -2383,6 +2383,11 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
                                             &group_segment_size);
     STATUS_CHECK_Q(status, commandQueue, __LINE__);
 
+#if KALMAR_DEBUG 
+    std::cerr << "static group segment size: " << group_segment_size << "\n";
+    std::cerr << "dynamic group segment size: " << this->dynamicGroupSize << "\n";
+#endif
+
     // add dynamic group segment size
     group_segment_size += this->dynamicGroupSize;
     aql.group_segment_size = group_segment_size;
