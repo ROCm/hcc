@@ -2079,7 +2079,7 @@ static RegisterPass<PromoteGlobals>
 Y("promote-globals", "Promote Pointer To Global Pass");
 #else
 INITIALIZE_PASS(PromoteGlobals, "promote-globals", "Promote Pointer to Global", false, false);
-#endif // BoltTranslator_EXPORTS
+#endif
 
 llvm::ModulePass * createPromoteGlobalsPass ()
 {

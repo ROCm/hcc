@@ -13,14 +13,4 @@
 #define CMAKE_OPENCL_INC       "@OPENCL_HEADER@/.."
 #define CMAKE_OPENCL_LIB       "@OPENCL_LIBRARY@"
 
-#define CMAKE_BOLT_SRC_INC_DIR  "@PROJECT_SOURCE_DIR@/Bolt/include"
-#define CMAKE_BOLT_BIN_INC_DIR  "@PROJECT_BINARY_DIR@/Bolt/superbuild/Bolt-build/include"
-#define CMAKE_BOOST_INC_DIR     "@PROJECT_BINARY_DIR@/Bolt/superbuild/external/boost/src/Boost"
-
-#define CMAKE_BOLT_LIB_DIR      "@PROJECT_BINARY_DIR@/Bolt/superbuild/Bolt-build/bolt/amp"
-#define CMAKE_BOOST_LIB_DIR     "@PROJECT_BINARY_DIR@/Bolt/superbuild/external/boost/src/Boost/stage/lib"
-
-#define CMAKE_INSTALL_BOLT_INC  CMAKE_INSTALL_PREFIX"/include/Bolt"
-#define CMAKE_INSTALL_BOOST_INC CMAKE_INSTALL_PREFIX"/include/Boost"
-
 #define CMAKE_GTEST_INC_DIR "@PROJECT_SOURCE_DIR@/utils"

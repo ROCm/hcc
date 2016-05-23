@@ -95,8 +95,3 @@ add_subdirectory(opencl)
 add_subdirectory(hsa)
 add_subdirectory(cpu)
 
-# Build plugins for clang
-# FIXME: codes in this directory is obsolete, need to clean it up
-#if (CXXAMP_ENABLE_BOLT)
-#  add_subdirectory(clang-plugins)
-#endif (CXXAMP_ENABLE_BOLT)

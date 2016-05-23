@@ -17,8 +17,6 @@ static bool build_mode = false, install_mode = true; // use install mode by defa
 
 static bool amp_mode = true, hcc_mode = false;
 
-static bool bolt_rewrite_mode = false;
-
 void replace(std::string& str,
         const std::string& from, const std::string& to) {
     size_t start_pos = str.find(from);
@@ -44,30 +42,11 @@ void cxxflags(void) {
     // clamp
     if (build_mode) {
         std::cout << " -I" CMAKE_CLAMP_INC_DIR;
-
-        // bolt and boost
-        if (bolt_rewrite_mode) {
-            std::cout << " -I" CMAKE_BOLT_SRC_INC_DIR;
-            std::cout << " -I" CMAKE_BOLT_BIN_INC_DIR;
-            std::cout << " -I" CMAKE_BOOST_INC_DIR;
-        }
     } else if (install_mode) {
         if (const char *p = getenv("HCC_HOME")) {
             std::cout << " -I" << p << "/include";
-
-            // bolt and boost
-            if (bolt_rewrite_mode) {
-                std::cout << " -I" << p << "/include/Bolt";
-                std::cout << " -I" << p << "/include/Boost";
-            }
         } else {
             std::cout << " -I" CMAKE_INSTALL_INC;
-    
-            // bolt and boost
-            if (bolt_rewrite_mode) {
-                std::cout << " -I" CMAKE_INSTALL_BOLT_INC;
-                std::cout << " -I" CMAKE_INSTALL_BOOST_INC;
-            }
         }
     } else {
         assert(0 && "Unreacheable!");
@@ -87,18 +66,8 @@ void ldflags(void) {
     if (build_mode) {
         std::cout << " -L" CMAKE_AMPCL_LIB_DIR;
 
-        if (bolt_rewrite_mode) {
-            std::cout << " -L" CMAKE_BOLT_LIB_DIR;
-            std::cout << " -L" CMAKE_BOOST_LIB_DIR;
-        }
-
         std::cout << " -Wl,--rpath="
             CMAKE_AMPCL_LIB_DIR;
-
-        if (bolt_rewrite_mode) {
-            std::cout << ":" CMAKE_BOLT_LIB_DIR ":"
-                         CMAKE_BOOST_LIB_DIR ;
-        }
     } else if (install_mode) {
         if (const char *p = getenv("HCC_HOME")) {
             std::cout << " -L" << p << "/lib";
@@ -110,9 +79,6 @@ void ldflags(void) {
     }
 
     std::cout << " -lc++ -lc++abi -ldl -lpthread ";
-    if (bolt_rewrite_mode) {
-        std::cout << "-lampBolt.runtime.clang ";
-    }
     if (const char *p = getenv("TEST_CPU"))
         if (p == std::string("ON"))
         std::cout << " -lmcwamp_atomic ";
@@ -172,7 +138,6 @@ int main (int argc, char **argv) {
             {"install",  no_argument,       0, 'i'},
             {"ldflags",  no_argument,       0, 'l'},
             {"prefix",  no_argument,       0, 'p'},
-            {"bolt",  no_argument,       0, 'o'},
             {"shared",  no_argument,       0, 's'},
             {"gtest",  no_argument,       0, 't'},
             {0, 0, 0, 0}
@@ -218,9 +183,6 @@ int main (int argc, char **argv) {
             case 'i':   // --install
                 build_mode = false;
                 install_mode = true;
-                break;
-            case 'o':   // --bolt
-                bolt_rewrite_mode = true;
                 break;
             case 't':   // --gtest
                 gtest();
