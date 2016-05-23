@@ -48,7 +48,6 @@ include (PatchAsmParser)
 include (PatchPassManagerBuilder)
 include (SetupRemoveSpecialSection)
 include (PatchLLVM350)
-include (PatchLLVMforClangOMP)
 include (SetupDivisionPrecision)
 
 ensure_llvm_is_present(${PROJECT_SOURCE_DIR} compiler)
@@ -63,7 +62,6 @@ patch_AsmParser(SPIRify)
 patch_PassManagerBuilder(TileUniform)
 setup_RemoveSpecialSection(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms RemoveSpecialSection)
 patch_LLVM350(utils)
-patch_LLVM_for_ClangOMP(OpenMP)
 setup_DivisionPrecision(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms DivisionPrecision)
 
 # Regression test
