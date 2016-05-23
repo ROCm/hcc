@@ -37,7 +37,6 @@ include (EnsureLLVMisPresent)
 include (EnsureCLANGisPresent)
 include (EnsureHLCisPresent)
 include (EnsureHSAILASMisPresent)
-include (SetupCBE)
 include (SetupSPIRify)
 include (SetupEraseNonkernel)
 include (SetupCpuRename)
@@ -54,7 +53,6 @@ include (SetupDivisionPrecision)
 
 ensure_llvm_is_present(${PROJECT_SOURCE_DIR} compiler)
 ensure_clang_is_present(${PROJECT_SOURCE_DIR} compiler ${CLANG_URL})
-setup_CBackend(${PROJECT_SOURCE_DIR}/compiler/lib/Target CBackend)
 setup_SPIRify(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms SPIRify)
 setup_EraseNonkernel(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms EraseNonkernel)
 setup_CpuRename(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms CpuRename)
@@ -348,7 +346,6 @@ add_custom_target(clang
           -DKALMAR_HLC_COMMIT=${KALMAR_HLC_COMMIT}
           -DKALMAR_BACKEND=${KALMAR_BACKEND}
           -DLLVM_TARGETS_TO_BUILD=X86
-          -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CBackend
           -DLLVM_INCLUDE_EXAMPLES=off
   COMMAND make -j ${NUM_BUILD_THREADS} # not portable, but we need it this way
   WORKING_DIRECTORY ${CLANG_BIN_DIR}
@@ -366,7 +363,6 @@ add_custom_target(clang
           -DKALMAR_COMPILER_COMMIT=${KALMAR_COMPILER_COMMIT}
           -DKALMAR_BACKEND=${KALMAR_BACKEND}
           -DLLVM_TARGETS_TO_BUILD=X86
-          -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=CBackend
           -DLLVM_INCLUDE_EXAMPLES=off
   COMMAND make -j ${NUM_BUILD_THREADS} # not portable, but we need it this way
   WORKING_DIRECTORY ${CLANG_BIN_DIR}
