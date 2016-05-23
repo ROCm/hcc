@@ -11,7 +11,6 @@ if(EXISTS "${dest_dir}/${name}/tools/clang")
   MESSAGE("hcc-clang is present.")
 else(EXISTS "${dest_dir}/${name}/tools/clang")
   Find_Package(Git)
-  Find_Program(GITL_EXECUTABLE git)
 
   # determine current branch of hcc
   #execute_process(COMMAND ${GIT_EXECUTABLE} symbolic-ref --short HEAD
