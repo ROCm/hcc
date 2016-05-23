@@ -23,9 +23,9 @@ IF (NOT CMAKE_BUILD_TYPE)
   SET(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build, options are: Release Debug" FORCE)
 ENDIF(NOT CMAKE_BUILD_TYPE)
 
-# set default cppamp-ng URL
+# set default HCC-clang URL
 IF (NOT CLANG_URL)
-  SET(CLANG_URL "https://github.com/RadeonOpenCompute/hcc-clang-upgrade.git" CACHE STRING "CLANG URL" FORCE)
+  SET(CLANG_URL "git@github.com:RadeonOpenCompute/hcc-clang-upgrade.git" CACHE STRING "CLANG URL" FORCE)
 ENDIF (NOT CLANG_URL)
 set(CMAKE_MACOSX_RPATH 1)
 
