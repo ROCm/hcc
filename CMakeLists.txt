@@ -47,7 +47,6 @@ include (MCWAMP)
 include (PatchAsmParser)
 include (PatchPassManagerBuilder)
 include (SetupRemoveSpecialSection)
-include (PatchLLVM350)
 include (SetupDivisionPrecision)
 
 ensure_llvm_is_present(${PROJECT_SOURCE_DIR} compiler)
@@ -61,7 +60,6 @@ setup_Utils(utils)
 patch_AsmParser(SPIRify)
 patch_PassManagerBuilder(TileUniform)
 setup_RemoveSpecialSection(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms RemoveSpecialSection)
-patch_LLVM350(utils)
 setup_DivisionPrecision(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms DivisionPrecision)
 
 # Regression test
