@@ -124,22 +124,22 @@ static RegisterPass<ControlDependences>
 X("ctrl-deps-redun", "Control Dependences Construction.");
 
 bool ControlDependences::runOnFunction(Function &F) {
-  PostDominatorTree *PDT = new PostDominatorTree();
+  PostDominatorTreeWrapperPass *PDT = new PostDominatorTreeWrapperPass();
   PDT->runOnFunction(F);
 
   for (Function::iterator I = F.begin(), E = F.end(); I != E; ++I) {
-    for (succ_iterator SI = succ_begin(I), SE = succ_end(I); SI != SE; ++SI) {
+    for (succ_iterator SI = succ_begin(I.operator pointer()), SE = succ_end(I.operator pointer()); SI != SE; ++SI) {
       BasicBlock *BB = dyn_cast<BasicBlock>(I);
       BasicBlock *SBB = *SI;
 
-      if(PDT->dominates(SBB, BB))
+      if(PDT->getPostDomTree().dominates(SBB, BB))
         continue;
       
-      BasicBlock *PBB = PDT->getNode(BB)->getIDom()->getBlock();
+      BasicBlock *PBB = PDT->getPostDomTree().getNode(BB)->getIDom()->getBlock();
       while (SBB != PBB) {
         CtrlDepSetType &CtrlDep = CtrlDeps[SBB];
         CtrlDep.insert(BB);
-        SBB = PDT->getNode(SBB)->getIDom()->getBlock();
+        SBB = PDT->getPostDomTree().getNode(SBB)->getIDom()->getBlock();
       }
     }
   }

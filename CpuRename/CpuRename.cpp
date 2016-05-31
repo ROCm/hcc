@@ -117,7 +117,7 @@ bool CpuRename::runOnModule(Module &M)
     }
     Module::FunctionListType &funcs = M.getFunctionList();
     for (Module::iterator I = funcs.begin(), E = funcs.end(); I != E; ) {
-        Function *F = I++;
+        Function *F = (I++).operator pointer();
         if (F->getName().str().find("$_") != std::string::npos ||
                 F->getName().str().find("_cl") != std::string::npos)
             F->setLinkage(GlobalValue::ExternalLinkage);
