@@ -167,6 +167,8 @@
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToGlobal/Test04/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToLocal/Test02/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToLocal/Test01/test.cpp
+2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToLocal/Test02.03/test.cpp
+2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToLocal/Test04/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToLocal/Test06/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToLocal/Test08/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToLocal/Test15/test.cpp
@@ -1069,9 +1071,11 @@
 4_Basic_Data_Elmnts/4_2_extent/4_2_4_ops/Logical/Test.01/test.cpp
 4_Basic_Data_Elmnts/4_2_extent/4_2_4_ops/Logical/Test.02/test.cpp
 4_Basic_Data_Elmnts/4_2_extent/4_2_4_ops/Logical/Negative/Test.01/test.cpp
-4_Basic_Data_Elmnts/4_2_extent/4_2_2_c/Test.04/test.cpp
 4_Basic_Data_Elmnts/4_2_extent/4_2_2_c/Test.01/test.cpp
 4_Basic_Data_Elmnts/4_2_extent/4_2_2_c/Test.02/test.cpp
+4_Basic_Data_Elmnts/4_2_extent/4_2_2_c/Test.03/test.cpp
+4_Basic_Data_Elmnts/4_2_extent/4_2_2_c/Test.04/test.cpp
+4_Basic_Data_Elmnts/4_2_extent/4_2_2_c/Test.05/test.cpp
 4_Basic_Data_Elmnts/4_2_extent/4_2_2_c/Negative/Test.04/test.cpp
 4_Basic_Data_Elmnts/4_2_extent/4_2_2_c/Negative/Test.01/test.cpp
 4_Basic_Data_Elmnts/4_2_extent/4_2_2_c/Negative/Test.02/test.cpp
@@ -1083,6 +1087,7 @@
 2_Cxx_Lang_Exte/2_x_general/Literals/double.01/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Statements/ControlFlow/Test.19/1d/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/Misc/Test04/test.cpp
+2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/RefToPointer/Normal/Test10/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToShared/Test11.10/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToShared/Test10/test.cpp
 2_Cxx_Lang_Exte/2_x_general/Expressions/Pointers/ToShared/Test01/test.cpp

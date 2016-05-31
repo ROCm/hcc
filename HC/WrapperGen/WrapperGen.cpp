@@ -495,6 +495,7 @@ struct StringFinder
           out << "_lp.groupDim.x = __lp.groupDim.x;\n";
           out << "_lp.groupDim.y = __lp.groupDim.y;\n";
           out << "_lp.groupDim.z = __lp.groupDim.z;\n";
+          out << "_lp.groupMemBytes = __lp.groupMemBytes;\n";
           out << "}\n";
 
           out << "void operator()(tiled_index<3>& i) __attribute((hc))\n{\n";
@@ -520,7 +521,7 @@ struct StringFinder
           out << "  static accelerator_view av = accelerator().get_default_view();\n";
           out << "  _lp.av = &av;\n";
           out << "}\n\n";
-          out << "completion_future cf = parallel_for_each(*(_lp.av),extent<3>(_lp.gridDim.z*_lp.groupDim.z,_lp.gridDim.y*_lp.groupDim.y,_lp.gridDim.x*_lp.groupDim.x).tile(_lp.groupDim.z, _lp.groupDim.y, _lp.groupDim.x), \n"
+          out << "completion_future cf = parallel_for_each(*(_lp.av),extent<3>(_lp.gridDim.z*_lp.groupDim.z,_lp.gridDim.y*_lp.groupDim.y,_lp.gridDim.x*_lp.groupDim.x).tile_with_dynamic(_lp.groupDim.z, _lp.groupDim.y, _lp.groupDim.x, _lp.groupMemBytes), \n"
               << func->getFunctorName()
               << "(";
           func->printArgsAsArguments(out);

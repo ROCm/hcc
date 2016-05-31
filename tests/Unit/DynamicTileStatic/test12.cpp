@@ -30,7 +30,7 @@ bool test() {
     __GROUP__ unsigned char* ptr = (__GROUP__ unsigned char*)&lds1[local[0]];
 
     // fetch the address of the beginning of dynamic group segment
-    __GROUP__ unsigned char* dynamic_lds = (__GROUP__ unsigned char*)get_dynamic_group_segment();
+    __GROUP__ unsigned char* dynamic_lds = (__GROUP__ unsigned char*)get_dynamic_group_segment_base_pointer();
 
     // calculate the offset and set to the result global array_view
     av(global) = (dynamic_lds - ptr);
@@ -66,16 +66,19 @@ bool test() {
 int main() {
   bool ret = true;
 
-  // FIXME: uncomment these line back when we have an updated dynamic group
-  // segment allocation routine
-#if 0
+  // The test case is only workable on LC backend as of now
+  // because on HSAIL backend there is no way to check the size of
+  // group segment.
+
+  // Skip the test in case we are not using LC backend
+#if __hcc_backend__ == HCC_BACKEND_AMDGPU
   ret &= test<1, 1>();
   ret &= test<4, 2>();
   ret &= test<8, 4>();
   ret &= test<64, 16>();
   ret &= test<256, 32>();
-#endif
   ret &= test<4096, 64>();
+#endif
 
   return !(ret == true);
 }

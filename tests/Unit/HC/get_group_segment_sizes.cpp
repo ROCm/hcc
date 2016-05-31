@@ -14,7 +14,7 @@
 // An example which shows how to use the following new builtin functions
 //
 // hc::get_static_group_segment_size()
-// hc::get_dynamic_group_segment_size()
+// hc::get_group_segment_size()
 
 bool test() {
   bool ret = true;
@@ -40,8 +40,8 @@ bool test() {
       tile_static int group[groupSize];
       group[idx[0]] = 0;
 
-      // av_a stores the size of dynamic group segment
-      av_a(idx) = hc::get_dynamic_group_segment_size();
+      // av_a stores the size of group segment
+      av_a(idx) = hc::get_group_segment_size();
 
       // av_b stores the size of static group segment
       av_b(idx) = hc::get_static_group_segment_size() + group[idx[0]]; // use group__HC__ so it won't be optimized away
@@ -62,7 +62,7 @@ bool test() {
   int error = 0;
   for(unsigned i = 0; i < vecSize; i++) {
     //std::cout << table_a[i] << " " << table_b[i] << "\n";
-    error += std::abs(table_a[i] - DYNAMIC_GROUP_SEGMENT_SIZE);
+    error += std::abs(table_a[i] - ((int)(sizeof(int) * groupSize) + DYNAMIC_GROUP_SEGMENT_SIZE));
     error += std::abs(table_b[i] - (int)(sizeof(int) * groupSize));
   }
   if (error == 0) {
@@ -78,7 +78,14 @@ bool test() {
 int main() {
   bool ret = true;
 
+  // The test case is only workable on LC backend as of now
+  // because on HSAIL backend there is no way to check the size of
+  // group segment.
+
+  // Skip the test in case we are not using LC backend
+#if __hcc_backend__ == HCC_BACKEND_AMDGPU
   ret &= test();
+#endif
 
   return !(ret == true);
 }
