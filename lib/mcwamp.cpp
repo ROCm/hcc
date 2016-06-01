@@ -338,9 +338,6 @@ public:
   }
 };
 
-// this would initialize Kalmar runtime before main() in user program begins
-static KalmarBootstrap boot;
-
 } // namespace Kalmar
 
 extern "C" void __attribute__((constructor)) __hcc_shared_library_init() {
