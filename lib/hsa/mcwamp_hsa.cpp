@@ -2403,8 +2403,13 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
     uint32_t queueMask = commandQueue->size - 1;
     // TODO: Need to check if package write is correct.
     uint64_t index = hsa_queue_load_write_index_relaxed(commandQueue);
+
+    uint64_t nextIndex = index + 1;
+    // spin-wait if the command queue is full
+    while(nextIndex - hsa_queue_load_read_index_acquire(commandQueue) >= commandQueue->size) ;
+
     ((hsa_kernel_dispatch_packet_t*)(commandQueue->base_address))[index & queueMask] = aql;
-    hsa_queue_store_write_index_relaxed(commandQueue, index + 1);
+    hsa_queue_store_write_index_relaxed(commandQueue, nextIndex);
   
 #if KALMAR_DEBUG
     std::cerr << "ring door bell to dispatch kernel\n";
