@@ -1,2 +1,0 @@
-#/bin/bash
-echo "add_subdirectory(DivisionPrecision)" >> compiler/lib/Transforms/CMakeLists.txt

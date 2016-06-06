@@ -35,7 +35,6 @@ VERBOSE=0
 # GPU targets
 ################
 
-LOWER_OPENCL=@HAS_OPENCL@
 LOWER_HSA=@HAS_HSA@
 LOWER_HOF=@HAS_HSA_HOF@
 
@@ -166,7 +165,7 @@ do
   ####################################
 
   if [ $ARG == "--disable-opencl" ]; then
-    LOWER_OPENCL=0
+    # keep this check as of now until the frontend driver is changed
     continue
   fi
 
@@ -401,7 +400,8 @@ do
   elif [ $ARG == "--verbose" ]; then
     VERBOSE=1
   elif [ $ARG == "--disable-opencl" ]; then
-    LOWER_OPENCL=0
+    # keep this check for now before the frontend is changed
+    :
   elif [ $ARG == "--disable-hsa" ]; then
     LOWER_HSA=0
   else
@@ -455,42 +455,6 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
   # combine kernel sections together
   $LINK $LINK_KERNEL_ARGS | $OPT -always-inline - -o $TEMP_DIR/kernel.bc
   
-  # lower to SPIR
-  if [ $LOWER_OPENCL == 1 ]; then
-    # lower to SPIR
-    if [ $VERBOSE == 0 ]; then
-      $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.spir --spir
-    else
-      $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.spir --spir --verbose
-    fi
-    ret=$?
-    if [ $ret == 0 ]; then
-      # build a new kernel object
-      pushd . > /dev/null
-      cd $TEMP_DIR
-      $CLAMP_EMBED kernel.spir kernel_spir.o
-      popd > /dev/null
-    fi
-  fi
-  
-  # lower to OpenCL C
-  if [ $LOWER_OPENCL == 1 ]; then
-    # lower to OpenCL C
-    if [ $VERBOSE == 0 ]; then
-      $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.cl --opencl
-    else
-      $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.cl --opencl --verbose
-    fi
-    ret=$?
-    if [ $ret == 0 ]; then
-      # build a new kernel object
-      pushd . > /dev/null
-      cd $TEMP_DIR
-      $CLAMP_EMBED kernel.cl kernel.o
-      popd > /dev/null
-    fi
-  fi
-  
   # lower to HSA
   if [ $LOWER_HSA == 1 ]; then
     # lower to HSA BRIG
@@ -543,17 +507,9 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
   
   if [ $ret == 0 ]; then
     # link everything together
-    if [ $LOWER_OPENCL == 1 ] && [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 1 ]; then
-      ld --allow-multiple-definition $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $TEMP_DIR/kernel_hsa.o $TEMP_DIR/kernel_hof.o $LINK_HOST_ARGS $LINK_CPU_ARG $LINK_OTHER_ARGS
-    elif [ $LOWER_OPENCL == 1 ] && [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 0 ]; then
-      ld --allow-multiple-definition $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS  $LINK_CPU_ARG $LINK_OTHER_ARGS
-      ret=$?
-    elif [ $LOWER_OPENCL == 1 ] && [ $LOWER_HSA == 0 ]; then
-      ld --allow-multiple-definition $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $LINK_HOST_ARGS $LINK_CPU_ARG $LINK_OTHER_ARGS
-      ret=$?
-    elif [ $LOWER_OPENCL == 0 ] && [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 1 ]; then
+    if [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 1 ]; then
       ld --allow-multiple-definition $TEMP_DIR/kernel_hsa.o $TEMP_DIR/kernel_hof.o $LINK_HOST_ARGS $LINK_CPU_ARG $LINK_OTHER_ARGS
-    elif [ $LOWER_OPENCL == 0 ] && [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 0 ]; then
+    elif [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 0 ]; then
       ld --allow-multiple-definition $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS $LINK_CPU_ARG $LINK_OTHER_ARGS
       ret=$?
     else
@@ -565,14 +521,6 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
 fi # if [ -n $LINK_KERNEL_ARGS ];
 
 # remove temp files
-if [ -e $TEMP_DIR/kernel.o ]; then
-  rm $TEMP_DIR/kernel.o
-fi
-
-if [ -e $TEMP_DIR/kernel_spir.o ]; then
-  rm $TEMP_DIR/kernel_spir.o
-fi
-
 if [ -e $TEMP_DIR/kernel_hof.o ]; then
   rm $TEMP_DIR/kernel_hof.o
 fi
@@ -583,14 +531,6 @@ fi
 
 if [ -e $TEMP_DIR/kernel_cpu.o ]; then
   rm $TEMP_DIR/kernel_cpu.o
-fi
-
-if [ -e $TEMP_DIR/kernel.cl ]; then
-  rm $TEMP_DIR/kernel.bc
-fi
-
-if [ -e $TEMP_DIR/kernel.spir ]; then
-  rm $TEMP_DIR/kernel.spir
 fi
 
 if [ -e $TEMP_DIR/kernel.isa ]; then

@@ -26,7 +26,6 @@ install(PROGRAMS ${PROJECT_BINARY_DIR}/compiler/bin/clamp-device
     ${PROJECT_BINARY_DIR}/compiler/bin/clamp-link
     ${PROJECT_BINARY_DIR}/compiler/bin/hc-kernel-assemble
     ${PROJECT_BINARY_DIR}/compiler/bin/hc-host-assemble
-#    ${PROJECT_BINARY_DIR}/compiler/bin/clamp-preprocess
     DESTINATION compiler/bin)
 
 ####################
@@ -40,20 +39,6 @@ install(PROGRAMS ${PROJECT_BINARY_DIR}/bin/extractkernel
     DESTINATION bin)
 
 ####################
-# builtin functions CL kernel (OpenCL C)
-####################
-INSTALL(FILES opencl_math.cl DESTINATION lib)
-# Copy the file to directory matching the install directory
-file(COPY opencl_math.cl DESTINATION "${PROJECT_BINARY_DIR}/lib")
-
-####################
-# builtin functions bitcode (SPIR)
-####################
-install(FILES opencl_math.bc DESTINATION lib)
-# Copy the file to directory matching the install directory
-file(COPY opencl_math.bc DESTINATION "${PROJECT_BINARY_DIR}/lib")
-
-####################
 # builtin functions bitcode (HSA)
 ####################
 install(FILES hsa_math.bc DESTINATION lib)
@@ -65,23 +50,6 @@ file(COPY builtins-hsail.opt.bc DESTINATION "${PROJECT_BINARY_DIR}/lib")
 file(COPY hsail-amdgpu-wrapper.ll DESTINATION "${PROJECT_BINARY_DIR}/lib")
 
 ####################
-# OpenCL runtime version detection
-####################
-if (HAS_OPENCL EQUAL 1)
-add_mcwamp_library_opencl(mcwamp_opencl_version opencl_version.cpp)
-install(TARGETS mcwamp_opencl_version
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib)
-endif (HAS_OPENCL EQUAL 1)
-
-####################
-# OpenCL C double type detection
-####################
-install(FILES opencl_prefix.cl DESTINATION lib)
-# Copy the file to directory matching the install directory
-file(COPY opencl_prefix.cl DESTINATION "${PROJECT_BINARY_DIR}/lib")
-
-####################
 # Dynamic memory allocation HSAIL logic (HSA)
 ####################
 install(FILES hsa_builtins.hsail DESTINATION lib)
@@ -91,7 +59,6 @@ file(COPY hsa_builtins.hsail DESTINATION "${PROJECT_BINARY_DIR}/lib")
 ####################
 # add subdirectories
 ####################
-add_subdirectory(opencl)
 add_subdirectory(hsa)
 add_subdirectory(cpu)
 

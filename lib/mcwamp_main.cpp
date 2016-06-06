@@ -41,7 +41,7 @@ void cxxflags(void) {
 
     // clamp
     if (build_mode) {
-        std::cout << " -I" CMAKE_CLAMP_INC_DIR;
+        std::cout << " -I" CMAKE_BUILD_INC_DIR;
     } else if (install_mode) {
         if (const char *p = getenv("HCC_HOME")) {
             std::cout << " -I" << p << "/include";
@@ -64,10 +64,10 @@ void ldflags(void) {
     std::cout << " -std=c++amp";
 
     if (build_mode) {
-        std::cout << " -L" CMAKE_AMPCL_LIB_DIR;
+        std::cout << " -L" CMAKE_BUILD_LIB_DIR;
 
         std::cout << " -Wl,--rpath="
-            CMAKE_AMPCL_LIB_DIR;
+            CMAKE_BUILD_LIB_DIR;
     } else if (install_mode) {
         if (const char *p = getenv("HCC_HOME")) {
             std::cout << " -L" << p << "/lib";
@@ -97,7 +97,7 @@ void prefix(void) {
 void gtest(void) {
     if (build_mode) {
        std::cout << " -I" CMAKE_GTEST_INC_DIR;
-       std::cout << " -L" CMAKE_AMPCL_LIB_DIR;
+       std::cout << " -L" CMAKE_BUILD_LIB_DIR;
        std::cout << " -lmcwamp_gtest ";
     }
     else if (install_mode) {

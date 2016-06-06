@@ -1,13 +1,8 @@
 #!/bin/bash
 # wraps around commands to produce GPU kernel
 # $1 = input ll name
-# $2 = OpenCL/SPIR/HSAIL kernel file name
-# $3 = (optional) --hsa will trigger HSAIL lowering
-#      (optional) --spir will trigger SPIR lowering
-#      (optional) --opencl will trigger OpenCL C lowering
-#
-# in case $3 is not set, then either SPIR or OpenCL C kernel
-# will be emitted according to the capability of GPU
+# $2 = HSAIL/GCN kernel file name
+# $3 = --hsa will trigger HSAIL/GCN lowering
 
 # enable bash debugging
 KMDBSCRIPT="${KMDBSCRIPT:=0}"
@@ -21,11 +16,9 @@ then
 fi
 
 # check command line arguments
-if [ "$#" -lt 2 ]; then
-  echo "Usage: $0 input_LLVM output_kernel (--hsa | --spir | --opencl) (--verbose)" >&2
-  echo "  --hsa    will trigger HSAIL/BRIG kernel output" >&2
-  echo "  --spir   will trigger SPIR       kernel output" >&2
-  echo "  --opencl will trigger OpenCL C   kernel output" >&2
+if [ "$#" -lt 3 ]; then
+  echo "Usage: $0 input_LLVM output_kernel --hsa (--verbose)" >&2
+  echo "  --hsa    will trigger HSAIL/GCN kernel output" >&2
   echo "  --verbose will enable GPU target lowering output" >&2
   exit 1
 fi
@@ -137,111 +130,4 @@ if [ "$3" == "--hsa" ]; then
       rm $2.promote.ll.orig $2.promote.ll $2.promote.bc
     fi
     exit $RETVAL
-fi
-
-# emit SPIR kernel
-if [ "$3" == "--spir" ]; then
-    if [ "$CLAMP_NOTILECHECK" == "ON" ]; then
-      $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-           -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-           -promote-globals -erase-nonkernels -dce -globaldce < $1 -o $2.promote.bc
-    else
-      $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-           -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-           -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-           -promote-globals -erase-nonkernels -tile-uniform -dce -globaldce < $1 -o $2.promote.bc
-    fi
-
-    # convert fdiv float instructions to builtin calls
-    # only apply this patch when HCC_DIVPRECISE_PATCH environment variable set to ON
-    if [ "$HCC_DIVPRECISE_PATCH" == "ON" ]; then
-      $OPT -load $LIB/LLVMDivisionPrecision.so \
-           -divprecise < $2.promote.bc -o $2.promote.bc.new
-      mv $2.promote.bc.new $2.promote.bc
-    fi
-
-    if [ $? == 1 ]; then
-      echo "Generating OpenCL SPIR kernel failed"
-      exit 1
-    fi
-    if [ $VERBOSE == 1 ]; then
-      echo "Generating OpenCL SPIR kernel"
-    fi
-    $LINK $MATHLIB/opencl_math.bc $2.promote.bc -o $2 2>/dev/null
-    # remove temp file
-    rm $2.promote.bc
-    exit $?
-fi
-
-# emit OpenCL C kernel
-if [ "$3" == "--opencl" ]; then
-    if [ "$CLAMP_NOTILECHECK" == "ON" ]; then
-      $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-           -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-           -promote-globals -erase-nonkernels -dce -globaldce < $1 -o $2.promote.bc
-    else
-      $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-           -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-           -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-           -promote-globals -erase-nonkernels -tile-uniform -dce -globaldce < $1 -o $2.promote.bc
-    fi
-    if [ $? == 1 ]; then
-      echo "Generating OpenCL C kernel failed"
-      exit 1
-    fi
-    if [ $VERBOSE == 1 ]; then
-      echo "Generating OpenCL C kernel"
-    fi
-    $LLC $2.promote.bc -march=c -o - |cat $MATHLIB/opencl_math.cl - > $2
-
-    if grep -q " double " $2; then
-        cat $MATHLIB/opencl_prefix.cl $2 > $2.t
-        mv -f $2.t $2
-    fi
-    # remove temp file
-    rm $2.promote.bc
-    exit $?
-fi
-
-
-hasSPIR() {
-    [ -z "$CLAMP_NOSPIR" -a -x /usr/bin/clinfo ] && ( /usr/bin/clinfo|grep cl_khr_spir > /dev/null )
-    return $?
-}
-# if there is no mode specified, fallback to default behavior
-if [ "$CLAMP_NOTILECHECK" == "ON" ]; then
-  $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-       -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-       -promote-globals -erase-nonkernels -dce -globaldce < $1 -o $2.promote.bc
-else
-  $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-       -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-       -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-       -promote-globals -erase-nonkernels -tile-uniform -dce -globaldce < $1 -o $2.promote.bc
-fi
-if [ $? == 1 ]; then
-  echo "Generating OpenCL kernel failed"
-  exit 1
-fi
-if hasSPIR; then
-    if [ $VERBOSE == 1 ]; then
-      echo "Generating OpenCL SPIR kernel"
-    fi
-    $LINK $MATHLIB/opencl_math.bc $2.promote.bc -o $2 2>/dev/null
-    # remove temp file
-    rm $2.promote.bc
-    exit $?
-else
-    if [ $VERBOSE == 1 ]; then
-      echo "Generating OpenCL C kernel"
-    fi
-    $LLC $2.promote.bc -march=c -o - |cat $MATHLIB/opencl_math.cl - > $2
-
-    if grep -q " double " $2; then
-        cat $MATHLIB/opencl_prefix.cl $2 > $2.t
-        mv -f $2.t $2
-    fi
-    # remove temp file
-    rm $2.promote.bc
-    exit $?
 fi

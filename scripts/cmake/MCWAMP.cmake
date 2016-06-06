@@ -39,21 +39,6 @@ macro(add_mcwamp_library_cpu name )
 endmacro(add_mcwamp_library_cpu name )
 
 ####################
-# C++AMP runtime (OpenCL implementation) 
-####################
-macro(add_mcwamp_library_opencl name )
-  CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXXAMP_FLAGS} ${HCC_RUNTIME_CFLAGS}")
-  # add OpenCL headers
-  include_directories("${OPENCL_HEADER}/..")
-  add_library( ${name} SHARED ${ARGN} )
-  # LLVM and Clang shall be compiled beforehand
-  add_dependencies(${name} llvm-link opt clang)
-  # add OpenCL libraries
-  target_link_libraries(${name} ${OPENCL_LIBRARY})
-endmacro(add_mcwamp_library_opencl name )
-
-####################
 # C++AMP runtime (HSA implementation) 
 ####################
 macro(add_mcwamp_library_hsa name )

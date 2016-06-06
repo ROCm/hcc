@@ -44,10 +44,7 @@ include (SetupTileUniform)
 include (SetupHC)
 include (SetupUtils)
 include (MCWAMP)
-#include (PatchAsmParser)
-#include (PatchPassManagerBuilder)
 include (SetupRemoveSpecialSection)
-include (SetupDivisionPrecision)
 
 ensure_llvm_is_present(${PROJECT_SOURCE_DIR} compiler)
 ensure_clang_is_present(${PROJECT_SOURCE_DIR} compiler ${CLANG_URL})
@@ -57,10 +54,7 @@ setup_CpuRename(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms CpuRename)
 setup_TileUniform(${PROJECT_SOURCE_DIR}/compiler/lib/Analysis TileUniform)
 setup_HC(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms HC)
 setup_Utils(utils)
-#patch_AsmParser(SPIRify)
-#patch_PassManagerBuilder(TileUniform)
 setup_RemoveSpecialSection(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms RemoveSpecialSection)
-setup_DivisionPrecision(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms DivisionPrecision)
 
 # Regression test
 set(LLVM_SRC "${PROJECT_SOURCE_DIR}/compiler")
@@ -95,35 +89,6 @@ LINK_DIRECTORIES( ${LLVM_LIB_DIR} )
 
 
 #################
-# Detect OpenCL
-#################
-
-find_path(OPENCL_HEADER cl.h PATHS ${OPENCL_HEADER_DIR} /usr/include/CL /opt/AMDAPP/include/CL /usr/local/cuda/include/CL NO_DEFAULT_PATH)
-find_path(OPENCL_HEADER cl.h)
-if (NOT APPLE AND NOT OPENCL_HEADER)
-  MESSAGE("OpenCL header not found. Use -DOPENCL_HEADER_DIR=<path_to_cl.h>.")
-endif(NOT APPLE AND NOT OPENCL_HEADER)
-
-find_library(OPENCL_LIBRARY OpenCL PATHS ${OPENCL_LIBRARY_DIR} /usr/lib /opt/AMDAPP/lib/x86_64 /usr/local/cuda/lib64 NO_DEFAULT_PATH)
-find_library(OPENCL_LIBRARY OpenCL)
-if (NOT APPLE AND NOT OPENCL_LIBRARY)
-  MESSAGE("OpenCL library not found. Use -DOPENCL_LIBRARY_DIR=<path_to_libOpenCL.so>.")
-endif(NOT APPLE AND NOT OPENCL_LIBRARY)
-
-# display OpenCL information
-MESSAGE("")
-MESSAGE("OPENCL INFORMATION:")
-MESSAGE("OPENCL_HEADER_DIR = ${OPENCL_HEADER_DIR}, actually found at: ${OPENCL_HEADER}")
-MESSAGE("OPENCL_LIBRARY_DIR = ${OPENCL_LIBRARY_DIR}, actually found at: ${OPENCL_LIBRARY}")
-MESSAGE("")
-
-if ((NOT OPENCL_HEADER) OR (NOT OPENCL_LIBRARY))
-  set(HAS_OPENCL 0)
-else ((NOT OPENCL_HEADER) OR (NOT OPENCL_LIBRARY))
-  set(HAS_OPENCL 1)
-endif ((NOT OPENCL_HEADER) OR (NOT OPENCL_LIBRARY))
-
-#################
 # Detect HSA
 #################
 
@@ -133,7 +98,6 @@ set (HSA_ROOT "/opt/hsa"
 
 set (ROCM_ROOT "/opt/rocm"
         CACHE PATH "ROCM runtime path")
-
 
 set (HSA_LLVM_BIN_DIR CACHE PATH "Path to llvm tools with hsail/amdgpu support")
 
@@ -250,11 +214,11 @@ if (HAS_HSA)
 endif (HAS_HSA)
 
 #################
-# Detect if we have at least one of OpenCL or HSA available
+# Detect if we have HSA available
 #################
-if ((HAS_OPENCL EQUAL 0) AND (HAS_HSA EQUAL 0))
-  MESSAGE(FATAL_ERROR "Neither OpenCL nor HSA is available on the system!")
-endif ((HAS_OPENCL EQUAL 0) AND (HAS_HSA EQUAL 0))
+if (HAS_HSA EQUAL 0)
+  MESSAGE(FATAL_ERROR "HSA is NOT available on the system!")
+endif (HAS_HSA EQUAL 0)
 
 #################
 # Detect AMDGPU backend for native codegen
@@ -519,7 +483,7 @@ set(CPACK_PACKAGE_VERSION_MAJOR ${KALMAR_VERSION_MAJOR})
 set(CPACK_PACKAGE_VERSION_MINOR ${KALMAR_VERSION_MINOR})
 set(CPACK_PACKAGE_VERSION_PATCH ${KALMAR_VERSION_PATCH})
 set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_SYSTEM_NAME})
-set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "HCC: a Heterogeneous C++ to OpenCL/HSA compiler")
+set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "HCC: a Heterogeneous C++ compiler")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Siu Chi Chan <siuchi.chan@amd.com>")
 set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
 

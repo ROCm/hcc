@@ -1,5 +1,5 @@
 #!/bin/sh
-# wraps around commands to produce the OpenCL kernel
+# wraps around commands to produce kernel with memory address space deduced
 # $1 = input ll name
 
 BINDIR=$(dirname $0)

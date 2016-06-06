@@ -1,5 +1,4 @@
-#OpenCL
-include_directories(${OPENCL_HEADER}/../ ${CMAKE_CURRENT_SOURCE_DIR}/amp_test_lib/inc)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/amp_test_lib/inc)
 
 add_mcwamp_library(amptest
 amp_test_lib/src/context.cpp amp_test_lib/src/device.cpp amp_test_lib/src/logging.cpp

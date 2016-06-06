@@ -12,11 +12,6 @@ set(GTEST_LIB_DIR "${PROJECT_BINARY_DIR}/utils/gtest")
 set(CPPAMP_GTEST_LIB "${GTEST_LIB_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}gtest_main_amp${CMAKE_STATIC_LIBRARY_SUFFIX}")
 file(MAKE_DIRECTORY ${GTEST_LIB_DIR})
 
-set(AMPCL_LIB_DIR "${PROJECT_BINARY_DIR}/lib")
-
-# opencl_math
-set(OPENCL_MATH_DIR "${PROJECT_SOURCE_DIR}/include")
-
 # MCWAMP
 set(MCWAMP_LIB_DIR "${LIBRARY_OUTPUT_PATH}")
 set(MCWAMP_TOOL_DIR "${PROJECT_BINARY_DIR}/compiler/bin")
@@ -55,11 +50,6 @@ configure_file(
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-link.in
   ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-link @ONLY)
-
-# FIXME: rewriter plugin is obsolete, need to clean it up
-#configure_file(
-#  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-preprocess.in
-#  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-preprocess @ONLY)
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-hsatools.in

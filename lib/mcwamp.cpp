@@ -28,14 +28,6 @@ std::vector<std::string> __mcw_kernel_names;
 
 // weak symbols of kernel codes
 
-// OpenCL kernel codes
-extern "C" char * cl_kernel_source[] asm ("_binary_kernel_cl_start") __attribute__((weak));
-extern "C" char * cl_kernel_end[] asm ("_binary_kernel_cl_end") __attribute__((weak));
-
-// SPIR kernel codes
-extern "C" char * spir_kernel_source[] asm ("_binary_kernel_spir_start") __attribute__((weak));
-extern "C" char * spir_kernel_end[] asm ("_binary_kernel_spir_end") __attribute__((weak));
-
 // HSA kernel codes
 extern "C" char * hsa_kernel_source[] asm ("_binary_kernel_brig_start") __attribute__((weak));
 extern "C" char * hsa_kernel_end[] asm ("_binary_kernel_brig_end") __attribute__((weak));
@@ -137,34 +129,6 @@ private:
   void* m_kernel_source;
 };
 
-class OpenCLPlatformDetect : public PlatformDetect {
-public:
-    OpenCLPlatformDetect()
-      : PlatformDetect("OpenCL", "libmcwamp_opencl.so",  cl_kernel_source) {}
-
-  bool hasSPIR() {
-    void* ocl_version_test_handle = nullptr;
-    typedef int (*spir_test_t) ();
-    spir_test_t test_func = nullptr;
-    bool result = false;
-
-    ocl_version_test_handle = dlopen("libmcwamp_opencl_version.so", RTLD_LAZY|RTLD_NODELETE);
-    if (!ocl_version_test_handle) {
-      result = false;
-    } else {
-      test_func = (spir_test_t) dlsym(ocl_version_test_handle, "IsSPIRAvailable");
-      if (!test_func) {
-        result = false;
-      } else {
-        result = (test_func() > 0);
-      }
-    }
-    if (ocl_version_test_handle)
-      dlclose(ocl_version_test_handle);
-    return result;
-  }
-};
-
 /**
  * \brief HSA runtime detection
  */
@@ -178,22 +142,6 @@ public:
  * \brief Flag to turn on/off platform-dependent runtime messages
  */
 static bool mcwamp_verbose = false;
-
-static RuntimeImpl* LoadOpenCLRuntime() {
-  RuntimeImpl* runtimeImpl = nullptr;
-  // load OpenCL C++AMP runtime
-  if (mcwamp_verbose)
-    std::cout << "Use OpenCL runtime" << std::endl;
-  runtimeImpl = new RuntimeImpl("libmcwamp_opencl.so");
-  if (!runtimeImpl->m_RuntimeHandle) {
-    std::cerr << "Can't load OpenCL runtime!" << std::endl;
-    delete runtimeImpl;
-    exit(-1);
-  } else {
-    //std::cout << "OpenCL C++AMP runtime loaded" << std::endl;
-  }
-  return runtimeImpl;
-}
 
 static RuntimeImpl* LoadHSARuntime() {
   RuntimeImpl* runtimeImpl = nullptr;
@@ -229,7 +177,6 @@ RuntimeImpl* GetOrInitRuntime() {
   static RuntimeImpl* runtimeImpl = nullptr;
   if (runtimeImpl == nullptr) {
     HSAPlatformDetect hsa_rt;
-    OpenCLPlatformDetect opencl_rt;
 
     char* verbose_env = getenv("HCC_VERBOSE");
     if (verbose_env != nullptr) {
@@ -247,12 +194,6 @@ RuntimeImpl* GetOrInitRuntime() {
         } else {
           std::cerr << "Ignore unsupported HCC_RUNTIME environment variable: " << runtime_env << std::endl;
         }
-      } else if (runtime_env[0] == 'C' && runtime_env[1] == 'L') {
-          if (opencl_rt.detect()) {
-              runtimeImpl = LoadOpenCLRuntime();
-          } else {
-              std::cerr << "Ignore unsupported HCC_RUNTIME environment variable: " << runtime_env << std::endl;
-          }
       } else if(std::string("CPU") == runtime_env) {
           // CPU runtime should be available
           runtimeImpl = LoadCPURuntime();
@@ -266,8 +207,6 @@ RuntimeImpl* GetOrInitRuntime() {
     if (runtimeImpl == nullptr) {
       if (hsa_rt.detect()) {
         runtimeImpl = LoadHSARuntime();
-      } else if (opencl_rt.detect()) {
-        runtimeImpl = LoadOpenCLRuntime();
       } else {
           runtimeImpl = LoadCPURuntime();
           runtimeImpl->set_cpu();
@@ -290,75 +229,36 @@ void leave_kernel() { in_kernel = false; }
 
 void DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, void** kernel_source, bool* needs_compilation) {
   static bool firstTime = true;
-  static bool hasSPIR = false;
   static bool hasFinalized = false;
 
   char* kernel_env = nullptr;
 
-  // FIXME need a more elegant way
-  if (GetOrInitRuntime()->m_ImplName.find("libmcwamp_opencl") != std::string::npos) {
-    if (firstTime) {
-      // force use OpenCL C kernel from HCC_NOSPIR environment variable
-      kernel_env = getenv("HCC_NOSPIR");
-      if (kernel_env == nullptr) {
-          OpenCLPlatformDetect opencl_rt;
-        if (opencl_rt.hasSPIR()) {
-          if (mcwamp_verbose)
-            std::cout << "Use OpenCL SPIR kernel\n";
-          hasSPIR = true;
-        } else {
-          if (mcwamp_verbose)
-            std::cout << "Use OpenCL C kernel\n";
-        }
-      } else {
+  // HSA path
+  if (firstTime) {
+    // force use HSA BRIG kernel from HCC_NOISA environment variable
+    kernel_env = getenv("HCC_NOISA");
+    if (kernel_env == nullptr) {
+      // check if offline finalized kernels are available
+      size_t kernel_finalized_size = 
+        (ptrdiff_t)((void *)hsa_offline_finalized_kernel_end) -
+        (ptrdiff_t)((void *)hsa_offline_finalized_kernel_source);
+      // check if offline finalized kernel is compatible with ISA of the HSA agent
+      if ((kernel_finalized_size > 0) &&
+          (pQueue->getDev()->IsCompatibleKernel((void*)kernel_finalized_size, hsa_offline_finalized_kernel_source))) {
         if (mcwamp_verbose)
-          std::cout << "Use OpenCL C kernel\n";
-      }
-      firstTime = false;
-    }
-    if (hasSPIR) {
-      // SPIR path
-      *kernel_size =
-        (ptrdiff_t)((void *)spir_kernel_end) -
-        (ptrdiff_t)((void *)spir_kernel_source);
-      *kernel_source = spir_kernel_source;
-      *needs_compilation = true;
-    } else {
-      // OpenCL path
-      *kernel_size =
-        (ptrdiff_t)((void *)cl_kernel_end) -
-        (ptrdiff_t)((void *)cl_kernel_source);
-      *kernel_source = cl_kernel_source;
-      *needs_compilation = true;
-    }
-  } else {
-    // HSA path
-
-    if (firstTime) {
-      // force use HSA BRIG kernel from HCC_NOISA environment variable
-      kernel_env = getenv("HCC_NOISA");
-      if (kernel_env == nullptr) {
-        // check if offline finalized kernels are available
-        size_t kernel_finalized_size = 
-          (ptrdiff_t)((void *)hsa_offline_finalized_kernel_end) -
-          (ptrdiff_t)((void *)hsa_offline_finalized_kernel_source);
-        // check if offline finalized kernel is compatible with ISA of the HSA agent
-        if ((kernel_finalized_size > 0) &&
-            (pQueue->getDev()->IsCompatibleKernel((void*)kernel_finalized_size, hsa_offline_finalized_kernel_source))) {
-          if (mcwamp_verbose)
-            std::cout << "Use offline finalized HSA kernels\n";
-          hasFinalized = true;
-        } else {
-          if (mcwamp_verbose)
-            std::cout << "Use HSA BRIG kernel\n";
-        }
+          std::cout << "Use offline finalized HSA kernels\n";
+        hasFinalized = true;
       } else {
-        // force use BRIG kernel
         if (mcwamp_verbose)
           std::cout << "Use HSA BRIG kernel\n";
       }
-      firstTime = false;
+    } else {
+      // force use BRIG kernel
+      if (mcwamp_verbose)
+        std::cout << "Use HSA BRIG kernel\n";
     }
+    firstTime = false;
+
     if (hasFinalized) {
       *kernel_size =
         (ptrdiff_t)((void *)hsa_offline_finalized_kernel_end) -

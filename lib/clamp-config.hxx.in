@@ -1,6 +1,6 @@
 #pragma once
-#define CMAKE_CLAMP_INC_DIR     "@CPPAMP_SOURCE_DIR@/include"
-#define CMAKE_AMPCL_LIB_DIR     "@AMPCL_LIB_DIR@"
+#define CMAKE_BUILD_INC_DIR     "@CPPAMP_SOURCE_DIR@/include"
+#define CMAKE_BUILD_LIB_DIR     "@PROJECT_BINARY_DIR@/lib"
 
 #define CMAKE_INSTALL_PREFIX    "@CMAKE_INSTALL_PREFIX@"
 #define CMAKE_INSTALL_INC           CMAKE_INSTALL_PREFIX"/include"
@@ -10,7 +10,5 @@
 #define CMAKE_HSA_LIB          "@HSA_ROOT@/lib"
 
 #define CMAKE_LIBHSAIL_LIB     "@LIBHSAIL_LIBRARY@"
-#define CMAKE_OPENCL_INC       "@OPENCL_HEADER@/.."
-#define CMAKE_OPENCL_LIB       "@OPENCL_LIBRARY@"
 
 #define CMAKE_GTEST_INC_DIR "@PROJECT_SOURCE_DIR@/utils"
