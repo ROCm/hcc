@@ -18,11 +18,13 @@ HLC_LLC=$HLC_DIR/bin/llc
 HLC_ASM_DIR=$BINDIR/../../HSAILasm
 HLC_ASM=$HLC_ASM_DIR/HSAILasm
 
-if [ -n "@HSA_LLVM_BIN_DIR@" ]; then
-    HLC_DIR=@HSA_LLVM_BIN_DIR@
-    HLC_LLVM_LINK=@HSA_LLVM_BIN_DIR@/llvm-link
-    HLC_OPT=@HSA_LLVM_BIN_DIR@/opt
-    HLC_LLC=@HSA_LLVM_BIN_DIR@/llc
+
+HSA_LLVM_BIN_DIR="${BASH_SOURCE%/*}/../../llvm/bin"
+if [ -n "$HSA_LLVM_BIN_DIR" ]; then
+    HLC_DIR=$HSA_LLVM_BIN_DIR
+    HLC_LLVM_LINK=$HSA_LLVM_BIN_DIR/llvm-link
+    HLC_OPT=$HSA_LLVM_BIN_DIR/opt
+    HLC_LLC=$HSA_LLVM_BIN_DIR/llc
 fi
 
 ################
