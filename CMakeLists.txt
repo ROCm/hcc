@@ -584,13 +584,7 @@ set(HCC_GENERAL_DEBIAN_DEP "libstdc++-4.8-dev, libc++1, libc++-dev, libc++abi1, 
 set(OFFICIAL_RELEASE_BUILD 0)
 if (OFFICIAL_RELEASE_BUILD)
   set(HCC_ROCR_DEBIAN_DEP "hsa-rocr-dev, hsa-ext-rocr-dev")
-  if (HSA_USE_AMDGPU_BACKEND)
-    # dependencies for official release build with lightning backend
-    set(HCC_BACKEND_DEBIAN_DEP "llvm-amdgpu (>=3.9)")
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_ROCR_DEBIAN_DEP}, ${HCC_GENERAL_DEBIAN_DEP}, ${HCC_BACKEND_DEBIAN_DEP}")
-  else (HSA_USE_AMDGPU_BACKEND)
-    # dependencies for official releasebuild with non-lightning backend
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_ROCR_DEBIAN_DEP}, ${HCC_GENERAL_DEBIAN_DEP}")
+  set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_ROCR_DEBIAN_DEP}, ${HCC_GENERAL_DEBIAN_DEP}")
   endif (HSA_USE_AMDGPU_BACKEND)
 else (OFFICIAL_RELEASE_BUILD)
     # dependencies for any local build
