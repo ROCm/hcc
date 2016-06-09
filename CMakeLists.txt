@@ -272,12 +272,6 @@ endif ((HAS_OPENCL EQUAL 0) AND (HAS_HSA EQUAL 0))
 if (HSA_USE_AMDGPU_BACKEND)
   add_definitions(-DHSA_USE_AMDGPU_BACKEND)
   set(HAS_HSA_HOF 0)
-  find_program(AMDPHDRS amdphdrs PATHS /opt/rocm/bin ${AMDPHDRS_DIR} NO_DEFAULT_PATH)
-  find_program(AMDPHDRS amdphdrs)
-  MESSAGE("AMDPHDRS_DIR = ${AMDPHDRS_DIR}, actually found at: ${AMDPHDRS}")
-  if (NOT AMDPHDRS)
-    MESSAGE("amdphdrs not found.  Use -DAMDPHDRS_DIR=<amdphdrs path>.")
-  endif (NOT AMDPHDRS)
 endif ()
 
 set(HSA_AMDGPU_GPU_TARGET "auto" CACHE STRING "Target GPU device (kaveri,carrizo,fiji)")
@@ -457,8 +451,21 @@ add_custom_target(HSAILasm_setup
 endif(NOT HSA_LLVM_BIN_DIR)
 
 if (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
+
+  # create a symlink to the LLVM binaries for the amdgpu backend in the project directory
+  add_custom_target(lightning_bin
+    COMMAND mkdir -p "${PROJECT_BINARY_DIR}/llvm/"
+    COMMAND ln -s "${HSA_LLVM_BIN_DIR}" "${PROJECT_BINARY_DIR}/llvm/"
+  )
+
+  # include the amdgpu backend binaries in the hcc package
+  install(DIRECTORY ${HSA_LLVM_BIN_DIR}
+          DESTINATION llvm
+          COMPONENT lightning_bin
+          PATTERN * PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+
   # do NOT depend on HLC or HSAILasm in case we use AMDGPU backend
-  add_custom_target(world DEPENDS clang)
+  add_custom_target(world DEPENDS clang lightning_bin)
 else (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
   # build hlc and HSAILasm in case HSA_USE_AMDGPU_BACKEND 
   # or HSA_LLVM_BIN_DIR is not set
@@ -577,13 +584,7 @@ set(HCC_GENERAL_DEBIAN_DEP "libstdc++-4.8-dev, libc++1, libc++-dev, libc++abi1, 
 set(OFFICIAL_RELEASE_BUILD 0)
 if (OFFICIAL_RELEASE_BUILD)
   set(HCC_ROCR_DEBIAN_DEP "hsa-rocr-dev, hsa-ext-rocr-dev")
-  if (HSA_USE_AMDGPU_BACKEND)
-    # dependencies for official release build with lightning backend
-    set(HCC_BACKEND_DEBIAN_DEP "amdphdrs (=1.0), llvm-amdgpu (>=3.9)")
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_ROCR_DEBIAN_DEP}, ${HCC_GENERAL_DEBIAN_DEP}, ${HCC_BACKEND_DEBIAN_DEP}")
-  else (HSA_USE_AMDGPU_BACKEND)
-    # dependencies for official releasebuild with non-lightning backend
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_ROCR_DEBIAN_DEP}, ${HCC_GENERAL_DEBIAN_DEP}")
+  set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_ROCR_DEBIAN_DEP}, ${HCC_GENERAL_DEBIAN_DEP}")
   endif (HSA_USE_AMDGPU_BACKEND)
 else (OFFICIAL_RELEASE_BUILD)
     # dependencies for any local build
