@@ -1,6 +1,6 @@
 config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
 config.llvm_libs_dir = "@LLVM_LIBS_DIR@"
-config.project_src_dir = "@CPPAMP_SOURCE_DIR@"
+config.project_src_dir = "@HCC_SOURCE_DIR@"
 config.executable_output_path = "@EXECUTABLE_OUTPUT_PATH@"
 
 # gtest
@@ -12,7 +12,7 @@ config.mcwamp_lib_dir = "@MCWAMP_LIB_DIR@"
 config.mcwamp_tool_dir = "@MCWAMP_TOOL_DIR@"
 
 # Let the main config do the real work.
-lit_config.load_config(config, "@CPPAMP_TEST_DIR@/lit.cfg")
+lit_config.load_config(config, "@HCC_TEST_DIR@/lit.cfg")
 
 # HSA header files path
 config.substitutions.append( ('%hsa_header_path', '@ROCM_ROOT@/hsa/include') )
