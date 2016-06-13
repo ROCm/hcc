@@ -40,7 +40,7 @@ else
 fi
 
 HSA_LLVM_BIN_DIR="${BASH_SOURCE%/*}/../../llvm/bin"
-if [ -n $HSA_LLVM_BIN_DIR ]; then
+if [ -d $HSA_LLVM_BIN_DIR ]; then
     HLC_LLC=$HSA_LLVM_BIN_DIR/llc
 fi
 

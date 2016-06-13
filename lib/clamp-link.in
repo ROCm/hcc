@@ -20,7 +20,7 @@ HLC_ASM=$HLC_ASM_DIR/HSAILasm
 
 
 HSA_LLVM_BIN_DIR="${BASH_SOURCE%/*}/../../llvm/bin"
-if [ -n "$HSA_LLVM_BIN_DIR" ]; then
+if [ -d "$HSA_LLVM_BIN_DIR" ]; then
     HLC_DIR=$HSA_LLVM_BIN_DIR
     HLC_LLVM_LINK=$HSA_LLVM_BIN_DIR/llvm-link
     HLC_OPT=$HSA_LLVM_BIN_DIR/opt
@@ -52,7 +52,7 @@ if [ $HSA_USE_AMDGPU_BACKEND == "ON" ]; then
 fi
 
 if [ $LOWER_HSA == 1 ]; then
-  if [ -d $HLC_DIR ] && [ -e $HLC_LLVM_LINK ] && [ -e $HLC_OPT ] && [ -e $HLC_LLC ] && [ -d $HLC_ASM_DIR ] && [ -e $HLC_ASM ] || [ $KM_USE_AMDGPU -eq 1 ] ; then
+  if [ -d $HLC_DIR ] && [ -e $HLC_LLVM_LINK ] && [ -e $HLC_OPT ] && [ -e $HLC_LLC ] && [ -d $HLC_ASM_DIR ] && [ -e $HLC_ASM ] || [ $KM_USE_AMDGPU -eq 1 ] ; then 
     # all HSA tools are available
     LOWER_HSA=1
   else
