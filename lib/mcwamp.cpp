@@ -258,20 +258,20 @@ void DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, void** ker
         std::cout << "Use HSA BRIG kernel\n";
     }
     firstTime = false;
+  }
 
-    if (hasFinalized) {
-      *kernel_size =
-        (ptrdiff_t)((void *)hsa_offline_finalized_kernel_end) -
-        (ptrdiff_t)((void *)hsa_offline_finalized_kernel_source);
-      *kernel_source = hsa_offline_finalized_kernel_source;
-      *needs_compilation = false;
-    } else {
-      *kernel_size = 
-        (ptrdiff_t)((void *)hsa_kernel_end) -
-        (ptrdiff_t)((void *)hsa_kernel_source);
-      *kernel_source = hsa_kernel_source;
-      *needs_compilation = true;
-    }
+  if (hasFinalized) {
+    *kernel_size =
+      (ptrdiff_t)((void *)hsa_offline_finalized_kernel_end) -
+      (ptrdiff_t)((void *)hsa_offline_finalized_kernel_source);
+    *kernel_source = hsa_offline_finalized_kernel_source;
+    *needs_compilation = false;
+  } else {
+    *kernel_size = 
+      (ptrdiff_t)((void *)hsa_kernel_end) -
+      (ptrdiff_t)((void *)hsa_kernel_source);
+    *kernel_source = hsa_kernel_source;
+    *needs_compilation = true;
   }
 }
 
