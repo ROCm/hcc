@@ -206,19 +206,7 @@ bool EraseNonkernels::runOnModule(Module &M)
                         I->getName().find("get_group_segment_size") != StringRef::npos || 
                         I->getName().find("get_static_group_segment_size") != StringRef::npos || 
                         I->getName().find("get_group_segment_base_pointer") != StringRef::npos || 
-                        I->getName().find("get_dynamic_group_segment_base_pointer") != StringRef::npos || 
-                        I->getName().find("_Znwm") != StringRef::npos ||
-                        I->getName().find("_Znam") != StringRef::npos ||
-                        I->getName().find("_ZdlPv") != StringRef::npos ||
-                        I->getName().find("_ZdaPv") != StringRef::npos ||
-                        I->getName().find("_Z14putXmallocFlagm") != StringRef::npos ||
-                        I->getName().find("_Z13putMallocFlagm") != StringRef::npos ||
-                        I->getName().find("_Z9put_ptr_xPv") != StringRef::npos ||
-                        I->getName().find("_Z9put_ptr_yPv") != StringRef::npos ||
-                        I->getName().find("_Z9put_ptr_zPv") != StringRef::npos ||
-                        I->getName().find("_Z9put_ptr_aPv") != StringRef::npos ||
-                        I->getName().find("_Z9put_ptr_bPv") != StringRef::npos ||
-                        I->getName().find("_Z9put_ptr_cPv") != StringRef::npos ) {
+                        I->getName().find("get_dynamic_group_segment_base_pointer") != StringRef::npos ) {
 			I++;
 			continue;
 		}

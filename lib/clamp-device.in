@@ -66,28 +66,14 @@ if [ "$3" == "--hsa" ]; then
     fi
 
     if [ "$CLAMP_NOTILECHECK" == "ON" ]; then
-      if [ "$ALWAYS_MALLOC" == "ON" ]; then
-        $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-             -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-             -promote-globals -promote-privates -erase-nonkernels -malloc-select -always-malloc -dce -globaldce -S < $1 -o $2.promote.ll.orig
-      else
-        $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-             -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-             -promote-globals -promote-privates -erase-nonkernels -malloc-select -dce -globaldce -S < $1 -o $2.promote.ll.orig
-      fi
+      $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+           -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+           -promote-globals -erase-nonkernels -dce -globaldce -S < $1 -o $2.promote.ll.orig
     else
-      if [ "$ALWAYS_MALLOC" == "ON" ]; then
-        $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-             -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-             -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-             -promote-globals -promote-privates -erase-nonkernels -tile-uniform -malloc-select -always-malloc -dce -globaldce -S < $1 -o $2.promote.ll.orig
-      else
-        $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-             -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-             -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-             -promote-globals -promote-privates -erase-nonkernels -tile-uniform -malloc-select -dce -globaldce -S < $1 -o $2.promote.ll.orig
-
-      fi
+      $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+           -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+           -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+           -promote-globals -erase-nonkernels -tile-uniform -dce -globaldce -S < $1 -o $2.promote.ll.orig
     fi
 
     if [ $? == 1 ]; then
