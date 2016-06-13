@@ -115,7 +115,8 @@ if [ "$3" == "--hsa" ]; then
     if [ $VERBOSE == 1 ]; then
       echo "Generating HSA Brig kernel"
     fi
-    $LINK $MATHLIB/hsa_math.bc $2.promote.bc -o $2 2>/dev/null
+    #$LINK $MATHLIB/hsa_math.bc $2.promote.bc -o $2 2>/dev/null
+    $LINK $2.promote.bc $MATHLIB/hsa_math.bc -o $2 2>/dev/null
 
     if [ $KMDUMPLLVM == "1" ]; then
       cp $2 ./dump.hsa_math_linked.bc
