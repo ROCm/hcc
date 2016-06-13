@@ -41,7 +41,7 @@ NEWLIB=$BINDIR/../../lib
 
 
 HSA_LLVM_BIN_DIR="${BASH_SOURCE%/*}/../../llvm/bin"
-if [ -n "$HSA_LLVM_BIN_DIR" ]; then
+if [ -d "$HSA_LLVM_BIN_DIR" ]; then
     HLC_LLVM_LINK=$HSA_LLVM_BIN_DIR/llvm-link
     HLC_OPT=$HSA_LLVM_BIN_DIR/opt
     HLC_LLC=$HSA_LLVM_BIN_DIR/llc

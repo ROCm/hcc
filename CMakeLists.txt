@@ -371,6 +371,28 @@ endif (HAS_HSA)
 # - hcc
 # - clang++
 # - clang
+
+if (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
+
+add_custom_command(TARGET clang POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/hcc ${PROJECT_BINARY_DIR}/bin/hcc
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/clang++ ${PROJECT_BINARY_DIR}/bin/clang++
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/clang ${PROJECT_BINARY_DIR}/bin/clang
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../llvm/bin/llvm-mc ${PROJECT_BINARY_DIR}/bin/llvm-mc
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../llvm/bin/llvm-objdump ${PROJECT_BINARY_DIR}/bin/llvm-objdump
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../llvm/bin/lld ${PROJECT_BINARY_DIR}/bin/lld
+  WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/bin
+)
+install(FILES ${PROJECT_BINARY_DIR}/bin/hcc
+              ${PROJECT_BINARY_DIR}/bin/clang++
+              ${PROJECT_BINARY_DIR}/bin/clang
+              ${PROJECT_BINARY_DIR}/bin/llvm-mc
+              ${PROJECT_BINARY_DIR}/bin/llvm-objdump
+              ${PROJECT_BINARY_DIR}/bin/lld
+        DESTINATION bin)
+
+else (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
+
 add_custom_command(TARGET clang POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/hcc ${PROJECT_BINARY_DIR}/bin/hcc
   COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/clang++ ${PROJECT_BINARY_DIR}/bin/clang++
@@ -381,6 +403,10 @@ install(FILES ${PROJECT_BINARY_DIR}/bin/hcc
               ${PROJECT_BINARY_DIR}/bin/clang++
               ${PROJECT_BINARY_DIR}/bin/clang
         DESTINATION bin)
+
+endif (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
+
+
 
 # install clang along with HCC
 # stored under compiler/
@@ -455,7 +481,7 @@ if (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
   # create a symlink to the LLVM binaries for the amdgpu backend in the project directory
   add_custom_target(lightning_bin
     COMMAND mkdir -p "${PROJECT_BINARY_DIR}/llvm/"
-    COMMAND ln -s "${HSA_LLVM_BIN_DIR}" "${PROJECT_BINARY_DIR}/llvm/"
+    COMMAND ${CMAKE_COMMAND} -E create_symlink "${HSA_LLVM_BIN_DIR}" "${PROJECT_BINARY_DIR}/llvm/bin"
   )
 
   # include the amdgpu backend binaries in the hcc package
@@ -465,7 +491,7 @@ if (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
           PATTERN * PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
   # do NOT depend on HLC or HSAILasm in case we use AMDGPU backend
-  add_custom_target(world DEPENDS clang lightning_bin)
+  add_custom_target(world DEPENDS lightning_bin clang)
 else (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
   # build hlc and HSAILasm in case HSA_USE_AMDGPU_BACKEND 
   # or HSA_LLVM_BIN_DIR is not set
