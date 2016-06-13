@@ -30,11 +30,7 @@
 #include <map>
 #include <set>
 using namespace llvm;
-#ifdef __APPLE__
-#define TILE_STATIC_NAME "clamp,opencl_local"
-#else
 #define TILE_STATIC_NAME "clamp_opencl_local"
-#endif
 
 namespace {
 
