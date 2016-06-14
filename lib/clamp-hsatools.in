@@ -1,5 +1,5 @@
 #!/bin/bash
-# Compiles an LLVM bitcode file to HSAIL
+# Compiles an LLVM bitcode file to HSAIL or GCN ISA
 
 # enable bash debugging
 KMDBSCRIPT="${KMDBSCRIPT:=0}"
@@ -21,8 +21,10 @@ if [ $KMDBSCRIPT == "1" ]; then
 fi
 
 # check command line argument
-if [ "$#" -ne 1 ]; then
-  echo "Usage: $0 input_LLVM_IR" >&2
+if [ "$#" -lt 1 ]; then
+  echo "Usage: $0 input_LLVM_IR (--amdgpu-target=(fiji | kaveri | carrizo | hawaii))" >&2
+  echo "  --amdgpu-target=(fiji | kaveri | carrizo | hawaii)" >&2
+  echo "           selects AMDGPU target" >&2
   exit 1
 fi
 
@@ -119,17 +121,37 @@ getDefaultHsaNodeName() {
     done
 }
 
-HSA_AMDGPU_GPU_TARGET=@HSA_AMDGPU_GPU_TARGET@
-if [ "$HSA_AMDGPU_GPU_TARGET" == "auto" ]; then
-    HSA_AMDGPU_GPU_TARGET="$(getDefaultHsaNodeName)"
+################
+# AMDGPU target 
+################
+
+AMDGPU_TARGET=@HSA_AMDGPU_GPU_TARGET@
+
+ARGS="$@"
+for ARG in $ARGS
+do
+  ######################
+  # Parse AMDGPU target
+  ######################
+  case $ARG in
+    --amdgpu-target=*)
+    AMDGPU_TARGET="${ARG#*=}"
+    continue
+    ;;
+  esac
+done
+
+if [ "$AMDGPU_TARGET" == "auto" ]; then
+    AMDGPU_TARGET="$(getDefaultHsaNodeName)"
 fi
+
 
 # Optimization notes:
 #  -disable-simplify-libcalls:  prevents transforming loops into library calls such as memset, memcopy on GPU 
 
 if [ $KM_USE_AMDGPU ]; then
   # KMOPTOPT can be used to pass last-minute options to opt in LC backend
-  $HLC_OPT $KMOPTOPT -O3 -mtriple amdgcn--amdhsa -mcpu=$HSA_AMDGPU_GPU_TARGET -disable-simplify-libcalls -verify $1.linked.bc -o $1.opt.bc
+  $HLC_OPT $KMOPTOPT -O3 -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -disable-simplify-libcalls -verify $1.linked.bc -o $1.opt.bc
 else
   $HLC_OPT -O3 -disable-simplify-libcalls -verify $1.linked.bc -o $1.opt.bc
 fi
@@ -145,9 +167,9 @@ if [ $KMDUMPLLVM == "1" ]; then
 fi
 
 if [ $KM_USE_AMDGPU  ]; then
-  $HLC_LLC -O2 -mtriple amdgcn--amdhsa -mcpu=$HSA_AMDGPU_GPU_TARGET -filetype=obj -o $1.hsail $1.opt.bc
+  $HLC_LLC -O2 -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -filetype=obj -o $1.hsail $1.opt.bc
   if [ $KMDUMPISA == "1" ]; then
-    $HLC_LLC -O2 -mtriple amdgcn--amdhsa -mcpu=$HSA_AMDGPU_GPU_TARGET -filetype=asm -o $1.isa $1.opt.bc
+    $HLC_LLC -O2 -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -filetype=asm -o $1.isa $1.opt.bc
     mv $1.isa ./dump.isa
   fi
 else
