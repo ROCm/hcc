@@ -89,6 +89,8 @@ deviceIdToGpuName() {
             platformName="carrizo" ;;
         7300 )
             platformName="fiji" ;;
+        67a0 )
+            platformName="hawaii" ;;
         * )
             echo "Warning: failed to autodetect target, defaulting to fiji"
             platformName="fiji" ;;
