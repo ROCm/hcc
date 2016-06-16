@@ -1,6 +1,7 @@
 
 #pragma once
 
+
 #define DECLARE_VECTOR_TYPE_INTERNAL(VECTOR_TYPE,SCALAR_TYPE,NUM_ELEMENT) typedef SCALAR_TYPE VECTOR_TYPE __attribute__((ext_vector_type(NUM_ELEMENT)))
 
 DECLARE_VECTOR_TYPE_INTERNAL(__uchar2,  unsigned char,  2);
@@ -69,13 +70,119 @@ DECLARE_VECTOR_TYPE_INTERNAL(__double8,  double,  8);
 DECLARE_VECTOR_TYPE_INTERNAL(__double16, double, 16);
 
 
-// forward declaration of the 
+#ifndef __CPU_GPU__
+
+#if __HCC_AMP__
+#define __CPU_GPU__   restrict(cpu,amp)
+#else
+#define __CPU_GPU__   [[cpu,hc]]
+#endif
+
+#endif
+
+
 template <typename SCALAR_TYPE, typename VECTOR_TYPE>
-class __vector_2;
+class __vector_2 {
+
+public:
+  typedef SCALAR_TYPE value_type;
+  typedef __vector_2<SCALAR_TYPE,VECTOR_TYPE> __scalartype_N;
+
+  static const int size = 2;
+
+  __vector_2() __CPU_GPU__ { data = { static_cast<SCALAR_TYPE>(0), static_cast<SCALAR_TYPE>(0)}; }
+ 
+  // component-wise constructor
+  __vector_2(SCALAR_TYPE v1, SCALAR_TYPE v2) __CPU_GPU__ { data = { v1, v2 }; }
+
+  __vector_2(SCALAR_TYPE value) __CPU_GPU__ { data = { static_cast<SCALAR_TYPE>(value), static_cast<SCALAR_TYPE>(value)}; }
+
+  // conversion constructor from other short vector types
+  template <typename ST, typename VT>
+  explicit __vector_2(const  __vector_2<ST,VT>& other)  __CPU_GPU__ { data = { static_cast<SCALAR_TYPE>(other.get_x()),
+                                                                               static_cast<SCALAR_TYPE>(other.get_y()) }; }
+ 
+  SCALAR_TYPE get_x() const __CPU_GPU__ { return data.x; }
+  SCALAR_TYPE get_y() const __CPU_GPU__ { return data.y; }
+  VECTOR_TYPE get_vector() const __CPU_GPU__ { return data; }
+
+  void set_x(SCALAR_TYPE v) __CPU_GPU__ { data.x = v; }
+  void set_y(SCALAR_TYPE v)  __CPU_GPU__ { data.y = v; }
+  void set_vector(VECTOR_TYPE v)  __CPU_GPU__ { data = v; }
+
+  __scalartype_N& operator=(const __scalartype_N& rhs) __CPU_GPU__ { 
+    data = rhs.data;
+    return *this;
+  }
+
+  __scalartype_N& operator++() __CPU_GPU__ { data++; }
+  __scalartype_N operator++(int) __CPU_GPU__ { 
+    __scalartype_N r(*this);
+    operator++();
+    return r;
+  }
+  __scalartype_N& operator--() __CPU_GPU__ { data--; }
+  __scalartype_N operator--(int) __CPU_GPU__ { 
+    __scalartype_N r(*this);
+    operator--();
+    return r;
+  }
+
+  __scalartype_N& operator+=(const __scalartype_N& rhs) __CPU_GPU__ { 
+    data += rhs.data;
+    return *this;
+  }
+
+  __scalartype_N& operator-=(const __scalartype_N& rhs) __CPU_GPU__ { 
+    data -= rhs.data;
+    return *this;
+  }
+ 
+  __scalartype_N& operator*=(const __scalartype_N& rhs) __CPU_GPU__ { 
+    data *= rhs.data;
+    return *this;
+  }
+ 
+  __scalartype_N& operator/=(const __scalartype_N& rhs) __CPU_GPU__ { 
+    data /= rhs.data;
+    return *this;
+  }
+
+
+  // operator% template enabled only for integral short vector 
+  template<typename __int_scalartype_N = __scalartype_N
+           ,class = typename std::enable_if<std::is_integral<typename __int_scalartype_N::value_type>::value>::type >
+  __int_scalartype_N operator%(const __int_scalartype_N& lhs) __CPU_GPU__ { 
+    __int_scalartype_N r;
+    r.data = data%lhs.data;
+    return r;
+  }
+
+  // template to detect applying operator% to float short vector and to generate an error
+  template<typename __int_scalartype_N = __scalartype_N>
+  typename std::enable_if<!std::is_integral<typename __int_scalartype_N::value_type>::value
+                          , __int_scalartype_N >::type
+  operator%(const __int_scalartype_N& lhs) __CPU_GPU__ { 
+    static_assert(std::is_integral<SCALAR_TYPE>::value, "operator% can only support integral short vector.");
+    return __int_scalartype_N();
+  }
+
+
+
+  // boolean operator
+  bool operator==(const __scalartype_N& rhs) __CPU_GPU__ { return (data.x == rhs.data.x 
+                                                                   && data.y == rhs.data.y); }
+  bool operator!=(const __scalartype_N& rhs) __CPU_GPU__ { return !(*this==rhs); }
+  
+private:
+  VECTOR_TYPE data;
+
+};
+
+
 
 #define DECLARE_VECTOR_TYPE_CLASS(SCALAR_TYPE, INTERNAL_VECTOR_TYPE_PREFIX, CLASS_PREFIX) \
 typedef __vector_2<SCALAR_TYPE, INTERNAL_VECTOR_TYPE_PREFIX ## 2>   CLASS_PREFIX ## 2;
-
 
 DECLARE_VECTOR_TYPE_CLASS(unsigned char, __uchar, uchar);
 DECLARE_VECTOR_TYPE_CLASS(char, __char, char);
@@ -87,40 +194,6 @@ DECLARE_VECTOR_TYPE_CLASS(unsigned long long, __ulonglong, ulong);
 DECLARE_VECTOR_TYPE_CLASS(long long, __longlong, long);
 DECLARE_VECTOR_TYPE_CLASS(float, __float, float);
 DECLARE_VECTOR_TYPE_CLASS(double, __double, double);
-
-
-template <typename SCALAR_TYPE, typename VECTOR_TYPE>
-class __vector_2 {
-
-public:
-  typedef SCALAR_TYPE value_type;
-  static const int size = 2;
-
-  __vector_2() __CPU_GPU__ { data = { static_cast<SCALAR_TYPE>(0), static_cast<SCALAR_TYPE>(0)}; }
-  __vector_2(SCALAR_TYPE value) __CPU_GPU__ { data = { static_cast<SCALAR_TYPE>(value), static_cast<SCALAR_TYPE>(value)}; }
-
-  // component-wise constructor
-  __vector_2(SCALAR_TYPE v1, SCALAR_TYPE v2) __CPU_GPU__ { data = { v1, v2 }; }
-
-  // conversion constructor from other short vector types
-  template <typename ST, typename VT>
-  __vector_2(const __vector_2<ST,VT>& other)  __CPU_GPU__ { data = { static_cast<SCALAR_TYPE>(other.get_x()),
-                                                                     static_cast<SCALAR_TYPE>(other.get_y()) }; }
- 
-  SCALAR_TYPE get_x() const __CPU_GPU__ { return data.x; }
-  SCALAR_TYPE get_y() const __CPU_GPU__ { return data.y; }
-  VECTOR_TYPE get_vector() const __CPU_GPU__ { return data; }
- 
-  SCALAR_TYPE set_x(SCALAR_TYPE v) const __CPU_GPU__ { return data.x = v; }
-  SCALAR_TYPE set_y(SCALAR_TYPE v) const __CPU_GPU__ { return data.y = v; }
-  VECTOR_TYPE set_vector(VECTOR_TYPE v) const __CPU_GPU__ { return data = v; }
-
-private:
-  VECTOR_TYPE data;
-
-};
-
-
 
 
 
