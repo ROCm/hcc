@@ -95,7 +95,11 @@ public:
   // component-wise constructor
   __vector_2(SCALAR_TYPE v1, SCALAR_TYPE v2) __CPU_GPU__ { data = { v1, v2 }; }
 
-  __vector_2(SCALAR_TYPE value) __CPU_GPU__ { data = { static_cast<SCALAR_TYPE>(value), static_cast<SCALAR_TYPE>(value)}; }
+  
+  //__vector_2(SCALAR_TYPE value) __CPU_GPU__ { data = { static_cast<SCALAR_TYPE>(value), static_cast<SCALAR_TYPE>(value)}; }
+
+  __vector_2(VECTOR_TYPE value) __CPU_GPU__ : data(value) {  }
+
 
   // conversion constructor from other short vector types
   template <typename ST, typename VT>
@@ -128,6 +132,11 @@ public:
     return r;
   }
 
+  __scalartype_N  operator+(const __scalartype_N& rhs) __CPU_GPU__ {
+    __scalartype_N r;   
+    r.data = this->data+rhs.data;
+    return r;
+  }
   __scalartype_N& operator+=(const __scalartype_N& rhs) __CPU_GPU__ { 
     data += rhs.data;
     return *this;
@@ -149,6 +158,46 @@ public:
   }
 
 
+
+  // operator- template enabled only for short vector of signed integral types or floats 
+  template<typename __int_scalartype_N = __scalartype_N
+           ,class = typename std::enable_if<std::is_signed<typename __int_scalartype_N::value_type>::value>::type >
+  __int_scalartype_N operator-() __CPU_GPU__ { 
+    __int_scalartype_N r;
+    r.data = -this->data;
+    return r;
+  }
+
+  // template to detect applying operator- to short vector of unsigned integral types and to generate an error
+  template<typename __int_scalartype_N = __scalartype_N>
+  typename std::enable_if<!std::is_signed<typename __int_scalartype_N::value_type>::value
+                          , __int_scalartype_N >::type
+  operator-() __CPU_GPU__ { 
+    static_assert(std::is_signed<SCALAR_TYPE>::value, "operator- can only support short vector of signed integral or floating-point types.");
+    return __int_scalartype_N();
+  }
+
+
+  // operator~ template enabled only for integral short vector 
+  template<typename __int_scalartype_N = __scalartype_N
+           ,class = typename std::enable_if<std::is_integral<typename __int_scalartype_N::value_type>::value>::type >
+  __int_scalartype_N operator~() __CPU_GPU__ { 
+    __int_scalartype_N r;
+    r.data = ~this->data;
+    return r;
+  }
+
+  // template to detect applying operator% to float short vector and to generate an error
+  template<typename __int_scalartype_N = __scalartype_N>
+  typename std::enable_if<!std::is_integral<typename __int_scalartype_N::value_type>::value
+                          , __int_scalartype_N >::type
+  operator~() __CPU_GPU__ { 
+    static_assert(std::is_integral<SCALAR_TYPE>::value, "operator~ can only support short vector of integral types.");
+    return __int_scalartype_N();
+  }
+
+
+
   // operator% template enabled only for integral short vector 
   template<typename __int_scalartype_N = __scalartype_N
            ,class = typename std::enable_if<std::is_integral<typename __int_scalartype_N::value_type>::value>::type >
@@ -163,8 +212,142 @@ public:
   typename std::enable_if<!std::is_integral<typename __int_scalartype_N::value_type>::value
                           , __int_scalartype_N >::type
   operator%(const __int_scalartype_N& lhs) __CPU_GPU__ { 
-    static_assert(std::is_integral<SCALAR_TYPE>::value, "operator% can only support integral short vector.");
+    static_assert(std::is_integral<SCALAR_TYPE>::value, "operator% can only support short vector of integral types.");
     return __int_scalartype_N();
+  }
+
+  template<typename __int_scalartype_N = __scalartype_N>
+  __int_scalartype_N& operator%=(const __int_scalartype_N& lhs) __CPU_GPU__ { 
+    *this = *this%lhs;
+    return *this;
+  }
+
+
+
+  // operator^ template enabled only for integral short vector 
+  template<typename __int_scalartype_N = __scalartype_N
+           ,class = typename std::enable_if<std::is_integral<typename __int_scalartype_N::value_type>::value>::type >
+  __int_scalartype_N operator^(const __int_scalartype_N& lhs) __CPU_GPU__ { 
+    __int_scalartype_N r;
+    r.data = data^lhs.data;
+    return r;
+  }
+
+  // template to detect applying operator^ to float short vector and to generate an error
+  template<typename __int_scalartype_N = __scalartype_N>
+  typename std::enable_if<!std::is_integral<typename __int_scalartype_N::value_type>::value
+                          , __int_scalartype_N >::type
+  operator^(const __int_scalartype_N& lhs) __CPU_GPU__ { 
+    static_assert(std::is_integral<SCALAR_TYPE>::value, "operator^ can only support integral short vector.");
+    return __int_scalartype_N();
+  }
+
+  template<typename __int_scalartype_N = __scalartype_N>
+  __int_scalartype_N& operator^=(const __int_scalartype_N& lhs) __CPU_GPU__ { 
+    *this = *this^lhs;
+    return *this;
+  }
+
+
+
+  // operator| template enabled only for integral short vector 
+  template<typename __int_scalartype_N = __scalartype_N
+           ,class = typename std::enable_if<std::is_integral<typename __int_scalartype_N::value_type>::value>::type >
+  __int_scalartype_N operator|(const __int_scalartype_N& lhs) __CPU_GPU__ { 
+    __int_scalartype_N r;
+    r.data = data|lhs.data;
+    return r;
+  }
+
+  // template to detect applying operator| to float short vector and to generate an error
+  template<typename __int_scalartype_N = __scalartype_N>
+  typename std::enable_if<!std::is_integral<typename __int_scalartype_N::value_type>::value
+                          , __int_scalartype_N >::type
+  operator|(const __int_scalartype_N& lhs) __CPU_GPU__ { 
+    static_assert(std::is_integral<SCALAR_TYPE>::value, "operator| can only support integral short vector.");
+    return __int_scalartype_N();
+  }
+
+  template<typename __int_scalartype_N = __scalartype_N>
+  __int_scalartype_N& operator|=(const __int_scalartype_N& lhs) __CPU_GPU__ { 
+    *this = *this|lhs;
+    return *this;
+  }
+
+
+
+  // operator& template enabled only for integral short vector 
+  template<typename __int_scalartype_N = __scalartype_N
+           ,class = typename std::enable_if<std::is_integral<typename __int_scalartype_N::value_type>::value>::type >
+  __int_scalartype_N operator&(const __int_scalartype_N& lhs) __CPU_GPU__ { 
+    __int_scalartype_N r;
+    r.data = data&lhs.data;
+    return r;
+  }
+
+  // template to detect applying operator& to float short vector and to generate an error
+  template<typename __int_scalartype_N = __scalartype_N>
+  typename std::enable_if<!std::is_integral<typename __int_scalartype_N::value_type>::value
+                          , __int_scalartype_N >::type
+  operator&(const __int_scalartype_N& lhs) __CPU_GPU__ { 
+    static_assert(std::is_integral<SCALAR_TYPE>::value, "operator& can only support integral short vector.");
+    return __int_scalartype_N();
+  }
+
+  template<typename __int_scalartype_N = __scalartype_N>
+  __int_scalartype_N& operator&=(const __int_scalartype_N& lhs) __CPU_GPU__ { 
+    *this = *this&lhs;
+    return *this;
+  }
+
+
+  // operator>> template enabled only for integral short vector 
+  template<typename __int_scalartype_N = __scalartype_N
+           ,class = typename std::enable_if<std::is_integral<typename __int_scalartype_N::value_type>::value>::type >
+  __int_scalartype_N operator>>(const __int_scalartype_N& lhs) __CPU_GPU__ { 
+    __int_scalartype_N r;
+    r.data = data>>lhs.data;
+    return r;
+  }
+
+  // template to detect applying operator>> to float short vector and to generate an error
+  template<typename __int_scalartype_N = __scalartype_N>
+  typename std::enable_if<!std::is_integral<typename __int_scalartype_N::value_type>::value
+                          , __int_scalartype_N >::type
+  operator>>(const __int_scalartype_N& lhs) __CPU_GPU__ { 
+    static_assert(std::is_integral<SCALAR_TYPE>::value, "operator>> can only support integral short vector.");
+    return __int_scalartype_N();
+  }
+
+  template<typename __int_scalartype_N = __scalartype_N>
+  __int_scalartype_N& operator>>=(const __int_scalartype_N& lhs) __CPU_GPU__ { 
+    *this = *this>>lhs;
+    return *this;
+  }
+
+
+  // operator<< template enabled only for integral short vector 
+  template<typename __int_scalartype_N = __scalartype_N
+           ,class = typename std::enable_if<std::is_integral<typename __int_scalartype_N::value_type>::value>::type >
+  __int_scalartype_N operator<<(const __int_scalartype_N& lhs) __CPU_GPU__ { 
+    __int_scalartype_N r;
+    r.data = data<<lhs.data;
+    return r;
+  }
+
+  // template to detect applying operator<< to float short vector and to generate an error
+  template<typename __int_scalartype_N = __scalartype_N>
+  typename std::enable_if<!std::is_integral<typename __int_scalartype_N::value_type>::value
+                          , __int_scalartype_N >::type
+  operator<<(const __int_scalartype_N& lhs) __CPU_GPU__ { 
+    static_assert(std::is_integral<SCALAR_TYPE>::value, "operator<< can only support integral short vector.");
+    return __int_scalartype_N();
+  }
+
+  template<typename __int_scalartype_N = __scalartype_N>
+  __int_scalartype_N& operator<<=(const __int_scalartype_N& lhs) __CPU_GPU__ { 
+    *this = *this<<lhs;
+    return *this;
   }
 
 
@@ -178,6 +361,16 @@ private:
   VECTOR_TYPE data;
 
 };
+
+
+template <typename SCALAR_TYPE, typename VECTOR_TYPE>
+__vector_2<SCALAR_TYPE,VECTOR_TYPE> operator+(const __vector_2<SCALAR_TYPE,VECTOR_TYPE>& lhs
+                                              , const __vector_2<SCALAR_TYPE,VECTOR_TYPE>& rhs) __CPU_GPU__ {
+  __vector_2<SCALAR_TYPE,VECTOR_TYPE> r(lhs.get_vector() + rhs.get_vector());
+  return r;
+}
+
+
 
 
 
