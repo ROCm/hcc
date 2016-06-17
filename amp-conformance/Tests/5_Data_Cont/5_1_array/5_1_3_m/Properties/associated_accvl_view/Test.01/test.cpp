@@ -20,7 +20,7 @@ bool test_feature()
         edata[i] = 3;
     const extent<_rank> e1(edata);
 
-	printf("Found %d devices\n", devices.size());
+	printf("Found %zu devices\n", devices.size());
 
 	for (size_t i = 0; i < devices.size(); i++)
 	{
@@ -42,7 +42,7 @@ bool test_feature()
                 return false;
         }
 
-		printf("Finished with device %d\n", i);
+		printf("Finished with device %zu\n", i);
 	}
 
 	return true;
