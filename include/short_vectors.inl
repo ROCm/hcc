@@ -256,10 +256,10 @@ public:
   // two-component accessors
 
 #define DECLARE_VECTOR_TWO_COMPONENT_GET_SET(C0,C1) \
-  __vector<value_type, v2_type_internal, 2> get_ ##C0 ##C1 () { return create_vector2(get_ ##C0 (), get_ ##C1 ()); } \
-  __vector<value_type, v2_type_internal, 2> get_ ##C1 ##C0 () { return create_vector2(get_ ##C1 (), get_ ##C0 ()); } \
-  void set_ ##C0 ##C1 (const __vector<value_type, v2_type_internal, 2>& v) { set_ ##C0 (v.get_s0());  set_ ##C1 (v.get_s1()); } \
-  void set_ ##C1 ##C0 (const __vector<value_type, v2_type_internal, 2>& v) { set_ ##C1 (v.get_s0());  set_ ##C0 (v.get_s1()); } 
+  __vector<value_type, v2_type_internal, 2> get_ ##C0 ##C1 () { return create_vector2(data.C0 ## C1); } \
+  __vector<value_type, v2_type_internal, 2> get_ ##C1 ##C0 () { return create_vector2(data.C1 ## C0); } \
+  void set_ ##C0 ##C1 (const __vector<value_type, v2_type_internal, 2>& v) { data.C0 ## C1 = v.get_vector();  } \
+  void set_ ##C1 ##C0 (const __vector<value_type, v2_type_internal, 2>& v) { data.C1 ## C0 = v.get_vector();  } 
 
   DECLARE_VECTOR_TWO_COMPONENT_GET_SET(x,y)
   DECLARE_VECTOR_TWO_COMPONENT_GET_SET(x,z)
@@ -506,8 +506,8 @@ public:
 private:
   vector_value_type data;
 
-  __vector<value_type,v2_type_internal,2> create_vector2(value_type v1, value_type v2) {
-    return __vector<value_type,v2_type_internal,2>(v1,v2);
+  __vector<value_type,v2_type_internal,2> create_vector2(v2_type_internal v) {
+    return __vector<value_type,v2_type_internal,2>(v);
   }
 
   __vector<value_type,v3_type_internal,3> create_vector3(value_type v1, value_type v2, value_type v3) {
