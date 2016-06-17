@@ -119,7 +119,7 @@ bool test_array_copy_constructor()
         result &= VerifyDataOnCpu<_type, _rank>(src, dst);
     }
 
-	delete edata;
+	delete[] edata;
     return result;
 }
 
@@ -149,7 +149,7 @@ bool test_array_copy_constructors_with_array_view()
         result &= VerifyDataOnCpu<_type, _rank>(src, dst);
     }
 	
-	delete edata;
+	delete[] edata;
     return result;
 }
 
@@ -178,7 +178,7 @@ bool test_array_copy_constructors_with_array_view(_accl device)
         result &= VerifyDataOnCpu<_type, _rank>(src, dst);
     }
 	
-	delete edata;
+	delete[] edata;
     return result;
 }
 
@@ -207,7 +207,7 @@ bool test_array_copy_constructors_with_array_view(_accl device1,_accl device2)
         result &= VerifyDataOnCpu<_type, _rank>(src, dst);
     }
 	
-	delete edata;
+	delete[] edata;
     return result;
 }
 
