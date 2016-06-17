@@ -80,10 +80,27 @@ DECLARE_VECTOR_TYPE_INTERNAL(__double16, double, 16);
 
 #endif
 
-/*
-template <typename SCALAR_TYPE_ORG, typename VECTOR_TYPE_ORG, unsigned int VECTOR_LENGTH_ORG>
+template <typename SCALAR_TYPE, typename VECTOR_TYPE, unsigned int VECTOR_LENGTH>
 class __vector;
-*/
+
+
+#define DECLARE_VECTOR_TYPE_CLASS(SCALAR_TYPE, INTERNAL_VECTOR_TYPE_PREFIX, CLASS_PREFIX) \
+typedef __vector<SCALAR_TYPE, INTERNAL_VECTOR_TYPE_PREFIX ## 2, 2>   CLASS_PREFIX ## 2; \
+typedef __vector<SCALAR_TYPE, INTERNAL_VECTOR_TYPE_PREFIX ## 3, 4>   CLASS_PREFIX ## 3; \
+typedef __vector<SCALAR_TYPE, INTERNAL_VECTOR_TYPE_PREFIX ## 4, 4>   CLASS_PREFIX ## 4; \
+typedef __vector<SCALAR_TYPE, INTERNAL_VECTOR_TYPE_PREFIX ## 8, 8>   CLASS_PREFIX ## 8; \
+typedef __vector<SCALAR_TYPE, INTERNAL_VECTOR_TYPE_PREFIX ## 16, 16>   CLASS_PREFIX ## 16; 
+
+DECLARE_VECTOR_TYPE_CLASS(unsigned char, __uchar, uchar);
+DECLARE_VECTOR_TYPE_CLASS(char, __char, char);
+DECLARE_VECTOR_TYPE_CLASS(unsigned short, __ushort, ushort);
+DECLARE_VECTOR_TYPE_CLASS(short, __short, short);
+DECLARE_VECTOR_TYPE_CLASS(unsigned int, __uint, uint);
+DECLARE_VECTOR_TYPE_CLASS(int, __int, int);
+DECLARE_VECTOR_TYPE_CLASS(unsigned long long, __ulonglong, ulong);
+DECLARE_VECTOR_TYPE_CLASS(long long, __longlong, long);
+DECLARE_VECTOR_TYPE_CLASS(float, __float, float);
+DECLARE_VECTOR_TYPE_CLASS(double, __double, double);
 
 
 template <typename SCALAR_TYPE, typename VECTOR_TYPE, unsigned int VECTOR_LENGTH>
@@ -97,6 +114,14 @@ public:
   typedef VECTOR_TYPE vector_value_type;
 
   typedef __vector<value_type,vector_value_type,size> __scalartype_N;
+
+
+private:
+  typedef value_type v2_type_internal  __attribute__((ext_vector_type(2)));
+  typedef value_type v3_type_internal  __attribute__((ext_vector_type(4)));
+  typedef value_type v4_type_internal  __attribute__((ext_vector_type(4)));
+
+public:
 
   __vector() __CPU_GPU__ { data = static_cast<vector_value_type>(static_cast<value_type>(0)); }; 
 
@@ -189,94 +214,121 @@ public:
                                                                              ,static_cast<value_type>(other.get_sF()) }; }
 
 
-  value_type get_s0() const __CPU_GPU__ {
-    return data.s0;
-  }
 
-  value_type get_s1() const __CPU_GPU__ {
-    static_assert(size>=2, "invalid component for vector with a length less than 2");
-    return data.s1;
-  }
+  // one-component accessors
 
-  value_type get_s2() const __CPU_GPU__ {
-    static_assert(size>=3, "invalid component for vector with a length less than 3");
-    return data.s2;
-  }
+#define DECLARE_VECTOR_ONE_COMPONENT_GET_SET(N,MIN_V_SIZE) \
+  value_type get_s ##N() const __CPU_GPU__ {   \
+    static_assert(size>=MIN_V_SIZE , "invalid vector component"); \
+    return data.s ##N; } \
+  void set_s ##N(value_type v) const __CPU_GPU__ { \
+    static_assert(size>=MIN_V_SIZE , "invalid vector component"); \
+    data.s ##N = v; }
 
-  value_type get_s3() const __CPU_GPU__ {
-    static_assert(size>=4, "invalid component for vector with a length less than 4");
-    return data.s3;
-  }
-
-  value_type get_s4() const __CPU_GPU__ {
-    static_assert(size>=8, "invalid component for vector with a length less than 8");
-    return data.s4;
-  }
-
-  value_type get_s5() const __CPU_GPU__ {
-    static_assert(size>=8, "invalid component for vector with a length less than 8");
-    return data.s5;
-  }
-
-  value_type get_s6() const __CPU_GPU__ {
-    static_assert(size>=8, "invalid component for vector with a length less than 8");
-    return data.s6;
-  }
-
-  value_type get_s7() const __CPU_GPU__ {
-    static_assert(size>=8, "invalid component for vector with a length less than 8");
-    return data.s7;
-  }
-
-  value_type get_s8() const __CPU_GPU__ {
-    static_assert(size>=16, "invalid component for vector with a length less than 16");
-    return data.s8;
-  }
-
-  value_type get_s9() const __CPU_GPU__ {
-    static_assert(size>=16, "invalid component for vector with a length less than 16");
-    return data.s9;
-  }
-
-  value_type get_sA() const __CPU_GPU__ {
-    static_assert(size>=16, "invalid component for vector with a length less than 16");
-    return data.sA;
-  }
-
-  value_type get_sB() const __CPU_GPU__ {
-    static_assert(size>=16, "invalid component for vector with a length less than 16");
-    return data.sB;
-  }
-
-  value_type get_sC() const __CPU_GPU__ {
-    static_assert(size>=16, "invalid component for vector with a length less than 16");
-    return data.sC;
-  }
-
-  value_type get_sD() const __CPU_GPU__ {
-    static_assert(size>=16, "invalid component for vector with a length less than 16");
-    return data.sD;
-  }
-
-  value_type get_sE() const __CPU_GPU__ {
-    static_assert(size>=16, "invalid component for vector with a length less than 16");
-    return data.sE;
-  }
-
-  value_type get_sF() const __CPU_GPU__ {
-    static_assert(size>=16, "invalid component for vector with a length less than 16");
-    return data.sF;
-  }
+  DECLARE_VECTOR_ONE_COMPONENT_GET_SET(0,1)
+  DECLARE_VECTOR_ONE_COMPONENT_GET_SET(1,2)
+  DECLARE_VECTOR_ONE_COMPONENT_GET_SET(2,3)
+  DECLARE_VECTOR_ONE_COMPONENT_GET_SET(3,4)
+  DECLARE_VECTOR_ONE_COMPONENT_GET_SET(4,8)
+  DECLARE_VECTOR_ONE_COMPONENT_GET_SET(5,8)
+  DECLARE_VECTOR_ONE_COMPONENT_GET_SET(6,8)
+  DECLARE_VECTOR_ONE_COMPONENT_GET_SET(7,8)
+  DECLARE_VECTOR_ONE_COMPONENT_GET_SET(8,16)
+  DECLARE_VECTOR_ONE_COMPONENT_GET_SET(9,16)
+  DECLARE_VECTOR_ONE_COMPONENT_GET_SET(A,16)
+  DECLARE_VECTOR_ONE_COMPONENT_GET_SET(B,16)
+  DECLARE_VECTOR_ONE_COMPONENT_GET_SET(C,16)
+  DECLARE_VECTOR_ONE_COMPONENT_GET_SET(D,16)
+  DECLARE_VECTOR_ONE_COMPONENT_GET_SET(E,16)
+  DECLARE_VECTOR_ONE_COMPONENT_GET_SET(F,16)
 
   value_type get_x() const __CPU_GPU__ { return get_s0(); }
   value_type get_y() const __CPU_GPU__ { return get_s1(); }
   value_type get_z() const __CPU_GPU__ { return get_s2(); }
   value_type get_w() const __CPU_GPU__ { return get_s3(); }
 
-  vector_value_type get_vector() const __CPU_GPU__ { return data; }
+  void set_x(value_type v) __CPU_GPU__ { set_s0(v); }
+  void set_y(value_type v) __CPU_GPU__ { set_s1(v); }
+  void set_z(value_type v) __CPU_GPU__ { set_s2(v); }
+  void set_w(value_type v) __CPU_GPU__ { set_s3(v); }
 
-  void set_x(value_type v) __CPU_GPU__ { data.x = v; }
-  void set_y(value_type v)  __CPU_GPU__ { data.y = v; }
+
+  // two-component accessors
+
+#define DECLARE_VECTOR_TWO_COMPONENT_GET_SET(C0,C1) \
+  __vector<value_type, v2_type_internal, 2> get_ ##C0 ##C1 () { return create_vector2(get_ ##C0 (), get_ ##C1 ()); } \
+  __vector<value_type, v2_type_internal, 2> get_ ##C1 ##C0 () { return create_vector2(get_ ##C1 (), get_ ##C0 ()); } \
+  void set_ ##C0 ##C1 (const __vector<value_type, v2_type_internal, 2>& v) { set_ ##C0 (v.get_s0());  set_ ##C1 (v.get_s1()); } \
+  void set_ ##C1 ##C0 (const __vector<value_type, v2_type_internal, 2>& v) { set_ ##C1 (v.get_s0());  set_ ##C0 (v.get_s1()); } 
+
+  DECLARE_VECTOR_TWO_COMPONENT_GET_SET(x,y)
+  DECLARE_VECTOR_TWO_COMPONENT_GET_SET(x,z)
+  DECLARE_VECTOR_TWO_COMPONENT_GET_SET(x,w)
+  DECLARE_VECTOR_TWO_COMPONENT_GET_SET(y,z)
+  DECLARE_VECTOR_TWO_COMPONENT_GET_SET(y,w)
+  DECLARE_VECTOR_TWO_COMPONENT_GET_SET(w,z)
+
+
+
+  // three-component accessors
+
+#define DECLARE_VECTOR_THREE_COMPONENT_GET_SET(C0,C1,C2) \
+  __vector<value_type, v3_type_internal, 3> get_ ##C0 ##C1 ## C2 () { return create_vector3(get_ ##C0 (), get_ ##C1 (), get_ ##C2 ()); } \
+  __vector<value_type, v3_type_internal, 3> get_ ##C0 ##C2 ## C1 () { return create_vector3(get_ ##C0 (), get_ ##C2 (), get_ ##C1 ()); } \
+  __vector<value_type, v3_type_internal, 3> get_ ##C1 ##C0 ## C2 () { return create_vector3(get_ ##C1 (), get_ ##C0 (), get_ ##C2 ()); } \
+  __vector<value_type, v3_type_internal, 3> get_ ##C1 ##C2 ## C0 () { return create_vector3(get_ ##C1 (), get_ ##C2 (), get_ ##C0 ()); } \
+  __vector<value_type, v3_type_internal, 3> get_ ##C2 ##C0 ## C1 () { return create_vector3(get_ ##C2 (), get_ ##C0 (), get_ ##C1 ()); } \
+  __vector<value_type, v3_type_internal, 3> get_ ##C2 ##C1 ## C0 () { return create_vector3(get_ ##C2 (), get_ ##C1 (), get_ ##C0 ()); } \
+  void set_ ##C0 ##C1 ##C2 (const __vector<value_type, v3_type_internal, 3>& v) { set_ ##C0 (v.get_s0());  set_ ##C1 (v.get_s1()); set_ ##C2 (v.get_s2()); } \
+  void set_ ##C0 ##C2 ##C1 (const __vector<value_type, v3_type_internal, 3>& v) { set_ ##C0 (v.get_s0());  set_ ##C2 (v.get_s1()); set_ ##C1 (v.get_s2()); } \
+  void set_ ##C1 ##C0 ##C2 (const __vector<value_type, v3_type_internal, 3>& v) { set_ ##C1 (v.get_s0());  set_ ##C0 (v.get_s1()); set_ ##C2 (v.get_s2()); } \
+  void set_ ##C1 ##C2 ##C0 (const __vector<value_type, v3_type_internal, 3>& v) { set_ ##C1 (v.get_s0());  set_ ##C2 (v.get_s1()); set_ ##C0 (v.get_s2()); } \
+  void set_ ##C2 ##C0 ##C1 (const __vector<value_type, v3_type_internal, 3>& v) { set_ ##C2 (v.get_s0());  set_ ##C0 (v.get_s1()); set_ ##C1 (v.get_s2()); } \
+  void set_ ##C2 ##C1 ##C0 (const __vector<value_type, v3_type_internal, 3>& v) { set_ ##C2 (v.get_s0());  set_ ##C1 (v.get_s1()); set_ ##C0 (v.get_s2()); } 
+
+  DECLARE_VECTOR_THREE_COMPONENT_GET_SET(x,y,z)
+  DECLARE_VECTOR_THREE_COMPONENT_GET_SET(x,y,w)
+  DECLARE_VECTOR_THREE_COMPONENT_GET_SET(x,z,w)
+  DECLARE_VECTOR_THREE_COMPONENT_GET_SET(y,z,w) 
+
+
+  // four-component accessors
+
+#define DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C0,C1,C2,C3) \
+  __vector<value_type, v4_type_internal, 4> get_ ##C0 ##C1 ## C2 ## C3 () { return create_vector4(get_ ##C0 (), get_ ##C1 (), get_ ##C2 (), get_ ##C3 ()); } \
+  void set_ ##C0 ##C1 ##C2 ##C3 (const __vector<value_type, v4_type_internal, 4>& v) { set_ ##C0 (v.get_s0());  set_ ##C1 (v.get_s1()); set_ ##C2 (v.get_s2()); set_ ##C3 (v.get_s3()); } 
+
+
+#define DECLARE_VECTOR_FOUR_COMPONENT_GET_SET(C0,C1,C2,C3) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C0,C1,C2,C3) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C0,C1,C3,C2) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C0,C2,C1,C3) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C0,C2,C3,C1) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C0,C3,C1,C2) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C0,C3,C2,C1) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C1,C0,C2,C3) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C1,C0,C3,C2) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C1,C2,C0,C3) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C1,C2,C3,C0) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C1,C3,C0,C2) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C1,C3,C2,C0) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C2,C0,C1,C3) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C2,C0,C3,C1) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C2,C1,C0,C3) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C2,C1,C3,C0) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C2,C3,C0,C1) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C2,C3,C1,C0) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C3,C0,C1,C2) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C3,C0,C2,C1) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C3,C1,C0,C2) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C3,C1,C2,C0) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C3,C2,C0,C1) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C3,C2,C1,C0) 
+
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET(x,y,z,w);
+
+
+  vector_value_type get_vector() const __CPU_GPU__ { return data; }
   void set_vector(vector_value_type v)  __CPU_GPU__ { data = v; }
 
   __scalartype_N& operator=(const __scalartype_N& rhs) __CPU_GPU__ { 
@@ -402,44 +454,100 @@ public:
     return *this;
   }
 
+  template <typename T = __scalartype_N
+            , class = typename std::enable_if<T::size==2,value_type>::type >
+  bool operator==(const __vector<value_type, vector_value_type, 2>& rhs) __CPU_GPU__ { 
+    return (data.x == rhs.data.x 
+         && data.y == rhs.data.y); 
+  }
+
+  template <typename T = __scalartype_N
+            , class = typename std::enable_if<T::size==4,value_type>::type >
+  bool operator==(const __vector<value_type, vector_value_type, 4>& rhs) __CPU_GPU__ { 
+    return   ((data.s0 == rhs.data.s0) && (data.s1 == rhs.data.s1))
+              && ((data.s2 == rhs.data.s2) && (data.s3 == rhs.data.s3));
+
+  }
 
 
-  // boolean operator
-  bool operator==(const __scalartype_N& rhs) __CPU_GPU__ { return (data.x == rhs.data.x 
-                                                                   && data.y == rhs.data.y); }
+  template <typename T = __scalartype_N
+            , class = typename std::enable_if<T::size==8,value_type>::type >
+  bool operator==(const __vector<value_type, vector_value_type, 8>& rhs) __CPU_GPU__ {
+    return    (((data.s0 == rhs.data.s0) && (data.s1 == rhs.data.s1))
+              && ((data.s2 == rhs.data.s2) && (data.s3 == rhs.data.s3)))
+            &&  
+              (((data.s4 == rhs.data.s4) && (data.s5 == rhs.data.s5))
+              && ((data.s6 == rhs.data.s6) && (data.s7 == rhs.data.s7)))
+              ;
+  }
+
+  template <typename T = __scalartype_N
+            , class = typename std::enable_if<T::size==16,value_type>::type >
+  bool operator==(const __vector<value_type, vector_value_type, 16>& rhs) __CPU_GPU__ {
+
+    return (   (((data.s0 == rhs.data.s0) && (data.s1 == rhs.data.s1))
+              && ((data.s2 == rhs.data.s2) && (data.s3 == rhs.data.s3)))
+            &&  
+              (((data.s4 == rhs.data.s4) && (data.s5 == rhs.data.s5))
+              && ((data.s6 == rhs.data.s6) && (data.s7 == rhs.data.s7)))
+           )
+           &&
+           (  (((data.s8 == rhs.data.s8) && (data.s9 == rhs.data.s9))
+              && ((data.sA == rhs.data.sA) && (data.sB == rhs.data.sB)))
+            &&  
+              (((data.sC == rhs.data.sC) && (data.sD == rhs.data.sD))
+              && ((data.sE == rhs.data.sE) && (data.sF == rhs.data.sF)))
+           )
+           ;
+  }
+
   bool operator!=(const __scalartype_N& rhs) __CPU_GPU__ { return !(*this==rhs); }
-  
 
 private:
   vector_value_type data;
 
+  __vector<value_type,v2_type_internal,2> create_vector2(value_type v1, value_type v2) {
+    return __vector<value_type,v2_type_internal,2>(v1,v2);
+  }
+
+  __vector<value_type,v3_type_internal,3> create_vector3(value_type v1, value_type v2, value_type v3) {
+    return __vector<value_type,v2_type_internal,3>(v1,v2,v3);
+  }
+
+  __vector<value_type,v4_type_internal,4> create_vector4(value_type v1, value_type v2
+                                                       , value_type v3, value_type v4) {
+    return __vector<value_type,v2_type_internal,4>(v1,v2,v3,v4);
+  }
 };
 
-template <typename SCALAR_TYPE_P, typename VECTOR_TYPE_P, unsigned int VECTOR_LENGTH_P>
-__vector<SCALAR_TYPE_P,VECTOR_TYPE_P,VECTOR_LENGTH_P> operator+(const __vector<SCALAR_TYPE_P,VECTOR_TYPE_P,VECTOR_LENGTH_P>& lhs
-                                                          , const __vector<SCALAR_TYPE_P,VECTOR_TYPE_P,VECTOR_LENGTH_P>& rhs) __CPU_GPU__ {
-  __vector<SCALAR_TYPE_P,VECTOR_TYPE_P,VECTOR_LENGTH_P> r(lhs.get_vector() + rhs.get_vector());
+
+template <typename SCALAR_TYPE, typename VECTOR_TYPE, unsigned int VECTOR_LENGTH>
+__vector<SCALAR_TYPE,VECTOR_TYPE,VECTOR_LENGTH> operator+(const __vector<SCALAR_TYPE,VECTOR_TYPE,VECTOR_LENGTH>& lhs
+                                                          , const __vector<SCALAR_TYPE,VECTOR_TYPE,VECTOR_LENGTH>& rhs) __CPU_GPU__ {
+  __vector<SCALAR_TYPE,VECTOR_TYPE,VECTOR_LENGTH> r(lhs.get_vector() + rhs.get_vector());
   return r;
 }
 
 
-#define DECLARE_VECTOR_TYPE_CLASS(SCALAR_TYPE, INTERNAL_VECTOR_TYPE_PREFIX, CLASS_PREFIX) \
-typedef __vector<SCALAR_TYPE, INTERNAL_VECTOR_TYPE_PREFIX ## 2, 2>   CLASS_PREFIX ## 2; \
-typedef __vector<SCALAR_TYPE, INTERNAL_VECTOR_TYPE_PREFIX ## 3, 4>   CLASS_PREFIX ## 3; \
-typedef __vector<SCALAR_TYPE, INTERNAL_VECTOR_TYPE_PREFIX ## 4, 4>   CLASS_PREFIX ## 4; \
-typedef __vector<SCALAR_TYPE, INTERNAL_VECTOR_TYPE_PREFIX ## 8, 8>   CLASS_PREFIX ## 8; \
-typedef __vector<SCALAR_TYPE, INTERNAL_VECTOR_TYPE_PREFIX ## 16, 16>   CLASS_PREFIX ## 16; 
+template <typename SCALAR_TYPE, typename VECTOR_TYPE, unsigned int VECTOR_LENGTH>
+__vector<SCALAR_TYPE,VECTOR_TYPE,VECTOR_LENGTH> operator-(const __vector<SCALAR_TYPE,VECTOR_TYPE,VECTOR_LENGTH>& lhs
+                                                          , const __vector<SCALAR_TYPE,VECTOR_TYPE,VECTOR_LENGTH>& rhs) __CPU_GPU__ {
+  __vector<SCALAR_TYPE,VECTOR_TYPE,VECTOR_LENGTH> r(lhs.get_vector() - rhs.get_vector());
+  return r;
+}
 
+template <typename SCALAR_TYPE, typename VECTOR_TYPE, unsigned int VECTOR_LENGTH>
+__vector<SCALAR_TYPE,VECTOR_TYPE,VECTOR_LENGTH> operator*(const __vector<SCALAR_TYPE,VECTOR_TYPE,VECTOR_LENGTH>& lhs
+                                                          , const __vector<SCALAR_TYPE,VECTOR_TYPE,VECTOR_LENGTH>& rhs) __CPU_GPU__ {
+  __vector<SCALAR_TYPE,VECTOR_TYPE,VECTOR_LENGTH> r(lhs.get_vector() * rhs.get_vector());
+  return r;
+}
 
-DECLARE_VECTOR_TYPE_CLASS(unsigned char, __uchar, uchar);
-DECLARE_VECTOR_TYPE_CLASS(char, __char, char);
-DECLARE_VECTOR_TYPE_CLASS(unsigned short, __ushort, ushort);
-DECLARE_VECTOR_TYPE_CLASS(short, __short, short);
-DECLARE_VECTOR_TYPE_CLASS(unsigned int, __uint, uint);
-DECLARE_VECTOR_TYPE_CLASS(int, __int, int);
-DECLARE_VECTOR_TYPE_CLASS(unsigned long long, __ulonglong, ulong);
-DECLARE_VECTOR_TYPE_CLASS(long long, __longlong, long);
-DECLARE_VECTOR_TYPE_CLASS(float, __float, float);
-DECLARE_VECTOR_TYPE_CLASS(double, __double, double);
+template <typename SCALAR_TYPE, typename VECTOR_TYPE, unsigned int VECTOR_LENGTH>
+__vector<SCALAR_TYPE,VECTOR_TYPE,VECTOR_LENGTH> operator/(const __vector<SCALAR_TYPE,VECTOR_TYPE,VECTOR_LENGTH>& lhs
+                                                          , const __vector<SCALAR_TYPE,VECTOR_TYPE,VECTOR_LENGTH>& rhs) __CPU_GPU__ {
+  __vector<SCALAR_TYPE,VECTOR_TYPE,VECTOR_LENGTH> r(lhs.get_vector() / rhs.get_vector());
+  return r;
+}
 
 
