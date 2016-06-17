@@ -99,7 +99,7 @@ int main()
         if(!AreAlmostEqual(vec[i].a_b, static_cast<float>(i+3)) || !AreAlmostEqual(av[i].a_b, static_cast<float>(i+3)))
         {
             printf("a_b data copied to vector doesnt contained updated data for index : [%d]. FAIL!\n", i);
-            printf("Expected: [%d] Actual vec: [%d] Actual av : [%d]\n", i+3, vec[i].a_b, av[i].a_b);
+            printf("Expected: [%d] Actual vec: [%f] Actual av : [%f]\n", i+3, vec[i].a_b, av[i].a_b);
             return runall_fail;
         }
 
@@ -120,7 +120,7 @@ int main()
         if(!AreAlmostEqual(vec[i].b_b, static_cast<float>(i+6)) || !AreAlmostEqual(av[i].b_b, static_cast<float>(i+6)))
         {
             printf("b_b data copied to vector doesnt contained updated data for index : [%d]. FAIL!\n", i);
-            printf("Expected: [%d] Actual vec: [%d] Actual av : [%d]\n", i+6, vec[i].b_b, av[i].b_b);
+            printf("Expected: [%d] Actual vec: [%f] Actual av : [%f]\n", i+6, vec[i].b_b, av[i].b_b);
             return runall_fail;
         }
 

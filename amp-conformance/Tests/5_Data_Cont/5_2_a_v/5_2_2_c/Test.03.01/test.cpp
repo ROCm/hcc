@@ -81,7 +81,7 @@ int main()
     {
         if(results_vec[i] != 100)
         {
-            printf("Fail: Test %d failed for index %d\n", results_vec[i], i);
+            printf("Fail: Test %f failed for index %d\n", results_vec[i], i);
             return runall_fail;
         }
     }
