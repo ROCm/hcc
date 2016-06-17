@@ -80,39 +80,204 @@ DECLARE_VECTOR_TYPE_INTERNAL(__double16, double, 16);
 
 #endif
 
+/*
+template <typename SCALAR_TYPE_ORG, typename VECTOR_TYPE_ORG, unsigned int VECTOR_LENGTH_ORG>
+class __vector;
+*/
 
-template <typename SCALAR_TYPE, typename VECTOR_TYPE>
-class __vector_2 {
+
+template <typename SCALAR_TYPE, typename VECTOR_TYPE, unsigned int VECTOR_LENGTH>
+class __vector {
 
 public:
+
+  static const int size = VECTOR_LENGTH;
+
   typedef SCALAR_TYPE value_type;
-  typedef __vector_2<SCALAR_TYPE,VECTOR_TYPE> __scalartype_N;
+  typedef VECTOR_TYPE vector_value_type;
 
-  static const int size = 2;
+  typedef __vector<value_type,vector_value_type,size> __scalartype_N;
 
-  __vector_2() __CPU_GPU__ { data = { static_cast<SCALAR_TYPE>(0), static_cast<SCALAR_TYPE>(0)}; }
- 
+  __vector() __CPU_GPU__ { data = static_cast<vector_value_type>(static_cast<value_type>(0)); }; 
+
+  // the vector type overloaded constructor below already covers this scalar case
+  //__vector(value_type value) __CPU_GPU__ { data = { static_cast<value_type>(value), static_cast<value_type>(value)}; }
+  __vector(vector_value_type value) __CPU_GPU__ : data(value) {}
+
+  __vector(const __scalartype_N& other) __CPU_GPU__ : data(other.data) { }
+
+
   // component-wise constructor
-  __vector_2(SCALAR_TYPE v1, SCALAR_TYPE v2) __CPU_GPU__ { data = { v1, v2 }; }
+  template<typename T = __scalartype_N
+          ,class = typename std::enable_if<T::size==2,value_type>::type > 
+  __vector(value_type v1,value_type v2) __CPU_GPU__ {
+    data = {v1,v2}; 
+  }
+
+  template<typename T = __scalartype_N
+          ,class = typename std::enable_if<T::size==3,value_type>::type > 
+  __vector(value_type v1,value_type v2,value_type v3) __CPU_GPU__ {
+    data = {v1,v2,v3,static_cast<value_type>(0)}; 
+  }
+
+  template<typename T = __scalartype_N
+          ,class = typename std::enable_if<T::size==4,value_type>::type > 
+  __vector(value_type v1,value_type v2, value_type v3, value_type v4) __CPU_GPU__ {
+    data = {v1,v2,v3,v4}; 
+  }
+
+  template<typename T = __scalartype_N
+          ,class = typename std::enable_if<T::size==8,value_type>::type > 
+  __vector(value_type v1,value_type v2, value_type v3, value_type v4
+          ,value_type v5,value_type v6, value_type v7, value_type v8) __CPU_GPU__ {
+    data = {v1,v2,v3,v4,v5,v6,v7,v8}; 
+  }
+
+  template<typename T = __scalartype_N
+          ,class = typename std::enable_if<T::size==16,value_type>::type > 
+  __vector(value_type v1,value_type v2, value_type v3, value_type v4
+          ,value_type v5,value_type v6, value_type v7, value_type v8
+          ,value_type v9,value_type v10, value_type v11, value_type v12
+          ,value_type v13,value_type v14, value_type v15, value_type v16) __CPU_GPU__ {
+    data = {v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15,v16}; 
+  }
 
   
-  //__vector_2(SCALAR_TYPE value) __CPU_GPU__ { data = { static_cast<SCALAR_TYPE>(value), static_cast<SCALAR_TYPE>(value)}; }
-
-  __vector_2(VECTOR_TYPE value) __CPU_GPU__ : data(value) {  }
-
-
   // conversion constructor from other short vector types
-  template <typename ST, typename VT>
-  explicit __vector_2(const  __vector_2<ST,VT>& other)  __CPU_GPU__ { data = { static_cast<SCALAR_TYPE>(other.get_x()),
-                                                                               static_cast<SCALAR_TYPE>(other.get_y()) }; }
- 
-  SCALAR_TYPE get_x() const __CPU_GPU__ { return data.x; }
-  SCALAR_TYPE get_y() const __CPU_GPU__ { return data.y; }
-  VECTOR_TYPE get_vector() const __CPU_GPU__ { return data; }
+  template < typename ST, typename VT>
+  explicit __vector(const  __vector<ST,VT,2>& other)  __CPU_GPU__ { data = { static_cast<value_type>(other.get_s0())
+                                                                            ,static_cast<value_type>(other.get_s1()) }; }
 
-  void set_x(SCALAR_TYPE v) __CPU_GPU__ { data.x = v; }
-  void set_y(SCALAR_TYPE v)  __CPU_GPU__ { data.y = v; }
-  void set_vector(VECTOR_TYPE v)  __CPU_GPU__ { data = v; }
+  template < typename ST, typename VT>
+  explicit __vector(const  __vector<ST,VT,3>& other)  __CPU_GPU__ { data = { static_cast<value_type>(other.get_s0())
+                                                                             ,static_cast<value_type>(other.get_s1())
+                                                                             ,static_cast<value_type>(other.get_s2()) 
+                                                                             ,static_cast<value_type>(0) };           }
+
+  template <typename ST, typename VT>
+  explicit __vector(const  __vector<ST,VT,4>& other)  __CPU_GPU__ { data = { static_cast<value_type>(other.get_s0())
+                                                                             ,static_cast<value_type>(other.get_s1())
+                                                                             ,static_cast<value_type>(other.get_s2()) 
+                                                                             ,static_cast<value_type>(other.get_s3()) }; }
+
+  template <typename ST, typename VT>
+  explicit __vector(const  __vector<ST,VT,8>& other)  __CPU_GPU__ { data = { static_cast<value_type>(other.get_s0())
+                                                                             ,static_cast<value_type>(other.get_s1())
+                                                                             ,static_cast<value_type>(other.get_s2()) 
+                                                                             ,static_cast<value_type>(other.get_s3()) 
+                                                                             ,static_cast<value_type>(other.get_s4())
+                                                                             ,static_cast<value_type>(other.get_s5())
+                                                                             ,static_cast<value_type>(other.get_s6()) 
+                                                                             ,static_cast<value_type>(other.get_s7()) }; }
+
+  template <typename ST, typename VT>
+  explicit __vector(const  __vector<ST,VT,16>& other)  __CPU_GPU__ { data = { static_cast<value_type>(other.get_s0())
+                                                                             ,static_cast<value_type>(other.get_s1())
+                                                                             ,static_cast<value_type>(other.get_s2()) 
+                                                                             ,static_cast<value_type>(other.get_s3()) 
+                                                                             ,static_cast<value_type>(other.get_s4())
+                                                                             ,static_cast<value_type>(other.get_s5())
+                                                                             ,static_cast<value_type>(other.get_s6()) 
+                                                                             ,static_cast<value_type>(other.get_s7()) 
+                                                                             ,static_cast<value_type>(other.get_s8())
+                                                                             ,static_cast<value_type>(other.get_s9())
+                                                                             ,static_cast<value_type>(other.get_sA()) 
+                                                                             ,static_cast<value_type>(other.get_sB()) 
+                                                                             ,static_cast<value_type>(other.get_sC())
+                                                                             ,static_cast<value_type>(other.get_sD())
+                                                                             ,static_cast<value_type>(other.get_sE()) 
+                                                                             ,static_cast<value_type>(other.get_sF()) }; }
+
+
+  value_type get_s0() const __CPU_GPU__ {
+    return data.s0;
+  }
+
+  value_type get_s1() const __CPU_GPU__ {
+    static_assert(size>=2, "invalid component for vector with a length less than 2");
+    return data.s1;
+  }
+
+  value_type get_s2() const __CPU_GPU__ {
+    static_assert(size>=3, "invalid component for vector with a length less than 3");
+    return data.s2;
+  }
+
+  value_type get_s3() const __CPU_GPU__ {
+    static_assert(size>=4, "invalid component for vector with a length less than 4");
+    return data.s3;
+  }
+
+  value_type get_s4() const __CPU_GPU__ {
+    static_assert(size>=8, "invalid component for vector with a length less than 8");
+    return data.s4;
+  }
+
+  value_type get_s5() const __CPU_GPU__ {
+    static_assert(size>=8, "invalid component for vector with a length less than 8");
+    return data.s5;
+  }
+
+  value_type get_s6() const __CPU_GPU__ {
+    static_assert(size>=8, "invalid component for vector with a length less than 8");
+    return data.s6;
+  }
+
+  value_type get_s7() const __CPU_GPU__ {
+    static_assert(size>=8, "invalid component for vector with a length less than 8");
+    return data.s7;
+  }
+
+  value_type get_s8() const __CPU_GPU__ {
+    static_assert(size>=16, "invalid component for vector with a length less than 16");
+    return data.s8;
+  }
+
+  value_type get_s9() const __CPU_GPU__ {
+    static_assert(size>=16, "invalid component for vector with a length less than 16");
+    return data.s9;
+  }
+
+  value_type get_sA() const __CPU_GPU__ {
+    static_assert(size>=16, "invalid component for vector with a length less than 16");
+    return data.sA;
+  }
+
+  value_type get_sB() const __CPU_GPU__ {
+    static_assert(size>=16, "invalid component for vector with a length less than 16");
+    return data.sB;
+  }
+
+  value_type get_sC() const __CPU_GPU__ {
+    static_assert(size>=16, "invalid component for vector with a length less than 16");
+    return data.sC;
+  }
+
+  value_type get_sD() const __CPU_GPU__ {
+    static_assert(size>=16, "invalid component for vector with a length less than 16");
+    return data.sD;
+  }
+
+  value_type get_sE() const __CPU_GPU__ {
+    static_assert(size>=16, "invalid component for vector with a length less than 16");
+    return data.sE;
+  }
+
+  value_type get_sF() const __CPU_GPU__ {
+    static_assert(size>=16, "invalid component for vector with a length less than 16");
+    return data.sF;
+  }
+
+  value_type get_x() const __CPU_GPU__ { return get_s0(); }
+  value_type get_y() const __CPU_GPU__ { return get_s1(); }
+  value_type get_z() const __CPU_GPU__ { return get_s2(); }
+  value_type get_w() const __CPU_GPU__ { return get_s3(); }
+
+  vector_value_type get_vector() const __CPU_GPU__ { return data; }
+
+  void set_x(value_type v) __CPU_GPU__ { data.x = v; }
+  void set_y(value_type v)  __CPU_GPU__ { data.y = v; }
+  void set_vector(vector_value_type v)  __CPU_GPU__ { data = v; }
 
   __scalartype_N& operator=(const __scalartype_N& rhs) __CPU_GPU__ { 
     data = rhs.data;
@@ -157,195 +322,82 @@ public:
     return *this;
   }
 
-
-
-  // operator- template enabled only for short vector of signed integral types or floats 
-  template<typename __int_scalartype_N = __scalartype_N
-           ,class = typename std::enable_if<std::is_signed<typename __int_scalartype_N::value_type>::value>::type >
-  __int_scalartype_N operator-() __CPU_GPU__ { 
-    __int_scalartype_N r;
-    r.data = -this->data;
+  __scalartype_N operator-() __CPU_GPU__ {
+    static_assert(std::is_signed<value_type>::value, "operator- can only support short vector of signed integral or floating-point types.");
+    __scalartype_N r;
+    r.data = -data;
     return r;
   }
 
-  // template to detect applying operator- to short vector of unsigned integral types and to generate an error
-  template<typename __int_scalartype_N = __scalartype_N>
-  typename std::enable_if<!std::is_signed<typename __int_scalartype_N::value_type>::value
-                          , __int_scalartype_N >::type
-  operator-() __CPU_GPU__ { 
-    static_assert(std::is_signed<SCALAR_TYPE>::value, "operator- can only support short vector of signed integral or floating-point types.");
-    return __int_scalartype_N();
-  }
-
-
-  // operator~ template enabled only for integral short vector 
-  template<typename __int_scalartype_N = __scalartype_N
-           ,class = typename std::enable_if<std::is_integral<typename __int_scalartype_N::value_type>::value>::type >
-  __int_scalartype_N operator~() __CPU_GPU__ { 
-    __int_scalartype_N r;
-    r.data = ~this->data;
+  __scalartype_N operator~() __CPU_GPU__ { 
+    static_assert(std::is_integral<value_type>::value, "operator~ can only support short vector of integral types.");
+    __scalartype_N r;
+    r.data = ~data;
     return r;
   }
 
-  // template to detect applying operator% to float short vector and to generate an error
-  template<typename __int_scalartype_N = __scalartype_N>
-  typename std::enable_if<!std::is_integral<typename __int_scalartype_N::value_type>::value
-                          , __int_scalartype_N >::type
-  operator~() __CPU_GPU__ { 
-    static_assert(std::is_integral<SCALAR_TYPE>::value, "operator~ can only support short vector of integral types.");
-    return __int_scalartype_N();
-  }
-
-
-
-  // operator% template enabled only for integral short vector 
-  template<typename __int_scalartype_N = __scalartype_N
-           ,class = typename std::enable_if<std::is_integral<typename __int_scalartype_N::value_type>::value>::type >
-  __int_scalartype_N operator%(const __int_scalartype_N& lhs) __CPU_GPU__ { 
-    __int_scalartype_N r;
+  __scalartype_N operator%(const __scalartype_N& lhs) __CPU_GPU__ { 
+    static_assert(std::is_integral<value_type>::value, "operator% can only support short vector of integral types.");
+    __scalartype_N r;
     r.data = data%lhs.data;
     return r;
   }
-
-  // template to detect applying operator% to float short vector and to generate an error
-  template<typename __int_scalartype_N = __scalartype_N>
-  typename std::enable_if<!std::is_integral<typename __int_scalartype_N::value_type>::value
-                          , __int_scalartype_N >::type
-  operator%(const __int_scalartype_N& lhs) __CPU_GPU__ { 
-    static_assert(std::is_integral<SCALAR_TYPE>::value, "operator% can only support short vector of integral types.");
-    return __int_scalartype_N();
-  }
-
-  template<typename __int_scalartype_N = __scalartype_N>
-  __int_scalartype_N& operator%=(const __int_scalartype_N& lhs) __CPU_GPU__ { 
+  __scalartype_N& operator%=(const __scalartype_N& lhs) __CPU_GPU__ { 
     *this = *this%lhs;
     return *this;
   }
 
-
-
-  // operator^ template enabled only for integral short vector 
-  template<typename __int_scalartype_N = __scalartype_N
-           ,class = typename std::enable_if<std::is_integral<typename __int_scalartype_N::value_type>::value>::type >
-  __int_scalartype_N operator^(const __int_scalartype_N& lhs) __CPU_GPU__ { 
-    __int_scalartype_N r;
+  __scalartype_N operator^(const __scalartype_N& lhs) __CPU_GPU__ { 
+    static_assert(std::is_integral<value_type>::value, "operator^ can only support integral short vector.");
+    __scalartype_N r;
     r.data = data^lhs.data;
     return r;
   }
-
-  // template to detect applying operator^ to float short vector and to generate an error
-  template<typename __int_scalartype_N = __scalartype_N>
-  typename std::enable_if<!std::is_integral<typename __int_scalartype_N::value_type>::value
-                          , __int_scalartype_N >::type
-  operator^(const __int_scalartype_N& lhs) __CPU_GPU__ { 
-    static_assert(std::is_integral<SCALAR_TYPE>::value, "operator^ can only support integral short vector.");
-    return __int_scalartype_N();
-  }
-
-  template<typename __int_scalartype_N = __scalartype_N>
-  __int_scalartype_N& operator^=(const __int_scalartype_N& lhs) __CPU_GPU__ { 
+  __scalartype_N& operator^=(const __scalartype_N& lhs) __CPU_GPU__ { 
     *this = *this^lhs;
     return *this;
   }
 
-
-
-  // operator| template enabled only for integral short vector 
-  template<typename __int_scalartype_N = __scalartype_N
-           ,class = typename std::enable_if<std::is_integral<typename __int_scalartype_N::value_type>::value>::type >
-  __int_scalartype_N operator|(const __int_scalartype_N& lhs) __CPU_GPU__ { 
-    __int_scalartype_N r;
+  __scalartype_N operator|(const __scalartype_N& lhs) __CPU_GPU__ { 
+    static_assert(std::is_integral<value_type>::value, "operator| can only support integral short vector.");
+    __scalartype_N r;
     r.data = data|lhs.data;
     return r;
   }
-
-  // template to detect applying operator| to float short vector and to generate an error
-  template<typename __int_scalartype_N = __scalartype_N>
-  typename std::enable_if<!std::is_integral<typename __int_scalartype_N::value_type>::value
-                          , __int_scalartype_N >::type
-  operator|(const __int_scalartype_N& lhs) __CPU_GPU__ { 
-    static_assert(std::is_integral<SCALAR_TYPE>::value, "operator| can only support integral short vector.");
-    return __int_scalartype_N();
-  }
-
-  template<typename __int_scalartype_N = __scalartype_N>
-  __int_scalartype_N& operator|=(const __int_scalartype_N& lhs) __CPU_GPU__ { 
+  __scalartype_N& operator|=(const __scalartype_N& lhs) __CPU_GPU__ { 
     *this = *this|lhs;
     return *this;
   }
 
-
-
-  // operator& template enabled only for integral short vector 
-  template<typename __int_scalartype_N = __scalartype_N
-           ,class = typename std::enable_if<std::is_integral<typename __int_scalartype_N::value_type>::value>::type >
-  __int_scalartype_N operator&(const __int_scalartype_N& lhs) __CPU_GPU__ { 
-    __int_scalartype_N r;
+  __scalartype_N operator&(const __scalartype_N& lhs) __CPU_GPU__ { 
+   static_assert(std::is_integral<value_type>::value, "operator& can only support integral short vector.");
+    __scalartype_N r;
     r.data = data&lhs.data;
     return r;
   }
-
-  // template to detect applying operator& to float short vector and to generate an error
-  template<typename __int_scalartype_N = __scalartype_N>
-  typename std::enable_if<!std::is_integral<typename __int_scalartype_N::value_type>::value
-                          , __int_scalartype_N >::type
-  operator&(const __int_scalartype_N& lhs) __CPU_GPU__ { 
-    static_assert(std::is_integral<SCALAR_TYPE>::value, "operator& can only support integral short vector.");
-    return __int_scalartype_N();
-  }
-
-  template<typename __int_scalartype_N = __scalartype_N>
-  __int_scalartype_N& operator&=(const __int_scalartype_N& lhs) __CPU_GPU__ { 
+  __scalartype_N& operator&=(const __scalartype_N& lhs) __CPU_GPU__ { 
     *this = *this&lhs;
     return *this;
   }
 
-
-  // operator>> template enabled only for integral short vector 
-  template<typename __int_scalartype_N = __scalartype_N
-           ,class = typename std::enable_if<std::is_integral<typename __int_scalartype_N::value_type>::value>::type >
-  __int_scalartype_N operator>>(const __int_scalartype_N& lhs) __CPU_GPU__ { 
-    __int_scalartype_N r;
+  __scalartype_N operator>>(const __scalartype_N& lhs) __CPU_GPU__ { 
+    static_assert(std::is_integral<value_type>::value, "operator>> can only support integral short vector.");
+    __scalartype_N r;
     r.data = data>>lhs.data;
     return r;
   }
-
-  // template to detect applying operator>> to float short vector and to generate an error
-  template<typename __int_scalartype_N = __scalartype_N>
-  typename std::enable_if<!std::is_integral<typename __int_scalartype_N::value_type>::value
-                          , __int_scalartype_N >::type
-  operator>>(const __int_scalartype_N& lhs) __CPU_GPU__ { 
-    static_assert(std::is_integral<SCALAR_TYPE>::value, "operator>> can only support integral short vector.");
-    return __int_scalartype_N();
-  }
-
-  template<typename __int_scalartype_N = __scalartype_N>
-  __int_scalartype_N& operator>>=(const __int_scalartype_N& lhs) __CPU_GPU__ { 
+  __scalartype_N& operator>>=(const __scalartype_N& lhs) __CPU_GPU__ { 
     *this = *this>>lhs;
     return *this;
   }
 
-
-  // operator<< template enabled only for integral short vector 
-  template<typename __int_scalartype_N = __scalartype_N
-           ,class = typename std::enable_if<std::is_integral<typename __int_scalartype_N::value_type>::value>::type >
-  __int_scalartype_N operator<<(const __int_scalartype_N& lhs) __CPU_GPU__ { 
-    __int_scalartype_N r;
+  __scalartype_N operator<<(const __scalartype_N& lhs) __CPU_GPU__ { 
+    static_assert(std::is_integral<value_type>::value, "operator<< can only support integral short vector.");
+    __scalartype_N r;
     r.data = data<<lhs.data;
     return r;
   }
-
-  // template to detect applying operator<< to float short vector and to generate an error
-  template<typename __int_scalartype_N = __scalartype_N>
-  typename std::enable_if<!std::is_integral<typename __int_scalartype_N::value_type>::value
-                          , __int_scalartype_N >::type
-  operator<<(const __int_scalartype_N& lhs) __CPU_GPU__ { 
-    static_assert(std::is_integral<SCALAR_TYPE>::value, "operator<< can only support integral short vector.");
-    return __int_scalartype_N();
-  }
-
-  template<typename __int_scalartype_N = __scalartype_N>
-  __int_scalartype_N& operator<<=(const __int_scalartype_N& lhs) __CPU_GPU__ { 
+  __scalartype_N& operator<<=(const __scalartype_N& lhs) __CPU_GPU__ { 
     *this = *this<<lhs;
     return *this;
   }
@@ -357,25 +409,27 @@ public:
                                                                    && data.y == rhs.data.y); }
   bool operator!=(const __scalartype_N& rhs) __CPU_GPU__ { return !(*this==rhs); }
   
+
 private:
-  VECTOR_TYPE data;
+  vector_value_type data;
 
 };
 
-
-template <typename SCALAR_TYPE, typename VECTOR_TYPE>
-__vector_2<SCALAR_TYPE,VECTOR_TYPE> operator+(const __vector_2<SCALAR_TYPE,VECTOR_TYPE>& lhs
-                                              , const __vector_2<SCALAR_TYPE,VECTOR_TYPE>& rhs) __CPU_GPU__ {
-  __vector_2<SCALAR_TYPE,VECTOR_TYPE> r(lhs.get_vector() + rhs.get_vector());
+template <typename SCALAR_TYPE_P, typename VECTOR_TYPE_P, unsigned int VECTOR_LENGTH_P>
+__vector<SCALAR_TYPE_P,VECTOR_TYPE_P,VECTOR_LENGTH_P> operator+(const __vector<SCALAR_TYPE_P,VECTOR_TYPE_P,VECTOR_LENGTH_P>& lhs
+                                                          , const __vector<SCALAR_TYPE_P,VECTOR_TYPE_P,VECTOR_LENGTH_P>& rhs) __CPU_GPU__ {
+  __vector<SCALAR_TYPE_P,VECTOR_TYPE_P,VECTOR_LENGTH_P> r(lhs.get_vector() + rhs.get_vector());
   return r;
 }
 
 
-
-
-
 #define DECLARE_VECTOR_TYPE_CLASS(SCALAR_TYPE, INTERNAL_VECTOR_TYPE_PREFIX, CLASS_PREFIX) \
-typedef __vector_2<SCALAR_TYPE, INTERNAL_VECTOR_TYPE_PREFIX ## 2>   CLASS_PREFIX ## 2;
+typedef __vector<SCALAR_TYPE, INTERNAL_VECTOR_TYPE_PREFIX ## 2, 2>   CLASS_PREFIX ## 2; \
+typedef __vector<SCALAR_TYPE, INTERNAL_VECTOR_TYPE_PREFIX ## 3, 4>   CLASS_PREFIX ## 3; \
+typedef __vector<SCALAR_TYPE, INTERNAL_VECTOR_TYPE_PREFIX ## 4, 4>   CLASS_PREFIX ## 4; \
+typedef __vector<SCALAR_TYPE, INTERNAL_VECTOR_TYPE_PREFIX ## 8, 8>   CLASS_PREFIX ## 8; \
+typedef __vector<SCALAR_TYPE, INTERNAL_VECTOR_TYPE_PREFIX ## 16, 16>   CLASS_PREFIX ## 16; 
+
 
 DECLARE_VECTOR_TYPE_CLASS(unsigned char, __uchar, uchar);
 DECLARE_VECTOR_TYPE_CLASS(char, __char, char);
@@ -387,6 +441,5 @@ DECLARE_VECTOR_TYPE_CLASS(unsigned long long, __ulonglong, ulong);
 DECLARE_VECTOR_TYPE_CLASS(long long, __longlong, long);
 DECLARE_VECTOR_TYPE_CLASS(float, __float, float);
 DECLARE_VECTOR_TYPE_CLASS(double, __double, double);
-
 
 
