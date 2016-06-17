@@ -134,7 +134,7 @@ int test_feature()
 			}
 		}
 
-		printf("Finished with device %d \n", i);
+		printf("Finished with device %zu \n", i);
 	}
 
 	return runall_pass;
@@ -264,7 +264,7 @@ int test_feature()
 			}
 		}
 
-		printf("Finished with device %d \n", i);
+		printf("Finished with device %zu \n", i);
 	}
 
 	return runall_pass;
