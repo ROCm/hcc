@@ -65,15 +65,16 @@ if [ "$3" == "--hsa" ]; then
       cp $1 ./dump.input.bc
     fi
 
+    # UPGRADE_TBD: temporary suppress warning messages in Promote pass
     if [ "$CLAMP_NOTILECHECK" == "ON" ]; then
       $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
            -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-           -promote-globals -erase-nonkernels -dce -globaldce -S < $1 -o $2.promote.ll.orig
+           -promote-globals -erase-nonkernels -dce -globaldce -S < $1 -o $2.promote.ll.orig 2> /dev/null
     else
       $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
            -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
            -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-           -promote-globals -erase-nonkernels -tile-uniform -dce -globaldce -S < $1 -o $2.promote.ll.orig
+           -promote-globals -erase-nonkernels -tile-uniform -dce -globaldce -S < $1 -o $2.promote.ll.orig 2> /dev/null
     fi
 
     if [ $? == 1 ]; then
