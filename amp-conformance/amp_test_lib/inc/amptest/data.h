@@ -23,7 +23,7 @@ namespace Concurrency
         // Details namespace serves as private namespace
         namespace details
         {
-			template<typename T> inline T get_default_fill_min() { return (std::is_unsigned<T>::value) ? 0 : (-1 << 15); }
+			template<typename T> inline T get_default_fill_min() { return (std::is_unsigned<T>::value) ? 0 : -(1 << 15); }
 			template<typename T> inline T get_default_fill_max() { return  1 << 15; }
 
 #pragma warning( push )
@@ -42,10 +42,10 @@ namespace Concurrency
 			template<> inline unsigned short get_default_fill_max<unsigned short>(){ return 0xFFFF; }
 
 			// These min/max for floating-point types come from the original template specialization functions
-			template<> inline float get_default_fill_min<float>(){ return -1 << 15; }
+			template<> inline float get_default_fill_min<float>(){ return -(1 << 15); }
 			template<> inline float get_default_fill_max<float>(){ return  1 << 15; }
 
-			template<> inline double get_default_fill_min<double>(){ return -1 << 15; }
+			template<> inline double get_default_fill_min<double>(){ return -(1 << 15); }
 			template<> inline double get_default_fill_max<double>(){ return  1 << 15; }
 
 #pragma warning( pop )
