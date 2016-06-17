@@ -273,9 +273,8 @@ public:
 
   // three-component accessors
 #define DECLARE_VECTOR_THREE_COMPONENT_GET_SET_PAIR(C0,C1,C2) \
-  __vector<value_type, v3_type_internal, 3> get_ ##C0 ##C1 ## C2 () { return create_vector3(data.C0 ## C1 ##C2); } \
+  __vector<value_type, v3_type_internal, 3> get_ ##C0 ##C1 ## C2 () { return create_vector3(data.C0 ## C1 ## C2); } \
   void set_ ##C0 ##C1 ##C2 (const __vector<value_type, v3_type_internal, 3>& v) { data.C0 ## C1 ## C2 = v.get_vector().xyz; }  
-
 
 #define DECLARE_VECTOR_THREE_COMPONENT_GET_SET(C0,C1,C2) \
   DECLARE_VECTOR_THREE_COMPONENT_GET_SET_PAIR(C0,C1,C2) \
@@ -284,25 +283,6 @@ public:
   DECLARE_VECTOR_THREE_COMPONENT_GET_SET_PAIR(C1,C2,C0) \
   DECLARE_VECTOR_THREE_COMPONENT_GET_SET_PAIR(C2,C0,C1) \
   DECLARE_VECTOR_THREE_COMPONENT_GET_SET_PAIR(C2,C1,C0) 
-
-
-
-#if 0
-
-#define DECLARE_VECTOR_THREE_COMPONENT_GET_SET(C0,C1,C2) \
-  __vector<value_type, v3_type_internal, 3> get_ ##C0 ##C1 ## C2 () { return create_vector3(get_ ##C0 (), get_ ##C1 (), get_ ##C2 ()); } \
-  __vector<value_type, v3_type_internal, 3> get_ ##C0 ##C2 ## C1 () { return create_vector3(get_ ##C0 (), get_ ##C2 (), get_ ##C1 ()); } \
-  __vector<value_type, v3_type_internal, 3> get_ ##C1 ##C0 ## C2 () { return create_vector3(get_ ##C1 (), get_ ##C0 (), get_ ##C2 ()); } \
-  __vector<value_type, v3_type_internal, 3> get_ ##C1 ##C2 ## C0 () { return create_vector3(get_ ##C1 (), get_ ##C2 (), get_ ##C0 ()); } \
-  __vector<value_type, v3_type_internal, 3> get_ ##C2 ##C0 ## C1 () { return create_vector3(get_ ##C2 (), get_ ##C0 (), get_ ##C1 ()); } \
-  __vector<value_type, v3_type_internal, 3> get_ ##C2 ##C1 ## C0 () { return create_vector3(get_ ##C2 (), get_ ##C1 (), get_ ##C0 ()); } \
-  void set_ ##C0 ##C1 ##C2 (const __vector<value_type, v3_type_internal, 3>& v) { set_ ##C0 (v.get_s0());  set_ ##C1 (v.get_s1()); set_ ##C2 (v.get_s2()); } \
-  void set_ ##C0 ##C2 ##C1 (const __vector<value_type, v3_type_internal, 3>& v) { set_ ##C0 (v.get_s0());  set_ ##C2 (v.get_s1()); set_ ##C1 (v.get_s2()); } \
-  void set_ ##C1 ##C0 ##C2 (const __vector<value_type, v3_type_internal, 3>& v) { set_ ##C1 (v.get_s0());  set_ ##C0 (v.get_s1()); set_ ##C2 (v.get_s2()); } \
-  void set_ ##C1 ##C2 ##C0 (const __vector<value_type, v3_type_internal, 3>& v) { set_ ##C1 (v.get_s0());  set_ ##C2 (v.get_s1()); set_ ##C0 (v.get_s2()); } \
-  void set_ ##C2 ##C0 ##C1 (const __vector<value_type, v3_type_internal, 3>& v) { set_ ##C2 (v.get_s0());  set_ ##C0 (v.get_s1()); set_ ##C1 (v.get_s2()); } \
-  void set_ ##C2 ##C1 ##C0 (const __vector<value_type, v3_type_internal, 3>& v) { set_ ##C2 (v.get_s0());  set_ ##C1 (v.get_s1()); set_ ##C0 (v.get_s2()); } 
-#endif
 
   DECLARE_VECTOR_THREE_COMPONENT_GET_SET(x,y,z)
   DECLARE_VECTOR_THREE_COMPONENT_GET_SET(x,y,w)
@@ -313,9 +293,8 @@ public:
   // four-component accessors
 
 #define DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C0,C1,C2,C3) \
-  __vector<value_type, v4_type_internal, 4> get_ ##C0 ##C1 ## C2 ## C3 () { return create_vector4(get_ ##C0 (), get_ ##C1 (), get_ ##C2 (), get_ ##C3 ()); } \
-  void set_ ##C0 ##C1 ##C2 ##C3 (const __vector<value_type, v4_type_internal, 4>& v) { set_ ##C0 (v.get_s0());  set_ ##C1 (v.get_s1()); set_ ##C2 (v.get_s2()); set_ ##C3 (v.get_s3()); } 
-
+  __vector<value_type, v4_type_internal, 4> get_ ##C0 ##C1 ## C2 ## C3 () { return create_vector4(data.C0 ## C1 ## C2 ## C3); } \
+  void set_ ##C0 ##C1 ##C2 ##C3 (const __vector<value_type, v4_type_internal, 4>& v) { data.C0 ## C1 ## C2 ## C3 = v.get_vector(); }  
 
 #define DECLARE_VECTOR_FOUR_COMPONENT_GET_SET(C0,C1,C2,C3) \
   DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C0,C1,C2,C3) \
@@ -529,12 +508,11 @@ private:
   }
 
   __vector<value_type,v3_type_internal,3> create_vector3(v3_type_internal v) {
-    return __vector<value_type,v2_type_internal,3>(v);
+    return __vector<value_type,v3_type_internal,3>(v);
   }
 
-  __vector<value_type,v4_type_internal,4> create_vector4(value_type v1, value_type v2
-                                                       , value_type v3, value_type v4) {
-    return __vector<value_type,v2_type_internal,4>(v1,v2,v3,v4);
+  __vector<value_type,v4_type_internal,4> create_vector4(v4_type_internal v) {
+    return __vector<value_type,v4_type_internal,4>(v);
   }
 };
 
