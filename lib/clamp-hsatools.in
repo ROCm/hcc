@@ -125,7 +125,7 @@ getDefaultHsaNodeName() {
 # AMDGPU target 
 ################
 
-AMDGPU_TARGET=@HSA_AMDGPU_GPU_TARGET@
+AMDGPU_TARGET=@AMDGPU_TARGET@
 
 ARGS="$@"
 for ARG in $ARGS
