@@ -22,8 +22,8 @@ public:
   int a;
   int b;
   Foo2 foo2;
-  int getX() { return x;}
-  int getY() { return y;}
+  [[hc]][[cpu]] int getX() { return x;}
+  [[hc]][[cpu]] int getY() { return y;}
 };
 
 struct Bar {
