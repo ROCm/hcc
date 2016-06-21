@@ -10,7 +10,7 @@
 
 __attribute__((hc_grid_launch)) void foo(grid_launch_parm lp, int* a)
 {
-  int x = lp.threadId.x + lp.groupDim.x*lp.groupId.x;
+  int x = hc_get_workitem_id(0) + hc_get_group_id(0)*lp.group_dim.x;
   a[x] = x;
 }
 
@@ -32,7 +32,7 @@ int main()
   grid_launch_parm lp;
   grid_launch_init(&lp);
 
-  lp.groupDim = gl_dim3(size);
+  lp.group_dim = gl_dim3(size);
 
   hc::completion_future cf;
   lp.cf = &cf;
