@@ -29,7 +29,7 @@ namespace {
 const int SIZE = GRID_SIZE*TILE_SIZE;
 
 __attribute__((hc_grid_launch)) void kernel1(grid_launch_parm lp, Foo *x, Bar *y, const constStructconst* C) {
-  int i = lp.threadId.x + lp.groupId.x*lp.groupDim.x;
+  int i = hc_get_workitem_id(0) + hc_get_group_id(0)*lp.group_dim.x;
 
   x[i].x = i;
   y[i].x = i + C[i].x;
@@ -54,8 +54,8 @@ int main(void) {
   grid_launch_parm lp;
   grid_launch_init(&lp);
 
-  lp.gridDim = gl_dim3(GRID_SIZE, 1);
-  lp.groupDim = gl_dim3(TILE_SIZE, 1);
+  lp.grid_dim = gl_dim3(GRID_SIZE, 1);
+  lp.group_dim = gl_dim3(TILE_SIZE, 1);
 
   hc::completion_future cf;
   lp.cf = &cf;

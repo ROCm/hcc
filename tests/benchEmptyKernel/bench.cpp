@@ -113,8 +113,8 @@ int main(int argc, char* argv[]) {
   grid_launch_parm lp;
   grid_launch_init(&lp);
 
-  lp.gridDim = gl_dim3(GRID_SIZE);
-  lp.groupDim = gl_dim3(TILE_SIZE);
+  lp.grid_dim = gl_dim3(GRID_SIZE);
+  lp.group_dim = gl_dim3(TILE_SIZE);
 
   // Set up extra stuff
   static hc::accelerator_view av = hc::accelerator().get_default_view();
@@ -123,7 +123,7 @@ int main(int argc, char* argv[]) {
   // launch empty kernel to initialize everything first
   // timing for null kernel launch appears later
 
-  hc::parallel_for_each(av, hc::extent<3>(lp.gridDim.x*lp.groupDim.x,1,1).tile(lp.groupDim.x,1,1),
+  hc::parallel_for_each(av, hc::extent<3>(lp.grid_dim.x*lp.group_dim.x,1,1).tile(lp.group_dim.x,1,1),
   [=](hc::index<3>& idx) __HC__ {
   }).wait();
 
@@ -137,7 +137,7 @@ int main(int argc, char* argv[]) {
   // Timing null pfe
   for(int i = 0; i < dispatch_count; ++i) {
     start = std::chrono::high_resolution_clock::now();
-    auto cf = hc::parallel_for_each(av, hc::extent<3>(lp.gridDim.x*lp.groupDim.x,1,1).tile(lp.groupDim.x,1,1),
+    auto cf = hc::parallel_for_each(av, hc::extent<3>(lp.grid_dim.x*lp.group_dim.x,1,1).tile(lp.group_dim.x,1,1),
     [=](hc::index<3>& idx) __HC__ {
     });
     cf.wait();
