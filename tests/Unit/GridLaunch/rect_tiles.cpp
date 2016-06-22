@@ -15,8 +15,10 @@
 
 __attribute__((hc_grid_launch)) void kernel_call(grid_launch_parm lp, int *a_d, int pitch)
 {
-  int i = lp.groupId.x*TILE_I + lp.threadId.x;
-  int j = lp.groupId.y*TILE_J + lp.threadId.y;
+  //int i = lp.group_id.x*TILE_I + lp.thread_id.x;
+  //int j = lp.group_id.y*TILE_J + lp.thread_id.y;
+  int i = amp_get_group_id(0) * TILE_I + amp_get_local_id(0);
+  int j = amp_get_group_id(1) * TILE_J + amp_get_local_id(1);
 
   int i2d = i + j*pitch/sizeof(int);
 
@@ -38,8 +40,8 @@ int main()
   grid_launch_parm lp;
   grid_launch_init(&lp);
 
-  lp.gridDim = gl_dim3(width/TILE_I, height/TILE_J);
-  lp.groupDim = gl_dim3(TILE_I, TILE_J);
+  lp.grid_dim = gl_dim3(width/TILE_I, height/TILE_J);
+  lp.group_dim = gl_dim3(TILE_I, TILE_J);
 
   hc::completion_future cf;
   lp.cf = &cf;
