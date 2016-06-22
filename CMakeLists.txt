@@ -272,21 +272,40 @@ endif ((HAS_OPENCL EQUAL 0) AND (HAS_HSA EQUAL 0))
 if (HSA_USE_AMDGPU_BACKEND)
   add_definitions(-DHSA_USE_AMDGPU_BACKEND)
   set(HAS_HSA_HOF 0)
-  find_program(AMDPHDRS amdphdrs PATHS /opt/rocm/bin ${AMDPHDRS_DIR} NO_DEFAULT_PATH)
-  find_program(AMDPHDRS amdphdrs)
-  MESSAGE("AMDPHDRS_DIR = ${AMDPHDRS_DIR}, actually found at: ${AMDPHDRS}")
-  if (NOT AMDPHDRS)
-    MESSAGE("amdphdrs not found.  Use -DAMDPHDRS_DIR=<amdphdrs path>.")
-  endif (NOT AMDPHDRS)
 endif ()
 
-set(HSA_AMDGPU_GPU_TARGET "auto" CACHE STRING "Target GPU device (kaveri,carrizo,fiji)")
+set(HSA_AMDGPU_GPU_TARGET "auto" CACHE STRING "Target AMDGPU ISA version")
 
 if (NOT (HSA_AMDGPU_GPU_TARGET STREQUAL "kaveri" OR
          HSA_AMDGPU_GPU_TARGET STREQUAL "carrizo" OR
          HSA_AMDGPU_GPU_TARGET STREQUAL "fiji" OR
+         HSA_AMDGPU_GPU_TARGET STREQUAL "hawaii" OR
+         HSA_AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:7:0:0" OR
+         HSA_AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:7:0:1" OR
+         HSA_AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:8:0:1" OR
+         HSA_AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:8:0:3" OR
          HSA_AMDGPU_GPU_TARGET STREQUAL "auto"))
-  MESSAGE(FATAL_ERROR "${HSA_AMDGPU_GPU_TARGET} is not a valid GPU")
+  MESSAGE(FATAL_ERROR "${HSA_AMDGPU_GPU_TARGET} is not a valid AMDGPU target")
+endif()
+
+# AMDGPU_TARGET would hold the value used by compiler scripts
+SET(AMDGPU_TARGET ${HSA_AMDGPU_GPU_TARGET})
+
+# Map ISA version to GPU family
+if (HSA_AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:7:0:0")
+  SET(AMDGPU_TARGET "kaveri")
+endif()
+
+if (HSA_AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:7:0:1")
+  SET(AMDGPU_TARGET "hawaii")
+endif()
+
+if (HSA_AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:8:0:1")
+  SET(AMDGPU_TARGET "carrizo")
+endif()
+
+if (HSA_AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:8:0:3")
+  SET(AMDGPU_TARGET "fiji")
 endif()
 
 #################
@@ -336,7 +355,7 @@ set(CLANG_BIN_DIR "${PROJECT_BINARY_DIR}/compiler")
 file(MAKE_DIRECTORY ${CLANG_BIN_DIR})
 if (HAS_HSA)
 add_custom_target(clang
-  COMMAND ${CMAKE_COMMAND} ${CLANG_SRC_DIR}
+  COMMAND ${CMAKE_COMMAND} -Wno-dev ${CLANG_SRC_DIR}
           -DHAS_HSA=${HAS_HSA}
           -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
           -DKALMAR_VERSION_STRING=${KALMAR_VERSION_STRING}
@@ -355,7 +374,7 @@ add_custom_target(clang
 )
 else (HAS_HSA)
 add_custom_target(clang
-  COMMAND ${CMAKE_COMMAND} ${CLANG_SRC_DIR}
+  COMMAND ${CMAKE_COMMAND} -Wno-dev ${CLANG_SRC_DIR}
           -DHAS_HSA=${HAS_HSA}
           -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
           -DKALMAR_VERSION_STRING=${KALMAR_VERSION_STRING}
@@ -377,6 +396,28 @@ endif (HAS_HSA)
 # - hcc
 # - clang++
 # - clang
+
+if (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
+
+add_custom_command(TARGET clang POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/hcc ${PROJECT_BINARY_DIR}/bin/hcc
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/clang++ ${PROJECT_BINARY_DIR}/bin/clang++
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/clang ${PROJECT_BINARY_DIR}/bin/clang
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../llvm/bin/llvm-mc ${PROJECT_BINARY_DIR}/bin/llvm-mc
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../llvm/bin/llvm-objdump ${PROJECT_BINARY_DIR}/bin/llvm-objdump
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../llvm/bin/lld ${PROJECT_BINARY_DIR}/bin/lld
+  WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/bin
+)
+install(FILES ${PROJECT_BINARY_DIR}/bin/hcc
+              ${PROJECT_BINARY_DIR}/bin/clang++
+              ${PROJECT_BINARY_DIR}/bin/clang
+              ${PROJECT_BINARY_DIR}/bin/llvm-mc
+              ${PROJECT_BINARY_DIR}/bin/llvm-objdump
+              ${PROJECT_BINARY_DIR}/bin/lld
+        DESTINATION bin)
+
+else (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
+
 add_custom_command(TARGET clang POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/hcc ${PROJECT_BINARY_DIR}/bin/hcc
   COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/clang++ ${PROJECT_BINARY_DIR}/bin/clang++
@@ -387,6 +428,10 @@ install(FILES ${PROJECT_BINARY_DIR}/bin/hcc
               ${PROJECT_BINARY_DIR}/bin/clang++
               ${PROJECT_BINARY_DIR}/bin/clang
         DESTINATION bin)
+
+endif (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
+
+
 
 # install clang along with HCC
 # stored under compiler/
@@ -413,7 +458,7 @@ set(HLC_SRC_DIR "${PROJECT_SOURCE_DIR}/hlc")
 set(HLC_BIN_DIR "${PROJECT_BINARY_DIR}/hlc")
 file(MAKE_DIRECTORY ${HLC_BIN_DIR})
 add_custom_target(hlc
-  COMMAND ${CMAKE_COMMAND} ${HLC_SRC_DIR}
+  COMMAND ${CMAKE_COMMAND} -Wno-dev ${HLC_SRC_DIR}
           -DLLVM_ENABLE_EH=ON
           -DLLVM_ENABLE_RTTI=ON
           -DLLVM_TARGETS_TO_BUILD=
@@ -436,7 +481,7 @@ set(HSAILASM_SRC_DIR "${PROJECT_SOURCE_DIR}/HSAILasm")
 set(HSAILASM_BIN_DIR "${PROJECT_BINARY_DIR}/HSAILasm")
 file(MAKE_DIRECTORY ${HSAILASM_BIN_DIR})
 add_custom_target(HSAILasm
-  COMMAND ${CMAKE_COMMAND} ${HSAILASM_SRC_DIR}
+  COMMAND ${CMAKE_COMMAND} -Wno-dev -DBUILD_LIBBRIGDWARF=OFF ${HSAILASM_SRC_DIR}
   COMMAND make -j4 # not portable, but we need it this way
   WORKING_DIRECTORY ${HSAILASM_BIN_DIR}
   DEPENDS hlc
@@ -457,8 +502,21 @@ add_custom_target(HSAILasm_setup
 endif(NOT HSA_LLVM_BIN_DIR)
 
 if (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
+
+  # create a symlink to the LLVM binaries for the amdgpu backend in the project directory
+  add_custom_target(lightning_bin
+    COMMAND mkdir -p "${PROJECT_BINARY_DIR}/llvm/"
+    COMMAND ${CMAKE_COMMAND} -E create_symlink "${HSA_LLVM_BIN_DIR}" "${PROJECT_BINARY_DIR}/llvm/bin"
+  )
+
+  # include the amdgpu backend binaries in the hcc package
+  install(DIRECTORY ${HSA_LLVM_BIN_DIR}
+          DESTINATION llvm
+          COMPONENT lightning_bin
+          PATTERN * PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+
   # do NOT depend on HLC or HSAILasm in case we use AMDGPU backend
-  add_custom_target(world DEPENDS clang)
+  add_custom_target(world DEPENDS lightning_bin clang)
 else (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
   # build hlc and HSAILasm in case HSA_USE_AMDGPU_BACKEND 
   # or HSA_LLVM_BIN_DIR is not set
@@ -577,17 +635,10 @@ set(HCC_GENERAL_DEBIAN_DEP "libstdc++-4.8-dev, libc++1, libc++-dev, libc++abi1, 
 set(OFFICIAL_RELEASE_BUILD 1)
 if (OFFICIAL_RELEASE_BUILD)
   set(HCC_ROCR_DEBIAN_DEP "hsa-rocr-dev, hsa-ext-rocr-dev")
-  if (HSA_USE_AMDGPU_BACKEND)
-    # dependencies for official release build with lightning backend
-    set(HCC_BACKEND_DEBIAN_DEP "llvm-amdgpu (=3.9-r269660)")
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_ROCR_DEBIAN_DEP}, ${HCC_GENERAL_DEBIAN_DEP}, ${HCC_BACKEND_DEBIAN_DEP}")
-  else (HSA_USE_AMDGPU_BACKEND)
-    # dependencies for official releasebuild with non-lightning backend
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_ROCR_DEBIAN_DEP}, ${HCC_GENERAL_DEBIAN_DEP}")
-  endif (HSA_USE_AMDGPU_BACKEND)
+  set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_ROCR_DEBIAN_DEP}, ${HCC_GENERAL_DEBIAN_DEP}")
 else (OFFICIAL_RELEASE_BUILD)
-    # dependencies for any local build
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_GENERAL_DEBIAN_DEP}")
+  # dependencies for any local build
+  set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_GENERAL_DEBIAN_DEP}")
 endif (OFFICIAL_RELEASE_BUILD)
 
 set(CPACK_GENERATOR "DEB;TGZ")

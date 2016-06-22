@@ -23,7 +23,7 @@ public:
   int b;
   Foo2 foo2;
   int getX() { return x;}
-  int getY() { return y;}
+  int getY() [[hc]] { return y;}
 };
 
 struct Bar {

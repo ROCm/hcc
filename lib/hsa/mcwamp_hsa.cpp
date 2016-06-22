@@ -130,6 +130,51 @@ static const char* getHSAErrorString(hsa_status_t s) {
 		exit(-1);\
 	}
 
+
+namespace Kalmar {
+
+enum class HCCRuntimeStatus{
+
+  // No error 
+  HCCRT_STATUS_SUCCESS = 0x0,
+
+  // A generic error
+  HCCRT_STATUS_ERROR = 0x2000,
+
+  // The maximum number of outstanding AQL packets in a queue has been reached
+  HCCRT_STATUS_ERROR_COMMAND_QUEUE_OVERFLOW = 0x2001
+};
+
+const char* getHCCRuntimeStatusMessage(const HCCRuntimeStatus status) {
+  const char* message = nullptr;
+  switch(status) {
+    //HCCRT_CASE_STATUS_STRING(HCCRT_STATUS_SUCCESS,"Success");
+    case HCCRuntimeStatus::HCCRT_STATUS_SUCCESS: 
+      message = "Success"; break; 
+    case HCCRuntimeStatus::HCCRT_STATUS_ERROR:  
+      message = "Generic error"; break; 
+    case HCCRuntimeStatus::HCCRT_STATUS_ERROR_COMMAND_QUEUE_OVERFLOW: 
+      message = "Command queue overflow"; break; 
+    default: 
+      message = "Unknown error code"; break;
+  };
+  return message;
+}
+
+inline static void checkHCCRuntimeStatus(const HCCRuntimeStatus status, const unsigned int line, hsa_queue_t* q=nullptr) {
+  if (status != HCCRuntimeStatus::HCCRT_STATUS_SUCCESS) {
+    printf("### HCC runtime error: %s at line:%d\n", getHCCRuntimeStatusMessage(status), line);
+    if (q != nullptr)
+      assert(HSA_STATUS_SUCCESS == hsa_queue_destroy(q));
+    assert(HSA_STATUS_SUCCESS == hsa_shut_down());
+	  exit(-1);
+  }
+}
+
+} // namespace Kalmar
+
+
+
 extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v);
 extern "C" void PushArgPtrImpl(void *ker, int idx, size_t sz, const void *v);
 
@@ -2383,12 +2428,9 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
                                             &group_segment_size);
     STATUS_CHECK_Q(status, commandQueue, __LINE__);
 
-#ifndef HSA_USE_AMDGPU_BACKEND
-    // let kernel know static group segment size
-    kernel->executable->setSymbolToValue("&hcc_static_group_segment_size", group_segment_size);
-
-    // let kernel know dynamic group segment size
-    kernel->executable->setSymbolToValue("&hcc_dynamic_group_segment_size", this->dynamicGroupSize);
+#if KALMAR_DEBUG 
+    std::cerr << "static group segment size: " << group_segment_size << "\n";
+    std::cerr << "dynamic group segment size: " << this->dynamicGroupSize << "\n";
 #endif
 
     // add dynamic group segment size
@@ -2406,8 +2448,12 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
     uint32_t queueMask = commandQueue->size - 1;
     // TODO: Need to check if package write is correct.
     uint64_t index = hsa_queue_load_write_index_relaxed(commandQueue);
+    uint64_t nextIndex = index + 1;
+    if (nextIndex - hsa_queue_load_read_index_acquire(commandQueue) >= commandQueue->size) {
+      checkHCCRuntimeStatus(Kalmar::HCCRuntimeStatus::HCCRT_STATUS_ERROR_COMMAND_QUEUE_OVERFLOW, __LINE__, commandQueue);
+    }
     ((hsa_kernel_dispatch_packet_t*)(commandQueue->base_address))[index & queueMask] = aql;
-    hsa_queue_store_write_index_relaxed(commandQueue, index + 1);
+    hsa_queue_store_write_index_relaxed(commandQueue, nextIndex);
   
 #if KALMAR_DEBUG
     std::cerr << "ring door bell to dispatch kernel\n";
@@ -2648,6 +2694,10 @@ HSABarrier::enqueueBarrier(hsa_queue_t* queue) {
     // Obtain the write index for the command queue
     uint64_t index = hsa_queue_load_write_index_relaxed(queue);
     const uint32_t queueMask = queue->size - 1;
+    uint64_t nextIndex = index + 1;
+    if (nextIndex - hsa_queue_load_read_index_acquire(queue) >= queue->size) {
+      checkHCCRuntimeStatus(Kalmar::HCCRuntimeStatus::HCCRT_STATUS_ERROR_COMMAND_QUEUE_OVERFLOW, __LINE__, queue);
+    }
 
     // Define the barrier packet to be at the calculated queue index address
     hsa_barrier_and_packet_t* barrier = &(((hsa_barrier_and_packet_t*)(queue->base_address))[index&queueMask]);
@@ -2667,7 +2717,7 @@ HSABarrier::enqueueBarrier(hsa_queue_t* queue) {
 #endif
 
     // Increment write index and ring doorbell to dispatch the kernel
-    hsa_queue_store_write_index_relaxed(queue, index+1);
+    hsa_queue_store_write_index_relaxed(queue, nextIndex);
     hsa_signal_store_relaxed(queue->doorbell_signal, index);
 
     isDispatched = true;

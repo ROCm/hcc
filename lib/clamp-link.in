@@ -18,11 +18,13 @@ HLC_LLC=$HLC_DIR/bin/llc
 HLC_ASM_DIR=$BINDIR/../../HSAILasm
 HLC_ASM=$HLC_ASM_DIR/HSAILasm
 
-if [ -n "@HSA_LLVM_BIN_DIR@" ]; then
-    HLC_DIR=@HSA_LLVM_BIN_DIR@
-    HLC_LLVM_LINK=@HSA_LLVM_BIN_DIR@/llvm-link
-    HLC_OPT=@HSA_LLVM_BIN_DIR@/opt
-    HLC_LLC=@HSA_LLVM_BIN_DIR@/llc
+
+HSA_LLVM_BIN_DIR="${BASH_SOURCE%/*}/../../llvm/bin"
+if [ -d "$HSA_LLVM_BIN_DIR" ]; then
+    HLC_DIR=$HSA_LLVM_BIN_DIR
+    HLC_LLVM_LINK=$HSA_LLVM_BIN_DIR/llvm-link
+    HLC_OPT=$HSA_LLVM_BIN_DIR/opt
+    HLC_LLC=$HSA_LLVM_BIN_DIR/llc
 fi
 
 ################
@@ -38,6 +40,7 @@ VERBOSE=0
 LOWER_OPENCL=@HAS_OPENCL@
 LOWER_HSA=@HAS_HSA@
 LOWER_HOF=@HAS_HSA_HOF@
+AMDGPU_TARGET=@AMDGPU_TARGET@
 
 ################
 # Sanity check for HSAIL backend
@@ -50,7 +53,7 @@ if [ $HSA_USE_AMDGPU_BACKEND == "ON" ]; then
 fi
 
 if [ $LOWER_HSA == 1 ]; then
-  if [ -d $HLC_DIR ] && [ -e $HLC_LLVM_LINK ] && [ -e $HLC_OPT ] && [ -e $HLC_LLC ] && [ -d $HLC_ASM_DIR ] && [ -e $HLC_ASM ] || [ $KM_USE_AMDGPU -eq 1 ] ; then
+  if [ -d $HLC_DIR ] && [ -e $HLC_LLVM_LINK ] && [ -e $HLC_OPT ] && [ -e $HLC_LLC ] && [ -d $HLC_ASM_DIR ] && [ -e $HLC_ASM ] || [ $KM_USE_AMDGPU -eq 1 ] ; then 
     # all HSA tools are available
     LOWER_HSA=1
   else
@@ -175,7 +178,15 @@ do
     continue
   fi
  
-
+  ######################
+  # Parse AMDGPU target
+  ######################
+  case $ARG in
+    --amdgpu-target=*)
+    AMDGPU_TARGET="${ARG#*=}"
+    continue
+    ;;
+  esac
 
   #####################################
   # detect object or static library
@@ -405,6 +416,21 @@ do
   elif [ $ARG == "--disable-hsa" ]; then
     LOWER_HSA=0
   else
+
+    ######################
+    # Parse AMDGPU target
+    ######################
+    case $ARG in
+      --amdgpu-target=*)
+      AMDGPU_TARGET="${ARG#*=}"
+      continue
+      ;;
+    esac
+
+    #########################
+    # Append other arguments
+    #########################
+
     LINK_OTHER_ARGS=$LINK_OTHER_ARGS" "$ARG
   fi
 done
@@ -415,6 +441,8 @@ if [ $VERBOSE == 1 ]; then
   echo "host args: "$LINK_HOST_ARGS
   echo ""
   echo "other args: "$LINK_OTHER_ARGS
+  echo ""
+  echo "AMDGPU target: "$AMDGPU_TARGET
   echo ""
 fi
 
@@ -434,6 +462,9 @@ if [ $VERBOSE == 1 ]; then
   echo "new host args: "$NEW_LINK_HOST_ARGS
   echo ""
   echo "new other args: "$NEW_LINK_OTHER_ARGS
+  echo ""
+  echo "AMDGPU target: "$AMDGPU_TARGET
+  echo ""
 fi
 
 if [ $VERBOSE == 1 ]; then
@@ -495,9 +526,9 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
   if [ $LOWER_HSA == 1 ]; then
     # lower to HSA BRIG
     if [ $VERBOSE == 0 ]; then
-      $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.brig --hsa
+      $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.brig --hsa --amdgpu-target=$AMDGPU_TARGET
     else
-      $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.brig --hsa --verbose
+      $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.brig --hsa --amdgpu-target=$AMDGPU_TARGET --verbose
     fi
     ret=$?
     if [ $ret == 0 ]; then
@@ -516,8 +547,24 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
       $HOF_BIN/hof -output=$TEMP_DIR/kernel.isa -brig $TEMP_DIR/kernel.brig
     else
       if [ -e $HOF_BIN/amdhsafin ]; then
-        # Fiji 
-        HOF_ARCH="8:0:3"
+        case $AMDGPU_TARGET in
+          auto)
+            #default set to fiji
+            HOF_ARCH="8:0:3"
+          ;;
+          fiji)
+            HOF_ARCH="8:0:3"
+          ;;
+          kaveri)
+            HOF_ARCH="7:0:0"
+          ;;
+          carrizo)
+            HOF_ARCH="8:0:1"
+          ;;
+          hawaii)
+            HOF_ARCH="7:0:1"
+          ;;
+        esac
 
         # conduct HSA offline finalization for DGPU
         $HOF_BIN/amdhsafin -target=$HOF_ARCH -output=$TEMP_DIR/kernel.isa -brig $TEMP_DIR/kernel.brig -O2

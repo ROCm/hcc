@@ -5,6 +5,8 @@
 # $3 = (optional) --hsa will trigger HSAIL lowering
 #      (optional) --spir will trigger SPIR lowering
 #      (optional) --opencl will trigger OpenCL C lowering
+# $4 = (optional) --amdgpu-target=(fiji | kaveri | carrizo | hawaii)
+#                          selects AMDGPU target
 #
 # in case $3 is not set, then either SPIR or OpenCL C kernel
 # will be emitted according to the capability of GPU
@@ -22,10 +24,12 @@ fi
 
 # check command line arguments
 if [ "$#" -lt 2 ]; then
-  echo "Usage: $0 input_LLVM output_kernel (--hsa | --spir | --opencl) (--verbose)" >&2
+  echo "Usage: $0 input_LLVM output_kernel (--hsa | --spir | --opencl) (--amdgpu-target=(fiji | kaveri | carrizo | hawaii) (--verbose)" >&2
   echo "  --hsa    will trigger HSAIL/BRIG kernel output" >&2
   echo "  --spir   will trigger SPIR       kernel output" >&2
   echo "  --opencl will trigger OpenCL C   kernel output" >&2
+  echo "  --amdgpu-target=(fiji | kaveri | carrizo | hawaii)" >&2
+  echo "           selects AMDGPU target" >&2
   echo "  --verbose will enable GPU target lowering output" >&2
   exit 1
 fi
@@ -51,13 +55,32 @@ HSATOOLS=$BINDIR/clamp-hsatools
 
 VERBOSE=0
 
-# set verbose flag
+################
+# AMDGPU target 
+################
+
+AMDGPU_TARGET=@AMDGPU_TARGET@
+
+
 ARGS="$@"
 for ARG in $ARGS
 do
+  ######################
+  # Parse verbose flag
+  ######################
   if [ $ARG == "--verbose" ]; then
     VERBOSE=1
   fi
+
+  ######################
+  # Parse AMDGPU target
+  ######################
+  case $ARG in
+    --amdgpu-target=*)
+    AMDGPU_TARGET="${ARG#*=}"
+    continue
+    ;;
+  esac
 done
 
 HSA_USE_AMDGPU_BACKEND=@HSA_USE_AMDGPU_BACKEND@
@@ -128,7 +151,11 @@ if [ "$3" == "--hsa" ]; then
       cp $2 ./dump.hsa_math_linked.bc
     fi
 
-    $HSATOOLS $2
+    if [ "$AMDGPU_TARGET" != "" ]; then
+      $HSATOOLS $2 --amdgpu-target=$AMDGPU_TARGET
+    else
+      $HSATOOLS $2
+    fi
     RETVAL=$?
     if [ $RETVAL == 0 ]; then
       mv -f $2 $2.orig

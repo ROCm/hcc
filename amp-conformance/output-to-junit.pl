@@ -57,6 +57,8 @@ while ( <STDIN> ) {
         $result = '<skipped/>';
       } elsif ($1 eq 'failed') {
         $result = '<failure/>';
+      } elsif ($1 eq 'invalid or cannot open') {
+        $result = '<failure/>';
       }
       next;
     }
