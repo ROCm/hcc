@@ -127,8 +127,9 @@ int main(int argc, char* argv[]) {
   [=](hc::index<3>& idx) __HC__ {
   }).wait();
 
-  // Setting lp.cf to null forces synchonization for grid_launch
-  lp.cf = NULL;
+  // Setting lp.cf to completion_future so we can track completion: (NULL ignores all synchronization)
+  hc::completion_future cf;
+  lp.cf = &cf;
   lp.av = &av;
 
   std::cout << "Iterations per test:           " << dispatch_count << "\n";
@@ -153,6 +154,8 @@ int main(int argc, char* argv[]) {
   for(int i = 0; i < dispatch_count; ++i) {
     start = std::chrono::high_resolution_clock::now();
     kernel(lp);
+    lp.cf->wait();
+
     end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> dur = end - start;
     elapsed_grid_launch.push_back(dur);
