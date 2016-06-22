@@ -512,8 +512,8 @@ struct StringFinder
 #if CHECK_LP_ARGS
           out << "assert(x_lp.barrier_bit   ==  barrier_bit_queue_default);\n";  // remove when barrier-bit supported
           out << "assert(x_lp.launch_fence  == -1);\n";  // remove when launch_fence supported
-          out << "}\n";
 #endif
+          out << "}\n";
 
 
           // This code is in the compute kernel that is executed on the accelerator :
