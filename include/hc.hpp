@@ -167,8 +167,7 @@ public:
      * The version of the accelerator view is usually the same as that of the
      * parent accelerator.
      */
-    // FIXME: dummy implementation now
-    unsigned int get_version() const { return 0; } 
+    unsigned int get_version() const;
 
     /**
      * Returns the accelerator that this accelerator_view has been created on.
@@ -605,8 +604,7 @@ public:
      * version number is in the high-order 16 bits, and the minor version number
      * is in the low-order bits.
      */
-    // FIXME: dummy implementation now
-    unsigned int get_version() const { return 0; }
+    unsigned int get_version() const { return pDev->get_version(); }
 
     /**
      * This property indicates that the accelerator may be shared by (and thus
@@ -1125,6 +1123,8 @@ inline accelerator accelerator_view::get_accelerator() const { return pQueue->ge
 inline completion_future accelerator_view::create_marker() {
     return completion_future(pQueue->EnqueueMarker());
 }
+
+inline unsigned int accelerator_view::get_version() const { return get_accelerator().get_version(); }
 
 // ------------------------------------------------------------------------
 // extent

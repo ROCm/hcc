@@ -1050,6 +1050,9 @@ private:
     not be linked directly to the first cpu node, host */
     hsa_agent_t host_;
 
+    uint16_t versionMajor;
+    uint16_t versionMinor;
+
 public:
  
     uint32_t getWorkgroupMaxSize() {
@@ -1170,7 +1173,8 @@ public:
                                kernargPool(), kernargPoolFlag(), kernargCursor(0), kernargPoolMutex(),
                                executables(),
                                profile(hcAgentProfileNone),
-                               path(), description(), host_(host) {
+                               path(), description(), host_(host),
+                               versionMajor(0), versionMinor(0) {
 #if KALMAR_DEBUG
         std::cerr << "HSADevice::HSADevice()\n";
 #endif
@@ -1178,6 +1182,7 @@ public:
         hsa_status_t status = HSA_STATUS_SUCCESS;
 
         /// set up path and description
+        /// and version information
         {
             char name[64] {0};
             uint32_t node = 0;
@@ -1197,6 +1202,15 @@ public:
 #if KALMAR_DEBUG
             std::wcerr << L"Path: " << path << L"\n";
             std::wcerr << L"Description: " << description << L"\n";
+#endif
+
+            status = hsa_agent_get_info(agent, HSA_AGENT_INFO_VERSION_MAJOR, &versionMajor);
+            STATUS_CHECK(status, __LINE__);
+            status = hsa_agent_get_info(agent, HSA_AGENT_INFO_VERSION_MINOR, &versionMinor);
+            STATUS_CHECK(status, __LINE__);
+
+#if KALMAR_DEBUG
+            std::cout << "Version Major: " << versionMajor << " Minor: " << versionMinor << "\n";
 #endif
         }
 
@@ -1347,6 +1361,7 @@ public:
         return (useCoarseGrainedRegion == false);
     }
     bool is_emulated() const override { return false; }
+    uint32_t get_version() const { return ((static_cast<unsigned int>(versionMajor) << 16) | versionMinor); }
 
     void* create(size_t count, struct rw_info* key) override {
         void *data = nullptr;

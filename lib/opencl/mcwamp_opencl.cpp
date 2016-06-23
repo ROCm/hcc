@@ -367,6 +367,7 @@ public:
     bool is_lim_double() const override { return true; }
     bool is_unified() const override { return false; }
     bool is_emulated() const override { return false; }
+    uint32_t get_version() const override { return 0; }
 
     void BuildProgram(void* size, void* source, bool needsCompilation = true) override {
         if (programs.find(source) == std::end(programs))
