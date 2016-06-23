@@ -504,6 +504,8 @@ struct pool_iterator
     bool        _found_local_memory_pool;
     bool        _found_coarsegrained_system_memory_pool;
 
+    size_t _local_memory_pool_size;
+
     pool_iterator() ;
 };
 
@@ -519,6 +521,8 @@ pool_iterator::pool_iterator()
     _found_finegrained_system_memory_pool = false;
     _found_local_memory_pool = false;
     _found_coarsegrained_system_memory_pool = false;
+
+    _local_memory_pool_size = 0;
 }
 //-----
 
@@ -1073,15 +1077,15 @@ public:
         hsa_amd_memory_pool_get_info(region, HSA_AMD_MEMORY_POOL_INFO_SEGMENT, &segment);
     
         if (segment == HSA_AMD_SEGMENT_GLOBAL) {
-#if KALMAR_DEBUG
           size_t size = 0;
           hsa_amd_memory_pool_get_info(region, HSA_AMD_MEMORY_POOL_INFO_SIZE, &size);
-          size = size/(1024*1024);
-          std::cerr << "found memory pool of GPU local memory, size(MB) = " << size << std::endl;
+#if KALMAR_DEBUG
+          std::cerr << "found memory pool of GPU local memory, size(MB) = " << (size/(1024*1024)) << std::endl;
 #endif 
           pool_iterator *ri = (pool_iterator*) (data);
           ri->_local_memory_pool = region;
           ri->_found_local_memory_pool = true;
+          ri->_local_memory_pool_size = size;
 
           return HSA_STATUS_INFO_BREAK;
         }
@@ -1354,7 +1358,7 @@ public:
 
     std::wstring get_path() const override { return path; }
     std::wstring get_description() const override { return description; }
-    size_t get_mem() const override { return 0; }
+    size_t get_mem() const override { return ri._local_memory_pool_size; }
     bool is_double() const override { return true; }
     bool is_lim_double() const override { return true; }
     bool is_unified() const override {
