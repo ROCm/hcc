@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include "hc_types.inl"
 
 #define DECLARE_VECTOR_TYPE_INTERNAL(VECTOR_TYPE,SCALAR_TYPE,NUM_ELEMENT) typedef SCALAR_TYPE VECTOR_TYPE __attribute__((ext_vector_type(NUM_ELEMENT)))
 
@@ -122,6 +123,7 @@ private:
   typedef value_type v4_type_internal  __attribute__((ext_vector_type(4)));
   typedef value_type v8_type_internal  __attribute__((ext_vector_type(8)));
   typedef value_type v16_type_internal  __attribute__((ext_vector_type(16)));
+
 
 public:
 
