@@ -759,7 +759,7 @@ public:
 
     // wait for dependent async operations to complete
     void waitForDependentAsyncOps(void* buffer) {
-        auto dependentAsyncOpVector = bufferKernelMap[buffer];
+        auto&& dependentAsyncOpVector = bufferKernelMap[buffer];
         for (int i = 0; i < dependentAsyncOpVector.size(); ++i) {
           auto dependentAsyncOp = dependentAsyncOpVector[i];
           if (!dependentAsyncOp.expired()) {
