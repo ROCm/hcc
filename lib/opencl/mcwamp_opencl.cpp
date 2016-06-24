@@ -475,9 +475,10 @@ public:
             for (const auto pId : platform_id) {
                 cl_uint num_device;
                 err = clGetDeviceIDs(pId, Conf.type, 0, nullptr, &num_device);
-                assert(err == CL_SUCCESS);
-                if (num_device == 0)
+                if (err == CL_DEVICE_NOT_FOUND)
                     continue;
+                assert(err == CL_SUCCESS);
+
                 std::vector<cl_device_id> dev(num_device);
                 err = clGetDeviceIDs(pId, Conf.type, num_device, dev.data(), nullptr);
                 assert(err == CL_SUCCESS);
