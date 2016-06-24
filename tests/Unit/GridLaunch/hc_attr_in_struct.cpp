@@ -28,8 +28,8 @@ int main() {
 
   grid_launch_parm lp;
   grid_launch_init(&lp);
-  lp.gridDim = gl_dim3(1);
-  lp.groupDim = gl_dim3(1);
+  lp.grid_dim = gl_dim3(1);
+  lp.group_dim = gl_dim3(1);
   static hc::accelerator_view av = hc::accelerator().get_default_view();
 
   lp.cf = NULL;

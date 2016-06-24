@@ -5,6 +5,11 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 
+
+// Check the new launch-parm arguments to make sure they have sane default values.
+#define CHECK_LP_ARGS 1
+
+
 namespace
 {
 
@@ -182,8 +187,8 @@ namespace
    private:
       enum RangeOptions {
         PARAMETERS,
-        PARAMETERSKERNEL,
-        PARAMETERSCONSTR,
+        PARAMETERSKERNEL, // parameters to kernel
+        PARAMETERSCONSTR, // parameters in constructor
         INITIALIZE,
         ARGUMENTS,
         DECLARE
@@ -284,21 +289,28 @@ struct StringFinder
       switch(rop) {
         // type function(type1 arg1, type1 arg2, type2 arg3)
         case PARAMETERS:
+          if(i->getTypeName() == "grid_launch_parm_cxx") {
+              //out << "const ";
+          }
           out << i->getTypeNameWithQual() << " " << i->getArgName();
           break;
         // type function(grid_launch_parm lp, type1 arg2, type2 arg3)
         // retain grid_launch_parm for compatibility
         case PARAMETERSKERNEL:
           if(i->getTypeName() == "grid_launch_parm_cxx")
-            out << "grid_launch_parm" << " " << i->getArgName();
+            out << "const grid_launch_parm" << " " << i->getArgName();
           else
             out << i->getTypeNameWithQual() << " " << i->getArgName();
           break;
         // Class::Class(grid_launch_parm _lp, type1 arg2, type2 arg3)
         case PARAMETERSCONSTR:
-          out << i->getTypeNameWithQual() << " ";
-          if(i->getTypeName() == "grid_launch_parm_cxx")
-            out << "_";
+          if(i->getTypeName() == "grid_launch_parm_cxx") {
+            out << "const " ;
+            out << i->getTypeNameWithQual() << " ";
+            out << "x";
+          } else {
+            out << i->getTypeNameWithQual() << " ";
+          }
           out << i->getArgName();
           break;
         // : arg2(arg2), arg3(arg3) {}
@@ -480,6 +492,7 @@ struct StringFinder
           out << ");\n";
 
           // functor
+          // This code is executed on the host :
           out << "namespace\n{\nstruct " << func->getFunctorName() << "\n{\n";
           out << func->getFunctorName() << "(";
           func->printArgsAsParametersInConstructor(out);
@@ -489,22 +502,22 @@ struct StringFinder
             func->printArgsAsInitializers(out);
           }
           out << "{\n";
-          out << "_lp.gridDim.x = __lp.gridDim.x;\n";
-          out << "_lp.gridDim.y = __lp.gridDim.y;\n";
-          out << "_lp.gridDim.z = __lp.gridDim.z;\n";
-          out << "_lp.groupDim.x = __lp.groupDim.x;\n";
-          out << "_lp.groupDim.y = __lp.groupDim.y;\n";
-          out << "_lp.groupDim.z = __lp.groupDim.z;\n";
-          out << "_lp.groupMemBytes = __lp.groupMemBytes;\n";
+          out << "_lp.grid_dim.x = x_lp.grid_dim.x;\n";
+          out << "_lp.grid_dim.y = x_lp.grid_dim.y;\n";
+          out << "_lp.grid_dim.z = x_lp.grid_dim.z;\n";
+          out << "_lp.group_dim.x = x_lp.group_dim.x;\n";
+          out << "_lp.group_dim.y = x_lp.group_dim.y;\n";
+          out << "_lp.group_dim.z = x_lp.group_dim.z;\n";
+          out << "_lp.dynamic_group_mem_bytes = x_lp.dynamic_group_mem_bytes;\n";
+#if CHECK_LP_ARGS
+          out << "assert(x_lp.barrier_bit   ==  barrier_bit_queue_default);\n";  // remove when barrier-bit supported
+          out << "assert(x_lp.launch_fence  == -1);\n";  // remove when launch_fence supported
+#endif
           out << "}\n";
 
+
+          // This code is in the compute kernel that is executed on the accelerator :
           out << "void operator()(tiled_index<3>& i) __attribute((hc))\n{\n";
-          out << "_lp.groupId.x = i.tile[2];\n";
-          out << "_lp.groupId.y = i.tile[1];\n";
-          out << "_lp.groupId.z = i.tile[0];\n";
-          out << "_lp.threadId.x = i.local[2];\n";
-          out << "_lp.threadId.y = i.local[1];\n";
-          out << "_lp.threadId.z = i.local[0];\n";
           out << func->getFunctionName() << "(";
           func->printArgsAsArguments(out);
           out << ");\n}\n";
@@ -521,15 +534,13 @@ struct StringFinder
           out << "  static accelerator_view av = accelerator().get_default_view();\n";
           out << "  _lp.av = &av;\n";
           out << "}\n\n";
-          out << "completion_future cf = parallel_for_each(*(_lp.av),extent<3>(_lp.gridDim.z*_lp.groupDim.z,_lp.gridDim.y*_lp.groupDim.y,_lp.gridDim.x*_lp.groupDim.x).tile_with_dynamic(_lp.groupDim.z, _lp.groupDim.y, _lp.groupDim.x, _lp.groupMemBytes), \n"
+          out << "completion_future cf = parallel_for_each(*(_lp.av),extent<3>(_lp.grid_dim.z*_lp.group_dim.z,_lp.grid_dim.y*_lp.group_dim.y,_lp.grid_dim.x*_lp.group_dim.x).tile_with_dynamic(_lp.group_dim.z, _lp.group_dim.y, _lp.group_dim.x, _lp.dynamic_group_mem_bytes), \n"
               << func->getFunctorName()
               << "(";
           func->printArgsAsArguments(out);
           out << "));\n\n"
               << "if(_lp.cf)\n"
               << "  *(_lp.cf) = cf;\n"
-              << "else\n"
-              << "  cf.wait();\n"
               << "}\n";
       }
         return false;
