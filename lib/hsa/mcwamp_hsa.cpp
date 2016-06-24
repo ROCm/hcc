@@ -87,6 +87,7 @@ static const char* getHSAErrorString(hsa_status_t s) {
 
     const char* error_string;
     switch(s) {
+        CASE_ERROR_STRING(HSA_STATUS_ERROR);
         CASE_ERROR_STRING(HSA_STATUS_ERROR_INVALID_ARGUMENT);
         CASE_ERROR_STRING(HSA_STATUS_ERROR_INVALID_QUEUE_CREATION);
         CASE_ERROR_STRING(HSA_STATUS_ERROR_INVALID_ALLOCATION);
@@ -117,14 +118,14 @@ static const char* getHSAErrorString(hsa_status_t s) {
 
 #define STATUS_CHECK(s,line) if (s != HSA_STATUS_SUCCESS && s != HSA_STATUS_INFO_BREAK) {\
     const char* error_string = getHSAErrorString(s);\
-		printf("### Error: %s (%d) at line:%d\n", error_string, s, line);\
+		printf("### HCC STATUS_CHECK Error: %s (0x%x) at file:%s line:%d\n", error_string, s, __FILE__, line);\
                 assert(HSA_STATUS_SUCCESS == hsa_shut_down());\
 		exit(-1);\
 	}
 
 #define STATUS_CHECK_Q(s,q,line) if (s != HSA_STATUS_SUCCESS) {\
     const char* error_string = getHSAErrorString(s);\
-		printf("### Error: %s (%d) at line:%d\n", error_string, s, line);\
+		printf("### HCC STATUS_CHECK_Q Error: %s (0x%x) at file:%s line:%d\n", error_string, s, __FILE__, line);\
                 assert(HSA_STATUS_SUCCESS == hsa_queue_destroy(q));\
                 assert(HSA_STATUS_SUCCESS == hsa_shut_down());\
 		exit(-1);\
