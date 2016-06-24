@@ -531,6 +531,10 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
       $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.brig --hsa --amdgpu-target=$AMDGPU_TARGET --verbose
     fi
     ret=$?
+
+    md5=($(md5sum $TEMP_DIR/kernel.brig))
+    sed -i "1s/^/$md5/" $TEMP_DIR/kernel.brig
+
     if [ $ret == 0 ]; then
       # build a new kernel object
       pushd . > /dev/null

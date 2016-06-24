@@ -359,17 +359,18 @@ void DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, void** ker
       }
       firstTime = false;
     }
+    static const int md5_size = 32;
     if (hasFinalized) {
       *kernel_size =
         (ptrdiff_t)((void *)hsa_offline_finalized_kernel_end) -
-        (ptrdiff_t)((void *)hsa_offline_finalized_kernel_source);
-      *kernel_source = hsa_offline_finalized_kernel_source;
+        (ptrdiff_t)((void *)hsa_offline_finalized_kernel_source) - md5_size;
+      *kernel_source = (void*)((char*)hsa_offline_finalized_kernel_source + md5_size);
       *needs_compilation = false;
     } else {
       *kernel_size = 
         (ptrdiff_t)((void *)hsa_kernel_end) -
-        (ptrdiff_t)((void *)hsa_kernel_source);
-      *kernel_source = hsa_kernel_source;
+        (ptrdiff_t)((void *)hsa_kernel_source) - md5_size;
+      *kernel_source = (void*)((char*)hsa_kernel_source + md5_size);
       *needs_compilation = true;
     }
   }
