@@ -185,6 +185,11 @@ public:
   /// in rare occasions it may be called by other functions to ensure proper
   /// resource clean up sequence
   virtual void dispose() {}
+ 
+  /// set CU affinity of this queue.
+  /// the setting is permanent until the queue is destroyed or another setting
+  /// is called.
+  virtual bool set_cu_mask(const std::vector<bool>& cu_mask) { return false; };
 
 private:
   KalmarDevice* pDev;
@@ -297,6 +302,9 @@ public:
 
     /// check if @p other can access to this device's device memory, return true if so, false otherwise
     virtual bool is_peer(const KalmarDevice* other) {return false;}
+
+    /// get device's compute unit count
+    virtual unsigned int get_compute_unit_count() {return 0;}
 
 };
 
