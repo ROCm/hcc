@@ -91,6 +91,12 @@ deviceIdToGpuName() {
             platformName="carrizo" ;;
         7300 )
             platformName="fiji" ;;
+        # Polaris11 share the same ISA with Fiji
+        67e0 | 67e3 | 67e8 | 67eb | 67ef | 67ff | 67e1 | 67e7 | 67e9 )
+            platformName="fiji" ;;
+        # Polaris10 share the same ISA with Fiji
+        67c0 | 67c1 | 67c2 | 67c4 | 67c7 | 67df | 67c8 | 67c9 | 67ca | 67cc | 67cf )
+            platformName="fiji" ;;
         67a0 | 67a1 | 67a2 | 67a8 | 67a9 | 67aa | 67b0 | 67b1 | 67b8 | 67b9 | 67ba | 67be )
             platformName="hawaii" ;;
         * )
@@ -125,7 +131,7 @@ getDefaultHsaNodeName() {
 # AMDGPU target 
 ################
 
-AMDGPU_TARGET=@HSA_AMDGPU_GPU_TARGET@
+AMDGPU_TARGET=@AMDGPU_TARGET@
 
 ARGS="$@"
 for ARG in $ARGS

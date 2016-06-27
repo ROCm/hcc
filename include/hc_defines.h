@@ -22,6 +22,11 @@
 #include <ucontext.h>
 #endif
 
+namespace hc {
+  typedef __fp16 half;
+}
+
+
 //
 // work-item related builtin functions
 //
