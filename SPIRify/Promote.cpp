@@ -909,23 +909,10 @@ void updateGEPWithNewOperand(GetElementPtrInst * GEP, Value * oldOperand, Value 
 
         std::vector<Value *> Indices(GEP->idx_begin(), GEP->idx_end());
 
-
-        Type * futureType =
-                GEP->getGEPReturnType(newOperand, ArrayRef<Value *>(Indices));
-
-        DEBUG(llvm::errs() << "future type: "; futureType->dump(); llvm::errs() << "\n";
-        llvm::errs() << "address space: " << GEP->getAddressSpace() << "\n";
-        llvm::errs() << "indexed type: "; GEP->getIndexedType(oldOperand->getType(), Indices)->dump(); llvm::errs() << "\n";);
-
-        PointerType * futurePtrType = dyn_cast<PointerType>(futureType);
-        if ( !futurePtrType ) return;
-
-        GEP->setOperand ( GEP->getPointerOperandIndex(), newOperand);
-
-        if ( futurePtrType == GEP->getType()) return;
-
-        GEP->mutateType ( futurePtrType );
-        updateListWithUsers(GEP->user_begin(), GEP->user_end(), GEP, GEP, updatesNeeded);
+        Type* basisType = newOperand->getType()->getPointerElementType();
+        GetElementPtrInst* newGEPI = GetElementPtrInst::Create(basisType, newOperand, Indices, "", GEP);
+        DEBUG(newGEPI->dump(); llvm::errs() << "\n";);
+        updateListWithUsers(GEP->user_begin(), GEP->user_end(), GEP, newGEPI, updatesNeeded);
 }
 
 void updateCMPWithNewOperand(CmpInst *CMP, Value *oldOperand, Value *newOperand, InstUpdateWorkList *updatesNeeded)
