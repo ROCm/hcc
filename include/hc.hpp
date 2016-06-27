@@ -342,6 +342,20 @@ public:
         return pQueue->hasHSAInterOp();
     }
 
+    /**
+     * Set a CU affinity to specific command queues. 
+     * The setting is permanent until the queue is destroyed or CU affinity is
+     * set again. This setting is "atomic", it won't affect the dispatch in flight. 
+     *
+     */
+     bool set_cu_mask(const std::vector<bool>& cu_mask) {
+        // If it is HSA based accelerator view, set cu mask, otherwise, return;
+        if(is_hsa_accelerator()) {
+            return pQueue->set_cu_mask(cu_mask);
+        }
+        return false;
+     }
+
 private:
     accelerator_view(std::shared_ptr<Kalmar::KalmarQueue> pQueue) : pQueue(pQueue) {}
     std::shared_ptr<Kalmar::KalmarQueue> pQueue;
@@ -785,6 +799,14 @@ public:
                 peers.push_back(*iter);
         }
         return peers;
+    }
+
+    /**
+     * Return the compute unit count of the accelerator.
+     *
+     */
+    unsigned int get_cu_count() const {
+        return pDev->get_compute_unit_count();
     }
 
 private:
