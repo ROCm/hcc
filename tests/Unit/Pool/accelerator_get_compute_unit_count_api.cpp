@@ -19,7 +19,10 @@ int main()
     unsigned int cu_count = acc.get_compute_unit_count();
    
     if(0 == cu_count)
+    {
         printf("Compute Unit count is 0!\n");
+        return -1;
+    }
 
     return 0;
 }
