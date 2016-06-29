@@ -346,6 +346,14 @@ public:
      * The setting is permanent until the queue is destroyed or CU affinity is
      * set again. This setting is "atomic", it won't affect the dispatch in flight. 
      *
+     * @param cu_mask a bool vector to indicate what CUs you want to use. True
+     *        represents using the cu. The first 32 elements represents the first
+     *        32 CUs, and so on. If its size is greater than physical CU number,
+     *        the extra elements are ignored.
+     *        It is user's responsibility to make sure the input is meaningful.
+     *
+     * @return a bool variable to indicate if the setting is successful.
+     *
      */
      bool set_cu_mask(const std::vector<bool>& cu_mask) {
         // If it is HSA based accelerator view, set cu mask, otherwise, return;

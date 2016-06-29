@@ -984,24 +984,21 @@ public:
         return true;
     }
 
-    bool set_cu_mask(const vector<bool>& cu_mask) override {
+    bool set_cu_mask(const std::vector<bool>& cu_mask) override {
         // get device's total compute unit count
         auto device = getDev();
         unsigned int physical_count = device->get_compute_unit_count();
         assert(physical_count > 0);
 
-        vector<uint32_t> cu_arrays;
+        std::vector<uint32_t> cu_arrays;
         uint32_t temp = 0;
         uint32_t bit_index = 0;
 
-        // resize cu_mask vector to physical_count. i.e. if size of cu_mask
-        // is greater than physical_count, it will discard the extra bit, 
-        // and if it is smaller than physical_count, it will make up the rest
-        // with 0.
-        cu_mask.resize(physical_count, false); 
+        // If cu_mask.size() is greater than physical_count, igore the rest.
+        int iter = cu_mask.size() > physical_count ? physical_count : cu_mask.size();
 
-        for(auto i = cu_mask.begin(); i != cu_mask.end(); i++) {
-            temp |= (uint32_t)(*i) << bit_index;
+        for(auto i = 0; i < iter; i++) {
+            temp |= (uint32_t)(cu_mask[i]) << bit_index;
 
             if(++bit_index == 32) {
                 cu_arrays.push_back(temp);
@@ -1665,11 +1662,11 @@ public:
       return false;
     }
 
-    unsigned int get_compute_unit_count() const override {
+    unsigned int get_compute_unit_count() override {
         hsa_agent_t agent = getAgent();
 
         uint32_t compute_unit_count = 0;
-        hsa_status_t status = hsa_agent_get_info(*agent, HSA_AMD_AGENT_INFO_COMPUTE_UNIT_COUNT, &compute_unit_count);
+        hsa_status_t status = hsa_agent_get_info(agent, (hsa_agent_info_t)HSA_AMD_AGENT_INFO_COMPUTE_UNIT_COUNT, &compute_unit_count);
         if(status == HSA_STATUS_SUCCESS)
             return compute_unit_count;
         else
