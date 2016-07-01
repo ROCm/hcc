@@ -291,6 +291,11 @@ endif()
 # AMDGPU_TARGET would hold the value used by compiler scripts
 SET(AMDGPU_TARGET ${HSA_AMDGPU_GPU_TARGET})
 
+# auto means fiji
+if (HSA_AMDGPU_TARGET STREQUAL "auto")
+  SET(AMDGPU_TARGET "fiji")
+endif()
+
 # Map ISA version to GPU family
 if (HSA_AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:7:0:0")
   SET(AMDGPU_TARGET "kaveri")

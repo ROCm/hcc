@@ -548,10 +548,7 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
     else
       if [ -e $HOF_BIN/amdhsafin ]; then
         case $AMDGPU_TARGET in
-          auto)
-            #default set to fiji
-            HOF_ARCH="8:0:3"
-          ;;
+          #default set to fiji
           fiji)
             HOF_ARCH="8:0:3"
           ;;
