@@ -2,7 +2,6 @@
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <hc.hpp>
-
 /**
  * Test if hc::accelerator::get_compute_unit_count() works fine.
  * Create the default accelerator and check if the tested api returns

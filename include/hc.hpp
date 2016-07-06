@@ -348,8 +348,14 @@ public:
      *
      * @param cu_mask a bool vector to indicate what CUs you want to use. True
      *        represents using the cu. The first 32 elements represents the first
+<<<<<<< HEAD
      *        32 CUs, and so on. If its size is greater than physical CU number,
      *        the extra elements are ignored.
+=======
+     *        32 CUs, and so on. cu_mask might be resized if it's size is not equal
+     *        to physical CU numbers. If its size is greater than physical CU number,
+     *        the extra elements are dropped, otherwise, make it up with False.
+>>>>>>> 4780f12a9f0e99e47ae98f70abd2bfd0fd36afb4
      *        It is user's responsibility to make sure the input is meaningful.
      *
      * @return a bool variable to indicate if the setting is successful.

@@ -51,6 +51,7 @@ int main()
                                 [=](hc::index<1> idx) __HC__ {
                                   table_c[idx[0]] = table_a[idx[0]] + table_b[idx[0]];
                                 });
+    
     fut.wait();
 
     // Verify output
