@@ -984,6 +984,41 @@ public:
         return true;
     }
 
+    bool set_cu_mask(const std::vector<bool>& cu_mask) override {
+        // get device's total compute unit count
+        auto device = getDev();
+        unsigned int physical_count = device->get_compute_unit_count();
+        assert(physical_count > 0);
+
+        std::vector<uint32_t> cu_arrays;
+        uint32_t temp = 0;
+        uint32_t bit_index = 0;
+
+        // If cu_mask.size() is greater than physical_count, igore the rest.
+        int iter = cu_mask.size() > physical_count ? physical_count : cu_mask.size();
+
+        for(auto i = 0; i < iter; i++) {
+            temp |= (uint32_t)(cu_mask[i]) << bit_index;
+
+            if(++bit_index == 32) {
+                cu_arrays.push_back(temp);
+                bit_index = 0;
+                temp = 0;
+            }
+        }
+      
+        if(bit_index != 0) {
+            cu_arrays.push_back(temp);
+        }
+
+        // call hsa ext api to set cu mask
+        hsa_status_t status = hsa_amd_queue_cu_set_mask(commandQueue, cu_arrays.size(), cu_arrays.data());
+        if(HSA_STATUS_SUCCESS == status)
+            return true;
+        else
+            return false;
+    }
+
     // enqueue a barrier packet
     std::shared_ptr<KalmarAsyncOp> EnqueueMarker() {
         hsa_status_t status = HSA_STATUS_SUCCESS;
@@ -1625,6 +1660,17 @@ public:
           return true;
   
       return false;
+    }
+
+    unsigned int get_compute_unit_count() override {
+        hsa_agent_t agent = getAgent();
+
+        uint32_t compute_unit_count = 0;
+        hsa_status_t status = hsa_agent_get_info(agent, (hsa_agent_info_t)HSA_AMD_AGENT_INFO_COMPUTE_UNIT_COUNT, &compute_unit_count);
+        if(status == HSA_STATUS_SUCCESS)
+            return compute_unit_count;
+        else
+            return 0; 
     }
 
     void releaseKernargBuffer(void* kernargBuffer, int kernargBufferIndex) {
