@@ -532,14 +532,11 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
     fi
     ret=$?
 
-    md5=($(md5sum $TEMP_DIR/kernel.brig))
-    sed -i "1s/^/$md5/" $TEMP_DIR/kernel.brig
-
     if [ $ret == 0 ]; then
       # build a new kernel object
       pushd . > /dev/null
       cd $TEMP_DIR
-      $CLAMP_EMBED kernel.brig kernel_hsa.o
+      $CLAMP_EMBED kernel.brig kernel_hsa.o --md5
       popd > /dev/null
     fi
   fi
