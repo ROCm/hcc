@@ -577,7 +577,7 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
       # build a new kernel object
       pushd . > /dev/null
       cd $TEMP_DIR
-      $CLAMP_EMBED kernel.isa kernel_hof.o
+      $CLAMP_EMBED kernel.isa kernel_hof.o --md5
       popd > /dev/null
 
       # debug purpose

@@ -294,6 +294,7 @@ void DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, void** ker
   static bool hasFinalized = false;
 
   char* kernel_env = nullptr;
+  const int md5_size = 32;
 
   // FIXME need a more elegant way
   if (GetOrInitRuntime()->m_ImplName.find("libmcwamp_opencl") != std::string::npos) {
@@ -342,9 +343,10 @@ void DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, void** ker
         size_t kernel_finalized_size = 
           (ptrdiff_t)((void *)hsa_offline_finalized_kernel_end) -
           (ptrdiff_t)((void *)hsa_offline_finalized_kernel_source);
+        void* source = (void*)((char*)hsa_offline_finalized_kernel_source + md5_size);
         // check if offline finalized kernel is compatible with ISA of the HSA agent
         if ((kernel_finalized_size > 0) &&
-            (pQueue->getDev()->IsCompatibleKernel((void*)kernel_finalized_size, hsa_offline_finalized_kernel_source))) {
+            (pQueue->getDev()->IsCompatibleKernel((void*)kernel_finalized_size, source))) {
           if (mcwamp_verbose)
             std::cout << "Use offline finalized HSA kernels\n";
           hasFinalized = true;
@@ -359,7 +361,6 @@ void DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, void** ker
       }
       firstTime = false;
     }
-    static const int md5_size = 32;
     if (hasFinalized) {
       *kernel_size =
         (ptrdiff_t)((void *)hsa_offline_finalized_kernel_end) -
