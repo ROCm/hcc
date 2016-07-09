@@ -499,7 +499,7 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
       # build a new kernel object
       pushd . > /dev/null
       cd $TEMP_DIR
-      $CLAMP_EMBED kernel.spir kernel_spir.o
+      $CLAMP_EMBED kernel.spir kernel_spir.o --md5
       popd > /dev/null
     fi
   fi
@@ -517,7 +517,7 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
       # build a new kernel object
       pushd . > /dev/null
       cd $TEMP_DIR
-      $CLAMP_EMBED kernel.cl kernel.o
+      $CLAMP_EMBED kernel.cl kernel.o --md5
       popd > /dev/null
     fi
   fi

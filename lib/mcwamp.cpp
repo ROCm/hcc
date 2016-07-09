@@ -321,15 +321,15 @@ void DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, void** ker
       // SPIR path
       *kernel_size =
         (ptrdiff_t)((void *)spir_kernel_end) -
-        (ptrdiff_t)((void *)spir_kernel_source);
-      *kernel_source = spir_kernel_source;
+        (ptrdiff_t)((void *)spir_kernel_source) - md5_size;
+      *kernel_source = (void*)((char*)spir_kernel_source + md5_size);
       *needs_compilation = true;
     } else {
       // OpenCL path
       *kernel_size =
         (ptrdiff_t)((void *)cl_kernel_end) -
-        (ptrdiff_t)((void *)cl_kernel_source);
-      *kernel_source = cl_kernel_source;
+        (ptrdiff_t)((void *)cl_kernel_source) - md5_size;
+      *kernel_source = (void*)((char*)cl_kernel_source + md5_size);
       *needs_compilation = true;
     }
   } else {
