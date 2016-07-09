@@ -34,11 +34,11 @@ if [[ $OSTYPE == linux-gnu ]]; then
         rm $1.S
     else
         if [ $MD5 == 1 ]; then
-            cp $1 $1.md5
-            md5=($(md5sum $1.md5))
-            sed -i "1s/^/$md5/" $1.md5
-            objcopy -B i386:x86-64 -I binary -O elf64-x86-64 --rename-section .data=.kernel $1.md5 $2
-            rm $1.md5
+            cp $1 $1.bak
+            md5=($(md5sum $1))
+            sed -i "1s/^/$md5/" $1
+            objcopy -B i386:x86-64 -I binary -O elf64-x86-64 --rename-section .data=.kernel $1 $2
+            mv $1.bak $1
         else
             objcopy -B i386:x86-64 -I binary -O elf64-x86-64 --rename-section .data=.kernel $1 $2
         fi
