@@ -45,6 +45,7 @@ include (SetupHC)
 include (SetupUtils)
 include (MCWAMP)
 include (SetupRemoveSpecialSection)
+include (PatchLLVM)
 
 ensure_llvm_is_present(${PROJECT_SOURCE_DIR} compiler)
 ensure_clang_is_present(${PROJECT_SOURCE_DIR} compiler ${CLANG_URL})
@@ -55,6 +56,7 @@ setup_TileUniform(${PROJECT_SOURCE_DIR}/compiler/lib/Analysis TileUniform)
 setup_HC(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms HC)
 setup_Utils(utils)
 setup_RemoveSpecialSection(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms RemoveSpecialSection)
+patch_LLVM(utils)
 
 # Regression test
 set(LLVM_SRC "${PROJECT_SOURCE_DIR}/compiler")
