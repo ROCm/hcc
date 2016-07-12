@@ -60,6 +60,7 @@ public:
     bool is_lim_double() const override { return true; }
     bool is_unified() const override { return true; }
     bool is_emulated() const override { return true; }
+    uint32_t get_version() const override { return 0; }
 
     void* create(size_t count, struct rw_info* /* not used */) override {
         return kalmar_aligned_alloc(0x1000, count);

@@ -367,6 +367,7 @@ public:
     bool is_lim_double() const override { return true; }
     bool is_unified() const override { return false; }
     bool is_emulated() const override { return false; }
+    uint32_t get_version() const override { return 0; }
 
     void BuildProgram(void* size, void* source, bool needsCompilation = true) override {
         if (programs.find(source) == std::end(programs))
@@ -474,9 +475,10 @@ public:
             for (const auto pId : platform_id) {
                 cl_uint num_device;
                 err = clGetDeviceIDs(pId, Conf.type, 0, nullptr, &num_device);
-                assert(err == CL_SUCCESS);
-                if (num_device == 0)
+                if (err == CL_DEVICE_NOT_FOUND)
                     continue;
+                assert(err == CL_SUCCESS);
+
                 std::vector<cl_device_id> dev(num_device);
                 err = clGetDeviceIDs(pId, Conf.type, num_device, dev.data(), nullptr);
                 assert(err == CL_SUCCESS);

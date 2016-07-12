@@ -185,6 +185,11 @@ public:
   /// in rare occasions it may be called by other functions to ensure proper
   /// resource clean up sequence
   virtual void dispose() {}
+ 
+  /// set CU affinity of this queue.
+  /// the setting is permanent until the queue is destroyed or another setting
+  /// is called.
+  virtual bool set_cu_mask(const std::vector<bool>& cu_mask) { return false; };
 
 private:
   KalmarDevice* pDev;
@@ -232,7 +237,7 @@ public:
     virtual bool is_lim_double() const = 0;
     virtual bool is_unified() const = 0;
     virtual bool is_emulated() const = 0;
-
+    virtual uint32_t get_version() const = 0;
 
     /// create buffer
     /// @key on device that supports shared memory
@@ -298,6 +303,9 @@ public:
     /// check if @p other can access to this device's device memory, return true if so, false otherwise
     virtual bool is_peer(const KalmarDevice* other) {return false;}
 
+    /// get device's compute unit count
+    virtual unsigned int get_compute_unit_count() {return 0;}
+
 };
 
 class CPUQueue final : public KalmarQueue
@@ -341,7 +349,7 @@ public:
     bool is_lim_double() const override { return true; }
     bool is_unified() const override { return true; }
     bool is_emulated() const override { return true; }
-
+    uint32_t get_version() const override { return 0; }
 
     std::shared_ptr<KalmarQueue> createQueue(execute_order order = execute_in_order) override { return std::shared_ptr<KalmarQueue>(new CPUQueue(this)); }
     void* create(size_t count, struct rw_info* /* not used */ ) override { return kalmar_aligned_alloc(0x1000, count); }

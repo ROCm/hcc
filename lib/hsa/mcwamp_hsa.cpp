@@ -504,6 +504,8 @@ struct pool_iterator
     bool        _found_local_memory_pool;
     bool        _found_coarsegrained_system_memory_pool;
 
+    size_t _local_memory_pool_size;
+
     pool_iterator() ;
 };
 
@@ -519,6 +521,8 @@ pool_iterator::pool_iterator()
     _found_finegrained_system_memory_pool = false;
     _found_local_memory_pool = false;
     _found_coarsegrained_system_memory_pool = false;
+
+    _local_memory_pool_size = 0;
 }
 //-----
 
@@ -980,6 +984,41 @@ public:
         return true;
     }
 
+    bool set_cu_mask(const std::vector<bool>& cu_mask) override {
+        // get device's total compute unit count
+        auto device = getDev();
+        unsigned int physical_count = device->get_compute_unit_count();
+        assert(physical_count > 0);
+
+        std::vector<uint32_t> cu_arrays;
+        uint32_t temp = 0;
+        uint32_t bit_index = 0;
+
+        // If cu_mask.size() is greater than physical_count, igore the rest.
+        int iter = cu_mask.size() > physical_count ? physical_count : cu_mask.size();
+
+        for(auto i = 0; i < iter; i++) {
+            temp |= (uint32_t)(cu_mask[i]) << bit_index;
+
+            if(++bit_index == 32) {
+                cu_arrays.push_back(temp);
+                bit_index = 0;
+                temp = 0;
+            }
+        }
+      
+        if(bit_index != 0) {
+            cu_arrays.push_back(temp);
+        }
+
+        // call hsa ext api to set cu mask
+        hsa_status_t status = hsa_amd_queue_cu_set_mask(commandQueue, cu_arrays.size(), cu_arrays.data());
+        if(HSA_STATUS_SUCCESS == status)
+            return true;
+        else
+            return false;
+    }
+
     // enqueue a barrier packet
     std::shared_ptr<KalmarAsyncOp> EnqueueMarker() {
         hsa_status_t status = HSA_STATUS_SUCCESS;
@@ -1050,6 +1089,9 @@ private:
     not be linked directly to the first cpu node, host */
     hsa_agent_t host_;
 
+    uint16_t versionMajor;
+    uint16_t versionMinor;
+
 public:
  
     uint32_t getWorkgroupMaxSize() {
@@ -1070,15 +1112,15 @@ public:
         hsa_amd_memory_pool_get_info(region, HSA_AMD_MEMORY_POOL_INFO_SEGMENT, &segment);
     
         if (segment == HSA_AMD_SEGMENT_GLOBAL) {
-#if KALMAR_DEBUG
           size_t size = 0;
           hsa_amd_memory_pool_get_info(region, HSA_AMD_MEMORY_POOL_INFO_SIZE, &size);
-          size = size/(1024*1024);
-          std::cerr << "found memory pool of GPU local memory, size(MB) = " << size << std::endl;
+#if KALMAR_DEBUG
+          std::cerr << "found memory pool of GPU local memory, size(MB) = " << (size/(1024*1024)) << std::endl;
 #endif 
           pool_iterator *ri = (pool_iterator*) (data);
           ri->_local_memory_pool = region;
           ri->_found_local_memory_pool = true;
+          ri->_local_memory_pool_size = size;
 
           return HSA_STATUS_INFO_BREAK;
         }
@@ -1170,7 +1212,8 @@ public:
                                kernargPool(), kernargPoolFlag(), kernargCursor(0), kernargPoolMutex(),
                                executables(),
                                profile(hcAgentProfileNone),
-                               path(), description(), host_(host) {
+                               path(), description(), host_(host),
+                               versionMajor(0), versionMinor(0) {
 #if KALMAR_DEBUG
         std::cerr << "HSADevice::HSADevice()\n";
 #endif
@@ -1178,6 +1221,7 @@ public:
         hsa_status_t status = HSA_STATUS_SUCCESS;
 
         /// set up path and description
+        /// and version information
         {
             char name[64] {0};
             uint32_t node = 0;
@@ -1197,6 +1241,15 @@ public:
 #if KALMAR_DEBUG
             std::wcerr << L"Path: " << path << L"\n";
             std::wcerr << L"Description: " << description << L"\n";
+#endif
+
+            status = hsa_agent_get_info(agent, HSA_AGENT_INFO_VERSION_MAJOR, &versionMajor);
+            STATUS_CHECK(status, __LINE__);
+            status = hsa_agent_get_info(agent, HSA_AGENT_INFO_VERSION_MINOR, &versionMinor);
+            STATUS_CHECK(status, __LINE__);
+
+#if KALMAR_DEBUG
+            std::cout << "Version Major: " << versionMajor << " Minor: " << versionMinor << "\n";
 #endif
         }
 
@@ -1340,13 +1393,14 @@ public:
 
     std::wstring get_path() const override { return path; }
     std::wstring get_description() const override { return description; }
-    size_t get_mem() const override { return 0; }
+    size_t get_mem() const override { return ri._local_memory_pool_size; }
     bool is_double() const override { return true; }
     bool is_lim_double() const override { return true; }
     bool is_unified() const override {
         return (useCoarseGrainedRegion == false);
     }
     bool is_emulated() const override { return false; }
+    uint32_t get_version() const { return ((static_cast<unsigned int>(versionMajor) << 16) | versionMinor); }
 
     void* create(size_t count, struct rw_info* key) override {
         void *data = nullptr;
@@ -1606,6 +1660,17 @@ public:
           return true;
   
       return false;
+    }
+
+    unsigned int get_compute_unit_count() override {
+        hsa_agent_t agent = getAgent();
+
+        uint32_t compute_unit_count = 0;
+        hsa_status_t status = hsa_agent_get_info(agent, (hsa_agent_info_t)HSA_AMD_AGENT_INFO_COMPUTE_UNIT_COUNT, &compute_unit_count);
+        if(status == HSA_STATUS_SUCCESS)
+            return compute_unit_count;
+        else
+            return 0; 
     }
 
     void releaseKernargBuffer(void* kernargBuffer, int kernargBufferIndex) {
