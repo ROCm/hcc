@@ -522,7 +522,7 @@ declare i64 @llvm.bitreverse.i64(i64) #1
 
 ; Function Attrs: alwaysinline nounwind
 define linkonce_odr spir_func i64 @__activelanemask_v4_b64_b1(i32 %input) #5 {
-  %a = tail call i64 asm "v_cmp_ne_i32_e64 $0, 0, $1", "=s,v"(i32 %input) #1
+  %a = tail call i64 asm "v_cmp_ne_i32_e64 $0, 0, $1", "=s,v"(i32 %input) #9
   ret i64 %a
 }
 
@@ -765,6 +765,7 @@ attributes #5 = { alwaysinline nounwind }
 attributes #6 = { alwaysinline norecurse nounwind readnone }
 attributes #7 = { norecurse nounwind readnone }
 attributes #8 = { nounwind argmemonly }
+attributes #9 = { convergent nounwind readnone }
 
 !0 = !{}
 !1 = !{i32 0, i32 2048}

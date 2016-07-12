@@ -130,6 +130,51 @@ static const char* getHSAErrorString(hsa_status_t s) {
 		exit(-1);\
 	}
 
+
+namespace Kalmar {
+
+enum class HCCRuntimeStatus{
+
+  // No error 
+  HCCRT_STATUS_SUCCESS = 0x0,
+
+  // A generic error
+  HCCRT_STATUS_ERROR = 0x2000,
+
+  // The maximum number of outstanding AQL packets in a queue has been reached
+  HCCRT_STATUS_ERROR_COMMAND_QUEUE_OVERFLOW = 0x2001
+};
+
+const char* getHCCRuntimeStatusMessage(const HCCRuntimeStatus status) {
+  const char* message = nullptr;
+  switch(status) {
+    //HCCRT_CASE_STATUS_STRING(HCCRT_STATUS_SUCCESS,"Success");
+    case HCCRuntimeStatus::HCCRT_STATUS_SUCCESS: 
+      message = "Success"; break; 
+    case HCCRuntimeStatus::HCCRT_STATUS_ERROR:  
+      message = "Generic error"; break; 
+    case HCCRuntimeStatus::HCCRT_STATUS_ERROR_COMMAND_QUEUE_OVERFLOW: 
+      message = "Command queue overflow"; break; 
+    default: 
+      message = "Unknown error code"; break;
+  };
+  return message;
+}
+
+inline static void checkHCCRuntimeStatus(const HCCRuntimeStatus status, const unsigned int line, hsa_queue_t* q=nullptr) {
+  if (status != HCCRuntimeStatus::HCCRT_STATUS_SUCCESS) {
+    printf("### HCC runtime error: %s at line:%d\n", getHCCRuntimeStatusMessage(status), line);
+    if (q != nullptr)
+      assert(HSA_STATUS_SUCCESS == hsa_queue_destroy(q));
+    assert(HSA_STATUS_SUCCESS == hsa_shut_down());
+	  exit(-1);
+  }
+}
+
+} // namespace Kalmar
+
+
+
 extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v);
 extern "C" void PushArgPtrImpl(void *ker, int idx, size_t sz, const void *v);
 
@@ -459,6 +504,8 @@ struct pool_iterator
     bool        _found_local_memory_pool;
     bool        _found_coarsegrained_system_memory_pool;
 
+    size_t _local_memory_pool_size;
+
     pool_iterator() ;
 };
 
@@ -474,6 +521,8 @@ pool_iterator::pool_iterator()
     _found_finegrained_system_memory_pool = false;
     _found_local_memory_pool = false;
     _found_coarsegrained_system_memory_pool = false;
+
+    _local_memory_pool_size = 0;
 }
 //-----
 
@@ -710,7 +759,7 @@ public:
 
     // wait for dependent async operations to complete
     void waitForDependentAsyncOps(void* buffer) {
-        auto dependentAsyncOpVector = bufferKernelMap[buffer];
+        auto&& dependentAsyncOpVector = bufferKernelMap[buffer];
         for (int i = 0; i < dependentAsyncOpVector.size(); ++i) {
           auto dependentAsyncOp = dependentAsyncOpVector[i];
           if (!dependentAsyncOp.expired()) {
@@ -935,6 +984,41 @@ public:
         return true;
     }
 
+    bool set_cu_mask(const std::vector<bool>& cu_mask) override {
+        // get device's total compute unit count
+        auto device = getDev();
+        unsigned int physical_count = device->get_compute_unit_count();
+        assert(physical_count > 0);
+
+        std::vector<uint32_t> cu_arrays;
+        uint32_t temp = 0;
+        uint32_t bit_index = 0;
+
+        // If cu_mask.size() is greater than physical_count, igore the rest.
+        int iter = cu_mask.size() > physical_count ? physical_count : cu_mask.size();
+
+        for(auto i = 0; i < iter; i++) {
+            temp |= (uint32_t)(cu_mask[i]) << bit_index;
+
+            if(++bit_index == 32) {
+                cu_arrays.push_back(temp);
+                bit_index = 0;
+                temp = 0;
+            }
+        }
+      
+        if(bit_index != 0) {
+            cu_arrays.push_back(temp);
+        }
+
+        // call hsa ext api to set cu mask
+        hsa_status_t status = hsa_amd_queue_cu_set_mask(commandQueue, cu_arrays.size(), cu_arrays.data());
+        if(HSA_STATUS_SUCCESS == status)
+            return true;
+        else
+            return false;
+    }
+
     // enqueue a barrier packet
     std::shared_ptr<KalmarAsyncOp> EnqueueMarker() {
         hsa_status_t status = HSA_STATUS_SUCCESS;
@@ -1005,6 +1089,9 @@ private:
     not be linked directly to the first cpu node, host */
     hsa_agent_t host_;
 
+    uint16_t versionMajor;
+    uint16_t versionMinor;
+
 public:
  
     uint32_t getWorkgroupMaxSize() {
@@ -1025,15 +1112,15 @@ public:
         hsa_amd_memory_pool_get_info(region, HSA_AMD_MEMORY_POOL_INFO_SEGMENT, &segment);
     
         if (segment == HSA_AMD_SEGMENT_GLOBAL) {
-#if KALMAR_DEBUG
           size_t size = 0;
           hsa_amd_memory_pool_get_info(region, HSA_AMD_MEMORY_POOL_INFO_SIZE, &size);
-          size = size/(1024*1024);
-          std::cerr << "found memory pool of GPU local memory, size(MB) = " << size << std::endl;
+#if KALMAR_DEBUG
+          std::cerr << "found memory pool of GPU local memory, size(MB) = " << (size/(1024*1024)) << std::endl;
 #endif 
           pool_iterator *ri = (pool_iterator*) (data);
           ri->_local_memory_pool = region;
           ri->_found_local_memory_pool = true;
+          ri->_local_memory_pool_size = size;
 
           return HSA_STATUS_INFO_BREAK;
         }
@@ -1125,7 +1212,8 @@ public:
                                kernargPool(), kernargPoolFlag(), kernargCursor(0), kernargPoolMutex(),
                                executables(),
                                profile(hcAgentProfileNone),
-                               path(), description(), host_(host) {
+                               path(), description(), host_(host),
+                               versionMajor(0), versionMinor(0) {
 #if KALMAR_DEBUG
         std::cerr << "HSADevice::HSADevice()\n";
 #endif
@@ -1133,6 +1221,7 @@ public:
         hsa_status_t status = HSA_STATUS_SUCCESS;
 
         /// set up path and description
+        /// and version information
         {
             char name[64] {0};
             uint32_t node = 0;
@@ -1152,6 +1241,15 @@ public:
 #if KALMAR_DEBUG
             std::wcerr << L"Path: " << path << L"\n";
             std::wcerr << L"Description: " << description << L"\n";
+#endif
+
+            status = hsa_agent_get_info(agent, HSA_AGENT_INFO_VERSION_MAJOR, &versionMajor);
+            STATUS_CHECK(status, __LINE__);
+            status = hsa_agent_get_info(agent, HSA_AGENT_INFO_VERSION_MINOR, &versionMinor);
+            STATUS_CHECK(status, __LINE__);
+
+#if KALMAR_DEBUG
+            std::cout << "Version Major: " << versionMajor << " Minor: " << versionMinor << "\n";
 #endif
         }
 
@@ -1295,13 +1393,14 @@ public:
 
     std::wstring get_path() const override { return path; }
     std::wstring get_description() const override { return description; }
-    size_t get_mem() const override { return 0; }
+    size_t get_mem() const override { return ri._local_memory_pool_size; }
     bool is_double() const override { return true; }
     bool is_lim_double() const override { return true; }
     bool is_unified() const override {
         return (useCoarseGrainedRegion == false);
     }
     bool is_emulated() const override { return false; }
+    uint32_t get_version() const { return ((static_cast<unsigned int>(versionMajor) << 16) | versionMinor); }
 
     void* create(size_t count, struct rw_info* key) override {
         void *data = nullptr;
@@ -1561,6 +1660,17 @@ public:
           return true;
   
       return false;
+    }
+
+    unsigned int get_compute_unit_count() override {
+        hsa_agent_t agent = getAgent();
+
+        uint32_t compute_unit_count = 0;
+        hsa_status_t status = hsa_agent_get_info(agent, (hsa_agent_info_t)HSA_AMD_AGENT_INFO_COMPUTE_UNIT_COUNT, &compute_unit_count);
+        if(status == HSA_STATUS_SUCCESS)
+            return compute_unit_count;
+        else
+            return 0; 
     }
 
     void releaseKernargBuffer(void* kernargBuffer, int kernargBufferIndex) {
@@ -2403,8 +2513,12 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
     uint32_t queueMask = commandQueue->size - 1;
     // TODO: Need to check if package write is correct.
     uint64_t index = hsa_queue_load_write_index_relaxed(commandQueue);
+    uint64_t nextIndex = index + 1;
+    if (nextIndex - hsa_queue_load_read_index_acquire(commandQueue) >= commandQueue->size) {
+      checkHCCRuntimeStatus(Kalmar::HCCRuntimeStatus::HCCRT_STATUS_ERROR_COMMAND_QUEUE_OVERFLOW, __LINE__, commandQueue);
+    }
     ((hsa_kernel_dispatch_packet_t*)(commandQueue->base_address))[index & queueMask] = aql;
-    hsa_queue_store_write_index_relaxed(commandQueue, index + 1);
+    hsa_queue_store_write_index_relaxed(commandQueue, nextIndex);
   
 #if KALMAR_DEBUG
     std::cerr << "ring door bell to dispatch kernel\n";
@@ -2645,6 +2759,10 @@ HSABarrier::enqueueBarrier(hsa_queue_t* queue) {
     // Obtain the write index for the command queue
     uint64_t index = hsa_queue_load_write_index_relaxed(queue);
     const uint32_t queueMask = queue->size - 1;
+    uint64_t nextIndex = index + 1;
+    if (nextIndex - hsa_queue_load_read_index_acquire(queue) >= queue->size) {
+      checkHCCRuntimeStatus(Kalmar::HCCRuntimeStatus::HCCRT_STATUS_ERROR_COMMAND_QUEUE_OVERFLOW, __LINE__, queue);
+    }
 
     // Define the barrier packet to be at the calculated queue index address
     hsa_barrier_and_packet_t* barrier = &(((hsa_barrier_and_packet_t*)(queue->base_address))[index&queueMask]);
@@ -2664,7 +2782,7 @@ HSABarrier::enqueueBarrier(hsa_queue_t* queue) {
 #endif
 
     // Increment write index and ring doorbell to dispatch the kernel
-    hsa_queue_store_write_index_relaxed(queue, index+1);
+    hsa_queue_store_write_index_relaxed(queue, nextIndex);
     hsa_signal_store_relaxed(queue->doorbell_signal, index);
 
     isDispatched = true;

@@ -15,7 +15,7 @@
 const int SIZE = GRID_SIZE*TILE_SIZE;
 
 __attribute__((hc_grid_launch)) void kernel1(grid_launch_parm lp, int *x) {
-  int i = lp.threadId.x + lp.groupId.x*lp.groupDim.x;
+  int i = hc_get_workitem_id(0) + hc_get_group_id(0)*lp.group_dim.x;
 
   x[i] = i;
 }
@@ -30,8 +30,8 @@ int main(void) {
   grid_launch_parm lp;
   grid_launch_init(&lp);
 
-  lp.gridDim.x = GRID_SIZE;
-  lp.groupDim.x = TILE_SIZE;
+  lp.grid_dim.x = GRID_SIZE;
+  lp.group_dim.x = TILE_SIZE;
 
   hc::completion_future cf;
   lp.cf = &cf;

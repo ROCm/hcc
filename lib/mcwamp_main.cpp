@@ -112,6 +112,47 @@ void shared(void) {
     std::cout << " -shared -fPIC -Wl,-Bsymbolic ";
 }
 
+// print command line usage
+void usage(void) {
+  if (amp_mode) {
+    std::cout << R"(Usage: clamp-config [config-options] [options]
+Get information needed to compile C++AMP programs using the HCC compiler.
+)";
+  } else {
+    assert(hcc_mode);
+
+    std::cout << R"(Usage: hcc-config [config-options] [options]
+Get information needed to compile HC C++ programs using the HCC compiler.
+
+Example:
+hcc `hcc-config --cxxflags --ldflags` EXAMPLE.cpp -o EXAMPLE
+)";
+  }
+
+  std::cout << R"(
+Options:
+  -h --help   Display this information
+
+  --cxxflags  Print C++ compilation flags
+  --ldflags   Print linker flags
+  --shared    Print flags to build a shared library
+
+  --prefix    Print the installation prefix
+
+  --gtest     Print gtest flags
+
+Config-Options:
+  --install   Use the installed libraries [default]
+  --build     Use the built libraries (cmake binary directory)
+
+  --bolt      Bolt mode
+
+Environment:
+  HCC_HOME    if set, its value is used as installation prefix
+)";
+
+}
+
 int main (int argc, char **argv) {
     if (std::string(argv[0]).find("hcc-config") != std::string::npos) {
         hcc_mode = true; amp_mode = false;
@@ -129,6 +170,7 @@ int main (int argc, char **argv) {
             {"brief",   no_argument,       &verbose_flag, 0},
             /* These options don't set a flag.
                We distinguish them by their indices. */
+            {"help",     no_argument,       0, 'h'},
             {"cxxflags", no_argument,       0, 'a'},
             {"build",    no_argument,       0, 'b'},
             {"install",  no_argument,       0, 'i'},
@@ -141,8 +183,7 @@ int main (int argc, char **argv) {
         /* getopt_long stores the option index here. */
         int option_index = 0;
 
-        c = getopt_long (argc, argv, "",
-                long_options, &option_index);
+        c = getopt_long (argc, argv, "h", long_options, &option_index);
 
         /* Detect the end of the options. */
         if (c == -1)
@@ -160,6 +201,10 @@ int main (int argc, char **argv) {
                 printf ("\n");
                 break;
 
+            case 'h':   // --help
+                usage();
+                exit(0);
+                break;
             case 'a':   // --cxxflags
                 cxxflags();
                 break;
@@ -185,6 +230,8 @@ int main (int argc, char **argv) {
                 break;
             case '?':
                 /* getopt_long already printed an error message. */
+                std::cerr << "Try '--help' for more information.\n";
+                exit(1);
                 break;
 
             default:
