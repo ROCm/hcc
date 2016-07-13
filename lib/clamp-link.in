@@ -435,6 +435,11 @@ do
   fi
 done
 
+# AMDGPU_TARGET could be overridden by HCC_AMDGPU_TARGET env variable
+if [ -n "$HCC_AMDGPU_TARGET" ]; then
+  AMDGPU_TARGET=$HCC_AMDGPU_TARGET
+fi
+
 if [ $VERBOSE == 1 ]; then
   echo "kernel args: "$LINK_KERNEL_ARGS
   echo ""
@@ -548,10 +553,7 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
     else
       if [ -e $HOF_BIN/amdhsafin ]; then
         case $AMDGPU_TARGET in
-          auto)
-            #default set to fiji
-            HOF_ARCH="8:0:3"
-          ;;
+          #default set to fiji
           fiji)
             HOF_ARCH="8:0:3"
           ;;
@@ -563,6 +565,9 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
           ;;
           hawaii)
             HOF_ARCH="7:0:1"
+          ;;
+          tonga)
+            HOF_ARCH="8:0:2"
           ;;
         esac
 
