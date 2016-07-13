@@ -22,8 +22,8 @@ fi
 
 # check command line argument
 if [ "$#" -lt 1 ]; then
-  echo "Usage: $0 input_LLVM_IR (--amdgpu-target=(fiji | kaveri | carrizo | hawaii))" >&2
-  echo "  --amdgpu-target=(fiji | kaveri | carrizo | hawaii)" >&2
+  echo "Usage: $0 input_LLVM_IR (--amdgpu-target=(GPU family name))" >&2
+  echo "  --amdgpu-target=(fiji | kaveri | carrizo | hawaii | tonga)" >&2
   echo "           selects AMDGPU target" >&2
   exit 1
 fi
@@ -76,57 +76,6 @@ if [ $KMDUMPLLVM == "1" ]; then
   cp $1.linked.bc ./dump.linked.bc
 fi
 
-TOPOLOGY_SYSFS_DIR=/sys/devices/virtual/kfd/kfd/topology/nodes
-
-# Prints GPU name for a given Device ID
-#   param - Device ID.
-deviceIdToGpuName() {
-    local deviceId=$1; shift;
-    local platformName=""
-    case $deviceId in
-        1304 | 1305 | 1306 | 1307 | 1309 | 130a | 130b | 130c | 130d | 130e | 130f | \
-        1310 | 1311 | 1312 | 1313 | 1315 | 1316 | 1317 | 1318 | 131b | 131c | 131d )
-            platformName="kaveri" ;;
-        9874 | 9875 | 9876 | 9877 )
-            platformName="carrizo" ;;
-        7300 )
-            platformName="fiji" ;;
-        # Polaris11 share the same ISA with Fiji
-        67e0 | 67e3 | 67e8 | 67eb | 67ef | 67ff | 67e1 | 67e7 | 67e9 )
-            platformName="fiji" ;;
-        # Polaris10 share the same ISA with Fiji
-        67c0 | 67c1 | 67c2 | 67c4 | 67c7 | 67df | 67c8 | 67c9 | 67ca | 67cc | 67cf )
-            platformName="fiji" ;;
-        67a0 | 67a1 | 67a2 | 67a8 | 67a9 | 67aa | 67b0 | 67b1 | 67b8 | 67b9 | 67ba | 67be )
-            platformName="hawaii" ;;
-        * )
-            echo "Warning: failed to autodetect target, defaulting to fiji"
-            platformName="fiji" ;;
-    esac
-    echo "$platformName"
-}
-
-# Prints GPU Name for the given Node ID
-#   param - Node Path
-getNodeName() {
-    local nodePath=$1; shift;
-    local gpuIdInDec=$(cat $nodePath/properties | grep device_id | awk '{print $2}')
-    printf -v gpuIdInHex "%x" "$gpuIdInDec"
-    local gpuName=$(deviceIdToGpuName $gpuIdInHex)
-    echo "$gpuName"
-}
-
-# Prints the name of the first HSA node with a GPU associated with it
-getDefaultHsaNodeName() {
-    for i in $(find $TOPOLOGY_SYSFS_DIR  -maxdepth 1 -mindepth 1 -type d); do
-        local simdcount=$(cat $i/properties | grep simd_count | awk '{print $2}')
-        if [ $simdcount != 0 ]; then
-            echo "$(getNodeName $i)"
-            return
-        fi
-    done
-}
-
 ################
 # AMDGPU target 
 ################
@@ -146,11 +95,6 @@ do
     ;;
   esac
 done
-
-if [ "$AMDGPU_TARGET" == "auto" ]; then
-    AMDGPU_TARGET="$(getDefaultHsaNodeName)"
-fi
-
 
 # Optimization notes:
 #  -disable-simplify-libcalls:  prevents transforming loops into library calls such as memset, memcopy on GPU 
