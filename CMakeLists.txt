@@ -274,7 +274,7 @@ if (HSA_USE_AMDGPU_BACKEND)
   set(HAS_HSA_HOF 0)
 endif ()
 
-set(HSA_AMDGPU_GPU_TARGET "auto" CACHE STRING "Target AMDGPU ISA version")
+set(HSA_AMDGPU_GPU_TARGET "fiji" CACHE STRING "Target AMDGPU ISA version")
 
 if (NOT (HSA_AMDGPU_GPU_TARGET STREQUAL "kaveri" OR
          HSA_AMDGPU_GPU_TARGET STREQUAL "carrizo" OR
@@ -291,12 +291,12 @@ if (NOT (HSA_AMDGPU_GPU_TARGET STREQUAL "kaveri" OR
 endif()
 
 # AMDGPU_TARGET would hold the value used by compiler scripts
-SET(AMDGPU_TARGET ${HSA_AMDGPU_GPU_TARGET})
-
-# auto means fiji
-if (HSA_AMDGPU_TARGET STREQUAL "auto")
+# But by default, auto means fiji
+if (HSA_AMDGPU_GPU_TARGET STREQUAL "auto")
   SET(AMDGPU_TARGET "fiji")
-endif()
+else (HSA_AMDGPU_GPU_TARGET STREQUAL "auto")
+  SET(AMDGPU_TARGET ${HSA_AMDGPU_GPU_TARGET})
+endif (HSA_AMDGPU_GPU_TARGET STREQUAL "auto")
 
 # Map ISA version to GPU family
 if (HSA_AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:7:0:0")
