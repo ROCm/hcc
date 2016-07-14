@@ -13,13 +13,10 @@ else(EXISTS "${dest_dir}/${name}/tools/clang")
   Find_Package(Git)
 
   # determine current branch of hcc
-  #execute_process(COMMAND ${GIT_EXECUTABLE} symbolic-ref --short HEAD
-  #                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-  #                OUTPUT_VARIABLE KALMAR_BRANCH_NAME
-  #                OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-  # XXX temporary fix use develop branch during clang upgrade
-  set(KALMAR_BRANCH_NAME "develop")
+  execute_process(COMMAND ${GIT_EXECUTABLE} symbolic-ref --short HEAD
+                  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+                  OUTPUT_VARIABLE KALMAR_BRANCH_NAME
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)
 
   # query if the branch exist
   execute_process(COMMAND ${GIT_EXECUTABLE} ls-remote --heads ${REPO} ${KALMAR_BRANCH_NAME} 
