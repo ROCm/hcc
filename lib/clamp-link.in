@@ -437,7 +437,21 @@ done
 
 # AMDGPU_TARGET could be overridden by HCC_AMDGPU_TARGET env variable
 if [ -n "$HCC_AMDGPU_TARGET" ]; then
-  AMDGPU_TARGET=$HCC_AMDGPU_TARGET
+  # map ISA version string to GPU family
+  if [ "$HCC_AMDGPU_TARGET" = "AMD:AMDGPU:7:0:0" ]; then
+    AMDGPU_TARGET="kaveri"
+  elif [ "$HCC_AMDGPU_TARGET" = "AMD:AMDGPU:7:0:1" ]; then
+    AMDGPU_TARGET="hawaii"
+  elif [ "$HCC_AMDGPU_TARGET" = "AMD:AMDGPU:8:0:1" ]; then
+    AMDGPU_TARGET="carrizo"
+  elif [ "$HCC_AMDGPU_TARGET" = "AMD:AMDGPU:8:0:2" ]; then
+    AMDGPU_TARGET="tonga"
+  elif [ "$HCC_AMDGPU_TARGET" = "AMD:AMDGPU:8:0:3" ]; then
+    AMDGPU_TARGET="fiji"
+  else
+    # not mappable, simply pass to backend and wish it accepts
+    AMDGPU_TARGET=$HCC_AMDGPU_TARGET
+  fi
 fi
 
 if [ $VERBOSE == 1 ]; then
