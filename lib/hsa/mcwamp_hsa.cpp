@@ -386,7 +386,10 @@ public:
             status = waitComplete();
             STATUS_CHECK(status, __LINE__);
         }
-        dispose();
+        if(future != nullptr){
+            delete future;
+            future = nullptr;
+        }
     }
 
     hsa_status_t setDynamicGroupSegment(size_t dynamicGroupSize) {
@@ -2557,7 +2560,7 @@ HSADispatch::waitComplete() {
         printf("Signal wait returned unexpected value\n");
         exit(0);
     }
-
+    dispose();
 #if KALMAR_DEBUG
     std::cerr << "complete!\n";
 #endif
@@ -2634,10 +2637,6 @@ HSADispatch::dispose() {
 
     Kalmar::ctx.releaseSignal(signal, signalIndex);
 
-    if (future != nullptr) {
-      delete future;
-      future = nullptr;
-    }
 }
 
 inline uint64_t
