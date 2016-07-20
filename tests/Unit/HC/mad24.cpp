@@ -81,10 +81,8 @@ bool run_test(const int num) {
 int main() {
   bool pass = true;
 
- // pass &= run_test<unsigned int>(1024*1024);
-
+  pass &= run_test<unsigned int>(1024*1024);
   pass &= run_test<int>(1024*1024);
-
 
 #ifdef DEBUG
   std::cout << (const char*)(pass?"passed!":"failed!") << std::endl;
