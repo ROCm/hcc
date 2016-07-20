@@ -2440,16 +2440,23 @@ inline int __lane_id(void) [[hc]] {
 
 #if __hcc_backend__==HCC_BACKEND_AMDGPU
 
-extern "C" int amdgcn_ds_bpermute(int index, int src) [[hc]];
-extern "C" int amdgcn_ds_permute(int index, int src) [[hc]];
-extern "C" int amdgcn_move_dpp(int src, int dpp_ctrl, int row_mask, int bank_mask, bool bound_ctrl) [[hc]]; 
-extern "C" int amdgcn_wave_rshift_1(int src) [[hc]];
-extern "C" int amdgcn_wave_rshift_zero_1(int src) [[hc]];  
-extern "C" int amdgcn_wave_rrotate_1(int src) [[hc]];
-extern "C" int amdgcn_wave_lshift_1(int src) [[hc]];
-extern "C" int amdgcn_wave_lshift_zero_1(int src) [[hc]];
-extern "C" int amdgcn_wave_lrotate_1(int src) [[hc]];
-extern "C" int amdgcn_row_rshift(int data, int delta) [[hc]];
+extern "C" int __amdgcn_ds_bpermute(int index, int src) [[hc]];
+extern "C" int __amdgcn_ds_permute(int index, int src) [[hc]];
+
+extern "C" int __amdgcn_move_dpp(int src, int dpp_ctrl, int row_mask, int bank_mask, bool bound_ctrl) [[hc]]; 
+
+
+/**
+ * Shift the value of src left by one thread within a wavefront.  
+ * 
+ * @param[in] src 
+ */
+extern "C" int __amdgcn_wave_sr1(int src, bool bound_ctrl) [[hc]];
+extern "C" int __amdgcn_wave_sl1(int src, bool bound_ctrl) [[hc]];  
+
+extern "C" int __amdgcn_wave_rr1(int src) [[hc]];
+extern "C" int __amdgcn_wave_rl1(int src) [[hc]];
+
 
 #elif __hcc_backend__==HCC_BACKEND_HSAIL
 
@@ -2476,7 +2483,7 @@ inline int __wavefront_shift_left(int var) __HC__ {
 inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
   int self = __lane_id();
   int index = srcLane + (self & ~(width-1));
-  return amdgcn_ds_bpermute(index<<2, var);
+  return __amdgcn_ds_bpermute(index<<2, var);
 }
 
 #elif __hcc_backend__==HCC_BACKEND_HSAIL
@@ -2541,7 +2548,7 @@ inline int __shfl_up(int var, const unsigned int delta, const int width=__HSA_WA
   int self = __lane_id();
   int index = self - delta;
   index = (index < (self & ~(width-1)))?self:index;
-  return amdgcn_ds_bpermute(index<<2, var);
+  return __amdgcn_ds_bpermute(index<<2, var);
 }
 
 #elif __hcc_backend__==HCC_BACKEND_HSAIL
@@ -2603,7 +2610,7 @@ inline int __shfl_down(int var, const unsigned int delta, const int width=__HSA_
   int self = __lane_id();
   int index = self + delta;
   index = ((self&(width-1))+delta) >= width?self:index;
-  return amdgcn_ds_bpermute(index<<2, var);
+  return __amdgcn_ds_bpermute(index<<2, var);
 }
 
 #elif __hcc_backend__==HCC_BACKEND_HSAIL
@@ -2663,7 +2670,7 @@ inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) _
   int self = __lane_id();
   int index = self^laneMask;
   index = index >= ((self+width)&~(width-1))?self:index;
-  return amdgcn_ds_bpermute(index<<2, var);
+  return __amdgcn_ds_bpermute(index<<2, var);
 }
 
 
@@ -2693,6 +2700,55 @@ inline unsigned int __shfl_xor(unsigned int var, int laneMask, int width=__HSA_W
     tmp.i = __shfl_xor(tmp.i, laneMask, width);
     return tmp.u;
 }
+
+/**
+ * Multiply two unsigned integers (x,y) but only the lower 24 bits will be used in the multiplication.
+ *
+ * @param[in] x 24-bit unsigned integer multiplier
+ * @param[in] y 24-bit unsigned integer multiplicand
+ * @return 32-bit unsigned integer product
+ */
+inline unsigned int __mul24(unsigned int x, unsigned int y) {
+  return (x & 0x00FFFFFF) * (y & 0x00FFFFFF);
+}
+
+/**
+ * Multiply two integers (x,y) but only the lower 24 bits will be used in the multiplication.
+ *
+ * @param[in] x 24-bit integer multiplier
+ * @param[in] y 24-bit integer multiplicand
+ * @return 32-bit integer product
+ */
+inline int __mul24(int x, int y) {
+  return (x & 0x00FFFFFF) * (y & 0x00FFFFFF);
+}
+
+/**
+ * Multiply two unsigned integers (x,y) but only the lower 24 bits will be used in the multiplication and
+ * then add the product to a 32-bit unsigned integer
+ *
+ * @param[in] x 24-bit unsigned integer multiplier
+ * @param[in] y 24-bit unsigned integer multiplicand
+ * @param[in] z 32-bit unsigned integer to be added to the product
+ * @return 32-bit unsigned integer result of mad24
+ */
+inline unsigned int __mad24(unsigned int x, unsigned int y, unsigned int z) {
+  return __mul24(x,y) + z;
+}
+
+/**
+ * Multiply two integers (x,y) but only the lower 24 bits will be used in the multiplication and
+ * then add the product to a 32-bit integer
+ *
+ * @param[in] x 24-bit integer multiplier
+ * @param[in] y 24-bit integer multiplicand
+ * @param[in] z 32-bit integer to be added to the product
+ * @return 32-bit integer result of mad24
+ */
+inline int __mad24(int x, int y, int z) {
+  return __mul24(x,y) + z;
+}
+
 
 
 // ------------------------------------------------------------------------
