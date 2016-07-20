@@ -180,21 +180,8 @@ ThreadDependencyAnalyzer::ThreadDependencyAnalyzer(Module &M) {
 
 #if HANDLE_LOAD_PRIVATE
 void ThreadDependencyAnalyzer::visitLoadInst(LoadInst &I) {
-#if LLVM_VERSION_MAJOR == 3
-  #if (LLVM_VERSION_MINOR >= 3) && (LLVM_VERSION_MINOR <= 5)
-  // logic which is compatible from LLVM 3.3 till LLVM 3.5
-  if (!Visited.insert(&I)) return;
-  #elif LLVM_VERSION_MINOR > 5
-  // support new SmallPtrSet interface
   auto pair = Visited.insert(&I);
   if (!pair.second) return;
-  #else
-    #error Unsupported LLVM MINOR VERSION
-  #endif
-#else
-  #error Unsupported LLVM MAJOR VERSION
-#endif
-
 #if TILE_UNIFORM_DEBUG
   errs() << I << "\n";
 #endif
@@ -203,21 +190,8 @@ void ThreadDependencyAnalyzer::visitLoadInst(LoadInst &I) {
 #endif
 
 void ThreadDependencyAnalyzer::visitCallInst(CallInst &I) {
-#if LLVM_VERSION_MAJOR == 3
-  #if (LLVM_VERSION_MINOR >= 3) && (LLVM_VERSION_MINOR <= 5)
-  // logic which is compatible from LLVM 3.3 till LLVM 3.5
-  if (!Visited.insert(&I)) return;
-  #elif LLVM_VERSION_MINOR > 5
-  // support new SmallPtrSet interface
   auto pair = Visited.insert(&I);
   if (!pair.second) return;
-  #else
-    #error Unsupported LLVM MINOR VERSION
-  #endif
-#else
-  #error Unsupported LLVM MAJOR VERSION
-#endif
-
 #if TILE_UNIFORM_DEBUG
   errs() << I << "\n";
 #endif
@@ -227,21 +201,9 @@ void ThreadDependencyAnalyzer::visitCallInst(CallInst &I) {
 }
 
 void ThreadDependencyAnalyzer::visitInstruction(Instruction &I) {
-#if LLVM_VERSION_MAJOR == 3
-  #if (LLVM_VERSION_MINOR >= 3) && (LLVM_VERSION_MINOR <= 5)
-  // logic which is compatible from LLVM 3.3 till LLVM 3.5
-  if (!Visited.insert(&I)) return;
-  #elif LLVM_VERSION_MINOR > 5
   // support new SmallPtrSet interface
   auto pair = Visited.insert(&I);
   if (!pair.second) return;
-  #else
-    #error Unsupported LLVM MINOR VERSION
-  #endif
-#else
-  #error Unsupported LLVM MAJOR VERSION
-#endif
-
 #if TILE_UNIFORM_DEBUG
   errs() << I << "\n";
 #endif
