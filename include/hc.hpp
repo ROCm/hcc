@@ -2407,6 +2407,7 @@ extern "C" inline uint64_t __ballot(int predicate) __HC__ {
 // utility union type
 union __u {
     int i;
+    unsigned int u;
     float f;
 };
 
@@ -2440,6 +2441,15 @@ inline int __lane_id(void) [[hc]] {
 #if __hcc_backend__==HCC_BACKEND_AMDGPU
 
 extern "C" int amdgcn_ds_bpermute(int index, int src) [[hc]];
+extern "C" int amdgcn_ds_permute(int index, int src) [[hc]];
+extern "C" int amdgcn_move_dpp(int src, int dpp_ctrl, int row_mask, int bank_mask, bool bound_ctrl) [[hc]]; 
+extern "C" int amdgcn_wave_rshift_1(int src) [[hc]];
+extern "C" int amdgcn_wave_rshift_zero_1(int src) [[hc]];  
+extern "C" int amdgcn_wave_rrotate_1(int src) [[hc]];
+extern "C" int amdgcn_wave_lshift_1(int src) [[hc]];
+extern "C" int amdgcn_wave_lshift_zero_1(int src) [[hc]];
+extern "C" int amdgcn_wave_lrotate_1(int src) [[hc]];
+extern "C" int amdgcn_row_rshift(int data, int delta) [[hc]];
 
 #elif __hcc_backend__==HCC_BACKEND_HSAIL
 
@@ -2486,6 +2496,13 @@ inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__
 }
 
 #endif
+
+inline unsigned int __shfl(unsigned int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+     __u tmp; tmp.u = var;
+    tmp.i = __shfl(tmp.i, srcLane, width);
+    return tmp.u;
+}
+
 
 inline float __shfl(float var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     __u tmp; tmp.f = var;
@@ -2541,6 +2558,12 @@ inline int __shfl_up(int var, const unsigned int delta, const int width=__HSA_WA
     }
 }
 #endif
+
+inline unsigned int __shfl_up(unsigned int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+    __u tmp; tmp.u = var;
+    tmp.i = __shfl_up(tmp.i, delta, width);
+    return tmp.u;
+}
 
 inline float __shfl_up(float var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     __u tmp; tmp.f = var;
@@ -2599,6 +2622,11 @@ inline int __shfl_down(int var, const unsigned int delta, const int width=__HSA_
 
 #endif
 
+inline unsigned int __shfl_down(unsigned int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+    __u tmp; tmp.u = var;
+    tmp.i = __shfl_down(tmp.i, delta, width);
+    return tmp.u;
+}
 
 inline float __shfl_down(float var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     __u tmp; tmp.f = var;
@@ -2651,13 +2679,19 @@ inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) _
 
 #endif
 
-// FIXME: support half type
-/** @} */
-
 inline float __shfl_xor(float var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     __u tmp; tmp.f = var;
     tmp.i = __shfl_xor(tmp.i, laneMask, width);
     return tmp.f;
+}
+
+// FIXME: support half type
+/** @} */
+
+inline unsigned int __shfl_xor(unsigned int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+    __u tmp; tmp.u = var;
+    tmp.i = __shfl_xor(tmp.i, laneMask, width);
+    return tmp.u;
 }
 
 
