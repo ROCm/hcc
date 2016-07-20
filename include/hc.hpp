@@ -2708,7 +2708,7 @@ inline unsigned int __shfl_xor(unsigned int var, int laneMask, int width=__HSA_W
  * @param[in] y 24-bit unsigned integer multiplicand
  * @return 32-bit unsigned integer product
  */
-inline unsigned int __mul24(unsigned int x, unsigned int y) {
+inline unsigned int __mul24(unsigned int x, unsigned int y) [[hc]] {
   return (x & 0x00FFFFFF) * (y & 0x00FFFFFF);
 }
 
@@ -2719,8 +2719,8 @@ inline unsigned int __mul24(unsigned int x, unsigned int y) {
  * @param[in] y 24-bit integer multiplicand
  * @return 32-bit integer product
  */
-inline int __mul24(int x, int y) {
-  return (x & 0x00FFFFFF) * (y & 0x00FFFFFF);
+inline int __mul24(int x, int y) [[hc]] {
+  return  ((x << 8) >> 8) * ((y << 8) >> 8);
 }
 
 /**
@@ -2732,7 +2732,7 @@ inline int __mul24(int x, int y) {
  * @param[in] z 32-bit unsigned integer to be added to the product
  * @return 32-bit unsigned integer result of mad24
  */
-inline unsigned int __mad24(unsigned int x, unsigned int y, unsigned int z) {
+inline unsigned int __mad24(unsigned int x, unsigned int y, unsigned int z) [[hc]] {
   return __mul24(x,y) + z;
 }
 
@@ -2745,7 +2745,7 @@ inline unsigned int __mad24(unsigned int x, unsigned int y, unsigned int z) {
  * @param[in] z 32-bit integer to be added to the product
  * @return 32-bit integer result of mad24
  */
-inline int __mad24(int x, int y, int z) {
+inline int __mad24(int x, int y, int z) [[hc]] {
   return __mul24(x,y) + z;
 }
 
