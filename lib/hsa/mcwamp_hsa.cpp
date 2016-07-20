@@ -2627,11 +2627,7 @@ HSADispatch::dispatchKernelAsync(Kalmar::HSAQueue* hsaQueue) {
 inline void
 HSADispatch::dispose() {
     hsa_status_t status;
-    if (kernargMemory != nullptr) {
-      device->releaseKernargBuffer(kernargMemory, kernargMemoryIndex);
-      kernargMemory = nullptr;
-    }
-
+    
     clearArgs();
     std::vector<uint8_t>().swap(arg_vec);
 
