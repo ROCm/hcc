@@ -2440,21 +2440,58 @@ inline int __lane_id(void) [[hc]] {
 
 #if __hcc_backend__==HCC_BACKEND_AMDGPU
 
+/**
+ * ds_bpermute intrinsic
+ */
 extern "C" int __amdgcn_ds_bpermute(int index, int src) [[hc]];
-extern "C" int __amdgcn_ds_permute(int index, int src) [[hc]];
 
-extern "C" int __amdgcn_move_dpp(int src, int dpp_ctrl, int row_mask, int bank_mask, bool bound_ctrl) [[hc]]; 
+/**
+ * ds_permute intrinsic
+ */
+extern "C" int __amdgcn_ds_permute(int index, int src) [[hc]];
 
 
 /**
- * Shift the value of src left by one thread within a wavefront.  
+ * move DPP intrinsic
+ */
+extern "C" int __amdgcn_move_dpp(int src, int dpp_ctrl, int row_mask, int bank_mask, bool bound_ctrl) [[hc]]; 
+
+/**
+ * Shift the value of src to the right by one thread within a wavefront.  
  * 
- * @param[in] src 
+ * @param[in] src variable being shifted
+ * @param[in] bound_ctrl When set to true, a zero will be shifted into thread 0; otherwise, the original value will be returned for thread 0
+ * @return value of src being shifted into from the neighboring lane 
+ * 
  */
 extern "C" int __amdgcn_wave_sr1(int src, bool bound_ctrl) [[hc]];
+
+/**
+ * Shift the value of src to the left by one thread within a wavefront.  
+ * 
+ * @param[in] src variable being shifted
+ * @param[in] bound_ctrl When set to true, a zero will be shifted into thread 63; otherwise, the original value will be returned for thread 63
+ * @return value of src being shifted into from the neighboring lane 
+ * 
+ */
 extern "C" int __amdgcn_wave_sl1(int src, bool bound_ctrl) [[hc]];  
 
+/**
+ * Rotate the value of src to the right by one thread within a wavefront.  
+ * 
+ * @param[in] src variable being rotated
+ * @return value of src being rotated into from the neighboring lane 
+ * 
+ */
 extern "C" int __amdgcn_wave_rr1(int src) [[hc]];
+
+/**
+ * Rotate the value of src to the left by one thread within a wavefront.  
+ * 
+ * @param[in] src variable being rotated
+ * @return value of src being rotated into from the neighboring lane 
+ * 
+ */
 extern "C" int __amdgcn_wave_rl1(int src) [[hc]];
 
 
