@@ -2698,7 +2698,7 @@ entry:
 }
 
 attributes #0 = { alwaysinline nounwind readnone }
-attributes #1 = { nounwind readnone }
+attributes #1 = { alwaysinline nounwind readnone }
 attributes #2 = { alwaysinline nounwind }
 attributes #3 = { nounwind }
 
