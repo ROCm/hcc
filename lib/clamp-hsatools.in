@@ -117,9 +117,10 @@ if [ $KMDUMPLLVM == "1" ]; then
 fi
 
 if [ $KM_USE_AMDGPU  ]; then
-  $HLC_LLC -O2 -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -filetype=obj -o $1.hsail $1.opt.bc
+  # KMOPTLLC can be used to pass last-minute options to LLC in LC backend
+  $HLC_LLC $KMOPTLLC -O2 -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -filetype=obj -o $1.hsail $1.opt.bc
   if [ $KMDUMPISA == "1" ]; then
-    $HLC_LLC -O2 -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -filetype=asm -o $1.isa $1.opt.bc
+    $HLC_LLC $KMOPTLLC -O2 -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -filetype=asm -o $1.isa $1.opt.bc
     mv $1.isa ./dump.isa
   fi
 else
