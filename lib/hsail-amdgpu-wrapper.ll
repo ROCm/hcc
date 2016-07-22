@@ -639,6 +639,11 @@ define linkonce_odr spir_func i32 @__amdgcn_ds_bpermute(i32 %index, i32 %src) #3
   ret i32 %call
 }
 
+define linkonce_odr spir_func i32 @__amdgcn_ds_swizzle(i32 %src, i32 %pattern) #3  {
+  %call = call i32 @llvm.amdgcn.ds.swizzle(i32 %src, i32 %pattern)
+  ret i32 %call
+}
+
 define linkonce_odr spir_func i32 @__amdgcn_move_dpp(i32 %src, i32 %dpp_ctrl, i32 %row_mask, i32 %bank_mask, i1 %bound_ctrl) #3  {
   %call = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %src, i32 %dpp_ctrl, i32 %row_mask, i32 %bank_mask, i1 %bound_ctrl)
   ret i32 %call
@@ -654,6 +659,7 @@ declare i32 @llvm.amdgcn.ds.permute(i32, i32) #4
 ;llvm.amdgcn.ds.bpermute <index> <src>
 declare i32 @llvm.amdgcn.ds.bpermute(i32, i32) #4
 
+declare i32 @llvm.amdgcn.ds.swizzle(i32, i32) #4
 
 ; Function Attrs: nounwind argmemonly
 define linkonce_odr spir_func i32 @__atomic_wrapinc_global(i32 addrspace(1)* nocapture %addr, i32 %val) #8 {

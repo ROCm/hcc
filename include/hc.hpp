@@ -2450,6 +2450,11 @@ extern "C" int __amdgcn_ds_bpermute(int index, int src) [[hc]];
  */
 extern "C" int __amdgcn_ds_permute(int index, int src) [[hc]];
 
+/**
+ * ds_swizzle intrinsic
+ */
+extern "C" int __amdgcn_ds_swizzle(int src, int pattern) [[hc]];
+
 
 /**
  * move DPP intrinsic
