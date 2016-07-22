@@ -2444,16 +2444,48 @@ inline int __lane_id(void) [[hc]] {
  * ds_bpermute intrinsic
  */
 extern "C" int __amdgcn_ds_bpermute(int index, int src) [[hc]];
+inline unsigned int __amdgcn_ds_bpermute(int index, unsigned int src) [[hc]] {
+  __u tmp; tmp.u = src;
+  tmp.i = __amdgcn_ds_bpermute(index, tmp.i);
+  return tmp.u;
+}
+inline float __amdgcn_ds_bpermute(int index, float src) [[hc]] {
+  __u tmp; tmp.f = src;
+  tmp.i = __amdgcn_ds_bpermute(index, tmp.i);
+  return tmp.f;
+}
 
 /**
  * ds_permute intrinsic
  */
 extern "C" int __amdgcn_ds_permute(int index, int src) [[hc]];
+inline unsigned int __amdgcn_ds_permute(int index, unsigned int src) [[hc]] {
+  __u tmp; tmp.u = src;
+  tmp.i = __amdgcn_ds_permute(index, tmp.i);
+  return tmp.u;
+}
+inline float __amdgcn_ds_permute(int index, float src) [[hc]] {
+  __u tmp; tmp.f = src;
+  tmp.i = __amdgcn_ds_permute(index, tmp.i);
+  return tmp.f;
+}
+
 
 /**
  * ds_swizzle intrinsic
  */
 extern "C" int __amdgcn_ds_swizzle(int src, int pattern) [[hc]];
+inline unsigned int __amdgcn_ds_swizzle(unsigned int src, int pattern) [[hc]] {
+  __u tmp; tmp.u = src;
+  tmp.i = __amdgcn_ds_swizzle(tmp.i, pattern);
+  return tmp.u;
+}
+inline float __amdgcn_ds_swizzle(float src, int pattern) [[hc]] {
+  __u tmp; tmp.f = src;
+  tmp.i = __amdgcn_ds_swizzle(tmp.i, pattern);
+  return tmp.f;
+}
+
 
 
 /**
@@ -2470,6 +2502,16 @@ extern "C" int __amdgcn_move_dpp(int src, int dpp_ctrl, int row_mask, int bank_m
  * 
  */
 extern "C" int __amdgcn_wave_sr1(int src, bool bound_ctrl) [[hc]];
+inline unsigned int __amdgcn_wave_sr1(unsigned int src, bool bound_ctrl) [[hc]] {
+  __u tmp; tmp.u = src;
+  tmp.i = __amdgcn_wave_sr1(tmp.i, bound_ctrl);
+  return tmp.u;
+}
+inline float __amdgcn_wave_sr1(float src, bool bound_ctrl) [[hc]] {
+  __u tmp; tmp.f = src;
+  tmp.i = __amdgcn_wave_sr1(tmp.i, bound_ctrl);
+  return tmp.f;
+}
 
 /**
  * Shift the value of src to the left by one thread within a wavefront.  
@@ -2480,6 +2522,17 @@ extern "C" int __amdgcn_wave_sr1(int src, bool bound_ctrl) [[hc]];
  * 
  */
 extern "C" int __amdgcn_wave_sl1(int src, bool bound_ctrl) [[hc]];  
+inline unsigned int __amdgcn_wave_sl1(unsigned int src, bool bound_ctrl) [[hc]] {
+  __u tmp; tmp.u = src;
+  tmp.i = __amdgcn_wave_sl1(tmp.i, bound_ctrl);
+  return tmp.u;
+}
+inline float __amdgcn_wave_sl1(float src, bool bound_ctrl) [[hc]] {
+  __u tmp; tmp.f = src;
+  tmp.i = __amdgcn_wave_sl1(tmp.i, bound_ctrl);
+  return tmp.f;
+}
+
 
 /**
  * Rotate the value of src to the right by one thread within a wavefront.  
@@ -2489,6 +2542,16 @@ extern "C" int __amdgcn_wave_sl1(int src, bool bound_ctrl) [[hc]];
  * 
  */
 extern "C" int __amdgcn_wave_rr1(int src) [[hc]];
+inline unsigned int __amdgcn_wave_rr1(unsigned int src) [[hc]] {
+  __u tmp; tmp.u = src;
+  tmp.i = __amdgcn_wave_rr1(tmp.i);
+  return tmp.u;
+}
+inline float __amdgcn_wave_rr1(float src) [[hc]] {
+  __u tmp; tmp.f = src;
+  tmp.i = __amdgcn_wave_rr1(tmp.i);
+  return tmp.f;
+}
 
 /**
  * Rotate the value of src to the left by one thread within a wavefront.  
@@ -2498,7 +2561,16 @@ extern "C" int __amdgcn_wave_rr1(int src) [[hc]];
  * 
  */
 extern "C" int __amdgcn_wave_rl1(int src) [[hc]];
-
+inline unsigned int __amdgcn_wave_rl1(unsigned int src) [[hc]] {
+  __u tmp; tmp.u = src;
+  tmp.i = __amdgcn_wave_rl1(tmp.i);
+  return tmp.u;
+}
+inline float __amdgcn_wave_rl1(float src) [[hc]] {
+  __u tmp; tmp.f = src;
+  tmp.i = __amdgcn_wave_rl1(tmp.i);
+  return tmp.f;
+}
 
 #elif __hcc_backend__==HCC_BACKEND_HSAIL
 
