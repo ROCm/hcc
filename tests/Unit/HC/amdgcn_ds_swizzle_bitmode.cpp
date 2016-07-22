@@ -70,6 +70,12 @@ int main() {
   pass &= run_test<int,(short)0x5D69>(1024*1024);
   pass &= run_test<int,(short)0x5355>(1024*1024);
 
+  pass &= run_test<unsigned int,(short)0x5D69>(1024*1024);
+  pass &= run_test<unsigned int,(short)0x5355>(1024*1024);
+
+  pass &= run_test<float,(short)0x5D69>(1024*1024);
+  pass &= run_test<float,(short)0x5355>(1024*1024);
+
 #ifdef DEBUG
   std::cout << (const char*)(pass?"passed!":"failed!") << std::endl;
 #endif
