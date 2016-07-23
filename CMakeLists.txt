@@ -1,9 +1,12 @@
 cmake_minimum_required( VERSION 2.8 )
 project (HCC)
 
+# tame CMake 3.0+
+cmake_policy(SET CMP0026 OLD)
+cmake_policy(SET CMP0037 OLD)
+cmake_policy(SET CMP0046 OLD)
+
 option(HSA_USE_AMDGPU_BACKEND "Use AMDGPU LLVM backend as compiler for HSA" OFF)
-
-
 
 # set default installation path
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND CMAKE_INSTALL_PREFIX MATCHES "/usr/local")
