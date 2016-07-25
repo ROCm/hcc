@@ -1,0 +1,169 @@
+diff --git a/include/llvm/IR/DIBuilder.h b/include/llvm/IR/DIBuilder.h
+index 0f2f67f..d7144b7 100644
+--- a/include/llvm/IR/DIBuilder.h
++++ b/include/llvm/IR/DIBuilder.h
+@@ -135,9 +135,11 @@ namespace llvm {
+     /// \param PointeeTy   Type pointed by this pointer.
+     /// \param SizeInBits  Size.
+     /// \param AlignInBits Alignment. (optional)
++    /// \param AddrSpace   Address space. (optional)
+     /// \param Name        Pointer type name. (optional)
+     DIDerivedType *createPointerType(DIType *PointeeTy, uint64_t SizeInBits,
+                                      uint64_t AlignInBits = 0,
++                                     unsigned AddrSpace = 0,
+                                      StringRef Name = "");
+ 
+     /// Create debugging information entry for a pointer to member.
+diff --git a/include/llvm/IR/DebugInfoMetadata.h b/include/llvm/IR/DebugInfoMetadata.h
+index 853a94a..d8230b4 100644
+--- a/include/llvm/IR/DebugInfoMetadata.h
++++ b/include/llvm/IR/DebugInfoMetadata.h
+@@ -14,6 +14,7 @@
+ #ifndef LLVM_IR_DEBUGINFOMETADATA_H
+ #define LLVM_IR_DEBUGINFOMETADATA_H
+ 
++#include "llvm/IR/Constants.h"
+ #include "llvm/IR/Metadata.h"
+ #include "llvm/Support/Dwarf.h"
+ 
+@@ -753,6 +754,11 @@ public:
+       return C->getValue();
+     return nullptr;
+   }
++  unsigned getAddrSpace() const {
++    if (auto *C = cast_or_null<ConstantAsMetadata>(getExtraData()))
++      return cast<ConstantInt>(C->getValue())->getZExtValue();
++    return 0;
++  }
+   /// @}
+ 
+   static bool classof(const Metadata *MD) {
+diff --git a/include/llvm/Target/TargetFrameLowering.h b/include/llvm/Target/TargetFrameLowering.h
+index 98065ac..c2e41e8 100644
+--- a/include/llvm/Target/TargetFrameLowering.h
++++ b/include/llvm/Target/TargetFrameLowering.h
+@@ -158,6 +158,20 @@ public:
+     return false;
+   }
+ 
++  //==========================================================================//
++  virtual bool useXderef() const {
++    return false;
++  }
++  virtual unsigned getAddrSpace(const MachineFunction &MF, int FI) const {
++    assert(useXderef());
++    return 0;
++  }
++  virtual int getOffset(const MachineFunction &MF, int FI) const {
++    assert(useXderef());
++    return 0;
++  }
++  //==========================================================================//
++
+   /// emitProlog/emitEpilog - These methods insert prolog and epilog code into
+   /// the function.
+   virtual void emitPrologue(MachineFunction &MF,
+diff --git a/lib/CodeGen/AsmPrinter/DwarfCompileUnit.cpp b/lib/CodeGen/AsmPrinter/DwarfCompileUnit.cpp
+index 7822814..58eceef 100644
+--- a/lib/CodeGen/AsmPrinter/DwarfCompileUnit.cpp
++++ b/lib/CodeGen/AsmPrinter/DwarfCompileUnit.cpp
+@@ -547,8 +547,14 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
+     const TargetFrameLowering *TFI = Asm->MF->getSubtarget().getFrameLowering();
+     int Offset = TFI->getFrameIndexReference(*Asm->MF, FI, FrameReg);
+     assert(Expr != DV.getExpression().end() && "Wrong number of expressions");
+-    DwarfExpr.AddMachineRegIndirect(*Asm->MF->getSubtarget().getRegisterInfo(),
+-                                    FrameReg, Offset);
++    if (TFI->useXderef()) {
++      DwarfExpr.EmitOp(dwarf::DW_OP_fbreg);
++      DwarfExpr.EmitSigned(TFI->getOffset(*Asm->MF, FI));
++      DwarfExpr.EmitOp(dwarf::DW_OP_deref);
++    } else {
++      DwarfExpr.AddMachineRegIndirect(*Asm->MF->getSubtarget().getRegisterInfo(),
++                                      FrameReg, Offset);
++    }
+     DwarfExpr.AddExpression((*Expr)->expr_op_begin(), (*Expr)->expr_op_end());
+     ++Expr;
+   }
+diff --git a/lib/CodeGen/AsmPrinter/DwarfUnit.cpp b/lib/CodeGen/AsmPrinter/DwarfUnit.cpp
+index 4100d72..72f2e25 100644
+--- a/lib/CodeGen/AsmPrinter/DwarfUnit.cpp
++++ b/lib/CodeGen/AsmPrinter/DwarfUnit.cpp
+@@ -837,6 +837,13 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
+   // Add source line info if available and TyDesc is not a forward declaration.
+   if (!DTy->isForwardDecl())
+     addSourceLine(Buffer, DTy);
++  // Add address space for pointer types if available.
++  if (Tag == dwarf::DW_TAG_pointer_type) {
++    unsigned AddrSpace = DTy->getAddrSpace();
++    if (AddrSpace != 0)
++      addUInt(
++          Buffer, dwarf::DW_AT_address_class, dwarf::DW_FORM_data4, AddrSpace);
++  }
+ }
+ 
+ void DwarfUnit::constructSubprogramArguments(DIE &Buffer, DITypeRefArray Args) {
+diff --git a/lib/IR/DIBuilder.cpp b/lib/IR/DIBuilder.cpp
+index 01b47f3..7574e1f 100644
+--- a/lib/IR/DIBuilder.cpp
++++ b/lib/IR/DIBuilder.cpp
+@@ -209,11 +209,18 @@ DIDerivedType *DIBuilder::createQualifiedType(unsigned Tag, DIType *FromTy) {
+ DIDerivedType *DIBuilder::createPointerType(DIType *PointeeTy,
+                                             uint64_t SizeInBits,
+                                             uint64_t AlignInBits,
++                                            unsigned AddrSpace,
+                                             StringRef Name) {
++  ConstantAsMetadata *AddrSpaceMD = nullptr;
++  if (AddrSpace != 0) {
++    Type *I32Ty = Type::getInt32Ty(VMContext);
++    AddrSpaceMD = ConstantAsMetadata::get(ConstantInt::get(I32Ty, AddrSpace));
++  }
++
+   // FIXME: Why is there a name here?
+   return DIDerivedType::get(VMContext, dwarf::DW_TAG_pointer_type, Name,
+                             nullptr, 0, nullptr, PointeeTy, SizeInBits,
+-                            AlignInBits, 0, 0);
++                            AlignInBits, 0, 0, AddrSpaceMD);
+ }
+ 
+ DIDerivedType *DIBuilder::createMemberPointerType(DIType *PointeeTy,
+diff --git a/lib/Target/AMDGPU/AMDGPUFrameLowering.cpp b/lib/Target/AMDGPU/AMDGPUFrameLowering.cpp
+index bbc28b8..8870cd8 100644
+--- a/lib/Target/AMDGPU/AMDGPUFrameLowering.cpp
++++ b/lib/Target/AMDGPU/AMDGPUFrameLowering.cpp
+@@ -102,3 +102,19 @@ int AMDGPUFrameLowering::getFrameIndexReference(const MachineFunction &MF,
+   return OffsetBytes / (getStackWidth(MF) * 4);
+ }
+ 
++//==========================================================================//
++bool AMDGPUFrameLowering::useXderef() const {
++  // Do we always want to use xderef?
++  // Or maybe for any particular frame indices?
++  return true;
++}
++unsigned AMDGPUFrameLowering::getAddrSpace(const MachineFunction &MF, int FI) const {
++  // By default we always return private address space.
++  // TODO: possibly come up with values shared by compiler and tools.
++  return 0;
++}
++int AMDGPUFrameLowering::getOffset(const MachineFunction &MF, int FI) const {
++  return MF.getFrameInfo()->getObjectOffset(FI);
++}
++//==========================================================================//
++
+diff --git a/lib/Target/AMDGPU/AMDGPUFrameLowering.h b/lib/Target/AMDGPU/AMDGPUFrameLowering.h
+index 513848a..9fd1f82 100644
+--- a/lib/Target/AMDGPU/AMDGPUFrameLowering.h
++++ b/lib/Target/AMDGPU/AMDGPUFrameLowering.h
+@@ -39,6 +39,12 @@ public:
+   bool hasFP(const MachineFunction &MF) const override {
+     return false;
+   }
++
++  //==========================================================================//
++  bool useXderef() const override;
++  unsigned getAddrSpace(const MachineFunction &MF, int FI) const override;
++  int getOffset(const MachineFunction &MF, int FI) const override;
++  //==========================================================================//
+ };
+ } // namespace llvm
+ #endif
