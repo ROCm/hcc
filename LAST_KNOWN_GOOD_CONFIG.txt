@@ -1,0 +1,27 @@
+# This document shows the last known good configuration for the following
+# projects:
+# - ToT HCC
+# - ToT HCC Clang
+# - upstream LLVM
+# - upstream LLD
+
+[ToT HCC]
+- clone: git@github.com:RadeonOpenCompute/hcc.git
+- branch: clang_tot_upgrade
+- commit: 0430f7b67a4633db2532bb4c38f7cc86a5f34633
+
+[ToT HCC Clang]
+- clone: git@github.com:RadeonOpenCompute/hcc-clang-upgrade.git
+- branch: clang_tot_upgrade
+- commit: df4611d908b84dcb642086fbe63564d2805aa605
+
+[upstream LLVM]
+- clone: https://github.com/llvm-mirror/llvm
+- branch: master
+- commit: d5f5e9fa1f72a262c0ba1416190da08192dfa6ec
+
+[upstream LLD]
+- clone: https://github.com/llvm-mirror/lld 
+- branch: master
+- commit: fcd491be55a2c3217792857878ec67d62c64a9f7
+
