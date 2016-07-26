@@ -2,26 +2,32 @@
 # projects:
 # - ToT HCC
 # - ToT HCC Clang
+# - upstream Clang (where ToT HCC Clang is synchronized with)
 # - upstream LLVM
 # - upstream LLD
 
 [ToT HCC]
 - clone: git@github.com:RadeonOpenCompute/hcc.git
 - branch: clang_tot_upgrade
-- commit: 0430f7b67a4633db2532bb4c38f7cc86a5f34633
+- commit: 5a9b27cda445f921bc9b09c1cd09da36a7e5616d
 
 [ToT HCC Clang]
 - clone: git@github.com:RadeonOpenCompute/hcc-clang-upgrade.git
 - branch: clang_tot_upgrade
-- commit: df4611d908b84dcb642086fbe63564d2805aa605
+- commit: 549273ceea422c00831247999b1aa04359a16919
+
+[upstream Clang]
+- clone: git@github.com:RadeonOpenCompute/hcc-clang-upgrade.git
+- branch: upstream
+- commit: bc70669aeb14645d90464b93460e258ee72360fb
 
 [upstream LLVM]
 - clone: https://github.com/llvm-mirror/llvm
 - branch: master
-- commit: d5f5e9fa1f72a262c0ba1416190da08192dfa6ec
+- commit: 2970c2210ea61f80f9ff77ccfa1039508b813d64
 
 [upstream LLD]
 - clone: https://github.com/llvm-mirror/lld 
 - branch: master
-- commit: fcd491be55a2c3217792857878ec67d62c64a9f7
+- commit: e49e72b3bf9afb9c29ee27bbd3b3c0c040828118
 
