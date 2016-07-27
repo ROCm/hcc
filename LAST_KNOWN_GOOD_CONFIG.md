@@ -12,19 +12,19 @@ ToT HCC
 -------
 - clone: git@github.com:RadeonOpenCompute/hcc.git
 - branch: clang_tot_upgrade
-- commit: 8b31719a2afef6855c1bd67087453cfe79f00dee
+- commit: 0816db3324f04580b92f6192382c0e60c7c466e6
 
 ToT HCC Clang
 -------------
 - clone: git@github.com:RadeonOpenCompute/hcc-clang-upgrade.git
 - branch: clang_tot_upgrade
-- commit: de547dc3f213aee7274557227aa1e370bc6b5d1f
+- commit: 5ad084aabe6258d9d95ed26de99ca287950f86b7
 
 upstream Clang
 --------------
 - clone: git@github.com:RadeonOpenCompute/hcc-clang-upgrade.git
 - branch: upstream
-- commit: 3c55f1d0231063428f4c11082d5337a55cd2ed38
+- commit: 3eda93df84e4931740ce2c79f2d30134dd11b593
 
 upstream LLVM
 -------------
