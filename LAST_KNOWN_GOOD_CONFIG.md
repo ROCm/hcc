@@ -58,7 +58,7 @@ Process A: merge upstream Clang
 4. Build merged ToT HCC Clang
    - For failures introduced by changes in LLVM / LLD, execute Process B
 5. Quick sanity tests on merged ToT HCC Clang
-6. Update LAST_KNOWN_GOOD_CONFIG.txt (this document)
+6. Update LAST_KNOWN_GOOD_CONFIG.md (this document)
 7. Push everything
 
 Process B: merge upstream LLVM / LLD
@@ -66,7 +66,8 @@ Process B: merge upstream LLVM / LLD
 1. Fetch upstream LLVM commits
 2. Fetch upstream LLD commits
 3. Build upstream LLVM / LLD
-4. Remove ToT HCC checkout and restart Process A
+4. Update LAST_KNOWN_GOOD_CONFIG.md (this document)
+5. Remove ToT HCC checkout and restart Process A
 
 Detailed step-by-step instructions are in following sections.
 
@@ -100,7 +101,7 @@ Assume commands below are carried out in `compiler/tools/clang`.
 Resolve any merge conflicts encountered here.
 
 ### Build merged ToT HCC Clang
-Assume a ToT HCC build directory is there.
+Assume a ToT HCC build directory is there. If there's not, follow Appendix B to configure one.
 
 - change to ToT HCC build directory
 - `make -j16`
@@ -124,7 +125,7 @@ bin/hcc `bin/hcc-config --build --cxxflags --ldflags` -lhc_am ~/hcc_upstream/tes
 ./a.out ; echo $?
 ```
 
-### Update LAST_KNOWN_GOOD_CONFIG.txt (this document)
+### Update LAST_KNOWN_GOOD_CONFIG.md (this document)
 
 - change to ToT HCC Clang directory
 - `git checkout upstream`
@@ -137,7 +138,7 @@ bin/hcc `bin/hcc-config --build --cxxflags --ldflags` -lhc_am ~/hcc_upstream/tes
 ### Push everything
 
 - change to ToT HCC directory
-- `git add LAST_KNOWN_GOOD_CONFIG.txt`
+- `git add LAST_KNOWN_GOOD_CONFIG.md`
 - `git commit`
 - `git push`
 - change to ToT HCC Clang directory
@@ -160,12 +161,60 @@ Upon reaching here, the merge process is completed.
 
 Process B: merge upstream LLVM / LLD
 ------------------------------------
+Sometimes it's not possible to synchronize with upstream Clang without also
+synchronizing with upstream LLVM / LLD. This section explains steps to do that.
+Notice by the end of this Process you are asked to *remove* your ToT HCC checkout and restart Process A from scratch. If you have work already applied in ToT HCC Clang it's recommended to stash them elsewhere.
+
+In the near future ToT HCC and ToT HCC Clang should move to a true out-of-source build model to simplify the process.
 
 ### Fetch upstream LLVM commits
+Assume there is already an upstream LLVM checkout for AMDGPU(Lightning) backend.
+
+- change to upstream LLVM directory
+- `git pull`
 
 ### Fetch upstream LLD commits
+Assume there is already an upstream LLD checkout for AMDGPU(Lightning) backend. Normally it would be in "tools/lld" in LLVM checkout.
+
+- change to upstream LLD directory
+- `git pull`
 
 ### Build upstream LLVM / LLD
+Assume there's a build directory for upstream LLVM / LLD. If there's not, follow Appendix A to configure one.
+
+- change to LLVM build directory
+- `make -j16`
+
+### Update LAST_KNOWN_GOOD_CONFIG.md (this document)
+
+- change to upstream LLVM directory
+- `git rev-parse HEAD` : log the result in "upstream LLVM" in the beginning of this document
+- change to upstream LLD directory
+- `git rev-parse HEAD` : log the result in "upstream LLD" in the beginning of this document
 
 ### Remove ToT HCC checkout and restart Process A
+In ToT HCC there's also an LLVM / LLD checkout which sits in "compiler/" directory, and they would be patched by ToT HCC. It would be complicated to undo the process. So right now the recommended approach is to simply *remove* ToT HCC checkout and restart Process A. You may need to stash your changes in ToT HCC Clang somewhere else before removing ToT HCC checkout.
 
+
+Appendix A: CMake command for upstream LLVM / LLD
+=================================================
+
+```
+cmake \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/opt/rocm/llvm \
+    -DLLVM_TARGETS_TO_BUILD="AMDGPU;X86" \
+    <upstream LLVM checkout directory>
+```
+
+Appendix B: CMake command for ToT HCC
+=====================================
+
+```
+cmake \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DHSA_LLVM_BIN_DIR=<upstream LLVM build directory>/bin \
+    -DHSA_AMDGPU_GPU_TARGET=fiji \
+    -DHSA_USE_AMDGPU_BACKEND=ON \
+    <ToT HCC checkout directory>
+```
