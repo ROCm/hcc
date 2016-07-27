@@ -51,6 +51,7 @@ projects, but it's usually not easy to figure it out from the commit log.
 Generally speaking, the process goes like this:
 
 Process A: merge upstream Clang
+
 1. Add git remote for upstream Clang
 2. Fetch upstream Clang commits
 3. Merge upstream Clang with ToT HCC Clang
@@ -61,6 +62,7 @@ Process A: merge upstream Clang
 7. Push everything
 
 Process B: merge upstream LLVM / LLD
+
 1. Fetch upstream LLVM commits
 2. Fetch upstream LLD commits
 3. Build upstream LLVM / LLD
