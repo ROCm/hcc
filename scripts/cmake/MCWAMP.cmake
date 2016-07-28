@@ -72,6 +72,7 @@ endmacro(add_mcwamp_library_hsa name )
 ####################
 # C++AMP config (clamp-config)
 ####################
+
 macro(add_mcwamp_executable name )
   link_directories(${LIBCXX_LIB_DIR} ${LIBCXXRT_LIB_DIR})
   CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
@@ -86,4 +87,15 @@ macro(add_mcwamp_executable name )
   else (APPLE)
     target_link_libraries( ${name} mcwamp dl pthread c++abi)
   endif (APPLE)
+endmacro(add_mcwamp_executable name )
+
+
+macro(add_config_executable name )
+  CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
+  set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+  set(CMAKE_CXX_FLAGS "-std=c++11" )
+  add_executable( ${name} ${ARGN} )
+
+  # LLVM and Clang shall be compiled beforehand
+  add_dependencies(${name} llvm-link opt clang)
 endmacro(add_mcwamp_executable name )

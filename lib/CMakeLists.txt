@@ -1,16 +1,17 @@
 ####################
+# C++AMP config (clamp-config)
+####################
+add_config_executable(clamp-config mcwamp_main.cpp)
+add_config_executable(hcc-config mcwamp_main.cpp)
+
+####################
 # C++AMP runtime (mcwamp)
 ####################
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
 add_mcwamp_library(mcwamp mcwamp.cpp)
 add_mcwamp_library(mcwamp_atomic mcwamp_atomic.cpp)
 
-####################
-# C++AMP config (clamp-config)
-####################
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
-add_mcwamp_executable(clamp-config mcwamp_main.cpp)
-add_mcwamp_executable(hcc-config mcwamp_main.cpp)
-install(TARGETS mcwamp clamp-config hcc-config mcwamp_atomic
+install(TARGETS clamp-config hcc-config mcwamp mcwamp_atomic
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
