@@ -516,8 +516,7 @@ if (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
 
   # create a symlink to the LLVM binaries for the amdgpu backend in the project directory
   add_custom_target(lightning_bin
-    COMMAND mkdir -p "${PROJECT_BINARY_DIR}/llvm/bin"
-    COMMAND cp -rp "${HSA_LLVM_BIN_DIR}/*" "${PROJECT_BINARY_DIR}/llvm/bin/"
+    COMMAND ln -sf "${HSA_LLVM_BIN_DIR}" "${PROJECT_BINARY_DIR}/llvm/bin"
   )
 
   # include the amdgpu backend binaries in the hcc package
