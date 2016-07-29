@@ -384,6 +384,8 @@ struct StringFinder
         str.insert(0, "float");
       if(T->isDoubleTy())
         str.insert(0, "double");
+      if(T->isHalfTy())
+        str.insert(0, "__fp16");
     }
 
     if(llvm::StructType *sTy = llvm::dyn_cast<llvm::StructType>(T)) {
