@@ -12,7 +12,7 @@ ToT HCC
 -------
 - clone: git@github.com:RadeonOpenCompute/hcc.git
 - branch: clang_tot_upgrade
-- commit: 287efb2992ca1c8d061b44405319aaa5338f1e49
+- commit: aa2ad873773061d399b4bfbe3051f0ea948ba6c9
 
 ToT HCC Clang
 -------------
