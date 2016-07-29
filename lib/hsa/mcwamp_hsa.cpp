@@ -1548,9 +1548,9 @@ public:
         }
 
         static const size_t stagingSize = 64*1024;
-        hsa_region_t systemRegion = getHSAAMHostRegion();
-        staging_buffer[0] = new StagingBuffer(agent, systemRegion, stagingSize, 2/*staging buffers*/);
-        staging_buffer[1] = new StagingBuffer(agent, systemRegion, stagingSize, 2/*staging Buffers*/);
+        hsa_amd_memory_pool_t hostPool = (getHSAAMHostRegion());
+        staging_buffer[0] = new StagingBuffer(agent, hostPool, stagingSize, 2/*staging buffers*/);
+        staging_buffer[1] = new StagingBuffer(agent, hostPool, stagingSize, 2/*staging Buffers*/);
     }
 
     ~HSADevice() {
@@ -2333,6 +2333,22 @@ class HSAContext final : public KalmarContext
     }
 
 
+    static hsa_status_t find_host(hsa_agent_t agent, void* data) {
+        hsa_status_t status;
+        hsa_device_type_t device_type;
+        if(data == nullptr)
+            return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+        status = hsa_agent_get_info(agent, HSA_AGENT_INFO_DEVICE, &device_type);
+        STATUS_CHECK(status, __LINE__);
+
+        if(HSA_DEVICE_TYPE_CPU == device_type) {
+            *(hsa_agent_t*)data = agent;
+            return HSA_STATUS_INFO_BREAK;
+        }
+        return HSA_STATUS_SUCCESS;
+    }
+
+
 public:
     HSAContext() : KalmarContext(), signalPool(), signalPoolFlag(), signalCursor(0), signalPoolMutex() {
         host.handle = (uint64_t)-1;
@@ -2344,36 +2360,25 @@ public:
         status = hsa_init();
         STATUS_CHECK(status, __LINE__);
 
-<<<<<<< HEAD
         // Iterate over the agents to find out gpu device
-=======
-        // Iterate over GPU agents
->>>>>>> [HSA] fix CPU agent finding logic
         std::vector<hsa_agent_t> agents;
         status = hsa_iterate_agents(&HSAContext::find_gpu, &agents);
         STATUS_CHECK(status, __LINE__);
 
+        // Iterate over agents to find out the first cpu device as host
+        status = hsa_iterate_agents(&HSAContext::find_host, &host);
+        STATUS_CHECK(status, __LINE__);
+
         for (int i = 0; i < agents.size(); ++i) {
             hsa_agent_t agent = agents[i];
-<<<<<<< HEAD
             auto Dev = new HSADevice(agent, host);
             // choose the first GPU device as the default device
-=======
-            auto Dev = new HSADevice(agent);
->>>>>>> [HSA] fix CPU agent finding logic
             if (i == 0)
                 def = Dev;
             Devices.push_back(Dev);
         }
-<<<<<<< HEAD
-        
-=======
 
-        // Iterate over CPU agents
-        status = hsa_iterate_agents(&HSAContext::find_cpu, &g_cpu_agent);
-        STATUS_CHECK(status, __LINE__);
 
->>>>>>> [HSA] fix CPU agent finding logic
 #if SIGNAL_POOL_SIZE > 0
         signalPoolMutex.lock();
 
