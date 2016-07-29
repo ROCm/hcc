@@ -9,14 +9,14 @@
 #define tprintf(trace_level, ...) 
 
 //-------------------------------------------------------------------------------------------------
-StagingBuffer::StagingBuffer(hsa_agent_t hsaAgent, hsa_region_t systemRegion, size_t bufferSize, int numBuffers) :
+StagingBuffer::StagingBuffer(hsa_agent_t hsaAgent, hsa_amd_memory_pool_t systemPool, size_t bufferSize, int numBuffers) :
     _hsa_agent(hsaAgent),
     _bufferSize(bufferSize),
     _numBuffers(numBuffers > _max_buffers ? _max_buffers : numBuffers)
 {
     for (int i=0; i<_numBuffers; i++) {
         // TODO - experiment with alignment here.
-        hsa_status_t s1 = hsa_memory_allocate(systemRegion, _bufferSize, (void**) (&_pinnedStagingBuffer[i]) );
+        hsa_status_t s1 = hsa_amd_memory_pool_allocate(systemPool, _bufferSize, 0, (void**) (&_pinnedStagingBuffer[i]) );
 
         if ((s1 != HSA_STATUS_SUCCESS) || (_pinnedStagingBuffer[i] == NULL)) {
             THROW_ERROR(hipErrorMemoryAllocation);

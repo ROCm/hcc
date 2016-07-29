@@ -21,7 +21,7 @@ struct StagingBuffer {
 
     static const int _max_buffers = 4;
 
-    StagingBuffer(hsa_agent_t hsaAgent, hsa_region_t systemRegion, size_t bufferSize, int numBuffers) ;
+    StagingBuffer(hsa_agent_t hsaAgent, hsa_amd_memory_pool_t systemPool, size_t bufferSize, int numBuffers) ;
     ~StagingBuffer();
 
     void CopyHostToDevice(void* dst, const void* src, size_t sizeBytes, hsa_signal_t *waitFor);
