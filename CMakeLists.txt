@@ -531,6 +531,10 @@ if (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
 
   # do NOT depend on HLC or HSAILasm in case we use AMDGPU backend
   add_custom_target(world DEPENDS lightning_bin clang)
+  find_program(OPT opt PATHS ${HSA_LLVM_BIN_DIR} NO_DEFAULT_PATH)
+  add_custom_target(opt DEPENDS ${OPT})
+  find_program(LLVM_LINK llvm-link PATHS ${HSA_LLVM_BIN_DIR} NO_DEFAULT_PATH)
+  add_custom_target(llvm-link DEPENDS ${LLVM_LINK})
 else (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
   # build hlc and HSAILasm in case HSA_USE_AMDGPU_BACKEND 
   # or HSA_LLVM_BIN_DIR is not set
