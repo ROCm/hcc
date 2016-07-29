@@ -12,31 +12,31 @@ ToT HCC
 -------
 - clone: git@github.com:RadeonOpenCompute/hcc.git
 - branch: clang_tot_upgrade
-- commit: 0816db3324f04580b92f6192382c0e60c7c466e6
+- commit: 287efb2992ca1c8d061b44405319aaa5338f1e49
 
 ToT HCC Clang
 -------------
 - clone: git@github.com:RadeonOpenCompute/hcc-clang-upgrade.git
 - branch: clang_tot_upgrade
-- commit: 5ad084aabe6258d9d95ed26de99ca287950f86b7
+- commit: 7cb25e2394a1975d34cd102cc9fe1d969de9e604
 
 upstream Clang
 --------------
 - clone: git@github.com:RadeonOpenCompute/hcc-clang-upgrade.git
 - branch: upstream
-- commit: 3eda93df84e4931740ce2c79f2d30134dd11b593
+- commit: 5d0d64dcfd3f84fc684c40a79f88fa223b3852b6
 
 upstream LLVM
 -------------
 - clone: https://github.com/llvm-mirror/llvm
 - branch: master
-- commit: 2970c2210ea61f80f9ff77ccfa1039508b813d64
+- commit: c6c1814d38905ae31faf406e74a557516399bcda
 
 upstream LLD
 ------------
 - clone: https://github.com/llvm-mirror/lld 
 - branch: master
-- commit: e49e72b3bf9afb9c29ee27bbd3b3c0c040828118
+- commit: acddb44526eb60458db830a4ef1ff25a6c0f72db
 
 How to synchronize ToT HCC with upstream
 ========================================
@@ -83,7 +83,7 @@ checkout.
 - `git remote -v` to check if there's a git remote pointing to:
   `git@github.com:llvm-mirror/clang.git`
 - If there's not, add it by:
-  `git add remote clang git@github.com:llvm-mirror/clang.git`
+  `git remote add clang git@github.com:llvm-mirror/clang.git`
 
 ### Fetch upstream Clang commits
 Assume commands below are carried out in `compiler/tools/clang`.
