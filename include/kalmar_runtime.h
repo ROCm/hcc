@@ -30,11 +30,14 @@ enum execute_order
     execute_any_order
 };
 
-enum hcMemcpyKind {
+enum hcCommandKind {
     hcMemcpyHostToHost = 0,
     hcMemcpyHostToDevice = 1,
     hcMemcpyDeviceToHost = 2,
-    hcMemcpyDeviceToDevice = 3
+    hcMemcpyDeviceToDevice = 3,
+    hcCommandKernel = 4,
+    hcCommandMarker = 5,
+
 };
 
 enum hcWaitMode {
@@ -303,9 +306,9 @@ public:
     /// get all queues associated with this device
     virtual std::vector< std::shared_ptr<KalmarQueue> > get_all_queues() { return std::vector< std::shared_ptr<KalmarQueue> >(); }
 
-    virtual void memcpySymbol(const char* symbolName, void* hostptr, size_t count, size_t offset = 0, hcMemcpyKind kind = hcMemcpyHostToDevice) {}
+    virtual void memcpySymbol(const char* symbolName, void* hostptr, size_t count, size_t offset = 0, hcCommandKind kind = hcMemcpyHostToDevice) {}
 
-    virtual void memcpySymbol(void* symbolAddr, void* hostptr, size_t count, size_t offset = 0, hcMemcpyKind kind = hcMemcpyHostToDevice) {}
+    virtual void memcpySymbol(void* symbolAddr, void* hostptr, size_t count, size_t offset = 0, hcCommandKind kind = hcMemcpyHostToDevice) {}
 
     virtual void* getSymbolAddress(const char* symbolName) { return nullptr; }
 

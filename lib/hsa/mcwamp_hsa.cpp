@@ -1,5 +1,4 @@
 //===----------------------------------------------------------------------===//
-//===----------------------------------------------------------------------===//
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
@@ -41,7 +40,9 @@
 #include <time.h>
 #include <iomanip>
 
+#ifndef KALMAR_DEBUG
 #define KALMAR_DEBUG (0)
+#endif
 
 /////////////////////////////////////////////////
 // kernel dispatch speed optimization flags
@@ -269,6 +270,7 @@ private:
     hsa_signal_t signal;
     int signalIndex;
     bool isSubmitted;
+    Kalmar::hcCommandKind    commandKind;  // encodes copy direction 
     hsa_wait_state_t waitMode;
 
     std::shared_future<void>* future;
@@ -288,10 +290,11 @@ private:
     hsa_status_t enqueueAsyncCopy(hsa_queue_t* queue);
 
     // helper function used by HSACopy::syncCopy()
-    void setCopyAgents(Kalmar::hcMemcpyKind copyDir, hsa_agent_t *srcAgent, hsa_agent_t *dstAgent);
+    void setCopyAgents(Kalmar::hcCommandKind copyDir, hsa_agent_t *srcAgent, hsa_agent_t *dstAgent);
 
 public:
     std::shared_future<void>* getFuture() override { return future; }
+    Kalmar::hcCommandKind getCommandKind() const { return commandKind; };
 
     void* getNativeHandle() override { return &signal; }
 
@@ -667,6 +670,13 @@ private:
     //
     std::vector< std::shared_ptr<KalmarAsyncOp> > asyncOps;
 
+
+    // Kind of the youngest command.  
+    hcCommandKind youngestCommandKind;
+
+
+
+
     //
     // kernelBufferMap and bufferKernelMap forms the dependency graph of
     // kernel / kernel dispatches / buffers
@@ -717,6 +727,8 @@ public:
 
         /// Enable profiling support for the queue.
         status = hsa_amd_profiling_set_profiler_enabled(commandQueue, 1);
+
+        youngestCommandKind = hcMemcpyHostToDevice;
     }
 
     void dispose() override {
@@ -768,6 +780,38 @@ public:
     }
 
     // FIXME: implement flush
+ 
+    // Save the command and type
+    void pushAsyncOp(std::shared_ptr<KalmarAsyncOp> op, hcCommandKind commandKind) {
+        std::cerr << "  pushed op=" << op << "signal=" << ((hsa_signal_t*)op->getNativeHandle())->handle << " commandKind=" << commandKind << std::endl;
+        asyncOps.push_back(op);
+        youngestCommandKind = commandKind;
+    }
+
+
+    // Check the command kind for the upcoming command that will be sent to this queue
+    // if it differs from the youngest async op sent to the queue, we may need to insert additional synchronization.
+    // The function returns nullptr if no dependency is required. For example, back-to-back commands of same type
+    // are often implicitly synchronized.  
+    std::shared_ptr<KalmarAsyncOp> detectStreamDeps(hcCommandKind commandKind) {
+        // TODO - 
+        if (!asyncOps.empty() && (commandKind != youngestCommandKind)) {
+            printf ("command type changed %d->%d\n", youngestCommandKind, commandKind) ;
+            return asyncOps.front();
+        } else {
+            return nullptr;
+        }
+    }
+
+
+    void waitForStreamDeps (hcCommandKind commandKind) {
+        std::shared_ptr<KalmarAsyncOp> depOp = detectStreamDeps(commandKind);
+        if (depOp != nullptr) {
+            // TODO - add reference???
+            EnqueueMarkerWithDependency(depOp->getNativeHandle());
+        }
+    }
+
 
     int getPendingAsyncOps() override {
         int count = 0;
@@ -780,6 +824,7 @@ public:
     }
 
     void wait(hcWaitMode mode = hcWaitModeBlocked) override {
+      // TODO - perform wait in opposite order.
       // wait on all previous async operations to complete
       for (int i = 0; i < asyncOps.size(); ++i) {
         if (asyncOps[i] != nullptr) {
@@ -787,6 +832,7 @@ public:
             // wait on valid futures only
             std::shared_future<void>* future = asyncOp->getFuture();
             if (future->valid()) {
+                printf ("wait on future\n");
                 future->wait();
             }
         }
@@ -813,6 +859,8 @@ public:
                       [&] (void* buffer) {
                         waitForDependentAsyncOps(buffer);
                       });
+
+        // TODO - add waitFo
 
         // dispatch the kernel
         // and wait for its completion
@@ -847,6 +895,8 @@ public:
                         waitForDependentAsyncOps(buffer);
                       });
 
+        waitForStreamDeps(hcCommandKernel);
+
         // dispatch the kernel
         status = dispatch->dispatchKernelAsync(this);
         STATUS_CHECK(status, __LINE__);
@@ -855,7 +905,7 @@ public:
         std::shared_ptr<KalmarAsyncOp> sp_dispatch(dispatch);
 
         // associate the kernel dispatch with this queue
-        asyncOps.push_back(sp_dispatch);
+        pushAsyncOp(sp_dispatch, hcCommandKernel);
 
         // associate all buffers used by the kernel with the kernel dispatch instance
         std::for_each(std::begin(kernelBufferMap[ker]), std::end(kernelBufferMap[ker]),
@@ -1149,7 +1199,7 @@ public:
         STATUS_CHECK(status, __LINE__);
 
         // associate the barrier with this queue
-        asyncOps.push_back(barrier);
+        pushAsyncOp(barrier, hcCommandMarker);
 
         return barrier;
     }
@@ -1169,7 +1219,7 @@ public:
         STATUS_CHECK(status, __LINE__);
 
         // associate the barrier with this queue
-        asyncOps.push_back(barrier);
+        pushAsyncOp(barrier, hcCommandMarker);
 
         return barrier;
     }
@@ -1194,7 +1244,7 @@ public:
             STATUS_CHECK(status, __LINE__);
 
             // associate the barrier with this queue
-            asyncOps.push_back(barrier);
+            pushAsyncOp(barrier, hcCommandMarker);
 
             return barrier;
         } else {
@@ -1215,7 +1265,7 @@ public:
         STATUS_CHECK(status, __LINE__);
 
         // associate the async copy command with this queue
-        asyncOps.push_back(copyCommand);
+        pushAsyncOp(copyCommand, copyCommand->getCommandKind());
 
         return copyCommand;
     }
@@ -2081,7 +2131,7 @@ public:
     // TODO: Need more info about hostptr, is it OS allocated buffer or HSA allocator allocated buffer.
     // Or it might be the responsibility of caller? Because for OS allocated buffer, we need to call hsa_amd_memory_lock, otherwise, need to call
     // hsa_amd_agents_allow_access. Assume it is HSA allocated buffer.
-    void memcpySymbol(void* symbolAddr, void* hostptr, size_t count, size_t offset = 0, enum hcMemcpyKind kind = hcMemcpyHostToDevice) override {
+    void memcpySymbol(void* symbolAddr, void* hostptr, size_t count, size_t offset = 0, enum hcCommandKind kind = hcMemcpyHostToDevice) override {
         hsa_status_t status;
 
         if (executables.size() != 0) {
@@ -2103,7 +2153,7 @@ public:
     }
 
     // FIXME: return values
-    void memcpySymbol(const char* symbolName, void* hostptr, size_t count, size_t offset = 0, enum hcMemcpyKind kind = hcMemcpyHostToDevice) override {
+    void memcpySymbol(const char* symbolName, void* hostptr, size_t count, size_t offset = 0, enum hcCommandKind kind = hcMemcpyHostToDevice) override {
         if (executables.size() != 0) {
             unsigned long* symbol_ptr = (unsigned long*)getSymbolAddress(symbolName);
             memcpySymbol(symbol_ptr, hostptr, count, offset, kind);
@@ -2367,6 +2417,7 @@ public:
 
         // Iterate over agents to find out the first cpu device as host
         status = hsa_iterate_agents(&HSAContext::find_host, &host);
+        g_cpu_agent = host;  //TODO - remove me, replace uses of g_cpu_agent with host.
         STATUS_CHECK(status, __LINE__);
 
         for (int i = 0; i < agents.size(); ++i) {
@@ -2396,6 +2447,8 @@ public:
     }
 
     void releaseSignal(hsa_signal_t signal, int signalIndex) {
+
+        std::cerr << "  releaseSignal: " << signal.handle << "\n";
         hsa_status_t status = HSA_STATUS_SUCCESS;
 #if SIGNAL_POOL_SIZE > 0
         signalPoolMutex.lock();
@@ -2772,6 +2825,7 @@ HSADispatch::waitComplete() {
 #if KALMAR_DEBUG
     std::cerr << "wait for kernel dispatch completion with wait flag: " << waitMode << "\n";
 #endif
+    std::cerr << " wait for kernel dispatch completion with wait flag: " << waitMode << "signal=" << signal.handle << "\n";
 
     // wait for completion
     if (hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_LT, 1, uint64_t(-1), waitMode)!=0) {
@@ -2926,6 +2980,7 @@ HSABarrier::waitComplete() {
 #if KALMAR_DEBUG
     std::cerr << "wait for barrier completion with wait flag: " << waitMode << "\n";
 #endif
+    std::cerr << "  wait for barrier completion with wait flag: " << waitMode << "signal=" << signal.handle << "\n";
 
     // Wait on completion signal until the barrier is finished
     hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, waitMode);
@@ -3063,6 +3118,7 @@ HSACopy::waitComplete() {
 #if KALMAR_DEBUG
     std::cerr << "wait for async copy for completion with wait flag: " << waitMode << "\n";
 #endif
+    std::cerr << "  wait for copy completion with wait flag: " << waitMode << "signal=" << signal.handle << "\n";
 
     // Wait on completion signal until the async copy is finished
     hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, waitMode);
@@ -3187,7 +3243,7 @@ HSACopy::getEndTimestamp() override {
 
 // Helper function for copy routines - determines agents based on direction:
 inline void
-HSACopy::setCopyAgents(Kalmar::hcMemcpyKind copyDir, hsa_agent_t *srcAgent, hsa_agent_t *dstAgent) {
+HSACopy::setCopyAgents(Kalmar::hcCommandKind copyDir, hsa_agent_t *srcAgent, hsa_agent_t *dstAgent) {
     Kalmar::HSADevice *device = static_cast<Kalmar::HSADevice*> (hsaQueue->getDev());
     hsa_agent_t deviceAgent = device->getAgent();
 
@@ -3250,7 +3306,7 @@ HSACopy::syncCopy(Kalmar::HSAQueue* hsaQueue) {
 #endif
 
     // Resolve default to a specific Kind so we know which algorithm to use:
-    Kalmar::hcMemcpyKind copyDir;
+    Kalmar::hcCommandKind copyDir;
     if (!srcInDeviceMem && !dstInDeviceMem) {
         copyDir = Kalmar::hcMemcpyHostToHost;
     } else if (!srcInDeviceMem && dstInDeviceMem) {
@@ -3263,9 +3319,10 @@ HSACopy::syncCopy(Kalmar::HSAQueue* hsaQueue) {
         // Invalid copy copyDir - should never reach here since we cover all 4 possible options above.
         throw Kalmar::runtime_exception("invalid copy copyDir", 0);
     }
+    commandKind = copyDir; // TODO, refactor to remove copyDir temp
 
 #if KALMAR_DEBUG
-    std::cerr << "hcMemcpyKind: " << copyDir << "\n";
+    std::cerr << "hcCommandKind: " << commandKind << "\n";
 #endif
 
     // do not mark any dependent signals as of now
@@ -3329,7 +3386,7 @@ HSACopy::syncCopy(Kalmar::HSAQueue* hsaQueue) {
 #endif
         } else {
 #if KALMAR_DEBUG
-    std::cerr << "HSACopy::syncCopy(), hsa_amd_memory_async_copy() returns: " << hsa_status << "\n";
+    std::cerr << "HSACopy::syncCopy(), hsa_amd_memory_async_copy() returns: 0x" << std::hex << hsa_status << "\n";
 #endif
             throw Kalmar::runtime_exception("hsa_amd_memory_async_copy error", hsa_status);
         }

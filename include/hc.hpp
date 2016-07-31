@@ -809,11 +809,11 @@ public:
         return pDev->getProfile();
     }
 
-    void memcpy_symbol(const char* symbolName, void* hostptr, size_t count, size_t offset = 0, hcMemcpyKind kind = hcMemcpyHostToDevice) {
+    void memcpy_symbol(const char* symbolName, void* hostptr, size_t count, size_t offset = 0, hcCommandKind kind = hcMemcpyHostToDevice) {
         pDev->memcpySymbol(symbolName, hostptr, count, offset, kind);
     }
 
-    void memcpy_symbol(void* symbolAddr, void* hostptr, size_t count, size_t offset = 0, hcMemcpyKind kind = hcMemcpyHostToDevice) {
+    void memcpy_symbol(void* symbolAddr, void* hostptr, size_t count, size_t offset = 0, hcCommandKind kind = hcMemcpyHostToDevice) {
         pDev->memcpySymbol(symbolAddr, hostptr, count, offset, kind);
     }
 
