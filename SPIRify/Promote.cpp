@@ -1894,19 +1894,6 @@ void PromoteGlobals::getAnalysisUsage(AnalysisUsage& AU) const
 {
         AU.addRequired<CallGraphWrapperPass>();
 }
-static std::string escapeName(const std::string &orig_name)
-{
-    std::string oldName(orig_name);
-    // AMD OpenCL doesn't like kernel names starting with _
-    if (oldName[0] == '_')
-        oldName = oldName.substr(1);
-    size_t loc;
-    // escape name: $ -> _EC_
-    while ((loc = oldName.find('$')) != std::string::npos) {
-        oldName.replace(loc, 1, "_EC_");
-    }
-    return oldName;
-}
 
 bool PromoteGlobals::runOnModule(Module& M)
 {
@@ -1921,7 +1908,7 @@ bool PromoteGlobals::runOnModule(Module& M)
                     continue;
                 Function * promoted = createPromotedFunction (*F);
                 promoted->takeName (*F);
-                promoted->setName(escapeName(promoted->getName().str()));
+                promoted->setName(promoted->getName().str());
 
                 promoted->setCallingConv(llvm::CallingConv::SPIR_KERNEL);
                 // lambdas can be set as internal. This causes problem
@@ -1956,7 +1943,7 @@ bool PromoteGlobals::runOnModule(Module& M)
                     I->getSection() == std::string(TILE_STATIC_NAME) &&
                     I->getType()->getPointerAddressSpace() != 0) {
 
-                std::string oldName = escapeName(I->getName().str());
+                std::string oldName = I->getName().str();
                 // Prepend the name of the function which contains the user
                 std::set<std::string> userNames;
                 for (Value::user_iterator U = I->user_begin(), Ue = I->user_end();

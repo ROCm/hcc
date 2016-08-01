@@ -14,22 +14,6 @@
 /** \cond HIDDEN_SYMBOLS */
 namespace Kalmar {
 
-static inline std::string mcw_cxxamp_fixnames(char *f) restrict(cpu) {
-    std::string s(f);
-    std::string out;
-
-    for(std::string::iterator it = s.begin(); it != s.end(); it++ ) {
-      if (*it == '_' && it == s.begin()) {
-        continue;
-      } else if (isalnum(*it) || (*it == '_')) {
-        out.append(1, *it);
-      } else if (*it == '$') {
-        out.append("_EC_");
-      }
-    }
-    return out;
-}
-
 template <typename Kernel>
 static void append_kernel(const std::shared_ptr<KalmarQueue>& pQueue, const Kernel& f, void* kernel)
 {
@@ -65,9 +49,8 @@ mcw_cxxamp_launch_kernel_async(const std::shared_ptr<KalmarQueue>& pQueue, size_
   int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
   void *kernel = NULL;
   {
-      std::string transformed_kernel_name =
-          mcw_cxxamp_fixnames(f.__cxxamp_trampoline_name());
-      kernel = CLAMP::CreateKernel(transformed_kernel_name, pQueue.get());
+      std::string kernel_name(f.__cxxamp_trampoline_name());
+      kernel = CLAMP::CreateKernel(kernel_name, pQueue.get());
   }
   append_kernel(pQueue, f, kernel);
   return pQueue->LaunchKernelAsync(kernel, dim_ext, ext, local_size);
@@ -89,9 +72,8 @@ void mcw_cxxamp_launch_kernel(const std::shared_ptr<KalmarQueue>& pQueue, size_t
   int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
   void *kernel = NULL;
   {
-      std::string transformed_kernel_name =
-          mcw_cxxamp_fixnames(f.__cxxamp_trampoline_name());
-      kernel = CLAMP::CreateKernel(transformed_kernel_name, pQueue.get());
+      std::string kernel_name(f.__cxxamp_trampoline_name());
+      kernel = CLAMP::CreateKernel(kernel_name, pQueue.get());
   }
   append_kernel(pQueue, f, kernel);
   pQueue->LaunchKernel(kernel, dim_ext, ext, local_size);
@@ -110,9 +92,8 @@ inline void* mcw_cxxamp_get_kernel(const std::shared_ptr<KalmarQueue>& pQueue, c
   // FIXME: implicitly casting to avoid pointer to int error
   int* foo = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
   void *kernel = NULL;
-  std::string transformed_kernel_name =
-      mcw_cxxamp_fixnames(f.__cxxamp_trampoline_name());
-  kernel = CLAMP::CreateKernel(transformed_kernel_name, pQueue.get());
+  std::string kernel_name (f.__cxxamp_trampoline_name());
+  kernel = CLAMP::CreateKernel(kernel_name, pQueue.get());
   return kernel;
 #else
   return NULL;
