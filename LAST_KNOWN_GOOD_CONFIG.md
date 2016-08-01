@@ -12,31 +12,31 @@ ToT HCC
 -------
 - clone: git@github.com:RadeonOpenCompute/hcc.git
 - branch: clang_tot_upgrade
-- commit: aa2ad873773061d399b4bfbe3051f0ea948ba6c9
+- commit: 7b62aed7e2790e26dbd236f8e8dedfceb5fa98ac
 
 ToT HCC Clang
 -------------
 - clone: git@github.com:RadeonOpenCompute/hcc-clang-upgrade.git
 - branch: clang_tot_upgrade
-- commit: 7cb25e2394a1975d34cd102cc9fe1d969de9e604
+- commit: d7c7511ded7cf959c937835b024461edd240ba29
 
 upstream Clang
 --------------
 - clone: git@github.com:RadeonOpenCompute/hcc-clang-upgrade.git
 - branch: upstream
-- commit: 5d0d64dcfd3f84fc684c40a79f88fa223b3852b6
+- commit: 549148fed3a1b33d397072a0a8ea1639cdc4697b
 
 upstream LLVM
 -------------
 - clone: https://github.com/llvm-mirror/llvm
 - branch: master
-- commit: c6c1814d38905ae31faf406e74a557516399bcda
+- commit: f6cf26bc83e5e2b4b80c5e28929a773cf0ec8207
 
 upstream LLD
 ------------
 - clone: https://github.com/llvm-mirror/lld 
 - branch: master
-- commit: acddb44526eb60458db830a4ef1ff25a6c0f72db
+- commit: a78bbfb761f1d81391418b998e3e31ad8ea4b329
 
 How to synchronize ToT HCC with upstream
 ========================================
