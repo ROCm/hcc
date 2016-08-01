@@ -2,9 +2,11 @@ cmake_minimum_required( VERSION 2.8 )
 project (HCC)
 
 # tame CMake 3.0+
+if (CMAKE_MAJOR_VERSION GREATER 3)
 cmake_policy(SET CMP0026 OLD)
 cmake_policy(SET CMP0037 OLD)
 cmake_policy(SET CMP0046 OLD)
+endif()
 
 option(HSA_USE_AMDGPU_BACKEND "Use AMDGPU LLVM backend as compiler for HSA" OFF)
 
