@@ -251,28 +251,15 @@ am_status_t am_free(void* ptr)
 am_status_t am_copy(void*  dst, const void*  src, size_t sizeBytes)
 {
     am_status_t am_status = AM_ERROR_MISC;
+    hsa_status_t err = hsa_memory_copy(dst, src, sizeBytes);
 
-    hc::accelerator acc;
-    hc::AmPointerInfo srcPtrInfo(NULL,NULL,0, acc);
-    hc::AmPointerInfo dstPtrInfo(NULL,NULL,0, acc);
-
-    bool srcTracked = ! (hc::am_memtracker_getinfo(&srcPtrInfo, src) != AM_SUCCESS);
-    bool dstTracked = true;
-    if (! srcTracked) {
-        dstTracked = ! (hc::am_memtracker_getinfo(&dstPtrInfo, dst) != AM_SUCCESS);
-    }
-
-    if (srcTracked) {
-        // prefer src if avail:
-        srcPtrInfo._acc.get_default_view().copy(src, dst, sizeBytes);
-    } else if (dstTracked) {
-        dstPtrInfo._acc.get_default_view().copy(src, dst, sizeBytes);
+    if (err == HSA_STATUS_SUCCESS) {
+        am_status = AM_SUCCESS;
     } else {
-        // host-to-host copy of two untracked pointers- use memcpy.
-        memcpy(dst, src, sizeBytes);
+        am_status = AM_ERROR_MISC;
     }
 
-    return HSA_STATUS_SUCCESS;
+    return am_status;
 }
 
 
