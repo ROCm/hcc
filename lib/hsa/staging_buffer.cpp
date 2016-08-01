@@ -6,11 +6,17 @@
 
 #include "staging_buffer.h"
 #define THROW_ERROR(e) throw 
+#ifdef KALMAR_DEBUG_COPY
+#include <stdio.h>
+#define tprintf(trace_level, ...) printf(__VA_ARGS__)
+#else
 #define tprintf(trace_level, ...) 
+#endif
 
 //-------------------------------------------------------------------------------------------------
-StagingBuffer::StagingBuffer(hsa_agent_t hsaAgent, hsa_amd_memory_pool_t systemPool, size_t bufferSize, int numBuffers) :
-    _hsa_agent(hsaAgent),
+StagingBuffer::StagingBuffer(hsa_agent_t deviceAgent, hsa_agent_t cpuStagingAgent, hsa_amd_memory_pool_t systemPool, size_t bufferSize, int numBuffers) :
+    _hsa_agent(deviceAgent),
+    _cpu_staging_agent(cpuStagingAgent),
     _bufferSize(bufferSize),
     _numBuffers(numBuffers > _max_buffers ? _max_buffers : numBuffers)
 {
@@ -18,9 +24,17 @@ StagingBuffer::StagingBuffer(hsa_agent_t hsaAgent, hsa_amd_memory_pool_t systemP
         // TODO - experiment with alignment here.
         hsa_status_t s1 = hsa_amd_memory_pool_allocate(systemPool, _bufferSize, 0, (void**) (&_pinnedStagingBuffer[i]) );
 
+
         if ((s1 != HSA_STATUS_SUCCESS) || (_pinnedStagingBuffer[i] == NULL)) {
             THROW_ERROR(hipErrorMemoryAllocation);
         }
+
+        // Make visible to the target GPU agent:
+        s1 = hsa_amd_agents_allow_access(1, &_hsa_agent, NULL, _pinnedStagingBuffer[i]);
+        if (s1 != HSA_STATUS_SUCCESS) {
+            THROW_ERROR(hipErrorMemoryAllocation);
+        }
+
         hsa_signal_create(0, 0, NULL, &_completion_signal[i]);
     }
 };
@@ -39,7 +53,7 @@ StagingBuffer::~StagingBuffer()
 }
 
 
-// FIXME: this function still needs more works
+// FIXME: this function still needs more work
 #if 0
 //---
 //Copies sizeBytes from src to dst, using either a copy to a staging buffer or a staged pin-in-place strategy
@@ -145,7 +159,7 @@ void StagingBuffer::CopyHostToDevice(void* dst, const void* src, size_t sizeByte
 
         hsa_signal_store_relaxed(_completion_signal[bufferIndex], 1);
 
-        hsa_status_t hsa_status = hsa_amd_memory_async_copy(dstp, _hsa_agent, _pinnedStagingBuffer[bufferIndex], _hsa_agent, theseBytes, waitFor ? 1:0, waitFor, _completion_signal[bufferIndex]);
+        hsa_status_t hsa_status = hsa_amd_memory_async_copy(dstp, _hsa_agent, _pinnedStagingBuffer[bufferIndex], _cpu_staging_agent, theseBytes, waitFor ? 1:0, waitFor, _completion_signal[bufferIndex]);
         tprintf (DB_COPY2, "H2D: bytesRemaining=%zu: async_copy %zu bytes %p to %p status=%x\n", bytesRemaining, theseBytes, _pinnedStagingBuffer[bufferIndex], dstp, hsa_status);
 
         if (hsa_status != HSA_STATUS_SUCCESS) {
@@ -199,7 +213,7 @@ void StagingBuffer::CopyDeviceToHost(void* dst, const void* src, size_t sizeByte
 
             tprintf (DB_COPY2, "D2H: bytesRemaining0=%zu  async_copy %zu bytes src:%p to staging:%p\n", bytesRemaining0, theseBytes, srcp0, _pinnedStagingBuffer[bufferIndex]);
             hsa_signal_store_relaxed(_completion_signal[bufferIndex], 1);
-            hsa_status_t hsa_status = hsa_amd_memory_async_copy(_pinnedStagingBuffer[bufferIndex], _hsa_agent, srcp0, _hsa_agent, theseBytes, waitFor ? 1:0, waitFor, _completion_signal[bufferIndex]);
+            hsa_status_t hsa_status = hsa_amd_memory_async_copy(_pinnedStagingBuffer[bufferIndex], _cpu_staging_agent, srcp0, _hsa_agent, theseBytes, waitFor ? 1:0, waitFor, _completion_signal[bufferIndex]);
             if (hsa_status != HSA_STATUS_SUCCESS) {
                 THROW_ERROR (hipErrorRuntimeMemory);
             }
@@ -219,7 +233,7 @@ void StagingBuffer::CopyDeviceToHost(void* dst, const void* src, size_t sizeByte
             tprintf (DB_COPY2, "D2H: wait_completion[%d] bytesRemaining=%zu\n", bufferIndex, bytesRemaining1);
             hsa_signal_wait_acquire(_completion_signal[bufferIndex], HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, HSA_WAIT_STATE_ACTIVE);
 
-            tprintf (DB_COPY2, "D2H: bytesRemaining1=%zu copy %zu bytes stagingBuf[%d]:%p to dst:%p\n", bytesRemaining1, theseBytes, bufferIndex, _pinnedStagingBuffer[bufferIndex], dstp1);
+            tprintf (DB_COPY2, "D2H: bytesRemaining1=%zu memcopy %zu bytes stagingBuf[%d]:%p to dst:%p\n", bytesRemaining1, theseBytes, bufferIndex, _pinnedStagingBuffer[bufferIndex], dstp1);
             memcpy(dstp1, _pinnedStagingBuffer[bufferIndex], theseBytes);
 
             dstp1 += theseBytes;

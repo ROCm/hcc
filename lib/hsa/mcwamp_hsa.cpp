@@ -44,6 +44,10 @@
 #define KALMAR_DEBUG (0)
 #endif
 
+#ifndef KALMAR_DEBUG_ASYNC_COPY
+#define KALMAR_DEBUG_ASYNC_COPY (0)
+#endif
+
 /////////////////////////////////////////////////
 // kernel dispatch speed optimization flags
 /////////////////////////////////////////////////
@@ -671,10 +675,9 @@ private:
     std::vector< std::shared_ptr<KalmarAsyncOp> > asyncOps;
 
 
-    // Kind of the youngest command.  
+    // Kind of the youngest command in the queue.
+    // Used to detect and enforce dependencies between commands.
     hcCommandKind youngestCommandKind;
-
-
 
 
     //
@@ -783,7 +786,9 @@ public:
  
     // Save the command and type
     void pushAsyncOp(std::shared_ptr<KalmarAsyncOp> op, hcCommandKind commandKind) {
-        std::cerr << "  pushed op=" << op << "signal=" << ((hsa_signal_t*)op->getNativeHandle())->handle << " commandKind=" << commandKind << std::endl;
+#if KALMAR_DEBUG_ASYNC_COPY
+        std::cerr << "  pushed op=" << op << "  signal=" << ((hsa_signal_t*)op->getNativeHandle())->handle << "  commandKind=" << commandKind << std::endl;
+#endif
         asyncOps.push_back(op);
         youngestCommandKind = commandKind;
     }
@@ -826,13 +831,17 @@ public:
     void wait(hcWaitMode mode = hcWaitModeBlocked) override {
       // TODO - perform wait in opposite order.
       // wait on all previous async operations to complete
-      for (int i = 0; i < asyncOps.size(); ++i) {
+      // Go in reverse order (from yooungest to oldest).
+      // Ensures younger ops have chance to complete before older ops reclaim their resources
+#if KALMAR_DEBUG_ASYNC_COPY
+      std::cerr << " queue wait\n";
+#endif
+      for (int i = asyncOps.size()-1; i >= 0;  i--) {
         if (asyncOps[i] != nullptr) {
             auto asyncOp = asyncOps[i];
             // wait on valid futures only
             std::shared_future<void>* future = asyncOp->getFuture();
             if (future->valid()) {
-                printf ("wait on future\n");
                 future->wait();
             }
         }
@@ -1427,7 +1436,7 @@ public:
 
         if ((flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_COARSE_GRAINED) && (!ri->_found_coarsegrained_system_memory_pool)) {
 #if KALMAR_DEBUG
-            std::cerr << "found coarse-grain system memory pool, size(MB) = " << size << std::endl;
+            std::cerr << "found coarse-grain system memory pool=" << region.handle << " size(MB) = " << size << std::endl;
 #endif 
             ri->_coarsegrained_system_memory_pool = region;
             ri->_found_coarsegrained_system_memory_pool = true;
@@ -1599,8 +1608,8 @@ public:
 
         static const size_t stagingSize = 64*1024;
         hsa_amd_memory_pool_t hostPool = (getHSAAMHostRegion());
-        staging_buffer[0] = new StagingBuffer(agent, hostPool, stagingSize, 2/*staging buffers*/);
-        staging_buffer[1] = new StagingBuffer(agent, hostPool, stagingSize, 2/*staging Buffers*/);
+        staging_buffer[0] = new StagingBuffer(agent, g_cpu_agent, hostPool, stagingSize, 2/*staging buffers*/);
+        staging_buffer[1] = new StagingBuffer(agent, g_cpu_agent, hostPool, stagingSize, 2/*staging Buffers*/);
     }
 
     ~HSADevice() {
@@ -2448,7 +2457,9 @@ public:
 
     void releaseSignal(hsa_signal_t signal, int signalIndex) {
 
+#if KALMAR_DEBUG_ASYNC_COPY
         std::cerr << "  releaseSignal: " << signal.handle << "\n";
+#endif
         hsa_status_t status = HSA_STATUS_SUCCESS;
 #if SIGNAL_POOL_SIZE > 0
         signalPoolMutex.lock();
@@ -2823,9 +2834,8 @@ HSADispatch::waitComplete() {
     }
 
 #if KALMAR_DEBUG
-    std::cerr << "wait for kernel dispatch completion with wait flag: " << waitMode << "\n";
+    std::cerr << " wait for kernel dispatch completion with wait flag: " << waitMode << "  signal=" << signal.handle << "\n";
 #endif
-    std::cerr << " wait for kernel dispatch completion with wait flag: " << waitMode << "signal=" << signal.handle << "\n";
 
     // wait for completion
     if (hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_LT, 1, uint64_t(-1), waitMode)!=0) {
@@ -2977,10 +2987,9 @@ HSABarrier::waitComplete() {
         return HSA_STATUS_ERROR_INVALID_ARGUMENT;
     }
 
-#if KALMAR_DEBUG
-    std::cerr << "wait for barrier completion with wait flag: " << waitMode << "\n";
+#if KALMAR_DEBUG or KALMAR_DEBUG_ASYNC_COPY
+    std::cerr << "  wait for barrier completion with wait flag: " << waitMode << "  signal=" << signal.handle << "\n";
 #endif
-    std::cerr << "  wait for barrier completion with wait flag: " << waitMode << "signal=" << signal.handle << "\n";
 
     // Wait on completion signal until the barrier is finished
     hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, waitMode);
@@ -3115,10 +3124,9 @@ HSACopy::waitComplete() {
         return HSA_STATUS_ERROR_INVALID_ARGUMENT;
     }
 
-#if KALMAR_DEBUG
-    std::cerr << "wait for async copy for completion with wait flag: " << waitMode << "\n";
+#if KALMAR_DEBUG or KALMAR_DEBUG_ASYNC_COPY
+    sed::cerr << "  wait for copy completion with wait flag: " << waitMode << "signal=" << signal.handle << "\n";
 #endif
-    std::cerr << "  wait for copy completion with wait flag: " << waitMode << "signal=" << signal.handle << "\n";
 
     // Wait on completion signal until the async copy is finished
     hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, waitMode);
