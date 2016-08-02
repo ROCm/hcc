@@ -386,10 +386,7 @@ public:
             status = waitComplete();
             STATUS_CHECK(status, __LINE__);
         }
-        if(future != nullptr){
-            delete future;
-            future = nullptr;
-        }
+        dispose();
     }
 
     hsa_status_t setDynamicGroupSegment(size_t dynamicGroupSize) {
@@ -2560,7 +2557,7 @@ HSADispatch::waitComplete() {
         printf("Signal wait returned unexpected value\n");
         exit(0);
     }
-    dispose();
+
 #if KALMAR_DEBUG
     std::cerr << "complete!\n";
 #endif
@@ -2627,12 +2624,20 @@ HSADispatch::dispatchKernelAsync(Kalmar::HSAQueue* hsaQueue) {
 inline void
 HSADispatch::dispose() {
     hsa_status_t status;
-    
+    if (kernargMemory != nullptr) {
+      device->releaseKernargBuffer(kernargMemory, kernargMemoryIndex);
+      kernargMemory = nullptr;
+    }
+
     clearArgs();
     std::vector<uint8_t>().swap(arg_vec);
 
     Kalmar::ctx.releaseSignal(signal, signalIndex);
 
+    if (future != nullptr) {
+      delete future;
+      future = nullptr;
+    }
 }
 
 inline uint64_t

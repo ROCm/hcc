@@ -23,11 +23,10 @@
 
 
 
-template <typename T>
+template <typename T, short pattern>
 bool run_test(const int num) {
 
   std::vector<T> input_x(num);
-  std::vector<T> input_y(num);
 
   // initialize the input data
   std::default_random_engine random_gen;
@@ -39,33 +38,26 @@ bool run_test(const int num) {
   auto gen = std::bind(distribution, random_gen);
   std::generate(input_x.begin(), input_x.end(), gen);
 
-  constexpr int wave_size = 64;
-
-  // generate the lane IDs
-  int counter = 0;
-  std::generate(input_y.begin(), input_y.end(), [&]() {
-    counter = (counter == wave_size)?0:counter++;
-    return counter;
-  });
-  for (auto wave_start = input_y.begin(); wave_start != input_y.end(); wave_start+=wave_size) {
-    std::random_shuffle(wave_start, wave_start + wave_size);
-  }
-
   hc::array_view<T,1> av_input_x(num, input_x);
-  hc::array_view<T,1> av_input_y(num, input_y);
 
   std::vector<T> actual(num);
   hc::array_view<T,1> av_actual(num, actual);
   hc::parallel_for_each(av_input_x.get_extent(), 
                         [=](hc::index<1> idx) [[hc]] {
-    av_actual[idx] = hc::__amdgcn_ds_permute(av_input_y[idx], av_input_x[idx]);
+    av_actual[idx] = hc::__amdgcn_ds_swizzle(av_input_x[idx],pattern);
   });
   av_actual.synchronize();
 
   std::vector<T> expected(num);
-  for(int j = 0; j < num; j+= wave_size) {
-    for (int i = 0; i < wave_size; i++) {
-      expected[ j+input_y[j+i] ] = input_x[j+i];
+ 
+  static_assert((pattern & 0x00008000) == 0, "The pattern provided is not in BitMode and therefore incompatible with this test!");
+  short and_mask = pattern & 0x1F;
+  short or_mask = (pattern >> 5) & 0x1F;
+  short xor_mask = (pattern >> 10) & 0x1F;
+  for(int j = 0; j < num; j+= 32) {
+    for (unsigned int i = 0; i < 32; i++) {
+      unsigned int k = (((i & and_mask) | or_mask) ^ xor_mask);
+      expected[j+i] = av_input_x[j+k];
     }
   }
  
@@ -75,10 +67,14 @@ bool run_test(const int num) {
 
 int main() {
   bool pass = true;
+  pass &= run_test<int,(short)0x5D69>(1024*1024);
+  pass &= run_test<int,(short)0x5355>(1024*1024);
 
-  pass &= run_test<unsigned int>(1024*1024);
-  pass &= run_test<int>(1024*1024);
-  pass &= run_test<float>(1024*1024);
+  pass &= run_test<unsigned int,(short)0x5D69>(1024*1024);
+  pass &= run_test<unsigned int,(short)0x5355>(1024*1024);
+
+  pass &= run_test<float,(short)0x5D69>(1024*1024);
+  pass &= run_test<float,(short)0x5355>(1024*1024);
 
 #ifdef DEBUG
   std::cout << (const char*)(pass?"passed!":"failed!") << std::endl;

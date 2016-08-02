@@ -1,9 +1,14 @@
 cmake_minimum_required( VERSION 2.8 )
 project (HCC)
 
+# tame CMake 3.0+
+if (CMAKE_MAJOR_VERSION GREATER 3)
+cmake_policy(SET CMP0026 OLD)
+cmake_policy(SET CMP0037 OLD)
+cmake_policy(SET CMP0046 OLD)
+endif()
+
 option(HSA_USE_AMDGPU_BACKEND "Use AMDGPU LLVM backend as compiler for HSA" OFF)
-
-
 
 # set default installation path
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND CMAKE_INSTALL_PREFIX MATCHES "/usr/local")
@@ -483,6 +488,10 @@ if (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
 
   # do NOT depend on HLC or HSAILasm in case we use AMDGPU backend
   add_custom_target(world DEPENDS lightning_bin clang)
+  find_program(OPT opt PATHS ${HSA_LLVM_BIN_DIR} NO_DEFAULT_PATH)
+  add_custom_target(opt DEPENDS ${OPT})
+  find_program(LLVM_LINK llvm-link PATHS ${HSA_LLVM_BIN_DIR} NO_DEFAULT_PATH)
+  add_custom_target(llvm-link DEPENDS ${LLVM_LINK})
 else (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
   # build hlc and HSAILasm in case HSA_USE_AMDGPU_BACKEND 
   # or HSA_LLVM_BIN_DIR is not set
