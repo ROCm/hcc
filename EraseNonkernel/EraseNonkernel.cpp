@@ -152,15 +152,15 @@ bool EraseNonkernels::runOnModule(Module &M)
 
 	// codes below will remove CPU codes emitted in GPU path
 	// only functions in the following 3 categories would be preserved:
-	// 1) kernels : functions with SPIR_KERNEL linkage
+	// 1) kernels : functions with AMDGPU_KERNEL linkage
 	// 2) OpenCL intrinsics
 	// 3) LLVM intrinsics
 
 	// remove unwanted functions
 	Module::FunctionListType &global_funcs = M.getFunctionList();
 	for (Module::iterator I = global_funcs.begin(), E = global_funcs.end(); I != E; ) {
-		// keep functions with SPIR_KERNEL linkage
-		if (I->getCallingConv() == CallingConv::SPIR_KERNEL) {
+		// keep functions with AMDGPU_KERNEL linkage
+		if (I->getCallingConv() == CallingConv::AMDGPU_KERNEL) {
 			I++;
 			continue;
 		}

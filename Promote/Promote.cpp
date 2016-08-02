@@ -1910,7 +1910,7 @@ bool PromoteGlobals::runOnModule(Module& M)
                 promoted->takeName (*F);
                 promoted->setName(promoted->getName().str());
 
-                promoted->setCallingConv(llvm::CallingConv::SPIR_KERNEL);
+                promoted->setCallingConv(llvm::CallingConv::AMDGPU_KERNEL);
                 // lambdas can be set as internal. This causes problem
                 // in optimizer and we shall mark it as non-internal
                 if (promoted->getLinkage() ==
