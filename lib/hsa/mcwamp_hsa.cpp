@@ -44,6 +44,7 @@
 #define KALMAR_DEBUG (0)
 #endif
 
+#define KALMAR_DEBUG_ASYNC_COPY (0)
 #ifndef KALMAR_DEBUG_ASYNC_COPY
 #define KALMAR_DEBUG_ASYNC_COPY (0)
 #endif
@@ -75,6 +76,9 @@
 // threshold to clean up finished kernel in HSAQueue.asyncOps
 // default set as 1024
 #define ASYNCOPS_VECTOR_GC_SIZE (1024)
+
+
+#define HSA_BARRIER_DEP_SIGNAL_CNT (5)
 
 
 // whether to use MD5 as kernel indexing hash function
@@ -279,6 +283,11 @@ private:
 
     std::shared_future<void>* future;
 
+
+    // If copy is dependent on another operation, record reference here.
+    // keep a reference which prevents those ops from being deleted until this op is deleted.
+    std::shared_ptr<KalmarAsyncOp> depAsyncOp;
+
     Kalmar::HSAQueue* hsaQueue;
 
     // source pointer
@@ -290,9 +299,6 @@ private:
     // bytes to be copied
     size_t sizeBytes;
 
-    // array of all operations that this op depends on.
-    // This array keeps a reference which prevents those ops from being deleted until this op is deleted.
-    std::vector< std::shared_ptr<KalmarAsyncOp> > depAsyncOps;
 
     // helper function used by HSACopy::enqueueAsync()
     hsa_status_t enqueueAsyncCopy(hsa_queue_t* queue);
@@ -323,7 +329,7 @@ public:
 
     // HSA signals would be waited in HSA_WAIT_STATE_ACTIVE by default for HSACopy instances
     HSACopy(const void* src_, void* dst_, size_t sizeBytes_) :
-        isSubmitted(false), future(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_ACTIVE), 
+        isSubmitted(false), future(nullptr), depAsyncOp(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_ACTIVE), 
         src(src_), dst(dst_), sizeBytes(sizeBytes_),
         signalIndex(-1) {
 #if KALMAR_DEBUG
@@ -381,12 +387,10 @@ private:
     // maximum up to 5 prior dependencies could be associated with one
     // HSABarrier instance
     int depCount;
-    hsa_signal_t depSignal[5];
-
 
     // array of all operations that this op depends on.
     // This array keeps a reference which prevents those ops from being deleted until this op is deleted.
-    std::vector< std::shared_ptr<KalmarAsyncOp> > depAsyncOps;
+    std::shared_ptr<KalmarAsyncOp> depAsyncOps [HSA_BARRIER_DEP_SIGNAL_CNT];
 
 public:
     std::shared_future<void>* getFuture() override { return future; }
@@ -413,15 +417,15 @@ public:
     HSABarrier() : isDispatched(false), future(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_BLOCKED), depCount(0) {}
 
     // constructor with 1 prior depedency
-    HSABarrier(hsa_signal_t dependent_signal) : isDispatched(false), future(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_BLOCKED), depCount(1) {
-        depSignal[0] = dependent_signal;
+    HSABarrier(std::shared_ptr <Kalmar::KalmarAsyncOp> dependent_op) : isDispatched(false), future(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_BLOCKED), depCount(1) {
+        depAsyncOps[0] = dependent_op;
     }
 
     // constructor with at most 5 prior dependencies
-    HSABarrier(int count, hsa_signal_t* dependent_signal_array) : isDispatched(false), future(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_BLOCKED), depCount(count) {
+    HSABarrier(int count, std::shared_ptr <Kalmar::KalmarAsyncOp> *dependent_op_array) : isDispatched(false), future(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_BLOCKED), depCount(count) {
         if ((count > 0) && (count <= 5)) {
             for (int i = 0; i < count; ++i) {
-                depSignal[i] = dependent_signal_array[i];
+                depAsyncOps[i] = dependent_op_array[i];
             }
         } else {
             // throw an exception
@@ -808,7 +812,6 @@ public:
     // The function returns nullptr if no dependency is required. For example, back-to-back commands of same type
     // are often implicitly synchronized.  
     std::shared_ptr<KalmarAsyncOp> detectStreamDeps(hcCommandKind commandKind) {
-        // TODO - 
         if (!asyncOps.empty() && (commandKind != youngestCommandKind)) {
             printf ("command type changed %d->%d\n", youngestCommandKind, commandKind) ;
             return asyncOps.back();
@@ -822,7 +825,7 @@ public:
         std::shared_ptr<KalmarAsyncOp> depOp = detectStreamDeps(commandKind);
         if (depOp != nullptr) {
             // TODO - add reference???
-            EnqueueMarkerWithDependency(depOp->getNativeHandle());
+            EnqueueMarkerWithDependency(1, &depOp); // TODO-async.  Add convenience function?
         }
     }
 
@@ -1222,40 +1225,14 @@ public:
         return barrier;
     }
 
-    // enqueue a barrier packet with one prior dependency
-    std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(void* native_dependency) override {
-        hsa_status_t status = HSA_STATUS_SUCCESS;
-
-        // convert void* to hsa_signal_t
-        hsa_signal_t dep_signal = *(static_cast<hsa_signal_t*>(native_dependency));
-
-        // create shared_ptr instance
-        std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>(dep_signal);
-
-        // enqueue the barrier
-        status = barrier.get()->enqueueAsync(this);
-        STATUS_CHECK(status, __LINE__);
-
-        // associate the barrier with this queue's stream of ops
-        pushAsyncOp(barrier, hcCommandMarker);
-
-        return barrier;
-    }
-
     // enqueue a barrier packet with multiple prior dependencies
-    std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(int count, void** native_dependency_array) override {
+    std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(int count, std::shared_ptr <KalmarAsyncOp> *depOps) override {
         hsa_status_t status = HSA_STATUS_SUCCESS;
 
-        hsa_signal_t dep_signal_array[5];
-
-        if ((count > 0) && (count <= 5)) {
-            // convert void* to hsa_signal_t
-            for (int i = 0; i < count; ++i) {
-                dep_signal_array[i] = *(static_cast<hsa_signal_t*>(native_dependency_array[i]));
-            }
+        if ((count > 0) && (count <= HSA_BARRIER_DEP_SIGNAL_CNT)) {
 
             // create shared_ptr instance
-            std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>(count, dep_signal_array);
+            std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>(count, depOps);
 
             // enqueue the barrier
             status = barrier.get()->enqueueAsync(this);
@@ -1746,7 +1723,7 @@ public:
     std::string kernel_checksum(size_t size, void* source) {
 #if USE_MD5_HASH
         unsigned char md5_hash[16];
-        memset(md5_hash, 0, sizeof(unsigned char) * 16);
+        memset(md5_hash, 0, sieof(unsigned char) * 16);
         MD5_CTX md5ctx;
         MD5_Init(&md5ctx);
         MD5_Update(&md5ctx, source, size);
@@ -3076,7 +3053,7 @@ HSABarrier::enqueueBarrier(hsa_queue_t* queue) {
     // setup dependent signals
     if ((depCount > 0) && (depCount <= 5)) {
         for (int i = 0; i < depCount; ++i) {
-            barrier->dep_signal[i] = depSignal[i];
+            barrier->dep_signal[i] = *(static_cast <hsa_signal_t*> (depAsyncOps[i]->getNativeHandle()));
         }
     }
 
@@ -3098,6 +3075,11 @@ HSABarrier::enqueueBarrier(hsa_queue_t* queue) {
 inline void
 HSABarrier::dispose() {
     Kalmar::ctx.releaseSignal(signal, signalIndex);
+
+    // Release referecne to our dependent ops:
+    for (int i=0; i<depCount; i++) {
+        depAsyncOps[i] = nullptr;
+    } 
 
     if (future != nullptr) {
       delete future;
@@ -3235,12 +3217,11 @@ HSACopy::enqueueAsyncCopy(hsa_queue_t* queue) {
         int depSignalCnt = 0;
         hsa_signal_t depSignal;
         commandKind = resolveMemcpyDirection(srcPtrInfo._isInDeviceMem, dstPtrInfo._isInDeviceMem);
-        std::shared_ptr<KalmarAsyncOp> depOp = hsaQueue->detectStreamDeps(commandKind);
+        depAsyncOp = hsaQueue->detectStreamDeps(commandKind);
 
-        if (depOp) {
-            depAsyncOps.push_back(depOp);
+        if (depAsyncOp) {
             depSignalCnt = 1;
-            depSignal = * (static_cast <hsa_signal_t*> (depOp->getNativeHandle()));
+            depSignal = * (static_cast <hsa_signal_t*> (depAsyncOp->getNativeHandle()));
 #if KALMAR_DEBUG_ASYNC_COPY 
             std::cerr << "  asyncCopy sent with dependency on signal=" << depSignal.handle << "\n"; 
 #endif
@@ -3263,7 +3244,7 @@ inline void
 HSACopy::dispose() {
 
     // clear reference counts for dependent ops.
-    depAsyncOps.clear();
+    depAsyncOp = nullptr;
 
 
     // HSA signal may not necessarily be allocated by HSACopy instance
@@ -3321,7 +3302,7 @@ HSACopy::setCopyAgents(Kalmar::hcCommandKind copyDir, hsa_agent_t *srcAgent, hsa
 //     allow communicating that information to this function.  *IsMapped=False indicates the map state is unknown,
 //     so the functions uses the memory tracker to determine mapped or unmapped and *IsInDeviceMem
 //
-// The copies are performed synchronously - the routine waits until the copy completes before returning.
+// The copies are performed host-synchronously - the routine waits until the copy completes before returning.
 void
 HSACopy::syncCopy(Kalmar::HSAQueue* hsaQueue) {
 
@@ -3367,7 +3348,7 @@ HSACopy::syncCopy(Kalmar::HSAQueue* hsaQueue) {
     std::cerr << "hcCommandKind: " << commandKind << "\n";
 #endif
 
-    // do not mark any dependent signals as of now
+    // Copy already called queue.wait() so there are no dependent signals.
     hsa_signal_t depSignal;
     int depSignalCnt = 0;
 

@@ -1211,7 +1211,7 @@ accelerator_view::create_marker() const {
 inline unsigned int accelerator_view::get_version() const { return get_accelerator().get_version(); }
 
 inline completion_future accelerator_view::create_blocking_marker(completion_future& dependent_future) const {
-    return completion_future(pQueue->EnqueueMarkerWithDependency(dependent_future.get_native_handle()));
+    return completion_future(pQueue->EnqueueMarkerWithDependency(dependent_future.__asyncOp));
 }
 
 template<typename InputIterator>
@@ -1219,7 +1219,7 @@ inline completion_future
 accelerator_view::create_blocking_marker(InputIterator first, InputIterator last) const {
     bool atLeastOne = false; // have we sent at least one marker
     int cnt = 0;
-    void* deps[5]; // array of 5 pointers to the native handle of async ops. 5 is the max supported by barrier packet
+    std::shared_ptr<Kalmar::KalmarAsyncOp> deps[5]; // array of 5 pointers to the native handle of async ops. 5 is the max supported by barrier packet
     hc::completion_future lastMarker;
 
     // loop through signals and group into sections of 5
@@ -1227,7 +1227,7 @@ accelerator_view::create_blocking_marker(InputIterator first, InputIterator last
     // since HC sets the barrier bit in each AND barrier packet, we know
     // the barriers will execute in-order
     for (auto iter = first; iter != last; ++iter) {
-        deps[cnt++] = iter->get_native_handle(); // retrieve native handle of async op associated with completion_future
+        deps[cnt++] = iter->__asyncOp; // retrieve async op associated with completion_future
         if (cnt == 5) {
             atLeastOne = true;
             lastMarker = completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps));
