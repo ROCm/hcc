@@ -153,16 +153,15 @@ int main()
   size_t N = 1024*256; 
 
   // In-progress:
+  // Test H2D -> kernel -> D2H dependency.  If this fails, likely indicates problem with D2H
+  simpleTest1<float>(gpu_acc, N, true/*allocPinned*/,  true/*useAsyncCopy*/,  false/*syncAfterH2D*/, false/*syncAfterKernel*/, true/*syncAfterD2H*/, 0);
 
-  // PASS:
   // Use async calls, but av.wait() after all the important steps:
   simpleTest1<float>(gpu_acc, N, true/*allocPinned*/,  true/*useAsyncCopy*/,  true/*syncAfterH2D*/, true/*syncAfterKernel*/, true/*syncAfterD2H*/, 0);
 
   // Test H2D -> kernel dependency:
   simpleTest1<float>(gpu_acc, N, true/*allocPinned*/,  true/*useAsyncCopy*/,  false/*syncAfterH2D*/, true/*syncAfterKernel*/, true/*syncAfterD2H*/, 0);
 
-  // Test H2D -> kernel -> D2H dependency.  If this fails, likely indicates problem with D2H
-  //simpleTest1<float>(gpu_acc, N, true/*allocPinned*/,  true/*useAsyncCopy*/,  false/*syncAfterH2D*/, false/*syncAfterKernel*/, true/*syncAfterD2H*/, 0);
   
 
   // Synchronous cases:

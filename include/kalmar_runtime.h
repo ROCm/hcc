@@ -107,6 +107,7 @@ public:
    * @param mode[in] wait mode, must be one of the value in hcWaitMode enum.
    */
   virtual void setWaitMode(hcWaitMode mode) {}
+
 };
 
 /// KalmarQueue

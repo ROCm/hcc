@@ -219,8 +219,7 @@ public:
      * after the device finishes executing the buffered commands. However, the
      * commands will eventually always complete.
      *
-     * If the queuing_mode is queuing_mode_immediate, this function does
-     * nothing.
+     * If the queuing_mode is queuing_mode_immediate, this function has no effect.
      *
      * @return None
      */
@@ -995,6 +994,7 @@ public:
             if (__asyncOp != nullptr) {
                 __asyncOp->setWaitMode(mode);
             }   
+            //TODO-ASYNC - need to reclaim older AsyncOps here.
             __amp_future.wait();
         }
     }
