@@ -133,7 +133,7 @@ attributes #0 = { alwaysinline nounwind readnone uwtable "less-precise-fpmad"="f
 attributes #1 = { noinline nounwind readnone uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #2 = { nounwind readnone uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
-!opencl.kernels = !{!0, !6, !12, !13, !15}
+!hcc.kernels = !{!0, !6, !12, !13, !15}
 !llvm.ident = !{!21, !21, !21, !21, !21, !21, !21, !21, !21, !21, !21, !21, !21, !21}
 
 !0 = metadata !{void (i32, i32, %struct.SimFlatSt*, i32, double, %struct.EamPotentialSt*)* @"_ZZL8eamForceP9SimFlatStEN3$_219__cxxamp_trampolineEiiS0_idP14EamPotentialSt", metadata !1, metadata !2, metadata !3, metadata !4, metadata !5}

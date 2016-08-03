@@ -2271,7 +2271,7 @@ attributes #20 = { noreturn nounwind }
 attributes #21 = { builtin nobuiltin nounwind }
 
 !llvm.ident = !{!0, !0}
-!opencl.kernels = !{!1}
+!hcc.kernels = !{!1}
 
 !0 = metadata !{metadata !"HCC clang version 3.5.0 (tags/RELEASE_350/final) (based on HCC 0.8.1541-1e50a32-348ebf7 LLVM 3.5.0svn)"}
 !1 = metadata !{void (i32, i32*, i32*, i32*, i32)* @_ZN12_GLOBAL__N_18foo_func19__cxxamp_trampolineEiPiS1_S1_i, metadata !2, metadata !3, metadata !4, metadata !5, metadata !6}

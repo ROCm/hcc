@@ -88,7 +88,7 @@ attributes #0 = { alwaysinline nounwind "less-precise-fpmad"="false" "no-frame-p
 attributes #1 = { noinline nounwind readonly "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-frame-pointer-elim-non-leaf"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-frame-pointer-elim-non-leaf"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
-!opencl.kernels = !{!0, !1, !2, !3, !4}
+!hcc.kernels = !{!0, !1, !2, !3, !4}
 
 !0 = metadata !{void (i32, i32, i32*, i32, i32, i32)* @_ZZ16bitonic_sort_ampIiEvRNSt3__16vectorIT_NS0_9allocatorIS2_EEEES6_ENS_IiEUlN11Concurrency11tiled_indexILi512ELi0ELi0EEEE1_19__cxxamp_trampolineEiiPiNS8_11access_typeEjj}
 !1 = metadata !{void (i32, i32, i32*, i32, i32, i32, i32*, i32, i32, i32)* @_ZZ16bitonic_sort_ampIiEvRNSt3__16vectorIT_NS0_9allocatorIS2_EEEES6_ENS_IiEUlN11Concurrency11tiled_indexILi16ELi16ELi0EEEE0_19__cxxamp_trampolineEiiPiNS8_11access_typeEiiSC_SD_jj}

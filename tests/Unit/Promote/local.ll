@@ -87,7 +87,7 @@ attributes #4 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "
 attributes #5 = { nounwind readonly "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-frame-pointer-elim-non-leaf"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #6 = { nounwind readonly }
 
-!opencl.kernels = !{!0}
+!hcc.kernels = !{!0}
 
 !0 = metadata !{void (i32, i32, i32, i32, i32*, i32, i32, i32, i32, i32, i32, i32, i32, i32)* @"_ZZ4mainEN3$_019__cxxamp_trampolineEiiiiPiiiiiiiiii"}
 !1 = metadata !{metadata !"int", metadata !2}

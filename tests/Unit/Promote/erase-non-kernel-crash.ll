@@ -11,7 +11,7 @@ entry:
 
 attributes #0 = { alwaysinline nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
-!opencl.kernels = !{!0, !6, !0, !12, !14}
+!hcc.kernels = !{!0, !6, !0, !12, !14}
 !llvm.ident = !{!20, !20, !20, !20, !20, !20, !20, !20, !20, !20, !20, !20, !20, !20}
 
 !0 = metadata !{null, metadata !1, metadata !2, metadata !3, metadata !4, metadata !5}

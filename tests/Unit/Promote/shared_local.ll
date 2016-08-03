@@ -341,7 +341,7 @@ attributes #4 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "
 attributes #5 = { noduplicate "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-frame-pointer-elim-non-leaf"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #6 = { nounwind readonly "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-frame-pointer-elim-non-leaf"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
-!opencl.kernels = !{!0, !6, !12, !13, !14}
+!hcc.kernels = !{!0, !6, !12, !13, !14}
 
 !0 = metadata !{void (i32, i32, i32*, i32, i32, i32)* @_ZZ16bitonic_sort_ampIiEvRNSt3__16vectorIT_NS0_9allocatorIS2_EEEES6_ENS_IiEUlN11Concurrency11tiled_indexILi256ELi0ELi0EEEE1_19__cxxamp_trampolineEiiPiNS8_11access_typeEjj, metadata !1, metadata !2, metadata !3, metadata !4, metadata !5}
 !1 = metadata !{metadata !"kernel_arg_addr_space", i32 0, i32 0, i32 0, i32 0, i32 0, i32 0}

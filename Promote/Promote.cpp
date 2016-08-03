@@ -41,8 +41,8 @@ typedef SmallVector<std::pair<Function *, Function *>, 3> FunctionPairVect;
 typedef std::map <Function *, Function *> FunctionMap;
 
 /* The name of the MDNode into which the list of
-   MD nodes referencing each OpenCL kernel is stored. */
-static Twine KernelListMDNodeName = "opencl.kernels";
+   MD nodes referencing each HCC kernel is stored. */
+static Twine KernelListMDNodeName = "hcc.kernels";
 
 enum {
         PrivateAddressSpace = 0,

@@ -28,7 +28,7 @@ namespace {
 
     void findKernels(Module& M, FunctionVect& found_kernels)
     {
-        NamedMDNode * root = M.getNamedMetadata("opencl.kernels");
+        NamedMDNode * root = M.getNamedMetadata("hcc.kernels");
         if (!root || (root->getNumOperands() == 0))
             return;
 

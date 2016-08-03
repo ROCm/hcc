@@ -33,8 +33,8 @@ namespace {
 typedef SmallVector<Function *, 3> FunctionVect;
 
 /* The name of the MDNode into which the list of
-   MD nodes referencing each OpenCL kernel is stored. */
-static Twine KernelListMDNodeName = "opencl.kernels";
+   MD nodes referencing each HCC kernel is stored. */
+static Twine KernelListMDNodeName = "hcc.kernels";
 
 /* Find the MDNode which reference the list of opencl kernels.
    NULL if it does not exists. */
