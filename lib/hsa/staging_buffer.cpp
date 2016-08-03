@@ -1,5 +1,5 @@
 // AMD-specific HSA API
-#include <hsa/hsa_ext_amd.h>
+#include <hsa_ext_amd.h>
 
 // mutex and lock_guard
 #include <mutex>
