@@ -300,7 +300,7 @@ private:
 
 
     // helper function used by HSACopy::enqueueAsync()
-    hsa_status_t enqueueAsyncCopy(hsa_queue_t* queue);
+    hsa_status_t enqueueAsyncCopy();
 
     // helper function used by HSACopy::syncCopy()
     void setCopyAgents(Kalmar::hcCommandKind copyDir, hsa_agent_t *srcAgent, hsa_agent_t *dstAgent);
@@ -3145,7 +3145,7 @@ HSACopy::enqueueAsync(Kalmar::HSAQueue* hsaQueue) {
     hsa_queue_t* queue = static_cast<hsa_queue_t*>(hsaQueue->getHSAQueue());
 
     // enqueue async copy command
-    status = enqueueAsyncCopy(queue);
+    status = enqueueAsyncCopy();
     STATUS_CHECK_Q(status, queue, __LINE__);
 
     // dynamically allocate a std::shared_future<void> object
@@ -3175,7 +3175,7 @@ static Kalmar::hcCommandKind resolveMemcpyDirection(bool srcInDeviceMem, bool ds
 
 
 inline hsa_status_t
-HSACopy::enqueueAsyncCopy(hsa_queue_t* queue) {
+HSACopy::enqueueAsyncCopy() {
     hsa_status_t status = HSA_STATUS_SUCCESS;
     if (isSubmitted) {
         return HSA_STATUS_ERROR_INVALID_ARGUMENT;
