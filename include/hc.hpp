@@ -202,7 +202,7 @@ public:
      * An accelerator_view internally maintains a buffer of commands such as
      * data transfers between the host memory and device buffers, and kernel
      * invocations (parallel_for_each calls). This member function sends the
-     * commands to the device for processing. Normally, these commands are sent
+     * commands to the device for processing. Normally, these commands 
      * to the GPU automatically whenever the runtime determines that they need
      * to be, such as when the command buffer is full or when waiting for 
      * transfer of data from the device buffers to host memory. The flush 
@@ -216,7 +216,7 @@ public:
      * references to them have been removed.
      *
      * Because flush operates asynchronously, it can return either before or
-     * after the device finishes executing the buffered commands. However, the
+     * after the device finishes executing the buffered commandser, the
      * commands will eventually always complete.
      *
      * If the queuing_mode is queuing_mode_immediate, this function has no effect.
@@ -267,8 +267,8 @@ public:
     /**
      * Copies size_bytes bytes from src to dst.  
      * Src and dst must not overlap.  
-     * Note the src is the first parameter and dst is second, following C++ convention.
-     * The copy command will execute after any commands already inserted into the accelerator_view.
+     * Note the src is the first parameter and dst is second, foAllowing C++ convention.
+     * The copy command will execute after any commands already inserted into the accelerator_view finish.
      * This is a synchronous copy command, and the copy operation complete before this call returns.
      */
     void copy(const void *src, void *dst, size_t size_bytes) {
@@ -278,9 +278,13 @@ public:
     /**
      * Copies size_bytes bytes from src to dst.  
      * Src and dst must not overlap.  
-     * Note the src is the first parameter and dst is second, following C++ convention.
-     * The copy command will execute after any commands already inserted into the accelerator_view.
+     * Note the src is the first parameter and dst is second, following C++ convention.  
      * This is an asynchronous copy command, and this call may return before the copy operation completes.
+     *
+     * The copy command will be implicitly ordered with respect to commands previously equeued to this accelerator_view:
+     * - If the queue execute_order is execute_in_order (the default), then the copy will execute after all previously sent commands finish execution.
+     * - If the queue execute_order is execute_any_order, then the copy will start after all previously send commands start but can execute in any order.
+     *
      */
     completion_future copy_async(const void *src, void *dst, size_t size_bytes);
 
@@ -1049,6 +1053,10 @@ public:
      * Get the native handle for the asynchronous operation encapsulated in
      * this completion_future object. The method is mostly used for debugging
      * purpose.
+     * Applications should retain the parent completion_future to ensure
+     * the native handle is not deallocated by the HCC runtime.  The completion_future
+     * pointer to the native handle is reference counted, so a copy of 
+     * the completion_future is sufficient to retain the native_handle.
      */
     void* get_native_handle() const {
       if (__asyncOp != nullptr) {

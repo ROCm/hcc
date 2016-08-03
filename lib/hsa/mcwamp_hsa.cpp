@@ -44,7 +44,6 @@
 #define KALMAR_DEBUG (0)
 #endif
 
-#define KALMAR_DEBUG_ASYNC_COPY (0)
 #ifndef KALMAR_DEBUG_ASYNC_COPY
 #define KALMAR_DEBUG_ASYNC_COPY (0)
 #endif
