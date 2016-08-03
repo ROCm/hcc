@@ -91,6 +91,17 @@ int main(){
 
     Init(gpu_acc);
     hc::accelerator_view av = gpu_acc.get_default_view();
+    
+    // Sync + Kernel + Sync
+    Test1(av);
+    Test2(av);
+    Test3(av);
+    // Async + Kernel + Async
+    Test4(av);
+    Test2(av);
+    Test5(av);
+
+    
     for(uint32_t i=0;i<SHRT_MAX;i++){
         Test1(av);
     }
@@ -110,6 +121,6 @@ int main(){
     for(uint32_t i=0;i<SHRT_MAX;i++){
         Test5(av);
     }
-
+    
 }
 
