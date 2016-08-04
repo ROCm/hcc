@@ -1,6 +1,6 @@
 #pragma once
 
-#include <hsa.h>
+#include <hsa/hsa.h>
 
 #include <mutex>
 

@@ -186,9 +186,6 @@ inline static void checkHCCRuntimeStatus(const HCCRuntimeStatus status, const un
 extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v);
 extern "C" void PushArgPtrImpl(void *ker, int idx, size_t sz, const void *v);
 
-// Need to use the CPU agent to identify host allocations for hsa copy routines:
-static hsa_agent_t g_cpu_agent;
-
 // forward declaration
 namespace Kalmar {
 class HSAQueue;
@@ -1460,6 +1457,10 @@ public:
         return agent;
     }
 
+    hsa_agent_t& getHostAgent() {
+        return host_;
+    }
+
     HSADevice(hsa_agent_t a, hsa_agent_t host) : KalmarDevice(access_type_read_write),
                                agent(a), programs(), max_tile_static_size(0),
                                queues(), queues_mutex(),
@@ -1593,8 +1594,8 @@ public:
 
         static const size_t stagingSize = 64*1024;
         hsa_amd_memory_pool_t hostPool = (getHSAAMHostRegion());
-        staging_buffer[0] = new StagingBuffer(agent, g_cpu_agent, hostPool, stagingSize, 2/*staging buffers*/);
-        staging_buffer[1] = new StagingBuffer(agent, g_cpu_agent, hostPool, stagingSize, 2/*staging Buffers*/);
+        staging_buffer[0] = new StagingBuffer(agent, host_, hostPool, stagingSize, 2/*staging buffers*/);
+        staging_buffer[1] = new StagingBuffer(agent, host_, hostPool, stagingSize, 2/*staging Buffers*/);
     }
 
     ~HSADevice() {
@@ -1722,7 +1723,7 @@ public:
     std::string kernel_checksum(size_t size, void* source) {
 #if USE_MD5_HASH
         unsigned char md5_hash[16];
-        memset(md5_hash, 0, sieof(unsigned char) * 16);
+        memset(md5_hash, 0, sizeof(unsigned char) * 16);
         MD5_CTX md5ctx;
         MD5_Init(&md5ctx);
         MD5_Update(&md5ctx, source, size);
@@ -2411,7 +2412,6 @@ public:
 
         // Iterate over agents to find out the first cpu device as host
         status = hsa_iterate_agents(&HSAContext::find_host, &host);
-        g_cpu_agent = host;  //TODO - remove me, replace uses of g_cpu_agent with host.
         STATUS_CHECK(status, __LINE__);
 
         for (int i = 0; i < agents.size(); ++i) {
@@ -3200,8 +3200,8 @@ HSACopy::enqueueAsyncCopy() {
         hsa_agent_t deviceAgent = device->getAgent();
 
         hsa_agent_t srcAgent, dstAgent;
-        srcAgent = srcPtrInfo._isInDeviceMem ? deviceAgent : g_cpu_agent;
-        dstAgent = dstPtrInfo._isInDeviceMem ? deviceAgent : g_cpu_agent;
+        srcAgent = srcPtrInfo._isInDeviceMem ? deviceAgent : device->getHostAgent();
+        dstAgent = dstPtrInfo._isInDeviceMem ? deviceAgent : device->getHostAgent();
 
         // Performs an async copy.
         // This routine deals only with "mapped" pointers - see syncCopy for an explanation.
@@ -3279,11 +3279,12 @@ inline void
 HSACopy::setCopyAgents(Kalmar::hcCommandKind copyDir, hsa_agent_t *srcAgent, hsa_agent_t *dstAgent) {
     Kalmar::HSADevice *device = static_cast<Kalmar::HSADevice*> (hsaQueue->getDev());
     hsa_agent_t deviceAgent = device->getAgent();
+    hsa_agent_t hostAgent = device->getHostAgent();
 
     switch (copyDir) {
-        case Kalmar::hcMemcpyHostToHost     : *srcAgent=g_cpu_agent; *dstAgent=g_cpu_agent; break;
-        case Kalmar::hcMemcpyHostToDevice   : *srcAgent=g_cpu_agent; *dstAgent=deviceAgent; break;
-        case Kalmar::hcMemcpyDeviceToHost   : *srcAgent=deviceAgent; *dstAgent=g_cpu_agent; break;
+        case Kalmar::hcMemcpyHostToHost     : *srcAgent=hostAgent; *dstAgent=hostAgent; break;
+        case Kalmar::hcMemcpyHostToDevice   : *srcAgent=hostAgent; *dstAgent=deviceAgent; break;
+        case Kalmar::hcMemcpyDeviceToHost   : *srcAgent=deviceAgent; *dstAgent=hostAgent; break;
         case Kalmar::hcMemcpyDeviceToDevice : *srcAgent=deviceAgent; *dstAgent=deviceAgent; break;
         default: throw Kalmar::runtime_exception("invalid memcpy direction", copyDir);
     };
