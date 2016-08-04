@@ -69,6 +69,8 @@ struct rw_info;
 /// This is an abstraction of all asynchronous operations within Kalmar
 class KalmarAsyncOp {
 public:
+  KalmarAsyncOp() : seqNum(0) {} 
+
   virtual ~KalmarAsyncOp() {} 
   virtual std::shared_future<void>* getFuture() { return nullptr; }
   virtual void* getNativeHandle() { return nullptr;}
@@ -107,6 +109,13 @@ public:
    * @param mode[in] wait mode, must be one of the value in hcWaitMode enum.
    */
   virtual void setWaitMode(hcWaitMode mode) {}
+
+  uint64_t getSeqNum () const { return seqNum;};
+  void     setSeqNum (uint64_t s) {seqNum = s;};
+
+private:
+  // Sequence number of this op in the queue it is dispatched into.
+  uint64_t seqNum;
 
 };
 

@@ -44,6 +44,7 @@
 #define KALMAR_DEBUG (0)
 #endif
 
+#define KALMAR_DEBUG_ASYNC_COPY (0)
 #ifndef KALMAR_DEBUG_ASYNC_COPY
 #define KALMAR_DEBUG_ASYNC_COPY (0)
 #endif
@@ -60,9 +61,9 @@
 // default set as 64 (pre-allocating 64 of kernarg buffers in the pool)
 #define KERNARG_POOL_SIZE (64)
 
-// number of pre-allocated HSA signals in HSAContext
-// default set as 64 (pre-allocating 64 HSA signals)
-#define SIGNAL_POOL_SIZE (64)
+// Maximum number of inflight commands sent to a single queue.
+// If ld is exceeded, HCC will force a queue wait to reclaim some resources.
+#define MAX_INFLIGHT_COMMANDS_PER_QUEUE  1024
 
 // whether to use kernarg region found on the HSA agent
 // default set as 1 (use karnarg region)
@@ -125,7 +126,7 @@ static const char* getHSAErrorString(hsa_status_t s) {
 
 #define STATUS_CHECK(s,line) if (s != HSA_STATUS_SUCCESS && s != HSA_STATUS_INFO_BREAK) {\
     const char* error_string = getHSAErrorString(s);\
-		printf("### Error: %s (%d) at line:%d\n", error_string, s, line);\
+		printf("### HCC Error: %s (%d) at %s:line:%d\n", error_string, s, __FILE__, line);\
                 assert(HSA_STATUS_SUCCESS == hsa_shut_down());\
 		exit(-1);\
 	}
@@ -324,7 +325,7 @@ public:
     }
 
     // HSA signals would be waited in HSA_WAIT_STATE_ACTIVE by default for HSACopy instances
-    HSACopy(const void* src_, void* dst_, size_t sizeBytes_) :
+    HSACopy(const void* src_, void* dst_, size_t sizeBytes_) : KalmarAsyncOp(),
         isSubmitted(false), future(nullptr), depAsyncOp(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_ACTIVE), 
         src(src_), dst(dst_), sizeBytes(sizeBytes_),
         signalIndex(-1) {
@@ -410,7 +411,7 @@ public:
 
     // default constructor
     // 0 prior dependency
-    HSABarrier() : isDispatched(false), future(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_BLOCKED), depCount(0) {}
+    HSABarrier() : KalmarAsyncOp(), isDispatched(false), future(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_BLOCKED), depCount(0) {}
 
     // constructor with 1 prior depedency
     HSABarrier(std::shared_ptr <Kalmar::KalmarAsyncOp> dependent_op) : isDispatched(false), future(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_BLOCKED), depCount(1) {
@@ -529,7 +530,7 @@ public:
         return HSA_STATUS_SUCCESS;
     }
 
-    HSADispatch(Kalmar::HSADevice* _device, HSAKernel* _kernel);
+    HSADispatch(Kalmar::HSADevice* _device, HSAKernel* _kernel)  ;
 
     hsa_status_t pushFloatArg(float f) { return pushArgPrivate(f); }
     hsa_status_t pushIntArg(int i) { return pushArgPrivate(i); }
@@ -683,6 +684,8 @@ private:
     //
     std::vector< std::shared_ptr<KalmarAsyncOp> > asyncOps;
 
+    uint64_t                                      opSeqNums;
+
 
     // Kind of the youngest command in the queue.
     // Used to detect and enforce dependencies between commands.
@@ -721,7 +724,7 @@ private:
     std::map<void*, std::vector<void*> > kernelBufferMap;
 
 public:
-    HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order) : KalmarQueue(pDev, queuing_mode_automatic, order), commandQueue(nullptr), asyncOps(), bufferKernelMap(), kernelBufferMap() {
+    HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order) : KalmarQueue(pDev, queuing_mode_automatic, order), commandQueue(nullptr), asyncOps(), opSeqNums(0), bufferKernelMap(), kernelBufferMap() {
         hsa_status_t status;
 
         /// Query the maximum size of the queue.
@@ -796,9 +799,19 @@ public:
     // Save the command and type
     void pushAsyncOp(std::shared_ptr<KalmarAsyncOp> op, hcCommandKind commandKind) {
 #if KALMAR_DEBUG_ASYNC_COPY
-        std::cerr << "  pushed op=" << op << "  signal=" << ((hsa_signal_t*)op->getNativeHandle())->handle << "  commandKind=" << commandKind << std::endl;
+        std::cerr << "  pushing op=" << op << "  signal=" << ((hsa_signal_t*)op->getNativeHandle())->handle << "  commandKind=" << commandKind << std::endl;
 #endif
+        op->setSeqNum(++opSeqNums);
+
+        if (asyncOps.size() >= MAX_INFLIGHT_COMMANDS_PER_QUEUE) {
+            printf ("op#%zu: force sync asyncOps.size=%zu\n", opSeqNums, asyncOps.size());
+
+            // TODO - could optimized this to only drain part of the pool:
+            // Would like to change asyncOps to vector before getting too deep.
+            wait();
+        }
         asyncOps.push_back(op);
+
         youngestCommandKind = commandKind;
     }
 
@@ -842,7 +855,7 @@ public:
       // Go in reverse order (from yooungest to oldest).
       // Ensures younger ops have chance to complete before older ops reclaim their resources
 #if KALMAR_DEBUG_ASYNC_COPY
-      std::cerr << " queue wait\n";
+      //std::cerr << " queue wait\n";
 #endif
       for (int i = asyncOps.size()-1; i >= 0;  i--) {
         if (asyncOps[i] != nullptr) {
@@ -2657,6 +2670,7 @@ HSAQueue::getHSAKernargRegion() override {
 // ----------------------------------------------------------------------
 
 HSADispatch::HSADispatch(Kalmar::HSADevice* _device, HSAKernel* _kernel) :
+    KalmarAsyncOp(),
     device(_device),
     agent(_device->getAgent()),
     kernel(_kernel),
