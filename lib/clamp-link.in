@@ -123,7 +123,7 @@ _find_object() {
 ARGS="$@"
 
 # flag to switch to the new arg parsing algorithm
-USE_NEW_LINK=0
+USE_NEW_LINK=1
 
 NEW_LINK_KERNEL_ARGS=""
 NEW_LINK_HOST_ARGS=""
