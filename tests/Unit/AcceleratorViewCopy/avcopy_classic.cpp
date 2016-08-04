@@ -1,4 +1,9 @@
 // RUN: %hc %s -o %t.out -lhc_am && %t.out 
+//
+// Test "classic" GPU pattern of H2D copies, followed by Kernels, Followed by D2H.
+// Test allows toggling explicit host-side syncs (via accelerator-view waits) vs relying on 
+// efficient GPU hardware dependnecies.
+//
 #include <stdlib.h>
 #include <iostream>
 
