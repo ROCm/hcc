@@ -1722,7 +1722,7 @@ public:
     std::string kernel_checksum(size_t size, void* source) {
 #if USE_MD5_HASH
         unsigned char md5_hash[16];
-        memset(md5_hash, 0, sieof(unsigned char) * 16);
+        memset(md5_hash, 0, sizeof(unsigned char) * 16);
         MD5_CTX md5ctx;
         MD5_Init(&md5ctx);
         MD5_Update(&md5ctx, source, size);
