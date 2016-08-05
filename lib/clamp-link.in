@@ -436,7 +436,7 @@ do
 done
 
 
-if [ $VERBOSE == 1 ]; then
+if [ $VERBOSE != 0 ]; then
   echo "kernel args: "$LINK_KERNEL_ARGS
   echo ""
   echo "host args: "$LINK_HOST_ARGS
@@ -469,7 +469,7 @@ if [ -n "$HCC_AMDGPU_TARGET" ]; then
     AMDGPU_TARGET=$HCC_AMDGPU_TARGET
   fi
 fi
-if [ $VERBOSE == 1 ]; then
+if [ $VERBOSE != 0 ]; then
   echo "AMDGPU target: "$AMDGPU_TARGET
   echo ""
 fi
@@ -477,7 +477,7 @@ fi
 
 if [ $USE_NEW_LINK == 1 ]; then
 
-if [ $VERBOSE == 1 ]; then
+if [ $VERBOSE != 0 ]; then
   echo "new kernel args: "$NEW_LINK_KERNEL_ARGS
   echo ""
   echo "new host args: "$NEW_LINK_HOST_ARGS
@@ -486,7 +486,7 @@ if [ $VERBOSE == 1 ]; then
   echo ""
 fi
 
-if [ $VERBOSE == 1 ]; then
+if [ $VERBOSE != 0 ]; then
   echo "replacing old link args with new link args"
 fi
 LINK_KERNEL_ARGS=$NEW_LINK_KERNEL_ARGS
