@@ -31,14 +31,17 @@ enum execute_order
 };
 
 enum hcCommandKind {
+    hcCommandInvalid= -1,
+
     hcMemcpyHostToHost = 0,
     hcMemcpyHostToDevice = 1,
     hcMemcpyDeviceToHost = 2,
     hcMemcpyDeviceToDevice = 3,
     hcCommandKernel = 4,
     hcCommandMarker = 5,
-
 };
+
+
 
 enum hcWaitMode {
     hcWaitModeBlocked = 0,
@@ -69,7 +72,7 @@ struct rw_info;
 /// This is an abstraction of all asynchronous operations within Kalmar
 class KalmarAsyncOp {
 public:
-  KalmarAsyncOp() : seqNum(0) {} 
+  KalmarAsyncOp(hcCommandKind xCommandKind) : seqNum(0), commandKind(xCommandKind) {} 
 
   virtual ~KalmarAsyncOp() {} 
   virtual std::shared_future<void>* getFuture() { return nullptr; }
@@ -113,9 +116,15 @@ public:
   uint64_t getSeqNum () const { return seqNum;};
   void     setSeqNum (uint64_t s) {seqNum = s;};
 
+  hcCommandKind getCommandKind() const { return commandKind; };
+  void          setCommandKind(hcCommandKind xCommandKind) { commandKind = xCommandKind; };
+
 private:
+  // Kind of this command - copy, kernel, barrier, etc:
+  hcCommandKind  commandKind;
+
   // Sequence number of this op in the queue it is dispatched into.
-  uint64_t seqNum;
+  uint64_t       seqNum;
 
 };
 

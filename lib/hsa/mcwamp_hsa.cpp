@@ -44,7 +44,6 @@
 #define KALMAR_DEBUG (0)
 #endif
 
-#define KALMAR_DEBUG_ASYNC_COPY (0)
 #ifndef KALMAR_DEBUG_ASYNC_COPY
 #define KALMAR_DEBUG_ASYNC_COPY (0)
 #endif
@@ -90,38 +89,55 @@
 // which is larger than HSA BrigModuleHeader and AMD GCN ISA header (Elf64_Ehdr)
 #define FNV1A_CUTOFF_SIZE (768)
 
+#define CASE_STRING(X)  case X: case_string = #X ;break;
+
+static const char* getHcCommandType(Kalmar::hcCommandKind k) {
+    const char* case_string;
+
+    switch(k) {
+        using namespace Kalmar;
+        CASE_STRING(hcCommandInvalid);
+        CASE_STRING(hcMemcpyHostToHost);
+        CASE_STRING(hcMemcpyHostToDevice);
+        CASE_STRING(hcMemcpyDeviceToHost);
+        CASE_STRING(hcMemcpyDeviceToDevice);
+        CASE_STRING(hcCommandKernel);
+        CASE_STRING(hcCommandMarker);
+        default: case_string = "Unknown command type";
+    };
+    return case_string;
+};
+
 static const char* getHSAErrorString(hsa_status_t s) {
 
-#define CASE_ERROR_STRING(X)  case X: error_string = #X ;break;
-
-    const char* error_string;
+    const char* case_string;
     switch(s) {
-        CASE_ERROR_STRING(HSA_STATUS_ERROR_INVALID_ARGUMENT);
-        CASE_ERROR_STRING(HSA_STATUS_ERROR_INVALID_QUEUE_CREATION);
-        CASE_ERROR_STRING(HSA_STATUS_ERROR_INVALID_ALLOCATION);
-        CASE_ERROR_STRING(HSA_STATUS_ERROR_INVALID_AGENT);
-        CASE_ERROR_STRING(HSA_STATUS_ERROR_INVALID_REGION);
-        CASE_ERROR_STRING(HSA_STATUS_ERROR_INVALID_SIGNAL);
-        CASE_ERROR_STRING(HSA_STATUS_ERROR_INVALID_QUEUE);
-        CASE_ERROR_STRING(HSA_STATUS_ERROR_OUT_OF_RESOURCES);
-        CASE_ERROR_STRING(HSA_STATUS_ERROR_INVALID_PACKET_FORMAT);
-        CASE_ERROR_STRING(HSA_STATUS_ERROR_RESOURCE_FREE);
-        CASE_ERROR_STRING(HSA_STATUS_ERROR_NOT_INITIALIZED);
-        CASE_ERROR_STRING(HSA_STATUS_ERROR_REFCOUNT_OVERFLOW);
-        CASE_ERROR_STRING(HSA_STATUS_ERROR_INCOMPATIBLE_ARGUMENTS);
-        CASE_ERROR_STRING(HSA_STATUS_ERROR_INVALID_INDEX);
-        CASE_ERROR_STRING(HSA_STATUS_ERROR_INVALID_ISA);
-        CASE_ERROR_STRING(HSA_STATUS_ERROR_INVALID_ISA_NAME);
-        CASE_ERROR_STRING(HSA_STATUS_ERROR_INVALID_CODE_OBJECT);
-        CASE_ERROR_STRING(HSA_STATUS_ERROR_INVALID_EXECUTABLE);
-        CASE_ERROR_STRING(HSA_STATUS_ERROR_FROZEN_EXECUTABLE);
-        CASE_ERROR_STRING(HSA_STATUS_ERROR_INVALID_SYMBOL_NAME);
-        CASE_ERROR_STRING(HSA_STATUS_ERROR_VARIABLE_ALREADY_DEFINED);
-        CASE_ERROR_STRING(HSA_STATUS_ERROR_VARIABLE_UNDEFINED);
-        CASE_ERROR_STRING(HSA_STATUS_ERROR_EXCEPTION);
-        default: error_string = "Unknown Error Code";
+        CASE_STRING(HSA_STATUS_ERROR_INVALID_ARGUMENT);
+        CASE_STRING(HSA_STATUS_ERROR_INVALID_QUEUE_CREATION);
+        CASE_STRING(HSA_STATUS_ERROR_INVALID_ALLOCATION);
+        CASE_STRING(HSA_STATUS_ERROR_INVALID_AGENT);
+        CASE_STRING(HSA_STATUS_ERROR_INVALID_REGION);
+        CASE_STRING(HSA_STATUS_ERROR_INVALID_SIGNAL);
+        CASE_STRING(HSA_STATUS_ERROR_INVALID_QUEUE);
+        CASE_STRING(HSA_STATUS_ERROR_OUT_OF_RESOURCES);
+        CASE_STRING(HSA_STATUS_ERROR_INVALID_PACKET_FORMAT);
+        CASE_STRING(HSA_STATUS_ERROR_RESOURCE_FREE);
+        CASE_STRING(HSA_STATUS_ERROR_NOT_INITIALIZED);
+        CASE_STRING(HSA_STATUS_ERROR_REFCOUNT_OVERFLOW);
+        CASE_STRING(HSA_STATUS_ERROR_INCOMPATIBLE_ARGUMENTS);
+        CASE_STRING(HSA_STATUS_ERROR_INVALID_INDEX);
+        CASE_STRING(HSA_STATUS_ERROR_INVALID_ISA);
+        CASE_STRING(HSA_STATUS_ERROR_INVALID_ISA_NAME);
+        CASE_STRING(HSA_STATUS_ERROR_INVALID_CODE_OBJECT);
+        CASE_STRING(HSA_STATUS_ERROR_INVALID_EXECUTABLE);
+        CASE_STRING(HSA_STATUS_ERROR_FROZEN_EXECUTABLE);
+        CASE_STRING(HSA_STATUS_ERROR_INVALID_SYMBOL_NAME);
+        CASE_STRING(HSA_STATUS_ERROR_VARIABLE_ALREADY_DEFINED);
+        CASE_STRING(HSA_STATUS_ERROR_VARIABLE_UNDEFINED);
+        CASE_STRING(HSA_STATUS_ERROR_EXCEPTION);
+        default: case_string = "Unknown Error Code";
     };
-    return error_string;
+    return case_string;
 }
 
 #define STATUS_CHECK(s,line) if (s != HSA_STATUS_SUCCESS && s != HSA_STATUS_INFO_BREAK) {\
@@ -275,7 +291,6 @@ private:
     hsa_signal_t signal;
     int signalIndex;
     bool isSubmitted;
-    Kalmar::hcCommandKind    commandKind;  // encodes copy direction 
     hsa_wait_state_t waitMode;
 
     std::shared_future<void>* future;
@@ -305,7 +320,6 @@ private:
 
 public:
     std::shared_future<void>* getFuture() override { return future; }
-    Kalmar::hcCommandKind getCommandKind() const { return commandKind; };
 
     void* getNativeHandle() override { return &signal; }
 
@@ -324,8 +338,9 @@ public:
         return (hsa_signal_load_acquire(signal) == 0);
     }
 
+    // Copy mode will be set later on.
     // HSA signals would be waited in HSA_WAIT_STATE_ACTIVE by default for HSACopy instances
-    HSACopy(const void* src_, void* dst_, size_t sizeBytes_) : KalmarAsyncOp(),
+    HSACopy(const void* src_, void* dst_, size_t sizeBytes_) : KalmarAsyncOp(Kalmar::hcCommandInvalid),
         isSubmitted(false), future(nullptr), depAsyncOp(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_ACTIVE), 
         src(src_), dst(dst_), sizeBytes(sizeBytes_),
         signalIndex(-1) {
@@ -411,15 +426,15 @@ public:
 
     // default constructor
     // 0 prior dependency
-    HSABarrier() : KalmarAsyncOp(), isDispatched(false), future(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_BLOCKED), depCount(0) {}
+    HSABarrier() : KalmarAsyncOp(Kalmar::hcCommandMarker), isDispatched(false), future(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_BLOCKED), depCount(0) {}
 
     // constructor with 1 prior depedency
-    HSABarrier(std::shared_ptr <Kalmar::KalmarAsyncOp> dependent_op) : isDispatched(false), future(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_BLOCKED), depCount(1) {
+    HSABarrier(std::shared_ptr <Kalmar::KalmarAsyncOp> dependent_op) : KalmarAsyncOp(Kalmar::hcCommandMarker), isDispatched(false), future(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_BLOCKED), depCount(1) {
         depAsyncOps[0] = dependent_op;
     }
 
     // constructor with at most 5 prior dependencies
-    HSABarrier(int count, std::shared_ptr <Kalmar::KalmarAsyncOp> *dependent_op_array) : isDispatched(false), future(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_BLOCKED), depCount(count) {
+    HSABarrier(int count, std::shared_ptr <Kalmar::KalmarAsyncOp> *dependent_op_array) : KalmarAsyncOp(Kalmar::hcCommandMarker), isDispatched(false), future(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_BLOCKED), depCount(count) {
         if ((count > 0) && (count <= 5)) {
             for (int i = 0; i < count; ++i) {
                 depAsyncOps[i] = dependent_op_array[i];
@@ -743,7 +758,7 @@ public:
         /// Enable profiling support for the queue.
         status = hsa_amd_profiling_set_profiler_enabled(commandQueue, 1);
 
-        youngestCommandKind = hcMemcpyHostToDevice;
+        youngestCommandKind = hcCommandInvalid;
     }
 
     void dispose() override {
@@ -820,9 +835,12 @@ public:
     // if it differs from the youngest async op sent to the queue, we may need to insert additional synchronization.
     // The function returns nullptr if no dependency is required. For example, back-to-back commands of same type
     // are often implicitly synchronized.  
-    std::shared_ptr<KalmarAsyncOp> detectStreamDeps(hcCommandKind commandKind) {
+    std::shared_ptr<KalmarAsyncOp> detectStreamDeps(KalmarAsyncOp *newOp) {
+        hcCommandKind commandKind = newOp->getCommandKind();
+        assert (commandKind != hcCommandInvalid);
         if (!asyncOps.empty() && (commandKind != youngestCommandKind)) {
-            printf ("command type changed %d->%d\n", youngestCommandKind, commandKind) ;
+            assert (youngestCommandKind != hcCommandInvalid);
+            printf ("command type changed %s->%s\n", getHcCommandType(youngestCommandKind), getHcCommandType(commandKind)) ;
             return asyncOps.back();
         } else {
             return nullptr;
@@ -830,8 +848,8 @@ public:
     }
 
 
-    void waitForStreamDeps (hcCommandKind commandKind) {
-        std::shared_ptr<KalmarAsyncOp> depOp = detectStreamDeps(commandKind);
+    void waitForStreamDeps (KalmarAsyncOp *newOp) {
+        std::shared_ptr<KalmarAsyncOp> depOp = detectStreamDeps(newOp);
         if (depOp != nullptr) {
             // TODO - add reference???
             EnqueueMarkerWithDependency(1, &depOp); // TODO-async.  Add convenience function?
@@ -890,7 +908,7 @@ public:
                         waitForDependentAsyncOps(buffer);
                       });
 
-        waitForStreamDeps(hcCommandKernel);
+        waitForStreamDeps(dispatch);
 
         // dispatch the kernel
         // and wait for its completion
@@ -925,7 +943,7 @@ public:
                         waitForDependentAsyncOps(buffer);
                       });
 
-        waitForStreamDeps(hcCommandKernel);
+        waitForStreamDeps(dispatch);
 
         // dispatch the kernel
         status = dispatch->dispatchKernelAsync(this);
@@ -2670,7 +2688,7 @@ HSAQueue::getHSAKernargRegion() override {
 // ----------------------------------------------------------------------
 
 HSADispatch::HSADispatch(Kalmar::HSADevice* _device, HSAKernel* _kernel) :
-    KalmarAsyncOp(),
+    KalmarAsyncOp(Kalmar::hcCommandKernel),
     device(_device),
     agent(_device->getAgent()),
     kernel(_kernel),
@@ -3229,8 +3247,8 @@ HSACopy::enqueueAsyncCopy() {
 
         int depSignalCnt = 0;
         hsa_signal_t depSignal;
-        commandKind = resolveMemcpyDirection(srcPtrInfo._isInDeviceMem, dstPtrInfo._isInDeviceMem);
-        depAsyncOp = hsaQueue->detectStreamDeps(commandKind);
+        setCommandKind (resolveMemcpyDirection(srcPtrInfo._isInDeviceMem, dstPtrInfo._isInDeviceMem));
+        depAsyncOp = hsaQueue->detectStreamDeps(this);
 
         if (depAsyncOp) {
             depSignalCnt = 1;
@@ -3356,7 +3374,7 @@ HSACopy::syncCopy(Kalmar::HSAQueue* hsaQueue) {
 #endif
 
     // Resolve default to a specific Kind so we know which algorithm to use:
-    commandKind = resolveMemcpyDirection(srcInDeviceMem, dstInDeviceMem);
+    setCommandKind (resolveMemcpyDirection(srcInDeviceMem, dstInDeviceMem));
 
 #if KALMAR_DEBUG
     std::cerr << "hcCommandKind: " << commandKind << "\n";
@@ -3372,6 +3390,8 @@ HSACopy::syncCopy(Kalmar::HSAQueue* hsaQueue) {
     hsa_queue_t* queue = static_cast<hsa_queue_t*>(hsaQueue->getHSAQueue());
 
     Kalmar::HSADevice *device = static_cast<Kalmar::HSADevice*> (hsaQueue->getDev());
+
+    Kalmar::hcCommandKind commandKind = getCommandKind();
 
     // Need to use staging buffer if copying to or from unmapped host memory:
     if ((commandKind == Kalmar::hcMemcpyHostToDevice) && (!srcIsMapped)) {
