@@ -435,6 +435,22 @@ do
   fi
 done
 
+
+if [ $VERBOSE == 1 ]; then
+  echo "kernel args: "$LINK_KERNEL_ARGS
+  echo ""
+  echo "host args: "$LINK_HOST_ARGS
+  echo ""
+  echo "other args: "$LINK_OTHER_ARGS
+  echo ""
+fi
+
+###################################
+# End of old argument processing
+###################################
+
+fi
+
 # AMDGPU_TARGET could be overridden by HCC_AMDGPU_TARGET env variable
 if [ -n "$HCC_AMDGPU_TARGET" ]; then
   # map ISA version string to GPU family
@@ -453,24 +469,10 @@ if [ -n "$HCC_AMDGPU_TARGET" ]; then
     AMDGPU_TARGET=$HCC_AMDGPU_TARGET
   fi
 fi
-
 if [ $VERBOSE == 1 ]; then
-  echo "kernel args: "$LINK_KERNEL_ARGS
-  echo ""
-  echo "host args: "$LINK_HOST_ARGS
-  echo ""
-  echo "other args: "$LINK_OTHER_ARGS
-  echo ""
   echo "AMDGPU target: "$AMDGPU_TARGET
   echo ""
 fi
-
-###################################
-# End of old argument processing
-###################################
-
-fi
-
 
 
 if [ $USE_NEW_LINK == 1 ]; then
@@ -481,8 +483,6 @@ if [ $VERBOSE == 1 ]; then
   echo "new host args: "$NEW_LINK_HOST_ARGS
   echo ""
   echo "new other args: "$NEW_LINK_OTHER_ARGS
-  echo ""
-  echo "AMDGPU target: "$AMDGPU_TARGET
   echo ""
 fi
 
