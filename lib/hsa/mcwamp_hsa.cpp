@@ -62,7 +62,8 @@
 
 // Maximum number of inflight commands sent to a single queue.
 // If ld is exceeded, HCC will force a queue wait to reclaim some resources.
-#define MAX_INFLIGHT_COMMANDS_PER_QUEUE  1024
+// set this to around 512, higher values seems to cause issues with async copy:
+#define MAX_INFLIGHT_COMMANDS_PER_QUEUE  512
 
 // whether to use kernarg region found on the HSA agent
 // default set as 1 (use karnarg region)
@@ -91,7 +92,7 @@
 
 #define CASE_STRING(X)  case X: case_string = #X ;break;
 
-static const char* getHcCommandType(Kalmar::hcCommandKind k) {
+static const char* getHcCommandKind(Kalmar::hcCommandKind k) {
     const char* case_string;
 
     switch(k) {
@@ -812,14 +813,19 @@ public:
     // FIXME: implement flush
  
     // Save the command and type
-    void pushAsyncOp(std::shared_ptr<KalmarAsyncOp> op, hcCommandKind commandKind) {
-#if KALMAR_DEBUG_ASYNC_COPY
-        std::cerr << "  pushing op=" << op << "  signal=" << ((hsa_signal_t*)op->getNativeHandle())->handle << "  commandKind=" << commandKind << std::endl;
-#endif
+    void pushAsyncOp(std::shared_ptr<KalmarAsyncOp> op) {
         op->setSeqNum(++opSeqNums);
 
+#if KALMAR_DEBUG_ASYNC_COPY
+        std::cerr << "  pushing op=" << op << "  #" << op->getSeqNum() << " signal=" << ((hsa_signal_t*)op->getNativeHandle())->handle 
+                  << "  commandKind=" << getHcCommandKind(op->getCommandKind()) << std::endl;
+#endif
+
+
         if (asyncOps.size() >= MAX_INFLIGHT_COMMANDS_PER_QUEUE) {
+#if KALMAR_DEBUG_ASYNC_COPY
             printf ("op#%zu: force sync asyncOps.size=%zu\n", opSeqNums, asyncOps.size());
+#endif
 
             // TODO - could optimized this to only drain part of the pool:
             // Would like to change asyncOps to vector before getting too deep.
@@ -827,7 +833,7 @@ public:
         }
         asyncOps.push_back(op);
 
-        youngestCommandKind = commandKind;
+        youngestCommandKind = op->getCommandKind();
     }
 
 
@@ -840,7 +846,9 @@ public:
         assert (commandKind != hcCommandInvalid);
         if (!asyncOps.empty() && (commandKind != youngestCommandKind)) {
             assert (youngestCommandKind != hcCommandInvalid);
-            printf ("command type changed %s->%s\n", getHcCommandType(youngestCommandKind), getHcCommandType(commandKind)) ;
+#if KALMAR_DEBUG_ASYNC_COPY
+            printf ("command type changed %s->%s\n", getHcCommandKind(youngestCommandKind), getHcCommandKind(commandKind)) ;
+#endif
             return asyncOps.back();
         } else {
             return nullptr;
@@ -953,7 +961,7 @@ public:
         std::shared_ptr<KalmarAsyncOp> sp_dispatch(dispatch);
 
         // associate the kernel dispatch with this queue
-        pushAsyncOp(sp_dispatch, hcCommandKernel);
+        pushAsyncOp(sp_dispatch);
 
         // associate all buffers used by the kernel with the kernel dispatch instance
         std::for_each(std::begin(kernelBufferMap[ker]), std::end(kernelBufferMap[ker]),
@@ -1247,7 +1255,7 @@ public:
         STATUS_CHECK(status, __LINE__);
 
         // associate the barrier with this queue
-        pushAsyncOp(barrier, hcCommandMarker);
+        pushAsyncOp(barrier);
 
         return barrier;
     }
@@ -1266,7 +1274,7 @@ public:
             STATUS_CHECK(status, __LINE__);
 
             // associate the barrier with this queue
-            pushAsyncOp(barrier, hcCommandMarker);
+            pushAsyncOp(barrier);
 
             return barrier;
         } else {
@@ -1287,7 +1295,7 @@ public:
         STATUS_CHECK(status, __LINE__);
 
         // associate the async copy command with this queue
-        pushAsyncOp(copyCommand, copyCommand->getCommandKind());
+        pushAsyncOp(copyCommand);
 
         return copyCommand;
     }
@@ -1324,6 +1332,7 @@ public:
 
         // GC for finished kernels
         if (asyncOps.size() > ASYNCOPS_VECTOR_GC_SIZE) {
+            //printf ("GC\n");
           asyncOps.erase(std::remove(asyncOps.begin(), asyncOps.end(), nullptr),
                          asyncOps.end());
         }
@@ -2474,7 +2483,7 @@ public:
     void releaseSignal(hsa_signal_t signal, int signalIndex) {
 
 #if KALMAR_DEBUG_ASYNC_COPY
-        std::cerr << "  releaseSignal: " << signal.handle << "\n";
+        std::cerr << "  releaseSignal: " << signal.handle << " and restored value to 1\n";
 #endif
         hsa_status_t status = HSA_STATUS_SUCCESS;
 #if SIGNAL_POOL_SIZE > 0
@@ -2851,7 +2860,7 @@ HSADispatch::waitComplete() {
     }
 
 #if KALMAR_DEBUG
-    std::cerr << " wait for kernel dispatch completion with wait flag: " << waitMode << "  signal=" << signal.handle << "\n";
+    std::cerr << " wait for kernel dispatch op#" << getSeqNum() << " completion with wait flag: " << waitMode << "  signal=" << signal.handle << "\n";
 #endif
 
     // wait for completion
@@ -3005,7 +3014,7 @@ HSABarrier::waitComplete() {
     }
 
 #if KALMAR_DEBUG or KALMAR_DEBUG_ASYNC_COPY
-    std::cerr << "  wait for barrier completion with wait flag: " << waitMode << "  signal=" << signal.handle << "\n";
+    std::cerr << "  wait for barrier op#" << getSeqNum() << " completion with wait flag: " << waitMode << "  signal=" << signal.handle << "\n";
 #endif
 
     // Wait on completion signal until the barrier is finished
@@ -3146,8 +3155,13 @@ HSACopy::waitComplete() {
         return HSA_STATUS_ERROR_INVALID_ARGUMENT;
     }
 
+
+
 #if KALMAR_DEBUG or KALMAR_DEBUG_ASYNC_COPY
-    std::cerr << "  wait for copy completion with wait flag: " << waitMode << "signal=" << signal.handle << "\n";
+    // TODO - remove me:
+    // Wait on completion signal until the async copy is finished
+    hsa_signal_value_t v = hsa_signal_load_acquire(signal);
+    std::cerr << "  wait for copy op#" << getSeqNum() << " completion with wait flag: " << waitMode << "signal=" << signal.handle << " currentVal=" << v << "\n";
 #endif
 
     // Wait on completion signal until the async copy is finished
@@ -3254,10 +3268,15 @@ HSACopy::enqueueAsyncCopy() {
             depSignalCnt = 1;
             depSignal = * (static_cast <hsa_signal_t*> (depAsyncOp->getNativeHandle()));
 #if KALMAR_DEBUG_ASYNC_COPY 
-            std::cerr << "  asyncCopy sent with dependency on signal=" << depSignal.handle << "\n"; 
+            std::cerr << "  asyncCopy sent with dependency on op#" << depAsyncOp->getSeqNum() << " depSignal=" << depSignal.handle << "\n"; 
 #endif
         }
 
+#if KALMAR_DEBUG_ASYNC_COPY 
+            hsa_signal_value_t v = hsa_signal_load_acquire(signal);
+            std::cerr << "  hsa_amd_memory_async_copy launched for op#" << getSeqNum() << " completionSignal=" << signal.handle 
+                      << "  InitSignalValue=" << v << " depSignalCnt=" << depSignalCnt << "\n";
+#endif
 
         hsa_status_t hsa_status = hsa_amd_memory_async_copy(dst, device->getAgent(), src, device->getAgent(), sizeBytes, depSignalCnt, depSignalCnt ? &depSignal:NULL, signal);
 
@@ -3377,7 +3396,7 @@ HSACopy::syncCopy(Kalmar::HSAQueue* hsaQueue) {
     setCommandKind (resolveMemcpyDirection(srcInDeviceMem, dstInDeviceMem));
 
 #if KALMAR_DEBUG
-    std::cerr << "hcCommandKind: " << commandKind << "\n";
+    std::cerr << "hcCommandKind: " << getHcCommandKind(commandKind) << "\n";
 #endif
 
     // Copy already called queue.wait() so there are no dependent signals.
