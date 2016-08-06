@@ -1,4 +1,3 @@
-//===----------------------------------------------------------------------===//
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
@@ -60,10 +59,14 @@
 // default set as 64 (pre-allocating 64 of kernarg buffers in the pool)
 #define KERNARG_POOL_SIZE (64)
 
+// number of pre-allocated HSA signals in HSAContext
+// default set as 64 (pre-allocating 64 HSA signals)
+#define SIGNAL_POOL_SIZE (5000) // TODO, renable signal pool.
+
 // Maximum number of inflight commands sent to a single queue.
-// If ld is exceeded, HCC will force a queue wait to reclaim some resources.
-// set this to around 512, higher values seems to cause issues with async copy:
-#define MAX_INFLIGHT_COMMANDS_PER_QUEUE  512
+// If limit is exceeded, HCC will force a queue wait to reclaim 
+// resources (signals, kernarg)
+#define MAX_INFLIGHT_COMMANDS_PER_QUEUE  1024
 
 // whether to use kernarg region found on the HSA agent
 // default set as 1 (use karnarg region)
@@ -92,7 +95,7 @@
 
 #define CASE_STRING(X)  case X: case_string = #X ;break;
 
-static const char* getHcCommandKind(Kalmar::hcCommandKind k) {
+static const char* getHcCommandKindString(Kalmar::hcCommandKind k) {
     const char* case_string;
 
     switch(k) {
@@ -811,6 +814,27 @@ public:
     }
 
     // FIXME: implement flush
+    //
+    void printAsyncOps(std::ostream &s = std::cerr) 
+    {
+        hsa_signal_value_t oldv=0;
+        s << "Queue: " << this;
+        for (int i=0; i<asyncOps.size(); i++) {
+            const std::shared_ptr<KalmarAsyncOp::KalmarAsyncOp> &op = asyncOps[i];
+            hsa_signal_t signal = * (static_cast<hsa_signal_t*> (op->getNativeHandle()));
+            hsa_signal_value_t v = hsa_signal_load_acquire(signal);
+            s << "index:" << setw(4)i << " op#"<< op->getSeqNum() 
+              << " " << getHcCommandKindString(op->getCommandKind())
+              << " signal=" << signal.handle << " value=" << v;
+
+            if (v != oldv) {
+                s << " <--CHANGE";
+                oldv = v;
+            }
+            s  << "\n";
+            
+        }
+    }
  
     // Save the command and type
     void pushAsyncOp(std::shared_ptr<KalmarAsyncOp> op) {
@@ -818,7 +842,7 @@ public:
 
 #if KALMAR_DEBUG_ASYNC_COPY
         std::cerr << "  pushing op=" << op << "  #" << op->getSeqNum() << " signal=" << ((hsa_signal_t*)op->getNativeHandle())->handle 
-                  << "  commandKind=" << getHcCommandKind(op->getCommandKind()) << std::endl;
+                  << "  commandKind=" << getHcCommandKindString(op->getCommandKind()) << std::endl;
 #endif
 
 
@@ -847,7 +871,7 @@ public:
         if (!asyncOps.empty() && (commandKind != youngestCommandKind)) {
             assert (youngestCommandKind != hcCommandInvalid);
 #if KALMAR_DEBUG_ASYNC_COPY
-            printf ("command type changed %s->%s\n", getHcCommandKind(youngestCommandKind), getHcCommandKind(commandKind)) ;
+            printf ("command type changed %s->%s\n", getHcCommandKindString(youngestCommandKind), getHcCommandKindString(commandKind)) ;
 #endif
             return asyncOps.back();
         } else {
@@ -878,10 +902,15 @@ public:
     void wait(hcWaitMode mode = hcWaitModeBlocked) override {
       // TODO - perform wait in opposite order.
       // wait on all previous async operations to complete
-      // Go in reverse order (from yooungest to oldest).
+      // Go in reverse order (from youngest to oldest).
       // Ensures younger ops have chance to complete before older ops reclaim their resources
 #if KALMAR_DEBUG_ASYNC_COPY
-      //std::cerr << " queue wait\n";
+      std::cerr << " queue wait\n";
+
+      for (int i =0; i<10; i++) {
+          std::cerr << "Queue Snapshot#" << i << "\n";
+          printAsyncOps(std::cerr);
+      }
 #endif
       for (int i = asyncOps.size()-1; i >= 0;  i--) {
         if (asyncOps[i] != nullptr) {
@@ -2554,6 +2583,7 @@ public:
                 int oldSignalPoolFlagSize = signalPoolFlag.size();
                 assert(oldSignalPoolSize == oldSignalPoolFlagSize);
 
+
                 // increase signal pool on demand for another SIGNAL_POOL_SIZE
                 for (int i = 0; i < SIGNAL_POOL_SIZE; ++i) {
                     hsa_signal_t signal;
@@ -2562,6 +2592,10 @@ public:
                     signalPool.push_back(signal);
                     signalPoolFlag.push_back(false);
                 }
+
+#if KALMAR_DEBUG or KALMAR_DEBUG_ASYNC_COPY
+                std::cerr << "grew signal pool to size=" << signalPool.size() << "\n";
+#endif
 
                 assert(signalPool.size() == oldSignalPoolSize + SIGNAL_POOL_SIZE);
                 assert(signalPoolFlag.size() == oldSignalPoolFlagSize + SIGNAL_POOL_SIZE);
@@ -2587,7 +2621,9 @@ public:
 
         signalPoolMutex.unlock();
 #else
-        hsa_signal_create(1, 0, NULL, &ret);
+        hsa_signal_t signal;
+        hsa_status_t status = hsa_signal_create(1, 0, NULL, &signal);
+        STATUS_CHECK(status, __LINE__);
         int cursor = 0;
 #endif
         return std::make_pair(ret, cursor);
@@ -3274,7 +3310,7 @@ HSACopy::enqueueAsyncCopy() {
 
 #if KALMAR_DEBUG_ASYNC_COPY 
             hsa_signal_value_t v = hsa_signal_load_acquire(signal);
-            std::cerr << "  hsa_amd_memory_async_copy launched for op#" << getSeqNum() << " completionSignal=" << signal.handle 
+            std::cerr << "  hsa_amd_memory_async_copy launched " << " completionSignal=" << signal.handle 
                       << "  InitSignalValue=" << v << " depSignalCnt=" << depSignalCnt << "\n";
 #endif
 
@@ -3396,7 +3432,7 @@ HSACopy::syncCopy(Kalmar::HSAQueue* hsaQueue) {
     setCommandKind (resolveMemcpyDirection(srcInDeviceMem, dstInDeviceMem));
 
 #if KALMAR_DEBUG
-    std::cerr << "hcCommandKind: " << getHcCommandKind(commandKind) << "\n";
+    std::cerr << "hcCommandKind: " << getHcCommandKindString(commandKind) << "\n";
 #endif
 
     // Copy already called queue.wait() so there are no dependent signals.
