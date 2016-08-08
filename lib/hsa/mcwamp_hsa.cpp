@@ -823,7 +823,7 @@ public:
             const std::shared_ptr<KalmarAsyncOp::KalmarAsyncOp> &op = asyncOps[i];
             hsa_signal_t signal = * (static_cast<hsa_signal_t*> (op->getNativeHandle()));
             hsa_signal_value_t v = hsa_signal_load_acquire(signal);
-            s << "index:" << setw(4)i << " op#"<< op->getSeqNum() 
+            s << "index:" << std::setw(4) << " op#"<< op->getSeqNum() 
               << " " << getHcCommandKindString(op->getCommandKind())
               << " signal=" << signal.handle << " value=" << v;
 
