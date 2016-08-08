@@ -39,6 +39,7 @@ HLC_OPT=$BINDIR/../../hlc/bin/opt
 HLC_LLC=$BINDIR/../../hlc/bin/llc
 HLC_ASM=$BINDIR/../../HSAILasm/HSAILasm
 NEWLIB=$BINDIR/../../lib
+ROCM_LIB=/opt/rocm/lib
 
 
 
@@ -61,10 +62,14 @@ if [ $KMDUMPLLVM == "1" ]; then
 fi
 
 if [ $KM_USE_AMDGPU ]; then
-  HCC_EXTRA_LIBRARIES="$HCC_EXTRA_LIBRARIES $NEWLIB/hsail-amdgpu-wrapper.ll"
+  HCC_BC_LIBS="$ROCM_LIB/hc.bc $ROCM_LIB/opencl.bc $ROCM_LIB/ocml.bc $ROCM_LIB/ockl.bc $ROCM_LIB/irif.bc $ROCM_LIB/oclc_isa_version_803.bc $ROCM_LIB/oclc_finite_only_off.bc $ROCM_LIB/oclc_daz_opt_off.bc $ROCM_LIB/oclc_correctly_rounded_sqrt_on.bc $ROCM_LIB/oclc_unsafe_math_off.bc"
+else
+  HCC_BC_LIBS="$NEWLIB/builtins-hsail.opt.bc $NEWLIB/hsail-amdgpu-wrapper.ll"
 fi
 
-$HLC_LLVM_LINK -suppress-warnings -o $1.linked.bc $1 $NEWLIB/builtins-hsail.opt.bc $HCC_EXTRA_LIBRARIES
+set -x
+$HLC_LLVM_LINK -suppress-warnings -o $1.linked.bc $1 $HCC_BC_LIBS
+set +x
 
 # error handling for HSAIL llvm-link
 RETVAL=$?
