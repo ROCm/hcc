@@ -44,7 +44,7 @@
 
 // size of default kernarg buffer in the kernarg pool in HSAContext
 // default set as 128
-#define KERNARG_BUFFER_SIZE (128)
+#define KERNARG_BUFFER_SIZE (256)
 
 // number of pre-allocated kernarg buffers in HSAContext
 // default set as 64 (pre-allocating 64 of kernarg buffers in the pool)
