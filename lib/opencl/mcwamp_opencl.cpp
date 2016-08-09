@@ -18,7 +18,6 @@
 
 #include <CL/opencl.h>
 
-#include <md5.h>
 #include <kalmar_runtime.h>
 #include <kalmar_aligned_alloc.h>
 
@@ -532,29 +531,18 @@ cl_program CLCompileKernels(cl_device_id& device, void* kernel_size_, void* kern
     err = clGetDeviceInfo(device, CL_DEVICE_NAME, sizeof(name), name, NULL);
     assert(err == CL_SUCCESS);
 
-    // calculate MD5 checksum
-    unsigned char md5_hash[16];
-    memset(md5_hash, 0, sizeof(unsigned char) * 16);
-    MD5_CTX md5ctx;
-    MD5_Init(&md5ctx);
-    MD5_Update(&md5ctx, source, size);
-    // hash device name, prevent storing the same kernel for different device
-    MD5_Update(&md5ctx, name, strlen(name));
-    MD5_Final(md5_hash, &md5ctx);
+    std::string compiled_kernel_name = "/tmp/";
+    static const int md5size = 32;
+    const char* kernel = static_cast<char*>(kernel_source_) - md5size;
+    std::string kernel_name(kernel, md5size);
+    compiled_kernel_name += kernel_name;
+    compiled_kernel_name += ".bin";
 
-    // compute compiled kernel file name
-    std::stringstream compiled_kernel_name;
-    compiled_kernel_name << "/tmp/";
-    compiled_kernel_name << std::setbase(16);
-    for (int i = 0; i < 16; ++i) {
-        compiled_kernel_name << static_cast<unsigned int>(md5_hash[i]);
-    }
-    compiled_kernel_name << ".bin";
-
-    //std::cout << "Try load precompiled kernel: " << compiled_kernel_name.str() << std::endl;
+    //std::cout << "Try load precompiled kernel: " << compiled_kernel_name << std::endl;
 
     // check if pre-compiled kernel binary exist
-    std::ifstream precompiled_kernel(compiled_kernel_name.str(), std::ifstream::binary);
+    std::ifstream precompiled_kernel(compiled_kernel_name, std::ifstream::binary);
+    std::cout << compiled_kernel_name << std::endl;
     if (precompiled_kernel) {
         // use pre-compiled kernel binary
         precompiled_kernel.seekg(0, std::ios_base::end);
@@ -642,7 +630,7 @@ cl_program CLCompileKernels(cl_device_id& device, void* kernel_size_, void* kern
         assert(err == CL_SUCCESS);
 
         // save compiled kernel binary
-        std::ofstream compiled_kernel(compiled_kernel_name.str(), std::ostream::binary);
+        std::ofstream compiled_kernel(compiled_kernel_name, std::ostream::binary);
         compiled_kernel.write(reinterpret_cast<const char*>(pgBinaries[0]), pgBinarySizes[0]);
         compiled_kernel.close();
 

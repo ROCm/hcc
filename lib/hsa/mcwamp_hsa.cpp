@@ -29,7 +29,6 @@
 #include <hsa/hsa_ext_finalize.h>
 #include <hsa/hsa_ext_amd.h>
 
-#include <hcc/md5.h>
 #include <hcc/kalmar_runtime.h>
 #include <hcc/kalmar_aligned_alloc.h>
 
@@ -1450,36 +1449,9 @@ public:
 
     // calculate MD5 checksum
     std::string kernel_checksum(size_t size, void* source) {
-#if USE_MD5_HASH
-        unsigned char md5_hash[16];
-        memset(md5_hash, 0, sizeof(unsigned char) * 16);
-        MD5_CTX md5ctx;
-        MD5_Init(&md5ctx);
-        MD5_Update(&md5ctx, source, size);
-        MD5_Final(md5_hash, &md5ctx);
-
-        std::stringstream checksum;
-        checksum << std::setbase(16);
-        for (int i = 0; i < 16; ++i) {
-            checksum << static_cast<unsigned int>(md5_hash[i]);
-        }
-
-        return checksum.str();
-#else
-        // FNV-1a hashing, 64-bit version
-        const uint64_t FNV_prime = 0x100000001b3;
-        const uint64_t FNV_basis = 0xcbf29ce484222325;
-        uint64_t hash = FNV_basis;
-
-        const char *str = static_cast<const char *>(source);
-
-        size = size > FNV1A_CUTOFF_SIZE ? FNV1A_CUTOFF_SIZE : size;
-        for (auto i = 0; i < size; ++i) {
-            hash ^= *str++;
-            hash *= FNV_prime;
-        }
-        return std::to_string(hash);
-#endif
+        static const int md5_size = 32;
+        char* md5sum = static_cast<char*>(source) - md5_size;
+        return std::string(md5sum, md5_size);
     }
 
     void BuildProgram(void* size, void* source, bool needsCompilation = true) override {

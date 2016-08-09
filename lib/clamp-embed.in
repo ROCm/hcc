@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # check command line arguments
-if [ "$#" -ne 2 ]; then
+if [ "$#" -lt 2 ]; then
   echo "Usage: $0 input_object output_kernel" >&2
   exit 1
 fi
@@ -16,6 +16,14 @@ OPT=$BINDIR/opt
 LLC=$BINDIR/llc
 LIB=$BINDIR/../lib
 
+MD5=0
+for ARG in "$@"
+do
+    if [ $ARG == "--md5" ]; then
+        MD5=1
+    fi
+done
+
 if [[ $OSTYPE == linux-gnu ]]; then
     FILE=`basename $1`
     FILENAME=${FILE%cpu}
@@ -25,7 +33,15 @@ if [[ $OSTYPE == linux-gnu ]]; then
         $LLC -O=2 $1.S -relocation-model=pic -filetype=obj -o $2
         rm $1.S
     else
-        objcopy -B i386:x86-64 -I binary -O elf64-x86-64 --rename-section .data=.kernel $1 $2
+        if [ $MD5 == 1 ]; then
+            cp $1 $1.bak
+            md5=($(md5sum $1))
+            sed -i "1s/^/$md5/" $1
+            objcopy -B i386:x86-64 -I binary -O elf64-x86-64 --rename-section .data=.kernel $1 $2
+            mv $1.bak $1
+        else
+            objcopy -B i386:x86-64 -I binary -O elf64-x86-64 --rename-section .data=.kernel $1 $2
+        fi
     fi
 elif [[ $OSTYPE == darwin* ]]; then
 # OS X

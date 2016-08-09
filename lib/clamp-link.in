@@ -518,7 +518,7 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
       # build a new kernel object
       pushd . > /dev/null
       cd $TEMP_DIR
-      $CLAMP_EMBED kernel.spir kernel_spir.o
+      $CLAMP_EMBED kernel.spir kernel_spir.o --md5
       popd > /dev/null
     fi
   fi
@@ -536,7 +536,7 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
       # build a new kernel object
       pushd . > /dev/null
       cd $TEMP_DIR
-      $CLAMP_EMBED kernel.cl kernel.o
+      $CLAMP_EMBED kernel.cl kernel.o --md5
       popd > /dev/null
     fi
   fi
@@ -550,11 +550,12 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
       $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.brig --hsa --amdgpu-target=$AMDGPU_TARGET --verbose
     fi
     ret=$?
+
     if [ $ret == 0 ]; then
       # build a new kernel object
       pushd . > /dev/null
       cd $TEMP_DIR
-      $CLAMP_EMBED kernel.brig kernel_hsa.o
+      $CLAMP_EMBED kernel.brig kernel_hsa.o --md5
       popd > /dev/null
     fi
   fi
@@ -595,7 +596,7 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
       # build a new kernel object
       pushd . > /dev/null
       cd $TEMP_DIR
-      $CLAMP_EMBED kernel.isa kernel_hof.o
+      $CLAMP_EMBED kernel.isa kernel_hof.o --md5
       popd > /dev/null
 
       # debug purpose
