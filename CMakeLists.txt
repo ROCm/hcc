@@ -31,10 +31,6 @@ IF (NOT NUM_BUILD_THREADS)
   SET(NUM_BUILD_THREADS 8)
 ENDIF(NOT NUM_BUILD_THREADS)
 
-include (EnsureLLVMisPresent)
-include (EnsureCLANGisPresent)
-include (EnsureHLCisPresent)
-include (EnsureHSAILASMisPresent)
 include (SetupPromote)
 include (SetupEraseNonkernel)
 include (SetupCpuRename)
@@ -45,8 +41,8 @@ include (MCWAMP)
 include (SetupRemoveSpecialSection)
 include (PatchLLVM)
 
-ensure_llvm_is_present(${PROJECT_SOURCE_DIR} compiler)
-ensure_clang_is_present(${PROJECT_SOURCE_DIR} compiler ${CLANG_URL})
+execute_process(COMMAND ln -sf ../../lld WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/compiler/tools)
+execute_process(COMMAND ln -sf ../../clang WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/compiler/tools)
 setup_Promote(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms Promote)
 setup_EraseNonkernel(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms EraseNonkernel)
 setup_CpuRename(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms CpuRename)
@@ -301,17 +297,11 @@ message(STATUS "HCC configured with default backend: ${KALMAR_BACKEND}")
 
 if (HAS_HSA)
 
-# setup HLC in HCC
-ensure_HLC_is_present(${PROJECT_SOURCE_DIR} hlc)
-
 # get HLC commit information
 execute_process(COMMAND git rev-parse --short HEAD
                 WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/hlc
                 OUTPUT_VARIABLE KALMAR_HLC_COMMIT
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-# setup HSAILasm in HCC
-ensure_HSAILASM_is_present(${PROJECT_SOURCE_DIR} HSAILasm)
 
 endif (HAS_HSA)
 
