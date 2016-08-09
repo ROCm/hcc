@@ -120,7 +120,7 @@ entry:
 }
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_acos(float %x) #2 {
+define linkonce_odr spir_func float @__hc_acos(float %x) #2 {
 entry:
   %call = call spir_func float @_Z4acosf(float %x) #1
   ret float %call
@@ -130,7 +130,7 @@ entry:
 declare spir_func float @_Z4acosf(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_acos_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_acos_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z4acosd(double %x) #1
   ret double %call
@@ -140,7 +140,7 @@ entry:
 declare spir_func double @_Z4acosd(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_acosh(float %x) #2 {
+define linkonce_odr spir_func float @__hc_acosh(float %x) #2 {
 entry:
   %call = call spir_func float @_Z5acoshf(float %x) #1
   ret float %call
@@ -150,7 +150,7 @@ entry:
 declare spir_func float @_Z5acoshf(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_acosh_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_acosh_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z5acoshd(double %x) #1
   ret double %call
@@ -160,7 +160,7 @@ entry:
 declare spir_func double @_Z5acoshd(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_asin(float %x) #2 {
+define linkonce_odr spir_func float @__hc_asin(float %x) #2 {
 entry:
   %call = call spir_func float @_Z4asinf(float %x) #1
   ret float %call
@@ -170,7 +170,7 @@ entry:
 declare spir_func float @_Z4asinf(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_asin_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_asin_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z4asind(double %x) #1
   ret double %call
@@ -180,7 +180,7 @@ entry:
 declare spir_func double @_Z4asind(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_asinh(float %x) #2 {
+define linkonce_odr spir_func float @__hc_asinh(float %x) #2 {
 entry:
   %call = call spir_func float @_Z5asinhf(float %x) #1
   ret float %call
@@ -190,7 +190,7 @@ entry:
 declare spir_func float @_Z5asinhf(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_asinh_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_asinh_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z5asinhd(double %x) #1
   ret double %call
@@ -200,7 +200,7 @@ entry:
 declare spir_func double @_Z5asinhd(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_atan(float %x) #2 {
+define linkonce_odr spir_func float @__hc_atan(float %x) #2 {
 entry:
   %call = call spir_func float @_Z4atanf(float %x) #1
   ret float %call
@@ -210,7 +210,7 @@ entry:
 declare spir_func float @_Z4atanf(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_atan_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_atan_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z4atand(double %x) #1
   ret double %call
@@ -220,7 +220,7 @@ entry:
 declare spir_func double @_Z4atand(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_atanh(float %x) #2 {
+define linkonce_odr spir_func float @__hc_atanh(float %x) #2 {
 entry:
   %call = call spir_func float @_Z5atanhf(float %x) #1
   ret float %call
@@ -230,7 +230,7 @@ entry:
 declare spir_func float @_Z5atanhf(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_atanh_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_atanh_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z5atanhd(double %x) #1
   ret double %call
@@ -240,7 +240,7 @@ entry:
 declare spir_func double @_Z5atanhd(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_atan2(float %x, float %y) #2 {
+define linkonce_odr spir_func float @__hc_atan2(float %x, float %y) #2 {
 entry:
   %call = call spir_func float @_Z5atan2ff(float %x, float %y) #1
   ret float %call
@@ -250,7 +250,7 @@ entry:
 declare spir_func float @_Z5atan2ff(float, float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_atan2_double(double %x, double %y) #2 {
+define linkonce_odr spir_func double @__hc_atan2_double(double %x, double %y) #2 {
 entry:
   %call = call spir_func double @_Z5atan2dd(double %x, double %y) #1
   ret double %call
@@ -260,7 +260,7 @@ entry:
 declare spir_func double @_Z5atan2dd(double, double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_cbrt(float %x) #2 {
+define linkonce_odr spir_func float @__hc_cbrt(float %x) #2 {
 entry:
   %call = call spir_func float @_Z4cbrtf(float %x) #1
   ret float %call
@@ -270,7 +270,7 @@ entry:
 declare spir_func float @_Z4cbrtf(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_cbrt_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_cbrt_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z4cbrtd(double %x) #1
   ret double %call
@@ -280,7 +280,7 @@ entry:
 declare spir_func double @_Z4cbrtd(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_ceil(float %x) #2 {
+define linkonce_odr spir_func float @__hc_ceil(float %x) #2 {
 entry:
   %call = call spir_func float @_Z4ceilf(float %x) #1
   ret float %call
@@ -290,7 +290,7 @@ entry:
 declare spir_func float @_Z4ceilf(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_ceil_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_ceil_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z4ceild(double %x) #1
   ret double %call
@@ -300,7 +300,7 @@ entry:
 declare spir_func double @_Z4ceild(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_copysign(float %x, float %y) #2 {
+define linkonce_odr spir_func float @__hc_copysign(float %x, float %y) #2 {
 entry:
   %call = call spir_func float @_Z8copysignff(float %x, float %y) #1
   ret float %call
@@ -310,7 +310,7 @@ entry:
 declare spir_func float @_Z8copysignff(float, float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_copysign_double(double %x, double %y) #2 {
+define linkonce_odr spir_func double @__hc_copysign_double(double %x, double %y) #2 {
 entry:
   %call = call spir_func double @_Z8copysigndd(double %x, double %y) #1
   ret double %call
@@ -320,7 +320,7 @@ entry:
 declare spir_func double @_Z8copysigndd(double, double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_cos(float %x) #2 {
+define linkonce_odr spir_func float @__hc_cos(float %x) #2 {
 entry:
   %call = call spir_func float @_Z3cosf(float %x) #1
   ret float %call
@@ -330,7 +330,7 @@ entry:
 declare spir_func float @_Z3cosf(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_cos_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_cos_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z3cosd(double %x) #1
   ret double %call
@@ -340,7 +340,7 @@ entry:
 declare spir_func double @_Z3cosd(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_cosh(float %x) #2 {
+define linkonce_odr spir_func float @__hc_cosh(float %x) #2 {
 entry:
   %call = call spir_func float @_Z4coshf(float %x) #1
   ret float %call
@@ -350,7 +350,7 @@ entry:
 declare spir_func float @_Z4coshf(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_cosh_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_cosh_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z4coshd(double %x) #1
   ret double %call
@@ -360,7 +360,7 @@ entry:
 declare spir_func double @_Z4coshd(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_cospi(float %x) #2 {
+define linkonce_odr spir_func float @__hc_cospi(float %x) #2 {
 entry:
   %call = call spir_func float @_Z5cospif(float %x) #1
   ret float %call
@@ -370,7 +370,7 @@ entry:
 declare spir_func float @_Z5cospif(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_cospi_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_cospi_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z5cospid(double %x) #1
   ret double %call
@@ -380,7 +380,7 @@ entry:
 declare spir_func double @_Z5cospid(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_erf(float %x) #2 {
+define linkonce_odr spir_func float @__hc_erf(float %x) #2 {
 entry:
   %call = call spir_func float @_Z3erff(float %x) #1
   ret float %call
@@ -390,7 +390,7 @@ entry:
 declare spir_func float @_Z3erff(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_erf_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_erf_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z3erfd(double %x) #1
   ret double %call
@@ -400,7 +400,7 @@ entry:
 declare spir_func double @_Z3erfd(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_erfc(float %x) #2 {
+define linkonce_odr spir_func float @__hc_erfc(float %x) #2 {
 entry:
   %call = call spir_func float @_Z4erfcf(float %x) #1
   ret float %call
@@ -410,7 +410,7 @@ entry:
 declare spir_func float @_Z4erfcf(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_erfc_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_erfc_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z4erfcd(double %x) #1
   ret double %call
@@ -420,7 +420,7 @@ entry:
 declare spir_func double @_Z4erfcd(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_exp(float %x) #2 {
+define linkonce_odr spir_func float @__hc_exp(float %x) #2 {
 entry:
   %call = call spir_func float @_Z3expf(float %x) #1
   ret float %call
@@ -430,7 +430,7 @@ entry:
 declare spir_func float @_Z3expf(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_exp_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_exp_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z3expd(double %x) #1
   ret double %call
@@ -440,7 +440,7 @@ entry:
 declare spir_func double @_Z3expd(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_exp2(float %x) #2 {
+define linkonce_odr spir_func float @__hc_exp2(float %x) #2 {
 entry:
   %call = call spir_func float @_Z4exp2f(float %x) #1
   ret float %call
@@ -450,7 +450,7 @@ entry:
 declare spir_func float @_Z4exp2f(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_exp2_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_exp2_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z4exp2d(double %x) #1
   ret double %call
@@ -460,7 +460,7 @@ entry:
 declare spir_func double @_Z4exp2d(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_exp10(float %x) #2 {
+define linkonce_odr spir_func float @__hc_exp10(float %x) #2 {
 entry:
   %call = call spir_func float @_Z5exp10f(float %x) #1
   ret float %call
@@ -470,7 +470,7 @@ entry:
 declare spir_func float @_Z5exp10f(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_exp10_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_exp10_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z5exp10d(double %x) #1
   ret double %call
@@ -480,7 +480,7 @@ entry:
 declare spir_func double @_Z5exp10d(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_expm1(float %x) #2 {
+define linkonce_odr spir_func float @__hc_expm1(float %x) #2 {
 entry:
   %call = call spir_func float @_Z5expm1f(float %x) #1
   ret float %call
@@ -490,7 +490,7 @@ entry:
 declare spir_func float @_Z5expm1f(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_expm1_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_expm1_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z5expm1d(double %x) #1
   ret double %call
@@ -500,7 +500,7 @@ entry:
 declare spir_func double @_Z5expm1d(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_fabs(float %x) #2 {
+define linkonce_odr spir_func float @__hc_fabs(float %x) #2 {
 entry:
   %call = call spir_func float @_Z4fabsf(float %x) #1
   ret float %call
@@ -510,7 +510,7 @@ entry:
 declare spir_func float @_Z4fabsf(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_fabs_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_fabs_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z4fabsd(double %x) #1
   ret double %call
@@ -520,7 +520,7 @@ entry:
 declare spir_func double @_Z4fabsd(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_fdim(float %x, float %y) #2 {
+define linkonce_odr spir_func float @__hc_fdim(float %x, float %y) #2 {
 entry:
   %call = call spir_func float @_Z4fdimff(float %x, float %y) #1
   ret float %call
@@ -530,7 +530,7 @@ entry:
 declare spir_func float @_Z4fdimff(float, float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_fdim_double(double %x, double %y) #2 {
+define linkonce_odr spir_func double @__hc_fdim_double(double %x, double %y) #2 {
 entry:
   %call = call spir_func double @_Z4fdimdd(double %x, double %y) #1
   ret double %call
@@ -540,7 +540,7 @@ entry:
 declare spir_func double @_Z4fdimdd(double, double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_floor(float %x) #2 {
+define linkonce_odr spir_func float @__hc_floor(float %x) #2 {
 entry:
   %call = call spir_func float @_Z5floorf(float %x) #1
   ret float %call
@@ -550,7 +550,7 @@ entry:
 declare spir_func float @_Z5floorf(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_floor_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_floor_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z5floord(double %x) #1
   ret double %call
@@ -560,7 +560,7 @@ entry:
 declare spir_func double @_Z5floord(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_fma(float %x, float %y, float %z) #2 {
+define linkonce_odr spir_func float @__hc_fma(float %x, float %y, float %z) #2 {
 entry:
   %call = call spir_func float @_Z3fmafff(float %x, float %y, float %z) #1
   ret float %call
@@ -570,7 +570,7 @@ entry:
 declare spir_func float @_Z3fmafff(float, float, float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_fma_double(double %x, double %y, double %z) #2 {
+define linkonce_odr spir_func double @__hc_fma_double(double %x, double %y, double %z) #2 {
 entry:
   %call = call spir_func double @_Z3fmaddd(double %x, double %y, double %z) #1
   ret double %call
@@ -580,7 +580,7 @@ entry:
 declare spir_func double @_Z3fmaddd(double, double, double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_fmax(float %x, float %y) #2 {
+define linkonce_odr spir_func float @__hc_fmax(float %x, float %y) #2 {
 entry:
   %call = call spir_func float @_Z3maxff(float %x, float %y) #1
   ret float %call
@@ -590,7 +590,7 @@ entry:
 declare spir_func float @_Z3maxff(float, float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_fmax_double(double %x, double %y) #2 {
+define linkonce_odr spir_func double @__hc_fmax_double(double %x, double %y) #2 {
 entry:
   %call = call spir_func double @_Z3maxdd(double %x, double %y) #1
   ret double %call
@@ -600,7 +600,7 @@ entry:
 declare spir_func double @_Z3maxdd(double, double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_fmin(float %x, float %y) #2 {
+define linkonce_odr spir_func float @__hc_fmin(float %x, float %y) #2 {
 entry:
   %call = call spir_func float @_Z3minff(float %x, float %y) #1
   ret float %call
@@ -610,7 +610,7 @@ entry:
 declare spir_func float @_Z3minff(float, float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_fmin_double(double %x, double %y) #2 {
+define linkonce_odr spir_func double @__hc_fmin_double(double %x, double %y) #2 {
 entry:
   %call = call spir_func double @_Z3mindd(double %x, double %y) #1
   ret double %call
@@ -620,7 +620,7 @@ entry:
 declare spir_func double @_Z3mindd(double, double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_fmod(float %x, float %y) #2 {
+define linkonce_odr spir_func float @__hc_fmod(float %x, float %y) #2 {
 entry:
   %call = call spir_func float @_Z4fmodff(float %x, float %y) #1
   ret float %call
@@ -630,7 +630,7 @@ entry:
 declare spir_func float @_Z4fmodff(float, float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_fmod_double(double %x, double %y) #2 {
+define linkonce_odr spir_func double @__hc_fmod_double(double %x, double %y) #2 {
 entry:
   %call = call spir_func double @_Z4fmoddd(double %x, double %y) #1
   ret double %call
@@ -640,7 +640,7 @@ entry:
 declare spir_func double @_Z4fmoddd(double, double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_frexpf_global(float %x, i32 addrspace(1)* %exp) #2 {
+define linkonce_odr spir_func float @__hc_frexpf_global(float %x, i32 addrspace(1)* %exp) #2 {
 entry:
   %0 = ptrtoint i32 addrspace(1)* %exp to i64
   %1 = inttoptr i64 %0 to i32 addrspace(4)*
@@ -652,7 +652,7 @@ entry:
 declare spir_func float @_Z5frexpfPU3AS4i(float, i32 addrspace(4)*) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_frexpf_local(float %x, i32 addrspace(3)* %exp) #2 {
+define linkonce_odr spir_func float @__hc_frexpf_local(float %x, i32 addrspace(3)* %exp) #2 {
 entry:
   %0 = ptrtoint i32 addrspace(3)* %exp to i64
   %1 = inttoptr i64 %0 to i32 addrspace(4)*
@@ -661,14 +661,14 @@ entry:
 }
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_frexpf(float %x, i32 addrspace(4)* readnone %exp) #2 {
+define linkonce_odr spir_func float @__hc_frexpf(float %x, i32 addrspace(4)* readnone %exp) #2 {
 entry:
   %call = call spir_func float @_Z5frexpfPU3AS4i(float %x, i32 addrspace(4)* %exp) #1
   ret float %call
 }
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_frexp_global(double %x, i32 addrspace(1)* %exp) #2 {
+define linkonce_odr spir_func double @__hc_frexp_global(double %x, i32 addrspace(1)* %exp) #2 {
 entry:
   %0 = ptrtoint i32 addrspace(1)* %exp to i64
   %1 = inttoptr i64 %0 to i32 addrspace(4)*
@@ -680,7 +680,7 @@ entry:
 declare spir_func double @_Z5frexpdPU3AS4i(double, i32 addrspace(4)*) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_frexp_local(double %x, i32 addrspace(3)* %exp) #2 {
+define linkonce_odr spir_func double @__hc_frexp_local(double %x, i32 addrspace(3)* %exp) #2 {
 entry:
   %0 = ptrtoint i32 addrspace(3)* %exp to i64
   %1 = inttoptr i64 %0 to i32 addrspace(4)*
@@ -689,14 +689,14 @@ entry:
 }
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_frexp(double %x, i32 addrspace(4)* readnone %exp) #2 {
+define linkonce_odr spir_func double @__hc_frexp(double %x, i32 addrspace(4)* readnone %exp) #2 {
 entry:
   %call = call spir_func double @_Z5frexpdPU3AS4i(double %x, i32 addrspace(4)* %exp) #1
   ret double %call
 }
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_hypot(float %x, float %y) #2 {
+define linkonce_odr spir_func float @__hc_hypot(float %x, float %y) #2 {
 entry:
   %call = call spir_func float @_Z5hypotff(float %x, float %y) #1
   ret float %call
@@ -706,7 +706,7 @@ entry:
 declare spir_func float @_Z5hypotff(float, float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_hypot_double(double %x, double %y) #2 {
+define linkonce_odr spir_func double @__hc_hypot_double(double %x, double %y) #2 {
 entry:
   %call = call spir_func double @_Z5hypotdd(double %x, double %y) #1
   ret double %call
@@ -716,7 +716,7 @@ entry:
 declare spir_func double @_Z5hypotdd(double, double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func i32 @opencl_ilogb(float %x) #2 {
+define linkonce_odr spir_func i32 @__hc_ilogb(float %x) #2 {
 entry:
   %call = call spir_func i32 @_Z5ilogbf(float %x) #1
   ret i32 %call
@@ -726,7 +726,7 @@ entry:
 declare spir_func i32 @_Z5ilogbf(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func i32 @opencl_ilogb_double(double %x) #2 {
+define linkonce_odr spir_func i32 @__hc_ilogb_double(double %x) #2 {
 entry:
   %call = call spir_func i32 @_Z5ilogbd(double %x) #1
   ret i32 %call
@@ -736,7 +736,7 @@ entry:
 declare spir_func i32 @_Z5ilogbd(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func i32 @opencl_isfinite(float %x) #2 {
+define linkonce_odr spir_func i32 @__hc_isfinite(float %x) #2 {
 entry:
   %call = call spir_func i32 @_Z8isfinitef(float %x) #1
   ret i32 %call
@@ -746,7 +746,7 @@ entry:
 declare spir_func i32 @_Z8isfinitef(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func i32 @opencl_isfinite_double(double %x) #2 {
+define linkonce_odr spir_func i32 @__hc_isfinite_double(double %x) #2 {
 entry:
   %call = call spir_func i32 @_Z8isfinited(double %x) #1
   ret i32 %call
@@ -756,7 +756,7 @@ entry:
 declare spir_func i32 @_Z8isfinited(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func i32 @opencl_isinf(float %x) #2 {
+define linkonce_odr spir_func i32 @__hc_isinf(float %x) #2 {
 entry:
   %call = call spir_func i32 @_Z5isinff(float %x) #1
   ret i32 %call
@@ -766,7 +766,7 @@ entry:
 declare spir_func i32 @_Z5isinff(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func i32 @opencl_isinf_double(double %x) #2 {
+define linkonce_odr spir_func i32 @__hc_isinf_double(double %x) #2 {
 entry:
   %call = call spir_func i32 @_Z5isinfd(double %x) #1
   ret i32 %call
@@ -776,7 +776,7 @@ entry:
 declare spir_func i32 @_Z5isinfd(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func i32 @opencl_isnan(float %x) #2 {
+define linkonce_odr spir_func i32 @__hc_isnan(float %x) #2 {
 entry:
   %call = call spir_func i32 @_Z5isnanf(float %x) #1
   ret i32 %call
@@ -786,7 +786,7 @@ entry:
 declare spir_func i32 @_Z5isnanf(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func i32 @opencl_isnan_double(double %x) #2 {
+define linkonce_odr spir_func i32 @__hc_isnan_double(double %x) #2 {
 entry:
   %call = call spir_func i32 @_Z5isnand(double %x) #1
   ret i32 %call
@@ -796,7 +796,7 @@ entry:
 declare spir_func i32 @_Z5isnand(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func i32 @opencl_isnormal(float %x) #2 {
+define linkonce_odr spir_func i32 @__hc_isnormal(float %x) #2 {
 entry:
   %call = call spir_func i32 @_Z8isnormalf(float %x) #1
   ret i32 %call
@@ -806,7 +806,7 @@ entry:
 declare spir_func i32 @_Z8isnormalf(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func i32 @opencl_isnormal_double(double %x) #2 {
+define linkonce_odr spir_func i32 @__hc_isnormal_double(double %x) #2 {
 entry:
   %call = call spir_func i32 @_Z8isnormald(double %x) #1
   ret i32 %call
@@ -816,7 +816,7 @@ entry:
 declare spir_func i32 @_Z8isnormald(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_lgammaf_global(float %x, i32 addrspace(1)* %exp) #2 {
+define linkonce_odr spir_func float @__hc_lgammaf_global(float %x, i32 addrspace(1)* %exp) #2 {
 entry:
   %0 = ptrtoint i32 addrspace(1)* %exp to i64
   %1 = inttoptr i64 %0 to i32 addrspace(4)*
@@ -828,7 +828,7 @@ entry:
 declare spir_func float @_Z8lgamma_rfPU3AS4i(float, i32 addrspace(4)*) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_lgammaf_local(float %x, i32 addrspace(3)* %exp) #2 {
+define linkonce_odr spir_func float @__hc_lgammaf_local(float %x, i32 addrspace(3)* %exp) #2 {
 entry:
   %0 = ptrtoint i32 addrspace(3)* %exp to i64
   %1 = inttoptr i64 %0 to i32 addrspace(4)*
@@ -837,14 +837,14 @@ entry:
 }
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_lgammaf(float %x, i32 addrspace(4)* readnone %exp) #2 {
+define linkonce_odr spir_func float @__hc_lgammaf(float %x, i32 addrspace(4)* readnone %exp) #2 {
 entry:
   %call = call spir_func float @_Z8lgamma_rfPU3AS4i(float %x, i32 addrspace(4)* %exp) #1
   ret float %call
 }
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_lgamma_global(double %x, i32 addrspace(1)* %exp) #2 {
+define linkonce_odr spir_func double @__hc_lgamma_global(double %x, i32 addrspace(1)* %exp) #2 {
 entry:
   %0 = ptrtoint i32 addrspace(1)* %exp to i64
   %1 = inttoptr i64 %0 to i32 addrspace(4)*
@@ -856,7 +856,7 @@ entry:
 declare spir_func double @_Z8lgamma_rdPU3AS4i(double, i32 addrspace(4)*) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_lgamma_local(double %x, i32 addrspace(3)* %exp) #2 {
+define linkonce_odr spir_func double @__hc_lgamma_local(double %x, i32 addrspace(3)* %exp) #2 {
 entry:
   %0 = ptrtoint i32 addrspace(3)* %exp to i64
   %1 = inttoptr i64 %0 to i32 addrspace(4)*
@@ -865,14 +865,14 @@ entry:
 }
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_lgamma(double %x, i32 addrspace(4)* readnone %exp) #2 {
+define linkonce_odr spir_func double @__hc_lgamma(double %x, i32 addrspace(4)* readnone %exp) #2 {
 entry:
   %call = call spir_func double @_Z8lgamma_rdPU3AS4i(double %x, i32 addrspace(4)* %exp) #1
   ret double %call
 }
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_log(float %x) #2 {
+define linkonce_odr spir_func float @__hc_log(float %x) #2 {
 entry:
   %call = call spir_func float @_Z3logf(float %x) #1
   ret float %call
@@ -882,7 +882,7 @@ entry:
 declare spir_func float @_Z3logf(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_log_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_log_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z3logd(double %x) #1
   ret double %call
@@ -892,7 +892,7 @@ entry:
 declare spir_func double @_Z3logd(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_log10(float %x) #2 {
+define linkonce_odr spir_func float @__hc_log10(float %x) #2 {
 entry:
   %call = call spir_func float @_Z5log10f(float %x) #1
   ret float %call
@@ -902,7 +902,7 @@ entry:
 declare spir_func float @_Z5log10f(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_log10_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_log10_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z5log10d(double %x) #1
   ret double %call
@@ -912,7 +912,7 @@ entry:
 declare spir_func double @_Z5log10d(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_log2(float %x) #2 {
+define linkonce_odr spir_func float @__hc_log2(float %x) #2 {
 entry:
   %call = call spir_func float @_Z4log2f(float %x) #1
   ret float %call
@@ -922,7 +922,7 @@ entry:
 declare spir_func float @_Z4log2f(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_log2_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_log2_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z4log2d(double %x) #1
   ret double %call
@@ -932,7 +932,7 @@ entry:
 declare spir_func double @_Z4log2d(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_log1p(float %x) #2 {
+define linkonce_odr spir_func float @__hc_log1p(float %x) #2 {
 entry:
   %call = call spir_func float @_Z5log1pf(float %x) #1
   ret float %call
@@ -942,7 +942,7 @@ entry:
 declare spir_func float @_Z5log1pf(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_log1p_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_log1p_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z5log1pd(double %x) #1
   ret double %call
@@ -952,7 +952,7 @@ entry:
 declare spir_func double @_Z5log1pd(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_logb(float %x) #2 {
+define linkonce_odr spir_func float @__hc_logb(float %x) #2 {
 entry:
   %call = call spir_func float @_Z4logbf(float %x) #1
   ret float %call
@@ -962,7 +962,7 @@ entry:
 declare spir_func float @_Z4logbf(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_logb_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_logb_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z4logbd(double %x) #1
   ret double %call
@@ -972,7 +972,7 @@ entry:
 declare spir_func double @_Z4logbd(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_modff_global(float %x, float addrspace(1)* %iptr) #2 {
+define linkonce_odr spir_func float @__hc_modff_global(float %x, float addrspace(1)* %iptr) #2 {
 entry:
   %0 = ptrtoint float addrspace(1)* %iptr to i64
   %1 = inttoptr i64 %0 to float addrspace(4)*
@@ -984,7 +984,7 @@ entry:
 declare spir_func float @_Z4modffPU3AS4f(float, float addrspace(4)*) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_modff_local(float %x, float addrspace(3)* %iptr) #2 {
+define linkonce_odr spir_func float @__hc_modff_local(float %x, float addrspace(3)* %iptr) #2 {
 entry:
   %0 = ptrtoint float addrspace(3)* %iptr to i64
   %1 = inttoptr i64 %0 to float addrspace(4)*
@@ -993,14 +993,14 @@ entry:
 }
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_modff(float %x, float addrspace(4)* readnone %iptr) #2 {
+define linkonce_odr spir_func float @__hc_modff(float %x, float addrspace(4)* readnone %iptr) #2 {
 entry:
   %call = call spir_func float @_Z4modffPU3AS4f(float %x, float addrspace(4)* %iptr) #1
   ret float %call
 }
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_modf_global(double %x, double addrspace(1)* %iptr) #2 {
+define linkonce_odr spir_func double @__hc_modf_global(double %x, double addrspace(1)* %iptr) #2 {
 entry:
   %0 = ptrtoint double addrspace(1)* %iptr to i64
   %1 = inttoptr i64 %0 to double addrspace(4)*
@@ -1012,7 +1012,7 @@ entry:
 declare spir_func double @_Z4modfdPU3AS4d(double, double addrspace(4)*) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_modf_local(double %x, double addrspace(3)* %iptr) #2 {
+define linkonce_odr spir_func double @__hc_modf_local(double %x, double addrspace(3)* %iptr) #2 {
 entry:
   %0 = ptrtoint double addrspace(3)* %iptr to i64
   %1 = inttoptr i64 %0 to double addrspace(4)*
@@ -1021,14 +1021,14 @@ entry:
 }
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_modf(double %x, double addrspace(4)* readnone %iptr) #2 {
+define linkonce_odr spir_func double @__hc_modf(double %x, double addrspace(4)* readnone %iptr) #2 {
 entry:
   %call = call spir_func double @_Z4modfdPU3AS4d(double %x, double addrspace(4)* %iptr) #1
   ret double %call
 }
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_nan(i32 %tagp) #2 {
+define linkonce_odr spir_func float @__hc_nan(i32 %tagp) #2 {
 entry:
   %call = call spir_func float @_Z3nanj(i32 %tagp) #1
   ret float %call
@@ -1038,7 +1038,7 @@ entry:
 declare spir_func float @_Z3nanj(i32) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_nan_double(i32 %tagp) #2 {
+define linkonce_odr spir_func double @__hc_nan_double(i32 %tagp) #2 {
 entry:
   %conv = sext i32 %tagp to i64
   %call = call spir_func double @_Z3nanm(i64 %conv) #1
@@ -1049,7 +1049,7 @@ entry:
 declare spir_func double @_Z3nanm(i64) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_nearbyint(float %x) #2 {
+define linkonce_odr spir_func float @__hc_nearbyint(float %x) #2 {
 entry:
   %call = call spir_func float @_Z4rintf(float %x) #1
   ret float %call
@@ -1059,7 +1059,7 @@ entry:
 declare spir_func float @_Z4rintf(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_nearbyint_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_nearbyint_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z4rintd(double %x) #1
   ret double %call
@@ -1069,7 +1069,7 @@ entry:
 declare spir_func double @_Z4rintd(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_nextafter(float %x, float %y) #2 {
+define linkonce_odr spir_func float @__hc_nextafter(float %x, float %y) #2 {
 entry:
   %call = call spir_func float @_Z9nextafterff(float %x, float %y) #1
   ret float %call
@@ -1079,7 +1079,7 @@ entry:
 declare spir_func float @_Z9nextafterff(float, float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_nextafter_double(double %x, double %y) #2 {
+define linkonce_odr spir_func double @__hc_nextafter_double(double %x, double %y) #2 {
 entry:
   %call = call spir_func double @_Z9nextafterdd(double %x, double %y) #1
   ret double %call
@@ -1089,7 +1089,7 @@ entry:
 declare spir_func double @_Z9nextafterdd(double, double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_pow(float %x, float %y) #2 {
+define linkonce_odr spir_func float @__hc_pow(float %x, float %y) #2 {
 entry:
   %call = call spir_func float @_Z3powff(float %x, float %y) #1
   ret float %call
@@ -1099,7 +1099,7 @@ entry:
 declare spir_func float @_Z3powff(float, float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_pow_double(double %x, double %y) #2 {
+define linkonce_odr spir_func double @__hc_pow_double(double %x, double %y) #2 {
 entry:
   %call = call spir_func double @_Z3powdd(double %x, double %y) #1
   ret double %call
@@ -1109,7 +1109,7 @@ entry:
 declare spir_func double @_Z3powdd(double, double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_remainder(float %x, float %y) #2 {
+define linkonce_odr spir_func float @__hc_remainder(float %x, float %y) #2 {
 entry:
   %call = call spir_func float @_Z9remainderff(float %x, float %y) #1
   ret float %call
@@ -1119,7 +1119,7 @@ entry:
 declare spir_func float @_Z9remainderff(float, float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_remainder_double(double %x, double %y) #2 {
+define linkonce_odr spir_func double @__hc_remainder_double(double %x, double %y) #2 {
 entry:
   %call = call spir_func double @_Z9remainderdd(double %x, double %y) #1
   ret double %call
@@ -1129,7 +1129,7 @@ entry:
 declare spir_func double @_Z9remainderdd(double, double) #1
 
 ; Function Attrs: alwaysinline nounwind readnone
-define linkonce_odr spir_func float @opencl_remquof_global(float %x, float %y, i32 addrspace(1)* nocapture readnone %quo) #0 {
+define linkonce_odr spir_func float @__hc_remquof_global(float %x, float %y, i32 addrspace(1)* nocapture readnone %quo) #0 {
 entry:
   ret float 0.000000e+00
 }
@@ -1137,19 +1137,19 @@ entry:
 declare spir_func float @_Z6remquoffPU3AS4i(float, float, i32 addrspace(4)*)
 
 ; Function Attrs: alwaysinline nounwind readnone
-define linkonce_odr spir_func float @opencl_remquof_local(float %x, float %y, i32 addrspace(3)* nocapture readnone %quo) #0 {
+define linkonce_odr spir_func float @__hc_remquof_local(float %x, float %y, i32 addrspace(3)* nocapture readnone %quo) #0 {
 entry:
   ret float 0.000000e+00
 }
 
 ; Function Attrs: alwaysinline nounwind readnone
-define linkonce_odr spir_func float @opencl_remquof(float %x, float %y, i32 addrspace(4)* nocapture readnone %quo) #0 {
+define linkonce_odr spir_func float @__hc_remquof(float %x, float %y, i32 addrspace(4)* nocapture readnone %quo) #0 {
 entry:
   ret float 0.000000e+00
 }
 
 ; Function Attrs: alwaysinline nounwind readnone
-define linkonce_odr spir_func double @opencl_remquo_global(double %x, double %y, i32 addrspace(1)* nocapture readnone %quo) #0 {
+define linkonce_odr spir_func double @__hc_remquo_global(double %x, double %y, i32 addrspace(1)* nocapture readnone %quo) #0 {
 entry:
   ret double 0.000000e+00
 }
@@ -1158,19 +1158,19 @@ entry:
 declare spir_func double @_Z6remquoddPU3AS4i(double, double, i32 addrspace(4)*) #1
 
 ; Function Attrs: alwaysinline nounwind readnone
-define linkonce_odr spir_func double @opencl_remquo_local(double %x, double %y, i32 addrspace(3)* nocapture readnone %quo) #0 {
+define linkonce_odr spir_func double @__hc_remquo_local(double %x, double %y, i32 addrspace(3)* nocapture readnone %quo) #0 {
 entry:
   ret double 0.000000e+00
 }
 
 ; Function Attrs: alwaysinline nounwind readnone
-define linkonce_odr spir_func double @opencl_remquo(double %x, double %y, i32 addrspace(4)* nocapture readnone %quo) #0 {
+define linkonce_odr spir_func double @__hc_remquo(double %x, double %y, i32 addrspace(4)* nocapture readnone %quo) #0 {
 entry:
   ret double 0.000000e+00
 }
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_round(float %x) #2 {
+define linkonce_odr spir_func float @__hc_round(float %x) #2 {
 entry:
   %call = call spir_func float @_Z5roundf(float %x) #1
   ret float %call
@@ -1180,7 +1180,7 @@ entry:
 declare spir_func float @_Z5roundf(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_round_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_round_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z5roundd(double %x) #1
   ret double %call
@@ -1190,7 +1190,7 @@ entry:
 declare spir_func double @_Z5roundd(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_rsqrt(float %x) #2 {
+define linkonce_odr spir_func float @__hc_rsqrt(float %x) #2 {
 entry:
   %call = call spir_func float @_Z5rsqrtf(float %x) #1
   ret float %call
@@ -1200,7 +1200,7 @@ entry:
 declare spir_func float @_Z5rsqrtf(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_rsqrt_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_rsqrt_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z5rsqrtd(double %x) #1
   ret double %call
@@ -1210,7 +1210,7 @@ entry:
 declare spir_func double @_Z5rsqrtd(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_sinpi(float %x) #2 {
+define linkonce_odr spir_func float @__hc_sinpi(float %x) #2 {
 entry:
   %call = call spir_func float @_Z5sinpif(float %x) #1
   ret float %call
@@ -1220,7 +1220,7 @@ entry:
 declare spir_func float @_Z5sinpif(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_sinpi_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_sinpi_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z5sinpid(double %x) #1
   ret double %call
@@ -1230,7 +1230,7 @@ entry:
 declare spir_func double @_Z5sinpid(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_ldexp(float %x, i32 %exp) #2 {
+define linkonce_odr spir_func float @__hc_ldexp(float %x, i32 %exp) #2 {
 entry:
   %call = call spir_func float @_Z5ldexpfi(float %x, i32 %exp) #1
   ret float %call
@@ -1240,7 +1240,7 @@ entry:
 declare spir_func float @_Z5ldexpfi(float, i32) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_ldexp_double(double %x, i32 %exp) #2 {
+define linkonce_odr spir_func double @__hc_ldexp_double(double %x, i32 %exp) #2 {
 entry:
   %call = call spir_func double @_Z5ldexpdi(double %x, i32 %exp) #1
   ret double %call
@@ -1250,7 +1250,7 @@ entry:
 declare spir_func double @_Z5ldexpdi(double, i32) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func i32 @opencl_signbit(float %x) #2 {
+define linkonce_odr spir_func i32 @__hc_signbit(float %x) #2 {
 entry:
   %call = call spir_func i32 @_Z7signbitf(float %x) #1
   ret i32 %call
@@ -1260,7 +1260,7 @@ entry:
 declare spir_func i32 @_Z7signbitf(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func i32 @opencl_signbit_double(double %x) #2 {
+define linkonce_odr spir_func i32 @__hc_signbit_double(double %x) #2 {
 entry:
   %call = call spir_func i32 @_Z7signbitd(double %x) #1
   ret i32 %call
@@ -1270,7 +1270,7 @@ entry:
 declare spir_func i32 @_Z7signbitd(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_sin(float %x) #2 {
+define linkonce_odr spir_func float @__hc_sin(float %x) #2 {
 entry:
   %call = call spir_func float @_Z3sinf(float %x) #1
   ret float %call
@@ -1280,7 +1280,7 @@ entry:
 declare spir_func float @_Z3sinf(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_sin_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_sin_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z3sind(double %x) #1
   ret double %call
@@ -1290,7 +1290,7 @@ entry:
 declare spir_func double @_Z3sind(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func void @opencl_sincosf_global(float %x, float addrspace(1)* nocapture %s, float addrspace(1)* %c) #2 {
+define linkonce_odr spir_func void @__hc_sincosf_global(float %x, float addrspace(1)* nocapture %s, float addrspace(1)* %c) #2 {
 entry:
   %0 = addrspacecast float addrspace(1)* %c to float addrspace(4)*
   %call = call spir_func float @_Z6sincosfPU3AS4f(float %x, float addrspace(4)* %0) #1
@@ -1302,7 +1302,7 @@ entry:
 declare spir_func float @_Z6sincosfPU3AS4f(float, float addrspace(4)*) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func void @opencl_sincosf_local(float %x, float addrspace(3)* nocapture %s, float addrspace(3)* %c) #2 {
+define linkonce_odr spir_func void @__hc_sincosf_local(float %x, float addrspace(3)* nocapture %s, float addrspace(3)* %c) #2 {
 entry:
   %0 = addrspacecast float addrspace(3)* %c to float addrspace(4)*
   %call = call spir_func float @_Z6sincosfPU3AS4f(float %x, float addrspace(4)* %0) #1
@@ -1311,7 +1311,7 @@ entry:
 }
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func void @opencl_sincosf(float %x, float addrspace(4)* nocapture %s, float addrspace(4)* %c) #2 {
+define linkonce_odr spir_func void @__hc_sincosf(float %x, float addrspace(4)* nocapture %s, float addrspace(4)* %c) #2 {
 entry:
   %call = call spir_func float @_Z6sincosfPU3AS4f(float %x, float addrspace(4)* %c) #1
   store float %call, float addrspace(4)* %s, align 4
@@ -1319,7 +1319,7 @@ entry:
 }
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func void @opencl_sincos_global(double %x, double addrspace(1)* nocapture %s, double addrspace(1)* %c) #2 {
+define linkonce_odr spir_func void @__hc_sincos_global(double %x, double addrspace(1)* nocapture %s, double addrspace(1)* %c) #2 {
 entry:
   %0 = addrspacecast double addrspace(1)* %c to double addrspace(4)*
   %call = call spir_func double @_Z6sincosdPU3AS4d(double %x, double addrspace(4)* %0) #1
@@ -1331,7 +1331,7 @@ entry:
 declare spir_func double @_Z6sincosdPU3AS4d(double, double addrspace(4)*) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func void @opencl_sincos_local(double %x, double addrspace(3)* nocapture %s, double addrspace(3)* %c) #2 {
+define linkonce_odr spir_func void @__hc_sincos_local(double %x, double addrspace(3)* nocapture %s, double addrspace(3)* %c) #2 {
 entry:
   %0 = addrspacecast double addrspace(3)* %c to double addrspace(4)*
   %call = call spir_func double @_Z6sincosdPU3AS4d(double %x, double addrspace(4)* %0) #1
@@ -1340,7 +1340,7 @@ entry:
 }
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func void @opencl_sincos(double %x, double addrspace(4)* nocapture %s, double addrspace(4)* %c) #2 {
+define linkonce_odr spir_func void @__hc_sincos(double %x, double addrspace(4)* nocapture %s, double addrspace(4)* %c) #2 {
 entry:
   %call = call spir_func double @_Z6sincosdPU3AS4d(double %x, double addrspace(4)* %c) #1
   store double %call, double addrspace(4)* %s, align 8
@@ -1348,7 +1348,7 @@ entry:
 }
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_sinh(float %x) #2 {
+define linkonce_odr spir_func float @__hc_sinh(float %x) #2 {
 entry:
   %call = call spir_func float @_Z4sinhf(float %x) #1
   ret float %call
@@ -1358,7 +1358,7 @@ entry:
 declare spir_func float @_Z4sinhf(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_sinh_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_sinh_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z4sinhd(double %x) #1
   ret double %call
@@ -1368,7 +1368,7 @@ entry:
 declare spir_func double @_Z4sinhd(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_sqrt(float %x) #2 {
+define linkonce_odr spir_func float @__hc_sqrt(float %x) #2 {
 entry:
   %call = call spir_func float @_Z4sqrtf(float %x) #1
   ret float %call
@@ -1378,7 +1378,7 @@ entry:
 declare spir_func float @_Z4sqrtf(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_sqrt_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_sqrt_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z4sqrtd(double %x) #1
   ret double %call
@@ -1388,7 +1388,7 @@ entry:
 declare spir_func double @_Z4sqrtd(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_tgamma(float %x) #2 {
+define linkonce_odr spir_func float @__hc_tgamma(float %x) #2 {
 entry:
   %call = call spir_func float @_Z6tgammaf(float %x) #1
   ret float %call
@@ -1398,7 +1398,7 @@ entry:
 declare spir_func float @_Z6tgammaf(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_tgamma_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_tgamma_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z6tgammad(double %x) #1
   ret double %call
@@ -1408,7 +1408,7 @@ entry:
 declare spir_func double @_Z6tgammad(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_tan(float %x) #2 {
+define linkonce_odr spir_func float @__hc_tan(float %x) #2 {
 entry:
   %call = call spir_func float @_Z3tanf(float %x) #1
   ret float %call
@@ -1418,7 +1418,7 @@ entry:
 declare spir_func float @_Z3tanf(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_tan_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_tan_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z3tand(double %x) #1
   ret double %call
@@ -1428,7 +1428,7 @@ entry:
 declare spir_func double @_Z3tand(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_tanh(float %x) #2 {
+define linkonce_odr spir_func float @__hc_tanh(float %x) #2 {
 entry:
   %call = call spir_func float @_Z4tanhf(float %x) #1
   ret float %call
@@ -1438,7 +1438,7 @@ entry:
 declare spir_func float @_Z4tanhf(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_tanh_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_tanh_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z4tanhd(double %x) #1
   ret double %call
@@ -1448,7 +1448,7 @@ entry:
 declare spir_func double @_Z4tanhd(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_tanpi(float %x) #2 {
+define linkonce_odr spir_func float @__hc_tanpi(float %x) #2 {
 entry:
   %call = call spir_func float @_Z5tanpif(float %x) #1
   ret float %call
@@ -1458,7 +1458,7 @@ entry:
 declare spir_func float @_Z5tanpif(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_tanpi_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_tanpi_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z5tanpid(double %x) #1
   ret double %call
@@ -1468,7 +1468,7 @@ entry:
 declare spir_func double @_Z5tanpid(double) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func float @opencl_trunc(float %x) #2 {
+define linkonce_odr spir_func float @__hc_trunc(float %x) #2 {
 entry:
   %call = call spir_func float @_Z5truncf(float %x) #1
   ret float %call
@@ -1478,7 +1478,7 @@ entry:
 declare spir_func float @_Z5truncf(float) #1
 
 ; Function Attrs: alwaysinline nounwind
-define linkonce_odr spir_func double @opencl_trunc_double(double %x) #2 {
+define linkonce_odr spir_func double @__hc_trunc_double(double %x) #2 {
 entry:
   %call = call spir_func double @_Z5truncd(double %x) #1
   ret double %call
