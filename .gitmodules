@@ -13,5 +13,5 @@
 	branch = hsail-stable-3.7
 [submodule "clang"]
 	path = clang
-	url = https://github.com/RadeonOpenCompute/hcc-clang-upgrade
+	url = git@github.com:RadeonOpenCompute/hcc-clang-upgrade.git
 	branch = clang_tot_upgrade
