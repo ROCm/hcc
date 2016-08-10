@@ -24,7 +24,16 @@ ENDIF(NOT CMAKE_BUILD_TYPE)
 set(CMAKE_MACOSX_RPATH 1)
 
 IF (NOT NUM_BUILD_THREADS)
-  SET(NUM_BUILD_THREADS 8)
+  # try determine logical processors via nproc
+  find_program(nproc "nproc")
+  if (nproc)
+    # heuristic for the best CPU utilization: 2 times the number of logical processor
+    execute_process(COMMAND ${nproc} OUTPUT_VARIABLE NUM_CORES)
+    math(EXPR NUM_BUILD_THREADS "${NUM_CORES} * 2")
+  else(nproc)
+    # fallback to a default number in case nproc can't be located
+    SET(NUM_BUILD_THREADS 8)
+  endif(nproc)
 ENDIF(NOT NUM_BUILD_THREADS)
 
 include (SetupPromote)
