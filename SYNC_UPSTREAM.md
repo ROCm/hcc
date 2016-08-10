@@ -1,43 +1,3 @@
-Overview
-========
-This document shows the last known good configuration for the following
-projects:
-- ToT HCC
-- ToT HCC Clang
-- upstream Clang (where ToT HCC Clang is synchronized with)
-- upstream LLVM
-- upstream LLD
-
-ToT HCC
--------
-- clone: git@github.com:RadeonOpenCompute/hcc.git
-- branch: clang_tot_upgrade
-- commit: cc72b8fb34f42dcb7bf151643ea5508c9cde5db1
-
-ToT HCC Clang
--------------
-- clone: git@github.com:RadeonOpenCompute/hcc-clang-upgrade.git
-- branch: clang_tot_upgrade
-- commit: 2ee9da7b68416abf5caf50160a2f03c0e2b4a81b
-
-upstream Clang
---------------
-- clone: git@github.com:RadeonOpenCompute/hcc-clang-upgrade.git
-- branch: upstream
-- commit: efef5889e0f0c6f082351075ed965300a6dba4a4
-
-upstream LLVM
--------------
-- clone: https://github.com/llvm-mirror/llvm
-- branch: master
-- commit: f6cf26bc83e5e2b4b80c5e28929a773cf0ec8207
-
-upstream LLD
-------------
-- clone: https://github.com/llvm-mirror/lld 
-- branch: master
-- commit: a78bbfb761f1d81391418b998e3e31ad8ea4b329
-
 How to synchronize ToT HCC with upstream
 ========================================
 This section shows the step to synchronize ToT HCC with upstream projects, such
@@ -125,21 +85,15 @@ bin/hcc `bin/hcc-config --build --cxxflags --ldflags` -lhc_am ~/hcc_upstream/tes
 ./a.out ; echo $?
 ```
 
-### Update LAST_KNOWN_GOOD_CONFIG.md (this document)
+### Update clang submodule
 
 - change to ToT HCC Clang directory
-- `git checkout upstream`
-- `git rev-parse HEAD` : log the result in "upstream Clang" in the beginning of this document
-- `git checkout clang_tot_upgrade`
-- `git rev-parse HEAD` : log the result in "ToT HCC Clang" in the beginning of this document
-- change to ToT HCC directory
-- `git rev-parse HEAD` : log the result in "ToT HCC" in the beginning of this document
+- `git add clang`
+- `git commit -m "Update clang to ..."`
 
 ### Push everything
 
 - change to ToT HCC directory
-- `git add LAST_KNOWN_GOOD_CONFIG.md`
-- `git commit`
 - `git push`
 - change to ToT HCC Clang directory
 - `git checkout clang_tot_upgrade`

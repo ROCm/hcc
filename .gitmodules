@@ -1,0 +1,17 @@
+[submodule "llvm"]
+	path = compiler
+	url = https://github.com/llvm-mirror/llvm
+[submodule "lld"]
+	path = lld
+	url = https://github.com/llvm-mirror/lld
+[submodule "HSAIL-Tools"]
+	path = HSAILasm
+	url = https://github.com/HSAFoundation/HSAIL-Tools
+[submodule "hlc"]
+	path = hlc
+	url = https://github.com/HSAFoundation/HLC-HSAIL-Development-LLVM
+	branch = hsail-stable-3.7
+[submodule "clang"]
+	path = clang
+	url = git@github.com:RadeonOpenCompute/hcc-clang-upgrade.git
+	branch = clang_tot_upgrade
