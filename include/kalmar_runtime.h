@@ -41,6 +41,19 @@ enum hcCommandKind {
     hcCommandMarker = 5,
 };
 
+static inline bool isCopyCommand(hcCommandKind k) 
+{
+    switch (k) {
+        case hcMemcpyHostToHost:
+        case hcMemcpyHostToDevice:
+        case hcMemcpyDeviceToHost:
+        case hcMemcpyDeviceToDevice:
+            return true;
+        default:
+            return false;
+    };
+};
+
 
 
 enum hcWaitMode {

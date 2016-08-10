@@ -84,6 +84,10 @@
 #define HSA_BARRIER_DEP_SIGNAL_CNT (5)
 
 
+// Add a signal dependencies between async copies - so completion signal from prev command used as input dep to next.
+// If 0, rely on implicit ordering for copy commands of same type.
+#define USE_SIGNAL_DEP_BETWEEN_COPIES (1)
+
 // whether to use MD5 as kernel indexing hash function
 // default set as 0 (use faster FNV-1a hash instead)
 #define USE_MD5_HASH (0)
@@ -864,19 +868,41 @@ public:
     // Check the command kind for the upcoming command that will be sent to this queue
     // if it differs from the youngest async op sent to the queue, we may need to insert additional synchronization.
     // The function returns nullptr if no dependency is required. For example, back-to-back commands of same type
-    // are often implicitly synchronized.  
+    // are often implicitly synchronized so no dependency is required.   
+    // Also different modes and optimizations can control when dependencies are added.
     std::shared_ptr<KalmarAsyncOp> detectStreamDeps(KalmarAsyncOp *newOp) {
-        hcCommandKind commandKind = newOp->getCommandKind();
-        assert (commandKind != hcCommandInvalid);
-        if (!asyncOps.empty() && (commandKind != youngestCommandKind)) {
+        hcCommandKind newCommandKind = newOp->getCommandKind();
+        assert (newCommandKind != hcCommandInvalid);
+
+        if (!asyncOps.empty()) {
             assert (youngestCommandKind != hcCommandInvalid);
+
+              
+            bool needDep = false;
+            if  (newCommandKind != youngestCommandKind) {
+                needDep = true;
+            };
+
+
+            if (((newCommandKind == hcCommandKernel) && (youngestCommandKind == hcCommandMarker)) ||
+                ((newCommandKind == hcCommandMarker) && (youngestCommandKind == hcCommandKernel))) {
+
+                // No dependency required since Marker and Kernel share same queue and are ordered by AQL barrier bit.
+                needDep = false;
+            } else if (USE_SIGNAL_DEP_BETWEEN_COPIES && isCopyCommand(newCommandKind) && isCopyCommand(youngestCommandKind)) {
+                needDep = true;
+            }
+
+
+            if (needDep) {
 #if KALMAR_DEBUG_ASYNC_COPY
-            printf ("command type changed %s->%s\n", getHcCommandKindString(youngestCommandKind), getHcCommandKindString(commandKind)) ;
+                printf ("command type changed %s->%s\n", getHcCommandKindString(youngestCommandKind), getHcCommandKindString(newCommandKind)) ;
 #endif
-            return asyncOps.back();
-        } else {
-            return nullptr;
-        }
+                return asyncOps.back();
+            }
+        } 
+
+        return nullptr;
     }
 
 
