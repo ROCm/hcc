@@ -4,6 +4,9 @@ This section shows the step to synchronize ToT HCC with upstream projects, such
 as Clang, LLVM, and LLD. The process is currently carried out manually but it
 could and should be automated.
 
+ToT HCC has been configured use git submodules. This document has been revised
+to cope with this architectural change.
+
 Upstream Clang, LLVM, and LLD all sit in different git repositories and they
 are almost changed daily. Sometimes a change upstream may affect several
 projects, but it's usually not easy to figure it out from the commit log.
@@ -18,16 +21,16 @@ Process A: merge upstream Clang
 4. Build merged ToT HCC Clang
    - For failures introduced by changes in LLVM / LLD, execute Process B
 5. Quick sanity tests on merged ToT HCC Clang
-6. Update LAST_KNOWN_GOOD_CONFIG.md (this document)
-7. Push everything
+6. Push ToT HCC submodule
+7. 
 
 Process B: merge upstream LLVM / LLD
 
 1. Fetch upstream LLVM commits
-2. Fetch upstream LLD commits
+2. Fetch upstream LLD commits 
 3. Build upstream LLVM / LLD
-4. Update LAST_KNOWN_GOOD_CONFIG.md (this document)
-5. Remove ToT HCC checkout and restart Process A
+4. Update LLVM / LLD submodules in ToT HCC
+   - Resume step 4 of Process A
 
 Detailed step-by-step instructions are in following sections.
 
@@ -36,38 +39,38 @@ Process A: merge upstream Clang
 
 ### Add git remote for upstream Clang
 It's assumed there's already a ToT HCC checkout, and also a ToT HCC Clang
-checkout, normally found under `compiler/tools/clang` diretory under ToT HCC
-checkout.
+submodule, normally found under `clang` diretory under ToT HCC checkout.
 
-- Enter `compiler/tools/clang`
+- Enter `clang`
 - `git remote -v` to check if there's a git remote pointing to:
   `git@github.com:llvm-mirror/clang.git`
 - If there's not, add it by:
   `git remote add clang git@github.com:llvm-mirror/clang.git`
 
 ### Fetch upstream Clang commits
-Assume commands below are carried out in `compiler/tools/clang`.
+Assume commands below are carried out in `clang`.
 
 - `git checkout upstream` : change to the branch to keep upstream commits. The branch contains no HCC-specific codes.
 - `git fetch clang` : fetch upstream commits
 - `git merge --no-ff clang/master` : get upstream commits merged into upstream branch
 
 ### Merge upstream Clang with ToT HCC Clang
-Assume commands below are carried out in `compiler/tools/clang`.
+Assume commands below are carried out in `clang`.
 
 - `git checkout clang_tot_upgrade` : change to the main develop branch for ToT HCC Clang
 - `git merge upstream` : merge commits from upstream Clang to ToT HCC Clang
 
-Resolve any merge conflicts encountered here.
+Resolve any merge conflicts encountered here. Commit to clang_tot_upgrade branch.
 
 ### Build merged ToT HCC Clang
 Assume a ToT HCC build directory is there. If there's not, follow Appendix B to configure one.
 
 - change to ToT HCC build directory
-- `make -j16`
+- `make -j40` , recommended job number is the number of your logical processor times 2.
 
 Fix any compilation failures if there's any. For failures introduced by changes
-in LLVM / LLD. Stop. Execute Process B and restart Process A.
+in LLVM / LLD. Stop. Execute Process B and come back here once it's done.
+Then repeat this step until ToT HCC can be built.
 
 ### Quick sanity tests on merged ToT HCC Clang
 Assume commands below are carried out in ToT HCC build directory. And ToT HCC
@@ -85,16 +88,8 @@ bin/hcc `bin/hcc-config --build --cxxflags --ldflags` -lhc_am ~/hcc_upstream/tes
 ./a.out ; echo $?
 ```
 
-### Update clang submodule
+### Commit and push ToT HCC Clang submodule
 
-- change to ToT HCC Clang directory
-- `git add clang`
-- `git commit -m "Update clang to ..."`
-
-### Push everything
-
-- change to ToT HCC directory
-- `git push`
 - change to ToT HCC Clang directory
 - `git checkout clang_tot_upgrade`
 - `git push`
@@ -110,6 +105,16 @@ as "clang_tot_upgrade" branch.
 - `git merge clang_tot_upgrade`
 - `git push`
 
+### Update submodules configuration
+
+- change to ToT HCC Clang directory
+- If only Process A is executed:
+  `git add clang`
+  if Process B is also executed, then
+  `git add clang compiler lld`
+- `git commit` and provide commit log
+- `git push` to push submodules configuration online
+
 Upon reaching here, the merge process is completed.
 
 
@@ -117,12 +122,10 @@ Process B: merge upstream LLVM / LLD
 ------------------------------------
 Sometimes it's not possible to synchronize with upstream Clang without also
 synchronizing with upstream LLVM / LLD. This section explains steps to do that.
-Notice by the end of this Process you are asked to *remove* your ToT HCC checkout and restart Process A from scratch. If you have work already applied in ToT HCC Clang it's recommended to stash them elsewhere.
-
-In the near future ToT HCC and ToT HCC Clang should move to a true out-of-source build model to simplify the process.
 
 ### Fetch upstream LLVM commits
-Assume there is already an upstream LLVM checkout for AMDGPU(Lightning) backend.
+Assume there is already an upstream LLVM checkout for AMDGPU(Lightning) backend
+outside ToT HCC checkout.
 
 - change to upstream LLVM directory
 - `git pull`
@@ -137,17 +140,23 @@ Assume there is already an upstream LLD checkout for AMDGPU(Lightning) backend. 
 Assume there's a build directory for upstream LLVM / LLD. If there's not, follow Appendix A to configure one.
 
 - change to LLVM build directory
-- `make -j16`
+- `make -j40` , recommended job number is the number of your logical processor times 2.
 
-### Update LAST_KNOWN_GOOD_CONFIG.md (this document)
+### Update LLVM / LLD submodule configuration
 
 - change to upstream LLVM directory
-- `git rev-parse HEAD` : log the result in "upstream LLVM" in the beginning of this document
-- change to upstream LLD directory
-- `git rev-parse HEAD` : log the result in "upstream LLD" in the beginning of this document
+- `git rev-parse HEAD`, log the commit #
+- change to ToT HCC directory
+- `cd compiler`
+- `git checkout master`
+- `git reset --hard <commit # of upstream LLVM>`
 
-### Remove ToT HCC checkout and restart Process A
-In ToT HCC there's also an LLVM / LLD checkout which sits in "compiler/" directory, and they would be patched by ToT HCC. It would be complicated to undo the process. So right now the recommended approach is to simply *remove* ToT HCC checkout and restart Process A. You may need to stash your changes in ToT HCC Clang somewhere else before removing ToT HCC checkout.
+- change to upstream LLD directory
+- `git rev-parse HEAD`, log the commit #
+- change to ToT HCC directory
+- `cd lld`
+- `git checkout master`
+- `git reset --hard <commit # of upstream LLD>`
 
 
 Appendix A: CMake command for upstream LLVM / LLD
