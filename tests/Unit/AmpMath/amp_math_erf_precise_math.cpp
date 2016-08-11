@@ -52,13 +52,8 @@ bool test() {
 int main(void) {
   bool ret = true;
 
-#if __hcc_backend__ == HCC_BACKEND_AMDGPU
-  // XXX the test will hang if compiled with LC backend
-  ret = false;
-#else
   ret &= test<float>();
   ret &= test<double>();
-#endif
 
   return !(ret == true);
 }
