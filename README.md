@@ -25,3 +25,7 @@ For more information about git submodules, please refer to [git documentation][2
 [1]: https://github.com/RadeonOpenCompute/hcc/wiki
 [2]: https://git-scm.com/book/en/v2/Git-Tools-Submodules
 
+Device libraries
+----------------
+HCC device library is a part of [ROCm-Device-Libs](https://github.com/RadeonOpenCompute/ROCm-Device-Libs).
+When compiling device code with hcc, rocm-device-libs package needs to be installed.
