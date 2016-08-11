@@ -61,12 +61,12 @@
 
 // number of pre-allocated HSA signals in HSAContext
 // default set as 64 (pre-allocating 64 HSA signals)
-#define SIGNAL_POOL_SIZE (5000) // TODO, renable signal pool.
+#define SIGNAL_POOL_SIZE (64) // TODO, renable signal pool.
 
 // Maximum number of inflight commands sent to a single queue.
 // If limit is exceeded, HCC will force a queue wait to reclaim 
 // resources (signals, kernarg)
-#define MAX_INFLIGHT_COMMANDS_PER_QUEUE  1024
+#define MAX_INFLIGHT_COMMANDS_PER_QUEUE  512
 
 // whether to use kernarg region found on the HSA agent
 // default set as 1 (use karnarg region)
@@ -86,7 +86,7 @@
 
 // Add a signal dependencies between async copies - so completion signal from prev command used as input dep to next.
 // If 0, rely on implicit ordering for copy commands of same type.
-#define USE_SIGNAL_DEP_BETWEEN_COPIES (1)
+#define USE_SIGNAL_DEP_BETWEEN_COPIES (0)
 
 // whether to use MD5 as kernel indexing hash function
 // default set as 0 (use faster FNV-1a hash instead)
@@ -152,7 +152,7 @@ static const char* getHSAErrorString(hsa_status_t s) {
     const char* error_string = getHSAErrorString(s);\
 		printf("### HCC Error: %s (%d) at %s:line:%d\n", error_string, s, __FILE__, line);\
                 assert(HSA_STATUS_SUCCESS == hsa_shut_down());\
-		exit(-1);\
+		assert(0); /* drop into debugger if present or exit if not*/ \
 	}
 
 #define STATUS_CHECK_Q(s,q,line) if (s != HSA_STATUS_SUCCESS) {\
@@ -852,7 +852,7 @@ public:
 
         if (asyncOps.size() >= MAX_INFLIGHT_COMMANDS_PER_QUEUE) {
 #if KALMAR_DEBUG_ASYNC_COPY
-            printf ("op#%zu: force sync asyncOps.size=%zu\n", opSeqNums, asyncOps.size());
+            std::cerr << "Hit max inflight ops asyncOps.size=" << asyncOps.size() << ". op#" << opSeqNums << " force sync\n";
 #endif
 
             // TODO - could optimized this to only drain part of the pool:
@@ -896,7 +896,7 @@ public:
 
             if (needDep) {
 #if KALMAR_DEBUG_ASYNC_COPY
-                printf ("command type changed %s->%s\n", getHcCommandKindString(youngestCommandKind), getHcCommandKindString(newCommandKind)) ;
+                std::cerr <<  "command type changed " << getHcCommandKindString(youngestCommandKind) << "  ->  " << getHcCommandKindString(newCommandKind) << "\n" ;
 #endif
                 return asyncOps.back();
             }
@@ -931,12 +931,9 @@ public:
       // Go in reverse order (from youngest to oldest).
       // Ensures younger ops have chance to complete before older ops reclaim their resources
 #if KALMAR_DEBUG_ASYNC_COPY
-      std::cerr << " queue wait\n";
+      std::cerr << " queue wait, contents:\n";
 
-      for (int i =0; i<10; i++) {
-          std::cerr << "Queue Snapshot#" << i << "\n";
-          printAsyncOps(std::cerr);
-      }
+      printAsyncOps(std::cerr);
 #endif
       for (int i = asyncOps.size()-1; i >= 0;  i--) {
         if (asyncOps[i] != nullptr) {
