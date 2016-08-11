@@ -1,4 +1,5 @@
-// RUN: %hc %s -o %t.out -lhc_am && %t.out
+// RUN: %hc %s -o %t.run0x18.out -lhc_am -DRUNMASK=0x18 && %t.out 
+// RUN: %hc %s -o %t.run0xFF.out -lhc_am -DRUNMASK=0xFF && %t.out
 #include<stdlib.h>
 #include<iostream>
 
@@ -12,6 +13,14 @@
 const size_t size = sizeof(float) * N;
 
 #include "common2.h"
+
+#if not defined (RUNMASK)
+#define RUNMASK 0xFF
+#endif
+
+#if not defined (ITERS)
+#define ITERS 2000
+#endif
 
 
 int main(){
@@ -28,10 +37,9 @@ int main(){
     hc::accelerator_view av = gpu_acc.get_default_view();
 
 
-    //unsigned testsToRun = 0xFF;
-    unsigned testsToRun = 0x18;
-    //int testIters = SHRT_MAX;
-    int testIters = 2000;
+    // RUNMASK should be #defined as input to compilation:
+    unsigned testsToRun = RUNMASK;
+    int testIters = ITERS;
 
 
     if (testsToRun & 0x1) {
