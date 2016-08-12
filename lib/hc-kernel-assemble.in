@@ -91,8 +91,8 @@ if [[ -s $TEMP_NAME.kernel_redirect.ll ]]; then
   $LLVM_LINK $TEMP_NAME.kernel_redirect.bc $TEMP_NAME.camp.s -o $TEMP_NAME.link.bc
   $CLAMP_ASM $TEMP_NAME.link.bc $TEMP_NAME.camp.o
 else
-  ln -s $KERNEL_INPUT $KERNEL_INPUT.bc
-  $CLAMP_ASM $KERNEL_INPUT.bc $TEMP_NAME.camp.o
+  ln -s $KERNEL_INPUT $1.bc
+  $CLAMP_ASM $1.bc $TEMP_NAME.camp.o
 fi
 
 if [ -f $TEMP_DIR/$BASENAME.tmp.o ]; then
