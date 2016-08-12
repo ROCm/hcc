@@ -47,8 +47,18 @@ if [ "$#" -ne 2 ]; then
   exit 1
 fi
 
-if [ ! -f $1 ]; then
-  echo "kernel-bitcode $1 is not valid" >&2
+
+# inject a new GPU IR to replace the IR from the FE
+HC_REPLACE_GPU_FE_LLVM="${HC_REPLACE_GPU_FE_LLVM:=0}"
+KERNEL_INPUT=$1
+if [ $HC_REPLACE_GPU_FE_LLVM != "0" ]; then
+  KERNEL_INPUT=$HC_REPLACE_GPU_FE_LLVM
+  echo "Replacing GPU input IR from clang with $KERNEL_INPUT" 
+fi
+
+
+if [ ! -f $KERNEL_INPUT ]; then
+  echo "kernel-bitcode $KERNEL_INPUT is not valid" >&2
   exit 1
 fi
 
@@ -63,7 +73,7 @@ if [ -f $2 ]; then
   mv $2 $TEMP_DIR/$BASENAME.tmp.o
 fi
 
-$LLVM_DIS $1 -o $TEMP_NAME.ll
+$LLVM_DIS $KERNEL_INPUT -o $TEMP_NAME.ll
 if [ $KMDUMPLLVM == "1" ]; then
   cp $TEMP_NAME.ll ./dump.kernel_input.ll
 fi
@@ -83,8 +93,8 @@ if [[ -s $TEMP_NAME.kernel_redirect.ll ]]; then
   $LLVM_LINK $TEMP_NAME.kernel_redirect.bc $TEMP_NAME.camp.s -o $TEMP_NAME.link.bc
   $CLAMP_ASM $TEMP_NAME.link.bc $TEMP_NAME.camp.o
 else
-  ln -s $1 $1.bc
-  $CLAMP_ASM $1.bc $TEMP_NAME.camp.o
+  ln -s $KERNEL_INPUT $KERNEL_INPUT.bc
+  $CLAMP_ASM $KERNEL_INPUT.bc $TEMP_NAME.camp.o
 fi
 
 if [ -f $TEMP_DIR/$BASENAME.tmp.o ]; then
@@ -94,4 +104,5 @@ else
 fi
 
 rm -f $TEMP_NAME.* $1.bc
+
 rmdir $TEMP_DIR
