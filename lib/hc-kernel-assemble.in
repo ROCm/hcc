@@ -47,7 +47,6 @@ if [ "$#" -ne 2 ]; then
   exit 1
 fi
 
-
 # inject a new GPU IR to replace the IR from the FE
 HC_REPLACE_GPU_FE_LLVM="${HC_REPLACE_GPU_FE_LLVM:=0}"
 KERNEL_INPUT=$1
@@ -55,7 +54,6 @@ if [ $HC_REPLACE_GPU_FE_LLVM != "0" ]; then
   KERNEL_INPUT=$HC_REPLACE_GPU_FE_LLVM
   echo "Replacing GPU input IR from clang with $KERNEL_INPUT" 
 fi
-
 
 if [ ! -f $KERNEL_INPUT ]; then
   echo "kernel-bitcode $KERNEL_INPUT is not valid" >&2
@@ -104,5 +102,4 @@ else
 fi
 
 rm -f $TEMP_NAME.* $1.bc
-
 rmdir $TEMP_DIR
