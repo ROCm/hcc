@@ -152,7 +152,7 @@ static const char* getHSAErrorString(hsa_status_t s) {
     const char* error_string = getHSAErrorString(s);\
 		printf("### HCC Error: %s (%d) at %s:line:%d\n", error_string, s, __FILE__, line);\
                 assert(HSA_STATUS_SUCCESS == hsa_shut_down());\
-		assert(0); /* drop into debugger if present or exit if not*/ \
+		abort();\
 	}
 
 #define STATUS_CHECK_Q(s,q,line) if (s != HSA_STATUS_SUCCESS) {\
@@ -160,7 +160,7 @@ static const char* getHSAErrorString(hsa_status_t s) {
 		printf("### Error: %s (%d) at line:%d\n", error_string, s, line);\
                 assert(HSA_STATUS_SUCCESS == hsa_queue_destroy(q));\
                 assert(HSA_STATUS_SUCCESS == hsa_shut_down());\
-		exit(-1);\
+		abort();\
 	}
 
 
@@ -825,15 +825,20 @@ public:
         s << "Queue: " << this;
         for (int i=0; i<asyncOps.size(); i++) {
             const std::shared_ptr<KalmarAsyncOp::KalmarAsyncOp> &op = asyncOps[i];
-            hsa_signal_t signal = * (static_cast<hsa_signal_t*> (op->getNativeHandle()));
-            hsa_signal_value_t v = hsa_signal_load_acquire(signal);
-            s << "index:" << std::setw(4) << " op#"<< op->getSeqNum() 
-              << " " << getHcCommandKindString(op->getCommandKind())
-              << " signal=" << signal.handle << " value=" << v;
+            s << "index:" << std::setw(4) ;
+            if (op != nullptr) {
+                s << " op#"<< op->getSeqNum() ;
+                hsa_signal_t signal = * (static_cast<hsa_signal_t*> (op->getNativeHandle()));
+                hsa_signal_value_t v = hsa_signal_load_acquire(signal);
+                s  << " " << getHcCommandKindString(op->getCommandKind());
+                s  << " signal=" << signal.handle << " value=" << v;
 
-            if (v != oldv) {
-                s << " <--CHANGE";
-                oldv = v;
+                if (v != oldv) {
+                    s << " <--CHANGE";
+                    oldv = v;
+                }
+            } else {
+                s << " op <nullptr>";
             }
             s  << "\n";
             
@@ -2520,6 +2525,7 @@ public:
         signalPoolMutex.lock();
 
         // pre-allocate signals
+        printf ("precallocate %d signals\n", SIGNAL_POOL_SIZE);
         for (int i = 0; i < SIGNAL_POOL_SIZE; ++i) {
           hsa_signal_t signal;
           status = hsa_signal_create(1, 0, NULL, &signal);
@@ -3454,9 +3460,6 @@ HSACopy::syncCopy(Kalmar::HSAQueue* hsaQueue) {
     // Resolve default to a specific Kind so we know which algorithm to use:
     setCommandKind (resolveMemcpyDirection(srcInDeviceMem, dstInDeviceMem));
 
-#if KALMAR_DEBUG
-    std::cerr << "hcCommandKind: " << getHcCommandKindString(commandKind) << "\n";
-#endif
 
     // Copy already called queue.wait() so there are no dependent signals.
     hsa_signal_t depSignal;
@@ -3470,6 +3473,10 @@ HSACopy::syncCopy(Kalmar::HSAQueue* hsaQueue) {
     Kalmar::HSADevice *device = static_cast<Kalmar::HSADevice*> (hsaQueue->getDev());
 
     Kalmar::hcCommandKind commandKind = getCommandKind();
+
+#if KALMAR_DEBUG
+    std::cerr << "hcCommandKind: " << getHcCommandKindString(commandKind) << "\n";
+#endif
 
     // Need to use staging buffer if copying to or from unmapped host memory:
     if ((commandKind == Kalmar::hcMemcpyHostToDevice) && (!srcIsMapped)) {
