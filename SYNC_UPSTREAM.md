@@ -105,6 +105,9 @@ as "clang_tot_upgrade" branch.
 - `git merge clang_tot_upgrade`
 - `git push`
 
+Finally switch back to "clang_tot_upgrade" branch.
+- `git checkout clang_tot_upgrade`
+
 ### Update submodules configuration
 
 - change to ToT HCC Clang directory
@@ -149,6 +152,7 @@ Assume there's a build directory for upstream LLVM / LLD. If there's not, follow
 - change to ToT HCC directory
 - `cd compiler`
 - `git checkout master`
+- `git pull`
 - `git reset --hard <commit # of upstream LLVM>`
 
 - change to upstream LLD directory
@@ -156,6 +160,7 @@ Assume there's a build directory for upstream LLVM / LLD. If there's not, follow
 - change to ToT HCC directory
 - `cd lld`
 - `git checkout master`
+- `git pull`
 - `git reset --hard <commit # of upstream LLD>`
 
 
@@ -177,7 +182,7 @@ Appendix B: CMake command for ToT HCC
 cmake \
     -DCMAKE_BUILD_TYPE=Release \
     -DHSA_LLVM_BIN_DIR=<upstream LLVM build directory>/bin \
-    -DHSA_AMDGPU_GPU_TARGET=fiji \
+    -DHSA_AMDGPU_GPU_TARGET=AMD:AMDGPU:8:0:3 \
     -DHSA_USE_AMDGPU_BACKEND=ON \
     <ToT HCC checkout directory>
 ```
