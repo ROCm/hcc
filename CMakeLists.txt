@@ -159,7 +159,7 @@ SET(KALMAR_VERSION_MINOR "10")
 # add xargs to remove strange trailing newline character
 execute_process(COMMAND git show -s --format=@%ct
                 COMMAND xargs
-                COMMAND date -f - --utc +%y%W%w
+                COMMAND date -f - --utc +%y%U%w
                 WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
                 OUTPUT_VARIABLE KALMAR_VERSION_PATCH
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
