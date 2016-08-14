@@ -99,23 +99,23 @@ if [ "$3" == "--hsa" ]; then
       if [ "$ALWAYS_MALLOC" == "ON" ]; then
         $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
              -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-             -promote-globals -promote-privates -erase-nonkernels -malloc-select -always-malloc -dce -globaldce -S < $1 -o $2.promote.ll.orig
+             -erase-nonkernels -promote-globals -promote-privates -malloc-select -always-malloc -dce -globaldce -S < $1 -o $2.promote.ll.orig
       else
         $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
              -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-             -promote-globals -promote-privates -erase-nonkernels -malloc-select -dce -globaldce -S < $1 -o $2.promote.ll.orig
+             -erase-nonkernels -promote-globals -promote-privates -malloc-select -dce -globaldce -S < $1 -o $2.promote.ll.orig
       fi
     else
       if [ "$ALWAYS_MALLOC" == "ON" ]; then
         $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
              -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
              -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-             -promote-globals -promote-privates -erase-nonkernels -tile-uniform -malloc-select -always-malloc -dce -globaldce -S < $1 -o $2.promote.ll.orig
+             -erase-nonkernels -promote-globals -promote-privates -tile-uniform -malloc-select -always-malloc -dce -globaldce -S < $1 -o $2.promote.ll.orig
       else
         $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
              -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
              -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-             -promote-globals -promote-privates -erase-nonkernels -tile-uniform -malloc-select -dce -globaldce -S < $1 -o $2.promote.ll.orig
+             -erase-nonkernels -promote-globals -promote-privates -tile-uniform -malloc-select -dce -globaldce -S < $1 -o $2.promote.ll.orig
 
       fi
     fi
@@ -171,12 +171,12 @@ if [ "$3" == "--spir" ]; then
     if [ "$CLAMP_NOTILECHECK" == "ON" ]; then
       $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
            -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-           -promote-globals -erase-nonkernels -dce -globaldce < $1 -o $2.promote.bc
+           -erase-nonkernels -promote-globals -dce -globaldce < $1 -o $2.promote.bc
     else
       $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
            -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
            -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-           -promote-globals -erase-nonkernels -tile-uniform -dce -globaldce < $1 -o $2.promote.bc
+           -erase-nonkernels -promote-globals -tile-uniform -dce -globaldce < $1 -o $2.promote.bc
     fi
 
     # convert fdiv float instructions to builtin calls
@@ -205,12 +205,12 @@ if [ "$3" == "--opencl" ]; then
     if [ "$CLAMP_NOTILECHECK" == "ON" ]; then
       $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
            -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-           -promote-globals -erase-nonkernels -dce -globaldce < $1 -o $2.promote.bc
+           -erase-nonkernels -promote-globals -dce -globaldce < $1 -o $2.promote.bc
     else
       $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
            -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
            -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-           -promote-globals -erase-nonkernels -tile-uniform -dce -globaldce < $1 -o $2.promote.bc
+           -erase-nonkernels -promote-globals -tile-uniform -dce -globaldce < $1 -o $2.promote.bc
     fi
     if [ $? == 1 ]; then
       echo "Generating OpenCL C kernel failed"
@@ -239,12 +239,12 @@ hasSPIR() {
 if [ "$CLAMP_NOTILECHECK" == "ON" ]; then
   $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
        -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-       -promote-globals -erase-nonkernels -dce -globaldce < $1 -o $2.promote.bc
+       -erase-nonkernels -promote-globals -dce -globaldce < $1 -o $2.promote.bc
 else
   $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
        -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
        -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-       -promote-globals -erase-nonkernels -tile-uniform -dce -globaldce < $1 -o $2.promote.bc
+       -erase-nonkernels -promote-globals -tile-uniform -dce -globaldce < $1 -o $2.promote.bc
 fi
 if [ $? == 1 ]; then
   echo "Generating OpenCL kernel failed"
