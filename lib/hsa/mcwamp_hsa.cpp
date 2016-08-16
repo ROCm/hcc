@@ -61,7 +61,7 @@
 
 // number of pre-allocated HSA signals in HSAContext
 // default set as 64 (pre-allocating 64 HSA signals)
-#define SIGNAL_POOL_SIZE (64) // TODO, renable signal pool.
+#define SIGNAL_POOL_SIZE (64) // 
 
 // Maximum number of inflight commands sent to a single queue.
 // If limit is exceeded, HCC will force a queue wait to reclaim 
@@ -860,8 +860,6 @@ public:
             std::cerr << "Hit max inflight ops asyncOps.size=" << asyncOps.size() << ". op#" << opSeqNums << " force sync\n";
 #endif
 
-            // TODO - could optimized this to only drain part of the pool:
-            // Would like to change asyncOps to vector before getting too deep.
             wait();
         }
         asyncOps.push_back(op);
@@ -914,8 +912,7 @@ public:
     void waitForStreamDeps (KalmarAsyncOp *newOp) {
         std::shared_ptr<KalmarAsyncOp> depOp = detectStreamDeps(newOp);
         if (depOp != nullptr) {
-            // TODO - add reference???
-            EnqueueMarkerWithDependency(1, &depOp); // TODO-async.  Add convenience function?
+            EnqueueMarkerWithDependency(1, &depOp); 
         }
     }
 
@@ -931,7 +928,6 @@ public:
     }
 
     void wait(hcWaitMode mode = hcWaitModeBlocked) override {
-      // TODO - perform wait in opposite order.
       // wait on all previous async operations to complete
       // Go in reverse order (from youngest to oldest).
       // Ensures younger ops have chance to complete before older ops reclaim their resources
@@ -1074,8 +1070,8 @@ public:
                 void* va = nullptr;
                 status = hsa_amd_memory_lock(dst, count, agent, 1, &va);
                 // TODO: If host buffer is not allocated through OS allocator, so far, lock 
-                // API will return nullptr to va, this is not specified in the spec, but will use it 
-                // check if host buffer is has allocator allocated. 
+                // API will return nullptr to va, this is not specified in the spec, but will use it to
+                // check if host buffer is allocated by hsa allocator
                 if(va == NULL || status != HSA_STATUS_SUCCESS)
                 {
                     status = hsa_amd_agents_allow_access(1, agent, NULL, dst);
@@ -3223,7 +3219,6 @@ HSACopy::waitComplete() {
 
 
 #if KALMAR_DEBUG or KALMAR_DEBUG_ASYNC_COPY
-    // TODO - remove me:
     // Wait on completion signal until the async copy is finished
     hsa_signal_value_t v = hsa_signal_load_acquire(signal);
     std::cerr << "  wait for copy op#" << getSeqNum() << " completion with wait flag: " << waitMode << "signal=" << signal.handle << " currentVal=" << v << "\n";
