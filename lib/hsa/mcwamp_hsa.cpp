@@ -1165,7 +1165,8 @@ public:
         // we explicitly allocate a host memory buffer in this case
         if (!getDev()->is_unified()) {
 #if KALMAR_DEBUG
-            std::cerr << "map(" << device << "," << count << "," << offset << "," << modify << "): use HSA memory map\n";
+            std::wcerr << getDev()->get_path();
+            std::cerr << ": map( <device> " << device << ", <count> " << count << ", <offset> " << offset << ", <modify> " << modify << "): use HSA memory map\n";
 #endif
             hsa_status_t status = HSA_STATUS_SUCCESS;
             // allocate a host buffer
@@ -1189,18 +1190,20 @@ public:
               abort();
             }
 #if KALMAR_DEBUG
-            std::cerr << "map(): " << data << "\n";
+            std::wcerr << getDev()->get_path();
+            std::cerr << ": map() -> <pointer> " << data << "\n";
 #endif
 
             return data;
-
         } else {
 #if KALMAR_DEBUG
-            std::cerr << "map(" << device << "," << count << "," << offset << "," << modify << "): use host memory map\n";
+            std::wcerr << getDev()->get_path();
+            std::cerr << ": map( <device> " << device << ", <count> " << count << ", <offset> " << offset << ", <modify> " << modify << "): use host memory map\n";
 #endif
             // for host memory we simply return the pointer plus offset
 #if KALMAR_DEBUG
-            std::cerr << "map(): " << ((char*)device+offset) << "\n";
+            std::wcerr << getDev()->get_path();
+            std::cerr << ": map() -> <pointer> " << ((char*)device+offset) << "\n";
 #endif
             return (char*)device + offset;
         }
@@ -1213,7 +1216,8 @@ public:
         // we free the host memory buffer allocated in map()
         if (!getDev()->is_unified()) {
 #if KALMAR_DEBUG
-            std::cerr << "unmap(" << device << "," << addr << "," << count << "," << offset << "," << modify << "): use HSA memory unmap\n";
+            std::wcerr << getDev()->get_path();
+            std::cerr << ": unmap( <device> " << device << ", <addr> " << addr << ", <count> " << count << ", <offset> " << offset << ", <modify> " << modify << "): use HSA memory unmap\n";
 #endif
             if (modify) {
 #if KALMAR_DEBUG
@@ -1229,7 +1233,8 @@ public:
             hsa_amd_memory_pool_free(addr);
         } else {
 #if KALMAR_DEBUG
-            std::cerr << "unmap(" << device << "," << addr << "," << count << "," << offset << "," << modify << "): use host memory unmap\n";
+            std::wcerr << getDev()->get_path();
+            std::cerr << ": unmap( <device> " << device << ", <addr> " << addr << ", <count> " << count << ", <offset> " << offset << ", <modify> " << modify <<"): use host memory unmap\n";
 #endif
             // for host memory there's nothing to be done
         }
@@ -1772,7 +1777,8 @@ public:
 
         if (!is_unified()) {
 #if KALMAR_DEBUG
-            std::cerr << "create(" << count << "," << key << "): use HSA memory allocator\n";
+            std::wcerr << get_path();
+            std::cerr << ": create( <count> " << count << ", <key> " << key << "): use HSA memory allocator\n";
 #endif
             hsa_status_t status = HSA_STATUS_SUCCESS;
             auto am_region = getHSAAMRegion();
@@ -1785,13 +1791,15 @@ public:
             STATUS_CHECK(status, __LINE__);
         } else {
 #if KALMAR_DEBUG
-            std::cerr << "create(" << count << "," << key << "): use host memory allocator\n";
+            std::wcerr << get_path();
+            std::cerr << ": create( <count> " << count << ", <key> " << key << "): use host memory allocator\n";
 #endif
             data = kalmar_aligned_alloc(0x1000, count);
         }
 
 #if KALMAR_DEBUG
-        std::cerr << "create(): " << data << "\n";
+        std::wcerr << get_path();
+        std::cerr << ": create -> <pointer> " << data << "\n";
 #endif
 
         return data;
