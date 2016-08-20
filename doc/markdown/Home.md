@@ -1,4 +1,4 @@
-# HC API : An HSA-extension to C++AMP
+# HC API : Moving Beyond C++AMP for Accelerated GPU Computing
 
 HC is a C++ API for accelerated computing provided by the HCC compiler.  It has some similarities to C++ AMP and therefore, reference materials (blogs, articles, books) that describe C++ AMP also proivide an excellent way to become familiar with HC.  For example, both APIs use a parallel_for_each construct to specify a parallel execution region that runs on accelerator.  However, HC has several important differences from C++ AMP, including the removal of the "restrict" keyword to annotate device code, an explicit asynchronous launch behavior for parallel_for_each, the support for non-constant tile size, the support for memory pointer, etc..
 
