@@ -57,16 +57,16 @@ Macros for language modes in use:
 
 | Macro | Meaning |
 |----|--------|
-| ```__KALMAR_AMP__``` | 1 in case in C++ AMP mode (-std=c++amp) |
-| ```__KALMAR_HC__``` | 1 in case in HC mode (-hc) |
+| ```__HCC_AMP__``` | 1 in case in C++ AMP mode (-std=c++amp) |
+| ```__HCC_HC__``` | 1 in case in HC mode (-hc) |
 
 Compilation mode:
 HCC is a single-source compiler where kernel codes and host codes can reside in the same file. Internally HCC would trigger 2 compilation iterations, and the following macros can be user by user programs to determine which mode the compiler is in.
 
 | Macro | Meaning |
 |----|--------|
-| ```__KALMAR_ACCELERATOR__``` | not 0 in case the compiler runs in kernel code compilation mode |
-| ```__KALMAR_CPU__``` | not 0 in case the compiler runs in host code compilation mode |
+| ```__HCC_ACCELERATOR__``` | not 0 in case the compiler runs in kernel code compilation mode |
+| ```__HCC_CPU__``` | not 0 in case the compiler runs in host code compilation mode |
 
 ---
 
