@@ -590,7 +590,7 @@ void nameAndMapArgs (Function * newFunc, Function * oldFunc, ValueToValueMapTy& 
              new_arg = newFunc->arg_begin(),
              last_arg = oldFunc->arg_end();
              old_arg != last_arg; ++old_arg, ++new_arg) {
-                VMap[old_arg.operator pointer()] = new_arg.operator pointer();
+                VMap[old_arg.operator->()] = new_arg.operator->();
                 new_arg->setName(old_arg->getName());
 
         }
@@ -1303,7 +1303,7 @@ void promoteGlobalVars(Function *Func, InstUpdateWorkList * updateNeeded)
             I->getType()->getPointerAddressSpace() == 0 &&
             I->hasName() && I->getLinkage() == GlobalVariable::InternalLinkage) {
             // Though I'm global, I'm constant indeed.
-          if(usedInTheFunc(I.operator pointer(), Func))
+          if(usedInTheFunc(I.operator->(), Func))
             the_space = ConstantAddressSpace;
           else
             continue;
@@ -1313,7 +1313,7 @@ void promoteGlobalVars(Function *Func, InstUpdateWorkList * updateNeeded)
             // Though I'm private, I'm constant indeed.
             // FIXME: We should determine constant with address space (2) for OpenCL SPIR
             //              during clang front-end. It is not reliable to determine that in Promte stage
-            if(usedInTheFunc(I.operator pointer(), Func))
+            if(usedInTheFunc(I.operator->(), Func))
               the_space = ConstantAddressSpace;
             else
               continue;
@@ -1323,7 +1323,7 @@ void promoteGlobalVars(Function *Func, InstUpdateWorkList * updateNeeded)
             !I->hasName()) {
             // promote to global address space if the variable is used in a kernel
             // and does not come with predefined address space
-            if (usedInTheFunc(I.operator pointer(), Func) && I->getType()->getPointerAddressSpace() == 0) {
+            if (usedInTheFunc(I.operator->(), Func) && I->getType()->getPointerAddressSpace() == 0) {
               the_space = GlobalAddressSpace;
             } else {
               continue;
@@ -1347,7 +1347,7 @@ void promoteGlobalVars(Function *Func, InstUpdateWorkList * updateNeeded)
                 uses.insert(std::make_pair(Ins->getParent()->getParent(), *U));
             } else if (ConstantExpr *C = dyn_cast<ConstantExpr>(*U)) {
                 // Replace ConstantExpr with Instruction so we can track it
-                updateListWithUsers (*U, I.operator pointer(), I.operator pointer(), updateNeeded);
+                updateListWithUsers (*U, I.operator->(), I.operator->(), updateNeeded);
                 if (C->getNumUses() == 0) {
                   // Only non-zero ref can be destroyed, otherwise deadlock occurs
                   C->destroyConstant();
@@ -1379,9 +1379,9 @@ void promoteGlobalVars(Function *Func, InstUpdateWorkList * updateNeeded)
                     I->isConstant(), I->getLinkage(),
                     Init,
                     "", (GlobalVariable *)0, I->getThreadLocalMode(), the_space);
-            new_GV->copyAttributesFrom(I.operator pointer());
+            new_GV->copyAttributesFrom(I.operator->());
             if (i == 0) {
-                new_GV->takeName(I.operator pointer());
+                new_GV->takeName(I.operator->());
             } else {
                 new_GV->setName(I->getName());
             }
@@ -1396,7 +1396,7 @@ void promoteGlobalVars(Function *Func, InstUpdateWorkList * updateNeeded)
             usesOfSameFunction = uses.equal_range(*F);
             for ( Uses::iterator U = usesOfSameFunction.first, Ue =
                 usesOfSameFunction.second; U != Ue; U++)
-                updateListWithUsers (U->second, I.operator pointer(), new_GV, updateNeeded);
+                updateListWithUsers (U->second, I.operator->(), new_GV, updateNeeded);
         }
     }
 }
@@ -1414,7 +1414,7 @@ void eraseOldTileStaticDefs(Module *M)
         }
         I->removeDeadConstantUsers();
         if (I->getNumUses() == 0)
-            todo.push_back(I.operator pointer());
+            todo.push_back(I.operator->());
     }
     for (std::vector<GlobalValue*>::iterator I = todo.begin(),
             E = todo.end(); I!=E; I++) {
@@ -1507,9 +1507,9 @@ void updateArgUsers (Function * F, InstUpdateWorkList * updateNeeded)
         typedef Function::arg_iterator arg_iterator;
         for (arg_iterator A = F->arg_begin(), Ae = F->arg_end();
              A != Ae; ++A) {
-                if ( !hasPtrToNonZeroAddrSpace (A.operator pointer()) ) continue;
+                if ( !hasPtrToNonZeroAddrSpace (A.operator->()) ) continue;
                 updateListWithUsers (A->user_begin(), A->user_end(),
-                                     A.operator pointer(), A.operator pointer(), updateNeeded);
+                                     A.operator->(), A.operator->(), updateNeeded);
         }
 }
 
@@ -1534,7 +1534,7 @@ void updateOperandType(Function * oldF, Function * newF, FunctionType* ty, InstU
         if (Sel->getType() != I->getOperand(1)->getType()) {
           // mutate type only when absolutely necessary
           Sel->mutateType(I->getOperand(1)->getType());
-          updateListWithUsers(I->user_begin(), I->user_end(), I.operator pointer(), I.operator pointer(), workList);
+          updateListWithUsers(I->user_begin(), I->user_end(), I.operator->(), I.operator->(), workList);
         }
       } else if( GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(I)) {
         // Only handle GEPs with parameters promoted (ex: after a select instruction)
@@ -1826,7 +1826,7 @@ Function * createWrappedFunction (Function * F)
         for (arg_iterator sA = F->arg_begin(), dA = wrapped->arg_begin(),
                           Ae = F->arg_end(); sA != Ae; ++sA, ++dA) {
             dA->setName (sA->getName());
-            callArgs.push_back(dA.operator pointer());
+            callArgs.push_back(dA.operator->());
         }
         wrapped->setAttributes (F->getAttributes());
         BasicBlock * entry = BasicBlock::Create(F->getContext(), "entry",
@@ -1855,7 +1855,7 @@ Function * createWrappedFunction (Function * F)
                 std::vector<Value *> memCpyArgs;
                 memCpyArgs.push_back (new BitCastInst (AI, castTargetType,
                                                        "", entry));
-                memCpyArgs.push_back (new BitCastInst (A.operator pointer(), castSrcType,
+                memCpyArgs.push_back (new BitCastInst (A.operator->(), castSrcType,
                                                        "", entry));
 
                 memCpyArgs.push_back (ConstantInt::get(Int64Ty,

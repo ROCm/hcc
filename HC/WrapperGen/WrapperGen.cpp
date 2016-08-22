@@ -471,7 +471,7 @@ struct StringFinder
       // Collect information
       for(auto F = M.begin(), F_end = M.end(); F != F_end; ++F) {
         if(F->hasFnAttribute("hc_grid_launch") && (F->size() > 0)) {
-          WrapperFunction* func = new WrapperFunction(F.operator pointer());
+          WrapperFunction* func = new WrapperFunction(F.operator->());
 
           const llvm::Function::ArgumentListType &Args(F->getArgumentList());
           for (auto i = Args.begin(), e = Args.end(); i != e; ++i) {
