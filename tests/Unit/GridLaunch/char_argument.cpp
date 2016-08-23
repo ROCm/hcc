@@ -3,6 +3,7 @@
 
 #include "grid_launch.hpp"
 #include "hc_am.hpp"
+#include "hc.hpp"
 
 #define GRID_SIZE 256
 #define TILE_SIZE 16
@@ -35,7 +36,8 @@ int main(void) {
   kernel1(lp, data1_d, c);
   lp.cf->wait();
 
-  hc::am_copy(data1, data1_d, SIZE*sizeof(int));
+  static hc::accelerator_view av = acc.get_default_view();
+  av.copy(data1_d, data1, SIZE*sizeof(int));
 
   bool ret = 0;
   for(int i = 0; i < SIZE; ++i) {

@@ -7,6 +7,7 @@
 
 #include "grid_launch.hpp"
 #include "hc_am.hpp"
+#include "hc.hpp"
 #include <iostream>
 
 class Foo2 {
@@ -63,7 +64,8 @@ int main(void) {
   kernel1(lp, data1, data2_d);
   lp.cf->wait();
 
-  hc::am_copy(data2, data2_d, SIZE*sizeof(Bar));
+  static hc::accelerator_view av = acc.get_default_view();
+  av.copy(data2_d, data2, SIZE*sizeof(Bar));
 
   bool ret = 0;
   for(int i = 0; i < SIZE; ++i) {

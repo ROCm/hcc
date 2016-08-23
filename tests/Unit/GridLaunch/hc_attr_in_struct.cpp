@@ -39,7 +39,7 @@ int main() {
   kernel(lp, a, data1_d);
 
   int data1 = 0;
-  hc::am_copy(&data1, data1_d, sizeof(int));
+  av.copy(data1_d, &data1, sizeof(int));
 
   // Verify results
   Foo foo;

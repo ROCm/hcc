@@ -10,6 +10,7 @@
 #include <algorithm>
 
 #include "hc_am.hpp"
+#include "hc.hpp"
 #include "hsa_atomic.h"
 
 #define HC_PRINTF_DEBUG  (0)
@@ -26,11 +27,11 @@ union PrintfPacketData {
 };
 
 enum PrintfPacketDataType {
-  PRINTF_UNUSED       
-  ,PRINTF_UNSIGNED_INT 
-  ,PRINTF_SIGNED_INT  
-  ,PRINTF_FLOAT       
-  ,PRINTF_VOID_PTR    
+  PRINTF_UNUSED
+  ,PRINTF_UNSIGNED_INT
+  ,PRINTF_SIGNED_INT
+  ,PRINTF_FLOAT
+  ,PRINTF_VOID_PTR
   ,PRINTF_CONST_VOID_PTR
   ,PRINTF_BUFFER_CURSOR
   ,PRINTF_BUFFER_SIZE
@@ -64,7 +65,10 @@ static inline PrintfPacket* createPrintfBuffer(hc::accelerator& a, const unsigne
     header[0].data.ui = numElements;
     header[1].type = PRINTF_BUFFER_CURSOR;
     header[1].data.ui = 2;
-    hc::am_copy(printfBuffer,header,sizeof(PrintfPacket) * 2);
+
+    // initialize the accelerator_view object
+    static hc::accelerator_view av = a->get_default_view();
+    av.copy(header, printfBuffer, sizeof(PrintfPacket) * 2);
   }
   return printfBuffer;
 }
@@ -75,9 +79,9 @@ void deletePrintfBuffer(PrintfPacket* buffer) {
 
 // get the argument count
 static inline void countArg(unsigned int& count) [[hc,cpu]] {}
-template <typename T> 
+template <typename T>
 static inline void countArg(unsigned int& count, const T& t) [[hc,cpu]] { ++count; }
-template <typename T, typename... Rest> 
+template <typename T, typename... Rest>
 static inline void countArg(unsigned int& count, const T& t, const Rest&... rest) [[hc,cpu]] {
   ++count;
   countArg(count,rest...);
@@ -95,7 +99,7 @@ static inline void set_batch(PrintfPacket* queue, int offset, const T t, Rest...
 
 template <typename... All>
 static inline PrintfError printf(PrintfPacket* queue, All... all) [[hc,cpu]] {
-  unsigned int count = 0;      
+  unsigned int count = 0;
   countArg(count, all...);
 
   PrintfError error = PRINTF_SUCCESS;
@@ -109,7 +113,7 @@ static inline PrintfError printf(PrintfPacket* queue, All... all) [[hc,cpu]] {
     unsigned int offset = queue[1].data.ai.fetch_add(count + 1);
 #endif
     unsigned int offset = __hsail_atomic_fetch_add_unsigned(&(queue[1].data.ui),count + 1);
-    if (offset + count + 1 < queue[0].data.ui) { 
+    if (offset + count + 1 < queue[0].data.ui) {
       set_batch(queue, offset, count, all...);
     }
     else {
@@ -148,7 +152,7 @@ static inline void processPrintfPackets(PrintfPacket* packets, const unsigned in
 #if HC_PRINTF_DEBUG
     std::printf("%s:%d \t number of matches = %d\n", __FUNCTION__, __LINE__, (int)specifierMatches.size());
 #endif
-    
+
     for (unsigned int j = 1; j < numPrintfArgs; ++j, ++i) {
 
       if (!std::regex_search(formatString, specifierMatches, specifierPattern)) {
@@ -167,7 +171,7 @@ static inline void processPrintfPackets(PrintfPacket* packets, const unsigned in
       std::string prefix = specifierMatches.prefix();
       prefix = std::regex_replace(prefix,doubleAmpersandPattern,"%");
       std::printf("%s",prefix.c_str());
-      
+
       std::smatch specifierTypeMatch;
       if (std::regex_search(specifier, specifierTypeMatch, unsignedIntegerPattern)) {
         std::printf(specifier.c_str(), packets[i].data.ui);
@@ -193,23 +197,26 @@ static inline void processPrintfPackets(PrintfPacket* packets, const unsigned in
 static inline void processPrintfBuffer(PrintfPacket* gpuBuffer) {
 
   if (gpuBuffer == NULL) return;
+  // Get accelerator view
+  auto acc = hc::accelerator();
+  static hc::accelerator_view av = acc.get_default_view();
 
   PrintfPacket header[2];
-  hc::am_copy(header, gpuBuffer, sizeof(PrintfPacket)*2);
+  av.copy(gpuBuffer, header, sizeof(PrintfPacket)*2);
   unsigned int bufferSize = header[0].data.ui;
   unsigned int cursor = header[1].data.ui;
   unsigned int numPackets = ((bufferSize<cursor)?bufferSize:cursor) - 2;
   if (numPackets > 0) {
     PrintfPacket* hostBuffer = (PrintfPacket*)malloc(sizeof(PrintfPacket) * numPackets);
     if (hostBuffer) {
-      hc::am_copy(hostBuffer, gpuBuffer+2, sizeof(PrintfPacket) * numPackets);
+      av.copy(gpuBuffer+2, hostBuffer, sizeof(PrintfPacket) * numPackets);
       processPrintfPackets(hostBuffer, numPackets);
       free(hostBuffer);
     }
   }
   // reset the printf buffer
   header[1].data.ui = 2;
-  hc::am_copy(gpuBuffer,header,sizeof(PrintfPacket) * 2);
+  av.copy(header,gpuBuffer,sizeof(PrintfPacket) * 2);
 }
 
 
