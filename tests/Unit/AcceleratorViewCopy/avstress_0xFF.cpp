@@ -1,5 +1,4 @@
-// RUN: %hc %s -o %t.run0x18.out -lhc_am -DRUNMASK=0x18 && %t.out 
-// RUN: %hc %s -o %t.run0xFF.out -lhc_am -DRUNMASK=0xFF && %t.out
+// RUN: %hc %s -o %t.out -lhc_am -DRUNMASK=0xFF && %t.out
 #include<stdlib.h>
 #include<iostream>
 
