@@ -217,7 +217,6 @@ void do13425(hc::accelerator_view &av){
     memcpyDtoH(av, D, Bd, LEN);
 
     assertTwoArrays(A, B, LEN);
-    assertTwoArrays(C, B, LEN);
     assertTwoArrays(D, B, LEN);
 }
 
