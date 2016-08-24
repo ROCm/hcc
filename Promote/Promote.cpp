@@ -628,10 +628,10 @@ namespace {
   void updateListWithUsers ( User *U, Value * oldOperand, Value * newOperand,
                              InstUpdateWorkList * updates )
   {
-    Instruction * Insn = dyn_cast<Instruction>(U);
-    if ( Insn ) {
+    Instruction * I1 = dyn_cast<Instruction>(U);
+    if ( I1 ) {
       updates->addUpdate (
-        new ForwardUpdate(Insn,
+        new ForwardUpdate(I1,
                           oldOperand, newOperand ) );
     } else if (ConstantExpr * CE =
                dyn_cast<ConstantExpr>(U)) {
@@ -643,40 +643,47 @@ namespace {
           // patch all the users of the constexpr by
           // first producing an equivalent instruction that
           // computes the constantexpr
-          Insn = CE->getAsInstruction();
-          Insn->insertBefore(I2);
-          updateInstructionWithNewOperand(Insn,
-                                          oldOperand, newOperand, updates);
-          updateInstructionWithNewOperand(I2,
-                                          CE, Insn, updates);
+          I1 = CE->getAsInstruction();
+          I1->insertBefore(I2);
+          updateInstructionWithNewOperand(I1, oldOperand, newOperand, updates);
+          updateInstructionWithNewOperand(I2, CE, I1, updates);
           // CU is invalidated
           CU = CE->user_begin();
           continue;
         } else if (ConstantExpr *CE2 = dyn_cast<ConstantExpr>(*CU)) {
           // there are cases where a ConstantExpr is used by another ConstantExpr
           // in the current implementation, we assume there would be at most
-          // 2 ConstantExpr used in an Instruction
+          // 3 ConstantExpr used in an Instruction
           //
           // assuming the original Instruction is:
           // I3(CE2(CE))
           //
           // we would rewrite it to:
-          // Insn (built from CE)
-          // I2 (built from CE2, with Insn as operand)
+          // I1 (built from CE)
+          // I2 (built from CE2, with I1 as operand)
           // I3 (replace CE2 with I2)
           //
           // notice that I2 can NOT be built from CE2->getAsInstruction() as it would
           // increase user count of CE2 and CE, and would cause infinite loop
+          //
+          // in another case if the original Instruction is:
+          // I4(CE3(CE2(CE)))
+          //
+          // we would rewrite it to:
+          // I1 (built from CE)
+          // I2 (built from CE2, with I1 as operand)
+          // I3 (built from CE3, with I2 as operand)
+          // I4 (replace CE3 with I3)
 
           for (Value::user_iterator CU2 = CE2->user_begin(), CUE2 = CE2->user_end(); CU2 != CUE2;) {
             if (Instruction *I3 = dyn_cast<Instruction>(*CU2)) {
-              Insn = CE->getAsInstruction();
+              I1 = CE->getAsInstruction();
               Instruction *I2 = nullptr;
               switch (CE2->getOpcode()) {
               case Instruction::BitCast:
                 // notice that I2 can NOT be built from CE2->getAsInstruction() as it would
                 // increase user count of CE2 and CE, and would cause infinite loop
-                I2 = new BitCastInst(Insn, CE2->getType(), "", I3);
+                I2 = new BitCastInst(I1, CE2->getType(), "", I3);
                 break;
               default:
                 llvm::errs() << "BUG: DO NOT KNOW HOW TO UPDATE ConstantExpr: ";
@@ -684,31 +691,75 @@ namespace {
                 break;
               }
               if (I2) {
-                // properly order Insn, I2, I3
-                Insn->insertBefore(I2);
+                // properly order I1, I2, I3
+                I1->insertBefore(I2);
 
                 // update operands to correctly set user count for CE and CE2
-                updateInstructionWithNewOperand(Insn, oldOperand, newOperand, updates);
+                updateInstructionWithNewOperand(I1, oldOperand, newOperand, updates);
                 updateInstructionWithNewOperand(I3, CE2, I2, updates);
 
                 // CU2 is invalidated
                 CU2 = CE2->user_begin();
                 continue;
               }
+            } else if (ConstantExpr *CE3 = dyn_cast<ConstantExpr>(*CU2)) {
+#if 0
+              // debug output
+              llvm::errs() << "CE1: "; CE->dump(); llvm::errs() << "\n";
+              llvm::errs() << "CE2: "; CE2->dump(); llvm::errs() << "\n";
+              llvm::errs() << "CE3: "; CE3->dump(); llvm::errs() << "\n";
+              llvm::errs() << "CE1 number of uses: " << CE->getNumUses() << "\n";
+              llvm::errs() << "CE2 number of uses: " << CE2->getNumUses() << "\n";
+              llvm::errs() << "CE3 number of uses: " << CE3->getNumUses() << "\n";
+#endif
+
+              for (Value::user_iterator CU3 = CE3->user_begin(), CUE3 = CE3->user_end(); CU3 != CUE3;) {
+#if 0
+                // debug output
+                if (Instruction *I4 = dyn_cast<Instruction>(*CU3)) {
+                  llvm::errs() << "I4: "; I4->dump(); llvm::errs() << "\n";
+                  llvm::errs() << "I4 number of uses: " << I4->getNumUses() << "\n";
+                }
+                llvm::errs() << "\n";
+#endif
+
+                if (Instruction *I4 = dyn_cast<Instruction>(*CU3)) {
+                  // construct Instruction instances
+                  Instruction *I1 = CE->getAsInstruction();
+                  Instruction *I2 = CE2->getAsInstruction();
+                  Instruction *I3 = CE3->getAsInstruction();
+
+                  I3->insertBefore(I4);
+                  I2->insertBefore(I3);
+                  I1->insertBefore(I2);
+
+                  updateInstructionWithNewOperand(I4, CE3, I3, updates);
+                  updateInstructionWithNewOperand(I3, CE2, I2, updates);
+                  updateInstructionWithNewOperand(I2, CE, I1, updates);
+                  updateInstructionWithNewOperand(I1, oldOperand, newOperand, updates);
+
+#if 0
+                  llvm::errs() << "CE1 number of uses: " << CE->getNumUses() << "\n";
+                  llvm::errs() << "CE2 number of uses: " << CE2->getNumUses() << "\n";
+                  llvm::errs() << "CE3 number of uses: " << CE3->getNumUses() << "\n";
+
+                  llvm::errs() << "I1 number of uses: " << I1->getNumUses() << "\n";
+                  llvm::errs() << "I2 number of uses: " << I2->getNumUses() << "\n";
+                  llvm::errs() << "I3 number of uses: " << I3->getNumUses() << "\n";
+#endif
+
+                  // CU3 is invalidated
+                  CU3 = CE3->user_begin();
+                  continue;
+                }
+
+                ++CU3;
+              }
             }
-            CU2++;
-          }
-
-          if (CE2->getNumUses() == 0) {
-            // Only non-zero ref can be destroyed, otherwise deadlock occurs
-            CE2->destroyConstant();
-
-            // CU is invalidated
-            CU = CE->user_begin();
-            continue;
+            ++CU2;
           }
         }
-        CU++;
+        ++CU;
       }
     }
   }
@@ -1406,14 +1457,14 @@ namespace {
       std::set<Function *> users;
       typedef std::multimap<Function *, llvm::User *> Uses;
       Uses uses;
+
+      // First visit all users which are of type ConstantExpr and flatten
+      // them into Instruction
       for (Value::user_iterator U = I->user_begin(), Ue = I->user_end();
-           U!=Ue;) {
-        if (Instruction *Ins = dyn_cast<Instruction>(*U)) {
-          users.insert(Ins->getParent()->getParent());
-          uses.insert(std::make_pair(Ins->getParent()->getParent(), *U));
-        } else if (ConstantExpr *C = dyn_cast<ConstantExpr>(*U)) {
-          // Replace ConstantExpr with Instruction so we can track it
-          updateListWithUsers (*U, I, I, updateNeeded);
+           U != Ue;) {
+        if (ConstantExpr *C = dyn_cast<ConstantExpr>(*U)) {
+          // Replace ConstantExpt with Instruction so we can track it
+          updateListWithUsers(*U, I, I, updateNeeded);
           if (C->getNumUses() == 0) {
             // Only non-zero ref can be destroyed, otherwise deadlock occurs
             C->destroyConstant();
@@ -1421,10 +1472,22 @@ namespace {
             continue;
           }
         }
+        ++U;
+      }
+
+      // Now all ConstantExpr should be flattened to Instruction
+      // Revisit users of I
+      for (Value::user_iterator U = I->user_begin(), Ue = I->user_end();
+           U!=Ue;) {
+        if (Instruction *Ins = dyn_cast<Instruction>(*U)) {
+          users.insert(Ins->getParent()->getParent());
+          uses.insert(std::make_pair(Ins->getParent()->getParent(), *U));
+        }
         DEBUG(llvm::errs() << "U: \n";
               U->dump(););
-        U++;
+        ++U;
       }
+
       int i = users.size()-1;
       // Create a clone of the tile static variable for each unique
       // function that uses it
