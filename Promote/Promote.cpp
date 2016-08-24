@@ -643,10 +643,23 @@ namespace {
           // patch all the users of the constexpr by
           // first producing an equivalent instruction that
           // computes the constantexpr
+
+          // construct an Instruction from ConstantExpr
           I1 = CE->getAsInstruction();
+
+          // properly order I1 and I2
           I1->insertBefore(I2);
-          updateInstructionWithNewOperand(I1, oldOperand, newOperand, updates);
-          updateInstructionWithNewOperand(I2, CE, I1, updates);
+
+          // update operand, a new Instruction may be created along the way
+          Instruction *newI1 = updateInstructionWithNewOperand(I1, oldOperand, newOperand, updates);
+
+          // updated Instruction may be a complete new Instruction
+          // if that's the case, ditch the original one
+          if (newI1 != I1) I1->eraseFromParent();
+
+          // Let I2 use newI1 as its new operand
+          updateInstructionWithNewOperand(I2, CE, newI1, updates);
+
           // CU is invalidated
           CU = CE->user_begin();
           continue;
@@ -662,47 +675,40 @@ namespace {
           // I1 (built from CE)
           // I2 (built from CE2, with I1 as operand)
           // I3 (replace CE2 with I2)
-          //
-          // notice that I2 can NOT be built from CE2->getAsInstruction() as it would
-          // increase user count of CE2 and CE, and would cause infinite loop
-          //
-          // in another case if the original Instruction is:
-          // I4(CE3(CE2(CE)))
-          //
-          // we would rewrite it to:
-          // I1 (built from CE)
-          // I2 (built from CE2, with I1 as operand)
-          // I3 (built from CE3, with I2 as operand)
-          // I4 (replace CE3 with I3)
 
           for (Value::user_iterator CU2 = CE2->user_begin(), CUE2 = CE2->user_end(); CU2 != CUE2;) {
             if (Instruction *I3 = dyn_cast<Instruction>(*CU2)) {
               I1 = CE->getAsInstruction();
-              Instruction *I2 = nullptr;
-              switch (CE2->getOpcode()) {
-              case Instruction::BitCast:
-                // notice that I2 can NOT be built from CE2->getAsInstruction() as it would
-                // increase user count of CE2 and CE, and would cause infinite loop
-                I2 = new BitCastInst(I1, CE2->getType(), "", I3);
-                break;
-              default:
-                llvm::errs() << "BUG: DO NOT KNOW HOW TO UPDATE ConstantExpr: ";
-                CE2->print(llvm::errs()); llvm::errs() << "\n";
-                break;
-              }
-              if (I2) {
-                // properly order I1, I2, I3
-                I1->insertBefore(I2);
+              Instruction *I2 = CE2->getAsInstruction();
 
-                // update operands to correctly set user count for CE and CE2
-                updateInstructionWithNewOperand(I1, oldOperand, newOperand, updates);
-                updateInstructionWithNewOperand(I3, CE2, I2, updates);
+              // properly order I1, I2, I3
+              I2->insertBefore(I3);
+              I1->insertBefore(I2);
 
-                // CU2 is invalidated
-                CU2 = CE2->user_begin();
-                continue;
-              }
+              // for each new Instruction, update its operand
+              // notice additional Instruction may be produced along the
+              // way. In that case the original Instruction would be
+              // removed.
+              Instruction *newI1 = updateInstructionWithNewOperand(I1, oldOperand, newOperand, updates);
+              if (newI1 != I1) I1->eraseFromParent();
+              Instruction *newI2 = updateInstructionWithNewOperand(I2, CE, newI1, updates);
+              if (newI2 != I2) I2->eraseFromParent();
+              updateInstructionWithNewOperand(I3, CE2, newI2, updates);
+
+              // CU2 is invalidated
+              CU2 = CE2->user_begin();
+              continue;
             } else if (ConstantExpr *CE3 = dyn_cast<ConstantExpr>(*CU2)) {
+
+              // in another case if the original Instruction is:
+              // I4(CE3(CE2(CE)))
+              //
+              // we would rewrite it to:
+              // I1 (built from CE)
+              // I2 (built from CE2, with I1 as operand)
+              // I3 (built from CE3, with I2 as operand)
+              // I4 (replace CE3 with I3)
+
               for (Value::user_iterator CU3 = CE3->user_begin(), CUE3 = CE3->user_end(); CU3 != CUE3;) {
 
                 if (Instruction *I4 = dyn_cast<Instruction>(*CU3)) {
@@ -718,17 +724,20 @@ namespace {
 
                   // for each new Instruction, update its operand
                   // notice additional Instruction may be produced along the
-                  // way, and it needs to be used by the next Instruction
+                  // way. In that case the original Instruction would be
+                  // removed.
                   Instruction *newI1 = updateInstructionWithNewOperand(I1, oldOperand, newOperand, updates);
+                  if (newI1 != I1) I1->eraseFromParent();
                   Instruction *newI2 = updateInstructionWithNewOperand(I2, CE, newI1, updates);
+                  if (newI2 != I2) I2->eraseFromParent();
                   Instruction *newI3 = updateInstructionWithNewOperand(I3, CE2, newI2, updates);
+                  if (newI3 != I3) I3->eraseFromParent();
                   updateInstructionWithNewOperand(I4, CE3, newI3, updates);
 
                   // CU3 is invalidated
                   CU3 = CE3->user_begin();
                   continue;
                 }
-
                 ++CU3;
               }
             }
