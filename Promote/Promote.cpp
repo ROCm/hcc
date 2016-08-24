@@ -63,10 +63,10 @@ namespace {
     virtual void operator()(InstUpdateWorkList*) =0;
   };
 
-  void updateInstructionWithNewOperand(Instruction * I,
-                                       Value * oldOperand,
-                                       Value * newOperand,
-                                       InstUpdateWorkList * updatesNeeded);
+  Instruction * updateInstructionWithNewOperand(Instruction * I,
+                                                Value * oldOperand,
+                                                Value * newOperand,
+                                                InstUpdateWorkList * updatesNeeded);
 
   void updateListWithUsers ( Value::user_iterator U,
                              const Value::user_iterator& Ue,
@@ -703,50 +703,26 @@ namespace {
                 continue;
               }
             } else if (ConstantExpr *CE3 = dyn_cast<ConstantExpr>(*CU2)) {
-#if 0
-              // debug output
-              llvm::errs() << "CE1: "; CE->dump(); llvm::errs() << "\n";
-              llvm::errs() << "CE2: "; CE2->dump(); llvm::errs() << "\n";
-              llvm::errs() << "CE3: "; CE3->dump(); llvm::errs() << "\n";
-              llvm::errs() << "CE1 number of uses: " << CE->getNumUses() << "\n";
-              llvm::errs() << "CE2 number of uses: " << CE2->getNumUses() << "\n";
-              llvm::errs() << "CE3 number of uses: " << CE3->getNumUses() << "\n";
-#endif
-
               for (Value::user_iterator CU3 = CE3->user_begin(), CUE3 = CE3->user_end(); CU3 != CUE3;) {
-#if 0
-                // debug output
-                if (Instruction *I4 = dyn_cast<Instruction>(*CU3)) {
-                  llvm::errs() << "I4: "; I4->dump(); llvm::errs() << "\n";
-                  llvm::errs() << "I4 number of uses: " << I4->getNumUses() << "\n";
-                }
-                llvm::errs() << "\n";
-#endif
 
                 if (Instruction *I4 = dyn_cast<Instruction>(*CU3)) {
                   // construct Instruction instances
-                  Instruction *I1 = CE->getAsInstruction();
+                  I1 = CE->getAsInstruction();
                   Instruction *I2 = CE2->getAsInstruction();
                   Instruction *I3 = CE3->getAsInstruction();
 
+                  // properly order new Instruction instances
                   I3->insertBefore(I4);
                   I2->insertBefore(I3);
                   I1->insertBefore(I2);
 
-                  updateInstructionWithNewOperand(I4, CE3, I3, updates);
-                  updateInstructionWithNewOperand(I3, CE2, I2, updates);
-                  updateInstructionWithNewOperand(I2, CE, I1, updates);
-                  updateInstructionWithNewOperand(I1, oldOperand, newOperand, updates);
-
-#if 0
-                  llvm::errs() << "CE1 number of uses: " << CE->getNumUses() << "\n";
-                  llvm::errs() << "CE2 number of uses: " << CE2->getNumUses() << "\n";
-                  llvm::errs() << "CE3 number of uses: " << CE3->getNumUses() << "\n";
-
-                  llvm::errs() << "I1 number of uses: " << I1->getNumUses() << "\n";
-                  llvm::errs() << "I2 number of uses: " << I2->getNumUses() << "\n";
-                  llvm::errs() << "I3 number of uses: " << I3->getNumUses() << "\n";
-#endif
+                  // for each new Instruction, update its operand
+                  // notice additional Instruction may be produced along the
+                  // way, and it needs to be used by the next Instruction
+                  Instruction *newI1 = updateInstructionWithNewOperand(I1, oldOperand, newOperand, updates);
+                  Instruction *newI2 = updateInstructionWithNewOperand(I2, CE, newI1, updates);
+                  Instruction *newI3 = updateInstructionWithNewOperand(I3, CE2, newI2, updates);
+                  updateInstructionWithNewOperand(I4, CE3, newI3, updates);
 
                   // CU3 is invalidated
                   CU3 = CE3->user_begin();
@@ -773,8 +749,8 @@ namespace {
     }
   }
 
-  void updateLoadInstWithNewOperand(LoadInst * I, Value * newOperand,
-                                    InstUpdateWorkList * updatesNeeded)
+  Instruction * updateLoadInstWithNewOperand(LoadInst * I, Value * newOperand,
+                                             InstUpdateWorkList * updatesNeeded)
   {
     Type * originalLoadedType = I->getType();
     I->setOperand(0, newOperand);
@@ -783,11 +759,12 @@ namespace {
       I->mutateType(PT->getElementType());
       updateListWithUsers(I->user_begin(), I->user_end(), I, I, updatesNeeded);
     }
+    return I;
   }
 
-  void updatePHINodeWithNewOperand(PHINode * I, Value * oldOperand,
-                                   Value * newOperand,
-                                   InstUpdateWorkList * updatesNeeded)
+  Instruction * updatePHINodeWithNewOperand(PHINode * I, Value * oldOperand,
+                                            Value * newOperand,
+                                            InstUpdateWorkList * updatesNeeded)
   {
     DEBUG(llvm::errs() << "=== BEFORE UPDATE PHI ===\n";
           I->dump();
@@ -830,7 +807,7 @@ namespace {
             } else if (isa<Constant>(V)) {
               Constant *CC = dyn_cast<Constant>(V);
 
-              DEBUG(llvm::errs() << "value#" << i << " update type from: ";  PTy->dump(); 
+              DEBUG(llvm::errs() << "value#" << i << " update type from: ";  PTy->dump();
                     llvm::errs() << " to: "; PT->dump();
                     llvm::errs() << " for constant: "; CC->dump(); llvm::errs() << "\n";);
 
@@ -852,11 +829,13 @@ namespace {
           llvm::errs() << "src#" << i << ": "; I->getIncomingValue(i)->getType()->dump(); llvm::errs() << "\n";
           }
           llvm::errs() << "\n\n";);
+    return I;
   }
 
-  void updateStoreInstWithNewOperand(StoreInst * I, Value * oldOperand,
-                                     Value * newOperand,
-                                     InstUpdateWorkList * updatesNeeded)
+  Instruction * updateStoreInstWithNewOperand(StoreInst * I,
+                                              Value * oldOperand,
+                                              Value * newOperand,
+                                              InstUpdateWorkList * updatesNeeded)
   {
     unsigned index = I->getOperand(1) == oldOperand?1:0;
     I->setOperand(index, newOperand);
@@ -865,7 +844,7 @@ namespace {
       dyn_cast<PointerType>(storeOperand->getType());
 
     if ( destType->getElementType ()
-         == I->getValueOperand()->getType() ) return;
+         == I->getValueOperand()->getType() ) return I;
 
 
     if ( index == StoreInst::getPointerOperandIndex () ) {
@@ -889,11 +868,15 @@ namespace {
 
       } else {
         DEBUG(llvm::errs() << "ptrProducer is null\n";);
-      } 
+      }
     }
+
+    return I;
   }
 
-  void updateCallInstWithNewOperand(CallInst * CI, Value * oldOperand, Value * newOperand, InstUpdateWorkList * updatesNeeded)
+  Instruction * updateCallInstWithNewOperand(CallInst * CI, Value * oldOperand,
+                                             Value * newOperand,
+                                             InstUpdateWorkList * updatesNeeded)
   {
     for ( unsigned i = 0, numArgs = CI->getNumArgOperands();
           i != numArgs; ++i ) {
@@ -901,15 +884,18 @@ namespace {
         CI->setArgOperand ( i, newOperand );
       }
     }
+
+    return CI;
   }
 
-  void updateBitCastInstWithNewOperand(BitCastInst * BI, Value *oldOperand,
-                                       Value * newOperand,
-                                       InstUpdateWorkList * updatesNeeded)
+  Instruction * updateBitCastInstWithNewOperand(BitCastInst * BI,
+                                                Value *oldOperand,
+                                                Value * newOperand,
+                                                InstUpdateWorkList * updatesNeeded)
   {
     Type * currentType = BI->getType();
     PointerType * currentPtrType = dyn_cast<PointerType>(currentType);
-    if (!currentPtrType) return;
+    if (!currentPtrType) return BI;
 
     // make sure pointers inside the casted type are also promoted
     // this fixes an issue when a class has a vtbl gets captured in the kernel,
@@ -921,7 +907,7 @@ namespace {
 
     Type * sourceType = newOperand->getType();
     PointerType * sourcePtrType = dyn_cast<PointerType>(sourceType);
-    if (!sourcePtrType) return;
+    if (!sourcePtrType) return BI;
 
     PointerType * newDestType =
       PointerType::get(elementType,
@@ -932,27 +918,29 @@ namespace {
 
     updateListWithUsers (BI->user_begin(), BI->user_end(),
                          BI, newBCI, updatesNeeded);
+
+    return newBCI;
   }
 
-  void updateAddrSpaceCastInstWithNewOperand(AddrSpaceCastInst * AI,
-                                             Value *oldOperand,
-                                             Value * newOperand,
-                                             InstUpdateWorkList * updatesNeeded)
+  Instruction * updateAddrSpaceCastInstWithNewOperand(AddrSpaceCastInst * AI,
+                                                      Value *oldOperand,
+                                                      Value * newOperand,
+                                                      InstUpdateWorkList * updatesNeeded)
   {
     Type * currentType = AI->getType();
     PointerType * currentPtrType = dyn_cast<PointerType>(currentType);
-    if (!currentPtrType) return;
+    if (!currentPtrType) return AI;
 
     Type * sourceType = newOperand->getType();
     PointerType * sourcePtrType = dyn_cast<PointerType>(sourceType);
-    if (!sourcePtrType) return;
+    if (!sourcePtrType) return AI;
 
     if ( sourcePtrType->getAddressSpace()
          == currentPtrType->getAddressSpace() ) {
       Value *nV = AI->getOperand(0);
       AI->replaceAllUsesWith(nV);
       AI->eraseFromParent();
-      return;
+      return AI;
     }
 
     PointerType * newDestType =
@@ -964,19 +952,21 @@ namespace {
 
     updateListWithUsers (AI->user_begin(), AI->user_end(),
                          AI, newACI, updatesNeeded);
+
+    return newACI;
   }
 
-  void updateGEPWithNewOperand(GetElementPtrInst * GEP, Value * oldOperand,
-                               Value * newOperand,
-                               InstUpdateWorkList * updatesNeeded)
+  Instruction * updateGEPWithNewOperand(GetElementPtrInst * GEP,
+                                        Value * oldOperand,
+                                        Value * newOperand,
+                                        InstUpdateWorkList * updatesNeeded)
   {
     DEBUG(llvm::errs() << "=== BEFORE UPDATE GEP ===\n";
           llvm::errs() << "new operand: "; newOperand->getType()->dump(); llvm::errs() << "\n";);
 
-    if ( GEP->getPointerOperand() != oldOperand ) return;
+    if ( GEP->getPointerOperand() != oldOperand ) return GEP;
 
     std::vector<Value *> Indices(GEP->idx_begin(), GEP->idx_end());
-
 
     Type * futureType =
       GEP->getGEPReturnType(newOperand, ArrayRef<Value *>(Indices));
@@ -986,19 +976,20 @@ namespace {
           llvm::errs() << "indexed type: "; GEP->getIndexedType(oldOperand->getType(), Indices)->dump(); llvm::errs() << "\n";);
 
     PointerType * futurePtrType = dyn_cast<PointerType>(futureType);
-    if ( !futurePtrType ) return;
+    if ( !futurePtrType ) return GEP;
 
     GEP->setOperand ( GEP->getPointerOperandIndex(), newOperand);
 
-    if ( futurePtrType == GEP->getType()) return;
+    if ( futurePtrType == GEP->getType()) return GEP;
 
     GEP->mutateType ( futurePtrType );
     updateListWithUsers(GEP->user_begin(), GEP->user_end(), GEP, GEP, updatesNeeded);
+    return GEP;
   }
 
-  void updateCMPWithNewOperand(CmpInst *CMP, Value *oldOperand,
-                               Value *newOperand,
-                               InstUpdateWorkList *updatesNeeded)
+  Instruction * updateCMPWithNewOperand(CmpInst *CMP, Value *oldOperand,
+                                        Value *newOperand,
+                                        InstUpdateWorkList *updatesNeeded)
   {
     DEBUG(llvm::errs() << "=== BEFORE UPDATE CMP ===\n";
           llvm::errs() << " new type: "; newOperand->getType()->dump(); llvm::errs() << "\n";
@@ -1018,11 +1009,12 @@ namespace {
     }
     if (update)
       updateListWithUsers(CMP->user_begin(), CMP->user_end(), CMP, CMP, updatesNeeded);
+    return CMP;
   }
 
-  void updateSELWithNewOperand(SelectInst * SEL, Value * oldOperand,
-                               Value * newOperand,
-                               InstUpdateWorkList * updatesNeeded)
+  Instruction * updateSELWithNewOperand(SelectInst * SEL, Value * oldOperand,
+                                        Value * newOperand,
+                                        InstUpdateWorkList * updatesNeeded)
   {
     DEBUG(llvm::errs() << "=== BEFORE UPDATE SEL ===\n";
           llvm::errs() << " new type: "; newOperand->getType()->dump(); llvm::errs() << "\n";
@@ -1066,8 +1058,10 @@ namespace {
           llvm::errs() << " op1 type: "; SEL->getOperand(1)->getType()->dump(); llvm::errs() << "\n";
           llvm::errs() << " op2 type: "; SEL->getOperand(2)->getType()->dump(); llvm::errs() << "\n";);
 
-    if(update) 
+    if(update)
       updateListWithUsers(SEL->user_begin(), SEL->user_end(), SEL, SEL, updatesNeeded);
+
+    return SEL;
   }
 
   bool CheckCalledFunction ( CallInst * CI, InstUpdateWorkList * updates,
@@ -1196,18 +1190,17 @@ namespace {
     I->setMetadata("mem.scope", MD);
   }
 
-  void updateInstructionWithNewOperand(Instruction * I,
-                                       Value * oldOperand,
-                                       Value * newOperand,
-                                       InstUpdateWorkList * updatesNeeded)
+  Instruction * updateInstructionWithNewOperand(Instruction * I,
+                                                Value * oldOperand,
+                                                Value * newOperand,
+                                                InstUpdateWorkList * updatesNeeded)
   {
     if (LoadInst * LI = dyn_cast<LoadInst>(I)) {
       if (LI->isAtomic()) {
         appendMemoryScopeMetadata(I);
       }
 
-      updateLoadInstWithNewOperand(LI, newOperand, updatesNeeded);
-      return;
+      return updateLoadInstWithNewOperand(LI, newOperand, updatesNeeded);
     }
 
     if (StoreInst * SI = dyn_cast<StoreInst>(I)) {
@@ -1215,76 +1208,67 @@ namespace {
         appendMemoryScopeMetadata(I);
       }
 
-      updateStoreInstWithNewOperand(SI, oldOperand, newOperand, updatesNeeded);
-      return;
+      return updateStoreInstWithNewOperand(SI, oldOperand, newOperand, updatesNeeded);
     }
 
     if (CallInst * CI = dyn_cast<CallInst>(I)) {
-      updateCallInstWithNewOperand(CI, oldOperand, newOperand, updatesNeeded);
-      return;
+      return updateCallInstWithNewOperand(CI, oldOperand, newOperand, updatesNeeded);
     }
 
     if (BitCastInst * BI = dyn_cast<BitCastInst>(I)) {
-      updateBitCastInstWithNewOperand(BI, oldOperand, newOperand, updatesNeeded);
-      return;
+      return updateBitCastInstWithNewOperand(BI, oldOperand, newOperand, updatesNeeded);
     }
 
     if (AddrSpaceCastInst * AI = dyn_cast<AddrSpaceCastInst>(I)) {
-      updateAddrSpaceCastInstWithNewOperand(AI, oldOperand, newOperand, updatesNeeded);
-      return;
+      return updateAddrSpaceCastInstWithNewOperand(AI, oldOperand, newOperand, updatesNeeded);
     }
 
     if (GetElementPtrInst * GEP = dyn_cast<GetElementPtrInst>(I)) {
-      updateGEPWithNewOperand(GEP, oldOperand, newOperand,
-                              updatesNeeded);
-      return;
+      return updateGEPWithNewOperand(GEP, oldOperand, newOperand, updatesNeeded);
     }
 
     if (PHINode * PHI = dyn_cast<PHINode>(I)) {
-      updatePHINodeWithNewOperand(PHI, oldOperand, newOperand, updatesNeeded);
-      return;
+      return updatePHINodeWithNewOperand(PHI, oldOperand, newOperand, updatesNeeded);
     }
 
     if (SelectInst * SEL = dyn_cast<SelectInst>(I)) {
-      updateSELWithNewOperand(SEL, oldOperand, newOperand,updatesNeeded);
-      return;
+      return updateSELWithNewOperand(SEL, oldOperand, newOperand,updatesNeeded);
     }
 
     if (CmpInst *CMP = dyn_cast<CmpInst>(I)) {
-      updateCMPWithNewOperand(CMP, oldOperand, newOperand, updatesNeeded);
-      return;
+      return updateCMPWithNewOperand(CMP, oldOperand, newOperand, updatesNeeded);
     }
 
     if (isa<PtrToIntInst>(I)) {
       DEBUG(llvm::errs() << "No need to update ptrtoint\n";);
-      return;
+      return I;
     }
 
     if (isa<InvokeInst>(I)) {
       DEBUG(llvm::errs() << "No need to update invoke\n";);
-      return;
+      return I;
     }
 
     if (isa<BranchInst>(I)) {
       DEBUG(llvm::errs() << "No need to update branch\n";);
-      return;
+      return I;
     }
 
     if (isa<AtomicRMWInst>(I) || isa<AtomicCmpXchgInst>(I) || isa<FenceInst>(I)) {
       appendMemoryScopeMetadata(I);
-      return;
+      return I;
     }
 
     if (isa<ReturnInst>(I)) {
       DEBUG(llvm::errs() << "No need to update ret\n";);
-      return;
+      return I;
     }
 
     DEBUG(llvm::errs() << "DO NOT KNOW HOW TO UPDATE INSTRUCTION: ";
           I->print(llvm::errs()); llvm::errs() << "\n";);
 
     // Don't crash the program
-    return;
+    return I;
   }
 
   static bool usedInTheFunc(const User *U, const Function* F)
