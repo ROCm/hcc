@@ -18,7 +18,7 @@ Generally speaking, the process goes like this:
 Process A: merge upstream LLVM / LLD
 
 1. Fetch upstream LLVM commits
-2. Fetch upstream LLD commits 
+2. Fetch upstream LLD commits
 3. Build upstream LLVM / LLD
 4. Update LLVM / LLD submodules in ToT HCC
 
@@ -64,7 +64,9 @@ Assume there is a build directory for upstream LLVM / LLD. If there is not, foll
 - change to ToT HCC directory
 - `cd compiler`
 - `git checkout master`
-- `git checkout -- .` in case you built ToT HCC before
+- In case you built ToT HCC before, remove patches from ToT HCC by:
+  - `git checkout -- .`
+  - `rm lib/Analysis/TileUniform lib/Transforms/CpuRename lib/Transforms/EraseNonkernel lib/Transforms/HC lib/Transforms/Promote lib/Transforms/RemoveSpecialSection/`
 - `git pull`
 - `git reset --hard <commit # of upstream LLVM>`
 
