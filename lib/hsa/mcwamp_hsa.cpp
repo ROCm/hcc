@@ -163,6 +163,27 @@ static const char* getHSAErrorString(hsa_status_t s) {
 		abort();\
 	}
 
+// debug function to dump information on an HSA agent
+static void dumpHSAAgentInfo(hsa_agent_t agent, const char* extra_string = (const char*)"") {
+  hsa_status_t status;
+  char name[64] = {0};
+  status = hsa_agent_get_info(agent, HSA_AGENT_INFO_NAME, name);
+  STATUS_CHECK(status, __LINE__);
+
+  uint32_t node = 0;
+  status = hsa_agent_get_info(agent, HSA_AGENT_INFO_NODE, &node);
+  STATUS_CHECK(status, __LINE__);
+
+  wchar_t path_wchar[128] {0};
+  swprintf(path_wchar, 128, L"%s%u", name, node);
+
+  printf("Dump Agent Info (%s)\n",extra_string);
+  printf("\t Agent: "); 
+  std::wcerr  << path_wchar << L"\n";
+
+  return;
+}
+
 
 namespace Kalmar {
 
@@ -717,7 +738,7 @@ private:
 
 
     //
-    // kernelBufferMap and bufferKernelMap forms the dependency graph of
+    // kernelBufferMaaap and bufferKernelMap forms the dependency graph of
     // kernel / kernel dispatches / buffers
     //
     // For a particular kernel k, kernelBufferMap[k] holds a vector of
@@ -1157,10 +1178,12 @@ public:
     }
 
     void* map(void* device, size_t count, size_t offset, bool modify) override {
+#if KALMAR_DEBUG
+        dumpHSAAgentInfo(*static_cast<hsa_agent_t*>(getHSAAgent()), "map(...)");
+#endif
         waitForDependentAsyncOps(device);
 
         // do map
-
         // as HSA runtime doesn't have map/unmap facility at this moment,
         // we explicitly allocate a host memory buffer in this case
         if (!getDev()->is_unified()) {
