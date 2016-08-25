@@ -61,10 +61,10 @@
 
 // number of pre-allocated HSA signals in HSAContext
 // default set as 64 (pre-allocating 64 HSA signals)
-#define SIGNAL_POOL_SIZE (64) // 
+#define SIGNAL_POOL_SIZE (64) //
 
 // Maximum number of inflight commands sent to a single queue.
-// If limit is exceeded, HCC will force a queue wait to reclaim 
+// If limit is exceeded, HCC will force a queue wait to reclaim
 // resources (signals, kernarg)
 #define MAX_INFLIGHT_COMMANDS_PER_QUEUE  512
 
@@ -168,7 +168,7 @@ namespace Kalmar {
 
 enum class HCCRuntimeStatus{
 
-  // No error 
+  // No error
   HCCRT_STATUS_SUCCESS = 0x0,
 
   // A generic error
@@ -182,13 +182,13 @@ const char* getHCCRuntimeStatusMessage(const HCCRuntimeStatus status) {
   const char* message = nullptr;
   switch(status) {
     //HCCRT_CASE_STATUS_STRING(HCCRT_STATUS_SUCCESS,"Success");
-    case HCCRuntimeStatus::HCCRT_STATUS_SUCCESS: 
-      message = "Success"; break; 
-    case HCCRuntimeStatus::HCCRT_STATUS_ERROR:  
-      message = "Generic error"; break; 
-    case HCCRuntimeStatus::HCCRT_STATUS_ERROR_COMMAND_QUEUE_OVERFLOW: 
-      message = "Command queue overflow"; break; 
-    default: 
+    case HCCRuntimeStatus::HCCRT_STATUS_SUCCESS:
+      message = "Success"; break;
+    case HCCRuntimeStatus::HCCRT_STATUS_ERROR:
+      message = "Generic error"; break;
+    case HCCRuntimeStatus::HCCRT_STATUS_ERROR_COMMAND_QUEUE_OVERFLOW:
+      message = "Command queue overflow"; break;
+    default:
       message = "Unknown error code"; break;
   };
   return message;
@@ -349,7 +349,7 @@ public:
     // Copy mode will be set later on.
     // HSA signals would be waited in HSA_WAIT_STATE_ACTIVE by default for HSACopy instances
     HSACopy(const void* src_, void* dst_, size_t sizeBytes_) : KalmarAsyncOp(Kalmar::hcCommandInvalid),
-        isSubmitted(false), future(nullptr), depAsyncOp(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_ACTIVE), 
+        isSubmitted(false), future(nullptr), depAsyncOp(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_ACTIVE),
         src(src_), dst(dst_), sizeBytes(sizeBytes_),
         signalIndex(-1) {
 #if KALMAR_DEBUG
@@ -451,7 +451,7 @@ public:
             // throw an exception
             throw Kalmar::runtime_exception("Incorrect number of dependent signals passed to HSABarrier constructor", count);
         }
-    } 
+    }
 
     ~HSABarrier() {
 #if KALMAR_DEBUG
@@ -637,10 +637,10 @@ private:
         if (localSize == 0) localSize = recommendedSize;
         localSize = std::min(localSize, recommendedSize);
         localSize = std::min(localSize, globalSize); // workgroup size shall not exceed grid size
-  
+
         global_size[level] = globalSize;
         workgroup_size[level] = localSize;
-        //std::cout << "level " << level << ", grid=" << global_size[level] 
+        //std::cout << "level " << level << ", grid=" << global_size[level]
         //          << ", group=" << workgroup_size[level] << std::endl;
     }
 
@@ -719,7 +719,7 @@ private:
     // kernelBufferMap and bufferKernelMap forms the dependency graph of
     // kernel / kernel dispatches / buffers
     //
-    // For a particular kernel k, kernelBufferMap[k] holds a vector of 
+    // For a particular kernel k, kernelBufferMap[k] holds a vector of
     // host buffers used by k. The vector is filled at HSAQueue::Push(),
     // when kernel arguments are prepared.
     //
@@ -756,7 +756,7 @@ public:
         STATUS_CHECK(status, __LINE__);
 
         /// Create a queue using the maximum size.
-        status = hsa_queue_create(agent, queue_size, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, 
+        status = hsa_queue_create(agent, queue_size, HSA_QUEUE_TYPE_SINGLE, NULL, NULL,
                                   UINT32_MAX, UINT32_MAX, &commandQueue);
 #if KALMAR_DEBUG
         std::cerr << "HSAQueue::HSAQueue(): created an HSA command queue: " << commandQueue << "\n";
@@ -819,7 +819,7 @@ public:
 
     // FIXME: implement flush
     //
-    void printAsyncOps(std::ostream &s = std::cerr) 
+    void printAsyncOps(std::ostream &s = std::cerr)
     {
         hsa_signal_value_t oldv=0;
         s << "Queue: " << this;
@@ -841,16 +841,16 @@ public:
                 s << " op <nullptr>";
             }
             s  << "\n";
-            
+
         }
     }
- 
+
     // Save the command and type
     void pushAsyncOp(std::shared_ptr<KalmarAsyncOp> op) {
         op->setSeqNum(++opSeqNums);
 
 #if KALMAR_DEBUG_ASYNC_COPY
-        std::cerr << "  pushing op=" << op << "  #" << op->getSeqNum() << " signal=" << ((hsa_signal_t*)op->getNativeHandle())->handle 
+        std::cerr << "  pushing op=" << op << "  #" << op->getSeqNum() << " signal=" << ((hsa_signal_t*)op->getNativeHandle())->handle
                   << "  commandKind=" << getHcCommandKindString(op->getCommandKind()) << std::endl;
 #endif
 
@@ -871,7 +871,7 @@ public:
     // Check the command kind for the upcoming command that will be sent to this queue
     // if it differs from the youngest async op sent to the queue, we may need to insert additional synchronization.
     // The function returns nullptr if no dependency is required. For example, back-to-back commands of same type
-    // are often implicitly synchronized so no dependency is required.   
+    // are often implicitly synchronized so no dependency is required.
     // Also different modes and optimizations can control when dependencies are added.
     std::shared_ptr<KalmarAsyncOp> detectStreamDeps(KalmarAsyncOp *newOp) {
         hcCommandKind newCommandKind = newOp->getCommandKind();
@@ -880,7 +880,7 @@ public:
         if (!asyncOps.empty()) {
             assert (youngestCommandKind != hcCommandInvalid);
 
-              
+
             bool needDep = false;
             if  (newCommandKind != youngestCommandKind) {
                 needDep = true;
@@ -903,7 +903,7 @@ public:
 #endif
                 return asyncOps.back();
             }
-        } 
+        }
 
         return nullptr;
     }
@@ -912,7 +912,7 @@ public:
     void waitForStreamDeps (KalmarAsyncOp *newOp) {
         std::shared_ptr<KalmarAsyncOp> depOp = detectStreamDeps(newOp);
         if (depOp != nullptr) {
-            EnqueueMarkerWithDependency(1, &depOp); 
+            EnqueueMarkerWithDependency(1, &depOp);
         }
     }
 
@@ -987,7 +987,7 @@ public:
     }
 
     std::shared_ptr<KalmarAsyncOp> LaunchKernelWithDynamicGroupMemoryAsync(void *ker, size_t nr_dim, size_t *global, size_t *local, size_t dynamic_group_size) override {
-        hsa_status_t status = HSA_STATUS_SUCCESS;      
+        hsa_status_t status = HSA_STATUS_SUCCESS;
 
         HSADispatch *dispatch =
             reinterpret_cast<HSADispatch*>(ker);
@@ -1066,10 +1066,10 @@ public:
                 // dst--host buffer might be allocated through either OS allocator or hsa allocator.
                 // Things become complicated, we may need some query API to query the pointer info, i.e.
                 // allocator info. Same as write.
-                hsa_agent_t* agent = static_cast<hsa_agent_t*>(getHSAAgent()); 
+                hsa_agent_t* agent = static_cast<hsa_agent_t*>(getHSAAgent());
                 void* va = nullptr;
                 status = hsa_amd_memory_lock(dst, count, agent, 1, &va);
-                // TODO: If host buffer is not allocated through OS allocator, so far, lock 
+                // TODO: If host buffer is not allocated through OS allocator, so far, lock
                 // API will return nullptr to va, this is not specified in the spec, but will use it to
                 // check if host buffer is allocated by hsa allocator
                 if(va == NULL || status != HSA_STATUS_SUCCESS)
@@ -1103,10 +1103,10 @@ public:
                 hsa_status_t status = HSA_STATUS_SUCCESS;
                 // Make sure host memory is accessible to gpu
                 // FIXME: host memory is allocated through OS allocator, if not, correct it.
-                hsa_agent_t* agent = static_cast<hsa_agent_t*>(getHSAAgent()); 
+                hsa_agent_t* agent = static_cast<hsa_agent_t*>(getHSAAgent());
                 void* va = nullptr;
                 status = hsa_amd_memory_lock(const_cast<void*>(src), count, agent, 1, &va);
-                  
+
                 if(va == NULL || status != HSA_STATUS_SUCCESS)
                 {
                     status = hsa_amd_agents_allow_access(1, agent, NULL, src);
@@ -1143,7 +1143,7 @@ public:
                 // FIXME: aftre p2p enabled, if this function is not expected to copy between two buffers from different device, then, delete allow_access API call.
                 hsa_agent_t* agent = static_cast<hsa_agent_t*>(getHSAAgent());
                 status = hsa_amd_agents_allow_access(1, agent, NULL, src);
-                STATUS_CHECK(status, __LINE__); 
+                STATUS_CHECK(status, __LINE__);
                 status = hsa_memory_copy((char*)dst + dst_offset, (char*)src + src_offset, count);
                 STATUS_CHECK(status, __LINE__);
             } else {
@@ -1161,7 +1161,7 @@ public:
         // do map
 
         // as HSA runtime doesn't have map/unmap facility at this moment,
-        // we explicitly allocate a host memory buffer in this case 
+        // we explicitly allocate a host memory buffer in this case
         if (!getDev()->is_unified()) {
 #if KALMAR_DEBUG
             std::cerr << "map(" << device << "," << count << "," << offset << "," << modify << "): use HSA memory map\n";
@@ -1176,7 +1176,7 @@ public:
             STATUS_CHECK(status, __LINE__);
             if (data != nullptr) {
               // copy data from device buffer to host buffer
-              hsa_agent_t* agent = static_cast<hsa_agent_t*>(getHSAAgent()); 
+              hsa_agent_t* agent = static_cast<hsa_agent_t*>(getHSAAgent());
               status = hsa_amd_agents_allow_access(1, agent, NULL, data);
               STATUS_CHECK(status, __LINE__);
               status = hsa_memory_copy(data, (char*)device + offset, count);
@@ -1192,7 +1192,7 @@ public:
 #endif
 
             return data;
-            
+
         } else {
 #if KALMAR_DEBUG
             std::cerr << "map(" << device << "," << count << "," << offset << "," << modify << "): use host memory map\n";
@@ -1283,7 +1283,7 @@ public:
                 temp = 0;
             }
         }
-      
+
         if(bit_index != 0) {
             cu_arrays.push_back(temp);
         }
@@ -1336,7 +1336,7 @@ public:
         }
     }
 
-    // enqueue an async copy command 
+    // enqueue an async copy command
     std::shared_ptr<KalmarAsyncOp> EnqueueAsyncCopy(const void *src, void *dst, size_t size_bytes) override {
         hsa_status_t status = HSA_STATUS_SUCCESS;
 
@@ -1439,7 +1439,7 @@ public:
     class StagingBuffer      *staging_buffer[2]; // one buffer for each direction.
 
 public:
- 
+
     uint32_t getWorkgroupMaxSize() {
         return workgroup_max_size;
     }
@@ -1453,16 +1453,16 @@ public:
     // we save the pools we care about into this structure.
     static hsa_status_t get_memory_pools(hsa_amd_memory_pool_t region, void* data)
     {
-    
+
         hsa_amd_segment_t segment;
         hsa_amd_memory_pool_get_info(region, HSA_AMD_MEMORY_POOL_INFO_SEGMENT, &segment);
-    
+
         if (segment == HSA_AMD_SEGMENT_GLOBAL) {
           size_t size = 0;
           hsa_amd_memory_pool_get_info(region, HSA_AMD_MEMORY_POOL_INFO_SIZE, &size);
 #if KALMAR_DEBUG
           std::cerr << "found memory pool of GPU local memory, size(MB) = " << (size/(1024*1024)) << std::endl;
-#endif 
+#endif
           pool_iterator *ri = (pool_iterator*) (data);
           ri->_local_memory_pool = region;
           ri->_found_local_memory_pool = true;
@@ -1470,7 +1470,7 @@ public:
 
           return HSA_STATUS_INFO_BREAK;
         }
-    
+
         return HSA_STATUS_SUCCESS;
     }
 
@@ -1496,15 +1496,15 @@ public:
         if ((flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT) && (!ri->_found_kernarg_memory_pool)) {
 #if KALMAR_DEBUG
             std::cerr << "found kernarg memory pool on host memory, size(MB) = " << size << std::endl;
-#endif 
+#endif
             ri->_kernarg_memory_pool = region;
             ri->_found_kernarg_memory_pool = true;
         }
-        
+
         if ((flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED) && (!ri->_found_finegrained_system_memory_pool)) {
 #if KALMAR_DEBUG
             std::cerr << "found fine grained memory pool on host memory, size(MB) = " << size << std::endl;
-#endif 
+#endif
             ri->_finegrained_system_memory_pool = region;
             ri->_found_finegrained_system_memory_pool = true;
         }
@@ -1512,12 +1512,12 @@ public:
         if ((flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_COARSE_GRAINED) && (!ri->_found_coarsegrained_system_memory_pool)) {
 #if KALMAR_DEBUG
             std::cerr << "found coarse-grain system memory pool=" << region.handle << " size(MB) = " << size << std::endl;
-#endif 
+#endif
             ri->_coarsegrained_system_memory_pool = region;
             ri->_found_coarsegrained_system_memory_pool = true;
         }
         return HSA_STATUS_SUCCESS;
-    } 
+    }
 
     static hsa_status_t find_group_memory(hsa_amd_memory_pool_t region, void* data) {
       hsa_amd_segment_t segment;
@@ -1579,12 +1579,12 @@ public:
             STATUS_CHECK(status, __LINE__);
             status = hsa_agent_get_info(agent, HSA_AGENT_INFO_NODE, &node);
             STATUS_CHECK(status, __LINE__);
-    
+
             wchar_t path_wchar[128] {0};
             wchar_t description_wchar[128] {0};
             swprintf(path_wchar, 128, L"%s%u", name, node);
             swprintf(description_wchar, 128, L"AMD HSA Agent %s%u", name, node);
-    
+
             path = std::wstring(path_wchar);
             description = std::wstring(description_wchar);
 
@@ -1626,7 +1626,7 @@ public:
                 }
             }
         }
-        useCoarseGrainedRegion = result; 
+        useCoarseGrainedRegion = result;
 
         /// pre-allocate a pool of kernarg buffers in case:
         /// - kernarg region is available
@@ -1660,7 +1660,7 @@ public:
         ri._am_host_memory_pool = (ri._found_coarsegrained_system_memory_pool)
                                       ? ri._coarsegrained_system_memory_pool
                                       : ri._finegrained_system_memory_pool;
-        
+
         /// Query the maximum number of work-items in a workgroup
         status = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_SIZE, &workgroup_max_size);
         STATUS_CHECK(status, __LINE__);
@@ -1775,13 +1775,13 @@ public:
 #endif
             hsa_status_t status = HSA_STATUS_SUCCESS;
             auto am_region = getHSAAMRegion();
-    
+
             status = hsa_amd_memory_pool_allocate(am_region, count, 0, &data);
             STATUS_CHECK(status, __LINE__);
 
             hsa_agent_t* agent = static_cast<hsa_agent_t*>(getHSAAgent());
             status = hsa_amd_agents_allow_access(1, agent, NULL, data);
-            STATUS_CHECK(status, __LINE__); 
+            STATUS_CHECK(status, __LINE__);
         } else {
 #if KALMAR_DEBUG
             std::cerr << "create(" << count << "," << key << "): use host memory allocator\n";
@@ -1795,7 +1795,7 @@ public:
 
         return data;
     }
-    
+
     void release(void *ptr, struct rw_info* key ) override {
         hsa_status_t status = HSA_STATUS_SUCCESS;
         if (!is_unified()) {
@@ -1990,7 +1990,7 @@ public:
         return ri._am_memory_pool;
     }
 
-    bool hasHSAKernargRegion() const { 
+    bool hasHSAKernargRegion() const {
       return ri._found_kernarg_memory_pool;
     }
 
@@ -2018,11 +2018,11 @@ public:
       hsa_status_t status = hsa_amd_agent_memory_pool_get_info(*agent, self_pool, HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access);
 
       if(HSA_STATUS_SUCCESS != status)
-          return false; 
-    
+          return false;
+
       if ((HSA_AMD_MEMORY_POOL_ACCESS_ALLOWED_BY_DEFAULT == access) || (HSA_AMD_MEMORY_POOL_ACCESS_DISALLOWED_BY_DEFAULT == access))
           return true;
-  
+
       return false;
     }
 
@@ -2034,7 +2034,7 @@ public:
         if(status == HSA_STATUS_SUCCESS)
             return compute_unit_count;
         else
-            return 0; 
+            return 0;
     }
 
     void releaseKernargBuffer(void* kernargBuffer, int kernargBufferIndex) {
@@ -2066,54 +2066,54 @@ public:
             if ( (KERNARG_POOL_SIZE > 0) && (size <= KERNARG_BUFFER_SIZE) ) {
                 kernargPoolMutex.lock();
                 cursor = kernargCursor;
-        
+
                 if (kernargPoolFlag[cursor] == false) {
                     // the cursor is valid, use it
                     ret = kernargPool[cursor];
-        
+
                     // set the kernarg buffer as used
                     kernargPoolFlag[cursor] = true;
-        
+
                     // simply move the cursor to the next index
                     ++kernargCursor;
-                    if (kernargCursor == kernargPool.size()) kernargCursor = 0;          
+                    if (kernargCursor == kernargPool.size()) kernargCursor = 0;
                 } else {
                     // the cursor is not valid, sequentially find the next available slot
                     bool found = false;
-        
+
                     int startingCursor = cursor;
                     do {
                         ++cursor;
                         if (cursor == kernargPool.size()) cursor = 0;
-        
+
                         if (kernargPoolFlag[cursor] == false) {
                             // the cursor is valid, use it
                             ret = kernargPool[cursor];
-        
+
                             // set the kernarg buffer as used
                             kernargPoolFlag[cursor] = true;
-        
+
                             // simply move the cursor to the next index
                             kernargCursor = cursor + 1;
                             if (kernargCursor == kernargPool.size()) kernargCursor = 0;
-        
+
                             // break from the loop
                             found = true;
                             break;
                         }
                     } while(cursor != startingCursor); // ensure we at most scan the vector once
-        
+
                     if (found == false) {
                         hsa_status_t status = HSA_STATUS_SUCCESS;
 
                         // increase kernarg pool on demand by KERNARG_POOL_SIZE
                         hsa_amd_memory_pool_t kernarg_region = getHSAKernargRegion();
-                       
+
                         // keep track of the size of kernarg pool before increasing it
                         int oldKernargPoolSize = kernargPool.size();
                         int oldKernargPoolFlagSize = kernargPoolFlag.size();
                         assert(oldKernargPoolSize == oldKernargPoolFlagSize);
-            
+
                         // pre-allocate kernarg buffers
                         void* kernargMemory = nullptr;
                         for (int i = 0; i < KERNARG_POOL_SIZE; ++i) {
@@ -2122,7 +2122,7 @@ public:
 
                             status = hsa_amd_agents_allow_access(1, &agent, NULL, kernargMemory);
                             STATUS_CHECK(status, __LINE__);
-            
+
                             kernargPool.push_back(kernargMemory);
                             kernargPoolFlag.push_back(false);
                         }
@@ -2147,9 +2147,9 @@ public:
 
                         found = true;
                     }
-        
+
                 }
-        
+
                 kernargPoolMutex.unlock();
             } else {
                 // allocate new buffers in case:
@@ -2158,13 +2158,13 @@ public:
 
                 hsa_status_t status = HSA_STATUS_SUCCESS;
                 hsa_amd_memory_pool_t kernarg_region = getHSAKernargRegion();
-    
+
                 status = hsa_amd_memory_pool_allocate(kernarg_region, size, 0, &ret);
                 STATUS_CHECK(status, __LINE__);
 
                 status = hsa_amd_agents_allow_access(1, &agent, NULL, ret);
                 STATUS_CHECK(status, __LINE__);
-    
+
                 // set cursor value as -1 to notice the buffer would be deallocated
                 // instead of recycled back into the pool
                 cursor = -1;
@@ -2201,7 +2201,7 @@ public:
                                                             HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ADDRESS,
                                                             &symbol_address);
                     STATUS_CHECK(status, __LINE__);
-        
+
                     symbol_ptr = (unsigned long*)symbol_address;
                     break;
                 }
@@ -2252,7 +2252,7 @@ public:
         }
     }
 
-    void* getHSAAgent() override; 
+    void* getHSAAgent() override;
 
     hcAgentProfile getProfile() override { return profile; }
 
@@ -2385,14 +2385,14 @@ private:
 
     HSAKernel* CreateKernelImpl(const char *hsailBuffer, int hsailSize, const char *entryName) {
         hsa_status_t status;
-  
+
         std::string index = kernel_checksum((size_t)hsailSize, (void*)hsailBuffer);
 
         // finalize HSA program if we haven't done so
         if (executables.find(index) == executables.end()) {
             BuildProgramImpl(hsailBuffer, hsailSize);
         }
-  
+
         // fetch HSAExecutable*
         HSAExecutable* executable = executables[index];
 
@@ -2400,12 +2400,12 @@ private:
         hsa_executable_symbol_t kernelSymbol;
         status = hsa_executable_get_symbol(executable->hsaExecutable, NULL, entryName, agent, 0, &kernelSymbol);
         STATUS_CHECK(status, __LINE__);
-  
+
         // Get code handle.
         uint64_t kernelCodeHandle;
         status = hsa_executable_symbol_get_info(kernelSymbol, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT, &kernelCodeHandle);
         STATUS_CHECK(status, __LINE__);
-  
+
         return new HSAKernel(executable, kernelSymbol, kernelCodeHandle);
     }
 
@@ -2422,11 +2422,11 @@ class HSAContext final : public KalmarContext
     When using memory pool api, each agent will only report memory pool
     which is attached with the agent itself physically, eg, GPU won't
     report system memory pool anymore. In order to change as little
-    as possbile, will choose the first CPU as default host and hack the 
-    HSADevice class to assign it the host memory pool to GPU agent. 
+    as possbile, will choose the first CPU as default host and hack the
+    HSADevice class to assign it the host memory pool to GPU agent.
     */
     hsa_agent_t host;
-    
+
     /// Determines if the given agent is of type HSA_DEVICE_TYPE_GPU
     /// If so, cache to input data
     static hsa_status_t find_gpu(hsa_agent_t agent, void *data) {
@@ -2521,7 +2521,9 @@ public:
         signalPoolMutex.lock();
 
         // pre-allocate signals
-        printf ("precallocate %d signals\n", SIGNAL_POOL_SIZE);
+#if KALMAR_DEBUG_ASYNC_COPY
+        std::cerr << " precallocate " << SIGNAL_POOL_SIZE << " signals\n";
+#endif
         for (int i = 0; i < SIGNAL_POOL_SIZE; ++i) {
           hsa_signal_t signal;
           status = hsa_signal_create(1, 0, NULL, &signal);
@@ -2641,7 +2643,7 @@ public:
                 if (signalCursor == signalPool.size()) signalCursor = 0;
 
                 found = true;
-            } 
+            }
         }
 
         signalPoolMutex.unlock();
@@ -2865,7 +2867,7 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
                                             &group_segment_size);
     STATUS_CHECK_Q(status, commandQueue, __LINE__);
 
-#if KALMAR_DEBUG 
+#if KALMAR_DEBUG
     std::cerr << "static group segment size: " << group_segment_size << "\n";
     std::cerr << "dynamic group segment size: " << this->dynamicGroupSize << "\n";
 #endif
@@ -2891,7 +2893,7 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
     }
     ((hsa_kernel_dispatch_packet_t*)(commandQueue->base_address))[index & queueMask] = aql;
     hsa_queue_store_write_index_relaxed(commandQueue, index + 1);
-  
+
 #if KALMAR_DEBUG
     std::cerr << "ring door bell to dispatch kernel\n";
 #endif
@@ -3180,7 +3182,7 @@ HSABarrier::dispose() {
     // Release referecne to our dependent ops:
     for (int i=0; i<depCount; i++) {
         depAsyncOps[i] = nullptr;
-    } 
+    }
 
     if (future != nullptr) {
       delete future;
@@ -3327,14 +3329,14 @@ HSACopy::enqueueAsyncCopy() {
         if (depAsyncOp) {
             depSignalCnt = 1;
             depSignal = * (static_cast <hsa_signal_t*> (depAsyncOp->getNativeHandle()));
-#if KALMAR_DEBUG_ASYNC_COPY 
-            std::cerr << "  asyncCopy sent with dependency on op#" << depAsyncOp->getSeqNum() << " depSignal=" << depSignal.handle << "\n"; 
+#if KALMAR_DEBUG_ASYNC_COPY
+            std::cerr << "  asyncCopy sent with dependency on op#" << depAsyncOp->getSeqNum() << " depSignal=" << depSignal.handle << "\n";
 #endif
         }
 
-#if KALMAR_DEBUG_ASYNC_COPY 
+#if KALMAR_DEBUG_ASYNC_COPY
             hsa_signal_value_t v = hsa_signal_load_acquire(signal);
-            std::cerr << "  hsa_amd_memory_async_copy launched " << " completionSignal=" << signal.handle 
+            std::cerr << "  hsa_amd_memory_async_copy launched " << " completionSignal=" << signal.handle
                       << "  InitSignalValue=" << v << " depSignalCnt=" << depSignalCnt << "\n";
 #endif
 
