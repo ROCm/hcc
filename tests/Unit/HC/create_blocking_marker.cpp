@@ -1,5 +1,5 @@
 // XFAIL: Linux
-// RUN: %hc %s -I/opt/hsa/include -L/opt/hsa/lib -lhsa-runtime64 -o %t.out && %t.out
+// RUN: %hc %s -I/opt/rocm/hsa/include -L/opt/rocm/hsa/lib -lhsa-runtime64 -o %t.out && %t.out
 
 #include <hc.hpp>
 
@@ -42,7 +42,7 @@ bool test() {
   hc::completion_future fut = hc::parallel_for_each(
     e,
     [=](hc::index<1> idx) __HC__ {
-      for (int i = 0; i < LOOP_COUNT; ++i) 
+      for (int i = 0; i < LOOP_COUNT; ++i)
         table_c(idx) = table_a(idx) + table_b(idx);
   });
 
