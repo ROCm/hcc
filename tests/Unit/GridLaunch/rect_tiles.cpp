@@ -49,7 +49,7 @@ int main()
   lp.cf->wait();
 
   static hc::accelerator_view av = acc.get_default_view();
-  av.copy(a, a_d, width*height*sizeof(int));
+  av.copy(a_d, a, width*height*sizeof(int));
 
   int ret = 0;
   for(int i = 0; i < width*height; ++i)

@@ -42,9 +42,8 @@ int main(void) {
   Foo* data1 = (Foo*)malloc(SIZE*sizeof(Foo));
   Bar* data2 = (Bar*)malloc(SIZE*sizeof(Bar));
   constStructconst* data3 = (constStructconst*)malloc(SIZE*sizeof(constStructconst));
-  for(int i = 0; i < SIZE; ++i) {
+  for(int i = 0; i < SIZE; ++i) 
     data3[i].x = i;
-  }
 
   auto acc = hc::accelerator();
   Foo* data1_d = (Foo*)hc::am_alloc(SIZE*sizeof(Foo), acc, 0);
@@ -67,6 +66,13 @@ int main(void) {
 
   av.copy(data1_d, data1, SIZE*sizeof(Foo));
   av.copy(data2_d, data2, SIZE*sizeof(Bar));
+
+  bool ret = 0;
+  for (int i = 0; i < SIZE; i++)
+  {
+    if(data1[i].x != (data2[i].x - data3[i].x))
+      ret = 1;
+  }
 
   hc::am_free(data2_d);
   hc::am_free(data3_d);

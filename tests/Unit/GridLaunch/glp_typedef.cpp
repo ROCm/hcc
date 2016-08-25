@@ -53,8 +53,8 @@ int main() {
   lp.cf->wait();
 
   static hc::accelerator_view av = acc.get_default_view();
-  av.copy(data1, data1_d, sz*sizeof(int));
-  av.copy(data2, data2_d, sz*sizeof(int));
+  av.copy(data1_d, data1, sz*sizeof(int));
+  av.copy(data2_d, data2, sz*sizeof(int));
 
   bool ret = true;
 

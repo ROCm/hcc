@@ -67,7 +67,7 @@ static inline PrintfPacket* createPrintfBuffer(hc::accelerator& a, const unsigne
     header[1].data.ui = 2;
 
     // initialize the accelerator_view object
-    static hc::accelerator_view av = a->get_default_view();
+    static hc::accelerator_view av = a.get_default_view();
     av.copy(header, printfBuffer, sizeof(PrintfPacket) * 2);
   }
   return printfBuffer;
