@@ -66,7 +66,7 @@ Assume there is a build directory for upstream LLVM / LLD. If there is not, foll
 - `git checkout master`
 - In case you built ToT HCC before, remove patches from ToT HCC by:
   - `git checkout -- .`
-  - `rm lib/Analysis/TileUniform lib/Transforms/CpuRename lib/Transforms/EraseNonkernel lib/Transforms/HC lib/Transforms/Promote lib/Transforms/RemoveSpecialSection/`
+  - `rm lib/Analysis/TileUniform lib/Transforms/CpuRename lib/Transforms/EraseNonkernel lib/Transforms/HC lib/Transforms/Promote lib/Transforms/RemoveSpecialSection`
 - `git pull`
 - `git reset --hard <commit # of upstream LLVM>`
 
@@ -110,6 +110,7 @@ Resolve any merge conflicts encountered here. Commit to clang_tot_upgrade branch
 Assume a ToT HCC build directory is there. If there is not, follow Appendix B to configure one.
 
 - change to ToT HCC build directory
+- re-run CMake according to Appendix B
 - `make -j40` , recommended job number is the number of your logical processor times 2.
 
 Fix any compilation failures if there is any. For failures introduced by changes
