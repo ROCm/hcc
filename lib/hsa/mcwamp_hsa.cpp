@@ -561,6 +561,7 @@ public:
     hsa_status_t pushByteArg(char b) { return pushArgPrivate(b); }
     hsa_status_t pushLongArg(long j) { return pushArgPrivate(j); }
     hsa_status_t pushDoubleArg(double d) { return pushArgPrivate(d); }
+    hsa_status_t pushShortArg(short s) { return pushArgPrivate(s); }
     hsa_status_t pushPointerArg(void *addr) { return pushArgPrivate(addr); }
 
     hsa_status_t clearArgs() {
@@ -3551,6 +3552,9 @@ extern "C" void PushArgImpl(void *ker, int idx, size_t sz, const void *v) {
   switch (sz) {
     case sizeof(double):
       dispatch->pushDoubleArg(*reinterpret_cast<double*>(val));
+      break;
+    case sizeof(short):
+      dispatch->pushShortArg(*reinterpret_cast<short*>(val));
       break;
     case sizeof(int):
       dispatch->pushIntArg(*reinterpret_cast<int*>(val));
