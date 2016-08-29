@@ -8,6 +8,7 @@
 #include <cstring>
 #include <exception>
 #include <future>
+#include <initializer_list>
 #include <map>
 #include <memory>
 #include <set>

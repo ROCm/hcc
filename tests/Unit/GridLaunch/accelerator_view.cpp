@@ -11,7 +11,8 @@
 const int SIZE = GRID_SIZE*TILE_SIZE;
 
 __attribute__((hc_grid_launch)) void kernel1(grid_launch_parm lp, int *x) {
-  int i = hc_get_workitem_id(0) + hc_get_group_id(0)*lp.group_dim.x;
+  //int i = hc_get_workitem_id(0) + hc_get_group_id(0)*lp.group_dim.x;
+  int i = amp_get_global_id(0);
 
 
   x[i] = i;
@@ -20,6 +21,9 @@ __attribute__((hc_grid_launch)) void kernel1(grid_launch_parm lp, int *x) {
 int main(void) {
 
   int *data1 = (int *)malloc(SIZE*sizeof(int));
+  for (size_t i=0; i<SIZE; i++) {
+      data1[i] = -42;
+  }
 
   auto acc = hc::accelerator();
   int* data1_d = (int*)hc::am_alloc(SIZE*sizeof(int), acc, 0);
@@ -37,18 +41,31 @@ int main(void) {
   kernel1(lp, data1_d);
   lp.cf->wait();
 
-  hc::am_copy(data1, data1_d, SIZE*sizeof(int));
 
-  bool ret = 0;
+  hc::accelerator_view myav = acc.get_default_view(); 
+
+  myav.wait();
+
+#ifdef OLD_AM_COPY
+  hc::am_copy(data1, data1_d, SIZE*sizeof(int));
+#else
+  myav.copy(data1_d, data1, SIZE*sizeof(int));
+#endif
+
+  myav.wait();
+
+  int mismatchCnt = 0;
   for(int i = 0; i < SIZE; ++i) {
     if(data1[i] != i) {
-      ret = 1;
-      break;
+        printf ("mismatch [%d]: data1=%d, expected:%d\n", i, data1[i], i);
+        if (++mismatchCnt > 10) {
+          break;
+        }
     }
   }
 
   hc::am_free(data1_d);
   free(data1);
 
-  return ret;
+  return mismatchCnt;
 }
