@@ -122,7 +122,7 @@ bool ControlDependences::runOnFunction(Function &F) {
   PDT->runOnFunction(F);
 
   for (Function::iterator I = F.begin(), E = F.end(); I != E; ++I) {
-    for (succ_iterator SI = succ_begin(I.operator pointer()), SE = succ_end(I.operator pointer()); SI != SE; ++SI) {
+    for (succ_iterator SI = succ_begin(I.operator->()), SE = succ_end(I.operator->()); SI != SE; ++SI) {
       BasicBlock *BB = dyn_cast<BasicBlock>(I);
       BasicBlock *SBB = *SI;
 

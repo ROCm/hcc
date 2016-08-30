@@ -41,7 +41,6 @@ include (SetupEraseNonkernel)
 include (SetupCpuRename)
 include (SetupTileUniform)
 include (SetupHC)
-include (SetupUtils)
 include (MCWAMP)
 include (SetupRemoveSpecialSection)
 include (PatchLLVM)
@@ -53,7 +52,6 @@ setup_EraseNonkernel(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms EraseNonkerne
 setup_CpuRename(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms CpuRename)
 setup_TileUniform(${PROJECT_SOURCE_DIR}/compiler/lib/Analysis TileUniform)
 setup_HC(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms HC)
-setup_Utils(utils)
 setup_RemoveSpecialSection(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms RemoveSpecialSection)
 patch_LLVM(utils)
 
@@ -159,7 +157,7 @@ SET(KALMAR_VERSION_MINOR "10")
 # add xargs to remove strange trailing newline character
 execute_process(COMMAND git show -s --format=@%ct
                 COMMAND xargs
-                COMMAND date -f - --utc +%y%W%w
+                COMMAND date -f - --utc +%y%U%w
                 WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
                 OUTPUT_VARIABLE KALMAR_VERSION_PATCH
                 OUTPUT_STRIP_TRAILING_WHITESPACE)

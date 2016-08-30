@@ -13,8 +13,15 @@ KMDUMPBRIG="${KMDUMPBRIG:=0}"
 # dump the isa
 KMDUMPISA="${KMDUMPISA:=0}"
 
-# pass extra options to llc
-KMLLOPT="${KMLLOPT:=""}"
+# pass extra options to OPT
+# KMOPTOPT can be used to pass last-minute options to opt in the backend
+# if not set, then "-O3" would be passed to opt
+KMOPTOPT="${KMOPTOPT:="-O3"}"
+
+# pass extra options to LLC
+# KMOPTLLC can be used to pass last-minute options to llc in the backend
+# if not set, then "-O2" will be passed to llc
+KMOPTLLC="${KMOPTLLC:="-O2"}"
 
 if [ $KMDBSCRIPT == "1" ]; then
   set -x
@@ -105,10 +112,9 @@ done
 #  -disable-simplify-libcalls:  prevents transforming loops into library calls such as memset, memcopy on GPU 
 
 if [ $KM_USE_AMDGPU ]; then
-  # KMOPTOPT can be used to pass last-minute options to opt in LC backend
-  $HLC_OPT $KMOPTOPT -O3 -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -disable-simplify-libcalls -verify $1.linked.bc -o $1.opt.bc
+  $HLC_OPT $KMOPTOPT -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -disable-simplify-libcalls -verify $1.linked.bc -o $1.opt.bc
 else
-  $HLC_OPT -O3 -disable-simplify-libcalls -verify $1.linked.bc -o $1.opt.bc
+  $HLC_OPT $KMOPTOPT -disable-simplify-libcalls -verify $1.linked.bc -o $1.opt.bc
 fi
 
 # error handling for HSAIL opt
@@ -122,14 +128,13 @@ if [ $KMDUMPLLVM == "1" ]; then
 fi
 
 if [ $KM_USE_AMDGPU  ]; then
-  # KMOPTLLC can be used to pass last-minute options to LLC in LC backend
-  $HLC_LLC $KMOPTLLC -O2 -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -filetype=obj -o $1.hsail $1.opt.bc
+  $HLC_LLC $KMOPTLLC -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -filetype=obj -o $1.hsail $1.opt.bc
   if [ $KMDUMPISA == "1" ]; then
-    $HLC_LLC $KMOPTLLC -O2 -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -filetype=asm -o $1.isa $1.opt.bc
+    $HLC_LLC $KMOPTLLC -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -filetype=asm -o $1.isa $1.opt.bc
     mv $1.isa ./dump.isa
   fi
 else
-  $HLC_LLC -O2 -march=hsail64 -filetype=asm -o $1.hsail $1.opt.bc
+  $HLC_LLC $KMOPTLLC -march=hsail64 -filetype=asm -o $1.hsail $1.opt.bc
 fi
 
 # error handling for HSAIL llc
