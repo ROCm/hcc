@@ -114,7 +114,11 @@ if [ "$3" == "--hsa" ]; then
       fi
     fi
 
-    sed "s/call /call spir_func /g" < $2.promote.ll.orig | sed "s/addrspacecast /bitcast /g" > $2.promote.ll
+    if [ $KM_USE_AMDGPU ] ; then
+      sed "s/addrspacecast /bitcast /g" < $2.promote.ll.orig > $2.promote.ll
+    else
+      sed "s/call /call spir_func /g" < $2.promote.ll.orig | sed "s/addrspacecast /bitcast /g" > $2.promote.ll
+    fi
 
     if [ $KMDUMPLLVM == "1" ]; then
       cp $2.promote.ll ./dump.promote.ll
@@ -125,8 +129,11 @@ if [ "$3" == "--hsa" ]; then
     if [ $VERBOSE == 1 ]; then
       echo "Generating HSA Brig kernel"
     fi
-    #$LINK $MATHLIB/hsa_math.bc $2.promote.bc -o $2 2>/dev/null
-    $LINK $2.promote.bc $MATHLIB/hsa_math.bc -o $2 2>/dev/null
+    if [ $KM_USE_AMDGPU ] ; then
+      $LINK $2.promote.bc -o $2 2>/dev/null
+    else
+      $LINK $2.promote.bc $MATHLIB/hsa_math.bc -o $2 2>/dev/null
+    fi
 
     if [ $KMDUMPLLVM == "1" ]; then
       cp $2 ./dump.hsa_math_linked.bc
