@@ -57,35 +57,8 @@ fi
 
 HSA_USE_AMDGPU_BACKEND=@HSA_USE_AMDGPU_BACKEND@
 
-if [ $HSA_USE_AMDGPU_BACKEND == "ON" ]; then
-  LLD=$HSA_LLVM_BIN_DIR/ld.lld
-  KM_USE_AMDGPU="${KM_USE_AMDGPU:=1}"
-fi
-
-if [ $KMDUMPLLVM == "1" ]; then
-  cp $1 ./dump.fe.bc
-fi
-
-if [ $KM_USE_AMDGPU ]; then
-  HCC_BC_LIBS="$ROCM_LIB/hc.bc $ROCM_LIB/opencl.bc $ROCM_LIB/ocml.bc $ROCM_LIB/ockl.bc $ROCM_LIB/irif.bc $ROCM_LIB/oclc_isa_version_803.bc $ROCM_LIB/oclc_finite_only_off.bc $ROCM_LIB/oclc_daz_opt_off.bc $ROCM_LIB/oclc_correctly_rounded_sqrt_on.bc $ROCM_LIB/oclc_unsafe_math_off.bc"
-else
-  HCC_BC_LIBS="$NEWLIB/builtins-hsail.opt.bc $NEWLIB/hsail-amdgpu-wrapper.ll"
-fi
-
-$HLC_LLVM_LINK -suppress-warnings -o $1.linked.bc $1 $HCC_BC_LIBS
-
-# error handling for HSAIL llvm-link
-RETVAL=$?
-if [ $RETVAL != 0 ]; then
-  exit $RETVAL
-fi
-
-if [ $KMDUMPLLVM == "1" ]; then
-  cp $1.linked.bc ./dump.linked.bc
-fi
-
 ################
-# AMDGPU target 
+# AMDGPU target
 ################
 
 AMDGPU_TARGET=@AMDGPU_TARGET@
@@ -103,6 +76,45 @@ do
     ;;
   esac
 done
+
+if [ $HSA_USE_AMDGPU_BACKEND == "ON" ]; then
+  LLD=$HSA_LLVM_BIN_DIR/ld.lld
+  KM_USE_AMDGPU="${KM_USE_AMDGPU:=1}"
+fi
+
+if [ $KMDUMPLLVM == "1" ]; then
+  cp $1 ./dump.fe.bc
+fi
+
+if [ $KM_USE_AMDGPU ]; then
+  # select appropriate ROCm-Device-Libs per AMDGPU_TARGET
+  if [ $AMDGPU_TARGET == "fiji" ]; then
+    OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_803.bc"
+  elif [ $AMDGPU_TARGET == "hawaii" ]; then
+    OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_701.bc"
+  elif [ $AMDGPU_TARGET == "kaveri" ]; then
+    OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_700.bc"
+  elif [ $AMDGPU_TARGET == "carrizo" ]; then
+    OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_801.bc"
+  elif [ $AMDGPU_TARGET == "tonga" ]; then
+    OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_800.bc"
+  fi
+  HCC_BC_LIBS="$ROCM_LIB/hc.bc $ROCM_LIB/opencl.bc $ROCM_LIB/ocml.bc $ROCM_LIB/ockl.bc $ROCM_LIB/irif.bc $OCLC_ISA_VERSION_LIB $ROCM_LIB/oclc_finite_only_off.bc $ROCM_LIB/oclc_daz_opt_off.bc $ROCM_LIB/oclc_correctly_rounded_sqrt_on.bc $ROCM_LIB/oclc_unsafe_math_off.bc"
+else
+  HCC_BC_LIBS="$NEWLIB/builtins-hsail.opt.bc $NEWLIB/hsail-amdgpu-wrapper.ll"
+fi
+
+$HLC_LLVM_LINK -suppress-warnings -o $1.linked.bc $1 $HCC_BC_LIBS
+
+# error handling for HSAIL llvm-link
+RETVAL=$?
+if [ $RETVAL != 0 ]; then
+  exit $RETVAL
+fi
+
+if [ $KMDUMPLLVM == "1" ]; then
+  cp $1.linked.bc ./dump.linked.bc
+fi
 
 # Optimization notes:
 #  -disable-simplify-libcalls:  prevents transforming loops into library calls such as memset, memcopy on GPU 
