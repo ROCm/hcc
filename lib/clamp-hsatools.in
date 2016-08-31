@@ -74,9 +74,7 @@ else
   HCC_BC_LIBS="$NEWLIB/builtins-hsail.opt.bc $NEWLIB/hsail-amdgpu-wrapper.ll"
 fi
 
-set -x
 $HLC_LLVM_LINK -suppress-warnings -o $1.linked.bc $1 $HCC_BC_LIBS
-set +x
 
 # error handling for HSAIL llvm-link
 RETVAL=$?
