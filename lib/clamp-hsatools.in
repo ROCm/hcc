@@ -46,9 +46,7 @@ HLC_OPT=$BINDIR/../../hlc/bin/opt
 HLC_LLC=$BINDIR/../../hlc/bin/llc
 HLC_ASM=$BINDIR/../../HSAILasm/HSAILasm
 NEWLIB=$BINDIR/../../lib
-ROCM_LIB=/opt/rocm/lib
-
-
+ROCM_LIB=@ROCM_DEVICE_LIB@
 
 HSA_LLVM_BIN_DIR="${BASH_SOURCE%/*}/../../llvm/bin"
 if [ -d "$HSA_LLVM_BIN_DIR" ]; then

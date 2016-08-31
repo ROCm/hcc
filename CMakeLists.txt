@@ -107,12 +107,18 @@ if (NOT HSA_HEADER)
   MESSAGE("HSA header not found. Use -DHSA_HEADER_DIR=<path_to_hsa.h>.")
 endif (NOT HSA_HEADER)
 
-
 find_library(HSA_LIBRARY hsa-runtime64 PATHS ${HSA_LIBRARY_DIR} ${ROCM_ROOT}/lib ${HSA_ROOT}/lib NO_DEFAULT_PATH)
 find_library(HSA_LIBRARY hsa-runtime64)
 if (NOT HSA_LIBRARY)
   MESSAGE("HSA runtime library not found. Use -DHSA_LIBRARY_DIR=<path_to_libhsa-runtime64.so>.")
 endif (NOT HSA_LIBRARY)
+
+find_path(ROCM_DEVICE_LIB ocml.bc PATHS ${ROCM_DEVICE_LIB_DIR} ${ROCM_ROOT}/lib NO_DEFAULT_PATH)
+find_path(ROCM_DEVICE_LIB ocml.bc)
+
+if (NOT ROCM_DEVICE_LIB)
+  MESSAGE("ROCM Device Lib not found. Use -DROCM_DEVICE_LIB_DIR=<path_to_ocml.bc>.")
+endif (NOT ROCM_DEVICE_LIB)
 
 # find offline finalization tool for APU
 find_program(HSA_HOF_APU hof PATHS ${HSA_HOF_DIR} ${ROCM_ROOT}/bin ${HSA_ROOT}/bin NO_DEFAULT_PATH)
@@ -141,6 +147,7 @@ MESSAGE("HSA INFORMATION:")
 MESSAGE("HSA_HEADER_DIR = ${HSA_HEADER_DIR}, actually found at: ${HSA_HEADER}")
 MESSAGE("HSA_LIBRARY_DIR = ${HSA_LIBRARY_DIR}, actually found at: ${HSA_LIBRARY}")
 MESSAGE("HSA_HOF_DIR = ${HSA_HOF_DIR}, actually found at: ${HSA_HOF}")
+MESSAGE("ROCM_DEVICE_LIB_DIR = ${ROCM_DEVICE_LIB_DIR}, actually found at: ${ROCM_DEVICE_LIB}")
 MESSAGE("")
 
 #################
@@ -192,12 +199,12 @@ MESSAGE("=============================================")
 # at least we need the followings:
 # - HSA headers (installed by HSA runtime)
 # - HSA runtime libraries (installed by HSA runtime)
-# - HSA ext64 library (installed by HSA runtime)
-if ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY))
+# - ROCm Device Library
+if ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT ROCM_DEVICE_LIB))
   set(HAS_HSA 0)
-else ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY))
+else ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT ROCM_DEVICE_LIB))
   set(HAS_HSA 1)
-endif ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY))
+endif ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT ROCM_DEVICE_LIB))
 
 # determine if HSA offline finalization is possible
 # at least we need the followings:
