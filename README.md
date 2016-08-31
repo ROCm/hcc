@@ -28,4 +28,33 @@ For more information about git submodules, please refer to [git documentation][2
 Device libraries
 ----------------
 HCC device library is a part of [ROCm-Device-Libs](https://github.com/RadeonOpenCompute/ROCm-Device-Libs).
-When compiling device code with hcc, rocm-device-libs package needs to be installed.
+When compiling device code with hcc, rocm-device-libs package needs to be
+installed.
+
+In case rocm-device-libs package is not present, you are required to build it
+from source. Once it's built, run `make install` and config ToT HCC like:
+
+```
+cmake \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DHSA_LLVM_BIN_DIR=<where ToT LLVM binary exeuctables are> \
+    -DHSA_AMDGPU_GPU_TARGET=<AMD GPU ISA version string> \
+    -DHSA_USE_AMDGPU_BACKEND=ON \
+    -DROCM_DEVICE_LIB_DIR=<where bitcodes of ROCm-Device-Libs are> \
+    <ToT HCC checkout directory>
+```
+
+An example would be:
+```
+# ToT LLVM is built at ~/llvm/build , executables are at ~/llvm/build/bin
+# Use AMD:AMDGPU:8:0:3 AMD GPU ISA
+# ROCm-Device-Libs is built at ~/ocml/build , bitcodes are at
+# ~/ocml/build/dist/lib
+cmake \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DHSA_LLVM_BIN_DIR=~/llvm/build/bin \
+    -DHSA_AMDGPU_GPU_TARGET=AMD:AMDGPU:8:0:3 \
+    -DHSA_USE_AMDGPU_BACKEND=ON \
+    -DROCM_DEVICE_LIB_DIR=~/ocml/build/dist/lib \
+    ..
+```
