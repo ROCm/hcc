@@ -120,7 +120,6 @@ static const char* getHSAErrorString(hsa_status_t s) {
 
     const char* case_string;
     switch(s) {
-        CASE_ERROR_STRING(HSA_STATUS_ERROR);
         CASE_STRING(HSA_STATUS_ERROR_INVALID_ARGUMENT);
         CASE_STRING(HSA_STATUS_ERROR_INVALID_QUEUE_CREATION);
         CASE_STRING(HSA_STATUS_ERROR_INVALID_ALLOCATION);
@@ -1523,13 +1522,6 @@ public:
         size = size/(1024*1024);
 
 #endif
-        if ((flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT) && (!ri->_found_kernarg_memory_pool)) {
-#if KALMAR_DEBUG
-            std::cerr << "found kernarg memory pool on host memory, size(MB) = " << size << std::endl;
-#endif
-            ri->_kernarg_memory_pool = region;
-            ri->_found_kernarg_memory_pool = true;
-        }
 
         if ((flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED) && (!ri->_found_finegrained_system_memory_pool)) {
 #if KALMAR_DEBUG
@@ -1546,6 +1538,31 @@ public:
             ri->_coarsegrained_system_memory_pool = region;
             ri->_found_coarsegrained_system_memory_pool = true;
         }
+
+        // choose coarse grained system for kernarg, if not available, fall back to fine grained system.
+        if (flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT) {
+          if (flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_COARSE_GRAINED) {
+#if KALMAR_DEBUG
+            std::cerr << "using coarse grained system for kernarg memory, size(MB) = " << size << std::endl;
+#endif 
+            ri->_kernarg_memory_pool = region;
+            ri->_found_kernarg_memory_pool = true;
+          }
+          else if (flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED
+                   && ri->_found_kernarg_memory_pool == false) {
+#if KALMAR_DEBUG
+            std::cerr << "using fine grained system for kernarg memory, size(MB) = " << size << std::endl;
+#endif 
+            ri->_kernarg_memory_pool = region;
+            ri->_found_kernarg_memory_pool = true;
+          }
+          else {
+#if KALMAR_DEBUG
+            std::cerr << "Unknown memory pool with kernarg_init flag set!!!, size(MB) = " << size << std::endl;
+#endif 
+          }
+        }
+
         return HSA_STATUS_SUCCESS;
     }
 
