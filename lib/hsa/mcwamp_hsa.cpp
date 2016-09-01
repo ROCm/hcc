@@ -2309,6 +2309,10 @@ private:
                                            NULL, &hsaExecutable);
             STATUS_CHECK(status, __LINE__);
 
+#if KALMAR_DEBUG
+            dumpHSAAgentInfo(agent, "Loading code object ");
+#endif
+
             // Load the code object.
             status = hsa_executable_load_code_object(hsaExecutable, agent, code_object, NULL);
             STATUS_CHECK(status, __LINE__);
