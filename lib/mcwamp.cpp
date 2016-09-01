@@ -26,9 +26,9 @@ const wchar_t accelerator::default_accelerator[] = L"default";
 
 // weak symbols of kernel codes
 
-// HSA kernel codes
-extern "C" char * hsa_kernel_source[] asm ("_binary_kernel_brig_start") __attribute__((weak));
-extern "C" char * hsa_kernel_end[] asm ("_binary_kernel_brig_end") __attribute__((weak));
+// HSACO kernel codes
+extern "C" char * hsaco_kernel_source[] asm ("_binary_kernel_hsaco_start") __attribute__((weak));
+extern "C" char * hsaco_kernel_end[] asm ("_binary_kernel_hsaco_end") __attribute__((weak));
 
 // interface of HCC runtime implementation
 struct RuntimeImpl {
@@ -128,7 +128,7 @@ private:
  */
 class HSAPlatformDetect : public PlatformDetect {
 public:
-  HSAPlatformDetect() : PlatformDetect("HSA", "libmcwamp_hsa.so",  hsa_kernel_source) {}
+  HSAPlatformDetect() : PlatformDetect("HSA", "libmcwamp_hsa.so",  hsaco_kernel_source) {}
 };
 
 
@@ -223,9 +223,9 @@ void leave_kernel() { in_kernel = false; }
 
 inline void DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, void** kernel_source) {
   *kernel_size =
-    (ptrdiff_t)((void *)hsa_kernel_end) -
-    (ptrdiff_t)((void *)hsa_kernel_source);
-  *kernel_source = hsa_kernel_source;
+    (ptrdiff_t)((void *)hsaco_kernel_end) -
+    (ptrdiff_t)((void *)hsaco_kernel_source);
+  *kernel_source = hsaco_kernel_source;
 }
 
 void BuildProgram(KalmarQueue* pQueue) {

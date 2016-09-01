@@ -34,7 +34,7 @@ LOWER_ROCM=@HAS_ROCM@
 AMDGPU_TARGET=@AMDGPU_TARGET@
 
 ################
-# Sanity check for HSAIL backend
+# Sanity check for AMDGPU backend
 ################
 
 if [ $LOWER_ROCM == 1 ]; then
@@ -434,7 +434,6 @@ LINK_OTHER_ARGS=$NEW_LINK_OTHER_ARGS
 
 fi
 
-
 # linker return value
 ret=0
 
@@ -448,16 +447,16 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
   if [ $LOWER_ROCM == 1 ]; then
     # lower to GCN ISA
     if [ $VERBOSE == 0 ]; then
-      $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.brig --hsa --amdgpu-target=$AMDGPU_TARGET
+      $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.hsaco --hsa --amdgpu-target=$AMDGPU_TARGET
     else
-      $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.brig --hsa --amdgpu-target=$AMDGPU_TARGET --verbose
+      $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.hsaco --hsa --amdgpu-target=$AMDGPU_TARGET --verbose
     fi
     ret=$?
     if [ $ret == 0 ]; then
       # build a new kernel object
       pushd . > /dev/null
       cd $TEMP_DIR
-      $CLAMP_EMBED kernel.brig kernel_hsa.o
+      $CLAMP_EMBED kernel.hsaco kernel_hsa.o
       popd > /dev/null
     fi
   fi
@@ -476,10 +475,6 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
 fi # if [ -n $LINK_KERNEL_ARGS ];
 
 # remove temp files
-if [ -e $TEMP_DIR/kernel_hof.o ]; then
-  rm $TEMP_DIR/kernel_hof.o
-fi
-
 if [ -e $TEMP_DIR/kernel_hsa.o ]; then
   rm $TEMP_DIR/kernel_hsa.o
 fi
@@ -488,12 +483,8 @@ if [ -e $TEMP_DIR/kernel_cpu.o ]; then
   rm $TEMP_DIR/kernel_cpu.o
 fi
 
-if [ -e $TEMP_DIR/kernel.isa ]; then
-  rm $TEMP_DIR/kernel.isa
-fi
-
-if [ -e $TEMP_DIR/kernel.brig ]; then
-  rm $TEMP_DIR/kernel.brig
+if [ -e $TEMP_DIR/kernel.hsaco ]; then
+  rm $TEMP_DIR/kernel.hsaco
 fi
 
 if [ -e $TEMP_DIR/kernel.bc ]; then
