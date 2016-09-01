@@ -29,7 +29,6 @@
 #include <hsa/hsa_ext_finalize.h>
 #include <hsa/hsa_ext_amd.h>
 
-#include <hcc/md5.h>
 #include <hcc/kalmar_runtime.h>
 #include <hcc/kalmar_aligned_alloc.h>
 
@@ -70,11 +69,6 @@
 // threshold to clean up finished kernel in HSAQueue.asyncOps
 // default set as 1024
 #define ASYNCOPS_VECTOR_GC_SIZE (1024)
-
-
-// whether to use MD5 as kernel indexing hash function
-// default set as 0 (use faster FNV-1a hash instead)
-#define USE_MD5_HASH (0)
 
 // cutoff size used in FNV-1a hash function
 // default set as 768, this is a heuristic value
@@ -1450,22 +1444,6 @@ public:
 
     // calculate MD5 checksum
     std::string kernel_checksum(size_t size, void* source) {
-#if USE_MD5_HASH
-        unsigned char md5_hash[16];
-        memset(md5_hash, 0, sizeof(unsigned char) * 16);
-        MD5_CTX md5ctx;
-        MD5_Init(&md5ctx);
-        MD5_Update(&md5ctx, source, size);
-        MD5_Final(md5_hash, &md5ctx);
-
-        std::stringstream checksum;
-        checksum << std::setbase(16);
-        for (int i = 0; i < 16; ++i) {
-            checksum << static_cast<unsigned int>(md5_hash[i]);
-        }
-
-        return checksum.str();
-#else
         // FNV-1a hashing, 64-bit version
         const uint64_t FNV_prime = 0x100000001b3;
         const uint64_t FNV_basis = 0xcbf29ce484222325;
@@ -1479,7 +1457,6 @@ public:
             hash *= FNV_prime;
         }
         return std::to_string(hash);
-#endif
     }
 
     void BuildProgram(void* size, void* source, bool needsCompilation = true) override {
