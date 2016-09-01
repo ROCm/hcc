@@ -1,8 +1,6 @@
 cmake_minimum_required( VERSION 2.8 )
 project (HCC)
 
-option(HSA_USE_AMDGPU_BACKEND "Use AMDGPU LLVM backend as compiler for ROCm" ON)
-
 # set default installation path
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND CMAKE_INSTALL_PREFIX MATCHES "/usr/local")
   set(CMAKE_INSTALL_PREFIX "/opt/rocm/hcc-lc" CACHE PATH "Default installation path of hcc" FORCE)
@@ -182,8 +180,6 @@ endif (HAS_ROCM EQUAL 0)
 #################
 # Detect AMDGPU backend for native codegen
 #################
-
-add_definitions(-DHSA_USE_AMDGPU_BACKEND)
 
 set(HSA_AMDGPU_GPU_TARGET "fiji" CACHE STRING "Target AMDGPU ISA version")
 

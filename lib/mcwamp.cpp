@@ -32,11 +32,7 @@ std::vector<std::string> __mcw_kernel_names;
 extern "C" char * hsa_kernel_source[] asm ("_binary_kernel_brig_start") __attribute__((weak));
 extern "C" char * hsa_kernel_end[] asm ("_binary_kernel_brig_end") __attribute__((weak));
 
-// HSA offline finalized kernel codes
-extern "C" char * hsa_offline_finalized_kernel_source[] asm ("_binary_kernel_isa_start") __attribute__((weak));
-extern "C" char * hsa_offline_finalized_kernel_end[] asm ("_binary_kernel_isa_end") __attribute__((weak));
-
-// interface of C++AMP runtime implementation
+// interface of HCC runtime implementation
 struct RuntimeImpl {
   RuntimeImpl(const char* libraryName) :
     m_ImplName(libraryName),
@@ -227,61 +223,19 @@ bool in_cpu_kernel() { return in_kernel; }
 void enter_kernel() { in_kernel = true; }
 void leave_kernel() { in_kernel = false; }
 
-void DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, void** kernel_source, bool* needs_compilation) {
-  static bool firstTime = true;
-  static bool hasFinalized = false;
-
-  char* kernel_env = nullptr;
-
-  // HSA path
-  if (firstTime) {
-    // force use HSA BRIG kernel from HCC_NOISA environment variable
-    kernel_env = getenv("HCC_NOISA");
-    if (kernel_env == nullptr) {
-      // check if offline finalized kernels are available
-      size_t kernel_finalized_size = 
-        (ptrdiff_t)((void *)hsa_offline_finalized_kernel_end) -
-        (ptrdiff_t)((void *)hsa_offline_finalized_kernel_source);
-      // check if offline finalized kernel is compatible with ISA of the HSA agent
-      if ((kernel_finalized_size > 0) &&
-          (pQueue->getDev()->IsCompatibleKernel((void*)kernel_finalized_size, hsa_offline_finalized_kernel_source))) {
-        if (mcwamp_verbose)
-          std::cout << "Use offline finalized HSA kernels\n";
-        hasFinalized = true;
-      } else {
-        if (mcwamp_verbose)
-          std::cout << "Use HSA BRIG kernel\n";
-      }
-    } else {
-      // force use BRIG kernel
-      if (mcwamp_verbose)
-        std::cout << "Use HSA BRIG kernel\n";
-    }
-    firstTime = false;
-  }
-
-  if (hasFinalized) {
-    *kernel_size =
-      (ptrdiff_t)((void *)hsa_offline_finalized_kernel_end) -
-      (ptrdiff_t)((void *)hsa_offline_finalized_kernel_source);
-    *kernel_source = hsa_offline_finalized_kernel_source;
-    *needs_compilation = false;
-  } else {
-    *kernel_size = 
-      (ptrdiff_t)((void *)hsa_kernel_end) -
-      (ptrdiff_t)((void *)hsa_kernel_source);
-    *kernel_source = hsa_kernel_source;
-    *needs_compilation = true;
-  }
+inline void DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, void** kernel_source) {
+  *kernel_size =
+    (ptrdiff_t)((void *)hsa_kernel_end) -
+    (ptrdiff_t)((void *)hsa_kernel_source);
+  *kernel_source = hsa_kernel_source;
 }
 
 void BuildProgram(KalmarQueue* pQueue) {
   size_t kernel_size = 0;
   void* kernel_source = nullptr;
-  bool needs_compilation = true;
 
-  DetermineAndGetProgram(pQueue, &kernel_size, &kernel_source, &needs_compilation);
-  pQueue->getDev()->BuildProgram((void*)kernel_size, kernel_source, needs_compilation);
+  DetermineAndGetProgram(pQueue, &kernel_size, &kernel_source);
+  pQueue->getDev()->BuildProgram((void*)kernel_size, kernel_source);
 }
 
 // used in parallel_for_each.h
@@ -290,9 +244,9 @@ void *CreateKernel(std::string s, KalmarQueue* pQueue) {
   void* kernel_source = nullptr;
   bool needs_compilation = true;
 
-  DetermineAndGetProgram(pQueue, &kernel_size, &kernel_source, &needs_compilation);
+  DetermineAndGetProgram(pQueue, &kernel_size, &kernel_source);
 
-  return pQueue->getDev()->CreateKernel(s.c_str(), (void *)kernel_size, kernel_source, needs_compilation);
+  return pQueue->getDev()->CreateKernel(s.c_str(), (void *)kernel_size, kernel_source);
 }
 
 void PushArg(void *k_, int idx, size_t sz, const void *s) {

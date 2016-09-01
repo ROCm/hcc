@@ -181,6 +181,6 @@ cmake \
     -DCMAKE_BUILD_TYPE=Release \
     -DHSA_LLVM_BIN_DIR=<upstream LLVM build directory>/bin \
     -DHSA_AMDGPU_GPU_TARGET=AMD:AMDGPU:8:0:3 \
-    -DHSA_USE_AMDGPU_BACKEND=ON \
+    -DROCM_DEVICE_LIB_DIR=<build directory of ROCm-Device-Libs>/dist/lib \
     <ToT HCC checkout directory>
 ```

@@ -249,10 +249,10 @@ public:
     virtual void release(void* ptr, struct rw_info* key) = 0;
 
     /// build program
-    virtual void BuildProgram(void* size, void* source, bool needsCompilation = true) {}
+    virtual void BuildProgram(void* size, void* source) {}
 
     /// create kernel
-    virtual void* CreateKernel(const char* fun, void* size, void* source, bool needsCompilation = true) { return nullptr; }
+    virtual void* CreateKernel(const char* fun, void* size, void* source) { return nullptr; }
 
     /// check if a given kernel is compatible with the device
     virtual bool IsCompatibleKernel(void* size, void* source) { return true; }
@@ -354,7 +354,7 @@ public:
     std::shared_ptr<KalmarQueue> createQueue(execute_order order = execute_in_order) override { return std::shared_ptr<KalmarQueue>(new CPUQueue(this)); }
     void* create(size_t count, struct rw_info* /* not used */ ) override { return kalmar_aligned_alloc(0x1000, count); }
     void release(void* ptr, struct rw_info* /* nout used */) override { kalmar_aligned_free(ptr); }
-    void* CreateKernel(const char* fun, void* size, void* source, bool needsCompilation = true) { return nullptr; }
+    void* CreateKernel(const char* fun, void* size, void* source) { return nullptr; }
 };
 
 /// KalmarContext

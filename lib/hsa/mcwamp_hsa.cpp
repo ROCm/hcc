@@ -1459,22 +1459,13 @@ public:
         return std::to_string(hash);
     }
 
-    void BuildProgram(void* size, void* source, bool needsCompilation = true) override {
+    void BuildProgram(void* size, void* source) override {
         if (executables.find(kernel_checksum((size_t)size, source)) == executables.end()) {
-            bool use_amdgpu = false;
-#ifdef HSA_USE_AMDGPU_BACKEND
-            const char *km_use_amdgpu = getenv("KM_USE_AMDGPU");
-            use_amdgpu = !km_use_amdgpu || km_use_amdgpu[0] != '0';
-#endif
             size_t kernel_size = (size_t)((void *)size);
             char *kernel_source = (char*)malloc(kernel_size+1);
             memcpy(kernel_source, source, kernel_size);
             kernel_source[kernel_size] = '\0';
-            if (needsCompilation && !use_amdgpu) {
-              BuildProgramImpl(kernel_source, kernel_size);
-            } else {
-              BuildOfflineFinalizedProgramImpl(kernel_source, kernel_size);
-            }
+            BuildOfflineFinalizedProgramImpl(kernel_source, kernel_size);
             free(kernel_source);
         }
     }
@@ -1514,31 +1505,16 @@ public:
         return isCompatible;
     }
 
-    void* CreateKernel(const char* fun, void* size, void* source, bool needsCompilation = true) override {
+    void* CreateKernel(const char* fun, void* size, void* source) override {
         std::string str(fun);
         HSAKernel *kernel = programs[str];
         if (!kernel) {
-            bool use_amdgpu = false;
-#ifdef HSA_USE_AMDGPU_BACKEND
-            const char *km_use_amdgpu = getenv("KM_USE_AMDGPU");
-            use_amdgpu = !km_use_amdgpu || km_use_amdgpu[0] != '0';
-#endif
             size_t kernel_size = (size_t)((void *)size);
             char *kernel_source = (char*)malloc(kernel_size+1);
             memcpy(kernel_source, source, kernel_size);
             kernel_source[kernel_size] = '\0';
-            std::string kname;
-            if (use_amdgpu) {
-              kname = fun;
-            } else {
-              kname = std::string("&")+fun;
-            }
-            //std::cerr << "HSADevice::CreateKernel(): Creating kernel: " << kname << "\n";
-            if (needsCompilation && !use_amdgpu) {
-              kernel = CreateKernelImpl(kernel_source, kernel_size, kname.c_str());
-            } else {
-              kernel = CreateOfflineFinalizedKernelImpl(kernel_source, kernel_size, kname.c_str());
-            }
+            //std::cerr << "HSADevice::CreateKernel(): Creating kernel: " << fun << "\n";
+            kernel = CreateOfflineFinalizedKernelImpl(kernel_source, kernel_size, fun);
             free(kernel_source);
             if (!kernel) {
                 std::cerr << "HSADevice::CreateKernel(): Unable to create kernel\n";
@@ -1928,100 +1904,6 @@ private:
 
         return new HSAKernel(executable, kernelSymbol, kernelCodeHandle);
     }
-
-    void BuildProgramImpl(const char* hsailBuffer, int hsailSize) {
-        hsa_status_t status;
-
-        std::string index = kernel_checksum((size_t)hsailSize, (void*)hsailBuffer);
-
-        // finalize HSA program if we haven't done so
-        if (executables.find(index) == executables.end()) {
-            /*
-             * Load BRIG, encapsulated in an ELF container, into a BRIG module.
-             */
-            hsa_ext_module_t hsaModule = 0;
-            hsaModule = (hsa_ext_module_t)hsailBuffer;
-
-            /*
-             * Create hsa program.
-             */
-            hsa_ext_program_t hsaProgram = {0};
-            status = hsa_ext_program_create(HSA_MACHINE_MODEL_LARGE, HSA_PROFILE_FULL,
-                                            HSA_DEFAULT_FLOAT_ROUNDING_MODE_ZERO, NULL, &hsaProgram);
-            STATUS_CHECK(status, __LINE__);
-
-            /*
-             * Add the BRIG module to hsa program.
-             */
-            status = hsa_ext_program_add_module(hsaProgram, hsaModule);
-            STATUS_CHECK(status, __LINE__);
-
-            /*
-             * Finalize the hsa program.
-             */
-            hsa_isa_t isa = {0};
-            status = hsa_agent_get_info(agent, HSA_AGENT_INFO_ISA, &isa);
-            STATUS_CHECK(status, __LINE__);
-
-            hsa_ext_control_directives_t control_directives;
-            memset(&control_directives, 0, sizeof(hsa_ext_control_directives_t));
-
-            const char* extra_finalizer_opt = getenv("HCC_FINALIZE_OPT");
-            hsa_code_object_t hsaCodeObject = {0};
-            status = hsa_ext_program_finalize(hsaProgram, isa, 0, control_directives,
-                                              extra_finalizer_opt, HSA_CODE_OBJECT_TYPE_PROGRAM, &hsaCodeObject);
-            STATUS_CHECK(status, __LINE__);
-
-            if (hsaProgram.handle != 0) {
-                status = hsa_ext_program_destroy(hsaProgram);
-                STATUS_CHECK(status, __LINE__);
-            }
-
-            // Create the executable.
-            hsa_executable_t hsaExecutable;
-            status = hsa_executable_create(HSA_PROFILE_FULL, HSA_EXECUTABLE_STATE_UNFROZEN,
-                                           NULL, &hsaExecutable);
-            STATUS_CHECK(status, __LINE__);
-
-            // Load the code object.
-            status = hsa_executable_load_code_object(hsaExecutable, agent, hsaCodeObject, NULL);
-            STATUS_CHECK(status, __LINE__);
-
-            // Freeze the executable.
-            status = hsa_executable_freeze(hsaExecutable, NULL);
-            STATUS_CHECK(status, __LINE__);
-
-            // save everything as an HSAExecutable instance
-            executables[index] = new HSAExecutable(hsaExecutable, hsaCodeObject);
-        }
-    }
-
-    HSAKernel* CreateKernelImpl(const char *hsailBuffer, int hsailSize, const char *entryName) {
-        hsa_status_t status;
-  
-        std::string index = kernel_checksum((size_t)hsailSize, (void*)hsailBuffer);
-
-        // finalize HSA program if we haven't done so
-        if (executables.find(index) == executables.end()) {
-            BuildProgramImpl(hsailBuffer, hsailSize);
-        }
-  
-        // fetch HSAExecutable*
-        HSAExecutable* executable = executables[index];
-
-        // Get symbol handle.
-        hsa_executable_symbol_t kernelSymbol;
-        status = hsa_executable_get_symbol(executable->hsaExecutable, NULL, entryName, agent, 0, &kernelSymbol);
-        STATUS_CHECK(status, __LINE__);
-  
-        // Get code handle.
-        uint64_t kernelCodeHandle;
-        status = hsa_executable_symbol_get_info(kernelSymbol, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT, &kernelCodeHandle);
-        STATUS_CHECK(status, __LINE__);
-  
-        return new HSAKernel(executable, kernelSymbol, kernelCodeHandle);
-    }
-
 };
 
 class HSAContext final : public KalmarContext

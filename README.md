@@ -39,7 +39,6 @@ cmake \
     -DCMAKE_BUILD_TYPE=Release \
     -DHSA_LLVM_BIN_DIR=<where ToT LLVM binary exeuctables are> \
     -DHSA_AMDGPU_GPU_TARGET=<AMD GPU ISA version string> \
-    -DHSA_USE_AMDGPU_BACKEND=ON \
     -DROCM_DEVICE_LIB_DIR=<where bitcodes of ROCm-Device-Libs are> \
     <ToT HCC checkout directory>
 ```
@@ -54,7 +53,6 @@ cmake \
     -DCMAKE_BUILD_TYPE=Release \
     -DHSA_LLVM_BIN_DIR=~/llvm/build/bin \
     -DHSA_AMDGPU_GPU_TARGET=AMD:AMDGPU:8:0:3 \
-    -DHSA_USE_AMDGPU_BACKEND=ON \
     -DROCM_DEVICE_LIB_DIR=~/ocml/build/dist/lib \
     ..
 ```
