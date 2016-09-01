@@ -1,3 +1,11 @@
+
+option(HCC_RUNTIME_DEBUG "Enable debug build for HCC Runtime" OFF)
+
+if (HCC_RUNTIME_DEBUG)
+  add_compile_options(-g -O0)
+  add_definitions(-DKALMAR_DEBUG=1)
+endif (HCC_RUNTIME_DEBUG)
+
 ####################
 # C++AMP config (clamp-config)
 ####################
