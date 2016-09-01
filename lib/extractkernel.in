@@ -9,9 +9,9 @@ sub usage {
   print("-h          \t\t\t\tshow this help message\n");
   print("-i <input>  \t\t\t\tinput file\n");
   print("-t <target> \t\t\t\ttarget architecture (optional)\n");
-  print("            \t\t\t\t 7:0:0 for CI (Kaveri)\n");
-  print("            \t\t\t\t 8:0:1 for subset of VI (Carizzo)\n");
-  print("            \t\t\t\t 8:0:3 for subset of VI (Fiji) (default)\n");
+  print("            \t\t\t\t AMD:AMDGPU:7:0:1 for Hawaii\n");
+  print("            \t\t\t\t AMD:AMDGPU:8:0:1 for Carizzo\n");
+  print("            \t\t\t\t AMD:AMDGPU:8:0:3 for Fiji / Polaris (default)\n");
   exit;
 }
 
@@ -29,51 +29,49 @@ $input_file = $options{i};
 (-f $input_file) || die("can't find $input_file");
 
 # Set default target architecture to Fiji
-my $target = "8:0:3";
+my $target = "AMD:AMDGPU:8:0:3";
 if (defined $options{t}) {
   $target = $options{t};
 }
 
-my $brig_start_tag = "_binary_kernel_brig_start";
-my $brig_size_tag  = "_binary_kernel_brig_size";
-my $brig_start = hex(`objdump -t $input_file | grep $brig_start_tag | awk '{print \$1}'`);
-my $brig_size  = hex(`objdump -t $input_file | grep $brig_size_tag | awk '{print \$1}'`);
+# Convert from ISA version string to ASIC name
+my $asic_target = "fiji";
+if ($target eq "AMD:AMDGPU:8:0:3") { $asic_target = "fiji"; }
+if ($target eq "AMD:AMDGPU:8:0:1") { $asic_target = "carrizo"; }
+if ($target eq "AMD:AMDGPU:7:0:1") { $asic_target = "hawaii"; }
 
-if ($brig_start == 0 || $brig_size == 0) {
-  print("can't find any hsail kernel in $input_file\n");
-}  
+my $hsaco_start_tag = "_binary_kernel_hsaco_start";
+my $hsaco_size_tag  = "_binary_kernel_hsaco_size";
+my $hsaco_start = hex(`objdump -t $input_file | grep $hsaco_start_tag | awk '{print \$1}'`);
+my $hsaco_size  = hex(`objdump -t $input_file | grep $hsaco_size_tag | awk '{print \$1}'`);
+
+if ($hsaco_start == 0 || $hsaco_size == 0) {
+  print("can't find any HSACO kernel in $input_file\n");
+}
 else {
 
-  # extract the hsail brig file from the binary
+  # extract HSACO file from the binary
   my $data_lma         = hex(`objdump -h $input_file | grep ".data.rel.ro" | awk '{print \$5}'`);
   my $data_file_offset = hex(`objdump -h $input_file | grep ".data.rel.ro" | awk '{print \$6}'`);
-  my $brig_file_offset = $data_file_offset + ($brig_start - $data_lma);
-  my $brig_file_name = "$input_file.brig";
-  system("dd if=$input_file of=$brig_file_name skip=$brig_file_offset count=$brig_size bs=1 status=none");
+  my $hsaco_file_offset = $data_file_offset + ($hsaco_start - $data_lma);
+  my $hsaco_file_name = "$input_file.hsaco";
+  system("dd if=$input_file of=$hsaco_file_name skip=$hsaco_file_offset count=$hsaco_size bs=1 status=none");
 
-  my $hsa_path = "@HSA_ROOT@";
   my $rocm_path = "@ROCM_ROOT@";
 
   # set the default to rocm path
-  my $hsafin = "$rocm_path/bin/amdhsafin";
+  my $llvm_objdump = "$rocm_path/llvm/bin/llvm-objdump";
 
-  if (defined $ENV{'HSA_HOME'}) {
-    $hsafin = "$ENV{'HSA_HOME'}/bin/amdhsafin";
-  }
-  elsif (!(-f $hsafin)) {
-    # can't find amdhsafin in rocm, let's try with hsa root
-    $hsafin = "$hsa_path/bin/amdhsafin";
+  if (defined $ENV{'HCC_HOME'}) {
+    $llvm_objdump = "$ENV{'HCC_HOME'}/llvm/bin/llvm-objdump";
   }
 
-  if (-f $hsafin) {
+  if (-f $llvm_objdump) {
 
-    # use the offline finalizer to dump out the hsail and isa
-    system("$hsafin -target=$target -brig $brig_file_name -output=$input_file.gpu.o -O2 -dump-isa -dump-hsail");
-    move("./amdhsa001.hsail","./$input_file.hsail");
-    move("./amdhsa001.isa","./$input_file.isa");
+    # use llvm-objdump to dump out GCN ISA
+    system("$llvm_objdump -disassemble -mcpu=$asic_target $hsaco_file_name > $input_file.isa");
   }
   else {
-    print("can't find HSAIL offline finalizer\n");
+    print("can't find AMDGPU disassembler\n");
   }
-  
 }
