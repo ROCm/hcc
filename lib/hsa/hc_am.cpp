@@ -248,7 +248,6 @@ am_status_t am_free(void* ptr)
 }
 
 
-
 am_status_t am_copy(void*  dst, const void*  src, size_t sizeBytes)
 {
     am_status_t am_status = AM_ERROR_MISC;
@@ -268,20 +267,19 @@ am_status_t am_memtracker_getinfo(hc::AmPointerInfo *info, const void *ptr)
 {
     auto infoI = g_amPointerTracker.find(ptr);
     if (infoI != g_amPointerTracker.end()) {
-        *info = infoI->second;
+        if (info) {
+            *info = infoI->second;
+        }
         return AM_SUCCESS;
     } else {
         return AM_ERROR_MISC;
     }
 }
 
-am_status_t am_memtracker_add(void* ptr, size_t sizeBytes, hc::accelerator &acc, bool isDeviceMem)
+
+am_status_t am_memtracker_add(void* ptr, hc::AmPointerInfo &info)
 {
-    if (isDeviceMem) {
-        g_amPointerTracker.insert(ptr, hc::AmPointerInfo(ptr/*hostPointer*/,  ptr /*devicePointer*/, sizeBytes, acc, true/*isDevice*/, false /*isAMManaged*/));
-    } else {
-        g_amPointerTracker.insert(ptr, hc::AmPointerInfo(NULL/*hostPointer*/,  ptr /*devicePointer*/, sizeBytes, acc, false/*isDevice*/, false /*isAMManaged*/));
-    }
+    g_amPointerTracker.insert(ptr, info);
 
     return AM_SUCCESS;
 }

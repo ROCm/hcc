@@ -30,10 +30,31 @@ enum execute_order
     execute_any_order
 };
 
-enum hcMemcpyKind {
-    hcMemcpyHostToDevice = 0,
-    hcMemcpyDeviceToHost = 1
+enum hcCommandKind {
+    hcCommandInvalid= -1,
+
+    hcMemcpyHostToHost = 0,
+    hcMemcpyHostToDevice = 1,
+    hcMemcpyDeviceToHost = 2,
+    hcMemcpyDeviceToDevice = 3,
+    hcCommandKernel = 4,
+    hcCommandMarker = 5,
 };
+
+static inline bool isCopyCommand(hcCommandKind k) 
+{
+    switch (k) {
+        case hcMemcpyHostToHost:
+        case hcMemcpyHostToDevice:
+        case hcMemcpyDeviceToHost:
+        case hcMemcpyDeviceToDevice:
+            return true;
+        default:
+            return false;
+    };
+};
+
+
 
 enum hcWaitMode {
     hcWaitModeBlocked = 0,
@@ -64,6 +85,8 @@ struct rw_info;
 /// This is an abstraction of all asynchronous operations within Kalmar
 class KalmarAsyncOp {
 public:
+  KalmarAsyncOp(hcCommandKind xCommandKind) : seqNum(0), commandKind(xCommandKind) {} 
+
   virtual ~KalmarAsyncOp() {} 
   virtual std::shared_future<void>* getFuture() { return nullptr; }
   virtual void* getNativeHandle() { return nullptr;}
@@ -102,6 +125,20 @@ public:
    * @param mode[in] wait mode, must be one of the value in hcWaitMode enum.
    */
   virtual void setWaitMode(hcWaitMode mode) {}
+
+  uint64_t getSeqNum () const { return seqNum;};
+  void     setSeqNum (uint64_t s) {seqNum = s;};
+
+  hcCommandKind getCommandKind() const { return commandKind; };
+  void          setCommandKind(hcCommandKind xCommandKind) { commandKind = xCommandKind; };
+
+private:
+  // Kind of this command - copy, kernel, barrier, etc:
+  hcCommandKind  commandKind;
+
+  // Sequence number of this op in the queue it is dispatched into.
+  uint64_t       seqNum;
+
 };
 
 /// KalmarQueue
@@ -139,6 +176,7 @@ public:
 
   /// copy data between two device pointers
   virtual void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset, bool blocking) = 0;
+
 
   /// map host accessible pointer from device
   virtual void* map(void* device, size_t count, size_t offset, bool modify) = 0;
@@ -179,6 +217,17 @@ public:
 
   /// enqueue marker
   virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarker() { return nullptr; }
+
+  /// enqueue marker with prior dependency
+  virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(int count, std::shared_ptr <KalmarAsyncOp> *depOps) { return nullptr; }
+  virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(std::shared_ptr <KalmarAsyncOp> depOp) { return EnqueueMarkerWithDependency(1, &depOp); };
+
+
+  /// copy src to dst asynchronously
+  virtual std::shared_ptr<KalmarAsyncOp> EnqueueAsyncCopy(const void* src, void* dst, size_t size_bytes) { return nullptr; }
+
+  // Copy src to dst synchronously
+  virtual void copy(const void *src, void *dst, size_t size_bytes) { }
 
   /// cleanup internal resource
   /// this function is usually called by dtor of the implementation classes
@@ -288,9 +337,9 @@ public:
     /// get all queues associated with this device
     virtual std::vector< std::shared_ptr<KalmarQueue> > get_all_queues() { return std::vector< std::shared_ptr<KalmarQueue> >(); }
 
-    virtual void memcpySymbol(const char* symbolName, void* hostptr, size_t count, size_t offset = 0, hcMemcpyKind kind = hcMemcpyHostToDevice) {}
+    virtual void memcpySymbol(const char* symbolName, void* hostptr, size_t count, size_t offset = 0, hcCommandKind kind = hcMemcpyHostToDevice) {}
 
-    virtual void memcpySymbol(void* symbolAddr, void* hostptr, size_t count, size_t offset = 0, hcMemcpyKind kind = hcMemcpyHostToDevice) {}
+    virtual void memcpySymbol(void* symbolAddr, void* hostptr, size_t count, size_t offset = 0, hcCommandKind kind = hcMemcpyHostToDevice) {}
 
     virtual void* getSymbolAddress(const char* symbolName) { return nullptr; }
 

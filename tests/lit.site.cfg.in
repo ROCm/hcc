@@ -16,4 +16,4 @@ lit_config.load_config(config, "@HCC_TEST_DIR@/lit.cfg")
 
 # HSA header files path
 config.substitutions.append( ('%hsa_header_path', '@ROCM_ROOT@/hsa/include') )
-config.substitutions.append( ('%hsa_library_path', '@ROCM_ROOT@/hsa/lib') )
+config.substitutions.append( ('%hsa_library_path', '@ROCM_ROOT@/lib') )

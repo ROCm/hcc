@@ -20,6 +20,7 @@ int main() {
 
   hc::extent<1> grid(64);
   hc::accelerator acc;
+  static hc::accelerator_view av = acc.get_default_view();
   char* gpu_buffer = hc::am_alloc(sizeof(Point)*grid[0], acc, 0);
 
   hc::parallel_for_each(grid,[=](hc::index<1> idx) [[hc]] {
@@ -31,7 +32,7 @@ int main() {
   }).wait();
 
   char* buffer = (char*)malloc(sizeof(Point)*grid[0]);
-  hc::am_copy(buffer, gpu_buffer, sizeof(Point)*grid[0]);
+  av.copy(gpu_buffer, buffer, sizeof(Point)*grid[0]);
   hc::am_free(gpu_buffer);
 
   int errors = 0;
