@@ -122,8 +122,8 @@ MESSAGE("")
 #################
 
 # define HCC version information
-SET(KALMAR_VERSION_MAJOR "0")
-SET(KALMAR_VERSION_MINOR "10")
+SET(KALMAR_VERSION_MAJOR "1")
+SET(KALMAR_VERSION_MINOR "0")
 
 # get date information based on UTC
 # use the last two digits of year + week number + day in the week as KALMAR_VERSION_PATCH
