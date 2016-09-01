@@ -526,37 +526,27 @@ define linkonce_odr spir_func i64 @__activelanemask_v4_b64_b1(i32 %input) #5 {
   ret i64 %a
 }
 
-define linkonce_odr spir_func i32 @amdgcn_wave_rshift_1(i32 %v) #3  {
-  %call = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %v, i32 312, i32 15, i32 15, i1 0)
+define linkonce_odr spir_func i32 @__amdgcn_wave_sr1(i32 %v, i1 %b) #3  {
+  %call = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %v, i32 312, i32 15, i32 15, i1 %b)
   ret i32 %call
 }
 
-define linkonce_odr spir_func i32 @amdgcn_wave_rshift_zero_1(i32 %v) #3  {
-  %call = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %v, i32 312, i32 15, i32 15, i1 1)
+define linkonce_odr spir_func i32 @__amdgcn_wave_sl1(i32 %v, i1 %b) #3  {
+  %call = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %v, i32 304, i32 15, i32 15, i1 %b)
   ret i32 %call
 }
 
-define linkonce_odr spir_func i32 @amdgcn_wave_rrotate_1(i32 %v) #3  {
+define linkonce_odr spir_func i32 @__amdgcn_wave_rr1(i32 %v) #3  {
   %call = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %v, i32 316, i32 15, i32 15, i1 0)
   ret i32 %call
 }
 
-define linkonce_odr spir_func i32 @amdgcn_wave_lshift_1(i32 %v) #3  {
-  %call = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %v, i32 304, i32 15, i32 15, i1 0)
-  ret i32 %call
-}
-
-define linkonce_odr spir_func i32 @amdgcn_wave_lshift_zero_1(i32 %v) #3  {
-  %call = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %v, i32 304, i32 15, i32 15, i1 1)
-  ret i32 %call
-}
-
-define linkonce_odr spir_func i32 @amdgcn_wave_lrotate_1(i32 %v) #3  {
+define linkonce_odr spir_func i32 @__amdgcn_wave_rl1(i32 %v) #3  {
   %call = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %v, i32 308, i32 15, i32 15, i1 0)
   ret i32 %call
 }
 
-define linkonce_odr spir_func i32 @amdgcn_row_rshift(i32 %data, i32 %delta) #3 {
+define linkonce_odr spir_func i32 @__amdgcn_row_rshift(i32 %data, i32 %delta) #3 {
   switch i32 %delta, label %31 [
     i32 1, label %1
     i32 2, label %3
@@ -639,13 +629,23 @@ define linkonce_odr spir_func i32 @amdgcn_row_rshift(i32 %data, i32 %delta) #3 {
   ret i32 %data
 }
 
-define linkonce_odr spir_func i32 @amdgcn_ds_permute(i32 %index, i32 %src) #3  {
+define linkonce_odr spir_func i32 @__amdgcn_ds_permute(i32 %index, i32 %src) #3  {
   %call = call i32 @llvm.amdgcn.ds.permute(i32 %index, i32 %src)
   ret i32 %call
 }
 
-define linkonce_odr spir_func i32 @amdgcn_ds_bpermute(i32 %index, i32 %src) #3  {
+define linkonce_odr spir_func i32 @__amdgcn_ds_bpermute(i32 %index, i32 %src) #3  {
   %call = call i32 @llvm.amdgcn.ds.bpermute(i32 %index, i32 %src)
+  ret i32 %call
+}
+
+define linkonce_odr spir_func i32 @__amdgcn_ds_swizzle(i32 %src, i32 %pattern) #3  {
+  %call = call i32 @llvm.amdgcn.ds.swizzle(i32 %src, i32 %pattern)
+  ret i32 %call
+}
+
+define linkonce_odr spir_func i32 @__amdgcn_move_dpp(i32 %src, i32 %dpp_ctrl, i32 %row_mask, i32 %bank_mask, i1 %bound_ctrl) #3  {
+  %call = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %src, i32 %dpp_ctrl, i32 %row_mask, i32 %bank_mask, i1 %bound_ctrl)
   ret i32 %call
 }
 
@@ -659,6 +659,7 @@ declare i32 @llvm.amdgcn.ds.permute(i32, i32) #4
 ;llvm.amdgcn.ds.bpermute <index> <src>
 declare i32 @llvm.amdgcn.ds.bpermute(i32, i32) #4
 
+declare i32 @llvm.amdgcn.ds.swizzle(i32, i32) #4
 
 ; Function Attrs: nounwind argmemonly
 define linkonce_odr spir_func i32 @__atomic_wrapinc_global(i32 addrspace(1)* nocapture %addr, i32 %val) #8 {

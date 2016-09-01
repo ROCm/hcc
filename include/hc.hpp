@@ -2407,6 +2407,7 @@ extern "C" inline uint64_t __ballot(int predicate) __HC__ {
 // utility union type
 union __u {
     int i;
+    unsigned int u;
     float f;
 };
 
@@ -2439,7 +2440,137 @@ inline int __lane_id(void) [[hc]] {
 
 #if __hcc_backend__==HCC_BACKEND_AMDGPU
 
-extern "C" int amdgcn_ds_bpermute(int index, int src) [[hc]];
+/**
+ * ds_bpermute intrinsic
+ */
+extern "C" int __amdgcn_ds_bpermute(int index, int src) [[hc]];
+inline unsigned int __amdgcn_ds_bpermute(int index, unsigned int src) [[hc]] {
+  __u tmp; tmp.u = src;
+  tmp.i = __amdgcn_ds_bpermute(index, tmp.i);
+  return tmp.u;
+}
+inline float __amdgcn_ds_bpermute(int index, float src) [[hc]] {
+  __u tmp; tmp.f = src;
+  tmp.i = __amdgcn_ds_bpermute(index, tmp.i);
+  return tmp.f;
+}
+
+/**
+ * ds_permute intrinsic
+ */
+extern "C" int __amdgcn_ds_permute(int index, int src) [[hc]];
+inline unsigned int __amdgcn_ds_permute(int index, unsigned int src) [[hc]] {
+  __u tmp; tmp.u = src;
+  tmp.i = __amdgcn_ds_permute(index, tmp.i);
+  return tmp.u;
+}
+inline float __amdgcn_ds_permute(int index, float src) [[hc]] {
+  __u tmp; tmp.f = src;
+  tmp.i = __amdgcn_ds_permute(index, tmp.i);
+  return tmp.f;
+}
+
+
+/**
+ * ds_swizzle intrinsic
+ */
+extern "C" int __amdgcn_ds_swizzle(int src, int pattern) [[hc]];
+inline unsigned int __amdgcn_ds_swizzle(unsigned int src, int pattern) [[hc]] {
+  __u tmp; tmp.u = src;
+  tmp.i = __amdgcn_ds_swizzle(tmp.i, pattern);
+  return tmp.u;
+}
+inline float __amdgcn_ds_swizzle(float src, int pattern) [[hc]] {
+  __u tmp; tmp.f = src;
+  tmp.i = __amdgcn_ds_swizzle(tmp.i, pattern);
+  return tmp.f;
+}
+
+
+
+/**
+ * move DPP intrinsic
+ */
+extern "C" int __amdgcn_move_dpp(int src, int dpp_ctrl, int row_mask, int bank_mask, bool bound_ctrl) [[hc]]; 
+
+/**
+ * Shift the value of src to the right by one thread within a wavefront.  
+ * 
+ * @param[in] src variable being shifted
+ * @param[in] bound_ctrl When set to true, a zero will be shifted into thread 0; otherwise, the original value will be returned for thread 0
+ * @return value of src being shifted into from the neighboring lane 
+ * 
+ */
+extern "C" int __amdgcn_wave_sr1(int src, bool bound_ctrl) [[hc]];
+inline unsigned int __amdgcn_wave_sr1(unsigned int src, bool bound_ctrl) [[hc]] {
+  __u tmp; tmp.u = src;
+  tmp.i = __amdgcn_wave_sr1(tmp.i, bound_ctrl);
+  return tmp.u;
+}
+inline float __amdgcn_wave_sr1(float src, bool bound_ctrl) [[hc]] {
+  __u tmp; tmp.f = src;
+  tmp.i = __amdgcn_wave_sr1(tmp.i, bound_ctrl);
+  return tmp.f;
+}
+
+/**
+ * Shift the value of src to the left by one thread within a wavefront.  
+ * 
+ * @param[in] src variable being shifted
+ * @param[in] bound_ctrl When set to true, a zero will be shifted into thread 63; otherwise, the original value will be returned for thread 63
+ * @return value of src being shifted into from the neighboring lane 
+ * 
+ */
+extern "C" int __amdgcn_wave_sl1(int src, bool bound_ctrl) [[hc]];  
+inline unsigned int __amdgcn_wave_sl1(unsigned int src, bool bound_ctrl) [[hc]] {
+  __u tmp; tmp.u = src;
+  tmp.i = __amdgcn_wave_sl1(tmp.i, bound_ctrl);
+  return tmp.u;
+}
+inline float __amdgcn_wave_sl1(float src, bool bound_ctrl) [[hc]] {
+  __u tmp; tmp.f = src;
+  tmp.i = __amdgcn_wave_sl1(tmp.i, bound_ctrl);
+  return tmp.f;
+}
+
+
+/**
+ * Rotate the value of src to the right by one thread within a wavefront.  
+ * 
+ * @param[in] src variable being rotated
+ * @return value of src being rotated into from the neighboring lane 
+ * 
+ */
+extern "C" int __amdgcn_wave_rr1(int src) [[hc]];
+inline unsigned int __amdgcn_wave_rr1(unsigned int src) [[hc]] {
+  __u tmp; tmp.u = src;
+  tmp.i = __amdgcn_wave_rr1(tmp.i);
+  return tmp.u;
+}
+inline float __amdgcn_wave_rr1(float src) [[hc]] {
+  __u tmp; tmp.f = src;
+  tmp.i = __amdgcn_wave_rr1(tmp.i);
+  return tmp.f;
+}
+
+/**
+ * Rotate the value of src to the left by one thread within a wavefront.  
+ * 
+ * @param[in] src variable being rotated
+ * @return value of src being rotated into from the neighboring lane 
+ * 
+ */
+extern "C" int __amdgcn_wave_rl1(int src) [[hc]];
+inline unsigned int __amdgcn_wave_rl1(unsigned int src) [[hc]] {
+  __u tmp; tmp.u = src;
+  tmp.i = __amdgcn_wave_rl1(tmp.i);
+  return tmp.u;
+}
+inline float __amdgcn_wave_rl1(float src) [[hc]] {
+  __u tmp; tmp.f = src;
+  tmp.i = __amdgcn_wave_rl1(tmp.i);
+  return tmp.f;
+}
 
 #elif __hcc_backend__==HCC_BACKEND_HSAIL
 
@@ -2466,7 +2597,7 @@ inline int __wavefront_shift_left(int var) __HC__ {
 inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
   int self = __lane_id();
   int index = srcLane + (self & ~(width-1));
-  return amdgcn_ds_bpermute(index<<2, var);
+  return __amdgcn_ds_bpermute(index<<2, var);
 }
 
 #elif __hcc_backend__==HCC_BACKEND_HSAIL
@@ -2486,6 +2617,13 @@ inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__
 }
 
 #endif
+
+inline unsigned int __shfl(unsigned int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+     __u tmp; tmp.u = var;
+    tmp.i = __shfl(tmp.i, srcLane, width);
+    return tmp.u;
+}
+
 
 inline float __shfl(float var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     __u tmp; tmp.f = var;
@@ -2524,7 +2662,7 @@ inline int __shfl_up(int var, const unsigned int delta, const int width=__HSA_WA
   int self = __lane_id();
   int index = self - delta;
   index = (index < (self & ~(width-1)))?self:index;
-  return amdgcn_ds_bpermute(index<<2, var);
+  return __amdgcn_ds_bpermute(index<<2, var);
 }
 
 #elif __hcc_backend__==HCC_BACKEND_HSAIL
@@ -2541,6 +2679,12 @@ inline int __shfl_up(int var, const unsigned int delta, const int width=__HSA_WA
     }
 }
 #endif
+
+inline unsigned int __shfl_up(unsigned int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+    __u tmp; tmp.u = var;
+    tmp.i = __shfl_up(tmp.i, delta, width);
+    return tmp.u;
+}
 
 inline float __shfl_up(float var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     __u tmp; tmp.f = var;
@@ -2580,7 +2724,7 @@ inline int __shfl_down(int var, const unsigned int delta, const int width=__HSA_
   int self = __lane_id();
   int index = self + delta;
   index = ((self&(width-1))+delta) >= width?self:index;
-  return amdgcn_ds_bpermute(index<<2, var);
+  return __amdgcn_ds_bpermute(index<<2, var);
 }
 
 #elif __hcc_backend__==HCC_BACKEND_HSAIL
@@ -2599,6 +2743,11 @@ inline int __shfl_down(int var, const unsigned int delta, const int width=__HSA_
 
 #endif
 
+inline unsigned int __shfl_down(unsigned int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+    __u tmp; tmp.u = var;
+    tmp.i = __shfl_down(tmp.i, delta, width);
+    return tmp.u;
+}
 
 inline float __shfl_down(float var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     __u tmp; tmp.f = var;
@@ -2635,7 +2784,7 @@ inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) _
   int self = __lane_id();
   int index = self^laneMask;
   index = index >= ((self+width)&~(width-1))?self:index;
-  return amdgcn_ds_bpermute(index<<2, var);
+  return __amdgcn_ds_bpermute(index<<2, var);
 }
 
 
@@ -2651,14 +2800,69 @@ inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) _
 
 #endif
 
-// FIXME: support half type
-/** @} */
-
 inline float __shfl_xor(float var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
     __u tmp; tmp.f = var;
     tmp.i = __shfl_xor(tmp.i, laneMask, width);
     return tmp.f;
 }
+
+// FIXME: support half type
+/** @} */
+
+inline unsigned int __shfl_xor(unsigned int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
+    __u tmp; tmp.u = var;
+    tmp.i = __shfl_xor(tmp.i, laneMask, width);
+    return tmp.u;
+}
+
+/**
+ * Multiply two unsigned integers (x,y) but only the lower 24 bits will be used in the multiplication.
+ *
+ * @param[in] x 24-bit unsigned integer multiplier
+ * @param[in] y 24-bit unsigned integer multiplicand
+ * @return 32-bit unsigned integer product
+ */
+inline unsigned int __mul24(unsigned int x, unsigned int y) [[hc]] {
+  return (x & 0x00FFFFFF) * (y & 0x00FFFFFF);
+}
+
+/**
+ * Multiply two integers (x,y) but only the lower 24 bits will be used in the multiplication.
+ *
+ * @param[in] x 24-bit integer multiplier
+ * @param[in] y 24-bit integer multiplicand
+ * @return 32-bit integer product
+ */
+inline int __mul24(int x, int y) [[hc]] {
+  return  ((x << 8) >> 8) * ((y << 8) >> 8);
+}
+
+/**
+ * Multiply two unsigned integers (x,y) but only the lower 24 bits will be used in the multiplication and
+ * then add the product to a 32-bit unsigned integer
+ *
+ * @param[in] x 24-bit unsigned integer multiplier
+ * @param[in] y 24-bit unsigned integer multiplicand
+ * @param[in] z 32-bit unsigned integer to be added to the product
+ * @return 32-bit unsigned integer result of mad24
+ */
+inline unsigned int __mad24(unsigned int x, unsigned int y, unsigned int z) [[hc]] {
+  return __mul24(x,y) + z;
+}
+
+/**
+ * Multiply two integers (x,y) but only the lower 24 bits will be used in the multiplication and
+ * then add the product to a 32-bit integer
+ *
+ * @param[in] x 24-bit integer multiplier
+ * @param[in] y 24-bit integer multiplicand
+ * @param[in] z 32-bit integer to be added to the product
+ * @return 32-bit integer result of mad24
+ */
+inline int __mad24(int x, int y, int z) [[hc]] {
+  return __mul24(x,y) + z;
+}
+
 
 
 // ------------------------------------------------------------------------
