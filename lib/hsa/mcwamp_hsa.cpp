@@ -738,7 +738,7 @@ private:
 
 
     //
-    // kernelBufferMaaap and bufferKernelMap forms the dependency graph of
+    // kernelBufferMap and bufferKernelMap forms the dependency graph of
     // kernel / kernel dispatches / buffers
     //
     // For a particular kernel k, kernelBufferMap[k] holds a vector of
