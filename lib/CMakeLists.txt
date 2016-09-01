@@ -42,7 +42,6 @@ install(PROGRAMS ${PROJECT_BINARY_DIR}/bin/extractkernel
 ####################
 # add subdirectories
 ####################
-add_subdirectory(hcc_device_hsail)
 add_subdirectory(hsa)
 add_subdirectory(cpu)
 

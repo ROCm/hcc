@@ -9,6 +9,4 @@
 #define CMAKE_HSA_ROOT         "@HSA_HEADER@"
 #define CMAKE_HSA_LIB          "@HSA_ROOT@/lib"
 
-#define CMAKE_LIBHSAIL_LIB     "@LIBHSAIL_LIBRARY@"
-
 #define CMAKE_GTEST_INC_DIR "@PROJECT_SOURCE_DIR@/utils"

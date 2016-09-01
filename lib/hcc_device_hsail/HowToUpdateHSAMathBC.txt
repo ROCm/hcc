@@ -1,5 +1,0 @@
-hsa_math.bc is compiled from lib/hsa_math.ll, using llvm-as from upstream LLVM
-
-(1) Build upstream LLVM and get llvm-as
-
-(2) (path-to-llvm-build)/llvm-as -o hsa_math.bc hsa_math.ll

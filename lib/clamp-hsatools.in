@@ -1,5 +1,5 @@
 #!/bin/bash
-# Compiles an LLVM bitcode file to HSAIL or GCN ISA
+# Compiles an LLVM bitcode file to GCN ISA
 
 # enable bash debugging
 KMDBSCRIPT="${KMDBSCRIPT:=0}"
@@ -41,21 +41,15 @@ if [ ! -f $1 ]; then
 fi
 
 BINDIR=$(dirname $0)
-HLC_LLVM_LINK=$BINDIR/../../hlc/bin/llvm-link
-HLC_OPT=$BINDIR/../../hlc/bin/opt
-HLC_LLC=$BINDIR/../../hlc/bin/llc
-HLC_ASM=$BINDIR/../../HSAILasm/HSAILasm
-NEWLIB=$BINDIR/../../lib
 ROCM_LIB=@ROCM_DEVICE_LIB@
 
 HSA_LLVM_BIN_DIR="${BASH_SOURCE%/*}/../../llvm/bin"
 if [ -d "$HSA_LLVM_BIN_DIR" ]; then
-    HLC_LLVM_LINK=$HSA_LLVM_BIN_DIR/llvm-link
-    HLC_OPT=$HSA_LLVM_BIN_DIR/opt
-    HLC_LLC=$HSA_LLVM_BIN_DIR/llc
+    AMDGPU_LLVM_LINK=$HSA_LLVM_BIN_DIR/llvm-link
+    AMDGPU_OPT=$HSA_LLVM_BIN_DIR/opt
+    AMDGPU_LLC=$HSA_LLVM_BIN_DIR/llc
+    AMDGPU_LLD=$HSA_LLVM_BIN_DIR/ld.lld
 fi
-
-HSA_USE_AMDGPU_BACKEND=@HSA_USE_AMDGPU_BACKEND@
 
 ################
 # AMDGPU target
@@ -77,30 +71,21 @@ do
   esac
 done
 
-if [ $HSA_USE_AMDGPU_BACKEND == "ON" ]; then
-  LLD=$HSA_LLVM_BIN_DIR/ld.lld
-  KM_USE_AMDGPU="${KM_USE_AMDGPU:=1}"
-fi
-
 if [ $KMDUMPLLVM == "1" ]; then
   cp $1 ./dump.fe.bc
 fi
 
-if [ $KM_USE_AMDGPU ]; then
-  # select appropriate ROCm-Device-Libs per AMDGPU_TARGET
-  if [ $AMDGPU_TARGET == "fiji" ]; then
-    OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_803.bc"
-  elif [ $AMDGPU_TARGET == "hawaii" ]; then
-    OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_701.bc"
-  elif [ $AMDGPU_TARGET == "carrizo" ]; then
-    OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_801.bc"
-  fi
-  HCC_BC_LIBS="$ROCM_LIB/hc.bc $ROCM_LIB/opencl.bc $ROCM_LIB/ocml.bc $ROCM_LIB/ockl.bc $ROCM_LIB/irif.bc $OCLC_ISA_VERSION_LIB $ROCM_LIB/oclc_finite_only_off.bc $ROCM_LIB/oclc_daz_opt_off.bc $ROCM_LIB/oclc_correctly_rounded_sqrt_on.bc $ROCM_LIB/oclc_unsafe_math_off.bc"
-else
-  HCC_BC_LIBS="$NEWLIB/builtins-hsail.opt.bc $NEWLIB/hsail-amdgpu-wrapper.ll"
+# select appropriate ROCm-Device-Libs per AMDGPU_TARGET
+if [ $AMDGPU_TARGET == "fiji" ]; then
+  OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_803.bc"
+elif [ $AMDGPU_TARGET == "hawaii" ]; then
+  OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_701.bc"
+elif [ $AMDGPU_TARGET == "carrizo" ]; then
+  OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_801.bc"
 fi
+HCC_BC_LIBS="$ROCM_LIB/hc.bc $ROCM_LIB/opencl.bc $ROCM_LIB/ocml.bc $ROCM_LIB/ockl.bc $ROCM_LIB/irif.bc $OCLC_ISA_VERSION_LIB $ROCM_LIB/oclc_finite_only_off.bc $ROCM_LIB/oclc_daz_opt_off.bc $ROCM_LIB/oclc_correctly_rounded_sqrt_on.bc $ROCM_LIB/oclc_unsafe_math_off.bc"
 
-$HLC_LLVM_LINK -suppress-warnings -o $1.linked.bc $1 $HCC_BC_LIBS
+$AMDGPU_LLVM_LINK -suppress-warnings -o $1.linked.bc $1 $HCC_BC_LIBS
 
 # error handling for HSAIL llvm-link
 RETVAL=$?
@@ -114,12 +99,7 @@ fi
 
 # Optimization notes:
 #  -disable-simplify-libcalls:  prevents transforming loops into library calls such as memset, memcopy on GPU 
-
-if [ $KM_USE_AMDGPU ]; then
-  $HLC_OPT $KMOPTOPT -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -disable-simplify-libcalls -verify $1.linked.bc -o $1.opt.bc
-else
-  $HLC_OPT $KMOPTOPT -disable-simplify-libcalls -verify $1.linked.bc -o $1.opt.bc
-fi
+$AMDGPU_OPT $KMOPTOPT -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -disable-simplify-libcalls -verify $1.linked.bc -o $1.opt.bc
 
 # error handling for HSAIL opt
 RETVAL=$?
@@ -131,14 +111,10 @@ if [ $KMDUMPLLVM == "1" ]; then
   cp $1.opt.bc ./dump.opt.bc
 fi
 
-if [ $KM_USE_AMDGPU  ]; then
-  $HLC_LLC $KMOPTLLC -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -filetype=obj -o $1.hsail $1.opt.bc
-  if [ $KMDUMPISA == "1" ]; then
-    $HLC_LLC $KMOPTLLC -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -filetype=asm -o $1.isa $1.opt.bc
-    mv $1.isa ./dump.isa
-  fi
-else
-  $HLC_LLC $KMOPTLLC -march=hsail64 -filetype=asm -o $1.hsail $1.opt.bc
+$AMDGPU_LLC $KMOPTLLC -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -filetype=obj -o $1.hsail $1.opt.bc
+if [ $KMDUMPISA == "1" ]; then
+  $AMDGPU_LLC $KMOPTLLC -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -filetype=asm -o $1.isa $1.opt.bc
+  mv $1.isa ./dump.isa
 fi
 
 # error handling for HSAIL llc
@@ -151,12 +127,7 @@ if [ $KMDUMPBRIG == "1" ]; then
     cp $1.hsail ./dump.hsail
 fi
 
-if [ $KM_USE_AMDGPU ]; then
-  $LLD  -shared $1.hsail -o $1.brig
-else
-  cat $NEWLIB/hsa_builtins.hsail >> $1.hsail
-  $HLC_ASM -assemble -o $1.brig $1.hsail
-fi
+$AMDGPU_LLD -shared $1.hsail -o $1.brig
 
 # error handling for HSAILasm
 RETVAL=$?

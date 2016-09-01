@@ -11,20 +11,13 @@ LINK=$BINDIR/llvm-link
 OPT=$BINDIR/opt
 CLAMP_DEVICE=$BINDIR/clamp-device
 CLAMP_EMBED=$BINDIR/clamp-embed
-HLC_DIR=$BINDIR/../../hlc
-HLC_LLVM_LINK=$HLC_DIR/bin/llvm-link
-HLC_OPT=$HLC_DIR/bin/opt
-HLC_LLC=$HLC_DIR/bin/llc
-HLC_ASM_DIR=$BINDIR/../../HSAILasm
-HLC_ASM=$HLC_ASM_DIR/HSAILasm
-
 
 HSA_LLVM_BIN_DIR="${BASH_SOURCE%/*}/../../llvm/bin"
 if [ -d "$HSA_LLVM_BIN_DIR" ]; then
-    HLC_DIR=$HSA_LLVM_BIN_DIR
-    HLC_LLVM_LINK=$HSA_LLVM_BIN_DIR/llvm-link
-    HLC_OPT=$HSA_LLVM_BIN_DIR/opt
-    HLC_LLC=$HSA_LLVM_BIN_DIR/llc
+    AMDGPU_DIR=$HSA_LLVM_BIN_DIR
+    AMDGPU_LLVM_LINK=$HSA_LLVM_BIN_DIR/llvm-link
+    AMDGPU_OPT=$HSA_LLVM_BIN_DIR/opt
+    AMDGPU_LLC=$HSA_LLVM_BIN_DIR/llc
 fi
 
 ################
@@ -37,52 +30,21 @@ VERBOSE=0
 # GPU targets
 ################
 
-LOWER_HSA=@HAS_HSA@
-LOWER_HOF=@HAS_HSA_HOF@
+LOWER_ROCM=@HAS_ROCM@
 AMDGPU_TARGET=@AMDGPU_TARGET@
 
 ################
 # Sanity check for HSAIL backend
 ################
 
-HSA_USE_AMDGPU_BACKEND=@HSA_USE_AMDGPU_BACKEND@
-
-if [ $HSA_USE_AMDGPU_BACKEND == "ON" ]; then
-  KM_USE_AMDGPU="${KM_USE_AMDGPU:=1}"
-fi
-
-if [ $LOWER_HSA == 1 ]; then
-  if [ -d $HLC_DIR ] && [ -e $HLC_LLVM_LINK ] && [ -e $HLC_OPT ] && [ -e $HLC_LLC ] && [ -d $HLC_ASM_DIR ] && [ -e $HLC_ASM ] || [ $KM_USE_AMDGPU -eq 1 ] ; then 
-    # all HSA tools are available
-    LOWER_HSA=1
+if [ $LOWER_ROCM == 1 ]; then
+  if [ -d $AMDGPU_DIR ] && [ -e $AMDGPU_LLVM_LINK ] && [ -e $AMDGPU_OPT ] && [ -e $AMDGPU_LLC ] && [ -d $AMDGPU_ASM_DIR ] && [ -e $AMDGPU_ASM ]; then
+    # all ROCm tools are available
+    LOWER_ROCM=1
   else
-    # disable HSA lowering in case any of the required tools is missing
+    # disable ROCm lowering in case any of the required tools is missing
     echo "WARNING: Missing HSA toolchain.  Disable HSA target."
-    LOWER_HSA=0
-  fi
-fi
-
-################
-# Sanity check for HSA offline finalization
-################
-
-if [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 1 ]; then
-  # Path to HOF
-  HOF_BIN=@HOF_BIN@
-
-  if [ -d $HOF_BIN ] && ( [ -e $HOF_BIN/hof ] || [ -e $HOF_BIN/amdhsafin ] ); then
-    # all HOF tools are available
-    HCC_NOISA="${HCC_NOISA:=0}"
-    if [ $HCC_NOISA == "1" ]; then
-      echo "WARNING: HSA offline finalization explicitely disabled."
-      LOWER_HOF=0
-    else
-      LOWER_HOF=1
-    fi
-  else
-    # disable HOF in case any of the required tools is missing
-    echo "WARNING: Missing HOF tools.  Disable HSA offline finalization."
-    LOWER_HOF=0
+    LOWER_ROCM=0
   fi
 fi
 
@@ -163,20 +125,6 @@ done
 for ARG in $ARGS
 do
 
-  ####################################
-  #  parse the simple switches first...
-  ####################################
-
-  if [ $ARG == "--disable-opencl" ]; then
-    # keep this check as of now until the frontend driver is changed
-    continue
-  fi
-
-  if [ $ARG == "--disable-hsa" ]; then
-    LOWER_HSA=0
-    continue
-  fi
- 
   ######################
   # Parse AMDGPU target
   ######################
@@ -198,7 +146,7 @@ do
 
     cp $ARG $TEMP_DIR/kernel_cpu.o
     NEW_LINK_CPU_ARG=$NEW_LINK_CPU_ARG" "$TEMP_DIR/kernel_cpu.o
- 
+
   elif [[ "$ARG" =~ [^[:space:]]+\.o$ ]]; then
     # detected a .o file
     if [ $VERBOSE == 2 ]; then
@@ -264,11 +212,11 @@ do
         STATIC_LIB_LIST+=( $DETECTED_STATIC_LIBRARY )
       fi
     fi
- 
-    
-    KERNEL_UNDETECTED="1" 
+
+
+    KERNEL_UNDETECTED="1"
     if [[ $DETECTED_STATIC_LIBRARY != "" ]]; then
-      
+
       # we found a static library library
       if [ $VERBOSE == 2 ]; then
         echo "processing static library $DETECTED_STATIC_LIBRARY"
@@ -292,7 +240,7 @@ do
         if [ $VERBOSE == 2 ]; then
           echo "creating temp dir: $AR_TEMP_DIR"
         fi
- 
+
         mkdir -p $AR_TEMP_DIR
         TEMP_AR_DIRS+=( $AR_TEMP_DIR )
         cd $AR_TEMP_DIR
@@ -386,7 +334,7 @@ do
       HOST_FILE=$TEMP_DIR/$FILENAME.host.o
 
       # extract kernel section
-      objcopy -O binary -j .kernel $ARG $KERNEL_FILE 
+      objcopy -O binary -j .kernel $ARG $KERNEL_FILE
 
       # extract host section
       objcopy -R .kernel $ARG $HOST_FILE
@@ -410,11 +358,6 @@ do
     fi
   elif [ $ARG == "--verbose" ]; then
     VERBOSE=1
-  elif [ $ARG == "--disable-opencl" ]; then
-    # keep this check for now before the frontend is changed
-    :
-  elif [ $ARG == "--disable-hsa" ]; then
-    LOWER_HSA=0
   else
 
     ######################
@@ -500,10 +443,10 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
 
   # combine kernel sections together
   $LINK $LINK_KERNEL_ARGS | $OPT -always-inline - -o $TEMP_DIR/kernel.bc
-  
-  # lower to HSA
-  if [ $LOWER_HSA == 1 ]; then
-    # lower to HSA BRIG
+
+  # lower to ROCm
+  if [ $LOWER_ROCM == 1 ]; then
+    # lower to GCN ISA
     if [ $VERBOSE == 0 ]; then
       $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.brig --hsa --amdgpu-target=$AMDGPU_TARGET
     else
@@ -519,57 +462,13 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
     fi
   fi
 
-  # HSA offline finalization
-  if [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 1 ]; then
-    if [ -e $HOF_BIN/hof ]; then
-      # conduct HSA offline finalization for APU
-      $HOF_BIN/hof -output=$TEMP_DIR/kernel.isa -brig $TEMP_DIR/kernel.brig
-    else
-      if [ -e $HOF_BIN/amdhsafin ]; then
-        case $AMDGPU_TARGET in
-          #default set to fiji
-          fiji)
-            HOF_ARCH="8:0:3"
-          ;;
-          carrizo)
-            HOF_ARCH="8:0:1"
-          ;;
-          hawaii)
-            HOF_ARCH="7:0:1"
-          ;;
-        esac
-
-        # conduct HSA offline finalization for DGPU
-        $HOF_BIN/amdhsafin -target=$HOF_ARCH -output=$TEMP_DIR/kernel.isa -brig $TEMP_DIR/kernel.brig -O2
-      fi
-    fi
-
-    ret=$?
-    if [ $ret == 0 ]; then
-      # build a new kernel object
-      pushd . > /dev/null
-      cd $TEMP_DIR
-      $CLAMP_EMBED kernel.isa kernel_hof.o
-      popd > /dev/null
-
-      # debug purpose
-      # dump the brig
-      KMDUMPBRIG="${KMDUMPBRIG:=0}"
-      if [ $KMDUMPBRIG == "1" ]; then
-        cp $TEMP_DIR/kernel.isa ./dump.isa
-      fi
-    fi
-  fi
-  
   if [ $ret == 0 ]; then
     # link everything together
-    if [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 1 ]; then
-      ld --allow-multiple-definition $TEMP_DIR/kernel_hsa.o $TEMP_DIR/kernel_hof.o $LINK_HOST_ARGS $LINK_CPU_ARG $LINK_OTHER_ARGS
-    elif [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 0 ]; then
+    if [ $LOWER_ROCM == 1 ]; then
       ld --allow-multiple-definition $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS $LINK_CPU_ARG $LINK_OTHER_ARGS
       ret=$?
     else
-      echo "ERROR: No GPU target available! Linker failed."
+      echo "ERROR: ROCm stack not found! Linker failed."
       ret=1
     fi
   fi

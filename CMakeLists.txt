@@ -1,15 +1,11 @@
 cmake_minimum_required( VERSION 2.8 )
 project (HCC)
 
-option(HSA_USE_AMDGPU_BACKEND "Use AMDGPU LLVM backend as compiler for HSA" OFF)
+option(HSA_USE_AMDGPU_BACKEND "Use AMDGPU LLVM backend as compiler for ROCm" ON)
 
 # set default installation path
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND CMAKE_INSTALL_PREFIX MATCHES "/usr/local")
-  if (HSA_USE_AMDGPU_BACKEND)
-    set(CMAKE_INSTALL_PREFIX "/opt/rocm/hcc-lc" CACHE PATH "Default installation path of hcc" FORCE)
-  else  (HSA_USE_AMDGPU_BACKEND)
-    set(CMAKE_INSTALL_PREFIX "/opt/rocm/hcc-hsail" CACHE PATH "Default installation path of hcc" FORCE)
-  endif()
+  set(CMAKE_INSTALL_PREFIX "/opt/rocm/hcc-lc" CACHE PATH "Default installation path of hcc" FORCE)
 endif ()
 MESSAGE("Package installation path: ${CMAKE_INSTALL_PREFIX}")
 
@@ -20,8 +16,6 @@ MESSAGE("Module path: ${CMAKE_MODULE_PATH}")
 IF (NOT CMAKE_BUILD_TYPE)
   SET(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build, options are: Release Debug" FORCE)
 ENDIF(NOT CMAKE_BUILD_TYPE)
-
-set(CMAKE_MACOSX_RPATH 1)
 
 IF (NOT NUM_BUILD_THREADS)
   # try determine logical processors via nproc
@@ -88,26 +82,22 @@ LINK_DIRECTORIES( ${LLVM_LIB_DIR} )
 
 
 #################
-# Detect HSA
+# Detect ROCm
 #################
 
-# HSA external dependencies
-set (HSA_ROOT "/opt/hsa"
-        CACHE PATH "HSA runtime path")
+# ROCm external dependencies
+set (ROCM_ROOT "/opt/rocm" CACHE PATH "ROCM runtime path")
 
-set (ROCM_ROOT "/opt/rocm"
-        CACHE PATH "ROCM runtime path")
+set (HSA_LLVM_BIN_DIR CACHE PATH "Path to llvm tools with AMDGPU support")
 
-set (HSA_LLVM_BIN_DIR CACHE PATH "Path to llvm tools with hsail/amdgpu support")
-
-find_path(HSA_HEADER hsa/hsa.h PATHS ${HSA_HEADER_DIR} ${ROCM_ROOT}/include ${HSA_ROOT}/include NO_DEFAULT_PATH)
+find_path(HSA_HEADER hsa/hsa.h PATHS ${HSA_HEADER_DIR} ${ROCM_ROOT}/include NO_DEFAULT_PATH)
 find_path(HSA_HEADER hsa/hsa.h)
 
 if (NOT HSA_HEADER)
   MESSAGE("HSA header not found. Use -DHSA_HEADER_DIR=<path_to_hsa.h>.")
 endif (NOT HSA_HEADER)
 
-find_library(HSA_LIBRARY hsa-runtime64 PATHS ${HSA_LIBRARY_DIR} ${ROCM_ROOT}/lib ${HSA_ROOT}/lib NO_DEFAULT_PATH)
+find_library(HSA_LIBRARY hsa-runtime64 PATHS ${HSA_LIBRARY_DIR} ${ROCM_ROOT}/lib NO_DEFAULT_PATH)
 find_library(HSA_LIBRARY hsa-runtime64)
 if (NOT HSA_LIBRARY)
   MESSAGE("HSA runtime library not found. Use -DHSA_LIBRARY_DIR=<path_to_libhsa-runtime64.so>.")
@@ -120,30 +110,9 @@ if (NOT ROCM_DEVICE_LIB)
   MESSAGE("ROCM Device Lib not found. Use -DROCM_DEVICE_LIB_DIR=<path_to_ocml.bc>.")
 endif (NOT ROCM_DEVICE_LIB)
 
-# find offline finalization tool for APU
-find_program(HSA_HOF_APU hof PATHS ${HSA_HOF_DIR} ${ROCM_ROOT}/bin ${HSA_ROOT}/bin NO_DEFAULT_PATH)
-find_program(HSA_HOF_APU hof)
-
-# find offline finalization tool for DGPU
-find_program(HSA_HOF_DGPU amdhsafin PATHS ${HSA_HOF_DIR} ${ROCM_ROOT}/bin ${HSA_ROOT}/bin NO_DEFAULT_PATH)
-find_program(HSA_HOF_DGPU amdhasfin)
-
-if (HSA_HOF_APU)
-  set(HSA_HOF ${HSA_HOF_APU})
-else (HSA_HOF_APU)
-  if (HSA_HOF_DGPU)
-    set(HSA_HOF ${HSA_HOF_DGPU})
-  endif (HSA_HOF_DGPU)
-endif (HSA_HOF_APU)
-
-if (NOT HSA_HOF)
-  MESSAGE("HSA offline finalizer (HOF) not found.  Use -DHSA_HOF_DIR=<path_to_hof>.")
-endif (NOT HSA_HOF)
-
-
-# display HSA information
+# display ROCm information
 MESSAGE("")
-MESSAGE("HSA INFORMATION:")
+MESSAGE("ROCm INFORMATION:")
 MESSAGE("HSA_HEADER_DIR = ${HSA_HEADER_DIR}, actually found at: ${HSA_HEADER}")
 MESSAGE("HSA_LIBRARY_DIR = ${HSA_LIBRARY_DIR}, actually found at: ${HSA_LIBRARY}")
 MESSAGE("HSA_HOF_DIR = ${HSA_HOF_DIR}, actually found at: ${HSA_HOF}")
@@ -172,68 +141,49 @@ execute_process(COMMAND git show -s --format=@%ct
 # get commit information
 execute_process(COMMAND git rev-parse --short HEAD
                 WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-                OUTPUT_VARIABLE KALMAR_DRIVER_COMMIT
+                OUTPUT_VARIABLE KALMAR_SDK_COMMIT
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 execute_process(COMMAND git rev-parse --short HEAD
-                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/compiler/tools/clang
-                OUTPUT_VARIABLE KALMAR_COMPILER_COMMIT
+                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/clang
+                OUTPUT_VARIABLE KALMAR_FRONTEND_COMMIT
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process(COMMAND git rev-parse --short HEAD
+                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/compiler
+                OUTPUT_VARIABLE KALMAR_BACKEND_COMMIT
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-# set HCC version string
-if (HAS_HSA)
-  # For HSA build, the rule for version string is:
-  # KALMAR_VERSION_MAJOR . KALMAR_VERSION_MINOR . KALMAR_VERSION_PATCH-KALMAR_DRIVER_COMIT-KALMAR_COMPILER_COMMIT-KALMAR_HLC_COMMIT
-  set(KALMAR_VERSION_STRING "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}.${KALMAR_VERSION_PATCH}-${KALMAR_DRIVER_COMMIT}-${KALMAR_COMPILER_COMMIT}-${KALMAR_HLC_COMMIT}")
-else (HAS_HSA)
-  # For non-HSA build, the rule for version string is:
-  # KALMAR_VERSION_MAJOR . KALMAR_VERSION_MINOR . KALMAR_VERSION_PATCH-KALMAR_DRIVER_COMIT-KALMAR_COMPILER_COMMIT
-  set(KALMAR_VERSION_STRING "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}.${KALMAR_VERSION_PATCH}-${KALMAR_DRIVER_COMMIT}-${KALMAR_COMPILER_COMMIT}")
-endif (HAS_HSA)
+# Set HCC version string. The rule for version string is:
+# KALMAR_VERSION_MAJOR . KALMAR_VERSION_MINOR . KALMAR_VERSION_PATCH-KALMAR_SDK_COMIT-KALMAR_FRONTEND_COMMIT-KALMAR_BACKEND_COMMIT
+set(KALMAR_VERSION_STRING "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}.${KALMAR_VERSION_PATCH}-${KALMAR_SDK_COMMIT}-${KALMAR_FRONTEND_COMMIT}-${KALMAR_BACKEND_COMMIT}")
 
 # show HCC version string
 MESSAGE("=============================================")
 MESSAGE("HCC version: ${KALMAR_VERSION_STRING}")
 MESSAGE("=============================================")
 
-# determine if we have HSA stack available
+#################
+# Detect if we have ROCm stack available
+#################
+
 # at least we need the followings:
 # - HSA headers (installed by HSA runtime)
 # - HSA runtime libraries (installed by HSA runtime)
 # - ROCm Device Library
 if ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT ROCM_DEVICE_LIB))
-  set(HAS_HSA 0)
+  set(HAS_ROCM 0)
 else ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT ROCM_DEVICE_LIB))
-  set(HAS_HSA 1)
+  set(HAS_ROCM 1)
 endif ((NOT HSA_HEADER) OR (NOT HSA_LIBRARY) OR (NOT ROCM_DEVICE_LIB))
 
-# determine if HSA offline finalization is possible
-# at least we need the followings:
-# - a working HSA stack (HAS_HSA is 1)
-# - HOF executable (install by HSA HOF)
-if (HAS_HSA)
-  if (NOT HSA_HOF)
-    set (HAS_HSA_HOF 0)
-  else (NOT HSA_HOF)
-    set (HAS_HSA_HOF 1)
-    get_filename_component(HOF_BIN ${HSA_HOF} DIRECTORY)
-  endif (NOT HSA_HOF)
-endif (HAS_HSA)
-
-#################
-# Detect if we have HSA available
-#################
-if (HAS_HSA EQUAL 0)
-  MESSAGE(FATAL_ERROR "HSA is NOT available on the system!")
-endif (HAS_HSA EQUAL 0)
+if (HAS_ROCM EQUAL 0)
+  MESSAGE(FATAL_ERROR "ROCm is NOT available on the system!")
+endif (HAS_ROCM EQUAL 0)
 
 #################
 # Detect AMDGPU backend for native codegen
 #################
 
-if (HSA_USE_AMDGPU_BACKEND)
-  add_definitions(-DHSA_USE_AMDGPU_BACKEND)
-  set(HAS_HSA_HOF 0)
-endif ()
+add_definitions(-DHSA_USE_AMDGPU_BACKEND)
 
 set(HSA_AMDGPU_GPU_TARGET "fiji" CACHE STRING "Target AMDGPU ISA version")
 
@@ -271,85 +221,42 @@ endif()
 #################
 # Setup HCC backend macro string
 # Possible values:
-# - CL : for non-HSA systems
-# - HSAIL : for HSA systems configured with HLC backend
 # - AMDGPU : for HSA systems configured with Lightning backend
 #################
 
-if (HSA_USE_AMDGPU_BACKEND)
-  set(KALMAR_BACKEND "HCC_BACKEND_AMDGPU")
-else(HSA_USE_AMDGPU_BACKEND)
-  if (HAS_HSA)
-    set(KALMAR_BACKEND "HCC_BACKEND_HSAIL")
-  else (HAS_HSA)
-    set(KALMAR_BACKEND "HCC_BACKEND_CL")
-  endif (HAS_HSA)
-endif(HSA_USE_AMDGPU_BACKEND)
+set(KALMAR_BACKEND "HCC_BACKEND_AMDGPU")
 
 message(STATUS "HCC configured with default backend: ${KALMAR_BACKEND}")
 
 #########################
 # build target: world
-# enable HLC and HSAILasm only if HSA stack is available
 #########################
-
-if (HAS_HSA)
-
-# get HLC commit information
-execute_process(COMMAND git rev-parse --short HEAD
-                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/hlc
-                OUTPUT_VARIABLE KALMAR_HLC_COMMIT
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-endif (HAS_HSA)
 
 # build Clang front-end
 set(CLANG_SRC_DIR "${PROJECT_SOURCE_DIR}/compiler")
 set(CLANG_BIN_DIR "${PROJECT_BINARY_DIR}/compiler")
 file(MAKE_DIRECTORY ${CLANG_BIN_DIR})
-if (HAS_HSA)
 add_custom_target(clang
   COMMAND ${CMAKE_COMMAND} -Wno-dev ${CLANG_SRC_DIR}
-          -DHAS_HSA=${HAS_HSA}
           -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
           -DKALMAR_VERSION_STRING=${KALMAR_VERSION_STRING}
           -DKALMAR_VERSION_MAJOR=${KALMAR_VERSION_MAJOR}
           -DKALMAR_VERSION_MINOR=${KALMAR_VERSION_MINOR}
           -DKALMAR_VERSION_PATCH=${KALMAR_VERSION_PATCH}
-          -DKALMAR_DRIVER_COMMIT=${KALMAR_DRIVER_COMMIT}
-          -DKALMAR_COMPILER_COMMIT=${KALMAR_COMPILER_COMMIT}
-          -DKALMAR_HLC_COMMIT=${KALMAR_HLC_COMMIT}
+          -DKALMAR_SDK_COMMIT=${KALMAR_SDK_COMMIT}
+          -DKALMAR_FRONTEND_COMMIT=${KALMAR_FRONTEND_COMMIT}
+          -DKALMAR_BACKEND_COMMIT=${KALMAR_BACKEND_COMMIT}
           -DKALMAR_BACKEND=${KALMAR_BACKEND}
           -DLLVM_TARGETS_TO_BUILD=X86
           -DLLVM_INCLUDE_EXAMPLES=off
   COMMAND make -j ${NUM_BUILD_THREADS} # not portable, but we need it this way
   WORKING_DIRECTORY ${CLANG_BIN_DIR}
 )
-else (HAS_HSA)
-add_custom_target(clang
-  COMMAND ${CMAKE_COMMAND} -Wno-dev ${CLANG_SRC_DIR}
-          -DHAS_HSA=${HAS_HSA}
-          -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-          -DKALMAR_VERSION_STRING=${KALMAR_VERSION_STRING}
-          -DKALMAR_VERSION_MAJOR=${KALMAR_VERSION_MAJOR}
-          -DKALMAR_VERSION_MINOR=${KALMAR_VERSION_MINOR}
-          -DKALMAR_VERSION_PATCH=${KALMAR_VERSION_PATCH}
-          -DKALMAR_DRIVER_COMMIT=${KALMAR_DRIVER_COMMIT}
-          -DKALMAR_COMPILER_COMMIT=${KALMAR_COMPILER_COMMIT}
-          -DKALMAR_BACKEND=${KALMAR_BACKEND}
-          -DLLVM_TARGETS_TO_BUILD=X86
-          -DLLVM_INCLUDE_EXAMPLES=off
-  COMMAND make -j ${NUM_BUILD_THREADS} # not portable, but we need it this way
-  WORKING_DIRECTORY ${CLANG_BIN_DIR}
-)
-endif (HAS_HSA)
 
 # create symlink of mostly used commands in clang to bin/
 # - hcc
 # - clang++
 # - clang
-
-if (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
 
 add_custom_command(TARGET clang POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/hcc ${PROJECT_BINARY_DIR}/bin/hcc
@@ -368,23 +275,6 @@ install(FILES ${PROJECT_BINARY_DIR}/bin/hcc
               ${PROJECT_BINARY_DIR}/bin/lld
         DESTINATION bin)
 
-else (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
-
-add_custom_command(TARGET clang POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/hcc ${PROJECT_BINARY_DIR}/bin/hcc
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/clang++ ${PROJECT_BINARY_DIR}/bin/clang++
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/clang ${PROJECT_BINARY_DIR}/bin/clang
-  WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/bin
-)
-install(FILES ${PROJECT_BINARY_DIR}/bin/hcc
-              ${PROJECT_BINARY_DIR}/bin/clang++
-              ${PROJECT_BINARY_DIR}/bin/clang
-        DESTINATION bin)
-
-endif (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
-
-
-
 # install clang along with HCC
 # stored under compiler/
 install(DIRECTORY ${CLANG_BIN_DIR}/bin
@@ -400,93 +290,23 @@ install(DIRECTORY ${CLANG_BIN_DIR}/lib
         PATTERN LLVM*
         PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
-if (HAS_HSA)
-
-# build HLC
-
-if (NOT HSA_LLVM_BIN_DIR)
-
-set(HLC_SRC_DIR "${PROJECT_SOURCE_DIR}/hlc")
-set(HLC_BIN_DIR "${PROJECT_BINARY_DIR}/hlc")
-file(MAKE_DIRECTORY ${HLC_BIN_DIR})
-add_custom_target(hlc
-  COMMAND ${CMAKE_COMMAND} -Wno-dev ${HLC_SRC_DIR}
-          -DLLVM_ENABLE_EH=ON
-          -DLLVM_ENABLE_RTTI=ON
-          -DLLVM_TARGETS_TO_BUILD=
-          -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=HSAIL
-          -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-  COMMAND make -j ${NUM_BUILD_THREADS} # not portable, but we need it this way
-  WORKING_DIRECTORY ${HLC_BIN_DIR}
-  DEPENDS clang
+# create a symlink to the LLVM binaries for the amdgpu backend in the project directory
+add_custom_target(lightning_bin
+  COMMAND mkdir -p "${PROJECT_BINARY_DIR}/llvm/bin"
+  COMMAND cp -rp "${HSA_LLVM_BIN_DIR}/*" "${PROJECT_BINARY_DIR}/llvm/bin/"
 )
 
-# install HLC along with HCC
-# stored under hlc/
-install(DIRECTORY ${HLC_BIN_DIR}/bin
-        DESTINATION hlc
-        COMPONENT hlc
+# include the amdgpu backend binaries in the hcc package
+install(DIRECTORY ${PROJECT_BINARY_DIR}/llvm/bin
+        DESTINATION llvm
+        COMPONENT lightning_bin
         PATTERN * PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
-# build HSAILasm
-set(HSAILASM_SRC_DIR "${PROJECT_SOURCE_DIR}/HSAILasm")
-set(HSAILASM_BIN_DIR "${PROJECT_BINARY_DIR}/HSAILasm")
-file(MAKE_DIRECTORY ${HSAILASM_BIN_DIR})
-add_custom_target(HSAILasm
-  COMMAND ${CMAKE_COMMAND} -Wno-dev -DBUILD_LIBBRIGDWARF=1 ${HSAILASM_SRC_DIR}
-  COMMAND make -j4 # not portable, but we need it this way
-  WORKING_DIRECTORY ${HSAILASM_BIN_DIR}
-  DEPENDS hlc
-)
-
-# stored under HSAILasm/
-install(FILES ${HSAILASM_BIN_DIR}/HSAILAsm/HSAILasm
-        DESTINATION HSAILasm
-        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
-        COMPONENT HSAILasm)
-
-# Copy binary file to directory matching the install directory
-add_custom_target(HSAILasm_setup
-    COMMAND ${CMAKE_COMMAND} -E copy
-    "${HSAILASM_BIN_DIR}/HSAILAsm/HSAILasm" "${HSAILASM_BIN_DIR}"
-    DEPENDS HSAILasm)
-
-endif(NOT HSA_LLVM_BIN_DIR)
-
-if (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
-
-  # create a symlink to the LLVM binaries for the amdgpu backend in the project directory
-  add_custom_target(lightning_bin
-    COMMAND mkdir -p "${PROJECT_BINARY_DIR}/llvm/bin"
-    COMMAND cp -rp "${HSA_LLVM_BIN_DIR}/*" "${PROJECT_BINARY_DIR}/llvm/bin/"
-  )
-
-  # include the amdgpu backend binaries in the hcc package
-  install(DIRECTORY ${PROJECT_BINARY_DIR}/llvm/bin
-          DESTINATION llvm
-          COMPONENT lightning_bin
-          PATTERN * PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-
-  # do NOT depend on HLC or HSAILasm in case we use AMDGPU backend
-  add_custom_target(world DEPENDS lightning_bin clang)
-  find_program(OPT opt PATHS ${HSA_LLVM_BIN_DIR} NO_DEFAULT_PATH)
-  add_custom_target(opt DEPENDS ${OPT})
-  find_program(LLVM_LINK llvm-link PATHS ${HSA_LLVM_BIN_DIR} NO_DEFAULT_PATH)
-  add_custom_target(llvm-link DEPENDS ${LLVM_LINK})
-else (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
-  # build hlc and HSAILasm in case HSA_USE_AMDGPU_BACKEND 
-  # or HSA_LLVM_BIN_DIR is not set
-  add_custom_target(world DEPENDS clang hlc HSAILasm_setup)
-endif (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
-
-else (HAS_HSA)
-
-# do NOT depend on HLC or HSAILasm in case HSA is not present
-add_custom_target(world
-    DEPENDS clang ${DEPS}
-)
-
-endif (HAS_HSA)
+add_custom_target(world DEPENDS lightning_bin clang)
+find_program(OPT opt PATHS ${HSA_LLVM_BIN_DIR} NO_DEFAULT_PATH)
+add_custom_target(opt DEPENDS ${OPT})
+find_program(LLVM_LINK llvm-link PATHS ${HSA_LLVM_BIN_DIR} NO_DEFAULT_PATH)
+add_custom_target(llvm-link DEPENDS ${LLVM_LINK})
 
 add_subdirectory(lib)
 add_subdirectory(utils)
@@ -520,11 +340,7 @@ install(DIRECTORY ${PROJECT_BINARY_DIR}/docs/html
         OPTIONAL)
 
 # generate Debian control scripts postinst and postrm
-if (HSA_USE_AMDGPU_BACKEND)
-  set(CPACK_PACKAGE_NAME "hcc_lc")
-else (HSA_USE_AMDGPU_BACKEND)
-  set(CPACK_PACKAGE_NAME "hcc_hsail")
-endif(HSA_USE_AMDGPU_BACKEND)
+set(CPACK_PACKAGE_NAME "hcc_lc")
 
 set(DEBIAN_EXTRA_SCRIPT_SOURCE_DIR "${PROJECT_SOURCE_DIR}/packaging/debian")
 set(DEBIAN_EXTRA_SCRIPT_DEST_DIR "${PROJECT_BINARY_DIR}/packaging/debian")
@@ -547,7 +363,6 @@ set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMA
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "HCC: a Heterogeneous C++ compiler")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Siu Chi Chan <siuchi.chan@amd.com>")
 set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
-
 
 set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
   "${PROJECT_BINARY_DIR}/packaging/debian/postinst;${PROJECT_BINARY_DIR}/packaging/debian/prerm")
@@ -574,18 +389,12 @@ set(CPACK_SOURCE_TZ "OFF")
 set(CPACK_SOURCE_TBZ2 "OFF")
 set(CPACK_BINARY_TZ "OFF")
 
-if (HSA_USE_AMDGPU_BACKEND)
-  # don't include HSAILasm and hlc if using AMDGPU backend
-  set(CPACK_COMPONENTS_ALL compiler)
-else (HSA_USE_AMDGPU_BACKEND)
-  # put Clang front-end, HLC and HSAILasm in the package as well
-  set(CPACK_COMPONENTS_ALL HSAILasm hlc compiler)
-endif (HSA_USE_AMDGPU_BACKEND)
+set(CPACK_COMPONENTS_ALL compiler)
 
 include (CPack)
 MESSAGE("")
 MESSAGE("** For the first time:")
-MESSAGE("   'make world' to build clang, HLC, HSAILasm and library for testing.")
+MESSAGE("   'make world' to build HCC Clang, and library for testing.")
 MESSAGE("   'make' to build the rest of LLVM tools")
 MESSAGE("   'make docs' to build the HTML API reference")
 MESSAGE("")
