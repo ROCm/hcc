@@ -3,7 +3,8 @@
 	url = https://github.com/llvm-mirror/llvm
 [submodule "lld"]
 	path = lld
-	url = https://github.com/llvm-mirror/lld
+	url = git@github.com:RadeonOpenCompute/lld.git
+	branch = amd-common
 [submodule "clang"]
 	path = clang
 	url = git@github.com:RadeonOpenCompute/hcc-clang-upgrade.git
