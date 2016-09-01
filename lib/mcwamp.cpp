@@ -24,8 +24,6 @@ const wchar_t accelerator::default_accelerator[] = L"default";
 
 } // namespace Concurrency
 
-std::vector<std::string> __mcw_kernel_names;
-
 // weak symbols of kernel codes
 
 // HSA kernel codes
