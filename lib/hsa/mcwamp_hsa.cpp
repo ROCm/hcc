@@ -115,7 +115,7 @@ static const char* getHSAErrorString(hsa_status_t s) {
 
     const char* case_string;
     switch(s) {
-        CASE_ERROR_STRING(HSA_STATUS_ERROR);
+        CASE_STRING(HSA_STATUS_ERROR);
         CASE_STRING(HSA_STATUS_ERROR_INVALID_ARGUMENT);
         CASE_STRING(HSA_STATUS_ERROR_INVALID_QUEUE_CREATION);
         CASE_STRING(HSA_STATUS_ERROR_INVALID_ALLOCATION);
