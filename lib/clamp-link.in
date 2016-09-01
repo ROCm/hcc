@@ -438,14 +438,10 @@ done
 # AMDGPU_TARGET could be overridden by HCC_AMDGPU_TARGET env variable
 if [ -n "$HCC_AMDGPU_TARGET" ]; then
   # map ISA version string to GPU family
-  if [ "$HCC_AMDGPU_TARGET" = "AMD:AMDGPU:7:0:0" ]; then
-    AMDGPU_TARGET="kaveri"
-  elif [ "$HCC_AMDGPU_TARGET" = "AMD:AMDGPU:7:0:1" ]; then
+  if [ "$HCC_AMDGPU_TARGET" = "AMD:AMDGPU:7:0:1" ]; then
     AMDGPU_TARGET="hawaii"
   elif [ "$HCC_AMDGPU_TARGET" = "AMD:AMDGPU:8:0:1" ]; then
     AMDGPU_TARGET="carrizo"
-  elif [ "$HCC_AMDGPU_TARGET" = "AMD:AMDGPU:8:0:2" ]; then
-    AMDGPU_TARGET="tonga"
   elif [ "$HCC_AMDGPU_TARGET" = "AMD:AMDGPU:8:0:3" ]; then
     AMDGPU_TARGET="fiji"
   else
@@ -535,17 +531,11 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
           fiji)
             HOF_ARCH="8:0:3"
           ;;
-          kaveri)
-            HOF_ARCH="7:0:0"
-          ;;
           carrizo)
             HOF_ARCH="8:0:1"
           ;;
           hawaii)
             HOF_ARCH="7:0:1"
-          ;;
-          tonga)
-            HOF_ARCH="8:0:2"
           ;;
         esac
 
