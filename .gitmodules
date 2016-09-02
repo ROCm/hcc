@@ -1,7 +1,7 @@
 [submodule "llvm"]
 	path = compiler
 	url = git@github.com:RadeonOpenCompute/llvm.git
-	branch = amd-common
+	branch = amd-hcc
 [submodule "lld"]
 	path = lld
 	url = git@github.com:RadeonOpenCompute/lld.git
