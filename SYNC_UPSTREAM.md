@@ -11,15 +11,18 @@ Upstream Clang, LLVM, and LLD all sit in different git repositories and they
 are almost changed daily. Sometimes a change upstream may affect several
 projects, but it is usually not easy to figure it out from the commit log.
 
-The old version of this process merge upstream Clang first, then LLVM / LLD. It has been changed to start from merging upstream LLVM / LLD first, then Clang.
+ToT HCC depends on amd-common LLVM / LLD, which is a fork maintained by AMD,
+and may contain patches yet upstreamed. amd-common LLVM / LLD is automatically
+synchronized with upstream LLVM / LLD every 4 hours, so they are very close to
+the latest codes upstream.
 
 Generally speaking, the process goes like this:
 
-Process A: merge upstream LLVM / LLD
+Process A: merge amd-common LLVM / LLD
 
-1. Fetch upstream LLVM commits
-2. Fetch upstream LLD commits
-3. Build upstream LLVM / LLD
+1. Fetch amd-common LLVM commits
+2. Fetch amd-common LLD commits
+3. Build amd-common LLVM / LLD
 4. Update LLVM / LLD submodules in ToT HCC
 
 Process B: merge upstream Clang
@@ -36,47 +39,54 @@ Detailed step-by-step instructions are in following sections.
 
 Process A: merge upstream LLVM / LLD
 ------------------------------------
-It is now recommended to first merge upstream LLVM / LLD before upstream Clang. So this Process has been re-ordered to Process A.
+git locations of amd-common LLVM / LLD are:
+- amd-common LLVM
+  - URL : git@github.com:RadeonOpenCompute/llvm.git
+  - branch : amd-common
+- amd-common LLD
+  - URL: git@github.com:RadeonOpenCompute/lld.git
+  - branch : amd-common
 
-### Fetch upstream LLVM commits
-Assume there is already an upstream LLVM checkout for AMDGPU(Lightning) backend
-outside ToT HCC checkout.
+### Fetch amd-common LLVM commits
+Assume there is already an amd-common LLVM checkout outside ToT HCC checkout.
 
-- change to upstream LLVM directory
+- change to amd-common LLVM directory
 - `git pull`
 
-### Fetch upstream LLD commits
-Assume there is already an upstream LLD checkout for AMDGPU(Lightning) backend. Normally it would be in "tools/lld" in LLVM checkout.
+### Fetch amd-common LLD commits
+Assume there is already an amd-common LLD checkout. Normally it would be in
+"tools/lld" in amd-common LLVM checkout.
 
-- change to upstream LLD directory
+- change to amd-common LLD directory
 - `git pull`
 
-### Build upstream LLVM / LLD
-Assume there is a build directory for upstream LLVM / LLD. If there is not, follow Appendix A to configure one.
+### Build amd-common LLVM / LLD
+Assume there is a build directory for amd-common LLVM / LLD. If there is not,
+follow Appendix A to configure one.
 
-- change to LLVM build directory
-- `make -j40` , recommended job number is the number of your logical processor times 2.
+- change to amd-common LLVM build directory
+- `make -j40` , recommended number is your logical processor times 2.
 
 ### Update LLVM / LLD submodule configuration
 
-- change to upstream LLVM directory
+- change to amd-common LLVM directory
 - `git rev-parse HEAD`, log the commit #
 - change to ToT HCC directory
 - `cd compiler`
-- `git checkout master`
+- `git checkout amd-common`
 - In case you built ToT HCC before, remove patches from ToT HCC by:
   - `git checkout -- .`
   - `rm lib/Analysis/TileUniform lib/Transforms/CpuRename lib/Transforms/EraseNonkernel lib/Transforms/HC lib/Transforms/Promote lib/Transforms/RemoveSpecialSection`
 - `git pull`
-- `git reset --hard <commit # of upstream LLVM>`
+- `git reset --hard <commit # of amd-common LLVM>`
 
-- change to upstream LLD directory
+- change to amd-common LLD directory
 - `git rev-parse HEAD`, log the commit #
 - change to ToT HCC directory
 - `cd lld`
-- `git checkout master`
+- `git checkout amd-common`
 - `git pull`
-- `git reset --hard <commit # of upstream LLD>`
+- `git reset --hard <commit # of amd-common LLD>`
 
 Process B: merge upstream Clang
 -------------------------------
@@ -162,15 +172,15 @@ Finally switch back to "clang_tot_upgrade" branch.
 
 Upon reaching here, the merge process is completed.
 
-Appendix A: CMake command for upstream LLVM / LLD
-=================================================
+Appendix A: CMake command for amd-common LLVM / LLD
+===================================================
 
 ```
 cmake \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/opt/rocm/llvm \
     -DLLVM_TARGETS_TO_BUILD="AMDGPU;X86" \
-    <upstream LLVM checkout directory>
+    <amd-common LLVM checkout directory>
 ```
 
 Appendix B: CMake command for ToT HCC
@@ -179,7 +189,7 @@ Appendix B: CMake command for ToT HCC
 ```
 cmake \
     -DCMAKE_BUILD_TYPE=Release \
-    -DHSA_LLVM_BIN_DIR=<upstream LLVM build directory>/bin \
+    -DHSA_LLVM_BIN_DIR=<amd-common LLVM build directory>/bin \
     -DHSA_AMDGPU_GPU_TARGET=AMD:AMDGPU:8:0:3 \
     -DROCM_DEVICE_LIB_DIR=<build directory of ROCm-Device-Libs>/dist/lib \
     <ToT HCC checkout directory>
