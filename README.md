@@ -36,7 +36,6 @@ from source. Once it's built, run `make install` and config ToT HCC like:
 ```
 cmake \
     -DCMAKE_BUILD_TYPE=Release \
-    -DHSA_LLVM_BIN_DIR=<where ToT LLVM binary exeuctables are> \
     -DHSA_AMDGPU_GPU_TARGET=<AMD GPU ISA version string> \
     -DROCM_DEVICE_LIB_DIR=<where bitcodes of ROCm-Device-Libs are> \
     <ToT HCC checkout directory>
@@ -44,13 +43,11 @@ cmake \
 
 An example would be:
 ```
-# ToT LLVM is built at ~/llvm/build , executables are at ~/llvm/build/bin
 # Use AMD:AMDGPU:8:0:3 AMD GPU ISA
 # ROCm-Device-Libs is built at ~/ocml/build , bitcodes are at
 # ~/ocml/build/dist/lib
 cmake \
     -DCMAKE_BUILD_TYPE=Release \
-    -DHSA_LLVM_BIN_DIR=~/llvm/build/bin \
     -DHSA_AMDGPU_GPU_TARGET=AMD:AMDGPU:8:0:3 \
     -DROCM_DEVICE_LIB_DIR=~/ocml/build/dist/lib \
     ..

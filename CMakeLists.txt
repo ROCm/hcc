@@ -72,8 +72,6 @@ LINK_DIRECTORIES( ${LLVM_LIB_DIR} )
 # ROCm external dependencies
 set (ROCM_ROOT "/opt/rocm" CACHE PATH "ROCM runtime path")
 
-set (HSA_LLVM_BIN_DIR CACHE PATH "Path to llvm tools with AMDGPU support")
-
 find_path(HSA_HEADER hsa/hsa.h PATHS ${HSA_HEADER_DIR} ${ROCM_ROOT}/include NO_DEFAULT_PATH)
 find_path(HSA_HEADER hsa/hsa.h)
 
@@ -214,12 +212,12 @@ message(STATUS "HCC configured with default backend: ${KALMAR_BACKEND}")
 # build target: world
 #########################
 
-# build Clang front-end
+# build Clang frontend + AMDGPU backend
 set(CLANG_SRC_DIR "${PROJECT_SOURCE_DIR}/compiler")
 set(CLANG_BIN_DIR "${PROJECT_BINARY_DIR}/compiler")
 file(MAKE_DIRECTORY ${CLANG_BIN_DIR})
 add_custom_target(clang
-  COMMAND ${CMAKE_COMMAND} -Wno-dev ${CLANG_SRC_DIR}
+  COMMAND ${CMAKE_COMMAND} ${CLANG_SRC_DIR}
           -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
           -DKALMAR_VERSION_STRING=${KALMAR_VERSION_STRING}
           -DKALMAR_VERSION_MAJOR=${KALMAR_VERSION_MAJOR}
@@ -229,7 +227,7 @@ add_custom_target(clang
           -DKALMAR_FRONTEND_COMMIT=${KALMAR_FRONTEND_COMMIT}
           -DKALMAR_BACKEND_COMMIT=${KALMAR_BACKEND_COMMIT}
           -DKALMAR_BACKEND=${KALMAR_BACKEND}
-          -DLLVM_TARGETS_TO_BUILD=X86
+          -DLLVM_TARGETS_TO_BUILD="AMDGPU\;X86"
           -DLLVM_INCLUDE_EXAMPLES=off
   COMMAND make -j ${NUM_BUILD_THREADS} # not portable, but we need it this way
   WORKING_DIRECTORY ${CLANG_BIN_DIR}
@@ -272,23 +270,7 @@ install(DIRECTORY ${CLANG_BIN_DIR}/lib
         PATTERN LLVM*
         PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
-# create a symlink to the LLVM binaries for the amdgpu backend in the project directory
-add_custom_target(lightning_bin
-  COMMAND mkdir -p "${PROJECT_BINARY_DIR}/llvm/bin"
-  COMMAND cp -rp "${HSA_LLVM_BIN_DIR}/*" "${PROJECT_BINARY_DIR}/llvm/bin/"
-)
-
-# include the amdgpu backend binaries in the hcc package
-install(DIRECTORY ${PROJECT_BINARY_DIR}/llvm/bin
-        DESTINATION llvm
-        COMPONENT lightning_bin
-        PATTERN * PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-
-add_custom_target(world DEPENDS lightning_bin clang)
-find_program(OPT opt PATHS ${HSA_LLVM_BIN_DIR} NO_DEFAULT_PATH)
-add_custom_target(opt DEPENDS ${OPT})
-find_program(LLVM_LINK llvm-link PATHS ${HSA_LLVM_BIN_DIR} NO_DEFAULT_PATH)
-add_custom_target(llvm-link DEPENDS ${LLVM_LINK})
+add_custom_target(world DEPENDS clang)
 
 add_subdirectory(lib)
 add_subdirectory(utils)

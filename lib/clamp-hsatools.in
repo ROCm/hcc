@@ -43,13 +43,10 @@ fi
 BINDIR=$(dirname $0)
 ROCM_LIB=@ROCM_DEVICE_LIB@
 
-HSA_LLVM_BIN_DIR="${BASH_SOURCE%/*}/../../llvm/bin"
-if [ -d "$HSA_LLVM_BIN_DIR" ]; then
-    AMDGPU_LLVM_LINK=$HSA_LLVM_BIN_DIR/llvm-link
-    AMDGPU_OPT=$HSA_LLVM_BIN_DIR/opt
-    AMDGPU_LLC=$HSA_LLVM_BIN_DIR/llc
-    AMDGPU_LLD=$HSA_LLVM_BIN_DIR/ld.lld
-fi
+AMDGPU_LLVM_LINK=$BINDIR/llvm-link
+AMDGPU_OPT=$BINDIR/opt
+AMDGPU_LLC=$BINDIR/llc
+AMDGPU_LLD=$BINDIR/ld.lld
 
 ################
 # AMDGPU target

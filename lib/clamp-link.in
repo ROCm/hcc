@@ -12,13 +12,10 @@ OPT=$BINDIR/opt
 CLAMP_DEVICE=$BINDIR/clamp-device
 CLAMP_EMBED=$BINDIR/clamp-embed
 
-HSA_LLVM_BIN_DIR="${BASH_SOURCE%/*}/../../llvm/bin"
-if [ -d "$HSA_LLVM_BIN_DIR" ]; then
-    AMDGPU_DIR=$HSA_LLVM_BIN_DIR
-    AMDGPU_LLVM_LINK=$HSA_LLVM_BIN_DIR/llvm-link
-    AMDGPU_OPT=$HSA_LLVM_BIN_DIR/opt
-    AMDGPU_LLC=$HSA_LLVM_BIN_DIR/llc
-fi
+AMDGPU_DIR=$BINDIR
+AMDGPU_LLVM_LINK=$BINDIR/llvm-link
+AMDGPU_OPT=$BINDIR/opt
+AMDGPU_LLC=$BINDIR/llc
 
 ################
 # Verbose flag
