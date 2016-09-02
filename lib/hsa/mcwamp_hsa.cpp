@@ -768,6 +768,9 @@ private:
     // value: a vector of buffers used by the kernel
     std::map<void*, std::vector<void*> > kernelBufferMap;
 
+    // signal used by sync copy only
+    hsa_signal_t  sync_copy_signal;
+
 public:
     HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order) : KalmarQueue(pDev, queuing_mode_automatic, order), commandQueue(nullptr), asyncOps(), opSeqNums(0), bufferKernelMap(), kernelBufferMap() {
         hsa_status_t status;
@@ -789,6 +792,9 @@ public:
         status = hsa_amd_profiling_set_profiler_enabled(commandQueue, 1);
 
         youngestCommandKind = hcCommandInvalid;
+
+        status = hsa_signal_create(1, 1, &agent, &sync_copy_signal);
+        STATUS_CHECK(status, __LINE__);
     }
 
     void dispose() override {
@@ -819,6 +825,9 @@ public:
         status = hsa_queue_destroy(commandQueue);
         STATUS_CHECK(status, __LINE__);
         commandQueue = nullptr;
+
+        status = hsa_signal_destroy(sync_copy_signal);
+        STATUS_CHECK(status, __LINE__);
 
 #if KALMAR_DEBUG
         std::cerr << "HSAQueue::dispose() out\n";
@@ -1084,24 +1093,12 @@ public:
 #endif
 
       hsa_status_t status;
-
-      hsa_signal_t completion_signal = {0};
-      status = hsa_signal_create(0, 0, NULL, &completion_signal);
-      STATUS_CHECK(status, __LINE__);
-      hsa_signal_store_relaxed(completion_signal, 1);
-
+      hsa_signal_store_relaxed(sync_copy_signal, 1);
       status = hsa_amd_memory_async_copy(dst, dst_agent,
                                           src, src_agent,
-                                          size, 0, nullptr, completion_signal);
-
-      
-      hsa_wait_state_t waitMode = HSA_WAIT_STATE_BLOCKED;
-      hsa_signal_wait_acquire(completion_signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, waitMode);
-
-
-      hsa_signal_destroy(completion_signal);
+                                          size, 0, nullptr, sync_copy_signal);
       STATUS_CHECK(status, __LINE__);
-      
+      hsa_signal_wait_acquire(sync_copy_signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_STATE_BLOCKED);
       return;
     }
 
