@@ -18,134 +18,107 @@ the latest codes upstream.
 
 Generally speaking, the process goes like this:
 
-Process A: merge amd-common LLVM / LLD
-
-1. Fetch amd-common LLVM commits
-2. Fetch amd-common LLD commits
-3. Build amd-common LLVM / LLD
-4. Update LLVM / LLD submodules in ToT HCC
-
-Process B: merge upstream Clang
-
-1. Add git remote for upstream Clang
-2. Fetch upstream Clang commits
-3. Merge upstream Clang with ToT HCC Clang
-4. Build merged ToT HCC Clang
-   - For failures introduced by changes in LLVM / LLD, re-execute Process A
-5. Quick sanity tests on merged ToT HCC Clang
-6. Push ToT HCC submodules
+ 1. Merge amd-common LLVM commits
+ 2. Merge amd-common LLD commits
+ 3. Add git remote for upstream Clang
+ 4. Fetch upstream Clang commits
+ 5. Merge upstream Clang with ToT HCC Clang
+ 6. Build merged ToT HCC
+ 7. Quick sanity tests on merged ToT HCC
+ 8. Push ToT HCC Clang submodules
+ 9. Push amd-hcc LLVM submodule
+10. Update submodules configuration
 
 Detailed step-by-step instructions are in following sections.
 
-Process A: merge upstream LLVM / LLD
+Useful github repositories
 ------------------------------------
-git locations of amd-common LLVM / LLD are:
+git locations of repositories used in the merge process are:
 - amd-common LLVM
   - URL : git@github.com:RadeonOpenCompute/llvm.git
   - branch : amd-common
 - amd-common LLD
   - URL: git@github.com:RadeonOpenCompute/lld.git
   - branch : amd-common
+- upstram Clang
+  - URL: git@github.com:llvm-mirror/clang.git
+  - branch : master
 
-### Fetch amd-common LLVM commits
-Assume there is already an amd-common LLVM checkout outside ToT HCC checkout.
+Step-by-step Merge Process
+------------------------------------
+### Merge amd-common LLVM commits
 
-- change to amd-common LLVM directory
-- `git pull`
-
-### Fetch amd-common LLD commits
-Assume there is already an amd-common LLD checkout. Normally it would be in
-"tools/lld" in amd-common LLVM checkout.
-
-- change to amd-common LLD directory
-- `git pull`
-
-### Build amd-common LLVM / LLD
-Assume there is a build directory for amd-common LLVM / LLD. If there is not,
-follow Appendix A to configure one.
-
-- change to amd-common LLVM build directory
-- `make -j40` , recommended number is your logical processor times 2.
-
-### Update LLVM / LLD submodule configuration
-
-- change to amd-common LLVM directory
-- `git rev-parse HEAD`, log the commit #
 - change to ToT HCC directory
 - `cd compiler`
-- `git checkout amd-common`
-- In case you built ToT HCC before, remove patches from ToT HCC by:
-  - `git checkout -- .`
-  - `rm lib/Analysis/TileUniform lib/Transforms/CpuRename lib/Transforms/EraseNonkernel lib/Transforms/HC lib/Transforms/Promote lib/Transforms/RemoveSpecialSection`
+- `git checkout amd-hcc`
 - `git pull`
-- `git reset --hard <commit # of amd-common LLVM>`
+- `git merge origin/amd-common`
 
-- change to amd-common LLD directory
-- `git rev-parse HEAD`, log the commit #
-- change to ToT HCC directory
-- `cd lld`
+Resolve any merge conflicts encountered here. Commit to amd-hcc branch.
+
+### Merge amd-common LLD commits
+
+- `cd ../lld`
 - `git checkout amd-common`
 - `git pull`
-- `git reset --hard <commit # of amd-common LLD>`
-
-Process B: merge upstream Clang
--------------------------------
 
 ### Add git remote for upstream Clang
-It is assumed there is already a ToT HCC checkout, and also a ToT HCC Clang
-submodule, normally found under `clang` diretory under ToT HCC checkout.
 
-- Enter `clang`
+- `cd ../clang`
 - `git remote -v` to check if there is a git remote pointing to:
   `git@github.com:llvm-mirror/clang.git`
 - If there is not, add it by:
   `git remote add clang git@github.com:llvm-mirror/clang.git`
 
 ### Fetch upstream Clang commits
-Assume commands below are carried out in `clang`.
 
-- `git checkout upstream` : change to the branch to keep upstream commits. The branch contains no HCC-specific codes.
-- `git fetch clang` : fetch upstream commits
-- `git merge --no-ff clang/master` : get upstream commits merged into upstream branch
+- `git checkout upstream`
+  - change to the branch to keep upstream commits.
+  - The branch contains no HCC-specific codes.
+- `git fetch clang`
+- `git merge --no-ff clang/master`
 
 ### Merge upstream Clang with ToT HCC Clang
-Assume commands below are carried out in `clang`.
 
-- `git checkout clang_tot_upgrade` : change to the main develop branch for ToT HCC Clang
-- `git merge upstream` : merge commits from upstream Clang to ToT HCC Clang
+- `git checkout clang_tot_upgrade`
+  - change to the main develop branch for ToT HCC Clang
+- `git merge upstream`
 
-Resolve any merge conflicts encountered here. Commit to clang_tot_upgrade branch.
+Resolve merge conflicts encountered here. Commit to clang_tot_upgrade branch.
 
-### Build merged ToT HCC Clang
-Assume a ToT HCC build directory is there. If there is not, follow Appendix B to configure one.
+### Build merged ToT HCC
+Assume a ToT HCC build directory is there. If there is not, follow Appendix A
+to configure one.
 
 - change to ToT HCC build directory
-- re-run CMake according to Appendix B
-- `make -j40` , recommended job number is the number of your logical processor times 2.
+- re-run CMake according to Appendix A
+- `make -j56` , recommended number is your logical processor times 2.
 
-Fix any compilation failures if there is any. For failures introduced by changes
-in LLVM / LLD. Stop. Execute Process A and come back here once it is done.
-Then repeat this step until ToT HCC can be built.
+Fix any compilation failures if there is any. Repeat this step until ToT HCC
+can be built.
 
-### Quick sanity tests on merged ToT HCC Clang
+### Quick sanity tests on merged ToT HCC
 Assume commands below are carried out in ToT HCC build directory. And ToT HCC
 checkout is at `~/hcc_upstream`.
 
 Test with one C++AMP FP math unit test.
 ```
-bin/hcc `bin/clamp-config --build --cxxflags --ldflags` -lm ~/hcc_upstream/tests/Unit/AmpMath/amp_math_cos.cpp
+bin/hcc `bin/clamp-config --build --cxxflags --ldflags` -lm \
+  ~/hcc_upstream/tests/Unit/AmpMath/amp_math_cos.cpp
 ./a.out ; echo $?
 ```
 
 Test with one grid_launch unit test with AM library usage.
 ```
-bin/hcc `bin/hcc-config --build --cxxflags --ldflags` -lhc_am ~/hcc_upstream/tests/Unit/GridLaunch/glp_const.cpp
+bin/hcc `bin/hcc-config --build --cxxflags --ldflags` -lhc_am \
+  ~/hcc_upstream/tests/Unit/GridLaunch/glp_const.cpp
 ./a.out ; echo $?
 ```
 
-### Commit and push ToT HCC Clang submodule
+### Push ToT HCC Clang submodule
 
-- change to ToT HCC Clang directory
+- change to ToT HCC directory
+- `cd clang`
 - `git checkout clang_tot_upgrade`
 - `git push`
 - `git checkout upstream`
@@ -163,6 +136,13 @@ as "clang_tot_upgrade" branch.
 Finally switch back to "clang_tot_upgrade" branch.
 - `git checkout clang_tot_upgrade`
 
+### Push amd-hcc LLVM submodule
+
+- change to ToT HCC directory
+- `cd compiler`
+- `git checkout amd-hcc`
+- `git push`
+
 ### Update submodules configuration
 
 - change to ToT HCC Clang directory
@@ -172,24 +152,12 @@ Finally switch back to "clang_tot_upgrade" branch.
 
 Upon reaching here, the merge process is completed.
 
-Appendix A: CMake command for amd-common LLVM / LLD
-===================================================
-
-```
-cmake \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_INSTALL_PREFIX=/opt/rocm/llvm \
-    -DLLVM_TARGETS_TO_BUILD="AMDGPU;X86" \
-    <amd-common LLVM checkout directory>
-```
-
-Appendix B: CMake command for ToT HCC
+Appendix A: CMake command for ToT HCC
 =====================================
 
 ```
 cmake \
     -DCMAKE_BUILD_TYPE=Release \
-    -DHSA_LLVM_BIN_DIR=<amd-common LLVM build directory>/bin \
     -DHSA_AMDGPU_GPU_TARGET=AMD:AMDGPU:8:0:3 \
     -DROCM_DEVICE_LIB_DIR=<build directory of ROCm-Device-Libs>/dist/lib \
     <ToT HCC checkout directory>
