@@ -11,7 +11,7 @@
 
 int main() {
 
-  constexpr int N = 1024 * 1024 * 256;
+  constexpr int N = 1024 * 1024 * 64;
   constexpr float a = 100.0f;
 
   std::vector<float> host_x(N);
