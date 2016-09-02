@@ -764,6 +764,9 @@ private:
     // value: a vector of buffers used by the kernel
     std::map<void*, std::vector<void*> > kernelBufferMap;
 
+    // signal used by sync copy only
+    hsa_signal_t  sync_copy_signal;
+
 public:
     HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order) : KalmarQueue(pDev, queuing_mode_automatic, order), commandQueue(nullptr), asyncOps(), opSeqNums(0), bufferKernelMap(), kernelBufferMap() {
         hsa_status_t status;
@@ -785,6 +788,9 @@ public:
         status = hsa_amd_profiling_set_profiler_enabled(commandQueue, 1);
 
         youngestCommandKind = hcCommandInvalid;
+
+        status = hsa_signal_create(1, 1, &agent, &sync_copy_signal);
+        STATUS_CHECK(status, __LINE__);
     }
 
     void dispose() override {
@@ -815,6 +821,9 @@ public:
         status = hsa_queue_destroy(commandQueue);
         STATUS_CHECK(status, __LINE__);
         commandQueue = nullptr;
+
+        status = hsa_signal_destroy(sync_copy_signal);
+        STATUS_CHECK(status, __LINE__);
 
 #if KALMAR_DEBUG
         std::cerr << "HSAQueue::dispose() out\n";
@@ -1069,6 +1078,26 @@ public:
         dependentAsyncOpVector.clear();
     }
 
+
+    void sync_copy(void* dst, hsa_agent_t dst_agent,
+                   const void* src, hsa_agent_t src_agent,
+                   size_t size) {
+
+#if KALMAR_DEBUG
+      dumpHSAAgentInfo(src_agent, "sync_copy source agent");
+      dumpHSAAgentInfo(dst_agent, "sync_copy destination agent");
+#endif
+
+      hsa_status_t status;
+      hsa_signal_store_relaxed(sync_copy_signal, 1);
+      status = hsa_amd_memory_async_copy(dst, dst_agent,
+                                          src, src_agent,
+                                          size, 0, nullptr, sync_copy_signal);
+      STATUS_CHECK(status, __LINE__);
+      hsa_signal_wait_acquire(sync_copy_signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_STATE_BLOCKED);
+      return;
+    }
+
     void read(void* device, void* dst, size_t count, size_t offset) override {
         waitForDependentAsyncOps(device);
 
@@ -1096,8 +1125,9 @@ public:
                     STATUS_CHECK(status, __LINE__);
                     va = dst;
                 }
-                status = hsa_memory_copy(va, (char*)device + offset, count);
-                STATUS_CHECK(status, __LINE__);
+
+                sync_copy(va, *static_cast<hsa_agent_t*>(getHostAgent()),  (char*)device + offset, *static_cast<hsa_agent_t*>(getHSAAgent()), count);
+
                 // Unlock the host memory
                 status = hsa_amd_memory_unlock(dst);
             } else {
@@ -1121,20 +1151,18 @@ public:
                 hsa_status_t status = HSA_STATUS_SUCCESS;
                 // Make sure host memory is accessible to gpu
                 // FIXME: host memory is allocated through OS allocator, if not, correct it.
-                hsa_agent_t* agent = static_cast<hsa_agent_t*>(getHSAAgent());
-                void* va = nullptr;
-                status = hsa_amd_memory_lock(const_cast<void*>(src), count, agent, 1, &va);
-
+                hsa_agent_t* agent = static_cast<hsa_agent_t*>(getHSAAgent()); 
+                const void* va = nullptr;
+                status = hsa_amd_memory_lock(const_cast<void*>(src), count, agent, 1, (void**)&va);
+                  
                 if(va == NULL || status != HSA_STATUS_SUCCESS)
                 {
                     status = hsa_amd_agents_allow_access(1, agent, NULL, src);
                     STATUS_CHECK(status, __LINE__);
-                    status = hsa_memory_copy((char*)device + offset, src, count);
-                    STATUS_CHECK(status, __LINE__);
-                    return;
+                    va = src;
                 }
+                sync_copy(((char*)device) + offset,  *agent, va,    *static_cast<hsa_agent_t*>(getHostAgent()), count);
 
-                status = hsa_memory_copy((char*)device + offset, va, count);
                 STATUS_CHECK(status, __LINE__);
                 // Unlock the host memory
                 status = hsa_amd_memory_unlock(const_cast<void*>(src));
@@ -1147,6 +1175,9 @@ public:
         }
     }
 
+
+
+    //FIXME: this API doesn't work in the P2P world because we don't who the source agent is!!!
     void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset, bool blocking) override {
         waitForDependentAsyncOps(dst);
         waitForDependentAsyncOps(src);
@@ -1196,12 +1227,23 @@ public:
             status = hsa_amd_memory_pool_allocate(*am_host_region, count, 0, &data);
             STATUS_CHECK(status, __LINE__);
             if (data != nullptr) {
+#if KALMAR_DEBUG
+            std::wcerr << getDev()->get_path();
+            std::cerr << ": map() allow device access to mapped buffer\n";
+#endif
               // copy data from device buffer to host buffer
               hsa_agent_t* agent = static_cast<hsa_agent_t*>(getHSAAgent());
               status = hsa_amd_agents_allow_access(1, agent, NULL, data);
               STATUS_CHECK(status, __LINE__);
-              status = hsa_memory_copy(data, (char*)device + offset, count);
-              STATUS_CHECK(status, __LINE__);
+#if KALMAR_DEBUG
+                std::wcerr << getDev()->get_path();
+                std::cerr << ": map() copy device buffer to host buffer\n";
+#endif
+                sync_copy(data, *static_cast<hsa_agent_t*>(getHostAgent()), ((char*)device) + offset, *agent, count);
+#if KALMAR_DEBUG
+                std::wcerr << getDev()->get_path();
+                std::cerr << ": map() copy done\n";
+#endif
             } else {
 #if KALMAR_DEBUG
               std::cerr << "host buffer allocation failed!\n";
@@ -1240,12 +1282,18 @@ public:
 #endif
             if (modify) {
 #if KALMAR_DEBUG
-                std::cerr << "copy host buffer to device buffer\n";
+                std::wcerr << getDev()->get_path();
+                std::cerr << ": unmap() copy host buffer to device buffer\n";
 #endif
                 // copy data from host buffer to device buffer
                 hsa_status_t status = HSA_STATUS_SUCCESS;
-                status = hsa_memory_copy((char*)device + offset, addr, count);
-                STATUS_CHECK(status, __LINE__);
+
+                hsa_agent_t* agent = static_cast<hsa_agent_t*>(getHSAAgent()); 
+                sync_copy(((char*)device) + offset, *agent, addr, *static_cast<hsa_agent_t*>(getHostAgent()), count);
+#if KALMAR_DEBUG
+                std::wcerr << getDev()->get_path();
+                std::cerr << ": unmap() copy done\n";
+#endif
             }
 
             // deallocate the host buffer
@@ -1275,6 +1323,8 @@ public:
     }
 
     void* getHSAAgent() override;
+
+    void* getHostAgent() override;
 
     void* getHSAAMRegion() override;
 
@@ -1478,13 +1528,19 @@ public:
     // we save the pools we care about into this structure.
     static hsa_status_t get_memory_pools(hsa_amd_memory_pool_t region, void* data)
     {
-
+        hsa_status_t status;
         hsa_amd_segment_t segment;
-        hsa_amd_memory_pool_get_info(region, HSA_AMD_MEMORY_POOL_INFO_SEGMENT, &segment);
+        status = hsa_amd_memory_pool_get_info(region, HSA_AMD_MEMORY_POOL_INFO_SEGMENT, &segment);
+        if (status != HSA_STATUS_SUCCESS) {
+          return status;
+        }
 
         if (segment == HSA_AMD_SEGMENT_GLOBAL) {
           size_t size = 0;
-          hsa_amd_memory_pool_get_info(region, HSA_AMD_MEMORY_POOL_INFO_SIZE, &size);
+          status = hsa_amd_memory_pool_get_info(region, HSA_AMD_MEMORY_POOL_INFO_SIZE, &size);
+          if (status != HSA_STATUS_SUCCESS) {
+            return status;
+          }
 #if KALMAR_DEBUG
           std::cerr << "found memory pool of GPU local memory, size(MB) = " << (size/(1024*1024)) << std::endl;
 #endif
@@ -2651,7 +2707,10 @@ inline void*
 HSAQueue::getHSAAgent() override {
     return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getAgent()));
 }
-
+inline void*
+HSAQueue::getHostAgent() override {
+    return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getHostAgent()));
+}
 inline void*
 HSAQueue::getHSAAMRegion() override {
     return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getHSAAMRegion()));
