@@ -178,7 +178,7 @@ static void dumpHSAAgentInfo(hsa_agent_t agent, const char* extra_string = (cons
   swprintf(path_wchar, 128, L"%s%u", name, node);
 
   printf("Dump Agent Info (%s)\n",extra_string);
-  printf("\t Agent: "); 
+  printf("\t Agent: ");
   std::wcerr  << path_wchar << L"\n";
 
   return;
@@ -853,19 +853,19 @@ public:
     void printAsyncOps(std::ostream &s = std::cerr)
     {
         hsa_signal_value_t oldv=0;
-        s << "Queue: " << this;
+        s << "Queue: " << this << "  : " << asyncOps.size() << " op entries\n";
         for (int i=0; i<asyncOps.size(); i++) {
             const std::shared_ptr<KalmarAsyncOp::KalmarAsyncOp> &op = asyncOps[i];
-            s << "index:" << std::setw(4) ;
+            s << "index:" << std::setw(4) << i ;
             if (op != nullptr) {
                 s << " op#"<< op->getSeqNum() ;
                 hsa_signal_t signal = * (static_cast<hsa_signal_t*> (op->getNativeHandle()));
                 hsa_signal_value_t v = hsa_signal_load_acquire(signal);
                 s  << " " << getHcCommandKindString(op->getCommandKind());
-                s  << " signal=" << signal.handle << " value=" << v;
+                s  << " signal=" << std::hex << signal.handle << " value=" << v;
 
                 if (v != oldv) {
-                    s << " <--CHANGE";
+                    s << " <--TRANSITION";
                     oldv = v;
                 }
             } else {
@@ -881,7 +881,7 @@ public:
         op->setSeqNum(++opSeqNums);
 
 #if KALMAR_DEBUG_ASYNC_COPY
-        std::cerr << "  pushing op=" << op << "  #" << op->getSeqNum() << " signal=" << ((hsa_signal_t*)op->getNativeHandle())->handle
+        std::cerr << "  pushing op=" << op << "  #" << op->getSeqNum() << " signal="<< std::hex  << ((hsa_signal_t*)op->getNativeHandle())->handle
                   << "  commandKind=" << getHcCommandKindString(op->getCommandKind()) << std::endl;
 #endif
 
@@ -951,8 +951,14 @@ public:
     int getPendingAsyncOps() override {
         int count = 0;
         for (int i = 0; i < asyncOps.size(); ++i) {
-            if (asyncOps[i] != nullptr) {
-                ++count;
+            auto asyncOp = asyncOps[i];
+
+            if (asyncOp != nullptr) {
+                hsa_signal_t signal = *(static_cast <hsa_signal_t*> (asyncOp->getNativeHandle()));
+                hsa_signal_value_t v = hsa_signal_load_relaxed(signal);
+                if (v != 0) {
+                    ++count;
+                }
             }
         }
         return count;
@@ -1600,7 +1606,7 @@ public:
           if (flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_COARSE_GRAINED) {
 #if KALMAR_DEBUG
             std::cerr << "using coarse grained system for kernarg memory, size(MB) = " << size << std::endl;
-#endif 
+#endif
             ri->_kernarg_memory_pool = region;
             ri->_found_kernarg_memory_pool = true;
           }
@@ -1608,14 +1614,14 @@ public:
                    && ri->_found_kernarg_memory_pool == false) {
 #if KALMAR_DEBUG
             std::cerr << "using fine grained system for kernarg memory, size(MB) = " << size << std::endl;
-#endif 
+#endif
             ri->_kernarg_memory_pool = region;
             ri->_found_kernarg_memory_pool = true;
           }
           else {
 #if KALMAR_DEBUG
             std::cerr << "Unknown memory pool with kernarg_init flag set!!!, size(MB) = " << size << std::endl;
-#endif 
+#endif
           }
         }
 
@@ -3036,7 +3042,7 @@ HSADispatch::waitComplete() {
     }
 
 #if KALMAR_DEBUG
-    std::cerr << " wait for kernel dispatch op#" << getSeqNum() << " completion with wait flag: " << waitMode << "  signal=" << signal.handle << "\n";
+    std::cerr << " wait for kernel dispatch op#" << getSeqNum() << " completion with wait flag: " << waitMode << "  signal="<< std::hex  << signal.handle << "\n";
 #endif
 
     // wait for completion
@@ -3190,7 +3196,7 @@ HSABarrier::waitComplete() {
     }
 
 #if KALMAR_DEBUG or KALMAR_DEBUG_ASYNC_COPY
-    std::cerr << "  wait for barrier op#" << getSeqNum() << " completion with wait flag: " << waitMode << "  signal=" << signal.handle << "\n";
+    std::cerr << "  wait for barrier op#" << getSeqNum() << " completion with wait flag: " << waitMode << "  signal="<< std::hex  << signal.handle << "\n";
 #endif
 
     // Wait on completion signal until the barrier is finished
@@ -3336,7 +3342,7 @@ HSACopy::waitComplete() {
 #if KALMAR_DEBUG or KALMAR_DEBUG_ASYNC_COPY
     // Wait on completion signal until the async copy is finished
     hsa_signal_value_t v = hsa_signal_load_acquire(signal);
-    std::cerr << "  wait for copy op#" << getSeqNum() << " completion with wait flag: " << waitMode << "signal=" << signal.handle << " currentVal=" << v << "\n";
+    std::cerr << "  wait for copy op#" << getSeqNum() << " completion with wait flag: " << waitMode << "signal="<< std::hex  << signal.handle << " currentVal=" << v << "\n";
 #endif
 
     // Wait on completion signal until the async copy is finished
@@ -3443,13 +3449,13 @@ HSACopy::enqueueAsyncCopy() {
             depSignalCnt = 1;
             depSignal = * (static_cast <hsa_signal_t*> (depAsyncOp->getNativeHandle()));
 #if KALMAR_DEBUG_ASYNC_COPY
-            std::cerr << "  asyncCopy sent with dependency on op#" << depAsyncOp->getSeqNum() << " depSignal=" << depSignal.handle << "\n";
+            std::cerr << "  asyncCopy sent with dependency on op#" << depAsyncOp->getSeqNum() << " depSignal="<< std::hex  << depSignal.handle << "\n";
 #endif
         }
 
 #if KALMAR_DEBUG_ASYNC_COPY
             hsa_signal_value_t v = hsa_signal_load_acquire(signal);
-            std::cerr << "  hsa_amd_memory_async_copy launched " << " completionSignal=" << signal.handle
+            std::cerr << "  hsa_amd_memory_async_copy launched " << " completionSignal="<< std::hex  << signal.handle
                       << "  InitSignalValue=" << v << " depSignalCnt=" << depSignalCnt << "\n";
 #endif
 
