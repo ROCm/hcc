@@ -104,14 +104,14 @@ checkout is at `~/hcc_upstream`.
 Test with one C++AMP FP math unit test.
 ```
 bin/hcc `bin/clamp-config --build --cxxflags --ldflags` -lm \
-  ~/hcc_upstream/tests/Unit/AmpMath/amp_math_cos.cpp
+  ~/hcc/hcc_upstream/tests/Unit/AmpMath/amp_math_cos.cpp
 ./a.out ; echo $?
 ```
 
 Test with one grid_launch unit test with AM library usage.
 ```
 bin/hcc `bin/hcc-config --build --cxxflags --ldflags` -lhc_am \
-  ~/hcc_upstream/tests/Unit/GridLaunch/glp_const.cpp
+  ~/hcc/hcc_upstream/tests/Unit/GridLaunch/glp_const.cpp
 ./a.out ; echo $?
 ```
 
@@ -138,14 +138,13 @@ Finally switch back to "clang_tot_upgrade" branch.
 
 ### Push amd-hcc LLVM submodule
 
-- change to ToT HCC directory
-- `cd compiler`
+- `cd ../compiler`
 - `git checkout amd-hcc`
 - `git push`
 
 ### Update submodules configuration
 
-- change to ToT HCC Clang directory
+- `cd ..`
 - `git add clang compiler lld`
 - `git commit` and provide commit log
 - `git push` to push submodules configuration online
