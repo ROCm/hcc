@@ -4,7 +4,6 @@
 # $2 = HSACO kernel file name
 # $3 = (optional) --amdgpu-target=(GPU family name)
 #                          selects AMDGPU target
-# $4 = (optional) --verbose show verbose output
 
 # enable bash debugging
 KMDBSCRIPT="${KMDBSCRIPT:=0}"
@@ -19,10 +18,9 @@ fi
 
 # check command line arguments
 if [ "$#" -lt 2 ]; then
-  echo "Usage: $0 input_LLVM output_kernel (--amdgpu-target=(GPU family name) (--verbose)" >&2
+  echo "Usage: $0 input_LLVM output_kernel (--amdgpu-target=(GPU family name)" >&2
   echo "  --amdgpu-target=(GPU family name)" >&2
   echo "           selects AMDGPU target" >&2
-  echo "  --verbose will enable GPU target lowering output" >&2
   exit 1
 fi
 
@@ -41,12 +39,6 @@ LIB=$BINDIR/../lib
 HSATOOLS=$BINDIR/clamp-hsatools
 
 ################
-# Verbose flag
-################
-
-VERBOSE=0
-
-################
 # AMDGPU target
 ################
 
@@ -56,13 +48,6 @@ AMDGPU_TARGET=@AMDGPU_TARGET@
 ARGS="$@"
 for ARG in $ARGS
 do
-  ######################
-  # Parse verbose flag
-  ######################
-  if [ $ARG == "--verbose" ]; then
-    VERBOSE=1
-  fi
-
   ######################
   # Parse AMDGPU target
   ######################
@@ -111,9 +96,6 @@ fi
 
 $AS -o $2.promote.bc $2.promote.ll
 
-if [ $VERBOSE == 1 ]; then
-  echo "Generating AMD GCN kernel"
-fi
 $LINK $2.promote.bc -o $2 2>/dev/null
 
 if [ $KMDUMPLLVM == "1" ]; then

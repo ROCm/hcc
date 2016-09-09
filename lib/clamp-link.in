@@ -443,11 +443,10 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
   # lower to ROCm
   if [ $LOWER_ROCM == 1 ]; then
     # lower to GCN ISA
-    if [ $VERBOSE == 0 ]; then
-      $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.hsaco --amdgpu-target=$AMDGPU_TARGET
-    else
-      $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.hsaco --amdgpu-target=$AMDGPU_TARGET --verbose
+    if [ $VERBOSE == 1 ]; then
+      echo "Generating AMD GCN kernel"
     fi
+    $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.hsaco --amdgpu-target=$AMDGPU_TARGET
     ret=$?
     if [ $ret == 0 ]; then
       # build a new kernel object
