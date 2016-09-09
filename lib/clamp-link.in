@@ -444,9 +444,9 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
   if [ $LOWER_ROCM == 1 ]; then
     # lower to GCN ISA
     if [ $VERBOSE == 0 ]; then
-      $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.hsaco --hsa --amdgpu-target=$AMDGPU_TARGET
+      $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.hsaco --amdgpu-target=$AMDGPU_TARGET
     else
-      $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.hsaco --hsa --amdgpu-target=$AMDGPU_TARGET --verbose
+      $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.hsaco --amdgpu-target=$AMDGPU_TARGET --verbose
     fi
     ret=$?
     if [ $ret == 0 ]; then
