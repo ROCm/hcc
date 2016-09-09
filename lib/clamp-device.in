@@ -64,28 +64,26 @@ if [ $KMDUMPLLVM == "1" ]; then
   cp $1 ./dump.input.bc
 fi
 
+# Invoke HCC-specific opt passes
 # UPGRADE_TBD: temporary suppress warning messages in Promote pass
 if [ "$CLAMP_NOTILECHECK" == "ON" ]; then
   $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
        -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-       -erase-nonkernels -promote-globals -dce -globaldce -S < $1 -o $2.promote.ll.orig
+       -load $LIB/LLVMRemoveSpecialSection@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+       -erase-nonkernels -promote-globals -dce -globaldce -remove-special-section -S < $1 -o $2.promote.ll.orig
 else
   $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
        -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
        -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-       -erase-nonkernels -promote-globals -tile-uniform -dce -globaldce -S < $1 -o $2.promote.ll.orig
+       -load $LIB/LLVMRemoveSpecialSection@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+       -erase-nonkernels -promote-globals -tile-uniform -dce -globaldce -remove-special-section -S < $1 -o $2.promote.ll.orig
 fi
 
-if [ $? == 1 ]; then
-  echo "Generating AMD GCN kernel failed"
-  exit 1
-fi
-
-# remove special section information for AMDGPU backend
-$OPT -load $LIB/LLVMRemoveSpecialSection@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-     -remove-special-section -S < $2.promote.ll.orig -o $2.promote.ll.orig.new
-if [ $? == 0 ]; then
-  mv -f $2.promote.ll.orig.new $2.promote.ll.orig
+# error handling for HCC-specific opt passes
+RETVAL=$?
+if [ $RETVAL != 0 ]; then
+  echo "Generating AMD GCN kernel failed in HCC-specific opt passes"
+  exit $RETVAL
 fi
 
 sed "s/addrspacecast /bitcast /g" < $2.promote.ll.orig > $2.promote.ll
