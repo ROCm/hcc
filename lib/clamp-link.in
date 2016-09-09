@@ -12,11 +12,6 @@ OPT=$BINDIR/opt
 CLAMP_DEVICE=$BINDIR/clamp-device
 CLAMP_EMBED=$BINDIR/clamp-embed
 
-AMDGPU_DIR=$BINDIR
-AMDGPU_LLVM_LINK=$BINDIR/llvm-link
-AMDGPU_OPT=$BINDIR/opt
-AMDGPU_LLC=$BINDIR/llc
-
 ################
 # Verbose flag
 ################
@@ -27,23 +22,7 @@ VERBOSE=0
 # GPU targets
 ################
 
-LOWER_ROCM=@HAS_ROCM@
 AMDGPU_TARGET=@AMDGPU_TARGET@
-
-################
-# Sanity check for AMDGPU backend
-################
-
-if [ $LOWER_ROCM == 1 ]; then
-  if [ -d $AMDGPU_DIR ] && [ -e $AMDGPU_LLVM_LINK ] && [ -e $AMDGPU_OPT ] && [ -e $AMDGPU_LLC ] && [ -d $AMDGPU_ASM_DIR ] && [ -e $AMDGPU_ASM ]; then
-    # all ROCm tools are available
-    LOWER_ROCM=1
-  else
-    # disable ROCm lowering in case any of the required tools is missing
-    echo "WARNING: Missing HSA toolchain.  Disable HSA target."
-    LOWER_ROCM=0
-  fi
-fi
 
 ################
 # link
@@ -440,32 +419,24 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
   # combine kernel sections together
   $LINK $LINK_KERNEL_ARGS | $OPT -always-inline - -o $TEMP_DIR/kernel.bc
 
-  # lower to ROCm
-  if [ $LOWER_ROCM == 1 ]; then
-    # lower to GCN ISA
-    if [ $VERBOSE == 1 ]; then
-      echo "Generating AMD GCN kernel"
-    fi
-    $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.hsaco --amdgpu-target=$AMDGPU_TARGET
-    ret=$?
-    if [ $ret == 0 ]; then
-      # build a new kernel object
-      pushd . > /dev/null
-      cd $TEMP_DIR
-      $CLAMP_EMBED kernel.hsaco kernel_hsa.o
-      popd > /dev/null
-    fi
+  # lower to GCN ISA
+  if [ $VERBOSE == 1 ]; then
+    echo "Generating AMD GCN kernel"
   fi
 
+  $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.hsaco --amdgpu-target=$AMDGPU_TARGET
+
+  ret=$?
   if [ $ret == 0 ]; then
+    # build a new kernel object
+    pushd . > /dev/null
+    cd $TEMP_DIR
+    $CLAMP_EMBED kernel.hsaco kernel_hsa.o
+    popd > /dev/null
+
     # link everything together
-    if [ $LOWER_ROCM == 1 ]; then
-      ld --allow-multiple-definition $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS $LINK_CPU_ARG $LINK_OTHER_ARGS
-      ret=$?
-    else
-      echo "ERROR: ROCm stack not found! Linker failed."
-      ret=1
-    fi
+    ld --allow-multiple-definition $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS $LINK_CPU_ARG $LINK_OTHER_ARGS
+    ret=$?
   fi
 
 fi # if [ -n $LINK_KERNEL_ARGS ];
