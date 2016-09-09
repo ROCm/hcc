@@ -1,7 +1,7 @@
 #!/bin/bash
-# wraps around commands to produce HSACO kernel
+# Compiles an LLVM bitcode file to GCN ISA, and store as HSACO
 # $1 = input ll name
-# $2 = HSACO kernel file name
+# $2 = HSACO code object file name
 # $3 = (optional) --amdgpu-target=(GPU family name)
 #                          selects AMDGPU target
 
@@ -11,6 +11,19 @@ KMDBSCRIPT="${KMDBSCRIPT:=0}"
 # dump the LLVM bitcode
 KMDUMPLLVM="${KMDUMPLLVM:=0}"
 
+# dump the isa
+KMDUMPISA="${KMDUMPISA:=0}"
+
+# pass extra options to OPT
+# KMOPTOPT can be used to pass last-minute options to opt in the backend
+# if not set, then "-O3" would be passed to opt
+KMOPTOPT="${KMOPTOPT:="-O3"}"
+
+# pass extra options to LLC
+# KMOPTLLC can be used to pass last-minute options to llc in the backend
+# if not set, then "-O2" will be passed to llc
+KMOPTLLC="${KMOPTLLC:="-O2"}"
+
 if [ $KMDBSCRIPT == "1" ]
 then
   set -x
@@ -18,7 +31,7 @@ fi
 
 # check command line arguments
 if [ "$#" -lt 2 ]; then
-  echo "Usage: $0 input_LLVM output_kernel (--amdgpu-target=(GPU family name)" >&2
+  echo "Usage: $0 input_LLVM output_hsaco_kernel (--amdgpu-target=(GPU family name)" >&2
   echo "  --amdgpu-target=(GPU family name)" >&2
   echo "           selects AMDGPU target" >&2
   exit 1
@@ -36,14 +49,15 @@ OPT=$BINDIR/opt
 LLC=$BINDIR/llc
 LINK=$BINDIR/llvm-link
 LIB=$BINDIR/../lib
-HSATOOLS=$BINDIR/clamp-hsatools
+LLD=$BINDIR/ld.lld
+
+ROCM_LIB=@ROCM_DEVICE_LIB@
 
 ################
 # AMDGPU target
 ################
 
 AMDGPU_TARGET=@AMDGPU_TARGET@
-
 
 ARGS="$@"
 for ARG in $ARGS
@@ -107,30 +121,71 @@ if [ $KMDUMPLLVM == "1" ]; then
   cp $2.promote.bc ./dump.promote.bc
 fi
 
-# invoke llvm-link
-$LINK $2.promote.bc -o $2
+# select appropriate ROCm-Device-Libs per AMDGPU_TARGET
+if [ $AMDGPU_TARGET == "fiji" ]; then
+  OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_803.bc"
+elif [ $AMDGPU_TARGET == "hawaii" ]; then
+  OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_701.bc"
+elif [ $AMDGPU_TARGET == "carrizo" ]; then
+  OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_801.bc"
+fi
+HCC_BC_LIBS="$ROCM_LIB/hc.bc $ROCM_LIB/opencl.bc $ROCM_LIB/ocml.bc $ROCM_LIB/ockl.bc $ROCM_LIB/irif.bc $OCLC_ISA_VERSION_LIB $ROCM_LIB/oclc_finite_only_off.bc $ROCM_LIB/oclc_daz_opt_off.bc $ROCM_LIB/oclc_correctly_rounded_sqrt_on.bc $ROCM_LIB/oclc_unsafe_math_off.bc"
 
-# error handling logic for llvm-link
+$LINK -suppress-warnings -o $2.linked.bc $2.promote.bc $HCC_BC_LIBS
+
+# error handling for llvm-link
 RETVAL=$?
 if [ $RETVAL != 0 ]; then
-  echo "Generating AMD GCN kernel failed in llvm-link"
+  echo "Generating AMD GCN kernel failed in llvm-link with ROCm-Device-Libs"
   exit $RETVAL
 fi
 
 if [ $KMDUMPLLVM == "1" ]; then
-  cp $2 ./dump.hsa_math_linked.bc
+  cp $2.linked.bc ./dump.linked.bc
 fi
 
-if [ "$AMDGPU_TARGET" != "" ]; then
-  $HSATOOLS $2 --amdgpu-target=$AMDGPU_TARGET
-else
-  $HSATOOLS $2
-fi
+# Optimization notes:
+#  -disable-simplify-libcalls:  prevents transforming loops into library calls such as memset, memcopy on GPU
+$OPT $KMOPTOPT -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -disable-simplify-libcalls -verify $2.linked.bc -o $2.opt.bc
+
+# error handling for opt
 RETVAL=$?
-if [ $RETVAL == 0 ]; then
-  mv -f $2 $2.orig
-  mv $2.brig $2
-  # remove temp file
-  rm $2.promote.ll.orig $2.promote.ll $2.promote.bc
+if [ $RETVAL != 0 ]; then
+  echo "Generating AMD GCN kernel failed in opt"
+  exit $RETVAL
 fi
-exit $RETVAL
+
+if [ $KMDUMPLLVM == "1" ]; then
+  cp $2.opt.bc ./dump.opt.bc
+fi
+
+$LLC $KMOPTLLC -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -filetype=obj -o $2.isabin $2.opt.bc
+
+# error handling for llc
+RETVAL=$?
+if [ $RETVAL != 0 ]; then
+  echo "Generating AMD GCN kernel failed in llc"
+  exit $RETVAL
+fi
+
+if [ $KMDUMPISA == "1" ]; then
+  cp $2.isabin ./dump.isabin
+  $LLC $KMOPTLLC -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -filetype=asm -o $2.isa $2.opt.bc
+  mv $2.isa ./dump.isa
+fi
+
+$LLD -shared $2.isabin -o $2
+
+# error handling for ld.lld
+RETVAL=$?
+if [ $RETVAL != 0 ]; then
+  echo "Generating AMD GCN kernel failed in ld.lld"
+  exit $RETVAL
+fi
+
+if [ $KMDUMPISA == "1" ]; then
+  cp $2 ./dump.hsaco
+fi
+
+# remove temp file
+rm -f $2.promote.ll.orig $2.promote.ll $2.promote.bc $2.linked.bc $2.opt.bc $2.isabin $2.isa

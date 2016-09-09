@@ -40,9 +40,6 @@ install(PROGRAMS ${PROJECT_BINARY_DIR}/compiler/bin/clamp-device
 ####################
 # C++AMP tools (HSA-specific)
 ####################
-install(PROGRAMS ${PROJECT_BINARY_DIR}/compiler/bin/clamp-hsatools
-    DESTINATION compiler/bin)
-
 install(PROGRAMS ${PROJECT_BINARY_DIR}/bin/extractkernel
     DESTINATION bin)
 
