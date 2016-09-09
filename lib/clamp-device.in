@@ -86,15 +86,36 @@ if [ $RETVAL != 0 ]; then
   exit $RETVAL
 fi
 
+# convert all addrspacecast to bitcast
 sed "s/addrspacecast /bitcast /g" < $2.promote.ll.orig > $2.promote.ll
 
 if [ $KMDUMPLLVM == "1" ]; then
   cp $2.promote.ll ./dump.promote.ll
 fi
 
+# assemble to bitcode
 $AS -o $2.promote.bc $2.promote.ll
 
-$LINK $2.promote.bc -o $2 2>/dev/null
+# error handling logic for llvm-as
+RETVAL=$?
+if [ $RETVAL != 0 ]; then
+  echo "Generating AMD GCN kernel failed in llvm-as"
+  exit $RETVAL
+fi
+
+if [ $KMDUMPLLVM == "1" ]; then
+  cp $2.promote.bc ./dump.promote.bc
+fi
+
+# invoke llvm-link
+$LINK $2.promote.bc -o $2
+
+# error handling logic for llvm-link
+RETVAL=$?
+if [ $RETVAL != 0 ]; then
+  echo "Generating AMD GCN kernel failed in llvm-link"
+  exit $RETVAL
+fi
 
 if [ $KMDUMPLLVM == "1" ]; then
   cp $2 ./dump.hsa_math_linked.bc
