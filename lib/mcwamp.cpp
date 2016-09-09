@@ -26,9 +26,9 @@ const wchar_t accelerator::default_accelerator[] = L"default";
 
 // weak symbols of kernel codes
 
-// HSACO kernel codes
-extern "C" char * hsaco_kernel_source[] asm ("_binary_kernel_hsaco_start") __attribute__((weak));
-extern "C" char * hsaco_kernel_end[] asm ("_binary_kernel_hsaco_end") __attribute__((weak));
+// Kernel bundle
+extern "C" char * kernel_bundle_source[] asm ("_binary_kernel_bundle_start") __attribute__((weak));
+extern "C" char * kernel_bundle_end[] asm ("_binary_kernel_bundle_end") __attribute__((weak));
 
 // interface of HCC runtime implementation
 struct RuntimeImpl {
@@ -128,7 +128,7 @@ private:
  */
 class HSAPlatformDetect : public PlatformDetect {
 public:
-  HSAPlatformDetect() : PlatformDetect("HSA", "libmcwamp_hsa.so",  hsaco_kernel_source) {}
+  HSAPlatformDetect() : PlatformDetect("HSA", "libmcwamp_hsa.so",  kernel_bundle_source) {}
 };
 
 
@@ -222,10 +222,13 @@ void enter_kernel() { in_kernel = true; }
 void leave_kernel() { in_kernel = false; }
 
 inline void DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, void** kernel_source) {
+  /* FIXME need to adopt bundle header parsing logic in ClangOffloadBundler */
+#define BUNDLE_HEADER_LENGTH (128)
   *kernel_size =
-    (ptrdiff_t)((void *)hsaco_kernel_end) -
-    (ptrdiff_t)((void *)hsaco_kernel_source);
-  *kernel_source = hsaco_kernel_source;
+    (ptrdiff_t)((void *)kernel_bundle_end) -
+    (ptrdiff_t)((void *)kernel_bundle_source);
+  *kernel_size -= BUNDLE_HEADER_LENGTH;
+  *kernel_source = (unsigned char*)kernel_bundle_source + BUNDLE_HEADER_LENGTH;
 }
 
 void BuildProgram(KalmarQueue* pQueue) {

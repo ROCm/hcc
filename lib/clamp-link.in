@@ -11,6 +11,7 @@ LINK=$BINDIR/llvm-link
 OPT=$BINDIR/opt
 CLAMP_DEVICE=$BINDIR/clamp-device
 CLAMP_EMBED=$BINDIR/clamp-embed
+CLANG_OFFLOAD_BUNDLER=$BINDIR/clang-offload-bundler
 
 ################
 # Verbose flag
@@ -424,20 +425,37 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
     echo "Generating AMD GCN kernel"
   fi
 
+  # lower to GCN ISA in HSACO format
   $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.hsaco --amdgpu-target=$AMDGPU_TARGET
 
+  # error handling
   ret=$?
-  if [ $ret == 0 ]; then
-    # build a new kernel object
-    pushd . > /dev/null
-    cd $TEMP_DIR
-    $CLAMP_EMBED kernel.hsaco kernel_hsa.o
-    popd > /dev/null
-
-    # link everything together
-    ld --allow-multiple-definition $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS $LINK_CPU_ARG $LINK_OTHER_ARGS
-    ret=$?
+  if [ $ret != 0 ]; then
+    exit $ret
   fi
+
+  # touch an empty object for host part, to accomodate rule required by
+  # clang-offload-bundler
+  touch $TEMP_DIR/__empty.o
+
+  # invoke clang-offload-bundler to create kernel bundle
+  $CLANG_OFFLOAD_BUNDLER -type=o -inputs=$TEMP_DIR/__empty.o,$TEMP_DIR/kernel.hsaco -targets=host-x86_64-unknown-linux,hcc-amdgcn--amdhsa-$AMDGPU_TARGET -outputs=$TEMP_DIR/kernel.bundle
+
+  # error handling
+  ret=$?
+  if [ $ret != 0 ]; then
+    exit $ret
+  fi
+
+  # build a new kernel object
+  pushd . > /dev/null
+  cd $TEMP_DIR
+  $CLAMP_EMBED kernel.bundle kernel_hsa.o
+  popd > /dev/null
+
+  # link everything together
+  ld --allow-multiple-definition $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS $LINK_CPU_ARG $LINK_OTHER_ARGS
+  ret=$?
 
 fi # if [ -n $LINK_KERNEL_ARGS ];
 
@@ -448,6 +466,14 @@ fi
 
 if [ -e $TEMP_DIR/kernel_cpu.o ]; then
   rm $TEMP_DIR/kernel_cpu.o
+fi
+
+if [ -e $TEMP_DIR/__empty.o ]; then
+  rm $TEMP_DIR/__empty.o
+fi
+
+if [ -e $TEMP_DIR/kernel.bundle ]; then
+  rm $TEMP_DIR/kernel.bundle
 fi
 
 if [ -e $TEMP_DIR/kernel.hsaco ]; then
