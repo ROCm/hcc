@@ -34,7 +34,7 @@
 #include <hc_am.hpp>
 
 // staging buffer header
-#include "staging_buffer.h"
+#include "unpinned_copy_engine.h"
 
 #include <time.h>
 #include <iomanip>

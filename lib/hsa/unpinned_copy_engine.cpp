@@ -4,7 +4,7 @@
 // mutex and lock_guard
 #include <mutex>
 
-#include "staging_buffer.h"
+#include "unpinned_copy_engine.h"
 #define THROW_ERROR(e) throw 
 #ifdef KALMAR_DEBUG_COPY
 #include <stdio.h>
