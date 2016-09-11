@@ -3609,6 +3609,12 @@ HSACopy::syncCopy(Kalmar::HSAQueue* hsaQueue) {
 #if KALMAR_DEBUG
     std::cerr << "HSACopy::syncCopy(), invoke memcpy\n";
 #endif
+
+        if (depSignalCnt) {
+            // host waits before doing host memory copy.
+            hsa_signal_wait_acquire(depSignal, HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, HSA_WAIT_STATE_ACTIVE);
+        }
+
         // This works for both mapped and unmapped memory:
         memcpy(dst, src, sizeBytes);
     } else {
