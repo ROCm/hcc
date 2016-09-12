@@ -870,6 +870,16 @@ public:
         return pDev->get_compute_unit_count();
     }
 
+
+    /**
+     * Return true if the accelerator's memory can be mapped into the CPU's address space,
+     * and the CPU is allowed to access the memory directly with CPU memory operations.
+     *
+     */
+    bool get_allow_cpu_access()
+        return pDev->get_allow_cpu_access();
+    };
+
 private:
     accelerator(Kalmar::KalmarDevice* pDev) : pDev(pDev) {}
     friend class accelerator_view;

@@ -254,6 +254,8 @@ class KalmarDevice
 private:
     access_type cpu_type;
 
+    // Set true if the device has large bar
+
 #if !TLS_QUEUE
     /// default KalmarQueue
     std::shared_ptr<KalmarQueue> def;
@@ -267,6 +269,11 @@ private:
 #endif
 
 protected:
+    // True if the device memory is mapped into CPU address space and can be
+    // directly accessed with CPU memory operations.
+    bool allow_cpu_access;
+
+
     KalmarDevice(access_type type = access_type_read_write)
         : cpu_type(type),
 #if !TLS_QUEUE
@@ -354,6 +361,8 @@ public:
 
     /// get device's compute unit count
     virtual unsigned int get_compute_unit_count() {return 0;}
+
+    virtual bool get_has_large_bar() {return 0;}
 
 };
 

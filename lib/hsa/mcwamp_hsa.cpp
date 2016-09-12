@@ -1813,16 +1813,16 @@ public:
         }
 
         static const size_t stagingSize = 64*1024;
-        static const bool   isLargeBar = hasAccess(hostAgent, ri._am_memory_pool);
+        this->allow_cpu_access = hasAccess(hostAgent, ri._am_memory_pool);
         hsa_amd_memory_pool_t hostPool = (getHSAAMHostRegion());
         copy_engine[0] = new UnpinnedCopyEngine(agent, hostAgent, stagingSize, 2/*staging buffers*/,
-                                                isLargeBar, 
+                                                this->allow_cpu_access, 
                                                 MEMCPY_H2D_DIRECT_VS_STAGING_COPY_THRESHOLD,
                                                 MEMCPY_H2D_STAGING_VS_PININPLACE_COPY_THRESHOLD,
                                                 MEMCPY_D2H_STAGING_VS_PININPLACE_COPY_THRESHOLD);
 
         copy_engine[1] = new UnpinnedCopyEngine(agent, hostAgent, stagingSize, 2/*staging Buffers*/,
-                                                isLargeBar, 
+                                                this->allow_cpu_access, 
                                                 MEMCPY_H2D_DIRECT_VS_STAGING_COPY_THRESHOLD,
                                                 MEMCPY_H2D_STAGING_VS_PININPLACE_COPY_THRESHOLD,
                                                 MEMCPY_D2H_STAGING_VS_PININPLACE_COPY_THRESHOLD);
@@ -2176,6 +2176,10 @@ public:
         else
             return 0;
     }
+
+    bool get_allow_cpu_access() override {
+        return allow_cpu_access;
+    };
 
     void releaseKernargBuffer(void* kernargBuffer, int kernargBufferIndex) {
         if (hasHSAKernargRegion() && USE_KERNARG_REGION) {

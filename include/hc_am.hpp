@@ -19,7 +19,7 @@ struct AmPointerInfo {
     void *      _hostPointer;   ///< Host pointer.  If host access is not allowed, NULL.
     void *      _devicePointer; ///< Device pointer.  
     size_t      _sizeBytes;     ///< Size of allocation.
-    hc::accelerator _acc;       ///< Device / Accelerator to use.
+    hc::accelerator _acc;       ///< Accelerator where allocation is physically located.
     bool        _isInDeviceMem;    ///< Memory is physically resident on a device (if false, memory is located on host)
     bool        _isAmManaged;   ///< Memory was allocated by AM and should be freed when am_reset is called.
 
