@@ -1813,16 +1813,16 @@ public:
         }
 
         static const size_t stagingSize = 64*1024;
-        this->allow_cpu_access = hasAccess(hostAgent, ri._am_memory_pool);
+        this->cpu_accessible_am = hasAccess(hostAgent, ri._am_memory_pool);
         hsa_amd_memory_pool_t hostPool = (getHSAAMHostRegion());
         copy_engine[0] = new UnpinnedCopyEngine(agent, hostAgent, stagingSize, 2/*staging buffers*/,
-                                                this->allow_cpu_access, 
+                                                this->cpu_accessible_am, 
                                                 MEMCPY_H2D_DIRECT_VS_STAGING_COPY_THRESHOLD,
                                                 MEMCPY_H2D_STAGING_VS_PININPLACE_COPY_THRESHOLD,
                                                 MEMCPY_D2H_STAGING_VS_PININPLACE_COPY_THRESHOLD);
 
         copy_engine[1] = new UnpinnedCopyEngine(agent, hostAgent, stagingSize, 2/*staging Buffers*/,
-                                                this->allow_cpu_access, 
+                                                this->cpu_accessible_am, 
                                                 MEMCPY_H2D_DIRECT_VS_STAGING_COPY_THRESHOLD,
                                                 MEMCPY_H2D_STAGING_VS_PININPLACE_COPY_THRESHOLD,
                                                 MEMCPY_D2H_STAGING_VS_PININPLACE_COPY_THRESHOLD);
@@ -1902,6 +1902,8 @@ public:
     }
     bool is_emulated() const override { return false; }
     uint32_t get_version() const { return ((static_cast<unsigned int>(versionMajor) << 16) | versionMinor); }
+
+    bool has_cpu_accessible_am() const override { return cpu_accessible_am; }
 
     void* create(size_t count, struct rw_info* key) override {
         void *data = nullptr;
@@ -2177,8 +2179,8 @@ public:
             return 0;
     }
 
-    bool get_allow_cpu_access() override {
-        return allow_cpu_access;
+    bool has_cpu_accessible_am() override {
+        return cpu_accessible_am;
     };
 
     void releaseKernargBuffer(void* kernargBuffer, int kernargBufferIndex) {
@@ -3623,6 +3625,12 @@ HSACopy::syncCopy(Kalmar::HSAQueue* hsaQueue) {
 
     Kalmar::hcCommandKind commandKind = getCommandKind();
 
+    bool copyEngineCanSeeSrcAndDest = false;
+    if (commandKind == Kalmar::hcMemcpyDeviceToDevice) {
+        if (device->is_peer(dstPtrInfo._acc.get_dev_ptr()) && (device->is_peer(srcPtrInfo._acc.get_dev_ptr()))) {
+        copyEngineCanSeeSrcAndDest = true;
+    }
+
     static const UnpinnedCopyEngine::CopyMode copyMode = UnpinnedCopyEngine::ChooseBest;
 
 #if KALMAR_DEBUG
@@ -3653,10 +3661,26 @@ HSACopy::syncCopy(Kalmar::HSAQueue* hsaQueue) {
 
         // This works for both mapped and unmapped memory:
         memcpy(dst, src, sizeBytes);
+    } else if ((commandKind == Kalmar::hcMemcpyDeviceToDevice) && !copyEngineCanSeeSrcAndDest)
+#if KALMAR_DEBUG
+        std::cerr << "HSACopy:: P2P copy by engine can't see both pointers - use staged copy\n";
+#endif
+
+        //printf ("staged-copy- read dep signals\n");
+        hsa_agent_t dstAgent2 = * (static_cast<hsa_agent_t*> (dstPtrInfo._acc.get_hsa_agent()));
+        hsa_agent_t srcAgent = * (static_cast<hsa_agent_t*> (srcPtrInfo._acc.get_hsa_agent()));
+
+        printf ("staged P2P copy, needs fix\n");
+        assert(0);
+
+        //hsa_agent_t d2 = dstAgent2;
+        //device->copy_engine[1]->CopyPeerToPeer(dst, dstAgent2, src, srcAgent, sizeBytes, depSignalCnt ? &depSignal : NULL);
+
+
     } else {
 
 #if KALMAR_DEBUG
-    std::cerr << "HSACopy::syncCopy(), fetch and init a HSA signal\n";
+        std::cerr << "HSACopy::syncCopy(), fetch and init a HSA signal\n";
 #endif
         // If not special case - these can all be handled by the hsa async copy:
         hsa_agent_t srcAgent, dstAgent;
@@ -3670,23 +3694,23 @@ HSACopy::syncCopy(Kalmar::HSAQueue* hsaQueue) {
         hsa_signal_store_relaxed(signal, 1);
 
 #if KALMAR_DEBUG
-    std::cerr << "HSACopy::syncCopy(), invoke hsa_amd_memory_async_copy()\n";
+        std::cerr << "HSACopy::syncCopy(), invoke hsa_amd_memory_async_copy()\n";
 #endif
 
         hsa_status_t hsa_status = hsa_amd_memory_async_copy(dst, dstAgent, src, srcAgent, sizeBytes, depSignalCnt, depSignalCnt ? &depSignal:NULL, signal);
 
         if (hsa_status == HSA_STATUS_SUCCESS) {
 #if KALMAR_DEBUG
-    std::cerr << "HSACopy::syncCopy(), wait for completion...";
+            std::cerr << "HSACopy::syncCopy(), wait for completion...";
 #endif
             hsa_signal_wait_relaxed(signal, HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, waitMode);
 
 #if KALMAR_DEBUG
-    std::cerr << "done!\n";
+            std::cerr << "done!\n";
 #endif
         } else {
 #if KALMAR_DEBUG
-    std::cerr << "HSACopy::syncCopy(), hsa_amd_memory_async_copy() returns: 0x" << std::hex << hsa_status << "\n";
+            std::cerr << "HSACopy::syncCopy(), hsa_amd_memory_async_copy() returns: 0x" << std::hex << hsa_status << "\n";
 #endif
             throw Kalmar::runtime_exception("hsa_amd_memory_async_copy error", hsa_status);
         }
