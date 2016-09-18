@@ -23,6 +23,7 @@
 #include <chrono>
 #include <vector>
 #include <thread>
+#include <iomanip>
 
 #define GRID_SIZE 16
 #define TILE_SIZE 16
@@ -30,8 +31,10 @@
 #define DISPATCH_COUNT 10000
 #define TOL_HI 1e-4
 
-__attribute__((hc_grid_launch)) void kernel(const grid_launch_parm lp) {
+__attribute__((hc_grid_launch)) 
+void nullkernel(const grid_launch_parm lp) {
 }
+
 
 template <typename T>
 T average(const std::vector<std::chrono::duration<T>> &data) {
@@ -128,9 +131,6 @@ int main(int argc, char* argv[]) {
   }).wait();
 
   // Setting lp.cf to completion_future so we can track completion: (NULL ignores all synchronization)
-  hc::completion_future cf;
-  lp.cf = &cf;
-  lp.av = &av;
 
   std::cout << "Iterations per test:           " << dispatch_count << "\n";
   auto wait_time_us = std::chrono::milliseconds(10);
@@ -148,13 +148,19 @@ int main(int argc, char* argv[]) {
   }
   remove_outliers(elapsed_pfe, outliers_pfe);
   plot("pfe", elapsed_pfe);
-  std::cout << "pfe time (s):                  " << average(elapsed_pfe) << "\n";
+  std::cout << "pfe time (us):                  " 
+            << std::setprecision(8) << average(elapsed_pfe)*1000000.0 << "\n";
 
   // Timing null grid_launch call
   for(int i = 0; i < dispatch_count; ++i) {
     start = std::chrono::high_resolution_clock::now();
-    kernel(lp);
-    lp.cf->wait();
+    hc::completion_future cf; // create new completion-future 
+    lp.cf = &cf;
+    lp.av = &av;
+
+    nullkernel(lp);
+    //std::cout << "CF use_count=" << cf.use_count() << "is_ready=" << cf.is_ready()<< "\n";
+    cf.wait();
 
     end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> dur = end - start;
@@ -162,7 +168,8 @@ int main(int argc, char* argv[]) {
   }
   remove_outliers(elapsed_grid_launch, outliers_gl);
   plot("grid_launch", elapsed_grid_launch);
-  std::cout << "grid_launch time (s):          " << average(elapsed_grid_launch) << "\n";
+  std::cout << "grid_launch time (us):          " 
+            << std::setprecision(8) << average(elapsed_grid_launch)*1000000.0 << "\n";
 
   return 0;
 }
