@@ -1147,6 +1147,8 @@ public:
       }
     }
 
+    int use_count() { return __asyncOp.use_count(); };
+
 private:
     std::shared_future<void> __amp_future;
     std::thread* __thread_then = nullptr;

@@ -7,7 +7,7 @@
 
 
 // Check the new launch-parm arguments to make sure they have sane default values.
-#define CHECK_LP_ARGS 1
+#define CHECK_LP_ARGS 0
 
 
 namespace
@@ -534,14 +534,21 @@ struct StringFinder
           out << "  static accelerator_view av = accelerator().get_default_view();\n";
           out << "  _lp.av = &av;\n";
           out << "}\n\n";
-          out << "completion_future cf = parallel_for_each(*(_lp.av),extent<3>(_lp.grid_dim.z*_lp.group_dim.z,_lp.grid_dim.y*_lp.group_dim.y,_lp.grid_dim.x*_lp.group_dim.x).tile_with_dynamic(_lp.group_dim.z, _lp.group_dim.y, _lp.group_dim.x, _lp.dynamic_group_mem_bytes), \n"
+          out << "completion_future cf;\n";
+          out << "completion_future* cf_ptr = _lp.cf ? _lp.cf : &cf;\n";
+
+          out << "*cf_ptr = parallel_for_each(*(_lp.av),extent<3>(_lp.grid_dim.z*_lp.group_dim.z,_lp.grid_dim.y*_lp.group_dim.y,_lp.grid_dim.x*_lp.group_dim.x).tile_with_dynamic(_lp.group_dim.z, _lp.group_dim.y, _lp.group_dim.x, _lp.dynamic_group_mem_bytes), \n"
+          //out << "cf = parallel_for_each(*(_lp.av),extent<3>(_lp.grid_dim.z*_lp.group_dim.z,_lp.grid_dim.y*_lp.group_dim.y,_lp.grid_dim.x*_lp.group_dim.x).tile_with_dynamic(_lp.group_dim.z, _lp.group_dim.y, _lp.group_dim.x, _lp.dynamic_group_mem_bytes), \n"
               << func->getFunctorName()
               << "(";
           func->printArgsAsArguments(out);
-          out << "));\n\n"
-              << "if(_lp.cf)\n"
-              << "  *(_lp.cf) = cf;\n"
-              << "}\n";
+          out << "));\n\n";
+
+          //out << "printf (\"==_lp.cf=%p USE_COUNT=%d isReady=%d%c\", _lp.cf, cf_ptr->use_count(), cf_ptr->is_ready(), 0xA);\n";
+          //out << "cf_ptr->wait();\n"; // bozo
+          
+
+          out << "}\n";
       }
         return false;
     }

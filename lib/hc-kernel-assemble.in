@@ -4,6 +4,7 @@
 
 # enable bash debugging
 KMDBSCRIPT="${KMDBSCRIPT:=0}"
+KMDBGRIDLAUNCH="${KMDBGRIDLAUNCH:=0}"
 
 # dump the LLVM bitcode
 KMDUMPLLVM="${KMDUMPLLVM:=0}"
@@ -25,6 +26,9 @@ CXXFLAGS="-std=c++amp -stdlib=libc++ -I$BINDIR/../../include -fPIC"
 # Set additional CXXFLAGS based on CMAKE_BUILD_TYPE
 shopt -s nocasematch
 CMAKE_BUILD_TYPE="@CMAKE_BUILD_TYPE@"
+if [ $KMDBGRIDLAUNCH == "1" ]; then
+    CMAKE_BUILD_TYPE="debug";
+fi
 case $CMAKE_BUILD_TYPE in
   release)
     CXXFLAGS=$CXXFLAGS" -O3"
@@ -93,5 +97,9 @@ else
   mv $TEMP_NAME.camp.o $2
 fi
 
-rm -f $TEMP_NAME.* $1.bc
-rmdir $TEMP_DIR
+if [ $KMDBGRIDLAUNCH == "1" ]; then
+  echo "db: KMDBGRIDLAUNCH=1 and temps saved in $TEMP_DIR"
+else
+  rm -f $TEMP_NAME.* $1.bc
+  rmdir $TEMP_DIR
+fi
