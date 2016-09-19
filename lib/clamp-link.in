@@ -26,7 +26,7 @@ VERBOSE=0
 # GPU targets
 ################
 
-AMDGPU_TARGET=@AMDGPU_TARGET@
+AMDGPU_TARGET_ARRAY=(@AMDGPU_TARGET@)
 
 ################
 # link
@@ -110,7 +110,7 @@ do
   ######################
   case $ARG in
     --amdgpu-target=*)
-    AMDGPU_TARGET="${ARG#*=}"
+    AMDGPU_TARGET_ARRAY+="${ARG#*=}"
     continue
     ;;
   esac
@@ -345,7 +345,7 @@ do
     ######################
     case $ARG in
       --amdgpu-target=*)
-      AMDGPU_TARGET="${ARG#*=}"
+      AMDGPU_TARGET_ARRAY+="${ARG#*=}"
       continue
       ;;
     esac
@@ -374,22 +374,22 @@ fi
 
 fi
 
-# AMDGPU_TARGET could be overridden by HCC_AMDGPU_TARGET env variable
+# AMDGPU_TARGET_ARRAY could be overridden by HCC_AMDGPU_TARGET env variable
 if [ -n "$HCC_AMDGPU_TARGET" ]; then
   # map ISA version string to GPU family
   if [ "$HCC_AMDGPU_TARGET" = "AMD:AMDGPU:7:0:1" ]; then
-    AMDGPU_TARGET="hawaii"
+    AMDGPU_TARGET_ARRAY[0]="hawaii"
   elif [ "$HCC_AMDGPU_TARGET" = "AMD:AMDGPU:8:0:1" ]; then
-    AMDGPU_TARGET="carrizo"
+    AMDGPU_TARGET_ARRAY[0]="carrizo"
   elif [ "$HCC_AMDGPU_TARGET" = "AMD:AMDGPU:8:0:3" ]; then
-    AMDGPU_TARGET="fiji"
+    AMDGPU_TARGET_ARRAY[0]="fiji"
   else
     # not mappable, simply pass to backend and wish it accepts
-    AMDGPU_TARGET=$HCC_AMDGPU_TARGET
+    AMDGPU_TARGET_ARRAY[0]=$HCC_AMDGPU_TARGET
   fi
 fi
 if [ $VERBOSE != 0 ]; then
-  echo "AMDGPU target: "$AMDGPU_TARGET
+  echo "AMDGPU target array: "${AMDGPU_TARGET_ARRAY[@]}
   echo ""
 fi
 
@@ -429,7 +429,7 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
   fi
 
   # lower to GCN ISA in HSACO format
-  $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel.hsaco --amdgpu-target=$AMDGPU_TARGET
+  $CLAMP_DEVICE $TEMP_DIR/kernel.bc $TEMP_DIR/kernel-${AMDGPU_TARGET_ARRAY[0]}.hsaco --amdgpu-target=${AMDGPU_TARGET_ARRAY[0]}
 
   # error handling
   ret=$?
@@ -442,7 +442,7 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
   touch $TEMP_DIR/__empty.o
 
   # invoke clang-offload-bundler to create kernel bundle
-  $CLANG_OFFLOAD_BUNDLER -type=o -inputs=$TEMP_DIR/__empty.o,$TEMP_DIR/kernel.hsaco -targets=host-x86_64-unknown-linux,hcc-amdgcn--amdhsa-$AMDGPU_TARGET -outputs=$TEMP_DIR/kernel.bundle
+  $CLANG_OFFLOAD_BUNDLER -type=o -inputs=$TEMP_DIR/__empty.o,$TEMP_DIR/kernel-${AMDGPU_TARGET_ARRAY[0]}.hsaco -targets=host-x86_64-unknown-linux,hcc-amdgcn--amdhsa-${AMDGPU_TARGET_ARRAY[0]} -outputs=$TEMP_DIR/kernel.bundle
 
   # error handling
   ret=$?
@@ -483,8 +483,8 @@ if [ -e $TEMP_DIR/kernel.bundle ]; then
   rm $TEMP_DIR/kernel.bundle
 fi
 
-if [ -e $TEMP_DIR/kernel.hsaco ]; then
-  rm $TEMP_DIR/kernel.hsaco
+if [ -e $TEMP_DIR/kernel-${AMDGPU_TARGET_ARRAY[0]}.hsaco ]; then
+  rm $TEMP_DIR/kernel-${AMDGPU_TARGET_ARRAY[0]}.hsaco
 fi
 
 if [ -e $TEMP_DIR/kernel.bc ]; then
