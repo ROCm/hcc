@@ -57,8 +57,6 @@ ROCM_LIB=@ROCM_DEVICE_LIB@
 # AMDGPU target
 ################
 
-AMDGPU_TARGET=@AMDGPU_TARGET@
-
 ARGS="$@"
 for ARG in $ARGS
 do
