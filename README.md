@@ -58,7 +58,7 @@ Multiple ISA
 
 HCC now supports having multiple GCN ISAs in one executable file. You can do it in different ways:
 
-1. use `--amdgpu-target=` command line option
+2. use `--amdgpu-target=` command line option
 
 It's possible to specify multiple `--amdgpu-target=` option. Example:
 
@@ -73,7 +73,7 @@ hcc `hcc-config --cxxflags --ldflags` \
 
 1. use `HCC_AMDGPU_TARGET` env var
 
-Use "," to delimit each AMDGPU target in HCC. Example:
+Use `,` to delimit each AMDGPU target in HCC. Example:
 
 ```
 export HCC_AMDGPU_TARGET=AMD:AMDGPU:7:0:1,AMD:AMDGPU:8:0:1,AMD:AMDGPU:8:0:3
@@ -81,12 +81,12 @@ export HCC_AMDGPU_TARGET=AMD:AMDGPU:7:0:1,AMD:AMDGPU:8:0:1,AMD:AMDGPU:8:0:3
 hcc `hcc-config --cxxflags --ldflags` foo.cpp
 ```
 
-1. configure HCC use CMake HSA_AMDGPU_GPU_TARGET variable
+3. configure HCC use CMake `HSA_AMDGPU_GPU_TARGET` variable
 
 If you build HCC from source, it's possible to configure it to automatically
-produce multiple ISAs via HSA_AMDGPU_GPU_TARGET CMake variable.
+produce multiple ISAs via `HSA_AMDGPU_GPU_TARGET` CMake variable.
 
-Use ";" to delimit each AMDGPU target. Example:
+Use `;` to delimit each AMDGPU target. Example:
 
 ```
 # ISA for Hawaii(7:0:1), Carrizo(8:0:1), Fiji(8:0:3) be configured by default
