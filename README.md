@@ -52,3 +52,48 @@ cmake \
     -DROCM_DEVICE_LIB_DIR=~/ocml/build/dist/lib \
     ..
 ```
+
+Multiple ISA
+------------
+
+HCC now supports having multiple GCN ISAs in one executable file. You can do it in different ways:
+
+1. use `--amdgpu-target=` command line option
+
+It's possible to specify multiple `--amdgpu-target=` option. Example:
+
+```
+# ISA for Hawaii(7:0:1), Carrizo(8:0:1), Fiji(8:0:3) would be produced
+hcc `hcc-config --cxxflags --ldflags` \
+    --amdgpu-target=AMD:AMDGPU:7:0:1 \
+    --amdgpu-target=AMD:AMDGPU:8:0:1 \
+    --amdgpu-target=AMD:AMDGPU:8:0:3 \
+    foo.cpp
+```
+
+1. use `HCC_AMDGPU_TARGET` env var
+
+Use "," to delimit each AMDGPU target in HCC. Example:
+
+```
+export HCC_AMDGPU_TARGET=AMD:AMDGPU:7:0:1,AMD:AMDGPU:8:0:1,AMD:AMDGPU:8:0:3
+# ISA for Hawaii(7:0:1), Carrizo(8:0:1), Fiji(8:0:3) would be produced
+hcc `hcc-config --cxxflags --ldflags` foo.cpp
+```
+
+1. configure HCC use CMake HSA_AMDGPU_GPU_TARGET variable
+
+If you build HCC from source, it's possible to configure it to automatically
+produce multiple ISAs via HSA_AMDGPU_GPU_TARGET CMake variable.
+
+Use ";" to delimit each AMDGPU target. Example:
+
+```
+# ISA for Hawaii(7:0:1), Carrizo(8:0:1), Fiji(8:0:3) be configured by default
+cmake \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DROCM_DEVICE_LIB_DIR=~hcc/ROCm-Device-Libs/build/dist/lib \
+    -DHSA_AMDGPU_GPU_TARGET="AMD:AMDGPU:7:0:1;AMD:AMDGPU:8:0:1;AMD:AMDGPU:8:0:3" \
+    ../hcc
+```
+
