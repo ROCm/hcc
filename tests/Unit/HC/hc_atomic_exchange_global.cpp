@@ -35,7 +35,6 @@ int main() {
 
   ret &= test<unsigned int>();
   ret &= test<int>();
-  ret &= test<uint64_t>();
 
   return !(ret == true);
 }
