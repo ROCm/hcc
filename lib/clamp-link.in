@@ -24,9 +24,19 @@ VERBOSE=0
 
 ################
 # GPU targets
+# This array could be populated via 3 methods:
+# 1) clang driver adds multiple --amdgpu-target=<GPU target> options
+# 2) HCC_AMDGPU_TARGET env var, multiple targets are delimited by ",".
+#    Example:
+#
+#    export HCC_AMDGPU_TARGET=AMD:AMDGPU:7:0:1,AMD:AMDGPU:8:0:1,AMD:AMDGPU:8:0:3
+#    # ISA for Hawaii(7:0:1), Carrizo(8:0:1), Fiji(8:0:3) would be produced
+#    hcc `hcc-config --cxxflags --ldflags` foo.cpp
+#
+# 3) CMake AMDGPU_TARGET config value. This is the last resort options.
 ################
 
-AMDGPU_TARGET_ARRAY=(@AMDGPU_TARGET@)
+AMDGPU_TARGET_ARRAY=()
 
 ################
 # link
@@ -110,7 +120,7 @@ do
   ######################
   case $ARG in
     --amdgpu-target=*)
-    AMDGPU_TARGET_ARRAY+="${ARG#*=}"
+    AMDGPU_TARGET_ARRAY+=("${ARG#*=}")
     continue
     ;;
   esac
@@ -345,7 +355,7 @@ do
     ######################
     case $ARG in
       --amdgpu-target=*)
-      AMDGPU_TARGET_ARRAY+="${ARG#*=}"
+      AMDGPU_TARGET_ARRAY+=("${ARG#*=}")
       continue
       ;;
     esac
@@ -398,6 +408,13 @@ if [ -n "$HCC_AMDGPU_TARGET" ]; then
     ((iter++))
   done
 fi
+
+# In case neither Clang Driver nor HCC_AMDGPU_TARGET env var specify target,
+# use default value in CMake configuration
+if [ ${#AMDGPU_TARGET_ARRAY[@]} == 0 ]; then
+  AMDGPU_TARGET_ARRAY=(@AMDGPU_TARGET@)
+fi
+
 if [ $VERBOSE != 0 ]; then
   echo "AMDGPU target array: "${AMDGPU_TARGET_ARRAY[@]}
   echo ""
