@@ -156,7 +156,7 @@ if [ $RETVAL != 0 ]; then
 fi
 
 if [ $KMDUMPLLVM == "1" ]; then
-  cp $2.opt.bc ./dump.opt.bc
+  cp $2.opt.bc ./dump-$AMDGPU_TARGET.opt.bc
 fi
 
 $LLC $KMOPTLLC -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -filetype=obj -o $2.isabin $2.opt.bc
@@ -169,9 +169,9 @@ if [ $RETVAL != 0 ]; then
 fi
 
 if [ $KMDUMPISA == "1" ]; then
-  cp $2.isabin ./dump.isabin
+  cp $2.isabin ./dump-$AMDGPU_TARGET.isabin
   $LLC $KMOPTLLC -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -filetype=asm -o $2.isa $2.opt.bc
-  mv $2.isa ./dump.isa
+  mv $2.isa ./dump-$AMDGPU_TARGET.isa
 fi
 
 $LLD -shared $2.isabin -o $2
@@ -184,7 +184,7 @@ if [ $RETVAL != 0 ]; then
 fi
 
 if [ $KMDUMPISA == "1" ]; then
-  cp $2 ./dump.hsaco
+  cp $2 ./dump-$AMDGPU_TARGET.hsaco
 fi
 
 # remove temp file
