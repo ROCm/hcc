@@ -52,10 +52,6 @@ configure_file(
   ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-link @ONLY)
 
 configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-hsatools.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-hsatools @ONLY)
-
-configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/extractkernel.in
   ${CMAKE_CURRENT_BINARY_DIR}/../bin/extractkernel @ONLY)
 
