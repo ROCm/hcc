@@ -164,38 +164,37 @@ endif (HAS_ROCM EQUAL 0)
 # Detect AMDGPU backend for native codegen
 #################
 
-set(HSA_AMDGPU_GPU_TARGET "fiji" CACHE STRING "Target AMDGPU ISA version")
+set(HSA_AMDGPU_GPU_TARGET "AMD:AMDGPU:8:0:3" CACHE STRING "Target AMDGPU ISA version")
 
-if (NOT ( HSA_AMDGPU_GPU_TARGET STREQUAL "carrizo" OR
-         HSA_AMDGPU_GPU_TARGET STREQUAL "fiji" OR
-         HSA_AMDGPU_GPU_TARGET STREQUAL "hawaii" OR
-         HSA_AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:7:0:1" OR
-         HSA_AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:8:0:1" OR
-         HSA_AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:8:0:3" OR
-         HSA_AMDGPU_GPU_TARGET STREQUAL "auto"))
-  MESSAGE(FATAL_ERROR "${HSA_AMDGPU_GPU_TARGET} is not a valid AMDGPU target")
-endif()
+# Tokenize HSA_AMDGPU_GPU_TARGET
+foreach(AMDGPU_GPU_TARGET IN LISTS HSA_AMDGPU_GPU_TARGET)
+  if (NOT (AMDGPU_GPU_TARGET STREQUAL "carrizo" OR
+           AMDGPU_GPU_TARGET STREQUAL "fiji" OR
+           AMDGPU_GPU_TARGET STREQUAL "hawaii" OR
+           AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:7:0:1" OR
+           AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:8:0:1" OR
+           AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:8:0:3"))
+    MESSAGE(FATAL_ERROR "${AMDGPU_GPU_TARGET} is not a valid AMDGPU target")
+  endif()
 
-# AMDGPU_TARGET would hold the value used by compiler scripts
-# But by default, auto means fiji
-if (HSA_AMDGPU_GPU_TARGET STREQUAL "auto")
-  SET(AMDGPU_TARGET "fiji")
-else (HSA_AMDGPU_GPU_TARGET STREQUAL "auto")
-  SET(AMDGPU_TARGET ${HSA_AMDGPU_GPU_TARGET})
-endif (HSA_AMDGPU_GPU_TARGET STREQUAL "auto")
+  # AMDGPU_TARGET_LIST would hold values used by compiler scripts
+  # Map ISA version to GPU family
+  if (AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:7:0:1")
+    list(APPEND AMDGPU_TARGET_LIST "hawaii")
+  endif()
 
-# Map ISA version to GPU family
-if (HSA_AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:7:0:1")
-  SET(AMDGPU_TARGET "hawaii")
-endif()
+  if (AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:8:0:1")
+    list(APPEND AMDGPU_TARGET_LIST "carrizo")
+  endif()
 
-if (HSA_AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:8:0:1")
-  SET(AMDGPU_TARGET "carrizo")
-endif()
+  if (AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:8:0:3")
+    list(APPEND AMDGPU_TARGET_LIST "fiji")
+  endif()
+endforeach(AMDGPU_GPU_TARGET)
 
-if (HSA_AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:8:0:3")
-  SET(AMDGPU_TARGET "fiji")
-endif()
+# join list
+string(REPLACE ";" " " AMDGPU_TARGET "${AMDGPU_TARGET_LIST}")
+MESSAGE(STATUS "HCC configured with AMDGPU targets: ${AMDGPU_TARGET}")
 
 #################
 # Setup HCC backend macro string
@@ -204,8 +203,6 @@ endif()
 #################
 
 set(KALMAR_BACKEND "HCC_BACKEND_AMDGPU")
-
-message(STATUS "HCC configured with default backend: ${KALMAR_BACKEND}")
 
 #########################
 # build target: world
