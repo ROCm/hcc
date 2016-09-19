@@ -224,11 +224,22 @@ void leave_kernel() { in_kernel = false; }
 inline void DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, void** kernel_source) {
   /* FIXME need to adopt bundle header parsing logic in ClangOffloadBundler */
 #define BUNDLE_HEADER_LENGTH (128)
-  *kernel_size =
+
+  size_t bundle_size =
     (ptrdiff_t)((void *)kernel_bundle_end) -
     (ptrdiff_t)((void *)kernel_bundle_source);
-  *kernel_size -= BUNDLE_HEADER_LENGTH;
-  *kernel_source = (unsigned char*)kernel_bundle_source + BUNDLE_HEADER_LENGTH;
+  bundle_size -= BUNDLE_HEADER_LENGTH;
+
+  void *bundle_content = (unsigned char *)kernel_bundle_source + BUNDLE_HEADER_LENGTH;
+
+  // use KalmarDevice::IsCompatibleKernel to check
+  if (pQueue->getDev()->IsCompatibleKernel((void*)bundle_size, bundle_content)) {
+    *kernel_size = bundle_size;
+    *kernel_source = bundle_content;
+  } else {
+    printf("Can't find compatible kernel!\n");
+    exit(1);
+  }
 }
 
 void BuildProgram(KalmarQueue* pQueue) {
@@ -280,13 +291,13 @@ public:
     if (to_init) {
       // initialize runtime
       runtime = CLAMP::GetOrInitRuntime();
-  
+
       // get context
       KalmarContext* context = static_cast<KalmarContext*>(runtime->m_GetContextImpl());
-  
+
       // get default queue on the default device
       std::shared_ptr<KalmarQueue> queue = context->auto_select();
-  
+
       // build kernels on the default queue on the default device
       CLAMP::BuildProgram(queue.get());
     }
