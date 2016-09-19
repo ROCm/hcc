@@ -8,16 +8,11 @@ sub usage {
   print("Extract the device kernels from an hcc executable.\n\n");
   print("-h          \t\t\t\tshow this help message\n");
   print("-i <input>  \t\t\t\tinput file\n");
-  print("-t <target> \t\t\t\ttarget architecture (optional)\n");
-  print("            \t\t\t\t AMD:AMDGPU:7:0:1 for Hawaii\n");
-  print("            \t\t\t\t AMD:AMDGPU:8:0:1 for Carizzo\n");
-  print("            \t\t\t\t AMD:AMDGPU:8:0:3 for Fiji / Polaris (default)\n");
   exit;
 }
 
-
 my %options=();
-getopts('hi:t:', \%options);
+getopts('hi:', \%options);
 
 if (!%options || defined $options{h}) {
   usage();
@@ -28,50 +23,133 @@ defined $options{i} || die("input not specified");
 $input_file = $options{i};
 (-f $input_file) || die("can't find $input_file");
 
-# Set default target architecture to Fiji
-my $target = "AMD:AMDGPU:8:0:3";
-if (defined $options{t}) {
-  $target = $options{t};
-}
+my $bundle_start_tag = "_binary_kernel_bundle_start";
+my $bundle_size_tag  = "_binary_kernel_bundle_size";
+my $bundle_start = hex(`objdump -t $input_file | grep $bundle_start_tag | awk '{print \$1}'`);
+my $bundle_size  = hex(`objdump -t $input_file | grep $bundle_size_tag | awk '{print \$1}'`);
 
-# Convert from ISA version string to ASIC name
-my $asic_target = "fiji";
-if ($target eq "AMD:AMDGPU:8:0:3") { $asic_target = "fiji"; }
-if ($target eq "AMD:AMDGPU:8:0:1") { $asic_target = "carrizo"; }
-if ($target eq "AMD:AMDGPU:7:0:1") { $asic_target = "hawaii"; }
-
-my $hsaco_start_tag = "_binary_kernel_hsaco_start";
-my $hsaco_size_tag  = "_binary_kernel_hsaco_size";
-my $hsaco_start = hex(`objdump -t $input_file | grep $hsaco_start_tag | awk '{print \$1}'`);
-my $hsaco_size  = hex(`objdump -t $input_file | grep $hsaco_size_tag | awk '{print \$1}'`);
-
-if ($hsaco_start == 0 || $hsaco_size == 0) {
-  print("can't find any HSACO kernel in $input_file\n");
+if ($bundle_start == 0 || $bundle_size == 0) {
+  die("can't find any kernel bundle file in $input_file\n");
 }
 else {
 
-  # extract HSACO file from the binary
+  # extract kernel bundle file from the binary
   my $data_lma         = hex(`objdump -h $input_file | grep ".data.rel.ro" | awk '{print \$5}'`);
   my $data_file_offset = hex(`objdump -h $input_file | grep ".data.rel.ro" | awk '{print \$6}'`);
-  my $hsaco_file_offset = $data_file_offset + ($hsaco_start - $data_lma);
-  my $hsaco_file_name = "$input_file.hsaco";
-  system("dd if=$input_file of=$hsaco_file_name skip=$hsaco_file_offset count=$hsaco_size bs=1 status=none");
+  my $bundle_file_offset = $data_file_offset + ($bundle_start - $data_lma);
+  my $bundle_file_name = "$input_file.bundle";
+  system("dd if=$input_file of=$bundle_file_name skip=$bundle_file_offset count=$bundle_size bs=1 status=none") == 0
+    or die("Extracting kernel bundle file failed: $?");
+
+  # hold the array of GPU targets
+  # parsed below by looking into kernel bundle file header
+  # used by llvm-objdump later on
+  my @asic_target_array;
+
+  # parse kernel bundle header
+  open BUNDLE_FP, $bundle_file_name || die $!;
+  binmode BUNDLE_FP;
+
+  # skip OFFLOAD_BUNDLER_MAGIC_STR
+  my $magic_str;
+  my $read_bytes;
+  $read_bytes = read(BUNDLE_FP, $magic_str, 24);
+  if (($read_bytes != 24) || ($magic_str ne "__CLANG_OFFLOAD_BUNDLE__")) {
+    die("Incorrect magic string");
+  }
+
+  # read number of bundles
+  my $NumberOfBundles;
+  $read_bytes = read(BUNDLE_FP, $NumberOfBundles, 8);
+  if ($read_bytes != 8) {
+    die("Fail to parse number of bundles");
+  }
+  $NumberOfBundles = unpack("s", $NumberOfBundles);
+
+  my $ClangOffloadBundlerOutputsArgs="-outputs=/dev/null";
+  my $ClangOffloadBundlerTargetsArgs="-targets=host-x86_64-unknown-linux";
+
+  for (my $iter = 0; $iter < $NumberOfBundles; $iter++) {
+    # read offset
+    my $Offset;
+    $read_bytes = read(BUNDLE_FP, $Offset, 8);
+    if ($read_bytes != 8) {
+      die("Fail to parse bundle offset");
+    }
+
+    # read size
+    my $Size;
+    $read_bytes = read(BUNDLE_FP, $Size, 8);
+    if ($read_bytes != 8) {
+      die("Fail to parse bundle size");
+    }
+
+    # read triple size
+    my $TripleSize;
+    $read_bytes = read(BUNDLE_FP, $TripleSize, 8);
+    if ($read_bytes != 8) {
+      die("Fail to parse triple size");
+    }
+    $TripleSize = unpack("s", $TripleSize);
+
+    # read triple
+    my $Triple;
+    $read_bytes = read(BUNDLE_FP, $Triple, $TripleSize);
+    if ($read_bytes != $TripleSize) {
+      die("Fail to parse triple");
+    }
+
+    # Only process GPU targets, skip host targets
+    if ($Triple =~ /^hcc-amdgcn--amdhsa-/) {
+      my $asic_target = substr($Triple, 19); # hcc-amdgcn--amdhsa-
+      #print("GPU target: " . $asic_target . "\n");
+
+      # augment arguments for clang-offload-bundler
+      my $hsaco_file_name = "$input_file-$asic_target.hsaco";
+      $ClangOffloadBundlerOutputsArgs = $ClangOffloadBundlerOutputsArgs . "," . $hsaco_file_name;
+      $ClangOffloadBundlerTargetsArgs = $ClangOffloadBundlerTargetsArgs . "," . $Triple;
+
+      # add into asic_target_array
+      $asic_target_array[$#asic_target_array + 1]=$asic_target;
+    } else {
+      #print("Host target: " . $Triple . "\n");
+    }
+  }
+
+  # close file
+  close BUNDLE_FP;
 
   my $rocm_path = "@ROCM_ROOT@";
-
   # set the default to rocm path
-  my $llvm_objdump = "$rocm_path/llvm/bin/llvm-objdump";
+  my $llvm_objdump = "$rocm_path/hcc/compiler/bin/llvm-objdump";
+  my $clang_offload_bundler = "$rocm_path/hcc/compiler/bin/clang-offload-bundler";
 
   if (defined $ENV{'HCC_HOME'}) {
-    $llvm_objdump = "$ENV{'HCC_HOME'}/llvm/bin/llvm-objdump";
+    $llvm_objdump = "$ENV{'HCC_HOME'}/compiler/bin/llvm-objdump";
+    $clang_offload_bundler = "$ENV{'HCC_HOME'}/compiler/bin/clang-offload-bundler";
+  }
+
+  if (-f $clang_offload_bundler) {
+    #print($ClangOffloadBundlerOutputsArgs);
+    #print($ClangOffloadBundlerTargetsArgs);
+
+    # use clang-offload-bundler to unbundle HSACO
+    system("$clang_offload_bundler -unbundle -type=o -inputs=$bundle_file_name " . $ClangOffloadBundlerOutputsArgs . " " . $ClangOffloadBundlerTargetsArgs) == 0 or die("Fail to execute clang-offload-bundler");
+  } else {
+    die("Can't find clang-offload-bundler\n");
   }
 
   if (-f $llvm_objdump) {
+    for (my $iter = 0; $iter <= $#asic_target_array; $iter++) {
+      my $asic_target = $asic_target_array[$iter];
+      my $hsaco_file_name = "$input_file-$asic_target.hsaco";
+      my $isa_file_name = "$input_file-$asic_target.isa";
 
-    # use llvm-objdump to dump out GCN ISA
-    system("$llvm_objdump -disassemble -mcpu=$asic_target $hsaco_file_name > $input_file.isa");
-  }
-  else {
-    print("can't find AMDGPU disassembler\n");
+      # use llvm-objdump to dump out GCN ISA
+      system("$llvm_objdump -disassemble -mcpu=$asic_target $hsaco_file_name > $isa_file_name") == 0 or die("Fail to disassemble AMDGPU ISA for target" . $asic_target);
+      print("Generated GCN ISA for " . $asic_target . " at: " . $isa_file_name . "\n");
+    }
+  } else {
+    die("Can't find AMDGPU disassembler\n");
   }
 }
