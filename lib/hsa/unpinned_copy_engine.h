@@ -39,7 +39,7 @@ THE SOFTWARE.
 // Staging buffer provides thread-safe access via a mutex.
 struct UnpinnedCopyEngine {
 
-    enum CopyMode {ChooseBest, UsePinInPlace, UseStaging, UseMemcpy} ; 
+    enum CopyMode {ChooseBest=0, UsePinInPlace=1, UseStaging=2, UseMemcpy=3} ; 
 
     static const int _max_buffers = 4;
 
