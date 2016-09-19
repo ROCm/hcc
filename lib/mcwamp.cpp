@@ -101,7 +101,7 @@ public:
 
     void* handle = nullptr;
 
-    // detect if C++AMP runtime is available and 
+    // detect if C++AMP runtime is available and
     // whether all platform library dependencies are satisfied
     //std::cout << "dlopen(" << m_ampRuntimeLibrary << ")\n";
     handle = dlopen(m_ampRuntimeLibrary.c_str(), RTLD_LAZY|RTLD_NODELETE);
@@ -221,24 +221,126 @@ bool in_cpu_kernel() { return in_kernel; }
 void enter_kernel() { in_kernel = true; }
 void leave_kernel() { in_kernel = false; }
 
-inline void DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, void** kernel_source) {
-  /* FIXME need to adopt bundle header parsing logic in ClangOffloadBundler */
-#define BUNDLE_HEADER_LENGTH (128)
 
+/// Handler for binary files. The bundled file will have the following format
+/// (all integers are stored in little-endian format):
+///
+/// "OFFLOAD_BUNDLER_MAGIC_STR" (ASCII encoding of the string)
+///
+/// NumberOfOffloadBundles (8-byte integer)
+///
+/// OffsetOfBundle1 (8-byte integer)
+/// SizeOfBundle1 (8-byte integer)
+/// NumberOfBytesInTripleOfBundle1 (8-byte integer)
+/// TripleOfBundle1 (byte length defined before)
+///
+/// ...
+///
+/// OffsetOfBundleN (8-byte integer)
+/// SizeOfBundleN (8-byte integer)
+/// NumberOfBytesInTripleOfBundleN (8-byte integer)
+/// TripleOfBundleN (byte length defined before)
+///
+/// Bundle1
+/// ...
+/// BundleN
+
+static inline uint64_t Read8byteIntegerFromBuffer(const char *data, size_t pos) {
+  uint64_t Res = 0;
+  for (unsigned i = 0; i < 8; ++i) {
+    Res <<= 8;
+    uint64_t Char = (uint64_t)data[pos + 7 - i];
+    Res |= 0xffu & Char;
+  }
+  return Res;
+}
+
+#define RUNTIME_ERROR(val, error_string, line) { \
+  printf("### HCC RUNTIME ERROR: %s at file:%s line:%d\n", error_string, __FILE__, line); \
+  exit(val); \
+}
+
+#define OFFLOAD_BUNDLER_MAGIC_STR "__CLANG_OFFLOAD_BUNDLE__"
+#define OFFLOAD_BUNDLER_MAGIC_STR_LENGTH (24)
+#define HCC_TRIPLE_PREFIX "hcc-amdgcn--amdhsa-"
+#define HCC_TRIPLE_PREFIX_LENGTH (19)
+
+inline void DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, void** kernel_source) {
+
+  bool FoundCompatibleKernel = false;
+
+  // walk through bundle header
+  // get bundle file size
   size_t bundle_size =
     (ptrdiff_t)((void *)kernel_bundle_end) -
     (ptrdiff_t)((void *)kernel_bundle_source);
-  bundle_size -= BUNDLE_HEADER_LENGTH;
 
-  void *bundle_content = (unsigned char *)kernel_bundle_source + BUNDLE_HEADER_LENGTH;
+  // point to bundle file data
+  const char *data = (const char *)kernel_bundle_source;
 
-  // use KalmarDevice::IsCompatibleKernel to check
-  if (pQueue->getDev()->IsCompatibleKernel((void*)bundle_size, bundle_content)) {
-    *kernel_size = bundle_size;
-    *kernel_source = bundle_content;
-  } else {
-    printf("Can't find compatible kernel!\n");
-    exit(1);
+  // skip OFFLOAD_BUNDLER_MAGIC_STR
+  size_t pos = 0;
+  if (pos + OFFLOAD_BUNDLER_MAGIC_STR_LENGTH > bundle_size) {
+    RUNTIME_ERROR(1, "Bundle size too small", __LINE__)
+  }
+  std::string MagicStr(data + pos, OFFLOAD_BUNDLER_MAGIC_STR_LENGTH);
+  if (MagicStr.compare(OFFLOAD_BUNDLER_MAGIC_STR) != 0) {
+    RUNTIME_ERROR(1, "Incorrect magic string", __LINE__)
+  }
+  pos += OFFLOAD_BUNDLER_MAGIC_STR_LENGTH;
+
+  // Read number of bundles.
+  if (pos + 8 > bundle_size) {
+    RUNTIME_ERROR(1, "Fail to parse number of bundles", __LINE__)
+  }
+  uint64_t NumberOfBundles = Read8byteIntegerFromBuffer(data, pos);
+  pos += 8;
+
+  for (uint64_t i = 0; i < NumberOfBundles; ++i) {
+    // Read offset.
+    if (pos + 8 > bundle_size) {
+      RUNTIME_ERROR(1, "Fail to parse bundle offset", __LINE__)
+    }
+    uint64_t Offset = Read8byteIntegerFromBuffer(data, pos);
+    pos += 8;
+
+    // Read size.
+    if (pos + 8 > bundle_size) {
+      RUNTIME_ERROR(1, "Fail to parse bundle size", __LINE__)
+    }
+    uint64_t Size = Read8byteIntegerFromBuffer(data, pos);
+    pos += 8;
+
+    // Read triple size.
+    if (pos + 8 > bundle_size) {
+      RUNTIME_ERROR(1, "Fail to parse triple size", __LINE__)
+    }
+    uint64_t TripleSize = Read8byteIntegerFromBuffer(data, pos);
+    pos += 8;
+
+    // Read triple.
+    if (pos + TripleSize > bundle_size) {
+      RUNTIME_ERROR(1, "Fail to parse triple", __LINE__)
+    }
+    std::string Triple(data + pos, TripleSize);
+    pos += TripleSize;
+
+    // only check bundles with HCC triple prefix string
+    if (Triple.compare(0, HCC_TRIPLE_PREFIX_LENGTH, HCC_TRIPLE_PREFIX) == 0) {
+      // use KalmarDevice::IsCompatibleKernel to check
+      size_t SizeST = (size_t)Size;
+      void *Content = (unsigned char *)data + Offset;
+      if (pQueue->getDev()->IsCompatibleKernel((void*)SizeST, Content)) {
+        *kernel_size = SizeST;
+        *kernel_source = Content;
+        FoundCompatibleKernel = true;
+        break;
+      }
+    }
+  }
+
+  if (!FoundCompatibleKernel) {
+    RUNTIME_ERROR(1, "Fail to find compatible kernel", __LINE__)
   }
 }
 
