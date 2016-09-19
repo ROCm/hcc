@@ -94,7 +94,7 @@ fi
 # error handling for HCC-specific opt passes
 RETVAL=$?
 if [ $RETVAL != 0 ]; then
-  echo "Generating AMD GCN kernel failed in HCC-specific opt passes"
+  echo "Generating AMD GCN kernel failed in HCC-specific opt passes for target: $AMDGPU_TARGET"
   exit $RETVAL
 fi
 
@@ -111,7 +111,7 @@ $AS -o $2.promote.bc $2.promote.ll
 # error handling logic for llvm-as
 RETVAL=$?
 if [ $RETVAL != 0 ]; then
-  echo "Generating AMD GCN kernel failed in llvm-as"
+  echo "Generating AMD GCN kernel failed in llvm-as for target: $AMDGPU_TARGET"
   exit $RETVAL
 fi
 
@@ -134,7 +134,7 @@ $LINK -suppress-warnings -o $2.linked.bc $2.promote.bc $HCC_BC_LIBS
 # error handling for llvm-link
 RETVAL=$?
 if [ $RETVAL != 0 ]; then
-  echo "Generating AMD GCN kernel failed in llvm-link with ROCm-Device-Libs"
+  echo "Generating AMD GCN kernel failed in llvm-link with ROCm-Device-Libs for target: $AMDGPU_TARGET"
   exit $RETVAL
 fi
 
@@ -144,12 +144,12 @@ fi
 
 # Optimization notes:
 #  -disable-simplify-libcalls:  prevents transforming loops into library calls such as memset, memcopy on GPU
-$OPT $KMOPTOPT -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -disable-simplify-libcalls -verify $2.linked.bc -o $2.opt.bc
+$OPT $KMOPTOPT -inline -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -disable-simplify-libcalls -verify $2.linked.bc -o $2.opt.bc
 
 # error handling for opt
 RETVAL=$?
 if [ $RETVAL != 0 ]; then
-  echo "Generating AMD GCN kernel failed in opt"
+  echo "Generating AMD GCN kernel failed in opt for target: $AMDGPU_TARGET"
   exit $RETVAL
 fi
 
@@ -162,7 +162,7 @@ $LLC $KMOPTLLC -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -filetype=obj -o $2.
 # error handling for llc
 RETVAL=$?
 if [ $RETVAL != 0 ]; then
-  echo "Generating AMD GCN kernel failed in llc"
+  echo "Generating AMD GCN kernel failed in llc for target: $AMDGPU_TARGET"
   exit $RETVAL
 fi
 
@@ -177,7 +177,7 @@ $LLD -shared $2.isabin -o $2
 # error handling for ld.lld
 RETVAL=$?
 if [ $RETVAL != 0 ]; then
-  echo "Generating AMD GCN kernel failed in ld.lld"
+  echo "Generating AMD GCN kernel failed in ld.lld for target: $AMDGPU_TARGET"
   exit $RETVAL
 fi
 
