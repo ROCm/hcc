@@ -90,9 +90,13 @@
 #define HSA_BARRIER_DEP_SIGNAL_CNT (5)
 
 
-// Add a signal dependencies between async copies - so completion signal from prev command used as input dep to next.
-// If 0, rely on implicit ordering for copy commands of same type.
-#define USE_SIGNAL_DEP_BETWEEN_COPIES (0)
+// synchronization for copy commands in the same stream, regardless of command type.
+// Add a signal dependencies between async copies - 
+// so completion signal from prev command used as input dep to next.
+// If FORCE_SIGNAL_DEP_BETWEEN_COPIES=0 then data copies of the same kind (H2H, H2D, D2H, D2D) 
+// are assumed to be implicitly ordered.
+// ROCR 1.2 runtime implementation currently provides this guarantee when using SDMA queues and compute shaders.
+#define FORCE_SIGNAL_DEP_BETWEEN_COPIES (0)
 
 // whether to use MD5 as kernel indexing hash function
 // default set as 0 (use faster FNV-1a hash instead)
@@ -929,7 +933,7 @@ public:
 
                 // No dependency required since Marker and Kernel share same queue and are ordered by AQL barrier bit.
                 needDep = false;
-            } else if (USE_SIGNAL_DEP_BETWEEN_COPIES && isCopyCommand(newCommandKind) && isCopyCommand(youngestCommandKind)) {
+            } else if (FORCE_SIGNAL_DEP_BETWEEN_COPIES && isCopyCommand(newCommandKind) && isCopyCommand(youngestCommandKind)) {
                 needDep = true;
             }
 
