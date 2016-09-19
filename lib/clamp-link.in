@@ -6,6 +6,9 @@ if [ "$#" -eq 0 ]; then
   exit 1
 fi
 
+# enable bundle dumping
+KMDUMPBUNDLE="${KMDUMPBUNDLE:=0}"
+
 BINDIR=$(dirname $0)
 LINK=$BINDIR/llvm-link
 OPT=$BINDIR/opt
@@ -445,6 +448,10 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
   ret=$?
   if [ $ret != 0 ]; then
     exit $ret
+  fi
+
+  if [ $KMDUMPBUNDLE == "1" ]; then
+    cp $TEMP_DIR/kernel.bundle ./dump.bundle
   fi
 
   # build a new kernel object
