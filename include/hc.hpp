@@ -32,6 +32,7 @@
 #   define __CPU__ [[cpu]]
 #endif
 
+
 /**
  * @namespace hc
  * Heterogeneous  C++ (HC) namespace
@@ -869,6 +870,19 @@ public:
     unsigned int get_cu_count() const {
         return pDev->get_compute_unit_count();
     }
+
+
+    /**
+     * Return true if the accelerator's memory can be mapped into the CPU's address space,
+     * and the CPU is allowed to access the memory directly with CPU memory operations.
+     * Typically this is enabled with "large BAR" or "resizeable BAR" address mapping.
+     *
+     */
+    bool has_cpu_accessible_am() {
+        return pDev->has_cpu_accessible_am();
+    };
+
+    Kalmar::KalmarDevice *get_dev_ptr() const { return pDev; }; 
 
 private:
     accelerator(Kalmar::KalmarDevice* pDev) : pDev(pDev) {}
