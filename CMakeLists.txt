@@ -85,11 +85,11 @@ if (NOT HSA_LIBRARY)
   MESSAGE("HSA runtime library not found. Use -DHSA_LIBRARY_DIR=<path_to_libhsa-runtime64.so>.")
 endif (NOT HSA_LIBRARY)
 
-find_path(ROCM_DEVICE_LIB ocml.bc PATHS ${ROCM_DEVICE_LIB_DIR} ${ROCM_ROOT}/lib NO_DEFAULT_PATH)
-find_path(ROCM_DEVICE_LIB ocml.bc)
+find_path(ROCM_DEVICE_LIB ocml.amdgcn.bc PATHS ${ROCM_DEVICE_LIB_DIR} ${ROCM_ROOT}/lib NO_DEFAULT_PATH)
+find_path(ROCM_DEVICE_LIB ocml.amdgcn.bc)
 
 if (NOT ROCM_DEVICE_LIB)
-  MESSAGE("ROCM Device Lib not found. Use -DROCM_DEVICE_LIB_DIR=<path_to_ocml.bc>.")
+  MESSAGE("ROCM Device Lib not found. Use -DROCM_DEVICE_LIB_DIR=<path_to_ocml.amdgcn.bc>.")
 endif (NOT ROCM_DEVICE_LIB)
 
 # display ROCm information
