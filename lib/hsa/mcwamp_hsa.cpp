@@ -32,8 +32,7 @@
 
 #include <hc_am.hpp>
 
-// staging buffer header
-#include "staging_buffer.h"
+#include "unpinned_copy_engine.h"
 
 #include <time.h>
 #include <iomanip>
@@ -80,12 +79,23 @@
 #define ASYNCOPS_VECTOR_GC_SIZE (1024)
 
 
+// These parameters change the thresholds used to select the unpinned copy algorithm:
+#define MEMCPY_D2H_STAGING_VS_PININPLACE_COPY_THRESHOLD    4194304
+#define MEMCPY_H2D_DIRECT_VS_STAGING_COPY_THRESHOLD    65336
+#define MEMCPY_H2D_STAGING_VS_PININPLACE_COPY_THRESHOLD    1048576
+
+
+
 #define HSA_BARRIER_DEP_SIGNAL_CNT (5)
 
 
-// Add a signal dependencies between async copies - so completion signal from prev command used as input dep to next.
-// If 0, rely on implicit ordering for copy commands of same type.
-#define USE_SIGNAL_DEP_BETWEEN_COPIES (0)
+// synchronization for copy commands in the same stream, regardless of command type.
+// Add a signal dependencies between async copies - 
+// so completion signal from prev command used as input dep to next.
+// If FORCE_SIGNAL_DEP_BETWEEN_COPIES=0 then data copies of the same kind (H2H, H2D, D2H, D2D) 
+// are assumed to be implicitly ordered.
+// ROCR 1.2 runtime implementation currently provides this guarantee when using SDMA queues and compute shaders.
+#define FORCE_SIGNAL_DEP_BETWEEN_COPIES (0)
 
 // cutoff size used in FNV-1a hash function
 // default set as 768, this is a heuristic value
@@ -217,7 +227,7 @@ inline static void checkHCCRuntimeStatus(const HCCRuntimeStatus status, const un
     if (q != nullptr)
       assert(HSA_STATUS_SUCCESS == hsa_queue_destroy(q));
     assert(HSA_STATUS_SUCCESS == hsa_shut_down());
-	  exit(-1);
+    exit(-1);
   }
 }
 
@@ -919,7 +929,7 @@ public:
 
                 // No dependency required since Marker and Kernel share same queue and are ordered by AQL barrier bit.
                 needDep = false;
-            } else if (USE_SIGNAL_DEP_BETWEEN_COPIES && isCopyCommand(newCommandKind) && isCopyCommand(youngestCommandKind)) {
+            } else if (FORCE_SIGNAL_DEP_BETWEEN_COPIES && isCopyCommand(newCommandKind) && isCopyCommand(youngestCommandKind)) {
                 needDep = true;
             }
 
@@ -1510,14 +1520,15 @@ private:
     we must make sure there is pyshycial link between device and host. Currently,
     agent iterate function will push back all of the dGPU on the system, which might
     not be linked directly to the first cpu node, host */
-    hsa_agent_t host_;
+    hsa_agent_t hostAgent;
 
     uint16_t versionMajor;
     uint16_t versionMinor;
 
 public:
-    // Structures to manage staging buffers and copies:
-    class StagingBuffer      *staging_buffer[2]; // one buffer for each direction.
+    // Structures to manage unpinnned memory copies
+    class UnpinnedCopyEngine      *copy_engine[2]; // one for each direction.
+    UnpinnedCopyEngine::CopyMode  copy_mode;
 
 public:
 
@@ -1656,8 +1667,20 @@ public:
     }
 
     hsa_agent_t& getHostAgent() {
-        return host_;
+        return hostAgent;
     }
+
+    // Returns true if specified agent has access to the specified pool.
+    // Typically used to detect when a CPU agent has access to GPU device memory via large-bar: 
+    int hasAccess(hsa_agent_t agent, hsa_amd_memory_pool_t pool)
+    {
+        hsa_status_t err;
+        hsa_amd_memory_pool_access_t access;
+        err = hsa_amd_agent_memory_pool_get_info(agent, pool, HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &access);
+        STATUS_CHECK(err, __LINE__);
+        return access;
+    }
+
 
     HSADevice(hsa_agent_t a, hsa_agent_t host) : KalmarDevice(access_type_read_write),
                                agent(a), programs(), max_tile_static_size(0),
@@ -1667,7 +1690,7 @@ public:
                                kernargPool(), kernargPoolFlag(), kernargCursor(0), kernargPoolMutex(),
                                executables(),
                                profile(hcAgentProfileNone),
-                               path(), description(), host_(host),
+                               path(), description(), hostAgent(host),
                                versionMajor(0), versionMinor(0) {
 #if KALMAR_DEBUG
         std::cerr << "HSADevice::HSADevice()\n";
@@ -1715,7 +1738,7 @@ public:
         status = hsa_amd_agent_iterate_memory_pools(agent, &HSADevice::get_memory_pools, &ri);
         STATUS_CHECK(status, __LINE__);
 
-        status = hsa_amd_agent_iterate_memory_pools(host_, HSADevice::get_host_pools, &ri);
+        status = hsa_amd_agent_iterate_memory_pools(hostAgent, HSADevice::get_host_pools, &ri);
         STATUS_CHECK(status, __LINE__);
 
         /// after iterating memory regions, set if we can use coarse grained regions
@@ -1790,10 +1813,36 @@ public:
             profile = hcAgentProfileFull;
         }
 
+        //---
+        //Provide an environment variable to select the mode used to perform the copy operaton
+        const char *copy_mode_str = getenv("HCC_UNPINNED_COPY_MODE");
+        this->copy_mode = copy_mode_str ? static_cast<UnpinnedCopyEngine::CopyMode> (atoi(copy_mode_str)) : UnpinnedCopyEngine::ChooseBest;
+        switch (this->copy_mode) {
+            case UnpinnedCopyEngine::ChooseBest:    //0
+            case UnpinnedCopyEngine::UsePinInPlace: //1
+            case UnpinnedCopyEngine::UseStaging:    //2
+            case UnpinnedCopyEngine::UseMemcpy:     //3
+                break;
+            default:
+                this->copy_mode = UnpinnedCopyEngine::ChooseBest;
+        };
+
+        
+
         static const size_t stagingSize = 64*1024;
+        this->cpu_accessible_am = hasAccess(hostAgent, ri._am_memory_pool);
         hsa_amd_memory_pool_t hostPool = (getHSAAMHostRegion());
-        staging_buffer[0] = new StagingBuffer(agent, host_, hostPool, stagingSize, 2/*staging buffers*/);
-        staging_buffer[1] = new StagingBuffer(agent, host_, hostPool, stagingSize, 2/*staging Buffers*/);
+        copy_engine[0] = new UnpinnedCopyEngine(agent, hostAgent, stagingSize, 2/*staging buffers*/,
+                                                this->cpu_accessible_am, 
+                                                MEMCPY_H2D_DIRECT_VS_STAGING_COPY_THRESHOLD,
+                                                MEMCPY_H2D_STAGING_VS_PININPLACE_COPY_THRESHOLD,
+                                                MEMCPY_D2H_STAGING_VS_PININPLACE_COPY_THRESHOLD);
+
+        copy_engine[1] = new UnpinnedCopyEngine(agent, hostAgent, stagingSize, 2/*staging Buffers*/,
+                                                this->cpu_accessible_am, 
+                                                MEMCPY_H2D_DIRECT_VS_STAGING_COPY_THRESHOLD,
+                                                MEMCPY_H2D_STAGING_VS_PININPLACE_COPY_THRESHOLD,
+                                                MEMCPY_D2H_STAGING_VS_PININPLACE_COPY_THRESHOLD);
     }
 
     ~HSADevice() {
@@ -1845,9 +1894,9 @@ public:
 
 
         for (int i=0; i<2; i++) {
-            if (staging_buffer[i]) {
-                delete staging_buffer[i];
-                staging_buffer[i] = NULL;
+            if (copy_engine[i]) {
+                delete copy_engine[i];
+                copy_engine[i] = NULL;
             }
         }
 
@@ -1870,6 +1919,8 @@ public:
     }
     bool is_emulated() const override { return false; }
     uint32_t get_version() const { return ((static_cast<unsigned int>(versionMajor) << 16) | versionMinor); }
+
+    bool has_cpu_accessible_am() const override { return cpu_accessible_am; }
 
     void* create(size_t count, struct rw_info* key) override {
         void *data = nullptr;
@@ -2103,6 +2154,10 @@ public:
         else
             return 0;
     }
+
+    bool has_cpu_accessible_am() override {
+        return cpu_accessible_am;
+    };
 
     void releaseKernargBuffer(void* kernargBuffer, int kernargBufferIndex) {
         if (hasHSAKernargRegion() && USE_KERNARG_REGION) {
@@ -3273,13 +3328,13 @@ HSACopy::enqueueAsyncCopy() {
     hc::AmPointerInfo srcPtrInfo(NULL, NULL, 0, acc, 0, 0);
     hc::AmPointerInfo dstPtrInfo(NULL, NULL, 0, acc, 0, 0);
 
-    bool srcIsMapped = (hc::am_memtracker_getinfo(&srcPtrInfo, src) == AM_SUCCESS);
-    bool dstIsMapped = (hc::am_memtracker_getinfo(&dstPtrInfo, dst) == AM_SUCCESS);
+    bool srcInTracker = (hc::am_memtracker_getinfo(&srcPtrInfo, src) == AM_SUCCESS);
+    bool dstInTracker = (hc::am_memtracker_getinfo(&dstPtrInfo, dst) == AM_SUCCESS);
 
-    if (!srcIsMapped) {
+    if (!srcInTracker) {
         // throw an exception
         throw Kalmar::runtime_exception("trying to copy from unpinned src pointer", 0);
-    } else if (!dstIsMapped) {
+    } else if (!dstInTracker) {
         // throw an exception
         throw Kalmar::runtime_exception("trying to copy from unpinned dst pointer", 0);
     } else {
@@ -3403,34 +3458,32 @@ HSACopy::syncCopy(Kalmar::HSAQueue* hsaQueue) {
     std::cerr << "HSACopy::syncCopy(" << hsaQueue << "), src = " << src << ", dst = " << dst << ", sizeBytes = " << sizeBytes << "\n";
 #endif
 
-    // query if src and dst are on device memory or pinned host memory
-    bool srcIsMapped = false;
+    // The tracker stores information on all device memory allocations and all pinned host memory, for the specified device
+    // If the memory is not found in the tracker, then it is assumed to be unpinned host memory.
+    bool srcInTracker = false;  
     bool srcInDeviceMem = false;
-    bool dstIsMapped = false;
+    bool dstInTracker = false;
     bool dstInDeviceMem = false;
 
     hc::accelerator acc;
     hc::AmPointerInfo srcPtrInfo(NULL, NULL, 0, acc, 0, 0);
     hc::AmPointerInfo dstPtrInfo(NULL, NULL, 0, acc, 0, 0);
 
-    if (!srcIsMapped) {
-        if (hc::am_memtracker_getinfo(&srcPtrInfo, src) == AM_SUCCESS) {
-            srcIsMapped = true;
-            srcInDeviceMem = (srcPtrInfo._isInDeviceMem);
-        }  // Else - srcNotMapped=srcInDeviceMem=false
-    }
+    if (hc::am_memtracker_getinfo(&srcPtrInfo, src) == AM_SUCCESS) {
+        srcInTracker = true;
+        srcInDeviceMem = (srcPtrInfo._isInDeviceMem);
+    }  // Else - srcNotMapped=srcInDeviceMem=false
 
-    if (!dstIsMapped) {
-        if (hc::am_memtracker_getinfo(&dstPtrInfo, dst) == AM_SUCCESS) {
-            dstIsMapped = true;
-            dstInDeviceMem = (dstPtrInfo._isInDeviceMem);
-        } // Else - dstNotMapped=dstInDeviceMem=false
-    }
+    if (hc::am_memtracker_getinfo(&dstPtrInfo, dst) == AM_SUCCESS) {
+        dstInTracker = true;
+        dstInDeviceMem = (dstPtrInfo._isInDeviceMem);
+    } // Else - dstNotMapped=dstInDeviceMem=false
+
 
 #if KALMAR_DEBUG
-    std::cerr << "srcIsMapped: " << srcIsMapped << "\n";
+    std::cerr << "srcInTracker: " << srcInTracker << "\n";
     std::cerr << "srcInDeviceMem: " << srcInDeviceMem << "\n";
-    std::cerr << "dstIsMapped: " << dstIsMapped << "\n";
+    std::cerr << "dstInTracker: " << dstInTracker << "\n";
     std::cerr << "dstInDeviceMem: " << dstInDeviceMem << "\n";
 #endif
 
@@ -3451,31 +3504,80 @@ HSACopy::syncCopy(Kalmar::HSAQueue* hsaQueue) {
 
     Kalmar::hcCommandKind commandKind = getCommandKind();
 
+
+
 #if KALMAR_DEBUG
     std::cerr << "hcCommandKind: " << getHcCommandKindString(commandKind) << "\n";
 #endif
 
-    // Need to use staging buffer if copying to or from unmapped host memory:
-    if ((commandKind == Kalmar::hcMemcpyHostToDevice) && (!srcIsMapped)) {
+    bool useDefaultCopy = true;
+
+    switch (commandKind) {
+        case Kalmar::hcMemcpyHostToDevice:
+            if (!srcInTracker) {
 #if KALMAR_DEBUG
-    std::cerr << "HSACopy::syncCopy(), invoke StagingBuffer::CopyHostToDevice()\n";
+                std::cerr << "HSACopy::syncCopy(), invoke UnpinnedCopyEngine::CopyHostToDevice()\n";
 #endif
-        device->staging_buffer[0]->CopyHostToDevice(dst, src, sizeBytes, depSignalCnt ? &depSignal : NULL);
-    } else if ((commandKind == Kalmar::hcMemcpyDeviceToHost) && (!dstIsMapped)) {
+                device->copy_engine[0]->CopyHostToDevice(device->copy_mode, dst, src, sizeBytes, depSignalCnt ? &depSignal : NULL);
+                useDefaultCopy = false;
+            }
+            break;
+
+
+        case Kalmar::hcMemcpyDeviceToHost:
+            if (!dstInTracker) {
 #if KALMAR_DEBUG
-    std::cerr << "HSACopy::syncCopy(), invoke StagingBuffer::CopyDeviceToHost()\n";
+                std::cerr << "HSACopy::syncCopy(), invoke UnpinnedCopyEngine::CopyDeviceToHost()\n";
 #endif
-        device->staging_buffer[1]->CopyDeviceToHost(dst, src, sizeBytes, depSignalCnt ? &depSignal : NULL);
-    } else if (commandKind == Kalmar::hcMemcpyHostToHost)  {
+                UnpinnedCopyEngine::CopyMode d2hCopyMode = device->copy_mode;
+                if (d2hCopyMode == UnpinnedCopyEngine::UseMemcpy) {
+                    // override since D2H does not support Memcpy
+                    d2hCopyMode = UnpinnedCopyEngine::ChooseBest;
+                }
+                device->copy_engine[1]->CopyDeviceToHost(d2hCopyMode, dst, src, sizeBytes, depSignalCnt ? &depSignal : NULL);
+                useDefaultCopy = false;
+            };
+            break;
+
+        case Kalmar::hcMemcpyHostToHost:
 #if KALMAR_DEBUG
-    std::cerr << "HSACopy::syncCopy(), invoke memcpy\n";
+            std::cerr << "HSACopy::syncCopy(), invoke memcpy\n";
 #endif
-        // This works for both mapped and unmapped memory:
-        memcpy(dst, src, sizeBytes);
-    } else {
+            // Since this is sync copy, we assume here that the GPU has already drained younger commands.
+
+            // This works for both mapped and unmapped memory:
+            memcpy(dst, src, sizeBytes);
+            useDefaultCopy = false;
+            break;
+
+        case Kalmar::hcMemcpyDeviceToDevice:
+            if (!device->is_peer(dstPtrInfo._acc.get_dev_ptr()) || 
+                !device->is_peer(srcPtrInfo._acc.get_dev_ptr())) {
+#if KALMAR_DEBUG
+                std::cerr << "HSACopy:: P2P copy by engine can't see both pointers - use staged copy\n";
+#endif
+
+                //printf ("staged-copy- read dep signals\n");
+                hsa_agent_t dstAgent2 = * (static_cast<hsa_agent_t*> (dstPtrInfo._acc.get_hsa_agent()));
+                hsa_agent_t srcAgent = * (static_cast<hsa_agent_t*> (srcPtrInfo._acc.get_hsa_agent()));
+
+                printf ("staged P2P copy, needs fix\n");
+                assert(0);
+                useDefaultCopy = false;
+            };
+            break;
+
+        default:
+            throw Kalmar::runtime_exception("unexpected copy type", HSA_STATUS_SUCCESS);
+
+    };
+
+
+    if (useDefaultCopy) {
+        // Didn't already handle copy with one of special (slow) cases above, use the standard runtime copy path.
 
 #if KALMAR_DEBUG
-    std::cerr << "HSACopy::syncCopy(), fetch and init a HSA signal\n";
+        std::cerr << "HSACopy::syncCopy(), useDefaultCopy, fetch and init a HSA signal\n";
 #endif
         // If not special case - these can all be handled by the hsa async copy:
         hsa_agent_t srcAgent, dstAgent;
@@ -3489,23 +3591,23 @@ HSACopy::syncCopy(Kalmar::HSAQueue* hsaQueue) {
         hsa_signal_store_relaxed(signal, 1);
 
 #if KALMAR_DEBUG
-    std::cerr << "HSACopy::syncCopy(), invoke hsa_amd_memory_async_copy()\n";
+        std::cerr << "HSACopy::syncCopy(), invoke hsa_amd_memory_async_copy()\n";
 #endif
 
         hsa_status_t hsa_status = hsa_amd_memory_async_copy(dst, dstAgent, src, srcAgent, sizeBytes, depSignalCnt, depSignalCnt ? &depSignal:NULL, signal);
 
         if (hsa_status == HSA_STATUS_SUCCESS) {
 #if KALMAR_DEBUG
-    std::cerr << "HSACopy::syncCopy(), wait for completion...";
+            std::cerr << "HSACopy::syncCopy(), wait for completion...";
 #endif
             hsa_signal_wait_relaxed(signal, HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, waitMode);
 
 #if KALMAR_DEBUG
-    std::cerr << "done!\n";
+            std::cerr << "done!\n";
 #endif
         } else {
 #if KALMAR_DEBUG
-    std::cerr << "HSACopy::syncCopy(), hsa_amd_memory_async_copy() returns: 0x" << std::hex << hsa_status << "\n";
+            std::cerr << "HSACopy::syncCopy(), hsa_amd_memory_async_copy() returns: 0x" << std::hex << hsa_status << "\n";
 #endif
             throw Kalmar::runtime_exception("hsa_amd_memory_async_copy error", hsa_status);
         }
