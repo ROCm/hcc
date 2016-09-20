@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 // RUN: %hc %s -I/opt/rocm/hsa/include -L/opt/rocm/hsa/lib -lhsa-runtime64 -o %t.out && %t.out
 
 #include <hc.hpp>

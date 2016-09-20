@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 // RUN: %hc %s -o %t.out && %t.out
 
 // a test to check I16 type can be used in HCC

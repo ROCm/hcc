@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 // RUN: %hc -fPIC -Wl,-Bsymbolic -shared -DSHARED_LIBRARY %s -o %T/libtest1.so
 // RUN: %clang %s -L%T -ltest1 -o %t.out && LD_LIBRARY_PATH=%T %t.out
 

@@ -1,4 +1,4 @@
-// XFAIL: Linux
+
 
 // RUN: %hc -DTYPE="char"  %s -o %t.out && %t.out
 // RUN: %hc -DTYPE="signed char"  %s -o %t.out && %t.out
