@@ -1,15 +1,13 @@
 HCC : An open source C++ compiler for heterogeneous devices
 ===========================================================
-This repository hosts HCC compiler implementation project. The goal is to implement a compiler that takes a program conforming parallel programming standards such as C++ AMP, HC, C++ 17 ParallelSTL, or OpenMP and transforms it into the following targets:
-
-1. AMD GCN ISA
+This repository hosts HCC compiler implementation project. The goal is to implement a compiler that takes a program conforming parallel programming standards such as C++ AMP, HC, C++ 17 ParallelSTL, or OpenMP and transforms it into AMD GCN ISA.
 
 The project is based on LLVM+CLANG.  For more information, please visit the [hcc wiki][1]:
 
 [https://github.com/RadeonOpenCompute/hcc/wiki][1]
 
 Git submodules
---------------
+==============
 The project now employs git submodules to manage external components it depends upon. It it advised to add `--recursive` when you clone the project so all submodules are fetched automatically.
 
 For example:
@@ -25,7 +23,7 @@ For more information about git submodules, please refer to [git documentation][2
 [2]: https://git-scm.com/book/en/v2/Git-Tools-Submodules
 
 Device libraries
-----------------
+================
 HCC device library is a part of [ROCm-Device-Libs](https://github.com/RadeonOpenCompute/ROCm-Device-Libs).
 When compiling device code with hcc, rocm-device-libs package needs to be
 installed.
@@ -54,12 +52,12 @@ cmake \
 ```
 
 Multiple ISA
-------------
+============
 
 HCC now supports having multiple GCN ISAs in one executable file. You can do it in different ways:
 
-2. use `--amdgpu-target=` command line option
-
+use `--amdgpu-target=` command line option
+------------------------------------------
 It's possible to specify multiple `--amdgpu-target=` option. Example:
 
 ```
@@ -71,8 +69,8 @@ hcc `hcc-config --cxxflags --ldflags` \
     foo.cpp
 ```
 
-1. use `HCC_AMDGPU_TARGET` env var
-
+use `HCC_AMDGPU_TARGET` env var
+------------------------------------------
 Use `,` to delimit each AMDGPU target in HCC. Example:
 
 ```
@@ -81,8 +79,8 @@ export HCC_AMDGPU_TARGET=AMD:AMDGPU:7:0:1,AMD:AMDGPU:8:0:1,AMD:AMDGPU:8:0:3
 hcc `hcc-config --cxxflags --ldflags` foo.cpp
 ```
 
-3. configure HCC use CMake `HSA_AMDGPU_GPU_TARGET` variable
-
+configure HCC use CMake `HSA_AMDGPU_GPU_TARGET` variable
+---------------------------------------------------------
 If you build HCC from source, it's possible to configure it to automatically
 produce multiple ISAs via `HSA_AMDGPU_GPU_TARGET` CMake variable.
 
