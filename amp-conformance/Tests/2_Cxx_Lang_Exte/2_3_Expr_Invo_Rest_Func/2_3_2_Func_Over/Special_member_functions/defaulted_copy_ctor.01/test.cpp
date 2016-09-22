@@ -91,6 +91,7 @@ struct A8 : A8_base
 // Empty class with base classes having both defaulted and user-defined copy ctors
 struct A9_base_1
 {
+	A9_base_1() {}
 	int i;
 };
 class A9_base_2
@@ -124,6 +125,7 @@ class A10
 
 class A11_member_1
 {
+	A11_member_1() {}
 	int i;
 };
 class A11_member_2

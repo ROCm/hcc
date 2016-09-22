@@ -78,6 +78,7 @@ struct A7 : A7_base
 // Empty class with base classes having both defaulted and user-defined copy op=
 struct A8_base_1
 {
+	A8_base_1() {}
 	int i;
 };
 class A8_base_2
@@ -94,6 +95,7 @@ class A8 : A8_base_1, public A8_base_2
 // Classes with data members having both defaulted and user-defined copy op=
 struct A9_member_1
 {
+	A9_member_1() {}
 	int i;
 	A9_member_1& operator=(const A9_member_1&) restrict(cpu,amp) { return *this; }
 };
@@ -109,6 +111,7 @@ class A9
 
 class A10_member_1
 {
+	A10_member_1() {}
 	int i;
 };
 class A10_member_2
