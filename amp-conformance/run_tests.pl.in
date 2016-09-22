@@ -74,7 +74,7 @@ $CLAMP_CXXFLAGS =~ s/\s+$//;
 my $CLAMP_LDFLAGS=`$CLAMP_CONFIG --build --ldflags`;
 $CLAMP_LDFLAGS =~ s/^\s+//;
 $CLAMP_LDFLAGS =~ s/\s+$//;
-my $SHARED_CXXFLAGS="$CLAMP_CXXFLAGS -I$AMPTESTINC -I/usr/include -I$CLANG_AMP_BUILD_DIR/compiler/lib/clang/3.5.0/include/";
+my $SHARED_CXXFLAGS="$CLAMP_CXXFLAGS -I$AMPTESTINC -I/usr/include -I$CLANG_AMP_BUILD_DIR/compiler/lib/clang/4.0.0/include/";
 
 ### Prepare environment
 if(-e $run_log)
