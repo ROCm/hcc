@@ -3,6 +3,10 @@
 #include "hc_defines.h"
 #include "kalmar_aligned_alloc.h"
 
+namespace hc {
+class AmPointerInfo;
+}; // end namespace hc
+
 namespace Kalmar {
 namespace enums {
 
@@ -178,6 +182,7 @@ public:
   virtual void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset, bool blocking) = 0;
 
 
+
   /// map host accessible pointer from device
   virtual void* map(void* device, size_t count, size_t offset, bool modify) = 0;
 
@@ -228,6 +233,9 @@ public:
 
   // Copy src to dst synchronously
   virtual void copy(const void *src, void *dst, size_t size_bytes) { }
+
+  /// copy src to dst, with caller providing extended information about the pointers.
+  virtual void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceHostCopyEngine) { };
 
   /// cleanup internal resource
   /// this function is usually called by dtor of the implementation classes
