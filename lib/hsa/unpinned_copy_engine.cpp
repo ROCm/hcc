@@ -38,9 +38,9 @@ void errorCheck(hsa_status_t hsa_error_code, int line_num, std::string str) {
 }
 
 #define ErrorCheck(x) errorCheck(x, __LINE__, __FILE__)
-hsa_amd_memory_pool_t sys_pool_;
 
-hsa_status_t findGlobalPool(hsa_amd_memory_pool_t pool, void* data) {
+static hsa_status_t findGlobalPool(hsa_amd_memory_pool_t pool, void* data) 
+{
     if (NULL == data) {
         return HSA_STATUS_ERROR_INVALID_ARGUMENT;
     }
@@ -48,15 +48,38 @@ hsa_status_t findGlobalPool(hsa_amd_memory_pool_t pool, void* data) {
     hsa_status_t err;
     hsa_amd_segment_t segment;
     uint32_t flag;
-    err = hsa_amd_memory_pool_get_info(pool, HSA_AMD_MEMORY_POOL_INFO_SEGMENT, &segment);
-    ErrorCheck(err);
+    ErrorCheck(hsa_amd_memory_pool_get_info(pool, HSA_AMD_MEMORY_POOL_INFO_SEGMENT, &segment));
 
-    err = hsa_amd_memory_pool_get_info(pool, HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS, &flag);
-    ErrorCheck(err);
+    ErrorCheck( hsa_amd_memory_pool_get_info(pool, HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS, &flag));
     if ((HSA_AMD_SEGMENT_GLOBAL == segment) &&
         (flag & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_COARSE_GRAINED)) {
         *((hsa_amd_memory_pool_t*)data) = pool;
     }
+    return HSA_STATUS_SUCCESS;
+}
+
+
+static hsa_status_t find_gpu(hsa_agent_t agent, void *data) {
+    hsa_status_t status;
+    hsa_device_type_t device_type;
+    std::vector<hsa_agent_t>* pAgents = nullptr;
+
+    if (data == nullptr) {
+        return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+    } else {
+        pAgents = static_cast<std::vector<hsa_agent_t>*>(data);
+    }
+
+    hsa_status_t stat = hsa_agent_get_info(agent, HSA_AGENT_INFO_DEVICE, &device_type);
+    if (stat != HSA_STATUS_SUCCESS) {
+        return stat;
+    }
+
+
+    if (device_type == HSA_DEVICE_TYPE_GPU)  {
+        pAgents->push_back(agent);
+    }
+
     return HSA_STATUS_SUCCESS;
 }
 
@@ -73,18 +96,34 @@ UnpinnedCopyEngine::UnpinnedCopyEngine(hsa_agent_t hsaAgent, hsa_agent_t cpuAgen
     _hipH2DTransferThresholdStagingOrPininplace(thresholdH2DStagingPinInPlace),
     _hipD2HTransferThreshold(thresholdD2H)
 {
-    hsa_status_t err = hsa_amd_agent_iterate_memory_pools(_cpuAgent, findGlobalPool, &sys_pool_);
+    hsa_amd_memory_pool_t sys_pool;
+    hsa_status_t err = hsa_amd_agent_iterate_memory_pools(_cpuAgent, findGlobalPool, &sys_pool);
+
+    // Generate a packed C-style array of agents, for use below with hsa_amd_agents_allow_access
+    std::vector<hsa_agent_t> agents;
+    err = hsa_iterate_agents(&find_gpu, &agents);
+    ErrorCheck(err);
+    hsa_agent_t * agentBlock = new hsa_agent_t[agents.size()];
+    int i=0;
+    for (auto iter=agents.begin(); iter!= agents.end(); iter++) {
+        agentBlock[i++] = *iter;
+        assert (i<=agents.size());
+    };
+
     ErrorCheck(err);
     for (int i=0; i<_numBuffers; i++) {
         // TODO - experiment with alignment here.
-        err = hsa_amd_memory_pool_allocate(sys_pool_, _bufferSize, 0, (void**)(&_pinnedStagingBuffer[i]));
+        err = hsa_amd_memory_pool_allocate(sys_pool, _bufferSize, 0, (void**)(&_pinnedStagingBuffer[i]));
         ErrorCheck(err);
 
         if ((err != HSA_STATUS_SUCCESS) || (_pinnedStagingBuffer[i] == NULL)) {
             THROW_ERROR(hipErrorMemoryAllocation, err);
         }
 
-        err = hsa_amd_agents_allow_access(1, &hsaAgent, NULL, _pinnedStagingBuffer[i]);
+        // Allow access from every agent:
+        // This is used in peer-to-peer copies, since we use the buffers to copy from different agents.
+        // TODO - may want to review this algorithm for NUMA locality - it might be faster to use staging buffer closer to devices?
+        err = hsa_amd_agents_allow_access(agents.size(), agentBlock, NULL, _pinnedStagingBuffer[i]);
         ErrorCheck(err);
 
         hsa_signal_create(0, 0, NULL, &_completionSignal[i]);
