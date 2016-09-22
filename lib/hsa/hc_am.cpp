@@ -279,9 +279,13 @@ am_status_t am_memtracker_getinfo(hc::AmPointerInfo *info, const void *ptr)
 
 am_status_t am_memtracker_add(void* ptr, hc::AmPointerInfo &info)
 {
-    g_amPointerTracker.insert(ptr, info);
+    if ((ptr == NULL) || (info._sizeBytes == 0)) {
+        return AM_ERROR_MISC;
+    } else {
+        g_amPointerTracker.insert(ptr, info);
+        return AM_SUCCESS;
+    };
 
-    return AM_SUCCESS;
 }
 
 
