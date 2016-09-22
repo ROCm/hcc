@@ -28,7 +28,8 @@ ENDIF (NOT CLANG_URL)
 set(CMAKE_MACOSX_RPATH 1)
 
 IF (NOT NUM_BUILD_THREADS)
-  SET(NUM_BUILD_THREADS 8)
+  include(ProcessorCount)
+  ProcessorCount(NUM_BUILD_THREADS)
 ENDIF(NOT NUM_BUILD_THREADS)
 
 include (EnsureLLVMisPresent)
