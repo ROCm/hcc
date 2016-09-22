@@ -39,6 +39,8 @@
  */
 namespace hc {
 
+class AmPointerInfo;
+
 using namespace Kalmar::enums;
 using namespace Kalmar::CLAMP;
 
@@ -268,13 +270,29 @@ public:
     /**
      * Copies size_bytes bytes from src to dst.  
      * Src and dst must not overlap.  
-     * Note the src is the first parameter and dst is second, foAllowing C++ convention.
+     * Note the src is the first parameter and dst is second, following C++ convention.
      * The copy command will execute after any commands already inserted into the accelerator_view finish.
      * This is a synchronous copy command, and the copy operation complete before this call returns.
      */
     void copy(const void *src, void *dst, size_t size_bytes) {
         pQueue->copy(src, dst, size_bytes);
     }
+
+
+    /**
+     * Copies size_bytes bytes from src to dst.  
+     * Src and dst must not overlap.  
+     * Note the src is the first parameter and dst is second, following C++ convention.
+     * The copy command will execute after any commands already inserted into the accelerator_view finish.
+     * This is a synchronous copy command, and the copy operation complete before this call returns.
+     * The copy_ext flavor allows caller to provide additional information about each pointer, which can improve performance by eliminating replicated lookups.
+    
+     @p copyDir : Specify direction of copy.  Must be hcMemcpyHostToHost, hcMemcpyHostToDevice, hcMemcpyDeviceToHost, or hcMemcpyDeviceToDevice. 
+     @p forceHostCopyEngine : Force copy to be performed with host involvement rather than with accelerator copy engines.
+     */
+    void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceHostCopyEngine) {
+        pQueue->copy_ext(src, dst, size_bytes, copyDir, srcInfo, dstInfo, forceHostCopyEngine);
+    };
 
     /**
      * Copies size_bytes bytes from src to dst.  
