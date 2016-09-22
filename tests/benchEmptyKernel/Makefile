@@ -2,7 +2,7 @@
 N := 500000
 
 # TODO - should enable OPT=-O3 for benchmarking.
-OPT=
+OPT=-O3
 
 bench: bench.cpp
 	hcc `hcc-config --build --cxxflags --ldflags` $(OPT) bench.cpp -o bench

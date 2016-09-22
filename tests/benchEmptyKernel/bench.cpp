@@ -32,7 +32,10 @@
 #define TOL_HI 1e-4
 
 __attribute__((hc_grid_launch)) 
-void nullkernel(const grid_launch_parm lp) {
+void nullkernel(const grid_launch_parm lp, float* A) {
+    if (A) {
+        A[0] = 0x13;
+    }
 }
 
 
@@ -158,8 +161,8 @@ int main(int argc, char* argv[]) {
     lp.cf = &cf;
     lp.av = &av;
 
-    nullkernel(lp);
-    //std::cout << "CF use_count=" << cf.use_count() << "is_ready=" << cf.is_ready()<< "\n";
+    nullkernel(lp, 0x0);
+    //std::cout << "CF get_use_count=" << cf.get_use_count() << "is_ready=" << cf.is_ready()<< "\n";
     cf.wait();
 
     end = std::chrono::high_resolution_clock::now();

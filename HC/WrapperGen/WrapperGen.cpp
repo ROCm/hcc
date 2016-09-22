@@ -538,15 +538,10 @@ struct StringFinder
           out << "completion_future* cf_ptr = _lp.cf ? _lp.cf : &cf;\n";
 
           out << "*cf_ptr = parallel_for_each(*(_lp.av),extent<3>(_lp.grid_dim.z*_lp.group_dim.z,_lp.grid_dim.y*_lp.group_dim.y,_lp.grid_dim.x*_lp.group_dim.x).tile_with_dynamic(_lp.group_dim.z, _lp.group_dim.y, _lp.group_dim.x, _lp.dynamic_group_mem_bytes), \n"
-          //out << "cf = parallel_for_each(*(_lp.av),extent<3>(_lp.grid_dim.z*_lp.group_dim.z,_lp.grid_dim.y*_lp.group_dim.y,_lp.grid_dim.x*_lp.group_dim.x).tile_with_dynamic(_lp.group_dim.z, _lp.group_dim.y, _lp.group_dim.x, _lp.dynamic_group_mem_bytes), \n"
               << func->getFunctorName()
               << "(";
           func->printArgsAsArguments(out);
           out << "));\n\n";
-
-          //out << "printf (\"==_lp.cf=%p USE_COUNT=%d isReady=%d%c\", _lp.cf, cf_ptr->use_count(), cf_ptr->is_ready(), 0xA);\n";
-          //out << "cf_ptr->wait();\n"; // bozo
-          
 
           out << "}\n";
       }
