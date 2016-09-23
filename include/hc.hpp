@@ -2550,6 +2550,23 @@ union __u {
  * __HSA_WAVEFRONT_SIZE__.
  */
 
+#if __hcc_backend__==HCC_BACKEND_AMDGPU
+
+/*
+ * FIXME: We need to add __builtin_amdgcn_mbcnt_{lo,hi} to clang and call
+ * them here instead.
+ */
+
+int __amdgcn_mbcnt_lo(int mask, int src) [[hc]] __asm("llvm.amdgcn.mbcnt.lo");
+int __amdgcn_mbcnt_hi(int mask, int src) [[hc]] __asm("llvm.amdgcn.mbcnt.hi");
+
+inline int __lane_id(void) [[hc]] {
+  int lo = __amdgcn_mbcnt_lo(-1, 0);
+  return __amdgcn_mbcnt_hi(-1, lo);
+}
+
+#elif __hcc_backend__==HCC_BACKEND_HSAIL
+
 extern "C" __attribute__((const)) unsigned int __hsail_get_lane_id(void) __HC__;
 
 // returns the lane ID within a wavefront
