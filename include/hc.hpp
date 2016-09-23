@@ -2557,12 +2557,16 @@ inline int __lane_id(void) [[hc]] {
   return __hsail_get_lane_id();
 }
 
+#endif
+
 #if __hcc_backend__==HCC_BACKEND_AMDGPU
 
 /**
  * ds_bpermute intrinsic
+ * FIXME: We need to add __builtin_amdgcn_ds_bpermute to clang and call it here
+ * instead.
  */
-extern "C" int __amdgcn_ds_bpermute(int index, int src) [[hc]];
+int __amdgcn_ds_bpermute(int index, int src) [[hc]] __asm("llvm.amdgcn.ds.bpermute");
 inline unsigned int __amdgcn_ds_bpermute(int index, unsigned int src) [[hc]] {
   __u tmp; tmp.u = src;
   tmp.i = __amdgcn_ds_bpermute(index, tmp.i);
