@@ -1165,6 +1165,12 @@ public:
       }
     }
 
+
+    /**
+     * @return reference count for the completion future.  Primarily used for debug purposes.
+     */
+    int get_use_count() const { return __asyncOp.use_count(); };
+
 private:
     std::shared_future<void> __amp_future;
     std::thread* __thread_then = nullptr;
