@@ -531,9 +531,6 @@ private:
     void* kernargMemory;
     int kernargMemoryIndex;
 
-    int launchDimensions;
-    uint32_t workgroup_size[3];
-    uint32_t global_size[3];
 
     hsa_signal_t signal;
     int signalIndex;
@@ -661,16 +658,14 @@ private:
         return HSA_STATUS_SUCCESS;
     }
 
-    void computeLaunchAttr(int level, int globalSize, int localSize, int recommendedSize) {
+    int computeLaunchAttr(int globalSize, int localSize, int recommendedSize) {
         // localSize of 0 means pick best
         if (localSize == 0) localSize = recommendedSize;
         localSize = std::min(localSize, recommendedSize);
         localSize = std::min(localSize, globalSize); // workgroup size shall not exceed grid size
 
-        global_size[level] = globalSize;
-        workgroup_size[level] = localSize;
-        //std::cout << "level " << level << ", grid=" << global_size[level]
-        //          << ", group=" << workgroup_size[level] << std::endl;
+        return localSize;
+
     }
 
 }; // end of HSADispatch
@@ -2981,22 +2976,9 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
     signalIndex = ret.second;
 
     /*
-     * Initialize the dispatch packet.
-     */
-    memset(&aql, 0, sizeof(aql));
-
-    /*
      * Setup the dispatch information.
      */
     aql.completion_signal = signal;
-    aql.setup = launchDimensions << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
-    aql.workgroup_size_x = workgroup_size[0];
-    aql.workgroup_size_y = workgroup_size[1];
-    aql.workgroup_size_z = workgroup_size[2];
-    aql.grid_size_x = global_size[0];
-    aql.grid_size_y = global_size[1];
-    aql.grid_size_z = global_size[2];
-
 
     // set dispatch fences
     if (hsaQueue->get_execute_order() == Kalmar::execute_in_order) {
@@ -3221,18 +3203,26 @@ HSADispatch::setLaunchAttributes(int dims, size_t *globalDims, size_t *localDims
                                  int dynamicGroupSize) {
     assert((0 < dims) && (dims <= 3));
 
+    /*
+     * Initialize the dispatch packet.
+     */
+    memset(&aql, 0, sizeof(aql));
+
     this->dynamicGroupSize = dynamicGroupSize;
 
-    // defaults
-    launchDimensions = dims;
-    workgroup_size[0] = workgroup_size[1] = workgroup_size[2] = 1;
-    global_size[0] = global_size[1] = global_size[2] = 1;
+    // Set global dims:
+    aql.grid_size_x = globalDims[0];
+    aql.grid_size_y = (dims >= 2 ) ? globalDims[1] : 1;
+    aql.grid_size_z = (dims >= 3 ) ? globalDims[2] : 1;
 
+
+    // Set group dims
     // for each workgroup dimension, make sure it does not exceed the maximum allowable limit
     const uint16_t* workgroup_max_dim = device->getWorkgroupMaxDim();
-    for (int i = 0; i < dims; ++i) {
-        computeLaunchAttr(i, globalDims[i], localDims[i], workgroup_max_dim[i]);
-    }
+    int workgroup_size[3];
+    workgroup_size[0] = computeLaunchAttr(globalDims[0], localDims[0], workgroup_max_dim[0]);
+    workgroup_size[1] = (dims >= 2) ? computeLaunchAttr(globalDims[1], localDims[1], workgroup_max_dim[1]) : 1;
+    workgroup_size[2] = (dims >= 3) ? computeLaunchAttr(globalDims[2], localDims[2], workgroup_max_dim[2]) : 1;
 
     // reduce each dimension in case the overall workgroup limit is exceeded
     uint32_t workgroup_max_size = device->getWorkgroupMaxSize();
@@ -3248,6 +3238,12 @@ HSADispatch::setLaunchAttributes(int dims, size_t *globalDims, size_t *localDims
       }
       workgroup_total_size = workgroup_size[0] * workgroup_size[1] * workgroup_size[2];
     }
+
+    aql.workgroup_size_x = workgroup_size[0];
+    aql.workgroup_size_y = workgroup_size[1];
+    aql.workgroup_size_z = workgroup_size[2];
+
+    aql.setup = dims << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
 
     return HSA_STATUS_SUCCESS;
 }
