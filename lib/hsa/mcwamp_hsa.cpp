@@ -541,7 +541,7 @@ private:
     bool isDispatched;
     hsa_wait_state_t waitMode;
 
-    size_t dynamicGroupSize;
+    int dynamicGroupSize;
 
     std::shared_future<void>* future;
 
@@ -580,11 +580,6 @@ public:
         dispose();
     }
 
-    hsa_status_t setDynamicGroupSegment(size_t dynamicGroupSize) {
-        this->dynamicGroupSize = dynamicGroupSize;
-        return HSA_STATUS_SUCCESS;
-    }
-
     HSADispatch(Kalmar::HSADevice* _device, HSAKernel* _kernel)  ;
 
     hsa_status_t pushFloatArg(float f) { return pushArgPrivate(f); }
@@ -602,7 +597,8 @@ public:
         return HSA_STATUS_SUCCESS;
     }
 
-    hsa_status_t setLaunchAttributes(int dims, size_t *globalDims, size_t *localDims);
+    hsa_status_t setLaunchAttributes(int dims, size_t *globalDims, size_t *localDims, 
+                                     int dynamicGroupSize);
 
     hsa_status_t dispatchKernelWaitComplete(Kalmar::HSAQueue*);
 
@@ -1008,8 +1004,7 @@ public:
         size_t tmp_local[] = {0, 0, 0};
         if (!local)
             local = tmp_local;
-        dispatch->setLaunchAttributes(nr_dim, global, local);
-        dispatch->setDynamicGroupSegment(dynamic_group_size);
+        dispatch->setLaunchAttributes(nr_dim, global, local, dynamic_group_size);
 
         // wait for previous kernel dispatches be completed
         std::for_each(std::begin(kernelBufferMap[ker]), std::end(kernelBufferMap[ker]),
@@ -1043,8 +1038,7 @@ public:
         size_t tmp_local[] = {0, 0, 0};
         if (!local)
             local = tmp_local;
-        dispatch->setLaunchAttributes(nr_dim, global, local);
-        dispatch->setDynamicGroupSegment(dynamic_group_size);
+        dispatch->setLaunchAttributes(nr_dim, global, local, dynamic_group_size);
 
         // wait for previous kernel dispatches be completed
         std::for_each(std::begin(kernelBufferMap[ker]), std::end(kernelBufferMap[ker]),
@@ -3223,8 +3217,11 @@ HSADispatch::getEndTimestamp() override {
 }
 
 inline hsa_status_t
-HSADispatch::setLaunchAttributes(int dims, size_t *globalDims, size_t *localDims) {
+HSADispatch::setLaunchAttributes(int dims, size_t *globalDims, size_t *localDims,
+                                 int dynamicGroupSize) {
     assert((0 < dims) && (dims <= 3));
+
+    this->dynamicGroupSize = dynamicGroupSize;
 
     // defaults
     launchDimensions = dims;
