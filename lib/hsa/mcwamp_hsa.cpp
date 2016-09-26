@@ -2997,21 +2997,22 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
      */
     aql.completion_signal = signal;
 
+    uint16_t header = aql.header;;
+    aql.header = 0;
+
     // set dispatch fences
     if (hsaQueue->get_execute_order() == Kalmar::execute_in_order) {
         //std::cout << "barrier bit on\n";
         // set AQL header with barrier bit on if execute in order
-        aql.header = (HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE) |
-                     (1 << HSA_PACKET_HEADER_BARRIER) |
-                     (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
-                     (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
+        header |= ((HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE) |
+                     (1 << HSA_PACKET_HEADER_BARRIER));
     } else {
         //std::cout << "barrier bit off\n";
         // set AQL header with barrier bit off if execute in any order
-        aql.header = (HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE) |
-                     (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
-                     (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
+        header |= (HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE);
     }
+
+    aql.header = header;
 
     // bind kernel arguments
     //printf("arg_vec size: %d in bytes: %d\n", arg_vec.size(), arg_vec.size());
@@ -3245,6 +3246,12 @@ HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localD
     aql.workgroup_size_z = workgroup_size[2];
 
     aql.setup = dims << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
+   
+   // Set fences here.  Other fields in header will be set just before dispatch: 
+
+    aql.header = 
+        ((HSA_FENCE_SCOPE_SYSTEM | HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
+        ((HSA_FENCE_SCOPE_SYSTEM | HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
 
     return HSA_STATUS_SUCCESS;
 }
