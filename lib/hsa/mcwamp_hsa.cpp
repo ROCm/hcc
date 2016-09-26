@@ -308,15 +308,32 @@ private:
     HSAExecutable* executable;
     uint64_t kernelCodeHandle;
     hsa_executable_symbol_t hsaExecutableSymbol;
+    uint32_t static_group_segment_size; 
+    uint32_t private_segment_size;
     friend class HSADispatch;
 
 public:
     HSAKernel(HSAExecutable* _executable,
               hsa_executable_symbol_t _hsaExecutableSymbol,
               uint64_t _kernelCodeHandle) :
-      executable(_executable),
-      hsaExecutableSymbol(_hsaExecutableSymbol),
-      kernelCodeHandle(_kernelCodeHandle) {}
+        executable(_executable),
+        hsaExecutableSymbol(_hsaExecutableSymbol),
+        kernelCodeHandle(_kernelCodeHandle) {
+
+            hsa_status_t status = 
+                hsa_executable_symbol_get_info(
+                    _hsaExecutableSymbol,
+                    HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE,
+                    &this->static_group_segment_size);
+            STATUS_CHECK_Q(status, commandQueue, __LINE__);
+
+            status = 
+                hsa_executable_symbol_get_info(
+                    _hsaExecutableSymbol,
+                    HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_PRIVATE_SEGMENT_SIZE,
+                    &this->private_segment_size);
+            STATUS_CHECK_Q(status, commandQueue, __LINE__);
+      }
 
     ~HSAKernel() {
 #if KALMAR_DEBUG
@@ -523,7 +540,7 @@ class HSADispatch : public Kalmar::KalmarAsyncOp {
 private:
     Kalmar::HSADevice* device;
     hsa_agent_t agent;
-    HSAKernel* kernel;
+    const HSAKernel* kernel;
 
     std::vector<uint8_t> arg_vec;
     uint32_t arg_count;
@@ -538,7 +555,6 @@ private:
     bool isDispatched;
     hsa_wait_state_t waitMode;
 
-    int dynamicGroupSize;
 
     std::shared_future<void>* future;
 
@@ -594,7 +610,9 @@ public:
         return HSA_STATUS_SUCCESS;
     }
 
-    hsa_status_t setLaunchAttributes(int dims, size_t *globalDims, size_t *localDims, 
+    void setKernelLaunchAttributes();
+
+    hsa_status_t setLaunchConfiguration(int dims, size_t *globalDims, size_t *localDims, 
                                      int dynamicGroupSize);
 
     hsa_status_t dispatchKernelWaitComplete(Kalmar::HSAQueue*);
@@ -999,7 +1017,7 @@ public:
         size_t tmp_local[] = {0, 0, 0};
         if (!local)
             local = tmp_local;
-        dispatch->setLaunchAttributes(nr_dim, global, local, dynamic_group_size);
+        dispatch->setLaunchConfiguration(nr_dim, global, local, dynamic_group_size);
 
         // wait for previous kernel dispatches be completed
         std::for_each(std::begin(kernelBufferMap[ker]), std::end(kernelBufferMap[ker]),
@@ -1033,7 +1051,7 @@ public:
         size_t tmp_local[] = {0, 0, 0};
         if (!local)
             local = tmp_local;
-        dispatch->setLaunchAttributes(nr_dim, global, local, dynamic_group_size);
+        dispatch->setLaunchConfiguration(nr_dim, global, local, dynamic_group_size);
 
         // wait for previous kernel dispatches be completed
         std::for_each(std::begin(kernelBufferMap[ker]), std::end(kernelBufferMap[ker]),
@@ -2947,7 +2965,6 @@ HSADispatch::HSADispatch(Kalmar::HSADevice* _device, HSAKernel* _kernel) :
     kernel(_kernel),
     isDispatched(false),
     waitMode(HSA_WAIT_STATE_BLOCKED),
-    dynamicGroupSize(0),
     future(nullptr),
     hsaQueue(nullptr),
     kernargMemory(nullptr) {
@@ -2996,9 +3013,6 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
                      (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
     }
 
-    // bind kernel code
-    aql.kernel_object = kernel->kernelCodeHandle;
-
     // bind kernel arguments
     //printf("arg_vec size: %d in bytes: %d\n", arg_vec.size(), arg_vec.size());
 
@@ -3028,28 +3042,6 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
     //}
     //printf("\n");
 
-    // Initialize memory resources needed to execute
-    uint32_t group_segment_size;
-    status = hsa_executable_symbol_get_info(kernel->hsaExecutableSymbol,
-                                            HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE,
-                                            &group_segment_size);
-    STATUS_CHECK_Q(status, commandQueue, __LINE__);
-
-#if KALMAR_DEBUG
-    std::cerr << "static group segment size: " << group_segment_size << "\n";
-    std::cerr << "dynamic group segment size: " << this->dynamicGroupSize << "\n";
-#endif
-
-    // add dynamic group segment size
-    group_segment_size += this->dynamicGroupSize;
-    aql.group_segment_size = group_segment_size;
-
-    uint32_t private_segment_size;
-    status = hsa_executable_symbol_get_info(kernel->hsaExecutableSymbol,
-                                            HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_PRIVATE_SEGMENT_SIZE,
-                                            &private_segment_size);
-    STATUS_CHECK_Q(status, commandQueue, __LINE__);
-    aql.private_segment_size = private_segment_size;
 
     // write packet
     uint32_t queueMask = commandQueue->size - 1;
@@ -3198,22 +3190,31 @@ HSADispatch::getEndTimestamp() override {
     return time.end;
 }
 
+
 inline hsa_status_t
-HSADispatch::setLaunchAttributes(int dims, size_t *globalDims, size_t *localDims,
+HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localDims,
                                  int dynamicGroupSize) {
     assert((0 < dims) && (dims <= 3));
 
-    /*
-     * Initialize the dispatch packet.
-     */
     memset(&aql, 0, sizeof(aql));
 
-    this->dynamicGroupSize = dynamicGroupSize;
+    // Copy info from kernel into AQL packet:
+    // bind kernel code
+    aql.kernel_object = kernel->kernelCodeHandle;
+
+    aql.group_segment_size   = kernel->static_group_segment_size + dynamicGroupSize;;
+    aql.private_segment_size = kernel->private_segment_size;
+
+
+#if KALMAR_DEBUG
+    std::cerr << "static group segment size: " << kernel->static_group_segment_size << "\n";
+    std::cerr << "dynamic group segment size: " << dynamicGroupSize << "\n";
+#endif
 
     // Set global dims:
     aql.grid_size_x = globalDims[0];
-    aql.grid_size_y = (dims >= 2 ) ? globalDims[1] : 1;
-    aql.grid_size_z = (dims >= 3 ) ? globalDims[2] : 1;
+    aql.grid_size_y = (dims > 1 ) ? globalDims[1] : 1;
+    aql.grid_size_z = (dims > 2 ) ? globalDims[2] : 1;
 
 
     // Set group dims
@@ -3221,8 +3222,8 @@ HSADispatch::setLaunchAttributes(int dims, size_t *globalDims, size_t *localDims
     const uint16_t* workgroup_max_dim = device->getWorkgroupMaxDim();
     int workgroup_size[3];
     workgroup_size[0] = computeLaunchAttr(globalDims[0], localDims[0], workgroup_max_dim[0]);
-    workgroup_size[1] = (dims >= 2) ? computeLaunchAttr(globalDims[1], localDims[1], workgroup_max_dim[1]) : 1;
-    workgroup_size[2] = (dims >= 3) ? computeLaunchAttr(globalDims[2], localDims[2], workgroup_max_dim[2]) : 1;
+    workgroup_size[1] = (dims > 1) ? computeLaunchAttr(globalDims[1], localDims[1], workgroup_max_dim[1]) : 1;
+    workgroup_size[2] = (dims > 2) ? computeLaunchAttr(globalDims[2], localDims[2], workgroup_max_dim[2]) : 1;
 
     // reduce each dimension in case the overall workgroup limit is exceeded
     uint32_t workgroup_max_size = device->getWorkgroupMaxSize();
