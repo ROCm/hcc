@@ -67,10 +67,6 @@
 // resources (signals, kernarg)
 #define MAX_INFLIGHT_COMMANDS_PER_QUEUE  512
 
-// whether to use kernarg region found on the HSA agent
-// default set as 1 (use karnarg region)
-#define USE_KERNARG_REGION (1)
-
 // whether to print out kernel dispatch time
 // default set as 0 (NOT print out kernel dispatch time)
 #define KALMAR_DISPATCH_TIME_PRINTOUT (0)
@@ -1790,27 +1786,24 @@ public:
 
         /// pre-allocate a pool of kernarg buffers in case:
         /// - kernarg region is available
-        /// - compile-time macro USE_KERNARG_REGION is set
         /// - compile-time macro KERNARG_POOL_SIZE is larger than 0
-        if (hasHSAKernargRegion() && USE_KERNARG_REGION) {
 #if KERNARG_POOL_SIZE > 0
-            hsa_amd_memory_pool_t kernarg_region = getHSAKernargRegion();
+        hsa_amd_memory_pool_t kernarg_region = getHSAKernargRegion();
 
-            // pre-allocate kernarg buffers
-            void* kernargMemory = nullptr;
-            for (int i = 0; i < KERNARG_POOL_SIZE; ++i) {
-                status = hsa_amd_memory_pool_allocate(kernarg_region, KERNARG_BUFFER_SIZE, 0, &kernargMemory);
-                STATUS_CHECK(status, __LINE__);
+        // pre-allocate kernarg buffers
+        void* kernargMemory = nullptr;
+        for (int i = 0; i < KERNARG_POOL_SIZE; ++i) {
+            status = hsa_amd_memory_pool_allocate(kernarg_region, KERNARG_BUFFER_SIZE, 0, &kernargMemory);
+            STATUS_CHECK(status, __LINE__);
 
-                // Allow device to access to it once it is allocated. Normally, this memory pool is on system memory.
-                status = hsa_amd_agents_allow_access(1, &agent, NULL, kernargMemory);
-                STATUS_CHECK(status, __LINE__);
+            // Allow device to access to it once it is allocated. Normally, this memory pool is on system memory.
+            status = hsa_amd_agents_allow_access(1, &agent, NULL, kernargMemory);
+            STATUS_CHECK(status, __LINE__);
 
-                kernargPool.push_back(kernargMemory);
-                kernargPoolFlag.push_back(false);
-            }
-#endif
+            kernargPool.push_back(kernargMemory);
+            kernargPoolFlag.push_back(false);
         }
+#endif
 
         // Setup AM pool.
         ri._am_memory_pool = (ri._found_local_memory_pool)
@@ -1894,23 +1887,21 @@ public:
         queues_mutex.unlock();
 
         // deallocate kernarg buffers in the pool
-        if (hasHSAKernargRegion() && USE_KERNARG_REGION) {
 #if KERNARG_POOL_SIZE > 0
-            kernargPoolMutex.lock();
+        kernargPoolMutex.lock();
 
-            hsa_status_t status = HSA_STATUS_SUCCESS;
+        hsa_status_t status = HSA_STATUS_SUCCESS;
 
-            for (int i = 0; i < kernargPool.size(); ++i) {
-                hsa_amd_memory_pool_free(kernargPool[i]);
-                STATUS_CHECK(status, __LINE__);
-            }
-
-            kernargPool.clear();
-            kernargPoolFlag.clear();
-
-            kernargPoolMutex.unlock();
-#endif
+        for (int i = 0; i < kernargPool.size(); ++i) {
+            hsa_amd_memory_pool_free(kernargPool[i]);
+            STATUS_CHECK(status, __LINE__);
         }
+
+        kernargPool.clear();
+        kernargPoolFlag.clear();
+
+        kernargPoolMutex.unlock();
+#endif
 
         // release all data in programs
         for (auto kernel_iterator : programs) {
@@ -2233,141 +2224,132 @@ public:
     };
 
     void releaseKernargBuffer(void* kernargBuffer, int kernargBufferIndex) {
-        if (hasHSAKernargRegion() && USE_KERNARG_REGION) {
-            if ( (KERNARG_POOL_SIZE > 0) && (kernargBufferIndex >= 0) ) {
-                kernargPoolMutex.lock();
+        if ( (KERNARG_POOL_SIZE > 0) && (kernargBufferIndex >= 0) ) {
+            kernargPoolMutex.lock();
 
-                // mark the kernarg buffer pointed by kernelBufferIndex as available
-                kernargPoolFlag[kernargBufferIndex] = false;
+            // mark the kernarg buffer pointed by kernelBufferIndex as available
+            kernargPoolFlag[kernargBufferIndex] = false;
 
-                kernargPoolMutex.unlock();
-             } else {
-                if (kernargBuffer != nullptr) {
-                    hsa_amd_memory_pool_free(kernargBuffer);
-                }
-             }
-        }
+            kernargPoolMutex.unlock();
+         } else {
+            if (kernargBuffer != nullptr) {
+                hsa_amd_memory_pool_free(kernargBuffer);
+            }
+         }
     }
 
     std::pair<void*, int> getKernargBuffer(int size) {
         void* ret = nullptr;
         int cursor = 0;
 
-        if (hasHSAKernargRegion() && USE_KERNARG_REGION) {
+        // find an available buffer in the pool in case
+        // - kernarg pool is available
+        // - requested size is smaller than KERNARG_BUFFER_SIZE
+        if ( (KERNARG_POOL_SIZE > 0) && (size <= KERNARG_BUFFER_SIZE) ) {
+            kernargPoolMutex.lock();
+            cursor = kernargCursor;
 
-            // find an available buffer in the pool in case
-            // - kernarg pool is available
-            // - requested size is smaller than KERNARG_BUFFER_SIZE
-            if ( (KERNARG_POOL_SIZE > 0) && (size <= KERNARG_BUFFER_SIZE) ) {
-                kernargPoolMutex.lock();
-                cursor = kernargCursor;
+            if (kernargPoolFlag[cursor] == false) {
+                // the cursor is valid, use it
+                ret = kernargPool[cursor];
 
-                if (kernargPoolFlag[cursor] == false) {
-                    // the cursor is valid, use it
-                    ret = kernargPool[cursor];
+                // set the kernarg buffer as used
+                kernargPoolFlag[cursor] = true;
 
-                    // set the kernarg buffer as used
-                    kernargPoolFlag[cursor] = true;
+                // simply move the cursor to the next index
+                ++kernargCursor;
+                if (kernargCursor == kernargPool.size()) kernargCursor = 0;
+            } else {
+                // the cursor is not valid, sequentially find the next available slot
+                bool found = false;
 
-                    // simply move the cursor to the next index
-                    ++kernargCursor;
-                    if (kernargCursor == kernargPool.size()) kernargCursor = 0;
-                } else {
-                    // the cursor is not valid, sequentially find the next available slot
-                    bool found = false;
+                int startingCursor = cursor;
+                do {
+                    ++cursor;
+                    if (cursor == kernargPool.size()) cursor = 0;
 
-                    int startingCursor = cursor;
-                    do {
-                        ++cursor;
-                        if (cursor == kernargPool.size()) cursor = 0;
-
-                        if (kernargPoolFlag[cursor] == false) {
-                            // the cursor is valid, use it
-                            ret = kernargPool[cursor];
-
-                            // set the kernarg buffer as used
-                            kernargPoolFlag[cursor] = true;
-
-                            // simply move the cursor to the next index
-                            kernargCursor = cursor + 1;
-                            if (kernargCursor == kernargPool.size()) kernargCursor = 0;
-
-                            // break from the loop
-                            found = true;
-                            break;
-                        }
-                    } while(cursor != startingCursor); // ensure we at most scan the vector once
-
-                    if (found == false) {
-                        hsa_status_t status = HSA_STATUS_SUCCESS;
-
-                        // increase kernarg pool on demand by KERNARG_POOL_SIZE
-                        hsa_amd_memory_pool_t kernarg_region = getHSAKernargRegion();
-
-                        // keep track of the size of kernarg pool before increasing it
-                        int oldKernargPoolSize = kernargPool.size();
-                        int oldKernargPoolFlagSize = kernargPoolFlag.size();
-                        assert(oldKernargPoolSize == oldKernargPoolFlagSize);
-
-                        // pre-allocate kernarg buffers
-                        void* kernargMemory = nullptr;
-                        for (int i = 0; i < KERNARG_POOL_SIZE; ++i) {
-                            status = hsa_amd_memory_pool_allocate(kernarg_region, KERNARG_BUFFER_SIZE, 0, &kernargMemory);
-                            STATUS_CHECK(status, __LINE__);
-
-                            status = hsa_amd_agents_allow_access(1, &agent, NULL, kernargMemory);
-                            STATUS_CHECK(status, __LINE__);
-
-                            kernargPool.push_back(kernargMemory);
-                            kernargPoolFlag.push_back(false);
-                        }
-
-                        assert(kernargPool.size() == oldKernargPoolSize + KERNARG_POOL_SIZE);
-                        assert(kernargPoolFlag.size() == oldKernargPoolFlagSize + KERNARG_POOL_SIZE);
-
-                        // set return values, after the pool has been increased
-
-                        // use the first item in the newly allocated pool
-                        cursor = oldKernargPoolSize;
-
-                        // access the new item through the newly assigned cursor
+                    if (kernargPoolFlag[cursor] == false) {
+                        // the cursor is valid, use it
                         ret = kernargPool[cursor];
 
-                        // mark the item as used
+                        // set the kernarg buffer as used
                         kernargPoolFlag[cursor] = true;
 
                         // simply move the cursor to the next index
                         kernargCursor = cursor + 1;
                         if (kernargCursor == kernargPool.size()) kernargCursor = 0;
 
+                        // break from the loop
                         found = true;
+                        break;
+                    }
+                } while(cursor != startingCursor); // ensure we at most scan the vector once
+
+                if (found == false) {
+                    hsa_status_t status = HSA_STATUS_SUCCESS;
+
+                    // increase kernarg pool on demand by KERNARG_POOL_SIZE
+                    hsa_amd_memory_pool_t kernarg_region = getHSAKernargRegion();
+
+                    // keep track of the size of kernarg pool before increasing it
+                    int oldKernargPoolSize = kernargPool.size();
+                    int oldKernargPoolFlagSize = kernargPoolFlag.size();
+                    assert(oldKernargPoolSize == oldKernargPoolFlagSize);
+
+                    // pre-allocate kernarg buffers
+                    void* kernargMemory = nullptr;
+                    for (int i = 0; i < KERNARG_POOL_SIZE; ++i) {
+                        status = hsa_amd_memory_pool_allocate(kernarg_region, KERNARG_BUFFER_SIZE, 0, &kernargMemory);
+                        STATUS_CHECK(status, __LINE__);
+
+                        status = hsa_amd_agents_allow_access(1, &agent, NULL, kernargMemory);
+                        STATUS_CHECK(status, __LINE__);
+
+                        kernargPool.push_back(kernargMemory);
+                        kernargPoolFlag.push_back(false);
                     }
 
+                    assert(kernargPool.size() == oldKernargPoolSize + KERNARG_POOL_SIZE);
+                    assert(kernargPoolFlag.size() == oldKernargPoolFlagSize + KERNARG_POOL_SIZE);
+
+                    // set return values, after the pool has been increased
+
+                    // use the first item in the newly allocated pool
+                    cursor = oldKernargPoolSize;
+
+                    // access the new item through the newly assigned cursor
+                    ret = kernargPool[cursor];
+
+                    // mark the item as used
+                    kernargPoolFlag[cursor] = true;
+
+                    // simply move the cursor to the next index
+                    kernargCursor = cursor + 1;
+                    if (kernargCursor == kernargPool.size()) kernargCursor = 0;
+
+                    found = true;
                 }
 
-                kernargPoolMutex.unlock();
-            } else {
-                // allocate new buffers in case:
-                // - the kernarg pool is set at compile-time
-                // - requested kernarg buffer size is larger than KERNARG_BUFFER_SIZE
-
-                hsa_status_t status = HSA_STATUS_SUCCESS;
-                hsa_amd_memory_pool_t kernarg_region = getHSAKernargRegion();
-
-                status = hsa_amd_memory_pool_allocate(kernarg_region, size, 0, &ret);
-                STATUS_CHECK(status, __LINE__);
-
-                status = hsa_amd_agents_allow_access(1, &agent, NULL, ret);
-                STATUS_CHECK(status, __LINE__);
-
-                // set cursor value as -1 to notice the buffer would be deallocated
-                // instead of recycled back into the pool
-                cursor = -1;
             }
+
+            kernargPoolMutex.unlock();
         } else {
-            // this function does nothing in case:
-            // - kernarg region is not available on the agent
-            // - or we choose not to use kernarg region by setting USE_KERNARG_REGION to 0
+            // allocate new buffers in case:
+            // - the kernarg pool is set at compile-time
+            // - requested kernarg buffer size is larger than KERNARG_BUFFER_SIZE
+
+            hsa_status_t status = HSA_STATUS_SUCCESS;
+            hsa_amd_memory_pool_t kernarg_region = getHSAKernargRegion();
+
+            status = hsa_amd_memory_pool_allocate(kernarg_region, size, 0, &ret);
+            STATUS_CHECK(status, __LINE__);
+
+            status = hsa_amd_agents_allow_access(1, &agent, NULL, ret);
+            STATUS_CHECK(status, __LINE__);
+
+            // set cursor value as -1 to notice the buffer would be deallocated
+            // instead of recycled back into the pool
+            cursor = -1;
         }
 
         return std::make_pair(ret, cursor);
@@ -3017,24 +2999,19 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
     // bind kernel arguments
     //printf("arg_vec size: %d in bytes: %d\n", arg_vec.size(), arg_vec.size());
 
-    if (device->hasHSAKernargRegion() && USE_KERNARG_REGION) {
-        hsa_amd_memory_pool_t kernarg_region = device->getHSAKernargRegion();
+    hsa_amd_memory_pool_t kernarg_region = device->getHSAKernargRegion();
 
-        if (arg_vec.size() > 0) {
-            std::pair<void*, int> ret = device->getKernargBuffer(arg_vec.size());
-            kernargMemory = ret.first;
-            kernargMemoryIndex = ret.second;
+    if (arg_vec.size() > 0) {
+        std::pair<void*, int> ret = device->getKernargBuffer(arg_vec.size());
+        kernargMemory = ret.first;
+        kernargMemoryIndex = ret.second;
 
-            // as kernarg buffers are fine-grained, we can directly use memcpy
-            memcpy(kernargMemory, arg_vec.data(), arg_vec.size());
+        // as kernarg buffers are fine-grained, we can directly use memcpy
+        memcpy(kernargMemory, arg_vec.data(), arg_vec.size());
 
-            aql.kernarg_address = kernargMemory;
-        } else {
-            aql.kernarg_address = nullptr;
-        }
-    }
-    else {
-        aql.kernarg_address = arg_vec.data();
+        aql.kernarg_address = kernargMemory;
+    } else {
+        aql.kernarg_address = nullptr;
     }
 
 
