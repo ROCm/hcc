@@ -13,7 +13,7 @@ The project now employs git submodules to manage external components it depends 
 For example:
 ```
 # automatically fetches all submodules
-git clone --recursive -b clang_tot_upgrade git@github.com:RadeonOpenCompute/hcc.git
+git clone --recursive -b clang_tot_upgrade https://github.com/RadeonOpenCompute/hcc.git
 ```
 
 For more information about git submodules, please refer to [git documentation][2].
