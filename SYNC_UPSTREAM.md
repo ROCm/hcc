@@ -44,6 +44,21 @@ git locations of repositories used in the merge process are:
   - URL: git@github.com:llvm-mirror/clang.git
   - branch : master
 
+Set SSH URL for git push
+------------------------------------
+ToT HCC has been configured to use HTTPS URL by default. It is easy for users
+to clone it anonymously. But it would be hard for committing changes. Use the
+following commands to setup SSH URL.
+
+- change to ToT HCC directory
+- `git remote set-url --push origin git@github.com:RadeonOpenCompute/hcc.git`
+- `cd clang`
+- `git remote set-url --push origin git@github.com:RadeonOpenCompute/hcc-clang-upgrade.git`
+- `cd ../compiler`
+- `git remote set-url --push origin git@github.com:RadeonOpenCompute/llvm.git`
+
+This only needs to be done once.
+
 Step-by-step Merge Process
 ------------------------------------
 ### Merge amd-common LLVM commits
