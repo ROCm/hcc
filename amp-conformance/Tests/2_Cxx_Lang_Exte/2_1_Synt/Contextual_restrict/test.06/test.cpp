@@ -41,7 +41,7 @@ struct restrict
     }
 
 private:
-   int size;
+   unsigned int size;
 };
 
 
