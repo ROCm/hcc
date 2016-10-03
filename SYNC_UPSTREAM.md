@@ -67,7 +67,7 @@ Step-by-step Merge Process
 - `cd compiler`
 - `git checkout amd-hcc`
 - `git pull`
-- `git merge origin/amd-common`
+- `git merge origin/amd-common --no-edit`
 
 Resolve any merge conflicts encountered here. Commit to amd-hcc branch.
 
@@ -91,13 +91,13 @@ Resolve any merge conflicts encountered here. Commit to amd-hcc branch.
   - change to the branch to keep upstream commits.
   - The branch contains no HCC-specific codes.
 - `git fetch clang`
-- `git merge --no-ff clang/master`
+- `git merge --no-ff clang/master --no-edit`
 
 ### Merge upstream Clang with ToT HCC Clang
 
 - `git checkout clang_tot_upgrade`
   - change to the main develop branch for ToT HCC Clang
-- `git merge upstream`
+- `git merge upstream --no-edit`
 
 Resolve merge conflicts encountered here. Commit to clang_tot_upgrade branch.
 
@@ -130,6 +130,13 @@ bin/hcc `bin/hcc-config --build --cxxflags --ldflags` -lhc_am \
 ./a.out ; echo $?
 ```
 
+Test with one HC unit test with atomic function and 64-bit arithmetic.
+```
+bin/hcc `bin/hcc-config --build --cxxflags --ldflags` \
+  ~/hcc/hcc_upstream/tests/Unit/HC/hc_atomic_add_global.cpp
+./a.out ; echo $?
+```
+
 ### Push ToT HCC Clang submodule
 
 - change to ToT HCC directory
@@ -142,10 +149,10 @@ bin/hcc `bin/hcc-config --build --cxxflags --ldflags` -lhc_am \
 Following steps are to ensure "develop" and "master" branch are kept the same
 as "clang_tot_upgrade" branch.
 - `git checkout develop`
-- `git merge clang_tot_upgrade`
+- `git merge clang_tot_upgrade --no-edit`
 - `git push`
 - `git checkout master`
-- `git merge clang_tot_upgrade`
+- `git merge clang_tot_upgrade --no-edit`
 - `git push`
 
 Finally switch back to "clang_tot_upgrade" branch.
@@ -161,7 +168,8 @@ Finally switch back to "clang_tot_upgrade" branch.
 
 - `cd ..`
 - `git add clang compiler lld`
-- `git commit` and provide commit log
+- `git commit -m "[Config] revise submodule configuration"`, or provide custom
+  commit log
 - `git push` to push submodules configuration online
 
 Upon reaching here, the merge process is completed.
