@@ -2977,7 +2977,6 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
     /*
      * Setup the dispatch information.
      */
-    aql.completion_signal = signal;
 
     uint16_t header = aql.header;;
     aql.header = 0;
@@ -3001,6 +3000,7 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
 
     hsa_amd_memory_pool_t kernarg_region = device->getHSAKernargRegion();
 
+    void *kernarg_address;
     if (arg_vec.size() > 0) {
         std::pair<void*, int> ret = device->getKernargBuffer(arg_vec.size());
         kernargMemory = ret.first;
@@ -3009,9 +3009,9 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
         // as kernarg buffers are fine-grained, we can directly use memcpy
         memcpy(kernargMemory, arg_vec.data(), arg_vec.size());
 
-        aql.kernarg_address = kernargMemory;
+        kernarg_address = kernargMemory;
     } else {
-        aql.kernarg_address = nullptr;
+        kernarg_address = nullptr;
     }
 
 
@@ -3029,7 +3029,21 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
     if (nextIndex - hsa_queue_load_read_index_acquire(commandQueue) >= commandQueue->size) {
       checkHCCRuntimeStatus(Kalmar::HCCRuntimeStatus::HCCRT_STATUS_ERROR_COMMAND_QUEUE_OVERFLOW, __LINE__, commandQueue);
     }
-    ((hsa_kernel_dispatch_packet_t*)(commandQueue->base_address))[index & queueMask] = aql;
+
+
+    hsa_kernel_dispatch_packet_t* q_aql = 
+        &(((hsa_kernel_dispatch_packet_t*)(commandQueue->base_address))[index & queueMask]);
+
+    // Copy mostly-finished AQL packet into the queue
+    *q_aql = aql;
+
+    // Set some specific fields:
+    q_aql->completion_signal = signal;
+    q_aql->kernarg_address   = kernarg_address;
+
+    // Lastly copy in the header:
+    q_aql->header = header;
+
     hsa_queue_store_write_index_relaxed(commandQueue, index + 1);
 
 #if KALMAR_DEBUG

@@ -28,7 +28,7 @@
 #define GRID_SIZE 16
 #define TILE_SIZE 16
 
-#define DISPATCH_COUNT 10000
+#define DISPATCH_COUNT 100000
 #define TOL_HI 1e-4
 
 __attribute__((hc_grid_launch)) 
