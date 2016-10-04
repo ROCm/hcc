@@ -528,12 +528,11 @@ static inline void copy_helper(std::shared_ptr<KalmarQueue>& srcQueue, void* src
     /// If device pointer comes from cpu, let the device queue to handle the copy
     /// For example, if src is on cpu and dst is on device,
     /// in OpenCL, clEnqueueWrtieBuffer to write data from src to device
-    if (is_cpu_queue(srcQueue))
-        dstQueue->write(dst, (char*)src + src_offset, cnt, dst_offset, block);
-    else if (is_cpu_queue(dstQueue))
+    
+    if (is_cpu_queue(dstQueue))
         srcQueue->read(src, (char*)dst + dst_offset, cnt, src_offset);
     else
-        dstQueue->copy(src, dst, cnt, src_offset, dst_offset, block);
+        dstQueue->write(dst, (char*)src + src_offset, cnt, dst_offset, block);
 }
 
 /// software MSI protocol
