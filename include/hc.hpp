@@ -288,6 +288,7 @@ public:
      * The copy command will execute after any commands already inserted into the accelerator_view finish.
      * This is a synchronous copy command, and the copy operation complete before this call returns.
      * The copy_ext flavor allows caller to provide additional information about each pointer, which can improve performance by eliminating replicated lookups.
+     * This interface is intended for language runtimes such as HIP.
     
      @p copyDir : Specify direction of copy.  Must be hcMemcpyHostToHost, hcMemcpyHostToDevice, hcMemcpyDeviceToHost, or hcMemcpyDeviceToDevice. 
      @p forceHostCopyEngine : Force copy to be performed with host involvement rather than with accelerator copy engines.
@@ -416,7 +417,7 @@ public:
     /**
      * Dispatch a kernel into the accelerator_view.
      *
-     * This function is intended to provide a gateway to launch code objects, with 
+     * This function is intended to provide a gateway to dispatch code objects, with 
      * some assistance from HCC.  Kernels are specified in the standard code object
      * format, and can be created from a varety of compiler tools including the 
      * assembler, offline cl compilers, or other tools.    The caller also
@@ -455,20 +456,23 @@ public:
      * @p args : Pointer to kernel arguments with the size and aligment expected by the kernel.  The args are copied and then passed directly to the kernel.   After this function returns, the args memory may be deallocated.
      * @p argSz : Size of the arguments.
      * @p cf : Written with a completion_future that can be used to track the status
-     *          of the launch.  May be NULL, in which case no completion_future is 
+     *          of the dispatch.  May be NULL, in which case no completion_future is 
      *          returned and the caller must use other synchronization techniqueues 
      *          such as calling accelerator_view::wait() or waiting on a younger command
      *          in the same queue.
      *
-     * The launch_hsa_kernel call will perform the following operations:
+     * The dispatch_hsa_kernel call will perform the following operations:
      *    - Efficiently allocate a kernarg region and copy the arguments.
      *    - Efficiently allocate a signal, if required.
      *    - Dispatch the command into the queue and flush it to the GPU.
      *    - Kernargs and signals are automatically reclaimed by the HCC runtime.
      */
-    void launch_hsa_kernel(const hsa_kernel_dispatch_packet *aql, 
+    void dispatch_hsa_kernel(const hsa_kernel_dispatch_packet *aql, 
                            const void * args, size_t argsize,
-                           hc::completion_future *cf=NULL);
+                           hc::completion_future *cf=NULL) 
+    {
+        //pQueue->dispatch_hsa_kernel(aql, args, argsize, cf);
+    }
 
     /**
      * Set a CU affinity to specific command queues. 

@@ -1360,6 +1360,13 @@ public:
         return true;
     }
 
+    void dispatch_hsa_kernel(const hsa_kernel_dispatch_packet *aql, 
+                             const void * args, size_t argsize,
+                             hc::completion_future *cf) override 
+    {
+        printf ("dispatch_hsa_kernel\n");
+    };
+
     bool set_cu_mask(const std::vector<bool>& cu_mask) override {
         // get device's total compute unit count
         auto device = getDev();
@@ -2993,7 +3000,6 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
         header |= (HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE);
     }
 
-    aql.header = header;
 
     // bind kernel arguments
     //printf("arg_vec size: %d in bytes: %d\n", arg_vec.size(), arg_vec.size());
