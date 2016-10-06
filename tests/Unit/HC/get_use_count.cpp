@@ -1,4 +1,3 @@
-// XFAIL: Linux
 // RUN: %hc %s -o %t.out && %t.out
 
 #include <hc.hpp>
