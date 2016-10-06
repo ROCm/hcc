@@ -2504,13 +2504,6 @@ extern "C" inline unsigned int __activelanecount_u32_b1(unsigned int input) __HC
  return  __popcount_u32_b64(__activelanemask_v4_b64_b1(input));
 }
 
-/**
- * Permute active work-items in the wavefront.
- *
- * Please refer to: <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/09_Parallel/cross_lane.htm">HSA PRM</a> for more detailed information of this instruction.
- */
-extern "C" unsigned int __activelanepermute_b32(unsigned int src, unsigned int laneId, unsigned int identity, unsigned int useIdentity) __HC__;
-
 // ------------------------------------------------------------------------
 // Wavefront Vote Functions
 // ------------------------------------------------------------------------
@@ -2736,17 +2729,6 @@ inline float __amdgcn_wave_rl1(float src) [[hc]] {
   return tmp.f;
 }
 
-#elif __hcc_backend__==HCC_BACKEND_HSAIL
-
-extern "C" unsigned int __hsail_activelanepermute_b32(unsigned int src, unsigned int lid, unsigned int ival, bool useival) __HC__;
-inline int __wavefront_shift_right(int var) __HC__ {
-    return  __hsail_activelanepermute_b32(var, __lane_id()-1
-                                        , var, __lane_id()==0);
-}
-inline int __wavefront_shift_left(int var) __HC__ {
-    return  __hsail_activelanepermute_b32(var, __lane_id()+1
-                                        , var, __lane_id()==63);
-}
 #endif
 
 /* definition to expand macro then apply to pragma message 
