@@ -13,10 +13,10 @@
 
 #define TEST_DEBUG (0)
 
-// A test case to verify HSAIL builtin function
-// - __activelaneid_u32
+// A test case to verify AMDGPU builtin function
+// - __lane_id()
 
-// test __activelaneid_u32
+// test __lane_id()
 bool test() {
   using namespace hc;
   bool ret = true;
@@ -24,7 +24,7 @@ bool test() {
   array<uint32_t, 1> output_GPU(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
   parallel_for_each(ex, [&](index<1>& idx) [[hc]] {
-    output_GPU(idx) = __activelaneid_u32();
+    output_GPU(idx) = __lane_id();
   }).wait();
 
   // verify result
@@ -49,12 +49,7 @@ bool test() {
 int main() {
   bool ret = true;
 
-#if __hcc_backend__ == HCC_BACKEND_AMDGPU
-  // XXX activelaneid is not yet implemented on LC backend. let this case fail directly.
-  ret = false;
-#else
   ret &= test();
-#endif
 
   return !(ret == true);
 }
