@@ -29,7 +29,9 @@ When compiling device code with hcc, rocm-device-libs package needs to be
 installed.
 
 In case rocm-device-libs package is not present, you are required to build it
-from source. Once it's built, run `make install` and config ToT HCC like:
+from source. Please refer to [ROCm-Device-Libs build procedure](https://github.com/RadeonOpenCompute/ROCm-Device-Libs#building) for more details.
+
+Once it's built, run `make install` and config ToT HCC like:
 
 ```
 cmake \
