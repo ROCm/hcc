@@ -5,7 +5,7 @@
 [submodule "lld"]
 	path = lld
 	url = https://github.com/RadeonOpenCompute/lld.git
-	branch = amd-common
+	branch = amd-hcc
 [submodule "clang"]
 	path = clang
 	url = https://github.com/RadeonOpenCompute/hcc-clang-upgrade.git
