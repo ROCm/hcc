@@ -67,10 +67,6 @@
 // resources (signals, kernarg)
 #define MAX_INFLIGHT_COMMANDS_PER_QUEUE  512
 
-// whether to print out kernel dispatch time
-// default set as 0 (NOT print out kernel dispatch time)
-#define KALMAR_DISPATCH_TIME_PRINTOUT (0)
-
 // threshold to clean up finished kernel in HSAQueue.asyncOps
 // default set as 1024
 #define ASYNCOPS_VECTOR_GC_SIZE (1024)
@@ -534,6 +530,7 @@ public:
 
 class HSADispatch : public Kalmar::KalmarAsyncOp {
 private:
+public: // TODO - remove me.
     Kalmar::HSADevice* device;
     hsa_agent_t agent;
     const HSAKernel* kernel;
@@ -606,27 +603,16 @@ public:
         return HSA_STATUS_SUCCESS;
     }
 
-    void setKernelLaunchAttributes();
 
     hsa_status_t setLaunchConfiguration(int dims, size_t *globalDims, size_t *localDims, 
                                      int dynamicGroupSize);
 
     hsa_status_t dispatchKernelWaitComplete(Kalmar::HSAQueue*);
 
-    hsa_status_t dispatchKernelAsync(Kalmar::HSAQueue*);
-
-    uint32_t getGroupSegmentSize() {
-        hsa_status_t status = HSA_STATUS_SUCCESS;
-        uint32_t group_segment_size = 0;
-        status = hsa_executable_symbol_get_info(kernel->hsaExecutableSymbol,
-                                                HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE,
-                                                &group_segment_size);
-        STATUS_CHECK(status, __LINE__);
-        return group_segment_size;
-    }
+    hsa_status_t dispatchKernelAsync(Kalmar::HSAQueue*, bool allocSignal, bool allocKernarg);
 
     // dispatch a kernel asynchronously
-    hsa_status_t dispatchKernel(hsa_queue_t* commandQueue);
+    hsa_status_t dispatchKernel(hsa_queue_t* commandQueue, bool allocSignal, bool allocKernarg);
 
     // wait for the kernel to finish execution
     hsa_status_t waitComplete();
@@ -1058,7 +1044,7 @@ public:
         waitForStreamDeps(dispatch);
 
         // dispatch the kernel
-        status = dispatch->dispatchKernelAsync(this);
+        status = dispatch->dispatchKernelAsync(this, true, true);
         STATUS_CHECK(status, __LINE__);
 
         // create a shared_ptr instance
@@ -1078,11 +1064,6 @@ public:
         kernelBufferMap.erase(ker);
 
         return sp_dispatch;
-    }
-
-    uint32_t GetGroupSegmentSize(void *ker) override {
-        HSADispatch *dispatch = reinterpret_cast<HSADispatch*>(ker);
-        return dispatch->getGroupSegmentSize();
     }
 
     // wait for dependent async operations to complete
@@ -1360,12 +1341,9 @@ public:
         return true;
     }
 
-    void dispatch_hsa_kernel(const hsa_kernel_dispatch_packet *aql, 
+    void dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql, 
                              const void * args, size_t argsize,
-                             hc::completion_future *cf) override 
-    {
-        printf ("dispatch_hsa_kernel\n");
-    };
+                             hc::completion_future *cf) override ;
 
     bool set_cu_mask(const std::vector<bool>& cu_mask) override {
         // get device's total compute unit count
@@ -2130,7 +2108,6 @@ public:
         // or it will be created as a shared_ptr<KalmarAsyncOp> in:
         // HSAQueue::LaunchKernelAsync()
         HSADispatch *dispatch = new HSADispatch(this, kernel);
-        dispatch->clearArgs();
 
         // HLC Stable would need 3 additional arguments
         // HLC Development would not need any additional arguments
@@ -2941,6 +2918,42 @@ HSAQueue::getHSAKernargRegion() override {
     return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getHSAKernargRegion()));
 }
 
+void 
+HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql, 
+                         const void * args, size_t argSize,
+                         hc::completion_future *cf) override 
+{
+    Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(this->getDev());
+    HSADispatch *dispatch = new HSADispatch(device, nullptr);
+    dispatch->aql = *aql;
+
+
+    // TODO - move into HSADispatch member function to init
+    if (argSize > 0) {
+        hsa_amd_memory_pool_t kernarg_region = device->getHSAKernargRegion();
+        std::pair<void*, int> ret = device->getKernargBuffer(argSize);
+        dispatch->kernargMemory = ret.first;
+        dispatch->kernargMemoryIndex = ret.second;
+
+        // as kernarg buffers are fine-grained, we can directly use memcpy
+        memcpy(dispatch->kernargMemory, args, argSize);
+
+        dispatch->aql.kernarg_address = dispatch->kernargMemory;
+    } else {
+        dispatch->aql.kernarg_address = nullptr;
+    }
+
+    // Set kernargs
+    // Set signal
+
+
+    waitForStreamDeps(dispatch);
+
+    dispatch->dispatchKernelAsync(this, false, false);
+
+    printf ("dispatch_hsa_kernel\n");
+};
+
 } // namespace Kalmar
 
 // ----------------------------------------------------------------------
@@ -2956,35 +2969,27 @@ HSADispatch::HSADispatch(Kalmar::HSADevice* _device, HSAKernel* _kernel) :
     waitMode(HSA_WAIT_STATE_BLOCKED),
     future(nullptr),
     hsaQueue(nullptr),
-    kernargMemory(nullptr) {
-
+    kernargMemory(nullptr) 
+{
     clearArgs();
 }
 
 
+
 // dispatch a kernel asynchronously
+// -  allocates signal, copies arguments into kernarg buffer, and places aql packet into queue.
 hsa_status_t
-HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
-    struct timespec begin;
-    struct timespec end;
-    clock_gettime(CLOCK_REALTIME, &begin);
+HSADispatch::dispatchKernel(hsa_queue_t* commandQueue, bool allocSignal, bool allocKernarg) {
 
     hsa_status_t status = HSA_STATUS_SUCCESS;
     if (isDispatched) {
         return HSA_STATUS_ERROR_INVALID_ARGUMENT;
     }
 
-    /*
-     * Create a signal to wait for the dispatch to finish.
-     */
-    std::pair<hsa_signal_t, int> ret = Kalmar::ctx.getSignal();
-    signal = ret.first;
-    signalIndex = ret.second;
 
     /*
      * Setup the dispatch information.
      */
-
     uint16_t header = aql.header;;
     aql.header = 0;
 
@@ -3004,20 +3009,21 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
     // bind kernel arguments
     //printf("arg_vec size: %d in bytes: %d\n", arg_vec.size(), arg_vec.size());
 
-    hsa_amd_memory_pool_t kernarg_region = device->getHSAKernargRegion();
 
-    void *kernarg_address;
-    if (arg_vec.size() > 0) {
-        std::pair<void*, int> ret = device->getKernargBuffer(arg_vec.size());
-        kernargMemory = ret.first;
-        kernargMemoryIndex = ret.second;
+    if (allocKernarg) {
+        if (arg_vec.size() > 0) {
+            hsa_amd_memory_pool_t kernarg_region = device->getHSAKernargRegion();
+            std::pair<void*, int> ret = device->getKernargBuffer(arg_vec.size());
+            kernargMemory = ret.first;
+            kernargMemoryIndex = ret.second;
 
-        // as kernarg buffers are fine-grained, we can directly use memcpy
-        memcpy(kernargMemory, arg_vec.data(), arg_vec.size());
+            // as kernarg buffers are fine-grained, we can directly use memcpy
+            memcpy(kernargMemory, arg_vec.data(), arg_vec.size());
 
-        kernarg_address = kernargMemory;
-    } else {
-        kernarg_address = nullptr;
+            aql.kernarg_address = kernargMemory;
+        } else {
+            aql.kernarg_address = nullptr;
+        }
     }
 
 
@@ -3044,8 +3050,15 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
     *q_aql = aql;
 
     // Set some specific fields:
-    q_aql->completion_signal = signal;
-    q_aql->kernarg_address   = kernarg_address;
+    if (allocSignal) {
+        /*
+         * Create a signal to wait for the dispatch to finish.
+         */
+        std::pair<hsa_signal_t, int> ret = Kalmar::ctx.getSignal();
+        signal = ret.first;
+        signalIndex = ret.second;
+        q_aql->completion_signal = signal;
+    }
 
     // Lastly copy in the header:
     q_aql->header = header;
@@ -3060,12 +3073,6 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue) {
     hsa_signal_store_relaxed(commandQueue->doorbell_signal, index);
 
     isDispatched = true;
-
-    clock_gettime(CLOCK_REALTIME, &end);
-
-#if KALMAR_DISPATCH_TIME_PRINTOUT
-    std::cerr << std::setprecision(6) << ((float)(end.tv_sec - begin.tv_sec) * 1000 * 1000 + (float)(end.tv_nsec - begin.tv_nsec) / 1000) << "\n";
-#endif
 
     return status;
 }
@@ -3122,7 +3129,7 @@ HSADispatch::dispatchKernelWaitComplete(Kalmar::HSAQueue* hsaQueue) {
     hsa_queue_t* queue = static_cast<hsa_queue_t*>(hsaQueue->getHSAQueue());
 
     // dispatch kernel
-    status = dispatchKernel(queue);
+    status = dispatchKernel(queue, true, true);
     STATUS_CHECK_Q(status, queue, __LINE__);
 
     // wait for completion
@@ -3133,7 +3140,7 @@ HSADispatch::dispatchKernelWaitComplete(Kalmar::HSAQueue* hsaQueue) {
 }
 
 inline hsa_status_t
-HSADispatch::dispatchKernelAsync(Kalmar::HSAQueue* hsaQueue) {
+HSADispatch::dispatchKernelAsync(Kalmar::HSAQueue* hsaQueue, bool allocSignal, bool allocKernarg) {
     hsa_status_t status = HSA_STATUS_SUCCESS;
 
     // record HSAQueue association
@@ -3142,7 +3149,7 @@ HSADispatch::dispatchKernelAsync(Kalmar::HSAQueue* hsaQueue) {
     hsa_queue_t* queue = static_cast<hsa_queue_t*>(hsaQueue->getHSAQueue());
 
     // dispatch kernel
-    status = dispatchKernel(queue);
+    status = dispatchKernel(queue, allocSignal, allocKernarg);
     STATUS_CHECK_Q(status, queue, __LINE__);
 
     // dynamically allocate a std::shared_future<void> object

@@ -5,9 +5,10 @@
 
 namespace hc {
 class AmPointerInfo;
+class completion_future;
 }; // end namespace hc
 
-struct hsa_kernel_dispatch_packet;
+typedef struct hsa_kernel_dispatch_packet_s hsa_kernel_dispatch_packet_t;
 
 namespace Kalmar {
 namespace enums {
@@ -163,7 +164,6 @@ public:
   virtual void wait(hcWaitMode mode = hcWaitModeBlocked) {}
 
   // sync kernel launch with dynamic group memory
-  // pQueue->dispatch_hsa_kernel();
   virtual void LaunchKernelWithDynamicGroupMemory(void *kernel, size_t dim_ext, size_t *ext, size_t *local_size, size_t dynamic_group_size) {}
 
   // async kernel launch with dynamic group memory
@@ -246,11 +246,9 @@ public:
   /// resource clean up sequence
   virtual void dispose() {}
 
-#if 0
-  virtual void dispatch_hsa_kernel(const hsa_kernel_dispatch_packet *aql, 
+  virtual void dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql, 
                                    const void * args, size_t argsize,
-                                   hc::completion_future *cf  { };
-#endif
+                                   hc::completion_future *cf)  { };
  
   /// set CU affinity of this queue.
   /// the setting is permanent until the queue is destroyed or another setting

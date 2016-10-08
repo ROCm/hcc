@@ -32,7 +32,7 @@
 #   define __CPU__ [[cpu]]
 #endif
 
-class hsa_kernel_dispatch_packet;
+typedef struct hsa_kernel_dispatch_packet_s hsa_kernel_dispatch_packet_t;
 
 /**
  * @namespace hc
@@ -452,6 +452,10 @@ public:
     aql.header = (HSA_FENCE_SCOPE_SYSTEM | HSA_FENCE_SCOPE_AGENT)  << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
                  (HSA_FENCE_SCOPE_SYSTEM | HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE) |
                  (1 << HSA_PACKET_HEADER_BARRIER);
+
+     * The following fields are ignored.  The API will will set up these fields before dispatching the AQL packet:
+     *  aql.completion_signal 
+     *  aql.kernarg 
      * 
      * @p args : Pointer to kernel arguments with the size and aligment expected by the kernel.  The args are copied and then passed directly to the kernel.   After this function returns, the args memory may be deallocated.
      * @p argSz : Size of the arguments.
@@ -467,11 +471,11 @@ public:
      *    - Dispatch the command into the queue and flush it to the GPU.
      *    - Kernargs and signals are automatically reclaimed by the HCC runtime.
      */
-    void dispatch_hsa_kernel(const hsa_kernel_dispatch_packet *aql, 
+    void dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql, 
                            const void * args, size_t argsize,
                            hc::completion_future *cf=NULL) 
     {
-        //pQueue->dispatch_hsa_kernel(aql, args, argsize, cf);
+        pQueue->dispatch_hsa_kernel(aql, args, argsize, cf);
     }
 
     /**
