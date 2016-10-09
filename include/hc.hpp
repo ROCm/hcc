@@ -449,8 +449,8 @@ public:
      *  aql.group_size_x, aql.group_size_y, aql.group_size_z
      *  aql.setup :  The 2 bits at HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS.
      *  aql.header :  Must specify the desired memory fence operations, and barrier bit (if desired.).  A typical conservative setting would be:
-    aql.header = (HSA_FENCE_SCOPE_SYSTEM | HSA_FENCE_SCOPE_AGENT)  << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
-                 (HSA_FENCE_SCOPE_SYSTEM | HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE) |
+    aql.header = (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
+                 (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE) |
                  (1 << HSA_PACKET_HEADER_BARRIER);
 
      * The following fields are ignored.  The API will will set up these fields before dispatching the AQL packet:

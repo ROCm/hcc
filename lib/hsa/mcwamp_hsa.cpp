@@ -2990,10 +2990,9 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue, bool allocSignal, bool al
     /*
      * Setup the dispatch information.
      */
-    uint16_t header = aql.header;;
-    aql.header = 0;
-
     // set dispatch fences
+    // The fence bits must be set on entry into this function.
+    uint16_t header = aql.header;
     if (hsaQueue->get_execute_order() == Kalmar::execute_in_order) {
         //std::cout << "barrier bit on\n";
         // set AQL header with barrier bit on if execute in order
@@ -3254,8 +3253,8 @@ HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localD
    // Set fences here.  Other fields in header will be set just before dispatch: 
 
     aql.header = 
-        ((HSA_FENCE_SCOPE_SYSTEM | HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
-        ((HSA_FENCE_SCOPE_SYSTEM | HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
+        ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
+        ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
 
     return HSA_STATUS_SUCCESS;
 }
