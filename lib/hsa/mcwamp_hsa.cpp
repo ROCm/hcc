@@ -72,10 +72,10 @@
 #define ASYNCOPS_VECTOR_GC_SIZE (1024)
 
 
-// These parameters change the thresholds used to select the unpinned copy algorithm:
-#define MEMCPY_D2H_STAGING_VS_PININPLACE_COPY_THRESHOLD    4194304
-#define MEMCPY_H2D_DIRECT_VS_STAGING_COPY_THRESHOLD    65336
-#define MEMCPY_H2D_STAGING_VS_PININPLACE_COPY_THRESHOLD    1048576
+// Copy thresholds, in KB.  These are used for "choose-best" copy mode.
+long int HCC_H2D_STAGING_THRESHOLD    = 64; 
+long int HCC_H2D_PININPLACE_THRESHOLD = 4096; 
+long int HCC_D2H_PININPLACE_THRESHOLD = 1024; 
 
 
 
@@ -1694,6 +1694,19 @@ public:
         return access;
     }
 
+    static long int getenvlong(const char *var_name, long int defaultValue)
+    {
+        char * env = getenv(var_name);
+
+        if (env == NULL) {
+            return defaultValue;
+        } else {
+            return (strtol(env, NULL, 0));
+        }
+    }
+
+
+
 
     HSADevice(hsa_agent_t a, hsa_agent_t host) : KalmarDevice(access_type_read_write),
                                agent(a), programs(), max_tile_static_size(0),
@@ -1836,23 +1849,32 @@ public:
             default:
                 this->copy_mode = UnpinnedCopyEngine::ChooseBest;
         };
-
         
+        long int HCC_H2D_STAGING_THRESHOLD = 
+            getenvlong("HCC_H2D_STAGING_THRESHOLD", HCC_H2D_STAGING_THRESHOLD);
+        long int HCC_H2D_PININPLACE_THRESHOLD =  
+            getenvlong("HCC_H2D_PININPLACE_THRESHOLD", HCC_H2D_PININPLACE_THRESHOLD);
+        long int HCC_D2H_PININPLACE_THRESHOLD =  
+            getenvlong("HCC_D2H_PININPLACE_THRESHOLD", HCC_D2H_PININPLACE_THRESHOLD);
+
+        HCC_H2D_STAGING_THRESHOLD    *= 1024;
+        HCC_H2D_PININPLACE_THRESHOLD *= 1024;
+        HCC_D2H_PININPLACE_THRESHOLD *= 1024;
 
         static const size_t stagingSize = 64*1024;
         this->cpu_accessible_am = hasAccess(hostAgent, ri._am_memory_pool);
         hsa_amd_memory_pool_t hostPool = (getHSAAMHostRegion());
         copy_engine[0] = new UnpinnedCopyEngine(agent, hostAgent, stagingSize, 2/*staging buffers*/,
                                                 this->cpu_accessible_am, 
-                                                MEMCPY_H2D_DIRECT_VS_STAGING_COPY_THRESHOLD,
-                                                MEMCPY_H2D_STAGING_VS_PININPLACE_COPY_THRESHOLD,
-                                                MEMCPY_D2H_STAGING_VS_PININPLACE_COPY_THRESHOLD);
+                                                HCC_H2D_STAGING_THRESHOLD,
+                                                HCC_H2D_PININPLACE_THRESHOLD,
+                                                HCC_D2H_PININPLACE_THRESHOLD);
 
         copy_engine[1] = new UnpinnedCopyEngine(agent, hostAgent, stagingSize, 2/*staging Buffers*/,
                                                 this->cpu_accessible_am, 
-                                                MEMCPY_H2D_DIRECT_VS_STAGING_COPY_THRESHOLD,
-                                                MEMCPY_H2D_STAGING_VS_PININPLACE_COPY_THRESHOLD,
-                                                MEMCPY_D2H_STAGING_VS_PININPLACE_COPY_THRESHOLD);
+                                                HCC_H2D_STAGING_THRESHOLD,
+                                                HCC_H2D_PININPLACE_THRESHOLD,
+                                                HCC_D2H_PININPLACE_THRESHOLD);
     }
 
     ~HSADevice() {
