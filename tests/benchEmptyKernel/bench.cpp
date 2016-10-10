@@ -1,5 +1,5 @@
-// RUN: %hc %s -o %t.out
-// RUN: %t.out 10000
+// RUN: %hc %s %S/statutils.CPP -O3  %S/dispatch_aql.CPP  -o %t.out -I/opt/rocm/include -L/opt/rocm/lib -lhsa-runtime64 
+// RUN: %t.out 10000 %S/Inputs/nullkernel.hsaco
 // RUN: test -e pfe.dat && mv pfe.dat %T/pfe.dat
 // RUN: test -e grid_launch.dat && mv grid_launch.dat %T/grid_launch.dat
 
@@ -24,17 +24,18 @@
 #include <iostream>
 #include <fstream>
 
-#include <chrono>
 #include <vector>
 #include <thread>
 #include <iomanip>
 
 #include <hsa/hsa.h>
 
+#include "statutils.h"
+
 #define GRID_SIZE 16
 #define TILE_SIZE 16
 
-#define DISPATCH_COUNT 100000
+#define DISPATCH_COUNT 10000
 #define TOL_HI 1e-4
 
 __attribute__((hc_grid_launch)) 
@@ -45,67 +46,6 @@ void nullkernel(const grid_launch_parm lp, float* A) {
 }
 
 
-template <typename T>
-T average(const std::vector<std::chrono::duration<T>> &data) {
-  T avg_duration = 0;
-
-  for(auto &i : data)
-    avg_duration += i.count();
-
-  return avg_duration/data.size();
-}
-
-void plot(const std::string &filename, const std::vector<std::chrono::duration<double>> &data) {
-  std::ofstream file(filename + ".dat", std::ios_base::out | std::ios_base::trunc);
-  file << "#x y\n";
-  for(auto i = data.begin(); i != data.end(); i++)
-    file << i - data.begin() << ' ' << i->count() << '\n';
-  file << "A_mean = " << average(data) << "\n";
-  file.close();
-}
-
-void remove_outliers(std::vector<std::chrono::duration<double>> &data,
-                     std::vector<std::chrono::duration<double>> &outliers) {
-
-  auto tdata = data;
-  std::sort(tdata.begin(), tdata.end());
-
-  const int size = tdata.size();
-  const bool parity = size % 2;
-  /*
-         ---------.---------
-    |----|   .    |    .   | ----|
-         ---------'---------
-         Q1       Q2       Q3
-
-    Q2: median
-    Q1: first quartile, median of the lower half, ~25% lie below Q1, ~75% lie above Q1
-    Q3: third quartile, median of the upper half ~ 75% lie below Q3, ~25% lie above Q3
-    IQR: interquartile range, distance between Q3 and Q1
-    outliers: any value below Q1 - 1.5*IQR or above Q3 + 1.5*IQR
-  */
-
-  const double Q2 = parity ? tdata[size/2].count() : (tdata[size/2].count() + tdata[size/2 - 1].count())/2;
-  const double Q1 = (tdata[size/4].count() + tdata[size/4 - 1].count())/2;
-  const double Q3 = (tdata[size - size/4].count() + tdata[size - size/4 - 1].count())/2;
-
-  const double IQR = Q3 - Q1;
-  const double lwrB = Q1 - 1.5*IQR;
-  const double uppB = Q3 + 1.5*IQR;
-
-  std::copy_if(data.begin(), data.end(), std::back_inserter(outliers),
-    [&](std::chrono::duration<double> dur) { return dur.count() < lwrB || dur.count() > uppB;} );
-
-  data.erase(std::remove_if(data.begin(), data.end(),
-        [&](std::chrono::duration<double> dur) { return dur.count() < lwrB || dur.count() > uppB;} ),
-      data.end());
-}
-
-void printVecInfo(const std::string &name, const std::vector<std::chrono::duration<double>> &data) {
-  std::cout << name << "count: " << data.size() << "\n";
-  for(auto &i : data)
-    std::cout << "  " << i.count() << "\n";
-}
 
 
 #if BENCH_HSA
@@ -118,6 +58,11 @@ uint64_t load_hsaco(hc::accelerator_view *av, const char * fileName, const char 
     hsa_agent_t hsaAgent = *(hsa_agent_t*) av->get_hsa_agent();
 
     std::ifstream file(fileName, std::ios::binary | std::ios::ate);
+    if (!file.is_open()) {
+        printf("could not open code object '%s'\n", fileName);
+        assert(0);
+    };
+
     std::streamsize fsize = file.tellg();
     file.seekg(0, std::ios::beg);
 
@@ -206,13 +151,12 @@ void explicit_launch_null_kernel(hc::accelerator_view *av, uint64_t kernelCodeHa
 
     av->dispatch_hsa_kernel(&aql, &args, sizeof(NullKernelArgs), nullptr/*completionSignal*/);
 }
-#define FILENAME "nullkernel.hsaco"
 #define KERNEL_NAME "NullKernel"
 
 
-void time_dispatch_hsa_kernel(int dispatch_count, hc::accelerator_view *av)
+void time_dispatch_hsa_kernel(int dispatch_count, hc::accelerator_view *av, const char *nullkernel_hsaco)
 {
-  uint64_t kernelCodeHandle = load_hsaco(av, FILENAME, KERNEL_NAME);
+  uint64_t kernelCodeHandle = load_hsaco(av, nullkernel_hsaco, KERNEL_NAME);
   std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
 
   const char *testName = "dispatch_hsa_kernel";
@@ -225,8 +169,6 @@ void time_dispatch_hsa_kernel(int dispatch_count, hc::accelerator_view *av)
 
     explicit_launch_null_kernel(av, kernelCodeHandle);
 
-    exit(0);
-    
     //std::cout << "CF get_use_count=" << cf.get_use_count() << "is_ready=" << cf.is_ready()<< "\n";
     //
     av->wait(hc::hcWaitModeActive);
@@ -239,7 +181,7 @@ void time_dispatch_hsa_kernel(int dispatch_count, hc::accelerator_view *av)
   std::vector<std::chrono::duration<double>> outliers;
   remove_outliers(elapsed_timer, outliers);
   plot(testName, elapsed_timer);
-  std::cout << testName << " time, active (us):          " 
+  std::cout << std::setw(20) << std::left << testName << "time, active (us):  " 
             << std::setprecision(8) << average(elapsed_timer)*1000000.0 << "\n";
 };
 
@@ -247,9 +189,14 @@ void time_dispatch_hsa_kernel(int dispatch_count, hc::accelerator_view *av)
 
 int main(int argc, char* argv[]) {
 
+  const char *nullkernel_hsaco = NULL;
+
   int dispatch_count = DISPATCH_COUNT;
   if(argc > 1)
     dispatch_count = std::stoi(argv[1]);
+  if(argc > 2) {
+    nullkernel_hsaco = argv[2];
+  }
 
   std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
   std::vector<std::chrono::duration<double>> elapsed_pfe;
@@ -272,7 +219,8 @@ int main(int argc, char* argv[]) {
   lp.group_dim = gl_dim3(TILE_SIZE);
   lp.av = &av;
 
-  time_dispatch_hsa_kernel(dispatch_count, &av);
+  std::cout << "Iterations per test:           " << dispatch_count << "\n";
+
 
   // launch empty kernel to initialize everything first
   // timing for null kernel launch appears later
@@ -283,7 +231,6 @@ int main(int argc, char* argv[]) {
 
   // Setting lp.cf to completion_future so we can track completion: (NULL ignores all synchronization)
 
-  std::cout << "Iterations per test:           " << dispatch_count << "\n";
   auto wait_time_us = std::chrono::milliseconds(10);
 
   // Timing null pfe, active wait
@@ -316,7 +263,7 @@ int main(int argc, char* argv[]) {
   }
   remove_outliers(elapsed_pfe, outliers_pfe);
   plot("pfe", elapsed_pfe);
-  std::cout << "pfe time, blocked (us):                  " 
+  std::cout << "pfe time, blocked (us):                 " 
             << std::setprecision(8) << average(elapsed_pfe)*1000000.0 << "\n";
 
 
@@ -358,10 +305,15 @@ int main(int argc, char* argv[]) {
   }
   remove_outliers(elapsed_grid_launch, outliers_gl);
   plot("grid_launch", elapsed_grid_launch);
-  std::cout << "grid_launch time, blocked (us):          " 
+  std::cout << "grid_launch time, blocked (us):         " 
             << std::setprecision(8) << average(elapsed_grid_launch)*1000000.0 << "\n";
 
 
+  if (nullkernel_hsaco) {
+      time_dispatch_hsa_kernel(dispatch_count, &av, nullkernel_hsaco);
+  } else {
+      std::cout << "skipping dispatch_hsa_kernel - must specify path to hsaco on commandline.  (ie: ./bench 10000 Inputs/nullkernel.hsaco)\n";
+  }
 
   return 0;
 }

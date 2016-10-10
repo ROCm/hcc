@@ -6,8 +6,20 @@ OPT=-O3
 
 ROCM_PATH=/opt/rocm
 
-bench: bench.cpp
-	hcc `hcc-config --build --cxxflags --ldflags` $(OPT) -I$(ROCM_PATH)/include bench.cpp -o bench  -L$(ROCM_PATH)/lib -lhsa-runtime64
+SOURCES=bench.cpp
+EX_SOURCES=statutils.CPP dispatch_aql.CPP
+
+OBJECTS=$(SOURCES:.cpp=.o) $(EX_SOURCES:.CPP=.o)
+
+
+bench: $(OBJECTS)
+	hcc `hcc-config --build --ldflags` $(OPT) $(OBJECTS) -o bench  -L$(ROCM_PATH)/lib -lhsa-runtime64
+
+%.o: %.CPP
+	hcc `hcc-config --build --cxxflags` $(OPT) -I$(ROCM_PATH)/include $< -c -o $@
+
+%.o: %.cpp
+	hcc `hcc-config --build --cxxflags` $(OPT) -I$(ROCM_PATH)/include $< -c -o $@
 
 plot: bench
 	./bench ${N}
@@ -16,7 +28,7 @@ plot: bench
 	@echo "Done, please check the svg files."
 
 clean:
-	rm -f bench
+	rm -f bench *.o
 
 
 .PHONY: clean plot
