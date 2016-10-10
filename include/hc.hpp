@@ -1238,12 +1238,13 @@ public:
      */
     int get_use_count() const { return __asyncOp.use_count(); };
 
+public: // TODO, make this constructor private again
+    completion_future(std::shared_ptr<Kalmar::KalmarAsyncOp> event) : __amp_future(*(event->getFuture())), __asyncOp(event) {}
 private:
     std::shared_future<void> __amp_future;
     std::thread* __thread_then = nullptr;
     std::shared_ptr<Kalmar::KalmarAsyncOp> __asyncOp;
 
-    completion_future(std::shared_ptr<Kalmar::KalmarAsyncOp> event) : __amp_future(*(event->getFuture())), __asyncOp(event) {}
 
     completion_future(const std::shared_future<void> &__future)
         : __amp_future(__future), __thread_then(nullptr), __asyncOp(nullptr) {}

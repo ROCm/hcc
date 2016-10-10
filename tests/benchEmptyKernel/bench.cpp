@@ -29,7 +29,6 @@
 #include <thread>
 #include <iomanip>
 
-#include <elf.h>
 #include <hsa/hsa.h>
 
 #define GRID_SIZE 16
@@ -110,25 +109,6 @@ void printVecInfo(const std::string &name, const std::vector<std::chrono::durati
 
 
 #if BENCH_HSA
-static uint64_t ElfSize(const void *emi){
-    const Elf64_Ehdr *ehdr = (const Elf64_Ehdr*)emi;
-    const Elf64_Shdr *shdr = (const Elf64_Shdr*)((char*)emi + ehdr->e_shoff);
-
-    uint64_t max_offset = ehdr->e_shoff;
-    uint64_t total_size = max_offset + ehdr->e_shentsize * ehdr->e_shnum;
-
-    for(uint16_t i=0;i < ehdr->e_shnum;++i){
-        uint64_t cur_offset = static_cast<uint64_t>(shdr[i].sh_offset);
-        if(max_offset < cur_offset){
-            max_offset = cur_offset;
-            total_size = max_offset;
-            if(SHT_NOBITS != shdr[i].sh_type){
-                total_size += static_cast<uint64_t>(shdr[i].sh_size);
-            }
-        }
-    }
-    return total_size;
-}
 
 
 // Load HSACO 
@@ -144,8 +124,6 @@ uint64_t load_hsaco(hc::accelerator_view *av, const char * fileName, const char 
     std::vector<char> buffer(fsize);
     if (file.read(buffer.data(), fsize))
     {
-        uint64_t elfSize = ElfSize(&buffer[0]);
-        assert(fsize == elfSize);
 
         hsa_status_t status;
 
@@ -228,6 +206,42 @@ void explicit_launch_null_kernel(hc::accelerator_view *av, uint64_t kernelCodeHa
 
     av->dispatch_hsa_kernel(&aql, &args, sizeof(NullKernelArgs), nullptr/*completionSignal*/);
 }
+#define FILENAME "nullkernel.hsaco"
+#define KERNEL_NAME "NullKernel"
+
+
+void time_dispatch_hsa_kernel(int dispatch_count, hc::accelerator_view *av)
+{
+  uint64_t kernelCodeHandle = load_hsaco(av, FILENAME, KERNEL_NAME);
+  std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
+
+  const char *testName = "dispatch_hsa_kernel";
+
+  std::vector<std::chrono::duration<double>> elapsed_timer;
+
+  // Timing null grid_launch call, active wait
+  for(int i = 0; i < dispatch_count; ++i) {
+    start = std::chrono::high_resolution_clock::now();
+
+    explicit_launch_null_kernel(av, kernelCodeHandle);
+
+    exit(0);
+    
+    //std::cout << "CF get_use_count=" << cf.get_use_count() << "is_ready=" << cf.is_ready()<< "\n";
+    //
+    av->wait(hc::hcWaitModeActive);
+    //cf.wait(hc::hcWaitModeActive);
+
+    end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> dur = end - start;
+    elapsed_timer.push_back(dur);
+  }
+  std::vector<std::chrono::duration<double>> outliers;
+  remove_outliers(elapsed_timer, outliers);
+  plot(testName, elapsed_timer);
+  std::cout << testName << " time, active (us):          " 
+            << std::setprecision(8) << average(elapsed_timer)*1000000.0 << "\n";
+};
 
 #endif
 
@@ -246,17 +260,19 @@ int main(int argc, char* argv[]) {
   std::vector<std::chrono::duration<double>> outliers_gl;
   std::vector<std::chrono::duration<double>> outliers_gl_ex;
 
-  grid_launch_parm lp;
-  grid_launch_init(&lp);
-
-  lp.grid_dim = gl_dim3(GRID_SIZE);
-  lp.group_dim = gl_dim3(TILE_SIZE);
-
 
   hc::accelerator acc = hc::accelerator();
   // Set up extra stuff
   static hc::accelerator_view av = acc.get_default_view();
 
+  grid_launch_parm lp;
+  grid_launch_init(&lp);
+
+  lp.grid_dim = gl_dim3(GRID_SIZE);
+  lp.group_dim = gl_dim3(TILE_SIZE);
+  lp.av = &av;
+
+  time_dispatch_hsa_kernel(dispatch_count, &av);
 
   // launch empty kernel to initialize everything first
   // timing for null kernel launch appears later
@@ -346,33 +362,6 @@ int main(int argc, char* argv[]) {
             << std::setprecision(8) << average(elapsed_grid_launch)*1000000.0 << "\n";
 
 
-#define FILENAME "nullkernel.hsaco"
-#define KERNEL_NAME "NullKernel"
-  uint64_t kernelCodeHandle = load_hsaco(&av, FILENAME, KERNEL_NAME);
-
-  // TODO - create and init AQL packet here:
-  // TODO - move AQL code to another file?
-
-  // Timing null grid_launch call, active wait
-  for(int i = 0; i < dispatch_count; ++i) {
-    start = std::chrono::high_resolution_clock::now();
-    hc::completion_future cf; // create new completion-future 
-    lp.cf = &cf;
-    lp.av = &av;
-
-    explicit_launch_null_kernel(&av, kernelCodeHandle);
-    
-    //std::cout << "CF get_use_count=" << cf.get_use_count() << "is_ready=" << cf.is_ready()<< "\n";
-    cf.wait(hc::hcWaitModeActive);
-
-    end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> dur = end - start;
-    elapsed_grid_launch.push_back(dur);
-  }
-  remove_outliers(elapsed_grid_launch, outliers_gl);
-  plot("grid_launch", elapsed_grid_launch);
-  std::cout << "grid_launch time, active (us):          " 
-            << std::setprecision(8) << average(elapsed_grid_launch)*1000000.0 << "\n";
 
   return 0;
 }
