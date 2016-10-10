@@ -38,6 +38,9 @@ typedef struct hsa_kernel_dispatch_packet_s hsa_kernel_dispatch_packet_t;
  * @namespace hc
  * Heterogeneous  C++ (HC) namespace
  */
+namespace Kalmar {
+    class HSAQueue;
+};
 
 namespace hc {
 
@@ -45,6 +48,7 @@ class AmPointerInfo;
 
 using namespace Kalmar::enums;
 using namespace Kalmar::CLAMP;
+
 
 // forward declaration
 class accelerator;
@@ -54,6 +58,8 @@ template <int N> class extent;
 template <int N> class tiled_extent;
 template <typename T, int N> class array_view;
 template <typename T, int N> class array;
+
+
 
 // namespace alias
 // namespace hc::fast_math is an alias of namespace Kalmar::fast_math
@@ -1238,17 +1244,18 @@ public:
      */
     int get_use_count() const { return __asyncOp.use_count(); };
 
-public: // TODO, make this constructor private again
-    completion_future(std::shared_ptr<Kalmar::KalmarAsyncOp> event) : __amp_future(*(event->getFuture())), __asyncOp(event) {}
 private:
     std::shared_future<void> __amp_future;
     std::thread* __thread_then = nullptr;
     std::shared_ptr<Kalmar::KalmarAsyncOp> __asyncOp;
 
+    completion_future(std::shared_ptr<Kalmar::KalmarAsyncOp> event) : __amp_future(*(event->getFuture())), __asyncOp(event) {}
 
     completion_future(const std::shared_future<void> &__future)
         : __amp_future(__future), __thread_then(nullptr), __asyncOp(nullptr) {}
 
+    friend class Kalmar::HSAQueue;
+    
     // non-tiled parallel_for_each
     // generic version
     template <int N, typename Kernel> friend
