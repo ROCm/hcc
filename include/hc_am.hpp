@@ -19,7 +19,7 @@ struct AmPointerInfo {
     void *      _hostPointer;   ///< Host pointer.  If host access is not allowed, NULL.
     void *      _devicePointer; ///< Device pointer.  
     size_t      _sizeBytes;     ///< Size of allocation.
-    hc::accelerator _acc;       ///< Device / Accelerator to use.
+    hc::accelerator _acc;       ///< Accelerator where allocation is physically located.
     bool        _isInDeviceMem;    ///< Memory is physically resident on a device (if false, memory is located on host)
     bool        _isAmManaged;   ///< Memory was allocated by AM and should be freed when am_reset is called.
 
@@ -27,7 +27,7 @@ struct AmPointerInfo {
     unsigned    _appAllocationFlags; ///< App-specific allocation flags.  (Used by HIP to store allocation flags.)
 
 
-    AmPointerInfo(void *hostPointer, void *devicePointer, size_t sizeBytes, hc::accelerator &acc, bool isInDeviceMem, bool isAmManaged) :
+    AmPointerInfo(void *hostPointer, void *devicePointer, size_t sizeBytes, hc::accelerator &acc,  bool isInDeviceMem=false, bool isAmManaged=false) :
         _hostPointer(hostPointer),
         _devicePointer(devicePointer),
         _sizeBytes(sizeBytes),
@@ -82,7 +82,7 @@ am_status_t am_free(void*  ptr);
  * @return AM_SUCCESS on error or AM_ERROR_MISC if an error occurs.
  * @see am_alloc, am_free
  */
-am_status_t am_copy(void*  dst, const void*  src, size_t size);
+am_status_t am_copy(void*  dst, const void*  src, size_t size) __attribute__ (( deprecated ("use accelerator_view::copy instead (and note src/dst order reversal)" ))) ;
 
 
 
@@ -93,10 +93,13 @@ am_status_t am_copy(void*  dst, const void*  src, size_t size);
  * The tracker tracks the base pointer as well as the size of the allocation, and will
  * find the information for a pointer anywhere in the tracked range.
  *
- * @returns AM_ERROR_MISC if pointer is not currently being tracked.
- * @returns AM_SUCCESS if pointer is tracked and writes info to @p info.
+ * @returns AM_ERROR_MISC if pointer is not currently being tracked.  In this case, @p info
+ * is not modified.
+
+ * @returns AM_SUCCESS if pointer is tracked and writes info to @p info. if @ info is NULL,
+ * no info is written but the returned status indicates if the pointer was tracked.
  *
- * @see AM_memtracker_add, 
+ * @see AM_memtracker_add 
  */
 am_status_t am_memtracker_getinfo(hc::AmPointerInfo *info, const void *ptr);
 
@@ -104,10 +107,11 @@ am_status_t am_memtracker_getinfo(hc::AmPointerInfo *info, const void *ptr);
 /**
  * Add a pointer to the memory tracker.
  *
+ * @return AM_ERROR_MISC : If @p ptr is NULL, or info._sizeBytes = 0, the info is not added to the tracker and AM_ERROR_MISC is returned.
  * @return AM_SUCCESS
  * @see am_memtracker_getinfo
  */
-am_status_t am_memtracker_add(void* ptr, size_t sizeBytes, hc::accelerator &acc, bool isDeviceMem=false);
+am_status_t am_memtracker_add(void* ptr, hc::AmPointerInfo &info);
 
 
 /*

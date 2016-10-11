@@ -5,6 +5,7 @@
 
 #include "grid_launch.hpp"
 #include "hc_am.hpp"
+#include "hc.hpp"
 
 #ifdef FILE_1
 
@@ -39,7 +40,9 @@ int main()
   foo(lp, a_d);
   lp.cf->wait();
 
-  hc::am_copy(a, a_d, size*sizeof(int));
+
+  static hc::accelerator_view av = acc.get_default_view();
+  av.copy(a_d, a, size*sizeof(int));
 
   int ret = 0;
   for(int i = 0; i < size; ++i)

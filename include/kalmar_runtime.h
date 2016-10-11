@@ -3,6 +3,10 @@
 #include "hc_defines.h"
 #include "kalmar_aligned_alloc.h"
 
+namespace hc {
+class AmPointerInfo;
+}; // end namespace hc
+
 namespace Kalmar {
 namespace enums {
 
@@ -30,10 +34,31 @@ enum execute_order
     execute_any_order
 };
 
-enum hcMemcpyKind {
-    hcMemcpyHostToDevice = 0,
-    hcMemcpyDeviceToHost = 1
+enum hcCommandKind {
+    hcCommandInvalid= -1,
+
+    hcMemcpyHostToHost = 0,
+    hcMemcpyHostToDevice = 1,
+    hcMemcpyDeviceToHost = 2,
+    hcMemcpyDeviceToDevice = 3,
+    hcCommandKernel = 4,
+    hcCommandMarker = 5,
 };
+
+static inline bool isCopyCommand(hcCommandKind k) 
+{
+    switch (k) {
+        case hcMemcpyHostToHost:
+        case hcMemcpyHostToDevice:
+        case hcMemcpyDeviceToHost:
+        case hcMemcpyDeviceToDevice:
+            return true;
+        default:
+            return false;
+    };
+};
+
+
 
 enum hcWaitMode {
     hcWaitModeBlocked = 0,
@@ -64,6 +89,8 @@ struct rw_info;
 /// This is an abstraction of all asynchronous operations within Kalmar
 class KalmarAsyncOp {
 public:
+  KalmarAsyncOp(hcCommandKind xCommandKind) : seqNum(0), commandKind(xCommandKind) {} 
+
   virtual ~KalmarAsyncOp() {} 
   virtual std::shared_future<void>* getFuture() { return nullptr; }
   virtual void* getNativeHandle() { return nullptr;}
@@ -102,6 +129,20 @@ public:
    * @param mode[in] wait mode, must be one of the value in hcWaitMode enum.
    */
   virtual void setWaitMode(hcWaitMode mode) {}
+
+  uint64_t getSeqNum () const { return seqNum;};
+  void     setSeqNum (uint64_t s) {seqNum = s;};
+
+  hcCommandKind getCommandKind() const { return commandKind; };
+  void          setCommandKind(hcCommandKind xCommandKind) { commandKind = xCommandKind; };
+
+private:
+  // Kind of this command - copy, kernel, barrier, etc:
+  hcCommandKind  commandKind;
+
+  // Sequence number of this op in the queue it is dispatched into.
+  uint64_t       seqNum;
+
 };
 
 /// KalmarQueue
@@ -139,6 +180,8 @@ public:
 
   /// copy data between two device pointers
   virtual void copy(void* src, void* dst, size_t count, size_t src_offset, size_t dst_offset, bool blocking) = 0;
+
+
 
   /// map host accessible pointer from device
   virtual void* map(void* device, size_t count, size_t offset, bool modify) = 0;
@@ -180,6 +223,20 @@ public:
   /// enqueue marker
   virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarker() { return nullptr; }
 
+  /// enqueue marker with prior dependency
+  virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(int count, std::shared_ptr <KalmarAsyncOp> *depOps) { return nullptr; }
+  virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(std::shared_ptr <KalmarAsyncOp> depOp) { return EnqueueMarkerWithDependency(1, &depOp); };
+
+
+  /// copy src to dst asynchronously
+  virtual std::shared_ptr<KalmarAsyncOp> EnqueueAsyncCopy(const void* src, void* dst, size_t size_bytes) { return nullptr; }
+
+  // Copy src to dst synchronously
+  virtual void copy(const void *src, void *dst, size_t size_bytes) { }
+
+  /// copy src to dst, with caller providing extended information about the pointers.
+  virtual void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceHostCopyEngine) { };
+
   /// cleanup internal resource
   /// this function is usually called by dtor of the implementation classes
   /// in rare occasions it may be called by other functions to ensure proper
@@ -205,6 +262,8 @@ class KalmarDevice
 private:
     access_type cpu_type;
 
+    // Set true if the device has large bar
+
 #if !TLS_QUEUE
     /// default KalmarQueue
     std::shared_ptr<KalmarQueue> def;
@@ -218,6 +277,11 @@ private:
 #endif
 
 protected:
+    // True if the device memory is mapped into CPU address space and can be
+    // directly accessed with CPU memory operations.
+    bool cpu_accessible_am;
+
+
     KalmarDevice(access_type type = access_type_read_write)
         : cpu_type(type),
 #if !TLS_QUEUE
@@ -288,9 +352,9 @@ public:
     /// get all queues associated with this device
     virtual std::vector< std::shared_ptr<KalmarQueue> > get_all_queues() { return std::vector< std::shared_ptr<KalmarQueue> >(); }
 
-    virtual void memcpySymbol(const char* symbolName, void* hostptr, size_t count, size_t offset = 0, hcMemcpyKind kind = hcMemcpyHostToDevice) {}
+    virtual void memcpySymbol(const char* symbolName, void* hostptr, size_t count, size_t offset = 0, hcCommandKind kind = hcMemcpyHostToDevice) {}
 
-    virtual void memcpySymbol(void* symbolAddr, void* hostptr, size_t count, size_t offset = 0, hcMemcpyKind kind = hcMemcpyHostToDevice) {}
+    virtual void memcpySymbol(void* symbolAddr, void* hostptr, size_t count, size_t offset = 0, hcCommandKind kind = hcMemcpyHostToDevice) {}
 
     virtual void* getSymbolAddress(const char* symbolName) { return nullptr; }
 
@@ -305,6 +369,8 @@ public:
 
     /// get device's compute unit count
     virtual unsigned int get_compute_unit_count() {return 0;}
+
+    virtual bool has_cpu_accessible_am() {return false;}
 
 };
 
@@ -462,12 +528,11 @@ static inline void copy_helper(std::shared_ptr<KalmarQueue>& srcQueue, void* src
     /// If device pointer comes from cpu, let the device queue to handle the copy
     /// For example, if src is on cpu and dst is on device,
     /// in OpenCL, clEnqueueWrtieBuffer to write data from src to device
-    if (is_cpu_queue(srcQueue))
-        dstQueue->write(dst, (char*)src + src_offset, cnt, dst_offset, block);
-    else if (is_cpu_queue(dstQueue))
+    
+    if (is_cpu_queue(dstQueue))
         srcQueue->read(src, (char*)dst + dst_offset, cnt, src_offset);
     else
-        dstQueue->copy(src, dst, cnt, src_offset, dst_offset, block);
+        dstQueue->write(dst, (char*)src + src_offset, cnt, dst_offset, block);
 }
 
 /// software MSI protocol

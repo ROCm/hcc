@@ -55,7 +55,8 @@ int main(void) {
   kernel1(lp, data1_d, F);
   lp.cf->wait();
 
-  hc::am_copy(data1, data1_d, SIZE*sizeof(int));
+  static hc::accelerator_view av = acc.get_default_view();
+  av.copy(data1_d, data1, SIZE*sizeof(int));
 
   bool ret = 0;
   for(int i = 0; i < SIZE; ++i) {

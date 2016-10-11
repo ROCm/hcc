@@ -3,8 +3,6 @@ project (HCC)
 
 option(HSA_USE_AMDGPU_BACKEND "Use AMDGPU LLVM backend as compiler for HSA" OFF)
 
-
-
 # set default installation path
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND CMAKE_INSTALL_PREFIX MATCHES "/usr/local")
   if (HSA_USE_AMDGPU_BACKEND)
@@ -30,7 +28,8 @@ ENDIF (NOT CLANG_URL)
 set(CMAKE_MACOSX_RPATH 1)
 
 IF (NOT NUM_BUILD_THREADS)
-  SET(NUM_BUILD_THREADS 8)
+  include(ProcessorCount)
+  ProcessorCount(NUM_BUILD_THREADS)
 ENDIF(NOT NUM_BUILD_THREADS)
 
 include (EnsureLLVMisPresent)
@@ -38,7 +37,7 @@ include (EnsureCLANGisPresent)
 include (EnsureHLCisPresent)
 include (EnsureHSAILASMisPresent)
 include (SetupCBE)
-include (SetupSPIRify)
+include (SetupPromote)
 include (SetupEraseNonkernel)
 include (SetupCpuRename)
 include (SetupTileUniform)
@@ -55,13 +54,13 @@ include (SetupDivisionPrecision)
 ensure_llvm_is_present(${PROJECT_SOURCE_DIR} compiler)
 ensure_clang_is_present(${PROJECT_SOURCE_DIR} compiler ${CLANG_URL})
 setup_CBackend(${PROJECT_SOURCE_DIR}/compiler/lib/Target CBackend)
-setup_SPIRify(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms SPIRify)
+setup_Promote(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms Promote)
 setup_EraseNonkernel(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms EraseNonkernel)
 setup_CpuRename(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms CpuRename)
 setup_TileUniform(${PROJECT_SOURCE_DIR}/compiler/lib/Analysis TileUniform)
 setup_HC(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms HC)
 setup_Utils(utils)
-patch_AsmParser(SPIRify)
+patch_AsmParser(Promote)
 patch_PassManagerBuilder(TileUniform)
 setup_RemoveSpecialSection(${PROJECT_SOURCE_DIR}/compiler/lib/Transforms RemoveSpecialSection)
 patch_LLVM350(utils)
@@ -203,7 +202,7 @@ SET(KALMAR_VERSION_MINOR "10")
 # add xargs to remove strange trailing newline character
 execute_process(COMMAND git show -s --format=@%ct
                 COMMAND xargs
-                COMMAND date -f - --utc +%y%W%w
+                COMMAND date -f - --utc +%y%U%w
                 WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
                 OUTPUT_VARIABLE KALMAR_VERSION_PATCH
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -528,6 +527,10 @@ if (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
 
   # do NOT depend on HLC or HSAILasm in case we use AMDGPU backend
   add_custom_target(world DEPENDS lightning_bin clang)
+  find_program(OPT opt PATHS ${HSA_LLVM_BIN_DIR} NO_DEFAULT_PATH)
+  add_custom_target(opt DEPENDS ${OPT})
+  find_program(LLVM_LINK llvm-link PATHS ${HSA_LLVM_BIN_DIR} NO_DEFAULT_PATH)
+  add_custom_target(llvm-link DEPENDS ${LLVM_LINK})
 else (HSA_USE_AMDGPU_BACKEND AND HSA_LLVM_BIN_DIR)
   # build hlc and HSAILasm in case HSA_USE_AMDGPU_BACKEND 
   # or HSA_LLVM_BIN_DIR is not set

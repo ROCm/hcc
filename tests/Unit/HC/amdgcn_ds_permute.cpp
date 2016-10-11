@@ -27,7 +27,7 @@ template <typename T>
 bool run_test(const int num) {
 
   std::vector<T> input_x(num);
-  std::vector<T> input_y(num);
+  std::vector<int> input_y(num);
 
   // initialize the input data
   std::default_random_engine random_gen;
@@ -44,21 +44,20 @@ bool run_test(const int num) {
   // generate the lane IDs
   int counter = 0;
   std::generate(input_y.begin(), input_y.end(), [&]() {
-    counter = (counter == wave_size)?0:counter++;
-    return counter;
+    return counter++ % wave_size;
   });
   for (auto wave_start = input_y.begin(); wave_start != input_y.end(); wave_start+=wave_size) {
     std::random_shuffle(wave_start, wave_start + wave_size);
   }
 
   hc::array_view<T,1> av_input_x(num, input_x);
-  hc::array_view<T,1> av_input_y(num, input_y);
+  hc::array_view<int,1> av_input_y(num, input_y);
 
   std::vector<T> actual(num);
   hc::array_view<T,1> av_actual(num, actual);
   hc::parallel_for_each(av_input_x.get_extent(), 
                         [=](hc::index<1> idx) [[hc]] {
-    av_actual[idx] = hc::__amdgcn_ds_permute(av_input_y[idx], av_input_x[idx]);
+    av_actual[idx] = hc::__amdgcn_ds_permute(av_input_y[idx]<<2, av_input_x[idx]);
   });
   av_actual.synchronize();
 

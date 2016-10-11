@@ -7,6 +7,7 @@
 
 #include "grid_launch.hpp"
 #include "hc_am.hpp"
+#include "hc.hpp"
 #include <iostream>
 
 typedef struct {
@@ -41,15 +42,16 @@ int main(void) {
   Foo* data1 = (Foo*)malloc(SIZE*sizeof(Foo));
   Bar* data2 = (Bar*)malloc(SIZE*sizeof(Bar));
   constStructconst* data3 = (constStructconst*)malloc(SIZE*sizeof(constStructconst));
-  for(int i = 0; i < SIZE; ++i) {
+  for(int i = 0; i < SIZE; ++i) 
     data3[i].x = i;
-  }
 
   auto acc = hc::accelerator();
   Foo* data1_d = (Foo*)hc::am_alloc(SIZE*sizeof(Foo), acc, 0);
   Bar* data2_d = (Bar*)hc::am_alloc(SIZE*sizeof(Bar), acc, 0);
   constStructconst* data3_d = (constStructconst*)hc::am_alloc(SIZE*sizeof(constStructconst), acc, 0);
-  hc::am_copy(data3_d, data3, SIZE*sizeof(constStructconst));
+
+  static hc::accelerator_view av = acc.get_default_view();
+  av.copy(data3, data3_d, SIZE*sizeof(constStructconst));
 
   grid_launch_parm lp;
   grid_launch_init(&lp);
@@ -62,18 +64,16 @@ int main(void) {
   kernel1(lp, data1_d, data2_d, data3_d);
   lp.cf->wait();
 
-  hc::am_copy(data1, data1_d, SIZE*sizeof(Foo));
-  hc::am_copy(data2, data2_d, SIZE*sizeof(Bar));
+  av.copy(data1_d, data1, SIZE*sizeof(Foo));
+  av.copy(data2_d, data2, SIZE*sizeof(Bar));
 
   bool ret = 0;
-  for(int i = 0; i < SIZE; ++i) {
-    if((data1[i].x != i) || (data2[i].x != i + data3[i].x)) {
+  for (int i = 0; i < SIZE; i++)
+  {
+    if(data1[i].x != (data2[i].x - data3[i].x))
       ret = 1;
-      break;
-    }
   }
 
-  hc::am_free(data1_d);
   hc::am_free(data2_d);
   hc::am_free(data3_d);
   free(data1);

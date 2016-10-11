@@ -48,7 +48,8 @@ int main()
   kernel_call(lp, a_d, pitch);
   lp.cf->wait();
 
-  hc::am_copy(a, a_d, width*height*sizeof(int));
+  static hc::accelerator_view av = acc.get_default_view();
+  av.copy(a_d, a, width*height*sizeof(int));
 
   int ret = 0;
   for(int i = 0; i < width*height; ++i)

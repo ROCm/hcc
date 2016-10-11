@@ -73,7 +73,19 @@ configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/extractkernel.in
   ${CMAKE_CURRENT_BINARY_DIR}/../bin/extractkernel @ONLY)
 
+if(POLICY CMP0037)
+  cmake_policy(PUSH)
+  cmake_policy(SET CMP0037 OLD)
+endif()
+
+include(ProcessorCount)
+ProcessorCount(N)
+
 add_custom_target(test
-  COMMAND python ${LLVM_ROOT}/bin/llvm-lit -j 8 --path ${LLVM_TOOLS_DIR} -sv ${CMAKE_CURRENT_BINARY_DIR}
+  COMMAND python ${LLVM_ROOT}/bin/llvm-lit -j ${N} --path ${LLVM_TOOLS_DIR} -sv ${CMAKE_CURRENT_BINARY_DIR}
   # DEPENDS ${CPPAMP_GTEST_LIB}
   COMMENT "Running HCC regression tests")
+
+if(POLICY CMP0037)
+  cmake_policy(POP)
+endif()
