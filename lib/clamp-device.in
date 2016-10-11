@@ -82,36 +82,19 @@ if [ "$CLAMP_NOTILECHECK" == "ON" ]; then
   $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
        -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
        -load $LIB/LLVMRemoveSpecialSection@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-       -erase-nonkernels -promote-globals -dce -globaldce -remove-special-section -S < $1 -o $2.promote.ll.orig
+       -erase-nonkernels -promote-globals -dce -globaldce -remove-special-section < $1 -o $2.promote.bc
 else
   $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
        -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
        -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
        -load $LIB/LLVMRemoveSpecialSection@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-       -erase-nonkernels -promote-globals -tile-uniform -dce -globaldce -remove-special-section -S < $1 -o $2.promote.ll.orig
+       -erase-nonkernels -promote-globals -tile-uniform -dce -globaldce -remove-special-section < $1 -o $2.promote.bc
 fi
 
 # error handling for HCC-specific opt passes
 RETVAL=$?
 if [ $RETVAL != 0 ]; then
   echo "Generating AMD GCN kernel failed in HCC-specific opt passes for target: $AMDGPU_TARGET"
-  exit $RETVAL
-fi
-
-# convert all addrspacecast to bitcast
-sed "s/addrspacecast /bitcast /g" < $2.promote.ll.orig > $2.promote.ll
-
-if [ $KMDUMPLLVM == "1" ]; then
-  cp $2.promote.ll ./dump.promote.ll
-fi
-
-# assemble to bitcode
-$AS -o $2.promote.bc $2.promote.ll
-
-# error handling logic for llvm-as
-RETVAL=$?
-if [ $RETVAL != 0 ]; then
-  echo "Generating AMD GCN kernel failed in llvm-as for target: $AMDGPU_TARGET"
   exit $RETVAL
 fi
 
