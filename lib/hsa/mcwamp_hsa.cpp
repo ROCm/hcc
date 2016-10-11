@@ -2371,9 +2371,6 @@ public:
 
         unsigned long* symbol_ptr = nullptr;
         if (executables.size() != 0) {
-            // fix symbol name to match HSA rule
-            std::string symbolString("&");
-            symbolString += symbolName;
 
             // iterate through all HSA executables
             for (auto executable_iterator : executables) {
@@ -2381,7 +2378,7 @@ public:
 
                 // get symbol
                 hsa_executable_symbol_t symbol;
-                status = hsa_executable_get_symbol(executable->hsaExecutable, NULL, symbolString.c_str(), agent, 0, &symbol);
+                status = hsa_executable_get_symbol(executable->hsaExecutable, NULL, symbolName, agent, 0, &symbol);
                 if (status == HSA_STATUS_SUCCESS) {
                     // get address of symbol
                     uint64_t symbol_address;
