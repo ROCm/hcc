@@ -169,4 +169,4 @@ if [ $KMDUMPISA == "1" ]; then
 fi
 
 # remove temp file
-rm -f $2.promote.ll.orig $2.promote.ll $2.promote.bc $2.linked.bc $2.opt.bc $2.isabin $2.isa
+rm -f $2.promote.bc $2.linked.bc $2.opt.bc $2.isabin $2.isa
