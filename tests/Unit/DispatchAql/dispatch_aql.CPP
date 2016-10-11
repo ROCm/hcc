@@ -7,8 +7,13 @@
 
 #include <hsa/hsa.h>
 
+#include "dispatch_aql.h"
+
+
+
+
 // Load HSACO 
-uint64_t load_hsaco(hc::accelerator_view *av, const char * fileName, const char *kernelName)
+Kernel load_hsaco(hc::accelerator_view *av, const char * fileName, const char *kernelName)
 {
     hsa_region_t systemRegion = *(hsa_region_t*)av->get_hsa_am_system_region();
     hsa_agent_t hsaAgent = *(hsa_agent_t*) av->get_hsa_agent();
@@ -49,16 +54,24 @@ uint64_t load_hsaco(hc::accelerator_view *av, const char * fileName, const char 
         // Get symbol handle.
         hsa_executable_symbol_t kernelSymbol;
         status = hsa_executable_get_symbol(hsaExecutable, NULL, kernelName, hsaAgent, 0, &kernelSymbol);
+        assert(status == HSA_STATUS_SUCCESS);
+
+        Kernel k;
 
 
-        uint64_t kernelCodeHandle;
         status = hsa_executable_symbol_get_info(kernelSymbol,
                                    HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT,
-                                   &kernelCodeHandle);
+                                   &k._kernelCodeHandle);
+        assert(status == HSA_STATUS_SUCCESS);
+
+        status = hsa_executable_symbol_get_info(kernelSymbol, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_PRIVATE_SEGMENT_SIZE, &k._privateSegmentSize);
+        assert(status == HSA_STATUS_SUCCESS);
+
+        status = hsa_executable_symbol_get_info(kernelSymbol, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE, &k._groupSegmentSize);
         assert(status == HSA_STATUS_SUCCESS);
 
 
-        return kernelCodeHandle;
+        return k;
 
 
     } else {

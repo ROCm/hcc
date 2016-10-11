@@ -39,11 +39,11 @@
 #include <iomanip>
 
 #ifndef KALMAR_DEBUG
-#define KALMAR_DEBUG (0)
+#define KALMAR_DEBUG (1)
 #endif
 
 #ifndef KALMAR_DEBUG_ASYNC_COPY
-#define KALMAR_DEBUG_ASYNC_COPY (0)
+#define KALMAR_DEBUG_ASYNC_COPY (1)
 #endif
 
 // Macro for prettier debug messages, use like:
@@ -2977,6 +2977,22 @@ HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
                          const void * args, size_t argSize,
                          hc::completion_future *cf) override 
 {
+    uint16_t dims = (aql->setup >> HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS) & 
+                    ((1 << HSA_KERNEL_DISPATCH_PACKET_SETUP_WIDTH_DIMENSIONS) - 1);
+
+    if (dims == 0) {
+        throw Kalmar::runtime_exception("dispatch_hsa_kernel: must set dims in aql.header", 0);
+    }
+
+    uint16_t packetType = (aql->header >> HSA_PACKET_HEADER_TYPE) &
+                          ((1 << HSA_PACKET_HEADER_WIDTH_TYPE) - 1);
+
+
+    if (packetType != HSA_PACKET_TYPE_KERNEL_DISPATCH) {
+        throw Kalmar::runtime_exception("dispatch_hsa_kernel: must set packetType and fence bits in aql.header", 0);
+    }
+
+
     Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(this->getDev());
     HSADispatch *dispatch = new HSADispatch(device, nullptr, aql);
 
@@ -2995,8 +3011,6 @@ HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
     if (cf) {
         *cf = hc::completion_future(sp_dispatch);
     }
-
-    //printf ("dispatch_hsa_kernel2\n");
 };
 
 } // namespace Kalmar

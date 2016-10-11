@@ -28,7 +28,6 @@
 #include <thread>
 #include <iomanip>
 
-#include <hsa/hsa.h>
 
 #include "statutils.h"
 
@@ -50,92 +49,12 @@ void nullkernel(const grid_launch_parm lp, float* A) {
 
 #if BENCH_HSA
 
+#include "dispatch_aql.h"
 
-// Load HSACO 
-uint64_t load_hsaco(hc::accelerator_view *av, const char * fileName, const char *kernelName)
+
+
+void explicit_launch_null_kernel(const grid_launch_parm *lp, uint64_t kernelCodeHandle)
 {
-    hsa_region_t systemRegion = *(hsa_region_t*)av->get_hsa_am_system_region();
-    hsa_agent_t hsaAgent = *(hsa_agent_t*) av->get_hsa_agent();
-
-    std::ifstream file(fileName, std::ios::binary | std::ios::ate);
-    if (!file.is_open()) {
-        printf("could not open code object '%s'\n", fileName);
-        assert(0);
-    };
-
-    std::streamsize fsize = file.tellg();
-    file.seekg(0, std::ios::beg);
-
-    std::vector<char> buffer(fsize);
-    if (file.read(buffer.data(), fsize))
-    {
-
-        hsa_status_t status;
-
-        hsa_code_object_t code_object = {0};
-        status = hsa_code_object_deserialize(&buffer[0], fsize, NULL, &code_object);
-        assert(status == HSA_STATUS_SUCCESS);
-
-        hsa_executable_t hsaExecutable;
-        status = hsa_executable_create(HSA_PROFILE_FULL, HSA_EXECUTABLE_STATE_UNFROZEN,
-                                       NULL, &hsaExecutable);
-        assert(status == HSA_STATUS_SUCCESS);
-
-        // Load the code object.
-        status = hsa_executable_load_code_object(hsaExecutable, hsaAgent, code_object, NULL);
-        assert(status == HSA_STATUS_SUCCESS);
-
-        // Freeze the executable.
-        status = hsa_executable_freeze(hsaExecutable, NULL);
-        assert(status == HSA_STATUS_SUCCESS);
-
-
-        // Get symbol handle.
-        hsa_executable_symbol_t kernelSymbol;
-        status = hsa_executable_get_symbol(hsaExecutable, NULL, kernelName, hsaAgent, 0, &kernelSymbol);
-
-
-        uint64_t kernelCodeHandle;
-        status = hsa_executable_symbol_get_info(kernelSymbol,
-                                   HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT,
-                                   &kernelCodeHandle);
-        assert(status == HSA_STATUS_SUCCESS);
-
-
-        return kernelCodeHandle;
-
-
-    } else {
-        printf("could not open code object '%s'\n", fileName);
-        assert(0);
-    }
-}
-
-void explicit_launch_null_kernel(hc::accelerator_view *av, uint64_t kernelCodeHandle)
-{
-    hsa_kernel_dispatch_packet_t aql;
-    memset(&aql, 0, sizeof(aql));
-
-    aql.completion_signal.handle = 0; // signal;
-    aql.grid_size_x = GRID_SIZE;
-    aql.grid_size_y = 1;
-    aql.grid_size_z = 1;
-    aql.workgroup_size_x = TILE_SIZE;
-    aql.workgroup_size_y = 1;
-    aql.workgroup_size_z = 1;
-
-    aql.group_segment_size = 0;
-    aql.private_segment_size = 0;
-    aql.kernarg_address = 0;
-    aql.kernel_object = kernelCodeHandle;
-
-    aql.header =   (HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE) |
-                        (1 << HSA_PACKET_HEADER_BARRIER) |
-                        (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
-                        (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
-
-    aql.setup = 1 << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
-
     struct NullKernelArgs {
         uint32_t hidden[6];
         void *Ad;
@@ -149,14 +68,15 @@ void explicit_launch_null_kernel(hc::accelerator_view *av, uint64_t kernelCodeHa
     args.hidden[5] = 1;
     args.Ad        = nullptr;
 
-    av->dispatch_hsa_kernel(&aql, &args, sizeof(NullKernelArgs), nullptr/*completionSignal*/);
+
+    dispatch_glp_kernel(lp, kernelCodeHandle, &args, sizeof(NullKernelArgs));
 }
 #define KERNEL_NAME "NullKernel"
 
 
-void time_dispatch_hsa_kernel(int dispatch_count, hc::accelerator_view *av, const char *nullkernel_hsaco)
+void time_dispatch_hsa_kernel(int dispatch_count, const grid_launch_parm *lp, const char *nullkernel_hsaco)
 {
-  uint64_t kernelCodeHandle = load_hsaco(av, nullkernel_hsaco, KERNEL_NAME);
+  uint64_t kernelCodeHandle = load_hsaco(lp->av, nullkernel_hsaco, KERNEL_NAME);
   std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
 
   const char *testName = "dispatch_hsa_kernel";
@@ -167,11 +87,11 @@ void time_dispatch_hsa_kernel(int dispatch_count, hc::accelerator_view *av, cons
   for(int i = 0; i < dispatch_count; ++i) {
     start = std::chrono::high_resolution_clock::now();
 
-    explicit_launch_null_kernel(av, kernelCodeHandle);
+    explicit_launch_null_kernel(lp, kernelCodeHandle);
 
     //std::cout << "CF get_use_count=" << cf.get_use_count() << "is_ready=" << cf.is_ready()<< "\n";
     //
-    av->wait(hc::hcWaitModeActive);
+    lp->av->wait(hc::hcWaitModeActive);
     //cf.wait(hc::hcWaitModeActive);
 
     end = std::chrono::high_resolution_clock::now();
@@ -272,7 +192,6 @@ int main(int argc, char* argv[]) {
     start = std::chrono::high_resolution_clock::now();
     hc::completion_future cf; // create new completion-future 
     lp.cf = &cf;
-    lp.av = &av;
 
     nullkernel(lp, 0x0);
     //std::cout << "CF get_use_count=" << cf.get_use_count() << "is_ready=" << cf.is_ready()<< "\n";
@@ -293,7 +212,6 @@ int main(int argc, char* argv[]) {
     start = std::chrono::high_resolution_clock::now();
     hc::completion_future cf; // create new completion-future 
     lp.cf = &cf;
-    lp.av = &av;
 
     nullkernel(lp, 0x0);
     //std::cout << "CF get_use_count=" << cf.get_use_count() << "is_ready=" << cf.is_ready()<< "\n";
@@ -310,7 +228,7 @@ int main(int argc, char* argv[]) {
 
 
   if (nullkernel_hsaco) {
-      time_dispatch_hsa_kernel(dispatch_count, &av, nullkernel_hsaco);
+      time_dispatch_hsa_kernel(dispatch_count, &lp, nullkernel_hsaco);
   } else {
       std::cout << "skipping dispatch_hsa_kernel - must specify path to hsaco on commandline.  (ie: ./bench 10000 Inputs/nullkernel.hsaco)\n";
   }
