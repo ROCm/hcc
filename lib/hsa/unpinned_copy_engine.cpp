@@ -52,7 +52,7 @@ static hsa_status_t findGlobalPool(hsa_amd_memory_pool_t pool, void* data)
 
     ErrorCheck( hsa_amd_memory_pool_get_info(pool, HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS, &flag));
     if ((HSA_AMD_SEGMENT_GLOBAL == segment) &&
-        (flag & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_COARSE_GRAINED)) {
+        (flag & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED)) {
         *((hsa_amd_memory_pool_t*)data) = pool;
     }
     return HSA_STATUS_SUCCESS;
