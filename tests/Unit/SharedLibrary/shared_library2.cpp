@@ -1,7 +1,7 @@
 // XFAIL: Linux
 // RUN: %hc -fPIC -Wl,-Bsymbolic -shared -DSHARED_LIBRARY_1 %s -o %T/libtest2_foo.so
 // RUN: %hc -fPIC -Wl,-Bsymbolic -shared -DSHARED_LIBRARY_2 %s -o %T/libtest2_bar.so
-// RUN: %clang -std=c++11 %s -o %t.out -ldl && LD_LIBRARY_PATH=%T %t.out
+// RUN: %clang -std=c++11 -stdlib=libc++ -lc++ -lc++abi -ldl -lpthread %s -o %t.out -ldl && LD_LIBRARY_PATH=%T %t.out
 
 // kernels built as multiple shared libraries
 // loaded dynamically via dlopen()
