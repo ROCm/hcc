@@ -24,10 +24,6 @@ configure_file(
   ${CMAKE_CURRENT_BINARY_DIR}/../lib/clamp-config.hxx ESCAPE_QUOTES)
 
 configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-spirify.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-spirify @ONLY)
-
-configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-device.in
   ${CMAKE_CURRENT_BINARY_DIR}/../compiler/bin/clamp-device @ONLY)
 

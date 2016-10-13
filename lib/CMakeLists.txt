@@ -29,7 +29,6 @@ install(TARGETS clamp-config hcc-config mcwamp mcwamp_atomic
 # C++AMP tools
 ####################
 install(PROGRAMS ${PROJECT_BINARY_DIR}/compiler/bin/clamp-device
-    ${PROJECT_BINARY_DIR}/compiler/bin/clamp-spirify
     ${PROJECT_BINARY_DIR}/compiler/bin/clamp-embed
     ${PROJECT_BINARY_DIR}/compiler/bin/clamp-assemble
     ${PROJECT_BINARY_DIR}/compiler/bin/clamp-link
