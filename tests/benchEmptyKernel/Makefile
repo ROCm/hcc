@@ -7,7 +7,7 @@ OPT=-O3
 ROCM_PATH=/opt/rocm
 
 SOURCES=bench.cpp
-EX_SOURCES=statutils.CPP dispatch_aql.CPP
+EX_SOURCES=statutils.CPP hsacodelib.CPP
 
 OBJECTS=$(SOURCES:.cpp=.o) $(EX_SOURCES:.CPP=.o)
 

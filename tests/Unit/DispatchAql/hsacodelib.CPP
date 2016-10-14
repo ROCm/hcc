@@ -7,8 +7,13 @@
 
 #include <hsa/hsa.h>
 
+#include "hsacodelib.h"
+
+
+
+
 // Load HSACO 
-uint64_t load_hsaco(hc::accelerator_view *av, const char * fileName, const char *kernelName)
+Kernel load_hsaco(hc::accelerator_view *av, const char * fileName, const char *kernelName)
 {
     hsa_region_t systemRegion = *(hsa_region_t*)av->get_hsa_am_system_region();
     hsa_agent_t hsaAgent = *(hsa_agent_t*) av->get_hsa_agent();
@@ -49,16 +54,24 @@ uint64_t load_hsaco(hc::accelerator_view *av, const char * fileName, const char 
         // Get symbol handle.
         hsa_executable_symbol_t kernelSymbol;
         status = hsa_executable_get_symbol(hsaExecutable, NULL, kernelName, hsaAgent, 0, &kernelSymbol);
+        assert(status == HSA_STATUS_SUCCESS);
+
+        Kernel k;
 
 
-        uint64_t kernelCodeHandle;
         status = hsa_executable_symbol_get_info(kernelSymbol,
                                    HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT,
-                                   &kernelCodeHandle);
+                                   &k._kernelCodeHandle);
+        assert(status == HSA_STATUS_SUCCESS);
+
+        status = hsa_executable_symbol_get_info(kernelSymbol, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_PRIVATE_SEGMENT_SIZE, &k._privateSegmentSize);
+        assert(status == HSA_STATUS_SUCCESS);
+
+        status = hsa_executable_symbol_get_info(kernelSymbol, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE, &k._groupSegmentSize);
         assert(status == HSA_STATUS_SUCCESS);
 
 
-        return kernelCodeHandle;
+        return k;
 
 
     } else {
@@ -70,7 +83,7 @@ uint64_t load_hsaco(hc::accelerator_view *av, const char * fileName, const char 
 
 // Dispatch a GL packet - 
 // Convert to AQL and call dispatch_hsa_kernel
-void dispatch_glp_kernel(const grid_launch_parm *lp, uint64_t kernelCodeHandle, void *args, int argSize)
+void dispatch_glp_kernel(const grid_launch_parm *lp, const Kernel &k, void *args, int argSize)
 {
     hsa_kernel_dispatch_packet_t aql;
     memset(&aql, 0, sizeof(aql));
@@ -87,7 +100,7 @@ void dispatch_glp_kernel(const grid_launch_parm *lp, uint64_t kernelCodeHandle, 
     aql.group_segment_size = lp->dynamic_group_mem_bytes; // TODO - should read static from code object.
     aql.private_segment_size = 0; // TODO - should read from code-object
     aql.kernarg_address = 0;
-    aql.kernel_object = kernelCodeHandle;
+    aql.kernel_object = k._kernelCodeHandle;
 
     aql.header =   (HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE) |
                         (1 << HSA_PACKET_HEADER_BARRIER) |
@@ -95,6 +108,9 @@ void dispatch_glp_kernel(const grid_launch_parm *lp, uint64_t kernelCodeHandle, 
                         (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
 
     aql.setup = 1 << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
+
+    aql.private_segment_size = k._privateSegmentSize;
+    aql.group_segment_size = k._groupSegmentSize;
 
     lp->av->dispatch_hsa_kernel(&aql, args, argSize, lp->cf);
 }

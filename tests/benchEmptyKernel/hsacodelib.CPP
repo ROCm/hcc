@@ -7,7 +7,7 @@
 
 #include <hsa/hsa.h>
 
-#include "dispatch_aql.h"
+#include "hsacodelib.h"
 
 
 
@@ -83,7 +83,7 @@ Kernel load_hsaco(hc::accelerator_view *av, const char * fileName, const char *k
 
 // Dispatch a GL packet - 
 // Convert to AQL and call dispatch_hsa_kernel
-void dispatch_glp_kernel(const grid_launch_parm *lp, uint64_t kernelCodeHandle, void *args, int argSize)
+void dispatch_glp_kernel(const grid_launch_parm *lp, const Kernel &k, void *args, int argSize)
 {
     hsa_kernel_dispatch_packet_t aql;
     memset(&aql, 0, sizeof(aql));
@@ -100,7 +100,7 @@ void dispatch_glp_kernel(const grid_launch_parm *lp, uint64_t kernelCodeHandle, 
     aql.group_segment_size = lp->dynamic_group_mem_bytes; // TODO - should read static from code object.
     aql.private_segment_size = 0; // TODO - should read from code-object
     aql.kernarg_address = 0;
-    aql.kernel_object = kernelCodeHandle;
+    aql.kernel_object = k._kernelCodeHandle;
 
     aql.header =   (HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE) |
                         (1 << HSA_PACKET_HEADER_BARRIER) |
@@ -108,6 +108,9 @@ void dispatch_glp_kernel(const grid_launch_parm *lp, uint64_t kernelCodeHandle, 
                         (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
 
     aql.setup = 1 << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
+
+    aql.private_segment_size = k._privateSegmentSize;
+    aql.group_segment_size = k._groupSegmentSize;
 
     lp->av->dispatch_hsa_kernel(&aql, args, argSize, lp->cf);
 }

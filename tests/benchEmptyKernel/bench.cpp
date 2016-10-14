@@ -1,4 +1,4 @@
-// RUN: %hc %s %S/statutils.CPP -O3  %S/dispatch_aql.CPP  -o %t.out -I/opt/rocm/include -L/opt/rocm/lib -lhsa-runtime64 
+// RUN: %hc %s %S/statutils.CPP -O3  %S/hsacodelib.CPP  -o %t.out -I/opt/rocm/include -L/opt/rocm/lib -lhsa-runtime64 
 // RUN: %t.out 10000 %S/Inputs/nullkernel.hsaco
 // RUN: test -e pfe.dat && mv pfe.dat %T/pfe.dat
 // RUN: test -e grid_launch.dat && mv grid_launch.dat %T/grid_launch.dat
@@ -49,11 +49,11 @@ void nullkernel(const grid_launch_parm lp, float* A) {
 
 #if BENCH_HSA
 
-#include "dispatch_aql.h"
+#include "hsacodelib.h"
 
 
 
-void explicit_launch_null_kernel(const grid_launch_parm *lp, uint64_t kernelCodeHandle)
+void explicit_launch_null_kernel(const grid_launch_parm *lp, const Kernel &k)
 {
     struct NullKernelArgs {
         uint32_t hidden[6];
@@ -69,14 +69,14 @@ void explicit_launch_null_kernel(const grid_launch_parm *lp, uint64_t kernelCode
     args.Ad        = nullptr;
 
 
-    dispatch_glp_kernel(lp, kernelCodeHandle, &args, sizeof(NullKernelArgs));
+    dispatch_glp_kernel(lp, k, &args, sizeof(NullKernelArgs));
 }
 #define KERNEL_NAME "NullKernel"
 
 
 void time_dispatch_hsa_kernel(int dispatch_count, const grid_launch_parm *lp, const char *nullkernel_hsaco)
 {
-  uint64_t kernelCodeHandle = load_hsaco(lp->av, nullkernel_hsaco, KERNEL_NAME);
+  Kernel k = load_hsaco(lp->av, nullkernel_hsaco, KERNEL_NAME);
   std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
 
   const char *testName = "dispatch_hsa_kernel";
@@ -87,7 +87,7 @@ void time_dispatch_hsa_kernel(int dispatch_count, const grid_launch_parm *lp, co
   for(int i = 0; i < dispatch_count; ++i) {
     start = std::chrono::high_resolution_clock::now();
 
-    explicit_launch_null_kernel(lp, kernelCodeHandle);
+    explicit_launch_null_kernel(lp, k);
 
     //std::cout << "CF get_use_count=" << cf.get_use_count() << "is_ready=" << cf.is_ready()<< "\n";
     //

@@ -39,11 +39,11 @@
 #include <iomanip>
 
 #ifndef KALMAR_DEBUG
-#define KALMAR_DEBUG (1)
+#define KALMAR_DEBUG (0)
 #endif
 
 #ifndef KALMAR_DEBUG_ASYNC_COPY
-#define KALMAR_DEBUG_ASYNC_COPY (1)
+#define KALMAR_DEBUG_ASYNC_COPY (0)
 #endif
 
 // Macro for prettier debug messages, use like:

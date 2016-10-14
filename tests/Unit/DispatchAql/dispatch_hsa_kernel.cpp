@@ -1,5 +1,5 @@
 // XFAIL: Linux
-// RUN: %hc %s %S/dispatch_aql.CPP -I/opt/rocm/include -L/opt/rocm/lib -lhsa-runtime64 -o %t.out && %t.out -lhc_am
+// RUN: %hc %s %S/hsacodelib.CPP -I/opt/rocm/include -L/opt/rocm/lib -lhsa-runtime64 -lhc_am -o %t.out && %t.out %S/vcpy_isa.hsaco
 
 #include <hc.hpp>
 
@@ -9,11 +9,13 @@
 //#include <hsa/hsa.h>
 #include <hsa/hsa.h>
 
-#include "dispatch_aql.h"
+#include "hsacodelib.h"
 #include <hc_am.hpp>
 
 int p_db = 1;
 int p_wait = 1;
+
+const char *hsaco_filename = NULL;
 
 // An example which shows how to use accelerator_view::create_blocking_marker(completion_future&)
 ///
@@ -24,18 +26,18 @@ int p_wait = 1;
 bool test() {
   bool ret = true;
 
-  // define inputs and output
-  const int vecSize = 2048;
-
 
   hc::accelerator acc = hc::accelerator();
   hc::accelerator_view av = acc.get_default_view();
 
-  Kernel k = load_hsaco(&av, "vcpy_isa.hsaco", "hello_world");
+  Kernel k = load_hsaco(&av, hsaco_filename, "hello_world");
 
 
-  float bufferElements = 1024*1024;
-  float bufferSize = bufferElements * sizeof(float);
+  //int bufferElements = 1024*1024;
+  int bufferElements = 1024;
+  int groupSize      = 1024;
+  assert(bufferElements <= groupSize); // limitation of the kernel used in the test
+  int bufferSize = bufferElements * sizeof(float);
   float *in_h  = (float*)malloc(bufferSize);
   float *out_h = (float*)malloc(bufferSize);
   float *in_d  = hc::am_alloc(bufferSize, acc, 0);
@@ -55,7 +57,7 @@ bool test() {
   dispatch_packet.grid_size_x = (uint32_t) bufferElements;
   dispatch_packet.grid_size_y = 1;
   dispatch_packet.grid_size_z = 1;
-  dispatch_packet.workgroup_size_x = (uint16_t)256;
+  dispatch_packet.workgroup_size_x = (uint16_t)groupSize;
   dispatch_packet.workgroup_size_y = (uint16_t)1;
   dispatch_packet.workgroup_size_z = (uint16_t)1;
   dispatch_packet.completion_signal.handle = 0; //signal;
@@ -68,20 +70,26 @@ bool test() {
   header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE;
   header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE;
   header |= HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE;
+  //header |= (1 << HSA_PACKET_HEADER_BARRIER);
   dispatch_packet.header = header;
 
+#define USE_HIDDEN
   struct __attribute__ ((aligned(16))) args_t {
+#ifdef USE_HIDDEN
       uint32_t hidden[6];
+#endif
       float* in;
       float* out;
   } args;
 
+#ifdef USE_HIDDEN
   args.hidden[0]=dispatch_packet.grid_size_x;
   args.hidden[1]=1;
   args.hidden[2]=1;
   args.hidden[3]=dispatch_packet.workgroup_size_x;
   args.hidden[4]=1;
   args.hidden[5]=1;
+#endif
 
   args.in=in_d;
   args.out=out_d;
@@ -105,7 +113,7 @@ bool test() {
     printf ("info: dispatch finished, copy back results\n");
   }
 
-  //av.copy(out_d, out_h, bufferSize);
+  av.copy(out_d, out_h, bufferSize);
 
   if (p_db) {
     printf ("info: results copied back, performing check\n");
@@ -161,8 +169,15 @@ bool test_negative()
 
 
 
-int main() {
+int main(int argc, char* argv[]) {
   bool success = true;
+
+  if(argc > 1) {
+    hsaco_filename = argv[1];
+  } else {
+      printf ("error - usage: %s HSACO_FILE\n", argv[0]);
+      assert(0);
+  }
 
   success &= test_negative();
 
