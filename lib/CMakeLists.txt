@@ -12,10 +12,13 @@ endif (HCC_RUNTIME_DEBUG)
 add_config_executable(clamp-config mcwamp_main.cpp)
 add_config_executable(hcc-config mcwamp_main.cpp)
 
+include_directories(${CMAKE_CURRENT_BINARY_DIR} ${LIBCXX_HEADER} )
+target_link_libraries(clamp-config c++)
+target_link_libraries(hcc-config c++)
+
 ####################
 # C++AMP runtime (mcwamp)
 ####################
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
 add_mcwamp_library(mcwamp mcwamp.cpp)
 add_mcwamp_library(mcwamp_atomic mcwamp_atomic.cpp)
 

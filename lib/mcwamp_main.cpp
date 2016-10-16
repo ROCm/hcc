@@ -38,6 +38,8 @@ void cxxflags(void) {
         std::cout << " -hc";
     }
 
+    std::cout << " -I /usr/local/include/c++/v1/";
+
     // Common options
     std::cout << " -std=c++amp -stdlib=libc++";
 

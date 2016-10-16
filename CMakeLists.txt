@@ -188,6 +188,15 @@ MESSAGE("HSA_LIBRARY_DIR = ${HSA_LIBRARY_DIR}, actually found at: ${HSA_LIBRARY}
 MESSAGE("HSA_HOF_DIR = ${HSA_HOF_DIR}, actually found at: ${HSA_HOF}")
 MESSAGE("")
 
+
+#################
+# Detect libc++
+#################
+
+find_path(LIBCXX_HEADER random PATHS /usr/local/include/c++/v1 NO_DEFAULT_PATH)
+MESSAGE("libc++ headers found at ${LIBCXX_HEADER}")
+
+
 #################
 # Set up version information
 #################
@@ -655,7 +664,7 @@ else (OFFICIAL_RELEASE_BUILD)
   set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_GENERAL_DEBIAN_DEP}")
 endif (OFFICIAL_RELEASE_BUILD)
 
-set(CPACK_GENERATOR "DEB;TGZ")
+set(CPACK_GENERATOR "DEB;RPM;TGZ")
 set(CPACK_SOURCE_GENERATOR "TGZ")
 set(CPACK_BINARY_DEB "ON")
 set(CPACK_BINARY_STGZ "OFF")
