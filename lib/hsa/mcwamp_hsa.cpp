@@ -165,6 +165,13 @@ static const char* getHSAErrorString(hsa_status_t s) {
 		abort();\
 	}
 
+#define STATUS_CHECK_SYMBOL(s,symbol,line) if (s != HSA_STATUS_SUCCESS && s != HSA_STATUS_INFO_BREAK) {\
+    const char* error_string = getHSAErrorString(s);\
+		printf("### HCC STATUS_CHECK_SYMBOL Error: %s (0x%x), symbol name:%s at file:%s line:%d\n", error_string, s, (symbol)!=nullptr?symbol:(const char*)"is a nullptr", __FILE__, line);\
+                assert(HSA_STATUS_SUCCESS == hsa_shut_down());\
+		abort();\
+	}
+
 #define STATUS_CHECK_Q(s,q,line) if (s != HSA_STATUS_SUCCESS) {\
     const char* error_string = getHSAErrorString(s);\
 		printf("### HCC STATUS_CHECK_Q Error: %s (0x%x) at file:%s line:%d\n", error_string, s, __FILE__, line);\
@@ -288,7 +295,7 @@ public:
         hsa_executable_symbol_t symbol;
         hsa_agent_t agent;
         status = hsa_executable_get_symbol(hsaExecutable, NULL, symbolName, agent, 0, &symbol);
-        STATUS_CHECK(status, __LINE__);
+        STATUS_CHECK_SYMBOL(status, symbolName, __LINE__);
 
         // get address of symbol
         uint64_t symbol_address;
@@ -2403,6 +2410,8 @@ public:
                 // get symbol
                 hsa_executable_symbol_t symbol;
                 status = hsa_executable_get_symbol(executable->hsaExecutable, NULL, symbolName, agent, 0, &symbol);
+                STATUS_CHECK_SYMBOL(status, symbolName, __LINE__);
+
                 if (status == HSA_STATUS_SUCCESS) {
                     // get address of symbol
                     uint64_t symbol_address;
@@ -2519,7 +2528,7 @@ private:
         // Get symbol handle.
         hsa_executable_symbol_t kernelSymbol;
         status = hsa_executable_get_symbol(executable->hsaExecutable, NULL, entryName, agent, 0, &kernelSymbol);
-        STATUS_CHECK(status, __LINE__);
+        STATUS_CHECK_SYMBOL(status, entryName, __LINE__);
 
         // Get code handle.
         uint64_t kernelCodeHandle;
@@ -2612,7 +2621,7 @@ private:
         // Get symbol handle.
         hsa_executable_symbol_t kernelSymbol;
         status = hsa_executable_get_symbol(executable->hsaExecutable, NULL, entryName, agent, 0, &kernelSymbol);
-        STATUS_CHECK(status, __LINE__);
+        STATUS_CHECK_SYMBOL(status, entryName, __LINE__);
 
         // Get code handle.
         uint64_t kernelCodeHandle;
