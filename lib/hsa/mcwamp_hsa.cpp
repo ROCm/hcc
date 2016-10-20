@@ -3755,7 +3755,6 @@ HSACopy::syncCopyExt(Kalmar::HSAQueue *hsaQueue, hc::hcCommandKind copyDir, cons
                 std::cerr << "HSACopy:: P2P copy by engine forcing use of host copy\n";
 #endif
 
-                printf ("staged-copy- read dep signals\n");
                 hsa_agent_t dstAgent = * (static_cast<hsa_agent_t*> (dstPtrInfo._acc.get_hsa_agent()));
                 hsa_agent_t srcAgent = * (static_cast<hsa_agent_t*> (srcPtrInfo._acc.get_hsa_agent()));
 
