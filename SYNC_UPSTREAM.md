@@ -11,18 +11,18 @@ Upstream Clang, LLVM, and LLD all sit in different git repositories and they
 are almost changed daily. Sometimes a change upstream may affect several
 projects, but it is usually not easy to figure it out from the commit log.
 
-ToT HCC depends on amd-common LLVM / LLD, which is a fork maintained by AMD,
-and may contain patches yet upstreamed. amd-common LLVM / LLD is automatically
-synchronized with upstream LLVM / LLD every 4 hours, so they are very close to
+ToT HCC depends on amd-common LLVM / LLD / Clang, which is a fork maintained by AMD,
+and may contain patches yet upstreamed. amd-common LLVM / LLD / Clang is automatically
+synchronized with upstream LLVM / LLD / Clang every 4 hours, so they are very close to
 the latest codes upstream.
 
 Generally speaking, the process goes like this:
 
  1. Merge amd-common LLVM commits
  2. Merge amd-common LLD commits
- 3. Add git remote for upstream Clang
- 4. Fetch upstream Clang commits
- 5. Merge upstream Clang with ToT HCC Clang
+ 3. Add git remote for amd-common Clang
+ 4. Fetch amd-common Clang commits
+ 5. Merge amd-common Clang with ToT HCC Clang
  6. Build merged ToT HCC
  7. Quick sanity tests on merged ToT HCC
  8. Push ToT HCC Clang submodules
@@ -40,8 +40,8 @@ git locations of repositories used in the merge process are:
 - amd-common LLD
   - URL: git@github.com:RadeonOpenCompute/lld.git
   - branch : amd-common
-- upstram Clang
-  - URL: git@github.com:llvm-mirror/clang.git
+- amd-common Clang
+  - URL: git@github.com:RadeonOpenCompute/clang.git
   - branch : master
 
 Set SSH URL for git push
@@ -82,23 +82,23 @@ Resolve any merge conflicts encountered here. Commit to amd-hcc branch.
 
 Resolve any merge conflicts encountered here. Commit to amd-hcc branch.
 
-### Add git remote for upstream Clang
+### Add git remote for amd-common Clang
 
 - `cd ../clang`
 - `git remote -v` to check if there is a git remote pointing to:
-  `git@github.com:llvm-mirror/clang.git`
+  `git@github.com:RadeonOpenCompute/clang.git`
 - If there is not, add it by:
-  `git remote add clang https://github.com/llvm-mirror/clang`
+  `git remote add clang https://github.com/RadeonOpenCompute/clang`
 
-### Fetch upstream Clang commits
+### Fetch amd-common Clang commits
 
 - `git checkout upstream`
   - change to the branch to keep upstream commits.
   - The branch contains no HCC-specific codes.
 - `git fetch clang`
-- `git merge --no-ff clang/master --no-edit`
+- `git merge --no-ff clang/amd-common --no-edit`
 
-### Merge upstream Clang with ToT HCC Clang
+### Merge amd-common Clang with ToT HCC Clang
 
 - `git checkout clang_tot_upgrade`
   - change to the main develop branch for ToT HCC Clang
