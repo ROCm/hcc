@@ -3584,8 +3584,8 @@ HSACopy::enqueueAsyncCopy() {
         hsa_agent_t deviceAgent = device->getAgent();
 
         hsa_agent_t srcAgent, dstAgent;
-        srcAgent = srcPtrInfo._isInDeviceMem ? deviceAgent : device->getHostAgent();
-        dstAgent = dstPtrInfo._isInDeviceMem ? deviceAgent : device->getHostAgent();
+        srcAgent = srcPtrInfo._isInDeviceMem ? *(hsa_agent_t*)srcPtrInfo._acc.get_hsa_agent() : device->getHostAgent();
+        dstAgent = dstPtrInfo._isInDeviceMem ? *(hsa_agent_t*)dstPtrInfo._acc.get_hsa_agent() : device->getHostAgent();
 
         // Performs an async copy.
         // This routine deals only with "mapped" pointers - see syncCopy for an explanation.
@@ -3616,7 +3616,7 @@ HSACopy::enqueueAsyncCopy() {
                       << "  InitSignalValue=" << v << " depSignalCnt=" << depSignalCnt << "\n";
 #endif
 
-        hsa_status_t hsa_status = hsa_amd_memory_async_copy(dst, device->getAgent(), src, device->getAgent(), sizeBytes, depSignalCnt, depSignalCnt ? &depSignal:NULL, signal);
+        hsa_status_t hsa_status = hsa_amd_memory_async_copy(dst, dstAgent, src, srcAgent, sizeBytes, depSignalCnt, depSignalCnt ? &depSignal:NULL, signal);
 
         if (hsa_status != HSA_STATUS_SUCCESS) {
             throw Kalmar::runtime_exception("hsa_amd_memory_async_copy error", hsa_status);
