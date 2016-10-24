@@ -161,7 +161,7 @@ void AmPointerTracker::update_peers (const hc::accelerator &acc, int peerCnt, hs
     for (auto iter = _tracker.begin() ; iter != _tracker.end(); ) {
         if (iter->second._acc == acc) {
             if (iter->second._isInDeviceMem) {
-                printf ("update peers\n");
+                mprintf ("update peers\n");
                 hsa_amd_agents_allow_access(peerCnt, peerAgents, NULL, const_cast<void*> (iter->first._basePointer));
             }
         } 
