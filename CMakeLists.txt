@@ -32,6 +32,13 @@ IF (NOT NUM_BUILD_THREADS)
   ProcessorCount(NUM_BUILD_THREADS)
 ENDIF(NOT NUM_BUILD_THREADS)
 
+
+# Accepted values for DISTRO: ubuntu, fedora
+IF (NOT DISTRO)
+  SET(DISTRO "ubuntu")
+ENDIF(NOT DISTRO)
+MESSAGE("Distro: ${DISTRO}")
+
 include (EnsureLLVMisPresent)
 include (EnsureCLANGisPresent)
 include (EnsureHLCisPresent)
@@ -189,12 +196,16 @@ MESSAGE("HSA_HOF_DIR = ${HSA_HOF_DIR}, actually found at: ${HSA_HOF}")
 MESSAGE("")
 
 
-#################
-# Detect libc++
-#################
+if ("${DISTRO}" STREQUAL "fedora") 
 
-find_path(LIBCXX_HEADER random PATHS /usr/local/include/c++/v1 NO_DEFAULT_PATH)
-MESSAGE("libc++ headers found at ${LIBCXX_HEADER}")
+  #################
+  # Detect libc++
+  #################
+
+  find_path(LIBCXX_HEADER random PATHS /usr/local/include/c++/v1 NO_DEFAULT_PATH)
+  MESSAGE("libc++ headers found at ${LIBCXX_HEADER}")
+
+endif ("${DISTRO}" STREQUAL "fedora") 
 
 
 #################
@@ -664,7 +675,16 @@ else (OFFICIAL_RELEASE_BUILD)
   set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_GENERAL_DEBIAN_DEP}")
 endif (OFFICIAL_RELEASE_BUILD)
 
-set(CPACK_GENERATOR "DEB;RPM;TGZ")
+
+
+if ("${DISTRO}" STREQUAL "fedora") 
+  set(CPACK_GENERATOR "RPM;TGZ")
+else (DISTRO)
+  # default to Ubuntu
+  set(CPACK_GENERATOR "DEB;TGZ")
+endif(DISTRO)
+
+
 set(CPACK_SOURCE_GENERATOR "TGZ")
 set(CPACK_BINARY_DEB "ON")
 set(CPACK_BINARY_STGZ "OFF")
