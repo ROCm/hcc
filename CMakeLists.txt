@@ -195,18 +195,11 @@ MESSAGE("HSA_LIBRARY_DIR = ${HSA_LIBRARY_DIR}, actually found at: ${HSA_LIBRARY}
 MESSAGE("HSA_HOF_DIR = ${HSA_HOF_DIR}, actually found at: ${HSA_HOF}")
 MESSAGE("")
 
-
-if ("${DISTRO}" STREQUAL "fedora") 
-
-  #################
-  # Detect libc++
-  #################
-
-  find_path(LIBCXX_HEADER random PATHS /usr/local/include/c++/v1 NO_DEFAULT_PATH)
-  MESSAGE("libc++ headers found at ${LIBCXX_HEADER}")
-
-endif ("${DISTRO}" STREQUAL "fedora") 
-
+#################
+# Detect libc++
+#################
+find_path(LIBCXX_HEADER random PATHS /usr/local/include/c++/v1 /usr/include/c++/v1 NO_DEFAULT_PATH)
+MESSAGE("libc++ headers found at ${LIBCXX_HEADER}")
 
 #################
 # Set up version information
