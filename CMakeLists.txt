@@ -655,26 +655,32 @@ set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
 set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
   "${PROJECT_BINARY_DIR}/packaging/debian/postinst;${PROJECT_BINARY_DIR}/packaging/debian/prerm")
 
-set(HCC_GENERAL_DEBIAN_DEP "libstdc++-4.8-dev, libc++1, libc++-dev, libc++abi1, libc++abi-dev, elfutils")
-
-# control the list of package dependency depending on whether this is an official release build.
-# for non-official release build, we want to relax the dependency on rocr runtime
 set(OFFICIAL_RELEASE_BUILD 0)
-if (OFFICIAL_RELEASE_BUILD)
-  set(HCC_ROCR_DEBIAN_DEP "hsa-rocr-dev, hsa-ext-rocr-dev")
-  set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_ROCR_DEBIAN_DEP}, ${HCC_GENERAL_DEBIAN_DEP}")
-else (OFFICIAL_RELEASE_BUILD)
-  # dependencies for any local build
-  set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_GENERAL_DEBIAN_DEP}")
-endif (OFFICIAL_RELEASE_BUILD)
 
+if ("${DISTRO}" STREQUAL "ubuntu")
 
+  set(HCC_GENERAL_DEBIAN_DEP "libstdc++-4.8-dev, libc++1, libc++-dev, libc++abi1, libc++abi-dev, elfutils")
 
-if ("${DISTRO}" STREQUAL "fedora") 
-  set(CPACK_GENERATOR "RPM;TGZ")
-else (DISTRO)
-  # default to Ubuntu
+  # control the list of package dependency depending on whether this is an official release build.
+  # for non-official release build, we want to relax the dependency on rocr runtime
+  if (OFFICIAL_RELEASE_BUILD)
+    set(HCC_ROCR_DEBIAN_DEP "hsa-rocr-dev, hsa-ext-rocr-dev")
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_ROCR_DEBIAN_DEP}, ${HCC_GENERAL_DEBIAN_DEP}")
+  else (OFFICIAL_RELEASE_BUILD)
+    # dependencies for any local build
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_GENERAL_DEBIAN_DEP}")
+  endif (OFFICIAL_RELEASE_BUILD)
+
   set(CPACK_GENERATOR "DEB;TGZ")
+
+elseif ("${DISTRO}" STREQUAL "fedora")
+
+  # disable automatic shared libraries dependency detection
+  set(CPACK_RPM_PACKAGE_AUTOREQ 0)
+
+  set(CPACK_RPM_PACKAGE_REQUIRES "")
+  set(CPACK_GENERATOR "RPM;TGZ")
+
 endif(DISTRO)
 
 
