@@ -2059,13 +2059,25 @@ public:
         std::string str(fun);
         HSAKernel *kernel = programs[str];
         if (!kernel) {
-            size_t kernel_size = (size_t)((void *)size);
-            char *kernel_source = (char*)malloc(kernel_size+1);
-            memcpy(kernel_source, source, kernel_size);
-            kernel_source[kernel_size] = '\0';
-            //std::cerr << "HSADevice::CreateKernel(): Creating kernel: " << fun << "\n";
-            kernel = CreateOfflineFinalizedKernelImpl(kernel_source, kernel_size, fun);
-            free(kernel_source);
+            if (executables.size() != 0) {
+                for (auto executable_iterator : executables) {
+                    HSAExecutable *executable = executable_iterator.second;
+
+                    // Get symbol handle.
+                    hsa_status_t status;
+                    hsa_executable_symbol_t kernelSymbol;
+                    status = hsa_executable_get_symbol(executable->hsaExecutable, NULL, fun, agent, 0, &kernelSymbol);
+                    STATUS_CHECK(status, __LINE__);
+
+                    // Get code handle.
+                    uint64_t kernelCodeHandle;
+                    status = hsa_executable_symbol_get_info(kernelSymbol, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT, &kernelCodeHandle);
+                    STATUS_CHECK(status, __LINE__);
+
+                    kernel =  new HSAKernel(executable, kernelSymbol, kernelCodeHandle);
+                }
+            }
+         
             if (!kernel) {
                 std::cerr << "HSADevice::CreateKernel(): Unable to create kernel\n";
                 abort();
@@ -2431,32 +2443,6 @@ private:
             // save everything as an HSAExecutable instance
             executables[index] = new HSAExecutable(hsaExecutable, code_object);
         }
-    }
-
-    HSAKernel* CreateOfflineFinalizedKernelImpl(void *kernelBuffer, int kernelSize, const char *entryName) {
-        hsa_status_t status;
-
-        std::string index = kernel_checksum((size_t)kernelSize, kernelBuffer);
-
-        // load HSA program if we haven't done so
-        if (executables.find(index) == executables.end()) {
-            BuildOfflineFinalizedProgramImpl(kernelBuffer, kernelSize);
-        }
-
-        // fetch HSAExecutable*
-        HSAExecutable* executable = executables[index];
-
-        // Get symbol handle.
-        hsa_executable_symbol_t kernelSymbol;
-        status = hsa_executable_get_symbol(executable->hsaExecutable, NULL, entryName, agent, 0, &kernelSymbol);
-        STATUS_CHECK(status, __LINE__);
-
-        // Get code handle.
-        uint64_t kernelCodeHandle;
-        status = hsa_executable_symbol_get_info(kernelSymbol, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT, &kernelCodeHandle);
-        STATUS_CHECK(status, __LINE__);
-
-        return new HSAKernel(executable, kernelSymbol, kernelCodeHandle);
     }
 };
 

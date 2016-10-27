@@ -354,13 +354,7 @@ void BuildProgram(KalmarQueue* pQueue) {
 
 // used in parallel_for_each.h
 void *CreateKernel(std::string s, KalmarQueue* pQueue) {
-  size_t kernel_size = 0;
-  void* kernel_source = nullptr;
-  bool needs_compilation = true;
-
-  DetermineAndGetProgram(pQueue, &kernel_size, &kernel_source);
-
-  return pQueue->getDev()->CreateKernel(s.c_str(), (void *)kernel_size, kernel_source);
+  return pQueue->getDev()->CreateKernel(s.c_str());
 }
 
 void PushArg(void *k_, int idx, size_t sz, const void *s) {
