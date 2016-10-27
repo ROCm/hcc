@@ -9,6 +9,7 @@ endif (HCC_RUNTIME_DEBUG)
 ####################
 # C++AMP config (clamp-config)
 ####################
+add_definitions(-DLIBCXX_HEADER=${LIBCXX_HEADER}) 
 add_config_executable(clamp-config mcwamp_main.cpp)
 add_config_executable(hcc-config mcwamp_main.cpp)
 
