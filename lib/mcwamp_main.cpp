@@ -78,7 +78,7 @@ void ldflags(void) {
         }
     }
 
-    std::cout << " -lc++ -lc++abi -ldl -lpthread ";
+    std::cout << " -lc++ -lc++abi -ldl -lm -lpthread ";
     if (const char *p = getenv("TEST_CPU"))
         if (p == std::string("ON"))
         std::cout << " -lmcwamp_atomic ";
