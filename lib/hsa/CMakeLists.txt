@@ -2,7 +2,7 @@
 # HSA headers
 ####################
 if (HAS_HSA EQUAL 1)
-  include_directories(${HSA_HEADER} ${LIBHSAIL_HEADER_DIR} ${LIBHSAIL_HEADER_DIR}/generated)
+  include_directories(${HSA_HEADER} ${LIBHSAIL_HEADER_DIR} ${LIBHSAIL_HEADER_DIR}/generated ${LIBCXX_HEADER} )
 endif (HAS_HSA EQUAL 1)
 
 ####################
