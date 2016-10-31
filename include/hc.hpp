@@ -564,7 +564,7 @@ public:
         std::vector<accelerator> ret(Devices.size());
         for (int i = 0; i < ret.size(); ++i)
             ret[i] = Devices[i];
-        return std::move(ret);
+        return ret;
     }
 
     /**

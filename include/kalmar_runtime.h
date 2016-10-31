@@ -89,7 +89,7 @@ struct rw_info;
 /// This is an abstraction of all asynchronous operations within Kalmar
 class KalmarAsyncOp {
 public:
-  KalmarAsyncOp(hcCommandKind xCommandKind) : seqNum(0), commandKind(xCommandKind) {} 
+  KalmarAsyncOp(hcCommandKind xCommandKind) : commandKind(xCommandKind), seqNum(0) {} 
 
   virtual ~KalmarAsyncOp() {} 
   virtual std::shared_future<void>* getFuture() { return nullptr; }
