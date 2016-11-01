@@ -24,6 +24,8 @@ KMOPTOPT="${KMOPTOPT:="-O3"}"
 # if not set, then "-O2" will be passed to llc
 KMOPTLLC="${KMOPTLLC:="-O2"}"
 
+KMHACKLLVM="${KMHACKLLVM:=0}"
+
 if [ $KMDBSCRIPT == "1" ]
 then
   set -x
@@ -96,6 +98,12 @@ RETVAL=$?
 if [ $RETVAL != 0 ]; then
   echo "Generating AMD GCN kernel failed in HCC-specific opt passes for target: $AMDGPU_TARGET"
   exit $RETVAL
+fi
+
+# HACK
+if [ $KMHACKLLVM == "1" ]; then
+  echo "INJECT HACKED BITCODE"
+  cp ./hacked.promote.bc $2.promote.bc
 fi
 
 if [ $KMDUMPLLVM == "1" ]; then
