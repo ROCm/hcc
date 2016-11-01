@@ -84,13 +84,13 @@ if [ "$CLAMP_NOTILECHECK" == "ON" ]; then
   $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
        -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
        -load $LIB/LLVMRemoveSpecialSection@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-       -erase-nonkernels -promote-globals -dce -globaldce -remove-special-section < $1 -o $2.promote.bc
+       -erase-nonkernels -promote-generic -dce -globaldce -remove-special-section < $1 -o $2.promote.bc
 else
   $OPT -load $LIB/LLVMPromote@CMAKE_SHARED_LIBRARY_SUFFIX@ \
        -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
        -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
        -load $LIB/LLVMRemoveSpecialSection@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-       -erase-nonkernels -promote-globals -tile-uniform -dce -globaldce -remove-special-section < $1 -o $2.promote.bc
+       -erase-nonkernels -promote-generic -tile-uniform -dce -globaldce -remove-special-section < $1 -o $2.promote.bc
 fi
 
 # error handling for HCC-specific opt passes
