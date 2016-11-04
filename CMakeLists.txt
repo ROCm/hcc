@@ -681,7 +681,7 @@ elseif ("${DISTRO}" STREQUAL "fedora")
   set(CPACK_RPM_PACKAGE_REQUIRES "")
   set(CPACK_GENERATOR "RPM;TGZ")
 
-endif(DISTRO)
+endif ("${DISTRO}" STREQUAL "ubuntu")
 
 
 set(CPACK_SOURCE_GENERATOR "TGZ")
