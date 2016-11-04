@@ -1,9 +1,11 @@
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/amp_test_lib/inc)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/amp_test_lib/inc ${LIBCXX_HEADER})
 
 add_mcwamp_library(amptest
 amp_test_lib/src/context.cpp amp_test_lib/src/device.cpp amp_test_lib/src/logging.cpp
 amp_test_lib/src/main.cpp amp_test_lib/src/runall.cpp amp_test_lib/src/string_utils.cpp
 )
+
+target_link_libraries(amptest c++)
 
 set(AMP_CONFORMANCE_NUM_THREADS 1 CACHE INT "The number of threads to use when running amp conformance")
 

@@ -5,7 +5,10 @@
 
 namespace hc {
 class AmPointerInfo;
+class completion_future;
 }; // end namespace hc
+
+typedef struct hsa_kernel_dispatch_packet_s hsa_kernel_dispatch_packet_t;
 
 namespace Kalmar {
 namespace enums {
@@ -242,6 +245,10 @@ public:
   /// in rare occasions it may be called by other functions to ensure proper
   /// resource clean up sequence
   virtual void dispose() {}
+
+  virtual void dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql, 
+                                   const void * args, size_t argsize,
+                                   hc::completion_future *cf)  { };
  
   /// set CU affinity of this queue.
   /// the setting is permanent until the queue is destroyed or another setting

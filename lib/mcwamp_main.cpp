@@ -11,6 +11,11 @@
 #include <iostream>
 #include <cassert>
 #include "clamp-config.hxx"
+
+// macro for stringification 
+#define XSTR(S) STR(S)
+#define STR(S) #S
+
 /* Flag set by ‘--verbose’. */
 static int verbose_flag;
 static bool build_mode = false, install_mode = true; // use install mode by default
@@ -35,6 +40,9 @@ void cxxflags(void) {
     if (hcc_mode) {
         std::cout << " -hc";
     }
+
+    // Add include path to the libcxx headers
+    std::cout << " -I " XSTR(LIBCXX_HEADER) ;
 
     // Common options
     std::cout << " -std=c++amp -stdlib=libc++";
