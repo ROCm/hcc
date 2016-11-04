@@ -1,5 +1,5 @@
 
-// RUN: %hc %s -o %t.out && %t.out
+// RUN: %hc --amdgpu-target=AMD:AMDGPU:7:0:1 --amdgpu-target=AMD:AMDGPU:8:0:1 --amdgpu-target=AMD:AMDGPU:8:0:3 %s -o %t.out && %t.out
 #include <random>
 #include <algorithm>
 #include <vector>
