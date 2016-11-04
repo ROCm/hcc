@@ -14,4 +14,5 @@ The project is based on LLVM+CLANG.  For more information, please visit the [hcc
 1. New device linking algorithm to support static library
 1. Support for Ubuntu 16.04 and Fedora 23
 1. Performance optimizations
+1. Polaris 10 and Polaris 11 support
 
