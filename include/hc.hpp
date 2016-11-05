@@ -2259,11 +2259,12 @@ extern "C" uint64_t __bitmask_b64(unsigned int src0, unsigned int src1) __HC__;
  * Reverse the bits
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these functions.
- * TODO: Use __builtin_bitreverse when we upgrade clang to 3.9.
  */
-extern "C" unsigned int __bitrev_b32(unsigned int src0) __HC__;
 
-extern "C" uint64_t __bitrev_b64(uint64_t src0) __HC__;
+unsigned int __bitrev_b32(unsigned int src0) [[hc]] __asm("llvm.bitreverse.i32");
+
+uint64_t __bitrev_b64(uint64_t src0) [[hc]] __asm("llvm.bitreverse.i64");
+
 /** @} */
 
 /** @{ */
