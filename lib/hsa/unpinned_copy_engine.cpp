@@ -100,6 +100,7 @@ UnpinnedCopyEngine::UnpinnedCopyEngine(hsa_agent_t hsaAgent, hsa_agent_t cpuAgen
     hsa_status_t err = hsa_amd_agent_iterate_memory_pools(_cpuAgent, findGlobalPool, &sys_pool);
 
     // Generate a packed C-style array of agents, for use below with hsa_amd_agents_allow_access
+    // TODO - should this include the CPU agents as well?
     std::vector<hsa_agent_t> agents;
     err = hsa_iterate_agents(&find_gpu, &agents);
     ErrorCheck(err);
@@ -447,6 +448,8 @@ void UnpinnedCopyEngine::CopyPeerToPeer(void* dst, hsa_agent_t dstAgent, const v
 
     int64_t bytesRemaining0 = sizeBytes; // bytes to copy from dest into staging buffer.
     int64_t bytesRemaining1 = sizeBytes; // bytes to copy from staging buffer into final dest
+
+    // TODO - can we run this all on the GPU, without host sync?
 
     while (bytesRemaining1 > 0) {
         // First launch the async copies to copy from dest to host

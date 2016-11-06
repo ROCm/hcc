@@ -3598,8 +3598,8 @@ HSACopy::enqueueAsyncCopy() {
         hsa_agent_t deviceAgent = device->getAgent();
 
         hsa_agent_t srcAgent, dstAgent;
-        srcAgent = srcPtrInfo._isInDeviceMem ? *(hsa_agent_t*)srcPtrInfo._acc.get_hsa_agent() : device->getHostAgent();
-        dstAgent = dstPtrInfo._isInDeviceMem ? *(hsa_agent_t*)dstPtrInfo._acc.get_hsa_agent() : device->getHostAgent();
+        srcAgent = srcPtrInfo._isInDeviceMem ? deviceAgent : device->getHostAgent();
+        dstAgent = dstPtrInfo._isInDeviceMem ? deviceAgent : device->getHostAgent();
 
         // Performs an async copy.
         // This routine deals only with "mapped" pointers - see syncCopy for an explanation.
@@ -3681,8 +3681,14 @@ HSACopy::getEndTimestamp() override {
 inline void
 HSACopy::setCopyAgents(Kalmar::hcCommandKind copyDir, hsa_agent_t *srcAgent, hsa_agent_t *dstAgent) {
     Kalmar::HSADevice *device = static_cast<Kalmar::HSADevice*> (hsaQueue->getDev());
-    hsa_agent_t deviceAgent = device->getAgent();
+    // Use agent from the queue where the copy is being performed.  IGNORE the device where the memory is physically located.
+    // The user must ensure that the copy agent has a valid mapping to the device.
+    hsa_agent_t deviceAgent = device->getAgent(); 
     hsa_agent_t hostAgent = device->getHostAgent();
+
+    // Direction is set here to work with the rules of hsa_amd_memory_async_copy:  
+    // We know we want to use the agent associated with this queue as the "copy agent"
+    // ROCR always uses srcAgent to perform the copy?
 
     switch (copyDir) {
         case Kalmar::hcMemcpyHostToHost     : *srcAgent=hostAgent; *dstAgent=hostAgent; break;
@@ -3722,10 +3728,20 @@ HSACopy::syncCopyExt(Kalmar::HSAQueue *hsaQueue, hc::hcCommandKind copyDir, cons
 #endif
 
     bool useDefaultCopy = true;
+    if (forceHostCopyEngine) {
+        hsa_agent_t dstAgent = * (static_cast<hsa_agent_t*> (dstPtrInfo._acc.get_hsa_agent()));
+        hsa_agent_t srcAgent = * (static_cast<hsa_agent_t*> (srcPtrInfo._acc.get_hsa_agent()));
+#if KALMAR_DEBUG
+        std::cerr << "HSACopy:: P2P copy by engine forcing use of host copy\n";
+#endif
 
-    switch (copyDir) {
+        // TODO, which staging buffer should we use for this to be optimal?
+        device->copy_engine[1]->CopyPeerToPeer(dst, dstAgent, src, srcAgent, sizeBytes, depSignalCnt ? &depSignal : NULL);
+
+        useDefaultCopy = false;
+    } else switch (copyDir) {
         case Kalmar::hcMemcpyHostToDevice:
-            if (!srcInTracker || forceHostCopyEngine) {
+            if (!srcInTracker) {
 #if KALMAR_DEBUG
                 std::cerr << "HSACopy::syncCopy(), invoke UnpinnedCopyEngine::CopyHostToDevice()\n";
 #endif
@@ -3736,7 +3752,7 @@ HSACopy::syncCopyExt(Kalmar::HSAQueue *hsaQueue, hc::hcCommandKind copyDir, cons
 
 
         case Kalmar::hcMemcpyDeviceToHost:
-            if (!dstInTracker || forceHostCopyEngine) {
+            if (!dstInTracker) {
 #if KALMAR_DEBUG
                 std::cerr << "HSACopy::syncCopy(), invoke UnpinnedCopyEngine::CopyDeviceToHost()\n";
 #endif
@@ -3762,20 +3778,6 @@ HSACopy::syncCopyExt(Kalmar::HSAQueue *hsaQueue, hc::hcCommandKind copyDir, cons
             break;
 
         case Kalmar::hcMemcpyDeviceToDevice:
-            //if (!device->is_peer(dstPtrInfo._acc.get_dev_ptr()) || 
-            //    !device->is_peer(srcPtrInfo._acc.get_dev_ptr())) {
-            if (forceHostCopyEngine) {
-#if KALMAR_DEBUG
-                std::cerr << "HSACopy:: P2P copy by engine forcing use of host copy\n";
-#endif
-
-                hsa_agent_t dstAgent = * (static_cast<hsa_agent_t*> (dstPtrInfo._acc.get_hsa_agent()));
-                hsa_agent_t srcAgent = * (static_cast<hsa_agent_t*> (srcPtrInfo._acc.get_hsa_agent()));
-
-                device->copy_engine[1]->CopyPeerToPeer(dst, dstAgent, src, srcAgent, sizeBytes, depSignalCnt ? &depSignal : NULL);
-
-                useDefaultCopy = false;
-            };
             break;
 
         default:
@@ -3801,8 +3803,8 @@ HSACopy::syncCopyExt(Kalmar::HSAQueue *hsaQueue, hc::hcCommandKind copyDir, cons
 
         hsa_signal_store_relaxed(signal, 1);
 
-#if KALMAR_DEBUG
-        std::cerr << "HSACopy::syncCopy(), invoke hsa_amd_memory_async_copy()\n";
+#if KALMAR_DEBUG or KALMAR_DEBUG_ASYNC_COPY
+        std::cerr << "HSACopy::syncCopy(), invoke hsa_amd_memory_async_copy() with dstAgent=%lu srcAgent=%lu\n";
 #endif
 
         hsa_status_t hsa_status = hsa_amd_memory_async_copy(dst, dstAgent, src, srcAgent, sizeBytes, depSignalCnt, depSignalCnt ? &depSignal:NULL, signal);
