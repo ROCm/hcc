@@ -57,7 +57,9 @@ namespace hc {
  *
  * If @p size == 0, 0 is returned.
  *
- * Flags must be 0.
+ * Flags:
+ *  amHostPinned : Allocated pinned host memory and map it into the address space of the specified accelerator.
+ *
  *
  * @return : On success, pointer to the newly allocated memory is returned.
  * The pointer is typecast to the desired return type.
