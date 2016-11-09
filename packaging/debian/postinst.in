@@ -31,8 +31,8 @@ do_softlinks() {
       return
   fi
 
-  mkdir -p /opt/rocm/lib
-  mkdir -p /opt/rocm/bin
+  mkdir -p "$ROCM_PATH/lib"
+  mkdir -p "$ROCM_PATH/bin"
 
   if [ -L "$ROCM_PATH/hcc" ] ; then
     rm -f "$ROCM_PATH/hcc" 
@@ -54,7 +54,7 @@ do_softlinks() {
 }
 
 case "$1" in
-   configure|upgrade)
+   configure|upgrade|1|2)
    do_softlinks
    ;;
 
