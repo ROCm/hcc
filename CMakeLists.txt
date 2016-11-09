@@ -677,8 +677,7 @@ elseif ("${DISTRO}" STREQUAL "fedora")
 
   # disable automatic shared libraries dependency detection
   set(CPACK_RPM_PACKAGE_AUTOREQ 0)
-
-  set(CPACK_RPM_PACKAGE_REQUIRES "")
+  set(CPACK_RPM_PACKAGE_REQUIRES "hsakmt-roct-dev, hsa-rocr-dev, libstdc++-devel, elfutils-libelf-devel, glibc-devel")
   set(CPACK_GENERATOR "RPM;TGZ")
 
 endif(DISTRO)
