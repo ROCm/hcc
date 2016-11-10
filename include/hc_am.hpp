@@ -10,6 +10,7 @@ typedef int am_status_t;
 
 // Flags for am_alloc API:
 #define amHostPinned 0x1
+#define amHostCoherent 0x2
 
 
 namespace hc {

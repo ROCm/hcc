@@ -690,6 +690,7 @@ struct pool_iterator
 {
     hsa_amd_memory_pool_t _am_memory_pool;
     hsa_amd_memory_pool_t _am_host_memory_pool;
+    hsa_amd_memory_pool_t _am_host_coherent_memory_pool;
 
     hsa_amd_memory_pool_t _kernarg_memory_pool;
     hsa_amd_memory_pool_t _finegrained_system_memory_pool;
@@ -1364,6 +1365,8 @@ public:
     void* getHostAgent() override;
 
     void* getHSAAMRegion() override;
+    
+    void* getHSACoherentHostRegion() override;
 
     void* getHSAAMHostRegion() override;
 
@@ -1843,6 +1846,10 @@ public:
         ri._am_host_memory_pool = (ri._found_coarsegrained_system_memory_pool)
                                       ? ri._coarsegrained_system_memory_pool
                                       : ri._finegrained_system_memory_pool;
+        
+        ri._am_host_coherent_memory_pool = (ri._found_finegrained_system_memory_pool)
+                                      ? ri._finegrained_system_memory_pool
+                                      : ri._coarsegrained_system_memory_pool;
 
         /// Query the maximum number of work-items in a workgroup
         status = hsa_agent_get_info(agent, HSA_AGENT_INFO_WORKGROUP_MAX_SIZE, &workgroup_max_size);
@@ -2176,6 +2183,10 @@ public:
 
     hsa_amd_memory_pool_t& getHSAAMHostRegion() {
         return ri._am_host_memory_pool;
+    }
+
+    hsa_amd_memory_pool_t& getHSACoherentHostRegion() {
+        return ri._am_host_coherent_memory_pool;
     }
 
     hsa_amd_memory_pool_t& getHSAAMRegion() {
@@ -2816,7 +2827,10 @@ inline void*
 HSAQueue::getHSAAMRegion() override {
     return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getHSAAMRegion()));
 }
-
+inline void*
+HSAQueue::getHSACoherentHostRegion() override {
+    return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getHSACoherentHostRegion()));
+}
 inline void*
 HSAQueue::getHSAAMHostRegion() override {
     return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getHSAAMHostRegion()));
