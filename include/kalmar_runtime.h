@@ -216,6 +216,8 @@ public:
   virtual void* getHSAAMRegion() { return nullptr; }
 
   virtual void* getHSAAMHostRegion() { return nullptr; }
+  
+  virtual void* getHSACoherentAMHostRegion() { return nullptr; }
 
   /// get kernarg region handle
   virtual void* getHSAKernargRegion() { return nullptr; }
