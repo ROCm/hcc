@@ -235,12 +235,17 @@ public:
 
   /// copy src to dst asynchronously
   virtual std::shared_ptr<KalmarAsyncOp> EnqueueAsyncCopy(const void* src, void* dst, size_t size_bytes) { return nullptr; }
+  virtual std::shared_ptr<KalmarAsyncOp> EnqueueAsyncCopyExt(const void* src, void* dst, size_t size_bytes, 
+                                                             hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, 
+                                                             const Kalmar::KalmarDevice *copyDevice) { return nullptr; };
 
   // Copy src to dst synchronously
   virtual void copy(const void *src, void *dst, size_t size_bytes) { }
 
   /// copy src to dst, with caller providing extended information about the pointers.
   virtual void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceHostCopyEngine) { };
+  virtual void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, 
+                        const Kalmar::KalmarDevice *copyDev) { };
 
   /// cleanup internal resource
   /// this function is usually called by dtor of the implementation classes
