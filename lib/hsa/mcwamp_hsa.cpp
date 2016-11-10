@@ -26,6 +26,8 @@
 #include <hsa/hsa.h>
 #include <hsa/hsa_ext_finalize.h>
 #include <hsa/hsa_ext_amd.h>
+#include <hsa/amd_hsa_kernel_code.h>
+#include <hsa/hsa_ven_amd_loader.h>
 
 #include <hcc/kalmar_runtime.h>
 #include <hcc/kalmar_aligned_alloc.h>
@@ -313,6 +315,7 @@ private:
     hsa_executable_symbol_t hsaExecutableSymbol;
     uint32_t static_group_segment_size; 
     uint32_t private_segment_size;
+    uint16_t workitem_vgpr_count;
     friend class HSADispatch;
 
 public:
@@ -323,20 +326,34 @@ public:
         hsaExecutableSymbol(_hsaExecutableSymbol),
         kernelCodeHandle(_kernelCodeHandle) {
 
-            hsa_status_t status = 
-                hsa_executable_symbol_get_info(
-                    _hsaExecutableSymbol,
-                    HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE,
-                    &this->static_group_segment_size);
+        hsa_status_t status =
+            hsa_executable_symbol_get_info(
+                _hsaExecutableSymbol,
+                HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE,
+                &this->static_group_segment_size);
+        STATUS_CHECK_Q(status, commandQueue, __LINE__);
+
+        status =
+            hsa_executable_symbol_get_info(
+                _hsaExecutableSymbol,
+                HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_PRIVATE_SEGMENT_SIZE,
+                &this->private_segment_size);
+        STATUS_CHECK_Q(status, commandQueue, __LINE__);
+
+        workitem_vgpr_count = 0;
+
+        hsa_ven_amd_loader_1_00_pfn_t ext_table = {nullptr};
+        status = hsa_system_get_extension_table(HSA_EXTENSION_AMD_LOADER, 1, 0, &ext_table);
+        STATUS_CHECK_Q(status, commandQueue, __LINE__);
+
+        if (nullptr != ext_table.hsa_ven_amd_loader_query_host_address) {
+            const amd_kernel_code_t* akc = nullptr;
+            status = ext_table.hsa_ven_amd_loader_query_host_address(reinterpret_cast<const void*>(kernelCodeHandle), reinterpret_cast<const void**>(&akc));
             STATUS_CHECK_Q(status, commandQueue, __LINE__);
 
-            status = 
-                hsa_executable_symbol_get_info(
-                    _hsaExecutableSymbol,
-                    HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_PRIVATE_SEGMENT_SIZE,
-                    &this->private_segment_size);
-            STATUS_CHECK_Q(status, commandQueue, __LINE__);
-      }
+            workitem_vgpr_count = akc->workitem_vgpr_count;
+        }
+    }
 
     ~HSAKernel() {
 #if KALMAR_DEBUG
@@ -3169,6 +3186,15 @@ HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localD
         dim_iterator = 2;
       }
       workgroup_total_size = workgroup_size[0] * workgroup_size[1] * workgroup_size[2];
+    }
+
+    // Every work-item has access to some number of VGPRs, up to a maximum of 256.
+    static const size_t max_num_vgprs_per_work_item = 256;
+    static const size_t num_work_items_per_simd = 64;
+    static const size_t num_simds_per_cu = 4;
+    size_t max_num_work_items_per_cu = (max_num_vgprs_per_work_item / kernel->workitem_vgpr_count) * num_work_items_per_simd * num_simds_per_cu;
+    if (max_num_work_items_per_cu < workgroup_total_size) {
+        throw Kalmar::runtime_exception("The number of VGPRs needed by this launch exceeds HW limit due to big work group size!", 0);
     }
 
     aql.workgroup_size_x = workgroup_size[0];
