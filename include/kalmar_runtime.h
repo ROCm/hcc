@@ -243,9 +243,10 @@ public:
   virtual void copy(const void *src, void *dst, size_t size_bytes) { }
 
   /// copy src to dst, with caller providing extended information about the pointers.
-  virtual void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceHostCopyEngine) { };
+  //// TODO - remove me, this form is deprecated.
+  virtual void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceUnpinnedCopy) { };
   virtual void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, 
-                        const Kalmar::KalmarDevice *copyDev) { };
+                        const Kalmar::KalmarDevice *copyDev, bool forceUnpinnedCopy) { };
 
   /// cleanup internal resource
   /// this function is usually called by dtor of the implementation classes

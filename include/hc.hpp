@@ -297,13 +297,13 @@ public:
      * This interface is intended for language runtimes such as HIP.
     
      @p copyDir : Specify direction of copy.  Must be hcMemcpyHostToHost, hcMemcpyHostToDevice, hcMemcpyDeviceToHost, or hcMemcpyDeviceToDevice. 
-     @p forceHostCopyEngine : Force copy to be performed with host involvement rather than with accelerator copy engines.
+     @p forceUnpinnedCopy : Force copy to be performed with host involvement rather than with accelerator copy engines.
      */
-    void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, const hc::accelerator *copyAcc);
+    void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, const hc::accelerator *copyAcc, bool forceUnpinnedCopy);
 
 
-    // TODO - first form is deprecated, provided for use with older HIP runtimes.
-    void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceHostCopyEngine) ;
+    // TODO - this form is deprecated, provided for use with older HIP runtimes.
+    void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceUnpinnedCopy) ;
 
     /**
      * Copies size_bytes bytes from src to dst.  
@@ -1422,8 +1422,8 @@ accelerator_view::create_blocking_marker(std::initializer_list<completion_future
 }
 
 
-inline void accelerator_view::copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, const hc::accelerator *copyAcc) {
-    pQueue->copy_ext(src, dst, size_bytes, copyDir, srcInfo, dstInfo, copyAcc ? copyAcc->pDev : nullptr);
+inline void accelerator_view::copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, const hc::accelerator *copyAcc, bool forceUnpinnedCopy) {
+    pQueue->copy_ext(src, dst, size_bytes, copyDir, srcInfo, dstInfo, copyAcc ? copyAcc->pDev : nullptr, forceUnpinnedCopy);
 };
 
 inline void accelerator_view::copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceHostCopyEngine) {
