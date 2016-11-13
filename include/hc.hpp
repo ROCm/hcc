@@ -297,11 +297,13 @@ public:
      * This interface is intended for language runtimes such as HIP.
     
      @p copyDir : Specify direction of copy.  Must be hcMemcpyHostToHost, hcMemcpyHostToDevice, hcMemcpyDeviceToHost, or hcMemcpyDeviceToDevice. 
-     @p forceHostCopyEngine : Force copy to be performed with host involvement rather than with accelerator copy engines.
+     @p forceUnpinnedCopy : Force copy to be performed with host involvement rather than with accelerator copy engines.
      */
-    void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceHostCopyEngine) {
-        pQueue->copy_ext(src, dst, size_bytes, copyDir, srcInfo, dstInfo, forceHostCopyEngine);
-    };
+    void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, const hc::accelerator *copyAcc, bool forceUnpinnedCopy);
+
+
+    // TODO - this form is deprecated, provided for use with older HIP runtimes.
+    void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceUnpinnedCopy) ;
 
     /**
      * Copies size_bytes bytes from src to dst.  
@@ -315,6 +317,33 @@ public:
      *
      */
     completion_future copy_async(const void *src, void *dst, size_t size_bytes);
+
+
+    /**
+     * Copies size_bytes bytes from src to dst.  
+     * Src and dst must not overlap.  
+     * Note the src is the first parameter and dst is second, following C++ convention.  
+     * This is an asynchronous copy command, and this call may return before the copy operation completes.
+     *
+     * The copy command will be implicitly ordered with respect to commands previously enqueued to this accelerator_view:
+     * - If the queue execute_order is execute_in_order (the default), then the copy will execute after all previously sent commands finish execution.
+     * - If the queue execute_order is execute_any_order, then the copy will start after all previously send commands start but can execute in any order.
+     *   The copyAcc determines where the copy is executed and does not affect the ordering.
+     *
+     * The copy_async_ext flavor allows caller to provide additional information about each pointer, which can improve performance by eliminating replicated lookups,
+     * and also allow control over which device performs the copy.  
+     * This interface is intended for language runtimes such as HIP.
+     *
+     *  @p copyDir : Specify direction of copy.  Must be hcMemcpyHostToHost, hcMemcpyHostToDevice, hcMemcpyDeviceToHost, or hcMemcpyDeviceToDevice. 
+     *  @p copyAcc : Specify which accelerator performs the copy operation.  The specified accelerator must have access to the source and dest pointers - either
+     *               because the memory is allocated on those devices or because the accelerator has peer access to the memory.
+     *               If copyAcc is nullptr, then the copy will be performed by the host.  In this case, the host accelerator must have access to both pointers.
+     *               The copy operation will be performed by the specified engine but is not synchronized with respect to any operations on that device.  
+     *
+     */
+    completion_future copy_async_ext(const void *src, void *dst, size_t size_bytes, 
+                                     hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, 
+                                     const hc::accelerator *copyAcc);
 
     /**
      * Compares "this" accelerator_view with the passed accelerator_view object
@@ -1392,10 +1421,28 @@ accelerator_view::create_blocking_marker(std::initializer_list<completion_future
     return create_blocking_marker(dependent_future_list.begin(), dependent_future_list.end());
 }
 
+
+inline void accelerator_view::copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, const hc::accelerator *copyAcc, bool forceUnpinnedCopy) {
+    pQueue->copy_ext(src, dst, size_bytes, copyDir, srcInfo, dstInfo, copyAcc ? copyAcc->pDev : nullptr, forceUnpinnedCopy);
+};
+
+inline void accelerator_view::copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceHostCopyEngine) {
+    pQueue->copy_ext(src, dst, size_bytes, copyDir, srcInfo, dstInfo, forceHostCopyEngine);
+};
+
 inline completion_future
 accelerator_view::copy_async(const void *src, void *dst, size_t size_bytes) {
     return completion_future(pQueue->EnqueueAsyncCopy(src, dst, size_bytes));
 }
+
+inline completion_future
+accelerator_view::copy_async_ext(const void *src, void *dst, size_t size_bytes,
+                             hcCommandKind copyDir, 
+                             const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, 
+                             const hc::accelerator *copyAcc)
+{
+    return completion_future(pQueue->EnqueueAsyncCopyExt(src, dst, size_bytes, copyDir, srcInfo, dstInfo, copyAcc ? copyAcc->pDev : nullptr));
+};
 
 
 // ------------------------------------------------------------------------
