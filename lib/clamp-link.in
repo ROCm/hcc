@@ -123,7 +123,7 @@ ARGS="$@"
 
 NEW_LINK_KERNEL_ARGS=""
 NEW_LINK_HOST_ARGS=""
-NEW_LINK_OTHER_ARGS=()
+LINK_OTHER_ARGS=()
 NEW_LINK_CPU_ARG=""
 
 STATIC_LIB_LIST=()
@@ -320,7 +320,7 @@ do
     if [ $VERBOSE == 2 ]; then
       echo "passing down link args: $ARG"
     fi
-    NEW_LINK_OTHER_ARGS+=( "$ARG" )
+    LINK_OTHER_ARGS+=( "$ARG" )
     continue
   fi
 
@@ -361,7 +361,7 @@ do
       NEW_LINK_HOST_ARGS+=" "
       NEW_LINK_HOST_ARGS+="$HOST_FILE"
     else
-      NEW_LINK_OTHER_ARGS+=( "$OBJ" )
+      LINK_OTHER_ARGS+=( "$OBJ" )
     fi
 
 
@@ -396,7 +396,7 @@ if [ $VERBOSE != 0 ]; then
   echo ""
   echo "new host args: "$NEW_LINK_HOST_ARGS
   echo ""
-  echo "new other args: ${NEW_LINK_OTHER_ARGS[@]}"
+  echo "new other args: ${LINK_OTHER_ARGS[@]}"
   echo ""
 fi
 
@@ -517,17 +517,17 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
   if [ $ret == 0 ]; then
     # link everything together
     if [ $LOWER_OPENCL == 1 ] && [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 1 ]; then
-      ld --allow-multiple-definition $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $TEMP_DIR/kernel_hsa.o $TEMP_DIR/kernel_hof.o $LINK_HOST_ARGS $LINK_CPU_ARG "${NEW_LINK_OTHER_ARGS[@]}"
+      ld --allow-multiple-definition $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $TEMP_DIR/kernel_hsa.o $TEMP_DIR/kernel_hof.o $LINK_HOST_ARGS $LINK_CPU_ARG "${LINK_OTHER_ARGS[@]}"
     elif [ $LOWER_OPENCL == 1 ] && [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 0 ]; then
-      ld --allow-multiple-definition $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS  $LINK_CPU_ARG "${NEW_LINK_OTHER_ARGS[@]}"
+      ld --allow-multiple-definition $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS  $LINK_CPU_ARG "${LINK_OTHER_ARGS[@]}"
       ret=$?
     elif [ $LOWER_OPENCL == 1 ] && [ $LOWER_HSA == 0 ]; then
-      ld --allow-multiple-definition $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $LINK_HOST_ARGS $LINK_CPU_ARG "${NEW_LINK_OTHER_ARGS[@]}"
+      ld --allow-multiple-definition $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $LINK_HOST_ARGS $LINK_CPU_ARG "${LINK_OTHER_ARGS[@]}"
       ret=$?
     elif [ $LOWER_OPENCL == 0 ] && [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 1 ]; then
-      ld --allow-multiple-definition $TEMP_DIR/kernel_hsa.o $TEMP_DIR/kernel_hof.o $LINK_HOST_ARGS $LINK_CPU_ARG "${NEW_LINK_OTHER_ARGS[@]}"
+      ld --allow-multiple-definition $TEMP_DIR/kernel_hsa.o $TEMP_DIR/kernel_hof.o $LINK_HOST_ARGS $LINK_CPU_ARG "${LINK_OTHER_ARGS[@]}"
     elif [ $LOWER_OPENCL == 0 ] && [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 0 ]; then
-      ld --allow-multiple-definition $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS $LINK_CPU_ARG "${NEW_LINK_OTHER_ARGS[@]}"
+      ld --allow-multiple-definition $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS $LINK_CPU_ARG "${LINK_OTHER_ARGS[@]}"
       ret=$?
     else
       echo "ERROR: No GPU target available! Linker failed."
