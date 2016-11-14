@@ -122,9 +122,6 @@ _find_object() {
 
 ARGS="$@"
 
-# flag to switch to the new arg parsing algorithm
-USE_NEW_LINK=1
-
 NEW_LINK_KERNEL_ARGS=""
 NEW_LINK_HOST_ARGS=""
 NEW_LINK_OTHER_ARGS=""
@@ -132,8 +129,6 @@ NEW_LINK_CPU_ARG=""
 
 STATIC_LIB_LIST=()
 TEMP_AR_DIRS=()
-
-if [ $USE_NEW_LINK == 1 ]; then
 
 # detect the verbose flags before doing anything
 if [[ "$ARGS" =~ --verbose ]]; then
@@ -367,90 +362,6 @@ do
   done # for OBJ in "${OBJS_TO_PROCESS[@]}"
 done
 
-else #  if [ $USE_NEW_LINK == 1 ]; then
-
-############################
-# Old argument processing
-############################
-
-for ARG in $ARGS
-do
-  if [ -f $ARG ]; then
-    FILE=`basename $ARG` # remove path
-    FILENAME=$(_find_object $FILE)  # check if it's an object file
-    CPUFILE=${FILE%.cpu}
-    ISCRT=${ARG#/usr}    # exception for objects under /usr
-    ISLIB=${ARG#/lib}    # exception for objects under /lib
-
-    if [ $FILENAME != $FILE ] && [ $ISCRT == $ARG ] && [ $ISLIB == $ARG ]; then
-      KERNEL_FILE=$TEMP_DIR/$FILENAME.kernel.bc
-      HOST_FILE=$TEMP_DIR/$FILENAME.host.o
-
-      # extract kernel section
-      objcopy -O binary -j .kernel $ARG $KERNEL_FILE 
-
-      # extract host section
-      objcopy -R .kernel $ARG $HOST_FILE
-
-      # strip all symbols specified in symbol.txt from $HOST_FILE
-      objcopy @$CXXAMP_SERIALIZE_SYMBOL_FILE $HOST_FILE $HOST_FILE.new 2> /dev/null
-      if [ -f $HOST_FILE.new ]; then
-        mv $HOST_FILE.new $HOST_FILE
-      fi
-
-      # find cxxamp_serialize symbols and save them into symbol.txt
-      objdump -t $HOST_FILE -j .text 2> /dev/null | grep "g.*__cxxamp_serialize" | awk '{print "-L"$6}' >> $CXXAMP_SERIALIZE_SYMBOL_FILE
-
-      LINK_KERNEL_ARGS=$LINK_KERNEL_ARGS" "$KERNEL_FILE
-      LINK_HOST_ARGS=$LINK_HOST_ARGS" "$HOST_FILE
-    elif [[ $CPUFILE != $FILE ]]; then
-        cp $ARG $TEMP_DIR/kernel_cpu.o
-        LINK_CPU_ARG=$LINK_CPU_ARG" "$TEMP_DIR/kernel_cpu.o
-    else
-      LINK_OTHER_ARGS=$LINK_OTHER_ARGS" "$ARG
-    fi
-  elif [ $ARG == "--verbose" ]; then
-    VERBOSE=1
-  elif [ $ARG == "--disable-opencl" ]; then
-    LOWER_OPENCL=0
-  elif [ $ARG == "--disable-hsa" ]; then
-    LOWER_HSA=0
-  else
-
-    ######################
-    # Parse AMDGPU target
-    ######################
-    case $ARG in
-      --amdgpu-target=*)
-      AMDGPU_TARGET="${ARG#*=}"
-      continue
-      ;;
-    esac
-
-    #########################
-    # Append other arguments
-    #########################
-
-    LINK_OTHER_ARGS=$LINK_OTHER_ARGS" "$ARG
-  fi
-done
-
-
-if [ $VERBOSE != 0 ]; then
-  echo "kernel args: "$LINK_KERNEL_ARGS
-  echo ""
-  echo "host args: "$LINK_HOST_ARGS
-  echo ""
-  echo "other args: "$LINK_OTHER_ARGS
-  echo ""
-fi
-
-###################################
-# End of old argument processing
-###################################
-
-fi
-
 # AMDGPU_TARGET could be overridden by HCC_AMDGPU_TARGET env variable
 if [ -n "$HCC_AMDGPU_TARGET" ]; then
   # map ISA version string to GPU family
@@ -474,9 +385,6 @@ if [ $VERBOSE != 0 ]; then
   echo ""
 fi
 
-
-if [ $USE_NEW_LINK == 1 ]; then
-
 if [ $VERBOSE != 0 ]; then
   echo "new kernel args: "$NEW_LINK_KERNEL_ARGS
   echo ""
@@ -486,15 +394,9 @@ if [ $VERBOSE != 0 ]; then
   echo ""
 fi
 
-if [ $VERBOSE != 0 ]; then
-  echo "replacing old link args with new link args"
-fi
 LINK_KERNEL_ARGS=$NEW_LINK_KERNEL_ARGS
 LINK_HOST_ARGS=$NEW_LINK_HOST_ARGS
 LINK_OTHER_ARGS=$NEW_LINK_OTHER_ARGS
-
-fi
-
 
 # linker return value
 ret=0
