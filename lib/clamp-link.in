@@ -93,7 +93,7 @@ fi
 
 LINK_KERNEL_ARGS=""
 LINK_HOST_ARGS=()
-LINK_CPU_ARG=""
+LINK_CPU_ARG=()
 LINK_OTHER_ARGS=()
 
 TEMP_DIR=`mktemp -d`
@@ -123,7 +123,6 @@ _find_object() {
 ARGS="$@"
 
 NEW_LINK_KERNEL_ARGS=""
-NEW_LINK_CPU_ARG=""
 
 STATIC_LIB_LIST=()
 TEMP_AR_DIRS=()
@@ -191,7 +190,7 @@ do
   if [[ "$ARG" =~ [^[:space:]]+\.cpu$ ]]; then
 
     cp "$ARG" $TEMP_DIR/kernel_cpu.o
-    NEW_LINK_CPU_ARG=$NEW_LINK_CPU_ARG" "$TEMP_DIR/kernel_cpu.o
+    LINK_CPU_ARG+=( "$TEMP_DIR/kernel_cpu.o" )
  
   elif [[ "$ARG" =~ [^[:space:]]+\.o$ ]]; then
     # detected a .o file
@@ -514,17 +513,17 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
   if [ $ret == 0 ]; then
     # link everything together
     if [ $LOWER_OPENCL == 1 ] && [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 1 ]; then
-      ld --allow-multiple-definition $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $TEMP_DIR/kernel_hsa.o $TEMP_DIR/kernel_hof.o "${LINK_HOST_ARGS[@]}" $LINK_CPU_ARG "${LINK_OTHER_ARGS[@]}"
+      ld --allow-multiple-definition $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $TEMP_DIR/kernel_hsa.o $TEMP_DIR/kernel_hof.o "${LINK_HOST_ARGS[@]}" "${LINK_CPU_ARG[@]}" "${LINK_OTHER_ARGS[@]}"
     elif [ $LOWER_OPENCL == 1 ] && [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 0 ]; then
-      ld --allow-multiple-definition $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $TEMP_DIR/kernel_hsa.o "${LINK_HOST_ARGS[@]}" $LINK_CPU_ARG "${LINK_OTHER_ARGS[@]}"
+      ld --allow-multiple-definition $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o $TEMP_DIR/kernel_hsa.o "${LINK_HOST_ARGS[@]}" "${LINK_CPU_ARG[@]}" "${LINK_OTHER_ARGS[@]}"
       ret=$?
     elif [ $LOWER_OPENCL == 1 ] && [ $LOWER_HSA == 0 ]; then
-      ld --allow-multiple-definition $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o "${LINK_HOST_ARGS[@]}" $LINK_CPU_ARG "${LINK_OTHER_ARGS[@]}"
+      ld --allow-multiple-definition $TEMP_DIR/kernel.o $TEMP_DIR/kernel_spir.o "${LINK_HOST_ARGS[@]}" "${LINK_CPU_ARG[@]}" "${LINK_OTHER_ARGS[@]}"
       ret=$?
     elif [ $LOWER_OPENCL == 0 ] && [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 1 ]; then
-      ld --allow-multiple-definition $TEMP_DIR/kernel_hsa.o $TEMP_DIR/kernel_hof.o "${LINK_HOST_ARGS[@]}" $LINK_CPU_ARG "${LINK_OTHER_ARGS[@]}"
+      ld --allow-multiple-definition $TEMP_DIR/kernel_hsa.o $TEMP_DIR/kernel_hof.o "${LINK_HOST_ARGS[@]}" "${LINK_CPU_ARG[@]}" "${LINK_OTHER_ARGS[@]}"
     elif [ $LOWER_OPENCL == 0 ] && [ $LOWER_HSA == 1 ] && [ $LOWER_HOF == 0 ]; then
-      ld --allow-multiple-definition $TEMP_DIR/kernel_hsa.o "${LINK_HOST_ARGS[@]}" $LINK_CPU_ARG "${LINK_OTHER_ARGS[@]}"
+      ld --allow-multiple-definition $TEMP_DIR/kernel_hsa.o "${LINK_HOST_ARGS[@]}" "${LINK_CPU_ARG[@]}" "${LINK_OTHER_ARGS[@]}"
       ret=$?
     else
       echo "ERROR: No GPU target available! Linker failed."
