@@ -91,7 +91,7 @@ fi
 # link
 ################
 
-LINK_KERNEL_ARGS=""
+LINK_KERNEL_ARGS=()
 LINK_HOST_ARGS=()
 LINK_CPU_ARG=()
 LINK_OTHER_ARGS=()
@@ -121,9 +121,6 @@ _find_object() {
 }
 
 ARGS="$@"
-
-NEW_LINK_KERNEL_ARGS=""
-
 STATIC_LIB_LIST=()
 TEMP_AR_DIRS=()
 
@@ -353,9 +350,7 @@ do
       # find cxxamp_serialize symbols and save them into symbol.txt
       objdump -t "$HOST_FILE" -j .text 2> /dev/null | grep "g.*__cxxamp_serialize" | awk '{print "-L"$6}' >> $CXXAMP_SERIALIZE_SYMBOL_FILE
 
-      NEW_LINK_KERNEL_ARGS+=" "
-      NEW_LINK_KERNEL_ARGS+="$KERNEL_FILE"
-
+      LINK_KERNEL_ARGS+=( "$KERNEL_FILE" )
       LINK_HOST_ARGS+=( "$HOST_FILE" )
     else
       LINK_OTHER_ARGS+=( "$OBJ" )
@@ -389,7 +384,7 @@ if [ $VERBOSE != 0 ]; then
 fi
 
 if [ $VERBOSE != 0 ]; then
-  echo "new kernel args: "$NEW_LINK_KERNEL_ARGS
+  echo "new kernel args: ${LINK_KERNEL_ARGS[@]}"
   echo ""
   echo "new host args: ${LINK_HOST_ARGS[@]}"
   echo ""
@@ -397,16 +392,14 @@ if [ $VERBOSE != 0 ]; then
   echo ""
 fi
 
-LINK_KERNEL_ARGS=$NEW_LINK_KERNEL_ARGS
-
 # linker return value
 ret=0
 
 # only do kernel lowering if there are objects given
-if [ -n "$LINK_KERNEL_ARGS" ]; then
+if [ ${#LINK_KERNEL_ARGS[@]} != 0 ]; then
 
   # combine kernel sections together
-  $LINK $LINK_KERNEL_ARGS | $OPT -always-inline - -o $TEMP_DIR/kernel.bc
+  $LINK "${LINK_KERNEL_ARGS[@]}" | $OPT -always-inline - -o $TEMP_DIR/kernel.bc
   
   # lower to SPIR
   if [ $LOWER_OPENCL == 1 ]; then
@@ -531,7 +524,7 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
     fi
   fi
 
-fi # if [ -n $LINK_KERNEL_ARGS ];
+fi # if [ -n "${LINK_KERNEL_ARGS[@]}" ];
 
 # remove temp files
 if [ -e $TEMP_DIR/kernel.o ]; then
@@ -574,12 +567,12 @@ if [ -e $TEMP_DIR/kernel.bc ]; then
   rm $TEMP_DIR/kernel.bc
 fi
 
-if [ -n "$LINK_KERNEL_ARGS" ]; then
-  rm $LINK_KERNEL_ARGS # individual kernels
+if [ ${#LINK_KERNEL_ARGS[@]} != 0 ]; then
+  rm "${LINK_KERNEL_ARGS[@]}" # individual kernels
 fi
 
 if [ -n "$LINK_HOST_ARGS" ]; then
-  rm $LINK_HOST_ARGS # individual host codes
+  rm "${LINK_HOST_ARGS[@]}" # individual host codes
 fi
 
 if [ -e $CXXAMP_SERIALIZE_SYMBOL_FILE ]; then
