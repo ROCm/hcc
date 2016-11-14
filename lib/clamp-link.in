@@ -299,7 +299,7 @@ do
         cd $AR_TEMP_DIR
         `ar x $DETECTED_STATIC_LIBRARY`
 
-        cd $CURRENT_DIR
+        cd "$CURRENT_DIR"
 
         # store all the extract objects to process further
         OBJS_TO_PROCESS=($(ls $AR_TEMP_DIR/*.o))
