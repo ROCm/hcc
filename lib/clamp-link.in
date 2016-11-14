@@ -342,8 +342,8 @@ do
       objcopy -R .kernel "$OBJ" "$HOST_FILE"
 
       # strip all symbols specified in symbol.txt from $HOST_FILE
-      objcopy @$CXXAMP_SERIALIZE_SYMBOL_FILE $HOST_FILE $HOST_FILE.new 2> /dev/null
-      if [ -f $HOST_FILE.new ]; then
+      objcopy @$CXXAMP_SERIALIZE_SYMBOL_FILE "$HOST_FILE" "$HOST_FILE.new" 2> /dev/null
+      if [ -f "$HOST_FILE.new" ]; then
         mv "$HOST_FILE.new" "$HOST_FILE"
       fi
 
