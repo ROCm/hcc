@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# enable bash debugging
+KMDBSCRIPT="${KMDBSCRIPT:=0}"
+if [ $KMDBSCRIPT == "1" ]
+then
+  set -x
+fi
+
 # check number of arguments
 if [ "$#" -eq 0 ]; then
   echo "$0 is NOT recommended to be directly used" >&2
@@ -138,12 +145,12 @@ LIB_SEARCH_PATHS=()
 for ARG in "$@"
 do
   # matches -L<path>
-  if [[ "$ARG" =~ ^-L[^[:space:]]+$ ]]; then
-    REAL_PATH=$(readlink -f ${ARG:2})
+  if [[ "$ARG" =~ ^-L* ]]; then
+    REAL_PATH="$(readlink -f "${ARG:2}")"
     if [ $VERBOSE == 2 ]; then
       echo "add library path: ${ARG:2}, canonical path: $REAL_PATH"
     fi
-    LIB_SEARCH_PATHS+=( $REAL_PATH )
+    LIB_SEARCH_PATHS+=( "$REAL_PATH" )
   fi
 done
 
