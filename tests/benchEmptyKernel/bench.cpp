@@ -1,5 +1,5 @@
-// RUN: %hc %s %S/statutils.CPP -O3  %S/hsacodelib.CPP  -o %t.out -I/opt/rocm/include -L/opt/rocm/lib -lhsa-runtime64 
-// RUN: %t.out 10000 %S/Inputs/nullkernel.hsaco
+// RUN: %hc %s %S/statutils.CPP -g  %S/hsacodelib.CPP  -o %t.out -I/opt/rocm/include -L/opt/rocm/lib -lhsa-runtime64 
+// RUN: %t.out 10000 %T/nullkernel-fiji.hsaco
 // RUN: test -e pfe.dat && mv pfe.dat %T/pfe.dat
 // RUN: test -e grid_launch.dat && mv grid_launch.dat %T/grid_launch.dat
 
@@ -45,13 +45,9 @@ void nullkernel(const grid_launch_parm lp, float* A) {
 }
 
 
-
-
 #if BENCH_HSA
 
 #include "hsacodelib.h"
-
-
 
 void explicit_launch_null_kernel(const grid_launch_parm *lp, const Kernel &k)
 {
@@ -71,8 +67,8 @@ void explicit_launch_null_kernel(const grid_launch_parm *lp, const Kernel &k)
 
     dispatch_glp_kernel(lp, k, &args, sizeof(NullKernelArgs));
 }
-#define KERNEL_NAME "NullKernel"
 
+#define KERNEL_NAME "_ZN12_GLOBAL__N_142_Z10nullkernel16grid_launch_parmPf_functor19__cxxamp_trampolineEiiiiiiPf"
 
 void time_dispatch_hsa_kernel(int dispatch_count, const grid_launch_parm *lp, const char *nullkernel_hsaco)
 {
