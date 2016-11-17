@@ -31,8 +31,8 @@ else(EXISTS "${dest_dir}/${name}/tools/clang")
     execute_process( COMMAND ${GIT_EXECUTABLE} clone -b ${KALMAR_BRANCH_NAME} ${REPO} ${dest_dir}/${name}/tools/clang )
   else(KALMAR_CLANG_HAS_SAME_BRANCH)
     # branch not found, use default one
-    MESSAGE("Cloning hcc-clang from default branch of ${REPO}...")
-    execute_process( COMMAND ${GIT_EXECUTABLE} clone ${REPO} ${dest_dir}/${name}/tools/clang )
+    MESSAGE("Cloning hcc-clang from roc-1.3.x branch of ${REPO}...")
+    execute_process( COMMAND ${GIT_EXECUTABLE} clone -b roc-1.3.x   ${REPO} ${dest_dir}/${name}/tools/clang )
   endif()
 
 endif(EXISTS "${dest_dir}/${name}/tools/clang")
