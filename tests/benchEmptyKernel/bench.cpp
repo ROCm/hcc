@@ -1,5 +1,5 @@
 // RUN: %hc %s %S/statutils.CPP -O3  %S/hsacodelib.CPP  -o %t.out -I/opt/rocm/include -L/opt/rocm/lib -lhsa-runtime64 
-// RUN: %t.out 10000 %S/Inputs/nullkernel.hsaco
+// RUN: %t.out 10000 %T
 // RUN: test -e pfe.dat && mv pfe.dat %T/pfe.dat
 // RUN: test -e grid_launch.dat && mv grid_launch.dat %T/grid_launch.dat
 
@@ -23,7 +23,7 @@
 #include "grid_launch.hpp"
 #include <iostream>
 #include <fstream>
-
+#include <string>
 #include <vector>
 #include <thread>
 #include <iomanip>
@@ -45,13 +45,9 @@ void nullkernel(const grid_launch_parm lp, float* A) {
 }
 
 
-
-
 #if BENCH_HSA
 
 #include "hsacodelib.h"
-
-
 
 void explicit_launch_null_kernel(const grid_launch_parm *lp, const Kernel &k)
 {
@@ -71,12 +67,14 @@ void explicit_launch_null_kernel(const grid_launch_parm *lp, const Kernel &k)
 
     dispatch_glp_kernel(lp, k, &args, sizeof(NullKernelArgs));
 }
-#define KERNEL_NAME "NullKernel"
 
+#define KERNEL_NAME "_ZN12_GLOBAL__N_142_Z10nullkernel16grid_launch_parmPf_functor19__cxxamp_trampolineEiiiiiiPf"
 
-void time_dispatch_hsa_kernel(int dispatch_count, const grid_launch_parm *lp, const char *nullkernel_hsaco)
+void time_dispatch_hsa_kernel(int dispatch_count, const grid_launch_parm *lp, const char *nullkernel_hsaco_dir)
 {
-  Kernel k = load_hsaco(lp->av, nullkernel_hsaco, KERNEL_NAME);
+  std::string nullkernel_hsaco(nullkernel_hsaco_dir);
+  nullkernel_hsaco += "/nullkernel-fiji.hsaco";
+  Kernel k = load_hsaco(lp->av, nullkernel_hsaco.c_str(), KERNEL_NAME);
   std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
 
   const char *testName = "dispatch_hsa_kernel";
@@ -109,13 +107,13 @@ void time_dispatch_hsa_kernel(int dispatch_count, const grid_launch_parm *lp, co
 
 int main(int argc, char* argv[]) {
 
-  const char *nullkernel_hsaco = NULL;
+  const char *nullkernel_hsaco_dir = NULL;
 
   int dispatch_count = DISPATCH_COUNT;
   if(argc > 1)
     dispatch_count = std::stoi(argv[1]);
   if(argc > 2) {
-    nullkernel_hsaco = argv[2];
+    nullkernel_hsaco_dir = argv[2];
   }
 
   std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
@@ -227,8 +225,8 @@ int main(int argc, char* argv[]) {
             << std::setprecision(8) << average(elapsed_grid_launch)*1000000.0 << "\n";
 
 
-  if (nullkernel_hsaco) {
-      time_dispatch_hsa_kernel(dispatch_count, &lp, nullkernel_hsaco);
+  if (nullkernel_hsaco_dir) {
+      time_dispatch_hsa_kernel(dispatch_count, &lp, nullkernel_hsaco_dir);
   } else {
       std::cout << "skipping dispatch_hsa_kernel - must specify path to hsaco on commandline.  (ie: ./bench 10000 Inputs/nullkernel.hsaco)\n";
   }
