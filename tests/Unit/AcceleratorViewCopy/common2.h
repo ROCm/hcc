@@ -46,6 +46,7 @@ void Test5(hc::accelerator_view &Av){
 }
 
 
+
 void Init(hc::accelerator &Ac){
     A = (float*)malloc(size);
     B = (float*)malloc(size);
@@ -65,4 +66,20 @@ void Init(hc::accelerator &Ac){
         Ah[i] = A[i];
         Bh[i] = B[i];
     }
+}
+
+
+void Destroy(hc::accelerator &Ac){
+    free(A);
+    free(B);
+    free(C);
+
+    am_free(Ad);
+    am_free(Bd);
+    am_free(Cd);
+
+    am_free(Ah);
+    am_free(Bh);
+    am_free(Ch);
+
 }

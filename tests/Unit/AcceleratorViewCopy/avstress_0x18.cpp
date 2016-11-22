@@ -85,8 +85,8 @@ int main(){
             Test5(av);
         }
     }
-
-
     
+// To release all allocated resources from Init
+    Destroy();
 }
 
