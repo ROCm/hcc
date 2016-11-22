@@ -86,7 +86,8 @@ int main(){
         }
     }
 
+// To release all allocated resources from Init
+     Destroy();
 
-    
 }
 
