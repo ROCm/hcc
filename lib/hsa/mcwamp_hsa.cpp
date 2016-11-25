@@ -3871,7 +3871,7 @@ HSACopy::syncCopyExt(Kalmar::HSAQueue *hsaQueue, hc::hcCommandKind copyDir, cons
                 hsa_agent_t dstAgent = * (static_cast<hsa_agent_t*> (dstPtrInfo._acc.get_hsa_agent()));
                 hsa_agent_t srcAgent = * (static_cast<hsa_agent_t*> (srcPtrInfo._acc.get_hsa_agent()));
 #if KALMAR_DEBUG
-                std::cerr << "HSACopy:: P2P copy by engine forcing use of staging buffers.  dstAgent=%s srcAgent=%s\n";
+                std::cerr << "HSACopy:: P2P copy by engine forcing use of staging buffers.  copyEngine=" << copyDevice << "\n";
 #endif
 
                 // TODO, which staging buffer should we use for this to be optimal?
