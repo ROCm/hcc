@@ -1889,11 +1889,11 @@ public:
                 this->copy_mode = UnpinnedCopyEngine::ChooseBest;
         };
         
-        long int HCC_H2D_STAGING_THRESHOLD = 
+        HCC_H2D_STAGING_THRESHOLD = 
             getenvlong("HCC_H2D_STAGING_THRESHOLD", HCC_H2D_STAGING_THRESHOLD);
-        long int HCC_H2D_PININPLACE_THRESHOLD =  
+        HCC_H2D_PININPLACE_THRESHOLD =  
             getenvlong("HCC_H2D_PININPLACE_THRESHOLD", HCC_H2D_PININPLACE_THRESHOLD);
-        long int HCC_D2H_PININPLACE_THRESHOLD =  
+        HCC_D2H_PININPLACE_THRESHOLD =  
             getenvlong("HCC_D2H_PININPLACE_THRESHOLD", HCC_D2H_PININPLACE_THRESHOLD);
 
         HCC_H2D_STAGING_THRESHOLD    *= 1024;
