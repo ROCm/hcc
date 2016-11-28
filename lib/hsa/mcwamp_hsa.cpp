@@ -377,9 +377,11 @@ private:
     std::shared_ptr<KalmarAsyncOp> depAsyncOp;
 
     Kalmar::HSAQueue* hsaQueue;
+    const Kalmar::HSADevice* copyDevice;  // Which device did the copy.
 
     // source pointer
     const void* src;
+
 
     // destination pointer
     void* dst;
@@ -388,14 +390,9 @@ private:
     size_t sizeBytes;
 
 
-    // helper function used by HSACopy::enqueueAsync()
-    hsa_status_t enqueueAsyncCopy();
-
-    // helper function used by HSACopy::syncCopy()
-    void setCopyAgents(Kalmar::hcCommandKind copyDir, hsa_agent_t *srcAgent, hsa_agent_t *dstAgent);
-
 public:
     std::shared_future<void>* getFuture() override { return future; }
+    const Kalmar::HSADevice* getCopyDevice() { return copyDevice; } ;  // Which device did the copy.
 
     void* getNativeHandle() override { return &signal; }
 
@@ -414,16 +411,19 @@ public:
         return (hsa_signal_load_acquire(signal) == 0);
     }
 
+
     // Copy mode will be set later on.
     // HSA signals would be waited in HSA_WAIT_STATE_ACTIVE by default for HSACopy instances
     HSACopy(const void* src_, void* dst_, size_t sizeBytes_) : KalmarAsyncOp(Kalmar::hcCommandInvalid),
-        isSubmitted(false), future(nullptr), depAsyncOp(nullptr), hsaQueue(nullptr), waitMode(HSA_WAIT_STATE_ACTIVE),
-        src(src_), dst(dst_), sizeBytes(sizeBytes_),
+        isSubmitted(false), future(nullptr), depAsyncOp(nullptr), hsaQueue(nullptr), copyDevice(nullptr), waitMode(HSA_WAIT_STATE_ACTIVE),
+        src(src_), dst(dst_), 
+        sizeBytes(sizeBytes_),
         signalIndex(-1) {
 #if KALMAR_DEBUG
         std::cerr << "HSACopy::HSACopy(" << src_ << ", " << dst_ << ", " << sizeBytes_ << ")\n";
 #endif
     }
+
 
     ~HSACopy() {
 #if KALMAR_DEBUG
@@ -437,7 +437,7 @@ public:
         dispose();
     }
 
-    hsa_status_t enqueueAsync(Kalmar::HSAQueue*);
+    hsa_status_t enqueueAsyncCopyCommand(Kalmar::HSAQueue*, const Kalmar::HSADevice *copyDevice, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo);
 
     // wait for the async copy to complete
     hsa_status_t waitComplete();
@@ -457,7 +457,15 @@ public:
 
     // synchronous version of copy
     void syncCopy(Kalmar::HSAQueue*);
-    void syncCopyExt(Kalmar::HSAQueue *hsaQueue, hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo, bool forceHostCopyEngine);
+    void syncCopyExt(Kalmar::HSAQueue *hsaQueue, hc::hcCommandKind copyDir, 
+                     const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo, 
+                     const Kalmar::HSADevice *copyDevice, bool forceUnpinnedCopy);
+
+
+private:
+  hsa_status_t hcc_memory_async_copy(const Kalmar::HSADevice *copyDevice, void *dst, const void *src, size_t sizeBytes, 
+                                      int depSignalCnt, const hsa_signal_t *depSignals, 
+                                      hsa_signal_t completion_signal);
 
 }; // end of HSACopy
 
@@ -939,6 +947,7 @@ public:
     // The function returns nullptr if no dependency is required. For example, back-to-back commands of same type
     // are often implicitly synchronized so no dependency is required.
     // Also different modes and optimizations can control when dependencies are added.
+    // TODO - return reference if possible to avoid shared ptr overhead.
     std::shared_ptr<KalmarAsyncOp> detectStreamDeps(KalmarAsyncOp *newOp) {
         hcCommandKind newCommandKind = newOp->getCommandKind();
         assert (newCommandKind != hcCommandInvalid);
@@ -958,8 +967,18 @@ public:
 
                 // No dependency required since Marker and Kernel share same queue and are ordered by AQL barrier bit.
                 needDep = false;
-            } else if (FORCE_SIGNAL_DEP_BETWEEN_COPIES && isCopyCommand(newCommandKind) && isCopyCommand(youngestCommandKind)) {
-                needDep = true;
+            } else if (isCopyCommand(newCommandKind) && isCopyCommand(youngestCommandKind)) {
+                HSACopy *newCopyOp = static_cast<HSACopy*> (newOp);
+                HSACopy *youngestCopyOp = static_cast<HSACopy*> (asyncOps.back().get());
+                if (newCopyOp->getCopyDevice() != youngestCopyOp->getCopyDevice()) {
+                    // This covers cases where two copies are back-to-back in the queue but use different copy engines.
+                    // In this case there is no implicit dependency between the ops so we need to add one 
+                    // here.
+                    needDep = true;
+                }
+                if (FORCE_SIGNAL_DEP_BETWEEN_COPIES) {
+                    needDep = true;
+                }
             }
 
 
@@ -1115,6 +1134,7 @@ public:
 
         return sp_dispatch;
     }
+
 
     // wait for dependent async operations to complete
     void waitForDependentAsyncOps(void* buffer) {
@@ -1472,22 +1492,12 @@ public:
         }
     }
 
-    // enqueue an async copy command
-    std::shared_ptr<KalmarAsyncOp> EnqueueAsyncCopy(const void *src, void *dst, size_t size_bytes) override {
-        hsa_status_t status = HSA_STATUS_SUCCESS;
+    std::shared_ptr<KalmarAsyncOp> EnqueueAsyncCopyExt(const void* src, void* dst, size_t size_bytes, 
+                                                       hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo, 
+                                                       const Kalmar::KalmarDevice *copyDevice) override;
 
-        // create shared_ptr instance
-        std::shared_ptr<HSACopy> copyCommand = std::make_shared<HSACopy>(src, dst, size_bytes);
+    std::shared_ptr<KalmarAsyncOp> EnqueueAsyncCopy(const void *src, void *dst, size_t size_bytes) override ;
 
-        // euqueue the async copy command
-        status = copyCommand.get()->enqueueAsync(this);
-        STATUS_CHECK(status, __LINE__);
-
-        // associate the async copy command with this queue
-        pushAsyncOp(copyCommand);
-
-        return copyCommand;
-    }
 
     // synchronous copy
     void copy(const void *src, void *dst, size_t size_bytes) override {
@@ -1510,26 +1520,12 @@ public:
 #endif
     }
 
-    void copy_ext(const void *src, void *dst, size_t size_bytes, hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceHostCopyEngine) override {
-#if KALMAR_DEBUG
-        std::cerr << "HSAQueue::copy(" << src << ", " << dst << ", " << size_bytes << ")\n";
-#endif
-        // wait for all previous async commands in this queue to finish
-        this->wait();
+    void copy_ext(const void *src, void *dst, size_t size_bytes, hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo, 
+                  const Kalmar::KalmarDevice *copyDevice, bool forceUnpinnedCopy) override ;
 
-        // create a HSACopy instance
-        HSACopy* copyCommand = new HSACopy(src, dst, size_bytes);
 
-        // synchronously do copy
-        copyCommand->syncCopyExt(this, copyDir, srcInfo, dstInfo, forceHostCopyEngine);
+    void copy_ext(const void *src, void *dst, size_t size_bytes, hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo, bool foo) override ;
 
-        // TODO - should remove from queue instead?
-        delete(copyCommand);
-
-#if KALMAR_DEBUG
-        std::cerr << "HSAQueue::copy() complete\n";
-#endif
-    };
 
     // remove finished async operation from waiting list
     void removeAsyncOp(KalmarAsyncOp* asyncOp) {
@@ -1906,11 +1902,11 @@ public:
                 this->copy_mode = UnpinnedCopyEngine::ChooseBest;
         };
         
-        long int HCC_H2D_STAGING_THRESHOLD = 
+        HCC_H2D_STAGING_THRESHOLD = 
             getenvlong("HCC_H2D_STAGING_THRESHOLD", HCC_H2D_STAGING_THRESHOLD);
-        long int HCC_H2D_PININPLACE_THRESHOLD =  
+        HCC_H2D_PININPLACE_THRESHOLD =  
             getenvlong("HCC_H2D_PININPLACE_THRESHOLD", HCC_H2D_PININPLACE_THRESHOLD);
-        long int HCC_D2H_PININPLACE_THRESHOLD =  
+        HCC_D2H_PININPLACE_THRESHOLD =  
             getenvlong("HCC_D2H_PININPLACE_THRESHOLD", HCC_D2H_PININPLACE_THRESHOLD);
 
         HCC_H2D_STAGING_THRESHOLD    *= 1024;
@@ -2859,6 +2855,121 @@ HSAQueue::getHSAKernargRegion() override {
     return static_cast<void*>(&(static_cast<HSADevice*>(getDev())->getHSAKernargRegion()));
 }
 
+void HSAQueue::copy_ext(const void *src, void *dst, size_t size_bytes, hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo, 
+              const Kalmar::KalmarDevice *copyDevice, bool forceUnpinnedCopy) override {
+#if KALMAR_DEBUG
+    std::cerr << "HSAQueue::copy(" << src << ", " << dst << ", " << size_bytes << ")\n";
+#endif
+    // wait for all previous async commands in this queue to finish
+    this->wait();
+
+
+    const Kalmar::HSADevice *copyDeviceHsa = static_cast<const Kalmar::HSADevice*> (copyDevice);
+
+    // create a HSACopy instance
+    HSACopy* copyCommand = new HSACopy(src, dst, size_bytes);
+
+    // synchronously do copy
+    // FIX me, pull from constructor.
+    copyCommand->syncCopyExt(this, copyDir, srcPtrInfo, dstPtrInfo, copyDeviceHsa, forceUnpinnedCopy);
+
+    // TODO - should remove from queue instead?
+    delete(copyCommand);
+
+#if KALMAR_DEBUG
+    std::cerr << "HSAQueue::copy() complete\n";
+#endif
+};
+
+
+// TODO - remove me
+void HSAQueue::copy_ext(const void *src, void *dst, size_t size_bytes, hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo, bool foo) override {
+
+    const Kalmar::KalmarDevice *copyDevice;
+    if (srcPtrInfo._isInDeviceMem) {
+        copyDevice = (srcPtrInfo._acc.get_dev_ptr());
+    } else if (dstPtrInfo._isInDeviceMem) {
+        copyDevice = (dstPtrInfo._acc.get_dev_ptr());
+    } else {
+        copyDevice = nullptr;
+    }
+
+    copy_ext(src, dst, size_bytes, copyDir, srcPtrInfo, dstPtrInfo, copyDevice);
+}
+
+
+std::shared_ptr<KalmarAsyncOp> HSAQueue::EnqueueAsyncCopyExt(const void* src, void* dst, size_t size_bytes, 
+                                                   hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo, 
+                                                   const Kalmar::KalmarDevice *copyDevice) override {
+
+    hsa_status_t status = HSA_STATUS_SUCCESS;
+
+    // create shared_ptr instance
+    const Kalmar::HSADevice *copyDeviceHsa = static_cast<const Kalmar::HSADevice*> (copyDevice);
+    std::shared_ptr<HSACopy> copyCommand = std::make_shared<HSACopy>(src, dst, size_bytes);
+
+    // euqueue the async copy command
+    status = copyCommand.get()->enqueueAsyncCopyCommand(this, copyDeviceHsa, srcPtrInfo, dstPtrInfo);
+    STATUS_CHECK(status, __LINE__);
+
+    // associate the async copy command with this queue
+    pushAsyncOp(copyCommand);
+
+    return copyCommand;
+};
+
+
+// enqueue an async copy command
+std::shared_ptr<KalmarAsyncOp> HSAQueue::EnqueueAsyncCopy(const void *src, void *dst, size_t size_bytes) override {
+    hsa_status_t status = HSA_STATUS_SUCCESS;
+
+    // create shared_ptr instance
+    std::shared_ptr<HSACopy> copyCommand = std::make_shared<HSACopy>(src, dst, size_bytes);
+
+
+    hc::accelerator acc;
+    hc::AmPointerInfo srcPtrInfo(NULL, NULL, 0, acc, 0, 0);
+    hc::AmPointerInfo dstPtrInfo(NULL, NULL, 0, acc, 0, 0);
+
+    bool srcInTracker = (hc::am_memtracker_getinfo(&srcPtrInfo, src) == AM_SUCCESS);
+    bool dstInTracker = (hc::am_memtracker_getinfo(&dstPtrInfo, dst) == AM_SUCCESS);
+
+    if (!srcInTracker) {
+        // throw an exception
+        throw Kalmar::runtime_exception("trying to copy from unpinned src pointer", 0);
+    } else if (!dstInTracker) {
+        // throw an exception
+        throw Kalmar::runtime_exception("trying to copy from unpinned dst pointer", 0);
+    };
+
+
+    // Select optimal copy agent:
+    // Prefer source SDMA engine if possible since this is typically the fastest, unless the source data is in host mem.
+    //
+    // If the src agent cannot see both src and dest pointers, then the async copy will fault.   
+    // The caller of this function is responsible for avoiding this situation, by examining the
+    // host and device allow-access mappings and using a CPU staging copy BEFORE calling
+    // this routine.
+    const Kalmar::HSADevice *copyDevice;
+    if (srcPtrInfo._isInDeviceMem) {  // D2H or D2D
+        copyDevice = static_cast<Kalmar::HSADevice*>(srcPtrInfo._acc.get_dev_ptr());
+    } else if (dstPtrInfo._isInDeviceMem) { // H2D
+        copyDevice = static_cast<Kalmar::HSADevice*>(dstPtrInfo._acc.get_dev_ptr());
+    } else {
+        copyDevice = nullptr; // H2H
+    }
+
+    // enqueue the async copy command
+    status = copyCommand.get()->enqueueAsyncCopyCommand(this, copyDevice, srcPtrInfo, dstPtrInfo);
+    STATUS_CHECK(status, __LINE__);
+
+    // associate the async copy command with this queue
+    pushAsyncOp(copyCommand);
+
+    return copyCommand;
+}
+
+
 void 
 HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql, 
                          const void * args, size_t argSize,
@@ -3406,26 +3517,39 @@ HSACopy::waitComplete() {
     return status;
 }
 
-inline hsa_status_t
-HSACopy::enqueueAsync(Kalmar::HSAQueue* hsaQueue) {
-    hsa_status_t status = HSA_STATUS_SUCCESS;
 
-    // record HSAQueue association
-    this->hsaQueue = hsaQueue;
-    // extract hsa_queue_t from HSAQueue
-    hsa_queue_t* queue = static_cast<hsa_queue_t*>(hsaQueue->getHSAQueue());
+// Small wrapper that calls hsa_amd_memory_async_copy.
+// HCC knows exactly which copy-engine it wants to perfom the copy and has already made. 
+hsa_status_t HSACopy::hcc_memory_async_copy(const Kalmar::HSADevice *copyDeviceArg, void *dst, const void *src, size_t sizeBytes, 
+                      int depSignalCnt, const hsa_signal_t *depSignals, 
+                      hsa_signal_t completion_signal)
+{
+    this->copyDevice = copyDeviceArg;
 
-    // enqueue async copy command
-    status = enqueueAsyncCopy();
-    STATUS_CHECK_Q(status, queue, __LINE__);
+    // beautiful...:
+    hsa_agent_t copyAgent = * static_cast<hsa_agent_t*>(const_cast<Kalmar::HSADevice*>(copyDeviceArg)->getHSAAgent());
+    hsa_status_t status;
+    hsa_device_type_t device_type;
+    status = hsa_agent_get_info(copyAgent, HSA_AGENT_INFO_DEVICE, &device_type);
+    if (status != HSA_STATUS_SUCCESS) {
+        throw Kalmar::runtime_exception("invalid copy agent used for hcc_memory_async_copy", status);
+    }
+    if (device_type != HSA_DEVICE_TYPE_GPU) { 
+        throw Kalmar::runtime_exception("copy agent must be GPU hcc_memory_async_copy", -1);
+    }
 
-    // dynamically allocate a std::shared_future<void> object
-    future = new std::shared_future<void>(std::async(std::launch::deferred, [&] {
-        waitComplete();
-    }).share());
+    // Pass same copy agent for source and device so we have control over the copy engine.
+    // The runtime will always pick the srcAgent if it is a GPU (which we checked above), and 
+    // if at least on of the pointers is in device memory. (caller should ensure this is true).
+
+    status = hsa_amd_memory_async_copy(dst, copyAgent, src, copyAgent, sizeBytes, depSignalCnt, depSignals, completion_signal);
+    if (status != HSA_STATUS_SUCCESS) {
+        throw Kalmar::runtime_exception("hsa_amd_memory_async_copy error", status);
+    }
 
     return status;
 }
+
 
 
 static Kalmar::hcCommandKind resolveMemcpyDirection(bool srcInDeviceMem, bool dstInDeviceMem)
@@ -3444,40 +3568,26 @@ static Kalmar::hcCommandKind resolveMemcpyDirection(bool srcInDeviceMem, bool ds
     }
 }
 
-
 inline hsa_status_t
-HSACopy::enqueueAsyncCopy() {
+HSACopy::enqueueAsyncCopyCommand(Kalmar::HSAQueue* hsaQueue, const Kalmar::HSADevice *copyDevice, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo) {
+
     hsa_status_t status = HSA_STATUS_SUCCESS;
+
+    // record HSAQueue association
+    this->hsaQueue = hsaQueue;
+    // extract hsa_queue_t from HSAQueue
+    hsa_queue_t* queue = static_cast<hsa_queue_t*>(hsaQueue->getHSAQueue());
+
+
+    // Performs an async copy.
+    // This routine deals only with "mapped" pointers - see syncCopy for an explanation.
+
+    // enqueue async copy command
     if (isSubmitted) {
         return HSA_STATUS_ERROR_INVALID_ARGUMENT;
     }
 
-    hc::accelerator acc;
-    hc::AmPointerInfo srcPtrInfo(NULL, NULL, 0, acc, 0, 0);
-    hc::AmPointerInfo dstPtrInfo(NULL, NULL, 0, acc, 0, 0);
-
-    bool srcInTracker = (hc::am_memtracker_getinfo(&srcPtrInfo, src) == AM_SUCCESS);
-    bool dstInTracker = (hc::am_memtracker_getinfo(&dstPtrInfo, dst) == AM_SUCCESS);
-
-    if (!srcInTracker) {
-        // throw an exception
-        throw Kalmar::runtime_exception("trying to copy from unpinned src pointer", 0);
-    } else if (!dstInTracker) {
-        // throw an exception
-        throw Kalmar::runtime_exception("trying to copy from unpinned dst pointer", 0);
-    } else {
-        // both mapped - pick device or host memory:
-        Kalmar::HSADevice *device = static_cast<Kalmar::HSADevice*> (hsaQueue->getDev());
-        hsa_agent_t deviceAgent = device->getAgent();
-
-        hsa_agent_t srcAgent, dstAgent;
-        srcAgent = srcPtrInfo._isInDeviceMem ? *(hsa_agent_t*)srcPtrInfo._acc.get_hsa_agent() : device->getHostAgent();
-        dstAgent = dstPtrInfo._isInDeviceMem ? *(hsa_agent_t*)dstPtrInfo._acc.get_hsa_agent() : device->getHostAgent();
-
-        // Performs an async copy.
-        // This routine deals only with "mapped" pointers - see syncCopy for an explanation.
-
-
+    {
         // Create a signal to wait for the async copy command to finish.
         std::pair<hsa_signal_t, int> ret = Kalmar::ctx.getSignal();
         signal = ret.first;
@@ -3497,23 +3607,31 @@ HSACopy::enqueueAsyncCopy() {
 #endif
         }
 
+
 #if KALMAR_DEBUG_ASYNC_COPY
             hsa_signal_value_t v = hsa_signal_load_acquire(signal);
             std::cerr << "  hsa_amd_memory_async_copy launched " << " completionSignal="<< std::hex  << signal.handle
-                      << "  InitSignalValue=" << v << " depSignalCnt=" << depSignalCnt << "\n";
+                      << "  InitSignalValue=" << v << " depSignalCnt=" << depSignalCnt 
+                      << "  copyAgent=" << copyDevice
+                      << "\n";
 #endif
 
-        hsa_status_t hsa_status = hsa_amd_memory_async_copy(dst, dstAgent, src, srcAgent, sizeBytes, depSignalCnt, depSignalCnt ? &depSignal:NULL, signal);
-
-        if (hsa_status != HSA_STATUS_SUCCESS) {
-            throw Kalmar::runtime_exception("hsa_amd_memory_async_copy error", hsa_status);
-        }
+        hcc_memory_async_copy(copyDevice, dst, src, sizeBytes, depSignalCnt, depSignalCnt ? &depSignal:NULL, signal);
     }
 
     isSubmitted = true;
 
+    STATUS_CHECK_Q(status, queue, __LINE__);
+
+    // dynamically allocate a std::shared_future<void> object
+    future = new std::shared_future<void>(std::async(std::launch::deferred, [&] {
+        waitComplete();
+    }).share());
+
     return status;
 }
+
+
 
 inline void
 HSACopy::dispose() {
@@ -3550,27 +3668,10 @@ HSACopy::getEndTimestamp() override {
     return time.end;
 }
 
-// Helper function for copy routines - determines agents based on direction:
-inline void
-HSACopy::setCopyAgents(Kalmar::hcCommandKind copyDir, hsa_agent_t *srcAgent, hsa_agent_t *dstAgent) {
-    Kalmar::HSADevice *device = static_cast<Kalmar::HSADevice*> (hsaQueue->getDev());
-    hsa_agent_t deviceAgent = device->getAgent();
-    hsa_agent_t hostAgent = device->getHostAgent();
-
-    switch (copyDir) {
-        case Kalmar::hcMemcpyHostToHost     : *srcAgent=hostAgent; *dstAgent=hostAgent; break;
-        case Kalmar::hcMemcpyHostToDevice   : *srcAgent=hostAgent; *dstAgent=deviceAgent; break;
-        case Kalmar::hcMemcpyDeviceToHost   : *srcAgent=deviceAgent; *dstAgent=hostAgent; break;
-        case Kalmar::hcMemcpyDeviceToDevice : *srcAgent=deviceAgent; *dstAgent=deviceAgent; break;
-        default: throw Kalmar::runtime_exception("invalid memcpy direction", copyDir);
-    };
-};
-
-
 
 
 void
-HSACopy::syncCopyExt(Kalmar::HSAQueue *hsaQueue, hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo, bool forceHostCopyEngine)
+HSACopy::syncCopyExt(Kalmar::HSAQueue *hsaQueue, hc::hcCommandKind copyDir, const hc::AmPointerInfo &srcPtrInfo, const hc::AmPointerInfo &dstPtrInfo, const Kalmar::HSADevice *copyDevice, bool forceUnpinnedCopy)
 {
     bool srcInTracker = (srcPtrInfo._sizeBytes != 0);
     bool dstInTracker = (dstPtrInfo._sizeBytes != 0);
@@ -3586,7 +3687,11 @@ HSACopy::syncCopyExt(Kalmar::HSAQueue *hsaQueue, hc::hcCommandKind copyDir, cons
     // extract hsa_queue_t from HSAQueue
     hsa_queue_t* queue = static_cast<hsa_queue_t*>(hsaQueue->getHSAQueue());
 
-    Kalmar::HSADevice *device = static_cast<Kalmar::HSADevice*> (hsaQueue->getDev());
+
+    if ((copyDevice == nullptr) && (copyDir != Kalmar::hcMemcpyHostToHost) && (copyDir != Kalmar::hcMemcpyDeviceToDevice)) {
+        throw Kalmar::runtime_exception("Null copyDevice can only be used with HostToHost or DeviceToDevice copy", -1);
+    }
+
 
 
 
@@ -3594,32 +3699,32 @@ HSACopy::syncCopyExt(Kalmar::HSAQueue *hsaQueue, hc::hcCommandKind copyDir, cons
     std::cerr << "hcCommandKind: " << getHcCommandKindString(copyDir) << "\n";
 #endif
 
-    bool useDefaultCopy = true;
-
+    bool useFastCopy = true;
     switch (copyDir) {
         case Kalmar::hcMemcpyHostToDevice:
-            if (!srcInTracker || forceHostCopyEngine) {
+            if (!srcInTracker || forceUnpinnedCopy) {
 #if KALMAR_DEBUG
                 std::cerr << "HSACopy::syncCopy(), invoke UnpinnedCopyEngine::CopyHostToDevice()\n";
+
 #endif
-                device->copy_engine[0]->CopyHostToDevice(device->copy_mode, dst, src, sizeBytes, depSignalCnt ? &depSignal : NULL);
-                useDefaultCopy = false;
+                copyDevice->copy_engine[0]->CopyHostToDevice(copyDevice->copy_mode, dst, src, sizeBytes, depSignalCnt ? &depSignal : NULL);
+                useFastCopy = false;
             }
             break;
 
 
         case Kalmar::hcMemcpyDeviceToHost:
-            if (!dstInTracker || forceHostCopyEngine) {
+            if (!dstInTracker || forceUnpinnedCopy) {
 #if KALMAR_DEBUG
                 std::cerr << "HSACopy::syncCopy(), invoke UnpinnedCopyEngine::CopyDeviceToHost()\n";
 #endif
-                UnpinnedCopyEngine::CopyMode d2hCopyMode = device->copy_mode;
+                UnpinnedCopyEngine::CopyMode d2hCopyMode = copyDevice->copy_mode;
                 if (d2hCopyMode == UnpinnedCopyEngine::UseMemcpy) {
                     // override since D2H does not support Memcpy
                     d2hCopyMode = UnpinnedCopyEngine::ChooseBest;
                 }
-                device->copy_engine[1]->CopyDeviceToHost(d2hCopyMode, dst, src, sizeBytes, depSignalCnt ? &depSignal : NULL);
-                useDefaultCopy = false;
+                copyDevice->copy_engine[1]->CopyDeviceToHost(d2hCopyMode, dst, src, sizeBytes, depSignalCnt ? &depSignal : NULL);
+                useFastCopy = false;
             };
             break;
 
@@ -3631,24 +3736,22 @@ HSACopy::syncCopyExt(Kalmar::HSAQueue *hsaQueue, hc::hcCommandKind copyDir, cons
 
             // This works for both mapped and unmapped memory:
             memcpy(dst, src, sizeBytes);
-            useDefaultCopy = false;
+            useFastCopy = false;
             break;
 
         case Kalmar::hcMemcpyDeviceToDevice:
-            //if (!device->is_peer(dstPtrInfo._acc.get_dev_ptr()) || 
-            //    !device->is_peer(srcPtrInfo._acc.get_dev_ptr())) {
-            if (forceHostCopyEngine) {
-#if KALMAR_DEBUG
-                std::cerr << "HSACopy:: P2P copy by engine forcing use of host copy\n";
-#endif
-
+            if (forceUnpinnedCopy) {
                 hsa_agent_t dstAgent = * (static_cast<hsa_agent_t*> (dstPtrInfo._acc.get_hsa_agent()));
                 hsa_agent_t srcAgent = * (static_cast<hsa_agent_t*> (srcPtrInfo._acc.get_hsa_agent()));
+#if KALMAR_DEBUG
+                std::cerr << "HSACopy:: P2P copy by engine forcing use of staging buffers.  copyEngine=" << copyDevice << "\n";
+#endif
 
-                device->copy_engine[1]->CopyPeerToPeer(dst, dstAgent, src, srcAgent, sizeBytes, depSignalCnt ? &depSignal : NULL);
+                // TODO, which staging buffer should we use for this to be optimal?
+                copyDevice->copy_engine[1]->CopyPeerToPeer(dst, dstAgent, src, srcAgent, sizeBytes, depSignalCnt ? &depSignal : NULL);
 
-                useDefaultCopy = false;
-            };
+                useFastCopy = false;
+            }
             break;
 
         default:
@@ -3657,15 +3760,12 @@ HSACopy::syncCopyExt(Kalmar::HSAQueue *hsaQueue, hc::hcCommandKind copyDir, cons
     };
 
 
-    if (useDefaultCopy) {
+    if (useFastCopy) {
         // Didn't already handle copy with one of special (slow) cases above, use the standard runtime copy path.
 
 #if KALMAR_DEBUG
-        std::cerr << "HSACopy::syncCopy(), useDefaultCopy, fetch and init a HSA signal\n";
+        std::cerr << "HSACopy::syncCopy(), useFastCopy=1, fetch and init a HSA signal\n";
 #endif
-        // If not special case - these can all be handled by the hsa async copy:
-        hsa_agent_t srcAgent, dstAgent;
-        setCopyAgents(copyDir, &srcAgent, &dstAgent);
 
         // Get a signal and initialize it:
         std::pair<hsa_signal_t, int> ret = Kalmar::ctx.getSignal();
@@ -3674,11 +3774,16 @@ HSACopy::syncCopyExt(Kalmar::HSAQueue *hsaQueue, hc::hcCommandKind copyDir, cons
 
         hsa_signal_store_relaxed(signal, 1);
 
-#if KALMAR_DEBUG
-        std::cerr << "HSACopy::syncCopy(), invoke hsa_amd_memory_async_copy()\n";
+#if KALMAR_DEBUG or KALMAR_DEBUG_ASYNC_COPY
+        std::cerr << "HSACopy::syncCopy(), invoke hsa_amd_memory_async_copy() with dstAgent=%lu srcAgent=%lu\n";
 #endif
 
-        hsa_status_t hsa_status = hsa_amd_memory_async_copy(dst, dstAgent, src, srcAgent, sizeBytes, depSignalCnt, depSignalCnt ? &depSignal:NULL, signal);
+        if (copyDevice == nullptr) {
+            throw Kalmar::runtime_exception("Null copyDevice reached call to hcc_memory_async_copy", -1);
+        }
+
+
+        hsa_status_t hsa_status = hcc_memory_async_copy(copyDevice, dst, src, sizeBytes, depSignalCnt, depSignalCnt ? &depSignal:NULL, signal);
 
         if (hsa_status == HSA_STATUS_SUCCESS) {
 #if KALMAR_DEBUG
@@ -3751,7 +3856,16 @@ HSACopy::syncCopy(Kalmar::HSAQueue* hsaQueue) {
     // Resolve default to a specific Kind so we know which algorithm to use:
     setCommandKind (resolveMemcpyDirection(srcInDeviceMem, dstInDeviceMem));
 
-    syncCopyExt(hsaQueue, getCommandKind(), srcPtrInfo, dstPtrInfo, false);
+    Kalmar::HSADevice *copyDevice;
+    if (srcInDeviceMem) {  // D2D, H2D
+        copyDevice = static_cast<Kalmar::HSADevice*> (srcPtrInfo._acc.get_dev_ptr());
+    }else if (dstInDeviceMem) {  // D2H
+        copyDevice = static_cast<Kalmar::HSADevice*> (dstPtrInfo._acc.get_dev_ptr());
+    } else {
+        copyDevice = nullptr;  // H2D
+    }
+
+    syncCopyExt(hsaQueue, getCommandKind(), srcPtrInfo, dstPtrInfo, copyDevice, false);
 };
 
 

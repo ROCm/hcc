@@ -6,25 +6,25 @@ if [ "$#" -ne 2 ]; then
   exit 1
 fi
 
-if [ ! -f $1 ]; then
+if [ ! -f "$1" ]; then
   echo "input object $1 is not valid" >&2
   exit 1
 fi
 
-BINDIR=$(dirname $0)
+BINDIR=$(dirname "$0")
 OPT=$BINDIR/opt
 LLC=$BINDIR/llc
 LIB=$BINDIR/../lib
 
 if [[ $OSTYPE == linux-gnu ]]; then
-    FILE=`basename $1`
+    FILE=`basename "$1"`
     FILENAME=${FILE%cpu}
-    if [[ $FILE != $FILENAME ]]; then
+    if [[ "$FILE" != "$FILENAME" ]]; then
         $OPT -load $LIB/LLVMCpuRename@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-                -cpu-rename $1 -S -o $1.S
-        $LLC -O=2 $1.S -relocation-model=pic -filetype=obj -o $2
-        rm $1.S
+                -cpu-rename "$1" -S -o "$1.S"
+        $LLC -O=2 "$1.S" -relocation-model=pic -filetype=obj -o "$2"
+        rm "$1.S"
     else
-        objcopy -B i386:x86-64 -I binary -O elf64-x86-64 --rename-section .data=.kernel $1 $2
+        objcopy -B i386:x86-64 -I binary -O elf64-x86-64 --rename-section .data=.kernel "$1" "$2"
     fi
 fi
