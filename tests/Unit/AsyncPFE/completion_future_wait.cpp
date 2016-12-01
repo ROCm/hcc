@@ -6,7 +6,7 @@
 #include <iostream>
 #include <random>
 
-#include <hsa.h>
+#include <hsa/hsa.h>
 
 #define LOOP_COUNT (1024)
 
