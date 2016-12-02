@@ -63,7 +63,7 @@ namespace Concurrency
             LogType g_verbose = LogType::Info;
 
 			static inline std::ostream& get_raw_log_stream(LogType type) {
-	
+
 				switch (type)
 				{
 				case LogType::Info:
@@ -82,7 +82,7 @@ namespace Concurrency
 
 				// Compose the prefix as a string so it won't get broken up
 				std::stringstream ss;
-				ss << get_timestamp() << " AMPTest: ";
+				ss << get_timestamp(false) << " AMPTest: ";
 				if(type == LogType::Warning) {
 					ss << "Warning: ";
 				} else if(type == LogType::Error) {
@@ -201,7 +201,7 @@ namespace Concurrency
 #pragma warning(disable:4996)
 			int actual_len = vsnprintf(c_msg.get(), len+1, msg, args);
 #pragma warning(default:4996)
-			Log(type) << c_msg.get() << std::endl;
+			Log(type, true) << c_msg.get() << std::endl;
 
             va_end(args);
 
@@ -209,7 +209,7 @@ namespace Concurrency
 			{
 				// The code above should ensure this doesn't happen.  However, I'd prefer to fail fast if we
 				// do ever see it.
-				Log(LogType::Warning) << "The previous message was unexpectedly truncated" << std::endl;
+				Log(LogType::Warning, true) << "The previous message was unexpectedly truncated" << std::endl;
 				throw amptest_exception("Log_Writeline() message was unexpectedly truncated");
 			}
         }
@@ -226,10 +226,10 @@ namespace Concurrency
                 return; // message does not have required verbosity
             }
 
-			Log(type) << std::endl;
+			Log(type, true) << std::endl;
 		}
-		
-		std::string AMP_TEST_API get_type_name(const std::type_info& ti) {			
+
+		std::string AMP_TEST_API get_type_name(const std::type_info& ti) {
 
 			if(ti == typeid(std::string)) {
 				return "string";
@@ -256,7 +256,7 @@ namespace Concurrency
 
 			return tname;
 		}
-		
+
 		std::ostream& AMP_TEST_API LogStream()
         {
 			return amptest_context.get_raw_stdout_stream();

@@ -40,7 +40,7 @@ namespace Concurrency {
 				try {
 					amptest_context_enable_debugging = amptest_context.get_environment_variable("AMPTEST_ENABLE_DEBUGGING", false);
 				} catch(std::exception& ex) {
-					Log(LogType::Error) << "Error loading AMPTest context: " << ex.what() << std::endl;
+					Log(LogType::Error, true) << "Error loading AMPTest context: " << ex.what() << std::endl;
 					exit(runall_fail);
 				}
 			}
@@ -53,19 +53,19 @@ namespace Concurrency {
 
 					result = test_main();
 				} catch(amptest_skip e) {
-					Log(LogType::Warning) << e.what() << std::endl;
+					Log(LogType::Warning, true) << e.what() << std::endl;
 					result = runall_skip;
 				} catch(amptest_cascade_failure e) {
-					Log(LogType::Error) << e.what() << std::endl;
+					Log(LogType::Error, true) << e.what() << std::endl;
 					result = runall_cascade_fail;
 				} catch(amptest_failure e) {
-					Log(LogType::Error) << e.what() << std::endl;
+					Log(LogType::Error, true) << e.what() << std::endl;
 					result = runall_fail;
 				} catch(const amptest_exception& e) {
-					Log(LogType::Error) << "test_main() threw unhandled " << get_type_name(e) << " exception: " << e.what() << std::endl;
+					Log(LogType::Error, true) << "test_main() threw unhandled " << get_type_name(e) << " exception: " << e.what() << std::endl;
 					result = runall_fail;
 				}
-				Log() << "test_main(): Returned " << result << std::endl;
+				Log(LogType::Info, true) << "test_main(): Returned " << result << std::endl;
 				return result;
 			}
 
@@ -75,27 +75,27 @@ namespace Concurrency {
 					return invoke_test_main();
 				} catch(concurrency::accelerator_view_removed& ex) {
 					// If we catch a TDR, then lets be sure to print out the reason too
-					Log(LogType::Error) << "test_main() threw unhandled " << get_type_name(ex) << " exception "
+					Log(LogType::Error, true) << "test_main() threw unhandled " << get_type_name(ex) << " exception "
 						<< "(error code: 0x" << std::hex << ex.get_error_code() << std::dec
 						<< ", reason code: 0x" << std::hex << ex.get_view_removed_reason() << std::dec
 						<< "): "
 						<< ex.what() << std::endl;
 					return runall_fail;
 				} catch(concurrency::runtime_exception& ex) {
-					Log(LogType::Error) << "test_main() threw unhandled " << get_type_name(ex) << " exception "
+					Log(LogType::Error, true) << "test_main() threw unhandled " << get_type_name(ex) << " exception "
 						<< "(error code: 0x" << std::hex << ex.get_error_code() << std::dec << "): "
 						<< ex.what() << std::endl;
 					return runall_fail;
 				} catch(const std::exception& ex) {
-					Log(LogType::Error) << "test_main() threw unhandled " << get_type_name(ex) << " exception: " << ex.what() << std::endl;
+					Log(LogType::Error, true) << "test_main() threw unhandled " << get_type_name(ex) << " exception: " << ex.what() << std::endl;
 					return runall_fail;
 				} catch(const char* exmsg) {
-					Log(LogType::Error) << "test_main() threw unhandled exception: " << exmsg << std::endl;
+					Log(LogType::Error, true) << "test_main() threw unhandled exception: " << exmsg << std::endl;
 					return runall_fail;
 				}
-				catch(...)	
+				catch(...)
 				{
-					Log(LogType::Error) << "test_main() threw unhandled unknown exception caught." << std::endl;
+					Log(LogType::Error, true) << "test_main() threw unhandled unknown exception caught." << std::endl;
 					return runall_fail;
 				}
 			}
@@ -112,7 +112,7 @@ namespace Concurrency {
 			} else {
 				test_result = details::invoke_test_main_with_exception_handling();
 			}
-			
+
 			return test_result.get_exit_code();
 		}
 	} // namespace Test
