@@ -215,7 +215,7 @@ namespace Concurrency {
 
 				// Split by ' ' in case of RUNALL_CROSSLIST usages
 				auto parts = split_string(env_var_val, ' ', true);
-				for_each(parts.begin(), parts.end(), [](const string& part) {
+				for (auto&& part : parts) {
 						// 'RESET' is only valid when it's surrounded by spaces
 						if(part == "RESET") {
 							// Reset to the default value
@@ -234,7 +234,7 @@ namespace Concurrency {
 						device_flags flags = parse_device_flags(string("environment variable ") + env_var_name_allowed_devices, part, ',', valid_flags);
 
 						dmf_allowed_device_flags |= flags;
-					});
+					}
 			}
 
 			void parse_allowed_gpu_device_paths() {
@@ -244,7 +244,7 @@ namespace Concurrency {
 
 				// Split by ' ' in case of RUNALL_CROSSLIST usages
 				auto parts1 = split_string(env_var_val, ' ', true);
-				for_each(parts1.begin(), parts1.end(), [](const string& part1) {
+				for (auto&& part1 : parts1) {
 						auto parts2 = split_string(part1, ',', true);
 						for_each(parts2.begin(), parts2.end(), [](const string& part2) {
 								// Detect whether 'NOT_SPECIFIED' is used, because this would cause the prev flags to be cleared
@@ -255,7 +255,7 @@ namespace Concurrency {
 									//dmf_allowed_gpu_device_paths.push_back(part);
 								}
 							});
-					});
+					}
 			}
 
 			void parse_supported_devices() {
@@ -265,7 +265,7 @@ namespace Concurrency {
 
 				// Split by ' ' in case of RUNALL_CROSSLIST usages
 				auto parts = split_string(env_var_val, ' ', true);
-				for_each(parts.begin(), parts.end(), [](const string& part) {
+				for (auto&& part : parts) {
 						// Detect whether 'NOT_SPECIFIED' is used, because it doesn't have any meaning.
 						if(part.find("NOT_SPECIFIED") != string::npos) {
 							stringstream ss;
@@ -276,7 +276,7 @@ namespace Concurrency {
 						device_flags flags = parse_device_flags(string("environment variable ") + env_var_name_supported_devices, part, ',', valid_supported_device_flags);
 
 						dmf_supported_device_flags |= flags;
-					});
+					}
 			}
 
 			void parse_TARGET_DEVICE() {
@@ -290,7 +290,7 @@ namespace Concurrency {
 
 				// Handle when they use ALL_DEVICES, as it's the same as NOT_SPECIFIED.
 				if(env_var_val == "ALL_DEVICES") {
-					Log(LogType::Warning) << env_var_name_TARGET_DEVICE << " has unsupported value of 'ALL_DEVICES'. This is the same as saying NOT_SPECIFIED." << std::endl;
+					Log(LogType::Warning, true) << env_var_name_TARGET_DEVICE << " has unsupported value of 'ALL_DEVICES'. This is the same as saying NOT_SPECIFIED." << std::endl;
 					return;
 				}
 
@@ -385,7 +385,7 @@ namespace Concurrency {
 
 			void parse_IHV_failure_behavior() {
 				dmf_known_IHV_failure_behavior = known_IHV_failure_behavior::EXCLUDE_DEVICE;
-				
+
 				string env_var_val = trim(amptest_context.get_environment_variable(env_var_name_known_IHV_failure_behavior));
 
 				// Split by ' ' in case of RUNALL_CROSSLIST usages, we take the last one specified
@@ -415,7 +415,7 @@ namespace Concurrency {
 					throw amptest_cascade_failure("The DMF is already initialized.");
 				}
 
-				Log() << "DMF: Initializing the AMPTest Device Management Framework..." << std::endl;
+				Log(LogType::Info, true) << "DMF: Initializing the AMPTest Device Management Framework..." << std::endl;
 
 				// Look for common typos in the environment variable name
 				if(amptest_context.get_environment_variable("AMPTEST_AVAILABLE_DEVICES").length() > 0) {
@@ -428,14 +428,14 @@ namespace Concurrency {
 					ss << "Typo: Environment variable IHV_FAILURE is not supported. Use " << env_var_name_known_IHV_failures << " instead.";
 					throw amptest_cascade_failure(ss.str());
 				}
-				
+
 				// Allowed Devices
 				parse_allowed_devices();
-				Log() << "DMF:    Allowed device types: " << device_flags_to_string(dmf_allowed_device_flags) << std::endl;
+				Log(LogType::Info, true) << "DMF:    Allowed device types: " << device_flags_to_string(dmf_allowed_device_flags) << std::endl;
 
 				parse_allowed_gpu_device_paths();
 				if(dmf_allowed_gpu_device_paths.size() > 0) {
-					Log() << "DMF:    Allowed GPU device paths: " << std::endl;
+					Log(LogType::Info, true) << "DMF:    Allowed GPU device paths: " << std::endl;
 					std::for_each(dmf_allowed_gpu_device_paths.begin(), dmf_allowed_gpu_device_paths.end(), [](const wstring& dpath) {
 							WLog() << "DMF:       " << dpath << std::endl;
 						});
@@ -445,12 +445,12 @@ namespace Concurrency {
 				if(!dmf_supported_device_flags_set_in_code) {
 					parse_supported_devices();
 				}
-				Log() << "DMF:    Supported devices for this test: " << device_flags_to_string(dmf_supported_device_flags) << std::endl;
+				Log(LogType::Info, true) << "DMF:    Supported devices for this test: " << device_flags_to_string(dmf_supported_device_flags) << std::endl;
 
 				// BACKWARD COMPATABILITY
 				parse_TARGET_DEVICE();
 				if(dmf_TARGET_DEVICE_flags != device_flags::NOT_SPECIFIED) {
-					Log() << "DMF:    TARGET_DEVICE (deprecated!!!): " << device_flags_to_string(dmf_TARGET_DEVICE_flags) << std::endl;
+					Log(LogType::Info, true) << "DMF:    TARGET_DEVICE (deprecated!!!): " << device_flags_to_string(dmf_TARGET_DEVICE_flags) << std::endl;
 				}
 
 				// Detect IHV failures
@@ -458,11 +458,11 @@ namespace Concurrency {
 				parse_IHV_failure_behavior();
 				if(dmf_known_IHV_failures.size() > 0) {
 					// Only bother reporting the IHV failure behavior setting if the test has some specified.
-					Log() << "DMF:    Known IHV failures have been marked for this test. count = " << dmf_known_IHV_failures.size() << std::endl;
-					Log() << "DMF:    IHV failure behavior: " << get_known_IHV_failure_behavior_name() << std::endl;
+					Log(LogType::Info, true) << "DMF:    Known IHV failures have been marked for this test. count = " << dmf_known_IHV_failures.size() << std::endl;
+					Log(LogType::Info, true) << "DMF:    IHV failure behavior: " << get_known_IHV_failure_behavior_name() << std::endl;
 				}
 
-				Log() << "DMF: Finished Initializing." << std::endl << std::endl;
+				Log(LogType::Info, true) << "DMF: Finished Initializing." << std::endl << std::endl;
 				is_dmf_initialized = true;
 			}
 
@@ -603,7 +603,7 @@ namespace Concurrency {
 					// The CPU device is always ALLOWED
 					return true;
 				}
-				
+
 				if(!is_compute_device_type_match(dinfo.first, dmf_allowed_device_flags)) {
 					return false;
 				}
@@ -627,7 +627,7 @@ namespace Concurrency {
 				if(!has_bits_set(dinfo.first, device_bit_flags::IS_CPU)) {
 					is_supported &= is_compute_device_type_match(dinfo.first, dmf_supported_device_flags);
 				}   // The CPU is always a SUPPORTED device type
-				
+
 				// Check the device capabilities flags
 				is_supported &= is_device_capabilities_match(dinfo.first, dmf_supported_device_flags);
 
@@ -649,7 +649,7 @@ namespace Concurrency {
 				} else {
 					is_supported &= is_compute_device_type_match(dinfo.first, required_flags);
 				}
-				
+
 				// Check the device capabilities flags
 				is_supported &= is_device_capabilities_match(dinfo.first, required_flags);
 
@@ -669,12 +669,12 @@ namespace Concurrency {
 
 					// Check against the test context
 					bool matches_context = true;
-					
+
 					// context - Build Flavor
 					if(has_any_bits_set(failure, known_IHV_failure::FLAV_MASK)) {
-						Log(LogType::Warning) << "DMF: amptest_context.is_chk_build and is_ret_build functions are not implemented yet. Ignoring IHV_FAILURE context specifying build flavor." << std::endl;
+						Log(LogType::Warning, true) << "DMF: amptest_context.is_chk_build and is_ret_build functions are not implemented yet. Ignoring IHV_FAILURE context specifying build flavor." << std::endl;
 					}
-					
+
 					// context - AMP buffer aliasing
 					if(has_any_bits_set(failure, known_IHV_failure::ALIASING_MASK)) {
 						if(has_bits_set(failure, known_IHV_failure::ALIASING_FORCED)) {
@@ -684,7 +684,7 @@ namespace Concurrency {
 						} else {
 							throw amptest_exception("is_device_known_IHV_failure_impl: Unhandled aliasing flag.");
 						}
-					}					
+					}
 
 					return matches_context;
 				});
@@ -804,9 +804,9 @@ namespace Concurrency {
 
 			accelerator require_device_core(device_flags required_flags, vector<wstring> excluded_device_paths = vector<wstring>(0)) {
 				// Report what we're doing
-				Log() << "DMF: Getting required device: " << device_flags_to_string(required_flags) << std::endl;
+				Log(LogType::Info, true) << "DMF: Getting required device: " << device_flags_to_string(required_flags) << std::endl;
 				if(excluded_device_paths.size() > 0) {
-					Log() << "DMF:    excluding:" << std::endl;
+					Log(LogType::Info, true) << "DMF:    excluding:" << std::endl;
 					std::for_each(excluded_device_paths.begin(), excluded_device_paths.end(), [](const wstring& dpath) {
 						WLog() << "DMF:        " << dpath << std::endl;
 					});
@@ -846,7 +846,7 @@ namespace Concurrency {
 				}
 
 				// Make sure we have one to return
-				if(newLast - avail_infos.begin() == 0) {
+				if(newLast == avail_infos.begin()) {
 					throw amptest_skip("The required device could not be retrieved.");
 				}
 
@@ -855,7 +855,7 @@ namespace Concurrency {
 				// Log what we are returning
 				auto device_type = retrieved_device_type_to_string(device);
 				auto device_caps = retrieved_device_caps_to_string(device);
-				Log() << "DMF:    Returning " << device_type << " (" << device_caps << ")"
+				Log(LogType::Info, true) << "DMF:    Returning " << device_type << " (" << device_caps << ")"
 					<< " accelerator: " << device.get_description() << " (" << device.get_device_path() << ")" << std::endl;
 
 				// Handle IHV failures
@@ -865,7 +865,7 @@ namespace Concurrency {
 					static const char* err_msg = "The retrieved device is marked as a known IHV device failure.";
 					switch(dmf_known_IHV_failure_behavior) {
 					case known_IHV_failure_behavior::IGNORE_FAILURE:
-						Log(LogType::Warning) << "DMF: " << err_msg << std::endl;
+						Log(LogType::Warning, true) << "DMF: " << err_msg << std::endl;
 						break;
 					case known_IHV_failure_behavior::SKIP_TEST:
 						throw amptest_skip(err_msg);
@@ -876,7 +876,7 @@ namespace Concurrency {
 					}
 				}
 
-				Log() << std::endl;
+				Log(LogType::Info, true) << std::endl;
 				return device;
 			}
 
@@ -886,7 +886,7 @@ namespace Concurrency {
 					try {
 						return func();
 					} catch(amptest_skip& ex) {
-						Log(LogType::Warning) << ex.what() << std::endl;
+						Log(LogType::Warning, true) << ex.what() << std::endl;
 						exit(runall_skip);
 					}
 				} else {
@@ -924,7 +924,7 @@ namespace Concurrency {
 
 			// Parse the list
 			auto parts = split_string(trim(str), separator, true);
-			for_each(parts.begin(), parts.end(), [&flags, &src_desc](const string& prt) {
+			for (auto&& prt : parts) {
 				string part = trim(prt);
 				if(part.length() > 0) {
 					device_flags flg = parse_device_flag(part);
@@ -938,7 +938,7 @@ namespace Concurrency {
 
 					flags |= flg;
 				}
-			});
+			}
 
 			// Detect invalid flags
 			if(valid_flags != device_flags::NOT_SPECIFIED) {
@@ -987,7 +987,7 @@ namespace Concurrency {
 			if(parts.size() == 0) {
 				return "NOT_SPECIFIED";
 			}
-				
+
 			// Loop thru the parts and add a seperator
 			stringstream ss;
 			ss << parts[0];
@@ -1032,7 +1032,7 @@ namespace Concurrency {
 
 			details::ensure_dmf_initialized();
 
-			Log() << "DMF: Getting available devices: " << device_flags_to_string(required_flags) << std::endl;
+			Log(LogType::Info, true) << "DMF: Getting available devices: " << device_flags_to_string(required_flags) << std::endl;
 			vector<details::device_info> avail_infos = details::get_available_device_infos(required_flags);
 			auto newLast = avail_infos.end();
 
@@ -1077,7 +1077,7 @@ namespace Concurrency {
 				devices.push_back(dinfo.second);
 			});
 
-            Log() << "DMF:    Found " << devices.size() << " available devices." << std::endl;
+            Log(LogType::Info, true) << "DMF:    Found " << devices.size() << " available devices." << std::endl;
 			return devices;
 		}
 
@@ -1106,7 +1106,7 @@ namespace Concurrency {
 			// Note, since we'll be using the new device_flags features we could possibly get more coverage than the previous implementation
 
 			details::ensure_dmf_initialized();
-			
+
 			try {
 				device = details::require_device_core(required_flags);
 				return true;
@@ -1123,7 +1123,7 @@ namespace Concurrency {
 		// parts of the DMF.
 		// Note, these functions aren't marked with AMP_TEST_API as the tests in which they are used don't need it.
 		namespace dmf_testing {
-			
+
 			/// Ensures that the DMF is initialized without calling any of the public APIs.
 			/// This will cause all environment variables related to the DMF to be parsed.
 			void ensure_dmf_initialized() {
@@ -1140,7 +1140,7 @@ namespace Concurrency {
 			// Tells the DMF whether to throw an exception when the TARGET_DEVICE env var is used.
 			void set_TARGET_DEVICE_behavior(bool throw_failure) {
 				details::dmf_TARGET_DEVICE_throws_failure = throw_failure;
-				Log() << "DMF Testing: The TARGET_DEVICE behavior has been changed to: " << (throw_failure ? "throws amptest_failure" : "is supported") << std::endl;
+				Log(LogType::Info, true) << "DMF Testing: The TARGET_DEVICE behavior has been changed to: " << (throw_failure ? "throws amptest_failure" : "is supported") << std::endl;
 			}
 
 			/// Gets the parsed setting for the AMPTEST_ALLOWED_DEVICES environment variable.
