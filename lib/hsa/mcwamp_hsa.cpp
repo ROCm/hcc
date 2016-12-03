@@ -86,6 +86,11 @@ long int HCC_H2D_STAGING_THRESHOLD    = 64;
 long int HCC_H2D_PININPLACE_THRESHOLD = 4096; 
 long int HCC_D2H_PININPLACE_THRESHOLD = 1024; 
 
+int HCC_SERIALIZE_KERNEL = 0;
+int HCC_SERIALIZE_COPY = 0;
+
+unsigned HCC_DB = 0;
+
 
 
 #define HSA_BARRIER_DEP_SIGNAL_CNT (5)
@@ -310,6 +315,7 @@ public:
 
 class HSAKernel {
 private:
+    std::string kernelName;
     HSAExecutable* executable;
     uint64_t kernelCodeHandle;
     hsa_executable_symbol_t hsaExecutableSymbol;
@@ -319,9 +325,10 @@ private:
     friend class HSADispatch;
 
 public:
-    HSAKernel(HSAExecutable* _executable,
+    HSAKernel(std::string &_kernelName, HSAExecutable* _executable,
               hsa_executable_symbol_t _hsaExecutableSymbol,
               uint64_t _kernelCodeHandle) :
+        kernelName(_kernelName),
         executable(_executable),
         hsaExecutableSymbol(_hsaExecutableSymbol),
         kernelCodeHandle(_kernelCodeHandle) {
@@ -1888,6 +1895,15 @@ public:
             profile = hcAgentProfileFull;
         }
 
+
+       // 0x1=pre-serialize, 0x2=post-serialize , 0x3= pre- and post- serialize.
+       // HCC_SERIALIZE_KERNEL serializes PFE, GL, and dispatch_hsa_kernel calls.
+       // HCC_SERIALIZE_COPY serializes av::copy_async operations.  (array_view copies are not currently impacted))
+        HCC_SERIALIZE_KERNEL =  getenvlong("HCC_SERIALIZE_KERNEL", HCC_SERIALIZE_KERNEL);
+        HCC_SERIALIZE_COPY   =  getenvlong("HCC_SERIALIZE_COPY",   HCC_SERIALIZE_COPY);
+
+        HCC_DB   =  getenvlong("HCC_DB",   HCC_DB);
+
         //---
         //Provide an environment variable to select the mode used to perform the copy operaton
         const char *copy_mode_str = getenv("HCC_UNPINNED_COPY_MODE");
@@ -1908,6 +1924,7 @@ public:
             getenvlong("HCC_H2D_PININPLACE_THRESHOLD", HCC_H2D_PININPLACE_THRESHOLD);
         HCC_D2H_PININPLACE_THRESHOLD =  
             getenvlong("HCC_D2H_PININPLACE_THRESHOLD", HCC_D2H_PININPLACE_THRESHOLD);
+       
 
         HCC_H2D_STAGING_THRESHOLD    *= 1024;
         HCC_H2D_PININPLACE_THRESHOLD *= 1024;
@@ -2133,7 +2150,7 @@ public:
                         uint64_t kernelCodeHandle;
                         status = hsa_executable_symbol_get_info(kernelSymbol, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT, &kernelCodeHandle);
                         if (status == HSA_STATUS_SUCCESS) {
-                            kernel =  new HSAKernel(executable, kernelSymbol, kernelCodeHandle);
+                            kernel =  new HSAKernel(str, executable, kernelSymbol, kernelCodeHandle);
                             break;
                         }
                     }
@@ -3120,8 +3137,11 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue, const void *hostKernarg,
 
     hsa_queue_store_write_index_relaxed(commandQueue, index + 1);
 
+    if (HCC_DB & 0x1) {
+        std::cerr << "tid" << std::this_thread::get_id() <<  " ring door bell to dispatch kernel " << kernel->kernelName << "\n";
+    }
 #if KALMAR_DEBUG
-    std::cerr << "ring door bell to dispatch kernel\n";
+    std::cerr << "ring door bell to dispatch kernel " << kernel->kernelName << "\n";
 #endif
 
     // Ring door bell
@@ -3142,8 +3162,13 @@ HSADispatch::waitComplete() {
         return HSA_STATUS_ERROR_INVALID_ARGUMENT;
     }
 
+
+
     if (signal.handle) {
         DBOUT(" wait for kernel dispatch op#" << getSeqNum() << " completion with wait flag: " << waitMode << "  signal="<< std::hex  << signal.handle << std::dec << "\n");
+        if (HCC_DB & 0x1) {
+            std::cerr << "wait for kernel dispatch op#" << getSeqNum() << " completion with wait flag: " << waitMode << "  signal="<< std::hex  << signal.handle << std::dec << "\n";
+        }
 
         // wait for completion
         if (hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_LT, 1, uint64_t(-1), waitMode)!=0) {
@@ -3209,6 +3234,11 @@ HSADispatch::dispatchKernelAsyncFromOp(Kalmar::HSAQueue* hsaQueue)
 inline hsa_status_t
 HSADispatch::dispatchKernelAsync(Kalmar::HSAQueue* hsaQueue, const void *hostKernarg, 
                                  int hostKernargSize, bool allocSignal) {
+
+    if (HCC_SERIALIZE_KERNEL & 0x1) {
+        hsaQueue->wait();
+    }
+
     hsa_status_t status = HSA_STATUS_SUCCESS;
 
     // record HSAQueue association
@@ -3220,10 +3250,17 @@ HSADispatch::dispatchKernelAsync(Kalmar::HSAQueue* hsaQueue, const void *hostKer
     status = dispatchKernel(queue, hostKernarg, hostKernargSize, allocSignal);
     STATUS_CHECK_Q(status, queue, __LINE__);
 
+
     // dynamically allocate a std::shared_future<void> object
     future = new std::shared_future<void>(std::async(std::launch::deferred, [&] {
         waitComplete();
     }).share());
+
+    if (HCC_SERIALIZE_KERNEL & 0x2) {
+        status = waitComplete();
+        STATUS_CHECK_Q(status, queue, __LINE__);
+    };
+
 
     return status;
 }
@@ -3578,6 +3615,9 @@ HSACopy::enqueueAsyncCopyCommand(Kalmar::HSAQueue* hsaQueue, const Kalmar::HSADe
     // extract hsa_queue_t from HSAQueue
     hsa_queue_t* queue = static_cast<hsa_queue_t*>(hsaQueue->getHSAQueue());
 
+    if (HCC_SERIALIZE_COPY & 0x1) {
+        hsaQueue->wait();
+    }
 
     // Performs an async copy.
     // This routine deals only with "mapped" pointers - see syncCopy for an explanation.
@@ -3627,6 +3667,11 @@ HSACopy::enqueueAsyncCopyCommand(Kalmar::HSAQueue* hsaQueue, const Kalmar::HSADe
     future = new std::shared_future<void>(std::async(std::launch::deferred, [&] {
         waitComplete();
     }).share());
+
+    if (HCC_SERIALIZE_COPY & 0x2) {
+        status = waitComplete();
+        STATUS_CHECK_Q(status, queue, __LINE__);
+    };
 
     return status;
 }
