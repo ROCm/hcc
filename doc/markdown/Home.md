@@ -1,4 +1,4 @@
-# HC API : An HSA-extension to C++AMP
+# HC API : Moving Beyond C++AMP for Accelerated GPU Computing
 
 HC is a C++ API for accelerated computing provided by the HCC compiler.  It has some similarities to C++ AMP and therefore, reference materials (blogs, articles, books) that describe C++ AMP also proivide an excellent way to become familiar with HC.  For example, both APIs use a parallel_for_each construct to specify a parallel execution region that runs on accelerator.  However, HC has several important differences from C++ AMP, including the removal of the "restrict" keyword to annotate device code, an explicit asynchronous launch behavior for parallel_for_each, the support for non-constant tile size, the support for memory pointer, etc..
 
@@ -57,16 +57,16 @@ Macros for language modes in use:
 
 | Macro | Meaning |
 |----|--------|
-| ```__KALMAR_AMP__``` | 1 in case in C++ AMP mode (-std=c++amp) |
-| ```__KALMAR_HC__``` | 1 in case in HC mode (-hc) |
+| ```__HCC_AMP__``` | 1 in case in C++ AMP mode (-std=c++amp) |
+| ```__HCC_HC__``` | 1 in case in HC mode (-hc) |
 
 Compilation mode:
 HCC is a single-source compiler where kernel codes and host codes can reside in the same file. Internally HCC would trigger 2 compilation iterations, and the following macros can be user by user programs to determine which mode the compiler is in.
 
 | Macro | Meaning |
 |----|--------|
-| ```__KALMAR_ACCELERATOR__``` | not 0 in case the compiler runs in kernel code compilation mode |
-| ```__KALMAR_CPU__``` | not 0 in case the compiler runs in host code compilation mode |
+| ```__HCC_ACCELERATOR__``` | not 0 in case the compiler runs in kernel code compilation mode |
+| ```__HCC_CPU__``` | not 0 in case the compiler runs in host code compilation mode |
 
 ---
 
