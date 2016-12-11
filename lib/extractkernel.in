@@ -34,22 +34,22 @@ if (defined $options{t}) {
   $target = $options{t};
 }
 
-my $brig_start_tag = "_binary_kernel_brig_start";
-my $brig_size_tag  = "_binary_kernel_brig_size";
-my $brig_start = hex(`objdump -t $input_file | grep $brig_start_tag | awk '{print \$1}'`);
-my $brig_size  = hex(`objdump -t $input_file | grep $brig_size_tag | awk '{print \$1}'`);
+my $binary_start_tag = "_binary_kernel_brig_start";
+my $binary_size_tag  = "_binary_kernel_brig_size";
+my $binary_start = hex(`objdump -t $input_file | grep $binary_start_tag | awk '{print \$1}'`);
+my $binary_size  = hex(`objdump -t $input_file | grep $binary_size_tag | awk '{print \$1}'`);
 
-if ($brig_start == 0 || $brig_size == 0) {
+if ($binary_start == 0 || $binary_size == 0) {
   print("can't find any hsail kernel in $input_file\n");
 }  
 else {
 
-  # extract the hsail brig file from the binary
+  # extract the GPU binary file from the host binary
   my $data_lma         = hex(`objdump -h $input_file | grep ".data.rel.ro" | awk '{print \$5}'`);
   my $data_file_offset = hex(`objdump -h $input_file | grep ".data.rel.ro" | awk '{print \$6}'`);
-  my $brig_file_offset = $data_file_offset + ($brig_start - $data_lma);
-  my $brig_file_name = "$input_file.brig";
-  system("dd if=$input_file of=$brig_file_name skip=$brig_file_offset count=$brig_size bs=1 status=none");
+  my $binary_file_offset = $data_file_offset + ($binary_start - $data_lma);
+  my $binary_file_name = "$input_file.hsaco";
+  system("dd if=$input_file of=$binary_file_name skip=$binary_file_offset count=$binary_size bs=1 status=none");
 
   my $hsa_path = "@HSA_ROOT@";
   my $rocm_path = "@ROCM_ROOT@";
@@ -68,7 +68,7 @@ else {
   if (-f $hsafin) {
 
     # use the offline finalizer to dump out the hsail and isa
-    system("$hsafin -target=$target -brig $brig_file_name -output=$input_file.gpu.o -O2 -dump-isa -dump-hsail");
+    system("$hsafin -target=$target -brig $binary_file_name -output=$input_file.gpu.o -O2 -dump-isa -dump-hsail");
     move("./amdhsa001.hsail","./$input_file.hsail");
     move("./amdhsa001.isa","./$input_file.isa");
   }
