@@ -139,3 +139,20 @@ dpkg -i libc++-dev_3.9.0-3_amd64.deb
 ```
 
 This replaces previous version of libc++.
+
+CodeXL Activity Logger
+======================
+To enable the [CodeXL Activity Logger](https://github.com/RadeonOpenCompute/ROCm-Profiler/tree/master/CXLActivityLogger), use `USE_CODEXL_ACTIVITY_LOGGER` env var.
+
+Configure the build like: 
+
+```
+cmake \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DHSA_AMDGPU_GPU_TARGET=<AMD GPU ISA version string> \
+    -DROCM_DEVICE_LIB_DIR=<where bitcodes of ROCm-Device-Libs are> \
+    -DUSE_CODEXL_ACTIVITY_LOGGER=1 \
+    <ToT HCC checkout directory>
+```
+
+For the usage of the Activity Logger for profiling, please refer to its [documentation](https://github.com/RadeonOpenCompute/ROCm-Profiler/blob/master/CXLActivityLogger/doc/AMDTActivityLogger.pdf).
