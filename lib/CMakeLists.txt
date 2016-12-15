@@ -56,8 +56,8 @@ MESSAGE("CodeXL INFORMATION")
 ####################
 # CodeXL Activity Logger header
 ####################
-find_path(CODEXL_ACTIVITY_LOGGER_HEADER NAMES include/CXLActivityLogger.h PATHS ${CODEXL_ACTIVITY_LOGGER_HEADER_DIR} ${ROCM_ROOT}/profiler/CXLActivityLogger NO_DEFAULT_PATH)
-find_path(CODEXL_ACTIVITY_LOGGER_HEADER NAMES include/CXLActivityLogger.h)
+find_path(CODEXL_ACTIVITY_LOGGER_HEADER NAMES CXLActivityLogger.h PATHS ${CODEXL_ACTIVITY_LOGGER_HEADER_DIR} ${ROCM_ROOT}/profiler/CXLActivityLogger/include NO_DEFAULT_PATH)
+find_path(CODEXL_ACTIVITY_LOGGER_HEADER NAMES CXLActivityLogger.h)
 
 if (NOT CODEXL_ACTIVITY_LOGGER_HEADER)
   MESSAGE("ERROR: CodeXL header not found. use -DCODEXL_ACTIVITY_LOGGER_HEADER_DIR=<path_to_CXLActivityLogger.h>.")
@@ -69,8 +69,8 @@ endif (NOT CODEXL_ACTIVITY_LOGGER_HEADER)
 ####################
 # CodeXL Activity Logger Library
 ####################
-find_path(CODEXL_ACTIVITY_LOGGER_LIBRARY NAMES x86_64/libCXLActivityLogger.so PATHS ${CODEXL_ACTIVITY_LOGGER_LIBRARY_DIR} ${ROCM_ROOT}/profiler/CXLActivityLogger/bin NO_DEFAULT_PATH)
-find_path(CODEXL_ACTIVITY_LOGGER_LIBRARY NAMES x86_64/libCXLActivityLogger.so)
+find_path(CODEXL_ACTIVITY_LOGGER_LIBRARY NAMES libCXLActivityLogger.so PATHS ${CODEXL_ACTIVITY_LOGGER_LIBRARY_DIR} ${ROCM_ROOT}/profiler/CXLActivityLogger/bin/x86_64 NO_DEFAULT_PATH)
+find_path(CODEXL_ACTIVITY_LOGGER_LIBRARY NAMES libCXLActivityLogger.so)
 
 if (NOT CODEXL_ACTIVITY_LOGGER_LIBRARY)
   MESSAGE("ERROR: CodeXL Activity Logger library not found. Use -DCODEXL_ACTIVITY_LOGGER_LIBRARY_DIR=<path_to_libCXLActivityLogger.so>.")
