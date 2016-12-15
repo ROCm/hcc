@@ -161,7 +161,7 @@ void AmPointerTracker::update_peers (const hc::accelerator &acc, int peerCnt, hs
     for (auto iter = _tracker.begin() ; iter != _tracker.end(); ) {
         if (iter->second._acc == acc) {
             if (iter->second._isInDeviceMem) {
-                printf ("update peers\n");
+                mprintf ("update peers\n");
                 hsa_amd_agents_allow_access(peerCnt, peerAgents, NULL, const_cast<void*> (iter->first._basePointer));
             }
         } 
@@ -196,7 +196,9 @@ auto_voidp am_alloc(size_t sizeBytes, hc::accelerator &acc, unsigned flags)
             hsa_amd_memory_pool_t *alloc_region;
             if (flags & amHostPinned) {
                alloc_region = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_system_region());
-            } else {
+            } else if (flags & amHostCoherent) {
+               alloc_region = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_finegrained_system_region());
+            }else {
                alloc_region = static_cast<hsa_amd_memory_pool_t*>(acc.get_hsa_am_region());
             }
 

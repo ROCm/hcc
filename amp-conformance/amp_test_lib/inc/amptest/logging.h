@@ -40,7 +40,7 @@ namespace Concurrency
 
 		/// Gets the current timestamp from the system and formats it to a string
 		/// The format used has the timestamp surrounded with square brackets (e.g. "[...]").
-		std::string AMP_TEST_API get_timestamp(bool include_date = false);
+		std::string AMP_TEST_API get_timestamp(bool include_date);
 
 		/// C++-style streaming operators.  Convert output to a UTF-8 encoded byte stream.
 		std::ostream& operator<<(std::ostream& os, const wchar_t* str);
@@ -49,16 +49,16 @@ namespace Concurrency
 		std::ostream& operator<<(std::ostream& os, const std::wstring& str);
 
         ///<summary>Logs the "logtype" and returns an ostream for further logging</summary>
-        std::ostream& AMP_TEST_API Log(LogType type = LogType::Info, bool print_line_prefix = true);
+        std::ostream& AMP_TEST_API Log(LogType type, bool print_line_prefix);
         std::ostream& AMP_TEST_API LogStream();
 
         inline std::ostream& Log(runall_result result) {
 			if(result.get_is_pass() || result.get_is_no_value()) {
-				return Log(LogType::Info);
+				return Log(LogType::Info, true);
 			} else if(result.get_is_skip()) {
-				return Log(LogType::Warning);
+				return Log(LogType::Warning, true);
 			} else { // Any of the fail states
-				return Log(LogType::Error);
+				return Log(LogType::Error, true);
 			}
 		}
 
@@ -69,14 +69,14 @@ namespace Concurrency
         void AMP_TEST_API Log_writeline(const char *msg, ...);
 
 		// Prints a new line character to the specified log.
-        void AMP_TEST_API Log_writeline(LogType type = LogType::Info);
+        void AMP_TEST_API Log_writeline(LogType type);
 
         void AMP_TEST_API SetVerbosity(LogType level);
         LogType AMP_TEST_API GetVerbosity();
 
 		/// Reports a pass/fail result.
 		inline bool report_result(const std::string& description, const bool& passed) {
-			Log(passed ? LogType::Info : LogType::Error)
+			Log(passed ? LogType::Info : LogType::Error, true)
 				<< description << ": " << runall_result_name(passed) << std::endl << std::flush;
 			return passed;
 		}
@@ -96,7 +96,7 @@ namespace Concurrency
 		/// calling exit(runall_skip) if contition is false.
 		inline void skip_if(const std::string& description, bool condition) {
 			if(condition) {
-				Log() << description << ": Skipping..." << std::endl << std::flush;
+				Log(LogType::Info, true) << description << ": Skipping..." << std::endl << std::flush;
 				exit(runall_skip);
 			}
 		}

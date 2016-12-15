@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# enable bash debugging
+KMDBSCRIPT="${KMDBSCRIPT:=0}"
+if [ $KMDBSCRIPT == "1" ]
+then
+  set -x
+fi
+
 # check number of arguments
 if [ "$#" -eq 0 ]; then
   echo "$0 is NOT recommended to be directly used" >&2
@@ -42,10 +49,10 @@ AMDGPU_TARGET_ARRAY=()
 # link
 ################
 
-LINK_KERNEL_ARGS=""
-LINK_HOST_ARGS=""
-LINK_OTHER_ARGS=""
-LINK_CPU_ARG=""
+LINK_KERNEL_ARGS=()
+LINK_HOST_ARGS=()
+LINK_CPU_ARG=()
+LINK_OTHER_ARGS=()
 
 TEMP_DIR=`mktemp -d`
 
@@ -72,19 +79,8 @@ _find_object() {
 }
 
 ARGS="$@"
-
-# flag to switch to the new arg parsing algorithm
-USE_NEW_LINK=1
-
-NEW_LINK_KERNEL_ARGS=""
-NEW_LINK_HOST_ARGS=""
-NEW_LINK_OTHER_ARGS=""
-NEW_LINK_CPU_ARG=""
-
 STATIC_LIB_LIST=()
 TEMP_AR_DIRS=()
-
-if [ $USE_NEW_LINK == 1 ]; then
 
 # detect the verbose flags before doing anything
 if [[ "$ARGS" =~ --verbose ]]; then
@@ -97,22 +93,22 @@ fi
 
 # gather a list of library search paths
 LIB_SEARCH_PATHS=()
-for ARG in $ARGS
+for ARG in "$@"
 do
   # matches -L<path>
-  if [[ "$ARG" =~ ^-L[^[:space:]]+$ ]]; then
-    REAL_PATH=$(readlink -f ${ARG:2})
+  if [[ "$ARG" =~ ^-L* ]]; then
+    REAL_PATH="$(readlink -f "${ARG:2}")"
     if [ $VERBOSE == 2 ]; then
       echo "add library path: ${ARG:2}, canonical path: $REAL_PATH"
     fi
-    LIB_SEARCH_PATHS+=( $REAL_PATH )
+    LIB_SEARCH_PATHS+=( "$REAL_PATH" )
   fi
 done
 
 
 
 
-for ARG in $ARGS
+for ARG in "$@"
 do
 
   ######################
@@ -134,16 +130,16 @@ do
 
   if [[ "$ARG" =~ [^[:space:]]+\.cpu$ ]]; then
 
-    cp $ARG $TEMP_DIR/kernel_cpu.o
-    NEW_LINK_CPU_ARG=$NEW_LINK_CPU_ARG" "$TEMP_DIR/kernel_cpu.o
-
+    cp "$ARG" $TEMP_DIR/kernel_cpu.o
+    LINK_CPU_ARG+=( "$TEMP_DIR/kernel_cpu.o" )
+ 
   elif [[ "$ARG" =~ [^[:space:]]+\.o$ ]]; then
     # detected a .o file
     if [ $VERBOSE == 2 ]; then
       echo "detect object file to process further: $ARG"
     fi
 
-    OBJS_TO_PROCESS+=( $ARG )
+    OBJS_TO_PROCESS+=( "$ARG" )
   elif [[ "$ARG" =~ ^-l[^[:space:]]+$ ]] || [[ "$ARG" =~ [^[:space:]]+.a$ ]]; then
 
     # proccess a static library
@@ -163,27 +159,29 @@ do
       # look for the static library in the library search paths
       for LIB_PATH in "${LIB_SEARCH_PATHS[@]}"
       do
-        FULL_LIB_PATH=$LIB_PATH"/"$STATIC_LIB_NAME
-        FULL_LIB_PATH=$(readlink -f $FULL_LIB_PATH)
+        FULL_LIB_PATH="$LIB_PATH"
+        FULL_LIB_PATH+="/"
+        FULL_LIB_PATH+="$STATIC_LIB_NAME"
+        FULL_LIB_PATH=$(readlink -f "$FULL_LIB_PATH")
         if [ $VERBOSE == 2 ]; then
           echo "trying to detect $FULL_LIB_PATH"
         fi
-        if [ -f $FULL_LIB_PATH ]; then
+        if [ -f "$FULL_LIB_PATH" ]; then
           if [ $VERBOSE == 2 ]; then
             echo "$FULL_LIB_PATH detected"
           fi
-          DETECTED_STATIC_LIBRARY=$FULL_LIB_PATH;
+          DETECTED_STATIC_LIBRARY="$FULL_LIB_PATH";
           break;
         fi
       done
     else
       # this is .a static library file specified at the commad line
-      if [ -f $ARG ]; then
-        FULL_LIB_PATH=$(readlink -f $ARG)
+      if [ -f "$ARG" ]; then
+        FULL_LIB_PATH=$(readlink -f "$ARG")
         if [ $VERBOSE == 2 ]; then
           echo "use .a specified at: $FULL_LIB_PATH"
         fi
-        DETECTED_STATIC_LIBRARY=$FULL_LIB_PATH
+        DETECTED_STATIC_LIBRARY="$FULL_LIB_PATH"
       fi
     fi  # if [[ "$ARG" =~ ^-l[^[:space:]]+$ ]]; then
 
@@ -199,7 +197,7 @@ do
         fi
       done
       if [[ $DETECTED_STATIC_LIBRARY != "" ]]; then
-        STATIC_LIB_LIST+=( $DETECTED_STATIC_LIBRARY )
+        STATIC_LIB_LIST+=( "$DETECTED_STATIC_LIBRARY" )
       fi
     fi
 
@@ -213,7 +211,7 @@ do
       fi
 
       # detect whether the objects in the static library contain a .kernel section
-      KERNEL_UNDETECTED=`objdump -t $DETECTED_STATIC_LIBRARY | grep -q "\.kernel"; echo $?`
+      KERNEL_UNDETECTED=`objdump -t "$DETECTED_STATIC_LIBRARY" | grep -q "\.kernel"; echo $?`
       if [[ $KERNEL_UNDETECTED == "0" ]]; then
 
         # .kernel section detected, extract the objects from the archieve
@@ -225,30 +223,32 @@ do
         CURRENT_DIR=$PWD
         # extract the archive
         FILE=`basename $DETECTED_STATIC_LIBRARY`
-        AR_TEMP_DIR=$TEMP_DIR"/"$FILE
+        AR_TEMP_DIR="$TEMP_DIR"
+        AR_TEMP_DIR+="/"
+        AR_TEMP_DIR+="$FILE"
 
         if [ $VERBOSE == 2 ]; then
           echo "creating temp dir: $AR_TEMP_DIR"
         fi
+ 
+        mkdir -p "$AR_TEMP_DIR"
+        TEMP_AR_DIRS+=( "$AR_TEMP_DIR" )
+        cd "$AR_TEMP_DIR"
+        `ar x "$DETECTED_STATIC_LIBRARY"`
 
-        mkdir -p $AR_TEMP_DIR
-        TEMP_AR_DIRS+=( $AR_TEMP_DIR )
-        cd $AR_TEMP_DIR
-        `ar x $DETECTED_STATIC_LIBRARY`
-
-        cd $CURRENT_DIR
+        cd "$CURRENT_DIR"
 
         # store all the extract objects to process further
-        OBJS_TO_PROCESS=($(ls $AR_TEMP_DIR/*.o))
+        OBJS_TO_PROCESS=($(ls "$AR_TEMP_DIR"/*.o))
 
       fi  # if [[ $KERNEL_UNDETECTED == "0" ]]; then
     fi  # if [[ $DETECTED_STATIC_LIBRARY != "" ]]; then
-  elif [ -f $ARG ]; then
+  elif [ -f "$ARG" ]; then
     # an object file but doesn't have an .o extension??
-    file_output=`file $ARG | grep 'ELF 64-bit LSB  relocatable, x86-64'`
-    readelf_output=`readelf -h $ARG | grep 'Relocatable file'`
+    file_output=`file "$ARG" | grep 'ELF 64-bit LSB  relocatable, x86-64'`
+    readelf_output=`readelf -h "$ARG" | grep 'Relocatable file'`
     if [ ! -z "$file_output" ] && [ ! -z "$readelf_output" ]; then
-      OBJS_TO_PROCESS+=( $ARG )
+      OBJS_TO_PROCESS+=( "$ARG" )
     fi
   fi
 
@@ -259,7 +259,7 @@ do
     if [ $VERBOSE == 2 ]; then
       echo "passing down link args: $ARG"
     fi
-    NEW_LINK_OTHER_ARGS=$NEW_LINK_OTHER_ARGS" "$ARG
+    LINK_OTHER_ARGS+=( "$ARG" )
     continue
   fi
 
@@ -271,118 +271,38 @@ do
     fi
 
     # detect whether the objects in the static library contain a .kernel section
-    KERNEL_UNDETECTED=`objdump -t $OBJ | grep -q "\.kernel"; echo $?`
+    KERNEL_UNDETECTED=`objdump -t "$OBJ" | grep -q "\.kernel"; echo $?`
     if [[ $KERNEL_UNDETECTED == "0" ]]; then
 
-      FILE=`basename $OBJ` # remove path
-      FILENAME=${FILE%.*}
-      KERNEL_FILE=$TEMP_DIR/$FILENAME.kernel.bc
-      HOST_FILE=$TEMP_DIR/$FILENAME.host.o
+      FILE=`basename "$OBJ"` # remove path
+      FILENAME="${FILE%.*}"
+      KERNEL_FILE="$TEMP_DIR/$FILENAME.kernel.bc"
+      HOST_FILE="$TEMP_DIR/$FILENAME.host.o"
 
       # extract kernel section
-      objcopy -O binary -j .kernel $OBJ $KERNEL_FILE 
+      objcopy -O binary -j .kernel "$OBJ" "$KERNEL_FILE"
 
       # extract host section
-      objcopy -R .kernel $OBJ $HOST_FILE
+      objcopy -R .kernel "$OBJ" "$HOST_FILE"
 
       # strip all symbols specified in symbol.txt from $HOST_FILE
-      objcopy @$CXXAMP_SERIALIZE_SYMBOL_FILE $HOST_FILE $HOST_FILE.new 2> /dev/null
-      if [ -f $HOST_FILE.new ]; then
-        mv $HOST_FILE.new $HOST_FILE
+      objcopy @$CXXAMP_SERIALIZE_SYMBOL_FILE "$HOST_FILE" "$HOST_FILE.new" 2> /dev/null
+      if [ -f "$HOST_FILE.new" ]; then
+        mv "$HOST_FILE.new" "$HOST_FILE"
       fi
 
       # find cxxamp_serialize symbols and save them into symbol.txt
-      objdump -t $HOST_FILE -j .text 2> /dev/null | grep "g.*__cxxamp_serialize" | awk '{print "-L"$6}' >> $CXXAMP_SERIALIZE_SYMBOL_FILE
+      objdump -t "$HOST_FILE" -j .text 2> /dev/null | grep "g.*__cxxamp_serialize" | awk '{print "-L"$6}' >> $CXXAMP_SERIALIZE_SYMBOL_FILE
 
-      NEW_LINK_KERNEL_ARGS=$NEW_LINK_KERNEL_ARGS" "$KERNEL_FILE
-      NEW_LINK_HOST_ARGS=$NEW_LINK_HOST_ARGS" "$HOST_FILE
+      LINK_KERNEL_ARGS+=( "$KERNEL_FILE" )
+      LINK_HOST_ARGS+=( "$HOST_FILE" )
     else
-      NEW_LINK_OTHER_ARGS=$NEW_LINK_OTHER_ARGS" "$OBJ
+      LINK_OTHER_ARGS+=( "$OBJ" )
     fi
 
 
   done # for OBJ in "${OBJS_TO_PROCESS[@]}"
 done
-
-else #  if [ $USE_NEW_LINK == 1 ]; then
-
-############################
-# Old argument processing
-############################
-
-for ARG in $ARGS
-do
-  if [ -f $ARG ]; then
-    FILE=`basename $ARG` # remove path
-    FILENAME=$(_find_object $FILE)  # check if it's an object file
-    CPUFILE=${FILE%.cpu}
-    ISCRT=${ARG#/usr}    # exception for objects under /usr
-    ISLIB=${ARG#/lib}    # exception for objects under /lib
-
-    if [ $FILENAME != $FILE ] && [ $ISCRT == $ARG ] && [ $ISLIB == $ARG ]; then
-      KERNEL_FILE=$TEMP_DIR/$FILENAME.kernel.bc
-      HOST_FILE=$TEMP_DIR/$FILENAME.host.o
-
-      # extract kernel section
-      objcopy -O binary -j .kernel $ARG $KERNEL_FILE
-
-      # extract host section
-      objcopy -R .kernel $ARG $HOST_FILE
-
-      # strip all symbols specified in symbol.txt from $HOST_FILE
-      objcopy @$CXXAMP_SERIALIZE_SYMBOL_FILE $HOST_FILE $HOST_FILE.new 2> /dev/null
-      if [ -f $HOST_FILE.new ]; then
-        mv $HOST_FILE.new $HOST_FILE
-      fi
-
-      # find cxxamp_serialize symbols and save them into symbol.txt
-      objdump -t $HOST_FILE -j .text 2> /dev/null | grep "g.*__cxxamp_serialize" | awk '{print "-L"$6}' >> $CXXAMP_SERIALIZE_SYMBOL_FILE
-
-      LINK_KERNEL_ARGS=$LINK_KERNEL_ARGS" "$KERNEL_FILE
-      LINK_HOST_ARGS=$LINK_HOST_ARGS" "$HOST_FILE
-    elif [[ $CPUFILE != $FILE ]]; then
-        cp $ARG $TEMP_DIR/kernel_cpu.o
-        LINK_CPU_ARG=$LINK_CPU_ARG" "$TEMP_DIR/kernel_cpu.o
-    else
-      LINK_OTHER_ARGS=$LINK_OTHER_ARGS" "$ARG
-    fi
-  elif [ $ARG == "--verbose" ]; then
-    VERBOSE=1
-  else
-
-    ######################
-    # Parse AMDGPU target
-    ######################
-    case $ARG in
-      --amdgpu-target=*)
-      AMDGPU_TARGET_ARRAY+=("${ARG#*=}")
-      continue
-      ;;
-    esac
-
-    #########################
-    # Append other arguments
-    #########################
-
-    LINK_OTHER_ARGS=$LINK_OTHER_ARGS" "$ARG
-  fi
-done
-
-
-if [ $VERBOSE != 0 ]; then
-  echo "kernel args: "$LINK_KERNEL_ARGS
-  echo ""
-  echo "host args: "$LINK_HOST_ARGS
-  echo ""
-  echo "other args: "$LINK_OTHER_ARGS
-  echo ""
-fi
-
-###################################
-# End of old argument processing
-###################################
-
-fi
 
 # AMDGPU_TARGET_ARRAY could be overridden by HCC_AMDGPU_TARGET env variable
 if [ -n "$HCC_AMDGPU_TARGET" ]; then
@@ -420,35 +340,23 @@ if [ $VERBOSE != 0 ]; then
   echo ""
 fi
 
-
-if [ $USE_NEW_LINK == 1 ]; then
-
 if [ $VERBOSE != 0 ]; then
-  echo "new kernel args: "$NEW_LINK_KERNEL_ARGS
+  echo "new kernel args: ${LINK_KERNEL_ARGS[@]}"
   echo ""
-  echo "new host args: "$NEW_LINK_HOST_ARGS
+  echo "new host args: ${LINK_HOST_ARGS[@]}"
   echo ""
-  echo "new other args: "$NEW_LINK_OTHER_ARGS
+  echo "new other args: ${LINK_OTHER_ARGS[@]}"
   echo ""
-fi
-
-if [ $VERBOSE != 0 ]; then
-  echo "replacing old link args with new link args"
-fi
-LINK_KERNEL_ARGS=$NEW_LINK_KERNEL_ARGS
-LINK_HOST_ARGS=$NEW_LINK_HOST_ARGS
-LINK_OTHER_ARGS=$NEW_LINK_OTHER_ARGS
-
 fi
 
 # linker return value
 ret=0
 
 # only do kernel lowering if there are objects given
-if [ -n "$LINK_KERNEL_ARGS" ]; then
+if [ ${#LINK_KERNEL_ARGS[@]} != 0 ]; then
 
   # combine kernel sections together
-  $LINK $LINK_KERNEL_ARGS | $OPT -always-inline - -o $TEMP_DIR/kernel.bc
+  $LINK "${LINK_KERNEL_ARGS[@]}" | $OPT -always-inline - -o $TEMP_DIR/kernel.bc
 
   # lower to GCN ISA
   if [ $VERBOSE == 1 ]; then
@@ -498,7 +406,7 @@ if [ -n "$LINK_KERNEL_ARGS" ]; then
   popd > /dev/null
 
   # link everything together
-  ld --allow-multiple-definition $TEMP_DIR/kernel_hsa.o $LINK_HOST_ARGS $LINK_CPU_ARG $LINK_OTHER_ARGS
+  ld --allow-multiple-definition $TEMP_DIR/kernel_hsa.o "${LINK_HOST_ARGS[@]}" "${LINK_CPU_ARG[@]}" "${LINK_OTHER_ARGS[@]}"
   ret=$?
 
 fi # if [ -n $LINK_KERNEL_ARGS ];
@@ -526,12 +434,12 @@ if [ -e $TEMP_DIR/kernel.bc ]; then
   rm $TEMP_DIR/kernel.bc
 fi
 
-if [ -n "$LINK_KERNEL_ARGS" ]; then
-  rm $LINK_KERNEL_ARGS # individual kernels
+if [ ${#LINK_KERNEL_ARGS[@]} != 0 ]; then
+  rm "${LINK_KERNEL_ARGS[@]}" # individual kernels
 fi
 
 if [ -n "$LINK_HOST_ARGS" ]; then
-  rm $LINK_HOST_ARGS # individual host codes
+  rm "${LINK_HOST_ARGS[@]}" # individual host codes
 fi
 
 if [ -e $CXXAMP_SERIALIZE_SYMBOL_FILE ]; then

@@ -5,7 +5,10 @@
 
 namespace hc {
 class AmPointerInfo;
+class completion_future;
 }; // end namespace hc
+
+typedef struct hsa_kernel_dispatch_packet_s hsa_kernel_dispatch_packet_t;
 
 namespace Kalmar {
 namespace enums {
@@ -213,6 +216,8 @@ public:
   virtual void* getHSAAMRegion() { return nullptr; }
 
   virtual void* getHSAAMHostRegion() { return nullptr; }
+  
+  virtual void* getHSACoherentAMHostRegion() { return nullptr; }
 
   /// get kernarg region handle
   virtual void* getHSAKernargRegion() { return nullptr; }
@@ -230,18 +235,28 @@ public:
 
   /// copy src to dst asynchronously
   virtual std::shared_ptr<KalmarAsyncOp> EnqueueAsyncCopy(const void* src, void* dst, size_t size_bytes) { return nullptr; }
+  virtual std::shared_ptr<KalmarAsyncOp> EnqueueAsyncCopyExt(const void* src, void* dst, size_t size_bytes, 
+                                                             hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, 
+                                                             const Kalmar::KalmarDevice *copyDevice) { return nullptr; };
 
   // Copy src to dst synchronously
   virtual void copy(const void *src, void *dst, size_t size_bytes) { }
 
   /// copy src to dst, with caller providing extended information about the pointers.
-  virtual void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceHostCopyEngine) { };
+  //// TODO - remove me, this form is deprecated.
+  virtual void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceUnpinnedCopy) { };
+  virtual void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, 
+                        const Kalmar::KalmarDevice *copyDev, bool forceUnpinnedCopy) { };
 
   /// cleanup internal resource
   /// this function is usually called by dtor of the implementation classes
   /// in rare occasions it may be called by other functions to ensure proper
   /// resource clean up sequence
   virtual void dispose() {}
+
+  virtual void dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql, 
+                                   const void * args, size_t argsize,
+                                   hc::completion_future *cf)  { };
  
   /// set CU affinity of this queue.
   /// the setting is permanent until the queue is destroyed or another setting

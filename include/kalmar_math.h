@@ -144,7 +144,7 @@
   extern "C" double __hc_modf(double x, double *iptr) restrict(amp);
 
   extern "C" float __hc_nan(int tagp) restrict(amp);
-  extern "C" double __hc_nan_double(int tagp) restrict(amp);
+  extern "C" double __hc_nan_double(unsigned long tagp) restrict(amp);
 
   extern "C" float __hc_nearbyint(float x) restrict(amp);
   extern "C" double __hc_nearbyint_double(double x) restrict(amp);
@@ -1969,7 +1969,7 @@ namespace fast_math {
   inline double host_nan(int tagp) restrict(cpu) { return ::nan(reinterpret_cast<const char*>(&tagp)); }
   inline double nan(int tagp) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
-      return __hc_nan_double(tagp);
+      return __hc_nan_double(static_cast<unsigned long>(tagp));
     #else
       return host_nan(tagp);
     #endif

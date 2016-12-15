@@ -390,12 +390,17 @@ public:
 
       // get context
       KalmarContext* context = static_cast<KalmarContext*>(runtime->m_GetContextImpl());
+    
+      const std::vector<KalmarDevice*> devices = context->getDevices();
 
-      // get default queue on the default device
-      std::shared_ptr<KalmarQueue> queue = context->auto_select();
+      for (auto dev = devices.begin(); dev != devices.end(); dev++) {
 
-      // build kernels on the default queue on the default device
-      CLAMP::BuildProgram(queue.get());
+        // get default queue on the default device
+        std::shared_ptr<KalmarQueue> queue = (*dev)->get_default_queue();
+  
+        // build kernels on the default queue on the default device
+        CLAMP::BuildProgram(queue.get());
+      }
     }
   }
 };

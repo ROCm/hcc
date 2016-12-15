@@ -32,17 +32,23 @@
 #   define __CPU__ [[cpu]]
 #endif
 
+typedef struct hsa_kernel_dispatch_packet_s hsa_kernel_dispatch_packet_t;
 
 /**
  * @namespace hc
  * Heterogeneous  C++ (HC) namespace
  */
+namespace Kalmar {
+    class HSAQueue;
+};
+
 namespace hc {
 
 class AmPointerInfo;
 
 using namespace Kalmar::enums;
 using namespace Kalmar::CLAMP;
+
 
 // forward declaration
 class accelerator;
@@ -52,6 +58,8 @@ template <int N> class extent;
 template <int N> class tiled_extent;
 template <typename T, int N> class array_view;
 template <typename T, int N> class array;
+
+
 
 // namespace alias
 // namespace hc::fast_math is an alias of namespace Kalmar::fast_math
@@ -286,13 +294,16 @@ public:
      * The copy command will execute after any commands already inserted into the accelerator_view finish.
      * This is a synchronous copy command, and the copy operation complete before this call returns.
      * The copy_ext flavor allows caller to provide additional information about each pointer, which can improve performance by eliminating replicated lookups.
+     * This interface is intended for language runtimes such as HIP.
     
      @p copyDir : Specify direction of copy.  Must be hcMemcpyHostToHost, hcMemcpyHostToDevice, hcMemcpyDeviceToHost, or hcMemcpyDeviceToDevice. 
-     @p forceHostCopyEngine : Force copy to be performed with host involvement rather than with accelerator copy engines.
+     @p forceUnpinnedCopy : Force copy to be performed with host involvement rather than with accelerator copy engines.
      */
-    void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceHostCopyEngine) {
-        pQueue->copy_ext(src, dst, size_bytes, copyDir, srcInfo, dstInfo, forceHostCopyEngine);
-    };
+    void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, const hc::accelerator *copyAcc, bool forceUnpinnedCopy);
+
+
+    // TODO - this form is deprecated, provided for use with older HIP runtimes.
+    void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceUnpinnedCopy) ;
 
     /**
      * Copies size_bytes bytes from src to dst.  
@@ -306,6 +317,33 @@ public:
      *
      */
     completion_future copy_async(const void *src, void *dst, size_t size_bytes);
+
+
+    /**
+     * Copies size_bytes bytes from src to dst.  
+     * Src and dst must not overlap.  
+     * Note the src is the first parameter and dst is second, following C++ convention.  
+     * This is an asynchronous copy command, and this call may return before the copy operation completes.
+     *
+     * The copy command will be implicitly ordered with respect to commands previously enqueued to this accelerator_view:
+     * - If the queue execute_order is execute_in_order (the default), then the copy will execute after all previously sent commands finish execution.
+     * - If the queue execute_order is execute_any_order, then the copy will start after all previously send commands start but can execute in any order.
+     *   The copyAcc determines where the copy is executed and does not affect the ordering.
+     *
+     * The copy_async_ext flavor allows caller to provide additional information about each pointer, which can improve performance by eliminating replicated lookups,
+     * and also allow control over which device performs the copy.  
+     * This interface is intended for language runtimes such as HIP.
+     *
+     *  @p copyDir : Specify direction of copy.  Must be hcMemcpyHostToHost, hcMemcpyHostToDevice, hcMemcpyDeviceToHost, or hcMemcpyDeviceToDevice. 
+     *  @p copyAcc : Specify which accelerator performs the copy operation.  The specified accelerator must have access to the source and dest pointers - either
+     *               because the memory is allocated on those devices or because the accelerator has peer access to the memory.
+     *               If copyAcc is nullptr, then the copy will be performed by the host.  In this case, the host accelerator must have access to both pointers.
+     *               The copy operation will be performed by the specified engine but is not synchronized with respect to any operations on that device.  
+     *
+     */
+    completion_future copy_async_ext(const void *src, void *dst, size_t size_bytes, 
+                                     hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, 
+                                     const hc::accelerator *copyAcc);
 
     /**
      * Compares "this" accelerator_view with the passed accelerator_view object
@@ -394,6 +432,18 @@ public:
     }
 
     /**
+     * Returns an opaque handle which points to the AM system region on the HSA agent.
+     * This region can be used to allocate finegrained system memory which is accessible from the 
+     * specified accelerator.
+     *
+     * @return An opaque handle of the region, if the accelerator is based
+     *         on HSA.  NULL otherwise.
+     */
+    void* get_hsa_am_finegrained_system_region() {
+        return pQueue->getHSACoherentAMHostRegion();
+    }
+
+    /**
      * Returns an opaque handle which points to the Kernarg region on the HSA
      * agent.
      *
@@ -409,6 +459,70 @@ public:
      */
     bool is_hsa_accelerator() {
         return pQueue->hasHSAInterOp();
+    }
+
+    /**
+     * Dispatch a kernel into the accelerator_view.
+     *
+     * This function is intended to provide a gateway to dispatch code objects, with 
+     * some assistance from HCC.  Kernels are specified in the standard code object
+     * format, and can be created from a varety of compiler tools including the 
+     * assembler, offline cl compilers, or other tools.    The caller also
+     * specifies the execution configuration and kernel arguments.    HCC 
+     * will copy the kernel arguments into an appropriate segment and insert
+     * the packet into the queue.   HCC will also automatically handle signal 
+     * and kernarg allocation and deallocation for the command.
+     *
+     *  The kernel is dispatched asynchronously, and thus this API may return before the 
+     *  kernel finishes executing.
+     
+     *  Kernels dispatched with this API may be interleaved with other copy and kernel
+     *  commands generated from copy or parallel_for_each commands.  
+     *  The kernel honors the execute_order associated with the accelerator_view.  
+     *  Specifically, if execute_order is execute_in_order, then the kernel
+     *  will wait for older data and kernel commands in the same queue before
+     *  beginning execution.  If execute_order is execute_any_order, then the 
+     *  kernel may begin executing without regards to the state of older kernels.  
+     *  This call honors the packer barrier bit (1 << HSA_PACKET_HEADER_BARRIER) 
+     *  if set in the aql.header field.  If set, this provides the same synchronization
+     *  behaviora as execute_in_order for the command generated by this API.
+     *
+     * @p aql is an HSA-format "AQL" packet. The following fields must 
+     * be set by the caller:
+     *  aql.kernel_object 
+     *  aql.group_segment_size : includes static + dynamic group size
+     *  aql.private_segment_size 
+     *  aql.grid_size_x, aql.grid_size_y, aql.grid_size_z
+     *  aql.group_size_x, aql.group_size_y, aql.group_size_z
+     *  aql.setup :  The 2 bits at HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS.
+     *  aql.header :  Must specify the desired memory fence operations, and barrier bit (if desired.).  A typical conservative setting would be:
+    aql.header = (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
+                 (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE) |
+                 (1 << HSA_PACKET_HEADER_BARRIER);
+
+     * The following fields are ignored.  The API will will set up these fields before dispatching the AQL packet:
+     *  aql.completion_signal 
+     *  aql.kernarg 
+     * 
+     * @p args : Pointer to kernel arguments with the size and aligment expected by the kernel.  The args are copied and then passed directly to the kernel.   After this function returns, the args memory may be deallocated.
+     * @p argSz : Size of the arguments.
+     * @p cf : Written with a completion_future that can be used to track the status
+     *          of the dispatch.  May be NULL, in which case no completion_future is 
+     *          returned and the caller must use other synchronization techniqueues 
+     *          such as calling accelerator_view::wait() or waiting on a younger command
+     *          in the same queue.
+     *
+     * The dispatch_hsa_kernel call will perform the following operations:
+     *    - Efficiently allocate a kernarg region and copy the arguments.
+     *    - Efficiently allocate a signal, if required.
+     *    - Dispatch the command into the queue and flush it to the GPU.
+     *    - Kernargs and signals are automatically reclaimed by the HCC runtime.
+     */
+    void dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql, 
+                           const void * args, size_t argsize,
+                           hc::completion_future *cf=NULL) 
+    {
+        pQueue->dispatch_hsa_kernel(aql, args, argsize, cf);
     }
 
     /**
@@ -804,6 +918,18 @@ public:
     }
 
     /**
+     * Returns an opaque handle which points to the AM system region on the HSA agent.
+     * This region can be used to allocate finegrained system memory which is accessible from the 
+     * specified accelerator.
+     *
+     * @return An opaque handle of the region, if the accelerator is based
+     *         on HSA.  NULL otherwise.
+     */
+    void* get_hsa_am_finegrained_system_region() const {
+        return get_default_view().get_hsa_am_finegrained_system_region();
+    }
+
+    /**
      * Returns an opaque handle which points to the Kernarg region on the HSA
      * agent.
      *
@@ -1181,6 +1307,8 @@ private:
     completion_future(const std::shared_future<void> &__future)
         : __amp_future(__future), __thread_then(nullptr), __asyncOp(nullptr) {}
 
+    friend class Kalmar::HSAQueue;
+    
     // non-tiled parallel_for_each
     // generic version
     template <int N, typename Kernel> friend
@@ -1293,10 +1421,28 @@ accelerator_view::create_blocking_marker(std::initializer_list<completion_future
     return create_blocking_marker(dependent_future_list.begin(), dependent_future_list.end());
 }
 
+
+inline void accelerator_view::copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, const hc::accelerator *copyAcc, bool forceUnpinnedCopy) {
+    pQueue->copy_ext(src, dst, size_bytes, copyDir, srcInfo, dstInfo, copyAcc ? copyAcc->pDev : nullptr, forceUnpinnedCopy);
+};
+
+inline void accelerator_view::copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceHostCopyEngine) {
+    pQueue->copy_ext(src, dst, size_bytes, copyDir, srcInfo, dstInfo, forceHostCopyEngine);
+};
+
 inline completion_future
 accelerator_view::copy_async(const void *src, void *dst, size_t size_bytes) {
     return completion_future(pQueue->EnqueueAsyncCopy(src, dst, size_bytes));
 }
+
+inline completion_future
+accelerator_view::copy_async_ext(const void *src, void *dst, size_t size_bytes,
+                             hcCommandKind copyDir, 
+                             const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, 
+                             const hc::accelerator *copyAcc)
+{
+    return completion_future(pQueue->EnqueueAsyncCopyExt(src, dst, size_bytes, copyDir, srcInfo, dstInfo, copyAcc ? copyAcc->pDev : nullptr));
+};
 
 
 // ------------------------------------------------------------------------
@@ -2184,11 +2330,12 @@ extern "C" uint64_t __bitmask_b64(unsigned int src0, unsigned int src1) __HC__;
  * Reverse the bits
  *
  * Please refer to <a href="http://www.hsafoundation.com/html/Content/PRM/Topics/05_Arithmetic/bit_string.htm">HSA PRM 5.7</a> for more detailed specification of these functions.
- * TODO: Use __builtin_bitreverse when we upgrade clang to 3.9.
  */
-extern "C" unsigned int __bitrev_b32(unsigned int src0) __HC__;
 
-extern "C" uint64_t __bitrev_b64(uint64_t src0) __HC__;
+unsigned int __bitrev_b32(unsigned int src0) [[hc]] __asm("llvm.bitreverse.i32");
+
+uint64_t __bitrev_b64(uint64_t src0) [[hc]] __asm("llvm.bitreverse.i64");
+
 /** @} */
 
 /** @{ */

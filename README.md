@@ -97,3 +97,45 @@ cmake \
     ../hcc
 ```
 
+Building clang_tot_upgrade branch on Ubuntu 16.04.1
+----------------------------------------------------
+The following issue is common when building HCC tot branch.
+
+```
+In file included from /home/aditya/rocm/hcc.lc.tot/lib/mcwamp.cpp:8:
+In file included from /usr/include/c++/v1/iostream:38:
+In file included from /usr/include/c++/v1/ios:216:
+In file included from /usr/include/c++/v1/__locale:15:
+/usr/include/c++/v1/string:1938:44: error: 'basic_string<_CharT, _Traits, _Allocator>' is
+      missing exception specification
+      'noexcept(is_nothrow_copy_constructible<allocator_type>::value)'
+basic_string<_CharT, _Traits, _Allocator>::basic_string(const allocator_type& __a)
+                                           ^
+/usr/include/c++/v1/string:1326:40: note: previous declaration is here
+    _LIBCPP_INLINE_VISIBILITY explicit basic_string(const allocator_type& __a)
+                                       ^
+1 error generated.
+lib/CMakeFiles/mcwamp.dir/build.make:62: recipe for target 'lib/CMakeFiles/mcwamp.dir/mcwamp.cpp.o' failed
+make[2]: *** [lib/CMakeFiles/mcwamp.dir/mcwamp.cpp.o] Error 1
+CMakeFiles/Makefile2:229: recipe for target 'lib/CMakeFiles/mcwamp.dir/all' failed
+make[1]: *** [lib/CMakeFiles/mcwamp.dir/all] Error 2
+Makefile:149: recipe for target 'all' failed
+make: *** [all] Error 2
+```
+
+This is because of broken libc++ package that ships with ubuntu 16.04.1. 
+This can be solved by installing libc++1 and libc++-dev from 
+https://packages.debian.org/sid/libc++1
+https://packages.debian.org/sid/libc++-dev
+
+version at the time of writing this is 3.9.0-3 which is working (replaces 3.7.x).
+
+```
+wget http://ftp.us.debian.org/debian/pool/main/libc/libc++/libc++-dev_3.9.0-3_amd64.deb
+wget http://ftp.us.debian.org/debian/pool/main/libc/libc++/libc++1_3.9.0-3_amd64.deb
+
+dpkg -i libc++1_3.9.0-3_amd64.deb
+dpkg -i libc++-dev_3.9.0-3_amd64.deb
+```
+
+This replaces previous version of libc++.

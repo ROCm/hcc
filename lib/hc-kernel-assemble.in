@@ -14,7 +14,7 @@ then
   set -x
 fi
 
-BINDIR=$(dirname $0)
+BINDIR=$(dirname "$0")
 CLANG=$BINDIR/clang
 LLVM_LINK=$BINDIR/llvm-link
 OPT=$BINDIR/opt
@@ -22,7 +22,7 @@ LLVM_AS=$BINDIR/llvm-as
 LLVM_DIS=$BINDIR/llvm-dis
 CLAMP_ASM=$BINDIR/clamp-assemble
 LIBPATH=$BINDIR/../lib
-CXXFLAGS="-std=c++amp -stdlib=libc++ -I$BINDIR/../../include -fPIC"
+CXXFLAGS="-std=c++amp -stdlib=libc++ -I@LIBCXX_HEADER@ -I$BINDIR/../../include -fPIC"
 # Set additional CXXFLAGS based on CMAKE_BUILD_TYPE
 shopt -s nocasematch
 CMAKE_BUILD_TYPE="@CMAKE_BUILD_TYPE@"
@@ -59,7 +59,7 @@ if [ $HC_REPLACE_GPU_FE_LLVM != "0" ]; then
   echo "Replacing GPU input IR from clang with $KERNEL_INPUT" 
 fi
 
-if [ ! -f $KERNEL_INPUT ]; then
+if [ ! -f "$KERNEL_INPUT" ]; then
   echo "kernel-bitcode $KERNEL_INPUT is not valid" >&2
   exit 1
 fi
@@ -67,47 +67,46 @@ fi
 CO="-c -o"
 
 TEMP_DIR=`mktemp -d`
-BASENAME=`basename $2`
+BASENAME=`basename "$2"`
 TEMP_NAME="$TEMP_DIR/$BASENAME"
 
 # hip-kernel-assemble goes after hip-host-assemble, so attempt to link object from host
-if [ -f $2 ]; then
-  mv $2 $TEMP_DIR/$BASENAME.tmp.o
+if [ -f "$2" ]; then
+  mv "$2" "$TEMP_DIR/$BASENAME.tmp.o"
 fi
 
-$LLVM_DIS $KERNEL_INPUT -o $TEMP_NAME.ll
+$LLVM_DIS "$KERNEL_INPUT" -o "$TEMP_NAME.ll"
 if [ $KMDUMPLLVM == "1" ]; then
-  cp $TEMP_NAME.ll ./dump.kernel_input.ll
+  cp "$TEMP_NAME.ll" ./dump.kernel_input.ll
 fi
-$OPT -load $LIBPATH/LLVMDirectFuncCall.so -redirect < $TEMP_NAME.ll 2>$TEMP_NAME.kernel_redirect.ll >/dev/null
+$OPT -load $LIBPATH/LLVMDirectFuncCall.so -redirect < "$TEMP_NAME.ll" 2>"$TEMP_NAME.kernel_redirect.ll" >/dev/null
 if [ $KMDUMPLLVM == "1" ]; then
-  cp $TEMP_NAME.kernel_redirect.ll ./dump.kernel_redirect.ll
+  cp "$TEMP_NAME.kernel_redirect.ll" ./dump.kernel_redirect.ll
 fi
-if [[ -s $TEMP_NAME.kernel_redirect.ll ]]; then
-  $OPT -load $LIBPATH/LLVMWrapperGen.so -gensrc < $TEMP_NAME.ll 2>$TEMP_NAME.camp.cpp >/dev/null
+if [[ -s "$TEMP_NAME.kernel_redirect.ll" ]]; then
+  $OPT -load $LIBPATH/LLVMWrapperGen.so -gensrc < "$TEMP_NAME.ll" 2>"$TEMP_NAME.camp.cpp" >/dev/null
   if [ $KMDUMPLLVM == "1" ]; then
-    cp $TEMP_NAME.camp.cpp ./dump.kernel_camp.cpp
+    cp "$TEMP_NAME.camp.cpp" ./dump.kernel_camp.cpp
   fi
-  $LLVM_AS $TEMP_NAME.kernel_redirect.ll -o $TEMP_NAME.kernel_redirect.bc
-  $CLANG $CXXFLAGS $TEMP_NAME.camp.cpp $CO $TEMP_NAME.camp.s -emit-llvm
-  $CLANG $CXXFLAGS $TEMP_NAME.camp.cpp $CO $TEMP_NAME.camp.o
-  objcopy -R .kernel $TEMP_NAME.camp.o
-  $LLVM_LINK $TEMP_NAME.kernel_redirect.bc $TEMP_NAME.camp.s -o $TEMP_NAME.link.bc
-  $CLAMP_ASM $TEMP_NAME.link.bc $TEMP_NAME.camp.o
+  $LLVM_AS "$TEMP_NAME.kernel_redirect.ll" -o "$TEMP_NAME.kernel_redirect.bc"
+  $CLANG $CXXFLAGS "$TEMP_NAME.camp.cpp" $CO "$TEMP_NAME.camp.s" -emit-llvm
+  $CLANG $CXXFLAGS "$TEMP_NAME.camp.cpp" $CO "$TEMP_NAME.camp.o"
+  objcopy -R .kernel "$TEMP_NAME.camp.o"
+  $LLVM_LINK "$TEMP_NAME.kernel_redirect.bc" "$TEMP_NAME.camp.s" -o "$TEMP_NAME.link.bc"
+  $CLAMP_ASM "$TEMP_NAME.link.bc" "$TEMP_NAME.camp.o"
 else
-  ln -s $KERNEL_INPUT $1.bc
-  $CLAMP_ASM $1.bc $TEMP_NAME.camp.o
+  ln -s "$KERNEL_INPUT" "$1.bc"
+  $CLAMP_ASM "$1.bc" "$TEMP_NAME.camp.o"
 fi
 
-if [ -f $TEMP_DIR/$BASENAME.tmp.o ]; then
-  ld -r --allow-multiple-definition $TEMP_DIR/$BASENAME.tmp.o $TEMP_NAME.camp.o -o $2
+if [ -f "$TEMP_DIR/$BASENAME.tmp.o" ]; then
+  ld -r --allow-multiple-definition "$TEMP_DIR/$BASENAME.tmp.o" "$TEMP_NAME.camp.o" -o "$2"
 else
-  mv $TEMP_NAME.camp.o $2
+  mv "$TEMP_NAME.camp.o" "$2"
 fi
 
 if [ $KMDBGRIDLAUNCH == "1" ]; then
   echo "db: KMDBGRIDLAUNCH=1 and temps saved in $TEMP_DIR"
 else
-  rm -f $TEMP_NAME.* $1.bc
-  rmdir $TEMP_DIR
+   rm -rf "$TEMP_DIR"
 fi

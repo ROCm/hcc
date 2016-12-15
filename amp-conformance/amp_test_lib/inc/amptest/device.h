@@ -69,7 +69,7 @@ namespace Concurrency {
 		/// with a single separator character (default is a pipe ('|') character).
 		/// Note, whitespace is not allowed unless it's the separator character.
 		/// If a value isn't recognized (or UNKNOWN) an amptest_cascade_failure exception will be thrown.
-		device_flags AMP_TEST_API parse_device_flags(const std::string& src_desc, const std::string& src, char separator = '|', device_flags valid_flags = all_valid_device_flags);
+		device_flags AMP_TEST_API parse_device_flags(const std::string& src_desc, const std::string& src, char separator, device_flags valid_flags);
 		inline device_flags parse_device_flags(const std::string& src, char separator = '|', device_flags valid_flags = all_valid_device_flags) {
 			return parse_device_flags("", src, separator, valid_flags);
 		}
@@ -81,7 +81,7 @@ namespace Concurrency {
 		/// meant to support.
 		/// This method may only be called before any DMR API that retrieves a device or set
 		/// of devices, otherwise an exception will be thrown.
-		void AMP_TEST_API set_amptest_supported_devices(device_flags required_flags = device_flags::NOT_SPECIFIED);
+		void AMP_TEST_API set_amptest_supported_devices(device_flags required_flags);
 
 
 		/// Gets a prioritized list of the available devices for the current amptest.
@@ -95,15 +95,15 @@ namespace Concurrency {
 		///       by using the set_amptest_supported_devices function before this.
 		/// Exceptions:
 		/// invalid_argument - If device_flags has the AMP_DEFAULT flag set.
-		std::vector<accelerator> AMP_TEST_API get_available_devices(device_flags required_flags = device_flags::NOT_SPECIFIED);
+		std::vector<accelerator> AMP_TEST_API get_available_devices(device_flags required_flags);
 
-		
+
 		/// Retrieves a device from the DMF that has the required_flags.
 		/// The DMF will return its first prioritized choice.
 		/// If no device is available:
 		///   - if amptest_main.h is used an amptest_skip exception is thrown.
 		///   - if amptest_main.h IS NOT used, then exit() is called with an exit code of runall_skip.
-        accelerator AMP_TEST_API require_device(device_flags required_flags = device_flags::NOT_SPECIFIED);
+        accelerator AMP_TEST_API require_device(device_flags required_flags);
 
 		/// Retrieves a device from the DMF that has the required_flags and excludes the specified device.
 		/// The DMF will return its first prioritized choice which is not excluded.
@@ -111,7 +111,7 @@ namespace Concurrency {
 		/// If no device is available:
 		///   - if amptest_main.h is used an amptest_skip exception is thrown.
 		///   - if amptest_main.h IS NOT used, then exit() is called with an exit code of runall_skip.
-        accelerator AMP_TEST_API require_device(const accelerator& excluded_device, device_flags required_flags = device_flags::NOT_SPECIFIED);
+        accelerator AMP_TEST_API require_device(const accelerator& excluded_device, device_flags required_flags);
 
 		/// Requires a device and when T is 'double' will also verify the device has double support.
 		/// The type of double support requested is determined by the parameter full_double_support:
@@ -119,7 +119,7 @@ namespace Concurrency {
 		///    false => device_flags::LIMITED_DOUBLE
 		/// The default value of full_double_support if false.
 		template <typename T>
-		inline accelerator require_device_for(device_flags required_flags = device_flags::NOT_SPECIFIED, bool full_double_support = false) {
+		inline accelerator require_device_for(device_flags required_flags, bool full_double_support) {
 			static_assert(0 == (sizeof(T) % sizeof(int)), "only value types whose size is a multiple of the size of an integer are allowed on accelerator");
 
 			(void)(full_double_support);	// only used for double support
@@ -148,7 +148,7 @@ namespace Concurrency {
 		///    false => device_flags::LIMITED_DOUBLE
 		/// The default value of full_double_support if false.
 		template <typename T>
-		inline accelerator require_device_for(const accelerator& excluded_device, device_flags required_flags = device_flags::NOT_SPECIFIED, bool full_double_support = false) {
+		inline accelerator require_device_for(const accelerator& excluded_device, device_flags required_flags, bool full_double_support) {
 			static_assert(0 == (sizeof(T) % sizeof(int)), "only value types whose size is a multiple of the size of an integer are allowed on accelerator");
 
 			(void)(full_double_support);	// only used for double support
@@ -189,7 +189,7 @@ namespace Concurrency {
 		}
 
 		/// Attempts to retrieve a device and returns a value indicating whether the retrieval was successful.
-        bool AMP_TEST_API get_device(accelerator &device, device_flags required_flags = device_flags::NOT_SPECIFIED);
+        bool AMP_TEST_API get_device(accelerator &device, device_flags required_flags);
 
 		// TODO: After the above APIs have solidified, the uses off these should be replaced.
         inline bool get_device(Test::Device required_device, accelerator &device) {

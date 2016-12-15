@@ -20,6 +20,12 @@ IF (NOT NUM_BUILD_THREADS)
   ProcessorCount(NUM_BUILD_THREADS)
 ENDIF(NOT NUM_BUILD_THREADS)
 
+# Accepted values for DISTRO: ubuntu, fedora
+IF (NOT DISTRO)
+  SET(DISTRO "ubuntu")
+ENDIF(NOT DISTRO)
+MESSAGE("Distro: ${DISTRO}")
+
 include (MCWAMP)
 
 execute_process(COMMAND ln -sf ../../lld WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/compiler/tools)
@@ -91,6 +97,12 @@ MESSAGE("HSA_HEADER_DIR = ${HSA_HEADER_DIR}, actually found at: ${HSA_HEADER}")
 MESSAGE("HSA_LIBRARY_DIR = ${HSA_LIBRARY_DIR}, actually found at: ${HSA_LIBRARY}")
 MESSAGE("ROCM_DEVICE_LIB_DIR = ${ROCM_DEVICE_LIB_DIR}, actually found at: ${ROCM_DEVICE_LIB}")
 MESSAGE("")
+
+#################
+# Detect libc++
+#################
+find_path(LIBCXX_HEADER random PATHS /usr/local/include/c++/v1 /usr/include/c++/v1 NO_DEFAULT_PATH)
+MESSAGE("libc++ headers found at ${LIBCXX_HEADER}")
 
 #################
 # Set up version information
@@ -325,27 +337,50 @@ set(CPACK_PACKAGE_VERSION_MAJOR ${KALMAR_VERSION_MAJOR})
 set(CPACK_PACKAGE_VERSION_MINOR ${KALMAR_VERSION_MINOR})
 set(CPACK_PACKAGE_VERSION_PATCH ${KALMAR_VERSION_PATCH})
 set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_SYSTEM_NAME})
-set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "HCC: a Heterogeneous C++ compiler")
-set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Siu Chi Chan <siuchi.chan@amd.com>")
-set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
 
-set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
-  "${PROJECT_BINARY_DIR}/packaging/debian/postinst;${PROJECT_BINARY_DIR}/packaging/debian/prerm")
 
-set(HCC_GENERAL_DEBIAN_DEP "rocm-device-libs, libstdc++-4.8-dev, libc++1, libc++-dev, libc++abi1, libc++abi-dev, elfutils")
+set(PACKAGE_DESCRIPTION "HCC: An Open Source, Optimizing C++ Compiler for Heterogeneous Compute")
 
-# control the list of package dependency depending on whether this is an official release build.
-# for non-official release build, we want to relax the dependency on rocr runtime
 set(OFFICIAL_RELEASE_BUILD 0)
-if (OFFICIAL_RELEASE_BUILD)
-  set(HCC_ROCR_DEBIAN_DEP "hsa-rocr-dev, hsa-ext-rocr-dev")
-  set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_ROCR_DEBIAN_DEP}, ${HCC_GENERAL_DEBIAN_DEP}")
-else (OFFICIAL_RELEASE_BUILD)
-  # dependencies for any local build
-  set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_GENERAL_DEBIAN_DEP}")
-endif (OFFICIAL_RELEASE_BUILD)
 
-set(CPACK_GENERATOR "DEB;TGZ")
+if ("${DISTRO}" STREQUAL "ubuntu")
+
+  set(CPACK_DEBIAN_PACKAGE_DESCRIPTION ${PACKAGE_DESCRIPTION})
+  set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Siu Chi Chan <siuchi.chan@amd.com>")
+  set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
+
+  set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
+    "${PROJECT_BINARY_DIR}/packaging/debian/postinst;${PROJECT_BINARY_DIR}/packaging/debian/prerm")
+
+  set(HCC_GENERAL_DEBIAN_DEP "libstdc++-4.8-dev, libc++1, libc++-dev, libc++abi1, libc++abi-dev, elfutils")
+
+  # control the list of package dependency depending on whether this is an official release build.
+  # for non-official release build, we want to relax the dependency on rocr runtime
+  if (OFFICIAL_RELEASE_BUILD)
+    set(HCC_ROCR_DEBIAN_DEP "hsa-rocr-dev, hsa-ext-rocr-dev")
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_ROCR_DEBIAN_DEP}, ${HCC_GENERAL_DEBIAN_DEP}")
+  else (OFFICIAL_RELEASE_BUILD)
+    # dependencies for any local build
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_GENERAL_DEBIAN_DEP}")
+  endif (OFFICIAL_RELEASE_BUILD)
+
+  set(CPACK_GENERATOR "DEB;TGZ")
+
+elseif ("${DISTRO}" STREQUAL "fedora")
+
+  set(CPACK_RPM_PACKAGE_DESCRIPTION ${PACKAGE_DESCRIPTION})
+
+  set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/postinst")
+  set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/prerm")
+
+  # disable automatic shared libraries dependency detection
+  set(CPACK_RPM_PACKAGE_AUTOREQ 0)
+  set(CPACK_RPM_PACKAGE_REQUIRES "hsakmt-roct-dev, hsa-rocr-dev, libstdc++-devel, elfutils-libelf-devel, glibc-devel")
+  set(CPACK_GENERATOR "RPM;TGZ")
+
+endif ("${DISTRO}" STREQUAL "ubuntu")
+
+
 set(CPACK_SOURCE_GENERATOR "TGZ")
 set(CPACK_BINARY_DEB "ON")
 set(CPACK_BINARY_STGZ "OFF")

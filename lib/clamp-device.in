@@ -120,6 +120,9 @@ elif [ $AMDGPU_TARGET == "carrizo" ]; then
 fi
 HCC_BC_LIBS="$ROCM_LIB/hc.amdgcn.bc $ROCM_LIB/opencl.amdgcn.bc $ROCM_LIB/ocml.amdgcn.bc $ROCM_LIB/ockl.amdgcn.bc $ROCM_LIB/irif.amdgcn.bc $OCLC_ISA_VERSION_LIB $ROCM_LIB/oclc_finite_only_off.amdgcn.bc $ROCM_LIB/oclc_daz_opt_off.amdgcn.bc $ROCM_LIB/oclc_correctly_rounded_sqrt_on.amdgcn.bc $ROCM_LIB/oclc_unsafe_math_off.amdgcn.bc"
 
+# include libraries specified through the HCC_EXTRA_LIBRARIES environment variable
+HCC_BC_LIBS="$HCC_BC_LIBS  $HCC_EXTRA_LIBRARIES"
+
 $LINK -suppress-warnings -o $2.linked.bc $2.promote.bc $HCC_BC_LIBS
 
 # error handling for llvm-link

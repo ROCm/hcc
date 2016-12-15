@@ -46,7 +46,7 @@ do_softlinks() {
 
 
 case "$1" in
-   remove|purge|upgrade)
+   remove|purge|upgrade|0|1)
    do_softlinks
    ;;
 
