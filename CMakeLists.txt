@@ -1,12 +1,6 @@
 cmake_minimum_required( VERSION 2.8 )
 project (HCC)
 
-# set default installation path
-if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND CMAKE_INSTALL_PREFIX MATCHES "/usr/local")
-  set(CMAKE_INSTALL_PREFIX "/opt/rocm/hcc-lc" CACHE PATH "Default installation path of hcc" FORCE)
-endif ()
-MESSAGE("Package installation path: ${CMAKE_INSTALL_PREFIX}")
-
 SET(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/scripts/cmake")
 MESSAGE("Module path: ${CMAKE_MODULE_PATH}")
 
@@ -141,6 +135,14 @@ execute_process(COMMAND git rev-parse --short HEAD
 # KALMAR_VERSION_MAJOR . KALMAR_VERSION_MINOR . KALMAR_VERSION_PATCH-KALMAR_SDK_COMIT-KALMAR_FRONTEND_COMMIT-KALMAR_BACKEND_COMMIT
 set(KALMAR_VERSION_STRING "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}.${KALMAR_VERSION_PATCH}-${KALMAR_SDK_COMMIT}-${KALMAR_FRONTEND_COMMIT}-${KALMAR_BACKEND_COMMIT}")
 
+# set default installation path
+if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND CMAKE_INSTALL_PREFIX MATCHES "/usr/local")
+  set(INSTALL_DIR_NAME "hcc-${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}")
+  set(CMAKE_INSTALL_PREFIX "/opt/rocm/${INSTALL_DIR_NAME}" CACHE PATH "Default installation path of hcc" FORCE)
+endif ()
+MESSAGE("Package installation path: ${CMAKE_INSTALL_PREFIX}")
+
+
 # show HCC version string
 MESSAGE("=============================================")
 MESSAGE("HCC version: ${KALMAR_VERSION_STRING}")
@@ -266,6 +268,10 @@ install(DIRECTORY ${CLANG_BIN_DIR}/lib
         DESTINATION compiler
         COMPONENT compiler
         PATTERN CMakeFiles EXCLUDE
+        PATTERN *tmp EXCLUDE
+        PATTERN *inc EXCLUDE
+        PATTERN Makefile EXCLUDE
+        PATTERN *.cmake EXCLUDE
         PATTERN lib*
         PATTERN LLVM*
         PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
@@ -317,7 +323,7 @@ install(DIRECTORY ${PROJECT_BINARY_DIR}/docs/html
         OPTIONAL)
 
 # generate Debian control scripts postinst and postrm
-set(CPACK_PACKAGE_NAME "hcc_lc")
+set(CPACK_PACKAGE_NAME "hcc")
 
 set(DEBIAN_EXTRA_SCRIPT_SOURCE_DIR "${PROJECT_SOURCE_DIR}/packaging/debian")
 set(DEBIAN_EXTRA_SCRIPT_DEST_DIR "${PROJECT_BINARY_DIR}/packaging/debian")
@@ -357,7 +363,7 @@ if ("${DISTRO}" STREQUAL "ubuntu")
   # control the list of package dependency depending on whether this is an official release build.
   # for non-official release build, we want to relax the dependency on rocr runtime
   if (OFFICIAL_RELEASE_BUILD)
-    set(HCC_ROCR_DEBIAN_DEP "hsa-rocr-dev, hsa-ext-rocr-dev")
+    set(HCC_ROCR_DEBIAN_DEP "hsa-rocr-dev, hsa-ext-rocr-dev, rocm-device-libs")
     set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_ROCR_DEBIAN_DEP}, ${HCC_GENERAL_DEBIAN_DEP}")
   else (OFFICIAL_RELEASE_BUILD)
     # dependencies for any local build
@@ -375,7 +381,7 @@ elseif ("${DISTRO}" STREQUAL "fedora")
 
   # disable automatic shared libraries dependency detection
   set(CPACK_RPM_PACKAGE_AUTOREQ 0)
-  set(CPACK_RPM_PACKAGE_REQUIRES "hsakmt-roct-dev, hsa-rocr-dev, libstdc++-devel, elfutils-libelf-devel, glibc-devel")
+  set(CPACK_RPM_PACKAGE_REQUIRES "hsakmt-roct-dev, hsa-rocr-dev, rocm-device-libs, libstdc++-devel, elfutils-libelf-devel, glibc-devel")
   set(CPACK_GENERATOR "RPM;TGZ")
 
 endif ("${DISTRO}" STREQUAL "ubuntu")
