@@ -5,6 +5,7 @@
 #include <hc_math.hpp>
 
 #include <algorithm>
+#include <cmath>
 #include <random>
 
 
@@ -40,8 +41,8 @@ bool test() {
     int error = 0; \
     for (size_t i = 0; i < GRID_SIZE; ++i) { \
       R actual = table3[i];\
-      R expected = func(table1[i],table2[i]);\
-      R delta = fabs(actual - expected); \
+      R expected = std::func(table1[i],table2[i]);\
+      R delta = std::fabs(actual - expected); \
       if (delta > expected * 0.0001) error++; \
     } \
     ret &= (error == 0); \
