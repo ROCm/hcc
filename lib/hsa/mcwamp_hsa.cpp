@@ -74,6 +74,7 @@
 // Maximum number of inflight commands sent to a single queue.
 // If limit is exceeded, HCC will force a queue wait to reclaim
 // resources (signals, kernarg)
+// MUST be a power of 2.
 #define MAX_INFLIGHT_COMMANDS_PER_QUEUE  512
 
 // threshold to clean up finished kernel in HSAQueue.asyncOps
@@ -828,6 +829,14 @@ public:
         uint32_t queue_size = 0;
         status = hsa_agent_get_info(agent, HSA_AGENT_INFO_QUEUE_MAX_SIZE, &queue_size);
         STATUS_CHECK(status, __LINE__);
+
+        assert (__builtin_popcount(MAX_INFLIGHT_COMMANDS_PER_QUEUE) == 1); // make sure this is power of 2.
+        assert(queue_size > MAX_INFLIGHT_COMMANDS_PER_QUEUE*2);
+
+        // MAX_INFLIGHT_COMMANDS_PER_QUEUE throttles the number of commands that can be in the queue, so no reason
+        // to allocate a huge HSA queue - size it to it is large enough to handle the inflight commands.
+        queue_size = 2*MAX_INFLIGHT_COMMANDS_PER_QUEUE;
+
 
         /// Create a queue using the maximum size.
         status = hsa_queue_create(agent, queue_size, HSA_QUEUE_TYPE_SINGLE, NULL, NULL,
