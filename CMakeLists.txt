@@ -291,6 +291,7 @@ install(DIRECTORY ${CLANG_SRC_DIR}/include
 
 add_custom_target(world DEPENDS clang)
 
+add_subdirectory(hcc_config)
 add_subdirectory(lib)
 add_subdirectory(utils)
 add_subdirectory(tests)

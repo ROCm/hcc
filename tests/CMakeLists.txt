@@ -20,8 +20,8 @@ configure_file(
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg)
 
 configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-config.hxx.in
-  ${CMAKE_CURRENT_BINARY_DIR}/../lib/clamp-config.hxx ESCAPE_QUOTES)
+  ${CMAKE_CURRENT_SOURCE_DIR}/../hcc_config/hcc_config.hxx.in
+  ${CMAKE_CURRENT_BINARY_DIR}/../hcc_config/hcc_config.hxx ESCAPE_QUOTES)
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/clamp-device.in

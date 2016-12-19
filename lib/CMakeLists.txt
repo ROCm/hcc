@@ -6,16 +6,7 @@ if (HCC_RUNTIME_DEBUG)
   add_definitions(-DKALMAR_DEBUG=1)
 endif (HCC_RUNTIME_DEBUG)
 
-####################
-# C++AMP config (clamp-config)
-####################
-add_definitions(-DLIBCXX_HEADER=${LIBCXX_HEADER}) 
-add_config_executable(clamp-config mcwamp_main.cpp)
-add_config_executable(hcc-config mcwamp_main.cpp)
-
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${LIBCXX_HEADER} )
-target_link_libraries(clamp-config c++)
-target_link_libraries(hcc-config c++)
 
 ####################
 # C++AMP runtime (mcwamp)
@@ -23,7 +14,7 @@ target_link_libraries(hcc-config c++)
 add_mcwamp_library(mcwamp mcwamp.cpp)
 add_mcwamp_library(mcwamp_atomic mcwamp_atomic.cpp)
 
-install(TARGETS clamp-config hcc-config mcwamp mcwamp_atomic
+install(TARGETS mcwamp mcwamp_atomic
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib

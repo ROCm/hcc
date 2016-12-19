@@ -10,7 +10,7 @@
 #include <getopt.h>
 #include <iostream>
 #include <cassert>
-#include "clamp-config.hxx"
+#include "hcc_config.hxx"
 
 // macro for stringification 
 #define XSTR(S) STR(S)
