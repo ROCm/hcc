@@ -359,7 +359,7 @@ if ("${DISTRO}" STREQUAL "ubuntu")
   set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
     "${PROJECT_BINARY_DIR}/packaging/debian/postinst;${PROJECT_BINARY_DIR}/packaging/debian/prerm")
 
-  set(HCC_GENERAL_DEBIAN_DEP "libstdc++-4.8-dev, libc++1, libc++-dev, libc++abi1, libc++abi-dev, elfutils")
+  #set(HCC_GENERAL_DEBIAN_DEP "libstdc++-dev, libc++1, libc++-dev, libc++abi1, libc++abi-dev, elfutils")
 
   # control the list of package dependency depending on whether this is an official release build.
   # for non-official release build, we want to relax the dependency on rocr runtime
