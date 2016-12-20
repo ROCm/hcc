@@ -247,6 +247,7 @@ add_custom_command(TARGET clang POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E create_symlink ../llvm/bin/llvm-mc ${PROJECT_BINARY_DIR}/bin/llvm-mc
   COMMAND ${CMAKE_COMMAND} -E create_symlink ../llvm/bin/llvm-objdump ${PROJECT_BINARY_DIR}/bin/llvm-objdump
   COMMAND ${CMAKE_COMMAND} -E create_symlink ../llvm/bin/lld ${PROJECT_BINARY_DIR}/bin/lld
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../bin/hcc-config ${PROJECT_BINARY_DIR}/bin/clamp-config
   WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/bin
 )
 install(FILES ${PROJECT_BINARY_DIR}/bin/hcc
