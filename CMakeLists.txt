@@ -244,9 +244,9 @@ add_custom_command(TARGET clang POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/hcc ${PROJECT_BINARY_DIR}/bin/hcc
   COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/clang++ ${PROJECT_BINARY_DIR}/bin/clang++
   COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/clang ${PROJECT_BINARY_DIR}/bin/clang
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../llvm/bin/llvm-mc ${PROJECT_BINARY_DIR}/bin/llvm-mc
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../llvm/bin/llvm-objdump ${PROJECT_BINARY_DIR}/bin/llvm-objdump
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../llvm/bin/lld ${PROJECT_BINARY_DIR}/bin/lld
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/llvm-mc ${PROJECT_BINARY_DIR}/bin/llvm-mc
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/llvm-objdump ${PROJECT_BINARY_DIR}/bin/llvm-objdump
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/lld ${PROJECT_BINARY_DIR}/bin/lld
   WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/bin
 )
 install(FILES ${PROJECT_BINARY_DIR}/bin/hcc
@@ -291,6 +291,7 @@ install(DIRECTORY ${CLANG_SRC_DIR}/include
 
 add_custom_target(world DEPENDS clang)
 
+add_subdirectory(hcc_config)
 add_subdirectory(lib)
 add_subdirectory(utils)
 add_subdirectory(tests)
@@ -358,7 +359,7 @@ if ("${DISTRO}" STREQUAL "ubuntu")
   set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
     "${PROJECT_BINARY_DIR}/packaging/debian/postinst;${PROJECT_BINARY_DIR}/packaging/debian/prerm")
 
-  set(HCC_GENERAL_DEBIAN_DEP "libstdc++-4.8-dev, libc++1, libc++-dev, libc++abi1, libc++abi-dev, elfutils")
+  #set(HCC_GENERAL_DEBIAN_DEP "libstdc++-dev, libc++1, libc++-dev, libc++abi1, libc++abi-dev, elfutils")
 
   # control the list of package dependency depending on whether this is an official release build.
   # for non-official release build, we want to relax the dependency on rocr runtime

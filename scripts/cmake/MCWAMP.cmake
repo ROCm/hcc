@@ -82,16 +82,6 @@ macro(add_mcwamp_executable name )
   endif (APPLE)
 endmacro(add_mcwamp_executable name )
 
-macro(add_config_executable name )
-  CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
-  set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-  set(CMAKE_CXX_FLAGS "-std=c++11" )
-  add_executable( ${name} ${ARGN} )
-
-  # LLVM and Clang shall be compiled beforehand
-  add_dependencies(${name} llvm-link opt clang)
-endmacro(add_config_executable name )
-
 if(POLICY CMP0046)
   cmake_policy(POP)
 endif()

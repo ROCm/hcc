@@ -10,7 +10,7 @@
 #include <getopt.h>
 #include <iostream>
 #include <cassert>
-#include "clamp-config.hxx"
+#include "hcc_config.hxx"
 
 // macro for stringification 
 #define XSTR(S) STR(S)
@@ -91,6 +91,8 @@ void ldflags(void) {
         if (p == std::string("ON"))
         std::cout << " -lmcwamp_atomic ";
     std::cout << "-Wl,--whole-archive -lmcwamp -Wl,--no-whole-archive ";
+    
+    std::cout << std::endl;
 }
 
 void prefix(void) {
