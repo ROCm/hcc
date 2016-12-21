@@ -91,8 +91,6 @@ void ldflags(void) {
         if (p == std::string("ON"))
         std::cout << " -lmcwamp_atomic ";
     std::cout << "-Wl,--whole-archive -lmcwamp -Wl,--no-whole-archive ";
-    
-    std::cout << std::endl;
 }
 
 void prefix(void) {
