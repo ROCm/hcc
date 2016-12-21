@@ -108,7 +108,7 @@ Building clang_tot_upgrade branch on Ubuntu 16.04.1
 ----------------------------------------------------
 The following issue is common when building HCC tot branch.
 
-```
+```bash
 In file included from /home/aditya/rocm/hcc.lc.tot/lib/mcwamp.cpp:8:
 In file included from /usr/include/c++/v1/iostream:38:
 In file included from /usr/include/c++/v1/ios:216:
