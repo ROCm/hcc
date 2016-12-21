@@ -1,5 +1,4 @@
-
-// RUN: %hc --amdgpu-target=AMD:AMDGPU:7:0:1 --amdgpu-target=AMD:AMDGPU:8:0:1 --amdgpu-target=AMD:AMDGPU:8:0:3 %s -o %t.out && %t.out
+// RUN: %hc --amdgpu-target=gfx701 --amdgpu-target=gfx801 --amdgpu-target=gfx802 --amdgpu-target=gfx803 %s -o %t.out && %t.out
 #include <random>
 #include <algorithm>
 #include <vector>
@@ -24,12 +23,12 @@ int main() {
   std::generate(host_y.begin(), host_y.end(), [&]() { return distribution(random_gen); });
 
   // CPU implementation of saxpy
-  
+
   std::vector<float> host_result_y(N);
   for (int i = 0; i < N; i++) {
     host_result_y[i] = a * host_x[i] + host_y[i];
   }
-  
+
   std::vector<hc::accelerator> all_accelerators = hc::accelerator::get_all();
   std::vector<hc::accelerator> accelerators;
   for (auto a = all_accelerators.begin(); a != all_accelerators.end(); a++) {
@@ -78,7 +77,7 @@ int main() {
       dataCursor = newDataCursor;
       cpfuture_x.wait();
       cpfuture_y.wait();
-      
+
       hc::completion_future f;
       f = hc::parallel_for_each(acc_views.back(), x_array.get_extent()
                             , [&,a](hc::index<1> i) [[hc]] {
@@ -110,7 +109,7 @@ int main() {
   for(auto f = futures.begin(); f != futures.end(); f++) {
     f->wait();
   }
- 
+
   // verify the results
   int errors = 0;
   for (int i = 0; i < N; i++) {

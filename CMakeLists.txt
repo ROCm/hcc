@@ -1,12 +1,6 @@
 cmake_minimum_required( VERSION 2.8 )
 project (HCC)
 
-# set default installation path
-if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND CMAKE_INSTALL_PREFIX MATCHES "/usr/local")
-  set(CMAKE_INSTALL_PREFIX "/opt/rocm/hcc-lc" CACHE PATH "Default installation path of hcc" FORCE)
-endif ()
-MESSAGE("Package installation path: ${CMAKE_INSTALL_PREFIX}")
-
 SET(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/scripts/cmake")
 MESSAGE("Module path: ${CMAKE_MODULE_PATH}")
 
@@ -141,6 +135,14 @@ execute_process(COMMAND git rev-parse --short HEAD
 # KALMAR_VERSION_MAJOR . KALMAR_VERSION_MINOR . KALMAR_VERSION_PATCH-KALMAR_SDK_COMIT-KALMAR_FRONTEND_COMMIT-KALMAR_BACKEND_COMMIT
 set(KALMAR_VERSION_STRING "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}.${KALMAR_VERSION_PATCH}-${KALMAR_SDK_COMMIT}-${KALMAR_FRONTEND_COMMIT}-${KALMAR_BACKEND_COMMIT}")
 
+# set default installation path
+if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND CMAKE_INSTALL_PREFIX MATCHES "/usr/local")
+  set(INSTALL_DIR_NAME "hcc-${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}")
+  set(CMAKE_INSTALL_PREFIX "/opt/rocm/${INSTALL_DIR_NAME}" CACHE PATH "Default installation path of hcc" FORCE)
+endif ()
+MESSAGE("Package installation path: ${CMAKE_INSTALL_PREFIX}")
+
+
 # show HCC version string
 MESSAGE("=============================================")
 MESSAGE("HCC version: ${KALMAR_VERSION_STRING}")
@@ -168,32 +170,22 @@ endif (HAS_ROCM EQUAL 0)
 # Detect AMDGPU backend for native codegen
 #################
 
-set(HSA_AMDGPU_GPU_TARGET "AMD:AMDGPU:8:0:3" CACHE STRING "Target AMDGPU ISA version")
+set(HSA_AMDGPU_GPU_TARGET "gfx803" CACHE STRING "Target AMDGPU ISA version")
 
 # Tokenize HSA_AMDGPU_GPU_TARGET
 foreach(AMDGPU_GPU_TARGET IN LISTS HSA_AMDGPU_GPU_TARGET)
-  if (NOT (AMDGPU_GPU_TARGET STREQUAL "carrizo" OR
-           AMDGPU_GPU_TARGET STREQUAL "fiji" OR
-           AMDGPU_GPU_TARGET STREQUAL "hawaii" OR
-           AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:7:0:1" OR
-           AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:8:0:1" OR
-           AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:8:0:3"))
-    MESSAGE(FATAL_ERROR "${AMDGPU_GPU_TARGET} is not a valid AMDGPU target")
-  endif()
-
-  # AMDGPU_TARGET_LIST would hold values used by compiler scripts
-  # Map ISA version to GPU family
-  if (AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:7:0:1")
+  # AMDGPU_TARGET_LIST holds the values which are used by the compiler scripts.
+  if (AMDGPU_GPU_TARGET STREQUAL "gfx701")
     list(APPEND AMDGPU_TARGET_LIST "hawaii")
-  endif()
-
-  if (AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:8:0:1")
+  elseif (AMDGPU_GPU_TARGET STREQUAL "gfx801")
     list(APPEND AMDGPU_TARGET_LIST "carrizo")
-  endif()
-
-  if (AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:8:0:3")
+  elseif (AMDGPU_GPU_TARGET STREQUAL "gfx802")
+    list(APPEND AMDGPU_TARGET_LIST "tonga")
+  elseif (AMDGPU_GPU_TARGET STREQUAL "gfx803")
     list(APPEND AMDGPU_TARGET_LIST "fiji")
-  endif()
+  else ()
+    message(FATAL_ERROR "${AMDGPU_GPU_TARGET} is not a valid AMDPU target!")
+  endif ()
 endforeach(AMDGPU_GPU_TARGET)
 
 # join list
@@ -242,9 +234,9 @@ add_custom_command(TARGET clang POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/hcc ${PROJECT_BINARY_DIR}/bin/hcc
   COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/clang++ ${PROJECT_BINARY_DIR}/bin/clang++
   COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/clang ${PROJECT_BINARY_DIR}/bin/clang
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../llvm/bin/llvm-mc ${PROJECT_BINARY_DIR}/bin/llvm-mc
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../llvm/bin/llvm-objdump ${PROJECT_BINARY_DIR}/bin/llvm-objdump
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ../llvm/bin/lld ${PROJECT_BINARY_DIR}/bin/lld
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/llvm-mc ${PROJECT_BINARY_DIR}/bin/llvm-mc
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/llvm-objdump ${PROJECT_BINARY_DIR}/bin/llvm-objdump
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ../compiler/bin/lld ${PROJECT_BINARY_DIR}/bin/lld
   WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/bin
 )
 install(FILES ${PROJECT_BINARY_DIR}/bin/hcc
@@ -266,6 +258,10 @@ install(DIRECTORY ${CLANG_BIN_DIR}/lib
         DESTINATION compiler
         COMPONENT compiler
         PATTERN CMakeFiles EXCLUDE
+        PATTERN *tmp EXCLUDE
+        PATTERN *inc EXCLUDE
+        PATTERN Makefile EXCLUDE
+        PATTERN *.cmake EXCLUDE
         PATTERN lib*
         PATTERN LLVM*
         PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
@@ -285,6 +281,7 @@ install(DIRECTORY ${CLANG_SRC_DIR}/include
 
 add_custom_target(world DEPENDS clang)
 
+add_subdirectory(hcc_config)
 add_subdirectory(lib)
 add_subdirectory(utils)
 add_subdirectory(tests)
@@ -317,7 +314,7 @@ install(DIRECTORY ${PROJECT_BINARY_DIR}/docs/html
         OPTIONAL)
 
 # generate Debian control scripts postinst and postrm
-set(CPACK_PACKAGE_NAME "hcc_lc")
+set(CPACK_PACKAGE_NAME "hcc")
 
 set(DEBIAN_EXTRA_SCRIPT_SOURCE_DIR "${PROJECT_SOURCE_DIR}/packaging/debian")
 set(DEBIAN_EXTRA_SCRIPT_DEST_DIR "${PROJECT_BINARY_DIR}/packaging/debian")
@@ -352,12 +349,12 @@ if ("${DISTRO}" STREQUAL "ubuntu")
   set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
     "${PROJECT_BINARY_DIR}/packaging/debian/postinst;${PROJECT_BINARY_DIR}/packaging/debian/prerm")
 
-  set(HCC_GENERAL_DEBIAN_DEP "libstdc++-4.8-dev, libc++1, libc++-dev, libc++abi1, libc++abi-dev, elfutils")
+  #set(HCC_GENERAL_DEBIAN_DEP "libstdc++-dev, libc++1, libc++-dev, libc++abi1, libc++abi-dev, elfutils")
 
   # control the list of package dependency depending on whether this is an official release build.
   # for non-official release build, we want to relax the dependency on rocr runtime
   if (OFFICIAL_RELEASE_BUILD)
-    set(HCC_ROCR_DEBIAN_DEP "hsa-rocr-dev, hsa-ext-rocr-dev")
+    set(HCC_ROCR_DEBIAN_DEP "hsa-rocr-dev, hsa-ext-rocr-dev, rocm-device-libs")
     set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_ROCR_DEBIAN_DEP}, ${HCC_GENERAL_DEBIAN_DEP}")
   else (OFFICIAL_RELEASE_BUILD)
     # dependencies for any local build
@@ -375,7 +372,7 @@ elseif ("${DISTRO}" STREQUAL "fedora")
 
   # disable automatic shared libraries dependency detection
   set(CPACK_RPM_PACKAGE_AUTOREQ 0)
-  set(CPACK_RPM_PACKAGE_REQUIRES "hsakmt-roct-dev, hsa-rocr-dev, libstdc++-devel, elfutils-libelf-devel, glibc-devel")
+  set(CPACK_RPM_PACKAGE_REQUIRES "hsakmt-roct-dev, hsa-rocr-dev, rocm-device-libs, libstdc++-devel, elfutils-libelf-devel, glibc-devel")
   set(CPACK_GENERATOR "RPM;TGZ")
 
 endif ("${DISTRO}" STREQUAL "ubuntu")

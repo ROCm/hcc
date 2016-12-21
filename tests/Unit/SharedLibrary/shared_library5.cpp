@@ -1,5 +1,5 @@
 
-// RUN: %hc --amdgpu-target=AMD:AMDGPU:7:0:1 --amdgpu-target=AMD:AMDGPU:8:0:1 --amdgpu-target=AMD:AMDGPU:8:0:3 -fPIC -Wl,-Bsymbolic -shared -DSHARED_LIBRARY %s -o %T/libtest5.so
+// RUN: %hc --amdgpu-target=gfx701 --amdgpu-target=gfx801 --amdgpu-target=gfx802 --amdgpu-target=gfx803 -fPIC -Wl,-Bsymbolic -shared -DSHARED_LIBRARY %s -o %T/libtest5.so
 // RUN: %clang %s -L%T -ltest5 -o %t.out && LD_LIBRARY_PATH=%T %t.out
 
 // kernels built as one single shared libary
