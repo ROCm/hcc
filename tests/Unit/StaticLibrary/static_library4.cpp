@@ -1,7 +1,7 @@
 
 // RUN: %hc -DSTATIC_LIB %s -c -o %T/static_library4.o
 // RUN: ar rcs %T/libstatic_library4.a %T/static_library4.o
-// RUN: %hc --amdgpu-target=AMD:AMDGPU:7:0:1 --amdgpu-target=AMD:AMDGPU:8:0:1 --amdgpu-target=AMD:AMDGPU:8:0:3 %s -L%T -lstatic_library4 -o %t.out && %t.out
+// RUN: %hc --amdgpu-target=gfx701 --amdgpu-target=gfx801 --amdgpu-target=gfx802 --amdgpu-target=gfx803 %s -L%T -lstatic_library4 -o %t.out && %t.out
 
 #include <cstdio>
 #include <hc.hpp>
@@ -29,8 +29,8 @@ int sum(hc::array_view<int,1>& input) {
 
 #else
 
-int main() {
-
+int main()
+{
   hc::array_view<int,1> av(64);
   for (int i = 0;i < 64; i++)
     av[i] = i;

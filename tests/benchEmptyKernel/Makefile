@@ -22,7 +22,7 @@ bench: $(OBJECTS) nullkernel
 	hcc `hcc-config --build --cxxflags` $(OPT) -I$(ROCM_PATH)/include $< -c -o $@
 
 nullkernel: nullkernel.cpp
-	hcc `hcc-config --build --cxxflags --ldflags --shared` --amdgpu-target=AMD:AMDGPU:7:0:1 --amdgpu-target=AMD:AMDGPU:8:0:1 --amdgpu-target=AMD:AMDGPU:8:0:3 $< -o $@
+	hcc `hcc-config --build --cxxflags --ldflags --shared` --amdgpu-target=gfx701 --amdgpu-target=gfx801 --amdgpu-target=gfx802 --amdgpu-target=gfx803 $< -o $@
 	extractkernel -i nullkernel
 
 plot: bench
