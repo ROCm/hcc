@@ -103,7 +103,9 @@ if [ $KMDUMPLLVM == "1" ]; then
 fi
 
 # select appropriate ROCm-Device-Libs per AMDGPU_TARGET
-if [ $AMDGPU_TARGET == "hawaii" ]; then
+if [ $AMDGPU_TARGET == "kaveri" ]; then
+  OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_700.amdgcn.bc"
+elif [ $AMDGPU_TARGET == "hawaii" ]; then
   OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_701.amdgcn.bc"
 elif [ $AMDGPU_TARGET == "carrizo" ]; then
   OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_801.amdgcn.bc"

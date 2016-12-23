@@ -176,7 +176,7 @@ set(HSA_AMDGPU_GPU_TARGET "gfx803" CACHE STRING "Target AMDGPU ISA version")
 
 # Temporary workaround for use of old long-form GFX_ip names, to be removed once
 # we fully deprecate them.
-string(REGEX MATCHALL "AMD:AMDGPU:(7:0:1|8:0:1|8:0:2|8:0:3)"
+string(REGEX MATCHALL "AMD:AMDGPU:(7:0:0|7:0:1|8:0:1|8:0:2|8:0:3)"
                       tmp
                       ${HSA_AMDGPU_GPU_TARGET})
 foreach(long_form IN LISTS tmp)
@@ -192,7 +192,9 @@ endforeach()
 # Map to LC-consumable name.
 foreach(AMDGPU_GPU_TARGET IN LISTS HSA_AMDGPU_GPU_TARGET)
   # AMDGPU_TARGET_LIST holds the values which are used by the compiler scripts.
-  if (AMDGPU_GPU_TARGET STREQUAL "gfx701")
+  if (AMDGPU_GPU_TARGET STREQUAL "gfx700")
+    list(APPEND AMDGPU_TARGET_LIST "kaveri")
+  elseif (AMDGPU_GPU_TARGET STREQUAL "gfx701")
     list(APPEND AMDGPU_TARGET_LIST "hawaii")
   elseif (AMDGPU_GPU_TARGET STREQUAL "gfx801")
     list(APPEND AMDGPU_TARGET_LIST "carrizo")
