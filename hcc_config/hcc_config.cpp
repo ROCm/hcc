@@ -42,7 +42,7 @@ void cxxflags(void) {
     }
 
     // Add include path to the libcxx headers
-    std::cout << " -I " XSTR(LIBCXX_HEADER) ;
+    std::cout << " -I" XSTR(LIBCXX_HEADER) ;
 
     // Common options
     std::cout << " -std=c++amp -stdlib=libc++";
@@ -59,6 +59,11 @@ void cxxflags(void) {
     } else {
         assert(0 && "Unreacheable!");
     }
+
+#ifdef CODEXL_ACTIVITY_LOGGER_ENABLED
+    // CodeXL Activity Logger
+    std::cout << " -I" XSTR(CODEXL_ACTIVITY_LOGGER_HEADER);
+#endif
 
     std::cout << std::endl;
 }
@@ -86,11 +91,19 @@ void ldflags(void) {
         }
     }
 
-    std::cout << " -lc++ -lc++abi -ldl -lm -lpthread ";
+    std::cout << " -lc++ -lc++abi -ldl -lm -lpthread";
     if (const char *p = getenv("TEST_CPU"))
         if (p == std::string("ON"))
-        std::cout << " -lmcwamp_atomic ";
-    std::cout << "-Wl,--whole-archive -lmcwamp -Wl,--no-whole-archive ";
+        std::cout << " -lmcwamp_atomic";
+    std::cout << " -Wl,--whole-archive -lmcwamp -Wl,--no-whole-archive";
+
+#ifdef CODEXL_ACTIVITY_LOGGER_ENABLED
+    // CodeXL Activity Logger
+    std::cout << " -L" XSTR(CODEXL_ACTIVITY_LOGGER_LIBRARY);
+    std::cout << " -lCXLActivityLogger";
+#endif
+
+    std::cout << std::endl;
 }
 
 void prefix(void) {
@@ -112,7 +125,7 @@ void gtest(void) {
        //Flags set using cxxflags and ldflsgs suffice
        std::cout << " -lmcwamp_gtest ";
     }
-          
+
 }
 
 // Compiling as a shared library

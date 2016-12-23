@@ -155,4 +155,8 @@ cmake \
     <ToT HCC checkout directory>
 ```
 
+In your application compiled using hcc, include the CodeXL Activiy Logger header:
+```
+#include <CXLActivityLogger.h>
+```
 For the usage of the Activity Logger for profiling, please refer to its [documentation](https://github.com/RadeonOpenCompute/ROCm-Profiler/blob/master/CXLActivityLogger/doc/AMDTActivityLogger.pdf).
