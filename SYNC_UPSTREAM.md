@@ -122,21 +122,21 @@ Assume commands below are carried out in ToT HCC build directory. And ToT HCC
 checkout is at `~/hcc_upstream`.
 
 Test with one C++AMP FP math unit test.
-```
+```bash
 bin/hcc `bin/clamp-config --build --cxxflags --ldflags` -lm \
   ~/hcc/hcc_tot/tests/Unit/AmpMath/amp_math_cos.cpp
 ./a.out ; echo $?
 ```
 
 Test with one grid_launch unit test with AM library usage.
-```
+```bash
 bin/hcc `bin/hcc-config --build --cxxflags --ldflags` -lhc_am \
   ~/hcc/hcc_tot/tests/Unit/GridLaunch/glp_const.cpp
 ./a.out ; echo $?
 ```
 
 Test with one HC unit test with atomic function and 64-bit arithmetic.
-```
+```bash
 bin/hcc `bin/hcc-config --build --cxxflags --ldflags` \
   ~/hcc/hcc_tot/tests/Unit/HC/hc_atomic_add_global.cpp
 ./a.out ; echo $?
@@ -188,10 +188,10 @@ Upon reaching here, the merge process is completed.
 Appendix A: CMake command for ToT HCC
 =====================================
 
-```
+```bash
 cmake \
     -DCMAKE_BUILD_TYPE=Release \
-    -DHSA_AMDGPU_GPU_TARGET=AMD:AMDGPU:8:0:3 \
+    -DHSA_AMDGPU_GPU_TARGET=gfx803 \
     -DROCM_DEVICE_LIB_DIR=<build directory of ROCm-Device-Libs>/dist/lib \
     <ToT HCC checkout directory>
 ```

@@ -1,4 +1,4 @@
-// RUN: %hc --amdgpu-target=AMD:AMDGPU:7:0:1 --amdgpu-target=AMD:AMDGPU:8:0:1 --amdgpu-target=AMD:AMDGPU:8:0:3 -fPIC -Wl,-Bsymbolic -shared %S/nullkernel.cpp -o %T/nullkernel
+// RUN: %hc --amdgpu-target=gfx701 --amdgpu-target=gfx801 --amdgpu-target=gfx802 --amdgpu-target=gfx803 -fPIC -Wl,-Bsymbolic -shared %S/nullkernel.cpp -o %T/nullkernel
 // RUN: extractkernel -i %T/nullkernel
 
 #include "hc.hpp"

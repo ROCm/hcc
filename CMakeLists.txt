@@ -170,32 +170,39 @@ endif (HAS_ROCM EQUAL 0)
 # Detect AMDGPU backend for native codegen
 #################
 
-set(HSA_AMDGPU_GPU_TARGET "AMD:AMDGPU:8:0:3" CACHE STRING "Target AMDGPU ISA version")
+set(HSA_AMDGPU_GPU_TARGET "gfx803" CACHE STRING "Target AMDGPU ISA version")
 
 # Tokenize HSA_AMDGPU_GPU_TARGET
+
+# Temporary workaround for use of old long-form GFX_ip names, to be removed once
+# we fully deprecate them.
+string(REGEX MATCHALL "AMD:AMDGPU:(7:0:1|8:0:1|8:0:2|8:0:3)"
+                      tmp
+                      ${HSA_AMDGPU_GPU_TARGET})
+foreach(long_form IN LISTS tmp)
+  string(REPLACE "AMD:AMDGPU:" "gfx" short_form ${long_form})
+  string(REPLACE ":" "" short_form ${short_form})
+  message(DEPRECATION "Be advised that use of long-form GFX_ip names, such as \
+                       ${long_form}, is deprecated. Please use the short-form: \
+                       ${short_form}.")
+  list(REMOVE_ITEM HSA_AMDGPU_GPU_TARGET ${long_form})
+  list(APPEND HSA_AMDGPU_GPU_TARGET ${short_form})
+endforeach()
+
+# Map to LC-consumable name.
 foreach(AMDGPU_GPU_TARGET IN LISTS HSA_AMDGPU_GPU_TARGET)
-  if (NOT (AMDGPU_GPU_TARGET STREQUAL "carrizo" OR
-           AMDGPU_GPU_TARGET STREQUAL "fiji" OR
-           AMDGPU_GPU_TARGET STREQUAL "hawaii" OR
-           AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:7:0:1" OR
-           AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:8:0:1" OR
-           AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:8:0:3"))
-    MESSAGE(FATAL_ERROR "${AMDGPU_GPU_TARGET} is not a valid AMDGPU target")
-  endif()
-
-  # AMDGPU_TARGET_LIST would hold values used by compiler scripts
-  # Map ISA version to GPU family
-  if (AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:7:0:1")
+  # AMDGPU_TARGET_LIST holds the values which are used by the compiler scripts.
+  if (AMDGPU_GPU_TARGET STREQUAL "gfx701")
     list(APPEND AMDGPU_TARGET_LIST "hawaii")
-  endif()
-
-  if (AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:8:0:1")
+  elseif (AMDGPU_GPU_TARGET STREQUAL "gfx801")
     list(APPEND AMDGPU_TARGET_LIST "carrizo")
-  endif()
-
-  if (AMDGPU_GPU_TARGET STREQUAL "AMD:AMDGPU:8:0:3")
+  elseif (AMDGPU_GPU_TARGET STREQUAL "gfx802")
+    list(APPEND AMDGPU_TARGET_LIST "tonga")
+  elseif (AMDGPU_GPU_TARGET STREQUAL "gfx803")
     list(APPEND AMDGPU_TARGET_LIST "fiji")
-  endif()
+  else ()
+    message(FATAL_ERROR "${AMDGPU_GPU_TARGET} is not a valid AMDPU target!")
+  endif ()
 endforeach(AMDGPU_GPU_TARGET)
 
 # join list
