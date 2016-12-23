@@ -103,13 +103,13 @@ if [ $KMDUMPLLVM == "1" ]; then
 fi
 
 # select appropriate ROCm-Device-Libs per AMDGPU_TARGET
-if [ $AMDGPU_TARGET == "gfx701" ]; then
+if [ $AMDGPU_TARGET == "hawaii" ]; then
   OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_701.amdgcn.bc"
-elif [ $AMDGPU_TARGET == "gfx801" ]; then
+elif [ $AMDGPU_TARGET == "carrizo" ]; then
   OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_801.amdgcn.bc"
-elif [ $AMDGPU_TARGET == "gfx802" ]; then
+elif [ $AMDGPU_TARGET == "tonga" ]; then
   OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_802.amdgcn.bc"
-elif [ $AMDGPU_TARGET == "gfx803" ]; then
+elif [ $AMDGPU_TARGET == "fiji" ]; then
   OCLC_ISA_VERSION_LIB="$ROCM_LIB/oclc_isa_version_803.amdgcn.bc"
 fi
 HCC_BC_LIBS="$ROCM_LIB/hc.amdgcn.bc $ROCM_LIB/opencl.amdgcn.bc $ROCM_LIB/ocml.amdgcn.bc $ROCM_LIB/ockl.amdgcn.bc $ROCM_LIB/irif.amdgcn.bc $OCLC_ISA_VERSION_LIB $ROCM_LIB/oclc_finite_only_off.amdgcn.bc $ROCM_LIB/oclc_daz_opt_off.amdgcn.bc $ROCM_LIB/oclc_correctly_rounded_sqrt_on.amdgcn.bc $ROCM_LIB/oclc_unsafe_math_off.amdgcn.bc"
