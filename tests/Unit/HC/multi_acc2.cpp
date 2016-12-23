@@ -1,5 +1,4 @@
-
-// RUN: %hc --amdgpu-target=AMD:AMDGPU:7:0:1 --amdgpu-target=AMD:AMDGPU:8:0:1 --amdgpu-target=AMD:AMDGPU:8:0:3 %s -o %t.out && %t.out
+// RUN: %hc --amdgpu-target=gfx701 --amdgpu-target=gfx801 --amdgpu-target=gfx802 --amdgpu-target=gfx803 %s -o %t.out && %t.out
 #include <random>
 #include <algorithm>
 #include <vector>
@@ -28,7 +27,7 @@ int main() {
   for (int i = 0; i < N; i++) {
     host_result_y[i] = a * host_x[i] + host_y[i];
   }
-  
+
   std::vector<hc::accelerator> all_accelerators = hc::accelerator::get_all();
   std::vector<hc::accelerator> accelerators;
   for (auto a = all_accelerators.begin(); a != all_accelerators.end(); a++) {
@@ -84,7 +83,7 @@ int main() {
   for(auto v = y_views.begin(); v != y_views.end(); v++) {
     v->synchronize();
   }
-  
+
   // verify the results
   int errors = 0;
   for (int i = 0; i < N; i++) {

@@ -36,8 +36,9 @@ VERBOSE=0
 # 2) HCC_AMDGPU_TARGET env var, multiple targets are delimited by ",".
 #    Example:
 #
-#    export HCC_AMDGPU_TARGET=AMD:AMDGPU:7:0:1,AMD:AMDGPU:8:0:1,AMD:AMDGPU:8:0:3
-#    # ISA for Hawaii(7:0:1), Carrizo(8:0:1), Fiji(8:0:3) would be produced
+#    export HCC_AMDGPU_TARGET=gfx701,gfx801,gfx802,gfx803
+#    # ISA for Hawaii(gfx701), Carrizo(gfx801), Tonga(gfx802) and Fiji(gfx803)
+#    # would be produced
 #    hcc `hcc-config --cxxflags --ldflags` foo.cpp
 #
 # 3) CMake AMDGPU_TARGET config value. This is the last resort options.
@@ -132,7 +133,7 @@ do
 
     cp "$ARG" $TEMP_DIR/kernel_cpu.o
     LINK_CPU_ARG+=( "$TEMP_DIR/kernel_cpu.o" )
- 
+
   elif [[ "$ARG" =~ [^[:space:]]+\.o$ ]]; then
     # detected a .o file
     if [ $VERBOSE == 2 ]; then
@@ -230,7 +231,7 @@ do
         if [ $VERBOSE == 2 ]; then
           echo "creating temp dir: $AR_TEMP_DIR"
         fi
- 
+
         mkdir -p "$AR_TEMP_DIR"
         TEMP_AR_DIRS+=( "$AR_TEMP_DIR" )
         cd "$AR_TEMP_DIR"
@@ -315,11 +316,13 @@ if [ -n "$HCC_AMDGPU_TARGET" ]; then
   iter=0
   for HCC_AMDGPU_TARGET_TOKEN in ${HCC_AMDGPU_TARGET_TOKENS[@]}; do
     # map ISA version string to GPU family
-    if [ "$HCC_AMDGPU_TARGET_TOKEN" = "AMD:AMDGPU:7:0:1" ]; then
+    if [ "$HCC_AMDGPU_TARGET_TOKEN" = "gfx701" ]; then
       AMDGPU_TARGET_ARRAY[$iter]="hawaii"
-    elif [ "$HCC_AMDGPU_TARGET_TOKEN" = "AMD:AMDGPU:8:0:1" ]; then
+    elif [ "$HCC_AMDGPU_TARGET_TOKEN" = "gfx801" ]; then
       AMDGPU_TARGET_ARRAY[$iter]="carrizo"
-    elif [ "$HCC_AMDGPU_TARGET_TOKEN" = "AMD:AMDGPU:8:0:3" ]; then
+    elif [ "$HCC_AMDGPU_TARGET_TOKEN" = "gfx802" ]; then
+      AMDGPU_TARGET_ARRAY[$iter]="tonga"
+    elif [ "$HCC_AMDGPU_TARGET_TOKEN" = "gfx803" ]; then
       AMDGPU_TARGET_ARRAY[$iter]="fiji"
     else
       # not mappable, simply pass to backend and wish it accepts
