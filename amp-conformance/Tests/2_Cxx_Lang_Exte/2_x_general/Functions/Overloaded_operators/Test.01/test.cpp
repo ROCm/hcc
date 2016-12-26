@@ -49,6 +49,6 @@ runall_result test() __GPU
 
 int main()
 {
-    return GPU_INVOKE(require_device().get_default_view(), runall_result, test).get_exit_code();
+    return GPU_INVOKE(require_device(device_flags::NOT_SPECIFIED).get_default_view(), runall_result, test).get_exit_code();
 }
 

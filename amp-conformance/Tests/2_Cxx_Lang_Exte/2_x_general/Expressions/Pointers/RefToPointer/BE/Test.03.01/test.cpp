@@ -258,7 +258,7 @@ runall_result test_main()
 {
     srand(2010);
 
-    accelerator_view av = require_device_for<AMP_ELEMENT_TYPE>().get_default_view();
+    accelerator_view av = require_device_for<AMP_ELEMENT_TYPE>(device_flags::NOT_SPECIFIED, false).get_default_view();
 
     runall_result ret;
 

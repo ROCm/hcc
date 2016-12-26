@@ -437,7 +437,7 @@ namespace Concurrency {
 				if(dmf_allowed_gpu_device_paths.size() > 0) {
 					Log(LogType::Info, true) << "DMF:    Allowed GPU device paths: " << std::endl;
 					std::for_each(dmf_allowed_gpu_device_paths.begin(), dmf_allowed_gpu_device_paths.end(), [](const wstring& dpath) {
-							WLog() << "DMF:       " << dpath << std::endl;
+							WLog(LogType::Info, true) << "DMF:       " << dpath << std::endl;
 						});
 				}
 
@@ -490,7 +490,7 @@ namespace Concurrency {
 					} else if(ddesc.find(L"NVIDIA") != wstring::npos) {
 						bit_flags |= device_bit_flags::IHV_NVIDIA;
 					} else {
-						WLog(LogType::Warning) << "Could not determine IHV for accelerator '" << ddesc << "' (" << dpath << ")" << std::endl;
+						WLog(LogType::Warning, true) << "Could not determine IHV for accelerator '" << ddesc << "' (" << dpath << ")" << std::endl;
 					}
 				} else {
 					// Emulated devices
@@ -505,7 +505,7 @@ namespace Concurrency {
 						bit_flags |= device_bit_flags::IS_REF;
 #endif
 					} else {
-						WLog(LogType::Error) << "Unknown accelerator '" << ddesc << "' (" << dpath << ")" << std::endl;
+						WLog(LogType::Error, true) << "Unknown accelerator '" << ddesc << "' (" << dpath << ")" << std::endl;
 					}
 				}
 
@@ -808,7 +808,7 @@ namespace Concurrency {
 				if(excluded_device_paths.size() > 0) {
 					Log(LogType::Info, true) << "DMF:    excluding:" << std::endl;
 					std::for_each(excluded_device_paths.begin(), excluded_device_paths.end(), [](const wstring& dpath) {
-						WLog() << "DMF:        " << dpath << std::endl;
+						WLog(LogType::Info, true) << "DMF:        " << dpath << std::endl;
 					});
 				}
 

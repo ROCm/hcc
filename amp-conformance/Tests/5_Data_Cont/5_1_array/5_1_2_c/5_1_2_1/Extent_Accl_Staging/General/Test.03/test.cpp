@@ -18,8 +18,8 @@ bool test_feature(const std::vector<accelerator>& devices)
     {
         accelerator pdevice1 = devices[i];
         accelerator pdevice2 = devices[i+1];
-		WLog() << "device1 = devices[" << i << "] = " << pdevice1.get_device_path() << std::endl;
-		WLog() << "device2 = devices[" << (i+1) << "] = " << pdevice2.get_device_path() << std::endl;
+		WLog(LogType::Info, true) << "device1 = devices[" << i << "] = " << pdevice1.get_device_path() << std::endl;
+		WLog(LogType::Info, true) << "device2 = devices[" << (i+1) << "] = " << pdevice2.get_device_path() << std::endl;
 
         {
             if (!test_accl_staging_buffer_constructor<_type, _rank, accelerator_view>(pdevice1.get_default_view(), pdevice2.get_default_view()))
@@ -28,7 +28,7 @@ bool test_feature(const std::vector<accelerator>& devices)
                 return false;
             if (!test_accl_staging_buffer_constructor<_type, _rank, accelerator_view>(pdevice1.create_view(queuing_mode_automatic), pdevice2.create_view(queuing_mode_immediate)))
                 return false;
-            Log() << "Finished - device1 for device2" << std::endl;
+            Log(LogType::Info, true) << "Finished - device1 for device2" << std::endl;
         }
 
         {
@@ -38,9 +38,9 @@ bool test_feature(const std::vector<accelerator>& devices)
                 return false;
             if (!test_accl_staging_buffer_constructor<_type, _rank, accelerator_view>(pdevice2.create_view(queuing_mode_automatic), pdevice1.create_view(queuing_mode_immediate)))
                 return false;
-            Log() << "Finished - device2 for device1" << std::endl;
+            Log(LogType::Info, true) << "Finished - device2 for device1" << std::endl;
         }
-		Log() << std::endl;
+		Log(LogType::Info, true) << std::endl;
     }
 
 	return true;

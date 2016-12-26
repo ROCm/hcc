@@ -15,11 +15,11 @@ using namespace Concurrency::Test;
 runall_result test_main()
 {
 	array<int, 1> data(10);
-	const array_view<int, 1> src(data);	
-	const array<int, 1> dst(10);
-	
+	const array_view<int, 1> src(data);
+	const Concurrency::array<int, 1> dst(10);
+
 	copy(src, dst);
-	
+
     return runall_fail;
 }
 

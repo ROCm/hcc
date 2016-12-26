@@ -33,35 +33,35 @@ using namespace Concurrency::Test;
 
 runall_result test_main()
 {
-    accelerator acc = require_device();
-	
+    accelerator acc = require_device(device_flags::NOT_SPECIFIED);
+
 	if(acc.get_supports_cpu_shared_memory())
 	{
 		acc.set_default_cpu_access_type(ACCESS_TYPE);
 	}
-	
+
 	accelerator_view av = acc.get_default_view();
 
     ArrayViewTest<int, 1> arr_v(extent<1>(10));
 
-    Log() << "Writing on the GPU" << std::endl;
+    Log(LogType::Info, true) << "Writing on the GPU" << std::endl;
     array_view<int, 1> gpu_view = arr_v.view();
     parallel_for_each(av, extent<1>(1), [=](index<1>) restrict(amp) {
         gpu_view(0) = 17;
     });
 
-    Log() << "Copying to array" << std::endl;
+    Log(LogType::Info, true) << "Copying to array" << std::endl;
     array<int, 1> a(arr_v.view(), av);
 
 	std::vector<int> results_v(1);
     array_view<int, 1> results(1, results_v);
-	
+
     parallel_for_each(av, extent<1>(1), [=, &a](index<1>) restrict(amp) {
         results[0] = a[0];
     });
 
     int result = results[0];
-    Log() << "Result is: " << result << " Expected: 17" << std::endl;
+    Log(LogType::Info, true) << "Result is: " << result << " Expected: 17" << std::endl;
     return result == 17 ? arr_v.pass() : arr_v.fail();
 }
 

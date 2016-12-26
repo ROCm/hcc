@@ -103,7 +103,7 @@ bool test_feature()
 
 runall_result test_main()
 {
-	accelerator::set_default(require_device_for<AMP_TESTVAR_T>().get_device_path());
+	accelerator::set_default(require_device_for<AMP_TESTVAR_T>(device_flags::NOT_SPECIFIED, false).get_device_path());
 
     return test_feature<AMP_TESTVAR_T, AMPTESTVAR_D0, AMPTESTVAR_D1>();
 }

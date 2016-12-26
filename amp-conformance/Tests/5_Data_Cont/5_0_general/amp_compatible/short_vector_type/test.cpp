@@ -46,7 +46,7 @@ runall_result test() restrict(cpu,amp)
 
 runall_result test_main()
 {
-	accelerator_view av = require_device().get_default_view();
+	accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
 
 	runall_result result;
     result &= test();

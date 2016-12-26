@@ -11,11 +11,12 @@
 #include "../../../accelerator.common.h"
 
 using namespace Concurrency;
+using namespace Concurrency::Test;
 
 runall_result test_main()
 {
     runall_result result;
-    accelerator acc = Test::require_device();
+    accelerator acc = Test::require_device(device_flags::NOT_SPECIFIED);
 
     accelerator_view av = acc.create_view();
     result &= REPORT_RESULT((av != acc.get_default_view()) == true);

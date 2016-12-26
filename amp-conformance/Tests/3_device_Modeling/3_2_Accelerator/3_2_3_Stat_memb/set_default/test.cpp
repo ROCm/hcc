@@ -10,6 +10,7 @@
 #include <amptest_main.h>
 
 using namespace Concurrency;
+using namespace Concurrency::Test;
 
 runall_result test_main()
 {
@@ -17,7 +18,7 @@ runall_result test_main()
 
     // require_device() will cause test to skip
     // if no accelerators found other than cpu
-    Test::require_device();
+    Test::require_device(device_flags::NOT_SPECIFIED);
 
     accelerator::set_default(accelerator::cpu_accelerator);
     accelerator acc;

@@ -22,7 +22,7 @@ int main()
     const int size = 2048;
     vector<int> c(size);
     Concurrency::extent<1> e(size);
-    array<int, 1> ac(e);
+    Concurrency::array<int, 1> ac(e);
 
     parallel_for_each(ac.get_extent(), [&](index<1> idx) __GPU {
         int *vectorSidePtr = &ac[idx];

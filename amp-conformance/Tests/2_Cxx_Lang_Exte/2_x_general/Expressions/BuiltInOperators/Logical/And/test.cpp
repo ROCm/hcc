@@ -23,7 +23,7 @@ void Kernel(index<2> idx, array<long, 2> &aC, array<long, 2> &aA, array<long, 2>
 // Main entry point
 runall_result test_main()
 {
-    accelerator_view rv = require_device().get_default_view();
+    accelerator_view rv = require_device(device_flags::NOT_SPECIFIED).get_default_view();
 
     // this tests uses a 2D dataset of size N x M
     const int N = 1024;
@@ -67,9 +67,9 @@ runall_result test_main()
 
             if (C[i * N + j] != expectedPc)
             {
-                Log(LogType::Error) << "Logical AND fails" << std::endl;
-                Log(LogType::Error) << "-Expression: " << A[i * N + j] << " && " << B[i * N + j] << std::endl;
-                Log(LogType::Error) << "-Actual C[" << i * N + j << "]: " << C[i * N + j] << " Expected: " << expectedPc << std::endl;
+                Log(LogType::Error, true) << "Logical AND fails" << std::endl;
+                Log(LogType::Error, true) << "-Expression: " << A[i * N + j] << " && " << B[i * N + j] << std::endl;
+                Log(LogType::Error, true) << "-Actual C[" << i * N + j << "]: " << C[i * N + j] << " Expected: " << expectedPc << std::endl;
                 result = false;
                 break;
             }
