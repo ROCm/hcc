@@ -224,7 +224,7 @@ bool test_local(accelerator_view &alv)
 
 runall_result test_main()
 {
-    accelerator_view alv = require_device_for<AMP_ELEMENT_TYPE>().get_default_view();
+    accelerator_view alv = require_device_for<AMP_ELEMENT_TYPE>(device_flags::NOT_SPECIFIED, false).get_default_view();
 
     runall_result ret;
 

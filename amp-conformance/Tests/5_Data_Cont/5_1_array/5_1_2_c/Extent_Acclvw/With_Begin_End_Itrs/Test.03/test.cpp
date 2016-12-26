@@ -28,7 +28,7 @@ bool test_feature()
             test_feature_itr<_type, _rank, _D0, _D1, accelerator_view>(data, data+(_D0*_D1), (_gpu_device).create_view(queuing_mode_automatic)) &&
             test_feature_itr<_type, _rank, _D0, _D1, accelerator_view>(data, data+(_D0*_D1), (_gpu_device).create_view(queuing_mode_automatic));
 
-	Log() << "test_feature_itr(begin,end) :" << pass << std::endl;
+	Log(LogType::Info, true) << "test_feature_itr(begin,end) :" << pass << std::endl;
  	result &= pass;
     }
 
@@ -38,7 +38,7 @@ bool test_feature()
             test_feature_itr<_type, _rank, _D0, _D1, accelerator_view>(data, (_gpu_device).create_view(queuing_mode_automatic)) &&
             test_feature_itr<_type, _rank, _D0, _D1, accelerator_view>(data, (_gpu_device).create_view(queuing_mode_immediate));
 
-	Log() << "test_feature_itr(begin) :" << pass << std::endl;
+	Log(LogType::Info, true) << "test_feature_itr(begin) :" << pass << std::endl;
 	result &= pass;
     }
 
@@ -60,7 +60,7 @@ runall_result test_main()
 	result &= REPORT_RESULT((test_feature<float, 31, 19>()));
     result &= REPORT_RESULT((test_feature<float, 5, 1>()));
 	result &= REPORT_RESULT((test_feature<double, 13, 7>()));
-	
+
     return result;
 }
 

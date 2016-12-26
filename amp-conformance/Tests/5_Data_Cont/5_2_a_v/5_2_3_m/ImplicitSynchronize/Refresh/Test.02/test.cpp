@@ -30,8 +30,8 @@ using namespace Concurrency::Test;
 
 runall_result test_main()
 {
-    accelerator acc = require_device();
-	
+    accelerator acc = require_device(device_flags::NOT_SPECIFIED);
+
     if(acc.get_supports_cpu_shared_memory())
     {
         acc.set_default_cpu_access_type(ACCESS_TYPE);
@@ -40,13 +40,13 @@ runall_result test_main()
     array<int, 1> a(extent<1>(10));
     array_view<int, 1> av(a);
 
-    Log() << "Writing on the GPU" << std::endl;
+    Log(LogType::Info, true) << "Writing on the GPU" << std::endl;
     parallel_for_each(extent<1>(1), [=, &a](index<1>) __GPU {
         av.data()[0] = 17;
     });
 
     av.refresh();
 
-    Log() << "Result is: " << av[0] << "Expected: 17" << std::endl;
+    Log(LogType::Info, true) << "Result is: " << av[0] << "Expected: 17" << std::endl;
     return av[0] == 17 ? runall_pass : runall_fail;
 }

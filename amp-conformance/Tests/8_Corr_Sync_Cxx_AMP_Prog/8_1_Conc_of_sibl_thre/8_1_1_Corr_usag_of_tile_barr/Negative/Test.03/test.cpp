@@ -28,7 +28,9 @@ const int ZSize     = ZGroupSize * NumZGroups;
 const int Size = XSize * YSize * ZSize;
 
 template<typename ElementType>
-void CalculateGroupSum(tiled_index<ZGroupSize, YGroupSize, XGroupSize> idx, const array<ElementType, 3> & fA, array<ElementType, 3> & fB) __GPU
+void CalculateGroupSum(tiled_index<ZGroupSize, YGroupSize, XGroupSize> idx,
+                       const Concurrency::array<ElementType, 3>& fA,
+                       Concurrency::array<ElementType, 3>& fB) __GPU
 {
     // error: cause 3561
     int flatindex = idx.global[0] * YSize * XSize + idx.global[1] * XSize + idx.global[2];
@@ -43,7 +45,10 @@ void CalculateGroupSum(tiled_index<ZGroupSize, YGroupSize, XGroupSize> idx, cons
 }
 
 template <typename ElementType>
-void kernel(tiled_index<ZGroupSize, YGroupSize, XGroupSize> idx, const array<ElementType, 3> & fA, array<ElementType, 3> & fB, int x) __GPU
+void kernel(tiled_index<ZGroupSize, YGroupSize, XGroupSize> idx,
+            const Concurrency::array<ElementType, 3>& fA,
+            Concurrency::array<ElementType, 3>& fB,
+            int x) __GPU
 {
     do { if(x <= 1)  break; do { if(x <= 2)  break; do { if(x <= 3)  break; do { if(x <= 4)  break; do { if(x <= 5)  break;
     for(;x > 6;)   { for(;x > 7;)  { for(;x > 8;)  { for(;x > 9;)  { for(;x > 10;) {
@@ -90,7 +95,7 @@ runall_result test()
     accelerator_view rv =  require_device(Device::ALL_DEVICES).get_default_view();
 
     Concurrency::extent<3> extentA(ZSize, YSize, XSize), extentB(NumZGroups, NumYGroups, NumXGroups);
-    array<ElementType, 3> fA(extentA, rv), fB(extentB, rv);
+    Concurrency::array<ElementType, 3> fA(extentA, rv), fB(extentB, rv);
 
     //forall where conditions are met
     copy(A, fA);

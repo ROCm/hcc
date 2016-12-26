@@ -18,7 +18,9 @@ const int NumGroups = 65535;
 const int Size      = GroupSize * NumGroups;
 
 template<typename ElementType>
-void CalculateGroupSum(tiled_index<GroupSize> idx, const array<ElementType, 1> & fA, array<ElementType, 1> & fB) __GPU_ONLY
+void CalculateGroupSum(tiled_index<GroupSize> idx,
+                       const Concurrency::array<ElementType, 1>& fA,
+                       Concurrency::array<ElementType, 1>& fB) __GPU_ONLY
 {
     // error: cause 3561
     if (idx.global[0] %2 == 0)
@@ -32,7 +34,10 @@ void CalculateGroupSum(tiled_index<GroupSize> idx, const array<ElementType, 1> &
 
 //Kernel
 template <typename ElementType>
-void kernel(tiled_index<GroupSize> idx, const array<ElementType, 1> & fA, array<ElementType, 1> & fB, int x) __GPU_ONLY
+void kernel(tiled_index<GroupSize> idx,
+            const Concurrency::array<ElementType, 1>& fA,
+            Concurrency::array<ElementType, 1>& fB,
+            int x) __GPU_ONLY
 {
     do { if(x <= 1)  break; do { if(x <= 2)  break; do { if(x <= 3)  break; do { if(x <= 4)  break; do { if(x <= 5)  break;
     for(;x > 6;)   { for(;x > 7;)  { for(;x > 8;)  { for(;x > 9;)  { for(;x > 10;) {
@@ -79,7 +84,7 @@ runall_result test()
     accelerator_view rv =  require_device(Device::ALL_DEVICES).get_default_view();
 
     Concurrency::extent<1> extentA(Size), extentB(NumGroups);
-    array<ElementType, 1> fA(extentA, rv), fB(extentB, rv);
+    Concurrency::array<ElementType, 1> fA(extentA, rv), fB(extentB, rv);
 
     //forall where conditions are met
     copy(A, fA);

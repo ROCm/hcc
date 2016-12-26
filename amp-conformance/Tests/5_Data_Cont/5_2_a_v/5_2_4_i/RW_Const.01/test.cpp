@@ -94,7 +94,7 @@ void function_ref(const data_nonconst& data) restrict(amp)
 
 runall_result test_main()
 {
-	accelerator_view av = require_device().get_default_view();
+	accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
 	runall_result result;
 
 	// Const member field in a function object
@@ -157,7 +157,7 @@ runall_result test_main()
 		output_1_ = 0;
 		output_2_ = 0;
 		output_3_ = 0;
-		functor.sync();		
+		functor.sync();
 		parallel_for_each(av, extent<1>(1), functor);
 		functor.sync();
 		result &= REPORT_RESULT(output_1_ == 0x0000000F);
@@ -267,5 +267,5 @@ runall_result test_main()
 		result &= REPORT_RESULT(output_3_ == 0x00000007);
 	}
 
-	return result;	
+	return result;
 }

@@ -40,7 +40,7 @@ const int size = 10;
 
 int test_device()
 {
-    accelerator_view av = require_device().get_default_view();
+    accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
 
     extent<1> e(size);
     array<int, 1> result(e);
@@ -67,11 +67,11 @@ runall_result test_main()
 {
 	runall_result result;
     // Test on host
-	Log() << "Test == and != on host" << std::endl;
+	Log(LogType::Info, true) << "Test == and != on host" << std::endl;
     result &= REPORT_RESULT(test() == 0);
 
     // Test on device
-	Log() << "Test == and != on device" << std::endl;
+	Log(LogType::Info, true) << "Test == and != on device" << std::endl;
 	result &= REPORT_RESULT(test_device() == 0);
     return result;
 }

@@ -42,7 +42,7 @@ runall_result test(array_view<int, 1> &av1, array_view<int, 1> av2, vector<int>&
         return runall_fail;
     }
 
-    accelerator_view acc_view = require_device().get_default_view();
+    accelerator_view acc_view = require_device(device_flags::NOT_SPECIFIED).get_default_view();
 
     // use in parallel_for_each
     parallel_for_each(acc_view, av2.get_extent(), [=] (index<1> idx) __GPU

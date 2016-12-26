@@ -14,7 +14,7 @@
 template<typename _type, int _rank>
 runall_result test_feature(accelerator *p_device_gpu,accelerator *p_device_cpu)
 {
-    Log(LogType::Info) << "Testing _type:" << typeid(_type).name() << " _rank:" << _rank << std::endl;
+    Log(LogType::Info, true) << "Testing _type:" << typeid(_type).name() << " _rank:" << _rank << std::endl;
 
     if (p_device_cpu && p_device_gpu)
     {
@@ -26,7 +26,7 @@ runall_result test_feature(accelerator *p_device_gpu,accelerator *p_device_cpu)
             return runall_fail;
     }
 
-	Log(LogType::Info) << "Done" << std::endl;
+	Log(LogType::Info, true) << "Done" << std::endl;
 	return runall_pass;
 }
 

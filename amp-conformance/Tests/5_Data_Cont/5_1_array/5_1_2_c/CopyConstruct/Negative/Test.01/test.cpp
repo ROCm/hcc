@@ -31,7 +31,7 @@ bool test_feature()
 
     {
 		std::vector<_type> data;
-		for (int i = 0; i < abs(e1.size()); i++)
+		for (decltype(e1.size()) i = 0; i != e1.size(); ++i)
 			data.push_back((_type)rand());
         array<_type, rank> src(e1, data);
         const array<_type, rank> dst(e1);
@@ -42,7 +42,7 @@ bool test_feature()
 
     {
 		std::vector<_type> data;
-		for (int i = 0; i < abs(e1.size()); i++)
+		for (decltype(e1.size()) i = 0; i != e1.size(); ++i)
 			data.push_back((_type)rand());
         const array<_type, rank> src(e1, data);
         const array<_type, rank> dst(e1);

@@ -18,16 +18,16 @@ private:
 	accelerator cpu_acc;
 	accelerator gpu_acc1;
 	accelerator gpu_acc2;
-	
-	access_list access_types_vec;	
+
+	access_list access_types_vec;
 
 public:
 	NonContigArrayViewConstToArrayTests()
 	{
 		cpu_acc = accelerator(accelerator::cpu_accelerator);
-		gpu_acc1 = require_device_for<DATA_TYPE>();
-		gpu_acc2 = require_device_for<DATA_TYPE>(gpu_acc1);
-		
+		gpu_acc1 = require_device_for<DATA_TYPE>(device_flags::NOT_SPECIFIED, false);
+		gpu_acc2 = require_device_for<DATA_TYPE>(gpu_acc1, device_flags::NOT_SPECIFIED, false);
+
 		compute_access_type_list(access_types_vec, gpu_acc1, gpu_acc2, DEF_ACCESS_TYPE1, DEF_ACCESS_TYPE2);
 	}
 
@@ -35,9 +35,9 @@ public:
 	{
 		accelerator_view gpu_av1 = gpu_acc1.get_default_view();
 		accelerator_view gpu_av2 = gpu_acc2.get_default_view();
-		
+
 		runall_result res;
-		
+
 		for(auto a_t_tuple : access_types_vec)
 		{
 			print_access_type_tuple(a_t_tuple);
@@ -49,7 +49,7 @@ public:
 };
 
 runall_result test_main()
-{	
+{
 	NonContigArrayViewConstToArrayTests tests;
 	runall_result res;
 

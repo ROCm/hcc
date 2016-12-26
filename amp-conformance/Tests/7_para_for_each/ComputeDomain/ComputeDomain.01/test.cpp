@@ -44,7 +44,7 @@ bool test(const accelerator_view& av, const extent<N>& ext)
 	{
 		if(vec[i] != i + 1)
 		{
-			Log(LogType::Error) << "Mismatch on index: " << i << ", actual: " << vec[i] << ", expected: " << (i + 1) << std::endl;
+			Log(LogType::Error, true) << "Mismatch on index: " << i << ", actual: " << vec[i] << ", expected: " << (i + 1) << std::endl;
 			passed = false;
 		}
 	}
@@ -54,8 +54,8 @@ bool test(const accelerator_view& av, const extent<N>& ext)
 
 runall_result test_main()
 {
-	accelerator_view av = require_device().get_default_view();
-	
+	accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
+
 	runall_result result;
 
 	result &= REPORT_RESULT(test(av, extent<1>(1)         ));

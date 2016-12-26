@@ -37,7 +37,7 @@ void InitializeArray(vector<float> &vM, int size)
 {
     for(int i=0; i<size; ++i)
     {
-        vM[i] = (float)rand() / (float)(RAND_MAX + 1);
+        vM[i] = (float)(rand() % RAND_MAX) / (float)RAND_MAX;
     }
 }
 
@@ -49,15 +49,15 @@ runall_result test_main()
     const int N = 64;
     const int W = 8;
 
-    accelerator device1 = require_device();
+    accelerator device1 = require_device(device_flags::NOT_SPECIFIED);
 	// Need to get a 2nd device that's different than the first
-    accelerator device2 = require_device(device1);
-	
+    accelerator device2 = require_device(device1, device_flags::NOT_SPECIFIED);
+
 	if(device1.get_supports_cpu_shared_memory())
 	{
 		device1.set_default_cpu_access_type(DEF_ACCESS_TYPE1);
 	}
-	
+
 	if(device2.get_supports_cpu_shared_memory())
 	{
 		device2.set_default_cpu_access_type(DEF_ACCESS_TYPE2);
@@ -77,7 +77,7 @@ runall_result test_main()
     InitializeArray(vB, N * W);
 
     // Compute mxm on CPU
-	Log() << "Performing matrix multiply on the CPU..." << std::endl;
+	Log(LogType::Info, true) << "Performing matrix multiply on the CPU..." << std::endl;
     for(int k=0; k<M; ++k)
     {
         for(int j=0; j<W; ++j)
@@ -95,7 +95,7 @@ runall_result test_main()
             vRef[k * W + j] = result;
         }
     }
-	Log() << "   Done." << std::endl;
+	Log(LogType::Info, true) << "   Done." << std::endl;
 
     extent<2> eA(M, N), eB(N, W), eC(M, W);
     extent<2> eA_half(M/2, N), eC_half(M/2, W);
@@ -110,7 +110,7 @@ runall_result test_main()
     array_view<float, 2> mC_view1(mC.section(0,0,M/2,W));
     array_view<float, 2> mC_view2(mC.section(M/2,0,M/2,W));
 
-	Log() << "Performing matrix multiply on the GPU..." << std::endl;
+	Log(LogType::Info, true) << "Performing matrix multiply on the GPU..." << std::endl;
     parallel_for_each(av4, eC_half, [=](index<2> idx) restrict(amp)
         {
             float result = 0.0f;
@@ -143,7 +143,7 @@ runall_result test_main()
         });
 
     vC = mC;
-	Log() << "   Done." << std::endl;
+	Log(LogType::Info, true) << "   Done." << std::endl;
 
     // Compare GPU and CPU results
 	return Verify(vC, vRef);

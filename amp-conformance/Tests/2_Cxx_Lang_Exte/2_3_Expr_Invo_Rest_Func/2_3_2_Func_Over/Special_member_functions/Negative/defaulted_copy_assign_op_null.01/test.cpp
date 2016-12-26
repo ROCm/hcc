@@ -20,13 +20,13 @@ using namespace concurrency::Test;
 struct A1_base_1
 {
 	int i;
-	A1_base_1& operator=(const A1_base_1&) restrict(cpu) {}
+	A1_base_1& operator=(const A1_base_1&) restrict(cpu) { return *this; }
 };
 class A1_base_2
 {
 	int i;
 public:
-	A1_base_2& operator=(const A1_base_2&) restrict(amp) {}
+	A1_base_2& operator=(const A1_base_2&) restrict(amp) { return *this; }
 };
 struct A1 : A1_base_1, A1_base_2
 {
@@ -37,11 +37,11 @@ struct A1 : A1_base_1, A1_base_2
 union A2_member_1
 {
 	int i;
-	A2_member_1& operator=(const A2_member_1&) restrict(amp) {}
+	A2_member_1& operator=(const A2_member_1&) restrict(amp) { return *this; }
 };
 struct A2_member_2
 {
-	A2_member_2& operator=(const A2_member_2&) restrict(cpu) {}
+	A2_member_2& operator=(const A2_member_2&) restrict(cpu) { return *this;}
 };
 class A2
 {
@@ -54,12 +54,12 @@ class A2
 struct A3_base_1
 {
 	int i;
-	A3_base_1& operator=(const A3_base_1&) restrict(cpu) {}
+	A3_base_1& operator=(const A3_base_1&) restrict(cpu) { return *this; }
 };
 class A3_member_1
 {
 public:
-	A3_member_1& operator=(const A3_member_1&) restrict(amp) {}
+	A3_member_1& operator=(const A3_member_1&) restrict(amp) { return *this; }
 };
 struct A3 : A3_base_1
 {
@@ -67,19 +67,19 @@ struct A3 : A3_base_1
 	// no copy op= possible
 };
 
-/* post-Dev11 #345711
+post-Dev11 #345711
 // Classes with move assignment operators
 struct A4
 {
-	void operator=(A4&&) restrict(cpu) {}
+	A4& operator=(A4&&) restrict(cpu) { return *this; }
 	// copy op= deleted
 };
 
 struct A5
 {
-	void operator=(A5&&) restrict(amp) {}
+	A5& operator=(A5&&) restrict(amp) { return *this; }
 	// copy op= deleted
-};*/
+};
 
 void f() restrict(cpu)
 {
@@ -95,13 +95,13 @@ void f() restrict(cpu)
 	const A3 a3r;
 	a3l = a3r;
 
-	/*A4 a4l;
+	A4 a4l;
 	const A4 a4r;
 	a4l = a4r;
 
 	A5 a5l;
 	const A5 a5r;
-	a5l = a5r;*/
+	a5l = a5r;
 }
 
 void f() restrict(amp)
@@ -118,13 +118,13 @@ void f() restrict(amp)
 	const A3 a3r;
 	a3l = a3r;
 
-	/*A4 a4l;
+	A4 a4l;
 	const A4 a4r;
 	a4l = a4r;
 
 	A5 a5l;
 	const A5 a5r;
-	a5l = a5r;*/
+	a5l = a5r;
 }
 
 runall_result test_main()

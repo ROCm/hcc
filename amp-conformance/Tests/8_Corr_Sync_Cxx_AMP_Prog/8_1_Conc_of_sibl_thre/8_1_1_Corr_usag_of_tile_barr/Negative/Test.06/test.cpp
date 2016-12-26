@@ -9,17 +9,23 @@
 #include <iostream>
 #include <amptest.h>
 #include <amptest_main.h>
+
 using namespace std;
 using namespace Concurrency;
 using namespace Concurrency::Test;
 
+static
+inline
+void foo(tiled_index<1> idx)
+{
+    idx.barrier.wait();
+}
+
 runall_result test_main()
 {
-
-    tiled_index<1> idx;
-    idx.barrier.wait();
-
-    return runall_fail;
+    typename std::result_of<decltype(&foo), tiled_index<1>>::type* foo = nullptr;
+    // Should not get here.
+    return !foo ? runall_fail : runall_cascade_fail;
 }
 
 //#Expects: Error: \(19\) : .+ C2512

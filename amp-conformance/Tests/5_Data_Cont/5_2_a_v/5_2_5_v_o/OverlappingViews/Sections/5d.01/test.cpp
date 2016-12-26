@@ -30,13 +30,13 @@ using namespace Concurrency::Test;
 
 runall_result test_main()
 {
-    accelerator acc = require_device();
-	
+    accelerator acc = require_device(device_flags::NOT_SPECIFIED);
+
     if(acc.get_supports_cpu_shared_memory())
     {
         acc.set_default_cpu_access_type(ACCESS_TYPE);
     }
-	
+
     OverlapTest<int, 5> t(make_extent(4, 4, 4, 4, 4));
 
     return t.negative_test(

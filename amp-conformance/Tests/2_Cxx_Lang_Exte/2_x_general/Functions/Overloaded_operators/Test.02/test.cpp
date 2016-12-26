@@ -40,5 +40,5 @@ runall_result kernel() __GPU
 
 runall_result test_main()
 {
-    return GPU_INVOKE(require_device().get_default_view(), runall_result, kernel);
+    return GPU_INVOKE(require_device(device_flags::NOT_SPECIFIED).get_default_view(), runall_result, kernel);
 }

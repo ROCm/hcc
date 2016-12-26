@@ -133,7 +133,7 @@ namespace Test
         _known_values(new known_values_store()),
         _view(extent, *_data.get())
         {
-            Log(LogType::Info) << "Created Array View of: " << extent << std::endl;
+            Log(LogType::Info, true) << "Created Array View of: " << extent << std::endl;
         }
 
         ///<summary>Creates a new ArrayViewTest -- with initial data, and an array_view around it</summary>
@@ -145,8 +145,8 @@ namespace Test
         {
             assert(_data.get()->size() == extent.size());
 
-            Log(LogType::Info) << "Created Array View of: " << extent << std::endl;
-            Log(LogType::Info) << "Initial data: ";
+            Log(LogType::Info, true) << "Created Array View of: " << extent << std::endl;
+            Log(LogType::Info, true) << "Initial data: ";
             std::ostream_iterator<value_type> os_iter(LogStream(), ", ");
             std::copy(_data.get()->begin(), _data.get()->end(), os_iter);
             LogStream() << std::endl;
@@ -195,7 +195,7 @@ namespace Test
         ///</remarks>
         ArrayViewTest<value_type, rank - 1, _data_rank> projection(array_view<value_type, rank - 1> other, int i)
         {
-            Log(LogType::Info) << "Creating projection on: " << i << std::endl;
+            Log(LogType::Info, true) << "Creating projection on: " << i << std::endl;
 
             std::shared_ptr<coordinate_nest<rank - 1, _data_rank>> p(new projected_coordinate_nest<rank - 1, rank, _data_rank>(_coordinates, index<1>(i)));
             return ArrayViewTest<value_type, rank - 1, _data_rank>(
@@ -246,7 +246,7 @@ namespace Test
         ///</remarks>
         ArrayViewTest<value_type, rank, _data_rank> section(array_view<value_type, rank> other, index<rank> origin)
         {
-            Log(LogType::Info) << "Creating section: (origin: " << origin << " extent: "
+            Log(LogType::Info, true) << "Creating section: (origin: " << origin << " extent: "
                 << other.get_extent() << ")" << std::endl;
             // make a copy
             ArrayViewTest<value_type, rank, _data_rank> otherTest = *this;
@@ -258,7 +258,7 @@ namespace Test
         template<int new_rank>
         ArrayViewTest<_value_type, new_rank, _data_rank> view_as(extent<new_rank> ex)
         {
-            Log(LogType::Info) << "Creating reshaped view: (extent: " << ex << ")" << std::endl;
+            Log(LogType::Info, true) << "Creating reshaped view: (extent: " << ex << ")" << std::endl;
             std::shared_ptr<coordinate_nest<new_rank, _data_rank>> p(new reshaped_coordinate_nest<new_rank, _data_rank>(_coordinates, ex));
             return ArrayViewTest<_value_type, new_rank, _data_rank>(
                 p,
@@ -279,7 +279,7 @@ namespace Test
         ///<summary>sets the given value in the known-values store</summary>
         void set_known_value(index<rank> i, value_type value)
         {
-            Log(LogType::Info) << "Added known value at: " << i << " (this view) or " << _coordinates.get()->get_absolute(i) <<
+            Log(LogType::Info, true) << "Added known value at: " << i << " (this view) or " << _coordinates.get()->get_absolute(i) <<
             " (original array view) of: " << value << std::endl;
 
             (*_known_values)[_coordinates.get()->get_absolute(i)] = value;
@@ -328,7 +328,7 @@ namespace Test
                     return fail();
                 }
             }
-            Log(LogType::Info) << "Pass" << std::endl;
+            Log(LogType::Info, true) << "Pass" << std::endl;
             return runall_pass;
         };
 
@@ -340,16 +340,16 @@ namespace Test
 				// Only log the failing elements
 				if(this->data()[_coordinates.get()->get_linear(iter->first)] != iter->second)
 				{
-					Log(LogType::Error) << "Known value at: " << iter->first << " should be: " << iter->second << " was: "
+					Log(LogType::Error, true) << "Known value at: " << iter->first << " should be: " << iter->second << " was: "
 						<< this->data()[_coordinates.get()->get_linear(iter->first)] << std::endl;
 				}
             }
 
-            Log(LogType::Info) << "Raw data: ";
+            Log(LogType::Info, true) << "Raw data: ";
             std::ostream_iterator<value_type> os_iter(LogStream(), ", ");
             std::copy(_data.get()->begin(), _data.get()->end(), os_iter);
             LogStream() << std::endl;
-            Log(LogType::Error) << "Fail" << std::endl;
+            Log(LogType::Error, true) << "Fail" << std::endl;
             return runall_fail;
         };
 
@@ -398,49 +398,49 @@ namespace Test
 
         // set a value in the original on the CPU
         value_type expected_value = static_cast<value_type>(rand());
-        Log() << "Setting a value in the original AV on the CPU" << std::endl;
+        Log(LogType::Info, true) << "Setting a value in the original AV on the CPU" << std::endl;
         original.view()[set_original_on_cpu] = expected_value;
         original.set_known_value(set_original_on_cpu, expected_value);
         value_type actual_value = section.view()[set_original_on_cpu - origin];
         if (!comparer.are_equal(actual_value, expected_value))
         {
-            Log(LogType::Error) << "Reading section (CPU) expected: " << expected_value << " actual: " << actual_value << std::endl;
+            Log(LogType::Error, true) << "Reading section (CPU) expected: " << expected_value << " actual: " << actual_value << std::endl;
             return false;
         }
 
         // set a value in the section on the GPU
         expected_value = static_cast<value_type>(rand());
-        Log() << "Setting a value in the section AV on the GPU" << std::endl;
+        Log(LogType::Info, true) << "Setting a value in the section AV on the GPU" << std::endl;
         details::gpu_write(section.view(), set_section_on_gpu, expected_value);
         section.set_known_value(set_section_on_gpu, expected_value);
         actual_value = original.view()[set_section_on_gpu + origin];
         if (!comparer.are_equal(actual_value, expected_value))
         {
-            Log(LogType::Error) << "Reading original (CPU) expected: " << expected_value << " actual: " << actual_value << std::endl;
+            Log(LogType::Error, true) << "Reading original (CPU) expected: " << expected_value << " actual: " << actual_value << std::endl;
             return false;
         }
 
         // set a value in the original on the GPU
         expected_value = static_cast<value_type>(rand());
-        Log() << "Setting a value in the original AV on the GPU" << std::endl;
+        Log(LogType::Info, true) << "Setting a value in the original AV on the GPU" << std::endl;
         details::gpu_write(original.view(), set_original_on_gpu, expected_value);
         original.set_known_value(set_original_on_gpu, expected_value);
         actual_value = details::gpu_read(section.view(), set_original_on_gpu - origin);
         if (!comparer.are_equal(actual_value, expected_value))
         {
-            Log(LogType::Error) << "Reading section (GPU) expected: " << expected_value << " actual: " << actual_value << std::endl;
+            Log(LogType::Error, true) << "Reading section (GPU) expected: " << expected_value << " actual: " << actual_value << std::endl;
             return false;
         }
 
         // set a value in the section on the CPU
         expected_value = static_cast<value_type>(rand());
-        Log() << "Setting a value in the section AV on the CPU" << std::endl;
+        Log(LogType::Info, true) << "Setting a value in the section AV on the CPU" << std::endl;
         section.view()[set_section_on_gpu] = expected_value;
         section.set_known_value(set_section_on_gpu, expected_value);
         actual_value = details::gpu_read(original.view(), set_section_on_gpu + origin);
         if (!comparer.are_equal(actual_value, expected_value))
         {
-            Log(LogType::Error) << "Reading original (GPU) expected: " << expected_value << " actual: " << actual_value << std::endl;
+            Log(LogType::Error, true) << "Reading original (GPU) expected: " << expected_value << " actual: " << actual_value << std::endl;
             return false;
         }
 
@@ -486,12 +486,12 @@ namespace Test
             write_remote(remote);
 
             // now try to read locally (implicit synchronize)
-            Log() << "Performing implicit synchronize on the local section" << std::endl;
+            Log(LogType::Info, true) << "Performing implicit synchronize on the local section" << std::endl;
             local.view()[typename local_view_type::index_type()];
 
             // for the positive case, the local section should be updated with some of the known
             // values
-            Log() << "Looking for changes in local_view" << std::endl;
+            Log(LogType::Info, true) << "Looking for changes in local_view" << std::endl;
             int known_values_checked = 0;
             index_iterator<local_view_type::rank> iter(local.view().get_extent());
             auto unexpected_changes = std::count_if(iter.begin(), iter.end(), [=, &known_values_checked] (typename local_view_type::index_type i) {
@@ -508,7 +508,7 @@ namespace Test
                     // this value should not have changed
                     if (local_value != actual_value)
                     {
-                        Log(LogType::Error) << "Mismatch found at: " << i << " (Local section AV) " << absolute_index <<
+                        Log(LogType::Error, true) << "Mismatch found at: " << i << " (Local section AV) " << absolute_index <<
                             " (original AV) Expected: " << local_value << " Actual: " << actual_value << std::endl;
                         return true;
                     }
@@ -520,32 +520,32 @@ namespace Test
                     // this value should have changed
                     if (expected_value != actual_value)
                     {
-                        Log(LogType::Error) << "Mismatch found at: " << i << " (Local section AV) " << absolute_index <<
+                        Log(LogType::Error, true) << "Mismatch found at: " << i << " (Local section AV) " << absolute_index <<
                             " (original AV) Expected: " << expected_value << " Actual: " << actual_value << std::endl;
                         return true;
                     }
                     else
                     {
-                        Log() << "Value of: " << expected_value << " at: " << i << " (Local section AV) was correctly copied" << std::endl;
+                        Log(LogType::Info, true) << "Value of: " << expected_value << " at: " << i << " (Local section AV) was correctly copied" << std::endl;
                     }
                 }
 
                 return false;
             });
 
-            Log() << unexpected_changes << " unexpected changes found" << std::endl;
+            Log(LogType::Info, true) << unexpected_changes << " unexpected changes found" << std::endl;
 
             if (known_values_checked == 0)
             {
-                Log(LogType::Error) << "0 known values in the local view range, the views do not overlap" << std::endl;
+                Log(LogType::Error, true) << "0 known values in the local view range, the views do not overlap" << std::endl;
             }
             else
             {
-                Log() << known_values_checked << " overlapping elements found" << std::endl;
+                Log(LogType::Info, true) << known_values_checked << " overlapping elements found" << std::endl;
             }
 
             // now refresh the remote view
-            Log() << "Performing implicit synchronize on the remote section" << std::endl;
+            Log(LogType::Info, true) << "Performing implicit synchronize on the remote section" << std::endl;
             remote.view()[typename remote_view_type::index_type()];
 
             return unexpected_changes == 0 && known_values_checked > 0;
@@ -570,11 +570,11 @@ namespace Test
             write_remote(remote);
 
             // now try to read locally (implicit synchronize)
-            Log() << "Performing implicit synchronize on the local section" << std::endl;
+            Log(LogType::Info, true) << "Performing implicit synchronize on the local section" << std::endl;
             local.view()[typename local_view_type::index_type()];
 
             // for the negative case, no change should occur -- this will count the changes
-            Log() << "Looking for changes in local_view" << std::endl;
+            Log(LogType::Info, true) << "Looking for changes in local_view" << std::endl;
             index_iterator<local_view_type::rank> iter(local.view().get_extent());
             auto changes = std::count_if(iter.begin(), iter.end(), [=] (typename local_view_type::index_type i) {
 
@@ -582,7 +582,7 @@ namespace Test
                 value_type actual_value = _original.data()[local.coordinates().get_linear(i)];
                 if (local_value != actual_value)
                 {
-                    Log(LogType::Error) << "Mismatch found at: " << i << " (Local section AV) Expected: "
+                    Log(LogType::Error, true) << "Mismatch found at: " << i << " (Local section AV) Expected: "
                         << local_value << " Actual: " << actual_value << std::endl;
                     return true;
                 }
@@ -590,10 +590,10 @@ namespace Test
                 return false;
             });
 
-            Log() << changes << " changes found" << std::endl;
+            Log(LogType::Info, true) << changes << " changes found" << std::endl;
 
             // now refresh the remote view
-            Log() << "Performing implicit synchronize on the remote section" << std::endl;
+            Log(LogType::Info, true) << "Performing implicit synchronize on the remote section" << std::endl;
             remote.view()[index<remote_view_type::rank>()];
 
             return changes == 0;
@@ -613,7 +613,7 @@ namespace Test
 
         void write_local(value_type value)
         {
-            Log() << "writing a constant value of: " << value << " locally" << std::endl;
+            Log(LogType::Info, true) << "writing a constant value of: " << value << " locally" << std::endl;
             std::fill(_original.begin(), _original.end(), value);
         }
 
@@ -621,14 +621,14 @@ namespace Test
         template<typename remote_view_type>
         void write_remote(remote_view_type &remote)
         {
-            accelerator accel = require_device();
+            accelerator accel = require_device(device_flags::NOT_SPECIFIED);
             std::vector<value_type> random_data(remote.view().get_extent().size());
             Fill(random_data);
 
             array_view<value_type, remote_view_type::rank> random_av(remote.view().get_extent(), random_data);
             array_view<value_type, remote_view_type::rank> remote_av = remote.view();
 
-            Log() << "Writing random data to AV: " << remote_av.get_extent() << std::endl;
+            Log(LogType::Info, true) << "Writing random data to AV: " << remote_av.get_extent() << std::endl;
             parallel_for_each(accel.get_default_view(), remote_av.get_extent(), [=](typename remote_view_type::index_type i) restrict(amp) {
                 remote_av[i] = random_av[i];
             });

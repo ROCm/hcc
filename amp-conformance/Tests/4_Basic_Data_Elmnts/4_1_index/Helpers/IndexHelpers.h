@@ -17,14 +17,14 @@ bool IsIndexSetToZero(const index<Rank> &actual)
     {
         if(actual[i] != 0)
         {
-            Log() << "Fail: Incorrect index[" << i << "]. Actual: " << actual[i] << ".Expected: " << 0 << std::endl;
+            Log(LogType::Info, true) << "Fail: Incorrect index[" << i << "]. Actual: " << actual[i] << ".Expected: " << 0 << std::endl;
             passed = false;
         }
     }
 
     if (actual.rank != Rank)
     {
-        Log() << "Fail: Incorrect Rank. actual: " << actual.rank << ".Expected: " << Rank << std::endl;
+        Log(LogType::Info, true) << "Fail: Incorrect Rank. actual: " << actual.rank << ".Expected: " << Rank << std::endl;
         passed = false;
     }
 
@@ -40,14 +40,14 @@ bool IsIndexSetToZero(vector<int> actual, int actualRank)
     {
         if(actual[i] != 0)
         {
-            Log()<< "Fail: Incorrect actual[" << i << "]. Actual: " << actual[i] << ".Expected: " << 0 << std::endl;
+            Log(LogType::Info, true)<< "Fail: Incorrect actual[" << i << "]. Actual: " << actual[i] << ".Expected: " << 0 << std::endl;
             passed = false;
         }
     }
 
     if (actualRank != Rank)
     {
-        Log() << "Fail: Incorrect Rank. actual: " << actualRank << ".Expected: " << Rank << std::endl;
+        Log(LogType::Info, true) << "Fail: Incorrect Rank. actual: " << actualRank << ".Expected: " << Rank << std::endl;
         passed = false;
     }
 
@@ -63,14 +63,14 @@ bool IsIndexSetToSequence(const index<Rank> &actual, int start = 0)
     {
         if(actual[i] != start + i)
         {
-            Log()<< "Fail: Incorrect index[" << i << "]. Actual: " << actual[i] << ".Expected: " << start + i << std::endl;
+            Log(LogType::Info, true)<< "Fail: Incorrect index[" << i << "]. Actual: " << actual[i] << ".Expected: " << start + i << std::endl;
             passed = false;
         }
     }
 
     if (actual.rank != Rank)
     {
-        Log()<< "Fail: Incorrect Rank. actual: " << actual.rank << ".Expected: " << Rank << std::endl;
+        Log(LogType::Info, true)<< "Fail: Incorrect Rank. actual: " << actual.rank << ".Expected: " << Rank << std::endl;
         passed = false;
     }
 
@@ -86,14 +86,14 @@ bool IsIndexSetToSequence(vector<int> actual, int actualRank, int start = 0)
     {
         if(actual[i] != start + i)
         {
-            Log()<< "Fail: Incorrect actual[" << i << "]. Actual: " << actual[i] << ".Expected: " << start + i << std::endl;
+            Log(LogType::Info, true)<< "Fail: Incorrect actual[" << i << "]. Actual: " << actual[i] << ".Expected: " << start + i << std::endl;
             passed = false;
         }
     }
 
     if (actualRank != Rank)
     {
-        Log()<< "Fail: Incorrect Rank. actual: " << actualRank << ".Expected: " << Rank << std::endl;
+        Log(LogType::Info, true)<< "Fail: Incorrect Rank. actual: " << actualRank << ".Expected: " << Rank << std::endl;
         passed = false;
     }
 

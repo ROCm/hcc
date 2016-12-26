@@ -50,7 +50,7 @@ const int size = 10;
 
 int test_device()
 {
-    accelerator_view av = require_device().get_default_view();
+    accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
 
     extent<1> e(size);
     array<int, 1> result(e, av);

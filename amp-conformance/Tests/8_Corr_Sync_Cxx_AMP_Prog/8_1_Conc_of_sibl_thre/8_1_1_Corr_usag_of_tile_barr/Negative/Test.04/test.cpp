@@ -51,7 +51,7 @@ runall_result test()
     accelerator_view rv =  require_device(Device::ALL_DEVICES).get_default_view();
 
     Concurrency::extent<3> extentA(ZSize, YSize, XSize), extentB(NumZGroups, NumYGroups, NumXGroups);
-    array<ElementType, 3> fA(extentA, rv), fB(extentB, rv);
+    Concurrency::array<ElementType, 3> fA(extentA, rv), fB(extentB, rv);
 
     //forall where conditions are met
     copy(A, fA);
