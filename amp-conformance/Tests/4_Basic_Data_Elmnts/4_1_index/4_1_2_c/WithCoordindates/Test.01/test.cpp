@@ -17,7 +17,7 @@
 runall_result TestOnHost()
 {
 	runall_result result;
-    Log() << "Testing constructor that takes individual co-ordinates on host" << std::endl;
+    Log(LogType::Info, true) << "Testing constructor that takes individual co-ordinates on host" << std::endl;
 
     index<1> idx1(0);
     index<2> idx2(0, 1);
@@ -57,9 +57,9 @@ void kernel(array<int, 1>& A, array<int, 1>& B, array<int, 1>& C, array<int, 1>&
 runall_result TestOnDevice()
 {
 	runall_result result;
-    Log() << "Testing constructor that takes individual co-ordinates on Device" << std::endl;
+    Log(LogType::Info, true) << "Testing constructor that takes individual co-ordinates on Device" << std::endl;
 
-    accelerator_view av = require_device().get_default_view();
+    accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
 
     /* vA, vB, vC, vD hold the components of each index. vE, holds all the rank values */
     vector<int> vA(1), vB(2), vC(3), vD(3);

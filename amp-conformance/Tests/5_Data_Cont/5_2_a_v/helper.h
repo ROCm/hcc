@@ -38,7 +38,7 @@ bool compare(const vector<T>& vec, const array_view<U, 1>& av)
 	{
 		if(vec[i] != av(i))
 		{
-			Log(LogType::Error) << compose_incorrect_element_message(i, vec[i], av(i)) << std::endl;
+			Log(LogType::Error, true) << compose_incorrect_element_message(i, vec[i], av(i)) << std::endl;
 			return false;
 		}
 	}
@@ -55,7 +55,7 @@ bool compare(const vector<T>& vec, const array_view<U, 2>& av)
 		{
 			if(vec[i * av.get_extent()[1] + j] != av(i,j))
 			{
-				Log(LogType::Error) << compose_incorrect_element_message(index<2>(i,j), vec[i * av.get_extent()[1] + j], av(i,j)) << std::endl;
+				Log(LogType::Error, true) << compose_incorrect_element_message(index<2>(i,j), vec[i * av.get_extent()[1] + j], av(i,j)) << std::endl;
 				return false;
 			}
 		}
@@ -75,7 +75,7 @@ bool compare(const vector<T>& vec, const array_view<U, 3>& av)
 			{
 				if(vec[i * av.get_extent()[1] * av.get_extent()[2] + j * av.get_extent()[2] + k] != av(i,j,k))
 				{
-					Log(LogType::Error) << compose_incorrect_element_message(index<3>(i,j,k), vec[i * av.get_extent()[1] * av.get_extent()[2] + j * av.get_extent()[2] + k], av(i,j,k)) << std::endl;
+					Log(LogType::Error, true) << compose_incorrect_element_message(index<3>(i,j,k), vec[i * av.get_extent()[1] * av.get_extent()[2] + j * av.get_extent()[2] + k], av(i,j,k)) << std::endl;
 					return false;
 				}
 			}
@@ -93,7 +93,7 @@ bool verify_extent(concurrency::array_view<TValue, Rank> actual, concurrency::ex
 
 	if(actual.get_extent() != expected)
 	{
-		Log(LogType::Error) << "Extent doesn't match expected "
+		Log(LogType::Error, true) << "Extent doesn't match expected "
 			<< "Expected: " << expected << " Actual: " << actual.get_extent() << std::endl;
 		return false;
 	}

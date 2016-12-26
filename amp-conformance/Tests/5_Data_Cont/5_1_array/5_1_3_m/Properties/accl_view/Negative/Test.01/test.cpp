@@ -22,9 +22,9 @@ bool test_feature()
     accelerator device(accelerator::default_accelerator);
 
     accelerator_view av = device.create_view(queuing_mode_immediate);
-	array<_type, _rank> src(e1, av);
+	Concurrency::array<_type, _rank> src(e1, av);
 
-    src.get_accelerator()_view = device.get_default_view();
+    src.get_accelerator_view() = device.get_default_view();
 
     return false;
 }

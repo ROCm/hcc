@@ -100,7 +100,7 @@ int int_vect_add()
     parallel_for_each(aA.get_extent(), [&](index<1> idx) __GPU
     {
         kernel1(idx, aD, aA, aB);
-    });	
+    });
 
     C = aD;
 
@@ -139,7 +139,7 @@ bool verify_result(int size, vector<int> &C, vector<int> &refC)
     {
         if (refC[i] != C[i])
         {
-            fprintf(stderr, "C[%Id] = %d, refC[%Id] = %d\n", i, C[i], i, refC[i]);
+            fprintf(stderr, "C[%zu] = %d, refC[%zu] = %d\n", i, C[i], i, refC[i]);
             passed = false;
         }
     }

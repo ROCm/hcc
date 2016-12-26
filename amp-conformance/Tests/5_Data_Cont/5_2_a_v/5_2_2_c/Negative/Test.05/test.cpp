@@ -44,7 +44,7 @@ int test()
     array_view<T, 1> av(size, v);
 }
 
-void main()
+int main()
 {
    test<bool>();
    test<int*>();

@@ -50,7 +50,7 @@ runall_result test_main()
     runall_result result;
 
 
-    accelerator_view av = require_device().get_default_view();
+    accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
     result &= EVALUATE_TEST_ON_CPU_AND_GPU(av, test_post_increment());
     result &= EVALUATE_TEST_ON_CPU_AND_GPU(av, test_pre_increment());
     return runall_pass;

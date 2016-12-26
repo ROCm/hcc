@@ -45,7 +45,7 @@ int main()
     }
     catch (runtime_exception &re)
     {
-        Log() << re.what() << std::endl;
+        Log(LogType::Info, true) << re.what() << std::endl;
         return runall_pass;
     }
 }

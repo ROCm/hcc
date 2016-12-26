@@ -12,9 +12,9 @@ using namespace Concurrency;
 using namespace Concurrency::Test;
 
 runall_result test_main()
-{	
+{
 	accelerator cpuDevice(accelerator::cpu_accelerator);
-	accelerator gpuDevice = require_device_for<DATA_TYPE>();
-	
+	accelerator gpuDevice = require_device_for<DATA_TYPE>(device_flags::NOT_SPECIFIED, false);
+
 	return AsyncCopyAndVerifyIter2ToArrayView<DATA_TYPE, RANK>(SRC_DEVICE);
 }

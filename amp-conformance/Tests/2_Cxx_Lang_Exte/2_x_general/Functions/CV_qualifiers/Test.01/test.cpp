@@ -30,27 +30,27 @@ int main()
     std::vector<int> v(1);
     array_view<int, 1> av(1, v);
 
-    Log() << "Calling const function" << std::endl;
+    Log(LogType::Info, true) << "Calling const function" << std::endl;
     parallel_for_each(extent<1>(1), [=](index<1> i) __GPU {
         const S s;
         av[0] = s.test();
     });
 
-    if (av[0] =! 2)
+    if (av[0] != 2)
     {
-        Log() << "Result was: " << av[0] << " Expected: 2" << std::endl;
+        Log(LogType::Info, true) << "Result was: " << av[0] << " Expected: 2" << std::endl;
         return runall_fail;
     }
 
-    Log() << "Calling non-const function" << std::endl;
+    Log(LogType::Info, true) << "Calling non-const function" << std::endl;
     parallel_for_each(extent<1>(1), [=](index<1> i) __GPU {
         S s;
         av[0] = s.test();
     });
 
-    if (av[0] =! 1)
+    if (av[0] != 1)
     {
-        Log() << "Result was: " << av[0] << " Expected: 1" << std::endl;
+        Log(LogType::Info, true) << "Result was: " << av[0] << " Expected: 1" << std::endl;
         return runall_fail;
     }
 

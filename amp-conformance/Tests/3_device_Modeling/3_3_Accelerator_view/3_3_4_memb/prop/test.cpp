@@ -27,7 +27,7 @@ runall_result test_main()
 	std::for_each(accs.begin(), accs.end(),
 		[&](accelerator& acc)
 		{
-        		Log(LogType::Info) << "For device : " << acc.get_description() << std::endl;
+        		Log(LogType::Info, true) << "For device : " << acc.get_description() << std::endl;
 
 			// default accelerator view
 			result &= REPORT_RESULT(test_accelerator_view(acc.get_default_view(), acc));

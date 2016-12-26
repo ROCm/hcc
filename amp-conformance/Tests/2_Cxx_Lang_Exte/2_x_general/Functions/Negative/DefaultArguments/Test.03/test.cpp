@@ -6,17 +6,30 @@
 /// <tags>P1</tags>
 /// <summary>Default argument expression</summary>
 
+#include <amptest.h>
+#include <amptest_main.h>
+
+using namespace Concurrency;
+using namespace Concurrency::Test;
+
 int foo() restrict(amp) { return 1; }
 int foo() restrict(cpu) { return 2; }
 
 void hoo1() restrict(amp)
 {
-    struct A{
+    struct A {
       static void poo(int x = foo()) restrict(cpu) {}
       static void voo() restrict(cpu) {
-          poo(); // erorr foo binds to amp
+          poo(); // error foo binds to amp
       }
     };
+}
+
+runall_result test_main()
+{
+    parallel_for_each(extent<1>{1}, [=](index<1>) restrict(amp) { hoo1(); });
+    // Should not get here.
+    return runall_pass;
 }
 
 //#Expects: Error: test.cpp\(17\) : error C3931

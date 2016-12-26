@@ -31,14 +31,14 @@ using namespace Concurrency::Test;
 
 runall_result test_main()
 {
-    accelerator accel1 = require_device_for<int>();
-    accelerator accel2 = require_device_for<int>(accel1);
-	
+    accelerator accel1 = require_device_for<int>(device_flags::NOT_SPECIFIED, false);
+    accelerator accel2 = require_device_for<int>(accel1, device_flags::NOT_SPECIFIED, false);
+
     if(accel1.get_supports_cpu_shared_memory())
     {
         accel1.set_default_cpu_access_type(DEF_ACCESS_TYPE1);
     }
-	
+
     if(accel2.get_supports_cpu_shared_memory())
     {
         accel2.set_default_cpu_access_type(DEF_ACCESS_TYPE2);
@@ -51,7 +51,7 @@ runall_result test_main()
     av.set_known_value(index<2>(21, 21), 14);
 
     // read/write remotely on both GPUs
-    Log() << "Reading/Writing on accel 1" << std::endl;
+    Log(LogType::Info, true) << "Reading/Writing on accel 1" << std::endl;
     array_view<int, 2> remote1 = av.view().section(extent<2>(5, 5));
     parallel_for_each(accel1.get_default_view(), extent<1>(1), [=](index<1>) __GPU {
         remote1(0, 0) = remote1(1, 1);
@@ -60,11 +60,11 @@ runall_result test_main()
     av.set_known_value(index<2>(0, 0), 13);
     av.set_known_value(index<2>(1, 1), 12);
 
-    Log() << "Writing locally" << std::endl;
+    Log(LogType::Info, true) << "Writing locally" << std::endl;
     av.view()(22, 22) = av.view()(0, 0);
     av.set_known_value(index<2>(22, 22), 13);
 
-    Log() << "Reading/Writing on accel 2" << std::endl;
+    Log(LogType::Info, true) << "Reading/Writing on accel 2" << std::endl;
     array_view<int, 2> remote2 = av.view().section(index<2>(20, 20), extent<2>(5, 5));
     parallel_for_each(accel2.get_default_view(), extent<1>(1), [=](index<1>) __GPU {
         remote2(0, 0) = remote2(1, 1);

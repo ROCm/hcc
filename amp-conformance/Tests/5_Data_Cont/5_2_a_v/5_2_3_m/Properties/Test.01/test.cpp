@@ -34,7 +34,7 @@ runall_result test_main()
     vector<int> vec(size);
     Fill<int>(vec.data(), size);
 
-    accelerator_view acc_view = require_device().get_default_view();
+    accelerator_view acc_view = require_device(device_flags::NOT_SPECIFIED).get_default_view();
 
     extent<3> ex(10, 10, 1);
     array<int, 3> arr(ex, vec.begin(), acc_view);

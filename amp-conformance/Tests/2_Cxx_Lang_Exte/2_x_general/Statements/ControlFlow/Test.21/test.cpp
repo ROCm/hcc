@@ -35,7 +35,7 @@ void kernel_switch(index<2> idx, array<int, 2> &aA, int e1, int e2) __GPU
     int i = DEFAULT;
     switch (e1 && e2 && (++i))
     {
-    case 0:
+    case false:
         aA[idx] = 3;
         break;
     }
@@ -91,7 +91,7 @@ bool verify(vector<int> &v, array<int, 2> &aA)
             return false;
     }
 
-    return true;	
+    return true;
 }
 
 // Main entry point

@@ -8,7 +8,7 @@
 
 static const int global_y = 4;
 
-void foo(int x = global_y) restrict(amp) {}  // good static cost is allowed
+void foo(int x = global_y) restrict(amp) {}  // good static const is allowed
 
 void hoo1() restrict(amp)
 {
