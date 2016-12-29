@@ -41,11 +41,16 @@ void cxxflags(void) {
         std::cout << " -hc";
     }
 
+    // extra compiler options and include paths if
+    // using the libc++ for C++ runtime
+#ifdef USE_LIBCXX
     // Add include path to the libcxx headers
     std::cout << " -I" XSTR(LIBCXX_HEADER) ;
+    std::cout << " -stdlib=libc++";
+#endif
 
     // Common options
-    std::cout << " -std=c++amp -stdlib=libc++";
+    std::cout << " -std=c++amp";
 
     // clamp
     if (build_mode) {
@@ -91,7 +96,13 @@ void ldflags(void) {
         }
     }
 
-    std::cout << " -lc++ -lc++abi -ldl -lm -lpthread";
+    // extra libraries if using libc++ for C++ runtime   
+#ifdef USE_LIBCXX
+    std::cout << " -lc++ -lc++abi";
+#endif
+
+    std::cout << " -ldl -lm -lpthread";
+
     if (const char *p = getenv("TEST_CPU"))
         if (p == std::string("ON"))
         std::cout << " -lmcwamp_atomic";

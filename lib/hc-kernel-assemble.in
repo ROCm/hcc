@@ -22,7 +22,15 @@ LLVM_AS=$BINDIR/llvm-as
 LLVM_DIS=$BINDIR/llvm-dis
 CLAMP_ASM=$BINDIR/clamp-assemble
 LIBPATH=$BINDIR/../lib
-CXXFLAGS="-std=c++amp -stdlib=libc++ -I@LIBCXX_HEADER@ -I$BINDIR/../../include -fPIC"
+
+CXXFLAGS="-std=c++amp -I$BINDIR/../../include -fPIC"
+
+# Add additional flags if using libc++ for C++ runtime
+USE_LIBCXX=@USE_LIBCXX@
+if [ USE_LIBCXX == "ON" ]; then
+ CXXFLAGS+=" -stdlib=libc++ -I@LIBCXX_HEADER@" 
+fi
+
 # Set additional CXXFLAGS based on CMAKE_BUILD_TYPE
 shopt -s nocasematch
 CMAKE_BUILD_TYPE="@CMAKE_BUILD_TYPE@"

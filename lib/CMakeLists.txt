@@ -6,7 +6,11 @@ if (HCC_RUNTIME_DEBUG)
   add_definitions(-DKALMAR_DEBUG=1)
 endif (HCC_RUNTIME_DEBUG)
 
-include_directories(${CMAKE_CURRENT_BINARY_DIR} ${LIBCXX_HEADER} )
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
+if (USE_LIBCXX)
+  include_directories(${LIBCXX_HEADER})
+endif (USE_LIBCXX)
 
 ####################
 # C++AMP runtime (mcwamp)
