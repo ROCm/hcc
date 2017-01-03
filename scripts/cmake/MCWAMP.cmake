@@ -20,7 +20,8 @@ set(MCWAMP_INC_DIR "${PROJECT_SOURCE_DIR}/include")
 
 macro(amp_target name )
 	target_compile_definitions(${name} PRIVATE "GTEST_HAS_TR1_TUPLE=0")
-	target_include_directories(${name} PRIVATE ${GTEST_INC_DIR} ${LIBCXX_INC_DIR} ${MCWAMP_INC_DIR})
+	target_include_directories(${name} SYSTEM PRIVATE ${GTEST_INC_DIR} ${LIBCXX_INC_DIR} ${MCWAMP_INC_DIR})
+  target_include_directories(${name} SYSTEM INTERFACE $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include>)
 	target_compile_options(${name} PUBLIC -stdlib=libc++ -std=c++amp -fPIC)
 endmacro(amp_target name )
 
@@ -53,7 +54,7 @@ macro(add_mcwamp_library_hsa name )
   CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
   # add HSA headers
   add_library( ${name} SHARED ${ARGN} )
-  target_include_directories(${name} PRIVATE ${HSA_HEADER})
+  target_include_directories(${name} PUBLIC ${HSA_HEADER})
   amp_target(${name})
   # LLVM and Clang shall be compiled beforehand
   add_dependencies(${name} llvm-link opt clang)
