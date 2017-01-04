@@ -339,25 +339,25 @@ public:
                 _hsaExecutableSymbol,
                 HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE,
                 &this->static_group_segment_size);
-        STATUS_CHECK_Q(status, commandQueue, __LINE__);
+        STATUS_CHECK(status, __LINE__);
 
         status =
             hsa_executable_symbol_get_info(
                 _hsaExecutableSymbol,
                 HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_PRIVATE_SEGMENT_SIZE,
                 &this->private_segment_size);
-        STATUS_CHECK_Q(status, commandQueue, __LINE__);
+        STATUS_CHECK(status, __LINE__);
 
         workitem_vgpr_count = 0;
 
         hsa_ven_amd_loader_1_00_pfn_t ext_table = {nullptr};
         status = hsa_system_get_extension_table(HSA_EXTENSION_AMD_LOADER, 1, 0, &ext_table);
-        STATUS_CHECK_Q(status, commandQueue, __LINE__);
+        STATUS_CHECK(status, __LINE__);
 
         if (nullptr != ext_table.hsa_ven_amd_loader_query_host_address) {
             const amd_kernel_code_t* akc = nullptr;
             status = ext_table.hsa_ven_amd_loader_query_host_address(reinterpret_cast<const void*>(kernelCodeHandle), reinterpret_cast<const void**>(&akc));
-            STATUS_CHECK_Q(status, commandQueue, __LINE__);
+            STATUS_CHECK(status, __LINE__);
 
             workitem_vgpr_count = akc->workitem_vgpr_count;
         }
