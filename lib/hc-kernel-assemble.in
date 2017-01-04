@@ -27,7 +27,7 @@ CXXFLAGS="-std=c++amp -I$BINDIR/../../include -fPIC"
 
 # Add additional flags if using libc++ for C++ runtime
 USE_LIBCXX=@USE_LIBCXX@
-if [ USE_LIBCXX == "ON" ]; then
+if [ "$USE_LIBCXX" == "ON" ]; then
  CXXFLAGS+=" -stdlib=libc++ -I@LIBCXX_HEADER@" 
 fi
 
