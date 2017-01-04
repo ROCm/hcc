@@ -38,7 +38,7 @@ use threads::shared;
 use warnings;
 
 my $max_num_threads = @AMP_CONFORMANCE_NUM_THREADS@;
-my $use_threads = $Config{useithreads};# && $max_num_threads > 1; - temporarily disabled.
+my $use_threads = $Config{useithreads} and $max_num_threads > 1;
 my $console_lock : shared = 0;
 my $device_lock : shared = 0;
 

@@ -67,7 +67,6 @@ struct A3 : A3_base_1
 	// no copy op= possible
 };
 
-post-Dev11 #345711
 // Classes with move assignment operators
 struct A4
 {
