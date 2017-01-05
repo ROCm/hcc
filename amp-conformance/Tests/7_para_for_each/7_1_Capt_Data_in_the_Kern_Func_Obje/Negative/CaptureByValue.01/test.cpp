@@ -47,9 +47,9 @@ int main()
     c.assign(c.size(), 0);
 
     Concurrency::extent<1> e(size);
-    array<int, 1> aa(e, a.begin(), rv);
-    array<int, 1> ab(e, b.begin(), rv);
-    array<int, 1> ac(e, c.begin(), rv);
+    Concurrency::array<int, 1> aa(e, a.begin(), rv);
+    Concurrency::array<int, 1> ab(e, b.begin(), rv);
+    Concurrency::array<int, 1> ac(e, c.begin(), rv);
 
     // error ac and ab is passed by reference
     parallel_for_each(aa.get_extent(), [=](index<1> idx) __GPU {

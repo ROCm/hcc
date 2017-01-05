@@ -27,23 +27,23 @@ int main()
     accelerator_view av = device.get_default_view();
 
     int r;
-    Log() << "Executing gpu_only on the GPU" << std::endl;
+    Log(LogType::Info, true) << "Executing gpu_only on the GPU" << std::endl;
     r = GPU_INVOKE(av, int, gpu_only);
     if (r != 2)
     {
-        Log() << "Value was: " << r << "Expected 2" << std::endl;
+        Log(LogType::Info, true) << "Value was: " << r << "Expected 2" << std::endl;
         return runall_fail;
     }
 
-    Log() << "Executing cpu_only on the CPU" << std::endl;
+    Log(LogType::Info, true) << "Executing cpu_only on the CPU" << std::endl;
     r = cpu_only();
     if (r != 1)
     {
-        Log() << "Value was: " << r << "Expected 1" << std::endl;
+        Log(LogType::Info, true) << "Value was: " << r << "Expected 1" << std::endl;
         return runall_fail;
     }
 
-    Log() << "Passed" << std::endl;
+    Log(LogType::Info, true) << "Passed" << std::endl;
     return runall_pass;
 }
 

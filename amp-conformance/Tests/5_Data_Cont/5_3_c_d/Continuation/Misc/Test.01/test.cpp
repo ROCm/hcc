@@ -30,12 +30,12 @@ using namespace Concurrency::Test;
 runall_result test_main()
 {
 	accelerator_view cp_av = accelerator(accelerator::cpu_accelerator).get_default_view();
-	accelerator_view av = require_device().get_default_view();
-	
-	std::vector<int> src_vec(DATA_SIZE), dest_vec(DATA_SIZE);	
+	accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
+
+	std::vector<int> src_vec(DATA_SIZE), dest_vec(DATA_SIZE);
 	Fill(src_vec);
-	array<int, 1> arr1(DATA_SIZE, av);
-	
+	Concurrency::array<int, 1> arr1(DATA_SIZE, av);
+
 	// Wait event is set when continuation finishes verification.
 	// Each continuation waits for its child continuation to complete
 	// because child continuation captures variable from enclosing scope.
@@ -45,38 +45,38 @@ runall_result test_main()
 	// go out of scope and no longer valid.
 	event waitEvent1;
 	completion_future cf = copy_async(src_vec.begin(), src_vec.end(), arr1);
-	
-	task<void> t1 = cf.to_task().then([&]() {
-		Log() << "Inside first continuation" << std::endl;		
+
+	auto t1 = cf.to_task().then([&]() {
+		Log(LogType::Info, true) << "Inside first continuation" << std::endl;
 		std::vector<int> data1(DATA_SIZE);
 		array_view<int, 1> arr_v1(DATA_SIZE, data1);
-		
+
 		event waitEvent2;
 		copy_async(arr1, arr_v1).then([&]() {
-			Log() << "Inside second continuation" << std::endl;
+			Log(LogType::Info, true) << "Inside second continuation" << std::endl;
 			array<int, 1> arr2(DATA_SIZE, av);
-			
+
 			event waitEvent3;
 			copy_async(arr_v1, arr2).then([&]() {
-				Log() << "Inside third continuation" << std::endl;
+				Log(LogType::Info, true) << "Inside third continuation" << std::endl;
 				array<int, 1> s_arr1(DATA_SIZE, cp_av, av);
-				
+
 				event waitEvent4;
 				copy_async(arr2, s_arr1).then([&]() {
-					Log() << "Inside fourth continuation" << std::endl;
+					Log(LogType::Info, true) << "Inside fourth continuation" << std::endl;
 					std::vector<int> data2(DATA_SIZE);
 					array_view<int, 1> arr_v2(DATA_SIZE, data2);
-					
+
 					event waitEvent5;
 					copy_async(s_arr1, arr_v2).then([&]() {
-						Log() << "Inside fifth continuation" << std::endl;
-						
+						Log(LogType::Info, true) << "Inside fifth continuation" << std::endl;
+
 						event waitEvent6;
 						copy_async(arr_v2, dest_vec.begin()).then([&]() {
-							Log() << "Inside sixth continuation" << std::endl;
+							Log(LogType::Info, true) << "Inside sixth continuation" << std::endl;
 							waitEvent6.set();
-						});	
-					
+						});
+
 					waitEvent6.wait();
 					waitEvent5.set();
 					});
@@ -92,9 +92,9 @@ runall_result test_main()
 	waitEvent2.wait();
 	waitEvent1.set();
 	});
-	
+
 	waitEvent1.wait();
-	
+
 	return REPORT_RESULT(Verify(src_vec, dest_vec));
 }
 

@@ -90,7 +90,7 @@ namespace Concurrency {
 			/// Reading multiple environment files is not supported and will result in an amptest_exception being thrown.
 			int load_environment_variable_cache_from_file(const std::string& file_path);
 
-			/// Writes contents of the Environment Variable Cache to Log() and returns the number of elements in the cache.
+			/// Writes contents of the Environment Variable Cache to Log(LogType::Info, true) and returns the number of elements in the cache.
 			///
 			/// If the environment variable cache does not exist, then -1 will be returned.
 			int dump_environment_variable_cache() const;

@@ -11,7 +11,7 @@ extern "C" void foo() restrict(amp)
     long long disallowed;
 }
 
-void main()
+int main()
 {
 
 }

@@ -99,7 +99,7 @@ runall_result test_main()
 
     FunctObj cobj(fA, fB, fC);
 
-    parallel_for_each(e.tile<BLOCK_DIM, BLOCK_DIM>(), cobj;
+    parallel_for_each(e.tile<BLOCK_DIM, BLOCK_DIM>(), cobj);
 
     C = fC;
 
@@ -108,7 +108,7 @@ runall_result test_main()
     {
         if (refC[i] * 4 != C[i])
         {
-            printf("C[%d] = %d, refC[%d] = %d\n", i, C[i], i, refC[i]);
+            printf("C[%zu] = %d, refC[%zu] = %d\n", i, C[i], i, refC[i]);
             passed = false;
             break;
         }

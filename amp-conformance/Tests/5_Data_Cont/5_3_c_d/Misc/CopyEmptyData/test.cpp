@@ -15,15 +15,15 @@ using namespace Concurrency::Test;
 bool CopyArrayWithNoData()
 {
 	accelerator cpuDevice(accelerator::cpu_accelerator);
-	
+
 	array<int, 1> srcArray(10, cpuDevice.get_default_view());
-	Log() << "Created array of " << srcArray.get_extent() << std::endl;
-	
+	Log(LogType::Info, true) << "Created array of " << srcArray.get_extent() << std::endl;
+
 	array<int, 1> destArray(10, cpuDevice.get_default_view());
-	Log() << "Created array of " << destArray.get_extent() << std::endl;
-	
+	Log(LogType::Info, true) << "Created array of " << destArray.get_extent() << std::endl;
+
 	copy(srcArray, destArray);
-	
+
 	if(!VerifyDataOnCpu<int, 1>(srcArray, destArray))
 	{
 		return false;
@@ -33,9 +33,9 @@ bool CopyArrayWithNoData()
 }
 
 runall_result test_main()
-{	
+{
 	if(!CopyArrayWithNoData()) { return runall_fail; }
-	
+
 	//We are here means test passed.
     return runall_pass;
 }

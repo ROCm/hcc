@@ -34,7 +34,7 @@ bool test_feature()
 
 runall_result test_main()
 {
-	accelerator::set_default(require_device().get_device_path());
+	accelerator::set_default(require_device(device_flags::NOT_SPECIFIED).get_device_path());
 
 	runall_result result;
 
@@ -46,7 +46,7 @@ runall_result test_main()
     result &= REPORT_RESULT((test_feature<float, 31, 19>()));
 	result &= REPORT_RESULT((test_feature<float, 5, 1>()));
 	result &= REPORT_RESULT((test_feature<double, 13, 7>()));
-	
+
 	return result;
 }
 

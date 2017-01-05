@@ -118,17 +118,17 @@ runall_result test_main()
     init_matrix(A, M * W);
     init_matrix(B, W * N);
 
-	Log() << "Performing matrix multiply on the CPU..." << std::endl;
+	Log(LogType::Info, true) << "Performing matrix multiply on the CPU..." << std::endl;
     mxm_cpu_seq(A, B, refC, M, N, W);
-	Log() << "   Done." << std::endl;
+	Log(LogType::Info, true) << "   Done." << std::endl;
 
-	accelerator acc = require_device();
-	
+	accelerator acc = require_device(device_flags::NOT_SPECIFIED);
+
 	if(acc.get_supports_cpu_shared_memory())
 	{
 		acc.set_default_cpu_access_type(ACCESS_TYPE);
 	}
-	
+
 	accelerator_view av = acc.get_default_view();
 
     extent<2> eA(M, W), eB(W, N), eC(M, N);
@@ -144,14 +144,14 @@ runall_result test_main()
     array_view<float, 2> aC_view1(aC.section(0, 0, M/2, N));
     array_view<float, 2> aC_view2(aC.section(M/2, 0, M/2, N));
 
-	Log() << "Performing matrix multiply on the GPU..." << std::endl;
-    Log() << "Starting with View1..." << std::endl;
+	Log(LogType::Info, true) << "Performing matrix multiply on the GPU..." << std::endl;
+    Log(LogType::Info, true) << "Starting with View1..." << std::endl;
     mxm_tiling(av, aC_view1, aA_view1, aB);
-    Log() << "Starting with View2..." << std::endl;
+    Log(LogType::Info, true) << "Starting with View2..." << std::endl;
     mxm_tiling(av, aC_view2, aA_view2, aB);
 
     C = aC;
-	Log() << "   Done." << std::endl;
+	Log(LogType::Info, true) << "   Done." << std::endl;
 
 	return Verify(C, refC);
 }

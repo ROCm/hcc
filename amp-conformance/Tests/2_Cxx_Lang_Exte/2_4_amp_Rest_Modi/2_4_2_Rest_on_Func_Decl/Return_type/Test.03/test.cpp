@@ -28,9 +28,9 @@ int main()
     };
     parallel_for_each(extent<1>(1), lam);
 
-    if (av[0] =! 15)
+    if (av[0] != 15)
     {
-        Log() << "Result was: " << av[0] << " Expected: 15" << std::endl;
+        Log(LogType::Info, true) << "Result was: " << av[0] << " Expected: 15" << std::endl;
         return runall_fail;
     }
 

@@ -43,33 +43,33 @@ runall_result test_main()
 
     if(m != av1.get_extent()[0]) // Verify extent
     {
-        Log(LogType::Error) << "array_view extent[0] different from extent used to initialize object." << std::endl;
-        Log(LogType::Error) << "Expected: [" << m << "] Actual : [" << av1.get_extent()[0] << "]" << std::endl;
+        Log(LogType::Error, true) << "array_view extent[0] different from extent used to initialize object." << std::endl;
+        Log(LogType::Error, true) << "Expected: [" << m << "] Actual : [" << av1.get_extent()[0] << "]" << std::endl;
         return runall_fail;
     }
 
     if(n != av1.get_extent()[1]) // Verify extent
     {
-        Log(LogType::Error) << "array_view extent[1] different from extent used to initialize object." << std::endl;
-        Log(LogType::Error) << "Expected: [" << n << "] Actual : [" << av1.get_extent()[1] << "]" << std::endl;
+        Log(LogType::Error, true) << "array_view extent[1] different from extent used to initialize object." << std::endl;
+        Log(LogType::Error, true) << "Expected: [" << n << "] Actual : [" << av1.get_extent()[1] << "]" << std::endl;
         return runall_fail;
     }
 
     if(o != av1.get_extent()[2]) // Verify extent
     {
-        Log(LogType::Error) << "array_view extent[2] different from extent used to initialize object." << std::endl;
-        Log(LogType::Error) << "Expected: [" << o << "] Actual : [" << av1.get_extent()[2] << "]" << std::endl;
+        Log(LogType::Error, true) << "array_view extent[2] different from extent used to initialize object." << std::endl;
+        Log(LogType::Error, true) << "Expected: [" << o << "] Actual : [" << av1.get_extent()[2] << "]" << std::endl;
         return runall_fail;
     }
 
     // verify data
     if(!compare(vec1, av1))
     {
-         Log(LogType::Error) << "array_view and vector data do not match" << std::endl;
+         Log(LogType::Error, true) << "array_view and vector data do not match" << std::endl;
          return runall_fail;
     }
 
-    accelerator_view acc_view = require_device().get_default_view();
+    accelerator_view acc_view = require_device(device_flags::NOT_SPECIFIED).get_default_view();
 
     // use in parallel_for_each
     parallel_for_each(acc_view, av1.get_extent(), [=](index<3> idx) restrict(amp)
@@ -78,7 +78,7 @@ runall_result test_main()
     });
 
     // vec should be updated after this
-    Log() << "Accessing first element of array_view [value = " << av2(0,0,0) << "] to force synchronize." << std::endl;
+    Log(LogType::Info, true) << "Accessing first element of array_view [value = " << av2(0,0,0) << "] to force synchronize." << std::endl;
 
     // verify data
 	bool passed = true;
@@ -86,7 +86,7 @@ runall_result test_main()
     {
         if(vec2[i] != vec1[i] + 1)
         {
-			Log(LogType::Error) << compose_incorrect_element_message(i, vec1[i] + 1, vec2[i]) << std::endl;
+			Log(LogType::Error, true) << compose_incorrect_element_message(i, vec1[i] + 1, vec2[i]) << std::endl;
             passed = false;
         }
     }

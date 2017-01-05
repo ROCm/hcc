@@ -29,14 +29,14 @@ using namespace Concurrency::Test;
 
 runall_result test_main()
 {
-    accelerator accel1 = require_device_for<int>();
-    accelerator accel2 = require_device_for<int>(accel1);
-	
+    accelerator accel1 = require_device_for<int>(device_flags::NOT_SPECIFIED, false);
+    accelerator accel2 = require_device_for<int>(accel1, device_flags::NOT_SPECIFIED, false);
+
     if(accel1.get_supports_cpu_shared_memory())
     {
         accel1.set_default_cpu_access_type(DEF_ACCESS_TYPE1);
     }
-	
+
     if(accel2.get_supports_cpu_shared_memory())
     {
         accel2.set_default_cpu_access_type(DEF_ACCESS_TYPE2);
@@ -56,7 +56,7 @@ runall_result test_main()
 
     // force a synch
     av(0, 0);
-    Log() << "Comparing Array View on Accel1 to the vector that was used to initalize it" << std::endl;
+    Log(LogType::Info, true) << "Comparing Array View on Accel1 to the vector that was used to initalize it" << std::endl;
     if (!VerifyDataOnCpu(av, v))
     {
         return runall_fail;
@@ -64,7 +64,7 @@ runall_result test_main()
 
     // force a synch
     result_1(0, 0);
-    Log() << "Comparing Array View on Accel1 with Array View on Accel2" << std::endl;
+    Log(LogType::Info, true) << "Comparing Array View on Accel1 with Array View on Accel2" << std::endl;
 	auto avsec2 = av.section(index<2>(20, 20), extent<2>(5, 5));
     return VerifyDataOnCpu(avsec2, result_1) ? runall_pass : runall_fail;
 }

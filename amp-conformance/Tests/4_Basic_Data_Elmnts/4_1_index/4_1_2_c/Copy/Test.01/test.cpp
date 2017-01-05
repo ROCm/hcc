@@ -17,7 +17,7 @@ const int RANK = 3;
 /*---------------- Test on Host ------------------ */
 bool CopyConstructWithIndexOnHost()
 {
-    Log()<< "Testing copy construct index with another index on host" << std::endl;
+    Log(LogType::Info, true)<< "Testing copy construct index with another index on host" << std::endl;
 
     index<RANK> idx1(0, 1, 2);
     index<RANK> idx2(idx1);   // copy construct
@@ -42,9 +42,9 @@ void kernelIndex(array<int, 1>& A, array<int, 1>& B) __GPU
 
 bool CopyConstructWithIndexOnDevice()
 {
-    accelerator_view av = require_device().get_default_view();
+    accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
 
-    Log()<< "Testing copy construct index with an index on device" << std::endl;
+    Log(LogType::Info, true)<< "Testing copy construct index with an index on device" << std::endl;
 
     vector<int> resultsA(RANK), resultsB(1);
     array<int, 1> A(extent<1>(RANK), av), B(extent<1>(1), av);

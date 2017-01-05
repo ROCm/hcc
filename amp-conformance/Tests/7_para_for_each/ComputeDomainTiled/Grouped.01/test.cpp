@@ -90,7 +90,7 @@ void cube_invoker(const vector<int> &A, const vector<int> &B, vector<int> &C, ac
     C = fC;
 }
 
-int int_add_grouped(void(*invoker)(const vector<int> &, const vector<int> &, vector<int> &, accelerator_view&), char *version)
+int int_add_grouped(void(*invoker)(const vector<int> &, const vector<int> &, vector<int> &, accelerator_view&), const char *version)
 {
     vector<int> A(size);
     vector<int> B(size);

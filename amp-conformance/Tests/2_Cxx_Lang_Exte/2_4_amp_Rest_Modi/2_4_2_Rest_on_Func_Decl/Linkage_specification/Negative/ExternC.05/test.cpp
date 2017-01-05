@@ -19,7 +19,7 @@ extern "C" void foo() restrict(cpu)
 }
 
 
-void main()
+int main()
 {
 
 }

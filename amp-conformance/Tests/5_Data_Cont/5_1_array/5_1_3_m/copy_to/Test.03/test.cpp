@@ -34,7 +34,7 @@ runall_result test(extent<rank> e, accelerator_view acc_view)
 
 runall_result test_main()
 {
-    accelerator_view acc_view = require_device().create_view();
+    accelerator_view acc_view = require_device(device_flags::NOT_SPECIFIED).create_view();
 
     runall_result result;
 

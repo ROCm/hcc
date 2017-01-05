@@ -32,7 +32,7 @@ void init_data(size_t size, vector<int> A, vector<int> B, vector<int> C, vector<
 runall_result test_main()
 {
     runall_result result;
-    accelerator_view av = require_device().get_default_view();
+    accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
 
     const size_t size = 256;
     const size_t itr = 64;
@@ -64,7 +64,7 @@ runall_result test_main()
 
     result = Verify(C, refC);
 
-    Log(LogType::Info) << "accelerator_view create_marker API test: " << result << std::endl;
+    Log(LogType::Info, true) << "accelerator_view create_marker API test: " << result << std::endl;
 
     return result;
 }

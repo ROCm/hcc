@@ -10,9 +10,20 @@
 //#Expects: Error: amp.h\(\d+\) : error C2338
 //#Expects: Error: test.cpp\(16\)
 
+#include <amptest_main.h>
+
 #include <amp.h>
 
+using namespace Concurrency;
+using namespace Concurrency::Test;
+
 void compile_only() {
-    concurrency::index<2> idx(1);
+    index<2> idx(1);
 }
 
+runall_result test_main()
+{
+    compile_only();
+
+    return runall_pass;
+}
