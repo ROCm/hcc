@@ -60,7 +60,7 @@ add_subdirectory(cpu)
 ####################
 # install targets
 ####################
-install(TARGETS mcwamp mcwamp_atomic mcwamp_cpu mcwamp_hsa hc_am
+install(TARGETS mcwamp mcwamp_atomic
     EXPORT hcc-targets
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
