@@ -13,20 +13,20 @@ using namespace Concurrency;
 using namespace Concurrency::Test;
 
 runall_result test_main()
-{		
-	accelerator device = require_device_for<DATA_TYPE>();
-	
+{
+	accelerator device = require_device_for<DATA_TYPE>(device_flags::NOT_SPECIFIED, false);
+
 	if(!device.get_supports_cpu_shared_memory())
 	{
-		WLog() << "The accelerator " << device.get_description() << " does not support zero copy: Skipping" << std::endl;
+		WLog(LogType::Info, true) << "The accelerator " << device.get_description() << " does not support zero copy: Skipping" << std::endl;
 		return runall_skip;
 	}
-	
+
 	device.set_default_cpu_access_type(DEF_ACCESS_TYPE);
-	
+
 	extent<RANK> arr_extent = CreateRandomExtent<RANK>(256);
 	array<DATA_TYPE, RANK> arr(arr_extent, device.get_default_view());
-	
-	return REPORT_RESULT(VerifyCpuAccessType(arr, DEF_ACCESS_TYPE));	
+
+	return REPORT_RESULT(VerifyCpuAccessType(arr, DEF_ACCESS_TYPE));
 }
 

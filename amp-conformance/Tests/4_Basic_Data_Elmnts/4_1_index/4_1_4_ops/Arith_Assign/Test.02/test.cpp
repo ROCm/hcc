@@ -241,7 +241,7 @@ const int size = 4;
 
 int test_device()
 {
-    accelerator device = require_device();
+    accelerator device = require_device(device_flags::NOT_SPECIFIED);
     accelerator_view av = device.get_default_view();
 
     extent<1> e(size);

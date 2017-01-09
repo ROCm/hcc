@@ -45,6 +45,8 @@ macro(add_mcwamp_library_cpu name )
   amp_target(${name})
   # LLVM and Clang shall be compiled beforehand
   add_dependencies(${name} llvm-link opt clang)
+  target_link_libraries(${name} c++)
+  target_link_libraries(${name} c++abi)
 endmacro(add_mcwamp_library_cpu name )
 
 ####################
@@ -57,11 +59,29 @@ macro(add_mcwamp_library_hsa name )
   target_include_directories(${name} PUBLIC ${HSA_HEADER})
   amp_target(${name})
   # LLVM and Clang shall be compiled beforehand
+  add_dependencies(${name} llvm-link opt clang hc_am)
+  # add HSA libraries
+  target_link_libraries(${name} ${HSA_LIBRARY})
+  target_link_libraries(${name} pthread)
+  target_link_libraries(${name} c++)
+  target_link_libraries(${name} c++abi)
+  target_link_libraries(${name} hc_am)
+endmacro(add_mcwamp_library_hsa name )
+
+macro(add_mcwamp_library_hc_am name )
+  CMAKE_FORCE_CXX_COMPILER("${PROJECT_BINARY_DIR}/compiler/bin/clang++" MCWAMPCC)
+  # add HSA headers
+  add_library( ${name} SHARED ${ARGN} )
+  target_include_directories(${name} PRIVATE ${HSA_HEADER})
+  amp_target(${name})
+  # LLVM and Clang shall be compiled beforehand
   add_dependencies(${name} llvm-link opt clang)
   # add HSA libraries
   target_link_libraries(${name} ${HSA_LIBRARY})
   target_link_libraries(${name} pthread)
-endmacro(add_mcwamp_library_hsa name )
+  target_link_libraries(${name} c++)
+  target_link_libraries(${name} c++abi)
+endmacro(add_mcwamp_library_hc_am name )
 
 ####################
 # C++AMP config (clamp-config)

@@ -21,7 +21,6 @@ public:
     {
         return 0;
     }
-
 };
 
 class c1

@@ -40,7 +40,7 @@ bool compare_ulp(double a, double b, std::uint64_t max_ulp_diff)
 
 runall_result test_main()
 {
-	accelerator_view av = require_device_for<double>().get_default_view();
+	accelerator_view av = require_device_for<double>(device_flags::NOT_SPECIFIED, false).get_default_view();
 
 	std::vector<double> res_0_(5);
 	std::vector<double> res_1_(14);
@@ -79,7 +79,7 @@ runall_result test_main()
 		double d111 = -1.9999999999999998;
 		double d112 = -2.0000000000000000;
 		double d113 = -1.7976931348623158e+308;
-		
+
 		// Long literals
 		double d200 = .3333333333333333333333333333333333333333333333333333333333333333333333333333333;
 		double d201 = 100000000000000000000000000000000000000.;
@@ -121,16 +121,16 @@ runall_result test_main()
 		if(idx[0] == 1)
 		{
 			DEOPT(d000);DEOPT(d001);DEOPT(d002);DEOPT(d003);DEOPT(d004);
-			
+
 			DEOPT(d100);DEOPT(d101);DEOPT(d102);DEOPT(d103);DEOPT(d104);
 			DEOPT(d105);DEOPT(d106);DEOPT(d107);DEOPT(d108);DEOPT(d109);
 			DEOPT(d110);DEOPT(d111);DEOPT(d112);DEOPT(d113);
-			
+
 			DEOPT(d200);DEOPT(d201);DEOPT(d202);
-			
+
 			DEOPT(d300);DEOPT(d301);DEOPT(d302);DEOPT(d303);DEOPT(d304);
 			DEOPT(d305);DEOPT(d306);DEOPT(d307);DEOPT(d308);DEOPT(d309);
-			
+
 			DEOPT(d400);DEOPT(d401);DEOPT(d402);DEOPT(d403);
 
 			DEOPT(d500);DEOPT(d501);DEOPT(d502);DEOPT(d503);
@@ -138,7 +138,7 @@ runall_result test_main()
 
 		// Store results
 		unsigned i;
-		
+
 		// res_0 := d0xx
 		i = 0;
 		STORE(0, d000);STORE(0, d001);STORE(0, d002);STORE(0, d003);STORE(0, d004);

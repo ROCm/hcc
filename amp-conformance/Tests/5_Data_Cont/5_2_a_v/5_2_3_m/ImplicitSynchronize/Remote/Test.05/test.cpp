@@ -29,14 +29,14 @@ using namespace Concurrency::Test;
 
 runall_result test_main()
 {
-    accelerator accel1 = require_device_for<int>();
-    accelerator accel2 = require_device_for<int>(accel1);
-	
+    accelerator accel1 = require_device_for<int>(device_flags::NOT_SPECIFIED, false);
+    accelerator accel2 = require_device_for<int>(accel1, device_flags::NOT_SPECIFIED, false);
+
     if(accel1.get_supports_cpu_shared_memory())
     {
         accel1.set_default_cpu_access_type(DEF_ACCESS_TYPE1);
     }
-	
+
     if(accel2.get_supports_cpu_shared_memory())
     {
         accel2.set_default_cpu_access_type(DEF_ACCESS_TYPE2);

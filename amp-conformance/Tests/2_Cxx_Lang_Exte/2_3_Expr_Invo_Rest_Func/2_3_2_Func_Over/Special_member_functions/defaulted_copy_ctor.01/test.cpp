@@ -236,7 +236,7 @@ int test_amp() restrict(amp)
 
 runall_result test_main()
 {
-	accelerator_view av = require_device().get_default_view();
+	accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
 
 	runall_result result;
 	result &= REPORT_RESULT(INVOKE_TEST_FUNC_ON_CPU_AND_GPU(av, test));

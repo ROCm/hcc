@@ -18,45 +18,45 @@ class ArrayToNonContiguousArrayViewTests
 private:
 	accelerator cpu_acc;
 	accelerator gpu_acc;
-	
+
 	access_list access_types_vec;
 
 public:
 	ArrayToNonContiguousArrayViewTests()
 	{
 		cpu_acc = accelerator(accelerator::cpu_accelerator);
-		gpu_acc = require_device_for<DATA_TYPE>();
-		
+		gpu_acc = require_device_for<DATA_TYPE>(device_flags::NOT_SPECIFIED, false);
+
 		compute_access_type_list(access_types_vec, gpu_acc, DEF_ACCESS_TYPE);
 	}
 
 	runall_result CpuAccViewToCpuAccView()
 	{
 		accelerator_view cpu_av = cpu_acc.get_default_view();
-		
+
 		runall_result res;
-		
+
 		for(auto a_t_tuple : access_types_vec)
 		{
 			print_access_type_tuple(a_t_tuple);
 			res &= CopyAndVerifyFromArrayToNonContiguousArrayView<DATA_TYPE, RANK>(cpu_av, cpu_av, std::get<0>(a_t_tuple), std::get<1>(a_t_tuple), std::get<0>(a_t_tuple));
 		}
-		
+
 		return res;
 	}
 
 	runall_result GpuAccViewToGpuAccView()
 	{
-		accelerator_view gpu_av = gpu_acc.get_default_view();	
-		
+		accelerator_view gpu_av = gpu_acc.get_default_view();
+
 		runall_result res;
-		
+
 		for(auto a_t_tuple : access_types_vec)
 		{
 			print_access_type_tuple(a_t_tuple);
 			res &= CopyAndVerifyFromArrayToNonContiguousArrayView<DATA_TYPE, RANK>(gpu_av, gpu_av, std::get<0>(a_t_tuple), std::get<1>(a_t_tuple), std::get<0>(a_t_tuple));
 		}
-		
+
 		return res;
 	}
 
@@ -64,15 +64,15 @@ public:
 	{
 		accelerator_view cpu_av1 = cpu_acc.create_view();
 		accelerator_view cpu_av2 = cpu_acc.create_view();
-		
+
 		runall_result res;
-		
+
 		for(auto a_t_tuple : access_types_vec)
 		{
 			print_access_type_tuple(a_t_tuple);
 			res &= CopyAndVerifyFromArrayToNonContiguousArrayView<DATA_TYPE, RANK>(cpu_av1, cpu_av2, std::get<0>(a_t_tuple), std::get<1>(a_t_tuple), std::get<0>(a_t_tuple));
 		}
-		
+
 		return res;
 	}
 
@@ -80,15 +80,15 @@ public:
 	{
 		accelerator_view gpu_av1 = gpu_acc.create_view();
 		accelerator_view gpu_av2 = gpu_acc.create_view();
-		
+
 		runall_result res;
-		
+
 		for(auto a_t_tuple : access_types_vec)
 		{
 			print_access_type_tuple(a_t_tuple);
 			res &= CopyAndVerifyFromArrayToNonContiguousArrayView<DATA_TYPE, RANK>(gpu_av1, gpu_av2, std::get<0>(a_t_tuple), std::get<1>(a_t_tuple), std::get<0>(a_t_tuple));
 		}
-		
+
 		return res;
 	}
 
@@ -96,15 +96,15 @@ public:
 	{
 		accelerator_view cpu_av = cpu_acc.get_default_view();
 		accelerator_view gpu_av = gpu_acc.get_default_view();
-		
+
 		runall_result res;
-		
+
 		for(auto a_t_tuple : access_types_vec)
 		{
 			print_access_type_tuple(a_t_tuple);
 			res &= CopyAndVerifyFromArrayToNonContiguousArrayView<DATA_TYPE, RANK>(cpu_av, gpu_av, std::get<0>(a_t_tuple), std::get<1>(a_t_tuple), std::get<0>(a_t_tuple));
 		}
-		
+
 		return res;
 	}
 
@@ -112,22 +112,22 @@ public:
 	{
 		accelerator_view cpu_av = cpu_acc.get_default_view();
 		accelerator_view gpu_av = gpu_acc.get_default_view();
-		
+
 		runall_result res;
-		
+
 		for(auto a_t_tuple : access_types_vec)
 		{
 			print_access_type_tuple(a_t_tuple);
 			res &= CopyAndVerifyFromArrayToNonContiguousArrayView<DATA_TYPE, RANK>(gpu_av, cpu_av, std::get<0>(a_t_tuple), std::get<1>(a_t_tuple), std::get<0>(a_t_tuple));
 		}
-		
+
 		return res;
 	}
 };
 
 runall_result test_main()
-{	
-	ArrayToNonContiguousArrayViewTests tests;	
+{
+	ArrayToNonContiguousArrayViewTests tests;
 	runall_result res;
 
 	res &= REPORT_RESULT(tests.CpuAccViewToCpuAccView());

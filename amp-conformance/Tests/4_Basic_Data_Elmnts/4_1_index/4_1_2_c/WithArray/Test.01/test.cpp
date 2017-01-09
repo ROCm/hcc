@@ -18,7 +18,7 @@ const int RANK = 3;
 /*---------------- Test on Host ------------------ */
 bool TestOnHost()
 {
-    Log() << "Testing index contructor with array on host" << std::endl;
+    Log(LogType::Info, true) << "Testing index contructor with array on host" << std::endl;
 
     int arr[RANK];
     for(int i = 0; i < RANK; i++)
@@ -52,9 +52,9 @@ void kernel(array<int, 1>& A, array<int, 1>& B) __GPU
 
 bool TestOnDevice()
 {
-    Log() << "Testing index contructor with array on Device" << std::endl;
+    Log(LogType::Info, true) << "Testing index contructor with array on Device" << std::endl;
 
-    accelerator_view av = require_device().get_default_view();
+    accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
 
     vector<int> vA(RANK), vB(1);
     array<int, 1> A(extent<1>(RANK), av), B(extent<1>(1), av);

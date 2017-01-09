@@ -6,7 +6,7 @@
 // INCLUDING WITHOUT LIMITATION ANY IMPLIED WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABLITY OR NON-INFRINGEMENT.
 // See the Apache Version 2.0 License for specific language governing permissions and limitations under the License.
 /// <tags>P1</tags>
-/// <summary>Verify NON-availablity of array's x, y and z properties in 1D</summary>
+/// <summary>Verify NON-availability of array's x, y and z properties in 1D</summary>
 //#Expects: Error: error C2039
 //#Expects: Error: error C2039
 //#Expects: Error: error C2039

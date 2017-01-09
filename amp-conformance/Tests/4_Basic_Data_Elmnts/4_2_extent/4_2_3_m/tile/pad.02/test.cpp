@@ -72,7 +72,7 @@ runall_result test_main()
 {
     runall_result result;
 
-	accelerator_view av = require_device().get_default_view();
+	accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
 
     result &= INVOKE_TEST_FUNC_ON_CPU_AND_GPU(av, Test1);
     result &= INVOKE_TEST_FUNC_ON_CPU_AND_GPU(av, Test2);

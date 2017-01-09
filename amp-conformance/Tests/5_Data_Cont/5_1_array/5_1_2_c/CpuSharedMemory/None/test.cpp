@@ -14,25 +14,25 @@ using namespace Concurrency;
 using namespace Concurrency::Test;
 
 runall_result test_main()
-{		
-	accelerator device = require_device_for<DATA_TYPE>();
-	
+{
+	accelerator device = require_device_for<DATA_TYPE>(device_flags::NOT_SPECIFIED, false);
+
 	if(!device.get_supports_cpu_shared_memory())
 	{
-		WLog() << "The accelerator " << device.get_description() << " does not support zero copy: Skipping" << std::endl;
+		WLog(LogType::Info, true) << "The accelerator " << device.get_description() << " does not support zero copy: Skipping" << std::endl;
 		return runall_skip;
 	}
-	
+
 	extent<RANK> arr_extent = CreateRandomExtent<RANK>(256);
 		std::vector<DATA_TYPE> cont(arr_extent.size(), 100);
-	
+
 		array<DATA_TYPE, RANK> arr(arr_extent, cont.begin(), device.get_default_view(), access_type_none);
-	
+
 	if(!VerifyCpuAccessType(arr, access_type_none))
 	{
 		return false;
 	}
-	
+
 	for(int i = 0; i < 100; i++)
 	{
 		parallel_for_each(device.get_default_view(), arr.get_extent(), [&](index<RANK> idx) restrict(amp)
@@ -40,7 +40,7 @@ runall_result test_main()
 			arr[idx] += 2;
 		});
 	}
-	
-	return REPORT_RESULT((VerifyAllSameValue(arr, static_cast<DATA_TYPE>(300)) == -1));		
+
+	return REPORT_RESULT((VerifyAllSameValue(arr, static_cast<DATA_TYPE>(300)) == -1));
 }
 

@@ -76,7 +76,7 @@ runall_result Shape(accelerator_view av, int extents[], int base)
 
 runall_result test_main()
 {
-	accelerator_view av = require_device().get_default_view();
+	accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
 
     const int base = 64;
 

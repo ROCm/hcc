@@ -19,19 +19,19 @@ runall_result test1(const accelerator_view &av)
 {
 	runall_result result;
 	const int M = 256;
-	
+
 	array_view<int,1> arrViewSrc(M);
 	arrViewSrc.discard_data();
-	
+
 	parallel_for_each(av,arrViewSrc.get_extent(),[=](index<1> idx) restrict(amp){
 		arrViewSrc(idx) = idx[0];
 	});
-	
+
 	arrViewSrc.discard_data();
-	
+
 	int cmp_result = 0;
 	array_view<int,1> av_result(1,&cmp_result);
-	
+
 	parallel_for_each(av,arrViewSrc.get_extent(),[=](index<1> idx) restrict(amp){
 		if(arrViewSrc(idx) != idx[0])
 		{
@@ -39,14 +39,14 @@ runall_result test1(const accelerator_view &av)
 		}
 	});
 	av_result.synchronize();
-	
+
 	result &= REPORT_RESULT(cmp_result == 0);
 	return result;
 }
 
 runall_result test_main()
 {
-    accelerator_view av = require_device().get_default_view();
+    accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
 
     runall_result res;
     res &= REPORT_RESULT(test1(av));

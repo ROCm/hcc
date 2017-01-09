@@ -6,6 +6,12 @@
 /// <tags>P1</tags>
 /// <summary>Default argument expression</summary>
 
+#include <amptest.h>
+#include <amptest_main.h>
+
+using namespace Concurrency;
+using namespace Concurrency::Test;
+
 int global_y = 4;
 
 void foo(int x = global_y) restrict(amp) {}  // unsupported storage class
@@ -13,6 +19,14 @@ void foo(int x = global_y) restrict(amp) {}  // unsupported storage class
 void hoo1() restrict(amp)
 {
     foo();
+}
+
+runall_result test_main()
+{
+    parallel_for_each(extent<1>{1}, [=](index<1>) restrict(amp) { hoo1(); });
+
+    // Should not get here.
+    return runall_pass;
 }
 
 //#Expects: Error: error C3586

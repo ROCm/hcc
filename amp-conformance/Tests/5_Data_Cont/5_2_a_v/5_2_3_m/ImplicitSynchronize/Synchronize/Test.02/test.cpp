@@ -28,8 +28,8 @@ using namespace Concurrency::Test;
 
 runall_result test_main()
 {
-    accelerator acc = require_device();
-	
+    accelerator acc = require_device(device_flags::NOT_SPECIFIED);
+
     if(acc.get_supports_cpu_shared_memory())
     {
         acc.set_default_cpu_access_type(ACCESS_TYPE);
@@ -40,15 +40,15 @@ runall_result test_main()
     array_view<int, 1> *av = new array_view<int, 1>(10, v);
     {
         array_view<int, 1> alias = *av;
-        Log() << "Writing on the GPU" << std::endl;
+        Log(LogType::Info, true) << "Writing on the GPU" << std::endl;
         parallel_for_each(extent<1>(1), [=](index<1>) restrict(amp) {
             alias[0] = 17;
         });
     }
 
-    Log() << "Destructing the AV for an implicit synch" << std::endl;
+    Log(LogType::Info, true) << "Destructing the AV for an implicit synch" << std::endl;
     av->~array_view();
 
-    Log() << "Result is: " << v[0] << " Expected: 17" << std::endl;
+    Log(LogType::Info, true) << "Result is: " << v[0] << " Expected: 17" << std::endl;
     return REPORT_RESULT(v[0] == 17) ? runall_pass : runall_fail;
 }

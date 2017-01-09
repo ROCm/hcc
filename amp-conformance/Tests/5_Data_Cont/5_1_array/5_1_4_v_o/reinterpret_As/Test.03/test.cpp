@@ -24,7 +24,7 @@ runall_result test_main()
     array_view<double, 1> av_double = arr_float.reinterpret_as<double>();
 
     int expected_size = arr_float.get_extent().size() * sizeof(float) / sizeof(double);
-    Log() << "Expected size: " << expected_size << " actual: " << av_double.get_extent()[0] << std::endl;
+    Log(LogType::Info, true) << "Expected size: " << expected_size << " actual: " << av_double.get_extent()[0] << std::endl;
     if (av_double.get_extent()[0] != expected_size)
     {
         return runall_fail;

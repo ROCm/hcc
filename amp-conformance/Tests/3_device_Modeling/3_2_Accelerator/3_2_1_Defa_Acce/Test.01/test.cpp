@@ -23,7 +23,7 @@ runall_result test_main()
     }
     catch(...)
     {
-        Test::Log(Test::LogType::Error) << "The default ctor for concurrency"
+        Test::Log(Test::LogType::Error, true) << "The default ctor for concurrency"
             " accelerator must never throw an exception." << std::endl;
 
         return runall_fail;

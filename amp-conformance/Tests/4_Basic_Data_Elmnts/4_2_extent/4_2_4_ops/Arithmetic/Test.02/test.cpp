@@ -67,7 +67,7 @@ int test1() restrict(amp,cpu)
     {
         return 15;
     }
-	
+
     return 0;
 }
 
@@ -206,7 +206,7 @@ int test4() restrict(amp,cpu)
     {
         return 44;
     }
-	
+
 	e1 = e1o;
     e1 %= -9;
     if (!(e1 == er))
@@ -249,7 +249,7 @@ const int size = 10;
 
 int test_device()
 {
-    accelerator_view av = require_device().get_default_view();
+    accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
 
     extent<1> e(size);
     array<int, 1> result(e, av);
@@ -275,7 +275,7 @@ int test_device()
 runall_result test_main()
 {
     runall_result result;
-	
+
 	result &= REPORT_RESULT(test());
 	result &= REPORT_RESULT(test_device());
 

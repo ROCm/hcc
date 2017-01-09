@@ -33,14 +33,14 @@ int test() restrict(cpu,amp)
 
 int main(int argc, char **argv)
 {
-	accelerator_view av = require_device().get_default_view();
+	accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
 
 	int result = test();
-	Log() << "Test " << runall_result_name(result) << " on host\n";
+	Log(LogType::Info, true) << "Test " << runall_result_name(result) << " on host\n";
 	if(result != runall_pass) return result;
 
 	result = GPU_INVOKE(av, int, test);
-	Log() << "Test " << runall_result_name(result) << " on device\n";
+	Log(LogType::Info, true) << "Test " << runall_result_name(result) << " on device\n";
 	return result;
 }
 

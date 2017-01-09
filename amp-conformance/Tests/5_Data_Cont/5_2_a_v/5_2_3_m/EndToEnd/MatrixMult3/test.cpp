@@ -57,7 +57,7 @@ runall_result test_main()
     InitializeArray(vB, N * W);
 
     // Compute mxm on CPU
-	Log() << "Performing matrix multiply on the CPU..." << std::endl;
+	Log(LogType::Info, true) << "Performing matrix multiply on the CPU..." << std::endl;
     for(int k=0; k<M; ++k)
     {
         for(int j=0; j<W; ++j)
@@ -75,15 +75,15 @@ runall_result test_main()
             vRef[k * W + j] = result;
         }
     }
-	Log() << "   Done." << std::endl;
+	Log(LogType::Info, true) << "   Done." << std::endl;
 
-    accelerator acc = require_device();
-	
+    accelerator acc = require_device(device_flags::NOT_SPECIFIED);
+
 	if(acc.get_supports_cpu_shared_memory())
 	{
 		acc.set_default_cpu_access_type(ACCESS_TYPE);
 	}
-	
+
 	accelerator_view av = acc.get_default_view();
 
     extent<2> eA(M, N), eB(N, W), eC(M, W);
@@ -98,7 +98,7 @@ runall_result test_main()
     array_view<float, 2> mC_view1(mC_view.section(0, 0, M/2, W));
     array_view<float, 2> mC_view2(mC_view.section(M/2, 0, M/2, W));
 
-	Log() << "Performing matrix multiply on the GPU..." << std::endl;
+	Log(LogType::Info, true) << "Performing matrix multiply on the GPU..." << std::endl;
     parallel_for_each(av, eC_half, [=](index<2> idx) restrict(amp)
         {
             float result = 0.0f;
@@ -132,7 +132,7 @@ runall_result test_main()
 
     mC_view1.synchronize();
     mC_view2.synchronize();
-	Log() << "   Done." << std::endl;
+	Log(LogType::Info, true) << "   Done." << std::endl;
 
     // Compare GPU and CPU results
 	return Verify(vC, vRef);

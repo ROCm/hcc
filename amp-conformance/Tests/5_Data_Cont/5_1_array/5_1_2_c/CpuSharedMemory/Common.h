@@ -20,12 +20,12 @@ bool ReadAndVerify(_amp_container_type<_type, _rank>& amp_container, _type value
 	{
 		if(amp_container[*iter] != value)
 		{
-			Log(LogType::Error) << "Value mismatch at " << *iter << std::endl;
-			Log(LogType::Error) << "Excpected: " << value << " Actual: " << amp_container[*iter] << std::endl;
+			Log(LogType::Error, true) << "Value mismatch at " << *iter << std::endl;
+			Log(LogType::Error, true) << "Excpected: " << value << " Actual: " << amp_container[*iter] << std::endl;
 			return false;
 		}
 	}
-	
+
 	return true;
 }
 
@@ -62,23 +62,23 @@ bool VerifyCpuAccessType(concurrency::array<_type, _rank>& arr, concurrency::acc
 
 	if(arr.get_cpu_access_type() != exp_access_type)
 	{
-		Log(LogType::Error) << "Wrong cpu_access_type." << std::endl;
-		Log(LogType::Error) << "Expect: " << exp_access_type << " Actual: " << arr.get_cpu_access_type() << std::endl;
+		Log(LogType::Error, true) << "Wrong cpu_access_type." << std::endl;
+		Log(LogType::Error, true) << "Expect: " << exp_access_type << " Actual: " << arr.get_cpu_access_type() << std::endl;
 		return false;
 	}
-	
+
 	if(arr.get_cpu_access_type() != access_type_none && arr.data() == NULL)
 	{
-		Log(LogType::Error) << "Array with CPU access type read or write or read-and-write has NULL arr.data()" << std::endl;
+		Log(LogType::Error, true) << "Array with CPU access type read or write or read-and-write has NULL arr.data()" << std::endl;
 		return false;
 	}
-	
+
 	if(arr.get_cpu_access_type() == access_type_none && arr.data() != NULL)
 	{
-		Log(LogType::Error) << "Array with CPU access type none has non-NULL arr.data()" << std::endl;
+		Log(LogType::Error, true) << "Array with CPU access type none has non-NULL arr.data()" << std::endl;
 		return false;
 	}
-	
+
 	return true;
 }
 

@@ -21,14 +21,14 @@ runall_result test1(const accelerator_view &av)
 	runall_result result;
 	const int M = 256;
 	const int N = 256;
-		
+
 	array_view<int,2> arrViewSrc(M,N);
 	array<int,2> arrDest(M,N);
-	
+
 	parallel_for_each(av, arrViewSrc.get_extent(), [=](const index<2> &idx) restrict(amp) {
 		arrViewSrc[idx] = idx[0] * 10 + idx[1];
 	});
-	
+
 	arrViewSrc.copy_to(arrDest); // Copying to Array
 	result &= REPORT_RESULT(VerifyDataOnCpu(arrViewSrc,arrDest));
 	return result;
@@ -44,12 +44,12 @@ runall_result test2(const accelerator_view &av)
 	runall_result result;
 	const int M = 256;
 	const int N = 256;
-		
+
 	array_view<int,2> arrViewSrc(M,N);
-	
+
 	parallel_for_each(av, arrViewSrc.get_extent(), [=](const index<2> &idx) restrict(amp) {
 		arrViewSrc[idx] = idx[0] * 10 + idx[1];
-	});	
+	});
 
 	std::vector<int> destVect( M * N , 0 );
 	array_view<int,2> destArrView(M,N,destVect);
@@ -69,18 +69,18 @@ runall_result test3(const accelerator_view &av)
 	runall_result result;
 	const int M = 256;
 	const int N = 256;
-		
+
 	array_view<int,2> arrViewSrc(M,N);
-	
+
 	parallel_for_each(av, arrViewSrc.get_extent(), [=](const index<2> &idx) restrict(amp) {
 		arrViewSrc[idx] = idx[0] * 10 + idx[1];
-	});	
+	});
 
 	array_view<int,2> destArrView(M,N);
 	arrViewSrc.copy_to(destArrView); // Copying to Arrayview having no data source
 	result &= REPORT_RESULT(VerifyDataOnCpu(arrViewSrc,destArrView));
 	//destArrView.synchronize();
-	
+
 	return result;
 }
 
@@ -94,16 +94,16 @@ runall_result test4(const accelerator_view &av)
 	runall_result result;
 	const int M = 256;
 	const int N = 256;
-		
+
 	std::vector<int> vecSrc(M * N);
 	std::generate(vecSrc.begin(), vecSrc.end(), rand);
 	array<int,2> arrSrc(M,N,vecSrc.begin(), av);
-	array_view<int,2> arrViewDest(M,N);	
-	
+	array_view<int,2> arrViewDest(M,N);
+
 	arrSrc.copy_to(arrViewDest); // Copying to Arrayview having no data source
 	arrViewDest.synchronize();
 	result &= REPORT_RESULT(VerifyDataOnCpu(arrSrc,arrViewDest));
-	
+
 	// Verifying Data on Gpu
 	int comp_result = 0;
 	array_view<int,1> av_compare_result(1,&comp_result);
@@ -128,15 +128,15 @@ runall_result test5(const accelerator_view &av)
 	runall_result result;
 	const int M = 256;
 	const int N = 256;
-		
+
 	std::vector<int> vecSrc(M * N);
 	std::generate(vecSrc.begin(), vecSrc.end(), rand);
 	array_view<int,2> arrViewSrc(M,N,vecSrc);
-	array_view<int,2> arrViewDest(M,N);	
-	
+	array_view<int,2> arrViewDest(M,N);
+
 	arrViewSrc.copy_to(arrViewDest); // Copying to Arrayview having no data source
 	result &= REPORT_RESULT(VerifyDataOnCpu(arrViewSrc,arrViewDest));
-	
+
 	int comp_result = 0;
 	array_view<int,1> av_compare_result(1,&comp_result);
 	parallel_for_each(av,arrViewSrc.get_extent(),[=](index<2> idx) restrict(amp){
@@ -153,9 +153,9 @@ runall_result test5(const accelerator_view &av)
 
 runall_result test_main()
 {
-    accelerator_view av = require_device().get_default_view();
+    accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
     runall_result res;
-	
+
 	res &= REPORT_RESULT(test1(av));
 	res &= REPORT_RESULT(test2(av));
 	res &= REPORT_RESULT(test3(av));

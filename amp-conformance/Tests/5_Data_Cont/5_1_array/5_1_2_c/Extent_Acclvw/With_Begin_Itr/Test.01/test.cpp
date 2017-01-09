@@ -23,7 +23,7 @@ const size_t DATA_SIZE = 1024;
 
 runall_result test_main()
 {
-    accelerator_view av = require_device().get_default_view();
+    accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
 
     vector<int> inData(DATA_SIZE);
     vector<int> outData(DATA_SIZE);
