@@ -27,6 +27,8 @@ public:
         _data(const _data<U>& d) restrict(cpu, amp)
         : p_(reinterpret_cast<__attribute__((address_space(4))) T *>(d.get())) {}
     __attribute__((annotate("user_deserialize")))
+        explicit _data(T* t) restrict(cpu, amp) { p_ = reinterpret_cast<__attribute__((address_space(4))) T*>(t); }
+    __attribute__((annotate("user_deserialize")))
         explicit _data(__attribute__((address_space(4))) T* t) restrict(cpu, amp) { p_ = t; }
     __attribute__((address_space(4))) T* get(void) const restrict(cpu, amp) { return p_; }
     T* get_device_pointer() const restrict(cpu, amp) { return p_; }
