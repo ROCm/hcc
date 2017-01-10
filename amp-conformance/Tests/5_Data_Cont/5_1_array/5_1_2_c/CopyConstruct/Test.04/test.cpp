@@ -21,7 +21,7 @@ runall_result test_main()
 {
     runall_result result;
 
-    accelerator_view acc_view = require_device().get_default_view();
+    accelerator_view acc_view = require_device(device_flags::NOT_SPECIFIED).get_default_view();
 
     int size = 20;
     std::vector<float> src_v(size);
@@ -37,11 +37,11 @@ runall_result test_main()
     array<float> dest2(dest1);
 
     array_view<float> av(dest1);
-    Log() << "Verifying original array" << std::endl;
+    Log(LogType::Info, true) << "Verifying original array" << std::endl;
     result &= REPORT_RESULT(VerifyDataOnCpu(av, src_v));
 
     av = array_view<float>(dest2);
-    Log() << "Now verifying copy constructed array" << std::endl;
+    Log(LogType::Info, true) << "Now verifying copy constructed array" << std::endl;
     result &= REPORT_RESULT(VerifyDataOnCpu(av, src_v));
 
 	return result;

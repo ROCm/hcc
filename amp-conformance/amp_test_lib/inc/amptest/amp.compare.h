@@ -25,7 +25,7 @@ namespace Concurrency
     namespace Test
     {
 		template<typename _type> class Difference;
-	
+
 		// The maximum number of incorrect elements to log before just returning the summary
 		static const size_t max_failed_elements_to_log = 20;
 
@@ -71,18 +71,18 @@ namespace Concurrency
 						num_failed++;
 
 						if(num_failed == 1) {
-							Log(LogType::Error) << "Verify found elements with incorrect values: " << std::endl;
+							Log(LogType::Error, true) << "Verify found elements with incorrect values: " << std::endl;
 						}
 						if(num_failed <= max_failed_elements_to_log) {
-							Log(LogType::Error) << "   " << compose_incorrect_element_message(i, ary_expected[i], ary_actual[i]) << std::endl;
+							Log(LogType::Error, true) << "   " << compose_incorrect_element_message(i, ary_expected[i], ary_actual[i]) << std::endl;
 						} else if (num_failed == max_failed_elements_to_log+1) {
-							Log(LogType::Error) << "      and more..." << std::endl;
+							Log(LogType::Error, true) << "      and more..." << std::endl;
 						}
 					}
 				}
 
 				if(num_failed != 0) {
-					Log(LogType::Error) << "      " << num_failed << " out of " << ary_length << " elements failed." << std::endl;
+					Log(LogType::Error, true) << "      " << num_failed << " out of " << ary_length << " elements failed." << std::endl;
 				}
 
 				return num_failed == 0;
@@ -107,7 +107,7 @@ namespace Concurrency
         {
             return amptest_math::are_almost_equal(v1, v2, maxAbsoluteDiff, maxRelativeDiff);
         }
-		
+
         // Compare arrays for arbitrary type, T is required to define operator<
         // Returns 'true' if arrays contain same results and 'false' otherwise.
         // Start of Verify functions for c-style arrays
@@ -145,7 +145,7 @@ namespace Concurrency
 			type_comparer<T> comparer(static_cast<T>(maxAbsoluteDiff), static_cast<T>(maxRelativeDiff));
             return Verify(c, refc, comparer);
         }
-		
+
         // End of Verify functions for c-style arrays
 
 		#pragma region VerifyDataOnCpu()
@@ -157,11 +157,11 @@ namespace Concurrency
 		{
 			if(actual.get_extent() != expected.get_extent())
 			{
-				Log(LogType::Error) << "Extent values for actual and  expected does not match.";
-				Log(LogType::Error) << "Actual: " << actual.get_extent() << " Expected: " << expected.get_extent();
+				Log(LogType::Error, true) << "Extent values for actual and  expected does not match.";
+				Log(LogType::Error, true) << "Actual: " << actual.get_extent() << " Expected: " << expected.get_extent();
 				return false;
 			}
-			
+
 			std::vector<_type> vect_actual(actual.get_extent().size());
 			copy(actual, vect_actual.begin());
 
@@ -178,15 +178,15 @@ namespace Concurrency
 		{
 			if(actual.get_extent().size() != expected.size())
 			{
-				Log(LogType::Error) << "Size of actual and expected does not match.\n";
-				Log(LogType::Error) << "Size of actual : " << actual.get_extent().size();
-				Log(LogType::Error) << "Size of expected : " << expected.size();
+				Log(LogType::Error, true) << "Size of actual and expected does not match.\n";
+				Log(LogType::Error, true) << "Size of actual : " << actual.get_extent().size();
+				Log(LogType::Error, true) << "Size of expected : " << expected.size();
 				return false;
 			}
-			
+
 			std::vector<_type> temp_cont(actual.get_extent().size());
 			copy(actual, temp_cont.begin());
-		
+
 			return Equal(temp_cont.begin(), temp_cont.end(), expected.begin(), Difference<_type>(diff));
 		}
 
@@ -197,15 +197,15 @@ namespace Concurrency
 		{
 			if(actual.get_extent().size() != expected.size())
 			{
-				Log(LogType::Error) << "Size of actual and expected does not match.\n";
-				Log(LogType::Error) << "Size of actual : " << actual.get_extent().size();
-				Log(LogType::Error) << "Size of expected : " << expected.size();
+				Log(LogType::Error, true) << "Size of actual and expected does not match.\n";
+				Log(LogType::Error, true) << "Size of actual : " << actual.get_extent().size();
+				Log(LogType::Error, true) << "Size of expected : " << expected.size();
 				return false;
 			}
-			
+
 			std::vector<_type> temp_cont(actual.get_extent().size());
 			copy(actual, temp_cont.begin());
-		
+
 			return Equal(temp_cont.begin(), temp_cont.end(), expected.begin(), Difference<_type>(diff));
 		}
 
@@ -216,18 +216,18 @@ namespace Concurrency
 		{
 			if(expected.get_extent().size() != actual.size())
 			{
-				Log(LogType::Error) << "Size of expected and actual does not match.\n";
-				Log(LogType::Error) << "Size of actual: " << actual.size();
-				Log(LogType::Error) << "Size of expected: " << expected.get_extent().size();
+				Log(LogType::Error, true) << "Size of expected and actual does not match.\n";
+				Log(LogType::Error, true) << "Size of actual: " << actual.size();
+				Log(LogType::Error, true) << "Size of expected: " << expected.get_extent().size();
 				return false;
 			}
-			
+
 			std::vector<_type> temp_cont(expected.get_extent().size());
 			copy(expected, temp_cont.begin());
-		
+
 			return Equal(actual.begin(), actual.end(), temp_cont.begin(), Difference<_type>(diff));
 		}
-		
+
 		// Verifies that data contained in the two array_view<const T, N> and C++ AMP container differs by
 		// value 'diff'. The computation happens on CPU. If any of supplied array is on GPU, it will get copied to CPU.
 		template<typename _type, int _rank, template<typename, int> class _amp_container_type>
@@ -238,8 +238,8 @@ namespace Concurrency
 
 			return VerifyDataOnCpu(vect_actual, expected, diff);
 		}
-	
-		
+
+
 		#pragma endregion
 
 		#pragma region VerifyAllSameValue()
@@ -262,7 +262,7 @@ namespace Concurrency
                 int res = (int)(iter - inputVector.begin());
 
 				// Now report all the failed elements
-				Log(LogType::Error) << "VerifyAllSameValue found elements with incorrect values. Expected value: " << format_as_code(value) << std::endl;
+				Log(LogType::Error, true) << "VerifyAllSameValue found elements with incorrect values. Expected value: " << format_as_code(value) << std::endl;
 				size_t num_failed = 0;
 				for(; iter < inputVector.end(); ++iter)
 				{
@@ -272,15 +272,15 @@ namespace Concurrency
 						num_failed++;
 
 						if(num_failed <= max_failed_elements_to_log) {
-							Log(LogType::Error) << "   " << compose_incorrect_element_message((int)(iter - inputVector.begin()), value, elm) << std::endl;
+							Log(LogType::Error, true) << "   " << compose_incorrect_element_message((int)(iter - inputVector.begin()), value, elm) << std::endl;
 						} else if (num_failed == max_failed_elements_to_log+1) {
-							Log(LogType::Error) << "     and more..." << std::endl;
+							Log(LogType::Error, true) << "     and more..." << std::endl;
 						}
 					}
 				}
 
 				// Always report the summary since this block has already found one
-				Log(LogType::Error) << "   " << num_failed << " out of " << inputVector.size() << " elements failed." << std::endl;
+				Log(LogType::Error, true) << "   " << num_failed << " out of " << inputVector.size() << " elements failed." << std::endl;
 
                 return res; // old implementation returns the index of the first element not equal to value.
             }
@@ -293,14 +293,14 @@ namespace Concurrency
 			std::vector<_type> vect1 = inputArray;
 			return VerifyAllSameValue<_type>(vect1, value);
 		}
-		
+
 		// Verifies that all the values contained in input array view are equal to 'value'
 		template<typename _type, int _rank>
 		int VerifyAllSameValue(const array_view<_type, _rank>& inputArrayView, const _type& value)
 		{
 			std::vector<_type> vect1(inputArrayView.get_extent().size());
 			copy(inputArrayView, vect1.begin());
-		
+
 			return VerifyAllSameValue<_type>(vect1, value);
 		}
 
@@ -316,15 +316,15 @@ namespace Concurrency
         {
             if(actual.get_extent() != expected.get_extent())
             {
-                Log(LogType::Error) << "Grid values for actual and expected array does not match.";
-                Log(LogType::Error) << "Actual: " << actual.get_extent() << " Expected: " << expected.get_extent();
+                Log(LogType::Error, true) << "Grid values for actual and expected array does not match.";
+                Log(LogType::Error, true) << "Actual: " << actual.get_extent() << " Expected: " << expected.get_extent();
                 return false;
             }
 
             if(stagingArrResult.get_extent() != expected.get_extent())
             {
-                Log(LogType::Error) << "Grid value for result staging array and input containers does not match.";
-                Log(LogType::Error) << "Input containers: " << actual.get_extent() << " staging array result: " << expected.get_extent();
+                Log(LogType::Error, true) << "Grid value for result staging array and input containers does not match.";
+                Log(LogType::Error, true) << "Input containers: " << actual.get_extent() << " staging array result: " << expected.get_extent();
                 return false;
             }
 
@@ -354,15 +354,15 @@ namespace Concurrency
         {
             if(actual.get_extent() != expected.get_extent())
             {
-                Log(LogType::Error) << "Grid values for actual and  expected array view does not match.";
-                Log(LogType::Error) << "Actual: " << actual.get_extent() << " Expected: " << expected.get_extent();
+                Log(LogType::Error, true) << "Grid values for actual and  expected array view does not match.";
+                Log(LogType::Error, true) << "Actual: " << actual.get_extent() << " Expected: " << expected.get_extent();
                 return false;
             }
 
             if(stagingArrResult.get_extent() != expected.get_extent())
             {
-                Log(LogType::Error) << "Grid value for result staging array and input containers does not match.";
-                Log(LogType::Error) << "Input containers: " << actual.get_extent() << " staging array result: " << expected.get_extent();
+                Log(LogType::Error, true) << "Grid value for result staging array and input containers does not match.";
+                Log(LogType::Error, true) << "Input containers: " << actual.get_extent() << " staging array result: " << expected.get_extent();
                 return false;
             }
 
@@ -391,15 +391,15 @@ namespace Concurrency
         {
             if(actual.get_extent() != expected.get_extent())
             {
-                Log(LogType::Error) << "Grid values for actual array and  expected array view does not match.";
-                Log(LogType::Error) << "Actual: " << actual.get_extent() << " Expected: " << expected.get_extent();
+                Log(LogType::Error, true) << "Grid values for actual array and  expected array view does not match.";
+                Log(LogType::Error, true) << "Actual: " << actual.get_extent() << " Expected: " << expected.get_extent();
                 return false;
             }
 
             if(stagingArrResult.get_extent() != expected.get_extent())
             {
-                Log(LogType::Error) << "Grid value for result staging array and input containers does not match.";
-                Log(LogType::Error) << "Input containers: " << actual.get_extent() << " staging array result: " << expected.get_extent();
+                Log(LogType::Error, true) << "Grid value for result staging array and input containers does not match.";
+                Log(LogType::Error, true) << "Input containers: " << actual.get_extent() << " staging array result: " << expected.get_extent();
                 return false;
             }
 
@@ -429,16 +429,16 @@ namespace Concurrency
 		{
 			std::pair<InputIterator1, InputIterator2> result;
 			result = std::mismatch<InputIterator1, InputIterator2>(beginActual, endActual, beginExpected, comp);
-			
+
 			if ( result.first == endActual )
 			{
 				return true;
 			}
 			else
-			{	
-				Log(LogType::Error) << "Result mismatch between two iterators";
-				Log(LogType::Error) << "First mismatch at element number: " << result.first - beginActual;
-				Log(LogType::Error) << "Value at actual iterator = " << *result.first << "\nValue at expected iterator = " << *result.second;
+			{
+				Log(LogType::Error, true) << "Result mismatch between two iterators";
+				Log(LogType::Error, true) << "First mismatch at element number: " << result.first - beginActual;
+				Log(LogType::Error, true) << "Value at actual iterator = " << *result.first << "\nValue at expected iterator = " << *result.second;
 				return false;
 			}
 		}
@@ -454,7 +454,7 @@ namespace Concurrency
 			Difference(_type _Diff) : diff(_Diff)
 			{
 			}
-	
+
 			bool operator()(_type actualValue, _type expectedValue) const
 			{
 				return (expectedValue - actualValue == diff);

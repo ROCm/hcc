@@ -23,12 +23,12 @@ bool test_feature(void)
     accelerator_view av = device.get_default_view();
 
 	access_type arr_cpu_access_type = access_type_auto;
-	
+
 	if(device.get_supports_cpu_shared_memory())
 	{
 		arr_cpu_access_type = access_type_none;
 	}
-	
+
 	// Create a device array to store the results
 	array<float, 1> dResult(MAX_LEN, av, arr_cpu_access_type);
 
@@ -39,17 +39,17 @@ bool test_feature(void)
 		pxData = dResult[idx];	// <= expect runtime_exception
 	}
 	catch(runtime_exception ex) {
-		Log() << "runtime_exception occured as expected: " << ex.what() << std::endl;
+		Log(LogType::Info, true) << "runtime_exception occured as expected: " << ex.what() << std::endl;
 		return true;
 	}
 	catch(...) {
-		Log(LogType::Error) << "An unknown exception occured trying to index into array based on the cpu_accelerator. "
+		Log(LogType::Error, true) << "An unknown exception occured trying to index into array based on the cpu_accelerator. "
 			<< "Expected runtime_exception but got caught something else."
 			<< std::endl;
 		return false;
 	}
 
-	Log(LogType::Error) << "A runtime_exception was expected but did not occur." << std::endl;
+	Log(LogType::Error, true) << "A runtime_exception was expected but did not occur." << std::endl;
 	return false;
 }
 

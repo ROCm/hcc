@@ -271,17 +271,17 @@ runall_result test_main()
 
     accelerator_view av = require_device_with_double(Device::ALL_DEVICES).get_default_view();
 
-    Log() << "test in local memory: \n";
+    Log(LogType::Info, true) << "test in local memory: \n";
     if (!test<AMP_ELEMENT_TYPE, kernel_local<AMP_ELEMENT_TYPE>>(av)) return runall_fail;
-    Log() << "pass\n";
+    Log(LogType::Info, true) << "pass\n";
 
-    Log() << "test in global memory: \n";
+    Log(LogType::Info, true) << "test in global memory: \n";
     if (!test<AMP_ELEMENT_TYPE, kernel_global<AMP_ELEMENT_TYPE>>(av)) return runall_fail;
-    Log() << "pass\n";
+    Log(LogType::Info, true) << "pass\n";
 
-    Log() << "test in shared memory: \n";
+    Log(LogType::Info, true) << "test in shared memory: \n";
     if (!test<AMP_ELEMENT_TYPE, kernel_shared<AMP_ELEMENT_TYPE>>(av)) return runall_fail;
-    Log() << "pass\n";
+    Log(LogType::Info, true) << "pass\n";
 
     return runall_pass;
 }

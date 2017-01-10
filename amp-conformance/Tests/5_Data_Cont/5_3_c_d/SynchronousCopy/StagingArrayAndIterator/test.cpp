@@ -16,21 +16,21 @@ using namespace Concurrency::Test;
 runall_result test_main()
 {
 	accelerator_view cpu_av = accelerator(accelerator::cpu_accelerator).get_default_view();
-	accelerator gpu_acc = require_device_for<DATA_TYPE>();
-	
+	accelerator gpu_acc = require_device_for<DATA_TYPE>(device_flags::NOT_SPECIFIED, false);
+
 	if(gpu_acc.get_supports_cpu_shared_memory())
 	{
-		WLog() << "Accelerator " << gpu_acc.get_description() << " supports zero copy" << std::endl;
-		
+		WLog(LogType::Info, true) << "Accelerator " << gpu_acc.get_description() << " supports zero copy" << std::endl;
+
 		// Set the default cpu access type for this accelerator
 		gpu_acc.set_default_cpu_access_type(DEF_ACCESS_TYPE);
 	}
-	
+
 	accelerator_view gpu_av = gpu_acc.get_default_view();
-	
+
 	runall_result res;
 	res &= CopyAndVerifyBetweenStagingArrayAndIterator<DATA_TYPE, RANK, STL_CONT>(cpu_av, gpu_av);
-	
+
 	return res;
 }
 

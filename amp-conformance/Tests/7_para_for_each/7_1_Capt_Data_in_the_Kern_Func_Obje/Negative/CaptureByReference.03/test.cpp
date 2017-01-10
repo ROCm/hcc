@@ -45,9 +45,9 @@ int main()
     init(b, size);
 
     Concurrency::extent<1> e(size);
-    array<int, 1> aa(e, a.begin(), rv);
-    array<int, 1> ab(e, b.begin(), rv);
-    array<int, 1> ac(e, rv);
+    Concurrency::array<int, 1> aa(e, a.begin(), rv);
+    Concurrency::array<int, 1> ab(e, b.begin(), rv);
+    Concurrency::array<int, 1> ac(e, rv);
 
     // Integral type
     int x = 5;

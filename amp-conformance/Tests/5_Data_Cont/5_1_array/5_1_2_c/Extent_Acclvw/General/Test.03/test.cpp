@@ -14,7 +14,7 @@
 template<typename _type, int _rank>
 bool test_feature()
 {
-	vector<accelerator> devices = get_available_devices();
+	vector<accelerator> devices = get_available_devices(device_flags::NOT_SPECIFIED);
 	printf("Found %d devices\n", devices.size());
 
 	for (size_t i = 0; i < devices.size(); i++)

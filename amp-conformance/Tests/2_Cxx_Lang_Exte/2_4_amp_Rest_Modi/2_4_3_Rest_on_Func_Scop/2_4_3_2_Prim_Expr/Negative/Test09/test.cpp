@@ -25,7 +25,7 @@ bool test(accelerator_view &rv)
     array<int, 1> aA(e, A.begin(), rv);
 
     static int i = 0;
-    static unsigned __int32 ui = 0;
+    static unsigned int ui = 0;
     static float f = 0;
     static double d = 0;
 
@@ -35,8 +35,8 @@ bool test(accelerator_view &rv)
         int *pi = &i; // not allowed here
         int &ri = i;
 
-        unsigned __int32 *pui = &ui;
-        unsigned __int32 &rui = ui;
+        unsigned int *pui = &ui;
+        unsigned int &rui = ui;
 
         float *pf = &f;
         float &rf = f;

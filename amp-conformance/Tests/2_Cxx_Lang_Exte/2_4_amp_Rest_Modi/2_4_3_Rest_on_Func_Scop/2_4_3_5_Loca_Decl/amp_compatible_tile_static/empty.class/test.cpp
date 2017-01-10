@@ -30,7 +30,7 @@ int test() restrict(amp)
 
 runall_result test_main()
 {
-    accelerator_view av = require_device().get_default_view();
+    accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
 
     int out_ = 0;
     array_view<int> out(1, &out_);

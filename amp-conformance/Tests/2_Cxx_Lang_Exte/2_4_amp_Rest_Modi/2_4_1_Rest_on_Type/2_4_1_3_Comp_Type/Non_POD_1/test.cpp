@@ -46,7 +46,7 @@ int main()
 
     runall_result result = GPU_INVOKE(av, runall_result, Test1);
 
-    Log() << result.get_name() << std::endl;
+    Log(LogType::Info, true) << result.get_name() << std::endl;
     return result.get_exit_code();
 }
 

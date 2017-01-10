@@ -84,7 +84,7 @@ bool test(accelerator_view &rv)
 
     array<int, 1> aA(e, A.begin(), rv);
 
-    parallel_for_each(aA.get_extent().tile<1>(), [&](tiled_index<1>idx) __GPU_ONLY
+    parallel_for_each(aA.get_extent().tile<1>(), [&](tiled_index<1> idx) __GPU_ONLY
     {
         tile_static c o, o2;
 

@@ -14,21 +14,21 @@
 template<typename _type, int _rank>
 runall_result test_feature()
 {
-	vector<accelerator> devices = get_available_devices(); // all but CPU devices
+	vector<accelerator> devices = get_available_devices(device_flags::NOT_SPECIFIED); // all but CPU devices
 
 	runall_result result;
 	for (size_t i = 0; i < devices.size(); i++)
 	{
 		accelerator& device = devices[i];
 
-		WLog() << "Device " << i << ": " << device.get_description() << " (" << device.get_device_path() << ")" << std::endl;
-		Log() << "  Version: " << device.get_version() << "; Memory: " << device.get_dedicated_memory() << std::endl;
-		Log() << "  Debug: " << device.get_is_debug() << "; Emulated: " << device.get_is_emulated() << "; Has Display: " << device.get_has_display() << std::endl;
+		WLog(LogType::Info, true) << "Device " << i << ": " << device.get_description() << " (" << device.get_device_path() << ")" << std::endl;
+		Log(LogType::Info, true) << "  Version: " << device.get_version() << "; Memory: " << device.get_dedicated_memory() << std::endl;
+		Log(LogType::Info, true) << "  Debug: " << device.get_is_debug() << "; Emulated: " << device.get_is_emulated() << "; Has Display: " << device.get_has_display() << std::endl;
 
         result &= REPORT_RESULT((test_accl_staging_buffer_constructor<_type, _rank, accelerator_view>(device.get_default_view(), device.get_default_view())));
         result &= REPORT_RESULT((test_accl_staging_buffer_constructor<_type, _rank, accelerator_view>(device.create_view(queuing_mode_immediate), device.create_view(queuing_mode_automatic))));
         result &= REPORT_RESULT((test_accl_staging_buffer_constructor<_type, _rank, accelerator_view>(device.create_view(queuing_mode_automatic), device.create_view(queuing_mode_immediate))));
-		Log_writeline();
+		Log_writeline(LogType::Info);
 	}
 
 	return result;
@@ -46,10 +46,10 @@ runall_result test_feature()
 	for (size_t i = 0; i < devices.size(); i++)
 	{
 		accelerator& device = devices[i];
-		
-		WLog() << "Device " << i << ": " << device.get_description() << " (" << device.get_device_path() << ")" << std::endl;
-		Log() << "  Version: " << device.get_version() << "; Memory: " << device.get_dedicated_memory() << std::endl;
-		Log() << "  Debug: " << device.get_is_debug() << "; Emulated: " << device.get_is_emulated() << "; Has Display: " << device.get_has_display() << std::endl;
+
+		WLog(LogType::Info, true) << "Device " << i << ": " << device.get_description() << " (" << device.get_device_path() << ")" << std::endl;
+		Log(LogType::Info, true) << "  Version: " << device.get_version() << "; Memory: " << device.get_dedicated_memory() << std::endl;
+		Log(LogType::Info, true) << "  Debug: " << device.get_is_debug() << "; Emulated: " << device.get_is_emulated() << "; Has Display: " << device.get_has_display() << std::endl;
 
         result &= REPORT_RESULT((test_accl_staging_buffer_constructor<double, _rank, accelerator_view>(device.get_default_view(), device.get_default_view())));
         result &= REPORT_RESULT((test_accl_staging_buffer_constructor<double, _rank, accelerator_view>(device.create_view(queuing_mode_immediate), device.create_view(queuing_mode_automatic))));

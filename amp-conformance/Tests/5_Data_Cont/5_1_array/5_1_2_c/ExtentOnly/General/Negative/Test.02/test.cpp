@@ -14,8 +14,8 @@
 
 runall_result test_main()
 {
-	extent<1> e(10);
-    array<int, 0>(e);
+	Concurrency::extent<1> e(10);
+    Concurrency::array<int, 0> foo{e};
 
 	// We shouldn't compile
     return runall_fail;

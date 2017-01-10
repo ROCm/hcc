@@ -22,18 +22,18 @@ runall_result NonContigArrayViewOnCpu()
 
 runall_result NonContigArrayViewOnGpu()
 {
-	accelerator gpu_acc = require_device_for<DATA_TYPE>();
+	accelerator gpu_acc = require_device_for<DATA_TYPE>(device_flags::NOT_SPECIFIED, false);
 	accelerator_view gpu_av = gpu_acc.get_default_view();
-	
+
 	runall_result res;
-	
+
 	if(gpu_acc.get_supports_cpu_shared_memory())
 	{
-		WLog() << "Accelerator " << gpu_acc.get_description() << " supports zero copy" << std::endl;
-		
+		WLog(LogType::Info, true) << "Accelerator " << gpu_acc.get_description() << " supports zero copy" << std::endl;
+
 		// Set the default cpu access type for this accelerator
 		gpu_acc.set_default_cpu_access_type(DEF_ACCESS_TYPE);
-		
+
 		res &= REPORT_RESULT((CopyAndVerifyFromNonContigArrayViewToIterator<DATA_TYPE, RANK, STL_CONT>(gpu_av, access_type_none)));
 		res &= REPORT_RESULT((CopyAndVerifyFromNonContigArrayViewToIterator<DATA_TYPE, RANK, STL_CONT>(gpu_av, access_type_read)));
 		res &= REPORT_RESULT((CopyAndVerifyFromNonContigArrayViewToIterator<DATA_TYPE, RANK, STL_CONT>(gpu_av, access_type_write)));
@@ -43,17 +43,17 @@ runall_result NonContigArrayViewOnGpu()
 	{
 		res &= REPORT_RESULT((CopyAndVerifyFromNonContigArrayViewToIterator<DATA_TYPE, RANK, STL_CONT>(gpu_av, access_type_none)));
 	}
-	
+
 	return res;
 }
 
 runall_result test_main()
 {
 	runall_result res;
-	
+
 	res &= REPORT_RESULT(NonContigArrayViewOnCpu());
 	res &= REPORT_RESULT(NonContigArrayViewOnGpu());
-	
+
 	return res;
 }
 

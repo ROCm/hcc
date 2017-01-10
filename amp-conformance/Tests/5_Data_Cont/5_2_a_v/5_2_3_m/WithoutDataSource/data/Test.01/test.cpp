@@ -19,24 +19,24 @@ runall_result test1(const accelerator_view &av)
 {
 	runall_result result;
 	const int M = 256;
-		
+
 	array_view<int,1> arrViewSrc(M);
 	int* dataPtr1 = arrViewSrc.data();
-	
+
 	result &= REPORT_RESULT( dataPtr1 != NULL );
-	
+
 	parallel_for_each(av,arrViewSrc.get_extent(),[=](index<1> idx) restrict(amp){
 		arrViewSrc(idx) = idx[0];
 	});
-	
+
 	int* dataPtr2 = arrViewSrc.data();
 	result &= REPORT_RESULT( dataPtr2 != NULL);
 	result &= REPORT_RESULT( dataPtr1 == dataPtr2);
-	
+
 	bool passed = true;
 	for (size_t i = 0; i < M; ++i) {
 		if (dataPtr2[i] != i) {
-			Log(LogType::Error) << "Expected = " << i << ", Actual = " << dataPtr2[i] << std::endl;
+			Log(LogType::Error, true) << "Expected = " << i << ", Actual = " << dataPtr2[i] << std::endl;
 			passed = false;
 		}
 	}
@@ -46,11 +46,11 @@ runall_result test1(const accelerator_view &av)
 
 runall_result test_main()
 {
-    accelerator_view av = require_device().get_default_view();
+    accelerator_view av = require_device(device_flags::NOT_SPECIFIED).get_default_view();
     runall_result res;
-	
+
     res &= REPORT_RESULT(test1(av));
-	
+
     return res;
 }
 

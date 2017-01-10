@@ -23,21 +23,21 @@ public:
 	StagingArrayToStagingArrayTests()
 	{
 		cpu_acc = accelerator(accelerator::cpu_accelerator);
-		gpu_acc1 = require_device_for<DATA_TYPE>();
-		gpu_acc1 = require_device_for<DATA_TYPE>(gpu_acc1);
-		
+		gpu_acc1 = require_device_for<DATA_TYPE>(device_flags::NOT_SPECIFIED, false);
+		gpu_acc1 = require_device_for<DATA_TYPE>(gpu_acc1, device_flags::NOT_SPECIFIED, false);
+
 		if(gpu_acc1.get_supports_cpu_shared_memory())
 		{
-			WLog() << "Accelerator " << gpu_acc1.get_description() << " supports zero copy" << std::endl;
-			
+			WLog(LogType::Info, true) << "Accelerator " << gpu_acc1.get_description() << " supports zero copy" << std::endl;
+
 			// Set the default cpu access type for this accelerator to be used by array_view
 			gpu_acc1.set_default_cpu_access_type(DEF_ACCESS_TYPE1);
 		}
-		
+
 		if(gpu_acc2.get_supports_cpu_shared_memory())
 		{
-			WLog() << "Accelerator " << gpu_acc2.get_description() << " supports zero copy" << std::endl;
-			
+			WLog(LogType::Info, true) << "Accelerator " << gpu_acc2.get_description() << " supports zero copy" << std::endl;
+
 			// Set the default cpu access type for this accelerator to be used by array_view
 			gpu_acc2.set_default_cpu_access_type(DEF_ACCESS_TYPE2);
 		}
@@ -56,7 +56,7 @@ public:
 };
 
 runall_result test_main()
-{	
+{
 	StagingArrayToStagingArrayTests tests;
 	runall_result res;
 

@@ -11,12 +11,13 @@
 #include "../../../accelerator.common.h"
 
 using namespace Concurrency;
+using namespace Concurrency::Test;
 
 runall_result test_main()
 {
     runall_result result;
 
-    accelerator acc_def = Test::require_device();
+    accelerator acc_def = Test::require_device(device_flags::NOT_SPECIFIED);
     accelerator acc = accelerator(accelerator::cpu_accelerator);
 
     // verify the logical operators using a copy constructed accelerator

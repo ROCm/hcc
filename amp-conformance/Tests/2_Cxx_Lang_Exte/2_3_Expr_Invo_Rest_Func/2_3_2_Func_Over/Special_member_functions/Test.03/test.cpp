@@ -54,12 +54,12 @@ struct S
 
 int main()
 {
-    require_device();
+    require_device(device_flags::NOT_SPECIFIED);
 
     std::vector<S> v(1);
     array_view<S, 1> av(1, v);
 
-    Log() << "Constructing S(12) on the GPU" << std::endl;
+    Log(LogType::Info, true) << "Constructing S(12) on the GPU" << std::endl;
     parallel_for_each(extent<1>(1), [=](index<1> i) __GPU {
         S s1(12);
         S s2 = s1;
@@ -69,7 +69,7 @@ int main()
 
     if (av[0].x != 12 && av[0].y != 24)
     {
-        Log() << "Expected: { 12, 24 } Was: {" << av[0].x << ", " << av[0].y << "}" << std::endl;
+        Log(LogType::Info, true) << "Expected: { 12, 24 } Was: {" << av[0].x << ", " << av[0].y << "}" << std::endl;
         return runall_fail;
     }
 

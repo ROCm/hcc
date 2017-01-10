@@ -32,57 +32,57 @@ using namespace Concurrency;
 using namespace Concurrency::Test;
 
 runall_result test_main()
-{	
-	accelerator gpuDevice = require_device();
-	
+{
+	accelerator gpuDevice = require_device(device_flags::NOT_SPECIFIED);
+
 	if(gpuDevice.get_supports_cpu_shared_memory())
 	{
 		gpuDevice.set_default_cpu_access_type(ACCESS_TYPE);
 	}
-	
+
 	std::vector<int> data(DATA_SIZE, 2);
 	array_view<int, 1> dataArrayView(DATA_SIZE, data);
-	
+
 	// Create two overlapping array views.
 	array_view<int, 1> arrayView1 = dataArrayView.section(0, 2 * DATA_SIZE/3);
 	array_view<int, 1> arrayView2 = dataArrayView.section(DATA_SIZE/3, 2 * DATA_SIZE/3);
-	
+
 	parallel_for_each(gpuDevice.get_default_view(), arrayView1.get_extent(), [=](index<1> idx) restrict(amp) {
         atomic_fetch_add(&(arrayView1(idx)), 1);
 		atomic_fetch_add(&(dataArrayView(idx)), 1);
         atomic_fetch_add(&(arrayView2(idx)), 1);
     });
-	
+
 	std::vector<int> dest(DATA_SIZE);
 	copy(dataArrayView, dest.begin());
-		
+
 	for(int i = 0; i < DATA_SIZE/3; i++)
 	{
 		if(dest[i] != 4)
 		{
-			Log(LogType::Error) << "Incorrect result at (" << i << ") - expected " << 4 << " but got " << dest[i] << std::endl;
+			Log(LogType::Error, true) << "Incorrect result at (" << i << ") - expected " << 4 << " but got " << dest[i] << std::endl;
 			return runall_fail;
 		}
 	}
-	
+
 	for(int i = DATA_SIZE/3; i < 2 * DATA_SIZE/3; i++)
 	{
 		if(dest[i] != 5)
 		{
-			Log(LogType::Error) << "Incorrect result at (" << i << ") - expected " << 5 << " but got " << dest[i] << std::endl;
+			Log(LogType::Error, true) << "Incorrect result at (" << i << ") - expected " << 5 << " but got " << dest[i] << std::endl;
 			return runall_fail;
 		}
 	}
-	
+
 	for(int i = 2 * DATA_SIZE/3; i < DATA_SIZE; i++)
 	{
 		if(dest[i] != 3)
 		{
-			Log(LogType::Error) << "Incorrect result at (" << i << ") - expected " << 3 << " but got " << dest[i] << std::endl;
+			Log(LogType::Error, true) << "Incorrect result at (" << i << ") - expected " << 3 << " but got " << dest[i] << std::endl;
 			return runall_fail;
 		}
 	}
-	
+
 	return REPORT_RESULT(VerifyAllSameValue(data, 2) == -1);
 }
 
