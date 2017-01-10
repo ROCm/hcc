@@ -25,10 +25,10 @@ public:
         : p_(static_cast<T*>(d)) {}
     template <typename U>
         _data(const _data<U>& d) restrict(cpu, amp)
-        : p_(reinterpret_cast<T *>(d.get())) {}
+        : p_(reinterpret_cast<__attribute__((address_space(4))) T *>(d.get())) {}
     __attribute__((annotate("user_deserialize")))
-        explicit _data(T* t) restrict(cpu, amp) { p_ = t; }
-    T* get(void) const restrict(cpu, amp) { return p_; }
+        explicit _data(__attribute__((address_space(4))) T* t) restrict(cpu, amp) { p_ = t; }
+    __attribute__((address_space(4))) T* get(void) const restrict(cpu, amp) { return p_; }
     T* get_device_pointer() const restrict(cpu, amp) { return p_; }
     std::shared_ptr<KalmarQueue> get_av() const { return nullptr; }
     void reset() const {}
@@ -46,7 +46,7 @@ public:
     std::shared_ptr<KalmarQueue> get_stage() const { return nullptr; }
 
 private:
-    T* p_;
+    __attribute__((address_space(4))) T* p_;
 };
 
 template <typename T>
