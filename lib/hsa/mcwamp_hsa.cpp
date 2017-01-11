@@ -93,6 +93,8 @@ long int HCC_D2H_PININPLACE_THRESHOLD = 1024;
 int HCC_SERIALIZE_KERNEL = 0;
 int HCC_SERIALIZE_COPY = 0;
 
+int HCC_OPT_FLUSH=0;
+
 unsigned HCC_DB = 0;
 
 
@@ -553,9 +555,8 @@ public:
         dispose();
     }
 
-    hsa_status_t enqueueBarrier(hsa_queue_t* queue);
 
-    hsa_status_t enqueueAsync(Kalmar::HSAQueue*);
+    hsa_status_t enqueueAsync(Kalmar::HSAQueue*, bool forceFlush);
 
     // wait for the barrier to complete
     hsa_status_t waitComplete();
@@ -1047,7 +1048,9 @@ public:
         printAsyncOps(std::cerr);
 #endif
     
-   
+  
+#if 0 
+        // TODO - can remove this when HCC_OPT_FLUSH=1
         // If oldest OP doesn't have a signal, we need to enqueue 
         // a barrier with a signal so host can tell when it finishes
         for (int i = asyncOps.size()-1; i >= 0;  i--) {
@@ -1061,6 +1064,12 @@ public:
                 }
                 break;
             }
+        }
+#endif
+        if (HCC_OPT_FLUSH) {
+            // In the loop below, this will be the first op waited on
+            auto marker = EnqueueMarkerWithFlush();
+            DBOUT("enqueue marker to release written data " << marker<<"\n");
         }
 
         for (int i = asyncOps.size()-1; i >= 0;  i--) {
@@ -1473,13 +1482,33 @@ public:
 
     // enqueue a barrier packet
     std::shared_ptr<KalmarAsyncOp> EnqueueMarker() override {
+
         hsa_status_t status = HSA_STATUS_SUCCESS;
 
         // create shared_ptr instance
         std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>();
 
         // enqueue the barrier
-        status = barrier.get()->enqueueAsync(this);
+        status = barrier.get()->enqueueAsync(this, false);
+        STATUS_CHECK(status, __LINE__);
+
+        // associate the barrier with this queue
+        pushAsyncOp(barrier);
+
+        return barrier;
+    }
+
+
+    // enqueue a barrier packet
+    std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithFlush() {
+
+        hsa_status_t status = HSA_STATUS_SUCCESS;
+
+        // create shared_ptr instance
+        std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>();
+
+        // enqueue the barrier
+        status = barrier.get()->enqueueAsync(this, true);
         STATUS_CHECK(status, __LINE__);
 
         // associate the barrier with this queue
@@ -1498,7 +1527,7 @@ public:
             std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>(count, depOps);
 
             // enqueue the barrier
-            status = barrier.get()->enqueueAsync(this);
+            status = barrier.get()->enqueueAsync(this, false);
             STATUS_CHECK(status, __LINE__);
 
             // associate the barrier with this queue
@@ -1927,7 +1956,9 @@ public:
                      "0x1=pre-serialize before each data copy, 0x2=post-serialize after each data copy, 0x3=both");
 
 
-        GET_ENV_INT(HCC_DB, "Enable HCC trace debug.");
+        GET_ENV_INT(HCC_DB, "Enable HCC trace debug");
+
+        GET_ENV_INT(HCC_OPT_FLUSH, "Perform cache flushes only at CPU sync boundaries (rather than after each kernel)");
 
 
         GET_ENV_INT(HCC_UNPINNED_COPY_MODE, "Select algorithm for unpinned copies. 0=ChooseBest(see thresholds), 1=PinInPlace, 2=StagingBuffer, 3=Memcpy");
@@ -1944,7 +1975,7 @@ public:
         };
        
         // Select thresholds to use for unpinned copies
-        GET_ENV_INT (HCC_H2D_STAGING_THRESHOLD,    "Min size (in KB) to use staging buffer algorithm for H2D copy if ChooseBest algorithm selected.");
+        GET_ENV_INT (HCC_H2D_STAGING_THRESHOLD,    "Min size (in KB) to use staging buffer algorithm for H2D copy if ChooseBest algorithm selected");
         GET_ENV_INT (HCC_H2D_PININPLACE_THRESHOLD, "Min size (in KB) to use pin-in-place algorithm for H2D copy if ChooseBest algorithm selected");
         GET_ENV_INT (HCC_D2H_PININPLACE_THRESHOLD, "Min size (in KB) to use pin-in-place for D2H copy if ChooseBest algorithm selected");
        
@@ -3161,7 +3192,7 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue, const void *hostKernarg,
     hsa_queue_store_write_index_relaxed(commandQueue, index + 1);
 
     if (HCC_DB & 0x1) {
-        std::cerr << "tid" << std::this_thread::get_id() <<  " ring door bell to dispatch kernel " << kernel->kernelName << "\n";
+        std::cerr << "tid" << std::this_thread::get_id() <<  " ring door bell to dispatch kernel " << kernel->kernelName <<  "  aql.header=0x" << std::hex << header << std::dec << "\n";
     }
 #if KALMAR_DEBUG
     std::cerr << "ring door bell to dispatch kernel " << kernel->kernelName << "\n";
@@ -3390,7 +3421,10 @@ HSADispatch::setLaunchConfiguration(int dims, size_t *globalDims, size_t *localD
    
    // Set fences here.  Other fields in header will be set just before dispatch: 
 
-    aql.header = 
+    aql.header = HCC_OPT_FLUSH ? 
+        ((HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
+        ((HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE)
+        :
         ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
         ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
 
@@ -3432,8 +3466,7 @@ HSABarrier::waitComplete() {
 }
 
 inline hsa_status_t
-HSABarrier::enqueueAsync(Kalmar::HSAQueue* hsaQueue) {
-    hsa_status_t status = HSA_STATUS_SUCCESS;
+HSABarrier::enqueueAsync(Kalmar::HSAQueue* hsaQueue, bool forceFlush) {
 
     // record HSAQueue association
     this->hsaQueue = hsaQueue;
@@ -3441,22 +3474,15 @@ HSABarrier::enqueueAsync(Kalmar::HSAQueue* hsaQueue) {
     hsa_queue_t* queue = static_cast<hsa_queue_t*>(hsaQueue->getHSAQueue());
 
     // enqueue barrier packet
-    status = enqueueBarrier(queue);
-    STATUS_CHECK_Q(status, queue, __LINE__);
+    unsigned fenceBits = (!forceFlush && HCC_OPT_FLUSH) ? 
+        ((HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
+        ((HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE)
+        :
+        ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
+        ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
 
-    // dynamically allocate a std::shared_future<void> object
-    future = new std::shared_future<void>(std::async(std::launch::deferred, [&] {
-        waitComplete();
-    }).share());
-
-    return status;
-}
-
-inline hsa_status_t
-HSABarrier::enqueueBarrier(hsa_queue_t* queue) {
-    hsa_status_t status = HSA_STATUS_SUCCESS;
     if (isDispatched) {
-        return HSA_STATUS_ERROR_INVALID_ARGUMENT;
+        STATUS_CHECK(HSA_STATUS_ERROR_INVALID_ARGUMENT, __LINE__);
     }
 
     // Create a signal to wait for the barrier to finish.
@@ -3479,13 +3505,12 @@ HSABarrier::enqueueBarrier(hsa_queue_t* queue) {
     // setup header
     uint16_t header = HSA_PACKET_TYPE_BARRIER_AND << HSA_PACKET_HEADER_TYPE;
     header |= 1 << HSA_PACKET_HEADER_BARRIER;
-    header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE;
-    header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE;
+    header |= fenceBits;
     barrier->header = header;
 
-#if KALMAR_DEBUG
-    std::cerr << "barrier dependency count: " << depCount << "\n";
-#endif
+    if (HCC_DB & 0x1) {
+        std::cerr << "barrier dependency count: " << depCount << " aql.header=0x" << std::hex << barrier->header << std::dec << "\n";
+    }
 
     // setup dependent signals
     if ((depCount > 0) && (depCount <= 5)) {
@@ -3506,8 +3531,16 @@ HSABarrier::enqueueBarrier(hsa_queue_t* queue) {
 
     isDispatched = true;
 
-    return status;
+    // dynamically allocate a std::shared_future<void> object
+    future = new std::shared_future<void>(std::async(std::launch::deferred, [&] {
+        waitComplete();
+    }).share());
+
+    return HSA_STATUS_SUCCESS;
 }
+
+
+
 
 inline void
 HSABarrier::dispose() {
