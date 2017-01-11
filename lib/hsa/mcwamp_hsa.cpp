@@ -81,6 +81,9 @@
 // default set as 1024
 #define ASYNCOPS_VECTOR_GC_SIZE (1024)
 
+int HCC_PRINT_ENV=0;
+
+int HCC_UNPINNED_COPY_MODE = UnpinnedCopyEngine::ChooseBest;
 
 // Copy thresholds, in KB.  These are used for "choose-best" copy mode.
 long int HCC_H2D_STAGING_THRESHOLD    = 64; 
@@ -1758,16 +1761,25 @@ public:
         return access;
     }
 
-    static long int getenvlong(const char *var_name, long int defaultValue)
+
+    template <typename T>
+    static void hccgetenv(const char *var_name, T *var, const char *usage)
     {
         char * env = getenv(var_name);
 
-        if (env == NULL) {
-            return defaultValue;
-        } else {
-            return (strtol(env, NULL, 0));
+        if (env != NULL) {
+            long int t = strtol(env, NULL, 0);
+            *var = t;
         }
+
+        if (HCC_PRINT_ENV) {
+            std::cout << std::left << std::setw(30) << var_name << " = " << *var << " : " << usage << std::endl;
+        };
     }
+
+// Helper function to return environment var:
+// Handles signed int or long int types, note call to strol above:
+#define GET_ENV_INT(envVar, usage)  hccgetenv (#envVar, &envVar, usage)
 
 
 
@@ -1904,19 +1916,23 @@ public:
             profile = hcAgentProfileFull;
         }
 
+        GET_ENV_INT(HCC_PRINT_ENV, "Print values of HCC environment variables");
 
        // 0x1=pre-serialize, 0x2=post-serialize , 0x3= pre- and post- serialize.
        // HCC_SERIALIZE_KERNEL serializes PFE, GL, and dispatch_hsa_kernel calls.
        // HCC_SERIALIZE_COPY serializes av::copy_async operations.  (array_view copies are not currently impacted))
-        HCC_SERIALIZE_KERNEL =  getenvlong("HCC_SERIALIZE_KERNEL", HCC_SERIALIZE_KERNEL);
-        HCC_SERIALIZE_COPY   =  getenvlong("HCC_SERIALIZE_COPY",   HCC_SERIALIZE_COPY);
+        GET_ENV_INT(HCC_SERIALIZE_KERNEL, 
+                     "0x1=pre-serialize before each kernel launch, 0x2=post-serialize after each kernel launch, 0x3=both");
+        GET_ENV_INT(HCC_SERIALIZE_COPY,
+                     "0x1=pre-serialize before each data copy, 0x2=post-serialize after each data copy, 0x3=both");
 
-        HCC_DB   =  getenvlong("HCC_DB",   HCC_DB);
 
+        GET_ENV_INT(HCC_DB, "Enable HCC trace debug.");
+
+
+        GET_ENV_INT(HCC_UNPINNED_COPY_MODE, "Select algorithm for unpinned copies. 0=ChooseBest(see thresholds), 1=PinInPlace, 2=StagingBuffer, 3=Memcpy");
         //---
         //Provide an environment variable to select the mode used to perform the copy operaton
-        const char *copy_mode_str = getenv("HCC_UNPINNED_COPY_MODE");
-        this->copy_mode = copy_mode_str ? static_cast<UnpinnedCopyEngine::CopyMode> (atoi(copy_mode_str)) : UnpinnedCopyEngine::ChooseBest;
         switch (this->copy_mode) {
             case UnpinnedCopyEngine::ChooseBest:    //0
             case UnpinnedCopyEngine::UsePinInPlace: //1
@@ -1926,13 +1942,11 @@ public:
             default:
                 this->copy_mode = UnpinnedCopyEngine::ChooseBest;
         };
-        
-        HCC_H2D_STAGING_THRESHOLD = 
-            getenvlong("HCC_H2D_STAGING_THRESHOLD", HCC_H2D_STAGING_THRESHOLD);
-        HCC_H2D_PININPLACE_THRESHOLD =  
-            getenvlong("HCC_H2D_PININPLACE_THRESHOLD", HCC_H2D_PININPLACE_THRESHOLD);
-        HCC_D2H_PININPLACE_THRESHOLD =  
-            getenvlong("HCC_D2H_PININPLACE_THRESHOLD", HCC_D2H_PININPLACE_THRESHOLD);
+       
+        // Select thresholds to use for unpinned copies
+        GET_ENV_INT (HCC_H2D_STAGING_THRESHOLD,    "Min size (in KB) to use staging buffer algorithm for H2D copy if ChooseBest algorithm selected.");
+        GET_ENV_INT (HCC_H2D_PININPLACE_THRESHOLD, "Min size (in KB) to use pin-in-place algorithm for H2D copy if ChooseBest algorithm selected");
+        GET_ENV_INT (HCC_D2H_PININPLACE_THRESHOLD, "Min size (in KB) to use pin-in-place for D2H copy if ChooseBest algorithm selected");
        
 
         HCC_H2D_STAGING_THRESHOLD    *= 1024;
