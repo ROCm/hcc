@@ -51,8 +51,12 @@ macro(add_mcwamp_library_cpu name )
   amp_target(${name})
   # LLVM and Clang shall be compiled beforehand
   add_dependencies(${name} llvm-link opt clang)
-  target_link_libraries(${name} c++)
-  target_link_libraries(${name} c++abi)
+
+  if (USE_LIBCXX)
+    target_link_libraries(${name} c++)
+    target_link_libraries(${name} c++abi)
+  endif (USE_LIBCXX)
+
 endmacro(add_mcwamp_library_cpu name )
 
 ####################
