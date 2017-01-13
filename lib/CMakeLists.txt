@@ -19,6 +19,8 @@ set( CONFIG_PACKAGE_INSTALL_DIR ${LIB_INSTALL_DIR}/cmake/hcc )
 add_mcwamp_library(mcwamp mcwamp.cpp)
 add_mcwamp_library(mcwamp_atomic mcwamp_atomic.cpp)
 
+target_link_libraries(mcwamp dl)
+
 ####################
 # C++AMP tools
 ####################

@@ -23,7 +23,6 @@ macro(amp_target name )
   target_include_directories(${name} SYSTEM PRIVATE ${GTEST_INC_DIR} ${LIBCXX_INC_DIR})
 	target_include_directories(${name} PRIVATE ${MCWAMP_INC_DIR})
   target_include_directories(${name} SYSTEM INTERFACE $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include>)
-  target_include_directories(${name} SYSTEM INTERFACE /usr/include/libcxxabi)
 	target_compile_options(${name} PUBLIC -stdlib=libc++ -std=c++amp -fPIC)
 endmacro(amp_target name )
 
