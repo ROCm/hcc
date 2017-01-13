@@ -78,7 +78,7 @@ int main() {
 
   pass &= run_test<unsigned int>(1024*1024);
   pass &= run_test<int>(1024*1024);
-  //pass &= run_test<float>(1024*1024);
+  pass &= run_test<float>(1024*1024);
 
 #ifdef DEBUG
   std::cout << (const char*)(pass?"passed!":"failed!") << std::endl;
