@@ -342,6 +342,7 @@ add_subdirectory(tests)
 add_subdirectory(include)
 add_subdirectory(amp-conformance)
 add_subdirectory(stl-test)
+add_subdirectory(cmake-tests)
 
 # create a "hcc" symlink in the include directory
 # that points to itself so we could support
