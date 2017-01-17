@@ -8,17 +8,18 @@ endif (HCC_RUNTIME_DEBUG)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${LIBCXX_HEADER} )
 
+include(GNUInstallDirs)
+set( LIB_INSTALL_DIR ${CMAKE_INSTALL_LIBDIR} )
+set( INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_INCLUDEDIR} )
+set( CONFIG_PACKAGE_INSTALL_DIR ${LIB_INSTALL_DIR}/cmake/hcc )
+
 ####################
 # C++AMP runtime (mcwamp)
 ####################
 add_mcwamp_library(mcwamp mcwamp.cpp)
 add_mcwamp_library(mcwamp_atomic mcwamp_atomic.cpp)
 
-install(TARGETS mcwamp mcwamp_atomic
-    RUNTIME DESTINATION bin
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
-    )
+target_link_libraries(mcwamp dl)
 
 ####################
 # C++AMP tools
@@ -57,3 +58,41 @@ endif (USE_CODEXL_ACTIVITY_LOGGER EQUAL 1)
 ####################
 add_subdirectory(hsa)
 add_subdirectory(cpu)
+
+####################
+# install targets
+####################
+install(TARGETS mcwamp mcwamp_atomic
+    EXPORT hcc-targets
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    )
+
+install( EXPORT hcc-targets
+  DESTINATION
+    ${CONFIG_PACKAGE_INSTALL_DIR}
+  NAMESPACE hcc::
+)
+
+include( CMakePackageConfigHelpers )
+
+configure_package_config_file(
+  hcc-config.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/hcc-config.cmake
+  INSTALL_DESTINATION ${CONFIG_PACKAGE_INSTALL_DIR}
+  PATH_VARS LIB_INSTALL_DIR INCLUDE_INSTALL_DIR
+)
+
+write_basic_package_version_file(
+  ${CMAKE_CURRENT_BINARY_DIR}/hcc-config-version.cmake
+  VERSION "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}.${KALMAR_VERSION_PATCH}"
+  COMPATIBILITY SameMajorVersion
+)
+
+
+install( FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/hcc-config.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/hcc-config-version.cmake
+  DESTINATION
+    ${CONFIG_PACKAGE_INSTALL_DIR} )
