@@ -193,7 +193,7 @@ public:
      * the parent accelerator.
      */
     // FIXME: dummy implementation now
-    bool get_is_debug() const { return 0; } 
+    bool get_is_debug() const { return 0; }
 
     /**
      * Performs a blocking wait for completion of all commands submitted to the
@@ -213,10 +213,10 @@ public:
      * An accelerator_view internally maintains a buffer of commands such as
      * data transfers between the host memory and device buffers, and kernel
      * invocations (parallel_for_each calls). This member function sends the
-     * commands to the device for processing. Normally, these commands 
+     * commands to the device for processing. Normally, these commands
      * to the GPU automatically whenever the runtime determines that they need
-     * to be, such as when the command buffer is full or when waiting for 
-     * transfer of data from the device buffers to host memory. The flush 
+     * to be, such as when the command buffer is full or when waiting for
+     * transfer of data from the device buffers to host memory. The flush
      * member function will send the commands manually to the device.
      *
      * Calling this member function incurs an overhead and must be used with
@@ -276,8 +276,8 @@ public:
     completion_future create_blocking_marker(std::initializer_list<completion_future> dependent_future_list) const;
 
     /**
-     * Copies size_bytes bytes from src to dst.  
-     * Src and dst must not overlap.  
+     * Copies size_bytes bytes from src to dst.
+     * Src and dst must not overlap.
      * Note the src is the first parameter and dst is second, following C++ convention.
      * The copy command will execute after any commands already inserted into the accelerator_view finish.
      * This is a synchronous copy command, and the copy operation complete before this call returns.
@@ -288,15 +288,15 @@ public:
 
 
     /**
-     * Copies size_bytes bytes from src to dst.  
-     * Src and dst must not overlap.  
+     * Copies size_bytes bytes from src to dst.
+     * Src and dst must not overlap.
      * Note the src is the first parameter and dst is second, following C++ convention.
      * The copy command will execute after any commands already inserted into the accelerator_view finish.
      * This is a synchronous copy command, and the copy operation complete before this call returns.
      * The copy_ext flavor allows caller to provide additional information about each pointer, which can improve performance by eliminating replicated lookups.
      * This interface is intended for language runtimes such as HIP.
-    
-     @p copyDir : Specify direction of copy.  Must be hcMemcpyHostToHost, hcMemcpyHostToDevice, hcMemcpyDeviceToHost, or hcMemcpyDeviceToDevice. 
+
+     @p copyDir : Specify direction of copy.  Must be hcMemcpyHostToHost, hcMemcpyHostToDevice, hcMemcpyDeviceToHost, or hcMemcpyDeviceToDevice.
      @p forceUnpinnedCopy : Force copy to be performed with host involvement rather than with accelerator copy engines.
      */
     void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, const hc::accelerator *copyAcc, bool forceUnpinnedCopy);
@@ -306,9 +306,9 @@ public:
     void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceUnpinnedCopy) ;
 
     /**
-     * Copies size_bytes bytes from src to dst.  
-     * Src and dst must not overlap.  
-     * Note the src is the first parameter and dst is second, following C++ convention.  
+     * Copies size_bytes bytes from src to dst.
+     * Src and dst must not overlap.
+     * Note the src is the first parameter and dst is second, following C++ convention.
      * This is an asynchronous copy command, and this call may return before the copy operation completes.
      *
      * The copy command will be implicitly ordered with respect to commands previously equeued to this accelerator_view:
@@ -320,9 +320,9 @@ public:
 
 
     /**
-     * Copies size_bytes bytes from src to dst.  
-     * Src and dst must not overlap.  
-     * Note the src is the first parameter and dst is second, following C++ convention.  
+     * Copies size_bytes bytes from src to dst.
+     * Src and dst must not overlap.
+     * Note the src is the first parameter and dst is second, following C++ convention.
      * This is an asynchronous copy command, and this call may return before the copy operation completes.
      *
      * The copy command will be implicitly ordered with respect to commands previously enqueued to this accelerator_view:
@@ -331,18 +331,18 @@ public:
      *   The copyAcc determines where the copy is executed and does not affect the ordering.
      *
      * The copy_async_ext flavor allows caller to provide additional information about each pointer, which can improve performance by eliminating replicated lookups,
-     * and also allow control over which device performs the copy.  
+     * and also allow control over which device performs the copy.
      * This interface is intended for language runtimes such as HIP.
      *
-     *  @p copyDir : Specify direction of copy.  Must be hcMemcpyHostToHost, hcMemcpyHostToDevice, hcMemcpyDeviceToHost, or hcMemcpyDeviceToDevice. 
+     *  @p copyDir : Specify direction of copy.  Must be hcMemcpyHostToHost, hcMemcpyHostToDevice, hcMemcpyDeviceToHost, or hcMemcpyDeviceToDevice.
      *  @p copyAcc : Specify which accelerator performs the copy operation.  The specified accelerator must have access to the source and dest pointers - either
      *               because the memory is allocated on those devices or because the accelerator has peer access to the memory.
      *               If copyAcc is nullptr, then the copy will be performed by the host.  In this case, the host accelerator must have access to both pointers.
-     *               The copy operation will be performed by the specified engine but is not synchronized with respect to any operations on that device.  
+     *               The copy operation will be performed by the specified engine but is not synchronized with respect to any operations on that device.
      *
      */
-    completion_future copy_async_ext(const void *src, void *dst, size_t size_bytes, 
-                                     hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, 
+    completion_future copy_async_ext(const void *src, void *dst, size_t size_bytes,
+                                     hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo,
                                      const hc::accelerator *copyAcc);
 
     /**
@@ -408,7 +408,7 @@ public:
 
     /**
      * Returns an opaque handle which points to the AM region on the HSA agent.
-     * This region can be used to allocate accelerator memory which is accessible from the 
+     * This region can be used to allocate accelerator memory which is accessible from the
      * specified accelerator.
      *
      * @return An opaque handle of the region, if the accelerator is based
@@ -421,7 +421,7 @@ public:
 
     /**
      * Returns an opaque handle which points to the AM system region on the HSA agent.
-     * This region can be used to allocate system memory which is accessible from the 
+     * This region can be used to allocate system memory which is accessible from the
      * specified accelerator.
      *
      * @return An opaque handle of the region, if the accelerator is based
@@ -433,7 +433,7 @@ public:
 
     /**
      * Returns an opaque handle which points to the AM system region on the HSA agent.
-     * This region can be used to allocate finegrained system memory which is accessible from the 
+     * This region can be used to allocate finegrained system memory which is accessible from the
      * specified accelerator.
      *
      * @return An opaque handle of the region, if the accelerator is based
@@ -464,34 +464,34 @@ public:
     /**
      * Dispatch a kernel into the accelerator_view.
      *
-     * This function is intended to provide a gateway to dispatch code objects, with 
+     * This function is intended to provide a gateway to dispatch code objects, with
      * some assistance from HCC.  Kernels are specified in the standard code object
-     * format, and can be created from a varety of compiler tools including the 
+     * format, and can be created from a varety of compiler tools including the
      * assembler, offline cl compilers, or other tools.    The caller also
-     * specifies the execution configuration and kernel arguments.    HCC 
+     * specifies the execution configuration and kernel arguments.    HCC
      * will copy the kernel arguments into an appropriate segment and insert
-     * the packet into the queue.   HCC will also automatically handle signal 
+     * the packet into the queue.   HCC will also automatically handle signal
      * and kernarg allocation and deallocation for the command.
      *
-     *  The kernel is dispatched asynchronously, and thus this API may return before the 
+     *  The kernel is dispatched asynchronously, and thus this API may return before the
      *  kernel finishes executing.
-     
+
      *  Kernels dispatched with this API may be interleaved with other copy and kernel
-     *  commands generated from copy or parallel_for_each commands.  
-     *  The kernel honors the execute_order associated with the accelerator_view.  
+     *  commands generated from copy or parallel_for_each commands.
+     *  The kernel honors the execute_order associated with the accelerator_view.
      *  Specifically, if execute_order is execute_in_order, then the kernel
      *  will wait for older data and kernel commands in the same queue before
-     *  beginning execution.  If execute_order is execute_any_order, then the 
-     *  kernel may begin executing without regards to the state of older kernels.  
-     *  This call honors the packer barrier bit (1 << HSA_PACKET_HEADER_BARRIER) 
+     *  beginning execution.  If execute_order is execute_any_order, then the
+     *  kernel may begin executing without regards to the state of older kernels.
+     *  This call honors the packer barrier bit (1 << HSA_PACKET_HEADER_BARRIER)
      *  if set in the aql.header field.  If set, this provides the same synchronization
      *  behaviora as execute_in_order for the command generated by this API.
      *
-     * @p aql is an HSA-format "AQL" packet. The following fields must 
+     * @p aql is an HSA-format "AQL" packet. The following fields must
      * be set by the caller:
-     *  aql.kernel_object 
+     *  aql.kernel_object
      *  aql.group_segment_size : includes static + dynamic group size
-     *  aql.private_segment_size 
+     *  aql.private_segment_size
      *  aql.grid_size_x, aql.grid_size_y, aql.grid_size_z
      *  aql.group_size_x, aql.group_size_y, aql.group_size_z
      *  aql.setup :  The 2 bits at HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS.
@@ -501,14 +501,14 @@ public:
                  (1 << HSA_PACKET_HEADER_BARRIER);
 
      * The following fields are ignored.  The API will will set up these fields before dispatching the AQL packet:
-     *  aql.completion_signal 
-     *  aql.kernarg 
-     * 
+     *  aql.completion_signal
+     *  aql.kernarg
+     *
      * @p args : Pointer to kernel arguments with the size and aligment expected by the kernel.  The args are copied and then passed directly to the kernel.   After this function returns, the args memory may be deallocated.
      * @p argSz : Size of the arguments.
      * @p cf : Written with a completion_future that can be used to track the status
-     *          of the dispatch.  May be NULL, in which case no completion_future is 
-     *          returned and the caller must use other synchronization techniqueues 
+     *          of the dispatch.  May be NULL, in which case no completion_future is
+     *          returned and the caller must use other synchronization techniqueues
      *          such as calling accelerator_view::wait() or waiting on a younger command
      *          in the same queue.
      *
@@ -518,17 +518,17 @@ public:
      *    - Dispatch the command into the queue and flush it to the GPU.
      *    - Kernargs and signals are automatically reclaimed by the HCC runtime.
      */
-    void dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql, 
+    void dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
                            const void * args, size_t argsize,
-                           hc::completion_future *cf=NULL) 
+                           hc::completion_future *cf=NULL)
     {
         pQueue->dispatch_hsa_kernel(aql, args, argsize, cf);
     }
 
     /**
-     * Set a CU affinity to specific command queues. 
+     * Set a CU affinity to specific command queues.
      * The setting is permanent until the queue is destroyed or CU affinity is
-     * set again. This setting is "atomic", it won't affect the dispatch in flight. 
+     * set again. This setting is "atomic", it won't affect the dispatch in flight.
      *
      * @param cu_mask a bool vector to indicate what CUs you want to use. True
      *        represents using the cu. The first 32 elements represents the first
@@ -554,7 +554,7 @@ private:
     friend class accelerator;
     template <typename Q, int K> friend class array;
     template <typename Q, int K> friend class array_view;
-  
+
     template<typename Kernel> friend
         void* Kalmar::mcw_cxxamp_get_kernel(const std::shared_ptr<Kalmar::KalmarQueue>&, const Kernel&);
     template<typename Kernel, int dim_ext> friend
@@ -565,7 +565,7 @@ private:
         void Kalmar::mcw_cxxamp_launch_kernel(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&);
     template<typename Kernel, int dim_ext> friend
         std::shared_ptr<Kalmar::KalmarAsyncOp> Kalmar::mcw_cxxamp_launch_kernel_async(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&);
-  
+
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
     template <typename Kernel, int N> friend
         completion_future launch_cpu_task_async(const std::shared_ptr<Kalmar::KalmarQueue>&, Kernel const&, extent<N> const&);
@@ -575,27 +575,27 @@ private:
     // generic version
     template <int N, typename Kernel> friend
         completion_future parallel_for_each(const accelerator_view&, const extent<N>&, const Kernel&);
-  
+
     // 1D specialization
     template <typename Kernel> friend
         completion_future parallel_for_each(const accelerator_view&, const extent<1>&, const Kernel&);
-  
+
     // 2D specialization
     template <typename Kernel> friend
         completion_future parallel_for_each(const accelerator_view&, const extent<2>&, const Kernel&);
-  
+
     // 3D specialization
     template <typename Kernel> friend
         completion_future parallel_for_each(const accelerator_view&, const extent<3>&, const Kernel&);
-  
+
     // tiled parallel_for_each, 3D version
     template <typename Kernel> friend
         completion_future parallel_for_each(const accelerator_view&, const tiled_extent<3>&, const Kernel&);
-  
+
     // tiled parallel_for_each, 2D version
     template <typename Kernel> friend
         completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, const Kernel&);
-  
+
     // tiled parallel_for_each, 1D version
     template <typename Kernel> friend
         completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
@@ -629,7 +629,7 @@ class accelerator
 public:
     /**
      * Constructs a new accelerator object that represents the default
-     * accelerator. This is equivalent to calling the constructor 
+     * accelerator. This is equivalent to calling the constructor
      * @code{.cpp}
      * accelerator(accelerator::default_accelerator)
      * @endcode
@@ -752,7 +752,7 @@ public:
         pQueue->set_mode(mode);
         return pQueue;
     }
-  
+
     /**
      * Compares "this" accelerator with the passed accelerator object to
      * determine if they represent the same underlying device.
@@ -781,9 +781,9 @@ public:
      * this this accelerator.
      *
      * This method only succeeds if the default_cpu_access_type for the
-     * accelerator has not already been overriden by a previous call to this 
-     * method and the runtime selected default_cpu_access_type for this 
-     * accelerator has not yet been used for allocating an array or for an 
+     * accelerator has not already been overriden by a previous call to this
+     * method and the runtime selected default_cpu_access_type for this
+     * accelerator has not yet been used for allocating an array or for an
      * implicit array_view memory allocation on this accelerator.
      *
      * @param[in] default_cpu_access_type The default cpu access_type to be used
@@ -871,8 +871,8 @@ public:
      * Get the default cpu access_type for buffers created on this accelerator
      */
     access_type get_default_cpu_access_type() const { return pDev->get_access(); }
-  
-  
+
+
     /**
      * Returns the maximum size of tile static area available on this
      * accelerator.
@@ -880,7 +880,7 @@ public:
     size_t get_max_tile_static_size() {
       return get_default_view().get_max_tile_static_size();
     }
-  
+
     /**
      * Returns a vector of all accelerator_view associated with this accelerator.
      */
@@ -895,7 +895,7 @@ public:
 
     /**
      * Returns an opaque handle which points to the AM region on the HSA agent.
-     * This region can be used to allocate accelerator memory which is accessible from the 
+     * This region can be used to allocate accelerator memory which is accessible from the
      * specified accelerator.
      *
      * @return An opaque handle of the region, if the accelerator is based
@@ -907,7 +907,7 @@ public:
 
     /**
      * Returns an opaque handle which points to the AM system region on the HSA agent.
-     * This region can be used to allocate system memory which is accessible from the 
+     * This region can be used to allocate system memory which is accessible from the
      * specified accelerator.
      *
      * @return An opaque handle of the region, if the accelerator is based
@@ -919,7 +919,7 @@ public:
 
     /**
      * Returns an opaque handle which points to the AM system region on the HSA agent.
-     * This region can be used to allocate finegrained system memory which is accessible from the 
+     * This region can be used to allocate finegrained system memory which is accessible from the
      * specified accelerator.
      *
      * @return An opaque handle of the region, if the accelerator is based
@@ -988,9 +988,9 @@ public:
     bool get_is_peer(const accelerator& other) const {
         return pDev->is_peer(other.pDev);
     }
-      
+
     /**
-     * Return a std::vector of this accelerator's peers. peer is other accelerator which can access this 
+     * Return a std::vector of this accelerator's peers. peer is other accelerator which can access this
      * accelerator's device memory using map_to_peer family of APIs.
      *
      */
@@ -1026,7 +1026,7 @@ public:
         return pDev->has_cpu_accessible_am();
     };
 
-    Kalmar::KalmarDevice *get_dev_ptr() const { return pDev; }; 
+    Kalmar::KalmarDevice *get_dev_ptr() const { return pDev; };
 
 private:
     accelerator(Kalmar::KalmarDevice* pDev) : pDev(pDev) {}
@@ -1155,7 +1155,7 @@ public:
         if (this->valid()) {
             if (__asyncOp != nullptr) {
                 __asyncOp->setWaitMode(mode);
-            }   
+            }
             //TODO-ASYNC - need to reclaim older AsyncOps here.
             __amp_future.wait();
         }
@@ -1213,7 +1213,7 @@ public:
      * purpose.
      * Applications should retain the parent completion_future to ensure
      * the native handle is not deallocated by the HCC runtime.  The completion_future
-     * pointer to the native handle is reference counted, so a copy of 
+     * pointer to the native handle is reference counted, so a copy of
      * the completion_future is sufficient to retain the native_handle.
      */
     void* get_native_handle() const {
@@ -1285,7 +1285,7 @@ public:
       }
       delete __thread_then;
       __thread_then = nullptr;
-      
+
       if (__asyncOp != nullptr) {
         __asyncOp = nullptr;
       }
@@ -1308,7 +1308,7 @@ private:
         : __amp_future(__future), __thread_then(nullptr), __asyncOp(nullptr) {}
 
     friend class Kalmar::HSAQueue;
-    
+
     // non-tiled parallel_for_each
     // generic version
     template <int N, typename Kernel> friend
@@ -1437,8 +1437,8 @@ accelerator_view::copy_async(const void *src, void *dst, size_t size_bytes) {
 
 inline completion_future
 accelerator_view::copy_async_ext(const void *src, void *dst, size_t size_bytes,
-                             hcCommandKind copyDir, 
-                             const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, 
+                             hcCommandKind copyDir,
+                             const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo,
                              const hc::accelerator *copyAcc)
 {
     return completion_future(pQueue->EnqueueAsyncCopyExt(src, dst, size_bytes, copyDir, srcInfo, dstInfo, copyAcc ? copyAcc->pDev : nullptr));
@@ -1878,12 +1878,12 @@ template <int N>
 class tiled_extent : public extent<N> {
 public:
     static const int rank = N;
-  
+
     /**
      * Tile size for each dimension.
      */
     int tile_dim[N];
-  
+
     /**
      * Default constructor. The origin and extent is default-constructed and
      * thus zero.
@@ -1966,7 +1966,7 @@ public:
      * @param[in] ext The extent of this tiled_extent
      * @param[in] t0 Size of tile.
      */
-    tiled_extent(const extent<1>& ext, int t0) __CPU__ __HC__ : extent(ext), dynamic_group_segment_size(0), tile_dim{t0} {} 
+    tiled_extent(const extent<1>& ext, int t0) __CPU__ __HC__ : extent(ext), dynamic_group_segment_size(0), tile_dim{t0} {}
 
     /**
      * Constructs a tiled_extent<N> with the extent "ext".
@@ -2253,7 +2253,7 @@ tiled_extent<3> extent<N>::tile_with_dynamic(int t0, int t1, int t2, int dynamic
  * @return The size of a wavefront.
  */
 #define __HSA_WAVEFRONT_SIZE__ (64)
-extern "C" unsigned int __wavesize() __HC__; 
+extern "C" unsigned int __wavesize() __HC__;
 
 
 #if __hcc_backend__==HCC_BACKEND_AMDGPU
@@ -2795,15 +2795,15 @@ inline float __amdgcn_ds_swizzle(float src, int pattern) [[hc]] {
 /**
  * move DPP intrinsic
  */
-extern "C" int __amdgcn_move_dpp(int src, int dpp_ctrl, int row_mask, int bank_mask, bool bound_ctrl) [[hc]]; 
+extern "C" int __amdgcn_move_dpp(int src, int dpp_ctrl, int row_mask, int bank_mask, bool bound_ctrl) [[hc]];
 
 /**
- * Shift the value of src to the right by one thread within a wavefront.  
- * 
+ * Shift the value of src to the right by one thread within a wavefront.
+ *
  * @param[in] src variable being shifted
  * @param[in] bound_ctrl When set to true, a zero will be shifted into thread 0; otherwise, the original value will be returned for thread 0
- * @return value of src being shifted into from the neighboring lane 
- * 
+ * @return value of src being shifted into from the neighboring lane
+ *
  */
 extern "C" int __amdgcn_wave_sr1(int src, bool bound_ctrl) [[hc]];
 inline unsigned int __amdgcn_wave_sr1(unsigned int src, bool bound_ctrl) [[hc]] {
@@ -2818,14 +2818,14 @@ inline float __amdgcn_wave_sr1(float src, bool bound_ctrl) [[hc]] {
 }
 
 /**
- * Shift the value of src to the left by one thread within a wavefront.  
- * 
+ * Shift the value of src to the left by one thread within a wavefront.
+ *
  * @param[in] src variable being shifted
  * @param[in] bound_ctrl When set to true, a zero will be shifted into thread 63; otherwise, the original value will be returned for thread 63
- * @return value of src being shifted into from the neighboring lane 
- * 
+ * @return value of src being shifted into from the neighboring lane
+ *
  */
-extern "C" int __amdgcn_wave_sl1(int src, bool bound_ctrl) [[hc]];  
+extern "C" int __amdgcn_wave_sl1(int src, bool bound_ctrl) [[hc]];
 inline unsigned int __amdgcn_wave_sl1(unsigned int src, bool bound_ctrl) [[hc]] {
   __u tmp; tmp.u = src;
   tmp.i = __amdgcn_wave_sl1(tmp.i, bound_ctrl);
@@ -2839,11 +2839,11 @@ inline float __amdgcn_wave_sl1(float src, bool bound_ctrl) [[hc]] {
 
 
 /**
- * Rotate the value of src to the right by one thread within a wavefront.  
- * 
+ * Rotate the value of src to the right by one thread within a wavefront.
+ *
  * @param[in] src variable being rotated
- * @return value of src being rotated into from the neighboring lane 
- * 
+ * @return value of src being rotated into from the neighboring lane
+ *
  */
 extern "C" int __amdgcn_wave_rr1(int src) [[hc]];
 inline unsigned int __amdgcn_wave_rr1(unsigned int src) [[hc]] {
@@ -2858,11 +2858,11 @@ inline float __amdgcn_wave_rr1(float src) [[hc]] {
 }
 
 /**
- * Rotate the value of src to the left by one thread within a wavefront.  
- * 
+ * Rotate the value of src to the left by one thread within a wavefront.
+ *
  * @param[in] src variable being rotated
- * @return value of src being rotated into from the neighboring lane 
- * 
+ * @return value of src being rotated into from the neighboring lane
+ *
  */
 extern "C" int __amdgcn_wave_rl1(int src) [[hc]];
 inline unsigned int __amdgcn_wave_rl1(unsigned int src) [[hc]] {
@@ -2878,7 +2878,7 @@ inline float __amdgcn_wave_rl1(float src) [[hc]] {
 
 #endif
 
-/* definition to expand macro then apply to pragma message 
+/* definition to expand macro then apply to pragma message
 #define VALUE_TO_STRING(x) #x
 #define VALUE(x) VALUE_TO_STRING(x)
 #define VAR_NAME_VALUE(var) #var "="  VALUE(var)
@@ -2961,7 +2961,7 @@ inline int __shfl_up(int var, const unsigned int delta, const int width=__HSA_WA
 #elif __hcc_backend__==HCC_BACKEND_HSAIL
 
 inline int __shfl_up(int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-    if (delta == 1 
+    if (delta == 1
         && width == __HSA_WAVEFRONT_SIZE__) {
         return __wavefront_shift_right(var);
     }
@@ -4173,7 +4173,7 @@ public:
      * There is no default constructor for array<T,N>.
      */
     array() = delete;
- 
+
     /**
      * Copy constructor. Constructs a new array<T,N> from the supplied argument
      * other. The new array is located on the same accelerator_view as the
@@ -4253,7 +4253,7 @@ public:
      *
      * @param[in] e0,e1,e2 The component values that will form the extent of
      *                     this array.
-     * @param[in] srcBegin A beginning iterator into the source container. 
+     * @param[in] srcBegin A beginning iterator into the source container.
      * @param[in] srcEnd An ending iterator into the source container.
      */
     template <typename InputIter>
@@ -4355,7 +4355,7 @@ public:
     /** @{ */
     /**
      * Equivalent to construction using
-     * "array(extent<N>(e0 [, e1 [, e2 ]]), av, cpu_access_type)".   
+     * "array(extent<N>(e0 [, e1 [, e2 ]]), av, cpu_access_type)".
      *
      * @param[in] e0,e1,e2 The component values that will form the extent of
      *                     this array.
@@ -4423,7 +4423,7 @@ public:
      *
      * Users can optionally specify the type of CPU access desired for "this"
      * array thus requesting creation of an array that is accessible both on
-     * the specified accelerator_view "av" as well as the CPU (with the 
+     * the specified accelerator_view "av" as well as the CPU (with the
      * specified CPU access_type). If a value other than access_type_auto or
      * access_type_none is specified for the cpu_access_type parameter and the
      * accelerator corresponding to the accelerator_view “av” does not support
@@ -4498,7 +4498,7 @@ public:
 
     /** @{ */
     /**
-     * Equivalent to construction using 
+     * Equivalent to construction using
      * "array(extent<N>(e0 [, e1 [, e2 ]]), av, associated_av)".
      *
      * @param[in] e0,e1,e2 The component values that will form the extent of
@@ -4621,7 +4621,7 @@ public:
      * This property returns the CPU "access_type" allowed for this array.
      */
     access_type get_cpu_access_type() const { return m_device.get_access(); }
-  
+
     /**
      * Assigns the contents of the array "other" to this array, using a deep
      * copy.
@@ -4667,7 +4667,7 @@ public:
         *this = std::move(arr);
         return *this;
     }
-  
+
     /**
      * Copies the contents of this array to the array given by "dest", as
      * if by calling "copy(*this, dest)".
@@ -5571,7 +5571,7 @@ public:
 
     /** @{ */
     /**
-     * Equivalent to 
+     * Equivalent to
      * "section(index<N>(i0 [, i1 [, i2 ]]), extent<N>(e0 [, e1 [, e2 ]]))".
      *
      * @param[in] i0,i1,i2 The component values that will form the origin of
@@ -5657,7 +5657,7 @@ private:
     template <typename K, int Q> friend struct array_projection_helper;
     template <typename Q, int K> friend class array;
     template <typename Q, int K> friend class array_view;
-  
+
     template<typename Q, int K> friend
         bool is_flat(const array_view<Q, K>&) noexcept;
     template <typename Q, int K> friend
@@ -5670,7 +5670,7 @@ private:
         void copy(const array_view<Q, K>&, OutputIter);
     template <typename Q, int K> friend
         void copy(const array_view<const Q, K>& src, const array_view<Q, K>& dest);
-  
+
     // used by view_as and reinterpret_as
     array_view(const acc_buffer_t& cache, const hc::extent<N>& ext,
                int offset) __CPU__ __HC__
@@ -5682,7 +5682,7 @@ private:
                const index<N>& idx_b, int off) __CPU__ __HC__
         : cache(cache), extent(ext_now), extent_base(ext_b), index_base(idx_b),
         offset(off) {}
-  
+
     acc_buffer_t cache;
     hc::extent<N> extent;
     hc::extent<N> extent_base;
@@ -5867,7 +5867,7 @@ public:
         offset = other.offset;
         return *this;
     }
-  
+
     array_view& operator=(const array_view& other) __CPU__ __HC__ {
         if (this != &other) {
             cache = other.cache;
@@ -6067,7 +6067,7 @@ public:
         static_assert(N == 1, "const T& array_view::operator()(int) is only permissible on array_view<T, 1>");
         return (*this)[index<1>(i0)];
     }
-  
+
     const T& operator()(int i0, int i1) const __CPU__ __HC__ {
         static_assert(N == 2, "const T& array_view::operator()(int,int) is only permissible on array_view<T, 2>");
         return (*this)[index<2>(i0, i1)];
@@ -6152,7 +6152,7 @@ public:
 
     /** @{ */
     /**
-     * Equivalent to 
+     * Equivalent to
      * "section(index<N>(i0 [, i1 [, i2 ]]), extent<N>(e0 [, e1 [, e2 ]]))".
      *
      * @param[in] i0,i1,i2 The component values that will form the origin of
@@ -6236,7 +6236,7 @@ private:
     template <typename K, int Q> friend struct array_projection_helper;
     template <typename Q, int K> friend class array;
     template <typename Q, int K> friend class array_view;
-  
+
     template<typename Q, int K> friend
         bool is_flat(const array_view<Q, K>&) noexcept;
     template <typename Q, int K> friend
@@ -6249,19 +6249,19 @@ private:
         void copy(const array_view<Q, K>&, OutputIter);
     template <typename Q, int K> friend
         void copy(const array_view<const Q, K>& src, const array_view<Q, K>& dest);
-  
+
     // used by view_as and reinterpret_as
     array_view(const acc_buffer_t& cache, const hc::extent<N>& ext,
                int offset) __CPU__ __HC__
         : cache(cache), extent(ext), extent_base(ext), offset(offset) {}
-  
+
     // used by section and projection
     array_view(const acc_buffer_t& cache, const hc::extent<N>& ext_now,
                const extent<N>& ext_b,
                const index<N>& idx_b, int off) __CPU__ __HC__
         : cache(cache), extent(ext_now), extent_base(ext_b), index_base(idx_b),
         offset(off) {}
-  
+
     acc_buffer_t cache;
     hc::extent<N> extent;
     hc::extent<N> extent_base;
@@ -7415,7 +7415,7 @@ extern unsigned int atomic_fetch_dec(unsigned int * _Dest) __CPU__ __HC__;
  * - stores the result back to the address
  *
  * @return The original value retrieved from address pointer.
- * 
+ *
  * Please refer to <a href="http://www.hsafoundation.com/html/HSA_Library.htm#PRM/Topics/06_Memory/atomic.htm">atomic_wrapinc in HSA PRM 6.6</a> for more detailed specification of the function.
  */
 extern "C" unsigned int __atomic_wrapinc(unsigned int* address, unsigned int val) __HC__;
@@ -7427,7 +7427,7 @@ extern "C" unsigned int __atomic_wrapinc(unsigned int* address, unsigned int val
  * - stores the result back to the address
  *
  * @return The original value retrieved from address pointer.
- * 
+ *
  * Please refer to <a href="http://www.hsafoundation.com/html/HSA_Library.htm#PRM/Topics/06_Memory/atomic.htm">atomic_wrapdec in HSA PRM 6.6</a> for more detailed specification of the function.
  */
 extern "C" unsigned int __atomic_wrapdec(unsigned int* address, unsigned int val) __HC__;
@@ -7579,7 +7579,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
   auto foo = &Kernel::__cxxamp_trampoline;
-  auto bar = &Kernel::operator();
+  decltype(std::declval<Kernel>()(std::declval<index<1>&>()))* bar = nullptr;
 #endif
 }
 #pragma clang diagnostic pop
@@ -7617,7 +7617,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
   auto foo = &Kernel::__cxxamp_trampoline;
-  auto bar = &Kernel::operator();
+  decltype(std::declval<Kernel>()(std::declval<index<2>&>()))* bar = nullptr;
 #endif
 }
 #pragma clang diagnostic pop
@@ -7658,7 +7658,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
   auto foo = &Kernel::__cxxamp_trampoline;
-  auto bar = &Kernel::operator();
+  decltype(std::declval<Kernel>()(std::declval<index<3>&>()))* bar = nullptr;
 #endif
 }
 #pragma clang diagnostic pop
@@ -7696,7 +7696,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
   auto foo = &Kernel::__cxxamp_trampoline;
-  auto bar = &Kernel::operator();
+  decltype(std::declval<Kernel>()(std::declval<tiled_index<1>&>()))* bar = nullptr;
 #endif
 }
 #pragma clang diagnostic pop
@@ -7738,7 +7738,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
   auto foo = &Kernel::__cxxamp_trampoline;
-  auto bar = &Kernel::operator();
+  decltype(std::declval<Kernel>()(std::declval<tiled_index<2>&>()))* bar = nullptr;
 #endif
 }
 #pragma clang diagnostic pop
@@ -7784,7 +7784,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
   auto foo = &Kernel::__cxxamp_trampoline;
-  auto bar = &Kernel::operator();
+  decltype(std::declval<Kernel>()(std::declval<tiled_index<3>&>()))* bar = nullptr;
 #endif
 }
 #pragma clang diagnostic pop
