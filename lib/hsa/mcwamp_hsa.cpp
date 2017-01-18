@@ -768,6 +768,7 @@ pool_iterator::pool_iterator()
 namespace Kalmar {
 
 
+
 // Small wrapper around the hsa hardware queue (ie returned from hsa_queue_create(...).
 // This allows us to see which accelerator_view owns the hsa queue, and
 // also tracks the state of the cu mask, profiling, priority of the HW queue.
@@ -785,14 +786,18 @@ struct RocrQueue {
         STATUS_CHECK(status, __LINE__);
     };
 
+    void assignHccQueue(HSAQueue *hccQueue);
+
+    hsa_status_t setCuMask(HSAQueue *hccQueue);
+
 
     hsa_queue_t *_hwQueue; // Pointer to the HSA queue this entry tracks.
 
     HSAQueue *_hccQueue;  // Pointe to the HCC "HSA" queue which is assigned to use the rocrQueue
 
-    // CU mask here
+    std::vector<uint32_t> cu_arrays;
     
-    // Track profiling enabled state here.
+    // Track profiling enabled state here. - no need now since all hw queues have profiling enabled.
     
     // Priority could be tracked here:
 };
@@ -803,6 +808,8 @@ class HSAQueue final : public KalmarQueue
 {
 private:
     friend class Kalmar::HSADevice;
+    friend class RocrQueue;
+
     // ROCR queue associated with this HSAQueue instance. 
     RocrQueue    *rocrQueue;
 
@@ -827,6 +834,8 @@ private:
     // Used to detect and enforce dependencies between commands.
     hcCommandKind youngestCommandKind;
 
+    // Store current CU mask, if any.
+    std::vector<uint32_t> cu_arrays;
 
     //
     // kernelBufferMap and bufferKernelMap forms the dependency graph of
@@ -1445,35 +1454,38 @@ public:
         unsigned int physical_count = device->get_compute_unit_count();
         assert(physical_count > 0);
 
-        std::vector<uint32_t> cu_arrays;
         uint32_t temp = 0;
         uint32_t bit_index = 0;
 
         // If cu_mask.size() is greater than physical_count, igore the rest.
         int iter = cu_mask.size() > physical_count ? physical_count : cu_mask.size();
 
-        for(auto i = 0; i < iter; i++) {
-            temp |= (uint32_t)(cu_mask[i]) << bit_index;
 
-            if(++bit_index == 32) {
-                cu_arrays.push_back(temp);
-                bit_index = 0;
-                temp = 0;
+        {
+            std::lock_guard<std::mutex> (this->qmutex);
+
+
+            this->cu_arrays.clear();
+
+            for(auto i = 0; i < iter; i++) {
+                temp |= (uint32_t)(cu_mask[i]) << bit_index;
+
+                if(++bit_index == 32) {
+                    this->cu_arrays.push_back(temp);
+                    bit_index = 0;
+                    temp = 0;
+                }
             }
+
+            if(bit_index != 0) {
+                this->cu_arrays.push_back(temp);
+            }
+
+
+            // Apply the new cu mask to the hw queue:
+            return (rocrQueue->setCuMask(this) == HSA_STATUS_SUCCESS);
+
         }
-
-        if(bit_index != 0) {
-            cu_arrays.push_back(temp);
-        }
-
-        assert(0); // FIXME-maxq for queue virtualization.-maxq
-
-        // call hsa ext api to set cu mask
-        hsa_status_t status = hsa_amd_queue_cu_set_mask(/*commandQueue*/nullptr, cu_arrays.size(), cu_arrays.data());
-        if(HSA_STATUS_SUCCESS == status)
-            return true;
-        else
-            return false;
     }
 
     // enqueue a barrier packet
@@ -1589,6 +1601,26 @@ public:
 };
 
 
+void RocrQueue::assignHccQueue(HSAQueue *hccQueue) {
+    assert (hcc->rocrQueue == nullptr);  // only needy should assign new queue
+    hccQueue->rocrQueue = this;
+    _hccQueue = hccQueue;
+
+    setCuMask(hccQueue);
+}
+
+hsa_status_t RocrQueue::setCuMask(HSAQueue *hccQueue) {
+    hsa_status_t status = HSA_STATUS_SUCCESS;
+
+    if (this->cu_arrays != hccQueue->cu_arrays) {
+        // Expensive operation:
+        this->cu_arrays = hccQueue->cu_arrays;
+        status = hsa_amd_queue_cu_set_mask(_hwQueue,  hccQueue->cu_arrays.size(), hccQueue->cu_arrays.data());
+    }
+
+    return status;
+}
+
 
     class HSADevice final : public KalmarDevice
     {
@@ -1604,10 +1636,11 @@ public:
         hsa_agent_t agent;
         size_t max_tile_static_size;
 
-        std::mutex queues_mutex;
+        std::mutex queues_mutex; // protects access to the queues vector:
         std::vector< std::weak_ptr<KalmarQueue> > queues;
 
-        std::mutex                  rocrQueuesMutex;
+
+        std::mutex                  rocrQueuesMutex; // protects rocrQueues
         std::vector< RocrQueue *>    rocrQueues;
 
         pool_iterator ri;
@@ -1669,12 +1702,15 @@ public:
 #endif
                 STATUS_CHECK(status, __LINE__);
 
+                status = hsa_amd_profiling_set_profiler_enabled(hwQueue, 1);
 
-                thief->rocrQueue = new RocrQueue(hwQueue, thief);
+
+                auto rocrQueue = new RocrQueue(hwQueue, thief);
                 rocrQueues.push_back(thief->rocrQueue);
+                rocrQueue->assignHccQueue(thief);
+                
 
                 /// Enable profiling support for the queue.
-                status = hsa_amd_profiling_set_profiler_enabled(hwQueue, 1);
 
 
 
@@ -1683,23 +1719,23 @@ public:
                     for (auto rq : rocrQueues) {
                         if (rq->_hccQueue != thief)  {
                             auto victimHccQueue = rq->_hccQueue;
-                            std::lock_guard<std::mutex> (victimHccQueue->qmutex);
-                            if (victimHccQueue->isEmpty()) {
-                                if (HCC_DB & DB_SYNC) {
-                                    std::cerr << "tid:" << std::this_thread::get_id() << " ptr:" << this << " lock_guard...\n";
+                            if (victimHccQueue) {
+                                // victimHccQueue==nullptr indicates that a RocrQueue is allocated but not used by any HCC queue
+                                std::lock_guard<std::mutex> (victimHccQueue->qmutex);
+                                if (victimHccQueue->isEmpty()) {
+                                    if (HCC_DB & DB_SYNC) {
+                                        std::cerr << "tid:" << std::this_thread::get_id() << " ptr:" << this << " lock_guard...\n";
+                                    }
+
+                                    assert (victimHccQueue->rocrQueue == rq);  // ensure the link is consistent.
+                                    victimHccQueue->rocrQueue = nullptr; 
                                 }
-
-                                assert (victimHccQueue->rocrQueue == rq);  // ensure the link is consistent.
-                                auto victimHwQueue = rq->_hwQueue;
-
-                                // update the queue pointers to indicate the theft:
-                                rq->_hccQueue = thief;
-                                assert (thief->rocrQueue == nullptr);  // only needy should steal
-                                thief->rocrQueue = rq;
-                                victimHccQueue->rocrQueue = nullptr; 
-
-                                return;
                             }
+                                
+                            // update the queue pointers to indicate the theft:
+                            rq->assignHccQueue(thief);
+
+                            return;
                         }
                     }
                 }
@@ -1708,14 +1744,30 @@ public:
         };
 
         void removeRocrQueue(RocrQueue *rocrQueue) {
-            std::lock_guard<std::mutex> (this->rocrQueuesMutex);
 
-            auto iter = std::find(rocrQueues.begin(), rocrQueues.end(), rocrQueue);
-            assert (iter != rocrQueue.end()); 
-            rocrQueues.erase(iter);
+            // queues already locked:
+            size_t hccSz = queues.size();
 
-            delete rocrQueue;
-        }
+            { 
+                std::lock_guard<std::mutex> (this->rocrQueuesMutex);
+
+                // a perf optimization to keep the HSA queue if we have more HCC queues that might want it.
+                // This defers expensive queue deallocation if an hccQueue that holds an hwQueue is destroyed - 
+                // keep the hwqueue around until the number of hccQueues drops below the number of hwQueues
+                // we have already allocated.
+                if (hccSz < rocrQueues.size())  {
+
+                    auto iter = std::find(rocrQueues.begin(), rocrQueues.end(), rocrQueue);
+                    assert (iter != rocrQueue.end()); 
+                    rocrQueues.erase(iter);
+                    delete rocrQueue; // this will delete the HSA HW queue.
+                } else {
+                    rocrQueue->_hccQueue = nullptr; // mark it as available.
+                }
+            }
+
+        };
+
 
     public:
 
@@ -2340,6 +2392,8 @@ public:
             queues_mutex.unlock();
             return result;
         }
+
+
 
         hsa_amd_memory_pool_t& getHSAKernargRegion() {
             return ri._kernarg_memory_pool;
@@ -3036,10 +3090,9 @@ public:
             kernelBufferMap.clear();
 
 
+            Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(getDev());
             if (rocrQueue != nullptr) {
-                // and queues <rocrQueues. TODO - perf optimization to keep the HSA queue if we have more streams that might want it.
                 
-                Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(getDev());
                 device->removeRocrQueue(rocrQueue);
                 rocrQueue = nullptr;
             }
