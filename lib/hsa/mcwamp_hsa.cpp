@@ -1615,7 +1615,7 @@ hsa_status_t RocrQueue::setCuMask(HSAQueue *hccQueue) {
     if (this->cu_arrays != hccQueue->cu_arrays) {
         // Expensive operation:
         this->cu_arrays = hccQueue->cu_arrays;
-        status = hsa_amd_queue_cu_set_mask(_hwQueue,  hccQueue->cu_arrays.size(), hccQueue->cu_arrays.data());
+        status = hsa_amd_queue_cu_set_mask(_hwQueue,  hccQueue->cu_arrays.size()*32, hccQueue->cu_arrays.data());
     }
 
     return status;

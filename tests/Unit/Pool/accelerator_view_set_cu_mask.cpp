@@ -29,8 +29,10 @@ int main()
         cu_mask[i] = true;
     }
 
-    if(!acc_view.set_cu_mask(cu_mask))
+    if(!acc_view.set_cu_mask(cu_mask)) {
+        printf ("set_cu_mask returned false (not successful)\n");
         return -1;
+    }
 
     // Launch a kernel.
     const int vec_size = 2048;

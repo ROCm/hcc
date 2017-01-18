@@ -536,7 +536,7 @@ public:
      *        the extra elements are ignored.
      *        It is user's responsibility to make sure the input is meaningful.
      *
-     * @return a bool variable to indicate if the setting is successful.
+     * @return true if operations succeeds or false if not.
      *
      */
      bool set_cu_mask(const std::vector<bool>& cu_mask) {
