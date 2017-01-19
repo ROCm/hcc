@@ -22,7 +22,7 @@ add_mcwamp_library(mcwamp_atomic mcwamp_atomic.cpp)
 # Library interface to use runtime
 add_library(hccrt INTERFACE)
 target_compile_options(hccrt INTERFACE -hc)
-target_link_libraries(hccrt INTERFACE "-Wl,-rpath $<TARGET_FILE_DIR:$<TARGET_NAME:mcwamp>>" "-Wl,--whole-archive" mcwamp "-Wl,--no-whole-archive")
+target_link_libraries(hccrt INTERFACE "-hc -Wl,-rpath $<TARGET_FILE_DIR:$<TARGET_NAME:mcwamp>>" "-Wl,--whole-archive" mcwamp "-Wl,--no-whole-archive")
 target_link_libraries(hccrt INTERFACE dl)
 target_link_libraries(hccrt INTERFACE c++)
 target_link_libraries(hccrt INTERFACE c++abi)
