@@ -6,7 +6,7 @@ set_and_check( hcc_LIB_INSTALL_DIR "@PACKAGE_LIB_INSTALL_DIR@" )
 
 include( "${CMAKE_CURRENT_LIST_DIR}/hcc-targets.cmake" )
 
-set( hcc_LIBRARIES hcc::hccrt)
+set( hcc_LIBRARIES hcc::hccrt hcc::hc_am)
 set( hcc_LIBRARY ${hcc_LIBRARIES})
 
 set(HCC_INCLUDE_DIR ${hcc_INCLUDE_DIR})
