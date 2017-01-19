@@ -3,6 +3,7 @@
 #include <hc_am.hpp>
 #include <iostream>
 #include <string>
+#include <cmath>
 
 int sum(hc::array_view<int,1>& input) {
 
@@ -30,7 +31,7 @@ int main() {
   for (int i = 0;i < 64; i++)
     av[i] = i;
 
-  int s = sum(av);
+  int s = std::sqrt(sum(av));
 
   std::string ss = std::to_string(s);
   std::cout << "sum: " << ss << std::endl;
