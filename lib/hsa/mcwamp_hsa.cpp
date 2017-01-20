@@ -2399,23 +2399,12 @@ void ReadHccEnv()
             if (!queue.expired()) {
                 result.push_back(queue.lock());
             }
-            queues_mutex.unlock();
-            return result;
         }
-    }
-
-
-
-    hsa_amd_memory_pool_t& getHSAKernargRegion() {
-        return ri._kernarg_memory_pool;
-    }
-
-    hsa_amd_memory_pool_t& getHSAAMHostRegion() {
-        return ri._am_host_memory_pool;
-    }
-    queues_mutex.unlock();
+        queues_mutex.unlock();
         return result;
     }
+
+
 
     hsa_amd_memory_pool_t& getHSAKernargRegion() {
         return ri._kernarg_memory_pool;
