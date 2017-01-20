@@ -69,8 +69,6 @@ void cxxflags(void) {
     // CodeXL Activity Logger
     std::cout << " -I" XSTR(CODEXL_ACTIVITY_LOGGER_HEADER);
 #endif
-
-    std::cout << std::endl;
 }
 
 void ldflags(void) {
@@ -113,8 +111,6 @@ void ldflags(void) {
     std::cout << " -L" XSTR(CODEXL_ACTIVITY_LOGGER_LIBRARY);
     std::cout << " -lCXLActivityLogger";
 #endif
-
-    std::cout << std::endl;
 }
 
 void prefix(void) {
