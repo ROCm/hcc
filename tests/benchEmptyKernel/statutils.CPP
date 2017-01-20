@@ -1,4 +1,5 @@
 #include "statutils.h"
+#include <algorithm>
 
 void plot(const std::string &filename, const std::vector<std::chrono::duration<double>> &data) {
   std::ofstream file(filename + ".dat", std::ios_base::out | std::ios_base::trunc);

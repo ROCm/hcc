@@ -6,7 +6,7 @@ if (HCC_RUNTIME_DEBUG)
   add_definitions(-DKALMAR_DEBUG=1)
 endif (HCC_RUNTIME_DEBUG)
 
-include_directories(${CMAKE_CURRENT_BINARY_DIR} ${LIBCXX_HEADER} )
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 include(GNUInstallDirs)
 set( LIB_INSTALL_DIR ${CMAKE_INSTALL_LIBDIR} )
@@ -23,7 +23,10 @@ add_mcwamp_library(mcwamp_atomic mcwamp_atomic.cpp)
 add_library(hccrt INTERFACE)
 target_compile_options(hccrt INTERFACE -hc)
 target_link_libraries(hccrt INTERFACE "-hc -Wl,-rpath $<TARGET_FILE_DIR:$<TARGET_NAME:mcwamp>>" "-Wl,--whole-archive" mcwamp "-Wl,--no-whole-archive")
-target_link_libraries(hccrt INTERFACE dl c++ c++abi m)
+target_link_libraries(hccrt INTERFACE dl m)
+if (USE_LIBCXX)
+  target_link_libraries(hccrt INTERFACE c++ c++abi)
+endif (USE_LIBCXX)
 
 ####################
 # C++AMP tools

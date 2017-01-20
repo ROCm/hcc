@@ -10,6 +10,7 @@
 
 #include <amptest.h>
 #include <amptest_main.h>
+#include <climits>
 
 using namespace concurrency;
 using namespace concurrency::Test;

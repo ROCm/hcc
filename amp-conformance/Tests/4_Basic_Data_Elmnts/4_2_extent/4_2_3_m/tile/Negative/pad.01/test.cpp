@@ -11,6 +11,7 @@
 #include <amptest.h>
 #include <amptest_main.h>
 #include <string>
+#include <climits>
 
 using namespace Concurrency;
 using namespace Concurrency::Test;

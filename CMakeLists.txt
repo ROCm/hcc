@@ -120,11 +120,18 @@ MESSAGE("")
 
 endif (USE_CODEXL_ACTIVITY_LOGGER EQUAL 1)
 
+# switch to use libc++ instead of libstdc++ as the C++ runtime
+OPTION(USE_LIBCXX "Use libc++ for C++ runtime" ON)
+
 #################
 # Detect libc++
 #################
-find_path(LIBCXX_HEADER random PATHS /usr/local/include/c++/v1 /usr/include/c++/v1 NO_DEFAULT_PATH)
-MESSAGE("libc++ headers found at ${LIBCXX_HEADER}")
+
+if (USE_LIBCXX)
+  find_path(LIBCXX_HEADER random PATHS /usr/local/include/c++/v1 /usr/include/c++/v1 NO_DEFAULT_PATH)
+  MESSAGE("libc++ headers found at ${LIBCXX_HEADER}")
+endif (USE_LIBCXX)
+
 
 #################
 # Set up version information
