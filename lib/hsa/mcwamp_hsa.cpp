@@ -774,7 +774,10 @@ namespace Kalmar {
 // also tracks the state of the cu mask, profiling, priority of the HW queue.
 struct RocrQueue {
     RocrQueue(hsa_queue_t *hwQueue, HSAQueue *hccQueue) : 
-        _hwQueue(hwQueue), _hccQueue(hccQueue) {};
+        _hwQueue(hwQueue), _hccQueue(hccQueue) 
+    {
+        assignHccQueue(hccQueue);
+    }
 
     ~RocrQueue() {
 
@@ -1701,6 +1704,13 @@ public:
 #endif
             STATUS_CHECK(status, __LINE__);
 
+            status = hsa_amd_profiling_set_profiler_enabled(hwQueue, 1);
+
+
+            auto rq = new RocrQueue(hwQueue, thief);
+            rocrQueues.push_back(rq);
+            
+
             /// Enable profiling support for the queue.
             status = hsa_amd_profiling_set_profiler_enabled(hwQueue, 1);
 
@@ -1935,6 +1945,34 @@ public:
 #define GET_ENV_INT(envVar, usage)  hccgetenv (#envVar, &envVar, usage)
 
 
+// Global function to read HCC_ENV vars.  Really this should be called once per process not once-per-event.
+// Global so HCC clients or debuggers can force a re-read of the environment variables.
+void ReadHccEnv() 
+{
+    GET_ENV_INT(HCC_PRINT_ENV, "Print values of HCC environment variables");
+
+   // 0x1=pre-serialize, 0x2=post-serialize , 0x3= pre- and post- serialize.
+   // HCC_SERIALIZE_KERNEL serializes PFE, GL, and dispatch_hsa_kernel calls.
+   // HCC_SERIALIZE_COPY serializes av::copy_async operations.  (array_view copies are not currently impacted))
+    GET_ENV_INT(HCC_SERIALIZE_KERNEL, 
+                 "0x1=pre-serialize before each kernel launch, 0x2=post-serialize after each kernel launch, 0x3=both");
+    GET_ENV_INT(HCC_SERIALIZE_COPY,
+                 "0x1=pre-serialize before each data copy, 0x2=post-serialize after each data copy, 0x3=both");
+
+
+    GET_ENV_INT(HCC_DB, "Enable HCC trace debug");
+
+    GET_ENV_INT(HCC_OPT_FLUSH, "Perform cache flushes only at CPU sync boundaries (rather than after each kernel)");
+    GET_ENV_INT(HCC_MAX_QUEUES, "Set max number of HSA queues this process will use.  accelerator_views will share the allotted queues and steal from each other as necessary");
+
+
+    GET_ENV_INT(HCC_UNPINNED_COPY_MODE, "Select algorithm for unpinned copies. 0=ChooseBest(see thresholds), 1=PinInPlace, 2=StagingBuffer, 3=Memcpy");
+   
+    // Select thresholds to use for unpinned copies
+    GET_ENV_INT (HCC_H2D_STAGING_THRESHOLD,    "Min size (in KB) to use staging buffer algorithm for H2D copy if ChooseBest algorithm selected");
+    GET_ENV_INT (HCC_H2D_PININPLACE_THRESHOLD, "Min size (in KB) to use pin-in-place algorithm for H2D copy if ChooseBest algorithm selected");
+    GET_ENV_INT (HCC_D2H_PININPLACE_THRESHOLD, "Min size (in KB) to use pin-in-place for D2H copy if ChooseBest algorithm selected");
+};
 
 
     HSADevice(hsa_agent_t a, hsa_agent_t host) : KalmarDevice(access_type_read_write),
@@ -2070,24 +2108,8 @@ public:
             profile = hcAgentProfileFull;
         }
 
-        GET_ENV_INT(HCC_PRINT_ENV, "Print values of HCC environment variables");
+        ReadHccEnv();
 
-       // 0x1=pre-serialize, 0x2=post-serialize , 0x3= pre- and post- serialize.
-       // HCC_SERIALIZE_KERNEL serializes PFE, GL, and dispatch_hsa_kernel calls.
-       // HCC_SERIALIZE_COPY serializes av::copy_async operations.  (array_view copies are not currently impacted))
-        GET_ENV_INT(HCC_SERIALIZE_KERNEL, 
-                     "0x1=pre-serialize before each kernel launch, 0x2=post-serialize after each kernel launch, 0x3=both");
-        GET_ENV_INT(HCC_SERIALIZE_COPY,
-                     "0x1=pre-serialize before each data copy, 0x2=post-serialize after each data copy, 0x3=both");
-
-
-        GET_ENV_INT(HCC_DB, "Enable HCC trace debug");
-
-        GET_ENV_INT(HCC_OPT_FLUSH, "Perform cache flushes only at CPU sync boundaries (rather than after each kernel)");
-        GET_ENV_INT(HCC_MAX_QUEUES, "Set max number of HSA queues this process will use.  accelerator_views will share the allotted queues and steal from each other as necessary");
-
-
-        GET_ENV_INT(HCC_UNPINNED_COPY_MODE, "Select algorithm for unpinned copies. 0=ChooseBest(see thresholds), 1=PinInPlace, 2=StagingBuffer, 3=Memcpy");
         //---
         //Provide an environment variable to select the mode used to perform the copy operaton
         switch (this->copy_mode) {
@@ -2099,11 +2121,6 @@ public:
             default:
                 this->copy_mode = UnpinnedCopyEngine::ChooseBest;
         };
-       
-        // Select thresholds to use for unpinned copies
-        GET_ENV_INT (HCC_H2D_STAGING_THRESHOLD,    "Min size (in KB) to use staging buffer algorithm for H2D copy if ChooseBest algorithm selected");
-        GET_ENV_INT (HCC_H2D_PININPLACE_THRESHOLD, "Min size (in KB) to use pin-in-place algorithm for H2D copy if ChooseBest algorithm selected");
-        GET_ENV_INT (HCC_D2H_PININPLACE_THRESHOLD, "Min size (in KB) to use pin-in-place for D2H copy if ChooseBest algorithm selected");
        
 
         HCC_H2D_STAGING_THRESHOLD    *= 1024;
