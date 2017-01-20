@@ -8,10 +8,6 @@ endif (HCC_RUNTIME_DEBUG)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-if (USE_LIBCXX)
-  include_directories(${LIBCXX_HEADER})
-endif (USE_LIBCXX)
-
 include(GNUInstallDirs)
 set( LIB_INSTALL_DIR ${CMAKE_INSTALL_LIBDIR} )
 set( INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_INCLUDEDIR} )
