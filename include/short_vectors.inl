@@ -505,15 +505,15 @@ public:
 private:
   vector_value_type data;
 
-  __vector<value_type,v2_type_internal,2> create_vector2(v2_type_internal v) {
+  __vector<value_type,v2_type_internal,2> create_vector2(v2_type_internal v) __CPU_GPU__ {
     return __vector<value_type,v2_type_internal,2>(v);
   }
 
-  __vector<value_type,v3_type_internal,3> create_vector3(v3_type_internal v) {
+  __vector<value_type,v3_type_internal,3> create_vector3(v3_type_internal v) __CPU_GPU__ {
     return __vector<value_type,v3_type_internal,3>(v);
   }
 
-  __vector<value_type,v4_type_internal,4> create_vector4(v4_type_internal v) {
+  __vector<value_type,v4_type_internal,4> create_vector4(v4_type_internal v) __CPU_GPU__ {
     return __vector<value_type,v4_type_internal,4>(v);
   }
 };
