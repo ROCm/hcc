@@ -39,7 +39,7 @@
 #include <time.h>
 #include <iomanip>
 
-#define KALMAR_DEBUG (0)
+//#define KALMAR_DEBUG (0)
 #ifndef KALMAR_DEBUG
 #define KALMAR_DEBUG (0)
 #endif
@@ -772,10 +772,37 @@ namespace Kalmar {
 // Small wrapper around the hsa hardware queue (ie returned from hsa_queue_create(...).
 // This allows us to see which accelerator_view owns the hsa queue, and
 // also tracks the state of the cu mask, profiling, priority of the HW queue.
+// Rocr queues are shared by the allocated HSAQueues.  When an HSAQueue steals
+// a rocrQueue, we ensure that the hw queue has the desired cu_mask and other state.
+//
+// HSAQueue is the implementation of accelerator_view for HSA back-and.  HSAQueue
+// points to RocrQueue, or to nullptr if the HSAQueue is not currently attached to a RocrQueue.
 struct RocrQueue {
-    RocrQueue(hsa_queue_t *hwQueue, HSAQueue *hccQueue) : 
-        _hwQueue(hwQueue), _hccQueue(hccQueue) 
+    RocrQueue(hsa_agent_t agent, HSAQueue *hccQueue) 
     {
+        /// Query the maximum size of the queue.
+        uint32_t queue_size = 0;
+        hsa_status_t status = hsa_agent_get_info(agent, HSA_AGENT_INFO_QUEUE_MAX_SIZE, &queue_size);
+        STATUS_CHECK(status, __LINE__);
+
+        assert (__builtin_popcount(MAX_INFLIGHT_COMMANDS_PER_QUEUE) == 1); // make sure this is power of 2.
+        assert(queue_size > MAX_INFLIGHT_COMMANDS_PER_QUEUE*2);
+
+        // MAX_INFLIGHT_COMMANDS_PER_QUEUE throttles the number of commands that can be in the queue, so no reason
+        // to allocate a huge HSA queue - size it to it is large enough to handle the inflight commands.
+        queue_size = 2*MAX_INFLIGHT_COMMANDS_PER_QUEUE;
+
+        /// Create a queue using the maximum size.
+        status = hsa_queue_create(agent, queue_size, HSA_QUEUE_TYPE_SINGLE, NULL, NULL,
+                                  UINT32_MAX, UINT32_MAX, &_hwQueue);
+#if KALMAR_DEBUG
+        std::cerr << "HSAQueue::HSAQueue(): created an HSA command queue: " << _hwQueue << "\n";
+#endif
+        STATUS_CHECK(status, __LINE__);
+
+        status = hsa_amd_profiling_set_profiler_enabled(_hwQueue, 1);
+
+        // Create the links between the queues:
         assignHccQueue(hccQueue);
     }
 
@@ -830,6 +857,8 @@ private:
 
     uint64_t                                      opSeqNums;
 
+    // Valid is used to prevent the fields of the HSAQueue from being disposed 
+    // multiple times.  
     bool                                            valid;
 
 
@@ -1008,7 +1037,7 @@ public:
     int getPendingAsyncOps() override {
         int count = 0;
         for (int i = 0; i < asyncOps.size(); ++i) {
-            auto asyncOp = asyncOps[i]; // TODO _ shared_ptr copy, can we optimize?
+            auto &asyncOp = asyncOps[i]; 
 
             if (asyncOp != nullptr) {
                 hsa_signal_t signal = *(static_cast <hsa_signal_t*> (asyncOp->getNativeHandle()));
@@ -1023,11 +1052,10 @@ public:
 
 
     int isEmpty() override {
-        int count = 0;
         // Have to walk asyncOps since it can contain null pointers.
         for (int i = 0; i < asyncOps.size(); ++i) {
             if (asyncOps[i] != nullptr) {
-                auto asyncOp = asyncOps[i];
+                auto &asyncOp = asyncOps[i];
                 hsa_signal_t signal = *(static_cast <hsa_signal_t*> (asyncOp->getNativeHandle()));
                 hsa_signal_value_t v = hsa_signal_load_relaxed(signal);
                 if (v != 0) {
@@ -1681,46 +1709,14 @@ public:
 
         if (rocrQueues.size() < HCC_MAX_QUEUES) {
 
-            // Allocate a new queue, we have not hit any of the limits 
-            
-            /// Query the maximum size of the queue.
-            uint32_t queue_size = 0;
-            hsa_status_t status = hsa_agent_get_info(agent, HSA_AGENT_INFO_QUEUE_MAX_SIZE, &queue_size);
-            STATUS_CHECK(status, __LINE__);
+            // Allocate a new queue, we have are belowthe HCC_MAX_QUEUES limit :
 
-            assert (__builtin_popcount(MAX_INFLIGHT_COMMANDS_PER_QUEUE) == 1); // make sure this is power of 2.
-            assert(queue_size > MAX_INFLIGHT_COMMANDS_PER_QUEUE*2);
-
-            // MAX_INFLIGHT_COMMANDS_PER_QUEUE throttles the number of commands that can be in the queue, so no reason
-            // to allocate a huge HSA queue - size it to it is large enough to handle the inflight commands.
-            queue_size = 2*MAX_INFLIGHT_COMMANDS_PER_QUEUE;
-
-            /// Create a queue using the maximum size.
-            hsa_queue_t *hwQueue;
-            status = hsa_queue_create(agent, queue_size, HSA_QUEUE_TYPE_SINGLE, NULL, NULL,
-                                      UINT32_MAX, UINT32_MAX, &hwQueue);
-#if KALMAR_DEBUG
-            std::cerr << "HSAQueue::HSAQueue(): created an HSA command queue: " << hwQueue << "\n";
-#endif
-            STATUS_CHECK(status, __LINE__);
-
-            status = hsa_amd_profiling_set_profiler_enabled(hwQueue, 1);
-
-
-            auto rq = new RocrQueue(hwQueue, thief);
+            auto rq = new RocrQueue(agent, thief);
             rocrQueues.push_back(rq);
-            
-
-            /// Enable profiling support for the queue.
-            status = hsa_amd_profiling_set_profiler_enabled(hwQueue, 1);
-
-            auto rocrQueue = new RocrQueue(hwQueue, thief);
-            rocrQueues.push_back(thief->rocrQueue);
-            rocrQueue->assignHccQueue(thief);
-            
 
         } else {
-            while (1) {
+            bool foundQueue = false;
+            while (!foundQueue) {
                 for (auto rq : rocrQueues) {
                     if (rq->_hccQueue != thief)  {
                         auto victimHccQueue = rq->_hccQueue;
@@ -1740,9 +1736,15 @@ public:
                         // update the queue pointers to indicate the theft:
                         rq->assignHccQueue(thief);
 
-                        return;
+                        foundQueue = true;
+
+                        break;
+
                     }
                 }
+                // Allow other threads a small window to release threads to make progress:
+                this->rocrQueuesMutex.unlock();
+                this->rocrQueuesMutex.lock();
             }
         }
     };
