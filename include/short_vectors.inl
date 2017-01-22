@@ -17,12 +17,11 @@
 template <typename SCALAR_TYPE, unsigned int VECTOR_LENGTH>
 class __vector;
 
-
 #define DECLARE_VECTOR_TYPE_CLASS(SCALAR_TYPE, CLASS_PREFIX) \
-typedef __vector<SCALAR_TYPE, 2>   CLASS_PREFIX ## 2; \
-typedef __vector<SCALAR_TYPE, 4>   CLASS_PREFIX ## 3; \
-typedef __vector<SCALAR_TYPE, 4>   CLASS_PREFIX ## 4; \
-typedef __vector<SCALAR_TYPE, 8>   CLASS_PREFIX ## 8; \
+typedef __vector<SCALAR_TYPE, 2>    CLASS_PREFIX ## 2; \
+typedef __vector<SCALAR_TYPE, 4>    CLASS_PREFIX ## 3; \
+typedef __vector<SCALAR_TYPE, 4>    CLASS_PREFIX ## 4; \
+typedef __vector<SCALAR_TYPE, 8>    CLASS_PREFIX ## 8; \
 typedef __vector<SCALAR_TYPE, 16>   CLASS_PREFIX ## 16; 
 
 DECLARE_VECTOR_TYPE_CLASS(unsigned char, uchar);
@@ -96,7 +95,6 @@ typedef double4 double_4;
 typedef double8 double_8;
 typedef double16 double_16;
 
-
 template<typename SCALAR_TYPE, int SIZE> struct short_vector {
   short_vector() {
     static_assert(((!std::is_integral<SCALAR_TYPE>::value
@@ -106,10 +104,11 @@ template<typename SCALAR_TYPE, int SIZE> struct short_vector {
                       && SIZE!=4
                       && SIZE!=8
                       && SIZE!=16))
-                  , "short_vector is not supported for this scalar type (T) and length(N)");
+                  , "short_vector is not supported");
     typedef __vector<SCALAR_TYPE,SIZE> type;
   }
 };
+
 
 template <typename SCALAR_TYPE, unsigned int VECTOR_LENGTH>
 class __vector {
@@ -234,12 +233,10 @@ public:
   // one-component accessors
 
 #define DECLARE_VECTOR_ONE_COMPONENT_GET_SET(N,MIN_V_SIZE) \
-  value_type get_s ##N() const __CPU_GPU__ {   \
-    static_assert(size>=MIN_V_SIZE , "invalid vector component"); \
-    return data.s ##N; } \
-  void set_s ##N(value_type v) const __CPU_GPU__ { \
-    static_assert(size>=MIN_V_SIZE , "invalid vector component"); \
-    data.s ##N = v; }
+  template <typename T = __scalartype_N ,class = typename std::enable_if<T::size>=MIN_V_SIZE,value_type>::type > \
+  value_type get_s ##N() const __CPU_GPU__ { return data.s ##N; } \
+  template <typename T = __scalartype_N ,class = typename std::enable_if<T::size>=MIN_V_SIZE,value_type>::type > \
+  void set_s ##N(value_type v) const __CPU_GPU__ { data.s ##N = v; }
 
   DECLARE_VECTOR_ONE_COMPONENT_GET_SET(0,1)
   DECLARE_VECTOR_ONE_COMPONENT_GET_SET(1,2)
@@ -259,84 +256,104 @@ public:
   DECLARE_VECTOR_ONE_COMPONENT_GET_SET(F,16)
 
   value_type get_x() const __CPU_GPU__ { return get_s0(); }
+
+  template <typename T = __scalartype_N ,class = typename std::enable_if<T::size>=2,value_type>::type >
   value_type get_y() const __CPU_GPU__ { return get_s1(); }
+
+  template <typename T = __scalartype_N ,class = typename std::enable_if<T::size>=3,value_type>::type >
   value_type get_z() const __CPU_GPU__ { return get_s2(); }
+
+  template <typename T = __scalartype_N ,class = typename std::enable_if<T::size>=4,value_type>::type >
   value_type get_w() const __CPU_GPU__ { return get_s3(); }
 
   void set_x(value_type v) __CPU_GPU__ { set_s0(v); }
+
+  template <typename T = __scalartype_N ,class = typename std::enable_if<T::size>=2,value_type>::type >
   void set_y(value_type v) __CPU_GPU__ { set_s1(v); }
+
+  template <typename T = __scalartype_N ,class = typename std::enable_if<T::size>=3,value_type>::type >
   void set_z(value_type v) __CPU_GPU__ { set_s2(v); }
+
+  template <typename T = __scalartype_N ,class = typename std::enable_if<T::size>=4,value_type>::type >
   void set_w(value_type v) __CPU_GPU__ { set_s3(v); }
 
 
   // two-component accessors
 
-#define DECLARE_VECTOR_TWO_COMPONENT_GET_SET(C0,C1) \
+#define DECLARE_VECTOR_TWO_COMPONENT_GET_SET(C0,C1,MIN_V_SIZE) \
+  template <typename T = __scalartype_N ,class = typename std::enable_if<T::size>=MIN_V_SIZE,value_type>::type > \
   __vector<value_type, 2> get_ ##C0 ##C1 () { return create_vector2(data.C0 ## C1); } \
+  template <typename T = __scalartype_N ,class = typename std::enable_if<T::size>=MIN_V_SIZE,value_type>::type > \
   __vector<value_type, 2> get_ ##C1 ##C0 () { return create_vector2(data.C1 ## C0); } \
+  template <typename T = __scalartype_N ,class = typename std::enable_if<T::size>=MIN_V_SIZE,value_type>::type > \
   void set_ ##C0 ##C1 (const __vector<value_type, 2>& v) { data.C0 ## C1 = v.get_vector();  } \
+  template <typename T = __scalartype_N ,class = typename std::enable_if<T::size>=MIN_V_SIZE,value_type>::type > \
   void set_ ##C1 ##C0 (const __vector<value_type, 2>& v) { data.C1 ## C0 = v.get_vector();  } 
 
-  DECLARE_VECTOR_TWO_COMPONENT_GET_SET(x,y)
-  DECLARE_VECTOR_TWO_COMPONENT_GET_SET(x,z)
-  DECLARE_VECTOR_TWO_COMPONENT_GET_SET(x,w)
-  DECLARE_VECTOR_TWO_COMPONENT_GET_SET(y,z)
-  DECLARE_VECTOR_TWO_COMPONENT_GET_SET(y,w)
-  DECLARE_VECTOR_TWO_COMPONENT_GET_SET(w,z)
+  DECLARE_VECTOR_TWO_COMPONENT_GET_SET(x,y,2)
+  DECLARE_VECTOR_TWO_COMPONENT_GET_SET(x,z,3)
+  DECLARE_VECTOR_TWO_COMPONENT_GET_SET(x,w,4)
+  DECLARE_VECTOR_TWO_COMPONENT_GET_SET(y,z,3)
+  DECLARE_VECTOR_TWO_COMPONENT_GET_SET(y,w,4)
+  DECLARE_VECTOR_TWO_COMPONENT_GET_SET(w,z,4)
 
 
   // three-component accessors
-#define DECLARE_VECTOR_THREE_COMPONENT_GET_SET_PAIR(C0,C1,C2) \
+#define DECLARE_VECTOR_THREE_COMPONENT_GET_SET_PAIR(C0,C1,C2,MIN_V_SIZE) \
+  template <typename T = __scalartype_N ,class = typename std::enable_if<T::size>=MIN_V_SIZE,value_type>::type > \
   __vector<value_type, 3> get_ ##C0 ##C1 ## C2 () { return create_vector3(data.C0 ## C1 ## C2); } \
-  void set_ ##C0 ##C1 ##C2 (const __vector<value_type, 3>& v) { data.C0 ## C1 ## C2 = v.get_vector().xyz; }  
+  template <typename T = __scalartype_N ,class = typename std::enable_if<T::size>=MIN_V_SIZE,value_type>::type > \
+  void set_ ##C0 ##C1 ##C2 (const __vector<value_type, 3>& v) { data.C0 ## C1 ## C2 = v.get_vector(); }  
 
-#define DECLARE_VECTOR_THREE_COMPONENT_GET_SET(C0,C1,C2) \
-  DECLARE_VECTOR_THREE_COMPONENT_GET_SET_PAIR(C0,C1,C2) \
-  DECLARE_VECTOR_THREE_COMPONENT_GET_SET_PAIR(C0,C2,C1) \
-  DECLARE_VECTOR_THREE_COMPONENT_GET_SET_PAIR(C1,C0,C2) \
-  DECLARE_VECTOR_THREE_COMPONENT_GET_SET_PAIR(C1,C2,C0) \
-  DECLARE_VECTOR_THREE_COMPONENT_GET_SET_PAIR(C2,C0,C1) \
-  DECLARE_VECTOR_THREE_COMPONENT_GET_SET_PAIR(C2,C1,C0) 
+#define DECLARE_VECTOR_THREE_COMPONENT_GET_SET(C0,C1,C2,MIN_V_SIZE) \
+  DECLARE_VECTOR_THREE_COMPONENT_GET_SET_PAIR(C0,C1,C2,MIN_V_SIZE) \
+  DECLARE_VECTOR_THREE_COMPONENT_GET_SET_PAIR(C0,C2,C1,MIN_V_SIZE) \
+  DECLARE_VECTOR_THREE_COMPONENT_GET_SET_PAIR(C1,C0,C2,MIN_V_SIZE) \
+  DECLARE_VECTOR_THREE_COMPONENT_GET_SET_PAIR(C1,C2,C0,MIN_V_SIZE) \
+  DECLARE_VECTOR_THREE_COMPONENT_GET_SET_PAIR(C2,C0,C1,MIN_V_SIZE) \
+  DECLARE_VECTOR_THREE_COMPONENT_GET_SET_PAIR(C2,C1,C0,MIN_V_SIZE) 
 
-  DECLARE_VECTOR_THREE_COMPONENT_GET_SET(x,y,z)
-  DECLARE_VECTOR_THREE_COMPONENT_GET_SET(x,y,w)
-  DECLARE_VECTOR_THREE_COMPONENT_GET_SET(x,z,w)
-  DECLARE_VECTOR_THREE_COMPONENT_GET_SET(y,z,w) 
+  DECLARE_VECTOR_THREE_COMPONENT_GET_SET(x,y,z,3)
+  DECLARE_VECTOR_THREE_COMPONENT_GET_SET(x,y,w,4)
+  DECLARE_VECTOR_THREE_COMPONENT_GET_SET(x,z,w,4)
+  DECLARE_VECTOR_THREE_COMPONENT_GET_SET(y,z,w,4) 
 
 
   // four-component accessors
 
-#define DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C0,C1,C2,C3) \
+#define DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C0,C1,C2,C3,MIN_V_SIZE) \
+  template <typename T = __scalartype_N ,class = typename std::enable_if<T::size>=MIN_V_SIZE,value_type>::type > \
   __vector<value_type, 4> get_ ##C0 ##C1 ## C2 ## C3 () { return create_vector4(data.C0 ## C1 ## C2 ## C3); } \
+  template <typename T = __scalartype_N ,class = typename std::enable_if<T::size>=MIN_V_SIZE,value_type>::type > \
   void set_ ##C0 ##C1 ##C2 ##C3 (const __vector<value_type, 4>& v) { data.C0 ## C1 ## C2 ## C3 = v.get_vector(); }  
 
-#define DECLARE_VECTOR_FOUR_COMPONENT_GET_SET(C0,C1,C2,C3) \
-  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C0,C1,C2,C3) \
-  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C0,C1,C3,C2) \
-  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C0,C2,C1,C3) \
-  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C0,C2,C3,C1) \
-  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C0,C3,C1,C2) \
-  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C0,C3,C2,C1) \
-  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C1,C0,C2,C3) \
-  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C1,C0,C3,C2) \
-  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C1,C2,C0,C3) \
-  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C1,C2,C3,C0) \
-  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C1,C3,C0,C2) \
-  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C1,C3,C2,C0) \
-  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C2,C0,C1,C3) \
-  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C2,C0,C3,C1) \
-  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C2,C1,C0,C3) \
-  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C2,C1,C3,C0) \
-  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C2,C3,C0,C1) \
-  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C2,C3,C1,C0) \
-  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C3,C0,C1,C2) \
-  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C3,C0,C2,C1) \
-  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C3,C1,C0,C2) \
-  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C3,C1,C2,C0) \
-  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C3,C2,C0,C1) \
-  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C3,C2,C1,C0) 
+#define DECLARE_VECTOR_FOUR_COMPONENT_GET_SET(C0,C1,C2,C3,MIN_V_SIZE) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C0,C1,C2,C3,MIN_V_SIZE) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C0,C1,C3,C2,MIN_V_SIZE) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C0,C2,C1,C3,MIN_V_SIZE) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C0,C2,C3,C1,MIN_V_SIZE) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C0,C3,C1,C2,MIN_V_SIZE) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C0,C3,C2,C1,MIN_V_SIZE) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C1,C0,C2,C3,MIN_V_SIZE) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C1,C0,C3,C2,MIN_V_SIZE) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C1,C2,C0,C3,MIN_V_SIZE) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C1,C2,C3,C0,MIN_V_SIZE) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C1,C3,C0,C2,MIN_V_SIZE) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C1,C3,C2,C0,MIN_V_SIZE) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C2,C0,C1,C3,MIN_V_SIZE) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C2,C0,C3,C1,MIN_V_SIZE) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C2,C1,C0,C3,MIN_V_SIZE) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C2,C1,C3,C0,MIN_V_SIZE) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C2,C3,C0,C1,MIN_V_SIZE) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C2,C3,C1,C0,MIN_V_SIZE) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C3,C0,C1,C2,MIN_V_SIZE) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C3,C0,C2,C1,MIN_V_SIZE) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C3,C1,C0,C2,MIN_V_SIZE) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C3,C1,C2,C0,MIN_V_SIZE) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C3,C2,C0,C1,MIN_V_SIZE) \
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET_PAIR(C3,C2,C1,C0,MIN_V_SIZE) 
 
-  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET(x,y,z,w);
+  DECLARE_VECTOR_FOUR_COMPONENT_GET_SET(x,y,z,w,4);
 
 
   vector_value_type get_vector() const __CPU_GPU__ { return data; }
@@ -347,13 +364,19 @@ public:
     return *this;
   }
 
-  __scalartype_N& operator++() __CPU_GPU__ { data++; }
+  __scalartype_N& operator++() __CPU_GPU__ { 
+     data += static_cast<vector_value_type>(static_cast<value_type>(1)); 
+     return *this; 
+  }
   __scalartype_N operator++(int) __CPU_GPU__ { 
     __scalartype_N r(*this);
     operator++();
     return r;
   }
-  __scalartype_N& operator--() __CPU_GPU__ { data--; }
+  __scalartype_N& operator--() __CPU_GPU__ { 
+    data -= static_cast<vector_value_type>(static_cast<value_type>(1)); 
+    return *this;
+  }
   __scalartype_N operator--(int) __CPU_GPU__ { 
     __scalartype_N r(*this);
     operator--();
@@ -559,5 +582,4 @@ __vector<SCALAR_TYPE,VECTOR_LENGTH> operator/(const __vector<SCALAR_TYPE,VECTOR_
   __vector<SCALAR_TYPE,VECTOR_LENGTH> r(lhs.get_vector() / rhs.get_vector());
   return r;
 }
-
 
