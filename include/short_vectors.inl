@@ -109,6 +109,14 @@ template<typename SCALAR_TYPE, int SIZE> struct short_vector {
   }
 };
 
+template <typename>
+struct short_vector_traits;
+
+template <typename SCALAR_TYPE, int SIZE>
+struct short_vector_traits<__vector<SCALAR_TYPE, SIZE>> {
+  typedef typename __vector<SCALAR_TYPE, SIZE>::value_type value_type;
+  static int const size = __vector<SCALAR_TYPE, SIZE>::size;
+};
 
 template <typename SCALAR_TYPE, unsigned int VECTOR_LENGTH>
 class __vector {
