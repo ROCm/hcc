@@ -96,6 +96,21 @@ typedef double4 double_4;
 typedef double8 double_8;
 typedef double16 double_16;
 
+
+template<typename SCALAR_TYPE, int SIZE> struct short_vector {
+  short_vector() {
+    static_assert(((!std::is_integral<SCALAR_TYPE>::value
+                    && !std::is_floating_point<SCALAR_TYPE>::value)
+                   || (SIZE!=2
+                      && SIZE!=3
+                      && SIZE!=4
+                      && SIZE!=8
+                      && SIZE!=16))
+                  , "short_vector is not supported for this scalar type (T) and length(N)");
+    typedef __vector<SCALAR_TYPE,SIZE> type;
+  }
+};
+
 template <typename SCALAR_TYPE, unsigned int VECTOR_LENGTH>
 class __vector {
 
