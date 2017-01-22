@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include <type_traits>
 #include "hc_types.inl"
 
 #define DECLARE_VECTOR_TYPE_INTERNAL(VECTOR_TYPE,SCALAR_TYPE,NUM_ELEMENT) typedef SCALAR_TYPE VECTOR_TYPE __attribute__((ext_vector_type(NUM_ELEMENT)))
@@ -103,6 +104,66 @@ DECLARE_VECTOR_TYPE_CLASS(long long, __longlong, long);
 DECLARE_VECTOR_TYPE_CLASS(float, __float, float);
 DECLARE_VECTOR_TYPE_CLASS(double, __double, double);
 
+typedef uchar2 uchar_2;
+typedef uchar3 uchar_3;
+typedef uchar4 uchar_4;
+typedef uchar8 uchar_8;
+typedef uchar16 uchar_16;
+
+typedef char2 char_2;
+typedef char3 char_3;
+typedef char4 char_4;
+typedef char8 char_8;
+typedef char16 char_16;
+
+typedef ushort2 ushort_2;
+typedef ushort3 ushort_3;
+typedef ushort4 ushort_4;
+typedef ushort8 ushort_8;
+typedef ushort16 ushort_16;
+
+typedef short2 short_2;
+typedef short3 short_3;
+typedef short4 short_4;
+typedef short8 short_8;
+typedef short16 short_16;
+
+typedef uint2 uint_2;
+typedef uint3 uint_3;
+typedef uint4 uint_4;
+typedef uint8 uint_8;
+typedef uint16 uint_16;
+
+typedef int2 int_2;
+typedef int3 int_3;
+typedef int4 int_4;
+typedef int8 int_8;
+typedef int16 int_16;
+
+typedef ulong2 ulong_2;
+typedef ulong3 ulong_3;
+typedef ulong4 ulong_4;
+typedef ulong8 ulong_8;
+typedef ulong16 ulong_16;
+
+typedef long2 long_2;
+typedef long3 long_3;
+typedef long4 long_4;
+typedef long8 long_8;
+typedef long16 long_16;
+
+typedef float2 float_2;
+typedef float3 float_3;
+typedef float4 float_4;
+typedef float8 float_8;
+typedef float16 float_16;
+
+typedef double2 double_2;
+typedef double3 double_3;
+typedef double4 double_4;
+typedef double8 double_8;
+typedef double16 double_16;
+
 
 template <typename SCALAR_TYPE, typename VECTOR_TYPE, unsigned int VECTOR_LENGTH>
 class __vector {
@@ -115,7 +176,6 @@ public:
   typedef VECTOR_TYPE vector_value_type;
 
   typedef __vector<value_type,vector_value_type,size> __scalartype_N;
-
 
 private:
   typedef value_type v2_type_internal  __attribute__((ext_vector_type(2)));
