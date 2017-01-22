@@ -3141,7 +3141,7 @@ HSADispatch::dispatchKernel(hsa_queue_t* commandQueue, const void *hostKernarg,
         std::cerr << "tid" << std::this_thread::get_id() <<  " ring door bell to dispatch kernel " << kernel->kernelName << "\n";
     }
 #if KALMAR_DEBUG
-    std::cerr << "ring door bell to dispatch kernel " << kernel->kernelName << "\n";
+    std::cerr << "ring door bell to dispatch a kernel\n";
 #endif
 
     // Ring door bell
