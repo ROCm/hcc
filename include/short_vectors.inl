@@ -18,6 +18,7 @@ template <typename SCALAR_TYPE, unsigned int VECTOR_LENGTH>
 class __vector;
 
 #define DECLARE_VECTOR_TYPE_CLASS(SCALAR_TYPE, CLASS_PREFIX) \
+typedef __vector<SCALAR_TYPE, 1>    CLASS_PREFIX ## 1; \
 typedef __vector<SCALAR_TYPE, 2>    CLASS_PREFIX ## 2; \
 typedef __vector<SCALAR_TYPE, 4>    CLASS_PREFIX ## 3; \
 typedef __vector<SCALAR_TYPE, 4>    CLASS_PREFIX ## 4; \
@@ -35,60 +36,70 @@ DECLARE_VECTOR_TYPE_CLASS(long long, long);
 DECLARE_VECTOR_TYPE_CLASS(float, float);
 DECLARE_VECTOR_TYPE_CLASS(double, double);
 
+typedef uchar1 uchar_1;
 typedef uchar2 uchar_2;
 typedef uchar3 uchar_3;
 typedef uchar4 uchar_4;
 typedef uchar8 uchar_8;
 typedef uchar16 uchar_16;
 
+typedef char1 char_1;
 typedef char2 char_2;
 typedef char3 char_3;
 typedef char4 char_4;
 typedef char8 char_8;
 typedef char16 char_16;
 
+typedef ushort1 ushort_1;
 typedef ushort2 ushort_2;
 typedef ushort3 ushort_3;
 typedef ushort4 ushort_4;
 typedef ushort8 ushort_8;
 typedef ushort16 ushort_16;
 
+typedef short1 short_1;
 typedef short2 short_2;
 typedef short3 short_3;
 typedef short4 short_4;
 typedef short8 short_8;
 typedef short16 short_16;
 
+typedef uint1 uint_1;
 typedef uint2 uint_2;
 typedef uint3 uint_3;
 typedef uint4 uint_4;
 typedef uint8 uint_8;
 typedef uint16 uint_16;
 
+typedef int1 int_1;
 typedef int2 int_2;
 typedef int3 int_3;
 typedef int4 int_4;
 typedef int8 int_8;
 typedef int16 int_16;
 
+typedef ulong1 ulong_1;
 typedef ulong2 ulong_2;
 typedef ulong3 ulong_3;
 typedef ulong4 ulong_4;
 typedef ulong8 ulong_8;
 typedef ulong16 ulong_16;
 
+typedef long1 long_1;
 typedef long2 long_2;
 typedef long3 long_3;
 typedef long4 long_4;
 typedef long8 long_8;
 typedef long16 long_16;
 
+typedef float1 float_1;
 typedef float2 float_2;
 typedef float3 float_3;
 typedef float4 float_4;
 typedef float8 float_8;
 typedef float16 float_16;
 
+typedef double1 double_1;
 typedef double2 double_2;
 typedef double3 double_3;
 typedef double4 double_4;
@@ -97,14 +108,6 @@ typedef double16 double_16;
 
 template<typename SCALAR_TYPE, int SIZE> struct short_vector {
   short_vector() {
-    static_assert(((!std::is_integral<SCALAR_TYPE>::value
-                    && !std::is_floating_point<SCALAR_TYPE>::value)
-                   || (SIZE!=2
-                      && SIZE!=3
-                      && SIZE!=4
-                      && SIZE!=8
-                      && SIZE!=16))
-                  , "short_vector is not supported");
     typedef __vector<SCALAR_TYPE,SIZE> type;
   }
 };
@@ -120,6 +123,14 @@ struct short_vector_traits<__vector<SCALAR_TYPE, SIZE>> {
 
 template <typename SCALAR_TYPE, unsigned int VECTOR_LENGTH>
 class __vector {
+
+  static_assert((std::is_integral<SCALAR_TYPE>::value
+                || std::is_floating_point<SCALAR_TYPE>::value)
+                , "short_vector of this data type is not supported");
+
+  static_assert((VECTOR_LENGTH==1 || VECTOR_LENGTH==2 || VECTOR_LENGTH==3 
+                || VECTOR_LENGTH==4 || VECTOR_LENGTH==8 || VECTOR_LENGTH==16)
+                  , "short_vector of this size is not supported");
 
 public:
   typedef SCALAR_TYPE value_type;
@@ -137,6 +148,7 @@ public:
   typedef __vector<value_type,size> __scalartype_N;
 
 private:
+  typedef value_type v1_type_internal  __attribute__((ext_vector_type(1)));
   typedef value_type v2_type_internal  __attribute__((ext_vector_type(2)));
   typedef value_type v3_type_internal  __attribute__((ext_vector_type(4)));
   typedef value_type v4_type_internal  __attribute__((ext_vector_type(4)));
@@ -192,7 +204,10 @@ public:
 
   
   // conversion constructor from other short vector types
-  template < typename ST>
+  template <typename ST>
+  explicit __vector(const  __vector<ST,1>& other)  __CPU_GPU__ { data = { static_cast<value_type>(other.get_s0()) }; }
+
+  template <typename ST>
   explicit __vector(const  __vector<ST,2>& other)  __CPU_GPU__ { data = { static_cast<value_type>(other.get_s0())
                                                                             ,static_cast<value_type>(other.get_s1()) }; }
 
@@ -494,6 +509,12 @@ public:
   __scalartype_N& operator<<=(const __scalartype_N& lhs) __CPU_GPU__ { 
     *this = *this<<lhs;
     return *this;
+  }
+
+  template <typename T = __scalartype_N
+            , class = typename std::enable_if<T::size==1,value_type>::type >
+  bool operator==(const __vector<value_type, 1>& rhs) __CPU_GPU__ { 
+    return (data.x == rhs.data.x); 
   }
 
   template <typename T = __scalartype_N
