@@ -17,6 +17,7 @@
 template <typename SCALAR_TYPE, unsigned int VECTOR_LENGTH>
 class __vector;
 
+/*
 #define DECLARE_VECTOR_TYPE_CLASS(SCALAR_TYPE, CLASS_PREFIX) \
 typedef __vector<SCALAR_TYPE, 1>    CLASS_PREFIX ## 1; \
 typedef __vector<SCALAR_TYPE, 2>    CLASS_PREFIX ## 2; \
@@ -24,6 +25,16 @@ typedef __vector<SCALAR_TYPE, 3>    CLASS_PREFIX ## 3; \
 typedef __vector<SCALAR_TYPE, 4>    CLASS_PREFIX ## 4; \
 typedef __vector<SCALAR_TYPE, 8>    CLASS_PREFIX ## 8; \
 typedef __vector<SCALAR_TYPE, 16>   CLASS_PREFIX ## 16; 
+*/
+
+#define DECLARE_VECTOR_TYPE_CLASS(SCALAR_TYPE, CLASS_PREFIX) \
+typedef SCALAR_TYPE    CLASS_PREFIX ## 1; \
+typedef __vector<SCALAR_TYPE, 2>    CLASS_PREFIX ## 2; \
+typedef __vector<SCALAR_TYPE, 3>    CLASS_PREFIX ## 3; \
+typedef __vector<SCALAR_TYPE, 4>    CLASS_PREFIX ## 4; \
+typedef __vector<SCALAR_TYPE, 8>    CLASS_PREFIX ## 8; \
+typedef __vector<SCALAR_TYPE, 16>   CLASS_PREFIX ## 16; 
+
 
 DECLARE_VECTOR_TYPE_CLASS(unsigned char, uchar);
 DECLARE_VECTOR_TYPE_CLASS(char, char);
@@ -138,10 +149,11 @@ typedef unorm4 unorm_4;
 typedef unorm8 unorm_8;
 typedef unorm16 unorm_16;
 
-template<typename SCALAR_TYPE, int SIZE> struct short_vector {
-  short_vector() {
-    typedef __vector<SCALAR_TYPE,SIZE> type;
-  }
+template<typename SCALAR_TYPE, int SIZE> 
+struct short_vector {
+  typedef typename std::conditional<SIZE==1
+                                  , SCALAR_TYPE
+                                  , __vector<SCALAR_TYPE,SIZE>>::type type;
 };
 
 template <typename>
