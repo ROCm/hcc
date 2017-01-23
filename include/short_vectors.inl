@@ -156,9 +156,20 @@ struct short_vector {
                                   , __vector<SCALAR_TYPE,SIZE>>::type type;
 };
 
-template <typename>
-struct short_vector_traits;
 
+// short_vector_traits for single component vector
+template <typename SCALAR_TYPE>
+struct short_vector_traits {
+  static_assert((std::is_integral<SCALAR_TYPE>::value
+                || std::is_floating_point<SCALAR_TYPE>::value
+                || std::is_same<SCALAR_TYPE, norm>::value
+                || std::is_same<SCALAR_TYPE, unorm>::value)
+                , "short_vector of this data type is not supported");
+  typedef SCALAR_TYPE value_type;
+  static int const size = 1;
+};
+
+// short_vector_traits for non-single component vetor
 template <typename SCALAR_TYPE, int SIZE>
 struct short_vector_traits<__vector<SCALAR_TYPE, SIZE>> {
   typedef typename __vector<SCALAR_TYPE, SIZE>::value_type value_type;
