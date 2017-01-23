@@ -15,7 +15,11 @@ namespace short_vector
 #define __CPU_GPU__
 #endif
 
+#if 1
+#include "short_vectors.inl"
+#else
 #include "kalmar_short_vectors.inl"
+#endif
 
 #undef __CPU_GPU__
 
