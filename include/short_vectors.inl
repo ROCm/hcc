@@ -171,11 +171,11 @@ public:
   // NOTE: size != size in memory`
   static const int size = VECTOR_LENGTH;
 
-  // Actual vector size in memory
-  // NOTE: A 3-component vector has the same size as a 4-component vector
-  static constexpr int data_vector_length = VECTOR_LENGTH==3?4:VECTOR_LENGTH;
-
+  // native vector type
   typedef SCALAR_TYPE vector_value_type  __attribute__((ext_vector_type(VECTOR_LENGTH)));
+
+  // Actual vector size in memory
+  static constexpr size_t vector_value_size = sizeof(vector_value_type);
 
   typedef __vector<value_type,size> __scalartype_N;
 
@@ -668,11 +668,11 @@ public:
   // NOTE: size != size in memory`
   static const int size = VECTOR_LENGTH;
 
-  // Actual vector size in memory
-  // NOTE: A 3-component vector has the same size as a 4-component vector
-  static constexpr int data_vector_length = VECTOR_LENGTH==3?4:VECTOR_LENGTH;
-
+  // native vector type
   typedef float vector_value_type  __attribute__((ext_vector_type(VECTOR_LENGTH)));
+
+  // Actual vector size in memory
+  static constexpr size_t vector_value_size = sizeof(vector_value_type);
 
   typedef __vector<value_type,size> __scalartype_N;
 
