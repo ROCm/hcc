@@ -19,6 +19,9 @@ template <bool isSigned> class __amp_norm_template;
 typedef __amp_norm_template<true>  __amp_norm;
 typedef __amp_norm_template<false> __amp_unorm;
 
+typedef __amp_norm   norm;
+typedef __amp_unorm unorm;
+
 //#define AMP_UNORM_MIN((__amp_unorm) 1.0f)
 
 template <bool isSigned>
@@ -43,12 +46,13 @@ public:
   __amp_norm_template(const norm_type& other) __CPU_GPU__ {
     data = other.data;
   }
+
   explicit __amp_norm_template(const __amp_norm_template<!isSigned>& other) __CPU_GPU__ {
     data = set(other.data);
   }
 
   void set(float f) {
-    data = clamp(other.data);
+    data = clamp(f);
   }
 
   norm_type& operator=(const norm_type& other) __CPU_GPU__ {
@@ -63,19 +67,11 @@ public:
     return *this;
   }
 
-  operator
-
-  constexpr static float min = isSigned?norm_min:unorm_min;
-  constexpr static float max = isSigned?norm_max:unorm_max;
+  static constexpr float min = isSigned?-1.0f:0.0f;
+  static constexpr float max = isSigned? 1.0f:1.0f;
 
 private:
   float data;
-  
-  static constexpr float unorm_min  = 0.0f;
-  static constexpr float unorm_max  = 1.0f;
-
-  static constexpr float norm_min  = -1.0f;
-  static constexpr float norm_max  = 1.0f;
 
   float clamp(float v) {
     return v>max?max:(v<min?min:v);
