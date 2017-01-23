@@ -10,7 +10,11 @@ namespace graphics
 
 #define __CPU_GPU__ restrict(cpu, amp)
 
+#if 1
+#include "short_vectors.inl"
+#else
 #include "kalmar_short_vectors.inl"
+#endif
 
 #undef __CPU_GPU__
 
