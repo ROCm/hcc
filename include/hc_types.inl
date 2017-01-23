@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include <type_traits>
+
 #ifndef __CPU_GPU__
 
 #if __HCC_AMP__
@@ -11,9 +13,6 @@
 
 #endif
 
-//namespace Kalmar {
-
-
 template <bool isSigned> class __amp_norm_template;
 
 typedef __amp_norm_template<true>  __amp_norm;
@@ -22,14 +21,14 @@ typedef __amp_norm_template<false> __amp_unorm;
 typedef __amp_norm   norm;
 typedef __amp_unorm unorm;
 
-//#define AMP_UNORM_MIN((__amp_unorm) 1.0f)
-
 template <bool isSigned>
 class __amp_norm_template {
 
 public:
 
   typedef __amp_norm_template<isSigned> norm_type;
+
+  __amp_norm_template() __CPU_GPU__ : data(0.0f) { }
 
   explicit __amp_norm_template(float v) __CPU_GPU__ {
     data = set(v);
@@ -104,7 +103,8 @@ public:
     return r;
   }
 
-  template <typename T = typename std::enable_if<isSigned,norm_type>::type >
+  template <typename T = norm_type
+            , class = typename std::enable_if<T::isSigned,norm_type>::type >
   T& operator-() __CPU_GPU__ {
     T r(-data);
     return r;
@@ -188,4 +188,3 @@ bool operator<=(const __amp_norm_template<isSigned>& lhs
 #define NORM_MIN   ((norm)-1.0f)
 #define NORM_MAX   ((norm)1.0f)
 
-//} // namespace Kalmar
