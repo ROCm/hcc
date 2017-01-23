@@ -31,23 +31,27 @@ public:
   __amp_norm_template() __CPU_GPU__ : data(0.0f) { }
 
   explicit __amp_norm_template(float v) __CPU_GPU__ {
-    data = set(v);
+    set(v);
   }
   explicit __amp_norm_template(unsigned int v) __CPU_GPU__ {
-    data = set((float)v);
+    set((float)v);
   }
   explicit __amp_norm_template(int v) __CPU_GPU__ {
-    data = set((float)v);
+    set((float)v);
   }
   explicit __amp_norm_template(double v) __CPU_GPU__ {
-    data = set((float)v);
+    set((float)v);
   }
   __amp_norm_template(const norm_type& other) __CPU_GPU__ {
     data = other.data;
   }
 
   explicit __amp_norm_template(const __amp_norm_template<!isSigned>& other) __CPU_GPU__ {
-    data = set(other.data);
+    set((float)other);
+  }
+
+  float get() {
+    return data;
   }
 
   void set(float f) {
@@ -56,6 +60,11 @@ public:
 
   norm_type& operator=(const norm_type& other) __CPU_GPU__ {
     data = other.data;
+    return *this;
+  }
+
+  norm_type& operator=(const float& other) __CPU_GPU__ {
+    set(other);
     return *this;
   }
 
@@ -86,7 +95,7 @@ public:
     return *this;
   }
 
-  norm_type& operator++(int) __CPU_GPU__ {
+  norm_type operator++(int) __CPU_GPU__ {
     norm_type r(*this);
     operator++();
     return r;
@@ -97,7 +106,7 @@ public:
     return *this;
   }
 
-  norm_type& operator--(int) __CPU_GPU__ {
+  norm_type operator--(int) __CPU_GPU__ {
     norm_type r(*this);
     operator--();
     return r;
@@ -105,7 +114,7 @@ public:
 
   template <typename T = norm_type
             , class = typename std::enable_if<T::isSigned,norm_type>::type >
-  T& operator-() __CPU_GPU__ {
+  T operator-() __CPU_GPU__ {
     T r(-data);
     return r;
   }
