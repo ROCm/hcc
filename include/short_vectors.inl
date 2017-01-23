@@ -35,8 +35,8 @@ DECLARE_VECTOR_TYPE_CLASS(unsigned long long, ulong);
 DECLARE_VECTOR_TYPE_CLASS(long long, long);
 DECLARE_VECTOR_TYPE_CLASS(float, float);
 DECLARE_VECTOR_TYPE_CLASS(double, double);
-DECLARE_VECTOR_TYPE_CLASS(__amp_norm, norm);
-DECLARE_VECTOR_TYPE_CLASS(__amp_unorm, unorm);
+DECLARE_VECTOR_TYPE_CLASS(norm, norm);
+DECLARE_VECTOR_TYPE_CLASS(unorm, unorm);
 
 typedef uchar1 uchar_1;
 typedef uchar2 uchar_2;
