@@ -20,7 +20,7 @@ class __vector;
 #define DECLARE_VECTOR_TYPE_CLASS(SCALAR_TYPE, CLASS_PREFIX) \
 typedef __vector<SCALAR_TYPE, 1>    CLASS_PREFIX ## 1; \
 typedef __vector<SCALAR_TYPE, 2>    CLASS_PREFIX ## 2; \
-typedef __vector<SCALAR_TYPE, 4>    CLASS_PREFIX ## 3; \
+typedef __vector<SCALAR_TYPE, 3>    CLASS_PREFIX ## 3; \
 typedef __vector<SCALAR_TYPE, 4>    CLASS_PREFIX ## 4; \
 typedef __vector<SCALAR_TYPE, 8>    CLASS_PREFIX ## 8; \
 typedef __vector<SCALAR_TYPE, 16>   CLASS_PREFIX ## 16; 
@@ -175,14 +175,14 @@ public:
   // NOTE: A 3-component vector has the same size as a 4-component vector
   static constexpr int data_vector_length = VECTOR_LENGTH==3?4:VECTOR_LENGTH;
 
-  typedef SCALAR_TYPE vector_value_type  __attribute__((ext_vector_type(data_vector_length)));
+  typedef SCALAR_TYPE vector_value_type  __attribute__((ext_vector_type(VECTOR_LENGTH)));
 
   typedef __vector<value_type,size> __scalartype_N;
 
 private:
   typedef value_type v1_type_internal  __attribute__((ext_vector_type(1)));
   typedef value_type v2_type_internal  __attribute__((ext_vector_type(2)));
-  typedef value_type v3_type_internal  __attribute__((ext_vector_type(4)));
+  typedef value_type v3_type_internal  __attribute__((ext_vector_type(3)));
   typedef value_type v4_type_internal  __attribute__((ext_vector_type(4)));
   typedef value_type v8_type_internal  __attribute__((ext_vector_type(8)));
   typedef value_type v16_type_internal  __attribute__((ext_vector_type(16)));
@@ -194,7 +194,7 @@ public:
 
   // the vector type overloaded constructor below already covers this scalar case
   //__vector(value_type value) __CPU_GPU__ { data = { static_cast<value_type>(value), static_cast<value_type>(value)}; }
-  __vector(vector_value_type value) __CPU_GPU__ : data(value) {}
+  __vector(const vector_value_type& value) __CPU_GPU__ : data(value) {}
 
   __vector(const __scalartype_N& other) __CPU_GPU__ : data(other.data) { }
 
@@ -209,7 +209,7 @@ public:
   template<typename T = __scalartype_N
           ,class = typename std::enable_if<T::size==3,value_type>::type > 
   __vector(value_type v1,value_type v2,value_type v3) __CPU_GPU__ {
-    data = {v1,v2,v3,static_cast<value_type>(0)}; 
+    data = {v1,v2,v3}; 
   }
 
   template<typename T = __scalartype_N
@@ -234,7 +234,6 @@ public:
     data = {v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15,v16}; 
   }
 
-  
   // conversion constructor from other short vector types
   template <typename ST>
   explicit __vector(const  __vector<ST,1>& other)  __CPU_GPU__ { data = { static_cast<value_type>(other.get_s0()) }; }
@@ -246,8 +245,7 @@ public:
   template < typename ST>
   explicit __vector(const  __vector<ST,3>& other)  __CPU_GPU__ { data = { static_cast<value_type>(other.get_s0())
                                                                              ,static_cast<value_type>(other.get_s1())
-                                                                             ,static_cast<value_type>(other.get_s2()) 
-                                                                             ,static_cast<value_type>(0) };           }
+                                                                             ,static_cast<value_type>(other.get_s2()) }; }
 
   template <typename ST>
   explicit __vector(const  __vector<ST,4>& other)  __CPU_GPU__ { data = { static_cast<value_type>(other.get_s0())
@@ -557,13 +555,20 @@ public:
   }
 
   template <typename T = __scalartype_N
+            , class = typename std::enable_if<T::size==3,value_type>::type >
+  bool operator==(const __vector<value_type, 3>& rhs) __CPU_GPU__ { 
+    return   ((data.s0 == rhs.data.s0) && (data.s1 == rhs.data.s1))
+              && (data.s2 == rhs.data.s2);
+
+  }
+
+  template <typename T = __scalartype_N
             , class = typename std::enable_if<T::size==4,value_type>::type >
   bool operator==(const __vector<value_type, 4>& rhs) __CPU_GPU__ { 
     return   ((data.s0 == rhs.data.s0) && (data.s1 == rhs.data.s1))
               && ((data.s2 == rhs.data.s2) && (data.s3 == rhs.data.s3));
 
   }
-
 
   template <typename T = __scalartype_N
             , class = typename std::enable_if<T::size==8,value_type>::type >
@@ -667,14 +672,14 @@ public:
   // NOTE: A 3-component vector has the same size as a 4-component vector
   static constexpr int data_vector_length = VECTOR_LENGTH==3?4:VECTOR_LENGTH;
 
-  typedef float vector_value_type  __attribute__((ext_vector_type(data_vector_length)));
+  typedef float vector_value_type  __attribute__((ext_vector_type(VECTOR_LENGTH)));
 
   typedef __vector<value_type,size> __scalartype_N;
 
 private:
   typedef float v1_type_internal  __attribute__((ext_vector_type(1)));
   typedef float v2_type_internal  __attribute__((ext_vector_type(2)));
-  typedef float v3_type_internal  __attribute__((ext_vector_type(4)));
+  typedef float v3_type_internal  __attribute__((ext_vector_type(3)));
   typedef float v4_type_internal  __attribute__((ext_vector_type(4)));
   typedef float v8_type_internal  __attribute__((ext_vector_type(8)));
   typedef float v16_type_internal  __attribute__((ext_vector_type(16)));
@@ -735,7 +740,7 @@ public:
 
   // the vector type overloaded constructor below already covers this scalar case
   //__vector(value_type value) __CPU_GPU__ { data = { static_cast<value_type>(value), static_cast<value_type>(value)}; }
-  __vector(vector_value_type value) __CPU_GPU__   { set_vector(value); }
+  __vector(const vector_value_type& value) __CPU_GPU__   { set_vector(value); }
 
   __vector(const __scalartype_N& other) __CPU_GPU__ : data(other.data) {  }
 
@@ -750,7 +755,7 @@ public:
   template<typename T = __scalartype_N
           ,class = typename std::enable_if<T::size==3,value_type>::type > 
   __vector(value_type v1,value_type v2,value_type v3) __CPU_GPU__ {
-    data = {v1,v2,v3,static_cast<value_type>(0)}; 
+    data = {v1,v2,v3}; 
   }
 
   template<typename T = __scalartype_N
@@ -787,8 +792,7 @@ public:
   template < typename ST>
   explicit __vector(const  __vector<ST,3>& other)  __CPU_GPU__ { data = { value_type(other.get_s0())
                                                                              ,value_type(other.get_s1())
-                                                                             ,value_type(other.get_s2()) 
-                                                                             ,value_type(0) };           }
+                                                                             ,value_type(other.get_s2()) }; }
 
   template <typename ST>
   explicit __vector(const  __vector<ST,4>& other)  __CPU_GPU__ { data = { value_type(other.get_s0())
@@ -1025,13 +1029,20 @@ public:
   }
 
   template <typename T = __scalartype_N
+            , class = typename std::enable_if<T::size==3,value_type>::type >
+  bool operator==(const __vector<value_type, 3>& rhs) __CPU_GPU__ { 
+    return   ((data.s0 == rhs.data.s0) && (data.s1 == rhs.data.s1))
+              && (data.s2 == rhs.data.s2);
+
+  }
+
+  template <typename T = __scalartype_N
             , class = typename std::enable_if<T::size==4,value_type>::type >
   bool operator==(const __vector<value_type, 4>& rhs) __CPU_GPU__ { 
     return   ((data.s0 == rhs.data.s0) && (data.s1 == rhs.data.s1))
               && ((data.s2 == rhs.data.s2) && (data.s3 == rhs.data.s3));
 
   }
-
 
   template <typename T = __scalartype_N
             , class = typename std::enable_if<T::size==8,value_type>::type >
