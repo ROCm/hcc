@@ -16,7 +16,7 @@ namespace short_vector
 #endif
 
 #if 1
-#include "short_vectors.inl"
+#include "hc_short_vector.inl"
 #else
 #include "kalmar_short_vectors.inl"
 #endif
