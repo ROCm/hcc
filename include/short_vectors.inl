@@ -31,8 +31,10 @@ DECLARE_VECTOR_TYPE_CLASS(unsigned short, ushort);
 DECLARE_VECTOR_TYPE_CLASS(short, short);
 DECLARE_VECTOR_TYPE_CLASS(unsigned int, uint);
 DECLARE_VECTOR_TYPE_CLASS(int, int);
-DECLARE_VECTOR_TYPE_CLASS(unsigned long long, ulong);
-DECLARE_VECTOR_TYPE_CLASS(long long, long);
+DECLARE_VECTOR_TYPE_CLASS(unsigned long, ulong);
+DECLARE_VECTOR_TYPE_CLASS(long, long);
+DECLARE_VECTOR_TYPE_CLASS(unsigned long long, ulonglong);
+DECLARE_VECTOR_TYPE_CLASS(long long, longlong);
 DECLARE_VECTOR_TYPE_CLASS(float, float);
 DECLARE_VECTOR_TYPE_CLASS(double, double);
 DECLARE_VECTOR_TYPE_CLASS(norm, norm);
@@ -93,6 +95,20 @@ typedef long3 long_3;
 typedef long4 long_4;
 typedef long8 long_8;
 typedef long16 long_16;
+
+typedef ulonglong1 ulonglong_1;
+typedef ulonglong2 ulonglong_2;
+typedef ulonglong3 ulonglong_3;
+typedef ulonglong4 ulonglong_4;
+typedef ulonglong8 ulonglong_8;
+typedef ulonglong16 ulonglong_16;
+
+typedef longlong1 longlong_1;
+typedef longlong2 longlong_2;
+typedef longlong3 longlong_3;
+typedef longlong4 longlong_4;
+typedef longlong8 longlong_8;
+typedef longlong16 longlong_16;
 
 typedef float1 float_1;
 typedef float2 float_2;
@@ -715,7 +731,7 @@ private:
 
 public:
 
-  __vector() __CPU_GPU__ { data = 0.0f; }
+  __vector() __CPU_GPU__ : data(0.0f) {  }
 
   // the vector type overloaded constructor below already covers this scalar case
   //__vector(value_type value) __CPU_GPU__ { data = { static_cast<value_type>(value), static_cast<value_type>(value)}; }
