@@ -14,9 +14,9 @@ IF (NOT NUM_BUILD_THREADS)
   ProcessorCount(NUM_BUILD_THREADS)
 ENDIF(NOT NUM_BUILD_THREADS)
 
-# Accepted values for DISTRO: ubuntu, fedora
+# Accepted values for DISTRO: trusty (Ubuntu 14.04), xenial (Ubuntu 16.06), fd23 (Fedora 23)
 IF (NOT DISTRO)
-  SET(DISTRO "ubuntu")
+  SET(DISTRO "trusty")
 ENDIF(NOT DISTRO)
 MESSAGE("Distro: ${DISTRO}")
 
@@ -120,13 +120,21 @@ MESSAGE("")
 
 endif (USE_CODEXL_ACTIVITY_LOGGER EQUAL 1)
 
-# switch to use libc++ instead of libstdc++ as the C++ runtime
-OPTION(USE_LIBCXX "Use libc++ for C++ runtime" ON)
-
 #################
+# Configure which C++ runtime to use
+# hcc will use libc++ if USE_LIBCXX is set to ON; otherwise, it will use libstdc++
+#################
+
+# if USE_LIBCXX is not set, then pick the C++ runtime based on the distro
+IF (NOT USE_LIBCXX)
+  IF (DISTRO STREQUAL "trusty")
+    SET(USE_LIBCXX "ON")
+  ELSE()
+    SET(USE_LIBCXX "OFF")
+  ENDIF()
+ENDIF(NOT USE_LIBCXX)
+
 # Detect libc++
-#################
-
 if (USE_LIBCXX)
   find_path(LIBCXX_HEADER random PATHS /usr/local/include/c++/v1 /usr/include/c++/v1 NO_DEFAULT_PATH)
   MESSAGE("libc++ headers found at ${LIBCXX_HEADER}")
@@ -389,14 +397,15 @@ set(CPACK_PACKAGE_VERSION "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}.${KAL
 set(CPACK_PACKAGE_VERSION_MAJOR ${KALMAR_VERSION_MAJOR})
 set(CPACK_PACKAGE_VERSION_MINOR ${KALMAR_VERSION_MINOR})
 set(CPACK_PACKAGE_VERSION_PATCH ${KALMAR_VERSION_PATCH})
-set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_SYSTEM_NAME})
+set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${DISTRO})
 
 
 set(PACKAGE_DESCRIPTION "HCC: An Open Source, Optimizing C++ Compiler for Heterogeneous Compute")
 
 set(OFFICIAL_RELEASE_BUILD 0)
 
-if ("${DISTRO}" STREQUAL "ubuntu")
+if ("${DISTRO}" STREQUAL "trusty"
+  OR "${DISTRO}" STREQUAL "xenial")
 
   set(CPACK_DEBIAN_PACKAGE_DESCRIPTION ${PACKAGE_DESCRIPTION})
   set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Siu Chi Chan <siuchi.chan@amd.com>")
@@ -417,25 +426,24 @@ if ("${DISTRO}" STREQUAL "ubuntu")
     set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_GENERAL_DEBIAN_DEP}")
   endif (OFFICIAL_RELEASE_BUILD)
 
-  set(CPACK_GENERATOR "DEB;TGZ")
-
-elseif ("${DISTRO}" STREQUAL "fedora")
+  set(CPACK_GENERATOR "DEB")
+  set(CPACK_BINARY_DEB "ON")
+elseif ("${DISTRO}" STREQUAL "fd23")
 
   set(CPACK_RPM_PACKAGE_DESCRIPTION ${PACKAGE_DESCRIPTION})
-
   set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/postinst")
   set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/prerm")
 
   # disable automatic shared libraries dependency detection
   set(CPACK_RPM_PACKAGE_AUTOREQ 0)
   set(CPACK_RPM_PACKAGE_REQUIRES "hsakmt-roct-dev, hsa-rocr-dev, rocm-device-libs, libstdc++-devel, elfutils-libelf-devel, glibc-devel")
-  set(CPACK_GENERATOR "RPM;TGZ")
-
-endif ("${DISTRO}" STREQUAL "ubuntu")
-
+  set(CPACK_GENERATOR "RPM")
+else()
+  # generate a tarball for unknown distro
+  set(CPACK_GENERATOR "TGZ")
+endif ()
 
 set(CPACK_SOURCE_GENERATOR "TGZ")
-set(CPACK_BINARY_DEB "ON")
 set(CPACK_BINARY_STGZ "OFF")
 set(CPACK_SOURCE_TGZ "OFF")
 set(CPACK_SOURCE_TZ "OFF")
