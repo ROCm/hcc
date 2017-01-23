@@ -17,7 +17,12 @@
 template <typename SCALAR_TYPE, unsigned int VECTOR_LENGTH>
 class __vector;
 
-/*
+// NOTE: A single-component vector (short vector with 1 component) in the hc namespace
+// is implemented with the __vector class with 1 component.
+// However, for C++AMP (Concurrency namespace), a single-component vector is mapped to a
+// scalar according to the C++AMP specification 
+#if !__HCC_AMP__
+
 #define DECLARE_VECTOR_TYPE_CLASS(SCALAR_TYPE, CLASS_PREFIX) \
 typedef __vector<SCALAR_TYPE, 1>    CLASS_PREFIX ## 1; \
 typedef __vector<SCALAR_TYPE, 2>    CLASS_PREFIX ## 2; \
@@ -25,7 +30,8 @@ typedef __vector<SCALAR_TYPE, 3>    CLASS_PREFIX ## 3; \
 typedef __vector<SCALAR_TYPE, 4>    CLASS_PREFIX ## 4; \
 typedef __vector<SCALAR_TYPE, 8>    CLASS_PREFIX ## 8; \
 typedef __vector<SCALAR_TYPE, 16>   CLASS_PREFIX ## 16; 
-*/
+
+#else
 
 #define DECLARE_VECTOR_TYPE_CLASS(SCALAR_TYPE, CLASS_PREFIX) \
 typedef SCALAR_TYPE    CLASS_PREFIX ## 1; \
@@ -35,6 +41,7 @@ typedef __vector<SCALAR_TYPE, 4>    CLASS_PREFIX ## 4; \
 typedef __vector<SCALAR_TYPE, 8>    CLASS_PREFIX ## 8; \
 typedef __vector<SCALAR_TYPE, 16>   CLASS_PREFIX ## 16; 
 
+#endif
 
 DECLARE_VECTOR_TYPE_CLASS(unsigned char, uchar);
 DECLARE_VECTOR_TYPE_CLASS(char, char);
@@ -151,9 +158,13 @@ typedef unorm16 unorm_16;
 
 template<typename SCALAR_TYPE, int SIZE> 
 struct short_vector {
+#if !__HCC_AMP__
+  typedef typename __vector<SCALAR_TYPE,SIZE>::type type;
+#else
   typedef typename std::conditional<SIZE==1
                                   , SCALAR_TYPE
                                   , __vector<SCALAR_TYPE,SIZE>>::type type;
+#endif
 };
 
 
@@ -176,6 +187,8 @@ struct short_vector_traits<__vector<SCALAR_TYPE, SIZE>> {
   static int const size = __vector<SCALAR_TYPE, SIZE>::size;
 };
 
+
+// Implementation of a generic short vector
 template <typename SCALAR_TYPE, unsigned int VECTOR_LENGTH>
 class __vector {
 
