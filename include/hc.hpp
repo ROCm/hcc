@@ -242,6 +242,11 @@ public:
      * commands that were submitted prior to the marker event creation have
      * completed, the future is ready.
      *
+     * Regardless of the accelerator_view's execute_order (execute_any_order, execute_in_order), 
+     * the marker always ensures older commands complete before the returned completion_future
+     * is marked ready.   Thus, markers provide a mechanism to enforce order between
+     * commands in an execute_any_order accelerator_view.
+     *
      * @return A future which can be waited on, and will block until the
      *         current batch of commands has completed.
      */
@@ -255,6 +260,11 @@ public:
      * dependent event and all commands submitted prior to the marker event
      * creation have been completed, the future is ready.
      *
+     * Regardless of the accelerator_view's execute_order (execute_any_order, execute_in_order), 
+     * the marker always ensures older commands complete before the returned completion_future
+     * is marked ready.   Thus, markers provide a mechanism to enforce order between
+     * commands in an execute_any_order accelerator_view.
+     *
      * @return A future which can be waited on, and will block until the
      *         current batch of commands, plus the dependent event have
      *         been completed.
@@ -266,8 +276,13 @@ public:
      * queue with arbitrary number of dependent asynchronous events.
      *
      * This marker is returned as a completion_future object. When its
-     * dependent event and all commands submitted prior to the marker event
-     * creation have been completed, the future is ready.
+     * dependent events and all commands submitted prior to the marker event
+     * creation have been completed, the completion_future is ready.
+     *
+     * Regardless of the accelerator_view's execute_order (execute_any_order, execute_in_order), 
+     * the marker always ensures older commands complete before the returned completion_future
+     * is marked ready.   Thus, markers provide a mechanism to enforce order between
+     * commands in an execute_any_order accelerator_view.
      *
      * @return A future which can be waited on, and will block until the
      *         current batch of commands, plus the dependent event have
@@ -310,10 +325,13 @@ public:
      * Src and dst must not overlap.  
      * Note the src is the first parameter and dst is second, following C++ convention.  
      * This is an asynchronous copy command, and this call may return before the copy operation completes.
+     * If the source or dest is host memory, the memory must be pinned or a runtime exception will be thrown.
+     * Pinned memory can be created with am_alloc with flag=amHostPinned flag.
      *
      * The copy command will be implicitly ordered with respect to commands previously equeued to this accelerator_view:
-     * - If the queue execute_order is execute_in_order (the default), then the copy will execute after all previously sent commands finish execution.
-     * - If the queue execute_order is execute_any_order, then the copy will start after all previously send commands start but can execute in any order.
+     * - If the accelerator_view execute_order is execute_in_order (the default), then the copy will execute after all previously sent commands finish execution.
+     * - If the accelerator_view execute_order is execute_any_order, then the copy will start after all previously send commands start but can execute in any order.
+     *
      *
      */
     completion_future copy_async(const void *src, void *dst, size_t size_bytes);
@@ -324,10 +342,12 @@ public:
      * Src and dst must not overlap.  
      * Note the src is the first parameter and dst is second, following C++ convention.  
      * This is an asynchronous copy command, and this call may return before the copy operation completes.
+     * If the source or dest is host memory, the memory must be pinned or a runtime exception will be thrown.
+     * Pinned memory can be created with am_alloc with flag=amHostPinned flag.
      *
      * The copy command will be implicitly ordered with respect to commands previously enqueued to this accelerator_view:
-     * - If the queue execute_order is execute_in_order (the default), then the copy will execute after all previously sent commands finish execution.
-     * - If the queue execute_order is execute_any_order, then the copy will start after all previously send commands start but can execute in any order.
+     * - If the accelerator_view execute_order is execute_in_order (the default), then the copy will execute after all previously sent commands finish execution.
+     * - If the accelerator_view execute_order is execute_any_order, then the copy will start after all previously send commands start but can execute in any order.
      *   The copyAcc determines where the copy is executed and does not affect the ordering.
      *
      * The copy_async_ext flavor allows caller to provide additional information about each pointer, which can improve performance by eliminating replicated lookups,
