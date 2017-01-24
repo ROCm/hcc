@@ -1,7 +1,6 @@
 
 #pragma once
 
-#include <type_traits>
 #include "hc_norm_unorm.inl"
 
 #ifndef __CPU_GPU__

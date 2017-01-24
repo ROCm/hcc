@@ -3,6 +3,9 @@
 #ifndef _HC_SHORT_VECTORS_HPP
 #define _HC_SHORT_VECTORS_HPP
 
+#include <cstddef>
+#include <type_traits>
+
 namespace hc
 {
 
