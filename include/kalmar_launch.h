@@ -40,7 +40,7 @@ static std::set<std::string> __mcw_cxxamp_kernels;
 template<typename Kernel, int dim_ext>
 inline std::shared_ptr<KalmarAsyncOp>
 mcw_cxxamp_launch_kernel_async(const std::shared_ptr<KalmarQueue>& pQueue, size_t *ext,
-  size_t *local_size, const Kernel& f) restrict(cpu,amp) {
+  size_t *local_size, const Kernel& f) {
 #if __KALMAR_ACCELERATOR__ != 1
   //Invoke Kernel::__cxxamp_trampoline as an kernel
   //to ensure functor has right operator() defined

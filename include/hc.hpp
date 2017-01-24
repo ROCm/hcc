@@ -7511,7 +7511,7 @@ private:
 #pragma clang diagnostic ignored "-Wunused-variable"
 //ND parallel_for_each, nontiled
 template <int N, typename Kernel>
-__attribute__((noinline,used)) completion_future parallel_for_each(
+__attribute__((used)) completion_future parallel_for_each(
     const accelerator_view& av,
     const extent<N>& compute_domain, const Kernel& f) __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
@@ -7554,7 +7554,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
 #pragma clang diagnostic ignored "-Wunused-variable"
 //1D parallel_for_each, nontiled
 template <typename Kernel>
-__attribute__((noinline,used)) completion_future parallel_for_each(
+__attribute__((used)) completion_future parallel_for_each(
     const accelerator_view& av, const extent<1>& compute_domain, const Kernel& f) __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
   // silently return in case the any dimension of the extent is 0
@@ -7589,7 +7589,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
 #pragma clang diagnostic ignored "-Wunused-variable"
 //2D parallel_for_each, nontiled
 template <typename Kernel>
-__attribute__((noinline,used)) completion_future parallel_for_each(
+__attribute__((used)) completion_future parallel_for_each(
     const accelerator_view& av, const extent<2>& compute_domain, const Kernel& f) __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
   // silently return in case the any dimension of the extent is 0
@@ -7627,7 +7627,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
 #pragma clang diagnostic ignored "-Wunused-variable"
 //3D parallel_for_each, nontiled
 template <typename Kernel>
-__attribute__((noinline,used)) completion_future parallel_for_each(
+__attribute__((used)) completion_future parallel_for_each(
     const accelerator_view& av, const extent<3>& compute_domain, const Kernel& f) __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
   // silently return in case the any dimension of the extent is 0
@@ -7668,7 +7668,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
 #pragma clang diagnostic ignored "-Wunused-variable"
 //1D parallel_for_each, tiled
 template <typename Kernel>
-__attribute__((noinline,used)) completion_future parallel_for_each(
+__attribute__((used)) completion_future parallel_for_each(
     const accelerator_view& av, const tiled_extent<1>& compute_domain, const Kernel& f) __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
   // silently return in case the any dimension of the extent is 0
@@ -7706,7 +7706,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
 #pragma clang diagnostic ignored "-Wunused-variable"
 //2D parallel_for_each, tiled
 template <typename Kernel>
-__attribute__((noinline,used)) completion_future parallel_for_each(
+__attribute__((,used)) completion_future parallel_for_each(
     const accelerator_view& av, const tiled_extent<2>& compute_domain, const Kernel& f) __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
   // silently return in case the any dimension of the extent is 0
@@ -7748,7 +7748,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
 #pragma clang diagnostic ignored "-Wunused-variable"
 //3D parallel_for_each, tiled
 template <typename Kernel>
-__attribute__((noinline,used)) completion_future parallel_for_each(
+__attribute__((used)) completion_future parallel_for_each(
     const accelerator_view& av, const tiled_extent<3>& compute_domain, const Kernel& f) __CPU__ __HC__ {
 #if __KALMAR_ACCELERATOR__ != 1
   // silently return in case the any dimension of the extent is 0

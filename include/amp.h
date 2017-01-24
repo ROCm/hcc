@@ -5825,7 +5825,7 @@ private:
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-variable"
 template <int N, typename Kernel>
-__attribute__((noinline,used))
+__attribute__((used))
 void parallel_for_each(const accelerator_view& av, extent<N> compute_domain,
                        const Kernel& f) restrict(cpu, amp) {
 #if __KALMAR_ACCELERATOR__ != 1
@@ -5876,7 +5876,7 @@ void parallel_for_each(const accelerator_view& av, extent<N> compute_domain,
 #pragma clang diagnostic ignored "-Wunused-variable"
 //1D parallel_for_each, nontiled
 template <typename Kernel>
-__attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av,
+__attribute__((used)) void parallel_for_each(const accelerator_view& av,
     extent<1> compute_domain, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
   if(compute_domain[0]<=0) {
@@ -5908,7 +5908,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
 #pragma clang diagnostic ignored "-Wunused-variable"
 //2D parallel_for_each, nontiled
 template <typename Kernel>
-__attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av,
+__attribute__((used)) void parallel_for_each(const accelerator_view& av,
     extent<2> compute_domain, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
   if(compute_domain[0]<=0 || compute_domain[1]<=0) {
@@ -5941,7 +5941,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
 #pragma clang diagnostic ignored "-Wunused-variable"
 //3D parallel_for_each, nontiled
 template <typename Kernel>
-__attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av,
+__attribute__((used)) void parallel_for_each(const accelerator_view& av,
     extent<3> compute_domain, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
   if(compute_domain[0]<=0 || compute_domain[1]<=0 || compute_domain[2]<=0) {
@@ -5981,7 +5981,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
 #pragma clang diagnostic ignored "-Wunused-variable"
 //1D parallel_for_each, tiled
 template <int D0, typename Kernel>
-__attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av,
+__attribute__((used)) void parallel_for_each(const accelerator_view& av,
     tiled_extent<D0> compute_domain, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
   if(compute_domain[0]<=0) {
@@ -6018,7 +6018,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
 #pragma clang diagnostic ignored "-Wunused-variable"
 //2D parallel_for_each, tiled
 template <int D0, int D1, typename Kernel>
-__attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av,
+__attribute__((used)) void parallel_for_each(const accelerator_view& av,
     tiled_extent<D0, D1> compute_domain, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
   if(compute_domain[0]<=0 || compute_domain[1]<=0) {
@@ -6057,7 +6057,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
 #pragma clang diagnostic ignored "-Wunused-variable"
 //3D parallel_for_each, tiled
 template <int D0, int D1, int D2, typename Kernel>
-__attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av,
+__attribute__((used)) void parallel_for_each(const accelerator_view& av,
     tiled_extent<D0, D1, D2> compute_domain, const Kernel& f) restrict(cpu,amp) {
 #if __KALMAR_ACCELERATOR__ != 1
   if(compute_domain[0]<=0 || compute_domain[1]<=0 || compute_domain[2]<=0) {
