@@ -39,7 +39,7 @@
 #include <time.h>
 #include <iomanip>
 
-//#define KALMAR_DEBUG (0)
+#define KALMAR_DEBUG (0)
 #ifndef KALMAR_DEBUG
 #define KALMAR_DEBUG (0)
 #endif
@@ -48,13 +48,6 @@
 #define KALMAR_DEBUG_ASYNC_COPY (0)
 #endif
 
-// Macro for prettier debug messages, use like:
-// DBOUT(" Something happenedd" << myId() << " i= " << i << "\n");
-#if KALMAR_DEBUG
-  #define DBOUT( x )  std::cerr << x
-#else
-  #define DBOUT( x )
-#endif
 
 /////////////////////////////////////////////////
 // kernel dispatch speed optimization flags
@@ -99,10 +92,21 @@ int HCC_SERIALIZE_COPY = 0;
 
 int HCC_OPT_FLUSH=0;
 
-#define DB_SYNC 0x2
+#define DB_MISC  0x0  // 0x01
+#define DB_SYNC  0x1  // 0x02
+#define DB_AQL   0x2  // 0x04
+#define DB_QUEUE 0x3  // 0x08
 unsigned HCC_DB = 0;
 
-int HCC_MAX_QUEUES = 1024;
+std::vector<std::string> g_DbStr = {"misc", "sync", "aql", "queue" };
+
+int HCC_MAX_QUEUES = 24;
+
+// Macro for prettier debug messages, use like:
+// DBOUT(" Something happened" << myId() << " i= " << i << "\n");
+#define COMPILE_HCC_DB 1
+//#define DBOUT(db_flag, msg) if (COMPILE_HCC_DB && (HCC_DB & (1<<(db_flag)))) { std::cerr << "tid:" << std::this_thread::get_id() << ":" <<  msg ; } ;
+#define DBOUT(db_flag, msg) if (COMPILE_HCC_DB && (HCC_DB & (1<<(db_flag)))) { std::cerr << " hcc-" << g_DbStr[db_flag] << ":" << msg ; } ;
 
 
 
@@ -1098,7 +1102,7 @@ public:
         if (HCC_OPT_FLUSH) {
             // In the loop below, this will be the first op waited on
             auto marker = EnqueueMarkerWithFlush();
-            DBOUT("enqueue marker to release written data " << marker<<"\n");
+            DBOUT(DB_MISC, "enqueue marker to release written data " << marker<<"\n");
         }
 
         for (int i = asyncOps.size()-1; i >= 0;  i--) {
@@ -1709,50 +1713,62 @@ public:
 
         if (rocrQueues.size() < HCC_MAX_QUEUES) {
 
-            // Allocate a new queue, we have are belowthe HCC_MAX_QUEUES limit :
+            // Allocate a new queue, we are belowthe HCC_MAX_QUEUES limit :
+            //
 
             auto rq = new RocrQueue(agent, thief);
             rocrQueues.push_back(rq);
 
+            DBOUT(DB_QUEUE, "Create new rocrQueue=" << rq << "\n")
+
         } else {
-            bool foundQueue = false;
-            while (!foundQueue) {
+            RocrQueue *foundRQ = nullptr;
+            while (!foundRQ) {
+                // First make a pass to see if we can find an unused queue:
                 for (auto rq : rocrQueues) {
-                    if (rq->_hccQueue != thief)  {
-                        auto victimHccQueue = rq->_hccQueue;
-                        if (victimHccQueue) {
-                            // victimHccQueue==nullptr indicates that a RocrQueue is allocated but not used by any HCC queue
+                    if (rq->_hccQueue == nullptr) {
+                        foundRQ = rq;
+                        break;
+                    }
+                } 
+                if (!foundRQ) {
+                    for (auto rq : rocrQueues) {
+                        if (rq->_hccQueue != thief)  {
+                            auto victimHccQueue = rq->_hccQueue;
+                            // victimHccQueue==nullptr should be detected by above loop.
                             std::lock_guard<std::mutex> (victimHccQueue->qmutex);
                             if (victimHccQueue->isEmpty()) {
-                                if (HCC_DB & DB_SYNC) {
-                                    std::cerr << "tid:" << std::this_thread::get_id() << " ptr:" << this << " lock_guard...\n";
-                                }
+                                DBOUT(DB_SYNC, " ptr:" << this << " lock_guard...\n");
 
                                 assert (victimHccQueue->rocrQueue == rq);  // ensure the link is consistent.
                                 victimHccQueue->rocrQueue = nullptr; 
+                                foundRQ = rq;
+                                break;
                             }
                         }
-                            
-                        // update the queue pointers to indicate the theft:
-                        rq->assignHccQueue(thief);
-
-                        foundQueue = true;
-
-                        break;
-
                     }
                 }
+                if (foundRQ) {
+                    
+                    // update the queue pointers to indicate the theft:
+                    foundRQ->assignHccQueue(thief);
+
+                    break; // while !foundVictim
+                };
+
                 // Allow other threads a small window to release threads to make progress:
                 this->rocrQueuesMutex.unlock();
                 this->rocrQueuesMutex.lock();
             }
+
+            DBOUT(DB_QUEUE, "Assigned existing rocrQueue=" << thief->rocrQueue << " to hccQueue=" << thief << "\n")
         }
     };
 
     void removeRocrQueue(RocrQueue *rocrQueue) {
 
         // queues already locked:
-        size_t hccSz = queues.size();
+        size_t hccSize = queues.size();
 
         { 
             std::lock_guard<std::mutex> (this->rocrQueuesMutex);
@@ -1761,13 +1777,16 @@ public:
             // This defers expensive queue deallocation if an hccQueue that holds an hwQueue is destroyed - 
             // keep the hwqueue around until the number of hccQueues drops below the number of hwQueues
             // we have already allocated.
-            if (hccSz < rocrQueues.size())  {
-
+            auto rqSize = rocrQueues.size();
+            if (hccSize <= rqSize)  {
                 auto iter = std::find(rocrQueues.begin(), rocrQueues.end(), rocrQueue);
                 assert (iter != rocrQueue.end()); 
+                // Remove the pointer from the list:
                 rocrQueues.erase(iter);
+                DBOUT(DB_QUEUE, "removeRocrQueue:: rocrQueue=" << rocrQueue << " hccQueues/rocrQueues=" << hccSize << "/" << rqSize << "\n")
                 delete rocrQueue; // this will delete the HSA HW queue.
             } else {
+                DBOUT(DB_QUEUE, "removeRocrQueue: rocrQueue=" << rocrQueue << " keep hwQUeue, set _hccQueue link to nullptr" << " hccQueues/rocrQueues=" << hccSize << "/" << rqSize << "\n");
                 rocrQueue->_hccQueue = nullptr; // mark it as available.
             }
         }
@@ -3053,9 +3072,7 @@ HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order) :
 {
     { 
         // Protect the HSA queue we can steal it.
-        if (HCC_DB & DB_SYNC) {
-            std::cerr << "tid:" << std::this_thread::get_id() << " ptr:" << this << " create lock_guard...\n";
-        }
+        DBOUT(DB_SYNC, " ptr:" << this << " create lock_guard...\n");
 
         std::lock_guard<std::mutex> (this->qmutex);
 
@@ -3078,9 +3095,7 @@ void HSAQueue::dispose() override {
     std::cerr << "HSAQueue::dispose() in\n";
 #endif
     {
-        if (HCC_DB & DB_SYNC) {
-            std::cerr << "tid:" << std::this_thread::get_id() << " ptr:" << this << " dispose lock_guard...\n";
-        }
+        DBOUT(DB_SYNC, " ptr:" << this << " dispose lock_guard...\n");
 
         std::lock_guard<std::mutex> (this->qmutex);
 
@@ -3121,9 +3136,7 @@ void HSAQueue::dispose() override {
 
 
 hsa_queue_t *HSAQueue::acquireLockedRocrQueue() {
-    if (HCC_DB & DB_SYNC) {
-        std::cerr << "tid:" << std::this_thread::get_id() << " ptr:" << this << " lock...\n";
-    }
+    DBOUT(DB_SYNC, " ptr:" << this << " lock...\n");
     this->qmutex.lock();
     if (this->rocrQueue == nullptr) {
         auto device = static_cast<Kalmar::HSADevice*>(this->getDev());
@@ -3135,9 +3148,7 @@ hsa_queue_t *HSAQueue::acquireLockedRocrQueue() {
 void HSAQueue::releaseLockedRocrQueue()
 {
    
-    if (HCC_DB & DB_SYNC) {
-        std::cerr << "tid:" << std::this_thread::get_id() << " ptr:" << this << " unlock...\n";
-    }
+    DBOUT(DB_SYNC, " ptr:" << this << " unlock...\n");
     this->qmutex.unlock();
 }
 
@@ -3349,6 +3360,24 @@ HSADispatch::HSADispatch(Kalmar::HSADevice* _device, HSAKernel* _kernel,
 }
 
 
+static void printAql(const hsa_kernel_dispatch_packet_t *aql) 
+{
+    fprintf (stderr, "header=%x, setup=%x, grid=[%d.%d.%d], group=[%d.%d.%d], private_seg_size=%d, group_seg_size=%d, kernel_object=%lx, kernarg_address=%p, completion_signal=%lx\n",
+            aql->header,
+            aql->setup,
+            aql->grid_size_x,
+            aql->grid_size_y,
+            aql->grid_size_z,
+            aql->workgroup_size_x,
+            aql->workgroup_size_y,
+            aql->workgroup_size_z,
+            aql->private_segment_size,
+            aql->group_segment_size, 
+            aql->kernel_object, 
+            aql->kernarg_address,
+            aql->completion_signal.handle);
+}
+
 
 // dispatch a kernel asynchronously
 // -  allocates signal, copies arguments into kernarg buffer, and places aql packet into queue.
@@ -3433,12 +3462,10 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
 
     hsa_queue_store_write_index_relaxed(lockedHsaQueue, index + 1);
 
-    if (HCC_DB & 0x1) {
-        std::cerr << "tid" << std::this_thread::get_id() <<  " ring door bell to dispatch kernel " << kernel->kernelName <<  "  aql.header=0x" << std::hex << header << std::dec << "\n";
+    DBOUT(DB_AQL, " dispatch kernel " << kernel->kernelName ? kernel->kernelName : "<unknown>");
+    if (HCC_DB & (1<<DB_AQL)) {
+        printAql(q_aql); // TODO - convert to stream-based
     }
-#if KALMAR_DEBUG
-    std::cerr << "ring door bell to dispatch kernel " << kernel->kernelName << "\n";
-#endif
 
     // Ring door bell
     hsa_signal_store_relaxed(lockedHsaQueue->doorbell_signal, index);
@@ -3461,23 +3488,20 @@ HSADispatch::waitComplete() {
 
 
     if (signal.handle) {
-        DBOUT(" wait for kernel dispatch op#" << getSeqNum() << " completion with wait flag: " << waitMode << "  signal="<< std::hex  << signal.handle << std::dec << "\n");
-        if (HCC_DB & 0x1) {
-            std::cerr << "wait for kernel dispatch op#" << getSeqNum() << " completion with wait flag: " << waitMode << "  signal="<< std::hex  << signal.handle << std::dec << "\n";
-        }
+        DBOUT(DB_MISC, "wait for kernel dispatch op#" << getSeqNum() << " completion with wait flag: " << waitMode << "  signal="<< std::hex  << signal.handle << std::dec << "\n");
 
         // wait for completion
         if (hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_LT, 1, uint64_t(-1), waitMode)!=0) {
             throw Kalmar::runtime_exception("Signal wait returned unexpected value\n", 0);
         }
 
-        DBOUT ("complete!\n");
+        DBOUT (DB_MISC, "complete!\n");
     } else {
         // Some commands may have null signal - in this case we can't actually
         // track their status so assume they are complete.
         // In practice, apps would need to use another form of synchronization for
         // these such as waiting on a younger command or using a queue sync.
-        DBOUT ("null signal, considered complete\n");
+        DBOUT (DB_MISC, "null signal, considered complete\n");
     }
 
     if (kernargMemory != nullptr) {
@@ -3760,9 +3784,7 @@ HSABarrier::enqueueAsync(Kalmar::HSAQueue* hsaQueue, bool forceFlush) {
         header |= fenceBits;
         barrier->header = header;
 
-        if (HCC_DB & 0x1) {
-            std::cerr << "barrier dependency count: " << depCount << " aql.header=0x" << std::hex << barrier->header << std::dec << "\n";
-        }
+        DBOUT(DB_MISC, "barrier dependency count: " << depCount << " aql.header=0x" << std::hex << barrier->header << std::dec << "\n");
 
         // setup dependent signals
         if ((depCount > 0) && (depCount <= 5)) {
