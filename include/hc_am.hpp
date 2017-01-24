@@ -16,7 +16,8 @@ typedef int am_status_t;
 namespace hc {
 
 // Info for each pointer in the memtry tracker:
-struct AmPointerInfo {
+class AmPointerInfo {
+public:
     void *      _hostPointer;   ///< Host pointer.  If host access is not allowed, NULL.
     void *      _devicePointer; ///< Device pointer.  
     size_t      _sizeBytes;     ///< Size of allocation.
