@@ -559,7 +559,7 @@ public:
     }
 
 
-    hsa_status_t enqueueAsync(Kalmar::HSAQueue*, bool forceFlush);
+    hsa_status_t enqueueAsync(Kalmar::HSAQueue*, hc::memory_scope memory_scope);
 
     // wait for the barrier to complete
     hsa_status_t waitComplete();
@@ -1023,7 +1023,7 @@ public:
     void waitForStreamDeps (KalmarAsyncOp *newOp) {
         std::shared_ptr<KalmarAsyncOp> depOp = detectStreamDeps(newOp);
         if (depOp != nullptr) {
-            EnqueueMarkerWithDependency(1, &depOp);
+            EnqueueMarkerWithDependency(1, &depOp, hc::system_scope);
         }
     }
 
@@ -1091,7 +1091,7 @@ public:
 #endif
         if (HCC_OPT_FLUSH) {
             // In the loop below, this will be the first op waited on
-            auto marker = EnqueueMarkerWithFlush();
+            auto marker = EnqueueMarker(hc::system_scope);
             DBOUT(DB_MISC, "enqueue marker to release written data " << marker<<"\n");
         }
 
@@ -1514,7 +1514,7 @@ public:
     }
 
     // enqueue a barrier packet
-    std::shared_ptr<KalmarAsyncOp> EnqueueMarker() override {
+    std::shared_ptr<KalmarAsyncOp> EnqueueMarker(memory_scope release_scope) override {
 
         hsa_status_t status = HSA_STATUS_SUCCESS;
 
@@ -1522,7 +1522,7 @@ public:
         std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>();
 
         // enqueue the barrier
-        status = barrier.get()->enqueueAsync(this, false/*agent-flush*/);
+        status = barrier.get()->enqueueAsync(this, release_scope);
         STATUS_CHECK(status, __LINE__);
 
         // associate the barrier with this queue
@@ -1531,28 +1531,11 @@ public:
         return barrier;
     }
 
-
-    // enqueue a barrier packet
-    std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithFlush() {
-
-        hsa_status_t status = HSA_STATUS_SUCCESS;
-
-        // create shared_ptr instance
-        std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>();
-
-        // enqueue the barrier
-        status = barrier.get()->enqueueAsync(this, true/*system-flush*/);
-        STATUS_CHECK(status, __LINE__);
-
-        // associate the barrier with this queue
-        pushAsyncOp(barrier);
-
-        return barrier;
-    }
 
     // enqueue a barrier packet with multiple prior dependencies
-    std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(int count, std::shared_ptr <KalmarAsyncOp> *depOps) override {
+    std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(int count, std::shared_ptr <KalmarAsyncOp> *depOps, hc::memory_scope scope) override {
         hsa_status_t status = HSA_STATUS_SUCCESS;
+
 
         if ((count > 0) && (count <= HSA_BARRIER_DEP_SIGNAL_CNT)) {
 
@@ -1560,7 +1543,7 @@ public:
             std::shared_ptr<HSABarrier> barrier = std::make_shared<HSABarrier>(count, depOps);
 
             // enqueue the barrier
-            status = barrier.get()->enqueueAsync(this, false);
+            status = barrier.get()->enqueueAsync(this, scope);
             STATUS_CHECK(status, __LINE__);
 
             // associate the barrier with this queue
@@ -3755,19 +3738,26 @@ HSABarrier::waitComplete() {
 }
 
 inline hsa_status_t
-HSABarrier::enqueueAsync(Kalmar::HSAQueue* hsaQueue, bool forceFlush) {
+HSABarrier::enqueueAsync(Kalmar::HSAQueue* hsaQueue, hc::memory_scope scope) {
 
     // record HSAQueue association
     this->hsaQueue = hsaQueue;
     // extract hsa_queue_t from HSAQueue
 
     // enqueue barrier packet
-    unsigned fenceBits = (!forceFlush && HCC_OPT_FLUSH) ? 
-        ((HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
-        ((HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE)
-        :
-        ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
-        ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
+    // TODO - can we remove acquire fence, this is barrier:
+    unsigned fenceBits;
+    if (scope == hc::accelerator_scope) {
+        fenceBits =
+            ((HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
+            ((HSA_FENCE_SCOPE_AGENT) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
+    } else if (scope == hc::system_scope) {
+        fenceBits =
+            ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
+            ((HSA_FENCE_SCOPE_SYSTEM) << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
+    } else {
+        STATUS_CHECK(HSA_STATUS_ERROR_INVALID_ARGUMENT, __LINE__);
+    }
 
     if (isDispatched) {
         STATUS_CHECK(HSA_STATUS_ERROR_INVALID_ARGUMENT, __LINE__);

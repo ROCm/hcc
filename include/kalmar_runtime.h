@@ -37,6 +37,15 @@ enum execute_order
     execute_any_order
 };
 
+
+// Flags to specify visibility of previous commands after a marker is executed.
+enum memory_scope
+{
+    accelerator_scope,  // One accelerator scope 
+    system_scope,       // CPU + All accelerators
+};
+
+
 enum hcCommandKind {
     hcCommandInvalid= -1,
 
@@ -47,6 +56,7 @@ enum hcCommandKind {
     hcCommandKernel = 4,
     hcCommandMarker = 5,
 };
+
 
 static inline bool isCopyCommand(hcCommandKind k) 
 {
@@ -226,11 +236,11 @@ public:
   virtual bool hasHSAInterOp() { return false; }
 
   /// enqueue marker
-  virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarker() { return nullptr; }
+  virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarker(memory_scope) { return nullptr; }
 
   /// enqueue marker with prior dependency
-  virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(int count, std::shared_ptr <KalmarAsyncOp> *depOps) { return nullptr; }
-  virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(std::shared_ptr <KalmarAsyncOp> depOp) { return EnqueueMarkerWithDependency(1, &depOp); };
+  virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(int count, std::shared_ptr <KalmarAsyncOp> *depOps, memory_scope scope) { return nullptr; }
+  virtual std::shared_ptr<KalmarAsyncOp> EnqueueMarkerWithDependency(std::shared_ptr <KalmarAsyncOp> depOp, memory_scope scope) { return EnqueueMarkerWithDependency(1, &depOp, scope); };
 
 
   /// copy src to dst asynchronously

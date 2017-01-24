@@ -250,7 +250,7 @@ public:
      * @return A future which can be waited on, and will block until the
      *         current batch of commands has completed.
      */
-    completion_future create_marker() const;
+    completion_future create_marker(memory_scope scope=system_scope) const;
 
     /**
      * This command inserts a marker event into the accelerator_view's command
@@ -269,7 +269,7 @@ public:
      *         current batch of commands, plus the dependent event have
      *         been completed.
      */
-    completion_future create_blocking_marker(completion_future& dependent_future) const;
+    completion_future create_blocking_marker(completion_future& dependent_future, memory_scope scope=system_scope) const;
 
     /**
      * This command inserts a marker event into the accelerator_view's command
@@ -288,7 +288,7 @@ public:
      *         current batch of commands, plus the dependent event have
      *         been completed.
      */
-    completion_future create_blocking_marker(std::initializer_list<completion_future> dependent_future_list) const;
+    completion_future create_blocking_marker(std::initializer_list<completion_future> dependent_future_list, memory_scope scope=system_scope) const;
 
     /**
      * Copies size_bytes bytes from src to dst.  
@@ -622,7 +622,7 @@ private:
 
     // private member function template to create a marker from iterators
     template<typename InputIterator>
-    completion_future create_blocking_marker(InputIterator first, InputIterator last) const;
+    completion_future create_blocking_marker(InputIterator first, InputIterator last, memory_scope scope) const;
 
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
 public:
@@ -1398,19 +1398,19 @@ inline accelerator
 accelerator_view::get_accelerator() const { return pQueue->getDev(); }
 
 inline completion_future
-accelerator_view::create_marker() const {
-    return completion_future(pQueue->EnqueueMarker());
+accelerator_view::create_marker(memory_scope scope) const {
+    return completion_future(pQueue->EnqueueMarker(scope));
 }
 
 inline unsigned int accelerator_view::get_version() const { return get_accelerator().get_version(); }
 
-inline completion_future accelerator_view::create_blocking_marker(completion_future& dependent_future) const {
-    return completion_future(pQueue->EnqueueMarkerWithDependency(dependent_future.__asyncOp));
+inline completion_future accelerator_view::create_blocking_marker(completion_future& dependent_future, memory_scope scope) const {
+    return completion_future(pQueue->EnqueueMarkerWithDependency(dependent_future.__asyncOp, scope));
 }
 
 template<typename InputIterator>
 inline completion_future
-accelerator_view::create_blocking_marker(InputIterator first, InputIterator last) const {
+accelerator_view::create_blocking_marker(InputIterator first, InputIterator last, memory_scope scope) const {
     bool atLeastOne = false; // have we sent at least one marker
     int cnt = 0;
     std::shared_ptr<Kalmar::KalmarAsyncOp> deps[5]; // array of 5 pointers to the native handle of async ops. 5 is the max supported by barrier packet
@@ -1424,21 +1424,21 @@ accelerator_view::create_blocking_marker(InputIterator first, InputIterator last
         deps[cnt++] = iter->__asyncOp; // retrieve async op associated with completion_future
         if (cnt == 5) {
             atLeastOne = true;
-            lastMarker = completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps));
+            lastMarker = completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, scope));
             cnt = 0;
         }
     }
 
     if (cnt || !atLeastOne) {
-        lastMarker = completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps));
+        lastMarker = completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, scope));
     }
 
     return lastMarker;
 }
 
 inline completion_future
-accelerator_view::create_blocking_marker(std::initializer_list<completion_future> dependent_future_list) const {
-    return create_blocking_marker(dependent_future_list.begin(), dependent_future_list.end());
+accelerator_view::create_blocking_marker(std::initializer_list<completion_future> dependent_future_list, memory_scope scope) const {
+    return create_blocking_marker(dependent_future_list.begin(), dependent_future_list.end(), scope);
 }
 
 
