@@ -808,11 +808,10 @@ struct RocrQueue {
         assert(queue_size != 0);
 
         /// Create a queue using the maximum size.
-        hsa_status_t status = hsa_queue_create(agent, queue_size, HSA_QUEUE_TYPE_SINGLE, NULL, NULL,
-                                               UINT32_MAX, UINT32_MAX, &_hwQueue);
-#if KALMAR_DEBUG
-        std::cerr << "HSAQueue::HSAQueue(): created an HSA command queue: " << _hwQueue << "\n";
-#endif
+        status = hsa_queue_create(agent, queue_size, HSA_QUEUE_TYPE_SINGLE, NULL, NULL,
+                                  UINT32_MAX, UINT32_MAX, &_hwQueue);
+        DBOUT(DB_QUEUE, "  " <<  __func__ << ": created an HSA command queue: " << _hwQueue << "\n");
+
         STATUS_CHECK(status, __LINE__);
 
         status = hsa_amd_profiling_set_profiler_enabled(_hwQueue, 1);
@@ -823,11 +822,10 @@ struct RocrQueue {
 
     ~RocrQueue() {
 
-#if KALMAR_DEBUG
-        std::cerr << "HSAQueue::dispose(): destroy an HSA command queue: " << _hwQueue << "\n";
-#endif
+        DBOUT(DB_QUEUE, "  " <<  __func__ << ": destroy an HSA command queue: " << _hwQueue << "\n");
 
         hsa_status_t status = hsa_queue_destroy(_hwQueue);
+        _hwQueue = 0;
         STATUS_CHECK(status, __LINE__);
     };
 
@@ -1722,7 +1720,7 @@ public:
                 // First make a pass to see if we can find an unused queue:
                 for (auto rq : rocrQueues) {
                     if (rq->_hccQueue == nullptr) {
-                        DBOUT(DB_QUEUE, "Found unused rocrQueue=" << rq << " for thief=" << thief << "\n")
+                        DBOUT(DB_QUEUE, "Found unused rocrQueue=" << rq << " for thief=" << thief << ".  hwQueue=" << rq->_hwQueue << "\n")
                         foundRQ = rq;
                         break;
                     }
@@ -1774,15 +1772,15 @@ public:
             // keep the hwqueue around until the number of hccQueues drops below the number of hwQueues
             // we have already allocated.
             auto rqSize = rocrQueues.size();
-            if (hccSize <= rqSize)  {
+            if (hccSize < rqSize)  {
                 auto iter = std::find(rocrQueues.begin(), rocrQueues.end(), rocrQueue);
                 assert (iter != rocrQueue.end()); 
                 // Remove the pointer from the list:
                 rocrQueues.erase(iter);
-                DBOUT(DB_QUEUE, "removeRocrQueue:: rocrQueue=" << rocrQueue << " hccQueues/rocrQueues=" << hccSize << "/" << rqSize << "\n")
+                DBOUT(DB_QUEUE, "removeRocrQueue-hard: rocrQueue=" << rocrQueue << " hccQueues/rocrQueues=" << hccSize << "/" << rqSize << "\n")
                 delete rocrQueue; // this will delete the HSA HW queue.
             } else {
-                DBOUT(DB_QUEUE, "removeRocrQueue: rocrQueue=" << rocrQueue << " keep hwQUeue, set _hccQueue link to nullptr" << " hccQueues/rocrQueues=" << hccSize << "/" << rqSize << "\n");
+                DBOUT(DB_QUEUE, "removeRocrQueue-soft: rocrQueue=" << rocrQueue << " keep hwQUeue, set _hccQueue link to nullptr" << " hccQueues/rocrQueues=" << hccSize << "/" << rqSize << "\n");
                 rocrQueue->_hccQueue = nullptr; // mark it as available.
             }
         }
@@ -3134,7 +3132,7 @@ void HSAQueue::dispose() override {
 
 
         Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(getDev());
-        if (rocrQueue != nullptr) {
+        if (this->rocrQueue != nullptr) {
             
             device->removeRocrQueue(rocrQueue);
             rocrQueue = nullptr;
@@ -3159,7 +3157,8 @@ hsa_queue_t *HSAQueue::acquireLockedRocrQueue() {
         device->createOrstealRocrQueue(this);
     }
 
-    assert (this->rocrQueue->_hwQueue != nullptr);
+    DBOUT (DB_QUEUE, "acquireLockedRocrQueue returned hwQueue=" << this->rocrQueue->_hwQueue << "\n");
+    assert (this->rocrQueue->_hwQueue != 0);
     return this->rocrQueue->_hwQueue;
 }
 
@@ -3341,6 +3340,9 @@ HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
     // May be faster to create signals for each dispatch than to use markers.
     // Perhaps could check HSA queue pointers.
     bool needsSignal = true;
+    if (HCC_OPT_FLUSH) {
+        needsSignal = (cf != nullptr);
+    };
 
     dispatch->dispatchKernelAsync(this, args, argSize, needsSignal);
 
