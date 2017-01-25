@@ -101,11 +101,32 @@ std::vector<std::string> g_DbStr = {"misc", "sync", "aql", "queue" };
 
 int HCC_MAX_QUEUES = 24;
 
+
+// Track a short thread-id, for debugging:
+static std::atomic<int> s_lastShortTid(1);
+
+// Class with a constructor that gets called when new thread is created:
+struct ShortTid {
+    ShortTid() {
+        _shortTid = s_lastShortTid.fetch_add(1);
+    }
+    int _shortTid;
+};
+
+thread_local ShortTid hcc_tlsShortTid;
+
 // Macro for prettier debug messages, use like:
 // DBOUT(" Something happened" << myId() << " i= " << i << "\n");
 #define COMPILE_HCC_DB 1
-//#define DBOUT(db_flag, msg) if (COMPILE_HCC_DB && (HCC_DB & (1<<(db_flag)))) { std::cerr << "tid:" << std::this_thread::get_id() << ":" <<  msg ; } ;
-#define DBOUT(db_flag, msg) if (COMPILE_HCC_DB && (HCC_DB & (1<<(db_flag)))) { std::cerr << " hcc-" << g_DbStr[db_flag] << ":" << msg ; } ;
+
+// Use str::stream so output is atomic wrt other threads:
+#define DBOUT(db_flag, msg) \
+if (COMPILE_HCC_DB && (HCC_DB & (1<<(db_flag)))) { \
+    std::stringstream sstream;\
+    sstream << " hcc-" << g_DbStr[db_flag] << " tid:" << hcc_tlsShortTid._shortTid << " " << msg ; \
+    std::cerr << sstream.str();\
+};
+
 
 
 
@@ -1693,7 +1714,7 @@ public:
             auto rq = new RocrQueue(agent, this->queue_size, thief);
             rocrQueues.push_back(rq);
 
-            DBOUT(DB_QUEUE, "Create new rocrQueue=" << rq << "\n")
+            DBOUT(DB_QUEUE, "Create new rocrQueue=" << rq << " for thief=" << thief << "\n")
 
         } else {
             RocrQueue *foundRQ = nullptr;
@@ -1701,6 +1722,7 @@ public:
                 // First make a pass to see if we can find an unused queue:
                 for (auto rq : rocrQueues) {
                     if (rq->_hccQueue == nullptr) {
+                        DBOUT(DB_QUEUE, "Found unused rocrQueue=" << rq << " for thief=" << thief << "\n")
                         foundRQ = rq;
                         break;
                     }
@@ -1717,6 +1739,7 @@ public:
                                 assert (victimHccQueue->rocrQueue == rq);  // ensure the link is consistent.
                                 victimHccQueue->rocrQueue = nullptr; 
                                 foundRQ = rq;
+                                DBOUT(DB_QUEUE, "Stole existing rocrQueue=" << rq << " from victimHccQueue=" << victimHccQueue << " to hccQueue=" << thief << "\n")
                                 break;
                             }
                         }
@@ -1735,7 +1758,6 @@ public:
                 this->rocrQueuesMutex.lock();
             }
 
-            DBOUT(DB_QUEUE, "Assigned existing rocrQueue=" << thief->rocrQueue << " to hccQueue=" << thief << "\n")
         }
     };
 
@@ -3136,6 +3158,8 @@ hsa_queue_t *HSAQueue::acquireLockedRocrQueue() {
         auto device = static_cast<Kalmar::HSADevice*>(this->getDev());
         device->createOrstealRocrQueue(this);
     }
+
+    assert (this->rocrQueue->_hwQueue != nullptr);
     return this->rocrQueue->_hwQueue;
 }
 
@@ -3316,7 +3340,6 @@ HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
 
     // May be faster to create signals for each dispatch than to use markers.
     // Perhaps could check HSA queue pointers.
-    //bool needsSignal = (cf != nullptr);
     bool needsSignal = true;
 
     dispatch->dispatchKernelAsync(this, args, argSize, needsSignal);
