@@ -267,7 +267,7 @@ const char* getHCCRuntimeStatusMessage(const HCCRuntimeStatus status) {
 
 inline static void checkHCCRuntimeStatus(const HCCRuntimeStatus status, const unsigned int line, hsa_queue_t* q=nullptr) {
   if (status != HCCRuntimeStatus::HCCRT_STATUS_SUCCESS) {
-    printf("### HCC runtime error: %s at line:%d\n", getHCCRuntimeStatusMessage(status), line);
+    printf("### HCC runtime error: %s at %s line:%d\n", getHCCRuntimeStatusMessage(status), __FILE__, line);
     if (q != nullptr)
       assert(HSA_STATUS_SUCCESS == hsa_queue_destroy(q));
     assert(HSA_STATUS_SUCCESS == hsa_shut_down());
@@ -3333,7 +3333,9 @@ HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
 
 
     Kalmar::HSADevice* device = static_cast<Kalmar::HSADevice*>(this->getDev());
-    HSADispatch *dispatch = new HSADispatch(device, nullptr, aql);
+    //HSADispatch *dispatch = new HSADispatch(device, nullptr, aql);
+    std::shared_ptr<HSADispatch> sp_dispatch = std::make_shared<HSADispatch>(device,nullptr,aql);
+    HSADispatch *dispatch = sp_dispatch.get();
 
     waitForStreamDeps(dispatch);
 
@@ -3341,12 +3343,12 @@ HSAQueue::dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql,
     // Perhaps could check HSA queue pointers.
     bool needsSignal = true;
     if (HCC_OPT_FLUSH) {
+        // Only allocate a signal if the caller requested a completion_future to track status.
         needsSignal = (cf != nullptr);
     };
 
     dispatch->dispatchKernelAsync(this, args, argSize, needsSignal);
 
-    std::shared_ptr<HSADispatch> sp_dispatch(dispatch);
     pushAsyncOp(sp_dispatch);
 
     if (cf) {
@@ -3481,7 +3483,7 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
 
     hsa_queue_store_write_index_relaxed(lockedHsaQueue, index + 1);
 
-    DBOUT(DB_AQL, " dispatch kernel " << kernel->kernelName ? kernel->kernelName : "<unknown>");
+    DBOUT(DB_AQL, " dispatch kernel " << (kernel ? kernel->kernelName : "<unknown>"));
     if (HCC_DB & (1<<DB_AQL)) {
         printAql(q_aql); // TODO - convert to stream-based
     }
