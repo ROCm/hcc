@@ -39,7 +39,6 @@
 #include <time.h>
 #include <iomanip>
 
-#define KALMAR_DEBUG (0)
 #ifndef KALMAR_DEBUG
 #define KALMAR_DEBUG (0)
 #endif
@@ -782,23 +781,14 @@ namespace Kalmar {
 // HSAQueue is the implementation of accelerator_view for HSA back-and.  HSAQueue
 // points to RocrQueue, or to nullptr if the HSAQueue is not currently attached to a RocrQueue.
 struct RocrQueue {
-    RocrQueue(hsa_agent_t agent, HSAQueue *hccQueue) 
+    RocrQueue(hsa_agent_t agent, size_t queue_size, HSAQueue *hccQueue) 
     {
-        /// Query the maximum size of the queue.
-        uint32_t queue_size = 0;
-        hsa_status_t status = hsa_agent_get_info(agent, HSA_AGENT_INFO_QUEUE_MAX_SIZE, &queue_size);
-        STATUS_CHECK(status, __LINE__);
 
-        assert (__builtin_popcount(MAX_INFLIGHT_COMMANDS_PER_QUEUE) == 1); // make sure this is power of 2.
-        assert(queue_size > MAX_INFLIGHT_COMMANDS_PER_QUEUE*2);
-
-        // MAX_INFLIGHT_COMMANDS_PER_QUEUE throttles the number of commands that can be in the queue, so no reason
-        // to allocate a huge HSA queue - size it to it is large enough to handle the inflight commands.
-        queue_size = 2*MAX_INFLIGHT_COMMANDS_PER_QUEUE;
+        assert(queue_size != 0);
 
         /// Create a queue using the maximum size.
-        status = hsa_queue_create(agent, queue_size, HSA_QUEUE_TYPE_SINGLE, NULL, NULL,
-                                  UINT32_MAX, UINT32_MAX, &_hwQueue);
+        hsa_status_t status = hsa_queue_create(agent, queue_size, HSA_QUEUE_TYPE_SINGLE, NULL, NULL,
+                                               UINT32_MAX, UINT32_MAX, &_hwQueue);
 #if KALMAR_DEBUG
         std::cerr << "HSAQueue::HSAQueue(): created an HSA command queue: " << _hwQueue << "\n";
 #endif
@@ -1671,6 +1661,7 @@ private:
     hsa_agent_t agent;
     size_t max_tile_static_size;
 
+    size_t queue_size;
     std::mutex queues_mutex; // protects access to the queues vector:
     std::vector< std::weak_ptr<KalmarQueue> > queues;
 
@@ -1716,7 +1707,7 @@ public:
             // Allocate a new queue, we are belowthe HCC_MAX_QUEUES limit :
             //
 
-            auto rq = new RocrQueue(agent, thief);
+            auto rq = new RocrQueue(agent, this->queue_size, thief);
             rocrQueues.push_back(rq);
 
             DBOUT(DB_QUEUE, "Create new rocrQueue=" << rq << "\n")
@@ -1998,7 +1989,7 @@ void ReadHccEnv()
 
     HSADevice(hsa_agent_t a, hsa_agent_t host) : KalmarDevice(access_type_read_write),
                                agent(a), programs(), max_tile_static_size(0),
-                               queues(), queues_mutex(),
+                               queue_size(0), queues(), queues_mutex(),
                                rocrQueues(0/*empty*/), rocrQueuesMutex(),
                                ri(),
                                useCoarseGrainedRegion(false),
@@ -2045,6 +2036,24 @@ void ReadHccEnv()
             std::cout << "Version Major: " << versionMajor << " Minor: " << versionMinor << "\n";
 #endif
         }
+
+
+        {
+            /// Set the queue size to use when creating hsa queues:
+            this->queue_size = 0;
+            status = hsa_agent_get_info(agent, HSA_AGENT_INFO_QUEUE_MAX_SIZE, &this->queue_size);
+            STATUS_CHECK(status, __LINE__);
+
+            // MAX_INFLIGHT_COMMANDS_PER_QUEUE throttles the number of commands that can be in the queue, so no reason
+            // to allocate a huge HSA queue - size it to it is large enough to handle the inflight commands.
+            this->queue_size = 2*MAX_INFLIGHT_COMMANDS_PER_QUEUE;
+
+            // Check that the queue size is valid, these assumptions are used in hsa_queue_create.
+            assert (__builtin_popcount(MAX_INFLIGHT_COMMANDS_PER_QUEUE) == 1); // make sure this is power of 2.
+            assert(this->queue_size > MAX_INFLIGHT_COMMANDS_PER_QUEUE*2);
+        }
+
+
 
         /// Iterate over memory pool of the device and its host
         status = hsa_amd_agent_iterate_memory_pools(agent, HSADevice::find_group_memory, &max_tile_static_size);
@@ -2161,6 +2170,8 @@ void ReadHccEnv()
                                                 HCC_H2D_STAGING_THRESHOLD,
                                                 HCC_H2D_PININPLACE_THRESHOLD,
                                                 HCC_D2H_PININPLACE_THRESHOLD);
+
+
     }
 
     ~HSADevice() {
