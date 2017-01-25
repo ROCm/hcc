@@ -83,7 +83,7 @@ Kernel load_hsaco(hc::accelerator_view *av, const char * fileName, const char *k
 
 // Dispatch a GL packet - 
 // Convert to AQL and call dispatch_hsa_kernel
-void dispatch_glp_kernel(const grid_launch_parm *lp, const Kernel &k, void *args, int argSize)
+void dispatch_glp_kernel(const grid_launch_parm *lp, const Kernel &k, void *args, int argSize, bool systemScope)
 {
     hsa_kernel_dispatch_packet_t aql;
     memset(&aql, 0, sizeof(aql));
@@ -103,9 +103,15 @@ void dispatch_glp_kernel(const grid_launch_parm *lp, const Kernel &k, void *args
     aql.kernel_object = k._kernelCodeHandle;
 
     aql.header =   (HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE) |
-                        (1 << HSA_PACKET_HEADER_BARRIER) |
-                        (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
-                        (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
+                        (1 << HSA_PACKET_HEADER_BARRIER);
+ 
+    if (systemScope) {
+      aql.header |= (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
+                    (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
+    } else {
+      aql.header |= (HSA_FENCE_SCOPE_AGENT << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
+                    (HSA_FENCE_SCOPE_AGENT << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
+    }
 
     aql.setup = 1 << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
 

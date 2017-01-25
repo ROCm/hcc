@@ -37,6 +37,19 @@
 #define DISPATCH_COUNT 10000
 #define TOL_HI 1e-4
 
+// Text width for labels.
+#define TW 48
+
+#define PFE_ACTIVE  0x1
+#define PFE_BLOCKED 0x2
+#define GL_ACTIVE   0x4
+#define GL_BLOCKED  0x8
+#define DISPATCH_HSA_KERNEL_CF    0x10
+#define DISPATCH_HSA_KERNEL_NOCF  0x20
+
+int tests = 0xff;
+//int tests = DISPATCH_HSA_KERNEL_CF+DISPATCH_HSA_KERNEL_NOCF;
+
 __attribute__((hc_grid_launch)) 
 void nullkernel(const grid_launch_parm lp, float* A) {
     if (A) {
@@ -65,19 +78,17 @@ void explicit_launch_null_kernel(const grid_launch_parm *lp, const Kernel &k)
     args.Ad        = nullptr;
 
 
-    dispatch_glp_kernel(lp, k, &args, sizeof(NullKernelArgs));
+    dispatch_glp_kernel(lp, k, &args, sizeof(NullKernelArgs), false/*systemScope*/);
 }
 
 #define KERNEL_NAME "_ZN12_GLOBAL__N_142_Z10nullkernel16grid_launch_parmPf_functor19__cxxamp_trampolineEiiiiiiPf"
 
-void time_dispatch_hsa_kernel(int dispatch_count, const grid_launch_parm *lp, const char *nullkernel_hsaco_dir)
+void time_dispatch_hsa_kernel(std::string testName, int dispatch_count, int burst_count, const grid_launch_parm *lp, const char *nullkernel_hsaco_dir)
 {
   std::string nullkernel_hsaco(nullkernel_hsaco_dir);
   nullkernel_hsaco += "/nullkernel-fiji.hsaco";
   Kernel k = load_hsaco(lp->av, nullkernel_hsaco.c_str(), KERNEL_NAME);
   std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
-
-  const char *testName = "dispatch_hsa_kernel";
 
   std::vector<std::chrono::duration<double>> elapsed_timer;
 
@@ -85,7 +96,9 @@ void time_dispatch_hsa_kernel(int dispatch_count, const grid_launch_parm *lp, co
   for(int i = 0; i < dispatch_count; ++i) {
     start = std::chrono::high_resolution_clock::now();
 
-    explicit_launch_null_kernel(lp, k);
+    for (int j=0; j<burst_count ;j++) {
+        explicit_launch_null_kernel(lp, k);
+    };
 
     //std::cout << "CF get_use_count=" << cf.get_use_count() << "is_ready=" << cf.is_ready()<< "\n";
     //
@@ -99,8 +112,8 @@ void time_dispatch_hsa_kernel(int dispatch_count, const grid_launch_parm *lp, co
   std::vector<std::chrono::duration<double>> outliers;
   remove_outliers(elapsed_timer, outliers);
   plot(testName, elapsed_timer);
-  std::cout << std::setw(20) << std::left << testName << "time, active (us):  " 
-            << std::setprecision(8) << average(elapsed_timer)*1000000.0 << "\n";
+  std::cout << std::setw(TW-2) << std::left << testName << ": " 
+            << std::setw(8) << std::setprecision(8) << average(elapsed_timer)*1000000.0 << "\n";
 };
 
 #endif
@@ -110,10 +123,14 @@ int main(int argc, char* argv[]) {
   const char *nullkernel_hsaco_dir = NULL;
 
   int dispatch_count = DISPATCH_COUNT;
+  int burst_count = 1;
   if(argc > 1)
     dispatch_count = std::stoi(argv[1]);
   if(argc > 2) {
     nullkernel_hsaco_dir = argv[2];
+  }
+  if(argc > 3) {
+    burst_count = std::stoi(argv[3]);
   }
 
   std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
@@ -137,7 +154,9 @@ int main(int argc, char* argv[]) {
   lp.group_dim = gl_dim3(TILE_SIZE);
   lp.av = &av;
 
-  std::cout << "Iterations per test:           " << dispatch_count << "\n";
+  std::cout << "Iterations per test:              " << dispatch_count << "\n";
+  std::cout << "Bursts (#dispatches before sync): " << burst_count  << "\n";
+  std::cout << "\n";
 
 
   // launch empty kernel to initialize everything first
@@ -151,86 +170,114 @@ int main(int argc, char* argv[]) {
 
   auto wait_time_us = std::chrono::milliseconds(10);
 
+
   // Timing null pfe, active wait
-  for(int i = 0; i < dispatch_count; ++i) {
-    start = std::chrono::high_resolution_clock::now();
-    auto cf = hc::parallel_for_each(av, hc::extent<3>(lp.grid_dim.x*lp.group_dim.x,1,1).tile(lp.group_dim.x,1,1),
-    [=](hc::index<3>& idx) __HC__ {
-    });
-    cf.wait(hc::hcWaitModeActive);
-    end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> dur = end - start;
-    elapsed_pfe.push_back(dur);
+  if (tests & PFE_ACTIVE) {
+      for(int i = 0; i < dispatch_count; ++i) {
+        start = std::chrono::high_resolution_clock::now();
+
+        hc::completion_future cf;
+        for (int j=0; j<burst_count ;j++) {
+            cf = hc::parallel_for_each(av, hc::extent<3>(lp.grid_dim.x*lp.group_dim.x,1,1).tile(lp.group_dim.x,1,1),
+            [=](hc::index<3>& idx) __HC__ {
+            });
+        };
+        cf.wait(hc::hcWaitModeActive);
+
+        end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> dur = end - start;
+        elapsed_pfe.push_back(dur);
+      }
+      remove_outliers(elapsed_pfe, outliers_pfe);
+      plot("pfe", elapsed_pfe);
+      std::cout << std::setw(TW) << "pfe time, active (us):                  " 
+                << std::setprecision(8) << average(elapsed_pfe)*1000000.0 << "\n";
   }
-  remove_outliers(elapsed_pfe, outliers_pfe);
-  plot("pfe", elapsed_pfe);
-  std::cout << "pfe time, active (us):                  " 
-            << std::setprecision(8) << average(elapsed_pfe)*1000000.0 << "\n";
 
 
-  // Timing null pfe, blocking wait
-  for(int i = 0; i < dispatch_count; ++i) {
-    start = std::chrono::high_resolution_clock::now();
-    auto cf = hc::parallel_for_each(av, hc::extent<3>(lp.grid_dim.x*lp.group_dim.x,1,1).tile(lp.group_dim.x,1,1),
-    [=](hc::index<3>& idx) __HC__ {
-    });
-    cf.wait(hc::hcWaitModeBlocked);
-    end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> dur = end - start;
-    elapsed_pfe.push_back(dur);
+  if (tests & PFE_BLOCKED) {
+      // Timing null pfe, blocking wait
+      for(int i = 0; i < dispatch_count; ++i) {
+        start = std::chrono::high_resolution_clock::now();
+        hc::completion_future cf;
+        for (int j=0; j<burst_count ;j++) {
+            cf = hc::parallel_for_each(av, hc::extent<3>(lp.grid_dim.x*lp.group_dim.x,1,1).tile(lp.group_dim.x,1,1),
+            [=](hc::index<3>& idx) __HC__ {
+            });
+        };
+        cf.wait(hc::hcWaitModeBlocked);
+        end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> dur = end - start;
+        elapsed_pfe.push_back(dur);
+      }
+      remove_outliers(elapsed_pfe, outliers_pfe);
+      plot("pfe", elapsed_pfe);
+      std::cout << std::setw(TW) << "pfe time, blocked (us):                 " 
+                << std::setprecision(8) << average(elapsed_pfe)*1000000.0 << "\n";
   }
-  remove_outliers(elapsed_pfe, outliers_pfe);
-  plot("pfe", elapsed_pfe);
-  std::cout << "pfe time, blocked (us):                 " 
-            << std::setprecision(8) << average(elapsed_pfe)*1000000.0 << "\n";
 
 
-  // Timing null grid_launch call, active wait
-  for(int i = 0; i < dispatch_count; ++i) {
-    start = std::chrono::high_resolution_clock::now();
-    hc::completion_future cf; // create new completion-future 
-    lp.cf = &cf;
+  if (tests & GL_ACTIVE) {
+      // Timing null grid_launch call, active wait
+      for(int i = 0; i < dispatch_count; ++i) {
+        start = std::chrono::high_resolution_clock::now();
+        hc::completion_future cf; // create new completion-future 
+        lp.cf = &cf;
 
-    nullkernel(lp, 0x0);
-    //std::cout << "CF get_use_count=" << cf.get_use_count() << "is_ready=" << cf.is_ready()<< "\n";
-    cf.wait(hc::hcWaitModeActive);
+        for (int j=0; j<burst_count ;j++) {
+            nullkernel(lp, 0x0);
+        }
+        //std::cout << "CF get_use_count=" << cf.get_use_count() << "is_ready=" << cf.is_ready()<< "\n";
+        cf.wait(hc::hcWaitModeActive);
 
-    end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> dur = end - start;
-    elapsed_grid_launch.push_back(dur);
+        end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> dur = end - start;
+        elapsed_grid_launch.push_back(dur);
+      }
+      remove_outliers(elapsed_grid_launch, outliers_gl);
+      plot("grid_launch", elapsed_grid_launch);
+      std::cout << std::setw(TW) << "grid_launch time, active (us):          " 
+                << std::setprecision(8) << average(elapsed_grid_launch)*1000000.0 << "\n";
   }
-  remove_outliers(elapsed_grid_launch, outliers_gl);
-  plot("grid_launch", elapsed_grid_launch);
-  std::cout << "grid_launch time, active (us):          " 
-            << std::setprecision(8) << average(elapsed_grid_launch)*1000000.0 << "\n";
 
 
-  // Timing null grid_launch call, blocked wait
-  for(int i = 0; i < dispatch_count; ++i) {
-    start = std::chrono::high_resolution_clock::now();
-    hc::completion_future cf; // create new completion-future 
-    lp.cf = &cf;
+  if (tests & GL_BLOCKED) {
+      // Timing null grid_launch call, blocked wait
+      for(int i = 0; i < dispatch_count; ++i) {
+        start = std::chrono::high_resolution_clock::now();
+        hc::completion_future cf; // create new completion-future 
+        lp.cf = &cf;
 
-    nullkernel(lp, 0x0);
-    //std::cout << "CF get_use_count=" << cf.get_use_count() << "is_ready=" << cf.is_ready()<< "\n";
-    cf.wait(hc::hcWaitModeBlocked);
+        for (int j=0; j<burst_count ;j++) {
+            nullkernel(lp, 0x0);
+        };
+        //std::cout << "CF get_use_count=" << cf.get_use_count() << "is_ready=" << cf.is_ready()<< "\n";
+        cf.wait(hc::hcWaitModeBlocked);
 
-    end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> dur = end - start;
-    elapsed_grid_launch.push_back(dur);
+        end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> dur = end - start;
+        elapsed_grid_launch.push_back(dur);
+      }
+      remove_outliers(elapsed_grid_launch, outliers_gl);
+      plot("grid_launch", elapsed_grid_launch);
+      std::cout << std::setw(TW) << "grid_launch time, blocked (us):         " 
+                << std::setprecision(8) << average(elapsed_grid_launch)*1000000.0 << "\n";
   }
-  remove_outliers(elapsed_grid_launch, outliers_gl);
-  plot("grid_launch", elapsed_grid_launch);
-  std::cout << "grid_launch time, blocked (us):         " 
-            << std::setprecision(8) << average(elapsed_grid_launch)*1000000.0 << "\n";
 
 
   if (nullkernel_hsaco_dir) {
-      hc::completion_future cf;
-      lp.cf = &cf;
-      time_dispatch_hsa_kernel(dispatch_count, &lp, nullkernel_hsaco_dir);
+      if (tests & DISPATCH_HSA_KERNEL_CF) {
+          hc::completion_future cf; // create new completion-future 
+          lp.cf = &cf;
+          time_dispatch_hsa_kernel("dispatch_hsa_kernel, withcompletion, active", dispatch_count, burst_count, &lp, nullkernel_hsaco_dir);
+      }
+
+      if (tests & DISPATCH_HSA_KERNEL_NOCF) {
+          lp.cf=0x0;
+          time_dispatch_hsa_kernel("dispatch_hsa_kernel, nocompletion, active", dispatch_count, burst_count, &lp, nullkernel_hsaco_dir);
+      }
   } else {
-      std::cout << "skipping dispatch_hsa_kernel - must specify path to hsaco on commandline.  (ie: ./bench 10000 Inputs/nullkernel.hsaco)\n";
+      std::cout << "skipping dispatch_hsa_kernel - must specify directory with hsaco on commandline.  (ie: ./bench 10000 Inputs/)\n";
   }
 
   return 0;
