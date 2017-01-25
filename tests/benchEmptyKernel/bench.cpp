@@ -1,4 +1,4 @@
-// RUN: %hc %s %S/statutils.CPP -O3  %S/hsacodelib.CPP  -o %t.out -I/opt/rocm/include -L/opt/rocm/lib -lhsa-runtime64 
+// RUN: %hc %s %S/statutils.CPP -O3  %S/hsacodelib.CPP  -o %t.out -I/opt/rocm/include -L/opt/rocm/lib -lhsa-runtime64
 // RUN: %t.out 10000 %T
 // RUN: test -e pfe.dat && mv pfe.dat %T/pfe.dat
 // RUN: test -e grid_launch.dat && mv grid_launch.dat %T/grid_launch.dat
@@ -37,7 +37,7 @@
 #define DISPATCH_COUNT 10000
 #define TOL_HI 1e-4
 
-__attribute__((hc_grid_launch)) 
+__attribute__((hc_grid_launch))
 void nullkernel(const grid_launch_parm lp, float* A) {
     if (A) {
         A[0] = 0x13;
@@ -99,7 +99,7 @@ void time_dispatch_hsa_kernel(int dispatch_count, const grid_launch_parm *lp, co
   std::vector<std::chrono::duration<double>> outliers;
   remove_outliers(elapsed_timer, outliers);
   plot(testName, elapsed_timer);
-  std::cout << std::setw(20) << std::left << testName << "time, active (us):  " 
+  std::cout << std::setw(20) << std::left << testName << "time, active (us):  "
             << std::setprecision(8) << average(elapsed_timer)*1000000.0 << "\n";
 };
 
@@ -144,7 +144,7 @@ int main(int argc, char* argv[]) {
   // timing for null kernel launch appears later
 
   hc::parallel_for_each(av, hc::extent<3>(lp.grid_dim.x*lp.group_dim.x,1,1).tile(lp.group_dim.x,1,1),
-  [=](hc::index<3>& idx) __HC__ {
+  [=](hc::tiled_index<3>& idx) __HC__ {
   }).wait();
 
   // Setting lp.cf to completion_future so we can track completion: (NULL ignores all synchronization)
@@ -155,7 +155,7 @@ int main(int argc, char* argv[]) {
   for(int i = 0; i < dispatch_count; ++i) {
     start = std::chrono::high_resolution_clock::now();
     auto cf = hc::parallel_for_each(av, hc::extent<3>(lp.grid_dim.x*lp.group_dim.x,1,1).tile(lp.group_dim.x,1,1),
-    [=](hc::index<3>& idx) __HC__ {
+    [=](hc::tiled_index<3>& idx) __HC__ {
     });
     cf.wait(hc::hcWaitModeActive);
     end = std::chrono::high_resolution_clock::now();
@@ -164,7 +164,7 @@ int main(int argc, char* argv[]) {
   }
   remove_outliers(elapsed_pfe, outliers_pfe);
   plot("pfe", elapsed_pfe);
-  std::cout << "pfe time, active (us):                  " 
+  std::cout << "pfe time, active (us):                  "
             << std::setprecision(8) << average(elapsed_pfe)*1000000.0 << "\n";
 
 
@@ -172,7 +172,7 @@ int main(int argc, char* argv[]) {
   for(int i = 0; i < dispatch_count; ++i) {
     start = std::chrono::high_resolution_clock::now();
     auto cf = hc::parallel_for_each(av, hc::extent<3>(lp.grid_dim.x*lp.group_dim.x,1,1).tile(lp.group_dim.x,1,1),
-    [=](hc::index<3>& idx) __HC__ {
+    [=](hc::tiled_index<3>& idx) __HC__ {
     });
     cf.wait(hc::hcWaitModeBlocked);
     end = std::chrono::high_resolution_clock::now();
@@ -181,14 +181,14 @@ int main(int argc, char* argv[]) {
   }
   remove_outliers(elapsed_pfe, outliers_pfe);
   plot("pfe", elapsed_pfe);
-  std::cout << "pfe time, blocked (us):                 " 
+  std::cout << "pfe time, blocked (us):                 "
             << std::setprecision(8) << average(elapsed_pfe)*1000000.0 << "\n";
 
 
   // Timing null grid_launch call, active wait
   for(int i = 0; i < dispatch_count; ++i) {
     start = std::chrono::high_resolution_clock::now();
-    hc::completion_future cf; // create new completion-future 
+    hc::completion_future cf; // create new completion-future
     lp.cf = &cf;
 
     nullkernel(lp, 0x0);
@@ -201,14 +201,14 @@ int main(int argc, char* argv[]) {
   }
   remove_outliers(elapsed_grid_launch, outliers_gl);
   plot("grid_launch", elapsed_grid_launch);
-  std::cout << "grid_launch time, active (us):          " 
+  std::cout << "grid_launch time, active (us):          "
             << std::setprecision(8) << average(elapsed_grid_launch)*1000000.0 << "\n";
 
 
   // Timing null grid_launch call, blocked wait
   for(int i = 0; i < dispatch_count; ++i) {
     start = std::chrono::high_resolution_clock::now();
-    hc::completion_future cf; // create new completion-future 
+    hc::completion_future cf; // create new completion-future
     lp.cf = &cf;
 
     nullkernel(lp, 0x0);
@@ -221,7 +221,7 @@ int main(int argc, char* argv[]) {
   }
   remove_outliers(elapsed_grid_launch, outliers_gl);
   plot("grid_launch", elapsed_grid_launch);
-  std::cout << "grid_launch time, blocked (us):         " 
+  std::cout << "grid_launch time, blocked (us):         "
             << std::setprecision(8) << average(elapsed_grid_launch)*1000000.0 << "\n";
 
 

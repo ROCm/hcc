@@ -21,6 +21,8 @@
 #include "kalmar_launch.h"
 #include "kalmar_cpu_launch.h"
 
+#include <utility> // For std::declval.
+
 // forward declaration
 namespace Concurrency {
 class completion_future;
@@ -95,7 +97,7 @@ public:
         pQueue = other.pQueue;
         return *this;
     }
-  
+
     /**
      * Returns the queuing mode that this accelerator_view was created with.
      * See "Queuing Mode".
@@ -143,7 +145,7 @@ public:
      */
     // FIXME: dummy implementation now
     bool get_is_debug() const { return 0; }
-  
+
     /**
      * Performs a blocking wait for completion of all commands submitted to the
      * accelerator view prior to calling wait().
@@ -159,8 +161,8 @@ public:
      * invocations (parallel_for_each calls). This member function sends the
      * commands to the device for processing. Normally, these commands are sent
      * to the GPU automatically whenever the runtime determines that they need
-     * to be, such as when the command buffer is full or when waiting for 
-     * transfer of data from the device buffers to host memory. The flush 
+     * to be, such as when the command buffer is full or when waiting for
+     * transfer of data from the device buffers to host memory. The flush
      * member function will send the commands manually to the device.
      *
      * Calling this member function incurs an overhead and must be used with
@@ -192,7 +194,7 @@ public:
      */
     // FIXME: dummy implementation now
     completion_future create_marker();
-  
+
     /**
      * Compares "this" accelerator_view with the passed accelerator_view object
      * to determine if they represent the same underlying object.
@@ -219,7 +221,7 @@ private:
     accelerator_view(std::shared_ptr<Kalmar::KalmarQueue> pQueue) : pQueue(pQueue) {}
     std::shared_ptr<Kalmar::KalmarQueue> pQueue;
     friend class accelerator;
-  
+
     template<typename Kernel, int dim_ext> friend
         void Kalmar::mcw_cxxamp_launch_kernel(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&);
     template<typename Kernel, int dim_ext> friend
@@ -232,7 +234,7 @@ private:
 
     template <typename Q, int K> friend class array;
     template <typename Q, int K> friend class array_view;
-  
+
     template <int N, typename Kernel> friend
         void parallel_for_each(Concurrency::extent<N>, const Kernel&);
     template <int N, typename Kernel> friend
@@ -243,17 +245,17 @@ private:
         void parallel_for_each(const accelerator_view&, Concurrency::extent<2>, const Kernel&);
     template <typename Kernel> friend
         void parallel_for_each(const accelerator_view&, Concurrency::extent<3>, const Kernel&);
-  
+
     template <int D0, typename Kernel> friend
         void parallel_for_each(tiled_extent<D0>, const Kernel&);
     template <int D0, typename Kernel> friend
         void parallel_for_each(const accelerator_view&, tiled_extent<D0>, const Kernel&);
-  
+
     template <int D0, int D1, typename Kernel> friend
         void parallel_for_each(tiled_extent<D0,D1>, const Kernel&);
     template <int D0, int D1, typename Kernel> friend
         void parallel_for_each(const accelerator_view&, tiled_extent<D0, D1>, const Kernel&);
-  
+
     template <int D0, int D1, int D2, typename Kernel> friend
         void parallel_for_each(tiled_extent<D0,D1,D2>, const Kernel&);
     template <int D0, int D1, int D2, typename Kernel> friend
@@ -282,9 +284,9 @@ public:
 class accelerator
 {
 public:
-  
+
     /** @{ */
-    /** 
+    /**
      * These are static constant string literals that represent device paths for
      * known accelerators, or in the case of "default_accelerator", direct the
      * runtime to choose an accelerator automatically.
@@ -301,12 +303,12 @@ public:
      */
     static const wchar_t default_accelerator[];   // = L"default"
     static const wchar_t cpu_accelerator[];       // = L"cpu"
-  
+
     /** @} */
-  
+
     /**
      * Constructs a new accelerator object that represents the default
-     * accelerator. This is equivalent to calling the constructor 
+     * accelerator. This is equivalent to calling the constructor
      * @code{.cpp}
      * accelerator(accelerator::default_accelerator)
      * @endcode
@@ -315,7 +317,7 @@ public:
      * accelerator::set_default().
      */
     accelerator() : accelerator(default_accelerator) {}
-  
+
     /**
      * Constructs a new accelerator object that represents the physical device
      * named by the "path" argument. If the path represents an unknown or
@@ -333,7 +335,7 @@ public:
      */
     explicit accelerator(const std::wstring& path)
         : pDev(Kalmar::getContext()->getDevice(path)) {}
-  
+
     /**
      * Copy constructs an accelerator object. This function does a shallow copy
      * with the newly created accelerator object pointing to the same underlying
@@ -342,7 +344,7 @@ public:
      * @param[in] other The accelerator object to be copied.
      */
     accelerator(const accelerator& other) : pDev(other.pDev) {}
-  
+
     /**
      * Returns a std::vector of accelerator objects (in no specific
      * order) representing all accelerators that are available, including
@@ -357,7 +359,7 @@ public:
             ret[i] = Devices[i];
         return std::move(ret);
     }
-  
+
     /**
      * Sets the default accelerator to the device path identified by the "path"
      * argument. See the constructor accelerator(const std::wstring& path)
@@ -458,9 +460,9 @@ public:
      * this this accelerator.
      *
      * This method only succeeds if the default_cpu_access_type for the
-     * accelerator has not already been overriden by a previous call to this 
-     * method and the runtime selected default_cpu_access_type for this 
-     * accelerator has not yet been used for allocating an array or for an 
+     * accelerator has not already been overriden by a previous call to this
+     * method and the runtime selected default_cpu_access_type for this
+     * accelerator has not yet been used for allocating an array or for an
      * implicit array_view memory allocation on this accelerator.
      *
      * @param[in] default_cpu_access_type The default cpu access_type to be used
@@ -484,7 +486,7 @@ public:
      * Returns a short textual description of the accelerator device.
      */
     std::wstring get_description() const { return pDev->get_description(); }
-  
+
     /**
      * Returns a 32-bit unsigned integer representing the version number of this
      * accelerator. The format of the integer is major.minor, where the major
@@ -867,7 +869,7 @@ public:
         base_.operator=(other.base_);
         return *this;
     }
-    
+
     /** @{ */
     /**
      * Returns the extent component value at position c.
@@ -1779,7 +1781,7 @@ public:
         trunc[2] = (trunc[2]/D2) * D2;
         return trunc;
     }
-  
+
     /**
      * Returns an instance of an extent<N> that captures the values of the
      * tiled_extent template arguments D0, D1, and D2. For example:
@@ -2561,7 +2563,7 @@ public:
      *
      * @param[in] e0,e1,e2 The component values that will form the extent of
      *                     this array.
-     * @param[in] srcBegin A beginning iterator into the source container. 
+     * @param[in] srcBegin A beginning iterator into the source container.
      * @param[in] srcEnd An ending iterator into the source container.
      */
     template <typename InputIter>
@@ -2632,7 +2634,7 @@ public:
     /** @{ */
     /**
      * Equivalent to construction using
-     * "array(extent<N>(e0 [, e1 [, e2 ]]), av, cpu_access_type)".   
+     * "array(extent<N>(e0 [, e1 [, e2 ]]), av, cpu_access_type)".
      *
      * @param[in] e0,e1,e2 The component values that will form the extent of
      *                     this array.
@@ -2700,7 +2702,7 @@ public:
      *
      * Users can optionally specify the type of CPU access desired for "this"
      * array thus requesting creation of an array that is accessible both on
-     * the specified accelerator_view "av" as well as the CPU (with the 
+     * the specified accelerator_view "av" as well as the CPU (with the
      * specified CPU access_type). If a value other than access_type_auto or
      * access_type_none is specified for the cpu_access_type parameter and the
      * accelerator corresponding to the accelerator_view “av” does not support
@@ -2775,7 +2777,7 @@ public:
 
     /** @{ */
     /**
-     * Equivalent to construction using 
+     * Equivalent to construction using
      * "array(extent<N>(e0 [, e1 [, e2 ]]), av, associated_av)".
      *
      * @param[in] e0,e1,e2 The component values that will form the extent of
@@ -3869,7 +3871,7 @@ public:
 
     /** @{ */
     /**
-     * Equivalent to 
+     * Equivalent to
      * "section(index<N>(i0 [, i1 [, i2 ]]), extent<N>(e0 [, e1 [, e2 ]]))".
      *
      * @param[in] i0,i1,i2 The component values that will form the origin of
@@ -3988,7 +3990,7 @@ private:
                const Concurrency::extent<N>& ext_b,
                const Concurrency::index<N>& idx_b, int off) restrict(amp,cpu)
         : cache(cache), extent(ext_now), extent_base(ext_b), index_base(idx_b), offset(off) {}
-  
+
     acc_buffer_t cache;
     Concurrency::extent<N> extent;
     Concurrency::extent<N> extent_base;
@@ -4184,7 +4186,7 @@ public:
         }
         return *this;
     }
- 
+
     /** @} */
 
     /**
@@ -4280,7 +4282,7 @@ public:
         std::future<void> fut = std::async([&]() mutable { synchronize(); });
         return completion_future(fut.share());
     }
-  
+
     /**
      * Calling this member function synchronizes any modifications made to the
      * data underlying "this" array_view to the specified accelerator_view
@@ -4350,7 +4352,7 @@ public:
      */
     // FIXME: this method is not implemented
     const T& get_ref(const index<N>& idx) const restrict(amp,cpu);
-  
+
     /** @{ */
     /**
      * Equivalent to
@@ -4363,7 +4365,7 @@ public:
         static_assert(N == 1, "const T& array_view::operator()(int) is only permissible on array_view<T, 1>");
         return (*this)[index<1>(i0)];
     }
-  
+
     const T& operator() (int i0, int i1) const restrict(amp,cpu) {
         static_assert(N == 2, "const T& array_view::operator()(int,int) is only permissible on array_view<T, 2>");
         return (*this)[index<2>(i0, i1)];
@@ -4374,7 +4376,7 @@ public:
     }
 
     /** @} */
-  
+
     /** @{ */
     /**
      * This overload is defined for array_view<T,N> where @f$N \ge 2@f$.
@@ -4404,7 +4406,7 @@ public:
     // is not implemented
 
     /** @} */
-  
+
     /**
      * Returns a subsection of the source array view at the origin specified by
      * "idx" and with the extent specified by "ext".
@@ -4437,7 +4439,7 @@ public:
         Kalmar::amp_helper<N, Concurrency::index<N>, Concurrency::extent<N>>::minus(idx, ext);
         return section(idx, ext);
     }
-  
+
     /**
      * Equivalent to "section(index<N>(), ext)".
      */
@@ -4448,7 +4450,7 @@ public:
 
     /** @{ */
     /**
-     * Equivalent to 
+     * Equivalent to
      * "section(index<N>(i0 [, i1 [, i2 ]]), extent<N>(e0 [, e1 [, e2 ]]))".
      *
      * @param[in] i0,i1,i2 The component values that will form the origin of
@@ -4472,7 +4474,7 @@ public:
     }
 
     /** @} */
-  
+
     /**
      * This member function is similar to "array<T,N>::reinterpret_as",
      * although it only supports array_views of rank 1 (only those guarantee
@@ -4517,7 +4519,7 @@ public:
             array_view<const T, K> av(cache, viewExtent, offset + index_base[0]);
             return av;
         }
-  
+
     ~array_view() restrict(amp,cpu) {}
 
     // FIXME: functions below are not defined in C++ AMP specification
@@ -4532,7 +4534,7 @@ private:
     template <typename K, int Q> friend struct array_projection_helper;
     template <typename Q, int K> friend class array;
     template <typename Q, int K> friend class array_view;
-  
+
     template<typename Q, int K> friend
         bool is_flat(const array_view<Q, K>&) noexcept;
     template <typename Q, int K> friend
@@ -4545,18 +4547,18 @@ private:
         void copy(const array_view<Q, K>&, OutputIter);
     template <typename Q, int K> friend
         void copy(const array_view<const Q, K>& src, const array_view<Q, K>& dest);
-  
+
     // used by view_as and reinterpret_as
     array_view(const acc_buffer_t& cache, const Concurrency::extent<N>& ext,
                int offset) restrict(amp,cpu)
         : cache(cache), extent(ext), extent_base(ext), offset(offset) {}
-  
+
     // used by section and projection
     array_view(const acc_buffer_t& cache, const Concurrency::extent<N>& ext_now,
                const Concurrency::extent<N>& ext_b,
                const Concurrency::index<N>& idx_b, int off) restrict(amp,cpu)
         : cache(cache), extent(ext_now), extent_base(ext_b), index_base(idx_b), offset(off) {}
-  
+
     acc_buffer_t cache;
     Concurrency::extent<N> extent;
     Concurrency::extent<N> extent_base;
@@ -5899,7 +5901,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
   auto foo = &Kernel::__cxxamp_trampoline;
-  auto bar = &Kernel::operator();
+  decltype(std::declval<Kernel>()(std::declval<index<1>&>()))* bar = nullptr;
 #endif
 }
 #pragma clang diagnostic pop
@@ -5932,7 +5934,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
   auto foo = &Kernel::__cxxamp_trampoline;
-  auto bar = &Kernel::operator();
+  decltype(std::declval<Kernel>()(std::declval<index<2>&>()))* bar = nullptr;
 #endif
 }
 #pragma clang diagnostic pop
@@ -5972,7 +5974,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
   auto foo = &Kernel::__cxxamp_trampoline;
-  auto bar = &Kernel::operator();
+  decltype(std::declval<Kernel>()(std::declval<index<3>&>()))* bar = nullptr;
 #endif
 }
 #pragma clang diagnostic pop
@@ -6009,7 +6011,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
   auto foo = &Kernel::__cxxamp_trampoline;
-  auto bar = &Kernel::operator();
+  decltype(std::declval<Kernel>()(std::declval<tiled_index<D0>&>()))* bar = nullptr;
 #endif
 }
 #pragma clang diagnostic pop
@@ -6048,7 +6050,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
   auto foo = &Kernel::__cxxamp_trampoline;
-  auto bar = &Kernel::operator();
+  decltype(std::declval<Kernel>()(std::declval<tiled_index<D0, D1>&>()))* bar = nullptr;
 #endif
 }
 #pragma clang diagnostic pop
@@ -6095,7 +6097,7 @@ __attribute__((noinline,used)) void parallel_for_each(const accelerator_view& av
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
   auto foo = &Kernel::__cxxamp_trampoline;
-  auto bar = &Kernel::operator();
+  decltype(std::declval<Kernel>()(std::declval<tiled_index<D0, D1, D2>&>()))* bar = nullptr;
 #endif
 }
 #pragma clang diagnostic pop
