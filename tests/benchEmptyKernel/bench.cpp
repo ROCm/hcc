@@ -1,5 +1,7 @@
 // RUN: %hc %s %S/statutils.CPP -O3  %S/hsacodelib.CPP  -o %t.out -I/opt/rocm/include -L/opt/rocm/lib -lhsa-runtime64 
 // RUN: %t.out 10000 %T
+// // This runs burst of 100 kernels to measure kernel-to-kernel overhead:
+// RUN: %t.out 1000 %T 100
 // RUN: test -e pfe.dat && mv pfe.dat %T/pfe.dat
 // RUN: test -e grid_launch.dat && mv grid_launch.dat %T/grid_launch.dat
 
@@ -47,8 +49,10 @@
 #define DISPATCH_HSA_KERNEL_CF    0x10
 #define DISPATCH_HSA_KERNEL_NOCF  0x20
 
-int tests = 0xff;
-//int tests = DISPATCH_HSA_KERNEL_CF+DISPATCH_HSA_KERNEL_NOCF;
+int p_tests = 0xff;
+//int p_tests = DISPATCH_HSA_KERNEL_CF+DISPATCH_HSA_KERNEL_NOCF;
+//
+int p_useSystemScope = false;
 
 __attribute__((hc_grid_launch)) 
 void nullkernel(const grid_launch_parm lp, float* A) {
@@ -78,7 +82,7 @@ void explicit_launch_null_kernel(const grid_launch_parm *lp, const Kernel &k)
     args.Ad        = nullptr;
 
 
-    dispatch_glp_kernel(lp, k, &args, sizeof(NullKernelArgs), false/*systemScope*/);
+    dispatch_glp_kernel(lp, k, &args, sizeof(NullKernelArgs), p_useSystemScope);
 }
 
 #define KERNEL_NAME "_ZN12_GLOBAL__N_142_Z10nullkernel16grid_launch_parmPf_functor19__cxxamp_trampolineEiiiiiiPf"
@@ -145,7 +149,8 @@ int main(int argc, char* argv[]) {
 
   hc::accelerator acc = hc::accelerator();
   // Set up extra stuff
-  static hc::accelerator_view av = acc.get_default_view();
+  static hc::accelerator_view av = acc.create_view(hc::execute_any_order);
+  //static hc::accelerator_view av = acc.create_view(hc::execute_in_order);
 
   grid_launch_parm lp;
   grid_launch_init(&lp);
@@ -172,7 +177,7 @@ int main(int argc, char* argv[]) {
 
 
   // Timing null pfe, active wait
-  if (tests & PFE_ACTIVE) {
+  if (p_tests & PFE_ACTIVE) {
       for(int i = 0; i < dispatch_count; ++i) {
         start = std::chrono::high_resolution_clock::now();
 
@@ -195,7 +200,7 @@ int main(int argc, char* argv[]) {
   }
 
 
-  if (tests & PFE_BLOCKED) {
+  if (p_tests & PFE_BLOCKED) {
       // Timing null pfe, blocking wait
       for(int i = 0; i < dispatch_count; ++i) {
         start = std::chrono::high_resolution_clock::now();
@@ -217,7 +222,7 @@ int main(int argc, char* argv[]) {
   }
 
 
-  if (tests & GL_ACTIVE) {
+  if (p_tests & GL_ACTIVE) {
       // Timing null grid_launch call, active wait
       for(int i = 0; i < dispatch_count; ++i) {
         start = std::chrono::high_resolution_clock::now();
@@ -241,7 +246,7 @@ int main(int argc, char* argv[]) {
   }
 
 
-  if (tests & GL_BLOCKED) {
+  if (p_tests & GL_BLOCKED) {
       // Timing null grid_launch call, blocked wait
       for(int i = 0; i < dispatch_count; ++i) {
         start = std::chrono::high_resolution_clock::now();
@@ -266,13 +271,13 @@ int main(int argc, char* argv[]) {
 
 
   if (nullkernel_hsaco_dir) {
-      if (tests & DISPATCH_HSA_KERNEL_CF) {
+      if (p_tests & DISPATCH_HSA_KERNEL_CF) {
           hc::completion_future cf; // create new completion-future 
           lp.cf = &cf;
           time_dispatch_hsa_kernel("dispatch_hsa_kernel, withcompletion, active", dispatch_count, burst_count, &lp, nullkernel_hsaco_dir);
       }
 
-      if (tests & DISPATCH_HSA_KERNEL_NOCF) {
+      if (p_tests & DISPATCH_HSA_KERNEL_NOCF) {
           lp.cf=0x0;
           time_dispatch_hsa_kernel("dispatch_hsa_kernel, nocompletion, active", dispatch_count, burst_count, &lp, nullkernel_hsaco_dir);
       }

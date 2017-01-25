@@ -102,8 +102,9 @@ void dispatch_glp_kernel(const grid_launch_parm *lp, const Kernel &k, void *args
     aql.kernarg_address = 0;
     aql.kernel_object = k._kernelCodeHandle;
 
-    aql.header =   (HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE) |
-                        (1 << HSA_PACKET_HEADER_BARRIER);
+    aql.header =   (HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE);
+
+    //aql.header |=   (1 << HSA_PACKET_HEADER_BARRIER);
  
     if (systemScope) {
       aql.header |= (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
