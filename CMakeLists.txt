@@ -78,12 +78,42 @@ if (NOT HSA_LIBRARY)
   MESSAGE("HSA runtime library not found. Use -DHSA_LIBRARY_DIR=<path_to_libhsa-runtime64.so>.")
 endif (NOT HSA_LIBRARY)
 
-find_path(ROCM_DEVICE_LIB ocml.amdgcn.bc PATHS ${ROCM_DEVICE_LIB_DIR} ${ROCM_ROOT}/lib NO_DEFAULT_PATH)
-find_path(ROCM_DEVICE_LIB ocml.amdgcn.bc)
 
-if (NOT ROCM_DEVICE_LIB)
-  MESSAGE("ROCM Device Lib not found. Use -DROCM_DEVICE_LIB_DIR=<path_to_ocml.amdgcn.bc>.")
-endif (NOT ROCM_DEVICE_LIB)
+################
+# Detect ROCm Device Libs
+################
+
+# Use ROCM_DEVICE_LIB_DIR to specify a list of semi-colon separated search paths for ROCm Device Libs 
+if (ROCM_DEVICE_LIB_DIR)
+ 
+  # loop through the list paths and look for ocml.amdgcn.bc
+  foreach (TMP_ROCM_DEVICE_LIB_DIR ${ROCM_DEVICE_LIB_DIR}) 
+    if (EXISTS ${TMP_ROCM_DEVICE_LIB_DIR}/ocml.amdgcn.bc)
+      set(DETECTED_ROCM_DEVICE_LIB_DIR ${TMP_ROCM_DEVICE_LIB_DIR})
+      MESSAGE("ROCm Device Libs found in ${DETECTED_ROCM_DEVICE_LIB_DIR}")
+      break()
+    endif()
+  endforeach()
+
+  if (NOT DETECTED_ROCM_DEVICE_LIB_DIR)
+    MESSAGE(FATAL_ERROR "ROCm Device Libs not found in ${ROCM_DEVICE_LIB_DIR}")
+  else(NOT DETECTED_ROCM_DEVICE_LIB_DIR)
+    # NOTE: Here we set ROCM_DEVICE_LIB to the ROCM_DEVICE_LIB_DIR, which is a list of paths,
+    #       rather then set to DETECTED_ROCM_DEVICE_LIB_DIR.  That's because the path to device libs
+    #       could be different between a build system and a production system
+    set(ROCM_DEVICE_LIB ${ROCM_DEVICE_LIB_DIR})
+  endif (NOT DETECTED_ROCM_DEVICE_LIB_DIR)
+ 
+else (ROCM_DEVICE_LIB_DIR)
+
+  find_path(ROCM_DEVICE_LIB ocml.amdgcn.bc PATHS ${ROCM_ROOT}/lib NO_DEFAULT_PATH)
+  find_path(ROCM_DEVICE_LIB ocml.amdgcn.bc)
+
+  if (NOT ROCM_DEVICE_LIB)
+    MESSAGE(FATAL_ERROR "ROCm Device Libs not found. Use -DROCM_DEVICE_LIB_DIR=<path_to_ocml.amdgcn.bc>.")
+  endif (NOT ROCM_DEVICE_LIB)
+
+endif(ROCM_DEVICE_LIB_DIR)
 
 # display ROCm information
 MESSAGE("")
