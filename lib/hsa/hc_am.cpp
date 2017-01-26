@@ -166,10 +166,8 @@ void AmPointerTracker::update_peers (const hc::accelerator &acc, int peerCnt, hs
     // relies on C++11 (erase returns iterator)
     for (auto iter = _tracker.begin() ; iter != _tracker.end(); ) {
         if (iter->second._acc == acc) {
-            if (iter->second._isInDeviceMem) {
-                mprintf ("update peers\n");
-                hsa_amd_agents_allow_access(peerCnt, peerAgents, NULL, const_cast<void*> (iter->first._basePointer));
-            }
+            printf ("update peers\n");
+            hsa_amd_agents_allow_access(peerCnt, peerAgents, NULL, const_cast<void*> (iter->first._basePointer));
         } 
         iter++;
     }
