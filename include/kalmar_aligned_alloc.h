@@ -26,7 +26,7 @@ inline void* kalmar_aligned_alloc(std::size_t alignment, std::size_t size) noexc
     }
     std::size_t n = size + alignment - N;
     void* p1 = 0;
-    void* p2 = std::malloc(n + sizeof p1);
+    void* p2 = std::malloc(n + sizeof(p1));
     if (p2) {
         p1 = static_cast<char*>(p2) + sizeof(p1);
         posix_memalign(&p1,alignment,size);
