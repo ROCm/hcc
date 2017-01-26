@@ -336,7 +336,7 @@ void am_memtracker_print(void *targetAddress)
     for (auto iter = g_amPointerTracker.readerLockBegin() ; iter != g_amPointerTracker.end(); iter++) {
         const auto basePointer = static_cast<const char*> (iter->first._basePointer);
         const auto endPointer = static_cast<const char*> (iter->first._endPointer);
-        if ((targetAddressP != nullptr) && (targetAddressP > basePointer) && (targetAddressP < endPointer)) {
+        if ((targetAddressP != nullptr) && (targetAddressP >= basePointer) && (targetAddressP < endPointer)) {
             foundMatch = true;
             os << "-->" ;
         } else {
@@ -350,11 +350,11 @@ void am_memtracker_print(void *targetAddress)
                 closestAfter = iter;
             }
         };
-        os << basePointer << "-" << endPointer << "::  ";
+        os << iter->first._basePointer << "-" << iter->first._endPointer << "::  ";
         os << iter->second << std::endl;
     }
 
-    if (1) { // TODO , should check match.
+    if (!foundMatch) { 
         if (closestBefore != g_amPointerTracker.end()) {
             os << "closest before: " << beforeD << " bytes before base of: " << closestBefore->second << std::endl;
         }
