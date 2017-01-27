@@ -3,6 +3,9 @@
 #ifndef _HC_SHORT_VECTORS_HPP
 #define _HC_SHORT_VECTORS_HPP
 
+#include <cstddef>
+#include <type_traits>
+
 namespace hc
 {
 
@@ -15,7 +18,11 @@ namespace short_vector
 #define __CPU_GPU__
 #endif
 
+#if 1
+#include "hc_short_vector.inl"
+#else
 #include "kalmar_short_vectors.inl"
+#endif
 
 #undef __CPU_GPU__
 
