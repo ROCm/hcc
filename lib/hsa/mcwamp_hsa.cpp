@@ -48,6 +48,11 @@
 #endif
 
 
+// Used to mark pieces of HCC runtime which may be specific to AMD's HSA implementation.
+// Intended to help identify this code when porting to another HSA impl.
+#define AMD_HSA
+
+
 /////////////////////////////////////////////////
 // kernel dispatch speed optimization flags
 /////////////////////////////////////////////////
@@ -3812,7 +3817,10 @@ HSABarrier::enqueueAsync(Kalmar::HSAQueue* hsaQueue, hc::memory_scope scope) {
 
         // setup header
         uint16_t header = HSA_PACKET_TYPE_BARRIER_AND << HSA_PACKET_HEADER_TYPE;
+#ifndef AMD_HSA
+        // AMD implementation does not require barrier bit on barrier packet and executes a little faster without it set.
         header |= 1 << HSA_PACKET_HEADER_BARRIER;
+#endif
         header |= fenceBits;
         barrier->header = header;
 
