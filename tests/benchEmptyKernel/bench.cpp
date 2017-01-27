@@ -1,7 +1,7 @@
 // RUN: %hc %s %S/statutils.CPP -O3  %S/hsacodelib.CPP  -o %t.out -I/opt/rocm/include -L/opt/rocm/lib -lhsa-runtime64 
-// RUN: %t.out 10000 %T
+// RUN: %t.out -d 10000 -h %T
 // // This runs burst of 100 kernels to measure kernel-to-kernel overhead:
-// RUN: %t.out 1000 %T 100
+// RUN: %t.out -d 1000 -b 100 -h %T 
 // RUN: test -e pfe.dat && mv pfe.dat %T/pfe.dat
 // RUN: test -e grid_launch.dat && mv grid_launch.dat %T/grid_launch.dat
 
@@ -49,10 +49,13 @@
 #define DISPATCH_HSA_KERNEL_CF    0x10
 #define DISPATCH_HSA_KERNEL_NOCF  0x20
 
-int p_tests = 0xff;
-//int p_tests = DISPATCH_HSA_KERNEL_CF+DISPATCH_HSA_KERNEL_NOCF;
+//int p_tests = 0xff;
+int p_tests = DISPATCH_HSA_KERNEL_CF+DISPATCH_HSA_KERNEL_NOCF;
 //
 int p_useSystemScope = false;
+
+int p_dispatch_count = DISPATCH_COUNT;
+int p_burst_count = 1;
 
 __attribute__((hc_grid_launch)) 
 void nullkernel(const grid_launch_parm lp, float* A) {
@@ -87,7 +90,7 @@ void explicit_launch_null_kernel(const grid_launch_parm *lp, const Kernel &k)
 
 #define KERNEL_NAME "_ZN12_GLOBAL__N_142_Z10nullkernel16grid_launch_parmPf_functor19__cxxamp_trampolineEiiiiiiPf"
 
-void time_dispatch_hsa_kernel(std::string testName, int dispatch_count, int burst_count, const grid_launch_parm *lp, const char *nullkernel_hsaco_dir)
+void time_dispatch_hsa_kernel(std::string testName, const grid_launch_parm *lp, const char *nullkernel_hsaco_dir)
 {
   std::string nullkernel_hsaco(nullkernel_hsaco_dir);
   nullkernel_hsaco += "/nullkernel-fiji.hsaco";
@@ -97,10 +100,10 @@ void time_dispatch_hsa_kernel(std::string testName, int dispatch_count, int burs
   std::vector<std::chrono::duration<double>> elapsed_timer;
 
   // Timing null grid_launch call, active wait
-  for(int i = 0; i < dispatch_count; ++i) {
+  for(int i = 0; i < p_dispatch_count; ++i) {
     start = std::chrono::high_resolution_clock::now();
 
-    for (int j=0; j<burst_count ;j++) {
+    for (int j=0; j<p_burst_count ;j++) {
         explicit_launch_null_kernel(lp, k);
     };
 
@@ -122,20 +125,56 @@ void time_dispatch_hsa_kernel(std::string testName, int dispatch_count, int burs
 
 #endif
 
+int parseInt(const char *str, int *output)
+{
+    char *next;
+    *output = strtol(str, &next, 0);
+    return !strlen(next);
+}
+
+int parseString(const char *str, const char **output)
+{
+    *output = str;
+    return 1;
+}
+
+
+#define failed(...) \
+    printf ("error: ");\
+    printf (__VA_ARGS__);\
+    printf ("\n");\
+    exit(EXIT_FAILURE);
+
 int main(int argc, char* argv[]) {
 
   const char *nullkernel_hsaco_dir = NULL;
 
-  int dispatch_count = DISPATCH_COUNT;
-  int burst_count = 1;
-  if(argc > 1)
-    dispatch_count = std::stoi(argv[1]);
-  if(argc > 2) {
-    nullkernel_hsaco_dir = argv[2];
-  }
-  if(argc > 3) {
-    burst_count = std::stoi(argv[3]);
-  }
+  for (int i = 1; i < argc; i++) {
+    const char *arg = argv[i];
+
+    if (!strcmp(arg, " ")) {
+        // skip NULL args.
+    } else if (!strcmp(arg, "--dispatch_count") || (!strcmp(arg, "-d"))) {
+        if (++i >= argc || !parseInt(argv[i], &p_dispatch_count)) {
+            failed ("Bad dispatch_count");
+        };
+    } else if (!strcmp(arg, "--burst_count") || (!strcmp(arg, "-b"))) {
+        if (++i >= argc || !parseInt(argv[i], &p_burst_count)) {
+            failed ("Bad burst_count");
+        };
+    } else if (!strcmp(arg, "--hsaco_dir") || (!strcmp(arg, "-h"))) {
+        if (++i >= argc || !parseString(argv[i], &nullkernel_hsaco_dir)) {
+            failed ("Bad hsaco dir");
+        }
+    } else if (!strcmp(arg, "--tests") || (!strcmp(arg, "-t"))) {
+        if (++i >= argc || !parseInt(argv[i], &p_tests)) {
+            failed ("Bad tests");
+        };
+    } else {
+        failed("Bad argument '%s'", arg);
+    }
+  };
+
 
   std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
   std::vector<std::chrono::duration<double>> elapsed_pfe;
@@ -159,8 +198,8 @@ int main(int argc, char* argv[]) {
   lp.group_dim = gl_dim3(TILE_SIZE);
   lp.av = &av;
 
-  std::cout << "Iterations per test:              " << dispatch_count << "\n";
-  std::cout << "Bursts (#dispatches before sync): " << burst_count  << "\n";
+  std::cout << "Iterations per test:              " << p_dispatch_count << "\n";
+  std::cout << "Bursts (#dispatches before sync): " << p_burst_count  << "\n";
   std::cout << "\n";
 
 
@@ -178,11 +217,11 @@ int main(int argc, char* argv[]) {
 
   // Timing null pfe, active wait
   if (p_tests & PFE_ACTIVE) {
-      for(int i = 0; i < dispatch_count; ++i) {
+      for(int i = 0; i < p_dispatch_count; ++i) {
         start = std::chrono::high_resolution_clock::now();
 
         hc::completion_future cf;
-        for (int j=0; j<burst_count ;j++) {
+        for (int j=0; j<p_burst_count ;j++) {
             cf = hc::parallel_for_each(av, hc::extent<3>(lp.grid_dim.x*lp.group_dim.x,1,1).tile(lp.group_dim.x,1,1),
             [=](hc::index<3>& idx) __HC__ {
             });
@@ -202,10 +241,10 @@ int main(int argc, char* argv[]) {
 
   if (p_tests & PFE_BLOCKED) {
       // Timing null pfe, blocking wait
-      for(int i = 0; i < dispatch_count; ++i) {
+      for(int i = 0; i < p_dispatch_count; ++i) {
         start = std::chrono::high_resolution_clock::now();
         hc::completion_future cf;
-        for (int j=0; j<burst_count ;j++) {
+        for (int j=0; j<p_burst_count ;j++) {
             cf = hc::parallel_for_each(av, hc::extent<3>(lp.grid_dim.x*lp.group_dim.x,1,1).tile(lp.group_dim.x,1,1),
             [=](hc::index<3>& idx) __HC__ {
             });
@@ -224,12 +263,12 @@ int main(int argc, char* argv[]) {
 
   if (p_tests & GL_ACTIVE) {
       // Timing null grid_launch call, active wait
-      for(int i = 0; i < dispatch_count; ++i) {
+      for(int i = 0; i < p_dispatch_count; ++i) {
         start = std::chrono::high_resolution_clock::now();
         hc::completion_future cf; // create new completion-future 
         lp.cf = &cf;
 
-        for (int j=0; j<burst_count ;j++) {
+        for (int j=0; j<p_burst_count ;j++) {
             nullkernel(lp, 0x0);
         }
         //std::cout << "CF get_use_count=" << cf.get_use_count() << "is_ready=" << cf.is_ready()<< "\n";
@@ -248,12 +287,12 @@ int main(int argc, char* argv[]) {
 
   if (p_tests & GL_BLOCKED) {
       // Timing null grid_launch call, blocked wait
-      for(int i = 0; i < dispatch_count; ++i) {
+      for(int i = 0; i < p_dispatch_count; ++i) {
         start = std::chrono::high_resolution_clock::now();
         hc::completion_future cf; // create new completion-future 
         lp.cf = &cf;
 
-        for (int j=0; j<burst_count ;j++) {
+        for (int j=0; j<p_burst_count ;j++) {
             nullkernel(lp, 0x0);
         };
         //std::cout << "CF get_use_count=" << cf.get_use_count() << "is_ready=" << cf.is_ready()<< "\n";
@@ -274,12 +313,12 @@ int main(int argc, char* argv[]) {
       if (p_tests & DISPATCH_HSA_KERNEL_CF) {
           hc::completion_future cf; // create new completion-future 
           lp.cf = &cf;
-          time_dispatch_hsa_kernel("dispatch_hsa_kernel, withcompletion, active", dispatch_count, burst_count, &lp, nullkernel_hsaco_dir);
+          time_dispatch_hsa_kernel("dispatch_hsa_kernel, withcompletion, active", &lp, nullkernel_hsaco_dir);
       }
 
       if (p_tests & DISPATCH_HSA_KERNEL_NOCF) {
           lp.cf=0x0;
-          time_dispatch_hsa_kernel("dispatch_hsa_kernel, nocompletion, active", dispatch_count, burst_count, &lp, nullkernel_hsaco_dir);
+          time_dispatch_hsa_kernel("dispatch_hsa_kernel, nocompletion, active", &lp, nullkernel_hsaco_dir);
       }
   } else {
       std::cout << "skipping dispatch_hsa_kernel - must specify directory with hsaco on commandline.  (ie: ./bench 10000 Inputs/)\n";
