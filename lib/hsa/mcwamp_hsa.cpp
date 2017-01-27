@@ -813,7 +813,7 @@ struct RocrQueue {
         assert(queue_size != 0);
 
         /// Create a queue using the maximum size.
-        status = hsa_queue_create(agent, queue_size, HSA_QUEUE_TYPE_SINGLE, NULL, NULL,
+        hsa_status_t status = hsa_queue_create(agent, queue_size, HSA_QUEUE_TYPE_SINGLE, NULL, NULL,
                                   UINT32_MAX, UINT32_MAX, &_hwQueue);
         DBOUT(DB_QUEUE, "  " <<  __func__ << ": created an HSA command queue: " << _hwQueue << "\n");
 
