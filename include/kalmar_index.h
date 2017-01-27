@@ -96,7 +96,7 @@ struct index_impl<__indices<N...> > : public __index_leaf<N>...  {
         return static_cast<const __index_leaf<0>&>(*((__index_leaf<0> *)this + c)).get();
     }
     int& operator[] (unsigned int c) restrict(amp,cpu) {
-        return static_cast<__index_leaf<0>&>(*((__index_leaf<0> *)this + c)).get();
+        return static_cast<__index_leaf<0>&>(static_cast<__index_leaf<0> *>(this)[c]).get();
     }
     index_impl& operator=(const index_impl& __t) restrict(amp,cpu) {
         __swallow(__index_leaf<N>::operator=(static_cast<const __index_leaf<N>&>(__t).get())...);
