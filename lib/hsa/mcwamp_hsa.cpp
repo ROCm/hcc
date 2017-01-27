@@ -3478,6 +3478,10 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
         printAql(q_aql); // TODO - convert to stream-based
     }
 
+#if KALMAR_DEBUG
+    std::cerr << "ring door bell to dispatch a kernel\n";
+#endif
+
     // Ring door bell
     hsa_signal_store_relaxed(lockedHsaQueue->doorbell_signal, index);
 

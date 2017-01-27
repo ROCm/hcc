@@ -22,11 +22,13 @@ public:
     void *      _devicePointer; ///< Device pointer.  
     size_t      _sizeBytes;     ///< Size of allocation.
     hc::accelerator _acc;       ///< Accelerator where allocation is physically located.
-    bool        _isInDeviceMem;    ///< Memory is physically resident on a device (if false, memory is located on host)
+    bool        _isInDeviceMem; ///< Memory is physically resident on a device (if false, memory is located on host)
     bool        _isAmManaged;   ///< Memory was allocated by AM and should be freed when am_reset is called.
+    uint64_t    _allocSeqNum;   ///< Sequence number of allocation.
 
-    int         _appId;              ///< App-specific storage.  (Used by HIP to store deviceID.)
-    unsigned    _appAllocationFlags; ///< App-specific allocation flags.  (Used by HIP to store allocation flags.)
+    int         _appId;              ///< App-specific storage.  (Used by HIP to store deviceID)
+    unsigned    _appAllocationFlags; ///< App-specific allocation flags.  (Used by HIP to store allocation flags)
+    void *      _appPtr;             ///< App-specific pointer to additional information.
 
 
     AmPointerInfo(void *hostPointer, void *devicePointer, size_t sizeBytes, hc::accelerator &acc,  bool isInDeviceMem=false, bool isAmManaged=false) :
@@ -36,8 +38,10 @@ public:
         _acc(acc),
         _isInDeviceMem(isInDeviceMem),
         _isAmManaged(isAmManaged),
+        _allocSeqNum(0),
         _appId(-1),
-        _appAllocationFlags(0)  {};
+        _appAllocationFlags(0),
+        _appPtr(nullptr)  {};
 
     AmPointerInfo & operator= (const AmPointerInfo &other);
 
@@ -155,7 +159,7 @@ size_t am_memtracker_reset(const hc::accelerator &acc);
  * Intended primarily for debug purposes.
  * @see am_memtracker_getinfo
  **/
-void am_memtracker_print();
+void am_memtracker_print(void * targetAddress=nullptr);
 
 
 /**
