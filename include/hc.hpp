@@ -399,11 +399,21 @@ public:
      * Returns the number of pending asynchronous operations on this
      * accelerator view.
      *
-     * The number returned would be immediately obsolete. This functions shall
-     * only be used for testing and debugging purpose.
+     * Care must be taken to use this API in a thread-safe manner,
      */
     int get_pending_async_ops() {
         return pQueue->getPendingAsyncOps();
+    }
+
+    /**
+     * Returns true if the accelerator_view is currently empty.
+     *
+     * Care must be taken to use this API in a thread-safe manner.
+     * As the accelerator completes work, the queue may become empty
+     * after this function returns false;
+     */
+    int get_is_empty() {
+        return pQueue->isEmpty();
     }
 
     /**

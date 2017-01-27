@@ -216,6 +216,9 @@ public:
   /// get number of pending async operations in the queue
   virtual int getPendingAsyncOps() { return 0; }
 
+  /// Is the queue empty?  Same as getPendingAsyncOps but may be faster.
+  virtual int isEmpty() { return 0; }
+
   /// get underlying native queue handle
   virtual void* getHSAQueue() { return nullptr; }
 
