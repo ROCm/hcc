@@ -1945,54 +1945,8 @@ public:
     }
 
 
-    template <typename T>
-    static void hccgetenv(const char *var_name, T *var, const char *usage)
-    {
-        char * env = getenv(var_name);
-
-        if (env != NULL) {
-            long int t = strtol(env, NULL, 0);
-            *var = t;
-        }
-
-        if (HCC_PRINT_ENV) {
-            std::cout << std::left << std::setw(30) << var_name << " = " << *var << " : " << usage << std::endl;
-        };
-    }
-
-// Helper function to return environment var:
-// Handles signed int or long int types, note call to strol above:
-#define GET_ENV_INT(envVar, usage)  hccgetenv (#envVar, &envVar, usage)
 
 
-// Global function to read HCC_ENV vars.  Really this should be called once per process not once-per-event.
-// Global so HCC clients or debuggers can force a re-read of the environment variables.
-void ReadHccEnv() 
-{
-    GET_ENV_INT(HCC_PRINT_ENV, "Print values of HCC environment variables");
-
-   // 0x1=pre-serialize, 0x2=post-serialize , 0x3= pre- and post- serialize.
-   // HCC_SERIALIZE_KERNEL serializes PFE, GL, and dispatch_hsa_kernel calls.
-   // HCC_SERIALIZE_COPY serializes av::copy_async operations.  (array_view copies are not currently impacted))
-    GET_ENV_INT(HCC_SERIALIZE_KERNEL, 
-                 "0x1=pre-serialize before each kernel launch, 0x2=post-serialize after each kernel launch, 0x3=both");
-    GET_ENV_INT(HCC_SERIALIZE_COPY,
-                 "0x1=pre-serialize before each data copy, 0x2=post-serialize after each data copy, 0x3=both");
-
-
-    GET_ENV_INT(HCC_DB, "Enable HCC trace debug");
-
-    GET_ENV_INT(HCC_OPT_FLUSH, "Perform cache flushes only at CPU sync boundaries (rather than after each kernel)");
-    GET_ENV_INT(HCC_MAX_QUEUES, "Set max number of HSA queues this process will use.  accelerator_views will share the allotted queues and steal from each other as necessary");
-
-
-    GET_ENV_INT(HCC_UNPINNED_COPY_MODE, "Select algorithm for unpinned copies. 0=ChooseBest(see thresholds), 1=PinInPlace, 2=StagingBuffer, 3=Memcpy");
-   
-    // Select thresholds to use for unpinned copies
-    GET_ENV_INT (HCC_H2D_STAGING_THRESHOLD,    "Min size (in KB) to use staging buffer algorithm for H2D copy if ChooseBest algorithm selected");
-    GET_ENV_INT (HCC_H2D_PININPLACE_THRESHOLD, "Min size (in KB) to use pin-in-place algorithm for H2D copy if ChooseBest algorithm selected");
-    GET_ENV_INT (HCC_D2H_PININPLACE_THRESHOLD, "Min size (in KB) to use pin-in-place for D2H copy if ChooseBest algorithm selected");
-};
 
 
     HSADevice(hsa_agent_t a, hsa_agent_t host) : KalmarDevice(access_type_read_write),
@@ -2145,8 +2099,6 @@ void ReadHccEnv()
         } else if (agentProfile == HSA_PROFILE_FULL) {
             profile = hcAgentProfileFull;
         }
-
-        ReadHccEnv();
 
         //---
         //Provide an environment variable to select the mode used to perform the copy operaton
@@ -2759,6 +2711,56 @@ private:
     }
 };
 
+
+template <typename T>
+static void hccgetenv(const char *var_name, T *var, const char *usage)
+{
+    char * env = getenv(var_name);
+
+    if (env != NULL) {
+        long int t = strtol(env, NULL, 0);
+        *var = t;
+    }
+
+    if (HCC_PRINT_ENV) {
+        std::cout << std::left << std::setw(30) << var_name << " = " << *var << " : " << usage << std::endl;
+    };
+}
+
+// Helper function to return environment var:
+// Handles signed int or long int types, note call to strol above:
+#define GET_ENV_INT(envVar, usage)  hccgetenv (#envVar, &envVar, usage)
+
+
+// Global free function to read HCC_ENV vars.  Really this should be called once per process not once-per-event.
+// Global so HCC clients or debuggers can force a re-read of the environment variables.
+void ReadHccEnv() 
+{
+    GET_ENV_INT(HCC_PRINT_ENV, "Print values of HCC environment variables");
+
+   // 0x1=pre-serialize, 0x2=post-serialize , 0x3= pre- and post- serialize.
+   // HCC_SERIALIZE_KERNEL serializes PFE, GL, and dispatch_hsa_kernel calls.
+   // HCC_SERIALIZE_COPY serializes av::copy_async operations.  (array_view copies are not currently impacted))
+    GET_ENV_INT(HCC_SERIALIZE_KERNEL, 
+                 "0x1=pre-serialize before each kernel launch, 0x2=post-serialize after each kernel launch, 0x3=both");
+    GET_ENV_INT(HCC_SERIALIZE_COPY,
+                 "0x1=pre-serialize before each data copy, 0x2=post-serialize after each data copy, 0x3=both");
+
+
+    GET_ENV_INT(HCC_DB, "Enable HCC trace debug");
+
+    GET_ENV_INT(HCC_OPT_FLUSH, "Perform cache flushes only at CPU sync boundaries (rather than after each kernel)");
+    GET_ENV_INT(HCC_MAX_QUEUES, "Set max number of HSA queues this process will use.  accelerator_views will share the allotted queues and steal from each other as necessary");
+
+
+    GET_ENV_INT(HCC_UNPINNED_COPY_MODE, "Select algorithm for unpinned copies. 0=ChooseBest(see thresholds), 1=PinInPlace, 2=StagingBuffer, 3=Memcpy");
+   
+    // Select thresholds to use for unpinned copies
+    GET_ENV_INT (HCC_H2D_STAGING_THRESHOLD,    "Min size (in KB) to use staging buffer algorithm for H2D copy if ChooseBest algorithm selected");
+    GET_ENV_INT (HCC_H2D_PININPLACE_THRESHOLD, "Min size (in KB) to use pin-in-place algorithm for H2D copy if ChooseBest algorithm selected");
+    GET_ENV_INT (HCC_D2H_PININPLACE_THRESHOLD, "Min size (in KB) to use pin-in-place for D2H copy if ChooseBest algorithm selected");
+};
+
 class HSAContext final : public KalmarContext
 {
     /// memory pool for signals
@@ -2838,6 +2840,9 @@ class HSAContext final : public KalmarContext
 public:
     HSAContext() : KalmarContext(), signalPool(), signalPoolFlag(), signalCursor(0), signalPoolMutex() {
         host.handle = (uint64_t)-1;
+
+        ReadHccEnv();
+
         // initialize HSA runtime
 #if KALMAR_DEBUG
         std::cerr << "HSAContext::HSAContext(): init HSA runtime\n";
