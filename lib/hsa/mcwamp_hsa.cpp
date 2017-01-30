@@ -885,6 +885,12 @@ private:
     bool                                            valid;
 
 
+    // Flag that is set when a kernel command is sent without system scope
+    // Indicates queue needs a flush at the next queue::wait() call to ensure
+    // host data is valid.
+    bool                                            _needs_sys_release;
+
+
     // Kind of the youngest command in the queue.
     // Used to detect and enforce dependencies between commands.
     hcCommandKind youngestCommandKind;
@@ -929,6 +935,8 @@ private:
 
 public:
     HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order) ;
+
+    void setNeedsSysRelease() { _needs_sys_release = true; };
 
     void dispose() override;
 
@@ -1108,10 +1116,14 @@ public:
             }
         }
 #endif
-        if (HCC_OPT_FLUSH) {
+        if (HCC_OPT_FLUSH && _needs_sys_release) {
+            _needs_sys_release = false;
+
             // In the loop below, this will be the first op waited on
             auto marker = EnqueueMarker(hc::system_scope);
-            DBOUT(DB_MISC, "enqueue marker to release written data " << marker<<"\n");
+
+            
+            DBOUT(DB_MISC, " Sys-release needed, enqueue marker to release written data " << marker<<"\n");
         }
 
         DBOUT(DB_WAIT, " queue wait, contents:\n");
@@ -3086,7 +3098,7 @@ namespace Kalmar  {
 HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order) : 
     KalmarQueue(pDev, queuing_mode_automatic, order), 
     rocrQueue(nullptr),
-    asyncOps(), opSeqNums(0), valid(true), bufferKernelMap(), kernelBufferMap() 
+    asyncOps(), opSeqNums(0), valid(true), _needs_sys_release(false), bufferKernelMap(), kernelBufferMap() 
 {
     { 
         // Protect the HSA queue we can steal it.
@@ -3629,6 +3641,10 @@ HSADispatch::dispatchKernelAsync(Kalmar::HSAQueue* hsaQueue, const void *hostKer
 
     // record HSAQueue association
     this->hsaQueue = hsaQueue;
+
+    // If HCC_OPT_FLUSH=1, we are not flushing to system scope after each command.
+    // Set the flag so we remember to do so at next queue::wait() call.
+    hsaQueue->setNeedsSysRelease();
 
     {
         // extract hsa_queue_t from HSAQueue
