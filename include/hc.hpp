@@ -290,6 +290,27 @@ public:
      */
     completion_future create_blocking_marker(std::initializer_list<completion_future> dependent_future_list, memory_scope scope=system_scope) const;
 
+
+    /**
+     * This command inserts a marker event into the accelerator_view's command
+     * queue with arbitrary number of dependent asynchronous events.
+     *
+     * This marker is returned as a completion_future object. When its
+     * dependent events and all commands submitted prior to the marker event
+     * creation have been completed, the completion_future is ready.
+     *
+     * Regardless of the accelerator_view's execute_order (execute_any_order, execute_in_order), 
+     * the marker always ensures older commands complete before the returned completion_future
+     * is marked ready.   Thus, markers provide a mechanism to enforce order between
+     * commands in an execute_any_order accelerator_view.
+     *
+     * @return A future which can be waited on, and will block until the
+     *         current batch of commands, plus the dependent event have
+     *         been completed.
+     */
+    template<typename InputIterator>
+    completion_future create_blocking_marker(InputIterator first, InputIterator last, memory_scope scope) const;
+
     /**
      * Copies size_bytes bytes from src to dst.  
      * Src and dst must not overlap.  
@@ -630,9 +651,6 @@ private:
     template <typename Kernel> friend
         completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
 
-    // private member function template to create a marker from iterators
-    template<typename InputIterator>
-    completion_future create_blocking_marker(InputIterator first, InputIterator last, memory_scope scope) const;
 
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
 public:
