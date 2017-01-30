@@ -49,8 +49,8 @@
 #define DISPATCH_HSA_KERNEL_CF    0x10
 #define DISPATCH_HSA_KERNEL_NOCF  0x20
 
-//int p_tests = 0xff;
-int p_tests = DISPATCH_HSA_KERNEL_CF+DISPATCH_HSA_KERNEL_NOCF;
+int p_tests = 0xff;
+//int p_tests = DISPATCH_HSA_KERNEL_CF+DISPATCH_HSA_KERNEL_NOCF;
 //
 int p_useSystemScope = false;
 
@@ -144,6 +144,12 @@ int parseString(const char *str, const char **output)
     printf (__VA_ARGS__);\
     printf ("\n");\
     exit(EXIT_FAILURE);
+
+void usage() {
+    printf (" --dispatch_count, -d      : Set dispatch count\n");
+    printf (" --burst_count, -b         : Set burst count (commands before sync) \n");
+    printf (" --hsaco_dir, -h           : Directory to look for nullkernel hsaco file\n");
+};
 
 int main(int argc, char* argv[]) {
 

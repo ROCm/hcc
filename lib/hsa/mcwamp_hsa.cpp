@@ -44,10 +44,6 @@
 #define KALMAR_DEBUG (0)
 #endif
 
-#ifndef KALMAR_DEBUG_ASYNC_COPY
-#define KALMAR_DEBUG_ASYNC_COPY (0)
-#endif
-
 
 // Used to mark pieces of HCC runtime which may be specific to AMD's HSA implementation.
 // Intended to help identify this code when porting to another HSA impl.
@@ -97,13 +93,16 @@ int HCC_SERIALIZE_COPY = 0;
 
 int HCC_OPT_FLUSH=0;
 
-#define DB_MISC  0x0  // 0x01
-#define DB_SYNC  0x1  // 0x02
-#define DB_AQL   0x2  // 0x04
-#define DB_QUEUE 0x3  // 0x08
+#define DB_MISC  0x0  // 0x01  // misc debug, not yet classified.
+#define DB_CMD   0x1  // 0x02  // Kernel and COpy Commands and synchronization
+#define DB_WAIT  0x2  // 0x04  // Synchronization and waiting for commands to finish.
+#define DB_AQL   0x3  // 0x08  // Decode and display AQL packets 
+#define DB_QUEUE 0x4  // 0x10  // Queue creation and desruction commands
+#define DB_SIG   0x5  // 0x20  // Signal creation, allocation, pool
+#define DB_LOCK  0x6  // 0x40  // Locks and HCC thread-safety code
 unsigned HCC_DB = 0;
 
-std::vector<std::string> g_DbStr = {"misc", "sync", "aql", "queue" };
+std::vector<std::string> g_DbStr = {"misc", "cmd", "aql", "queue", "sig", "lock" };
 
 int HCC_MAX_QUEUES = 24;
 
@@ -124,6 +123,8 @@ thread_local ShortTid hcc_tlsShortTid;
 // Macro for prettier debug messages, use like:
 // DBOUT(" Something happened" << myId() << " i= " << i << "\n");
 #define COMPILE_HCC_DB 1
+
+#define DBFLAG(db_flag) (HCC_DB & (1<<db_flag))
 
 // Use str::stream so output is atomic wrt other threads:
 #define DBOUT(db_flag, msg) \
@@ -273,11 +274,14 @@ const char* getHCCRuntimeStatusMessage(const HCCRuntimeStatus status) {
 
 inline static void checkHCCRuntimeStatus(const HCCRuntimeStatus status, const unsigned int line, hsa_queue_t* q=nullptr) {
   if (status != HCCRuntimeStatus::HCCRT_STATUS_SUCCESS) {
-    printf("### HCC runtime error: %s at %s line:%d\n", getHCCRuntimeStatusMessage(status), __FILE__, line);
-    if (q != nullptr)
-      assert(HSA_STATUS_SUCCESS == hsa_queue_destroy(q));
-    assert(HSA_STATUS_SUCCESS == hsa_shut_down());
-    exit(-1);
+    fprintf(stderr, "### HCC runtime error: %s at %s line:%d\n", getHCCRuntimeStatusMessage(status), __FILE__, line);
+    std::string m("HCC Runtime Error - ");
+    m += getHCCRuntimeStatusMessage(status);
+    throw Kalmar::runtime_exception(m.c_str(), 0);
+    //if (q != nullptr)
+    //  assert(HSA_STATUS_SUCCESS == hsa_queue_destroy(q));
+    //assert(HSA_STATUS_SUCCESS == hsa_shut_down());
+    //exit(-1);
   }
 }
 
@@ -974,16 +978,12 @@ public:
     void pushAsyncOp(std::shared_ptr<KalmarAsyncOp> op) {
         op->setSeqNum(++opSeqNums);
 
-#if KALMAR_DEBUG_ASYNC_COPY
-        std::cerr << "  pushing op=" << op << "  #" << op->getSeqNum() << " signal="<< std::hex  << ((hsa_signal_t*)op->getNativeHandle())->handle << std::dec
-                  << "  commandKind=" << getHcCommandKindString(op->getCommandKind()) << std::endl;
-#endif
+        DBOUT(DB_CMD, "  pushing op=" << op << "  #" << op->getSeqNum() << " signal="<< std::hex  << ((hsa_signal_t*)op->getNativeHandle())->handle << std::dec
+                    << "  commandKind=" << getHcCommandKindString(op->getCommandKind()) << std::endl);
 
 
         if (asyncOps.size() >= MAX_INFLIGHT_COMMANDS_PER_QUEUE) {
-#if KALMAR_DEBUG_ASYNC_COPY
-            std::cerr << "Hit max inflight ops asyncOps.size=" << asyncOps.size() << ". op#" << opSeqNums << " force sync\n";
-#endif
+            DBOUT(DB_WAIT, "*** Hit max inflight ops asyncOps.size=" << asyncOps.size() << ". op#" << opSeqNums << " force sync\n");
 
             wait();
         }
@@ -1034,9 +1034,7 @@ public:
 
 
             if (needDep) {
-#if KALMAR_DEBUG_ASYNC_COPY
-                std::cerr <<  "command type changed " << getHcCommandKindString(youngestCommandKind) << "  ->  " << getHcCommandKindString(newCommandKind) << "\n" ;
-#endif
+                DBOUT(DB_CMD, "command type changed " << getHcCommandKindString(youngestCommandKind) << "  ->  " << getHcCommandKindString(newCommandKind) << "\n") ;
                 return asyncOps.back();
             }
         }
@@ -1090,11 +1088,7 @@ public:
         // wait on all previous async operations to complete
         // Go in reverse order (from youngest to oldest).
         // Ensures younger ops have chance to complete before older ops reclaim their resources
-#if KALMAR_DEBUG_ASYNC_COPY
-        std::cerr << " queue wait, contents:\n";
-
-        printAsyncOps(std::cerr);
-#endif
+        //
 
   
 #if 0 
@@ -1118,6 +1112,11 @@ public:
             // In the loop below, this will be the first op waited on
             auto marker = EnqueueMarker(hc::system_scope);
             DBOUT(DB_MISC, "enqueue marker to release written data " << marker<<"\n");
+        }
+
+        DBOUT(DB_WAIT, " queue wait, contents:\n");
+        if (DBFLAG(DB_WAIT)) {
+            printAsyncOps(std::cerr);
         }
 
         for (int i = asyncOps.size()-1; i >= 0;  i--) {
@@ -1738,7 +1737,7 @@ public:
                             // victimHccQueue==nullptr should be detected by above loop.
                             std::lock_guard<std::mutex> (victimHccQueue->qmutex);
                             if (victimHccQueue->isEmpty()) {
-                                DBOUT(DB_SYNC, " ptr:" << this << " lock_guard...\n");
+                                DBOUT(DB_LOCK, " ptr:" << this << " lock_guard...\n");
 
                                 assert (victimHccQueue->rocrQueue == rq);  // ensure the link is consistent.
                                 victimHccQueue->rocrQueue = nullptr; 
@@ -2875,9 +2874,7 @@ public:
         signalPoolMutex.lock();
 
         // pre-allocate signals
-#if KALMAR_DEBUG_ASYNC_COPY
-        std::cerr << " precallocate " << SIGNAL_POOL_SIZE << " signals\n";
-#endif
+        DBOUT(DB_SIG,  " pre-allocate " << SIGNAL_POOL_SIZE << " signals\n");
         for (int i = 0; i < SIGNAL_POOL_SIZE; ++i) {
           hsa_signal_t signal;
           status = hsa_signal_create(1, 0, NULL, &signal);
@@ -2894,9 +2891,7 @@ public:
 
         if (signal.handle) {
 
-#if KALMAR_DEBUG_ASYNC_COPY
-            std::cerr << "  releaseSignal: " << signal.handle << " and restored value to 1\n";
-#endif
+            DBOUT(DB_SIG, "  releaseSignal: " << signal.handle << " and restored value to 1\n");
             hsa_status_t status = HSA_STATUS_SUCCESS;
 #if SIGNAL_POOL_SIZE > 0
             signalPoolMutex.lock();
@@ -2977,9 +2972,7 @@ public:
                     signalPoolFlag.push_back(false);
                 }
 
-#if KALMAR_DEBUG or KALMAR_DEBUG_ASYNC_COPY
-                std::cerr << "grew signal pool to size=" << signalPool.size() << "\n";
-#endif
+                DBOUT(DB_SIG,  "grew signal pool to size=" << signalPool.size() << "\n");
 
                 assert(signalPool.size() == oldSignalPoolSize + SIGNAL_POOL_SIZE);
                 assert(signalPoolFlag.size() == oldSignalPoolFlagSize + SIGNAL_POOL_SIZE);
@@ -3097,7 +3090,7 @@ HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order) :
 {
     { 
         // Protect the HSA queue we can steal it.
-        DBOUT(DB_SYNC, " ptr:" << this << " create lock_guard...\n");
+        DBOUT(DB_LOCK, " ptr:" << this << " create lock_guard...\n");
 
         std::lock_guard<std::mutex> (this->qmutex);
 
@@ -3120,7 +3113,7 @@ void HSAQueue::dispose() override {
     std::cerr << "HSAQueue::dispose() in\n";
 #endif
     {
-        DBOUT(DB_SYNC, " ptr:" << this << " dispose lock_guard...\n");
+        DBOUT(DB_LOCK, " ptr:" << this << " dispose lock_guard...\n");
 
         std::lock_guard<std::mutex> (this->qmutex);
 
@@ -3161,7 +3154,7 @@ void HSAQueue::dispose() override {
 
 
 hsa_queue_t *HSAQueue::acquireLockedRocrQueue() {
-    DBOUT(DB_SYNC, " ptr:" << this << " lock...\n");
+    DBOUT(DB_LOCK, " ptr:" << this << " lock...\n");
     this->qmutex.lock();
     if (this->rocrQueue == nullptr) {
         auto device = static_cast<Kalmar::HSADevice*>(this->getDev());
@@ -3176,7 +3169,7 @@ hsa_queue_t *HSAQueue::acquireLockedRocrQueue() {
 void HSAQueue::releaseLockedRocrQueue()
 {
    
-    DBOUT(DB_SYNC, " ptr:" << this << " unlock...\n");
+    DBOUT(DB_LOCK, " ptr:" << this << " unlock...\n");
     this->qmutex.unlock();
 }
 
@@ -3786,9 +3779,7 @@ HSABarrier::waitComplete() {
         return HSA_STATUS_ERROR_INVALID_ARGUMENT;
     }
 
-#if KALMAR_DEBUG or KALMAR_DEBUG_ASYNC_COPY
-    std::cerr << "  wait for barrier op#" << getSeqNum() << " completion with wait flag: " << waitMode << "  signal="<< std::hex  << signal.handle << std::dec <<"\n";
-#endif
+    DBOUT(DB_WAIT,  "  wait for barrier op#" << getSeqNum() << " completion with wait flag: " << waitMode << "  signal="<< std::hex  << signal.handle << std::dec <<"...\n");
 
     // Wait on completion signal until the barrier is finished
     hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, waitMode);
@@ -3876,7 +3867,7 @@ HSABarrier::enqueueAsync(Kalmar::HSAQueue* hsaQueue, hc::memory_scope scope) {
         // Set header last:
         barrier->header = header;
 
-        DBOUT(DB_AQL, "queue:" << rocrQueue << " dispatch barrier depCount=" << depCount << " aql:" <<  *barrier << "\n");
+        DBOUT(DB_AQL, "queue:" << rocrQueue << ".op#" << getSeqNum() << " dispatch barrier depCount=" << depCount << " aql:" <<  *barrier << "\n");
 #if KALMAR_DEBUG
         std::cerr << "ring door bell to dispatch barrier\n";
 #endif
@@ -3947,11 +3938,14 @@ HSACopy::waitComplete() {
 
 
 
-#if KALMAR_DEBUG or KALMAR_DEBUG_ASYNC_COPY
-    // Wait on completion signal until the async copy is finished
-    hsa_signal_value_t v = hsa_signal_load_acquire(signal);
-    std::cerr << "  wait for copy op#" << getSeqNum() << " completion with wait flag: " << waitMode << "signal="<< std::hex  << signal.handle << std::dec <<" currentVal=" << v << "\n";
-#endif
+    // Wait on completion signal until the async copy is finishedS
+    if (DBFLAG(DB_WAIT)) {
+        hsa_signal_value_t v = -1000;
+        if (signal.handle) {
+            hsa_signal_load_acquire(signal);
+        }
+        DBOUT(DB_WAIT, "  wait for copy op#" << getSeqNum() << " completion with wait flag: " << waitMode << "signal="<< std::hex  << signal.handle << std::dec <<" currentVal=" << v << "...\n");
+    }
 
     // Wait on completion signal until the async copy is finished
     hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_LT, 1, UINT64_MAX, waitMode);
@@ -4057,19 +4051,17 @@ HSACopy::enqueueAsyncCopyCommand(Kalmar::HSAQueue* hsaQueue, const Kalmar::HSADe
         if (depAsyncOp) {
             depSignalCnt = 1;
             depSignal = * (static_cast <hsa_signal_t*> (depAsyncOp->getNativeHandle()));
-#if KALMAR_DEBUG_ASYNC_COPY
-            std::cerr << "  asyncCopy sent with dependency on op#" << depAsyncOp->getSeqNum() << " depSignal="<< std::hex  << depSignal.handle << std::dec <<"\n";
-#endif
+            DBOUT( DB_CMD, "  asyncCopy sent with dependency on op#" << depAsyncOp->getSeqNum() << " depSignal="<< std::hex  << depSignal.handle << std::dec <<"\n");
         }
 
 
-#if KALMAR_DEBUG_ASYNC_COPY
+        if (DBFLAG(DB_CMD)) {
             hsa_signal_value_t v = hsa_signal_load_acquire(signal);
-            std::cerr << "  hsa_amd_memory_async_copy launched " << " completionSignal="<< std::hex  << signal.handle
+            DBOUT(DB_CMD,  "  hsa_amd_memory_async_copy launched " << " completionSignal="<< std::hex  << signal.handle
                       << "  InitSignalValue=" << v << " depSignalCnt=" << depSignalCnt
                       << "  copyAgent=" << copyDevice
-                      << "\n";
-#endif
+                      << "\n");
+        }
 
         hcc_memory_async_copy(copyDevice, dst, src, sizeBytes, depSignalCnt, depSignalCnt ? &depSignal:NULL, signal);
     }
@@ -4232,9 +4224,7 @@ HSACopy::syncCopyExt(Kalmar::HSAQueue *hsaQueue, hc::hcCommandKind copyDir, cons
 
         hsa_signal_store_relaxed(signal, 1);
 
-#if KALMAR_DEBUG or KALMAR_DEBUG_ASYNC_COPY
-        std::cerr << "HSACopy::syncCopy(), invoke hsa_amd_memory_async_copy() with dstAgent=%lu srcAgent=%lu\n";
-#endif
+        DBOUT(DB_CMD, "HSACopy::syncCopy(), invoke hsa_amd_memory_async_copy() with dstAgent=%lu srcAgent=%lu\n");
 
         if (copyDevice == nullptr) {
             throw Kalmar::runtime_exception("Null copyDevice reached call to hcc_memory_async_copy", -1);
