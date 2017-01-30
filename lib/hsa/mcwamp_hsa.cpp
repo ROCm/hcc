@@ -39,6 +39,7 @@
 #include <time.h>
 #include <iomanip>
 
+#define KALMAR_DEBUG (0)
 #ifndef KALMAR_DEBUG
 #define KALMAR_DEBUG (0)
 #endif
@@ -3390,23 +3391,57 @@ HSADispatch::HSADispatch(Kalmar::HSADevice* _device, HSAKernel* _kernel,
     clearArgs();
 }
 
+#if 1
 
-static void printAql(const hsa_kernel_dispatch_packet_t *aql) 
+static unsigned extractBits(unsigned v, unsigned pos, unsigned w)
 {
-    fprintf (stderr, "header=%x, setup=%x, grid=[%d.%d.%d], group=[%d.%d.%d], private_seg_size=%d, group_seg_size=%d, kernel_object=%lx, kernarg_address=%p, completion_signal=%lx\n",
-            aql->header,
-            aql->setup,
-            aql->grid_size_x,
-            aql->grid_size_y,
-            aql->grid_size_z,
-            aql->workgroup_size_x,
-            aql->workgroup_size_y,
-            aql->workgroup_size_z,
-            aql->private_segment_size,
-            aql->group_segment_size, 
-            aql->kernel_object, 
-            aql->kernarg_address,
-            aql->completion_signal.handle);
+    return (v >> pos) & ((1 << w) - 1);
+};
+
+
+static std::ostream& PrintHeader(std::ostream& os, uint16_t h)
+{
+    os << "header=" << std::hex << h << "("
+    //os << std::hex << "("
+       << "type=" << extractBits(h, HSA_PACKET_HEADER_TYPE, HSA_PACKET_HEADER_WIDTH_TYPE)
+       << ",barrier=" << extractBits (h, HSA_PACKET_HEADER_BARRIER, HSA_PACKET_HEADER_WIDTH_BARRIER)
+       << ",acquire_fence=" << extractBits(h, HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE, HSA_PACKET_HEADER_WIDTH_SCACQUIRE_FENCE_SCOPE)
+       << ",release_fence=" << extractBits(h, HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE, HSA_PACKET_HEADER_WIDTH_SCRELEASE_FENCE_SCOPE)
+       << ")";
+
+
+    return os;
+}
+#endif
+
+
+static std::ostream& operator<<(std::ostream& os, const hsa_kernel_dispatch_packet_t &aql)
+{
+    PrintHeader(os, aql.header);
+    os << " setup=" << std::hex <<  aql.setup
+       << " grid=[" << std::dec << aql.grid_size_x << "." <<  aql.grid_size_y << "." <<  aql.grid_size_z << "]"
+       << " group=[" << std::dec << aql.workgroup_size_x << "." <<  aql.workgroup_size_y << "." <<  aql.workgroup_size_z << "]"
+       << " private_seg_size=" <<  aql.private_segment_size
+       << " group_seg_size=" <<  aql.group_segment_size 
+       << " kernel_object=" << std::hex <<  aql.kernel_object 
+       << " kernarg_address=" <<  aql.kernarg_address
+       << " completion_signal=" <<  aql.completion_signal.handle;
+
+    return os;
+}
+
+
+static std::ostream& operator<<(std::ostream& os, const hsa_barrier_and_packet_t &aql)
+{
+    PrintHeader(os, aql.header);
+    os << " dep_signal[0]=" <<  aql.dep_signal[0].handle
+       << " dep_signal[1]=" <<  aql.dep_signal[1].handle
+       << " dep_signal[2]=" <<  aql.dep_signal[2].handle
+       << " dep_signal[3]=" <<  aql.dep_signal[3].handle
+       << " dep_signal[4]=" <<  aql.dep_signal[4].handle
+       << " completion_signal=" <<  aql.completion_signal.handle;
+
+   return os;
 }
 
 
@@ -3493,10 +3528,8 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
 
     hsa_queue_store_write_index_relaxed(lockedHsaQueue, index + 1);
 
-    DBOUT(DB_AQL, " dispatch kernel " << (kernel ? kernel->kernelName : "<unknown>"));
-    if (HCC_DB & (1<<DB_AQL)) {
-        printAql(q_aql); // TODO - convert to stream-based
-    }
+    DBOUT(DB_AQL, "queue:" << lockedHsaQueue  <<  " dispatch kernel " << (kernel ? kernel->kernelName : "<unknown>") << "\n");
+    DBOUT(DB_AQL, "queue:" << lockedHsaQueue  <<  " aql:" << *q_aql << "\n");
 
 #if KALMAR_DEBUG
     std::cerr << "ring door bell to dispatch a kernel\n";
@@ -3805,6 +3838,16 @@ HSABarrier::enqueueAsync(Kalmar::HSAQueue* hsaQueue, hc::memory_scope scope) {
     signal = ret.first;
     signalIndex = ret.second;
 
+
+        // setup header
+        uint16_t header = HSA_PACKET_TYPE_BARRIER_AND << HSA_PACKET_HEADER_TYPE;
+#ifndef AMD_HSA
+        // AMD implementation does not require barrier bit on barrier packet and executes a little faster without it set.
+        header |= (1 << HSA_PACKET_HEADER_BARRIER);
+#endif
+        header |= fenceBits;
+
+
     {
         hsa_queue_t* rocrQueue = hsaQueue->acquireLockedRocrQueue();
 
@@ -3820,16 +3863,6 @@ HSABarrier::enqueueAsync(Kalmar::HSAQueue* hsaQueue, hc::memory_scope scope) {
         hsa_barrier_and_packet_t* barrier = &(((hsa_barrier_and_packet_t*)(rocrQueue->base_address))[index&queueMask]);
         memset(barrier, 0, sizeof(hsa_barrier_and_packet_t));
 
-        // setup header
-        uint16_t header = HSA_PACKET_TYPE_BARRIER_AND << HSA_PACKET_HEADER_TYPE;
-#ifndef AMD_HSA
-        // AMD implementation does not require barrier bit on barrier packet and executes a little faster without it set.
-        header |= 1 << HSA_PACKET_HEADER_BARRIER;
-#endif
-        header |= fenceBits;
-        barrier->header = header;
-
-        DBOUT(DB_MISC, "barrier dependency count: " << depCount << " aql.header=0x" << std::hex << barrier->header << std::dec << "\n");
 
         // setup dependent signals
         if ((depCount > 0) && (depCount <= 5)) {
@@ -3840,9 +3873,14 @@ HSABarrier::enqueueAsync(Kalmar::HSAQueue* hsaQueue, hc::memory_scope scope) {
 
         barrier->completion_signal = signal;
 
+        // Set header last:
+        barrier->header = header;
+
+        DBOUT(DB_AQL, "queue:" << rocrQueue << " dispatch barrier depCount=" << depCount << " aql:" <<  *barrier << "\n");
 #if KALMAR_DEBUG
         std::cerr << "ring door bell to dispatch barrier\n";
 #endif
+
 
         // Increment write index and ring doorbell to dispatch the kernel
         hsa_queue_store_write_index_relaxed(rocrQueue, nextIndex);
