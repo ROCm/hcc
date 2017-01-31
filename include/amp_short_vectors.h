@@ -5,6 +5,7 @@
 
 #include <cstddef>
 #include <type_traits>
+#include "kalmar_serialize.h"
 
 namespace Concurrency
 {
@@ -14,8 +15,6 @@ namespace graphics
 #define __CPU_GPU__ restrict(cpu, amp)
 
 #if 1
-#include <cstddef>
-#include <type_traits>
 #include "hc_short_vector.inl"
 #else
 #include "kalmar_short_vectors.inl"

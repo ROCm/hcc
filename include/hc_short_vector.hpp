@@ -5,6 +5,7 @@
 
 #include <cstddef>
 #include <type_traits>
+#include "kalmar_serialize.h"
 
 namespace hc
 {
