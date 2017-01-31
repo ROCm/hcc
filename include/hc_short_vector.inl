@@ -649,8 +649,8 @@ public:
   DECLARE_VECTOR_FOUR_COMPONENT_GET_SET(x,y,z,w,4);
 
 
-  vector_value_type get_vector() const __CPU_GPU__ { return vector_container_type::data; }
-  void set_vector(vector_value_type v)  __CPU_GPU__ { vector_container_type::data = v; }
+  vector_value_type get_vector() const __CPU_GPU__ { return this->data;  }
+  void set_vector(vector_value_type v)  __CPU_GPU__ { this->data = v; }
 
   __scalartype_N& operator=(const __scalartype_N& rhs) __CPU_GPU__ { 
     this->data = rhs.data;
@@ -1012,50 +1012,50 @@ public:
   
   // conversion constructor from other short vector types
   template <typename ST>
-  explicit __vector(const  __vector<ST,1>& other)  __CPU_GPU__ { data = { value_type(other.get_s0()) }; }
+  explicit __vector(const  __vector<ST,1>& other)  __CPU_GPU__ { this->data = { value_type(other.get_s0()) }; }
 
   template <typename ST>
-  explicit __vector(const  __vector<ST,2>& other)  __CPU_GPU__ { data = { value_type(other.get_s0())
-                                                                            ,value_type(other.get_s1()) }; }
+  explicit __vector(const  __vector<ST,2>& other)  __CPU_GPU__ { this->data = { value_type(other.get_s0())
+                                                                               ,value_type(other.get_s1()) }; }
 
   template < typename ST>
-  explicit __vector(const  __vector<ST,3>& other)  __CPU_GPU__ { data = { value_type(other.get_s0())
-                                                                             ,value_type(other.get_s1())
-                                                                             ,value_type(other.get_s2()) }; }
+  explicit __vector(const  __vector<ST,3>& other)  __CPU_GPU__ { this->data = { value_type(other.get_s0())
+                                                                               ,value_type(other.get_s1())
+                                                                               ,value_type(other.get_s2()) }; }
 
   template <typename ST>
-  explicit __vector(const  __vector<ST,4>& other)  __CPU_GPU__ { data = { value_type(other.get_s0())
-                                                                             ,value_type(other.get_s1())
-                                                                             ,value_type(other.get_s2()) 
-                                                                             ,value_type(other.get_s3()) }; }
+  explicit __vector(const  __vector<ST,4>& other)  __CPU_GPU__ { this->data = { value_type(other.get_s0())
+                                                                               ,value_type(other.get_s1())
+                                                                               ,value_type(other.get_s2()) 
+                                                                               ,value_type(other.get_s3()) }; }
 
   template <typename ST>
-  explicit __vector(const  __vector<ST,8>& other)  __CPU_GPU__ { data = { value_type(other.get_s0())
-                                                                             ,value_type(other.get_s1())
-                                                                             ,value_type(other.get_s2()) 
-                                                                             ,value_type(other.get_s3()) 
-                                                                             ,value_type(other.get_s4())
-                                                                             ,value_type(other.get_s5())
-                                                                             ,value_type(other.get_s6()) 
-                                                                             ,value_type(other.get_s7()) }; }
+  explicit __vector(const  __vector<ST,8>& other)  __CPU_GPU__ { this->data = { value_type(other.get_s0())
+                                                                               ,value_type(other.get_s1())
+                                                                               ,value_type(other.get_s2()) 
+                                                                               ,value_type(other.get_s3()) 
+                                                                               ,value_type(other.get_s4())
+                                                                               ,value_type(other.get_s5())
+                                                                               ,value_type(other.get_s6()) 
+                                                                               ,value_type(other.get_s7()) }; }
 
   template <typename ST>
-  explicit __vector(const  __vector<ST,16>& other)  __CPU_GPU__ { data = { value_type(other.get_s0())
-                                                                             ,value_type(other.get_s1())
-                                                                             ,value_type(other.get_s2()) 
-                                                                             ,value_type(other.get_s3()) 
-                                                                             ,value_type(other.get_s4())
-                                                                             ,value_type(other.get_s5())
-                                                                             ,value_type(other.get_s6()) 
-                                                                             ,value_type(other.get_s7()) 
-                                                                             ,value_type(other.get_s8())
-                                                                             ,value_type(other.get_s9())
-                                                                             ,value_type(other.get_sA()) 
-                                                                             ,value_type(other.get_sB()) 
-                                                                             ,value_type(other.get_sC())
-                                                                             ,value_type(other.get_sD())
-                                                                             ,value_type(other.get_sE()) 
-                                                                             ,value_type(other.get_sF()) }; }
+  explicit __vector(const  __vector<ST,16>& other)  __CPU_GPU__ { this->data = { value_type(other.get_s0())
+                                                                                ,value_type(other.get_s1())
+                                                                                ,value_type(other.get_s2()) 
+                                                                                ,value_type(other.get_s3()) 
+                                                                                ,value_type(other.get_s4())
+                                                                                ,value_type(other.get_s5())
+                                                                                ,value_type(other.get_s6()) 
+                                                                                ,value_type(other.get_s7()) 
+                                                                                ,value_type(other.get_s8())
+                                                                                ,value_type(other.get_s9())
+                                                                                ,value_type(other.get_sA()) 
+                                                                                ,value_type(other.get_sB()) 
+                                                                                ,value_type(other.get_sC())
+                                                                                ,value_type(other.get_sD())
+                                                                                ,value_type(other.get_sE()) 
+                                                                                ,value_type(other.get_sF()) }; }
 
 
 
@@ -1119,16 +1119,16 @@ public:
   // four-component accessors
   DECLARE_VECTOR_FOUR_COMPONENT_GET_SET(x,y,z,w,4);
 
-  vector_value_type get_vector() const __CPU_GPU__ { return data; }
-  void set_vector(vector_value_type v)  __CPU_GPU__ { data = clamp(v); }
+  vector_value_type get_vector() const __CPU_GPU__ { return this->data; }
+  void set_vector(vector_value_type v)  __CPU_GPU__ { this->data = clamp(v); }
 
   __scalartype_N& operator=(const __scalartype_N& rhs) __CPU_GPU__ { 
-    data = rhs.data;
+    this->data = rhs.data;
     return *this;
   }
 
   __scalartype_N& operator++() __CPU_GPU__ { 
-     set_vector(data + static_cast<vector_value_type>(static_cast<value_type>(1))); 
+     set_vector(this->data + static_cast<vector_value_type>(static_cast<value_type>(1))); 
      return *this; 
   }
   __scalartype_N operator++(int) __CPU_GPU__ { 
@@ -1137,7 +1137,7 @@ public:
     return r;
   }
   __scalartype_N& operator--() __CPU_GPU__ { 
-    set_vector(data - static_cast<vector_value_type>(static_cast<value_type>(1))); 
+    set_vector(this->data - static_cast<vector_value_type>(static_cast<value_type>(1))); 
     return *this;
   }
   __scalartype_N operator--(int) __CPU_GPU__ { 
@@ -1152,69 +1152,69 @@ public:
     return r;
   }
   __scalartype_N& operator+=(const __scalartype_N& rhs) __CPU_GPU__ { 
-    set_vector(data + rhs.data);
+    set_vector(this->data + rhs.data);
     return *this;
   }
 
   __scalartype_N& operator-=(const __scalartype_N& rhs) __CPU_GPU__ { 
-    set_vector(data - rhs.data);
+    set_vector(this->data - rhs.data);
     return *this;
   }
  
   __scalartype_N& operator*=(const __scalartype_N& rhs) __CPU_GPU__ { 
-    set_vector(data * rhs.data);
+    set_vector(this->data * rhs.data);
     return *this;
   }
  
   __scalartype_N& operator/=(const __scalartype_N& rhs) __CPU_GPU__ { 
-    set_vector(data / rhs.data);
+    set_vector(this->data / rhs.data);
     return *this;
   }
 
   __scalartype_N operator-() __CPU_GPU__ {
     static_assert(normIsSigned, "operator- can only support short vector of signed integral or floating-point types.");
     __scalartype_N r;
-    r.data = -data;
+    r.data = -this->data;
     return r;
   }
 
   template <typename T = __scalartype_N
             , class = typename std::enable_if<T::size==1,value_type>::type >
   bool operator==(const __vector<value_type, 1>& rhs) __CPU_GPU__ { 
-    return (data.x == rhs.data.x); 
+    return (this->data.x == rhs.data.x); 
   }
 
   template <typename T = __scalartype_N
             , class = typename std::enable_if<T::size==2,value_type>::type >
   bool operator==(const __vector<value_type, 2>& rhs) __CPU_GPU__ { 
-    return (data.x == rhs.data.x 
-         && data.y == rhs.data.y); 
+    return (this->data.x == rhs.data.x 
+         && this->data.y == rhs.data.y); 
   }
 
   template <typename T = __scalartype_N
             , class = typename std::enable_if<T::size==3,value_type>::type >
   bool operator==(const __vector<value_type, 3>& rhs) __CPU_GPU__ { 
-    return   ((data.s0 == rhs.data.s0) && (data.s1 == rhs.data.s1))
-              && (data.s2 == rhs.data.s2);
+    return   ((this->data.s0 == rhs.data.s0) && (this->data.s1 == rhs.data.s1))
+              && (this->data.s2 == rhs.data.s2);
 
   }
 
   template <typename T = __scalartype_N
             , class = typename std::enable_if<T::size==4,value_type>::type >
   bool operator==(const __vector<value_type, 4>& rhs) __CPU_GPU__ { 
-    return   ((data.s0 == rhs.data.s0) && (data.s1 == rhs.data.s1))
-              && ((data.s2 == rhs.data.s2) && (data.s3 == rhs.data.s3));
+    return   ((this->data.s0 == rhs.data.s0) && (this->data.s1 == rhs.data.s1))
+              && ((this->data.s2 == rhs.data.s2) && (this->data.s3 == rhs.data.s3));
 
   }
 
   template <typename T = __scalartype_N
             , class = typename std::enable_if<T::size==8,value_type>::type >
   bool operator==(const __vector<value_type, 8>& rhs) __CPU_GPU__ {
-    return    (((data.s0 == rhs.data.s0) && (data.s1 == rhs.data.s1))
-              && ((data.s2 == rhs.data.s2) && (data.s3 == rhs.data.s3)))
+    return    (((this->data.s0 == rhs.data.s0) && (this->data.s1 == rhs.data.s1))
+              && ((this->data.s2 == rhs.data.s2) && (this->data.s3 == rhs.data.s3)))
             &&  
-              (((data.s4 == rhs.data.s4) && (data.s5 == rhs.data.s5))
-              && ((data.s6 == rhs.data.s6) && (data.s7 == rhs.data.s7)))
+              (((this->data.s4 == rhs.data.s4) && (this->data.s5 == rhs.data.s5))
+              && ((this->data.s6 == rhs.data.s6) && (this->data.s7 == rhs.data.s7)))
               ;
   }
 
@@ -1222,18 +1222,18 @@ public:
             , class = typename std::enable_if<T::size==16,value_type>::type >
   bool operator==(const __vector<value_type, 16>& rhs) __CPU_GPU__ {
 
-    return (   (((data.s0 == rhs.data.s0) && (data.s1 == rhs.data.s1))
-              && ((data.s2 == rhs.data.s2) && (data.s3 == rhs.data.s3)))
+    return (   (((this->data.s0 == rhs.data.s0) && (this->data.s1 == rhs.data.s1))
+              && ((this->data.s2 == rhs.data.s2) && (this->data.s3 == rhs.data.s3)))
             &&  
-              (((data.s4 == rhs.data.s4) && (data.s5 == rhs.data.s5))
-              && ((data.s6 == rhs.data.s6) && (data.s7 == rhs.data.s7)))
+              (((this->data.s4 == rhs.data.s4) && (this->data.s5 == rhs.data.s5))
+              && ((this->data.s6 == rhs.data.s6) && (this->data.s7 == rhs.data.s7)))
            )
            &&
-           (  (((data.s8 == rhs.data.s8) && (data.s9 == rhs.data.s9))
-              && ((data.sA == rhs.data.sA) && (data.sB == rhs.data.sB)))
+           (  (((this->data.s8 == rhs.data.s8) && (this->data.s9 == rhs.data.s9))
+              && ((this->data.sA == rhs.data.sA) && (this->data.sB == rhs.data.sB)))
             &&  
-              (((data.sC == rhs.data.sC) && (data.sD == rhs.data.sD))
-              && ((data.sE == rhs.data.sE) && (data.sF == rhs.data.sF)))
+              (((this->data.sC == rhs.data.sC) && (this->data.sD == rhs.data.sD))
+              && ((this->data.sE == rhs.data.sE) && (this->data.sF == rhs.data.sF)))
            )
            ;
   }
@@ -1241,7 +1241,6 @@ public:
   bool operator!=(const __scalartype_N& rhs) __CPU_GPU__ { return !(*this==rhs); }
 
 private:
-  vector_value_type data;
 
   __vector<value_type,2> create_vector2(v2_type_internal v) __CPU_GPU__ {
     return __vector<value_type,2>(v);
