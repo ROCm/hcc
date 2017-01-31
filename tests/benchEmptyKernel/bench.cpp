@@ -226,6 +226,8 @@ int main(int argc, char* argv[]) {
 
 
   if (nullkernel_hsaco_dir) {
+      hc::completion_future cf;
+      lp.cf = &cf;
       time_dispatch_hsa_kernel(dispatch_count, &lp, nullkernel_hsaco_dir);
   } else {
       std::cout << "skipping dispatch_hsa_kernel - must specify path to hsaco on commandline.  (ie: ./bench 10000 Inputs/nullkernel.hsaco)\n";
