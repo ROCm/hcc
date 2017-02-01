@@ -2,6 +2,9 @@
 // RUN: %t.out -d 10000 -h %T
 // // This runs burst of 100 kernels to measure kernel-to-kernel overhead:
 // RUN: %t.out -d 1000 -b 100 -h %T 
+// // Run again with --execute_any_order:
+// RUN: %t.out -d 10000 -h %T --execute_any_order
+// RUN: %t.out -d 1000 -b 100 -h %T  --execute_any_order
 // RUN: test -e pfe.dat && mv pfe.dat %T/pfe.dat
 // RUN: test -e grid_launch.dat && mv grid_launch.dat %T/grid_launch.dat
 
@@ -56,6 +59,7 @@ int p_useSystemScope = false;
 
 int p_dispatch_count = DISPATCH_COUNT;
 int p_burst_count = 1;
+int p_execute_any_order = 0;
 
 __attribute__((hc_grid_launch)) 
 void nullkernel(const grid_launch_parm lp, float* A) {
@@ -149,6 +153,8 @@ void usage() {
     printf (" --dispatch_count, -d      : Set dispatch count\n");
     printf (" --burst_count, -b         : Set burst count (commands before sync) \n");
     printf (" --hsaco_dir, -h           : Directory to look for nullkernel hsaco file\n");
+    printf (" --tests, -t               : Bit vector to control which tests are run, see p_tests in code\n");
+    printf (" --execute_any_order,-a    : Create queue with execute_any_order (no barrier bit)\n");
 };
 
 int main(int argc, char* argv[]) {
@@ -176,6 +182,8 @@ int main(int argc, char* argv[]) {
         if (++i >= argc || !parseInt(argv[i], &p_tests)) {
             failed ("Bad tests");
         };
+    } else if (!strcmp(arg, "--execute_any_order") || (!strcmp(arg, "-a"))) {
+        p_execute_any_order = true;
     } else {
         failed("Bad argument '%s'", arg);
     }
@@ -194,8 +202,8 @@ int main(int argc, char* argv[]) {
 
   hc::accelerator acc = hc::accelerator();
   // Set up extra stuff
-  static hc::accelerator_view av = acc.create_view(hc::execute_any_order);
-  //static hc::accelerator_view av = acc.create_view(hc::execute_in_order);
+  auto flags = p_execute_any_order ? hc::execute_any_order : hc::execute_in_order;
+  static hc::accelerator_view av = acc.create_view(flags);
 
   grid_launch_parm lp;
   grid_launch_init(&lp);
@@ -319,12 +327,12 @@ int main(int argc, char* argv[]) {
       if (p_tests & DISPATCH_HSA_KERNEL_CF) {
           hc::completion_future cf; // create new completion-future 
           lp.cf = &cf;
-          time_dispatch_hsa_kernel("dispatch_hsa_kernel, withcompletion, active", &lp, nullkernel_hsaco_dir);
+          time_dispatch_hsa_kernel("dispatch_hsa_kernel+withcompletion+activewait", &lp, nullkernel_hsaco_dir);
       }
 
       if (p_tests & DISPATCH_HSA_KERNEL_NOCF) {
           lp.cf=0x0;
-          time_dispatch_hsa_kernel("dispatch_hsa_kernel, nocompletion, active", &lp, nullkernel_hsaco_dir);
+          time_dispatch_hsa_kernel("dispatch_hsa_kernel+nocompletion+activewait", &lp, nullkernel_hsaco_dir);
       }
   } else {
       std::cout << "skipping dispatch_hsa_kernel - must specify directory with hsaco on commandline.  (ie: ./bench 10000 Inputs/)\n";
