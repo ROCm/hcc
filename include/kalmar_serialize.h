@@ -1,5 +1,7 @@
 #pragma once
 
+#include <set>
+#include "kalmar_runtime.h"
 #include "kalmar_exception.h"
 
 /** \cond HIDDEN_SYMBOLS */
