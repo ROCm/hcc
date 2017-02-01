@@ -39,7 +39,6 @@
 #include <time.h>
 #include <iomanip>
 
-#define KALMAR_DEBUG (0)
 #ifndef KALMAR_DEBUG
 #define KALMAR_DEBUG (0)
 #endif
@@ -1076,7 +1075,7 @@ public:
     }
 
 
-    int isEmpty() override {
+    bool isEmpty() override {
         // Have to walk asyncOps since it can contain null pointers.
         for (int i = 0; i < asyncOps.size(); ++i) {
             if (asyncOps[i] != nullptr) {

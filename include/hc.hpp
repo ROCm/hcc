@@ -433,7 +433,7 @@ public:
      * As the accelerator completes work, the queue may become empty
      * after this function returns false;
      */
-    int get_is_empty() {
+    bool get_is_empty() {
         return pQueue->isEmpty();
     }
 
