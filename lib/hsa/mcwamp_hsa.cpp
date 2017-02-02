@@ -1645,7 +1645,7 @@ public:
 
 
 void RocrQueue::assignHccQueue(HSAQueue *hccQueue) {
-    assert (hcc->rocrQueue == nullptr);  // only needy should assign new queue
+    assert (hccQueue->rocrQueue == nullptr);  // only needy should assign new queue
     hccQueue->rocrQueue = this;
     _hccQueue = hccQueue;
 
@@ -1790,7 +1790,7 @@ public:
             auto rqSize = rocrQueues.size();
             if (hccSize < rqSize)  {
                 auto iter = std::find(rocrQueues.begin(), rocrQueues.end(), rocrQueue);
-                assert (iter != rocrQueue.end()); 
+                assert (iter != rocrQueues.end()); 
                 // Remove the pointer from the list:
                 rocrQueues.erase(iter);
                 DBOUT(DB_QUEUE, "removeRocrQueue-hard: rocrQueue=" << rocrQueue << " hccQueues/rocrQueues=" << hccSize << "/" << rqSize << "\n")
