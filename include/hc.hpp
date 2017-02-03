@@ -2777,15 +2777,6 @@ inline int __lane_id(void) [[hc]] {
   return __amdgcn_mbcnt_hi(-1, lo);
 }
 
-#elif __hcc_backend__==HCC_BACKEND_HSAIL
-
-extern "C" __attribute__((const)) unsigned int __hsail_get_lane_id(void) __HC__;
-
-// returns the lane ID within a wavefront
-inline int __lane_id(void) [[hc]] {
-  return __hsail_get_lane_id();
-}
-
 #endif
 
 #if __hcc_backend__==HCC_BACKEND_AMDGPU
@@ -2941,22 +2932,6 @@ inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__
   return __amdgcn_ds_bpermute(index<<2, var);
 }
 
-#elif __hcc_backend__==HCC_BACKEND_HSAIL
-
-inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-    switch (width) {
-      case 64:
-        return __hsail_activelanepermute_b32(var,srcLane&63, 0, 0);
-      default: {
-        unsigned int ulane = (unsigned int)srcLane;
-        unsigned int uwidth = (unsigned int)width;
-        unsigned int laneId = __lane_id();
-        unsigned int newSrcLane = (laneId&((unsigned int)0xFFFFFFFF-(uwidth-1))) + (ulane&(uwidth-1));
-        return __hsail_activelanepermute_b32(var,newSrcLane, 0, 0);
-      }
-   };
-}
-
 #endif
 
 inline unsigned int __shfl(unsigned int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
@@ -3006,19 +2981,6 @@ inline int __shfl_up(int var, const unsigned int delta, const int width=__HSA_WA
   return __amdgcn_ds_bpermute(index<<2, var);
 }
 
-#elif __hcc_backend__==HCC_BACKEND_HSAIL
-
-inline int __shfl_up(int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-    if (delta == 1 
-        && width == __HSA_WAVEFRONT_SIZE__) {
-        return __wavefront_shift_right(var);
-    }
-    else {
-        int laneId = __lane_id();
-        int newSrcLane = laneId - delta;
-        return __hsail_activelanepermute_b32(var, newSrcLane, var, newSrcLane < (laneId&(~(width-1))));
-    }
-}
 #endif
 
 inline unsigned int __shfl_up(unsigned int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
@@ -3068,20 +3030,6 @@ inline int __shfl_down(int var, const unsigned int delta, const int width=__HSA_
   return __amdgcn_ds_bpermute(index<<2, var);
 }
 
-#elif __hcc_backend__==HCC_BACKEND_HSAIL
-
-inline int __shfl_down(int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-    if (delta == 1
-        && width == __HSA_WAVEFRONT_SIZE__) {
-        return __wavefront_shift_left(var);
-    }
-    else {
-        unsigned int laneId = __lane_id();
-        unsigned int newSrcLane = laneId + delta;
-        return __hsail_activelanepermute_b32(var, newSrcLane, var, newSrcLane >= ((laneId&(~(width-1))) + width ));
-    }
-}
-
 #endif
 
 inline unsigned int __shfl_down(unsigned int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
@@ -3126,17 +3074,6 @@ inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) _
   int index = self^laneMask;
   index = index >= ((self+width)&~(width-1))?self:index;
   return __amdgcn_ds_bpermute(index<<2, var);
-}
-
-
-#elif __hcc_backend__==HCC_BACKEND_HSAIL
-
-
-inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-    int self = __lane_id();
-    int index = self^laneMask;
-    index = index >= ((self+width)&~(width-1))?self:index;
-    return __hsail_activelanepermute_b32(var, index, 0, 0);
 }
 
 #endif
