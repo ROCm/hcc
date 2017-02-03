@@ -24,6 +24,9 @@ KMOPTOPT="${KMOPTOPT:="-O3"}"
 # if not set, then "-O2" will be passed to llc
 KMOPTLLC="${KMOPTLLC:="-O2"}"
 
+# enable LLVM hijacking
+KMHACKLLVM="${KMHACKLLVM:=0}"
+
 if [ $KMDBSCRIPT == "1" ]
 then
   set -x
@@ -70,6 +73,15 @@ do
     ;;
   esac
 done
+
+# hijack LLVM #1
+if [ $KMHACKLLVM == "1" ]; then
+  if [ -e ./hack.input.ll ]; then
+    echo "Use ./hack.input.ll to hijack $1"
+    $AS ./hack.input.ll
+    cp ./hack.input.bc $1
+  fi
+fi
 
 # emit GCN ISA kernel
 if [ $KMDUMPLLVM == "1" ]; then
@@ -137,6 +149,15 @@ RETVAL=$?
 if [ $RETVAL != 0 ]; then
   echo "Generating AMD GCN kernel failed in opt for target: $AMDGPU_TARGET"
   exit $RETVAL
+fi
+
+# hijack LLVM #2
+if [ $KMHACKLLVM == "1" ]; then
+  if [ -e ./hack-$AMDGPU_TARGET.opt.ll ]; then
+    echo "Use ./hack-$AMDGPU_TARGET.opt.ll to hijack $2.opt.bc"
+    $AS ./hack-$AMDGPU_TARGET.opt.ll
+    cp ./hack-$AMDGPU_TARGET.opt.bc $2.opt.bc
+  fi
 fi
 
 if [ $KMDUMPLLVM == "1" ]; then
