@@ -4,10 +4,10 @@
 #include <string>
 #include <stdio.h>
 
-#define DB_MISC		1U << 0
-#define DB_SYNC		1U << 1
-#define DB_AQL		1U << 2
-#define DB_QUEUE	1U << 3
+#define DB_MISC         1U << 0
+#define DB_SYNC         1U << 1
+#define DB_AQL          1U << 2
+#define DB_QUEUE        1U << 3
 
 #define DEBUG_ENABLED 1
 
