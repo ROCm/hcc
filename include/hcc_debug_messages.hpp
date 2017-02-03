@@ -14,6 +14,8 @@
 char* hcc_db;
 std::ostream &err = std::cerr;
 
+// Usage: DEBUG_MESSAGE_PRINTF(DB_MISC, "%s #%d\n", "Test", 1);
+// Output: Test #1
 #define DEBUG_MESSAGE_PRINTF(category, format, ...) \
 hcc_db = std::getenv("HCC_DB"); \
 if (hcc_db != NULL && DEBUG_ENABLED) { \
@@ -34,6 +36,8 @@ inline void DEBUG_MESSAGE_CERR(T t, Mssg... mssg) {
 	DEBUG_MESSAGE_CERR(mssg...);
 }
 
+// Usage: DEBUG_MESSAGE(DB_MISC, "i= ", 0.1, "\n");
+// Output: i= 0.1
 template <typename T, typename... Mssg>
 inline void DEBUG_MESSAGE(T t, Mssg... mssg) {
 	int category = t;
