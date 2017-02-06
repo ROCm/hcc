@@ -2,8 +2,8 @@ FROM ubuntu:14.04
 MAINTAINER Kent Knox <kent.knox@amd>
 
 # Parameters related to building hcc-lc
-ARG hcc_install_path=/opt/rocm
-ARG hcc_build_path=/usr/local/src/hcc-lc
+ARG rocm_install_path=/opt/rocm
+ARG rocm_build_path=/usr/local/src/hcc-lc
 ARG build_type=Release
 
 # Download and install an up to date version of cmake, because compiling
@@ -18,6 +18,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     sh -c 'echo deb [arch=amd64] http://packages.amd.com/rocm/apt/debian/ trusty main > /etc/apt/sources.list.d/rocm.list' && \
     apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     sudo \
+    file \
     build-essential \
     git \
     software-properties-common \
@@ -48,31 +49,31 @@ RUN cd /usr/local/src && \
 RUN curl http://commondatastorage.googleapis.com/git-repo-downloads/repo > /usr/local/bin/repo && \
     chmod a+x /usr/local/bin/repo
 
-RUN mkdir -p ${hcc_build_path} && \
-    cd ${hcc_build_path} && \
+RUN mkdir -p ${rocm_build_path} && \
+    cd ${rocm_build_path} && \
     repo init --depth=1 -u https://github.com/RadeonOpenCompute/HCC-Native-GCN-ISA.git -b clang_tot_upgrade && \
     repo sync && \
 
     # build amd-common LLVM/LLD/Clang
-    cd ${hcc_build_path}/llvm && \
+    cd ${rocm_build_path}/llvm && \
     mkdir -p build && \
     cd build && \
     cmake \
-      -DCMAKE_INSTALL_PREFIX=${hcc_install_path} \
+      -DCMAKE_INSTALL_PREFIX=${rocm_install_path} \
       -DCMAKE_BUILD_TYPE=${build_type} \
       -DLLVM_TARGETS_TO_BUILD="AMDGPU;X86" \
       -DLLVM_APPEND_VC_REV=ON .. && \
     make -j $(nproc) && \
 
     # build ROCm-Device-Libs with amd-common Clang
-    cd ${hcc_build_path}/ocml/ && \
+    cd ${rocm_build_path}/ocml/ && \
     mkdir -p build && \
     cd build && \
-    CC=${hcc_build_path}/llvm/build/bin/clang cmake \
-      -DCMAKE_INSTALL_PREFIX=${hcc_install_path} \
+    CC=${rocm_build_path}/llvm/build/bin/clang cmake \
+      -DCMAKE_INSTALL_PREFIX=${rocm_install_path} \
       -DCMAKE_BUILD_TYPE=${build_type} \
       -DAMDHSACOD=/opt/rocm/bin/amdhsacod \
-      -DLLVM_DIR="${hcc_build_path}/llvm/build" \
+      -DLLVM_DIR="${rocm_build_path}/llvm/build" \
       .. && \
     make -j $(nproc) package && \
     dpkg -i rocm-device-libs-*.deb
