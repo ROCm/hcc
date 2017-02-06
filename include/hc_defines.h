@@ -49,7 +49,7 @@ extern "C" __attribute__((const,amp)) int64_t amp_get_group_id(unsigned int n);
 #if __KALMAR_ACCELERATOR__ == 2
 #define tile_static thread_local
 #else
-#define tile_static static __attribute__((section("clamp_opencl_local")))
+#define tile_static static __lds
 #endif
 
 extern "C" __attribute__((noduplicate,hc)) void hc_barrier(unsigned int n);
