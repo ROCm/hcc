@@ -24,26 +24,29 @@ node ('rocmtest')
     // git clone --depth 1 -b clang_tot_upgrade https://github.com/RadeonOpenCompute/hcc.git
     checkout scm
     sh 'git submodule update --init'
-    // sh '''
+
+    // This is to build the extra clang tools
+    sh '''
+    rm -rf hcc/clang/tools/extra
+    git clone --depth 1 -b clang_tot_upgrade https://github.com/RadeonOpenCompute/clang-tools-extra.git hcc/clang/tools/extra
+    '''
     // git clone --depth 1 -b clang_tot_upgrade https://github.com/RadeonOpenCompute/hcc-clang-upgrade.git hcc/clang
     // git clone --depth 1 -b amd-hcc https://github.com/RadeonOpenCompute/llvm.git hcc/compiler
     // git clone --depth 1 -b amd-hcc https://github.com/RadeonOpenCompute/lld.git hcc/lld
-    // git clone --depth 1 -b clang_tot_upgrade https://github.com/RadeonOpenCompute/clang-tools-extra.git hcc/clang/tools/extra
-    // '''
   }
 
-  def hcc_image = null
-  stage('build image')
+  def hcc_build_image = null
+  stage('ubuntu-16.04 image')
   {
     dir('docker')
     {
-      hcc_image = docker.build( 'hcc-lc/build-ubuntu-16.04:latest', '-f dockerfile-ubuntu-16.04 --build-arg build_type=Release --build-arg rocm_install_path=/opt/rocm .' )
+      hcc_build_image = docker.build( 'hcc-lc/build-ubuntu-16.04:latest', '-f dockerfile-build-ubuntu-16.04 --build-arg build_type=Release --build-arg rocm_install_path=/opt/rocm .' )
     }
   }
 
-  hcc_image.inside( '--device=/dev/kfd' )
+  hcc_build_image.inside( '--device=/dev/kfd' )
   {
-    stage('release build')
+    stage('hcc-lc release')
     {
       // Build release hcc
       dir("${build_dir_release_abs}")
@@ -63,16 +66,10 @@ node ('rocmtest')
           """
       }
 
-      stage("make package")
-      {
-        sh "cd ${build_dir_release_abs}; make package"
-        archiveArtifacts artifacts: "${build_dir_release_rel}/*.deb", fingerprint: true
-      }
-
       // Cap the maximum amount of testing, in case of hangs
       timeout(time: 1, unit: 'HOURS')
       {
-        stage("unit tests")
+        stage("unit testing")
         {
           // install from debian packages because pre/post scripts set up softlinks install targets don't
           sh  """#!/usr/bin/env bash
@@ -82,6 +79,26 @@ node ('rocmtest')
           // junit "${build_dir_release_abs}/*.xml"
         }
       }
+
+      stage("packaging")
+      {
+        sh "cd ${build_dir_release_abs}; make package"
+        archiveArtifacts artifacts: "${build_dir_release_rel}/*.deb", fingerprint: true
+      }
     }
   }
+
+  // Everything above builds hcc in a clean container to create a debain package
+  // Create a clean docker image that installs the debian package that was built.
+  def hcc_install_image = null
+  stage('hcc-lc image')
+  {
+    dir("${build_dir_release_abs}/docker")
+    {
+      sh "cp -r ${workspace_dir_abs}/docker/* .; cp ${build_dir_release_abs}/*.deb .; ls -la"
+      // hcc_build_image = docker.build( "rocm/hcc-lc-ubuntu-16.04:${env.BUILD_TAG}", '-f dockerfile-hcc-lc-ubuntu-16.04 .' )
+      hcc_build_image = docker.build( "rocm/hcc-lc-ubuntu-16.04:latest", '-f dockerfile-hcc-lc-ubuntu-16.04 .' )
+    }
+  }
+
 }
