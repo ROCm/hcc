@@ -82,7 +82,7 @@ Use `,` to delimit each AMDGPU target in HCC. Example:
 
 ```bash
 export HCC_AMDGPU_TARGET=gfx701,gfx801,gfx802,gfx803
-# ISA for Hawaii(gfx801), Carrizo(gfx801), Tonga(gfx802) and Fiji(gfx803) would 
+# ISA for Hawaii(gfx701), Carrizo(gfx801), Tonga(gfx802) and Fiji(gfx803) would 
 # be produced
 hcc `hcc-config --cxxflags --ldflags` foo.cpp
 ```
