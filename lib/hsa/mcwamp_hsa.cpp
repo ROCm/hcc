@@ -148,9 +148,9 @@ if (COMPILE_HCC_DB && (HCC_DB & (1<<(db_flag)))) { \
 #define FORCE_SIGNAL_DEP_BETWEEN_COPIES (0)
 
 // cutoff size used in FNV-1a hash function
-// default set as 768, this is a heuristic value
+// default set as 2048, this is a heuristic value
 // which is larger than HSA BrigModuleHeader and AMD GCN ISA header (Elf64_Ehdr)
-#define FNV1A_CUTOFF_SIZE (768)
+#define FNV1A_CUTOFF_SIZE (2048)
 
 #define CASE_STRING(X)  case X: case_string = #X ;break;
 
