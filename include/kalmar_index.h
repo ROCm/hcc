@@ -92,16 +92,11 @@ struct index_impl<__indices<N...> > : public __index_leaf<N>...  {
     template<class ..._Tp>
         inline void __swallow(_Tp...) restrict(amp,cpu) {}
 
+    int operator[] (unsigned int c) const restrict(amp,cpu) {
+        return static_cast<const __index_leaf<0>&>(*((__index_leaf<0> *)this + c)).get();
+    }
     int& operator[] (unsigned int c) restrict(amp,cpu) {
         return static_cast<__index_leaf<0>&>(static_cast<__index_leaf<0> *>(this)[c]).get();
-    }
-    int operator[] (unsigned int c) const restrict(amp,cpu) {
-      // FIXME for some reason we have to do this for kernel path
-#if __HCC_ACCERATOR__
-        return this->operator[](c);
-#else
-        return static_cast<const __index_leaf<0>&>(*((__index_leaf<0> *)this + c)).get();
-#endif
     }
     index_impl& operator=(const index_impl& __t) restrict(amp,cpu) {
         __swallow(__index_leaf<N>::operator=(static_cast<const __index_leaf<N>&>(__t).get())...);
