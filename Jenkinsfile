@@ -27,8 +27,8 @@ node ('rocmtest')
 
     // This is to build the extra clang tools
     sh '''
-    rm -rf hcc/clang/tools/extra
-    git clone --depth 1 -b clang_tot_upgrade https://github.com/RadeonOpenCompute/clang-tools-extra.git hcc/clang/tools/extra
+    rm -rf clang/tools/extra
+    git clone --depth 1 -b clang_tot_upgrade https://github.com/RadeonOpenCompute/clang-tools-extra.git clang/tools/extra
     '''
     // git clone --depth 1 -b clang_tot_upgrade https://github.com/RadeonOpenCompute/hcc-clang-upgrade.git hcc/clang
     // git clone --depth 1 -b amd-hcc https://github.com/RadeonOpenCompute/llvm.git hcc/compiler
@@ -62,6 +62,7 @@ node ('rocmtest')
               -DCMAKE_BUILD_TYPE=${build_config} \
               -DHSA_AMDGPU_GPU_TARGET="gfx701;gfx803" \
               ${workspace_dir_abs}
+            make -j\$(nproc) world
             make -j\$(nproc)
           """
       }
