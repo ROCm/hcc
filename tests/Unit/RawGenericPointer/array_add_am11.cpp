@@ -6,8 +6,6 @@
 #include <hc_am.hpp>
 #include <hc.hpp>
 
-#define GENERIC __attribute__((address_space(4)))
-
 template<typename TTTT>
 [[hc]] void kfunc(TTTT* a, TTTT* b, TTTT* c, int idx) {
   c[idx] = a[idx] + b[idx];
@@ -42,12 +40,6 @@ bool test() {
 
   auto k = [=](hc::index<1> idx) [[hc]] {
     kfunc(data1_d, data2_d, data3_d, idx[0]);
-
-    // explicitly instantiate the function template with GENERIC int type argument
-    //kfunc<GENERIC int>(data1_d, data2_d, data3_d, idx[0]);
-
-    // use reinterpret_cast<> to cast all host pointers to GENERIC int
-    //kfunc(reinterpret_cast<GENERIC int*>(data1_d), reinterpret_cast<GENERIC int*>(data2_d), reinterpret_cast<GENERIC int*>(data3_d), idx[0]);
   };
 
   // launch kernel
