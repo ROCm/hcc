@@ -147,11 +147,6 @@ if (COMPILE_HCC_DB && (HCC_DB & (1<<(db_flag)))) { \
 // ROCR 1.2 runtime implementation currently provides this guarantee when using SDMA queues and compute shaders.
 #define FORCE_SIGNAL_DEP_BETWEEN_COPIES (0)
 
-// cutoff size used in FNV-1a hash function
-// default set as 768, this is a heuristic value
-// which is larger than HSA BrigModuleHeader and AMD GCN ISA header (Elf64_Ehdr)
-#define FNV1A_CUTOFF_SIZE (768)
-
 #define CASE_STRING(X)  case X: case_string = #X ;break;
 
 static const char* getHcCommandKindString(Kalmar::hcCommandKind k) {
@@ -2277,8 +2272,6 @@ public:
         uint64_t hash = FNV_basis;
 
         const char *str = static_cast<const char *>(source);
-
-        size = size > FNV1A_CUTOFF_SIZE ? FNV1A_CUTOFF_SIZE : size;
         for (auto i = 0; i < size; ++i) {
             hash ^= *str++;
             hash *= FNV_prime;
