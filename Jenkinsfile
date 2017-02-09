@@ -21,51 +21,55 @@ node ('rocmtest')
   // The client workspace is shared with the docker container
   stage('HCC Checkout')
   {
-    // git clone --depth 1 -b clang_tot_upgrade https://github.com/RadeonOpenCompute/hcc.git
+    deleteDir( )
     checkout scm
-    sh 'git submodule update --init'
 
-    // This is to build the extra clang tools
-    sh '''
-    rm -rf clang/tools/extra
-    git clone --depth 1 -b clang_tot_upgrade https://github.com/RadeonOpenCompute/clang-tools-extra.git clang/tools/extra
-    '''
-    // git clone --depth 1 -b clang_tot_upgrade https://github.com/RadeonOpenCompute/hcc-clang-upgrade.git hcc/clang
-    // git clone --depth 1 -b amd-hcc https://github.com/RadeonOpenCompute/llvm.git hcc/compiler
-    // git clone --depth 1 -b amd-hcc https://github.com/RadeonOpenCompute/lld.git hcc/lld
+    // submodule update may not be updating fresh files from submodules
+    // sh 'git submodule update --init'
+
+    // Manually clone all submodules to get shallow copies to speed up checkout time
+    sh  '''
+        git clone --depth 1 -b clang_tot_upgrade https://github.com/RadeonOpenCompute/hcc-clang-upgrade.git clang
+        git clone --depth 1 -b amd-hcc https://github.com/RadeonOpenCompute/llvm.git compiler
+        git clone --depth 1 -b amd-hcc https://github.com/RadeonOpenCompute/lld.git lld
+        git clone --depth 1 -b clang_tot_upgrade https://github.com/RadeonOpenCompute/clang-tools-extra.git clang/tools/extra
+        '''
   }
 
   def hcc_build_image = null
   stage('ubuntu-16.04 image')
   {
+    def build_org = "hcc-lc"
+    def build_image_name = "build-ubuntu-16.04"
     dir('docker')
     {
-      hcc_build_image = docker.build( 'hcc-lc/build-ubuntu-16.04:latest', '-f dockerfile-build-ubuntu-16.04 --build-arg build_type=Release --build-arg rocm_install_path=/opt/rocm .' )
+      hcc_build_image = docker.build( "${build_org}/${build_image_name}:latest", "-f dockerfile-${build_image_name} --build-arg build_type=Release --build-arg rocm_install_path=/opt/rocm ." )
     }
   }
 
+// JENKINS-33510: the jenkinsfile dir() command is not workin well with docker.inside()
   hcc_build_image.inside( '--device=/dev/kfd' )
   {
     stage('hcc-lc release')
     {
       // Build release hcc
-      dir("${build_dir_release_abs}")
-      {
-        deleteDir()
-        def build_config = "Release"
-        def hcc_install_prefix = "/opt/rocm"
-        sh  """#!/usr/bin/env bash
-            # build HCC with ROCm-Device-Libs
-            cd ${build_dir_release_abs}
-            cmake \
-              -DCMAKE_INSTALL_PREFIX=${hcc_install_prefix} \
-              -DCMAKE_BUILD_TYPE=${build_config} \
-              -DHSA_AMDGPU_GPU_TARGET="gfx701;gfx803" \
-              ${workspace_dir_abs}
-            make -j\$(nproc) world
-            make -j\$(nproc)
-          """
-      }
+      def build_config = "Release"
+      def hcc_install_prefix = "/opt/rocm"
+
+      // cmake -B${build_dir_release_abs} specifies to cmake where to generate build files
+      // This is necessary because cmake seemingly randomly generates build makefile into the docker
+      // workspace instead of the current set directory.  Not sure why, but it seems like a bug
+      sh  """
+          mkdir -p ${build_dir_release_rel}
+          cd ${build_dir_release_rel}
+          cmake -B${build_dir_release_abs} \
+            -DCMAKE_INSTALL_PREFIX=${hcc_install_prefix} \
+            -DCMAKE_BUILD_TYPE=${build_config} \
+            -DHSA_AMDGPU_GPU_TARGET="gfx701;gfx803" \
+            ../..
+          make -j\$(nproc) world
+          make -j\$(nproc)
+        """
 
       // Cap the maximum amount of testing, in case of hangs
       timeout(time: 1, unit: 'HOURS')
@@ -90,16 +94,30 @@ node ('rocmtest')
   }
 
   // Everything above builds hcc in a clean container to create a debain package
-  // Create a clean docker image that installs the debian package that was built.
+  // Create a clean docker image that installs the debian package
   def hcc_install_image = null
-  stage('hcc-lc image')
+  stage('artifactory')
   {
+    def artifactory_org = "${env.JOB_NAME}".toLowerCase()
+    def image_name = "hcc-lc-ubuntu-16.04"
+
     dir("${build_dir_release_abs}/docker")
     {
-      sh "cp -r ${workspace_dir_abs}/docker/* .; cp ${build_dir_release_abs}/*.deb .; ls -la"
-      // hcc_build_image = docker.build( "rocm/hcc-lc-ubuntu-16.04:${env.BUILD_TAG}", '-f dockerfile-hcc-lc-ubuntu-16.04 .' )
-      hcc_build_image = docker.build( "rocm/hcc-lc-ubuntu-16.04:latest", '-f dockerfile-hcc-lc-ubuntu-16.04 .' )
+      //  We copy the docker files into the bin directory where the .deb lives so that it's a clean
+      //  build everytime
+      sh "cp -r ${workspace_dir_abs}/docker/* .; cp ${build_dir_release_abs}/*.deb ."
+      hcc_build_image = docker.build( "${artifactory_org}/${image_name}:${env.BUILD_NUMBER}", "-f dockerfile-${image_name} ." )
     }
+
+    docker.withRegistry('http://compute-artifactory:5001', 'artifactory-cred' )
+    {
+      hcc_build_image.push( "${env.BUILD_NUMBER}" )
+      hcc_build_image.push( 'latest' )
+    }
+
+    // Lots of images with tags are created above; no apparent way to delete images:tags with docker global variable
+    // run bash script to clean images:tags after successful pushing
+    sh "docker images | grep \"${artifactory_org}/${image_name}\" | awk '{print \$1 \":\" \$2}' | xargs docker rmi"
   }
 
 }
