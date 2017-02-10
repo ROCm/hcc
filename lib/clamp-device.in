@@ -8,6 +8,13 @@
 # enable bash debugging
 KMDBSCRIPT="${KMDBSCRIPT:=0}"
 
+if [ $KMDBSCRIPT == "1" ]
+then
+  set -x
+fi
+# directory where files are dumped
+KMDUMPDIR="${KMDUMPDIR:=.}"
+
 # dump the LLVM bitcode
 KMDUMPLLVM="${KMDUMPLLVM:=0}"
 
@@ -23,11 +30,6 @@ KMOPTOPT="${KMOPTOPT:="-O3"}"
 # KMOPTLLC can be used to pass last-minute options to llc in the backend
 # if not set, then "-O2" will be passed to llc
 KMOPTLLC="${KMOPTLLC:="-O2"}"
-
-if [ $KMDBSCRIPT == "1" ]
-then
-  set -x
-fi
 
 # check command line arguments
 if [ "$#" -lt 2 ]; then
@@ -85,6 +87,16 @@ do
     AMDGPU_TARGET="${ARG#*=}"
     continue
     ;;
+    --dump-isa)
+    KMDUMPISA=1
+    ;;
+    --dump-llvm)
+    KMDUMPLLVM=1
+    ;;
+    --dump-dir=*)
+    KMDUMPDIR="${ARG#*=}"
+    continue
+    ;;
   esac
 done
 
@@ -116,7 +128,7 @@ if [ $RETVAL != 0 ]; then
 fi
 
 if [ $KMDUMPLLVM == "1" ]; then
-  cp $2.promote.bc ./dump.promote.bc
+  cp $2.promote.bc ${KMDUMPDIR}/dump.promote.bc
 fi
 
 HCC_EXTRA_ARCH_FILE=""
@@ -153,7 +165,7 @@ if [ $RETVAL != 0 ]; then
 fi
 
 if [ $KMDUMPLLVM == "1" ]; then
-  cp $2.linked.bc ./dump.linked.bc
+  cp $2.linked.bc ${KMDUMPDIR}/dump.linked.bc
 fi
 
 # Optimization notes:
@@ -168,7 +180,7 @@ if [ $RETVAL != 0 ]; then
 fi
 
 if [ $KMDUMPLLVM == "1" ]; then
-  cp $2.opt.bc ./dump-$AMDGPU_TARGET.opt.bc
+  cp $2.opt.bc ${KMDUMPDIR}/dump-$AMDGPU_TARGET.opt.bc
 fi
 
 $LLC $KMOPTLLC -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -filetype=obj -o $2.isabin $2.opt.bc
@@ -183,7 +195,7 @@ fi
 if [ $KMDUMPISA == "1" ]; then
   cp $2.isabin ./dump-$AMDGPU_TARGET.isabin
   $LLC $KMOPTLLC -mtriple amdgcn--amdhsa -mcpu=$AMDGPU_TARGET -filetype=asm -o $2.isa $2.opt.bc
-  mv $2.isa ./dump-$AMDGPU_TARGET.isa
+  mv $2.isa ${KMDUMPDIR}/dump-$AMDGPU_TARGET.isa
 fi
 
 $LLD -shared $2.isabin -o $2
@@ -196,7 +208,7 @@ if [ $RETVAL != 0 ]; then
 fi
 
 if [ $KMDUMPISA == "1" ]; then
-  cp $2 ./dump-$AMDGPU_TARGET.hsaco
+  cp $2 ${KMDUMPDIR}/dump-$AMDGPU_TARGET.hsaco
 fi
 
 # remove temp file
