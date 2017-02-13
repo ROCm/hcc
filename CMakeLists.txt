@@ -64,18 +64,26 @@ LINK_DIRECTORIES( ${LLVM_LIB_DIR} )
 # ROCm external dependencies
 set (ROCM_ROOT "/opt/rocm" CACHE PATH "ROCM runtime path")
 
-find_path(HSA_HEADER hsa/hsa.h PATHS ${HSA_HEADER_DIR} ${ROCM_ROOT}/include NO_DEFAULT_PATH)
-find_path(HSA_HEADER hsa/hsa.h)
+find_path(HSA_HEADER hsa/hsa.h 
+  HINTS 
+    ${HSA_HEADER_DIR} 
+  PATHS
+    ${ROCM_ROOT}/include
+)
 
 if (NOT HSA_HEADER)
-  MESSAGE("HSA header not found. Use -DHSA_HEADER_DIR=<path_to_hsa.h>.")
+  MESSAGE("HSA header not found. Use -DHSA_HEADER=<path_to_hsa.h>.")
 endif (NOT HSA_HEADER)
 
-find_library(HSA_LIBRARY hsa-runtime64 PATHS ${HSA_LIBRARY_DIR} ${ROCM_ROOT}/lib NO_DEFAULT_PATH)
-find_library(HSA_LIBRARY hsa-runtime64)
+find_library(HSA_LIBRARY hsa-runtime64 
+  HINTS 
+    ${HSA_LIBRARY_DIR} 
+  PATHS
+    ${ROCM_ROOT}/lib
+)
 
 if (NOT HSA_LIBRARY)
-  MESSAGE("HSA runtime library not found. Use -DHSA_LIBRARY_DIR=<path_to_libhsa-runtime64.so>.")
+  MESSAGE("HSA runtime library not found. Use -DHSA_LIBRARY=<path_to_libhsa-runtime64.so>.")
 endif (NOT HSA_LIBRARY)
 
 
@@ -83,37 +91,21 @@ endif (NOT HSA_LIBRARY)
 # Detect ROCm Device Libs
 ################
 
-# Use ROCM_DEVICE_LIB_DIR to specify a list of semi-colon separated search paths for ROCm Device Libs 
-if (ROCM_DEVICE_LIB_DIR)
- 
-  # loop through the list paths and look for ocml.amdgcn.bc
-  foreach (TMP_ROCM_DEVICE_LIB_DIR ${ROCM_DEVICE_LIB_DIR}) 
-    if (EXISTS ${TMP_ROCM_DEVICE_LIB_DIR}/ocml.amdgcn.bc)
-      set(DETECTED_ROCM_DEVICE_LIB_DIR ${TMP_ROCM_DEVICE_LIB_DIR})
-      MESSAGE("ROCm Device Libs found in ${DETECTED_ROCM_DEVICE_LIB_DIR}")
-      break()
-    endif()
-  endforeach()
+find_path(ROCM_DEVICE_LIB ocml.amdgcn.bc
+  PATH_SUFFIXES
+    lib
+  HINTS 
+    ${ROCM_DEVICE_LIB_DIR} 
+  PATHS
+    ${ROCM_ROOT}/lib
+)
 
-  if (NOT DETECTED_ROCM_DEVICE_LIB_DIR)
-    MESSAGE(FATAL_ERROR "ROCm Device Libs not found in ${ROCM_DEVICE_LIB_DIR}")
-  else(NOT DETECTED_ROCM_DEVICE_LIB_DIR)
-    # NOTE: Here we set ROCM_DEVICE_LIB to the ROCM_DEVICE_LIB_DIR, which is a list of paths,
-    #       rather then set to DETECTED_ROCM_DEVICE_LIB_DIR.  That's because the path to device libs
-    #       could be different between a build system and a production system
-    set(ROCM_DEVICE_LIB ${ROCM_DEVICE_LIB_DIR})
-  endif (NOT DETECTED_ROCM_DEVICE_LIB_DIR)
- 
-else (ROCM_DEVICE_LIB_DIR)
+if (NOT ROCM_DEVICE_LIB)
+  MESSAGE(FATAL_ERROR "ROCm Device Libs not found. Use -DROCM_DEVICE_LIB=<path_to_ocml.amdgcn.bc>.")
+endif (NOT ROCM_DEVICE_LIB)
 
-  find_path(ROCM_DEVICE_LIB ocml.amdgcn.bc PATHS ${ROCM_ROOT}/lib NO_DEFAULT_PATH)
-  find_path(ROCM_DEVICE_LIB ocml.amdgcn.bc)
-
-  if (NOT ROCM_DEVICE_LIB)
-    MESSAGE(FATAL_ERROR "ROCm Device Libs not found. Use -DROCM_DEVICE_LIB_DIR=<path_to_ocml.amdgcn.bc>.")
-  endif (NOT ROCM_DEVICE_LIB)
-
-endif(ROCM_DEVICE_LIB_DIR)
+set(ROCM_DEVICE_LIB_PATHS ${ROCM_DEVICE_LIB})
+list(APPEND ROCM_DEVICE_LIB_PATHS ${ROCM_DEVICE_LIB_DIR} ${ROCM_ROOT}/lib)
 
 # display ROCm information
 MESSAGE("")

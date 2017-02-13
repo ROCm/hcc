@@ -58,7 +58,7 @@ LLD=$BINDIR/ld.lld
 # Determine the ROCm device libs path
 ################
 
-ROCM_DEVICE_LIBS_SEARCH_PATHS="@ROCM_DEVICE_LIB@"
+ROCM_DEVICE_LIBS_SEARCH_PATHS="@ROCM_DEVICE_LIB_PATHS@"
 ROCM_LIB=""
 for SEARCH_PATH in $(echo $ROCM_DEVICE_LIBS_SEARCH_PATHS | tr ";" "\n")
 do
