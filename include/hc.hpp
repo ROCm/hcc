@@ -24,6 +24,12 @@
 #include "hsa_atomic.h"
 #include "kalmar_cpu_launch.h"
 
+#include <future>      // For std::async, std::future and std::shared_future.
+#include <iterator>    // For std::iterator_traits.
+#include <memory>      // For std::shared_ptr.
+#include <type_traits> // For std::false_type, std::is_same, and std::true_type.
+#include <utility>     // For std::move.
+
 #ifndef __HC__
 #   define __HC__ [[hc]]
 #endif
@@ -108,6 +114,334 @@ inline uint64_t get_tick_frequency() {
 
 
 // ------------------------------------------------------------------------
+// completion_future
+// ------------------------------------------------------------------------
+
+/**
+ * This class is the return type of all asynchronous APIs and has an interface
+ * analogous to std::shared_future<void>. Similar to std::shared_future, this
+ * type provides member methods such as wait and get to wait for asynchronous
+ * operations to finish, and the type additionally provides a member method
+ * then(), to specify a completion callback functor to be executed upon
+ * completion of an asynchronous operation.
+ */
+class completion_future {
+    // TODO: re-assess the need for such extensive friendship. The high count of
+    //       friends suggests that the interface is ill-designed.
+    friend class Kalmar::HSAQueue;
+    template<typename T, int N>
+    friend class array_view;
+    friend class accelerator_view;
+
+    // non-tiled parallel_for_each
+    // generic version
+    template<int N, typename Kernel>
+    friend
+    completion_future parallel_for_each(const accelerator_view&,
+                                        const extent<N>&,
+                                        const Kernel&);
+
+    // 1D specialization
+    template<typename Kernel>
+    friend
+    completion_future parallel_for_each(const accelerator_view&,
+                                        const extent<1>&,
+                                        const Kernel&);
+
+    // 2D specialization
+    template<typename Kernel>
+    friend
+    completion_future parallel_for_each(const accelerator_view&,
+                                        const extent<2>&,
+                                        const Kernel&);
+
+    // 3D specialization
+    template<typename Kernel>
+    friend
+    completion_future parallel_for_each(const accelerator_view&,
+                                        const extent<3>&,
+                                        const Kernel&);
+
+    // tiled parallel_for_each, 3D version
+    template<typename Kernel>
+    friend
+    completion_future parallel_for_each(const accelerator_view&,
+                                        const tiled_extent<3>&,
+                                        const Kernel&);
+
+    // tiled parallel_for_each, 2D version
+    template<typename Kernel>
+    friend
+    completion_future parallel_for_each(const accelerator_view&,
+                                        const tiled_extent<2>&,
+                                        const Kernel&);
+
+    // tiled parallel_for_each, 1D version
+    template<typename Kernel>
+    friend
+    completion_future parallel_for_each(const accelerator_view&,
+                                        const tiled_extent<1>&,
+                                        const Kernel&);
+
+    // copy_async
+    template<typename T, int N>
+    friend
+    completion_future copy_async(const array_view<const T, N>&,
+                                 const array_view<T, N>& );
+    template<typename T, int N>
+    friend
+    completion_future copy_async(const array<T, N>&, array<T, N>&);
+    template<typename T, int N>
+    friend
+    completion_future copy_async(const array<T, N>&, const array_view<T, N>&);
+    template<typename T, int N>
+    friend
+    completion_future copy_async(const array_view<T, N>&,
+                                 const array_view<T, N>&);
+    template<typename T, int N>
+    friend
+    completion_future copy_async(const array_view<const T, N>&, array<T, N>&);
+
+    template<typename InputIter, typename T, int N>
+    friend
+    completion_future copy_async(InputIter, InputIter, array<T, N>&);
+    template<typename InputIter, typename T, int N>
+    friend
+    completion_future copy_async(InputIter, InputIter, const array_view<T, N>&);
+    template<typename InputIter, typename T, int N>
+    friend
+    completion_future copy_async(InputIter, array<T, N>&);
+    template<typename InputIter, typename T, int N>
+    friend
+    completion_future copy_async(InputIter, const array_view<T, N>&);
+    template<typename OutputIter, typename T, int N>
+    friend
+    completion_future copy_async(const array<T, N>&, OutputIter);
+    template<typename OutputIter, typename T, int N>
+    friend
+    completion_future copy_async(const array_view<T, N>&, OutputIter);
+
+    std::shared_future<void> amp_future_;
+    std::shared_ptr<Kalmar::KalmarAsyncOp> async_op_;
+
+    explicit
+    completion_future(std::shared_ptr<Kalmar::KalmarAsyncOp> event)
+        : amp_future_{*(event->getFuture())},
+          async_op_{std::move(event)} {}
+
+    explicit
+    completion_future(const std::shared_future<void>& fut)
+        : amp_future_{fut},
+          async_op_{nullptr} {}
+public:
+    /**
+     * Default constructor. Constructs an empty uninitialized completion_future
+     * object which does not refer to any asynchronous operation. Default
+     * constructed completion_future objects have valid() == false
+     */
+    completion_future() = default;
+
+    /**
+     * Copy constructor. Constructs a new completion_future object that refers
+     * to the same asynchronous operation as the other completion_future object.
+     *
+     * @param[in] other An object of type completion_future from which to
+     *                  initialize this.
+     */
+    completion_future(const completion_future&) = default;
+
+    /**
+     * Move constructor. Move constructs a new completion_future object that
+     * refers to the same asynchronous operation as originally referred by the
+     * other completion_future object. After this constructor returns,
+     * other.valid() == false
+     *
+     * @param[in] other An object of type completion_future which the new
+     *                  completion_future
+     */
+    completion_future(completion_future&&) = default;
+
+    /**
+     * Copy assignment. Copy assigns the contents of other to this. This method
+     * causes this to stop referring its current asynchronous operation and
+     * start referring the same asynchronous operation as other.
+     *
+     * @param[in] other An object of type completion_future which is copy
+     *                  assigned to this.
+     */
+    completion_future& operator=(const completion_future&) = default;
+
+    /**
+     * Move assignment. Move assigns the contents of other to this. This method
+     * causes this to stop referring its current asynchronous operation and
+     * start referring the same asynchronous operation as other. After this
+     * method returns, other.valid() == false
+     *
+     * @param[in] other An object of type completion_future which is move
+     *                  assigned to this.
+     */
+    completion_future& operator=(completion_future&&) = default;
+
+    /**
+     * This method is functionally identical to std::shared_future<void>::get.
+     * This method waits for the associated asynchronous operation to finish
+     * and returns only upon the completion of the asynchronous operation. If
+     * an exception was encountered during the execution of the asynchronous
+     * operation, this method throws that stored exception.
+     */
+    void get() const { amp_future_.get(); }
+
+    /**
+     * This method is functionally identical to
+     * std::shared_future<void>::valid. This returns true if this
+     * completion_future is associated with an asynchronous operation.
+     */
+    bool valid() const { return amp_future_.valid(); }
+
+    /** @{ */
+    /**
+     * These methods are functionally identical to the corresponding
+     * std::shared_future<void> methods.
+     *
+     * The wait method waits for the associated asynchronous operation to
+     * finish and returns only upon completion of the associated asynchronous
+     * operation or if an exception was encountered when executing the
+     * asynchronous operation.
+     *
+     * The other variants are functionally identical to the
+     * std::shared_future<void> member methods with same names.
+     *
+     * @param waitMode[in] An optional parameter to specify the wait mode. By
+     *                     default it would be hcWaitModeBlocked.
+     *                     hcWaitModeActive would be used to reduce latency with
+     *                     the expense of using one CPU core for active waiting.
+     */
+    void wait(hcWaitMode mode = hcWaitModeBlocked) const
+    {
+        if (this->valid()) {
+            if (async_op_ != nullptr) {
+                async_op_->setWaitMode(mode);
+            }
+            // TODO-ASYNC - need to reclaim older AsyncOps here.
+            amp_future_.wait();
+        }
+    }
+
+    template<typename R, typename P>
+    std::future_status wait_for(const std::chrono::duration<R, P>& d) const
+    {
+        return amp_future_.wait_for(d);
+    }
+
+    template<typename C, typename D>
+    std::future_status wait_until(const std::chrono::time_point<C, D>& t) const
+    {
+        return amp_future_.wait_until(t);
+    }
+
+    /** @} */
+
+    /**
+     * Conversion operator to std::shared_future<void>. This method returns a
+     * shared_future<void> object corresponding to this completion_future
+     * object and refers to the same asynchronous operation.
+     */
+    operator std::shared_future<void>() const { return amp_future_; }
+
+    /**
+     * This method enables specification of a completion callback func which is
+     * executed upon completion of the asynchronous operation associated with
+     * this completion_future object. The completion callback func should have
+     * an operator() that is valid when invoked with no arguments, i.e.,
+     * "func()".
+     */
+    // FIXME: notice we removed const from the signature here
+    //        the original signature in the specification should be
+    //        template<typename functor>
+    //        void then(const functor& func) const;
+    template<typename F>
+    std::future<void> then(F&& func)
+    {   // TODO: this should be re-assessed. For now it treats completion_future
+        //       as an equivalent of std::experimental::shared_future i.e. it is
+        //       safe to call .then() multiple times, with different
+        //       continuations
+        if (valid()) {
+            return std::async([](const completion_future& fut, F&& fn) {
+                fut.wait();
+                fn();
+            }, *this, std::forward<F>(func));
+        }
+        return std::future<void>{};
+    }
+
+    /**
+     * Get the native handle for the asynchronous operation encapsulated in this
+     * completion_future object. The method is mostly used for debugging
+     * purposes.
+     * Applications should retain the parent completion_future to ensure the
+     * native handle is not deallocated by the HCC runtime. The
+     * completion_future pointer to the native handle is reference counted, so a
+     * copy of the completion_future is sufficient to retain the native_handle.
+     */
+    void* get_native_handle() const
+    {
+        return async_op_ ? async_op_->getNativeHandle() : nullptr;
+    }
+
+    /**
+     * Get the tick number when the underlying asynchronous operation begins.
+     *
+     * @return An implementation-defined tick number in case the instance is
+     *         created by a kernel dispatch or a barrier packet. 0 otherwise.
+     */
+    uint64_t get_begin_tick()
+    {
+        return async_op_ ? async_op_->getBeginTimestamp() : 0;
+    }
+
+    /**
+     * Get the tick number when the underlying asynchronous operation ends.
+     *
+     * @return An implementation-defined tick number in case the instance is
+     *         created by a kernel dispatch or a barrier packet. 0 otherwise.
+     */
+    uint64_t get_end_tick()
+    {
+        return async_op_ ? async_op_->getEndTimestamp() : 0;
+    }
+
+    /**
+     * Get the frequency of ticks per second for the underlying asynchronous
+     * operation.
+     *
+     * @return An implementation-defined frequency in Hz in case the instance is
+     *         created by a kernel dispatch or a barrier packet. 0 otherwise.
+     */
+    uint64_t get_tick_frequency()
+    {
+        return async_op_ ? async_op_->getTimestampFrequency() : 0;
+    }
+
+    /**
+     * Get if the async operations has been completed.
+     *
+     * @return True if the async operation has been completed, false if not.
+     */
+    bool is_ready()
+    {
+        return async_op_ ? async_op_->isReady() : 0;
+    }
+
+    /**
+    * @return reference count for the completion future.  Primarily used for
+    * debug purposes.
+    */
+    int get_use_count() const { return async_op_.use_count(); };
+
+    ~completion_future() = default;
+};
+
+// ------------------------------------------------------------------------
 // accelerator_view
 // ------------------------------------------------------------------------
 
@@ -117,6 +451,188 @@ inline uint64_t get_tick_frequency() {
  * or create_view member functions on an accelerator object.
  */
 class accelerator_view {
+    friend class accelerator;
+    template<typename Q, int K>
+    friend class array;
+    template<typename Q, int K>
+    friend class array_view;
+
+    template<typename Kernel>
+    friend
+    void* Kalmar::mcw_cxxamp_get_kernel(const std::shared_ptr<Kalmar::KalmarQueue>&,
+                                        const Kernel&);
+    template<typename Kernel, int dim_ext>
+    friend
+    void Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory(const std::shared_ptr<Kalmar::KalmarQueue>&,
+                                                                     size_t*,
+                                                                     size_t*,
+                                                                     const Kernel&,
+                                                                     void*,
+                                                                     size_t);
+    template<typename Kernel, int dim_ext>
+    friend
+    std::shared_ptr<Kalmar::KalmarAsyncOp> Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async(const std::shared_ptr<Kalmar::KalmarQueue>&,
+                                                                                                             size_t*,
+                                                                                                             size_t*,
+                                                                                                             const Kernel&,
+                                                                                                             void*,
+                                                                                                             size_t);
+    template<typename Kernel, int dim_ext>
+    friend
+    void Kalmar::mcw_cxxamp_launch_kernel(const std::shared_ptr<Kalmar::KalmarQueue>&,
+                                          size_t*,
+                                          size_t*,
+                                          const Kernel&);
+    template<typename Kernel, int dim_ext>
+    friend
+    std::shared_ptr<Kalmar::KalmarAsyncOp> Kalmar::mcw_cxxamp_launch_kernel_async(const std::shared_ptr<Kalmar::KalmarQueue>&,
+                                                                                  size_t*,
+                                                                                  size_t*,
+                                                                                  const Kernel&);
+
+    #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+        template<typename Kernel, int N>
+        friend
+        completion_future launch_cpu_task_async(const std::shared_ptr<Kalmar::KalmarQueue>&,
+                                                const Kernel&,
+                                                const extent<N>&);
+    #endif
+
+    // non-tiled parallel_for_each
+    // generic version
+    template<int N, typename Kernel>
+    friend
+    completion_future parallel_for_each(const accelerator_view&,
+                                        const extent<N>&,
+                                        const Kernel&);
+
+    // 1D specialization
+    template <typename Kernel>
+    friend
+    completion_future parallel_for_each(const accelerator_view&,
+                                        const extent<1>&,
+                                        const Kernel&);
+
+    // 2D specialization
+    template <typename Kernel>
+    friend
+    completion_future parallel_for_each(const accelerator_view&,
+                                        const extent<2>&,
+                                        const Kernel&);
+
+    // 3D specialization
+    template <typename Kernel>
+    friend
+    completion_future parallel_for_each(const accelerator_view&,
+                                        const extent<3>&,
+                                        const Kernel&);
+
+    // tiled parallel_for_each, 3D version
+    template <typename Kernel>
+    friend
+    completion_future parallel_for_each(const accelerator_view&,
+                                        const tiled_extent<3>&,
+                                        const Kernel&);
+
+    // tiled parallel_for_each, 2D version
+    template <typename Kernel>
+    friend
+    completion_future parallel_for_each(const accelerator_view&,
+                                        const tiled_extent<2>&,
+                                        const Kernel&);
+
+    // tiled parallel_for_each, 1D version
+    template <typename Kernel>
+    friend
+    completion_future parallel_for_each(const accelerator_view&,
+                                        const tiled_extent<1>&,
+                                        const Kernel&);
+
+    static constexpr unsigned int max_async_ops = 5u; // TODO: retrieve directly from HSA runtime.
+
+    std::shared_ptr<Kalmar::KalmarQueue> queue_;
+
+    explicit
+    accelerator_view(std::shared_ptr<Kalmar::KalmarQueue> queue)
+        : queue_{std::move(queue)} {}
+
+    template<typename InputIterator>
+    completion_future create_blocking_marker_(InputIterator f,
+                                              InputIterator l,
+                                              memory_scope scope,
+                                              std::true_type) const
+    {   // Precondition: readable_bounded_range(f, l) && non_empty(f, l).
+        static_assert(std::is_same<typename std::iterator_traits<InputIterator>::value_type,
+                                   completion_future>::value,
+                      "This requires accelerator_view arguments.");
+
+        std::shared_ptr<Kalmar::KalmarAsyncOp> deps[max_async_ops];
+
+        // since HC sets the barrier bit in each AND barrier packet, we know
+        // the barriers will execute in-order.
+        while (true) {
+            std::ptrdiff_t n = 0;
+            do {
+                // TODO: should not use completion_future implementation detail.
+                deps[n] = f->async_op_;
+                ++n;
+                ++f;
+            } while (f != l && n != max_async_ops);
+
+            if (f == l) {
+                return completion_future{queue_->EnqueueMarkerWithDependency(n,
+                                                                             deps,
+                                                                             scope)};
+            }
+
+            queue_->EnqueueMarkerWithDependency(n, deps, scope);
+        }
+    }
+
+    template<typename InputIterator>
+    completion_future create_blocking_marker_(InputIterator f,
+                                              InputIterator l,
+                                              memory_scope scope,
+                                              std::false_type) const
+    {   // Precondition: readable_bounded_range(f, l) && non_empty(f, l).
+        static_assert(std::is_same<typename std::iterator_traits<InputIterator>::value_type,
+                                   accelerator_view>::value,
+                      "This requires accelerator_view arguments.");
+
+        std::shared_ptr<Kalmar::KalmarAsyncOp> deps[max_async_ops];
+
+        // since HC sets the barrier bit in each AND barrier packet, we know
+        // the barriers will execute in-order.
+        while (true) {
+            std::ptrdiff_t n = 0;
+            do {
+                // TODO: should not use completion_future implementation detail.
+                if (!f->queue_->isEmpty()) {
+                    deps[n] = f->queue_->EnqueueMarker(scope);
+                    ++n;
+                    ++f;
+                }
+            } while (f != l && n != max_async_ops);
+
+            if (f == l) {
+                return completion_future{queue_->EnqueueMarkerWithDependency(n,
+                                                                             deps,
+                                                                             scope)};
+            }
+
+            queue_->EnqueueMarkerWithDependency(n, deps, scope);
+        }
+    }
+
+    #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
+    public:
+    #endif
+    __attribute__((annotate("user_deserialize")))
+    accelerator_view() __CPU__ __HC__ {
+        #if __KALMAR_ACCELERATOR__ != 1
+        throw runtime_exception("errorMsg_throw", 0);
+        #endif
+    }
 public:
     /**
      * Copy-constructs an accelerator_view object. This function does a shallow
@@ -125,8 +641,10 @@ public:
      *
      * @param[in] other The accelerator_view object to be copied.
      */
-    accelerator_view(const accelerator_view& other) :
-        pQueue(other.pQueue) {}
+    accelerator_view(const accelerator_view&) = default;
+
+    /** TODO: description. */
+    accelerator_view(accelerator_view&&) = default;
 
     /**
      * Assigns an accelerator_view object to "this" accelerator_view object and
@@ -137,10 +655,10 @@ public:
      * @param[in] other The accelerator_view object to be assigned from.
      * @return A reference to "this" accelerator_view object.
      */
-    accelerator_view& operator=(const accelerator_view& other) {
-        pQueue = other.pQueue;
-        return *this;
-    }
+    accelerator_view& operator=(const accelerator_view&) = default;
+
+    /** TODO: description. */
+    accelerator_view& operator=(accelerator_view&&) = default;
 
     /**
      * Returns the queuing mode that this accelerator_view was created with.
@@ -148,12 +666,15 @@ public:
      *
      * @return The queuing mode.
      */
-    queuing_mode get_queuing_mode() const { return pQueue->get_mode(); }
+    queuing_mode get_queuing_mode() const { return queue_->get_mode(); }
 
     /**
      * Returns the execution order of this accelerator_view.
      */
-    execute_order get_execute_order() const { return pQueue->get_execute_order(); }
+    execute_order get_execute_order() const
+    {
+        return queue_->get_execute_order();
+    }
 
     /**
      * Returns a boolean value indicating whether the accelerator view when
@@ -193,7 +714,7 @@ public:
      * the parent accelerator.
      */
     // FIXME: dummy implementation now
-    bool get_is_debug() const { return 0; } 
+    bool get_is_debug() const { return 0; }
 
     /**
      * Performs a blocking wait for completion of all commands submitted to the
@@ -204,7 +725,10 @@ public:
      *                     hcWaitModeActive would be used to reduce latency with
      *                     the expense of using one CPU core for active waiting.
      */
-    void wait(hcWaitMode waitMode = hcWaitModeBlocked) { pQueue->wait(waitMode); }
+    void wait(hcWaitMode waitMode = hcWaitModeBlocked)
+    {
+        queue_->wait(waitMode);
+    }
 
     /**
      * Sends the queued up commands in the accelerator_view to the device for
@@ -213,10 +737,10 @@ public:
      * An accelerator_view internally maintains a buffer of commands such as
      * data transfers between the host memory and device buffers, and kernel
      * invocations (parallel_for_each calls). This member function sends the
-     * commands to the device for processing. Normally, these commands 
+     * commands to the device for processing. Normally, these commands
      * to the GPU automatically whenever the runtime determines that they need
-     * to be, such as when the command buffer is full or when waiting for 
-     * transfer of data from the device buffers to host memory. The flush 
+     * to be, such as when the command buffer is full or when waiting for
+     * transfer of data from the device buffers to host memory. The flush
      * member function will send the commands manually to the device.
      *
      * Calling this member function incurs an overhead and must be used with
@@ -230,11 +754,12 @@ public:
      * after the device finishes executing the buffered commandser, the
      * commands will eventually always complete.
      *
-     * If the queuing_mode is queuing_mode_immediate, this function has no effect.
+     * If the queuing_mode is queuing_mode_immediate, this function has no
+     * effect.
      *
      * @return None
      */
-    void flush() { pQueue->flush(); }
+    void flush() { queue_->flush(); }
 
     /**
      * This command inserts a marker event into the accelerator_view's command
@@ -242,10 +767,19 @@ public:
      * commands that were submitted prior to the marker event creation have
      * completed, the future is ready.
      *
+     * Regardless of the accelerator_view's execute_order (execute_any_order,
+     * execute_in_order), the marker always ensures older commands complete
+     * before the returned completion_future is marked ready. Thus, markers
+     * provide a mechanism to enforce order between commands in an
+     * execute_any_order accelerator_view.
+     *
      * @return A future which can be waited on, and will block until the
      *         current batch of commands has completed.
      */
-    completion_future create_marker() const;
+    completion_future create_marker(memory_scope scope = system_scope) const
+    {
+        return completion_future{queue_->EnqueueMarker(scope)};
+    }
 
     /**
      * This command inserts a marker event into the accelerator_view's command
@@ -255,95 +789,219 @@ public:
      * dependent event and all commands submitted prior to the marker event
      * creation have been completed, the future is ready.
      *
+     * Regardless of the accelerator_view's execute_order (execute_any_order,
+     * execute_in_order), the marker always ensures older commands complete
+     * before the returned completion_future is marked ready. Thus, markers
+     * provide a mechanism to enforce order between commands in an
+     * execute_any_order accelerator_view.
+     *
      * @return A future which can be waited on, and will block until the
      *         current batch of commands, plus the dependent event have
      *         been completed.
      */
-    completion_future create_blocking_marker(completion_future& dependent_future) const;
+    completion_future create_blocking_marker(completion_future& dependent_future,
+                                             memory_scope scope = system_scope) const
+    {
+        return completion_future{queue_->EnqueueMarkerWithDependency(dependent_future.async_op_, // TODO: should not use future implementation detail.
+                                                                     scope)};
+    }
 
     /**
      * This command inserts a marker event into the accelerator_view's command
      * queue with arbitrary number of dependent asynchronous events.
      *
      * This marker is returned as a completion_future object. When its
-     * dependent event and all commands submitted prior to the marker event
-     * creation have been completed, the future is ready.
+     * dependent events and all commands submitted prior to the marker event
+     * creation have been completed, the completion_future is ready.
+     *
+     * Regardless of the accelerator_view's execute_order (execute_any_order,
+     * execute_in_order), the marker always ensures older commands complete
+     * before the returned completion_future is marked ready. Thus, markers
+     * provide a mechanism to enforce order between commands in an
+     * execute_any_order accelerator_view.
      *
      * @return A future which can be waited on, and will block until the
      *         current batch of commands, plus the dependent event have
      *         been completed.
      */
-    completion_future create_blocking_marker(std::initializer_list<completion_future> dependent_future_list) const;
-
-    /**
-     * Copies size_bytes bytes from src to dst.  
-     * Src and dst must not overlap.  
-     * Note the src is the first parameter and dst is second, following C++ convention.
-     * The copy command will execute after any commands already inserted into the accelerator_view finish.
-     * This is a synchronous copy command, and the copy operation complete before this call returns.
-     */
-    void copy(const void *src, void *dst, size_t size_bytes) {
-        pQueue->copy(src, dst, size_bytes);
+    completion_future create_blocking_marker(std::initializer_list<completion_future> dependent_future_list,
+                                             memory_scope scope = system_scope) const
+    {
+        return create_blocking_marker(dependent_future_list.begin(),
+                                      dependent_future_list.end(),
+                                      scope);
     }
 
 
     /**
-     * Copies size_bytes bytes from src to dst.  
-     * Src and dst must not overlap.  
-     * Note the src is the first parameter and dst is second, following C++ convention.
-     * The copy command will execute after any commands already inserted into the accelerator_view finish.
-     * This is a synchronous copy command, and the copy operation complete before this call returns.
-     * The copy_ext flavor allows caller to provide additional information about each pointer, which can improve performance by eliminating replicated lookups.
-     * This interface is intended for language runtimes such as HIP.
-    
-     @p copyDir : Specify direction of copy.  Must be hcMemcpyHostToHost, hcMemcpyHostToDevice, hcMemcpyDeviceToHost, or hcMemcpyDeviceToDevice. 
-     @p forceUnpinnedCopy : Force copy to be performed with host involvement rather than with accelerator copy engines.
+     * This command inserts a marker event into the accelerator_view's command
+     * queue with arbitrary number of dependent asynchronous events.
+     *
+     * This marker is returned as a completion_future object. When its
+     * dependent events and all commands submitted prior to the marker event
+     * creation have been completed, the completion_future is ready.
+     *
+     * Regardless of the accelerator_view's execute_order (execute_any_order,
+     * execute_in_order), the marker always ensures older commands complete
+     * before the returned completion_future is marked ready. Thus, markers
+     * provide a mechanism to enforce order between commands in an
+     * execute_any_order accelerator_view.
+     *
+     * @return A future which can be waited on, and will block until the
+     *         current batch of commands, plus the dependent event have
+     *         been completed.
      */
-    void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, const hc::accelerator *copyAcc, bool forceUnpinnedCopy);
+    template<typename InputIterator>
+    completion_future create_blocking_marker(InputIterator first,
+                                             InputIterator last,
+                                             memory_scope scope) const
+    {
+        if (first == last) return completion_future{};
+        return create_blocking_marker_(first,
+                                       last,
+                                       scope,
+                                       std::is_same<typename std::iterator_traits<InputIterator>::value_type,
+                                                    completion_future>{});
+    }
+
+    /**
+     * Copies size_bytes bytes from src to dst.
+     * Src and dst must not overlap.
+     * Note the src is the first parameter and dst is second, following C++
+     * convention. The copy command will execute after any commands already
+     * inserted into the accelerator_view finish. This is a synchronous copy
+     * command, and the copy operation complete before this call returns.
+     */
+    void copy(const void* src, void* dst, size_t size_bytes)
+    {
+        queue_->copy(src, dst, size_bytes);
+    }
+
+
+    /**
+     * Copies size_bytes bytes from src to dst.
+     * Src and dst must not overlap.
+     * Note the src is the first parameter and dst is second, following C++
+     * convention.
+     * The copy command will execute after any commands already inserted into
+     * the accelerator_view finish. This is a synchronous copy command, and the
+     * copy operation complete before this call returns. The copy_ext flavor
+     * allows caller to provide additional information about each pointer, which
+     * can improve performance by eliminating replicated lookups. This interface
+     * is intended for language runtimes such as HIP.
+
+     @p copyDir : Specify direction of copy.  Must be hcMemcpyHostToHost,
+     @p         : hcMemcpyHostToDevice, hcMemcpyDeviceToHost, or
+     @p         : hcMemcpyDeviceToDevice.
+     @p forceUnpinnedCopy : Force copy to be performed with host involvement
+     @p                   : rather than with accelerator copy engines.
+     */
+    void copy_ext(const void* src,
+                  void* dst,
+                  size_t size_bytes,
+                  hcCommandKind copy_dir,
+                  const hc::AmPointerInfo& src_info,
+                  const hc::AmPointerInfo& dst_info,
+                  const hc::accelerator* copy_acc,
+                  bool force_unpinned_copy);
 
 
     // TODO - this form is deprecated, provided for use with older HIP runtimes.
-    void copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceUnpinnedCopy) ;
+    void copy_ext(const void* src,
+                  void* dst,
+                  size_t size_bytes,
+                  hcCommandKind copy_dir,
+                  const hc::AmPointerInfo& src_info,
+                  const hc::AmPointerInfo& dst_info,
+                  bool force_unpinned_copy)
+    {
+        queue_->copy_ext(src,
+                         dst,
+                         size_bytes,
+                         copy_dir,
+                         src_info,
+                         dst_info,
+                         force_unpinned_copy);
+    }
 
     /**
-     * Copies size_bytes bytes from src to dst.  
-     * Src and dst must not overlap.  
-     * Note the src is the first parameter and dst is second, following C++ convention.  
-     * This is an asynchronous copy command, and this call may return before the copy operation completes.
+     * Copies size_bytes bytes from src to dst.
+     * Src and dst must not overlap.
+     * Note the src is the first parameter and dst is second, following C++
+     * convention.
+     * This is an asynchronous copy command, and this call may return before the
+     * copy operation completes.
+     * If the source or dest is host memory, the memory must be pinned or a
+     * runtime exception will be thrown.
+     * Pinned memory can be created with am_alloc with flag = amHostPinned flag.
      *
-     * The copy command will be implicitly ordered with respect to commands previously equeued to this accelerator_view:
-     * - If the queue execute_order is execute_in_order (the default), then the copy will execute after all previously sent commands finish execution.
-     * - If the queue execute_order is execute_any_order, then the copy will start after all previously send commands start but can execute in any order.
+     * The copy command will be implicitly ordered with respect to commands
+     * previously enqueued to this accelerator_view:
+     * - If the accelerator_view execute_order is execute_in_order (the default),
+     *   then the copy will execute after all previously sent commands finish
+     *   execution.
+     * - If the accelerator_view execute_order is execute_any_order, then the
+     *   copy will start after all previously send commands start but can
+     *   execute in any order.
+     *
      *
      */
-    completion_future copy_async(const void *src, void *dst, size_t size_bytes);
+    completion_future copy_async(const void* src, void* dst, size_t size_bytes)
+    {
+        return completion_future{queue_->EnqueueAsyncCopy(src, dst, size_bytes)};
+    }
 
 
     /**
-     * Copies size_bytes bytes from src to dst.  
-     * Src and dst must not overlap.  
-     * Note the src is the first parameter and dst is second, following C++ convention.  
-     * This is an asynchronous copy command, and this call may return before the copy operation completes.
+     * Copies size_bytes bytes from src to dst.
+     * Src and dst must not overlap.
+     * Note the src is the first parameter and dst is second, following C++
+     * convention.
+     * This is an asynchronous copy command, and this call may return before the
+     * copy operation completes.
+     * If the source or dest is host memory, the memory must be pinned or a
+     * runtime exception will be thrown.
+     * Pinned memory can be created with am_alloc with flag = amHostPinned flag.
      *
-     * The copy command will be implicitly ordered with respect to commands previously enqueued to this accelerator_view:
-     * - If the queue execute_order is execute_in_order (the default), then the copy will execute after all previously sent commands finish execution.
-     * - If the queue execute_order is execute_any_order, then the copy will start after all previously send commands start but can execute in any order.
-     *   The copyAcc determines where the copy is executed and does not affect the ordering.
+     * The copy command will be implicitly ordered with respect to commands
+     * previously enqueued to this accelerator_view:
+     * - If the accelerator_view execute_order is execute_in_order (the default),
+     *   then the copy will execute after all previously sent commands finish
+     *   execution.
+     * - If the accelerator_view execute_order is execute_any_order, then the
+     *   copy will start after all previously send commands start but can
+     *   execute in any order.
+     *   The copyAcc determines where the copy is executed and does not affect
+     *   the ordering.
      *
-     * The copy_async_ext flavor allows caller to provide additional information about each pointer, which can improve performance by eliminating replicated lookups,
-     * and also allow control over which device performs the copy.  
+     * The copy_async_ext flavor allows caller to provide additional information
+     * about each pointer, which can improve performance by eliminating
+     * replicated lookups, and also allow control over which device performs the
+     * copy.
      * This interface is intended for language runtimes such as HIP.
      *
-     *  @p copyDir : Specify direction of copy.  Must be hcMemcpyHostToHost, hcMemcpyHostToDevice, hcMemcpyDeviceToHost, or hcMemcpyDeviceToDevice. 
-     *  @p copyAcc : Specify which accelerator performs the copy operation.  The specified accelerator must have access to the source and dest pointers - either
-     *               because the memory is allocated on those devices or because the accelerator has peer access to the memory.
-     *               If copyAcc is nullptr, then the copy will be performed by the host.  In this case, the host accelerator must have access to both pointers.
-     *               The copy operation will be performed by the specified engine but is not synchronized with respect to any operations on that device.  
+     *  @p copyDir : Specify direction of copy.  Must be hcMemcpyHostToHost,
+     *  @p           hcMemcpyHostToDevice, hcMemcpyDeviceToHost, or
+     *  @p           hcMemcpyDeviceToDevice.
+     *  @p copyAcc : Specify which accelerator performs the copy operation. The
+     *  @p           specified accelerator must have access to the source and
+     *  @p           dest pointers - either because the memory is allocated on
+     *  @p           those devices or because the accelerator has peer access to
+     *  @p           the memory. If copyAcc is nullptr, then the copy will be
+     *  @p           performed by the host.  In this case, the host accelerator
+     *  @p           must have access to both pointers. The copy operation will
+     *  @p           be performed by the specified engine but is not
+     *  @p           synchronized with respect to any operations on that device.
      *
      */
-    completion_future copy_async_ext(const void *src, void *dst, size_t size_bytes, 
-                                     hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, 
-                                     const hc::accelerator *copyAcc);
+    completion_future copy_async_ext(const void* src,
+                                     void* dst,
+                                     size_t size_bytes,
+                                     hcCommandKind copy_dir,
+                                     const hc::AmPointerInfo& src_info,
+                                     const hc::AmPointerInfo& dst_info,
+                                     const hc::accelerator* copy_acc);
+
 
     /**
      * Compares "this" accelerator_view with the passed accelerator_view object
@@ -353,8 +1011,9 @@ public:
      * @return A boolean value indicating whether the passed accelerator_view
      *         object is same as "this" accelerator_view.
      */
-    bool operator==(const accelerator_view& other) const {
-        return pQueue == other.pQueue;
+    bool operator==(const accelerator_view& other) const
+    {
+        return queue_ == other.queue_;
     }
 
     /**
@@ -365,26 +1024,36 @@ public:
      * @return A boolean value indicating whether the passed accelerator_view
      *         object is different from "this" accelerator_view.
      */
-    bool operator!=(const accelerator_view& other) const { return !(*this == other); }
+    bool operator!=(const accelerator_view& other) const
+    {
+        return !(*this == other);
+    }
 
     /**
      * Returns the maximum size of tile static area available on this
      * accelerator view.
      */
-    size_t get_max_tile_static_size() {
-        return pQueue.get()->getDev()->GetMaxTileStaticSize();
+    size_t get_max_tile_static_size()
+    {
+        return queue_.get()->getDev()->GetMaxTileStaticSize();
     }
 
     /**
      * Returns the number of pending asynchronous operations on this
      * accelerator view.
      *
-     * The number returned would be immediately obsolete. This functions shall
-     * only be used for testing and debugging purpose.
+     * Care must be taken to use this API in a thread-safe manner,
      */
-    int get_pending_async_ops() {
-        return pQueue->getPendingAsyncOps();
-    }
+    int get_pending_async_ops() { return queue_->getPendingAsyncOps(); }
+
+    /**
+     * Returns true if the accelerator_view is currently empty.
+     *
+     * Care must be taken to use this API in a thread-safe manner.
+     * As the accelerator completes work, the queue may become empty
+     * after this function returns false;
+     */
+    bool get_is_empty() { return queue_->isEmpty(); }
 
     /**
      * Returns an opaque handle which points to the underlying HSA queue.
@@ -392,9 +1061,7 @@ public:
      * @return An opaque handle of the underlying HSA queue, if the accelerator
      *         view is based on HSA.  NULL if otherwise.
      */
-    void* get_hsa_queue() {
-        return pQueue->getHSAQueue();
-    }
+    void* get_hsa_queue() { return queue_->getHSAQueue(); }
 
     /**
      * Returns an opaque handle which points to the underlying HSA agent.
@@ -402,45 +1069,40 @@ public:
      * @return An opaque handle of the underlying HSA agent, if the accelerator
      *         view is based on HSA.  NULL otherwise.
      */
-    void* get_hsa_agent() {
-        return pQueue->getHSAAgent();
-    }
+    void* get_hsa_agent() { return queue_->getHSAAgent(); }
 
     /**
      * Returns an opaque handle which points to the AM region on the HSA agent.
-     * This region can be used to allocate accelerator memory which is accessible from the 
-     * specified accelerator.
+     * This region can be used to allocate accelerator memory which is
+     * accessible from the specified accelerator.
      *
      * @return An opaque handle of the region, if the accelerator is based
      *         on HSA.  NULL otherwise.
      */
-    void* get_hsa_am_region() {
-        return pQueue->getHSAAMRegion();
-    }
+    void* get_hsa_am_region() { return queue_->getHSAAMRegion(); }
 
 
     /**
-     * Returns an opaque handle which points to the AM system region on the HSA agent.
-     * This region can be used to allocate system memory which is accessible from the 
-     * specified accelerator.
+     * Returns an opaque handle which points to the AM system region on the HSA
+     * agent. This region can be used to allocate system memory which is
+     * accessible from the specified accelerator.
      *
      * @return An opaque handle of the region, if the accelerator is based
      *         on HSA.  NULL otherwise.
      */
-    void* get_hsa_am_system_region() {
-        return pQueue->getHSAAMHostRegion();
-    }
+    void* get_hsa_am_system_region() { return queue_->getHSAAMHostRegion(); }
 
     /**
-     * Returns an opaque handle which points to the AM system region on the HSA agent.
-     * This region can be used to allocate finegrained system memory which is accessible from the 
-     * specified accelerator.
+     * Returns an opaque handle which points to the AM system region on the HSA
+     * agent. This region can be used to allocate fine-grained system memory
+     * which is accessible from the specified accelerator.
      *
-     * @return An opaque handle of the region, if the accelerator is based
-     *         on HSA.  NULL otherwise.
+     * @return An opaque handle of the region, if the accelerator is based on
+     *         HSA.  NULL otherwise.
      */
-    void* get_hsa_am_finegrained_system_region() {
-        return pQueue->getHSACoherentAMHostRegion();
+    void* get_hsa_am_finegrained_system_region()
+    {
+        return queue_->getHSACoherentAMHostRegion();
     }
 
     /**
@@ -450,67 +1112,71 @@ public:
      * @return An opaque handle of the region, if the accelerator view is based
      *         on HSA.  NULL otherwise.
      */
-    void* get_hsa_kernarg_region() {
-        return pQueue->getHSAKernargRegion();
-    }
+    void* get_hsa_kernarg_region() { return queue_->getHSAKernargRegion(); }
 
     /**
      * Returns if the accelerator view is based on HSA.
      */
-    bool is_hsa_accelerator() {
-        return pQueue->hasHSAInterOp();
-    }
+    bool is_hsa_accelerator() { return queue_->hasHSAInterOp(); }
 
     /**
      * Dispatch a kernel into the accelerator_view.
      *
-     * This function is intended to provide a gateway to dispatch code objects, with 
-     * some assistance from HCC.  Kernels are specified in the standard code object
-     * format, and can be created from a varety of compiler tools including the 
-     * assembler, offline cl compilers, or other tools.    The caller also
-     * specifies the execution configuration and kernel arguments.    HCC 
-     * will copy the kernel arguments into an appropriate segment and insert
-     * the packet into the queue.   HCC will also automatically handle signal 
-     * and kernarg allocation and deallocation for the command.
+     * This function is intended to provide a gateway to dispatch code objects,
+     * with some assistance from HCC.  Kernels are specified in the standard
+     * code object format, and can be created from a variety of compiler tools
+     * including the assembler, offline cl compilers, or other tools. The caller
+     * also specifies the execution configuration and kernel arguments. HCC will
+     * copy the kernel arguments into an appropriate segment and insert the
+     * packet into the queue. HCC will also automatically handle signal and
+     * kernarg allocation and deallocation for the command.
      *
-     *  The kernel is dispatched asynchronously, and thus this API may return before the 
-     *  kernel finishes executing.
-     
-     *  Kernels dispatched with this API may be interleaved with other copy and kernel
-     *  commands generated from copy or parallel_for_each commands.  
-     *  The kernel honors the execute_order associated with the accelerator_view.  
+     *  The kernel is dispatched asynchronously, and thus this API may return
+     *  before the kernel finishes executing.
+
+     *  Kernels dispatched with this API may be interleaved with other copy and
+     *  kernel commands generated from copy or parallel_for_each commands.
+     *  The kernel honors the execute_order associated with the accelerator_view.
      *  Specifically, if execute_order is execute_in_order, then the kernel
      *  will wait for older data and kernel commands in the same queue before
-     *  beginning execution.  If execute_order is execute_any_order, then the 
-     *  kernel may begin executing without regards to the state of older kernels.  
-     *  This call honors the packer barrier bit (1 << HSA_PACKET_HEADER_BARRIER) 
-     *  if set in the aql.header field.  If set, this provides the same synchronization
-     *  behaviora as execute_in_order for the command generated by this API.
+     *  beginning execution.  If execute_order is execute_any_order, then the
+     *  kernel may begin executing without regards to the state of older kernels.
+     *  This call honors the packer barrier bit (1 << HSA_PACKET_HEADER_BARRIER)
+     *  if set in the aql.header field.  If set, this provides the same
+     *  synchronization behaviour as execute_in_order for the command generated
+     *  by this API.
      *
-     * @p aql is an HSA-format "AQL" packet. The following fields must 
+     * @p aql is an HSA-format "AQL" packet. The following fields must
      * be set by the caller:
-     *  aql.kernel_object 
+     *  aql.kernel_object
      *  aql.group_segment_size : includes static + dynamic group size
-     *  aql.private_segment_size 
+     *  aql.private_segment_size
      *  aql.grid_size_x, aql.grid_size_y, aql.grid_size_z
      *  aql.group_size_x, aql.group_size_y, aql.group_size_z
      *  aql.setup :  The 2 bits at HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS.
-     *  aql.header :  Must specify the desired memory fence operations, and barrier bit (if desired.).  A typical conservative setting would be:
-    aql.header = (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
-                 (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE) |
-                 (1 << HSA_PACKET_HEADER_BARRIER);
+     *  aql.header :  Must specify the desired memory fence operations, and
+     *                barrier bit (if desired.).  A typical conservative setting
+     *                would be:
+     aql.header = (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
+                  (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE) |
+                  (1 << HSA_PACKET_HEADER_BARRIER);
 
-     * The following fields are ignored.  The API will will set up these fields before dispatching the AQL packet:
-     *  aql.completion_signal 
-     *  aql.kernarg 
-     * 
-     * @p args : Pointer to kernel arguments with the size and aligment expected by the kernel.  The args are copied and then passed directly to the kernel.   After this function returns, the args memory may be deallocated.
+     * The following fields are ignored.  The API will will set up these fields
+     * before dispatching the AQL packet:
+     *  aql.completion_signal
+     *  aql.kernarg
+     *
+     * @p args : Pointer to kernel arguments with the size and alignment
+     * @p        expected by the kernel. The args are copied and then passed
+     * @p        directly to the kernel. After this function returns, the args
+     * @p        memory may be deallocated.
      * @p argSz : Size of the arguments.
-     * @p cf : Written with a completion_future that can be used to track the status
-     *          of the dispatch.  May be NULL, in which case no completion_future is 
-     *          returned and the caller must use other synchronization techniqueues 
-     *          such as calling accelerator_view::wait() or waiting on a younger command
-     *          in the same queue.
+     * @p cf : Written with a completion_future that can be used to track the
+     * @p      status of the dispatch. May be NULL, in which case no
+     * @p      completion_future is returned and the caller must use other
+     * @p      synchronization techniques such as calling
+     * @p      accelerator_view::wait() or waiting on a younger command in the
+     * @p      same queue.
      *
      * The dispatch_hsa_kernel call will perform the following operations:
      *    - Efficiently allocate a kernarg region and copy the arguments.
@@ -518,100 +1184,32 @@ public:
      *    - Dispatch the command into the queue and flush it to the GPU.
      *    - Kernargs and signals are automatically reclaimed by the HCC runtime.
      */
-    void dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t *aql, 
-                           const void * args, size_t argsize,
-                           hc::completion_future *cf=NULL) 
+    void dispatch_hsa_kernel(const hsa_kernel_dispatch_packet_t* aql,
+                             const void* args,
+                             size_t arg_size,
+                             hc::completion_future* cf = nullptr)
     {
-        pQueue->dispatch_hsa_kernel(aql, args, argsize, cf);
+        queue_->dispatch_hsa_kernel(aql, args, arg_size, cf);
     }
 
     /**
-     * Set a CU affinity to specific command queues. 
+     * Set a CU affinity to specific command queues.
      * The setting is permanent until the queue is destroyed or CU affinity is
-     * set again. This setting is "atomic", it won't affect the dispatch in flight. 
+     * set again. This setting is "atomic", it won't affect the dispatch in
+     * flight.
      *
      * @param cu_mask a bool vector to indicate what CUs you want to use. True
-     *        represents using the cu. The first 32 elements represents the first
-     *        32 CUs, and so on. If its size is greater than physical CU number,
-     *        the extra elements are ignored.
+     *        represents using the cu. The first 32 elements represents the
+     *        first 32 CUs, and so on. If its size is greater than physical CU
+     *        number, the extra elements are ignored.
      *        It is user's responsibility to make sure the input is meaningful.
      *
-     * @return a bool variable to indicate if the setting is successful.
+     * @return true if operations succeeds or false if not.
      *
      */
-     bool set_cu_mask(const std::vector<bool>& cu_mask) {
-        // If it is HSA based accelerator view, set cu mask, otherwise, return;
-        if(is_hsa_accelerator()) {
-            return pQueue->set_cu_mask(cu_mask);
-        }
-        return false;
-     }
-
-private:
-    accelerator_view(std::shared_ptr<Kalmar::KalmarQueue> pQueue) : pQueue(pQueue) {}
-    std::shared_ptr<Kalmar::KalmarQueue> pQueue;
-
-    friend class accelerator;
-    template <typename Q, int K> friend class array;
-    template <typename Q, int K> friend class array_view;
-  
-    template<typename Kernel> friend
-        void* Kalmar::mcw_cxxamp_get_kernel(const std::shared_ptr<Kalmar::KalmarQueue>&, const Kernel&);
-    template<typename Kernel, int dim_ext> friend
-        void Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&, void*, size_t);
-    template<typename Kernel, int dim_ext> friend
-        std::shared_ptr<Kalmar::KalmarAsyncOp> Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&, void*, size_t);
-    template<typename Kernel, int dim_ext> friend
-        void Kalmar::mcw_cxxamp_launch_kernel(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&);
-    template<typename Kernel, int dim_ext> friend
-        std::shared_ptr<Kalmar::KalmarAsyncOp> Kalmar::mcw_cxxamp_launch_kernel_async(const std::shared_ptr<Kalmar::KalmarQueue>&, size_t *, size_t *, const Kernel&);
-  
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-    template <typename Kernel, int N> friend
-        completion_future launch_cpu_task_async(const std::shared_ptr<Kalmar::KalmarQueue>&, Kernel const&, extent<N> const&);
-#endif
-
-    // non-tiled parallel_for_each
-    // generic version
-    template <int N, typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const extent<N>&, const Kernel&);
-  
-    // 1D specialization
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const extent<1>&, const Kernel&);
-  
-    // 2D specialization
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const extent<2>&, const Kernel&);
-  
-    // 3D specialization
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const extent<3>&, const Kernel&);
-  
-    // tiled parallel_for_each, 3D version
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<3>&, const Kernel&);
-  
-    // tiled parallel_for_each, 2D version
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, const Kernel&);
-  
-    // tiled parallel_for_each, 1D version
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
-
-    // private member function template to create a marker from iterators
-    template<typename InputIterator>
-    completion_future create_blocking_marker(InputIterator first, InputIterator last) const;
-
-#if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
-public:
-#endif
-    __attribute__((annotate("user_deserialize")))
-    accelerator_view() __CPU__ __HC__ {
-#if __KALMAR_ACCELERATOR__ != 1
-        throw runtime_exception("errorMsg_throw", 0);
-#endif
+    bool set_cu_mask(const std::vector<bool>& cu_mask)
+    {
+        return is_hsa_accelerator() ? queue_->set_cu_mask(cu_mask) : false;
     }
 };
 
@@ -624,12 +1222,11 @@ public:
  * this type can be created by enumerating the available devices, or
  * getting the default device.
  */
-class accelerator
-{
+class accelerator {
 public:
     /**
      * Constructs a new accelerator object that represents the default
-     * accelerator. This is equivalent to calling the constructor 
+     * accelerator. This is equivalent to calling the constructor
      * @code{.cpp}
      * accelerator(accelerator::default_accelerator)
      * @endcode
@@ -654,8 +1251,10 @@ public:
      *
      * @param[in] path The device path of this accelerator.
      */
-    explicit accelerator(const std::wstring& path)
-        : pDev(Kalmar::getContext()->getDevice(path)) {}
+    explicit
+    accelerator(const std::wstring& path)
+        : pDev(Kalmar::getContext()->getDevice(path))
+    {}
 
     /**
      * Copy constructs an accelerator object. This function does a shallow copy
@@ -664,7 +1263,7 @@ public:
      *
      * @param[in] other The accelerator object to be copied.
      */
-    accelerator(const accelerator& other) : pDev(other.pDev) {}
+    accelerator(const accelerator&) = default;
 
     /**
      * Returns a std::vector of accelerator objects (in no specific
@@ -673,7 +1272,9 @@ public:
      *
      * @return A vector of accelerators.
      */
-    static std::vector<accelerator> get_all() {
+    static
+    std::vector<accelerator> get_all()
+    {
         auto Devices = Kalmar::getContext()->getDevices();
         std::vector<accelerator> ret(Devices.size());
         for (int i = 0; i < ret.size(); ++i)
@@ -694,7 +1295,8 @@ public:
      *         default has already been set for this process, this value will be
      *         false, and the function will have no effect.
      */
-    static bool set_default(const std::wstring& path) {
+    static bool set_default(const std::wstring& path)
+    {
         return Kalmar::getContext()->set_default(path);
     }
 
@@ -713,8 +1315,10 @@ public:
      * @return An accelerator_view than can be used to indicate auto selection
      *         of the target for a parallel_for_each execution.
      */
-    static accelerator_view get_auto_selection_view() {
-        return Kalmar::getContext()->auto_select();
+    static
+    accelerator_view get_auto_selection_view()
+    {
+        return accelerator_view{Kalmar::getContext()->auto_select()};
     }
 
     /**
@@ -726,10 +1330,7 @@ public:
      * @param other The accelerator object to be assigned from.
      * @return A reference to "this" accelerator object.
      */
-    accelerator& operator=(const accelerator& other) {
-        pDev = other.pDev;
-        return *this;
-    }
+    accelerator& operator=(const accelerator&) = default;
 
     /**
      * Returns the default accelerator_view associated with the accelerator.
@@ -737,7 +1338,10 @@ public:
      *
      * @return The default accelerator_view object associated with the accelerator.
      */
-    accelerator_view get_default_view() const { return pDev->get_default_queue(); }
+    accelerator_view get_default_view() const
+    {
+        return accelerator_view{pDev->get_default_queue()};
+    }
 
     /**
      * Creates and returns a new accelerator view on the accelerator with the
@@ -747,12 +1351,14 @@ public:
      *                  See "Queuing Mode". The default value would be
      *                  queueing_mdoe_automatic if not specified.
      */
-    accelerator_view create_view(execute_order order = execute_in_order, queuing_mode mode = queuing_mode_automatic) {
-        auto pQueue = pDev->createQueue(order);
-        pQueue->set_mode(mode);
-        return pQueue;
+    accelerator_view create_view(execute_order order = execute_in_order,
+                                 queuing_mode mode = queuing_mode_automatic)
+    {
+        auto q = pDev->createQueue(order);
+        q->set_mode(mode);
+        return accelerator_view{q};
     }
-  
+
     /**
      * Compares "this" accelerator with the passed accelerator object to
      * determine if they represent the same underlying device.
@@ -761,7 +1367,10 @@ public:
      * @return A boolean value indicating whether the passed accelerator
      *         object is same as "this" accelerator.
      */
-    bool operator==(const accelerator& other) const { return pDev == other.pDev; }
+    bool operator==(const accelerator& other) const
+    {
+        return pDev == other.pDev;
+    }
 
     /**
      * Compares "this" accelerator with the passed accelerator object to
@@ -771,7 +1380,10 @@ public:
      * @return A boolean value indicating whether the passed accelerator
      *         object is different from "this" accelerator.
      */
-    bool operator!=(const accelerator& other) const { return !(*this == other); }
+    bool operator!=(const accelerator& other) const
+    {
+        return !(*this == other);
+    }
 
     /**
      * Sets the default_cpu_access_type for this accelerator.
@@ -781,9 +1393,9 @@ public:
      * this this accelerator.
      *
      * This method only succeeds if the default_cpu_access_type for the
-     * accelerator has not already been overriden by a previous call to this 
-     * method and the runtime selected default_cpu_access_type for this 
-     * accelerator has not yet been used for allocating an array or for an 
+     * accelerator has not already been overriden by a previous call to this
+     * method and the runtime selected default_cpu_access_type for this
+     * accelerator has not yet been used for allocating an array or for an
      * implicit array_view memory allocation on this accelerator.
      *
      * @param[in] default_cpu_access_type The default cpu access_type to be used
@@ -791,7 +1403,8 @@ public:
      * @return A boolean value indicating if the default cpu access_type for the
      *         accelerator was successfully set.
      */
-    bool set_default_cpu_access_type(access_type type) {
+    bool set_default_cpu_access_type(access_type type)
+    {
         pDev->set_access(type);
         return true;
     }
@@ -846,7 +1459,10 @@ public:
      * functions, int to double, double to int conversions) for a
      * parallel_for_each kernel.
      */
-    bool get_supports_limited_double_precision() const { return pDev->is_lim_double(); }
+    bool get_supports_limited_double_precision() const
+    {
+        return pDev->is_lim_double();
+    }
 
     /**
      * Returns a boolean value indicating whether the accelerator supports
@@ -871,61 +1487,65 @@ public:
      * Get the default cpu access_type for buffers created on this accelerator
      */
     access_type get_default_cpu_access_type() const { return pDev->get_access(); }
-  
-  
+
+
     /**
      * Returns the maximum size of tile static area available on this
      * accelerator.
      */
-    size_t get_max_tile_static_size() {
-      return get_default_view().get_max_tile_static_size();
+    size_t get_max_tile_static_size()
+    {
+        return get_default_view().get_max_tile_static_size();
     }
-  
+
     /**
      * Returns a vector of all accelerator_view associated with this accelerator.
      */
-    std::vector<accelerator_view> get_all_views() {
+    std::vector<accelerator_view> get_all_views()
+    {
         std::vector<accelerator_view> result;
-        std::vector< std::shared_ptr<Kalmar::KalmarQueue> > queues = pDev->get_all_queues();
-        for (auto q : queues) {
-            result.push_back(q);
-        }
+        auto queues = pDev->get_all_queues();
+        for (auto q : queues) result.push_back(accelerator_view{q});
+
         return result;
     }
 
     /**
      * Returns an opaque handle which points to the AM region on the HSA agent.
-     * This region can be used to allocate accelerator memory which is accessible from the 
+     * This region can be used to allocate accelerator memory which is accessible from the
      * specified accelerator.
      *
      * @return An opaque handle of the region, if the accelerator is based
      *         on HSA.  NULL otherwise.
      */
-    void* get_hsa_am_region() const {
+    void* get_hsa_am_region() const
+    {
         return get_default_view().get_hsa_am_region();
     }
 
     /**
      * Returns an opaque handle which points to the AM system region on the HSA agent.
-     * This region can be used to allocate system memory which is accessible from the 
+     * This region can be used to allocate system memory which is accessible from the
      * specified accelerator.
      *
      * @return An opaque handle of the region, if the accelerator is based
      *         on HSA.  NULL otherwise.
      */
-    void* get_hsa_am_system_region() const {
+    void* get_hsa_am_system_region() const
+    {
         return get_default_view().get_hsa_am_system_region();
     }
 
     /**
      * Returns an opaque handle which points to the AM system region on the HSA agent.
-     * This region can be used to allocate finegrained system memory which is accessible from the 
+     * This region can be used to allocate finegrained system memory which is accessible from the
      * specified accelerator.
      *
      * @return An opaque handle of the region, if the accelerator is based
      *         on HSA.  NULL otherwise.
      */
-    void* get_hsa_am_finegrained_system_region() const {
+    void* get_hsa_am_finegrained_system_region() const
+    {
         return get_default_view().get_hsa_am_finegrained_system_region();
     }
 
@@ -936,14 +1556,16 @@ public:
      * @return An opaque handle of the region, if the accelerator is based
      *         on HSA.  NULL otherwise.
      */
-    void* get_hsa_kernarg_region() const {
+    void* get_hsa_kernarg_region() const
+    {
         return get_default_view().get_hsa_kernarg_region();
     }
 
     /**
      * Returns if the accelerator is based on HSA.
      */
-    bool is_hsa_accelerator() const {
+    bool is_hsa_accelerator() const
+    {
         return get_default_view().is_hsa_accelerator();
     }
 
@@ -953,19 +1575,28 @@ public:
      * - hcAgentProfileBase in case the accelerator is of HSA Base Profile.
      * - hcAgentProfileFull in case the accelerator is of HSA Full Profile.
      */
-    hcAgentProfile get_profile() const {
-        return pDev->getProfile();
-    }
+    hcAgentProfile get_profile() const { return pDev->getProfile(); }
 
-    void memcpy_symbol(const char* symbolName, void* hostptr, size_t count, size_t offset = 0, hcCommandKind kind = hcMemcpyHostToDevice) {
+    void memcpy_symbol(const char* symbolName,
+                       void* hostptr,
+                       size_t count,
+                       size_t offset = 0,
+                       hcCommandKind kind = hcMemcpyHostToDevice)
+    {
         pDev->memcpySymbol(symbolName, hostptr, count, offset, kind);
     }
 
-    void memcpy_symbol(void* symbolAddr, void* hostptr, size_t count, size_t offset = 0, hcCommandKind kind = hcMemcpyHostToDevice) {
+    void memcpy_symbol(void* symbolAddr,
+                       void* hostptr,
+                       size_t count,
+                       size_t offset = 0,
+                       hcCommandKind kind = hcMemcpyHostToDevice)
+    {
         pDev->memcpySymbol(symbolAddr, hostptr, count, offset, kind);
     }
 
-    void* get_symbol_address(const char* symbolName) {
+    void* get_symbol_address(const char* symbolName)
+    {
         return pDev->getSymbolAddress(symbolName);
     }
 
@@ -975,9 +1606,7 @@ public:
      * @return An opaque handle of the underlying HSA agent, if the accelerator
      *         is based on HSA.  NULL otherwise.
      */
-    void* get_hsa_agent() const {
-        return pDev->getHSAAgent();
-    }
+    void* get_hsa_agent() const { return pDev->getHSAAgent(); }
 
     /**
      * Check if @p other is peer of this accelerator.
@@ -985,16 +1614,18 @@ public:
      * @return true if other can access this accelerator's device memory pool or false if not.
      * the acceleratos is its own peer.
      */
-    bool get_is_peer(const accelerator& other) const {
+    bool get_is_peer(const accelerator& other) const
+    {
         return pDev->is_peer(other.pDev);
     }
-      
+
     /**
-     * Return a std::vector of this accelerator's peers. peer is other accelerator which can access this 
+     * Return a std::vector of this accelerator's peers. peer is other accelerator which can access this
      * accelerator's device memory using map_to_peer family of APIs.
      *
      */
-    std::vector<accelerator> get_peers() const {
+    std::vector<accelerator> get_peers() const
+    {
         std::vector<accelerator> peers;
 
         const auto &accs = get_all();
@@ -1011,9 +1642,7 @@ public:
      * Return the compute unit count of the accelerator.
      *
      */
-    unsigned int get_cu_count() const {
-        return pDev->get_compute_unit_count();
-    }
+    unsigned int get_cu_count() const { return pDev->get_compute_unit_count(); }
 
 
     /**
@@ -1022,11 +1651,9 @@ public:
      * Typically this is enabled with "large BAR" or "resizeable BAR" address mapping.
      *
      */
-    bool has_cpu_accessible_am() {
-        return pDev->has_cpu_accessible_am();
-    };
+    bool has_cpu_accessible_am() { return pDev->has_cpu_accessible_am(); }
 
-    Kalmar::KalmarDevice *get_dev_ptr() const { return pDev; }; 
+    Kalmar::KalmarDevice* get_dev_ptr() const { return pDev; };
 
 private:
     accelerator(Kalmar::KalmarDevice* pDev) : pDev(pDev) {}
@@ -1035,415 +1662,59 @@ private:
 };
 
 // ------------------------------------------------------------------------
-// completion_future
+// member functions, defined here due to class inter-dependencies.
+// TODO: we should refactor our ADTs so as to remove inter-dependence.
 // ------------------------------------------------------------------------
 
-/**
- * This class is the return type of all asynchronous APIs and has an interface
- * analogous to std::shared_future<void>. Similar to std::shared_future, this
- * type provides member methods such as wait and get to wait for asynchronous
- * operations to finish, and the type additionally provides a member method
- * then(), to specify a completion callback functor to be executed upon
- * completion of an asynchronous operation.
- */
-class completion_future {
-public:
-
-    /**
-     * Default constructor. Constructs an empty uninitialized completion_future
-     * object which does not refer to any asynchronous operation. Default
-     * constructed completion_future objects have valid() == false
-     */
-    completion_future() : __amp_future(), __thread_then(nullptr), __asyncOp(nullptr) {};
-
-    /**
-     * Copy constructor. Constructs a new completion_future object that referes
-     * to the same asynchronous operation as the other completion_future object.
-     *
-     * @param[in] other An object of type completion_future from which to
-     *                  initialize this.
-     */
-    completion_future(const completion_future& other)
-        : __amp_future(other.__amp_future), __thread_then(other.__thread_then), __asyncOp(other.__asyncOp) {}
-
-    /**
-     * Move constructor. Move constructs a new completion_future object that
-     * referes to the same asynchronous operation as originally refered by the
-     * other completion_future object. After this constructor returns,
-     * other.valid() == false
-     *
-     * @param[in] other An object of type completion_future which the new
-     *                  completion_future
-     */
-    completion_future(completion_future&& other)
-        : __amp_future(std::move(other.__amp_future)), __thread_then(other.__thread_then), __asyncOp(other.__asyncOp) {}
-
-    /**
-     * Copy assignment. Copy assigns the contents of other to this. This method
-     * causes this to stop referring its current asynchronous operation and
-     * start referring the same asynchronous operation as other.
-     *
-     * @param[in] other An object of type completion_future which is copy
-     *                  assigned to this.
-     */
-    completion_future& operator=(const completion_future& _Other) {
-        if (this != &_Other) {
-           __amp_future = _Other.__amp_future;
-           __thread_then = _Other.__thread_then;
-           __asyncOp = _Other.__asyncOp;
-        }
-        return (*this);
-    }
-
-    /**
-     * Move assignment. Move assigns the contents of other to this. This method
-     * causes this to stop referring its current asynchronous operation and
-     * start referring the same asynchronous operation as other. After this
-     * method returns, other.valid() == false
-     *
-     * @param[in] other An object of type completion_future which is move
-     *                  assigned to this.
-     */
-    completion_future& operator=(completion_future&& _Other) {
-        if (this != &_Other) {
-            __amp_future = std::move(_Other.__amp_future);
-            __thread_then = _Other.__thread_then;
-           __asyncOp = _Other.__asyncOp;
-        }
-        return (*this);
-    }
-
-    /**
-     * This method is functionally identical to std::shared_future<void>::get.
-     * This method waits for the associated asynchronous operation to finish
-     * and returns only upon the completion of the asynchronous operation. If
-     * an exception was encountered during the execution of the asynchronous
-     * operation, this method throws that stored exception.
-     */
-    void get() const {
-        __amp_future.get();
-    }
-
-    /**
-     * This method is functionally identical to
-     * std::shared_future<void>::valid. This returns true if this
-     * completion_future is associated with an asynchronous operation.
-     */
-    bool valid() const {
-        return __amp_future.valid();
-    }
-
-    /** @{ */
-    /**
-     * These methods are functionally identical to the corresponding
-     * std::shared_future<void> methods.
-     *
-     * The wait method waits for the associated asynchronous operation to
-     * finish and returns only upon completion of the associated asynchronous
-     * operation or if an exception was encountered when executing the
-     * asynchronous operation.
-     *
-     * The other variants are functionally identical to the
-     * std::shared_future<void> member methods with same names.
-     *
-     * @param waitMode[in] An optional parameter to specify the wait mode. By
-     *                     default it would be hcWaitModeBlocked.
-     *                     hcWaitModeActive would be used to reduce latency with
-     *                     the expense of using one CPU core for active waiting.
-     */
-    void wait(hcWaitMode mode = hcWaitModeBlocked) const {
-        if (this->valid()) {
-            if (__asyncOp != nullptr) {
-                __asyncOp->setWaitMode(mode);
-            }   
-            //TODO-ASYNC - need to reclaim older AsyncOps here.
-            __amp_future.wait();
-        }
-    }
-
-    template <class _Rep, class _Period>
-    std::future_status wait_for(const std::chrono::duration<_Rep, _Period>& _Rel_time) const {
-        return __amp_future.wait_for(_Rel_time);
-    }
-
-    template <class _Clock, class _Duration>
-    std::future_status wait_until(const std::chrono::time_point<_Clock, _Duration>& _Abs_time) const {
-        return __amp_future.wait_until(_Abs_time);
-    }
-
-    /** @} */
-
-    /**
-     * Conversion operator to std::shared_future<void>. This method returns a
-     * shared_future<void> object corresponding to this completion_future
-     * object and refers to the same asynchronous operation.
-     */
-    operator std::shared_future<void>() const {
-        return __amp_future;
-    }
-
-    /**
-     * This method enables specification of a completion callback func which is
-     * executed upon completion of the asynchronous operation associated with
-     * this completion_future object. The completion callback func should have
-     * an operator() that is valid when invoked with non arguments, i.e., "func()".
-     */
-    // FIXME: notice we removed const from the signature here
-    //        the original signature in the specification should be
-    //        template<typename functor>
-    //        void then(const functor& func) const;
-    template<typename functor>
-    void then(const functor & func) {
-#if __KALMAR_ACCELERATOR__ != 1
-      // could only assign once
-      if (__thread_then == nullptr) {
-        // spawn a new thread to wait on the future and then execute the callback functor
-        __thread_then = new std::thread([&]() __CPU__ {
-          this->wait();
-          if(this->valid())
-            func();
-        });
-      }
-#endif
-    }
-
-    /**
-     * Get the native handle for the asynchronous operation encapsulated in
-     * this completion_future object. The method is mostly used for debugging
-     * purpose.
-     * Applications should retain the parent completion_future to ensure
-     * the native handle is not deallocated by the HCC runtime.  The completion_future
-     * pointer to the native handle is reference counted, so a copy of 
-     * the completion_future is sufficient to retain the native_handle.
-     */
-    void* get_native_handle() const {
-      if (__asyncOp != nullptr) {
-        return __asyncOp->getNativeHandle();
-      } else {
-        return nullptr;
-      }
-    }
-
-    /**
-     * Get the tick number when the underlying asynchronous operation begins.
-     *
-     * @return An implementation-defined tick number in case the instance is
-     *         created by a kernel dispatch or a barrier packet. 0 otherwise.
-     */
-    uint64_t get_begin_tick() {
-      if (__asyncOp != nullptr) {
-        return __asyncOp->getBeginTimestamp();
-      } else {
-        return 0L;
-      }
-    }
-
-    /**
-     * Get the tick number when the underlying asynchronous operation ends.
-     *
-     * @return An implementation-defined tick number in case the instance is
-     *         created by a kernel dispatch or a barrier packet. 0 otherwise.
-     */
-    uint64_t get_end_tick() {
-      if (__asyncOp != nullptr) {
-        return __asyncOp->getEndTimestamp();
-      } else {
-        return 0L;
-      }
-    }
-
-    /**
-     * Get the frequency of ticks per second for the underlying asynchrnous operation.
-     *
-     * @return An implementation-defined frequency in Hz in case the instance is
-     *         created by a kernel dispatch or a barrier packet. 0 otherwise.
-     */
-    uint64_t get_tick_frequency() {
-      if (__asyncOp != nullptr) {
-        return __asyncOp->getTimestampFrequency();
-      } else {
-        return 0L;
-      }
-    }
-
-    /**
-     * Get if the async operations has been completed.
-     *
-     * @return True if the async operation has been completed, false if not.
-     */
-    bool is_ready() {
-      if (__asyncOp != nullptr) {
-        return __asyncOp->isReady();
-      } else {
-        return false;
-      }
-    }
-
-    ~completion_future() {
-      if (__thread_then != nullptr) {
-        __thread_then->join();
-      }
-      delete __thread_then;
-      __thread_then = nullptr;
-      
-      if (__asyncOp != nullptr) {
-        __asyncOp = nullptr;
-      }
-    }
-
-
-    /**
-     * @return reference count for the completion future.  Primarily used for debug purposes.
-     */
-    int get_use_count() const { return __asyncOp.use_count(); };
-
-private:
-    std::shared_future<void> __amp_future;
-    std::thread* __thread_then = nullptr;
-    std::shared_ptr<Kalmar::KalmarAsyncOp> __asyncOp;
-
-    completion_future(std::shared_ptr<Kalmar::KalmarAsyncOp> event) : __amp_future(*(event->getFuture())), __asyncOp(event) {}
-
-    completion_future(const std::shared_future<void> &__future)
-        : __amp_future(__future), __thread_then(nullptr), __asyncOp(nullptr) {}
-
-    friend class Kalmar::HSAQueue;
-    
-    // non-tiled parallel_for_each
-    // generic version
-    template <int N, typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const extent<N>&, const Kernel&);
-
-    // 1D specialization
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const extent<1>&, const Kernel&);
-
-    // 2D specialization
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const extent<2>&, const Kernel&);
-
-    // 3D specialization
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const extent<3>&, const Kernel&);
-
-    // tiled parallel_for_each, 3D version
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<3>&, const Kernel&);
-
-    // tiled parallel_for_each, 2D version
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<2>&, const Kernel&);
-
-    // tiled parallel_for_each, 1D version
-    template <typename Kernel> friend
-        completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
-
-    // copy_async
-    template <typename T, int N> friend
-        completion_future copy_async(const array_view<const T, N>& src, const array_view<T, N>& dest);
-    template <typename T, int N> friend
-        completion_future copy_async(const array<T, N>& src, array<T, N>& dest);
-    template <typename T, int N> friend
-        completion_future copy_async(const array<T, N>& src, const array_view<T, N>& dest);
-    template <typename T, int N> friend
-        completion_future copy_async(const array_view<T, N>& src, const array_view<T, N>& dest);
-    template <typename T, int N> friend
-        completion_future copy_async(const array_view<const T, N>& src, array<T, N>& dest);
-
-    template <typename InputIter, typename T, int N> friend
-        completion_future copy_async(InputIter srcBegin, InputIter srcEnd, array<T, N>& dest);
-    template <typename InputIter, typename T, int N> friend
-        completion_future copy_async(InputIter srcBegin, InputIter srcEnd, const array_view<T, N>& dest);
-    template <typename InputIter, typename T, int N> friend
-        completion_future copy_async(InputIter srcBegin, array<T, N>& dest);
-    template <typename InputIter, typename T, int N> friend
-        completion_future copy_async(InputIter srcBegin, const array_view<T, N>& dest);
-    template <typename OutputIter, typename T, int N> friend
-        completion_future copy_async(const array<T, N>& src, OutputIter destBegin);
-    template <typename OutputIter, typename T, int N> friend
-        completion_future copy_async(const array_view<T, N>& src, OutputIter destBegin);
-
-    // array_view
-    template <typename T, int N> friend class array_view;
-
-    // accelerator_view
-    friend class accelerator_view;
-};
-
-// ------------------------------------------------------------------------
-// member function implementations
-// ------------------------------------------------------------------------
-
-inline accelerator
-accelerator_view::get_accelerator() const { return pQueue->getDev(); }
-
-inline completion_future
-accelerator_view::create_marker() const {
-    return completion_future(pQueue->EnqueueMarker());
-}
-
-inline unsigned int accelerator_view::get_version() const { return get_accelerator().get_version(); }
-
-inline completion_future accelerator_view::create_blocking_marker(completion_future& dependent_future) const {
-    return completion_future(pQueue->EnqueueMarkerWithDependency(dependent_future.__asyncOp));
-}
-
-template<typename InputIterator>
-inline completion_future
-accelerator_view::create_blocking_marker(InputIterator first, InputIterator last) const {
-    bool atLeastOne = false; // have we sent at least one marker
-    int cnt = 0;
-    std::shared_ptr<Kalmar::KalmarAsyncOp> deps[5]; // array of 5 pointers to the native handle of async ops. 5 is the max supported by barrier packet
-    hc::completion_future lastMarker;
-
-    // loop through signals and group into sections of 5
-    // every 5 signals goes into one barrier packet
-    // since HC sets the barrier bit in each AND barrier packet, we know
-    // the barriers will execute in-order
-    for (auto iter = first; iter != last; ++iter) {
-        deps[cnt++] = iter->__asyncOp; // retrieve async op associated with completion_future
-        if (cnt == 5) {
-            atLeastOne = true;
-            lastMarker = completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps));
-            cnt = 0;
-        }
-    }
-
-    if (cnt || !atLeastOne) {
-        lastMarker = completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps));
-    }
-
-    return lastMarker;
-}
-
-inline completion_future
-accelerator_view::create_blocking_marker(std::initializer_list<completion_future> dependent_future_list) const {
-    return create_blocking_marker(dependent_future_list.begin(), dependent_future_list.end());
-}
-
-
-inline void accelerator_view::copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, const hc::accelerator *copyAcc, bool forceUnpinnedCopy) {
-    pQueue->copy_ext(src, dst, size_bytes, copyDir, srcInfo, dstInfo, copyAcc ? copyAcc->pDev : nullptr, forceUnpinnedCopy);
-};
-
-inline void accelerator_view::copy_ext(const void *src, void *dst, size_t size_bytes, hcCommandKind copyDir, const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, bool forceHostCopyEngine) {
-    pQueue->copy_ext(src, dst, size_bytes, copyDir, srcInfo, dstInfo, forceHostCopyEngine);
-};
-
-inline completion_future
-accelerator_view::copy_async(const void *src, void *dst, size_t size_bytes) {
-    return completion_future(pQueue->EnqueueAsyncCopy(src, dst, size_bytes));
-}
-
-inline completion_future
-accelerator_view::copy_async_ext(const void *src, void *dst, size_t size_bytes,
-                             hcCommandKind copyDir, 
-                             const hc::AmPointerInfo &srcInfo, const hc::AmPointerInfo &dstInfo, 
-                             const hc::accelerator *copyAcc)
+inline
+unsigned int accelerator_view::get_version() const
 {
-    return completion_future(pQueue->EnqueueAsyncCopyExt(src, dst, size_bytes, copyDir, srcInfo, dstInfo, copyAcc ? copyAcc->pDev : nullptr));
-};
+    return get_accelerator().get_version();
+}
 
+inline
+accelerator accelerator_view::get_accelerator() const
+{
+    return queue_->getDev();
+}
+
+inline
+void accelerator_view::copy_ext(const void* src,
+                                void* dst,
+                                size_t size_bytes,
+                                hcCommandKind copy_dir,
+                                const hc::AmPointerInfo& src_info,
+                                const hc::AmPointerInfo& dst_info,
+                                const hc::accelerator* copy_acc,
+                                bool force_unpinned_copy)
+{
+    queue_->copy_ext(src,
+                     dst,
+                     size_bytes,
+                     copy_dir,
+                     src_info,
+                     dst_info,
+                     copy_acc ? copy_acc->pDev : nullptr, // TODO: should not use internal implementation detail.
+                     force_unpinned_copy);
+}
+
+inline
+completion_future accelerator_view::copy_async_ext(const void* src,
+                                                   void* dst,
+                                                   size_t size_bytes,
+                                                   hcCommandKind copy_dir,
+                                                   const hc::AmPointerInfo& src_info,
+                                                   const hc::AmPointerInfo& dst_info,
+                                                   const hc::accelerator* copy_acc)
+{
+      return completion_future{queue_->EnqueueAsyncCopyExt(src,
+                                                           dst,
+                                                           size_bytes,
+                                                           copy_dir,
+                                                           src_info,
+                                                           dst_info,
+                                                           copy_acc ? copy_acc->pDev : nullptr)};
+}
 
 // ------------------------------------------------------------------------
 // extent
@@ -1878,12 +2149,12 @@ template <int N>
 class tiled_extent : public extent<N> {
 public:
     static const int rank = N;
-  
+
     /**
      * Tile size for each dimension.
      */
     int tile_dim[N];
-  
+
     /**
      * Default constructor. The origin and extent is default-constructed and
      * thus zero.
@@ -1966,7 +2237,7 @@ public:
      * @param[in] ext The extent of this tiled_extent
      * @param[in] t0 Size of tile.
      */
-    tiled_extent(const extent<1>& ext, int t0) __CPU__ __HC__ : extent(ext), dynamic_group_segment_size(0), tile_dim{t0} {} 
+    tiled_extent(const extent<1>& ext, int t0) __CPU__ __HC__ : extent(ext), dynamic_group_segment_size(0), tile_dim{t0} {}
 
     /**
      * Constructs a tiled_extent<N> with the extent "ext".
@@ -2253,7 +2524,7 @@ tiled_extent<3> extent<N>::tile_with_dynamic(int t0, int t1, int t2, int dynamic
  * @return The size of a wavefront.
  */
 #define __HSA_WAVEFRONT_SIZE__ (64)
-extern "C" unsigned int __wavesize() __HC__; 
+extern "C" unsigned int __wavesize() __HC__;
 
 
 #if __hcc_backend__==HCC_BACKEND_AMDGPU
@@ -2729,15 +3000,6 @@ inline int __lane_id(void) [[hc]] {
   return __amdgcn_mbcnt_hi(-1, lo);
 }
 
-#elif __hcc_backend__==HCC_BACKEND_HSAIL
-
-extern "C" __attribute__((const)) unsigned int __hsail_get_lane_id(void) __HC__;
-
-// returns the lane ID within a wavefront
-inline int __lane_id(void) [[hc]] {
-  return __hsail_get_lane_id();
-}
-
 #endif
 
 #if __hcc_backend__==HCC_BACKEND_AMDGPU
@@ -2795,15 +3057,15 @@ inline float __amdgcn_ds_swizzle(float src, int pattern) [[hc]] {
 /**
  * move DPP intrinsic
  */
-extern "C" int __amdgcn_move_dpp(int src, int dpp_ctrl, int row_mask, int bank_mask, bool bound_ctrl) [[hc]]; 
+extern "C" int __amdgcn_move_dpp(int src, int dpp_ctrl, int row_mask, int bank_mask, bool bound_ctrl) [[hc]];
 
 /**
- * Shift the value of src to the right by one thread within a wavefront.  
- * 
+ * Shift the value of src to the right by one thread within a wavefront.
+ *
  * @param[in] src variable being shifted
  * @param[in] bound_ctrl When set to true, a zero will be shifted into thread 0; otherwise, the original value will be returned for thread 0
- * @return value of src being shifted into from the neighboring lane 
- * 
+ * @return value of src being shifted into from the neighboring lane
+ *
  */
 extern "C" int __amdgcn_wave_sr1(int src, bool bound_ctrl) [[hc]];
 inline unsigned int __amdgcn_wave_sr1(unsigned int src, bool bound_ctrl) [[hc]] {
@@ -2818,14 +3080,14 @@ inline float __amdgcn_wave_sr1(float src, bool bound_ctrl) [[hc]] {
 }
 
 /**
- * Shift the value of src to the left by one thread within a wavefront.  
- * 
+ * Shift the value of src to the left by one thread within a wavefront.
+ *
  * @param[in] src variable being shifted
  * @param[in] bound_ctrl When set to true, a zero will be shifted into thread 63; otherwise, the original value will be returned for thread 63
- * @return value of src being shifted into from the neighboring lane 
- * 
+ * @return value of src being shifted into from the neighboring lane
+ *
  */
-extern "C" int __amdgcn_wave_sl1(int src, bool bound_ctrl) [[hc]];  
+extern "C" int __amdgcn_wave_sl1(int src, bool bound_ctrl) [[hc]];
 inline unsigned int __amdgcn_wave_sl1(unsigned int src, bool bound_ctrl) [[hc]] {
   __u tmp; tmp.u = src;
   tmp.i = __amdgcn_wave_sl1(tmp.i, bound_ctrl);
@@ -2839,11 +3101,11 @@ inline float __amdgcn_wave_sl1(float src, bool bound_ctrl) [[hc]] {
 
 
 /**
- * Rotate the value of src to the right by one thread within a wavefront.  
- * 
+ * Rotate the value of src to the right by one thread within a wavefront.
+ *
  * @param[in] src variable being rotated
- * @return value of src being rotated into from the neighboring lane 
- * 
+ * @return value of src being rotated into from the neighboring lane
+ *
  */
 extern "C" int __amdgcn_wave_rr1(int src) [[hc]];
 inline unsigned int __amdgcn_wave_rr1(unsigned int src) [[hc]] {
@@ -2858,11 +3120,11 @@ inline float __amdgcn_wave_rr1(float src) [[hc]] {
 }
 
 /**
- * Rotate the value of src to the left by one thread within a wavefront.  
- * 
+ * Rotate the value of src to the left by one thread within a wavefront.
+ *
  * @param[in] src variable being rotated
- * @return value of src being rotated into from the neighboring lane 
- * 
+ * @return value of src being rotated into from the neighboring lane
+ *
  */
 extern "C" int __amdgcn_wave_rl1(int src) [[hc]];
 inline unsigned int __amdgcn_wave_rl1(unsigned int src) [[hc]] {
@@ -2878,7 +3140,7 @@ inline float __amdgcn_wave_rl1(float src) [[hc]] {
 
 #endif
 
-/* definition to expand macro then apply to pragma message 
+/* definition to expand macro then apply to pragma message
 #define VALUE_TO_STRING(x) #x
 #define VALUE(x) VALUE_TO_STRING(x)
 #define VAR_NAME_VALUE(var) #var "="  VALUE(var)
@@ -2891,22 +3153,6 @@ inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__
   int self = __lane_id();
   int index = srcLane + (self & ~(width-1));
   return __amdgcn_ds_bpermute(index<<2, var);
-}
-
-#elif __hcc_backend__==HCC_BACKEND_HSAIL
-
-inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-    switch (width) {
-      case 64:
-        return __hsail_activelanepermute_b32(var,srcLane&63, 0, 0);
-      default: {
-        unsigned int ulane = (unsigned int)srcLane;
-        unsigned int uwidth = (unsigned int)width;
-        unsigned int laneId = __lane_id();
-        unsigned int newSrcLane = (laneId&((unsigned int)0xFFFFFFFF-(uwidth-1))) + (ulane&(uwidth-1));
-        return __hsail_activelanepermute_b32(var,newSrcLane, 0, 0);
-      }
-   };
 }
 
 #endif
@@ -2958,19 +3204,6 @@ inline int __shfl_up(int var, const unsigned int delta, const int width=__HSA_WA
   return __amdgcn_ds_bpermute(index<<2, var);
 }
 
-#elif __hcc_backend__==HCC_BACKEND_HSAIL
-
-inline int __shfl_up(int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-    if (delta == 1 
-        && width == __HSA_WAVEFRONT_SIZE__) {
-        return __wavefront_shift_right(var);
-    }
-    else {
-        int laneId = __lane_id();
-        int newSrcLane = laneId - delta;
-        return __hsail_activelanepermute_b32(var, newSrcLane, var, newSrcLane < (laneId&(~(width-1))));
-    }
-}
 #endif
 
 inline unsigned int __shfl_up(unsigned int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
@@ -3020,20 +3253,6 @@ inline int __shfl_down(int var, const unsigned int delta, const int width=__HSA_
   return __amdgcn_ds_bpermute(index<<2, var);
 }
 
-#elif __hcc_backend__==HCC_BACKEND_HSAIL
-
-inline int __shfl_down(int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-    if (delta == 1
-        && width == __HSA_WAVEFRONT_SIZE__) {
-        return __wavefront_shift_left(var);
-    }
-    else {
-        unsigned int laneId = __lane_id();
-        unsigned int newSrcLane = laneId + delta;
-        return __hsail_activelanepermute_b32(var, newSrcLane, var, newSrcLane >= ((laneId&(~(width-1))) + width ));
-    }
-}
-
 #endif
 
 inline unsigned int __shfl_down(unsigned int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
@@ -3078,17 +3297,6 @@ inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) _
   int index = self^laneMask;
   index = index >= ((self+width)&~(width-1))?self:index;
   return __amdgcn_ds_bpermute(index<<2, var);
-}
-
-
-#elif __hcc_backend__==HCC_BACKEND_HSAIL
-
-
-inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-    int self = __lane_id();
-    int index = self^laneMask;
-    index = index >= ((self+width)&~(width-1))?self:index;
-    return __hsail_activelanepermute_b32(var, index, 0, 0);
 }
 
 #endif
@@ -4173,7 +4381,7 @@ public:
      * There is no default constructor for array<T,N>.
      */
     array() = delete;
- 
+
     /**
      * Copy constructor. Constructs a new array<T,N> from the supplied argument
      * other. The new array is located on the same accelerator_view as the
@@ -4253,7 +4461,7 @@ public:
      *
      * @param[in] e0,e1,e2 The component values that will form the extent of
      *                     this array.
-     * @param[in] srcBegin A beginning iterator into the source container. 
+     * @param[in] srcBegin A beginning iterator into the source container.
      * @param[in] srcEnd An ending iterator into the source container.
      */
     template <typename InputIter>
@@ -4314,11 +4522,15 @@ public:
      *               this array.
      * @param[in] access_type The type of CPU access desired for this array.
      */
-    array(const extent<N>& ext, accelerator_view av, access_type cpu_access_type = access_type_auto)
+    array(const extent<N>& ext,
+          accelerator_view av,
+          access_type cpu_access_type = access_type_auto)
 #if __KALMAR_ACCELERATOR__ == 1
         : m_device(ext.size()), extent(ext) {}
 #else
-        : m_device(av.pQueue, av.pQueue, check(ext).size(), cpu_access_type), extent(ext) {}
+        : m_device(av.queue_, av.queue_, check(ext).size(), cpu_access_type), // TODO: should not use accelerator_view implementation detail.
+          extent(ext)
+    {}
 #endif
 
     /** @{ */
@@ -4345,17 +4557,26 @@ public:
      * @param[in] accelerator_pointer The pointer to the device memory.
      * @param[in] access_type The type of CPU access desired for this array.
      */
-    explicit array(const extent<N>& ext, accelerator_view av, void* accelerator_pointer, access_type cpu_access_type = access_type_auto)
+    array(const extent<N>& ext,
+          accelerator_view av,
+          void* accelerator_pointer,
+          access_type cpu_access_type = access_type_auto)
 #if __KALMAR_ACCELERATOR__ == 1
         : m_device(ext.size(), accelerator_pointer), extent(ext) {}
 #else
-        : m_device(av.pQueue, av.pQueue, check(ext).size(), accelerator_pointer, cpu_access_type), extent(ext) {}
+        : m_device(av.queue_,
+                   av.queue_,
+                   check(ext).size(),
+                   accelerator_pointer,
+                   cpu_access_type), // TODO: should not use accelerator_view implementation detail.
+          extent(ext)
+    {}
 #endif
 
     /** @{ */
     /**
      * Equivalent to construction using
-     * "array(extent<N>(e0 [, e1 [, e2 ]]), av, cpu_access_type)".   
+     * "array(extent<N>(e0 [, e1 [, e2 ]]), av, cpu_access_type)".
      *
      * @param[in] e0,e1,e2 The component values that will form the extent of
      *                     this array.
@@ -4423,7 +4644,7 @@ public:
      *
      * Users can optionally specify the type of CPU access desired for "this"
      * array thus requesting creation of an array that is accessible both on
-     * the specified accelerator_view "av" as well as the CPU (with the 
+     * the specified accelerator_view "av" as well as the CPU (with the
      * specified CPU access_type). If a value other than access_type_auto or
      * access_type_none is specified for the cpu_access_type parameter and the
      * accelerator corresponding to the accelerator_view “av” does not support
@@ -4489,16 +4710,23 @@ public:
      * @param[in] associated_av An accelerator_view object which specifies a
      *                          target device accelerator.
      */
-    array(const extent<N>& ext, accelerator_view av, accelerator_view associated_av)
+    array(const extent<N>& ext,
+          accelerator_view av,
+          accelerator_view associated_av)
 #if __KALMAR_ACCELERATOR__ == 1
         : m_device(ext.size()), extent(ext) {}
 #else
-        : m_device(av.pQueue, associated_av.pQueue, check(ext).size(), access_type_auto), extent(ext) {}
+        : m_device(av.queue_,
+                   associated_av.queue_,
+                   check(ext).size(),
+                   access_type_auto), // TODO: should not use accelerator_view implementation detail.
+          extent(ext)
+    {}
 #endif
 
     /** @{ */
     /**
-     * Equivalent to construction using 
+     * Equivalent to construction using
      * "array(extent<N>(e0 [, e1 [, e2 ]]), av, associated_av)".
      *
      * @param[in] e0,e1,e2 The component values that will form the extent of
@@ -4609,7 +4837,10 @@ public:
      * This property returns the accelerator_view representing the location
      * where this array has been allocated.
      */
-    accelerator_view get_accelerator_view() const { return m_device.get_av(); }
+    accelerator_view get_accelerator_view() const
+    {
+        return accelerator_view{m_device.get_av()};
+    }
 
     /**
      * This property returns the accelerator_view representing the preferred
@@ -4621,7 +4852,7 @@ public:
      * This property returns the CPU "access_type" allowed for this array.
      */
     access_type get_cpu_access_type() const { return m_device.get_access(); }
-  
+
     /**
      * Assigns the contents of the array "other" to this array, using a deep
      * copy.
@@ -4667,7 +4898,7 @@ public:
         *this = std::move(arr);
         return *this;
     }
-  
+
     /**
      * Copies the contents of this array to the array given by "dest", as
      * if by calling "copy(*this, dest)".
@@ -5406,7 +5637,7 @@ public:
     // FIXME: type parameter is not implemented
     void synchronize_to(const accelerator_view& av) const {
 #if __KALMAR_ACCELERATOR__ != 1
-        cache.sync_to(av.pQueue);
+        cache.sync_to(av.queue_);
 #endif
     }
 
@@ -5571,7 +5802,7 @@ public:
 
     /** @{ */
     /**
-     * Equivalent to 
+     * Equivalent to
      * "section(index<N>(i0 [, i1 [, i2 ]]), extent<N>(e0 [, e1 [, e2 ]]))".
      *
      * @param[in] i0,i1,i2 The component values that will form the origin of
@@ -5657,7 +5888,7 @@ private:
     template <typename K, int Q> friend struct array_projection_helper;
     template <typename Q, int K> friend class array;
     template <typename Q, int K> friend class array_view;
-  
+
     template<typename Q, int K> friend
         bool is_flat(const array_view<Q, K>&) noexcept;
     template <typename Q, int K> friend
@@ -5670,7 +5901,7 @@ private:
         void copy(const array_view<Q, K>&, OutputIter);
     template <typename Q, int K> friend
         void copy(const array_view<const Q, K>& src, const array_view<Q, K>& dest);
-  
+
     // used by view_as and reinterpret_as
     array_view(const acc_buffer_t& cache, const hc::extent<N>& ext,
                int offset) __CPU__ __HC__
@@ -5682,7 +5913,7 @@ private:
                const index<N>& idx_b, int off) __CPU__ __HC__
         : cache(cache), extent(ext_now), extent_base(ext_b), index_base(idx_b),
         offset(off) {}
-  
+
     acc_buffer_t cache;
     hc::extent<N> extent;
     hc::extent<N> extent_base;
@@ -5867,7 +6098,7 @@ public:
         offset = other.offset;
         return *this;
     }
-  
+
     array_view& operator=(const array_view& other) __CPU__ __HC__ {
         if (this != &other) {
             cache = other.cache;
@@ -5998,7 +6229,7 @@ public:
      */
     void synchronize_to(const accelerator_view& av) const {
 #if __KALMAR_ACCELERATOR__ != 1
-        cache.sync_to(av.pQueue);
+        cache.sync_to(av.queue_);
 #endif
     }
 
@@ -6067,7 +6298,7 @@ public:
         static_assert(N == 1, "const T& array_view::operator()(int) is only permissible on array_view<T, 1>");
         return (*this)[index<1>(i0)];
     }
-  
+
     const T& operator()(int i0, int i1) const __CPU__ __HC__ {
         static_assert(N == 2, "const T& array_view::operator()(int,int) is only permissible on array_view<T, 2>");
         return (*this)[index<2>(i0, i1)];
@@ -6152,7 +6383,7 @@ public:
 
     /** @{ */
     /**
-     * Equivalent to 
+     * Equivalent to
      * "section(index<N>(i0 [, i1 [, i2 ]]), extent<N>(e0 [, e1 [, e2 ]]))".
      *
      * @param[in] i0,i1,i2 The component values that will form the origin of
@@ -6236,7 +6467,7 @@ private:
     template <typename K, int Q> friend struct array_projection_helper;
     template <typename Q, int K> friend class array;
     template <typename Q, int K> friend class array_view;
-  
+
     template<typename Q, int K> friend
         bool is_flat(const array_view<Q, K>&) noexcept;
     template <typename Q, int K> friend
@@ -6249,19 +6480,19 @@ private:
         void copy(const array_view<Q, K>&, OutputIter);
     template <typename Q, int K> friend
         void copy(const array_view<const Q, K>& src, const array_view<Q, K>& dest);
-  
+
     // used by view_as and reinterpret_as
     array_view(const acc_buffer_t& cache, const hc::extent<N>& ext,
                int offset) __CPU__ __HC__
         : cache(cache), extent(ext), extent_base(ext), offset(offset) {}
-  
+
     // used by section and projection
     array_view(const acc_buffer_t& cache, const hc::extent<N>& ext_now,
                const extent<N>& ext_b,
                const index<N>& idx_b, int off) __CPU__ __HC__
         : cache(cache), extent(ext_now), extent_base(ext_b), index_base(idx_b),
         offset(off) {}
-  
+
     acc_buffer_t cache;
     hc::extent<N> extent;
     hc::extent<N> extent_base;
@@ -7415,7 +7646,7 @@ extern unsigned int atomic_fetch_dec(unsigned int * _Dest) __CPU__ __HC__;
  * - stores the result back to the address
  *
  * @return The original value retrieved from address pointer.
- * 
+ *
  * Please refer to <a href="http://www.hsafoundation.com/html/HSA_Library.htm#PRM/Topics/06_Memory/atomic.htm">atomic_wrapinc in HSA PRM 6.6</a> for more detailed specification of the function.
  */
 extern "C" unsigned int __atomic_wrapinc(unsigned int* address, unsigned int val) __HC__;
@@ -7427,7 +7658,7 @@ extern "C" unsigned int __atomic_wrapinc(unsigned int* address, unsigned int val
  * - stores the result back to the address
  *
  * @return The original value retrieved from address pointer.
- * 
+ *
  * Please refer to <a href="http://www.hsafoundation.com/html/HSA_Library.htm#PRM/Topics/06_Memory/atomic.htm">atomic_wrapdec in HSA PRM 6.6</a> for more detailed specification of the function.
  */
 extern "C" unsigned int __atomic_wrapdec(unsigned int* address, unsigned int val) __HC__;
@@ -7510,10 +7741,12 @@ private:
 #pragma clang diagnostic ignored "-Wreturn-type"
 #pragma clang diagnostic ignored "-Wunused-variable"
 //ND parallel_for_each, nontiled
-template <int N, typename Kernel>
-__attribute__((noinline,used)) completion_future parallel_for_each(
-    const accelerator_view& av,
-    const extent<N>& compute_domain, const Kernel& f) __CPU__ __HC__ {
+template<int N, typename Kernel>
+__attribute__((used))
+completion_future parallel_for_each(const accelerator_view& av,
+                                    const extent<N>& compute_domain,
+                                    const Kernel& f) __CPU__ __HC__
+{
 #if __KALMAR_ACCELERATOR__ != 1
     for(int i = 0 ; i < N ; i++)
     {
@@ -7537,7 +7770,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
       throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
     }
     const pfe_wrapper<N, Kernel> _pf(compute_domain, f);
-    return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<pfe_wrapper<N, Kernel>, 3>(av.pQueue, ext, NULL, _pf));
+    return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<pfe_wrapper<N, Kernel>, 3>(av.queue_, ext, NULL, _pf));
 #else
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
     int* foo1 = reinterpret_cast<int*>(&Kernel::__cxxamp_trampoline);
@@ -7554,8 +7787,11 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
 #pragma clang diagnostic ignored "-Wunused-variable"
 //1D parallel_for_each, nontiled
 template <typename Kernel>
-__attribute__((noinline,used)) completion_future parallel_for_each(
-    const accelerator_view& av, const extent<1>& compute_domain, const Kernel& f) __CPU__ __HC__ {
+__attribute__((used))
+completion_future parallel_for_each(const accelerator_view& av,
+                                    const extent<1>& compute_domain,
+                                    const Kernel& f) __CPU__ __HC__
+{
 #if __KALMAR_ACCELERATOR__ != 1
   // silently return in case the any dimension of the extent is 0
   if (compute_domain[0] == 0)
@@ -7574,7 +7810,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   if (av.get_accelerator().get_device_path() == L"cpu") {
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
   }
-  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 1>(av.pQueue, &ext, NULL, f));
+  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 1>(av.queue_, &ext, NULL, f));
 #else //if __KALMAR_ACCELERATOR__ != 1
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -7589,8 +7825,11 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
 #pragma clang diagnostic ignored "-Wunused-variable"
 //2D parallel_for_each, nontiled
 template <typename Kernel>
-__attribute__((noinline,used)) completion_future parallel_for_each(
-    const accelerator_view& av, const extent<2>& compute_domain, const Kernel& f) __CPU__ __HC__ {
+__attribute__((used))
+completion_future parallel_for_each(const accelerator_view& av,
+                                    const extent<2>& compute_domain,
+                                    const Kernel& f) __CPU__ __HC__
+{
 #if __KALMAR_ACCELERATOR__ != 1
   // silently return in case the any dimension of the extent is 0
   if (compute_domain[0] == 0 || compute_domain[1] == 0)
@@ -7612,7 +7851,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   if (av.get_accelerator().get_device_path() == L"cpu") {
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
   }
-  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 2>(av.pQueue, ext, NULL, f));
+  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 2>(av.queue_, ext, NULL, f));
 #else //if __KALMAR_ACCELERATOR__ != 1
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -7627,8 +7866,11 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
 #pragma clang diagnostic ignored "-Wunused-variable"
 //3D parallel_for_each, nontiled
 template <typename Kernel>
-__attribute__((noinline,used)) completion_future parallel_for_each(
-    const accelerator_view& av, const extent<3>& compute_domain, const Kernel& f) __CPU__ __HC__ {
+__attribute__((used))
+completion_future parallel_for_each(const accelerator_view& av,
+                                    const extent<3>& compute_domain,
+                                    const Kernel& f) __CPU__ __HC__
+{
 #if __KALMAR_ACCELERATOR__ != 1
   // silently return in case the any dimension of the extent is 0
   if (compute_domain[0] == 0 || compute_domain[1] == 0 || compute_domain[2] == 0)
@@ -7653,7 +7895,7 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   if (av.get_accelerator().get_device_path() == L"cpu") {
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
   }
-  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 3>(av.pQueue, ext, NULL, f));
+  return completion_future(Kalmar::mcw_cxxamp_launch_kernel_async<Kernel, 3>(av.queue_, ext, NULL, f));
 #else //if __KALMAR_ACCELERATOR__ != 1
   //to ensure functor has right operator() defined
   //this triggers the trampoline code being emitted
@@ -7668,8 +7910,11 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
 #pragma clang diagnostic ignored "-Wunused-variable"
 //1D parallel_for_each, tiled
 template <typename Kernel>
-__attribute__((noinline,used)) completion_future parallel_for_each(
-    const accelerator_view& av, const tiled_extent<1>& compute_domain, const Kernel& f) __CPU__ __HC__ {
+__attribute__((used))
+completion_future parallel_for_each(const accelerator_view& av,
+                                    const tiled_extent<1>& compute_domain,
+                                    const Kernel& f) __CPU__ __HC__
+{
 #if __KALMAR_ACCELERATOR__ != 1
   // silently return in case the any dimension of the extent is 0
   if (compute_domain[0] == 0)
@@ -7689,8 +7934,8 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   if (av.get_accelerator().get_device_path() == L"cpu") {
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
   }
-  void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
-  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 1>(av.pQueue, &ext, &tile, f, kernel, compute_domain.get_dynamic_group_segment_size()));
+  void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.queue_, f);
+  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 1>(av.queue_, &ext, &tile, f, kernel, compute_domain.get_dynamic_group_segment_size()));
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index<1> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -7706,8 +7951,11 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
 #pragma clang diagnostic ignored "-Wunused-variable"
 //2D parallel_for_each, tiled
 template <typename Kernel>
-__attribute__((noinline,used)) completion_future parallel_for_each(
-    const accelerator_view& av, const tiled_extent<2>& compute_domain, const Kernel& f) __CPU__ __HC__ {
+__attribute__((used))
+completion_future parallel_for_each(const accelerator_view& av,
+                                    const tiled_extent<2>& compute_domain,
+                                    const Kernel& f) __CPU__ __HC__
+{
 #if __KALMAR_ACCELERATOR__ != 1
   // silently return in case the any dimension of the extent is 0
   if (compute_domain[0] == 0 || compute_domain[1] == 0)
@@ -7731,8 +7979,8 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   if (av.get_accelerator().get_device_path() == L"cpu") {
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
   }
-  void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
-  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 2>(av.pQueue, ext, tile, f, kernel, compute_domain.get_dynamic_group_segment_size()));
+  void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.queue_, f);
+  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 2>(av.queue_, ext, tile, f, kernel, compute_domain.get_dynamic_group_segment_size()));
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index<2> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
@@ -7748,8 +7996,11 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
 #pragma clang diagnostic ignored "-Wunused-variable"
 //3D parallel_for_each, tiled
 template <typename Kernel>
-__attribute__((noinline,used)) completion_future parallel_for_each(
-    const accelerator_view& av, const tiled_extent<3>& compute_domain, const Kernel& f) __CPU__ __HC__ {
+__attribute__((used))
+completion_future parallel_for_each(const accelerator_view& av,
+                                    const tiled_extent<3>& compute_domain,
+                                    const Kernel& f) __CPU__ __HC__
+{
 #if __KALMAR_ACCELERATOR__ != 1
   // silently return in case the any dimension of the extent is 0
   if (compute_domain[0] == 0 || compute_domain[1] == 0 || compute_domain[2] == 0)
@@ -7777,8 +8028,8 @@ __attribute__((noinline,used)) completion_future parallel_for_each(
   if (av.get_accelerator().get_device_path() == L"cpu") {
     throw runtime_exception(Kalmar::__errorMsg_UnsupportedAccelerator, E_FAIL);
   }
-  void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.pQueue, f);
-  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 3>(av.pQueue, ext, tile, f, kernel, compute_domain.get_dynamic_group_segment_size()));
+  void *kernel = Kalmar::mcw_cxxamp_get_kernel<Kernel>(av.queue_, f);
+  return completion_future(Kalmar::mcw_cxxamp_execute_kernel_with_dynamic_group_memory_async<Kernel, 3>(av.queue_, ext, tile, f, kernel, compute_domain.get_dynamic_group_segment_size()));
 #else //if __KALMAR_ACCELERATOR__ != 1
   tiled_index<3> this_is_used_to_instantiate_the_right_index;
   //to ensure functor has right operator() defined
