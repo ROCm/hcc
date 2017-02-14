@@ -49,6 +49,7 @@ int main(void) {
     ret &= test<ulong_1>();
     ret &= test<longlong_1>();
     ret &= test<ulonglong_1>();
+    ret &= test<half_1>();
 
     // scalar 2 types
     ret &= test<char_2>();
@@ -63,6 +64,7 @@ int main(void) {
     ret &= test<ulong_2>();
     ret &= test<longlong_2>();
     ret &= test<ulonglong_2>();
+    ret &= test<half_2>();
 
     // scalar 3 types
     ret &= test<char_3>();
@@ -76,6 +78,7 @@ int main(void) {
     ret &= test<long_3>();
     ret &= test<ulong_3>();
     ret &= test<longlong_3>();
+    ret &= test<half_3>();
 
     // scalar 4 types
     ret &= test<char_4>();
@@ -89,6 +92,7 @@ int main(void) {
     ret &= test<long_4>();
     ret &= test<ulong_4>();
     ret &= test<longlong_4>();
+    ret &= test<half_4>();
 
     // norm and unorm
     ret &= test_norm<norm>();
