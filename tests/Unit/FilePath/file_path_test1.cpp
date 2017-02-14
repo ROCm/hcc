@@ -1,4 +1,3 @@
-// XFAIL: Linux
 // RUN: mkdir -p "%T/foo bar"
 // RUN: cp %s "%T/foo bar"
 // RUN: %hc  "%T/foo bar"/`basename %s` -o %t.out && %t.out

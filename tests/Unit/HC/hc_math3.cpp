@@ -26,10 +26,12 @@ bool test() {
   std::default_random_engine gen(rd());
 
   // randomly produce input data
-  std::uniform_real_distribution<T> dis1(1, 10);
+  typedef typename std::conditional<(sizeof(T) > sizeof(float)), double, float>::type  _RangeTypeT;
+  std::uniform_real_distribution<_RangeTypeT> dis1(static_cast<_RangeTypeT>(1), static_cast<_RangeTypeT>(10));
   for (int i = 0; i < GRID_SIZE; ++i) table1[i] = dis1(gen);
 
-  std::uniform_real_distribution<Q> dis2(1, 10);
+  typedef typename std::conditional<(sizeof(Q) > sizeof(float)), double, float>::type  _RangeTypeQ;
+  std::uniform_real_distribution<_RangeTypeQ> dis2(static_cast<_RangeTypeQ>(1), static_cast<_RangeTypeQ>(10));
   for (int i = 0; i < GRID_SIZE; ++i) table2[i] = dis2(gen);
 
 #define TEST(func) \

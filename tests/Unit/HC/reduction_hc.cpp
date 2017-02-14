@@ -19,6 +19,7 @@
 #include <iostream>
 #include <numeric>
 #include <assert.h>
+#include <climits>
 
 using namespace hc;
 

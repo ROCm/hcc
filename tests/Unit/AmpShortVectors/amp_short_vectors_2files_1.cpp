@@ -19,8 +19,8 @@ void add(const array_view<float,1> &gbIn,const array_view<float_2,1> &gbOut)
 
 	if(me < 64)
 	{
-	  gbOut[me].set_x(gbIn[me]);
-	  gbOut[me].set_y(gbIn[me]);
+	  gbOut[me].x = gbIn[me];
+	  gbOut[me].y = gbIn[me];
 	}
 
    });
@@ -34,8 +34,8 @@ int main()
     for(int i = 0; i< 64;i++)
     {
       gbIn[i] = i + 1;
-      gbOut[i].set_x(i + 1);
-      gbOut[i].set_y(i + 1);
+      gbOut[i].x = i + 1;
+      gbOut[i].y = i + 1;
     }
     
     const Concurrency::array_view<float, 1> gbInA(64, gbIn);
@@ -72,8 +72,8 @@ void sub(const array_view<float,1> &gbIn,const array_view<float_2,1> &gbOut)
 
 	if(me < 64)
 	{
-	  gbOut[me].set_x(gbIn[me]);
-	  gbOut[me].set_y(gbIn[me]);
+	  gbOut[me].x = gbIn[me];
+	  gbOut[me].y = gbIn[me];
 	}
 
    });

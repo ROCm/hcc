@@ -1,4 +1,4 @@
-cmake_minimum_required( VERSION 2.8 )
+cmake_minimum_required( VERSION 3.0 )
 project (HCC)
 
 SET(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/scripts/cmake")
@@ -14,9 +14,9 @@ IF (NOT NUM_BUILD_THREADS)
   ProcessorCount(NUM_BUILD_THREADS)
 ENDIF(NOT NUM_BUILD_THREADS)
 
-# Accepted values for DISTRO: ubuntu, fedora
+# Accepted values for DISTRO: trusty (Ubuntu 14.04), xenial (Ubuntu 16.06), fd23 (Fedora 23)
 IF (NOT DISTRO)
-  SET(DISTRO "ubuntu")
+  SET(DISTRO "trusty")
 ENDIF(NOT DISTRO)
 MESSAGE("Distro: ${DISTRO}")
 
@@ -64,26 +64,48 @@ LINK_DIRECTORIES( ${LLVM_LIB_DIR} )
 # ROCm external dependencies
 set (ROCM_ROOT "/opt/rocm" CACHE PATH "ROCM runtime path")
 
-find_path(HSA_HEADER hsa/hsa.h PATHS ${HSA_HEADER_DIR} ${ROCM_ROOT}/include NO_DEFAULT_PATH)
-find_path(HSA_HEADER hsa/hsa.h)
+find_path(HSA_HEADER hsa/hsa.h 
+  HINTS 
+    ${HSA_HEADER_DIR} 
+  PATHS
+    ${ROCM_ROOT}/include
+)
 
 if (NOT HSA_HEADER)
-  MESSAGE("HSA header not found. Use -DHSA_HEADER_DIR=<path_to_hsa.h>.")
+  MESSAGE("HSA header not found. Use -DHSA_HEADER=<path_to_hsa.h>.")
 endif (NOT HSA_HEADER)
 
-find_library(HSA_LIBRARY hsa-runtime64 PATHS ${HSA_LIBRARY_DIR} ${ROCM_ROOT}/lib NO_DEFAULT_PATH)
-find_library(HSA_LIBRARY hsa-runtime64)
+find_library(HSA_LIBRARY hsa-runtime64 
+  HINTS 
+    ${HSA_LIBRARY_DIR} 
+  PATHS
+    ${ROCM_ROOT}/lib
+)
 
 if (NOT HSA_LIBRARY)
-  MESSAGE("HSA runtime library not found. Use -DHSA_LIBRARY_DIR=<path_to_libhsa-runtime64.so>.")
+  MESSAGE("HSA runtime library not found. Use -DHSA_LIBRARY=<path_to_libhsa-runtime64.so>.")
 endif (NOT HSA_LIBRARY)
 
-find_path(ROCM_DEVICE_LIB ocml.amdgcn.bc PATHS ${ROCM_DEVICE_LIB_DIR} ${ROCM_ROOT}/lib NO_DEFAULT_PATH)
-find_path(ROCM_DEVICE_LIB ocml.amdgcn.bc)
+
+################
+# Detect ROCm Device Libs
+################
+
+find_path(ROCM_DEVICE_LIB ocml.amdgcn.bc
+  PATH_SUFFIXES
+    lib
+  HINTS 
+    ${ROCM_DEVICE_LIB_DIR} 
+  PATHS
+    ${ROCM_ROOT}/lib
+)
 
 if (NOT ROCM_DEVICE_LIB)
-  MESSAGE("ROCM Device Lib not found. Use -DROCM_DEVICE_LIB_DIR=<path_to_ocml.amdgcn.bc>.")
+  MESSAGE(FATAL_ERROR "ROCm Device Libs not found. Use -DROCM_DEVICE_LIB=<path_to_ocml.amdgcn.bc>.")
 endif (NOT ROCM_DEVICE_LIB)
+
+set(ROCM_DEVICE_LIB_PATHS ${ROCM_DEVICE_LIB})
+list(APPEND ROCM_DEVICE_LIB_PATHS ${ROCM_DEVICE_LIB_DIR} ${ROCM_ROOT}/lib)
 
 # display ROCm information
 MESSAGE("")
@@ -121,10 +143,25 @@ MESSAGE("")
 endif (USE_CODEXL_ACTIVITY_LOGGER EQUAL 1)
 
 #################
-# Detect libc++
+# Configure which C++ runtime to use
+# hcc will use libc++ if USE_LIBCXX is set to ON; otherwise, it will use libstdc++
 #################
-find_path(LIBCXX_HEADER random PATHS /usr/local/include/c++/v1 /usr/include/c++/v1 NO_DEFAULT_PATH)
-MESSAGE("libc++ headers found at ${LIBCXX_HEADER}")
+
+# if USE_LIBCXX is not set, then pick the C++ runtime based on the distro
+IF (NOT USE_LIBCXX)
+  IF (DISTRO STREQUAL "trusty")
+    SET(USE_LIBCXX "ON")
+  ELSE()
+    SET(USE_LIBCXX "OFF")
+  ENDIF()
+ENDIF(NOT USE_LIBCXX)
+
+# Detect libc++
+if (USE_LIBCXX)
+  find_path(LIBCXX_HEADER random PATHS /usr/local/include/c++/v1 /usr/include/c++/v1 NO_DEFAULT_PATH)
+  MESSAGE("libc++ headers found at ${LIBCXX_HEADER}")
+endif (USE_LIBCXX)
+
 
 #################
 # Set up version information
@@ -309,6 +346,7 @@ install(DIRECTORY ${CLANG_BIN_DIR}/lib
         PATTERN *inc EXCLUDE
         PATTERN Makefile EXCLUDE
         PATTERN *.cmake EXCLUDE
+        PATTERN *.a EXCLUDE
         PATTERN lib*
         PATTERN LLVM*
         PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
@@ -335,6 +373,7 @@ add_subdirectory(tests)
 add_subdirectory(include)
 add_subdirectory(amp-conformance)
 add_subdirectory(stl-test)
+add_subdirectory(cmake-tests)
 
 # create a "hcc" symlink in the include directory
 # that points to itself so we could support
@@ -380,14 +419,15 @@ set(CPACK_PACKAGE_VERSION "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}.${KAL
 set(CPACK_PACKAGE_VERSION_MAJOR ${KALMAR_VERSION_MAJOR})
 set(CPACK_PACKAGE_VERSION_MINOR ${KALMAR_VERSION_MINOR})
 set(CPACK_PACKAGE_VERSION_PATCH ${KALMAR_VERSION_PATCH})
-set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_SYSTEM_NAME})
+set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${DISTRO})
 
 
 set(PACKAGE_DESCRIPTION "HCC: An Open Source, Optimizing C++ Compiler for Heterogeneous Compute")
 
 set(OFFICIAL_RELEASE_BUILD 0)
 
-if ("${DISTRO}" STREQUAL "ubuntu")
+if ("${DISTRO}" STREQUAL "trusty"
+  OR "${DISTRO}" STREQUAL "xenial")
 
   set(CPACK_DEBIAN_PACKAGE_DESCRIPTION ${PACKAGE_DESCRIPTION})
   set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Siu Chi Chan <siuchi.chan@amd.com>")
@@ -408,25 +448,24 @@ if ("${DISTRO}" STREQUAL "ubuntu")
     set(CPACK_DEBIAN_PACKAGE_DEPENDS "${HCC_GENERAL_DEBIAN_DEP}")
   endif (OFFICIAL_RELEASE_BUILD)
 
-  set(CPACK_GENERATOR "DEB;TGZ")
-
-elseif ("${DISTRO}" STREQUAL "fedora")
+  set(CPACK_GENERATOR "DEB")
+  set(CPACK_BINARY_DEB "ON")
+elseif ("${DISTRO}" STREQUAL "fd23")
 
   set(CPACK_RPM_PACKAGE_DESCRIPTION ${PACKAGE_DESCRIPTION})
-
   set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/postinst")
   set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/prerm")
 
   # disable automatic shared libraries dependency detection
   set(CPACK_RPM_PACKAGE_AUTOREQ 0)
   set(CPACK_RPM_PACKAGE_REQUIRES "hsakmt-roct-dev, hsa-rocr-dev, rocm-device-libs, libstdc++-devel, elfutils-libelf-devel, glibc-devel")
-  set(CPACK_GENERATOR "RPM;TGZ")
-
-endif ("${DISTRO}" STREQUAL "ubuntu")
-
+  set(CPACK_GENERATOR "RPM")
+else()
+  # generate a tarball for unknown distro
+  set(CPACK_GENERATOR "TGZ")
+endif ()
 
 set(CPACK_SOURCE_GENERATOR "TGZ")
-set(CPACK_BINARY_DEB "ON")
 set(CPACK_BINARY_STGZ "OFF")
 set(CPACK_SOURCE_TGZ "OFF")
 set(CPACK_SOURCE_TZ "OFF")

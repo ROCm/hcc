@@ -8,6 +8,7 @@
 #include <iostream>
 #include <string>
 #include <cassert>
+#include <cstddef>
 #include <tuple>
 
 #include <amp.h>
@@ -272,8 +273,8 @@ inline void DetermineAndGetProgram(KalmarQueue* pQueue, size_t* kernel_size, voi
   // walk through bundle header
   // get bundle file size
   size_t bundle_size =
-    (ptrdiff_t)((void *)kernel_bundle_end) -
-    (ptrdiff_t)((void *)kernel_bundle_source);
+    (std::ptrdiff_t)((void *)kernel_bundle_end) -
+    (std::ptrdiff_t)((void *)kernel_bundle_source);
 
   // point to bundle file data
   const char *data = (const char *)kernel_bundle_source;

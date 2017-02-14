@@ -1,4 +1,7 @@
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/amp_test_lib/inc ${LIBCXX_HEADER})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/amp_test_lib/inc)
+if (USE_LIBCXX)
+  include_directories(${LIBCXX_HEADER})
+endif(USE_LIBCXX)
 
 add_mcwamp_library(amptest
 amp_test_lib/src/context.cpp amp_test_lib/src/device.cpp amp_test_lib/src/logging.cpp

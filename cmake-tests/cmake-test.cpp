@@ -1,15 +1,9 @@
-// RUN: mkdir -p "%T/foo bar"
-// RUN: cp "%s" "%T/foo bar"
-// RUN: %hc -DSTATIC_LIB "%T/foo bar/`basename "%s"`"  -c -o %t.o
-// RUN: ar rcs "%T/foo bar/libfile_path_test3.a" %t.o
-// RUN: %hc %s -L"%T/foo bar/" -lfile_path_test3 -o %t.out && %t.out
 
-#include <cstdio>
 #include <hc.hpp>
-
-extern "C" int sum(hc::array_view<int,1>& input);
-
-#ifdef STATIC_LIB
+#include <hc_am.hpp>
+#include <iostream>
+#include <string>
+#include <cmath>
 
 int sum(hc::array_view<int,1>& input) {
 
@@ -28,19 +22,23 @@ int sum(hc::array_view<int,1>& input) {
   return s[0];
 }
 
-#else
-
 int main() {
+
+  auto acc = hc::accelerator();
+  int* data1_d = (int*)hc::am_alloc(256*sizeof(int), acc, 0);
 
   hc::array_view<int,1> av(64);
   for (int i = 0;i < 64; i++)
     av[i] = i;
 
-  int s = sum(av);
+  int s = std::sqrt(sum(av));
+
+  std::string ss = std::to_string(s);
+  std::cout << "sum: " << ss << std::endl;
 
  // printf("sum: %d\n",s);
 
+  hc::am_free(data1_d);
+
   return !(s==2016);
 }
-
-#endif

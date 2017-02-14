@@ -112,12 +112,28 @@ done
 for ARG in "$@"
 do
 
-  ######################
-  # Parse AMDGPU target
-  ######################
   case $ARG in
+    ######################
+    # Parse AMDGPU target
+    ######################
     --amdgpu-target=*)
     AMDGPU_TARGET_ARRAY+=("${ARG#*=}")
+    continue
+    ;;
+    ################################################
+    # Parse dump options and export them for called
+    # scripts e.g. clamp-device
+    ################################################
+    -dump-isa)
+    export KMDUMPISA=1
+    continue
+    ;;
+    -dump-llvm)
+    export KMDUMPLLVM=1
+    continue
+    ;;
+    -dump-dir=*)
+    export KMDUMPDIR="${ARG#*=}"
     continue
     ;;
   esac

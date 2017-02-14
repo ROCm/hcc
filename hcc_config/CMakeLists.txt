@@ -6,7 +6,11 @@ endif (HCC_RUNTIME_DEBUG)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/../hcc_config)
 
 set(CMAKE_CXX_FLAGS "-std=c++11" )
-add_definitions(-DLIBCXX_HEADER=${LIBCXX_HEADER}) 
+
+if (USE_LIBCXX)
+  add_definitions(-DUSE_LIBCXX  -DLIBCXX_HEADER=${LIBCXX_HEADER}) 
+endif (USE_LIBCXX)
+
 
 ####################
 # CodeXL Activity Logger

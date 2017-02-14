@@ -242,10 +242,15 @@ public:
      * commands that were submitted prior to the marker event creation have
      * completed, the future is ready.
      *
+     * Regardless of the accelerator_view's execute_order (execute_any_order, execute_in_order), 
+     * the marker always ensures older commands complete before the returned completion_future
+     * is marked ready.   Thus, markers provide a mechanism to enforce order between
+     * commands in an execute_any_order accelerator_view.
+     *
      * @return A future which can be waited on, and will block until the
      *         current batch of commands has completed.
      */
-    completion_future create_marker() const;
+    completion_future create_marker(memory_scope scope=system_scope) const;
 
     /**
      * This command inserts a marker event into the accelerator_view's command
@@ -255,25 +260,56 @@ public:
      * dependent event and all commands submitted prior to the marker event
      * creation have been completed, the future is ready.
      *
+     * Regardless of the accelerator_view's execute_order (execute_any_order, execute_in_order), 
+     * the marker always ensures older commands complete before the returned completion_future
+     * is marked ready.   Thus, markers provide a mechanism to enforce order between
+     * commands in an execute_any_order accelerator_view.
+     *
      * @return A future which can be waited on, and will block until the
      *         current batch of commands, plus the dependent event have
      *         been completed.
      */
-    completion_future create_blocking_marker(completion_future& dependent_future) const;
+    completion_future create_blocking_marker(completion_future& dependent_future, memory_scope scope=system_scope) const;
 
     /**
      * This command inserts a marker event into the accelerator_view's command
      * queue with arbitrary number of dependent asynchronous events.
      *
      * This marker is returned as a completion_future object. When its
-     * dependent event and all commands submitted prior to the marker event
-     * creation have been completed, the future is ready.
+     * dependent events and all commands submitted prior to the marker event
+     * creation have been completed, the completion_future is ready.
+     *
+     * Regardless of the accelerator_view's execute_order (execute_any_order, execute_in_order), 
+     * the marker always ensures older commands complete before the returned completion_future
+     * is marked ready.   Thus, markers provide a mechanism to enforce order between
+     * commands in an execute_any_order accelerator_view.
      *
      * @return A future which can be waited on, and will block until the
      *         current batch of commands, plus the dependent event have
      *         been completed.
      */
-    completion_future create_blocking_marker(std::initializer_list<completion_future> dependent_future_list) const;
+    completion_future create_blocking_marker(std::initializer_list<completion_future> dependent_future_list, memory_scope scope=system_scope) const;
+
+
+    /**
+     * This command inserts a marker event into the accelerator_view's command
+     * queue with arbitrary number of dependent asynchronous events.
+     *
+     * This marker is returned as a completion_future object. When its
+     * dependent events and all commands submitted prior to the marker event
+     * creation have been completed, the completion_future is ready.
+     *
+     * Regardless of the accelerator_view's execute_order (execute_any_order, execute_in_order), 
+     * the marker always ensures older commands complete before the returned completion_future
+     * is marked ready.   Thus, markers provide a mechanism to enforce order between
+     * commands in an execute_any_order accelerator_view.
+     *
+     * @return A future which can be waited on, and will block until the
+     *         current batch of commands, plus the dependent event have
+     *         been completed.
+     */
+    template<typename InputIterator>
+    completion_future create_blocking_marker(InputIterator first, InputIterator last, memory_scope scope) const;
 
     /**
      * Copies size_bytes bytes from src to dst.  
@@ -310,10 +346,13 @@ public:
      * Src and dst must not overlap.  
      * Note the src is the first parameter and dst is second, following C++ convention.  
      * This is an asynchronous copy command, and this call may return before the copy operation completes.
+     * If the source or dest is host memory, the memory must be pinned or a runtime exception will be thrown.
+     * Pinned memory can be created with am_alloc with flag=amHostPinned flag.
      *
      * The copy command will be implicitly ordered with respect to commands previously equeued to this accelerator_view:
-     * - If the queue execute_order is execute_in_order (the default), then the copy will execute after all previously sent commands finish execution.
-     * - If the queue execute_order is execute_any_order, then the copy will start after all previously send commands start but can execute in any order.
+     * - If the accelerator_view execute_order is execute_in_order (the default), then the copy will execute after all previously sent commands finish execution.
+     * - If the accelerator_view execute_order is execute_any_order, then the copy will start after all previously send commands start but can execute in any order.
+     *
      *
      */
     completion_future copy_async(const void *src, void *dst, size_t size_bytes);
@@ -324,10 +363,12 @@ public:
      * Src and dst must not overlap.  
      * Note the src is the first parameter and dst is second, following C++ convention.  
      * This is an asynchronous copy command, and this call may return before the copy operation completes.
+     * If the source or dest is host memory, the memory must be pinned or a runtime exception will be thrown.
+     * Pinned memory can be created with am_alloc with flag=amHostPinned flag.
      *
      * The copy command will be implicitly ordered with respect to commands previously enqueued to this accelerator_view:
-     * - If the queue execute_order is execute_in_order (the default), then the copy will execute after all previously sent commands finish execution.
-     * - If the queue execute_order is execute_any_order, then the copy will start after all previously send commands start but can execute in any order.
+     * - If the accelerator_view execute_order is execute_in_order (the default), then the copy will execute after all previously sent commands finish execution.
+     * - If the accelerator_view execute_order is execute_any_order, then the copy will start after all previously send commands start but can execute in any order.
      *   The copyAcc determines where the copy is executed and does not affect the ordering.
      *
      * The copy_async_ext flavor allows caller to provide additional information about each pointer, which can improve performance by eliminating replicated lookups,
@@ -379,11 +420,21 @@ public:
      * Returns the number of pending asynchronous operations on this
      * accelerator view.
      *
-     * The number returned would be immediately obsolete. This functions shall
-     * only be used for testing and debugging purpose.
+     * Care must be taken to use this API in a thread-safe manner,
      */
     int get_pending_async_ops() {
         return pQueue->getPendingAsyncOps();
+    }
+
+    /**
+     * Returns true if the accelerator_view is currently empty.
+     *
+     * Care must be taken to use this API in a thread-safe manner.
+     * As the accelerator completes work, the queue may become empty
+     * after this function returns false;
+     */
+    bool get_is_empty() {
+        return pQueue->isEmpty();
     }
 
     /**
@@ -536,7 +587,7 @@ public:
      *        the extra elements are ignored.
      *        It is user's responsibility to make sure the input is meaningful.
      *
-     * @return a bool variable to indicate if the setting is successful.
+     * @return true if operations succeeds or false if not.
      *
      */
      bool set_cu_mask(const std::vector<bool>& cu_mask) {
@@ -600,9 +651,6 @@ private:
     template <typename Kernel> friend
         completion_future parallel_for_each(const accelerator_view&, const tiled_extent<1>&, const Kernel&);
 
-    // private member function template to create a marker from iterators
-    template<typename InputIterator>
-    completion_future create_blocking_marker(InputIterator first, InputIterator last) const;
 
 #if __KALMAR_ACCELERATOR__ == 2 || __KALMAR_CPU__ == 2
 public:
@@ -1378,19 +1426,19 @@ inline accelerator
 accelerator_view::get_accelerator() const { return pQueue->getDev(); }
 
 inline completion_future
-accelerator_view::create_marker() const {
-    return completion_future(pQueue->EnqueueMarker());
+accelerator_view::create_marker(memory_scope scope) const {
+    return completion_future(pQueue->EnqueueMarker(scope));
 }
 
 inline unsigned int accelerator_view::get_version() const { return get_accelerator().get_version(); }
 
-inline completion_future accelerator_view::create_blocking_marker(completion_future& dependent_future) const {
-    return completion_future(pQueue->EnqueueMarkerWithDependency(dependent_future.__asyncOp));
+inline completion_future accelerator_view::create_blocking_marker(completion_future& dependent_future, memory_scope scope) const {
+    return completion_future(pQueue->EnqueueMarkerWithDependency(dependent_future.__asyncOp, scope));
 }
 
 template<typename InputIterator>
 inline completion_future
-accelerator_view::create_blocking_marker(InputIterator first, InputIterator last) const {
+accelerator_view::create_blocking_marker(InputIterator first, InputIterator last, memory_scope scope) const {
     bool atLeastOne = false; // have we sent at least one marker
     int cnt = 0;
     std::shared_ptr<Kalmar::KalmarAsyncOp> deps[5]; // array of 5 pointers to the native handle of async ops. 5 is the max supported by barrier packet
@@ -1404,21 +1452,21 @@ accelerator_view::create_blocking_marker(InputIterator first, InputIterator last
         deps[cnt++] = iter->__asyncOp; // retrieve async op associated with completion_future
         if (cnt == 5) {
             atLeastOne = true;
-            lastMarker = completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps));
+            lastMarker = completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, scope));
             cnt = 0;
         }
     }
 
     if (cnt || !atLeastOne) {
-        lastMarker = completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps));
+        lastMarker = completion_future(pQueue->EnqueueMarkerWithDependency(cnt, deps, scope));
     }
 
     return lastMarker;
 }
 
 inline completion_future
-accelerator_view::create_blocking_marker(std::initializer_list<completion_future> dependent_future_list) const {
-    return create_blocking_marker(dependent_future_list.begin(), dependent_future_list.end());
+accelerator_view::create_blocking_marker(std::initializer_list<completion_future> dependent_future_list, memory_scope scope) const {
+    return create_blocking_marker(dependent_future_list.begin(), dependent_future_list.end(), scope);
 }
 
 
@@ -2729,15 +2777,6 @@ inline int __lane_id(void) [[hc]] {
   return __amdgcn_mbcnt_hi(-1, lo);
 }
 
-#elif __hcc_backend__==HCC_BACKEND_HSAIL
-
-extern "C" __attribute__((const)) unsigned int __hsail_get_lane_id(void) __HC__;
-
-// returns the lane ID within a wavefront
-inline int __lane_id(void) [[hc]] {
-  return __hsail_get_lane_id();
-}
-
 #endif
 
 #if __hcc_backend__==HCC_BACKEND_AMDGPU
@@ -2893,22 +2932,6 @@ inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__
   return __amdgcn_ds_bpermute(index<<2, var);
 }
 
-#elif __hcc_backend__==HCC_BACKEND_HSAIL
-
-inline int __shfl(int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-    switch (width) {
-      case 64:
-        return __hsail_activelanepermute_b32(var,srcLane&63, 0, 0);
-      default: {
-        unsigned int ulane = (unsigned int)srcLane;
-        unsigned int uwidth = (unsigned int)width;
-        unsigned int laneId = __lane_id();
-        unsigned int newSrcLane = (laneId&((unsigned int)0xFFFFFFFF-(uwidth-1))) + (ulane&(uwidth-1));
-        return __hsail_activelanepermute_b32(var,newSrcLane, 0, 0);
-      }
-   };
-}
-
 #endif
 
 inline unsigned int __shfl(unsigned int var, int srcLane, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
@@ -2958,19 +2981,6 @@ inline int __shfl_up(int var, const unsigned int delta, const int width=__HSA_WA
   return __amdgcn_ds_bpermute(index<<2, var);
 }
 
-#elif __hcc_backend__==HCC_BACKEND_HSAIL
-
-inline int __shfl_up(int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-    if (delta == 1 
-        && width == __HSA_WAVEFRONT_SIZE__) {
-        return __wavefront_shift_right(var);
-    }
-    else {
-        int laneId = __lane_id();
-        int newSrcLane = laneId - delta;
-        return __hsail_activelanepermute_b32(var, newSrcLane, var, newSrcLane < (laneId&(~(width-1))));
-    }
-}
 #endif
 
 inline unsigned int __shfl_up(unsigned int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
@@ -3020,20 +3030,6 @@ inline int __shfl_down(int var, const unsigned int delta, const int width=__HSA_
   return __amdgcn_ds_bpermute(index<<2, var);
 }
 
-#elif __hcc_backend__==HCC_BACKEND_HSAIL
-
-inline int __shfl_down(int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-    if (delta == 1
-        && width == __HSA_WAVEFRONT_SIZE__) {
-        return __wavefront_shift_left(var);
-    }
-    else {
-        unsigned int laneId = __lane_id();
-        unsigned int newSrcLane = laneId + delta;
-        return __hsail_activelanepermute_b32(var, newSrcLane, var, newSrcLane >= ((laneId&(~(width-1))) + width ));
-    }
-}
-
 #endif
 
 inline unsigned int __shfl_down(unsigned int var, const unsigned int delta, const int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
@@ -3078,17 +3074,6 @@ inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) _
   int index = self^laneMask;
   index = index >= ((self+width)&~(width-1))?self:index;
   return __amdgcn_ds_bpermute(index<<2, var);
-}
-
-
-#elif __hcc_backend__==HCC_BACKEND_HSAIL
-
-
-inline int __shfl_xor(int var, int laneMask, int width=__HSA_WAVEFRONT_SIZE__) __HC__ {
-    int self = __lane_id();
-    int index = self^laneMask;
-    index = index >= ((self+width)&~(width-1))?self:index;
-    return __hsail_activelanepermute_b32(var, index, 0, 0);
 }
 
 #endif

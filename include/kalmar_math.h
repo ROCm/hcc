@@ -502,7 +502,7 @@ namespace fast_math {
     #endif
   }
 
-  inline int host_isfinite(float x) restrict(cpu) { return ::isfinite(x); }
+  inline int host_isfinite(float x) restrict(cpu) { return std::isfinite(x); }
   inline int isfinite(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_isfinite(x);
@@ -511,7 +511,7 @@ namespace fast_math {
     #endif
   }
 
-  inline int host_isinf(float x) restrict(cpu) { return ::isinf(x); }
+  inline int host_isinf(float x) restrict(cpu) { return std::isinf(x); }
   inline int isinf(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_isinf(x);
@@ -520,7 +520,7 @@ namespace fast_math {
     #endif
   }
 
-  inline int host_isnan(float x) restrict(cpu) { return ::isnan(x); }
+  inline int host_isnan(float x) restrict(cpu) { return std::isnan(x); }
   inline int isnan(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_isnan(x);
@@ -675,7 +675,7 @@ namespace fast_math {
     #endif
   }
 
-  inline int host_signbitf(float x) restrict(cpu) { return ::signbit(x); }
+  inline int host_signbitf(float x) restrict(cpu) { return std::signbit(x); }
   inline int signbitf(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_signbit(x);
@@ -684,7 +684,7 @@ namespace fast_math {
     #endif
   }
 
-  inline int host_signbit(float x) restrict(cpu) { return ::signbit(x); }
+  inline int host_signbit(float x) restrict(cpu) { return std::signbit(x); }
   inline int signbit(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_signbit(x);
@@ -1661,7 +1661,7 @@ namespace fast_math {
     #endif
   }
 
-  inline int host_isfinite(float x) restrict(cpu) { return ::isfinite(x); }
+  inline int host_isfinite(float x) restrict(cpu) { return std::isfinite(x); }
   inline int isfinite(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_isfinite(x);
@@ -1670,7 +1670,7 @@ namespace fast_math {
     #endif
   }
 
-  inline int host_isfinite(double x) restrict(cpu) { return ::isfinite(x); }
+  inline int host_isfinite(double x) restrict(cpu) { return std::isfinite(x); }
   inline int isfinite(double x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_isfinite_double(x);
@@ -1679,7 +1679,7 @@ namespace fast_math {
     #endif
   }
 
-  inline int host_isinf(float x) restrict(cpu) { return ::isinf(x); }
+  inline int host_isinf(float x) restrict(cpu) { return std::isinf(x); }
   inline int isinf(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_isinf(x);
@@ -1688,7 +1688,7 @@ namespace fast_math {
     #endif
   }
 
-  inline int host_isinf(double x) restrict(cpu) { return ::isinf(x); }
+  inline int host_isinf(double x) restrict(cpu) { return std::isinf(x); }
   inline int isinf(double x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_isinf_double(x);
@@ -1697,7 +1697,7 @@ namespace fast_math {
     #endif
   }
 
-  inline int host_isnan(float x) restrict(cpu) { return ::isnan(x); }
+  inline int host_isnan(float x) restrict(cpu) { return std::isnan(x); }
   inline int isnan(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_isnan(x);
@@ -1706,7 +1706,7 @@ namespace fast_math {
     #endif
   }
 
-  inline int host_isnan(double x) restrict(cpu) { return ::isnan(x); }
+  inline int host_isnan(double x) restrict(cpu) { return std::isnan(x); }
   inline int isnan(double x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_isnan_double(x);
@@ -1715,7 +1715,7 @@ namespace fast_math {
     #endif
   }
 
-  inline int host_isnormal(float x) restrict(cpu) { return ::isnormal(x); }
+  inline int host_isnormal(float x) restrict(cpu) { return std::isnormal(x); }
   inline int isnormal(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_isnormal(x);
@@ -1724,7 +1724,7 @@ namespace fast_math {
     #endif
   }
 
-  inline int host_isnormal(double x) restrict(cpu) { return ::isnormal(x); }
+  inline int host_isnormal(double x) restrict(cpu) { return std::isnormal(x); }
   inline int isnormal(double x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_isnormal_double(x);
@@ -2272,7 +2272,7 @@ namespace fast_math {
     #endif
   }
 
-  inline int host_signbitf(float x) restrict(cpu) { return ::signbit(x); }
+  inline int host_signbitf(float x) restrict(cpu) { return std::signbit(x); }
   inline int signbitf(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_signbit(x);
@@ -2281,7 +2281,7 @@ namespace fast_math {
     #endif
   }
 
-  inline int host_signbit(float x) restrict(cpu) { return ::signbit(x); }
+  inline int host_signbit(float x) restrict(cpu) { return std::signbit(x); }
   inline int signbit(float x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_signbit(x);
@@ -2290,7 +2290,7 @@ namespace fast_math {
     #endif
   }
 
-  inline int host_signbit(double x) restrict(cpu) { return ::signbit(x); }
+  inline int host_signbit(double x) restrict(cpu) { return std::signbit(x); }
   inline int signbit(double x) restrict(amp, cpu) {
     #if __KALMAR_ACCELERATOR__ == 1
       return __hc_signbit_double(x);
