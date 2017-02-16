@@ -4027,9 +4027,9 @@ hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, cons
      *  
      *  Decide which copy agent to use : 
      *   
-     *   1. Pick source agent as long as the src agent is a GPU (regardless of the dst agent).
-     *   2. Pick destination agent only if the dst agent is a GPU. 
-     *   3. If both src and dst agents are CPUs, launch a thread to perform memcpy.
+     *   1. Pick source agent if src agent is a GPU (regardless of the dst agent).
+     *   2. Pick destination agent if src argent is not a GPU, and the dst agent is a GPU. 
+     *   3. If both src and dst agents are CPUs, launch a CPU thread to perform memcpy. Will wait on host for dependent signals to resolve.
      *    
      *    Decide which DMA engine on the copy agent to use :
      *     
