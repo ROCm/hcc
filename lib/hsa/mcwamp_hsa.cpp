@@ -509,7 +509,7 @@ public:
 
 
 private:
-  hsa_status_t hcc_memory_async_copy(const Kalmar::HSADevice *copyDevice, void *dst, const void *src, size_t sizeBytes,
+  hsa_status_t hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, const Kalmar::HSADevice *copyDevice, void *dst, const void *src, size_t sizeBytes,
                                       int depSignalCnt, const hsa_signal_t *depSignals,
                                       hsa_signal_t completion_signal);
 
@@ -3982,7 +3982,7 @@ HSACopy::waitComplete() {
 
 // Small wrapper that calls hsa_amd_memory_async_copy.
 // HCC knows exactly which copy-engine it wants to perfom the copy and has already made.
-hsa_status_t HSACopy::hcc_memory_async_copy(const Kalmar::HSADevice *copyDeviceArg, void *dst, const void *src, size_t sizeBytes,
+hsa_status_t HSACopy::hcc_memory_async_copy(Kalmar::hcCommandKind copyKind, const Kalmar::HSADevice *copyDeviceArg, void *dst, const void *src, size_t sizeBytes,
                       int depSignalCnt, const hsa_signal_t *depSignals,
                       hsa_signal_t completion_signal)
 {
@@ -4000,11 +4000,46 @@ hsa_status_t HSACopy::hcc_memory_async_copy(const Kalmar::HSADevice *copyDeviceA
         throw Kalmar::runtime_exception("copy agent must be GPU hcc_memory_async_copy", -1);
     }
 
-    // Pass same copy agent for source and device so we have control over the copy engine.
-    // The runtime will always pick the srcAgent if it is a GPU (which we checked above), and
-    // if at least on of the pointers is in device memory. (caller should ensure this is true).
+    hsa_agent_t hostAgent = const_cast<Kalmar::HSADevice *> (copyDeviceArg)->getHostAgent();
 
-    status = hsa_amd_memory_async_copy(dst, copyAgent, src, copyAgent, sizeBytes, depSignalCnt, depSignals, completion_signal);
+
+    hsa_agent_t srcAgent, dstAgent;
+    switch (copyKind) {
+        case Kalmar::hcMemcpyHostToHost: 
+            srcAgent=hostAgent; dstAgent=hostAgent;
+            //throw Kalmar::runtime_exception("HCC should not use hsa_memory_async_copy for host-to-host copy");
+            break;
+        case Kalmar::hcMemcpyHostToDevice: 
+            srcAgent=hostAgent; dstAgent=copyAgent;
+            break;
+        case Kalmar::hcMemcpyDeviceToHost: 
+            srcAgent=copyAgent; dstAgent=hostAgent;
+            break;
+        case Kalmar::hcMemcpyDeviceToDevice: 
+            srcAgent=copyAgent; dstAgent=copyAgent;
+            break;
+        default:
+            throw Kalmar::runtime_exception("bad copyKind in hcc_memory_async_copy", copyKind);
+    };
+
+
+    /* ROCR logic to select the copy agent:
+     *  
+     *  Decide which copy agent to use : 
+     *   
+     *   1. Pick source agent as long as the src agent is a GPU (regardless of the dst agent).
+     *   2. Pick destination agent only if the dst agent is a GPU. 
+     *   3. If both src and dst agents are CPUs, launch a thread to perform memcpy.
+     *    
+     *    Decide which DMA engine on the copy agent to use :
+     *     
+     *     1.   Use SDMA, if the src agent is a CPU AND dst agent is a GPU.
+     *     2.   Use SDMA, if the src agent is a GPU AND dst agent is a CPU. 
+     *     3.   Launch a Blit kernel if the src agent is a GPU AND dst agent is a GPU.
+     */
+
+
+    status = hsa_amd_memory_async_copy(dst, dstAgent, src, srcAgent, sizeBytes, depSignalCnt, depSignals, completion_signal);
     if (status != HSA_STATUS_SUCCESS) {
         throw Kalmar::runtime_exception("hsa_amd_memory_async_copy error", status);
     }
@@ -4078,7 +4113,7 @@ HSACopy::enqueueAsyncCopyCommand(Kalmar::HSAQueue* hsaQueue, const Kalmar::HSADe
                       << "\n");
         }
 
-        hcc_memory_async_copy(copyDevice, dst, src, sizeBytes, depSignalCnt, depSignalCnt ? &depSignal:NULL, signal);
+        hcc_memory_async_copy(getCommandKind(), copyDevice, dst, src, sizeBytes, depSignalCnt, depSignalCnt ? &depSignal:NULL, signal);
     }
 
     isSubmitted = true;
@@ -4246,7 +4281,7 @@ HSACopy::syncCopyExt(Kalmar::HSAQueue *hsaQueue, hc::hcCommandKind copyDir, cons
         }
 
 
-        hsa_status_t hsa_status = hcc_memory_async_copy(copyDevice, dst, src, sizeBytes, depSignalCnt, depSignalCnt ? &depSignal:NULL, signal);
+        hsa_status_t hsa_status = hcc_memory_async_copy(copyDir, copyDevice, dst, src, sizeBytes, depSignalCnt, depSignalCnt ? &depSignal:NULL, signal);
 
         if (hsa_status == HSA_STATUS_SUCCESS) {
 #if KALMAR_DEBUG
