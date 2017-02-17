@@ -14,11 +14,28 @@ IF (NOT NUM_BUILD_THREADS)
   ProcessorCount(NUM_BUILD_THREADS)
 ENDIF(NOT NUM_BUILD_THREADS)
 
-# Accepted values for DISTRO: trusty (Ubuntu 14.04), xenial (Ubuntu 16.06), fd23 (Fedora 23)
-IF (NOT DISTRO)
-  SET(DISTRO "trusty")
-ENDIF(NOT DISTRO)
-MESSAGE("Distro: ${DISTRO}")
+# Query the systems distribution with lsb_release
+find_program( lsb_executable lsb_release )
+
+if( lsb_executable )
+  execute_process( COMMAND ${lsb_executable} -is OUTPUT_VARIABLE DISTRO_ID OUTPUT_STRIP_TRAILING_WHITESPACE )
+  execute_process( COMMAND ${lsb_executable} -rs OUTPUT_VARIABLE DISTRO_RELEASE OUTPUT_STRIP_TRAILING_WHITESPACE )
+else()
+  if( EXISTS "/etc/os-release" )
+    file(STRINGS "/etc/os-release" DISTRO_ID REGEX "^ID=" )
+    file(STRINGS "/etc/os-release" DISTRO_RELEASE REGEX "^VERSION_ID=" )
+  endif( )
+endif( )
+
+# Accepted values for DISTRO_ID: trusty (Ubuntu 14.04), xenial (Ubuntu 16.06), fd23 (Fedora 23)
+string(TOLOWER DISTRO_ID "${DISTRO_ID}" DISTRO_ID )
+if( DISTRO_ID MATCHES "ubuntu" OR DISTRO_ID MATCHES "fedora" )
+  message( STATUS "Detected distribution: ${DISTRO_ID}:${DISTRO_RELEASE}" )
+else()
+  message( "Could not recognize host linux distribution.  Defaulting to Ubuntu logic" )
+  set( DISTRO_ID "ubuntu" )
+  set( DISTRO_RELEASE "16.04" )
+endif()
 
 include (MCWAMP)
 
@@ -99,7 +116,7 @@ find_path(ROCM_DEVICE_LIB ocml.amdgcn.bc
   PATHS
     ${ROCM_ROOT}/lib
 )
-
+ 
 if (NOT ROCM_DEVICE_LIB)
   MESSAGE(FATAL_ERROR "ROCm Device Libs not found. Use -DROCM_DEVICE_LIB=<path_to_ocml.amdgcn.bc>.")
 endif (NOT ROCM_DEVICE_LIB)
@@ -147,21 +164,20 @@ endif (USE_CODEXL_ACTIVITY_LOGGER EQUAL 1)
 # hcc will use libc++ if USE_LIBCXX is set to ON; otherwise, it will use libstdc++
 #################
 
-# if USE_LIBCXX is not set, then pick the C++ runtime based on the distro
-IF (NOT USE_LIBCXX)
-  IF (DISTRO STREQUAL "trusty")
-    SET(USE_LIBCXX "ON")
-  ELSE()
-    SET(USE_LIBCXX "OFF")
-  ENDIF()
-ENDIF(NOT USE_LIBCXX)
+# if USE_LIBCXX is not set, then pick the C++ runtime based on the version of the detected g++ compiler
+if( NOT DEFINED USE_LIBCXX )
+  if( CMAKE_COMPILER_IS_GNUCXX AND (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.0) )
+    set( USE_LIBCXX "ON" )
+  else()
+    set( USE_LIBCXX "OFF" )
+  endif()
+endif( )
 
 # Detect libc++
 if (USE_LIBCXX)
   find_path(LIBCXX_HEADER random PATHS /usr/local/include/c++/v1 /usr/include/c++/v1 NO_DEFAULT_PATH)
-  MESSAGE("libc++ headers found at ${LIBCXX_HEADER}")
-endif (USE_LIBCXX)
-
+  message( "libc++ headers found at ${LIBCXX_HEADER}" )
+endif( )
 
 #################
 # Set up version information
@@ -419,15 +435,14 @@ set(CPACK_PACKAGE_VERSION "${KALMAR_VERSION_MAJOR}.${KALMAR_VERSION_MINOR}.${KAL
 set(CPACK_PACKAGE_VERSION_MAJOR ${KALMAR_VERSION_MAJOR})
 set(CPACK_PACKAGE_VERSION_MINOR ${KALMAR_VERSION_MINOR})
 set(CPACK_PACKAGE_VERSION_PATCH ${KALMAR_VERSION_PATCH})
-set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${DISTRO})
+set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${DISTRO_ID})
 
 
 set(PACKAGE_DESCRIPTION "HCC: An Open Source, Optimizing C++ Compiler for Heterogeneous Compute")
 
 set(OFFICIAL_RELEASE_BUILD 0)
 
-if ("${DISTRO}" STREQUAL "trusty"
-  OR "${DISTRO}" STREQUAL "xenial")
+if( "${DISTRO_ID}" MATCHES "ubuntu" )
 
   set(CPACK_DEBIAN_PACKAGE_DESCRIPTION ${PACKAGE_DESCRIPTION})
   set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Siu Chi Chan <siuchi.chan@amd.com>")
@@ -450,7 +465,7 @@ if ("${DISTRO}" STREQUAL "trusty"
 
   set(CPACK_GENERATOR "DEB")
   set(CPACK_BINARY_DEB "ON")
-elseif ("${DISTRO}" STREQUAL "fd23")
+elseif ("${DISTRO_ID}" MATCHES "fedora")
 
   set(CPACK_RPM_PACKAGE_DESCRIPTION ${PACKAGE_DESCRIPTION})
   set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${PROJECT_BINARY_DIR}/packaging/debian/postinst")
@@ -461,7 +476,7 @@ elseif ("${DISTRO}" STREQUAL "fd23")
   set(CPACK_RPM_PACKAGE_REQUIRES "hsakmt-roct-dev, hsa-rocr-dev, rocm-device-libs, libstdc++-devel, elfutils-libelf-devel, glibc-devel")
   set(CPACK_GENERATOR "RPM")
 else()
-  # generate a tarball for unknown distro
+  # generate a tarball for unknown DISTRO_ID
   set(CPACK_GENERATOR "TGZ")
 endif ()
 
