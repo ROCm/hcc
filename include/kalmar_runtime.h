@@ -207,7 +207,7 @@ public:
 
   virtual uint32_t GetGroupSegmentSize(void *kernel) { return 0; }
 
-  KalmarDevice* getDev() { return pDev; }
+  KalmarDevice* getDev() const { return pDev; }
   queuing_mode get_mode() const { return mode; }
   void set_mode(queuing_mode mod) { mode = mod; }
 
