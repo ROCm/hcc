@@ -92,16 +92,17 @@ int HCC_SERIALIZE_COPY = 0;
 
 int HCC_OPT_FLUSH=0;
 
-#define DB_MISC  0x0  // 0x01  // misc debug, not yet classified.
-#define DB_CMD   0x1  // 0x02  // Kernel and COpy Commands and synchronization
-#define DB_WAIT  0x2  // 0x04  // Synchronization and waiting for commands to finish.
-#define DB_AQL   0x3  // 0x08  // Decode and display AQL packets 
-#define DB_QUEUE 0x4  // 0x10  // Queue creation and desruction commands
-#define DB_SIG   0x5  // 0x20  // Signal creation, allocation, pool
-#define DB_LOCK  0x6  // 0x40  // Locks and HCC thread-safety code
+#define DB_MISC      0x0  // 0x01  // misc debug, not yet classified.
+#define DB_CMD       0x1  // 0x02  // Kernel and COpy Commands and synchronization
+#define DB_WAIT      0x2  // 0x04  // Synchronization and waiting for commands to finish.
+#define DB_AQL       0x3  // 0x08  // Decode and display AQL packets 
+#define DB_QUEUE     0x4  // 0x10  // Queue creation and desruction commands
+#define DB_SIG       0x5  // 0x20  // Signal creation, allocation, pool
+#define DB_LOCK      0x6  // 0x40  // Locks and HCC thread-safety code
+#define DB_KERNARG   0x7  // 0x80  // Decode and display AQL packets 
 unsigned HCC_DB = 0;
 
-std::vector<std::string> g_DbStr = {"misc", "cmd", "aql", "queue", "sig", "lock" };
+std::vector<std::string> g_DbStr = {"misc", "cmd", "wait", "aql", "queue", "sig", "lock", "kernarg" };
 
 int HCC_MAX_QUEUES = 24;
 
@@ -129,7 +130,7 @@ thread_local ShortTid hcc_tlsShortTid;
 #define DBOUT(db_flag, msg) \
 if (COMPILE_HCC_DB && (HCC_DB & (1<<(db_flag)))) { \
     std::stringstream sstream;\
-    sstream << " hcc-" << g_DbStr[db_flag] << " tid:" << hcc_tlsShortTid._shortTid << " " << msg ; \
+    sstream << "   hcc-" << g_DbStr[db_flag] << " tid:" << hcc_tlsShortTid._shortTid << " " << msg ; \
     std::cerr << sstream.str();\
 };
 
@@ -605,6 +606,7 @@ public:
 }; // end of HSABarrier
 
 class HSADispatch : public Kalmar::KalmarAsyncOp {
+    friend std::ostream& operator<<(std::ostream& os, const HSADispatch & op);
 private:
     Kalmar::HSADevice* device;
     hsa_agent_t agent;
@@ -856,6 +858,7 @@ class HSAQueue final : public KalmarQueue
 private:
     friend class Kalmar::HSADevice;
     friend class RocrQueue;
+    friend std::ostream& operator<<(std::ostream& os, const HSAQueue & hav);
 
     // ROCR queue associated with this HSAQueue instance. 
     RocrQueue    *rocrQueue;
@@ -873,6 +876,7 @@ private:
     std::vector< std::shared_ptr<KalmarAsyncOp> > asyncOps;
 
     uint64_t                                      opSeqNums;
+    uint64_t                                      queueSeqNum; // sequence-number of this queue.
 
     // Valid is used to prevent the fields of the HSAQueue from being disposed 
     // multiple times.  
@@ -1120,7 +1124,7 @@ public:
             DBOUT(DB_MISC, " Sys-release needed, enqueue marker to release written data " << marker<<"\n");
         }
 
-        DBOUT(DB_WAIT, " queue wait, contents:\n");
+        DBOUT(DB_WAIT, *this << " wait, contents:\n");
         if (DBFLAG(DB_WAIT)) {
             printAsyncOps(std::cerr);
         }
@@ -1662,6 +1666,7 @@ hsa_status_t RocrQueue::setCuMask(HSAQueue *hccQueue) {
 
 class HSADevice final : public KalmarDevice
 {
+    friend std::ostream& operator<<(std::ostream& os, const HSAQueue & hav);
 private:
     /// memory pool for kernargs
     std::vector<void*> kernargPool;
@@ -1703,6 +1708,9 @@ private:
 
     uint16_t versionMajor;
     uint16_t versionMinor;
+
+    int      accSeqNum;     // unique accelerator seq num 
+    uint64_t queueSeqNums;  // used to assign queue seqnums.
 
 public:
     // Structures to manage unpinnned memory copies
@@ -1828,7 +1836,7 @@ public:
             return status;
           }
 #if KALMAR_DEBUG
-          std::cerr << "found memory pool of GPU local memory, size(MB) = " << (size/(1024*1024)) << std::endl;
+          std::cerr << "found memory pool of GPU local memory region=" << region.handle << ", size(MB) = " << (size/(1024*1024)) << std::endl;
 #endif
           pool_iterator *ri = (pool_iterator*) (data);
           ri->_local_memory_pool = region;
@@ -1955,7 +1963,7 @@ public:
 
 
 
-    HSADevice(hsa_agent_t a, hsa_agent_t host) : KalmarDevice(access_type_read_write),
+    HSADevice(hsa_agent_t a, hsa_agent_t host, int x_accSeqNum) : KalmarDevice(access_type_read_write),
                                agent(a), programs(), max_tile_static_size(0),
                                queue_size(0), queues(), queues_mutex(),
                                rocrQueues(0/*empty*/), rocrQueuesMutex(),
@@ -1965,7 +1973,7 @@ public:
                                executables(),
                                profile(hcAgentProfileNone),
                                path(), description(), hostAgent(host),
-                               versionMajor(0), versionMinor(0) {
+                               versionMajor(0), versionMinor(0), accSeqNum(x_accSeqNum), queueSeqNums(0) {
 #if KALMAR_DEBUG
         std::cerr << "HSADevice::HSADevice()\n";
 #endif
@@ -2376,9 +2384,11 @@ public:
     }
 
     std::shared_ptr<KalmarQueue> createQueue(execute_order order = execute_in_order) override {
-        std::shared_ptr<KalmarQueue> q =  std::shared_ptr<KalmarQueue>(new HSAQueue(this, agent, order));
+        auto hsaAv = new HSAQueue(this, agent, order);
+        std::shared_ptr<KalmarQueue> q =  std::shared_ptr<KalmarQueue>(hsaAv);
         queues_mutex.lock();
         queues.push_back(q);
+        hsaAv->queueSeqNum = this->queueSeqNums++;
         queues_mutex.unlock();
         return q;
     }
@@ -2866,7 +2876,7 @@ public:
 
         for (int i = 0; i < agents.size(); ++i) {
             hsa_agent_t agent = agents[i];
-            auto Dev = new HSADevice(agent, host);
+            auto Dev = new HSADevice(agent, host, i);
             // choose the first GPU device as the default device
             if (i == 0)
                 def = Dev;
@@ -3085,6 +3095,26 @@ HSADevice::getHSAAgent() override {
 // member function implementation of HSAQueue
 // ----------------------------------------------------------------------
 namespace Kalmar  {
+
+                           
+std::ostream& operator<<(std::ostream& os, const HSAQueue & hav) 
+{
+    auto device = static_cast<Kalmar::HSADevice*>(hav.getDev());
+    os << "queue#" << device->accSeqNum << "." << hav.queueSeqNum;
+    return os;
+}
+
+
+inline void printOp(std::ostream& os, const HSAQueue &hav, uint64_t opNum)
+{
+    os << "op\n" ;
+}
+
+inline std::ostream& operator<<(std::ostream& os, const HSADispatch & op) 
+{
+    //printOp(os, *op.hsaQueue, op.getSeqNum());
+    return os;
+}
 
 
 HSAQueue::HSAQueue(KalmarDevice* pDev, hsa_agent_t agent, execute_order order) : 
@@ -3424,6 +3454,13 @@ static std::ostream& operator<<(std::ostream& os, const hsa_kernel_dispatch_pack
        << " kernarg_address=" <<  aql.kernarg_address
        << " completion_signal=" <<  aql.completion_signal.handle;
 
+    const unsigned *aqlBytes = (unsigned*)&aql;
+     os << "\n              raw_aql=[" << std::hex << std::setfill('0'); 
+     for (int i=0; i<sizeof(aql)/sizeof(unsigned); i++) {
+         os << " 0x" << std::setw(8) << aqlBytes[i];
+     }
+     os << " ]" << std::dec;
+
     return os;
 }
 
@@ -3438,7 +3475,39 @@ static std::ostream& operator<<(std::ostream& os, const hsa_barrier_and_packet_t
        << " dep_signal[4]=" <<  aql.dep_signal[4].handle
        << " completion_signal=" <<  aql.completion_signal.handle;
 
+    const unsigned *aqlBytes = (unsigned*)&aql;
+     os << "              raw_aql=[" << std::hex << std::setfill('0'); 
+     for (int i=0; i<sizeof(aql)/sizeof(unsigned); i++) {
+         os << " 0x" << std::setw(8) << aqlBytes[i];
+     }
+     os << " ]" << std::dec;
+
    return os;
+}
+
+
+static void printKernarg(const void *kernarg_address, int bytesToPrint) 
+{
+    const unsigned int *ck = static_cast<const unsigned int*> (kernarg_address);
+
+
+    std::stringstream ks;
+    ks << "kernarg_address: 0x" << kernarg_address << ", first " << bytesToPrint << " bytes:";
+    for (int i=0; i<bytesToPrint/sizeof(unsigned int); i++) {
+        bool newLine = ((i % 4) ==0);
+        
+        if (newLine) {    
+            ks << "\n      ";
+            ks << "0x" << std::setw(16) << std::setfill('0') << &(ck[i]) <<  ": " ;
+        }
+
+        ks << "0x" << std::hex << std::setfill('0') << std::setw(8) << ck[i] << "  ";
+    };
+    ks << "\n";
+
+
+    DBOUT(DB_KERNARG, ks.str());
+
 }
 
 
@@ -3526,7 +3595,12 @@ HSADispatch::dispatchKernel(hsa_queue_t* lockedHsaQueue, const void *hostKernarg
     hsa_queue_store_write_index_relaxed(lockedHsaQueue, index + 1);
 
     DBOUT(DB_AQL, "queue:" << lockedHsaQueue  <<  " dispatch kernel " << (kernel ? kernel->kernelName : "<unknown>") << "\n");
-    DBOUT(DB_AQL, "queue:" << lockedHsaQueue  <<  " aql:" << *q_aql << "\n");
+    DBOUT(DB_AQL, "dispatch_aql:" << *q_aql << "\n");
+
+    if (DBFLAG(DB_KERNARG)) { 
+        // TODO, perhaps someday we could determine size of kernarg block here:
+        printKernarg(q_aql->kernarg_address, 128);
+    }
 
 #if KALMAR_DEBUG
     std::cerr << "ring door bell to dispatch a kernel\n";
@@ -3875,7 +3949,8 @@ HSABarrier::enqueueAsync(Kalmar::HSAQueue* hsaQueue, hc::memory_scope scope) {
         // Set header last:
         barrier->header = header;
 
-        DBOUT(DB_AQL, "queue:" << rocrQueue << ".op#" << getSeqNum() << " dispatch barrier depCount=" << depCount << " aql:" <<  *barrier << "\n");
+        DBOUT(DB_AQL, "queue:" << rocrQueue << ".op#" << getSeqNum() << " dispatch barrier depCount=" << depCount << "\n");
+        DBOUT(DB_AQL, "barrier_aql:" <<  *barrier << "\n");
 #if KALMAR_DEBUG
         std::cerr << "ring door bell to dispatch barrier\n";
 #endif
