@@ -12,7 +12,7 @@ int main() {
   using namespace hc;
   array<unsigned int, 1> table(GRID_SIZE);
   extent<1> ex(GRID_SIZE);
-  // CHECK-LABEL: define amdgpu_kernel void @"_ZZ4mainEN3$_019__cxxamp_trampolineEPjii"
+  // CHECK-LABEL: define weak_odr amdgpu_kernel void @"_ZZ4mainEN3$_019__cxxamp_trampolineEPjii"
   // CHECK-SAME:({{[^)]*}}){{[^#]*}}#[[ATTR0:[0-9]+]]
   // CHECK: attributes #[[ATTR0]] = {{{.*}}"amdgpu-flat-work-group-size"="1,10" "amdgpu-max-work-group-dim"="10,1,1" "amdgpu-waves-per-eu"="5,6"
   auto k = [&](index<1>& idx) [[hc]]
