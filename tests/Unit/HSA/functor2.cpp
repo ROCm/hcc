@@ -29,7 +29,7 @@ class prog {
   user_functor& kernel;
 
 public:
-  prog(int (&t)[SIZE], user_functor& f) : input(t), kernel(f) {
+  prog(int (&t)[SIZE], user_functor& f) restrict(amp,cpu) : input(t), kernel(f) {
   }
 
   void operator() (index<1>& idx) restrict(amp) {
