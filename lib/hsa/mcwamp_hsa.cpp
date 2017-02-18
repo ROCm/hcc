@@ -39,7 +39,6 @@
 #include <time.h>
 #include <iomanip>
 
-#define KALMAR_DEBUG 0
 #ifndef KALMAR_DEBUG
 #define KALMAR_DEBUG (0)
 #endif
@@ -1842,7 +1841,7 @@ public:
             return status;
           }
 #if KALMAR_DEBUG
-          std::cerr << "found memory pool of GPU local memory region=" << region << ", size(MB) = " << (size/(1024*1024)) << std::endl;
+          std::cerr << "found memory pool of GPU local memory region=" << region.handle << ", size(MB) = " << (size/(1024*1024)) << std::endl;
 #endif
           pool_iterator *ri = (pool_iterator*) (data);
           ri->_local_memory_pool = region;
@@ -3494,7 +3493,7 @@ static std::ostream& operator<<(std::ostream& os, const hsa_barrier_and_packet_t
 }
 
 
-void printKernarg(const void *kernarg_address, int bytesToPrint) 
+static void printKernarg(const void *kernarg_address, int bytesToPrint) 
 {
     const unsigned int *ck = static_cast<const unsigned int*> (kernarg_address);
 
@@ -4446,5 +4445,4 @@ extern "C" void PushArgPtrImpl(void *ker, int idx, size_t sz, const void *v) {
       reinterpret_cast<HSADispatch*>(ker);
   void *val = const_cast<void*>(v);
   dispatch->pushPointerArg(val);
-// RUN: %t.out -d 10000 -h %T
 }
