@@ -18,6 +18,7 @@ Kernel load_hsaco(hc::accelerator_view *av, const char * fileName, const char *k
     hsa_region_t systemRegion = *(hsa_region_t*)av->get_hsa_am_system_region();
     hsa_agent_t hsaAgent = *(hsa_agent_t*) av->get_hsa_agent();
 
+    printf ("opening hsaco file: %s\n", fileName);
     std::ifstream file(fileName, std::ios::binary | std::ios::ate);
     if (!file.is_open()) {
         printf("could not open code object '%s'\n", fileName);
