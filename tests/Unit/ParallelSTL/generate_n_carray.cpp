@@ -16,7 +16,7 @@
 template<typename T, size_t SIZE, int FIRST_OFFSET, int LAST_OFFSET>
 bool test_negative(void) {
 
-  auto f = [] { return SIZE + 1; };
+  auto f = []() [[hc,cpu]] { return SIZE + 1; };
   using std::experimental::parallel::par;
 
   bool ret = true;
