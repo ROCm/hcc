@@ -125,12 +125,10 @@ fi
 # Invoke HCC-specific opt passes
 # UPGRADE_TBD: temporary suppress warning messages in Promote pass
 if [ "$CLAMP_NOTILECHECK" == "ON" ]; then
-  $OPT -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-       -erase-nonkernels -dce -globaldce < $1 -o $2.promote.bc
+  $OPT -dce -globaldce < $1 -o $2.promote.bc
 else
-  $OPT -load $LIB/LLVMEraseNonkernel@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-       -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
-       -erase-nonkernels -tile-uniform -dce -globaldce < $1 -o $2.promote.bc
+  $OPT -load $LIB/LLVMTileUniform@CMAKE_SHARED_LIBRARY_SUFFIX@ \
+       -tile-uniform -dce -globaldce < $1 -o $2.promote.bc
 fi
 
 # error handling for HCC-specific opt passes
