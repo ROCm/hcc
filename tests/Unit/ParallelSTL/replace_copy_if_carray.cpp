@@ -14,7 +14,7 @@ template<typename T, size_t SIZE>
 bool test(void) {
 
   // test predicate
-  auto pred = [](const T& v) { return static_cast<int>(v) % 3 == 0; };
+  auto pred = [](const T& v) [[hc,cpu]] { return static_cast<int>(v) % 3 == 0; };
 
   using std::experimental::parallel::par;
 
